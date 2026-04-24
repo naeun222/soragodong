@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>소라고동</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="소라고동">
+<meta name="theme-color" content="#0f0e17">
+
+<!-- PWA Icon (embedded SVG) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48ZGVmcz48cmFkaWFsR3JhZGllbnQgaWQ9ImJnIiBjeD0iNTAlIiBjeT0iNDAlIiByPSI3NSUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMzMzJjNTAiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwZjBlMTciLz48L3JhZGlhbEdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0ic2hlbGwiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNlOGM5OWEiLz48c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iI2M5YTk2ZSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzliN2IzZiIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiByeD0iNDAiIGZpbGw9InVybCgjYmcpIi8+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTAsOTUpIj48cGF0aCBkPSJNLTQwLDI1IFEtNDUsLTE1IC0yMCwtMzUgUTEwLC01MCAzNSwtMjggUTUwLC0xMCA0NSwxNSBRMzUsMzUgMTAsNDAgUS0yMCw0NSAtNDAsMjUgWiIgZmlsbD0idXJsKCNzaGVsbCkiIHN0cm9rZT0iI2Q0YjI3ZCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz48cGF0aCBkPSJNLTI4LDEyIFEtMjUsLTE1IC01LC0yNSBRMTUsLTMyIDI4LC0xNSBRMzUsMCAyNSwxNSBRMTAsMjUgLTEwLDIyIFEtMjUsMTggLTI4LDEyIFoiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QxYTg2NSIgc3Ryb2tlLXdpZHRoPSIxLjIiIG9wYWNpdHk9IjAuNiIvPjxwYXRoIGQ9Ik0tMTUsNCBRLTEwLC0xMCAxLC0xMiBRMTEsLTEyIDE1LC0yIiBmaWxsPSJub25lIiBzdHJva2U9IiNkMWE4NjUiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC41Ii8+PC9nPjwvc3ZnPg==">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🐚%3C/text%3E%3C/svg%3E">
+
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1826;
+    --surface2: #221f33;
+    --surface3: #2a2740;
+    --accent: #c9a96e;
+    --accent2: #e8c99a;
+    --accent-dim: rgba(201, 169, 110, 0.15);
+    --purple: #8b7ec4;
+    --purple-dim: rgba(139, 126, 196, 0.15);
+    --text: #ede8f5;
+    --text-dim: #9d9aad;
+    --text-soft: #7b7a8e;
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.1);
+    --danger: #e06c75;
+    --success: #98c379;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    position: fixed;
+    width: 100%;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before { content: ''; position: fixed; top: -30%; left: -20%; width: 70%; height: 70%; background: radial-gradient(ellipse, rgba(139, 126, 196, 0.12) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+  body::after { content: ''; position: fixed; bottom: -20%; right: -20%; width: 60%; height: 60%; background: radial-gradient(ellipse, rgba(201, 169, 110, 0.08) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+
+  .app { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
+  .header { flex-shrink: 0; padding: 52px 24px 12px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: 'Gowun Batang', serif; font-size: 20px; color: var(--accent); letter-spacing: 0.05em; }
+  .date-pill { font-size: 11px; color: var(--text-dim); background: var(--surface); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-soft); }
+  .sync-dot.online { background: var(--success); }
+  .sync-dot.syncing { background: var(--accent); animation: pulse 1.5s infinite; }
+  .sync-dot.error { background: var(--danger); }
+
+  .screens { flex: 1; overflow: hidden; position: relative; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 24px 100px; opacity: 0; pointer-events: none; transition: opacity 0.25s; -webkit-overflow-scrolling: touch; }
+  .screen.active { opacity: 1; pointer-events: auto; }
+
+  /* Home */
+  .greeting { margin-bottom: 18px; }
+  .greeting-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.05em; }
+  .greeting-main { font-family: 'Gowun Batang', serif; font-size: 24px; line-height: 1.4; }
+  .greeting-main .accent { color: var(--accent); }
+
+  .model-preview { background: linear-gradient(135deg, var(--purple-dim), var(--accent-dim)); border: 1px solid rgba(139,126,196,0.2); border-radius: 18px; padding: 16px 18px; margin-bottom: 14px; cursor: pointer; transition: all 0.2s; }
+  .model-preview:active { transform: scale(0.98); }
+  .model-preview-label { font-size: 10px; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .model-preview-content { font-size: 13px; line-height: 1.6; color: var(--text); }
+  .model-preview-empty { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+
+  /* Mode chips */
+  .mode-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .mode-chip { padding: 5px 11px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); font-size: 11px; color: var(--text-dim); cursor: pointer; transition: all 0.2s; }
+  .mode-chip.active { background: rgba(139,126,196,0.2); border-color: var(--purple); color: var(--purple); }
+
+  .action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; }
+  .action-card:active { background: var(--surface2); transform: scale(0.98); }
+  .action-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .action-card.chat .action-icon { background: linear-gradient(135deg, rgba(139,126,196,0.25), rgba(201,169,110,0.15)); }
+  .action-text { flex: 1; min-width: 0; }
+  .action-title { font-size: 15px; font-weight: 500; margin-bottom: 2px; }
+  .action-sub { font-size: 12px; color: var(--text-dim); }
+  .action-arrow { color: var(--accent); opacity: 0.5; font-size: 18px; }
+
+  .screen-title { font-family: 'Gowun Batang', serif; font-size: 22px; margin-bottom: 6px; }
+  .screen-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 24px; line-height: 1.6; }
+
+  .input-group { margin-bottom: 22px; }
+  .input-label { font-size: 11px; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .input-label .optional { color: var(--text-soft); font-weight: normal; text-transform: none; letter-spacing: 0; font-size: 10px; }
+  textarea, input[type=text], input[type=number], input[type=date], input[type=password], input[type=time] {
+    width: 100%; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px; padding: 14px; color: var(--text); font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.6; outline: none; transition: border-color 0.2s;
+  }
+  textarea { resize: none; min-height: 80px; }
+  textarea:focus, input:focus { border-color: rgba(201,169,110,0.4); }
+  textarea::placeholder, input::placeholder { color: var(--text-soft); }
+
+  /* Sleep time inputs */
+  .time-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .time-input-wrap { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px; padding: 12px 14px; }
+  .time-input-wrap .time-label { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
+  .time-input-wrap input[type=time] { background: none; border: none; padding: 0; font-family: 'Gowun Batang', serif; font-size: 22px; color: var(--accent); text-align: left; }
+
+  /* Vitality slider */
+  .vitality-options { display: flex; gap: 4px; }
+  .vitality-btn { flex: 1; padding: 14px 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font-size: 22px; cursor: pointer; transition: all 0.2s; }
+  .vitality-btn.selected { background: var(--accent-dim); border-color: var(--accent); transform: scale(1.08); }
+  .vitality-btn:active { transform: scale(0.94); }
+  .vitality-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-top: 6px; padding: 0 4px; }
+
+  /* Affect Grid (2D mood) */
+  .affect-grid-wrap { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px; padding: 20px 14px 12px; position: relative; }
+  .affect-grid-labels { font-size: 10px; color: var(--text-dim); text-align: center; margin-bottom: 8px; }
+  .affect-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 4px;
+    aspect-ratio: 1;
+    max-width: 280px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .affect-cell {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .affect-cell:active { transform: scale(0.92); }
+  .affect-cell.selected { background: var(--accent); border-color: var(--accent2); }
+  .affect-axis-x { font-size: 10px; color: var(--text-dim); display: flex; justify-content: space-between; margin-top: 6px; max-width: 280px; margin-left: auto; margin-right: auto; }
+  .affect-axis-y-label { font-size: 10px; color: var(--text-dim); text-align: center; margin-bottom: 4px; }
+
+  /* Quick buttons */
+  .quick-row { display: flex; gap: 6px; }
+  .quick-btn { flex: 1; padding: 12px 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; color: var(--text-dim); font-size: 12px; font-family: inherit; cursor: pointer; text-align: center; transition: all 0.2s; }
+  .quick-btn.selected { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
+  .quick-btn:active { transform: scale(0.96); }
+
+  /* Optional module toggle */
+  .optional-section { margin-top: 20px; }
+  .optional-toggle { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; margin-bottom: 8px; }
+  .optional-toggle .label { font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .optional-toggle .check { width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--border-strong); display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .optional-toggle.on .check { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .optional-expand { display: none; padding: 16px; background: var(--surface2); border-radius: 12px; margin-bottom: 8px; }
+  .optional-expand.show { display: block; }
+
+  /* AI bubble / 4-stage response */
+  .ai-bubble { background: var(--surface); border: 1px solid rgba(201,169,110,0.15); border-radius: 18px; padding: 20px; margin-bottom: 16px; position: relative; }
+  .ai-bubble::before { content: '🐚'; position: absolute; top: -12px; left: 16px; font-size: 20px; }
+  .ai-text { font-size: 14px; line-height: 1.85; color: var(--text); white-space: pre-wrap; }
+  .ai-text .stage-label { display: inline-block; font-size: 11px; color: var(--accent); font-weight: 700; letter-spacing: 0.05em; margin-top: 12px; margin-bottom: 4px; }
+  .ai-text .stage-label:first-child { margin-top: 0; }
+  .ai-loading { display: flex; gap: 5px; align-items: center; padding: 2px 0; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+
+  /* Proposal buttons */
+  .proposal-buttons { display: flex; gap: 8px; margin-top: 14px; margin-bottom: 4px; }
+  .proposal-btn { flex: 1; padding: 12px; border-radius: 12px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; }
+  .proposal-btn.accept { background: linear-gradient(135deg, var(--accent), #b8894a); color: var(--bg); }
+  .proposal-btn.decline { background: transparent; border: 1px solid var(--border-strong); color: var(--text-dim); }
+  .proposal-btn:active { transform: scale(0.97); }
+
+  /* Buttons */
+  .btn-primary { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--accent), #b8894a); border: none; border-radius: 14px; color: var(--bg); font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all 0.2s; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-secondary { width: 100%; padding: 14px; background: transparent; border: 1px solid var(--border-strong); border-radius: 14px; color: var(--text-dim); font-size: 13px; font-family: inherit; cursor: pointer; margin-top: 8px; }
+  .btn-secondary:active { background: var(--surface); }
+  .btn-danger { color: var(--danger); border-color: rgba(224,108,117,0.3); }
+
+  /* Chat */
+  .chat-messages { padding-bottom: 12px; }
+  .msg { margin-bottom: 14px; display: flex; flex-direction: column; }
+  .msg.user { align-items: flex-end; }
+  .msg.assistant { align-items: flex-start; }
+  .msg.error { align-items: flex-start; }
+  .msg-bubble { max-width: 88%; padding: 14px 18px; border-radius: 18px; font-size: 14px; line-height: 1.75; white-space: pre-wrap; word-break: break-word; }
+  .msg.user .msg-bubble { background: var(--accent); color: var(--bg); border-bottom-right-radius: 4px; font-weight: 500; }
+  .msg.assistant .msg-bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
+  .msg.error .msg-bubble { background: rgba(224,108,117,0.1); border: 1px solid rgba(224,108,117,0.3); color: var(--text); border-bottom-left-radius: 4px; }
+  .msg.assistant .msg-bubble .stage-label { display: block; font-size: 11px; color: var(--accent); font-weight: 700; letter-spacing: 0.05em; margin-top: 12px; margin-bottom: 4px; }
+  .msg.assistant .msg-bubble .stage-label:first-child { margin-top: 0; }
+  .msg-actions { display: flex; gap: 8px; margin-top: 6px; padding: 0 4px; flex-wrap: wrap; }
+  .msg-action { font-size: 11px; color: var(--text-dim); background: none; border: none; cursor: pointer; font-family: inherit; padding: 4px 8px; border-radius: 8px; }
+  .msg-action:active { background: var(--surface2); color: var(--accent); }
+  .msg-action.saved { color: var(--accent); }
+  .msg-action.retry { color: var(--accent); border: 1px solid var(--accent); padding: 6px 12px; }
+
+  .chat-input-bar { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; }
+  .chat-input-wrap { display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 16px; }
+  .chat-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.5; outline: none; resize: none; max-height: 140px; padding: 8px 0; }
+  .send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--bg); border: none; font-size: 16px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .send-btn:disabled { opacity: 0.4; }
+  .send-btn:active { transform: scale(0.95); }
+
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 10px 0 26px; z-index: 100; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; opacity: 0.4; transition: opacity 0.2s; padding: 4px 0; }
+  .nav-item.active { opacity: 1; }
+  .nav-icon { font-size: 20px; }
+  .nav-label { font-size: 9px; color: var(--text-dim); letter-spacing: 0.04em; }
+  .nav-item.active .nav-label { color: var(--accent); }
+
+  /* Model screen */
+  .model-section { margin-bottom: 22px; }
+  .model-section-title { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .model-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 8px; position: relative; }
+  .model-item-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .model-item-desc { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+  .model-item-meta { font-size: 10px; color: var(--text-soft); margin-top: 6px; display: flex; gap: 8px; }
+  .model-item-meta .conf { padding: 2px 8px; background: var(--surface2); border-radius: 10px; }
+  .model-item-meta .verified { color: var(--success); }
+  .model-item-actions { display: flex; gap: 6px; margin-top: 10px; }
+  .model-item-action { font-size: 11px; color: var(--text-dim); background: none; border: 1px solid var(--border); padding: 4px 10px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+  .model-item-action:active { background: var(--surface2); }
+  .model-item-action.reject { color: var(--danger); border-color: rgba(224,108,117,0.3); }
+  .model-item-action.approve { color: var(--success); border-color: rgba(152,195,121,0.3); }
+  .model-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; line-height: 1.7; }
+
+  /* Archive */
+  .archive-item { background: var(--surface); border-radius: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid var(--border); }
+  .archive-date { font-size: 10px; color: var(--accent); margin-bottom: 6px; letter-spacing: 0.06em; }
+  .archive-source { font-size: 10px; color: var(--text-dim); padding: 2px 8px; background: var(--surface2); border-radius: 8px; margin-left: 6px; }
+  .archive-insight { font-size: 13px; line-height: 1.7; color: var(--text); }
+  .archive-empty { text-align: center; padding: 60px 20px; color: var(--text-dim); font-size: 13px; line-height: 1.7; }
+
+  .api-key-box { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+  .api-key-box input { background: none; border: none; padding: 0; font-family: monospace; font-size: 12px; }
+
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">🐚 소라고동</div>
+    <div class="date-pill">
+      <span class="sync-dot" id="syncDot"></span>
+      <span id="datePill"></span>
+    </div>
+  </div>
+
+  <div class="screens">
+    <!-- HOME -->
+    <div class="screen active" id="screen-home">
+      <div class="greeting">
+        <div class="greeting-sub">오늘</div>
+        <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
+      </div>
+
+      <!-- Context modes -->
+      <div class="mode-row" id="modeRow">
+        <div class="mode-chip" data-mode="exam" onclick="toggleMode('exam')">📚 마감</div>
+        <div class="mode-chip" data-mode="travel" onclick="toggleMode('travel')">✈️ 여행</div>
+        <div class="mode-chip" data-mode="sick" onclick="toggleMode('sick')">🤒 아픔</div>
+        <div class="mode-chip" data-mode="rest" onclick="toggleMode('rest')">🏖 휴식</div>
+        <div class="mode-chip" data-mode="period" onclick="toggleMode('period')">🩸 월경</div>
+      </div>
+
+      <div class="model-preview" onclick="showScreen('model')">
+        <div class="model-preview-label">🔮 너에 대해 내가 배우고 있는 것</div>
+        <div class="model-preview-content" id="modelPreviewContent"></div>
+      </div>
+
+      <div class="action-card chat" onclick="showScreen('chat')">
+        <div class="action-icon">🐚</div>
+        <div class="action-text">
+          <div class="action-title">소라고동과 대화하기</div>
+          <div class="action-sub">일기·고민·생각 뭐든</div>
+        </div>
+        <div class="action-arrow">›</div>
+      </div>
+
+      <div class="action-card" onclick="showScreen('checkin')">
+        <div class="action-icon">✨</div>
+        <div class="action-text">
+          <div class="action-title">오늘 체크인</div>
+          <div class="action-sub" id="checkinSub">15초면 돼</div>
+        </div>
+        <div class="action-arrow">›</div>
+      </div>
+    </div>
+
+    <!-- CHECK-IN (Research-based) -->
+    <div class="screen" id="screen-checkin">
+      <div class="screen-title">오늘 체크인</div>
+      <div class="screen-sub">딱 15초. 부담 없이. 몰라도 괜찮아.</div>
+
+      <!-- 1. Sleep Regularity -->
+      <div class="input-group">
+        <div class="input-label">😴 어젯밤 수면</div>
+        <div class="time-pair">
+          <div class="time-input-wrap">
+            <div class="time-label">잠든 시각</div>
+            <input type="time" id="sleepStart" value="00:00">
+          </div>
+          <div class="time-input-wrap">
+            <div class="time-label">일어난 시각</div>
+            <input type="time" id="sleepEnd" value="07:30">
+          </div>
+        </div>
+        <div style="font-size:11px; color:var(--text-dim); margin-top:6px;" id="sleepDuration"></div>
+      </div>
+
+      <!-- 2. Subjective Vitality -->
+      <div class="input-group">
+        <div class="input-label">⚡ 지금 몸의 에너지는?</div>
+        <div class="vitality-options">
+          <div class="vitality-btn" onclick="selectVitality(this, 1)">😵</div>
+          <div class="vitality-btn" onclick="selectVitality(this, 2)">😴</div>
+          <div class="vitality-btn" onclick="selectVitality(this, 3)">🙂</div>
+          <div class="vitality-btn" onclick="selectVitality(this, 4)">😊</div>
+          <div class="vitality-btn" onclick="selectVitality(this, 5)">✨</div>
+        </div>
+        <div class="vitality-labels">
+          <span>탈진</span>
+          <span>충만</span>
+        </div>
+      </div>
+
+      <!-- 3. 2D Affect Grid (Russell circumplex) -->
+      <div class="input-group">
+        <div class="input-label">💭 지금 마음은 어디?</div>
+        <div class="affect-grid-wrap">
+          <div class="affect-axis-y-label">↑ 들뜸</div>
+          <div class="affect-grid" id="affectGrid"></div>
+          <div class="affect-axis-x">
+            <span>← 불편</span>
+            <span>편안 →</span>
+          </div>
+          <div class="affect-axis-y-label" style="margin-top:4px;">↓ 차분</div>
+        </div>
+      </div>
+
+      <!-- 4. Free note -->
+      <div class="input-group">
+        <div class="input-label">💬 한 줄로 오늘은? <span class="optional">(선택)</span></div>
+        <textarea id="checkinNote" placeholder="빈칸도 OK. 뭐든 생각나는 거." rows="2"></textarea>
+      </div>
+
+      <!-- Optional modules -->
+      <div class="optional-section">
+        <div style="font-size:11px; color:var(--text-soft); margin-bottom:10px; letter-spacing:0.06em;">━ 선택 모듈 (누르면 펼침) ━</div>
+
+        <div class="optional-toggle" onclick="toggleOptional('meals')">
+          <div class="label">🍚 식사</div>
+          <div class="check" id="check-meals"></div>
+        </div>
+        <div class="optional-expand" id="expand-meals">
+          <div class="quick-row">
+            <button class="quick-btn" onclick="selectQuick(this, 'meals', '규칙적')">규칙적</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'meals', '한두끼')">한두 끼</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'meals', '거의안')">거의 안</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'meals', '폭식')">폭식</button>
+          </div>
+        </div>
+
+        <div class="optional-toggle" onclick="toggleOptional('movement')">
+          <div class="label">🏃 움직임</div>
+          <div class="check" id="check-movement"></div>
+        </div>
+        <div class="optional-expand" id="expand-movement">
+          <div class="quick-row">
+            <button class="quick-btn" onclick="selectQuick(this, 'movement', '거의안')">거의 안</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'movement', '짧게')">짧게</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'movement', '충분히')">충분히</button>
+          </div>
+        </div>
+
+        <div class="optional-toggle" onclick="toggleOptional('focus')">
+          <div class="label">🎯 집중</div>
+          <div class="check" id="check-focus"></div>
+        </div>
+        <div class="optional-expand" id="expand-focus">
+          <div class="quick-row">
+            <button class="quick-btn" onclick="selectQuick(this, 'focus', '없음')">없음</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'focus', '짧게')">짧게</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'focus', '몰입')">몰입</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'focus', '과몰입')">과몰입</button>
+          </div>
+        </div>
+
+        <div class="optional-toggle" onclick="toggleOptional('social')">
+          <div class="label">💞 사회적 연결</div>
+          <div class="check" id="check-social"></div>
+        </div>
+        <div class="optional-expand" id="expand-social">
+          <div class="quick-row">
+            <button class="quick-btn" onclick="selectQuick(this, 'social', '없음')">없음</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'social', '짧게')">짧게</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'social', '깊은대화')">깊은 대화</button>
+          </div>
+        </div>
+
+        <div class="optional-toggle" onclick="toggleOptional('overwhelm')">
+          <div class="label">🌊 압도감</div>
+          <div class="check" id="check-overwhelm"></div>
+        </div>
+        <div class="optional-expand" id="expand-overwhelm">
+          <div class="quick-row">
+            <button class="quick-btn" onclick="selectQuick(this, 'overwhelm', '없음')">없음</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'overwhelm', '약간')">약간</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'overwhelm', '많이')">많이</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'overwhelm', '너무')">너무</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <button class="btn-primary" onclick="submitCheckin()">기록 완료 ✦</button>
+        <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="screen" id="screen-chat" style="padding-bottom: 180px;">
+      <div class="screen-title">소라고동 🐚</div>
+      <div class="screen-sub">뭐든 말해. 일기처럼 길게 써도 돼. 내가 읽고 답할게.</div>
+      <div class="chat-messages" id="chatMessages"></div>
+    </div>
+
+    <!-- MODEL -->
+    <div class="screen" id="screen-model">
+      <div class="screen-title">너에 대해 ✦</div>
+      <div class="screen-sub">내가 시간을 들여 배운 너의 모습이야.<br>틀린 게 있으면 언제든 말해줘.</div>
+      <div id="modelContent"></div>
+      <div style="margin-top: 30px;">
+        <button class="btn-secondary" onclick="forceAnalyze()">📊 지금까지 데이터 다시 분석</button>
+        <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
+      </div>
+    </div>
+
+    <!-- ARCHIVE -->
+    <div class="screen" id="screen-archive">
+      <div class="screen-title">깨달음 아카이브 ✦</div>
+      <div class="screen-sub">네가 살아가면서 발견한 것들.</div>
+      <div id="archiveList"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="screen" id="screen-settings">
+      <div class="screen-title">설정</div>
+      <div class="screen-sub">소라고동을 네 것으로.</div>
+
+      <div class="input-group">
+        <div class="input-label">🔑 Anthropic API 키</div>
+        <div class="api-key-box">
+          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." style="width:100%;">
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;">
+          <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>에서 발급
+        </div>
+      </div>
+
+      <div class="input-group">
+        <div class="input-label">👤 내 프로필 (AI가 참고)</div>
+        <textarea id="profileInput" placeholder="예: ADHD/ADD 성향. 과몰입·전환집중 어려움..." rows="5"></textarea>
+      </div>
+
+      <button class="btn-primary" onclick="saveSettings()">저장</button>
+
+      <div style="margin-top:30px;">
+        <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
+        <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
+        <button class="btn-secondary" onclick="exportData()">📤 데이터 내보내기 (백업)</button>
+        <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
+      </div>
+
+      <button class="btn-secondary" onclick="showScreen('home')" style="margin-top:16px;">돌아가기</button>
+
+      <div style="margin-top:30px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
+        <strong style="color:var(--accent)">프라이버시</strong><br>
+        모든 기록은 너의 Supabase에 저장되고, 다른 기기에서도 접근돼.<br>
+        API 호출은 Anthropic 서버를 통과하지만 7일 후 삭제되고 학습에 쓰이지 않아.
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active" data-screen="home" onclick="showScreen('home')"><div class="nav-icon">🏠</div><div class="nav-label">홈</div></div>
+    <div class="nav-item" data-screen="chat" onclick="showScreen('chat')"><div class="nav-icon">🐚</div><div class="nav-label">대화</div></div>
+    <div class="nav-item" data-screen="model" onclick="showScreen('model')"><div class="nav-icon">🔮</div><div class="nav-label">나</div></div>
+    <div class="nav-item" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">✦</div><div class="nav-label">아카이브</div></div>
+    <div class="nav-item" data-screen="settings" onclick="showScreen('settings')"><div class="nav-icon">⚙</div><div class="nav-label">설정</div></div>
+  </div>
+</div>
+
+<div class="chat-input-bar" id="chatInputBar" style="display:none;">
+  <div class="chat-input-wrap">
+    <textarea class="chat-textarea" id="chatInput" placeholder="편하게 말해봐..." rows="1"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://pfagqvfteqzfhkbxtnwp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmYWdxdmZ0ZXF6ZmhrYnh0bndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjU4MDMsImV4cCI6MjA5MjYwMTgwM30.jDYXky2ga-o_02uWWrqqwti_HfHm8K_61IHPV81YBoA';
+const USER_ID = 'me';
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+const DEFAULT_STATE = {
+  entries: [],
+  chatMessages: [],
+  traits: [],
+  values: [],
+  patterns: [],
+  caseFormulation: { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [] },
+  archive: [],
+  activeStrategies: [],
+  modes: { exam: false, travel: false, sick: false, rest: false, period: false },
+  periodStart: null,
+  apiKey: '',
+  profile: '',
+  lastSync: null,
+  version: 2
+};
+
+let state = { ...DEFAULT_STATE };
+let currentCheckin = {};
+let syncStatus = 'offline';
+let syncTimeout = null;
+let selectedAffectCell = null;
+
+function saveState() {
+  localStorage.setItem('soragodong_v2', JSON.stringify(state));
+  saveToCloud();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════════════════════════════
+async function loadFromCloud() {
+  setSyncStatus('syncing');
+  try {
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}&order=updated_at.desc&limit=1`,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    if (!resp.ok) throw new Error('Load failed');
+    const data = await resp.json();
+    if (data.length > 0) {
+      state = { ...DEFAULT_STATE, ...data[0].data };
+      // Ensure modes object exists
+      state.modes = { ...DEFAULT_STATE.modes, ...(state.modes || {}) };
+      console.log('✅ Loaded from cloud');
+    } else {
+      const local = localStorage.getItem('soragodong_v2');
+      if (local) {
+        state = { ...DEFAULT_STATE, ...JSON.parse(local) };
+        state.modes = { ...DEFAULT_STATE.modes, ...(state.modes || {}) };
+        await saveToCloudNow();
+      }
+    }
+    setSyncStatus('online');
+    return true;
+  } catch (e) {
+    console.error('Cloud load error:', e);
+    const local = localStorage.getItem('soragodong_v2');
+    if (local) {
+      state = { ...DEFAULT_STATE, ...JSON.parse(local) };
+      state.modes = { ...DEFAULT_STATE.modes, ...(state.modes || {}) };
+    }
+    setSyncStatus('error');
+    return false;
+  }
+}
+
+async function saveToCloudNow() {
+  state.lastSync = new Date().toISOString();
+  const checkResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}&select=id&limit=1`,
+    { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+  );
+  const existing = await checkResp.json();
+  if (existing.length > 0) {
+    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ data: state, updated_at: state.lastSync })
+    });
+  } else {
+    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ user_id: USER_ID, data: state })
+    });
+  }
+}
+
+function saveToCloud() {
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(async () => {
+    setSyncStatus('syncing');
+    try {
+      await saveToCloudNow();
+      setSyncStatus('online');
+    } catch (e) {
+      console.error('Sync error:', e);
+      setSyncStatus('error');
+    }
+  }, 1000);
+}
+
+async function manualSync() {
+  setSyncStatus('syncing');
+  try {
+    await saveToCloudNow();
+    setSyncStatus('online');
+    alert('동기화 완료 ✦');
+  } catch (e) { setSyncStatus('error'); alert('동기화 실패'); }
+}
+
+function setSyncStatus(status) {
+  syncStatus = status;
+  const dot = document.getElementById('syncDot');
+  if (dot) dot.className = 'sync-dot ' + status;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+async function init() {
+  const now = new Date();
+  document.getElementById('datePill').textContent = now.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  const hour = now.getHours();
+  let greet = hour < 11 ? '좋은 아침 ☀️' : hour < 18 ? '오후도 잘 🌤' : '오늘 수고했어 🌙';
+  document.getElementById('greetingMain').innerHTML = greet + ' <span class="accent">✦</span>';
+
+  await loadFromCloud();
+
+  buildAffectGrid();
+  renderModes();
+  renderModelPreview();
+  renderModel();
+  renderArchive();
+  renderChat();
+  loadSettings();
+  updateCheckinSub();
+  updateSleepDuration();
+}
+
+function todayKey() { return new Date().toISOString().split('T')[0]; }
+
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const target = document.getElementById('screen-' + name);
+  if (target) target.classList.add('active');
+  const nav = document.querySelector(`.nav-item[data-screen="${name}"]`);
+  if (nav) nav.classList.add('active');
+  target && target.scrollTo(0, 0);
+  document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';
+
+  if (name === 'home') { renderModelPreview(); updateCheckinSub(); renderModes(); }
+  if (name === 'model') renderModel();
+  if (name === 'archive') renderArchive();
+  if (name === 'chat') { renderChat(); setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50); }
+}
+
+function updateCheckinSub() {
+  const key = todayKey();
+  const entry = state.entries.find(e => e.date === key);
+  document.getElementById('checkinSub').textContent = entry ? '오늘 기록 완료 ✓' : '15초면 돼';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODES
+// ═══════════════════════════════════════════════════════════════
+function toggleMode(mode) {
+  state.modes[mode] = !state.modes[mode];
+  if (mode === 'period' && state.modes.period && !state.periodStart) {
+    state.periodStart = todayKey();
+  } else if (mode === 'period' && !state.modes.period) {
+    state.periodStart = null;
+  }
+  saveState();
+  renderModes();
+}
+
+function renderModes() {
+  document.querySelectorAll('.mode-chip').forEach(chip => {
+    chip.classList.toggle('active', !!state.modes[chip.dataset.mode]);
+  });
+}
+
+function getCyclePhase() {
+  if (!state.modes.period || !state.periodStart) return null;
+  const days = Math.floor((new Date() - new Date(state.periodStart)) / 86400000);
+  if (days < 5) return '월경기';
+  if (days < 14) return '난포기';
+  if (days < 16) return '배란기';
+  if (days < 28) return '황체기';
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AFFECT GRID
+// ═══════════════════════════════════════════════════════════════
+function buildAffectGrid() {
+  const grid = document.getElementById('affectGrid');
+  grid.innerHTML = '';
+  // 5x5 grid, rows top-to-bottom = high arousal to low arousal
+  // cols left-to-right = negative valence to positive valence
+  const labels = [
+    // Row 0 (high arousal)
+    ['😡','😠','😳','🤩','🥳'],
+    // Row 1
+    ['😤','😟','😐','😀','😄'],
+    // Row 2 (mid)
+    ['😔','🙁','😶','🙂','😊'],
+    // Row 3
+    ['😞','😕','😑','😌','😇'],
+    // Row 4 (low arousal)
+    ['😴','😪','💤','🌙','☺️']
+  ];
+  for (let row = 0; row < 5; row++) {
+    for (let col = 0; col < 5; col++) {
+      const cell = document.createElement('div');
+      cell.className = 'affect-cell';
+      cell.textContent = labels[row][col];
+      cell.dataset.valence = col - 2;  // -2 to +2
+      cell.dataset.arousal = 2 - row;  // -2 to +2
+      cell.onclick = () => selectAffectCell(cell);
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function selectAffectCell(cell) {
+  document.querySelectorAll('.affect-cell').forEach(c => c.classList.remove('selected'));
+  cell.classList.add('selected');
+  currentCheckin.valence = parseInt(cell.dataset.valence);
+  currentCheckin.arousal = parseInt(cell.dataset.arousal);
+  currentCheckin.affectEmoji = cell.textContent;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VITALITY
+// ═══════════════════════════════════════════════════════════════
+function selectVitality(btn, level) {
+  document.querySelectorAll('.vitality-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  currentCheckin.vitality = level;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SLEEP DURATION CALC
+// ═══════════════════════════════════════════════════════════════
+function updateSleepDuration() {
+  const startEl = document.getElementById('sleepStart');
+  const endEl = document.getElementById('sleepEnd');
+  if (!startEl || !endEl) return;
+  const start = startEl.value;
+  const end = endEl.value;
+  if (!start || !end) return;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let minutes = (eh * 60 + em) - (sh * 60 + sm);
+  if (minutes < 0) minutes += 24 * 60;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  document.getElementById('sleepDuration').textContent = `약 ${hours}시간 ${mins}분`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OPTIONAL MODULES
+// ═══════════════════════════════════════════════════════════════
+function toggleOptional(key) {
+  const toggle = document.querySelector(`[onclick="toggleOptional('${key}')"]`);
+  const expand = document.getElementById('expand-' + key);
+  const check = document.getElementById('check-' + key);
+  const isOn = toggle.classList.toggle('on');
+  expand.classList.toggle('show', isOn);
+  check.textContent = isOn ? '✓' : '';
+  if (!isOn) delete currentCheckin[key];
+}
+
+function selectQuick(btn, key, value) {
+  const parent = btn.closest('.quick-row');
+  parent.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  currentCheckin[key] = value;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHECK-IN SUBMIT
+// ═══════════════════════════════════════════════════════════════
+async function submitCheckin() {
+  const sleepStart = document.getElementById('sleepStart').value;
+  const sleepEnd = document.getElementById('sleepEnd').value;
+  const note = document.getElementById('checkinNote').value;
+
+  const key = todayKey();
+  let entry = state.entries.find(e => e.date === key);
+  if (!entry) { entry = { date: key }; state.entries.push(entry); }
+
+  entry.sleepStart = sleepStart;
+  entry.sleepEnd = sleepEnd;
+  entry.vitality = currentCheckin.vitality;
+  entry.valence = currentCheckin.valence;
+  entry.arousal = currentCheckin.arousal;
+  entry.affectEmoji = currentCheckin.affectEmoji;
+  entry.note = note;
+  entry.modes = { ...state.modes };
+  entry.cyclePhase = getCyclePhase();
+
+  // Optional modules
+  ['meals', 'movement', 'focus', 'social', 'overwhelm'].forEach(key => {
+    if (currentCheckin[key]) entry[key] = currentCheckin[key];
+  });
+
+  entry.timestamp = new Date().toISOString();
+  saveState();
+
+  // If note exists, add to chat for AI analysis
+  if (note.trim()) {
+    const summary = buildCheckinSummary(entry);
+    state.chatMessages.push({
+      role: 'user',
+      content: `[오늘 체크인]\n${summary}\n\n${note}`,
+      timestamp: new Date().toISOString()
+    });
+    saveState();
+    currentCheckin = {};
+    showScreen('chat');
+    await generateAIResponse();
+  } else {
+    currentCheckin = {};
+    updateCheckinSub();
+    // Simple feedback
+    showScreen('home');
+  }
+}
+
+function buildCheckinSummary(entry) {
+  const parts = [];
+  if (entry.sleepStart && entry.sleepEnd) parts.push(`수면 ${entry.sleepStart}~${entry.sleepEnd}`);
+  if (entry.vitality) parts.push(`에너지 ${entry.vitality}/5`);
+  if (entry.affectEmoji) parts.push(`기분 ${entry.affectEmoji}`);
+  if (entry.meals) parts.push(`식사:${entry.meals}`);
+  if (entry.movement) parts.push(`움직임:${entry.movement}`);
+  if (entry.focus) parts.push(`집중:${entry.focus}`);
+  if (entry.social) parts.push(`연결:${entry.social}`);
+  if (entry.overwhelm) parts.push(`압도감:${entry.overwhelm}`);
+  if (entry.cyclePhase) parts.push(`주기:${entry.cyclePhase}`);
+  const activeModes = Object.keys(entry.modes || {}).filter(k => entry.modes[k] && k !== 'period');
+  if (activeModes.length) parts.push(`모드:${activeModes.join(',')}`);
+  return parts.join(' | ');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODEL
+// ═══════════════════════════════════════════════════════════════
+function renderModelPreview() {
+  const el = document.getElementById('modelPreviewContent');
+  const allItems = [...state.traits, ...state.patterns, ...state.values];
+  if (allItems.length === 0) {
+    el.innerHTML = '<div class="model-preview-empty">아직 데이터가 부족해.<br>대화하고 체크인 쌓이면 여기에 네 모습이 나타날 거야.</div>';
+    return;
+  }
+  const top = allItems.slice(0, 3);
+  el.innerHTML = top.map(item => `<div style="margin-bottom:4px;">· ${escapeHtml(item.name)}</div>`).join('') +
+    '<div style="font-size:11px;color:var(--text-dim);margin-top:8px;">탭해서 더 보기 →</div>';
+}
+
+function renderModel() {
+  const container = document.getElementById('modelContent');
+  if (!state.traits.length && !state.patterns.length && !state.values.length) {
+    container.innerHTML = `<div class="model-empty">
+      <div style="font-size:32px; margin-bottom:12px;">🐚</div>
+      아직 데이터가 부족해.<br><br>
+      대화 탭에서 일기처럼 자유롭게 이야기하거나<br>
+      체크인을 며칠 하면 네 모습이 보이기 시작해.<br><br>
+      최소 3~5회의 기록이 쌓이면<br>분석을 시작할 수 있어.
+    </div>`;
+    return;
+  }
+
+  let html = '';
+  if (state.values.length > 0) {
+    html += `<div class="model-section"><div class="model-section-title">🎯 네가 중시하는 것</div>`;
+    state.values.forEach((v, i) => { html += renderModelItem(v, 'values', i); });
+    html += '</div>';
+  }
+  if (state.traits.length > 0) {
+    html += `<div class="model-section"><div class="model-section-title">💫 너의 특성</div>`;
+    state.traits.forEach((t, i) => { html += renderModelItem(t, 'traits', i); });
+    html += '</div>';
+  }
+  if (state.patterns.length > 0) {
+    html += `<div class="model-section"><div class="model-section-title">🔄 보이는 패턴</div>`;
+    state.patterns.forEach((p, i) => { html += renderModelItem(p, 'patterns', i); });
+    html += '</div>';
+  }
+  if (state.caseFormulation.version > 0) {
+    html += `<div class="model-section"><div class="model-section-title">📋 Case Formulation v.${state.caseFormulation.version}</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">(임상적 개념화 — 자세히)</div>`;
+    if (state.caseFormulation.problems.length > 0) {
+      html += `<div class="model-item"><div class="model-item-name">🔍 주요 관찰</div>
+        <div class="model-item-desc">${state.caseFormulation.problems.map(p => `• ${escapeHtml(p)}`).join('<br>')}</div></div>`;
+    }
+    if (state.caseFormulation.mechanisms.length > 0) {
+      html += `<div class="model-item"><div class="model-item-name">⚙️ 작동 메커니즘</div>
+        <div class="model-item-desc">${state.caseFormulation.mechanisms.map(m => `• ${escapeHtml(m)}`).join('<br>')}</div></div>`;
+    }
+    if (state.caseFormulation.strengths.length > 0) {
+      html += `<div class="model-item"><div class="model-item-name">💪 강점</div>
+        <div class="model-item-desc">${state.caseFormulation.strengths.map(s => `• ${escapeHtml(s)}`).join('<br>')}</div></div>`;
+    }
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function renderModelItem(item, category, idx) {
+  const confLabel = item.confidence >= 0.7 ? '확신' : item.confidence >= 0.4 ? '관찰 중' : '가설';
+  return `<div class="model-item">
+    <div class="model-item-name">${escapeHtml(item.name)}</div>
+    <div class="model-item-desc">${escapeHtml(item.description || '')}</div>
+    <div class="model-item-meta">
+      <span class="conf ${item.user_verified ? 'verified' : ''}">${item.user_verified ? '✓ 확인됨' : confLabel}</span>
+      ${item.evidence_count ? `<span>근거 ${item.evidence_count}개</span>` : ''}
+    </div>
+    ${!item.user_verified ? `<div class="model-item-actions">
+      <button class="model-item-action approve" onclick="approveItem('${category}', ${idx})">✓ 맞아</button>
+      <button class="model-item-action reject" onclick="rejectItem('${category}', ${idx})">아니야</button>
+    </div>` : ''}
+  </div>`;
+}
+
+function approveItem(category, idx) {
+  state[category][idx].user_verified = true;
+  saveState(); renderModel(); renderModelPreview();
+}
+
+function rejectItem(category, idx) {
+  if (!confirm('이 항목을 삭제할까?')) return;
+  state[category].splice(idx, 1);
+  saveState(); renderModel(); renderModelPreview();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════════════════════════════
+function renderChat() {
+  const container = document.getElementById('chatMessages');
+  if (!state.chatMessages.length) {
+    container.innerHTML = `<div class="msg assistant">
+      <div class="msg-bubble">안녕 🐚
+
+일기처럼 길게 써도 되고, 짧게 해도 돼. 오늘 있었던 일, 생각, 고민, 뭐든.
+
+내가 읽고, 너에 대해 배우고, 심리학적으로 의미 있는 걸 짚어줄게.</div>
+    </div>`;
+    return;
+  }
+  container.innerHTML = state.chatMessages.map((m, i) => {
+    let bubbleContent;
+    if (m.role === 'assistant' && !m.typing) {
+      bubbleContent = formatAIResponse(m.content);
+    } else {
+      bubbleContent = escapeHtml(m.content);
+    }
+    const msgClass = m.error ? 'error' : m.role;
+    const bubble = `<div class="msg-bubble">${bubbleContent}</div>`;
+
+    let actions = '';
+    if (m.error && m.canRetry) {
+      actions = `<div class="msg-actions">
+        <button class="msg-action retry" onclick="retryMessage(${i})">↻ 다시 보내기</button>
+      </div>`;
+    } else if (m.role === 'assistant' && !m.typing) {
+      actions = `<div class="msg-actions">
+        <button class="msg-action ${m.saved ? 'saved' : ''}" onclick="saveMsgAsInsight(${i})">${m.saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>
+      </div>`;
+    }
+
+    let proposalBtns = '';
+    if (m.role === 'assistant' && m.proposal && !m.proposalResponse && !m.typing) {
+      proposalBtns = `<div class="proposal-buttons">
+        <button class="proposal-btn accept" onclick="acceptProposal(${i})">✦ 해볼게</button>
+        <button class="proposal-btn decline" onclick="declineProposal(${i})">나중에</button>
+      </div>`;
+    } else if (m.proposalResponse) {
+      proposalBtns = `<div style="font-size:11px; color:var(--text-dim); margin-top:8px; padding: 0 4px;">${m.proposalResponse === 'accept' ? '✦ 수락함' : '✗ 거절함'}</div>`;
+    }
+
+    return `<div class="msg ${msgClass}">${bubble}${proposalBtns}${actions}</div>`;
+  }).join('');
+  setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50);
+}
+
+function formatAIResponse(text) {
+  // Strip any JSON blocks (safety - shouldn't be there)
+  let cleaned = text.replace(/```json[\s\S]*?```/g, '').trim();
+  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation)[\s\S]*\}\s*$/g, '').trim();
+
+  let formatted = escapeHtml(cleaned);
+  const labels = ['[내가 본 것]', '[이게 뭐냐면]', '[이럴 땐 이렇게]', '[오늘의 제안]'];
+  labels.forEach(label => {
+    const regex = new RegExp(label.replace(/[\[\]]/g, '\\$&'), 'g');
+    formatted = formatted.replace(regex, `<span class="stage-label">${label}</span>`);
+  });
+  return formatted;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  state.chatMessages.push({ role: 'user', content: text, timestamp: new Date().toISOString() });
+  input.value = ''; input.style.height = 'auto';
+  renderChat();
+  saveState();
+  await generateAIResponse();
+}
+
+async function retryMessage(errorIdx) {
+  // Remove the error message
+  state.chatMessages.splice(errorIdx, 1);
+  renderChat();
+  saveState();
+  await generateAIResponse();
+}
+
+async function generateAIResponse() {
+  // Remove any pending typing indicator
+  state.chatMessages = state.chatMessages.filter(m => !m.typing);
+  state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
+  renderChat();
+
+  if (!state.apiKey) {
+    state.chatMessages[state.chatMessages.length - 1] = {
+      role: 'assistant', content: 'API 키가 없어! 설정(⚙)에서 넣어줘 🐚',
+      timestamp: new Date().toISOString()
+    };
+    saveState(); renderChat(); return;
+  }
+
+  try {
+    const systemPrompt = buildSystemPrompt();
+    const messages = state.chatMessages.filter(m => !m.typing && !m.error).slice(-20).map(m => ({ role: m.role, content: m.content }));
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': state.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 2000,
+        stream: true,
+        system: systemPrompt,
+        messages
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error('API ' + response.status);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = '';
+    state.chatMessages[state.chatMessages.length - 1] = { role: 'assistant', content: '', timestamp: new Date().toISOString() };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+            fullText += parsed.delta.text;
+            // Aggressive JSON stripping during streaming
+            let display = fullText;
+            // Remove JSON code block if complete
+            display = display.replace(/```json[\s\S]*?```/g, '');
+            // Remove unfinished JSON at end (starting with ```json or { at end)
+            display = display.replace(/```json[\s\S]*$/g, '');
+            display = display.replace(/\n*\{[\s\S]*$/g, (match) => {
+              // Only strip if looks like analysis JSON (contains keys)
+              if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation)/.test(match)) {
+                return '';
+              }
+              return match;
+            });
+            display = display.trim();
+            state.chatMessages[state.chatMessages.length - 1].content = display;
+            renderChat();
+          }
+        } catch {}
+      }
+    }
+
+    // Final cleanup + analysis extraction
+    const jsonMatch = fullText.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      try {
+        const analysis = JSON.parse(jsonMatch[1]);
+        await processAnalysis(analysis, state.chatMessages.length - 1);
+      } catch (e) { console.error('Analysis parse error:', e); }
+    } else {
+      // Try to find raw JSON at end
+      const rawJsonMatch = fullText.match(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation)[\s\S]*\}/);
+      if (rawJsonMatch) {
+        try {
+          const analysis = JSON.parse(rawJsonMatch[0]);
+          await processAnalysis(analysis, state.chatMessages.length - 1);
+        } catch (e) { console.error('Raw JSON parse error:', e); }
+      }
+    }
+
+    // Final display - clean
+    const finalDisplay = fullText
+      .replace(/```json[\s\S]*?```/g, '')
+      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation)[\s\S]*\}/g, '')
+      .trim();
+    state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
+
+    if (fullText.includes('[오늘의 제안]')) {
+      state.chatMessages[state.chatMessages.length - 1].proposal = true;
+    }
+
+    saveState();
+    renderChat();
+    renderModelPreview();
+
+  } catch (err) {
+    state.chatMessages[state.chatMessages.length - 1] = {
+      role: 'assistant',
+      content: '연결이 안 됐어 😅\n(' + err.message + ')\n\n다시 보내기 버튼을 눌러봐.',
+      error: true,
+      canRetry: true,
+      timestamp: new Date().toISOString()
+    };
+    saveState(); renderChat();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ANALYSIS PROCESSING
+// ═══════════════════════════════════════════════════════════════
+async function processAnalysis(analysis, messageIdx) {
+  if (analysis.new_traits) {
+    analysis.new_traits.forEach(t => {
+      const exists = state.traits.find(e => similarText(e.name, t.name));
+      if (!exists) {
+        state.traits.push({
+          id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          name: t.name, description: t.description || '',
+          confidence: t.confidence || 0.5,
+          user_verified: false, evidence_count: 1,
+          created_at: new Date().toISOString()
+        });
+      } else {
+        exists.evidence_count = (exists.evidence_count || 1) + 1;
+        exists.confidence = Math.min(1.0, exists.confidence + 0.1);
+      }
+    });
+  }
+  if (analysis.new_values) {
+    analysis.new_values.forEach(v => {
+      const exists = state.values.find(e => similarText(e.name, v.name));
+      if (!exists) {
+        state.values.push({
+          id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          name: v.name, description: v.description || '',
+          confidence: v.confidence || 0.5,
+          user_verified: false, evidence_count: 1,
+          sdt_need: v.sdt_need || null
+        });
+      } else {
+        exists.evidence_count = (exists.evidence_count || 1) + 1;
+        exists.confidence = Math.min(1.0, exists.confidence + 0.1);
+      }
+    });
+  }
+  if (analysis.new_patterns) {
+    analysis.new_patterns.forEach(p => {
+      const exists = state.patterns.find(e => similarText(e.name, p.name));
+      if (!exists) {
+        state.patterns.push({
+          id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          name: p.name, description: p.description || '',
+          trigger: p.trigger || '', sequence: p.sequence || '',
+          confidence: p.confidence || 0.5,
+          user_verified: false, evidence_count: 1
+        });
+      } else {
+        exists.evidence_count = (exists.evidence_count || 1) + 1;
+        exists.confidence = Math.min(1.0, exists.confidence + 0.1);
+      }
+    });
+  }
+  if (analysis.case_formulation_update) {
+    const cf = state.caseFormulation;
+    const u = analysis.case_formulation_update;
+    if (u.new_problem) cf.problems.push(u.new_problem);
+    if (u.new_mechanism) cf.mechanisms.push(u.new_mechanism);
+    if (u.new_strength) cf.strengths.push(u.new_strength);
+    if (u.new_problem || u.new_mechanism || u.new_strength) {
+      cf.version += 1;
+      cf.lastUpdated = new Date().toISOString();
+    }
+  }
+  if (analysis.insight) {
+    state.chatMessages[messageIdx].insightCandidate = analysis.insight;
+  }
+  saveState();
+}
+
+function similarText(a, b) {
+  if (!a || !b) return false;
+  const n = s => s.toLowerCase().replace(/\s+/g, '');
+  return n(a) === n(b) || n(a).includes(n(b)) || n(b).includes(n(a));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SYSTEM PROMPT
+// ═══════════════════════════════════════════════════════════════
+const SYSTEM_PERSONA = `너는 "소라고동"이야. 사용자의 AI 라이프 전략가이자 친한 친구.
+
+핵심 정체성:
+- 네 역할은 사용자의 "Case Formulation"을 시간에 따라 구축하는 임상가이자 전략 컨설턴트.
+- 동시에 편안한 친구처럼 대화함.
+- 단순 공감 챗봇 아님. 전략 제공이 핵심.
+
+절대 원칙:
+1. 반말, 친근함. 상담사 말투 금지.
+2. 상투적 긍정 금지 ("힘내", "할 수 있어" X).
+3. 구체적으로 말하기 — 사용자의 실제 기록과 말 인용.
+4. 결과가 아닌 과정·태도·선택에 주목.
+5. 힘든 날엔 공감 먼저, 그다음 도움.
+6. 쉰 날/못한 날 죄책감 없이. 휴식도 유효한 하루.
+7. Self-compassion (Kristin Neff) 기반 반응.
+8. ADHD 특성 고려 — 규칙성보다 유연성.
+9. 동의만 하지 않기. 필요하면 부드럽게 반박.
+10. 이모지 1-2개 (🐚 자주).
+
+응답 구조 (상황에 맞게 선택):
+
+【풀 버전 - 일기/고민/중요한 순간에 사용】
+1. 짧은 공감 인사 (1-2줄)
+2. [내가 본 것] — 사용자의 말·기록에서 발견한 패턴을 담백하게. 판단 없이.
+3. [이게 뭐냐면] — 심리학 개념으로 설명. 연구자 이름 자연스럽게 언급.
+   (Gollwitzer, Neff, Barkley, Hershfield, Wilson & Gilbert, Heath brothers,
+    Klein, Burnett & Evans, Dweck, Lally, Grossmann, Russell, Buysse 등)
+4. [이럴 땐 이렇게] — 증거 기반 전략. 구체적 방법.
+5. [오늘의 제안] — 아주 구체적이고 작은 행동 하나.
+
+【짧은 버전 - 가벼운 대화에 사용】
+공감 + 짧은 한마디로 끝. 4단계 강제 X.
+
+***중요***: 응답 맨 끝에 반드시 분석 JSON 추가 (사용자에게는 안 보임):
+
+\`\`\`json
+{
+  "new_traits": [{"name": "...", "description": "...", "confidence": 0.5}],
+  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy/competence/relatedness", "confidence": 0.5}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "description": "...", "confidence": 0.5}],
+  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "..."},
+  "insight": "오늘 대화에서 사용자에 대한 핵심 통찰을 한 문장으로 압축. 추상적이지 말고 구체적으로."
+}
+\`\`\`
+
+JSON 규칙:
+- 새로 관찰한 것만. 모델에 이미 있는 건 제외.
+- 불확실하면 confidence 0.3-0.5.
+- 해당 없는 필드는 빈 배열 [] 또는 생략.
+- insight는 아카이빙용이므로 "사용자는 ~한 사람이다" 또는 "사용자는 ~할 때 ~하는 경향이 있다" 같은 명확한 문장으로.`;
+
+function buildSystemPrompt() {
+  let ctx = [SYSTEM_PERSONA];
+  ctx.push('\n━━━━━━━━━━━━━━━━━━━━━\n📂 사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
+  if (state.profile) ctx.push(`[사용자 프로필]\n${state.profile}\n`);
+
+  // Active modes
+  const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
+  if (activeModes.length > 0) {
+    const modeMap = { exam: '📚 마감/시험 기간', travel: '✈️ 여행 중', sick: '🤒 아픈 상태', rest: '🏖 의도적 휴식', period: '🩸 월경 주기' };
+    ctx.push('[현재 활성 모드]');
+    activeModes.forEach(m => ctx.push('- ' + (modeMap[m] || m)));
+    const phase = getCyclePhase();
+    if (phase) ctx.push(`- 월경 주기 단계: ${phase}`);
+    ctx.push('');
+  }
+
+  if (state.values.length > 0) {
+    ctx.push('[중시하는 가치]');
+    state.values.forEach(v => {
+      ctx.push(`- ${v.user_verified ? '✓' : '?'} ${v.name}${v.description ? ': ' + v.description : ''}`);
+    });
+    ctx.push('');
+  }
+  if (state.traits.length > 0) {
+    ctx.push('[특성]');
+    state.traits.forEach(t => {
+      ctx.push(`- ${t.user_verified ? '✓' : '?'} ${t.name}${t.description ? ': ' + t.description : ''}`);
+    });
+    ctx.push('');
+  }
+  if (state.patterns.length > 0) {
+    ctx.push('[관찰된 패턴]');
+    state.patterns.forEach(p => {
+      ctx.push(`- ${p.user_verified ? '✓' : '?'} ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`);
+    });
+    ctx.push('');
+  }
+  if (state.caseFormulation.version > 0) {
+    const cf = state.caseFormulation;
+    ctx.push(`[Case Formulation v.${cf.version}]`);
+    if (cf.problems.length) ctx.push('문제: ' + cf.problems.join('; '));
+    if (cf.mechanisms.length) ctx.push('메커니즘: ' + cf.mechanisms.join('; '));
+    if (cf.strengths.length) ctx.push('강점: ' + cf.strengths.join('; '));
+    ctx.push('');
+  }
+
+  const recent = state.entries.slice(-14);
+  if (recent.length > 0) {
+    ctx.push('[최근 2주 체크인]');
+    recent.forEach(e => {
+      const parts = [];
+      if (e.sleepStart && e.sleepEnd) parts.push(`수면 ${e.sleepStart}-${e.sleepEnd}`);
+      if (e.vitality) parts.push(`활력${e.vitality}/5`);
+      if (e.valence !== undefined) parts.push(`V${e.valence}/A${e.arousal}`);
+      if (e.overwhelm) parts.push(`압도:${e.overwhelm}`);
+      if (e.meals) parts.push(`식사:${e.meals}`);
+      if (e.movement) parts.push(`움직임:${e.movement}`);
+      if (e.focus) parts.push(`집중:${e.focus}`);
+      if (e.social) parts.push(`연결:${e.social}`);
+      if (e.cyclePhase) parts.push(`주기:${e.cyclePhase}`);
+      if (e.note) parts.push(`메모:${e.note.slice(0, 60)}`);
+      if (parts.length) ctx.push(`${e.date}: ${parts.join(' | ')}`);
+    });
+    ctx.push('');
+  }
+
+  if (state.archive.length > 0) {
+    ctx.push('[과거 깨달음 (최근 5개)]');
+    state.archive.slice(0, 5).forEach(a => ctx.push(`- ${a.date}: ${a.insight}`));
+  }
+  return ctx.join('\n');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INSIGHT SAVE (with AI summarization)
+// ═══════════════════════════════════════════════════════════════
+async function saveMsgAsInsight(idx) {
+  const msg = state.chatMessages[idx];
+  if (!msg || msg.saved) return;
+
+  // Use AI-generated insight if available, otherwise summarize
+  let insight = msg.insightCandidate;
+  if (!insight) {
+    // Ask AI to summarize
+    if (!state.apiKey) {
+      insight = msg.content.slice(0, 150);
+    } else {
+      try {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': state.apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-5',
+            max_tokens: 200,
+            messages: [{
+              role: 'user',
+              content: `아래 대화 내용을 "깨달음 아카이브"에 저장할 한 문장으로 요약해줘. 자신에 대한 통찰 형태로. 1-2문장만. 다른 설명 없이:\n\n${msg.content}`
+            }]
+          })
+        });
+        const data = await resp.json();
+        insight = data.content[0].text.trim();
+      } catch (e) {
+        insight = msg.content.slice(0, 150);
+      }
+    }
+  }
+
+  const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  state.archive.unshift({
+    date, insight,
+    source: '대화',
+    savedAt: new Date().toISOString()
+  });
+  msg.saved = true;
+  saveState();
+  renderChat();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROPOSALS
+// ═══════════════════════════════════════════════════════════════
+function acceptProposal(idx) {
+  state.chatMessages[idx].proposalResponse = 'accept';
+  saveState(); renderChat();
+  state.chatMessages.push({
+    role: 'assistant',
+    content: '좋아! ✦ 해보고 나서 어땠는지 알려줘.\n\n(Phase 2에서 자동으로 미션에 등록되는 기능 추가 예정)',
+    timestamp: new Date().toISOString()
+  });
+  saveState(); renderChat();
+}
+
+function declineProposal(idx) {
+  state.chatMessages[idx].proposalResponse = 'decline';
+  saveState(); renderChat();
+  state.chatMessages.push({
+    role: 'assistant',
+    content: '알았어. 지금 말고도 괜찮아. 언제든 준비되면 말해 🐚',
+    timestamp: new Date().toISOString()
+  });
+  saveState(); renderChat();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ARCHIVE
+// ═══════════════════════════════════════════════════════════════
+function renderArchive() {
+  const list = document.getElementById('archiveList');
+  if (!state.archive.length) {
+    list.innerHTML = `<div class="archive-empty">
+      <div style="font-size:32px; margin-bottom:12px;">🐚</div>
+      아직 저장된 깨달음이 없어.<br>
+      대화에서 의미 있는 응답을 "깨달음으로" 저장해봐.
+    </div>`;
+    return;
+  }
+  list.innerHTML = state.archive.map(a => `<div class="archive-item">
+    <div><span class="archive-date">${a.date} ✦</span><span class="archive-source">${a.source || '깨달음'}</span></div>
+    <div class="archive-insight">${escapeHtml(a.insight)}</div>
+  </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FORCE ANALYZE
+// ═══════════════════════════════════════════════════════════════
+async function forceAnalyze() {
+  if (!state.apiKey) { alert('API 키 먼저 설정!'); return; }
+  if (state.entries.length < 3 && state.chatMessages.length < 3) {
+    alert('분석하려면 체크인이나 대화가 최소 3개 이상 쌓여야 해.');
+    return;
+  }
+  if (!confirm('지금까지의 모든 데이터를 분석해서 "나에 대한 모델"을 업데이트할까? 1-2분 걸려.')) return;
+
+  setSyncStatus('syncing');
+  try {
+    const dataDump = {
+      entries: state.entries,
+      chatMessages: state.chatMessages.filter(m => !m.typing && !m.error).slice(-50),
+      archive: state.archive,
+      activeModes: Object.keys(state.modes).filter(k => state.modes[k])
+    };
+
+    const prompt = `너는 임상심리학자로서 이 사용자의 Case Formulation을 구축한다.
+
+아래는 사용자가 지금까지 기록한 데이터야:
+
+${JSON.stringify(dataDump, null, 2)}
+
+이 데이터를 기반으로 다음을 JSON으로 출력해:
+
+{
+  "traits": [{"name": "...", "description": "근거와 함께", "confidence": 0.0-1.0}],
+  "values": [{"name": "...", "description": "...", "sdt_need": "autonomy/competence/relatedness", "confidence": 0.0-1.0}],
+  "patterns": [{"name": "...", "trigger": "...", "sequence": "...", "description": "...", "confidence": 0.0-1.0}],
+  "case_formulation": {
+    "problems": ["..."],
+    "mechanisms": ["실패에 대한 두려움 → 완벽주의 → 회피 → ..."],
+    "strengths": ["..."]
+  }
+}
+
+원칙:
+- 관찰 가능한 행동·표현에 근거. 추측은 낮은 confidence.
+- 사용자의 실제 언어·예시를 반영.
+- ADHD·직업·가치관 맥락 고려.
+- 수면 시각 규칙성, 활력 변동, 2D affect 패턴 같은 체크인 데이터의 신호 해석.
+- 활성 모드(월경 주기, 마감 등) 컨텍스트로 분석.
+- 5-10개 항목씩 추출.
+- JSON만 출력, 다른 설명 금지.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (!response.ok) throw new Error('API ' + response.status);
+    const result = await response.json();
+    const text = result.content[0].text;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('JSON 파싱 실패');
+    const analysis = JSON.parse(jsonMatch[0]);
+
+    if (analysis.traits) {
+      analysis.traits.forEach(t => {
+        if (!state.traits.find(e => similarText(e.name, t.name))) {
+          state.traits.push({ id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...t, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
+        }
+      });
+    }
+    if (analysis.values) {
+      analysis.values.forEach(v => {
+        if (!state.values.find(e => similarText(e.name, v.name))) {
+          state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...v, user_verified: false, evidence_count: 1 });
+        }
+      });
+    }
+    if (analysis.patterns) {
+      analysis.patterns.forEach(p => {
+        if (!state.patterns.find(e => similarText(e.name, p.name))) {
+          state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...p, user_verified: false, evidence_count: 1 });
+        }
+      });
+    }
+    if (analysis.case_formulation) {
+      state.caseFormulation = {
+        version: state.caseFormulation.version + 1,
+        lastUpdated: new Date().toISOString(),
+        problems: analysis.case_formulation.problems || [],
+        mechanisms: analysis.case_formulation.mechanisms || [],
+        strengths: analysis.case_formulation.strengths || []
+      };
+    }
+
+    saveState();
+    renderModel(); renderModelPreview();
+    setSyncStatus('online');
+    alert('분석 완료! "나에 대한 모델"을 확인해봐 ✦');
+  } catch (err) {
+    console.error(err);
+    alert('분석 실패: ' + err.message);
+    setSyncStatus('error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════════════
+function loadSettings() {
+  document.getElementById('apiKeyInput').value = state.apiKey || '';
+  document.getElementById('profileInput').value = state.profile || '';
+}
+
+function saveSettings() {
+  state.apiKey = document.getElementById('apiKeyInput').value.trim();
+  state.profile = document.getElementById('profileInput').value.trim();
+  saveState();
+  alert('저장됐어 ✦');
+}
+
+function exportData() {
+  const dataStr = JSON.stringify(state, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `soragodong_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function resetAll() {
+  if (!confirm('로컬+클라우드 모든 데이터가 삭제돼. 정말?')) return;
+  if (!confirm('한 번 더. 진짜?')) return;
+  localStorage.removeItem('soragodong_v2');
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+  } catch (e) { console.error(e); }
+  location.reload();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAT INPUT
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('chatInput');
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
+  });
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !isMobile()) {
+      e.preventDefault(); sendChat();
+    }
+  });
+
+  // Sleep time change listeners
+  ['sleepStart', 'sleepEnd'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', updateSleepDuration);
+  });
+});
+
+function isMobile() {
+  return /Android|iPhone|iPad/i.test(navigator.userAgent);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// START
+init();
+</script>
+</body>
+</html>
