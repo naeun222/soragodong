@@ -9,10 +9,11 @@
 <meta name="apple-mobile-web-app-title" content="소라고동">
 <meta name="theme-color" content="#0f0e17">
 
-<!-- PWA Icon (embedded SVG) -->
-<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48ZGVmcz48cmFkaWFsR3JhZGllbnQgaWQ9ImJnIiBjeD0iNTAlIiBjeT0iNDAlIiByPSI3NSUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMzMzJjNTAiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwZjBlMTciLz48L3JhZGlhbEdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0ic2hlbGwiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNlOGM5OWEiLz48c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iI2M5YTk2ZSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzliN2IzZiIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiByeD0iNDAiIGZpbGw9InVybCgjYmcpIi8+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTAsOTUpIj48cGF0aCBkPSJNLTQwLDI1IFEtNDUsLTE1IC0yMCwtMzUgUTEwLC01MCAzNSwtMjggUTUwLC0xMCA0NSwxNSBRMzUsMzUgMTAsNDAgUS0yMCw0NSAtNDAsMjUgWiIgZmlsbD0idXJsKCNzaGVsbCkiIHN0cm9rZT0iI2Q0YjI3ZCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz48cGF0aCBkPSJNLTI4LDEyIFEtMjUsLTE1IC01LC0yNSBRMTUsLTMyIDI4LC0xNSBRMzUsMCAyNSwxNSBRMTAsMjUgLTEwLDIyIFEtMjUsMTggLTI4LDEyIFoiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QxYTg2NSIgc3Ryb2tlLXdpZHRoPSIxLjIiIG9wYWNpdHk9IjAuNiIvPjxwYXRoIGQ9Ik0tMTUsNCBRLTEwLC0xMCAxLC0xMiBRMTEsLTEyIDE1LC0yIiBmaWxsPSJub25lIiBzdHJva2U9IiNkMWE4NjUiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC41Ii8+PC9nPjwvc3ZnPg==">
+<link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
 
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🐚%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIuyGjOudvOqzoOuPmSIsCiAgInNob3J0X25hbWUiOiAi7IaM65287rOg64+ZIiwKICAiZGVzY3JpcHRpb24iOiAiQUkg66ub7J20IOydkOylieS4gCIsCiAgInN0YXJ0X3VybCI6ICIvIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMGYwZTE3IiwKICAidGhlbWVfY29sb3IiOiAiIzBmMGUxNyIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogIi9pY29uLTE5Mi5wbmciLAogICAgICAic2l6ZXMiOiAiMTkyeDE5MiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIKICAgIH0sCiAgICB7CiAgICAgICJzcmMiOiAiL2ljb24tNTEyLnBuZyIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIgogICAgfQogIF0KfQ==">
 
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -33,6 +34,7 @@
     --border-strong: rgba(255,255,255,0.1);
     --danger: #e06c75;
     --success: #98c379;
+    --gold: #ffd700;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; }
@@ -60,19 +62,78 @@
   .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 24px 100px; opacity: 0; pointer-events: none; transition: opacity 0.25s; -webkit-overflow-scrolling: touch; }
   .screen.active { opacity: 1; pointer-events: auto; }
 
-  /* Home */
   .greeting { margin-bottom: 18px; }
   .greeting-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.05em; }
   .greeting-main { font-family: 'Gowun Batang', serif; font-size: 24px; line-height: 1.4; }
   .greeting-main .accent { color: var(--accent); }
 
+  /* Shell collection bar */
+  .shell-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, var(--accent-dim), var(--purple-dim));
+    border: 1px solid rgba(201,169,110,0.2);
+    border-radius: 14px;
+    margin-bottom: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .shell-bar:active { transform: scale(0.98); }
+  .shell-bar .left { display: flex; align-items: center; gap: 10px; }
+  .shell-bar .shell-count { font-family: 'Gowun Batang', serif; font-size: 22px; color: var(--accent); }
+  .shell-bar .shell-label { font-size: 11px; color: var(--text-dim); }
+  .shell-bar .streak-info { font-size: 11px; color: var(--text-dim); }
+
+  /* Today's mission card */
+  .mission-card {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(201, 169, 110, 0.15));
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .mission-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.5;
+  }
+  .mission-label {
+    font-size: 10px; color: var(--gold); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .mission-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; line-height: 1.5; }
+  .mission-desc { font-size: 12px; color: var(--text-dim); line-height: 1.6; margin-bottom: 12px; }
+  .mission-actions { display: flex; gap: 8px; }
+  .mission-btn { flex: 1; padding: 11px; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; }
+  .mission-btn.complete { background: linear-gradient(135deg, var(--gold), #e8c043); color: var(--bg); }
+  .mission-btn.skip { background: transparent; border: 1px solid var(--border-strong); color: var(--text-dim); }
+  .mission-btn:active { transform: scale(0.97); }
+
+  /* Completed mission */
+  .mission-card.completed {
+    background: linear-gradient(135deg, rgba(152, 195, 121, 0.1), rgba(152, 195, 121, 0.05));
+    border-color: rgba(152, 195, 121, 0.3);
+  }
+  .mission-card.completed .mission-label { color: var(--success); }
+  .mission-completion-msg {
+    padding: 12px; background: rgba(152, 195, 121, 0.1);
+    border-radius: 10px; font-size: 13px; color: var(--text);
+    margin-top: 10px; line-height: 1.6;
+  }
+
+  /* Model preview */
   .model-preview { background: linear-gradient(135deg, var(--purple-dim), var(--accent-dim)); border: 1px solid rgba(139,126,196,0.2); border-radius: 18px; padding: 16px 18px; margin-bottom: 14px; cursor: pointer; transition: all 0.2s; }
   .model-preview:active { transform: scale(0.98); }
   .model-preview-label { font-size: 10px; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
   .model-preview-content { font-size: 13px; line-height: 1.6; color: var(--text); }
   .model-preview-empty { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
 
-  /* Mode chips */
   .mode-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
   .mode-chip { padding: 5px 11px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); font-size: 11px; color: var(--text-dim); cursor: pointer; transition: all 0.2s; }
   .mode-chip.active { background: rgba(139,126,196,0.2); border-color: var(--purple); color: var(--purple); }
@@ -99,55 +160,30 @@
   textarea:focus, input:focus { border-color: rgba(201,169,110,0.4); }
   textarea::placeholder, input::placeholder { color: var(--text-soft); }
 
-  /* Sleep time inputs */
   .time-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .time-input-wrap { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px; padding: 12px 14px; }
   .time-input-wrap .time-label { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
   .time-input-wrap input[type=time] { background: none; border: none; padding: 0; font-family: 'Gowun Batang', serif; font-size: 22px; color: var(--accent); text-align: left; }
 
-  /* Vitality slider */
   .vitality-options { display: flex; gap: 4px; }
   .vitality-btn { flex: 1; padding: 14px 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font-size: 22px; cursor: pointer; transition: all 0.2s; }
   .vitality-btn.selected { background: var(--accent-dim); border-color: var(--accent); transform: scale(1.08); }
   .vitality-btn:active { transform: scale(0.94); }
   .vitality-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-top: 6px; padding: 0 4px; }
 
-  /* Affect Grid (2D mood) */
   .affect-grid-wrap { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px; padding: 20px 14px 12px; position: relative; }
-  .affect-grid-labels { font-size: 10px; color: var(--text-dim); text-align: center; margin-bottom: 8px; }
-  .affect-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(5, 1fr);
-    gap: 4px;
-    aspect-ratio: 1;
-    max-width: 280px;
-    margin: 0 auto;
-    position: relative;
-  }
-  .affect-cell {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-  }
+  .affect-grid { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); gap: 4px; aspect-ratio: 1; max-width: 280px; margin: 0 auto; position: relative; }
+  .affect-cell { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; font-size: 16px; }
   .affect-cell:active { transform: scale(0.92); }
   .affect-cell.selected { background: var(--accent); border-color: var(--accent2); }
   .affect-axis-x { font-size: 10px; color: var(--text-dim); display: flex; justify-content: space-between; margin-top: 6px; max-width: 280px; margin-left: auto; margin-right: auto; }
   .affect-axis-y-label { font-size: 10px; color: var(--text-dim); text-align: center; margin-bottom: 4px; }
 
-  /* Quick buttons */
   .quick-row { display: flex; gap: 6px; }
   .quick-btn { flex: 1; padding: 12px 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; color: var(--text-dim); font-size: 12px; font-family: inherit; cursor: pointer; text-align: center; transition: all 0.2s; }
   .quick-btn.selected { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
   .quick-btn:active { transform: scale(0.96); }
 
-  /* Optional module toggle */
   .optional-section { margin-top: 20px; }
   .optional-toggle { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; margin-bottom: 8px; }
   .optional-toggle .label { font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 8px; }
@@ -156,26 +192,22 @@
   .optional-expand { display: none; padding: 16px; background: var(--surface2); border-radius: 12px; margin-bottom: 8px; }
   .optional-expand.show { display: block; }
 
-  /* AI bubble / 4-stage response */
   .ai-bubble { background: var(--surface); border: 1px solid rgba(201,169,110,0.15); border-radius: 18px; padding: 20px; margin-bottom: 16px; position: relative; }
   .ai-bubble::before { content: '🐚'; position: absolute; top: -12px; left: 16px; font-size: 20px; }
   .ai-text { font-size: 14px; line-height: 1.85; color: var(--text); white-space: pre-wrap; }
   .ai-text .stage-label { display: inline-block; font-size: 11px; color: var(--accent); font-weight: 700; letter-spacing: 0.05em; margin-top: 12px; margin-bottom: 4px; }
-  .ai-text .stage-label:first-child { margin-top: 0; }
   .ai-loading { display: flex; gap: 5px; align-items: center; padding: 2px 0; }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
   .dot:nth-child(2) { animation-delay: 0.2s; }
   .dot:nth-child(3) { animation-delay: 0.4s; }
   @keyframes pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
 
-  /* Proposal buttons */
   .proposal-buttons { display: flex; gap: 8px; margin-top: 14px; margin-bottom: 4px; }
   .proposal-btn { flex: 1; padding: 12px; border-radius: 12px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; }
   .proposal-btn.accept { background: linear-gradient(135deg, var(--accent), #b8894a); color: var(--bg); }
   .proposal-btn.decline { background: transparent; border: 1px solid var(--border-strong); color: var(--text-dim); }
   .proposal-btn:active { transform: scale(0.97); }
 
-  /* Buttons */
   .btn-primary { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--accent), #b8894a); border: none; border-radius: 14px; color: var(--bg); font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all 0.2s; }
   .btn-primary:active { transform: scale(0.98); }
   .btn-secondary { width: 100%; padding: 14px; background: transparent; border: 1px solid var(--border-strong); border-radius: 14px; color: var(--text-dim); font-size: 13px; font-family: inherit; cursor: pointer; margin-top: 8px; }
@@ -214,7 +246,6 @@
   .nav-label { font-size: 9px; color: var(--text-dim); letter-spacing: 0.04em; }
   .nav-item.active .nav-label { color: var(--accent); }
 
-  /* Model screen */
   .model-section { margin-bottom: 22px; }
   .model-section-title { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
   .model-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 8px; position: relative; }
@@ -230,7 +261,6 @@
   .model-item-action.approve { color: var(--success); border-color: rgba(152,195,121,0.3); }
   .model-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; line-height: 1.7; }
 
-  /* Archive */
   .archive-item { background: var(--surface); border-radius: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid var(--border); }
   .archive-date { font-size: 10px; color: var(--accent); margin-bottom: 6px; letter-spacing: 0.06em; }
   .archive-source { font-size: 10px; color: var(--text-dim); padding: 2px 8px; background: var(--surface2); border-radius: 8px; margin-left: 6px; }
@@ -240,10 +270,40 @@
   .api-key-box { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
   .api-key-box input { background: none; border: none; padding: 0; font-family: monospace; font-size: 12px; }
 
+  /* Shell collection modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
+  .modal-overlay.active { display: flex; }
+  .modal { width: 100%; max-width: 520px; background: var(--surface); border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 24px 24px 40px; max-height: 85vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-title { font-family: 'Gowun Batang', serif; font-size: 22px; margin-bottom: 8px; }
+  .modal-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 20px; }
+
+  .shell-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
+  .shell-slot { aspect-ratio: 1; background: var(--surface2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 26px; opacity: 0.3; position: relative; transition: all 0.3s; }
+  .shell-slot.collected { opacity: 1; background: linear-gradient(135deg, var(--accent-dim), rgba(139,126,196,0.1)); border: 1px solid rgba(201,169,110,0.3); }
+  .shell-slot.new { animation: shellPop 0.6s ease; }
+  @keyframes shellPop { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+
+  /* Celebration animation */
+  .celebration { position: fixed; inset: 0; pointer-events: none; z-index: 300; display: none; align-items: center; justify-content: center; }
+  .celebration.show { display: flex; }
+  .celebration-content { text-align: center; animation: celebrationPop 0.5s ease; }
+  .celebration-emoji { font-size: 80px; animation: bounce 0.8s ease infinite; }
+  .celebration-text { font-family: 'Gowun Batang', serif; font-size: 22px; color: var(--accent); margin-top: 12px; }
+  .celebration-shell { font-size: 40px; color: var(--accent); margin-top: 8px; animation: rotateShell 1s ease; }
+  @keyframes celebrationPop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+  @keyframes rotateShell { from { transform: rotate(-180deg) scale(0); } to { transform: rotate(0) scale(1); } }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: var(--surface3); color: var(--text); padding: 12px 20px; border-radius: 24px; font-size: 13px; z-index: 400; border: 1px solid rgba(201,169,110,0.3); opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 85%; text-align: center; }
+  .toast.show { opacity: 1; }
+
   a { color: var(--accent); }
 </style>
 </head>
 <body>
+
 <div class="app">
   <div class="header">
     <div class="logo">🐚 소라고동</div>
@@ -261,7 +321,22 @@
         <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
       </div>
 
-      <!-- Context modes -->
+      <!-- Shell collection bar -->
+      <div class="shell-bar" onclick="openShellCollection()">
+        <div class="left">
+          <span style="font-size:20px;">🐚</span>
+          <div>
+            <div class="shell-count" id="shellCount">0</div>
+            <div class="shell-label">모은 소라</div>
+          </div>
+        </div>
+        <div class="streak-info" id="streakInfo">탭해서 보기 →</div>
+      </div>
+
+      <!-- Today's mission -->
+      <div id="missionContainer"></div>
+
+      <!-- Modes -->
       <div class="mode-row" id="modeRow">
         <div class="mode-chip" data-mode="exam" onclick="toggleMode('exam')">📚 마감</div>
         <div class="mode-chip" data-mode="travel" onclick="toggleMode('travel')">✈️ 여행</div>
@@ -294,12 +369,11 @@
       </div>
     </div>
 
-    <!-- CHECK-IN (Research-based) -->
+    <!-- CHECK-IN -->
     <div class="screen" id="screen-checkin">
       <div class="screen-title">오늘 체크인</div>
       <div class="screen-sub">딱 15초. 부담 없이. 몰라도 괜찮아.</div>
 
-      <!-- 1. Sleep Regularity -->
       <div class="input-group">
         <div class="input-label">😴 어젯밤 수면</div>
         <div class="time-pair">
@@ -315,7 +389,6 @@
         <div style="font-size:11px; color:var(--text-dim); margin-top:6px;" id="sleepDuration"></div>
       </div>
 
-      <!-- 2. Subjective Vitality -->
       <div class="input-group">
         <div class="input-label">⚡ 지금 몸의 에너지는?</div>
         <div class="vitality-options">
@@ -331,7 +404,6 @@
         </div>
       </div>
 
-      <!-- 3. 2D Affect Grid (Russell circumplex) -->
       <div class="input-group">
         <div class="input-label">💭 지금 마음은 어디?</div>
         <div class="affect-grid-wrap">
@@ -345,13 +417,11 @@
         </div>
       </div>
 
-      <!-- 4. Free note -->
       <div class="input-group">
         <div class="input-label">💬 한 줄로 오늘은? <span class="optional">(선택)</span></div>
         <textarea id="checkinNote" placeholder="빈칸도 OK. 뭐든 생각나는 거." rows="2"></textarea>
       </div>
 
-      <!-- Optional modules -->
       <div class="optional-section">
         <div style="font-size:11px; color:var(--text-soft); margin-bottom:10px; letter-spacing:0.06em;">━ 선택 모듈 (누르면 펼침) ━</div>
 
@@ -454,7 +524,6 @@
     <div class="screen" id="screen-settings">
       <div class="screen-title">설정</div>
       <div class="screen-sub">소라고동을 네 것으로.</div>
-
       <div class="input-group">
         <div class="input-label">🔑 Anthropic API 키</div>
         <div class="api-key-box">
@@ -464,27 +533,21 @@
           <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>에서 발급
         </div>
       </div>
-
       <div class="input-group">
         <div class="input-label">👤 내 프로필 (AI가 참고)</div>
-        <textarea id="profileInput" placeholder="예: ADHD/ADD 성향. 과몰입·전환집중 어려움..." rows="5"></textarea>
+        <textarea id="profileInput" placeholder="예: ADHD/ADD 성향..." rows="5"></textarea>
       </div>
-
       <button class="btn-primary" onclick="saveSettings()">저장</button>
-
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
         <button class="btn-secondary" onclick="exportData()">📤 데이터 내보내기 (백업)</button>
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
       </div>
-
       <button class="btn-secondary" onclick="showScreen('home')" style="margin-top:16px;">돌아가기</button>
-
       <div style="margin-top:30px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
         <strong style="color:var(--accent)">프라이버시</strong><br>
-        모든 기록은 너의 Supabase에 저장되고, 다른 기기에서도 접근돼.<br>
-        API 호출은 Anthropic 서버를 통과하지만 7일 후 삭제되고 학습에 쓰이지 않아.
+        모든 기록은 너의 Supabase에 저장되고, 다른 기기에서도 접근돼.
       </div>
     </div>
   </div>
@@ -505,6 +568,32 @@
   </div>
 </div>
 
+<!-- Shell collection modal -->
+<div class="modal-overlay" id="shellModal" onclick="if(event.target===this)closeModal('shellModal')">
+  <div class="modal">
+    <div class="modal-title">🐚 소라 컬렉션</div>
+    <div class="modal-sub" id="shellSubtext"></div>
+    <div class="shell-grid" id="shellGrid"></div>
+    <div style="background: var(--surface2); padding: 14px; border-radius: 12px; font-size: 12px; color: var(--text-dim); line-height: 1.7;">
+      미션을 하나씩 완료하면 소라를 모을 수 있어.<br>
+      페널티 없어. 못 해도 괜찮고, 쉬어도 괜찮아 🌊
+    </div>
+    <button class="btn-secondary" onclick="closeModal('shellModal')" style="margin-top:16px;">닫기</button>
+  </div>
+</div>
+
+<!-- Celebration -->
+<div class="celebration" id="celebration">
+  <div class="celebration-content">
+    <div class="celebration-emoji" id="celebrationEmoji">✨</div>
+    <div class="celebration-text" id="celebrationText"></div>
+    <div class="celebration-shell" id="celebrationShell"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
 // ═══════════════════════════════════════════════════════════════
 // CONFIG
@@ -512,6 +601,9 @@
 const SUPABASE_URL = 'https://pfagqvfteqzfhkbxtnwp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmYWdxdmZ0ZXF6ZmhrYnh0bndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjU4MDMsImV4cCI6MjA5MjYwMTgwM30.jDYXky2ga-o_02uWWrqqwti_HfHm8K_61IHPV81YBoA';
 const USER_ID = 'me';
+
+// Shell types for collection
+const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮', '🌊', '🐠', '🐡', '🦐', '🪸', '🌺', '🌸', '🌼', '🌻', '🌷', '🍀', '🌱'];
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -530,14 +622,16 @@ const DEFAULT_STATE = {
   apiKey: '',
   profile: '',
   lastSync: null,
-  version: 2
+  // Phase 2 additions
+  missions: [],           // All missions (pending, completed, skipped)
+  shellCollection: [],    // [{type: '🐚', date: '2026-04-25', missionId: '...', note: '...'}]
+  version: 3
 };
 
 let state = { ...DEFAULT_STATE };
 let currentCheckin = {};
 let syncStatus = 'offline';
 let syncTimeout = null;
-let selectedAffectCell = null;
 
 function saveState() {
   localStorage.setItem('soragodong_v2', JSON.stringify(state));
@@ -550,22 +644,24 @@ function saveState() {
 async function loadFromCloud() {
   setSyncStatus('syncing');
   try {
-    const resp = await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}&order=updated_at.desc&limit=1`,
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}&order=updated_at.desc&limit=1`,
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
     );
     if (!resp.ok) throw new Error('Load failed');
     const data = await resp.json();
     if (data.length > 0) {
       state = { ...DEFAULT_STATE, ...data[0].data };
-      // Ensure modes object exists
       state.modes = { ...DEFAULT_STATE.modes, ...(state.modes || {}) };
+      if (!state.missions) state.missions = [];
+      if (!state.shellCollection) state.shellCollection = [];
       console.log('✅ Loaded from cloud');
     } else {
       const local = localStorage.getItem('soragodong_v2');
       if (local) {
         state = { ...DEFAULT_STATE, ...JSON.parse(local) };
         state.modes = { ...DEFAULT_STATE.modes, ...(state.modes || {}) };
+        if (!state.missions) state.missions = [];
+        if (!state.shellCollection) state.shellCollection = [];
         await saveToCloudNow();
       }
     }
@@ -577,6 +673,8 @@ async function loadFromCloud() {
     if (local) {
       state = { ...DEFAULT_STATE, ...JSON.parse(local) };
       state.modes = { ...DEFAULT_STATE.modes, ...(state.modes || {}) };
+      if (!state.missions) state.missions = [];
+      if (!state.shellCollection) state.shellCollection = [];
     }
     setSyncStatus('error');
     return false;
@@ -585,8 +683,7 @@ async function loadFromCloud() {
 
 async function saveToCloudNow() {
   state.lastSync = new Date().toISOString();
-  const checkResp = await fetch(
-    `${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}&select=id&limit=1`,
+  const checkResp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}&select=id&limit=1`,
     { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
   );
   const existing = await checkResp.json();
@@ -613,7 +710,6 @@ function saveToCloud() {
       await saveToCloudNow();
       setSyncStatus('online');
     } catch (e) {
-      console.error('Sync error:', e);
       setSyncStatus('error');
     }
   }, 1000);
@@ -624,8 +720,8 @@ async function manualSync() {
   try {
     await saveToCloudNow();
     setSyncStatus('online');
-    alert('동기화 완료 ✦');
-  } catch (e) { setSyncStatus('error'); alert('동기화 실패'); }
+    showToast('동기화 완료 ✦');
+  } catch (e) { setSyncStatus('error'); showToast('동기화 실패'); }
 }
 
 function setSyncStatus(status) {
@@ -649,6 +745,8 @@ async function init() {
   buildAffectGrid();
   renderModes();
   renderModelPreview();
+  renderTodayMission();
+  renderShellBar();
   renderModel();
   renderArchive();
   renderChat();
@@ -658,6 +756,186 @@ async function init() {
 }
 
 function todayKey() { return new Date().toISOString().split('T')[0]; }
+
+// ═══════════════════════════════════════════════════════════════
+// MISSION SYSTEM (Phase 2 core)
+// ═══════════════════════════════════════════════════════════════
+function getTodayMission() {
+  const key = todayKey();
+  return state.missions.find(m => m.scheduledFor === key && m.status === 'pending')
+      || state.missions.filter(m => m.completedDate === key).slice(-1)[0];
+}
+
+function hasActivePendingMission() {
+  const key = todayKey();
+  return state.missions.some(m => m.scheduledFor === key && m.status === 'pending');
+}
+
+function renderTodayMission() {
+  const container = document.getElementById('missionContainer');
+  const mission = getTodayMission();
+
+  if (!mission) {
+    container.innerHTML = '';
+    return;
+  }
+
+  if (mission.status === 'completed') {
+    container.innerHTML = `
+      <div class="mission-card completed">
+        <div class="mission-label">✓ 오늘의 미션 완료</div>
+        <div class="mission-title">${escapeHtml(mission.title)}</div>
+        ${mission.completionNote ? `<div class="mission-completion-msg">${escapeHtml(mission.completionNote)}</div>` : ''}
+      </div>
+    `;
+  } else {
+    container.innerHTML = `
+      <div class="mission-card">
+        <div class="mission-label">✦ 오늘의 미션</div>
+        <div class="mission-title">${escapeHtml(mission.title)}</div>
+        ${mission.description ? `<div class="mission-desc">${escapeHtml(mission.description)}</div>` : ''}
+        <div class="mission-actions">
+          <button class="mission-btn complete" onclick="completeMission('${mission.id}')">✓ 해냈어</button>
+          <button class="mission-btn skip" onclick="skipMission('${mission.id}')">오늘은 패스</button>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function createMission(title, description, options = {}) {
+  const mission = {
+    id: 'mis_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: title,
+    description: description || '',
+    createdAt: new Date().toISOString(),
+    scheduledFor: options.scheduledFor || todayKey(),
+    status: 'pending',
+    sourceMessageIdx: options.sourceMessageIdx,
+    linkedStrategy: options.linkedStrategy
+  };
+  state.missions.push(mission);
+  saveState();
+  return mission;
+}
+
+async function completeMission(missionId) {
+  const mission = state.missions.find(m => m.id === missionId);
+  if (!mission) return;
+
+  mission.status = 'completed';
+  mission.completedDate = todayKey();
+  mission.completedAt = new Date().toISOString();
+
+  // Add shell to collection
+  const shellType = SHELL_TYPES[state.shellCollection.length % SHELL_TYPES.length];
+  state.shellCollection.push({
+    type: shellType,
+    date: todayKey(),
+    missionId: mission.id,
+    title: mission.title
+  });
+
+  saveState();
+
+  // Celebration
+  showCelebration('✨', '해냈다!', shellType);
+
+  // Request AI brief encouragement
+  if (state.apiKey) {
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 150,
+          messages: [{
+            role: 'user',
+            content: `사용자가 "${mission.title}" 미션을 완료했어. 친구처럼 짧게 (1-2문장) 축하 메시지를 써줘. 과정이나 노력에 초점. 판에 박힌 "잘했어!" 금지. 구체적으로 진심으로. 반말. 이모지 최대 1개.`
+          }]
+        })
+      });
+      const data = await resp.json();
+      mission.completionNote = data.content[0].text.trim();
+      saveState();
+    } catch (e) { console.error(e); }
+  }
+
+  setTimeout(() => {
+    renderTodayMission();
+    renderShellBar();
+  }, 1500);
+}
+
+function skipMission(missionId) {
+  const mission = state.missions.find(m => m.id === missionId);
+  if (!mission) return;
+  mission.status = 'skipped';
+  mission.skippedAt = new Date().toISOString();
+  saveState();
+  showToast('괜찮아, 그런 날도 있어 🌊');
+  setTimeout(() => { renderTodayMission(); }, 300);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHELL COLLECTION
+// ═══════════════════════════════════════════════════════════════
+function renderShellBar() {
+  document.getElementById('shellCount').textContent = state.shellCollection.length;
+  const recent = state.shellCollection.slice(-7);
+  let info = '탭해서 보기 →';
+  if (recent.length > 0) {
+    info = recent.slice(-3).map(s => s.type).join(' ') + ' →';
+  }
+  document.getElementById('streakInfo').innerHTML = info;
+}
+
+function openShellCollection() {
+  const modal = document.getElementById('shellModal');
+  const grid = document.getElementById('shellGrid');
+  const sub = document.getElementById('shellSubtext');
+
+  sub.textContent = `지금까지 ${state.shellCollection.length}개의 소라를 모았어`;
+
+  // Build grid - show collected + empty slots for motivation
+  const totalSlots = Math.max(25, Math.ceil(state.shellCollection.length / 5) * 5 + 5);
+  let html = '';
+  for (let i = 0; i < totalSlots; i++) {
+    const shell = state.shellCollection[i];
+    if (shell) {
+      html += `<div class="shell-slot collected" title="${escapeHtml(shell.title || '')}">${shell.type}</div>`;
+    } else {
+      html += `<div class="shell-slot">•</div>`;
+    }
+  }
+  grid.innerHTML = html;
+
+  modal.classList.add('active');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CELEBRATION / TOAST
+// ═══════════════════════════════════════════════════════════════
+function showCelebration(emoji, text, shell) {
+  const el = document.getElementById('celebration');
+  document.getElementById('celebrationEmoji').textContent = emoji;
+  document.getElementById('celebrationText').textContent = text;
+  document.getElementById('celebrationShell').textContent = shell;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
@@ -672,7 +950,7 @@ function showScreen(name) {
   target && target.scrollTo(0, 0);
   document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';
 
-  if (name === 'home') { renderModelPreview(); updateCheckinSub(); renderModes(); }
+  if (name === 'home') { renderModelPreview(); updateCheckinSub(); renderModes(); renderTodayMission(); renderShellBar(); }
   if (name === 'model') renderModel();
   if (name === 'archive') renderArchive();
   if (name === 'chat') { renderChat(); setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50); }
@@ -715,23 +993,16 @@ function getCyclePhase() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// AFFECT GRID
+// AFFECT GRID / VITALITY / SLEEP (unchanged from phase 1.5)
 // ═══════════════════════════════════════════════════════════════
 function buildAffectGrid() {
   const grid = document.getElementById('affectGrid');
   grid.innerHTML = '';
-  // 5x5 grid, rows top-to-bottom = high arousal to low arousal
-  // cols left-to-right = negative valence to positive valence
   const labels = [
-    // Row 0 (high arousal)
     ['😡','😠','😳','🤩','🥳'],
-    // Row 1
     ['😤','😟','😐','😀','😄'],
-    // Row 2 (mid)
     ['😔','🙁','😶','🙂','😊'],
-    // Row 3
     ['😞','😕','😑','😌','😇'],
-    // Row 4 (low arousal)
     ['😴','😪','💤','🌙','☺️']
   ];
   for (let row = 0; row < 5; row++) {
@@ -739,8 +1010,8 @@ function buildAffectGrid() {
       const cell = document.createElement('div');
       cell.className = 'affect-cell';
       cell.textContent = labels[row][col];
-      cell.dataset.valence = col - 2;  // -2 to +2
-      cell.dataset.arousal = 2 - row;  // -2 to +2
+      cell.dataset.valence = col - 2;
+      cell.dataset.arousal = 2 - row;
       cell.onclick = () => selectAffectCell(cell);
       grid.appendChild(cell);
     }
@@ -755,18 +1026,12 @@ function selectAffectCell(cell) {
   currentCheckin.affectEmoji = cell.textContent;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// VITALITY
-// ═══════════════════════════════════════════════════════════════
 function selectVitality(btn, level) {
   document.querySelectorAll('.vitality-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   currentCheckin.vitality = level;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// SLEEP DURATION CALC
-// ═══════════════════════════════════════════════════════════════
 function updateSleepDuration() {
   const startEl = document.getElementById('sleepStart');
   const endEl = document.getElementById('sleepEnd');
@@ -783,9 +1048,6 @@ function updateSleepDuration() {
   document.getElementById('sleepDuration').textContent = `약 ${hours}시간 ${mins}분`;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// OPTIONAL MODULES
-// ═══════════════════════════════════════════════════════════════
 function toggleOptional(key) {
   const toggle = document.querySelector(`[onclick="toggleOptional('${key}')"]`);
   const expand = document.getElementById('expand-' + key);
@@ -803,18 +1065,13 @@ function selectQuick(btn, key, value) {
   currentCheckin[key] = value;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CHECK-IN SUBMIT
-// ═══════════════════════════════════════════════════════════════
 async function submitCheckin() {
   const sleepStart = document.getElementById('sleepStart').value;
   const sleepEnd = document.getElementById('sleepEnd').value;
   const note = document.getElementById('checkinNote').value;
-
   const key = todayKey();
   let entry = state.entries.find(e => e.date === key);
   if (!entry) { entry = { date: key }; state.entries.push(entry); }
-
   entry.sleepStart = sleepStart;
   entry.sleepEnd = sleepEnd;
   entry.vitality = currentCheckin.vitality;
@@ -824,16 +1081,12 @@ async function submitCheckin() {
   entry.note = note;
   entry.modes = { ...state.modes };
   entry.cyclePhase = getCyclePhase();
-
-  // Optional modules
-  ['meals', 'movement', 'focus', 'social', 'overwhelm'].forEach(key => {
-    if (currentCheckin[key]) entry[key] = currentCheckin[key];
+  ['meals', 'movement', 'focus', 'social', 'overwhelm'].forEach(k => {
+    if (currentCheckin[k]) entry[k] = currentCheckin[k];
   });
-
   entry.timestamp = new Date().toISOString();
   saveState();
 
-  // If note exists, add to chat for AI analysis
   if (note.trim()) {
     const summary = buildCheckinSummary(entry);
     state.chatMessages.push({
@@ -848,8 +1101,8 @@ async function submitCheckin() {
   } else {
     currentCheckin = {};
     updateCheckinSub();
-    // Simple feedback
     showScreen('home');
+    showToast('기록 고마워 🐚');
   }
 }
 
@@ -870,7 +1123,7 @@ function buildCheckinSummary(entry) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// MODEL
+// MODEL RENDERING (unchanged)
 // ═══════════════════════════════════════════════════════════════
 function renderModelPreview() {
   const el = document.getElementById('modelPreviewContent');
@@ -896,7 +1149,6 @@ function renderModel() {
     </div>`;
     return;
   }
-
   let html = '';
   if (state.values.length > 0) {
     html += `<div class="model-section"><div class="model-section-title">🎯 네가 중시하는 것</div>`;
@@ -915,7 +1167,7 @@ function renderModel() {
   }
   if (state.caseFormulation.version > 0) {
     html += `<div class="model-section"><div class="model-section-title">📋 Case Formulation v.${state.caseFormulation.version}</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">(임상적 개념화 — 자세히)</div>`;
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">(임상적 개념화)</div>`;
     if (state.caseFormulation.problems.length > 0) {
       html += `<div class="model-item"><div class="model-item-name">🔍 주요 관찰</div>
         <div class="model-item-desc">${state.caseFormulation.problems.map(p => `• ${escapeHtml(p)}`).join('<br>')}</div></div>`;
@@ -1003,7 +1255,8 @@ function renderChat() {
         <button class="proposal-btn decline" onclick="declineProposal(${i})">나중에</button>
       </div>`;
     } else if (m.proposalResponse) {
-      proposalBtns = `<div style="font-size:11px; color:var(--text-dim); margin-top:8px; padding: 0 4px;">${m.proposalResponse === 'accept' ? '✦ 수락함' : '✗ 거절함'}</div>`;
+      const icon = m.proposalResponse === 'accept' ? '✦ 미션으로 등록됨' : '✗ 거절함';
+      proposalBtns = `<div style="font-size:11px; color:var(--accent); margin-top:8px; padding: 0 4px;">${icon}</div>`;
     }
 
     return `<div class="msg ${msgClass}">${bubble}${proposalBtns}${actions}</div>`;
@@ -1012,10 +1265,8 @@ function renderChat() {
 }
 
 function formatAIResponse(text) {
-  // Strip any JSON blocks (safety - shouldn't be there)
   let cleaned = text.replace(/```json[\s\S]*?```/g, '').trim();
-  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation)[\s\S]*\}\s*$/g, '').trim();
-
+  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal)[\s\S]*\}\s*$/g, '').trim();
   let formatted = escapeHtml(cleaned);
   const labels = ['[내가 본 것]', '[이게 뭐냐면]', '[이럴 땐 이렇게]', '[오늘의 제안]'];
   labels.forEach(label => {
@@ -1037,7 +1288,6 @@ async function sendChat() {
 }
 
 async function retryMessage(errorIdx) {
-  // Remove the error message
   state.chatMessages.splice(errorIdx, 1);
   renderChat();
   saveState();
@@ -1045,7 +1295,6 @@ async function retryMessage(errorIdx) {
 }
 
 async function generateAIResponse() {
-  // Remove any pending typing indicator
   state.chatMessages = state.chatMessages.filter(m => !m.typing);
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
   renderChat();
@@ -1102,15 +1351,11 @@ async function generateAIResponse() {
           const parsed = JSON.parse(data);
           if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
             fullText += parsed.delta.text;
-            // Aggressive JSON stripping during streaming
             let display = fullText;
-            // Remove JSON code block if complete
             display = display.replace(/```json[\s\S]*?```/g, '');
-            // Remove unfinished JSON at end (starting with ```json or { at end)
             display = display.replace(/```json[\s\S]*$/g, '');
             display = display.replace(/\n*\{[\s\S]*$/g, (match) => {
-              // Only strip if looks like analysis JSON (contains keys)
-              if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation)/.test(match)) {
+              if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal)/.test(match)) {
                 return '';
               }
               return match;
@@ -1123,33 +1368,36 @@ async function generateAIResponse() {
       }
     }
 
-    // Final cleanup + analysis extraction
+    // Extract analysis JSON
     const jsonMatch = fullText.match(/```json\s*([\s\S]*?)\s*```/);
+    let analysisData = null;
     if (jsonMatch) {
       try {
-        const analysis = JSON.parse(jsonMatch[1]);
-        await processAnalysis(analysis, state.chatMessages.length - 1);
+        analysisData = JSON.parse(jsonMatch[1]);
+        await processAnalysis(analysisData, state.chatMessages.length - 1);
       } catch (e) { console.error('Analysis parse error:', e); }
     } else {
-      // Try to find raw JSON at end
-      const rawJsonMatch = fullText.match(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation)[\s\S]*\}/);
+      const rawJsonMatch = fullText.match(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|proposal)[\s\S]*\}/);
       if (rawJsonMatch) {
         try {
-          const analysis = JSON.parse(rawJsonMatch[0]);
-          await processAnalysis(analysis, state.chatMessages.length - 1);
-        } catch (e) { console.error('Raw JSON parse error:', e); }
+          analysisData = JSON.parse(rawJsonMatch[0]);
+          await processAnalysis(analysisData, state.chatMessages.length - 1);
+        } catch (e) {}
       }
     }
 
-    // Final display - clean
     const finalDisplay = fullText
       .replace(/```json[\s\S]*?```/g, '')
-      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation)[\s\S]*\}/g, '')
+      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal)[\s\S]*\}/g, '')
       .trim();
     state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
 
-    if (fullText.includes('[오늘의 제안]')) {
+    // Check for proposal in response
+    if (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal)) {
       state.chatMessages[state.chatMessages.length - 1].proposal = true;
+      if (analysisData && analysisData.proposal) {
+        state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;
+      }
     }
 
     saveState();
@@ -1168,21 +1416,12 @@ async function generateAIResponse() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// ANALYSIS PROCESSING
-// ═══════════════════════════════════════════════════════════════
 async function processAnalysis(analysis, messageIdx) {
   if (analysis.new_traits) {
     analysis.new_traits.forEach(t => {
       const exists = state.traits.find(e => similarText(e.name, t.name));
       if (!exists) {
-        state.traits.push({
-          id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-          name: t.name, description: t.description || '',
-          confidence: t.confidence || 0.5,
-          user_verified: false, evidence_count: 1,
-          created_at: new Date().toISOString()
-        });
+        state.traits.push({ id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: t.name, description: t.description || '', confidence: t.confidence || 0.5, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
       } else {
         exists.evidence_count = (exists.evidence_count || 1) + 1;
         exists.confidence = Math.min(1.0, exists.confidence + 0.1);
@@ -1193,13 +1432,7 @@ async function processAnalysis(analysis, messageIdx) {
     analysis.new_values.forEach(v => {
       const exists = state.values.find(e => similarText(e.name, v.name));
       if (!exists) {
-        state.values.push({
-          id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-          name: v.name, description: v.description || '',
-          confidence: v.confidence || 0.5,
-          user_verified: false, evidence_count: 1,
-          sdt_need: v.sdt_need || null
-        });
+        state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: v.name, description: v.description || '', confidence: v.confidence || 0.5, user_verified: false, evidence_count: 1, sdt_need: v.sdt_need || null });
       } else {
         exists.evidence_count = (exists.evidence_count || 1) + 1;
         exists.confidence = Math.min(1.0, exists.confidence + 0.1);
@@ -1210,13 +1443,7 @@ async function processAnalysis(analysis, messageIdx) {
     analysis.new_patterns.forEach(p => {
       const exists = state.patterns.find(e => similarText(e.name, p.name));
       if (!exists) {
-        state.patterns.push({
-          id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-          name: p.name, description: p.description || '',
-          trigger: p.trigger || '', sequence: p.sequence || '',
-          confidence: p.confidence || 0.5,
-          user_verified: false, evidence_count: 1
-        });
+        state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: p.name, description: p.description || '', trigger: p.trigger || '', sequence: p.sequence || '', confidence: p.confidence || 0.5, user_verified: false, evidence_count: 1 });
       } else {
         exists.evidence_count = (exists.evidence_count || 1) + 1;
         exists.confidence = Math.min(1.0, exists.confidence + 0.1);
@@ -1237,6 +1464,9 @@ async function processAnalysis(analysis, messageIdx) {
   if (analysis.insight) {
     state.chatMessages[messageIdx].insightCandidate = analysis.insight;
   }
+  if (analysis.proposal) {
+    state.chatMessages[messageIdx].proposalData = analysis.proposal;
+  }
   saveState();
 }
 
@@ -1249,92 +1479,89 @@ function similarText(a, b) {
 // ═══════════════════════════════════════════════════════════════
 // SYSTEM PROMPT
 // ═══════════════════════════════════════════════════════════════
-const SYSTEM_PERSONA = `너는 "소라고동"이야. 사용자의 AI 라이프 전략가이자 친한 친구.
+const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 AI 라이프 전략가이자 친한 친구.
 
 핵심 정체성:
-- 네 역할은 사용자의 "Case Formulation"을 시간에 따라 구축하는 임상가이자 전략 컨설턴트.
-- 동시에 편안한 친구처럼 대화함.
-- 단순 공감 챗봇 아님. 전략 제공이 핵심.
+- Case Formulation을 시간에 따라 구축하는 임상가이자 전략 컨설턴트.
+- 친구처럼 편안하게 대화.
+- 단순 공감 챗봇 X. 전략 제공이 핵심.
 
 절대 원칙:
 1. 반말, 친근함. 상담사 말투 금지.
 2. 상투적 긍정 금지 ("힘내", "할 수 있어" X).
-3. 구체적으로 말하기 — 사용자의 실제 기록과 말 인용.
-4. 결과가 아닌 과정·태도·선택에 주목.
-5. 힘든 날엔 공감 먼저, 그다음 도움.
-6. 쉰 날/못한 날 죄책감 없이. 휴식도 유효한 하루.
-7. Self-compassion (Kristin Neff) 기반 반응.
-8. ADHD 특성 고려 — 규칙성보다 유연성.
+3. 구체적으로. 사용자의 실제 기록과 말 인용.
+4. 결과가 아닌 과정·태도·선택.
+5. 힘든 날엔 공감 먼저.
+6. 쉰 날/못한 날 죄책감 없이.
+7. Self-compassion (Neff) 기반.
+8. ADHD 특성 고려.
 9. 동의만 하지 않기. 필요하면 부드럽게 반박.
 10. 이모지 1-2개 (🐚 자주).
 
-응답 구조 (상황에 맞게 선택):
+응답 구조 (상황에 맞게):
 
-【풀 버전 - 일기/고민/중요한 순간에 사용】
-1. 짧은 공감 인사 (1-2줄)
-2. [내가 본 것] — 사용자의 말·기록에서 발견한 패턴을 담백하게. 판단 없이.
-3. [이게 뭐냐면] — 심리학 개념으로 설명. 연구자 이름 자연스럽게 언급.
-   (Gollwitzer, Neff, Barkley, Hershfield, Wilson & Gilbert, Heath brothers,
-    Klein, Burnett & Evans, Dweck, Lally, Grossmann, Russell, Buysse 등)
-4. [이럴 땐 이렇게] — 증거 기반 전략. 구체적 방법.
-5. [오늘의 제안] — 아주 구체적이고 작은 행동 하나.
+【풀 버전 - 일기/고민/중요한 순간】
+1. 짧은 공감 (1-2줄)
+2. [내가 본 것] - 패턴을 담백하게
+3. [이게 뭐냐면] - 심리학 개념 + 연구자 이름 자연스럽게
+   (Gollwitzer, Neff, Barkley, Hershfield, Wilson & Gilbert, Heath, Klein, Burnett, Dweck, Russell, Buysse 등)
+4. [이럴 땐 이렇게] - 증거 기반 전략
+5. [오늘의 제안] - 아주 구체적이고 작은 행동
 
-【짧은 버전 - 가벼운 대화에 사용】
-공감 + 짧은 한마디로 끝. 4단계 강제 X.
+【짧은 버전 - 가벼운 대화】
+공감 + 짧은 한마디로 끝
 
-***중요***: 응답 맨 끝에 반드시 분석 JSON 추가 (사용자에게는 안 보임):
+***중요***: 응답 끝에 반드시 분석 JSON 추가 (사용자에게 안 보임):
 
 \`\`\`json
 {
   "new_traits": [{"name": "...", "description": "...", "confidence": 0.5}],
   "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy/competence/relatedness", "confidence": 0.5}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "description": "...", "confidence": 0.5}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.5}],
   "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "..."},
-  "insight": "오늘 대화에서 사용자에 대한 핵심 통찰을 한 문장으로 압축. 추상적이지 말고 구체적으로."
+  "insight": "오늘 대화의 핵심 통찰 한 문장",
+  "proposal": {
+    "title": "미션 제목 (10-25자, 구체적이고 작게)",
+    "description": "왜 이게 도움되는지 1-2문장. 심리학 개념 언급 가능."
+  }
 }
 \`\`\`
 
-JSON 규칙:
-- 새로 관찰한 것만. 모델에 이미 있는 건 제외.
-- 불확실하면 confidence 0.3-0.5.
-- 해당 없는 필드는 빈 배열 [] 또는 생략.
-- insight는 아카이빙용이므로 "사용자는 ~한 사람이다" 또는 "사용자는 ~할 때 ~하는 경향이 있다" 같은 명확한 문장으로.`;
+proposal은 [오늘의 제안]이 있을 때만. 제안 없으면 proposal 필드 생략.
+proposal.title 예시:
+- "침대에서 듀오링고 5분"
+- "5분 타이머 걸고 논문 쓰기 시작"
+- "오늘 하나만 - 10분 산책"
+- "3일 숙성 후 다시 결정"`;
 
 function buildSystemPrompt() {
   let ctx = [SYSTEM_PERSONA];
   ctx.push('\n━━━━━━━━━━━━━━━━━━━━━\n📂 사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
   if (state.profile) ctx.push(`[사용자 프로필]\n${state.profile}\n`);
 
-  // Active modes
   const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
   if (activeModes.length > 0) {
-    const modeMap = { exam: '📚 마감/시험 기간', travel: '✈️ 여행 중', sick: '🤒 아픈 상태', rest: '🏖 의도적 휴식', period: '🩸 월경 주기' };
+    const modeMap = { exam: '📚 마감/시험', travel: '✈️ 여행 중', sick: '🤒 아픔', rest: '🏖 휴식', period: '🩸 월경' };
     ctx.push('[현재 활성 모드]');
     activeModes.forEach(m => ctx.push('- ' + (modeMap[m] || m)));
     const phase = getCyclePhase();
-    if (phase) ctx.push(`- 월경 주기 단계: ${phase}`);
+    if (phase) ctx.push(`- 월경 주기: ${phase}`);
     ctx.push('');
   }
 
   if (state.values.length > 0) {
     ctx.push('[중시하는 가치]');
-    state.values.forEach(v => {
-      ctx.push(`- ${v.user_verified ? '✓' : '?'} ${v.name}${v.description ? ': ' + v.description : ''}`);
-    });
+    state.values.forEach(v => ctx.push(`- ${v.user_verified ? '✓' : '?'} ${v.name}${v.description ? ': ' + v.description : ''}`));
     ctx.push('');
   }
   if (state.traits.length > 0) {
     ctx.push('[특성]');
-    state.traits.forEach(t => {
-      ctx.push(`- ${t.user_verified ? '✓' : '?'} ${t.name}${t.description ? ': ' + t.description : ''}`);
-    });
+    state.traits.forEach(t => ctx.push(`- ${t.user_verified ? '✓' : '?'} ${t.name}${t.description ? ': ' + t.description : ''}`));
     ctx.push('');
   }
   if (state.patterns.length > 0) {
     ctx.push('[관찰된 패턴]');
-    state.patterns.forEach(p => {
-      ctx.push(`- ${p.user_verified ? '✓' : '?'} ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`);
-    });
+    state.patterns.forEach(p => ctx.push(`- ${p.user_verified ? '✓' : '?'} ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`));
     ctx.push('');
   }
   if (state.caseFormulation.version > 0) {
@@ -1343,6 +1570,17 @@ function buildSystemPrompt() {
     if (cf.problems.length) ctx.push('문제: ' + cf.problems.join('; '));
     if (cf.mechanisms.length) ctx.push('메커니즘: ' + cf.mechanisms.join('; '));
     if (cf.strengths.length) ctx.push('강점: ' + cf.strengths.join('; '));
+    ctx.push('');
+  }
+
+  // Recent missions
+  const recentMissions = state.missions.slice(-10);
+  if (recentMissions.length > 0) {
+    ctx.push('[최근 미션 기록]');
+    recentMissions.forEach(m => {
+      const icon = m.status === 'completed' ? '✓' : m.status === 'skipped' ? '⊘' : '○';
+      ctx.push(`${icon} "${m.title}" (${m.status})`);
+    });
     ctx.push('');
   }
 
@@ -1370,39 +1608,34 @@ function buildSystemPrompt() {
     ctx.push('[과거 깨달음 (최근 5개)]');
     state.archive.slice(0, 5).forEach(a => ctx.push(`- ${a.date}: ${a.insight}`));
   }
+
+  // Mission state
+  if (hasActivePendingMission()) {
+    ctx.push('\n[현재 상태] 오늘의 미션이 이미 있음. 새 제안은 신중하게 - 이미 있는 미션을 언급하거나, 진짜 다른 것일 때만 제안.');
+  }
+
   return ctx.join('\n');
 }
 
 // ═══════════════════════════════════════════════════════════════
-// INSIGHT SAVE (with AI summarization)
+// INSIGHT SAVING
 // ═══════════════════════════════════════════════════════════════
 async function saveMsgAsInsight(idx) {
   const msg = state.chatMessages[idx];
   if (!msg || msg.saved) return;
-
-  // Use AI-generated insight if available, otherwise summarize
   let insight = msg.insightCandidate;
   if (!insight) {
-    // Ask AI to summarize
     if (!state.apiKey) {
       insight = msg.content.slice(0, 150);
     } else {
       try {
         const resp = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': state.apiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true'
-          },
+          headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
           body: JSON.stringify({
             model: 'claude-sonnet-4-5',
             max_tokens: 200,
-            messages: [{
-              role: 'user',
-              content: `아래 대화 내용을 "깨달음 아카이브"에 저장할 한 문장으로 요약해줘. 자신에 대한 통찰 형태로. 1-2문장만. 다른 설명 없이:\n\n${msg.content}`
-            }]
+            messages: [{ role: 'user', content: `아래 대화 내용을 "깨달음 아카이브"에 저장할 한 문장으로 요약해줘. 자신에 대한 통찰 형태로. 1-2문장만:\n\n${msg.content}` }]
           })
         });
         const data = await resp.json();
@@ -1412,30 +1645,52 @@ async function saveMsgAsInsight(idx) {
       }
     }
   }
-
   const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-  state.archive.unshift({
-    date, insight,
-    source: '대화',
-    savedAt: new Date().toISOString()
-  });
+  state.archive.unshift({ date, insight, source: '대화', savedAt: new Date().toISOString() });
   msg.saved = true;
+  saveState();
+  renderChat();
+  showToast('깨달음 아카이브에 저장됐어 ✦');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROPOSAL HANDLING (Phase 2 upgrade)
+// ═══════════════════════════════════════════════════════════════
+function acceptProposal(idx) {
+  const msg = state.chatMessages[idx];
+  msg.proposalResponse = 'accept';
+
+  // Create mission
+  const proposalData = msg.proposalData || {};
+  const title = proposalData.title || extractProposalFromMessage(msg.content);
+  const description = proposalData.description || '';
+
+  if (title) {
+    createMission(title, description, { sourceMessageIdx: idx });
+    showToast('🐚 오늘의 미션으로 등록됐어!');
+  }
+
+  saveState();
+  renderChat();
+  renderTodayMission();
+
+  // Brief confirm from AI
+  state.chatMessages.push({
+    role: 'assistant',
+    content: `좋아! 홈 화면에 "${title}"이 오늘의 미션으로 등록됐어.\n\n완료하면 소라 하나 모아줄게 ✦`,
+    timestamp: new Date().toISOString()
+  });
   saveState();
   renderChat();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// PROPOSALS
-// ═══════════════════════════════════════════════════════════════
-function acceptProposal(idx) {
-  state.chatMessages[idx].proposalResponse = 'accept';
-  saveState(); renderChat();
-  state.chatMessages.push({
-    role: 'assistant',
-    content: '좋아! ✦ 해보고 나서 어땠는지 알려줘.\n\n(Phase 2에서 자동으로 미션에 등록되는 기능 추가 예정)',
-    timestamp: new Date().toISOString()
-  });
-  saveState(); renderChat();
+function extractProposalFromMessage(content) {
+  // Extract text after [오늘의 제안]
+  const match = content.match(/\[오늘의 제안\]([\s\S]+?)(?=\n\n|$)/);
+  if (match) {
+    return match[1].trim().split('\n')[0].slice(0, 40);
+  }
+  return '오늘의 미션';
 }
 
 function declineProposal(idx) {
@@ -1485,16 +1740,16 @@ async function forceAnalyze() {
       entries: state.entries,
       chatMessages: state.chatMessages.filter(m => !m.typing && !m.error).slice(-50),
       archive: state.archive,
+      missions: state.missions,
       activeModes: Object.keys(state.modes).filter(k => state.modes[k])
     };
-
     const prompt = `너는 임상심리학자로서 이 사용자의 Case Formulation을 구축한다.
 
-아래는 사용자가 지금까지 기록한 데이터야:
+아래는 사용자 데이터야:
 
 ${JSON.stringify(dataDump, null, 2)}
 
-이 데이터를 기반으로 다음을 JSON으로 출력해:
+JSON으로 출력:
 
 {
   "traits": [{"name": "...", "description": "근거와 함께", "confidence": 0.0-1.0}],
@@ -1502,19 +1757,19 @@ ${JSON.stringify(dataDump, null, 2)}
   "patterns": [{"name": "...", "trigger": "...", "sequence": "...", "description": "...", "confidence": 0.0-1.0}],
   "case_formulation": {
     "problems": ["..."],
-    "mechanisms": ["실패에 대한 두려움 → 완벽주의 → 회피 → ..."],
+    "mechanisms": ["..."],
     "strengths": ["..."]
   }
 }
 
 원칙:
-- 관찰 가능한 행동·표현에 근거. 추측은 낮은 confidence.
-- 사용자의 실제 언어·예시를 반영.
+- 관찰 가능한 행동·표현에 근거.
+- 사용자 실제 언어 반영.
 - ADHD·직업·가치관 맥락 고려.
-- 수면 시각 규칙성, 활력 변동, 2D affect 패턴 같은 체크인 데이터의 신호 해석.
-- 활성 모드(월경 주기, 마감 등) 컨텍스트로 분석.
-- 5-10개 항목씩 추출.
-- JSON만 출력, 다른 설명 금지.`;
+- 수면 시각 규칙성, 활력 변동, 2D affect 패턴, 미션 수락·완료 패턴도 해석.
+- 활성 모드(월경, 마감 등) 컨텍스트로 분석.
+- 5-10개씩.
+- JSON만 출력.`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -1558,11 +1813,10 @@ ${JSON.stringify(dataDump, null, 2)}
         strengths: analysis.case_formulation.strengths || []
       };
     }
-
     saveState();
     renderModel(); renderModelPreview();
     setSyncStatus('online');
-    alert('분석 완료! "나에 대한 모델"을 확인해봐 ✦');
+    showToast('분석 완료 ✦');
   } catch (err) {
     console.error(err);
     alert('분석 실패: ' + err.message);
@@ -1582,7 +1836,7 @@ function saveSettings() {
   state.apiKey = document.getElementById('apiKeyInput').value.trim();
   state.profile = document.getElementById('profileInput').value.trim();
   saveState();
-  alert('저장됐어 ✦');
+  showToast('저장됐어 ✦');
 }
 
 function exportData() {
@@ -1623,8 +1877,6 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault(); sendChat();
     }
   });
-
-  // Sleep time change listeners
   ['sleepStart', 'sleepEnd'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', updateSleepDuration);
@@ -1635,15 +1887,11 @@ function isMobile() {
   return /Android|iPhone|iPad/i.test(navigator.userAgent);
 }
 
-// ═══════════════════════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════════════════════
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// START
 init();
 </script>
 </body>
