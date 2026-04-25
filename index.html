@@ -340,12 +340,84 @@
   .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: var(--surface3); color: var(--text); padding: 12px 20px; border-radius: 24px; font-size: 13px; z-index: 400; border: 1px solid rgba(201,169,110,0.3); opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 85%; text-align: center; }
   .toast.show { opacity: 1; }
 
+  /* ─── Login screen ─── */
+  .login-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 500;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 28px;
+    overflow-y: auto;
+  }
+  .login-content { max-width: 380px; width: 100%; text-align: center; }
+  .login-icon { font-size: 56px; margin-bottom: 18px; }
+  .login-title { font-family: 'Gowun Batang', serif; font-size: 28px; color: var(--accent); margin-bottom: 8px; }
+  .login-sub { font-size: 13px; color: var(--text-dim); line-height: 1.7; margin-bottom: 32px; }
+  .login-form { width: 100%; }
+  .login-form input { margin-bottom: 12px; text-align: center; }
+  .login-status { margin-top: 18px; font-size: 13px; line-height: 1.6; }
+  .login-info { margin-top: 28px; padding: 14px; background: var(--surface); border-radius: 12px; font-size: 11px; color: var(--text-dim); line-height: 1.7; }
+
+  /* ─── Phase 4: Reviews ─── */
+  .review-card {
+    background: linear-gradient(135deg, rgba(139,126,196,0.15), rgba(201,169,110,0.1));
+    border: 1px solid rgba(139,126,196,0.3);
+    border-radius: 18px; padding: 18px; margin-bottom: 14px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .review-card:active { transform: scale(0.98); }
+  .review-card.monthly { background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(139,126,196,0.1)); border-color: rgba(255,215,0,0.25); }
+  .review-card-label { font-size: 10px; color: var(--purple); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
+  .review-card.monthly .review-card-label { color: var(--gold); }
+  .review-card-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .review-card-desc { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+
+  .followup-card {
+    background: linear-gradient(135deg, rgba(212,167,106,0.15), rgba(0,0,0,0.1));
+    border: 1px solid rgba(212,167,106,0.3);
+    border-radius: 18px; padding: 18px; margin-bottom: 14px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .followup-card:active { transform: scale(0.98); }
+  .followup-card-label { font-size: 10px; color: #d4a76a; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
+  .followup-card-question { font-size: 14px; line-height: 1.6; }
+
+  .review-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  .review-section-title { font-size: 11px; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; font-weight: 600; }
+  .review-section-content { font-size: 13px; line-height: 1.85; color: var(--text); white-space: pre-wrap; }
+
+  .review-history-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 8px; cursor: pointer; }
+  .review-history-item:active { background: var(--surface2); }
+  .review-history-date { font-size: 10px; color: var(--accent); margin-bottom: 4px; letter-spacing: 0.06em; }
+  .review-history-summary { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+
   a { color: var(--accent); }
 </style>
 </head>
 <body>
 
-<div class="app">
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-content">
+    <div class="login-icon">🐚</div>
+    <div class="login-title">소라고동</div>
+    <div class="login-sub">너의 AI 라이프 전략가.<br>이메일로 안전하게 들어와.</div>
+    <div class="login-form">
+      <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
+      <button class="btn-primary" id="loginBtn" onclick="handleLogin()">매직링크 받기</button>
+      <div class="login-status" id="loginStatus"></div>
+    </div>
+    <div class="login-info">
+      비밀번호 없이 이메일 링크로 로그인.<br>
+      네 데이터는 너만 볼 수 있도록 암호화돼.
+    </div>
+  </div>
+</div>
+
+<div class="app" style="display:none;">
   <div class="header">
     <div class="logo">🐚 소라고동</div>
     <div class="date-pill">
@@ -373,6 +445,12 @@
         </div>
         <div class="streak-info" id="streakInfo">탭해서 보기 →</div>
       </div>
+
+      <!-- Reviews available -->
+      <div id="reviewPromptsContainer"></div>
+
+      <!-- Prediction follow-ups due -->
+      <div id="predictionFollowupsContainer"></div>
 
       <!-- Active decisions -->
       <div id="activeDecisionsContainer"></div>
@@ -580,6 +658,12 @@
     <!-- DECISION DETAIL -->
     <div class="screen" id="screen-decision-detail"></div>
 
+    <!-- REVIEW (weekly/monthly) -->
+    <div class="screen" id="screen-review"></div>
+
+    <!-- PREDICTION FOLLOW-UP -->
+    <div class="screen" id="screen-followup"></div>
+
     <!-- MODEL -->
     <div class="screen" id="screen-model">
       <div class="screen-title">너에 대해 ✦</div>
@@ -623,10 +707,16 @@
         <button class="btn-secondary" onclick="exportData()">📤 데이터 내보내기 (백업)</button>
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
       </div>
+      <div style="margin-top:30px;">
+        <div class="input-label" style="margin-bottom:8px;">👤 계정</div>
+        <div id="accountInfo" style="font-size:12px; color:var(--text-dim); padding:12px; background:var(--surface); border-radius:12px; margin-bottom:8px;"></div>
+        <button class="btn-secondary btn-danger" onclick="logout()">로그아웃</button>
+      </div>
       <button class="btn-secondary" onclick="showScreen('home')" style="margin-top:16px;">돌아가기</button>
       <div style="margin-top:30px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
         <strong style="color:var(--accent)">프라이버시</strong><br>
-        모든 기록은 너의 Supabase에 저장되고, 다른 기기에서도 접근돼.
+        이메일 기반 인증으로 너만 접근 가능. 다른 사람은 너의 데이터를 볼 수 없어.<br>
+        API 호출은 Anthropic을 통과하지만 7일 후 삭제되고 학습에 쓰이지 않아.
       </div>
     </div>
   </div>
@@ -679,7 +769,10 @@
 // ═══════════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://pfagqvfteqzfhkbxtnwp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmYWdxdmZ0ZXF6ZmhrYnh0bndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjU4MDMsImV4cCI6MjA5MjYwMTgwM30.jDYXky2ga-o_02uWWrqqwti_HfHm8K_61IHPV81YBoA';
-const USER_ID = 'me';
+
+// Auth state — populated after login
+let session = null;       // { access_token, refresh_token, user: { id, email } }
+let authUserId = null;    // UUID
 
 // Shell types for collection
 const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮', '🌊', '🐠', '🐡', '🦐', '🪸', '🌺', '🌸', '🌼', '🌻', '🌷', '🍀', '🌱'];
@@ -701,12 +794,16 @@ const DEFAULT_STATE = {
   apiKey: '',
   profile: '',
   lastSync: null,
-  // Phase 2 additions
-  missions: [],           // All missions (pending, completed, skipped)
-  shellCollection: [],    // [{type: '🐚', date: '2026-04-25', missionId: '...', note: '...'}]
-  // Phase 3 additions
-  decisions: [],          // Big decisions in Decision Room
-  version: 4
+  // Phase 2
+  missions: [],
+  shellCollection: [],
+  // Phase 3
+  decisions: [],
+  // Phase 4
+  weeklyReviews: [],     // [{weekKey: '2026-W17', completedAt, summary, sections, userNote}]
+  monthlyReviews: [],    // [{monthKey: '2026-04', completedAt, summary, sections, userNote}]
+  predictionFollowups: [], // [{decisionId, horizon: '3months'|'6months'|'12months', dueDate, completedAt, originalPrediction, actualOutcome, accuracy, reflections}]
+  version: 5
 };
 
 let state = { ...DEFAULT_STATE };
@@ -715,8 +812,117 @@ let syncStatus = 'offline';
 let syncTimeout = null;
 
 function saveState() {
+  if (!authUserId) return; // Don't save if not logged in
   localStorage.setItem('soragodong_v2', JSON.stringify(state));
   saveToCloud();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH (Supabase magic link)
+// ═══════════════════════════════════════════════════════════════
+async function checkSession() {
+  // Check if returning from magic link (URL hash contains tokens)
+  if (window.location.hash.includes('access_token')) {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    if (access_token) {
+      session = { access_token, refresh_token };
+      // Get user info
+      const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${access_token}` }
+      });
+      if (userResp.ok) {
+        const user = await userResp.json();
+        session.user = user;
+        authUserId = user.id;
+        localStorage.setItem('soragodong_session', JSON.stringify(session));
+        // Clean URL
+        history.replaceState({}, document.title, window.location.pathname);
+        return true;
+      }
+    }
+  }
+  // Check stored session
+  const stored = localStorage.getItem('soragodong_session');
+  if (stored) {
+    try {
+      session = JSON.parse(stored);
+      // Verify token still valid
+      const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${session.access_token}` }
+      });
+      if (userResp.ok) {
+        const user = await userResp.json();
+        session.user = user;
+        authUserId = user.id;
+        return true;
+      } else {
+        // Try refresh
+        if (session.refresh_token) {
+          const refreshResp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: session.refresh_token })
+          });
+          if (refreshResp.ok) {
+            const newSession = await refreshResp.json();
+            session = { ...session, access_token: newSession.access_token, refresh_token: newSession.refresh_token, user: newSession.user };
+            authUserId = newSession.user.id;
+            localStorage.setItem('soragodong_session', JSON.stringify(session));
+            return true;
+          }
+        }
+        // Refresh failed
+        localStorage.removeItem('soragodong_session');
+        session = null; authUserId = null;
+        return false;
+      }
+    } catch (e) {
+      console.error('Session check error:', e);
+      localStorage.removeItem('soragodong_session');
+      return false;
+    }
+  }
+  return false;
+}
+
+async function sendMagicLink(email) {
+  const redirectTo = window.location.origin;
+  const resp = await fetch(`${SUPABASE_URL}/auth/v1/otp`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, options: { emailRedirectTo: redirectTo } })
+  });
+  if (!resp.ok) {
+    const err = await resp.json();
+    throw new Error(err.msg || err.error_description || '매직링크 전송 실패');
+  }
+  return true;
+}
+
+async function logout() {
+  if (!confirm('로그아웃할까? 데이터는 클라우드에 안전히 보관돼.')) return;
+  if (session && session.access_token) {
+    try {
+      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${session.access_token}` }
+      });
+    } catch (e) {}
+  }
+  localStorage.removeItem('soragodong_session');
+  localStorage.removeItem('soragodong_v2');
+  session = null;
+  authUserId = null;
+  location.reload();
+}
+
+function authHeaders() {
+  return {
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${session.access_token}`
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -725,29 +931,34 @@ function saveState() {
 async function loadFromCloud() {
   setSyncStatus('syncing');
   try {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}&order=updated_at.desc&limit=1`,
-      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&order=updated_at.desc&limit=1`,
+      { headers: authHeaders() }
     );
     if (!resp.ok) throw new Error('Load failed');
     const data = await resp.json();
     if (data.length > 0) {
       state = { ...DEFAULT_STATE, ...data[0].data };
-      state.modes = { ...DEFAULT_STATE.modes, ...(state.modes || {}) };
-      if (!state.missions) state.missions = [];
-      if (!state.shellCollection) state.shellCollection = [];
-      if (!state.decisions) state.decisions = [];
       console.log('✅ Loaded from cloud');
     } else {
-      const local = localStorage.getItem('soragodong_v2');
-      if (local) {
-        state = { ...DEFAULT_STATE, ...JSON.parse(local) };
-        state.modes = { ...DEFAULT_STATE.modes, ...(state.modes || {}) };
-        if (!state.missions) state.missions = [];
-        if (!state.shellCollection) state.shellCollection = [];
-        if (!state.decisions) state.decisions = [];
-        await saveToCloudNow();
+      // First time login: try to migrate legacy 'me' data
+      const migrated = await tryMigrateLegacyData();
+      if (!migrated) {
+        // Try local storage backup
+        const local = localStorage.getItem('soragodong_v2');
+        if (local) {
+          state = { ...DEFAULT_STATE, ...JSON.parse(local) };
+          await saveToCloudNow();
+        }
       }
     }
+    // Ensure all collections exist
+    state.modes = { ...DEFAULT_STATE.modes, ...(state.modes || {}) };
+    if (!state.missions) state.missions = [];
+    if (!state.shellCollection) state.shellCollection = [];
+    if (!state.decisions) state.decisions = [];
+    if (!state.weeklyReviews) state.weeklyReviews = [];
+    if (!state.monthlyReviews) state.monthlyReviews = [];
+    if (!state.predictionFollowups) state.predictionFollowups = [];
     setSyncStatus('online');
     return true;
   } catch (e) {
@@ -759,53 +970,78 @@ async function loadFromCloud() {
       if (!state.missions) state.missions = [];
       if (!state.shellCollection) state.shellCollection = [];
       if (!state.decisions) state.decisions = [];
+      if (!state.weeklyReviews) state.weeklyReviews = [];
+      if (!state.monthlyReviews) state.monthlyReviews = [];
+      if (!state.predictionFollowups) state.predictionFollowups = [];
     }
     setSyncStatus('error');
     return false;
   }
 }
 
+async function tryMigrateLegacyData() {
+  // One-time migration: if there's data with user_id='me', claim it for this auth user
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.me&order=updated_at.desc&limit=1`,
+      { headers: authHeaders() }
+    );
+    if (!resp.ok) return false;
+    const legacy = await resp.json();
+    if (legacy.length === 0) return false;
+
+    // Found legacy data — claim it
+    state = { ...DEFAULT_STATE, ...legacy[0].data };
+    // Update the row to belong to this auth user
+    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.me&id=eq.${legacy[0].id}`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ auth_user_id: authUserId, updated_at: new Date().toISOString() })
+    });
+    console.log('✅ Migrated legacy data');
+    showToast('이전 데이터 복구됨 ✦');
+    return true;
+  } catch (e) {
+    console.error('Migration error:', e);
+    return false;
+  }
+}
+
 async function saveToCloudNow() {
+  if (!authUserId) return;
   state.lastSync = new Date().toISOString();
-  const checkResp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}&select=id&limit=1`,
-    { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+  const checkResp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&select=id&limit=1`,
+    { headers: authHeaders() }
   );
   const existing = await checkResp.json();
   if (existing.length > 0) {
-    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}`, {
       method: 'PATCH',
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ data: state, updated_at: state.lastSync })
     });
   } else {
     await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ user_id: USER_ID, data: state })
+      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ auth_user_id: authUserId, user_id: session.user.email || 'auth', data: state })
     });
   }
 }
 
 function saveToCloud() {
+  if (!authUserId) return;
   if (syncTimeout) clearTimeout(syncTimeout);
   syncTimeout = setTimeout(async () => {
     setSyncStatus('syncing');
-    try {
-      await saveToCloudNow();
-      setSyncStatus('online');
-    } catch (e) {
-      setSyncStatus('error');
-    }
+    try { await saveToCloudNow(); setSyncStatus('online'); }
+    catch (e) { setSyncStatus('error'); }
   }, 1000);
 }
 
 async function manualSync() {
   setSyncStatus('syncing');
-  try {
-    await saveToCloudNow();
-    setSyncStatus('online');
-    showToast('동기화 완료 ✦');
-  } catch (e) { setSyncStatus('error'); showToast('동기화 실패'); }
+  try { await saveToCloudNow(); setSyncStatus('online'); showToast('동기화 완료 ✦'); }
+  catch (e) { setSyncStatus('error'); showToast('동기화 실패'); }
 }
 
 function setSyncStatus(status) {
@@ -824,6 +1060,16 @@ async function init() {
   let greet = hour < 11 ? '좋은 아침 ☀️' : hour < 18 ? '오후도 잘 🌤' : '오늘 수고했어 🌙';
   document.getElementById('greetingMain').innerHTML = greet + ' <span class="accent">✦</span>';
 
+  // ── AUTH GATE ──
+  const authed = await checkSession();
+  if (!authed) {
+    showLoginScreen();
+    return;
+  }
+  // Authenticated — load data
+  document.getElementById('loginScreen').style.display = 'none';
+  document.querySelector('.app').style.display = 'flex';
+
   await loadFromCloud();
 
   renderModes();
@@ -831,12 +1077,43 @@ async function init() {
   renderTodayMission();
   renderShellBar();
   renderActiveDecisionsHome();
+  renderReviewPrompts();
+  renderPredictionFollowups();
   renderModel();
   renderArchive();
   renderChat();
   loadSettings();
   updateCheckinSub();
   updateSleepDuration();
+}
+
+function showLoginScreen() {
+  document.querySelector('.app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+async function handleLogin() {
+  const emailInput = document.getElementById('loginEmail');
+  const email = emailInput.value.trim();
+  if (!email || !email.includes('@')) { alert('이메일을 정확히 입력해줘'); return; }
+
+  const btn = document.getElementById('loginBtn');
+  const status = document.getElementById('loginStatus');
+  btn.disabled = true;
+  btn.textContent = '전송 중...';
+  status.textContent = '';
+
+  try {
+    await sendMagicLink(email);
+    status.innerHTML = '✦ <strong>' + escapeHtml(email) + '</strong>으로 로그인 링크를 보냈어.<br>이메일 열고 링크 누르면 자동 로그인 돼.';
+    status.style.color = 'var(--success)';
+    btn.textContent = '✓ 전송됨';
+  } catch (err) {
+    status.textContent = '오류: ' + err.message;
+    status.style.color = 'var(--danger)';
+    btn.disabled = false;
+    btn.textContent = '매직링크 받기';
+  }
 }
 
 function todayKey() { return new Date().toISOString().split('T')[0]; }
@@ -1363,6 +1640,391 @@ function safeParseJSON(str) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// PHASE 4: REVIEWS + FUTURE SELF LETTER + PREDICTION FOLLOWUPS
+// ═══════════════════════════════════════════════════════════════
+
+// ─── Time helpers ───
+function getWeekKey(date) {
+  // ISO week: YYYY-W##
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7); // Thursday of this week
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  const weekNum = 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+  return `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+}
+
+function getMonthKey(date) {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getCurrentWeekKey() { return getWeekKey(new Date()); }
+function getCurrentMonthKey() { return getMonthKey(new Date()); }
+
+function isWeeklyReviewAvailable() {
+  // Available on Sunday OR if last review was more than 6 days ago
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0 = Sunday
+  const currentWeekKey = getCurrentWeekKey();
+  const hasThisWeek = (state.weeklyReviews || []).some(r => r.weekKey === currentWeekKey);
+  if (hasThisWeek) return false;
+  // Available Saturday and Sunday or after 7 days from last
+  if (dayOfWeek === 0 || dayOfWeek === 6) return true;
+  const last = (state.weeklyReviews || []).slice(-1)[0];
+  if (!last) {
+    // Need at least 5 entries to be useful
+    return state.entries.length >= 5;
+  }
+  const daysSince = Math.floor((today - new Date(last.completedAt)) / 86400000);
+  return daysSince >= 7;
+}
+
+function isMonthlyReviewAvailable() {
+  const today = new Date();
+  const currentMonthKey = getCurrentMonthKey();
+  const hasThisMonth = (state.monthlyReviews || []).some(r => r.monthKey === currentMonthKey);
+  if (hasThisMonth) return false;
+  // Available in first 7 days of new month
+  const dayOfMonth = today.getDate();
+  if (dayOfMonth > 7) return false;
+  // Need data from previous month
+  const prevMonthKey = getMonthKey(new Date(today.getFullYear(), today.getMonth() - 1, 15));
+  const hasPrevMonthData = state.entries.some(e => e.date.startsWith(prevMonthKey));
+  return hasPrevMonthData;
+}
+
+function renderReviewPrompts() {
+  const container = document.getElementById('reviewPromptsContainer');
+  if (!container) return;
+  let html = '';
+  if (isMonthlyReviewAvailable()) {
+    html += `
+      <div class="review-card monthly" onclick="openReview('monthly')">
+        <div class="review-card-label">📅 월간 리뷰</div>
+        <div class="review-card-title">지난 달 너의 모습 돌아보기</div>
+        <div class="review-card-desc">한 달치 패턴, 새로 발견된 트레이트, 의미 있던 순간들 — AI가 분석해줄게.</div>
+      </div>
+    `;
+  }
+  if (isWeeklyReviewAvailable()) {
+    html += `
+      <div class="review-card" onclick="openReview('weekly')">
+        <div class="review-card-label">🌙 주간 리뷰</div>
+        <div class="review-card-title">이번 주 어땠는지 같이 돌아볼까?</div>
+        <div class="review-card-desc">7일 데이터 분석 + 패턴 + 다음 주 한 가지 제안.</div>
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+}
+
+function renderPredictionFollowups() {
+  const container = document.getElementById('predictionFollowupsContainer');
+  if (!container) return;
+
+  // Generate followups for decisions if not already generated
+  ensurePredictionFollowups();
+
+  // Find followups due
+  const now = new Date();
+  const due = (state.predictionFollowups || []).filter(f => !f.completedAt && new Date(f.dueDate) <= now);
+
+  if (due.length === 0) { container.innerHTML = ''; return; }
+
+  container.innerHTML = due.map(f => {
+    const decision = state.decisions.find(d => d.id === f.decisionId);
+    if (!decision) return '';
+    const horizonLabel = { '3months': '3개월', '6months': '6개월', '12months': '12개월' }[f.horizon];
+    return `
+      <div class="followup-card" onclick="openFollowup('${f.id}')">
+        <div class="followup-card-label">🔮 Future Self Letter · ${horizonLabel}</div>
+        <div class="followup-card-question">"${escapeHtml(decision.title)}" — ${horizonLabel} 전 너의 예측이 도착했어. 지금 어때?</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function ensurePredictionFollowups() {
+  // For each decided decision, ensure followups exist
+  const decided = state.decisions.filter(d => d.status === 'decided' && d.predictions);
+  decided.forEach(d => {
+    ['3months', '6months', '12months'].forEach(horizon => {
+      const exists = state.predictionFollowups.some(f => f.decisionId === d.id && f.horizon === horizon);
+      if (!exists && d.predictions[horizon]) {
+        const months = parseInt(horizon);
+        const dueDate = new Date(d.decidedAt);
+        dueDate.setMonth(dueDate.getMonth() + months);
+        state.predictionFollowups.push({
+          id: 'fu_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          decisionId: d.id,
+          horizon,
+          dueDate: dueDate.toISOString(),
+          originalPrediction: d.predictions[horizon],
+          completedAt: null,
+          actualOutcome: null,
+          accuracy: null,
+          reflections: null
+        });
+      }
+    });
+  });
+}
+
+// ─── Weekly review screen ───
+async function openReview(type) {
+  const screen = document.getElementById('screen-review');
+  screen.innerHTML = `
+    <div class="screen-title">${type === 'weekly' ? '🌙 주간 리뷰' : '📅 월간 리뷰'}</div>
+    <div class="screen-sub">잠시만, 데이터를 분석하고 있어...</div>
+    <div style="text-align:center; padding: 60px 20px;">
+      <div class="ai-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    </div>
+  `;
+  showScreen('review');
+
+  try {
+    const reviewData = await generateReview(type);
+    renderReviewScreen(type, reviewData);
+  } catch (err) {
+    screen.innerHTML = `
+      <div class="screen-title">${type === 'weekly' ? '🌙 주간 리뷰' : '📅 월간 리뷰'}</div>
+      <div class="screen-sub">분석 중 오류가 났어 😅<br>${escapeHtml(err.message)}</div>
+      <button class="btn-secondary" onclick="openReview('${type}')">다시 시도</button>
+      <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
+    `;
+  }
+}
+
+async function generateReview(type) {
+  if (!state.apiKey) throw new Error('API 키가 없어');
+
+  // Collect data window
+  const today = new Date();
+  let cutoff;
+  if (type === 'weekly') {
+    cutoff = new Date(today.getTime() - 7 * 86400000);
+  } else {
+    // Last month
+    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    cutoff = lastMonth;
+  }
+  const cutoffISO = cutoff.toISOString().split('T')[0];
+
+  const entriesInRange = state.entries.filter(e => e.date >= cutoffISO);
+  const missionsInRange = state.missions.filter(m => new Date(m.createdAt) >= cutoff);
+  const chatInRange = state.chatMessages.filter(m => m.timestamp && new Date(m.timestamp) >= cutoff && !m.typing && !m.error).slice(-30);
+  const decisionsInRange = state.decisions.filter(d => new Date(d.startedAt) >= cutoff || (d.decidedAt && new Date(d.decidedAt) >= cutoff));
+
+  const prompt = `너는 사용자의 ${type === 'weekly' ? '주간' : '월간'} 리뷰를 작성한다.
+
+[기간 데이터]
+체크인: ${JSON.stringify(entriesInRange, null, 2).slice(0, 4000)}
+
+미션: ${JSON.stringify(missionsInRange.map(m => ({title: m.title, status: m.status})), null, 2).slice(0, 1500)}
+
+대화 발췌 (사용자 메시지만): ${chatInRange.filter(m => m.role === 'user').map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3000)}
+
+진행/완료된 결정: ${JSON.stringify(decisionsInRange.map(d => ({title: d.title, status: d.status, finalDecision: d.finalDecision})), null, 2).slice(0, 1500)}
+
+활성 모드: ${Object.keys(state.modes || {}).filter(k => state.modes[k]).join(', ') || '없음'}
+
+이미 알려진 사용자 모델 (요약):
+- traits: ${state.traits.slice(0, 5).map(t => t.name).join(', ')}
+- patterns: ${state.patterns.slice(0, 5).map(p => p.name).join(', ')}
+- values: ${state.values.slice(0, 3).map(v => v.name).join(', ')}
+
+[작성 가이드]
+- 친한 친구 톤, 반말. 상담사 X.
+- 구체적이고 진실되게. 일반론 X.
+- 판단/평가 없이. self-compassion (Neff) 기반.
+- 못 한 거 강조 X. 패턴과 흐름 짚기.
+- ADHD 특성 고려 — 결과보다 과정·시도·태도.
+
+JSON 형식으로 출력:
+
+{
+  "summary": "이번 ${type === 'weekly' ? '주' : '달'} 한 줄 요약 (15-30자)",
+  "sections": {
+    "patterns": "이번 ${type === 'weekly' ? '주' : '달'} 너의 모습. 보인 패턴, 컨디션 추이, 자주 등장한 주제. 2-4문장.",
+    "good_moments": "잘된 순간들 — 미션 완료, 의미 있는 대화, 성장 신호, 작은 승리. 구체적으로. 2-4문장.",
+    "hard_moments": "어려웠던 순간 — 비판단적, 따뜻한 톤. 왜 어려웠는지 컨텍스트도. 2-3문장.",
+    "next_suggestion": "다음 ${type === 'weekly' ? '주' : '달'} 한 가지 제안. 작고 구체적으로. 1-2문장."
+  }${type === 'monthly' ? ',\n  "new_observations": "이번 달 새로 보인 너에 관한 것 (1-3개, 짧게)"' : ''}
+}
+
+JSON만 출력. 다른 설명 X.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!resp.ok) throw new Error('API ' + resp.status);
+  const data = await resp.json();
+  const text = data.content[0].text;
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('JSON 파싱 실패');
+  return JSON.parse(jsonMatch[0]);
+}
+
+function renderReviewScreen(type, reviewData) {
+  const screen = document.getElementById('screen-review');
+  const periodLabel = type === 'weekly' ? `이번 주 (${getCurrentWeekKey()})` : `지난 달 (${getMonthKey(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15))})`;
+
+  let html = `
+    <div class="screen-title">${type === 'weekly' ? '🌙 주간 리뷰' : '📅 월간 리뷰'}</div>
+    <div class="screen-sub">${periodLabel}</div>
+
+    <div style="background: linear-gradient(135deg, var(--purple-dim), var(--accent-dim)); border: 1px solid rgba(139,126,196,0.2); border-radius: 16px; padding: 18px; margin-bottom: 20px; font-family: 'Gowun Batang', serif; font-size: 16px; line-height: 1.7;">
+      ${escapeHtml(reviewData.summary || '')}
+    </div>
+
+    <div class="review-section">
+      <div class="review-section-title">💫 너의 모습</div>
+      <div class="review-section-content">${escapeHtml(reviewData.sections.patterns || '')}</div>
+    </div>
+
+    <div class="review-section">
+      <div class="review-section-title">✨ 잘된 순간들</div>
+      <div class="review-section-content">${escapeHtml(reviewData.sections.good_moments || '')}</div>
+    </div>
+
+    <div class="review-section">
+      <div class="review-section-title">🌊 어려웠던 순간</div>
+      <div class="review-section-content">${escapeHtml(reviewData.sections.hard_moments || '')}</div>
+    </div>
+
+    <div class="review-section">
+      <div class="review-section-title">🐚 다음 ${type === 'weekly' ? '주' : '달'} 제안</div>
+      <div class="review-section-content">${escapeHtml(reviewData.sections.next_suggestion || '')}</div>
+    </div>
+
+    ${reviewData.new_observations ? `
+    <div class="review-section">
+      <div class="review-section-title">🔮 새로 보인 것</div>
+      <div class="review-section-content">${escapeHtml(reviewData.new_observations)}</div>
+    </div>` : ''}
+
+    <div class="input-group" style="margin-top: 24px;">
+      <div class="input-label">💬 ${type === 'weekly' ? '이번 주' : '이번 달'} 한 마디 (선택)</div>
+      <textarea id="reviewUserNote" placeholder="너의 말로 한 줄 남기고 싶다면..." rows="3"></textarea>
+    </div>
+
+    <button class="btn-primary" onclick="saveReview('${type}')">저장하고 닫기 ✦</button>
+    <button class="btn-secondary" onclick="showScreen('home')">나중에</button>
+  `;
+  screen.innerHTML = html;
+  // Save the data temporarily
+  screen.dataset.reviewData = JSON.stringify(reviewData);
+  screen.dataset.reviewType = type;
+}
+
+function saveReview(type) {
+  const screen = document.getElementById('screen-review');
+  const reviewData = JSON.parse(screen.dataset.reviewData);
+  const userNote = document.getElementById('reviewUserNote').value.trim();
+
+  const review = {
+    completedAt: new Date().toISOString(),
+    summary: reviewData.summary,
+    sections: reviewData.sections,
+    userNote
+  };
+
+  if (type === 'weekly') {
+    review.weekKey = getCurrentWeekKey();
+    state.weeklyReviews.push(review);
+  } else {
+    const lastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15);
+    review.monthKey = getMonthKey(lastMonth);
+    state.monthlyReviews.push(review);
+    if (reviewData.new_observations) review.newObservations = reviewData.new_observations;
+  }
+
+  // Also add to archive
+  state.archive.unshift({
+    date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
+    insight: reviewData.summary + (userNote ? ' — ' + userNote : ''),
+    source: type === 'weekly' ? '주간 리뷰' : '월간 리뷰',
+    savedAt: new Date().toISOString()
+  });
+
+  saveState();
+  showToast(`${type === 'weekly' ? '주간' : '월간'} 리뷰 저장됨 ✦`);
+  showScreen('home');
+}
+
+// ─── Future Self Letter (prediction follow-up) ───
+function openFollowup(followupId) {
+  const followup = state.predictionFollowups.find(f => f.id === followupId);
+  if (!followup) return;
+  const decision = state.decisions.find(d => d.id === followup.decisionId);
+  if (!decision) return;
+  const horizonLabel = { '3months': '3개월', '6months': '6개월', '12months': '12개월' }[followup.horizon];
+
+  const screen = document.getElementById('screen-followup');
+  screen.innerHTML = `
+    <div class="screen-title">🔮 Future Self Letter</div>
+    <div class="screen-sub">${horizonLabel} 전 너에게서 온 편지가 도착했어.</div>
+
+    <div style="background: linear-gradient(135deg, rgba(212,167,106,0.1), rgba(139,126,196,0.08)); border: 1px solid rgba(212,167,106,0.25); border-radius: 16px; padding: 18px; margin-bottom: 20px;">
+      <div style="font-size: 11px; color: #d4a76a; letter-spacing: 0.1em; margin-bottom: 8px;">결정: ${escapeHtml(decision.title)}</div>
+      <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 10px;">최종 결정: ${escapeHtml(decision.finalDecision || '')}</div>
+      <div style="font-size: 11px; color: var(--accent); letter-spacing: 0.08em; margin-bottom: 6px; margin-top: 14px;">${horizonLabel} 전 너의 예측:</div>
+      <div style="font-size: 14px; line-height: 1.7; color: var(--text); font-style: italic;">"${escapeHtml(followup.originalPrediction)}"</div>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">📝 지금 실제로는 어때?</div>
+      <textarea id="followupOutcome" rows="4" placeholder="실제로 ${horizonLabel} 후, 상황과 너의 느낌은?"></textarea>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">🎯 예측 정확도 (1-10)</div>
+      <input type="number" id="followupAccuracy" min="1" max="10" value="5">
+      <div style="font-size:11px; color:var(--text-dim); margin-top:6px;">1: 완전히 틀림 / 5: 어느 정도 맞음 / 10: 정확히 예측대로</div>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">💭 돌아보면 (선택)</div>
+      <textarea id="followupReflection" rows="3" placeholder="이 예측이 왜 맞았/틀렸는지, 나에 대해 새로 알게 된 것이 있다면..."></textarea>
+    </div>
+
+    <button class="btn-primary decision" onclick="saveFollowup('${followupId}')">기록하고 닫기 ✦</button>
+    <button class="btn-secondary" onclick="showScreen('home')">나중에</button>
+  `;
+  showScreen('followup');
+}
+
+async function saveFollowup(followupId) {
+  const followup = state.predictionFollowups.find(f => f.id === followupId);
+  const outcome = document.getElementById('followupOutcome').value.trim();
+  const accuracy = parseInt(document.getElementById('followupAccuracy').value) || 5;
+  const reflection = document.getElementById('followupReflection').value.trim();
+
+  if (!outcome) { alert('실제 상황을 적어주세요.'); return; }
+
+  followup.completedAt = new Date().toISOString();
+  followup.actualOutcome = outcome;
+  followup.accuracy = accuracy;
+  followup.reflections = reflection;
+
+  // Add to archive
+  const decision = state.decisions.find(d => d.id === followup.decisionId);
+  state.archive.unshift({
+    date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
+    insight: `[Future Self] "${decision?.title}" 결정의 ${followup.horizon} 후 — 예측 정확도 ${accuracy}/10. ${reflection || outcome.slice(0, 100)}`,
+    source: 'Future Self',
+    savedAt: new Date().toISOString()
+  });
+
+  saveState();
+  showCelebration('🔮', '편지 회신 완료', '✦');
+  setTimeout(() => { showScreen('home'); }, 1500);
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MISSION SYSTEM (Phase 2 core)
 // ═══════════════════════════════════════════════════════════════
 function getTodayMission() {
@@ -1555,7 +2217,7 @@ function showScreen(name) {
   target && target.scrollTo(0, 0);
   document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';
 
-  if (name === 'home') { renderModelPreview(); updateCheckinSub(); renderModes(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHome(); }
+  if (name === 'home') { renderModelPreview(); updateCheckinSub(); renderModes(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHome(); renderReviewPrompts(); renderPredictionFollowups(); }
   if (name === 'model') renderModel();
   if (name === 'archive') renderArchive();
   if (name === 'decisions') renderDecisionsList();
@@ -2423,6 +3085,10 @@ JSON으로 출력:
 function loadSettings() {
   document.getElementById('apiKeyInput').value = state.apiKey || '';
   document.getElementById('profileInput').value = state.profile || '';
+  const accountInfo = document.getElementById('accountInfo');
+  if (accountInfo && session?.user) {
+    accountInfo.innerHTML = `로그인된 계정: <strong style="color:var(--text)">${escapeHtml(session.user.email || '')}</strong>`;
+  }
 }
 
 function saveSettings() {
@@ -2448,10 +3114,12 @@ async function resetAll() {
   if (!confirm('한 번 더. 진짜?')) return;
   localStorage.removeItem('soragodong_v2');
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.${USER_ID}`, {
-      method: 'DELETE',
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-    });
+    if (authUserId) {
+      await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}`, {
+        method: 'DELETE',
+        headers: authHeaders()
+      });
+    }
   } catch (e) { console.error(e); }
   location.reload();
 }
@@ -2474,6 +3142,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', updateSleepDuration);
   });
+  // Enter key on login email
+  const loginEmail = document.getElementById('loginEmail');
+  if (loginEmail) {
+    loginEmail.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); handleLogin(); }
+    });
+  }
 });
 
 function isMobile() {
