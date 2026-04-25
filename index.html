@@ -2858,6 +2858,7 @@
           <button class="btn-secondary" onclick="testSkip4Hours()">⏭ 마지막 메시지 4시간 전으로</button>
           <button class="btn-secondary" onclick="testForceExtract()">📚 챕터 토픽 즉시 추출</button>
           <button class="btn-secondary" onclick="testForceArchive()">🗂 채팅 아카이브 즉시 실행</button>
+          <button class="btn-secondary" onclick="testForceMonthlyAuto()">📅 월간 자동 통합 즉시 실행</button>
         </div>
       </details>
       <div style="margin-top:24px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
@@ -3527,6 +3528,11 @@ async function init() {
   setTimeout(() => {
     runChatArchiveIfNeeded().catch(e => console.warn('archive error:', e));
   }, 3000);
+
+  // V3.12: 월간 자동 통합 (매월 1-7일, 지난 달 데이터 있고 미생성이면 자동)
+  setTimeout(() => {
+    runMonthlyAutoReviewIfNeeded().catch(e => console.warn('monthly auto error:', e));
+  }, 5000);
 
   // 첫 사용자 vs 기존 사용자 분기
   const isBrandNewUser = !state.hasSeenWelcomeTutorial 
@@ -8928,6 +8934,63 @@ async function testForceArchive() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// V3.12: 월간 자동 통합 — 매월 1-7일, 지난 달 데이터 있으면 AI가 자동 정리
+// ═══════════════════════════════════════════════════════════════
+async function runMonthlyAutoReviewIfNeeded() {
+  if (!state.apiKey) return;
+  const today = new Date();
+  const dayOfMonth = today.getDate();
+  if (dayOfMonth > 7) return;
+
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 15);
+  const lastMonthKey = getMonthKey(lastMonth);
+
+  const exists = (state.monthlyReviews || []).some(r => r.monthKey === lastMonthKey);
+  if (exists) return;
+
+  const hasData = state.entries.some(e => e.date.startsWith(lastMonthKey));
+  if (!hasData) return;
+
+  try {
+    const reviewData = await generateReview('monthly');
+    const review = {
+      completedAt: new Date().toISOString(),
+      summary: reviewData.summary,
+      sections: reviewData.sections,
+      userNote: '',
+      monthKey: lastMonthKey,
+      auto: true
+    };
+    if (reviewData.new_observations) review.newObservations = reviewData.new_observations;
+    state.monthlyReviews.push(review);
+    state.archive.unshift({
+      date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
+      insight: reviewData.summary,
+      source: '월간 리뷰 (자동)',
+      savedAt: new Date().toISOString()
+    });
+    saveState();
+    showToast('📅 지난 달 자동 정리 완료. 아카이브 → 리뷰 모음 확인.');
+  } catch (e) {
+    console.warn('monthly auto review failed:', e);
+  }
+}
+
+async function testForceMonthlyAuto() {
+  showToast('🧪 월간 자동 통합 시작...');
+  // Bypass guards: clear last month's review if exists, then run
+  const lastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15);
+  const lastMonthKey = getMonthKey(lastMonth);
+  state.monthlyReviews = (state.monthlyReviews || []).filter(r => r.monthKey !== lastMonthKey);
+  saveState();
+  try {
+    await runMonthlyAutoReviewIfNeeded();
+  } catch (e) {
+    showToast('❌ 실패: ' + e.message);
+  }
+}
+
 function showShortcutGuide() {
   showScreen('shortcut-guide');
 }
@@ -9981,10 +10044,11 @@ function renderArchiveReviews() {
     const dateStr = date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
     const typeLabel = r.type === 'weekly' ? '🌙 주간' : '📅 월간';
     const periodLabel = r.weekKey || r.monthKey || '';
-    
+    const autoTag = r.auto ? ' <span style="font-size:9px; color:var(--purple); padding:1px 6px; background:var(--purple-dim); border-radius:6px; margin-left:4px;">🤖 자동</span>' : '';
+
     return `
       <div class="timeline-day" onclick="toggleReviewDetail(${idx})" style="cursor:pointer;">
-        <div class="timeline-day-date">${typeLabel} 리뷰 · ${periodLabel}</div>
+        <div class="timeline-day-date">${typeLabel} 리뷰 · ${periodLabel}${autoTag}</div>
         <div class="timeline-day-summary" style="font-family: 'Gowun Batang', serif; font-size: 14px;">
           ${escapeHtml(r.summary || '(요약 없음)')}
         </div>
