@@ -2334,6 +2334,60 @@
   .review-history-summary { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
 
   a { color: var(--accent); }
+
+  /* V3.12: Project tracking — "나" 탭 안 카드 */
+  .project-section { margin-bottom: 22px; }
+  .project-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .project-section-title {
+    font-size: 13px; font-weight: 600; color: var(--accent);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .project-add-btn {
+    font-size: 11px; color: var(--accent); background: var(--accent-dim);
+    border: 1px solid rgba(201,169,110,0.3);
+    padding: 6px 12px; border-radius: 14px; cursor: pointer;
+    font-family: inherit; min-height: 32px;
+  }
+  .project-add-btn:active { transform: scale(0.96); background: rgba(201,169,110,0.25); }
+  .project-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
+  }
+  .project-card.paused { opacity: 0.6; }
+  .project-card.done { background: linear-gradient(135deg, rgba(152,195,121,0.08), transparent); border-color: rgba(152,195,121,0.3); }
+  .pc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .pc-emoji { font-size: 22px; flex-shrink: 0; }
+  .pc-title-wrap { flex: 1; min-width: 0; }
+  .pc-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+  .pc-sub { font-size: 11px; color: var(--text-dim); }
+  .pc-menu-btn {
+    background: none; border: none; color: var(--text-soft);
+    font-size: 18px; cursor: pointer; padding: 4px 8px;
+    font-family: inherit;
+  }
+  .pc-progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .pc-progress-bar { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .pc-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.4s; border-radius: 4px; }
+  .pc-progress-fill.done { background: linear-gradient(90deg, var(--success), #aed5a0); }
+  .pc-progress-text { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+  .pc-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .pc-action {
+    font-size: 11px; padding: 6px 12px; background: var(--surface2);
+    border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 10px; cursor: pointer; font-family: inherit;
+    min-height: 30px;
+  }
+  .pc-action:active { background: var(--surface3); color: var(--text); }
+  .pc-action.primary { background: var(--accent-dim); border-color: rgba(201,169,110,0.4); color: var(--accent); }
+  .pc-graph-wrap {
+    margin-top: 12px; padding: 10px; background: var(--surface2);
+    border-radius: 10px; display: none;
+  }
+  .pc-graph-wrap.show { display: block; }
+  .pc-graph-svg { width: 100%; height: 100px; }
 </style>
 </head>
 <body>
@@ -2608,6 +2662,7 @@
     <div class="screen" id="screen-model">
       <div class="screen-title">너에 대해 ✦</div>
       <div class="screen-sub">내가 시간을 들여 배운 너의 모습이야.<br>틀린 게 있으면 언제든 말해줘.</div>
+      <div id="projectsSection"></div>
       <div id="modelContent"></div>
       <div style="margin-top: 30px;">
         <button class="btn-secondary" onclick="forceAnalyze()">📊 지금까지 데이터 다시 분석</button>
@@ -3515,6 +3570,7 @@ async function init() {
   renderMainAction();
   renderDecisionMiniLink();
   renderModel();
+  renderProjects();
   renderArchive();
   renderChat();
   loadSettings();
@@ -6522,7 +6578,28 @@ async function sendChat() {
   if (isNewChapter && state.chatMessages.length > 1) {
     extractPreviousChapterTopics().catch(e => console.warn('topic extract error:', e));
   }
-  
+
+  // V3.12: 프로젝트 측정값 감지 (regex 기반, fire-and-forget)
+  const projMatch = detectProjectMeasurement(text);
+  if (projMatch) {
+    showConfirmModal({
+      title: `📊 ${projMatch.value}${projMatch.unit} 발견`,
+      message: `"${projMatch.project.title}" 측정값으로 기록할까?`,
+      okLabel: '응 기록', cancelLabel: '아니'
+    }).then((yes) => {
+      if (!yes) return;
+      const p = state.projects.find(x => x.id === projMatch.project.id);
+      if (!p) return;
+      p.measurements = p.measurements || [];
+      p.measurements.push({ value: projMatch.value, at: new Date().toISOString(), source: 'chat' });
+      const reached = (p.target > p.baseline && projMatch.value >= p.target) || (p.target < p.baseline && projMatch.value <= p.target);
+      if (reached) p.status = 'done';
+      saveState();
+      renderProjects();
+      showToast(reached ? `🎉 ${p.title} 목표 달성!` : `${p.emoji || '✦'} 기록`);
+    }).catch(() => {});
+  }
+
   await generateAIResponse();
 }
 
@@ -8989,6 +9066,277 @@ async function testForceMonthlyAuto() {
   } catch (e) {
     showToast('❌ 실패: ' + e.message);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// V3.12: PROJECT TRACKING (B-B-C) — "나" 탭 카드 / AI 추출 / 진행률+그래프
+// ═══════════════════════════════════════════════════════════════
+const PROJECT_TYPES = [
+  { value: 'diet', emoji: '⚖️', label: '체중/식단', defaultUnit: 'kg' },
+  { value: 'exercise', emoji: '🏃', label: '운동', defaultUnit: '분' },
+  { value: 'study', emoji: '📚', label: '공부/연구', defaultUnit: '시간' },
+  { value: 'habit', emoji: '🌱', label: '습관', defaultUnit: '회' },
+  { value: 'custom', emoji: '🎯', label: '직접', defaultUnit: '' }
+];
+
+function renderProjects() {
+  const container = document.getElementById('projectsSection');
+  if (!container) return;
+  const visible = (state.projects || []).filter(p => p.status !== 'abandoned' && p.target !== undefined);
+  let html = `<div class="project-section">
+    <div class="project-section-header">
+      <div class="project-section-title">🏃 프로젝트</div>
+      <button class="project-add-btn" onclick="addNewProject()">+ 추가</button>
+    </div>`;
+  if (visible.length === 0) {
+    html += `<div style="font-size:12px; color:var(--text-dim); padding:10px 0 4px; line-height:1.7;">
+      장기 프로젝트 없어. 다이어트 / 운동 / 공부 같은 거 추가해봐.<br>
+      체중·시간·횟수 추적하고 그래프로 봐.
+    </div>`;
+  } else {
+    visible.forEach(p => { html += renderProjectCard(p); });
+  }
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function renderProjectCard(p) {
+  const progress = computeProjectProgress(p);
+  const progressPct = Math.max(0, Math.min(100, progress.pct));
+  const statusCls = p.status === 'paused' ? 'paused' : (p.status === 'done' ? 'done' : '');
+  const fillCls = progress.pct >= 100 ? 'done' : '';
+  const statusText = p.status === 'done' ? '✓ 완료' : p.status === 'paused' ? '⏸ 일시중지' : '진행 중';
+  return `
+    <div class="project-card ${statusCls}">
+      <div class="pc-head">
+        <div class="pc-emoji">${p.emoji || '🎯'}</div>
+        <div class="pc-title-wrap">
+          <div class="pc-title">${escapeHtml(p.title)}</div>
+          <div class="pc-sub">${statusText}${p.unit ? ` · ${escapeHtml(p.unit)}` : ''}</div>
+        </div>
+        <button class="pc-menu-btn" onclick="openProjectMenu('${p.id}')">⋯</button>
+      </div>
+      <div class="pc-progress-row">
+        <div class="pc-progress-bar">
+          <div class="pc-progress-fill ${fillCls}" style="width:${progressPct}%"></div>
+        </div>
+        <div class="pc-progress-text">${progress.label}</div>
+      </div>
+      <div class="pc-actions">
+        <button class="pc-action primary" onclick="addProjectMeasurement('${p.id}')">📊 측정 기록</button>
+        <button class="pc-action" onclick="toggleProjectGraph('${p.id}')">${p.showGraph ? '▲ 그래프 닫기' : '📈 그래프'}</button>
+      </div>
+      <div class="pc-graph-wrap ${p.showGraph ? 'show' : ''}">
+        ${p.showGraph ? renderProjectGraphSVG(p) : ''}
+      </div>
+    </div>`;
+}
+
+function computeProjectProgress(p) {
+  const last = (p.measurements || []).length > 0
+    ? p.measurements[p.measurements.length - 1].value
+    : p.baseline;
+  const total = Math.abs(p.target - p.baseline);
+  if (total === 0) return { pct: 0, label: '시작 전' };
+  const moved = Math.abs(last - p.baseline);
+  const pct = (moved / total) * 100;
+  const direction = p.target > p.baseline ? '↑' : '↓';
+  return {
+    pct: pct,
+    label: `${last}${p.unit || ''} ${direction} ${p.target}${p.unit || ''} (${Math.round(pct)}%)`
+  };
+}
+
+function renderProjectGraphSVG(p) {
+  const points = [
+    { value: p.baseline, at: p.startDate || p.createdAt },
+    ...(p.measurements || [])
+  ];
+  if (points.length < 2) {
+    return '<div style="font-size:11px; color:var(--text-dim); text-align:center; padding:14px;">측정 기록을 더 쌓으면 그래프가 그려져.</div>';
+  }
+  const values = points.map(pt => pt.value).concat([p.target]);
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const range = (maxV - minV) || 1;
+  const w = 300, h = 100, padX = 22, padY = 12;
+  const innerW = w - 2 * padX;
+  const innerH = h - 2 * padY;
+  const polyPoints = points.map((pt, i) => {
+    const x = padX + (i / Math.max(points.length - 1, 1)) * innerW;
+    const y = h - padY - ((pt.value - minV) / range) * innerH;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const targetY = h - padY - ((p.target - minV) / range) * innerH;
+  const dots = points.map((pt, i) => {
+    const x = padX + (i / Math.max(points.length - 1, 1)) * innerW;
+    const y = h - padY - ((pt.value - minV) / range) * innerH;
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--accent2)"/>`;
+  }).join('');
+  return `<svg class="pc-graph-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <line x1="${padX}" y1="${targetY.toFixed(1)}" x2="${w-padX}" y2="${targetY.toFixed(1)}" stroke="var(--success)" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+    <polyline points="${polyPoints}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+    ${dots}
+    <text x="${w-padX}" y="${(targetY-3).toFixed(1)}" text-anchor="end" fill="var(--success)" font-size="10">목표 ${p.target}${p.unit || ''}</text>
+  </svg>`;
+}
+
+function toggleProjectGraph(id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p) return;
+  p.showGraph = !p.showGraph;
+  saveState();
+  renderProjects();
+}
+
+async function addNewProject() {
+  const type = await showOptionsModal({
+    title: '뭘 추적할까?',
+    options: PROJECT_TYPES.map(t => ({ label: `${t.emoji} ${t.label}`, value: t.value })),
+    allowCustom: false
+  });
+  if (!type) return;
+  const meta = PROJECT_TYPES.find(t => t.value === type);
+
+  const title = await showInputModal({
+    title: '프로젝트 이름',
+    placeholder: meta.value === 'diet' ? '예: 체중 -5kg' : meta.value === 'exercise' ? '예: 매주 3회 달리기' : '간결하게',
+    maxLength: 40
+  });
+  if (!title) return;
+
+  const unit = await showInputModal({
+    title: '측정 단위',
+    placeholder: '예: kg, 분, 회, 페이지...',
+    defaultValue: meta.defaultUnit || ''
+  });
+  if (unit === null) return;
+
+  const baselineStr = await showInputModal({
+    title: '시작값 (지금 상태)',
+    placeholder: '숫자만'
+  });
+  if (!baselineStr) return;
+  const baseline = parseFloat(baselineStr);
+  if (isNaN(baseline)) { showToast('숫자가 아니야'); return; }
+
+  const targetStr = await showInputModal({
+    title: '목표값',
+    placeholder: '숫자만'
+  });
+  if (!targetStr) return;
+  const target = parseFloat(targetStr);
+  if (isNaN(target)) { showToast('숫자가 아니야'); return; }
+
+  const project = {
+    id: 'proj_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title, emoji: meta.emoji, type: meta.value,
+    unit: unit || '',
+    baseline, target,
+    measurements: [],
+    status: 'active',
+    showGraph: false,
+    createdAt: new Date().toISOString(),
+    startDate: todayKey()
+  };
+  if (!state.projects) state.projects = [];
+  state.projects.push(project);
+  saveState();
+  renderProjects();
+  showToast(`${project.emoji} ${project.title} 시작 ✦`);
+}
+
+async function addProjectMeasurement(id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p) return;
+  if (p.status !== 'active') {
+    const resume = await showConfirmModal({
+      title: '재개할까?',
+      message: '일시중지/완료 상태야. 측정 추가하려면 재개해야 해.',
+      okLabel: '재개', cancelLabel: '취소'
+    });
+    if (!resume) return;
+    p.status = 'active';
+  }
+  const lastVal = (p.measurements || []).length > 0
+    ? p.measurements[p.measurements.length - 1].value
+    : p.baseline;
+  const valStr = await showInputModal({
+    title: `${p.emoji} ${p.title}`,
+    placeholder: `숫자 (이전: ${lastVal}${p.unit || ''})`
+  });
+  if (!valStr) return;
+  const val = parseFloat(valStr);
+  if (isNaN(val)) { showToast('숫자가 아니야'); return; }
+  if (!p.measurements) p.measurements = [];
+  p.measurements.push({ value: val, at: new Date().toISOString(), source: 'manual' });
+  const reached = (p.target > p.baseline && val >= p.target) || (p.target < p.baseline && val <= p.target);
+  if (reached) {
+    p.status = 'done';
+    showToast(`🎉 ${p.title} 목표 달성!`);
+  } else {
+    showToast('기록 ✦');
+  }
+  saveState();
+  renderProjects();
+}
+
+async function openProjectMenu(id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p) return;
+  const options = [
+    { label: '✏️ 이름 수정', value: 'rename' },
+    { label: '🎯 목표값 수정', value: 'retarget' },
+    { label: p.status === 'paused' ? '▶ 재개' : '⏸ 일시중지', value: 'pause_toggle' }
+  ];
+  if (p.status !== 'done') options.push({ label: '✓ 완료 처리', value: 'mark_done' });
+  options.push({ label: '🗑 포기/삭제', value: 'abandon' });
+
+  const action = await showOptionsModal({ title: p.title, options, allowCustom: false });
+  if (!action) return;
+
+  if (action === 'rename') {
+    const newTitle = await showInputModal({ title: '새 이름', defaultValue: p.title, maxLength: 40 });
+    if (newTitle) { p.title = newTitle; saveState(); renderProjects(); }
+  } else if (action === 'retarget') {
+    const newTargetStr = await showInputModal({ title: '새 목표값', defaultValue: String(p.target) });
+    if (newTargetStr) {
+      const t = parseFloat(newTargetStr);
+      if (!isNaN(t)) { p.target = t; saveState(); renderProjects(); }
+    }
+  } else if (action === 'pause_toggle') {
+    p.status = p.status === 'paused' ? 'active' : 'paused';
+    saveState(); renderProjects();
+  } else if (action === 'mark_done') {
+    p.status = 'done'; saveState(); renderProjects();
+    showToast('✓ 완료 처리됨');
+  } else if (action === 'abandon') {
+    const yes = await confirmDelete(p.title);
+    if (yes) {
+      p.status = 'abandoned'; saveState(); renderProjects();
+      showToast('포기했어. 괜찮아.');
+    }
+  }
+}
+
+// V3.12: 채팅 자연어 → 측정값 추출 (regex 기반 — AI 호출 절약)
+// 사용자 메시지에 "체중 65kg" 같은 패턴 발견 + 활성 프로젝트 매칭 → 제안 카드
+function detectProjectMeasurement(text) {
+  const active = (state.projects || []).filter(p => p.status === 'active' && p.target !== undefined);
+  if (active.length === 0) return null;
+  // 숫자 + 단위 매칭
+  const re = /(\d+(?:\.\d+)?)\s*(kg|km|분|회|시간|페이지|점|개|시)/g;
+  let m;
+  const matches = [];
+  while ((m = re.exec(text)) !== null) {
+    const value = parseFloat(m[1]);
+    const unit = m[2];
+    const matchedProject = active.find(p => p.unit && p.unit.includes(unit));
+    if (matchedProject) {
+      matches.push({ project: matchedProject, value, unit });
+    }
+  }
+  return matches.length > 0 ? matches[0] : null;
 }
 
 function showShortcutGuide() {
