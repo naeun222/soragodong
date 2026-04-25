@@ -4065,9 +4065,10 @@ const ONBOARDING_STEPS = [
     id: 'click_strategy',
     targetSelector: '.msg-action[onclick^="saveMsgAsStrategy"]',
     title: '🧭 전략으로',
-    body: '4단 응답 아래에 <b>"🧭 전략으로"</b> 버튼이 있어. 한 번 눌러볼래?<br><br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">응답이 길면 아래로 스크롤해서 찾아봐. (참고: 일반 응답엔 "✦ 깨달음으로", 4단 응답엔 "🧭 전략으로"가 자동 분기)</span>',
+    body: '4단 응답 아래에 <b>"🧭 전략으로"</b> 버튼이 있어. 한 번 눌러볼래?<br><br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">응답이 길면 아래로 스크롤해서 찾아봐. 누른 후 "눌렀어 →" 눌러줘.<br>(참고: 일반 응답엔 "✦ 깨달음으로", 4단 응답엔 "🧭 전략으로"가 자동 분기)</span>',
     waitFor: 'click',
     advanceDelay: 1200,
+    manualAdvance: true,
     dimBackground: false
   },
   {
