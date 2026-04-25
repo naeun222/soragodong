@@ -3900,14 +3900,23 @@ const ONBOARDING_STEPS = [
     fallbackPosition: 'top'
   },
 
-  // === Phase 5: 부름 + 모래사장 + 결별로 (4) ===
+  // === Phase 5: 부름 + 모래사장 + 결별로 (5) ===
+  {
+    id: 'go_home_for_mission',
+    targetSelector: '.nav-item[data-screen="home"]',
+    title: '🏠 홈으로 돌아가자',
+    body: '좋아! 이제 홈으로 가자. 방금 받아들인 전략이 미션으로 등록됐을 거야.<br><br>아래 🏠 홈 탭 한 번 눌러볼래?',
+    waitFor: 'visit',
+    visitScreen: 'home'
+  },
   {
     id: 'mission_done',
     targetSelector: '.mission-btn.complete',
-    title: '✓ 해냈어',
-    body: '홈으로 가면 방금 등록한 미션이 ⭐ "소라의 부름"으로 떠있을 거야!<br>"✓ 해냈어" 한 번 눌러서 미션 완료해보자. 탑티어 소라 획득! ✨<br><br><span class="small">실제 사용 시엔 인증샷이 필수야 — 튜토리얼은 내가 우회해줄게.</span>',
+    title: '⭐ 소라의 부름',
+    body: '홈에 ⭐ "소라의 부름" 미션 카드가 떠있을 거야!<br><br><b>"소라의 부름"이란?</b><br>네가 대화에서 받은 4단 분석 + 전략을 ✦ 해볼게로 받아들였을 때 등록되는 미션이야. 너 스스로 결정한 약속이지.<br><br><b>왜 특별해?</b><br>실제로는 미션 완료할 때 <b>인증샷</b>을 찍어서 내가 봐주고 검증해. 검증되면 그 미션의 소라는 ⭐ 부름 또는 ✨ 특별 — 가장 희귀한 결로 들어가! 자기 약속 지킨 흔적이라 특별한 거야.<br><br>지금은 튜토리얼이라 인증샷은 우회할게. ✓ 해냈어 한 번 눌러볼래?',
     waitFor: 'click',
     advanceDelay: 2000,
+    coachmarkPosition: 'corner',
     fallbackPosition: 'top'
   },
   {
@@ -4057,22 +4066,24 @@ function onbPositionStep(step, retryCount) {
   bodyEl.innerHTML = step.body;
   nextBtn.textContent = step.nextLabel || (_onbStep === ONBOARDING_STEPS.length - 1 ? '끝!' : '다음 →');
 
-  // V3.13.x: dimBackground:false 옵션 — 배경 안 어둡게 + coachmark 우상단 컴팩트
-  // (AI 응답 보면서 진행하는 step에서 화면 가리지 않도록)
+  // V3.13.x: dimBackground:false 옵션 — spotlight + 어두운 mask 끄기 (AI 응답 보면서 진행)
   if (step.dimBackground === false) {
     spotlight.style.display = 'none';
     mask.classList.remove('show-full');
     const ovDim = document.getElementById('onbOverlay');
     if (ovDim) ovDim.style.pointerEvents = 'none';
+  }
+  // V3.13.x: coachmarkPosition:'corner' — coachmark만 우상단 컴팩트 (spotlight/mask는 그대로)
+  // dimBackground:false인 경우에도 자동 corner 적용
+  if (step.coachmarkPosition === 'corner' || step.dimBackground === false) {
     coachmark.style.top = '20px';
     coachmark.style.right = '12px';
     coachmark.style.left = 'auto';
     coachmark.style.transform = 'none';
     coachmark.style.maxWidth = '260px';
     coachmark.style.bottom = 'auto';
-    // target click listener는 아래 일반 흐름에서 등록되어야 함 → target 잡기만 이어서
   } else {
-    // 평소 위치 reset (이전 step에서 dimBackground:false 사용했을 수 있음)
+    // 평소 위치 reset (이전 step에서 corner 썼을 수 있음)
     coachmark.style.maxWidth = '';
     coachmark.style.right = 'auto';
   }
@@ -4140,33 +4151,37 @@ function onbPositionStep(step, retryCount) {
       const ov = document.getElementById('onbOverlay');
       if (ov) ov.style.pointerEvents = 'none';
 
-      // coachmark 위치 (타깃 위 또는 아래 중 공간 더 큰 쪽)
-      const vh = window.innerHeight;
-      const spaceAbove = rect.top;
-      const spaceBelow = vh - rect.bottom;
-      const cmHeight = 220; // 대략
-      let cmTop;
-      if (step.fallbackPosition === 'top' || spaceAbove >= cmHeight && spaceAbove >= spaceBelow) {
-        cmTop = Math.max(16, rect.top - cmHeight - 16);
-      } else if (step.fallbackPosition === 'bottom' || spaceBelow >= cmHeight) {
-        cmTop = Math.min(vh - cmHeight - 16, rect.bottom + 16);
-      } else {
-        cmTop = (vh - cmHeight) / 2;
+      // coachmark 위치 — corner면 위에서 set한 우상단 그대로
+      if (step.coachmarkPosition !== 'corner') {
+        const vh = window.innerHeight;
+        const spaceAbove = rect.top;
+        const spaceBelow = vh - rect.bottom;
+        const cmHeight = 220; // 대략
+        let cmTop;
+        if (step.fallbackPosition === 'top' || spaceAbove >= cmHeight && spaceAbove >= spaceBelow) {
+          cmTop = Math.max(16, rect.top - cmHeight - 16);
+        } else if (step.fallbackPosition === 'bottom' || spaceBelow >= cmHeight) {
+          cmTop = Math.min(vh - cmHeight - 16, rect.bottom + 16);
+        } else {
+          cmTop = (vh - cmHeight) / 2;
+        }
+        coachmark.style.top = cmTop + 'px';
+        coachmark.style.left = '50%';
+        coachmark.style.transform = 'translateX(-50%)';
+        coachmark.style.bottom = 'auto';
       }
-      coachmark.style.top = cmTop + 'px';
-      coachmark.style.left = '50%';
-      coachmark.style.transform = 'translateX(-50%)';
-      coachmark.style.bottom = 'auto';
     } else {
       // 타깃 없음 — 화면 중앙. mask 표시해서 클릭 차단 (welcome/finish 화면).
       spotlight.style.display = 'none';
       mask.classList.add('show-full');
       const ov = document.getElementById('onbOverlay');
       if (ov) ov.style.pointerEvents = 'auto';
-      coachmark.style.top = '50%';
-      coachmark.style.left = '50%';
-      coachmark.style.transform = 'translate(-50%, -50%)';
-      coachmark.style.bottom = 'auto';
+      if (step.coachmarkPosition !== 'corner') {
+        coachmark.style.top = '50%';
+        coachmark.style.left = '50%';
+        coachmark.style.transform = 'translate(-50%, -50%)';
+        coachmark.style.bottom = 'auto';
+      }
     }
   }
 
