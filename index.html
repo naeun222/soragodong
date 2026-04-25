@@ -2206,27 +2206,28 @@
   .onb-overlay.active { pointer-events: auto; }
   .onb-mask {
     position: fixed; inset: 0;
-    background: rgba(15,14,23,0.78);
-    backdrop-filter: blur(2px);
+    background: rgba(15,14,23,0.7);
     transition: opacity 0.25s ease;
     pointer-events: auto;
+  }
+  /* V3.12: target 있을 때 마스크는 투명 + 클릭 패스스루 (spotlight box-shadow가 darkening 담당) */
+  .onb-mask.has-hole {
+    background: transparent;
+    pointer-events: none;
   }
   .onb-spotlight {
     position: fixed;
     border-radius: 16px;
-    box-shadow: 0 0 0 9999px rgba(15,14,23,0.78), 0 0 24px 6px rgba(201,169,110,0.4);
+    box-shadow: 0 0 0 9999px rgba(15,14,23,0.7), 0 0 16px 4px rgba(201,169,110,0.5);
     border: 2px solid var(--accent);
     pointer-events: none;
-    transition: all 0.3s ease;
+    transition: all 0.25s ease;
     background: transparent;
-    /* 클릭 패스스루: 마스크는 그대로지만 spotlight 영역만 밝게 */
+    animation: onbPulse 2s ease-in-out infinite;
   }
-  .onb-spotlight.allow-click {
-    pointer-events: none; /* 항상 패스스루 - 사용자 진짜 클릭은 onb-mask 밑 요소에 닿게 */
-  }
-  /* 마스크에 구멍을 뚫는 별도 처리: spotlight 영역만큼 마스크가 안 막게 */
-  .onb-mask.has-hole {
-    background: transparent;
+  @keyframes onbPulse {
+    0%, 100% { box-shadow: 0 0 0 9999px rgba(15,14,23,0.7), 0 0 16px 4px rgba(201,169,110,0.5); }
+    50% { box-shadow: 0 0 0 9999px rgba(15,14,23,0.7), 0 0 28px 10px rgba(201,169,110,0.85); }
   }
   .onb-coachmark {
     position: fixed;
@@ -3611,77 +3612,63 @@ function startWelcomeTutorial() {
 }
 
 // === V3.7 인터랙티브 온보딩 시스템 ===
+// V3.12: 진짜 인터랙티브 튜토리얼 — 사용자 액션이 단계 진행
 const ONBOARDING_STEPS = [
   {
     id: 'welcome',
-    targetSelector: null,  // 첫 화면 — 중앙
+    targetSelector: null,
     title: '안녕, 소라고동이야 🐚',
-    body: '너의 ADHD 친화 AI 친구야.<br>같이 한 바퀴 돌면서 익혀보자.<br><span class="small">언제든 건너뛸 수 있어.</span>',
+    body: '같이 한 바퀴 진짜로 돌아보자.<br>네가 직접 해봐야 익혀져.<br><span class="small">끝나면 데이터 다 지울게.</span>',
     waitFor: 'next'
   },
   {
-    id: 'checkin',
+    id: 'go_checkin',
     targetSelector: '.nav-item[data-screen="checkin"]',
-    title: '먼저, 체크인 — 15초',
-    body: '오늘 어땠어? 한 줄도 OK.<br>매일 가벼운 기록이 너의 패턴이 돼.<br><span class="small">아래 ✓ 탭을 눌러봐</span>',
+    title: '체크인 ✓ 눌러봐',
+    body: '15초면 끝나는 가벼운 기록.<br><span class="small">아래 ✓ 탭이야</span>',
     waitFor: 'visit',
     visitScreen: 'checkin'
   },
   {
-    id: 'chat',
+    id: 'pick_vitality',
+    targetSelector: '.vitality-options',
+    title: '오늘 활력 골라봐',
+    body: '😵 ~ ✨ 중에 대충 하나.<br>완벽할 필요 X.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    fallbackPosition: 'bottom'
+  },
+  {
+    id: 'submit_checkin',
+    targetSelector: 'button[onclick="submitCheckin()"]',
+    title: '기록 완료 눌러봐',
+    body: '저장돼. 끝.',
+    waitFor: 'click',
+    advanceDelay: 700,
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'go_chat',
     targetSelector: '.nav-item[data-screen="chat"]',
-    title: '대화 — 가장 자유로운 곳',
-    body: '뭐든 한 줄 써봐. "졸려" 한 마디도 OK.<br>알아서 톤 맞춰줄게.<br><span class="small">🐚 탭을 눌러봐</span>',
+    title: '🐚 대화 탭 눌러봐',
+    body: '여기가 가장 자유로운 곳.',
     waitFor: 'visit',
     visitScreen: 'chat'
   },
   {
-    id: 'home_mission',
-    targetSelector: '#missionContainer',
-    title: '소라의 부름',
-    body: '하루 한 번 작은 미션이 떠.<br>안 해도 돼. 너 페이스대로.',
-    waitFor: 'next',
-    visitScreen: 'home',
+    id: 'send_msg',
+    targetSelector: '.send-btn',
+    title: '뭐든 써서 보내봐',
+    body: '"안녕" 한 마디도 OK.<br>아래 입력창에 쓰고 → 화살표 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 1500,
     fallbackPosition: 'top'
-  },
-  {
-    id: 'execute',
-    targetSelector: '.nav-item[data-screen="execute"]',
-    title: '실행 — 머릿속 짐 풀기',
-    body: '와다다 쓰면 내가 정리해서<br><span class="highlight">오늘의 카드 3장</span>으로 만들어줘.<br><span class="small">🚀 탭을 눌러봐</span>',
-    waitFor: 'visit',
-    visitScreen: 'execute'
-  },
-  {
-    id: 'model',
-    targetSelector: '.nav-item[data-screen="model"]',
-    title: '나 — 너의 모습이 쌓이는 곳',
-    body: '대화·체크인이 쌓이면<br>여기 너의 패턴·가치·특성이 보여.<br><span class="small">👤 탭을 눌러봐</span>',
-    waitFor: 'visit',
-    visitScreen: 'model'
-  },
-  {
-    id: 'archive',
-    targetSelector: '.nav-item[data-screen="archive"]',
-    title: '아카이브 — 깨달음 모음',
-    body: '타임라인, 인사이트, 진주.<br>네가 쌓아온 의미들이 모이는 곳.<br><span class="small">📚 탭을 눌러봐</span>',
-    waitFor: 'visit',
-    visitScreen: 'archive'
-  },
-  {
-    id: 'decisions',
-    targetSelector: '#decisionMiniLinkContainer',
-    title: '큰 결정은 천천히',
-    body: '이직, 관계, 큰 구매 같은 건<br><span class="highlight">14일 숙성</span>하는 곳이 있어.<br>충동 차단용.',
-    waitFor: 'next',
-    visitScreen: 'home',
-    fallbackPosition: 'bottom'
   },
   {
     id: 'finish',
     targetSelector: null,
     title: '준비 끝 ✦',
-    body: '대화창은 마음대로 써.<br>· 와다다 쏟아내기<br>· "졸려" 한 마디<br>· 마음 힘들 때 들어줘만<br>· 오늘 기억하고 싶은 순간<br><span class="small">규칙 없어. 알아서 맞춰줄게.</span>',
+    body: '체크인·대화 한 번씩 해봤어.<br>이제 진짜 시작.<br><span class="small">튜토리얼에서 만든 데이터는 다 지웠어.</span>',
     waitFor: 'next',
     visitScreen: 'home',
     nextLabel: '시작! ✦'
@@ -3690,13 +3677,13 @@ const ONBOARDING_STEPS = [
 
 let _onbStep = 0;
 let _onbActiveListeners = [];
+let _onbStartTime = null;  // V3.12: 튜토리얼 시작 시간 — 종료 시 데이터 정리
 
 function startInteractiveOnboarding() {
   _onbStep = 0;
-  // 기존 슬라이드 투어 overlay 안 보이게
+  _onbStartTime = Date.now();
   const tourOv = document.getElementById('tourOverlay');
   if (tourOv) tourOv.style.display = 'none';
-  // 홈으로
   showScreen('home');
   setTimeout(() => {
     const ov = document.getElementById('onbOverlay');
@@ -3770,6 +3757,8 @@ function onbPositionStep(step) {
     spotlight.style.top = (rect.top - padding) + 'px';
     spotlight.style.width = (rect.width + padding * 2) + 'px';
     spotlight.style.height = (rect.height + padding * 2) + 'px';
+    // V3.12: target 있을 때 마스크 투명 + 클릭 패스스루
+    mask.classList.add('has-hole');
     
     // coachmark 위치 (타깃 위 또는 아래 중 공간 더 큰 쪽)
     const vh = window.innerHeight;
@@ -3789,28 +3778,35 @@ function onbPositionStep(step) {
     coachmark.style.transform = 'translateX(-50%)';
     coachmark.style.bottom = 'auto';
   } else {
-    // 타깃 없음 — 화면 중앙
+    // 타깃 없음 — 화면 중앙. 마스크는 불투명.
     spotlight.style.display = 'none';
+    mask.classList.remove('has-hole');
     coachmark.style.top = '50%';
     coachmark.style.left = '50%';
     coachmark.style.transform = 'translate(-50%, -50%)';
     coachmark.style.bottom = 'auto';
   }
-  
+
   // 행동 대기 처리
   if (step.waitFor === 'visit' && step.visitScreen) {
-    // 사용자가 해당 nav-item 클릭하면 다음
-    const navItem = target;
-    if (navItem) {
-      const handler = (e) => {
-        // showScreen 자체는 진행되게 — 클릭 차단 X
-        setTimeout(() => onbNext(), 350);
-      };
-      onbAddListener(navItem, 'click', handler);
+    if (target) {
+      const handler = (e) => { setTimeout(() => onbNext(), 350); };
+      onbAddListener(target, 'click', handler);
     }
-    nextBtn.classList.remove('waiting');
-    nextBtn.textContent = '눌렀어 →';
+    nextBtn.style.display = 'none';
+  } else if (step.waitFor === 'click') {
+    // V3.12: 사용자가 highlight된 요소 클릭하면 다음으로
+    if (target) {
+      const handler = (e) => {
+        const delay = step.advanceDelay || 350;
+        setTimeout(() => onbNext(), delay);
+      };
+      // 컨테이너면 자식 클릭도 잡히도록 capture phase
+      onbAddListener(target, 'click', handler);
+    }
+    nextBtn.style.display = 'none';
   } else if (step.waitFor === 'next') {
+    nextBtn.style.display = '';
     nextBtn.classList.remove('waiting');
   }
 }
@@ -3824,13 +3820,34 @@ function onbNext() {
   onbRenderStep();
 }
 
-function onbSkip() {
-  if (!confirm('투어 건너뛸까?\n언제든 ⚙ 설정에서 다시 볼 수 있어.')) return;
+async function onbSkip() {
+  const yes = await showConfirmModal({
+    title: '투어 건너뛸까?',
+    message: '언제든 ⚙ 설정에서 다시 볼 수 있어.\n지금까지 만든 데이터는 그대로 둘게.',
+    okLabel: '건너뛰기', cancelLabel: '계속'
+  });
+  if (!yes) return;
+  // Skip = 데이터 그대로 유지 (cleanup 건너뛰기)
+  _onbStartTime = null;
   onbFinish();
 }
 
 function onbFinish() {
   onbCleanupListeners();
+
+  // V3.12: 튜토리얼에서 만든 데이터 정리 (시작 시간 이후 생성된 것만)
+  if (_onbStartTime) {
+    const startISO = new Date(_onbStartTime).toISOString();
+    const todayK = todayKey();
+    state.chatMessages = (state.chatMessages || []).filter(m =>
+      !m.timestamp || m.timestamp < startISO
+    );
+    state.entries = (state.entries || []).filter(e =>
+      e.date !== todayK || (e.completedAt && e.completedAt < startISO)
+    );
+    _onbStartTime = null;
+  }
+
   state.hasSeenWelcomeTutorial = true;
   state.hasSeenV3Tour = true;
   saveState();
@@ -3840,7 +3857,7 @@ function onbFinish() {
     ov.style.display = 'none';
   }
   showScreen('home');
-  setTimeout(() => showToast('잘 왔어 ✦'), 300);
+  setTimeout(() => showToast('잘 왔어 ✦ 진짜 시작!'), 300);
 }
 
 // 화면 회전/리사이즈 시 spotlight 위치 재계산
