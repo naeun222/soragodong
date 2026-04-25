@@ -3210,6 +3210,7 @@
           기능 테스트하면서 데이터 더럽히기 싫을 때 켜둬.
         </div>
         <button class="btn-secondary" id="testerModeToggleBtn" onclick="toggleTesterMode()">🧪 테스터 모드: OFF</button>
+        <button class="btn-secondary" onclick="simulateNewUser()" style="margin-top:6px;">🆕 신규 사용자 튜토리얼 시뮬</button>
       </div>
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">👤 계정</div>
@@ -4064,19 +4065,19 @@ const ONBOARDING_STEPS = [
     id: 'click_strategy',
     targetSelector: '.msg-action[onclick^="saveMsgAsStrategy"]',
     title: '🧭 전략으로',
-    body: '4단 응답 아래에 <b>"🧭 전략으로"</b> 버튼이 보일 거야! 한 번 눌러볼래?<br><br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">참고: 일반 응답엔 "✦ 깨달음으로" 버튼이 떠. 4단 응답일 땐 자동으로 "🧭 전략으로"로 바뀌어.</span>',
+    body: '4단 응답 아래에 <b>"🧭 전략으로"</b> 버튼이 있어. 한 번 눌러볼래?<br><br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">응답이 길면 아래로 스크롤해서 찾아봐. (참고: 일반 응답엔 "✦ 깨달음으로", 4단 응답엔 "🧭 전략으로"가 자동 분기)</span>',
     waitFor: 'click',
     advanceDelay: 1200,
-    fallbackPosition: 'top'
+    dimBackground: false
   },
   {
     id: 'click_accept',
     targetSelector: '.proposal-btn.accept',
     title: '✦ 해볼게',
-    body: '같은 응답 아래에 "✦ 해볼게" 버튼이 있어. 한 번 눌러볼래?<br>전략을 "오늘의 미션"으로 받아들이는 거야 — 홈에 "소라의 부름" ⭐로 등록돼!',
+    body: '같은 응답 아래에 "✦ 해볼게" 버튼이 있어. 한 번 눌러볼래?<br>전략을 "오늘의 미션"으로 받아들이는 거야 — 홈에 "소라의 부름" ⭐로 등록돼!<br><br><span class="small">"🧭 전략으로" 옆에 같이 떠.</span>',
     waitFor: 'click',
     advanceDelay: 1500,
-    fallbackPosition: 'top'
+    dimBackground: false
   },
 
   // === Phase 5: 부름 + 모래사장 + 결별로 (5) ===
@@ -8295,7 +8296,7 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 5. 매번 4단 구조 X. 보통은 그냥 친구처럼 답해.
 6. 동의만 하지 않기. 필요하면 부드럽게 반박.
 7. Self-compassion (Neff) 기반. 죄책감 X.
-8. ADHD 특성 고려.
+8. **사용자 특성 가정 X**. ADHD/우울/불안 등 진단명 절대 먼저 꺼내지 말 것. 사용자 profile에 명시되어 있거나 사용자 본인이 언급한 경우에만 그 맥락 사용. 그 외엔 일반 사용자로 대하기.
 9. 이모지 1-2개. 🐚 가끔.
 10. 사용자가 그냥 감정 털어놓으면 → 그냥 들어주기. 분석 강요 X.
 11. **모든 메시지를 "고민/문제"로 보지 말기.** 사용자가 즐거운 일·웃긴 에피소드·소소한 일상 얘기하면 → 같이 즐거워하고 공감하기. 분석 X, 전략 제시 X, "이게 어떤 의미일까?" 같은 깊이 파기 X. 그냥 친구처럼 같이 웃고 같이 좋아하기.
@@ -12735,6 +12736,31 @@ async function resetTasks() {
   await _confirmAndReset('할 일(서랍장)', c, () => { state.tasks = []; }, () => {
     if (typeof renderExecute === 'function') renderExecute();
   });
+}
+
+// V3.13.x: 신규 사용자 시뮬 — 테스터 모드 자동 ON + 신규 사용자처럼 튜토리얼 시작
+// (메모리만 비워서 진행. 새로고침하면 원상복구)
+function simulateNewUser() {
+  state.preferences = state.preferences || {};
+  if (!state.preferences.testerMode) {
+    state.preferences.testerMode = true;
+    saveState(true);
+    refreshTesterModeUI();
+  }
+  // 메모리만 신규 사용자처럼 — saveState 가드 (테스터 모드)되어 cloud엔 안 감
+  state.hasSeenWelcomeTutorial = false;
+  state.entries = [];
+  state.chatMessages = [];
+  state.missions = [];
+  state.shellCollection = [];
+  state.tasks = [];
+  state.archive = [];
+  state.pearls = [];
+  state.topicCards = [];
+  state.projects = [];
+  state.decisions = [];
+  showToast('🧪 신규 사용자 시뮬 시작 — 새로고침하면 원상 복구');
+  setTimeout(() => startInteractiveOnboarding(), 600);
 }
 
 // V3.13.x: 테스터 모드 토글 — ON 시 saveState 가드되어 변경 저장 X
