@@ -1468,10 +1468,17 @@
     position: relative;
     transition: all 0.2s;
   }
-  .exec-card.completed { 
-    opacity: 0.5; 
+  .exec-card.completed {
+    opacity: 0.5;
     background: linear-gradient(135deg, rgba(122,184,122,0.1), transparent);
   }
+  /* V3.13: 서랍장 카드 — 약간 옅게 */
+  .exec-card.drawer-card {
+    opacity: 0.85;
+    background: linear-gradient(135deg, var(--surface), rgba(45,40,80,0.06));
+    border-color: rgba(139,126,196,0.18);
+  }
+  .exec-card.drawer-card:hover { opacity: 1; }
   .exec-card-tag {
     display: inline-block;
     font-size: 9px;
@@ -8520,6 +8527,37 @@ function renderExecute() {
       html += `</div>`;
     }
 
+    // V3.13: 서랍장 인라인 표시 (오늘의 카드 밑, 우선순위 정렬)
+    const drawerTasks = (state.tasks || [])
+      .filter(t => t.slot === 'drawer' && t.status !== 'done' && (t.date === todayKeyVal || !t.date))
+      .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+    if (drawerTasks.length > 0) {
+      html += `
+        <div class="exec-now-section">
+          <div class="exec-section-label">📂 서랍장 · ${drawerTasks.length}장 (우선순위순)</div>
+      `;
+      drawerTasks.forEach(task => {
+        const isAIMission = task.source === 'ai_mission';
+        const tag = isAIMission ? '🐚 부름' : task.weight === 'main' ? '⚡ 메인' : task.weight === 'light' ? '🍃 가벼움' : '📌 일상';
+        const elapsed = getTaskElapsedTime(task.id);
+        html += `
+          <div class="exec-card drawer-card" data-task-id="${task.id}">
+            <span class="exec-card-tag">${tag}</span>
+            <div class="exec-card-title">${escapeHtml(task.title)}</div>
+            <div class="exec-card-meta">
+              ${elapsed ? `<span>⏱ ${elapsed}</span>` : ''}
+            </div>
+            <div class="exec-card-actions">
+              <button class="start-btn" onclick="promoteSingleTask('${task.id}')">↑ 오늘의 카드로</button>
+              <button class="complete-btn" onclick="toggleQuestComplete('${task.id}')">✓ 완료</button>
+              <button onclick="rerollQuest('${task.id}')">↻ 다시</button>
+            </div>
+          </div>
+        `;
+      });
+      html += `</div>`;
+    }
+
     // Completed today
     if (completed.length > 0) {
       html += `
@@ -8527,21 +8565,22 @@ function renderExecute() {
           <div class="exec-section-label">✓ 오늘 클리어 · ${completed.length}장</div>
       `;
       completed.forEach(task => {
+        const elapsed = getTaskElapsedTime(task.id);
         html += `
           <div class="exec-card completed" onclick="toggleQuestComplete('${task.id}')" style="cursor:pointer;" title="실수로 눌렀으면 다시 탭해서 되살릴 수 있어">
             <div class="exec-card-title">${escapeHtml(task.title)}</div>
-            <div style="font-size:10px; color:var(--text-soft); margin-top:4px;">탭해서 되살리기 ↻</div>
+            <div style="font-size:10px; color:var(--text-soft); margin-top:4px;">${elapsed ? `⏱ ${elapsed} · ` : ''}탭해서 되살리기 ↻</div>
           </div>
         `;
       });
       html += `</div>`;
     }
 
-    // Bottom row
+    // Bottom row (V3.13: 서랍장 버튼 제거 — 인라인으로 통합. 채팅 아이디어 vault만 유지)
     html += `
       <div class="exec-actions-row">
         <button onclick="openBrainDump()">🧠 더 풀기</button>
-        <button onclick="openVault()">📂 서랍장 (${drawerCount + vaultCount})</button>
+        ${vaultCount > 0 ? `<button onclick="openVault()">💡 채팅 아이디어 (${vaultCount})</button>` : `<button onclick="addManualTask()">➕ 직접 추가</button>`}
       </div>
     `;
 
@@ -9371,8 +9410,64 @@ async function promoteFromDrawer() {
 }
 
 // === IMMERSE START (no task — pure ritual) ===
-function openImmerseStart() {
-  startRitualGame({ taskId: null, taskTitle: null });
+async function openImmerseStart() {
+  // V3.13: 몰입 시작 시 task 이름 입력 → 서랍장에 저장 + ritual 시작
+  const title = await showInputModal({
+    title: '🌧 몰입 시작',
+    message: '뭐에 몰입할 거야?',
+    placeholder: '예: 논문 쓰기, 코드 짜기, 청소',
+    maxLength: 50
+  });
+  if (!title || !title.trim()) return;
+
+  const todayKeyVal = todayKey();
+  const newTask = {
+    id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: title.trim(),
+    weight: 'daily',
+    energy: 'medium',
+    source: 'immerse',
+    date: todayKeyVal,
+    slot: 'drawer',
+    priority: getNextDrawerPriority(),
+    status: 'active',
+    createdAt: new Date().toISOString()
+  };
+  if (!state.tasks) state.tasks = [];
+  state.tasks.push(newTask);
+  saveState();
+  if (typeof renderExecute === 'function') renderExecute();
+  showToast(`📂 서랍장에 '${newTask.title}' 추가됨`);
+
+  startRitualGame({ taskId: newTask.id, taskTitle: newTask.title });
+}
+
+// V3.13: 서랍장 task 우선순위 다음 번호 계산 (가장 높은 priority + 1)
+function getNextDrawerPriority() {
+  const drawer = (state.tasks || []).filter(t => t.slot === 'drawer');
+  if (drawer.length === 0) return 0;
+  const maxP = Math.max(...drawer.map(t => t.priority ?? 0));
+  return maxP + 1;
+}
+
+// V3.13: 단일 서랍장 task → now3 슬롯으로 승격
+function promoteSingleTask(taskId) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (!task) return;
+  // now3 한도 체크 (3장)
+  const todayKeyVal = todayKey();
+  const now3Count = (state.tasks || []).filter(t =>
+    t.slot === 'now3' && t.status !== 'done' && t.date === todayKeyVal
+  ).length;
+  if (now3Count >= 3) {
+    showToast('⚠ 오늘의 카드 3장 꽉 찼어. 하나 완료하고 다시.');
+    return;
+  }
+  task.slot = 'now3';
+  task.date = todayKeyVal;
+  saveState();
+  renderExecute();
+  showToast('↑ 오늘의 카드로 올림 ✦');
 }
 
 function triggerShortcut() {
