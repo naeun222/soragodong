@@ -229,7 +229,7 @@
   @keyframes pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
 
   .proposal-buttons { display: flex; gap: 8px; margin-top: 14px; margin-bottom: 4px; }
-  .proposal-btn { flex: 1; padding: 12px; border-radius: 12px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; }
+  .proposal-btn { flex: 1; padding: 12px; border-radius: 12px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; white-space: nowrap; }
   .proposal-btn.accept { background: linear-gradient(135deg, var(--accent), #b8894a); color: var(--bg); }
   .proposal-btn.decline { background: transparent; border: 1px solid var(--border-strong); color: var(--text-dim); }
   .proposal-btn:active { transform: scale(0.97); }
@@ -2075,16 +2075,10 @@
     color: var(--accent);
   }
 
-  /* V3.11: 체크인 sticky 하단 (한 손 사용성) */
+  /* V3.11: 체크인/설정 화면 하단 액션 묶음 (sticky 해제 — 압도감 행 가림 이슈) */
   .checkin-bottom-bar {
-    position: sticky;
-    bottom: 76px;  /* nav 높이 위 */
-    background: linear-gradient(to top, var(--bg) 70%, transparent);
+    margin-top: 24px;
     padding: 16px 0 8px;
-    margin: 24px -16px 0;
-    padding-left: 16px;
-    padding-right: 16px;
-    z-index: 30;
   }
   .checkin-bottom-bar .btn-primary { margin-bottom: 8px; }
 
@@ -2855,7 +2849,18 @@
         <div id="accountInfo" style="font-size:12px; color:var(--text-dim); padding:12px; background:var(--surface); border-radius:12px; margin-bottom:8px;"></div>
         <button class="btn-secondary btn-danger" onclick="logout()">로그아웃</button>
       </div>
-      <div style="margin-top:30px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
+      <details class="model-collapse" style="margin-top:24px;">
+        <summary>🧪 테스트 도구 (시간 시뮬레이션)</summary>
+        <div class="model-collapse-content" style="padding: 10px 14px;">
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">
+            시간 trigger 동작 (챕터 분리, 토픽 추출, 아카이브 정리) 즉시 실행.
+          </div>
+          <button class="btn-secondary" onclick="testSkip4Hours()">⏭ 마지막 메시지 4시간 전으로</button>
+          <button class="btn-secondary" onclick="testForceExtract()">📚 챕터 토픽 즉시 추출</button>
+          <button class="btn-secondary" onclick="testForceArchive()">🗂 채팅 아카이브 즉시 실행</button>
+        </div>
+      </details>
+      <div style="margin-top:24px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
         <strong style="color:var(--accent)">프라이버시</strong><br>
         이메일 기반 인증으로 너만 접근 가능. 다른 사람은 너의 데이터를 볼 수 없어.<br>
         API 호출은 Anthropic을 통과하지만 7일 후 삭제되고 학습에 쓰이지 않아.
@@ -3194,6 +3199,7 @@ async function loadFromCloud() {
     }
     // Ensure all collections exist
     state.modes = { ...DEFAULT_STATE.modes, ...(state.modes || {}) };
+    if (state.modes.drained) state.modes.drained = false;
     if (!state.missions) state.missions = [];
     if (!state.shellCollection) state.shellCollection = [];
     if (!state.decisions) state.decisions = [];
@@ -6024,8 +6030,9 @@ function toggleMode(mode) {
   } else if (mode === 'period' && !state.modes.period) {
     state.periodStart = null;
   }
-  // 방전 모드 활성화 → SOS 효과
+  // 방전 모드는 SOS 트리거 전용 — 활성 상태로 저장하지 않음
   if (mode === 'drained' && state.modes.drained) {
+    state.modes.drained = false;
     saveState();
     renderModes();
     triggerSOS();
@@ -7022,7 +7029,14 @@ function buildSystemPromptParts() {
 
   // === VOLATILE (자주 변함, 캐시 X) ===
   let volatile = [];
-  
+
+  // V3.11.x: 오늘 날짜/요일 주입 — AI가 시간 감각 유지하도록
+  const _now = new Date();
+  const _dow = ['일', '월', '화', '수', '목', '금', '토'][_now.getDay()];
+  const _dateStr = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')} (${_dow}요일)`;
+  volatile.push(`[오늘] ${_dateStr}`);
+  volatile.push('');
+
   const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
   if (activeModes.length > 0) {
     const modeMap = { exam: '📚 마감/시험', travel: '✈️ 여행 중', sick: '🤒 아픔', rest: '🏖 휴식', period: '🩸 월경' };
@@ -8875,6 +8889,42 @@ function triggerShortcut() {
         window.location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}`;
       } catch(e) { /* graceful fail */ }
     }, 500);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🧪 V3.11.x: 테스트 도구 — 시간 trigger 시뮬레이션
+// ═══════════════════════════════════════════════════════════════
+function testSkip4Hours() {
+  if (!state.chatMessages || state.chatMessages.length === 0) {
+    showToast('대화 메시지가 없어. 먼저 대화창에서 메시지 보내봐.');
+    return;
+  }
+  const lastMsg = state.chatMessages[state.chatMessages.length - 1];
+  const fakeTime = new Date(Date.now() - (4 * 60 * 60 * 1000 + 60000));
+  lastMsg.timestamp = fakeTime.toISOString();
+  saveState();
+  showToast('🧪 4시간 전으로. 대화창에서 새 메시지 → 챕터 분리 + 토픽 추출');
+}
+
+async function testForceExtract() {
+  showToast('🧪 토픽 추출 시작...');
+  try {
+    await extractPreviousChapterTopics();
+    showToast('✦ 토픽 추출 완료. "나" 탭 확인.');
+  } catch (e) {
+    showToast('❌ 추출 실패: ' + e.message);
+  }
+}
+
+async function testForceArchive() {
+  showToast('🧪 채팅 아카이브 시작...');
+  try {
+    state.chatArchiveLastRun = null;
+    await runChatArchiveIfNeeded();
+    showToast('✦ 아카이브 실행 완료. "아카이브" 탭 확인.');
+  } catch (e) {
+    showToast('❌ 실패: ' + e.message);
   }
 }
 
