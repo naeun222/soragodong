@@ -463,7 +463,19 @@
   .msg.user { align-items: flex-end; }
   .msg.assistant { align-items: flex-start; }
   .msg.error { align-items: flex-start; }
-  .msg-bubble { max-width: 88%; padding: 14px 18px; border-radius: 18px; font-size: 14px; line-height: 1.75; white-space: pre-wrap; word-break: break-word; }
+  .msg-bubble { max-width: 88%; padding: 14px 18px; border-radius: 18px; font-size: 14px; line-height: 1.75; white-space: pre-wrap; word-break: break-word; position: relative; }
+  /* V3.13.x: 메시지 ⋮ 메뉴 버튼 */
+  .msg-menu-btn {
+    position: absolute; top: 4px; right: 4px;
+    width: 24px; height: 24px;
+    border: none; background: transparent;
+    color: var(--text-dim); opacity: 0.5;
+    font-size: 16px; line-height: 1; cursor: pointer;
+    border-radius: 50%; padding: 0;
+    transition: opacity 0.15s ease, background 0.15s ease;
+  }
+  .msg-menu-btn:hover, .msg-menu-btn:active { opacity: 1; background: rgba(255,255,255,0.08); }
+  .msg.user .msg-menu-btn { color: var(--bg); opacity: 0.55; }
   .msg.user .msg-bubble { background: var(--accent); color: var(--bg); border-bottom-right-radius: 4px; font-weight: 500; }
   .msg.assistant .msg-bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
   .msg.error .msg-bubble { background: rgba(224,108,117,0.1); border: 1px solid rgba(224,108,117,0.3); color: var(--text); border-bottom-left-radius: 4px; }
@@ -479,6 +491,15 @@
   .chat-input-wrap { display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 16px; }
   .chat-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.5; outline: none; resize: none; max-height: 140px; padding: 8px 0; }
   .send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--bg); border: none; font-size: 16px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  /* V3.13.x: 일기 템플릿 버튼 */
+  .diary-template-btn {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); font-size: 14px;
+    cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .diary-template-btn:active { transform: scale(0.95); background: var(--surface2); }
   .send-btn:disabled { opacity: 0.4; }
   .send-btn:active { transform: scale(0.95); }
 
@@ -3113,6 +3134,7 @@
 
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
   <div class="chat-input-wrap">
+    <button class="diary-template-btn" id="diaryTemplateBtn" onclick="showDiaryTemplates()" title="일기 템플릿" aria-label="일기 템플릿">📝</button>
     <textarea class="chat-textarea" id="chatInput" placeholder="편하게 말해봐..." rows="1"></textarea>
     <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
   </div>
@@ -7266,10 +7288,11 @@ function renderModelItem(item, category, idx) {
       <span class="conf ${item.user_verified ? 'verified' : ''}">${item.user_verified ? '✓ 확인됨' : confLabel}</span>
       ${item.evidence_count ? `<span>근거 ${item.evidence_count}개</span>` : ''}
     </div>
-    ${!item.user_verified ? `<div class="model-item-actions">
-      <button class="model-item-action approve" onclick="approveItem('${category}', ${idx})">✓ 맞아</button>
-      <button class="model-item-action reject" onclick="rejectItem('${category}', ${idx})">아니야</button>
-    </div>` : ''}
+    <div class="model-item-actions">
+      ${!item.user_verified ? `<button class="model-item-action approve" onclick="approveItem('${category}', ${idx})">✓ 맞아</button>` : ''}
+      <button class="model-item-action" onclick="editModelItem('${category}', ${idx})">✎ 수정</button>
+      <button class="model-item-action reject" onclick="rejectItem('${category}', ${idx})">${item.user_verified ? '✕ 삭제' : '아니야'}</button>
+    </div>
   </div>`;
 }
 
@@ -7282,6 +7305,38 @@ async function rejectItem(category, idx) {
   if (!await confirmDelete('이 항목')) return;
   state[category].splice(idx, 1);
   saveState(); renderModel(); renderModelPreview();
+}
+
+// V3.13.x: 통합분석 항목 수정 (이름 + 설명) — AI 오해 잘못된 추론 직접 고치기
+async function editModelItem(category, idx) {
+  const item = state[category] && state[category][idx];
+  if (!item) return;
+  const newName = await showInputModal({
+    title: '이름 수정',
+    message: `현재: ${item.name}`,
+    placeholder: '항목 이름',
+    defaultValue: item.name || '',
+    okLabel: '다음 →'
+  });
+  if (newName === null) return;
+  const trimmedName = newName.trim();
+  if (!trimmedName) { showToast('빈 이름은 안 돼'); return; }
+  const newDesc = await showInputModal({
+    title: '설명 수정',
+    message: '비워둬도 돼',
+    placeholder: '설명 (선택)',
+    defaultValue: item.description || '',
+    multiline: true,
+    okLabel: '저장'
+  });
+  if (newDesc === null) return;
+  item.name = trimmedName;
+  item.description = (newDesc || '').trim();
+  item.user_verified = true;  // 사용자 직접 수정 = 검증된 것
+  saveState();
+  renderModel();
+  renderModelPreview();
+  showToast('수정됨 ✦');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -7318,7 +7373,11 @@ function renderChat() {
       bubbleContent = escapeHtml(m.content);
     }
     const msgClass = m.error ? 'error' : m.role;
-    const bubble = `<div class="msg-bubble">${bubbleContent}</div>`;
+    // V3.13.x: 메시지 ⋮ 메뉴 버튼 (복사/수정/삭제). typing/error는 제외.
+    const menuBtn = (!m.typing && !m.error)
+      ? `<button class="msg-menu-btn" onclick="showMessageMenu(${i})" aria-label="더보기">⋮</button>`
+      : '';
+    const bubble = `<div class="msg-bubble">${bubbleContent}${menuBtn}</div>`;
 
     let actions = '';
     if (m.error && m.canRetry) {
@@ -7494,6 +7553,173 @@ async function sendChat() {
   }
 
   await generateAIResponse();
+}
+
+// V3.13.x: 일기 템플릿 — 인지심리학 연구 기반 5종.
+// 글쓰기 마찰 ↓ + 검증된 효과:
+//   1) Three Good Things (Seligman 2005, Park et al.) — 긍정성·우울 ↓ 6개월 효과
+//   2) Affect Labeling (Lieberman 2007) — 감정 명명만으로 amygdala 반응 ↓
+//   3) Implementation Intention (Gollwitzer 1999) — if-then 형식이 행동 follow-through 2-3배 ↑
+//   4) Self-compassion (Neff 2003) — 자기비판 → 자기친절. 회복탄력성 ↑
+//   5) Cognitive Reappraisal (Gross 2002) — 감정 재해석 → 정서조절 효과
+const DIARY_TEMPLATES = [
+  {
+    id: 'short',
+    label: '🌙 짧게 닫기 (1분)',
+    desc: '한 줄씩만. 가장 가벼운 옵션',
+    text: `일기:
+오늘 한 일 —
+지금 기분 —
+내일 하고 싶은 거 — `
+  },
+  {
+    id: 'tgt',
+    label: '✨ Three Good Things',
+    desc: '오늘 좋았던 일 3개. 긍정 강화',
+    text: `일기:
+오늘 좋았던 일 1.
+오늘 좋았던 일 2.
+오늘 좋았던 일 3.
+(왜 좋았어? 한 줄씩)`
+  },
+  {
+    id: 'hard',
+    label: '🌧 힘든 날 (Self-compassion)',
+    desc: '어려운 날, 자기비판 → 자기친절',
+    text: `일기:
+오늘 힘들었던 일 —
+근데 내가 잘한 점 —
+친구가 같은 상황이라면 나는 뭐라 말해줄까? — `
+  },
+  {
+    id: 'plan',
+    label: '🎯 내일 계획 (if-then)',
+    desc: '실행 follow-through 2-3배 ↑',
+    text: `일기:
+내일 가장 중요한 거 —
+어떤 상황(트리거)에서 —
+그러면 무엇을 한다(액션) — `
+  },
+  {
+    id: 'feel',
+    label: '🌊 감정 정리',
+    desc: '감정 명명 + 재해석',
+    text: `일기:
+지금 느끼는 감정 (구체 단어로) —
+이 감정이 오는 상황 —
+이 상황을 다른 시각으로 본다면 — `
+  }
+];
+
+async function showDiaryTemplates() {
+  const choice = await showOptionsModal({
+    title: '📝 일기 템플릿',
+    message: '오늘 끌리는 거 골라봐',
+    options: DIARY_TEMPLATES.map(t => ({ label: t.label, value: t.id, desc: t.desc }))
+  });
+  if (!choice) return;
+  const tpl = DIARY_TEMPLATES.find(t => t.id === choice);
+  if (!tpl) return;
+  const input = document.getElementById('chatInput');
+  if (!input) return;
+  input.value = tpl.text;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.focus();
+  // 첫 빈칸 (— 뒤)으로 커서 이동
+  const firstBlank = tpl.text.indexOf('— ');
+  if (firstBlank !== -1) {
+    setTimeout(() => {
+      const pos = firstBlank + 2;
+      input.setSelectionRange(pos, pos);
+    }, 50);
+  }
+}
+
+// V3.13.x: 메시지 ⋮ 메뉴 — 복사 / 수정 / 삭제
+async function showMessageMenu(idx) {
+  const msg = state.chatMessages[idx];
+  if (!msg || msg.typing) return;
+  const isUser = msg.role === 'user';
+  const options = [{ label: '📋 복사', value: 'copy' }];
+  if (isUser) {
+    options.push({ label: '✎ 텍스트만 수정', value: 'editText' });
+    options.push({ label: '↻ 여기서부터 다시 보내기', value: 'editResend' });
+  }
+  options.push({ label: '✕ 삭제', value: 'delete' });
+  const action = await showOptionsModal({
+    title: isUser ? '내 메시지' : '소라고동 메시지',
+    options
+  });
+  if (!action) return;
+  if (action === 'copy') {
+    try {
+      await navigator.clipboard.writeText(msg.content || '');
+      showToast('📋 복사됨');
+    } catch (e) {
+      showToast('복사 실패. 직접 선택해서 복사해줘.');
+    }
+    return;
+  }
+  if (action === 'editText') {
+    const newText = await showInputModal({
+      title: '메시지 수정 (텍스트만)',
+      message: '내용만 바꿔. AI 재호출 X.',
+      defaultValue: msg.content || '',
+      multiline: true,
+      okLabel: '저장'
+    });
+    if (newText === null) return;
+    const t = newText.trim();
+    if (!t) return;
+    msg.content = t;
+    saveState();
+    renderChat();
+    showToast('수정됨 ✦');
+    return;
+  }
+  if (action === 'editResend') {
+    const newText = await showInputModal({
+      title: '여기서부터 다시 보내기',
+      message: '이 메시지 이후 모든 대화가 삭제되고 AI가 다시 답해.',
+      defaultValue: msg.content || '',
+      multiline: true,
+      okLabel: '다시 보내기'
+    });
+    if (newText === null) return;
+    const t = newText.trim();
+    if (!t) return;
+    msg.content = t;
+    msg.timestamp = new Date().toISOString();
+    state.chatMessages = state.chatMessages.slice(0, idx + 1);
+    saveState();
+    renderChat();
+    await generateAIResponse();
+    return;
+  }
+  if (action === 'delete') {
+    const yes = await showConfirmModal({
+      title: '이 메시지 삭제',
+      message: isUser
+        ? '이 메시지 + 직후 AI 응답이 같이 삭제돼.\n되돌릴 수 없어.'
+        : '이 메시지가 삭제돼.\n되돌릴 수 없어.',
+      okLabel: '삭제', cancelLabel: '취소'
+    });
+    if (!yes) return;
+    if (isUser) {
+      // 사용자 메시지 + 직후 AI 응답 (있으면) 삭제
+      let removeCount = 1;
+      if (state.chatMessages[idx + 1] && state.chatMessages[idx + 1].role === 'assistant') {
+        removeCount = 2;
+      }
+      state.chatMessages.splice(idx, removeCount);
+    } else {
+      state.chatMessages.splice(idx, 1);
+    }
+    saveState();
+    renderChat();
+    showToast('삭제됨');
+    return;
+  }
 }
 
 async function retryMessage(errorIdx) {
