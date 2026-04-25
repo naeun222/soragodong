@@ -2841,7 +2841,6 @@
         <div class="input-label">👤 내 프로필 (AI가 참고)</div>
         <textarea id="profileInput" placeholder="예: ADHD/ADD 성향..." rows="5"></textarea>
       </div>
-      <button class="btn-primary" onclick="saveSettings()">저장</button>
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
@@ -2856,11 +2855,14 @@
         <div id="accountInfo" style="font-size:12px; color:var(--text-dim); padding:12px; background:var(--surface); border-radius:12px; margin-bottom:8px;"></div>
         <button class="btn-secondary btn-danger" onclick="logout()">로그아웃</button>
       </div>
-      <button class="btn-secondary" onclick="showScreen('home')" style="margin-top:16px;">돌아가기</button>
       <div style="margin-top:30px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
         <strong style="color:var(--accent)">프라이버시</strong><br>
         이메일 기반 인증으로 너만 접근 가능. 다른 사람은 너의 데이터를 볼 수 없어.<br>
         API 호출은 Anthropic을 통과하지만 7일 후 삭제되고 학습에 쓰이지 않아.
+      </div>
+      <div class="checkin-bottom-bar">
+        <button class="btn-primary" onclick="saveSettings()">저장</button>
+        <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
       </div>
     </div>
   </div>
