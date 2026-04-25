@@ -1175,6 +1175,26 @@
   }
   /* 그리드 자체는 위에 떠있어야 */
   .beach-grid > * { position: relative; z-index: 1; }
+  /* V3.13: 티어별 섹션 */
+  .beach-tier-section {
+    grid-column: 1 / -1;
+    margin-bottom: 10px;
+  }
+  .beach-tier-header {
+    font-size: 11px; font-weight: 700;
+    color: rgba(50,40,20,0.85);
+    letter-spacing: 0.03em;
+    margin-bottom: 6px;
+    padding: 4px 10px;
+    background: rgba(255,255,255,0.55);
+    border-radius: 8px;
+    display: inline-block;
+  }
+  .beach-tier-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+    gap: 8px;
+  }
   .beach-shell {
     aspect-ratio: 1;
     display: flex; align-items: center; justify-content: center;
@@ -5686,23 +5706,41 @@ async function completeMission(missionId) {
   const mission = state.missions.find(m => m.id === missionId);
   if (!mission) return;
 
+  // V3.13: 인증샷 필수 — AI가 검증해야 부름이 탑티어 소라가 됨
+  const photo = await captureAndVerifyMissionPhoto(mission);
+  if (!photo) return; // 사용자 취소 또는 검증 실패
+
   mission.status = 'completed';
   mission.completedDate = todayKey();
   mission.completedAt = new Date().toISOString();
+  mission.photoThumb = photo.thumb;
+  mission.aiVerification = photo.verification.reason;
 
-  // Add shell to collection
-  const shellType = SHELL_TYPES[state.shellCollection.length % SHELL_TYPES.length];
-  state.shellCollection.push({
-    type: shellType,
-    date: todayKey(),
-    missionId: mission.id,
-    title: mission.title
-  });
-
+  // V3.13: 부름은 항상 call/legend 티어 (pickShellForTask 사용 — 5% legendary 가챠)
+  const shell = pickShellForTask({ source: 'ai_mission', title: mission.title });
+  if (shell) {
+    state.shellCollection.push({
+      type: shell.emoji,
+      tier: shell.tier,
+      points: shell.points,
+      label: shell.label,
+      rarity: shell.rarity,
+      date: new Date().toISOString(),
+      missionId: mission.id,
+      title: mission.title,
+      story: `소라의 부름 — "${mission.title}"`,
+      photoThumb: photo.thumb,
+      _id: 'shell_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)
+    });
+  }
   saveState();
 
-  // Celebration
-  showCelebration('✨', '해냈다!', shellType);
+  // Celebration (legendary는 더 화려하게)
+  if (shell?.rarity === 'legendary') {
+    showCelebration('🌈', '특별한 부름이 왔어!', shell.emoji);
+  } else {
+    showCelebration('✨', '해냈다!', shell?.emoji || '⭐');
+  }
 
   // Request AI brief encouragement
   if (state.apiKey) {
@@ -5729,6 +5767,177 @@ async function completeMission(missionId) {
     renderTodayMission();
     renderShellBar();
   }, 1500);
+}
+
+// V3.13: 인증샷 캡처 + AI 검증 시스템
+async function captureAndVerifyMissionPhoto(mission) {
+  const file = await pickPhotoFile();
+  if (!file) return null;
+
+  showFullscreenLoader('사진 확인 중... 🐚');
+  try {
+    const resized = await fileToResizedDataUrl(file, 1024);
+    const thumb = await makeSquareThumb(resized, 200);
+    const verification = await verifyMissionPhoto(mission, resized);
+    hideFullscreenLoader();
+
+    if (verification.verified) {
+      // 인증 성공 → 짧은 succes 토스트 후 진행
+      showToast('✓ 인증됨 — ' + verification.reason);
+      return { thumb, verification };
+    }
+    // 실패 → 재시도 또는 취소
+    const retry = await showConfirmModal({
+      title: '⚠ 확인 안 됐어',
+      message: verification.reason + '\n\n다시 찍어볼까?',
+      okLabel: '📷 다시', cancelLabel: '취소'
+    });
+    if (retry) return captureAndVerifyMissionPhoto(mission);
+    return null;
+  } catch (err) {
+    hideFullscreenLoader();
+    // API 에러 시 fallback — 통과시켜 ADHD 사용자가 좌절 안 하도록
+    const fallback = { verified: true, reason: '검증 못 했어. 통과시킬게.' };
+    showToast('⚠ 검증 안 돼서 통과 처리.');
+    try {
+      const resized = await fileToResizedDataUrl(file, 1024);
+      const thumb = await makeSquareThumb(resized, 200);
+      return { thumb, verification: fallback };
+    } catch {
+      return { thumb: '', verification: fallback };
+    }
+  }
+}
+
+function pickPhotoFile() {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.setAttribute('capture', 'environment');
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    let resolved = false;
+    input.addEventListener('change', () => {
+      if (resolved) return; resolved = true;
+      const file = input.files[0] || null;
+      input.remove();
+      resolve(file);
+    });
+    // Detect cancel via focus loss + empty files
+    setTimeout(() => {
+      window.addEventListener('focus', function once() {
+        window.removeEventListener('focus', once);
+        setTimeout(() => {
+          if (resolved) return;
+          if (!input.files || input.files.length === 0) {
+            resolved = true;
+            input.remove();
+            resolve(null);
+          }
+        }, 400);
+      }, { once: true });
+    }, 100);
+    input.click();
+  });
+}
+
+async function fileToResizedDataUrl(file, maxSize = 1024) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round(height * maxSize / width);
+            width = maxSize;
+          } else {
+            width = Math.round(width * maxSize / height);
+            height = maxSize;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function makeSquareThumb(dataUrl, size = 200) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const m = Math.min(img.width, img.height);
+      const sx = (img.width - m) / 2;
+      const sy = (img.height - m) / 2;
+      canvas.getContext('2d').drawImage(img, sx, sy, m, m, 0, 0, size, size);
+      resolve(canvas.toDataURL('image/jpeg', 0.5));
+    };
+    img.src = dataUrl;
+  });
+}
+
+async function verifyMissionPhoto(mission, photoBase64) {
+  if (!state.apiKey) {
+    return { verified: true, reason: 'API 키가 없어서 통과.' };
+  }
+  const base64 = photoBase64.split(',')[1];
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': state.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 200,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+          { type: 'text', text: `사용자가 "${mission.title}" 미션을 완료했다고 인증샷을 올렸어. 사진이 미션과 합리적으로 일치하는지 판단해줘.\n\n미션 설명: ${mission.description || '(없음)'}\n\n응답: JSON만 출력. 다른 설명 X.\n{ "verified": true 또는 false, "reason": "한 문장. 친근한 반말. 통과면 격려, 실패면 부드럽게." }\n\n판단 기준: 너무 엄격하지 X. 모호하면 통과. 명백히 무관하거나 빈 화면일 때만 거절. 안티-수치심 톤 — '검증' X '축하/안내'.` }
+        ]
+      }]
+    })
+  });
+  if (!resp.ok) throw new Error('API ' + resp.status);
+  const data = await resp.json();
+  const text = data.content[0].text;
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return { verified: true, reason: '판단 어려워서 통과.' };
+  try {
+    const parsed = JSON.parse(match[0]);
+    return { verified: !!parsed.verified, reason: parsed.reason || '통과.' };
+  } catch {
+    return { verified: true, reason: '파싱 실패라 통과.' };
+  }
+}
+
+function showFullscreenLoader(text) {
+  let el = document.getElementById('_fsLoader');
+  if (el) el.remove();
+  el = document.createElement('div');
+  el.id = '_fsLoader';
+  el.style.cssText = 'position:fixed; inset:0; background:rgba(15,14,23,0.88); z-index:10000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:var(--text); backdrop-filter: blur(6px);';
+  el.innerHTML = `<div style="font-size:14px; font-family: inherit;">${escapeHtml(text || '잠시만...')}</div><div class="ai-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+  document.body.appendChild(el);
+}
+
+function hideFullscreenLoader() {
+  const el = document.getElementById('_fsLoader');
+  if (el) el.remove();
 }
 
 function skipMission(missionId) {
@@ -5869,29 +6078,51 @@ function renderBeach() {
   } else if (_beachTab === 'call') {
     filtered = all.filter(s => ['call', 'legend'].includes(s.tier));
   }
-  
+
   if (filtered.length === 0) {
     grid.innerHTML = `
       <div class="beach-empty" style="grid-column: 1 / -1;">
         <div class="icon">🏖</div>
-        ${_beachTab === 'call' ? '아직 소라의 부름 클리어한 적 없어' : 
-          _beachTab === 'card' ? '아직 오늘의 카드 클리어한 적 없어' : 
+        ${_beachTab === 'call' ? '아직 소라의 부름 클리어한 적 없어' :
+          _beachTab === 'card' ? '아직 오늘의 카드 클리어한 적 없어' :
           '아직 비어있어. 첫 소라 모아보자.'}
       </div>
     `;
     return;
   }
-  
-  // Sort by date desc
-  const sorted = filtered.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-  grid.innerHTML = sorted.map((s, idx) => {
-    const tier = s.tier || 'unknown';
-    return `
-      <div class="beach-shell tier-${tier}" onclick="openShellStory(${state.shellCollection.indexOf(s)})">
-        ${s.type}
-      </div>
-    `;
-  }).join('');
+
+  // V3.13: 티어별 그룹화 (높은 tier 먼저)
+  const TIER_ORDER = [
+    { tier: 'legend',  label: '✨ 특별 (가장 빛남)' },
+    { tier: 'call',    label: '⭐ 소라의 부름 (탑티어)' },
+    { tier: 'golden',  label: '🦞 황금 (집중 메인)' },
+    { tier: 'main',    label: '🐢 메인' },
+    { tier: 'daily',   label: '🌀 일상' },
+    { tier: 'light',   label: '🐚 가벼움' }
+  ];
+  const grouped = {};
+  filtered.forEach(s => {
+    const t = s.tier || 'unknown';
+    if (!grouped[t]) grouped[t] = [];
+    grouped[t].push(s);
+  });
+  // 각 그룹 안 날짜 desc 정렬
+  Object.keys(grouped).forEach(k => {
+    grouped[k].sort((a, b) => new Date(b.date) - new Date(a.date));
+  });
+
+  let html = '';
+  TIER_ORDER.forEach(({ tier, label }) => {
+    if (!grouped[tier] || grouped[tier].length === 0) return;
+    html += `<div class="beach-tier-section">
+      <div class="beach-tier-header">${label} · ${grouped[tier].length}</div>
+      <div class="beach-tier-grid">`;
+    grouped[tier].forEach(s => {
+      html += `<div class="beach-shell tier-${tier}" onclick="openShellStory(${state.shellCollection.indexOf(s)})">${s.type}</div>`;
+    });
+    html += `</div></div>`;
+  });
+  grid.innerHTML = html;
 }
 
 // Shell detail / story modal
@@ -5913,11 +6144,16 @@ function openShellStory(shellIdx) {
   const overlay = document.createElement('div');
   overlay.className = 'shell-story-overlay';
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  // V3.13: 인증샷이 있으면 thumbnail 표시
+  const photoBlock = shell.photoThumb
+    ? `<img src="${shell.photoThumb}" alt="인증샷" style="width:100%; max-width:200px; aspect-ratio:1; object-fit:cover; border-radius:12px; margin:12px auto; display:block; border: 2px solid rgba(201,169,110,0.3);">`
+    : '';
   overlay.innerHTML = `
     <div class="shell-story-card tier-${shell.tier}">
       <div class="shell-story-emoji">${shell.type}</div>
       <div class="shell-story-tier">${tierLabel}</div>
       <div class="shell-story-date">${dateStr} · ${timeStr}</div>
+      ${photoBlock}
       <div class="shell-story-text">${escapeHtml(shell.story || '')}</div>
       <button class="btn-secondary" onclick="this.closest('.shell-story-overlay').remove()" style="margin-top:18px; width:100%;">닫기</button>
     </div>
