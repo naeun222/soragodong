@@ -2309,8 +2309,8 @@
     animation: onbFadeIn 0.3s ease;
   }
   @keyframes onbFadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   .onb-step-num {
     font-size: 11px;
@@ -3843,7 +3843,8 @@ const ONBOARDING_STEPS = [
     title: '💬 대화 탭 — 소라고동의 꽃!',
     body: '이제 \'소라고동 앱\'의 핵심, 꽃, 대화 탭으로 갈 차례야! ✨<br>여기가 정말 중요한 곳이야 — 다음 화면에서 자세히 알려줄게.<br><br>아래 💬 대화 탭 눌러봐!',
     waitFor: 'visit',
-    visitScreen: 'chat'
+    visitScreen: 'chat',
+    fallbackPosition: 'top'
   },
   {
     id: 'chat_intro',
@@ -3860,7 +3861,7 @@ const ONBOARDING_STEPS = [
     waitFor: 'click',
     advanceDelay: 1000,
     fallbackPosition: 'top',
-    prefill: { selector: '#chatInput', value: '일기: 새벽까지 작업하다 카페 갔다 옴. 한 단락 끝냄.', force: true }
+    prefill: { selector: '#chatInput', value: '일기: 새벽까지 작업하다 카페 갔다 옴. 한 단락 끝냄. 근데 내일 발표 때문에 좀 불안하다.', force: true }
   },
   {
     id: 'click_deeper',
@@ -3944,7 +3945,7 @@ const ONBOARDING_STEPS = [
     body: '소라는 이렇게 6단계로 나뉘어:<br>🐚 가벼움 → 🌀 일상 → 🐢 메인 → 🦞 황금 → ⭐ <b>부름</b> → ✨ 특별<br>각 소라 탭하면 그날 이야기도 떠!<br><br>다 봤으면 닫기 눌러봐.',
     waitFor: 'click',
     advanceDelay: 600,
-    fallbackPosition: 'top'
+    coachmarkPosition: 'corner'
   },
 
   // === Phase 6: 아카이브 + 전략 확인 (2) ===
@@ -3962,25 +3963,52 @@ const ONBOARDING_STEPS = [
     title: '✨ 깨달음 렌즈로',
     body: '아카이브는 두 렌즈로 나뉘어:<br>📜 대화 (날짜별 일기 + 챕터 토픽) / ✨ 깨달음 (인사이트 + 🧭 전략 + 💎 진주)<br><br>"✨ 깨달음" 탭 눌러서 방금 저장한 전략 같이 확인해보자!',
     waitFor: 'click',
-    advanceDelay: 600
+    advanceDelay: 600,
+    dimBackground: false
+  },
+  {
+    id: 'wisdom_intro',
+    targetSelector: null,
+    title: '깨달음 렌즈 ✨',
+    body: '여기 보이는 건:<br><br>· <b>🔮 인사이트</b> — 체크인 데이터 쌓이면 내가 패턴/인과관계 분석해서 알려줘 (지금은 비어있음)<br>· <b>🧭 전략</b> — 방금 저장한 전략이 여기 보일 거야! 챕터 자동 추출 + askDeeper로 저장한 거 다 모임<br>· <b>💎 진주</b> — "좋다" 느낀 작은 순간들. 음악·음식·장소·사람·순간 보관소<br><br>천천히 둘러보고 다음 눌러줘.',
+    waitFor: 'next',
+    dimBackground: false
   },
 
-  // === Phase 7: 실행 + 나 + 마무리 (3) ===
+  // === Phase 7: 실행 + 나 + 마무리 (5) ===
   {
     id: 'go_execute',
     targetSelector: '.nav-item[data-screen="execute"]',
     title: '🚀 실행 탭',
-    body: '실행은 머릿속 풀기 → 카드 3장 → 몰입 흐름이야!<br>대화에서 발견한 "할 일"들이 자동으로 서랍장에 들어와 — 우선순위 순으로 보여줄게.<br><br>실행 탭 한 번 눌러봐.',
+    body: '실행 탭은 — 네가 뭔 일을 시작할 때 <b>무거운 마음을 훌훌 털고 가벼운 두뇌로 임할 수 있게</b> 해주는 곳이야! ✨<br><br>아래 🚀 실행 탭 한 번 눌러봐.',
     waitFor: 'visit',
-    visitScreen: 'execute'
+    visitScreen: 'execute',
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'execute_intro',
+    targetSelector: null,
+    title: '실행 탭 안내',
+    body: '여기서 할 수 있는 거:<br><br>· <b>🌧 머릿속 풀기</b> — 와다다 쏟아내면 내가 카드 3장으로 정리해줘<br>· <b>오늘의 카드 3장</b> — 가장 중요한 3개. 무거운 짐 내려놓고 이것만 봐<br>· <b>📂 서랍장</b> — 카드 밑에 우선순위 순. 대화에서 발견한 할 일들 자동으로 모임<br>· <b>🌧 몰입 시작</b> — 빗소리 + 단축어 + 시간 자동 기록<br><br>천천히 둘러보고 다음 눌러줘.',
+    waitFor: 'next',
+    dimBackground: false
   },
   {
     id: 'go_model_final',
     targetSelector: '.nav-item[data-screen="model"]',
-    title: '✦ 나 탭 — 마지막!',
-    body: '"나" 탭에선 추적 항목 그래프 + 가치/특성/패턴 (내가 너 대화 보면서 모델링한 거)을 볼 수 있어.<br><br>마지막으로 "나" 탭 눌러봐!',
+    title: '✦ 나 탭',
+    body: '거의 다 왔어!<br>"나" 탭에선 너에 대한 정보를 볼 수 있어.<br><br>아래 ✦ 나 탭 눌러봐.',
     waitFor: 'visit',
-    visitScreen: 'model'
+    visitScreen: 'model',
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'model_intro',
+    targetSelector: null,
+    title: '"나" 탭 안내',
+    body: '여기서 볼 수 있는 거:<br><br>· <b>📊 추적 항목</b> — 체크인에 입력한 측정값(수면, 카페인, 운동 등) 그래프로<br>· <b>📈 진행 중인 프로젝트</b> — 장기 목표 추적<br>· <b>🎯 가치 / 🐚 특성 / 🔄 패턴</b> — 대화 쌓이면 내가 너 모델링해서 보여줘<br>· <b>💼 케이스 정리</b> — 너의 강점·문제·메커니즘 임상가 시각<br><br><span class="small">지금은 비어있을 거야. 대화 쌓이면 자동으로 채워져!</span><br><br>천천히 둘러보고 다음 눌러줘.',
+    waitFor: 'next',
+    dimBackground: false
   },
   {
     id: 'finish',
