@@ -116,12 +116,19 @@
     animation: soraCallShimmer 3s linear infinite;
   }
   .mission-card.sora-call::after {
-    content: '🐚';
+    content: '';
     position: absolute;
     top: 12px; right: 14px;
     font-size: 22px;
-    opacity: 0.6;
-    animation: soraCallFloat 3s ease-in-out infinite;
+    opacity: 0;
+  }
+  .mission-call-reward {
+    position: absolute;
+    top: 14px; right: 16px;
+    font-size: 26px;
+    filter: drop-shadow(0 0 10px rgba(139,126,196,0.7));
+    animation: shellCallGlow 3.5s ease-in-out infinite;
+    z-index: 1;
   }
   @keyframes soraCallPulse {
     0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.08), inset 0 0 30px rgba(139,126,196,0.06); }
@@ -170,18 +177,10 @@
   .mode-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
   .mode-chip { padding: 5px 11px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); font-size: 11px; color: var(--text-dim); cursor: pointer; transition: all 0.2s; }
   .mode-chip.active { background: rgba(139,126,196,0.2); border-color: var(--purple); color: var(--purple); }
-  .mode-chip.mode-sos { 
-    background: rgba(220,150,150,0.06);
-    border-color: rgba(220,150,150,0.25);
-    color: rgba(220,150,150,0.85);
-  }
   .mode-chip.mode-sos.active {
     background: rgba(220,150,150,0.18);
     border-color: rgba(220,150,150,0.5);
     color: rgba(240,180,180,1);
-  }
-  .mode-chip.mode-sos:hover {
-    border-color: rgba(220,150,150,0.45);
   }
 
   .action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; }
@@ -1026,15 +1025,62 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
     gap: 8px;
-    padding: 14px;
+    padding: 24px 16px 18px;
     background: 
-      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
-      radial-gradient(ellipse at 70% 60%, rgba(255,255,255,0.04) 0%, transparent 40%),
-      linear-gradient(180deg, rgba(231,200,160,0.15), rgba(201,169,110,0.18));
+      /* 햇빛 */
+      radial-gradient(ellipse 200px 100px at 78% 8%, rgba(255,235,180,0.35) 0%, rgba(255,220,150,0.15) 30%, transparent 60%),
+      /* 햇빛 반사 1 */
+      radial-gradient(ellipse 60px 40px at 30% 32%, rgba(255,255,255,0.18) 0%, transparent 70%),
+      /* 햇빛 반사 2 */
+      radial-gradient(ellipse 40px 30px at 65% 45%, rgba(255,255,255,0.12) 0%, transparent 70%),
+      /* 바다 */
+      linear-gradient(180deg, 
+        rgba(160,205,230,0.55) 0%,      /* 하늘 */
+        rgba(140,195,225,0.5) 18%,       /* 바다 위쪽 */
+        rgba(120,180,210,0.55) 32%,      /* 바다 깊이 */
+        rgba(220,200,160,0.4) 42%,       /* 파도 거품 */
+        rgba(245,225,180,0.6) 50%,       /* 모래 시작 (젖은) */
+        rgba(238,212,168,0.7) 65%,       /* 모래 중간 */
+        rgba(232,200,155,0.75) 100%      /* 모래 끝 */
+      );
     border-radius: 16px;
-    border: 1px solid rgba(201,169,110,0.2);
-    min-height: 200px;
+    border: 1px solid rgba(201,169,110,0.3);
+    min-height: 240px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 1px 8px rgba(255,255,255,0.1);
   }
+  /* 모래 텍스처 */
+  .beach-grid::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+      radial-gradient(circle at 20% 75%, rgba(255,255,255,0.1) 1px, transparent 2px),
+      radial-gradient(circle at 60% 80%, rgba(255,255,255,0.08) 1px, transparent 2px),
+      radial-gradient(circle at 85% 70%, rgba(180,140,90,0.15) 1px, transparent 2px),
+      radial-gradient(circle at 35% 90%, rgba(180,140,90,0.12) 1px, transparent 2px),
+      radial-gradient(circle at 75% 88%, rgba(255,255,255,0.1) 1px, transparent 2px);
+    background-size: 80px 80px, 110px 110px, 60px 60px, 95px 95px, 70px 70px;
+    pointer-events: none;
+    opacity: 0.6;
+  }
+  /* 파도 거품 라인 */
+  .beach-grid::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    top: 38%;
+    height: 8px;
+    background: linear-gradient(180deg, 
+      rgba(255,255,255,0.4) 0%, 
+      rgba(255,255,255,0.15) 50%, 
+      transparent 100%);
+    pointer-events: none;
+    filter: blur(2px);
+  }
+  /* 그리드 자체는 위에 떠있어야 */
+  .beach-grid > * { position: relative; z-index: 1; }
   .beach-shell {
     aspect-ratio: 1;
     display: flex; align-items: center; justify-content: center;
@@ -1812,6 +1858,7 @@
       <!-- Mode (moved from home) -->
       <div class="input-group">
         <div class="input-label">🎯 오늘 어떤 날?</div>
+        <div style="font-size:11px; color:var(--text-soft); margin:-4px 0 8px; line-height:1.6;">평소엔 안 골라도 OK. 특별한 날만 표시해줘.</div>
         <div class="mode-row" id="modeRow">
           <div class="mode-chip" data-mode="exam" onclick="toggleMode('exam')">📚 시험</div>
           <div class="mode-chip" data-mode="travel" onclick="toggleMode('travel')">✈️ 여행</div>
@@ -2053,7 +2100,7 @@
       <div class="exec-modal">
         <div class="exec-modal-title">🧠 머릿속 짐 풀기</div>
         <div class="exec-modal-sub">생각나는 대로 다 적어. 우선순위·시간·형식 X.<br>그냥 와다다.</div>
-        <textarea id="brainDumpInput" rows="10" placeholder="예:&#10;교수님 메일 답장&#10;세그포머 로직 수정&#10;아 맞다 샴푸 사야 함&#10;논문 초안 1장 쓰기&#10;..." style="width:100%; padding:14px; background:var(--bg); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:14px; font-family:inherit; resize:vertical; line-height:1.7;"></textarea>
+        <textarea id="brainDumpInput" rows="10" placeholder="예:&#10;교수님 메일 답장&#10;프로젝트 한 단락 쓰기&#10;아 맞다 샴푸 사야 함&#10;운동 가야 하는데&#10;..." style="width:100%; padding:14px; background:var(--bg); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:14px; font-family:inherit; resize:vertical; line-height:1.7;"></textarea>
         <div style="margin-top:14px; font-size:12px; color:var(--text-dim);">오늘은 어떤 모드?</div>
         <div class="exec-mode-row">
           <button class="exec-mode-btn focus" onclick="selectExecMode('focus')" id="execModeFocus">
@@ -4281,26 +4328,29 @@ ${recent || '아직 데이터 없음'}
 시간대: ${isNight ? '밤' : '낮'}
 
 [규칙 — 매우 중요]
-- **극도로 짧게**: 5-15자. "귀요미 왔어?" 정도가 이상적.
-- 사용자의 **장점 또는 사랑스러운 점**을 살짝 짚어줌
-- 유쾌하고 다정. 친구가 반갑게 인사하는 느낌
-- 절대 길게 X. 절대 설명조 X. 절대 응원조 X.
-- 끝에 🐚 X (UI에서 따로 표시)
+- **극도로 짧게**: 5-12자. 한 줄.
+- 유쾌하고 소소하고 사랑스럽게. 긍정 확언 효과.
+- 친구가 가볍게 던지는 톤
+- 절대 길게 X. 설명 X. 응원 X. 분석 X.
+- 끝에 🐚 X (UI 자동)
 - 금지: "화이팅", "할 수 있어", "오늘도 멋진"
 
-[좋은 예시 — 길이와 톤 참고]
-"귀요미 왔어?"
+[좋은 예시 — 이 정도 길이·톤]
+"너 진짜 사랑스러워."
+"천재 모드 발동!"
+"귀요미 왔다."
+"또 만났네 ✦"
+"오늘도 너!"
+"반짝반짝."
 "왔구나 ✦"
-"오늘도 너 등장."
-"또 만났네."
-"잘 일어났네 ✦"
-"왔다 갔다 잘 하네."
-"천재 등장."
-"부지런한 너."
-"또 와줬구나."
-"마감 직전 천재."
+"좋은 아침."
+"잠 잘 잤지?"
+"오늘은 너의 날."
+"멋쟁이."
+"보고 싶었어."
+"오 등장!"
 
-특성 중 하나를 활짝 살리되, 한 줄, 따뜻하고 짧게. 한 줄만 출력. 따옴표 X.`;
+한 줄만 출력. 따옴표 X.`;
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -4737,25 +4787,31 @@ async function generateAIDailyQuestion() {
 ${recent || '없음'}
 
 [규칙]
-- 일상적이고 소소함. 큰 의미 X.
-- 짧지만 깊이가 있어야 함 (피상적 X)
-- 재미있거나 호기심 자극
-- 너무 무거운 자기성찰 X (피곤해짐)
-- 한국어, 반말, 친구 말투
-- 한 줄. 따옴표 X.
-- "오늘 어땠어?" 같은 뻔한 질문 X
+- 진짜 가볍고 일상적. 하루의 작은 디테일 포착.
+- 짧게. 한 줄.
+- 친근한 반말, 친구 말투
+- "오늘 어땠어?" 같은 뻔한 거 X
+- 자기성찰 X. 분석 X. "왜?" 다그치지 X.
+- 그냥 호기심 가는 가벼운 질문
 
-[좋은 예시]
-"오늘 본 것 중에 제일 예뻤던 건 뭐야?"
-"점심 뭐 먹었어? 왜 그거 골랐어?"
-"오늘 들은 노래 중에 한 번 더 듣고 싶은 거?"
-"방금 누가 말 걸었으면 가장 반가웠을 사람?"
-"오늘 머릿속에 자꾸 떠오른 게 있어?"
-"내일 갑자기 하루 휴가 생기면 뭐 할 거야?"
-"5분 전에 뭐 하고 있었어?"
-"오늘의 향기는 뭐였어?"
+[좋은 예시 — 이 정도 가볍게]
+"오늘 점심 뭐 먹었어?"
+"지금 뭐 입고 있어?"
+"오늘 본 거 중에 웃겼던 거?"
+"커피 마셨어?"
+"오늘 노래 들었어?"
+"날씨 어때?"
+"지금 어디야?"
+"오늘 누구 만났어?"
+"방금 뭐 하고 있었어?"
+"오늘 5분이라도 밖에 나갔어?"
+"가장 최근에 웃은 게 언제야?"
+"오늘 뭐 마시고 있어?"
+"지금 옆에 뭐 있어?"
+"오늘 이불 정리했어?"
+"머리 감았어?"
 
-한 줄만 출력.`;
+이 정도 가볍게. 한 줄만 출력. 따옴표 X.`;
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -4843,9 +4899,12 @@ function renderTodayMission() {
       </div>
     `;
   } else {
+    // 소라의 부름은 항상 'call' tier 보상 (5% 가챠로 legendary)
+    const rewardEmoji = '⭐';  // 대표 미리보기
     container.innerHTML = `
       <div class="mission-card sora-call">
         <div class="mission-label">🐚 소라의 부름</div>
+        <div class="mission-call-reward" title="이거 깨면 빛나는 소라 (가끔 ✨ 특별한 부름)">${rewardEmoji}</div>
         <div class="mission-title">${escapeHtml(mission.title)}</div>
         ${mission.description ? `<div class="mission-desc">${escapeHtml(mission.description)}</div>` : ''}
         <div class="mission-actions">
@@ -4936,13 +4995,16 @@ function skipMission(missionId) {
 // SHELL COLLECTION
 // ═══════════════════════════════════════════════════════════════
 function renderShellBar() {
-  document.getElementById('shellCount').textContent = state.shellCollection.length;
+  const countEl = document.getElementById('shellCount');
+  const streakEl = document.getElementById('streakInfo');
+  if (!countEl || !streakEl) return;  // FIX: prevent null errors
+  countEl.textContent = state.shellCollection.length;
   const recent = state.shellCollection.slice(-7);
   let info = '탭해서 보기 →';
   if (recent.length > 0) {
     info = recent.slice(-3).map(s => s.type).join(' ') + ' →';
   }
-  document.getElementById('streakInfo').innerHTML = info;
+  streakEl.innerHTML = info;
 }
 
 let _beachTab = 'all';
@@ -5317,6 +5379,7 @@ function buildCheckinSummary(entry) {
 // ═══════════════════════════════════════════════════════════════
 function renderModelPreview() {
   const el = document.getElementById('modelPreviewContent');
+  if (!el) return;  // FIX
   const allItems = [...state.traits, ...state.patterns, ...state.values];
   if (allItems.length === 0) {
     el.innerHTML = '<div class="model-preview-empty">아직 데이터가 부족해.<br>대화하고 체크인 쌓이면 여기에 네 모습이 나타날 거야.</div>';
@@ -5595,6 +5658,8 @@ async function sendChat() {
 }
 
 async function retryMessage(errorIdx) {
+  // V3.4: 같은 user message에 대한 retry 시 직전 N분 내 추출된 trait/pattern 추적
+  state._lastRetryAt = Date.now();
   state.chatMessages.splice(errorIdx, 1);
   renderChat();
   saveState();
@@ -5724,12 +5789,15 @@ async function generateAIResponse() {
 }
 
 async function processAnalysis(analysis, messageIdx) {
+  // V3.4: retry로 인한 중복 방지. 직전 3분 내 retry 호출되었다면 신규 추가 X
+  const recentRetry = state._lastRetryAt && (Date.now() - state._lastRetryAt < 3 * 60 * 1000);
+  
   if (analysis.new_traits) {
     analysis.new_traits.forEach(t => {
       const exists = state.traits.find(e => similarText(e.name, t.name));
-      if (!exists) {
+      if (!exists && !recentRetry) {
         state.traits.push({ id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: t.name, description: t.description || '', confidence: t.confidence || 0.5, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
-      } else {
+      } else if (exists) {
         exists.evidence_count = (exists.evidence_count || 1) + 1;
         exists.confidence = Math.min(1.0, exists.confidence + 0.1);
       }
@@ -5738,9 +5806,9 @@ async function processAnalysis(analysis, messageIdx) {
   if (analysis.new_values) {
     analysis.new_values.forEach(v => {
       const exists = state.values.find(e => similarText(e.name, v.name));
-      if (!exists) {
+      if (!exists && !recentRetry) {
         state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: v.name, description: v.description || '', confidence: v.confidence || 0.5, user_verified: false, evidence_count: 1, sdt_need: v.sdt_need || null });
-      } else {
+      } else if (exists) {
         exists.evidence_count = (exists.evidence_count || 1) + 1;
         exists.confidence = Math.min(1.0, exists.confidence + 0.1);
       }
@@ -5749,20 +5817,20 @@ async function processAnalysis(analysis, messageIdx) {
   if (analysis.new_patterns) {
     analysis.new_patterns.forEach(p => {
       const exists = state.patterns.find(e => similarText(e.name, p.name));
-      if (!exists) {
+      if (!exists && !recentRetry) {
         state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: p.name, description: p.description || '', trigger: p.trigger || '', sequence: p.sequence || '', confidence: p.confidence || 0.5, user_verified: false, evidence_count: 1 });
-      } else {
+      } else if (exists) {
         exists.evidence_count = (exists.evidence_count || 1) + 1;
         exists.confidence = Math.min(1.0, exists.confidence + 0.1);
       }
     });
   }
-  if (analysis.case_formulation_update) {
+  if (analysis.case_formulation_update && !recentRetry) {
     const cf = state.caseFormulation;
     const u = analysis.case_formulation_update;
-    if (u.new_problem) cf.problems.push(u.new_problem);
-    if (u.new_mechanism) cf.mechanisms.push(u.new_mechanism);
-    if (u.new_strength) cf.strengths.push(u.new_strength);
+    if (u.new_problem && !cf.problems.some(p => similarText(p, u.new_problem))) cf.problems.push(u.new_problem);
+    if (u.new_mechanism && !cf.mechanisms.some(m => similarText(m, u.new_mechanism))) cf.mechanisms.push(u.new_mechanism);
+    if (u.new_strength && !cf.strengths.some(s => similarText(s, u.new_strength))) cf.strengths.push(u.new_strength);
     if (u.new_problem || u.new_mechanism || u.new_strength) {
       cf.version += 1;
       cf.lastUpdated = new Date().toISOString();
@@ -5910,6 +5978,24 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 8. ADHD 특성 고려.
 9. 이모지 1-2개. 🐚 가끔.
 10. 사용자가 그냥 감정 털어놓으면 → 그냥 들어주기. 분석 강요 X.
+
+정직성 (Anti-Sycophancy) — 매우 중요:
+- 사용자가 좋은 일 했다고 매번 칭찬 X. 사실만 짚기.
+- 사용자가 자기 행동을 미화하면 → 부드럽게 다른 시점 제시.
+- "잘했어", "너 정말 ___해" 같은 평가성 칭찬 X.
+- 대신 관찰: "그게 너한테 의미 있었구나", "그 결정에 시간 들었네"
+- 사용자 결정·계획에 의문이 들면 → 침묵 X. 한 번은 다른 시점 제시.
+- 듣기 좋은 답 vs 정직한 답 충돌 시 → 정직한 답 선택. 단, 따뜻하게.
+- **안티-수치심 ≠ 무조건 긍정. 안티-수치심 = 판단 없이 사실 짚기.**
+- 사용자가 자기칭찬 유도 시 ("나 잘했지?") → 그냥 동의 X. 관찰로 대답.
+- 사용자가 같은 패턴 반복 시 → 부드럽게 짚어주기. 매번 첫 발견인 척 X.
+
+자기검증 (응답 작성 후 마음속으로 체크):
+응답 보내기 전 잠깐 점검:
+- "이 답이 듣기 좋게 만들기 위해 정확성을 희생했나?"
+- "사용자한테 진짜 도움 되는 답인가, 그냥 기분 좋게 만드는 답인가?"
+- "동의·칭찬·공감 쪽으로만 기울었나?"
+- 만약 그렇다면 → 다시 써. 따뜻함은 유지하되, 정직하게.
 
 응답 패턴:
 
@@ -6842,7 +6928,7 @@ function addManualTask() {
   if (!title || !title.trim()) return;
   const todayKeyVal = todayKey();
   const now3Count = (state.tasks || []).filter(t => t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done').length;
-  state.tasks.push({
+  const newTask = {
     id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     title: title.trim(),
     status: now3Count < 3 ? 'active' : 'drawer',
@@ -6852,10 +6938,19 @@ function addManualTask() {
     energy: 'medium',
     source: 'manual',
     createdAt: new Date().toISOString()
-  });
+  };
+  state.tasks.push(newTask);
   saveState();
   renderExecute();
-  showToast(now3Count < 3 ? 'Now 3에 추가됨' : '서랍장에 추가됨');
+  
+  // If-Then 약속 만들고 시작할지 묻기
+  setTimeout(() => {
+    if (now3Count < 3 && confirm(`"${title.trim()}" 추가됐어 ✦\n\n바로 시작할래? (If-Then 약속 만들기)`)) {
+      startQuest(newTask.id);
+    } else {
+      showToast(now3Count < 3 ? 'Now 3에 추가됨' : '서랍장에 추가됨');
+    }
+  }, 100);
 }
 
 // === REROLL ===
@@ -7377,7 +7472,7 @@ function renderRitualStep() {
       <div class="ritual-icon">🎯</div>
       <div class="ritual-question">지금 뭐 할 거야?</div>
       <div class="ritual-sub">한 줄로. 작아도 OK.<br>"문서 열기"도 충분해.</div>
-      <input type="text" class="ritual-input" id="ritualGoalInput" placeholder='예: 세그포머 코드 한 줄' value="${escapeHtml(_ritualState.goal)}" autofocus>
+      <input type="text" class="ritual-input" id="ritualGoalInput" placeholder='예: 메일 답장 한 통, 운동 5분, 공부 15분' value="${escapeHtml(_ritualState.goal)}" autofocus>
       <div class="ritual-actions">
         <button class="ritual-btn primary" onclick="ritualNextStep()">다음 →</button>
         <button class="ritual-btn skip" onclick="closeRitual()">취소</button>
