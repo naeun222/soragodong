@@ -2103,12 +2103,13 @@
     color: var(--accent);
   }
 
-  /* V3.11: 체크인/설정 화면 하단 액션 묶음 (sticky 해제 — 압도감 행 가림 이슈) */
-  .checkin-bottom-bar {
+  /* V3.11: 화면 하단 액션 묶음 — 일반화 (V3.13.x: checkin-bottom-bar → sticky-action-bar) */
+  /* sticky는 V3.11.x에서 해제 (압도감 행 가림 이슈), 이름은 패턴 식별용 */
+  .sticky-action-bar {
     margin-top: 24px;
     padding: 16px 0 8px;
   }
-  .checkin-bottom-bar .btn-primary { margin-bottom: 8px; }
+  .sticky-action-bar .btn-primary { margin-bottom: 8px; }
 
   /* Timeline entries */
   .timeline-day {
@@ -2727,7 +2728,7 @@
         </div>
       </div>
 
-      <div class="checkin-bottom-bar">
+      <div class="sticky-action-bar">
         <button class="btn-primary" onclick="submitCheckin()">기록 완료 ✦</button>
         <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
       </div>
@@ -3007,6 +3008,7 @@
         <button class="btn-secondary" onclick="exportData()">📤 데이터 내보내기 (백업)</button>
         <button class="btn-secondary" onclick="startInteractiveOnboarding()">🐚 투어 다시 보기</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
+        <button class="btn-secondary btn-danger" onclick="resetShellCollection()" style="margin-top:8px;">🐚 소라 컬렉션만 초기화</button>
         <button class="btn-secondary btn-danger" onclick="rollbackToV5()" style="margin-top:8px;">⏪ V3 이전 상태로 되돌리기</button>
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
       </div>
@@ -3033,7 +3035,7 @@
         이메일 기반 인증으로 너만 접근 가능. 다른 사람은 너의 데이터를 볼 수 없어.<br>
         API 호출은 Anthropic을 통과하지만 7일 후 삭제되고 학습에 쓰이지 않아.
       </div>
-      <div class="checkin-bottom-bar">
+      <div class="sticky-action-bar">
         <button class="btn-primary" onclick="saveSettings()">저장</button>
         <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
       </div>
@@ -3075,6 +3077,7 @@
       <button class="beach-tab active" data-beach-tab="all" onclick="switchBeachTab('all')">전체</button>
       <button class="beach-tab" data-beach-tab="card" onclick="switchBeachTab('card')">오늘의 카드</button>
       <button class="beach-tab" data-beach-tab="call" onclick="switchBeachTab('call')">소라의 부름</button>
+      <button class="beach-tab" data-beach-tab="tier" onclick="switchBeachTab('tier')">결별로</button>
     </div>
     
     <div class="beach-grid" id="beachGrid"></div>
@@ -3538,7 +3541,7 @@ async function migrateToV6() {
   // 3. Active mode dates initialized
   Object.keys(state.modes || {}).forEach(mode => {
     if (state.modes[mode] && !state.modeActiveSince[mode]) {
-      state.modeActiveSince[mode] = new Date().toISOString().split('T')[0];
+      state.modeActiveSince[mode] = todayKey();
     }
   });
   
@@ -3701,6 +3704,11 @@ async function init() {
   setTimeout(() => {
     runMonthlyAutoReviewIfNeeded().catch(e => console.warn('monthly auto error:', e));
   }, 5000);
+
+  // V3.13.x: 일기 자동 요약 (어제부터 거꾸로 보강 안 된 첫 날 1개)
+  setTimeout(() => {
+    runDiaryAutoSummaryIfNeeded().catch(e => console.warn('diary auto summary error:', e));
+  }, 7000);
 
   // 첫 사용자 vs 기존 사용자 분기
   const isBrandNewUser = !state.hasSeenWelcomeTutorial 
@@ -4032,14 +4040,16 @@ function onbRenderStep() {
   
   onbCleanupListeners();
   
-  // 1. 화면 전환 (필요 시)
+  // 1. 이미 그 화면이면 즉시 advance (V3.13.x: 막힘 방지)
   if (step.visitScreen) {
     const currentActive = document.querySelector('.screen.active');
-    if (!currentActive || currentActive.id !== 'screen-' + step.visitScreen) {
-      showScreen(step.visitScreen);
+    if (currentActive && currentActive.id === 'screen-' + step.visitScreen) {
+      setTimeout(() => onbNext(), 600);
+      return;
     }
+    // 사용자가 직접 누르길 기다림 — 자동 전환 X (학습 의도 + showScreen 훅에서 advance)
   }
-  
+
   // 2. 잠시 후 (DOM 업데이트 기다림) UI 위치 잡기
   setTimeout(() => {
     onbPositionStep(step);
@@ -4331,7 +4341,21 @@ function resetLoginFlow() {
   document.getElementById('loginBtn').textContent = '로그인 코드 받기';
 }
 
-function todayKey() { return new Date().toISOString().split('T')[0]; }
+// V3.13.x: "하루"를 04:00 cutoff로 정의 (한국 시간 새벽 4시 전은 어제, 4시 후는 오늘).
+// 새벽 작업자 자연스러움 + 잠 자기 전 일기·체크인이 그 날의 기록으로 묶임.
+const DAY_CUTOFF_HOUR = 4;
+function getDayKey(input) {
+  const t = input == null
+    ? Date.now()
+    : (typeof input === 'string' ? new Date(input).getTime()
+       : (input instanceof Date ? input.getTime() : input));
+  const d = new Date(t - DAY_CUTOFF_HOUR * 3600000);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+function todayKey() { return getDayKey(); }
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -6348,6 +6372,7 @@ function renderBeach() {
   } else if (_beachTab === 'call') {
     filtered = all.filter(s => ['call', 'legend'].includes(s.tier));
   }
+  // 'tier' 탭과 'all' 탭은 모든 항목 포함
 
   if (filtered.length === 0) {
     grid.innerHTML = `
@@ -6361,38 +6386,45 @@ function renderBeach() {
     return;
   }
 
-  // V3.13: 티어별 그룹화 (높은 tier 먼저)
-  const TIER_ORDER = [
-    { tier: 'legend',  label: '✨ 특별 (가장 빛남)' },
-    { tier: 'call',    label: '⭐ 소라의 부름 (탑티어)' },
-    { tier: 'golden',  label: '🦞 황금 (집중 메인)' },
-    { tier: 'main',    label: '🐢 메인' },
-    { tier: 'daily',   label: '🌀 일상' },
-    { tier: 'light',   label: '🐚 가벼움' }
-  ];
-  const grouped = {};
-  filtered.forEach(s => {
-    const t = s.tier || 'unknown';
-    if (!grouped[t]) grouped[t] = [];
-    grouped[t].push(s);
-  });
-  // 각 그룹 안 날짜 desc 정렬
-  Object.keys(grouped).forEach(k => {
-    grouped[k].sort((a, b) => new Date(b.date) - new Date(a.date));
-  });
-
-  let html = '';
-  TIER_ORDER.forEach(({ tier, label }) => {
-    if (!grouped[tier] || grouped[tier].length === 0) return;
-    html += `<div class="beach-tier-section">
-      <div class="beach-tier-header">${label} · ${grouped[tier].length}</div>
-      <div class="beach-tier-grid">`;
-    grouped[tier].forEach(s => {
-      html += `<div class="beach-shell tier-${tier}" onclick="openShellStory(${state.shellCollection.indexOf(s)})">${s.type}</div>`;
+  // V3.13.x: '결별로' 탭만 티어 그룹화 (높은 결 먼저). 그 외 탭은 시간순 평면.
+  if (_beachTab === 'tier') {
+    const TIER_ORDER = [
+      { tier: 'legend',  label: '✨ 특별 — 가장 빛나는 결' },
+      { tier: 'call',    label: '⭐ 소라의 부름 — 탑티어' },
+      { tier: 'golden',  label: '🦞 황금 — 집중 메인' },
+      { tier: 'main',    label: '🐢 메인' },
+      { tier: 'daily',   label: '🌀 일상' },
+      { tier: 'light',   label: '🐚 가벼움' }
+    ];
+    const grouped = {};
+    filtered.forEach(s => {
+      const t = s.tier || 'unknown';
+      if (!grouped[t]) grouped[t] = [];
+      grouped[t].push(s);
     });
-    html += `</div></div>`;
-  });
-  grid.innerHTML = html;
+    Object.keys(grouped).forEach(k => {
+      grouped[k].sort((a, b) => new Date(b.date) - new Date(a.date));
+    });
+
+    let html = '';
+    TIER_ORDER.forEach(({ tier, label }) => {
+      if (!grouped[tier] || grouped[tier].length === 0) return;
+      html += `<div class="beach-tier-section">
+        <div class="beach-tier-header">${label} · ${grouped[tier].length}</div>
+        <div class="beach-tier-grid">`;
+      grouped[tier].forEach(s => {
+        html += `<div class="beach-shell tier-${tier}" onclick="openShellStory(${state.shellCollection.indexOf(s)})">${s.type}</div>`;
+      });
+      html += `</div></div>`;
+    });
+    grid.innerHTML = html;
+  } else {
+    // 시간순 평면 (최신 위)
+    const sorted = filtered.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+    grid.innerHTML = `<div class="beach-tier-grid">` +
+      sorted.map(s => `<div class="beach-shell tier-${s.tier || 'unknown'}" onclick="openShellStory(${state.shellCollection.indexOf(s)})">${s.type}</div>`).join('') +
+      `</div>`;
+  }
 }
 
 // Shell detail / story modal
@@ -6671,10 +6703,18 @@ function showScreen(name) {
   if (name === 'model') renderModel();
   if (name === 'archive') renderArchive();
   if (name === 'decisions') renderDecisionsList();
-  if (name === 'chat') { 
+  if (name === 'chat') {
     rotateChatPlaceholder();  // V3.10: 매번 다른 힌트
-    renderChat(); 
-    setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50); 
+    renderChat();
+    setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50);
+  }
+
+  // V3.13.x: 튜토리얼 visit step — 어떤 경로(nav click/programmatic)든 화면 도달 시 advance
+  if (window._onbTutorialMode && typeof _onbStep === 'number' && Array.isArray(ONBOARDING_STEPS)) {
+    const step = ONBOARDING_STEPS[_onbStep];
+    if (step && step.waitFor === 'visit' && step.visitScreen === name) {
+      setTimeout(() => { if (window._onbTutorialMode) onbNext(); }, 400);
+    }
   }
 }
 
@@ -7112,8 +7152,12 @@ function renderChat() {
       // Detect if response was "short" (no 4-stage labels)
       const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]/.test(m.content || '');
       const deeperBtn = has4Stage ? '' : `<button class="msg-action" onclick="askDeeper(${i})">더 알고 싶어 ▾</button>`;
+      // V3.13.x: askDeeper 응답이면 깨달음 버튼 대신 '전략으로' (전략 탭에 저장)
+      const saveBtn = m.fromDeeper
+        ? `<button class="msg-action ${m.savedStrategy ? 'saved' : ''}" onclick="saveMsgAsStrategy(${i})">${m.savedStrategy ? '🧭 전략 저장됨' : '🧭 전략으로'}</button>`
+        : `<button class="msg-action ${m.saved ? 'saved' : ''}" onclick="saveMsgAsInsight(${i})">${m.saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>`;
       actions = `<div class="msg-actions">
-        <button class="msg-action ${m.saved ? 'saved' : ''}" onclick="saveMsgAsInsight(${i})">${m.saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>
+        ${saveBtn}
         ${deeperBtn}
       </div>`;
     }
@@ -7412,11 +7456,21 @@ async function generateAIResponse() {
       .trim();
     state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
 
-    // Check for proposal in response
+    // V3.13.x: 직전 user msg가 askDeeper 트리거였는지 — 전략 버튼/해볼게 노출 가드
+    let prevUserIdx = state.chatMessages.length - 2;
+    while (prevUserIdx >= 0 && state.chatMessages[prevUserIdx].role !== 'user') prevUserIdx--;
+    const prevUser = prevUserIdx >= 0 ? state.chatMessages[prevUserIdx] : null;
+    if (prevUser && prevUser.isDeeperRequest) {
+      state.chatMessages[state.chatMessages.length - 1].fromDeeper = true;
+    }
+
+    // Check for proposal in response — askDeeper 응답에서만
     if (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal)) {
-      state.chatMessages[state.chatMessages.length - 1].proposal = true;
-      if (analysisData && analysisData.proposal) {
-        state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;
+      if (prevUser && prevUser.isDeeperRequest) {
+        state.chatMessages[state.chatMessages.length - 1].proposal = true;
+        if (analysisData && analysisData.proposal) {
+          state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;
+        }
       }
     }
 
@@ -7888,39 +7942,156 @@ function buildSystemPromptParts() {
 async function saveMsgAsInsight(idx) {
   const msg = state.chatMessages[idx];
   if (!msg || msg.saved) return;
-  let insight = msg.insightCandidate;
-  if (!insight) {
-    if (!state.apiKey) {
-      insight = msg.content.slice(0, 150);
-    } else {
-      try {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-5',
-            max_tokens: 200,
-            messages: [{ role: 'user', content: `아래 대화 내용을 "깨달음 아카이브"에 저장할 한 문장으로 요약해줘. 자신에 대한 통찰 형태로. 1-2문장만. JSON, 코드 블록, 따옴표 사용 X. 그냥 평문만.\n\n${msg.content}` }]
-          })
-        });
-        const data = await resp.json();
-        let raw = data.content[0].text.trim();
-        // V3.12.x: AI가 JSON/코드 fence 줄 때 추출
-        raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
-        const jsonExtract = raw.match(/[{\[]\s*"[^"]+"\s*:\s*"([\s\S]+?)"\s*[}\]]/);
-        if (jsonExtract) raw = jsonExtract[1];
-        insight = raw.replace(/^["']|["']$/g, '').trim();
-      } catch (e) {
-        insight = msg.content.slice(0, 150);
+  let headline = '';
+  let body = '';
+  if (msg.insightCandidate) {
+    // Legacy: 단일 string으로 들어온 경우 fallback
+    body = msg.insightCandidate;
+  } else if (!state.apiKey) {
+    body = msg.content.slice(0, 150);
+  } else {
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 200,
+          messages: [{ role: 'user', content: `아래 대화에서 "깨달음 아카이브"에 저장할 핵심 통찰을 뽑아줘.
+
+[출력 형식 — 정확히 두 줄]
+1줄: 헤드라인 (5-14자, 짧고 임팩트 있게. 명사형 또는 짧은 명제)
+2줄: 본문 (1문장, 30-70자, 구체적 행동·조건·관찰)
+
+[좋은 예]
+경계가 곧 자기보호
+거절은 미안할 일이 아니다. 짧게 말하면 후회가 줄어든다.
+
+완벽주의의 함정
+시작을 늦추는 가장 큰 적은 '제대로 하기'라는 기준이다.
+
+카페가 답이다
+환경이 의지보다 강하다. 집보다 카페에서 집중력이 30% 높음.
+
+[금지]
+- "나는 ~다" 같은 일반 서술문 X (눈에 안 들어옴)
+- 마크다운(**, ##) X
+- JSON, 코드블록, 따옴표 X
+- 빈 응원·격언 X
+- 3줄 이상 X
+
+[원본 대화]
+${msg.content}
+
+두 줄만 출력. 다른 설명 X.` }]
+        })
+      });
+      const data = await resp.json();
+      let raw = data.content[0].text.trim();
+      raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+      raw = raw.replace(/\*\*/g, '').replace(/^#+\s*/gm, '');
+      const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length >= 2) {
+        headline = lines[0].replace(/^["']|["']$/g, '').slice(0, 30);
+        body = lines.slice(1).join(' ').replace(/^["']|["']$/g, '').slice(0, 200);
+      } else if (lines.length === 1) {
+        body = lines[0].replace(/^["']|["']$/g, '');
       }
+    } catch (e) {
+      body = msg.content.slice(0, 150);
     }
   }
+  if (!body && !headline) body = msg.content.slice(0, 150);
   const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-  state.archive.unshift({ date, insight, source: '대화', savedAt: new Date().toISOString() });
+  // headline + body 형식 저장. insight는 backwards-compat 결합 string.
+  const insight = headline ? `${headline} — ${body}` : body;
+  state.archive.unshift({ date, insight, headline, body, source: '대화', savedAt: new Date().toISOString() });
   msg.saved = true;
   saveState();
   renderChat();
   showToast('깨달음 아카이브에 저장됐어 ✦');
+}
+
+// V3.13.x: askDeeper 응답을 전략 카드로 저장 (state.topicCards에 category='strategy')
+async function saveMsgAsStrategy(idx) {
+  const msg = state.chatMessages[idx];
+  if (!msg || msg.savedStrategy) return;
+  let title = '';
+  let summary = '';
+  if (!state.apiKey) {
+    title = msg.content.slice(0, 30);
+    summary = msg.content.slice(30, 200);
+  } else {
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 250,
+          messages: [{ role: 'user', content: `아래 4단 분석/전략 응답에서 "전략 카드"로 저장할 핵심을 뽑아줘.
+
+[출력 형식 — 정확히 두 줄]
+1줄: 제목 (5-16자, 행동 지향. 짧고 또렷한 명사형 또는 명령형)
+2줄: 본문 (1-2문장, 50-120자, 언제·어떻게 실천할지 구체적)
+
+[좋은 예]
+마감 직전 폭발력 신뢰하기
+마감 24h 전부터 시작하면 OK. 그 전에 못 시작했다고 자책 X.
+
+카페에서 1시간 단위로
+집보다 카페에서 집중력 30% 높음. 1시간 → 10분 휴식 → 다시 1시간.
+
+거절은 짧게 그날 안에
+미루면 부채감 커짐. "이번엔 어려워" 한 줄로 그날 안에 답하기.
+
+[금지]
+- "나는 ~다" 일반 서술 X
+- 마크다운(**, ##) X
+- JSON, 코드블록, 따옴표 X
+- 빈 격언·추상적 다짐 X
+- 3줄 이상 X
+
+[원본 응답]
+${msg.content}
+
+두 줄만 출력. 다른 설명 X.` }]
+        })
+      });
+      const data = await resp.json();
+      let raw = data.content[0].text.trim();
+      raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+      raw = raw.replace(/\*\*/g, '').replace(/^#+\s*/gm, '');
+      const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length >= 2) {
+        title = lines[0].replace(/^["']|["']$/g, '').slice(0, 40);
+        summary = lines.slice(1).join(' ').replace(/^["']|["']$/g, '').slice(0, 240);
+      } else if (lines.length === 1) {
+        title = lines[0].replace(/^["']|["']$/g, '').slice(0, 40);
+      }
+    } catch (e) {
+      title = msg.content.slice(0, 30);
+      summary = msg.content.slice(30, 200);
+    }
+  }
+  if (!title) title = '전략';
+  const now = new Date().toISOString();
+  state.topicCards = state.topicCards || [];
+  state.topicCards.push({
+    id: 'strat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    category: 'strategy',
+    title,
+    summary,
+    chapterStartedAt: now,
+    chapterEndedAt: now,
+    createdAt: now,
+    messageCount: 1,
+    source: 'deeper'
+  });
+  msg.savedStrategy = true;
+  saveState();
+  renderChat();
+  showToast('전략 카드로 저장됐어 🧭');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -8152,7 +8323,22 @@ function renderLensTopicCards() {
   `;
   display.forEach(c => {
     const catInfo = TOPIC_CATEGORY_LABELS[c.category] || { label: '기타', icon: '·' };
-    const dateStr = new Date(c.chapterStartedAt || c.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+    const startedAt = c.chapterStartedAt || c.createdAt;
+    const dateStr = new Date(startedAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+    // V3.13.x: 그 날 체크인 신호 칩 (활력/기분/모드 첫 1개)
+    const dKey = startedAt ? new Date(startedAt).toISOString().slice(0, 10) : null;
+    const dEntry = dKey ? (state.entries || []).find(e => e.date === dKey) : null;
+    let metaExtra = '';
+    if (dEntry) {
+      const bits = [];
+      if (dEntry.vitality != null) bits.push(`⚡${dEntry.vitality}`);
+      if (dEntry.mood != null) bits.push(`💭${dEntry.mood}`);
+      if (dEntry.modes) {
+        const ms = Object.keys(dEntry.modes).filter(k => dEntry.modes[k]);
+        if (ms.length) bits.push(ms[0]);
+      }
+      if (bits.length) metaExtra = ` · ${bits.join(' ')}`;
+    }
     html += `
       <div class="topic-card cat-${c.category}" onclick="openTopicCard('${c.id}')">
         <div class="topic-card-row1">
@@ -8160,7 +8346,7 @@ function renderLensTopicCards() {
           <span class="topic-card-title">${escapeHtml(c.title)}</span>
         </div>
         <div class="topic-card-summary">${escapeHtml(c.summary)}</div>
-        <div class="topic-card-meta">${dateStr} · ${c.messageCount || 0}개 메시지</div>
+        <div class="topic-card-meta">${dateStr} · ${c.messageCount || 0}개 메시지${metaExtra}</div>
       </div>
     `;
   });
@@ -8175,7 +8361,30 @@ function openTopicCard(id) {
   const card = (state.topicCards || []).find(c => c.id === id);
   if (!card) return;
   const catInfo = TOPIC_CATEGORY_LABELS[card.category] || { label: '기타', icon: '·' };
-  const dateStr = new Date(card.chapterStartedAt || card.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  const startedAtISO = card.chapterStartedAt || card.createdAt;
+  const dateStr = new Date(startedAtISO).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+
+  // V3.13.x: 그 날 체크인 정보 박스
+  let dayInfoHtml = '';
+  const dayKey = startedAtISO ? new Date(startedAtISO).toISOString().slice(0, 10) : null;
+  const dayEntry = dayKey ? (state.entries || []).find(e => e.date === dayKey) : null;
+  if (dayEntry) {
+    const bits = [];
+    if (dayEntry.modes) {
+      const ms = Object.keys(dayEntry.modes).filter(k => dayEntry.modes[k]);
+      if (ms.length) bits.push(`모드: ${ms.join(', ')}`);
+    }
+    if (dayEntry.vitality != null) bits.push(`활력 ${dayEntry.vitality}/5`);
+    if (dayEntry.mood != null) bits.push(`기분 ${dayEntry.mood}/5`);
+    if (dayEntry.sleepStart && dayEntry.sleepEnd) bits.push(`수면 ${dayEntry.sleepStart}~${dayEntry.sleepEnd}`);
+    const hasAnything = bits.length || dayEntry.diary || dayEntry.aiSummary;
+    if (hasAnything) {
+      const diaryBlock = dayEntry.diary
+        ? `<div style="margin-top:6px; padding-top:6px; border-top: 1px solid var(--border); white-space:pre-wrap; color:var(--text);">📔 ${escapeHtml(dayEntry.diary)}</div>`
+        : (dayEntry.aiSummary ? `<div style="margin-top:6px; padding-top:6px; border-top: 1px solid var(--border); color:var(--text);">🤖 ${escapeHtml(dayEntry.aiSummary)}</div>` : '');
+      dayInfoHtml = `<div style="margin-top:10px; padding:10px 12px; background:var(--surface2); border-radius:10px; font-size:12px; color:var(--text-dim); line-height:1.6;"><div style="font-size:10px; opacity:0.7; letter-spacing:0.5px; margin-bottom:4px;">📅 그 날 체크인</div>${bits.join(' · ') || '<span style="opacity:0.6;">체크인 정보 없음</span>'}${diaryBlock}</div>`;
+    }
+  }
   
   // 액션 버튼 — 카테고리에 따라
   const actions = [];
@@ -8204,6 +8413,7 @@ function openTopicCard(id) {
       </div>
       <div class="topic-modal-title">${escapeHtml(card.title)}</div>
       <div class="topic-modal-summary">${escapeHtml(card.summary)}</div>
+      ${dayInfoHtml}
       <div class="topic-modal-meta">${dateStr} · ${card.messageCount || 0}개 메시지</div>
       <div class="topic-modal-actions">
         ${actions.join('')}
@@ -8484,7 +8694,7 @@ function renderLensTimeline() {
       }
       // V3.13: AI 자동 요약 (일기 없는 날)
       if (entry.aiSummary && !entry.diary) {
-        summary += `<div style="margin-bottom:8px; padding:8px 10px; background:var(--surface2); border-left: 3px solid var(--purple); border-radius: 8px; font-size:12px; color:var(--text-dim); line-height:1.6;">🤖 ${escapeHtml(entry.aiSummary)}</div>`;
+        summary += `<div style="margin-bottom:8px; padding:8px 10px; background:var(--surface2); border-left: 3px solid var(--purple); border-radius: 8px; font-size:12px; color:var(--text-dim); line-height:1.6;"><span style="font-size:10px; opacity:0.7; letter-spacing:0.5px;">🤖 자동 요약</span><div style="margin-top:4px;">${escapeHtml(entry.aiSummary)}</div></div>`;
       }
       if (entry.note) {
         summary += `<div>${escapeHtml(entry.note)}</div>`;
@@ -8496,10 +8706,15 @@ function renderLensTimeline() {
       `);
     }
     
-    // Archive insights
+    // Archive insights — V3.13.x: headline + body 형식 강조
     if (day.archives.length > 0) {
       parts.push(`<div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
-        ${day.archives.map(a => `<div style="font-size:13px; color:var(--text); line-height:1.7; margin-bottom:6px;">✦ ${escapeHtml(a.insight)}</div>`).join('')}
+        ${day.archives.map(a => {
+          if (a.headline) {
+            return `<div style="margin-bottom:10px; padding:10px 12px; background: linear-gradient(135deg, rgba(201,169,110,0.08), rgba(139,126,196,0.04)); border-left: 3px solid var(--accent); border-radius: 8px;"><div style="font-size:14px; font-weight:600; color:var(--accent2); letter-spacing:0.3px; margin-bottom:4px;">✦ ${escapeHtml(a.headline)}</div><div style="font-size:12px; color:var(--text-dim); line-height:1.6;">${escapeHtml(a.body || '')}</div></div>`;
+          }
+          return `<div style="font-size:13px; color:var(--text); line-height:1.7; margin-bottom:6px;">✦ ${escapeHtml(a.insight || '')}</div>`;
+        }).join('')}
       </div>`);
     }
     
@@ -8522,11 +8737,11 @@ function renderLensTimeline() {
 function formatDateKorean(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
-  const today = new Date();
-  const todayKey = today.toISOString().split('T')[0];
-  const yesterday = new Date(today.getTime() - 86400000).toISOString().split('T')[0];
-  if (dateStr === todayKey) return '오늘 · ' + d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
-  if (dateStr === yesterday) return '어제 · ' + d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  // V3.13.x: 04:00 cutoff 기준 오늘/어제 라벨링
+  const todayK = todayKey();
+  const yesterdayK = getDayKey(Date.now() - 86400000);
+  if (dateStr === todayK) return '오늘 · ' + d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  if (dateStr === yesterdayK) return '어제 · ' + d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
   return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
 }
 
@@ -9364,10 +9579,11 @@ async function runChatArchiveIfNeeded() {
     return;
   }
   
-  // 날짜별 그룹
+  // 날짜별 그룹 (V3.13.x: 04:00 cutoff 기준)
   const byDate = {};
   oldMessages.forEach(m => {
-    const dateKey = (m.timestamp || '').slice(0, 10);
+    if (!m.timestamp) return;
+    const dateKey = getDayKey(m.timestamp);
     if (!dateKey) return;
     if (!byDate[dateKey]) byDate[dateKey] = [];
     byDate[dateKey].push(m);
@@ -9412,11 +9628,11 @@ async function runChatArchiveIfNeeded() {
     }
   }
   
-  // chatMessages에서 archive된 거 제거
+  // chatMessages에서 archive된 거 제거 (V3.13.x: 04:00 cutoff)
   state.chatMessages = state.chatMessages.filter(m => {
     if (!m.timestamp) return true;
     if (new Date(m.timestamp).getTime() >= cutoff) return true;
-    const dateKey = m.timestamp.slice(0, 10);
+    const dateKey = getDayKey(m.timestamp);
     return !datesThisRun.includes(dateKey);
   });
   
@@ -9878,6 +10094,103 @@ async function runMonthlyAutoReviewIfNeeded() {
   } catch (e) {
     console.warn('monthly auto review failed:', e);
   }
+}
+
+// V3.13.x: 일기 자동 요약 — entry 있는데 diary/aiSummary 둘 다 없는 날 보강 (어제부터 7일 거슬러, 1회 1일치)
+async function runDiaryAutoSummaryIfNeeded() {
+  if (!state.apiKey) return;
+
+  // V3.13.x: 04:00 cutoff 기준 어제부터 거꾸로
+  for (let i = 1; i <= 7; i++) {
+    const noon = new Date();
+    noon.setHours(12, 0, 0, 0);
+    noon.setDate(noon.getDate() - i);
+    const dateKey = getDayKey(noon);
+
+    const entry = (state.entries || []).find(e => e.date === dateKey);
+    if (!entry) continue;
+    if (entry.diary) continue;
+    if (entry.aiSummary) continue;
+
+    let messages = (state.chatMessages || []).filter(m =>
+      m.timestamp && getDayKey(m.timestamp) === dateKey && !m.typing && !m.error
+    );
+    if (messages.length < 2) {
+      const archived = (state.chatArchive || []).find(a => a.date === dateKey);
+      if (archived && Array.isArray(archived.messages)) messages = archived.messages;
+    }
+
+    const hasContext = messages.length >= 2 || entry.vitality != null || entry.mood != null || (entry.note && entry.note.trim());
+    if (!hasContext) continue;
+
+    try {
+      const summary = await summarizeDayForEntry(dateKey, messages, entry);
+      if (summary) {
+        entry.aiSummary = summary;
+        entry.dailySource = 'auto';
+        saveState();
+        console.log(`✦ 자동 요약 ${dateKey} 생성됨`);
+      }
+    } catch (e) {
+      console.warn('diary auto summary failed for', dateKey, e);
+    }
+    return;  // 한 번에 1일치만 (cost + rate)
+  }
+}
+
+async function summarizeDayForEntry(date, messages, entry) {
+  const dateLabel = new Date(date).toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
+  });
+
+  const checkinParts = [];
+  if (entry.modes) {
+    const activeModes = Object.keys(entry.modes).filter(k => entry.modes[k]);
+    if (activeModes.length) checkinParts.push(`모드: ${activeModes.join(', ')}`);
+  }
+  if (entry.vitality != null) checkinParts.push(`활력: ${entry.vitality}/5`);
+  if (entry.mood != null) checkinParts.push(`기분: ${entry.mood}/5`);
+  if (entry.sleepStart && entry.sleepEnd) checkinParts.push(`수면: ${entry.sleepStart}~${entry.sleepEnd}`);
+  if (entry.note && entry.note.trim()) checkinParts.push(`체크인 메모: ${entry.note.trim()}`);
+  const checkinSummary = checkinParts.length ? checkinParts.join(' / ') : '체크인 정보 없음';
+
+  const chatLog = messages.length > 0 ? messages.map(m => {
+    const role = m.role === 'user' ? '나' : '소라';
+    let content = m.content || '';
+    content = content.replace(/```json[\s\S]*?```/g, '').trim();
+    content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
+    return `${role}: ${content}`;
+  }).join('\n\n').slice(0, 6000) : '대화 없음';
+
+  const prompt = `${dateLabel}의 기록이야. 일기를 안 썼지만 그 날 흔적으로 짧은 요약을 만들어줘.
+
+[체크인]
+${checkinSummary}
+
+[그 날 대화]
+${chatLog}
+
+[요약 규칙]
+- 1단락, 2-4문장 (150자 이내)
+- 그 날의 감정·상황·중요한 일만
+- 사용자 시점 ("나는 ~했다") 자연스럽게
+- 친근한 톤, 반말 OK
+- 형식: 그냥 한 단락. 제목 X, 불릿 X
+- 정보 적으면 정직하게 짧게 ("기록 적은 하루. 체크인 보면 ~")
+
+[좋은 예시]
+"활력 낮고 기분도 다운된 하루. 소라랑 짧게 압박감에 대해 얘기. 별다른 행동은 없었지만 자기 인식 있었음."
+
+요약만 출력. 다른 설명 X.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 300, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!resp.ok) throw new Error('API ' + resp.status);
+  const data = await resp.json();
+  return data.content[0].text.trim();
 }
 
 async function testForceMonthlyAuto() {
@@ -11702,6 +12015,26 @@ async function resetAll() {
     }
   } catch (e) { console.error(e); }
   location.reload();
+}
+
+// V3.13.x: 소라 컬렉션만 초기화 (다른 데이터는 유지)
+async function resetShellCollection() {
+  const count = (state.shellCollection || []).length;
+  if (count === 0) {
+    showToast('이미 비어있어');
+    return;
+  }
+  const yes = await showConfirmModal({
+    title: '소라 컬렉션 초기화',
+    message: `모래사장 소라 ${count}개가 모두 삭제돼.\n다른 데이터(체크인/대화/할 일 등)는 그대로.\n되돌릴 수 없어.`,
+    okLabel: '삭제', cancelLabel: '취소'
+  });
+  if (!yes) return;
+  state.shellCollection = [];
+  saveState();
+  if (typeof renderBeach === 'function') renderBeach();
+  if (typeof renderShellBar === 'function') renderShellBar();
+  showToast(`🐚 소라 ${count}개 초기화 완료`);
 }
 
 // ═══════════════════════════════════════════════════════════════
