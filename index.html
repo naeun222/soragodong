@@ -405,13 +405,27 @@
     <div class="login-icon">🐚</div>
     <div class="login-title">소라고동</div>
     <div class="login-sub">너의 AI 라이프 전략가.<br>이메일로 안전하게 들어와.</div>
-    <div class="login-form">
+
+    <!-- Step 1: Email -->
+    <div class="login-form" id="loginStep1">
       <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
-      <button class="btn-primary" id="loginBtn" onclick="handleLogin()">매직링크 받기</button>
+      <button class="btn-primary" id="loginBtn" onclick="handleSendCode()">6자리 코드 받기</button>
       <div class="login-status" id="loginStatus"></div>
     </div>
+
+    <!-- Step 2: Code -->
+    <div class="login-form" id="loginStep2" style="display:none;">
+      <div style="font-size:13px; color:var(--text); margin-bottom:14px; line-height:1.6;">
+        <strong id="loginEmailDisplay"></strong> 으로<br>6자리 코드를 보냈어.
+      </div>
+      <input type="text" id="loginCode" placeholder="6자리 코드" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" style="text-align:center; font-size:22px; letter-spacing:0.3em; font-family:monospace;">
+      <button class="btn-primary" id="verifyBtn" onclick="handleVerifyCode()">로그인</button>
+      <div class="login-status" id="verifyStatus"></div>
+      <button class="btn-secondary" onclick="resetLoginFlow()" style="margin-top:14px;">이메일 다시 입력</button>
+    </div>
+
     <div class="login-info">
-      비밀번호 없이 이메일 링크로 로그인.<br>
+      비밀번호 없이 이메일 코드로 로그인.<br>
       네 데이터는 너만 볼 수 있도록 암호화돼.
     </div>
   </div>
@@ -887,17 +901,46 @@ async function checkSession() {
   return false;
 }
 
-async function sendMagicLink(email) {
-  const redirectTo = window.location.origin;
+async function sendOTP(email) {
   const resp = await fetch(`${SUPABASE_URL}/auth/v1/otp`, {
     method: 'POST',
     headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, options: { emailRedirectTo: redirectTo } })
+    body: JSON.stringify({
+      email,
+      create_user: true,
+      // No emailRedirectTo → user gets a code AND a link, we use the code
+    })
   });
   if (!resp.ok) {
-    const err = await resp.json();
-    throw new Error(err.msg || err.error_description || '매직링크 전송 실패');
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.msg || err.error_description || err.message || '코드 전송 실패');
   }
+  return true;
+}
+
+async function verifyOTP(email, token) {
+  const resp = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      token,
+      type: 'email'
+    })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.msg || err.error_description || err.message || '코드가 틀렸어');
+  }
+  const data = await resp.json();
+  // Returns { access_token, refresh_token, user }
+  session = {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    user: data.user
+  };
+  authUserId = data.user.id;
+  localStorage.setItem('soragodong_session', JSON.stringify(session));
   return true;
 }
 
@@ -1092,7 +1135,7 @@ function showLoginScreen() {
   document.getElementById('loginScreen').style.display = 'flex';
 }
 
-async function handleLogin() {
+async function handleSendCode() {
   const emailInput = document.getElementById('loginEmail');
   const email = emailInput.value.trim();
   if (!email || !email.includes('@')) { alert('이메일을 정확히 입력해줘'); return; }
@@ -1104,16 +1147,58 @@ async function handleLogin() {
   status.textContent = '';
 
   try {
-    await sendMagicLink(email);
-    status.innerHTML = '✦ <strong>' + escapeHtml(email) + '</strong>으로 로그인 링크를 보냈어.<br>이메일 열고 링크 누르면 자동 로그인 돼.';
-    status.style.color = 'var(--success)';
-    btn.textContent = '✓ 전송됨';
+    await sendOTP(email);
+    // Move to step 2
+    document.getElementById('loginStep1').style.display = 'none';
+    document.getElementById('loginStep2').style.display = 'block';
+    document.getElementById('loginEmailDisplay').textContent = email;
+    // Store email for verification
+    document.getElementById('loginStep2').dataset.email = email;
+    setTimeout(() => document.getElementById('loginCode').focus(), 100);
   } catch (err) {
     status.textContent = '오류: ' + err.message;
     status.style.color = 'var(--danger)';
     btn.disabled = false;
-    btn.textContent = '매직링크 받기';
+    btn.textContent = '6자리 코드 받기';
   }
+}
+
+async function handleVerifyCode() {
+  const email = document.getElementById('loginStep2').dataset.email;
+  const codeInput = document.getElementById('loginCode');
+  const code = codeInput.value.trim();
+  if (!code || code.length !== 6) { alert('6자리 코드를 입력해줘'); return; }
+
+  const btn = document.getElementById('verifyBtn');
+  const status = document.getElementById('verifyStatus');
+  btn.disabled = true;
+  btn.textContent = '확인 중...';
+  status.textContent = '';
+
+  try {
+    await verifyOTP(email, code);
+    // Success — reload to enter app
+    status.textContent = '✓ 로그인 성공! 잠시만...';
+    status.style.color = 'var(--success)';
+    setTimeout(() => location.reload(), 600);
+  } catch (err) {
+    status.textContent = '오류: ' + err.message + ' — 코드를 다시 확인해줘.';
+    status.style.color = 'var(--danger)';
+    btn.disabled = false;
+    btn.textContent = '로그인';
+    codeInput.value = '';
+    codeInput.focus();
+  }
+}
+
+function resetLoginFlow() {
+  document.getElementById('loginStep1').style.display = 'block';
+  document.getElementById('loginStep2').style.display = 'none';
+  document.getElementById('loginCode').value = '';
+  document.getElementById('loginStatus').textContent = '';
+  document.getElementById('verifyStatus').textContent = '';
+  document.getElementById('loginBtn').disabled = false;
+  document.getElementById('loginBtn').textContent = '6자리 코드 받기';
 }
 
 function todayKey() { return new Date().toISOString().split('T')[0]; }
@@ -3146,7 +3231,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginEmail = document.getElementById('loginEmail');
   if (loginEmail) {
     loginEmail.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); handleLogin(); }
+      if (e.key === 'Enter') { e.preventDefault(); handleSendCode(); }
+    });
+  }
+  // Enter key on login code
+  const loginCode = document.getElementById('loginCode');
+  if (loginCode) {
+    loginCode.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); handleVerifyCode(); }
+    });
+    // Auto-submit when 6 digits entered
+    loginCode.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, ''); // numeric only
+      if (e.target.value.length === 6) {
+        setTimeout(() => handleVerifyCode(), 100);
+      }
     });
   }
 });
