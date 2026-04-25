@@ -2238,19 +2238,17 @@
   .onb-overlay {
     position: fixed; inset: 0;
     z-index: 9000;
-    pointer-events: none; /* V3.12.x: 항상 패스스루 — children(mask/coachmark)가 클릭 처리 */
+    pointer-events: none; /* 항상 패스스루 — children이 클릭 처리 */
   }
+  /* V3.12.x: target 있는 step은 mask 자체를 숨김 (spotlight box-shadow가 darkening 담당) */
   .onb-mask {
     position: fixed; inset: 0;
     background: rgba(15,14,23,0.7);
     transition: opacity 0.25s ease;
     pointer-events: auto;
+    display: none; /* 기본 숨김 */
   }
-  /* V3.12: target 있을 때 마스크는 투명 + 클릭 패스스루 (spotlight box-shadow가 darkening 담당) */
-  .onb-mask.has-hole {
-    background: transparent;
-    pointer-events: none;
-  }
+  .onb-mask.show-full { display: block; } /* target 없는 step에서만 표시 */
   .onb-spotlight {
     position: fixed;
     border-radius: 16px;
@@ -3662,7 +3660,7 @@ const ONBOARDING_STEPS = [
     id: 'go_checkin',
     targetSelector: '.nav-item[data-screen="checkin"]',
     title: '체크인 ✓ 눌러봐',
-    body: '15초면 끝나는 가벼운 기록.<br><span class="small">아래 ✓ 탭이야</span>',
+    body: '데일리로 일상을 기록하는 곳이야.',
     waitFor: 'visit',
     visitScreen: 'checkin'
   },
@@ -3670,7 +3668,7 @@ const ONBOARDING_STEPS = [
     id: 'pick_vitality',
     targetSelector: '.vitality-options',
     title: '오늘 활력 골라봐',
-    body: '😵 ~ ✨ 중에 대충 하나.<br>완벽할 필요 X.',
+    body: '아무거나 하나.',
     waitFor: 'click',
     advanceDelay: 600,
     fallbackPosition: 'bottom'
@@ -3679,7 +3677,7 @@ const ONBOARDING_STEPS = [
     id: 'submit_checkin',
     targetSelector: 'button[onclick="submitCheckin()"]',
     title: '기록 완료 눌러봐',
-    body: '저장돼. 끝.',
+    body: '오늘 기록이 저장돼.',
     waitFor: 'click',
     advanceDelay: 700,
     fallbackPosition: 'top'
@@ -3688,7 +3686,7 @@ const ONBOARDING_STEPS = [
     id: 'go_chat',
     targetSelector: '.nav-item[data-screen="chat"]',
     title: '🐚 대화 탭 눌러봐',
-    body: '여기가 가장 자유로운 곳.',
+    body: '뭐든 자유롭게 얘기하는 곳.',
     waitFor: 'visit',
     visitScreen: 'chat'
   },
@@ -3696,7 +3694,7 @@ const ONBOARDING_STEPS = [
     id: 'send_msg',
     targetSelector: '.send-btn',
     title: '뭐든 써서 보내봐',
-    body: '"안녕" 한 마디도 OK.<br>아래 입력창에 쓰고 → 화살표 눌러봐.',
+    body: '아래 입력창에 한 줄 쓰고<br>화살표 눌러봐.',
     waitFor: 'click',
     advanceDelay: 1500,
     fallbackPosition: 'top'
@@ -3794,8 +3792,8 @@ function onbPositionStep(step) {
     spotlight.style.top = (rect.top - padding) + 'px';
     spotlight.style.width = (rect.width + padding * 2) + 'px';
     spotlight.style.height = (rect.height + padding * 2) + 'px';
-    // V3.12: target 있을 때 마스크 투명 + 클릭 패스스루
-    mask.classList.add('has-hole');
+    // V3.12.x: target 있을 때 mask 자체를 숨김 → 클릭 100% 패스스루
+    mask.classList.remove('show-full');
     
     // coachmark 위치 (타깃 위 또는 아래 중 공간 더 큰 쪽)
     const vh = window.innerHeight;
@@ -3815,9 +3813,9 @@ function onbPositionStep(step) {
     coachmark.style.transform = 'translateX(-50%)';
     coachmark.style.bottom = 'auto';
   } else {
-    // 타깃 없음 — 화면 중앙. 마스크는 불투명.
+    // 타깃 없음 — 화면 중앙. mask 표시해서 클릭 차단.
     spotlight.style.display = 'none';
-    mask.classList.remove('has-hole');
+    mask.classList.add('show-full');
     coachmark.style.top = '50%';
     coachmark.style.left = '50%';
     coachmark.style.transform = 'translate(-50%, -50%)';
