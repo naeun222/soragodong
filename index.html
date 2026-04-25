@@ -67,22 +67,7 @@
   .greeting-main { font-family: 'Gowun Batang', serif; font-size: 24px; line-height: 1.4; }
   .greeting-main .accent { color: var(--accent); }
 
-  /* Shell collection bar */
-  .shell-bar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px;
-    background: linear-gradient(135deg, var(--accent-dim), var(--purple-dim));
-    border: 1px solid rgba(201,169,110,0.2);
-    border-radius: 14px;
-    margin-bottom: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .shell-bar:active { transform: scale(0.98); }
-  .shell-bar .left { display: flex; align-items: center; gap: 10px; }
-  .shell-bar .shell-count { font-family: 'Gowun Batang', serif; font-size: 22px; color: var(--accent); }
-  .shell-bar .shell-label { font-size: 11px; color: var(--text-dim); }
-  .shell-bar .streak-info { font-size: 11px; color: var(--text-dim); }
+  /* V3.7: shell-bar CSS 제거됨 (home-small-card로 대체) */
 
   /* Today's mission card */
   .mission-card {
@@ -175,12 +160,12 @@
   .model-preview-empty { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
 
   .mode-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-  .mode-chip { padding: 5px 11px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); font-size: 11px; color: var(--text-dim); cursor: pointer; transition: all 0.2s; }
+  .mode-chip { padding: 8px 13px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); font-size: 12px; color: var(--text-dim); cursor: pointer; transition: all 0.2s; min-height: 36px; display: inline-flex; align-items: center; }
   .mode-chip.active { background: rgba(139,126,196,0.2); border-color: var(--purple); color: var(--purple); }
   .mode-chip.mode-sos.active {
-    background: rgba(220,150,150,0.18);
-    border-color: rgba(220,150,150,0.5);
-    color: rgba(240,180,180,1);
+    background: rgba(155,148,178,0.22);
+    border-color: rgba(155,148,178,0.55);
+    color: rgba(200,195,220,1);
   }
 
   .action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; }
@@ -265,6 +250,28 @@
   .chat-archive-header:hover {
     background: linear-gradient(135deg, rgba(201,169,110,0.15), rgba(139,126,196,0.12));
     border-color: rgba(201,169,110,0.4);
+  }
+  
+  /* V3.8: 챕터 구분선 (4시간 비활성 후) */
+  .chapter-divider {
+    display: flex;
+    align-items: center;
+    margin: 22px 0 18px;
+    padding: 0 4px;
+    gap: 12px;
+    opacity: 0.7;
+  }
+  .chapter-divider::before, .chapter-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border-strong), transparent);
+  }
+  .chapter-divider span {
+    font-size: 10px;
+    color: var(--text-soft);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
   }
   
   .chat-archive-card {
@@ -393,6 +400,57 @@
   }
   .dsc-btn:active { transform: scale(0.97); }
 
+  /* V3.6: Vault proposal card — 대화 → 서랍장 확인 step */
+  .vault-proposal-card {
+    margin: 12px 0 4px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(201,169,110,0.1), rgba(50,42,28,0.2));
+    border: 1px solid rgba(201,169,110,0.28);
+    border-radius: 14px;
+  }
+  .vpc-header {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .vault-proposal-item {
+    background: rgba(255,255,255,0.04);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+  }
+  .vault-proposal-item:last-child { margin-bottom: 0; }
+  .vpi-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .vpi-buttons { display: flex; gap: 6px; }
+  .vpi-btn {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  .vpi-btn.yes {
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    font-weight: 600;
+  }
+  .vpi-btn.no {
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text-dim);
+  }
+  .vpi-btn:active { transform: scale(0.96); }
+
   .btn-primary { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--accent), #b8894a); border: none; border-radius: 14px; color: var(--bg); font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all 0.2s; }
   .btn-primary:active { transform: scale(0.98); }
   .btn-secondary { width: 100%; padding: 14px; background: transparent; border: 1px solid var(--border-strong); border-radius: 14px; color: var(--text-dim); font-size: 13px; font-family: inherit; cursor: pointer; margin-top: 8px; }
@@ -412,10 +470,10 @@
   .msg.assistant .msg-bubble .stage-label { display: block; font-size: 11px; color: var(--accent); font-weight: 700; letter-spacing: 0.05em; margin-top: 12px; margin-bottom: 4px; }
   .msg.assistant .msg-bubble .stage-label:first-child { margin-top: 0; }
   .msg-actions { display: flex; gap: 8px; margin-top: 6px; padding: 0 4px; flex-wrap: wrap; }
-  .msg-action { font-size: 11px; color: var(--text-dim); background: none; border: none; cursor: pointer; font-family: inherit; padding: 4px 8px; border-radius: 8px; }
+  .msg-action { font-size: 11px; color: var(--text-dim); background: none; border: none; cursor: pointer; font-family: inherit; padding: 8px 12px; border-radius: 10px; min-height: 32px; }
   .msg-action:active { background: var(--surface2); color: var(--accent); }
   .msg-action.saved { color: var(--accent); }
-  .msg-action.retry { color: var(--accent); border: 1px solid var(--accent); padding: 6px 12px; }
+  .msg-action.retry { color: var(--accent); border: 1px solid var(--accent); padding: 8px 14px; }
 
   .chat-input-bar { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; }
   .chat-input-wrap { display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 16px; }
@@ -425,10 +483,10 @@
   .send-btn:active { transform: scale(0.95); }
 
   .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 10px 0 26px; z-index: 100; }
-  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; opacity: 0.4; transition: opacity 0.2s; padding: 4px 0; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 8px 0; min-height: 56px; justify-content: center; }
   .nav-item.active { opacity: 1; }
-  .nav-icon { font-size: 20px; }
-  .nav-label { font-size: 9px; color: var(--text-dim); letter-spacing: 0.04em; }
+  .nav-icon { font-size: 22px; }
+  .nav-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.04em; }
   .nav-item.active .nav-label { color: var(--accent); }
 
   .model-section { margin-bottom: 22px; }
@@ -507,7 +565,7 @@
   /* Shell collection modal */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
   .modal-overlay.active { display: flex; }
-  .modal { width: 100%; max-width: 520px; background: var(--surface); border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 24px 24px 40px; max-height: 85vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+  .modal { width: 100%; max-width: 520px; background: var(--surface); border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 24px 24px 40px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.25s ease; }
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   .modal-title { font-family: 'Gowun Batang', serif; font-size: 22px; margin-bottom: 8px; }
   .modal-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 20px; }
@@ -555,43 +613,42 @@
   .login-info { margin-top: 28px; padding: 14px; background: var(--surface); border-radius: 12px; font-size: 11px; color: var(--text-dim); line-height: 1.7; }
 
   /* === V3 HOME === */
-  .todays-shell-card {
-    background: linear-gradient(135deg, rgba(201,169,110,0.12), rgba(139,126,196,0.08));
-    border: 1px solid rgba(201,169,110,0.25);
-    border-radius: 18px;
-    padding: 18px 20px;
-    margin-bottom: 16px;
-    font-family: 'Gowun Batang', serif;
-    font-size: 15px;
-    line-height: 1.7;
-    color: var(--text);
-    position: relative;
-  }
-  .todays-shell-card.loading { opacity: 0.5; font-style: italic; }
-  .todays-shell-shell {
-    position: absolute;
-    top: 14px; right: 16px;
-    font-size: 16px;
-    opacity: 0.6;
-  }
-  .todays-shell-text { padding-right: 20px; }
+  /* V3.7: todays-shell CSS 제거됨 (Today's Shell 기능 자체 제거) */
+  /* V3.7: mode-display CSS 제거됨 (renderModeDisplay dead code, mode-chip만 사용) */
 
-  /* Mode display - 자연어 */
-  .mode-display {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 14px;
+  /* V3.7: 홈 작은 가로 줄 (★ 부수적 항목들) */
+  .home-small-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .home-small-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px;
     background: var(--surface);
-    border-radius: 12px;
-    margin-bottom: 14px;
-    font-size: 13px;
-    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 14px;
     cursor: pointer;
+    transition: all 0.18s;
+    min-height: 56px;
   }
-  .mode-display.active { color: var(--accent2); }
-  .mode-display .change-link { 
-    font-size: 11px; color: var(--text-soft); 
-    margin-left: auto;
+  .home-small-card:active { transform: scale(0.97); background: var(--surface2); }
+  .hsc-icon { font-size: 22px; flex-shrink: 0; }
+  .hsc-text { flex: 1; min-width: 0; }
+  .hsc-title { font-size: 13px; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hsc-sub { font-size: 10px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* home-small-row 내부의 decision-mini-card는 home-small-card와 같은 모양으로 통일 */
+  .home-small-row .decision-mini-card {
+    margin-top: 0 !important;
+    padding: 12px 14px;
+    min-height: 56px;
+    border-radius: 14px;
   }
+  .home-small-row .decision-mini-card .dm-icon { font-size: 22px; }
+  .home-small-row .decision-mini-card .dm-title { font-size: 13px; }
+  .home-small-row .decision-mini-card .dm-sub { font-size: 10px; }
+  .home-small-row .decision-mini-card .dm-arrow { display: none; }
 
   /* Decision mini card - 살짝 키운 작은 카드 */
   .decision-mini-card {
@@ -672,26 +729,47 @@
     margin-top: 4px;
   }
 
-  /* Memory Vault toast */
-  .vault-toast {
+  /* V3.7: vault-toast CSS 제거됨 (showVaultToast 함수 자체 제거 - vaultProposals 카드로 대체) */
+
+  /* V3.7: Undo toast - 5초 안에 되돌리기 */
+  .undo-toast {
     position: fixed;
     left: 50%;
     bottom: 100px;
     transform: translateX(-50%) translateY(20px);
-    background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.95));
-    border: 1px solid rgba(139,126,196,0.4);
-    padding: 12px 18px;
-    border-radius: 14px;
-    z-index: 200;
-    cursor: pointer;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
-    max-width: 320px;
+    background: linear-gradient(135deg, rgba(45,40,80,0.96), rgba(30,28,50,0.96));
+    border: 1px solid rgba(201,169,110,0.35);
+    padding: 11px 14px 11px 18px;
+    border-radius: 28px;
+    z-index: 500;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 13px;
+    color: var(--text);
     opacity: 0;
-    transition: all 0.3s ease;
+    transition: all 0.25s ease;
+    max-width: 90vw;
   }
-  .vault-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  .vault-toast.removing { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.95); }
+  .undo-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .undo-toast.removing { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.96); }
+  .undo-toast-msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 56vw; }
+  .undo-toast-btn {
+    background: rgba(201,169,110,0.22);
+    border: 1px solid rgba(201,169,110,0.5);
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .undo-toast-btn:active { transform: scale(0.95); background: rgba(201,169,110,0.35); }
 
   /* Night mode body adjustments */
   body.night-mode {
@@ -699,10 +777,6 @@
   }
   body.night-mode .header { background: rgba(10,8,20,0.95); }
   body.night-mode .greeting-main { color: #c0b3e0; }
-  body.night-mode .todays-shell-card {
-    background: linear-gradient(135deg, rgba(139,126,196,0.15), rgba(45,40,80,0.3));
-    border-color: rgba(139,126,196,0.35);
-  }
 
   /* === START RITUAL — game-like === */
   .ritual-overlay {
@@ -1025,117 +1099,146 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
     gap: 8px;
-    padding: 24px 16px 18px;
+    padding: 28px 16px 22px;
     background: 
-      /* 햇빛 */
-      radial-gradient(ellipse 200px 100px at 78% 8%, rgba(255,235,180,0.35) 0%, rgba(255,220,150,0.15) 30%, transparent 60%),
-      /* 햇빛 반사 1 */
-      radial-gradient(ellipse 60px 40px at 30% 32%, rgba(255,255,255,0.18) 0%, transparent 70%),
-      /* 햇빛 반사 2 */
-      radial-gradient(ellipse 40px 30px at 65% 45%, rgba(255,255,255,0.12) 0%, transparent 70%),
-      /* 바다 */
+      /* 햇빛 광선 (오른쪽 위에서) */
+      radial-gradient(ellipse 240px 140px at 82% 5%, rgba(255,245,200,0.75) 0%, rgba(255,230,160,0.35) 25%, rgba(255,220,140,0.12) 50%, transparent 75%),
+      /* 햇빛 핵 (가장 밝은 점) */
+      radial-gradient(circle 50px at 82% 5%, rgba(255,255,230,0.95) 0%, rgba(255,250,210,0.5) 40%, transparent 80%),
+      /* 바다 윤슬 1 */
+      radial-gradient(ellipse 70px 25px at 25% 28%, rgba(255,255,255,0.4) 0%, transparent 70%),
+      /* 바다 윤슬 2 */
+      radial-gradient(ellipse 50px 18px at 60% 22%, rgba(255,255,255,0.32) 0%, transparent 70%),
+      /* 바다 윤슬 3 */
+      radial-gradient(ellipse 35px 12px at 45% 35%, rgba(255,255,255,0.25) 0%, transparent 70%),
+      /* 메인 그라디언트 — 하늘 → 바다 → 해변 */
       linear-gradient(180deg, 
-        rgba(160,205,230,0.55) 0%,      /* 하늘 */
-        rgba(140,195,225,0.5) 18%,       /* 바다 위쪽 */
-        rgba(120,180,210,0.55) 32%,      /* 바다 깊이 */
-        rgba(220,200,160,0.4) 42%,       /* 파도 거품 */
-        rgba(245,225,180,0.6) 50%,       /* 모래 시작 (젖은) */
-        rgba(238,212,168,0.7) 65%,       /* 모래 중간 */
-        rgba(232,200,155,0.75) 100%      /* 모래 끝 */
+        rgba(186,228,245,0.92) 0%,       /* 하늘 (밝은 하늘색) */
+        rgba(155,213,236,0.92) 12%,      /* 수평선 */
+        rgba(110,194,224,0.95) 22%,      /* 바다 위쪽 청록 */
+        rgba(82,178,212,0.95) 32%,       /* 바다 깊이 */
+        rgba(140,205,220,0.9) 40%,       /* 얕은 바다 */
+        rgba(220,235,225,0.85) 45%,      /* 파도 거품 */
+        rgba(255,240,200,0.92) 50%,      /* 젖은 모래 (밝게) */
+        rgba(255,228,170,0.95) 65%,      /* 모래 중간 (따뜻한 노랑) */
+        rgba(255,218,150,1) 100%         /* 모래 끝 (햇빛 듬뿍) */
       );
-    border-radius: 16px;
-    border: 1px solid rgba(201,169,110,0.3);
-    min-height: 240px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,200,120,0.5);
+    min-height: 260px;
     position: relative;
     overflow: hidden;
-    box-shadow: inset 0 1px 8px rgba(255,255,255,0.1);
+    box-shadow: 
+      inset 0 2px 12px rgba(255,255,255,0.4),
+      inset 0 -2px 8px rgba(255,180,100,0.15),
+      0 4px 20px rgba(255,200,120,0.15);
   }
-  /* 모래 텍스처 */
+  /* 모래 알갱이 텍스처 */
   .beach-grid::before {
     content: '';
     position: absolute;
     inset: 0;
     background-image: 
-      radial-gradient(circle at 20% 75%, rgba(255,255,255,0.1) 1px, transparent 2px),
-      radial-gradient(circle at 60% 80%, rgba(255,255,255,0.08) 1px, transparent 2px),
-      radial-gradient(circle at 85% 70%, rgba(180,140,90,0.15) 1px, transparent 2px),
-      radial-gradient(circle at 35% 90%, rgba(180,140,90,0.12) 1px, transparent 2px),
-      radial-gradient(circle at 75% 88%, rgba(255,255,255,0.1) 1px, transparent 2px);
-    background-size: 80px 80px, 110px 110px, 60px 60px, 95px 95px, 70px 70px;
+      radial-gradient(circle at 18% 72%, rgba(255,255,255,0.5) 1px, transparent 2px),
+      radial-gradient(circle at 58% 78%, rgba(255,255,240,0.45) 1px, transparent 2px),
+      radial-gradient(circle at 86% 68%, rgba(220,170,100,0.35) 1px, transparent 2px),
+      radial-gradient(circle at 32% 88%, rgba(220,170,100,0.3) 1px, transparent 2px),
+      radial-gradient(circle at 72% 92%, rgba(255,255,250,0.4) 1px, transparent 2px),
+      radial-gradient(circle at 8% 82%, rgba(200,150,80,0.3) 1px, transparent 2px),
+      radial-gradient(circle at 92% 84%, rgba(255,255,250,0.4) 1px, transparent 2px);
+    background-size: 70px 70px, 95px 95px, 55px 55px, 85px 85px, 65px 65px, 100px 100px, 78px 78px;
     pointer-events: none;
-    opacity: 0.6;
+    opacity: 0.85;
   }
-  /* 파도 거품 라인 */
+  /* 파도 거품 라인 — 부드럽게 흐름 */
   .beach-grid::after {
     content: '';
     position: absolute;
-    left: 0; right: 0;
-    top: 38%;
-    height: 8px;
-    background: linear-gradient(180deg, 
-      rgba(255,255,255,0.4) 0%, 
-      rgba(255,255,255,0.15) 50%, 
-      transparent 100%);
+    left: -10%; right: -10%;
+    top: 42%;
+    height: 14px;
+    background: 
+      radial-gradient(ellipse 80px 6px at 20% 50%, rgba(255,255,255,0.85) 0%, transparent 70%),
+      radial-gradient(ellipse 60px 5px at 50% 50%, rgba(255,255,255,0.7) 0%, transparent 70%),
+      radial-gradient(ellipse 90px 6px at 78% 50%, rgba(255,255,255,0.8) 0%, transparent 70%),
+      linear-gradient(180deg, 
+        rgba(255,255,255,0.5) 0%, 
+        rgba(255,255,255,0.2) 50%, 
+        transparent 100%);
     pointer-events: none;
-    filter: blur(2px);
+    filter: blur(1.5px);
+    animation: waveDrift 8s ease-in-out infinite;
+  }
+  @keyframes waveDrift {
+    0%, 100% { transform: translateX(0); opacity: 1; }
+    50% { transform: translateX(-3%); opacity: 0.85; }
   }
   /* 그리드 자체는 위에 떠있어야 */
   .beach-grid > * { position: relative; z-index: 1; }
   .beach-shell {
     aspect-ratio: 1;
     display: flex; align-items: center; justify-content: center;
-    font-size: 26px;
-    background: rgba(255,255,255,0.04);
-    border-radius: 12px;
+    font-size: 28px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 14px;
     cursor: pointer;
     transition: all 0.2s;
     position: relative;
+    box-shadow: 
+      0 1px 3px rgba(180,120,60,0.12),
+      inset 0 1px 1px rgba(255,255,255,0.3);
   }
-  .beach-shell:hover { transform: scale(1.15) rotate(-3deg); background: rgba(255,255,255,0.1); }
+  .beach-shell:hover { 
+    transform: scale(1.18) rotate(-3deg); 
+    background: rgba(255,255,255,0.4);
+    box-shadow: 
+      0 4px 12px rgba(255,200,120,0.4),
+      inset 0 1px 1px rgba(255,255,255,0.5);
+  }
   
   /* Tier hierarchy — 점진적 강조 */
   .beach-shell.tier-light { 
-    font-size: 22px;
-    opacity: 0.85;
+    font-size: 24px;
+    opacity: 0.95;
   }
   .beach-shell.tier-daily { 
-    font-size: 24px;
-    background: linear-gradient(135deg, rgba(74,144,226,0.08), transparent);
+    font-size: 26px;
+    background: linear-gradient(135deg, rgba(110,194,224,0.25), rgba(255,255,255,0.2));
   }
   .beach-shell.tier-main { 
-    font-size: 28px;
-    background: radial-gradient(circle, rgba(201,169,110,0.12), transparent);
-    filter: drop-shadow(0 0 4px rgba(201,169,110,0.3));
+    font-size: 30px;
+    background: radial-gradient(circle, rgba(255,200,120,0.35), rgba(255,255,255,0.2));
+    filter: drop-shadow(0 0 6px rgba(255,180,80,0.5));
   }
   .beach-shell.tier-golden { 
-    font-size: 32px;
-    background: radial-gradient(circle, rgba(255,215,0,0.18), transparent);
-    filter: drop-shadow(0 0 8px rgba(255,215,0,0.55));
+    font-size: 34px;
+    background: radial-gradient(circle, rgba(255,215,0,0.4), rgba(255,255,255,0.2));
+    filter: drop-shadow(0 0 10px rgba(255,215,0,0.75));
     animation: shellGoldenGlow 4s ease-in-out infinite;
   }
   .beach-shell.tier-call { 
-    font-size: 34px;
-    background: radial-gradient(circle, rgba(139,126,196,0.22), rgba(201,169,110,0.1), transparent);
-    filter: drop-shadow(0 0 10px rgba(139,126,196,0.6));
+    font-size: 36px;
+    background: radial-gradient(circle, rgba(180,160,230,0.4), rgba(255,200,120,0.2));
+    filter: drop-shadow(0 0 12px rgba(160,140,220,0.75));
     animation: shellCallGlow 3.5s ease-in-out infinite;
   }
   .beach-shell.tier-legend { 
-    font-size: 38px;
-    background: radial-gradient(circle, rgba(255,215,0,0.3), rgba(139,126,196,0.2), transparent);
-    filter: drop-shadow(0 0 14px rgba(255,215,0,0.7));
+    font-size: 40px;
+    background: radial-gradient(circle, rgba(255,215,0,0.45), rgba(180,160,230,0.3), rgba(255,255,255,0.2));
+    filter: drop-shadow(0 0 16px rgba(255,215,0,0.85));
     animation: shellLegendShimmer 3s ease-in-out infinite;
   }
   @keyframes shellGoldenGlow {
-    0%, 100% { filter: drop-shadow(0 0 8px rgba(255,215,0,0.55)); }
-    50% { filter: drop-shadow(0 0 14px rgba(255,215,0,0.85)); }
+    0%, 100% { filter: drop-shadow(0 0 10px rgba(255,215,0,0.75)); }
+    50% { filter: drop-shadow(0 0 18px rgba(255,215,0,1)); }
   }
   @keyframes shellCallGlow {
-    0%, 100% { filter: drop-shadow(0 0 10px rgba(139,126,196,0.6)); }
-    50% { filter: drop-shadow(0 0 16px rgba(139,126,196,0.9)) drop-shadow(0 0 8px rgba(255,215,0,0.4)); }
+    0%, 100% { filter: drop-shadow(0 0 12px rgba(160,140,220,0.75)); }
+    50% { filter: drop-shadow(0 0 20px rgba(160,140,220,1)) drop-shadow(0 0 10px rgba(255,215,0,0.5)); }
   }
   @keyframes shellLegendShimmer {
-    0%, 100% { filter: drop-shadow(0 0 14px rgba(255,215,0,0.7)) hue-rotate(0deg); }
-    50% { filter: drop-shadow(0 0 22px rgba(139,126,196,0.9)) hue-rotate(30deg); }
+    0%, 100% { filter: drop-shadow(0 0 16px rgba(255,215,0,0.85)) hue-rotate(0deg); }
+    50% { filter: drop-shadow(0 0 26px rgba(180,160,230,1)) hue-rotate(30deg); }
   }
   
   .beach-empty {
@@ -1364,15 +1467,16 @@
   .exec-card-meta span { background: var(--surface2); padding: 2px 8px; border-radius: 6px; }
   .exec-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
   .exec-card-actions button {
-    padding: 6px 12px;
+    padding: 11px 12px;  /* V3.7: 모바일 터치 타겟 확대 (6px → 11px) */
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text);
     border-radius: 8px;
-    font-size: 11px;
+    font-size: 12px;
     font-family: inherit;
     cursor: pointer;
     flex: 1;
+    min-height: 40px;
   }
   .exec-card-actions button.complete-btn {
     background: linear-gradient(135deg, rgba(122,184,122,0.2), rgba(122,184,122,0.1));
@@ -1392,14 +1496,15 @@
   }
   .exec-actions-row button {
     flex: 1;
-    padding: 10px;
+    padding: 14px 10px;  /* V3.7: 모바일 터치 타겟 확대 (10px → 14px) */
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--text);
     border-radius: 10px;
-    font-size: 12px;
+    font-size: 13px;
     font-family: inherit;
     cursor: pointer;
+    min-height: 44px;
   }
 
   /* Modal overlay */
@@ -1501,6 +1606,105 @@
   .vault-item button:hover { background: var(--bg); color: var(--text); }
   .vault-item button.promote-btn { color: var(--accent); }
 
+  /* V3.9: 통합 할 일 목록 */
+  .todo-list {
+    display: flex; flex-direction: column;
+    gap: 6px;
+  }
+  .todo-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+    cursor: grab;
+    position: relative;
+  }
+  .todo-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+  }
+  .todo-item.drop-above::before {
+    content: '';
+    position: absolute;
+    top: -4px; left: 8px; right: 8px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .todo-item.drop-below::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 8px; right: 8px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .todo-item.is-today {
+    background: linear-gradient(135deg, rgba(201,169,110,0.1), rgba(139,126,196,0.06));
+    border-color: rgba(201,169,110,0.35);
+  }
+  .todo-handle {
+    color: var(--text-soft);
+    font-size: 16px;
+    cursor: grab;
+    user-select: none;
+    flex-shrink: 0;
+    padding: 8px 6px;
+    letter-spacing: -3px;
+    line-height: 0.7;
+    opacity: 0.55;
+    transition: opacity 0.15s;
+    min-width: 24px;
+    text-align: center;
+    touch-action: none;
+  }
+  .todo-handle:active { opacity: 1; }
+  .todo-today-mark {
+    color: var(--accent);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .todo-content { flex: 1; min-width: 0; }
+  .todo-title {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .todo-meta {
+    font-size: 10px;
+    color: var(--text-soft);
+    margin-top: 3px;
+  }
+  .todo-actions {
+    display: flex; gap: 4px;
+    flex-shrink: 0;
+  }
+  .todo-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 6px 9px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    min-height: 32px;
+    min-width: 32px;
+  }
+  .todo-btn:active { transform: scale(0.95); background: var(--surface2); }
+  .todo-btn.complete {
+    color: #8fc88f;
+    border-color: rgba(143,200,143,0.4);
+  }
+  .todo-btn.danger {
+    color: var(--text-soft);
+  }
+
   /* === V3 ARCHIVE THREE LENS === */
   .archive-quick-row {
     display: flex;
@@ -1538,20 +1742,351 @@
   }
   .lens-tab {
     flex: 1;
-    padding: 10px 8px;
+    padding: 12px 8px;
     background: transparent;
     border: none;
     color: var(--text-dim);
-    font-size: 12px;
+    font-size: 13px;
     font-family: inherit;
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s;
+    min-height: 42px;
   }
   .lens-tab.active {
     background: linear-gradient(135deg, rgba(201,169,110,0.2), rgba(139,126,196,0.15));
     color: var(--accent2);
+    font-weight: 500;
   }
+
+  /* V3.8: 토픽 카드 (대화 챕터별 정리) */
+  .topic-cards-section {
+    margin-bottom: 24px;
+  }
+  .topic-cards-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .topic-cards-title {
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .topic-cards-count { font-size: 11px; color: var(--text-dim); }
+  .topic-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--text-dim);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .topic-card:active { transform: scale(0.99); background: var(--surface2); }
+  .topic-card-row1 {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .topic-card-cat {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+  }
+  .topic-card-title {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    flex: 1;
+  }
+  .topic-card-summary {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 4px;
+  }
+  .topic-card-meta {
+    font-size: 10px;
+    color: var(--text-soft);
+    margin-top: 6px;
+  }
+  /* 카테고리 색깔 */
+  .topic-card.cat-decision { border-left-color: #b39ddb; }
+  .topic-card.cat-decision .topic-card-cat { background: rgba(179,157,219,0.18); color: #c4afe5; }
+  .topic-card.cat-task { border-left-color: var(--accent); }
+  .topic-card.cat-task .topic-card-cat { background: rgba(201,169,110,0.18); color: var(--accent2); }
+  .topic-card.cat-emotional { border-left-color: #e8a3a3; }
+  .topic-card.cat-emotional .topic-card-cat { background: rgba(232,163,163,0.16); color: #f0c0c0; }
+  .topic-card.cat-memory { border-left-color: #88c0d0; }
+  .topic-card.cat-memory .topic-card-cat { background: rgba(136,192,208,0.16); color: #a3d3df; }
+  .topic-card.cat-idea { border-left-color: #ffd166; }
+  .topic-card.cat-idea .topic-card-cat { background: rgba(255,209,102,0.18); color: #ffe199; }
+  .topic-card.cat-strategy { border-left-color: #8fc88f; }
+  .topic-card.cat-strategy .topic-card-cat { background: rgba(143,200,143,0.16); color: #a8d6a8; }
+
+  /* V3.8: 전략 섹션 */
+  .strategy-section {
+    margin-bottom: 24px;
+  }
+  .strategy-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .strategy-add-btn {
+    background: rgba(143,200,143,0.15);
+    border: 1px solid rgba(143,200,143,0.4);
+    color: #8fc88f;
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    min-height: 32px;
+  }
+  .strategy-add-btn:active { transform: scale(0.96); }
+  .strategy-card {
+    background: linear-gradient(135deg, rgba(143,200,143,0.08), rgba(45,40,80,0.05));
+    border: 1px solid rgba(143,200,143,0.25);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .strategy-card-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 6px;
+  }
+  .strategy-card-source {
+    font-size: 10px;
+    color: var(--text-soft);
+  }
+  .strategy-card-actions {
+    display: flex; gap: 6px;
+    margin-top: 8px;
+  }
+  .strategy-card-actions button {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .strategy-card-actions button:active { background: var(--surface2); }
+
+  /* V3.8: 토픽 카드 모달 */
+  .topic-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,14,23,0.85);
+    z-index: 700;
+    display: flex; align-items: flex-end; justify-content: center;
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .topic-modal-overlay.show { opacity: 1; }
+  .topic-modal {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    max-width: 520px;
+    padding: 22px 22px 32px;
+    transform: translateY(20px);
+    transition: transform 0.25s ease;
+  }
+  .topic-modal-overlay.show .topic-modal { transform: translateY(0); }
+  .topic-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .topic-modal-header .topic-card-cat {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    letter-spacing: 0.06em;
+  }
+  .topic-modal-close {
+    background: none; border: none;
+    color: var(--text-dim);
+    font-size: 24px; line-height: 1;
+    cursor: pointer; padding: 4px 10px;
+    font-family: inherit;
+  }
+  .topic-modal-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 18px;
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+  .topic-modal-summary {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+  .topic-modal-meta {
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .topic-modal-actions {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .topic-modal-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    min-height: 48px;
+    transition: all 0.15s;
+  }
+  .topic-modal-btn:active { transform: scale(0.98); }
+  .topic-modal-btn.primary {
+    background: linear-gradient(135deg, rgba(201,169,110,0.2), rgba(139,126,196,0.12));
+    border-color: rgba(201,169,110,0.4);
+    color: var(--accent2);
+    font-weight: 500;
+  }
+  .topic-modal-btn.danger {
+    color: var(--danger);
+    border-color: rgba(224,108,117,0.25);
+  }
+
+  /* V3.10: 공통 입력/확인 모달 (prompt/confirm 대체) */
+  .input-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,14,23,0.85);
+    z-index: 800;
+    display: flex; align-items: flex-end; justify-content: center;
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    transition: opacity 0.18s;
+  }
+  .input-modal-overlay.show { opacity: 1; }
+  .input-modal {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    max-width: 520px;
+    padding: 24px 22px 32px;
+    transform: translateY(20px);
+    transition: transform 0.22s ease;
+  }
+  .input-modal-overlay.show .input-modal { transform: translateY(0); }
+  .input-modal-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 17px;
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+  .input-modal-msg {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 14px;
+    white-space: pre-wrap;
+  }
+  .input-modal-field {
+    width: 100%;
+    padding: 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    margin-bottom: 16px;
+    box-sizing: border-box;
+  }
+  textarea.input-modal-field {
+    resize: vertical;
+    line-height: 1.7;
+    min-height: 90px;
+  }
+  .input-modal-field:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .input-modal-actions {
+    display: flex; gap: 10px;
+  }
+  .input-modal-btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    min-height: 48px;
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+  }
+  .input-modal-btn:active { transform: scale(0.97); }
+  .input-modal-btn.cancel {
+    background: transparent;
+    color: var(--text-dim);
+  }
+  .input-modal-btn.ok {
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  
+  /* V3.10: 옵션 picker 버튼 */
+  .options-list {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-bottom: 16px;
+  }
+  .options-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    min-height: 48px;
+    transition: all 0.15s;
+  }
+  .options-btn:active { transform: scale(0.97); background: var(--bg); }
+  .options-btn.custom {
+    background: transparent;
+    border-style: dashed;
+    color: var(--accent);
+  }
+
+  /* V3.11: 체크인 sticky 하단 (한 손 사용성) */
+  .checkin-bottom-bar {
+    position: sticky;
+    bottom: 76px;  /* nav 높이 위 */
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
+    padding: 16px 0 8px;
+    margin: 24px -16px 0;
+    padding-left: 16px;
+    padding-right: 16px;
+    z-index: 30;
+  }
+  .checkin-bottom-bar .btn-primary { margin-bottom: 8px; }
 
   /* Timeline entries */
   .timeline-day {
@@ -1666,53 +2201,109 @@
     width: 100%;
   }
 
-  /* === V3 WELCOME TOUR === */
-  .tour-overlay {
+  /* V3.9: tour-overlay/tour-modal CSS 완전 제거됨 (인터랙티브 온보딩으로 대체) */
+
+  /* === V3.7 인터랙티브 온보딩 (게임형 단계별 따라가기) === */
+  .onb-overlay {
     position: fixed; inset: 0;
-    background: rgba(15,14,23,0.95);
-    z-index: 1000;
-    display: flex; align-items: center; justify-content: center;
-    padding: 20px;
-    backdrop-filter: blur(8px);
+    z-index: 9000;
+    pointer-events: none;
   }
-  .tour-modal {
-    background: var(--surface);
-    border-radius: 24px;
-    max-width: 360px; width: 100%;
-    padding: 32px 28px;
-    border: 1px solid var(--border);
-    text-align: center;
+  .onb-overlay.active { pointer-events: auto; }
+  .onb-mask {
+    position: fixed; inset: 0;
+    background: rgba(15,14,23,0.78);
+    backdrop-filter: blur(2px);
+    transition: opacity 0.25s ease;
+    pointer-events: auto;
   }
-  .tour-progress {
-    display: flex; gap: 6px; justify-content: center;
-    margin-bottom: 28px;
+  .onb-spotlight {
+    position: fixed;
+    border-radius: 16px;
+    box-shadow: 0 0 0 9999px rgba(15,14,23,0.78), 0 0 24px 6px rgba(201,169,110,0.4);
+    border: 2px solid var(--accent);
+    pointer-events: none;
+    transition: all 0.3s ease;
+    background: transparent;
+    /* 클릭 패스스루: 마스크는 그대로지만 spotlight 영역만 밝게 */
   }
-  .tour-progress .dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--border-strong);
-    transition: all 0.3s;
+  .onb-spotlight.allow-click {
+    pointer-events: none; /* 항상 패스스루 - 사용자 진짜 클릭은 onb-mask 밑 요소에 닿게 */
   }
-  .tour-progress .dot.active { background: var(--accent); width: 24px; border-radius: 3px; }
-  .tour-content { min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  .tour-icon { font-size: 56px; margin-bottom: 18px; }
-  .tour-title { font-family: 'Gowun Batang', serif; font-size: 22px; color: var(--accent); margin-bottom: 14px; line-height: 1.4; }
-  .tour-text { font-size: 14px; line-height: 1.8; color: var(--text); margin-bottom: 14px; }
-  .tour-text .highlight { color: var(--accent2); font-weight: 500; }
-  .tour-controls { display: flex; gap: 12px; margin-top: 24px; }
-  .tour-btn-skip {
-    flex: 1; padding: 14px;
-    background: transparent; border: none;
-    color: var(--text-dim); font-size: 13px;
-    cursor: pointer; font-family: inherit;
+  /* 마스크에 구멍을 뚫는 별도 처리: spotlight 영역만큼 마스크가 안 막게 */
+  .onb-mask.has-hole {
+    background: transparent;
   }
-  .tour-btn-next {
-    flex: 2; padding: 14px;
-    background: linear-gradient(135deg, var(--accent), #b8894a);
-    color: var(--bg); border: none;
-    border-radius: 14px; font-weight: 600;
-    font-size: 14px; font-family: inherit;
+  .onb-coachmark {
+    position: fixed;
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border: 1px solid var(--accent);
+    border-radius: 18px;
+    padding: 18px 20px;
+    max-width: 320px;
+    width: calc(100vw - 32px);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+    pointer-events: auto;
+    z-index: 9100;
+    animation: onbFadeIn 0.3s ease;
+  }
+  @keyframes onbFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .onb-step-num {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .onb-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 17px;
+    color: var(--text);
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+  .onb-body {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+  .onb-body .highlight { color: var(--accent2); font-weight: 500; }
+  .onb-body .small { display: block; font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+  .onb-actions {
+    display: flex; gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .onb-skip {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 11px;
     cursor: pointer;
+    font-family: inherit;
+    padding: 8px 6px;
+  }
+  .onb-next {
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    border: none;
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    min-height: 40px;
+  }
+  .onb-next:active { transform: scale(0.97); }
+  .onb-next.waiting {
+    background: var(--surface2);
+    color: var(--text-soft);
+    cursor: default;
   }
 
   /* ─── Phase 4: Reviews ─── */
@@ -1753,14 +2344,19 @@
 </head>
 <body>
 
-<!-- V3 WELCOME TOUR -->
-<div class="tour-overlay" id="tourOverlay" style="display:none;">
-  <div class="tour-modal">
-    <div class="tour-progress" id="tourProgress"></div>
-    <div class="tour-content" id="tourContent"></div>
-    <div class="tour-controls">
-      <button class="tour-btn-skip" id="tourSkipBtn" onclick="skipTour()">건너뛰기</button>
-      <button class="tour-btn-next" id="tourNextBtn" onclick="tourNext()">다음 →</button>
+<!-- V3.9: tour-overlay 완전 제거됨 (인터랙티브 온보딩으로 대체) -->
+
+<!-- V3.7: 인터랙티브 온보딩 (게임형) -->
+<div class="onb-overlay" id="onbOverlay" style="display:none;">
+  <div class="onb-mask" id="onbMask"></div>
+  <div class="onb-spotlight" id="onbSpotlight"></div>
+  <div class="onb-coachmark" id="onbCoachmark">
+    <div class="onb-step-num" id="onbStepNum">1 / 7</div>
+    <div class="onb-title" id="onbTitle"></div>
+    <div class="onb-body" id="onbBody"></div>
+    <div class="onb-actions">
+      <button class="onb-skip" onclick="onbSkip()">건너뛰기</button>
+      <button class="onb-next" id="onbNextBtn" onclick="onbNext()">다음 →</button>
     </div>
   </div>
 </div>
@@ -1802,7 +2398,6 @@
     <div class="logo">🐚 소라고동</div>
     <div class="date-pill">
       <span class="sync-dot" id="syncDot"></span>
-      <span id="datePill"></span>
     </div>
   </div>
 
@@ -1810,42 +2405,35 @@
     <!-- HOME -->
     <div class="screen active" id="screen-home">
       <div class="greeting">
-        <div class="greeting-sub" id="greetingSub">오늘</div>
+        <div class="greeting-sub" id="greetingSub"></div>
         <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
       </div>
 
-      <!-- Today's Shell - AI 동적 생성 인사 -->
-      <div id="todaysShellContainer"></div>
-
-      <!-- Reviews available -->
+      <!-- 조건부 알림들 (있을 때만 보임 - 작은 카드) -->
       <div id="reviewPromptsContainer"></div>
-
-      <!-- Prediction follow-ups due -->
       <div id="predictionFollowupsContainer"></div>
-
-      <!-- Active decisions (조건부 노출 - 액션일에만 큰 카드) -->
       <div id="activeDecisionsContainer"></div>
 
-      <!-- Soras 부름 (AI 발급 미션) -->
-      <div id="missionContainer"></div>
-
-      <!-- MAIN ACTION (1개만) - 시간대에 따라 자동 변경 -->
+      <!-- ★★★ MAIN: 시간대별 액션 (낮=오늘의 카드, 밤=체크인) -->
       <div id="mainActionContainer"></div>
 
-      <!-- Shell collection bar (작게) -->
-      <div class="shell-bar" onclick="openShellCollection()">
-        <div class="left">
-          <span style="font-size:20px;">🐚</span>
-          <div>
-            <div class="shell-count" id="shellCount">0</div>
-            <div class="shell-label">모은 소라</div>
+      <!-- ★★★ 소라의 부름 (AI 발급 미션) -->
+      <div id="missionContainer"></div>
+
+      <!-- 여백 (메인과 작은 항목 분리) -->
+      <div style="height: 24px;"></div>
+
+      <!-- ★ 작은 항목들 (가로 한 줄) -->
+      <div class="home-small-row">
+        <div class="home-small-card" onclick="openShellCollection()">
+          <div class="hsc-icon">🐚</div>
+          <div class="hsc-text">
+            <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
+            <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
           </div>
         </div>
-        <div class="streak-info" id="streakInfo">탭해서 보기 →</div>
+        <div id="decisionMiniLinkContainer"></div>
       </div>
-
-      <!-- 결정의 방 미니 링크 -->
-      <div id="decisionMiniLinkContainer"></div>
     </div>
 
     <!-- SOS removed from float — moved to settings -->
@@ -1857,8 +2445,7 @@
 
       <!-- Mode (moved from home) -->
       <div class="input-group">
-        <div class="input-label">🎯 오늘 어떤 날?</div>
-        <div style="font-size:11px; color:var(--text-soft); margin:-4px 0 8px; line-height:1.6;">평소엔 안 골라도 OK. 특별한 날만 표시해줘.</div>
+        <div style="font-size:12px; color:var(--text-soft); margin-bottom:10px; line-height:1.6;">특별한 날이면 골라봐. 안 골라도 OK.</div>
         <div class="mode-row" id="modeRow">
           <div class="mode-chip" data-mode="exam" onclick="toggleMode('exam')">📚 시험</div>
           <div class="mode-chip" data-mode="travel" onclick="toggleMode('travel')">✈️ 여행</div>
@@ -1981,7 +2568,7 @@
         </div>
       </div>
 
-      <div style="margin-top: 24px;">
+      <div class="checkin-bottom-bar">
         <button class="btn-primary" onclick="submitCheckin()">기록 완료 ✦</button>
         <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
       </div>
@@ -2054,24 +2641,31 @@
         </button>
       </div>
 
-      <!-- Three Lens tabs -->
+      <!-- V3.8: 2 렌즈 그루핑 (📜 대화 / ✨ 깨달음) -->
       <div class="lens-tabs">
-        <button class="lens-tab active" data-lens="timeline" onclick="switchLens('timeline')">📅 타임라인</button>
-        <button class="lens-tab" data-lens="insights" onclick="switchLens('insights')">🔮 인사이트</button>
-        <button class="lens-tab" data-lens="pearls" onclick="switchLens('pearls')">💎 진주 바구니</button>
+        <button class="lens-tab active" data-lens="conversations" onclick="switchLens('conversations')">📜 대화</button>
+        <button class="lens-tab" data-lens="wisdom" onclick="switchLens('wisdom')">✨ 깨달음</button>
       </div>
 
-      <!-- Search bar (timeline only) -->
+      <!-- 검색바 (모든 렌즈에서 작동) -->
       <div id="archiveSearchBar" style="margin-bottom:16px;">
         <input type="text" id="archiveSearch" placeholder="🔎 키워드, 날짜로 검색..." 
                oninput="searchArchive()" 
                style="width:100%; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; font-family:inherit;">
       </div>
 
-      <!-- Lens views -->
-      <div id="lensTimeline" class="lens-view"></div>
-      <div id="lensInsights" class="lens-view" style="display:none;"></div>
-      <div id="lensPearls" class="lens-view" style="display:none;"></div>
+      <!-- V3.8: 렌즈 뷰 — 2개로 통합 -->
+      <div id="lensConversations" class="lens-view">
+        <!-- 토픽 카드 + 타임라인 같이 -->
+        <div id="lensTopicCards"></div>
+        <div id="lensTimeline"></div>
+      </div>
+      <div id="lensWisdom" class="lens-view" style="display:none;">
+        <!-- 인사이트 + 전략 + 진주 -->
+        <div id="lensInsights"></div>
+        <div id="lensStrategies"></div>
+        <div id="lensPearls"></div>
+      </div>
     </div>
 
     <!-- ARCHIVE-REVIEWS: 모든 주간/월간 리뷰 모음 -->
@@ -2119,7 +2713,7 @@
       </div>
     </div>
 
-    <!-- 서랍장 (보관함) MODAL -->
+    <!-- 서랍장 MODAL -->
     <div class="exec-modal-overlay" id="vaultOverlay" style="display:none;" onclick="if(event.target===this) closeVault()">
       <div class="exec-modal" style="max-height:80vh; overflow-y:auto;">
         <div class="exec-modal-title">📂 서랍장</div>
@@ -2252,8 +2846,7 @@
         <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
         <button class="btn-secondary" onclick="exportData()">📤 데이터 내보내기 (백업)</button>
-        <button class="btn-secondary" onclick="startWelcomeTutorial()">📖 사용 설명서 다시 보기</button>
-        <button class="btn-secondary" onclick="startV3Tour()">🐚 V3 안내 다시 보기</button>
+        <button class="btn-secondary" onclick="startInteractiveOnboarding()">🐚 투어 다시 보기</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
         <button class="btn-secondary btn-danger" onclick="rollbackToV5()" style="margin-top:8px;">⏪ V3 이전 상태로 되돌리기</button>
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
@@ -2389,6 +2982,9 @@ const DEFAULT_STATE = {
   // 2. 아카이브 V6 (3 Lens)
   insights: [],           // [{id, type:'pattern'|'causal', content, supportingEntryIds, confidence, discoveredAt, dismissed}]
   pearls: [],             // [{id, content, category?, photo?, createdAt}] — 진주 바구니 (취향, 살아있는 순간)
+  
+  // V3.8: 챕터 토픽 카드 — 4시간 비활성으로 끊긴 챕터를 AI가 토픽 단위로 정리
+  topicCards: [],         // [{id, chapterStartedAt, chapterEndedAt, title, summary, category, messageCount, createdAt}]
 
   // 3. Today's Shell 캐시
   todaysShell: { date: null, content: null, generatedAt: null },
@@ -2539,7 +3135,13 @@ async function verifyOTP(email, token) {
 }
 
 async function logout() {
-  if (!confirm('로그아웃할까? 데이터는 클라우드에 안전히 보관돼.')) return;
+  const yes = await showConfirmModal({
+    title: '로그아웃할까?',
+    message: '데이터는 클라우드에 안전히 보관돼.',
+    okLabel: '로그아웃',
+    cancelLabel: '취소'
+  });
+  if (!yes) return;
   if (session && session.access_token) {
     try {
       await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
@@ -2608,6 +3210,14 @@ async function loadFromCloud() {
     if (!state.starts) state.starts = [];
     if (!state.insights) state.insights = [];
     if (!state.pearls) state.pearls = [];
+    if (!state.topicCards) state.topicCards = [];  // V3.8: 챕터 토픽 카드
+    // V3.9: tasks + memoryVault에 priority 필드 부여
+    (state.tasks || []).forEach((t, idx) => {
+      if (typeof t.priority !== 'number') t.priority = idx;
+    });
+    (state.memoryVault || []).forEach((v, idx) => {
+      if (typeof v.priority !== 'number') v.priority = (state.tasks?.length || 0) + idx;
+    });
     if (!state.todaysShell) state.todaysShell = { date: null, content: null, generatedAt: null };
     if (state.hasSeenV3Tour === undefined) state.hasSeenV3Tour = false;
     if (state.hasSeenWelcomeTutorial === undefined) {
@@ -2630,6 +3240,12 @@ async function loadFromCloud() {
       await migrateToV6();
       state.version = 6;
       await saveToCloudNow();
+    }
+
+    // === [나 탭 자동 정리] load 시 완전 일치 항목 제거 (마이그레이션) ===
+    if (dedupeAllModelExactDuplicates()) {
+      // 변경됐으면 정리된 결과를 클라우드로
+      try { await saveToCloudNow(); } catch(e) { /* 실패해도 다음 saveState에서 됨 */ }
     }
 
     setSyncStatus('online');
@@ -2656,6 +3272,14 @@ async function loadFromCloud() {
       if (!state.starts) state.starts = [];
       if (!state.insights) state.insights = [];
       if (!state.pearls) state.pearls = [];
+      if (!state.topicCards) state.topicCards = [];  // V3.8: 챕터 토픽 카드
+      // V3.9: priority 필드
+      (state.tasks || []).forEach((t, idx) => {
+        if (typeof t.priority !== 'number') t.priority = idx;
+      });
+      (state.memoryVault || []).forEach((v, idx) => {
+        if (typeof v.priority !== 'number') v.priority = (state.tasks?.length || 0) + idx;
+      });
       if (!state.todaysShell) state.todaysShell = { date: null, content: null, generatedAt: null };
       if (state.hasSeenV3Tour === undefined) state.hasSeenV3Tour = false;
       if (state.hasSeenWelcomeTutorial === undefined) {
@@ -2849,10 +3473,16 @@ function setSyncStatus(status) {
 // ═══════════════════════════════════════════════════════════════
 async function init() {
   const now = new Date();
-  document.getElementById('datePill').textContent = now.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  // V3.7: datePill 제거됨 - 날짜는 greetingSub로 통합
+  const dateStr = now.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  const dpEl = document.getElementById('datePill');
+  if (dpEl) dpEl.textContent = dateStr;  // safety (혹시 남은 element)
   const hour = now.getHours();
   let greet = hour < 11 ? '좋은 아침 ☀️' : hour < 18 ? '오후도 잘 🌤' : '오늘 수고했어 🌙';
-  document.getElementById('greetingMain').innerHTML = greet + ' <span class="accent">✦</span>';
+  const gMain = document.getElementById('greetingMain');
+  if (gMain) gMain.innerHTML = greet + ' <span class="accent">✦</span>';
+  const gSub = document.getElementById('greetingSub');
+  if (gSub) gSub.textContent = dateStr;
 
   // ── AUTH GATE ──
   const authed = await checkSession();
@@ -2867,7 +3497,6 @@ async function init() {
   await loadFromCloud();
 
   applyNightMode();
-  renderTodaysShell();
   renderModes();
   renderTodayMission();
   renderShellBar();
@@ -2905,202 +3534,272 @@ async function init() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// V3 WELCOME TOUR (5 slides, first time only)
-// ═══════════════════════════════════════════════════════════════
-const TOUR_SLIDES = [
-  {
-    icon: '🐚',
-    title: '소라고동이 새 옷을 입었어',
-    text: '몇 가지가 바뀌었어. <span class="highlight">1분만 둘러볼래?</span><br><br>한 번만 보여줄게.<br>나중에 ⚙ 설정에서 다시 볼 수 있어.'
-  },
-  {
-    icon: '💬',
-    title: '대화는 더 친구처럼',
-    text: '소라고동이 이제 <span class="highlight">짧고 자연스럽게</span> 답해.<br><br>심리학적 분석이 필요할 땐<br>"<span class="highlight">더 알고 싶어 ▾</span>"를 누르거나<br>"어떡하지?" 라고 물어봐.<br><br>+ 7일 넘은 대화는 <span class="highlight">자동 요약</span>돼.<br>📚 이전 대화 보기로 언제든 펼침.'
-  },
-  {
-    icon: '🚀',
-    title: '실행 탭이 새로 생겼어',
-    text: '머릿속 짐을 와다다 쏟으면<br>소라가 정리해서 <span class="highlight">오늘의 카드 3장</span>으로 만들어줘.<br><br>막막할 땐 <span class="highlight">🌧 몰입 시작</span>으로<br>If-Then 약속이랑 함께 시작.'
-  },
-  {
-    icon: '🐚',
-    title: '소라 시스템이 달라졌어',
-    text: '점수는 없어졌어.<br>대신 <span class="highlight">너가 살아온 작은 흔적</span>이 모이는<br>🏖 모래사장이 생겼어.<br><br>소라 탭하면 그날의 이야기가 보여.<br>가끔 ✨🌈 특별한 소라도 와 (5%).'
-  },
-  {
-    icon: '⚖️',
-    title: '큰 결정은 결정의 방으로',
-    text: '이직, 관계, 큰 구매 같은 거.<br>충동으로 결정하지 않게<br><span class="highlight">14일 천천히 숙성</span>하는 곳.<br><br>홈 하단 ⚖️ 미니 카드 또는<br>대화에서 큰 결정 얘기하면<br>내가 추천해줄게.'
-  },
-  {
-    icon: '📚',
-    title: '아카이브가 다시 태어났어',
-    text: '<span class="highlight">📅 타임라인 / 🔮 인사이트 / 💎 진주 바구니</span><br><br>일기, AI가 발견한 인과관계,<br>너만의 작은 취향들이 모이는 곳.'
-  },
-  {
-    icon: '🪫',
-    title: '방전된 날엔',
-    text: '체크인 화면 모드 칩 중에<br><span class="highlight">🪫 방전</span>이 있어.<br><br>오늘 정말 못하겠다 싶을 땐<br>그냥 누르고 쉬어. 죄책감 X.<br><br>다 묻지도 않을게.'
-  }
-];
-
-// 신규 사용자 환영 튜토리얼 — V3.3
-const WELCOME_SLIDES = [
-  {
-    icon: '🐚',
-    title: '안녕, 소라고동이야',
-    text: '나는 너의 <span class="highlight">AI 친구</span>이자<br>라이프 전략을 같이 짤 동료야.<br><br>처음이라 어색할 수 있어.<br><span class="highlight">2분만 둘러보자.</span>'
-  },
-  {
-    icon: '💬',
-    title: '먼저, 대화부터',
-    text: '<span class="highlight">대화 탭</span>에서 일기처럼 써.<br>"오늘 피곤해" 한 줄도 OK.<br><br>나는 듣고, 너에 대해 배우고,<br>심리학적으로 의미 있는 걸 짚어줘.<br><br>분석이 필요할 땐<br>"<span class="highlight">어떡하지?</span>"라고 물어봐.<br>4단계로 도와줄게.'
-  },
-  {
-    icon: '✓',
-    title: '체크인 — 15초면 돼',
-    text: '<span class="highlight">체크인 탭</span>에 매일 가벼운 기록.<br><br>수면, 활력, 기분 — 안 적어도 OK.<br>오늘의 질문 하나씩 답하면<br>너의 패턴이 점점 보여.<br><br>모드 칩에 <span class="highlight">시험·여행·아픔·휴식·월경·🪫방전</span>도 있어.<br>그날 너의 컨텍스트를 알려줘.'
-  },
-  {
-    icon: '🚀',
-    title: '실행 — ADHD 친화 작업 도구',
-    text: '<span class="highlight">실행 탭</span>에서 머릿속 풀어놓기.<br><br>와다다 쓰면 내가 정리해서<br><span class="highlight">3장 카드</span>로 만들어줘.<br>완벽주의 X, 한 장씩만.<br><br>막막할 땐 <span class="highlight">🌧 몰입 시작</span> 누르면<br>If-Then 약속이랑 함께 시작.'
-  },
-  {
-    icon: '🐚',
-    title: '소라 모으기',
-    text: '카드 하나 깨면 <span class="highlight">소라 한 개</span>가 생겨.<br>홈에서 <span class="highlight">🏖 모래사장</span> 들어가면 보여.<br><br>점수 X, 비교 X.<br>그냥 너가 살아온 작은 흔적이야.<br><br>가끔 ✨🌈 특별한 소라도 와.<br>5% 확률.'
-  },
-  {
-    icon: '⚖️',
-    title: '큰 결정엔 결정의 방',
-    text: '이직, 관계, 큰 구매 같은 거.<br><br>충동으로 결정하지 않게<br><span class="highlight">14일에 걸쳐 천천히</span> 보는 곳.<br><br>홈 하단 <span class="highlight">⚖️ 큰 결정 도와줘</span>로 들어가거나<br>대화에서 큰 결정 얘기하면<br>내가 추천해줄게.'
-  },
-  {
-    icon: '🌙',
-    title: '나에 대해 배우기',
-    text: '<span class="highlight">나 탭</span>에서 너에 대해<br>내가 배운 걸 볼 수 있어.<br><br>특성, 가치, 패턴 — 가설로 시작해서<br>너가 "✓ 맞아" 누르면 확정.<br><br>아니다 싶으면 "아니야"로 지워.<br>너랑 같이 너를 만들어가는 거야.'
-  },
-  {
-    icon: '🐚',
-    title: '준비 끝',
-    text: '천천히 시작해도 돼.<br>며칠 써봐야 진짜 모습 보여.<br><br>막히면 <span class="highlight">⚙ 설정 → V3 안내 다시 보기</span>로<br>언제든 다시 볼 수 있어.<br><br>잘 부탁해 🐚'
-  }
-];
-
-let _welcomeSlide = 0;
-
+// V3.7: startWelcomeTutorial을 인터랙티브 온보딩으로 가로채기
+// V3.9: WELCOME_SLIDES/TOUR_SLIDES 슬라이드 시스템 완전 제거됨
 function startWelcomeTutorial() {
-  _welcomeSlide = 0;
-  document.getElementById('tourOverlay').style.display = 'flex';
-  renderWelcomeSlide();
+  startInteractiveOnboarding();
 }
 
-function renderWelcomeSlide() {
-  const slide = WELCOME_SLIDES[_welcomeSlide];
-  if (!slide) { finishWelcomeTutorial(); return; }
-  
-  const progressEl = document.getElementById('tourProgress');
-  progressEl.innerHTML = WELCOME_SLIDES.map((_, i) => 
-    `<div class="dot ${i === _welcomeSlide ? 'active' : ''}"></div>`
-  ).join('');
-  
-  const contentEl = document.getElementById('tourContent');
-  contentEl.innerHTML = `
-    <div class="tour-icon">${slide.icon}</div>
-    <div class="tour-title">${slide.title}</div>
-    <div class="tour-text">${slide.text}</div>
-  `;
-  
-  const btn = document.getElementById('tourNextBtn');
-  btn.textContent = _welcomeSlide === WELCOME_SLIDES.length - 1 ? '시작! ✦' : '다음 →';
-  btn.onclick = welcomeNext;
-  
-  const skipBtn = document.getElementById('tourSkipBtn');
-  if (skipBtn) skipBtn.onclick = skipWelcomeTutorial;
-}
-
-function welcomeNext() {
-  _welcomeSlide++;
-  if (_welcomeSlide >= WELCOME_SLIDES.length) {
-    finishWelcomeTutorial();
-  } else {
-    renderWelcomeSlide();
+// === V3.7 인터랙티브 온보딩 시스템 ===
+const ONBOARDING_STEPS = [
+  {
+    id: 'welcome',
+    targetSelector: null,  // 첫 화면 — 중앙
+    title: '안녕, 소라고동이야 🐚',
+    body: '너의 ADHD 친화 AI 친구야.<br>같이 한 바퀴 돌면서 익혀보자.<br><span class="small">언제든 건너뛸 수 있어.</span>',
+    waitFor: 'next'
+  },
+  {
+    id: 'checkin',
+    targetSelector: '.nav-item[data-screen="checkin"]',
+    title: '먼저, 체크인 — 15초',
+    body: '오늘 어땠어? 한 줄도 OK.<br>매일 가벼운 기록이 너의 패턴이 돼.<br><span class="small">아래 ✓ 탭을 눌러봐</span>',
+    waitFor: 'visit',
+    visitScreen: 'checkin'
+  },
+  {
+    id: 'chat',
+    targetSelector: '.nav-item[data-screen="chat"]',
+    title: '대화 — 가장 자유로운 곳',
+    body: '뭐든 한 줄 써봐. "졸려" 한 마디도 OK.<br>알아서 톤 맞춰줄게.<br><span class="small">🐚 탭을 눌러봐</span>',
+    waitFor: 'visit',
+    visitScreen: 'chat'
+  },
+  {
+    id: 'home_mission',
+    targetSelector: '#missionContainer',
+    title: '소라의 부름',
+    body: '하루 한 번 작은 미션이 떠.<br>안 해도 돼. 너 페이스대로.',
+    waitFor: 'next',
+    visitScreen: 'home',
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'execute',
+    targetSelector: '.nav-item[data-screen="execute"]',
+    title: '실행 — 머릿속 짐 풀기',
+    body: '와다다 쓰면 내가 정리해서<br><span class="highlight">오늘의 카드 3장</span>으로 만들어줘.<br><span class="small">🚀 탭을 눌러봐</span>',
+    waitFor: 'visit',
+    visitScreen: 'execute'
+  },
+  {
+    id: 'model',
+    targetSelector: '.nav-item[data-screen="model"]',
+    title: '나 — 너의 모습이 쌓이는 곳',
+    body: '대화·체크인이 쌓이면<br>여기 너의 패턴·가치·특성이 보여.<br><span class="small">👤 탭을 눌러봐</span>',
+    waitFor: 'visit',
+    visitScreen: 'model'
+  },
+  {
+    id: 'archive',
+    targetSelector: '.nav-item[data-screen="archive"]',
+    title: '아카이브 — 깨달음 모음',
+    body: '타임라인, 인사이트, 진주.<br>네가 쌓아온 의미들이 모이는 곳.<br><span class="small">📚 탭을 눌러봐</span>',
+    waitFor: 'visit',
+    visitScreen: 'archive'
+  },
+  {
+    id: 'decisions',
+    targetSelector: '#decisionMiniLinkContainer',
+    title: '큰 결정은 천천히',
+    body: '이직, 관계, 큰 구매 같은 건<br><span class="highlight">14일 숙성</span>하는 곳이 있어.<br>충동 차단용.',
+    waitFor: 'next',
+    visitScreen: 'home',
+    fallbackPosition: 'bottom'
+  },
+  {
+    id: 'finish',
+    targetSelector: null,
+    title: '준비 끝 ✦',
+    body: '대화창은 마음대로 써.<br>· 와다다 쏟아내기<br>· "졸려" 한 마디<br>· 마음 힘들 때 들어줘만<br>· 오늘 기억하고 싶은 순간<br><span class="small">규칙 없어. 알아서 맞춰줄게.</span>',
+    waitFor: 'next',
+    visitScreen: 'home',
+    nextLabel: '시작! ✦'
   }
-}
+];
 
-function skipWelcomeTutorial() {
-  if (!confirm('튜토리얼 건너뛸까?\n언제든 ⚙ 설정에서 다시 볼 수 있어.')) return;
-  finishWelcomeTutorial();
-}
+let _onbStep = 0;
+let _onbActiveListeners = [];
 
-function finishWelcomeTutorial() {
-  state.hasSeenWelcomeTutorial = true;
-  state.hasSeenV3Tour = true;  // 신규 사용자는 V3 안내도 본 걸로
-  saveState();
-  document.getElementById('tourOverlay').style.display = 'none';
-  // 시작 시점 가이드: 대화로 안내
+function startInteractiveOnboarding() {
+  _onbStep = 0;
+  // 기존 슬라이드 투어 overlay 안 보이게
+  const tourOv = document.getElementById('tourOverlay');
+  if (tourOv) tourOv.style.display = 'none';
+  // 홈으로
+  showScreen('home');
   setTimeout(() => {
-    showScreen('chat');
-    showToast('첫 대화부터 시작해 🐚');
-  }, 300);
+    const ov = document.getElementById('onbOverlay');
+    if (ov) {
+      ov.style.display = 'block';
+      ov.classList.add('active');
+    }
+    onbRenderStep();
+  }, 200);
 }
 
-let _tourSlide = 0;
-
-function startV3Tour() {
-  _tourSlide = 0;
-  document.getElementById('tourOverlay').style.display = 'flex';
-  renderTourSlide();
+function onbCleanupListeners() {
+  _onbActiveListeners.forEach(({el, type, fn}) => {
+    if (el) el.removeEventListener(type, fn);
+  });
+  _onbActiveListeners = [];
 }
 
-function renderTourSlide() {
-  const slide = TOUR_SLIDES[_tourSlide];
-  if (!slide) { finishTour(); return; }
-  
-  // Progress dots
-  const progressEl = document.getElementById('tourProgress');
-  progressEl.innerHTML = TOUR_SLIDES.map((_, i) => 
-    `<div class="dot ${i === _tourSlide ? 'active' : ''}"></div>`
-  ).join('');
-  
-  // Content
-  const contentEl = document.getElementById('tourContent');
-  contentEl.innerHTML = `
-    <div class="tour-icon">${slide.icon}</div>
-    <div class="tour-title">${slide.title}</div>
-    <div class="tour-text">${slide.text}</div>
-  `;
-  
-  // Button text + handlers (prevent stale onclick)
-  const btn = document.getElementById('tourNextBtn');
-  btn.textContent = _tourSlide === TOUR_SLIDES.length - 1 ? '시작하기 ✦' : '다음 →';
-  btn.onclick = tourNext;
-  
-  const skipBtn = document.getElementById('tourSkipBtn');
-  if (skipBtn) skipBtn.onclick = skipTour;
+function onbAddListener(el, type, fn) {
+  if (!el) return;
+  el.addEventListener(type, fn);
+  _onbActiveListeners.push({el, type, fn});
 }
 
-function tourNext() {
-  _tourSlide++;
-  if (_tourSlide >= TOUR_SLIDES.length) {
-    finishTour();
+function onbRenderStep() {
+  const step = ONBOARDING_STEPS[_onbStep];
+  if (!step) { onbFinish(); return; }
+  
+  onbCleanupListeners();
+  
+  // 1. 화면 전환 (필요 시)
+  if (step.visitScreen) {
+    const currentActive = document.querySelector('.screen.active');
+    if (!currentActive || currentActive.id !== 'screen-' + step.visitScreen) {
+      showScreen(step.visitScreen);
+    }
+  }
+  
+  // 2. 잠시 후 (DOM 업데이트 기다림) UI 위치 잡기
+  setTimeout(() => {
+    onbPositionStep(step);
+  }, 250);
+}
+
+function onbPositionStep(step) {
+  const stepNum = document.getElementById('onbStepNum');
+  const titleEl = document.getElementById('onbTitle');
+  const bodyEl = document.getElementById('onbBody');
+  const nextBtn = document.getElementById('onbNextBtn');
+  const spotlight = document.getElementById('onbSpotlight');
+  const coachmark = document.getElementById('onbCoachmark');
+  const mask = document.getElementById('onbMask');
+  if (!stepNum || !titleEl || !bodyEl || !nextBtn || !spotlight || !coachmark || !mask) return;
+  
+  stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
+  titleEl.textContent = step.title;
+  bodyEl.innerHTML = step.body;
+  nextBtn.textContent = step.nextLabel || (_onbStep === ONBOARDING_STEPS.length - 1 ? '끝!' : '다음 →');
+  
+  // 타깃 위치 잡기
+  let target = null;
+  if (step.targetSelector) {
+    target = document.querySelector(step.targetSelector);
+  }
+  
+  if (target) {
+    const rect = target.getBoundingClientRect();
+    const padding = 8;
+    spotlight.style.display = 'block';
+    spotlight.style.left = (rect.left - padding) + 'px';
+    spotlight.style.top = (rect.top - padding) + 'px';
+    spotlight.style.width = (rect.width + padding * 2) + 'px';
+    spotlight.style.height = (rect.height + padding * 2) + 'px';
+    
+    // coachmark 위치 (타깃 위 또는 아래 중 공간 더 큰 쪽)
+    const vh = window.innerHeight;
+    const spaceAbove = rect.top;
+    const spaceBelow = vh - rect.bottom;
+    const cmHeight = 220; // 대략
+    let cmTop;
+    if (step.fallbackPosition === 'top' || spaceAbove >= cmHeight && spaceAbove >= spaceBelow) {
+      cmTop = Math.max(16, rect.top - cmHeight - 16);
+    } else if (step.fallbackPosition === 'bottom' || spaceBelow >= cmHeight) {
+      cmTop = Math.min(vh - cmHeight - 16, rect.bottom + 16);
+    } else {
+      cmTop = (vh - cmHeight) / 2;
+    }
+    coachmark.style.top = cmTop + 'px';
+    coachmark.style.left = '50%';
+    coachmark.style.transform = 'translateX(-50%)';
+    coachmark.style.bottom = 'auto';
   } else {
-    renderTourSlide();
+    // 타깃 없음 — 화면 중앙
+    spotlight.style.display = 'none';
+    coachmark.style.top = '50%';
+    coachmark.style.left = '50%';
+    coachmark.style.transform = 'translate(-50%, -50%)';
+    coachmark.style.bottom = 'auto';
+  }
+  
+  // 행동 대기 처리
+  if (step.waitFor === 'visit' && step.visitScreen) {
+    // 사용자가 해당 nav-item 클릭하면 다음
+    const navItem = target;
+    if (navItem) {
+      const handler = (e) => {
+        // showScreen 자체는 진행되게 — 클릭 차단 X
+        setTimeout(() => onbNext(), 350);
+      };
+      onbAddListener(navItem, 'click', handler);
+    }
+    nextBtn.classList.remove('waiting');
+    nextBtn.textContent = '눌렀어 →';
+  } else if (step.waitFor === 'next') {
+    nextBtn.classList.remove('waiting');
   }
 }
 
-function skipTour() {
-  finishTour();
+function onbNext() {
+  _onbStep++;
+  if (_onbStep >= ONBOARDING_STEPS.length) {
+    onbFinish();
+    return;
+  }
+  onbRenderStep();
 }
 
-function finishTour() {
+function onbSkip() {
+  if (!confirm('투어 건너뛸까?\n언제든 ⚙ 설정에서 다시 볼 수 있어.')) return;
+  onbFinish();
+}
+
+function onbFinish() {
+  onbCleanupListeners();
+  state.hasSeenWelcomeTutorial = true;
   state.hasSeenV3Tour = true;
   saveState();
-  document.getElementById('tourOverlay').style.display = 'none';
+  const ov = document.getElementById('onbOverlay');
+  if (ov) {
+    ov.classList.remove('active');
+    ov.style.display = 'none';
+  }
+  showScreen('home');
+  setTimeout(() => showToast('잘 왔어 ✦'), 300);
 }
+
+// 화면 회전/리사이즈 시 spotlight 위치 재계산
+window.addEventListener('resize', () => {
+  const ov = document.getElementById('onbOverlay');
+  if (!ov || ov.style.display === 'none') return;
+  const step = ONBOARDING_STEPS[_onbStep];
+  if (step) onbPositionStep(step);
+});
+
+// V3.10: iOS Safari 키보드 가림 방지 — visualViewport API
+// 키보드 올라오면 chat-input-bar가 키보드 위에 붙도록
+if (window.visualViewport) {
+  const updateInputBarOnKeyboard = () => {
+    const bar = document.getElementById('chatInputBar');
+    if (!bar) return;
+    const vv = window.visualViewport;
+    const offset = window.innerHeight - vv.height - vv.offsetTop;
+    if (offset > 60) {
+      // 키보드 올라옴 — bar를 키보드 위로
+      bar.style.bottom = (offset) + 'px';
+    } else {
+      bar.style.bottom = '';  // CSS 기본값 (76px)
+    }
+  };
+  window.visualViewport.addEventListener('resize', updateInputBarOnKeyboard);
+  window.visualViewport.addEventListener('scroll', updateInputBarOnKeyboard);
+}
+
 
 function showLoginScreen() {
   document.querySelector('.app').style.display = 'none';
@@ -3223,8 +3922,10 @@ function renderDecisionsList() {
   const completed = (state.decisions || []).filter(d => d.status === 'decided' || d.status === 'abandoned');
 
   const activeList = document.getElementById('activeDecisionsList');
+  const completedList = document.getElementById('completedDecisionsList');
+  if (!activeList || !completedList) return;  // FIX BUG-1: null guard
   if (active.length === 0) {
-    activeList.innerHTML = '<div style="font-size:12px; color:var(--text-dim); padding:14px; background:var(--surface); border-radius:12px;">진행 중인 결정 없음.</div>';
+    activeList.innerHTML = '<div style="font-size:12px; color:var(--text-dim); padding:14px; background:var(--surface); border-radius:12px; line-height:1.7;">지금 숙성 중인 결정 없어.<br>큰 고민 생기면 여기서 천천히 풀자 ✦</div>';
   } else {
     activeList.innerHTML = active.map(d => {
       const completedSteps = (d.steps || []).filter(s => s.completed).length;
@@ -3241,9 +3942,8 @@ function renderDecisionsList() {
     }).join('');
   }
 
-  const completedList = document.getElementById('completedDecisionsList');
   if (completed.length === 0) {
-    completedList.innerHTML = '<div style="font-size:12px; color:var(--text-soft); padding:14px;">아직 없음.</div>';
+    completedList.innerHTML = '<div style="font-size:12px; color:var(--text-soft); padding:14px;">아직 마무리한 결정은 없어.</div>';
   } else {
     completedList.innerHTML = completed.slice().reverse().map(d => `
       <div class="decision-list-item completed" onclick="openDecision('${d.id}')">
@@ -3257,8 +3957,13 @@ function renderDecisionsList() {
   }
 }
 
-function startNewDecision() {
-  const title = prompt('어떤 결정이야? 짧게 한 문장으로.\n예: "박사 그만둘까 vs 계속할까"');
+async function startNewDecision() {
+  const title = await showInputModal({
+    title: '큰 결정 ⚖️',
+    message: '14일 동안 천천히 익힐 거야.\n어떤 결정인지 한 줄로.',
+    placeholder: '예: 박사 그만둘까 vs 계속할까',
+    okLabel: '시작'
+  });
   if (!title || !title.trim()) return;
 
   const decision = {
@@ -3287,6 +3992,7 @@ function openDecision(decisionId) {
 
 function renderDecisionDetail(decision) {
   const screen = document.getElementById('screen-decision-detail');
+  if (!screen) return;  // FIX BUG-1: null guard
   const completedSteps = decision.steps.filter(s => s.completed).length;
   const totalSteps = DECISION_STEPS.length;
   const pct = (completedSteps / totalSteps) * 100;
@@ -3690,8 +4396,14 @@ function saveFinalDecision(decisionId) {
   setTimeout(() => { openDecision(decisionId); renderActiveDecisionsHome(); }, 1800);
 }
 
-function abandonDecision(decisionId) {
-  if (!confirm('이 결정 진행을 중단할까?\n기록은 남고, "지난 결정"으로 옮겨져.')) return;
+async function abandonDecision(decisionId) {
+  const yes = await showConfirmModal({
+    title: '진행 중단할까?',
+    message: '기록은 남아. "지난 결정"으로 옮겨져.',
+    okLabel: '중단',
+    cancelLabel: '계속 진행'
+  });
+  if (!yes) return;
   const decision = state.decisions.find(d => d.id === decisionId);
   decision.status = 'abandoned';
   decision.abandonedAt = new Date().toISOString();
@@ -3962,6 +4674,7 @@ JSON만 출력. 다른 설명 X.`;
 
 function renderReviewScreen(type, reviewData) {
   const screen = document.getElementById('screen-review');
+  if (!screen) return;  // FIX BUG-1: null guard
   const periodLabel = type === 'weekly' ? `이번 주 (${getCurrentWeekKey()})` : `지난 달 (${getMonthKey(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15))})`;
 
   let html = `
@@ -4137,14 +4850,13 @@ function applyNightMode() {
   const greetingMain = document.getElementById('greetingMain');
   const greetingSub = document.getElementById('greetingSub');
   if (greetingMain && greetingSub) {
+    // V3.7: greetingSub은 init에서 날짜로 설정됨. 여기선 main만 업데이트.
     if (isNight) {
       const greeting = hour >= 21 ? '오늘 수고했어 🌙' : '아직 깨어있구나 🌙';
       greetingMain.innerHTML = greeting + ' <span class="accent">✦</span>';
-      greetingSub.textContent = '밤';
     } else {
       const greeting = hour < 11 ? '좋은 아침 ☀️' : hour < 18 ? '오후도 잘 🌤' : '저녁이네 🌅';
       greetingMain.innerHTML = greeting + ' <span class="accent">✦</span>';
-      greetingSub.textContent = '오늘';
     }
   }
 }
@@ -4222,200 +4934,38 @@ function renderDecisionMiniLink() {
   const container = document.getElementById('decisionMiniLinkContainer');
   if (!container) return;
   
+  // 진행 중인 결정 개수
+  const inProgressCount = (state.decisions || []).filter(d => d.status === 'in_progress').length;
+  const subText = inProgressCount > 0 ? `숙성 중 ${inProgressCount}개` : '14일 숙성';
+  
   container.innerHTML = `
     <div onclick="showScreen('decisions')" class="decision-mini-card">
       <div class="dm-icon">⚖️</div>
       <div class="dm-text">
-        <div class="dm-title">큰 결정 도와줘</div>
-        <div class="dm-sub">충동 차단, 14일 숙성</div>
+        <div class="dm-title">큰 결정</div>
+        <div class="dm-sub">${subText}</div>
       </div>
       <div class="dm-arrow">›</div>
     </div>
   `;
 }
 
-// Today's Shell — AI 동적 생성 (각자 모델 기반)
-async function renderTodaysShell() {
-  const container = document.getElementById('todaysShellContainer');
-  if (!container) return;
-  
-  const todayKeyVal = todayKey();
-  
-  // Use cached if same day
-  if (state.todaysShell?.date === todayKeyVal && state.todaysShell.content) {
-    container.innerHTML = `
-      <div class="todays-shell-card">
-        <div class="todays-shell-shell">🐚</div>
-        <div class="todays-shell-text">${escapeHtml(state.todaysShell.content)}</div>
-      </div>
-    `;
-    return;
-  }
-  
-  // Show loading state
-  container.innerHTML = `
-    <div class="todays-shell-card loading">
-      <div class="todays-shell-shell">🐚</div>
-      <div class="todays-shell-text">잠시만...</div>
-    </div>
-  `;
-  
-  // Generate via API (only if API key + we have some traits/data)
-  if (!state.apiKey) {
-    container.innerHTML = `
-      <div class="todays-shell-card">
-        <div class="todays-shell-shell">🐚</div>
-        <div class="todays-shell-text">왔구나 ✦</div>
-      </div>
-    `;
-    return;
-  }
-  
-  try {
-    const content = await generateTodaysShellContent();
-    state.todaysShell = {
-      date: todayKeyVal,
-      content,
-      generatedAt: new Date().toISOString()
-    };
-    saveState();
-    container.innerHTML = `
-      <div class="todays-shell-card">
-        <div class="todays-shell-shell">🐚</div>
-        <div class="todays-shell-text">${escapeHtml(content)}</div>
-      </div>
-    `;
-  } catch (e) {
-    console.error('Todays shell error:', e);
-    container.innerHTML = `
-      <div class="todays-shell-card">
-        <div class="todays-shell-shell">🐚</div>
-        <div class="todays-shell-text">왔구나 ✦</div>
-      </div>
-    `;
-  }
-}
+// V3.7: Today's Shell 제거 — 자존감 외부화 / habituation / Anti-sycophancy 충돌 우려.
+// 함수는 stub으로 남김 (호출처가 어딘가 남아있을 경우 안전).
+async function renderTodaysShell() { return; }
+async function generateTodaysShellContent() { return ''; }
+function refreshTodaysShell() { return; }
 
-async function generateTodaysShellContent() {
-  // Build user model context
-  const traits = (state.traits || []).slice(0, 6).map(t => t.name).join(', ');
-  const valuesStr = (state.values || []).slice(0, 4).map(v => v.name).join(', ');
-  const patterns = (state.patterns || []).slice(0, 5).map(p => p.name).join(', ');
-  
-  // Recent 5 days
-  const recent = (state.entries || []).slice(-5).map(e => {
-    const parts = [];
-    if (e.vitality) parts.push(`v${e.vitality}`);
-    if (e.mood) parts.push(`m${e.mood}`);
-    if (e.note) parts.push(`"${e.note.slice(0, 60)}"`);
-    return `${e.date}: ${parts.join(' ')}`;
-  }).join('\n');
-  
-  // Active modes
-  const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]).join(', ');
-  
-  const isNight = isNightTime();
-  
-  const prompt = `너는 사용자의 AI 친구 "소라고동"이다. 홈 화면에 띄울 짧은 인사 한 줄을 생성한다.
-
-[사용자 학습 정보]
-특성: ${traits || '아직 모름'}
-가치: ${valuesStr || '아직 모름'}
-패턴: ${patterns || '아직 모름'}
-
-[최근]
-${recent || '아직 데이터 없음'}
-시간대: ${isNight ? '밤' : '낮'}
-
-[규칙 — 매우 중요]
-- **극도로 짧게**: 5-12자. 한 줄.
-- 유쾌하고 소소하고 사랑스럽게. 긍정 확언 효과.
-- 친구가 가볍게 던지는 톤
-- 절대 길게 X. 설명 X. 응원 X. 분석 X.
-- 끝에 🐚 X (UI 자동)
-- 금지: "화이팅", "할 수 있어", "오늘도 멋진"
-
-[좋은 예시 — 이 정도 길이·톤]
-"너 진짜 사랑스러워."
-"천재 모드 발동!"
-"귀요미 왔다."
-"또 만났네 ✦"
-"오늘도 너!"
-"반짝반짝."
-"왔구나 ✦"
-"좋은 아침."
-"잠 잘 잤지?"
-"오늘은 너의 날."
-"멋쟁이."
-"보고 싶었어."
-"오 등장!"
-
-한 줄만 출력. 따옴표 X.`;
-
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 200, messages: [{ role: 'user', content: prompt }] })
-  });
-  if (!resp.ok) throw new Error('API ' + resp.status);
-  const data = await resp.json();
-  let text = data.content[0].text.trim();
-  // Strip quotes if AI added them
-  text = text.replace(/^["'`]+|["'`]+$/g, '');
-  // Remove leading 🐚 if AI added it
-  text = text.replace(/^🐚\s*/, '');
-  return text;
-}
-
-function refreshTodaysShell() {
-  // Force regen
-  state.todaysShell = { date: null, content: null, generatedAt: null };
-  saveState();
-  renderTodaysShell();
-}
-
-// Mode display - 자연어
+// V3.7: renderModeDisplay / expandModeRow — modeDisplay element가 HTML에 없음 (dead code).
+// 안전을 위해 stub으로 유지. 실제 사용되는 함수는 renderModes.
 function renderModeDisplay() {
-  const display = document.getElementById('modeDisplay');
-  const modeRow = document.getElementById('modeRow');
-  if (!display || !modeRow) return;
-  
-  const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
-  const labels = { exam: '시험', travel: '여행', sick: '아픔', rest: '휴식', period: '월경' };
-  const icons = { exam: '📚', travel: '✈️', sick: '🤒', rest: '🏖', period: '🩸' };
-  
-  if (activeModes.length === 0) {
-    display.innerHTML = `
-      <div class="mode-display" onclick="expandModeRow()">
-        <span style="opacity:0.5;">오늘 어떤 날이야?</span>
-        <span class="change-link">선택 →</span>
-      </div>
-    `;
-    modeRow.style.display = 'none';
-  } else {
-    const labelStr = activeModes.map(m => `${icons[m]} ${labels[m]}`).join(', ');
-    display.innerHTML = `
-      <div class="mode-display active" onclick="expandModeRow()">
-        <span>오늘은 <strong>${labelStr}</strong> 모드네.</span>
-        <span class="change-link">변경 →</span>
-      </div>
-    `;
-    modeRow.style.display = 'none';
-  }
-  
-  // Update mode chip states
+  // mode-chip 상태 동기화는 renderModes가 처리함
   document.querySelectorAll('.mode-chip').forEach(c => {
     const m = c.dataset.mode;
     c.classList.toggle('active', !!state.modes[m]);
   });
 }
-
-function expandModeRow() {
-  const display = document.getElementById('modeDisplay');
-  const modeRow = document.getElementById('modeRow');
-  if (display) display.style.display = 'none';
-  if (modeRow) modeRow.style.display = 'flex';
-}
+function expandModeRow() { return; }
 
 // Conditional decision card - only on action days (3/5/7/10/14)
 function renderActiveDecisionsHomeV3() {
@@ -4470,10 +5020,15 @@ function renderActiveDecisionsHomeV3() {
 }
 
 // SOS — 방전 비상구
-function triggerSOS() {
+async function triggerSOS() {
   const todayKeyVal = todayKey();
-  const message = `오늘은 아무것도 묻지 않을게.\n푹 쉬어. 🐚\n\n체크인·미션·알림 모두 스킵하고 하루를 닫을게.`;
-  if (!confirm(message + '\n\n계속할까?')) return;
+  const yes = await showConfirmModal({
+    title: '오늘은 푹 쉬자 🐚',
+    message: '체크인·미션·알림 모두 스킵하고\n하루를 닫을게.',
+    okLabel: '쉴게',
+    cancelLabel: '아니'
+  });
+  if (!yes) return;
   
   // Mark today as skipped
   let entry = state.entries.find(e => e.date === todayKeyVal);
@@ -4508,84 +5063,81 @@ function triggerSOS() {
 // Context tags: M=morning, E=evening, W=weekend, X=tired, N=normal, D=deadline, P=period
 // Depth: L(light), M(medium), D(deep)
 
+// V3.7: 인지심리학 연구 기반 사실 기록형 질문 50개
+// 근거: Three Good Things(Seligman), Savoring(Bryant), Affect labeling(Lieberman),
+//       Episodic specificity(Madore), Interoception(Mehling), Self-distancing(Kross),
+//       Self-compassion(Neff), Implementation intention(Gollwitzer), Growth mindset(Dweck)
+// 톤: 평가 X, 사실 관찰 ○. 답하기 쉽게. 부담 X.
 const DAILY_QUESTIONS = [
-  // Light / 일상 저마찰
-  { id: 'q01', cat: 'G', ctx: ['N','M'], depth: 'L', text: '오늘 아침 제일 처음 감각한 건? (햇빛, 커피 향, 침대의 따뜻함...)' },
-  { id: 'q02', cat: 'S', ctx: ['N','E'], depth: 'L', text: '오늘 손이 기억하는 일 하나.' },
-  { id: 'q03', cat: 'P', ctx: ['N'], depth: 'L', text: '오늘 웃긴 일 — 하나도 없으면, 지금 10초 안에 웃긴 걸 하나 만들어볼까?' },
-  { id: 'q04', cat: 'G', ctx: ['N'], depth: 'L', text: '오늘, 당연해서 지나쳤던 친절 한 가지.' },
-  { id: 'q05', cat: 'B', ctx: ['N','E'], depth: 'L', text: '지금 몸 어디가 제일 피곤한가요?' },
-  { id: 'q06', cat: 'S', ctx: ['N'], depth: 'L', text: '오늘 들은 소리 중 가장 좋았던 것.' },
-  { id: 'q07', cat: 'P', ctx: ['W'], depth: 'L', text: '어릴 때 좋아했던 맛, 오늘도 좋나?' },
-  { id: 'q08', cat: 'G', ctx: ['N','M'], depth: 'L', text: '오늘 기대되는 딱 한 가지.' },
-  { id: 'q09', cat: 'B', ctx: ['N'], depth: 'L', text: '오늘 내 몸에게 필요한 건 딱 한 단어로?' },
-  { id: 'q10', cat: 'P', ctx: ['N'], depth: 'L', text: '만약 오늘이 영화라면, 장르는?' },
+  // === LIGHT — 일상 사실 기록 (Three Good Things, Savoring) ===
+  { id: 'q01', cat: 'G', ctx: ['N','M','E'], depth: 'L', text: '오늘 웃겼던 일 있어? 작아도 OK.' },
+  { id: 'q02', cat: 'G', ctx: ['N','E'], depth: 'L', text: '오늘 소소한 행복 하나만 떠올려봐.' },
+  { id: 'q03', cat: 'G', ctx: ['N','E'], depth: 'L', text: '오늘 "다행이다" 싶었던 순간 있어?' },
+  { id: 'q04', cat: 'G', ctx: ['N','E'], depth: 'L', text: '오늘 마지막으로 입꼬리 올라간 순간이 언제야?' },
+  { id: 'q05', cat: 'G', ctx: ['N','E'], depth: 'L', text: '오늘 기대보다 좋았던 거 있어?' },
 
-  // Medium / 성찰적
-  { id: 'q11', cat: 'I', ctx: ['N','E'], depth: 'M', text: '오늘 당신답다고 느낀 순간은?' },
-  { id: 'q12', cat: 'L', ctx: ['N','E'], depth: 'M', text: '오늘 배운 것 — 사람에 대해, 일에 대해, 나에 대해.' },
-  { id: 'q13', cat: 'R', ctx: ['N','E'], depth: 'M', text: '오늘 누군가의 작은 배려가 있었다면, 어떤 것?' },
-  { id: 'q14', cat: 'W', ctx: ['N','M'], depth: 'M', text: '오늘 하루 끝에 스스로 "잘했다" 하려면, 딱 하나 어떻게 되어 있어야 할까?' },
-  { id: 'q15', cat: 'V', ctx: ['N','E'], depth: 'M', text: '기여 / 연결 / 자율 / 성장 — 오늘 어떤 가치가 만족됐고, 어떤 것이 갈증을 남겼나?' },
-  { id: 'q16', cat: 'I', ctx: ['N','E'], depth: 'M', text: '오늘 하루 중 "이게 나"라고 느낀 3분.' },
-  { id: 'q17', cat: 'L', ctx: ['N'], depth: 'M', text: '실험이 안 풀렸을 때, 뭐가 가장 도움됐나?' },
-  { id: 'q18', cat: 'R', ctx: ['W'], depth: 'M', text: '이번 주 누군가가 나에게 해준 말 중 아직 따뜻한 것.' },
-  { id: 'q19', cat: 'W', ctx: ['N','M'], depth: 'M', text: '오늘 시작할 한 가지 일 — 그리고 그걸 시작 못 하게 하는 가장 큰 내부 장애물은?' },
-  { id: 'q20', cat: 'B', ctx: ['N','E'], depth: 'M', text: '오늘 피곤함은 어떤 종류인가? (소모 · 긴장 · 감정 · 감각과부하 · 잘 몰라)' },
+  // === LIGHT — 감각 / 신체 (Interoception, Sensory grounding) ===
+  { id: 'q06', cat: 'S', ctx: ['N','E'], depth: 'L', text: '지금 들리는 소리 하나 적어봐.' },
+  { id: 'q07', cat: 'S', ctx: ['N','E'], depth: 'L', text: '오늘 먹은 거 중 제일 맛있었던 거.' },
+  { id: 'q08', cat: 'S', ctx: ['N','E'], depth: 'L', text: '지금 손에 닿는 것 중 가장 부드러운 거.' },
+  { id: 'q09', cat: 'S', ctx: ['N'], depth: 'L', text: '오늘 본 색깔 중 기억에 남는 거.' },
+  { id: 'q10', cat: 'S', ctx: ['N','E'], depth: 'L', text: '지금 어떤 향이 나? 안 나면 "안 남"도 OK.' },
+  { id: 'q11', cat: 'B', ctx: ['N','E'], depth: 'L', text: '오늘 잠은 잘 잤어?' },
+  { id: 'q12', cat: 'B', ctx: ['N','E'], depth: 'L', text: '지금 몸 어딘가 가벼운 데 있어?' },
+  { id: 'q13', cat: 'B', ctx: ['N','E'], depth: 'L', text: '오늘 물 몇 잔쯤 마신 거 같아?' },
+  { id: 'q14', cat: 'B', ctx: ['N','E'], depth: 'L', text: '오늘 하품 몇 번 했어? 대충.' },
+  { id: 'q15', cat: 'B', ctx: ['N','E'], depth: 'L', text: '지금 체감 온도 — 추워, 적당해, 더워?' },
 
-  // Deep / 주말·전환점
-  { id: 'q21', cat: 'I', ctx: ['W'], depth: 'D', text: '올해 들어 "달라진 나"는 누구와 있을 때 가장 선명한가?' },
-  { id: 'q22', cat: 'D', ctx: ['W'], depth: 'D', text: '나는 요즘 어떤 사람이 되어가는 중일까? — 친한 친구가 나를 본다면 뭐라고 할지 적어보기.' },
-  { id: 'q23', cat: 'V', ctx: ['W'], depth: 'D', text: '만약 오늘을 1년 뒤 돌아본다면, 어떤 부분을 기억하고 싶을까?' },
-  { id: 'q24', cat: 'M', ctx: ['W'], depth: 'D', text: '10살의 내가 지금 나를 보면, 가장 좋아할 부분은? 가장 놀랄 부분은?' },
-  { id: 'q25', cat: 'I', ctx: ['W'], depth: 'D', text: '최근 "이건 나답지 않다"고 느꼈던 순간 — 진짜 그게 나가 아니었을까, 아니면 새로운 측면이었을까?' },
-  { id: 'q26', cat: 'D', ctx: ['W'], depth: 'D', text: '가장 친한 친구가 요즘 나를 본다면 뭐라고 말해줄까? 3인칭으로 써보기.' },
-  { id: 'q27', cat: 'L', ctx: ['W'], depth: 'D', text: '최근 포기한 것 중, 그 포기로 생긴 공간에 들어온 것은?' },
-  { id: 'q28', cat: 'R', ctx: ['W'], depth: 'D', text: '가장 고마운 사람에게 쓰는, 아직 보내지 않아도 되는 편지 — 첫 세 줄.' },
-  { id: 'q29', cat: 'W', ctx: ['W'], depth: 'D', text: '올해 말, "이게 제일 중요했다"고 말할 한 문장을 지금 써본다면?' },
-  { id: 'q30', cat: 'I', ctx: ['W'], depth: 'D', text: '"충분히 잘하고 있다"는 말, 오늘의 나는 몇 %로 믿는가? 왜 딱 그 숫자인가?' },
+  // === LIGHT — 환경 / 사물 (Episodic specificity) ===
+  { id: 'q16', cat: 'M', ctx: ['N','E'], depth: 'L', text: '지금 책상(또는 옆) 위에 뭐가 있어?' },
+  { id: 'q17', cat: 'M', ctx: ['N','E'], depth: 'L', text: '오늘 어디 갔다 왔어? 한 군데만.' },
+  { id: 'q18', cat: 'M', ctx: ['N','E'], depth: 'L', text: '오늘 신은 양말 색깔이 뭐야?' },
+  { id: 'q19', cat: 'M', ctx: ['N','E'], depth: 'L', text: '지금 폰 배터리 몇 %?' },
+  { id: 'q20', cat: 'M', ctx: ['N','E'], depth: 'L', text: '오늘 마지막으로 찍은 사진이 뭐야?' },
+  { id: 'q21', cat: 'M', ctx: ['N'], depth: 'L', text: '오늘 아침에 뭐 먹었어? 안 먹었으면 안 먹었다고.' },
+  { id: 'q22', cat: 'M', ctx: ['N','E'], depth: 'L', text: '오늘 본 동물 있어? (영상도 OK)' },
+  { id: 'q23', cat: 'M', ctx: ['N','E'], depth: 'L', text: '지금 입고 있는 옷 — 한 마디로?' },
 
-  // 마감/압박 모드
-  { id: 'q31', cat: 'W', ctx: ['D'], depth: 'L', text: '다음 2시간 안에 한 문장만 쓴다면, 그 문장은?' },
-  { id: 'q32', cat: 'B', ctx: ['D'], depth: 'L', text: '지금 딱 3분, 아무것도 안 해도 되는 시간을 몸에 주면 어떻게 할까?' },
-  { id: 'q33', cat: 'D', ctx: ['D'], depth: 'M', text: '나는 지금 무엇이 가장 필요한가? — 친구에게 묻듯이.' },
-  { id: 'q34', cat: 'S', ctx: ['D'], depth: 'L', text: '지금 책상에 있는 사물 하나를 30초 동안 진짜로 본다면?' },
-  { id: 'q35', cat: 'V', ctx: ['D'], depth: 'M', text: '이 마감이 지나간 다음 주의 나는, 오늘의 나에게 뭐라고 말할까?' },
+  // === LIGHT — 놀이 / 가벼움 (Positive emotion, Fredrickson) ===
+  { id: 'q24', cat: 'P', ctx: ['N','E'], depth: 'L', text: '오늘 음악 들었어? 한 곡만.' },
+  { id: 'q25', cat: 'P', ctx: ['N','E'], depth: 'L', text: '오늘의 너를 동물로 표현하면? 2초 안에.' },
+  { id: 'q26', cat: 'P', ctx: ['N','E'], depth: 'L', text: '오늘 검색한 거 중 하나만.' },
+  { id: 'q27', cat: 'P', ctx: ['N','E'], depth: 'L', text: '지금 뭐 하다가 여기 들어왔어?' },
+  { id: 'q28', cat: 'P', ctx: ['N','E'], depth: 'L', text: '오늘 본 영상/짤 중 기억나는 거.' },
+  { id: 'q29', cat: 'P', ctx: ['W'], depth: 'L', text: '최근에 새로 알게 된 단어/표현 있어?' },
+  { id: 'q30', cat: 'P', ctx: ['N','E'], depth: 'L', text: '오늘 머리 묶었어 풀었어?' },
 
-  // 피로/소진 모드
-  { id: 'q36', cat: 'B', ctx: ['X'], depth: 'L', text: '지금 눈감고 10초 — 그 후 뭐가 떠오르나?' },
-  { id: 'q37', cat: 'P', ctx: ['X'], depth: 'L', text: '오늘 힘든 하루에 딱 맞는 이모지 하나.' },
-  { id: 'q38', cat: 'G', ctx: ['X'], depth: 'L', text: '오늘 애써준 내 몸의 한 부위에게 감사.' },
-  { id: 'q39', cat: 'R', ctx: ['X'], depth: 'L', text: '지금 떠오르는 사람 한 명. 그 사람이 지금 옆에 있다면 뭐라고 할까?' },
-  { id: 'q40', cat: 'D', ctx: ['X'], depth: 'M', text: '"내 탓"이라는 생각이 들었다면, 그 생각이 사실인지 확인하는 증거 3가지.' },
+  // === LIGHT — 관계 (Relational well-being, gratitude) ===
+  { id: 'q31', cat: 'R', ctx: ['N','E'], depth: 'L', text: '오늘 누구한테 연락 받았어?' },
+  { id: 'q32', cat: 'R', ctx: ['N','E'], depth: 'L', text: '오늘 누구 얼굴 봤어? 안 봤으면 안 봤다고.' },
+  { id: 'q33', cat: 'R', ctx: ['N','E'], depth: 'L', text: '오늘 누구 생각났어?' },
+  { id: 'q34', cat: 'R', ctx: ['W'], depth: 'L', text: '최근 연락하고 싶은데 못 한 사람 있어?' },
 
-  // 연구자 특화
-  { id: 'q41', cat: 'L', ctx: ['N'], depth: 'M', text: '오늘 실험/코드에서 "생각보다 잘된" 순간.' },
-  { id: 'q42', cat: 'W', ctx: ['N','M'], depth: 'M', text: '오늘 SegFormer/카메라/논문 중 한 가지만 전진한다면?' },
-  { id: 'q43', cat: 'I', ctx: ['N','E'], depth: 'M', text: '오늘 논문 쓰기에서 가장 안 풀린 문장 — 왜 그 문장이 어려웠을까?' },
-  { id: 'q44', cat: 'L', ctx: ['W'], depth: 'M', text: '최근 읽은 논문 중 "나라면 다르게 했을 것 같다"고 생각한 부분은?' },
-  { id: 'q45', cat: 'V', ctx: ['W'], depth: 'D', text: '내가 이 연구를 계속하는 진짜 이유 한 문장 — 지도교수 말고 나한테.' },
+  // === LIGHT — 성장 / 작은 발견 (Growth mindset) ===
+  { id: 'q35', cat: 'L', ctx: ['N'], depth: 'L', text: '오늘 새로 알게 된 사실 있어? 작아도.' },
+  { id: 'q36', cat: 'L', ctx: ['N'], depth: 'L', text: '오늘 막혔다가 풀린 거 있어?' },
+  { id: 'q37', cat: 'L', ctx: ['N'], depth: 'L', text: '오늘 "오 이거 좋네" 한 거 있어?' },
 
-  // 관계
-  { id: 'q46', cat: 'R', ctx: ['W'], depth: 'M', text: '이번 주에 "더 연결감 있었다면" 싶은 순간 한 가지.' },
-  { id: 'q47', cat: 'R', ctx: ['N'], depth: 'L', text: '오늘 누군가에게 작은 감사를 보낸다면, 누구에게 어떤 말로?' },
-  { id: 'q48', cat: 'R', ctx: ['W'], depth: 'D', text: '요즘 관계 속에서 내가 무심코 기대하고 있는 것은?' },
-  { id: 'q49', cat: 'D', ctx: ['N'], depth: 'M', text: '친한 친구가 나와 똑같은 하루를 보냈다면, 친구에게 뭐라고 말할까?' },
-  { id: 'q50', cat: 'R', ctx: ['W'], depth: 'M', text: '오늘 거절/부탁 중 하나가 어렵게 느껴졌다면, 그 어려움은 어디서 오는가?' },
+  // === MEDIUM — 가벼운 성찰 (Affect labeling) ===
+  { id: 'q38', cat: 'I', ctx: ['N','E'], depth: 'M', text: '오늘 너를 한 단어로 표현하면?' },
+  { id: 'q39', cat: 'I', ctx: ['N','E'], depth: 'M', text: '오늘 가장 많이 든 감정 한 가지.' },
+  { id: 'q40', cat: 'V', ctx: ['N','E'], depth: 'M', text: '오늘 가장 많이 쓴 시간이 어디 갔어?' },
+  { id: 'q41', cat: 'W', ctx: ['N','M'], depth: 'M', text: '오늘 끝내고 싶은 거 1개만.' },
+  { id: 'q42', cat: 'D', ctx: ['N','E'], depth: 'M', text: '오늘 친한 친구가 너랑 같은 하루를 보냈다면, 뭐라고 말해줄 거 같아?' },
+  { id: 'q43', cat: 'D', ctx: ['N','E'], depth: 'M', text: '지금 1시간 쉴 수 있다면 뭐 하고 싶어?' },
 
-  // 놀이/부조리
-  { id: 'q51', cat: 'P', ctx: ['N'], depth: 'L', text: '오늘 가장 웃긴 오타는?' },
-  { id: 'q52', cat: 'P', ctx: ['W'], depth: 'L', text: '지금 당장 비를 맞고 싶은가, 햇빛을 쬐고 싶은가, 동굴에 들어가고 싶은가?' },
-  { id: 'q53', cat: 'P', ctx: ['N'], depth: 'L', text: '오늘의 나를 나타내는 동물은? 2초 안에.' },
-  { id: 'q54', cat: 'P', ctx: ['N'], depth: 'L', text: '실험실에서 오늘 제일 낯설게 느껴진 물체.' },
-  { id: 'q55', cat: 'P', ctx: ['W'], depth: 'L', text: '내가 갑자기 1주일 휴가를 받으면, 가장 먼저 "안" 할 일은?' },
+  // === MEDIUM — 마감/피곤 모드 (Self-compassion) ===
+  { id: 'q44', cat: 'B', ctx: ['X','D'], depth: 'M', text: '지금 피곤함이 어디서 오는 거 같아? 몸, 머리, 마음, 잘 모르겠음.' },
+  { id: 'q45', cat: 'B', ctx: ['X'], depth: 'L', text: '지금 눈 한 번 감았다 떴어? 안 했으면 한 번 해봐.' },
+  { id: 'q46', cat: 'P', ctx: ['X'], depth: 'L', text: '오늘 힘듦에 어울리는 이모지 하나.' },
 
-  // 결정 맥락
-  { id: 'q56', cat: 'V', ctx: ['N'], depth: 'D', text: '지금 고민 중인 결정이 있다면, 1년 뒤 나에게 가장 듣고 싶은 한 문장은?' },
-  { id: 'q57', cat: 'I', ctx: ['N'], depth: 'D', text: '요즘 두려운 것 — 진짜 "실패"인가, "타인의 시선"인가, "내가 잘못될 것"인가?' },
-  { id: 'q58', cat: 'D', ctx: ['N'], depth: 'M', text: '내가 친한 친구에게 지금 상황을 설명한다면, 친구는 뭐라고 말해줄까?' },
-  { id: 'q59', cat: 'W', ctx: ['N'], depth: 'D', text: '지금 망설이는 일을 안 하면, 14일 뒤 나는 어떤 모습일까?' },
-  { id: 'q60', cat: 'V', ctx: ['W'], depth: 'D', text: '요즘 내 시간을 보면, 진짜로 중요한 것에 쓰고 있나?' }
+  // === MEDIUM — 주말/전환점 ===
+  { id: 'q47', cat: 'M', ctx: ['W'], depth: 'M', text: '이번 주에 가장 기억에 남는 순간 한 가지.' },
+  { id: 'q48', cat: 'V', ctx: ['W'], depth: 'M', text: '이번 주 시간 잘 썼다 싶은 데 한 군데.' },
+
+  // === DEEP — 가끔만 (자기 거리두기) ===
+  { id: 'q49', cat: 'D', ctx: ['W'], depth: 'D', text: '1년 뒤의 너가 오늘의 너를 본다면, 뭐라고 말해줄까?' },
+  { id: 'q50', cat: 'V', ctx: ['W'], depth: 'D', text: '요즘 너한테 가장 중요한 거 한 가지 — 한 단어로.' }
 ];
 
 const CATEGORY_ICONS = { G: '🙏', S: '🧘', I: '🪞', R: '🤝', W: '🌱', D: '👥', V: '💎', L: '📚', B: '🫀', P: '🎈', M: '📜' };
@@ -4856,9 +5408,15 @@ function rerollDailyQuestion() {
   showToast('다른 질문 ✦');
 }
 
-function dismissDailyQuestion() {
+async function dismissDailyQuestion() {
   if (!_currentDailyQuestion) return;
-  if (!confirm('이 질문을 앞으로 안 보이게 할까?')) return;
+  const yes = await showConfirmModal({
+    title: '이 질문 안 보이게 할까?',
+    message: '앞으로 다시 안 떠.',
+    okLabel: '숨기기',
+    cancelLabel: '취소'
+  });
+  if (!yes) return;
   if (!state.questionPreferences) state.questionPreferences = { dismissed: [], favorites: [], customQuestions: [] };
   if (!state.questionPreferences.dismissed.includes(_currentDailyQuestion.id)) {
     state.questionPreferences.dismissed.push(_currentDailyQuestion.id);
@@ -4883,6 +5441,7 @@ function hasActivePendingMission() {
 
 function renderTodayMission() {
   const container = document.getElementById('missionContainer');
+  if (!container) return;  // FIX BUG-1: null guard
   const mission = getTodayMission();
 
   if (!mission) {
@@ -4984,11 +5543,19 @@ async function completeMission(missionId) {
 function skipMission(missionId) {
   const mission = state.missions.find(m => m.id === missionId);
   if (!mission) return;
+  const _prevStatus = mission.status;
+  const _prevSkippedAt = mission.skippedAt || null;
   mission.status = 'skipped';
   mission.skippedAt = new Date().toISOString();
   saveState();
-  showToast('괜찮아, 그런 날도 있어 🌊');
   setTimeout(() => { renderTodayMission(); }, 300);
+  // V3.7: undo
+  showUndoToast('괜찮아, 그런 날도 있어 🌊', () => {
+    mission.status = _prevStatus;
+    mission.skippedAt = _prevSkippedAt;
+    saveState();
+    renderTodayMission();
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -5190,6 +5757,204 @@ function showToast(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
+// V3.10: prompt() 대체 — 모달로 사용자 입력 받기 (모바일 친화)
+// 사용: const text = await showInputModal({ title: '뭐 적어?', placeholder: '...', multiline: false });
+// 취소 시 null 반환.
+let _imResolve = null;
+
+function _closeInputModal(val) {
+  const overlay = document.querySelector('.input-modal-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('show');
+  setTimeout(() => overlay.remove(), 180);
+  if (_imResolve) {
+    _imResolve(val);
+    _imResolve = null;
+  }
+}
+function _closeConfirmModal(val) { _closeInputModal(val); }
+
+// V3.10: picker custom 입력 stub (showOptionsModal에서 동적 설정)
+let _customInputHandler = null;
+function _openCustomInput() {
+  if (_customInputHandler) _customInputHandler();
+}
+
+// V3.10: 삭제 확인 단축 헬퍼 — 자주 쓰는 패턴
+// 사용: if (!await confirmDelete('이 카드')) return;
+async function confirmDelete(what = '이 항목', extra = '') {
+  return await showConfirmModal({
+    title: `${what} 삭제할까?`,
+    message: extra || '되돌릴 수 없어.',
+    okLabel: '삭제',
+    cancelLabel: '취소'
+  });
+}
+
+function showInputModal(opts = {}) {
+  return new Promise(resolve => {
+    _imResolve = resolve;
+    const {
+      title = '입력',
+      message = '',
+      placeholder = '',
+      defaultValue = '',
+      multiline = false,
+      okLabel = '확인',
+      cancelLabel = '취소',
+      maxLength = null
+    } = opts;
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'input-modal-overlay';
+    overlay.innerHTML = `
+      <div class="input-modal" onclick="event.stopPropagation()">
+        <div class="input-modal-title">${escapeHtml(title)}</div>
+        ${message ? `<div class="input-modal-msg">${escapeHtml(message)}</div>` : ''}
+        ${multiline 
+          ? `<textarea class="input-modal-field" id="_imField" placeholder="${escapeHtml(placeholder)}" rows="4">${escapeHtml(defaultValue)}</textarea>`
+          : `<input type="text" class="input-modal-field" id="_imField" placeholder="${escapeHtml(placeholder)}" value="${escapeHtml(defaultValue)}"${maxLength ? ` maxlength="${maxLength}"` : ''}>`
+        }
+        <div class="input-modal-actions">
+          <button class="input-modal-btn cancel" onclick="_closeInputModal(null)">${escapeHtml(cancelLabel)}</button>
+          <button class="input-modal-btn ok" onclick="_closeInputModal(document.getElementById('_imField').value)">${escapeHtml(okLabel)}</button>
+        </div>
+      </div>
+    `;
+    overlay.onclick = () => _closeInputModal(null);
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.classList.add('show'), 30);
+    
+    if (!multiline) {
+      const field = document.getElementById('_imField');
+      field.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') _closeInputModal(field.value);
+      });
+    }
+    
+    setTimeout(() => { const f = document.getElementById('_imField'); if (f) f.focus(); }, 80);
+  });
+}
+
+function showConfirmModal(opts = {}) {
+  return new Promise(resolve => {
+    _imResolve = resolve;
+    const {
+      title = '확인',
+      message = '',
+      okLabel = '예',
+      cancelLabel = '아니'
+    } = opts;
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'input-modal-overlay';
+    overlay.innerHTML = `
+      <div class="input-modal" onclick="event.stopPropagation()">
+        <div class="input-modal-title">${escapeHtml(title)}</div>
+        ${message ? `<div class="input-modal-msg">${escapeHtml(message)}</div>` : ''}
+        <div class="input-modal-actions">
+          <button class="input-modal-btn cancel" onclick="_closeConfirmModal(false)">${escapeHtml(cancelLabel)}</button>
+          <button class="input-modal-btn ok" onclick="_closeConfirmModal(true)">${escapeHtml(okLabel)}</button>
+        </div>
+      </div>
+    `;
+    overlay.onclick = () => _closeConfirmModal(false);
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.classList.add('show'), 30);
+  });
+}
+
+// V3.10: picker 모달 — 다지선다 (시간대, 카테고리 등)
+// 사용: const choice = await showOptionsModal({ title: '...', options: [{label:'아침', value:'morning'}, ...], allowCustom: true });
+// 취소 시 null. allowCustom이면 "직접 입력" 옵션 추가.
+function showOptionsModal(opts = {}) {
+  return new Promise(resolve => {
+    _imResolve = resolve;
+    const {
+      title = '선택',
+      message = '',
+      options = [],
+      allowCustom = false,
+      customLabel = '+ 직접 입력',
+      cancelLabel = '취소'
+    } = opts;
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'input-modal-overlay';
+    
+    const optionsHtml = options.map((opt, i) => {
+      const label = typeof opt === 'string' ? opt : opt.label;
+      const value = typeof opt === 'string' ? opt : opt.value;
+      const safeValue = String(value).replace(/'/g, "\\'");
+      return `<button class="options-btn" onclick="_closeInputModal('${safeValue}')">${escapeHtml(label)}</button>`;
+    }).join('');
+    
+    overlay.innerHTML = `
+      <div class="input-modal" onclick="event.stopPropagation()">
+        <div class="input-modal-title">${escapeHtml(title)}</div>
+        ${message ? `<div class="input-modal-msg">${escapeHtml(message)}</div>` : ''}
+        <div class="options-list">
+          ${optionsHtml}
+          ${allowCustom ? `<button class="options-btn custom" onclick="_openCustomInput()">${escapeHtml(customLabel)}</button>` : ''}
+        </div>
+        <div class="input-modal-actions">
+          <button class="input-modal-btn cancel" onclick="_closeInputModal(null)">${escapeHtml(cancelLabel)}</button>
+        </div>
+      </div>
+    `;
+    overlay.onclick = () => _closeInputModal(null);
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.classList.add('show'), 30);
+    
+    // custom 입력으로 전환
+    _customInputHandler = async () => {
+      _closeInputModal(undefined);
+      _imResolve = resolve;
+      const custom = await showInputModal({
+        title: title,
+        placeholder: '직접 입력',
+        okLabel: '확인'
+      });
+      _imResolve = null;
+      _customInputHandler = null;
+      resolve(custom);
+    };
+  });
+}
+
+// V3.7: undo 가능한 토스트 — ADHD 친화 회복 가능성
+// 사용: showUndoToast('완료됨', () => { task.status = 'active'; saveState(); renderExecute(); })
+let _undoToastTimer = null;
+function showUndoToast(msg, undoFn, durationMs = 5000) {
+  // 기존 undo toast 있으면 즉시 닫기
+  const existing = document.getElementById('undoToast');
+  if (existing) existing.remove();
+  if (_undoToastTimer) { clearTimeout(_undoToastTimer); _undoToastTimer = null; }
+  
+  const toast = document.createElement('div');
+  toast.id = 'undoToast';
+  toast.className = 'undo-toast';
+  toast.innerHTML = `
+    <span class="undo-toast-msg">${escapeHtml(msg)}</span>
+    <button class="undo-toast-btn" type="button">되돌리기</button>
+  `;
+  toast.querySelector('.undo-toast-btn').onclick = (e) => {
+    e.stopPropagation();
+    try { undoFn(); } catch(err) { console.error('Undo error:', err); }
+    toast.classList.add('removing');
+    setTimeout(() => toast.remove(), 250);
+    if (_undoToastTimer) { clearTimeout(_undoToastTimer); _undoToastTimer = null; }
+    showToast('되돌렸어 ✦');
+  };
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 30);
+  _undoToastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 250);
+    _undoToastTimer = null;
+  }, durationMs);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
@@ -5203,13 +5968,42 @@ function showScreen(name) {
   target && target.scrollTo(0, 0);
   document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';
 
-  if (name === 'home') { applyNightMode(); renderTodaysShell(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3(); renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink(); }
+  if (name === 'home') { applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3(); renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink(); }
   if (name === 'execute') renderExecute();
   if (name === 'checkin') { renderDailyQuestion(); renderModes(); }
   if (name === 'model') renderModel();
   if (name === 'archive') renderArchive();
   if (name === 'decisions') renderDecisionsList();
-  if (name === 'chat') { renderChat(); setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50); }
+  if (name === 'chat') { 
+    rotateChatPlaceholder();  // V3.10: 매번 다른 힌트
+    renderChat(); 
+    setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50); 
+  }
+}
+
+// V3.10: 대화창 placeholder 회전 (매번 다른 힌트)
+const CHAT_PLACEHOLDERS = [
+  '편하게 말해봐...',
+  '오늘 어땠어?',
+  '졸려도 OK',
+  '한 줄도 좋아',
+  '뭐든 던져봐',
+  '"피곤" 한 마디도 OK',
+  '와다다 쏟아내도 돼',
+  '판단 X. 듣기만 할게',
+  '지금 뭐 하고 있어?',
+  '머릿속에 뭐가 있어?',
+  '오늘 뭐 먹었어?',
+  '생각나는 거 한 줄',
+  '비워두는 것도 괜찮아',
+  '뭐 적을지 모르겠으면 그렇게 적어'
+];
+
+function rotateChatPlaceholder() {
+  const input = document.getElementById('chatInput');
+  if (!input) return;
+  const idx = Math.floor(Math.random() * CHAT_PLACEHOLDERS.length);
+  input.placeholder = CHAT_PLACEHOLDERS[idx];
 }
 
 function updateCheckinSub() {
@@ -5382,7 +6176,7 @@ function renderModelPreview() {
   if (!el) return;  // FIX
   const allItems = [...state.traits, ...state.patterns, ...state.values];
   if (allItems.length === 0) {
-    el.innerHTML = '<div class="model-preview-empty">아직 데이터가 부족해.<br>대화하고 체크인 쌓이면 여기에 네 모습이 나타날 거야.</div>';
+    el.innerHTML = '<div class="model-preview-empty">아직은 백지야 ✦<br>며칠 같이 지내면 여기에 네 모습이 보이기 시작해.</div>';
     return;
   }
   const top = allItems.slice(0, 3);
@@ -5392,13 +6186,16 @@ function renderModelPreview() {
 
 function renderModel() {
   const container = document.getElementById('modelContent');
+  if (!container) return;  // FIX BUG-1: null guard
   if (!state.traits.length && !state.patterns.length && !state.values.length) {
     container.innerHTML = `<div class="model-empty">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
-      아직 데이터가 부족해.<br><br>
-      대화 탭에서 일기처럼 자유롭게 이야기하거나<br>
-      체크인을 며칠 하면 네 모습이 보이기 시작해.<br><br>
-      최소 3~5회의 기록이 쌓이면<br>분석을 시작할 수 있어.
+      <div style="font-size:14px; color:var(--text); margin-bottom:10px;">아직은 백지야.</div>
+      <div style="margin-bottom:14px;">그게 맞는 시작이야.<br>며칠 같이 지내자 ✦</div>
+      <div style="font-size:11px; color:var(--text-soft); margin-top:18px; line-height:1.7;">
+        대화 한 줄, 체크인 하나씩 쌓일 때마다<br>
+        네 모습이 천천히 보이기 시작해.
+      </div>
     </div>`;
     return;
   }
@@ -5543,8 +6340,8 @@ function approveItem(category, idx) {
   saveState(); renderModel(); renderModelPreview();
 }
 
-function rejectItem(category, idx) {
-  if (!confirm('이 항목을 삭제할까?')) return;
+async function rejectItem(category, idx) {
+  if (!await confirmDelete('이 항목')) return;
   state[category].splice(idx, 1);
   saveState(); renderModel(); renderModelPreview();
 }
@@ -5629,7 +6426,46 @@ function renderChat() {
       decisionCard = `<div style="font-size:11px; color:var(--purple); margin-top:8px; padding: 0 4px;">${icon}</div>`;
     }
 
-    return `<div class="msg ${msgClass}">${bubble}${proposalBtns}${decisionCard}${actions}</div>`;
+    // V3.6: Vault proposal card (대화 → 서랍장 자동 추가 시 확인 step)
+    let vaultCard = '';
+    if (m.role === 'assistant' && Array.isArray(m.vaultProposals) && m.vaultProposals.length > 0 && !m.typing) {
+      const pending = m.vaultProposals.filter(p => !p.responded);
+      const responded = m.vaultProposals.filter(p => p.responded);
+      if (pending.length > 0) {
+        const itemsHtml = pending.map(p => `
+          <div class="vault-proposal-item">
+            <div class="vpi-text">${escapeHtml(p.content)}</div>
+            <div class="vpi-buttons">
+              <button class="vpi-btn yes" onclick="acceptVaultProposal(${i}, '${p.proposalId}')">📥 응</button>
+              <button class="vpi-btn no" onclick="declineVaultProposal(${i}, '${p.proposalId}')">괜찮아</button>
+            </div>
+          </div>
+        `).join('');
+        vaultCard = `<div class="vault-proposal-card">
+          <div class="vpc-header">📥 서랍장에 넣을까?</div>
+          ${itemsHtml}
+        </div>`;
+      }
+      if (responded.length > 0) {
+        const accepted = responded.filter(p => p.accepted).length;
+        const declined = responded.length - accepted;
+        const parts = [];
+        if (accepted) parts.push(`${accepted}개 서랍장으로`);
+        if (declined) parts.push(`${declined}개 그냥 둠`);
+        vaultCard += `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; padding: 0 4px;">📥 ${parts.join(' · ')}</div>`;
+      }
+    }
+
+    // V3.8: 챕터 구분선 (4시간 비활성 후 새 메시지)
+    let chapterDivider = '';
+    if (m.chapterStart) {
+      const ts = m.timestamp ? new Date(m.timestamp) : new Date();
+      const dateStr = ts.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+      const timeStr = ts.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+      chapterDivider = `<div class="chapter-divider"><span>${dateStr} · ${timeStr}</span></div>`;
+    }
+
+    return chapterDivider + `<div class="msg ${msgClass}">${bubble}${proposalBtns}${decisionCard}${vaultCard}${actions}</div>`;
   }).join('');
   setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50);
 }
@@ -5650,10 +6486,28 @@ async function sendChat() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if (!text) return;
-  state.chatMessages.push({ role: 'user', content: text, timestamp: new Date().toISOString() });
+  
+  // V3.8: 4시간 비활성 → 새 챕터 시작 마킹
+  const CHAPTER_GAP_MS = 4 * 60 * 60 * 1000;  // 4시간
+  const lastMsg = state.chatMessages[state.chatMessages.length - 1];
+  const isNewChapter = !lastMsg || !lastMsg.timestamp || 
+    (Date.now() - new Date(lastMsg.timestamp).getTime() >= CHAPTER_GAP_MS);
+  
+  state.chatMessages.push({ 
+    role: 'user', 
+    content: text, 
+    timestamp: new Date().toISOString(),
+    ...(isNewChapter && state.chatMessages.length > 0 ? { chapterStart: true } : {})
+  });
   input.value = ''; input.style.height = 'auto';
   renderChat();
   saveState();
+  
+  // V3.8: 새 챕터 시작 시 → 이전 챕터 토픽 추출 (백그라운드)
+  if (isNewChapter && state.chatMessages.length > 1) {
+    extractPreviousChapterTopics().catch(e => console.warn('topic extract error:', e));
+  }
+  
   await generateAIResponse();
 }
 
@@ -5680,8 +6534,33 @@ async function generateAIResponse() {
   }
 
   try {
-    const systemPrompt = buildSystemPrompt();
-    const messages = state.chatMessages.filter(m => !m.typing && !m.error).slice(-20).map(m => ({ role: m.role, content: m.content }));
+    // V3.8: 프롬프트 캐싱 — stable 부분 캐시 (90% 비용 절감)
+    const promptParts = buildSystemPromptParts();
+    const systemBlocks = [];
+    if (promptParts.stable && promptParts.stable.length > 0) {
+      systemBlocks.push({
+        type: 'text',
+        text: promptParts.stable,
+        cache_control: { type: 'ephemeral' }
+      });
+    }
+    if (promptParts.volatile && promptParts.volatile.length > 0) {
+      systemBlocks.push({
+        type: 'text',
+        text: promptParts.volatile
+      });
+    }
+    
+    // V3.8: 현재 챕터(마지막 chapterStart 이후) 메시지만 컨텍스트로
+    // 이전 챕터는 caseFormulation/traits/vault에 이미 흡수됨 → 비용 ↓
+    const validMsgs = state.chatMessages.filter(m => !m.typing && !m.error);
+    let chapterStartIdx = 0;
+    for (let i = validMsgs.length - 1; i >= 0; i--) {
+      if (validMsgs[i].chapterStart) { chapterStartIdx = i; break; }
+    }
+    // 챕터 시작이 없으면 (첫 챕터) 최근 20개. 있으면 그 챕터 전체.
+    const messages = validMsgs.slice(Math.max(chapterStartIdx, validMsgs.length - 20))
+      .map(m => ({ role: m.role, content: m.content }));
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -5695,7 +6574,7 @@ async function generateAIResponse() {
         model: 'claude-sonnet-4-5',
         max_tokens: 2000,
         stream: true,
-        system: systemPrompt,
+        system: systemBlocks,
         messages
       })
     });
@@ -5836,6 +6715,9 @@ async function processAnalysis(analysis, messageIdx) {
       cf.lastUpdated = new Date().toISOString();
     }
   }
+  // === [나 탭 자동 정리] 신규 추가 후 완전 일치 strict dedupe 한 번 더 ===
+  // similarText fuzzy로 못 잡힌 케이스 (다른 이름인데 description 완전 일치 등) 정리
+  dedupeAllModelExactDuplicates();
   if (analysis.insight) {
     state.chatMessages[messageIdx].insightCandidate = analysis.insight;
   }
@@ -5863,62 +6745,39 @@ async function processAnalysis(analysis, messageIdx) {
       };
     }
   }
-  // V3: Memory Vault auto-extraction
+  // V3: Memory Vault auto-extraction → 확인 step (V3.6)
+  // 변경: 즉시 추가 X. 사용자에게 카드로 물어보고 "응" 누를 때만 저장.
   if (analysis.extracted_tasks && Array.isArray(analysis.extracted_tasks)) {
-    const newItems = [];
+    const proposals = [];
     analysis.extracted_tasks.forEach(taskText => {
       if (!taskText || typeof taskText !== 'string') return;
       const cleanText = taskText.trim().slice(0, 200);
       if (!cleanText) return;
-      // Avoid duplicates from recent vault
-      const exists = (state.memoryVault || []).slice(-20).find(v => 
+      // 이미 vault에 있는지 (최근 20개) — fuzzy로 먼저 차단
+      const existsInVault = (state.memoryVault || []).slice(-20).find(v => 
         v.content && similarText(v.content, cleanText)
       );
-      if (exists) return;
-      const item = {
-        id: 'mv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      if (existsInVault) return;
+      // 같은 메시지에 같은 제안 중복도 차단
+      if (proposals.some(p => exactSameText(p.content, cleanText))) return;
+      proposals.push({
+        proposalId: 'vp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         content: cleanText,
-        source: 'chat',
-        extractedAt: new Date().toISOString(),
-        sourceMessageIdx: messageIdx,
-        processed: false  // not yet promoted to task
-      };
-      state.memoryVault.push(item);
-      newItems.push(item);
+        responded: false,
+        accepted: null
+      });
     });
-    // Show toast for each (max 2 to avoid spam)
-    newItems.slice(0, 2).forEach((item, i) => {
-      setTimeout(() => {
-        showVaultToast(item);
-      }, 600 + i * 1800);
-    });
+    if (proposals.length > 0) {
+      // 메시지에 pending proposal로 저장 (renderChat에서 카드로 표시)
+      state.chatMessages[messageIdx].vaultProposals = proposals;
+    }
   }
   saveState();
 }
 
-// V3: Memory Vault toast (tap to undo)
-function showVaultToast(item) {
-  const toast = document.createElement('div');
-  toast.className = 'vault-toast';
-  toast.innerHTML = `
-    <div style="font-size:11px; color:var(--text-soft); margin-bottom:2px;">📥 보관함에 저장</div>
-    <div style="font-size:13px; color:var(--text);">${escapeHtml(item.content)}</div>
-    <div style="font-size:10px; color:var(--text-dim); margin-top:4px;">탭해서 취소</div>
-  `;
-  toast.onclick = () => {
-    state.memoryVault = state.memoryVault.filter(v => v.id !== item.id);
-    saveState();
-    toast.classList.add('removing');
-    setTimeout(() => toast.remove(), 300);
-    showToast('보관함에서 제거됨');
-  };
-  document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('show'), 50);
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
-  }, 5000);
-}
+// V3.6: showVaultToast deprecated — vaultProposals 카드로 대체됨 (V3.7에서 제거)
+
+
 
 // V3: 짧은 답을 더 깊게 분석 요청
 async function askDeeper(messageIdx) {
@@ -5949,6 +6808,76 @@ function similarText(a, b) {
   if (!a || !b) return false;
   const n = s => s.toLowerCase().replace(/\s+/g, '');
   return n(a) === n(b) || n(a).includes(n(b)) || n(b).includes(n(a));
+}
+
+// === [나 탭 자동 정리] 완전 일치 문장만 strict 비교 ===
+// similarText는 fuzzy(부분일치 포함). 사용자 명시 요구는 "전체 문장이 완전히 일치하면" 만.
+// 대소문자/공백 normalize는 하되, 부분 일치는 안 잡음.
+function exactSameText(a, b) {
+  if (!a || !b) return false;
+  const norm = s => String(s).toLowerCase().replace(/\s+/g, ' ').trim();
+  return norm(a) === norm(b);
+}
+
+// 두 항목이 "내용상 완전히 같은 항목"인지 (이름 + 설명 모두 완전 일치)
+function exactSameModelItem(a, b, fields) {
+  return fields.every(f => exactSameText(a[f] || '', b[f] || ''));
+}
+
+// 배열에서 완전 일치 항목 제거 (먼저 들어온 것 보존, 나중에 들어온 중복 제거)
+function dedupeExactArray(arr, fields) {
+  if (!Array.isArray(arr)) return arr;
+  const out = [];
+  arr.forEach(item => {
+    if (!item) return;
+    const dup = out.find(existing => exactSameModelItem(existing, item, fields));
+    if (dup) {
+      // 중복인 경우: evidence_count 합산 + confidence 유지
+      dup.evidence_count = (dup.evidence_count || 1) + (item.evidence_count || 1);
+      if ((item.confidence || 0) > (dup.confidence || 0)) dup.confidence = item.confidence;
+      if (item.user_verified) dup.user_verified = true;
+    } else {
+      out.push(item);
+    }
+  });
+  return out;
+}
+
+// case_formulation의 problems/mechanisms/strengths는 단순 문자열 배열
+function dedupeStringArray(arr) {
+  if (!Array.isArray(arr)) return arr;
+  const out = [];
+  arr.forEach(s => {
+    if (!s) return;
+    if (!out.some(existing => exactSameText(existing, s))) out.push(s);
+  });
+  return out;
+}
+
+// 한 번에 모든 모델 데이터 정리
+function dedupeAllModelExactDuplicates() {
+  let changed = false;
+  const beforeT = (state.traits || []).length;
+  const beforeV = (state.values || []).length;
+  const beforeP = (state.patterns || []).length;
+  state.traits = dedupeExactArray(state.traits || [], ['name', 'description']);
+  state.values = dedupeExactArray(state.values || [], ['name', 'description']);
+  state.patterns = dedupeExactArray(state.patterns || [], ['name', 'description', 'trigger', 'sequence']);
+  if (state.caseFormulation) {
+    const cf = state.caseFormulation;
+    const bP = (cf.problems || []).length;
+    const bM = (cf.mechanisms || []).length;
+    const bS = (cf.strengths || []).length;
+    cf.problems = dedupeStringArray(cf.problems || []);
+    cf.mechanisms = dedupeStringArray(cf.mechanisms || []);
+    cf.strengths = dedupeStringArray(cf.strengths || []);
+    if (bP !== cf.problems.length || bM !== cf.mechanisms.length || bS !== cf.strengths.length) changed = true;
+  }
+  if (beforeT !== state.traits.length || beforeV !== state.values.length || beforeP !== state.patterns.length) changed = true;
+  if (changed) {
+    console.log(`✦ 나 탭 정리: traits ${beforeT}→${state.traits.length}, values ${beforeV}→${state.values.length}, patterns ${beforeP}→${state.patterns.length}`);
+  }
+  return changed;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -6051,70 +6980,83 @@ decision_suggested: 사용자가 큰 결정을 고민 중일 때만 추가. 트�
 proposal은 4단 응답 시에만. 평범한 대화엔 proposal 생략.`;
 
 function buildSystemPrompt() {
-  let ctx = [SYSTEM_PERSONA];
-  ctx.push('\n━━━━━━━━━━━━━━━━━━━━━\n📂 사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
-  if (state.profile) ctx.push(`[사용자 프로필]\n${state.profile}\n`);
+  // V3.8: 하위호환 — 단일 문자열 반환 (이전 호출처용)
+  const parts = buildSystemPromptParts();
+  return parts.stable + '\n' + parts.volatile;
+}
 
-  const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
-  if (activeModes.length > 0) {
-    const modeMap = { exam: '📚 마감/시험', travel: '✈️ 여행 중', sick: '🤒 아픔', rest: '🏖 휴식', period: '🩸 월경' };
-    ctx.push('[현재 활성 모드]');
-    activeModes.forEach(m => ctx.push('- ' + (modeMap[m] || m)));
-    const phase = getCyclePhase();
-    if (phase) ctx.push(`- 월경 주기: ${phase}`);
-    ctx.push('');
-  }
+// V3.8: 프롬프트 캐싱용 분리
+// stable: 안 변하거나 느리게 변하는 부분 → cache_control 적용 → 90% 비용 ↓
+// volatile: 자주 변하는 부분 → 매번 새로 보냄
+function buildSystemPromptParts() {
+  // === STABLE (캐시 가능) ===
+  let stable = [SYSTEM_PERSONA];
+  stable.push('\n━━━━━━━━━━━━━━━━━━━━━\n📂 사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
+  if (state.profile) stable.push(`[사용자 프로필]\n${state.profile}\n`);
 
   if (state.values.length > 0) {
-    ctx.push('[중시하는 가치]');
-    state.values.forEach(v => ctx.push(`- ${v.user_verified ? '✓' : '?'} ${v.name}${v.description ? ': ' + v.description : ''}`));
-    ctx.push('');
+    stable.push('[중시하는 가치]');
+    state.values.forEach(v => stable.push(`- ${v.user_verified ? '✓' : '?'} ${v.name}${v.description ? ': ' + v.description : ''}`));
+    stable.push('');
   }
   if (state.traits.length > 0) {
-    ctx.push('[특성]');
-    state.traits.forEach(t => ctx.push(`- ${t.user_verified ? '✓' : '?'} ${t.name}${t.description ? ': ' + t.description : ''}`));
-    ctx.push('');
+    stable.push('[특성]');
+    state.traits.forEach(t => stable.push(`- ${t.user_verified ? '✓' : '?'} ${t.name}${t.description ? ': ' + t.description : ''}`));
+    stable.push('');
   }
   if (state.patterns.length > 0) {
-    ctx.push('[관찰된 패턴]');
-    state.patterns.forEach(p => ctx.push(`- ${p.user_verified ? '✓' : '?'} ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`));
-    ctx.push('');
+    stable.push('[관찰된 패턴]');
+    state.patterns.forEach(p => stable.push(`- ${p.user_verified ? '✓' : '?'} ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`));
+    stable.push('');
   }
   if (state.caseFormulation.version > 0) {
     const cf = state.caseFormulation;
-    ctx.push(`[Case Formulation v.${cf.version}]`);
-    if (cf.problems.length) ctx.push('문제: ' + cf.problems.join('; '));
-    if (cf.mechanisms.length) ctx.push('메커니즘: ' + cf.mechanisms.join('; '));
-    if (cf.strengths.length) ctx.push('강점: ' + cf.strengths.join('; '));
-    ctx.push('');
+    stable.push(`[Case Formulation v.${cf.version}]`);
+    if (cf.problems.length) stable.push('문제: ' + cf.problems.join('; '));
+    if (cf.mechanisms.length) stable.push('메커니즘: ' + cf.mechanisms.join('; '));
+    if (cf.strengths.length) stable.push('강점: ' + cf.strengths.join('; '));
+    stable.push('');
+  }
+
+  // === VOLATILE (자주 변함, 캐시 X) ===
+  let volatile = [];
+  
+  const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
+  if (activeModes.length > 0) {
+    const modeMap = { exam: '📚 마감/시험', travel: '✈️ 여행 중', sick: '🤒 아픔', rest: '🏖 휴식', period: '🩸 월경' };
+    volatile.push('[현재 활성 모드]');
+    activeModes.forEach(m => volatile.push('- ' + (modeMap[m] || m)));
+    const phase = getCyclePhase();
+    if (phase) volatile.push(`- 월경 주기: ${phase}`);
+    volatile.push('');
   }
 
   // Active decisions
   const activeDecisions = (state.decisions || []).filter(d => d.status === 'in_progress');
   if (activeDecisions.length > 0) {
-    ctx.push('[현재 진행 중인 큰 결정]');
+    volatile.push('[현재 진행 중인 큰 결정]');
     activeDecisions.forEach(d => {
       const days = Math.floor((new Date() - new Date(d.startedAt)) / 86400000);
       const completed = d.steps.filter(s => s.completed).length;
-      ctx.push(`- "${d.title}" (${days}일째, ${completed}/10 단계)`);
+      volatile.push(`- "${d.title}" (${days}일째, ${completed}/10 단계)`);
     });
-    ctx.push('');
+    volatile.push('');
   }
 
   // Recent missions
   const recentMissions = state.missions.slice(-10);
   if (recentMissions.length > 0) {
-    ctx.push('[최근 미션 기록]');
+    volatile.push('[최근 미션 기록]');
     recentMissions.forEach(m => {
       const icon = m.status === 'completed' ? '✓' : m.status === 'skipped' ? '⊘' : '○';
-      ctx.push(`${icon} "${m.title}" (${m.status})`);
+      volatile.push(`${icon} "${m.title}" (${m.status})`);
     });
-    ctx.push('');
+    volatile.push('');
   }
 
   const recent = state.entries.slice(-14);
   if (recent.length > 0) {
-    ctx.push('[최근 2주 체크인]');
+    volatile.push('[최근 2주 체크인]');
     recent.forEach(e => {
       const parts = [];
       if (e.sleepStart && e.sleepEnd) parts.push(`수면 ${e.sleepStart}-${e.sleepEnd}`);
@@ -6129,9 +7071,9 @@ function buildSystemPrompt() {
       if (e.cyclePhase) parts.push(`주기:${e.cyclePhase}`);
       if (e.dailyQuestion?.text && e.note) parts.push(`Q:"${e.dailyQuestion.text.slice(0,40)}" A:${e.note.slice(0, 60)}`);
       else if (e.note) parts.push(`메모:${e.note.slice(0, 60)}`);
-      if (parts.length) ctx.push(`${e.date}: ${parts.join(' | ')}`);
+      if (parts.length) volatile.push(`${e.date}: ${parts.join(' | ')}`);
     });
-    ctx.push('');
+    volatile.push('');
   }
 
   // V3.3: 최근 14일 대화 archive 요약
@@ -6139,26 +7081,29 @@ function buildSystemPrompt() {
   const recentArchive = (state.chatArchive || [])
     .filter(a => new Date(a.date).getTime() >= archiveCutoff)
     .sort((a, b) => new Date(a.date) - new Date(b.date))
-    .slice(-7);  // 최근 7일치만
+    .slice(-7);
   if (recentArchive.length > 0) {
-    ctx.push('[과거 대화 요약 (지난 1-2주)]');
+    volatile.push('[과거 대화 요약 (지난 1-2주)]');
     recentArchive.forEach(a => {
-      ctx.push(`${a.date}: ${a.summary.slice(0, 250)}`);
+      volatile.push(`${a.date}: ${a.summary.slice(0, 250)}`);
     });
-    ctx.push('');
+    volatile.push('');
   }
 
   if (state.archive.length > 0) {
-    ctx.push('[과거 깨달음 (최근 5개)]');
-    state.archive.slice(0, 5).forEach(a => ctx.push(`- ${a.date}: ${a.insight}`));
+    volatile.push('[과거 깨달음 (최근 5개)]');
+    state.archive.slice(0, 5).forEach(a => volatile.push(`- ${a.date}: ${a.insight}`));
   }
 
   // Mission state
   if (hasActivePendingMission()) {
-    ctx.push('\n[현재 상태] 오늘의 미션이 이미 있음. 새 제안은 신중하게 - 이미 있는 미션을 언급하거나, 진짜 다른 것일 때만 제안.');
+    volatile.push('\n[현재 상태] 오늘의 미션이 이미 있음. 새 제안은 신중하게 - 이미 있는 미션을 언급하거나, 진짜 다른 것일 때만 제안.');
   }
 
-  return ctx.join('\n');
+  return {
+    stable: stable.join('\n'),
+    volatile: volatile.join('\n')
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -6283,17 +7228,64 @@ function declineDecisionSuggestion(idx) {
   renderChat();
 }
 
+// V3.6: Vault proposal — 대화에서 추출한 할 일을 서랍장에 넣을지 확인
+function acceptVaultProposal(msgIdx, proposalId) {
+  const msg = state.chatMessages[msgIdx];
+  if (!msg || !Array.isArray(msg.vaultProposals)) return;
+  const p = msg.vaultProposals.find(x => x.proposalId === proposalId);
+  if (!p || p.responded) return;
+  // 한 번 더 vault에 동일 항목 있는지 fuzzy 체크
+  const existsInVault = (state.memoryVault || []).slice(-30).find(v => 
+    v.content && similarText(v.content, p.content)
+  );
+  if (!existsInVault) {
+    state.memoryVault.push({
+      id: 'mv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      content: p.content,
+      source: 'chat',
+      extractedAt: new Date().toISOString(),
+      sourceMessageIdx: msgIdx,
+      processed: false,
+      priority: nextPriority()
+    });
+  }
+  p.responded = true;
+  p.accepted = true;
+  saveState();
+  renderChat();
+}
+
+function declineVaultProposal(msgIdx, proposalId) {
+  const msg = state.chatMessages[msgIdx];
+  if (!msg || !Array.isArray(msg.vaultProposals)) return;
+  const p = msg.vaultProposals.find(x => x.proposalId === proposalId);
+  if (!p || p.responded) return;
+  p.responded = true;
+  p.accepted = false;
+  saveState();
+  renderChat();
+  // V3.7: undo 토스트 — "괜찮아" 잘못 눌렀을 수 있음
+  showUndoToast('서랍장에 안 넣음', () => {
+    p.responded = false;
+    p.accepted = null;
+    saveState();
+    renderChat();
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════
-// V3 ARCHIVE — Three Lens (Timeline / Insights / Pearls)
+// V3.8 ARCHIVE — 2 Lens 그루핑 (📜 대화 / ✨ 깨달음)
 // ═══════════════════════════════════════════════════════════════
 
-let _currentLens = 'timeline';
+let _currentLens = 'conversations';
 let _archiveSearchQuery = '';
 
 function renderArchive() {
-  // Renders all three lens views; switchLens shows/hides
+  // Render all sub-views; switchLens shows/hides
+  renderLensTopicCards();
   renderLensTimeline();
   renderLensInsights();
+  renderLensStrategies();
   renderLensPearls();
   updateArchiveQuickCounts();
 }
@@ -6303,19 +7295,313 @@ function switchLens(lens) {
   document.querySelectorAll('.lens-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.lens === lens);
   });
-  ['timeline', 'insights', 'pearls'].forEach(l => {
-    const el = document.getElementById('lens' + l.charAt(0).toUpperCase() + l.slice(1));
-    if (el) el.style.display = l === lens ? 'block' : 'none';
-  });
-  // Show/hide search bar
+  // V3.8: 2 렌즈 (conversations / wisdom)
+  const conv = document.getElementById('lensConversations');
+  const wisdom = document.getElementById('lensWisdom');
+  if (conv) conv.style.display = lens === 'conversations' ? 'block' : 'none';
+  if (wisdom) wisdom.style.display = lens === 'wisdom' ? 'block' : 'none';
+  // 검색바는 모든 렌즈에서 노출
   const searchBar = document.getElementById('archiveSearchBar');
-  if (searchBar) searchBar.style.display = lens === 'timeline' ? 'block' : 'none';
+  if (searchBar) searchBar.style.display = 'block';
 }
 
 function searchArchive() {
   const input = document.getElementById('archiveSearch');
   _archiveSearchQuery = input.value.toLowerCase().trim();
+  // 검색은 양 렌즈 다 갱신
+  renderLensTopicCards();
   renderLensTimeline();
+  renderLensInsights();
+  renderLensStrategies();
+  renderLensPearls();
+}
+
+// === V3.8 LENS: TOPIC CARDS — 챕터별 토픽 정리 (대화 렌즈 상단) ===
+const TOPIC_CATEGORY_LABELS = {
+  decision: { label: '결정', icon: '⚖️' },
+  task: { label: '할 일', icon: '📋' },
+  emotional: { label: '감정', icon: '💧' },
+  memory: { label: '기억', icon: '📝' },
+  idea: { label: '아이디어', icon: '💡' },
+  strategy: { label: '전략', icon: '🧭' }
+};
+
+function renderLensTopicCards() {
+  const container = document.getElementById('lensTopicCards');
+  if (!container) return;
+  
+  const all = state.topicCards || [];
+  // Strategy는 wisdom 렌즈에서 따로 표시. 여기선 strategy 제외.
+  let cards = all.filter(c => c.category !== 'strategy');
+  
+  // 검색 필터
+  if (_archiveSearchQuery) {
+    cards = cards.filter(c => 
+      (c.title || '').toLowerCase().includes(_archiveSearchQuery) ||
+      (c.summary || '').toLowerCase().includes(_archiveSearchQuery)
+    );
+  }
+  
+  // 최신순
+  cards = cards.slice().sort((a, b) => 
+    new Date(b.chapterStartedAt || b.createdAt) - new Date(a.chapterStartedAt || a.createdAt)
+  );
+  
+  if (cards.length === 0) {
+    container.innerHTML = '';  // 빈 상태는 timeline empty가 처리
+    return;
+  }
+  
+  // 최대 15개만 (오래된 건 검색으로)
+  const display = cards.slice(0, 15);
+  
+  let html = `
+    <div class="topic-cards-section">
+      <div class="topic-cards-header">
+        <div class="topic-cards-title">🐚 대화에서 정리됨</div>
+        <div class="topic-cards-count">${cards.length}개</div>
+      </div>
+  `;
+  display.forEach(c => {
+    const catInfo = TOPIC_CATEGORY_LABELS[c.category] || { label: '기타', icon: '·' };
+    const dateStr = new Date(c.chapterStartedAt || c.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+    html += `
+      <div class="topic-card cat-${c.category}" onclick="openTopicCard('${c.id}')">
+        <div class="topic-card-row1">
+          <span class="topic-card-cat">${catInfo.icon} ${catInfo.label}</span>
+          <span class="topic-card-title">${escapeHtml(c.title)}</span>
+        </div>
+        <div class="topic-card-summary">${escapeHtml(c.summary)}</div>
+        <div class="topic-card-meta">${dateStr} · ${c.messageCount || 0}개 메시지</div>
+      </div>
+    `;
+  });
+  if (cards.length > 15) {
+    html += `<div style="font-size:11px; color:var(--text-soft); text-align:center; padding:8px;">+ ${cards.length - 15}개 더 (검색으로 찾기)</div>`;
+  }
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function openTopicCard(id) {
+  const card = (state.topicCards || []).find(c => c.id === id);
+  if (!card) return;
+  const catInfo = TOPIC_CATEGORY_LABELS[card.category] || { label: '기타', icon: '·' };
+  const dateStr = new Date(card.chapterStartedAt || card.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  
+  // 액션 버튼 — 카테고리에 따라
+  const actions = [];
+  if (card.category === 'decision') {
+    actions.push(`<button class="topic-modal-btn primary" onclick="topicToDecision('${id}'); closeTopicModal()">⚖️ 결정의 방으로</button>`);
+  }
+  if (card.category === 'task') {
+    actions.push(`<button class="topic-modal-btn primary" onclick="topicToVault('${id}'); closeTopicModal()">📥 서랍장에</button>`);
+  }
+  if (card.category === 'memory' || card.category === 'idea') {
+    actions.push(`<button class="topic-modal-btn primary" onclick="topicToPearl('${id}'); closeTopicModal()">💎 진주로 보관</button>`);
+  }
+  if (card.category !== 'strategy') {
+    actions.push(`<button class="topic-modal-btn" onclick="topicToStrategy('${id}'); closeTopicModal()">🧭 전략 카드로</button>`);
+  }
+  actions.push(`<button class="topic-modal-btn danger" onclick="closeTopicModal(); deleteTopicCard('${id}')">🗑 삭제</button>`);
+  
+  const modal = document.createElement('div');
+  modal.id = 'topicModal';
+  modal.className = 'topic-modal-overlay';
+  modal.innerHTML = `
+    <div class="topic-modal" onclick="event.stopPropagation()">
+      <div class="topic-modal-header">
+        <span class="topic-card-cat" style="${getTopicCatStyle(card.category)}">${catInfo.icon} ${catInfo.label}</span>
+        <button class="topic-modal-close" onclick="closeTopicModal()">×</button>
+      </div>
+      <div class="topic-modal-title">${escapeHtml(card.title)}</div>
+      <div class="topic-modal-summary">${escapeHtml(card.summary)}</div>
+      <div class="topic-modal-meta">${dateStr} · ${card.messageCount || 0}개 메시지</div>
+      <div class="topic-modal-actions">
+        ${actions.join('')}
+      </div>
+    </div>
+  `;
+  modal.onclick = closeTopicModal;
+  document.body.appendChild(modal);
+  setTimeout(() => modal.classList.add('show'), 30);
+}
+
+function closeTopicModal() {
+  const modal = document.getElementById('topicModal');
+  if (!modal) return;
+  modal.classList.remove('show');
+  setTimeout(() => modal.remove(), 200);
+}
+
+function getTopicCatStyle(category) {
+  const colors = {
+    decision: 'background: rgba(179,157,219,0.18); color: #c4afe5;',
+    task: 'background: rgba(201,169,110,0.18); color: var(--accent2);',
+    emotional: 'background: rgba(232,163,163,0.16); color: #f0c0c0;',
+    memory: 'background: rgba(136,192,208,0.16); color: #a3d3df;',
+    idea: 'background: rgba(255,209,102,0.18); color: #ffe199;',
+    strategy: 'background: rgba(143,200,143,0.16); color: #a8d6a8;'
+  };
+  return colors[category] || '';
+}
+
+function topicToDecision(id) {
+  const card = (state.topicCards || []).find(c => c.id === id);
+  if (!card) return;
+  const decision = {
+    id: 'dec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: card.title,
+    startedAt: new Date().toISOString(),
+    status: 'in_progress',
+    steps: DECISION_STEPS.map(s => ({ id: s.id, completed: false, content: '' })),
+    finalDecision: null,
+    predictions: null,
+    sourceTopicCardId: id
+  };
+  state.decisions.push(decision);
+  saveState();
+  renderArchive();
+  showToast('결정의 방으로 보냈어 ⚖️');
+  setTimeout(() => openDecision(decision.id), 600);
+}
+
+function topicToVault(id) {
+  const card = (state.topicCards || []).find(c => c.id === id);
+  if (!card) return;
+  state.memoryVault.push({
+    id: 'mv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    content: card.title + (card.summary ? ' — ' + card.summary : ''),
+    source: 'topic',
+    extractedAt: new Date().toISOString(),
+    sourceTopicCardId: id,
+    processed: false,
+    priority: nextPriority()
+  });
+  saveState();
+  renderArchive();
+  showToast('서랍장에 추가됨 📥');
+}
+
+function topicToPearl(id) {
+  const card = (state.topicCards || []).find(c => c.id === id);
+  if (!card) return;
+  state.pearls.push({
+    id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    content: card.title + (card.summary ? '\n' + card.summary : ''),
+    category: '순간',
+    createdAt: new Date().toISOString(),
+    sourceTopicCardId: id
+  });
+  saveState();
+  renderArchive();
+  showToast('진주 바구니에 보관됨 💎');
+}
+
+function topicToStrategy(id) {
+  const card = (state.topicCards || []).find(c => c.id === id);
+  if (!card) return;
+  // strategy 카테고리로 변경 — 이미 strategy면 그대로
+  if (card.category !== 'strategy') {
+    card.category = 'strategy';
+    saveState();
+    renderArchive();
+    showToast('전략 카드로 옮겼어 🧭');
+  }
+}
+
+async function deleteTopicCard(id) {
+  if (!await confirmDelete('이 토픽 카드')) return;
+  state.topicCards = (state.topicCards || []).filter(c => c.id !== id);
+  saveState();
+  renderArchive();
+  showToast('삭제됨');
+}
+
+// === V3.8 LENS: STRATEGIES — 전략 카드 모음 (깨달음 렌즈) ===
+function renderLensStrategies() {
+  const container = document.getElementById('lensStrategies');
+  if (!container) return;
+  
+  let strategies = (state.topicCards || []).filter(c => c.category === 'strategy');
+  
+  // 검색 필터
+  if (_archiveSearchQuery) {
+    strategies = strategies.filter(s => 
+      (s.title || '').toLowerCase().includes(_archiveSearchQuery) ||
+      (s.summary || '').toLowerCase().includes(_archiveSearchQuery)
+    );
+  }
+  
+  strategies = strategies.slice().sort((a, b) => 
+    new Date(b.createdAt) - new Date(a.createdAt)
+  );
+  
+  let html = `
+    <div class="strategy-section">
+      <div class="strategy-section-header">
+        <div class="topic-cards-title">🧭 전략</div>
+        <button class="strategy-add-btn" onclick="addManualStrategy()">+ 직접 추가</button>
+      </div>
+  `;
+  
+  if (strategies.length === 0) {
+    html += `
+      <div style="padding: 24px 16px; color: var(--text-dim); font-size: 12px; line-height: 1.7; text-align: center;">
+        <div style="font-size: 28px; margin-bottom: 10px; opacity: 0.6;">🧭</div>
+        대화에서 발견된 좋은 전략이 여기 모여.<br>
+        <span style="font-size:11px; color:var(--text-soft);">직접 추가도 가능 ✦</span>
+      </div>
+    `;
+  } else {
+    strategies.forEach(s => {
+      const dateStr = new Date(s.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+      html += `
+        <div class="strategy-card">
+          <div class="strategy-card-text">${escapeHtml(s.title)}${s.summary ? '<br><span style="font-size:11px; color:var(--text-dim);">' + escapeHtml(s.summary) + '</span>' : ''}</div>
+          <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : ' · 대화에서'}</div>
+          <div class="strategy-card-actions">
+            <button onclick="deleteTopicCard('${s.id}')">🗑 삭제</button>
+          </div>
+        </div>
+      `;
+    });
+  }
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+async function addManualStrategy() {
+  const title = await showInputModal({
+    title: '전략 추가 🧭',
+    message: '발견한 좋은 전략을 한 줄로.',
+    placeholder: '예: 마감 직전 폭발력 — 25% 더 잡기',
+    maxLength: 60,
+    okLabel: '다음 →'
+  });
+  if (!title || !title.trim()) return;
+  const summary = await showInputModal({
+    title: '짧은 설명 (선택)',
+    message: '비워둬도 OK',
+    placeholder: '왜 이 전략이 효과 있는지...',
+    multiline: true,
+    okLabel: '추가'
+  });
+  // summary가 null이면 취소했지만 title은 살림 — 사용자 의도 존중
+  state.topicCards.push({
+    id: 'tc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: title.trim().slice(0, 60),
+    summary: (summary || '').trim().slice(0, 300),
+    category: 'strategy',
+    chapterStartedAt: null,
+    chapterEndedAt: null,
+    messageCount: 0,
+    createdAt: new Date().toISOString(),
+    source: 'manual'
+  });
+  saveState();
+  renderArchive();
+  showToast('전략 추가됨 🧭');
 }
 
 // === LENS 1: TIMELINE — 일기 통합 (체크인 + 대화 + 아카이브 깨달음) ===
@@ -6370,7 +7656,7 @@ function renderLensTimeline() {
   if (filtered.length === 0) {
     container.innerHTML = `<div class="timeline-empty">
       <div class="icon">📅</div>
-      ${_archiveSearchQuery ? '검색 결과 없음' : '아직 기록이 없어.<br>체크인이나 대화를 시작해봐.'}
+      ${_archiveSearchQuery ? '검색 결과 없음' : '아직 기록이 없어.<br>오늘 한 줄부터 천천히 ✦'}
     </div>`;
     return;
   }
@@ -6459,11 +7745,18 @@ function computeSleepDuration(start, end) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-function editTimelineEntry(date) {
+async function editTimelineEntry(date) {
   const entry = state.entries.find(e => e.date === date);
   if (!entry) return;
   const current = entry.userEdit || '';
-  const updated = prompt('이 날에 대한 메모를 추가하거나 수정해:', current);
+  const updated = await showInputModal({
+    title: '메모 추가/수정',
+    message: date,
+    placeholder: '이 날에 대한 메모',
+    defaultValue: current,
+    multiline: true,
+    okLabel: '저장'
+  });
   if (updated === null) return;
   if (updated.trim() === '') {
     delete entry.userEdit;
@@ -6484,8 +7777,8 @@ function toggleHideEntry(date) {
   showToast(entry.hidden ? '숨김 처리됨' : '다시 보임');
 }
 
-function deleteTimelineEntry(date) {
-  if (!confirm(`${formatDateKorean(date)}의 기록을 삭제할까?\n\n복구할 수 없어. 그냥 숨기는 것도 가능해.`)) return;
+async function deleteTimelineEntry(date) {
+  if (!await confirmDelete(`${formatDateKorean(date)}의 기록`, '복구할 수 없어. 그냥 숨기는 것도 가능해.')) return;
   state.entries = state.entries.filter(e => e.date !== date);
   state.archive = state.archive.filter(a => {
     const aDate = a.savedAt ? a.savedAt.split('T')[0] : null;
@@ -6513,9 +7806,9 @@ function renderLensInsights() {
   if (insights.length === 0) {
     html += `<div class="insights-empty">
       <div class="icon">🔮</div>
-      아직 발견된 패턴이 없어.<br><br>
-      체크인이 7일 이상 쌓이면<br>"새 인사이트 찾기"를 눌러봐.<br>
-      AI가 너의 데이터에서<br>인과관계를 자동 발견해.
+      <div style="font-size:14px; color:var(--text); margin-bottom:8px;">아직 모이는 중 ✦</div>
+      체크인이 7일쯤 쌓이면<br>"새 인사이트 찾기"를 눌러봐.<br><br>
+      <div style="font-size:11px; color:var(--text-soft);">너만의 패턴이 천천히 드러나.</div>
     </div>`;
   } else {
     html += insights.map(insight => `
@@ -6790,6 +8083,7 @@ async function processBrainDump() {
     // Fallback: split by line, no AI
     const lines = dump.split('\n').filter(l => l.trim()).slice(0, 10);
     const todayKeyVal = todayKey();
+    const basePriority = nextPriority();
     lines.forEach((line, i) => {
       state.tasks.push({
         id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -6799,6 +8093,7 @@ async function processBrainDump() {
         date: todayKeyVal,
         weight: i === 0 ? 'main' : (i === 1 ? 'light' : 'daily'),
         energy: 'medium',
+        priority: basePriority + i,
         source: 'manual',
         createdAt: new Date().toISOString()
       });
@@ -6877,6 +8172,13 @@ JSON 출력:
 
     const todayKeyVal = todayKey();
     const now = new Date().toISOString();
+    
+    // V3.9: priority 자동 할당
+    // 기존 task의 max priority 기준으로 시작 (now3가 먼저, drawer가 나중)
+    const existingPriorities = [...(state.tasks || []), ...(state.memoryVault || [])]
+      .map(x => typeof x.priority === 'number' ? x.priority : 0);
+    const basePriority = existingPriorities.length > 0 ? Math.max(...existingPriorities) + 1 : 0;
+    let pIdx = 0;
 
     (result.now3 || []).slice(0, 3).forEach(card => {
       state.tasks.push({
@@ -6888,6 +8190,7 @@ JSON 출력:
         date: todayKeyVal,
         weight: card.weight || 'daily',
         energy: card.energy || 'medium',
+        priority: basePriority + (pIdx++),
         source: 'brain_dump',
         execMode: _execMode,
         createdAt: now
@@ -6903,6 +8206,7 @@ JSON 출력:
         date: todayKeyVal,
         weight: card.weight || 'daily',
         energy: 'medium',
+        priority: basePriority + (pIdx++),
         source: 'brain_dump',
         createdAt: now
       });
@@ -6923,8 +8227,12 @@ JSON 출력:
 }
 
 // === ADD MANUAL TASK ===
-function addManualTask() {
-  const title = prompt('할 일 한 줄로:');
+async function addManualTask() {
+  const title = await showInputModal({
+    title: '할 일 추가 ✦',
+    placeholder: '예: 교수님 메일 답장',
+    okLabel: '추가'
+  });
   if (!title || !title.trim()) return;
   const todayKeyVal = todayKey();
   const now3Count = (state.tasks || []).filter(t => t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done').length;
@@ -6936,6 +8244,7 @@ function addManualTask() {
     date: todayKeyVal,
     weight: 'daily',
     energy: 'medium',
+    priority: nextPriority(),
     source: 'manual',
     createdAt: new Date().toISOString()
   };
@@ -6943,18 +8252,26 @@ function addManualTask() {
   saveState();
   renderExecute();
   
-  // If-Then 약속 만들고 시작할지 묻기
-  setTimeout(() => {
-    if (now3Count < 3 && confirm(`"${title.trim()}" 추가됐어 ✦\n\n바로 시작할래? (If-Then 약속 만들기)`)) {
+  // 시작 약속 만들고 시작할지 묻기
+  if (now3Count < 3) {
+    const start = await showConfirmModal({
+      title: `"${title.trim()}" 추가됐어 ✦`,
+      message: '바로 시작할래?\n(시작 약속 만들기)',
+      okLabel: '시작',
+      cancelLabel: '나중에'
+    });
+    if (start) {
       startQuest(newTask.id);
     } else {
-      showToast(now3Count < 3 ? 'Now 3에 추가됨' : '서랍장에 추가됨');
+      showToast('오늘의 카드에 추가됨');
     }
-  }, 100);
+  } else {
+    showToast('서랍장에 추가됨');
+  }
 }
 
 // === REROLL ===
-function rerollQuest(taskId) {
+async function rerollQuest(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
   const todayKeyVal = todayKey();
@@ -6962,7 +8279,13 @@ function rerollQuest(taskId) {
     t.slot === 'drawer' && t.date === todayKeyVal && t.status !== 'done'
   );
   if (drawer.length === 0) {
-    if (confirm('서랍장이 비어있어. 이 카드를 그냥 서랍장으로 보낼까?')) {
+    const yes = await showConfirmModal({
+      title: '서랍장이 비어있어',
+      message: '이 카드를 그냥 서랍장으로 보낼까?',
+      okLabel: '보내',
+      cancelLabel: '취소'
+    });
+    if (yes) {
       task.slot = 'drawer';
       saveState();
       renderExecute();
@@ -7043,11 +8366,17 @@ function shellCountByTier() {
 function completeQuest(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
+  // Snapshot for undo
+  const _undoSnapshot = {
+    status: task.status,
+    completedAt: task.completedAt || null
+  };
   task.status = 'done';
   task.completedAt = new Date().toISOString();
 
   // Generate shell reward
   const shell = pickShellForTask(task);
+  let _undoShellId = null;
   if (shell) {
     const newShell = {
       type: shell.emoji,
@@ -7059,8 +8388,10 @@ function completeQuest(taskId) {
       story: task.source === 'ai_mission' 
         ? `소라의 부름 — "${task.title}"`
         : `"${task.title}"`,
-      taskId: task.id
+      taskId: task.id,
+      _id: 'shell_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)
     };
+    _undoShellId = newShell._id;
     state.shellCollection.push(newShell);
     const shellIdx = state.shellCollection.length - 1;
     
@@ -7069,7 +8400,18 @@ function completeQuest(taskId) {
     } else if (shell.rarity === 'rare') {
       showCelebration('🐚', task.source === 'ai_mission' ? '소라의 부름 완료' : '황금 소라 획득!', shell.emoji);
     } else {
-      showToast(`${shell.emoji} 모았어`);
+      // V3.7: 일반 tier만 undo 토스트
+      showUndoToast(`${shell.emoji} 모았어`, () => {
+        // Undo: task 되돌리고 shell 제거
+        const t = state.tasks.find(x => x.id === taskId);
+        if (t) { t.status = _undoSnapshot.status; t.completedAt = _undoSnapshot.completedAt; }
+        if (_undoShellId) {
+          state.shellCollection = state.shellCollection.filter(s => s._id !== _undoShellId);
+        }
+        saveState();
+        renderExecute();
+        renderShellBar();
+      });
     }
     
     // Async: AI가 경험 텍스트 생성 (not blocking)
@@ -7303,6 +8645,114 @@ ${chatLog.slice(0, 8000)}
   return data.content[0].text.trim();
 }
 
+// V3.8: 챕터 토픽 추출 — 4시간 비활성 후 새 챕터 시작 시 직전 챕터 분석
+// 결과: state.topicCards에 1-3개 토픽 카드 저장
+async function extractPreviousChapterTopics() {
+  if (!state.apiKey) return;
+  
+  // 직전 챕터 메시지 찾기 (마지막 chapterStart 직전까지의 챕터)
+  const msgs = state.chatMessages.filter(m => !m.typing && !m.error);
+  if (msgs.length < 3) return;  // 너무 짧으면 스킵
+  
+  // 마지막 chapterStart 위치 (새로 막 추가된 것)
+  let newChapterIdx = -1;
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].chapterStart) { newChapterIdx = i; break; }
+  }
+  if (newChapterIdx <= 0) return;  // 첫 챕터면 스킵
+  
+  // 직전 챕터: 그 이전 chapterStart부터 newChapterIdx-1까지
+  let prevChapterStart = 0;
+  for (let i = newChapterIdx - 1; i >= 0; i--) {
+    if (msgs[i].chapterStart) { prevChapterStart = i; break; }
+  }
+  const prevChapterMsgs = msgs.slice(prevChapterStart, newChapterIdx);
+  
+  if (prevChapterMsgs.length < 3) return;  // 너무 짧은 챕터 스킵
+  
+  // 이미 추출된 챕터인지 (시작 시각으로 체크)
+  const chapterStartedAt = prevChapterMsgs[0].timestamp;
+  const chapterEndedAt = prevChapterMsgs[prevChapterMsgs.length - 1].timestamp;
+  if (!chapterStartedAt) return;
+  if ((state.topicCards || []).some(c => c.chapterStartedAt === chapterStartedAt)) return;
+  
+  // Build chat log
+  const chatLog = prevChapterMsgs.map(m => {
+    const role = m.role === 'user' ? '나' : '소라';
+    let content = m.content || '';
+    content = content.replace(/```json[\s\S]*?```/g, '').trim();
+    content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
+    return `${role}: ${content}`;
+  }).join('\n\n');
+  
+  const prompt = `사용자가 AI 친구 "소라고동"과 나눈 한 챕터(연속된 대화 묶음)를 토픽 카드로 정리해.
+
+[대화 원문]
+${chatLog.slice(0, 8000)}
+
+[토픽 카드 추출 규칙]
+- 의미 있는 토픽 1-3개만 (잡담은 토픽 X)
+- 카테고리 중 하나 선택:
+  · decision: 큰 결정 / 고민 / 갈림길
+  · task: 할 일 / 일감 / 마감
+  · emotional: 감정 / 마음 / 관계
+  · memory: 기억할 순간 / 일상 사실
+  · idea: 아이디어 / 통찰
+  · strategy: 전략 / 방법 / 패턴 발견
+- 각 카드: 짧은 제목 (한 줄 ~25자) + 1-2문장 요약
+- 의미 없는 짧은 잡담만 있으면 빈 배열 반환
+
+[출력 형식 — 반드시 JSON만]
+{
+  "topics": [
+    {
+      "title": "박사 그만둘까 고민",
+      "summary": "지도교수 갈등 + 진로 회의. 결정 못 내림.",
+      "category": "decision"
+    }
+  ]
+}
+
+JSON만 출력. 마크다운 X. 다른 설명 X.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    let text = data.content[0].text.trim();
+    // Strip markdown if present
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return;
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.topics || !Array.isArray(parsed.topics)) return;
+    
+    parsed.topics.forEach(t => {
+      if (!t.title || !t.summary) return;
+      const validCats = ['decision', 'task', 'emotional', 'memory', 'idea', 'strategy'];
+      const category = validCats.includes(t.category) ? t.category : 'memory';
+      state.topicCards.push({
+        id: 'tc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        chapterStartedAt,
+        chapterEndedAt,
+        title: String(t.title).trim().slice(0, 60),
+        summary: String(t.summary).trim().slice(0, 300),
+        category,
+        messageCount: prevChapterMsgs.length,
+        createdAt: new Date().toISOString()
+      });
+    });
+    saveState();
+    console.log(`✦ 챕터 토픽 ${parsed.topics.length}개 추출됨`);
+  } catch (e) {
+    console.warn('Topic extract failed:', e);
+  }
+}
+
 async function generateShellStory(shellIdx, task) {
   const shell = state.shellCollection[shellIdx];
   if (!shell) return;
@@ -7386,14 +8836,20 @@ function toggleQuestComplete(taskId) {
   }
 }
 
-function promoteFromDrawer() {
+async function promoteFromDrawer() {
   const todayKeyVal = todayKey();
   const drawer = (state.tasks || []).filter(t => t.slot === 'drawer' && t.date === todayKeyVal && t.status !== 'done');
   if (drawer.length === 0) {
     showToast('오늘 할 일 다 끝! 잘했어 🐚');
     return;
   }
-  if (!confirm(`Now 3 다 깼어 🐚\n서랍장에 ${drawer.length}장 더 있어. 다음 3장 꺼낼까?`)) return;
+  const yes = await showConfirmModal({
+    title: '오늘의 카드 다 깼어 🐚',
+    message: `서랍장에 ${drawer.length}장 더 있어.\n다음 3장 꺼낼까?`,
+    okLabel: '꺼낼래',
+    cancelLabel: '쉴래'
+  });
+  if (!yes) return;
   drawer.slice(0, 3).forEach(t => {
     t.slot = 'now3';
     t.status = 'active';
@@ -7484,11 +8940,13 @@ function renderRitualStep() {
   else if (_ritualState.step === 1) {
     // Step 1: Choose ritual type (skip = launch directly)
     const goalLabel = escapeHtml(_ritualState.goal || '몰입');
+    // FIX BUG-2: 카드에서 시작했으면 "← 이전"이 의미 없으니 "취소"로 표시
+    const backLabel = _ritualState.taskId ? '취소' : '← 이전';
     stage.innerHTML = `
       <div class="ritual-step-label">— 약속 (선택) —</div>
       <div class="ritual-icon">🐚</div>
       <div class="ritual-question">"${goalLabel}"</div>
-      <div class="ritual-sub">If-Then 약속 더하면 뇌가 더 잘 따라와.<br>안 해도 OK.</div>
+      <div class="ritual-sub">"이러면 → 저러기" 약속을 더하면 뇌가 더 잘 따라와.<br>안 해도 OK.</div>
       <div class="ritual-actions">
         <button class="ritual-btn ifthen-choice" onclick="ritualChooseType('start')">
           <div style="font-weight:600; margin-bottom:2px;">🚀 시작 약속</div>
@@ -7503,7 +8961,7 @@ function renderRitualStep() {
           <div style="font-size:11px; color:var(--text-dim);">시작 + 방해 둘 다 약속</div>
         </button>
         <button class="ritual-btn primary" onclick="ritualSkipToLaunch()">바로 발사 🚀</button>
-        <button class="ritual-btn skip" onclick="ritualBackStep()">← 이전</button>
+        <button class="ritual-btn skip" onclick="ritualBackStep()">${backLabel}</button>
       </div>
     `;
   }
@@ -7668,7 +9126,14 @@ function ritualNextStep() {
 }
 
 function ritualBackStep() {
-  if (_ritualState.step === 1 && !_ritualState.taskId) _ritualState.step = 0;
+  // FIX BUG-2: 카드에서 시작한 경우(taskId 있음) step 1에서 이전 누르면 닫기
+  if (_ritualState.step === 1) {
+    if (_ritualState.taskId) {
+      closeRitual();
+      return;
+    }
+    _ritualState.step = 0;
+  }
   else if (_ritualState.step === 2) _ritualState.step = 1;
   else if (_ritualState.step === 3) {
     _ritualState.step = _ritualState.ifThenType === 'both' ? 2 : 1;
@@ -7894,7 +9359,7 @@ function renderBlockPickerContent() {
   
   if (drawer.length > 0) {
     html += `<div class="vault-section">
-      <div class="vault-section-label">📋 서랍장 카드</div>`;
+      <div class="vault-section-label">📋 서랍장 — 카드</div>`;
     drawer.forEach(t => {
       html += `
         <div class="vault-item">
@@ -7908,7 +9373,7 @@ function renderBlockPickerContent() {
   
   if (vault.length > 0) {
     html += `<div class="vault-section">
-      <div class="vault-section-label">🐚 보관함</div>`;
+      <div class="vault-section-label">🐚 서랍장 — 대화에서 흘린 것</div>`;
     vault.forEach(v => {
       html += `
         <div class="vault-item">
@@ -7950,7 +9415,7 @@ function promoteAndAssign(taskId) {
   task.date = todayKey();
   task.assignedBlock = _currentPickerBlock;
   saveState();
-  showToast('Now 3로 + 시간 지정 ✦');
+  showToast('오늘의 카드 + 시간 지정 ✦');
   closeBlockPicker();
   renderExecute();
 }
@@ -7966,6 +9431,7 @@ function vaultPromoteAndAssign(itemId) {
     date: todayKey(),
     weight: 'daily',
     energy: 'medium',
+    priority: typeof item.priority === 'number' ? item.priority : nextPriority(),
     source: 'vault_promoted',
     assignedBlock: _currentPickerBlock,
     createdAt: new Date().toISOString()
@@ -7978,19 +9444,31 @@ function vaultPromoteAndAssign(itemId) {
 }
 
 // === MOVE TO TIME BLOCK ===
-function moveToBlock(taskId) {
-  const blocks = ['morning', 'afternoon1', 'afternoon2', 'evening', 'night', null];
-  const labels = ['🌅 오전 (~12시)', '☀️ 오후 1부 (12-15시)', '🌤 오후 2부 (15-18시)', '🌆 저녁 (18-21시)', '🌙 밤 (21시~)', '시간 미지정'];
-  const choice = prompt(`어느 시간대?\n${labels.map((l, i) => `${i+1}. ${l}`).join('\n')}\n\n번호 입력:`);
+async function moveToBlock(taskId) {
+  const options = [
+    { label: '🌅 오전 (~12시)', value: 'morning' },
+    { label: '☀️ 오후 1부 (12-15시)', value: 'afternoon1' },
+    { label: '🌤 오후 2부 (15-18시)', value: 'afternoon2' },
+    { label: '🌆 저녁 (18-21시)', value: 'evening' },
+    { label: '🌙 밤 (21시~)', value: 'night' },
+    { label: '시간 미지정', value: '__none__' }
+  ];
+  const choice = await showOptionsModal({
+    title: '어느 시간대?',
+    options
+  });
   if (!choice) return;
-  const num = parseInt(choice);
-  if (isNaN(num) || num < 1 || num > 6) return;
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
-  task.assignedBlock = blocks[num - 1];
+  task.assignedBlock = choice === '__none__' ? null : choice;
   saveState();
   renderExecute();
-  showToast(num === 6 ? '시간 미지정' : `${labels[num-1].split(' ')[0]}로 이동`);
+  if (choice === '__none__') {
+    showToast('시간 미지정');
+  } else {
+    const lbl = options.find(o => o.value === choice)?.label.split(' ')[0] || '';
+    showToast(`${lbl}로 이동`);
+  }
 }
 
 function getBlockLabel(block) {
@@ -8085,56 +9563,257 @@ function renderVault() {
   const container = document.getElementById('vaultContent');
   if (!container) return;
   
-  const memVault = (state.memoryVault || []).filter(v => !v.processed);
+  // V3.9: 통합 할 일 목록
+  // = 모든 task (now3 + drawer, status !== 'done') + 처리되지 않은 memoryVault
+  // 카드(now3)도 목록에 보이지만 시각적으로 ★ 표시
+  // 우선순위 (priority) 순으로 정렬
+  
   const todayKeyVal = todayKey();
-  const drawer = (state.tasks || []).filter(t => 
-    (t.slot === 'drawer' || t.status === 'drawer') && t.status !== 'done'
-  );
   
-  let html = '';
+  // task: now3 + drawer 모두, 미완료
+  const activeTasks = (state.tasks || []).filter(t => t.status !== 'done');
   
-  if (memVault.length === 0 && drawer.length === 0) {
-    html = `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
-      <div style="font-size:32px; margin-bottom:12px;">📂</div>
-      서랍장이 비어있어.<br>
-      대화창에서 흘린 할 일이나<br>
-      서랍장에 들어간 카드가 여기 모여.
+  // vault: 처리되지 않은 것
+  const activeVault = (state.memoryVault || []).filter(v => !v.processed);
+  
+  // 통합: 같은 형식으로 변환
+  const unified = [];
+  activeTasks.forEach(t => {
+    unified.push({
+      _kind: 'task',
+      _id: t.id,
+      title: t.title,
+      priority: typeof t.priority === 'number' ? t.priority : 999,
+      isToday: t.slot === 'now3' && t.date === todayKeyVal,
+      weight: t.weight || 'daily',
+      energy: t.energy || 'medium',
+      raw: t
+    });
+  });
+  activeVault.forEach(v => {
+    unified.push({
+      _kind: 'vault',
+      _id: v.id,
+      title: v.content,
+      priority: typeof v.priority === 'number' ? v.priority : 9999,
+      isToday: false,
+      weight: v.weight || 'daily',
+      energy: v.energy || 'medium',
+      raw: v
+    });
+  });
+  
+  // priority 정렬
+  unified.sort((a, b) => a.priority - b.priority);
+  
+  if (unified.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:36px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
+      <div style="font-size:36px; margin-bottom:14px; opacity:0.6;">📂</div>
+      <div style="margin-bottom:6px;">아직은 백지야. 그게 맞는 시작이야 ✦</div>
+      <div style="font-size:11px; color:var(--text-soft); line-height:1.7;">
+        대화창에서 흘리거나<br>
+        실행 탭에서 만든 거 여기 모여.
+      </div>
     </div>`;
-  } else {
-    if (memVault.length > 0) {
-      html += `<div class="vault-section">
-        <div class="vault-section-label">🐚 소라가 쥐고 있는 것들 · ${memVault.length}개</div>
-      `;
-      memVault.forEach(item => {
-        html += `
-          <div class="vault-item">
-            <div class="content">${escapeHtml(item.content)}</div>
-            <button class="promote-btn" onclick="promoteFromVault('${item.id}')">→ Now 3</button>
-            <button onclick="deleteVaultItem('${item.id}')">✕</button>
-          </div>
-        `;
-      });
-      html += `</div>`;
-    }
-    
-    if (drawer.length > 0) {
-      html += `<div class="vault-section">
-        <div class="vault-section-label">📋 묵혀둔 카드 · ${drawer.length}장</div>
-      `;
-      drawer.forEach(t => {
-        html += `
-          <div class="vault-item">
-            <div class="content">${escapeHtml(t.title)}</div>
-            <button class="promote-btn" onclick="promoteTaskToNow3('${t.id}')">→ Now 3</button>
-            <button onclick="deleteTask('${t.id}')">✕</button>
-          </div>
-        `;
-      });
-      html += `</div>`;
-    }
+    return;
   }
   
+  // V3.9 헤더 안내
+  let html = `
+    <div style="font-size:11px; color:var(--text-soft); margin-bottom:12px; line-height:1.6; padding: 0 4px;">
+      ★ 오늘의 카드는 위에서도 보여 · 꾹 눌러 드래그하면 순서 바꿀 수 있어
+    </div>
+    <div class="todo-list" id="todoList">
+  `;
+  unified.forEach(item => {
+    const weightLabel = { light: '🪶 가벼움', daily: '🌀 일상', main: '⚓ 메인' }[item.weight] || '';
+    const energyLabel = { low: '🪫 저', medium: '⚡ 중', high: '🔥 고' }[item.energy] || '';
+    html += `
+      <div class="todo-item ${item.isToday ? 'is-today' : ''}" 
+           draggable="true" 
+           data-kind="${item._kind}" 
+           data-id="${item._id}"
+           ondragstart="todoDragStart(event)"
+           ondragover="todoDragOver(event)"
+           ondrop="todoDrop(event)"
+           ondragend="todoDragEnd(event)">
+        <div class="todo-handle">⋮⋮</div>
+        ${item.isToday ? '<span class="todo-today-mark">★</span>' : ''}
+        <div class="todo-content">
+          <div class="todo-title">${escapeHtml(item.title)}</div>
+          ${(weightLabel || energyLabel) ? `<div class="todo-meta">${weightLabel} · ${energyLabel}</div>` : ''}
+        </div>
+        <div class="todo-actions">
+          ${!item.isToday ? `<button class="todo-btn" onclick="todoToToday('${item._kind}','${item._id}')">→ 오늘로</button>` : ''}
+          <button class="todo-btn complete" onclick="todoComplete('${item._kind}','${item._id}')">✓</button>
+          <button class="todo-btn danger" onclick="todoDelete('${item._kind}','${item._id}')">✕</button>
+        </div>
+      </div>
+    `;
+  });
+  html += `</div>`;
   container.innerHTML = html;
+}
+
+// V3.9: 통합 목록 액션 핸들러
+function todoComplete(kind, id) {
+  if (kind === 'task') {
+    // task 완료 → completeQuest 재사용 (자동으로 shell 보상 + undo)
+    completeQuest(id);
+    setTimeout(() => renderVault(), 100);
+    return;
+  }
+  // vault 완료 → 그냥 처리됨으로 표시
+  if (kind === 'vault') {
+    const v = state.memoryVault.find(x => x.id === id);
+    if (!v) return;
+    v.processed = true;
+    saveState();
+    renderVault();
+    showUndoToast('완료됨', () => {
+      v.processed = false;
+      saveState();
+      renderVault();
+    });
+  }
+}
+
+async function todoDelete(kind, id) {
+  if (!await confirmDelete('이 할 일')) return;
+  if (kind === 'task') {
+    state.tasks = state.tasks.filter(t => t.id !== id);
+  } else if (kind === 'vault') {
+    state.memoryVault = state.memoryVault.filter(v => v.id !== id);
+  }
+  saveState();
+  renderVault();
+  renderExecute();
+}
+
+function todoToToday(kind, id) {
+  const todayKeyVal = todayKey();
+  const now3Count = (state.tasks || []).filter(t => 
+    t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done'
+  ).length;
+  if (now3Count >= 3) {
+    showToast('오늘의 카드가 꽉 찼어. 하나 끝내고 다시.');
+    return;
+  }
+  if (kind === 'task') {
+    const t = state.tasks.find(x => x.id === id);
+    if (!t) return;
+    t.slot = 'now3';
+    t.status = 'active';
+    t.date = todayKeyVal;
+  } else if (kind === 'vault') {
+    const v = state.memoryVault.find(x => x.id === id);
+    if (!v) return;
+    state.tasks.push({
+      id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      title: v.content,
+      status: 'active',
+      slot: 'now3',
+      date: todayKeyVal,
+      weight: v.weight || 'daily',
+      energy: v.energy || 'medium',
+      priority: typeof v.priority === 'number' ? v.priority : 0,
+      source: 'vault_promoted',
+      createdAt: new Date().toISOString()
+    });
+    v.processed = true;
+  }
+  saveState();
+  renderVault();
+  renderExecute();
+  showToast('오늘의 카드로 ★');
+}
+
+// V3.9: 드래그 & 드롭 재정렬
+let _todoDragId = null;
+let _todoDragKind = null;
+
+function todoDragStart(e) {
+  const item = e.currentTarget;
+  _todoDragId = item.dataset.id;
+  _todoDragKind = item.dataset.kind;
+  item.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  // Firefox 호환
+  try { e.dataTransfer.setData('text/plain', _todoDragId); } catch(_) {}
+}
+
+function todoDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const target = e.currentTarget;
+  if (target.dataset.id === _todoDragId) return;
+  // 위/아래 placeholder 표시
+  const rect = target.getBoundingClientRect();
+  const above = (e.clientY - rect.top) < rect.height / 2;
+  document.querySelectorAll('.todo-item').forEach(el => {
+    el.classList.remove('drop-above', 'drop-below');
+  });
+  target.classList.add(above ? 'drop-above' : 'drop-below');
+}
+
+function todoDrop(e) {
+  e.preventDefault();
+  const target = e.currentTarget;
+  if (!_todoDragId || target.dataset.id === _todoDragId) {
+    todoDragEnd(e);
+    return;
+  }
+  
+  // 드래그된 항목과 타깃 항목 찾기
+  const findItem = (kind, id) => {
+    if (kind === 'task') return state.tasks.find(t => t.id === id);
+    if (kind === 'vault') return state.memoryVault.find(v => v.id === id);
+    return null;
+  };
+  
+  const dragItem = findItem(_todoDragKind, _todoDragId);
+  const targetItem = findItem(target.dataset.kind, target.dataset.id);
+  if (!dragItem || !targetItem) {
+    todoDragEnd(e);
+    return;
+  }
+  
+  // 위치 계산: above면 targetItem.priority - 0.5, below면 +0.5
+  const rect = target.getBoundingClientRect();
+  const above = (e.clientY - rect.top) < rect.height / 2;
+  const newPriority = above 
+    ? (targetItem.priority || 0) - 0.5 
+    : (targetItem.priority || 0) + 0.5;
+  dragItem.priority = newPriority;
+  
+  // 모든 priority 정수화 (재정렬 후 0,1,2,...)
+  const all = [];
+  (state.tasks || []).filter(t => t.status !== 'done').forEach(t => all.push({ kind: 'task', item: t }));
+  (state.memoryVault || []).filter(v => !v.processed).forEach(v => all.push({ kind: 'vault', item: v }));
+  all.sort((a, b) => (a.item.priority || 0) - (b.item.priority || 0));
+  all.forEach((entry, idx) => { entry.item.priority = idx; });
+  
+  saveState();
+  todoDragEnd(e);
+  renderVault();
+}
+
+function todoDragEnd(e) {
+  document.querySelectorAll('.todo-item').forEach(el => {
+    el.classList.remove('dragging', 'drop-above', 'drop-below');
+  });
+  _todoDragId = null;
+  _todoDragKind = null;
+}
+
+// V3.9: priority 자동 부여 헬퍼
+// 모든 task/vault 생성 지점에서 사용 → 일관된 정렬
+function nextPriority() {
+  const all = [
+    ...(state.tasks || []).map(x => x.priority),
+    ...(state.memoryVault || []).map(x => x.priority)
+  ].filter(p => typeof p === 'number');
+  return all.length === 0 ? 0 : Math.max(...all) + 1;
 }
 
 function promoteFromVault(itemId) {
@@ -8151,6 +9830,7 @@ function promoteFromVault(itemId) {
     date: todayKeyVal,
     weight: 'daily',
     energy: 'medium',
+    priority: typeof item.priority === 'number' ? item.priority : nextPriority(),
     source: 'vault_promoted',
     createdAt: new Date().toISOString()
   });
@@ -8158,7 +9838,7 @@ function promoteFromVault(itemId) {
   saveState();
   renderVault();
   renderExecute();
-  showToast(now3Count < 3 ? 'Now 3에 추가됨' : '서랍장으로');
+  showToast(now3Count < 3 ? '오늘의 카드에 추가됨' : '서랍장으로');
 }
 
 function promoteTaskToNow3(taskId) {
@@ -8167,7 +9847,7 @@ function promoteTaskToNow3(taskId) {
   const todayKeyVal = todayKey();
   const now3Count = (state.tasks || []).filter(t => t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done').length;
   if (now3Count >= 3) {
-    showToast('Now 3가 꽉 찼어. 하나 끝내거나 리롤 해.');
+    showToast('오늘의 카드가 꽉 찼어. 하나 끝내거나 리롤 해.');
     return;
   }
   task.slot = 'now3';
@@ -8176,19 +9856,19 @@ function promoteTaskToNow3(taskId) {
   saveState();
   renderVault();
   renderExecute();
-  showToast('Now 3에 추가됨');
+  showToast('오늘의 카드에 추가됨');
 }
 
-function deleteVaultItem(itemId) {
-  if (!confirm('이 항목 삭제할까?')) return;
+async function deleteVaultItem(itemId) {
+  if (!await confirmDelete('이 항목')) return;
   state.memoryVault = state.memoryVault.filter(v => v.id !== itemId);
   saveState();
   renderVault();
   renderExecute();
 }
 
-function deleteTask(taskId) {
-  if (!confirm('이 카드 삭제할까?')) return;
+async function deleteTask(taskId) {
+  if (!await confirmDelete('이 카드')) return;
   state.tasks = state.tasks.filter(t => t.id !== taskId);
   saveState();
   renderVault();
@@ -8393,23 +10073,33 @@ function renderLensPearls() {
   container.innerHTML = html;
 }
 
-function addPearl() {
+async function addPearl() {
   const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
-  const catChoice = prompt(`어떤 카테고리?\n${categories.map((c, i) => `${i+1}. ${c}`).join('\n')}\n\n번호 또는 새 카테고리 이름:`);
-  if (!catChoice) return;
+  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
+  const options = categories.map(c => ({
+    label: `${iconMap[c] || '💎'} ${c}`,
+    value: c
+  }));
   
-  let category;
-  const num = parseInt(catChoice);
-  if (!isNaN(num) && num >= 1 && num <= categories.length) {
-    category = categories[num - 1];
-  } else {
-    category = catChoice.trim();
-    if (!categories.includes(category)) {
-      state.preferences.pearlBasketCategories.push(category);
-    }
+  let category = await showOptionsModal({
+    title: '어떤 진주? 💎',
+    message: '카테고리 골라.',
+    options,
+    allowCustom: true,
+    customLabel: '+ 새 카테고리'
+  });
+  if (!category) return;
+  category = category.trim();
+  if (!categories.includes(category)) {
+    state.preferences.pearlBasketCategories.push(category);
   }
   
-  const content = prompt(`💎 ${category}\n\n뭐가 좋았어? 한 줄로:`);
+  const content = await showInputModal({
+    title: `💎 ${category}`,
+    message: '뭐가 좋았어? 한 줄로.',
+    placeholder: '예: 그날 카페 음악',
+    okLabel: '보관'
+  });
   if (!content || !content.trim()) return;
   
   state.pearls.push({
@@ -8423,23 +10113,46 @@ function addPearl() {
   showToast('진주 추가됨 💎');
 }
 
-function openPearl(id) {
+async function openPearl(id) {
   const pearl = state.pearls.find(p => p.id === id);
   if (!pearl) return;
-  const action = prompt(`💎 ${pearl.category}\n\n"${pearl.content}"\n\n수정하려면 새 내용 입력. 삭제하려면 "삭제" 입력. 취소는 빈칸:`);
-  if (action === null) return;
-  if (action.trim() === '삭제') {
-    if (confirm('정말 삭제할까?')) {
+  
+  const action = await showOptionsModal({
+    title: `💎 ${pearl.category}`,
+    message: `"${pearl.content}"`,
+    options: [
+      { label: '✏️ 수정', value: 'edit' },
+      { label: '🗑 삭제', value: 'delete' }
+    ]
+  });
+  if (!action) return;
+  
+  if (action === 'delete') {
+    const yes = await showConfirmModal({
+      title: '정말 삭제할까?',
+      message: pearl.content,
+      okLabel: '삭제',
+      cancelLabel: '취소'
+    });
+    if (yes) {
       state.pearls = state.pearls.filter(p => p.id !== id);
       saveState();
       renderLensPearls();
       showToast('삭제됨');
     }
-  } else if (action.trim()) {
-    pearl.content = action.trim();
-    saveState();
-    renderLensPearls();
-    showToast('수정됨');
+  } else if (action === 'edit') {
+    const updated = await showInputModal({
+      title: `💎 ${pearl.category} 수정`,
+      defaultValue: pearl.content,
+      multiline: true,
+      okLabel: '저장'
+    });
+    if (updated && updated.trim()) {
+      pearl.content = updated.trim();
+      saveState();
+      renderLensPearls();
+      showToast('수정됨');
+    }
   }
 }
 
@@ -8452,7 +10165,13 @@ async function forceAnalyze() {
     alert('분석하려면 체크인이나 대화가 최소 3개 이상 쌓여야 해.');
     return;
   }
-  if (!confirm('지금까지의 모든 데이터를 분석해서 "나에 대한 모델"을 업데이트할까? 1-2분 걸려.')) return;
+  const yes = await showConfirmModal({
+    title: '나에 대한 모델 업데이트',
+    message: '지금까지의 데이터를 분석해서\n특성·가치·패턴을 새로 정리할게.\n1-2분 걸려.',
+    okLabel: '분석 시작',
+    cancelLabel: '나중에'
+  });
+  if (!yes) return;
 
   setSyncStatus('syncing');
   try {
