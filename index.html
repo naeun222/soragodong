@@ -3061,7 +3061,6 @@
           </div>
         </details>
 
-        <button class="btn-secondary btn-danger" onclick="rollbackToV5()" style="margin-top:8px;">⏪ V3 이전 상태로 되돌리기</button>
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
       </div>
 
@@ -3611,33 +3610,7 @@ async function migrateToV6() {
   console.log('✅ Migration to V6 complete');
 }
 
-async function rollbackToV5() {
-  if (!confirm('V5 (V3 업데이트 이전) 상태로 되돌릴까? V3에서 추가한 데이터(작업, 진주 바구니 등)는 사라져.')) return;
-  if (!confirm('정말로? 이건 되돌릴 수 없어.')) return;
-  
-  try {
-    // Fetch backup
-    const resp = await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.backup_v5_pre_v6&order=updated_at.desc&limit=1`,
-      { headers: authHeaders() }
-    );
-    if (!resp.ok) throw new Error('백업 로드 실패');
-    const backups = await resp.json();
-    if (backups.length === 0) throw new Error('백업이 없어');
-    
-    // Restore backup as main state
-    const backupData = backups[0].data;
-    delete backupData._backup_meta;
-    backupData.version = 5;
-    
-    state = { ...DEFAULT_STATE, ...backupData, version: 5 };
-    await saveToCloudNow();
-    showToast('V5로 되돌렸어. 새로고침 중...');
-    setTimeout(() => location.reload(), 1500);
-  } catch (e) {
-    alert('롤백 실패: ' + e.message);
-  }
-}
+// V3.13.x: rollbackToV5 제거됨 (이제 너무 멀리 와서 의미 없음)
 
 async function tryMigrateLegacyData() {
   // One-time migration: if there's data with user_id='me', claim it for this auth user
@@ -9254,7 +9227,7 @@ function renderExecute() {
             <div class="exec-card-actions">
               <button class="start-btn" onclick="startQuest('${task.id}')">🚀 시작</button>
               <button class="complete-btn" onclick="toggleQuestComplete('${task.id}')">✓ 완료</button>
-              ${!isAIMission ? `<button onclick="editTaskCard('${task.id}')">✎ 수정</button><button onclick="deleteTask('${task.id}')">✕ 삭제</button>` : ''}
+              ${!isAIMission ? `<button onclick="deleteTask('${task.id}')">✕ 삭제</button>` : ''}
             </div>
           </div>
         `;
