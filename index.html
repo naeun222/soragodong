@@ -3885,8 +3885,8 @@ const ONBOARDING_STEPS = [
   {
     id: 'click_strategy',
     targetSelector: '.msg-action[onclick^="saveMsgAsStrategy"]',
-    title: '🧭 전략으로 저장',
-    body: '4단 응답 아래에 "🧭 전략으로" 버튼이 보일 거야! 한 번 눌러볼래?<br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">참고: 일반 응답엔 "✦ 깨달음으로" 버튼이 떠. 4단 응답일 땐 자동으로 "🧭 전략으로"로 바뀌어.</span>',
+    title: '🧭 전략으로',
+    body: '4단 응답 아래에 <b>"🧭 전략으로"</b> 버튼이 보일 거야! ("전략 저장"이 아니라 정확히 "🧭 전략으로"야)<br>한 번 눌러볼래?<br><br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">참고: 일반 응답엔 "✦ 깨달음으로" 버튼이 떠. 4단 응답일 땐 자동으로 "🧭 전략으로"로 바뀌어.</span>',
     waitFor: 'click',
     advanceDelay: 1200,
     fallbackPosition: 'top'
@@ -3946,6 +3946,14 @@ const ONBOARDING_STEPS = [
     waitFor: 'click',
     advanceDelay: 600,
     coachmarkPosition: 'corner'
+  },
+  {
+    id: 'home_features_intro',
+    targetSelector: null,
+    title: '홈 화면에 두 가지 더',
+    body: '홈을 자세히 보면 두 가지 더 있어:<br><br>· <b>🌙 주간 리뷰</b> — 매주 일요일에 떠. 한 주 데이터(체크인·대화·미션)를 내가 분석해서 인사이트 + 전략 + 새로운 가치/특성을 발견해줘. 너 자신을 더 깊게 이해하는 시간이야.<br><br>· <b>⚖️ 결정의 방</b> — 큰 결정(이직·이별·진로·이사 등) 14일 동안 숙성하면서 매일 다른 각도로 같이 생각해보는 곳이야. 충동적 결정 X, 깊이 있는 결정 ○.<br><br>둘 다 너 페이스에 맞춰 떠. 부담 갖지 말고 천천히 ✦',
+    waitFor: 'next',
+    dimBackground: false
   },
 
   // === Phase 6: 아카이브 + 전략 확인 (2) ===
@@ -4192,6 +4200,10 @@ function onbPositionStep(step, retryCount) {
           cmTop = Math.min(vh - cmHeight - 16, rect.bottom + 16);
         } else {
           cmTop = (vh - cmHeight) / 2;
+        }
+        // V3.13.x: nav-item targeting 시 카드를 아이콘에서 더 띄움 (시각적 호흡)
+        if (step.targetSelector && step.targetSelector.indexOf('.nav-item') !== -1) {
+          cmTop = Math.max(16, cmTop - 30);
         }
         coachmark.style.top = cmTop + 'px';
         coachmark.style.left = '50%';
