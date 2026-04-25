@@ -3850,7 +3850,7 @@ const ONBOARDING_STEPS = [
     id: 'chat_intro',
     targetSelector: null,
     title: '대화창에서 할 수 있는 것',
-    body: '· <b>오늘 있었던 일</b> — "오늘 카페에서 공부했어"<br>· <b>머릿속 와다다</b> — "할 일 너무 많아 어디서부터 해야 해"<br>· <b>짧은 한 마디</b> — "졸려" / "피곤" / "싫어"<br>· <b>마음 힘들 때</b> — "걱정돼" / "불안해" — 들어주기만 함<br>· <b>도움 요청</b> — "어떡하지?" / "도와줘" → 4단 분석으로 답함<br>· <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장<br><br>규칙 X. 알아서 톤 맞춰줄게.',
+    body: '여기서는 소라고동한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진한 곳이야.<br>네가 머릿속에 엉킨 생각들을 여기에 쏟아내면, 지혜로운 소라고동이 알아서 분석해주고 정리해주고 기록해주고 조언해줘.<br><br>예시:<br>· <b>오늘 있었던 일</b> — "오늘 카페에서 공부했어"<br>· <b>머릿속 와다다</b> — "할 일 너무 많아 어디서부터 해야 해"<br>· <b>짧은 한 마디</b> — "졸려" / "피곤" / "싫어"<br>· <b>마음 힘들 때</b> — "걱정돼" / "불안해" — 들어주기만 함<br>· <b>도움 요청</b> — "어떡하지?" / "도와줘" → 4단 분석으로 답함<br>· <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장',
     waitFor: 'next'
   },
   {
@@ -3867,9 +3867,10 @@ const ONBOARDING_STEPS = [
     id: 'click_deeper',
     targetSelector: '.msg-action[onclick^="askDeeper"]',
     title: '"더 알고 싶어 ▾"',
-    body: 'AI 답 아래에 "더 알고 싶어" 버튼이 있어.<br>눌러봐. 4단 분석 + 전략으로 깊게 들어감.<br><br><span class="small">[내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 4단 형식.</span>',
+    body: 'AI 답 아래에 "더 알고 싶어" 버튼이 있어.<br>눌러봐. 4단 분석 + 전략으로 깊게 들어감.<br><br><span class="small">답변 길이가 다 달라서 버튼 위치가 바뀌어. 직접 찾아서 누르고 "눌렀어 →" 눌러줘.<br>[내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 4단 형식.</span>',
     waitFor: 'click',
     advanceDelay: 1500,
+    manualAdvance: true,
     fallbackPosition: 'top'
   },
   {
@@ -3883,18 +3884,20 @@ const ONBOARDING_STEPS = [
     id: 'click_strategy',
     targetSelector: '.msg-action[onclick^="saveMsgAsStrategy"]',
     title: '🧭 전략으로 저장',
-    body: '4단 응답 아래에 "🧭 전략으로" 버튼이 있어.<br>실천할 가이드는 여기로 저장 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">참고: 일반 응답엔 "✦ 깨달음으로" 버튼이 떠. 4단 응답일 땐 자동으로 "🧭 전략으로"로 바뀜.</span>',
+    body: '4단 응답 아래에 "🧭 전략으로" 버튼이 있어.<br>실천할 가이드는 여기로 저장 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">직접 찾아서 누르고 "눌렀어 →" 눌러줘.<br>참고: 일반 응답엔 "✦ 깨달음으로" 버튼이 떠. 4단 응답일 땐 자동으로 "🧭 전략으로"로 바뀜.</span>',
     waitFor: 'click',
     advanceDelay: 1200,
+    manualAdvance: true,
     fallbackPosition: 'top'
   },
   {
     id: 'click_accept',
     targetSelector: '.proposal-btn.accept',
     title: '✦ 해볼게',
-    body: '같은 응답 아래에 "✦ 해볼게" 버튼이 있어.<br>전략을 "오늘의 미션"으로 받아들이는 거야.<br>이게 → 홈에 "소라의 부름" ⭐로 등록돼.',
+    body: '같은 응답 아래에 "✦ 해볼게" 버튼이 있어.<br>전략을 "오늘의 미션"으로 받아들이는 거야.<br>이게 → 홈에 "소라의 부름" ⭐로 등록돼.<br><br><span class="small">직접 찾아서 누르고 "눌렀어 →" 눌러줘.</span>',
     waitFor: 'click',
     advanceDelay: 1500,
+    manualAdvance: true,
     fallbackPosition: 'top'
   },
 
@@ -4179,7 +4182,14 @@ function onbPositionStep(step, retryCount) {
       const handler = (e) => { safeAdvance(step.advanceDelay || 350); };
       onbAddListener(target, 'click', handler);
     }
-    nextBtn.style.display = 'none';
+    // V3.13.x: manualAdvance — spotlight 위치 부정확할 수 있는 step에서
+    // 사용자가 "눌렀어 →" 직접 누를 수 있게 (응답 길이에 따라 버튼 위치 바뀌는 케이스 등)
+    if (step.manualAdvance) {
+      nextBtn.style.display = '';
+      nextBtn.textContent = '눌렀어 →';
+    } else {
+      nextBtn.style.display = 'none';
+    }
   } else if (step.waitFor === 'inputFilled') {
     // V3.13: input/textarea에 값이 들어가면 advance
     if (target) {
