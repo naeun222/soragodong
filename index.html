@@ -2300,6 +2300,9 @@
     padding: 18px 20px;
     max-width: 320px;
     width: calc(100vw - 32px);
+    /* V3.13.x: 본문 길어도 화면 밖 안 잘리게 — 최대 높이 + 내부 스크롤 */
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
     box-shadow: 0 12px 36px rgba(0,0,0,0.6);
     pointer-events: auto;
     z-index: 9100;
@@ -4100,19 +4103,20 @@ function onbPositionStep(step, retryCount) {
     }, 100);
   }
 
-  // 행동 대기 처리
+  // 행동 대기 처리. V3.13.x: 모든 setTimeout에 step 가드 (double advance 방지).
+  const stepIdxAtRender = _onbStep;
+  const safeAdvance = (delay) => setTimeout(() => {
+    if (window._onbTutorialMode && _onbStep === stepIdxAtRender) onbNext();
+  }, delay);
   if (step.waitFor === 'visit' && step.visitScreen) {
     if (target) {
-      const handler = (e) => { setTimeout(() => onbNext(), 350); };
+      const handler = (e) => { safeAdvance(350); };
       onbAddListener(target, 'click', handler);
     }
     nextBtn.style.display = 'none';
   } else if (step.waitFor === 'click') {
     if (target) {
-      const handler = (e) => {
-        const delay = step.advanceDelay || 350;
-        setTimeout(() => onbNext(), delay);
-      };
+      const handler = (e) => { safeAdvance(step.advanceDelay || 350); };
       onbAddListener(target, 'click', handler);
     }
     nextBtn.style.display = 'none';
@@ -4121,7 +4125,7 @@ function onbPositionStep(step, retryCount) {
     if (target) {
       const handler = () => {
         if (target.value && target.value.trim().length >= (step.minLength || 1)) {
-          setTimeout(() => onbNext(), step.advanceDelay || 600);
+          safeAdvance(step.advanceDelay || 600);
         }
       };
       onbAddListener(target, 'input', handler);
@@ -6681,11 +6685,15 @@ function showScreen(name) {
     setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50);
   }
 
-  // V3.13.x: 튜토리얼 visit step — 어떤 경로(nav click/programmatic)든 화면 도달 시 advance
+  // V3.13.x: 튜토리얼 visit step — 어떤 경로든 화면 도달 시 advance.
+  // 단, setTimeout 콜백 실행 시점에 _onbStep이 이미 다른 단계면 무시 (double advance 방지).
   if (window._onbTutorialMode && typeof _onbStep === 'number' && Array.isArray(ONBOARDING_STEPS)) {
     const step = ONBOARDING_STEPS[_onbStep];
     if (step && step.waitFor === 'visit' && step.visitScreen === name) {
-      setTimeout(() => { if (window._onbTutorialMode) onbNext(); }, 400);
+      const stepIdxAtCall = _onbStep;
+      setTimeout(() => {
+        if (window._onbTutorialMode && _onbStep === stepIdxAtCall) onbNext();
+      }, 400);
     }
   }
 }
