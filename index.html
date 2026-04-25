@@ -3735,15 +3735,14 @@ function startWelcomeTutorial() {
 
 // === V3.7 인터랙티브 온보딩 시스템 ===
 // V3.13: 30단계 인터랙티브 튜토리얼 (API키 → 체크인 → 대화 → 부름 → 모래사장 → 아카이브 → 진주 → 실행 → 나)
-// V3.13.x 개편: 27단계 / 7 phases. 친구 톤 + 충분한 설명.
-// V3.13.x 신규 통합: 일기:키워드 직접 시도 / askDeeper → 🧭전략으로 (전략 탭 확인) / 모래사장 결별로 탭.
+// V3.13.x 개편: 27단계 / 7 phases. 소라고동 톤 (친구처럼 따뜻하게).
 const ONBOARDING_STEPS = [
   // === Phase 1: 환영 (1) ===
   {
     id: 'welcome',
     targetSelector: null,
-    title: '안녕, 소라고동이야 🐚',
-    body: '같이 한 바퀴 돌아보자. 직접 눌러보면서 익히면 돼.<br><br><span class="small">튜토리얼 동안 만든 데이터(체크인, 메시지, 미션 등)는 끝날 때 다 지울게. 부담 없이 해봐.</span>',
+    title: '안녕! 나 소라고동이야 🐚',
+    body: '만나서 반가워! 같이 한 바퀴 돌아보면서 익혀보자. 부담 없이 해봐 ✦<br><br><span class="small">튜토리얼 동안 만든 데이터(체크인·메시지·미션 등)는 끝날 때 내가 다 지워줄게.</span>',
     waitFor: 'next'
   },
 
@@ -3752,7 +3751,7 @@ const ONBOARDING_STEPS = [
     id: 'go_model_first',
     targetSelector: '.nav-item[data-screen="model"]',
     title: '먼저 키부터 등록하자',
-    body: 'AI랑 대화하려면 Anthropic API 키가 필요해.<br>키는 "나" 탭 안 설정에서 등록.<br><br>아래 <b>"나"</b> 탭 눌러봐.',
+    body: '나랑 대화하려면 Anthropic API 키가 필요해. 키는 "나" 탭 안 설정에서 등록할 수 있어.<br><br>아래 <b>"나"</b> 탭 한 번 눌러볼래?',
     waitFor: 'visit',
     visitScreen: 'model'
   },
@@ -3760,7 +3759,7 @@ const ONBOARDING_STEPS = [
     id: 'go_settings',
     targetSelector: 'button[onclick*="settings"]',
     title: '⚙ 설정으로',
-    body: '여기 ⚙ 설정 버튼이 보여.<br>눌러서 설정 화면으로 가자.',
+    body: '여기 ⚙ 설정 버튼 보이지? 눌러서 설정 화면으로 가보자.',
     waitFor: 'click',
     advanceDelay: 500,
     fallbackPosition: 'top'
@@ -3769,7 +3768,7 @@ const ONBOARDING_STEPS = [
     id: 'enter_api_key',
     targetSelector: '#apiKeyInput',
     title: '🔑 API 키 붙여넣기',
-    body: 'Anthropic 콘솔에서 발급받은 sk-ant-... 키를 여기 붙여넣어.<br><br><span class="small">키는 네 기기에만 저장돼. 다른 사람은 못 봐.</span>',
+    body: 'Anthropic 콘솔에서 발급받은 sk-ant-... 키를 여기 붙여넣어줘.<br><br><span class="small">키는 너 기기에만 저장돼. 다른 사람은 못 봐 — 안심해.</span>',
     waitFor: 'inputFilled',
     minLength: 10
   },
@@ -3777,7 +3776,7 @@ const ONBOARDING_STEPS = [
     id: 'save_settings',
     targetSelector: 'button[onclick="saveSettings()"]',
     title: '저장',
-    body: '키 저장하면 진짜 시작이야.',
+    body: '키 저장하면 진짜 시작이야! ✦',
     waitFor: 'click',
     advanceDelay: 800
   },
@@ -3787,7 +3786,7 @@ const ONBOARDING_STEPS = [
     id: 'go_home_for_checkin',
     targetSelector: '.nav-item[data-screen="home"]',
     title: '🏠 홈으로',
-    body: '체크인은 홈 화면에서 들어가.<br>아래 🏠 홈 탭 눌러봐.',
+    body: '체크인은 홈 화면에서 들어갈 수 있어.<br>아래 🏠 홈 탭 한 번 눌러볼래?',
     waitFor: 'visit',
     visitScreen: 'home'
   },
@@ -3795,16 +3794,16 @@ const ONBOARDING_STEPS = [
     id: 'go_checkin',
     targetSelector: '.action-card[onclick*="checkin"]',
     title: '✓ 체크인 카드',
-    body: '홈 메인에 있는 체크인 카드야.<br>매일 짧게 기록하는 곳 — 4개만 누르면 끝나.<br><br>눌러봐.<br><br><span class="small">실제 사용 시엔 시간대에 따라 카드 모양이 바뀌어 (밤엔 메인, 낮엔 작은 링크). 튜토리얼 동안엔 항상 메인으로 보여줄게.</span>',
+    body: '여기 메인 카드가 체크인이야! 매일 짧게 기록하는 곳 — 4개만 누르면 끝나니까 부담 없어.<br><br>한 번 눌러볼래?<br><br><span class="small">실제 사용 시엔 시간대에 따라 카드 모양이 바뀌어 (밤엔 메인, 낮엔 작은 링크). 튜토리얼 동안엔 내가 항상 메인 카드로 보여줄게.</span>',
     waitFor: 'click',
     advanceDelay: 800,
-    fallbackPosition: 'top'
+    fallbackPosition: 'bottom'
   },
   {
     id: 'pick_mode',
     targetSelector: '.mode-row',
-    title: '모드 (선택사항이지만 한 번 해보자)',
-    body: '사실 모드는 안 골라도 체크인 가능해.<br>근데 시험 기간/여행 중/아픈 날 같은 컨텍스트가 있으면 AI가 너 상황 더 잘 이해하니까 — 여기선 한 번 골라보자.<br><br>시험/여행/아픔/휴식/월경/🪫방전 중 아무거나 하나.',
+    title: '오늘 컨디션 어때?',
+    body: '모드는 안 골라도 돼! 진짜 선택사항이야.<br>근데 시험 기간이거나 여행 중이거나 아프면 골라두면 좋아 — 내가 너 상황 더 잘 이해할 수 있거든. 여기선 한 번 시험 삼아 골라보자.<br><br>시험 / 여행 / 아픔 / 휴식 / 월경 / 🪫방전 중 아무거나!',
     waitFor: 'click',
     advanceDelay: 500,
     fallbackPosition: 'bottom'
@@ -3812,8 +3811,8 @@ const ONBOARDING_STEPS = [
   {
     id: 'pick_vitality',
     targetSelector: '.vitality-options',
-    title: '⚡ 활력',
-    body: '오늘 에너지 어느 정도야?<br>😵 (방전) ~ ✨ (가득) 중에 직감으로 골라봐.',
+    title: '⚡ 활력은?',
+    body: '오늘 에너지 어느 정도야?<br>😵 (방전) ~ ✨ (가득) 중에 직감으로 골라봐!',
     waitFor: 'click',
     advanceDelay: 500,
     fallbackPosition: 'bottom'
@@ -3821,8 +3820,8 @@ const ONBOARDING_STEPS = [
   {
     id: 'pick_mood',
     targetSelector: '.mood-options',
-    title: '💭 기분',
-    body: '오늘 기분 어떄?<br>대충 골라도 OK. 정확하지 않아도 괜찮아 — 그냥 첫 느낌.',
+    title: '💭 기분은?',
+    body: '오늘 기분 어때? 대충 골라도 괜찮아.<br>정확하지 않아도 OK — 그냥 첫 느낌으로!',
     waitFor: 'click',
     advanceDelay: 500,
     fallbackPosition: 'bottom'
@@ -3831,7 +3830,7 @@ const ONBOARDING_STEPS = [
     id: 'submit_checkin',
     targetSelector: 'button[onclick="submitCheckin()"]',
     title: '✦ 기록 완료',
-    body: '여기까지로 충분해. 눌러봐.<br><br><span class="small">오늘의 질문 / 추적 항목 / 더 기록하기 / 수면 — 다 선택사항이야. 평소엔 원할 때만 채우면 돼.</span>',
+    body: '여기까지로 충분해! 한 번 눌러볼래?<br><br><span class="small">오늘의 질문 / 추적 항목 / 더 기록하기 / 수면 — 다 선택사항이야. 평소엔 원할 때만 채우면 돼.</span>',
     waitFor: 'click',
     advanceDelay: 1500,
     fallbackPosition: 'top'
@@ -3841,8 +3840,8 @@ const ONBOARDING_STEPS = [
   {
     id: 'go_chat',
     targetSelector: '.nav-item[data-screen="chat"]',
-    title: '💬 대화 탭으로',
-    body: '여기가 가장 자유로운 곳이야.<br>대화에서 뭘 할 수 있는지 다음 화면에서 자세히 볼게.',
+    title: '💬 대화 탭 — 소라고동의 꽃!',
+    body: '이제 \'소라고동 앱\'의 핵심, 꽃, 대화 탭으로 갈 차례야! ✨<br>여기가 정말 중요한 곳이야 — 다음 화면에서 자세히 알려줄게.<br><br>아래 💬 대화 탭 눌러봐!',
     waitFor: 'visit',
     visitScreen: 'chat'
   },
@@ -3857,7 +3856,7 @@ const ONBOARDING_STEPS = [
     id: 'send_diary',
     targetSelector: '.send-btn',
     title: '"일기:"로 시작 → 그날 entry로 저장',
-    body: '예시 미리 채웠어. 화살표 눌러서 보내봐.<br><br><span class="small">"일기:" 없이 그냥 보내면 평범한 대화. 둘 다 자유야.</span>',
+    body: '예시 미리 채워뒀어. 화살표 눌러서 한 번 보내봐!<br><br><span class="small">"일기:" 없이 그냥 보내면 평범한 대화야. 둘 다 자유롭게 써.</span>',
     waitFor: 'click',
     advanceDelay: 1000,
     fallbackPosition: 'top',
@@ -3867,37 +3866,37 @@ const ONBOARDING_STEPS = [
     id: 'click_deeper',
     targetSelector: '.msg-action[onclick^="askDeeper"]',
     title: '"더 알고 싶어 ▾"',
-    body: 'AI 답 아래에 "더 알고 싶어" 버튼이 있어.<br>눌러봐. 4단 분석 + 전략으로 깊게 들어감.<br><br><span class="small">답변 길이가 다 달라서 버튼 위치가 바뀌어. 직접 찾아서 누르고 "눌렀어 →" 눌러줘.<br>[내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 4단 형식.</span>',
+    body: '내가 답해주면 그 답 아래에 "더 알고 싶어 ▾" 버튼이 떠. 한 번 눌러볼래?<br>눌러주면 4단 분석 + 전략으로 더 깊게 들어가줄게.<br><br><span class="small">답변 길이에 따라 버튼 위치가 달라. 직접 찾아서 누르고 "눌렀어 →" 눌러줘.<br>[내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 4단 형식이야.</span>',
     waitFor: 'click',
     advanceDelay: 1500,
     manualAdvance: true,
+    dimBackground: false,
     fallbackPosition: 'top'
   },
   {
     id: 'await_deeper_response',
     targetSelector: null,
-    title: '대답 기다려 🐚',
-    body: 'AI가 4단 분석 + 전략 만드는 중. 응답이 길어서 5-15초 걸려.<br><br>응답 다 끝나서 화면에 4단계가 다 보이면 → 다음 눌러.',
-    waitFor: 'next'
+    title: '잠깐 기다려줘 🐚',
+    body: '4단 분석 + 전략 만드는 중이야. 5-15초 정도 걸려.<br>응답 다 끝나서 4단계가 다 보이면 → 다음 눌러줘!',
+    waitFor: 'next',
+    dimBackground: false
   },
   {
     id: 'click_strategy',
     targetSelector: '.msg-action[onclick^="saveMsgAsStrategy"]',
     title: '🧭 전략으로 저장',
-    body: '4단 응답 아래에 "🧭 전략으로" 버튼이 있어.<br>실천할 가이드는 여기로 저장 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">직접 찾아서 누르고 "눌렀어 →" 눌러줘.<br>참고: 일반 응답엔 "✦ 깨달음으로" 버튼이 떠. 4단 응답일 땐 자동으로 "🧭 전략으로"로 바뀜.</span>',
+    body: '4단 응답 아래에 "🧭 전략으로" 버튼이 보일 거야! 한 번 눌러볼래?<br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">참고: 일반 응답엔 "✦ 깨달음으로" 버튼이 떠. 4단 응답일 땐 자동으로 "🧭 전략으로"로 바뀌어.</span>',
     waitFor: 'click',
     advanceDelay: 1200,
-    manualAdvance: true,
     fallbackPosition: 'top'
   },
   {
     id: 'click_accept',
     targetSelector: '.proposal-btn.accept',
     title: '✦ 해볼게',
-    body: '같은 응답 아래에 "✦ 해볼게" 버튼이 있어.<br>전략을 "오늘의 미션"으로 받아들이는 거야.<br>이게 → 홈에 "소라의 부름" ⭐로 등록돼.<br><br><span class="small">직접 찾아서 누르고 "눌렀어 →" 눌러줘.</span>',
+    body: '같은 응답 아래에 "✦ 해볼게" 버튼이 있어. 한 번 눌러볼래?<br>전략을 "오늘의 미션"으로 받아들이는 거야 — 홈에 "소라의 부름" ⭐로 등록돼!',
     waitFor: 'click',
     advanceDelay: 1500,
-    manualAdvance: true,
     fallbackPosition: 'top'
   },
 
@@ -3906,7 +3905,7 @@ const ONBOARDING_STEPS = [
     id: 'mission_done',
     targetSelector: '.mission-btn.complete',
     title: '✓ 해냈어',
-    body: '홈으로 가면 방금 등록한 미션이 ⭐ "소라의 부름"으로 떠있어.<br>"✓ 해냈어" 눌러서 미션 완료해보자. 탑티어 소라 획득!<br><br><span class="small">실제 사용 시엔 인증샷 필수 — 튜토리얼은 우회할게.</span>',
+    body: '홈으로 가면 방금 등록한 미션이 ⭐ "소라의 부름"으로 떠있을 거야!<br>"✓ 해냈어" 한 번 눌러서 미션 완료해보자. 탑티어 소라 획득! ✨<br><br><span class="small">실제 사용 시엔 인증샷이 필수야 — 튜토리얼은 내가 우회해줄게.</span>',
     waitFor: 'click',
     advanceDelay: 2000,
     fallbackPosition: 'top'
@@ -3915,7 +3914,7 @@ const ONBOARDING_STEPS = [
     id: 'open_beach',
     targetSelector: '.home-small-card[onclick="openShellCollection()"]',
     title: '🏖 모래사장',
-    body: '미션 완료한 소라가 모래사장에 쌓여.<br>홈 화면의 모래사장 카드 눌러봐.',
+    body: '미션 완료한 소라가 모래사장에 쌓여 ✨<br>홈 화면의 모래사장 카드 한 번 눌러볼래?',
     waitFor: 'click',
     advanceDelay: 800,
     fallbackPosition: 'bottom'
@@ -3924,7 +3923,7 @@ const ONBOARDING_STEPS = [
     id: 'tier_tab',
     targetSelector: '.beach-tab[data-beach-tab="tier"]',
     title: '"결별로" 탭으로',
-    body: '결(= 등급)별로 묶어 보는 탭이야.<br>탭 눌러서 방금 받은 소라가 어떤 결인지 보자.',
+    body: '결(= 등급)별로 묶어서 보는 탭이야!<br>탭 눌러서 방금 받은 소라가 어떤 결인지 같이 보자.',
     waitFor: 'click',
     advanceDelay: 800,
     fallbackPosition: 'bottom'
@@ -3933,7 +3932,7 @@ const ONBOARDING_STEPS = [
     id: 'close_beach',
     targetSelector: '#shellModal .btn-secondary',
     title: '소라 6단계',
-    body: '🐚 가벼움 → 🌀 일상 → 🐢 메인 → 🦞 황금 → ⭐ <b>부름</b> → ✨ 특별.<br>각 소라 탭하면 그날 이야기 떠.<br><br>다 봤으면 닫기 눌러봐.',
+    body: '소라는 이렇게 6단계로 나뉘어:<br>🐚 가벼움 → 🌀 일상 → 🐢 메인 → 🦞 황금 → ⭐ <b>부름</b> → ✨ 특별<br>각 소라 탭하면 그날 이야기도 떠!<br><br>다 봤으면 닫기 눌러봐.',
     waitFor: 'click',
     advanceDelay: 600,
     fallbackPosition: 'top'
@@ -3943,8 +3942,8 @@ const ONBOARDING_STEPS = [
   {
     id: 'go_archive',
     targetSelector: '.nav-item[data-screen="archive"]',
-    title: '📚 아카이브 탭',
-    body: '대화·일기·깨달음·🧭 전략·💎 진주가 모이는 곳.<br>아카이브 탭 눌러봐.',
+    title: '📚 아카이브 탭으로',
+    body: '대화·일기·깨달음·🧭 전략·💎 진주가 다 모이는 곳이야!<br>아카이브 탭 눌러봐.',
     waitFor: 'visit',
     visitScreen: 'archive'
   },
@@ -3952,7 +3951,7 @@ const ONBOARDING_STEPS = [
     id: 'switch_wisdom',
     targetSelector: '.lens-tab[data-lens="wisdom"]',
     title: '✨ 깨달음 렌즈로',
-    body: '아카이브는 두 렌즈로 보여.<br>📜 대화 (날짜별 일기 + 챕터 토픽) / ✨ 깨달음 (인사이트 + 🧭 전략 + 💎 진주).<br><br>"✨ 깨달음" 탭 눌러서 방금 저장한 전략 확인하자.',
+    body: '아카이브는 두 렌즈로 나뉘어:<br>📜 대화 (날짜별 일기 + 챕터 토픽) / ✨ 깨달음 (인사이트 + 🧭 전략 + 💎 진주)<br><br>"✨ 깨달음" 탭 눌러서 방금 저장한 전략 같이 확인해보자!',
     waitFor: 'click',
     advanceDelay: 600
   },
@@ -3962,15 +3961,15 @@ const ONBOARDING_STEPS = [
     id: 'go_execute',
     targetSelector: '.nav-item[data-screen="execute"]',
     title: '🚀 실행 탭',
-    body: '실행은 머릿속 풀기 → 카드 3장 → 몰입 흐름이야.<br>대화에서 발견한 "할 일"들이 자동으로 서랍장에 들어와 — 우선순위 순으로 보여.<br><br>실행 탭 눌러봐.',
+    body: '실행은 머릿속 풀기 → 카드 3장 → 몰입 흐름이야!<br>대화에서 발견한 "할 일"들이 자동으로 서랍장에 들어와 — 우선순위 순으로 보여줄게.<br><br>실행 탭 한 번 눌러봐.',
     waitFor: 'visit',
     visitScreen: 'execute'
   },
   {
     id: 'go_model_final',
     targetSelector: '.nav-item[data-screen="model"]',
-    title: '✦ 나 탭',
-    body: '"나" 탭에선 추적 항목 그래프 + 가치/특성/패턴 (AI가 대화 보고 너 모델링한 거)을 봐.<br><br>마지막으로 "나" 탭 눌러봐.',
+    title: '✦ 나 탭 — 마지막!',
+    body: '"나" 탭에선 추적 항목 그래프 + 가치/특성/패턴 (내가 너 대화 보면서 모델링한 거)을 볼 수 있어.<br><br>마지막으로 "나" 탭 눌러봐!',
     waitFor: 'visit',
     visitScreen: 'model'
   },
@@ -3978,7 +3977,7 @@ const ONBOARDING_STEPS = [
     id: 'finish',
     targetSelector: null,
     title: '준비 끝 ✦',
-    body: '한 바퀴 다 돌았어.<br><br>이 앱은 친구야.<br>잘난 척 X, 판단 X. 들어주고 같이 풀어줘.<br>편하게 솔직하게 다 던져.<br><br><span class="small">튜토리얼 동안 만든 데이터는 다 지웠어. 진짜 시작.</span>',
+    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br>나는 너의 친구야.<br>잘난 척 X, 판단 X. 들어주고 같이 풀어줄게.<br>편하게 솔직하게 다 던져!<br><br><span class="small">튜토리얼 동안 만든 데이터는 내가 다 지웠어. 진짜 시작.</span>',
     waitFor: 'next',
     nextLabel: '시작! ✦'
   }
@@ -4058,6 +4057,26 @@ function onbPositionStep(step, retryCount) {
   bodyEl.innerHTML = step.body;
   nextBtn.textContent = step.nextLabel || (_onbStep === ONBOARDING_STEPS.length - 1 ? '끝!' : '다음 →');
 
+  // V3.13.x: dimBackground:false 옵션 — 배경 안 어둡게 + coachmark 우상단 컴팩트
+  // (AI 응답 보면서 진행하는 step에서 화면 가리지 않도록)
+  if (step.dimBackground === false) {
+    spotlight.style.display = 'none';
+    mask.classList.remove('show-full');
+    const ovDim = document.getElementById('onbOverlay');
+    if (ovDim) ovDim.style.pointerEvents = 'none';
+    coachmark.style.top = '20px';
+    coachmark.style.right = '12px';
+    coachmark.style.left = 'auto';
+    coachmark.style.transform = 'none';
+    coachmark.style.maxWidth = '260px';
+    coachmark.style.bottom = 'auto';
+    // target click listener는 아래 일반 흐름에서 등록되어야 함 → target 잡기만 이어서
+  } else {
+    // 평소 위치 reset (이전 step에서 dimBackground:false 사용했을 수 있음)
+    coachmark.style.maxWidth = '';
+    coachmark.style.right = 'auto';
+  }
+
   // 타깃 위치 잡기
   let target = null;
   if (step.targetSelector) {
@@ -4066,8 +4085,8 @@ function onbPositionStep(step, retryCount) {
     if (target && target.offsetParent === null) {
       target = null;
     }
-    // V3.13.x: target 없으면 polling. 동안 coachmark는 화면 중앙 임시 표시 (어두컴컴 방지)
-    if (!target) {
+    // V3.13.x: target 없고 dimBackground !== false면 polling. coachmark는 화면 중앙 임시 표시.
+    if (!target && step.dimBackground !== false) {
       spotlight.style.display = 'none';
       mask.classList.add('show-full');
       const ov0 = document.getElementById('onbOverlay');
@@ -4087,15 +4106,10 @@ function onbPositionStep(step, retryCount) {
         }, 200);
         return;
       }
-      // 6초 후에도 못 찾으면 화면 중앙 fallback (이미 위에서 설정됨). 아래 if(target) 분기 건너뜀.
     }
   }
-  // V3.13.x: target이 viewport 밖이면 자동 스크롤.
-  //  - fixed/sticky element는 skip (무한 루프 방지)
-  //  - step당 1회만 시도
-  //  - behavior:'auto' (즉시 스크롤) — smooth는 비동기 완료 시점이 불확실해서 spotlight가 transitional 좌표 잡음
-  //  - 스크롤 동안 spotlight 임시 hidden — 잘못된 위치 표시 방지
-  if (target) {
+  // V3.13.x: 자동 스크롤 (dimBackground !== false에서만)
+  if (target && step.dimBackground !== false) {
     const r0 = target.getBoundingClientRect();
     const vhCheck = window.innerHeight;
     const cs = window.getComputedStyle(target);
@@ -4110,47 +4124,50 @@ function onbPositionStep(step, retryCount) {
       return;
     }
   }
-  
-  if (target) {
-    const rect = target.getBoundingClientRect();
-    const padding = 8;
-    spotlight.style.display = 'block';
-    spotlight.style.left = (rect.left - padding) + 'px';
-    spotlight.style.top = (rect.top - padding) + 'px';
-    spotlight.style.width = (rect.width + padding * 2) + 'px';
-    spotlight.style.height = (rect.height + padding * 2) + 'px';
-    // V3.12.x: target 있을 때 mask 숨김 + overlay 클릭 패스스루 (inline 강제)
-    mask.classList.remove('show-full');
-    const ov = document.getElementById('onbOverlay');
-    if (ov) ov.style.pointerEvents = 'none';
-    
-    // coachmark 위치 (타깃 위 또는 아래 중 공간 더 큰 쪽)
-    const vh = window.innerHeight;
-    const spaceAbove = rect.top;
-    const spaceBelow = vh - rect.bottom;
-    const cmHeight = 220; // 대략
-    let cmTop;
-    if (step.fallbackPosition === 'top' || spaceAbove >= cmHeight && spaceAbove >= spaceBelow) {
-      cmTop = Math.max(16, rect.top - cmHeight - 16);
-    } else if (step.fallbackPosition === 'bottom' || spaceBelow >= cmHeight) {
-      cmTop = Math.min(vh - cmHeight - 16, rect.bottom + 16);
+
+  // V3.13.x: spotlight + coachmark 위치 잡기 (dimBackground !== false에서만)
+  if (step.dimBackground !== false) {
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const padding = 8;
+      spotlight.style.display = 'block';
+      spotlight.style.left = (rect.left - padding) + 'px';
+      spotlight.style.top = (rect.top - padding) + 'px';
+      spotlight.style.width = (rect.width + padding * 2) + 'px';
+      spotlight.style.height = (rect.height + padding * 2) + 'px';
+      // V3.12.x: target 있을 때 mask 숨김 + overlay 클릭 패스스루 (inline 강제)
+      mask.classList.remove('show-full');
+      const ov = document.getElementById('onbOverlay');
+      if (ov) ov.style.pointerEvents = 'none';
+
+      // coachmark 위치 (타깃 위 또는 아래 중 공간 더 큰 쪽)
+      const vh = window.innerHeight;
+      const spaceAbove = rect.top;
+      const spaceBelow = vh - rect.bottom;
+      const cmHeight = 220; // 대략
+      let cmTop;
+      if (step.fallbackPosition === 'top' || spaceAbove >= cmHeight && spaceAbove >= spaceBelow) {
+        cmTop = Math.max(16, rect.top - cmHeight - 16);
+      } else if (step.fallbackPosition === 'bottom' || spaceBelow >= cmHeight) {
+        cmTop = Math.min(vh - cmHeight - 16, rect.bottom + 16);
+      } else {
+        cmTop = (vh - cmHeight) / 2;
+      }
+      coachmark.style.top = cmTop + 'px';
+      coachmark.style.left = '50%';
+      coachmark.style.transform = 'translateX(-50%)';
+      coachmark.style.bottom = 'auto';
     } else {
-      cmTop = (vh - cmHeight) / 2;
+      // 타깃 없음 — 화면 중앙. mask 표시해서 클릭 차단 (welcome/finish 화면).
+      spotlight.style.display = 'none';
+      mask.classList.add('show-full');
+      const ov = document.getElementById('onbOverlay');
+      if (ov) ov.style.pointerEvents = 'auto';
+      coachmark.style.top = '50%';
+      coachmark.style.left = '50%';
+      coachmark.style.transform = 'translate(-50%, -50%)';
+      coachmark.style.bottom = 'auto';
     }
-    coachmark.style.top = cmTop + 'px';
-    coachmark.style.left = '50%';
-    coachmark.style.transform = 'translateX(-50%)';
-    coachmark.style.bottom = 'auto';
-  } else {
-    // 타깃 없음 — 화면 중앙. mask 표시해서 클릭 차단 (welcome/finish 화면).
-    spotlight.style.display = 'none';
-    mask.classList.add('show-full');
-    const ov = document.getElementById('onbOverlay');
-    if (ov) ov.style.pointerEvents = 'auto';
-    coachmark.style.top = '50%';
-    coachmark.style.left = '50%';
-    coachmark.style.transform = 'translate(-50%, -50%)';
-    coachmark.style.bottom = 'auto';
   }
 
   // V3.13 prefill: 모달이나 input에 예시 값 자동 주입
