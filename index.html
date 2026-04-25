@@ -409,16 +409,16 @@
     <!-- Step 1: Email -->
     <div class="login-form" id="loginStep1">
       <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
-      <button class="btn-primary" id="loginBtn" onclick="handleSendCode()">6자리 코드 받기</button>
+      <button class="btn-primary" id="loginBtn" onclick="handleSendCode()">로그인 코드 받기</button>
       <div class="login-status" id="loginStatus"></div>
     </div>
 
     <!-- Step 2: Code -->
     <div class="login-form" id="loginStep2" style="display:none;">
       <div style="font-size:13px; color:var(--text); margin-bottom:14px; line-height:1.6;">
-        <strong id="loginEmailDisplay"></strong> 으로<br>6자리 코드를 보냈어.
+        <strong id="loginEmailDisplay"></strong> 으로<br>코드를 보냈어.
       </div>
-      <input type="text" id="loginCode" placeholder="6자리 코드" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" style="text-align:center; font-size:22px; letter-spacing:0.3em; font-family:monospace;">
+      <input type="text" id="loginCode" placeholder="이메일로 받은 코드" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" style="text-align:center; font-size:22px; letter-spacing:0.25em; font-family:monospace;">
       <button class="btn-primary" id="verifyBtn" onclick="handleVerifyCode()">로그인</button>
       <div class="login-status" id="verifyStatus"></div>
       <button class="btn-secondary" onclick="resetLoginFlow()" style="margin-top:14px;">이메일 다시 입력</button>
@@ -1167,7 +1167,7 @@ async function handleVerifyCode() {
   const email = document.getElementById('loginStep2').dataset.email;
   const codeInput = document.getElementById('loginCode');
   const code = codeInput.value.trim();
-  if (!code || code.length !== 6) { alert('6자리 코드를 입력해줘'); return; }
+  if (!code || code.length < 6) { alert('이메일에 받은 코드를 입력해줘'); return; }
 
   const btn = document.getElementById('verifyBtn');
   const status = document.getElementById('verifyStatus');
@@ -1177,7 +1177,6 @@ async function handleVerifyCode() {
 
   try {
     await verifyOTP(email, code);
-    // Success — reload to enter app
     status.textContent = '✓ 로그인 성공! 잠시만...';
     status.style.color = 'var(--success)';
     setTimeout(() => location.reload(), 600);
@@ -1198,7 +1197,7 @@ function resetLoginFlow() {
   document.getElementById('loginStatus').textContent = '';
   document.getElementById('verifyStatus').textContent = '';
   document.getElementById('loginBtn').disabled = false;
-  document.getElementById('loginBtn').textContent = '6자리 코드 받기';
+  document.getElementById('loginBtn').textContent = '로그인 코드 받기';
 }
 
 function todayKey() { return new Date().toISOString().split('T')[0]; }
@@ -3240,10 +3239,10 @@ document.addEventListener('DOMContentLoaded', () => {
     loginCode.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); handleVerifyCode(); }
     });
-    // Auto-submit when 6 digits entered
+    // Auto-submit when full code entered
     loginCode.addEventListener('input', (e) => {
       e.target.value = e.target.value.replace(/\D/g, ''); // numeric only
-      if (e.target.value.length === 6) {
+      if (e.target.value.length >= 8) {
         setTimeout(() => handleVerifyCode(), 100);
       }
     });
