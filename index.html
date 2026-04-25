@@ -7416,7 +7416,7 @@ function acceptProposal(idx) {
   if (title) {
     createMission(title, description, { sourceMessageIdx: idx });
     // V3.12.x: 해볼게 효과 — 소라의 부름 등장 celebration
-    showCelebration('🐚', '소라가 부름을 가져왔어!', '✨');
+    showCelebration('🐚', '소라가 널 부르고 있어!', '✨');
   }
 
   saveState();
@@ -8271,6 +8271,7 @@ function renderExecute() {
             <div class="exec-card-meta">
               <span>${energyLabel}</span>
               ${task.assignedBlock ? `<span>📅 ${getBlockLabel(task.assignedBlock)}</span>` : ''}
+              ${(() => { const t = getTaskElapsedTime(task.id); return t ? `<span>⏱ ${t}</span>` : ''; })()}
             </div>
             <div class="exec-card-actions">
               <button class="start-btn" onclick="startQuest('${task.id}')">🚀 시작</button>
@@ -9076,6 +9077,18 @@ ${task.description ? `설명: ${task.description}` : ''}
 }
 
 // Toggle - allows "uncompleting" if user clicked by mistake
+// V3.12.x: 마지막 start의 경과시간 (시작 → 돌아옴)
+function getTaskElapsedTime(taskId) {
+  const starts = (state.starts || []).filter(s => s.taskId === taskId && s.returnedAt);
+  if (starts.length === 0) return null;
+  const last = starts[starts.length - 1];
+  const ms = new Date(last.returnedAt) - new Date(last.startedAt);
+  const mins = Math.round(ms / 60000);
+  if (mins < 1) return '< 1분';
+  if (mins < 60) return `${mins}분`;
+  return `${Math.floor(mins/60)}시간 ${mins%60}분`;
+}
+
 function toggleQuestComplete(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
@@ -9083,16 +9096,15 @@ function toggleQuestComplete(taskId) {
     // Uncomplete
     task.status = 'active';
     task.completedAt = null;
-    // Remove the most recent shell if it was an AI mission (avoid double-counting)
-    if (task.source === 'ai_mission') {
-      const lastShell = (state.shellCollection || []).slice().reverse().find(s => s.taskId === taskId);
-      if (lastShell) {
-        const idx = state.shellCollection.lastIndexOf(lastShell);
-        if (idx >= 0) state.shellCollection.splice(idx, 1);
-      }
+    // V3.12.x fix: 모든 task 종류에서 마지막 소라 제거 (이전엔 ai_mission만 제거하던 버그)
+    const lastShell = (state.shellCollection || []).slice().reverse().find(s => s.taskId === taskId);
+    if (lastShell) {
+      const idx = state.shellCollection.lastIndexOf(lastShell);
+      if (idx >= 0) state.shellCollection.splice(idx, 1);
     }
     saveState();
     renderExecute();
+    if (typeof renderShellBar === 'function') renderShellBar();
     showToast('되살림 ✦');
   } else {
     completeQuest(taskId);
