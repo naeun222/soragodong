@@ -2371,6 +2371,49 @@
 
   a { color: var(--accent); }
 
+  /* V3.12.x: 체크인 안 추적 항목 입력 (작은 inline) */
+  .checkin-tracker-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 6px;
+  }
+  .checkin-tracker-row .ct-emoji { font-size: 16px; flex-shrink: 0; }
+  .checkin-tracker-row .ct-label {
+    flex: 1; font-size: 13px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .checkin-tracker-row input {
+    width: 80px;
+    padding: 6px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    text-align: right;
+  }
+  .checkin-tracker-row .ct-unit {
+    font-size: 11px; color: var(--text-dim);
+    flex-shrink: 0; min-width: 20px;
+  }
+  .checkin-tracker-add {
+    width: 100%;
+    padding: 8px;
+    background: transparent;
+    border: 1px dashed var(--border-strong);
+    border-radius: 10px;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .checkin-tracker-add:active { background: var(--surface); color: var(--accent); }
+
   /* V3.12: Project tracking — "나" 탭 안 카드 */
   .project-section { margin-bottom: 22px; }
   .project-section-header {
@@ -2649,6 +2692,11 @@
             <button class="quick-btn" onclick="selectQuick(this, 'overwhelm', '많이')">많이</button>
             <button class="quick-btn" onclick="selectQuick(this, 'overwhelm', '너무')">너무</button>
           </div>
+        </div>
+
+        <div class="module-row">
+          <div class="module-label">📊 추적 항목 (선택)</div>
+          <div id="checkinTrackersContainer"></div>
         </div>
       </div>
 
@@ -6113,7 +6161,7 @@ function showScreen(name) {
 
   if (name === 'home') { applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3(); renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink(); }
   if (name === 'execute') renderExecute();
-  if (name === 'checkin') { renderDailyQuestion(); renderModes(); }
+  if (name === 'checkin') { renderDailyQuestion(); renderModes(); renderCheckinTrackers(); }
   if (name === 'model') renderModel();
   if (name === 'archive') renderArchive();
   if (name === 'decisions') renderDecisionsList();
@@ -6272,6 +6320,28 @@ async function submitCheckin() {
     if (currentCheckin[k]) entry[k] = currentCheckin[k];
   });
   entry.timestamp = new Date().toISOString();
+
+  // V3.12.x: 추적 항목 값 캡처 → state.projects의 measurements에 push
+  (state.projects || []).filter(p => p.status === 'active').forEach(p => {
+    const inputEl = document.getElementById('track_' + p.id);
+    if (!inputEl || inputEl.value === '') return;
+    const val = parseFloat(inputEl.value);
+    if (isNaN(val)) return;
+    if (p.baseline === null || p.baseline === undefined) {
+      // 첫 입력 → baseline으로 자동 설정
+      p.baseline = val;
+      p.startDate = entry.date;
+    }
+    p.measurements = p.measurements || [];
+    p.measurements.push({ value: val, at: new Date().toISOString(), source: 'checkin' });
+    // 목표 도달 시 자동 완료
+    if (p.target !== null && p.target !== undefined) {
+      const reached = (p.target > p.baseline && val >= p.target) || (p.target < p.baseline && val <= p.target);
+      if (reached && p.status === 'active') p.status = 'done';
+    }
+    inputEl.value = '';
+  });
+
   saveState();
 
   if (note.trim()) {
@@ -9208,13 +9278,13 @@ function renderProjects() {
   const visible = (state.projects || []).filter(p => p.status !== 'abandoned' && p.target !== undefined);
   let html = `<div class="project-section">
     <div class="project-section-header">
-      <div class="project-section-title">🏃 프로젝트</div>
-      <button class="project-add-btn" onclick="addNewProject()">+ 추가</button>
+      <div class="project-section-title">📊 추적 항목</div>
+      <button class="project-add-btn" onclick="addNewTracker()">+ 추가</button>
     </div>`;
   if (visible.length === 0) {
     html += `<div style="font-size:12px; color:var(--text-dim); padding:10px 0 4px; line-height:1.7;">
-      장기 프로젝트 없어. 다이어트 / 운동 / 공부 같은 거 추가해봐.<br>
-      체중·시간·횟수 추적하고 그래프로 봐.
+      추적 중인 항목 없어.<br>
+      체크인 화면 "📊 추적 항목"에서 추가하면 매일 기록 + 그래프.
     </div>`;
   } else {
     visible.forEach(p => { html += renderProjectCard(p); });
@@ -9256,9 +9326,20 @@ function renderProjectCard(p) {
 }
 
 function computeProjectProgress(p) {
-  const last = (p.measurements || []).length > 0
-    ? p.measurements[p.measurements.length - 1].value
+  const measurements = p.measurements || [];
+  const last = measurements.length > 0
+    ? measurements[measurements.length - 1].value
     : p.baseline;
+  const hasBaseline = p.baseline !== null && p.baseline !== undefined;
+  const hasTarget = p.target !== null && p.target !== undefined;
+
+  // baseline/target 없으면 그냥 현재값 표시
+  if (!hasBaseline || !hasTarget) {
+    return {
+      pct: 0,
+      label: last !== null && last !== undefined ? `${last}${p.unit || ''}${!hasTarget ? ' (목표 X)' : ''}` : '아직 기록 없음'
+    };
+  }
   const total = Math.abs(p.target - p.baseline);
   if (total === 0) return { pct: 0, label: '시작 전' };
   const moved = Math.abs(last - p.baseline);
@@ -9271,14 +9352,16 @@ function computeProjectProgress(p) {
 }
 
 function renderProjectGraphSVG(p) {
-  const points = [
-    { value: p.baseline, at: p.startDate || p.createdAt },
-    ...(p.measurements || [])
-  ];
+  // V3.12.x: baseline 없으면 첫 측정값을 baseline으로 가정
+  const hasBaseline = p.baseline !== null && p.baseline !== undefined;
+  const hasTarget = p.target !== null && p.target !== undefined;
+  const points = hasBaseline
+    ? [{ value: p.baseline, at: p.startDate || p.createdAt }, ...(p.measurements || [])]
+    : (p.measurements || []);
   if (points.length < 2) {
     return '<div style="font-size:11px; color:var(--text-dim); text-align:center; padding:14px;">측정 기록을 더 쌓으면 그래프가 그려져.</div>';
   }
-  const values = points.map(pt => pt.value).concat([p.target]);
+  const values = points.map(pt => pt.value).concat(hasTarget ? [p.target] : []);
   const minV = Math.min(...values);
   const maxV = Math.max(...values);
   const range = (maxV - minV) || 1;
@@ -9290,17 +9373,22 @@ function renderProjectGraphSVG(p) {
     const y = h - padY - ((pt.value - minV) / range) * innerH;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
-  const targetY = h - padY - ((p.target - minV) / range) * innerH;
   const dots = points.map((pt, i) => {
     const x = padX + (i / Math.max(points.length - 1, 1)) * innerW;
     const y = h - padY - ((pt.value - minV) / range) * innerH;
     return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--accent2)"/>`;
   }).join('');
+  let targetLine = '';
+  if (hasTarget) {
+    const targetY = h - padY - ((p.target - minV) / range) * innerH;
+    targetLine = `
+      <line x1="${padX}" y1="${targetY.toFixed(1)}" x2="${w-padX}" y2="${targetY.toFixed(1)}" stroke="var(--success)" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+      <text x="${w-padX}" y="${(targetY-3).toFixed(1)}" text-anchor="end" fill="var(--success)" font-size="10">목표 ${p.target}${p.unit || ''}</text>`;
+  }
   return `<svg class="pc-graph-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <line x1="${padX}" y1="${targetY.toFixed(1)}" x2="${w-padX}" y2="${targetY.toFixed(1)}" stroke="var(--success)" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+    ${targetLine}
     <polyline points="${polyPoints}" fill="none" stroke="var(--accent)" stroke-width="2"/>
     ${dots}
-    <text x="${w-padX}" y="${(targetY-3).toFixed(1)}" text-anchor="end" fill="var(--success)" font-size="10">목표 ${p.target}${p.unit || ''}</text>
   </svg>`;
 }
 
@@ -9440,6 +9528,80 @@ async function openProjectMenu(id) {
       showToast('포기했어. 괜찮아.');
     }
   }
+}
+
+// V3.12.x: 체크인 통합 — 작은 모달로 추적 항목 추가 (이름 + 단위 / target 선택)
+async function addNewTracker() {
+  const title = await showInputModal({
+    title: '추적할 항목',
+    placeholder: '예: 체중, 5km 시간, 페이지',
+    maxLength: 30
+  });
+  if (!title || !title.trim()) return;
+
+  const unit = await showInputModal({
+    title: '단위 (선택)',
+    placeholder: '예: kg, 분, 회',
+    defaultValue: ''
+  });
+  if (unit === null) return;
+
+  const targetStr = await showInputModal({
+    title: '목표값 (선택)',
+    message: '안 정해도 OK. 나중에 메뉴에서 추가 가능.',
+    placeholder: '숫자만',
+    defaultValue: ''
+  });
+  if (targetStr === null) return;
+  const target = targetStr.trim() ? parseFloat(targetStr) : null;
+
+  const project = {
+    id: 'proj_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: title.trim(),
+    emoji: '📊',
+    type: 'custom',
+    unit: (unit || '').trim(),
+    baseline: null,  // 첫 체크인 입력 때 자동 설정
+    target: (target !== null && !isNaN(target)) ? target : null,
+    measurements: [],
+    status: 'active',
+    showGraph: false,
+    createdAt: new Date().toISOString(),
+    startDate: todayKey()
+  };
+  if (!state.projects) state.projects = [];
+  state.projects.push(project);
+  saveState();
+  renderCheckinTrackers();
+  if (typeof renderProjects === 'function') renderProjects();
+  showToast(`📊 ${project.title} 추적 시작`);
+}
+
+// V3.12.x: 체크인 화면에 활성 추적 항목 입력 필드 렌더
+function renderCheckinTrackers() {
+  const container = document.getElementById('checkinTrackersContainer');
+  if (!container) return;
+  const active = (state.projects || []).filter(p => p.status === 'active');
+
+  let html = '';
+  if (active.length > 0) {
+    active.forEach(p => {
+      const last = (p.measurements || []).length > 0
+        ? p.measurements[p.measurements.length - 1].value
+        : (p.baseline !== null && p.baseline !== undefined ? p.baseline : '');
+      const placeholder = last !== '' ? `이전: ${last}${p.unit || ''}` : '숫자';
+      html += `
+        <div class="checkin-tracker-row">
+          <span class="ct-emoji">${p.emoji || '📊'}</span>
+          <span class="ct-label">${escapeHtml(p.title)}</span>
+          <input type="number" step="any" id="track_${p.id}" placeholder="${escapeHtml(placeholder)}">
+          <span class="ct-unit">${escapeHtml(p.unit || '')}</span>
+        </div>
+      `;
+    });
+  }
+  html += `<button class="checkin-tracker-add" onclick="addNewTracker()">+ 항목 추가</button>`;
+  container.innerHTML = html;
 }
 
 // V3.12: 채팅 자연어 → 측정값 추출 (regex 기반 — AI 호출 절약)
