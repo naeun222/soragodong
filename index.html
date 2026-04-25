@@ -3011,9 +3011,35 @@
         <button class="btn-secondary" onclick="exportData()">📤 데이터 내보내기 (백업)</button>
         <button class="btn-secondary" onclick="startInteractiveOnboarding()">🐚 투어 다시 보기</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
-        <button class="btn-secondary btn-danger" onclick="resetShellCollection()" style="margin-top:8px;">🐚 소라 컬렉션만 초기화</button>
+
+        <details class="model-collapse" style="margin-top:12px;">
+          <summary>🧹 부분 초기화 (실수로 잘못 입력한 거 정리)</summary>
+          <div class="model-collapse-content" style="padding: 10px 14px;">
+            <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">
+              해당 데이터만 삭제. 다른 데이터는 그대로.
+            </div>
+            <button class="btn-secondary btn-danger" onclick="resetShellCollection()">🐚 소라 컬렉션만</button>
+            <button class="btn-secondary btn-danger" onclick="resetChatMessages()" style="margin-top:6px;">💬 대화 메시지만</button>
+            <button class="btn-secondary btn-danger" onclick="resetEntries()" style="margin-top:6px;">✓ 체크인 entries만</button>
+            <button class="btn-secondary btn-danger" onclick="resetTopicCards()" style="margin-top:6px;">🐚 토픽 카드 + 전략 카드만</button>
+            <button class="btn-secondary btn-danger" onclick="resetMissions()" style="margin-top:6px;">⭐ 미션만</button>
+            <button class="btn-secondary btn-danger" onclick="resetArchive()" style="margin-top:6px;">📚 아카이브(깨달음)만</button>
+            <button class="btn-secondary btn-danger" onclick="resetPearls()" style="margin-top:6px;">💎 진주만</button>
+            <button class="btn-secondary btn-danger" onclick="resetTasks()" style="margin-top:6px;">📋 할 일(서랍장)만</button>
+          </div>
+        </details>
+
         <button class="btn-secondary btn-danger" onclick="rollbackToV5()" style="margin-top:8px;">⏪ V3 이전 상태로 되돌리기</button>
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
+      </div>
+
+      <div style="margin-top:24px;">
+        <div class="input-label" style="margin-bottom:8px;">🧪 테스터 모드</div>
+        <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
+          ON 시 모든 변경(체크인/대화/미션 등)이 <b>저장되지 않아</b>. 새로고침하면 ON 켜기 전 상태로 돌아옴.<br>
+          기능 테스트하면서 데이터 더럽히기 싫을 때 켜둬.
+        </div>
+        <button class="btn-secondary" id="testerModeToggleBtn" onclick="toggleTesterMode()">🧪 테스터 모드: OFF</button>
       </div>
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">👤 계정</div>
@@ -3196,8 +3222,10 @@ let currentCheckin = {};
 let syncStatus = 'offline';
 let syncTimeout = null;
 
-function saveState() {
+function saveState(force) {
   if (!authUserId) return; // Don't save if not logged in
+  // V3.13.x: 테스터 모드 — 변경 저장 안 함. force=true면 강제 (토글 자체 저장용)
+  if (state.preferences && state.preferences.testerMode && !force) return;
   localStorage.setItem('soragodong_v2', JSON.stringify(state));
   saveToCloud();
 }
@@ -3713,6 +3741,11 @@ async function init() {
     runDiaryAutoSummaryIfNeeded().catch(e => console.warn('diary auto summary error:', e));
   }, 7000);
 
+  // V3.13.x: 테스터 모드 켜져 있으면 배지 표시
+  if (state.preferences && state.preferences.testerMode) {
+    setTimeout(refreshTesterModeUI, 100);
+  }
+
   // 첫 사용자 vs 기존 사용자 분기
   const isBrandNewUser = !state.hasSeenWelcomeTutorial 
     && (state.entries || []).length === 0 
@@ -3794,7 +3827,7 @@ const ONBOARDING_STEPS = [
     id: 'go_checkin',
     targetSelector: '.action-card[onclick*="checkin"]',
     title: '✓ 체크인 카드',
-    body: '여기 메인 카드가 체크인이야! 매일 짧게 기록하는 곳 — 4개만 누르면 끝나니까 부담 없어.<br><br>한 번 눌러볼래?<br><br><span class="small">실제 사용 시엔 시간대에 따라 카드 모양이 바뀌어 (밤엔 메인, 낮엔 작은 링크). 튜토리얼 동안엔 내가 항상 메인 카드로 보여줄게.</span>',
+    body: '여기 메인 카드가 체크인이야! 매일 짧게 기록하는 곳 — 4개만 누르면 끝나니까 부담 없어.<br><br>한 번 눌러볼래?<br><br><span class="small">참고: 체크인 카드는 <b>밤에만</b> 메인으로 떠. 낮엔 안 보일 수도 있어 — 하루 기록은 하루 끝에 차분히 닫는 게 자연스러우니까. 낮에 체크인하고 싶으면 모드/활력/기분 행에서 직접 눌러도 돼.<br>튜토리얼 동안엔 내가 항상 메인 카드로 보여줄게.</span>',
     waitFor: 'click',
     advanceDelay: 800,
     fallbackPosition: 'bottom'
@@ -3886,7 +3919,7 @@ const ONBOARDING_STEPS = [
     id: 'click_strategy',
     targetSelector: '.msg-action[onclick^="saveMsgAsStrategy"]',
     title: '🧭 전략으로',
-    body: '4단 응답 아래에 <b>"🧭 전략으로"</b> 버튼이 보일 거야! ("전략 저장"이 아니라 정확히 "🧭 전략으로"야)<br>한 번 눌러볼래?<br><br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">참고: 일반 응답엔 "✦ 깨달음으로" 버튼이 떠. 4단 응답일 땐 자동으로 "🧭 전략으로"로 바뀌어.</span>',
+    body: '4단 응답 아래에 <b>"🧭 전략으로"</b> 버튼이 보일 거야! 한 번 눌러볼래?<br><br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">참고: 일반 응답엔 "✦ 깨달음으로" 버튼이 떠. 4단 응답일 땐 자동으로 "🧭 전략으로"로 바뀌어.</span>',
     waitFor: 'click',
     advanceDelay: 1200,
     fallbackPosition: 'top'
@@ -3951,7 +3984,7 @@ const ONBOARDING_STEPS = [
     id: 'home_features_intro',
     targetSelector: null,
     title: '홈 화면에 두 가지 더',
-    body: '홈을 자세히 보면 두 가지 더 있어:<br><br>· <b>🌙 주간 리뷰</b> — 매주 일요일에 떠. 한 주 데이터(체크인·대화·미션)를 내가 분석해서 인사이트 + 전략 + 새로운 가치/특성을 발견해줘. 너 자신을 더 깊게 이해하는 시간이야.<br><br>· <b>⚖️ 결정의 방</b> — 큰 결정(이직·이별·진로·이사 등) 14일 동안 숙성하면서 매일 다른 각도로 같이 생각해보는 곳이야. 충동적 결정 X, 깊이 있는 결정 ○.<br><br>둘 다 너 페이스에 맞춰 떠. 부담 갖지 말고 천천히 ✦',
+    body: '홈을 자세히 보면 두 가지 더 있어:<br><br>· <b>🌙 주간 리뷰</b> — 매주 일요일에 떠. 한 주 데이터(체크인·대화·미션)를 내가 분석해서 인사이트 + 전략 + 새로운 가치/특성을 발견해줘. 너 자신을 더 깊게 이해하는 시간이야.<br><br>· <b>⚖️ 결정의 방</b> — 큰 결정(이직·이별·진로·이사 등) 14일 동안 숙성하면서 매일 다른 각도로 같이 생각해보는 곳이야. 충동적 결정 X, 깊이 있는 결정 ○.<br><br>둘 다 너 페이스에 맞춰 떠. <b>이따가 한 번 구경해봐!</b> ✦',
     waitFor: 'next',
     dimBackground: false
   },
@@ -3961,7 +3994,7 @@ const ONBOARDING_STEPS = [
     id: 'go_archive',
     targetSelector: '.nav-item[data-screen="archive"]',
     title: '📚 아카이브 탭으로',
-    body: '대화·일기·깨달음·🧭 전략·💎 진주가 다 모이는 곳이야!<br>아카이브 탭 눌러봐.',
+    body: '<b>네가 하루동안 입력한 정보 + 일기가 날짜별로 자동 정리</b>되는 곳이야!<br>대화·일기·깨달음·🧭 전략·💎 진주가 다 여기 모여.<br><br>아래 📚 아카이브 탭 눌러봐.',
     waitFor: 'visit',
     visitScreen: 'archive'
   },
@@ -3997,7 +4030,7 @@ const ONBOARDING_STEPS = [
     id: 'execute_intro',
     targetSelector: null,
     title: '실행 탭 안내',
-    body: '여기서 할 수 있는 거:<br><br>· <b>🌧 머릿속 풀기</b> — 와다다 쏟아내면 내가 카드 3장으로 정리해줘<br>· <b>오늘의 카드 3장</b> — 가장 중요한 3개. 무거운 짐 내려놓고 이것만 봐<br>· <b>📂 서랍장</b> — 카드 밑에 우선순위 순. 대화에서 발견한 할 일들 자동으로 모임<br>· <b>🌧 몰입 시작</b> — 빗소리 + 단축어 + 시간 자동 기록<br><br>천천히 둘러보고 다음 눌러줘.',
+    body: '여기서 할 수 있는 거:<br><br>· <b>🌧 머릿속 풀기</b> — 와다다 쏟아내면 내가 카드 3장으로 정리해줘<br>· <b>오늘의 카드 3장</b> — 가장 중요한 3개. 무거운 짐 내려놓고 이것만 봐. <b>완료하면 중요도에 따라 다른 결의 소라가 보상으로 와!</b> (light/daily/main/golden)<br>· 카드 옆 ✕ <b>삭제 / ✎ 수정</b> 버튼으로 정리도 가능<br>· <b>📂 서랍장</b> — 카드 밑에 우선순위 순. 대화에서 발견한 할 일들 자동으로 모임<br>· <b>🌧 몰입 시작</b> — 빗소리 + 단축어 + 시간 자동 기록<br><br><span class="small">몰입 단축어 만드는 방법은 ⚙ 설정 → "🌧 몰입 단축어 만들기"에 자세히 있어!</span><br><br>천천히 둘러보고 다음 눌러줘.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -4022,7 +4055,7 @@ const ONBOARDING_STEPS = [
     id: 'finish',
     targetSelector: null,
     title: '준비 끝 ✦',
-    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br>나는 너의 친구야.<br>잘난 척 X, 판단 X. 들어주고 같이 풀어줄게.<br>편하게 솔직하게 다 던져!<br><br><span class="small">튜토리얼 동안 만든 데이터는 내가 다 지웠어. 진짜 시작.</span>',
+    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br><b>내가 너한테 어떤 도움이 될까?</b><br>네가 체크인으로 입력한 정보 + 나랑 한 대화를 모아서, 나는 너의 <b>가치·성향·반복 패턴·강점·취약점</b>을 시간 들여 천천히 파악해. 그걸 바탕으로 — 결정 앞에선 같이 14일 숙성하고, 미션은 너 페이스에 맞게 제안하고, 매주/매달 너 자신을 더 깊게 이해하도록 분석해줄게. <b>네가 앞으로 더 너답게, 더 나은 선택을 할 수 있도록</b> 옆에서 도울게 ✦<br><br><span class="small">튜토리얼 동안 만든 데이터는 내가 다 지웠어. 진짜 시작!</span>',
     waitFor: 'next',
     nextLabel: '시작! ✦'
   }
@@ -6832,6 +6865,7 @@ function showScreen(name) {
   document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';
 
   if (name === 'home') { applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3(); renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink(); }
+  if (name === 'settings') { setTimeout(refreshTesterModeUI, 30); }
   if (name === 'execute') renderExecute();
   if (name === 'checkin') { renderDailyQuestion(); renderModes(); renderCheckinTrackers(); }
   if (name === 'model') renderModel();
@@ -9162,7 +9196,7 @@ function renderExecute() {
             <div class="exec-card-actions">
               <button class="start-btn" onclick="startQuest('${task.id}')">🚀 시작</button>
               <button class="complete-btn" onclick="toggleQuestComplete('${task.id}')">✓ 완료</button>
-              ${!isAIMission ? `<button onclick="rerollQuest('${task.id}')">↻ 다시</button>` : ''}
+              ${!isAIMission ? `<button onclick="editTaskCard('${task.id}')">✎ 수정</button><button onclick="deleteTask('${task.id}')">✕ 삭제</button>` : ''}
             </div>
           </div>
         `;
@@ -9193,7 +9227,8 @@ function renderExecute() {
             <div class="exec-card-actions">
               <button class="start-btn" onclick="promoteSingleTask('${task.id}')">↑ 오늘의 카드로</button>
               <button class="complete-btn" onclick="toggleQuestComplete('${task.id}')">✓ 완료</button>
-              <button onclick="rerollQuest('${task.id}')">↻ 다시</button>
+              <button onclick="editTaskCard('${task.id}')">✎ 수정</button>
+              <button onclick="deleteTask('${task.id}')">✕ 삭제</button>
             </div>
           </div>
         `;
@@ -11699,6 +11734,26 @@ async function deleteVaultItem(itemId) {
   renderExecute();
 }
 
+// V3.13.x: 카드 제목/설명 수정
+async function editTaskCard(taskId) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (!task) return;
+  const newTitle = await showInputModal({
+    title: '카드 수정',
+    message: '제목 바꾸기',
+    placeholder: '카드 제목',
+    defaultValue: task.title || '',
+    okLabel: '저장'
+  });
+  if (newTitle === null) return;
+  const trimmed = newTitle.trim();
+  if (!trimmed) return;
+  task.title = trimmed;
+  saveState();
+  if (typeof renderExecute === 'function') renderExecute();
+  showToast('카드 수정됨 ✦');
+}
+
 async function deleteTask(taskId) {
   if (!await confirmDelete('이 카드')) return;
   state.tasks = state.tasks.filter(t => t.id !== taskId);
@@ -12173,6 +12228,99 @@ async function resetShellCollection() {
   if (typeof renderBeach === 'function') renderBeach();
   if (typeof renderShellBar === 'function') renderShellBar();
   showToast(`🐚 소라 ${count}개 초기화 완료`);
+}
+
+// V3.13.x: 부분 초기화 헬퍼들 — 잘못 테스트 입력한 데이터 정리용
+async function _confirmAndReset(label, count, doReset, rerender) {
+  if (count === 0) { showToast(`${label} 이미 비어있어`); return; }
+  const yes = await showConfirmModal({
+    title: `${label} 초기화`,
+    message: `${label} ${count}개가 모두 삭제돼.\n다른 데이터는 그대로.\n되돌릴 수 없어.`,
+    okLabel: '삭제', cancelLabel: '취소'
+  });
+  if (!yes) return;
+  doReset();
+  saveState();
+  if (rerender) try { rerender(); } catch (e) {}
+  showToast(`✦ ${label} ${count}개 초기화 완료`);
+}
+async function resetChatMessages() {
+  const c = (state.chatMessages || []).length;
+  await _confirmAndReset('대화 메시지', c, () => { state.chatMessages = []; }, () => {
+    if (typeof renderChat === 'function') renderChat();
+  });
+}
+async function resetEntries() {
+  const c = (state.entries || []).length;
+  await _confirmAndReset('체크인 entries', c, () => { state.entries = []; }, () => {
+    const cur = document.querySelector('.screen.active');
+    if (cur && cur.id === 'screen-archive' && typeof renderArchive === 'function') renderArchive();
+    if (cur && cur.id === 'screen-home' && typeof renderTodayMission === 'function') renderTodayMission();
+  });
+}
+async function resetTopicCards() {
+  const c = (state.topicCards || []).length;
+  await _confirmAndReset('토픽 카드 + 전략 카드', c, () => { state.topicCards = []; }, () => {
+    if (typeof renderArchive === 'function') renderArchive();
+  });
+}
+async function resetMissions() {
+  const c = (state.missions || []).length;
+  await _confirmAndReset('미션', c, () => { state.missions = []; }, () => {
+    if (typeof renderTodayMission === 'function') renderTodayMission();
+  });
+}
+async function resetArchive() {
+  const c = (state.archive || []).length;
+  await _confirmAndReset('아카이브 깨달음', c, () => { state.archive = []; }, () => {
+    if (typeof renderArchive === 'function') renderArchive();
+  });
+}
+async function resetPearls() {
+  const c = (state.pearls || []).length;
+  await _confirmAndReset('진주', c, () => { state.pearls = []; }, () => {
+    if (typeof renderArchive === 'function') renderArchive();
+  });
+}
+async function resetTasks() {
+  const c = (state.tasks || []).length;
+  await _confirmAndReset('할 일(서랍장)', c, () => { state.tasks = []; }, () => {
+    if (typeof renderExecute === 'function') renderExecute();
+  });
+}
+
+// V3.13.x: 테스터 모드 토글 — ON 시 saveState 가드되어 변경 저장 X
+function toggleTesterMode() {
+  state.preferences = state.preferences || {};
+  const next = !state.preferences.testerMode;
+  state.preferences.testerMode = next;
+  saveState(true);  // 토글 자체는 강제 저장
+  refreshTesterModeUI();
+  showToast(next
+    ? '🧪 테스터 모드 ON — 변경 저장 안 됨. 새로고침하면 OFF 직전 상태로 돌아옴.'
+    : '✦ 테스터 모드 OFF — 정상 저장 모드.');
+}
+function refreshTesterModeUI() {
+  const btn = document.getElementById('testerModeToggleBtn');
+  if (!btn) return;
+  const on = state.preferences && state.preferences.testerMode;
+  btn.textContent = on ? '🧪 테스터 모드: ON (변경 저장 X)' : '🧪 테스터 모드: OFF';
+  btn.style.background = on ? 'rgba(232,163,163,0.15)' : '';
+  btn.style.color = on ? '#f0c0c0' : '';
+  btn.style.borderColor = on ? 'rgba(232,163,163,0.4)' : '';
+  // 헤더에 시각 배지
+  let badge = document.getElementById('testerModeBadge');
+  if (on) {
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'testerModeBadge';
+      badge.style.cssText = 'position:fixed; top:8px; left:50%; transform:translateX(-50%); background:#e8a3a3; color:#000; padding:4px 12px; border-radius:12px; font-size:10px; font-weight:600; z-index:9999; letter-spacing:0.5px;';
+      badge.textContent = '🧪 TESTER MODE';
+      document.body.appendChild(badge);
+    }
+  } else {
+    if (badge) badge.remove();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
