@@ -1907,6 +1907,38 @@
     font-family: inherit;
   }
   .strategy-card-actions button:active { background: var(--surface2); }
+  /* V3.13.x: 전략 카드 4-필드 구조 (문제 상황 / 심리학 개념 / 전략적 행동) */
+  .strategy-card-v2 { padding: 16px 18px; }
+  .strategy-card-title {
+    font-size: 15px; font-weight: 600; color: var(--text);
+    letter-spacing: 0.3px; margin-bottom: 12px; line-height: 1.4;
+  }
+  .strategy-section-row {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 8px 10px; margin-bottom: 6px;
+    background: rgba(255,255,255,0.02); border-radius: 8px;
+  }
+  .strategy-section-icon {
+    font-size: 14px; line-height: 1.6; flex-shrink: 0;
+    width: 20px; text-align: center;
+  }
+  .strategy-section-label {
+    font-size: 10px; color: var(--text-soft);
+    letter-spacing: 0.4px; text-transform: uppercase;
+    margin-bottom: 2px; font-weight: 600;
+  }
+  .strategy-section-text {
+    font-size: 12px; color: var(--text-dim); line-height: 1.6;
+  }
+  .strategy-section-action {
+    color: var(--text); /* 전략적 행동은 살짝 강조 */
+    background: rgba(143,200,143,0.06);
+    padding: 6px 8px; border-left: 2px solid rgba(143,200,143,0.4);
+    border-radius: 4px; margin-top: 2px;
+  }
+  .strategy-card-legacy-summary {
+    font-size: 12px; color: var(--text-dim); line-height: 1.6; margin-bottom: 8px;
+  }
 
   /* V3.8: 토픽 카드 모달 */
   .topic-modal-overlay {
@@ -8185,14 +8217,14 @@ ${msg.content}
 }
 
 // V3.13.x: askDeeper 응답을 전략 카드로 저장 (state.topicCards에 category='strategy')
+// 4-필드 구조: title / problemContext / psychConcept / actionStrategy
 async function saveMsgAsStrategy(idx) {
   const msg = state.chatMessages[idx];
   if (!msg || msg.savedStrategy) return;
-  let title = '';
-  let summary = '';
+  let title = '', problemContext = '', psychConcept = '', actionStrategy = '';
   if (!state.apiKey) {
     title = msg.content.slice(0, 30);
-    summary = msg.content.slice(30, 200);
+    actionStrategy = msg.content.slice(30, 200);
   } else {
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -8200,60 +8232,70 @@ async function saveMsgAsStrategy(idx) {
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
           model: 'claude-sonnet-4-5',
-          max_tokens: 250,
+          max_tokens: 500,
           messages: [{ role: 'user', content: `아래 4단 분석/전략 응답에서 "전략 카드"로 저장할 핵심을 뽑아줘.
 
-[출력 형식 — 정확히 두 줄]
-1줄: 제목 (5-16자, 행동 지향. 짧고 또렷한 명사형 또는 명령형)
-2줄: 본문 (1-2문장, 50-120자, 언제·어떻게 실천할지 구체적)
+[출력 형식 — 정확히 4줄, 각 줄은 라벨로 시작]
+TITLE: <제목, 5-14자, 짧고 임팩트. 명사형 또는 짧은 명제>
+PROBLEM: <문제 상황, 50-90자, "어떤 순간·패턴에 적용?">
+CONCEPT: <심리학 개념 이름 + 1줄 설명, 30-80자>
+ACTION: <전략적 행동, 50-120자, 구체적 무엇을 어떻게>
 
 [좋은 예]
-마감 직전 폭발력 신뢰하기
-마감 24h 전부터 시작하면 OK. 그 전에 못 시작했다고 자책 X.
+TITLE: 마감 직전 폭발력 신뢰하기
+PROBLEM: 마감 24h 이상 남았는데 시작 못 했을 때 자책감으로 더 미루는 패턴.
+CONCEPT: ADHD time blindness — 마감 임박해야 도파민이 충분해져 시작 가능.
+ACTION: 24h 전엔 시작 못 했다고 자책 X. 마감 24h 전에 알람 1개만 설정. 그 알람을 trigger로 펼치기.
 
-카페에서 1시간 단위로
-집보다 카페에서 집중력 30% 높음. 1시간 → 10분 휴식 → 다시 1시간.
-
-거절은 짧게 그날 안에
-미루면 부채감 커짐. "이번엔 어려워" 한 줄로 그날 안에 답하기.
+TITLE: 거절은 짧게 그날 안에
+PROBLEM: 부탁받고 미루다 며칠 끌면서 부채감 커지는 패턴.
+CONCEPT: 미결 부담 누적 (Zeigarnik effect) — 결정 안 된 것이 인지 자원 잡아먹음.
+ACTION: 거절할 거면 "이번엔 어려워" 한 줄로 그날 안에 답하기. 이유 길게 설명 X.
 
 [금지]
-- "나는 ~다" 일반 서술 X
-- 마크다운(**, ##) X
-- JSON, 코드블록, 따옴표 X
-- 빈 격언·추상적 다짐 X
-- 3줄 이상 X
+- "나는 ~다" 일반 서술
+- 마크다운 (**, ##)
+- JSON, 코드블록, 따옴표
+- 추상적 다짐 ("열심히 하자")
+- 4줄 외 다른 줄
 
 [원본 응답]
 ${msg.content}
 
-두 줄만 출력. 다른 설명 X.` }]
+정확히 TITLE/PROBLEM/CONCEPT/ACTION 4줄만 출력.` }]
         })
       });
       const data = await resp.json();
       let raw = data.content[0].text.trim();
       raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
       raw = raw.replace(/\*\*/g, '').replace(/^#+\s*/gm, '');
-      const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-      if (lines.length >= 2) {
-        title = lines[0].replace(/^["']|["']$/g, '').slice(0, 40);
-        summary = lines.slice(1).join(' ').replace(/^["']|["']$/g, '').slice(0, 240);
-      } else if (lines.length === 1) {
-        title = lines[0].replace(/^["']|["']$/g, '').slice(0, 40);
-      }
+      const grab = (label) => {
+        const re = new RegExp(`^${label}:\\s*(.+)$`, 'mi');
+        const m = raw.match(re);
+        return m ? m[1].trim().replace(/^["']|["']$/g, '') : '';
+      };
+      title = grab('TITLE').slice(0, 30);
+      problemContext = grab('PROBLEM').slice(0, 200);
+      psychConcept = grab('CONCEPT').slice(0, 200);
+      actionStrategy = grab('ACTION').slice(0, 240);
     } catch (e) {
       title = msg.content.slice(0, 30);
-      summary = msg.content.slice(30, 200);
+      actionStrategy = msg.content.slice(30, 200);
     }
   }
   if (!title) title = '전략';
   const now = new Date().toISOString();
+  // backward-compat summary 결합 (legacy 코드가 summary 참조)
+  const summary = [problemContext, psychConcept, actionStrategy].filter(Boolean).join(' / ');
   state.topicCards = state.topicCards || [];
   state.topicCards.push({
     id: 'strat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     category: 'strategy',
     title,
     summary,
+    problemContext,
+    psychConcept,
+    actionStrategy,
     chapterStartedAt: now,
     chapterEndedAt: now,
     createdAt: now,
@@ -8726,10 +8768,26 @@ function renderLensStrategies() {
   } else {
     strategies.forEach(s => {
       const dateStr = new Date(s.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+      // V3.13.x: 4-필드 구조 (problemContext / psychConcept / actionStrategy) 우선,
+      // 없으면 legacy summary fallback
+      const hasStructured = s.problemContext || s.psychConcept || s.actionStrategy;
+      let bodyHtml;
+      if (hasStructured) {
+        bodyHtml = `
+          ${s.problemContext ? `<div class="strategy-section-row"><div class="strategy-section-icon">🎯</div><div><div class="strategy-section-label">문제 상황</div><div class="strategy-section-text">${escapeHtml(s.problemContext)}</div></div></div>` : ''}
+          ${s.psychConcept ? `<div class="strategy-section-row"><div class="strategy-section-icon">🧠</div><div><div class="strategy-section-label">심리학 개념</div><div class="strategy-section-text">${escapeHtml(s.psychConcept)}</div></div></div>` : ''}
+          ${s.actionStrategy ? `<div class="strategy-section-row"><div class="strategy-section-icon">✦</div><div><div class="strategy-section-label">전략적 행동</div><div class="strategy-section-text strategy-section-action">${escapeHtml(s.actionStrategy)}</div></div></div>` : ''}
+        `;
+      } else if (s.summary) {
+        bodyHtml = `<div class="strategy-card-legacy-summary">${escapeHtml(s.summary)}</div>`;
+      } else {
+        bodyHtml = '';
+      }
       html += `
-        <div class="strategy-card">
-          <div class="strategy-card-text">${escapeHtml(s.title)}${s.summary ? '<br><span style="font-size:11px; color:var(--text-dim);">' + escapeHtml(s.summary) + '</span>' : ''}</div>
-          <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : ' · 대화에서'}</div>
+        <div class="strategy-card strategy-card-v2">
+          <div class="strategy-card-title">🧭 ${escapeHtml(s.title)}</div>
+          ${bodyHtml}
+          <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : s.source === 'deeper' ? ' · 더 알고 싶어' : ' · 대화 챕터'}</div>
           <div class="strategy-card-actions">
             <button onclick="deleteTopicCard('${s.id}')">🗑 삭제</button>
           </div>
