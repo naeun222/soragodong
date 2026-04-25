@@ -102,6 +102,39 @@
     background: linear-gradient(90deg, transparent, var(--gold), transparent);
     opacity: 0.5;
   }
+  /* Sora's Call - special variant */
+  .mission-card.sora-call {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.18), rgba(139, 126, 196, 0.18), rgba(201, 169, 110, 0.2));
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 20px rgba(255,215,0,0.08), inset 0 0 30px rgba(139,126,196,0.06);
+    animation: soraCallPulse 4s ease-in-out infinite;
+  }
+  .mission-card.sora-call::before {
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), rgba(139,126,196,0.8), var(--gold), transparent);
+    opacity: 0.8;
+    animation: soraCallShimmer 3s linear infinite;
+  }
+  .mission-card.sora-call::after {
+    content: '🐚';
+    position: absolute;
+    top: 12px; right: 14px;
+    font-size: 22px;
+    opacity: 0.6;
+    animation: soraCallFloat 3s ease-in-out infinite;
+  }
+  @keyframes soraCallPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.08), inset 0 0 30px rgba(139,126,196,0.06); }
+    50% { box-shadow: 0 0 28px rgba(255,215,0,0.15), inset 0 0 40px rgba(139,126,196,0.1); }
+  }
+  @keyframes soraCallShimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes soraCallFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
   .mission-label {
     font-size: 10px; color: var(--gold); letter-spacing: 0.12em;
     text-transform: uppercase; margin-bottom: 8px;
@@ -137,6 +170,19 @@
   .mode-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
   .mode-chip { padding: 5px 11px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); font-size: 11px; color: var(--text-dim); cursor: pointer; transition: all 0.2s; }
   .mode-chip.active { background: rgba(139,126,196,0.2); border-color: var(--purple); color: var(--purple); }
+  .mode-chip.mode-sos { 
+    background: rgba(220,150,150,0.06);
+    border-color: rgba(220,150,150,0.25);
+    color: rgba(220,150,150,0.85);
+  }
+  .mode-chip.mode-sos.active {
+    background: rgba(220,150,150,0.18);
+    border-color: rgba(220,150,150,0.5);
+    color: rgba(240,180,180,1);
+  }
+  .mode-chip.mode-sos:hover {
+    border-color: rgba(220,150,150,0.45);
+  }
 
   .action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; }
   .action-card:active { background: var(--surface2); transform: scale(0.98); }
@@ -203,6 +249,150 @@
   .proposal-btn.accept { background: linear-gradient(135deg, var(--accent), #b8894a); color: var(--bg); }
   .proposal-btn.decline { background: transparent; border: 1px solid var(--border-strong); color: var(--text-dim); }
   .proposal-btn:active { transform: scale(0.97); }
+
+  /* === V3.3 CHAT ARCHIVE === */
+  .chat-archive-header {
+    background: linear-gradient(135deg, rgba(201,169,110,0.1), rgba(139,126,196,0.08));
+    border: 1px solid rgba(201,169,110,0.25);
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .chat-archive-header:hover {
+    background: linear-gradient(135deg, rgba(201,169,110,0.15), rgba(139,126,196,0.12));
+    border-color: rgba(201,169,110,0.4);
+  }
+  
+  .chat-archive-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .cac-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .cac-date {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14px;
+    color: var(--accent);
+  }
+  .cac-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .cac-toggle {
+    font-size: 14px;
+    color: var(--text-dim);
+    width: 16px;
+    text-align: center;
+  }
+  .cac-summary {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 10px;
+  }
+  .cac-messages {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .cac-msg {
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .cac-msg.user {
+    background: rgba(201,169,110,0.08);
+    color: var(--text);
+  }
+  .cac-msg.assistant {
+    background: rgba(139,126,196,0.08);
+    color: var(--text);
+  }
+  .cac-msg-time {
+    font-size: 10px;
+    color: var(--text-soft);
+    margin-bottom: 4px;
+  }
+  .cac-msg-content {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* Decision suggestion card (V3.1) */
+  .decision-suggest-card {
+    margin: 12px 0 4px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(139,126,196,0.12), rgba(45,40,80,0.2));
+    border: 1px solid rgba(139,126,196,0.3);
+    border-radius: 14px;
+  }
+  .dsc-header {
+    font-size: 11px;
+    color: var(--purple);
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .dsc-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.5;
+  }
+  .dsc-reason {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+  .dsc-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .dsc-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  .dsc-btn.accept {
+    background: linear-gradient(135deg, var(--purple), #5a4f8a);
+    color: white;
+  }
+  .dsc-btn.decline {
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text-dim);
+  }
+  .dsc-btn:active { transform: scale(0.97); }
 
   .btn-primary { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--accent), #b8894a); border: none; border-radius: 14px; color: var(--bg); font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all 0.2s; }
   .btn-primary:active { transform: scale(0.98); }
@@ -404,25 +594,84 @@
     margin-left: auto;
   }
 
-  /* SOS button - floating bottom right */
-  .sos-button {
-    position: fixed;
-    right: 18px;
-    bottom: 88px;
-    width: 50px; height: 50px;
-    border-radius: 50%;
-    background: rgba(45,40,60,0.85);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 20px;
+  /* Decision mini card - 살짝 키운 작은 카드 */
+  .decision-mini-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    margin-top: 14px;
+    background: linear-gradient(135deg, rgba(139,126,196,0.08), rgba(45,40,80,0.15));
+    border: 1px solid rgba(139,126,196,0.25);
+    border-radius: 14px;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    z-index: 100;
-    backdrop-filter: blur(8px);
     transition: all 0.2s;
   }
-  .sos-button:hover { transform: scale(1.05); }
-  .sos-button:active { transform: scale(0.95); }
+  .decision-mini-card:hover { 
+    transform: translateY(-1px);
+    border-color: rgba(139,126,196,0.4);
+  }
+  .dm-icon { font-size: 20px; flex-shrink: 0; }
+  .dm-text { flex: 1; }
+  .dm-title { font-size: 13px; color: var(--text); margin-bottom: 2px; }
+  .dm-sub { font-size: 10px; color: var(--text-dim); }
+  .dm-arrow { color: var(--text-soft); font-size: 18px; flex-shrink: 0; }
+
+  /* Model collapse / draft section */
+  .model-collapse {
+    margin-top: 8px;
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 4px 0;
+  }
+  .model-collapse summary {
+    cursor: pointer;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text-dim);
+    list-style: none;
+    user-select: none;
+    transition: color 0.2s;
+  }
+  .model-collapse summary::-webkit-details-marker { display: none; }
+  .model-collapse summary::before {
+    content: '▸ ';
+    display: inline-block;
+    margin-right: 4px;
+    transition: transform 0.2s;
+  }
+  .model-collapse[open] summary::before { transform: rotate(90deg); }
+  .model-collapse summary:hover { color: var(--text); }
+  .model-collapse-content {
+    padding: 4px 6px;
+    border-top: 1px solid var(--border);
+  }
+  .model-collapse.model-draft summary {
+    color: var(--text-soft);
+    font-style: italic;
+  }
+  .model-collapse.model-draft .model-collapse-content {
+    opacity: 0.85;
+  }
+
+  /* SOS button - moved to settings */
+  .sos-settings-btn {
+    width: 100%;
+    padding: 18px;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, rgba(220,150,150,0.12), rgba(45,40,60,0.4));
+    border: 1px solid rgba(220,150,150,0.35);
+    color: var(--text);
+    font-size: 16px;
+    font-family: inherit;
+    border-radius: 14px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .sos-settings-btn:hover { transform: translateY(-1px); border-color: rgba(220,150,150,0.6); }
+  .sos-settings-btn .sos-sub { 
+    font-size: 11px; color: var(--text-dim); 
+    margin-top: 4px;
+  }
 
   /* Memory Vault toast */
   .vault-toast {
@@ -456,7 +705,534 @@
     border-color: rgba(139,126,196,0.35);
   }
 
+  /* === START RITUAL — game-like === */
+  .ritual-overlay {
+    position: fixed; inset: 0;
+    background: radial-gradient(circle at center, rgba(45,40,80,0.98) 0%, rgba(15,14,23,0.99) 100%);
+    z-index: 1500;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(12px);
+    animation: ritualFadeIn 0.4s ease;
+  }
+  @keyframes ritualFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  
+  .ritual-stage {
+    width: 100%; max-width: 380px;
+    text-align: center;
+    color: var(--text);
+    animation: ritualStageIn 0.5s ease 0.1s backwards;
+  }
+  @keyframes ritualStageIn { 
+    from { opacity: 0; transform: translateY(20px); } 
+    to { opacity: 1; transform: translateY(0); } 
+  }
+  
+  .ritual-step-label {
+    font-size: 11px; color: var(--accent);
+    letter-spacing: 0.2em; text-transform: uppercase;
+    margin-bottom: 18px; font-weight: 600;
+  }
+  .ritual-icon {
+    font-size: 56px; margin-bottom: 18px;
+    animation: ritualFloat 3s ease-in-out infinite;
+  }
+  @keyframes ritualFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .ritual-question {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px; line-height: 1.6;
+    color: var(--text); margin-bottom: 14px;
+  }
+  .ritual-sub {
+    font-size: 13px; color: var(--text-dim);
+    line-height: 1.7; margin-bottom: 24px;
+  }
+  .ritual-input {
+    width: 100%; padding: 16px 18px;
+    background: rgba(45,40,80,0.5);
+    border: 1px solid rgba(139,126,196,0.4);
+    border-radius: 14px;
+    color: var(--text);
+    font-size: 16px;
+    font-family: inherit;
+    text-align: center;
+    margin-bottom: 18px;
+    outline: none;
+  }
+  .ritual-input:focus {
+    border-color: var(--accent);
+    background: rgba(45,40,80,0.7);
+  }
+  .ritual-input::placeholder { color: var(--text-soft); }
+
+  /* If-Then visual chain */
+  .ritual-ifthen {
+    display: flex; flex-direction: column; gap: 12px;
+    margin: 24px 0;
+  }
+  .ritual-ifthen-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.4));
+    border: 1px solid rgba(139,126,196,0.35);
+    border-radius: 14px;
+    text-align: left;
+  }
+  .ritual-ifthen-row.then {
+    background: linear-gradient(135deg, rgba(201,169,110,0.18), rgba(45,40,80,0.4));
+    border-color: rgba(201,169,110,0.4);
+  }
+  .ritual-ifthen-tag {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.18em;
+    padding: 4px 10px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .ritual-ifthen-row .ritual-ifthen-tag {
+    background: rgba(139,126,196,0.3);
+    color: #c0b3e0;
+  }
+  .ritual-ifthen-row.then .ritual-ifthen-tag {
+    background: rgba(201,169,110,0.3);
+    color: var(--accent);
+  }
+  .ritual-ifthen-text {
+    flex: 1; font-size: 14px; line-height: 1.5;
+    color: var(--text);
+  }
+  .ritual-arrow {
+    text-align: center;
+    font-size: 20px;
+    color: var(--accent);
+    margin: -4px 0;
+    animation: ritualArrowPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes ritualArrowPulse {
+    0%, 100% { opacity: 0.5; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(2px); }
+  }
+
+  .ritual-actions {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-top: 24px;
+  }
+  .ritual-btn {
+    padding: 16px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  .ritual-btn.primary {
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    font-weight: 600;
+    box-shadow: 0 0 20px rgba(201,169,110,0.3);
+  }
+  .ritual-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 4px 24px rgba(201,169,110,0.4); }
+  .ritual-btn.secondary {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .ritual-btn.skip {
+    background: transparent;
+    color: var(--text-soft);
+    border: none;
+    font-size: 12px;
+    padding: 8px;
+  }
+  .ritual-btn.ifthen-choice {
+    background: rgba(45,40,80,0.5);
+    border: 1px solid rgba(139,126,196,0.3);
+    color: var(--text);
+    text-align: left;
+    padding: 14px 16px;
+    transition: all 0.2s;
+  }
+  .ritual-btn.ifthen-choice:hover {
+    background: rgba(45,40,80,0.7);
+    border-color: rgba(139,126,196,0.6);
+    transform: translateX(2px);
+  }
+  .ritual-input.ifthen-inline {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .ritual-input.ifthen-inline:focus {
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+    padding: 4px 6px;
+  }
+
+  .ritual-launch-msg {
+    font-family: 'Gowun Batang', serif;
+    font-size: 18px;
+    line-height: 1.7;
+    color: var(--text);
+    margin: 24px 0;
+  }
+  .ritual-launch-msg .accent { color: var(--accent); }
+  
+  /* Floating "in progress" indicator after ritual launches */
+  .ritual-active-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: linear-gradient(135deg, rgba(139,126,196,0.95), rgba(45,40,80,0.95));
+    backdrop-filter: blur(10px);
+    padding: 12px 16px;
+    z-index: 200;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    animation: ritualBarSlideIn 0.4s ease;
+    border-bottom: 1px solid rgba(201,169,110,0.3);
+  }
+  @keyframes ritualBarSlideIn { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+  .ritual-active-bar .icon { font-size: 18px; }
+  .ritual-active-bar .text { 
+    flex: 1; font-size: 12px; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ritual-active-bar .check-btn {
+    background: var(--accent); color: var(--bg);
+    border: none; padding: 6px 12px;
+    border-radius: 8px; font-size: 11px;
+    font-weight: 600; cursor: pointer;
+    font-family: inherit;
+  }
+
   /* === V3 EXECUTE TAB === */
+  .exec-card-shell-preview {
+    position: absolute;
+    top: 14px; right: 14px;
+    font-size: 24px;
+    opacity: 0.7;
+    transition: all 0.3s;
+  }
+  .exec-card:hover .exec-card-shell-preview { opacity: 1; transform: scale(1.1); }
+  .exec-card-shell-preview.shell-main { 
+    filter: drop-shadow(0 0 6px rgba(201,169,110,0.5));
+  }
+  .exec-card-shell-preview.shell-golden {
+    filter: drop-shadow(0 0 8px rgba(255,215,0,0.7));
+    animation: shellGoldenPulse 2s ease-in-out infinite;
+  }
+  .exec-card-shell-preview.shell-call {
+    filter: drop-shadow(0 0 10px rgba(139,126,196,0.7));
+    animation: shellCallPulse 2.5s ease-in-out infinite;
+  }
+  @keyframes shellGoldenPulse {
+    0%, 100% { filter: drop-shadow(0 0 8px rgba(255,215,0,0.7)); }
+    50% { filter: drop-shadow(0 0 14px rgba(255,215,0,1)); }
+  }
+  @keyframes shellCallPulse {
+    0%, 100% { filter: drop-shadow(0 0 10px rgba(139,126,196,0.7)) hue-rotate(0deg); }
+    50% { filter: drop-shadow(0 0 16px rgba(255,215,0,0.9)) hue-rotate(20deg); }
+  }
+  
+  /* === SHELL COLLECTION — beach === */
+  .beach-screen {
+    background: linear-gradient(180deg, 
+      rgba(184,210,232,0.1) 0%,    /* soft sky/sea */
+      rgba(231,200,160,0.15) 30%,  /* shore */
+      rgba(231,200,160,0.25) 100%  /* sand */
+    );
+    min-height: 100%;
+  }
+  .beach-stats {
+    background: linear-gradient(135deg, rgba(231,200,160,0.18), rgba(184,210,232,0.12));
+    border: 1px solid rgba(201,169,110,0.3);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+  .beach-points {
+    font-family: 'Gowun Batang', serif;
+    font-size: 32px;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .beach-points-label {
+    font-size: 11px; color: var(--text-dim);
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .beach-tier-row {
+    display: flex; gap: 14px; justify-content: center;
+    margin-top: 14px; flex-wrap: wrap;
+  }
+  .beach-tier {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12px; color: var(--text-dim);
+  }
+  .beach-tier .emoji { font-size: 16px; }
+  
+  .beach-tabs {
+    display: flex; gap: 6px;
+    margin-bottom: 16px;
+    background: var(--surface);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .beach-tab {
+    flex: 1; padding: 8px;
+    background: transparent; border: none;
+    color: var(--text-dim); font-size: 12px;
+    font-family: inherit; cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .beach-tab.active {
+    background: linear-gradient(135deg, rgba(231,200,160,0.3), rgba(201,169,110,0.2));
+    color: var(--text);
+  }
+  
+  .beach-spotlight {
+    background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(139,126,196,0.1));
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .beach-spotlight-label {
+    font-size: 10px; color: var(--gold);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .beach-spotlight-emoji {
+    font-size: 40px; margin: 4px 0;
+    filter: drop-shadow(0 0 12px rgba(255,215,0,0.4));
+  }
+  .beach-spotlight-story {
+    font-size: 12px; color: var(--text);
+    line-height: 1.6; margin-top: 4px;
+    font-family: 'Gowun Batang', serif;
+  }
+  
+  .beach-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 8px;
+    padding: 14px;
+    background: 
+      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 60%, rgba(255,255,255,0.04) 0%, transparent 40%),
+      linear-gradient(180deg, rgba(231,200,160,0.15), rgba(201,169,110,0.18));
+    border-radius: 16px;
+    border: 1px solid rgba(201,169,110,0.2);
+    min-height: 200px;
+  }
+  .beach-shell {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .beach-shell:hover { transform: scale(1.15) rotate(-3deg); background: rgba(255,255,255,0.1); }
+  
+  /* Tier hierarchy — 점진적 강조 */
+  .beach-shell.tier-light { 
+    font-size: 22px;
+    opacity: 0.85;
+  }
+  .beach-shell.tier-daily { 
+    font-size: 24px;
+    background: linear-gradient(135deg, rgba(74,144,226,0.08), transparent);
+  }
+  .beach-shell.tier-main { 
+    font-size: 28px;
+    background: radial-gradient(circle, rgba(201,169,110,0.12), transparent);
+    filter: drop-shadow(0 0 4px rgba(201,169,110,0.3));
+  }
+  .beach-shell.tier-golden { 
+    font-size: 32px;
+    background: radial-gradient(circle, rgba(255,215,0,0.18), transparent);
+    filter: drop-shadow(0 0 8px rgba(255,215,0,0.55));
+    animation: shellGoldenGlow 4s ease-in-out infinite;
+  }
+  .beach-shell.tier-call { 
+    font-size: 34px;
+    background: radial-gradient(circle, rgba(139,126,196,0.22), rgba(201,169,110,0.1), transparent);
+    filter: drop-shadow(0 0 10px rgba(139,126,196,0.6));
+    animation: shellCallGlow 3.5s ease-in-out infinite;
+  }
+  .beach-shell.tier-legend { 
+    font-size: 38px;
+    background: radial-gradient(circle, rgba(255,215,0,0.3), rgba(139,126,196,0.2), transparent);
+    filter: drop-shadow(0 0 14px rgba(255,215,0,0.7));
+    animation: shellLegendShimmer 3s ease-in-out infinite;
+  }
+  @keyframes shellGoldenGlow {
+    0%, 100% { filter: drop-shadow(0 0 8px rgba(255,215,0,0.55)); }
+    50% { filter: drop-shadow(0 0 14px rgba(255,215,0,0.85)); }
+  }
+  @keyframes shellCallGlow {
+    0%, 100% { filter: drop-shadow(0 0 10px rgba(139,126,196,0.6)); }
+    50% { filter: drop-shadow(0 0 16px rgba(139,126,196,0.9)) drop-shadow(0 0 8px rgba(255,215,0,0.4)); }
+  }
+  @keyframes shellLegendShimmer {
+    0%, 100% { filter: drop-shadow(0 0 14px rgba(255,215,0,0.7)) hue-rotate(0deg); }
+    50% { filter: drop-shadow(0 0 22px rgba(139,126,196,0.9)) hue-rotate(30deg); }
+  }
+  
+  .beach-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  .beach-empty .icon { font-size: 36px; margin-bottom: 10px; }
+  
+  /* Beach count (replaces points) */
+  .beach-count {
+    font-family: 'Gowun Batang', serif;
+    font-size: 36px;
+    color: var(--accent);
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .beach-count-label {
+    font-size: 11px; color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+  
+  /* Beach tier row - colored badges */
+  .beach-tier-row { 
+    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .beach-tier {
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    font-size: 12px;
+    color: var(--text);
+  }
+  .beach-tier .emoji { font-size: 14px; }
+  .beach-tier.tier-golden { background: rgba(255,215,0,0.12); }
+  .beach-tier.tier-call { background: rgba(139,126,196,0.18); }
+  .beach-tier.tier-legend { 
+    background: linear-gradient(135deg, rgba(255,215,0,0.18), rgba(139,126,196,0.18));
+    color: var(--accent);
+  }
+  
+  /* Weekly summary card */
+  .beach-weekly {
+    background: linear-gradient(135deg, rgba(201,169,110,0.1), rgba(231,200,160,0.06));
+    border: 1px solid rgba(201,169,110,0.2);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .beach-weekly-label {
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+  }
+  .beach-weekly-count {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .beach-weekly-breakdown {
+    font-size: 13px; color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+  
+  /* Spotlight tier-specific bg */
+  .beach-spotlight.tier-call {
+    background: linear-gradient(135deg, rgba(139,126,196,0.15), rgba(45,40,80,0.2));
+    border-color: rgba(139,126,196,0.4);
+  }
+  .beach-spotlight.tier-legend {
+    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(139,126,196,0.18));
+    border-color: rgba(255,215,0,0.5);
+  }
+  
+  /* Shell story modal (click to see story) */
+  .shell-story-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,14,23,0.95);
+    z-index: 600;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(10px);
+    animation: ritualFadeIn 0.3s ease;
+  }
+  .shell-story-card {
+    width: 100%; max-width: 340px;
+    background: linear-gradient(180deg, rgba(231,200,160,0.18), rgba(201,169,110,0.12));
+    border: 1px solid rgba(201,169,110,0.4);
+    border-radius: 20px;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .shell-story-card.tier-golden {
+    background: linear-gradient(180deg, rgba(255,215,0,0.18), rgba(201,169,110,0.15));
+    border-color: rgba(255,215,0,0.5);
+    box-shadow: 0 0 40px rgba(255,215,0,0.2);
+  }
+  .shell-story-card.tier-call {
+    background: linear-gradient(180deg, rgba(139,126,196,0.2), rgba(201,169,110,0.1));
+    border-color: rgba(139,126,196,0.5);
+    box-shadow: 0 0 40px rgba(139,126,196,0.2);
+  }
+  .shell-story-card.tier-legend {
+    background: linear-gradient(180deg, rgba(255,215,0,0.2), rgba(139,126,196,0.2));
+    border-color: rgba(255,215,0,0.6);
+    box-shadow: 0 0 50px rgba(255,215,0,0.3);
+    animation: shellLegendShimmer 3s ease-in-out infinite;
+  }
+  .shell-story-emoji {
+    font-size: 64px;
+    margin-bottom: 12px;
+    line-height: 1;
+  }
+  .shell-story-tier {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.18em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .shell-story-date {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+  .shell-story-text {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.7;
+    padding: 14px 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+  }
+  
+  /* === V3 EXECUTE TAB - existing === */
   .exec-empty {
     text-align: center;
     padding: 60px 20px;
@@ -482,6 +1258,31 @@
   }
   .exec-bigbtn:hover { transform: translateY(-1px); }
   .exec-bigbtn .sub { font-family: inherit; font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+
+  .exec-immerse-btn {
+    display: block;
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, rgba(139,126,196,0.22), rgba(45,40,80,0.4));
+    border: 1px solid rgba(139,126,196,0.45);
+    border-radius: 16px;
+    color: var(--text);
+    font-family: 'Gowun Batang', serif;
+    font-size: 16px;
+    cursor: pointer;
+    text-align: center;
+    margin-bottom: 18px;
+    transition: all 0.2s;
+    box-shadow: 0 0 16px rgba(139,126,196,0.1);
+  }
+  .exec-immerse-btn:hover { 
+    transform: translateY(-1px);
+    box-shadow: 0 0 24px rgba(139,126,196,0.18);
+  }
+  .exec-immerse-btn .sub { 
+    font-family: inherit; font-size: 11px; 
+    color: var(--text-dim); margin-top: 4px;
+  }
 
   .exec-now-section { margin-bottom: 20px; }
   .exec-section-label {
@@ -912,7 +1713,7 @@
     <div class="tour-progress" id="tourProgress"></div>
     <div class="tour-content" id="tourContent"></div>
     <div class="tour-controls">
-      <button class="tour-btn-skip" onclick="skipTour()">건너뛰기</button>
+      <button class="tour-btn-skip" id="tourSkipBtn" onclick="skipTour()">건너뛰기</button>
       <button class="tour-btn-next" id="tourNextBtn" onclick="tourNext()">다음 →</button>
     </div>
   </div>
@@ -970,16 +1771,6 @@
       <!-- Today's Shell - AI 동적 생성 인사 -->
       <div id="todaysShellContainer"></div>
 
-      <!-- Mode display - 자연어 -->
-      <div id="modeDisplay"></div>
-      <div class="mode-row" id="modeRow" style="display:none;">
-        <div class="mode-chip" data-mode="exam" onclick="toggleMode('exam')">📚 시험</div>
-        <div class="mode-chip" data-mode="travel" onclick="toggleMode('travel')">✈️ 여행</div>
-        <div class="mode-chip" data-mode="sick" onclick="toggleMode('sick')">🤒 아픔</div>
-        <div class="mode-chip" data-mode="rest" onclick="toggleMode('rest')">🏖 휴식</div>
-        <div class="mode-chip" data-mode="period" onclick="toggleMode('period')">🩸 월경</div>
-      </div>
-
       <!-- Reviews available -->
       <div id="reviewPromptsContainer"></div>
 
@@ -1011,13 +1802,25 @@
       <div id="decisionMiniLinkContainer"></div>
     </div>
 
-    <!-- 🪫 Floating SOS button -->
-    <button class="sos-button" onclick="triggerSOS()" title="오늘 방전">🪫</button>
+    <!-- SOS removed from float — moved to settings -->
 
     <!-- CHECK-IN -->
     <div class="screen" id="screen-checkin">
       <div class="screen-title">오늘 체크인</div>
       <div class="screen-sub">딱 15초. 부담 없이. 몰라도 괜찮아.</div>
+
+      <!-- Mode (moved from home) -->
+      <div class="input-group">
+        <div class="input-label">🎯 오늘 어떤 날?</div>
+        <div class="mode-row" id="modeRow">
+          <div class="mode-chip" data-mode="exam" onclick="toggleMode('exam')">📚 시험</div>
+          <div class="mode-chip" data-mode="travel" onclick="toggleMode('travel')">✈️ 여행</div>
+          <div class="mode-chip" data-mode="sick" onclick="toggleMode('sick')">🤒 아픔</div>
+          <div class="mode-chip" data-mode="rest" onclick="toggleMode('rest')">🏖 휴식</div>
+          <div class="mode-chip" data-mode="period" onclick="toggleMode('period')">🩸 월경</div>
+          <div class="mode-chip mode-sos" data-mode="drained" onclick="toggleMode('drained')">🪫 방전</div>
+        </div>
+      </div>
 
       <div class="input-group">
         <div class="input-label">😴 어젯밤 수면</div>
@@ -1199,7 +2002,7 @@
         </button>
         <button class="archive-quick-btn" onclick="showArchiveDecisions()">
           <span class="aq-icon">⚖️</span>
-          <span class="aq-label">결정 기록</span>
+          <span class="aq-label">결정의 방</span>
           <span class="aq-count" id="aqDecisionCount"></span>
         </button>
       </div>
@@ -1232,9 +2035,9 @@
       <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">아카이브로 돌아가기</button>
     </div>
 
-    <!-- ARCHIVE-DECISIONS: 모든 결정 기록 모음 -->
+    <!-- ARCHIVE-DECISIONS: 모든 결정의 방 모음 -->
     <div class="screen" id="screen-archive-decisions">
-      <div class="screen-title">⚖️ 결정 기록</div>
+      <div class="screen-title">⚖️ 결정의 방</div>
       <div class="screen-sub">지금까지 거쳐온 큰 결정들.</div>
       <div id="archiveDecisionsList"></div>
       <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">아카이브로 돌아가기</button>
@@ -1279,10 +2082,111 @@
       </div>
     </div>
 
+    <!-- SHORTCUT GUIDE -->
+    <div class="screen" id="screen-shortcut-guide">
+      <div class="screen-title">🌧 몰입 단축어 만들기</div>
+      <div class="screen-sub">iOS에서 한 번만 만들면 평생 써. 안 만들어도 앱은 정상 작동.</div>
+
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px;">
+        <div style="font-family:'Gowun Batang',serif; font-size:16px; color:var(--accent); margin-bottom:14px;">왜 만들면 좋은가</div>
+        <div style="font-size:13px; line-height:1.8; color:var(--text);">
+          앱에서 🌧 몰입 시작 누르면<br>
+          <strong style="color:var(--accent2);">방해 금지 + 빗소리 + 집중 모드</strong>가 자동으로 켜져.<br><br>
+          뇌한테 "이제 다른 세계 들어간다" 신호 줌. 도파민 트리거.
+        </div>
+      </div>
+
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px;">
+        <div style="font-family:'Gowun Batang',serif; font-size:16px; color:var(--accent); margin-bottom:14px;">만드는 법 (5분)</div>
+        
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; gap:10px; margin-bottom:6px;">
+            <span style="background:var(--accent); color:var(--bg); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">1</span>
+            <div style="font-size:14px; color:var(--text); padding-top:2px;">iPhone에서 <strong>단축어</strong> 앱 열기</div>
+          </div>
+          <div style="font-size:11px; color:var(--text-dim); margin-left:34px;">기본 앱이라 이미 있어. 안 보이면 App Store에서 "단축어" 검색.</div>
+        </div>
+        
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; gap:10px; margin-bottom:6px;">
+            <span style="background:var(--accent); color:var(--bg); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">2</span>
+            <div style="font-size:14px; color:var(--text); padding-top:2px;">우측 상단 <strong>+</strong> 누르기 → "새로운 단축어"</div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; gap:10px; margin-bottom:6px;">
+            <span style="background:var(--accent); color:var(--bg); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">3</span>
+            <div style="font-size:14px; color:var(--text); padding-top:2px;">"<strong>동작 추가</strong>" 누르고 아래 동작들 추가:</div>
+          </div>
+          <div style="margin-left:34px; font-size:12px; color:var(--text-dim); line-height:1.8;">
+            • <strong style="color:var(--accent2);">방해 금지 모드 설정</strong> → 켜기<br>
+            • <strong style="color:var(--accent2);">배경 음악 재생</strong> → 비, 시냇물, 모닥불 등<br>
+            <span style="font-size:10px;">(좋아하는 사운드 자유)</span>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; gap:10px; margin-bottom:6px;">
+            <span style="background:var(--accent); color:var(--bg); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">4</span>
+            <div style="font-size:14px; color:var(--text); padding-top:2px;">단축어 이름을 <strong style="color:var(--accent2);">SoraRitual</strong> 정확히 (대소문자 구분)</div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:6px;">
+          <div style="display:flex; gap:10px; margin-bottom:6px;">
+            <span style="background:var(--accent); color:var(--bg); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">5</span>
+            <div style="font-size:14px; color:var(--text); padding-top:2px;"><strong>저장</strong>. 끝.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: linear-gradient(135deg, rgba(139,126,196,0.12), rgba(45,40,80,0.2)); border: 1px solid rgba(139,126,196,0.3); border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+        <div style="font-size:13px; line-height:1.8; color:var(--text);">
+          <strong style="color:var(--accent2);">팁</strong><br>
+          • 사운드는 너 좋아하는 거 (Apple Music에서 빗소리/lofi 검색)<br>
+          • 집중 모드도 추가 가능 (특정 앱만 알림 허용)<br>
+          • 책상 조명 켜기, 화면 밝기 낮추기 등 자유 추가
+        </div>
+      </div>
+
+      <div style="background: var(--surface2); padding: 14px; border-radius: 12px; font-size: 12px; color: var(--text-dim); line-height: 1.7;">
+        💡 안 만들어도 앱은 정상 작동해. 단축어 없으면 그냥 ritual 모달만 뜨고 끝.
+      </div>
+
+      <button class="btn-secondary" onclick="showScreen('execute')" style="margin-top:20px;">실행 탭으로</button>
+    </div>
+
+    <!-- BLOCK PICKER MODAL -->
+    <div class="exec-modal-overlay" id="blockPickerOverlay" style="display:none;" onclick="if(event.target===this) closeBlockPicker()">
+      <div class="exec-modal" style="max-height:80vh; overflow-y:auto;">
+        <div class="exec-modal-title" id="blockPickerTitle">시간 블록</div>
+        <div class="exec-modal-sub">여기 넣을 작업 선택. 또는 새로 추가.</div>
+        <div id="blockPickerContent"></div>
+        <button class="btn-secondary" onclick="closeBlockPicker()" style="margin-top:14px; width:100%;">닫기</button>
+      </div>
+    </div>
+
+    <!-- CHAT ARCHIVE MODAL (V3.3) -->
+    <div class="exec-modal-overlay" id="chatArchiveOverlay" style="display:none;" onclick="if(event.target===this) closeChatArchive()">
+      <div class="exec-modal" style="max-height:88vh; overflow-y:auto;">
+        <div class="exec-modal-title">📚 이전 대화</div>
+        <div class="exec-modal-sub">7일 전 대화는 자동으로 일별 요약되고 보관돼.<br>요약 카드 탭하면 원본도 볼 수 있어.</div>
+        <div id="chatArchiveContent"></div>
+        <button class="btn-secondary" onclick="closeChatArchive()" style="margin-top:14px; width:100%;">닫기</button>
+      </div>
+    </div>
+
+    <!-- START RITUAL — game-like full screen -->
+    <div class="ritual-overlay" id="ritualOverlay" style="display:none;">
+      <div class="ritual-stage" id="ritualStage"></div>
+    </div>
+
     <!-- SETTINGS -->
     <div class="screen" id="screen-settings">
       <div class="screen-title">설정</div>
       <div class="screen-sub">소라고동을 네 것으로.</div>
+      
       <div class="input-group">
         <div class="input-label">🔑 Anthropic API 키</div>
         <div class="api-key-box">
@@ -1301,7 +2205,9 @@
         <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
         <button class="btn-secondary" onclick="exportData()">📤 데이터 내보내기 (백업)</button>
+        <button class="btn-secondary" onclick="startWelcomeTutorial()">📖 사용 설명서 다시 보기</button>
         <button class="btn-secondary" onclick="startV3Tour()">🐚 V3 안내 다시 보기</button>
+        <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
         <button class="btn-secondary btn-danger" onclick="rollbackToV5()" style="margin-top:8px;">⏪ V3 이전 상태로 되돌리기</button>
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
       </div>
@@ -1337,12 +2243,30 @@
 
 <!-- Shell collection modal -->
 <div class="modal-overlay" id="shellModal" onclick="if(event.target===this)closeModal('shellModal')">
-  <div class="modal">
-    <div class="modal-title">🐚 소라 컬렉션</div>
+  <div class="modal beach-screen" style="max-height:88vh; overflow-y:auto;">
+    <div class="modal-title">🏖 너의 모래사장</div>
     <div class="modal-sub" id="shellSubtext"></div>
-    <div class="shell-grid" id="shellGrid"></div>
-    <div style="background: var(--surface2); padding: 14px; border-radius: 12px; font-size: 12px; color: var(--text-dim); line-height: 1.7;">
-      미션을 하나씩 완료하면 소라를 모을 수 있어.<br>
+    
+    <div class="beach-stats">
+      <div class="beach-count" id="beachCount">0</div>
+      <div class="beach-count-label">올해 모은 소라</div>
+      <div class="beach-tier-row" id="beachTierRow"></div>
+    </div>
+    
+    <div id="beachWeekly"></div>
+    <div id="beachSpotlight"></div>
+    
+    <div class="beach-tabs">
+      <button class="beach-tab active" data-beach-tab="all" onclick="switchBeachTab('all')">전체</button>
+      <button class="beach-tab" data-beach-tab="card" onclick="switchBeachTab('card')">오늘의 카드</button>
+      <button class="beach-tab" data-beach-tab="call" onclick="switchBeachTab('call')">소라의 부름</button>
+    </div>
+    
+    <div class="beach-grid" id="beachGrid"></div>
+    
+    <div style="background: var(--surface2); padding: 12px; border-radius: 10px; font-size: 11px; color: var(--text-dim); line-height: 1.7; margin-top:14px;">
+      소라 하나하나가 너의 작은 흔적이야.<br>
+      탭하면 그날의 이야기가 보여.<br>
       페널티 없어. 못 해도 괜찮고, 쉬어도 괜찮아 🌊
     </div>
     <button class="btn-secondary" onclick="closeModal('shellModal')" style="margin-top:16px;">닫기</button>
@@ -1424,6 +2348,7 @@ const DEFAULT_STATE = {
 
   // 4. 환영 투어
   hasSeenV3Tour: false,
+  hasSeenWelcomeTutorial: false,
 
   // 5. 모드 활성 시 표시용
   modeActiveSince: {},   // {exam: '2026-04-20', ...}
@@ -1434,6 +2359,10 @@ const DEFAULT_STATE = {
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
     starRitualSettings: { useShortcut: true, shortcutName: 'SoraRitual' }
   },
+
+  // 7. V3.3: 대화 일별 아카이브
+  chatArchive: [],          // [{date, summary, messageCount, messages, generatedAt}]
+  chatArchiveLastRun: null, // 마지막 archive 작업 실행 날짜
 
   version: 6
 };
@@ -1634,12 +2563,19 @@ async function loadFromCloud() {
     if (!state.pearls) state.pearls = [];
     if (!state.todaysShell) state.todaysShell = { date: null, content: null, generatedAt: null };
     if (state.hasSeenV3Tour === undefined) state.hasSeenV3Tour = false;
+    if (state.hasSeenWelcomeTutorial === undefined) {
+      // 기존 사용자(데이터 있음)는 본 걸로 처리, 신규는 false
+      state.hasSeenWelcomeTutorial = (state.entries || []).length > 0 || (state.chatMessages || []).length > 0;
+    }
     if (!state.modeActiveSince) state.modeActiveSince = {};
     if (!state.preferences) state.preferences = {
       nightModeManual: null,
       pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
       starRitualSettings: { useShortcut: true, shortcutName: 'SoraRitual' }
     };
+    // V3.3 migration
+    if (!state.chatArchive) state.chatArchive = [];
+    if (state.chatArchiveLastRun === undefined) state.chatArchiveLastRun = null;
 
     // === Auto-backup BEFORE V6 migration ===
     if (state.version < 6) {
@@ -1675,12 +2611,18 @@ async function loadFromCloud() {
       if (!state.pearls) state.pearls = [];
       if (!state.todaysShell) state.todaysShell = { date: null, content: null, generatedAt: null };
       if (state.hasSeenV3Tour === undefined) state.hasSeenV3Tour = false;
+      if (state.hasSeenWelcomeTutorial === undefined) {
+        state.hasSeenWelcomeTutorial = (state.entries || []).length > 0 || (state.chatMessages || []).length > 0;
+      }
       if (!state.modeActiveSince) state.modeActiveSince = {};
       if (!state.preferences) state.preferences = {
         nightModeManual: null,
         pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
         starRitualSettings: { useShortcut: true, shortcutName: 'SoraRitual' }
       };
+      // V3.3 migration
+      if (!state.chatArchive) state.chatArchive = [];
+      if (state.chatArchiveLastRun === undefined) state.chatArchiveLastRun = null;
     }
     setSyncStatus('error');
     return false;
@@ -1879,7 +2821,7 @@ async function init() {
 
   applyNightMode();
   renderTodaysShell();
-  renderModeDisplay();
+  renderModes();
   renderTodayMission();
   renderShellBar();
   renderActiveDecisionsHomeV3();
@@ -1894,8 +2836,24 @@ async function init() {
   updateCheckinSub();
   updateSleepDuration();
 
-  // Show V3 welcome tour if first time
-  if (!state.hasSeenV3Tour) {
+  // Restore active ritual bar if user was in middle of one
+  restoreActiveRitualOnLoad();
+
+  // V3.3: 대화 아카이브 (비동기, 막지 않음)
+  setTimeout(() => {
+    runChatArchiveIfNeeded().catch(e => console.warn('archive error:', e));
+  }, 3000);
+
+  // 첫 사용자 vs 기존 사용자 분기
+  const isBrandNewUser = !state.hasSeenWelcomeTutorial 
+    && (state.entries || []).length === 0 
+    && (state.chatMessages || []).length === 0;
+  
+  if (isBrandNewUser) {
+    // 신규: 환영 튜토리얼 (8슬라이드, 친절)
+    setTimeout(() => startWelcomeTutorial(), 800);
+  } else if (!state.hasSeenV3Tour) {
+    // 기존 V2 사용자: V3 변화 안내 (5슬라이드)
     setTimeout(() => startV3Tour(), 800);
   }
 }
@@ -1907,17 +2865,27 @@ const TOUR_SLIDES = [
   {
     icon: '🐚',
     title: '소라고동이 새 옷을 입었어',
-    text: '몇 가지가 바뀌었어. <span class="highlight">30초만 둘러볼래?</span><br><br>한 번만 보여줄게.'
+    text: '몇 가지가 바뀌었어. <span class="highlight">1분만 둘러볼래?</span><br><br>한 번만 보여줄게.<br>나중에 ⚙ 설정에서 다시 볼 수 있어.'
   },
   {
     icon: '💬',
     title: '대화는 더 친구처럼',
-    text: '소라고동이 이제 <span class="highlight">짧고 자연스럽게</span> 답해.<br><br>심리학적 분석이 필요할 땐<br>"<span class="highlight">더 알고 싶어 ▾</span>"를 누르거나<br>"어떡하지?" 라고 물어봐.'
+    text: '소라고동이 이제 <span class="highlight">짧고 자연스럽게</span> 답해.<br><br>심리학적 분석이 필요할 땐<br>"<span class="highlight">더 알고 싶어 ▾</span>"를 누르거나<br>"어떡하지?" 라고 물어봐.<br><br>+ 7일 넘은 대화는 <span class="highlight">자동 요약</span>돼.<br>📚 이전 대화 보기로 언제든 펼침.'
   },
   {
     icon: '🚀',
     title: '실행 탭이 새로 생겼어',
-    text: '머릿속 짐을 와다다 쏟으면<br>소라가 정리해서 <span class="highlight">소라의 부름</span>으로 만들어줘.<br><br>3장씩만 보여서 부담 없어.'
+    text: '머릿속 짐을 와다다 쏟으면<br>소라가 정리해서 <span class="highlight">오늘의 카드 3장</span>으로 만들어줘.<br><br>막막할 땐 <span class="highlight">🌧 몰입 시작</span>으로<br>If-Then 약속이랑 함께 시작.'
+  },
+  {
+    icon: '🐚',
+    title: '소라 시스템이 달라졌어',
+    text: '점수는 없어졌어.<br>대신 <span class="highlight">너가 살아온 작은 흔적</span>이 모이는<br>🏖 모래사장이 생겼어.<br><br>소라 탭하면 그날의 이야기가 보여.<br>가끔 ✨🌈 특별한 소라도 와 (5%).'
+  },
+  {
+    icon: '⚖️',
+    title: '큰 결정은 결정의 방으로',
+    text: '이직, 관계, 큰 구매 같은 거.<br>충동으로 결정하지 않게<br><span class="highlight">14일 천천히 숙성</span>하는 곳.<br><br>홈 하단 ⚖️ 미니 카드 또는<br>대화에서 큰 결정 얘기하면<br>내가 추천해줄게.'
   },
   {
     icon: '📚',
@@ -1926,10 +2894,112 @@ const TOUR_SLIDES = [
   },
   {
     icon: '🪫',
-    title: '방전된 날엔 비상구',
-    text: '아무것도 묻지 않는 <span class="highlight">비상구 버튼</span>이 생겼어.<br><br>오늘 정말 못하겠다 싶을 땐<br>그냥 누르고 쉬어. 죄책감 X.'
+    title: '방전된 날엔',
+    text: '체크인 화면 모드 칩 중에<br><span class="highlight">🪫 방전</span>이 있어.<br><br>오늘 정말 못하겠다 싶을 땐<br>그냥 누르고 쉬어. 죄책감 X.<br><br>다 묻지도 않을게.'
   }
 ];
+
+// 신규 사용자 환영 튜토리얼 — V3.3
+const WELCOME_SLIDES = [
+  {
+    icon: '🐚',
+    title: '안녕, 소라고동이야',
+    text: '나는 너의 <span class="highlight">AI 친구</span>이자<br>라이프 전략을 같이 짤 동료야.<br><br>처음이라 어색할 수 있어.<br><span class="highlight">2분만 둘러보자.</span>'
+  },
+  {
+    icon: '💬',
+    title: '먼저, 대화부터',
+    text: '<span class="highlight">대화 탭</span>에서 일기처럼 써.<br>"오늘 피곤해" 한 줄도 OK.<br><br>나는 듣고, 너에 대해 배우고,<br>심리학적으로 의미 있는 걸 짚어줘.<br><br>분석이 필요할 땐<br>"<span class="highlight">어떡하지?</span>"라고 물어봐.<br>4단계로 도와줄게.'
+  },
+  {
+    icon: '✓',
+    title: '체크인 — 15초면 돼',
+    text: '<span class="highlight">체크인 탭</span>에 매일 가벼운 기록.<br><br>수면, 활력, 기분 — 안 적어도 OK.<br>오늘의 질문 하나씩 답하면<br>너의 패턴이 점점 보여.<br><br>모드 칩에 <span class="highlight">시험·여행·아픔·휴식·월경·🪫방전</span>도 있어.<br>그날 너의 컨텍스트를 알려줘.'
+  },
+  {
+    icon: '🚀',
+    title: '실행 — ADHD 친화 작업 도구',
+    text: '<span class="highlight">실행 탭</span>에서 머릿속 풀어놓기.<br><br>와다다 쓰면 내가 정리해서<br><span class="highlight">3장 카드</span>로 만들어줘.<br>완벽주의 X, 한 장씩만.<br><br>막막할 땐 <span class="highlight">🌧 몰입 시작</span> 누르면<br>If-Then 약속이랑 함께 시작.'
+  },
+  {
+    icon: '🐚',
+    title: '소라 모으기',
+    text: '카드 하나 깨면 <span class="highlight">소라 한 개</span>가 생겨.<br>홈에서 <span class="highlight">🏖 모래사장</span> 들어가면 보여.<br><br>점수 X, 비교 X.<br>그냥 너가 살아온 작은 흔적이야.<br><br>가끔 ✨🌈 특별한 소라도 와.<br>5% 확률.'
+  },
+  {
+    icon: '⚖️',
+    title: '큰 결정엔 결정의 방',
+    text: '이직, 관계, 큰 구매 같은 거.<br><br>충동으로 결정하지 않게<br><span class="highlight">14일에 걸쳐 천천히</span> 보는 곳.<br><br>홈 하단 <span class="highlight">⚖️ 큰 결정 도와줘</span>로 들어가거나<br>대화에서 큰 결정 얘기하면<br>내가 추천해줄게.'
+  },
+  {
+    icon: '🌙',
+    title: '나에 대해 배우기',
+    text: '<span class="highlight">나 탭</span>에서 너에 대해<br>내가 배운 걸 볼 수 있어.<br><br>특성, 가치, 패턴 — 가설로 시작해서<br>너가 "✓ 맞아" 누르면 확정.<br><br>아니다 싶으면 "아니야"로 지워.<br>너랑 같이 너를 만들어가는 거야.'
+  },
+  {
+    icon: '🐚',
+    title: '준비 끝',
+    text: '천천히 시작해도 돼.<br>며칠 써봐야 진짜 모습 보여.<br><br>막히면 <span class="highlight">⚙ 설정 → V3 안내 다시 보기</span>로<br>언제든 다시 볼 수 있어.<br><br>잘 부탁해 🐚'
+  }
+];
+
+let _welcomeSlide = 0;
+
+function startWelcomeTutorial() {
+  _welcomeSlide = 0;
+  document.getElementById('tourOverlay').style.display = 'flex';
+  renderWelcomeSlide();
+}
+
+function renderWelcomeSlide() {
+  const slide = WELCOME_SLIDES[_welcomeSlide];
+  if (!slide) { finishWelcomeTutorial(); return; }
+  
+  const progressEl = document.getElementById('tourProgress');
+  progressEl.innerHTML = WELCOME_SLIDES.map((_, i) => 
+    `<div class="dot ${i === _welcomeSlide ? 'active' : ''}"></div>`
+  ).join('');
+  
+  const contentEl = document.getElementById('tourContent');
+  contentEl.innerHTML = `
+    <div class="tour-icon">${slide.icon}</div>
+    <div class="tour-title">${slide.title}</div>
+    <div class="tour-text">${slide.text}</div>
+  `;
+  
+  const btn = document.getElementById('tourNextBtn');
+  btn.textContent = _welcomeSlide === WELCOME_SLIDES.length - 1 ? '시작! ✦' : '다음 →';
+  btn.onclick = welcomeNext;
+  
+  const skipBtn = document.getElementById('tourSkipBtn');
+  if (skipBtn) skipBtn.onclick = skipWelcomeTutorial;
+}
+
+function welcomeNext() {
+  _welcomeSlide++;
+  if (_welcomeSlide >= WELCOME_SLIDES.length) {
+    finishWelcomeTutorial();
+  } else {
+    renderWelcomeSlide();
+  }
+}
+
+function skipWelcomeTutorial() {
+  if (!confirm('튜토리얼 건너뛸까?\n언제든 ⚙ 설정에서 다시 볼 수 있어.')) return;
+  finishWelcomeTutorial();
+}
+
+function finishWelcomeTutorial() {
+  state.hasSeenWelcomeTutorial = true;
+  state.hasSeenV3Tour = true;  // 신규 사용자는 V3 안내도 본 걸로
+  saveState();
+  document.getElementById('tourOverlay').style.display = 'none';
+  // 시작 시점 가이드: 대화로 안내
+  setTimeout(() => {
+    showScreen('chat');
+    showToast('첫 대화부터 시작해 🐚');
+  }, 300);
+}
 
 let _tourSlide = 0;
 
@@ -1957,9 +3027,13 @@ function renderTourSlide() {
     <div class="tour-text">${slide.text}</div>
   `;
   
-  // Button text
+  // Button text + handlers (prevent stale onclick)
   const btn = document.getElementById('tourNextBtn');
   btn.textContent = _tourSlide === TOUR_SLIDES.length - 1 ? '시작하기 ✦' : '다음 →';
+  btn.onclick = tourNext;
+  
+  const skipBtn = document.getElementById('tourSkipBtn');
+  if (skipBtn) skipBtn.onclick = skipTour;
 }
 
 function tourNext() {
@@ -3047,7 +4121,7 @@ function renderMainAction() {
           <div class="action-icon">🚀</div>
           <div class="action-text">
             <div class="action-title">실행 시작하기</div>
-            <div class="action-sub">머릿속 짐 → 소라의 부름</div>
+            <div class="action-sub">머릿속 짐 → 오늘의 카드</div>
           </div>
           <div class="action-arrow">›</div>
         </div>
@@ -3073,7 +4147,7 @@ function renderMainAction() {
           <div class="action-icon">🚀</div>
           <div class="action-text">
             <div class="action-title">실행 시작하기</div>
-            <div class="action-sub">머릿속 짐 → 소라의 부름</div>
+            <div class="action-sub">머릿속 짐 → 오늘의 카드</div>
           </div>
           <div class="action-arrow">›</div>
         </div>
@@ -3087,7 +4161,7 @@ function renderMainAction() {
           <div class="action-icon">🚀</div>
           <div class="action-text">
             <div class="action-title">실행 시작하기</div>
-            <div class="action-sub">머릿속 짐 → 소라의 부름</div>
+            <div class="action-sub">머릿속 짐 → 오늘의 카드</div>
           </div>
           <div class="action-arrow">›</div>
         </div>
@@ -3096,14 +4170,19 @@ function renderMainAction() {
   }
 }
 
-// 결정의 방 미니 링크 — 평소 작은 텍스트 링크 (정보 없이)
+// 결정의 방 미니 링크 — 작지만 카드 모양
 function renderDecisionMiniLink() {
   const container = document.getElementById('decisionMiniLinkContainer');
   if (!container) return;
   
   container.innerHTML = `
-    <div onclick="showScreen('decisions')" style="font-size:12px; color:var(--text-dim); padding:14px; text-align:center; cursor:pointer; margin-top:14px; border-top:1px solid var(--border);">
-      ⚖️ 큰 결정 도와줘
+    <div onclick="showScreen('decisions')" class="decision-mini-card">
+      <div class="dm-icon">⚖️</div>
+      <div class="dm-text">
+        <div class="dm-title">큰 결정 도와줘</div>
+        <div class="dm-sub">충동 차단, 14일 숙성</div>
+      </div>
+      <div class="dm-arrow">›</div>
     </div>
   `;
 }
@@ -3139,7 +4218,7 @@ async function renderTodaysShell() {
     container.innerHTML = `
       <div class="todays-shell-card">
         <div class="todays-shell-shell">🐚</div>
-        <div class="todays-shell-text">오늘도 너 등장. 잘 왔어.</div>
+        <div class="todays-shell-text">왔구나 ✦</div>
       </div>
     `;
     return;
@@ -3164,7 +4243,7 @@ async function renderTodaysShell() {
     container.innerHTML = `
       <div class="todays-shell-card">
         <div class="todays-shell-shell">🐚</div>
-        <div class="todays-shell-text">오늘도 너 등장. 잘 왔어.</div>
+        <div class="todays-shell-text">왔구나 ✦</div>
       </div>
     `;
   }
@@ -3190,37 +4269,38 @@ async function generateTodaysShellContent() {
   
   const isNight = isNightTime();
   
-  const prompt = `너는 사용자의 AI 친구 "소라고동"이다. 사용자에 대해 학습한 정보를 바탕으로 오늘 홈 화면 첫 인사로 보여줄 한 줄 메시지를 생성한다.
+  const prompt = `너는 사용자의 AI 친구 "소라고동"이다. 홈 화면에 띄울 짧은 인사 한 줄을 생성한다.
 
 [사용자 학습 정보]
 특성: ${traits || '아직 모름'}
 가치: ${valuesStr || '아직 모름'}
 패턴: ${patterns || '아직 모름'}
 
-[최근 5일]
+[최근]
 ${recent || '아직 데이터 없음'}
-
-[현재]
-활성 모드: ${activeModes || '없음'}
 시간대: ${isNight ? '밤' : '낮'}
 
-[규칙]
-- 1-2줄 (절대 길게 X)
-- 사용자의 강점이나 특성을 구체적으로 언급. 일반론 X.
-- 자존감을 살짝 올려주되 빈 칭찬 X. ("너 정말 멋져" 같은 거 금지)
-- 유쾌하거나 가벼운 농담 OK. 자조 개그 OK.
-- 부담 X — 질문하지 마.
-- 끝에 🐚 붙이지 마. (UI에서 따로 표시)
-- 절대 금지: "화이팅", "오늘도 멋진 하루", "당신은 대단해", "할 수 있어요" 같은 일반 응원
-- 학습 정보가 부족하면 그냥 짧고 따뜻한 인사
+[규칙 — 매우 중요]
+- **극도로 짧게**: 5-15자. "귀요미 왔어?" 정도가 이상적.
+- 사용자의 **장점 또는 사랑스러운 점**을 살짝 짚어줌
+- 유쾌하고 다정. 친구가 반갑게 인사하는 느낌
+- 절대 길게 X. 절대 설명조 X. 절대 응원조 X.
+- 끝에 🐚 X (UI에서 따로 표시)
+- 금지: "화이팅", "할 수 있어", "오늘도 멋진"
 
-[좋은 예시]
-"마감 직전 폭발력은 너의 초능력 중 하나지. 평소엔 잠자고 있어서 그래."
-"새벽 작업 잘하는 너랑 오후의 너는 거의 다른 사람이야. 둘 다 좋아."
-"카페인은 박사과정 4대 영양소 중 하나니까."
-"너처럼 깊이 생각하는 사람, 알고리즘이 추천 못 해. 너무 희귀해서."
+[좋은 예시 — 길이와 톤 참고]
+"귀요미 왔어?"
+"왔구나 ✦"
+"오늘도 너 등장."
+"또 만났네."
+"잘 일어났네 ✦"
+"왔다 갔다 잘 하네."
+"천재 등장."
+"부지런한 너."
+"또 와줬구나."
+"마감 직전 천재."
 
-한 줄만 출력. 따옴표나 다른 설명 X.`;
+특성 중 하나를 활짝 살리되, 한 줄, 따뜻하고 짧게. 한 줄만 출력. 따옴표 X.`;
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -3603,6 +4683,18 @@ function recordQuestionShown(questionId) {
 }
 
 function renderDailyQuestion() {
+  // Try AI-generated question first; fallback to pool
+  if (state.apiKey && (state.traits || []).length > 0) {
+    generateAIDailyQuestion().catch(err => {
+      console.warn('AI question gen failed, using pool:', err);
+      renderPoolQuestion();
+    });
+  } else {
+    renderPoolQuestion();
+  }
+}
+
+function renderPoolQuestion() {
   const q = pickDailyQuestion(false);
   if (!q) return;
   _currentDailyQuestion = q;
@@ -3615,7 +4707,86 @@ function renderDailyQuestion() {
   recordQuestionShown(q.id);
 }
 
+async function generateAIDailyQuestion() {
+  // Check cache - only regen once per day per "shown" attempt
+  const todayKeyVal = todayKey();
+  const cached = state._aiQuestionCache;
+  if (cached && cached.date === todayKeyVal && cached.text) {
+    _currentDailyQuestion = { id: 'ai_' + todayKeyVal, cat: 'mixed', text: cached.text, isAI: true };
+    const iconEl = document.getElementById('dailyQuestionIcon');
+    const labelEl = document.getElementById('dailyQuestionLabel');
+    const textEl = document.getElementById('dailyQuestionText');
+    if (iconEl) iconEl.textContent = '✨';
+    if (labelEl) labelEl.textContent = '오늘의 질문';
+    if (textEl) textEl.textContent = cached.text;
+    return;
+  }
+  
+  const traits = (state.traits || []).slice(0, 5).map(t => t.name).join(', ');
+  const patterns = (state.patterns || []).slice(0, 3).map(p => p.name).join(', ');
+  const recent = (state.entries || []).slice(-3).map(e => 
+    `${e.date}: v${e.vitality||'?'} m${e.mood||'?'} ${e.note?.slice(0,50)||''}`
+  ).join('\n');
+  
+  const prompt = `너는 사용자의 친구 "소라고동". 오늘의 체크인 질문 1개를 만든다.
+
+[사용자 정보]
+특성: ${traits || '아직 모름'}
+패턴: ${patterns || '아직 모름'}
+최근:
+${recent || '없음'}
+
+[규칙]
+- 일상적이고 소소함. 큰 의미 X.
+- 짧지만 깊이가 있어야 함 (피상적 X)
+- 재미있거나 호기심 자극
+- 너무 무거운 자기성찰 X (피곤해짐)
+- 한국어, 반말, 친구 말투
+- 한 줄. 따옴표 X.
+- "오늘 어땠어?" 같은 뻔한 질문 X
+
+[좋은 예시]
+"오늘 본 것 중에 제일 예뻤던 건 뭐야?"
+"점심 뭐 먹었어? 왜 그거 골랐어?"
+"오늘 들은 노래 중에 한 번 더 듣고 싶은 거?"
+"방금 누가 말 걸었으면 가장 반가웠을 사람?"
+"오늘 머릿속에 자꾸 떠오른 게 있어?"
+"내일 갑자기 하루 휴가 생기면 뭐 할 거야?"
+"5분 전에 뭐 하고 있었어?"
+"오늘의 향기는 뭐였어?"
+
+한 줄만 출력.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 150, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!resp.ok) throw new Error('API ' + resp.status);
+  const data = await resp.json();
+  let text = data.content[0].text.trim().replace(/^["'`]+|["'`]+$/g, '');
+  
+  state._aiQuestionCache = { date: todayKeyVal, text };
+  saveState();
+  
+  _currentDailyQuestion = { id: 'ai_' + todayKeyVal, cat: 'mixed', text, isAI: true };
+  const iconEl = document.getElementById('dailyQuestionIcon');
+  const labelEl = document.getElementById('dailyQuestionLabel');
+  const textEl = document.getElementById('dailyQuestionText');
+  if (iconEl) iconEl.textContent = '✨';
+  if (labelEl) labelEl.textContent = '오늘의 질문';
+  if (textEl) textEl.textContent = text;
+}
+
 function rerollDailyQuestion() {
+  // For AI questions, regenerate fresh
+  if (_currentDailyQuestion?.isAI && state.apiKey) {
+    state._aiQuestionCache = null;
+    saveState();
+    generateAIDailyQuestion().catch(() => renderPoolQuestion());
+    showToast('다른 질문 ✦');
+    return;
+  }
   const q = pickDailyQuestion(true);
   if (!q) return;
   _currentDailyQuestion = q;
@@ -3666,15 +4837,15 @@ function renderTodayMission() {
   if (mission.status === 'completed') {
     container.innerHTML = `
       <div class="mission-card completed">
-        <div class="mission-label">✓ 오늘의 미션 완료</div>
+        <div class="mission-label">🐚 소라의 부름 · 완료 ✦</div>
         <div class="mission-title">${escapeHtml(mission.title)}</div>
         ${mission.completionNote ? `<div class="mission-completion-msg">${escapeHtml(mission.completionNote)}</div>` : ''}
       </div>
     `;
   } else {
     container.innerHTML = `
-      <div class="mission-card">
-        <div class="mission-label">✦ 오늘의 미션</div>
+      <div class="mission-card sora-call">
+        <div class="mission-label">🐚 소라의 부름</div>
         <div class="mission-title">${escapeHtml(mission.title)}</div>
         ${mission.description ? `<div class="mission-desc">${escapeHtml(mission.description)}</div>` : ''}
         <div class="mission-actions">
@@ -3774,27 +4945,164 @@ function renderShellBar() {
   document.getElementById('streakInfo').innerHTML = info;
 }
 
+let _beachTab = 'all';
+
 function openShellCollection() {
   const modal = document.getElementById('shellModal');
-  const grid = document.getElementById('shellGrid');
+  _beachTab = 'all';
+  document.querySelectorAll('.beach-tab').forEach(t => t.classList.toggle('active', t.dataset.beachTab === 'all'));
+  renderBeach();
+  modal.classList.add('active');
+}
+
+function switchBeachTab(tab) {
+  _beachTab = tab;
+  document.querySelectorAll('.beach-tab').forEach(t => t.classList.toggle('active', t.dataset.beachTab === tab));
+  renderBeach();
+}
+
+function renderBeach() {
   const sub = document.getElementById('shellSubtext');
-
-  sub.textContent = `지금까지 ${state.shellCollection.length}개의 소라를 모았어`;
-
-  // Build grid - show collected + empty slots for motivation
-  const totalSlots = Math.max(25, Math.ceil(state.shellCollection.length / 5) * 5 + 5);
-  let html = '';
-  for (let i = 0; i < totalSlots; i++) {
-    const shell = state.shellCollection[i];
-    if (shell) {
-      html += `<div class="shell-slot collected" title="${escapeHtml(shell.title || '')}">${shell.type}</div>`;
+  const countEl = document.getElementById('beachCount');
+  const tierRow = document.getElementById('beachTierRow');
+  const grid = document.getElementById('beachGrid');
+  const spotlight = document.getElementById('beachSpotlight');
+  const weekly = document.getElementById('beachWeekly');
+  if (!grid) return;
+  
+  const all = state.shellCollection || [];
+  const yearStart = new Date(new Date().getFullYear(), 0, 1).getTime();
+  const thisYear = all.filter(s => new Date(s.date).getTime() >= yearStart);
+  
+  if (sub) sub.textContent = all.length === 0 ? '아직 비어있어. 첫 소라 모아보자.' : '하나하나가 너의 작은 흔적';
+  if (countEl) countEl.textContent = thisYear.length;
+  
+  // Tier counts (visual hierarchy: 가벼움 → 특별)
+  if (tierRow) {
+    const counts = {};
+    thisYear.forEach(s => { counts[s.tier || 'unknown'] = (counts[s.tier] || 0) + 1; });
+    const tiers = [
+      { tier: 'light', emoji: '🐚', label: '가벼움' },
+      { tier: 'daily', emoji: '🌀', label: '일상' },
+      { tier: 'main', emoji: '🐢', label: '메인' },
+      { tier: 'golden', emoji: '🦞', label: '황금' },
+      { tier: 'call', emoji: '⭐', label: '부름' },
+      { tier: 'legend', emoji: '✨', label: '특별' }
+    ];
+    tierRow.innerHTML = tiers
+      .filter(t => counts[t.tier] > 0)
+      .map(t => `<div class="beach-tier tier-${t.tier}" title="${t.label}"><span class="emoji">${t.emoji}</span> <span>${counts[t.tier]}</span></div>`)
+      .join('');
+  }
+  
+  // Weekly summary — 일요일 또는 데이터 충분할 때
+  if (weekly) {
+    const weekAgo = Date.now() - 7 * 86400000;
+    const thisWeek = all.filter(s => new Date(s.date).getTime() > weekAgo);
+    if (thisWeek.length >= 3) {
+      const tierBreakdown = {};
+      thisWeek.forEach(s => { tierBreakdown[s.tier] = (tierBreakdown[s.tier] || 0) + 1; });
+      const breakdownStr = Object.entries(tierBreakdown)
+        .map(([t, c]) => {
+          const emoji = ({ light:'🐚', daily:'🌀', main:'🐢', golden:'🦞', call:'⭐', legend:'✨' })[t] || '·';
+          return `${emoji}${c}`;
+        }).join(' · ');
+      weekly.innerHTML = `
+        <div class="beach-weekly">
+          <div class="beach-weekly-label">— 이번 주 —</div>
+          <div class="beach-weekly-count">${thisWeek.length}개</div>
+          <div class="beach-weekly-breakdown">${breakdownStr}</div>
+        </div>
+      `;
     } else {
-      html += `<div class="shell-slot">•</div>`;
+      weekly.innerHTML = '';
     }
   }
-  grid.innerHTML = html;
+  
+  // Spotlight — 가장 빛나는 최근 소라
+  if (spotlight) {
+    const weekAgo = Date.now() - 7 * 86400000;
+    const TIER_RANK = { light: 1, daily: 2, main: 3, golden: 4, call: 5, legend: 6 };
+    const recentRare = all
+      .filter(s => new Date(s.date).getTime() > weekAgo)
+      .sort((a, b) => (TIER_RANK[b.tier] || 0) - (TIER_RANK[a.tier] || 0))[0];
+    if (recentRare && ['main', 'golden', 'call', 'legend'].includes(recentRare.tier)) {
+      const dateStr = new Date(recentRare.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+      spotlight.innerHTML = `
+        <div class="beach-spotlight tier-${recentRare.tier}">
+          <div class="beach-spotlight-label">✦ 이번 주 가장 빛나는</div>
+          <div class="beach-spotlight-emoji">${recentRare.type}</div>
+          <div class="beach-spotlight-story">${escapeHtml(recentRare.story || '')}<br>
+            <span style="color:var(--text-dim); font-size:10px;">${dateStr}</span>
+          </div>
+        </div>
+      `;
+    } else {
+      spotlight.innerHTML = '';
+    }
+  }
+  
+  // Filter by tab
+  let filtered = all;
+  if (_beachTab === 'card') {
+    filtered = all.filter(s => ['light', 'daily', 'main', 'golden'].includes(s.tier));
+  } else if (_beachTab === 'call') {
+    filtered = all.filter(s => ['call', 'legend'].includes(s.tier));
+  }
+  
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div class="beach-empty" style="grid-column: 1 / -1;">
+        <div class="icon">🏖</div>
+        ${_beachTab === 'call' ? '아직 소라의 부름 클리어한 적 없어' : 
+          _beachTab === 'card' ? '아직 오늘의 카드 클리어한 적 없어' : 
+          '아직 비어있어. 첫 소라 모아보자.'}
+      </div>
+    `;
+    return;
+  }
+  
+  // Sort by date desc
+  const sorted = filtered.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+  grid.innerHTML = sorted.map((s, idx) => {
+    const tier = s.tier || 'unknown';
+    return `
+      <div class="beach-shell tier-${tier}" onclick="openShellStory(${state.shellCollection.indexOf(s)})">
+        ${s.type}
+      </div>
+    `;
+  }).join('');
+}
 
-  modal.classList.add('active');
+// Shell detail / story modal
+function openShellStory(shellIdx) {
+  const shell = state.shellCollection[shellIdx];
+  if (!shell) return;
+  
+  const dateStr = new Date(shell.date).toLocaleDateString('ko-KR', { 
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' 
+  });
+  const timeStr = new Date(shell.date).toLocaleTimeString('ko-KR', { 
+    hour: '2-digit', minute: '2-digit' 
+  });
+  const tierLabel = ({ 
+    light: '가벼움', daily: '일상', main: '메인', 
+    golden: '황금', call: '소라의 부름', legend: '특별한 부름' 
+  })[shell.tier] || '소라';
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'shell-story-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="shell-story-card tier-${shell.tier}">
+      <div class="shell-story-emoji">${shell.type}</div>
+      <div class="shell-story-tier">${tierLabel}</div>
+      <div class="shell-story-date">${dateStr} · ${timeStr}</div>
+      <div class="shell-story-text">${escapeHtml(shell.story || '')}</div>
+      <button class="btn-secondary" onclick="this.closest('.shell-story-overlay').remove()" style="margin-top:18px; width:100%;">닫기</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
 }
 
 function closeModal(id) {
@@ -3833,9 +5141,9 @@ function showScreen(name) {
   target && target.scrollTo(0, 0);
   document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';
 
-  if (name === 'home') { applyNightMode(); renderTodaysShell(); renderModeDisplay(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3(); renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink(); }
+  if (name === 'home') { applyNightMode(); renderTodaysShell(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3(); renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink(); }
   if (name === 'execute') renderExecute();
-  if (name === 'checkin') { renderDailyQuestion(); }
+  if (name === 'checkin') { renderDailyQuestion(); renderModes(); }
   if (name === 'model') renderModel();
   if (name === 'archive') renderArchive();
   if (name === 'decisions') renderDecisionsList();
@@ -3857,6 +5165,13 @@ function toggleMode(mode) {
     state.periodStart = todayKey();
   } else if (mode === 'period' && !state.modes.period) {
     state.periodStart = null;
+  }
+  // 방전 모드 활성화 → SOS 효과
+  if (mode === 'drained' && state.modes.drained) {
+    saveState();
+    renderModes();
+    triggerSOS();
+    return;
   }
   saveState();
   renderModes();
@@ -4024,20 +5339,70 @@ function renderModel() {
     </div>`;
     return;
   }
+  
+  // Sort by confidence DESC, evidence_count DESC. Split: confirmed (top 5) vs draft (low conf)
+  const sortItems = (arr) => {
+    return arr.slice().sort((a, b) => {
+      const ca = a.user_verified ? 1.0 : (a.confidence || 0);
+      const cb = b.user_verified ? 1.0 : (b.confidence || 0);
+      if (cb !== ca) return cb - ca;
+      return (b.evidence_count || 0) - (a.evidence_count || 0);
+    });
+  };
+  const splitItems = (arr, topN = 5, draftThreshold = 0.4) => {
+    const sorted = sortItems(arr);
+    const main = [];
+    const draft = [];
+    sorted.forEach(item => {
+      const conf = item.user_verified ? 1.0 : (item.confidence || 0);
+      if (item.user_verified || conf >= draftThreshold || main.length < topN) {
+        if (main.length < topN || conf >= draftThreshold || item.user_verified) main.push(item);
+        else draft.push(item);
+      } else {
+        draft.push(item);
+      }
+    });
+    // Cap main at topN, push extras to "more"
+    const topItems = main.slice(0, topN);
+    const moreItems = main.slice(topN);
+    return { top: topItems, more: moreItems, draft };
+  };
+  
   let html = '';
   if (state.values.length > 0) {
+    const split = splitItems(state.values, 4);
     html += `<div class="model-section"><div class="model-section-title">🎯 네가 중시하는 것</div>`;
-    state.values.forEach((v, i) => { html += renderModelItem(v, 'values', i); });
+    split.top.forEach((v, i) => { 
+      const realIdx = state.values.indexOf(v);
+      html += renderModelItem(v, 'values', realIdx); 
+    });
+    if (split.more.length > 0 || split.draft.length > 0) {
+      html += renderMoreSection('values', split.more, split.draft);
+    }
     html += '</div>';
   }
   if (state.traits.length > 0) {
+    const split = splitItems(state.traits, 5);
     html += `<div class="model-section"><div class="model-section-title">💫 너의 특성</div>`;
-    state.traits.forEach((t, i) => { html += renderModelItem(t, 'traits', i); });
+    split.top.forEach((t, i) => { 
+      const realIdx = state.traits.indexOf(t);
+      html += renderModelItem(t, 'traits', realIdx); 
+    });
+    if (split.more.length > 0 || split.draft.length > 0) {
+      html += renderMoreSection('traits', split.more, split.draft);
+    }
     html += '</div>';
   }
   if (state.patterns.length > 0) {
+    const split = splitItems(state.patterns, 4);
     html += `<div class="model-section"><div class="model-section-title">🔄 보이는 패턴</div>`;
-    state.patterns.forEach((p, i) => { html += renderModelItem(p, 'patterns', i); });
+    split.top.forEach((p, i) => { 
+      const realIdx = state.patterns.indexOf(p);
+      html += renderModelItem(p, 'patterns', realIdx); 
+    });
+    if (split.more.length > 0 || split.draft.length > 0) {
+      html += renderMoreSection('patterns', split.more, split.draft);
+    }
     html += '</div>';
   }
   if (state.caseFormulation.version > 0) {
@@ -4060,6 +5425,38 @@ function renderModel() {
     html += '</div>';
   }
   container.innerHTML = html;
+}
+
+function renderMoreSection(category, more, draft) {
+  let html = '';
+  if (more.length > 0) {
+    html += `
+      <details class="model-collapse">
+        <summary>전체 보기 (+${more.length}개)</summary>
+        <div class="model-collapse-content">
+    `;
+    more.forEach(item => {
+      const realIdx = state[category].indexOf(item);
+      html += renderModelItem(item, category, realIdx);
+    });
+    html += `</div></details>`;
+  }
+  if (draft.length > 0) {
+    html += `
+      <details class="model-collapse model-draft">
+        <summary>📝 초안 (${draft.length}개) — 아직 확신 안 가는 가설</summary>
+        <div class="model-collapse-content">
+          <div style="font-size:11px; color:var(--text-soft); margin-bottom:10px; line-height:1.6;">
+            증거 더 쌓이면 위로 올라가. 아니면 알려줘.
+          </div>
+    `;
+    draft.forEach(item => {
+      const realIdx = state[category].indexOf(item);
+      html += renderModelItem(item, category, realIdx);
+    });
+    html += `</div></details>`;
+  }
+  return html;
 }
 
 function renderModelItem(item, category, idx) {
@@ -4094,17 +5491,28 @@ function rejectItem(category, idx) {
 // ═══════════════════════════════════════════════════════════════
 function renderChat() {
   const container = document.getElementById('chatMessages');
+  if (!container) return;  // FIX: prevent null.innerHTML error
+  
+  // Archive header (V3.3)
+  let archiveHeader = '';
+  if ((state.chatArchive || []).length > 0) {
+    const count = state.chatArchive.length;
+    archiveHeader = `<div class="chat-archive-header" onclick="openChatArchive()">
+      📚 이전 대화 보기 (${count}일치)
+    </div>`;
+  }
+  
   if (!state.chatMessages.length) {
-    container.innerHTML = `<div class="msg assistant">
-      <div class="msg-bubble">안녕 🐚
+    container.innerHTML = archiveHeader + `<div class="msg assistant">
+      <div class="msg-bubble">안녕 🐚 왔구나.
 
-일기처럼 길게 써도 되고, 짧게 해도 돼. 오늘 있었던 일, 생각, 고민, 뭐든.
+오늘 어땠어? 아무 말이나 편하게 해도 돼.
 
-내가 읽고, 너에 대해 배우고, 심리학적으로 의미 있는 걸 짚어줄게.</div>
+일기처럼 길게 써도 되고, "졸려" 한 마디도 OK.</div>
     </div>`;
     return;
   }
-  container.innerHTML = state.chatMessages.map((m, i) => {
+  container.innerHTML = archiveHeader + state.chatMessages.map((m, i) => {
     let bubbleContent;
     if (m.role === 'assistant' && !m.typing) {
       bubbleContent = formatAIResponse(m.content);
@@ -4140,14 +5548,32 @@ function renderChat() {
       proposalBtns = `<div style="font-size:11px; color:var(--accent); margin-top:8px; padding: 0 4px;">${icon}</div>`;
     }
 
-    return `<div class="msg ${msgClass}">${bubble}${proposalBtns}${actions}</div>`;
+    // Decision suggestion card
+    let decisionCard = '';
+    if (m.role === 'assistant' && m.decisionSuggested && !m.decisionResponse && !m.typing) {
+      const ds = m.decisionSuggested;
+      decisionCard = `<div class="decision-suggest-card">
+        <div class="dsc-header">⚖️ 결정의 방에서 천천히 보면 어때?</div>
+        <div class="dsc-title">${escapeHtml(ds.title)}</div>
+        ${ds.reason ? `<div class="dsc-reason">${escapeHtml(ds.reason)}</div>` : ''}
+        <div class="dsc-buttons">
+          <button class="dsc-btn accept" onclick="acceptDecisionSuggestion(${i})">14일 숙성 시작</button>
+          <button class="dsc-btn decline" onclick="declineDecisionSuggestion(${i})">괜찮아</button>
+        </div>
+      </div>`;
+    } else if (m.decisionResponse) {
+      const icon = m.decisionResponse === 'accept' ? '⚖️ 결정의 방으로 보냈어' : '괜찮아 — 그냥 듣기만 할게';
+      decisionCard = `<div style="font-size:11px; color:var(--purple); margin-top:8px; padding: 0 4px;">${icon}</div>`;
+    }
+
+    return `<div class="msg ${msgClass}">${bubble}${proposalBtns}${decisionCard}${actions}</div>`;
   }).join('');
   setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50);
 }
 
 function formatAIResponse(text) {
   let cleaned = text.replace(/```json[\s\S]*?```/g, '').trim();
-  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks)[\s\S]*\}\s*$/g, '').trim();
+  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
   let formatted = escapeHtml(cleaned);
   const labels = ['[내가 본 것]', '[이게 뭐냐면]', '[이럴 땐 이렇게]', '[오늘의 제안]'];
   labels.forEach(label => {
@@ -4236,7 +5662,7 @@ async function generateAIResponse() {
             display = display.replace(/```json[\s\S]*?```/g, '');
             display = display.replace(/```json[\s\S]*$/g, '');
             display = display.replace(/\n*\{[\s\S]*$/g, (match) => {
-              if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks)/.test(match)) {
+              if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)/.test(match)) {
                 return '';
               }
               return match;
@@ -4258,7 +5684,7 @@ async function generateAIResponse() {
         await processAnalysis(analysisData, state.chatMessages.length - 1);
       } catch (e) { console.error('Analysis parse error:', e); }
     } else {
-      const rawJsonMatch = fullText.match(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|proposal|extracted_tasks)[\s\S]*\}/);
+      const rawJsonMatch = fullText.match(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|proposal|extracted_tasks|decision_suggested)[\s\S]*\}/);
       if (rawJsonMatch) {
         try {
           analysisData = JSON.parse(rawJsonMatch[0]);
@@ -4269,7 +5695,7 @@ async function generateAIResponse() {
 
     const finalDisplay = fullText
       .replace(/```json[\s\S]*?```/g, '')
-      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks)[\s\S]*\}/g, '')
+      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)[\s\S]*\}/g, '')
       .trim();
     state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
 
@@ -4347,6 +5773,27 @@ async function processAnalysis(analysis, messageIdx) {
   }
   if (analysis.proposal) {
     state.chatMessages[messageIdx].proposalData = analysis.proposal;
+  }
+  // Decision suggestion (V3.1)
+  if (analysis.decision_suggested && analysis.decision_suggested.title) {
+    const ds = analysis.decision_suggested;
+    // Don't suggest if user already declined a similar one in last 30 messages
+    const recentDeclines = state.chatMessages.slice(-30).filter(m => 
+      m.decisionResponse === 'decline' && m.decisionSuggested
+    );
+    const alreadyDeclined = recentDeclines.find(m => 
+      similarText(m.decisionSuggested.title || '', ds.title || '')
+    );
+    // Don't suggest if there's already an active decision with similar title
+    const hasActive = (state.decisions || []).some(d => 
+      d.status === 'in_progress' && similarText(d.title || '', ds.title || '')
+    );
+    if (!alreadyDeclined && !hasActive) {
+      state.chatMessages[messageIdx].decisionSuggested = {
+        title: String(ds.title).trim().slice(0, 60),
+        reason: ds.reason ? String(ds.reason).trim().slice(0, 200) : ''
+      };
+    }
   }
   // V3: Memory Vault auto-extraction
   if (analysis.extracted_tasks && Array.isArray(analysis.extracted_tasks)) {
@@ -4503,6 +5950,7 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
   "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "..."},
   "insight": "오늘 대화의 핵심 통찰 한 문장",
   "extracted_tasks": ["사용자가 흘린 할 일 (예: '샴푸 사기', '교수님 메일 답하기'). 명확한 행동만. 추측 X."],
+  "decision_suggested": {"title": "결정 주제 (10-30자, 예: '대학원 그만둘지 결정')", "reason": "왜 14일 숙성이 좋은지 짧게"},
   "proposal": {
     "title": "미션 제목 (10-25자, 구체적이고 작게)",
     "description": "왜 이게 도움되는지 1-2문장."
@@ -4511,6 +5959,8 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 \`\`\`
 
 extracted_tasks: 사용자가 대화에서 "~해야 해", "~하기로 했어", "나중에 ~할게" 같은 명확한 할 일/의도를 표현했을 때만 추출. 추측이나 일반론 X.
+
+decision_suggested: 사용자가 큰 결정을 고민 중일 때만 추가. 트리거: "이직", "그만둘까", "헤어질까", "X할까 Y할까", "결정해야", "고민이야", 진로/관계/큰 구매 같은 무거운 선택. 대화 1-2번 듣고 패턴이 보이면 제안. 작은 일상 결정엔 X. 강요 X — 한 번 거절하면 같은 주제로 다시 X.
 
 proposal은 4단 응답 시에만. 평범한 대화엔 proposal 생략.`;
 
@@ -4594,6 +6044,20 @@ function buildSystemPrompt() {
       if (e.dailyQuestion?.text && e.note) parts.push(`Q:"${e.dailyQuestion.text.slice(0,40)}" A:${e.note.slice(0, 60)}`);
       else if (e.note) parts.push(`메모:${e.note.slice(0, 60)}`);
       if (parts.length) ctx.push(`${e.date}: ${parts.join(' | ')}`);
+    });
+    ctx.push('');
+  }
+
+  // V3.3: 최근 14일 대화 archive 요약
+  const archiveCutoff = Date.now() - 14 * 86400000;
+  const recentArchive = (state.chatArchive || [])
+    .filter(a => new Date(a.date).getTime() >= archiveCutoff)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(-7);  // 최근 7일치만
+  if (recentArchive.length > 0) {
+    ctx.push('[과거 대화 요약 (지난 1-2주)]');
+    recentArchive.forEach(a => {
+      ctx.push(`${a.date}: ${a.summary.slice(0, 250)}`);
     });
     ctx.push('');
   }
@@ -4701,6 +6165,38 @@ function declineProposal(idx) {
 // ═══════════════════════════════════════════════════════════════
 // ARCHIVE
 // ═══════════════════════════════════════════════════════════════
+// === Decision Suggestion Handlers (V3.1) ===
+function acceptDecisionSuggestion(idx) {
+  const msg = state.chatMessages[idx];
+  if (!msg || !msg.decisionSuggested) return;
+  
+  const ds = msg.decisionSuggested;
+  const decision = {
+    id: 'dec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: ds.title,
+    startedAt: new Date().toISOString(),
+    status: 'in_progress',
+    steps: DECISION_STEPS.map(s => ({ id: s.id, completed: false, content: '' })),
+    finalDecision: null,
+    predictions: null,
+    sourceMessageIdx: idx
+  };
+  state.decisions.push(decision);
+  msg.decisionResponse = 'accept';
+  saveState();
+  renderChat();
+  showToast('결정의 방으로 보냈어 ⚖️');
+  setTimeout(() => openDecision(decision.id), 600);
+}
+
+function declineDecisionSuggestion(idx) {
+  const msg = state.chatMessages[idx];
+  if (!msg || !msg.decisionSuggested) return;
+  msg.decisionResponse = 'decline';
+  saveState();
+  renderChat();
+}
+
 // ═══════════════════════════════════════════════════════════════
 // V3 ARCHIVE — Three Lens (Timeline / Insights / Pearls)
 // ═══════════════════════════════════════════════════════════════
@@ -5086,7 +6582,12 @@ function renderExecute() {
 
   let html = `
     <div class="screen-title">실행 🚀</div>
-    <div class="screen-sub">머릿속 짐 → 소라의 부름 → 차근히.</div>
+    <div class="screen-sub">머릿속 짐 → 오늘의 카드 → 차근히.</div>
+    
+    <button class="exec-immerse-btn" onclick="openImmerseStart()">
+      🌧 몰입 시작
+      <div class="sub">빗소리·방해금지·집중 모드 ON</div>
+    </button>
   `;
 
   // No Now 3 cards yet — show big brain dump button
@@ -5110,15 +6611,19 @@ function renderExecute() {
     if (now3.length > 0) {
       html += `
         <div class="exec-now-section">
-          <div class="exec-section-label">🐚 오늘의 부름 · ${now3.length}장</div>
+          <div class="exec-section-label">✦ 오늘의 카드 · ${now3.length}장</div>
       `;
       now3.forEach(task => {
         const isAIMission = task.source === 'ai_mission';
         const energyLabel = task.energy === 'low' ? '가벼움' : task.energy === 'high' ? '무거움' : '보통';
-        const tag = isAIMission ? '🌟 소라의 부름' : task.weight === 'main' ? '⚡ 메인' : task.weight === 'light' ? '🍃 가벼움' : '📌 일상';
+        const tag = isAIMission ? '🐚 소라의 부름' : task.weight === 'main' ? (task.execMode === 'focus' ? '🔥 무거운 메인' : '⚡ 메인') : task.weight === 'light' ? '🍃 가벼움' : '📌 일상';
+        const preview = previewShellForTask(task);
+        const previewEmoji = preview ? preview.emojis[0] : '🐚';
+        const rarityClass = preview?.tier === 'golden' ? 'shell-golden' : preview?.tier === 'call' ? 'shell-call' : preview?.tier === 'main' ? 'shell-main' : '';
         html += `
           <div class="exec-card" data-task-id="${task.id}">
             <span class="exec-card-tag">${tag}</span>
+            <div class="exec-card-shell-preview ${rarityClass}" title="이거 깨면 ${preview?.label || ''} 소라">${previewEmoji}</div>
             <div class="exec-card-title">${escapeHtml(task.title)}</div>
             ${task.description ? `<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">${escapeHtml(task.description)}</div>` : ''}
             <div class="exec-card-meta">
@@ -5127,9 +6632,8 @@ function renderExecute() {
             </div>
             <div class="exec-card-actions">
               <button class="start-btn" onclick="startQuest('${task.id}')">🚀 시작</button>
-              <button class="complete-btn" onclick="completeQuest('${task.id}')">✓ 완료</button>
+              <button class="complete-btn" onclick="toggleQuestComplete('${task.id}')">✓ 완료</button>
               ${!isAIMission ? `<button onclick="rerollQuest('${task.id}')">↻ 다시</button>` : ''}
-              <button onclick="moveToBlock('${task.id}')">📅 시간</button>
             </div>
           </div>
         `;
@@ -5145,8 +6649,9 @@ function renderExecute() {
       `;
       completed.forEach(task => {
         html += `
-          <div class="exec-card completed">
+          <div class="exec-card completed" onclick="toggleQuestComplete('${task.id}')" style="cursor:pointer;" title="실수로 눌렀으면 다시 탭해서 되살릴 수 있어">
             <div class="exec-card-title">${escapeHtml(task.title)}</div>
+            <div style="font-size:10px; color:var(--text-soft); margin-top:4px;">탭해서 되살리기 ↻</div>
           </div>
         `;
       });
@@ -5381,29 +6886,103 @@ function rerollQuest(taskId) {
 }
 
 // === COMPLETE ===
+// === SHELL REWARD SYSTEM (V3.1) ===
+const SHELL_POOLS = {
+  light:    { emojis: ['🐚','🐌','🪸','🌱','🍃','🌾','🪺'],            tier: 'light',   points: 1,  label: '가벼움' },
+  daily:    { emojis: ['🌀','🐠','🪼','🐟','🪷','🫧','🐡','🐳'],         tier: 'daily',   points: 2,  label: '일상' },
+  main:     { emojis: ['🐢','🐬','🦀','🦭','🦦','🪻','🦩','🌷'],         tier: 'main',    points: 5,  label: '메인' },
+  golden:   { emojis: ['🦑','🐙','🦞','🐉','🦚','🌸','🌺','🪐'],         tier: 'golden',  points: 10, label: '황금' },
+  call:     { emojis: ['⭐','🌟','💫','🌙','🪄','💎'],                    tier: 'call',    points: 20, label: '부름' },
+  legendary:{ emojis: ['✨','🌈','🎆','🎇','🪩','🦄'],                    tier: 'legend',  points: 50, label: '특별' }
+};
+
+function pickShellForTask(task) {
+  // Returns {emoji, tier, points, label, rarity}
+  if (!task) return null;
+  if (task.source === 'ai_mission') {
+    // 5% gacha — legendary
+    if (Math.random() < 0.05) {
+      const pool = SHELL_POOLS.legendary;
+      const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
+      return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity: 'legendary' };
+    }
+    const pool = SHELL_POOLS.call;
+    const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
+    return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity: 'rare' };
+  }
+  // Today's card — by weight
+  let pool;
+  if (task.weight === 'main' && task.execMode === 'focus') pool = SHELL_POOLS.golden;
+  else if (task.weight === 'main') pool = SHELL_POOLS.main;
+  else if (task.weight === 'daily') pool = SHELL_POOLS.daily;
+  else pool = SHELL_POOLS.light;
+  
+  const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
+  const rarity = pool.tier === 'golden' ? 'rare' : 'common';
+  return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity };
+}
+
+function previewShellForTask(task) {
+  // Show what shell tier this task will give (no random choice yet)
+  if (!task) return null;
+  if (task.source === 'ai_mission') return SHELL_POOLS.call;
+  if (task.weight === 'main' && task.execMode === 'focus') return SHELL_POOLS.golden;
+  if (task.weight === 'main') return SHELL_POOLS.main;
+  if (task.weight === 'daily') return SHELL_POOLS.daily;
+  return SHELL_POOLS.light;
+}
+
+function totalShellPoints() {
+  return (state.shellCollection || []).reduce((sum, s) => sum + (s.points || 1), 0);
+}
+
+function shellCountByTier() {
+  const counts = {};
+  (state.shellCollection || []).forEach(s => {
+    const tier = s.tier || 'unknown';
+    counts[tier] = (counts[tier] || 0) + 1;
+  });
+  return counts;
+}
+
 function completeQuest(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
   task.status = 'done';
   task.completedAt = new Date().toISOString();
 
-  // Reward logic — only AI mission gets rare shell
-  if (task.source === 'ai_mission') {
-    const shells = ['🌟', '💫', '✨'];
-    const shell = shells[Math.floor(Math.random() * shells.length)];
-    state.shellCollection.push({
-      type: shell,
-      rarity: 'rare',
+  // Generate shell reward
+  const shell = pickShellForTask(task);
+  if (shell) {
+    const newShell = {
+      type: shell.emoji,
+      tier: shell.tier,
+      points: shell.points,
+      rarity: shell.rarity,
+      label: shell.label,
       date: new Date().toISOString(),
-      story: `소라의 부름 클리어: "${task.title}"`,
+      story: task.source === 'ai_mission' 
+        ? `소라의 부름 — "${task.title}"`
+        : `"${task.title}"`,
       taskId: task.id
-    });
-    saveState();
-    showCelebration('🐚', '소라의 부름 완료', shell);
-  } else {
-    saveState();
-    showToast('수고했어 ✦');
+    };
+    state.shellCollection.push(newShell);
+    const shellIdx = state.shellCollection.length - 1;
+    
+    if (shell.rarity === 'legendary') {
+      showCelebration('🌈', '특별한 부름이 왔어!', shell.emoji);
+    } else if (shell.rarity === 'rare') {
+      showCelebration('🐚', task.source === 'ai_mission' ? '소라의 부름 완료' : '황금 소라 획득!', shell.emoji);
+    } else {
+      showToast(`${shell.emoji} 모았어`);
+    }
+    
+    // Async: AI가 경험 텍스트 생성 (not blocking)
+    if (state.apiKey && shell.tier !== 'light') {
+      generateShellStory(shellIdx, task).catch(e => console.warn('story gen failed:', e));
+    }
   }
+  saveState();
 
   renderExecute();
   // Check if all Now 3 done — promote drawer if available
@@ -5411,6 +6990,304 @@ function completeQuest(taskId) {
   const remaining = state.tasks.filter(t => t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done').length;
   if (remaining === 0) {
     setTimeout(() => promoteFromDrawer(), 1000);
+  }
+}
+
+// AI generates short experience text for shell
+// ═══════════════════════════════════════════════════════════════
+// V3.3: 대화 일별 아카이브 (raw → AI 요약)
+// ═══════════════════════════════════════════════════════════════
+
+let _expandedArchiveDates = new Set();
+
+function openChatArchive() {
+  _expandedArchiveDates.clear();
+  renderChatArchiveModal();
+  document.getElementById('chatArchiveOverlay').style.display = 'flex';
+}
+
+function closeChatArchive() {
+  document.getElementById('chatArchiveOverlay').style.display = 'none';
+}
+
+function renderChatArchiveModal() {
+  const container = document.getElementById('chatArchiveContent');
+  if (!container) return;
+  
+  const archive = (state.chatArchive || []).slice().sort((a, b) => 
+    new Date(b.date) - new Date(a.date)
+  );
+  
+  if (archive.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
+      <div style="font-size:32px; margin-bottom:12px;">📚</div>
+      아직 보관된 대화가 없어.<br>
+      7일 넘은 대화가 자동으로 여기 모일 거야.
+    </div>`;
+    return;
+  }
+  
+  container.innerHTML = archive.map(a => {
+    const dateLabel = new Date(a.date).toLocaleDateString('ko-KR', { 
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' 
+    });
+    const isExpanded = _expandedArchiveDates.has(a.date);
+    const messages = isExpanded ? (a.messages || []) : [];
+    
+    return `
+      <div class="chat-archive-card">
+        <div class="cac-header" onclick="toggleArchiveDay('${a.date}')">
+          <div class="cac-date">${dateLabel}</div>
+          <div class="cac-meta">
+            <span>${a.messageCount || 0}개 메시지</span>
+            <span class="cac-toggle">${isExpanded ? '▾' : '▸'}</span>
+          </div>
+        </div>
+        <div class="cac-summary">${escapeHtml(a.summary || '')}</div>
+        ${isExpanded ? `
+          <div class="cac-messages">
+            ${messages.map(m => {
+              const cls = m.role === 'user' ? 'user' : 'assistant';
+              let content = m.content || '';
+              content = content.replace(/```json[\s\S]*?```/g, '').trim();
+              content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+              const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
+              return `<div class="cac-msg ${cls}">
+                <div class="cac-msg-time">${time}</div>
+                <div class="cac-msg-content">${escapeHtml(content.slice(0, 500))}${content.length > 500 ? '...' : ''}</div>
+              </div>`;
+            }).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleArchiveDay(date) {
+  if (_expandedArchiveDates.has(date)) {
+    _expandedArchiveDates.delete(date);
+  } else {
+    _expandedArchiveDates.add(date);
+  }
+  renderChatArchiveModal();
+}
+
+async function runChatArchiveIfNeeded() {
+  // Run at most once per day
+  const today = todayKey();
+  if (state.chatArchiveLastRun === today) return;
+  
+  if (!state.chatMessages || state.chatMessages.length === 0) {
+    state.chatArchiveLastRun = today;
+    saveState();
+    return;
+  }
+  
+  // 7일 넘은 메시지 찾기
+  const cutoff = Date.now() - 7 * 86400000;
+  const oldMessages = state.chatMessages.filter(m => {
+    if (!m.timestamp) return false;
+    return new Date(m.timestamp).getTime() < cutoff;
+  });
+  
+  if (oldMessages.length < 4) {
+    // 너무 적으면 archive 안 함 (의미 없음)
+    state.chatArchiveLastRun = today;
+    saveState();
+    return;
+  }
+  
+  // 날짜별 그룹
+  const byDate = {};
+  oldMessages.forEach(m => {
+    const dateKey = (m.timestamp || '').slice(0, 10);
+    if (!dateKey) return;
+    if (!byDate[dateKey]) byDate[dateKey] = [];
+    byDate[dateKey].push(m);
+  });
+  
+  // 이미 archive된 날짜 제외
+  const archivedDates = new Set((state.chatArchive || []).map(a => a.date));
+  const datesToArchive = Object.keys(byDate)
+    .filter(d => !archivedDates.has(d))
+    .sort();  // 오래된 순부터
+  
+  if (datesToArchive.length === 0) {
+    // 이미 archive된 메시지만 chatMessages에서 제거
+    state.chatMessages = state.chatMessages.filter(m => {
+      if (!m.timestamp) return true;
+      return new Date(m.timestamp).getTime() >= cutoff;
+    });
+    state.chatArchiveLastRun = today;
+    saveState();
+    return;
+  }
+  
+  // Archive 한 번에 최대 3일치만 (rate limit + cost)
+  const datesThisRun = datesToArchive.slice(0, 3);
+  
+  for (const date of datesThisRun) {
+    try {
+      const messages = byDate[date];
+      const summary = await summarizeChatDay(date, messages);
+      state.chatArchive.push({
+        date,
+        summary,
+        messageCount: messages.length,
+        messages,  // 원본 보관 (펼침용)
+        generatedAt: new Date().toISOString()
+      });
+      saveState();
+    } catch (e) {
+      console.warn('Chat archive failed for', date, e);
+      // Stop on error to retry next time
+      break;
+    }
+  }
+  
+  // chatMessages에서 archive된 거 제거
+  state.chatMessages = state.chatMessages.filter(m => {
+    if (!m.timestamp) return true;
+    if (new Date(m.timestamp).getTime() >= cutoff) return true;
+    const dateKey = m.timestamp.slice(0, 10);
+    return !datesThisRun.includes(dateKey);
+  });
+  
+  state.chatArchiveLastRun = today;
+  saveState();
+  
+  console.log(`📚 Chat archive: ${datesThisRun.length} days summarized`);
+}
+
+async function summarizeChatDay(date, messages) {
+  if (!state.apiKey) {
+    // Fallback: just store first/last message
+    return `${messages.length}개의 대화 (${messages[0]?.content?.slice(0, 40) || ''}...)`;
+  }
+  
+  // Build chat log
+  const chatLog = messages.map(m => {
+    const role = m.role === 'user' ? '나' : '소라';
+    let content = m.content || '';
+    // Strip JSON if present
+    content = content.replace(/```json[\s\S]*?```/g, '').trim();
+    content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
+    return `${role}: ${content}`;
+  }).join('\n\n');
+  
+  const dateLabel = new Date(date).toLocaleDateString('ko-KR', { 
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' 
+  });
+  
+  const prompt = `다음은 사용자가 ${dateLabel}에 AI 친구 "소라고동"과 나눈 대화야. 이걸 짧은 일기처럼 요약해.
+
+[대화 원문]
+${chatLog.slice(0, 8000)}
+
+[요약 규칙]
+- 1단락, 3-6문장 (200자 이내)
+- 사용자 시점 ("나는 ~했다") 또는 객관적 둘 다 OK — 자연스럽게
+- 그날의 감정·상황·결정·중요한 인사이트만
+- 잡담은 짧게 압축
+- 친근한 톤, 반말 OK
+- 형식: 그냥 한 단락. 제목 X, 불릿 X
+
+[좋은 예시]
+"논문 1장 마감 직전이라 압박받는 상태. 새벽까지 작업하다가 새벽 3시 한계. 소라랑 얘기하면서 한 단락만 끝내자고 정함. 끝내고 잠. 마감 직전 폭발력 또 발동."
+
+요약만 출력. 다른 설명 X.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!resp.ok) throw new Error('API ' + resp.status);
+  const data = await resp.json();
+  return data.content[0].text.trim();
+}
+
+async function generateShellStory(shellIdx, task) {
+  const shell = state.shellCollection[shellIdx];
+  if (!shell) return;
+  
+  const dateStr = new Date(shell.date).toLocaleDateString('ko-KR', { 
+    month: 'long', day: 'numeric' 
+  });
+  const timeStr = new Date(shell.date).toLocaleTimeString('ko-KR', { 
+    hour: '2-digit', minute: '2-digit' 
+  });
+  
+  const prompt = `사용자가 방금 작업을 완료했어. 이 순간을 기억할 수 있는 짧은 한 줄 또는 두 줄짜리 메모를 만들어.
+
+[작업]
+"${task.title}"
+${task.description ? `설명: ${task.description}` : ''}
+종류: ${task.source === 'ai_mission' ? '소라의 부름 (AI 제안 미션)' : task.weight === 'main' ? '메인 작업' : task.weight === 'daily' ? '일상 작업' : '가벼운 작업'}
+시간: ${dateStr} ${timeStr}
+
+[규칙]
+- 1-2줄, 30자 이내
+- 그 순간의 분위기를 살리되 과장 X
+- 너무 시적이지 X, 너무 건조하지 X
+- 친근한 반말
+- "수고했어" 같은 칭찬 X
+- 사용자가 나중에 봤을 때 그날을 떠올릴 수 있을 만한 작은 디테일
+- 따옴표 X, 다른 설명 X
+
+[좋은 예시]
+"오후의 작은 마침표"
+"세그포머 한 줄, 그래도 한 줄"
+"메일 하나, 어깨 가벼워짐"
+"마감 직전의 천재 모드"
+"오늘 첫 번째 도파민"
+
+한 줄만 출력. 따옴표 X.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 80, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    let text = data.content[0].text.trim().replace(/^["'`]+|["'`]+$/g, '');
+    if (text && text.length < 60) {
+      // Update the shell's story
+      if (state.shellCollection[shellIdx]) {
+        state.shellCollection[shellIdx].story = text;
+        state.shellCollection[shellIdx].experience = text;  // 별칭
+        saveState();
+      }
+    }
+  } catch (e) {
+    console.warn('shell story gen error:', e);
+  }
+}
+
+// Toggle - allows "uncompleting" if user clicked by mistake
+function toggleQuestComplete(taskId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  if (task.status === 'done') {
+    // Uncomplete
+    task.status = 'active';
+    task.completedAt = null;
+    // Remove the most recent shell if it was an AI mission (avoid double-counting)
+    if (task.source === 'ai_mission') {
+      const lastShell = (state.shellCollection || []).slice().reverse().find(s => s.taskId === taskId);
+      if (lastShell) {
+        const idx = state.shellCollection.lastIndexOf(lastShell);
+        if (idx >= 0) state.shellCollection.splice(idx, 1);
+      }
+    }
+    saveState();
+    renderExecute();
+    showToast('되살림 ✦');
+  } else {
+    completeQuest(taskId);
   }
 }
 
@@ -5431,73 +7308,578 @@ function promoteFromDrawer() {
   showToast('새 카드 3장 ✦');
 }
 
-// === START QUEST (시작 의식 — Start Ritual) ===
+// === IMMERSE START (no task — pure ritual) ===
+function openImmerseStart() {
+  startRitualGame({ taskId: null, taskTitle: null });
+}
+
+function triggerShortcut() {
+  const useShortcut = state.preferences?.starRitualSettings?.useShortcut !== false;
+  const shortcutName = state.preferences?.starRitualSettings?.shortcutName || 'SoraRitual';
+  if (useShortcut && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+    setTimeout(() => {
+      try {
+        window.location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}`;
+      } catch(e) { /* graceful fail */ }
+    }, 500);
+  }
+}
+
+function showShortcutGuide() {
+  showScreen('shortcut-guide');
+}
+
+// === START RITUAL GAME ===
+let _ritualState = {
+  step: 0,           // 0=goal, 1=type, 2=startIfThen, 3=obstacleIfThen, 4=launch
+  taskId: null,
+  taskTitle: null,
+  goal: '',
+  ifThenType: 'none', // 'none' | 'start' | 'obstacle' | 'both'
+  startIf: '',
+  startThen: '',
+  obstacle: '',
+  plan: '',
+  startId: null
+};
+
 function startQuest(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
-  
-  // Open start ritual modal
-  const obstacle = prompt(`🚀 ${task.title}\n\n잠깐, 시작 전에:\n혹시 너를 방해할 것 같은 게 뭐야?\n(예: 유튜브 숏츠, 카톡, 뜨거운 차 한 잔도 OK)`);
-  if (obstacle === null) return;
-  
-  let plan = '';
-  if (obstacle && obstacle.trim()) {
-    plan = prompt(`만약 "${obstacle}"이 너를 부르면, 그땐 어떻게 할 거야?\n(예: 창 닫기, 물 한 모금, 5번 심호흡)`);
-    if (plan === null) return;
-  }
+  startRitualGame({ taskId, taskTitle: task.title });
+}
 
-  // Record start
-  state.starts.push({
-    id: 'start_' + Date.now(),
+function startRitualGame({ taskId, taskTitle }) {
+  _ritualState = {
+    step: taskId ? 1 : 0,  // if task given, skip goal (it's the task title)
     taskId,
-    taskTitle: task.title,
-    obstacle: obstacle?.trim() || null,
-    plan: plan?.trim() || null,
+    taskTitle,
+    goal: taskTitle || '',
+    ifThenType: 'none',
+    startIf: '',
+    startThen: '',
+    obstacle: '',
+    plan: '',
+    startId: null
+  };
+  document.getElementById('ritualOverlay').style.display = 'flex';
+  renderRitualStep();
+}
+
+function renderRitualStep() {
+  const stage = document.getElementById('ritualStage');
+  if (!stage) return;
+  
+  if (_ritualState.step === 0) {
+    // Step 0: Goal
+    stage.innerHTML = `
+      <div class="ritual-step-label">— 목표 —</div>
+      <div class="ritual-icon">🎯</div>
+      <div class="ritual-question">지금 뭐 할 거야?</div>
+      <div class="ritual-sub">한 줄로. 작아도 OK.<br>"문서 열기"도 충분해.</div>
+      <input type="text" class="ritual-input" id="ritualGoalInput" placeholder='예: 세그포머 코드 한 줄' value="${escapeHtml(_ritualState.goal)}" autofocus>
+      <div class="ritual-actions">
+        <button class="ritual-btn primary" onclick="ritualNextStep()">다음 →</button>
+        <button class="ritual-btn skip" onclick="closeRitual()">취소</button>
+      </div>
+    `;
+    setTimeout(() => document.getElementById('ritualGoalInput')?.focus(), 100);
+    setupRitualEnter('ritualGoalInput', 'ritualNextStep');
+  }
+  else if (_ritualState.step === 1) {
+    // Step 1: Choose ritual type (skip = launch directly)
+    const goalLabel = escapeHtml(_ritualState.goal || '몰입');
+    stage.innerHTML = `
+      <div class="ritual-step-label">— 약속 (선택) —</div>
+      <div class="ritual-icon">🐚</div>
+      <div class="ritual-question">"${goalLabel}"</div>
+      <div class="ritual-sub">If-Then 약속 더하면 뇌가 더 잘 따라와.<br>안 해도 OK.</div>
+      <div class="ritual-actions">
+        <button class="ritual-btn ifthen-choice" onclick="ritualChooseType('start')">
+          <div style="font-weight:600; margin-bottom:2px;">🚀 시작 약속</div>
+          <div style="font-size:11px; color:var(--text-dim);">의자에 앉으면 → 코드 창 열기</div>
+        </button>
+        <button class="ritual-btn ifthen-choice" onclick="ritualChooseType('obstacle')">
+          <div style="font-weight:600; margin-bottom:2px;">🛡 방해 대비</div>
+          <div style="font-size:11px; color:var(--text-dim);">유튜브 부르면 → 창 닫기</div>
+        </button>
+        <button class="ritual-btn ifthen-choice" onclick="ritualChooseType('both')">
+          <div style="font-weight:600; margin-bottom:2px;">✦ 둘 다</div>
+          <div style="font-size:11px; color:var(--text-dim);">시작 + 방해 둘 다 약속</div>
+        </button>
+        <button class="ritual-btn primary" onclick="ritualSkipToLaunch()">바로 발사 🚀</button>
+        <button class="ritual-btn skip" onclick="ritualBackStep()">← 이전</button>
+      </div>
+    `;
+  }
+  else if (_ritualState.step === 2) {
+    // Step 2: Start IF-THEN
+    stage.innerHTML = `
+      <div class="ritual-step-label">— 시작 약속 —</div>
+      <div class="ritual-icon">🚀</div>
+      <div class="ritual-question">어떻게 시작할 거야?</div>
+      <div class="ritual-ifthen">
+        <div class="ritual-ifthen-row">
+          <span class="ritual-ifthen-tag">IF</span>
+          <input type="text" class="ritual-input ifthen-inline" id="ritualStartIfInput" 
+                 placeholder='예: 의자에 앉으면'
+                 value="${escapeHtml(_ritualState.startIf)}">
+        </div>
+        <div class="ritual-arrow">↓</div>
+        <div class="ritual-ifthen-row then">
+          <span class="ritual-ifthen-tag">THEN</span>
+          <input type="text" class="ritual-input ifthen-inline" id="ritualStartThenInput"
+                 placeholder='예: VS Code 열기'
+                 value="${escapeHtml(_ritualState.startThen)}">
+        </div>
+      </div>
+      <div class="ritual-sub">트리거 → 행동을 묶으면 자동 시동돼.</div>
+      <div class="ritual-actions">
+        <button class="ritual-btn primary" onclick="ritualNextStep()">${_ritualState.ifThenType === 'both' ? '다음 →' : '약속할게 ✦'}</button>
+        <button class="ritual-btn skip" onclick="ritualBackStep()">← 이전</button>
+      </div>
+    `;
+    setTimeout(() => document.getElementById('ritualStartIfInput')?.focus(), 100);
+  }
+  else if (_ritualState.step === 3) {
+    // Step 3: Obstacle IF-THEN
+    stage.innerHTML = `
+      <div class="ritual-step-label">— 방해 대비 —</div>
+      <div class="ritual-icon">🛡</div>
+      <div class="ritual-question">방해할 것 같은 게 있어?</div>
+      <div class="ritual-ifthen">
+        <div class="ritual-ifthen-row">
+          <span class="ritual-ifthen-tag">IF</span>
+          <input type="text" class="ritual-input ifthen-inline" id="ritualObstacleIfInput" 
+                 placeholder='예: 유튜브 부르면'
+                 value="${escapeHtml(_ritualState.obstacle)}">
+        </div>
+        <div class="ritual-arrow">↓</div>
+        <div class="ritual-ifthen-row then">
+          <span class="ritual-ifthen-tag">THEN</span>
+          <input type="text" class="ritual-input ifthen-inline" id="ritualObstacleThenInput"
+                 placeholder='예: 창 닫기, 물 한 모금'
+                 value="${escapeHtml(_ritualState.plan)}">
+        </div>
+      </div>
+      <div class="ritual-sub">자동 방어막이 돼.</div>
+      <div class="ritual-actions">
+        <button class="ritual-btn primary" onclick="ritualNextStep()">약속할게 ✦</button>
+        <button class="ritual-btn skip" onclick="ritualBackStep()">← 이전</button>
+      </div>
+    `;
+    setTimeout(() => document.getElementById('ritualObstacleIfInput')?.focus(), 100);
+  }
+  else if (_ritualState.step === 4) {
+    // Step 4: Launch
+    const goalLabel = escapeHtml(_ritualState.goal || '몰입');
+    const hasStart = _ritualState.startIf && _ritualState.startThen;
+    const hasObstacle = _ritualState.obstacle && _ritualState.plan;
+    stage.innerHTML = `
+      <div class="ritual-step-label">— 발사 —</div>
+      <div class="ritual-icon">🚀</div>
+      <div class="ritual-launch-msg">
+        <span class="accent">"${goalLabel}"</span><br>
+        시작!
+      </div>
+      ${hasStart ? `
+        <div class="ritual-ifthen">
+          <div class="ritual-ifthen-row">
+            <span class="ritual-ifthen-tag">시작 IF</span>
+            <span class="ritual-ifthen-text">${escapeHtml(_ritualState.startIf)}</span>
+          </div>
+          <div class="ritual-arrow">↓</div>
+          <div class="ritual-ifthen-row then">
+            <span class="ritual-ifthen-tag">THEN</span>
+            <span class="ritual-ifthen-text">${escapeHtml(_ritualState.startThen)}</span>
+          </div>
+        </div>
+      ` : ''}
+      ${hasObstacle ? `
+        <div class="ritual-ifthen">
+          <div class="ritual-ifthen-row">
+            <span class="ritual-ifthen-tag">방해 IF</span>
+            <span class="ritual-ifthen-text">${escapeHtml(_ritualState.obstacle)}</span>
+          </div>
+          <div class="ritual-arrow">↓</div>
+          <div class="ritual-ifthen-row then">
+            <span class="ritual-ifthen-tag">THEN</span>
+            <span class="ritual-ifthen-text">${escapeHtml(_ritualState.plan)}</span>
+          </div>
+        </div>
+      ` : ''}
+      <div class="ritual-sub">갔다 와. 돌아오면 위에 작은 알림이 떠.<br>아무 때나 탭하면 돼.</div>
+      <div class="ritual-actions">
+        <button class="ritual-btn primary" onclick="ritualLaunch()">🌧 몰입 시작</button>
+        <button class="ritual-btn skip" onclick="ritualBackStep()">← 이전</button>
+      </div>
+    `;
+  }
+}
+
+function setupRitualEnter(inputId, fn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      window[fn]();
+    }
+  });
+}
+
+function ritualChooseType(type) {
+  _ritualState.ifThenType = type;
+  if (type === 'start' || type === 'both') {
+    _ritualState.step = 2;
+  } else if (type === 'obstacle') {
+    _ritualState.step = 3;
+  }
+  renderRitualStep();
+}
+
+function ritualSkipToLaunch() {
+  _ritualState.ifThenType = 'none';
+  _ritualState.step = 4;
+  renderRitualStep();
+}
+
+function ritualNextStep() {
+  if (_ritualState.step === 0) {
+    const v = document.getElementById('ritualGoalInput')?.value.trim();
+    if (!v) { showToast('한 줄이라도 적어봐'); return; }
+    _ritualState.goal = v;
+    _ritualState.step = 1;
+  } else if (_ritualState.step === 2) {
+    const ifVal = document.getElementById('ritualStartIfInput')?.value.trim();
+    const thenVal = document.getElementById('ritualStartThenInput')?.value.trim();
+    if (!ifVal || !thenVal) { showToast('IF와 THEN 둘 다 적어봐'); return; }
+    _ritualState.startIf = ifVal;
+    _ritualState.startThen = thenVal;
+    if (_ritualState.ifThenType === 'both') {
+      _ritualState.step = 3;
+    } else {
+      _ritualState.step = 4;
+    }
+  } else if (_ritualState.step === 3) {
+    const ifVal = document.getElementById('ritualObstacleIfInput')?.value.trim();
+    const thenVal = document.getElementById('ritualObstacleThenInput')?.value.trim();
+    if (!ifVal || !thenVal) { showToast('IF와 THEN 둘 다 적어봐'); return; }
+    _ritualState.obstacle = ifVal;
+    _ritualState.plan = thenVal;
+    _ritualState.step = 4;
+  }
+  renderRitualStep();
+}
+
+function ritualBackStep() {
+  if (_ritualState.step === 1 && !_ritualState.taskId) _ritualState.step = 0;
+  else if (_ritualState.step === 2) _ritualState.step = 1;
+  else if (_ritualState.step === 3) {
+    _ritualState.step = _ritualState.ifThenType === 'both' ? 2 : 1;
+  } else if (_ritualState.step === 4) {
+    if (_ritualState.ifThenType === 'both') _ritualState.step = 3;
+    else if (_ritualState.ifThenType === 'start') _ritualState.step = 2;
+    else if (_ritualState.ifThenType === 'obstacle') _ritualState.step = 3;
+    else _ritualState.step = 1;
+  }
+  renderRitualStep();
+}
+
+function ritualLaunch() {
+  // Record start
+  const startEntry = {
+    id: 'start_' + Date.now(),
+    taskId: _ritualState.taskId,
+    taskTitle: _ritualState.goal,
+    startIf: _ritualState.startIf || null,
+    startThen: _ritualState.startThen || null,
+    obstacle: _ritualState.obstacle || null,
+    plan: _ritualState.plan || null,
+    ifThenType: _ritualState.ifThenType,
     startedAt: new Date().toISOString(),
     returnedAt: null,
     outcome: null
-  });
+  };
+  state.starts.push(startEntry);
+  _ritualState.startId = startEntry.id;
   saveState();
+  
+  // Trigger iOS shortcut
+  triggerShortcut();
+  
+  // Persist active ritual to localStorage so it survives page reload
+  try {
+    localStorage.setItem('soragodong_active_ritual', JSON.stringify({
+      startId: startEntry.id,
+      taskId: _ritualState.taskId,
+      taskTitle: _ritualState.goal,
+      startIf: _ritualState.startIf,
+      startThen: _ritualState.startThen,
+      obstacle: _ritualState.obstacle,
+      plan: _ritualState.plan,
+      launchedAt: Date.now()
+    }));
+  } catch(e) {}
+  
+  // Close modal
+  closeRitual();
+  
+  // Show floating "in progress" bar
+  showRitualActiveBar();
+  
+  showToast('🌧 몰입 시작! 갔다 와');
+}
 
-  // Try iOS shortcut
-  const useShortcut = state.preferences?.starRitualSettings?.useShortcut;
-  const shortcutName = state.preferences?.starRitualSettings?.shortcutName || 'SoraRitual';
-  if (useShortcut && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
-    // Try to launch shortcut — this won't error if shortcut doesn't exist
-    setTimeout(() => {
-      window.location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}`;
-    }, 800);
-  }
+function closeRitual() {
+  document.getElementById('ritualOverlay').style.display = 'none';
+}
 
-  // Show ritual confirmation
-  const message = obstacle 
-    ? `시작! 🐚\n\n"${task.title}"\n\n${obstacle}이 부르면 → ${plan || '잠깐 멈추고 호흡'}\n\n갔다 와.`
-    : `시작! 🐚\n\n"${task.title}"\n\n갔다 와.`;
-  alert(message);
+function showRitualActiveBar() {
+  // Remove existing if any
+  document.getElementById('ritualActiveBar')?.remove();
+  
+  let active;
+  try {
+    active = JSON.parse(localStorage.getItem('soragodong_active_ritual') || 'null');
+  } catch(e) { return; }
+  if (!active) return;
+  
+  const bar = document.createElement('div');
+  bar.className = 'ritual-active-bar';
+  bar.id = 'ritualActiveBar';
+  bar.innerHTML = `
+    <span class="icon">🌧</span>
+    <span class="text">몰입 중: ${escapeHtml(active.taskTitle || '몰입')}</span>
+    <button class="check-btn" onclick="event.stopPropagation(); ritualReturn()">✓ 돌아옴</button>
+  `;
+  bar.onclick = () => ritualReturn();
+  document.body.appendChild(bar);
+}
 
-  // Show return check after delay (when user comes back)
-  setTimeout(() => {
-    if (confirm(`돌아왔구나 🐚\n\n"${task.title}" 어땠어?\n\n[OK = 한 거] / [취소 = 못한 거 / 다른 거 했어]`)) {
-      // Mark started
-      const lastStart = state.starts[state.starts.length - 1];
-      if (lastStart) {
-        lastStart.returnedAt = new Date().toISOString();
-        lastStart.outcome = 'done';
-        saveState();
-      }
-      if (confirm('완료 처리할까?')) {
-        completeQuest(taskId);
-      }
-    } else {
-      const lastStart = state.starts[state.starts.length - 1];
-      if (lastStart) {
-        lastStart.returnedAt = new Date().toISOString();
-        lastStart.outcome = 'partial';
-        saveState();
-      }
-      showToast('괜찮아. 시도한 것도 한 걸음이야 🐚');
+function hideRitualActiveBar() {
+  document.getElementById('ritualActiveBar')?.remove();
+}
+
+function ritualReturn() {
+  let active;
+  try {
+    active = JSON.parse(localStorage.getItem('soragodong_active_ritual') || 'null');
+  } catch(e) { return; }
+  if (!active) { hideRitualActiveBar(); return; }
+  
+  // Show return check modal
+  const stage = document.getElementById('ritualStage');
+  if (!stage) return;
+  
+  document.getElementById('ritualOverlay').style.display = 'flex';
+  
+  const elapsed = Math.floor((Date.now() - active.launchedAt) / 60000);
+  const elapsedLabel = elapsed < 1 ? '방금' : elapsed < 60 ? `${elapsed}분` : `${Math.floor(elapsed/60)}시간 ${elapsed%60}분`;
+  
+  stage.innerHTML = `
+    <div class="ritual-step-label">— 돌아왔구나 —</div>
+    <div class="ritual-icon">🐚</div>
+    <div class="ritual-question">"${escapeHtml(active.taskTitle || '몰입')}"<br>어땠어?</div>
+    <div class="ritual-sub">${elapsedLabel} 동안 갔다 왔네</div>
+    <div class="ritual-actions">
+      <button class="ritual-btn primary" onclick="ritualOutcome('done')">✓ 했어 (또는 진전 있었어)</button>
+      <button class="ritual-btn secondary" onclick="ritualOutcome('partial')">조금만</button>
+      <button class="ritual-btn secondary" onclick="ritualOutcome('off')">딴 거 했어 / 못 했어</button>
+    </div>
+  `;
+}
+
+function ritualOutcome(outcome) {
+  let active;
+  try {
+    active = JSON.parse(localStorage.getItem('soragodong_active_ritual') || 'null');
+  } catch(e) {}
+  
+  // Update start record
+  if (active?.startId) {
+    const startEntry = state.starts.find(s => s.id === active.startId);
+    if (startEntry) {
+      startEntry.returnedAt = new Date().toISOString();
+      startEntry.outcome = outcome;
+      saveState();
     }
-  }, 5000);  // 5 sec demo; in real app, would persist & check on return to app
+  }
+  
+  // Clear active ritual
+  try { localStorage.removeItem('soragodong_active_ritual'); } catch(e) {}
+  hideRitualActiveBar();
+  closeRitual();
+  
+  // Feedback based on outcome
+  if (outcome === 'done') {
+    if (active?.taskId) {
+      // Offer to mark task complete
+      setTimeout(() => {
+        if (confirm('카드도 완료 처리할까?')) {
+          completeQuest(active.taskId);
+        }
+      }, 300);
+    } else {
+      showToast('잘했어 ✦');
+    }
+  } else if (outcome === 'partial') {
+    showToast('조금이라도 한 거, 충분해 🐚');
+  } else {
+    showToast('괜찮아. 시도한 것도 한 걸음이야 🐚');
+  }
+}
+
+// Restore active ritual bar on app load
+function restoreActiveRitualOnLoad() {
+  let active;
+  try {
+    active = JSON.parse(localStorage.getItem('soragodong_active_ritual') || 'null');
+  } catch(e) { return; }
+  if (!active) return;
+  // If older than 8 hours, expire silently
+  if (Date.now() - active.launchedAt > 8 * 3600 * 1000) {
+    try { localStorage.removeItem('soragodong_active_ritual'); } catch(e) {}
+    return;
+  }
+  showRitualActiveBar();
+}
+
+// === BLOCK PICKER (timetable empty block click) ===
+let _currentPickerBlock = null;
+
+function openBlockPicker(block) {
+  _currentPickerBlock = block;
+  const labels = {
+    morning: '🌅 오전 (~12시)',
+    afternoon1: '☀️ 오후 1부 (12-15시)',
+    afternoon2: '🌤 오후 2부 (15-18시)',
+    evening: '🌆 저녁 (18-21시)',
+    night: '🌙 밤 (21시~)'
+  };
+  document.getElementById('blockPickerTitle').textContent = labels[block] || block;
+  renderBlockPickerContent();
+  document.getElementById('blockPickerOverlay').style.display = 'flex';
+}
+
+function closeBlockPicker() {
+  _currentPickerBlock = null;
+  document.getElementById('blockPickerOverlay').style.display = 'none';
+}
+
+function renderBlockPickerContent() {
+  const container = document.getElementById('blockPickerContent');
+  if (!container) return;
+  
+  const todayKeyVal = todayKey();
+  // Available tasks: now3 + drawer + memoryVault items
+  const now3OtherBlocks = (state.tasks || []).filter(t => 
+    t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done' && t.assignedBlock !== _currentPickerBlock
+  );
+  const drawer = (state.tasks || []).filter(t => 
+    t.slot === 'drawer' && t.status !== 'done'
+  );
+  const vault = (state.memoryVault || []).filter(v => !v.processed);
+  
+  let html = '';
+  
+  if (now3OtherBlocks.length > 0) {
+    html += `<div class="vault-section">
+      <div class="vault-section-label">🐚 오늘의 카드</div>`;
+    now3OtherBlocks.forEach(t => {
+      html += `
+        <div class="vault-item">
+          <div class="content">${escapeHtml(t.title)}</div>
+          <button class="promote-btn" onclick="assignTaskToBlock('${t.id}')">→ 여기로</button>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+  
+  if (drawer.length > 0) {
+    html += `<div class="vault-section">
+      <div class="vault-section-label">📋 서랍장 카드</div>`;
+    drawer.forEach(t => {
+      html += `
+        <div class="vault-item">
+          <div class="content">${escapeHtml(t.title)}</div>
+          <button class="promote-btn" onclick="promoteAndAssign('${t.id}')">→ 여기로</button>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+  
+  if (vault.length > 0) {
+    html += `<div class="vault-section">
+      <div class="vault-section-label">🐚 보관함</div>`;
+    vault.forEach(v => {
+      html += `
+        <div class="vault-item">
+          <div class="content">${escapeHtml(v.content)}</div>
+          <button class="promote-btn" onclick="vaultPromoteAndAssign('${v.id}')">→ 여기로</button>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+  
+  if (now3OtherBlocks.length === 0 && drawer.length === 0 && vault.length === 0) {
+    html = `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
+      <div style="font-size:32px; margin-bottom:12px;">🐚</div>
+      넣을 게 없어.<br>
+      "🧠 머릿속 풀기"로 카드 발급받거나<br>
+      대화에서 할 일 흘리면 여기 모여.
+    </div>`;
+  }
+  
+  container.innerHTML = html;
+}
+
+function assignTaskToBlock(taskId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  task.assignedBlock = _currentPickerBlock;
+  saveState();
+  showToast('이동됨 ✦');
+  closeBlockPicker();
+  renderExecute();
+}
+
+function promoteAndAssign(taskId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  task.slot = 'now3';
+  task.status = 'active';
+  task.date = todayKey();
+  task.assignedBlock = _currentPickerBlock;
+  saveState();
+  showToast('Now 3로 + 시간 지정 ✦');
+  closeBlockPicker();
+  renderExecute();
+}
+
+function vaultPromoteAndAssign(itemId) {
+  const item = state.memoryVault.find(v => v.id === itemId);
+  if (!item) return;
+  state.tasks.push({
+    id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: item.content,
+    status: 'active',
+    slot: 'now3',
+    date: todayKey(),
+    weight: 'daily',
+    energy: 'medium',
+    source: 'vault_promoted',
+    assignedBlock: _currentPickerBlock,
+    createdAt: new Date().toISOString()
+  });
+  item.processed = true;
+  saveState();
+  showToast('카드 추가됨 ✦');
+  closeBlockPicker();
+  renderExecute();
 }
 
 // === MOVE TO TIME BLOCK ===
@@ -5556,16 +7938,16 @@ function renderTimetableHTML() {
       t.date === todayKeyVal && t.assignedBlock === b && t.slot === 'now3'
     );
     html += `
-      <div class="exec-tt-block ${b === current ? 'current' : ''}">
+      <div class="exec-tt-block ${b === current ? 'current' : ''}" onclick="openBlockPicker('${b}')" style="cursor:pointer;">
         <div class="exec-tt-label">${labels[b]}</div>
         <div class="exec-tt-cards">
           ${tasksInBlock.length > 0 
             ? tasksInBlock.map(t => `
-                <div class="exec-tt-card ${t.status === 'done' ? 'completed' : ''}" onclick="completeQuest('${t.id}')">
+                <div class="exec-tt-card ${t.status === 'done' ? 'completed' : ''}" onclick="event.stopPropagation(); toggleQuestComplete('${t.id}')">
                   ${escapeHtml(t.title.slice(0, 30))}
                 </div>
               `).join('')
-            : '<div class="exec-tt-empty">·</div>'
+            : '<div class="exec-tt-empty">+ 여기 작업 넣기</div>'
           }
         </div>
       </div>
@@ -5822,7 +8204,7 @@ function renderArchiveDecisions() {
   if (decisions.length === 0) {
     container.innerHTML = `<div class="timeline-empty">
       <div class="icon">⚖️</div>
-      아직 결정 기록이 없어.<br>
+      아직 결정의 방이 없어.<br>
       홈에서 "큰 결정 도와줘"로 시작.
     </div>`;
     return;
