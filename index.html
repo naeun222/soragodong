@@ -1968,10 +1968,11 @@
   }
 
   /* V3.10: 공통 입력/확인 모달 (prompt/confirm 대체) */
+  /* V3.12.x: z-index 9500 — 튜토리얼 onb-overlay(9000) 위로 떠야 confirm 가능 */
   .input-modal-overlay {
     position: fixed; inset: 0;
     background: rgba(15,14,23,0.85);
-    z-index: 800;
+    z-index: 9500;
     display: flex; align-items: flex-end; justify-content: center;
     backdrop-filter: blur(8px);
     opacity: 0;
@@ -3792,8 +3793,10 @@ function onbPositionStep(step) {
     spotlight.style.top = (rect.top - padding) + 'px';
     spotlight.style.width = (rect.width + padding * 2) + 'px';
     spotlight.style.height = (rect.height + padding * 2) + 'px';
-    // V3.12.x: target 있을 때 mask 자체를 숨김 → 클릭 100% 패스스루
+    // V3.12.x: target 있을 때 mask 숨김 + overlay 클릭 패스스루 (inline 강제)
     mask.classList.remove('show-full');
+    const ov = document.getElementById('onbOverlay');
+    if (ov) ov.style.pointerEvents = 'none';
     
     // coachmark 위치 (타깃 위 또는 아래 중 공간 더 큰 쪽)
     const vh = window.innerHeight;
@@ -3813,9 +3816,11 @@ function onbPositionStep(step) {
     coachmark.style.transform = 'translateX(-50%)';
     coachmark.style.bottom = 'auto';
   } else {
-    // 타깃 없음 — 화면 중앙. mask 표시해서 클릭 차단.
+    // 타깃 없음 — 화면 중앙. mask 표시해서 클릭 차단 (welcome/finish 화면).
     spotlight.style.display = 'none';
     mask.classList.add('show-full');
+    const ov = document.getElementById('onbOverlay');
+    if (ov) ov.style.pointerEvents = 'auto';
     coachmark.style.top = '50%';
     coachmark.style.left = '50%';
     coachmark.style.transform = 'translate(-50%, -50%)';
@@ -6618,6 +6623,10 @@ function formatAIResponse(text) {
     const regex = new RegExp(label.replace(/[\[\]]/g, '\\$&'), 'g');
     formatted = formatted.replace(regex, `<span class="stage-label">${label}</span>`);
   });
+  // V3.12.x: 인라인 마크다운 (**bold** / *italic*)
+  // 순서 중요: bold (**) 먼저, italic (*) 나중에
+  formatted = formatted.replace(/\*\*([^\*\n]+?)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/(^|[^*])\*([^\*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
   return formatted;
 }
 
