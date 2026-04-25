@@ -3758,7 +3758,7 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'go_settings',
-    targetSelector: 'button[onclick*="\'settings\'"]',
+    targetSelector: 'button[onclick*="settings"]',
     title: '⚙ 설정',
     body: '눌러봐.',
     waitFor: 'click',
@@ -3782,14 +3782,23 @@ const ONBOARDING_STEPS = [
     advanceDelay: 800
   },
 
-  // === Phase 3: 체크인 (5) ===
+  // === Phase 3: 체크인 (6) — 체크인은 nav-item에 없음. 홈 → 체크인 카드 두 단계로. ===
+  {
+    id: 'go_home_for_checkin',
+    targetSelector: '.nav-item[data-screen="home"]',
+    title: '🏠 홈으로',
+    body: '체크인은 홈 화면에서 들어가.',
+    waitFor: 'visit',
+    visitScreen: 'home'
+  },
   {
     id: 'go_checkin',
-    targetSelector: '.nav-item[data-screen="checkin"]',
-    title: '✓ 체크인',
-    body: '매일 짧게 기록.<br>4개만 누르면 끝.',
-    waitFor: 'visit',
-    visitScreen: 'checkin'
+    targetSelector: '.action-card[onclick*="checkin"]',
+    title: '✓ 체크인 카드',
+    body: '매일 짧게 기록하는 곳.<br>눌러봐. 4개만 누르면 끝.',
+    waitFor: 'click',
+    advanceDelay: 800,
+    fallbackPosition: 'top'
   },
   {
     id: 'pick_mode',
