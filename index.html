@@ -2148,6 +2148,43 @@
   }
   .insights-empty .icon, .pearls-empty .icon, .timeline-empty .icon { font-size: 32px; margin-bottom: 12px; }
 
+  /* V3.12.x: Pearls intro — 비언어적 설명 */
+  .pearls-intro {
+    background: linear-gradient(135deg, rgba(201,169,110,0.08), rgba(139,126,196,0.08));
+    border: 1px solid rgba(201,169,110,0.2);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .pearls-intro-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .pearls-intro-emoji {
+    font-size: 22px;
+    filter: drop-shadow(0 0 8px rgba(201,169,110,0.5));
+  }
+  .pearls-intro-text {
+    font-family: 'Gowun Batang', serif;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .pearls-intro-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .pi-cat {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-size: 18px;
+    padding: 6px 0;
+  }
+  .pi-cat span {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+  }
+
   /* Pearls grid */
   .pearls-add-btn {
     width: 100%;
@@ -2201,9 +2238,8 @@
   .onb-overlay {
     position: fixed; inset: 0;
     z-index: 9000;
-    pointer-events: none;
+    pointer-events: none; /* V3.12.x: 항상 패스스루 — children(mask/coachmark)가 클릭 처리 */
   }
-  .onb-overlay.active { pointer-events: auto; }
   .onb-mask {
     position: fixed; inset: 0;
     background: rgba(15,14,23,0.7);
@@ -2915,6 +2951,7 @@
           <button class="btn-secondary" onclick="testForceExtract()">📚 챕터 토픽 즉시 추출</button>
           <button class="btn-secondary" onclick="testForceArchive()">🗂 채팅 아카이브 즉시 실행</button>
           <button class="btn-secondary" onclick="testForceMonthlyAuto()">📅 월간 자동 통합 즉시 실행</button>
+          <button class="btn-secondary btn-danger" onclick="testResetExecute()">🚀 실행 탭 데이터 초기화</button>
         </div>
       </details>
       <div style="margin-top:24px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
@@ -4137,6 +4174,7 @@ function renderDecisionDetail(decision) {
     html += `
       <div style="margin-top: 30px; display:flex; flex-direction:column; gap: 8px;">
         <button class="btn-primary decision" onclick="resumeDecision('${decision.id}')">다시 이 결정 이어가기 ✦</button>
+        <button class="btn-secondary btn-danger" onclick="deleteDecisionForever('${decision.id}')">🗑 완전 삭제</button>
         <button class="btn-secondary" onclick="showScreen('decisions')">결정 목록으로</button>
       </div>
     `;
@@ -4497,6 +4535,21 @@ async function abandonDecision(decisionId) {
   saveState();
   showScreen('decisions');
   showToast('결정 중단. 언제든 다시 시작할 수 있어.');
+}
+
+async function deleteDecisionForever(decisionId) {
+  const decision = state.decisions.find(d => d.id === decisionId);
+  if (!decision) return;
+  const yes = await showConfirmModal({
+    title: '완전히 삭제할까?',
+    message: `"${decision.title}"\n\n돌이킬 수 없어. 정말 지울까?`,
+    okLabel: '🗑 완전 삭제', cancelLabel: '아니'
+  });
+  if (!yes) return;
+  state.decisions = state.decisions.filter(d => d.id !== decisionId);
+  saveState();
+  showScreen('decisions');
+  showToast('완전히 삭제됨.');
 }
 
 function resumeDecision(decisionId) {
@@ -6714,12 +6767,15 @@ async function generateAIResponse() {
             let display = fullText;
             display = display.replace(/```json[\s\S]*?```/g, '');
             display = display.replace(/```json[\s\S]*$/g, '');
+            display = display.replace(/```[\s\S]*$/g, ''); // 미완성 fence
             display = display.replace(/\n*\{[\s\S]*$/g, (match) => {
               if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)/.test(match)) {
                 return '';
               }
               return match;
             });
+            // V3.12.x: orphan JSON 키 (앞에 { 없이 시작) 잡기 — streaming 중 잘렸을 때
+            display = display.replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)"[\s\S]*$/g, '');
             display = display.trim();
             state.chatMessages[state.chatMessages.length - 1].content = display;
             renderChat();
@@ -6748,7 +6804,9 @@ async function generateAIResponse() {
 
     const finalDisplay = fullText
       .replace(/```json[\s\S]*?```/g, '')
+      .replace(/```[\s\S]*$/g, '')
       .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)[\s\S]*\}/g, '')
+      .replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)"[\s\S]*$/g, '')
       .trim();
     state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
 
@@ -7240,11 +7298,16 @@ async function saveMsgAsInsight(idx) {
           body: JSON.stringify({
             model: 'claude-sonnet-4-5',
             max_tokens: 200,
-            messages: [{ role: 'user', content: `아래 대화 내용을 "깨달음 아카이브"에 저장할 한 문장으로 요약해줘. 자신에 대한 통찰 형태로. 1-2문장만:\n\n${msg.content}` }]
+            messages: [{ role: 'user', content: `아래 대화 내용을 "깨달음 아카이브"에 저장할 한 문장으로 요약해줘. 자신에 대한 통찰 형태로. 1-2문장만. JSON, 코드 블록, 따옴표 사용 X. 그냥 평문만.\n\n${msg.content}` }]
           })
         });
         const data = await resp.json();
-        insight = data.content[0].text.trim();
+        let raw = data.content[0].text.trim();
+        // V3.12.x: AI가 JSON/코드 fence 줄 때 추출
+        raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+        const jsonExtract = raw.match(/[{\[]\s*"[^"]+"\s*:\s*"([\s\S]+?)"\s*[}\]]/);
+        if (jsonExtract) raw = jsonExtract[1];
+        insight = raw.replace(/^["']|["']$/g, '').trim();
       } catch (e) {
         insight = msg.content.slice(0, 150);
       }
@@ -7267,12 +7330,16 @@ function acceptProposal(idx) {
 
   // Create mission
   const proposalData = msg.proposalData || {};
-  const title = proposalData.title || extractProposalFromMessage(msg.content);
+  // V3.12.x: title 정제 (markdown/공백 제거, 너무 짧으면 fallback)
+  let rawTitle = (proposalData.title || '').replace(/^[*#\s\[\]"']+|[*#\s\[\]"']+$/g, '').trim();
+  if (!rawTitle || rawTitle.length < 2) rawTitle = extractProposalFromMessage(msg.content);
+  const title = rawTitle;
   const description = proposalData.description || '';
 
   if (title) {
     createMission(title, description, { sourceMessageIdx: idx });
-    showToast('🐚 오늘의 미션으로 등록됐어!');
+    // V3.12.x: 해볼게 효과 — 소라의 부름 등장 celebration
+    showCelebration('🐚', '소라가 부름을 가져왔어!', '✨');
   }
 
   saveState();
@@ -7293,7 +7360,10 @@ function extractProposalFromMessage(content) {
   // Extract text after [오늘의 제안]
   const match = content.match(/\[오늘의 제안\]([\s\S]+?)(?=\n\n|$)/);
   if (match) {
-    return match[1].trim().split('\n')[0].slice(0, 40);
+    let title = match[1].trim().split('\n')[0];
+    // V3.12.x: markdown 제거 (**, ##, [ ] 등)
+    title = title.replace(/^[*#\s\[\]]+|[*#\s\[\]]+$/g, '').slice(0, 40).trim();
+    if (title && title.length >= 2) return title;
   }
   return '오늘의 미션';
 }
@@ -9009,9 +9079,16 @@ function testSkip4Hours() {
 
 async function testForceExtract() {
   showToast('🧪 토픽 추출 시작...');
+  const before = (state.topicCards || []).length;
   try {
     await extractPreviousChapterTopics();
-    showToast('✦ 토픽 추출 완료. "나" 탭 확인.');
+    const after = (state.topicCards || []).length;
+    const diff = after - before;
+    if (diff > 0) {
+      showToast(`✦ 토픽 ${diff}개 추출됨. 아카이브 → 📜 대화 렌즈에서 확인.`);
+    } else {
+      showToast('⚠ 추출할 챕터 없음. 채팅 보내고 "4시간 전으로" 먼저 → 새 메시지 → 다시 시도.');
+    }
   } catch (e) {
     showToast('❌ 추출 실패: ' + e.message);
   }
@@ -9019,13 +9096,35 @@ async function testForceExtract() {
 
 async function testForceArchive() {
   showToast('🧪 채팅 아카이브 시작...');
+  const before = (state.chatArchive || []).length;
   try {
     state.chatArchiveLastRun = null;
     await runChatArchiveIfNeeded();
-    showToast('✦ 아카이브 실행 완료. "아카이브" 탭 확인.');
+    const after = (state.chatArchive || []).length;
+    const diff = after - before;
+    if (diff > 0) {
+      showToast(`✦ ${diff}일치 아카이브됨. 아카이브 → 📜 대화에서 확인.`);
+    } else {
+      showToast('⚠ 아카이브할 어제 이전 대화 없음.');
+    }
   } catch (e) {
     showToast('❌ 실패: ' + e.message);
   }
+}
+
+async function testResetExecute() {
+  const yes = await showConfirmModal({
+    title: '실행 탭 초기화?',
+    message: '오늘의 카드, 진행 중 task, dayPlan 다 지워.\n다른 데이터(체크인/대화/프로젝트 등)는 유지.',
+    okLabel: '🗑 초기화', cancelLabel: '아니'
+  });
+  if (!yes) return;
+  state.tasks = [];
+  state.dayPlan = [];
+  state.starts = [];
+  saveState();
+  if (typeof renderExecute === 'function') renderExecute();
+  showToast('✦ 실행 탭 초기화 완료.');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -10510,21 +10609,34 @@ function updateArchiveQuickCounts() {
 function renderLensPearls() {
   const container = document.getElementById('lensPearls');
   if (!container) return;
-  
+
   const pearls = (state.pearls || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
-  
+
+  // V3.12.x: 진주 비언어적 인트로 (icon grid)
   let html = `
+    <div class="pearls-intro">
+      <div class="pearls-intro-header">
+        <span class="pearls-intro-emoji">💎</span>
+        <div class="pearls-intro-text">살아있다 느낀 순간들</div>
+      </div>
+      <div class="pearls-intro-grid">
+        <div class="pi-cat">🎵<span>음악</span></div>
+        <div class="pi-cat">🍴<span>맛</span></div>
+        <div class="pi-cat">📍<span>장소</span></div>
+        <div class="pi-cat">✨<span>순간</span></div>
+        <div class="pi-cat">👥<span>사람</span></div>
+      </div>
+    </div>
     <button class="pearls-add-btn" onclick="addPearl()">+ 진주 하나 더하기</button>
   `;
-  
+
   if (pearls.length === 0) {
     html += `<div class="pearls-empty">
-      <div class="icon">💎</div>
-      너의 좋아하는 것들,<br>
-      살아있다고 느낀 순간들을<br>
-      여기 모아둬.<br><br>
-      <span style="font-size:11px;">대화에서 흘린 취향도<br>나중에 자동으로 추가될 거야.</span>
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-top:8px;">
+        "좋다" 떠올린 거 → 진주.<br>
+        <span style="opacity:0.7;">대화에서 흘린 취향도 나중에 자동으로 ✦</span>
+      </div>
     </div>`;
   } else {
     // Group by category
