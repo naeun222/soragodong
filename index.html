@@ -6430,7 +6430,8 @@ const CHAT_PLACEHOLDERS = [
   '오늘 뭐 먹었어?',
   '생각나는 거 한 줄',
   '비워두는 것도 괜찮아',
-  '뭐 적을지 모르겠으면 그렇게 적어'
+  '뭐 적을지 모르겠으면 그렇게 적어',
+  '"일기:"로 시작하면 일기로 저장돼'
 ];
 
 function rotateChatPlaceholder() {
@@ -6954,15 +6955,33 @@ async function sendChat() {
   const isNewChapter = !lastMsg || !lastMsg.timestamp || 
     (Date.now() - new Date(lastMsg.timestamp).getTime() >= CHAPTER_GAP_MS);
   
-  state.chatMessages.push({ 
-    role: 'user', 
-    content: text, 
+  // V3.13: '일기:' 키워드 감지 → 오늘 entry에 원본 그대로 저장
+  const diaryMatch = text.match(/^일기[:：]\s*([\s\S]+)$/);
+  let isDiary = false;
+  if (diaryMatch) {
+    const diaryContent = diaryMatch[1].trim();
+    const todayK = todayKey();
+    let entry = state.entries.find(e => e.date === todayK);
+    if (!entry) {
+      entry = { date: todayK, timestamp: new Date().toISOString() };
+      state.entries.push(entry);
+    }
+    entry.diary = diaryContent;
+    entry.dailySource = 'diary';
+    isDiary = true;
+  }
+
+  state.chatMessages.push({
+    role: 'user',
+    content: text,
     timestamp: new Date().toISOString(),
+    ...(isDiary ? { isDiary: true } : {}),
     ...(isNewChapter && state.chatMessages.length > 0 ? { chapterStart: true } : {})
   });
   input.value = ''; input.style.height = 'auto';
   renderChat();
   saveState();
+  if (isDiary) showToast('📔 오늘 일기로 저장됨');
   
   // V3.8: 새 챕터 시작 시 → 이전 챕터 토픽 추출 (백그라운드)
   if (isNewChapter && state.chatMessages.length > 1) {
@@ -8195,6 +8214,14 @@ function renderLensTimeline() {
       }
       if (entry.userEdit) {
         summary += `<div style="margin-bottom:8px; padding:8px 10px; background:var(--surface2); border-radius:8px; font-size:12px; color:var(--accent2);">📝 ${escapeHtml(entry.userEdit)}</div>`;
+      }
+      // V3.13: 일기 (사용자 직접 작성, 원본 그대로)
+      if (entry.diary) {
+        summary += `<div style="margin-bottom:8px; padding:10px 12px; background: linear-gradient(135deg, rgba(201,169,110,0.1), rgba(139,126,196,0.06)); border-left: 3px solid var(--accent); border-radius: 8px; font-size:13px; line-height:1.7; color:var(--text); white-space:pre-wrap;">📔 ${escapeHtml(entry.diary)}</div>`;
+      }
+      // V3.13: AI 자동 요약 (일기 없는 날)
+      if (entry.aiSummary && !entry.diary) {
+        summary += `<div style="margin-bottom:8px; padding:8px 10px; background:var(--surface2); border-left: 3px solid var(--purple); border-radius: 8px; font-size:12px; color:var(--text-dim); line-height:1.6;">🤖 ${escapeHtml(entry.aiSummary)}</div>`;
       }
       if (entry.note) {
         summary += `<div>${escapeHtml(entry.note)}</div>`;
