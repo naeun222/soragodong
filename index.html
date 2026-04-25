@@ -523,6 +523,24 @@
   .model-item-action:active { background: var(--surface2); }
   .model-item-action.reject { color: var(--danger); border-color: rgba(224,108,117,0.3); }
   .model-item-action.approve { color: var(--success); border-color: rgba(152,195,121,0.3); }
+  /* V3.13.x: 확인됨 항목 actions 토글 */
+  .model-item-actions.hidden { display: none; }
+  .conf.clickable { cursor: pointer; user-select: none; transition: background 0.15s ease; }
+  .conf.clickable:active { transform: scale(0.96); }
+  /* V3.13.x: 통합 분석 caseFormulation 항목 수정/삭제 */
+  .cf-list { padding: 0; }
+  .cf-bullet { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 4px 0; }
+  .cf-text { flex: 1; line-height: 1.6; }
+  .cf-actions { display: inline-flex; gap: 4px; opacity: 0; transition: opacity 0.15s ease; flex-shrink: 0; }
+  .model-item:hover .cf-actions, .cf-bullet:active .cf-actions { opacity: 0.85; }
+  .cf-actions button {
+    background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+    font-size: 10px; padding: 1px 6px; border-radius: 6px; cursor: pointer; font-family: inherit;
+    line-height: 1.4;
+  }
+  .cf-actions button:active { background: var(--surface2); }
+  /* 모바일에서 hover 안 먹음 — 항상 살짝 보이게 */
+  @media (hover: none) { .cf-actions { opacity: 0.5; } }
   .model-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; line-height: 1.7; }
 
   .archive-item { background: var(--surface); border-radius: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid var(--border); }
@@ -2164,7 +2182,107 @@
   }
   .sticky-action-bar .btn-primary { margin-bottom: 8px; }
 
-  /* Timeline entries */
+  /* V3.13.x: 인스타 게시물 스타일 timeline 카드 */
+  .ig-card {
+    margin-bottom: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: box-shadow 0.2s ease, opacity 0.2s ease;
+  }
+  .ig-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+  .ig-card.hidden-entry { opacity: 0.45; }
+  .ig-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+  .ig-header-left { flex: 1; min-width: 0; }
+  .ig-date {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14px; color: var(--text); font-weight: 600;
+    margin-bottom: 6px; letter-spacing: 0.2px;
+  }
+  .ig-chips {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .ig-chip {
+    font-size: 10px; padding: 3px 8px;
+    background: var(--surface2); color: var(--text-dim);
+    border-radius: 10px; letter-spacing: 0.2px;
+    border: 1px solid var(--border);
+  }
+  .ig-chip-mode { background: rgba(139,126,196,0.15); color: var(--purple); border-color: rgba(139,126,196,0.3); }
+  .ig-menu-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: transparent; border: none; color: var(--text-dim);
+    font-size: 16px; line-height: 1; cursor: pointer; padding: 0;
+    flex-shrink: 0; opacity: 0.6;
+    transition: opacity 0.15s ease, background 0.15s ease;
+  }
+  .ig-menu-btn:hover, .ig-menu-btn:active { opacity: 1; background: var(--surface2); }
+  .ig-body { padding: 12px 16px 16px; }
+  .ig-question {
+    font-size: 12px; color: var(--accent); margin-bottom: 8px;
+    padding: 6px 10px; background: rgba(201,169,110,0.06);
+    border-left: 2px solid var(--accent); border-radius: 4px;
+    font-style: italic;
+  }
+  .ig-block {
+    margin-bottom: 10px; line-height: 1.7;
+    font-size: 13px; color: var(--text);
+  }
+  .ig-block:last-child { margin-bottom: 0; }
+  .ig-block-edit {
+    padding: 8px 12px;
+    background: var(--surface2); border-radius: 10px;
+    font-size: 12px; color: var(--accent2);
+  }
+  .ig-block-diary {
+    display: flex; gap: 10px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(201,169,110,0.1), rgba(139,126,196,0.06));
+    border-left: 3px solid var(--accent); border-radius: 10px;
+    white-space: pre-wrap;
+  }
+  .ig-block-icon { font-size: 16px; flex-shrink: 0; opacity: 0.8; }
+  .ig-block-content { flex: 1; }
+  .ig-block-auto {
+    padding: 10px 12px; background: var(--surface2);
+    border-left: 3px solid var(--purple); border-radius: 10px;
+    color: var(--text-dim); font-size: 12px;
+  }
+  .ig-block-label {
+    font-size: 9px; opacity: 0.7; letter-spacing: 0.5px;
+    text-transform: uppercase; margin-bottom: 4px; font-weight: 600;
+  }
+  .ig-block-note {
+    font-size: 13px; color: var(--text); white-space: pre-wrap;
+  }
+  .ig-empty {
+    font-size: 12px; color: var(--text-soft); font-style: italic;
+    padding: 8px 0;
+  }
+  .ig-insights {
+    margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .ig-insight {
+    margin-bottom: 8px; padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(201,169,110,0.08), rgba(139,126,196,0.04));
+    border-left: 3px solid var(--accent); border-radius: 8px;
+  }
+  .ig-insight:last-child { margin-bottom: 0; }
+  .ig-insight-headline {
+    font-size: 13px; font-weight: 600; color: var(--accent2);
+    letter-spacing: 0.3px; margin-bottom: 4px;
+  }
+  .ig-insight-body { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+
+  /* Timeline entries (legacy 호환용) */
   .timeline-day {
     margin-bottom: 18px;
     background: var(--surface);
@@ -3910,7 +4028,7 @@ const ONBOARDING_STEPS = [
     id: 'chat_intro',
     targetSelector: null,
     title: '대화창에서 할 수 있는 것',
-    body: '여기서는 소라고동한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진한 곳이야.<br>네가 머릿속에 엉킨 생각들을 여기에 쏟아내면, 지혜로운 소라고동이 알아서 분석해주고 정리해주고 기록해주고 조언해줘.<br><br>예시:<br>· <b>오늘 있었던 일</b> — "오늘 카페에서 공부했어"<br>· <b>머릿속 와다다</b> — "할 일 너무 많아 어디서부터 해야 해"<br>· <b>짧은 한 마디</b> — "졸려" / "피곤" / "싫어"<br>· <b>마음 힘들 때</b> — "걱정돼" / "불안해" — 들어주기만 함<br>· <b>도움 요청</b> — "어떡하지?" / "도와줘" → 4단 분석으로 답함<br>· <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장',
+    body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진한 곳이야.<br>머릿속에 엉킨 생각도, 좋았던 일도, 웃긴 에피소드도 — 다 여기다 풀어. 분위기에 맞게 답해줄게.<br><br>예시 (전부 OK):<br>· <b>오늘 있었던 일</b> — "오늘 카페에서 공부했어"<br>· <b>좋았던 거</b> — "발표 잘 끝냈어 ✨" / "친구랑 맛있는 거 먹음"<br>· <b>웃긴 일</b> — "오늘 진짜 웃긴 일 있었는데"<br>· <b>머릿속 와다다</b> — "할 일 너무 많아 어디서부터 해야 해"<br>· <b>짧은 한 마디</b> — "졸려" / "심심" / "ㅋㅋㅋ"<br>· <b>도움 요청</b> — "어떡하지?" / "도와줘" → 4단 분석으로 답해줘<br>· <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장<br><br><span class="small">두 가지 더:<br>· <b>📝 입력창 옆 버튼</b> — 일기 템플릿 5종 (인지심리학 기반). 글쓰기 귀찮은 날 쓰기.<br>· <b>메시지 우상단 ⋮</b> — 복사 / 수정 / 다시 보내기 / 삭제 가능.</span>',
     waitFor: 'next'
   },
   {
@@ -6918,19 +7036,23 @@ function showScreen(name) {
 }
 
 // V3.10: 대화창 placeholder 회전 (매번 다른 힌트)
+// V3.13.x: 톤 편중 X — 좋은 일·웃긴 에피소드·소소한 일상도 자연스럽게
 const CHAT_PLACEHOLDERS = [
   '편하게 말해봐...',
   '오늘 어땠어?',
-  '졸려도 OK',
   '한 줄도 좋아',
   '뭐든 던져봐',
-  '"피곤" 한 마디도 OK',
+  '오늘 뭐 했어?',
+  '오 뭔가 좋은 일?',
+  'ㅋㅋㅋ 웃긴 거 있어?',
   '와다다 쏟아내도 돼',
   '판단 X. 듣기만 할게',
   '지금 뭐 하고 있어?',
   '머릿속에 뭐가 있어?',
   '오늘 뭐 먹었어?',
   '생각나는 거 한 줄',
+  '"졸려" 한 마디도 OK',
+  '소소한 거 들려줘',
   '비워두는 것도 괜찮아',
   '뭐 적을지 모르겠으면 그렇게 적어',
   '"일기:"로 시작하면 일기로 저장돼'
@@ -7160,11 +7282,13 @@ function renderModel() {
     return;
   }
   
-  // Sort by confidence DESC, evidence_count DESC. Split: confirmed (top 5) vs draft (low conf)
+  // V3.13.x: 미선택(user_verified=false)을 위로 정렬. 같은 그룹은 confidence 높은 순.
   const sortItems = (arr) => {
     return arr.slice().sort((a, b) => {
-      const ca = a.user_verified ? 1.0 : (a.confidence || 0);
-      const cb = b.user_verified ? 1.0 : (b.confidence || 0);
+      if (!a.user_verified && b.user_verified) return -1;
+      if (a.user_verified && !b.user_verified) return 1;
+      const ca = a.confidence || 0;
+      const cb = b.confidence || 0;
       if (cb !== ca) return cb - ca;
       return (b.evidence_count || 0) - (a.evidence_count || 0);
     });
@@ -7227,20 +7351,21 @@ function renderModel() {
   }
   if (state.caseFormulation.version > 0) {
     html += `<div class="model-section"><div class="model-section-title">📋 통합 분석 v.${state.caseFormulation.version}</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">너에 대해 내가 종합한 그림이야</div>`;
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">너에 대해 내가 종합한 그림이야. 잘못된 거 있으면 ✎ 수정 / ✕ 삭제 가능.</div>`;
+    const cfBullet = (text, field, i) => `<div class="cf-bullet"><span class="cf-text">• ${escapeHtml(text)}</span><span class="cf-actions"><button onclick="editCFItem('${field}', ${i})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${i})" title="삭제">✕</button></span></div>`;
     if (state.caseFormulation.problems.length > 0) {
       html += `<div class="model-item"><div class="model-item-name">🔍 다루어야 할 특성</div>
         <div style="font-size:11px; color:var(--text-soft); margin-bottom:8px;">고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 너의 결</div>
-        <div class="model-item-desc">${state.caseFormulation.problems.map(p => `• ${escapeHtml(p)}`).join('<br>')}</div></div>`;
+        <div class="model-item-desc cf-list">${state.caseFormulation.problems.map((p, i) => cfBullet(p, 'problems', i)).join('')}</div></div>`;
     }
     if (state.caseFormulation.mechanisms.length > 0) {
       html += `<div class="model-item"><div class="model-item-name">⚙️ 어떻게 작동하는지</div>
         <div style="font-size:11px; color:var(--text-soft); margin-bottom:8px;">너의 마음과 행동의 흐름</div>
-        <div class="model-item-desc">${state.caseFormulation.mechanisms.map(m => `• ${escapeHtml(m)}`).join('<br>')}</div></div>`;
+        <div class="model-item-desc cf-list">${state.caseFormulation.mechanisms.map((m, i) => cfBullet(m, 'mechanisms', i)).join('')}</div></div>`;
     }
     if (state.caseFormulation.strengths.length > 0) {
       html += `<div class="model-item"><div class="model-item-name">💪 너의 강점</div>
-        <div class="model-item-desc">${state.caseFormulation.strengths.map(s => `• ${escapeHtml(s)}`).join('<br>')}</div></div>`;
+        <div class="model-item-desc cf-list">${state.caseFormulation.strengths.map((s, i) => cfBullet(s, 'strengths', i)).join('')}</div></div>`;
     }
     html += '</div>';
   }
@@ -7281,19 +7406,28 @@ function renderMoreSection(category, more, draft) {
 
 function renderModelItem(item, category, idx) {
   const confLabel = item.confidence >= 0.7 ? '확신' : item.confidence >= 0.4 ? '관찰 중' : '가설';
-  return `<div class="model-item">
+  const verified = !!item.user_verified;
+  return `<div class="model-item${verified ? ' verified' : ''}" data-cat="${category}" data-idx="${idx}">
     <div class="model-item-name">${escapeHtml(item.name)}</div>
     <div class="model-item-desc">${escapeHtml(item.description || '')}</div>
     <div class="model-item-meta">
-      <span class="conf ${item.user_verified ? 'verified' : ''}">${item.user_verified ? '✓ 확인됨' : confLabel}</span>
+      <span class="conf ${verified ? 'verified clickable' : ''}" ${verified ? `onclick="toggleModelItemActions('${category}', ${idx})" title="눌러서 수정/삭제 보기"` : ''}>${verified ? '✓ 확인됨' : confLabel}</span>
       ${item.evidence_count ? `<span>근거 ${item.evidence_count}개</span>` : ''}
     </div>
-    <div class="model-item-actions">
-      ${!item.user_verified ? `<button class="model-item-action approve" onclick="approveItem('${category}', ${idx})">✓ 맞아</button>` : ''}
+    <div class="model-item-actions${verified ? ' hidden' : ''}">
+      ${!verified ? `<button class="model-item-action approve" onclick="approveItem('${category}', ${idx})">✓ 맞아</button>` : ''}
       <button class="model-item-action" onclick="editModelItem('${category}', ${idx})">✎ 수정</button>
-      <button class="model-item-action reject" onclick="rejectItem('${category}', ${idx})">${item.user_verified ? '✕ 삭제' : '아니야'}</button>
+      <button class="model-item-action reject" onclick="rejectItem('${category}', ${idx})">${verified ? '✕ 삭제' : '아니야'}</button>
     </div>
   </div>`;
+}
+
+// V3.13.x: '확인됨' 클릭 시 수정/삭제 버튼 토글
+function toggleModelItemActions(category, idx) {
+  const item = document.querySelector(`.model-item[data-cat="${category}"][data-idx="${idx}"]`);
+  if (!item) return;
+  const actions = item.querySelector('.model-item-actions');
+  if (actions) actions.classList.toggle('hidden');
 }
 
 function approveItem(category, idx) {
@@ -7305,6 +7439,37 @@ async function rejectItem(category, idx) {
   if (!await confirmDelete('이 항목')) return;
   state[category].splice(idx, 1);
   saveState(); renderModel(); renderModelPreview();
+}
+
+// V3.13.x: 통합 분석 (caseFormulation) 항목 수정/삭제
+async function editCFItem(field, idx) {
+  if (!state.caseFormulation || !Array.isArray(state.caseFormulation[field])) return;
+  const current = state.caseFormulation[field][idx];
+  if (current == null) return;
+  const newText = await showInputModal({
+    title: '통합 분석 항목 수정',
+    message: `현재: ${current}`,
+    defaultValue: current,
+    multiline: true,
+    okLabel: '저장'
+  });
+  if (newText === null) return;
+  const trimmed = newText.trim();
+  if (!trimmed) return;
+  state.caseFormulation[field][idx] = trimmed;
+  saveState();
+  renderModel();
+  renderModelPreview();
+  showToast('수정됨 ✦');
+}
+async function deleteCFItem(field, idx) {
+  if (!state.caseFormulation || !Array.isArray(state.caseFormulation[field])) return;
+  if (!await confirmDelete('이 항목')) return;
+  state.caseFormulation[field].splice(idx, 1);
+  saveState();
+  renderModel();
+  renderModelPreview();
+  showToast('삭제됨');
 }
 
 // V3.13.x: 통합분석 항목 수정 (이름 + 설명) — AI 오해 잘못된 추론 직접 고치기
@@ -8133,6 +8298,8 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 8. ADHD 특성 고려.
 9. 이모지 1-2개. 🐚 가끔.
 10. 사용자가 그냥 감정 털어놓으면 → 그냥 들어주기. 분석 강요 X.
+11. **모든 메시지를 "고민/문제"로 보지 말기.** 사용자가 즐거운 일·웃긴 에피소드·소소한 일상 얘기하면 → 같이 즐거워하고 공감하기. 분석 X, 전략 제시 X, "이게 어떤 의미일까?" 같은 깊이 파기 X. 그냥 친구처럼 같이 웃고 같이 좋아하기.
+12. **사용자를 "고쳐야 할 대상"으로 보지 말기.** 사용자가 명시적으로 도움 요청 ("어떡하지", "도와줘") 안 했으면 절대 분석/진단/제안 X. "너의 ~한 패턴이 보여" 같은 분석적 톤 강제 X.
 
 정직성 (Anti-Sycophancy) — 매우 중요:
 - 사용자가 좋은 일 했다고 매번 칭찬 X. 사실만 짚기.
@@ -8156,9 +8323,13 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 
 【기본 (대부분)】
 짧고 자연스러운 친구 답.
-예: "어, 그럴 만해. 어제 늦게 잤지?"
-예: "오 SegFormer 또 만지네. 잘 풀려?"
-예: "괜찮아 그런 날도 있어. 지금 뭐 하고 싶어?"
+예 (고민/피곤 시): "어, 그럴 만해. 어제 늦게 잤지?"
+예 (작업 얘기): "오 SegFormer 또 만지네. 잘 풀려?"
+예 (지친 날): "괜찮아 그런 날도 있어. 지금 뭐 하고 싶어?"
+예 (좋은 일): "오 진짜? 좋네 ✨ 어떻게 풀렸어?"
+예 (웃긴 에피소드): "ㅋㅋㅋ 그거 진짜 웃기네. 그래서 어떻게 했어?"
+예 (소소한 일): "헐 진짜 ㅋㅋ 그 기분 알 것 같아."
+예 (아무말): "응응 그렇구나. 오늘은 좀 어땠어?"
 
 【명시적 도움 요청 시 — 4단 응답】
 사용자가 "어떡하지?", "도와줘", "방법 있어?" 같은 표현 쓸 때만:
@@ -8247,11 +8418,19 @@ function buildSystemPromptParts() {
   // === VOLATILE (자주 변함, 캐시 X) ===
   let volatile = [];
 
-  // V3.11.x: 오늘 날짜/요일 주입 — AI가 시간 감각 유지하도록
+  // V3.13.x: 현재 시각 + entry 기준 날짜 모두 주입 (AI 날짜 착각 방지)
+  // 04:00 cutoff 도입으로 calendar date와 entry key가 다를 수 있음 (새벽 시간대)
   const _now = new Date();
-  const _dow = ['일', '월', '화', '수', '목', '금', '토'][_now.getDay()];
-  const _dateStr = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')} (${_dow}요일)`;
-  volatile.push(`[오늘] ${_dateStr}`);
+  const _dowReal = ['일', '월', '화', '수', '목', '금', '토'][_now.getDay()];
+  const _realDate = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+  const _realTime = `${String(_now.getHours()).padStart(2,'0')}:${String(_now.getMinutes()).padStart(2,'0')}`;
+  volatile.push(`[현재 시각] ${_realDate} ${_realTime} (${_dowReal}요일)`);
+  const _dayKeyVal = todayKey();
+  if (_dayKeyVal !== _realDate) {
+    const _dayDate = new Date(_dayKeyVal);
+    const _dowEntry = ['일', '월', '화', '수', '목', '금', '토'][_dayDate.getDay()];
+    volatile.push(`[entry 기준 날짜] ${_dayKeyVal} (${_dowEntry}요일) — 새벽 4시까지는 전날 entry로 묶임`);
+  }
   volatile.push('');
 
   const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
@@ -9088,79 +9267,91 @@ function renderLensTimeline() {
     return;
   }
 
+  // V3.13.x: 인스타 게시물 스타일 카드. 헤더(날짜+칩) + 본문 + ⋮ 메뉴
   container.innerHTML = filtered.map(day => {
     const entry = day.checkin;
     const isHidden = entry?.hidden;
     const dateStr = formatDateKorean(day.date);
-    
-    // Build summary
-    const parts = [];
+
+    // 헤더 칩들 — 체크인 정보를 작은 chip으로
+    const chips = [];
     if (entry) {
-      const meta = [];
       if (entry.sleepStart && entry.sleepEnd) {
         const dur = computeSleepDuration(entry.sleepStart, entry.sleepEnd);
-        meta.push(`😴 ${dur}`);
+        chips.push(`<span class="ig-chip">😴 ${dur}</span>`);
       }
-      if (entry.vitality) meta.push(`⚡ ${entry.vitality}/5`);
-      if (entry.mood) meta.push(`💭 ${entry.mood}/5`);
+      if (entry.vitality) chips.push(`<span class="ig-chip">⚡ ${entry.vitality}</span>`);
+      if (entry.mood) chips.push(`<span class="ig-chip">💭 ${entry.mood}</span>`);
       if (entry.modes) {
         const activeModes = Object.keys(entry.modes).filter(k => entry.modes[k]);
         const labels = { exam: '시험', travel: '여행', sick: '아픔', rest: '휴식', period: '월경' };
-        activeModes.forEach(m => meta.push(labels[m] || m));
+        activeModes.forEach(m => chips.push(`<span class="ig-chip ig-chip-mode">${labels[m] || m}</span>`));
       }
-      if (entry.sosSkipped) meta.push('🪫 방전');
-      
-      let summary = '';
-      if (entry.dailyQuestion?.text) {
-        summary += `<div style="font-size:12px; color:var(--accent); margin-bottom:6px;">Q: ${escapeHtml(entry.dailyQuestion.text)}</div>`;
-      }
-      if (entry.userEdit) {
-        summary += `<div style="margin-bottom:8px; padding:8px 10px; background:var(--surface2); border-radius:8px; font-size:12px; color:var(--accent2);">📝 ${escapeHtml(entry.userEdit)}</div>`;
-      }
-      // V3.13: 일기 (사용자 직접 작성, 원본 그대로)
-      if (entry.diary) {
-        summary += `<div style="margin-bottom:8px; padding:10px 12px; background: linear-gradient(135deg, rgba(201,169,110,0.1), rgba(139,126,196,0.06)); border-left: 3px solid var(--accent); border-radius: 8px; font-size:13px; line-height:1.7; color:var(--text); white-space:pre-wrap;">📔 ${escapeHtml(entry.diary)}</div>`;
-      }
-      // V3.13: AI 자동 요약 (일기 없는 날)
-      if (entry.aiSummary && !entry.diary) {
-        summary += `<div style="margin-bottom:8px; padding:8px 10px; background:var(--surface2); border-left: 3px solid var(--purple); border-radius: 8px; font-size:12px; color:var(--text-dim); line-height:1.6;"><span style="font-size:10px; opacity:0.7; letter-spacing:0.5px;">🤖 자동 요약</span><div style="margin-top:4px;">${escapeHtml(entry.aiSummary)}</div></div>`;
-      }
-      if (entry.note) {
-        summary += `<div>${escapeHtml(entry.note)}</div>`;
-      }
-      
-      parts.push(`
-        <div class="timeline-day-summary">${summary || '<span style="color:var(--text-dim);">기록만 남김</span>'}</div>
-        ${meta.length ? `<div class="timeline-day-meta">${meta.map(x => `<span>${x}</span>`).join('')}</div>` : ''}
-      `);
+      if (entry.sosSkipped) chips.push(`<span class="ig-chip ig-chip-mode">🪫 방전</span>`);
     }
-    
-    // Archive insights — V3.13.x: headline + body 형식 강조
+
+    // 본문 블록들
+    const blocks = [];
+    if (entry?.dailyQuestion?.text) {
+      blocks.push(`<div class="ig-question">Q. ${escapeHtml(entry.dailyQuestion.text)}</div>`);
+    }
+    if (entry?.userEdit) {
+      blocks.push(`<div class="ig-block ig-block-edit">📝 ${escapeHtml(entry.userEdit)}</div>`);
+    }
+    if (entry?.diary) {
+      blocks.push(`<div class="ig-block ig-block-diary"><div class="ig-block-icon">📔</div><div class="ig-block-content">${escapeHtml(entry.diary)}</div></div>`);
+    }
+    if (entry?.aiSummary && !entry?.diary) {
+      blocks.push(`<div class="ig-block ig-block-auto"><div class="ig-block-label">🤖 자동 요약</div><div class="ig-block-content">${escapeHtml(entry.aiSummary)}</div></div>`);
+    }
+    if (entry?.note) {
+      blocks.push(`<div class="ig-block ig-block-note">${escapeHtml(entry.note)}</div>`);
+    }
+    // 깨달음 카드들 (headline + body 강조)
     if (day.archives.length > 0) {
-      parts.push(`<div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
-        ${day.archives.map(a => {
-          if (a.headline) {
-            return `<div style="margin-bottom:10px; padding:10px 12px; background: linear-gradient(135deg, rgba(201,169,110,0.08), rgba(139,126,196,0.04)); border-left: 3px solid var(--accent); border-radius: 8px;"><div style="font-size:14px; font-weight:600; color:var(--accent2); letter-spacing:0.3px; margin-bottom:4px;">✦ ${escapeHtml(a.headline)}</div><div style="font-size:12px; color:var(--text-dim); line-height:1.6;">${escapeHtml(a.body || '')}</div></div>`;
-          }
-          return `<div style="font-size:13px; color:var(--text); line-height:1.7; margin-bottom:6px;">✦ ${escapeHtml(a.insight || '')}</div>`;
-        }).join('')}
-      </div>`);
+      const archHtml = day.archives.map(a => {
+        if (a.headline) {
+          return `<div class="ig-insight"><div class="ig-insight-headline">✦ ${escapeHtml(a.headline)}</div><div class="ig-insight-body">${escapeHtml(a.body || '')}</div></div>`;
+        }
+        return `<div class="ig-insight"><div class="ig-insight-body">✦ ${escapeHtml(a.insight || '')}</div></div>`;
+      }).join('');
+      blocks.push(`<div class="ig-insights">${archHtml}</div>`);
     }
-    
-    const entryId = entry?.date || day.date;
-    
+    if (blocks.length === 0) {
+      blocks.push(`<div class="ig-empty">기록만 남긴 날이야.</div>`);
+    }
+
     return `
-      <div class="timeline-day ${isHidden ? 'hidden-entry' : ''}" data-date="${day.date}">
-        <div class="timeline-day-date">${dateStr}</div>
-        ${parts.join('')}
-        <div class="timeline-day-actions">
-          <button class="small-btn" onclick="editTimelineEntry('${day.date}')">✎ 메모 추가</button>
-          <button class="small-btn" onclick="toggleHideEntry('${day.date}')">${isHidden ? '👁 보이기' : '🙈 숨기기'}</button>
-          <button class="small-btn" onclick="deleteTimelineEntry('${day.date}')">✕ 삭제</button>
-        </div>
-      </div>
+      <article class="ig-card${isHidden ? ' hidden-entry' : ''}" data-date="${day.date}">
+        <header class="ig-header">
+          <div class="ig-header-left">
+            <div class="ig-date">${dateStr}</div>
+            ${chips.length ? `<div class="ig-chips">${chips.join('')}</div>` : ''}
+          </div>
+          <button class="ig-menu-btn" onclick="showTimelineDayMenu('${day.date}')" aria-label="메뉴">⋮</button>
+        </header>
+        <div class="ig-body">${blocks.join('')}</div>
+      </article>
     `;
   }).join('');
+}
+
+// V3.13.x: timeline 카드 ⋮ 메뉴 — 메모 추가/숨기기/삭제 정리
+async function showTimelineDayMenu(date) {
+  const entry = (state.entries || []).find(e => e.date === date);
+  const isHidden = !!(entry && entry.hidden);
+  const action = await showOptionsModal({
+    title: formatDateKorean(date),
+    options: [
+      { label: '✎ 메모 추가/수정', value: 'edit' },
+      { label: isHidden ? '👁 보이기' : '🙈 숨기기', value: 'toggle' },
+      { label: '✕ 삭제', value: 'delete' }
+    ]
+  });
+  if (!action) return;
+  if (action === 'edit') return editTimelineEntry(date);
+  if (action === 'toggle') return toggleHideEntry(date);
+  if (action === 'delete') return deleteTimelineEntry(date);
 }
 
 function formatDateKorean(dateStr) {
