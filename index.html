@@ -541,6 +541,15 @@
   .cf-actions button:active { background: var(--surface2); }
   /* 모바일에서 hover 안 먹음 — 항상 살짝 보이게 */
   @media (hover: none) { .cf-actions { opacity: 0.5; } }
+  /* V3.13.x: 통합 분석 더 보기 collapse */
+  .cf-more { margin-top: 6px; }
+  .cf-more summary {
+    cursor: pointer; font-size: 11px; color: var(--accent);
+    padding: 4px 0; user-select: none; outline: none;
+    list-style: none;
+  }
+  .cf-more summary::-webkit-details-marker { display: none; }
+  .cf-more[open] summary { color: var(--text-dim); margin-bottom: 4px; }
   .model-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; line-height: 1.7; }
 
   .archive-item { background: var(--surface); border-radius: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid var(--border); }
@@ -4040,7 +4049,7 @@ const ONBOARDING_STEPS = [
     waitFor: 'click',
     advanceDelay: 1000,
     fallbackPosition: 'top',
-    prefill: { selector: '#chatInput', value: '일기: 새벽까지 작업하다 카페 갔다 옴. 한 단락 끝냄. 근데 내일 발표 때문에 좀 불안하다.', force: true }
+    prefill: { selector: '#chatInput', value: '일기: 오늘 새벽까지 논문 작업하다가 잠. 카페 가서 한 단락 겨우 끝냈는데 진도가 너무 안 나가서 답답해. 내일 학회 발표인데 발표 자료도 못 만들었고, 이제 시간 진짜 별로 없는데 압도감 때문에 시작도 못 하고 있어.', force: true }
   },
   {
     id: 'click_deeper',
@@ -4936,7 +4945,8 @@ async function askAIForStep(decisionId, stepId) {
   });
   saveState();
   showScreen('chat');
-  await generateAIResponse();
+  // V3.13.x: 결정의 방은 무거운 추론 필요 → opus 4.7
+  await generateAIResponse('claude-opus-4-7');
 }
 
 function openWeightStep(decision, step) {
@@ -5461,7 +5471,7 @@ JSON만 출력. 다른 설명 X.`;
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] })
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -6183,7 +6193,7 @@ ${recent || '없음'}
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 150, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 150, messages: [{ role: 'user', content: prompt }] })
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -6358,7 +6368,7 @@ async function completeMission(missionId) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
+          model: 'claude-sonnet-4-6',
           max_tokens: 150,
           messages: [{
             role: 'user',
@@ -6510,7 +6520,7 @@ async function verifyMissionPhoto(mission, photoBase64) {
       'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 200,
       messages: [{
         role: 'user',
@@ -7356,20 +7366,23 @@ function renderModel() {
     html += `<div class="model-section"><div class="model-section-title">📋 통합 분석 v.${state.caseFormulation.version}</div>
       <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">너에 대해 내가 종합한 그림이야. 잘못된 거 있으면 ✎ 수정 / ✕ 삭제 가능.</div>`;
     const cfBullet = (text, field, i) => `<div class="cf-bullet"><span class="cf-text">• ${escapeHtml(text)}</span><span class="cf-actions"><button onclick="editCFItem('${field}', ${i})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${i})" title="삭제">✕</button></span></div>`;
-    if (state.caseFormulation.problems.length > 0) {
-      html += `<div class="model-item"><div class="model-item-name">🔍 다루어야 할 특성</div>
-        <div style="font-size:11px; color:var(--text-soft); margin-bottom:8px;">고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 너의 결</div>
-        <div class="model-item-desc cf-list">${state.caseFormulation.problems.map((p, i) => cfBullet(p, 'problems', i)).join('')}</div></div>`;
-    }
-    if (state.caseFormulation.mechanisms.length > 0) {
-      html += `<div class="model-item"><div class="model-item-name">⚙️ 어떻게 작동하는지</div>
-        <div style="font-size:11px; color:var(--text-soft); margin-bottom:8px;">너의 마음과 행동의 흐름</div>
-        <div class="model-item-desc cf-list">${state.caseFormulation.mechanisms.map((m, i) => cfBullet(m, 'mechanisms', i)).join('')}</div></div>`;
-    }
-    if (state.caseFormulation.strengths.length > 0) {
-      html += `<div class="model-item"><div class="model-item-name">💪 너의 강점</div>
-        <div class="model-item-desc cf-list">${state.caseFormulation.strengths.map((s, i) => cfBullet(s, 'strengths', i)).join('')}</div></div>`;
-    }
+    // V3.13.x: top 1 + 더보기 collapse (상위 1개만 보이고 나머지는 펼쳐 보기)
+    const cfSection = (label, sub, items, field) => {
+      if (!items || items.length === 0) return '';
+      const top = items.slice(0, 1);
+      const rest = items.slice(1);
+      const topHtml = top.map((p, i) => cfBullet(p, field, i)).join('');
+      const restHtml = rest.length > 0
+        ? `<details class="cf-more"><summary>+ ${rest.length}개 더 보기</summary><div class="cf-list">${rest.map((p, i) => cfBullet(p, field, i + 1)).join('')}</div></details>`
+        : '';
+      return `<div class="model-item"><div class="model-item-name">${label}</div>
+        ${sub ? `<div style="font-size:11px; color:var(--text-soft); margin-bottom:8px;">${sub}</div>` : ''}
+        <div class="model-item-desc cf-list">${topHtml}</div>
+        ${restHtml}</div>`;
+    };
+    html += cfSection('🔍 다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 너의 결', state.caseFormulation.problems, 'problems');
+    html += cfSection('⚙️ 어떻게 작동하는지', '너의 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
+    html += cfSection('💪 너의 강점', '', state.caseFormulation.strengths, 'strengths');
     html += '</div>';
   }
   container.innerHTML = html;
@@ -7899,7 +7912,7 @@ async function retryMessage(errorIdx) {
   await generateAIResponse();
 }
 
-async function generateAIResponse() {
+async function generateAIResponse(modelOverride) {
   state.chatMessages = state.chatMessages.filter(m => !m.typing);
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
   renderChat();
@@ -7950,7 +7963,7 @@ async function generateAIResponse() {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: modelOverride || 'claude-sonnet-4-6',
         max_tokens: 2000,
         stream: true,
         system: systemBlocks,
@@ -8540,7 +8553,7 @@ async function saveMsgAsInsight(idx) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
+          model: 'claude-sonnet-4-6',
           max_tokens: 200,
           messages: [{ role: 'user', content: `아래 대화에서 "깨달음 아카이브"에 저장할 핵심 통찰을 뽑아줘.
 
@@ -8612,7 +8625,7 @@ async function saveMsgAsStrategy(idx) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
+          model: 'claude-sonnet-4-6',
           max_tokens: 500,
           messages: [{ role: 'user', content: `아래 4단 분석/전략 응답에서 "전략 카드"로 저장할 핵심을 뽑아줘.
 
@@ -9412,15 +9425,12 @@ function toggleHideEntry(date) {
 }
 
 async function deleteTimelineEntry(date) {
-  if (!await confirmDelete(`${formatDateKorean(date)}의 기록`, '복구할 수 없어. 그냥 숨기는 것도 가능해.')) return;
+  if (!await confirmDelete(`${formatDateKorean(date)}의 체크인`, '체크인 entry만 삭제. 그 날의 깨달음 카드는 그대로 유지돼 — 깨달음 탭에서 따로 관리해.')) return;
   state.entries = state.entries.filter(e => e.date !== date);
-  state.archive = state.archive.filter(a => {
-    const aDate = a.savedAt ? a.savedAt.split('T')[0] : null;
-    return aDate !== date;
-  });
+  // V3.13.x: archive(깨달음)는 별도 유지 — 사용자가 의도치 않게 깨달음을 잃는 일 방지
   saveState();
   renderLensTimeline();
-  showToast('삭제됨');
+  showToast('체크인 삭제됨');
 }
 
 // === LENS 2: INSIGHTS — AI 인과관계 발견 ===
@@ -9518,7 +9528,7 @@ JSON 출력:
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) throw new Error('API ' + resp.status);
     const data = await resp.json();
@@ -9662,7 +9672,10 @@ function renderExecute() {
     if (drawerTasks.length > 0) {
       html += `
         <div class="exec-now-section">
-          <div class="exec-section-label">📂 서랍장 · ${drawerTasks.length}장 (우선순위순)</div>
+          <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>📂 서랍장 · ${drawerTasks.length}장 (우선순위순)</span>
+            ${drawerTasks.length >= 2 ? `<button onclick="mergeDuplicateTasks()" style="font-size:10px; padding:4px 10px; background:transparent; border:1px solid var(--border); color:var(--text-dim); border-radius:8px; cursor:pointer; font-family:inherit;">🔗 중복 합치기</button>` : ''}
+          </div>
       `;
       drawerTasks.forEach(task => {
         const isAIMission = task.source === 'ai_mission';
@@ -9829,7 +9842,7 @@ JSON 출력:
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) throw new Error('API ' + resp.status);
     const data = await resp.json();
@@ -10307,7 +10320,7 @@ ${chatLog.slice(0, 8000)}
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -10388,7 +10401,7 @@ JSON만 출력. 마크다운 X. 다른 설명 X.`;
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -10463,7 +10476,7 @@ ${task.description ? `설명: ${task.description}` : ''}
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 80, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 80, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -10810,7 +10823,7 @@ ${chatLog}
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 300, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 300, messages: [{ role: 'user', content: prompt }] })
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -12185,6 +12198,38 @@ async function deleteVaultItem(itemId) {
   renderExecute();
 }
 
+// V3.13.x: 서랍장 중복 합치기 — 내용상 완전 같은 task 그룹화 후 가장 오래된 것만 keep
+async function mergeDuplicateTasks() {
+  const drawerTasks = (state.tasks || []).filter(t => t.slot === 'drawer' && t.status !== 'done');
+  if (drawerTasks.length < 2) { showToast('합칠 항목이 없어'); return; }
+  // 그룹화: title이 exactSameText로 같은 것
+  const groups = [];
+  drawerTasks.forEach(task => {
+    const found = groups.find(g => exactSameText(g[0].title || '', task.title || ''));
+    if (found) found.push(task);
+    else groups.push([task]);
+  });
+  const dupGroups = groups.filter(g => g.length > 1);
+  const dupCount = dupGroups.reduce((sum, g) => sum + g.length - 1, 0);
+  if (dupCount === 0) { showToast('완전히 같은 카드는 없어 ✦'); return; }
+  const yes = await showConfirmModal({
+    title: '중복 합치기',
+    message: `완전히 같은 카드 ${dupCount}개를 합칠게.\n각 그룹에서 가장 오래된 카드만 남기고 나머지 제거.\n되돌릴 수 없어.`,
+    okLabel: '합치기',
+    cancelLabel: '취소'
+  });
+  if (!yes) return;
+  const removeIds = new Set();
+  dupGroups.forEach(g => {
+    g.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    g.slice(1).forEach(t => removeIds.add(t.id));
+  });
+  state.tasks = state.tasks.filter(t => !removeIds.has(t.id));
+  saveState();
+  if (typeof renderExecute === 'function') renderExecute();
+  showToast(`✦ ${dupCount}개 합쳐짐`);
+}
+
 // V3.13.x: 카드 제목/설명 수정
 async function editTaskCard(taskId) {
   const task = (state.tasks || []).find(t => t.id === taskId);
@@ -12566,7 +12611,7 @@ JSON으로 출력:
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-opus-4-7', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
     });
     if (!response.ok) throw new Error('API ' + response.status);
     const result = await response.json();
@@ -12575,35 +12620,52 @@ JSON으로 출력:
     if (!jsonMatch) throw new Error('JSON 파싱 실패');
     const analysis = JSON.parse(jsonMatch[0]);
 
+    // V3.13.x: 덮어씌움 X. 추가 + 중복은 합치기 (evidence_count↑, confidence/description 더 좋은 거 채택)
+    const mergeModelItem = (existing, incoming) => {
+      existing.evidence_count = (existing.evidence_count || 1) + 1;
+      if ((incoming.confidence || 0) > (existing.confidence || 0)) existing.confidence = incoming.confidence;
+      if (incoming.description && (!existing.description || incoming.description.length > existing.description.length)) {
+        existing.description = incoming.description;
+      }
+      // user_verified는 그대로 유지 (사용자가 검증한 건 안 건드림)
+    };
     if (analysis.traits) {
       analysis.traits.forEach(t => {
-        if (!state.traits.find(e => similarText(e.name, t.name))) {
-          state.traits.push({ id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...t, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
-        }
+        const exist = state.traits.find(e => similarText(e.name, t.name));
+        if (exist) mergeModelItem(exist, t);
+        else state.traits.push({ id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...t, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
       });
     }
     if (analysis.values) {
       analysis.values.forEach(v => {
-        if (!state.values.find(e => similarText(e.name, v.name))) {
-          state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...v, user_verified: false, evidence_count: 1 });
-        }
+        const exist = state.values.find(e => similarText(e.name, v.name));
+        if (exist) mergeModelItem(exist, v);
+        else state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...v, user_verified: false, evidence_count: 1 });
       });
     }
     if (analysis.patterns) {
       analysis.patterns.forEach(p => {
-        if (!state.patterns.find(e => similarText(e.name, p.name))) {
-          state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...p, user_verified: false, evidence_count: 1 });
-        }
+        const exist = state.patterns.find(e => similarText(e.name, p.name));
+        if (exist) mergeModelItem(exist, p);
+        else state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...p, user_verified: false, evidence_count: 1 });
       });
     }
     if (analysis.case_formulation) {
-      state.caseFormulation = {
-        version: state.caseFormulation.version + 1,
-        lastUpdated: new Date().toISOString(),
-        problems: analysis.case_formulation.problems || [],
-        mechanisms: analysis.case_formulation.mechanisms || [],
-        strengths: analysis.case_formulation.strengths || []
+      // V3.13.x: case_formulation도 덮어씌움 X. 추가 + similarText로 중복 합치기
+      const cf = state.caseFormulation;
+      cf.version = (cf.version || 0) + 1;
+      cf.lastUpdated = new Date().toISOString();
+      const mergeStrings = (existing, incoming) => {
+        const out = [...(existing || [])];
+        (incoming || []).forEach(item => {
+          if (!item || typeof item !== 'string') return;
+          if (!out.some(e => similarText(e, item))) out.push(item);
+        });
+        return out;
       };
+      cf.problems = mergeStrings(cf.problems, analysis.case_formulation.problems);
+      cf.mechanisms = mergeStrings(cf.mechanisms, analysis.case_formulation.mechanisms);
+      cf.strengths = mergeStrings(cf.strengths, analysis.case_formulation.strengths);
     }
     saveState();
     renderModel(); renderModelPreview();
@@ -12740,16 +12802,17 @@ async function resetTasks() {
   });
 }
 
-// V3.13.x: 신규 사용자 시뮬 — 테스터 모드 자동 ON + 신규 사용자처럼 튜토리얼 시작
-// (메모리만 비워서 진행. 새로고침하면 원상복구)
+// V3.13.x: 신규 사용자 시뮬 — 테스터 모드 자동 ON (백업) + 신규 사용자처럼 튜토리얼 시작
+// 새로고침 또는 OFF 시 ON 직전 상태로 완전 복원
 function simulateNewUser() {
   state.preferences = state.preferences || {};
   if (!state.preferences.testerMode) {
+    // 테스터 모드 ON + snapshot 백업 (cloud 저장 X)
+    _testerModeBackupState = JSON.parse(JSON.stringify(state));
     state.preferences.testerMode = true;
-    saveState(true);
     refreshTesterModeUI();
   }
-  // 메모리만 신규 사용자처럼 — saveState 가드 (테스터 모드)되어 cloud엔 안 감
+  // 메모리만 신규 사용자처럼 — saveState 가드되어 cloud 저장 X
   state.hasSeenWelcomeTutorial = false;
   state.entries = [];
   state.chatMessages = [];
@@ -12761,20 +12824,41 @@ function simulateNewUser() {
   state.topicCards = [];
   state.projects = [];
   state.decisions = [];
-  showToast('🧪 신규 사용자 시뮬 시작 — 새로고침하면 원상 복구');
+  state.traits = [];
+  state.values = [];
+  state.patterns = [];
+  state.caseFormulation = { version: 0, problems: [], mechanisms: [], strengths: [] };
+  showToast('🧪 신규 사용자 시뮬 시작 — 테스터 모드 OFF로 원상 복구');
   setTimeout(() => startInteractiveOnboarding(), 600);
 }
 
-// V3.13.x: 테스터 모드 토글 — ON 시 saveState 가드되어 변경 저장 X
+// V3.13.x: 테스터 모드 토글 — ON 시 메모리 snapshot 백업, OFF 시 그 snapshot으로 복원
+// (이전: ON/OFF 모두 saveState(true) → 메모리 누적 변경 사항이 cloud에 저장되버림)
+let _testerModeBackupState = null;
 function toggleTesterMode() {
   state.preferences = state.preferences || {};
-  const next = !state.preferences.testerMode;
-  state.preferences.testerMode = next;
-  saveState(true);  // 토글 자체는 강제 저장
-  refreshTesterModeUI();
-  showToast(next
-    ? '🧪 테스터 모드 ON — 변경 저장 안 됨. 새로고침하면 OFF 직전 상태로 돌아옴.'
-    : '✦ 테스터 모드 OFF — 정상 저장 모드.');
+  if (!state.preferences.testerMode) {
+    // ON: 현재 state 백업 + testerMode flag 메모리에만 set (cloud엔 저장 X — 새로고침 시 자동 OFF)
+    _testerModeBackupState = JSON.parse(JSON.stringify(state));
+    state.preferences.testerMode = true;
+    refreshTesterModeUI();
+    showToast('🧪 테스터 모드 ON — 변경 저장 안 됨. OFF 또는 새로고침 시 ON 직전 상태로 복원.');
+    return;
+  }
+  // OFF: 백업 복원 후 정상 저장
+  if (_testerModeBackupState) {
+    Object.keys(state).forEach(k => delete state[k]);
+    Object.assign(state, _testerModeBackupState);
+    _testerModeBackupState = null;
+    saveState(true);
+    refreshTesterModeUI();
+    showToast('✦ 테스터 모드 OFF — ON 직전 상태로 복원됨. 화면 다시 그리는 중...');
+    setTimeout(() => location.reload(), 600);
+  } else {
+    // 백업 없음 (새로고침 후 어떻게 OFF 누른 경우) — 안전하게 reload
+    showToast('cloud에서 복원 중...');
+    setTimeout(() => location.reload(), 300);
+  }
 }
 function refreshTesterModeUI() {
   const btn = document.getElementById('testerModeToggleBtn');
