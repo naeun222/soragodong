@@ -9684,9 +9684,9 @@ function renderExecute() {
     if (drawerTasks.length > 0) {
       html += `
         <div class="exec-now-section">
-          <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>📂 서랍장 · ${drawerTasks.length}장 (우선순위순)</span>
-            <button onclick="mergeDuplicateTasks()" style="font-size:10px; padding:4px 10px; background:transparent; border:1px solid var(--border); color:var(--text-dim); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0;">🔗 중복 합치기</button>
+          <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <span style="flex:1; min-width:0;">📂 서랍장 · ${drawerTasks.length}장 (우선순위순)</span>
+            <button onclick="mergeDuplicateTasks()" title="중복 합치기 + 정렬" style="font-size:11px; padding:3px 8px; background:transparent; border:1px solid var(--border); color:var(--text-dim); border-radius:6px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap; line-height:1.4;">🔗 정리</button>
           </div>
       `;
       drawerTasks.forEach(task => {
@@ -12223,7 +12223,12 @@ async function mergeDuplicateTasks() {
   });
   const dupGroups = groups.filter(g => g.length > 1);
   const dupCount = dupGroups.reduce((sum, g) => sum + g.length - 1, 0);
-  if (dupCount === 0) { showToast('완전히 같은 카드는 없어 ✦'); return; }
+  if (dupCount === 0) {
+    // 합칠 거 없으면 그대로 두고 짧은 토스트만
+    if (typeof renderExecute === 'function') renderExecute();
+    showToast('✦ 깔끔한 상태야');
+    return;
+  }
   const yes = await showConfirmModal({
     title: '중복 합치기',
     message: `완전히 같은 카드 ${dupCount}개를 합칠게.\n각 그룹에서 가장 오래된 카드만 남기고 나머지 제거.\n되돌릴 수 없어.`,
@@ -12815,7 +12820,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-trigger-tour';
+const APP_VERSION = '2026-04-27-drawer-cleanup-btn';
 
 // V3.13.x: 새 버전 진입 시 자동 튜토리얼 (모달 없이 바로). 단:
 //   - 신규 사용자는 isBrandNewUser 분기에서 이미 자동 시작 → 여기선 skip
