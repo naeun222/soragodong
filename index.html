@@ -3222,7 +3222,6 @@
           기능 테스트하면서 데이터 더럽히기 싫을 때 켜둬.
         </div>
         <button class="btn-secondary" id="testerModeToggleBtn" onclick="toggleTesterMode()">🧪 테스터 모드: OFF</button>
-        <button class="btn-secondary" onclick="simulateNewUser()" style="margin-top:6px;">🆕 신규 사용자 튜토리얼 시뮬</button>
       </div>
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">👤 계정</div>
@@ -3880,8 +3879,8 @@ async function init() {
     setTimeout(refreshTesterModeUI, 100);
   }
 
-  // V3.13.x: 앱 업데이트 알림 (기존 사용자 대상)
-  setTimeout(() => showUpdateNoticeIfNeeded(), 2000);
+  // V3.13.x: 새 APP_VERSION 진입 시 튜토리얼 자동 시작
+  setTimeout(() => autoTourOnUpdate(), 2000);
 
   // 첫 사용자 vs 기존 사용자 분기
   const isBrandNewUser = !state.hasSeenWelcomeTutorial 
@@ -12804,63 +12803,23 @@ async function resetTasks() {
   });
 }
 
-// V3.13.x: 앱 버전 — 매 git push 전 갱신. 사용자가 본 버전(state.preferences.lastSeenAppVersion)과
-// 다르면 init 시 '업데이트됐어! 튜토리얼 다시 볼래?' 모달.
-const APP_VERSION = '2026-04-27-modes-cleanup';
+// V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
+const APP_VERSION = '2026-04-27-auto-tour';
 
-async function showUpdateNoticeIfNeeded() {
-  if (!state.hasSeenWelcomeTutorial) return;  // 신규 사용자는 자동 튜토리얼 진행 중. 알림 X.
+// V3.13.x: 새 버전 진입 시 자동 튜토리얼 (모달 없이 바로). 단:
+//   - 신규 사용자는 isBrandNewUser 분기에서 이미 자동 시작 → 여기선 skip
+//   - 첫 시작 (lastSeen 없음, 기존 사용자가 fix 적용 첫 진입)도 skip — 깜짝 X
+//   - 그 후 새 APP_VERSION 진입마다 자동
+function autoTourOnUpdate() {
+  if (!state.hasSeenWelcomeTutorial) return;  // 신규 사용자는 isBrandNewUser 자동 분기
   const lastSeen = state.preferences && state.preferences.lastSeenAppVersion;
-  if (lastSeen === APP_VERSION) return;  // 이미 이 버전 봤음
-  if (!lastSeen) {
-    // 처음 시작 — 알림 X. 그냥 현재 버전 박음.
-    state.preferences = state.preferences || {};
-    state.preferences.lastSeenAppVersion = APP_VERSION;
-    saveState();
-    return;
-  }
-  const yes = await showConfirmModal({
-    title: '앱이 업데이트됐어! ✨',
-    message: '새 기능 + 개선이 들어왔어.\n튜토리얼 다시 봐볼래?',
-    okLabel: '응! 보여줘',
-    cancelLabel: '다시 보지 않기'
-  });
+  if (lastSeen === APP_VERSION) return;
   state.preferences = state.preferences || {};
   state.preferences.lastSeenAppVersion = APP_VERSION;
   saveState();
-  if (yes) startInteractiveOnboarding();
-}
-
-// V3.13.x: 신규 사용자 시뮬 — 테스터 모드 자동 ON (백업) + 신규 사용자처럼 튜토리얼 시작
-// 새로고침 또는 OFF 시 ON 직전 상태로 완전 복원
-function simulateNewUser() {
-  state.preferences = state.preferences || {};
-  if (!state.preferences.testerMode) {
-    // 테스터 모드 ON + snapshot 백업 (cloud 저장 X)
-    _testerModeBackupState = JSON.parse(JSON.stringify(state));
-    state.preferences.testerMode = true;
-    refreshTesterModeUI();
-  }
-  // 메모리만 신규 사용자처럼 — saveState 가드되어 cloud 저장 X
-  state.hasSeenWelcomeTutorial = false;
-  state.entries = [];
-  state.chatMessages = [];
-  state.missions = [];
-  state.shellCollection = [];
-  state.tasks = [];
-  state.archive = [];
-  state.pearls = [];
-  state.topicCards = [];
-  state.projects = [];
-  state.decisions = [];
-  state.traits = [];
-  state.values = [];
-  state.patterns = [];
-  state.caseFormulation = { version: 0, problems: [], mechanisms: [], strengths: [] };
-  state.modes = { exam: false, travel: false, sick: false, rest: false, period: false };
-  state.periodStart = null;
-  showToast('🧪 신규 사용자 시뮬 시작 — 테스터 모드 OFF로 원상 복구');
-  setTimeout(() => startInteractiveOnboarding(), 600);
+  if (!lastSeen) return;  // 처음 박는 경우 — 다음부터 자동
+  // 새 버전 — 튜토리얼 자동 시작
+  startInteractiveOnboarding();
 }
 
 // V3.13.x: 테스터 모드 토글 — ON 시 메모리 snapshot 백업, OFF 시 그 snapshot으로 복원
