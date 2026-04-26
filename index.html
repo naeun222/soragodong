@@ -174,6 +174,47 @@
     min-width: 50px; text-align: center;
     font-variant-numeric: tabular-nums;
   }
+  .mission-card.sora-call.carryover .mission-label {
+    color: var(--purple);
+  }
+
+  /* V3.13.x: 모래사장 — 지난 부름 (만료) */
+  .lost-calls-section {
+    margin-top: 22px; padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .lost-calls-label {
+    font-size: 12px; color: var(--text-dim);
+    letter-spacing: 0.06em; margin-bottom: 10px;
+  }
+  .lost-calls-list {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .lost-call-card {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    opacity: 0.92;
+  }
+  .lost-call-card-info { flex: 1; min-width: 0; }
+  .lost-call-title {
+    font-size: 13px; color: var(--text);
+    margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .lost-call-meta { font-size: 10px; color: var(--text-soft); letter-spacing: 0.04em; }
+  .lost-call-resume {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 6px 12px; border-radius: 8px;
+    font-size: 11px; font-family: inherit;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .lost-call-resume:active { background: var(--accent); color: var(--bg); }
 
   /* Completed mission */
   .mission-card.completed {
@@ -3720,7 +3761,10 @@
     </div>
     
     <div class="beach-grid" id="beachGrid"></div>
-    
+
+    <!-- V3.13.x: 지난 부름 (3일 지나 만료된 거 — 다시 받기 가능) -->
+    <div id="lostCallsSection"></div>
+
     <div style="background: var(--surface2); padding: 12px; border-radius: 10px; font-size: 11px; color: var(--text-dim); line-height: 1.7; margin-top:14px;">
       소라 하나하나가 너의 작은 흔적이야.<br>
       탭하면 그날의 이야기가 보여.<br>
@@ -6724,12 +6768,44 @@ async function dismissDailyQuestion() {
 // V3.13.x: 한 번에 한 개만 보여주는 페이지 인덱스 (모듈 스코프)
 let _currentMissionIdx = 0;
 
-// V3.13.x: 오늘의 부름 리스트 — pending 우선, 없으면 가장 최근 완료된 1개
+// V3.13.x: 'YYYY-MM-DD' 키 두 개의 일수 차이 (b - a, 양수 = b가 미래)
+function daysBetweenKeys(a, b) {
+  if (!a || !b) return 0;
+  const da = new Date(a + 'T00:00:00').getTime();
+  const db = new Date(b + 'T00:00:00').getTime();
+  return Math.round((db - da) / 86400000);
+}
+
+// V3.13.x: 3일 이상 지난 pending 부름 자동 만료. init/홈 진입 시 호출.
+function expireOldMissions() {
+  const today = todayKey();
+  let changed = false;
+  (state.missions || []).forEach(m => {
+    if (m.status !== 'pending') return;
+    if (!m.scheduledFor) return;
+    const diff = daysBetweenKeys(m.scheduledFor, today);
+    if (diff >= 3) {
+      m.status = 'expired';
+      m.expiredAt = new Date().toISOString();
+      changed = true;
+    }
+  });
+  if (changed) saveState();
+}
+
+// V3.13.x: 오늘 list = 오늘 + 1·2일 전 pending. 0일 먼저 정렬. 없으면 오늘 완료 1개.
 function getTodayMissions() {
-  const key = todayKey();
-  const pending = (state.missions || []).filter(m => m.scheduledFor === key && m.status === 'pending');
-  if (pending.length > 0) return pending;
-  const lastCompleted = (state.missions || []).filter(m => m.completedDate === key).slice(-1);
+  const today = todayKey();
+  const pending = (state.missions || []).filter(m => {
+    if (m.status !== 'pending' || !m.scheduledFor) return false;
+    const diff = daysBetweenKeys(m.scheduledFor, today);
+    return diff >= 0 && diff <= 2;
+  });
+  if (pending.length > 0) {
+    pending.sort((a, b) => daysBetweenKeys(a.scheduledFor, today) - daysBetweenKeys(b.scheduledFor, today));
+    return pending;
+  }
+  const lastCompleted = (state.missions || []).filter(m => m.completedDate === today).slice(-1);
   return lastCompleted;
 }
 
@@ -6767,6 +6843,11 @@ function renderTodayMission() {
     </div>
   ` : '';
 
+  // V3.13.x: 어제·그제 받은 부름 라벨
+  const today = todayKey();
+  const ageDiff = mission.scheduledFor ? -daysBetweenKeys(mission.scheduledFor, today) : 0;
+  const ageLabel = ageDiff === 1 ? ' · 어제 받은 부름' : ageDiff === 2 ? ' · 그제 받은 부름' : '';
+
   if (mission.status === 'completed') {
     container.innerHTML = `
       <div class="mission-card completed">
@@ -6779,8 +6860,8 @@ function renderTodayMission() {
   } else {
     const rewardEmoji = '⭐';
     container.innerHTML = `
-      <div class="mission-card sora-call">
-        <div class="mission-label">🐚 소라의 부름</div>
+      <div class="mission-card sora-call${ageLabel ? ' carryover' : ''}">
+        <div class="mission-label">🐚 소라의 부름${ageLabel}</div>
         <div class="mission-call-reward" title="이거 깨면 빛나는 소라 (가끔 ✨ 특별한 부름)">${rewardEmoji}</div>
         <div class="mission-title">${escapeHtml(mission.title)}</div>
         ${mission.description ? `<div class="mission-desc">${escapeHtml(mission.description)}</div>` : ''}
@@ -7254,6 +7335,53 @@ function renderBeach() {
       sorted.map(s => `<div class="beach-shell tier-${s.tier || 'unknown'}" onclick="openShellStory(${state.shellCollection.indexOf(s)})">${s.type}</div>`).join('') +
       `</div>`;
   }
+
+  // V3.13.x: 지난 부름 (만료) 섹션 — 다시 받기 가능
+  const lostSec = document.getElementById('lostCallsSection');
+  if (lostSec) {
+    const expired = (state.missions || []).filter(m => m.status === 'expired');
+    if (expired.length === 0) {
+      lostSec.innerHTML = '';
+    } else {
+      expired.sort((a, b) => {
+        const ta = new Date(a.expiredAt || a.scheduledFor || 0).getTime();
+        const tb = new Date(b.expiredAt || b.scheduledFor || 0).getTime();
+        return tb - ta;
+      });
+      lostSec.innerHTML = `
+        <div class="lost-calls-section">
+          <div class="lost-calls-label">📜 받았지만 못 한 부름 — 다시 받을 수 있어</div>
+          <div class="lost-calls-list">
+            ${expired.map(m => {
+              const dateStr = m.scheduledFor || (m.createdAt ? m.createdAt.slice(0, 10) : '');
+              return `
+                <div class="lost-call-card">
+                  <div class="lost-call-card-info">
+                    <div class="lost-call-title">${escapeHtml(m.title || '')}</div>
+                    <div class="lost-call-meta">${escapeHtml(dateStr)} 받음</div>
+                  </div>
+                  <button class="lost-call-resume" onclick="resumeMission('${m.id}')">다시 받기</button>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+  }
+}
+
+// V3.13.x: 만료된 부름 다시 받기 — 오늘 pending으로 복원
+function resumeMission(id) {
+  const m = (state.missions || []).find(x => x.id === id);
+  if (!m) return;
+  m.status = 'pending';
+  m.scheduledFor = todayKey();
+  delete m.expiredAt;
+  saveState();
+  if (typeof renderTodayMission === 'function') renderTodayMission();
+  if (typeof renderBeach === 'function') renderBeach();
+  showToast('⭐ 부름 다시 받음 — 홈에서 확인');
 }
 
 // Shell detail / story modal
@@ -7530,6 +7658,7 @@ function showScreen(name) {
   if (bannerEl && name !== 'home') bannerEl.style.display = 'none';
 
   if (name === 'home') {
+    if (typeof expireOldMissions === 'function') expireOldMissions();
     applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3();
     renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink();
     // V3.13.x: 배너는 홈에만 (헤더와 함께)
