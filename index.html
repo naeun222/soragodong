@@ -5811,9 +5811,9 @@ function isNightTime() {
   // Manual override first
   if (state.preferences?.nightModeManual === 'on') return true;
   if (state.preferences?.nightModeManual === 'off') return false;
-  // Auto: 21:00 ~ 06:00
+  // Auto: 21:00 ~ DAY_CUTOFF_HOUR (4시) — 체크인 "그 날" 윈도우와 일치
   const hour = new Date().getHours();
-  return hour >= 21 || hour < 6;
+  return hour >= 21 || hour < DAY_CUTOFF_HOUR;
 }
 
 function applyNightMode() {
@@ -8896,7 +8896,9 @@ ${msg.content}
     }
   }
   if (!body && !headline) body = msg.content.slice(0, 150);
-  const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  // V3.13.x: 4시 cutoff 적용 — 새벽 1시 저장은 어제로 묶임
+  const _dayKey = todayKey();
+  const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
   // headline + body 형식 저장. insight는 backwards-compat 결합 string.
   const insight = headline ? `${headline} — ${body}` : body;
   state.archive.unshift({ date, insight, headline, body, source: '대화', savedAt: new Date().toISOString() });
@@ -9229,8 +9231,8 @@ function renderLensTopicCards() {
     const catInfo = TOPIC_CATEGORY_LABELS[c.category] || { label: '기타', icon: '·' };
     const startedAt = c.chapterStartedAt || c.createdAt;
     const dateStr = new Date(startedAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
-    // V3.13.x: 그 날 체크인 신호 칩 (활력/기분/모드 첫 1개)
-    const dKey = startedAt ? new Date(startedAt).toISOString().slice(0, 10) : null;
+    // V3.13.x: 그 날 체크인 신호 칩 (4시 cutoff 적용)
+    const dKey = startedAt ? getDayKey(startedAt) : null;
     const dEntry = dKey ? (state.entries || []).find(e => e.date === dKey) : null;
     let metaExtra = '';
     if (dEntry) {
@@ -9268,9 +9270,9 @@ function openTopicCard(id) {
   const startedAtISO = card.chapterStartedAt || card.createdAt;
   const dateStr = new Date(startedAtISO).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
 
-  // V3.13.x: 그 날 체크인 정보 박스
+  // V3.13.x: 그 날 체크인 정보 박스 (4시 cutoff 적용)
   let dayInfoHtml = '';
-  const dayKey = startedAtISO ? new Date(startedAtISO).toISOString().slice(0, 10) : null;
+  const dayKey = startedAtISO ? getDayKey(startedAtISO) : null;
   const dayEntry = dayKey ? (state.entries || []).find(e => e.date === dayKey) : null;
   if (dayEntry) {
     const bits = [];
@@ -9539,9 +9541,9 @@ function renderLensTimeline() {
     dateMap.get(e.date).checkin = e;
   });
 
-  // Add archive insights (legacy + new)
+  // Add archive insights (legacy + new) — V3.13.x: 4시 cutoff 적용
   (state.archive || []).forEach(a => {
-    const date = a.savedAt ? a.savedAt.split('T')[0] : (a.date && a.date.match(/\d{4}-\d{2}-\d{2}/)?.[0]);
+    const date = a.savedAt ? getDayKey(a.savedAt) : (a.date && a.date.match(/\d{4}-\d{2}-\d{2}/)?.[0]);
     if (!date) return;
     if (!dateMap.has(date)) {
       dateMap.set(date, { date, checkin: null, chatSummary: null, archives: [], hidden: false });
