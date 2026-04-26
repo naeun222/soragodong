@@ -7343,26 +7343,14 @@ async function submitCheckin() {
 
   saveState();
 
-  if (note.trim()) {
-    const summary = buildCheckinSummary(entry);
-    const questionContext = _currentDailyQuestion ? `\n[오늘의 질문] ${_currentDailyQuestion.text}\n[답변]` : '';
-    state.chatMessages.push({
-      role: 'user',
-      content: `[오늘 체크인]\n${summary}${questionContext}\n${note}`,
-      timestamp: new Date().toISOString()
-    });
-    saveState();
-    currentCheckin = {};
-    _currentDailyQuestion = null;
-    showScreen('chat');
-    await generateAIResponse();
-  } else {
-    currentCheckin = {};
-    _currentDailyQuestion = null;
-    updateCheckinSub();
-    showScreen('home');
-    showToast('기록 고마워 🐚');
-  }
+  // V3.13.x: 체크인은 순수 기록. AI 자동 응답 X. note + dailyQuestion 답변은
+  // entry에 저장만 (시스템 prompt로 자연스럽게 컨텍스트). 사용자가 chat에서 능동적으로 말 걸 때
+  // AI가 그 정보 참조해서 응답.
+  currentCheckin = {};
+  _currentDailyQuestion = null;
+  updateCheckinSub();
+  showScreen('home');
+  showToast(note.trim() ? '✦ 기록됐어' : '기록 고마워 🐚');
 }
 
 function buildCheckinSummary(entry) {
@@ -8602,6 +8590,22 @@ function buildSystemPromptParts() {
       const icon = m.status === 'completed' ? '✓' : m.status === 'skipped' ? '⊘' : '○';
       volatile.push(`${icon} "${m.title}" (${m.status})`);
     });
+    volatile.push('');
+  }
+
+  // V3.13.x: 오늘 entry는 별도 섹션으로 더 자세히 (체크인 자동 chat push 제거 보강)
+  const _todayEntry = (state.entries || []).find(e => e.date === _dayKeyVal);
+  if (_todayEntry) {
+    volatile.push('[오늘 체크인]');
+    if (_todayEntry.sleepStart && _todayEntry.sleepEnd) volatile.push(`- 수면: ${_todayEntry.sleepStart}~${_todayEntry.sleepEnd}`);
+    if (_todayEntry.vitality != null) volatile.push(`- 활력: ${_todayEntry.vitality}/5`);
+    if (_todayEntry.mood != null) volatile.push(`- 기분: ${_todayEntry.mood}/5`);
+    const _activeModes = Object.keys(_todayEntry.modes || {}).filter(k => _todayEntry.modes[k]);
+    if (_activeModes.length) volatile.push(`- 모드: ${_activeModes.join(', ')}`);
+    if (_todayEntry.dailyQuestion && _todayEntry.dailyQuestion.text) volatile.push(`- 오늘의 질문: "${_todayEntry.dailyQuestion.text}"`);
+    if (_todayEntry.note) volatile.push(`- 메모/답변: ${_todayEntry.note}`);
+    if (_todayEntry.diary) volatile.push(`- 일기: ${_todayEntry.diary}`);
+    volatile.push('(참고용 컨텍스트. 사용자가 명시적으로 묻지 않은 한 굳이 분석/되짚지 말 것.)');
     volatile.push('');
   }
 
@@ -12932,7 +12936,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-checkin-edit-mode';
+const APP_VERSION = '2026-04-27-checkin-decouple';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
