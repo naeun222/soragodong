@@ -3565,6 +3565,15 @@ function authHeaders() {
 // SUPABASE
 // ═══════════════════════════════════════════════════════════════
 async function loadFromCloud() {
+  // V3.13.x SECURITY: localStorage 사용자 변경 감지 — 다른 계정 로그인 시 이전 사용자 데이터
+  // 흘러들어가지 않도록 (특히 cloud에 새 사용자 row 없을 때 localStorage fallback 발동되는 케이스 방지)
+  const lastUserId = localStorage.getItem('soragodong_last_user_id');
+  if (lastUserId && lastUserId !== authUserId) {
+    localStorage.removeItem('soragodong_v2');
+    console.log('[security] 다른 사용자 감지 — localStorage 정리');
+  }
+  localStorage.setItem('soragodong_last_user_id', authUserId);
+
   setSyncStatus('syncing');
   try {
     const resp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&order=updated_at.desc&limit=1`,
@@ -5733,60 +5742,46 @@ function renderMainAction() {
   const todayEntry = state.entries.find(e => e.date === todayKeyVal);
   const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
   
-  if (isNight) {
-    // 밤: 체크인 우선
-    if (checkinDoneToday) {
-      // 이미 했으면 실행 카드
-      container.innerHTML = `
-        <div class="action-card" onclick="showScreen('execute')">
-          <div class="action-icon">🚀</div>
-          <div class="action-text">
-            <div class="action-title">실행 시작하기</div>
-            <div class="action-sub">머릿속 짐 → 오늘의 카드</div>
-          </div>
-          <div class="action-arrow">›</div>
+  // V3.13.x: 메인 카드 + 작은 체크인 링크 항상 (이미 했어도 들어가서 수정 가능)
+  let mainCard;
+  if (isNight && !checkinDoneToday) {
+    // 밤 + 미체크인: 체크인 메인
+    mainCard = `
+      <div class="action-card" onclick="showScreen('checkin')" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
+        <div class="action-icon">🌙</div>
+        <div class="action-text">
+          <div class="action-title">오늘 어땠어?</div>
+          <div class="action-sub">하루를 차분히 닫아보자</div>
         </div>
-      `;
-    } else {
-      container.innerHTML = `
-        <div class="action-card" onclick="showScreen('checkin')" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
-          <div class="action-icon">🌙</div>
-          <div class="action-text">
-            <div class="action-title">오늘 어땠어?</div>
-            <div class="action-sub">하루를 차분히 닫아보자</div>
-          </div>
-          <div class="action-arrow">›</div>
-        </div>
-      `;
-    }
+        <div class="action-arrow">›</div>
+      </div>
+    `;
   } else {
-    // 낮: 실행 우선
-    if (!checkinDoneToday && new Date().getHours() >= 18) {
-      // 저녁이고 아직 안 했으면 체크인도 권유
-      container.innerHTML = `
-        <div class="action-card" onclick="showScreen('execute')">
-          <div class="action-icon">🚀</div>
-          <div class="action-text">
-            <div class="action-title">실행 시작하기</div>
-            <div class="action-sub">머릿속 짐 → 오늘의 카드</div>
-          </div>
-          <div class="action-arrow">›</div>
+    mainCard = `
+      <div class="action-card" onclick="showScreen('execute')">
+        <div class="action-icon">🚀</div>
+        <div class="action-text">
+          <div class="action-title">실행 시작하기</div>
+          <div class="action-sub">머릿속 짐 → 오늘의 카드</div>
         </div>
-        <div onclick="showScreen('checkin')" style="font-size:12px; color:var(--text-dim); padding:10px 14px; text-align:center; cursor:pointer; margin-top:6px;">
-          ✨ 오늘 체크인 아직이라면 →
-        </div>
-      `;
+        <div class="action-arrow">›</div>
+      </div>
+    `;
+  }
+  // 메인 카드가 체크인 아닐 때 항상 작은 링크 노출 (이미 했어도 수정 가능)
+  let checkinSubLink = '';
+  if (!(isNight && !checkinDoneToday)) {
+    const label = checkinDoneToday ? '✓ 오늘 체크인 보기 / 수정' : '✨ 오늘 체크인하기 →';
+    checkinSubLink = `<div onclick="showScreen('checkin')" style="font-size:12px; color:var(--text-dim); padding:10px 14px; text-align:center; cursor:pointer; margin-top:6px;">${label}</div>`;
+  }
+  container.innerHTML = mainCard + checkinSubLink;
+  return;
+  // legacy code below (unreachable, kept for git history reference)
+  if (isNight) {
+    if (checkinDoneToday) {
+      container.innerHTML = '';
     } else {
-      container.innerHTML = `
-        <div class="action-card" onclick="showScreen('execute')">
-          <div class="action-icon">🚀</div>
-          <div class="action-text">
-            <div class="action-title">실행 시작하기</div>
-            <div class="action-sub">머릿속 짐 → 오늘의 카드</div>
-          </div>
-          <div class="action-arrow">›</div>
-        </div>
-      `;
+      container.innerHTML = '';
     }
   }
 }
@@ -9716,8 +9711,8 @@ function renderExecute() {
       html += `
         <div class="exec-now-section">
           <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-            <span style="flex:1; min-width:0;">📂 서랍장 · ${drawerTasks.length}장 (우선순위순)</span>
-            <button onclick="mergeDuplicateTasks()" title="중복 합치기 + 정렬" style="font-size:11px; padding:3px 8px; background:transparent; border:1px solid var(--border); color:var(--text-dim); border-radius:6px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap; line-height:1.4;">🔗 정리</button>
+            <span style="flex:1; min-width:0;">📂 서랍장 · ${drawerTasks.length}장</span>
+            <button onclick="mergeDuplicateTasks()" title="중복 합치기 + 정렬" style="font-size:12px; padding:5px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap; line-height:1.4; font-weight:500;">🔗 정리</button>
           </div>
       `;
       drawerTasks.forEach(task => {
@@ -12851,7 +12846,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-tutorial-refine';
+const APP_VERSION = '2026-04-27-checkin-link-security';
 
 // V3.13.x: 새 버전 진입 시 모달로 묻기. '응' → 튜토리얼 / '다시 안 볼래' → 그 버전 안 뜸.
 async function autoTourOnUpdate() {
