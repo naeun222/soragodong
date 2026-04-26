@@ -1,0 +1,21 @@
+{
+  "name": "soragodong",
+  "version": "4.0.0-dev",
+  "private": true,
+  "type": "module",
+  "description": "ADHD 친화 AI 라이프 전략가 — 친구처럼 곁에 있는 거울",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "eslint": "^9.15.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.16.0",
+    "vite": "^6.0.0"
+  }
+}
