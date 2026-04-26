@@ -1,0 +1,5 @@
+# V3.13.x: index.html 캐시 막기 — iOS PWA 재진입 시 새 HTML 받도록
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate

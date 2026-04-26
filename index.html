@@ -9,6 +9,11 @@
 <meta name="apple-mobile-web-app-title" content="소라고동">
 <meta name="theme-color" content="#0f0e17">
 
+<!-- V3.13.x: cache-busting — iOS PWA 재진입 시 새 HTML 받도록 -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
@@ -12812,14 +12817,15 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-sync-dot-step';
+const APP_VERSION = '2026-04-27-pwa-cache-bust';
 
 // V3.13.x: 새 버전 진입 시 자동 튜토리얼 (모달 없이 바로). 단:
 //   - 신규 사용자는 isBrandNewUser 분기에서 이미 자동 시작 → 여기선 skip
 //   - 첫 시작 (lastSeen 없음, 기존 사용자가 fix 적용 첫 진입)도 skip — 깜짝 X
 //   - 그 후 새 APP_VERSION 진입마다 자동
 function autoTourOnUpdate() {
-  if (!state.hasSeenWelcomeTutorial) return;  // 신규 사용자는 isBrandNewUser 자동 분기
+  if (!state || !state.hasSeenWelcomeTutorial) return;  // 신규 사용자는 isBrandNewUser 자동 분기
+  if (window._onbTutorialMode) return;  // 이미 튜토리얼 중이면 중복 X
   const lastSeen = state.preferences && state.preferences.lastSeenAppVersion;
   if (lastSeen === APP_VERSION) return;
   state.preferences = state.preferences || {};
@@ -12829,6 +12835,17 @@ function autoTourOnUpdate() {
   // 새 버전 — 튜토리얼 자동 시작
   startInteractiveOnboarding();
 }
+
+// V3.13.x: iOS PWA 슬라이드 종료 후 재진입 (또는 탭 복귀) 시 새 버전 체크
+// (visibility hidden → visible. iOS에선 cold start 안 해도 발생.)
+let _lastAutoTourCheck = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  const now = Date.now();
+  if (now - _lastAutoTourCheck < 5000) return;  // 5초 가드 (탭 전환 빈번 방지)
+  _lastAutoTourCheck = now;
+  if (state && state.preferences) autoTourOnUpdate();
+});
 
 // V3.13.x: 테스터 모드 토글 — ON 시 메모리 snapshot 백업, OFF 시 그 snapshot으로 복원
 // (이전: ON/OFF 모두 saveState(true) → 메모리 누적 변경 사항이 cloud에 저장되버림)
