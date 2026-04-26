@@ -3569,15 +3569,14 @@ async function loadFromCloud() {
       state = { ...DEFAULT_STATE, ...data[0].data };
       console.log('✅ Loaded from cloud');
     } else {
-      // First time login: try to migrate legacy 'me' data
-      const migrated = await tryMigrateLegacyData();
-      if (!migrated) {
-        // Try local storage backup
-        const local = localStorage.getItem('soragodong_v2');
-        if (local) {
-          state = { ...DEFAULT_STATE, ...JSON.parse(local) };
-          await saveToCloudNow();
-        }
+      // V3.13.x SECURITY: tryMigrateLegacyData 호출 제거.
+      // 이전 버전은 신규 가입자가 처음 로그인 시 user_id='me' 데이터를 가져와 자기 state로
+      // 셋업했는데, 이로 인해 다른 사용자(V5 'me' 단일 row)의 데이터가 무차별 할당되는
+      // 보안/프라이버시 버그가 있었음. 신규 사용자는 진짜 신규로 시작.
+      const local = localStorage.getItem('soragodong_v2');
+      if (local) {
+        state = { ...DEFAULT_STATE, ...JSON.parse(local) };
+        await saveToCloudNow();
       }
     }
     // Ensure all collections exist
@@ -3762,32 +3761,9 @@ async function migrateToV6() {
 
 // V3.13.x: rollbackToV5 제거됨 (이제 너무 멀리 와서 의미 없음)
 
-async function tryMigrateLegacyData() {
-  // One-time migration: if there's data with user_id='me', claim it for this auth user
-  try {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.me&order=updated_at.desc&limit=1`,
-      { headers: authHeaders() }
-    );
-    if (!resp.ok) return false;
-    const legacy = await resp.json();
-    if (legacy.length === 0) return false;
-
-    // Found legacy data — claim it
-    state = { ...DEFAULT_STATE, ...legacy[0].data };
-    // Update the row to belong to this auth user
-    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?user_id=eq.me&id=eq.${legacy[0].id}`, {
-      method: 'PATCH',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ auth_user_id: authUserId, updated_at: new Date().toISOString() })
-    });
-    console.log('✅ Migrated legacy data');
-    showToast('이전 데이터 복구됨 ✦');
-    return true;
-  } catch (e) {
-    console.error('Migration error:', e);
-    return false;
-  }
-}
+// V3.13.x SECURITY: tryMigrateLegacyData 함수 제거됨.
+// 이전엔 신규 가입자가 cloud의 user_id='me' 단일 row를 가져와 다른 사용자 데이터가
+// 무차별 할당되는 프라이버시 버그가 있었음. 더 이상 호출되지 않음.
 
 async function saveToCloudNow() {
   if (!authUserId) return;
@@ -3901,6 +3877,9 @@ async function init() {
     setTimeout(refreshTesterModeUI, 100);
   }
 
+  // V3.13.x: 앱 업데이트 알림 (기존 사용자 대상)
+  setTimeout(() => showUpdateNoticeIfNeeded(), 2000);
+
   // 첫 사용자 vs 기존 사용자 분기
   const isBrandNewUser = !state.hasSeenWelcomeTutorial 
     && (state.entries || []).length === 0 
@@ -3982,7 +3961,7 @@ const ONBOARDING_STEPS = [
     id: 'go_checkin',
     targetSelector: '.action-card[onclick*="checkin"]',
     title: '✓ 체크인 카드',
-    body: '여기 메인 카드가 체크인이야! 매일 짧게 기록하는 곳 — 4개만 누르면 끝나니까 부담 없어.<br><br>한 번 눌러볼래?<br><br><span class="small">참고: 체크인 카드는 <b>밤에만</b> 메인으로 떠. 낮엔 안 보일 수도 있어 — 하루 기록은 하루 끝에 차분히 닫는 게 자연스러우니까. 낮에 체크인하고 싶으면 모드/활력/기분 행에서 직접 눌러도 돼.<br>튜토리얼 동안엔 내가 항상 메인 카드로 보여줄게.</span>',
+    body: '여기 메인 카드가 체크인이야! 매일 짧게 기록하는 곳 — 4개만 누르면 끝나니까 부담 없어.<br><br>한 번 눌러볼래?<br><br><span class="small">📌 <b>중요</b>: 체크인 메인 카드는 <b>밤 9시 ~ 새벽 6시 사이에만</b> 떠. 하루 기록은 하루 끝에 차분히 닫는 게 자연스러우니까.<br>그 외 시간엔 ⚙ 설정에서 체크인 직접 가거나 다음 날 밤에 해도 돼.<br>튜토리얼 동안엔 내가 항상 메인으로 보여줄게.</span>',
     waitFor: 'click',
     advanceDelay: 800,
     fallbackPosition: 'bottom'
@@ -12800,6 +12779,33 @@ async function resetTasks() {
   await _confirmAndReset('할 일(서랍장)', c, () => { state.tasks = []; }, () => {
     if (typeof renderExecute === 'function') renderExecute();
   });
+}
+
+// V3.13.x: 앱 버전 — 매 git push 전 갱신. 사용자가 본 버전(state.preferences.lastSeenAppVersion)과
+// 다르면 init 시 '업데이트됐어! 튜토리얼 다시 볼래?' 모달.
+const APP_VERSION = '2026-04-27-secure-fix';
+
+async function showUpdateNoticeIfNeeded() {
+  if (!state.hasSeenWelcomeTutorial) return;  // 신규 사용자는 자동 튜토리얼 진행 중. 알림 X.
+  const lastSeen = state.preferences && state.preferences.lastSeenAppVersion;
+  if (lastSeen === APP_VERSION) return;  // 이미 이 버전 봤음
+  if (!lastSeen) {
+    // 처음 시작 — 알림 X. 그냥 현재 버전 박음.
+    state.preferences = state.preferences || {};
+    state.preferences.lastSeenAppVersion = APP_VERSION;
+    saveState();
+    return;
+  }
+  const yes = await showConfirmModal({
+    title: '앱이 업데이트됐어! ✨',
+    message: '새 기능 + 개선이 들어왔어.\n튜토리얼 다시 봐볼래?',
+    okLabel: '응! 보여줘',
+    cancelLabel: '다시 보지 않기'
+  });
+  state.preferences = state.preferences || {};
+  state.preferences.lastSeenAppVersion = APP_VERSION;
+  saveState();
+  if (yes) startInteractiveOnboarding();
 }
 
 // V3.13.x: 신규 사용자 시뮬 — 테스터 모드 자동 ON (백업) + 신규 사용자처럼 튜토리얼 시작
