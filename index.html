@@ -2356,6 +2356,30 @@
     border-left: 2px solid var(--accent); border-radius: 4px;
     font-style: italic;
   }
+  /* V3.13.x: 일일질문 + 답 한 세트 (사이에 일기 끼지 않게) */
+  .ig-qa-set {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    background: rgba(201,169,110,0.06);
+    border-left: 2px solid var(--accent);
+    border-radius: 6px;
+  }
+  .ig-qa-set .ig-question {
+    background: transparent;
+    border-left: none;
+    padding: 0;
+    border-radius: 0;
+    margin-bottom: 8px;
+  }
+  .ig-answer {
+    font-size: 13px; color: var(--text);
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+  .ig-answer-empty {
+    color: var(--text-soft); font-style: italic; opacity: 0.6;
+    font-size: 12px;
+  }
   .ig-block {
     margin-bottom: 10px; line-height: 1.7;
     font-size: 13px; color: var(--text);
@@ -9840,8 +9864,15 @@ function renderLensTimeline() {
 
     // 본문 블록들
     const blocks = [];
+    // V3.13.x: 일일질문이 있으면 Q + A 한 세트 박스로 (사이에 일기 끼지 않게)
     if (entry?.dailyQuestion?.text) {
-      blocks.push(`<div class="ig-question">Q. ${escapeHtml(entry.dailyQuestion.text)}</div>`);
+      let qaHtml = `<div class="ig-question">Q. ${escapeHtml(entry.dailyQuestion.text)}</div>`;
+      if (entry?.note) {
+        qaHtml += `<div class="ig-answer">${escapeHtml(entry.note)}</div>`;
+      } else {
+        qaHtml += `<div class="ig-answer ig-answer-empty">(답 없음)</div>`;
+      }
+      blocks.push(`<div class="ig-qa-set">${qaHtml}</div>`);
     }
     if (entry?.userEdit) {
       blocks.push(`<div class="ig-block ig-block-edit">📝 ${escapeHtml(entry.userEdit)}</div>`);
@@ -9852,7 +9883,8 @@ function renderLensTimeline() {
     if (entry?.aiSummary && !entry?.diary) {
       blocks.push(`<div class="ig-block ig-block-auto"><div class="ig-block-label">🤖 자동 요약</div><div class="ig-block-content">${escapeHtml(entry.aiSummary)}</div></div>`);
     }
-    if (entry?.note) {
+    // 일일질문 없이 note만 있는 케이스 — 단독 메모로
+    if (!entry?.dailyQuestion?.text && entry?.note) {
       blocks.push(`<div class="ig-block ig-block-note">${escapeHtml(entry.note)}</div>`);
     }
     // V3.13.x: 그 날 음악
