@@ -144,6 +144,36 @@
   .mission-btn.complete { background: linear-gradient(135deg, var(--gold), #e8c043); color: var(--bg); }
   .mission-btn.skip { background: transparent; border: 1px solid var(--border-strong); color: var(--text-dim); }
   .mission-btn:active { transform: scale(0.97); }
+  /* V3.13.x: 여러 부름 인디케이터 */
+  .mission-nav {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px;
+    margin-top: 12px; padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .mission-nav-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.18);
+    color: var(--text-dim);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+  }
+  .mission-nav-btn:active {
+    background: rgba(255,255,255,0.08);
+    color: var(--gold);
+    transform: scale(0.95);
+  }
+  .mission-nav-pos {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    min-width: 50px; text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
 
   /* Completed mission */
   .mission-card.completed {
@@ -6691,26 +6721,51 @@ async function dismissDailyQuestion() {
 // ═══════════════════════════════════════════════════════════════
 // MISSION SYSTEM (Phase 2 core)
 // ═══════════════════════════════════════════════════════════════
-function getTodayMission() {
+// V3.13.x: 한 번에 한 개만 보여주는 페이지 인덱스 (모듈 스코프)
+let _currentMissionIdx = 0;
+
+// V3.13.x: 오늘의 부름 리스트 — pending 우선, 없으면 가장 최근 완료된 1개
+function getTodayMissions() {
   const key = todayKey();
-  return state.missions.find(m => m.scheduledFor === key && m.status === 'pending')
-      || state.missions.filter(m => m.completedDate === key).slice(-1)[0];
+  const pending = (state.missions || []).filter(m => m.scheduledFor === key && m.status === 'pending');
+  if (pending.length > 0) return pending;
+  const lastCompleted = (state.missions || []).filter(m => m.completedDate === key).slice(-1);
+  return lastCompleted;
+}
+
+// 하위호환 (다른 곳에서 단일 미션 참조용)
+function getTodayMission() {
+  return getTodayMissions()[0];
 }
 
 function hasActivePendingMission() {
   const key = todayKey();
-  return state.missions.some(m => m.scheduledFor === key && m.status === 'pending');
+  return (state.missions || []).some(m => m.scheduledFor === key && m.status === 'pending');
 }
 
 function renderTodayMission() {
   const container = document.getElementById('missionContainer');
-  if (!container) return;  // FIX BUG-1: null guard
-  const mission = getTodayMission();
+  if (!container) return;
+  const list = getTodayMissions();
 
-  if (!mission) {
+  if (list.length === 0) {
     container.innerHTML = '';
     return;
   }
+
+  // 인덱스 범위 보정
+  if (_currentMissionIdx >= list.length) _currentMissionIdx = 0;
+  if (_currentMissionIdx < 0) _currentMissionIdx = list.length - 1;
+  const mission = list[_currentMissionIdx];
+  const total = list.length;
+
+  const navHtml = total > 1 ? `
+    <div class="mission-nav">
+      <button class="mission-nav-btn" onclick="prevMission()" aria-label="이전 부름">‹</button>
+      <span class="mission-nav-pos">${_currentMissionIdx + 1} / ${total}</span>
+      <button class="mission-nav-btn" onclick="nextMission()" aria-label="다음 부름">›</button>
+    </div>
+  ` : '';
 
   if (mission.status === 'completed') {
     container.innerHTML = `
@@ -6718,11 +6773,11 @@ function renderTodayMission() {
         <div class="mission-label">🐚 소라의 부름 · 완료 ✦</div>
         <div class="mission-title">${escapeHtml(mission.title)}</div>
         ${mission.completionNote ? `<div class="mission-completion-msg">${escapeHtml(mission.completionNote)}</div>` : ''}
+        ${navHtml}
       </div>
     `;
   } else {
-    // 소라의 부름은 항상 'call' tier 보상 (5% 가챠로 legendary)
-    const rewardEmoji = '⭐';  // 대표 미리보기
+    const rewardEmoji = '⭐';
     container.innerHTML = `
       <div class="mission-card sora-call">
         <div class="mission-label">🐚 소라의 부름</div>
@@ -6733,9 +6788,19 @@ function renderTodayMission() {
           <button class="mission-btn complete" onclick="completeMission('${mission.id}')">✓ 해냈어</button>
           <button class="mission-btn skip" onclick="skipMission('${mission.id}')">오늘은 패스</button>
         </div>
+        ${navHtml}
       </div>
     `;
   }
+}
+
+function nextMission() {
+  _currentMissionIdx += 1;
+  renderTodayMission();
+}
+function prevMission() {
+  _currentMissionIdx -= 1;
+  renderTodayMission();
 }
 
 function createMission(title, description, options = {}) {
