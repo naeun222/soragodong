@@ -6490,7 +6490,8 @@ function pickPhotoFile() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.setAttribute('capture', 'environment');
+    // V3.13.x: capture 속성 제거 — iOS는 자동으로 '사진 촬영 / 사진 보관함 선택' action sheet 띄움
+    // 알람 캡처 같은 스크린샷 미션도 갤러리에서 선택 가능
     input.style.display = 'none';
     document.body.appendChild(input);
     let resolved = false;
@@ -7849,61 +7850,76 @@ async function sendChat() {
 //   3) Implementation Intention (Gollwitzer 1999) — if-then 형식이 행동 follow-through 2-3배 ↑
 //   4) Self-compassion (Neff 2003) — 자기비판 → 자기친절. 회복탄력성 ↑
 //   5) Cognitive Reappraisal (Gross 2002) — 감정 재해석 → 정서조절 효과
-// V3.13.x: 짧은 한 줄 starter. 사용자가 한 단어만 채워도 또는 그대로 보내도 OK.
+// V3.13.x: 클릭만 해도 / 한 단어만 답해도 완성된 일기로 자동 send.
 const DIARY_TEMPLATES = [
   {
     id: 'short',
     label: '🌙 짧게 닫기 (1분)',
-    desc: '오늘 한 일 + 기분 + 내일',
-    text: `일기: 오늘 `
+    desc: '오늘 한 단어로',
+    prompt: '오늘 한 일을 한 단어로?',
+    placeholder: '예: 발표, 공부, 휴식, 산책',
+    format: (a) => `일기: 오늘은 ${a || '평범한 하루'}였어. 그래도 살아남음 ✦`
   },
   {
     id: 'tgt',
     label: '✨ Three Good Things',
-    desc: '오늘 좋았던 일 3개',
-    text: `일기: 오늘 좋았던 거 — `
+    desc: '오늘 좋았던 일',
+    prompt: '오늘 좋았던 거 한 가지?',
+    placeholder: '예: 친구 만남, 발표 잘됨',
+    format: (a) => `일기: 오늘 좋았던 거 — ${a || '특별한 거 없지만 그래도 무사히 보냄'} ✦`
   },
   {
     id: 'hard',
     label: '🌧 힘든 날',
     desc: '자기친절 모드',
-    text: `일기: 오늘 힘들었던 건 `
+    prompt: '오늘 힘들었던 거 한 줄?',
+    placeholder: '예: 발표 망함, 잠 못 잠, 답답',
+    format: (a) => `일기: 오늘 힘들었던 거 — ${a || '뚜렷한 이유 없이 그냥 힘듦'}. 그래도 여기까지 온 게 어디야 🌊`
   },
   {
     id: 'plan',
     label: '🎯 내일 계획 (if-then)',
-    desc: '내일 무엇을 어떻게',
-    text: `일기: 내일 `
+    desc: '내일 가장 중요한 거',
+    prompt: '내일 가장 중요한 거?',
+    placeholder: '예: 마감, 공부 시작, 약속',
+    format: (a) => `일기: 내일 가장 중요한 건 ${a || '아직 모름. 천천히 시작해보자'}. 작게 시작해도 OK.`
   },
   {
     id: 'feel',
     label: '🌊 감정 정리',
     desc: '지금 기분 한 단어',
-    text: `일기: 지금 기분 `
+    prompt: '지금 기분을 한 단어로?',
+    placeholder: '예: 피곤, 답답, 평온, 설렘',
+    format: (a) => `일기: 지금 기분은 ${a || '뭔지 잘 모르겠음'}. 이대로도 괜찮아.`
   }
 ];
 
 async function showDiaryTemplates() {
   const choice = await showOptionsModal({
     title: '📝 일기 템플릿',
-    message: '오늘 끌리는 거 골라봐',
+    message: '클릭만 해도, 한 단어만 답해도 자동으로 완성!',
     options: DIARY_TEMPLATES.map(t => ({ label: t.label, value: t.id, desc: t.desc }))
   });
   if (!choice) return;
   const tpl = DIARY_TEMPLATES.find(t => t.id === choice);
   if (!tpl) return;
+  // 한 단어/짧은 답 받기 (비워두고 OK 누르면 default format 사용)
+  const answer = await showInputModal({
+    title: tpl.label,
+    message: tpl.prompt + ' (비워두고 OK 누르면 그냥 저장)',
+    placeholder: tpl.placeholder,
+    okLabel: '완성 ✦'
+  });
+  if (answer === null) return;  // 취소
+  const completed = tpl.format((answer || '').trim());
+  // chatInput에 set + 즉시 send
   const input = document.getElementById('chatInput');
-  if (!input) return;
-  input.value = tpl.text;
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-  input.focus();
-  // 첫 빈칸 (— 뒤)으로 커서 이동
-  const firstBlank = tpl.text.indexOf('— ');
-  if (firstBlank !== -1) {
-    setTimeout(() => {
-      const pos = firstBlank + 2;
-      input.setSelectionRange(pos, pos);
-    }, 50);
+  if (input) {
+    input.value = completed;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  if (typeof sendChat === 'function') {
+    setTimeout(() => sendChat(), 50);
   }
 }
 
@@ -8412,11 +8428,12 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 10. 사용자가 그냥 감정 털어놓으면 → 그냥 들어주기. 분석 강요 X.
 11. **모든 메시지를 "고민/문제"로 보지 말기.** 사용자가 즐거운 일·웃긴 에피소드·소소한 일상 얘기하면 → 같이 즐거워하고 공감하기. 분석 X, 전략 제시 X, "이게 어떤 의미일까?" 같은 깊이 파기 X. 그냥 친구처럼 같이 웃고 같이 좋아하기.
 12. **사용자를 "고쳐야 할 대상"으로 보지 말기.** 사용자가 명시적으로 도움 요청 ("어떡하지", "도와줘") 안 했으면 절대 분석/진단/제안 X. "너의 ~한 패턴이 보여" 같은 분석적 톤 강제 X.
-13. **물음표 자제 — 매 응답 끝에 질문으로 마무리 X.** 친구처럼 그냥 끝내도 돼.
-    - 응답 1개에 질문은 **0~1개**. 보통 **0개**.
-    - "오늘 어땠어?" "어떡할 거야?" "왜 그런 거 같아?" 같은 follow-up 질문 자제.
-    - 사용자가 "어떡하지", "도와줘" 같은 명시적 요청 시에만 질문 OK.
-    - 일반 대화에선 **공감 / 관찰 / 짧은 동의**로 끝내기. 침묵해도 친구야.
+13. **물음표 자제 — 단, 친구 티키타카는 OK.**
+    - 매 응답마다 형식적 follow-up 질문 ("오늘 어땠어?", "어떡할 거야?", "왜 그런 거 같아?") X
+    - 분석적/탐색적 질문도 명시적 요청 ("어떡하지", "도와줘") 시에만
+    - **단, 친구 티키타카는 자연스럽게**: "오 진짜? 뭐 먹었어?", "ㅋㅋㅋ 그래서?", "헐 어디서?" 같은 자연스러운 호기심 질문은 OK
+    - 짧고 자연스러운 대화 흐름이면 질문 1개 정도. 분석/추궁성 질문 X.
+    - 사용자가 그냥 흘려쓴 거면 공감 한 마디 + 끝. 굳이 더 캐물지 X.
 
 정직성 (Anti-Sycophancy) — 매우 중요:
 - 사용자가 좋은 일 했다고 매번 칭찬 X. 사실만 짚기.
@@ -12963,7 +12980,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-question-template-test';
+const APP_VERSION = '2026-04-27-tone-template-camera';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
