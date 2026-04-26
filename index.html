@@ -2533,6 +2533,135 @@
     text-align: center; margin-top: 14px;
   }
 
+  /* V3.13.x: 음악 (iTunes Search) — Apple Music 풍 */
+  .music-search-input {
+    width: 100%;
+    padding: 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+  }
+  .music-search-input:focus { outline: none; border-color: var(--accent); }
+  .music-search-results {
+    max-height: 50vh;
+    overflow-y: auto;
+    margin: 0 -8px 12px;
+    padding: 0 8px;
+  }
+  .music-search-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .music-search-row:active { background: var(--surface2); }
+  .music-search-art {
+    width: 48px; height: 48px;
+    border-radius: 6px;
+    background: var(--surface2);
+    flex-shrink: 0;
+    object-fit: cover;
+  }
+  .music-search-meta { flex: 1; min-width: 0; }
+  .music-search-title {
+    font-size: 14px; font-weight: 500; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .music-search-artist {
+    font-size: 12px; color: var(--text-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+  .music-search-empty, .music-search-loading {
+    text-align: center; padding: 30px 20px;
+    color: var(--text-dim); font-size: 12px;
+  }
+
+  .music-card-wrap { position: relative; }
+  .music-card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(201,169,110,0.08), rgba(139,126,196,0.05));
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+  }
+  .music-card-art {
+    width: 64px; height: 64px;
+    border-radius: 8px;
+    background: var(--surface2);
+    flex-shrink: 0;
+    object-fit: cover;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+  .music-card-info { flex: 1; min-width: 0; }
+  .music-card-title {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+  .music-card-artist {
+    font-size: 12px; color: var(--text-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .music-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .music-card-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .music-card-btn.play {
+    background: var(--accent); color: var(--bg); border-color: var(--accent);
+  }
+  .music-card-btn.play.playing {
+    background: var(--purple); border-color: var(--purple); color: white;
+  }
+  .music-card-btn:active { transform: scale(0.95); }
+  .music-card-remove {
+    position: absolute; top: 6px; right: 6px;
+    background: rgba(15,14,23,0.7);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    width: 24px; height: 24px; border-radius: 50%;
+    cursor: pointer; font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+  }
+  .music-card-remove:active { background: var(--danger); color: white; }
+
+  .music-add-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px dashed var(--border-strong);
+    border-radius: 12px;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .music-add-btn:active {
+    background: var(--surface2); color: var(--accent); border-color: var(--accent);
+  }
+
+  /* 진주 음악 카드는 grid에서 한 줄 다 차지 */
+  .pearl-music-row { grid-column: 1 / -1; }
+  .pearl-music-card { padding: 0; background: transparent; border: none; }
+  .pearl-music-card:hover { transform: none; }
+
   /* V3.12.x: Pearls intro — 비언어적 설명 */
   .pearls-intro {
     background: linear-gradient(135deg, rgba(201,169,110,0.08), rgba(139,126,196,0.08));
@@ -3030,6 +3159,11 @@
           <button class="quick-btn" onclick="rerollDailyQuestion()" style="font-size:11px; flex: 0 0 auto; padding: 6px 12px;">↻ 다른 질문</button>
           <button class="quick-btn" onclick="dismissDailyQuestion()" style="font-size:11px; flex: 0 0 auto; padding: 6px 12px;">✕ 이 질문 그만</button>
         </div>
+      </div>
+
+      <!-- V3.13.x: 음악 슬롯 (optional) -->
+      <div class="input-group">
+        <div id="checkinMusicSlot"></div>
       </div>
 
       <div class="optional-section">
@@ -7366,10 +7500,11 @@ function prefillCheckinFromEntry() {
   if (endEl0) endEl0.value = '';
   if (noteEl0) noteEl0.value = '';
 
-  if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart)) {
+  if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart || entry.music)) {
     // 오늘 체크인 안 함 — 새로 작성 모드
     if (submitBtn) submitBtn.textContent = '기록 완료 ✦';
     if (subtitle) subtitle.textContent = '오늘 너의 컨디션 한 번 살펴보자.';
+    renderCheckinMusicSlot();
     return;
   }
   // 오늘 entry 있음 — 수정 모드
@@ -7397,6 +7532,9 @@ function prefillCheckinFromEntry() {
   ['meals','movement','focus','social','overwhelm'].forEach(k => {
     if (entry[k]) currentCheckin[k] = entry[k];
   });
+  // V3.13.x: 음악 prefill
+  if (entry.music) currentCheckin.music = entry.music;
+  renderCheckinMusicSlot();
   // sleep duration 다시 계산
   if (typeof updateSleepDuration === 'function') updateSleepDuration();
 }
@@ -7489,6 +7627,9 @@ async function submitCheckin() {
   ['meals', 'movement', 'focus', 'social', 'overwhelm'].forEach(k => {
     if (currentCheckin[k]) entry[k] = currentCheckin[k];
   });
+  // V3.13.x: 음악 저장 / 제거
+  if (currentCheckin.music) entry.music = currentCheckin.music;
+  else delete entry.music;
   entry.timestamp = new Date().toISOString();
 
   // V3.12.x: 추적 항목 값 캡처 → state.projects의 measurements에 push
@@ -9713,6 +9854,10 @@ function renderLensTimeline() {
     }
     if (entry?.note) {
       blocks.push(`<div class="ig-block ig-block-note">${escapeHtml(entry.note)}</div>`);
+    }
+    // V3.13.x: 그 날 음악
+    if (entry?.music) {
+      blocks.push(`<div style="margin-top:8px;">${renderMusicCardHTML(entry.music)}</div>`);
     }
     // 깨달음 카드들 (headline + body 강조)
     if (day.archives.length > 0) {
@@ -13033,18 +13178,220 @@ function renderLensPearls() {
       html += `<div style="font-size:11px; color:var(--accent); letter-spacing:0.1em; margin:14px 0 8px; text-transform:uppercase;">${icon} ${cat}</div>`;
       html += `<div class="pearls-grid">`;
       items.forEach(p => {
-        html += `
-          <div class="pearl-card" onclick="openPearl('${p.id}')">
-            <div class="pearl-card-content">${escapeHtml(p.content)}</div>
-            ${p.note ? `<div style="font-size:10px; color:var(--text-dim); margin-top:6px;">${escapeHtml(p.note.slice(0,50))}</div>` : ''}
-          </div>
-        `;
+        // V3.13.x: 음악 진주는 Apple Music 풍 카드로 (한 줄 다 차지)
+        if (p.category === '음악' && p.track) {
+          html += `
+            <div class="pearl-music-row pearl-card pearl-music-card" onclick="openPearl('${p.id}')">
+              ${renderMusicCardHTML(p.track)}
+              ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:6px; padding:0 4px;">${escapeHtml(p.note)}</div>` : ''}
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="pearl-card" onclick="openPearl('${p.id}')">
+              <div class="pearl-card-content">${escapeHtml(p.content)}</div>
+              ${p.note ? `<div style="font-size:10px; color:var(--text-dim); margin-top:6px;">${escapeHtml(p.note.slice(0,50))}</div>` : ''}
+            </div>
+          `;
+        }
       });
       html += `</div>`;
     });
   }
   
   container.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// V3.13.x: 음악 (iTunes Search API — 인증 X, 무료) + Apple Music 외부 링크
+// ═══════════════════════════════════════════════════════════════
+async function searchITunes(query) {
+  if (!query || !query.trim()) return [];
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query.trim())}&entity=song&limit=20&country=KR&lang=ko_KR`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return (data.results || []).filter(r => r.kind === 'song' || r.wrapperType === 'track').map(r => ({
+      id: String(r.trackId),
+      title: r.trackName,
+      artist: r.artistName,
+      album: r.collectionName,
+      artworkUrl: (r.artworkUrl100 || '').replace('100x100bb', '300x300bb'),
+      previewUrl: r.previewUrl,
+      trackUrl: r.trackViewUrl
+    }));
+  } catch (e) {
+    console.warn('iTunes search failed:', e);
+    return [];
+  }
+}
+
+let _musicSearchPickedTracks = null;
+function showMusicSearchModal(callback) {
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay';
+  overlay.id = 'musicSearchModal';
+  overlay.innerHTML = `
+    <div class="input-modal" onclick="event.stopPropagation()" style="max-height:88vh; display:flex; flex-direction:column;">
+      <div class="input-modal-title">🎵 곡 검색</div>
+      <input type="text" class="music-search-input" id="musicSearchInput" placeholder="곡명이나 아티스트..." autocomplete="off">
+      <div class="music-search-results" id="musicSearchResults">
+        <div class="music-search-empty">검색어를 입력해봐</div>
+      </div>
+      <div class="input-modal-actions">
+        <button class="input-modal-btn cancel" onclick="closeMusicSearchModal()">취소</button>
+      </div>
+    </div>
+  `;
+  overlay.onclick = closeMusicSearchModal;
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add('show'), 30);
+
+  const input = document.getElementById('musicSearchInput');
+  const results = document.getElementById('musicSearchResults');
+  let _searchTimer = null;
+  let _lastQuery = '';
+  setTimeout(() => input.focus(), 60);
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim();
+    if (_searchTimer) clearTimeout(_searchTimer);
+    if (!q) {
+      results.innerHTML = '<div class="music-search-empty">검색어를 입력해봐</div>';
+      return;
+    }
+    results.innerHTML = '<div class="music-search-loading">검색 중...</div>';
+    _searchTimer = setTimeout(async () => {
+      _lastQuery = q;
+      const tracks = await searchITunes(q);
+      if (q !== _lastQuery) return;
+      if (tracks.length === 0) {
+        results.innerHTML = '<div class="music-search-empty">검색 결과가 없어</div>';
+        return;
+      }
+      _musicSearchPickedTracks = tracks;
+      results.innerHTML = tracks.map((t, i) => `
+        <div class="music-search-row" onclick="_pickMusicTrack(${i})">
+          <img class="music-search-art" src="${escapeHtml(t.artworkUrl)}" alt="" onerror="this.style.opacity=0.3;">
+          <div class="music-search-meta">
+            <div class="music-search-title">${escapeHtml(t.title)}</div>
+            <div class="music-search-artist">${escapeHtml(t.artist)}</div>
+          </div>
+        </div>
+      `).join('');
+      window._pickMusicTrack = (idx) => {
+        const t = (_musicSearchPickedTracks || [])[idx];
+        if (!t) return;
+        closeMusicSearchModal();
+        if (callback) callback(t);
+      };
+    }, 350);
+  });
+}
+
+function closeMusicSearchModal() {
+  const overlay = document.getElementById('musicSearchModal');
+  if (!overlay) return;
+  overlay.classList.remove('show');
+  setTimeout(() => overlay.remove(), 200);
+  if (_currentMusicAudio) {
+    try { _currentMusicAudio.pause(); } catch {}
+    _currentMusicAudio = null;
+    _currentMusicBtn = null;
+  }
+  _musicSearchPickedTracks = null;
+  delete window._pickMusicTrack;
+}
+
+function renderMusicCardHTML(track, opts = {}) {
+  if (!track) return '';
+  const onRemove = opts.onRemove || '';
+  const removeBtn = onRemove ? `<button class="music-card-remove" onclick="event.stopPropagation(); ${onRemove}" aria-label="제거">✕</button>` : '';
+  const playBtn = track.previewUrl
+    ? `<button class="music-card-btn play" onclick="event.stopPropagation(); toggleMusicPreview(this, '${escapeHtml(track.previewUrl)}')" aria-label="미리듣기">▶</button>`
+    : '';
+  const linkBtn = track.trackUrl
+    ? `<a class="music-card-btn" href="${escapeHtml(track.trackUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation();" aria-label="Apple Music에서 듣기">↗</a>`
+    : '';
+  return `
+    <div class="music-card-wrap">
+      ${removeBtn}
+      <div class="music-card">
+        <img class="music-card-art" src="${escapeHtml(track.artworkUrl || '')}" alt="" onerror="this.style.opacity=0.3;">
+        <div class="music-card-info">
+          <div class="music-card-title">${escapeHtml(track.title || '')}</div>
+          <div class="music-card-artist">${escapeHtml(track.artist || '')}</div>
+        </div>
+        <div class="music-card-actions">${playBtn}${linkBtn}</div>
+      </div>
+    </div>
+  `;
+}
+
+let _currentMusicAudio = null;
+let _currentMusicBtn = null;
+function toggleMusicPreview(btn, url) {
+  if (_currentMusicAudio && _currentMusicBtn !== btn) {
+    try { _currentMusicAudio.pause(); } catch {}
+    if (_currentMusicBtn) {
+      _currentMusicBtn.textContent = '▶';
+      _currentMusicBtn.classList.remove('playing');
+    }
+    _currentMusicAudio = null;
+    _currentMusicBtn = null;
+  }
+  if (_currentMusicAudio && _currentMusicBtn === btn) {
+    if (_currentMusicAudio.paused) {
+      _currentMusicAudio.play().catch(e => console.warn(e));
+      btn.textContent = '⏸';
+      btn.classList.add('playing');
+    } else {
+      _currentMusicAudio.pause();
+      btn.textContent = '▶';
+      btn.classList.remove('playing');
+    }
+    return;
+  }
+  const audio = new Audio(url);
+  audio.play().catch(e => console.warn('audio play failed:', e));
+  audio.addEventListener('ended', () => {
+    btn.textContent = '▶';
+    btn.classList.remove('playing');
+    _currentMusicAudio = null;
+    _currentMusicBtn = null;
+  });
+  _currentMusicAudio = audio;
+  _currentMusicBtn = btn;
+  btn.textContent = '⏸';
+  btn.classList.add('playing');
+}
+
+// 체크인 화면 — 음악 슬롯 렌더 + 추가/제거
+function renderCheckinMusicSlot() {
+  const slot = document.getElementById('checkinMusicSlot');
+  if (!slot) return;
+  if (currentCheckin && currentCheckin.music) {
+    slot.innerHTML = renderMusicCardHTML(currentCheckin.music, { onRemove: 'removeCheckinMusic()' });
+  } else {
+    slot.innerHTML = `
+      <button class="music-add-btn" onclick="addCheckinMusic()">
+        <span style="font-size:16px;">🎵</span>
+        <span>음악</span>
+      </button>
+    `;
+  }
+}
+function addCheckinMusic() {
+  showMusicSearchModal((track) => {
+    if (!currentCheckin) currentCheckin = {};
+    currentCheckin.music = track;
+    renderCheckinMusicSlot();
+  });
+}
+function removeCheckinMusic() {
+  if (currentCheckin) delete currentCheckin.music;
+  renderCheckinMusicSlot();
 }
 
 async function addPearl() {
@@ -13067,7 +13414,32 @@ async function addPearl() {
   if (!categories.includes(category)) {
     state.preferences.pearlBasketCategories.push(category);
   }
-  
+
+  // V3.13.x: 음악 카테고리 → iTunes 검색 모달로 곡 선택
+  if (category === '음악') {
+    showMusicSearchModal(async (track) => {
+      const note = await showInputModal({
+        title: `💎 음악 — ${track.title}`,
+        message: '메모 한 줄 (선택). 비우고 OK 가능.',
+        placeholder: '예: 그날 카페 새벽 4시',
+        okLabel: '보관'
+      });
+      if (note === null) return;
+      state.pearls.push({
+        id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        category: '음악',
+        track,
+        content: track.title,
+        note: (note || '').trim() || null,
+        createdAt: new Date().toISOString()
+      });
+      saveState();
+      renderLensPearls();
+      showToast('진주 추가됨 💎');
+    });
+    return;
+  }
+
   const content = await showInputModal({
     title: `💎 ${category}`,
     message: '뭐가 좋았어? 한 줄로.',
@@ -13075,7 +13447,7 @@ async function addPearl() {
     okLabel: '보관'
   });
   if (!content || !content.trim()) return;
-  
+
   state.pearls.push({
     id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     content: content.trim(),
