@@ -7473,9 +7473,11 @@ function rotateChatPlaceholder() {
 }
 
 function updateCheckinSub() {
+  const el = document.getElementById('checkinSub');
+  if (!el) return;  // V3.13.x: mainAction 카드로 통합되며 엘리먼트 제거됨. 가드.
   const key = todayKey();
   const entry = state.entries.find(e => e.date === key);
-  document.getElementById('checkinSub').textContent = entry ? '오늘 기록 완료 ✓' : '15초면 돼';
+  el.textContent = entry ? '오늘 기록 완료 ✓' : '15초면 돼';
 }
 
 // ═══════════════════════════════════════════════════════════════
