@@ -550,6 +550,9 @@
   }
   .cf-more summary::-webkit-details-marker { display: none; }
   .cf-more[open] summary { color: var(--text-dim); margin-bottom: 4px; }
+  /* V3.13.x: cf-more 안의 cf-list 폰트도 model-item-desc와 동일하게 */
+  .cf-more .cf-list { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+  .cf-more .cf-text { font-size: 12px; line-height: 1.6; }
   .model-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; line-height: 1.7; }
 
   .archive-item { background: var(--surface); border-radius: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid var(--border); }
@@ -3886,8 +3889,16 @@ async function init() {
     && (state.chatMessages || []).length === 0;
   
   if (isBrandNewUser) {
-    // 신규: 환영 튜토리얼 (8슬라이드, 친절)
+    console.log('[onb] 신규 사용자 감지 — 튜토리얼 시작 예정');
+    // 신규: 환영 튜토리얼
     setTimeout(() => startWelcomeTutorial(), 800);
+    // V3.13.x 안전망: 5초 후에도 튜토리얼 안 떠있으면 재시도
+    setTimeout(() => {
+      if (!window._onbTutorialMode && !state.hasSeenWelcomeTutorial && (state.entries || []).length === 0 && (state.chatMessages || []).length === 0) {
+        console.warn('[onb] 안전망: 튜토리얼이 안 떴음. 재시도');
+        startWelcomeTutorial();
+      }
+    }, 5000);
   } else if (!state.hasSeenV3Tour) {
     // 기존 V2 사용자: V3 변화 안내 (5슬라이드)
     setTimeout(() => startV3Tour(), 800);
@@ -9645,15 +9656,16 @@ function renderExecute() {
     }
 
     // V3.13: 서랍장 인라인 표시 (오늘의 카드 밑, 우선순위 정렬)
+    // V3.13.x: t.date 조건 제거 — 모든 미완료 drawer task (날짜 무관)
     const drawerTasks = (state.tasks || [])
-      .filter(t => t.slot === 'drawer' && t.status !== 'done' && (t.date === todayKeyVal || !t.date))
+      .filter(t => t.slot === 'drawer' && t.status !== 'done')
       .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
     if (drawerTasks.length > 0) {
       html += `
         <div class="exec-now-section">
           <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center;">
             <span>📂 서랍장 · ${drawerTasks.length}장 (우선순위순)</span>
-            ${drawerTasks.length >= 2 ? `<button onclick="mergeDuplicateTasks()" style="font-size:10px; padding:4px 10px; background:transparent; border:1px solid var(--border); color:var(--text-dim); border-radius:8px; cursor:pointer; font-family:inherit;">🔗 중복 합치기</button>` : ''}
+            <button onclick="mergeDuplicateTasks()" style="font-size:10px; padding:4px 10px; background:transparent; border:1px solid var(--border); color:var(--text-dim); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0;">🔗 중복 합치기</button>
           </div>
       `;
       drawerTasks.forEach(task => {
@@ -12783,7 +12795,7 @@ async function resetTasks() {
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 사용자가 본 버전(state.preferences.lastSeenAppVersion)과
 // 다르면 init 시 '업데이트됐어! 튜토리얼 다시 볼래?' 모달.
-const APP_VERSION = '2026-04-27-secure-fix';
+const APP_VERSION = '2026-04-27-ui-fixes';
 
 async function showUpdateNoticeIfNeeded() {
   if (!state.hasSeenWelcomeTutorial) return;  // 신규 사용자는 자동 튜토리얼 진행 중. 알림 X.
