@@ -3922,26 +3922,8 @@ async function init() {
   // V3.13.x: 새 APP_VERSION 진입 시 튜토리얼 자동 시작
   setTimeout(() => autoTourOnUpdate(), 2000);
 
-  // 첫 사용자 vs 기존 사용자 분기
-  const isBrandNewUser = !state.hasSeenWelcomeTutorial 
-    && (state.entries || []).length === 0 
-    && (state.chatMessages || []).length === 0;
-  
-  if (isBrandNewUser) {
-    console.log('[onb] 신규 사용자 감지 — 튜토리얼 시작 예정');
-    // 신규: 환영 튜토리얼
-    setTimeout(() => startWelcomeTutorial(), 800);
-    // V3.13.x 안전망: 5초 후에도 튜토리얼 안 떠있으면 재시도
-    setTimeout(() => {
-      if (!window._onbTutorialMode && !state.hasSeenWelcomeTutorial && (state.entries || []).length === 0 && (state.chatMessages || []).length === 0) {
-        console.warn('[onb] 안전망: 튜토리얼이 안 떴음. 재시도');
-        startWelcomeTutorial();
-      }
-    }, 5000);
-  } else if (!state.hasSeenV3Tour) {
-    // 기존 V2 사용자: V3 변화 안내 (5슬라이드)
-    setTimeout(() => startV3Tour(), 800);
-  }
+  // V3.13.x: 신규 사용자 자동 튜토리얼 분기 제거. 배너로 통일.
+  // (isBrandNewUser 신규 사용자도 배너로 자기 페이스에 시작 가능)
 }
 
 // V3.7: startWelcomeTutorial을 인터랙티브 온보딩으로 가로채기
@@ -7096,10 +7078,18 @@ function showScreen(name) {
   if (nav) nav.classList.add('active');
   target && target.scrollTo(0, 0);
   document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';
+  // V3.13.x: 헤더 + 배너는 홈에만 표시
+  const headerEl = document.querySelector('.app .header');
+  const bannerEl = document.getElementById('updateBanner');
+  if (headerEl) headerEl.style.display = name === 'home' ? 'flex' : 'none';
+  if (bannerEl && name !== 'home') bannerEl.style.display = 'none';
 
-  if (name === 'home') { applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3(); renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink(); }
-  // V3.13.x: 모든 탭에서 상단 배너 항상 갱신
-  if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
+  if (name === 'home') {
+    applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3();
+    renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink();
+    // V3.13.x: 배너는 홈에만 (헤더와 함께)
+    if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
+  }
   if (name === 'settings') { setTimeout(refreshTesterModeUI, 30); }
   if (name === 'execute') renderExecute();
   if (name === 'checkin') { renderDailyQuestion(); renderModes(); renderCheckinTrackers(); }
@@ -12891,22 +12881,18 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-faster-version-check';
+const APP_VERSION = '2026-04-27-banner-simplify-header';
 
-// V3.13.x: 새 버전 진입 시 배너 갱신만. 자동 박음 X — 사용자가 dismiss 누를 때만 lastSeen 박힘.
+// V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
+// lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
 function autoTourOnUpdate() {
-  if (!state || !state.hasSeenWelcomeTutorial) return;  // 신규 사용자는 isBrandNewUser 자동 분기
-  if (window._onbTutorialMode) return;
   if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
 }
-
-// V3.13.x: 상단 sticky 배너 (모든 탭에서 보임, dismiss 시 그 버전 동안 안 뜸)
 function renderUpdateNotice() {
   const banner = document.getElementById('updateBanner');
   if (!banner) return;
-  const lastSeen = state && state.preferences && state.preferences.lastSeenAppVersion;
-  // 신규 사용자(튜토리얼 자동 진행)만 제외. lastSeen 없거나 다르면 배너 표시
-  const shouldShow = state && state.hasSeenWelcomeTutorial && lastSeen !== APP_VERSION && !window._onbTutorialMode;
+  const dismissed = state && state.preferences && state.preferences.dismissedAppVersion;
+  const shouldShow = state && dismissed !== APP_VERSION && !window._onbTutorialMode;
   if (!shouldShow) {
     banner.style.display = 'none';
     banner.innerHTML = '';
@@ -12923,13 +12909,13 @@ function renderUpdateNotice() {
 }
 function dismissUpdateNotice() {
   state.preferences = state.preferences || {};
-  state.preferences.lastSeenAppVersion = APP_VERSION;
+  state.preferences.dismissedAppVersion = APP_VERSION;
   saveState();
   renderUpdateNotice();
 }
 function startUpdateTour() {
   state.preferences = state.preferences || {};
-  state.preferences.lastSeenAppVersion = APP_VERSION;
+  state.preferences.dismissedAppVersion = APP_VERSION;
   saveState();
   renderUpdateNotice();
   startInteractiveOnboarding();
