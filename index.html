@@ -8053,21 +8053,19 @@ async function generateAIResponse(modelOverride) {
       .trim();
     state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
 
-    // V3.13.x: 직전 user msg가 askDeeper 트리거였는지 — 전략 버튼/해볼게 노출 가드
-    let prevUserIdx = state.chatMessages.length - 2;
-    while (prevUserIdx >= 0 && state.chatMessages[prevUserIdx].role !== 'user') prevUserIdx--;
-    const prevUser = prevUserIdx >= 0 ? state.chatMessages[prevUserIdx] : null;
-    if (prevUser && prevUser.isDeeperRequest) {
+    // V3.13.x: 4단 응답 ([오늘의 제안] 또는 다른 4단 라벨 포함) 판정
+    // askDeeper로 트리거됐든, 사용자 직접 '어떡하지' 등 도움 요청 → 자동 4단이든 다 해당
+    // → fromDeeper(전략으로) + proposal(해볼게) 두 버튼 노출
+    const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]|\[오늘의 제안\]/.test(fullText);
+    if (has4Stage) {
       state.chatMessages[state.chatMessages.length - 1].fromDeeper = true;
     }
 
-    // Check for proposal in response — askDeeper 응답에서만
+    // Check for proposal in response
     if (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal)) {
-      if (prevUser && prevUser.isDeeperRequest) {
-        state.chatMessages[state.chatMessages.length - 1].proposal = true;
-        if (analysisData && analysisData.proposal) {
-          state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;
-        }
+      state.chatMessages[state.chatMessages.length - 1].proposal = true;
+      if (analysisData && analysisData.proposal) {
+        state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;
       }
     }
 
@@ -12817,7 +12815,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-pwa-cache-bust';
+const APP_VERSION = '2026-04-27-4stage-buttons';
 
 // V3.13.x: 새 버전 진입 시 자동 튜토리얼 (모달 없이 바로). 단:
 //   - 신규 사용자는 isBrandNewUser 분기에서 이미 자동 시작 → 여기선 skip
