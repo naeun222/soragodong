@@ -3957,6 +3957,14 @@ const ONBOARDING_STEPS = [
     waitFor: 'click',
     advanceDelay: 800
   },
+  {
+    id: 'sync_dot_intro',
+    targetSelector: '#syncDot',
+    title: '🟢 동기화 표시',
+    body: '오른쪽 위 작은 점 보이지? 이게 클라우드 동기화 상태야:<br><br>· 🟢 <b>초록</b> — 잘 저장돼있음 ✦<br>· 🟡 <b>금색</b> (깜빡) — 동기화 중<br>· 🔴 <b>빨강</b> — 에러! 이때는 <b>⚙ 설정 → ☁️ 지금 동기화</b> 눌러서 다시 시도해줘.<br><br>지금 색 한 번 확인해봐!',
+    waitFor: 'next',
+    fallbackPosition: 'bottom'
+  },
 
   // === Phase 3: 체크인 (6) — 체크인은 nav-item에 없음. 홈 → 체크인 카드 두 단계로. ===
   {
@@ -12804,7 +12812,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-auto-tour-trigger';
+const APP_VERSION = '2026-04-27-sync-dot-step';
 
 // V3.13.x: 새 버전 진입 시 자동 튜토리얼 (모달 없이 바로). 단:
 //   - 신규 사용자는 isBrandNewUser 분기에서 이미 자동 시작 → 여기선 skip
