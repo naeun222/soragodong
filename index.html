@@ -632,6 +632,29 @@
   /* V3.13.x: cf-more 안의 cf-list 폰트도 model-item-desc와 동일하게 */
   .cf-more .cf-list { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
   .cf-more .cf-text { font-size: 12px; line-height: 1.6; }
+  /* V3.13.x: 통합 분석 미컨펌 NEW 배지 + ✓ 컨펌 버튼 */
+  .cf-bullet-new {
+    background: rgba(139,126,196,0.06);
+    border-left: 2px solid var(--purple);
+    padding-left: 8px;
+    margin: 4px -2px 4px;
+    border-radius: 4px;
+  }
+  .cf-bullet-new .cf-actions { opacity: 0.85; }
+  .cf-new-badge {
+    display: inline-block;
+    font-size: 9px; font-weight: 700;
+    color: var(--purple); background: rgba(139,126,196,0.18);
+    padding: 1px 5px; border-radius: 4px;
+    letter-spacing: 0.06em; margin-right: 6px;
+    vertical-align: middle;
+  }
+  .cf-confirm {
+    background: var(--accent-dim) !important;
+    color: var(--accent) !important;
+    border-color: var(--accent) !important;
+    font-weight: 700;
+  }
   .model-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; line-height: 1.7; }
 
   .archive-item { background: var(--surface); border-radius: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid var(--border); }
@@ -2953,6 +2976,36 @@
     margin-top: 4px;
   }
   .checkin-tracker-add:active { background: var(--surface); color: var(--accent); }
+
+  /* V3.13.x: 추적 항목 — 체크형 (토글) */
+  .checkin-tracker-check {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  }
+  .checkin-tracker-check .ct-emoji {
+    font-size: 18px;
+    color: var(--text-soft);
+    width: 22px;
+    text-align: center;
+  }
+  .checkin-tracker-check.is-checked {
+    background: rgba(201,169,110,0.08);
+    border-color: rgba(201,169,110,0.35);
+  }
+  .checkin-tracker-check.is-checked .ct-emoji {
+    color: var(--accent);
+  }
+  .ct-toggle-hint {
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .checkin-tracker-check.is-checked .ct-toggle-hint {
+    color: var(--accent);
+  }
+  .checkin-tracker-check:active { transform: scale(0.99); }
 
   /* V3.12: Project tracking — "나" 탭 안 카드 */
   .project-section { margin-bottom: 22px; }
@@ -7654,12 +7707,36 @@ async function submitCheckin() {
     if (currentCheckin[k]) entry[k] = currentCheckin[k];
   });
   // V3.13.x: 음악 저장 / 제거
-  if (currentCheckin.music) entry.music = currentCheckin.music;
-  else delete entry.music;
+  let _autoPearlAdded = null;
+  if (currentCheckin.music) {
+    entry.music = currentCheckin.music;
+    // V3.13.x: 같은 곡 5번 이상 체크인 → 자동 진주 저장 (이미 있으면 skip)
+    const trackId = currentCheckin.music.id;
+    if (trackId) {
+      const sameCount = (state.entries || []).filter(e => e.music && e.music.id === trackId).length;
+      const alreadyInPearls = (state.pearls || []).some(p => p.track && p.track.id === trackId);
+      if (sameCount >= 5 && !alreadyInPearls) {
+        if (!state.pearls) state.pearls = [];
+        state.pearls.push({
+          id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          category: '음악',
+          track: currentCheckin.music,
+          content: currentCheckin.music.title,
+          note: `체크인 ${sameCount}번 등장 → 자동 보관`,
+          autoAdded: true,
+          createdAt: new Date().toISOString()
+        });
+        _autoPearlAdded = currentCheckin.music.title;
+      }
+    }
+  } else {
+    delete entry.music;
+  }
   entry.timestamp = new Date().toISOString();
 
   // V3.12.x: 추적 항목 값 캡처 → state.projects의 measurements에 push
-  (state.projects || []).filter(p => p.status === 'active').forEach(p => {
+  // V3.13.x: 체크형은 즉시 토글로 저장되므로 skip
+  (state.projects || []).filter(p => p.status === 'active' && (p.kind || 'numeric') === 'numeric').forEach(p => {
     const inputEl = document.getElementById('track_' + p.id);
     if (!inputEl || inputEl.value === '') return;
     const val = parseFloat(inputEl.value);
@@ -7689,6 +7766,9 @@ async function submitCheckin() {
   updateCheckinSub();
   showScreen('home');
   showToast(note.trim() ? '✦ 기록됐어' : '기록 고마워 🐚');
+  if (_autoPearlAdded) {
+    setTimeout(() => showToast(`💎 자주 들은 곡이라 진주에 자동 저장 — ${_autoPearlAdded}`), 1200);
+  }
 }
 
 function buildCheckinSummary(entry) {
@@ -7808,16 +7888,31 @@ function renderModel() {
   }
   if (state.caseFormulation.version > 0) {
     html += `<div class="model-section"><div class="model-section-title">📋 통합 분석 v.${state.caseFormulation.version}</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">너에 대해 내가 종합한 그림이야. 잘못된 거 있으면 ✎ 수정 / ✕ 삭제 가능.</div>`;
-    const cfBullet = (text, field, i) => `<div class="cf-bullet"><span class="cf-text">• ${escapeHtml(text)}</span><span class="cf-actions"><button onclick="editCFItem('${field}', ${i})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${i})" title="삭제">✕</button></span></div>`;
-    // V3.13.x: top 1 + 더보기 collapse (상위 1개만 보이고 나머지는 펼쳐 보기)
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">너에 대해 내가 종합한 그림이야. 컨펌 안 한 게 위로. ✓ 맞아 / ✎ 수정 / ✕ 삭제.</div>`;
+    // V3.13.x: 미컨펌(unverified) 메타 — 자동 추출된 거 위에 표시
+    const cfBullet = (text, field, originalIdx) => {
+      const verified = isCFVerified(field, text);
+      const verifyBtn = !verified ? `<button class="cf-confirm" onclick="confirmCFItem('${field}', ${originalIdx})" title="맞아">✓</button>` : '';
+      const newBadge = !verified ? '<span class="cf-new-badge">NEW</span>' : '';
+      return `<div class="cf-bullet${verified ? '' : ' cf-bullet-new'}">
+        <span class="cf-text">${newBadge}• ${escapeHtml(text)}</span>
+        <span class="cf-actions">${verifyBtn}<button onclick="editCFItem('${field}', ${originalIdx})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${originalIdx})" title="삭제">✕</button></span>
+      </div>`;
+    };
+    // V3.13.x: 미컨펌 위로 정렬 (originalIdx는 state 배열 그대로)
     const cfSection = (label, sub, items, field) => {
       if (!items || items.length === 0) return '';
-      const top = items.slice(0, 1);
-      const rest = items.slice(1);
-      const topHtml = top.map((p, i) => cfBullet(p, field, i)).join('');
+      const sortedWithIdx = items.map((text, idx) => ({ text, idx }))
+        .sort((a, b) => {
+          const av = isCFVerified(field, a.text) ? 1 : 0;
+          const bv = isCFVerified(field, b.text) ? 1 : 0;
+          return av - bv;
+        });
+      const top = sortedWithIdx.slice(0, 1);
+      const rest = sortedWithIdx.slice(1);
+      const topHtml = top.map(o => cfBullet(o.text, field, o.idx)).join('');
       const restHtml = rest.length > 0
-        ? `<details class="cf-more"><summary>+ ${rest.length}개 더 보기</summary><div class="cf-list">${rest.map((p, i) => cfBullet(p, field, i + 1)).join('')}</div></details>`
+        ? `<details class="cf-more"><summary>+ ${rest.length}개 더 보기</summary><div class="cf-list">${rest.map(o => cfBullet(o.text, field, o.idx)).join('')}</div></details>`
         : '';
       return `<div class="model-item"><div class="model-item-name">${label}</div>
         ${sub ? `<div style="font-size:11px; color:var(--text-soft); margin-bottom:8px;">${sub}</div>` : ''}
@@ -7901,7 +7996,27 @@ async function rejectItem(category, idx) {
   saveState(); renderModel(); renderModelPreview();
 }
 
-// V3.13.x: 통합 분석 (caseFormulation) 항목 수정/삭제
+// V3.13.x: 통합 분석 미컨펌 메타 (텍스트 기준 lookup)
+function _cfUnverifiedArr(field) {
+  if (!state.caseFormulation) return [];
+  if (!state.caseFormulation.unverified) state.caseFormulation.unverified = {};
+  if (!state.caseFormulation.unverified[field]) state.caseFormulation.unverified[field] = [];
+  return state.caseFormulation.unverified[field];
+}
+function isCFVerified(field, text) {
+  return !_cfUnverifiedArr(field).includes(text);
+}
+function setCFVerified(field, text, verified) {
+  const arr = _cfUnverifiedArr(field);
+  const i = arr.indexOf(text);
+  if (verified) {
+    if (i >= 0) arr.splice(i, 1);
+  } else {
+    if (i < 0) arr.push(text);
+  }
+}
+
+// V3.13.x: 통합 분석 (caseFormulation) 항목 수정/삭제/컨펌
 async function editCFItem(field, idx) {
   if (!state.caseFormulation || !Array.isArray(state.caseFormulation[field])) return;
   const current = state.caseFormulation[field][idx];
@@ -7917,6 +8032,9 @@ async function editCFItem(field, idx) {
   const trimmed = newText.trim();
   if (!trimmed) return;
   state.caseFormulation[field][idx] = trimmed;
+  // sync unverified: 옛 텍스트 제거 + 사용자 직접 수정 → 컨펌됨
+  setCFVerified(field, current, true);
+  setCFVerified(field, trimmed, true);
   saveState();
   renderModel();
   renderModelPreview();
@@ -7925,11 +8043,22 @@ async function editCFItem(field, idx) {
 async function deleteCFItem(field, idx) {
   if (!state.caseFormulation || !Array.isArray(state.caseFormulation[field])) return;
   if (!await confirmDelete('이 항목')) return;
+  const removed = state.caseFormulation[field][idx];
   state.caseFormulation[field].splice(idx, 1);
+  setCFVerified(field, removed, true);  // unverified에서도 제거
   saveState();
   renderModel();
   renderModelPreview();
   showToast('삭제됨');
+}
+async function confirmCFItem(field, idx) {
+  if (!state.caseFormulation || !Array.isArray(state.caseFormulation[field])) return;
+  const text = state.caseFormulation[field][idx];
+  if (!text) return;
+  setCFVerified(field, text, true);
+  saveState();
+  renderModel();
+  showToast('확인됨 ✦');
 }
 
 // V3.13.x: 통합분석 항목 수정 (이름 + 설명) — AI 오해 잘못된 추론 직접 고치기
@@ -8639,9 +8768,19 @@ async function processAnalysis(analysis, messageIdx) {
   if (analysis.case_formulation_update && !recentRetry && !isUITrigger) {
     const cf = state.caseFormulation;
     const u = analysis.case_formulation_update;
-    if (u.new_problem && !cf.problems.some(p => similarText(p, u.new_problem))) cf.problems.push(u.new_problem);
-    if (u.new_mechanism && !cf.mechanisms.some(m => similarText(m, u.new_mechanism))) cf.mechanisms.push(u.new_mechanism);
-    if (u.new_strength && !cf.strengths.some(s => similarText(s, u.new_strength))) cf.strengths.push(u.new_strength);
+    // V3.13.x: 자동 추출은 unverified로 마킹 (사용자 컨펌 전까지 NEW 표시 + 위로 정렬)
+    if (u.new_problem && !cf.problems.some(p => similarText(p, u.new_problem))) {
+      cf.problems.push(u.new_problem);
+      setCFVerified('problems', u.new_problem, false);
+    }
+    if (u.new_mechanism && !cf.mechanisms.some(m => similarText(m, u.new_mechanism))) {
+      cf.mechanisms.push(u.new_mechanism);
+      setCFVerified('mechanisms', u.new_mechanism, false);
+    }
+    if (u.new_strength && !cf.strengths.some(s => similarText(s, u.new_strength))) {
+      cf.strengths.push(u.new_strength);
+      setCFVerified('strengths', u.new_strength, false);
+    }
     if (u.new_problem || u.new_mechanism || u.new_strength) {
       cf.version += 1;
       cf.lastUpdated = new Date().toISOString();
@@ -11845,39 +11984,74 @@ async function openProjectMenu(id) {
   }
 }
 
-// V3.12.x: 체크인 통합 — 작은 모달로 추적 항목 추가 (이름 + 단위 / target 선택)
+// V3.12.x: 체크인 통합 — 추적 항목 추가
+// V3.13.x: 측정 방식 (숫자 / 체크) 분기
 async function addNewTracker() {
   const title = await showInputModal({
     title: '추적할 항목',
-    placeholder: '예: 체중, 5km 시간, 페이지',
+    placeholder: '예: 체중, 운동, 약 복용, 페이지',
     maxLength: 30
   });
   if (!title || !title.trim()) return;
 
-  const unit = await showInputModal({
-    title: '단위 (선택)',
-    placeholder: '예: kg, 분, 회',
-    defaultValue: ''
+  const kind = await showOptionsModal({
+    title: '어떻게 측정할까?',
+    message: '숫자 — 체중·시간·페이지 같이 값 입력\n체크 — 운동·약 복용 같이 했/안 했만',
+    options: [
+      { label: '🔢 숫자로', value: 'numeric' },
+      { label: '✓ 체크로', value: 'check' }
+    ]
   });
-  if (unit === null) return;
+  if (!kind) return;
 
-  const targetStr = await showInputModal({
-    title: '목표값 (선택)',
-    message: '안 정해도 OK. 나중에 메뉴에서 추가 가능.',
-    placeholder: '숫자만',
-    defaultValue: ''
-  });
-  if (targetStr === null) return;
-  const target = targetStr.trim() ? parseFloat(targetStr) : null;
+  let unit = '';
+  let target = null;
+
+  if (kind === 'numeric') {
+    const u = await showInputModal({
+      title: '단위 (선택)',
+      placeholder: '예: kg, 분, 페이지',
+      defaultValue: ''
+    });
+    if (u === null) return;
+    unit = (u || '').trim();
+
+    const targetStr = await showInputModal({
+      title: '목표값 (선택)',
+      message: '안 정해도 OK. 나중에 메뉴에서 추가 가능.',
+      placeholder: '숫자만',
+      defaultValue: ''
+    });
+    if (targetStr === null) return;
+    if (targetStr.trim()) {
+      const t = parseFloat(targetStr);
+      if (!isNaN(t)) target = t;
+    }
+  } else {
+    // check
+    const targetStr = await showInputModal({
+      title: '목표 횟수 (선택)',
+      message: '몇 번 누적되면 완료? 안 정해도 OK.',
+      placeholder: '예: 30',
+      defaultValue: ''
+    });
+    if (targetStr === null) return;
+    if (targetStr.trim()) {
+      const t = parseFloat(targetStr);
+      if (!isNaN(t)) target = t;
+    }
+    unit = '회';
+  }
 
   const project = {
     id: 'proj_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     title: title.trim(),
-    emoji: '📊',
+    emoji: kind === 'check' ? '✓' : '📊',
     type: 'custom',
-    unit: (unit || '').trim(),
-    baseline: null,  // 첫 체크인 입력 때 자동 설정
-    target: (target !== null && !isNaN(target)) ? target : null,
+    kind,
+    unit,
+    baseline: kind === 'check' ? 0 : null,
+    target,
     measurements: [],
     status: 'active',
     showGraph: false,
@@ -11889,34 +12063,78 @@ async function addNewTracker() {
   saveState();
   renderCheckinTrackers();
   if (typeof renderProjects === 'function') renderProjects();
-  showToast(`📊 ${project.title} 추적 시작`);
+  showToast(`${project.emoji} ${project.title} 추적 시작`);
 }
 
 // V3.12.x: 체크인 화면에 활성 추적 항목 입력 필드 렌더
+// V3.13.x: kind에 따라 숫자 input vs 체크 토글 분기
 function renderCheckinTrackers() {
   const container = document.getElementById('checkinTrackersContainer');
   if (!container) return;
   const active = (state.projects || []).filter(p => p.status === 'active');
+  const todayK = todayKey();
 
   let html = '';
   if (active.length > 0) {
     active.forEach(p => {
-      const last = (p.measurements || []).length > 0
-        ? p.measurements[p.measurements.length - 1].value
-        : (p.baseline !== null && p.baseline !== undefined ? p.baseline : '');
-      const placeholder = last !== '' ? `이전: ${last}${p.unit || ''}` : '숫자';
-      html += `
-        <div class="checkin-tracker-row">
-          <span class="ct-emoji">${p.emoji || '📊'}</span>
-          <span class="ct-label">${escapeHtml(p.title)}</span>
-          <input type="number" step="any" id="track_${p.id}" placeholder="${escapeHtml(placeholder)}">
-          <span class="ct-unit">${escapeHtml(p.unit || '')}</span>
-        </div>
-      `;
+      const kind = p.kind || 'numeric';
+      if (kind === 'check') {
+        const checkedToday = (p.measurements || []).some(m => m.dayKey === todayK);
+        const totalCount = (p.measurements || []).length;
+        const hint = checkedToday
+          ? '오늘 ✓'
+          : (p.target ? `${totalCount}/${p.target}` : '탭해서 체크');
+        html += `
+          <div class="checkin-tracker-row checkin-tracker-check ${checkedToday ? 'is-checked' : ''}" onclick="toggleTrackerCheck('${p.id}')">
+            <span class="ct-emoji">${checkedToday ? '✓' : '○'}</span>
+            <span class="ct-label">${escapeHtml(p.title)}</span>
+            <span class="ct-toggle-hint">${escapeHtml(hint)}</span>
+          </div>
+        `;
+      } else {
+        const last = (p.measurements || []).length > 0
+          ? p.measurements[p.measurements.length - 1].value
+          : (p.baseline !== null && p.baseline !== undefined ? p.baseline : '');
+        const placeholder = last !== '' ? `이전: ${last}${p.unit || ''}` : '숫자';
+        html += `
+          <div class="checkin-tracker-row">
+            <span class="ct-emoji">${p.emoji || '📊'}</span>
+            <span class="ct-label">${escapeHtml(p.title)}</span>
+            <input type="number" step="any" id="track_${p.id}" placeholder="${escapeHtml(placeholder)}">
+            <span class="ct-unit">${escapeHtml(p.unit || '')}</span>
+          </div>
+        `;
+      }
     });
   }
   html += `<button class="checkin-tracker-add" onclick="addNewTracker()">+ 항목 추가</button>`;
   container.innerHTML = html;
+}
+
+// V3.13.x: 체크형 추적 — 오늘 토글 (즉시 저장)
+function toggleTrackerCheck(id) {
+  const p = (state.projects || []).find(x => x.id === id);
+  if (!p) return;
+  const todayK = todayKey();
+  p.measurements = p.measurements || [];
+  const existingIdx = p.measurements.findIndex(m => m.dayKey === todayK);
+  if (existingIdx >= 0) {
+    p.measurements.splice(existingIdx, 1);
+  } else {
+    p.measurements.push({ value: 1, at: new Date().toISOString(), dayKey: todayK, source: 'checkin' });
+    if (p.baseline === null || p.baseline === undefined) p.baseline = 0;
+    if (!p.startDate) p.startDate = todayK;
+    if (p.target !== null && p.target !== undefined) {
+      const total = p.measurements.length;
+      if (total >= p.target && p.status === 'active') {
+        p.status = 'done';
+        showToast(`🎉 ${p.title} 목표 달성!`);
+      }
+    }
+  }
+  saveState();
+  renderCheckinTrackers();
+  if (typeof renderProjects === 'function') renderProjects();
 }
 
 // V3.12: 채팅 자연어 → 측정값 추출 (regex 기반 — AI 호출 절약)
