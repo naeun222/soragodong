@@ -174,6 +174,30 @@
   }
 
   .action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; }
+  /* V3.13.x: 업데이트 알림 카드 (모달 대신 dismiss-able 카드) */
+  .update-notice-card {
+    background: linear-gradient(135deg, rgba(201,169,110,0.12), rgba(139,126,196,0.08));
+    border: 1px solid rgba(201,169,110,0.25);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 12px;
+    animation: onbFadeIn 0.4s ease;
+  }
+  .update-notice-text { flex: 1; min-width: 0; }
+  .update-notice-title { font-size: 13px; font-weight: 600; color: var(--accent2); margin-bottom: 2px; }
+  .update-notice-sub { font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+  .update-notice-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .update-notice-actions button {
+    font-size: 11px; padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--border); cursor: pointer; font-family: inherit;
+    background: var(--surface); color: var(--text-dim);
+  }
+  .update-notice-btn-go {
+    background: var(--accent) !important; color: var(--bg) !important;
+    border-color: var(--accent) !important; font-weight: 500;
+  }
+  .update-notice-actions button:active { transform: scale(0.96); }
   .action-card:active { background: var(--surface2); transform: scale(0.98); }
   .action-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
   .action-card.chat .action-icon { background: linear-gradient(135deg, rgba(139,126,196,0.25), rgba(201,169,110,0.15)); }
@@ -2761,6 +2785,7 @@
       <div id="activeDecisionsContainer"></div>
 
       <!-- ★★★ MAIN: 시간대별 액션 (낮=오늘의 카드, 밤=체크인) -->
+      <div id="updateNoticeCard"></div>
       <div id="mainActionContainer"></div>
 
       <!-- ★★★ 소라의 부름 (AI 발급 미션) -->
@@ -4264,6 +4289,8 @@ function startInteractiveOnboarding() {
   // V3.13.x: state.modes / periodStart 백업 (튜토리얼에서 변경된 모드 onbFinish 시 복원용)
   window._onbModesBackup = JSON.parse(JSON.stringify(state.modes || {}));
   window._onbPeriodStartBackup = state.periodStart || null;
+  // V3.13.x: caseFormulation도 백업 — 튜토리얼 대화로 update됐을 가능성 (timestamp 없어 timestamp 정리 X)
+  window._onbCFBackup = JSON.parse(JSON.stringify(state.caseFormulation || { version: 0, problems: [], mechanisms: [], strengths: [] }));
   const tourOv = document.getElementById('tourOverlay');
   if (tourOv) tourOv.style.display = 'none';
   showScreen('home');
@@ -4570,7 +4597,22 @@ function onbFinish() {
     state.topicCards = (state.topicCards || []).filter(c =>
       !c.createdAt || new Date(c.createdAt).getTime() < startMs
     );
+    // V3.13.x: 튜토리얼 대화로 추출된 traits/values/patterns 정리 (created_at 기반)
+    state.traits = (state.traits || []).filter(t =>
+      !t.created_at || new Date(t.created_at).getTime() < startMs
+    );
+    state.values = (state.values || []).filter(v =>
+      !v.created_at || new Date(v.created_at).getTime() < startMs
+    );
+    state.patterns = (state.patterns || []).filter(p =>
+      !p.created_at || new Date(p.created_at).getTime() < startMs
+    );
     _onbStartTime = null;
+  }
+  // V3.13.x: caseFormulation 복원 — 튜토리얼 대화로 변경됐을 가능성 (timestamp 없어 백업/복원 방식)
+  if (window._onbCFBackup) {
+    state.caseFormulation = window._onbCFBackup;
+    delete window._onbCFBackup;
   }
   // V3.13.x: state.modes + periodStart 복원 — _onbStartTime 검사 밖
   // (onbSkip 으로 종료해도 모드는 복원해야 — pick_mode에서 의도치 않게 누른 모드 정리)
@@ -7054,7 +7096,7 @@ function showScreen(name) {
   target && target.scrollTo(0, 0);
   document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';
 
-  if (name === 'home') { applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3(); renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink(); }
+  if (name === 'home') { applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3(); renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink(); if (typeof renderUpdateNotice === 'function') renderUpdateNotice(); }
   if (name === 'settings') { setTimeout(refreshTesterModeUI, 30); }
   if (name === 'execute') renderExecute();
   if (name === 'checkin') { renderDailyQuestion(); renderModes(); renderCheckinTrackers(); }
@@ -8130,7 +8172,7 @@ async function processAnalysis(analysis, messageIdx) {
     analysis.new_values.forEach(v => {
       const exists = state.values.find(e => similarText(e.name, v.name));
       if (!exists && !recentRetry) {
-        state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: v.name, description: v.description || '', confidence: v.confidence || 0.5, user_verified: false, evidence_count: 1, sdt_need: v.sdt_need || null });
+        state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: v.name, description: v.description || '', confidence: v.confidence || 0.5, user_verified: false, evidence_count: 1, sdt_need: v.sdt_need || null, created_at: new Date().toISOString() });
       } else if (exists) {
         exists.evidence_count = (exists.evidence_count || 1) + 1;
         exists.confidence = Math.min(1.0, exists.confidence + 0.1);
@@ -8141,7 +8183,7 @@ async function processAnalysis(analysis, messageIdx) {
     analysis.new_patterns.forEach(p => {
       const exists = state.patterns.find(e => similarText(e.name, p.name));
       if (!exists && !recentRetry) {
-        state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: p.name, description: p.description || '', trigger: p.trigger || '', sequence: p.sequence || '', confidence: p.confidence || 0.5, user_verified: false, evidence_count: 1 });
+        state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: p.name, description: p.description || '', trigger: p.trigger || '', sequence: p.sequence || '', confidence: p.confidence || 0.5, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
       } else if (exists) {
         exists.evidence_count = (exists.evidence_count || 1) + 1;
         exists.confidence = Math.min(1.0, exists.confidence + 0.1);
@@ -12683,14 +12725,14 @@ JSON으로 출력:
       analysis.values.forEach(v => {
         const exist = state.values.find(e => similarText(e.name, v.name));
         if (exist) mergeModelItem(exist, v);
-        else state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...v, user_verified: false, evidence_count: 1 });
+        else state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...v, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
       });
     }
     if (analysis.patterns) {
       analysis.patterns.forEach(p => {
         const exist = state.patterns.find(e => similarText(e.name, p.name));
         if (exist) mergeModelItem(exist, p);
-        else state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...p, user_verified: false, evidence_count: 1 });
+        else state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), ...p, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
       });
     }
     if (analysis.case_formulation) {
@@ -12846,10 +12888,10 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-checkin-link-security';
+const APP_VERSION = '2026-04-27-tutorial-cleanup-card';
 
-// V3.13.x: 새 버전 진입 시 모달로 묻기. '응' → 튜토리얼 / '다시 안 볼래' → 그 버전 안 뜸.
-async function autoTourOnUpdate() {
+// V3.13.x: 새 버전 진입 시 — 모달 X. 홈 화면 상단에 dismiss-able 카드 노출 (renderUpdateNotice).
+function autoTourOnUpdate() {
   if (!state || !state.hasSeenWelcomeTutorial) return;  // 신규 사용자는 isBrandNewUser 자동 분기
   if (window._onbTutorialMode) return;  // 이미 튜토리얼 중이면 중복 X
   const lastSeen = state.preferences && state.preferences.lastSeenAppVersion;
@@ -12861,18 +12903,45 @@ async function autoTourOnUpdate() {
     saveState();
     return;
   }
-  // 새 버전 — 모달로 묻기
-  const yes = await showConfirmModal({
-    title: '앱 업데이트됐어! ✨',
-    message: '튜토리얼 한 번 같이 돌아볼래? 새로 추가된 기능이나 변경된 흐름 익히기 좋아.',
-    okLabel: '응 좋아!',
-    cancelLabel: '다시 안 볼래'
-  });
-  // 사용자 선택과 무관하게 lastSeen 갱신 (다음 버전까지 안 뜸)
+  // 새 버전 — 홈 카드로 노출 (사용자가 자기 페이스로 결정)
+  if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
+}
+
+// V3.13.x: 홈 상단 업데이트 알림 카드 (dismiss-able, 모달 대신)
+function renderUpdateNotice() {
+  const container = document.getElementById('updateNoticeCard');
+  if (!container) return;
+  const lastSeen = state && state.preferences && state.preferences.lastSeenAppVersion;
+  const shouldShow = state && state.hasSeenWelcomeTutorial && lastSeen && lastSeen !== APP_VERSION && !window._onbTutorialMode;
+  if (!shouldShow) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = `
+    <div class="update-notice-card">
+      <div class="update-notice-text">
+        <div class="update-notice-title">✨ 앱 업데이트됐어!</div>
+        <div class="update-notice-sub">새 기능 + 개선 — 한 번 둘러볼래?</div>
+      </div>
+      <div class="update-notice-actions">
+        <button onclick="dismissUpdateNotice()" class="update-notice-btn-dismiss">닫기</button>
+        <button onclick="startUpdateTour()" class="update-notice-btn-go">한 번 보기</button>
+      </div>
+    </div>
+  `;
+}
+function dismissUpdateNotice() {
   state.preferences = state.preferences || {};
   state.preferences.lastSeenAppVersion = APP_VERSION;
   saveState();
-  if (yes) startInteractiveOnboarding();
+  renderUpdateNotice();
+}
+function startUpdateTour() {
+  state.preferences = state.preferences || {};
+  state.preferences.lastSeenAppVersion = APP_VERSION;
+  saveState();
+  renderUpdateNotice();
+  startInteractiveOnboarding();
 }
 
 // V3.13.x: iOS PWA 슬라이드 종료 후 재진입 (또는 탭 복귀) 시 새 버전 체크
