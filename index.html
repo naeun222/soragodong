@@ -2504,6 +2504,34 @@
   }
   .archive-item-delete:active { background: var(--surface2); color: var(--danger); }
   .archive-section-wrap { margin-bottom: 22px; }
+  .archive-item-card { cursor: pointer; transition: transform 0.15s, border-color 0.15s; }
+  .archive-item-card:active { transform: scale(0.99); border-color: rgba(201,169,110,0.4); }
+
+  /* V3.13.x: 깨달음 모달 내부 */
+  .archive-modal-headline {
+    font-size: 18px; font-weight: 700; color: var(--text);
+    line-height: 1.5; margin: 14px 0 8px;
+  }
+  .archive-modal-body {
+    font-size: 14px; color: var(--text-dim); line-height: 1.7;
+    margin-bottom: 18px; white-space: pre-wrap;
+  }
+  .archive-modal-section-label {
+    font-size: 10px; color: var(--text-soft); letter-spacing: 0.14em;
+    margin: 8px 0 8px; padding-top: 14px; border-top: 1px solid var(--border);
+    text-transform: uppercase;
+  }
+  .archive-modal-original {
+    font-size: 13px; color: var(--text); line-height: 1.75;
+    background: var(--surface2); border-radius: 12px;
+    padding: 14px; max-height: 50vh; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .archive-modal-no-original {
+    font-size: 12px; color: var(--text-soft); padding: 14px;
+    background: var(--surface2); border-radius: 12px;
+    text-align: center; margin-top: 14px;
+  }
 
   /* V3.12.x: Pearls intro — 비언어적 설명 */
   .pearls-intro {
@@ -8949,7 +8977,7 @@ ${msg.content}
   const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
   // headline + body 형식 저장. insight는 backwards-compat 결합 string.
   const insight = headline ? `${headline} — ${body}` : body;
-  state.archive.unshift({ date, insight, headline, body, source: '대화', savedAt: new Date().toISOString() });
+  state.archive.unshift({ date, insight, headline, body, original: msg.content, source: '대화', savedAt: new Date().toISOString() });
   msg.saved = true;
   saveState();
   renderChat();
@@ -9813,11 +9841,11 @@ function renderLensArchive() {
       const dateStr = a.date || '';
       const sourceStr = a.source ? ` · ${escapeHtml(a.source)}` : '';
       return `
-        <div class="archive-item-card">
+        <div class="archive-item-card" onclick="openArchiveItem(${realIdx})">
           <div class="archive-item-meta">${escapeHtml(dateStr)}${sourceStr}</div>
           ${headline}
           ${body}
-          <button class="archive-item-delete" onclick="deleteArchiveItem(${realIdx})" title="삭제" aria-label="삭제">✕</button>
+          <button class="archive-item-delete" onclick="event.stopPropagation(); deleteArchiveItem(${realIdx})" title="삭제" aria-label="삭제">✕</button>
         </div>
       `;
     }).join('');
@@ -9833,6 +9861,50 @@ async function deleteArchiveItem(idx) {
   saveState();
   renderLensArchive();
   showToast('삭제됨');
+}
+
+// V3.13.x: 깨달음 카드 클릭 → 원본 + 헤드라인/본문 보여주는 모달
+function openArchiveItem(idx) {
+  const a = (state.archive || [])[idx];
+  if (!a) return;
+  const dateStr = a.date || '';
+  const sourceStr = a.source ? ` · ${escapeHtml(a.source)}` : '';
+  const headline = a.headline ? `<div class="archive-modal-headline">${escapeHtml(a.headline)}</div>` : '';
+  const bodyText = a.body || (a.headline ? '' : (a.insight || ''));
+  const body = bodyText ? `<div class="archive-modal-body">${escapeHtml(bodyText)}</div>` : '';
+  const originalBlock = a.original
+    ? `<div class="archive-modal-section-label">원본 메시지</div>
+       <div class="archive-modal-original">${escapeHtml(a.original)}</div>`
+    : `<div class="archive-modal-no-original">원본이 함께 저장되지 않은 항목 (이전 버전에서 저장)</div>`;
+
+  const modal = document.createElement('div');
+  modal.id = 'archiveModal';
+  modal.className = 'topic-modal-overlay';
+  modal.innerHTML = `
+    <div class="topic-modal" onclick="event.stopPropagation()">
+      <div class="topic-modal-header">
+        <span class="topic-card-cat" style="background: rgba(201,169,110,0.18); color: var(--accent2);">✦ 깨달음</span>
+        <button class="topic-modal-close" onclick="closeArchiveModal()">×</button>
+      </div>
+      ${headline}
+      ${body}
+      ${originalBlock}
+      <div class="topic-modal-meta">${escapeHtml(dateStr)}${sourceStr}</div>
+      <div class="topic-modal-actions">
+        <button class="topic-modal-btn danger" onclick="closeArchiveModal(); deleteArchiveItem(${idx})">🗑 삭제</button>
+      </div>
+    </div>
+  `;
+  modal.onclick = closeArchiveModal;
+  document.body.appendChild(modal);
+  setTimeout(() => modal.classList.add('show'), 30);
+}
+
+function closeArchiveModal() {
+  const modal = document.getElementById('archiveModal');
+  if (!modal) return;
+  modal.classList.remove('show');
+  setTimeout(() => modal.remove(), 200);
 }
 
 // === LENS 2: INSIGHTS — AI 인과관계 발견 ===
