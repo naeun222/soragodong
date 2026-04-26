@@ -12815,7 +12815,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-4stage-buttons';
+const APP_VERSION = '2026-04-27-server-check';
 
 // V3.13.x: 새 버전 진입 시 자동 튜토리얼 (모달 없이 바로). 단:
 //   - 신규 사용자는 isBrandNewUser 분기에서 이미 자동 시작 → 여기선 skip
@@ -12837,12 +12837,36 @@ function autoTourOnUpdate() {
 // V3.13.x: iOS PWA 슬라이드 종료 후 재진입 (또는 탭 복귀) 시 새 버전 체크
 // (visibility hidden → visible. iOS에선 cold start 안 해도 발생.)
 let _lastAutoTourCheck = 0;
-document.addEventListener('visibilitychange', () => {
+async function checkServerVersionAndReload() {
+  try {
+    const resp = await fetch('/version.txt?_=' + Date.now(), { cache: 'no-store' });
+    if (!resp.ok) return false;
+    const serverVersion = (await resp.text()).trim();
+    if (serverVersion && serverVersion !== APP_VERSION) {
+      // 새 버전 — 강제 reload (메모리 state 폐기, cloud에서 다시 로드 → 새 HTML 받음)
+      console.log(`[version] new version ${serverVersion} (current ${APP_VERSION}) — reloading`);
+      location.reload();
+      return true;
+    }
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible') return;
   const now = Date.now();
   if (now - _lastAutoTourCheck < 5000) return;  // 5초 가드 (탭 전환 빈번 방지)
   _lastAutoTourCheck = now;
+  // 1. 서버 버전 체크 — 새 버전이면 reload (그 후 init에서 autoTourOnUpdate 호출됨)
+  const reloaded = await checkServerVersionAndReload();
+  if (reloaded) return;
+  // 2. 같은 버전이면 그냥 autoTourOnUpdate (혹시 이전 진입에서 lastSeen 미박힌 케이스 대비)
   if (state && state.preferences) autoTourOnUpdate();
+});
+// V3.13.x: 첫 init에서도 서버 버전 체크 (load 시 받은 HTML이 옛 캐시인지 확인)
+window.addEventListener('load', () => {
+  setTimeout(() => checkServerVersionAndReload(), 3000);
 });
 
 // V3.13.x: 테스터 모드 토글 — ON 시 메모리 snapshot 백업, OFF 시 그 snapshot으로 복원
