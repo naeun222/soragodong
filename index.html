@@ -7078,10 +7078,8 @@ function showScreen(name) {
   if (nav) nav.classList.add('active');
   target && target.scrollTo(0, 0);
   document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';
-  // V3.13.x: 헤더 + 배너는 홈에만 표시
-  const headerEl = document.querySelector('.app .header');
+  // V3.13.x: 헤더는 항상 표시 (튜토리얼 sync_dot step 등 의존). 배너만 홈에 한정.
   const bannerEl = document.getElementById('updateBanner');
-  if (headerEl) headerEl.style.display = name === 'home' ? 'flex' : 'none';
   if (bannerEl && name !== 'home') bannerEl.style.display = 'none';
 
   if (name === 'home') {
@@ -12881,7 +12879,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-banner-simplify-header';
+const APP_VERSION = '2026-04-27-header-restore';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
