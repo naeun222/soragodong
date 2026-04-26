@@ -4068,7 +4068,7 @@ const ONBOARDING_STEPS = [
     id: 'await_deeper_response',
     targetSelector: null,
     title: '잠깐 기다려줘 🐚',
-    body: '4단 분석 + 전략 만드는 중이야. 5-15초 정도 걸려.<br>응답 다 끝나서 4단계가 다 보이면 → 다음 눌러줘!',
+    body: '4단 분석 + 전략 만드는 중이야.<br><br><b>혹시 내가 한 번 더 질문하면, 정보 더 알려줘!</b> 충분한 맥락이 모이면 4단 분석 + 전략 짜줄게.<br><br>응답 끝나고 <b>🧭 전략으로</b>와 <b>✦ 해볼게</b> 두 버튼이 다 떠야 다음으로 진행할 수 있어.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -4076,7 +4076,7 @@ const ONBOARDING_STEPS = [
     id: 'click_strategy',
     targetSelector: '.msg-action[onclick^="saveMsgAsStrategy"]',
     title: '🧭 전략으로',
-    body: '4단 응답 아래에 <b>"🧭 전략으로"</b> 버튼이 있어. 한 번 눌러볼래?<br><br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">응답이 길면 아래로 스크롤해서 찾아봐. 누른 후 "눌렀어 →" 눌러줘.<br>(참고: 일반 응답엔 "✦ 깨달음으로", 4단 응답엔 "🧭 전략으로"가 자동 분기)</span>',
+    body: '4단 응답 아래에 <b>"🧭 전략으로"</b> 버튼이 있어. 한 번 눌러볼래?<br><br><b>누르고 잠깐 기다려야 돼!</b> AI가 전략 카드 만들어서 "🧭 전략 저장됨"으로 바뀌면 그때 "눌렀어 →" 눌러줘.<br><br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">응답이 길면 아래로 스크롤해서 찾아봐.</span>',
     waitFor: 'click',
     advanceDelay: 1200,
     manualAdvance: true,
@@ -4170,7 +4170,7 @@ const ONBOARDING_STEPS = [
     id: 'wisdom_intro',
     targetSelector: null,
     title: '깨달음 렌즈 ✨',
-    body: '여기 보이는 건:<br><br>· <b>🔮 인사이트</b> — 체크인 데이터 쌓이면 내가 패턴/인과관계 분석해서 알려줘 (지금은 비어있음)<br>· <b>🧭 전략</b> — 방금 저장한 전략이 여기 보일 거야! 챕터 자동 추출 + askDeeper로 저장한 거 다 모임<br>· <b>💎 진주</b> — "좋다" 느낀 작은 순간들. 음악·음식·장소·사람·순간 보관소<br><br>천천히 둘러보고 다음 눌러줘.',
+    body: '여기 보이는 건:<br><br>· <b>🔮 인사이트</b> — 체크인 데이터 쌓이면 내가 패턴/인과관계 분석해서 알려줘 (지금은 비어있음)<br>· <b>🧭 전략</b> — 방금 저장한 전략이 여기 보일 거야! 챕터 자동 추출 + 더 알아보기로 저장한 거 다 모임<br>· <b>💎 진주</b> — "좋다" 느낀 작은 순간들. 음악·음식·장소·사람·순간 보관소<br><br>천천히 둘러보고 다음 눌러줘.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -4186,10 +4186,34 @@ const ONBOARDING_STEPS = [
     fallbackPosition: 'top'
   },
   {
-    id: 'execute_intro',
+    id: 'exec_overview',
     targetSelector: null,
-    title: '실행 탭 안내',
-    body: '여기서 할 수 있는 거:<br><br>· <b>🌧 머릿속 풀기</b> — 와다다 쏟아내면 내가 카드 3장으로 정리해줘<br>· <b>오늘의 카드 3장</b> — 가장 중요한 3개. 무거운 짐 내려놓고 이것만 봐. <b>완료하면 중요도에 따라 다른 결의 소라가 보상으로 와!</b> (light/daily/main/golden)<br>· 카드 옆 ✕ <b>삭제 / ✎ 수정</b> 버튼으로 정리도 가능<br>· <b>📂 서랍장</b> — 카드 밑에 우선순위 순. 대화에서 발견한 할 일들 자동으로 모임<br>· <b>🌧 몰입 시작</b> — 빗소리 + 단축어 + 시간 자동 기록<br><br><span class="small">몰입 단축어 만드는 방법은 ⚙ 설정 → "🌧 몰입 단축어 만들기"에 자세히 있어!</span><br><br>천천히 둘러보고 다음 눌러줘.',
+    title: '실행 탭 — 무거운 마음 풀기',
+    body: '여기는 네가 할 일 앞에서 압도되지 않게 도와주는 곳이야.<br><br>지금부터 작은 단계로 같이 둘러보자!',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'exec_brain_dump_btn',
+    targetSelector: 'button[onclick="openBrainDump()"]',
+    title: '🧠 머릿속 풀기',
+    body: '이 버튼 보이지? 와다다 쏟아내면 내가 정리해서 <b>오늘의 카드 3장</b>으로 만들어줘.<br>네가 어디서부터 해야 할지 모를 때 가장 좋은 첫 단계야.<br><br><span class="small">지금 직접 눌러볼 필요 X. 어디 있는지만 기억해.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'exec_cards_intro',
+    targetSelector: null,
+    title: '오늘의 카드 3장',
+    body: '머릿속 풀기 누르면 카드 3장이 떠. 가장 중요한 것만.<br><br>· <b>완료하면 중요도에 따라 다른 결의 소라가 보상</b>으로 와! (가벼움/일상/메인/황금)<br>· 카드 옆 ✎ <b>수정</b> / ✕ <b>삭제</b> 가능<br>· 카드 밑에 <b>📂 서랍장</b> — 대화에서 발견한 할 일이 우선순위순으로 자동 모임',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'exec_immerse_btn',
+    targetSelector: '.exec-immerse-btn',
+    title: '🌧 몰입 시작',
+    body: '진짜 집중하고 싶을 때 이 버튼!<br>빗소리 + 단축어 + 시간 자동 기록까지. 작업 끝내고 돌아오면 자동으로 시간 남아있어.<br><br><span class="small">몰입 단축어 만드는 법은 ⚙ 설정 → "🌧 몰입 단축어 만들기"에 자세히 있어!</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -12827,23 +12851,33 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-models-46-47';
+const APP_VERSION = '2026-04-27-tutorial-refine';
 
-// V3.13.x: 새 버전 진입 시 자동 튜토리얼 (모달 없이 바로). 단:
-//   - 신규 사용자는 isBrandNewUser 분기에서 이미 자동 시작 → 여기선 skip
-//   - 첫 시작 (lastSeen 없음, 기존 사용자가 fix 적용 첫 진입)도 skip — 깜짝 X
-//   - 그 후 새 APP_VERSION 진입마다 자동
-function autoTourOnUpdate() {
+// V3.13.x: 새 버전 진입 시 모달로 묻기. '응' → 튜토리얼 / '다시 안 볼래' → 그 버전 안 뜸.
+async function autoTourOnUpdate() {
   if (!state || !state.hasSeenWelcomeTutorial) return;  // 신규 사용자는 isBrandNewUser 자동 분기
   if (window._onbTutorialMode) return;  // 이미 튜토리얼 중이면 중복 X
   const lastSeen = state.preferences && state.preferences.lastSeenAppVersion;
   if (lastSeen === APP_VERSION) return;
+  if (!lastSeen) {
+    // 첫 박음 — 깜짝 X, lastSeen만
+    state.preferences = state.preferences || {};
+    state.preferences.lastSeenAppVersion = APP_VERSION;
+    saveState();
+    return;
+  }
+  // 새 버전 — 모달로 묻기
+  const yes = await showConfirmModal({
+    title: '앱 업데이트됐어! ✨',
+    message: '튜토리얼 한 번 같이 돌아볼래? 새로 추가된 기능이나 변경된 흐름 익히기 좋아.',
+    okLabel: '응 좋아!',
+    cancelLabel: '다시 안 볼래'
+  });
+  // 사용자 선택과 무관하게 lastSeen 갱신 (다음 버전까지 안 뜸)
   state.preferences = state.preferences || {};
   state.preferences.lastSeenAppVersion = APP_VERSION;
   saveState();
-  if (!lastSeen) return;  // 처음 박는 경우 — 다음부터 자동
-  // 새 버전 — 튜토리얼 자동 시작
-  startInteractiveOnboarding();
+  if (yes) startInteractiveOnboarding();
 }
 
 // V3.13.x: iOS PWA 슬라이드 종료 후 재진입 (또는 탭 복귀) 시 새 버전 체크
