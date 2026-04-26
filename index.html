@@ -3760,7 +3760,7 @@
       <button class="beach-tab active" data-beach-tab="all" onclick="switchBeachTab('all')">전체</button>
       <button class="beach-tab" data-beach-tab="card" onclick="switchBeachTab('card')">오늘의 카드</button>
       <button class="beach-tab" data-beach-tab="call" onclick="switchBeachTab('call')">소라의 부름</button>
-      <button class="beach-tab" data-beach-tab="tier" onclick="switchBeachTab('tier')">결별로</button>
+      <button class="beach-tab" data-beach-tab="tier" onclick="switchBeachTab('tier')">등급별로</button>
     </div>
     
     <div class="beach-grid" id="beachGrid"></div>
@@ -3879,13 +3879,29 @@ let currentCheckin = {};
 let syncStatus = 'offline';
 let syncTimeout = null;
 
+// V4.0: localStorage 동기 저장 디바운스 (400ms). cloud는 saveToCloud 안에서 1초 디바운스.
+// force=true면 즉시 (토글/critical save). beforeunload에서도 강제 flush.
+let _localSaveTimer = null;
+function _flushLocalSave() {
+  if (_localSaveTimer) { clearTimeout(_localSaveTimer); _localSaveTimer = null; }
+  if (!authUserId) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  try { localStorage.setItem('soragodong_v2', JSON.stringify(state)); } catch (e) { console.warn('localStorage save failed:', e); }
+}
 function saveState(force) {
   if (!authUserId) return; // Don't save if not logged in
   // V3.13.x: 테스터 모드 — 변경 저장 안 함. force=true면 강제 (토글 자체 저장용)
   if (state.preferences && state.preferences.testerMode && !force) return;
-  localStorage.setItem('soragodong_v2', JSON.stringify(state));
+  if (force) {
+    _flushLocalSave();
+    saveToCloud();
+    return;
+  }
+  if (_localSaveTimer) clearTimeout(_localSaveTimer);
+  _localSaveTimer = setTimeout(_flushLocalSave, 400);
   saveToCloud();
 }
+window.addEventListener('beforeunload', _flushLocalSave);
 
 // ═══════════════════════════════════════════════════════════════
 // AUTH (Supabase magic link)
@@ -8791,6 +8807,36 @@ async function generateAIResponse(modelOverride) {
     let fullText = '';
     state.chatMessages[state.chatMessages.length - 1] = { role: 'assistant', content: '', timestamp: new Date().toISOString() };
 
+    // V4.0: 스트리밍 부분 업데이트 — 첫 청크만 renderChat (빈 bubble DOM 생성), 이후엔 마지막 bubble innerHTML만 갱신.
+    // 이전: 매 청크마다 전체 메시지 N개 escape+format 재생성 → 200+ 메시지에서 lag.
+    let _streamFirstChunk = true;
+    let _streamPending = null;
+    let _streamRafId = null;
+    const flushStreamUpdate = () => {
+      _streamRafId = null;
+      if (_streamPending === null) return;
+      const text = _streamPending; _streamPending = null;
+      const container = document.getElementById('chatMessages');
+      if (!container) return;
+      const bubbles = container.querySelectorAll('.msg.assistant .msg-bubble');
+      const lastBubble = bubbles[bubbles.length - 1];
+      if (!lastBubble) return;
+      // formatAIResponse 호출은 1개 bubble만 → 전체 재렌더보다 압도적으로 빠름.
+      // ⋮ 메뉴 버튼은 typing/error 아닌 메시지에만 붙는데, 스트리밍 중엔 typing 끝난 상태라
+      // renderChat이 이미 menuBtn을 포함해서 그렸음. 우린 .innerHTML로 통째 교체하니
+      // formatAIResponse 결과 + menuBtn HTML을 같이 써줘야 함.
+      const lastIdx = state.chatMessages.length - 1;
+      lastBubble.innerHTML = formatAIResponse(text) +
+        `<button class="msg-menu-btn" onclick="showMessageMenu(${lastIdx})" aria-label="더보기">⋮</button>`;
+      const screen = document.getElementById('screen-chat');
+      if (screen) screen.scrollTop = screen.scrollHeight;
+    };
+    const scheduleStreamUpdate = (text) => {
+      _streamPending = text;
+      if (_streamRafId !== null) return;
+      _streamRafId = requestAnimationFrame(flushStreamUpdate);
+    };
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -8818,10 +8864,20 @@ async function generateAIResponse(modelOverride) {
             display = display.replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)"[\s\S]*$/g, '');
             display = display.trim();
             state.chatMessages[state.chatMessages.length - 1].content = display;
-            renderChat();
+            if (_streamFirstChunk) {
+              renderChat();  // 첫 청크: 빈 bubble DOM 생성
+              _streamFirstChunk = false;
+            } else {
+              scheduleStreamUpdate(display);  // 이후: 마지막 bubble innerHTML만 갱신
+            }
           }
         } catch {}
       }
+    }
+    // 스트리밍 끝 — 미플러시 업데이트 즉시 반영
+    if (_streamRafId !== null) {
+      cancelAnimationFrame(_streamRafId);
+      flushStreamUpdate();
     }
 
     // Extract analysis JSON
@@ -14156,7 +14212,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-confirm-model-items';
+const APP_VERSION = '2026-04-27-perf-fixes';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
