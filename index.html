@@ -4216,6 +4216,9 @@ function startInteractiveOnboarding() {
   _onbStep = 0;
   _onbStartTime = Date.now();
   window._onbTutorialMode = true;  // V3.13: 다른 함수가 튜토리얼 모드 알도록
+  // V3.13.x: state.modes / periodStart 백업 (튜토리얼에서 변경된 모드 onbFinish 시 복원용)
+  window._onbModesBackup = JSON.parse(JSON.stringify(state.modes || {}));
+  window._onbPeriodStartBackup = state.periodStart || null;
   const tourOv = document.getElementById('tourOverlay');
   if (tourOv) tourOv.style.display = 'none';
   showScreen('home');
@@ -4523,6 +4526,14 @@ function onbFinish() {
       !c.createdAt || new Date(c.createdAt).getTime() < startMs
     );
     _onbStartTime = null;
+  }
+  // V3.13.x: state.modes + periodStart 복원 — _onbStartTime 검사 밖
+  // (onbSkip 으로 종료해도 모드는 복원해야 — pick_mode에서 의도치 않게 누른 모드 정리)
+  if (window._onbModesBackup) {
+    state.modes = window._onbModesBackup;
+    state.periodStart = window._onbPeriodStartBackup;
+    delete window._onbModesBackup;
+    delete window._onbPeriodStartBackup;
   }
 
   state.hasSeenWelcomeTutorial = true;
@@ -12795,7 +12806,7 @@ async function resetTasks() {
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 사용자가 본 버전(state.preferences.lastSeenAppVersion)과
 // 다르면 init 시 '업데이트됐어! 튜토리얼 다시 볼래?' 모달.
-const APP_VERSION = '2026-04-27-ui-fixes';
+const APP_VERSION = '2026-04-27-modes-cleanup';
 
 async function showUpdateNoticeIfNeeded() {
   if (!state.hasSeenWelcomeTutorial) return;  // 신규 사용자는 자동 튜토리얼 진행 중. 알림 X.
@@ -12846,6 +12857,8 @@ function simulateNewUser() {
   state.values = [];
   state.patterns = [];
   state.caseFormulation = { version: 0, problems: [], mechanisms: [], strengths: [] };
+  state.modes = { exam: false, travel: false, sick: false, rest: false, period: false };
+  state.periodStart = null;
   showToast('🧪 신규 사용자 시뮬 시작 — 테스터 모드 OFF로 원상 복구');
   setTimeout(() => startInteractiveOnboarding(), 600);
 }
