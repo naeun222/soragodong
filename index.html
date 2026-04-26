@@ -7849,52 +7849,37 @@ async function sendChat() {
 //   3) Implementation Intention (Gollwitzer 1999) — if-then 형식이 행동 follow-through 2-3배 ↑
 //   4) Self-compassion (Neff 2003) — 자기비판 → 자기친절. 회복탄력성 ↑
 //   5) Cognitive Reappraisal (Gross 2002) — 감정 재해석 → 정서조절 효과
+// V3.13.x: 짧은 한 줄 starter. 사용자가 한 단어만 채워도 또는 그대로 보내도 OK.
 const DIARY_TEMPLATES = [
   {
     id: 'short',
     label: '🌙 짧게 닫기 (1분)',
-    desc: '한 줄씩만. 가장 가벼운 옵션',
-    text: `일기:
-오늘 한 일 —
-지금 기분 —
-내일 하고 싶은 거 — `
+    desc: '오늘 한 일 + 기분 + 내일',
+    text: `일기: 오늘 `
   },
   {
     id: 'tgt',
     label: '✨ Three Good Things',
-    desc: '오늘 좋았던 일 3개. 긍정 강화',
-    text: `일기:
-오늘 좋았던 일 1.
-오늘 좋았던 일 2.
-오늘 좋았던 일 3.
-(왜 좋았어? 한 줄씩)`
+    desc: '오늘 좋았던 일 3개',
+    text: `일기: 오늘 좋았던 거 — `
   },
   {
     id: 'hard',
-    label: '🌧 힘든 날 (Self-compassion)',
-    desc: '어려운 날, 자기비판 → 자기친절',
-    text: `일기:
-오늘 힘들었던 일 —
-근데 내가 잘한 점 —
-친구가 같은 상황이라면 나는 뭐라 말해줄까? — `
+    label: '🌧 힘든 날',
+    desc: '자기친절 모드',
+    text: `일기: 오늘 힘들었던 건 `
   },
   {
     id: 'plan',
     label: '🎯 내일 계획 (if-then)',
-    desc: '실행 follow-through 2-3배 ↑',
-    text: `일기:
-내일 가장 중요한 거 —
-어떤 상황(트리거)에서 —
-그러면 무엇을 한다(액션) — `
+    desc: '내일 무엇을 어떻게',
+    text: `일기: 내일 `
   },
   {
     id: 'feel',
     label: '🌊 감정 정리',
-    desc: '감정 명명 + 재해석',
-    text: `일기:
-지금 느끼는 감정 (구체 단어로) —
-이 감정이 오는 상황 —
-이 상황을 다른 시각으로 본다면 — `
+    desc: '지금 기분 한 단어',
+    text: `일기: 지금 기분 `
   }
 ];
 
@@ -8427,6 +8412,11 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 10. 사용자가 그냥 감정 털어놓으면 → 그냥 들어주기. 분석 강요 X.
 11. **모든 메시지를 "고민/문제"로 보지 말기.** 사용자가 즐거운 일·웃긴 에피소드·소소한 일상 얘기하면 → 같이 즐거워하고 공감하기. 분석 X, 전략 제시 X, "이게 어떤 의미일까?" 같은 깊이 파기 X. 그냥 친구처럼 같이 웃고 같이 좋아하기.
 12. **사용자를 "고쳐야 할 대상"으로 보지 말기.** 사용자가 명시적으로 도움 요청 ("어떡하지", "도와줘") 안 했으면 절대 분석/진단/제안 X. "너의 ~한 패턴이 보여" 같은 분석적 톤 강제 X.
+13. **물음표 자제 — 매 응답 끝에 질문으로 마무리 X.** 친구처럼 그냥 끝내도 돼.
+    - 응답 1개에 질문은 **0~1개**. 보통 **0개**.
+    - "오늘 어땠어?" "어떡할 거야?" "왜 그런 거 같아?" 같은 follow-up 질문 자제.
+    - 사용자가 "어떡하지", "도와줘" 같은 명시적 요청 시에만 질문 OK.
+    - 일반 대화에선 **공감 / 관찰 / 짧은 동의**로 끝내기. 침묵해도 친구야.
 
 정직성 (Anti-Sycophancy) — 매우 중요:
 - 사용자가 좋은 일 했다고 매번 칭찬 X. 사실만 짚기.
@@ -10769,35 +10759,72 @@ function testSkip4Hours() {
 }
 
 async function testForceExtract() {
-  showToast('🧪 토픽 추출 시작...');
+  showToast('🧪 토픽 추출 시작 (가드 우회)...');
   const before = (state.topicCards || []).length;
+  // V3.13.x: 가드 우회 — 마지막 메시지에 chapterStart=true 마커 박아서 직전 챕터 강제 인식
+  const validMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
+  if (validMsgs.length < 2) {
+    showToast('⚠ 챕터 추출에 메시지가 너무 적어 (2개 이상 필요).');
+    return;
+  }
+  // 가장 마지막 메시지에 chapterStart 마커 임시 박기 (testForceExtract만)
+  const lastMsg = validMsgs[validMsgs.length - 1];
+  const wasChapterStart = lastMsg.chapterStart;
+  lastMsg.chapterStart = true;
   try {
     await extractPreviousChapterTopics();
+    if (!wasChapterStart) delete lastMsg.chapterStart;  // 임시 마커 복원
+    saveState();
     const after = (state.topicCards || []).length;
     const diff = after - before;
     if (diff > 0) {
       showToast(`✦ 토픽 ${diff}개 추출됨. 아카이브 → 📜 대화 렌즈에서 확인.`);
     } else {
-      showToast('⚠ 추출할 챕터 없음. 채팅 보내고 "4시간 전으로" 먼저 → 새 메시지 → 다시 시도.');
+      showToast('⚠ AI가 추출할 만한 토픽 못 찾음. 더 의미 있는 대화 후 시도.');
     }
   } catch (e) {
+    if (!wasChapterStart) delete lastMsg.chapterStart;
     showToast('❌ 추출 실패: ' + e.message);
   }
 }
 
 async function testForceArchive() {
-  showToast('🧪 채팅 아카이브 시작...');
+  showToast('🧪 채팅 아카이브 강제 시작 (cutoff 우회)...');
   const before = (state.chatArchive || []).length;
+  if (!state.chatMessages || state.chatMessages.length === 0) {
+    showToast('⚠ 대화 메시지가 없어.');
+    return;
+  }
+  // V3.13.x: 7일 cutoff 우회 — 모든 메시지를 강제로 archive 처리
+  if (!state.apiKey) { showToast('⚠ API 키 필요'); return; }
   try {
-    state.chatArchiveLastRun = null;
-    await runChatArchiveIfNeeded();
-    const after = (state.chatArchive || []).length;
-    const diff = after - before;
-    if (diff > 0) {
-      showToast(`✦ ${diff}일치 아카이브됨. 아카이브 → 📜 대화에서 확인.`);
-    } else {
-      showToast('⚠ 아카이브할 어제 이전 대화 없음.');
+    // 날짜별 그룹 (모든 메시지)
+    const byDate = {};
+    state.chatMessages.forEach(m => {
+      if (!m.timestamp || m.typing || m.error) return;
+      const dateKey = getDayKey(m.timestamp);
+      if (!byDate[dateKey]) byDate[dateKey] = [];
+      byDate[dateKey].push(m);
+    });
+    const archivedDates = new Set((state.chatArchive || []).map(a => a.date));
+    const datesToArchive = Object.keys(byDate)
+      .filter(d => !archivedDates.has(d))
+      .sort()
+      .slice(0, 3);  // 한 번에 3일치 (cost)
+    if (datesToArchive.length === 0) {
+      showToast('⚠ 아카이브할 새 날짜 없음 (이미 다 됐거나 메시지 없음).');
+      return;
     }
+    for (const date of datesToArchive) {
+      const messages = byDate[date];
+      const summary = await summarizeChatDay(date, messages);
+      state.chatArchive.push({
+        date, summary, messageCount: messages.length, messages,
+        generatedAt: new Date().toISOString()
+      });
+      saveState();
+    }
+    showToast(`✦ ${datesToArchive.length}일치 강제 아카이브됨.`);
   } catch (e) {
     showToast('❌ 실패: ' + e.message);
   }
@@ -12936,7 +12963,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-checkin-decouple';
+const APP_VERSION = '2026-04-27-question-template-test';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
