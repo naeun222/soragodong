@@ -7090,7 +7090,7 @@ function showScreen(name) {
   }
   if (name === 'settings') { setTimeout(refreshTesterModeUI, 30); }
   if (name === 'execute') renderExecute();
-  if (name === 'checkin') { renderDailyQuestion(); renderModes(); renderCheckinTrackers(); }
+  if (name === 'checkin') { renderDailyQuestion(); renderModes(); renderCheckinTrackers(); prefillCheckinFromEntry(); }
   if (name === 'model') renderModel();
   if (name === 'archive') renderArchive();
   if (name === 'decisions') renderDecisionsList();
@@ -7175,6 +7175,59 @@ function renderModes() {
   document.querySelectorAll('.mode-chip').forEach(chip => {
     chip.classList.toggle('active', !!state.modes[chip.dataset.mode]);
   });
+}
+
+// V3.13.x: 체크인 화면 진입 시 오늘 entry 있으면 prefill (수정 모드)
+function prefillCheckinFromEntry() {
+  const todayKeyVal = todayKey();
+  const entry = (state.entries || []).find(e => e.date === todayKeyVal);
+  // currentCheckin 초기화
+  currentCheckin = {};
+  // submit 버튼 텍스트 + 화면 부제목
+  const submitBtn = document.querySelector('button[onclick="submitCheckin()"]');
+  const subtitle = document.querySelector('#screen-checkin .screen-sub');
+  // mood/vitality/sleep/note input들 모두 초기화
+  document.querySelectorAll('#screen-checkin .mood-btn, #screen-checkin .vitality-btn').forEach(b => b.classList.remove('selected'));
+  const startEl0 = document.getElementById('sleepStart');
+  const endEl0 = document.getElementById('sleepEnd');
+  const noteEl0 = document.getElementById('checkinNote');
+  if (startEl0) startEl0.value = '';
+  if (endEl0) endEl0.value = '';
+  if (noteEl0) noteEl0.value = '';
+
+  if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart)) {
+    // 오늘 체크인 안 함 — 새로 작성 모드
+    if (submitBtn) submitBtn.textContent = '기록 완료 ✦';
+    if (subtitle) subtitle.textContent = '오늘 너의 컨디션 한 번 살펴보자.';
+    return;
+  }
+  // 오늘 entry 있음 — 수정 모드
+  if (submitBtn) submitBtn.textContent = '수정 완료 ✦';
+  if (subtitle) subtitle.textContent = '오늘 이미 기록한 거. 바꿀 거 있으면 고쳐.';
+
+  // mood
+  if (entry.mood != null) {
+    currentCheckin.mood = entry.mood;
+    const moodBtns = document.querySelectorAll('#screen-checkin .mood-btn');
+    if (moodBtns[entry.mood - 1]) moodBtns[entry.mood - 1].classList.add('selected');
+  }
+  // vitality
+  if (entry.vitality != null) {
+    currentCheckin.vitality = entry.vitality;
+    const vitBtns = document.querySelectorAll('#screen-checkin .vitality-btn');
+    if (vitBtns[entry.vitality - 1]) vitBtns[entry.vitality - 1].classList.add('selected');
+  }
+  // sleep
+  if (startEl0 && entry.sleepStart) startEl0.value = entry.sleepStart;
+  if (endEl0 && entry.sleepEnd) endEl0.value = entry.sleepEnd;
+  // note
+  if (noteEl0 && entry.note) noteEl0.value = entry.note;
+  // optional fields
+  ['meals','movement','focus','social','overwhelm'].forEach(k => {
+    if (entry[k]) currentCheckin[k] = entry[k];
+  });
+  // sleep duration 다시 계산
+  if (typeof updateSleepDuration === 'function') updateSleepDuration();
 }
 
 function getCyclePhase() {
@@ -12879,7 +12932,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-header-restore';
+const APP_VERSION = '2026-04-27-checkin-edit-mode';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
