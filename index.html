@@ -12891,7 +12891,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-banner-all-users';
+const APP_VERSION = '2026-04-27-faster-version-check';
 
 // V3.13.x: 새 버전 진입 시 배너 갱신만. 자동 박음 X — 사용자가 dismiss 누를 때만 lastSeen 박힘.
 function autoTourOnUpdate() {
@@ -12965,9 +12965,10 @@ document.addEventListener('visibilitychange', async () => {
   // 2. 같은 버전이면 그냥 autoTourOnUpdate (혹시 이전 진입에서 lastSeen 미박힌 케이스 대비)
   if (state && state.preferences) autoTourOnUpdate();
 });
-// V3.13.x: 첫 init에서도 서버 버전 체크 (load 시 받은 HTML이 옛 캐시인지 확인)
+// V3.13.x: 첫 load 시 서버 버전 즉시 체크 — 옛 캐시면 빠르게 reload
 window.addEventListener('load', () => {
-  setTimeout(() => checkServerVersionAndReload(), 3000);
+  // 즉시 호출 (이전엔 3초 setTimeout — 사용자 체감 지연)
+  checkServerVersionAndReload();
 });
 
 // V3.13.x: 테스터 모드 토글 — ON 시 메모리 snapshot 백업, OFF 시 그 snapshot으로 복원
