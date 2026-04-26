@@ -663,6 +663,9 @@
   .model-section { margin-bottom: 22px; }
   .model-section-title { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
   .model-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 8px; position: relative; }
+  /* V3.13.x.후속2: values/patterns 미컨펌 항목 강조 (보라 좌측 바) */
+  .model-item.model-item-new { border-left: 3px solid var(--purple); padding-left: 11px; }
+  .model-item.model-item-new .model-item-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .model-item-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
   .model-item-desc { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
   .model-item-meta { font-size: 10px; color: var(--text-soft); margin-top: 6px; display: flex; gap: 8px; }
@@ -8014,16 +8017,22 @@ function renderModel() {
   }
   
   // V3.13.x: confidence 내림차순 → evidence_count 내림차순
-  const sortItems = (arr) => {
+  // V3.13.x.후속2: prioritizeUnverified 시 user_verified===false 항목 우선
+  const sortItems = (arr, prioritizeUnverified = false) => {
     return arr.slice().sort((a, b) => {
+      if (prioritizeUnverified) {
+        const va = a.user_verified === false ? 0 : 1;
+        const vb = b.user_verified === false ? 0 : 1;
+        if (va !== vb) return va - vb;
+      }
       const ca = a.confidence || 0;
       const cb = b.confidence || 0;
       if (cb !== ca) return cb - ca;
       return (b.evidence_count || 0) - (a.evidence_count || 0);
     });
   };
-  const splitItems = (arr, topN = 5, draftThreshold = 0.4) => {
-    const sorted = sortItems(arr);
+  const splitItems = (arr, topN = 5, draftThreshold = 0.4, prioritizeUnverified = false) => {
+    const sorted = sortItems(arr, prioritizeUnverified);
     const main = sorted.filter(item => (item.confidence || 0) >= draftThreshold);
     const draft = sorted.filter(item => (item.confidence || 0) < draftThreshold);
     return { top: main.slice(0, topN), more: main.slice(topN), draft };
@@ -8031,7 +8040,7 @@ function renderModel() {
   
   let html = '';
   if (state.values.length > 0) {
-    const split = splitItems(state.values, 4);
+    const split = splitItems(state.values, 4, 0.4, true);
     html += `<div class="model-section"><div class="model-section-title">🎯 네가 중시하는 것</div>`;
     split.top.forEach((v, i) => { 
       const realIdx = state.values.indexOf(v);
@@ -8055,7 +8064,7 @@ function renderModel() {
     html += '</div>';
   }
   if (state.patterns.length > 0) {
-    const split = splitItems(state.patterns, 4);
+    const split = splitItems(state.patterns, 4, 0.4, true);
     html += `<div class="model-section"><div class="model-section-title">🔄 보이는 패턴</div>`;
     split.top.forEach((p, i) => { 
       const realIdx = state.patterns.indexOf(p);
@@ -8128,14 +8137,20 @@ function renderMoreSection(category, more, draft) {
 
 function renderModelItem(item, category, idx) {
   const confLabel = item.confidence >= 0.7 ? '확신' : item.confidence >= 0.4 ? '관찰 중' : '가설';
-  return `<div class="model-item" data-cat="${category}" data-idx="${idx}">
-    <div class="model-item-name">${escapeHtml(item.name)}</div>
+  // V3.13.x.후속2: values/patterns에 NEW 배지 + ✓ 맞아 버튼 (미컨펌만)
+  const showConfirm = (category === 'values' || category === 'patterns') && item.user_verified === false;
+  const newClass = showConfirm ? ' model-item-new' : '';
+  const newBadge = showConfirm ? `<span class="cf-new-badge">NEW</span>` : '';
+  const confirmBtn = showConfirm ? `<button class="model-item-action cf-confirm" onclick="confirmModelItem('${category}', ${idx})">✓ 맞아</button>` : '';
+  return `<div class="model-item${newClass}" data-cat="${category}" data-idx="${idx}">
+    <div class="model-item-name">${newBadge}${escapeHtml(item.name)}</div>
     <div class="model-item-desc">${escapeHtml(item.description || '')}</div>
     <div class="model-item-meta">
       <span class="conf">${confLabel}${item.confidence != null ? ` ${Math.round((item.confidence || 0) * 100)}%` : ''}</span>
       ${item.evidence_count ? `<span>근거 ${item.evidence_count}개</span>` : ''}
     </div>
     <div class="model-item-actions">
+      ${confirmBtn}
       <button class="model-item-action" onclick="editModelItem('${category}', ${idx})">✎ 수정</button>
       <button class="model-item-action reject" onclick="rejectItem('${category}', ${idx})">✕ 삭제</button>
     </div>
@@ -8146,6 +8161,16 @@ async function rejectItem(category, idx) {
   if (!await confirmDelete('이 항목')) return;
   state[category].splice(idx, 1);
   saveState(); renderModel(); renderModelPreview();
+}
+
+// V3.13.x.후속2: values/patterns 항목 ✓ 맞아 컨펌
+function confirmModelItem(category, idx) {
+  if (!Array.isArray(state[category])) return;
+  const item = state[category][idx];
+  if (!item) return;
+  item.user_verified = true;
+  saveState(); renderModel(); renderModelPreview();
+  showToast('확인됨 ✓');
 }
 
 // V3.13.x: 통합 분석 미컨펌 메타 (텍스트 기준 lookup)
@@ -14131,7 +14156,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-drawer-todo-endchapter';
+const APP_VERSION = '2026-04-27-confirm-model-items';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
