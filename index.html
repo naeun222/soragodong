@@ -517,27 +517,55 @@
   .msg-action.retry { color: var(--accent); border: 1px solid var(--accent); padding: 8px 14px; }
 
   .chat-input-bar { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; }
-  .chat-input-wrap { display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 16px; }
-  .chat-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.5; outline: none; resize: none; max-height: 140px; padding: 8px 0; }
+  .chat-input-wrap { display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 10px; }
+  .chat-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.5; outline: none; resize: none; max-height: 140px; padding: 8px 0; min-width: 0; }
   .send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--bg); border: none; font-size: 16px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-  /* V3.13.x: 일기 템플릿 버튼 */
-  .diary-template-btn {
+  /* V3.13.x: + 메뉴 버튼 (일기 템플릿/대화 마무리 통합) */
+  .chat-plus-btn {
     width: 32px; height: 32px; border-radius: 50%;
     background: transparent; border: 1px solid var(--border);
-    color: var(--text-dim); font-size: 14px;
+    color: var(--text-dim); font-size: 20px; line-height: 1; font-weight: 300;
     cursor: pointer; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
+    transition: transform 0.18s ease, background 0.15s, color 0.15s, border-color 0.15s;
   }
-  .diary-template-btn:active { transform: scale(0.95); background: var(--surface2); }
-  /* V3.13.x: 대화 마무리 버튼 */
-  .end-chapter-btn {
-    width: 32px; height: 32px; border-radius: 50%;
-    background: transparent; border: 1px solid var(--border);
-    color: var(--accent); font-size: 14px; font-weight: 600;
-    cursor: pointer; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
+  .chat-plus-btn:active { transform: scale(0.95); }
+  .chat-plus-btn.open {
+    transform: rotate(45deg);
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-color: var(--accent);
   }
-  .end-chapter-btn:active { transform: scale(0.95); background: var(--surface2); }
+  .chat-plus-btn.open:active { transform: rotate(45deg) scale(0.95); }
+  .chat-plus-menu {
+    position: absolute;
+    bottom: calc(100% - 6px);
+    left: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    padding: 6px;
+    min-width: 180px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+    display: flex; flex-direction: column; gap: 2px;
+    z-index: 60;
+    animation: chatPlusMenuIn 0.16s ease-out;
+  }
+  .chat-plus-menu[hidden] { display: none; }
+  @keyframes chatPlusMenuIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-plus-item {
+    display: flex; align-items: center; gap: 10px;
+    background: transparent; border: none;
+    color: var(--text); font-family: inherit; font-size: 14px;
+    padding: 10px 12px; border-radius: 10px;
+    cursor: pointer; text-align: left;
+  }
+  .chat-plus-item:active { background: var(--surface3); }
+  .chat-plus-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+  .chat-plus-label { flex: 1; }
   /* V3.13.x: 챕터 구분선 (대화 마무리 후) */
   .chat-chapter-divider {
     text-align: center; padding: 14px 0 10px;
@@ -3350,9 +3378,18 @@
 </div>
 
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
+  <div class="chat-plus-menu" id="chatPlusMenu" hidden>
+    <button class="chat-plus-item" onclick="chatPlusAction('diary')">
+      <span class="chat-plus-icon">📝</span>
+      <span class="chat-plus-label">일기 템플릿</span>
+    </button>
+    <button class="chat-plus-item" onclick="chatPlusAction('end')">
+      <span class="chat-plus-icon">✓</span>
+      <span class="chat-plus-label">이 대화 마무리</span>
+    </button>
+  </div>
   <div class="chat-input-wrap">
-    <button class="diary-template-btn" id="diaryTemplateBtn" onclick="showDiaryTemplates()" title="일기 템플릿" aria-label="일기 템플릿">📝</button>
-    <button class="end-chapter-btn" id="endChapterBtn" onclick="endChapter()" title="이 대화 마무리" aria-label="대화 마무리">✓</button>
+    <button class="chat-plus-btn" id="chatPlusBtn" onclick="toggleChatPlusMenu(event)" aria-label="더보기">+</button>
     <textarea class="chat-textarea" id="chatInput" placeholder="편하게 말해봐..." rows="1"></textarea>
     <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
   </div>
@@ -7951,6 +7988,39 @@ const DIARY_TEMPLATES = [
     format: (a) => `일기: 지금 기분은 ${a || '뭔지 잘 모르겠음'}. 이대로도 괜찮아.`
   }
 ];
+
+// V3.13.x: + 메뉴 토글 (일기 템플릿/대화 마무리 통합)
+function toggleChatPlusMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('chatPlusMenu');
+  const btn = document.getElementById('chatPlusBtn');
+  if (!menu || !btn) return;
+  if (menu.hidden) {
+    menu.hidden = false;
+    btn.classList.add('open');
+  } else {
+    menu.hidden = true;
+    btn.classList.remove('open');
+  }
+}
+function closeChatPlusMenu() {
+  const menu = document.getElementById('chatPlusMenu');
+  const btn = document.getElementById('chatPlusBtn');
+  if (menu && !menu.hidden) menu.hidden = true;
+  if (btn) btn.classList.remove('open');
+}
+function chatPlusAction(kind) {
+  closeChatPlusMenu();
+  if (kind === 'diary') showDiaryTemplates();
+  else if (kind === 'end') endChapter();
+}
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('chatPlusMenu');
+  if (!menu || menu.hidden) return;
+  const btn = document.getElementById('chatPlusBtn');
+  if (menu.contains(e.target) || (btn && btn.contains(e.target))) return;
+  closeChatPlusMenu();
+});
 
 // V3.13.x: 대화 마무리 — 사용자가 능동적으로 챕터 끊기. AI가 토픽 카드 생성 + chapterStart 마커.
 async function endChapter() {
