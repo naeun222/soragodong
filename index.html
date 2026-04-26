@@ -8013,11 +8013,9 @@ function renderModel() {
     return;
   }
   
-  // V3.13.x: 미선택(user_verified=false)을 위로 정렬. 같은 그룹은 confidence 높은 순.
+  // V3.13.x: confidence 내림차순 → evidence_count 내림차순
   const sortItems = (arr) => {
     return arr.slice().sort((a, b) => {
-      if (!a.user_verified && b.user_verified) return -1;
-      if (a.user_verified && !b.user_verified) return 1;
       const ca = a.confidence || 0;
       const cb = b.confidence || 0;
       if (cb !== ca) return cb - ca;
@@ -8026,21 +8024,9 @@ function renderModel() {
   };
   const splitItems = (arr, topN = 5, draftThreshold = 0.4) => {
     const sorted = sortItems(arr);
-    const main = [];
-    const draft = [];
-    sorted.forEach(item => {
-      const conf = item.user_verified ? 1.0 : (item.confidence || 0);
-      if (item.user_verified || conf >= draftThreshold || main.length < topN) {
-        if (main.length < topN || conf >= draftThreshold || item.user_verified) main.push(item);
-        else draft.push(item);
-      } else {
-        draft.push(item);
-      }
-    });
-    // Cap main at topN, push extras to "more"
-    const topItems = main.slice(0, topN);
-    const moreItems = main.slice(topN);
-    return { top: topItems, more: moreItems, draft };
+    const main = sorted.filter(item => (item.confidence || 0) >= draftThreshold);
+    const draft = sorted.filter(item => (item.confidence || 0) < draftThreshold);
+    return { top: main.slice(0, topN), more: main.slice(topN), draft };
   };
   
   let html = '';
@@ -8082,31 +8068,18 @@ function renderModel() {
   }
   if (state.caseFormulation.version > 0) {
     html += `<div class="model-section"><div class="model-section-title">📋 통합 분석 v.${state.caseFormulation.version}</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">너에 대해 내가 종합한 그림이야. 컨펌 안 한 게 위로. ✓ 맞아 / ✎ 수정 / ✕ 삭제.</div>`;
-    // V3.13.x: 미컨펌(unverified) 메타 — 자동 추출된 거 위에 표시
-    const cfBullet = (text, field, originalIdx) => {
-      const verified = isCFVerified(field, text);
-      const verifyBtn = !verified ? `<button class="cf-confirm" onclick="confirmCFItem('${field}', ${originalIdx})" title="맞아">✓</button>` : '';
-      const newBadge = !verified ? '<span class="cf-new-badge">NEW</span>' : '';
-      return `<div class="cf-bullet${verified ? '' : ' cf-bullet-new'}">
-        <span class="cf-text">${newBadge}• ${escapeHtml(text)}</span>
-        <span class="cf-actions">${verifyBtn}<button onclick="editCFItem('${field}', ${originalIdx})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${originalIdx})" title="삭제">✕</button></span>
-      </div>`;
-    };
-    // V3.13.x: 미컨펌 위로 정렬 (originalIdx는 state 배열 그대로)
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">너에 대해 내가 종합한 그림이야. 잘못된 거 있으면 ✎ 수정 / ✕ 삭제.</div>`;
+    const cfBullet = (text, field, idx) => `<div class="cf-bullet">
+      <span class="cf-text">• ${escapeHtml(text)}</span>
+      <span class="cf-actions"><button onclick="editCFItem('${field}', ${idx})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${idx})" title="삭제">✕</button></span>
+    </div>`;
     const cfSection = (label, sub, items, field) => {
       if (!items || items.length === 0) return '';
-      const sortedWithIdx = items.map((text, idx) => ({ text, idx }))
-        .sort((a, b) => {
-          const av = isCFVerified(field, a.text) ? 1 : 0;
-          const bv = isCFVerified(field, b.text) ? 1 : 0;
-          return av - bv;
-        });
-      const top = sortedWithIdx.slice(0, 1);
-      const rest = sortedWithIdx.slice(1);
-      const topHtml = top.map(o => cfBullet(o.text, field, o.idx)).join('');
+      const top = items.slice(0, 1);
+      const rest = items.slice(1);
+      const topHtml = top.map((p, i) => cfBullet(p, field, i)).join('');
       const restHtml = rest.length > 0
-        ? `<details class="cf-more"><summary>+ ${rest.length}개 더 보기</summary><div class="cf-list">${rest.map(o => cfBullet(o.text, field, o.idx)).join('')}</div></details>`
+        ? `<details class="cf-more"><summary>+ ${rest.length}개 더 보기</summary><div class="cf-list">${rest.map((p, i) => cfBullet(p, field, i + 1)).join('')}</div></details>`
         : '';
       return `<div class="model-item"><div class="model-item-name">${label}</div>
         ${sub ? `<div style="font-size:11px; color:var(--text-soft); margin-bottom:8px;">${sub}</div>` : ''}
@@ -8155,33 +8128,18 @@ function renderMoreSection(category, more, draft) {
 
 function renderModelItem(item, category, idx) {
   const confLabel = item.confidence >= 0.7 ? '확신' : item.confidence >= 0.4 ? '관찰 중' : '가설';
-  const verified = !!item.user_verified;
-  return `<div class="model-item${verified ? ' verified' : ''}" data-cat="${category}" data-idx="${idx}">
+  return `<div class="model-item" data-cat="${category}" data-idx="${idx}">
     <div class="model-item-name">${escapeHtml(item.name)}</div>
     <div class="model-item-desc">${escapeHtml(item.description || '')}</div>
     <div class="model-item-meta">
-      <span class="conf ${verified ? 'verified clickable' : ''}" ${verified ? `onclick="toggleModelItemActions('${category}', ${idx})" title="눌러서 수정/삭제 보기"` : ''}>${verified ? '✓ 확인됨' : confLabel}</span>
+      <span class="conf">${confLabel}${item.confidence != null ? ` ${Math.round((item.confidence || 0) * 100)}%` : ''}</span>
       ${item.evidence_count ? `<span>근거 ${item.evidence_count}개</span>` : ''}
     </div>
-    <div class="model-item-actions${verified ? ' hidden' : ''}">
-      ${!verified ? `<button class="model-item-action approve" onclick="approveItem('${category}', ${idx})">✓ 맞아</button>` : ''}
+    <div class="model-item-actions">
       <button class="model-item-action" onclick="editModelItem('${category}', ${idx})">✎ 수정</button>
-      <button class="model-item-action reject" onclick="rejectItem('${category}', ${idx})">${verified ? '✕ 삭제' : '아니야'}</button>
+      <button class="model-item-action reject" onclick="rejectItem('${category}', ${idx})">✕ 삭제</button>
     </div>
   </div>`;
-}
-
-// V3.13.x: '확인됨' 클릭 시 수정/삭제 버튼 토글
-function toggleModelItemActions(category, idx) {
-  const item = document.querySelector(`.model-item[data-cat="${category}"][data-idx="${idx}"]`);
-  if (!item) return;
-  const actions = item.querySelector('.model-item-actions');
-  if (actions) actions.classList.toggle('hidden');
-}
-
-function approveItem(category, idx) {
-  state[category][idx].user_verified = true;
-  saveState(); renderModel(); renderModelPreview();
 }
 
 async function rejectItem(category, idx) {
@@ -8226,9 +8184,6 @@ async function editCFItem(field, idx) {
   const trimmed = newText.trim();
   if (!trimmed) return;
   state.caseFormulation[field][idx] = trimmed;
-  // sync unverified: 옛 텍스트 제거 + 사용자 직접 수정 → 컨펌됨
-  setCFVerified(field, current, true);
-  setCFVerified(field, trimmed, true);
   saveState();
   renderModel();
   renderModelPreview();
@@ -8237,22 +8192,11 @@ async function editCFItem(field, idx) {
 async function deleteCFItem(field, idx) {
   if (!state.caseFormulation || !Array.isArray(state.caseFormulation[field])) return;
   if (!await confirmDelete('이 항목')) return;
-  const removed = state.caseFormulation[field][idx];
   state.caseFormulation[field].splice(idx, 1);
-  setCFVerified(field, removed, true);  // unverified에서도 제거
   saveState();
   renderModel();
   renderModelPreview();
   showToast('삭제됨');
-}
-async function confirmCFItem(field, idx) {
-  if (!state.caseFormulation || !Array.isArray(state.caseFormulation[field])) return;
-  const text = state.caseFormulation[field][idx];
-  if (!text) return;
-  setCFVerified(field, text, true);
-  saveState();
-  renderModel();
-  showToast('확인됨 ✦');
 }
 
 // V3.13.x: 통합분석 항목 수정 (이름 + 설명) — AI 오해 잘못된 추론 직접 고치기
@@ -8280,7 +8224,6 @@ async function editModelItem(category, idx) {
   if (newDesc === null) return;
   item.name = trimmedName;
   item.description = (newDesc || '').trim();
-  item.user_verified = true;  // 사용자 직접 수정 = 검증된 것
   saveState();
   renderModel();
   renderModelPreview();
@@ -8962,19 +8905,9 @@ async function processAnalysis(analysis, messageIdx) {
   if (analysis.case_formulation_update && !recentRetry && !isUITrigger) {
     const cf = state.caseFormulation;
     const u = analysis.case_formulation_update;
-    // V3.13.x: 자동 추출은 unverified로 마킹 (사용자 컨펌 전까지 NEW 표시 + 위로 정렬)
-    if (u.new_problem && !cf.problems.some(p => similarText(p, u.new_problem))) {
-      cf.problems.push(u.new_problem);
-      setCFVerified('problems', u.new_problem, false);
-    }
-    if (u.new_mechanism && !cf.mechanisms.some(m => similarText(m, u.new_mechanism))) {
-      cf.mechanisms.push(u.new_mechanism);
-      setCFVerified('mechanisms', u.new_mechanism, false);
-    }
-    if (u.new_strength && !cf.strengths.some(s => similarText(s, u.new_strength))) {
-      cf.strengths.push(u.new_strength);
-      setCFVerified('strengths', u.new_strength, false);
-    }
+    if (u.new_problem && !cf.problems.some(p => similarText(p, u.new_problem))) cf.problems.push(u.new_problem);
+    if (u.new_mechanism && !cf.mechanisms.some(m => similarText(m, u.new_mechanism))) cf.mechanisms.push(u.new_mechanism);
+    if (u.new_strength && !cf.strengths.some(s => similarText(s, u.new_strength))) cf.strengths.push(u.new_strength);
     if (u.new_problem || u.new_mechanism || u.new_strength) {
       cf.version += 1;
       cf.lastUpdated = new Date().toISOString();
