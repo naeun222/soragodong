@@ -529,6 +529,28 @@
     display: flex; align-items: center; justify-content: center;
   }
   .diary-template-btn:active { transform: scale(0.95); background: var(--surface2); }
+  /* V3.13.x: 대화 마무리 버튼 */
+  .end-chapter-btn {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--accent); font-size: 14px; font-weight: 600;
+    cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .end-chapter-btn:active { transform: scale(0.95); background: var(--surface2); }
+  /* V3.13.x: 챕터 구분선 (대화 마무리 후) */
+  .chat-chapter-divider {
+    text-align: center; padding: 14px 0 10px;
+    color: var(--text-soft); font-size: 11px;
+    letter-spacing: 0.2em; opacity: 0.6;
+  }
+  .chat-chapter-divider::before,
+  .chat-chapter-divider::after {
+    content: '─── '; opacity: 0.5;
+  }
+  .chat-chapter-divider::after {
+    content: ' ───';
+  }
   .send-btn:disabled { opacity: 0.4; }
   .send-btn:active { transform: scale(0.95); }
 
@@ -1573,6 +1595,40 @@
   .exec-card-meta { display: flex; gap: 8px; font-size: 11px; color: var(--text-dim); flex-wrap: wrap; margin-bottom: 10px; }
   .exec-card-meta span { background: var(--surface2); padding: 2px 8px; border-radius: 6px; }
   .exec-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  /* V3.13.x: 오늘 할 일 목록 (체크박스 형태, 작은 항목) */
+  .todo-list { display: flex; flex-direction: column; gap: 4px; }
+  .todo-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: background 0.15s ease;
+  }
+  .todo-item:active { background: var(--surface2); }
+  .todo-check {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid var(--border-strong); background: transparent;
+    cursor: pointer; flex-shrink: 0; padding: 0;
+    transition: all 0.15s ease;
+  }
+  .todo-check:hover { border-color: var(--accent); }
+  .todo-check:active { transform: scale(0.92); background: rgba(201,169,110,0.2); }
+  .todo-title {
+    flex: 1; min-width: 0;
+    font-size: 13px; color: var(--text);
+    line-height: 1.5; word-break: break-word;
+  }
+  .todo-action {
+    width: 26px; height: 26px; border-radius: 6px;
+    background: transparent; border: none;
+    color: var(--text-soft); cursor: pointer;
+    font-size: 13px; line-height: 1; padding: 0;
+    flex-shrink: 0; opacity: 0.7;
+    transition: all 0.15s ease;
+  }
+  .todo-action:hover { opacity: 1; background: var(--surface2); color: var(--text); }
+  .todo-action:active { transform: scale(0.92); }
   .exec-card-actions button {
     padding: 11px 12px;  /* V3.7: 모바일 터치 타겟 확대 (6px → 11px) */
     background: var(--surface2);
@@ -3296,6 +3352,7 @@
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
   <div class="chat-input-wrap">
     <button class="diary-template-btn" id="diaryTemplateBtn" onclick="showDiaryTemplates()" title="일기 템플릿" aria-label="일기 템플릿">📝</button>
+    <button class="end-chapter-btn" id="endChapterBtn" onclick="endChapter()" title="이 대화 마무리" aria-label="대화 마무리">✓</button>
     <textarea class="chat-textarea" id="chatInput" placeholder="편하게 말해봐..." rows="1"></textarea>
     <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
   </div>
@@ -7666,6 +7723,7 @@ function renderChat() {
       ? `<button class="msg-menu-btn" onclick="showMessageMenu(${i})" aria-label="더보기">⋮</button>`
       : '';
     const bubble = `<div class="msg-bubble">${bubbleContent}${menuBtn}</div>`;
+    // chapter divider는 line 7810~ 기존 코드가 처리 (m.chapterStart 마커 기준)
 
     let actions = '';
     if (m.error && m.canRetry) {
@@ -7893,6 +7951,40 @@ const DIARY_TEMPLATES = [
     format: (a) => `일기: 지금 기분은 ${a || '뭔지 잘 모르겠음'}. 이대로도 괜찮아.`
   }
 ];
+
+// V3.13.x: 대화 마무리 — 사용자가 능동적으로 챕터 끊기. AI가 토픽 카드 생성 + chapterStart 마커.
+async function endChapter() {
+  const validMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
+  if (validMsgs.length < 2) {
+    showToast('대화가 너무 짧아 마무리할 게 없어');
+    return;
+  }
+  const yes = await showConfirmModal({
+    title: '이 대화 마무리할까?',
+    message: '지금까지 대화를 AI가 정리해서 토픽 카드로 저장할게.\n새 주제로 깨끗하게 이어가자.',
+    okLabel: '정리하기 ✦',
+    cancelLabel: '취소'
+  });
+  if (!yes) return;
+  // 마지막 메시지에 chapterStart=true 마커 박기 (extractPreviousChapterTopics가 이걸 기준으로 직전 챕터 추출)
+  const lastMsg = validMsgs[validMsgs.length - 1];
+  const wasChapterStart = lastMsg.chapterStart;
+  lastMsg.chapterStart = true;
+  saveState();
+  showToast('🐚 정리 중...');
+  try {
+    await extractPreviousChapterTopics();
+    saveState();
+    if (typeof renderChat === 'function') renderChat();
+    showToast('✦ 정리됐어. 새 주제로 이어가자.');
+  } catch (e) {
+    if (!wasChapterStart) {
+      delete lastMsg.chapterStart;
+      saveState();
+    }
+    showToast('❌ 정리 실패: ' + (e.message || ''));
+  }
+}
 
 async function showDiaryTemplates() {
   const choice = await showOptionsModal({
@@ -9799,33 +9891,59 @@ function renderExecute() {
       html += `</div>`;
     }
 
-    // V3.13: 서랍장 인라인 표시 (오늘의 카드 밑, 우선순위 정렬)
-    // V3.13.x: t.date 조건 제거 — 모든 미완료 drawer task (날짜 무관)
-    const drawerTasks = (state.tasks || [])
-      .filter(t => t.slot === 'drawer' && t.status !== 'done')
-      .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+    // V3.13.x: 오늘 할 일 목록 (now3 밑) — drawer 중 isToday=true. 체크박스 + 수정 + 삭제만
+    const todayList = (state.tasks || [])
+      .filter(t => t.slot === 'drawer' && t.isToday && t.status !== 'done')
+      .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    if (todayList.length > 0) {
+      html += `<div class="exec-now-section">
+        <div class="exec-section-label">📋 오늘 할 일 · ${todayList.length}개</div>
+        <div class="todo-list">`;
+      todayList.forEach(task => {
+        html += `
+          <div class="todo-item" data-task-id="${task.id}">
+            <button class="todo-check" onclick="toggleQuestComplete('${task.id}')" aria-label="완료"></button>
+            <span class="todo-title">${escapeHtml(task.title)}</span>
+            <button class="todo-action" onclick="editTaskCard('${task.id}')" title="수정">✎</button>
+            <button class="todo-action" onclick="demoteFromToday('${task.id}')" title="서랍장으로">↩</button>
+            <button class="todo-action" onclick="deleteTask('${task.id}')" title="삭제">✕</button>
+          </div>
+        `;
+      });
+      html += `</div></div>`;
+    }
+
+    // V3.13.x: 서랍장 (시간순 + 중복 dedupe display). drawer 중 !isToday만
+    const drawerRaw = (state.tasks || [])
+      .filter(t => t.slot === 'drawer' && !t.isToday && t.status !== 'done')
+      .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    // 중복 자동 dedupe (display only — title 기준)
+    const seenTitles = new Set();
+    const drawerTasks = drawerRaw.filter(t => {
+      const key = (t.title || '').trim().toLowerCase();
+      if (!key) return true;
+      if (seenTitles.has(key)) return false;
+      seenTitles.add(key);
+      return true;
+    });
     if (drawerTasks.length > 0) {
+      const dupCount = drawerRaw.length - drawerTasks.length;
       html += `
         <div class="exec-now-section">
           <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-            <span style="flex:1; min-width:0;">📂 서랍장 · ${drawerTasks.length}장</span>
-            <button onclick="mergeDuplicateTasks()" title="중복 합치기 + 정렬" style="font-size:12px; padding:5px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap; line-height:1.4; font-weight:500;">🔗 정리</button>
+            <span style="flex:1; min-width:0;">📂 서랍장 · ${drawerTasks.length}장${dupCount > 0 ? ` <span style="color:var(--text-soft); font-size:10px;">(중복 ${dupCount}개 숨김)</span>` : ''}</span>
+            <button onclick="mergeDuplicateTasks()" title="중복 합치기" style="font-size:12px; padding:5px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap; line-height:1.4; font-weight:500;">🔗 정리</button>
           </div>
       `;
       drawerTasks.forEach(task => {
         const isAIMission = task.source === 'ai_mission';
         const tag = isAIMission ? '🐚 부름' : task.weight === 'main' ? '⚡ 메인' : task.weight === 'light' ? '🍃 가벼움' : '📌 일상';
-        const elapsed = getTaskElapsedTime(task.id);
         html += `
           <div class="exec-card drawer-card" data-task-id="${task.id}">
             <span class="exec-card-tag">${tag}</span>
             <div class="exec-card-title">${escapeHtml(task.title)}</div>
-            <div class="exec-card-meta">
-              ${elapsed ? `<span>⏱ ${elapsed}</span>` : ''}
-            </div>
             <div class="exec-card-actions">
-              <button class="start-btn" onclick="promoteSingleTask('${task.id}')">↑ 오늘의 카드로</button>
-              <button class="complete-btn" onclick="toggleQuestComplete('${task.id}')">✓ 완료</button>
+              <button class="start-btn" onclick="promoteToToday('${task.id}')">↑ 오늘로</button>
               <button onclick="editTaskCard('${task.id}')">✎ 수정</button>
               <button onclick="deleteTask('${task.id}')">✕ 삭제</button>
             </div>
@@ -12370,6 +12488,25 @@ async function deleteVaultItem(itemId) {
   renderExecute();
 }
 
+// V3.13.x: 서랍장 → 오늘 할 일 목록으로 (체크박스 작은 항목)
+function promoteToToday(taskId) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (!task) return;
+  task.isToday = true;
+  saveState();
+  if (typeof renderExecute === 'function') renderExecute();
+  showToast('📋 오늘 할 일로');
+}
+// V3.13.x: 오늘 할 일 → 서랍장으로 되돌리기
+function demoteFromToday(taskId) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (!task) return;
+  task.isToday = false;
+  saveState();
+  if (typeof renderExecute === 'function') renderExecute();
+  showToast('📂 서랍장으로');
+}
+
 // V3.13.x: 서랍장 중복 합치기 — 내용상 완전 같은 task 그룹화 후 가장 오래된 것만 keep
 async function mergeDuplicateTasks() {
   const drawerTasks = (state.tasks || []).filter(t => t.slot === 'drawer' && t.status !== 'done');
@@ -12980,7 +13117,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-tone-template-camera';
+const APP_VERSION = '2026-04-27-drawer-todo-endchapter';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
