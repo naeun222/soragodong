@@ -12891,22 +12891,12 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-update-banner';
+const APP_VERSION = '2026-04-27-banner-all-users';
 
-// V3.13.x: 새 버전 진입 시 — 모달 X. 홈 화면 상단에 dismiss-able 카드 노출 (renderUpdateNotice).
+// V3.13.x: 새 버전 진입 시 배너 갱신만. 자동 박음 X — 사용자가 dismiss 누를 때만 lastSeen 박힘.
 function autoTourOnUpdate() {
   if (!state || !state.hasSeenWelcomeTutorial) return;  // 신규 사용자는 isBrandNewUser 자동 분기
-  if (window._onbTutorialMode) return;  // 이미 튜토리얼 중이면 중복 X
-  const lastSeen = state.preferences && state.preferences.lastSeenAppVersion;
-  if (lastSeen === APP_VERSION) return;
-  if (!lastSeen) {
-    // 첫 박음 — 깜짝 X, lastSeen만
-    state.preferences = state.preferences || {};
-    state.preferences.lastSeenAppVersion = APP_VERSION;
-    saveState();
-    return;
-  }
-  // 새 버전 — 홈 카드로 노출 (사용자가 자기 페이스로 결정)
+  if (window._onbTutorialMode) return;
   if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
 }
 
@@ -12915,7 +12905,8 @@ function renderUpdateNotice() {
   const banner = document.getElementById('updateBanner');
   if (!banner) return;
   const lastSeen = state && state.preferences && state.preferences.lastSeenAppVersion;
-  const shouldShow = state && state.hasSeenWelcomeTutorial && lastSeen && lastSeen !== APP_VERSION && !window._onbTutorialMode;
+  // 신규 사용자(튜토리얼 자동 진행)만 제외. lastSeen 없거나 다르면 배너 표시
+  const shouldShow = state && state.hasSeenWelcomeTutorial && lastSeen !== APP_VERSION && !window._onbTutorialMode;
   if (!shouldShow) {
     banner.style.display = 'none';
     banner.innerHTML = '';
