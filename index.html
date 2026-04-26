@@ -8427,8 +8427,16 @@ async function generateAIResponse(modelOverride) {
 async function processAnalysis(analysis, messageIdx) {
   // V3.4: retry로 인한 중복 방지. 직전 3분 내 retry 호출되었다면 신규 추가 X
   const recentRetry = state._lastRetryAt && (Date.now() - state._lastRetryAt < 3 * 60 * 1000);
-  
-  if (analysis.new_traits) {
+
+  // V3.13.x: 직전 user 메시지가 단순 UI 트리거(askDeeper 등)면 사용자 발화 분석 스킵
+  // → "협상형 종료 패턴" 같은 잘못된 trait/pattern 박힘 방지.
+  // insight / proposal / extracted_tasks / decision_suggested는 응답 내용에 대한 것이라 유지.
+  let _prevUserIdx = messageIdx - 1;
+  while (_prevUserIdx >= 0 && state.chatMessages[_prevUserIdx]?.role !== 'user') _prevUserIdx--;
+  const _triggerMsg = _prevUserIdx >= 0 ? state.chatMessages[_prevUserIdx] : null;
+  const isUITrigger = !!(_triggerMsg && _triggerMsg.isDeeperRequest);
+
+  if (analysis.new_traits && !isUITrigger) {
     analysis.new_traits.forEach(t => {
       const exists = state.traits.find(e => similarText(e.name, t.name));
       if (!exists && !recentRetry) {
@@ -8439,7 +8447,7 @@ async function processAnalysis(analysis, messageIdx) {
       }
     });
   }
-  if (analysis.new_values) {
+  if (analysis.new_values && !isUITrigger) {
     analysis.new_values.forEach(v => {
       const exists = state.values.find(e => similarText(e.name, v.name));
       if (!exists && !recentRetry) {
@@ -8450,7 +8458,7 @@ async function processAnalysis(analysis, messageIdx) {
       }
     });
   }
-  if (analysis.new_patterns) {
+  if (analysis.new_patterns && !isUITrigger) {
     analysis.new_patterns.forEach(p => {
       const exists = state.patterns.find(e => similarText(e.name, p.name));
       if (!exists && !recentRetry) {
@@ -8461,7 +8469,7 @@ async function processAnalysis(analysis, messageIdx) {
       }
     });
   }
-  if (analysis.case_formulation_update && !recentRetry) {
+  if (analysis.case_formulation_update && !recentRetry && !isUITrigger) {
     const cf = state.caseFormulation;
     const u = analysis.case_formulation_update;
     if (u.new_problem && !cf.problems.some(p => similarText(p, u.new_problem))) cf.problems.push(u.new_problem);
@@ -8746,7 +8754,14 @@ extracted_tasks: 사용자가 대화에서 "~해야 해", "~하기로 했어", "
 
 decision_suggested: 사용자가 큰 결정을 고민 중일 때만 추가. 트리거: "이직", "그만둘까", "헤어질까", "X할까 Y할까", "결정해야", "고민이야", 진로/관계/큰 구매 같은 무거운 선택. 대화 1-2번 듣고 패턴이 보이면 제안. 작은 일상 결정엔 X. 강요 X — 한 번 거절하면 같은 주제로 다시 X.
 
-proposal은 4단 응답 시에만. 평범한 대화엔 proposal 생략.`;
+proposal은 4단 응답 시에만. 평범한 대화엔 proposal 생략.
+
+***UI 버튼 트리거 메시지 — 분석 제외***:
+사용자가 다음과 같은 "단순 UI 기능 트리거" 메시지로 요청한 경우, 이는 사용자의 자발적 발화가 아니라 버튼 클릭임:
+- "아까 그 얘기 좀 더 깊게 분석해줄래? 어떻게 하면 좋을지 전략도 알려줘." (← '더 알아보기' 버튼)
+- 챕터 마무리/대화 정리 같은 시스템 트리거
+
+이런 메시지에 대한 응답에서는 new_traits / new_values / new_patterns / case_formulation_update를 빈 배열/객체로 비워둬. 그 행위 자체를 사용자의 성격이나 패턴으로 잡지 마 (예: "협상형 종료 패턴", "분석 요청 성향" 같은 trait/pattern 절대 X). insight / proposal / extracted_tasks / decision_suggested는 응답 내용 기반이므로 OK.`;
 
 function buildSystemPrompt() {
   // V3.8: 하위호환 — 단일 문자열 반환 (이전 호출처용)
