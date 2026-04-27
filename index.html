@@ -18288,10 +18288,11 @@ function _renderStrategyCardHtml(s) {
     m.status === 'completed' &&
     !m.attemptStatus
   );
+  // 사용자 요청 2026-04-28: '작동' → '성공' 표기 통일, 결과 체크 대기 시 hint
   const metaLine = _status
     ? (_total > 0
-        ? `${_statusEmoji[_status]||'🌱'} ${_statusName[_status]||''} · 작동 ${_worked}/${_total}${_gens > 1 ? ` · ${_gens}세대` : ''}`
-        : `${_statusEmoji[_status]||'🌱'} 미시도`)
+        ? `${_statusEmoji[_status]||'🌱'} ${_statusName[_status]||''} · 성공 ${_worked}/${_total}${_gens > 1 ? ` · ${_gens}세대` : ''}${_hasUnchecked ? ' · 🔍 결과 체크 대기' : ''}`
+        : `${_statusEmoji[_status]||'🌱'} 미시도${_hasUnchecked ? ' · 🔍 결과 체크 대기' : ''}`)
     : '';
   const tryBtnHtml = (_status && !_isEmbodied)
     ? (_hasUnchecked
@@ -27147,7 +27148,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.121-result-check-logic';
+const APP_VERSION = 'v4.0.122-strategy-meta';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
