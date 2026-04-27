@@ -5229,7 +5229,7 @@
         <div class="reflection-screen-q" id="reflectionScreenQ"></div>
         <div class="reflection-screen-actions">
           <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론</button>
-          <button class="reflection-pause-btn" id="reflectionPauseBtn" title="보류">⏸</button>
+          <button class="reflection-pause-btn" id="reflectionDeleteBtn" title="삭제">🗑</button>
         </div>
       </div>
       <div class="reflection-chat-area" id="reflectionChatArea"></div>
@@ -5424,6 +5424,7 @@
             <button class="btn-secondary btn-danger" onclick="resetArchive()" style="margin-top:6px;">📚 아카이브(깨달음)만</button>
             <button class="btn-secondary btn-danger" onclick="resetPearls()" style="margin-top:6px;">💎 진주만</button>
             <button class="btn-secondary btn-danger" onclick="resetTasks()" style="margin-top:6px;">📋 할 일(서랍장)만</button>
+            <button class="btn-secondary btn-danger" onclick="cleanupPausedReflections()" style="margin-top:6px;">🌊 보류된 숙고 찌꺼기 정리</button>
           </div>
         </details>
 
@@ -8655,16 +8656,19 @@ function openReflectionChat(qId) {
   _activeReflectionId = qId;
   showScreen('reflection');
   renderReflectionChat();
-  // 결론 / 보류 버튼 wire
+  // 결론 / 삭제 버튼 wire (V4-fix: 보류 → 삭제로 변경)
   const resolveBtn = document.getElementById('reflectionResolveBtn');
   if (resolveBtn) {
     resolveBtn.onclick = () => resolveReflectionQuestion(qId);
   }
-  const pauseBtn = document.getElementById('reflectionPauseBtn');
-  if (pauseBtn) {
-    pauseBtn.onclick = async () => {
-      await pauseReflectionQuestion(qId);
+  const delBtn = document.getElementById('reflectionDeleteBtn');
+  if (delBtn) {
+    delBtn.onclick = async () => {
+      const ok = await confirmDelete('이 숙고 질문', '대화 내용도 같이 사라져.');
+      if (!ok) return;
+      deleteReflectionQuestion(qId);
       showScreen('home');
+      showToast('🗑 삭제됨');
     };
   }
   // V4-fix: 헤더 = 짧은 요약 (긴 원본은 채팅 첫 메시지에)
@@ -20074,6 +20078,27 @@ async function resetAll() {
 }
 
 // V3.13.x: 소라 컬렉션만 초기화 (다른 데이터는 유지)
+// V4-fix: 보류된 숙고 찌꺼기 일괄 정리 (paused 항목만)
+async function cleanupPausedReflections() {
+  const all = state.reflectionQuestions || [];
+  const paused = all.filter(q => q.status === 'paused');
+  if (paused.length === 0) {
+    showToast('보류된 숙고 없음 — 깨끗해');
+    return;
+  }
+  const ok = await showConfirmModal({
+    title: `🌊 보류된 숙고 ${paused.length}개 삭제`,
+    message: `옛 보류 데이터 일괄 정리. active / resolved 항목은 안 건드림.`,
+    okLabel: '정리',
+    cancelLabel: '취소'
+  });
+  if (!ok) return;
+  state.reflectionQuestions = all.filter(q => q.status !== 'paused');
+  saveState();
+  if (typeof renderReflectionHome === 'function') renderReflectionHome();
+  showToast(`🗑 ${paused.length}개 정리됨`);
+}
+
 async function resetShellCollection() {
   const count = (state.shellCollection || []).length;
   if (count === 0) {
@@ -20153,7 +20178,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.62-misc-fixes';
+const APP_VERSION = 'v4.0.63-pause-to-delete';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
