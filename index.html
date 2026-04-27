@@ -7859,6 +7859,7 @@ const ONBOARDING_STEPS = [
     waitFor: 'click',
     advanceDelay: 1000,
     fallbackPosition: 'top',
+    dimBackground: false,
     prefill: { selector: '#chatInput', value: '일기: 오늘 새벽까지 논문 작업하다가 잠. 카페 가서 한 단락 겨우 끝냈는데 진도가 너무 안 나가서 답답해. 내일 학회 발표인데 발표 자료도 못 만들었고, 이제 시간 진짜 별로 없는데 압도감 때문에 시작도 못 하고 있어.', force: true }
   },
   {
@@ -8367,6 +8368,10 @@ function _initOnbDrag() {
 function startInteractiveOnboarding() {
   _onbStep = 0;
   _onbStartTime = Date.now();
+  // V4-fix v3: 이전 튜토리얼의 _prefillApplied flag 초기화 (재실행 시 prefill 다시 박히도록)
+  if (Array.isArray(ONBOARDING_STEPS)) {
+    ONBOARDING_STEPS.forEach(s => { delete s._prefillApplied; });
+  }
   window._onbTutorialMode = true;  // V3.13: 다른 함수가 튜토리얼 모드 알도록
   // V3.13.x: state.modes / periodStart 백업 (튜토리얼에서 변경된 모드 onbFinish 시 복원용)
   window._onbModesBackup = JSON.parse(JSON.stringify(state.modes || {}));
@@ -8596,26 +8601,34 @@ function onbPositionStep(step, retryCount) {
       }
     }, 500);
   }
-  // V3.13 + V4-fix v3 prefill: 모달이나 input에 예시 값 자동 주입 (retry로 mount 기다림)
-  if (step.prefill) {
-    const tryPrefill = (attempts) => {
+  // V3.13 + V4-fix v3 prefill: input에 예시 값 자동 주입 (retry + 즉시 시도)
+  if (step.prefill && !step._prefillApplied) {
+    const applyPrefill = () => {
       const el = document.querySelector(step.prefill.selector);
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
         if (!el.value || step.prefill.force) {
           el.value = step.prefill.value;
           el.dispatchEvent(new Event('input', { bubbles: true }));
-          // textarea auto-resize
           if (el.tagName === 'TEXTAREA') {
             el.style.height = 'auto';
             el.style.height = Math.min(120, el.scrollHeight) + 'px';
           }
           el.focus();
+          step._prefillApplied = true;  // 이 step에서 한 번만 prefill (re-position 시 안 다시)
+          return true;
         }
-      } else if (attempts > 0) {
-        setTimeout(() => tryPrefill(attempts - 1), 200);
       }
+      return false;
     };
-    setTimeout(() => tryPrefill(8), 200);  // 최대 200 + 8*200 = 1.8s 까지 retry
+    // 즉시 + retry 둘 다 시도
+    if (!applyPrefill()) {
+      const tryPrefill = (attempts) => {
+        if (step._prefillApplied) return;
+        if (applyPrefill()) return;
+        if (attempts > 0) setTimeout(() => tryPrefill(attempts - 1), 150);
+      };
+      setTimeout(() => tryPrefill(15), 100);  // 최대 100 + 15*150 = 2.35s
+    }
   }
 
   // 행동 대기 처리. V3.13.x: 모든 setTimeout에 step 가드 (double advance 방지).
@@ -25233,7 +25246,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.110-banner-v4-text';
+const APP_VERSION = 'v4.0.111-prefill-robust';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
