@@ -8431,9 +8431,10 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'dna_explanation_close',
-    targetSelector: '#shellModal .btn-secondary',
+    targetSelector: '#shellModal .shell-story-dna-badge',
+    advanceClickSelector: '#shellModal .btn-secondary',
     title: '🧬 DNA 한 조각',
-    body: '미션 성공이 → 전략 성공이 되면, <b>그 소라가 DNA의 한 조각</b>이 돼.<br><br>아까 말했던 <b>"전략으로"</b> 버튼 기억 나지? 이게 바로 그 의미야 — 너만의 전략이 시간이 지나면서 너 일부가 되어가.<br><br>이제 양생방으로 가보자. <b>닫기</b> 눌러봐.',
+    body: '이게 <b>DNA 한 조각</b> 표시야.<br>미션 성공이 → 전략 성공이 되면, <b>그 소라가 DNA의 한 조각</b>이 돼.<br><br>아까 말했던 <b>"전략으로"</b> 버튼 기억 나지? 이게 바로 그 의미야 — 너만의 전략이 시간이 지나면서 너 일부가 되어가.<br><br>준비되면 <b>닫기</b> 눌러서 진행해.',
     waitFor: 'click',
     advanceDelay: 600,
     dimBackground: false,
@@ -8471,7 +8472,7 @@ const ONBOARDING_STEPS = [
     id: 'yangsaeng_intro',
     targetSelector: '.strategy-card-title[data-strategy-id="strat_seed_0"]',
     title: '🧬 \'마감 직전 폭발력 신뢰\' 카드',
-    body: '여기 \'<b>마감 직전 폭발력 신뢰</b>\' 카드 한 번 눌러봐.<br>3번 작동한 \'영그는 중\' 가닥이야.',
+    body: '여기 \'<b>마감 직전 폭발력 신뢰</b>\' 카드 한 번 눌러봐.<br>3번 성공한 \'영그는 중\' 가닥이야.',
     waitFor: 'click',
     advanceDelay: 800,
     manualAdvance: true,
@@ -9537,9 +9538,15 @@ function onbPositionStep(step, retryCount) {
     }
     nextBtn.style.display = 'none';
   } else if (step.waitFor === 'click') {
-    if (target) {
+    // 사용자 요청 2026-04-28: advanceClickSelector — spotlight는 다른 element 가리키되 click trigger는 별도 element (예: DNA icon 강조 + 닫기 버튼 클릭으로 advance)
+    let advanceTarget = target;
+    if (step.advanceClickSelector) {
+      const at = document.querySelector(step.advanceClickSelector);
+      if (at) advanceTarget = at;
+    }
+    if (advanceTarget) {
       const handler = (e) => { safeAdvance(step.advanceDelay || 350); };
-      onbAddListener(target, 'click', handler);
+      onbAddListener(advanceTarget, 'click', handler);
     }
     // V3.13.x: manualAdvance — spotlight 위치 부정확할 수 있는 step에서
     // 사용자가 "눌렀어 →" 직접 누를 수 있게 (응답 길이에 따라 버튼 위치 바뀌는 케이스 등)
@@ -27132,7 +27139,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.119-magic-flow';
+const APP_VERSION = 'v4.0.120-dna-target';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
