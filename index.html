@@ -15787,21 +15787,72 @@ function sendMutationMessage() {
 }
 
 // 사용자 요청 2026-04-28: ✦ 클릭 → 임시 대화창 닫고 → openStrategyMissionChat (어떤 상황? → 오늘의 제안 → 부름 등록)
-function finishMutationChat() {
+async function finishMutationChat() {
   if (!_mutationChatState || _mutationChatState.selected == null) return;
   const card = getStrategyCard(_mutationChatState.strategyId);
   if (!card) { closeMutationChat(false); return; }
   const opt = _mutationChatState.options[_mutationChatState.selected];
   if (!opt) return;
-  // chatRecord 자동 보관 (사용자 요청 X 묻지 않음)
+  // chatRecord 자동 보관
   _mutationChatState.chatRecord.messages = _mutationChatState.messages.slice();
   _mutationChatState.chatRecord.kept = true;
   if (!Array.isArray(card.evolutionChats)) card.evolutionChats = [];
   card.evolutionChats.push(_mutationChatState.chatRecord);
   saveState();
   const strategyId = _mutationChatState.strategyId;
+  const chatHistory = _mutationChatState.messages.slice();
   closeMutationChat(true);
-  setTimeout(() => openStrategyMissionChat(strategyId, opt), 300);
+  // 사용자 요청 2026-04-28: 돌연변이는 이미 대화로 맥락 충분 → '어떤 상황?' 모달 X. 바로 오늘의 제안 → 부름 등록
+  await _completeMutationToMission(strategyId, opt, chatHistory);
+}
+
+// 돌연변이 직접 흐름 — situation modal 건너뛰고 chatHistory로 바로 제안 생성
+async function _completeMutationToMission(strategyId, opt, chatHistory) {
+  const card = getStrategyCard(strategyId);
+  if (!card) return;
+  const layerName = _LAYER_NAME[opt.layer] || opt.layer;
+  showToast('🐚 오늘의 제안 생성 중...');
+  let proposal = '';
+  if (state.apiKey) {
+    try {
+      const recentMsgs = (chatHistory || []).slice(-8).map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n');
+      const ctx = `[전략] ${card.title}\n[새 차원] ${layerName}: ${opt.action}\n[돌연변이 임시 대화 흐름]\n${recentMsgs}`;
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6', max_tokens: 120,
+          messages: [{
+            role: 'user',
+            content: `${ctx}\n\n[너의 일]\n위 전략·새 차원·임시 대화 흐름 종합해서 '오늘의 제안' 1개. 오늘 바로 할 수 있는 구체 행동.\n한 줄 (max 40자). 동사 시작.\n\n[출력]\n제안만 한 줄. 다른 거 X.`
+          }]
+        })
+      });
+      const data = await resp.json();
+      proposal = (data.content?.[0]?.text || '').trim().replace(/^["「'`]|["」'`]$/g, '').split('\n')[0].trim();
+    } catch (e) { console.warn('mutation proposal AI:', e); }
+  }
+  if (!proposal) proposal = opt.action;
+  const yes = await showConfirmModal({
+    title: '🌿 오늘의 제안',
+    message: `"${proposal}"\n\n이걸로 '소라의 부름' 등록할까?`,
+    okLabel: '✦ 부름으로 등록',
+    cancelLabel: '취소'
+  });
+  if (!yes) return;
+  mutateToNewGeneration(strategyId, opt.layer, opt.action);
+  const refreshed = getStrategyCard(strategyId);
+  const newGenIdx = (refreshed?.generations?.length || 1) - 1;
+  createMission(proposal, `🧬 ${card.title} — ${layerName} 차원`, {
+    strategyId,
+    generationIdx: newGenIdx,
+    linkedStrategy: card.title
+  });
+  saveState({ force: true });
+  showCelebration('🐚', '소라가 널 부르고 있어!', '✨');
+  if (typeof renderTodayMission === 'function') renderTodayMission();
+  if (typeof renderArchive === 'function') renderArchive();
+  if (typeof showScreen === 'function') showScreen('home');
 }
 
 // V4-fix v2: 보관 여부 결정 후 실제 미션 생성
