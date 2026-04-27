@@ -5788,7 +5788,7 @@
           <button class="btn-secondary" onclick="testForceMusicAutoPearl()" style="margin-top:6px;">🎵 음악 5번 → 자동 진주 발동</button>
           <button class="btn-secondary" onclick="testForceDrainedMode()" style="margin-top:6px;">🪫 방전 모드 ON</button>
           <button class="btn-secondary" onclick="testForceDecisionRoom()" style="margin-top:6px;">🌀 갈피의 방 active 진입</button>
-          <button class="btn-secondary" onclick="testForceDiagnosisCitation()" style="margin-top:6px;" title="V4 비전 9.5: 진단은 별도 라벨 X, 채팅 응답에 자연스럽게 한 줄 끼워서 노출됨. 이 버튼은 다음 응답에 그 인용이 들어가도록 flag만 박음.">🩺 진단 → 다음 채팅 응답에 한 줄 끼우기 (V4 9.5)</button>
+          <button class="btn-secondary" onclick="testForceDiagnosisCitation()" style="margin-top:6px;" title="V4 9.5 + 사용자 정합: 진단은 '더 알아보기' 눌렀을 때만 자연 인용 (사용자 의도 표명 순간). active 진단을 복구해 다음 더 알아보기 응답에 한 줄로 노출되게 함.">🩺 진단 → 다음 "더 알아보기" 응답에 한 줄 인용</button>
           <button class="btn-secondary" onclick="testForceQuestionScrap()" style="margin-top:6px;">🌊 새 숙고 질문 박기 (스크랩)</button>
           <button class="btn-secondary" onclick="testForceTutorial()" style="margin-top:6px;">🎓 풀 튜토리얼 강제 시작</button>
           <button class="btn-secondary" onclick="testForceExtract()" style="margin-top:6px;">📌 토픽 추출 강제 (가드 우회)</button>
@@ -12629,18 +12629,21 @@ function buildSystemPromptParts() {
     volatile.push('');
   }
 
-  // V4-1o: 진단 5종 — active 진단 1개를 자연 인용 hint로 전달.
+  // V4-1o + 사용자 fix: 진단 5종 — "더 알아보기" 눌렀을 때만 자연 인용 (사용자 의도 표명 순간)
+  // 매 응답에 진단 끼우면 톤 무거워짐. ADHD 친화: 사용자 자율 + 마찰 X.
+  // anchor 8 "체화하고 싶을 때" 동력 모먼트와 정합.
   // 거울 3원칙 (9.6): 외재화 톤 / 균형 노출 / 사용자 자기 발견.
-  // V4-1o-2: prompt에 inject 시점에 즉시 status='shown' 마킹 (다음에 같은 진단 안 띄움).
-  const activeDiag = (state.diagnoses || []).find(d => d.status === 'active');
+  const _lastUserMsgForDiag = (state.chatMessages || []).slice().reverse().find(m => m.role === 'user');
+  const _isDeeperContext = !!(_lastUserMsgForDiag && _lastUserMsgForDiag.isDeeperRequest);
+  const activeDiag = _isDeeperContext ? (state.diagnoses || []).find(d => d.status === 'active') : null;
   if (activeDiag && _DIAG_LABELS && _DIAG_LABELS[activeDiag.type]) {
     const lbl = _DIAG_LABELS[activeDiag.type];
-    volatile.push(`[관찰된 패턴 — 자연스러운 흐름에 한 번 인용해도 OK]`);
+    volatile.push(`[관찰된 패턴 — "더 알아보기" 트리거됨, 자연스러운 흐름에 한 번 인용]`);
     volatile.push(`- ${lbl.emoji} ${lbl.name}: ${activeDiag.evidence}`);
     volatile.push(`  · 톤: 외재화("X 패턴이 작동 중" / "너 X적이야" X), 사용자 자기 발견 유도(결론 단정 X)`);
     volatile.push(`  · 한 번만. 사용자 거부하면 다시 X.`);
     volatile.push('');
-    // V4-1o-2: 즉시 shown 마킹 — 같은 진단 다시 안 띄움 (cooldown은 detect 단계에서 30일 가드)
+    // V4-1o-2: 즉시 shown 마킹 — 같은 진단 다시 안 띄움
     if (typeof markDiagnosisShown === 'function') {
       try { markDiagnosisShown(activeDiag.id); } catch (e) { console.warn('markDiagnosisShown:', e); }
     }
@@ -18321,18 +18324,14 @@ function testForceDecisionRoom() {
   }
 }
 
-// V4 9.5: 진단은 채팅 응답에 자연스럽게 한 줄 인용으로 노출 (별도 라벨 X).
-// generateAIResponse가 active 진단을 system prompt에 hint로 inject (line 12632 구현됨).
-// 이미 본 진단(shown)은 다시 안 띄움 — 이 버튼은 active 상태로 복구해 다음 응답에 다시 인용되게 함.
+// V4 9.5 + 사용자 정합: 진단은 "더 알아보기" 눌렀을 때만 자연 인용.
+// generateAIResponse는 마지막 user 메시지가 isDeeperRequest=true일 때만 active 진단 hint inject.
+// shown 진단은 active로 복구해 다음 "더 알아보기" 응답에 인용되도록.
 function testForceDiagnosisCitation() {
   let active = (state.diagnoses || []).find(d => d.status === 'active');
   if (!active) {
-    // shown 진단 중 첫 번째를 active로 복구
     const shown = (state.diagnoses || []).find(d => d.status === 'shown');
-    if (shown) {
-      shown.status = 'active';
-      active = shown;
-    }
+    if (shown) { shown.status = 'active'; active = shown; }
   }
   if (!active) {
     showToast('⚠️ 진단 X — "진단 5종 즉시 detect" 먼저 누르거나 시드 박기');
@@ -18341,7 +18340,7 @@ function testForceDiagnosisCitation() {
   active.status = 'active';
   saveState({ force: true });
   const labels = { weak_tool: '도구 약함', wrong_layer: '차원 안 맞음', value_clash: '가치 상충', avoidance: '회피 패턴', willpower_cap: '의지 임계치' };
-  showToast(`🩺 "${labels[active.type] || active.type}" — 다음 응답에 한 줄로 자연 인용. 대화 탭에서 메시지 보내봐.`);
+  showToast(`🩺 "${labels[active.type] || active.type}" 진단 active. 대화 → AI 응답 밑 [더 알고 싶어 ▾] 클릭하면 응답에 한 줄 자연 인용.`);
 }
 
 // 숙고 질문 새로 박기 (스크랩 진입점 시뮬레이션)
@@ -22208,7 +22207,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.68-diag-mutation-dna-beach';
+const APP_VERSION = 'v4.0.69-diag-on-deeper';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
