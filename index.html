@@ -3653,6 +3653,10 @@
         <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
         <button class="btn-secondary" onclick="exportData()">📤 데이터 내보내기 (백업)</button>
+        <button class="btn-secondary" onclick="importV3Data()">📥 V3 데이터 가져오기 (1회)</button>
+        <div style="font-size:11px; color:var(--text-dim); padding:4px 12px 8px; line-height:1.7;">
+          평소 쓰는 V3 데이터(체크인·대화·미션·진주 등)를 V4 미리보기로 복사. V3 prod는 그대로 안전. V4가 비어있을 때만.
+        </div>
         <button class="btn-secondary" onclick="startInteractiveOnboarding()">🐚 투어 다시 보기</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
 
@@ -4334,7 +4338,9 @@ async function migrateToV6() {
 // 빈 V7 state로 시작하는 신규 V4 사용자는 호출 안 됨 (DEFAULT_STATE.version=7).
 // V3 데이터 import (V4-1b) 시 V6 형식이 들어오면 호출됨.
 // ═══════════════════════════════════════════════════════════════
-async function createV6Backup() {
+async function createV6Backup(dataToBackup) {
+  // dataToBackup 인자 우선 사용 (V3 import 흐름에서 V3 raw 백업용).
+  // 인자 없으면 전역 state 사용 (loadFromCloud 자동 마이그레이션 흐름).
   if (!authUserId) return;
   try {
     const checkResp = await fetch(
@@ -4346,7 +4352,8 @@ async function createV6Backup() {
       console.log('V6 backup already exists');
       return;
     }
-    const backup = JSON.parse(JSON.stringify(state));
+    const source = dataToBackup || state;
+    const backup = JSON.parse(JSON.stringify(source));
     await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -4418,6 +4425,86 @@ async function saveToCloudNow() {
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: state })
     });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// V4-1b: V3 데이터 가져오기 (사용자 명시적 액션, 1회)
+// ───────────────────────────────────────────────────────────────
+// 같은 auth_user_id의 V3 row(`me` 또는 email user_id)를 fetch → V6 백업 row에 보존
+// → state 교체 → migrateToV7 → me_v4 row에 저장 → reload.
+// V3 prod row는 read만, 변경 X. V4가 빈 상태일 때만 가능 (덮어쓰기 방지).
+// ═══════════════════════════════════════════════════════════════
+async function importV3Data() {
+  // Guard: V4에 데이터 있으면 차단
+  const hasV4Data = ((state.entries && state.entries.length) ||
+                     (state.chatMessages && state.chatMessages.length) ||
+                     (state.tasks && state.tasks.length) ||
+                     (state.pearls && state.pearls.length) ||
+                     (state.shellCollection && state.shellCollection.length) ||
+                     (state.missions && state.missions.length)) > 0;
+  if (hasV4Data) {
+    await showConfirmModal({
+      title: 'V4에 이미 데이터 있음',
+      message: 'V3 import는 V4가 빈 상태일 때만 가능.\n먼저 "모든 데이터 초기화" 후 다시 시도.',
+      okLabel: '알았어',
+      cancelLabel: ''
+    });
+    return;
+  }
+
+  const ok = await showConfirmModal({
+    title: 'V3 데이터를 V4로 복사',
+    message: '평소 쓰는 V3 데이터(체크인·대화·미션·진주·프로젝트 등 전부)를 V4 미리보기로 복사. V3 prod는 그대로 안전. 진행?',
+    okLabel: '복사',
+    cancelLabel: '취소'
+  });
+  if (!ok) return;
+
+  setSyncStatus('syncing');
+  showToast('V3 데이터 가져오는 중...');
+
+  try {
+    // 같은 auth_user_id의 모든 row fetch (보통 5개 미만)
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&order=updated_at.desc`,
+      { headers: authHeaders() }
+    );
+    if (!resp.ok) throw new Error('Fetch failed: ' + resp.status);
+    const allRows = await resp.json();
+
+    // V3 row = me_v4도 backup_*도 아닌 row. user_id가 'me'(옛날) 또는 email(최근) 둘 다 cover.
+    const v3Row = allRows.find(r =>
+      r.user_id !== V4_USER_ID &&
+      !(r.user_id || '').startsWith('backup_')
+    );
+    if (!v3Row || !v3Row.data) {
+      showToast('V3 데이터 못 찾았어. 빈 상태 유지.');
+      setSyncStatus('online');
+      return;
+    }
+    const v3Data = v3Row.data;
+    console.log(`[V4 import] V3 row 발견 (user_id=${v3Row.user_id}, version=${v3Data.version || '?'})`);
+
+    // V3 raw → backup_v6_pre_v7 row 보존 (혹시 import 망쳐도 복구용)
+    await createV6Backup(v3Data);
+
+    // state 교체 + V7 보강
+    state = JSON.parse(JSON.stringify(v3Data));
+    migrateToV7();
+    state.version = 7;
+
+    // me_v4 row에 저장
+    await saveToCloudNow();
+    setSyncStatus('online');
+
+    showToast('✅ V3 데이터 가져옴. 새로고침...');
+    setTimeout(() => location.reload(), 1500);
+  } catch (e) {
+    console.error('V3 import error:', e);
+    setSyncStatus('error');
+    // 안티-시코판시: "실패" 단어 회피
+    showToast('가져오지 못했어: ' + (e.message || e));
   }
 }
 
@@ -14347,7 +14434,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.0-data-v7';
+const APP_VERSION = 'v4.0.1-data-import';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
