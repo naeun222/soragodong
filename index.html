@@ -3048,6 +3048,39 @@
     border-color: rgba(143,200,143,0.32) !important;
     background: linear-gradient(135deg, rgba(143,200,143,0.08), rgba(139,126,196,0.04)) !important;
   }
+  /* V4-1q: 깨달음 태그 칩 갤러리 (grid 뷰) */
+  .archive-tag-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin: 4px 0 14px;
+    padding: 4px 0;
+  }
+  .archive-tag-chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s, color 0.15s;
+  }
+  .archive-tag-chip:active { transform: scale(0.95); }
+  .archive-tag-chip.active {
+    background: linear-gradient(135deg, rgba(139,126,196,0.25), rgba(201,169,110,0.15));
+    border-color: rgba(139,126,196,0.50);
+    color: #b9aedc;
+    font-weight: 500;
+  }
+  .archive-tag-chip.clear {
+    border-style: dashed;
+    color: var(--accent2);
+  }
+  .tag-chip-count {
+    font-size: 10px;
+    color: var(--text-soft);
+    margin-left: 2px;
+  }
 
   /* V3.13.x: 깨달음 모달 내부 */
   .archive-modal-headline {
@@ -11786,6 +11819,7 @@ const _LIB_CAT_TO_VIEW = {
 let _currentLens = 'diary';
 let _archiveSearchQuery = '';
 let _libView = 'grid';  // V4-1p: 그리드 ↔ 타임라인 토글
+let _archiveTagFilter = null;  // V4-1q: 깨달음 태그 칩 필터 (단일 선택)
 
 function renderArchive() {
   // 모든 하위 뷰 렌더; switchLibraryCat이 표시/숨김 처리
@@ -11827,6 +11861,12 @@ function switchLibraryView(view) {
     b.classList.toggle('active', b.dataset.view === view);
   });
   renderArchive();
+}
+
+// V4-1q: 깨달음 태그 칩 필터 (단일 선택, 같은 태그 다시 누르면 해제)
+function setArchiveTagFilter(tag) {
+  _archiveTagFilter = (_archiveTagFilter === tag) ? null : tag;
+  renderLensArchive();
 }
 
 function searchArchive() {
@@ -12507,12 +12547,35 @@ function renderLensArchive() {
   if (!container) return;
   const items = (state.archive || []);
   const q = _archiveSearchQuery;
-  const filtered = q
+  let filtered = q
     ? items.filter(a => [a.headline, a.body, a.insight, a.userMemo, a.date, a.source, ...(a.tags || [])].filter(Boolean).join(' ').toLowerCase().includes(q))
     : items;
+  // V4-1q: 태그 칩 필터 (grid 모드)
+  if (_libView === 'grid' && _archiveTagFilter) {
+    filtered = filtered.filter(a => Array.isArray(a.tags) && a.tags.includes(_archiveTagFilter));
+  }
 
   let html = '<div class="archive-section-wrap">';
   html += `<div class="archive-section-label">✦ 저장한 깨달음${items.length ? ` <span class="al-count">${items.length}</span>` : ''}</div>`;
+
+  // V4-1q: grid 뷰에서 자주 쓰는 태그 5-10개 칩
+  if (_libView === 'grid') {
+    const tagCount = {};
+    items.forEach(a => {
+      if (Array.isArray(a.tags)) {
+        a.tags.forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; });
+      }
+    });
+    const topTags = Object.entries(tagCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+    if (topTags.length > 0) {
+      html += `<div class="archive-tag-chips">
+        ${_archiveTagFilter ? `<button class="archive-tag-chip clear" onclick="setArchiveTagFilter(null)">✕ 필터 해제</button>` : ''}
+        ${topTags.map(([t, c]) => `<button class="archive-tag-chip${_archiveTagFilter === t ? ' active' : ''}" onclick="setArchiveTagFilter('${escapeHtml(t).replace(/'/g, "\\'")}')">#${escapeHtml(t)} <span class="tag-chip-count">${c}</span></button>`).join('')}
+      </div>`;
+    }
+  }
 
   if (filtered.length === 0) {
     if (q) {
@@ -16410,7 +16473,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.19-grid-toggle';
+const APP_VERSION = 'v4.0.20-tag-gallery';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
