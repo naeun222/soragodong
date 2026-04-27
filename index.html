@@ -6713,14 +6713,6 @@
       <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">아카이브로 돌아가기</button>
     </div>
 
-    <!-- ARCHIVE-DECISIONS: 모든 마법의 소라고동 모음 -->
-    <div class="screen" id="screen-archive-decisions">
-      <div class="screen-title">⚖️ 마법의 소라고동</div>
-      <div class="screen-sub">지금까지 거쳐온 큰 결정들.</div>
-      <div id="archiveDecisionsList"></div>
-      <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">아카이브로 돌아가기</button>
-    </div>
-
     <!-- V4-1j-b: 숙고 채팅 별도 화면 (screen-reflection) -->
     <div class="screen" id="screen-reflection">
       <div class="reflection-screen-header">
@@ -7532,8 +7524,16 @@ async function loadFromCloud() {
     state.missions = stripSeed(state.missions, 'mis_seed_');
     state.pearls = stripSeedAlt(state.pearls, 'pearl_seed_', 'dpearl_seed_');
     state.archive = stripSeed(state.archive, 'archive_seed_');
-    state.topicCards = stripSeed(state.topicCards, 'strat_seed_');
+    state.topicCards = stripSeedAlt(state.topicCards, 'strat_seed_', 'tc_seed_');
     state.reflectionQuestions = stripSeed(state.reflectionQuestions, 'rq_seed_');
+    // 사용자 요청 2026-04-28: 빠진 시드 prefix 추가 (cloud 누수 방지)
+    state.projects = stripSeed(state.projects, 'proj_seed_');
+    state.starts = stripSeed(state.starts, 'start_seed_');
+    state.quarterlyReviews = stripSeed(state.quarterlyReviews, 'qr_seed_');
+    state.decisions = stripSeed(state.decisions, 'dec_seed_');
+    state.insights = stripSeed(state.insights, 'ins_seed_');
+    state.diagnoses = stripSeed(state.diagnoses, 'diag_seed_');
+    state.monthlyReviews = stripSeed(state.monthlyReviews, 'mr_seed_');
     if (Array.isArray(state.shellCollection)) {
       const before = state.shellCollection.length;
       state.shellCollection = state.shellCollection.filter(s => !(s && typeof s._id === 'string' && (s._id.startsWith('shell_seed_'))));
@@ -9067,7 +9067,7 @@ const ONBOARDING_STEPS = [
     id: 'finish',
     targetSelector: null,
     title: '준비 끝 ✦',
-    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br><b>다시 한 번 — 너보다 너를 더 잘 아는 나 소라고동이, 네가 더 나은 선택을 할 수 있도록 길라잡이를 해줄게</b> ✦<br><br>· <b>핵심 1: 체크인</b> — 매일 (또는 원할 때) 30초. 너의 거울이 쌓이는 곳.<br>· <b>핵심 2: 대화 탭</b> — 무슨 말이든. 4단 분석 + 너만의 전략으로 박아.<br>· 나머지 (도서관 / 양생방 / 모래사장 / 실행 / 나)는 부가 — 네가 쌓는 만큼 자연스럽게 차올라.<br><br>매일 안 봐도 OK. 너에게 맞춰지는 도구야 — 안 통하면 알려줘.<br><br><span class="small">튜토리얼 동안 만든 데이터는 내가 다 지웠어. 진짜 시작!</span>',
+    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br><b>다시 한 번 — 너보다 너를 더 잘 아는 나 소라고동이, 네가 더 나은 선택을 할 수 있도록 케어해줄게</b> ✦<br><br>· <b>핵심 1: 체크인</b> — 매일 (또는 원할 때) 30초. 너의 거울이 쌓이는 곳.<br>· <b>핵심 2: 대화 탭</b> — 무슨 말이든. 4단 분석 + 너만의 전략으로 박아.<br>· 나머지 (도서관 / 양생방 / 모래사장 / 실행 / 나)는 부가 — 네가 쌓는 만큼 자연스럽게 차올라.<br><br>매일 안 봐도 OK. 너에게 맞춰지는 도구야.<br><br><b>이제 같이 가보자. 한 걸음씩, 너답게.</b> ✦🐚',
     waitFor: 'next',
     nextLabel: '시작! ✦'
   }
@@ -9695,6 +9695,10 @@ function onbFinish() {
     );
     state.decisions = (state.decisions || []).filter(d =>
       !d.startedAt || new Date(d.startedAt).getTime() < startMs
+    );
+    // 사용자 요청 2026-04-28: 튜토리얼 중 만든 starts(몰입 세션) 정리
+    state.starts = (state.starts || []).filter(s =>
+      !s.startedAt || new Date(s.startedAt).getTime() < startMs
     );
     // V3.13.x: askDeeper → 🧬 전략으로 저장된 토픽 카드 정리
     state.topicCards = (state.topicCards || []).filter(c =>
@@ -14413,7 +14417,7 @@ function renderChat() {
 
 function formatAIResponse(text) {
   let cleaned = text.replace(/```json[\s\S]*?```/g, '').trim();
-  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
   let formatted = escapeHtml(cleaned);
   const labels = ['[내가 본 것]', '[이게 뭐냐면]', '[이럴 땐 이렇게]', '[오늘의 제안]'];
   labels.forEach(label => {
@@ -14954,13 +14958,13 @@ async function generateAIResponse(modelOverride) {
             display = display.replace(/```json[\s\S]*$/g, '');
             display = display.replace(/```[\s\S]*$/g, ''); // 미완성 fence
             display = display.replace(/\n*\{[\s\S]*$/g, (match) => {
-              if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)/.test(match)) {
+              if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)/.test(match)) {
                 return '';
               }
               return match;
             });
             // V3.12.x: orphan JSON 키 (앞에 { 없이 시작) 잡기 — streaming 중 잘렸을 때
-            display = display.replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)"[\s\S]*$/g, '');
+            display = display.replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)"[\s\S]*$/g, '');
             display = display.trim();
             state.chatMessages[state.chatMessages.length - 1].content = display;
             if (_streamFirstChunk) {
@@ -15000,8 +15004,8 @@ async function generateAIResponse(modelOverride) {
     const finalDisplay = fullText
       .replace(/```json[\s\S]*?```/g, '')
       .replace(/```[\s\S]*$/g, '')
-      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)[\s\S]*\}/g, '')
-      .replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)"[\s\S]*$/g, '')
+      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}/g, '')
+      .replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)"[\s\S]*$/g, '')
       .trim();
     state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
 
@@ -15186,6 +15190,36 @@ async function processAnalysis(analysis, messageIdx) {
     });
     if (added > 0) {
       showToast(`📅 ${added}개 일정 박힘`);
+    }
+  }
+  // 사용자 요청 2026-04-28: 채팅에서 진주 추가 요청 추출 → state.pearls에 자동 등록
+  if (analysis.extracted_pearls && Array.isArray(analysis.extracted_pearls)) {
+    if (!Array.isArray(state.pearls)) state.pearls = [];
+    const validCats = ['음악', '음식', '장소', '순간', '사람', '기타'];
+    let addedPearls = 0;
+    analysis.extracted_pearls.forEach(p => {
+      if (!p || !p.content || typeof p.content !== 'string') return;
+      const content = p.content.trim().slice(0, 200);
+      if (!content) return;
+      const category = validCats.includes(p.category) ? p.category : '기타';
+      // 같은 content 중복 방지 (대소문자 무시)
+      const dup = state.pearls.some(x => x && x.content &&
+        x.content.toLowerCase().trim() === content.toLowerCase()
+      );
+      if (dup) return;
+      state.pearls.push({
+        id: 'pearl_chat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        category,
+        content,
+        note: p.note ? String(p.note).trim().slice(0, 200) : null,
+        createdAt: new Date().toISOString(),
+        type: 'pearl',
+        source: 'chat'
+      });
+      addedPearls++;
+    });
+    if (addedPearls > 0) {
+      showToast(`🔮 ${addedPearls}개 진주 박힘`);
     }
   }
   saveState();
@@ -15394,6 +15428,7 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
   "insight": "오늘 대화의 핵심 통찰 한 문장",
   "extracted_tasks": ["사용자가 흘린 할 일 (예: '샴푸 사기', '교수님 메일 답하기'). 명확한 행동만. 추측 X."],
   "extracted_schedule": [{"title": "미팅", "start": "14:00", "end": "15:00"}],
+  "extracted_pearls": [{"content": "LNGSHOT - Vanilla Days", "category": "음악", "note": "새벽 카페에서 발견"}],
   "decision_suggested": {"title": "결정 주제 (10-30자, 예: '대학원 그만둘지 결정')", "reason": "왜 14일 숙성이 좋은지 짧게"},
   "proposal": {
     "title": "미션 제목 (10-25자, 구체적이고 작게)",
@@ -15405,6 +15440,8 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 extracted_tasks: 사용자가 대화에서 "~해야 해", "~하기로 했어", "나중에 ~할게" 같은 명확한 할 일/의도를 표현했을 때만 추출. 추측이나 일반론 X.
 
 extracted_schedule: 사용자가 "X시 Y하자", "내일 14시 미팅", "6시 운동 일정 박아줘" 같은 시간 명시 일정/요청을 표현했을 때만 추출. start/end는 "HH:MM" 형식. 시간 없이 흐릿한 거 X. (사용자 요청 2026-04-28: 채팅으로 일정 등록)
+
+extracted_pearls: 사용자가 "진주에 추가해줘", "진주로 박아줘", "이거 진주야", "이 곡 진주에 넣어줘" 같이 **명시적으로 진주(살아있다 느낀 순간) 추가를 요청**했을 때만 추출. category는 '음악'/'음식'/'장소'/'순간'/'사람'/'기타' 중 하나로 매핑. content는 짧고 구체적으로. 그냥 "좋다"/"행복하다" 같은 표현 X — 명시적 요청만. (사용자 요청 2026-04-28)
 
 decision_suggested: 사용자가 큰 결정을 고민 중일 때만 추가. 트리거: "이직", "그만둘까", "헤어질까", "X할까 Y할까", "결정해야", "고민이야", 진로/관계/큰 구매 같은 무거운 선택. 대화 1-2번 듣고 패턴이 보이면 제안. 작은 일상 결정엔 X. 강요 X — 한 번 거절하면 같은 주제로 다시 X.
 
@@ -19950,7 +19987,7 @@ function renderChatArchiveModal() {
               const cls = m.role === 'user' ? 'user' : 'assistant';
               let content = m.content || '';
               content = content.replace(/```json[\s\S]*?```/g, '').trim();
-              content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+              content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
               const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
               return `<div class="cac-msg ${cls}">
                 <div class="cac-msg-time">${time}</div>
@@ -26124,52 +26161,7 @@ function showArchiveDecisions() {
   if (typeof renderDecisionsList === 'function') renderDecisionsList();
 }
 
-function renderArchiveDecisions() {
-  const container = document.getElementById('archiveDecisionsList');
-  if (!container) return;
-  
-  const decisions = (state.decisions || []).slice().sort((a, b) =>
-    new Date(b.startedAt) - new Date(a.startedAt)
-  );
-  
-  if (decisions.length === 0) {
-    container.innerHTML = `<div class="timeline-empty">
-      <div class="icon">⚖️</div>
-      아직 마법의 소라고동이 없어.<br>
-      홈에서 "큰 결정 도와줘"로 시작.
-    </div>`;
-    return;
-  }
-  
-  const statusLabels = {
-    'in_progress': { label: '🌀 숙성 중', color: 'var(--accent)' },
-    'decided': { label: '✓ 완료', color: '#7ab87a' },
-    'abandoned': { label: '✗ 중단', color: 'var(--text-dim)' }
-  };
-  
-  container.innerHTML = decisions.map(d => {
-    const status = statusLabels[d.status] || statusLabels['in_progress'];
-    const startDate = new Date(d.startedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-    const days = Math.floor((Date.now() - new Date(d.startedAt).getTime()) / 86400000);
-    
-    let outcome = '';
-    if (d.status === 'decided' && d.finalDecision) {
-      outcome = `<div style="margin-top:8px; padding:8px 10px; background:var(--surface2); border-radius:8px; font-size:12px; color:var(--accent2);">최종: ${escapeHtml(d.finalDecision)}</div>`;
-    }
-    
-    return `
-      <div class="timeline-day" onclick="openDecision('${d.id}')" style="cursor:pointer;">
-        <div class="timeline-day-date" style="color:${status.color};">${status.label}</div>
-        <div class="timeline-day-summary">${escapeHtml(d.title || '(제목 없음)')}</div>
-        <div class="timeline-day-meta">
-          <span>${startDate} 시작</span>
-          <span>${d.status === 'in_progress' ? `${days}일째` : ''}</span>
-        </div>
-        ${outcome}
-      </div>
-    `;
-  }).join('');
-}
+// renderArchiveDecisions 함수 삭제 (사용자 요청 2026-04-28) — showArchiveDecisions가 'decisions' 화면으로 통일된 후 dead code
 
 // Update count badges on archive quick buttons
 function updateArchiveQuickCounts() {
@@ -27312,7 +27304,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.127-stories-pause';
+const APP_VERSION = 'v4.0.128-cleanup-pearls';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
