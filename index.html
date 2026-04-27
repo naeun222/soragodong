@@ -16738,12 +16738,15 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
     ? `"${card.title}" → ${layerName} 차원 진화 시작.\n어떤 상황이야? 오늘 시도하려는 거 짧게 알려줘.\n그 맥락에 맞춰 '오늘의 제안' 만들어줄게.`
     : `"${card.title}" — 다시 시도해보자!\n어떤 상황이야? 오늘 하려는 거 짧게 알려줘.\n그 맥락에 맞춰 '오늘의 제안' 만들어줄게.`;
 
+  // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드 시 예시 자동 입력
+  const _isAuto = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
   const situation = await showInputModal({
     title: '🌿 어떤 상황이야?',
     message: introMsg,
     placeholder: '예: 내일 발표인데 자료 준비가 안 돼서 카페에서 30분 집중 시도',
     multiline: true,
-    okLabel: '제안 받기 →'
+    okLabel: '제안 받기 →',
+    defaultValue: _isAuto ? '카페에서 30분 집중' : ''
   });
   if (!situation) return;
 
