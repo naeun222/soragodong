@@ -5761,6 +5761,15 @@
     background: transparent;
     animation: onbPulse 2s ease-in-out infinite;
   }
+  /* dimBackground:false 일 때는 박스 윤곽만 (배경 어둡게 X) */
+  .onb-spotlight.no-dim {
+    box-shadow: 0 0 16px 4px rgba(201,169,110,0.6), 0 0 0 2px rgba(201,169,110,0.2);
+    animation: onbPulseNoDim 2s ease-in-out infinite;
+  }
+  @keyframes onbPulseNoDim {
+    0%, 100% { box-shadow: 0 0 16px 4px rgba(201,169,110,0.6), 0 0 0 2px rgba(201,169,110,0.2); }
+    50%      { box-shadow: 0 0 28px 10px rgba(201,169,110,0.85), 0 0 0 3px rgba(201,169,110,0.35); }
+  }
   @keyframes onbPulse {
     0%, 100% { box-shadow: 0 0 0 9999px rgba(15,14,23,0.7), 0 0 16px 4px rgba(201,169,110,0.5); }
     50% { box-shadow: 0 0 0 9999px rgba(15,14,23,0.7), 0 0 28px 10px rgba(201,169,110,0.85); }
@@ -8589,12 +8598,13 @@ function onbPositionStep(step, retryCount) {
     }
   }
   // V3.13.x: 자동 스크롤 (dimBackground !== false에서만)
+  // 2026-04-27: bottom-nav (76px+) 가림 방지 — 하단 버퍼 130px 로 확대
   if (target && step.dimBackground !== false) {
     const r0 = target.getBoundingClientRect();
     const vhCheck = window.innerHeight;
     const cs = window.getComputedStyle(target);
     const isFixed = cs.position === 'fixed' || cs.position === 'sticky';
-    const outOfView = r0.bottom < 60 || r0.top > vhCheck - 60;
+    const outOfView = r0.bottom < 60 || r0.top > vhCheck - 130 || r0.bottom > vhCheck - 90;
     if (outOfView && !isFixed && window._onbScrolledStep !== _onbStep) {
       window._onbScrolledStep = _onbStep;
       spotlight.style.display = 'none';
@@ -8605,8 +8615,9 @@ function onbPositionStep(step, retryCount) {
     }
   }
 
-  // V3.13.x: spotlight + coachmark 위치 잡기 (dimBackground !== false에서만)
-  if (step.dimBackground !== false) {
+  // V3.13.x: spotlight + coachmark 위치 잡기
+  // 2026-04-27: dimBackground:false도 박스 윤곽 (no-dim) 표시 — target 어디 있는지 보이게
+  if (step.dimBackground !== false || target) {
     if (target) {
       const rect = target.getBoundingClientRect();
       const padding = 8;
@@ -8615,6 +8626,8 @@ function onbPositionStep(step, retryCount) {
       spotlight.style.top = (rect.top - padding) + 'px';
       spotlight.style.width = (rect.width + padding * 2) + 'px';
       spotlight.style.height = (rect.height + padding * 2) + 'px';
+      // dimBackground:false 면 박스만 (어둡지 X), 아니면 기존 box-shadow 다이밍
+      spotlight.classList.toggle('no-dim', step.dimBackground === false);
       // V3.12.x: target 있을 때 mask 숨김 + overlay 클릭 패스스루 (inline 강제)
       mask.classList.remove('show-full');
       const ov = document.getElementById('onbOverlay');
