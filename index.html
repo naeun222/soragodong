@@ -12231,15 +12231,16 @@ function openDnaPearlStory(pearlId) {
     year: 'numeric', month: 'long', day: 'numeric'
   });
 
+  // 사용자 요청 2026-04-28: DNA 진주 3종 라벨 통일
   const pathLabel = ({
-    'one-shot':        '✨ 단번 결정화',
-    'quick-discovery': '🧭 빠른 발견',
-    'evolved':         '🧬 진화 완료'
+    'one-shot':        '🌱 빠른 발견',
+    'quick-discovery': '🌳 영그는 길',
+    'evolved':         '🧬 진화한 길'
   })[pearl.embodimentPath] || '✨ DNA 진주';
 
   const pathColor = ({
-    'one-shot':        '#ffd700',
-    'quick-discovery': '#5fcfba',
+    'one-shot':        '#8fc88f',
+    'quick-discovery': '#ffd93d',
     'evolved':         'url(#dna-mini-rainbow)'
   })[pearl.embodimentPath] || '#ffd700';
 
@@ -15680,30 +15681,31 @@ async function promptCrystallize(card) {
 function showCrystallizeRitualModal(card, dnaPearl) {
   const path = dnaPearl.embodimentPath;
   // 5.8 톤 (path별)
+  // 사용자 요청 2026-04-28: 3종 라벨 통일 — 빠른 발견 / 영그는 길 / 진화한 길
   const ritualMessages = {
     'one-shot': {
-      emoji: '✨',
-      label: '단번 결정화',
-      msg: `깨끗한 결정화. 첫 가닥이 너 안에 완전히 자리 잡았어.\n\n이제 너 일부야 — 의식 X 자동 발동.\n\n너의 첫 DNA 진주.`
+      emoji: '🌱',
+      label: '빠른 발견',
+      msg: `한 차원에서 바로 통했어. 너 자신을 잘 알아서 빠르게 길 찾은 거야.\n\n이제 너 일부 — 의식 X 자동 발동.\n\n너만의 진주.`
+    },
+    'quick-discovery': {
+      emoji: '🌳',
+      label: '영그는 길',
+      msg: `${dnaPearl.totalAttempts}번 반복 시도로 한 차원에서 끝까지 영글었어.\n\n천천히 도달한 곳, 너만의 진주.`
     },
     'evolved': {
       emoji: '🧬',
-      label: '진화 완료',
-      msg: `${dnaPearl.totalAttempts}번 시도, ${Math.max(0, dnaPearl.totalGens - 1)}번 진화, 결국 너에게 맞는 모양 됨.\n\n이 길 걸어와서 도착한 곳, 너만의 진주야.`
-    },
-    'quick-discovery': {
-      emoji: '🧭',
-      label: '빠른 발견',
-      msg: `너 자신을 잘 알아서 빠르게 길 찾았어.\n\n너의 또 하나 진주.`
+      label: '진화한 길',
+      msg: `${dnaPearl.totalAttempts}번 시도, ${Math.max(0, dnaPearl.totalGens - 1)}번 진화, 결국 너에게 맞는 모양 됨.\n\n여러 차원 거쳐 도착한 곳, 너만의 진주.`
     }
   };
   const m = ritualMessages[path] || ritualMessages['one-shot'];
 
-  // 결정 다면체 외곽 색 (path별)
+  // 결정 다면체 외곽 색 (path별 — 사용자 요청 2026-04-28 색상 다양화)
   const outerColor = {
-    'one-shot':        '#ffd700',
-    'quick-discovery': '#5fcfba',
-    'evolved':         'url(#crystallize-rainbow)'
+    'one-shot':        '#8fc88f',  // 빠른 발견 — 새싹 초록
+    'quick-discovery': '#ffd93d',  // 영그는 길 — 황금
+    'evolved':         'url(#crystallize-rainbow)'  // 진화한 길 — 무지개
   }[path] || '#ffd700';
   const safeOuter = (typeof outerColor === 'string' && outerColor.startsWith('#')) ? outerColor : '#ffd700';
 
@@ -20256,12 +20258,12 @@ function testSeedV4Data() {
       problem: '새벽 작업 → 다음날 큰 결정 후회 반복. 잠 부족 시 reactive choice.',
       concept: '인지 자원 고갈 시 prefrontal cortex 기능 저하. 휴식 = reset.',
       action: '잠 6시간 미만이면 그날은 큰 결정 X. 다음날로 미루기.' },
-    { title: 'SNS 자동 종료', status: 'working', gens: 3, path: 'evolved', attempts: [['didnt',2], ['didnt',1], ['worked',3]], days: 50,
+    { title: 'SNS 자동 종료', status: 'embodied', gens: 3, path: 'evolved', attempts: [['didnt',2], ['didnt',1], ['worked',5]], days: 50,
       problem: 'SNS 잠깐만 보다가 1시간 가버림. 죄책감 + 진도 X.',
       concept: 'Variable reward → 자동 행동 강화. 의지 X로 끊기 어려움. 환경 차단 ○.',
       action: '작업 시작 전 SNS 앱 타이머 30분. 시간 차면 강제 종료.' },
     // Q-2 — 실험 사이클
-    { title: '실험 새벽 사이클', status: 'archived', gens: 2, attempts: [['worked',2], ['worked',1]], layers: ['L2','L3'], days: 130,
+    { title: '실험 새벽 사이클', status: 'embodied', gens: 2, path: 'quick-discovery', attempts: [['worked',2], ['worked',5]], layers: ['L2','L3'], days: 130,
       problem: '실험 데이터 처리 낮에 못함. 자꾸 미룸.',
       concept: 'Energy peak 활용. 새벽 = 인지 resource peak. 분산보다 집중 ○.',
       action: '새벽 5-7시 실험 데이터 처리. 낮엔 다른 일.' },
@@ -20379,19 +20381,48 @@ function testSeedV4Data() {
       type: 'pearl'
     });
   });
-  // DNA 진주 1개 (첫 strategy 결정화)
+  // DNA 진주 시드 3종 — 사용자 요청 2026-04-28 (3가지 path 시각 검증)
+  // 🌱 빠른 발견 (one-shot) — 한 차원에서 바로 통한 전략
   state.pearls.push({
-    id: 'dpearl_seed_1',
+    id: 'dpearl_seed_oneshot',
     type: 'dna_pearl',
-    content: '마감 직전 폭발력 신뢰',
+    content: '주말 회복 자동화',
     category: 'DNA',
-    strategyId: 'strat_seed_0',
+    strategyId: 'strat_seed_6',
     embodimentPath: 'one-shot',
     shellsUsed: [],
-    totalAttempts: 5,
+    totalAttempts: 4,
     totalGens: 1,
+    workedCount: 4,
+    createdAt: new Date(today.getTime() - 100 * 86400000).toISOString()
+  });
+  // 🌳 영그는 길 (quick-discovery) — 한 차원에서 반복으로 도달
+  state.pearls.push({
+    id: 'dpearl_seed_quick',
+    type: 'dna_pearl',
+    content: '실험 새벽 사이클',
+    category: 'DNA',
+    strategyId: 'strat_seed_5',
+    embodimentPath: 'quick-discovery',
+    shellsUsed: [],
+    totalAttempts: 7,
+    totalGens: 2,
+    workedCount: 7,
+    createdAt: new Date(today.getTime() - 80 * 86400000).toISOString()
+  });
+  // 🧬 진화한 길 (evolved) — 여러 차원 거쳐 진화로 도달
+  state.pearls.push({
+    id: 'dpearl_seed_evolved',
+    type: 'dna_pearl',
+    content: 'SNS 자동 종료',
+    category: 'DNA',
+    strategyId: 'strat_seed_4',
+    embodimentPath: 'evolved',
+    shellsUsed: [],
+    totalAttempts: 8,
+    totalGens: 3,
     workedCount: 5,
-    createdAt: new Date(today.getTime() - 14 * 86400000).toISOString()
+    createdAt: new Date(today.getTime() - 30 * 86400000).toISOString()
   });
   // V4-fix v3: 깨달음 archive 25개 (1년 동안, scrap + memo + reflection 골고루)
   state.archive = [];
