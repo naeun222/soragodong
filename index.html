@@ -6855,6 +6855,7 @@
           <button class="btn-secondary" onclick="testForceDiagnosisCitation()" style="margin-top:6px;" title="V4 9.5 + 사용자 정합: 진단은 '더 알아보기' 눌렀을 때만 자연 인용 (사용자 의도 표명 순간). active 진단을 복구해 다음 더 알아보기 응답에 한 줄로 노출되게 함.">🩺 진단 → 다음 "더 알아보기" 응답에 한 줄 인용</button>
           <button class="btn-secondary" onclick="testForceQuestionScrap()" style="margin-top:6px;">🌊 새 숙고 질문 박기 (스크랩)</button>
           <button class="btn-secondary" onclick="testForceTutorial()" style="margin-top:6px;">🎓 풀 튜토리얼 강제 시작</button>
+          <button class="btn-secondary" onclick="testStartTutorialFromStep()" style="margin-top:6px;" title="특정 step부터 튜토리얼 시작 (디버그 편의)">🎯 튜토리얼 step N부터 시작</button>
           <button class="btn-secondary" onclick="testForceExtract()" style="margin-top:6px;">📌 토픽 추출 강제 (가드 우회)</button>
           <button class="btn-secondary" onclick="testForceArchive()" style="margin-top:6px;">📜 채팅 아카이브 강제 (cutoff 우회)</button>
         </div>
@@ -9906,17 +9907,11 @@ function getCurrentWeekKey() { return getWeekKey(new Date()); }
 function getCurrentMonthKey() { return getMonthKey(new Date()); }
 
 function isWeeklyReviewAvailable() {
-  // 사용자 요청 2026-04-28: 일요일에만 (이번주 안 한 경우만)
+  // 사용자 요청 2026-04-28: 일요일에만 (이번주 안 한 경우만, entries 조건 X)
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0 = Sunday
-  if (dayOfWeek !== 0) return false;
+  if (today.getDay() !== 0) return false;
   const currentWeekKey = getCurrentWeekKey();
-  const hasThisWeek = (state.weeklyReviews || []).some(r => r.weekKey === currentWeekKey);
-  if (hasThisWeek) return false;
-  // 첫 리뷰는 데이터 5개 이상 (의미 있게)
-  const last = (state.weeklyReviews || []).slice(-1)[0];
-  if (!last) return (state.entries || []).length >= 5;
-  return true;
+  return !(state.weeklyReviews || []).some(r => r.weekKey === currentWeekKey);
 }
 
 function isMonthlyReviewAvailable() {
@@ -21535,6 +21530,27 @@ function testForceTutorial() {
   if (state.preferences) state.preferences.tutorialVersion = 'full';
   startInteractiveOnboarding();
   showToast('🎓 풀 튜토리얼 시작');
+}
+
+// 사용자 요청 2026-04-28: 특정 step부터 튜토리얼 시작 (디버그 편의)
+async function testStartTutorialFromStep() {
+  if (typeof startInteractiveOnboarding !== 'function') {
+    showToast('⚠️ startInteractiveOnboarding 함수 X');
+    return;
+  }
+  const total = (typeof ONBOARDING_STEPS !== 'undefined') ? ONBOARDING_STEPS.length : 0;
+  const input = await showInputModal({
+    title: '🎯 튜토리얼 step 번호',
+    message: `1 ~ ${total} 사이 (1 = 처음부터 / 41 = yangsaeng_explain).\n현재 ONBOARDING_STEPS 총 ${total}개.`,
+    placeholder: '예: 41',
+    okLabel: '시작'
+  });
+  if (!input) return;
+  const n = parseInt(input.trim(), 10);
+  if (isNaN(n) || n < 1 || n > total) { showToast('잘못된 번호'); return; }
+  if (state.preferences) state.preferences.tutorialVersion = 'full';
+  startInteractiveOnboarding(n - 1);  // 1-indexed → 0-indexed
+  showToast(`🎯 step ${n}부터 시작`);
 }
 
 // 월간 리뷰 강제 생성 (V3.12) — 가드 우회 (dayOfMonth>7 무시)
