@@ -7352,6 +7352,45 @@ async function loadFromCloud() {
       console.log('[testerMode] stale flag 자동 정리됨');
     }
 
+    // 사용자 요청 2026-04-28: 시드 데이터가 cloud에 박혀있는 버그 자동 청소
+    // (이전 버그로 testerMode 동작 중 force=true / 직접 saveToCloudNow 경로에서 cloud로 새던 시드 정리)
+    let seedCleaned = false;
+    const stripSeed = (arr, prefix) => {
+      if (!Array.isArray(arr)) return arr;
+      const before = arr.length;
+      const filtered = arr.filter(it => !(it && typeof it.id === 'string' && it.id.startsWith(prefix)));
+      if (filtered.length !== before) seedCleaned = true;
+      return filtered;
+    };
+    const stripSeedAlt = (arr, idPrefix, altPrefix) => {
+      if (!Array.isArray(arr)) return arr;
+      const before = arr.length;
+      const filtered = arr.filter(it => {
+        if (!it) return false;
+        if (typeof it.id === 'string' && (it.id.startsWith(idPrefix) || (altPrefix && it.id.startsWith(altPrefix)))) return false;
+        if (typeof it._id === 'string' && it._id.startsWith('shell_seed_')) return false;
+        return true;
+      });
+      if (filtered.length !== before) seedCleaned = true;
+      return filtered;
+    };
+    state.tasks = stripSeed(state.tasks, 'task_seed_');
+    state.missions = stripSeed(state.missions, 'mis_seed_');
+    state.pearls = stripSeedAlt(state.pearls, 'pearl_seed_', 'dpearl_seed_');
+    state.archive = stripSeed(state.archive, 'archive_seed_');
+    state.topicCards = stripSeed(state.topicCards, 'strat_seed_');
+    state.reflectionQuestions = stripSeed(state.reflectionQuestions, 'rq_seed_');
+    if (Array.isArray(state.shellCollection)) {
+      const before = state.shellCollection.length;
+      state.shellCollection = state.shellCollection.filter(s => !(s && typeof s._id === 'string' && (s._id.startsWith('shell_seed_'))));
+      if (state.shellCollection.length !== before) seedCleaned = true;
+    }
+    if (seedCleaned) {
+      console.log('[seed cleanup] cloud/localStorage에 박혀있던 시드 데이터 자동 정리됨');
+      // 정리 후 cloud에 즉시 저장 (testerMode false 상태이므로 안전)
+      try { await saveToCloudNow(); } catch (e) { console.warn('seed cleanup save:', e); }
+    }
+
     // === V6 → V7 마이그레이션 (V3 데이터 import 등으로 V6 형식이 들어왔을 때만 발동) ===
     if ((state.version || 0) < 7) {
       await createV6Backup();
