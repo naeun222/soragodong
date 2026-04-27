@@ -3786,6 +3786,250 @@
     border-left: 3px solid var(--purple);
     margin: 10px 0;
   }
+  /* V4-1z: Stories Overlay (분기/연간 리뷰) */
+  .stories-overlay {
+    position: fixed; inset: 0;
+    background: #0a0814;
+    z-index: 900;
+    overflow: hidden;
+    animation: stories-fade-in 0.3s ease;
+  }
+  @keyframes stories-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  .stories-progress {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; gap: 4px;
+    padding: 14px 14px 0;
+    z-index: 5;
+  }
+  .stories-progress-bar {
+    flex: 1; height: 3px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .stories-progress-fill {
+    height: 100%;
+    background: rgba(255,255,255,0.95);
+    width: 0%;
+    transition: width 0.1s linear;
+  }
+  .stories-progress-bar.done .stories-progress-fill { width: 100%; }
+  .stories-close {
+    position: absolute; top: 24px; right: 14px;
+    width: 36px; height: 36px;
+    background: rgba(0,0,0,0.45);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    font-size: 22px; line-height: 1;
+    cursor: pointer;
+    z-index: 6;
+  }
+  .stories-tap-zones {
+    position: absolute; inset: 0;
+    display: flex;
+    z-index: 4;
+  }
+  .stories-tap-prev   { flex: 1; cursor: pointer; }
+  .stories-tap-pause  { flex: 2; cursor: pointer; }
+  .stories-tap-next   { flex: 1; cursor: pointer; }
+  .stories-slide {
+    position: absolute; inset: 0;
+    padding: 50px 24px 70px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    color: white;
+    text-align: center;
+    overflow-y: auto;
+    z-index: 3;
+    animation: stories-slide-in 0.35s ease;
+  }
+  @keyframes stories-slide-in {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  /* 슬라이드 톤별 background */
+  .stories-slide.tone-emo  { background: linear-gradient(180deg, #2d1f3d 0%, #0a0814 100%); }
+  .stories-slide.tone-emo-2 { background: linear-gradient(180deg, #1a2438 0%, #0a0814 100%); }
+  .stories-slide.tone-emo-3 { background: linear-gradient(180deg, #3a2438 0%, #0a0814 100%); }
+  .stories-slide.tone-emo-4 { background: linear-gradient(180deg, #2a3838 0%, #0a0814 100%); }
+  .stories-slide.tone-emo-5 { background: linear-gradient(180deg, #38302a 0%, #0a0814 100%); }
+  .stories-slide.tone-deep { background: linear-gradient(180deg, #1f1a2e 0%, #0a0814 100%); }
+  .stories-slide.tone-deep-2 { background: linear-gradient(180deg, #1a1f2e 0%, #0a0814 100%); }
+  .stories-slide.tone-deep-3 { background: linear-gradient(180deg, #2a1f1f 0%, #0a0814 100%); }
+  .stories-slide.tone-deep-4 { background: linear-gradient(180deg, #1f2a1f 0%, #0a0814 100%); }
+  /* 큰 hero 숫자 */
+  .stories-hero-num {
+    font-size: 72px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+  .stories-hero-unit {
+    font-size: 18px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 24px;
+  }
+  .stories-label {
+    font-size: 12px;
+    color: rgba(212,167,106,0.85);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .stories-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px;
+    line-height: 1.5;
+    margin-bottom: 18px;
+    word-break: keep-all;
+  }
+  .stories-body {
+    font-size: 14px;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.85);
+    max-width: 320px;
+    word-break: keep-all;
+  }
+  .stories-photo {
+    max-width: 280px;
+    max-height: 320px;
+    border-radius: 14px;
+    object-fit: cover;
+    margin-bottom: 22px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  .stories-music-card {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    margin-bottom: 22px;
+  }
+  .stories-music-art {
+    width: 200px; height: 200px;
+    border-radius: 16px;
+    object-fit: cover;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  }
+  .stories-music-title {
+    font-size: 18px; font-weight: 600;
+    margin-top: 16px;
+  }
+  .stories-music-artist {
+    font-size: 13px;
+    color: rgba(255,255,255,0.65);
+    margin-top: 4px;
+  }
+  .stories-music-play {
+    margin-top: 14px;
+    width: 56px; height: 56px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.30);
+    color: white;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .stories-music-play:active { background: rgba(255,255,255,0.28); }
+  .stories-stat-list {
+    display: flex; flex-direction: column; gap: 14px;
+    width: 100%; max-width: 320px;
+    text-align: left;
+  }
+  .stories-stat-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.06);
+    border-left: 3px solid rgba(212,167,106,0.6);
+    border-radius: 8px;
+  }
+  .stories-stat-row.up    { border-left-color: #8fc88f; }
+  .stories-stat-row.down  { border-left-color: #c98c8c; }
+  .stories-stat-row.neutral { border-left-color: rgba(255,255,255,0.25); }
+  .stories-stat-label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    flex: 1;
+  }
+  .stories-stat-value {
+    font-size: 16px; font-weight: 600;
+    color: white;
+  }
+  .stories-stat-trend {
+    font-size: 11px;
+    margin-left: 6px;
+  }
+  .stories-poem {
+    font-family: 'Gowun Batang', serif;
+    font-size: 26px;
+    font-style: italic;
+    line-height: 1.7;
+    color: rgba(212,167,106,0.95);
+    max-width: 280px;
+    word-break: keep-all;
+  }
+  .stories-pearl-card {
+    padding: 22px 20px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(139,126,196,0.12));
+    border: 1px solid rgba(212,167,106,0.30);
+    border-radius: 16px;
+    max-width: 320px;
+  }
+  .stories-pearl-emoji { font-size: 32px; margin-bottom: 10px; }
+  .stories-pearl-content {
+    font-family: 'Gowun Batang', serif;
+    font-size: 16px;
+    line-height: 1.7;
+    color: white;
+  }
+  .stories-fun-list {
+    display: flex; flex-direction: column; gap: 12px;
+    max-width: 320px; width: 100%;
+    text-align: left;
+  }
+  .stories-fun-item {
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+  }
+  .stories-fun-item b { color: rgba(212,167,106,0.9); font-weight: 600; }
+  .stories-empty {
+    color: rgba(255,255,255,0.55);
+    font-size: 13px;
+    padding: 20px;
+  }
+  .stories-prompt {
+    margin-top: 20px;
+    padding: 14px 18px;
+    background: rgba(212,167,106,0.10);
+    border: 1px dashed rgba(212,167,106,0.40);
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.85);
+    max-width: 320px;
+  }
+  .stories-prompt-label {
+    font-size: 10px;
+    color: rgba(212,167,106,0.85);
+    letter-spacing: 0.12em;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  /* 진화 트리 미니 (Stories용) */
+  .stories-evol-tree {
+    text-align: left;
+    width: 100%; max-width: 320px;
+    background: rgba(255,255,255,0.04);
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.85);
+  }
+  .stories-evol-row { display: flex; gap: 6px; align-items: center; }
+
   /* V4-fix: 분기 리뷰 deep dive — 6 비교 축 시각 카드 */
   .dd-grid {
     display: grid;
@@ -5363,6 +5607,18 @@
         <div class="exec-modal-sub">여기 넣을 작업 선택. 또는 새로 추가.</div>
         <div id="blockPickerContent"></div>
         <button class="btn-secondary" onclick="closeBlockPicker()" style="margin-top:14px; width:100%;">닫기</button>
+      </div>
+    </div>
+
+    <!-- V4-1z: Stories Overlay (분기/연간 리뷰 Replay식) -->
+    <div class="stories-overlay" id="storiesOverlay" style="display:none;">
+      <div class="stories-progress" id="storiesProgress"></div>
+      <button class="stories-close" onclick="closeStories()" aria-label="닫기">×</button>
+      <div class="stories-slide" id="storiesSlide"></div>
+      <div class="stories-tap-zones">
+        <div class="stories-tap-prev" onclick="storiesPrev()"></div>
+        <div class="stories-tap-pause" onmousedown="storiesPause()" onmouseup="storiesResume()" ontouchstart="storiesPause()" ontouchend="storiesResume()"></div>
+        <div class="stories-tap-next" onclick="storiesNext()"></div>
       </div>
     </div>
 
@@ -19138,6 +19394,807 @@ function showArchiveReviews() {
   renderArchiveReviews();
 }
 
+// V4-1z: Stories 컴포넌트 (분기/연간 리뷰 Replay식)
+// 진지(변화/진화/AI 새 특징/패턴/narrative) + 감성(hook/곡/진주/재미/시) 5:5
+let _storiesState = null;
+
+async function openQuarterlyStories(reviewId) {
+  const review = (state.quarterlyReviews || []).find(r => r.id === reviewId);
+  if (!review) {
+    showToast('분기 리뷰 데이터 없음');
+    return;
+  }
+  const slides = await buildQuarterlySlides(review);
+  _openStoriesPlayer(slides, 'quarterly');
+}
+
+async function openAnnualStories(year) {
+  // 한 해의 4 분기 + 그 외 데이터 종합
+  const targetYear = year || new Date().getFullYear() - 1;  // default 작년
+  const yearReviews = (state.quarterlyReviews || []).filter(r =>
+    r.quarterKey && r.quarterKey.startsWith(String(targetYear) + '-Q')
+  );
+  if (yearReviews.length === 0) {
+    showToast(`${targetYear}년 분기 리뷰 데이터 없음`);
+    return;
+  }
+  const slides = await buildAnnualSlides(targetYear, yearReviews);
+  _openStoriesPlayer(slides, 'annual');
+}
+
+function _openStoriesPlayer(slides, type) {
+  if (!Array.isArray(slides) || slides.length === 0) {
+    showToast('표시할 슬라이드 없음');
+    return;
+  }
+  _storiesState = {
+    slides,
+    idx: 0,
+    type,
+    autoTimer: null,
+    paused: false,
+    fillTimer: null,
+    fillStart: 0,
+    fillElapsed: 0
+  };
+  const overlay = document.getElementById('storiesOverlay');
+  if (!overlay) return;
+  overlay.style.display = 'block';
+  // hide chat-input-bar (z-index 보호)
+  const chatBar = document.getElementById('chatInputBar');
+  if (chatBar) chatBar.style.visibility = 'hidden';
+  const reflBar = document.getElementById('reflectionInputBar');
+  if (reflBar) reflBar.classList.remove('active');
+  _renderStoriesProgress();
+  _renderStoriesSlide();
+  _startStoriesAutoTimer();
+}
+
+function closeStories() {
+  if (_storiesState && _storiesState.autoTimer) clearTimeout(_storiesState.autoTimer);
+  if (_storiesState && _storiesState.fillTimer) clearInterval(_storiesState.fillTimer);
+  _storiesState = null;
+  const overlay = document.getElementById('storiesOverlay');
+  if (overlay) overlay.style.display = 'none';
+  const chatBar = document.getElementById('chatInputBar');
+  if (chatBar) chatBar.style.visibility = '';
+  // 음악 미리듣기 멈춤
+  if (_currentMusicAudio) {
+    try { _currentMusicAudio.pause(); } catch {}
+    _currentMusicAudio = null;
+    _currentMusicBtn = null;
+  }
+}
+
+function storiesNext() {
+  if (!_storiesState) return;
+  if (_storiesState.idx < _storiesState.slides.length - 1) {
+    _storiesState.idx += 1;
+    _renderStoriesProgress();
+    _renderStoriesSlide();
+    _startStoriesAutoTimer();
+  } else {
+    closeStories();
+  }
+}
+
+function storiesPrev() {
+  if (!_storiesState) return;
+  if (_storiesState.idx > 0) {
+    _storiesState.idx -= 1;
+    _renderStoriesProgress();
+    _renderStoriesSlide();
+    _startStoriesAutoTimer();
+  }
+}
+
+function storiesPause() {
+  if (!_storiesState || _storiesState.paused) return;
+  _storiesState.paused = true;
+  if (_storiesState.autoTimer) {
+    clearTimeout(_storiesState.autoTimer);
+    _storiesState.autoTimer = null;
+  }
+  if (_storiesState.fillTimer) {
+    clearInterval(_storiesState.fillTimer);
+    _storiesState.fillTimer = null;
+  }
+  _storiesState.fillElapsed += Date.now() - _storiesState.fillStart;
+}
+
+function storiesResume() {
+  if (!_storiesState || !_storiesState.paused) return;
+  _storiesState.paused = false;
+  _startStoriesAutoTimer();
+}
+
+function _startStoriesAutoTimer() {
+  if (!_storiesState) return;
+  const SLIDE_DUR = 6000;  // 6초
+  if (_storiesState.autoTimer) clearTimeout(_storiesState.autoTimer);
+  if (_storiesState.fillTimer) clearInterval(_storiesState.fillTimer);
+  // resume이면 fillElapsed 유지 / 새 슬라이드면 reset
+  if (!_storiesState.paused) {
+    // 새 슬라이드 — fillElapsed 리셋 (단 resume에서는 유지)
+  }
+  _storiesState.fillStart = Date.now();
+  _storiesState.autoTimer = setTimeout(() => {
+    storiesNext();
+  }, SLIDE_DUR - _storiesState.fillElapsed);
+  // progress fill 진행
+  const fillEl = document.querySelector('.stories-progress-bar.current .stories-progress-fill');
+  if (fillEl) {
+    _storiesState.fillTimer = setInterval(() => {
+      if (!_storiesState || _storiesState.paused) return;
+      const elapsed = (Date.now() - _storiesState.fillStart) + _storiesState.fillElapsed;
+      const pct = Math.min(100, (elapsed / SLIDE_DUR) * 100);
+      fillEl.style.width = pct + '%';
+    }, 50);
+  }
+}
+
+function _renderStoriesProgress() {
+  const container = document.getElementById('storiesProgress');
+  if (!container || !_storiesState) return;
+  container.innerHTML = _storiesState.slides.map((s, i) => {
+    const cls = i < _storiesState.idx ? ' done' : (i === _storiesState.idx ? ' current' : '');
+    return `<div class="stories-progress-bar${cls}"><div class="stories-progress-fill"></div></div>`;
+  }).join('');
+}
+
+function _renderStoriesSlide() {
+  if (!_storiesState) return;
+  const slide = _storiesState.slides[_storiesState.idx];
+  if (!slide) return;
+  const container = document.getElementById('storiesSlide');
+  if (!container) return;
+  container.className = 'stories-slide ' + (slide.tone || 'tone-deep');
+  container.innerHTML = slide.html;
+  // 이전 슬라이드 음악 멈춤
+  if (_currentMusicAudio) {
+    try { _currentMusicAudio.pause(); } catch {}
+    _currentMusicAudio = null;
+    _currentMusicBtn = null;
+  }
+  // fillElapsed 리셋 (이건 새 슬라이드)
+  _storiesState.fillElapsed = 0;
+}
+
+// 분기 리뷰 → 10 슬라이드 빌더
+async function buildQuarterlySlides(review) {
+  const stats = review.stats || {};
+  const range = (() => {
+    const m = String(review.quarterKey || '').match(/^(\d{4})-Q(\d)$/);
+    if (!m) return null;
+    return getQuarterRange(review.quarterKey);
+  })();
+  const startMs = range ? new Date(range.start).getTime() : 0;
+  const endMs   = range ? new Date(range.end).getTime() : Date.now();
+  const inRange = (iso) => {
+    if (!iso) return false;
+    const t = new Date(iso).getTime();
+    return t >= startMs && t <= endMs;
+  };
+
+  // 직전 분기 비교
+  const prevQ = (() => {
+    const m = String(review.quarterKey || '').match(/^(\d{4})-Q(\d)$/);
+    if (!m) return null;
+    let y = parseInt(m[1]); let q = parseInt(m[2]) - 1;
+    if (q < 1) { q = 4; y -= 1; }
+    return (state.quarterlyReviews || []).find(r => r.quarterKey === `${y}-Q${q}`)?.stats || null;
+  })();
+
+  const slides = [];
+
+  // 1. 감성 hook — 큰 숫자 + 사진
+  const heroPhoto = (() => {
+    const entries = (state.entries || []).filter(e => e.photo && e.date && new Date(e.date + 'T12:00:00').getTime() >= startMs && new Date(e.date + 'T12:00:00').getTime() <= endMs);
+    return entries.length > 0 ? entries[Math.floor(Math.random() * entries.length)].photo : null;
+  })();
+  slides.push({
+    tone: 'tone-emo',
+    html: `
+      <div class="stories-label">${escapeHtml(review.quarterKey || '')}</div>
+      ${heroPhoto ? `<img class="stories-photo" src="${heroPhoto}" alt="">` : ''}
+      <div class="stories-hero-num">${stats.checkins || 0}</div>
+      <div class="stories-hero-unit">번 너 자신을 들여다봤어</div>
+    `
+  });
+
+  // 2. 진지 변화 — 8 차원 + 모드
+  slides.push({
+    tone: 'tone-deep',
+    html: _buildChangeSlideHTML(stats, prevQ)
+  });
+
+  // 3. 감성 top 곡
+  const topMusic = (() => {
+    const musicPearls = (state.pearls || []).filter(p => p.category === '음악' && p.track && inRange(p.createdAt));
+    if (musicPearls.length === 0) return null;
+    // 가장 최근 또는 random
+    return musicPearls[Math.floor(Math.random() * musicPearls.length)];
+  })();
+  slides.push({
+    tone: 'tone-emo-2',
+    html: topMusic ? `
+      <div class="stories-label">너의 사운드트랙</div>
+      <div class="stories-music-card">
+        <img class="stories-music-art" src="${escapeHtml(topMusic.track.artworkUrl || '')}" alt="">
+        <div>
+          <div class="stories-music-title">${escapeHtml(topMusic.track.title || '')}</div>
+          <div class="stories-music-artist">${escapeHtml(topMusic.track.artist || '')}</div>
+        </div>
+        ${topMusic.track.previewUrl ? `<button class="stories-music-play" onclick="event.stopPropagation(); toggleMusicPreview(this, '${escapeHtml(topMusic.track.previewUrl)}')">▶</button>` : ''}
+      </div>
+    ` : `
+      <div class="stories-label">너의 사운드트랙</div>
+      <div class="stories-empty">이 분기 음악 진주 없음<br>다음 분기엔 ✦</div>
+    `
+  });
+
+  // 4. 진지 진화 — 가닥 history
+  slides.push({
+    tone: 'tone-deep-4',
+    html: _buildEvolutionSlideHTML(stats, inRange)
+  });
+
+  // 5. 감성 top 진주
+  const topPearl = (() => {
+    const pearls = (state.pearls || []).filter(p => p.type !== 'dna_pearl' && p.category !== '음악' && inRange(p.createdAt));
+    if (pearls.length === 0) {
+      // 음악 빼고 없으면 음악도 OK
+      const allP = (state.pearls || []).filter(p => p.type !== 'dna_pearl' && inRange(p.createdAt));
+      return allP.length > 0 ? allP[Math.floor(Math.random() * allP.length)] : null;
+    }
+    return pearls[Math.floor(Math.random() * pearls.length)];
+  })();
+  slides.push({
+    tone: 'tone-emo-3',
+    html: topPearl ? `
+      <div class="stories-label">잊지 말 순간</div>
+      <div class="stories-pearl-card">
+        <div class="stories-pearl-emoji">${({음악:'🎵',음식:'🍴',장소:'📍',순간:'✨',사람:'👥'})[topPearl.category] || '💎'}</div>
+        <div class="stories-pearl-content">${escapeHtml(topPearl.content || '')}</div>
+        ${topPearl.note ? `<div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:10px; font-style:italic;">${escapeHtml(topPearl.note)}</div>` : ''}
+      </div>
+    ` : `
+      <div class="stories-label">잊지 말 순간</div>
+      <div class="stories-empty">이 분기 진주 없음</div>
+    `
+  });
+
+  // 6. 진지 AI 새 특징
+  slides.push({
+    tone: 'tone-deep-2',
+    html: _buildNewFeaturesSlideHTML(inRange)
+  });
+
+  // 7. 감성 재미 — Spotify식 light stat
+  slides.push({
+    tone: 'tone-emo-4',
+    html: _buildFunStatsSlideHTML(stats, inRange)
+  });
+
+  // 8. 진지 패턴 — 진단
+  slides.push({
+    tone: 'tone-deep-3',
+    html: _buildPatternsSlideHTML(inRange)
+  });
+
+  // 9. 진지 narrative + prompt
+  slides.push({
+    tone: 'tone-deep',
+    html: _buildNarrativeSlideHTML(review)
+  });
+
+  // 10. 감성 시적 한 줄
+  slides.push({
+    tone: 'tone-emo-5',
+    html: _buildClosingSlideHTML(review, stats)
+  });
+
+  return slides;
+}
+
+// === 슬라이드 HTML 빌더 ===
+function _buildChangeSlideHTML(stats, prevQ) {
+  const rows = [];
+  const trend = (cur, prev) => {
+    if (prev == null) return '';
+    if (cur > prev) return `<span class="stories-stat-trend" style="color:#8fc88f;">↑${cur - prev}</span>`;
+    if (cur < prev) return `<span class="stories-stat-trend" style="color:#c98c8c;">↓${prev - cur}</span>`;
+    return `<span class="stories-stat-trend" style="opacity:0.5;">→</span>`;
+  };
+  const cls = (cur, prev) => {
+    if (prev == null) return 'neutral';
+    if (cur > prev) return 'up';
+    if (cur < prev) return 'down';
+    return 'neutral';
+  };
+  // strengths 늘어남
+  rows.push({
+    label: '✨ 강점 발견',
+    val: stats.strengthsTotal || 0,
+    prev: prevQ?.strengthsTotal,
+    direction: 'up'
+  });
+  // problems
+  rows.push({
+    label: '💧 문제 인식',
+    val: stats.problemsTotal || 0,
+    prev: prevQ?.problemsTotal,
+    direction: 'down'
+  });
+  // growth 차원
+  rows.push({
+    label: '🌱 성장 차원',
+    val: stats.growthCount || 0,
+    prev: prevQ?.growthCount,
+    direction: 'up'
+  });
+  // 모드 빈도 변화 (가장 큰 모드)
+  const topMode = stats.modeCount ? Object.entries(stats.modeCount).sort((a,b) => b[1] - a[1])[0] : null;
+  if (topMode) {
+    const modeMap = { exam:'📚 시험', travel:'✈️ 여행', sick:'🤒 아픔', rest:'🏖 휴식', period:'🩸 월경', drained:'🪫 방전' };
+    rows.push({
+      label: modeMap[topMode[0]] || topMode[0],
+      val: topMode[1] + '일',
+      prev: prevQ?.modeCount?.[topMode[0]] != null ? prevQ.modeCount[topMode[0]] : null,
+      direction: 'neutral',
+      raw: topMode[1]
+    });
+  }
+  return `
+    <div class="stories-label">너의 변화</div>
+    <div class="stories-title">이 분기 너 안에서 일어난 변화</div>
+    <div class="stories-stat-list">
+      ${rows.map(r => `
+        <div class="stories-stat-row ${cls(r.raw != null ? r.raw : r.val, r.prev)}">
+          <span class="stories-stat-label">${r.label}</span>
+          <span class="stories-stat-value">${r.val}${trend(r.raw != null ? r.raw : r.val, r.prev)}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function _buildEvolutionSlideHTML(stats, inRange) {
+  // 분기 안 strategy 카드 + DNA 진주
+  const cards = (state.topicCards || []).filter(c => c.category === 'strategy' && inRange(c.createdAt));
+  const dnaInRange = (state.pearls || []).filter(p => p.type === 'dna_pearl' && inRange(p.createdAt));
+  const totalAttempts = stats.attempts || 0;
+
+  // 가장 진화 많이 한 가닥 1개
+  const mostEvolved = cards.slice().sort((a, b) =>
+    ((b.generations || []).length) - ((a.generations || []).length)
+  )[0];
+
+  // path 분포
+  const pathCount = { 'one-shot': 0, 'evolved': 0, 'quick-discovery': 0 };
+  dnaInRange.forEach(p => {
+    if (p.embodimentPath && pathCount[p.embodimentPath] != null) pathCount[p.embodimentPath]++;
+  });
+
+  let evolHtml = '';
+  if (mostEvolved && mostEvolved.generations && mostEvolved.generations.length >= 2) {
+    const _layerEmoji = { L1:'🧠', L2:'🎯', L3:'🌍', L4:'👥', L5:'🪞' };
+    const _layerName  = { L1:'인지', L2:'행동', L3:'환경', L4:'사회', L5:'메타' };
+    evolHtml = `
+      <div class="stories-evol-tree">
+        <div style="font-size:11px; color:rgba(255,255,255,0.6); margin-bottom:8px;">가장 진화한 가닥 — "${escapeHtml((mostEvolved.title || '').slice(0, 30))}"</div>
+        ${mostEvolved.generations.map((g, gi) => `
+          <div class="stories-evol-row" style="padding-left:${gi * 14}px;">
+            <span style="opacity:0.6;">${gi === 0 ? '·' : '└─'}</span>
+            <span>${_layerEmoji[g.layer] || '✦'} ${_layerName[g.layer] || g.layer}</span>
+            ${g.status === 'mutated' ? '<span style="opacity:0.5;">🪦</span>' : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="stories-label">너의 성장·진화</div>
+    <div class="stories-title">방법은 많아 — 너에게 맞는 모양 찾기</div>
+    <div class="stories-stat-list">
+      <div class="stories-stat-row neutral">
+        <span class="stories-stat-label">새 가닥</span>
+        <span class="stories-stat-value">${cards.length}개</span>
+      </div>
+      ${dnaInRange.length > 0 ? `
+        <div class="stories-stat-row up">
+          <span class="stories-stat-label">🧬 결정화된 DNA 진주</span>
+          <span class="stories-stat-value">${dnaInRange.length}개</span>
+        </div>
+        <div class="stories-stat-row neutral">
+          <span class="stories-stat-label">단번 / 진화 / 빠른 발견</span>
+          <span class="stories-stat-value">${pathCount['one-shot']}·${pathCount['evolved']}·${pathCount['quick-discovery']}</span>
+        </div>
+      ` : ''}
+      ${totalAttempts > 0 ? `
+        <div class="stories-stat-row neutral">
+          <span class="stories-stat-label">총 시도</span>
+          <span class="stories-stat-value">${totalAttempts}회</span>
+        </div>
+      ` : ''}
+    </div>
+    ${evolHtml}
+    <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px;">
+      안 통한 시도 = 발견. 다른 차원으로 가는 길.
+    </div>
+  `;
+}
+
+function _buildNewFeaturesSlideHTML(inRange) {
+  // 분기 안 created_at + conf >= 0.5 + user_verified=false (NEW)
+  const newTraits = (state.traits || []).filter(t => inRange(t.created_at) && (t.confidence || 0) >= 0.5);
+  const newValues = (state.values || []).filter(v => inRange(v.created_at) && (v.confidence || 0) >= 0.5);
+  const newPatterns = (state.patterns || []).filter(p => inRange(p.created_at) && (p.confidence || 0) >= 0.5);
+  const total = newTraits.length + newValues.length + newPatterns.length;
+
+  if (total === 0) {
+    return `
+      <div class="stories-label">AI가 포착한 새 특징</div>
+      <div class="stories-title">이번 분기엔 새 특징이 떠오르지 않았어</div>
+      <div class="stories-body">데이터가 더 쌓이면 보일 거야.</div>
+    `;
+  }
+
+  const items = [];
+  if (newTraits.length) items.push({ label: '특성', icon: '🪞', list: newTraits });
+  if (newValues.length) items.push({ label: '가치', icon: '⭐', list: newValues });
+  if (newPatterns.length) items.push({ label: '패턴', icon: '🌫', list: newPatterns });
+
+  // 가장 confidence 높은 항목 1-3개 highlight
+  const topItems = [...newTraits, ...newValues, ...newPatterns]
+    .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+    .slice(0, 3);
+
+  return `
+    <div class="stories-label">AI가 포착한 새 특징</div>
+    <div class="stories-title">${total}개가 너 안에서 처음 보였어</div>
+    <div class="stories-stat-list">
+      ${topItems.map(it => `
+        <div class="stories-stat-row neutral">
+          <span class="stories-stat-label" style="font-style: italic;">${escapeHtml(it.name || '')}</span>
+          <span class="stories-stat-value" style="font-size: 12px; opacity:0.7;">${Math.round((it.confidence || 0) * 100)}%</span>
+        </div>
+      `).join('')}
+    </div>
+    <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px;">
+      나 탭에서 ✓ 맞아 / 아니야 확인할 수 있어
+    </div>
+  `;
+}
+
+function _buildFunStatsSlideHTML(stats, inRange) {
+  const items = [];
+  // 가장 활력 높은 날
+  const entries = (state.entries || []).filter(e => e.date && new Date(e.date + 'T12:00:00').getTime() >= (Date.now() - 365 * 86400000));
+  const inRangeEntries = entries.filter(e => {
+    const t = new Date(e.date + 'T12:00:00').getTime();
+    return inRange ? inRange(new Date(e.date + 'T12:00:00').toISOString()) : true;
+  });
+  const topVitalityEntry = inRangeEntries.filter(e => e.vitality != null).sort((a,b) => (b.vitality - a.vitality))[0];
+  if (topVitalityEntry) {
+    const dateStr = new Date(topVitalityEntry.date + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+    items.push(`⚡ <b>${dateStr}</b> — 활력 ${topVitalityEntry.vitality}/5 (가장 빵빵)`);
+  }
+  // 가장 긴 잠
+  const sleeps = inRangeEntries.filter(e => e.sleepStart && e.sleepEnd).map(e => {
+    const [sh, sm] = e.sleepStart.split(':').map(Number);
+    const [eh, em] = e.sleepEnd.split(':').map(Number);
+    let mins = (eh * 60 + em) - (sh * 60 + sm);
+    if (mins < 0) mins += 24 * 60;
+    return { date: e.date, mins };
+  });
+  const longest = sleeps.sort((a,b) => b.mins - a.mins)[0];
+  if (longest) {
+    const dateStr = new Date(longest.date + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+    items.push(`😴 <b>${dateStr}</b> — ${Math.floor(longest.mins / 60)}시간 ${longest.mins % 60}분 (가장 긴 잠)`);
+  }
+  // 진주 카테고리 분포
+  const pearls = (state.pearls || []).filter(p => p.type !== 'dna_pearl' && inRange(p.createdAt));
+  if (pearls.length) {
+    const catCount = {};
+    pearls.forEach(p => { const c = p.category || '기타'; catCount[c] = (catCount[c] || 0) + 1; });
+    const topCat = Object.entries(catCount).sort((a,b) => b[1] - a[1])[0];
+    if (topCat) {
+      const iconMap = { 음악:'🎵', 음식:'🍴', 장소:'📍', 순간:'✨', 사람:'👥' };
+      items.push(`${iconMap[topCat[0]] || '💎'} <b>${topCat[0]}</b> 진주 ${topCat[1]}개 — 이번 분기 너의 취향`);
+    }
+  }
+  // 자주 활성된 모드
+  const topMode = stats.modeCount ? Object.entries(stats.modeCount).sort((a,b) => b[1] - a[1])[0] : null;
+  if (topMode) {
+    const modeMap = { exam:'📚 시험', travel:'✈️ 여행', sick:'🤒 아픔', rest:'🏖 휴식', period:'🩸 월경', drained:'🪫 방전' };
+    items.push(`${modeMap[topMode[0]] || topMode[0]} <b>${topMode[1]}일</b> 활성`);
+  }
+
+  if (items.length === 0) {
+    return `
+      <div class="stories-label">너의 재미 통계</div>
+      <div class="stories-empty">이번 분기 데이터 부족<br>다음 분기엔 더 풍부하게 ✦</div>
+    `;
+  }
+
+  return `
+    <div class="stories-label">너의 재미 통계</div>
+    <div class="stories-title">너만의 데이터</div>
+    <div class="stories-fun-list">
+      ${items.map(it => `<div class="stories-fun-item">${it}</div>`).join('')}
+    </div>
+  `;
+}
+
+function _buildPatternsSlideHTML(inRange) {
+  const diags = (state.diagnoses || []).filter(d => inRange(d.detectedAt));
+  if (diags.length === 0) {
+    return `
+      <div class="stories-label">작동 중인 패턴</div>
+      <div class="stories-title">이번 분기엔 큰 패턴 신호가 없었어</div>
+      <div class="stories-body">평탄한 흐름. 그것도 안정.</div>
+    `;
+  }
+
+  const labels = {
+    weak_tool: '🔧 도구 약함',
+    wrong_layer: '📐 차원 안 맞음',
+    value_clash: '⚖️ 가치 상충',
+    avoidance: '🌫 회피 패턴',
+    willpower_cap: '🪫 의지 임계치'
+  };
+  // 가장 confidence 높은 진단 1-2개
+  const topDiags = diags.sort((a, b) => (b.confidence || 0) - (a.confidence || 0)).slice(0, 2);
+
+  return `
+    <div class="stories-label">작동 중인 패턴</div>
+    <div class="stories-title">너 안에서 작동 중</div>
+    <div class="stories-stat-list">
+      ${topDiags.map(d => `
+        <div class="stories-stat-row neutral">
+          <span class="stories-stat-label">${labels[d.type] || d.type}</span>
+          <span class="stories-stat-value" style="font-size: 12px;">${Math.round((d.confidence || 0) * 100)}%</span>
+        </div>
+      `).join('')}
+    </div>
+    <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:14px; max-width:300px; line-height:1.7;">
+      ${escapeHtml(topDiags[0].evidence || '')}
+    </div>
+    <div style="font-size:11px; color:rgba(255,255,255,0.45); margin-top:12px; max-width:280px;">
+      너 ≠ 그 패턴. 작동 중일 뿐.
+    </div>
+  `;
+}
+
+function _buildNarrativeSlideHTML(review) {
+  const summary = review.summary || '';
+  // sections에서 next prompt 찾기
+  const nextSection = Array.isArray(review.sections)
+    ? review.sections.find(s => (s.label || '').includes('다음'))
+    : null;
+
+  return `
+    <div class="stories-label">너의 분기, 한 단락</div>
+    <div class="stories-title" style="font-size:17px; line-height:1.7;">${escapeHtml(summary || '데이터가 더 쌓이면 narrative가 보일 거야.')}</div>
+    ${nextSection ? `
+      <div class="stories-prompt">
+        <div class="stories-prompt-label">${escapeHtml(nextSection.label || '다음 분기에')}</div>
+        ${escapeHtml(nextSection.body || '')}
+      </div>
+    ` : ''}
+  `;
+}
+
+function _buildClosingSlideHTML(review, stats) {
+  // sections에서 흐름 또는 첫 번째 section을 시적으로
+  const flow = Array.isArray(review.sections) && review.sections[0] ? review.sections[0].body : '';
+  const poem = flow ? flow.split(/[.\n]/)[0].slice(0, 28) : `${review.quarterKey || '분기'} — 너의 흔적`;
+  return `
+    <div class="stories-label">${escapeHtml(review.quarterKey || '')}</div>
+    <div class="stories-poem">${escapeHtml(poem)}</div>
+  `;
+}
+
+// 연간 (15) — 분기 10 + 5 추가
+async function buildAnnualSlides(year, yearReviews) {
+  // 가장 최근 분기 review 선택 (또는 합산 stats 새로 계산)
+  const lastReview = yearReviews[yearReviews.length - 1];
+  const slides = await buildQuarterlySlides(lastReview);
+  // 마지막 (시적) 슬라이드 잠시 빼고 추가 5개 + 시적 끝에 다시
+  const closing = slides.pop();
+
+  // 11. 감성 계절별 무드
+  slides.push(_buildSeasonalSlide(year, yearReviews));
+  // 12. 진지 깊었던 숙고
+  slides.push(_buildDeepReflectionSlide(year));
+  // 13. 감성 top 5 곡
+  slides.push(_buildTopMusicSlide(year));
+  // 14. 진지 진단 학습 곡선
+  slides.push(_buildDiagnosisLearningSlide(year, yearReviews));
+  // 15. 진지 한 해 narrative
+  slides.push(_buildAnnualNarrativeSlide(year, yearReviews));
+
+  // 마지막 시적 한 줄 추가
+  closing.html = closing.html.replace(/\$\{escapeHtml\(review\.quarterKey.*?\)\}/, year + '년');
+  slides.push(closing);
+
+  return slides;
+}
+
+function _buildSeasonalSlide(year, yearReviews) {
+  // 4 분기 무드 평균 (있으면)
+  const quarters = ['Q1', 'Q2', 'Q3', 'Q4'].map(q => {
+    const r = yearReviews.find(x => x.quarterKey === `${year}-${q}`);
+    return r;
+  });
+  // 분기별 평균 mood
+  const moods = quarters.map(r => {
+    if (!r || !r.stats) return null;
+    // stats에는 mood 평균 X. entries에서 계산
+    const range = getQuarterRange(r.quarterKey);
+    if (!range) return null;
+    const startMs = range.start.getTime();
+    const endMs = range.end.getTime();
+    const moodEntries = (state.entries || []).filter(e => {
+      if (!e.date || e.mood == null) return false;
+      const t = new Date(e.date + 'T12:00:00').getTime();
+      return t >= startMs && t <= endMs;
+    });
+    if (moodEntries.length === 0) return null;
+    const sum = moodEntries.reduce((a, e) => a + e.mood, 0);
+    return Math.round((sum / moodEntries.length) * 10) / 10;
+  });
+  const labels = ['봄 (Q1)', '여름 (Q2)', '가을 (Q3)', '겨울 (Q4)'];
+  return {
+    tone: 'tone-emo',
+    html: `
+      <div class="stories-label">너의 ${year}년 무드</div>
+      <div class="stories-title">계절별 흐름</div>
+      <div class="stories-stat-list">
+        ${moods.map((m, i) => `
+          <div class="stories-stat-row neutral">
+            <span class="stories-stat-label">${labels[i]}</span>
+            <span class="stories-stat-value">${m != null ? `${m}/5` : '—'}</span>
+          </div>
+        `).join('')}
+      </div>
+    `
+  };
+}
+
+function _buildDeepReflectionSlide(year) {
+  const yearStart = new Date(year, 0, 1).getTime();
+  const yearEnd = new Date(year, 11, 31, 23, 59, 59).getTime();
+  const resolved = (state.reflectionQuestions || []).filter(q =>
+    q.status === 'resolved' && q.resolvedAt && new Date(q.resolvedAt).getTime() >= yearStart && new Date(q.resolvedAt).getTime() <= yearEnd
+  );
+  if (resolved.length === 0) {
+    return {
+      tone: 'tone-deep',
+      html: `
+        <div class="stories-label">가장 깊었던 숙고</div>
+        <div class="stories-title">이 해 결론 낸 숙고 없음</div>
+      `
+    };
+  }
+  // 가장 chatMessages 많이 박힌 거 (깊이 척도)
+  const deepest = resolved.sort((a, b) => (b.chatMessages?.length || 0) - (a.chatMessages?.length || 0))[0];
+  return {
+    tone: 'tone-deep-2',
+    html: `
+      <div class="stories-label">가장 깊었던 숙고</div>
+      <div class="stories-title" style="font-size:18px;">${escapeHtml(deepest.text)}</div>
+      <div class="stories-prompt" style="margin-top:18px;">
+        <div class="stories-prompt-label">너의 결론</div>
+        ${escapeHtml(deepest.conclusion || '')}
+      </div>
+    `
+  };
+}
+
+function _buildTopMusicSlide(year) {
+  const yearStart = new Date(year, 0, 1).getTime();
+  const yearEnd = new Date(year, 11, 31, 23, 59, 59).getTime();
+  const musicPearls = (state.pearls || []).filter(p =>
+    p.category === '음악' && p.track && p.createdAt &&
+    new Date(p.createdAt).getTime() >= yearStart && new Date(p.createdAt).getTime() <= yearEnd
+  );
+  if (musicPearls.length === 0) {
+    return {
+      tone: 'tone-emo-2',
+      html: `
+        <div class="stories-label">너의 ${year}년 사운드</div>
+        <div class="stories-empty">음악 진주 없음</div>
+      `
+    };
+  }
+  // top 5 — 등장 횟수 또는 random
+  const top5 = musicPearls.slice(-5);
+  return {
+    tone: 'tone-emo-2',
+    html: `
+      <div class="stories-label">너의 ${year}년 사운드</div>
+      <div class="stories-title">top ${top5.length} 곡</div>
+      <div class="stories-stat-list">
+        ${top5.map((p, i) => `
+          <div class="stories-stat-row neutral" style="display:flex; align-items:center; gap:10px;">
+            <img src="${escapeHtml(p.track.artworkUrl || '')}" style="width:36px; height:36px; border-radius:6px; flex-shrink:0;">
+            <div style="flex:1; min-width:0; text-align:left;">
+              <div style="font-size:13px; color:white; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(p.track.title || '')}</div>
+              <div style="font-size:11px; color:rgba(255,255,255,0.55);">${escapeHtml(p.track.artist || '')}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `
+  };
+}
+
+function _buildDiagnosisLearningSlide(year, yearReviews) {
+  const yearStart = new Date(year, 0, 1).getTime();
+  const yearEnd = new Date(year, 11, 31, 23, 59, 59).getTime();
+  const diags = (state.diagnoses || []).filter(d => {
+    if (!d.detectedAt) return false;
+    const t = new Date(d.detectedAt).getTime();
+    return t >= yearStart && t <= yearEnd;
+  });
+  if (diags.length === 0) {
+    return {
+      tone: 'tone-deep-3',
+      html: `
+        <div class="stories-label">진단 학습 곡선</div>
+        <div class="stories-title">큰 패턴 신호 없는 한 해</div>
+      `
+    };
+  }
+  // 자주 활성된 진단 type
+  const typeCount = {};
+  diags.forEach(d => { typeCount[d.type] = (typeCount[d.type] || 0) + 1; });
+  const labels = {
+    weak_tool: '🔧 도구 약함',
+    wrong_layer: '📐 차원 안 맞음',
+    value_clash: '⚖️ 가치 상충',
+    avoidance: '🌫 회피 패턴',
+    willpower_cap: '🪫 의지 임계치'
+  };
+  return {
+    tone: 'tone-deep-3',
+    html: `
+      <div class="stories-label">진단 학습 곡선</div>
+      <div class="stories-title">너 안에서 작동한 패턴</div>
+      <div class="stories-stat-list">
+        ${Object.entries(typeCount).sort((a,b) => b[1] - a[1]).slice(0, 4).map(([t, n]) => `
+          <div class="stories-stat-row neutral">
+            <span class="stories-stat-label">${labels[t] || t}</span>
+            <span class="stories-stat-value">${n}회</span>
+          </div>
+        `).join('')}
+      </div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px;">
+        진단 받고 행동 → 결과로 confidence 갱신.
+      </div>
+    `
+  };
+}
+
+function _buildAnnualNarrativeSlide(year, yearReviews) {
+  // 4 분기 summary 합쳐서 한 단락 narrative
+  const summaries = yearReviews.map(r => r.summary).filter(Boolean).join(' ');
+  return {
+    tone: 'tone-deep',
+    html: `
+      <div class="stories-label">${year}년 한 단락</div>
+      <div class="stories-title" style="font-size:17px; line-height:1.7;">${escapeHtml(summaries.slice(0, 300) || '한 해의 흐름이 천천히 자리 잡고 있어.')}</div>
+      <div class="stories-prompt" style="margin-top:18px;">
+        <div class="stories-prompt-label">${year + 1}년에</div>
+        같은 길 또는 새로운 길. 너의 데이터가 너에게 보여줄 거야.
+      </div>
+    `
+  };
+}
+
 // V4-fix: 분기 리뷰 deep dive — 6 비교 축 시각 카드 (anchor 3 / 비전 7.10)
 // 1. 8 차원 (problems↓ / strengths↑) / 2. 추적 항목 / 3. 모드 빈도
 // 4. 미션 작동률 / 5. 진주 수 / 6. growth 차원
@@ -19289,6 +20346,8 @@ function renderArchiveReviews() {
       // V4-fix: 다차원 진전 비교 deep dive (anchor 3 / 비전 7.10) — 6 축 시각 카드
       if (r.stats) {
         detailHtml += renderQuarterlyDeepDive(r);
+        // V4-1z: Stories 진입 버튼
+        detailHtml += `<button class="btn-primary" style="width:100%; margin-top:14px;" onclick="event.stopPropagation(); openQuarterlyStories('${r.id}')">▶ Stories로 보기</button>`;
       }
     } else if (r.sections) {
       // V3 형식 (object)
@@ -20178,7 +21237,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.63-pause-to-delete';
+const APP_VERSION = 'v4.0.64-stories';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
