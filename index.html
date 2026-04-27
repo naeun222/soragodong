@@ -4530,6 +4530,27 @@
     transform-origin: 100px 100px;
     transform-box: fill-box;
   }
+  /* V4-fix v3 (사용자 요청): 가닥 DNA 조각 shell — 모래사장에서 별도 디자인 */
+  .beach-shell.dna-shell {
+    border: 2px solid rgba(212,167,106,0.65);
+    box-shadow:
+      0 0 8px rgba(212,167,106,0.45),
+      inset 0 0 4px rgba(255,235,200,0.30);
+    background: linear-gradient(135deg, rgba(255,235,200,0.30), rgba(212,167,106,0.18)) !important;
+  }
+  .beach-shell.dna-shell::after {
+    content: '🧬';
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    font-size: 12px;
+    filter: drop-shadow(0 0 2px gold);
+    pointer-events: none;
+    line-height: 1;
+  }
+  .beach-shell.dna-shell:hover::after {
+    transform: scale(1.2);
+  }
   /* V4-fix v3 (사용자 요청 — 깨달음 가공 1~6): 리뷰 깨달음 정리 섹션 */
   .review-archive-summary {
     margin-top: 14px; padding: 14px;
@@ -11086,7 +11107,9 @@ function renderBeach() {
         <div class="beach-tier-header">${label} · ${grouped[tier].length}</div>
         <div class="beach-tier-grid">`;
       grouped[tier].forEach(s => {
-        html += `<div class="beach-shell tier-${tier}" onclick="openShellStory(${state.shellCollection.indexOf(s)})">${s.type}</div>`;
+        // V4-fix v3 (사용자 요청): 가닥 DNA 조각 shell 별도 디자인
+        const isDnaPiece = s.missionId && (state.missions || []).some(m => m.id === s.missionId && m.strategyId);
+        html += `<div class="beach-shell tier-${tier}${isDnaPiece ? ' dna-shell' : ''}" onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
       });
       html += `</div></div>`;
     });
@@ -11125,7 +11148,10 @@ function renderBeach() {
     }
     grid.innerHTML = dnaSectionHtml +
       `<div class="beach-tier-grid${isAllTab ? ' scatter' : ''}">` +
-      sorted.map((s, i) => `<div class="beach-shell tier-${s.tier || 'unknown'}"${scatterStyle(s, i)} onclick="openShellStory(${state.shellCollection.indexOf(s)})">${s.type}</div>`).join('') +
+      sorted.map((s, i) => {
+        const isDnaPiece = s.missionId && (state.missions || []).some(m => m.id === s.missionId && m.strategyId);
+        return `<div class="beach-shell tier-${s.tier || 'unknown'}${isDnaPiece ? ' dna-shell' : ''}"${scatterStyle(s, i)} onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
+      }).join('') +
       `</div>`;
   }
 
@@ -16055,15 +16081,41 @@ function _renderStrategyCardHtml(s) {
   if (Array.isArray(s.generations) && s.generations.length >= 1) {
     const _layerEmoji = { L1:'🧠', L2:'🎯', L3:'🌍', L4:'👥', L5:'🪞' };
     const _layerName  = { L1:'인지', L2:'행동', L3:'환경', L4:'사회', L5:'메타' };
+    // V4-fix v3 (사용자 보고): 진화 트리 dot — 그 미션의 shell tier 색으로 채움 (anchor 23)
+    const tierColors = {
+      light:  '#a89dc8',  // 가벼움 — 보라
+      daily:  '#7ec8e3',  // 일상 — 파랑
+      main:   '#ffb86b',  // 메인 — 주황
+      golden: '#ffd700',  // 황금
+      call:   '#ff8da1',  // 부름 — 핑크
+      legend: '#ffd93d'   // 특별 — 노랑
+    };
     const rows = s.generations.map((g, gi) => {
       const isLast = gi === s.generations.length - 1;
       const isMutated = g.status === 'mutated';
       const dots = (g.attempts || []).map(a => {
-        const c = a.status === 'worked' ? '#8fc88f'
-                : a.status === 'meh'    ? '#d4a76a'
-                : a.status === 'didnt'  ? '#888a90'
-                                        : '#666';
-        return `<span class="gen-dot" style="background:${c};" title="${a.status}"></span>`;
+        // shellId / missionId 로 shell 찾기
+        let shell = null;
+        if (a.shellId) shell = (state.shellCollection || []).find(sc => sc._id === a.shellId);
+        if (!shell && a.missionId) shell = (state.shellCollection || []).find(sc => sc.missionId === a.missionId);
+        let bgColor;
+        let extraStyle = '';
+        let titleStr = a.status;
+        if (shell) {
+          // 그 미션 shell 색
+          bgColor = tierColors[shell.tier] || '#a89dc8';
+          if (shell.tier === 'legend' || shell.tier === 'call') {
+            extraStyle = ` box-shadow: 0 0 6px ${bgColor};`;
+          }
+          titleStr = `${a.status} · ${shell.label || shell.tier} ${shell.type || ''}`;
+        } else {
+          // shell 없는 attempt — 기존 status 색 (worked/meh/didnt/skipped 회색)
+          bgColor = a.status === 'worked' ? '#8fc88f'
+                  : a.status === 'meh'    ? '#d4a76a'
+                  : a.status === 'didnt'  ? '#888a90'
+                                          : '#666';
+        }
+        return `<span class="gen-dot" style="background:${bgColor};${extraStyle}" title="${titleStr}"></span>`;
       }).join('');
       const prefix = gi === 0 ? '' : '└─ ';
       const layer = `${_layerEmoji[g.layer] || '✦'} ${_layerName[g.layer] || g.layer}`;
@@ -19291,44 +19343,77 @@ function testSeedV4Data() {
     { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
     { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
   ];
-  // V4-fix v3: shells 180개 (1년, 평균 0.5/일, 다양한 티어 분포 — light 60% / daily 20% / main 10% / golden 6% / call 3% / legend 1%)
+  // V4-fix v3 (사용자 요청): shells 180개 + SHELL_POOLS 다양 emoji 활용 (이쁜 아이콘 풍부)
   state.shellCollection = [];
-  const shellEmojis = ['🐚','🌀','🐢','🦞','⭐','✨'];
   const shellTiers = ['light','daily','main','golden','call','legend'];
+  const shellPoolKeys = ['light','daily','main','golden','call','legendary'];
   const shellLabels = ['가벼움','일상','메인','황금','부름','특별'];
+  const shellPoints = [1, 2, 5, 10, 20, 50];
   const shellStories = [
     '오늘 한 걸음', '카페 작업 마무리', '논문 한 단락',
     '운동 30분', '실험 한 사이클', '엄마 통화',
-    '거절 한 번', '책 50p', '명상 10분', '아침 일찍'
+    '거절 한 번', '책 50p', '명상 10분', '아침 일찍',
+    '한강 산책', '음악 한 곡', '깊은 잠'
   ];
-  // deterministic per-day shells
+  // 가닥 미션 ID 풀 (DNA 조각으로 박힘 — strategy seed 미션 ID + 새 미션)
+  const strategyMissionIds = ['mis_seed_2', 'mis_seed_carryover_1'];
   for (let i = 0; i < 360; i++) {
     const dayOffset = i;
-    const dayShells = (i % 2 === 0) ? 1 : 0;  // 평균 0.5/day
+    const dayShells = (i % 2 === 0) ? 1 : 0;
     if (dayShells === 0) continue;
     const seed = (i * 9301 + 49297) % 1000;
     let tIdx;
-    if (seed < 600) tIdx = 0;       // light 60%
-    else if (seed < 800) tIdx = 1;  // daily 20%
-    else if (seed < 900) tIdx = 2;  // main 10%
-    else if (seed < 960) tIdx = 3;  // golden 6%
-    else if (seed < 990) tIdx = 4;  // call 3%
-    else tIdx = 5;                   // legend 1%
+    if (seed < 600) tIdx = 0;
+    else if (seed < 800) tIdx = 1;
+    else if (seed < 900) tIdx = 2;
+    else if (seed < 960) tIdx = 3;
+    else if (seed < 990) tIdx = 4;
+    else tIdx = 5;
     const d = new Date(today.getTime() - dayOffset * 86400000);
+    // SHELL_POOLS의 다양 emoji 무작위 선택 (deterministic per index)
+    const pool = (typeof SHELL_POOLS !== 'undefined') ? SHELL_POOLS[shellPoolKeys[tIdx]] : null;
+    const emojiArr = pool && pool.emojis ? pool.emojis : ['🐚','🌀','🐢','🦞','⭐','✨'];
+    const emoji = emojiArr[(seed >> 4) % emojiArr.length];
+    // DNA 조각: 5% 확률로 가닥 미션 박힘 (시각 차이 검증)
+    const isDnaPiece = (seed % 20 === 0);
+    const missionId = isDnaPiece ? strategyMissionIds[seed % strategyMissionIds.length]
+                                  : (tIdx >= 4 ? 'mis_seed_2' : null);
     state.shellCollection.push({
       _id: 'shell_seed_' + state.shellCollection.length,
-      type: shellEmojis[tIdx],
+      type: emoji,
       tier: shellTiers[tIdx],
-      points: tIdx + 1,
+      points: shellPoints[tIdx],
       label: shellLabels[tIdx],
       rarity: tIdx >= 5 ? 'legendary' : (tIdx >= 4 ? 'rare' : 'common'),
       date: d.toISOString(),
       story: shellStories[i % shellStories.length],
       title: shellStories[i % shellStories.length],
-      missionId: tIdx >= 4 ? 'mis_seed_2' : null,
+      missionId,
       photoThumb: ''
     });
   }
+  // 가닥 generations에 shellId 박기 (gen.shells, missionId 매칭)
+  (state.topicCards || []).filter(c => c.category === 'strategy' && !c._isDiagnosticSeed).forEach(card => {
+    if (!Array.isArray(card.generations)) return;
+    card.generations.forEach(gen => {
+      if (!Array.isArray(gen.shells)) gen.shells = [];
+      if (!Array.isArray(gen.attempts)) return;
+      // 각 attempt에 마치 shell이 박힌 것처럼 임의 매칭 (시각 검증)
+      gen.attempts.forEach((a, ai) => {
+        if (a.status !== 'worked' && a.status !== 'meh') return;
+        // 시드 shell 중 임의 1개 매칭 (이미 매칭된 거 제외)
+        const free = state.shellCollection.find(s => !s._dnaMatched && (gen.layer === 'L1' || gen.layer === 'L2' || gen.layer === 'L3'));
+        if (free) {
+          a.shellId = free._id;
+          free._dnaMatched = true;
+          free.missionId = a.missionId || free.missionId;
+          if (!gen.shells.includes(free._id)) gen.shells.push(free._id);
+        }
+      });
+    });
+  });
+  // _dnaMatched 임시 마커 제거
+  state.shellCollection.forEach(s => { delete s._dnaMatched; });
   // tasks 6 (오늘의 카드 3 isToday=true + 일반 할 일 3 isToday=false)
   state.tasks = [];
   ['논문 서론 마무리', '운동 30분', '책 1챕터'].forEach((t, i) => {
@@ -22527,9 +22612,22 @@ function _buildEvolutionSlideHTML(stats, inRange) {
     `;
   }
 
+  // V4-fix v3 (사용자 요청 — 더 따뜻하게): 성장·진화 따뜻한 톤
+  const warmInsight = (() => {
+    if (dnaInRange.length > 0 && cards.length > 0) {
+      return `${dnaInRange.length}개 가닥이 너 일부가 됐고, ${cards.length}개 새 가지를 시작했어. 너만의 코드가 깊어지는 분기야. 🧬`;
+    }
+    if (cards.length > 0 && totalAttempts > 0) {
+      return `${cards.length}개 가닥에서 ${totalAttempts}번 시도 — 안 통한 시도도 너의 발견이야. 다른 차원으로 가는 길이 됐어. 🌱`;
+    }
+    if (totalAttempts > 0) {
+      return `${totalAttempts}번 시도. 결과보다 시도 자체가 의미야. 너에게 맞는 모양을 찾고 있어. 🌿`;
+    }
+    return '큰 시도 없이 머무르는 분기였어. 그것도 진화의 한 단계 — 다음 도약을 위한 숨고르기. 🍃';
+  })();
   return `
     <div class="stories-label">너의 성장·진화</div>
-    <div class="stories-title">방법은 많아 — 너에게 맞는 모양 찾기</div>
+    <div class="stories-title">너만의 모양을 찾아가는 시간</div>
     <div class="stories-stat-list">
       <div class="stories-stat-row neutral">
         <span class="stories-stat-label">새 가닥</span>
@@ -22537,7 +22635,7 @@ function _buildEvolutionSlideHTML(stats, inRange) {
       </div>
       ${dnaInRange.length > 0 ? `
         <div class="stories-stat-row up">
-          <span class="stories-stat-label">🧬 결정화된 DNA 진주</span>
+          <span class="stories-stat-label">🧬 너 일부가 된 DNA 진주</span>
           <span class="stories-stat-value">${dnaInRange.length}개</span>
         </div>
         <div class="stories-stat-row neutral">
@@ -22547,15 +22645,13 @@ function _buildEvolutionSlideHTML(stats, inRange) {
       ` : ''}
       ${totalAttempts > 0 ? `
         <div class="stories-stat-row neutral">
-          <span class="stories-stat-label">총 시도</span>
+          <span class="stories-stat-label">너의 시도</span>
           <span class="stories-stat-value">${totalAttempts}회</span>
         </div>
       ` : ''}
     </div>
-    ${evolHtml}
-    <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px;">
-      안 통한 시도 = 발견. 다른 차원으로 가는 길.
-    </div>
+    ${evolHtml ? evolHtml.replace('가장 진화한 가닥', '너가 가장 깊이 시도한 가닥') : ''}
+    <div class="stories-body" style="margin-top:14px; max-width:300px;">${escapeHtml(warmInsight)}</div>
   `;
 }
 
@@ -24233,7 +24329,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.93-followup-full-branches';
+const APP_VERSION = 'v4.0.94-dna-shells-warm';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
