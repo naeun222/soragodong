@@ -2837,10 +2837,16 @@
   .gen-layer { font-weight: 500; white-space: nowrap; }
   .gen-action { flex: 1; min-width: 100px; line-height: 1.4; }
   .gen-mark { font-size: 12px; }
-  .gen-dots { display: flex; gap: 3px; flex-wrap: wrap; }
+  .gen-dots { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
   .gen-dot {
     width: 8px; height: 8px; border-radius: 50%;
     display: inline-block;
+  }
+  /* 사용자 요청 2026-04-27: 진화 트리 dot → 미션 짝지어진 소라 아이콘 작게 */
+  .gen-shell-mini {
+    font-size: 13px; line-height: 1;
+    display: inline-block;
+    transform: translateY(-1px);
   }
   /* V3.13.x: 전략 카드 4-필드 구조 (문제 상황 / 심리학 개념 / 전략적 행동) */
   .strategy-card-v2 { padding: 16px 18px; }
@@ -4725,6 +4731,18 @@
     100%     { opacity: 1; transform: translateY(0); }
   }
 
+  /* DNA 조각 뱃지 (shell story modal) */
+  .shell-story-dna-badge {
+    margin: 8px auto 4px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(139,126,196,0.15));
+    border: 1px solid rgba(212,167,106,0.4);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.5;
+  }
   /* V4-fix v3 (사용자 요청): 가닥 DNA 조각 shell — 모래사장에서 별도 디자인 */
   .beach-shell.dna-shell {
     border: 2px solid rgba(212,167,106,0.65);
@@ -8094,6 +8112,26 @@ const ONBOARDING_STEPS = [
     demoAttemptResult: true,
     aboveModal: true
   },
+  {
+    id: 'back_to_beach',
+    targetSelector: '.home-small-card[onclick="openShellCollection()"]',
+    title: '🏖 모래사장으로',
+    body: '방금 봤어? 결과 체크가 끝났어! ✨<br>모래사장 가서 무슨 일이 일어났는지 같이 보자.',
+    waitFor: 'click',
+    advanceDelay: 800,
+    fallbackPosition: 'bottom'
+  },
+  {
+    id: 'dna_explanation_close',
+    targetSelector: '#shellModal .btn-secondary',
+    title: '🧬 DNA 한 조각',
+    body: '미션 성공이 → 전략 성공이 되면, <b>그 소라가 DNA의 한 조각</b>이 돼.<br><br>아까 말했던 <b>"전략으로"</b> 버튼 기억 나지? 이게 바로 그 의미야 — 너만의 전략이 시간이 지나면서 너 일부가 되어가.<br><br>이제 양생방으로 가보자. <b>닫기</b> 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    aboveModal: true,
+    fallbackPosition: 'top'
+  },
 
   // === Phase 6: 도서관 5 카테고리 (V4) — 부가 기능 (5) ===
   {
@@ -8152,6 +8190,14 @@ const ONBOARDING_STEPS = [
     body: '여기는 <b>너만의 행동 도구함</b>이야.<br>대화에서 박은 전략들이 모이는 곳.<br><br>양생방 칩 눌러봐!',
     waitFor: 'click',
     advanceDelay: 800,
+    dimBackground: false
+  },
+  {
+    id: 'yangsaeng_explain',
+    targetSelector: null,
+    title: '🧬 전략 양생',
+    body: '우리가 문제를 해결하기 위해 쓴 \'전략\'이 <b>실제로 나를 변화시킬 때까지</b> — 우리는 \'<b>전략 양생</b>\'을 할 수 있어.<br><br>여기 양생방엔 너의 전략들이 모이고, 시도되고, 진화하고, 결국 너 일부가 돼.',
+    waitFor: 'next',
     dimBackground: false
   },
   {
@@ -12176,18 +12222,25 @@ function resumeMission(id) {
 function openShellStory(shellIdx) {
   const shell = state.shellCollection[shellIdx];
   if (!shell) return;
-  
-  const dateStr = new Date(shell.date).toLocaleDateString('ko-KR', { 
-    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' 
+
+  const dateStr = new Date(shell.date).toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
   });
-  const timeStr = new Date(shell.date).toLocaleTimeString('ko-KR', { 
-    hour: '2-digit', minute: '2-digit' 
+  const timeStr = new Date(shell.date).toLocaleTimeString('ko-KR', {
+    hour: '2-digit', minute: '2-digit'
   });
-  const tierLabel = ({ 
-    light: '가벼움', daily: '일상', main: '메인', 
-    golden: '황금', call: '소라의 부름', legend: '특별한 부름' 
+  const tierLabel = ({
+    light: '가벼움', daily: '일상', main: '메인',
+    golden: '황금', call: '소라의 부름', legend: '특별한 부름'
   })[shell.tier] || '소라';
-  
+
+  // 사용자 요청 2026-04-27: DNA 조각인지 확인 (어떤 strategy generation의 shells에 속함)
+  const dnaStrategy = (state.topicCards || []).find(c =>
+    c.category === 'strategy' && Array.isArray(c.generations) &&
+    c.generations.some(g => Array.isArray(g.shells) && g.shells.includes(shell._id))
+  );
+  const isDnaPiece = !!dnaStrategy;
+
   const overlay = document.createElement('div');
   overlay.className = 'shell-story-overlay';
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
@@ -12195,11 +12248,18 @@ function openShellStory(shellIdx) {
   const photoBlock = shell.photoThumb
     ? `<img src="${shell.photoThumb}" alt="인증샷" style="width:100%; max-width:200px; aspect-ratio:1; object-fit:cover; border-radius:12px; margin:12px auto; display:block; border: 2px solid rgba(201,169,110,0.3);">`
     : '';
+  const dnaBadgeHtml = isDnaPiece
+    ? `<div class="shell-story-dna-badge">🧬 <b>DNA 한 조각</b><br><span style="font-size:11px; color:var(--text-dim);">전략 「${escapeHtml(dnaStrategy.title)}」의 일부</span></div>`
+    : '';
+  const emojiHtml = isDnaPiece
+    ? `<div class="shell-story-emoji" style="position:relative; display:inline-block;">${shell.type}<span style="position:absolute; top:-4px; right:-12px; font-size:24px; filter:drop-shadow(0 0 4px gold);">🧬</span></div>`
+    : `<div class="shell-story-emoji">${shell.type}</div>`;
   overlay.innerHTML = `
     <div class="shell-story-card tier-${shell.tier}">
-      <div class="shell-story-emoji">${shell.type}</div>
+      ${emojiHtml}
       <div class="shell-story-tier">${tierLabel}</div>
       <div class="shell-story-date">${dateStr} · ${timeStr}</div>
+      ${dnaBadgeHtml}
       ${photoBlock}
       <div class="shell-story-text">${escapeHtml(shell.story || '')}</div>
       <button class="btn-secondary" onclick="this.closest('.shell-story-overlay').remove()" style="margin-top:18px; width:100%;">닫기</button>
@@ -13487,8 +13547,6 @@ async function endChapter() {
   });
   if (!yes) return;
 
-  showToast('🐚 정리 중...');
-
   // 1. 토픽 카드 추출 (마지막 메시지에 chapterStart 마커)
   const lastMsg = validMsgs[validMsgs.length - 1];
   if (!lastMsg.chapterStart) lastMsg.chapterStart = true;
@@ -13499,27 +13557,18 @@ async function endChapter() {
     console.warn('topic extract failed:', e);
   }
 
-  // 2. summary 생성 (AI)
-  let summary = '';
-  if (state.apiKey) {
-    try {
-      summary = await summarizeChatDay(todayKey(), validMsgs);
-    } catch (e) {
-      console.warn('summary failed:', e);
-      summary = '(AI 요약 실패 — 메시지 ' + validMsgs.length + '개)';
-    }
-  } else {
-    summary = '메시지 ' + validMsgs.length + '개';
-  }
+  // 2. summary — API 안 씀 (사용자 요청 2026-04-27). 순번 라벨만.
+  if (!Array.isArray(state.chatArchive)) state.chatArchive = [];
+  const seqNum = state.chatArchive.length + 1;
+  const summary = `대화 #${seqNum}`;
 
   // 3. chatArchive push (오늘 날짜 + 같은 날 있으면 합침)
   const todayK = todayKey();
-  if (!Array.isArray(state.chatArchive)) state.chatArchive = [];
   const existing = state.chatArchive.find(a => a.date === todayK);
   if (existing) {
     existing.messages = [...(existing.messages || []), ...validMsgs];
     existing.messageCount = (existing.messages || []).length;
-    existing.summary = (existing.summary ? existing.summary + '\n\n' : '') + summary;
+    // summary 합치지 않음 — 첫 라벨 유지
     existing.generatedAt = new Date().toISOString();
   } else {
     state.chatArchive.unshift({
@@ -13540,7 +13589,7 @@ async function endChapter() {
 
   saveState();
   if (typeof renderChat === 'function') renderChat();
-  showToast('✦ 정리 완료. 새 대화 시작.');
+  showToast('정리 됐어 ✦');
 }
 
 // V4-fix: chatArchive 7일 cap (잠깐 보관용)
@@ -16991,6 +17040,11 @@ function _renderStrategyCardHtml(s) {
                   : a.status === 'didnt'  ? '#888a90'
                                           : '#666';
         }
+        // 사용자 요청 2026-04-27: shell 있으면 그 아이콘 작게 (점 대체), 없으면 기존 색 dot
+        if (shell && shell.type) {
+          const glow = (shell.tier === 'legend' || shell.tier === 'call') ? 'filter:drop-shadow(0 0 3px ' + bgColor + ');' : '';
+          return `<span class="gen-shell-mini" style="${glow}" title="${titleStr}">${shell.type}</span>`;
+        }
         return `<span class="gen-dot" style="background:${bgColor};${extraStyle}" title="${titleStr}"></span>`;
       }).join('');
       const prefix = gi === 0 ? '' : '└─ ';
@@ -19929,18 +19983,45 @@ function testSeedV4Data() {
   state.topicCards = (state.topicCards || []).filter(c => c.category !== 'strategy');
   const stratSeeds = [
     // 최근 분기 (Q-1) — 환경 차원 도구
-    { title: '마감 직전 폭발력 신뢰', status: 'embodied', gens: 1, path: 'one-shot', attempts: [['worked',5]], days: 20 },
-    { title: '거절은 그날 안에', status: 'working', gens: 1, attempts: [['worked',3], ['didnt',1]], days: 25 },
-    { title: '카페에서 30분 집중', status: 'trying', gens: 1, attempts: [['worked',1], ['didnt',1]], days: 30 },
-    { title: '잠 부족 시 결정 X', status: 'seedling', gens: 1, attempts: [], days: 35 },
-    { title: 'SNS 자동 종료', status: 'working', gens: 3, path: 'evolved', attempts: [['didnt',2], ['didnt',1], ['worked',3]], days: 50 },
+    { title: '마감 직전 폭발력 신뢰', status: 'embodied', gens: 1, path: 'one-shot', attempts: [['worked',5]], days: 20,
+      problem: '마감 임박해야 시작이 됨. 일찍 시작하려 했지만 결국 미루다 자책.',
+      concept: 'ADHD time-blindness + activation 곤란. 마감 임박 = 도파민 ↑ → 진입 가능. 자책 X 신뢰 ○.',
+      action: '마감 5일 전부터 폭발력 트리거 인지. 일찍 시작 강박 X. 마감 직전 환경 셋업 (카페 + 핸드폰 X + 노이즈 캔슬).' },
+    { title: '거절은 그날 안에', status: 'working', gens: 1, attempts: [['worked',3], ['didnt',1]], days: 25,
+      problem: '거절 메일/메시지 며칠 미루다가 더 어려워짐. 부담만 커짐.',
+      concept: 'Decisional procrastination. 미룰수록 인지 부하 ↑. 짧게 답하는 게 친절.',
+      action: '들어온 요청은 그날 안에 yes/no 답. 길게 설명 X. "지금은 어려워" 한 줄.' },
+    { title: '카페에서 30분 집중', status: 'trying', gens: 1, attempts: [['worked',1], ['didnt',1]], days: 30,
+      problem: '집에서 작업 시작 안 됨. 핸드폰·이불·간식 유혹. 진입 마찰 큼.',
+      concept: 'Environmental cuing. 작업 환경 = 작업 모드 신호. 분리된 공간 = 진입 마찰 ↓.',
+      action: '막힐 때 카페로. "30분만" 약속. 도착하면 노트북만 펴기.' },
+    { title: '잠 부족 시 결정 X', status: 'seedling', gens: 1, attempts: [], days: 35,
+      problem: '새벽 작업 → 다음날 큰 결정 후회 반복. 잠 부족 시 reactive choice.',
+      concept: '인지 자원 고갈 시 prefrontal cortex 기능 저하. 휴식 = reset.',
+      action: '잠 6시간 미만이면 그날은 큰 결정 X. 다음날로 미루기.' },
+    { title: 'SNS 자동 종료', status: 'working', gens: 3, path: 'evolved', attempts: [['didnt',2], ['didnt',1], ['worked',3]], days: 50,
+      problem: 'SNS 잠깐만 보다가 1시간 가버림. 죄책감 + 진도 X.',
+      concept: 'Variable reward → 자동 행동 강화. 의지 X로 끊기 어려움. 환경 차단 ○.',
+      action: '작업 시작 전 SNS 앱 타이머 30분. 시간 차면 강제 종료.' },
     // Q-2 — 실험 사이클
-    { title: '실험 새벽 사이클', status: 'archived', gens: 2, attempts: [['worked',2], ['worked',1]], layers: ['L2','L3'], days: 130 },
-    { title: '주말 회복 자동화', status: 'embodied', gens: 1, path: 'quick-discovery', attempts: [['worked',4]], days: 145 },
+    { title: '실험 새벽 사이클', status: 'archived', gens: 2, attempts: [['worked',2], ['worked',1]], layers: ['L2','L3'], days: 130,
+      problem: '실험 데이터 처리 낮에 못함. 자꾸 미룸.',
+      concept: 'Energy peak 활용. 새벽 = 인지 resource peak. 분산보다 집중 ○.',
+      action: '새벽 5-7시 실험 데이터 처리. 낮엔 다른 일.' },
+    { title: '주말 회복 자동화', status: 'embodied', gens: 1, path: 'quick-discovery', attempts: [['worked',4]], days: 145,
+      problem: '주말도 일 생각. 회복 못함. 월요일 더 지침.',
+      concept: 'Recovery vs resting. 적극적 회복 활동 = 인지 재충전.',
+      action: '토요일 오전 = 운동. 일요일 오후 = 카페·산책. 일 X 약속.' },
     // Q-3 — 학회 발표
-    { title: '발표 슬라이드 매주 1장', status: 'working', gens: 2, attempts: [['didnt',2], ['worked',3]], layers: ['L2','L4'], days: 220 },
+    { title: '발표 슬라이드 매주 1장', status: 'working', gens: 2, attempts: [['didnt',2], ['worked',3]], layers: ['L2','L4'], days: 220,
+      problem: '학회 발표 임박해서 몰아치다 망침. 미리 못 함.',
+      concept: 'Implementation intention + Distributed practice. 작은 단위 분산.',
+      action: '매주 토요일 오전 슬라이드 1장. 그 이상 X.' },
     // Q-4 — 회복
-    { title: '명상 10분 아침', status: 'working', gens: 1, attempts: [['worked',3], ['meh',1]], days: 320 },
+    { title: '명상 10분 아침', status: 'working', gens: 1, attempts: [['worked',3], ['meh',1]], days: 320,
+      problem: '아침에 폰 보면서 압도감으로 시작. 하루 전체 망침.',
+      concept: 'Morning routine = 인지 anchor. 명상 = 주의력 회복.',
+      action: '폰 알람 X. 일어나서 10분 명상 (앱). 그 다음 폰.' },
     // 진단 5종 발동용 (양생방 숨김)
     { title: '진단 시드: 알람 무한 반복', status: 'trying', gens: 1, attempts: [['didnt',4]], layers: ['L2'], days: 25 },
     { title: '진단 시드: 인지 차원 막힘', status: 'trying', gens: 1, attempts: [['didnt',3]], layers: ['L1'], days: 25 },
@@ -19963,9 +20044,9 @@ function testSeedV4Data() {
     state.topicCards.push({
       id, category: 'strategy',
       title: s.title,
-      problemContext: '시드 문제 상황',
-      psychConcept: '시드 심리학 개념',
-      actionStrategy: s.title,
+      problemContext: s.problem || '시드 문제 상황',
+      psychConcept: s.concept || '시드 심리학 개념',
+      actionStrategy: s.action || s.title,
       summary: `${s.title} — 시드`,
       generations,
       embodimentStatus: s.status,
