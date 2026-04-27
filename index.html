@@ -7963,6 +7963,7 @@ const ONBOARDING_STEPS = [
     body: '키 저장하면 진짜 시작이야! ✦',
     waitFor: 'click',
     advanceDelay: 800,
+    coachmarkPosition: 'corner',
     fallbackPosition: 'top'
   },
   {
@@ -8845,6 +8846,25 @@ function onbPositionStep(step, retryCount) {
       spotlight.style.top = (rect.top - padding) + 'px';
       spotlight.style.width = (rect.width + padding * 2) + 'px';
       spotlight.style.height = (rect.height + padding * 2) + 'px';
+      // 사용자 요청 2026-04-28: 레이아웃 settle 후 재포지션 (폰트/이미지 로드 / 키보드 닫힘 등 layout shift 보정)
+      requestAnimationFrame(() => {
+        const rect2 = target.getBoundingClientRect();
+        if (Math.abs(rect2.top - rect.top) > 1 || Math.abs(rect2.left - rect.left) > 1) {
+          spotlight.style.left = (rect2.left - padding) + 'px';
+          spotlight.style.top = (rect2.top - padding) + 'px';
+          spotlight.style.width = (rect2.width + padding * 2) + 'px';
+          spotlight.style.height = (rect2.height + padding * 2) + 'px';
+        }
+      });
+      setTimeout(() => {
+        const rect3 = target.getBoundingClientRect();
+        if (Math.abs(rect3.top - rect.top) > 1 || Math.abs(rect3.left - rect.left) > 1) {
+          spotlight.style.left = (rect3.left - padding) + 'px';
+          spotlight.style.top = (rect3.top - padding) + 'px';
+          spotlight.style.width = (rect3.width + padding * 2) + 'px';
+          spotlight.style.height = (rect3.height + padding * 2) + 'px';
+        }
+      }, 350);
       // dimBackground:false 면 박스만 (어둡지 X), 아니면 기존 box-shadow 다이밍
       spotlight.classList.toggle('no-dim', step.dimBackground === false);
       // V3.12.x: target 있을 때 mask 숨김 + overlay 클릭 패스스루 (inline 강제)
