@@ -4070,10 +4070,12 @@
     background: rgba(255,255,255,0.18);
     border-radius: 2px;
     overflow: hidden;
+    box-shadow: 0 0 4px rgba(255,255,255,0.06);
   }
   .stories-progress-fill {
     height: 100%;
-    background: rgba(255,255,255,0.95);
+    background: linear-gradient(90deg, rgba(212,167,106,0.85), rgba(255,235,200,0.95));
+    box-shadow: 0 0 8px rgba(255,235,200,0.55);
     width: 0%;
     transition: width 0.1s linear;
   }
@@ -4088,6 +4090,61 @@
     font-size: 22px; line-height: 1;
     cursor: pointer;
     z-index: 6;
+    backdrop-filter: blur(6px);
+  }
+  /* V4-fix: Stories 배경 음악 — mute 토글 */
+  .stories-mute-btn {
+    position: absolute; top: 24px; right: 60px;
+    width: 36px; height: 36px;
+    background: rgba(0,0,0,0.45);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    font-size: 16px; line-height: 1;
+    cursor: pointer;
+    z-index: 6;
+    backdrop-filter: blur(6px);
+  }
+  .stories-mute-btn:active { transform: scale(0.92); }
+  .stories-music-info {
+    position: absolute; top: 70px; left: 14px; right: 14px;
+    display: none;
+    align-items: center; gap: 8px;
+    padding: 6px 12px 6px 8px;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(8px);
+    border-radius: 100px;
+    color: rgba(255,255,255,0.92);
+    font-size: 11px;
+    z-index: 5;
+    max-width: max-content;
+    margin: 0 auto;
+    animation: stories-music-pulse 0.5s ease;
+  }
+  .stories-music-info.show { display: flex; }
+  @keyframes stories-music-pulse {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .stories-music-info-art {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: linear-gradient(135deg, rgba(212,167,106,0.5), rgba(139,126,196,0.4));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    animation: stories-music-spin 4s linear infinite;
+  }
+  @keyframes stories-music-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .stories-music-info-text {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 200px;
   }
   .stories-tap-zones {
     position: absolute; inset: 0;
@@ -4099,17 +4156,33 @@
   .stories-tap-next   { flex: 1; cursor: pointer; }
   .stories-slide {
     position: absolute; inset: 0;
-    padding: 50px 24px 70px;
+    padding: 60px 24px 70px;
     display: flex; flex-direction: column; justify-content: center; align-items: center;
     color: white;
     text-align: center;
     overflow-y: auto;
     z-index: 3;
-    animation: stories-slide-in 0.35s ease;
+    animation: stories-slide-in 0.45s cubic-bezier(0.2, 0.9, 0.4, 1);
   }
   @keyframes stories-slide-in {
-    from { opacity: 0; transform: translateX(20px); }
-    to   { opacity: 1; transform: translateX(0); }
+    from { opacity: 0; transform: translateY(14px) scale(0.97); filter: blur(4px); }
+    to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+  /* V4-fix: 슬라이드 backdrop 부드러운 빛 분산 */
+  .stories-slide::before {
+    content: '';
+    position: absolute;
+    top: 30%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140%; height: 80%;
+    background: radial-gradient(ellipse at center, rgba(255,235,200,0.10) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: -1;
+    animation: stories-bg-pulse 8s ease-in-out infinite;
+  }
+  @keyframes stories-bg-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
   }
   /* 슬라이드 톤별 background */
   .stories-slide.tone-emo  { background: linear-gradient(180deg, #2d1f3d 0%, #0a0814 100%); }
@@ -4123,29 +4196,47 @@
   .stories-slide.tone-deep-4 { background: linear-gradient(180deg, #1f2a1f 0%, #0a0814 100%); }
   /* 큰 hero 숫자 */
   .stories-hero-num {
-    font-size: 72px;
+    font-size: 84px;
     font-weight: 700;
     letter-spacing: -0.04em;
     line-height: 1;
     margin-bottom: 10px;
+    background: linear-gradient(180deg, #fff5d8 0%, #d4a76a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 40px rgba(212,167,106,0.35);
+    animation: stories-hero-rise 0.7s cubic-bezier(0.2, 0.9, 0.4, 1) 0.1s both;
+  }
+  @keyframes stories-hero-rise {
+    from { opacity: 0; transform: translateY(20px) scale(0.85); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .stories-hero-unit {
     font-size: 18px;
     color: rgba(255,255,255,0.7);
     margin-bottom: 24px;
+    animation: stories-fade-up 0.6s ease 0.3s both;
   }
   .stories-label {
     font-size: 12px;
-    color: rgba(212,167,106,0.85);
-    letter-spacing: 0.18em;
+    color: rgba(212,167,106,0.95);
+    letter-spacing: 0.22em;
     text-transform: uppercase;
     margin-bottom: 16px;
+    text-shadow: 0 0 12px rgba(212,167,106,0.4);
+    animation: stories-fade-up 0.6s ease both;
+  }
+  @keyframes stories-fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
   .stories-title {
     font-family: 'Gowun Batang', serif;
     font-size: 22px;
     line-height: 1.5;
     margin-bottom: 18px;
+    animation: stories-fade-up 0.7s ease 0.2s both;
     word-break: keep-all;
   }
   .stories-body {
@@ -5876,9 +5967,11 @@
       </div>
     </div>
 
-    <!-- V4-1z: Stories Overlay (분기/연간 리뷰 Replay식) -->
+    <!-- V4-1z + 사용자 fix: Stories Overlay (분기/연간 리뷰 Replay식 + 진주 음악 배경 + mute 토글) -->
     <div class="stories-overlay" id="storiesOverlay" style="display:none;">
       <div class="stories-progress" id="storiesProgress"></div>
+      <div class="stories-music-info" id="storiesMusicInfo"></div>
+      <button class="stories-mute-btn" id="storiesMuteBtn" onclick="toggleStoriesMute()" aria-label="음소거">🔊</button>
       <button class="stories-close" onclick="closeStories()" aria-label="닫기">×</button>
       <div class="stories-slide" id="storiesSlide"></div>
       <div class="stories-tap-zones">
@@ -12950,13 +13043,13 @@ function buildSystemPromptParts() {
     volatile.push('');
   }
 
-  // V4-1o + 사용자 fix: 진단 5종 — "더 알아보기" 눌렀을 때만 자연 인용 (사용자 의도 표명 순간)
-  // 매 응답에 진단 끼우면 톤 무거워짐. ADHD 친화: 사용자 자율 + 마찰 X.
-  // anchor 8 "체화하고 싶을 때" 동력 모먼트와 정합.
+  // V4-1o + 사용자 fix: 진단 5종 — "더 알아보기" 눌렀을 때만 자연 인용 (실 사용)
+  // 테스트 모드에서는 매 응답에 인용 (사용자 검증용 — 가드 우회)
   // 거울 3원칙 (9.6): 외재화 톤 / 균형 노출 / 사용자 자기 발견.
   const _lastUserMsgForDiag = (state.chatMessages || []).slice().reverse().find(m => m.role === 'user');
   const _isDeeperContext = !!(_lastUserMsgForDiag && _lastUserMsgForDiag.isDeeperRequest);
-  const activeDiag = _isDeeperContext ? (state.diagnoses || []).find(d => d.status === 'active') : null;
+  const _isTesterMode = !!(state.preferences && state.preferences.testerMode);
+  const activeDiag = (_isDeeperContext || _isTesterMode) ? (state.diagnoses || []).find(d => d.status === 'active') : null;
   if (activeDiag && _DIAG_LABELS && _DIAG_LABELS[activeDiag.type]) {
     const lbl = _DIAG_LABELS[activeDiag.type];
     volatile.push(`[관찰된 패턴 — "더 알아보기" 트리거됨, 자연스러운 흐름에 한 번 인용]`);
@@ -18864,7 +18957,14 @@ function testForceDiagnoses() {
     return;
   }
   registerDiagnoses(detected);
-  showToast(`🩺 ${detected.length}개 진단 감지됨 — 다음 챗 응답에 인용`);
+  // V4-fix: shown 진단도 active로 복구 (검증 위해)
+  (state.diagnoses || []).forEach(d => {
+    if (d.status === 'shown') d.status = 'active';
+  });
+  saveState();
+  const labels = { weak_tool: '도구 약함', wrong_layer: '차원 안 맞음', value_clash: '가치 상충', avoidance: '회피', willpower_cap: '의지 임계' };
+  const types = detected.map(d => labels[d.type] || d.type).join(', ');
+  showToast(`🩺 ${detected.length}개 진단 감지됨 (${types}) — 테스트 모드라 다음 응답에 자동 인용. 대화 탭에서 메시지 보내봐.`);
 }
 
 async function testForceCrystallize() {
@@ -21137,6 +21237,11 @@ function _openStoriesPlayer(slides, type) {
     showToast('표시할 슬라이드 없음');
     return;
   }
+  // V4-fix: 진주 음악 모음 (previewUrl 있는 것만, 슬라이드 cycle용)
+  const musicTracks = (state.pearls || [])
+    .filter(p => p.category === '음악' && p.track && p.track.previewUrl)
+    .map(p => p.track);
+  const muted = !!(state.preferences && state.preferences.storiesMuted);
   _storiesState = {
     slides,
     idx: 0,
@@ -21145,30 +21250,108 @@ function _openStoriesPlayer(slides, type) {
     paused: false,
     fillTimer: null,
     fillStart: 0,
-    fillElapsed: 0
+    fillElapsed: 0,
+    musicTracks,
+    musicAudio: null,
+    muted
   };
   const overlay = document.getElementById('storiesOverlay');
   if (!overlay) return;
   overlay.style.display = 'block';
-  // hide chat-input-bar (z-index 보호)
   const chatBar = document.getElementById('chatInputBar');
   if (chatBar) chatBar.style.visibility = 'hidden';
   const reflBar = document.getElementById('reflectionInputBar');
   if (reflBar) reflBar.classList.remove('active');
+  // mute 버튼 초기 상태
+  const muteBtn = document.getElementById('storiesMuteBtn');
+  if (muteBtn) {
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+    // 음악 진주 X면 mute 버튼 숨김
+    muteBtn.style.display = musicTracks.length > 0 ? '' : 'none';
+  }
   _renderStoriesProgress();
   _renderStoriesSlide();
   _startStoriesAutoTimer();
 }
 
+// V4-fix: Stories 음소거 토글
+function toggleStoriesMute() {
+  if (!_storiesState) return;
+  _storiesState.muted = !_storiesState.muted;
+  if (!state.preferences) state.preferences = {};
+  state.preferences.storiesMuted = _storiesState.muted;
+  saveState();
+  const muteBtn = document.getElementById('storiesMuteBtn');
+  if (muteBtn) muteBtn.textContent = _storiesState.muted ? '🔇' : '🔊';
+  if (_storiesState.muted) {
+    if (_storiesState.musicAudio) {
+      try { _storiesState.musicAudio.pause(); } catch {}
+    }
+    const info = document.getElementById('storiesMusicInfo');
+    if (info) info.classList.remove('show');
+  } else {
+    _playStoriesSlideMusic();
+  }
+}
+
+// V4-fix: 현재 슬라이드 idx에 맞는 음악 트랙 시작 (3 슬라이드마다 cycle, 부드러운 fade)
+function _playStoriesSlideMusic() {
+  if (!_storiesState || _storiesState.muted) return;
+  if (!_storiesState.musicTracks || _storiesState.musicTracks.length === 0) return;
+  const trackIdx = Math.floor(_storiesState.idx / 3) % _storiesState.musicTracks.length;
+  const track = _storiesState.musicTracks[trackIdx];
+  if (!track || !track.previewUrl) return;
+  // 이미 같은 트랙 재생 중이면 skip (슬라이드 변경 시 끊김 X)
+  if (_storiesState.musicAudio && _storiesState.musicAudio.src === track.previewUrl && !_storiesState.musicAudio.paused) {
+    return;
+  }
+  // 이전 음악 fade out (간단)
+  if (_storiesState.musicAudio) {
+    try { _storiesState.musicAudio.pause(); } catch {}
+  }
+  const audio = new Audio(track.previewUrl);
+  audio.volume = 0;
+  audio.loop = true;  // 30초 preview를 슬라이드 6초마다 새로 옮기지 않음 (cycle 시점에만)
+  audio.play().then(() => {
+    // fade-in 0.3s
+    let v = 0;
+    const targetVol = 0.45;
+    const step = setInterval(() => {
+      v += 0.05;
+      if (v >= targetVol) { v = targetVol; clearInterval(step); }
+      audio.volume = v;
+    }, 60);
+  }).catch(e => console.warn('stories music play failed:', e));
+  _storiesState.musicAudio = audio;
+  // music info 표시
+  const info = document.getElementById('storiesMusicInfo');
+  if (info) {
+    info.innerHTML = `
+      <div class="stories-music-info-art">${track.artworkUrl ? `<img src="${escapeHtml(track.artworkUrl)}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentElement.innerHTML='🎵'">` : '🎵'}</div>
+      <div class="stories-music-info-text">${escapeHtml(track.title || '')} — ${escapeHtml(track.artist || '')}</div>
+    `;
+    info.classList.add('show');
+  }
+}
+
 function closeStories() {
-  if (_storiesState && _storiesState.autoTimer) clearTimeout(_storiesState.autoTimer);
-  if (_storiesState && _storiesState.fillTimer) clearInterval(_storiesState.fillTimer);
+  if (_storiesState) {
+    if (_storiesState.autoTimer) clearTimeout(_storiesState.autoTimer);
+    if (_storiesState.fillTimer) clearInterval(_storiesState.fillTimer);
+    // V4-fix: 배경 음악 멈춤
+    if (_storiesState.musicAudio) {
+      try { _storiesState.musicAudio.pause(); } catch {}
+      _storiesState.musicAudio = null;
+    }
+  }
   _storiesState = null;
   const overlay = document.getElementById('storiesOverlay');
   if (overlay) overlay.style.display = 'none';
+  const info = document.getElementById('storiesMusicInfo');
+  if (info) info.classList.remove('show');
   const chatBar = document.getElementById('chatInputBar');
   if (chatBar) chatBar.style.visibility = '';
-  // 음악 미리듣기 멈춤
+  // 일반 음악 미리듣기도 멈춤
   if (_currentMusicAudio) {
     try { _currentMusicAudio.pause(); } catch {}
     _currentMusicAudio = null;
@@ -21210,12 +21393,20 @@ function storiesPause() {
     _storiesState.fillTimer = null;
   }
   _storiesState.fillElapsed += Date.now() - _storiesState.fillStart;
+  // V4-fix: 음악도 같이 pause
+  if (_storiesState.musicAudio) {
+    try { _storiesState.musicAudio.pause(); } catch {}
+  }
 }
 
 function storiesResume() {
   if (!_storiesState || !_storiesState.paused) return;
   _storiesState.paused = false;
   _startStoriesAutoTimer();
+  // V4-fix: 음악 resume
+  if (_storiesState.musicAudio && !_storiesState.muted) {
+    try { _storiesState.musicAudio.play(); } catch {}
+  }
 }
 
 function _startStoriesAutoTimer() {
@@ -21260,14 +21451,17 @@ function _renderStoriesSlide() {
   if (!container) return;
   container.className = 'stories-slide ' + (slide.tone || 'tone-deep');
   container.innerHTML = slide.html;
-  // 이전 슬라이드 음악 멈춤
+  // 일반 음악 미리듣기 (진주 카드 안의) 멈춤
   if (_currentMusicAudio) {
     try { _currentMusicAudio.pause(); } catch {}
     _currentMusicAudio = null;
     _currentMusicBtn = null;
   }
-  // fillElapsed 리셋 (이건 새 슬라이드)
+  // fillElapsed 리셋
   _storiesState.fillElapsed = 0;
+  // V4-fix: 슬라이드별 배경 음악 (진주 음악 cycle, mute 안 한 경우)
+  // 한 곡이 여러 슬라이드 걸쳐 재생 — 같은 트랙이면 끊김 X
+  _playStoriesSlideMusic();
 }
 
 // 분기 리뷰 → 10 슬라이드 빌더
@@ -22951,7 +23145,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.73-1y-seed-bd-photo';
+const APP_VERSION = 'v4.0.74-stories-music-prettier-diag';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
