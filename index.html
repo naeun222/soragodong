@@ -9004,18 +9004,18 @@ const ONBOARDING_STEPS = [
     id: 'annual_stories_show',
     targetSelector: '.annual-stories-card',
     title: '🌟 연간 Stories',
-    body: '같이 보자.',
+    body: '같이 보자. 카드 눌러봐.',
     waitFor: 'click',
-    advanceDelay: 600,
-    dimBackground: false,
-    manualAdvance: true
+    hideUntilElementHidden: '#storiesOverlay',
+    dimBackground: false
   },
   {
     id: 'annual_stories_done',
-    targetSelector: '[data-cat="galpi"]',
-    title: '🌀 마법·리뷰로 돌아오기',
-    body: 'Stories 다 봤으면 닫고, 마법·리뷰 칩으로 돌아와.',
-    waitFor: 'click',
+    targetSelector: '.nav-item[data-screen="archive"]',
+    title: '📚 도서관으로 돌아오기',
+    body: 'Stories 잘 봤지? 아래 <b>📚 도서관</b> 탭 한 번 눌러서 돌아와.',
+    waitFor: 'visit',
+    visitScreen: 'archive',
     advanceDelay: 600,
     dimBackground: false,
     manualAdvance: true
@@ -9543,8 +9543,42 @@ function onbPositionStep(step, retryCount) {
       if (at) advanceTarget = at;
     }
     if (advanceTarget) {
-      const handler = (e) => { safeAdvance(step.advanceDelay || 350); };
-      onbAddListener(advanceTarget, 'click', handler);
+      // 사용자 요청 2026-04-28: hideUntilElementHidden — 클릭 후 코치마크 숨김 + 지정 element가 hidden 될 때까지 대기 → 다시 띄우고 advance
+      if (step.hideUntilElementHidden) {
+        const handler = (e) => {
+          // 코치마크 숨김
+          coachmark.style.display = 'none';
+          spotlight.style.display = 'none';
+          mask.classList.remove('show-full');
+          const ovEl = document.getElementById('onbOverlay');
+          if (ovEl) ovEl.style.pointerEvents = 'none';
+          // overlay 가 hidden 될 때까지 polling
+          const sel = step.hideUntilElementHidden;
+          const stepIdxAtClick = stepIdxAtRender;
+          const startWatch = Date.now();
+          const pollId = setInterval(() => {
+            // step이 바뀌었거나 튜토리얼이 종료되면 중단
+            if (!window._onbTutorialMode || _onbStep !== stepIdxAtClick) {
+              clearInterval(pollId);
+              return;
+            }
+            const el = document.querySelector(sel);
+            const isHidden = !el || el.style.display === 'none' || el.offsetParent === null;
+            // overlay가 한 번 보였다가 hidden 되어야 advance (즉, 처음 polling 시작 후 200ms는 보임 보장 시간)
+            const visibleSeenMs = Date.now() - startWatch;
+            if (isHidden && visibleSeenMs > 300) {
+              clearInterval(pollId);
+              // 코치마크 다시 띄우고 advance
+              coachmark.style.display = '';
+              if (typeof onbNext === 'function') onbNext();
+            }
+          }, 200);
+        };
+        onbAddListener(advanceTarget, 'click', handler);
+      } else {
+        const handler = (e) => { safeAdvance(step.advanceDelay || 350); };
+        onbAddListener(advanceTarget, 'click', handler);
+      }
     }
     // V3.13.x: manualAdvance — spotlight 위치 부정확할 수 있는 step에서
     // 사용자가 "눌렀어 →" 직접 누를 수 있게 (응답 길이에 따라 버튼 위치 바뀌는 케이스 등)
@@ -27278,7 +27312,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.126-task-avg-only';
+const APP_VERSION = 'v4.0.127-stories-pause';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
