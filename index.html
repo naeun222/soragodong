@@ -11084,6 +11084,7 @@ document.addEventListener('click', function(e) {
 });
 
 // V3.13.x: 대화 마무리 — 사용자가 능동적으로 챕터 끊기. AI가 토픽 카드 생성 + chapterStart 마커.
+// V4-fix: 이 대화 마무리 → 즉시 히스토리로 이동 + 새 대화 시작 (ChatGPT 식)
 async function endChapter() {
   const validMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
   if (validMsgs.length < 2) {
@@ -11092,29 +11093,79 @@ async function endChapter() {
   }
   const yes = await showConfirmModal({
     title: '이 대화 마무리할까?',
-    message: '지금까지 대화를 AI가 정리해서 토픽 카드로 저장할게.\n새 주제로 깨끗하게 이어가자.',
-    okLabel: '정리하기 ✦',
+    message: 'AI가 정리해서 히스토리로 보관하고 새 대화를 시작할게.\n7일 뒤 자동으로 사라져 — 잠깐 보관용.',
+    okLabel: '마무리 ✦',
     cancelLabel: '취소'
   });
   if (!yes) return;
-  // 마지막 메시지에 chapterStart=true 마커 박기 (extractPreviousChapterTopics가 이걸 기준으로 직전 챕터 추출)
-  const lastMsg = validMsgs[validMsgs.length - 1];
-  const wasChapterStart = lastMsg.chapterStart;
-  lastMsg.chapterStart = true;
-  saveState();
+
   showToast('🐚 정리 중...');
+
+  // 1. 토픽 카드 추출 (마지막 메시지에 chapterStart 마커)
+  const lastMsg = validMsgs[validMsgs.length - 1];
+  if (!lastMsg.chapterStart) lastMsg.chapterStart = true;
+  saveState();
   try {
     await extractPreviousChapterTopics();
-    saveState();
-    if (typeof renderChat === 'function') renderChat();
-    showToast('✦ 정리됐어. 새 주제로 이어가자.');
   } catch (e) {
-    if (!wasChapterStart) {
-      delete lastMsg.chapterStart;
-      saveState();
-    }
-    showToast('❌ 정리 실패: ' + (e.message || ''));
+    console.warn('topic extract failed:', e);
   }
+
+  // 2. summary 생성 (AI)
+  let summary = '';
+  if (state.apiKey) {
+    try {
+      summary = await summarizeChatDay(todayKey(), validMsgs);
+    } catch (e) {
+      console.warn('summary failed:', e);
+      summary = '(AI 요약 실패 — 메시지 ' + validMsgs.length + '개)';
+    }
+  } else {
+    summary = '메시지 ' + validMsgs.length + '개';
+  }
+
+  // 3. chatArchive push (오늘 날짜 + 같은 날 있으면 합침)
+  const todayK = todayKey();
+  if (!Array.isArray(state.chatArchive)) state.chatArchive = [];
+  const existing = state.chatArchive.find(a => a.date === todayK);
+  if (existing) {
+    existing.messages = [...(existing.messages || []), ...validMsgs];
+    existing.messageCount = (existing.messages || []).length;
+    existing.summary = (existing.summary ? existing.summary + '\n\n' : '') + summary;
+    existing.generatedAt = new Date().toISOString();
+  } else {
+    state.chatArchive.unshift({
+      date: todayK,
+      summary,
+      messageCount: validMsgs.length,
+      messages: validMsgs.slice(),
+      generatedAt: new Date().toISOString(),
+      endedManually: true
+    });
+  }
+
+  // 4. chatMessages 리셋
+  state.chatMessages = [];
+
+  // 5. 7일 cap (오래된 archive 자동 prune)
+  pruneOldChatArchive();
+
+  saveState();
+  if (typeof renderChat === 'function') renderChat();
+  showToast('✦ 정리 완료. 새 대화 시작.');
+}
+
+// V4-fix: chatArchive 7일 cap (잠깐 보관용)
+function pruneOldChatArchive() {
+  if (!Array.isArray(state.chatArchive)) return;
+  const cutoff = Date.now() - 7 * 86400000;
+  const before = state.chatArchive.length;
+  state.chatArchive = state.chatArchive.filter(a => {
+    if (!a.date) return false;
+    const t = new Date(a.date + 'T12:00:00').getTime();
+    return t >= cutoff;
+  });
+  if (state.chatArchive.length < before) saveState();
 }
 
 async function showDiaryTemplates() {
@@ -15919,7 +15970,8 @@ function renderV4TimetableHTML() {
   `;
   for (let h = startHour; h <= endHour; h++) {
     const hourLabel = String(h).padStart(2, '0') + ':00';
-    html += `<div class="v4-tt-hour-row" style="height:${HOUR_PX}px;">
+    // V4-fix: 빈 시간대 클릭 → task picker
+    html += `<div class="v4-tt-hour-row" style="height:${HOUR_PX}px;" onclick="pickTaskForHour(${h})" title="이 시간에 할 일 박기">
       <span class="v4-tt-hour-label">${hourLabel}</span>
     </div>`;
   }
@@ -15954,6 +16006,93 @@ function renderV4TimetableHTML() {
   }
   html += `</div>`;
   return html;
+}
+
+// V4-fix: 시간 grid 빈 시간대 클릭 → 할 일 목록 picker (그 시간에 박기)
+async function pickTaskForHour(hour) {
+  // 아직 시간 안 박힌 today task 모음 (오늘의 카드 + 오늘 할 일)
+  const tasks = (state.tasks || []).filter(t =>
+    t.status !== 'done' &&
+    !t.scheduledStart &&
+    (t.slot === 'now3' || t.isToday)
+  );
+  const options = tasks.map(t => {
+    const tag = t.slot === 'now3' ? '✦' : '📋';
+    return { label: `${tag} ${(t.title || '').slice(0, 35)}`, value: t.id };
+  });
+  options.push({ label: '+ 새 일정 직접 입력', value: '__new' });
+  options.push({ label: '취소', value: 'cancel' });
+
+  const action = await showOptionsModal({
+    title: `${String(hour).padStart(2,'0')}:00 — 뭘 박을까?`,
+    message: tasks.length === 0 ? '박을 할 일 없음 — 직접 입력 가능' : '오늘 할 일 중 골라.',
+    options
+  });
+  if (!action || action === 'cancel') return;
+
+  const startStr = `${String(hour).padStart(2,'0')}:00`;
+  const endHour = (hour + 1) % 24;
+  const endStr = `${String(endHour).padStart(2,'0')}:00`;
+  const todayK = todayKey();
+
+  if (action === '__new') {
+    const title = await showInputModal({
+      title: `📅 ${startStr} 새 일정`,
+      placeholder: '뭐 할 거야?',
+      maxLength: 60,
+      okLabel: '박기'
+    });
+    if (!title || !title.trim()) return;
+    // 시간 정확히 조정 picker
+    const time = await showTimeRangePicker({
+      title: title.trim(),
+      startDefault: startStr,
+      endDefault: endStr
+    });
+    if (!time) return;
+    if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
+    state.todaySchedule.push({
+      id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      title: title.trim(),
+      start: time.start,
+      end: time.end,
+      date: todayK,
+      source: 'manual',
+      taskId: null,
+      color: _V4_TT_COLORS[Math.floor(Math.random() * _V4_TT_COLORS.length)]
+    });
+    saveState();
+    renderExecute();
+    showToast(`📅 ${time.start} 박힘`);
+    return;
+  }
+
+  // 기존 task → schedule push
+  const t = tasks.find(x => x.id === action);
+  if (!t) return;
+  // 시간 확인 picker (사용자가 1시간 default 변경 가능)
+  const time = await showTimeRangePicker({
+    title: `⏰ ${t.title}`,
+    startDefault: startStr,
+    endDefault: endStr
+  });
+  if (!time) return;
+  if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
+  state.todaySchedule.push({
+    id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: t.title,
+    start: time.start,
+    end: time.end,
+    date: todayK,
+    source: 'task',
+    taskId: t.id,
+    color: _V4_TT_COLORS[Math.floor(Math.random() * _V4_TT_COLORS.length)]
+  });
+  t.scheduledStart = time.start;
+  t.scheduledEnd = time.end;
+  saveState();
+  renderExecute();
+  showToast(`⏰ ${(t.title || '').slice(0, 20)} → ${time.start}`);
 }
 
 async function addV4ScheduleItem() {
@@ -19601,7 +19740,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.53-hero-play';
+const APP_VERSION = 'v4.0.54-chat-history';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
