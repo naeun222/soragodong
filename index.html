@@ -7247,6 +7247,33 @@ function authHeaders() {
   };
 }
 
+// 사용자 요청 2026-04-28: 서버 시간 동기화 — 디바이스 시계 잘못돼도 정확한 시간 사용
+let _serverTimeOffset = 0;  // serverTime - localTime (ms)
+async function syncServerTime() {
+  try {
+    // Supabase health endpoint 또는 worldtimeapi.org fallback
+    const start = Date.now();
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/`, { method: 'HEAD', headers: { 'apikey': SUPABASE_ANON_KEY } });
+    const end = Date.now();
+    const dateHeader = resp.headers.get('Date');
+    if (dateHeader) {
+      const serverMs = new Date(dateHeader).getTime();
+      const networkLag = (end - start) / 2;  // 절반은 응답 받는 시간
+      const adjustedLocal = (start + end) / 2;  // request 평균 시점
+      _serverTimeOffset = serverMs - adjustedLocal;
+      if (Math.abs(_serverTimeOffset) > 60000) {  // 1분 이상 차이
+        console.log(`[serverTime] offset: ${Math.round(_serverTimeOffset / 60000)}분 차이 (디바이스 시계 부정확)`);
+      }
+    }
+  } catch (e) { console.warn('serverTime sync failed:', e); }
+}
+function getServerNow() {
+  return new Date(Date.now() + _serverTimeOffset);
+}
+function getServerNowMs() {
+  return Date.now() + _serverTimeOffset;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // SUPABASE
 // ═══════════════════════════════════════════════════════════════
@@ -7856,6 +7883,9 @@ async function init() {
   // Authenticated — load data
   document.getElementById('loginScreen').style.display = 'none';
   document.querySelector('.app').style.display = 'flex';
+
+  // 사용자 요청 2026-04-28: 서버 시간 동기화 (디바이스 시계 잘못돼도 보정)
+  syncServerTime();  // fire-and-forget
 
   await loadFromCloud();
 
@@ -9307,8 +9337,9 @@ function resetLoginFlow() {
 // 새벽 작업자 자연스러움 + 잠 자기 전 일기·체크인이 그 날의 기록으로 묶임.
 const DAY_CUTOFF_HOUR = 4;
 function getDayKey(input) {
+  // 사용자 요청 2026-04-28: input 없으면 서버 시간 기반 (디바이스 시계 잘못돼도 정확)
   const t = input == null
-    ? Date.now()
+    ? (typeof getServerNowMs === 'function' ? getServerNowMs() : Date.now())
     : (typeof input === 'string' ? new Date(input).getTime()
        : (input instanceof Date ? input.getTime() : input));
   const d = new Date(t - DAY_CUTOFF_HOUR * 3600000);
@@ -11579,9 +11610,9 @@ async function showDeferDatePicker() {
     ]
   });
   if (!choice) return null;
-  const today = new Date();
+  // 사용자 요청 2026-04-28: 서버 시간 기반 (디바이스 시계 잘못돼도 정확)
+  const today = (typeof getServerNow === 'function') ? getServerNow() : new Date();
   today.setDate(today.getDate() + choice);
-  // todayKey 형식 (YYYY-MM-DD)
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const dd = String(today.getDate()).padStart(2, '0');
@@ -14651,7 +14682,8 @@ function buildSystemPromptParts() {
 
   // V3.13.x: 현재 시각 + entry 기준 날짜 모두 주입 (AI 날짜 착각 방지)
   // 04:00 cutoff 도입으로 calendar date와 entry key가 다를 수 있음 (새벽 시간대)
-  const _now = new Date();
+  // 사용자 요청 2026-04-28: 서버 시간 기반 (디바이스 시계 잘못돼도 정확)
+  const _now = (typeof getServerNow === 'function') ? getServerNow() : new Date();
   const _dowReal = ['일', '월', '화', '수', '목', '금', '토'][_now.getDay()];
   const _realDate = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
   const _realTime = `${String(_now.getHours()).padStart(2,'0')}:${String(_now.getMinutes()).padStart(2,'0')}`;
