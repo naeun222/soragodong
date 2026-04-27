@@ -8127,24 +8127,24 @@ const ONBOARDING_STEPS = [
   {
     id: 'model_intro',
     targetSelector: null,
-    title: '"나" 탭 안내 — 8 차원',
-    body: '여기서 볼 수 있는 거:<br><br>· <b>📊 추적 항목</b> — 체크인 측정값 그래프<br>· <b>📈 진행 중인 프로젝트</b> — 장기 목표 추적<br>· <b>🎯 가치 / 🐚 특성 / 🔄 패턴</b> — 대화 쌓이면 내가 너 모델링해서 보여줘<br>· <b>💼 케이스 정리</b> — 강점·문제·메커니즘·목표·성장 (8 차원, 임상가 시각)<br><br>· <b>NEW 보라 좌측 바</b> — AI 추출 새 항목. <b>맞아 ✓ / 아니야</b>로 검증해.<br><br><span class="small">지금은 비어있을 거야. 대화 쌓이면 자동으로 채워져!</span>',
+    title: '"나" 탭',
+    body: '여기는 <b>내가 너를 분석한 결과</b>가 모이는 곳이야.<br>대화 쌓이면 자동으로 채워져 — 천천히 둘러봐.',
     waitFor: 'next',
     dimBackground: false
   },
   {
     id: 'diagnoses_intro',
     targetSelector: null,
-    title: '🩺 진단 5종 (V4)',
-    body: '대화 + 양생방 데이터로 내가 5 진단을 자동 detect해:<br><br>· <b>🔧 도구 약함</b> — 같은 차원 N회 X<br>· <b>📐 차원 안 맞음</b> — 한 layer 다 X<br>· <b>⚖️ 가치 상충</b> — 모든 layer X + 가치 충돌<br>· <b>🌫 회피 패턴</b> — seedling 30일+ / skipped 50%+<br>· <b>🪫 의지 임계치</b> — 모든 게 X<br><br>대화 [더 알고 싶어 ▾] 응답에 한 줄 자연 인용. <b>시도 결과로 confidence 갱신</b>.',
+    title: '🩺 진단',
+    body: '내가 너 데이터에서 작동 중인 패턴을 발견하면 — <b>대화에서 자연스럽게 한 줄 인용</b>해줄게.<br><br><span class="small">"더 알고 싶어 ▾" 누르면 진단 같이 나와.</span>',
     waitFor: 'next',
     dimBackground: false
   },
   {
     id: 'reflection_intro',
     targetSelector: null,
-    title: '🌊 숙고 질문 (한 번에 1개)',
-    body: '큰 질문 한 번에 1개 — 별도 대화창에서 깊이 사색.<br><br>· <b>박는 법</b>: 홈 "더 깊이 볼 거" + 새 질문 / 대화 메시지 ⋮ → "🌊 숙고 질문으로"<br>· <b>대화창</b>: 메인챗과 분리. 결론은 너 직접.<br>· <b>✓ 결론</b> → archive 깨달음에 자동. 대화 흐름 보관 여부 yes/no.',
+    title: '🌊 숙고 질문',
+    body: '큰 질문 하나 안고 며칠 살고 싶을 때.<br><b>홈에서 + 질문 추가</b> 또는 메시지 ⋮ → "숙고 질문으로".<br>별도 대화창에서 깊이 사색 → 결론은 너 직접.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -12553,6 +12553,31 @@ function renderModel() {
     html += cfSection('⚙️ 어떻게 작동하는지', '너의 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
     html += cfSection('💪 너의 강점', '', state.caseFormulation.strengths, 'strengths');
     html += '</div>';
+  }
+  // V4-fix v3 (사용자 요청): 진단 5종 나 탭에 표시 (active + shown만, dismissed 제외)
+  const visibleDiags = (state.diagnoses || []).filter(d => d.status === 'active' || d.status === 'shown');
+  if (visibleDiags.length > 0) {
+    const diagLabels = {
+      weak_tool: '🔧 도구 약함',
+      wrong_layer: '📐 차원 안 맞음',
+      value_clash: '⚖️ 가치 상충',
+      avoidance: '🌫 회피 패턴',
+      willpower_cap: '🪫 의지 임계치'
+    };
+    html += `<div class="model-section">
+      <div class="model-section-title">🩺 작동 중인 패턴</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">내가 너 데이터에서 발견한 작동 중인 패턴이야. 시도 결과로 신뢰도 갱신돼.</div>
+      ${visibleDiags.sort((a,b) => (b.confidence || 0) - (a.confidence || 0)).map(d => `
+        <div class="model-item" style="border-left: 3px solid var(--purple); padding-left: 12px;">
+          <div class="model-item-name">${diagLabels[d.type] || d.type}</div>
+          <div class="model-item-desc" style="font-size:12px; line-height:1.6;">${escapeHtml(d.evidence || '')}</div>
+          <div class="model-item-meta">
+            <span class="conf">신뢰도 ${Math.round((d.confidence || 0.5) * 100)}%</span>
+            ${d.status === 'shown' ? '<span style="color:var(--text-soft);">대화에서 한 번 인용됨</span>' : '<span style="color:#8fc88f;">발견됨</span>'}
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
   }
   container.innerHTML = html;
 }
@@ -25052,7 +25077,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.106-tutorial-action-steps';
+const APP_VERSION = 'v4.0.107-model-tab-diagnoses';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
