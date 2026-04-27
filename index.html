@@ -8793,6 +8793,96 @@ const ONBOARDING_STEPS = [
     waitFor: 'next',
     dimBackground: false
   },
+  // 사용자 요청 2026-04-28: 도서관 튜토리얼 (reflection 앞으로 이동, 도서관 카테고리 다시 살림)
+  {
+    id: 'go_archive_lib',
+    targetSelector: '.nav-item[data-screen="archive"]',
+    title: '📚 도서관으로',
+    body: '이번엔 <b>📚 도서관</b> 전체 둘러보자.<br>아래 📚 도서관 탭 눌러봐.',
+    waitFor: 'visit',
+    visitScreen: 'archive',
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'library_categories',
+    targetSelector: null,
+    title: '📚 5 카테고리',
+    body: '도서관은 <b>5 카테고리</b>로 자동 정리:<br>📔 일기·대화 / 🔮 진주 / 🧬 양생방 / ✨ 깨달음 / 🌀 갈피·리뷰<br><br>맨 위 <b>🌟 오늘의 너</b> 카드는 진주 1개 회전.',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'click_diary_chip',
+    targetSelector: '[data-cat="diary"]',
+    title: '📔 일기·대화 칩',
+    body: '먼저 <b>📔 일기·대화</b> 칩 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'diary_calendar_explain',
+    targetSelector: null,
+    title: '📔 캘린더 무드 그리드',
+    body: '한 달 한눈에 — 칸 색 = 그날 기분.<br>칸 클릭 → 그날 카드 펼침 (체크인/일기/사진/음악/대화/진주/깨달음 다 모임).<br><br>위 8 서브칩 (일기/일상/고민/감정/기억/할 일/아이디어/관계) — 챕터 카테고리별 필터.<br><br><span class="small">🤖 일기 자동 요약: 체크인·대화 쌓이면 그 날 한 단락 자동.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'click_pearls_chip',
+    targetSelector: '[data-cat="pearls"]',
+    title: '🔮 진주 칩',
+    body: '<b>🔮 진주</b> 칩 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'pearls_intro',
+    targetSelector: null,
+    title: '🔮 살아있다 느낀 순간들',
+    body: '음악·음식·장소·순간·사람.<br><br>· <b>+ 진주 추가</b> — 직접 입력 + 사진/음악 첨부<br>· <b>★</b> 즐겨찾기<br><br>🎵 <b>같은 곡 5번 = 자동 진주</b>: 체크인에서 같은 곡 5번 등장하면 자동 박힘.<br><br><span class="small">대화에서 "진짜 좋아" 흐르면 내가 알아서 "진주에 넣을래?" 물어봐.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'click_insights_chip',
+    targetSelector: '[data-cat="insights"]',
+    title: '✨ 깨달음 칩',
+    body: '<b>✨ 깨달음</b> 칩 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'insights_intro',
+    targetSelector: null,
+    title: '✨ 너 안에서 떠오른 통찰',
+    body: '대화에서 박은 깨달음 (스크랩) / 직접 적은 메모 / 숙고 결론 — 셋 다 모임.<br><br>카드 누르면 <b>원본 메시지</b>까지 보여 (대화에서 박은 거).<br><br>🔮 <b>AI 인사이트 발견</b>: 체크인 7일 쌓이면 [🔮 새 인사이트 찾기] 버튼 → 데이터 패턴/인과 자동 발견.',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'click_galpi_chip',
+    targetSelector: '[data-cat="galpi"]',
+    title: '🌀 갈피·리뷰 칩',
+    body: '<b>🌀 갈피·리뷰</b> 칩 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'galpi_intro',
+    targetSelector: null,
+    title: '🌀 갈피의 방 + 리뷰',
+    body: '<b>⚖️ 갈피의 방</b> — 큰 결정 (이직·이별·진로) 14일 동안 숙성하며 매일 다른 각도로 생각.<br><br><b>🌙 주간/월간/분기/연간 리뷰</b> — 네 페이스에 자동.<br>· 분기 리뷰: ▶ Stories Replay (Spotify Wrapped식) 가능<br>· 진주 음악 슬라이드마다 자동 재생',
+    waitFor: 'next',
+    dimBackground: false
+  },
   {
     id: 'reflection_intro',
     targetSelector: '.nav-item[data-screen="home"]',
