@@ -2743,6 +2743,35 @@
   .archive-section-wrap { margin-bottom: 22px; }
   .archive-item-card { cursor: pointer; transition: transform 0.15s, border-color 0.15s; }
   .archive-item-card:active { transform: scale(0.99); border-color: rgba(201,169,110,0.4); }
+  /* V4-1h: 깨달음 type 배지 + tags */
+  .archive-type-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-size: 10px;
+    margin-right: 4px;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .archive-type-badge.t-memo    { background: rgba(143,200,143,0.18); color: #c5e8c5; }
+  .archive-type-badge.t-reflect { background: rgba(98,165,200,0.20); color: #a3d2e8; }
+  .archive-type-badge.t-scrap   { background: rgba(201,169,110,0.18); color: var(--accent2); }
+  .archive-item-tags {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    margin-top: 8px;
+  }
+  .archive-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    background: rgba(139,126,196,0.16);
+    color: #b9aedc;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+  }
+  .archive-type-memo {
+    border-color: rgba(143,200,143,0.32) !important;
+    background: linear-gradient(135deg, rgba(143,200,143,0.08), rgba(139,126,196,0.04)) !important;
+  }
 
   /* V3.13.x: 깨달음 모달 내부 */
   .archive-modal-headline {
@@ -3848,6 +3877,10 @@
     <button class="chat-plus-item" onclick="chatPlusAction('diary')">
       <span class="chat-plus-icon">📝</span>
       <span class="chat-plus-label">일기 템플릿</span>
+    </button>
+    <button class="chat-plus-item" onclick="chatPlusAction('memo')">
+      <span class="chat-plus-icon">✎</span>
+      <span class="chat-plus-label">메모 (깨달음)</span>
     </button>
     <button class="chat-plus-item" onclick="chatPlusAction('end')">
       <span class="chat-plus-icon">✓</span>
@@ -9075,6 +9108,7 @@ function chatPlusAction(kind) {
   closeChatPlusMenu();
   if (kind === 'diary') showDiaryTemplates();
   else if (kind === 'end') endChapter();
+  else if (kind === 'memo') addMemoArchive();
 }
 document.addEventListener('click', function(e) {
   const menu = document.getElementById('chatPlusMenu');
@@ -10023,6 +10057,88 @@ ${msg.content}
   saveState();
   renderChat();
   showToast('깨달음 아카이브에 저장됐어 ✦');
+}
+
+// V4-1h: ✎ 메모 — 자유 텍스트 + AI 해시태그 자동 생성. 컨텍스트 X (대화 인용 X).
+// V4 비전 7.6: archive 객체 { type:'memo', userMemo, tags[], date, savedAt, source:'메모' }
+async function addMemoArchive() {
+  const userMemo = await showInputModal({
+    title: '✎ 메모',
+    message: '깨달음 한 줄. 자유롭게 — 짧아도 OK.',
+    placeholder: '예: 새벽엔 결정 미루기 / 카페가 답이다',
+    multiline: true,
+    maxLength: 400,
+    okLabel: '저장 ✦'
+  });
+  if (!userMemo || !userMemo.trim()) return;
+  const trimmed = userMemo.trim();
+
+  // AI 해시태그 자동 생성 (3-5개, 짧은 키워드)
+  let tags = [];
+  if (state.apiKey) {
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 100,
+          messages: [{
+            role: 'user',
+            content: `메모: "${trimmed}"
+
+이 메모의 핵심을 짧은 해시태그 3-5개로 뽑아.
+각 태그 2-6자 한국어 명사형. 예: 결정, 환경, ADHD, 새벽, 회피, 자기효능감.
+
+[출력 — JSON만]
+{ "tags": ["태그1", "태그2", "태그3"] }
+
+[금지]
+- # 기호 X (태그 텍스트만)
+- 마크다운, 코드블록 X
+- 영어 (단 ADHD/CBT 등 약어 OK)
+- 6자 초과 태그 X
+- 일반 동사·형용사 (행동, 좋다 등) X
+- 5개 초과 X
+
+JSON만 출력.`
+          }]
+        })
+      });
+      const data = await resp.json();
+      let raw = data.content[0].text.trim();
+      raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) {
+        const parsed = JSON.parse(m[0]);
+        if (Array.isArray(parsed.tags)) {
+          tags = parsed.tags
+            .map(t => String(t).replace(/^#/, '').trim())
+            .filter(t => t && t.length <= 8)
+            .slice(0, 5);
+        }
+      }
+    } catch (e) {
+      console.warn('memo tag AI failed:', e);
+    }
+  }
+
+  const _dayKey = todayKey();
+  const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  state.archive.unshift({
+    type: 'memo',
+    userMemo: trimmed,
+    headline: '',
+    body: trimmed.slice(0, 80),
+    insight: trimmed,        // 검색·legacy 호환
+    tags,
+    date,
+    source: '메모',
+    savedAt: new Date().toISOString()
+  });
+  saveState();
+  if (typeof renderArchive === 'function') renderArchive();
+  showToast(tags.length ? `메모 저장됨 ✎  ${tags.map(t => '#' + t).join(' ')}` : '메모 저장됨 ✎');
 }
 
 // V3.13.x: askDeeper 응답을 전략 카드로 저장 (state.topicCards에 category='strategy')
@@ -11393,7 +11509,7 @@ function renderLensArchive() {
   const items = (state.archive || []);
   const q = _archiveSearchQuery;
   const filtered = q
-    ? items.filter(a => [a.headline, a.body, a.insight, a.date, a.source].filter(Boolean).join(' ').toLowerCase().includes(q))
+    ? items.filter(a => [a.headline, a.body, a.insight, a.userMemo, a.date, a.source, ...(a.tags || [])].filter(Boolean).join(' ').toLowerCase().includes(q))
     : items;
 
   let html = '<div class="archive-section-wrap">';
@@ -11406,22 +11522,39 @@ function renderLensArchive() {
       html += `<div class="archive-empty">
         <div class="icon">✦</div>
         <div style="font-size:14px; color:var(--text); margin-bottom:8px;">아직 저장된 깨달음 없어</div>
-        대화 응답 아래 <b>"✦ 깨달음으로"</b> 버튼을 누르면<br>여기 모여.
+        대화 응답 아래 <b>"✦ 깨달음으로"</b> 또는 + 메뉴의 <b>✎ 메모</b>로 모아.
       </div>`;
     }
   } else {
+    // V4-1h: type별 배지 + tags 표시
+    const typeBadge = {
+      'memo':       '<span class="archive-type-badge t-memo" title="메모">✎</span>',
+      'reflection': '<span class="archive-type-badge t-reflect" title="숙고 결론">🌊</span>',
+      'scrap':      '<span class="archive-type-badge t-scrap" title="대화 깨달음">📌</span>'
+    };
     html += filtered.map(a => {
       const realIdx = items.indexOf(a);
-      const headline = a.headline ? `<div class="archive-item-headline">${escapeHtml(a.headline)}</div>` : '';
-      const bodyText = a.body || (a.headline ? '' : (a.insight || ''));
+      const t = a.type || 'scrap';
+      const badge = typeBadge[t] || typeBadge['scrap'];
+      // memo는 userMemo가 본문, headline X
+      const headline = (t !== 'memo' && a.headline)
+        ? `<div class="archive-item-headline">${escapeHtml(a.headline)}</div>`
+        : '';
+      const bodyText = t === 'memo'
+        ? (a.userMemo || a.body || a.insight || '')
+        : (a.body || (a.headline ? '' : (a.insight || '')));
       const body = bodyText ? `<div class="archive-item-body">${escapeHtml(bodyText)}</div>` : '';
+      const tagsHtml = (Array.isArray(a.tags) && a.tags.length)
+        ? `<div class="archive-item-tags">${a.tags.map(tg => `<span class="archive-tag">#${escapeHtml(tg)}</span>`).join('')}</div>`
+        : '';
       const dateStr = a.date || '';
       const sourceStr = a.source ? ` · ${escapeHtml(a.source)}` : '';
       return `
-        <div class="archive-item-card" onclick="openArchiveItem(${realIdx})">
-          <div class="archive-item-meta">${escapeHtml(dateStr)}${sourceStr}</div>
+        <div class="archive-item-card archive-type-${t}" onclick="openArchiveItem(${realIdx})">
+          <div class="archive-item-meta">${badge} ${escapeHtml(dateStr)}${sourceStr}</div>
           ${headline}
           ${body}
+          ${tagsHtml}
           <button class="archive-item-delete" onclick="event.stopPropagation(); deleteArchiveItem(${realIdx})" title="삭제" aria-label="삭제">✕</button>
         </div>
       `;
@@ -15272,7 +15405,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.9-galpi-rename';
+const APP_VERSION = 'v4.0.10-memo-tags';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
