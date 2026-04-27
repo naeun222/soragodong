@@ -13593,6 +13593,16 @@ function renderExecute() {
 
     // V4-1u-b: 타임테이블 시간 grid (V4 비전 10.6) — 위에 표시. 5블록은 그대로 (점진 마이그레이션)
     html += renderV4TimetableHTML();
+    // V4-1u-b-2: 첫 렌더 시 현재 시각 라인 자동 스크롤 (한 세션 1회만)
+    if (!window._v4ttScrolledOnce) {
+      window._v4ttScrolledOnce = true;
+      setTimeout(() => {
+        const nowLine = document.querySelector('.v4-tt-now-line');
+        if (nowLine && nowLine.scrollIntoView) {
+          try { nowLine.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+        }
+      }, 250);
+    }
 
     // Time table (V3 5블록 — 점진 마이그레이션 위해 일단 유지)
     html += renderTimetableHTML();
@@ -17401,7 +17411,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.28-ai-scheduler';
+const APP_VERSION = 'v4.0.29-tt-autoscroll';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
