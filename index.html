@@ -2562,6 +2562,21 @@
     color: #d4a76a;
     font-weight: 500;
   }
+  /* V4-fix #13: 양생 카드 트리 collapse 토글 */
+  .strategy-tree-toggle {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--text-soft);
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 4px 0 6px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .strategy-tree-toggle:active { color: var(--text-dim); border-color: var(--text-soft); }
+
   /* V4-1n: 진화 트리 (텍스트 + 이모지) */
   .strategy-gens-tree {
     margin: 8px 0;
@@ -3431,6 +3446,138 @@
     border-color: rgba(143,200,143,0.32) !important;
     background: linear-gradient(135deg, rgba(143,200,143,0.08), rgba(139,126,196,0.04)) !important;
   }
+  /* V4-fix #6: 그날 모달 (캘린더 칸 클릭) */
+  .day-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    width: 92%; max-width: 460px;
+    max-height: 80vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .day-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .day-modal-date {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px;
+    color: var(--text);
+  }
+  .day-modal-close {
+    background: transparent; border: none;
+    color: var(--text-soft);
+    font-size: 22px;
+    cursor: pointer;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    line-height: 1;
+  }
+  .day-modal-close:active { background: var(--surface2); }
+  .day-modal-tabs {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .day-tab {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .day-tab:active { transform: scale(0.96); }
+  .day-tab.active {
+    background: linear-gradient(135deg, rgba(212,167,106,0.20), rgba(139,126,196,0.12));
+    border-color: rgba(212,167,106,0.45);
+    color: var(--accent2);
+    font-weight: 500;
+  }
+  .day-modal-body {
+    padding: 14px 16px 18px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .day-section { margin-bottom: 8px; }
+  .day-bits {
+    font-size: 12px; color: var(--text-dim);
+    padding: 8px 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+  .day-diary {
+    font-size: 14px; color: var(--text);
+    line-height: 1.7; white-space: pre-wrap;
+    padding: 10px 0;
+  }
+  .day-summary {
+    font-size: 12px; color: var(--text-dim);
+    padding: 8px 10px;
+    background: rgba(139,126,196,0.08);
+    border-radius: 8px;
+    border-left: 2px solid var(--purple);
+    margin: 8px 0;
+  }
+  .day-q {
+    font-size: 12px; color: var(--accent);
+    margin-top: 10px;
+  }
+  .day-a {
+    font-size: 13px; color: var(--text);
+    margin-top: 4px; padding-left: 12px;
+  }
+  .day-card {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.12s;
+  }
+  .day-card:active { transform: scale(0.98); }
+  .day-card-meta {
+    font-size: 10px; color: var(--text-soft);
+    letter-spacing: 0.06em; margin-bottom: 4px;
+  }
+  .day-card-title {
+    font-size: 13px; color: var(--text);
+    font-weight: 500; line-height: 1.4;
+    margin-bottom: 4px;
+  }
+  .day-card-body {
+    font-size: 12px; color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .day-card-note {
+    font-size: 11px; color: var(--text-dim);
+    margin-top: 6px; font-style: italic;
+  }
+  .day-tags {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+  }
+  .day-tags span {
+    font-size: 10px;
+    padding: 2px 7px;
+    background: rgba(139,126,196,0.16);
+    color: #b9aedc;
+    border-radius: 999px;
+  }
+  .day-empty {
+    text-align: center;
+    color: var(--text-soft);
+    font-size: 12px;
+    padding: 20px 10px;
+  }
+
   /* V4-1s: 📔 일기·대화 캘린더 무드 그리드 */
   .cal-grid-wrap {
     margin: 0 0 22px;
@@ -7797,7 +7944,8 @@ function renderReflectionHome() {
   if (!container) return;
   const all = state.reflectionQuestions || [];
   const active = all.find(q => q.status === 'active');
-  const pending = all.filter(q => q.status === 'pending').length;
+  // V4-fix: paused도 "더 깊이 볼 거"에 포함 (사용자가 다시 찾을 수 있게)
+  const pending = all.filter(q => q.status === 'pending' || q.status === 'paused').length;
 
   if (!active && pending === 0) {
     // 비어 있을 때 — 작은 "+ 질문 추가" 카드
@@ -7912,7 +8060,7 @@ async function pauseReflectionQuestion(id) {
   q.status = 'paused';
   saveState();
   renderReflectionHome();
-  showToast('⏸ 보류');
+  showToast('⏸ 보류 — "더 깊이 볼 거" 목록에서 다시 시작 가능');
 }
 
 async function resolveReflectionQuestion(id) {
@@ -11447,10 +11595,20 @@ function buildSystemPromptParts() {
 async function saveMsgAsInsight(idx) {
   const msg = state.chatMessages[idx];
   if (!msg || msg.saved) return;
+
+  // V4-fix #8: 직전 user 메시지(질문) 같이 저장
+  let priorUserMsg = null;
+  for (let i = idx - 1; i >= 0; i--) {
+    if (state.chatMessages[i]?.role === 'user' && !state.chatMessages[i].typing) {
+      priorUserMsg = state.chatMessages[i];
+      break;
+    }
+  }
+  const userQuestion = priorUserMsg?.content || '';
+
   let headline = '';
   let body = '';
   if (msg.insightCandidate) {
-    // Legacy: 단일 string으로 들어온 경우 fallback
     body = msg.insightCandidate;
   } else if (!state.apiKey) {
     body = msg.content.slice(0, 150);
@@ -11461,34 +11619,35 @@ async function saveMsgAsInsight(idx) {
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 200,
-          messages: [{ role: 'user', content: `아래 대화에서 "깨달음 아카이브"에 저장할 핵심 통찰을 뽑아줘.
+          max_tokens: 180,
+          messages: [{ role: 'user', content: `아래 대화에서 사용자가 얻은 "지혜(깨달음)"를 뽑아.
 
-[출력 형식 — 정확히 두 줄]
-1줄: 헤드라인 (5-14자, 짧고 임팩트 있게. 명사형 또는 짧은 명제)
-2줄: 본문 (1문장, 30-70자, 구체적 행동·조건·관찰)
+[출력 — 정확히 두 줄]
+1줄: 헤드라인 (5-14자, 명사형 또는 짧은 명제)
+2줄: 본문 (1문장, 30-70자, 깨달음의 핵심을 ~음/~함/~임 어미로 끝맺음)
 
 [좋은 예]
-경계가 곧 자기보호
-거절은 미안할 일이 아니다. 짧게 말하면 후회가 줄어든다.
+환경이 의지보다 강함
+집중 안 될 때 자책 X. 카페로 옮기면 30% 더 됨.
 
-완벽주의의 함정
-시작을 늦추는 가장 큰 적은 '제대로 하기'라는 기준이다.
+거절은 빠를수록 가벼움
+미루면 부채감 누적. 그날 안에 한 줄로 답하면 깨끗해짐.
 
-카페가 답이다
-환경이 의지보다 강하다. 집보다 카페에서 집중력이 30% 높음.
+새벽 결정 의심
+졸린 상태 결정은 후회 빈도 ↑. 자고 일어난 후 다시 봐야 함.
 
-[금지]
-- "나는 ~다" 같은 일반 서술문 X (눈에 안 들어옴)
-- 마크다운(**, ##) X
-- JSON, 코드블록, 따옴표 X
-- 빈 응원·격언 X
-- 3줄 이상 X
+[규칙]
+- 본문 어미: ~음 / ~함 / ~임 (간결, 명제형). "이다" "하다" "되다" 등 X.
+- "지혜" 추출: 사용자가 깨달은 것·앞으로 적용할 것
+- 일반 응원·격언·"잘했어" X
+- 마크다운/JSON/코드블록/따옴표/이모지 X
+- "나는 ~다" 일반 서술 X
 
-[원본 대화]
+${userQuestion ? `[사용자 질문/맥락]\n${userQuestion.slice(0, 400)}\n` : ''}
+[AI 응답 (이 안에서 지혜 추출)]
 ${msg.content}
 
-두 줄만 출력. 다른 설명 X.` }]
+두 줄만 출력.` }]
         })
       });
       const data = await resp.json();
@@ -11507,12 +11666,18 @@ ${msg.content}
     }
   }
   if (!body && !headline) body = msg.content.slice(0, 150);
-  // V3.13.x: 4시 cutoff 적용 — 새벽 1시 저장은 어제로 묶임
   const _dayKey = todayKey();
   const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-  // headline + body 형식 저장. insight는 backwards-compat 결합 string.
   const insight = headline ? `${headline} — ${body}` : body;
-  state.archive.unshift({ date, insight, headline, body, original: msg.content, source: '대화', savedAt: new Date().toISOString(), type: 'scrap', tags: [] });
+  state.archive.unshift({
+    date, insight, headline, body,
+    original: msg.content,
+    question: userQuestion,  // V4-fix #8: 직전 user 메시지 같이 저장
+    source: '대화',
+    savedAt: new Date().toISOString(),
+    type: 'scrap',
+    tags: []
+  });
   msg.saved = true;
   saveState();
   renderChat();
@@ -12625,6 +12790,16 @@ function renderArchive() {
   if (typeof renderLibraryHero === 'function') renderLibraryHero();
   if (typeof updateLibraryCatNewDots === 'function') updateLibraryCatNewDots();
   updateArchiveQuickCounts();
+  // V4-fix #6: 일기·대화 grid 뷰 = 캘린더만 (lensTopicCards / lensTimeline 숨김). 매 호출 일관 적용.
+  if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
+}
+
+function _applyDiaryGridHide() {
+  const tc = document.getElementById('lensTopicCards');
+  const tl = document.getElementById('lensTimeline');
+  const calOnly = (_libView === 'grid' && _currentLens === 'diary');
+  if (tc) tc.style.display = calOnly ? 'none' : '';
+  if (tl) tl.style.display = calOnly ? 'none' : '';
 }
 
 // V4-1t: 🌟 오늘의 너 — 진주 1개 회전 (안 본 진주 우선)
@@ -12738,10 +12913,13 @@ function shiftCalMonth(delta) {
 }
 
 function jumpToTimelineDate(dateStr) {
-  // ig-card 또는 lensTimeline 안 그 날짜 카드로 스크롤
+  // V4-fix #6: grid 뷰에서는 모달, timeline 뷰에서는 scrollIntoView
+  if (_libView === 'grid') {
+    openDayModal(dateStr);
+    return;
+  }
   const timeline = document.getElementById('lensTimeline');
   if (!timeline) return;
-  // ig-card에 data-date 속성 박혀있다고 가정. 없으면 텍스트 검색.
   const card = timeline.querySelector(`[data-date="${dateStr}"]`);
   if (card) {
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -12750,6 +12928,148 @@ function jumpToTimelineDate(dateStr) {
   } else {
     showToast(`${dateStr} 기록 없음`);
   }
+}
+
+// V4-fix #6: 그날 모달 (캘린더 칸 클릭 → 일기/토픽/깨달음/진주 서브칩)
+let _dayModalActiveTab = 'diary';
+
+function openDayModal(dateStr) {
+  // 그날 데이터 모음
+  const entry = (state.entries || []).find(e => e.date === dateStr);
+  const topics = (state.topicCards || []).filter(c =>
+    (c.chapterStartedAt && getDayKey(c.chapterStartedAt) === dateStr) ||
+    (!c.chapterStartedAt && c.createdAt && getDayKey(c.createdAt) === dateStr)
+  );
+  const archives = (state.archive || []).filter(a =>
+    a.savedAt && getDayKey(a.savedAt) === dateStr
+  );
+  const pearls = (state.pearls || []).filter(p =>
+    p.type !== 'dna_pearl' && p.createdAt && getDayKey(p.createdAt) === dateStr
+  );
+
+  const counts = {
+    diary: (entry ? 1 : 0),
+    topics: topics.length,
+    archives: archives.length,
+    pearls: pearls.length
+  };
+  const total = counts.diary + counts.topics + counts.archives + counts.pearls;
+  if (total === 0) {
+    showToast(`${dateStr} 기록 없음`);
+    return;
+  }
+
+  // 활성 첫 탭: 데이터 있는 첫 카테고리
+  const tabOrder = ['diary', 'topics', 'archives', 'pearls'];
+  _dayModalActiveTab = tabOrder.find(t => counts[t === 'diary' ? 'diary' : t === 'topics' ? 'topics' : t === 'archives' ? 'archives' : 'pearls'] > 0) || 'diary';
+
+  const dateLabel = new Date(dateStr + 'T12:00:00').toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
+  });
+
+  const overlay = document.createElement('div');
+  overlay.id = 'dayModal';
+  overlay.className = 'topic-modal-overlay show';
+  overlay.onclick = (e) => { if (e.target === overlay) closeDayModal(); };
+  overlay.innerHTML = `
+    <div class="day-modal" onclick="event.stopPropagation()">
+      <div class="day-modal-header">
+        <div class="day-modal-date">${escapeHtml(dateLabel)}</div>
+        <button class="day-modal-close" onclick="closeDayModal()">×</button>
+      </div>
+      <div class="day-modal-tabs">
+        ${counts.diary    ? `<button class="day-tab" data-tab="diary"    onclick="switchDayModalTab('diary')">📔 일기</button>` : ''}
+        ${counts.topics   ? `<button class="day-tab" data-tab="topics"   onclick="switchDayModalTab('topics')">✦ 토픽 ${counts.topics}</button>` : ''}
+        ${counts.archives ? `<button class="day-tab" data-tab="archives" onclick="switchDayModalTab('archives')">✨ 깨달음 ${counts.archives}</button>` : ''}
+        ${counts.pearls   ? `<button class="day-tab" data-tab="pearls"   onclick="switchDayModalTab('pearls')">🔮 진주 ${counts.pearls}</button>` : ''}
+      </div>
+      <div class="day-modal-body" id="dayModalBody"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  // dataset에 그날 데이터 저장 (재렌더용)
+  overlay._dayData = { entry, topics, archives, pearls, dateStr };
+  switchDayModalTab(_dayModalActiveTab);
+}
+
+function switchDayModalTab(tab) {
+  _dayModalActiveTab = tab;
+  document.querySelectorAll('.day-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  const body = document.getElementById('dayModalBody');
+  const overlay = document.getElementById('dayModal');
+  if (!body || !overlay || !overlay._dayData) return;
+  const { entry, topics, archives, pearls, dateStr } = overlay._dayData;
+
+  let html = '';
+  if (tab === 'diary' && entry) {
+    const bits = [];
+    if (entry.modes) {
+      const ms = Object.keys(entry.modes).filter(k => entry.modes[k]);
+      if (ms.length) bits.push(`모드: ${ms.join(', ')}`);
+    }
+    if (entry.vitality != null) bits.push(`활력 ${entry.vitality}/5`);
+    if (entry.mood != null)     bits.push(`기분 ${entry.mood}/5`);
+    if (entry.sleepStart && entry.sleepEnd) bits.push(`수면 ${entry.sleepStart}~${entry.sleepEnd}`);
+    html += `<div class="day-section">`;
+    if (bits.length) html += `<div class="day-bits">${bits.join(' · ')}</div>`;
+    if (entry.diary)     html += `<div class="day-diary">📔 ${escapeHtml(entry.diary)}</div>`;
+    if (entry.aiSummary) html += `<div class="day-summary">🤖 ${escapeHtml(entry.aiSummary)}</div>`;
+    if (entry.note)      html += `<div class="day-note">${escapeHtml(entry.note)}</div>`;
+    if (entry.dailyQuestion?.text) {
+      html += `<div class="day-q">Q. ${escapeHtml(entry.dailyQuestion.text)}</div>`;
+      if (entry.dailyQuestionAnswer) html += `<div class="day-a">→ ${escapeHtml(entry.dailyQuestionAnswer)}</div>`;
+    }
+    html += `</div>`;
+  } else if (tab === 'topics') {
+    topics.forEach(c => {
+      const cat = TOPIC_CATEGORY_LABELS && TOPIC_CATEGORY_LABELS[c.category];
+      const icon = cat?.icon || '📝';
+      const label = cat?.label || c.category;
+      html += `
+        <div class="day-card" onclick="closeDayModal(); openTopicCard('${c.id}')">
+          <div class="day-card-meta">${icon} ${escapeHtml(label)}</div>
+          <div class="day-card-title">${escapeHtml(c.title || '')}</div>
+          ${c.summary ? `<div class="day-card-body">${escapeHtml(c.summary)}</div>` : ''}
+        </div>
+      `;
+    });
+  } else if (tab === 'archives') {
+    archives.forEach(a => {
+      const t = a.type || 'scrap';
+      const badge = t === 'memo' ? '✎' : t === 'reflection' ? '🌊' : '📌';
+      const headline = a.headline || '';
+      const body = a.userMemo || a.body || a.insight || '';
+      html += `
+        <div class="day-card">
+          <div class="day-card-meta">${badge} ${escapeHtml(a.source || t)}</div>
+          ${headline ? `<div class="day-card-title">${escapeHtml(headline)}</div>` : ''}
+          ${body ? `<div class="day-card-body">${escapeHtml(body)}</div>` : ''}
+          ${Array.isArray(a.tags) && a.tags.length ? `<div class="day-tags">${a.tags.map(tg => `<span>#${escapeHtml(tg)}</span>`).join('')}</div>` : ''}
+        </div>
+      `;
+    });
+  } else if (tab === 'pearls') {
+    pearls.forEach(p => {
+      const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
+      const icon = iconMap[p.category] || '💎';
+      html += `
+        <div class="day-card" onclick="closeDayModal(); openPearl('${p.id}')">
+          <div class="day-card-meta">${icon} ${escapeHtml(p.category || '진주')}</div>
+          <div class="day-card-body">${escapeHtml(p.content || '')}</div>
+          ${p.note ? `<div class="day-card-note">${escapeHtml(p.note)}</div>` : ''}
+        </div>
+      `;
+    });
+  }
+  if (!html) html = `<div class="day-empty">이 날 ${tab === 'diary' ? '일기' : tab === 'topics' ? '토픽' : tab === 'archives' ? '깨달음' : '진주'} 기록 없음.</div>`;
+  body.innerHTML = html;
+}
+
+function closeDayModal() {
+  const el = document.getElementById('dayModal');
+  if (el) el.remove();
 }
 
 function renderLensCalendarGrid() {
@@ -12861,6 +13181,12 @@ function switchLibraryCat(cat) {
     saveState();
     if (typeof updateLibraryCatNewDots === 'function') updateLibraryCatNewDots();
   }
+  // V4-fix #6: 일기·대화 grid 뷰에서는 캘린더만 (lensTopicCards / lensTimeline 숨김)
+  const tc = document.getElementById('lensTopicCards');
+  const tl = document.getElementById('lensTimeline');
+  const calOnly = (_libView === 'grid' && cat === 'diary');
+  if (tc) tc.style.display = calOnly ? 'none' : '';
+  if (tl) tl.style.display = calOnly ? 'none' : '';
 }
 
 // V3 호환: 옛 switchLens('conversations'|'wisdom') 호출 지원 (튜토리얼 등 외부 참조)
@@ -12877,6 +13203,12 @@ function switchLibraryView(view) {
     b.classList.toggle('active', b.dataset.view === view);
   });
   renderArchive();
+  // V4-fix #6: 일기·대화 grid 뷰에서는 캘린더만 (lensTopicCards / lensTimeline 숨김)
+  const tc = document.getElementById('lensTopicCards');
+  const tl = document.getElementById('lensTimeline');
+  const calOnly = (_libView === 'grid' && _currentLens === 'diary');
+  if (tc) tc.style.display = calOnly ? 'none' : '';
+  if (tl) tl.style.display = calOnly ? 'none' : '';
 }
 
 // V4-1q: 깨달음 태그 칩 필터 (단일 선택, 같은 태그 다시 누르면 해제)
@@ -13161,15 +13493,15 @@ function renderLensStrategies() {
   let html = `
     <div class="strategy-section">
       <div class="strategy-section-header">
-        <div class="topic-cards-title">🧭 전략</div>
+        <div class="topic-cards-title">🧬 양생 가닥</div>
         <button class="strategy-add-btn" onclick="addManualStrategy()">+ 직접 추가</button>
       </div>
   `;
-  
+
   if (strategies.length === 0) {
     html += `
       <div style="padding: 24px 16px; color: var(--text-dim); font-size: 12px; line-height: 1.7; text-align: center;">
-        <div style="font-size: 28px; margin-bottom: 10px; opacity: 0.6;">🧭</div>
+        <div style="font-size: 28px; margin-bottom: 10px; opacity: 0.6;">🧬</div>
         대화에서 발견된 좋은 전략이 여기 모여.<br>
         <span style="font-size:11px; color:var(--text-soft);">직접 추가도 가능 ✦</span>
       </div>
@@ -13275,12 +13607,21 @@ function _renderStrategyCardHtml(s) {
       ${rows}
     </div>`;
   }
+  // V4-fix #13: 카드 클릭 시 진화 트리 펼침 (default 접힘 — 시각 정리)
+  if (!state.preferences) state.preferences = {};
+  if (!state.preferences._strategyTreeOpen) state.preferences._strategyTreeOpen = {};
+  const treeOpen = !!state.preferences._strategyTreeOpen[s.id];
+  const hasTree = !!genTreeHtml;
+  const treeToggle = hasTree
+    ? `<button class="strategy-tree-toggle" onclick="toggleStrategyTree('${s.id}')">${treeOpen ? '▴ DNA 트리 접기' : '▾ DNA 트리 보기'}</button>`
+    : '';
   return `
     <div class="strategy-card strategy-card-v2">
-      <div class="strategy-card-title">🧭 ${escapeHtml(s.title)}</div>
+      <div class="strategy-card-title">🧬 ${escapeHtml(s.title)}</div>
       ${bodyHtml}
       ${metaHtml}
-      ${genTreeHtml}
+      ${treeToggle}
+      ${hasTree && treeOpen ? genTreeHtml : ''}
       <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : s.source === 'deeper' ? ' · 더 알고 싶어' : ' · 대화 챕터'}</div>
       <div class="strategy-card-actions">
         ${tryBtnHtml}
@@ -13288,6 +13629,15 @@ function _renderStrategyCardHtml(s) {
       </div>
     </div>
   `;
+}
+
+// V4-fix #13: 양생 카드 진화 트리 collapse 토글
+function toggleStrategyTree(strategyId) {
+  if (!state.preferences) state.preferences = {};
+  if (!state.preferences._strategyTreeOpen) state.preferences._strategyTreeOpen = {};
+  state.preferences._strategyTreeOpen[strategyId] = !state.preferences._strategyTreeOpen[strategyId];
+  saveState();
+  renderArchive();
 }
 
 async function addManualStrategy() {
@@ -13660,8 +14010,12 @@ function openArchiveItem(idx) {
   const headline = a.headline ? `<div class="archive-modal-headline">${escapeHtml(a.headline)}</div>` : '';
   const bodyText = a.body || (a.headline ? '' : (a.insight || ''));
   const body = bodyText ? `<div class="archive-modal-body">${escapeHtml(bodyText)}</div>` : '';
+  const questionBlock = a.question
+    ? `<div class="archive-modal-section-label">너의 질문</div>
+       <div class="archive-modal-original" style="background:rgba(212,167,106,0.06);">${escapeHtml(a.question)}</div>`
+    : '';
   const originalBlock = a.original
-    ? `<div class="archive-modal-section-label">원본 메시지</div>
+    ? `<div class="archive-modal-section-label">${a.question ? 'AI 응답' : '원본 메시지'}</div>
        <div class="archive-modal-original">${escapeHtml(a.original)}</div>`
     : `<div class="archive-modal-no-original">원본이 함께 저장되지 않은 항목 (이전 버전에서 저장)</div>`;
 
@@ -13676,6 +14030,7 @@ function openArchiveItem(idx) {
       </div>
       ${headline}
       ${body}
+      ${questionBlock}
       ${originalBlock}
       <div class="topic-modal-meta">${escapeHtml(dateStr)}${sourceStr}</div>
       <div class="topic-modal-actions">
@@ -18535,7 +18890,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.42-drawer-rows';
+const APP_VERSION = 'v4.0.43-batch2';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
