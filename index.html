@@ -591,6 +591,24 @@
   .chat-input-wrap { display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 10px; }
   .chat-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.5; outline: none; resize: none; max-height: 140px; padding: 8px 0; min-width: 0; }
   .send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--bg); border: none; font-size: 16px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  /* V4-fix: 입력바 안 stack — ✓ 위 + 아래 (대화 마무리 prominent) */
+  .chat-input-stack {
+    display: flex; flex-direction: column; gap: 4px;
+    flex-shrink: 0;
+    align-self: flex-end;
+  }
+  .chat-end-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(98,165,200,0.12);
+    border: 1px solid rgba(98,165,200,0.30);
+    color: #a3d2e8;
+    font-size: 12px; line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+    transition: transform 0.15s, background 0.15s;
+  }
+  .chat-end-btn:active { transform: scale(0.92); background: rgba(98,165,200,0.22); }
   /* V3.13.x: + 메뉴 버튼 (일기 템플릿/대화 마무리 통합) */
   .chat-plus-btn {
     width: 32px; height: 32px; border-radius: 50%;
@@ -5391,13 +5409,12 @@
       <span class="chat-plus-icon">✎</span>
       <span class="chat-plus-label">메모 (깨달음)</span>
     </button>
-    <button class="chat-plus-item" onclick="chatPlusAction('end')">
-      <span class="chat-plus-icon">✓</span>
-      <span class="chat-plus-label">이 대화 마무리</span>
-    </button>
   </div>
   <div class="chat-input-wrap">
-    <button class="chat-plus-btn" id="chatPlusBtn" onclick="toggleChatPlusMenu(event)" aria-label="더보기">+</button>
+    <div class="chat-input-stack">
+      <button class="chat-end-btn" onclick="endChapter()" aria-label="이 대화 마무리" title="이 대화 마무리">✓</button>
+      <button class="chat-plus-btn" id="chatPlusBtn" onclick="toggleChatPlusMenu(event)" aria-label="더보기">+</button>
+    </div>
     <textarea class="chat-textarea" id="chatInput" placeholder="편하게 말해봐..." rows="1"></textarea>
     <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
   </div>
@@ -11160,8 +11177,8 @@ function closeChatPlusMenu() {
 function chatPlusAction(kind) {
   closeChatPlusMenu();
   if (kind === 'diary') showDiaryTemplates();
-  else if (kind === 'end') endChapter();
   else if (kind === 'memo') addMemoArchive();
+  // 'end'는 + 메뉴 밖 별도 ✓ 버튼으로 빼냄 (V4-fix)
 }
 document.addEventListener('click', function(e) {
   const menu = document.getElementById('chatPlusMenu');
@@ -19936,7 +19953,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.56-archive-z';
+const APP_VERSION = 'v4.0.57-end-btn-out';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
