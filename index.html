@@ -5825,6 +5825,16 @@
     pointer-events: auto;
     z-index: 9100;
     animation: onbFadeIn 0.3s ease;
+    /* 사용자 요청 2026-04-28: step 전환 부드럽게 — position/size transition */
+    transition: top 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                left 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                right 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                bottom 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  /* 드래그 중엔 transition 끔 */
+  .onb-coachmark.dragging {
+    transition: none !important;
   }
   .onb-coachmark.dragging {
     transition: none !important;
@@ -7070,8 +7080,9 @@ function _flushLocalSave() {
 }
 function saveState(force) {
   if (!authUserId) return; // Don't save if not logged in
-  // V3.13.x: 테스터 모드 — 변경 저장 안 함. force=true면 강제 (토글 자체 저장용)
-  if (state.preferences && state.preferences.testerMode && !force) return;
+  // 사용자 요청 2026-04-28: 테스터 모드면 force여도 cloud/localStorage 저장 X
+  // (testerMode flag가 cloud로 새지 않게 — 토글 OFF는 backup 복원 후 testerMode=false 상태에서 호출되므로 정상 작동)
+  if (state.preferences && state.preferences.testerMode) return;
   if (force) {
     _flushLocalSave();
     saveToCloud();
@@ -8013,7 +8024,8 @@ const ONBOARDING_STEPS = [
     waitFor: 'click',
     advanceDelay: 1200,
     manualAdvance: true,
-    dimBackground: false
+    dimBackground: false,
+    coachmarkPosition: 'corner'
   },
   {
     id: 'click_accept',
@@ -8023,7 +8035,8 @@ const ONBOARDING_STEPS = [
     waitFor: 'click',
     advanceDelay: 1500,
     manualAdvance: true,
-    dimBackground: false
+    dimBackground: false,
+    coachmarkPosition: 'corner'
   },
   {
     id: 'diary_keyword',
@@ -25983,9 +25996,13 @@ function toggleTesterMode() {
     showToast('✦ 테스터 모드 OFF — ON 직전 상태로 복원됨. 화면 다시 그리는 중...');
     setTimeout(() => location.reload(), 600);
   } else {
-    // 백업 없음 (새로고침 후 어떻게 OFF 누른 경우) — 안전하게 reload
-    showToast('cloud에서 복원 중...');
-    setTimeout(() => location.reload(), 300);
+    // 백업 없음 (이전 버그로 cloud에 testerMode=true가 남았거나 reload 후 OFF 누른 경우)
+    // testerMode flag만 명시적으로 끄고 강제 cloud save (testerMode=false로) — 무한 루프 깨기
+    state.preferences.testerMode = false;
+    saveState(true);
+    refreshTesterModeUI();
+    showToast('✦ 테스터 모드 OFF (백업 X — flag 만 지움)');
+    setTimeout(() => location.reload(), 600);
   }
 }
 function refreshTesterModeUI() {
