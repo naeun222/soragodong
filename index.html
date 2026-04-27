@@ -20060,7 +20060,7 @@ function testSkip4Hours() {
 }
 
 // V4-fix: 테스터 모드 V4 전체 시드 + 강제 trigger 함수들 (testerMode ON 시 안전)
-function testSeedV4Data() {
+async function testSeedV4Data() {
   if (!state.preferences || !state.preferences.testerMode) {
     showToast('⚠️ 테스터 모드 ON 후 사용 — 사용자 데이터 보호');
     return;
@@ -20339,27 +20339,27 @@ function testSeedV4Data() {
   // V4-fix v3: 진주 30+ (1년에 걸쳐, 월별 평균 2-3개, 4 카테고리 다양)
   state.pearls = [];
   const pearlSeeds = [
-    { c: '음악', content: 'LONGSHOT - Vanilla Days', daysAgo: 5, track: { id: 'seed1', title: 'Vanilla Days', artist: 'LONGSHOT', artworkUrl: '', previewUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' }, note: '새벽 카페에서 발견. 이 곡 들으면 그 시간으로 돌아감.' },
+    { c: '음악', content: 'LONGSHOT - Vanilla Days', daysAgo: 5, searchQuery: 'LONGSHOT Vanilla Days', note: '새벽 카페에서 발견. 이 곡 들으면 그 시간으로 돌아감.' },
     { c: '음식', content: '엄마 김치찌개', daysAgo: 8, note: '비 오는 날 — 고등학교 그 부엌 생각.' },
     { c: '장소', content: '한강 벤치 새벽 4시', daysAgo: 12, note: '논문 막힌 날. 30분 앉아있다 머리 풀림.' },
     { c: '순간', content: '논문 첫 단락 완성한 순간', daysAgo: 18 },
     { c: '사람', content: '오랜 친구가 갑자기 카톡', daysAgo: 22, note: '"잘 지내?" 그 한 마디.' },
-    { c: '음악', content: '비 오는 날 곡', daysAgo: 28, track: { id: 'seed2', title: 'Rainy Mood', artist: 'lofi.bird', artworkUrl: '', previewUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' }, note: '비 + 작업할 때만.' },
+    { c: '음악', content: '비 오는 날 곡', daysAgo: 28, searchQuery: 'lofi rainy day', note: '비 + 작업할 때만.' },
     { c: '음식', content: '연구실 옥상 도시락', daysAgo: 35, note: '같이 먹은 동기랑 진로 얘기.' },
     { c: '장소', content: '학교 도서관 창가 5층', daysAgo: 42, note: '거기 앉으면 항상 잘 됨.' },
     { c: '순간', content: '새벽 깨달음 — 환경이 의지보다 강함', daysAgo: 48 },
     { c: '사람', content: '교수님 한 마디 칭찬', daysAgo: 55, note: '"이 부분 좋다" — 한 줄인데 컸음.' },
-    { c: '음악', content: '논문 결과 쓸 때 곡', daysAgo: 65, track: { id: 'seed3', title: 'Focus Beats', artist: 'Various', artworkUrl: '', previewUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' } },
+    { c: '음악', content: '논문 결과 쓸 때 곡', daysAgo: 65, searchQuery: 'lofi study beats' },
     { c: '음식', content: '엄마가 보낸 김장 김치', daysAgo: 75, note: '한 통이 한 달 가요.' },
     { c: '장소', content: '카페 모서리 자리', daysAgo: 85, note: '거기 앉으면 두 시간은 집중.' },
     { c: '순간', content: '실험 결과 첫 success', daysAgo: 95, note: '진짜 소름. 6개월 만의 보상.' },
     { c: '사람', content: '동생이 깜짝 방문', daysAgo: 105 },
-    { c: '음악', content: '러닝할 때 듣는 곡', daysAgo: 120, track: { id: 'seed4', title: 'Run', artist: 'Hozier', artworkUrl: '', previewUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' } },
+    { c: '음악', content: '러닝할 때 듣는 곡', daysAgo: 120, searchQuery: 'Hozier Run' },
     { c: '음식', content: '연구실 동기랑 라멘', daysAgo: 135, note: '진로 고민 토론.' },
     { c: '장소', content: '집 앞 천변길', daysAgo: 150, note: '운동 + 생각 정리.' },
     { c: '순간', content: '드디어 거절했어', daysAgo: 165, note: '술자리 — 첫 거절 성공.' },
     { c: '사람', content: '오래 못 본 친구 결혼식', daysAgo: 175 },
-    { c: '음악', content: '아침 일어날 때 곡', daysAgo: 190, track: { id: 'seed5', title: 'Morning Light', artist: 'soul', artworkUrl: '', previewUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3' } },
+    { c: '음악', content: '아침 일어날 때 곡', daysAgo: 190, searchQuery: 'morning sunshine acoustic' },
     { c: '음식', content: '아빠 닭볶음탕', daysAgo: 210 },
     { c: '장소', content: '가을 단풍 — 학교 뒷산', daysAgo: 225 },
     { c: '순간', content: '새벽 4시 작업 끝낸 순간', daysAgo: 240 },
@@ -20368,19 +20368,38 @@ function testSeedV4Data() {
     { c: '장소', content: '제주도 협재 — 휴식', daysAgo: 300, note: '3박 4일.' },
     { c: '순간', content: '학회 첫 발표', daysAgo: 320 },
     { c: '사람', content: '동기 결혼식 축하', daysAgo: 340 },
-    { c: '음악', content: '봄 첫날 곡', daysAgo: 360, track: { id: 'seed6', title: 'Spring', artist: 'Vivaldi', artworkUrl: '', previewUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' } }
+    { c: '음악', content: '봄 첫날 곡', daysAgo: 360, searchQuery: 'Vivaldi Spring Four Seasons' }
   ];
-  pearlSeeds.forEach((p, i) => {
+  // 사용자 요청 2026-04-28: 음악 시드 — iTunes Search API로 실제 Apple preview URL 가져오기
+  for (let i = 0; i < pearlSeeds.length; i++) {
+    const p = pearlSeeds[i];
+    let trackData = p.track || null;
+    if (p.c === '음악' && p.searchQuery && typeof searchITunes === 'function') {
+      try {
+        const results = await searchITunes(p.searchQuery);
+        if (results && results.length > 0) {
+          const t = results[0];
+          trackData = {
+            id: t.id,
+            title: t.title,
+            artist: t.artist,
+            artworkUrl: t.artworkUrl,
+            previewUrl: t.previewUrl,
+            trackUrl: t.trackUrl
+          };
+        }
+      } catch (e) { console.warn('iTunes seed for', p.searchQuery, e); }
+    }
     state.pearls.push({
       id: 'pearl_seed_' + i,
       category: p.c,
       content: p.content,
       note: p.note || null,
-      ...(p.track ? { track: p.track } : {}),
+      ...(trackData ? { track: trackData } : {}),
       createdAt: new Date(today.getTime() - p.daysAgo * 86400000).toISOString(),
       type: 'pearl'
     });
-  });
+  }
   // DNA 진주 시드 3종 — 사용자 요청 2026-04-28 (3가지 path 시각 검증)
   // 🌱 빠른 발견 (one-shot) — 한 차원에서 바로 통한 전략
   state.pearls.push({
