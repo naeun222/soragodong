@@ -1695,6 +1695,43 @@
   }
 
   .exec-now-section { margin-bottom: 20px; }
+  /* V4-fix: 시간 범위 picker (input type=time × 2) */
+  .time-range-modal { padding: 24px 22px 20px; }
+  .time-range-row {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin: 18px 0 6px;
+  }
+  .time-range-col {
+    flex: 1;
+    display: flex; flex-direction: column; gap: 6px; align-items: center;
+  }
+  .time-range-col label {
+    font-size: 11px; color: var(--text-soft);
+    letter-spacing: 0.06em;
+  }
+  .time-range-col input[type="time"] {
+    width: 100%;
+    padding: 14px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 22px;
+    font-family: inherit;
+    text-align: center;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+  }
+  .time-range-col input[type="time"]:focus {
+    outline: none;
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(212,167,106,0.15);
+  }
+  .time-range-arrow {
+    font-size: 18px; color: var(--text-soft);
+    flex-shrink: 0;
+  }
+
   /* V4-1u-b-3: V3 5블록 토글 */
   .v3-blocks-toggle {
     margin: 8px 0 12px;
@@ -9482,7 +9519,18 @@ function showScreen(name) {
   if (name === 'execute') renderExecute();
   if (name === 'checkin') { renderDailyQuestion(); renderModes(); renderCheckinTrackers(); prefillCheckinFromEntry(); }
   if (name === 'model') renderModel();
-  if (name === 'archive') renderArchive();
+  if (name === 'archive') {
+    // V4-fix #5: 도서관 처음 진입 시 모든 카테고리 lastSeen 초기화 (점 폭발 방지)
+    if (state.preferences && !state.preferences._libCatLastSeenInit) {
+      const nowIso = new Date().toISOString();
+      state.preferences._libCatLastSeen = {
+        diary: nowIso, yangsaeng: nowIso, insights: nowIso, pearls: nowIso, galpi: nowIso
+      };
+      state.preferences._libCatLastSeenInit = true;
+      saveState();
+    }
+    renderArchive();
+  }
   if (name === 'decisions') renderDecisionsList();
   if (name === 'chat') {
     rotateChatPlaceholder();  // V3.10: 매번 다른 힌트
@@ -12590,23 +12638,42 @@ function renderLibraryHero() {
   `;
 }
 
-// V4-1t: 카테고리 칩 새 항목 ● 점 (24시간 내 추가)
+// V4-1t + fix: 카테고리 칩 새 항목 ● 점 — 카테고리별 lastSeen 이후 추가된 게 있을 때만.
+// 사용자가 카테고리 클릭 시 lastSeen=now → 점 사라짐. 이후 새 항목 추가되면 다시 점.
+function _libCatLastSeen(cat) {
+  const seen = state.preferences && state.preferences._libCatLastSeen;
+  return (seen && seen[cat]) ? new Date(seen[cat]).getTime() : 0;
+}
+function _markLibCatSeen(cat) {
+  if (!state.preferences) state.preferences = {};
+  if (!state.preferences._libCatLastSeen) state.preferences._libCatLastSeen = {};
+  state.preferences._libCatLastSeen[cat] = new Date().toISOString();
+}
+
 function updateLibraryCatNewDots() {
-  const since = Date.now() - 24 * 3600000;
   const checks = {
-    diary:     () => (state.entries || []).some(e => e.timestamp && new Date(e.timestamp).getTime() > since)
-                  || (state.chatMessages || []).some(m => m.timestamp && new Date(m.timestamp).getTime() > since),
-    yangsaeng: () => (state.topicCards || []).some(c => c.category === 'strategy' && c.createdAt && new Date(c.createdAt).getTime() > since),
-    insights:  () => (state.archive || []).some(a => a.savedAt && new Date(a.savedAt).getTime() > since),
-    pearls:    () => (state.pearls || []).some(p => p.type !== 'dna_pearl' && p.createdAt && new Date(p.createdAt).getTime() > since),
-    galpi:     () => (state.decisions || []).some(d => d.startedAt && new Date(d.startedAt).getTime() > since)
-                  || (state.weeklyReviews || []).some(r => r.completedAt && new Date(r.completedAt).getTime() > since)
-                  || (state.monthlyReviews || []).some(r => r.completedAt && new Date(r.completedAt).getTime() > since)
+    diary: (since) =>
+      (state.entries || []).some(e => e.timestamp && new Date(e.timestamp).getTime() > since)
+      || (state.chatMessages || []).some(m => m.timestamp && new Date(m.timestamp).getTime() > since),
+    yangsaeng: (since) =>
+      (state.topicCards || []).some(c => c.category === 'strategy' && c.createdAt && new Date(c.createdAt).getTime() > since),
+    insights: (since) =>
+      (state.archive || []).some(a => a.savedAt && new Date(a.savedAt).getTime() > since),
+    pearls: (since) =>
+      (state.pearls || []).some(p => p.type !== 'dna_pearl' && p.createdAt && new Date(p.createdAt).getTime() > since),
+    galpi: (since) =>
+      (state.decisions || []).some(d => d.startedAt && new Date(d.startedAt).getTime() > since)
+      || (state.weeklyReviews || []).some(r => r.completedAt && new Date(r.completedAt).getTime() > since)
+      || (state.monthlyReviews || []).some(r => r.completedAt && new Date(r.completedAt).getTime() > since)
+      || (state.quarterlyReviews || []).some(r => r.completedAt && new Date(r.completedAt).getTime() > since)
   };
   document.querySelectorAll('.lib-cat-chip').forEach(chip => {
     const cat = chip.dataset.cat;
     const fn = checks[cat];
-    const has = !!(fn && fn());
+    const since = _libCatLastSeen(cat);
+    // 처음 보는 카테고리(lastSeen=0)는 새 항목으로 간주 X (점 X) — 처음 진입 시 모든 카테고리가 점 안 떠야 깔끔.
+    // 단 lastSeen 박힌 후에만 그 이후 추가된 항목 체크.
+    const has = since > 0 ? !!(fn && fn(since)) : false;
     chip.classList.toggle('has-new', has);
   });
 }
@@ -12737,6 +12804,12 @@ function switchLibraryCat(cat) {
   // 검색바는 모든 카테고리에서 노출
   const searchBar = document.getElementById('archiveSearchBar');
   if (searchBar) searchBar.style.display = 'block';
+  // V4-fix #5: 클릭한 카테고리는 본 것 → ● 점 사라짐
+  if (typeof _markLibCatSeen === 'function') {
+    _markLibCatSeen(cat);
+    saveState();
+    if (typeof updateLibraryCatNewDots === 'function') updateLibraryCatNewDots();
+  }
 }
 
 // V3 호환: 옛 switchLens('conversations'|'wisdom') 호출 지원 (튜토리얼 등 외부 참조)
@@ -13807,10 +13880,16 @@ function renderExecute() {
     const todayList = (state.tasks || [])
       .filter(t => t.slot === 'drawer' && t.isToday && t.status !== 'done')
       .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-    if (todayList.length > 0) {
-      html += `<div class="exec-now-section">
-        <div class="exec-section-label">📋 오늘 할 일 · ${todayList.length}개</div>
-        <div class="todo-list">`;
+    // V4-fix: 오늘 할 일 헤더에 + 추가 버튼 (todayList 없어도 보이게)
+    html += `<div class="exec-now-section">
+      <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <span>📋 오늘 할 일${todayList.length > 0 ? ` · ${todayList.length}개` : ''}</span>
+        <button onclick="addTodayTask()" style="font-size:11px; padding:4px 10px; background:var(--surface2); border:1px solid var(--border); color:var(--accent2); border-radius:8px; cursor:pointer; font-family:inherit; font-weight:500;">+ 추가</button>
+      </div>`;
+    if (todayList.length === 0) {
+      html += `<div style="font-size:11px; color:var(--text-soft); padding:8px 4px 6px;">비어있어. + 추가로 시작.</div></div>`;
+    } else {
+      html += `<div class="todo-list">`;
       todayList.forEach(task => {
         const schedLabel = task.scheduledStart ? `<span class="todo-sched-label">⏰ ${task.scheduledStart}${task.scheduledEnd ? `–${task.scheduledEnd}` : ''}</span>` : '';
         html += `
@@ -13908,11 +13987,11 @@ function renderExecute() {
       html += `</div>`;
     }
 
-    // Bottom row (V3.13: 서랍장 버튼 제거 — 인라인으로 통합. 채팅 아이디어 vault만 유지)
+    // Bottom row (V3.13: 서랍장 인라인 통합. memoryVault에 쌓인 채팅 추출 task 라벨만 '서랍장'으로 표시)
     html += `
       <div class="exec-actions-row">
         <button onclick="openBrainDump()">🧠 더 풀기</button>
-        ${vaultCount > 0 ? `<button onclick="openVault()">💡 채팅 아이디어 (${vaultCount})</button>` : `<button onclick="addManualTask()">➕ 직접 추가</button>`}
+        ${vaultCount > 0 ? `<button onclick="openVault()">📂 서랍장 (${vaultCount})</button>` : `<button onclick="addManualTask()">➕ 직접 추가</button>`}
       </div>
     `;
 
@@ -14799,8 +14878,8 @@ function renderV4TimetableHTML() {
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button class="v4-tt-add-btn" onclick="openAIScheduler()" style="background:linear-gradient(135deg,rgba(139,126,196,0.20),rgba(212,167,106,0.12));border-color:rgba(139,126,196,0.45);">✨ AI</button>
           <button class="v4-tt-add-btn" onclick="addV4ScheduleItem()">+ 추가</button>
-          ${(state.todaySchedule || []).length > 0 ? `<button class="v4-tt-add-btn" onclick="exportTodayICS()" title="Google/Apple 캘린더로 가져갈 .ics 파일">📤 내보내기</button>` : ''}
-          <button class="v4-tt-add-btn" onclick="importICSFile()" title=".ics 파일에서 일정 가져오기 (Google/Apple 캘린더)">📥 가져오기</button>
+          ${(state.todaySchedule || []).length > 0 ? `<button class="v4-tt-add-btn" onclick="exportToGoogleCalendar()" title="Google 캘린더에 일정 추가">📤 구글 캘린더</button>` : ''}
+          <button class="v4-tt-add-btn" onclick="importFromGoogleCalendar()" title="Google 캘린더에서 일정 가져오기">📥 가져오기</button>
         </div>
       </div>
       <div class="v4-tt-grid" id="v4ttGrid">
@@ -14849,34 +14928,23 @@ async function addV4ScheduleItem() {
     title: '📅 일정 추가',
     message: '뭐 할 거야?',
     placeholder: '예: 미팅 / 운동 / 카페 작업',
-    maxLength: 60
-  });
-  if (!title || !title.trim()) return;
-  const start = await showInputModal({
-    title: '시작 시각',
-    message: '24h 형식 — 예: 14:00',
-    placeholder: '14:00',
-    defaultValue: '',
-    maxLength: 5,
+    maxLength: 60,
     okLabel: '다음 →'
   });
-  if (!start || !/^\d{1,2}:\d{2}$/.test(start.trim())) return;
-  const end = await showInputModal({
-    title: '끝 시각',
-    message: '24h 형식 — 예: 15:30',
-    placeholder: '15:30',
-    defaultValue: '',
-    maxLength: 5,
-    okLabel: '추가'
+  if (!title || !title.trim()) return;
+  const time = await showTimeRangePicker({
+    title: title.trim(),
+    startDefault: '',
+    endDefault: ''
   });
-  if (!end || !/^\d{1,2}:\d{2}$/.test(end.trim())) return;
+  if (!time) return;
 
   if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
   state.todaySchedule.push({
     id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     title: title.trim(),
-    start: start.trim(),
-    end: end.trim(),
+    start: time.start,
+    end: time.end,
     date: todayKey(),
     source: 'manual',
     taskId: null,
@@ -14885,6 +14953,35 @@ async function addV4ScheduleItem() {
   saveState();
   renderExecute();
   showToast('일정 추가됨 📅');
+}
+
+// V4-fix: 오늘 할 일 직접 추가
+async function addTodayTask() {
+  const title = await showInputModal({
+    title: '오늘 할 일 추가',
+    message: '한 줄로 적어.',
+    placeholder: '예: 메일 답장 / 빨래 돌리기',
+    maxLength: 60,
+    okLabel: '추가'
+  });
+  if (!title || !title.trim()) return;
+  if (!Array.isArray(state.tasks)) state.tasks = [];
+  state.tasks.push({
+    id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: title.trim().slice(0, 60),
+    status: 'active',
+    slot: 'drawer',
+    isToday: true,
+    weight: 'light',
+    energy: 'mid',
+    priority: typeof nextPriority === 'function' ? nextPriority() : 0,
+    createdAt: new Date().toISOString(),
+    date: todayKey(),
+    source: 'manual_today'
+  });
+  saveState();
+  renderExecute();
+  showToast('오늘 할 일에 추가됨 📋');
 }
 
 // V4-1u-b-3: V3 5블록 토글 (default 숨김)
@@ -14925,27 +15022,14 @@ async function scheduleTaskToTime(taskId) {
     // change → 아래 흐름으로 이어짐
   }
 
-  const start = await showInputModal({
-    title: '⏰ 시작 시각',
-    message: '24h 형식 — 예: 14:00',
-    placeholder: '14:00',
-    defaultValue: existing?.start || '',
-    maxLength: 5,
-    okLabel: '다음 →'
+  const time = await showTimeRangePicker({
+    title: `⏰ ${task.title}`,
+    startDefault: existing?.start || '',
+    endDefault: existing?.end || ''
   });
-  if (!start || !/^\d{1,2}:\d{2}$/.test(start.trim())) return;
-  const end = await showInputModal({
-    title: '끝 시각',
-    message: '24h 형식 — 예: 15:00',
-    placeholder: '15:00',
-    defaultValue: existing?.end || '',
-    maxLength: 5,
-    okLabel: '박기'
-  });
-  if (!end || !/^\d{1,2}:\d{2}$/.test(end.trim())) return;
-
-  const startT = start.trim();
-  const endT = end.trim();
+  if (!time) return;
+  const startT = time.start;
+  const endT = time.end;
   const todayK = todayKey();
 
   if (existing) {
@@ -15098,6 +15182,77 @@ async function importICSFile() {
   input.click();
 }
 
+// V4-fix: Google 캘린더 연동 (단방향, OAuth X — V5+로 양방향)
+// export: 옵션 picker → (a) 각 일정 개별 Google quick-add URL / (b) .ics 파일
+// import: 옵션 picker → (a) Google에서 .ics export 안내 / (b) 파일 업로드
+async function exportToGoogleCalendar() {
+  const items = (state.todaySchedule || []).filter(it => it.title && it.start && it.end);
+  if (items.length === 0) {
+    showToast('내보낼 일정 없어');
+    return;
+  }
+  const action = await showOptionsModal({
+    title: '📤 구글 캘린더로',
+    message: `오늘 ${items.length}개 일정 내보내기`,
+    options: [
+      { label: '🔗 일정별 Google에 추가 (한 개씩)', value: 'gcal_url' },
+      { label: '📁 .ics 파일 다운 (Google 캘린더 import)', value: 'ics' },
+      { label: '취소', value: 'cancel' }
+    ]
+  });
+  if (action === 'gcal_url') {
+    // 각 일정마다 Google quick-add URL 생성 → 새 탭 열기
+    const todayK = todayKey();
+    const targetItems = items.filter(it => !it.date || it.date === todayK);
+    let opened = 0;
+    targetItems.forEach((it, i) => {
+      setTimeout(() => {
+        const url = buildGoogleCalendarURL(it);
+        window.open(url, '_blank');
+      }, i * 200); // 차례로 열기 (브라우저 팝업 차단 회피)
+      opened++;
+    });
+    showToast(`🔗 ${opened}개 Google 새 탭 열림`);
+  } else if (action === 'ics') {
+    exportTodayICS();
+  }
+}
+
+function buildGoogleCalendarURL(it) {
+  const date = it.date || todayKey();
+  const start = _icsLocalDateTime(date, it.start);  // YYYYMMDDTHHMMSS
+  const end = _icsLocalDateTime(date, it.end);
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: it.title,
+    dates: `${start}/${end}`,
+    ...(it.note ? { details: it.note } : {})
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+async function importFromGoogleCalendar() {
+  const action = await showOptionsModal({
+    title: '📥 구글 캘린더에서',
+    message: '어떻게 가져올까?',
+    options: [
+      { label: '📁 .ics 파일 가져오기', value: 'ics' },
+      { label: '❓ Google에서 .ics 받는 법', value: 'help' },
+      { label: '취소', value: 'cancel' }
+    ]
+  });
+  if (action === 'ics') {
+    importICSFile();
+  } else if (action === 'help') {
+    await showConfirmModal({
+      title: '❓ Google에서 .ics 받기',
+      message: 'Google 캘린더 → 설정 → 캘린더 가져오기/내보내기 → 내보내기 → .zip 다운 → 압축 풀어 .ics 파일 → 여기서 "가져오기".',
+      okLabel: '알았어',
+      cancelLabel: ''
+    });
+  }
+}
+
 function exportTodayICS() {
   const items = (state.todaySchedule || []).filter(it => it.title && it.start && it.end);
   if (items.length === 0) {
@@ -15157,7 +15312,7 @@ async function openAIScheduler() {
   }
   const dump = await showInputModal({
     title: '✨ AI 스케줄러',
-    message: '오늘 뭐 해야 해? 자유롭게 적어. ADHD 맞춰서 짜줄게.',
+    message: '오늘 뭐 해야 해? 자유롭게 적어. 맞춰서 짜줄게.',
     placeholder: '예: 미팅 14시, 운동, 논문 1챕터, 카페에서 읽을 책...',
     multiline: true,
     maxLength: 500,
@@ -15167,18 +15322,11 @@ async function openAIScheduler() {
 
   showToast('🌊 일정 짜는 중...');
 
-  // 활성 모드 / 활력 / 현재 시각 context
+  // 현재 시각 + 활력만 (사용자 입력 외 추천 X)
   const now = new Date();
   const nowStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
   const todayEntry = (state.entries || []).find(e => e.date === todayKey());
   const vitality = todayEntry?.vitality;
-
-  const sysContext = [
-    `현재 시각: ${nowStr}`,
-    activeModes.length ? `활성 모드: ${activeModes.join(', ')}` : '',
-    vitality != null ? `오늘 활력: ${vitality}/5` : ''
-  ].filter(Boolean).join(' / ');
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -15186,33 +15334,31 @@ async function openAIScheduler() {
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
+        max_tokens: 1200,
         messages: [{
           role: 'user',
-          content: `사용자가 ADHD고 박사과정 중. 시간 계획을 ADHD 친화적으로 짜줘 (블록 25% 더 잡기, 버퍼 10-15분, 무거운 일은 활력 높을 때, 가벼운 일은 transition 시간에).
+          content: `사용자가 적은 항목들을 시간 grid에 배치. **새 활동 추천 X — 사용자가 적은 것만**.
 
 [사용자 dump]
 ${dump.trim()}
 
-[컨텍스트]
-${sysContext}
+[현재 시각]
+${nowStr}${vitality != null ? ` / 활력 ${vitality}/5` : ''}
+
+[규칙]
+- 사용자 dump에 명시된 항목만 추출. 새로 추가 X.
+- 사용자가 시간 명시한 건 그대로 (예: "미팅 14시" → 14:00)
+- 시간 안 적은 건 합리적으로 분배 (현재 시각 이후, 한 항목 최소 30분, 항목 간 10분 버퍼)
+- title 짧게 (10자 이내, 사용자 표현 유지)
+- 활력 ≤2면 무거운 일 사이에 휴식 자동 추가 X — 사용자 의도 우선
 
 [출력 — JSON만, 마크다운/코드블록 X]
 {
   "items": [
-    { "title": "미팅", "start": "14:00", "end": "15:00", "note": "선택" },
-    { "title": "운동", "start": "17:30", "end": "18:30", "note": "transition" }
+    { "title": "미팅", "start": "14:00", "end": "15:00" },
+    { "title": "운동", "start": "17:30", "end": "18:30" }
   ]
 }
-
-[규칙]
-- start/end = 24h 형식 "HH:MM"
-- 현재 시각 (${nowStr}) 이후만
-- 한 항목 최소 30분
-- 항목 간 최소 10분 간격 (버퍼)
-- ${vitality != null && vitality <= 2 ? '활력 낮음 — 가벼운 일 위주, 무거운 거 1-2개만, 충분한 휴식' : '균형 있게'}
-- 5-8개 정도 (너무 많으면 ADHD 부담)
-- title 짧게 (10자 이내)
 
 JSON만 출력. 다른 설명 X.`
         }]
@@ -15279,16 +15425,86 @@ async function openV4ScheduleItem(id) {
     title: `📅 ${it.title}`,
     message: `${it.start}–${it.end}`,
     options: [
-      { label: '🗑 삭제', value: 'delete' },
-      { label: '취소', value: 'cancel' }
+      { label: '🗑 삭제',   value: 'delete' },
+      { label: '✏️ 수정',   value: 'edit' },
+      { label: '취소',      value: 'cancel' }
     ]
   });
   if (action === 'delete') {
     state.todaySchedule = state.todaySchedule.filter(x => x.id !== id);
+    // 연결된 task가 있으면 task.scheduledStart도 비움
+    if (it.taskId) {
+      const t = (state.tasks || []).find(x => x.id === it.taskId);
+      if (t) { t.scheduledStart = null; t.scheduledEnd = null; }
+    }
     saveState();
     renderExecute();
     showToast('일정 삭제됨');
+  } else if (action === 'edit') {
+    const result = await showTimeRangePicker({
+      title: `✏️ ${it.title}`,
+      startDefault: it.start,
+      endDefault: it.end
+    });
+    if (!result) return;
+    it.start = result.start;
+    it.end = result.end;
+    if (it.taskId) {
+      const t = (state.tasks || []).find(x => x.id === it.taskId);
+      if (t) { t.scheduledStart = result.start; t.scheduledEnd = result.end; }
+    }
+    saveState();
+    renderExecute();
+    showToast('수정됨 ✦');
   }
+}
+
+// V4-fix: 시간 범위 picker (input type=time × 2). 알람 picker 느낌.
+function showTimeRangePicker(opts) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'input-modal-overlay show time-range-overlay';
+    overlay.innerHTML = `
+      <div class="input-modal time-range-modal">
+        <div class="input-modal-title">${escapeHtml(opts.title || '시간 선택')}</div>
+        <div class="time-range-row">
+          <div class="time-range-col">
+            <label>시작</label>
+            <input type="time" id="trStartInput" value="${opts.startDefault || ''}" step="300">
+          </div>
+          <div class="time-range-arrow">→</div>
+          <div class="time-range-col">
+            <label>끝</label>
+            <input type="time" id="trEndInput" value="${opts.endDefault || ''}" step="300">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:18px;">
+          <button class="input-modal-btn" id="trCancel" style="flex:1;">취소</button>
+          <button class="input-modal-btn primary" id="trOk" style="flex:1;">확인 ✦</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const cleanup = (val) => {
+      overlay.remove();
+      resolve(val);
+    };
+    document.getElementById('trCancel').onclick = () => cleanup(null);
+    document.getElementById('trOk').onclick = () => {
+      const start = document.getElementById('trStartInput').value;
+      const end = document.getElementById('trEndInput').value;
+      if (!start || !end) {
+        showToast('시작·끝 시간 둘 다 필요');
+        return;
+      }
+      if (start >= end) {
+        showToast('끝 시각이 시작 이후여야 해');
+        return;
+      }
+      cleanup({ start, end });
+    };
+    overlay.onclick = (e) => { if (e.target === overlay) cleanup(null); };
+  });
 }
 
 // V4-1v: 서랍장 4 그룹 자동 분류 (V4 비전 10.3)
@@ -18244,7 +18460,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.40-reflection-z-fix';
+const APP_VERSION = 'v4.0.41-exec-batch-fix';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
