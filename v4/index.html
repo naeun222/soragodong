@@ -2414,6 +2414,26 @@
     color: var(--accent);
   }
 
+  /* V4-1f: 모래사장 DNA 진주 (작은 다면체) */
+  .beach-dna-section .beach-tier-header {
+    color: #d4a76a;
+    letter-spacing: 0.08em;
+  }
+  .beach-dna-shell {
+    font-size: 28px !important;
+    cursor: pointer;
+    transition: transform 0.18s;
+  }
+  .beach-dna-shell:active { transform: scale(0.92); }
+  .dna-pearl-story {
+    text-align: center;
+    padding: 28px 22px 22px;
+  }
+  .dna-pearl-svg-wrap {
+    display: flex; justify-content: center;
+    margin-bottom: 12px;
+  }
+
   /* V4-1d-4: DNA 진주 결정화 의식 모달 (1회만, 큰 다면체 + 회전 헬릭스) */
   .crystallize-ritual-overlay {
     position: fixed; inset: 0;
@@ -7709,6 +7729,32 @@ function renderBeach() {
     return;
   }
 
+  // V4-1f: DNA 진주 — 모래사장 최상위 티어 (V4 비전 11)
+  // state.pearls에 type='dna_pearl'로 저장됨. shellCollection엔 없음.
+  // 'tier' 탭 + 'all' 탭에서 최상단 섹션으로 표시. 'card'/'call' 탭에선 X.
+  const dnaPearls = (state.pearls || []).filter(p => p.type === 'dna_pearl');
+  const showDnaSection = (_beachTab === 'tier' || _beachTab === 'all') && dnaPearls.length > 0;
+  const dnaPathColor = {
+    'one-shot':        '#ffd700',
+    'quick-discovery': '#5fcfba',
+    'evolved':         'linear-gradient(135deg,#ff6b6b,#ffd93d 33%,#5fcfba 66%,#8b7ec4)'
+  };
+  const dnaSectionHtml = showDnaSection ? `
+    <div class="beach-tier-section beach-dna-section">
+      <div class="beach-tier-header">🧬 DNA 진주 — 체화 완료 · ${dnaPearls.length}</div>
+      <div class="beach-tier-grid">
+        ${dnaPearls.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(p => {
+          const color = dnaPathColor[p.embodimentPath] || '#ffd700';
+          const isGradient = String(color).startsWith('linear-gradient');
+          const styleStr = isGradient
+            ? `background:${color}; -webkit-background-clip:text; background-clip:text; color:transparent;`
+            : `color:${color}; text-shadow:0 0 6px ${color}80;`;
+          return `<div class="beach-shell beach-dna-shell" style="${styleStr}" onclick="openDnaPearlStory('${p.id}')" title="${escapeHtml(p.content || '')}">🧬</div>`;
+        }).join('')}
+      </div>
+    </div>
+  ` : '';
+
   // V3.13.x: '결별로' 탭만 티어 그룹화 (높은 결 먼저). 그 외 탭은 시간순 평면.
   if (_beachTab === 'tier') {
     const TIER_ORDER = [
@@ -7729,7 +7775,7 @@ function renderBeach() {
       grouped[k].sort((a, b) => new Date(b.date) - new Date(a.date));
     });
 
-    let html = '';
+    let html = dnaSectionHtml;
     TIER_ORDER.forEach(({ tier, label }) => {
       if (!grouped[tier] || grouped[tier].length === 0) return;
       html += `<div class="beach-tier-section">
@@ -7744,7 +7790,8 @@ function renderBeach() {
   } else {
     // 시간순 평면 (최신 위)
     const sorted = filtered.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-    grid.innerHTML = `<div class="beach-tier-grid">` +
+    grid.innerHTML = dnaSectionHtml +
+      `<div class="beach-tier-grid">` +
       sorted.map(s => `<div class="beach-shell tier-${s.tier || 'unknown'}" onclick="openShellStory(${state.shellCollection.indexOf(s)})">${s.type}</div>`).join('') +
       `</div>`;
   }
@@ -7782,6 +7829,74 @@ function renderBeach() {
       `;
     }
   }
+}
+
+// V4-1f: DNA 진주 클릭 → 일반 story 모달 (결정화 의식보다 가벼운 톤).
+// 5.7: "결정화 의식 모달 = 1회만. 이후 모래사장 컬렉션 아이템 (일반 소라 story 모달 톤)"
+function openDnaPearlStory(pearlId) {
+  const pearl = (state.pearls || []).find(p => p.id === pearlId && p.type === 'dna_pearl');
+  if (!pearl) return;
+  const card = getStrategyCard(pearl.strategyId);
+
+  const dateStr = new Date(pearl.createdAt).toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  const pathLabel = ({
+    'one-shot':        '✨ 단번 결정화',
+    'quick-discovery': '🧭 빠른 발견',
+    'evolved':         '🧬 진화 완료'
+  })[pearl.embodimentPath] || '✨ DNA 진주';
+
+  const pathColor = ({
+    'one-shot':        '#ffd700',
+    'quick-discovery': '#5fcfba',
+    'evolved':         'url(#dna-mini-rainbow)'
+  })[pearl.embodimentPath] || '#ffd700';
+
+  // 작은 결정 다면체 (60px) — 의식 모달과 동일한 형태, 회전 없음
+  const dotColors = ['#ffd93d', '#d4a76a', '#5fcfba', '#a89dc8', '#666e8a', '#666e8a', '#666e8a', '#666e8a'];
+  const dotsHtml = dotColors.map((c, i) => {
+    const angle = (i / 8) * 360;
+    const rad = (angle * Math.PI) / 180;
+    const cx = 100 + 70 * Math.cos(rad);
+    const cy = 100 + 70 * Math.sin(rad);
+    return `<circle cx="${cx}" cy="${cy}" r="4.5" fill="${c}" opacity="0.85"/>`;
+  }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'shell-story-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="shell-story-card dna-pearl-story">
+      <div class="dna-pearl-svg-wrap">
+        <svg viewBox="0 0 200 200" width="120" height="120" aria-hidden="true">
+          <defs>
+            <linearGradient id="dna-mini-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#ff6b6b"/>
+              <stop offset="33%"  stop-color="#ffd93d"/>
+              <stop offset="66%"  stop-color="#5fcfba"/>
+              <stop offset="100%" stop-color="#8b7ec4"/>
+            </linearGradient>
+          </defs>
+          <polygon points="100,12 162,40 188,100 162,160 100,188 38,160 12,100 38,40"
+                   fill="${pathColor}" fill-opacity="0.14"
+                   stroke="${pathColor}" stroke-width="2.5" />
+          ${dotsHtml}
+          <circle cx="100" cy="100" r="3.5" fill="${pathColor}" opacity="0.95"/>
+        </svg>
+      </div>
+      <div class="shell-story-tier">${pathLabel}</div>
+      <div class="shell-story-date">${dateStr}</div>
+      <div class="shell-story-text">${escapeHtml(pearl.content || '')}</div>
+      <div style="font-size:11px; color:var(--text-soft); margin-top:8px;">
+        ${pearl.totalAttempts || 0}번 시도 · ${pearl.workedCount || 0}번 작동${pearl.totalGens > 1 ? ` · ${pearl.totalGens}세대` : ''}
+      </div>
+      ${card ? `<div style="font-size:11px; color:var(--text-dim); margin-top:6px;">가닥: ${escapeHtml(card.title)}</div>` : ''}
+      <button class="btn-secondary" style="margin-top:18px;" onclick="this.closest('.shell-story-overlay').remove()">닫기</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
 }
 
 // V3.13.x: 만료된 부름 다시 받기 — 오늘 pending으로 복원
@@ -10085,15 +10200,19 @@ function updateEmbodimentStatus(card) {
     card.embodimentStatus = 'trying';
   }
 
-  // trying → working prompt: worked 3회+ (사용자 확인은 V4-1d-2에서)
-  // working → embodied prompt: worked 5회+ (V4-1d-4 결정화 의식)
+  // trying → working: worked 3회+ 자동 전환 + 5.8 톤 토스트.
+  // (5.4 "사용자 확인"은 5회+ 결정화 의식에 한정. 3회 단계는 자동 + 인지 부담↓)
+  if (card.embodimentStatus === 'trying' && worked >= 3) {
+    card.embodimentStatus = 'working';
+    if (typeof showToast === 'function') {
+      showToast('🧬 가닥 색 진해짐 — 너만의 코드로 자리 잡고 있어');
+    }
+  }
+
+  // working → embodied: worked 5회+ → 결정화 의식 prompt (V4-1d-4)
   if (worked >= 5 && card.embodimentStatus !== 'embodied') {
     if (typeof promptCrystallize === 'function') {
       try { promptCrystallize(card); } catch (e) { console.warn('promptCrystallize:', e); }
-    }
-  } else if (worked >= 3 && card.embodimentStatus === 'trying') {
-    if (typeof promptWorkingTransition === 'function') {
-      try { promptWorkingTransition(card); } catch (e) { console.warn('promptWorkingTransition:', e); }
     }
   }
 }
@@ -15153,7 +15272,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.7-yangsaeng-flow';
+const APP_VERSION = 'v4.0.8-beach-dna';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
