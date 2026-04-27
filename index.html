@@ -2232,6 +2232,40 @@
     color: #d4a76a;
     font-weight: 500;
   }
+  /* V4-1n: 진화 트리 (텍스트 + 이모지) */
+  .strategy-gens-tree {
+    margin: 8px 0;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 11px;
+  }
+  .gens-tree-label {
+    font-size: 10px;
+    color: var(--text-soft);
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .strategy-gen-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    line-height: 1.6;
+    flex-wrap: wrap;
+    padding: 2px 0;
+    color: var(--text-dim);
+  }
+  .strategy-gen-row.current { color: var(--text); }
+  .gen-prefix { color: var(--text-soft); white-space: nowrap; }
+  .gen-layer { font-weight: 500; white-space: nowrap; }
+  .gen-action { flex: 1; min-width: 100px; line-height: 1.4; }
+  .gen-mark { font-size: 12px; }
+  .gen-dots { display: flex; gap: 3px; flex-wrap: wrap; }
+  .gen-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block;
+  }
   /* V3.13.x: 전략 카드 4-필드 구조 (문제 상황 / 심리학 개념 / 전략적 행동) */
   .strategy-card-v2 { padding: 16px 18px; }
   .strategy-card-title {
@@ -11856,11 +11890,43 @@ function renderLensStrategies() {
       const metaHtml = metaLine
         ? `<div class="strategy-card-meta${_isEmbodied ? ' embodied' : ''}">${metaLine}</div>`
         : '';
+      // V4-1n: 진화 트리 (텍스트 + 이모지, V4 비전 5.7) — generations 2개 이상일 때만 표시
+      let genTreeHtml = '';
+      if (Array.isArray(s.generations) && s.generations.length >= 2) {
+        const _layerEmoji = { L1:'🧠', L2:'🎯', L3:'🌍', L4:'👥', L5:'🪞' };
+        const _layerName  = { L1:'인지', L2:'행동', L3:'환경', L4:'사회', L5:'메타' };
+        const rows = s.generations.map((g, gi) => {
+          const isLast = gi === s.generations.length - 1;
+          const isMutated = g.status === 'mutated';
+          const dots = (g.attempts || []).map(a => {
+            const c = a.status === 'worked' ? '#8fc88f'
+                    : a.status === 'meh'    ? '#d4a76a'
+                    : a.status === 'didnt'  ? '#888a90'
+                                            : '#666';
+            return `<span class="gen-dot" style="background:${c};" title="${a.status}"></span>`;
+          }).join('');
+          const prefix = gi === 0 ? '' : '└─ ';
+          const layer = `${_layerEmoji[g.layer] || '✦'} ${_layerName[g.layer] || g.layer}`;
+          const action = escapeHtml((g.action || '').slice(0, 50));
+          const mark = isMutated ? '🪦' : (isLast && _isEmbodied ? '🍃' : '');
+          return `<div class="strategy-gen-row${isLast ? ' current' : ''}" style="padding-left:${gi * 14}px;">
+            <span class="gen-prefix">${prefix}</span>
+            <span class="gen-layer">${layer}</span>
+            <span class="gen-action">${action}${mark ? ` <span class="gen-mark">${mark}</span>` : ''}</span>
+            <span class="gen-dots">${dots}</span>
+          </div>`;
+        }).join('');
+        genTreeHtml = `<div class="strategy-gens-tree">
+          <div class="gens-tree-label">🧬 진화 트리 · ${s.generations.length}세대</div>
+          ${rows}
+        </div>`;
+      }
       html += `
         <div class="strategy-card strategy-card-v2">
           <div class="strategy-card-title">🧭 ${escapeHtml(s.title)}</div>
           ${bodyHtml}
           ${metaHtml}
+          ${genTreeHtml}
           <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : s.source === 'deeper' ? ' · 더 알고 싶어' : ' · 대화 챕터'}</div>
           <div class="strategy-card-actions">
             ${tryBtnHtml}
@@ -16050,7 +16116,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.16-pearl-signal';
+const APP_VERSION = 'v4.0.17-evolution-tree';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
