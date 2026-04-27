@@ -12998,13 +12998,15 @@ ${chatLog.slice(0, 8000)}
 
 [토픽 카드 추출 규칙]
 - 의미 있는 토픽 1-3개만 (잡담은 토픽 X)
-- 카테고리 중 하나 선택:
-  · decision: 큰 결정 / 고민 / 갈림길
-  · task: 할 일 / 일감 / 마감
-  · emotional: 감정 / 마음 / 관계
-  · memory: 기억할 순간 / 일상 사실
+- 카테고리 중 하나 선택 (V4 8 카테고리):
+  · diary: 일기 / 그날 정서 기록
+  · casual: 일상 / 가벼운 사실
+  · concern: 고민 / 갈림길 / 큰 결정
+  · emotion: 감정 / 마음 상태
+  · memory: 기억할 순간 / 강한 인상
+  · todo: 할 일 / 일감 / 마감
   · idea: 아이디어 / 통찰
-  · strategy: 전략 / 방법 / 패턴 발견
+  · relationship: 관계 / 사람
 - 각 카드: 짧은 제목 (한 줄 ~25자) + 1-2문장 요약
 - 의미 없는 짧은 잡담만 있으면 빈 배열 반환
 
@@ -13014,7 +13016,7 @@ ${chatLog.slice(0, 8000)}
     {
       "title": "박사 그만둘까 고민",
       "summary": "지도교수 갈등 + 진로 회의. 결정 못 내림.",
-      "category": "decision"
+      "category": "concern"
     }
   ]
 }
@@ -13039,8 +13041,12 @@ JSON만 출력. 마크다운 X. 다른 설명 X.`;
     
     parsed.topics.forEach(t => {
       if (!t.title || !t.summary) return;
-      const validCats = ['decision', 'task', 'emotional', 'memory', 'idea', 'strategy'];
-      const category = validCats.includes(t.category) ? t.category : 'memory';
+      // V4 비전 6.5: 8 카테고리 (V3 6개 → V4 8개로 확장).
+      // V3 옛 카테고리 호환 매핑. strategy는 자동 추출 X (사용자가 🧭 전략으로만 박음) → idea 다운그레이드.
+      const V3_TO_V4 = { decision: 'concern', task: 'todo', emotional: 'emotion', strategy: 'idea' };
+      let rawCat = V3_TO_V4[t.category] || t.category;
+      const validCats = ['diary', 'casual', 'concern', 'emotion', 'memory', 'todo', 'idea', 'relationship'];
+      const category = validCats.includes(rawCat) ? rawCat : 'memory';
       const cardTitle = String(t.title).trim().slice(0, 60);
       const cardSummary = String(t.summary).trim().slice(0, 300);
       const card = {
@@ -15818,7 +15824,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.12-reflection-scrap';
+const APP_VERSION = 'v4.0.13-chapter-cats-8';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
