@@ -11439,8 +11439,43 @@ function recordStrategyAttempt(strategyId, status, missionId) {
     gen.missions.push(missionId);
   }
   updateEmbodimentStatus(card);
+  // V4-1o-3: 자기 학습 — recently shown 진단의 confidence를 결과로 갱신
+  // V4 비전 9.5: "진단 받고 행동 → 결과로 confidence 갱신"
+  // weak_tool / wrong_layer 진단이 7일 내 shown인 경우, 이 카드 attempt 결과로 confidence 조정
+  if (typeof updateDiagnosisConfidence === 'function') {
+    try { updateDiagnosisConfidence(strategyId, status); } catch (e) { console.warn('updateDiagConf:', e); }
+  }
   saveState();
   return card;
+}
+
+// V4-1o-3: 진단 자기 학습 — recently shown 진단의 confidence 조정
+function updateDiagnosisConfidence(strategyId, status) {
+  if (!Array.isArray(state.diagnoses)) return;
+  const now = Date.now();
+  const window = 7 * 86400000;  // 7일 내 shown 진단만
+  state.diagnoses.forEach(d => {
+    if (d.status !== 'shown') return;
+    if (d.targetCardId && d.targetCardId !== strategyId) return;
+    if (!d.detectedAt) return;
+    const age = now - new Date(d.detectedAt).getTime();
+    if (age > window) return;
+    // weak_tool / wrong_layer: worked → confidence 감소 (진단 틀렸다는 신호) / didnt → 증가
+    if (d.type === 'weak_tool' || d.type === 'wrong_layer') {
+      const delta = status === 'worked' ? -0.15 : (status === 'didnt' ? 0.10 : 0);
+      if (delta) {
+        d.confidence = Math.max(0, Math.min(1, (d.confidence || 0.5) + delta));
+        d.lastUpdate = new Date().toISOString();
+        // confidence가 너무 낮아지면 status='dismissed' (다시 안 띄움 + 흔적 보존)
+        if (d.confidence < 0.2) d.status = 'dismissed';
+      }
+    }
+    // avoidance: worked → 회피 패턴 깨짐 → confidence 감소
+    if (d.type === 'avoidance' && status === 'worked') {
+      d.confidence = Math.max(0, (d.confidence || 0.5) - 0.20);
+      if (d.confidence < 0.2) d.status = 'dismissed';
+    }
+  });
 }
 
 function updateEmbodimentStatus(card) {
@@ -17677,7 +17712,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.32-task-sched';
+const APP_VERSION = 'v4.0.33-diag-learn';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
