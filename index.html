@@ -5770,10 +5770,9 @@
     background: linear-gradient(135deg, var(--surface), var(--surface2));
     border: 1px solid var(--accent);
     border-radius: 18px;
-    padding: 18px 20px;
+    padding: 18px 20px 18px 30px;  /* V4-fix v3: 드래그 핸들 자리 */
     max-width: 320px;
     width: calc(100vw - 32px);
-    /* V3.13.x: 본문 길어도 화면 밖 안 잘리게 — 최대 높이 + 내부 스크롤 */
     max-height: calc(100vh - 32px);
     overflow-y: auto;
     box-shadow: 0 12px 36px rgba(0,0,0,0.6);
@@ -5781,6 +5780,28 @@
     z-index: 9100;
     animation: onbFadeIn 0.3s ease;
   }
+  .onb-coachmark.dragging {
+    transition: none !important;
+    animation: none !important;
+    cursor: grabbing;
+  }
+  /* V4-fix v3 (사용자 요청): 튜토리얼 모달 드래그 핸들 */
+  .onb-drag-handle {
+    position: absolute;
+    top: 0; left: 0;
+    width: 24px; height: 100%;
+    cursor: grab;
+    color: var(--text-soft);
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+    border-right: 1px dashed rgba(212,167,106,0.20);
+    background: rgba(212,167,106,0.05);
+    border-radius: 18px 0 0 18px;
+    line-height: 1;
+    letter-spacing: -2px;
+  }
+  .onb-drag-handle:active { cursor: grabbing; background: rgba(212,167,106,0.15); }
   @keyframes onbFadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -6012,6 +6033,7 @@
   <div class="onb-mask" id="onbMask"></div>
   <div class="onb-spotlight" id="onbSpotlight"></div>
   <div class="onb-coachmark" id="onbCoachmark">
+    <div class="onb-drag-handle" id="onbDragHandle" title="드래그해서 옮기기">⋮⋮</div>
     <div class="onb-step-num" id="onbStepNum">1 / 7</div>
     <div class="onb-title" id="onbTitle"></div>
     <div class="onb-body" id="onbBody"></div>
@@ -7830,15 +7852,15 @@ const ONBOARDING_STEPS = [
     id: 'await_deeper_response',
     targetSelector: null,
     title: '잠깐 기다려줘 🐚',
-    body: '4단 분석 + 전략 만드는 중이야.<br><br><b>혹시 내가 한 번 더 질문하면, 정보 더 알려줘!</b> 충분한 맥락이 모이면 4단 분석 + 전략 짜줄게.<br><br>응답 끝나고 <b>🧭 전략으로</b>와 <b>✦ 해볼게</b> 두 버튼이 다 떠야 다음으로 진행할 수 있어.',
+    body: '4단 분석 + 전략 만드는 중이야.<br><br><b>혹시 내가 한 번 더 질문하면, 정보 더 알려줘!</b> 충분한 맥락이 모이면 4단 분석 + 전략 짜줄게.<br><br>응답 끝나고 <b>🧬 전략으로</b>와 <b>✦ 해볼게</b> 두 버튼이 다 떠야 다음으로 진행할 수 있어.',
     waitFor: 'next',
     dimBackground: false
   },
   {
     id: 'click_strategy',
     targetSelector: '.msg-action[onclick^="saveMsgAsStrategy"]',
-    title: '🧭 전략으로',
-    body: '4단 응답 아래에 <b>"🧭 전략으로"</b> 버튼이 있어. 한 번 눌러볼래?<br><br><b>누르고 잠깐 기다려야 돼!</b> AI가 전략 카드 만들어서 "🧭 전략 저장됨"으로 바뀌면 그때 "눌렀어 →" 눌러줘.<br><br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">응답이 길면 아래로 스크롤해서 찾아봐.</span>',
+    title: '🧬 전략으로',
+    body: '4단 응답 아래에 <b>"🧬 전략으로"</b> 버튼이 있어. 한 번 눌러볼래?<br><br><b>누르고 잠깐 기다려야 돼!</b> AI가 전략 카드 만들어서 "🧬 전략 저장됨"으로 바뀌면 그때 "눌렀어 →" 눌러줘.<br><br>실천할 가이드는 여기로 저장하면 — 아카이브 깨달음 렌즈의 전략 탭에 쌓여서 언제든 다시 볼 수 있어.<br><br><span class="small">응답이 길면 아래로 스크롤해서 찾아봐.</span>',
     waitFor: 'click',
     advanceDelay: 1200,
     manualAdvance: true,
@@ -7848,7 +7870,7 @@ const ONBOARDING_STEPS = [
     id: 'click_accept',
     targetSelector: '.proposal-btn.accept',
     title: '✦ 해볼게',
-    body: '같은 응답 아래에 "✦ 해볼게" 버튼이 있어. 한 번 눌러볼래?<br>전략을 "오늘의 미션"으로 받아들이는 거야 — 홈에 "소라의 부름" ⭐로 등록돼!<br><br><span class="small">"🧭 전략으로" 옆에 같이 떠. 누른 후 "눌렀어 →" 눌러줘.</span>',
+    body: '같은 응답 아래에 "✦ 해볼게" 버튼이 있어. 한 번 눌러볼래?<br>전략을 "오늘의 미션"으로 받아들이는 거야 — 홈에 "소라의 부름" ⭐로 등록돼!<br><br><span class="small">"🧬 전략으로" 옆에 같이 떠. 누른 후 "눌렀어 →" 눌러줘.</span>',
     waitFor: 'click',
     advanceDelay: 1500,
     manualAdvance: true,
@@ -7878,7 +7900,7 @@ const ONBOARDING_STEPS = [
     id: 'attempt_result_intro',
     targetSelector: null,
     title: '결과 체크 4 옵션',
-    body: '미션 ✓ 누르면 4 옵션이 떠 (전략 가닥 미션일 때):<br><br>· <b>👍 작동했어</b> — 가닥에 흔적 박힘, 5번 작동 시 결정화 prompt<br>· <b>🤔 그저 그래</b> — "돌연변이 해볼래?" yes/no<br>· <b>👎 안 통했어</b> — 임시 대화창 자동 (다른 차원 4 옵션)<br>· <b>😅 못 시도</b> — 자책 X, 다음 기회<br><br><span class="small">자책 X. 모든 결과 = 발견.</span>',
+    body: '<b>언제 떠?</b><br>· 미션 ✓ 즉시 누르면 → 바로 4 옵션<br>· 미션 받은 <b>다음 날 (1~7일 후) 체크인 또는 대화 탭 진입 시 자동으로 떠</b><br><br><b>4 옵션</b>:<br>· <b>👍 작동했어</b> — 가닥에 흔적 박힘, 5번 작동 시 결정화 prompt<br>· <b>🤔 그저 그래</b> — "돌연변이 해볼래?" yes/no<br>· <b>👎 안 통했어</b> — 임시 대화창 자동 (다른 차원 4 옵션)<br>· <b>😅 못 시도</b> — 자책 X, 다음 기회<br><br><span class="small">자책 X. 모든 결과 = 발견.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -7893,10 +7915,11 @@ const ONBOARDING_STEPS = [
   {
     id: 'crystallize_intro',
     targetSelector: null,
-    title: '💎 결정화 의식 (한 번뿐)',
-    body: '한 가닥이 5번 작동하면 → "<b>DNA 진주로 결정화할까?</b>" prompt.<br>응 → 결정화 의식 모달 (faceted gem + 회전 헬릭스 + 박힌 소라들).<br>→ 너 일부가 됨. <b>모래사장 최상위</b>로 올라가.',
+    title: '💎 너 일부가 되는 순간',
+    body: '한 전략이 <b>5번 작동</b>하면 → "이거 너 일부로 만들까?" 물어봐.<br>응 → <b>특별한 의식 화면</b>이 떠 (예쁜 보석 + 박힌 소라들 회전).<br>→ 의지 X로도 자동 작동. <b>모래사장 맨 위</b>로 올라가.<br><br><span class="small">한 번뿐인 의식이야. 진짜로 너 안에 박힘.</span>',
     waitFor: 'next',
-    dimBackground: false
+    dimBackground: false,
+    demoCrystallize: true
   },
   {
     id: 'open_beach',
@@ -7919,17 +7942,18 @@ const ONBOARDING_STEPS = [
   {
     id: 'close_beach',
     targetSelector: '#shellModal .btn-secondary',
-    title: '소라 6단계',
-    body: '소라는 이렇게 6단계로 나뉘어:<br>🐚 가벼움 → 🌀 일상 → 🐢 메인 → 🦞 황금 → ⭐ <b>부름</b> → ✨ 특별<br>각 소라 탭하면 그날 이야기도 떠!<br><br>다 봤으면 닫기 눌러봐.',
+    title: '소라 7단계',
+    body: '소라는 이렇게 나뉘어:<br>🐚 가벼움 → 🌀 일상 → 🐢 메인 → 🦞 황금 → ⭐ <b>부름</b> → ✨ 특별 → 🧬 <b>DNA 진주</b> (체화 완료)<br>각 소라 탭하면 그날 이야기도 떠!<br><br>다 봤으면 닫기 눌러봐.',
     waitFor: 'click',
     advanceDelay: 600,
-    coachmarkPosition: 'corner'
+    coachmarkPosition: 'corner',
+    dimBackground: false
   },
   {
     id: 'home_features_intro',
     targetSelector: null,
-    title: '홈 화면에 두 가지 더',
-    body: '홈을 자세히 보면 두 가지 더 있어:<br><br>· <b>🌙 주간 리뷰</b> — 매주 일요일에 떠. 한 주 데이터(체크인·대화·미션)를 내가 분석해서 인사이트 + 전략 + 새로운 가치/특성을 발견해줘. 너 자신을 더 깊게 이해하는 시간이야.<br><br>· <b>⚖️ 갈피의 방</b> — 큰 결정(이직·이별·진로·이사 등) 14일 동안 숙성하면서 매일 다른 각도로 같이 생각해보는 곳이야. 충동적 결정 X, 깊이 있는 결정 ○.<br><br>둘 다 너 페이스에 맞춰 떠. <b>이따가 한 번 구경해봐!</b> ✦',
+    title: '홈에 두 가지 더 있어',
+    body: '홈을 자세히 보면 두 가지 더 있어 — <b>🌙 주간/월간/분기 리뷰</b>와 <b>⚖️ 갈피의 방</b>.<br>다음에 하나씩 자세히 알려줄게!',
     waitFor: 'next',
     dimBackground: false
   },
@@ -7947,7 +7971,7 @@ const ONBOARDING_STEPS = [
     id: 'library_categories',
     targetSelector: null,
     title: '5 카테고리',
-    body: '도서관은 <b>5 카테고리</b>로 정리돼:<br><br>· <b>📔 일기·대화</b> — 캘린더 무드 그리드 + 8 서브칩 (일기/일상/고민/감정/기억/할 일/아이디어/관계)<br>· <b>🔮 진주</b> — Pinterest 갤러리 (음악/음식/장소/순간/사람) + ★ 즐겨찾기<br>· <b>🧬 양생방</b> — 너의 행동 전략 가닥들. 진화 트리.<br>· <b>✨ 깨달음</b> — 📌 스크랩 / ✎ 메모 / 🌊 숙고 결론. 해시태그 자동.<br>· <b>🌀 갈피·리뷰</b> — 갈피의 방 + 주간/월간/분기/연간 리뷰<br><br>맨 위 <b>🌟 오늘의 너</b> 카드는 진주 1개 회전 (안 본 거 우선).',
+    body: '도서관은 <b>5 카테고리</b>로 나뉘어:<br>📔 일기·대화 / 🔮 진주 / 🧬 양생방 / ✨ 깨달음 / 🌀 갈피·리뷰<br><br>맨 위 <b>🌟 오늘의 너</b> 카드는 진주 1개 회전.<br>다음에 핵심 몇 개만 짚어줄게.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -7970,12 +7994,44 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   {
-    id: 'galpi_reviews',
+    id: 'galpi_categories',
     targetSelector: '[data-cat="galpi"]',
-    title: '🌀 갈피·리뷰 — Stories Replay',
-    body: '갈피·리뷰 칩 눌러봐!<br><br>· <b>⚖️ 갈피의 방</b> — 큰 결정 14일 숙성 (관점/예측/가치 정렬)<br>· <b>🌙 리뷰 모음</b> — 주간/월간/분기/연간 자동 리뷰<br>· <b>▶ Stories Replay</b> — 분기 (10) / 연간 (15 슬라이드). <b>진주 음악 슬라이드마다</b>. tap 진행.<br>· <b>✨ 깨달음 가공</b> — 사고 모드 / 화두 무게중심 / 시간 분포 / 클러스터 / AI 메타 요약 / 살아있는 통찰.',
+    title: '🌀 갈피·리뷰',
+    body: '여기엔 두 가지 — 큰 결정과 회고가 모여.<br>갈피·리뷰 칩 눌러봐!',
     waitFor: 'click',
     advanceDelay: 800,
+    dimBackground: false
+  },
+  {
+    id: 'galpi_room',
+    targetSelector: null,
+    title: '⚖️ 갈피의 방',
+    body: '<b>큰 결정 (이직·이별·진로·이사 등) 14일 동안 숙성</b>하면서 매일 다른 각도로 같이 생각해보는 곳.<br><br>· 충동적 결정 X<br>· 깊이 있는 결정 ○<br>· 14일 후 결과 → 도서관 깨달음에 자동 보관',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'reviews_intro',
+    targetSelector: null,
+    title: '🌙 주간/월간/분기/연간 리뷰',
+    body: '네 페이스에 맞춰 자동으로 떠:<br><br>· <b>주간 리뷰</b> — 매주 일요일. 한 주 데이터 분석 + 인사이트 + 새로운 가치/특성 발견<br>· <b>월간 리뷰</b> — 매달 1주차 자동<br>· <b>분기 리뷰</b> — 매분기 자동, Stories Replay 가능<br>· <b>연간 리뷰</b> — 한 해 종합 (애플뮤직 리플레이식)',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'stories_replay',
+    targetSelector: null,
+    title: '▶ Stories Replay',
+    body: '분기 (10 슬라이드) / 연간 (15 슬라이드).<br><br>· 너만의 데이터 (빵빵한 날 / 시그니처 소라 / streak)<br>· DNA 진화 흐름<br>· 가장 깊었던 숙고<br>· 진단 학습 곡선<br>· <b>진주 음악 슬라이드마다 자동 재생</b><br>· tap 진행 / 길게 누르면 일시정지',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'archive_meta',
+    targetSelector: null,
+    title: '✨ 리뷰 깨달음 가공',
+    body: '리뷰 펼치면 자동 가공:<br><br>· <b>사고 모드</b> — 스크랩/메모/숙고 비율<br>· <b>화두 무게중심</b> — 자주 떠올린 태그 + 분기 비교 (계속/새로/사라진)<br>· <b>시간 분포</b> — 초/중/말 어디서 통찰 깊었나<br>· <b>클러스터</b> — 같은 테마 갈래<br>· <b>AI 메타 요약</b> — 한 단락 narrative<br>· <b>살아있는 통찰</b> — ★ 즐겨찾기 + 다시 본 횟수',
+    waitFor: 'next',
     dimBackground: false
   },
 
@@ -8068,6 +8124,52 @@ let _onbStep = 0;
 let _onbActiveListeners = [];
 let _onbStartTime = null;  // V3.12: 튜토리얼 시작 시간 — 종료 시 데이터 정리
 
+// V4-fix v3 (사용자 요청): 튜토리얼 coachmark 드래그
+function _initOnbDrag() {
+  const coachmark = document.getElementById('onbCoachmark');
+  const handle = document.getElementById('onbDragHandle');
+  if (!coachmark || !handle || handle._dragInited) return;
+  handle._dragInited = true;
+  let dragging = false, startX = 0, startY = 0, baseLeft = 0, baseTop = 0;
+  const onMove = (e) => {
+    if (!dragging) return;
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    const dx = cx - startX, dy = cy - startY;
+    coachmark.style.left = (baseLeft + dx) + 'px';
+    coachmark.style.top = (baseTop + dy) + 'px';
+    coachmark.style.right = 'auto';
+    coachmark.style.bottom = 'auto';
+    coachmark.style.transform = 'none';
+    if (e.cancelable) e.preventDefault();
+  };
+  const onEnd = () => {
+    if (!dragging) return;
+    dragging = false;
+    coachmark.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('mouseup', onEnd);
+    document.removeEventListener('touchend', onEnd);
+  };
+  const onStart = (e) => {
+    dragging = true;
+    coachmark.classList.add('dragging');
+    const rect = coachmark.getBoundingClientRect();
+    baseLeft = rect.left;
+    baseTop = rect.top;
+    startX = e.touches ? e.touches[0].clientX : e.clientX;
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+    if (e.cancelable) e.preventDefault();
+  };
+  handle.addEventListener('mousedown', onStart);
+  handle.addEventListener('touchstart', onStart, { passive: false });
+}
+
 function startInteractiveOnboarding() {
   _onbStep = 0;
   _onbStartTime = Date.now();
@@ -8077,6 +8179,20 @@ function startInteractiveOnboarding() {
   window._onbPeriodStartBackup = state.periodStart || null;
   // V3.13.x: caseFormulation도 백업 — 튜토리얼 대화로 update됐을 가능성 (timestamp 없어 timestamp 정리 X)
   window._onbCFBackup = JSON.parse(JSON.stringify(state.caseFormulation || { version: 0, problems: [], mechanisms: [], strengths: [] }));
+  // V4-fix v3 (사용자 요청): 튜토리얼 시작 시 testerMode ON + 시드 데이터 자동 박기
+  // 튜토리얼 끝(onbFinish) 또는 skip 시 testerMode OFF로 사용자 데이터 복원됨
+  window._onbAutoTesterMode = false;  // 자동 켰는지 마킹 (onbFinish에서 OFF용)
+  if (state.preferences && !state.preferences.testerMode) {
+    if (typeof toggleTesterMode === 'function') {
+      try {
+        toggleTesterMode();  // ON: 현재 state 백업 + flag set
+        window._onbAutoTesterMode = true;
+      } catch (e) { console.warn('tutorial testerMode ON:', e); }
+    }
+  }
+  if (window._onbAutoTesterMode && typeof testSeedV4Data === 'function') {
+    try { testSeedV4Data(); } catch (e) { console.warn('tutorial seed:', e); }
+  }
   const tourOv = document.getElementById('tourOverlay');
   if (tourOv) tourOv.style.display = 'none';
   showScreen('home');
@@ -8086,6 +8202,7 @@ function startInteractiveOnboarding() {
       ov.style.display = 'block';
       ov.classList.add('active');
     }
+    if (typeof _initOnbDrag === 'function') _initOnbDrag();
     onbRenderStep();
   }, 200);
 }
@@ -8266,17 +8383,45 @@ function onbPositionStep(step, retryCount) {
     }
   }
 
-  // V3.13 prefill: 모달이나 input에 예시 값 자동 주입
-  if (step.prefill) {
+  // V4-fix v3 (사용자 요청): 튜토리얼 step에서 데모 모달 띄움
+  if (step.demoCrystallize) {
     setTimeout(() => {
+      if (typeof showCrystallizeRitualModal === 'function') {
+        try {
+          const fakeCard = { title: '마감 직전 폭발력 신뢰', id: 'demo_strat' };
+          const fakePearl = {
+            id: 'demo_dna_pearl',
+            embodimentPath: 'one-shot',
+            shellsUsed: [],
+            totalAttempts: 5,
+            totalGens: 1,
+            workedCount: 5
+          };
+          showCrystallizeRitualModal(fakeCard, fakePearl);
+        } catch (e) { console.warn('demoCrystallize:', e); }
+      }
+    }, 500);
+  }
+  // V3.13 + V4-fix v3 prefill: 모달이나 input에 예시 값 자동 주입 (retry로 mount 기다림)
+  if (step.prefill) {
+    const tryPrefill = (attempts) => {
       const el = document.querySelector(step.prefill.selector);
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
         if (!el.value || step.prefill.force) {
           el.value = step.prefill.value;
           el.dispatchEvent(new Event('input', { bubbles: true }));
+          // textarea auto-resize
+          if (el.tagName === 'TEXTAREA') {
+            el.style.height = 'auto';
+            el.style.height = Math.min(120, el.scrollHeight) + 'px';
+          }
+          el.focus();
         }
+      } else if (attempts > 0) {
+        setTimeout(() => tryPrefill(attempts - 1), 200);
       }
-    }, 100);
+    };
+    setTimeout(() => tryPrefill(8), 200);  // 최대 200 + 8*200 = 1.8s 까지 retry
   }
 
   // 행동 대기 처리. V3.13.x: 모든 setTimeout에 step 가드 (double advance 방지).
@@ -8379,7 +8524,7 @@ function onbFinish() {
     state.decisions = (state.decisions || []).filter(d =>
       !d.startedAt || new Date(d.startedAt).getTime() < startMs
     );
-    // V3.13.x: askDeeper → 🧭 전략으로 저장된 토픽 카드 정리
+    // V3.13.x: askDeeper → 🧬 전략으로 저장된 토픽 카드 정리
     state.topicCards = (state.topicCards || []).filter(c =>
       !c.createdAt || new Date(c.createdAt).getTime() < startMs
     );
@@ -12626,7 +12771,7 @@ function renderChat() {
       const deeperBtn = has4Stage ? '' : `<button class="msg-action" onclick="askDeeper(${i})">더 알고 싶어 ▾</button>`;
       // V3.13.x: askDeeper 응답이면 깨달음 버튼 대신 '전략으로' (전략 탭에 저장)
       const saveBtn = m.fromDeeper
-        ? `<button class="msg-action ${m.savedStrategy ? 'saved' : ''}" onclick="saveMsgAsStrategy(${i})">${m.savedStrategy ? '🧭 전략 저장됨' : '🧭 전략으로'}</button>`
+        ? `<button class="msg-action ${m.savedStrategy ? 'saved' : ''}" onclick="saveMsgAsStrategy(${i})">${m.savedStrategy ? '🧬 전략 저장됨' : '🧬 전략으로'}</button>`
         : `<button class="msg-action ${m.saved ? 'saved' : ''}" onclick="saveMsgAsInsight(${i})">${m.saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>`;
       actions = `<div class="msg-actions">
         ${saveBtn}
@@ -18141,7 +18286,7 @@ JSON만 출력. 마크다운 X. 다른 설명 X.`;
     parsed.topics.forEach(t => {
       if (!t.title || !t.summary) return;
       // V4 비전 6.5: 8 카테고리 (V3 6개 → V4 8개로 확장).
-      // V3 옛 카테고리 호환 매핑. strategy는 자동 추출 X (사용자가 🧭 전략으로만 박음) → idea 다운그레이드.
+      // V3 옛 카테고리 호환 매핑. strategy는 자동 추출 X (사용자가 🧬 전략으로만 박음) → idea 다운그레이드.
       const V3_TO_V4 = { decision: 'concern', task: 'todo', emotional: 'emotion', strategy: 'idea' };
       let rawCat = V3_TO_V4[t.category] || t.category;
       const validCats = ['diary', 'casual', 'concern', 'emotion', 'memory', 'todo', 'idea', 'relationship'];
@@ -24869,7 +25014,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.103-tutorial-v4-full';
+const APP_VERSION = 'v4.0.104-tutorial-seed-drag-demo';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
