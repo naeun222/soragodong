@@ -2323,6 +2323,25 @@
   .hero-music-meta { flex: 1; min-width: 0; }
   .hero-music-title { font-size: 13px; color: var(--text); font-weight: 600; line-height: 1.4; }
   .hero-music-artist { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .hero-music-play {
+    flex-shrink: 0;
+    width: 38px; height: 38px;
+    background: rgba(212,167,106,0.20);
+    border: 1px solid rgba(212,167,106,0.40);
+    color: var(--accent2);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    transition: transform 0.15s, background 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hero-music-play:active { transform: scale(0.92); background: rgba(212,167,106,0.32); }
+  .hero-music-play.playing {
+    background: rgba(212,167,106,0.45);
+    color: #fff;
+  }
   .hero-note {
     font-size: 11px;
     color: var(--text-dim);
@@ -13218,6 +13237,9 @@ function renderLibraryHero() {
 
   let body;
   if (pick.category === '음악' && pick.track) {
+    const playBtn = pick.track.previewUrl
+      ? `<button class="hero-music-play" onclick="event.stopPropagation(); toggleMusicPreview(this, '${escapeHtml(pick.track.previewUrl)}')" aria-label="미리듣기">▶</button>`
+      : '';
     body = `
       <div class="hero-music">
         <img src="${escapeHtml(pick.track.artworkUrl || '')}" alt="" class="hero-music-art">
@@ -13226,6 +13248,7 @@ function renderLibraryHero() {
           <div class="hero-music-artist">${escapeHtml(pick.track.artist || '')}</div>
           ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}
         </div>
+        ${playBtn}
       </div>
     `;
   } else {
@@ -19578,7 +19601,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.52-photo-layout';
+const APP_VERSION = 'v4.0.53-hero-play';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
