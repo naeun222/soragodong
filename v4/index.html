@@ -7222,6 +7222,20 @@ async function completeMission(missionId) {
   mission.photoThumb = photo.thumb;
   mission.aiVerification = photo.verification.reason;
 
+  // V4-1d-2: 전략 가닥에 묶인 미션이면 결과 체크 모달 (4 옵션). 일반 미션은 skip.
+  // 안티-자책 (5.9): 모든 결과 = 발견. shell은 항상 줌. 톤만 다름.
+  if (mission.strategyId && !window._onbTutorialMode) {
+    const attemptStatus = await showAttemptResultModal(mission.title);
+    if (attemptStatus) {
+      mission.attemptStatus = attemptStatus;
+      recordStrategyAttempt(mission.strategyId, attemptStatus, mission.id);
+      // 'didnt' → 임시 채팅 진화 trigger (V4-1d-3에서 wire, typeof guard)
+      if (attemptStatus === 'didnt' && typeof openMutationChat === 'function') {
+        try { openMutationChat(mission.strategyId, mission.title); } catch (e) { console.warn('openMutationChat:', e); }
+      }
+    }
+  }
+
   // V3.13: 부름은 항상 call/legend 티어 (pickShellForTask 사용 — 5% legendary 가챠)
   const shell = pickShellForTask({ source: 'ai_mission', title: mission.title });
   if (shell) {
@@ -10017,6 +10031,23 @@ function determineEmbodimentPath(card) {
   if (gens.length === 1) return 'one-shot';
   if (gens.length <= 2) return 'quick-discovery';
   return 'evolved';
+}
+
+// V4-1d-2: 시도 결과 체크 4 옵션 모달.
+// 안티-자책 톤 (V4 비전 5.9): "실패" X, "안 통했어 / 못 시도했어" 톤.
+// returns: 'worked' | 'meh' | 'didnt' | 'skipped' | null (사용자 취소)
+async function showAttemptResultModal(missionTitle) {
+  const options = [
+    { label: '👍 작동했어',    value: 'worked' },
+    { label: '🤔 그저 그래',    value: 'meh' },
+    { label: '👎 안 통했어',    value: 'didnt' },
+    { label: '😅 못 시도했어',  value: 'skipped' }
+  ];
+  return await showOptionsModal({
+    title: '어땠어?',
+    message: missionTitle ? `"${missionTitle}"\n\n너에게 솔직하게.` : '너에게 솔직하게.',
+    options
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -14666,7 +14697,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.3-embodiment-machine';
+const APP_VERSION = 'v4.0.4-result-modal';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
