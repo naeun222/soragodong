@@ -6290,6 +6290,7 @@
           <button class="btn-secondary" onclick="testForceCrystallize()" style="margin-top:6px;">🧬 첫 strategy DNA 결정화 강제</button>
           <button class="btn-secondary" onclick="testForceMutation()" style="margin-top:6px;">🪦 첫 strategy 돌연변이 진화 강제</button>
           <button class="btn-secondary" onclick="testForceStrategyFollowup()" style="margin-top:6px;">🔄 전략 팔로업 → 안 통함 → 돌연변이 풀 흐름</button>
+          <button class="btn-secondary" onclick="testForceFullAnalysis()" style="margin-top:6px;">📊 통합 분석 강제 (시드 데이터로 traits/values/patterns 채움)</button>
           <button class="btn-secondary" onclick="testForcePearlSuggestion()" style="margin-top:6px;">🔮 진주 능동 제안 (마지막 user msg)</button>
           <button class="btn-secondary" onclick="testForceMissionExpire()" style="margin-top:6px;">⏰ 미션 3일 expire 강제</button>
           <button class="btn-secondary" onclick="testForceQuarterlyStories()" style="margin-top:6px;">▶ 분기 Stories 즉시 보기</button>
@@ -19265,6 +19266,29 @@ function testForceDiagnoses() {
   showToast(`🩺 ${detected.length}개 진단 감지됨 (${types}) — 테스트 모드라 다음 응답에 자동 인용. 대화 탭에서 메시지 보내봐.`);
 }
 
+// V4-fix v3 (사용자 요청): 시드 데이터로 통합 분석 강제 (forceAnalyze wrapper)
+async function testForceFullAnalysis() {
+  if (!state.preferences || !state.preferences.testerMode) {
+    showToast('⚠️ 테스터 모드 ON 후 사용');
+    return;
+  }
+  if (!state.apiKey) {
+    showToast('⚠️ API 키 필요 — 설정에서 박은 후 시도');
+    return;
+  }
+  if (typeof forceAnalyze !== 'function') {
+    showToast('⚠️ forceAnalyze 함수 X');
+    return;
+  }
+  showToast('📊 통합 분석 진행 중... (시드 데이터 기반)');
+  try {
+    await forceAnalyze();
+    showToast('✅ 통합 분석 완료 — 나 탭에서 확인 (NEW 항목 ✓ 맞아 / 아니야)');
+  } catch (e) {
+    showToast('❌ 분석 실패: ' + (e.message || ''));
+  }
+}
+
 // V4-fix v3 (사용자 요청): 전략 팔로업 → 안 통함 → 돌연변이 임시 대화창 흐름 풀 시뮬
 async function testForceStrategyFollowup() {
   if (!state.preferences || !state.preferences.testerMode) {
@@ -23513,7 +23537,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.80-traits-confirm';
+const APP_VERSION = 'v4.0.81-force-analysis';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
