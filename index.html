@@ -328,7 +328,18 @@
   .dot:nth-child(3) { animation-delay: 0.4s; }
   @keyframes pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
 
-  .proposal-buttons { display: flex; gap: 8px; margin-top: 14px; margin-bottom: 4px; }
+  .proposal-buttons { display: flex; gap: 8px; margin-top: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  /* 사용자 요청 2026-04-28: 오늘의 제안 title chip */
+  .proposal-title-chip {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.14), rgba(143,200,143,0.10));
+    border: 1px solid rgba(212,167,106,0.32);
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+  }
   .proposal-btn { flex: 1; padding: 12px; border-radius: 12px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; white-space: nowrap; }
   .proposal-btn.accept { background: linear-gradient(135deg, var(--accent), #b8894a); color: var(--bg); }
   .proposal-btn.decline { background: transparent; border: 1px solid var(--border-strong); color: var(--text-dim); }
@@ -13649,8 +13660,13 @@ function renderChat() {
 
     let proposalBtns = '';
     if (m.role === 'assistant' && m.proposal && !m.proposalResponse && !m.typing) {
-      proposalBtns = `<div class="proposal-buttons">
+      // 사용자 요청 2026-04-28: 제안 별로면 다시 만들기 버튼 (AI에게 다른 제안 요청)
+      const regenLabel = m._regenLoading ? '🔄 만드는 중...' : '🔄 다시 만들기';
+      const propTitle = m.proposalData?.title ? escapeHtml(m.proposalData.title) : '';
+      const propChip = propTitle ? `<div class="proposal-title-chip">🌿 오늘의 제안: <b>${propTitle}</b></div>` : '';
+      proposalBtns = `${propChip}<div class="proposal-buttons">
         <button class="proposal-btn accept" onclick="acceptProposal(${i})">✦ 해볼게</button>
+        <button class="proposal-btn decline" onclick="regenerateProposal(${i})" ${m._regenLoading ? 'disabled' : ''} title="다른 각도의 제안 받기">${regenLabel}</button>
         <button class="proposal-btn decline" onclick="declineProposal(${i})">나중에</button>
       </div>`;
     } else if (m.proposalResponse) {
@@ -16393,6 +16409,70 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
 // ═══════════════════════════════════════════════════════════════
 // PROPOSAL HANDLING (Phase 2 upgrade)
 // ═══════════════════════════════════════════════════════════════
+// 사용자 요청 2026-04-28: 전략 제안 별로면 AI에게 다른 각도의 제안 요청
+async function regenerateProposal(idx) {
+  const msg = state.chatMessages[idx];
+  if (!msg || !msg.proposal) return;
+  if (!state.apiKey) { showToast('AI 키가 필요해'); return; }
+  msg._regenLoading = true;
+  renderChat();
+  try {
+    const oldTitle = msg.proposalData?.title || '';
+    // 직전 user 메시지 (맥락) 찾기
+    let userContext = '';
+    for (let j = idx - 1; j >= 0; j--) {
+      if (state.chatMessages[j].role === 'user') {
+        userContext = state.chatMessages[j].content || '';
+        break;
+      }
+    }
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 250,
+        messages: [{
+          role: 'user',
+          content: `사용자가 직전 제안 "${oldTitle}"이 별로래. 같은 맥락에서 다른 각도의 '오늘의 제안' 1개 만들어줘.
+
+[사용자 메시지]
+${userContext}
+
+[직전 너의 응답]
+${msg.content}
+
+[너의 일]
+방금 제안 "${oldTitle}"과 다른 차원/접근으로 — 환경 / 시간 / 사회 / 인지 / 메타 중 다른 거.
+오늘 바로 할 수 있는 구체 행동 1개. 동사로 시작. 한 줄 (max 40자).
+
+[출력 JSON만]
+{"title": "...", "description": "..."}
+
+[금지] 마크다운, 추상 다짐, 직전 제안 반복.`
+        }]
+      })
+    });
+    const data = await resp.json();
+    let raw = (data.content?.[0]?.text || '').trim();
+    raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (m) {
+      const parsed = JSON.parse(m[0]);
+      if (parsed.title) {
+        msg.proposalData = { title: parsed.title, description: parsed.description || '' };
+        showToast('🔄 새 제안 생성됨');
+      }
+    }
+  } catch (e) {
+    console.warn('regenerate proposal:', e);
+    showToast('재생성 실패: ' + (e.message || e));
+  }
+  msg._regenLoading = false;
+  saveState();
+  renderChat();
+}
+
 function acceptProposal(idx) {
   const msg = state.chatMessages[idx];
   msg.proposalResponse = 'accept';
