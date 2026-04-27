@@ -8558,6 +8558,44 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   {
+    id: 'yangsaeng_try_btn',
+    targetSelector: '.strategy-try-btn[onclick*="callTryStrategy"]',
+    title: '✦ 해볼게 — 전략 재사용',
+    body: '<b>"✦ 해볼게"</b> 버튼 눌러봐.<br><br>소라고동과 대화하다가 전략을 재사용할 수도 있지만, <b>"✦ 해볼게" 버튼으로도 전략을 재사용</b>해볼 수 있어.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    manualAdvance: true,
+    dimBackground: false,
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'mission_proposal_walkthrough',
+    targetSelector: null,
+    title: '🌿 어떤 상황? → 오늘의 제안',
+    body: '\'어떤 상황?\' 모달이 뜨면 답 적어 → 오늘의 제안 → \'<b>✦ 부름으로 등록</b>\' 눌러봐.<br><br><span class="small">소라고동이 너 상황에 맞는 구체 제안을 만들어줘.</span>',
+    waitFor: 'next',
+    manualAdvance: true,
+    dimBackground: false,
+    aboveModal: true
+  },
+  {
+    id: 'go_home_check_mission',
+    targetSelector: '.nav-item[data-screen="home"]',
+    title: '🏠 홈으로',
+    body: '홈에 새 부름이 등록됐을 거야. 보러 가자.<br>아래 🏠 홈 탭 눌러봐.',
+    waitFor: 'visit',
+    visitScreen: 'home',
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'see_new_mission',
+    targetSelector: '#missionContainer',
+    title: '⭐ 새 \'소라의 부름\'',
+    body: '홈에 <b>새 \'소라의 부름\'</b>이 등록됐어! ✨<br>아까 만든 \'오늘의 제안\'이 미션이 됐지.',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
     id: 'crystallize_intro',
     targetSelector: null,
     title: '💎 너 일부가 되는 순간',
@@ -16075,60 +16113,33 @@ async function finishMutationChat() {
   await _completeMutationToMission(strategyId, opt, chatHistory);
 }
 
-// 돌연변이 직접 흐름 — situation modal 건너뛰고 chatHistory로 바로 제안 생성
+// 돌연변이 직접 흐름 — 카드만 update (사용자 요청 2026-04-28: mission 자동 생성 X. ✦ 해볼게로 재사용)
 async function _completeMutationToMission(strategyId, opt, chatHistory) {
   const card = getStrategyCard(strategyId);
   if (!card) return;
   const layerName = _LAYER_NAME[opt.layer] || opt.layer;
-  showToast('🐚 오늘의 제안 생성 중...');
-  let proposal = '';
-  if (state.apiKey) {
-    try {
-      const recentMsgs = (chatHistory || []).slice(-8).map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n');
-      const ctx = `[전략] ${card.title}\n[새 차원] ${layerName}: ${opt.action}\n[돌연변이 임시 대화 흐름]\n${recentMsgs}`;
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6', max_tokens: 120,
-          messages: [{
-            role: 'user',
-            content: `${ctx}\n\n[너의 일]\n위 전략·새 차원·임시 대화 흐름 종합해서 '오늘의 제안' 1개. 오늘 바로 할 수 있는 구체 행동.\n한 줄 (max 40자). 동사 시작.\n\n[출력]\n제안만 한 줄. 다른 거 X.`
-          }]
-        })
-      });
-      const data = await resp.json();
-      proposal = (data.content?.[0]?.text || '').trim().replace(/^["「'`]|["」'`]$/g, '').split('\n')[0].trim();
-    } catch (e) { console.warn('mutation proposal AI:', e); }
-  }
-  if (!proposal) proposal = opt.action;
-  const yes = await showConfirmModal({
-    title: '🌿 오늘의 제안',
-    message: `"${proposal}"\n\n이걸로 '소라의 부름' 등록할까?`,
-    okLabel: '✦ 부름으로 등록',
-    cancelLabel: '취소'
-  });
-  if (!yes) return;
-  // 사용자 요청 2026-04-28: 전략 DNA 카드도 update — 새 차원/제안으로 진화 + 3 필드 AI 재생성
+  showToast('🧬 카드 진화 중...');
+  // 새 generation 추가 + 옛 카드 내용 snapshot
   mutateToNewGeneration(strategyId, opt.layer, opt.action);
   const refreshed = getStrategyCard(strategyId);
   if (refreshed) {
-    refreshed.title = proposal.length > 50 ? proposal.slice(0, 50) + '...' : proposal;
+    // 임시 fallback (AI 호출 실패 대비)
+    const fallbackTitle = opt.action.length > 40 ? opt.action.slice(0, 40) + '...' : opt.action;
+    refreshed.title = fallbackTitle;
+    refreshed.psychConcept = `${layerName} 차원 — ${opt.action.slice(0, 60)}`;
+    refreshed.actionStrategy = opt.action;
     const lastGen = refreshed.generations[refreshed.generations.length - 1];
     if (lastGen) {
-      lastGen.proposal = proposal;
       lastGen.layerName = layerName;
     }
-    // 임시 fallback (AI 호출 실패 대비)
-    refreshed.psychConcept = `${layerName} 차원 — ${opt.action.slice(0, 60)}`;
-    refreshed.actionStrategy = proposal;
-    // AI로 새 problem/concept/action 3 필드 재생성
+    // AI로 새 4 필드 재생성 (TITLE/PROBLEM/CONCEPT/ACTION) — 옛 가닥 맥락 + 새 차원 + 임시 대화 흐름 종합
     if (state.apiKey) {
       try {
         const oldSnapshot = lastGen?.snapshot || refreshed.generations[refreshed.generations.length - 2]?.snapshot;
         const oldCtx = oldSnapshot
           ? `[옛 가닥] ${oldSnapshot.title}\n[옛 문제] ${oldSnapshot.problemContext}\n[옛 심리학] ${oldSnapshot.psychConcept}\n[옛 행동] ${oldSnapshot.actionStrategy}`
           : `[옛 가닥] ${refreshed.title}`;
+        const recentMsgs = (chatHistory || []).slice(-6).map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n');
         const aiResp = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
@@ -16136,15 +16147,16 @@ async function _completeMutationToMission(strategyId, opt, chatHistory) {
             model: 'claude-sonnet-4-6', max_tokens: 500,
             messages: [{
               role: 'user',
-              content: `진화한 새 가닥 — 카드 3 필드 정리.
+              content: `진화한 새 가닥 — 카드 4 필드 정리.
 
 ${oldCtx}
 [새 차원] ${layerName} (${opt.layer})
 [새 행동] ${opt.action}
-[오늘의 제안] ${proposal}
+[돌연변이 대화]
+${recentMsgs}
 
 [너의 일]
-새 차원/행동 맞춰 진화한 카드의 3 필드 작성.
+새 차원/행동 맞춰 진화한 카드의 4 필드 작성.
 
 [출력 — 정확히 4줄]
 TITLE: <짧은 제목, 5-14자>
@@ -16166,20 +16178,13 @@ ACTION: <전략적 행동, 50-120자, 구체적 무엇을 어떻게>
         if (probM) refreshed.problemContext = probM[1].trim().slice(0, 200);
         if (conM) refreshed.psychConcept = conM[1].trim().slice(0, 200);
         if (actM) refreshed.actionStrategy = actM[1].trim().slice(0, 240);
-      } catch (e) { console.warn('mutation AI 3-field:', e); }
+      } catch (e) { console.warn('mutation AI 4-field:', e); }
     }
   }
-  const newGenIdx = (refreshed?.generations?.length || 1) - 1;
-  createMission(proposal, `🧬 ${card.title} — ${layerName} 차원`, {
-    strategyId,
-    generationIdx: newGenIdx,
-    linkedStrategy: refreshed?.title || card.title
-  });
   saveState({ force: true });
-  showCelebration('🐚', '소라가 널 부르고 있어!', '✨');
-  if (typeof renderTodayMission === 'function') renderTodayMission();
+  showToast('🧬 전략 카드 진화 완료. 양생방에서 ✦ 해볼게로 재사용 가능');
   if (typeof renderArchive === 'function') renderArchive();
-  if (typeof showScreen === 'function') showScreen('home');
+  if (typeof showScreen === 'function') showScreen('archive');
 }
 
 // V4-fix v2: 보관 여부 결정 후 실제 미션 생성
@@ -17063,6 +17068,11 @@ function renderLibraryHero() {
     container.innerHTML = '';
     return;
   }
+  // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드는 시드 음악 진주 (LONGSHOT - Vanilla Days) 고정
+  const isAutoFix = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
+  const seedMusicPin = isAutoFix
+    ? pearls.find(p => p.id === 'pearl_seed_0' && p.category === '음악' && p.track && p.track.previewUrl)
+    : null;
   // 안 본 우선: state.preferences._libHeroSeen[]
   if (!state.preferences) state.preferences = {};
   if (!Array.isArray(state.preferences._libHeroSeen)) state.preferences._libHeroSeen = [];
@@ -17070,8 +17080,8 @@ function renderLibraryHero() {
   // 모든 진주 다 봤으면 reset
   const unseen = pearls.filter(p => !seen.includes(p.id));
   const pool = unseen.length > 0 ? unseen : pearls;
-  // 가장 오래된 unseen 또는 random
-  const pick = pool[Math.floor(Math.random() * pool.length)];
+  // 가장 오래된 unseen 또는 random — 시드 음악 고정 시 우선
+  const pick = seedMusicPin || pool[Math.floor(Math.random() * pool.length)];
   if (!seen.includes(pick.id)) {
     seen.push(pick.id);
     if (seen.length > pearls.length) seen = seen.slice(-pearls.length);
@@ -21148,32 +21158,24 @@ async function testSeedV4Data() {
   });
   // V4-fix v3: 깨달음 archive 25개 (1년 동안, scrap + memo + reflection 골고루)
   state.archive = [];
+  // 사용자 요청 2026-04-28: 깨달음 시드 5개로 줄임. scrap original = "내 대화 → 소라 대화" 페어
   const archiveSeeds = [
-    { type: 'scrap', headline: '환경이 의지보다 강함', body: '도구 셋업 한 번이 의지 매일보다 효과 큼.', daysAgo: 4, tags: ['환경', '습관'] },
-    { type: 'memo', headline: '저녁 무력감 = 정상', body: '에너지 곡선 자연스러운 저점. 자책 X.', daysAgo: 7, tags: ['에너지', '자기이해'] },
-    { type: 'reflection', headline: '학문 vs 졸업장', body: '학문 좋아함 + 졸업장도 필요. 둘 다 진실.', daysAgo: 10, tags: ['숙고', '진로'] },
-    { type: 'scrap', headline: '거절 = 자기 보호', body: '술자리 거절은 약함 X 강함. 부채감은 일시.', daysAgo: 14, tags: ['거절', '관계'] },
-    { type: 'memo', headline: '아침 6시 = 골든', body: '새벽 작업이 가장 잘 됨. 이거 활용해야.', daysAgo: 18, tags: ['시간', '리듬'] },
-    { type: 'scrap', headline: '매몰비용 함정', body: '이미 쓴 시간 ≠ 미래 결정 가중치.', daysAgo: 25, tags: ['결정', '인지'] },
-    { type: 'memo', headline: '논문 막히면 환경 바꾸기', body: '책상 → 카페 → 도서관 사이클.', daysAgo: 32, tags: ['논문', '환경'] },
-    { type: 'reflection', headline: '직장 6개월 더', body: '바로 그만두기 X. 6개월 학습 후 결정.', daysAgo: 40, tags: ['숙고', '진로'] },
-    { type: 'scrap', headline: '운동 = 인지 회복', body: '30분 운동 후 작업 효율 ↑↑.', daysAgo: 50, tags: ['운동', '효율'] },
-    { type: 'memo', headline: '엄마 통화 한 시간', body: '오랜만에. 잔소리도 위로.', daysAgo: 60, tags: ['가족'] },
-    { type: 'scrap', headline: 'SNS = 시간 누수', body: '하루 평균 2시간. 줄이면 책 1권/주.', daysAgo: 70, tags: ['SNS', '시간'] },
-    { type: 'memo', headline: '실험 한 개 망함', body: '망함 ≠ 너. 망함 = 데이터.', daysAgo: 80, tags: ['실험', '안티자책'] },
-    { type: 'reflection', headline: '박사 끝까지', body: '결론 보류. 1년 더 보고.', daysAgo: 90, tags: ['숙고', '진로'] },
-    { type: 'scrap', headline: '주말 휴식 = 회복', body: '죄책감 X. 회복도 작업.', daysAgo: 105, tags: ['휴식'] },
-    { type: 'memo', headline: '카페 모서리 자리', body: '집중 = 자리. 자리 = 환경.', daysAgo: 120, tags: ['환경', '집중'] },
-    { type: 'scrap', headline: '거절 후 부채감 → 5분 산책', body: '몸 움직이면 부채감 빠짐.', daysAgo: 140, tags: ['거절', '환경'] },
-    { type: 'memo', headline: '교수님 칭찬 한 줄', body: '"이 부분 좋다." 그 한 줄이 일주일 동력.', daysAgo: 160, tags: ['관계', '동력'] },
-    { type: 'reflection', headline: '청강 X 자기 공부', body: '시간 한정. 자기 공부 우선.', daysAgo: 180, tags: ['숙고', '학업'] },
-    { type: 'scrap', headline: '명상 10분', body: '아침 명상 후 인지 명료.', daysAgo: 200, tags: ['명상', '아침'] },
-    { type: 'memo', headline: '책 1권 완독', body: '종이책 집중 잘 됨.', daysAgo: 220, tags: ['독서'] },
-    { type: 'scrap', headline: '실험 첫 success', body: '6개월 만의 보상. 가능성 확인.', daysAgo: 240, tags: ['실험', '돌파'] },
-    { type: 'memo', headline: '학회 발표 마무리', body: '슬라이드 30장. 늦게까지 했지만 뿌듯.', daysAgo: 270, tags: ['학회'] },
-    { type: 'scrap', headline: '잠 부족 = 결정 X', body: '5시간 미만 잤으면 큰 결정 다음날로.', daysAgo: 300, tags: ['수면', '결정'] },
-    { type: 'memo', headline: '제주도 3박', body: '바람 + 바다 + 무직. 회복 끝.', daysAgo: 320, tags: ['휴식', '여행'] },
-    { type: 'scrap', headline: '봄 첫날 = 시작', body: '계절 변화 = 리셋 기회.', daysAgo: 360, tags: ['계절'] }
+    { type: 'scrap', headline: '환경이 의지보다 강함',
+      body: '도구 셋업 한 번이 의지 매일보다 효과 큼.', daysAgo: 4, tags: ['환경', '습관'],
+      userMsg: '아무리 다짐해도 작업 시작이 안 돼. 의지가 부족한 건가?',
+      assistantMsg: '의지 문제가 아닐 수도 있어. 작업 환경 한 번 셋업해두면 다음 진입 마찰이 확 줄어. 환경 = 자동 신호. 의지보다 강해.' },
+    { type: 'memo', headline: '저녁 무력감 = 정상',
+      body: '에너지 곡선 자연스러운 저점. 자책 X.', daysAgo: 7, tags: ['에너지', '자기이해'],
+      userMemo: '에너지 곡선 자연스러운 저점. 자책 X.' },
+    { type: 'reflection', headline: '학문 vs 졸업장',
+      body: '학문 좋아함 + 졸업장도 필요. 둘 다 진실.', daysAgo: 10, tags: ['숙고', '진로'] },
+    { type: 'scrap', headline: '거절 = 자기 보호',
+      body: '술자리 거절은 약함 X 강함. 부채감은 일시.', daysAgo: 14, tags: ['거절', '관계'],
+      userMsg: '오늘 술자리 거절했는데 친구한테 미안하고 부채감이 너무 든다.',
+      assistantMsg: '거절은 약함이 아니라 강함이야 — 자기 시간을 지키는 결단. 부채감은 일시적이고 며칠이면 사라져. 친구도 너 사정 이해할 거야.' },
+    { type: 'memo', headline: '아침 6시 = 골든',
+      body: '새벽 작업이 가장 잘 됨. 이거 활용해야.', daysAgo: 18, tags: ['시간', '리듬'],
+      userMemo: '새벽 작업이 가장 잘 됨. 이거 활용해야.' }
   ];
   archiveSeeds.forEach((a, i) => {
     // V4-fix v3 (사용자 요청 — 깨달음 가공): revisitCount + starred 다양화
@@ -21184,9 +21186,12 @@ async function testSeedV4Data() {
       type: a.type,
       headline: a.headline,
       body: a.body,
-      original: a.type === 'scrap' ? `[내가 본 것]\n${a.body}\n[이게 뭐냐면]\n반복 패턴.\n[이럴 땐 이렇게]\n환경 셋업 우선.\n[오늘의 제안]\n한 번에 하나.` : null,
+      // 사용자 요청 2026-04-28: scrap original = "내 대화 → 소라 대화" 페어 구조
+      original: a.type === 'scrap' && a.userMsg && a.assistantMsg
+        ? `[나]\n${a.userMsg}\n\n[소라]\n${a.assistantMsg}`
+        : null,
       insight: a.body,
-      ...(a.type === 'memo' ? { userMemo: a.body } : {}),
+      ...(a.type === 'memo' && a.userMemo ? { userMemo: a.userMemo } : {}),
       tags: a.tags,
       date: new Date(today.getTime() - a.daysAgo * 86400000).toLocaleDateString('ko-KR'),
       source: a.type === 'memo' ? '메모' : a.type === 'reflection' ? '숙고' : '대화',
