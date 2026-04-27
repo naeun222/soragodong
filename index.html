@@ -21663,7 +21663,24 @@ async function testSeedV4Data() {
       assistantMsg: '거절은 약함이 아니라 강함이야 — 자기 시간을 지키는 결단. 부채감은 일시적이고 며칠이면 사라져. 친구도 너 사정 이해할 거야.' },
     { type: 'memo', headline: '아침 6시 = 골든',
       body: '새벽 작업이 가장 잘 됨. 이거 활용해야.', daysAgo: 18, tags: ['시간', '리듬'],
-      userMemo: '새벽 작업이 가장 잘 됨. 이거 활용해야.' }
+      userMemo: '새벽 작업이 가장 잘 됨. 이거 활용해야.' },
+    // 사용자 요청 2026-04-28: 분기별 분산 — annual stories 각 quarter에 깨달음 노출되도록
+    { type: 'scrap', headline: '실패 ≠ 자기 부정',
+      body: '한 번 안 통한 = 데이터, 가치 판정 X.', daysAgo: 80, tags: ['실패', '자기이해'],
+      userMsg: '이번 시도도 실패. 내가 부족한 건가 싶어.',
+      assistantMsg: '한 번 안 통했다 = 그 방법이 안 맞았다. 너의 가치랑 별개야. 데이터 한 점 늘었어 — 다음 시도 더 정확해질 거야.' },
+    { type: 'memo', headline: '카페 새벽 = 가장 강한 환경',
+      body: '의지 0%여도 카페 자리 잡으면 시작됨. 환경 신호의 힘.', daysAgo: 130, tags: ['환경', '카페'],
+      userMemo: '카페 새벽 = 가장 강한 환경. 의지 0%여도 자리 잡으면 시작됨.' },
+    { type: 'reflection', headline: '학회 발표 후 깨달음 — 완벽보다 공유',
+      body: '준비 부족 두려웠지만 발표 후 피드백이 더 큰 자산. 완벽주의 비용 ↑.', daysAgo: 190, tags: ['숙고', '완벽주의'] },
+    { type: 'scrap', headline: '회복 = 일의 일부',
+      body: '쉬는 날도 작업 일부. 회복 없는 폭발 = 번아웃.', daysAgo: 245, tags: ['회복', '리듬'],
+      userMsg: '주말에 쉬면 일정 밀리는 게 너무 부담돼.',
+      assistantMsg: '쉬는 날 ≠ 잃는 시간. 주말 회복이 평일 폭발력의 연료야. 회복도 일의 일부로 봐도 돼.' },
+    { type: 'memo', headline: '몸 신호 먼저 듣기',
+      body: '졸림/배고픔 무시하고 밀어붙이면 다음 날 손해 더 큼.', daysAgo: 320, tags: ['몸', '자기돌봄'],
+      userMemo: '졸림/배고픔 무시 X. 다음 날 손해 더 큼.' }
   ];
   archiveSeeds.forEach((a, i) => {
     // V4-fix v3 (사용자 요청 — 깨달음 가공): revisitCount + starred 다양화
@@ -25591,36 +25608,68 @@ function _buildPatternsSlideHTML(inRange) {
   // 가장 confidence 높은 진단 1-2개
   const topDiags = diags.sort((a, b) => (b.confidence || 0) - (a.confidence || 0)).slice(0, 2);
 
-  // 사용자 요청 2026-04-28: evidence 줄 (예: '여러 가닥 모든 layer X — values 충돌 가능성') 제거 — 진단 라벨 + confidence 만으로 충분
+  // 사용자 요청 2026-04-28: 슬라이드 보충 — 첫 발견일, 상태(active/shown), 짧은 설명
+  const statusLabel = (s) => s === 'active' ? '🔴 active' : s === 'shown' ? '👁 인용됨' : s;
+  const fmtDate = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  };
+  const typeDescription = {
+    weak_tool: '시도해도 안 통하는 도구. 다른 차원으로.',
+    wrong_layer: '차원 자체가 안 맞을 가능성. 인지/행동/환경/사회/메타 다른 곳.',
+    value_clash: '두 가치 충돌. 우선순위 정리 필요.',
+    avoidance: '회피 신호 — 의식적으로 직면하거나 우회 설계.',
+    willpower_cap: '의지 자원 임계치. 환경 자동화 ↑.'
+  };
   return `
     <div class="stories-label">작동 중인 패턴</div>
     <div class="stories-title">너 안에서 작동 중</div>
-    <div class="stories-stat-list">
+    <div style="margin-top:14px;">
       ${topDiags.map(d => `
-        <div class="stories-stat-row neutral">
-          <span class="stories-stat-label">${labels[d.type] || d.type}</span>
-          <span class="stories-stat-value" style="font-size: 12px;">${Math.round((d.confidence || 0) * 100)}%</span>
+        <div style="background:rgba(255,255,255,0.06); border-left:3px solid rgba(212,167,106,0.55); border-radius:8px; padding:11px 13px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px;">
+            <span style="font-size:14px; color:white; font-weight:600;">${labels[d.type] || d.type}</span>
+            <span style="font-size:11px; color:rgba(255,255,255,0.7);">신뢰도 ${Math.round((d.confidence || 0) * 100)}%</span>
+          </div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.7); line-height:1.5; margin-bottom:6px;">
+            ${typeDescription[d.type] || ''}
+          </div>
+          <div style="font-size:10px; color:rgba(255,255,255,0.5); display:flex; gap:8px;">
+            ${d.detectedAt ? `<span>📅 ${fmtDate(d.detectedAt)} 발견</span>` : ''}
+            ${d.lastUpdate ? `<span>🔄 ${fmtDate(d.lastUpdate)} 갱신</span>` : ''}
+            <span>${statusLabel(d.status)}</span>
+          </div>
         </div>
       `).join('')}
     </div>
-    <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:18px; max-width:280px; line-height:1.6;">
-      너 ≠ 그 패턴. 작동 중일 뿐.
+    <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px; line-height:1.6;">
+      너 ≠ 그 패턴. 작동 중일 뿐. 시도 결과로 신뢰도 갱신돼.
     </div>
   `;
 }
 
 function _buildNarrativeSlideHTML(review) {
   const summary = review.summary || '';
-  // sections에서 next prompt 찾기
-  const nextSection = Array.isArray(review.sections)
-    ? review.sections.find(s => (s.label || '').includes('다음'))
-    : null;
-
+  // 사용자 요청 2026-04-28: 보충 — 4 sections 모두 노출 (흐름 / 새로 자라난 것 / 작동 패턴 / 다음 분기)
+  const sectionsArr = Array.isArray(review.sections) ? review.sections : [];
+  const nextSection = sectionsArr.find(s => (s.label || '').includes('다음'));
+  const otherSections = sectionsArr.filter(s => s !== nextSection);
   return `
     <div class="stories-label">너의 분기, 한 단락</div>
-    <div class="stories-title" style="font-size:17px; line-height:1.7;">${escapeHtml(summary || '데이터가 더 쌓이면 narrative가 보일 거야.')}</div>
+    <div class="stories-title" style="font-size:17px; line-height:1.7; margin-bottom:14px;">${escapeHtml(summary || '데이터가 더 쌓이면 narrative가 보일 거야.')}</div>
+    ${otherSections.length > 0 ? `
+      <div style="margin-top:10px;">
+        ${otherSections.map(s => `
+          <div style="margin-bottom:12px;">
+            <div style="font-size:11px; color:rgba(212,167,106,0.85); margin-bottom:4px; letter-spacing:0.04em;">${escapeHtml(s.label || '')}</div>
+            <div style="font-size:13px; color:rgba(255,255,255,0.85); line-height:1.6;">${escapeHtml(s.body || '')}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
     ${nextSection ? `
-      <div class="stories-prompt">
+      <div class="stories-prompt" style="margin-top:14px;">
         <div class="stories-prompt-label">${escapeHtml(nextSection.label || '다음 분기에')}</div>
         ${escapeHtml(nextSection.body || '')}
       </div>
@@ -25664,9 +25713,18 @@ function _buildClosingSlideHTML(review, stats) {
   // sections에서 흐름 또는 첫 번째 section을 시적으로
   const flow = Array.isArray(review.sections) && review.sections[0] ? review.sections[0].body : '';
   const poem = flow ? flow.split(/[.\n]/)[0].slice(0, 28) : `${review.quarterKey || '분기'} — 너의 흔적`;
+  // 사용자 요청 2026-04-28: 마지막 슬라이드 더 예쁘게 — gradient + emoji + 따뜻한 마무리 인사
   return `
-    <div class="stories-label">${escapeHtml(review.quarterKey || '')}</div>
-    <div class="stories-poem">${escapeHtml(poem)}</div>
+    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:30px 20px; max-width:320px;">
+      <div style="font-size:48px; line-height:1;">🐚</div>
+      <div class="stories-label" style="text-align:center;">${escapeHtml(review.quarterKey || '')}</div>
+      <div style="background:linear-gradient(135deg, rgba(212,167,106,0.22), rgba(168,157,200,0.18)); border:1px solid rgba(212,167,106,0.35); border-radius:18px; padding:22px 20px; text-align:center;">
+        <div class="stories-poem" style="font-size:18px; line-height:1.6; color:white; font-family:'Gowun Batang', serif;">${escapeHtml(poem)}</div>
+      </div>
+      <div style="font-size:12px; color:rgba(255,255,255,0.65); text-align:center; line-height:1.7; margin-top:6px;">
+        한 페이지가 끝났어.<br>다음 페이지도 같이 ✦
+      </div>
+    </div>
   `;
 }
 
@@ -25855,9 +25913,7 @@ function _buildDiagnosisLearningSlide(year, yearReviews) {
       `
     };
   }
-  // 자주 활성된 진단 type
-  const typeCount = {};
-  diags.forEach(d => { typeCount[d.type] = (typeCount[d.type] || 0) + 1; });
+  // 사용자 요청 2026-04-28: 언제 작동했는지 추가 — 진단별 첫 발견월/시기 정보
   const labels = {
     weak_tool: '🔧 도구 약함',
     wrong_layer: '📐 차원 안 맞음',
@@ -25865,18 +25921,41 @@ function _buildDiagnosisLearningSlide(year, yearReviews) {
     avoidance: '🌫 회피 패턴',
     willpower_cap: '🪫 의지 임계치'
   };
+  const seasonOf = (m) => m <= 2 || m === 11 ? '겨울' : m <= 5 ? '봄' : m <= 8 ? '여름' : '가을';
+  // type별 그룹 + 첫 발견 / 마지막 갱신
+  const typeMap = {};
+  diags.forEach(d => {
+    if (!typeMap[d.type]) typeMap[d.type] = { count: 0, dates: [] };
+    typeMap[d.type].count++;
+    if (d.detectedAt) typeMap[d.type].dates.push(new Date(d.detectedAt));
+    if (d.lastUpdate) typeMap[d.type].dates.push(new Date(d.lastUpdate));
+  });
+  const sortedTypes = Object.entries(typeMap).sort((a,b) => b[1].count - a[1].count).slice(0, 4);
+
   return {
     tone: 'tone-deep-3',
     html: `
       <div class="stories-label">진단 학습 곡선</div>
       <div class="stories-title">너 안에서 작동한 패턴</div>
-      <div class="stories-stat-list">
-        ${Object.entries(typeCount).sort((a,b) => b[1] - a[1]).slice(0, 4).map(([t, n]) => `
-          <div class="stories-stat-row neutral">
-            <span class="stories-stat-label">${labels[t] || t}</span>
-            <span class="stories-stat-value">${n}회</span>
-          </div>
-        `).join('')}
+      <div style="margin-top:14px;">
+        ${sortedTypes.map(([t, info]) => {
+          const minDate = info.dates.length > 0 ? new Date(Math.min(...info.dates.map(d => d.getTime()))) : null;
+          const maxDate = info.dates.length > 0 ? new Date(Math.max(...info.dates.map(d => d.getTime()))) : null;
+          const span = (minDate && maxDate)
+            ? (minDate.getMonth() === maxDate.getMonth()
+                ? `${minDate.getMonth()+1}월 (${seasonOf(minDate.getMonth())})`
+                : `${minDate.getMonth()+1}월 → ${maxDate.getMonth()+1}월 (${seasonOf(minDate.getMonth())} ~ ${seasonOf(maxDate.getMonth())})`)
+            : '';
+          return `
+            <div style="background:rgba(255,255,255,0.06); border-left:3px solid rgba(168,157,200,0.6); border-radius:8px; padding:10px 13px; margin-bottom:9px;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+                <span style="font-size:13px; color:white; font-weight:600;">${labels[t] || t}</span>
+                <span style="font-size:11px; color:rgba(255,255,255,0.7);">${info.count}회</span>
+              </div>
+              ${span ? `<div style="font-size:10px; color:rgba(255,255,255,0.55); margin-top:4px;">📅 ${span}</div>` : ''}
+            </div>
+          `;
+        }).join('')}
       </div>
       <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px;">
         진단 받고 행동 → 결과로 confidence 갱신.
@@ -27445,7 +27524,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.130-music-checkin-clarify';
+const APP_VERSION = 'v4.0.131-stories-content-boost';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
