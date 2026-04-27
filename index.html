@@ -8882,14 +8882,24 @@ function onbPositionStep(step, retryCount) {
     setTimeout(() => tryFill(15), 100);
   }
   // 결과 체크 모달 데모 (튜토리얼 attempt_result_demo step)
+  // 사용자 요청 2026-04-28: 가장 최근 소라의 부름 strategy로 매핑 + worked → 실제 recordStrategyAttempt (DNA 매핑)
   if (step.demoAttemptResult) {
     setTimeout(async () => {
       if (typeof showAttemptResultModal !== 'function') return;
       try {
-        const status = await showAttemptResultModal('마감 직전 폭발력 신뢰');
-        // 사용자가 옵션 선택 후 자동 next
+        // 가장 최근 strategyId가 있는 mission 찾기 (createdAt 내림차순)
+        const recentMission = (state.missions || [])
+          .filter(m => m.strategyId)
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0];
+        const card = recentMission ? getStrategyCard(recentMission.strategyId) : null;
+        const cardTitle = card?.title || '마감 직전 폭발력 신뢰';
+        const status = await showAttemptResultModal(cardTitle);
         if (status && window._onbTutorialMode && _onbStep === stepIdxAtRender) {
-          // DNA 박히는 효과 데모 (작동했어 시)
+          // worked → 실제 recordStrategyAttempt 호출 (shell이 있으면 DNA 조각으로 매핑)
+          if (status === 'worked' && recentMission && typeof recordStrategyAttempt === 'function') {
+            try { recordStrategyAttempt(recentMission.strategyId, 'worked', recentMission.id); } catch (e) { console.warn('recordStrategyAttempt:', e); }
+          }
+          // DNA 박히는 효과 (작동했어 시)
           if (status === 'worked' && typeof playDnaInsertionEffect === 'function') {
             try { playDnaInsertionEffect(); } catch (e) {}
           }
@@ -8997,12 +9007,11 @@ function onbBack() {
 async function onbSkip() {
   const yes = await showConfirmModal({
     title: '투어 건너뛸까?',
-    message: '언제든 ⚙ 설정에서 다시 볼 수 있어.\n지금까지 만든 데이터는 그대로 둘게.',
+    message: '언제든 ⚙ 설정에서 다시 볼 수 있어.\n지금까지 튜토리얼에서 만든 데이터는 다 정리할게.',
     okLabel: '건너뛰기', cancelLabel: '계속'
   });
   if (!yes) return;
-  // Skip = 데이터 그대로 유지 (cleanup 건너뛰기)
-  _onbStartTime = null;
+  // 사용자 요청 2026-04-28: 건너뛰기도 데이터 정리 (onbFinish의 cleanup 흐름 그대로 사용)
   onbFinish();
 }
 
@@ -15131,11 +15140,20 @@ function recordStrategyAttempt(strategyId, status, missionId) {
   const gen = getCurrentGeneration(card);
   if (!gen) return null;
   if (!Array.isArray(gen.attempts)) gen.attempts = [];
+  // 사용자 요청 2026-04-28: shell 매핑 — missionId에 해당하는 shell이 있으면 attempt에 shellId 박고 gen.shells에 추가 (DNA 조각화)
+  let shellId = null;
+  if (missionId && (status === 'worked' || status === 'meh')) {
+    const matched = (state.shellCollection || []).find(s => s.missionId === missionId);
+    if (matched) shellId = matched._id;
+  }
   gen.attempts.push({
     missionId: missionId || null,
+    shellId,
     status,
     at: new Date().toISOString()
   });
+  if (!Array.isArray(gen.shells)) gen.shells = [];
+  if (shellId && !gen.shells.includes(shellId)) gen.shells.push(shellId);
   if (missionId && Array.isArray(gen.missions) && !gen.missions.includes(missionId)) {
     gen.missions.push(missionId);
   }
