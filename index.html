@@ -20269,7 +20269,6 @@ function testSeedV4Data() {
   const dayBeforeKey = new Date(today.getTime() - 2 * 86400000).toISOString().split('T')[0];
   state.missions = [
     { id: 'mis_seed_1', title: '오늘 30분 산책', description: '집 → 한강 30분', status: 'pending', scheduledFor: todayStr, createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: null, generationIdx: null },
-    { id: 'mis_seed_carryover_1', title: '어제 받은 가닥 시도', description: 'L3 환경 차원 시도', status: 'pending', scheduledFor: yesterdayKey, createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: 'strat_seed_2', generationIdx: 0 },
     { id: 'mis_seed_carryover_2', title: '그제 받은 부름', status: 'pending', scheduledFor: dayBeforeKey, createdAt: new Date(today.getTime() - 2 * 86400000).toISOString() },
     { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
     { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
