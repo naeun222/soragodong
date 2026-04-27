@@ -15330,6 +15330,58 @@ function getQuarterlyStats(quarterKey) {
   };
 }
 
+// V4-1y-2: 분기 리뷰 AI 생성 (claude-opus-4-7, stats 기반)
+async function generateQuarterlyReview(quarterKey, stats) {
+  const cards = (state.topicCards || []).filter(c => c.category === 'strategy');
+  const recentEmbodied = cards.filter(c => c.embodimentStatus === 'embodied').length;
+
+  const prompt = `사용자 김나은 (ADHD, 박사과정). 지난 분기 ${quarterKey} 리뷰 작성. ADHD 친화 톤 — 외재화 / 균형 노출 / 사용자 자기 발견 유도. 칭찬 inflation X, 사실 관찰 ○.
+
+[지난 분기 stats]
+- 체크인: ${stats.checkins}일
+- 미션 작동률: ${stats.workRate != null ? Math.round(stats.workRate * 100) + '% (' + stats.worked + '/' + stats.attempts + ')' : '데이터 부족'}
+- 진주: ${stats.pearls}개${stats.dnaPearls ? ` + DNA 진주 ${stats.dnaPearls}개 결정화` : ''}
+- 활성 모드 빈도: ${Object.entries(stats.modeCount).map(([k, v]) => `${k} ${v}일`).join(' / ') || '거의 없음'}
+- 추적 항목 변화: ${stats.trackerStats.map(t => `${t.title} ${t.first}→${t.last}${t.unit || ''}`).join(' / ') || '데이터 부족'}
+- 8 차원: 문제 ${stats.problemsTotal} / 강점 ${stats.strengthsTotal} / growth ${stats.growthCount}
+- 체화 완료 가닥 (누적): ${recentEmbodied}개
+
+[출력 — JSON만, 마크다운 X]
+{
+  "summary": "분기 핵심 한 문장 (40-80자, 칭찬 X 사실 관찰)",
+  "sections": [
+    { "label": "🌊 흐름", "body": "분기 전체 흐름 1-2문장" },
+    { "label": "🌱 새로 자라난 것", "body": "강점/체화/진주 등 1-2문장" },
+    { "label": "🌫 작동 중인 패턴", "body": "주의할 패턴 1-2문장 (외재화 톤)" },
+    { "label": "🧭 다음 분기에", "body": "구체 제안 1문장" }
+  ]
+}
+
+[금지]
+- "잘했다 / 멋지다" 류 칭찬 X
+- "당신은 ~ 사람이다" 류 단정 X
+- 마크다운, 코드블록 X
+- 4개 section 외 추가 X
+
+JSON만 출력.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({
+      model: 'claude-opus-4-7',
+      max_tokens: 1500,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  const data = await resp.json();
+  let raw = data.content[0].text.trim();
+  raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('AI 응답 파싱 실패');
+  return JSON.parse(m[0]);
+}
+
 // 자동 trigger: 분기 시작 7일 내 (1, 4, 7, 10월 1-7일)
 async function runQuarterlyAutoReviewIfNeeded() {
   if (!state.apiKey) return;
@@ -15348,18 +15400,44 @@ async function runQuarterlyAutoReviewIfNeeded() {
   const stats = getQuarterlyStats(prevQuarterKey);
   if (!stats || stats.checkins === 0) return;
 
-  // V4-1y-2 (다음 commit)에서 AI Stories 생성. 1차는 stats만 박음.
-  state.quarterlyReviews.push({
-    id: 'qr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-    quarterKey: prevQuarterKey,
-    completedAt: new Date().toISOString(),
-    stats,
-    summary: '',  // V4-1y-2에서 AI 생성
-    sections: [],
-    auto: true
-  });
-  saveState();
-  console.log(`[V4-1y-1] 분기 stats 박힘: ${prevQuarterKey}`, stats);
+  try {
+    const aiReview = await generateQuarterlyReview(prevQuarterKey, stats);
+    state.quarterlyReviews.push({
+      id: 'qr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      quarterKey: prevQuarterKey,
+      completedAt: new Date().toISOString(),
+      stats,
+      summary: aiReview.summary || '',
+      sections: Array.isArray(aiReview.sections) ? aiReview.sections : [],
+      auto: true
+    });
+    state.archive.unshift({
+      date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
+      insight: aiReview.summary,
+      headline: `${prevQuarterKey} 분기 리뷰`,
+      body: aiReview.summary,
+      source: '분기 리뷰 (자동)',
+      savedAt: new Date().toISOString(),
+      type: 'scrap',
+      tags: ['분기리뷰']
+    });
+    saveState();
+    showToast(`📅 ${prevQuarterKey} 분기 리뷰 완료. 도서관 → 갈피·리뷰.`);
+  } catch (e) {
+    console.warn('quarterly review AI failed:', e);
+    // AI 실패해도 stats만이라도 박음 (V4-1y-1 fallback)
+    state.quarterlyReviews.push({
+      id: 'qr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      quarterKey: prevQuarterKey,
+      completedAt: new Date().toISOString(),
+      stats,
+      summary: '',
+      sections: [],
+      auto: true,
+      aiFailed: true
+    });
+    saveState();
+  }
 }
 
 async function runMonthlyAutoReviewIfNeeded() {
@@ -17854,7 +17932,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.34-quarterly-1';
+const APP_VERSION = 'v4.0.35-quarterly-ai';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
