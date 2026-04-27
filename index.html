@@ -7075,8 +7075,13 @@ let _localSaveTimer = null;
 function _flushLocalSave() {
   if (_localSaveTimer) { clearTimeout(_localSaveTimer); _localSaveTimer = null; }
   if (!authUserId) return;
-  if (state.preferences && state.preferences.testerMode) return;
-  try { localStorage.setItem(V4_LOCAL_STORAGE_KEY, JSON.stringify(state)); } catch (e) { console.warn('localStorage save failed:', e); }
+  // 사용자 요청 2026-04-28: testerMode flag는 localStorage로도 안 새게 strip
+  const sanitized = { ...state };
+  if (sanitized.preferences && sanitized.preferences.testerMode) {
+    sanitized.preferences = { ...sanitized.preferences };
+    delete sanitized.preferences.testerMode;
+  }
+  try { localStorage.setItem(V4_LOCAL_STORAGE_KEY, JSON.stringify(sanitized)); } catch (e) { console.warn('localStorage save failed:', e); }
 }
 function saveState(force) {
   if (!authUserId) return; // Don't save if not logged in
@@ -7340,6 +7345,12 @@ async function loadFromCloud() {
     if (state.preferences.tutorialCompleted === undefined) state.preferences.tutorialCompleted = false;
     if (!Array.isArray(state.preferences.miniTutorialsSeen)) state.preferences.miniTutorialsSeen = [];
     if (state.preferences.progressiveUnlockLevel === undefined) state.preferences.progressiveUnlockLevel = null;
+
+    // 사용자 요청 2026-04-28: cloud/localStorage에 stale testerMode 플래그가 있으면 항상 false로 (메모리에서만 토글되어야 하는 flag — 새로고침 시 무조건 OFF)
+    if (state.preferences.testerMode) {
+      state.preferences.testerMode = false;
+      console.log('[testerMode] stale flag 자동 정리됨');
+    }
 
     // === V6 → V7 마이그레이션 (V3 데이터 import 등으로 V6 형식이 들어왔을 때만 발동) ===
     if ((state.version || 0) < 7) {
@@ -7630,6 +7641,13 @@ function migrateToV7() {
 async function saveToCloudNow() {
   if (!authUserId) return;
   state.lastSync = new Date().toISOString();
+  // 사용자 요청 2026-04-28: testerMode flag는 cloud로 절대 안 새게 strip — 어떤 경로로 saveToCloudNow가 불려도 안전
+  // (이전엔 직접 호출 / force=true 경로에서 testerMode가 cloud에 박혀 stuck됨)
+  const sanitized = { ...state };
+  if (sanitized.preferences && sanitized.preferences.testerMode) {
+    sanitized.preferences = { ...sanitized.preferences };
+    delete sanitized.preferences.testerMode;
+  }
   // V4: V4 row만 PATCH/POST. V3 row(`me`)는 영원히 안 건드림.
   const checkResp = await fetch(
     `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=id&limit=1`,
@@ -7642,14 +7660,14 @@ async function saveToCloudNow() {
       {
         method: 'PATCH',
         headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ data: state, updated_at: state.lastSync })
+        body: JSON.stringify({ data: sanitized, updated_at: state.lastSync })
       }
     );
   } else {
     await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: state })
+      body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: sanitized })
     });
   }
 }
