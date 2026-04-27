@@ -8747,7 +8747,7 @@ const ONBOARDING_STEPS = [
     id: 'exec_immerse_done',
     targetSelector: null,
     title: '✦ 했어',
-    body: '몰입 결과 묻는 창 떴지? <b>"✓ 했어"</b> 눌러봐.<br><br><span class="small">"카드도 완료 처리할까?" 뜨면 <b>확인</b> 눌러줘.</span>',
+    body: '몰입 결과 묻는 창 떴지? <b>"✓ 했어"</b> 눌러봐.<br><br>네가 얼만큼의 시간을 써서 일을 완수했는지 알 수 있어. 이 데이터들이 쌓여서 너의 \'<b>메타인지</b>\'에 도움을 줄 거야.<br><br><span class="small">"카드도 완료 처리할까?" 뜨면 <b>확인</b> 눌러줘.</span>',
     waitFor: 'next',
     manualAdvance: true,
     dimBackground: false,
@@ -8792,7 +8792,7 @@ const ONBOARDING_STEPS = [
     id: 'library_categories',
     targetSelector: null,
     title: '📚 5 카테고리',
-    body: '도서관은 <b>5 카테고리</b>로 자동 정리:<br>📔 일기·대화 / 🔮 진주 / 🧬 양생방 / ✨ 깨달음 / 🌀 갈피·리뷰<br><br>맨 위 <b>🌟 오늘의 너</b> 카드는 진주 1개 회전.',
+    body: '도서관에는 <b>5가지 카테고리</b>가 있어:<br>📔 일기·대화 / 🔮 진주 / 🧬 양생방 / ✨ 깨달음 / 🌀 갈피·리뷰<br><br>각 카테고리별로 자동 정리.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8808,9 +8808,19 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'diary_calendar_explain',
-    targetSelector: null,
+    targetSelector: '.cal-day[data-date="2026-04-15"]',
     title: '📔 캘린더 무드 그리드',
-    body: '한 달 한눈에 — 칸 색 = 그날 기분.<br>칸 클릭 → 그날 카드 펼침 (체크인/일기/사진/음악/대화/진주/깨달음 다 모임).<br><br>위 8 서브칩 (일기/일상/고민/감정/기억/할 일/아이디어/관계) — 챕터 카테고리별 필터.<br><br><span class="small">🤖 일기 자동 요약: 체크인·대화 쌓이면 그 날 한 단락 자동.</span>',
+    body: '한 달 한눈에 — 칸 색 = 그날 기분.<br><br>이 날을 클릭해봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'diary_day_modal_explain',
+    targetSelector: null,
+    title: '📔 그날의 기록',
+    body: '이 날의 일기를 확인할 수 있어.<br><br>대화탭에서 "일기:"라고 쓴 것도 저장되고, 고동이랑 대화한 내용들을 고동이가 알아서 정리해줘.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8828,9 +8838,19 @@ const ONBOARDING_STEPS = [
     id: 'pearls_intro',
     targetSelector: null,
     title: '🔮 살아있다 느낀 순간들',
-    body: '음악·음식·장소·순간·사람.<br><br>· <b>+ 진주 추가</b> — 직접 입력 + 사진/음악 첨부<br>· <b>★</b> 즐겨찾기<br><br>🎵 <b>같은 곡 5번 = 자동 진주</b>: 체크인에서 같은 곡 5번 등장하면 자동 박힘.<br><br><span class="small">대화에서 "진짜 좋아" 흐르면 내가 알아서 "진주에 넣을래?" 물어봐.</span>',
+    body: '여기엔 네가 정말 정말 좋아하는 것들을 보관하는 곳이야. 언제 다시 떠올려도 기분이 좋아질 만한.<br><br><b>진주</b>라고 불러. 한 번 구경해봐.<br><br>네가 체크인에서 같은 곡을 5번 등록하면 자동으로 진주가 돼.',
     waitFor: 'next',
     dimBackground: false
+  },
+  {
+    id: 'today_you_play',
+    targetSelector: '.hero-music-play',
+    title: '🌟 오늘의 너',
+    body: '이 진주들 중 하나를 고동이가 꺼내서 보여줄 거야.<br><br>한 번 틀어볼까?',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
   },
   {
     id: 'click_insights_chip',
@@ -14099,7 +14119,7 @@ function renderChat() {
 
 function formatAIResponse(text) {
   let cleaned = text.replace(/```json[\s\S]*?```/g, '').trim();
-  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
   let formatted = escapeHtml(cleaned);
   const labels = ['[내가 본 것]', '[이게 뭐냐면]', '[이럴 땐 이렇게]', '[오늘의 제안]'];
   labels.forEach(label => {
@@ -14640,13 +14660,13 @@ async function generateAIResponse(modelOverride) {
             display = display.replace(/```json[\s\S]*$/g, '');
             display = display.replace(/```[\s\S]*$/g, ''); // 미완성 fence
             display = display.replace(/\n*\{[\s\S]*$/g, (match) => {
-              if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)/.test(match)) {
+              if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)/.test(match)) {
                 return '';
               }
               return match;
             });
             // V3.12.x: orphan JSON 키 (앞에 { 없이 시작) 잡기 — streaming 중 잘렸을 때
-            display = display.replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)"[\s\S]*$/g, '');
+            display = display.replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)"[\s\S]*$/g, '');
             display = display.trim();
             state.chatMessages[state.chatMessages.length - 1].content = display;
             if (_streamFirstChunk) {
@@ -14686,8 +14706,8 @@ async function generateAIResponse(modelOverride) {
     const finalDisplay = fullText
       .replace(/```json[\s\S]*?```/g, '')
       .replace(/```[\s\S]*$/g, '')
-      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)[\s\S]*\}/g, '')
-      .replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)"[\s\S]*$/g, '')
+      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)[\s\S]*\}/g, '')
+      .replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)"[\s\S]*$/g, '')
       .trim();
     state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
 
@@ -14842,6 +14862,36 @@ async function processAnalysis(analysis, messageIdx) {
     if (proposals.length > 0) {
       // 메시지에 pending proposal로 저장 (renderChat에서 카드로 표시)
       state.chatMessages[messageIdx].vaultProposals = proposals;
+    }
+  }
+  // 사용자 요청 2026-04-28: 채팅에서 일정 추출 → 자동 todaySchedule 등록
+  if (analysis.extracted_schedule && Array.isArray(analysis.extracted_schedule)) {
+    if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
+    const todayK = todayKey();
+    const colors = ['#d4a76a','#8fc88f','#7ec8e3','#b39ddb','#ff8da1','#ffb86b','#5fcfba'];
+    let added = 0;
+    analysis.extracted_schedule.forEach((it, i) => {
+      if (!it || !it.title || !it.start || !it.end) return;
+      if (!/^\d{1,2}:\d{2}$/.test(it.start) || !/^\d{1,2}:\d{2}$/.test(it.end)) return;
+      // 같은 시간대 중복 방지
+      const dup = state.todaySchedule.some(s =>
+        s.date === todayK && s.title === String(it.title).trim().slice(0,40) && s.start === it.start
+      );
+      if (dup) return;
+      state.todaySchedule.push({
+        id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        title: String(it.title).trim().slice(0,40),
+        start: it.start,
+        end: it.end,
+        date: todayK,
+        source: 'chat',
+        taskId: null,
+        color: colors[(state.todaySchedule.length + i) % colors.length]
+      });
+      added++;
+    });
+    if (added > 0) {
+      showToast(`📅 ${added}개 일정 박힘`);
     }
   }
   saveState();
@@ -15049,6 +15099,7 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
   "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "..."},
   "insight": "오늘 대화의 핵심 통찰 한 문장",
   "extracted_tasks": ["사용자가 흘린 할 일 (예: '샴푸 사기', '교수님 메일 답하기'). 명확한 행동만. 추측 X."],
+  "extracted_schedule": [{"title": "미팅", "start": "14:00", "end": "15:00"}],
   "decision_suggested": {"title": "결정 주제 (10-30자, 예: '대학원 그만둘지 결정')", "reason": "왜 14일 숙성이 좋은지 짧게"},
   "proposal": {
     "title": "미션 제목 (10-25자, 구체적이고 작게)",
@@ -15058,6 +15109,8 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 \`\`\`
 
 extracted_tasks: 사용자가 대화에서 "~해야 해", "~하기로 했어", "나중에 ~할게" 같은 명확한 할 일/의도를 표현했을 때만 추출. 추측이나 일반론 X.
+
+extracted_schedule: 사용자가 "X시 Y하자", "내일 14시 미팅", "6시 운동 일정 박아줘" 같은 시간 명시 일정/요청을 표현했을 때만 추출. start/end는 "HH:MM" 형식. 시간 없이 흐릿한 거 X. (사용자 요청 2026-04-28: 채팅으로 일정 등록)
 
 decision_suggested: 사용자가 큰 결정을 고민 중일 때만 추가. 트리거: "이직", "그만둘까", "헤어질까", "X할까 Y할까", "결정해야", "고민이야", 진로/관계/큰 구매 같은 무거운 선택. 대화 1-2번 듣고 패턴이 보이면 제안. 작은 일상 결정엔 X. 강요 X — 한 번 거절하면 같은 주제로 다시 X.
 
@@ -17155,11 +17208,32 @@ function renderLibraryHero() {
     container.innerHTML = '';
     return;
   }
-  // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드는 시드 음악 진주 (LONGSHOT - Vanilla Days) 고정
+  // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드는 LONGSHOT - Vanilla Days 음악 고정 (재생 가능 보장 — iTunes 검색 실패 케이스 대비 하드코딩 fallback)
   const isAutoFix = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
-  const seedMusicPin = isAutoFix
-    ? pearls.find(p => p.id === 'pearl_seed_0' && p.category === '음악' && p.track && p.track.previewUrl)
-    : null;
+  let seedMusicPin = null;
+  if (isAutoFix) {
+    const seedPearl = pearls.find(p => p.id === 'pearl_seed_0');
+    if (seedPearl && seedPearl.track && seedPearl.track.previewUrl) {
+      seedMusicPin = seedPearl;
+    } else {
+      // iTunes 검색 실패 / 시드 안 박힘 — 임시 fixed pearl 객체 (state에 push X, 렌더에만)
+      seedMusicPin = {
+        id: 'pearl_pinned_longshot',
+        category: '음악',
+        content: 'LONGSHOT - Vanilla Days',
+        note: '새벽 카페에서 발견. 이 곡 들으면 그 시간으로 돌아감.',
+        createdAt: new Date().toISOString(),
+        track: {
+          id: 'pinned_longshot',
+          title: 'Vanilla Days',
+          artist: 'LONGSHOT',
+          artworkUrl: '',
+          previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/12/82/7a/12827aa0-7d4e-e2a8-7e00-8920f2c8d885/mzaf_7802841560866563494.plus.aac.p.m4a',
+          trackUrl: ''
+        }
+      };
+    }
+  }
   // 안 본 우선: state.preferences._libHeroSeen[]
   if (!state.preferences) state.preferences = {};
   if (!Array.isArray(state.preferences._libHeroSeen)) state.preferences._libHeroSeen = [];
@@ -17600,6 +17674,7 @@ function renderLensCalendarGrid() {
     const empty = !entry && !hasChapter;
     html += `
       <div class="cal-day${isToday ? ' today' : ''}${empty ? ' empty' : ''}${isFuture ? ' future' : ''}"
+           data-date="${dateKey}"
            style="background:${bg};"
            onclick="${isFuture ? '' : `jumpToTimelineDate('${dateKey}')`}"
            title="${dateKey}${mood ? ` · 기분 ${mood}/5` : ''}">
@@ -19575,7 +19650,7 @@ function renderChatArchiveModal() {
               const cls = m.role === 'user' ? 'user' : 'assistant';
               let content = m.content || '';
               content = content.replace(/```json[\s\S]*?```/g, '').trim();
-              content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+              content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
               const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
               return `<div class="cac-msg ${cls}">
                 <div class="cac-msg-time">${time}</div>
@@ -20505,119 +20580,7 @@ function exportTodayICS() {
   showToast(`📤 ${targetItems.length}개 일정 내보냄`);
 }
 
-// V4-1u-c: AI 스케줄러 (V4 비전 10.5) — 사용자 텍스트 → AI가 시간 grid 생성
-async function openAIScheduler() {
-  if (!state.apiKey) {
-    showToast('AI 스케줄러는 API 키 필요 (설정 → API 키)');
-    return;
-  }
-  const dump = await showInputModal({
-    title: '✨ AI 스케줄러',
-    message: '오늘 뭐 해야 해? 자유롭게 적어. 맞춰서 짜줄게.',
-    placeholder: '예: 미팅 14시, 운동, 논문 1챕터, 카페에서 읽을 책...',
-    multiline: true,
-    maxLength: 500,
-    okLabel: '짜줘 ✦'
-  });
-  if (!dump || !dump.trim()) return;
-
-  showToast('🌊 일정 짜는 중...');
-
-  // 현재 시각 + 활력만 (사용자 입력 외 추천 X)
-  const now = new Date();
-  const nowStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  const todayEntry = (state.entries || []).find(e => e.date === todayKey());
-  const vitality = todayEntry?.vitality;
-
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1200,
-        messages: [{
-          role: 'user',
-          content: `사용자가 적은 항목들을 시간 grid에 배치. **새 활동 추천 X — 사용자가 적은 것만**.
-
-[사용자 dump]
-${dump.trim()}
-
-[현재 시각]
-${nowStr}${vitality != null ? ` / 활력 ${vitality}/5` : ''}
-
-[규칙]
-- 사용자 dump에 명시된 항목만 추출. 새로 추가 X.
-- 사용자가 시간 명시한 건 그대로 (예: "미팅 14시" → 14:00)
-- 시간 안 적은 건 합리적으로 분배 (현재 시각 이후, 한 항목 최소 30분, 항목 간 10분 버퍼)
-- title 짧게 (10자 이내, 사용자 표현 유지)
-- 활력 ≤2면 무거운 일 사이에 휴식 자동 추가 X — 사용자 의도 우선
-
-[출력 — JSON만, 마크다운/코드블록 X]
-{
-  "items": [
-    { "title": "미팅", "start": "14:00", "end": "15:00" },
-    { "title": "운동", "start": "17:30", "end": "18:30" }
-  ]
-}
-
-JSON만 출력. 다른 설명 X.`
-        }]
-      })
-    });
-    const data = await resp.json();
-    let raw = data.content[0].text.trim();
-    raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (!m) {
-      showToast('AI 응답 파싱 실패. 다시 시도해.');
-      return;
-    }
-    const parsed = JSON.parse(m[0]);
-    if (!Array.isArray(parsed.items)) {
-      showToast('AI 응답 형식 오류');
-      return;
-    }
-
-    // 기존 today 일정 비울지 컨펌
-    const todayK = todayKey();
-    const existing = (state.todaySchedule || []).filter(it => !it.date || it.date === todayK);
-    if (existing.length > 0) {
-      const replace = await showConfirmModal({
-        title: '기존 일정 있어',
-        message: `이미 ${existing.length}개 일정 있어. 새 걸로 교체? (취소하면 기존 + 새 거 합침)`,
-        okLabel: '교체',
-        cancelLabel: '합치기'
-      });
-      if (replace) {
-        state.todaySchedule = (state.todaySchedule || []).filter(it => it.date && it.date !== todayK);
-      }
-    }
-
-    if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
-    parsed.items.forEach((it, i) => {
-      if (!it.title || !it.start || !it.end) return;
-      if (!/^\d{1,2}:\d{2}$/.test(it.start) || !/^\d{1,2}:\d{2}$/.test(it.end)) return;
-      state.todaySchedule.push({
-        id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        title: String(it.title).trim().slice(0, 40),
-        start: it.start,
-        end: it.end,
-        date: todayK,
-        source: 'ai',
-        taskId: null,
-        note: it.note ? String(it.note).slice(0, 60) : '',
-        color: _V4_TT_COLORS[i % _V4_TT_COLORS.length]
-      });
-    });
-    saveState();
-    renderExecute();
-    showToast(`✨ ${parsed.items.length}개 일정 박힘`);
-  } catch (e) {
-    console.warn('AI scheduler failed:', e);
-    showToast('AI 스케줄러 실패. 다시 시도해.');
-  }
-}
+// AI 스케줄러 함수 삭제 (사용자 요청 2026-04-28). UI 호출 없는 dead code였음. 일정은 채팅으로만 등록.
 
 async function openV4ScheduleItem(id) {
   const it = (state.todaySchedule || []).find(x => x.id === id);
@@ -20985,7 +20948,8 @@ async function testSeedV4Data() {
       previewUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
       trackUrl: ''
     };
-    re.photoThumb = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="%23d4a76a"/><stop offset="60%" stop-color="%238b7ec4"/><stop offset="100%" stop-color="%23221f33"/></linearGradient></defs><rect width="200" height="200" fill="url(%23g)"/><circle cx="60" cy="60" r="22" fill="%23fff5b8" opacity="0.85"/><rect x="20" y="130" width="160" height="50" fill="%23000" opacity="0.5"/><rect x="40" y="145" width="6" height="22" fill="%23fff5b8" opacity="0.6"/><rect x="60" y="145" width="6" height="22" fill="%23fff5b8" opacity="0.6"/><rect x="80" y="145" width="6" height="22" fill="%23fff5b8" opacity="0.6"/><text x="100" y="195" text-anchor="middle" font-size="9" fill="%23ffffff" opacity="0.7" font-family="serif">새벽 카페 · 4월 15일</text></svg>');
+    // 사용자 요청 2026-04-28: 카페 사진 — Lorem Picsum 결정론적 시드 (캐시 가능 + 항상 같은 사진)
+    re.photoThumb = 'https://picsum.photos/seed/longshot-cafe-415/400/400';
     re.photo = re.photoThumb;
     re.aiSummary = '새벽 카페에서 음악 + 환경 시너지로 논문 서론 첫 단락 완성. "환경이 의지보다 강함" 패턴 명확히 인식한 날.';
   }
@@ -21166,7 +21130,15 @@ async function testSeedV4Data() {
   // V4-fix v3: 진주 30+ (1년에 걸쳐, 월별 평균 2-3개, 4 카테고리 다양)
   state.pearls = [];
   const pearlSeeds = [
-    { c: '음악', content: 'LONGSHOT - Vanilla Days', daysAgo: 5, searchQuery: 'LONGSHOT Vanilla Days', note: '새벽 카페에서 발견. 이 곡 들으면 그 시간으로 돌아감.' },
+    // 사용자 요청 2026-04-28: LONGSHOT Vanilla Days는 iTunes에 없는 가상 곡 → 검색 skip + 실제 작동하는 lofi 카페 preview URL 하드코딩
+    { c: '음악', content: 'LONGSHOT - Vanilla Days', daysAgo: 5, note: '새벽 카페에서 발견. 이 곡 들으면 그 시간으로 돌아감.', track: {
+        id: 'pinned_longshot',
+        title: 'Vanilla Days',
+        artist: 'LONGSHOT',
+        artworkUrl: '',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/12/82/7a/12827aa0-7d4e-e2a8-7e00-8920f2c8d885/mzaf_7802841560866563494.plus.aac.p.m4a',
+        trackUrl: ''
+      } },
     { c: '음식', content: '엄마 김치찌개', daysAgo: 8, note: '비 오는 날 — 고등학교 그 부엌 생각.' },
     { c: '장소', content: '한강 벤치 새벽 4시', daysAgo: 12, note: '논문 막힌 날. 30분 앉아있다 머리 풀림.' },
     { c: '순간', content: '논문 첫 단락 완성한 순간', daysAgo: 18 },
@@ -26996,7 +26968,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.115-batch-fixes';
+const APP_VERSION = 'v4.0.117-vanilla-cal-click';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
