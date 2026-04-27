@@ -20590,11 +20590,15 @@ async function promoteFromDrawer() {
 // === IMMERSE START (no task — pure ritual) ===
 async function openImmerseStart() {
   // V3.13: 몰입 시작 시 task 이름 입력 → 서랍장에 저장 + ritual 시작
+  // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드 시 예시 자동 채움
+  const isTutorial = !!window._onbTutorialMode;
+  const isTester = !!(state.preferences && state.preferences.testerMode);
   const title = await showInputModal({
     title: '🌧 몰입 시작',
     message: '뭐에 몰입할 거야?',
     placeholder: '예: 논문 쓰기, 코드 짜기, 청소',
-    maxLength: 50
+    maxLength: 50,
+    defaultValue: (isTutorial || isTester) ? '논문 서론 첫 단락 쓰기' : ''
   });
   if (!title || !title.trim()) return;
 
