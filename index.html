@@ -5785,6 +5785,15 @@
     animation: none !important;
     cursor: grabbing;
   }
+  /* 모달 위로 떠야 하는 step (예: diary_walkthrough) — input/options modal(9900) 위 */
+  .onb-coachmark.above-modal {
+    z-index: 9950 !important;
+    top: 16px !important;
+    bottom: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-width: 280px;
+  }
   /* V4-fix v3 (사용자 요청): 튜토리얼 모달 드래그 핸들 */
   .onb-drag-handle {
     position: absolute;
@@ -7946,7 +7955,8 @@ const ONBOARDING_STEPS = [
     body: '템플릿 picker 떴지?<br>1️⃣ <b>"🌧 힘든 날"</b> 눌러<br>2️⃣ 한 줄 적거나 비워두고<br>3️⃣ <b>"완성 ✦"</b> 누르면 자동으로 저장!<br><br>다 했으면 "눌렀어 →" 눌러줘.',
     waitFor: 'next',
     manualAdvance: true,
-    dimBackground: false
+    dimBackground: false,
+    aboveModal: true
   },
   {
     id: 'chapter_auto',
@@ -8517,6 +8527,8 @@ function onbPositionStep(step, retryCount) {
   if (!stepNum || !titleEl || !bodyEl || !nextBtn || !spotlight || !coachmark || !mask) return;
   // 뒤로 버튼 — step 0에선 숨김
   if (backBtn) backBtn.hidden = (_onbStep === 0);
+  // 모달 위로 떠야 하는 step (예: diary_walkthrough — picker 모달이 위에 떠서 가림)
+  coachmark.classList.toggle('above-modal', !!step.aboveModal);
 
   stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
   titleEl.textContent = step.title;
