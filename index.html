@@ -3214,6 +3214,21 @@
     display: flex; flex-direction: column; gap: 5px;
     margin-top: 4px;
   }
+  /* 사용자 요청 2026-04-27: 선택 후 컴팩트 — 1줄 inline 가벼운 표시 */
+  .mutation-options-stack.compact .mutation-option-card {
+    background: rgba(212,167,106,0.12);
+    padding: 6px 10px;
+  }
+  .mutation-options-stack.compact .mutation-option-card .mutation-option-layer {
+    display: inline-block; margin-right: 6px;
+  }
+  .mutation-options-toggle {
+    background: transparent; border: none;
+    color: var(--text-dim); font-size: 11px;
+    margin-top: 6px; padding: 4px 0;
+    cursor: pointer; font-family: inherit;
+  }
+  .mutation-options-toggle:hover { color: var(--accent2); }
   .mutation-option-card {
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(212,167,106,0.30);
@@ -7871,8 +7886,7 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     title: '🌙 새벽 4시까지 = 어제',
     body: '새벽까지 일하다가 체크인 / 일기 적으면 — <b>새벽 4시 이전엔 어제 기록</b>으로 들어가.<br>새벽 4시 지나면 그 날부터 새 날.<br><br><span class="small">밤샘 일하는 너 위한 배려야.</span>',
-    waitFor: 'next',
-    dimBackground: false
+    waitFor: 'next'
   },
   {
     id: 'submit_checkin',
@@ -7898,7 +7912,7 @@ const ONBOARDING_STEPS = [
     id: 'chat_intro',
     targetSelector: null,
     title: '대화창에서 할 수 있는 것',
-    body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진해.<br>분위기에 맞게 답해줄게.<br><br><b>예시 (전부 OK)</b><br>☕ <b>일상 공유</b> — "오늘 점심 마라탕 먹었어"<br>😆 <b>웃긴 에피소드</b> — "오늘 진짜 웃긴 일 있었어..."<br>🔍 <b>가벼운 호기심</b> — "오리너구리는 왜 그렇게 생겼어?"<br>🌟 <b>자랑·뿌듯</b> — "발표 끝났어! 잘 마무리함 ㅎㅎ"<br><br>🌀 <b>와다다 풀기</b> — "기쁘기도 하고 슬프기도 하고..."<br>🤔 <b>의견 듣기</b> — "이 옷 살까 말까ㅋㅋ"<br><br>🚧 <b>막혔을 때</b> — "내일 발표인데 자료 하나도 없어. 시작도 못 하겠어"<br>💧 <b>자책 흐를 때</b> — "방금 회의에서 말 더듬었어. 다들 별로라고 생각할 듯"<br>🔁 <b>패턴 의심</b> — "또 마감 임박해서야 시작이네. 왜?"<br><br>📔 <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장',
+    body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진해.<br>분위기에 맞게 답해줄게.<br><br>☕ <b>일상 공유</b> — "오늘 점심 마라탕 먹었어"<br>😆 <b>웃긴 에피소드</b> — "오늘 진짜 웃긴 일 있었어..."<br>🔍 <b>가벼운 호기심</b> — "오리너구리는 조상이 오리야 너구리야?"<br>🌟 <b>자랑·뿌듯</b> — "발표 끝났어! 잘 마무리함 ㅎㅎ"<br><br>🌀 <b>와다다 풀기</b> — "기쁘기도 하고 슬프기도 하고..."<br>🤔 <b>의견 듣기</b> — "이 옷 살까 말까ㅋㅋ"<br><br>🚧 <b>막혔을 때</b> — "내일 발표인데 자료 하나도 없어. 시작도 못 하겠어"<br>💧 <b>자책 흐를 때</b> — "방금 회의에서 말 더듬었어. 다들 별로라고 생각할 듯"<br>🔁 <b>패턴 의심</b> — "또 마감 임박해서야 시작이네. 왜?"<br><br>📔 <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장',
     waitFor: 'next'
   },
   {
@@ -7916,7 +7930,7 @@ const ONBOARDING_STEPS = [
     id: 'click_deeper',
     targetSelector: '.msg-action[onclick^="askDeeper"]',
     title: '"더 알고 싶어 ▾"',
-    body: '평소엔 친구처럼 짧고 다정하게 답해줄게.<br><br>근데 <b>심리학적으로 깊이 분석해보고 싶을 땐</b> — 내 답 아래 <b>"더 알고 싶어 ▾"</b> 누르면 돼! 4단 분석 + 너만의 전략까지 들어가줄게.<br><br>한 번 눌러볼래?<br><br><span class="small">답변 길이에 따라 버튼 위치가 달라. 직접 찾아서 누르고 "눌렀어 →" 눌러줘.<br>[내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 4단.</span>',
+    body: '평소엔 친구처럼 짧고 다정하게 답해줄게.<br><br>근데 <b>심리학적으로 깊이 분석해보고 싶을 땐</b> — 내 답 아래 <b>"더 알고 싶어 ▾"</b> 누르면 돼! 4단 분석 + 너만의 전략까지 들어가줄게.<br><br>한 번 눌러볼래?<br><br><span class="small">답변 길이에 따라 버튼 위치가 달라. 직접 찾아서 누르고 "눌렀어 →" 눌러줘.</span>',
     waitFor: 'click',
     advanceDelay: 1500,
     manualAdvance: true,
@@ -8583,8 +8597,11 @@ function onbPositionStep(step, retryCount) {
   // 뒤로 버튼 — step 0에선 숨김
   if (backBtn) backBtn.hidden = (_onbStep === 0);
   // 모달 위로 떠야 하는 step (예: diary_walkthrough — picker 모달이 위에 떠서 가림)
+  // 부모 .onb-overlay (z-index 9000) 의 stacking context가 자식의 z-index를 가두므로 부모도 같이 올림
   coachmark.classList.toggle('above-modal', !!step.aboveModal);
   spotlight.classList.toggle('above-modal', !!step.aboveModal);
+  const ovEl = document.getElementById('onbOverlay');
+  if (ovEl) ovEl.style.zIndex = step.aboveModal ? '9950' : '9000';
 
   stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
   titleEl.textContent = step.title;
@@ -11207,7 +11224,8 @@ function expireOldMissions() {
   if (changed) saveState();
 }
 
-// V4-fix v3 (사용자 요청): 가닥 미션 팔로업 — 어제~7일 내 pending strategy mission 1개 찾기
+// V4-fix v3 (사용자 요청): 가닥 미션 팔로업 — 오늘~7일 내 pending strategy mission 1개 찾기
+// 2026-04-27: defer로 미래 날짜 박혔다가 그날 도달하면 트리거되게 diff >= 0
 function _findPendingStrategyFollowup() {
   const today = todayKey();
   return (state.missions || []).find(m => {
@@ -11215,7 +11233,7 @@ function _findPendingStrategyFollowup() {
     if (!m.strategyId || !m.scheduledFor) return false;
     if (m._followupAsked) return false;
     const diff = daysBetweenKeys(m.scheduledFor, today);
-    return diff >= 1 && diff <= 7;  // 1-7일 전 pending
+    return diff >= 0 && diff <= 7;  // 오늘~7일 전 pending (defer 그날 포함)
   });
 }
 
@@ -11275,8 +11293,29 @@ async function triggerAttemptResultFlow(mission) {
   if (status === 'worked' && typeof playDnaInsertionEffect === 'function') {
     try { playDnaInsertionEffect(); } catch (e) {}
   }
+  // 사용자 요청 2026-04-27: 돌연변이 confirm 분기
+  // - 첫 번째 'didnt' → confirm ("한 번 더 해볼래 vs 진화")
+  // - 두 번째 이상 'didnt' → 자동 돌연변이 (확실한 signal)
   if (status === 'didnt' && typeof openMutationChat === 'function') {
-    setTimeout(() => openMutationChat(mission.strategyId, mission.title), 300);
+    const card = (state.topicCards || []).find(c => c.id === mission.strategyId);
+    const didntCount = (card && Array.isArray(card.generations))
+      ? card.generations.flatMap(g => g.attempts || []).filter(a => a.status === 'didnt').length
+      : 0;
+    if (didntCount <= 1) {
+      // 첫 번째 didnt — 사용자에게 선택권
+      const yes = await showConfirmModal({
+        title: '🤔 안 통했네',
+        message: '첫 시도라 우연일 수도 있어.\n\n다른 차원에서 시도해볼래?\n(아니면 한 번 더 해보자)',
+        okLabel: '🧬 진화해볼게',
+        cancelLabel: '한 번 더'
+      });
+      if (yes) {
+        try { openMutationChat(mission.strategyId, mission.title); } catch (e) { console.warn('openMutationChat:', e); }
+      }
+    } else {
+      // 두 번째 이상 didnt — 자동 진화
+      setTimeout(() => openMutationChat(mission.strategyId, mission.title), 300);
+    }
   } else if (status === 'meh' && typeof openMutationChat === 'function') {
     const yes = await showConfirmModal({
       title: '🌫 그저 그랬어',
@@ -15155,11 +15194,12 @@ async function openMutationChat(strategyId, missionTitle) {
     } catch (e) { console.warn('mutation AI failed:', e); }
   }
   if (!aiOptions.length) {
+    // 사용자 요청 2026-04-27: 일상적·이해 쉽게·친절히
     aiOptions = [
-      { layer: 'L3', action: '환경 자체를 바꿔봐 — 그 행동이 자동으로 일어나도록' },
-      { layer: 'L4', action: '믿을 사람에게 알려봐 — 카톡 한 줄로' },
-      { layer: 'L1', action: '생각의 틀을 재구조화 — 이 패턴이 어디서 오는지' },
-      { layer: 'L5', action: '가치 자체 재검토 — 이게 정말 너의 길인지' }
+      { layer: 'L3', action: '주변 환경을 바꿔보자 — 폰을 다른 방에 두거나, 카페로 자리 옮기기' },
+      { layer: 'L4', action: '친구한테 한 줄 알리기 — "나 오늘 X 시도 중"' },
+      { layer: 'L1', action: '이 패턴이 어디서 오는지 한 줄 적어보기' },
+      { layer: 'L5', action: '잠깐 멈춰서 — 이게 정말 내가 원하는 길인지 보기' }
     ].filter(o => o.layer !== prevLayer).slice(0, 4);
   }
   if (!_mutationChatState) return;  // 사용자가 그 사이 닫음
@@ -15245,16 +15285,23 @@ function _renderMutationChat() {
       html += `<div class="mutation-msg assistant" style="opacity:0.6;">옵션 생성 중...</div>`;
     } else if (_mutationChatState.options.length) {
       const sel = _mutationChatState.selected;
+      // 사용자 요청 2026-04-27: 선택 후 다른 옵션 접고 위로 — 대화 방해 X (토글로 다시 열기 가능)
+      const showAll = sel == null || _mutationChatState._optionsExpanded;
       html += `<div class="mutation-msg assistant" style="background:transparent; border:none; padding:0; max-width:100%;">
-        <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">하나 골라봐 ↓ (또는 자유롭게 입력)</div>
-        <div class="mutation-options-stack">
-          ${_mutationChatState.options.map((o, i) => `
-            <button class="mutation-option-card${sel === i ? ' selected' : ''}" onclick="selectMutationOption(${i})">
-              <div class="mutation-option-layer">${_LAYER_EMOJI[o.layer] || '✦'} ${_LAYER_NAME[o.layer] || o.layer}</div>
-              <div class="mutation-option-action">${escapeHtml(o.action)}</div>
-            </button>
-          `).join('')}
+        ${sel == null ? '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">하나 골라봐 ↓ (또는 자유롭게 입력)</div>' : ''}
+        <div class="mutation-options-stack${sel != null && !showAll ? ' compact' : ''}">
+          ${_mutationChatState.options.map((o, i) => {
+            const isSel = sel === i;
+            if (sel != null && !showAll && !isSel) return '';
+            return `
+              <button class="mutation-option-card${isSel ? ' selected' : ''}" onclick="selectMutationOption(${i})">
+                <div class="mutation-option-layer">${_LAYER_EMOJI[o.layer] || '✦'} ${_LAYER_NAME[o.layer] || o.layer}</div>
+                <div class="mutation-option-action">${escapeHtml(o.action)}</div>
+              </button>
+            `;
+          }).join('')}
         </div>
+        ${sel != null ? `<button class="mutation-options-toggle" onclick="_toggleMutationOptions()">${showAll ? '▴ 옵션 접기' : '▾ 다른 옵션 보기'}</button>` : ''}
       </div>`;
     }
     area.innerHTML = html;
@@ -15262,11 +15309,18 @@ function _renderMutationChat() {
   }
 }
 
+function _toggleMutationOptions() {
+  if (!_mutationChatState) return;
+  _mutationChatState._optionsExpanded = !_mutationChatState._optionsExpanded;
+  _renderMutationChat();
+}
+
 async function selectMutationOption(idx) {
   if (!_mutationChatState) return;
   const opt = _mutationChatState.options[idx];
   if (!opt) return;
   _mutationChatState.selected = idx;
+  _mutationChatState._optionsExpanded = false;
   _mutationChatState.chatRecord.selectedLayer = opt.layer;
   _mutationChatState.chatRecord.selectedAction = opt.action;
   _mutationChatState.messages.push({
