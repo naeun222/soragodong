@@ -1846,18 +1846,69 @@
     color: var(--text-dim);
     padding: 14px 8px 6px;
   }
-  /* V4-1v: 서랍장 4 그룹 분류 */
+  /* V4-1v + fix: 서랍장 4 그룹 분류 (한 줄 형태 + collapse) */
   .drawer-group {
-    margin-bottom: 14px;
+    margin-bottom: 10px;
   }
-  .drawer-group-label {
-    font-size: 10px;
-    color: var(--text-soft);
-    letter-spacing: 0.10em;
-    margin: 8px 0 6px;
-    padding-bottom: 4px;
-    border-bottom: 1px dashed var(--border);
+  .drawer-group-header {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    padding: 8px 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    user-select: none;
   }
+  .drawer-group-header:active { background: var(--bg); }
+  .drawer-row-list {
+    margin: 4px 0 0;
+  }
+  .drawer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s;
+  }
+  .drawer-row:first-child { border-radius: 8px 8px 0 0; }
+  .drawer-row:last-child { border-radius: 0 0 8px 8px; border-bottom: none; }
+  .drawer-row:only-child { border-radius: 8px; border-bottom: none; }
+  .drawer-row-tag {
+    font-size: 14px;
+    flex-shrink: 0;
+    width: 18px; text-align: center;
+  }
+  .drawer-row-title {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.4;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .drawer-row-title:active { color: var(--accent2); }
+  .drawer-row-action {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    padding: 0;
+    transition: background 0.12s;
+  }
+  .drawer-row-action:active { background: var(--surface2); }
+  .drawer-row-action.up { color: var(--accent2); border-color: rgba(212,167,106,0.30); }
+  .drawer-row-action.del:active { color: var(--danger); }
   .exec-section-label {
     font-size: 11px; color: var(--accent); letter-spacing: 0.1em;
     text-transform: uppercase; margin-bottom: 12px; font-weight: 600;
@@ -13929,19 +13980,16 @@ function renderExecute() {
             <button onclick="mergeDuplicateTasks()" title="중복 합치기" style="font-size:12px; padding:5px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap; line-height:1.4; font-weight:500;">🔗 정리</button>
           </div>
       `;
-      // V4-1v: 자동 4 그룹 분류
-      const renderDrawerCard = (task) => {
+      // V4-fix #4: 서랍장 한 줄 형태 (카드 X) — 정보 밀도 ↑, 시각 정리
+      const renderDrawerRow = (task) => {
         const isAIMission = task.source === 'ai_mission';
-        const tag = isAIMission ? '🐚 부름' : task.weight === 'main' ? '⚡ 메인' : task.weight === 'light' ? '🍃 가벼움' : '📌 일상';
+        const tagEmoji = isAIMission ? '🐚' : task.weight === 'main' ? '⚡' : task.weight === 'light' ? '🍃' : '📌';
         return `
-          <div class="exec-card drawer-card" data-task-id="${task.id}">
-            <span class="exec-card-tag">${tag}</span>
-            <div class="exec-card-title">${escapeHtml(task.title)}</div>
-            <div class="exec-card-actions">
-              <button class="start-btn" onclick="promoteToToday('${task.id}')">↑ 오늘로</button>
-              <button onclick="editTaskCard('${task.id}')">✎ 수정</button>
-              <button onclick="deleteTask('${task.id}')">✕ 삭제</button>
-            </div>
+          <div class="drawer-row" data-task-id="${task.id}">
+            <span class="drawer-row-tag">${tagEmoji}</span>
+            <span class="drawer-row-title" onclick="editTaskCard('${task.id}')" title="탭해서 수정">${escapeHtml(task.title)}</span>
+            <button class="drawer-row-action up" onclick="promoteToToday('${task.id}')" title="오늘로">↑</button>
+            <button class="drawer-row-action del" onclick="deleteTask('${task.id}')" title="삭제">✕</button>
           </div>
         `;
       };
@@ -13949,22 +13997,37 @@ function renderExecute() {
         const groups = { now: [], later: [], idea: [], big: [] };
         drawerTasks.forEach(t => { groups[classifyDrawerTask(t)].push(t); });
         const groupOrder = [
-          { key: 'now',   label: '🌅 지금 가능 — 즉시 시도' },
-          { key: 'big',   label: '🎯 큰 것 — 양생 가닥 후속·깊은 작업' },
-          { key: 'later', label: '📅 나중 — 조건 대기' },
-          { key: 'idea',  label: '💭 아이디어 — 검토용' }
+          { key: 'now',   label: '🌅 지금 가능' },
+          { key: 'big',   label: '🎯 큰 것' },
+          { key: 'later', label: '📅 나중' },
+          { key: 'idea',  label: '💭 아이디어' }
         ];
+        // 그룹 collapse default: now/big만 펼침, later/idea 접힘
+        if (!state.preferences) state.preferences = {};
+        if (!state.preferences._drawerGroupCollapsed) {
+          state.preferences._drawerGroupCollapsed = { now: false, big: false, later: true, idea: true };
+        }
+        const collapsed = state.preferences._drawerGroupCollapsed;
         groupOrder.forEach(({ key, label }) => {
           const items = groups[key];
           if (!items.length) return;
+          const isCollapsed = !!collapsed[key];
           html += `<div class="drawer-group">
-            <div class="drawer-group-label">${label} · ${items.length}</div>`;
-          items.forEach(t => { html += renderDrawerCard(t); });
+            <div class="drawer-group-header" onclick="toggleDrawerGroup('${key}')">
+              <span>${isCollapsed ? '▸' : '▾'} ${label} · ${items.length}</span>
+            </div>`;
+          if (!isCollapsed) {
+            html += `<div class="drawer-row-list">`;
+            items.forEach(t => { html += renderDrawerRow(t); });
+            html += `</div>`;
+          }
           html += `</div>`;
         });
       } else {
-        // 시간순 (기존 sort 유지)
-        drawerTasks.forEach(task => { html += renderDrawerCard(task); });
+        // 시간순 (한 줄 형태)
+        html += `<div class="drawer-row-list">`;
+        drawerTasks.forEach(task => { html += renderDrawerRow(task); });
+        html += `</div>`;
       }
       html += `</div>`;
     }
@@ -15513,6 +15576,18 @@ let _drawerView = 'auto';  // 'auto' | 'time'
 
 function toggleDrawerView() {
   _drawerView = _drawerView === 'auto' ? 'time' : 'auto';
+  renderExecute();
+}
+
+// V4-fix #4: 서랍장 그룹 collapse 토글
+function toggleDrawerGroup(key) {
+  if (!state.preferences) state.preferences = {};
+  if (!state.preferences._drawerGroupCollapsed) {
+    state.preferences._drawerGroupCollapsed = { now: false, big: false, later: true, idea: true };
+  }
+  const c = state.preferences._drawerGroupCollapsed;
+  c[key] = !c[key];
+  saveState();
   renderExecute();
 }
 
@@ -18460,7 +18535,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.41-exec-batch-fix';
+const APP_VERSION = 'v4.0.42-drawer-rows';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
