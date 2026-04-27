@@ -15184,12 +15184,14 @@ function switchDayModalTab(tab) {
       html += `<div class="day-summary" style="border-color:var(--accent2); background:rgba(212,167,106,0.08);">${escapeHtml(entry.note)}</div>`;
     }
     if (entry.dailyQuestion?.text) {
-      // V4-fix: Q + A 한 세트 박스로 묶음
+      // V4-fix v3 (사용자 요청): 답 없으면 질문 자체 표시 X
       const ans = entry.dailyQuestionAnswer || entry.note || '';
-      html += `<div class="day-qa-set">
-        <div class="day-q">Q. ${escapeHtml(entry.dailyQuestion.text)}</div>
-        ${ans ? `<div class="day-a">${escapeHtml(ans)}</div>` : `<div class="day-a empty">— 답하지 않음</div>`}
-      </div>`;
+      if (ans) {
+        html += `<div class="day-qa-set">
+          <div class="day-q">Q. ${escapeHtml(entry.dailyQuestion.text)}</div>
+          <div class="day-a">${escapeHtml(ans)}</div>
+        </div>`;
+      }
     }
   } else if (tab === 'topics') {
     // V4-fix: 카테고리 분류 X — '✦ 토픽' 단일
@@ -16128,15 +16130,13 @@ function renderLensTimeline() {
 
     // 본문 블록들
     const blocks = [];
-    // V3.13.x: 일일질문이 있으면 Q + A 한 세트 박스로 (사이에 일기 끼지 않게)
-    if (entry?.dailyQuestion?.text) {
-      let qaHtml = `<div class="ig-question">Q. ${escapeHtml(entry.dailyQuestion.text)}</div>`;
-      if (entry?.note) {
-        qaHtml += `<div class="ig-answer">${escapeHtml(entry.note)}</div>`;
-      } else {
-        qaHtml += `<div class="ig-answer ig-answer-empty">(답 없음)</div>`;
-      }
-      blocks.push(`<div class="ig-qa-set">${qaHtml}</div>`);
+    // V3.13.x + V4-fix v3 (사용자 요청): 일일질문 — 답 있을 때만 Q+A 표시. 답 X면 그냥 없앰.
+    if (entry?.dailyQuestion?.text && (entry?.note || entry?.dailyQuestionAnswer)) {
+      const ans = entry.dailyQuestionAnswer || entry.note || '';
+      blocks.push(`<div class="ig-qa-set">
+        <div class="ig-question">Q. ${escapeHtml(entry.dailyQuestion.text)}</div>
+        <div class="ig-answer">${escapeHtml(ans)}</div>
+      </div>`);
     }
     if (entry?.userEdit) {
       blocks.push(`<div class="ig-block ig-block-edit">📝 ${escapeHtml(entry.userEdit)}</div>`);
@@ -18719,20 +18719,27 @@ function testSeedV4Data() {
       break;
     }
   }
-  // strategy 카드 — 진단 5종 다 detect 되도록 보강 (V4 비전 9.5)
+  // strategy 카드 — 진단 5종 detect + 분기별 분산 (Stories 다차원 분석)
   state.topicCards = (state.topicCards || []).filter(c => c.category !== 'strategy');
   const stratSeeds = [
-    // 일반 진화 흐름 카드 (5개)
+    // 최근 분기 (Q-1) — 환경 차원 도구
     { title: '마감 직전 폭발력 신뢰', status: 'embodied', gens: 1, path: 'one-shot', attempts: [['worked',5]], days: 20 },
-    { title: '거절은 그날 안에', status: 'working', gens: 1, attempts: [['worked',3], ['didnt',1]], days: 20 },
-    { title: '카페에서 30분 집중', status: 'trying', gens: 1, attempts: [['worked',1], ['didnt',1]], days: 20 },
-    { title: '잠 부족 시 결정 X', status: 'seedling', gens: 1, attempts: [], days: 35 },  // → avoidance (seedling 30일+)
-    { title: 'SNS 자동 종료', status: 'working', gens: 3, path: 'evolved', attempts: [['didnt',2], ['didnt',1], ['worked',3]], days: 30 },
-    // 진단 5종 발동용 강제 카드 (4개)
-    { title: '진단 시드: 알람 무한 반복', status: 'trying', gens: 1, attempts: [['didnt',4]], layers: ['L2'], days: 25 },          // weak_tool (한 layer, attempts 3+, worked 0)
-    { title: '진단 시드: 인지 차원 막힘', status: 'trying', gens: 1, attempts: [['didnt',3]], layers: ['L1'], days: 25 },          // wrong_layer (L1만 3+ didnt)
-    { title: '진단 시드: 회피 50%', status: 'trying', gens: 1, attempts: [['skipped',3], ['worked',1]], layers: ['L2'], days: 20 },// avoidance (skipped > 50%)
-    { title: '진단 시드: 가치 상충 1', status: 'trying', gens: 1, attempts: [['didnt',2]], layers: ['L2'], days: 20 }              // value_clash (2+ cards all didnt + values 2+)
+    { title: '거절은 그날 안에', status: 'working', gens: 1, attempts: [['worked',3], ['didnt',1]], days: 25 },
+    { title: '카페에서 30분 집중', status: 'trying', gens: 1, attempts: [['worked',1], ['didnt',1]], days: 30 },
+    { title: '잠 부족 시 결정 X', status: 'seedling', gens: 1, attempts: [], days: 35 },
+    { title: 'SNS 자동 종료', status: 'working', gens: 3, path: 'evolved', attempts: [['didnt',2], ['didnt',1], ['worked',3]], days: 50 },
+    // Q-2 — 실험 사이클
+    { title: '실험 새벽 사이클', status: 'archived', gens: 2, attempts: [['worked',2], ['worked',1]], layers: ['L2','L3'], days: 130 },
+    { title: '주말 회복 자동화', status: 'embodied', gens: 1, path: 'quick-discovery', attempts: [['worked',4]], days: 145 },
+    // Q-3 — 학회 발표
+    { title: '발표 슬라이드 매주 1장', status: 'working', gens: 2, attempts: [['didnt',2], ['worked',3]], layers: ['L2','L4'], days: 220 },
+    // Q-4 — 회복
+    { title: '명상 10분 아침', status: 'working', gens: 1, attempts: [['worked',3], ['meh',1]], days: 320 },
+    // 진단 5종 발동용 (양생방 숨김)
+    { title: '진단 시드: 알람 무한 반복', status: 'trying', gens: 1, attempts: [['didnt',4]], layers: ['L2'], days: 25 },
+    { title: '진단 시드: 인지 차원 막힘', status: 'trying', gens: 1, attempts: [['didnt',3]], layers: ['L1'], days: 25 },
+    { title: '진단 시드: 회피 50%', status: 'trying', gens: 1, attempts: [['skipped',3], ['worked',1]], layers: ['L2'], days: 20 },
+    { title: '진단 시드: 가치 상충 1', status: 'trying', gens: 1, attempts: [['didnt',2]], layers: ['L2'], days: 20 }
   ];
   stratSeeds.forEach((s, idx) => {
     const id = 'strat_seed_' + idx;
@@ -18922,13 +18929,37 @@ function testSeedV4Data() {
       created_at: new Date(today.getTime() - (i+1) * 4 * 86400000).toISOString()
     });
   });
-  // V4-fix v3: 분기 리뷰 4개 (지난 1년 4분기)
+  // V4-fix v3 (사용자 요청 — 다차원 분석 풍부): 분기 리뷰 4개 + 풍부한 stats
   state.quarterlyReviews = [];
   const quarterlyTones = [
-    { focus: '환경 차원 도구', growth: '"마감 직전 폭발력" 결정화', pattern: '거절 후 부채감 풀림 중', next: '거절 자동화' },
-    { focus: '실험 사이클 + 결과', growth: '실험 첫 success — 6개월 만의 보상', pattern: '잠 부족 패턴 재등장', next: '11시 잠 자동화' },
-    { focus: '학회 발표 + 거절 패턴', growth: '거절 첫 성공 + 발표 마무리', pattern: '발표 후 번아웃', next: '사회 차원 시도' },
-    { focus: '여름 회복 + 시작', growth: '운동 30일 지속', pattern: '회복 모드 정착', next: '아침 리듬' }
+    { focus: '환경 차원 도구', growth: '"마감 직전 폭발력" 결정화', pattern: '거절 후 부채감 풀림 중', next: '거절 자동화',
+      stats: { checkins: 72, attempts: 18, worked: 12, didnt: 4, meh: 2, pearls: 11, dnaPearls: 1,
+        modeCount: { period: 8, drained: 5, rest: 3, exam: 4 },
+        moodAvg: 3.4, vitalityAvg: 3.1, topMusicCount: 4, photoCount: 6, diaryCount: 22,
+        problemsTotal: 5, strengthsTotal: 7, growthCount: 3, traitsTotal: 6, valuesTotal: 4, patternsTotal: 5,
+        diagnoses: { weak_tool: 1, wrong_layer: 1 },
+        trackerStats: [{ name: '체중', kind: 'numeric', delta: -2.0, unit: 'kg' }, { name: '러닝', kind: 'numeric', delta: 12, unit: 'km' }] } },
+    { focus: '실험 사이클 + 결과', growth: '실험 첫 success — 6개월 만의 보상', pattern: '잠 부족 패턴 재등장', next: '11시 잠 자동화',
+      stats: { checkins: 68, attempts: 14, worked: 9, didnt: 3, meh: 2, pearls: 9, dnaPearls: 0,
+        modeCount: { period: 9, drained: 7, rest: 5, sick: 2, exam: 2 },
+        moodAvg: 3.0, vitalityAvg: 2.8, topMusicCount: 3, photoCount: 4, diaryCount: 18,
+        problemsTotal: 6, strengthsTotal: 5, growthCount: 2, traitsTotal: 5, valuesTotal: 4, patternsTotal: 6,
+        diagnoses: { avoidance: 1 },
+        trackerStats: [{ name: '체중', kind: 'numeric', delta: -0.5, unit: 'kg' }, { name: '러닝', kind: 'numeric', delta: 8, unit: 'km' }] } },
+    { focus: '학회 발표 + 거절 패턴', growth: '거절 첫 성공 + 발표 마무리', pattern: '발표 후 번아웃', next: '사회 차원 시도',
+      stats: { checkins: 65, attempts: 16, worked: 10, didnt: 4, meh: 2, pearls: 10, dnaPearls: 0,
+        modeCount: { period: 8, drained: 9, rest: 7, exam: 5 },
+        moodAvg: 3.2, vitalityAvg: 2.9, topMusicCount: 5, photoCount: 7, diaryCount: 20,
+        problemsTotal: 5, strengthsTotal: 6, growthCount: 2, traitsTotal: 5, valuesTotal: 4, patternsTotal: 5,
+        diagnoses: { value_clash: 1, avoidance: 1 },
+        trackerStats: [{ name: '명상', kind: 'check', delta: 18, unit: '회' }] } },
+    { focus: '여름 회복 + 시작', growth: '운동 30일 지속', pattern: '회복 모드 정착', next: '아침 리듬',
+      stats: { checkins: 58, attempts: 10, worked: 7, didnt: 2, meh: 1, pearls: 8, dnaPearls: 0,
+        modeCount: { period: 8, rest: 12, travel: 3, sick: 2 },
+        moodAvg: 3.6, vitalityAvg: 3.3, topMusicCount: 3, photoCount: 8, diaryCount: 15,
+        problemsTotal: 4, strengthsTotal: 6, growthCount: 1, traitsTotal: 5, valuesTotal: 4, patternsTotal: 4,
+        diagnoses: {},
+        trackerStats: [{ name: '러닝', kind: 'numeric', delta: 5, unit: 'km' }] } }
   ];
   for (let q = 1; q <= 4; q++) {
     const qDate = new Date(today.getFullYear(), today.getMonth() - q * 3, 15);
@@ -18938,16 +18969,10 @@ function testSeedV4Data() {
       id: 'qr_seed_' + q,
       quarterKey,
       completedAt: new Date(today.getTime() - (q * 90 - 7) * 86400000).toISOString(),
-      stats: {
-        checkins: 60 + (q * 4), attempts: 12 + q, worked: 8 + q, pearls: 6 + q, dnaPearls: q === 1 ? 1 : 0,
-        modeCount: { rest: 5 + q, period: 9 },
-        trackerStats: [],
-        problemsTotal: 4, strengthsTotal: 5, growthCount: 2,
-        quarterKey
-      },
-      summary: `이번 분기, ${tone.focus}에 무게. ${tone.growth}.`,
+      stats: { ...tone.stats, quarterKey },
+      summary: `이 분기, ${tone.focus}에 무게가 실렸어. ${tone.growth}.`,
       sections: [
-        { label: '🌊 흐름', body: `${tone.focus} 중심. 의지에 덜 기대는 도구로 이동.` },
+        { label: '🌊 흐름', body: `${tone.focus} 중심으로 움직였어. 의지에 덜 기대고 환경/도구로 무게 이동.` },
         { label: '🌱 새로 자라난 것', body: tone.growth },
         { label: '🌫 작동 중인 패턴', body: tone.pattern },
         { label: '🧭 다음 분기에', body: tone.next }
@@ -21882,18 +21907,34 @@ async function buildQuarterlySlides(review) {
 
   const slides = [];
 
-  // 1. 감성 hook — 큰 숫자 + 사진
+  // 1. 감성 hook — 큰 숫자 + 사진 + 직전 분기 비교
   const heroPhoto = (() => {
     const entries = (state.entries || []).filter(e => e.photo && e.date && new Date(e.date + 'T12:00:00').getTime() >= startMs && new Date(e.date + 'T12:00:00').getTime() <= endMs);
     return entries.length > 0 ? entries[Math.floor(Math.random() * entries.length)].photo : null;
   })();
+  // V4-fix v3 (사용자 요청 — 더 설명적, 친절한 톤): 평균 빈도 + 직전 분기 비교
+  const totalDays = Math.max(1, Math.round((endMs - startMs) / 86400000));
+  const checkinsCnt = stats.checkins || 0;
+  const avgGap = checkinsCnt > 0 ? Math.round(totalDays / checkinsCnt) : 0;
+  const prevCheckins = prevQ?.checkins;
+  let heroComparison = '';
+  if (prevCheckins != null && checkinsCnt > prevCheckins) {
+    const diff = checkinsCnt - prevCheckins;
+    heroComparison = `<div class="stories-body">지난 분기보다 ${diff}번 더. 자기 자신한테 더 가까이 와 있었네.</div>`;
+  } else if (prevCheckins != null && checkinsCnt < prevCheckins) {
+    const diff = prevCheckins - checkinsCnt;
+    heroComparison = `<div class="stories-body">지난 분기보다 ${diff}번 적었어. 바빴거나 다른 데 살았던 분기일 거야.</div>`;
+  } else if (avgGap > 0) {
+    heroComparison = `<div class="stories-body">평균 ${avgGap}일에 한 번씩 들여다봤어. 꾸준한 흐름이야.</div>`;
+  }
   slides.push({
     tone: 'tone-emo',
     html: `
       <div class="stories-label">${escapeHtml(review.quarterKey || '')}</div>
       ${heroPhoto ? `<img class="stories-photo" src="${heroPhoto}" alt="">` : ''}
-      <div class="stories-hero-num">${stats.checkins || 0}</div>
+      <div class="stories-hero-num">${checkinsCnt}</div>
       <div class="stories-hero-unit">번 너 자신을 들여다봤어</div>
+      ${heroComparison}
     `
   });
 
@@ -22040,6 +22081,17 @@ function _buildChangeSlideHTML(stats, prevQ) {
       raw: topMode[1]
     });
   }
+  // V4-fix v3 (사용자 요청 — 더 설명적, 친절한 톤): 한 줄 통찰
+  const insight = (() => {
+    const sP = stats.strengthsTotal || 0;
+    const pP = stats.problemsTotal || 0;
+    const gP = stats.growthCount || 0;
+    if (gP >= 2 && sP > pP) return '강점도 새로 보였고, 성장 축도 여러 개 움직였어. 너의 모양이 더 또렷해진 분기야.';
+    if (gP >= 2) return `성장 축이 ${gP}개나 움직였어. 멈춰있던 게 아니야 — 이 자체가 큰 의미야.`;
+    if (sP > pP) return '강점이 문제보다 많이 보였어. 너 자신을 단단하게 알아가고 있어.';
+    if (pP > sP) return '문제가 더 또렷이 보인 분기야. 그게 보이는 것 자체가 첫 단계니까, 부담 가지지 마.';
+    return '큰 흔들림 없이 균형 잡힌 분기였어. 머무는 시간도 너에게 필요한 시간이야.';
+  })();
   return `
     <div class="stories-label">너의 변화</div>
     <div class="stories-title">이 분기 너 안에서 일어난 변화</div>
@@ -22051,6 +22103,7 @@ function _buildChangeSlideHTML(stats, prevQ) {
         </div>
       `).join('')}
     </div>
+    <div class="stories-body" style="margin-top:14px;">${escapeHtml(insight)}</div>
   `;
 }
 
@@ -23554,7 +23607,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.83-mut-action-update';
+const APP_VERSION = 'v4.0.84-stories-richer-stats';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
