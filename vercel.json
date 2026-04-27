@@ -34,6 +34,5 @@
         { "key": "Cache-Control", "value": "public, max-age=2592000, immutable" }
       ]
     }
-  ],
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ':(exclude)README.md' ':(exclude)*.md' ':(exclude).github/**' ':(exclude).vercelignore' ':(exclude)scripts/**'"
+  ]
 }
