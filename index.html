@@ -6799,6 +6799,7 @@
         </details>
 
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
+        <button class="btn-secondary" onclick="recoverFromBackup()" style="margin-top:8px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(212,167,106,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="V3→V4 마이그레이션 시 자동 백업된 cloud row 또는 localStorage 옛 데이터로 복구 시도">🔄 백업에서 복구 시도</button>
       </div>
 
       <div style="margin-top:24px;">
@@ -25935,6 +25936,64 @@ function exportData() {
   a.download = `soragodong_backup_${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// 사용자 요청 2026-04-28: 실수 초기화 복구 — V3→V4 마이그레이션 백업 (V4_BACKUP_USER_ID 'backup_v6_pre_v7') 또는 localStorage에서
+async function recoverFromBackup() {
+  if (!authUserId) { showToast('로그인 필요'); return; }
+  showToast('🔍 백업 검색 중...');
+  // 1. Supabase backup row 시도
+  try {
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_BACKUP_USER_ID}&select=data,updated_at&limit=1`,
+      { headers: authHeaders() }
+    );
+    if (resp.ok) {
+      const rows = await resp.json();
+      if (rows.length > 0 && rows[0].data) {
+        const meta = rows[0].data._backup_meta || {};
+        const when = meta.createdAt ? new Date(meta.createdAt).toLocaleString('ko-KR') : '시점 X';
+        const yes = await showConfirmModal({
+          title: '🔄 cloud 백업 발견',
+          message: `백업 시점: ${when}\n타입: ${meta.type || 'V6'}\n\n현재 데이터를 이 백업으로 덮어쓸까?\n(현재 데이터는 사라져)`,
+          okLabel: '복구',
+          cancelLabel: '취소'
+        });
+        if (yes) {
+          const backupData = JSON.parse(JSON.stringify(rows[0].data));
+          delete backupData._backup_meta;
+          state = { ...DEFAULT_STATE, ...backupData };
+          await saveToCloudNow();
+          showToast('✦ 복구됨 — 새로고침 중...');
+          setTimeout(() => location.reload(), 800);
+          return;
+        }
+      } else {
+        // cloud backup 없음 → localStorage 시도
+        const local = localStorage.getItem(V4_LOCAL_STORAGE_KEY);
+        if (local) {
+          const yes = await showConfirmModal({
+            title: '🔄 localStorage 백업 발견',
+            message: `이 기기에 저장된 옛 데이터가 있어.\n복구할까?\n(현재 cloud 데이터는 사라짐)`,
+            okLabel: '복구',
+            cancelLabel: '취소'
+          });
+          if (yes) {
+            state = { ...DEFAULT_STATE, ...JSON.parse(local) };
+            await saveToCloudNow();
+            showToast('✦ 복구됨 — 새로고침 중...');
+            setTimeout(() => location.reload(), 800);
+            return;
+          }
+        } else {
+          showToast('⚠️ 복구 가능한 백업 없음');
+        }
+      }
+    }
+  } catch (e) {
+    console.error('recovery error:', e);
+    showToast('복구 실패: ' + (e.message || e));
+  }
 }
 
 async function resetAll() {
