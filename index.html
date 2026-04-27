@@ -3130,14 +3130,22 @@
     margin-top: 4px;
     font-style: italic;
   }
+  /* V4-fix: 숙고 항목 inline ✎ 수정 / ✕ 삭제 */
+  .reflection-list-item { padding: 10px 12px 10px 12px; cursor: default; }
+  .reflection-list-actions {
+    position: absolute; top: 6px; right: 6px;
+    display: flex; gap: 4px;
+  }
+  .reflection-list-edit,
   .reflection-list-del {
-    position: absolute; top: 8px; right: 8px;
     background: transparent; border: none;
     color: var(--text-soft);
     width: 24px; height: 24px;
     border-radius: 50%;
     cursor: pointer; font-size: 11px;
+    line-height: 1; padding: 0;
   }
+  .reflection-list-edit:active { background: var(--bg); color: var(--accent2); }
   .reflection-list-del:active { background: var(--bg); color: var(--danger); }
 
   /* V4-1f: 모래사장 DNA 진주 (작은 다면체) */
@@ -8712,12 +8720,16 @@ async function showReflectionList() {
     listHtml += `<div class="reflection-list-group-label">${STATUS_LABEL[s]} · ${qs.length}</div>`;
     qs.forEach(q => {
       const cls = `reflection-list-item status-${q.status}`;
-      // V4-fix: 클릭 시 자동 활성화/교체 X — 항목 picker로 옵션 선택
-      const conclusion = q.conclusion ? `<div class="reflection-list-conclusion">→ ${escapeHtml(q.conclusion.slice(0, 60))}${q.conclusion.length > 60 ? '…' : ''}</div>` : '';
+      // V4-fix: 항목 = 보관소. 클릭 액션 X. inline ✎ 수정 / ✕ 삭제만.
+      const conclusion = q.conclusion ? `<div class="reflection-list-conclusion">→ ${escapeHtml(q.conclusion.slice(0, 80))}${q.conclusion.length > 80 ? '…' : ''}</div>` : '';
       listHtml += `
-        <div class="${cls}" onclick="showReflectionItemActions('${q.id}')">
+        <div class="${cls}">
           <div class="reflection-list-text">${escapeHtml(q.text)}</div>
           ${conclusion}
+          <div class="reflection-list-actions">
+            <button class="reflection-list-edit" onclick="editReflectionItem('${q.id}')" title="수정">✎</button>
+            <button class="reflection-list-del" onclick="confirmDeleteReflection('${q.id}')" title="삭제">✕</button>
+          </div>
         </div>
       `;
     });
@@ -8746,7 +8758,47 @@ function closeReflectionListModal() {
 async function confirmDeleteReflection(id) {
   if (!await confirmDelete('이 숙고 질문', '히스토리에서 영구 삭제됩니다.')) return;
   deleteReflectionQuestion(id);
-  closeReflectionListModal();
+  // 모달 안에 있으면 새로고침 (전체 닫지 X)
+  if (document.getElementById('reflectionListModal')) {
+    closeReflectionListModal();
+    showReflectionList();
+  }
+}
+
+// V4-fix: 숙고 항목 텍스트 수정 (resolved면 결론도 수정)
+async function editReflectionItem(id) {
+  const q = (state.reflectionQuestions || []).find(x => x.id === id);
+  if (!q) return;
+  const newText = await showInputModal({
+    title: '🌊 질문 수정',
+    defaultValue: q.text,
+    multiline: true,
+    maxLength: 300,
+    okLabel: '저장'
+  });
+  if (newText === null) return;
+  const t = newText.trim();
+  if (!t) return;
+  q.text = t;
+  if (q.status === 'resolved' && q.conclusion) {
+    const newConcl = await showInputModal({
+      title: '✓ 결론 수정 (선택)',
+      message: '비워둬도 OK',
+      defaultValue: q.conclusion,
+      multiline: true,
+      maxLength: 500,
+      okLabel: '저장'
+    });
+    if (newConcl !== null && newConcl.trim()) q.conclusion = newConcl.trim();
+  }
+  saveState();
+  // 모달 새로고침
+  if (document.getElementById('reflectionListModal')) {
+    closeReflectionListModal();
+    showReflectionList();
+  }
+  if (typeof renderReflectionHome === 'function') renderReflectionHome();
+  showToast('수정됨 ✦');
 }
 
 function openResolvedReflection(id) {
@@ -19953,7 +20005,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.57-end-btn-out';
+const APP_VERSION = 'v4.0.58-reflection-simple';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
