@@ -4210,12 +4210,14 @@
   /* 진주 음악 카드는 grid에서 한 줄 다 차지 */
   .pearl-music-row { grid-column: 1 / -1; }
   .pearl-music-card { padding: 0; background: transparent; border: none; }
-  /* V4-fix: 체크인 사진 슬롯 */
+  /* V4-fix: 체크인 사진 슬롯 — 음악 카드 height에 맞춰 정사각 (왼쪽 작게) */
+  .checkin-mp-row #checkinPhotoSlot { display: flex; }
   .checkin-photo-card {
     position: relative;
     aspect-ratio: 1;
-    max-width: 200px;
-    border-radius: 12px;
+    height: auto;
+    align-self: stretch;
+    border-radius: 10px;
     overflow: hidden;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -4226,15 +4228,35 @@
     display: block;
   }
   .checkin-photo-remove {
-    position: absolute; top: 6px; right: 6px;
-    width: 26px; height: 26px;
-    background: rgba(15,14,23,0.65);
+    position: absolute; top: 4px; right: 4px;
+    width: 22px; height: 22px;
+    background: rgba(15,14,23,0.70);
     border: none;
     color: white;
     border-radius: 50%;
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
+    line-height: 1;
+    padding: 0;
   }
+  .checkin-photo-add-btn {
+    aspect-ratio: 1;
+    height: auto;
+    align-self: stretch;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--text-dim);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2px;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .checkin-photo-add-btn:active { background: var(--surface2); }
+  .cpa-icon { font-size: 18px; }
+  .cpa-label { font-size: 10px; letter-spacing: 0.05em; }
   /* day-modal 일기 사진 */
   .day-photo-wrap {
     margin: 10px 0;
@@ -4796,10 +4818,10 @@
         </div>
       </div>
 
-      <!-- V3.13.x: 음악 슬롯 (optional) + V4: 사진 슬롯 -->
-      <div class="input-group" style="display:flex; gap:8px; flex-wrap:wrap;">
-        <div id="checkinMusicSlot" style="flex:1; min-width:120px;"></div>
-        <div id="checkinPhotoSlot" style="flex:1; min-width:120px;"></div>
+      <!-- V3.13.x: 음악 슬롯 + V4: 사진 슬롯 (사진 왼쪽 정사각, 음악 오른쪽 가로 길게) -->
+      <div class="input-group checkin-mp-row" style="display:flex; gap:8px; align-items:stretch;">
+        <div id="checkinPhotoSlot" style="flex:0 0 auto;"></div>
+        <div id="checkinMusicSlot" style="flex:1; min-width:0;"></div>
       </div>
 
       <div class="optional-section">
@@ -19124,7 +19146,7 @@ function removeCheckinMusic() {
   renderCheckinMusicSlot();
 }
 
-// V4-fix: 체크인 사진 슬롯 (음악 옆 자리, 같은 패턴)
+// V4-fix: 체크인 사진 슬롯 (음악 왼쪽 작은 정사각)
 function renderCheckinPhotoSlot() {
   const slot = document.getElementById('checkinPhotoSlot');
   if (!slot) return;
@@ -19137,9 +19159,9 @@ function renderCheckinPhotoSlot() {
     `;
   } else {
     slot.innerHTML = `
-      <button class="music-add-btn" onclick="addCheckinPhoto()">
-        <span style="font-size:16px;">📷</span>
-        <span>사진</span>
+      <button class="checkin-photo-add-btn" onclick="addCheckinPhoto()">
+        <span class="cpa-icon">📷</span>
+        <span class="cpa-label">사진</span>
       </button>
     `;
   }
@@ -19556,7 +19578,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.51-checkin-photo';
+const APP_VERSION = 'v4.0.52-photo-layout';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
