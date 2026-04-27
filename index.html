@@ -3048,6 +3048,97 @@
     border-color: rgba(143,200,143,0.32) !important;
     background: linear-gradient(135deg, rgba(143,200,143,0.08), rgba(139,126,196,0.04)) !important;
   }
+  /* V4-1s: 📔 일기·대화 캘린더 무드 그리드 */
+  .cal-grid-wrap {
+    margin: 0 0 22px;
+    padding: 14px 12px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+  .cal-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .cal-nav-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .cal-nav-btn:active { background: var(--surface2); }
+  .cal-month-label {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14px; color: var(--text);
+  }
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+    font-size: 10px;
+    color: var(--text-soft);
+    letter-spacing: 0.06em;
+  }
+  .cal-weekdays span { text-align: center; }
+  .cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-day {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s;
+    color: var(--text);
+    font-size: 12px;
+  }
+  .cal-day.empty { cursor: default; }
+  .cal-day.future { cursor: default; opacity: 0.35; }
+  .cal-day:not(.empty):not(.future):active { transform: scale(0.95); }
+  .cal-day.today { border-color: var(--accent2); font-weight: 700; }
+  .cal-day-num { position: relative; z-index: 1; }
+  .cal-chapter-dot {
+    position: absolute;
+    bottom: 4px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px;
+    background: var(--accent2);
+    border-radius: 50%;
+  }
+  .cal-empty { background: transparent !important; }
+  .cal-legend {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin-top: 12px;
+    font-size: 10px;
+    color: var(--text-soft);
+  }
+  .cal-legend span {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    margin-right: 2px;
+  }
+  .cal-legend-dot {
+    width: 5px !important; height: 5px !important; border-radius: 50%;
+    background: var(--accent2) !important;
+  }
+  /* V4-1s: 점프 시 ig-card 깜빡임 */
+  .ig-card-flash {
+    animation: ig-card-flash 1.2s ease;
+  }
+  @keyframes ig-card-flash {
+    0%, 100% { box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+    50%      { box-shadow: 0 0 0 3px rgba(212,167,106,0.55); }
+  }
+
   /* V4-1r: 진주 Pinterest 갤러리 (grid 뷰) + 카테고리 칩 */
   .pearl-cat-chips {
     display: flex; flex-wrap: wrap; gap: 6px;
@@ -4013,6 +4104,7 @@
 
       <!-- 📔 일기·대화 -->
       <div id="libDiary" class="library-cat-view">
+        <div id="lensCalendarGrid"></div>
         <div id="lensTopicCards"></div>
         <div id="lensTimeline"></div>
       </div>
@@ -11927,7 +12019,121 @@ function renderArchive() {
   renderLensInsights();
   renderLensStrategies();
   renderLensPearls();
+  if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
   updateArchiveQuickCounts();
+}
+
+// V4-1s: 📔 일기·대화 캘린더 무드 그리드 (월 단위)
+let _calMonthOffset = 0;  // 0 = 이번 달, -1 = 지난 달
+
+function shiftCalMonth(delta) {
+  _calMonthOffset += delta;
+  renderLensCalendarGrid();
+}
+
+function jumpToTimelineDate(dateStr) {
+  // ig-card 또는 lensTimeline 안 그 날짜 카드로 스크롤
+  const timeline = document.getElementById('lensTimeline');
+  if (!timeline) return;
+  // ig-card에 data-date 속성 박혀있다고 가정. 없으면 텍스트 검색.
+  const card = timeline.querySelector(`[data-date="${dateStr}"]`);
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.classList.add('ig-card-flash');
+    setTimeout(() => card.classList.remove('ig-card-flash'), 1200);
+  } else {
+    showToast(`${dateStr} 기록 없음`);
+  }
+}
+
+function renderLensCalendarGrid() {
+  const container = document.getElementById('lensCalendarGrid');
+  if (!container) { return; }
+  // grid 뷰 + diary 카테고리만 표시. 그 외 비움.
+  if (_libView !== 'grid' || _currentLens !== 'diary') {
+    container.innerHTML = '';
+    return;
+  }
+
+  const today = new Date();
+  const target = new Date(today.getFullYear(), today.getMonth() + _calMonthOffset, 1);
+  const year = target.getFullYear();
+  const month = target.getMonth();
+  const monthLabel = target.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startWeekday = firstDay.getDay(); // 0=일
+  const totalDays = lastDay.getDate();
+
+  // 무드 색 매핑 (entry.mood 1-5)
+  const moodColor = {
+    1: '#5a4a72',  // 어두운 보라 (낮은 무드)
+    2: '#7a6a92',
+    3: '#a89dc8',  // 중성
+    4: '#c7b288',
+    5: '#d4a76a'   // 밝은 금 (높은 무드)
+  };
+
+  // 각 날짜 entries / chatMessages 매핑
+  const entriesByDate = {};
+  (state.entries || []).forEach(e => { if (e.date) entriesByDate[e.date] = e; });
+  const chaptersByDate = {};
+  (state.chatMessages || []).forEach(m => {
+    if (m.chapterStart && m.timestamp) {
+      const dk = getDayKey(m.timestamp);
+      chaptersByDate[dk] = (chaptersByDate[dk] || 0) + 1;
+    }
+  });
+
+  let html = `
+    <div class="cal-grid-wrap">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="shiftCalMonth(-1)" aria-label="지난 달">←</button>
+        <div class="cal-month-label">${monthLabel}</div>
+        <button class="cal-nav-btn" onclick="shiftCalMonth(1)" aria-label="다음 달" ${_calMonthOffset >= 0 ? 'disabled style="opacity:0.3;"' : ''}>→</button>
+      </div>
+      <div class="cal-weekdays">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div class="cal-days">
+  `;
+  // 빈 칸 (월 첫째 날 전)
+  for (let i = 0; i < startWeekday; i++) {
+    html += `<div class="cal-day cal-empty"></div>`;
+  }
+  // 각 날짜
+  for (let d = 1; d <= totalDays; d++) {
+    const mm = String(month + 1).padStart(2, '0');
+    const dd = String(d).padStart(2, '0');
+    const dateKey = `${year}-${mm}-${dd}`;
+    const entry = entriesByDate[dateKey];
+    const mood = entry?.mood;
+    const bg = mood ? moodColor[mood] || 'transparent' : 'transparent';
+    const hasChapter = !!chaptersByDate[dateKey];
+    const isToday = dateKey === todayKey();
+    const isFuture = new Date(dateKey + 'T23:59:59') > new Date();
+    const empty = !entry && !hasChapter;
+    html += `
+      <div class="cal-day${isToday ? ' today' : ''}${empty ? ' empty' : ''}${isFuture ? ' future' : ''}"
+           style="background:${bg};"
+           onclick="${isFuture ? '' : `jumpToTimelineDate('${dateKey}')`}"
+           title="${dateKey}${mood ? ` · 기분 ${mood}/5` : ''}">
+        <span class="cal-day-num">${d}</span>
+        ${hasChapter ? `<span class="cal-chapter-dot"></span>` : ''}
+      </div>
+    `;
+  }
+  html += `
+      </div>
+      <div class="cal-legend">
+        <span style="background:#5a4a72;"></span> 낮은 무드
+        <span style="background:#a89dc8;"></span> 중성
+        <span style="background:#d4a76a;"></span> 높은 무드
+        <span class="cal-legend-dot"></span> 챕터 있음
+      </div>
+    </div>
+  `;
+  container.innerHTML = html;
 }
 
 function switchLibraryCat(cat) {
@@ -16617,7 +16823,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.21-pinterest';
+const APP_VERSION = 'v4.0.22-cal-grid';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
