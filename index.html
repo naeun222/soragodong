@@ -10050,6 +10050,148 @@ async function showAttemptResultModal(missionTitle) {
   });
 }
 
+// V4-1d-3: 돌연변이 진화 — 임시 채팅 (4 옵션 picker).
+// V4 비전 6.3: 안 통한 가지 → 다른 차원에서 4 옵션 즉석 → 사용자 선택 → 새 generation + 새 미션.
+// 5.8 톤: "🧬 돌연변이 시점. [전략명] 가지 끝났어 — 발견 [무엇]. 새 가지 어디서? 🌍/👥/🧠/🪞"
+// 메인 흐름 X (anchor 29). non-blocking: completeMission이 await 안 함.
+const _LAYER_EMOJI = { L1: '🧠', L2: '🎯', L3: '🌍', L4: '👥', L5: '🪞' };
+const _LAYER_NAME  = { L1: '인지', L2: '행동', L3: '환경', L4: '사회', L5: '메타' };
+
+async function openMutationChat(strategyId, missionTitle) {
+  const card = getStrategyCard(strategyId);
+  if (!card) return;
+
+  const prevGen = getCurrentGeneration(card);
+  const prevAction = prevGen?.action || card.actionStrategy || card.summary || '';
+  const prevLayer = prevGen?.layer || 'L2';
+
+  let aiOptions = [];
+  if (state.apiKey) {
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-opus-4-7',
+          max_tokens: 700,
+          messages: [{
+            role: 'user',
+            content: `돌연변이 진화 4 옵션 생성.
+
+전략 카드: "${card.title}"
+이전 가지 (${prevLayer} ${_LAYER_NAME[prevLayer]||''}): "${prevAction}"
+미션: "${missionTitle}"
+결과: 안 통했어.
+
+[너의 일]
+같은 문제를 *다른 차원*에서 풀 4 옵션 생성. 이전과 같은 차원 X.
+
+[5 차원]
+- L1 인지: 자기 설득, CBT 재구조화 (의지 100%)
+- L2 행동: 알람, 체크리스트 (의지 90%)
+- L3 환경: 환경 자체 변경, 자동 종료 (의지 30%)
+- L4 사회: 친구 카톡, 책임 파트너 (의지 20%)
+- L5 메타: 가치 재검토, 갈피의 방 (의지 10%)
+
+이전이 ${prevLayer}라 그 외 4개 차원에서 1개씩.
+
+[출력 — JSON만]
+{ "options": [
+  { "layer": "L3", "action": "구체 행동 50자 이내" },
+  { "layer": "L4", "action": "..." },
+  { "layer": "L1", "action": "..." },
+  { "layer": "L5", "action": "..." }
+]}
+
+[금지]
+- "실패" 단어 X
+- 마크다운, 코드블록 X
+- 한 차원에 여러 옵션 X
+- 추상적 다짐 X
+
+JSON만 출력.`
+          }]
+        })
+      });
+      const data = await resp.json();
+      let raw = data.content[0].text.trim();
+      raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) {
+        const parsed = JSON.parse(m[0]);
+        if (Array.isArray(parsed.options)) {
+          aiOptions = parsed.options.filter(o => o.layer && o.action && o.layer !== prevLayer);
+        }
+      }
+    } catch (e) {
+      console.warn('mutation AI failed:', e);
+    }
+  }
+
+  // Fallback (AI 없을 때)
+  if (!aiOptions.length) {
+    const fallback = [
+      { layer: 'L3', action: '환경 자체를 바꿔봐 — 그 행동이 자동으로 일어나도록' },
+      { layer: 'L4', action: '믿을 사람에게 알려봐 — 카톡 한 줄로' },
+      { layer: 'L1', action: '생각의 틀을 재구조화 — 이 패턴이 어디서 오는지' },
+      { layer: 'L5', action: '가치 자체 재검토 — 이게 정말 너의 길인지' }
+    ].filter(o => o.layer !== prevLayer);
+    aiOptions = fallback.slice(0, 4);
+  }
+
+  // evolutionChats에 대화 보존 (선택 X여도)
+  if (!Array.isArray(card.evolutionChats)) card.evolutionChats = [];
+  const chatRecord = {
+    gen: (card.generations?.length || 0),
+    triggerMission: missionTitle,
+    triggerAt: new Date().toISOString(),
+    options: aiOptions.slice(),
+    selectedLayer: null,
+    selectedAction: null
+  };
+
+  // Picker 모달
+  const pickerOptions = aiOptions.map(o => ({
+    label: `${_LAYER_EMOJI[o.layer] || '✦'} ${_LAYER_NAME[o.layer] || o.layer} — ${o.action}`,
+    value: JSON.stringify({ layer: o.layer, action: o.action })
+  }));
+
+  const picked = await showOptionsModal({
+    title: '🧬 돌연변이 시점',
+    message: `"${card.title}" 가지 끝났어.\n새 가지 어디서?`,
+    options: pickerOptions
+  });
+
+  if (!picked) {
+    card.evolutionChats.push(chatRecord);
+    saveState();
+    return;
+  }
+
+  let parsed;
+  try { parsed = JSON.parse(picked); } catch (e) { return; }
+  const { layer, action } = parsed;
+  chatRecord.selectedLayer = layer;
+  chatRecord.selectedAction = action;
+  card.evolutionChats.push(chatRecord);
+
+  // 새 generation + 새 미션
+  mutateToNewGeneration(strategyId, layer, action);
+  const refreshed = getStrategyCard(strategyId);
+  const newGenIdx = (refreshed?.generations?.length || 1) - 1;
+  createMission(action, `🧬 ${card.title} — ${_LAYER_NAME[layer] || layer} 차원 진화`, {
+    strategyId,
+    generationIdx: newGenIdx,
+    linkedStrategy: card.title
+  });
+
+  showToast('🧬 새 가닥 등록. 너만의 코드 형성 중.');
+  saveState();
+
+  if (typeof renderTodayMission === 'function') renderTodayMission();
+  if (typeof renderArchive === 'function') renderArchive();
+}
+
 // ═══════════════════════════════════════════════════════════════
 // PROPOSAL HANDLING (Phase 2 upgrade)
 // ═══════════════════════════════════════════════════════════════
@@ -14697,7 +14839,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.4-result-modal';
+const APP_VERSION = 'v4.0.5-mutation';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
