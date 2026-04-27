@@ -25368,7 +25368,7 @@ function _buildEvolutionSlideHTML(stats, inRange) {
       return `${dnaInRange.length}개 가닥이 너 일부가 됐고, ${cards.length}개 새 가지를 시작했어. 너만의 코드가 깊어지는 분기야. 🧬`;
     }
     if (cards.length > 0 && totalAttempts > 0) {
-      return `${cards.length}개 가닥에서 ${totalAttempts}번 시도 — 안 통한 시도도 너의 발견이야. 다른 차원으로 가는 길이 됐어. 🌱`;
+      return `${cards.length}개 가닥에서 ${totalAttempts}번 시도 — 안 통한 시도도 너의 발견이야. 그만큼 더 노하우도 쌓이고 단단해졌어. 🌱`;
     }
     if (totalAttempts > 0) {
       return `${totalAttempts}번 시도. 결과보다 시도 자체가 의미야. 너에게 맞는 모양을 찾고 있어. 🌿`;
@@ -25752,16 +25752,19 @@ async function buildAnnualSlides(year, yearReviews) {
   slides.push(closing);
 
   // 사용자 요청 2026-04-28: annual context — '분기' 단어를 '이번 년도'/'한 해' 등으로 치환 (quarterly slides 재사용 시 문맥 맞게)
+  // 2026-04-28 후속: quarterKey "YYYY-Q\d" 표시도 "YYYY년"으로 (첫 번째 탭 등)
   slides.forEach(s => {
     if (typeof s.html === 'string') {
       s.html = s.html
+        .replace(/(\d{4})-Q\d/g, '$1년')
         .replace(/이번 분기엔/g, '이번 한 해엔')
         .replace(/이번 분기는/g, '이번 한 해는')
         .replace(/이번 분기/g, '이번 한 해')
         .replace(/이 분기/g, '이번 한 해')
         .replace(/지난 분기/g, '지난 해')
         .replace(/다음 분기/g, '내년')
-        .replace(/한 분기/g, '한 해');
+        .replace(/한 분기/g, '한 해')
+        .replace(/너의 분기, 한 단락/g, `${year}년, 한 단락`);
     }
   });
 
@@ -27524,7 +27527,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.131-stories-content-boost';
+const APP_VERSION = 'v4.0.132-annual-year-label';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
