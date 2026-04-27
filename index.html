@@ -1875,6 +1875,122 @@
     color: var(--text-dim);
     padding: 14px 8px 6px;
   }
+  /* V4-fix v2 (사용자 요청): 서랍장 모달 가독성 개편 */
+  .vault-modal-v2 {
+    background: var(--surface);
+  }
+  .vault-modal-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 4px;
+  }
+  .vault-modal-title {
+    flex: 1;
+    font-family: 'Gowun Batang', serif;
+    font-size: 18px;
+    color: var(--text);
+  }
+  .vault-modal-close {
+    background: transparent; border: none;
+    color: var(--text-dim);
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 16px; line-height: 1;
+    cursor: pointer;
+  }
+  .vault-modal-close:active { background: var(--bg); color: var(--text); }
+  .vault-modal-sub {
+    font-size: 11px; color: var(--text-soft);
+    margin-bottom: 14px;
+    letter-spacing: 0.04em;
+  }
+  /* 그룹 헤더 + 항목 */
+  .vault-group {
+    margin-bottom: 14px;
+  }
+  .vault-group-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 12px; font-weight: 600;
+    color: var(--text);
+  }
+  .vault-group.group-today .vault-group-header { border-left-color: #ffd93d; }
+  .vault-group.group-now .vault-group-header { border-left-color: #8fc88f; }
+  .vault-group.group-big .vault-group-header { border-left-color: #d4a76a; }
+  .vault-group.group-later .vault-group-header { border-left-color: #7ec8e3; }
+  .vault-group.group-idea .vault-group-header { border-left-color: #b39ddb; }
+  .vault-group-count {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-left: auto;
+    font-weight: normal;
+    letter-spacing: 0.05em;
+  }
+  /* 항목 — 한 줄 디자인 (가독성 우선) */
+  .vault-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+  .vault-item:hover { border-color: rgba(212,167,106,0.35); }
+  .vault-item-title {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.45;
+    word-break: break-word;
+  }
+  .vault-item-meta {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+  }
+  .vault-item-actions {
+    display: flex; gap: 4px;
+    flex-shrink: 0;
+  }
+  .vault-item-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim);
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .vault-item-btn:active { background: var(--bg); }
+  .vault-item-btn.primary {
+    background: rgba(212,167,106,0.15);
+    border-color: rgba(212,167,106,0.40);
+    color: var(--accent2);
+  }
+  .vault-item-btn.danger { color: var(--danger); }
+  .vault-item-btn.success { color: #8fc88f; }
+  .vault-item.is-today {
+    background: linear-gradient(90deg, rgba(255,217,61,0.10), rgba(255,255,255,0));
+    border-color: rgba(255,217,61,0.30);
+  }
+  .vault-empty-msg {
+    text-align: center;
+    padding: 36px 16px;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
   /* V4-1v + fix: 서랍장 4 그룹 분류 (한 줄 + 그룹별 좌측 컬러 바 + 미리보기) */
   .drawer-group {
     margin-bottom: 10px;
@@ -5957,13 +6073,15 @@
       </div>
     </div>
 
-    <!-- 서랍장 MODAL -->
+    <!-- 서랍장 MODAL — V4-1v 4 그룹 + 가독성 개편 -->
     <div class="exec-modal-overlay" id="vaultOverlay" style="display:none;" onclick="if(event.target===this) closeVault()">
-      <div class="exec-modal" style="max-height:80vh; overflow-y:auto;">
-        <div class="exec-modal-title">📂 서랍장</div>
-        <div class="exec-modal-sub">소라가 쥐고 있는 것들 + 묵혀둔 일들.</div>
+      <div class="exec-modal vault-modal-v2" style="max-height:88vh; overflow-y:auto; padding: 18px 16px 14px;">
+        <div class="vault-modal-header">
+          <div class="vault-modal-title">📂 서랍장</div>
+          <button class="vault-modal-close" onclick="closeVault()" aria-label="닫기">✕</button>
+        </div>
+        <div class="vault-modal-sub">전체 흐름 — 그룹별로 정리됨</div>
         <div id="vaultContent"></div>
-        <button class="btn-secondary" onclick="closeVault()" style="margin-top:14px; width:100%;">닫기</button>
       </div>
     </div>
 
@@ -18496,6 +18614,10 @@ function testSeedV4Data() {
     if (isPeriodDay && cycleDay <= 2) e.modes.period = true;
     if (isExamWeek && i % 4 === 0) e.modes.exam = true;
     if (vit <= 2 && i % 5 === 0) e.modes.drained = true;
+    // V4-fix: 추가 모드 다양화 (5 모드 시뮬 — travel/sick/rest)
+    if (i % 60 === 5) e.modes.travel = true;       // 2달에 한 번 여행
+    if (i % 45 === 12) e.modes.sick = true;        // 1.5달에 한 번 아픔
+    if (isWeekend && i % 9 === 0) e.modes.rest = true;  // 주말 일부 휴식
     // 일기 (3-4일에 한 번)
     if (i % 3 === 0) e.diary = diaryPool[i % diaryPool.length];
     // 짧은 노트 (1주에 1-2번)
@@ -19065,6 +19187,14 @@ function testSeedV4Data() {
       archivedAt: new Date(today.getTime() - (d - 1) * 86400000).toISOString()
     });
   }
+  // V4-fix v3 (사용자 요청 점검): 오늘 일정 todaySchedule 시드 (V4 비전 10.6 타임테이블)
+  state.todaySchedule = [
+    { id: 'sch_seed_1', title: '논문 서론 작성', start: '09:00', end: '11:00', source: 'manual', taskId: 'task_seed_0', color: '#d4a76a', date: todayStr },
+    { id: 'sch_seed_2', title: '점심 + 산책', start: '12:00', end: '13:30', source: 'manual', taskId: null, color: '#8fc88f', date: todayStr },
+    { id: 'sch_seed_3', title: '실험 데이터 정리', start: '14:00', end: '16:30', source: 'ai', taskId: 'task_seed_1', color: '#7ec8e3', date: todayStr },
+    { id: 'sch_seed_4', title: '교수님 미팅', start: '17:00', end: '18:00', source: 'gcal', taskId: null, color: '#b39ddb', date: todayStr },
+    { id: 'sch_seed_5', title: '저녁 + 책', start: '19:30', end: '21:00', source: 'manual', taskId: 'task_seed_2', color: '#ff8da1', date: todayStr }
+  ];
   saveState({ force: true });
   showToast('🌱 V4 전체 시드 데이터 박힘. 도서관/모래사장/실행/나/홈 둘러보기.');
   if (typeof renderTodayMission === 'function') renderTodayMission();
@@ -20954,31 +21084,23 @@ function closeVault() {
 function renderVault() {
   const container = document.getElementById('vaultContent');
   if (!container) return;
-  
-  // V3.9: 통합 할 일 목록
-  // = 모든 task (now3 + drawer, status !== 'done') + 처리되지 않은 memoryVault
-  // 카드(now3)도 목록에 보이지만 시각적으로 ★ 표시
-  // 우선순위 (priority) 순으로 정렬
-  
+
   const todayKeyVal = todayKey();
-  
-  // task: now3 + drawer 모두, 미완료
   const activeTasks = (state.tasks || []).filter(t => t.status !== 'done');
-  
-  // vault: 처리되지 않은 것
   const activeVault = (state.memoryVault || []).filter(v => !v.processed);
-  
-  // 통합: 같은 형식으로 변환
+
+  // 통합 항목
   const unified = [];
   activeTasks.forEach(t => {
     unified.push({
       _kind: 'task',
       _id: t.id,
-      title: t.title,
+      title: t.title || '',
+      description: t.description || '',
       priority: typeof t.priority === 'number' ? t.priority : 999,
       isToday: t.slot === 'now3' && t.date === todayKeyVal,
+      strategyId: t.strategyId,
       weight: t.weight || 'daily',
-      energy: t.energy || 'medium',
       raw: t
     });
   });
@@ -20986,64 +21108,77 @@ function renderVault() {
     unified.push({
       _kind: 'vault',
       _id: v.id,
-      title: v.content,
+      title: v.content || '',
+      description: '',
       priority: typeof v.priority === 'number' ? v.priority : 9999,
       isToday: false,
+      strategyId: null,
       weight: v.weight || 'daily',
-      energy: v.energy || 'medium',
       raw: v
     });
   });
-  
-  // priority 정렬
-  unified.sort((a, b) => a.priority - b.priority);
-  
+
   if (unified.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:36px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
+    container.innerHTML = `<div class="vault-empty-msg">
       <div style="font-size:36px; margin-bottom:14px; opacity:0.6;">📂</div>
-      <div style="margin-bottom:6px;">아직은 백지야. 그게 맞는 시작이야 ✦</div>
+      <div style="margin-bottom:6px;">아직 비어있어 — 그게 맞는 시작이야 ✦</div>
       <div style="font-size:11px; color:var(--text-soft); line-height:1.7;">
-        대화창에서 흘리거나<br>
-        실행 탭에서 만든 거 여기 모여.
+        대화에서 흘리거나<br>실행 탭에서 만든 거 여기 모여
       </div>
     </div>`;
     return;
   }
-  
-  // V3.9 헤더 안내
-  let html = `
-    <div style="font-size:11px; color:var(--text-soft); margin-bottom:12px; line-height:1.6; padding: 0 4px;">
-      ★ 오늘의 카드는 위에서도 보여 · 꾹 눌러 드래그하면 순서 바꿀 수 있어
-    </div>
-    <div class="todo-list" id="todoList">
-  `;
+
+  // priority 정렬
+  unified.sort((a, b) => a.priority - b.priority);
+
+  // V4-1v 4 그룹 + 오늘 카드 별도 = 5 섹션
+  const groups = { today: [], now: [], big: [], later: [], idea: [] };
   unified.forEach(item => {
-    const weightLabel = { light: '🪶 가벼움', daily: '🌀 일상', main: '⚓ 메인' }[item.weight] || '';
-    const energyLabel = { low: '🪫 저', medium: '⚡ 중', high: '🔥 고' }[item.energy] || '';
-    html += `
-      <div class="todo-item ${item.isToday ? 'is-today' : ''}" 
-           draggable="true" 
-           data-kind="${item._kind}" 
-           data-id="${item._id}"
-           ondragstart="todoDragStart(event)"
-           ondragover="todoDragOver(event)"
-           ondrop="todoDrop(event)"
-           ondragend="todoDragEnd(event)">
-        <div class="todo-handle">⋮⋮</div>
-        ${item.isToday ? '<span class="todo-today-mark">★</span>' : ''}
-        <div class="todo-content">
-          <div class="todo-title">${escapeHtml(item.title)}</div>
-          ${(weightLabel || energyLabel) ? `<div class="todo-meta">${weightLabel} · ${energyLabel}</div>` : ''}
-        </div>
-        <div class="todo-actions">
-          ${!item.isToday ? `<button class="todo-btn" onclick="todoToToday('${item._kind}','${item._id}')">→ 오늘로</button>` : ''}
-          <button class="todo-btn complete" onclick="todoComplete('${item._kind}','${item._id}')">✓</button>
-          <button class="todo-btn danger" onclick="todoDelete('${item._kind}','${item._id}')">✕</button>
-        </div>
-      </div>
-    `;
+    if (item.isToday) {
+      groups.today.push(item);
+      return;
+    }
+    // classifyDrawerTask 재사용 (task only) — vault 항목엔 description X, title만으로 분류
+    const cls = (typeof classifyDrawerTask === 'function') ? classifyDrawerTask({
+      title: item.title, description: item.description,
+      strategyId: item.strategyId, weight: item.weight
+    }) : 'now';
+    groups[cls] = groups[cls] || [];
+    groups[cls].push(item);
   });
-  html += `</div>`;
+
+  const sections = [
+    { key: 'today', label: '⭐ 오늘의 카드', desc: '지금 진행 중', cls: 'group-today' },
+    { key: 'now',   label: '🌅 지금 가능',   desc: '바로 손댈 수 있는 것',   cls: 'group-now' },
+    { key: 'big',   label: '🎯 큰 것',       desc: '깊은 작업 / 양생 가닥',   cls: 'group-big' },
+    { key: 'later', label: '📅 나중',        desc: '조건 대기 중',            cls: 'group-later' },
+    { key: 'idea',  label: '💭 아이디어',    desc: '검토용 — 살릴지 미정',    cls: 'group-idea' }
+  ];
+
+  let html = '';
+  sections.forEach(sec => {
+    const items = groups[sec.key] || [];
+    if (items.length === 0) return;
+    html += `<div class="vault-group ${sec.cls}">
+      <div class="vault-group-header">
+        <span>${sec.label}</span>
+        <span class="vault-group-count">${items.length}장 · ${sec.desc}</span>
+      </div>`;
+    items.forEach(item => {
+      const isToday = item.isToday;
+      html += `<div class="vault-item${isToday ? ' is-today' : ''}">
+        <div class="vault-item-title">${escapeHtml(item.title)}</div>
+        <div class="vault-item-actions">
+          ${!isToday ? `<button class="vault-item-btn primary" onclick="todoToToday('${item._kind}','${item._id}')" title="오늘 카드로">→</button>` : ''}
+          <button class="vault-item-btn success" onclick="todoComplete('${item._kind}','${item._id}')" title="완료">✓</button>
+          <button class="vault-item-btn danger" onclick="todoDelete('${item._kind}','${item._id}')" title="삭제">✕</button>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
   container.innerHTML = html;
 }
 
@@ -23331,7 +23466,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.77-cat-order-pin-photo';
+const APP_VERSION = 'v4.0.78-vault-modal-schedule-modes';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
