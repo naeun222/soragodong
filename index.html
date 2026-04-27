@@ -12703,11 +12703,20 @@ async function showDiaryTemplates() {
   if (!choice) return;
   const tpl = DIARY_TEMPLATES.find(t => t.id === choice);
   if (!tpl) return;
-  // 한 단어/짧은 답 받기 (비워두고 OK 누르면 default format 사용)
+  // V4-fix v3 (사용자 요청): 테스터 모드 → placeholder 예시 자동 채움
+  const isTester = !!(state.preferences && state.preferences.testerMode);
+  const tplExamples = {
+    'short':  '오늘 잘 지냄. 큰 일 X.',
+    'good':   '카페에서 작업 잘 됨',
+    'hard':   '논문 막힘. 무력감.',
+    'plan':   '논문 서론 첫 단락',
+    'feel':   '평온'
+  };
   const answer = await showInputModal({
     title: tpl.label,
     message: tpl.prompt + ' (비워두고 OK 누르면 그냥 저장)',
     placeholder: tpl.placeholder,
+    defaultValue: isTester ? (tplExamples[tpl.id] || '') : '',
     okLabel: '완성 ✦'
   });
   if (answer === null) return;  // 취소
@@ -13767,10 +13776,21 @@ async function saveMsgAsPearl(idx) {
 // V4-1h: ✎ 메모 — 자유 텍스트 + AI 해시태그 자동 생성. 컨텍스트 X (대화 인용 X).
 // V4 비전 7.6: archive 객체 { type:'memo', userMemo, tags[], date, savedAt, source:'메모' }
 async function addMemoArchive() {
+  // V4-fix v3 (사용자 요청): 테스터 모드 → 예시 메모 자동 채움
+  const isTester = !!(state.preferences && state.preferences.testerMode);
+  const memoExamples = [
+    '새벽 작업이 가장 잘 돼. 이 시간이 너의 골든.',
+    '거절 = 약함 X 강함. 부채감은 일시.',
+    '환경이 의지보다 강함. 도구 셋업 한 번이 의지 매일보다 효과 큼.',
+    '한강 → 글쓰기 흐름 작동. 몸 풀림 + 인지 시작 패턴.',
+    '잠 6시간 미만이면 큰 결정 다음날로 미루기.'
+  ];
+  const seed = (Date.now() % memoExamples.length);
   const userMemo = await showInputModal({
     title: '✎ 메모',
     message: '깨달음 한 줄. 자유롭게 — 짧아도 OK.',
     placeholder: '예: 새벽엔 결정 미루기 / 카페가 답이다',
+    defaultValue: isTester ? memoExamples[seed] : '',
     multiline: true,
     maxLength: 400,
     okLabel: '저장 ✦'
@@ -24169,7 +24189,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.91-archive-deep-meta';
+const APP_VERSION = 'v4.0.92-diary-memo-prefill';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
