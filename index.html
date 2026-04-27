@@ -14467,6 +14467,7 @@ function renderV4TimetableHTML() {
           <button class="v4-tt-add-btn" onclick="openAIScheduler()" style="background:linear-gradient(135deg,rgba(139,126,196,0.20),rgba(212,167,106,0.12));border-color:rgba(139,126,196,0.45);">✨ AI</button>
           <button class="v4-tt-add-btn" onclick="addV4ScheduleItem()">+ 추가</button>
           ${(state.todaySchedule || []).length > 0 ? `<button class="v4-tt-add-btn" onclick="exportTodayICS()" title="Google/Apple 캘린더로 가져갈 .ics 파일">📤 내보내기</button>` : ''}
+          <button class="v4-tt-add-btn" onclick="importICSFile()" title=".ics 파일에서 일정 가져오기 (Google/Apple 캘린더)">📥 가져오기</button>
         </div>
       </div>
       <div class="v4-tt-grid" id="v4ttGrid">
@@ -14564,6 +14565,120 @@ function _icsLocalDateTime(dateStr, timeStr) {
   const [Y, M, D] = dateStr.split('-');
   const [h, m] = timeStr.split(':');
   return `${Y}${M}${D}T${(h || '00').padStart(2,'0')}${(m || '00').padStart(2,'0')}00`;
+}
+
+function _icsUnescape(s) {
+  return String(s || '').replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
+}
+
+// ICS 텍스트 → VEVENT 배열 파싱 (단순 파서, RFC 5545 부분 지원)
+function parseICS(text) {
+  const events = [];
+  // line-fold (next line starts with space) 합치기
+  const unfolded = text.replace(/\r?\n[ \t]/g, '');
+  const lines = unfolded.split(/\r?\n/);
+  let current = null;
+  for (const line of lines) {
+    if (line === 'BEGIN:VEVENT') current = {};
+    else if (line === 'END:VEVENT') {
+      if (current) events.push(current);
+      current = null;
+    } else if (current) {
+      // KEY[;PARAM]:VALUE
+      const colon = line.indexOf(':');
+      if (colon < 0) continue;
+      const keyPart = line.slice(0, colon);
+      const val = line.slice(colon + 1);
+      const key = keyPart.split(';')[0].toUpperCase();
+      if (key === 'SUMMARY') current.summary = _icsUnescape(val);
+      else if (key === 'DESCRIPTION') current.description = _icsUnescape(val);
+      else if (key === 'DTSTART') current.dtstart = val;
+      else if (key === 'DTEND') current.dtend = val;
+      else if (key === 'UID') current.uid = val;
+    }
+  }
+  return events;
+}
+
+// ICS DTSTART 'YYYYMMDDTHHMMSS' (또는 Z) → { date:'YYYY-MM-DD', time:'HH:MM' }
+function _parseICSDate(dt) {
+  if (!dt) return null;
+  const m = dt.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+  if (!m) return null;
+  return { date: `${m[1]}-${m[2]}-${m[3]}`, time: `${m[4]}:${m[5]}` };
+}
+
+async function importICSFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.ics,text/calendar';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    document.body.removeChild(input);
+    if (!file) return;
+    showToast('📥 가져오는 중...');
+    try {
+      const text = await file.text();
+      const events = parseICS(text);
+      if (events.length === 0) {
+        showToast('이벤트 없는 파일');
+        return;
+      }
+      const todayK = todayKey();
+      const todayEvents = events.filter(ev => {
+        const s = _parseICSDate(ev.dtstart);
+        return s && s.date === todayK;
+      });
+      const importTarget = todayEvents.length > 0
+        ? todayEvents
+        : await (async () => {
+            const yes = await showConfirmModal({
+              title: '오늘 일정 없음',
+              message: `${events.length}개 이벤트 중 오늘 항목 없어. 모든 날짜 가져올까?`,
+              okLabel: '전부',
+              cancelLabel: '취소'
+            });
+            return yes ? events : [];
+          })();
+      if (!importTarget.length) return;
+
+      if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
+      let added = 0;
+      importTarget.forEach((ev, i) => {
+        const s = _parseICSDate(ev.dtstart);
+        const e = _parseICSDate(ev.dtend) || s;
+        if (!s || !ev.summary) return;
+        // dedupe: 같은 uid 또는 같은 (date, start, summary)
+        const dupe = state.todaySchedule.some(x =>
+          (ev.uid && x.icsUid === ev.uid) ||
+          (x.date === s.date && x.start === s.time && x.title === ev.summary)
+        );
+        if (dupe) return;
+        state.todaySchedule.push({
+          id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          title: ev.summary.slice(0, 60),
+          start: s.time,
+          end: (e && e.time) || s.time,
+          date: s.date,
+          source: 'gcal',
+          taskId: null,
+          note: ev.description ? ev.description.slice(0, 100) : '',
+          color: _V4_TT_COLORS[i % _V4_TT_COLORS.length],
+          icsUid: ev.uid || null
+        });
+        added++;
+      });
+      saveState();
+      renderExecute();
+      showToast(`📥 ${added}개 일정 가져옴${added < importTarget.length ? ` (${importTarget.length - added}개 중복 skip)` : ''}`);
+    } catch (e) {
+      console.warn('ICS import failed:', e);
+      showToast('가져오기 실패. .ics 파일인지 확인.');
+    }
+  };
+  input.click();
 }
 
 function exportTodayICS() {
@@ -17476,7 +17591,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.30-ics-export';
+const APP_VERSION = 'v4.0.31-ics-import';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
