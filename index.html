@@ -11972,16 +11972,19 @@ function expireOldMissions() {
   if (changed) saveState();
 }
 
-// V4-fix v3 (사용자 요청): 가닥 미션 팔로업 — 오늘~7일 내 pending strategy mission 1개 찾기
-// 2026-04-27: defer로 미래 날짜 박혔다가 그날 도달하면 트리거되게 diff >= 0
+// V4-fix v3 (사용자 요청): 가닥 미션 팔로업 — 오늘~7일 내 결과 체크 필요 미션 1개 찾기
+// 2026-04-28 수정: 'completed' + attemptStatus 없음 = 결과 체크 대상 (사용자 명세 — '소라의 부름' 해냈어 처리됐을 때)
 function _findPendingStrategyFollowup() {
   const today = todayKey();
   return (state.missions || []).find(m => {
-    if (m.status !== 'pending') return false;
-    if (!m.strategyId || !m.scheduledFor) return false;
+    if (m.status !== 'completed') return false;
+    if (m.attemptStatus) return false;  // 이미 result check 끝남
+    if (!m.strategyId) return false;
     if (m._followupAsked) return false;
-    const diff = daysBetweenKeys(m.scheduledFor, today);
-    return diff >= 0 && diff <= 7;  // 오늘~7일 전 pending (defer 그날 포함)
+    const dateKey = m.completedDate || (m.completedAt ? new Date(m.completedAt).toISOString().split('T')[0] : null);
+    if (!dateKey) return false;
+    const diff = daysBetweenKeys(dateKey, today);
+    return diff >= 0 && diff <= 7;  // 완료일 오늘~7일 전
   });
 }
 
@@ -18279,14 +18282,19 @@ function _renderStrategyCardHtml(s) {
   const _total  = _status ? countTotalAttempts(s) : 0;
   const _gens   = Array.isArray(s.generations) ? s.generations.length : 0;
   const _isEmbodied = _status === 'embodied';
-  const _hasPending = (state.missions || []).some(m => m.strategyId === s.id && m.status === 'pending');
+  // 사용자 요청 2026-04-28: 결과 체크 버튼 조건 수정 — '소라의 부름' 해냈어가 되어야 (즉 status === 'completed' && !attemptStatus). pending 상태에선 안 뜸. result check 끝나면 attemptStatus 박혀서 사라짐
+  const _hasUnchecked = (state.missions || []).some(m =>
+    m.strategyId === s.id &&
+    m.status === 'completed' &&
+    !m.attemptStatus
+  );
   const metaLine = _status
     ? (_total > 0
         ? `${_statusEmoji[_status]||'🌱'} ${_statusName[_status]||''} · 작동 ${_worked}/${_total}${_gens > 1 ? ` · ${_gens}세대` : ''}`
         : `${_statusEmoji[_status]||'🌱'} 미시도`)
     : '';
   const tryBtnHtml = (_status && !_isEmbodied)
-    ? (_hasPending
+    ? (_hasUnchecked
         ? `<button class="strategy-try-btn" style="background:#7d6fa8;" onclick="triggerAttemptResultFromCard('${s.id}')">🔍 결과 체크</button>`
         : `<button class="strategy-try-btn" onclick="callTryStrategy('${s.id}')">✦ 해볼게</button>`)
     : '';
@@ -21641,9 +21649,9 @@ async function testSeedV4Data() {
   // missions 5 (오늘 pending / 어제 carryover pending / 그제 carryover pending / completed / expired)
   const yesterdayKey = new Date(today.getTime() - 86400000).toISOString().split('T')[0];
   const dayBeforeKey = new Date(today.getTime() - 2 * 86400000).toISOString().split('T')[0];
-  // 사용자 요청 2026-04-28: pending 미션 — 마감 직전 폭발력 신뢰 가닥에 1개만 (양생방 카드에 '🔍 결과 체크' 버튼 뜨도록)
+  // 사용자 요청 2026-04-28: 결과 체크 트리거 — 미션 'completed' + attemptStatus 없음 (양생방 카드에 '🔍 결과 체크' 버튼 뜨도록)
   state.missions = [
-    { id: 'mis_seed_strat0_pending', title: '마감 직전 환경 셋업 1번', description: '카페 자리 + 폰 다른 방', status: 'pending', scheduledFor: new Date(today.getTime() - 86400000).toISOString().split('T')[0], createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: 'strat_seed_0', generationIdx: 0, _followupAsked: true },
+    { id: 'mis_seed_strat0_done_unchecked', title: '마감 직전 환경 셋업 1번', description: '카페 자리 + 폰 다른 방', status: 'completed', completedDate: new Date(today.getTime() - 86400000).toISOString().split('T')[0], completedAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: 'strat_seed_0', generationIdx: 0, _followupAsked: true },
     { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
     { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
   ];
@@ -27139,7 +27147,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.120-dna-target';
+const APP_VERSION = 'v4.0.121-result-check-logic';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
