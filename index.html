@@ -3064,20 +3064,23 @@
     font-weight: 500;
   }
   .mutation-options-stack {
-    display: flex; flex-direction: column; gap: 8px;
+    display: flex; flex-direction: column; gap: 5px;
     margin-top: 4px;
   }
   .mutation-option-card {
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(212,167,106,0.30);
-    border-radius: 12px;
-    padding: 12px 14px;
+    border-radius: 10px;
+    padding: 8px 10px;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s, transform 0.15s;
     text-align: left;
     width: 100%;
     color: var(--text);
     font-family: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
   .mutation-option-card:hover {
     background: rgba(212,167,106,0.10);
@@ -3089,12 +3092,46 @@
     border-color: rgba(212,167,106,0.75);
   }
   .mutation-option-layer {
-    font-size: 11px; color: var(--accent2);
-    letter-spacing: 0.05em; margin-bottom: 4px;
+    font-size: 10px; color: var(--accent2);
+    letter-spacing: 0.04em;
   }
   .mutation-option-action {
-    font-size: 13px; line-height: 1.55;
+    font-size: 12px; line-height: 1.45;
+    color: var(--text);
   }
+  /* V4-fix: inline confirm bar (보관 여부) */
+  .mutation-confirm-bar {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 10px 12px;
+    background: rgba(212,167,106,0.10);
+    border: 1px solid rgba(212,167,106,0.30);
+    border-radius: 12px;
+  }
+  .mutation-confirm-text {
+    font-size: 12px; color: var(--text);
+    line-height: 1.5;
+  }
+  .mutation-confirm-actions {
+    display: flex; gap: 8px;
+  }
+  .mutation-confirm-btn {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .mutation-confirm-btn.primary {
+    background: linear-gradient(135deg, #d4a76a, #b88c50);
+    border: none;
+    color: #1a1525;
+    font-weight: 600;
+  }
+  .mutation-confirm-btn:active { transform: scale(0.97); }
   .mutation-chat-footer {
     border-top: 1px solid rgba(212,167,106,0.18);
     padding: 10px 14px 14px;
@@ -13680,9 +13717,10 @@ async function openMutationChat(strategyId, missionTitle) {
     prevLayer,
     options: [],
     selected: null,
+    confirmStep: false,
     messages: [{
       role: 'assistant',
-      content: `"${card.title}" 이 가지에서 발견 충분해.\nDNA가 진화하기 위한 준비를 마쳤어.\n\n다른 차원에서 시도해볼래?`
+      content: `"${card.title}" 이 전략은 잘 안 맞았군.\nDNA가 진화할 준비 됐어.\n\n다른 차원에서 시도해볼래?`
     }],
     loading: true,
     chatRecord: {
@@ -13778,25 +13816,46 @@ function _renderMutationChat() {
           <button class="mutation-chat-close" onclick="closeMutationChat(false)" aria-label="닫기">✕</button>
         </div>
         <div class="mutation-chat-area" id="mutationChatArea"></div>
-        <div class="mutation-chat-footer">
-          <div class="mutation-chat-input-row">
-            <textarea class="mutation-chat-input" id="mutationChatInput" placeholder="자유롭게 대화..." rows="1"></textarea>
-            <button class="mutation-chat-send" id="mutationChatSendBtn" onclick="sendMutationMessage()">↑</button>
-          </div>
-          <div class="mutation-chat-actions">
-            <button class="mutation-chat-mission-btn" id="mutationFinishBtn" onclick="finishMutationChat()" disabled>✦ 이 차원으로 해볼게</button>
-          </div>
-        </div>
+        <div class="mutation-chat-footer" id="mutationChatFooter"></div>
       </div>
     `;
     overlay.onclick = (e) => { if (e.target === overlay) closeMutationChat(false); };
     document.body.appendChild(overlay);
-    // 자동 textarea 크기 조정
-    const ta = overlay.querySelector('#mutationChatInput');
-    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(100, ta.scrollHeight) + 'px'; });
-    ta.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMutationMessage(); }
-    });
+  }
+  // V4-fix v2: footer는 매번 재렌더 (confirm bar 분기)
+  const footer = document.getElementById('mutationChatFooter');
+  if (footer) {
+    if (_mutationChatState.confirmStep) {
+      const opt = _mutationChatState.options[_mutationChatState.selected];
+      const layerName = _LAYER_NAME[opt.layer] || opt.layer;
+      footer.innerHTML = `
+        <div class="mutation-confirm-bar">
+          <div class="mutation-confirm-text">"${escapeHtml(card.title)}" → ${escapeHtml(layerName)} 차원 새 가닥 등록.<br>
+          이 대화 흐름 (${_mutationChatState.messages.length}개) 도 같이 보관할까?</div>
+          <div class="mutation-confirm-actions">
+            <button class="mutation-confirm-btn" onclick="_completeMutationFinish(false)">아니 결과만</button>
+            <button class="mutation-confirm-btn primary" onclick="_completeMutationFinish(true)">응 같이 보관</button>
+          </div>
+        </div>
+      `;
+    } else {
+      footer.innerHTML = `
+        <div class="mutation-chat-input-row">
+          <textarea class="mutation-chat-input" id="mutationChatInput" placeholder="자유롭게 대화..." rows="1"></textarea>
+          <button class="mutation-chat-send" id="mutationChatSendBtn" onclick="sendMutationMessage()">↑</button>
+        </div>
+        <div class="mutation-chat-actions">
+          <button class="mutation-chat-mission-btn" id="mutationFinishBtn" onclick="finishMutationChat()" ${_mutationChatState.selected == null ? 'disabled' : ''}>✦ 이 차원으로 해볼게</button>
+        </div>
+      `;
+      const ta = document.getElementById('mutationChatInput');
+      if (ta) {
+        ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(100, ta.scrollHeight) + 'px'; });
+        ta.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMutationMessage(); }
+        });
+      }
+    }
   }
   // subtitle: 가닥 제목
   const subEl = document.getElementById('mutationChatSubtitle');
@@ -13827,9 +13886,6 @@ function _renderMutationChat() {
     area.innerHTML = html;
     area.scrollTop = area.scrollHeight;
   }
-  // ✦ 해볼게 버튼 활성화 (옵션 선택 후)
-  const finishBtn = document.getElementById('mutationFinishBtn');
-  if (finishBtn) finishBtn.disabled = (_mutationChatState.selected == null);
 }
 
 function selectMutationOption(idx) {
@@ -13901,27 +13957,31 @@ function sendMutationMessage() {
   })();
 }
 
-async function finishMutationChat() {
+// V4-fix v2: ✦ 클릭 → inline confirm bar (별도 모달 X, z-index 이슈 회피)
+function finishMutationChat() {
+  if (!_mutationChatState || _mutationChatState.selected == null) return;
+  const card = getStrategyCard(_mutationChatState.strategyId);
+  if (!card) { closeMutationChat(false); return; }
+  const opt = _mutationChatState.options[_mutationChatState.selected];
+  if (!opt) return;
+  // confirmStep ON — 다음 _renderMutationChat에서 footer를 confirm bar로
+  _mutationChatState.confirmStep = true;
+  _renderMutationChat();
+}
+
+// V4-fix v2: 보관 여부 결정 후 실제 미션 생성
+function _completeMutationFinish(keepHistory) {
   if (!_mutationChatState || _mutationChatState.selected == null) return;
   const card = getStrategyCard(_mutationChatState.strategyId);
   if (!card) { closeMutationChat(false); return; }
   const opt = _mutationChatState.options[_mutationChatState.selected];
   if (!opt) return;
 
-  // 히스토리 저장 여부 묻기 (사용자 요청)
-  const keepHistory = await showConfirmModal({
-    title: '대화 보관할까?',
-    message: `"${card.title}" 진화 임시 대화창의 흐름 (${_mutationChatState.messages.length}개 메시지).\n\n도서관 → 양생방 가닥 카드에서 다시 볼 수 있어.`,
-    okLabel: '응 보관',
-    cancelLabel: '아니 결과만'
-  });
-
-  // chatRecord에 messages 보관 여부 반영
   _mutationChatState.chatRecord.messages = keepHistory ? _mutationChatState.messages.slice() : [];
   _mutationChatState.chatRecord.kept = !!keepHistory;
+  if (!Array.isArray(card.evolutionChats)) card.evolutionChats = [];
   card.evolutionChats.push(_mutationChatState.chatRecord);
 
-  // 새 generation + 새 미션
   mutateToNewGeneration(_mutationChatState.strategyId, opt.layer, opt.action);
   const refreshed = getStrategyCard(_mutationChatState.strategyId);
   const newGenIdx = (refreshed?.generations?.length || 1) - 1;
@@ -13931,8 +13991,8 @@ async function finishMutationChat() {
     linkedStrategy: card.title
   });
 
-  saveState();
-  showToast(`🧬 새 가닥 등록 — ${_LAYER_NAME[opt.layer] || opt.layer} 차원. ${keepHistory ? '대화 보관됨.' : ''} 홈에서 부름 확인.`);
+  saveState({ force: true });
+  showToast(`🧬 새 가닥 등록 — ${_LAYER_NAME[opt.layer] || opt.layer} 차원. ${keepHistory ? '대화도 보관됨.' : ''} 홈 → 부름.`);
   closeMutationChat(true);
   if (typeof renderTodayMission === 'function') renderTodayMission();
   if (typeof renderArchive === 'function') renderArchive();
@@ -15429,11 +15489,12 @@ function renderLensStrategies() {
   const container = document.getElementById('lensStrategies');
   if (!container) return;
   
-  let strategies = (state.topicCards || []).filter(c => c.category === 'strategy');
-  
+  // V4-fix (사용자 보고): 진단 시드 카드 양생방 숨김 (detectDiagnoses는 그대로 작동)
+  let strategies = (state.topicCards || []).filter(c => c.category === 'strategy' && !c._isDiagnosticSeed);
+
   // 검색 필터
   if (_archiveSearchQuery) {
-    strategies = strategies.filter(s => 
+    strategies = strategies.filter(s =>
       (s.title || '').toLowerCase().includes(_archiveSearchQuery) ||
       (s.summary || '').toLowerCase().includes(_archiveSearchQuery)
     );
@@ -15529,9 +15590,9 @@ function _renderStrategyCardHtml(s) {
         : `<button class="strategy-try-btn" onclick="callTryStrategy('${s.id}')">✦ 해볼게</button>`)
     : '';
   const metaHtml = metaLine ? `<div class="strategy-card-meta${_isEmbodied ? ' embodied' : ''}">${metaLine}</div>` : '';
-  // V4-1n: 진화 트리
+  // V4-1n + 사용자 fix: 진화 트리 — 1세대 (체화된 one-shot 포함) 도 표시
   let genTreeHtml = '';
-  if (Array.isArray(s.generations) && s.generations.length >= 2) {
+  if (Array.isArray(s.generations) && s.generations.length >= 1) {
     const _layerEmoji = { L1:'🧠', L2:'🎯', L3:'🌍', L4:'👥', L5:'🪞' };
     const _layerName  = { L1:'인지', L2:'행동', L3:'환경', L4:'사회', L5:'메타' };
     const rows = s.generations.map((g, gi) => {
@@ -15568,12 +15629,13 @@ function _renderStrategyCardHtml(s) {
   const treeToggle = hasTree
     ? `<button class="strategy-tree-toggle" onclick="toggleStrategyTree('${s.id}')">${treeOpen ? '▴ DNA 트리 접기' : '▾ DNA 트리 보기'}</button>`
     : '';
+  // V4-fix (사용자 보고): 카드 제목 클릭 = 트리 토글 (체화된 카드 포함)
+  const titleClickAttr = hasTree ? `onclick="toggleStrategyTree('${s.id}')" style="cursor:pointer;"` : '';
   return `
     <div class="strategy-card strategy-card-v2">
-      <div class="strategy-card-title">🧬 ${escapeHtml(s.title)}</div>
+      <div class="strategy-card-title" ${titleClickAttr}>🧬 ${escapeHtml(s.title)}${hasTree ? ' <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">' + (treeOpen ? '▴' : '▾') + '</span>' : ''}</div>
       ${bodyHtml}
       ${metaHtml}
-      ${treeToggle}
       ${hasTree && treeOpen ? genTreeHtml : ''}
       <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : s.source === 'deeper' ? ' · 더 알고 싶어' : ' · 대화 챕터'}</div>
       <div class="strategy-card-actions">
@@ -18491,7 +18553,9 @@ function testSeedV4Data() {
       evolutionChats: [],
       createdAt: new Date(today.getTime() - s.days * 86400000).toISOString(),
       messageCount: 5,
-      source: 'manual'
+      source: 'manual',
+      // V4-fix (사용자 보고): 진단 시드는 양생방 숨김 (제목 "진단 시드:"로 시작) — detectDiagnoses는 그대로 작동
+      _isDiagnosticSeed: s.title.startsWith('진단 시드:')
     });
   });
   // willpower_cap 발동: rest 모드 30일+ + 신규 가닥 30일 내 X로 만들려면 모든 strategy createdAt 30일+여야.
@@ -23182,7 +23246,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.75-cryst-helix-mut-zfix';
+const APP_VERSION = 'v4.0.76-mut-inline-diag-tree';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
