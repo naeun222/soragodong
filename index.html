@@ -1449,18 +1449,27 @@
     border-radius: 8px;
     display: inline-block;
   }
+  /* V4-fix: 모래사장 가로 흐름 — flex-wrap + 작은 minmax 로 가로로 더 많이 */
   .beach-tier-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
-    gap: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    align-content: flex-start;
   }
-  /* V4-fix: 전체 탭 — 랜덤 흩뿌림 (모래사장 느낌). row gap 좁고 각 shell 회전·offset */
+  .beach-tier-grid .beach-shell {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+  }
+  /* V4-fix: 전체 탭 — 자유로운 랜덤 흩뿌림 (모래사장 느낌). 큰 offset + rotate */
   .beach-tier-grid.scatter {
-    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
-    gap: 4px;
-    padding: 6px 4px;
+    gap: 8px 10px;
+    padding: 10px 6px;
+    justify-content: flex-start;
   }
   .beach-tier-grid.scatter .beach-shell {
+    width: 46px;
+    height: 46px;
     transition: transform 0.25s ease;
   }
   .beach-shell {
@@ -2338,6 +2347,32 @@
   }
   .hero-music { display: flex; gap: 10px; align-items: center; }
   .hero-music-art { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+  .hero-music-art-placeholder, .music-card-art-placeholder {
+    background: linear-gradient(135deg, rgba(212,167,106,0.30), rgba(139,126,196,0.25));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    color: rgba(255,255,255,0.85);
+  }
+  /* V4-fix: 오늘의 너 사진 진주 — 정방형 작게 */
+  .hero-photo {
+    display: flex; gap: 10px; align-items: center;
+  }
+  .hero-photo-thumb {
+    width: 56px; height: 56px;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .hero-photo-meta { flex: 1; min-width: 0; }
+  .hero-photo-content {
+    font-family: 'Gowun Batang', serif;
+    font-size: 13px; color: var(--text);
+    line-height: 1.5;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
   .hero-music-meta { flex: 1; min-width: 0; }
   .hero-music-title { font-size: 13px; color: var(--text); font-weight: 600; line-height: 1.4; }
   .hero-music-artist { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
@@ -3177,17 +3212,29 @@
   .reflection-list-edit:active { background: var(--bg); color: var(--accent2); }
   .reflection-list-del:active { background: var(--bg); color: var(--danger); }
 
-  /* V4-1f: 모래사장 DNA 진주 (작은 다면체) */
+  /* V4-1f / V4-fix: 모래사장 DNA 진주 (SVG 다면체 + 회전 헬릭스) */
   .beach-dna-section .beach-tier-header {
     color: #d4a76a;
     letter-spacing: 0.08em;
   }
   .beach-dna-shell {
-    font-size: 28px !important;
     cursor: pointer;
     transition: transform 0.18s;
+    background: rgba(255,255,255,0.32) !important;
+    border: 1px solid rgba(255,215,0,0.45);
+    box-shadow:
+      0 0 12px rgba(255,215,0,0.30),
+      inset 0 1px 2px rgba(255,255,255,0.5);
   }
   .beach-dna-shell:active { transform: scale(0.92); }
+  .beach-dna-shell:hover { transform: scale(1.18) rotate(0deg) !important; }
+  .dna-mini-svg {
+    animation: dnaSpin 12s linear infinite;
+  }
+  @keyframes dnaSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
   .dna-pearl-story {
     text-align: center;
     padding: 28px 22px 22px;
@@ -3195,6 +3242,12 @@
   .dna-pearl-svg-wrap {
     display: flex; justify-content: center;
     margin-bottom: 12px;
+  }
+  .dna-pearl-spin { animation: dnaSpin 16s linear infinite; transform-origin: center; }
+  .dna-pearl-inner-spin { animation: dnaSpinReverse 10s linear infinite; transform-origin: 100px 100px; transform-box: fill-box; }
+  @keyframes dnaSpinReverse {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(-360deg); }
   }
 
   /* V4-1d-4: DNA 진주 결정화 의식 모달 (1회만, 큰 다면체 + 회전 헬릭스) */
@@ -5735,7 +5788,7 @@
           <button class="btn-secondary" onclick="testForceMusicAutoPearl()" style="margin-top:6px;">🎵 음악 5번 → 자동 진주 발동</button>
           <button class="btn-secondary" onclick="testForceDrainedMode()" style="margin-top:6px;">🪫 방전 모드 ON</button>
           <button class="btn-secondary" onclick="testForceDecisionRoom()" style="margin-top:6px;">🌀 갈피의 방 active 진입</button>
-          <button class="btn-secondary" onclick="testForceDiagnosisCitation()" style="margin-top:6px;">🩺 다음 채팅에 진단 자연 인용 예약</button>
+          <button class="btn-secondary" onclick="testForceDiagnosisCitation()" style="margin-top:6px;" title="V4 비전 9.5: 진단은 별도 라벨 X, 채팅 응답에 자연스럽게 한 줄 끼워서 노출됨. 이 버튼은 다음 응답에 그 인용이 들어가도록 flag만 박음.">🩺 진단 → 다음 채팅 응답에 한 줄 끼우기 (V4 9.5)</button>
           <button class="btn-secondary" onclick="testForceQuestionScrap()" style="margin-top:6px;">🌊 새 숙고 질문 박기 (스크랩)</button>
           <button class="btn-secondary" onclick="testForceTutorial()" style="margin-top:6px;">🎓 풀 튜토리얼 강제 시작</button>
           <button class="btn-secondary" onclick="testForceExtract()" style="margin-top:6px;">📌 토픽 추출 강제 (가드 우회)</button>
@@ -10211,17 +10264,40 @@ function renderBeach() {
     'quick-discovery': '#5fcfba',
     'evolved':         'linear-gradient(135deg,#ff6b6b,#ffd93d 33%,#5fcfba 66%,#8b7ec4)'
   };
+  // V4-fix: DNA 진주 모래사장 — SVG 다면체 (이모지 아닌 결정 모양, 회전 헬릭스 점)
   const dnaSectionHtml = showDnaSection ? `
     <div class="beach-tier-section beach-dna-section">
       <div class="beach-tier-header">🧬 DNA 진주 — 체화 완료 · ${dnaPearls.length}</div>
       <div class="beach-tier-grid">
-        ${dnaPearls.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(p => {
-          const color = dnaPathColor[p.embodimentPath] || '#ffd700';
-          const isGradient = String(color).startsWith('linear-gradient');
-          const styleStr = isGradient
-            ? `background:${color}; -webkit-background-clip:text; background-clip:text; color:transparent;`
-            : `color:${color}; text-shadow:0 0 6px ${color}80;`;
-          return `<div class="beach-shell beach-dna-shell" style="${styleStr}" onclick="openDnaPearlStory('${p.id}')" title="${escapeHtml(p.content || '')}">🧬</div>`;
+        ${dnaPearls.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((p, i) => {
+          const isEvolved = p.embodimentPath === 'evolved';
+          const isQuick = p.embodimentPath === 'quick-discovery';
+          const strokeColor = isEvolved ? `url(#dnaPearlGrad-${p.id})` : (isQuick ? '#5fcfba' : '#ffd700');
+          const fillColor = isEvolved ? `url(#dnaPearlGrad-${p.id})` : (isQuick ? '#5fcfba' : '#ffd700');
+          // 6 헬릭스 점
+          const dots = [0,1,2,3,4,5].map(n => {
+            const a = (n / 6) * 360;
+            const x = 22 + 14 * Math.cos(a * Math.PI / 180);
+            const y = 22 + 14 * Math.sin(a * Math.PI / 180);
+            return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" fill="${fillColor}" opacity="0.85"/>`;
+          }).join('');
+          return `<div class="beach-shell beach-dna-shell" onclick="openDnaPearlStory('${p.id}')" title="${escapeHtml(p.content || '')}">
+            <svg class="dna-mini-svg" viewBox="0 0 44 44" width="38" height="38" aria-hidden="true">
+              <defs>
+                <linearGradient id="dnaPearlGrad-${p.id}" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ff6b6b"/>
+                  <stop offset="33%" stop-color="#ffd93d"/>
+                  <stop offset="66%" stop-color="#5fcfba"/>
+                  <stop offset="100%" stop-color="#8b7ec4"/>
+                </linearGradient>
+              </defs>
+              <polygon points="22,3 36,11 41,22 36,33 22,41 8,33 3,22 8,11"
+                       fill="${fillColor}" fill-opacity="0.18"
+                       stroke="${strokeColor}" stroke-width="1.6"/>
+              ${dots}
+              <circle cx="22" cy="22" r="2" fill="${fillColor}" opacity="0.95"/>
+            </svg>
+          </div>`;
         }).join('')}
       </div>
     </div>
@@ -10262,14 +10338,15 @@ function renderBeach() {
   } else {
     // 시간순 평면 (최신 위)
     const sorted = filtered.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-    // V4-fix: 'all' 탭 → 모래사장 흩뿌림 (각 shell deterministic random rotate + offset)
+    // V4-fix: 'all' 탭 → 모래사장 자유 흩뿌림 (큰 random offset + rotate, deterministic per shell)
     const isAllTab = _beachTab === 'all';
     const scatterStyle = (s, idx) => {
       if (!isAllTab) return '';
       const seed = (s._id ? s._id.split('').reduce((a,c) => a + c.charCodeAt(0), 0) : idx) * 9301 + 49297;
-      const tx = (((seed * 7) % 13) - 6);        // -6px ~ +6px
-      const ty = (((seed * 13) % 11) - 5);       // -5px ~ +5px
-      return ` style="margin-left:${tx}px; margin-top:${ty}px;"`;
+      const tx = (((seed * 7) % 25) - 12);       // -12px ~ +12px
+      const ty = (((seed * 13) % 19) - 9);       // -9px ~ +9px
+      const rot = (((seed * 19) % 17) - 8);      // -8deg ~ +8deg
+      return ` style="margin-left:${tx}px; margin-top:${ty}px; transform:rotate(${rot}deg);"`;
     };
     grid.innerHTML = dnaSectionHtml +
       `<div class="beach-tier-grid${isAllTab ? ' scatter' : ''}">` +
@@ -10335,14 +10412,21 @@ function openDnaPearlStory(pearlId) {
     'evolved':         'url(#dna-mini-rainbow)'
   })[pearl.embodimentPath] || '#ffd700';
 
-  // 작은 결정 다면체 (60px) — 의식 모달과 동일한 형태, 회전 없음
-  const dotColors = ['#ffd93d', '#d4a76a', '#5fcfba', '#a89dc8', '#666e8a', '#666e8a', '#666e8a', '#666e8a'];
-  const dotsHtml = dotColors.map((c, i) => {
+  // V4-fix: DNA 진주 모달 — 회전하는 헬릭스 점 + 외곽 glow + 내부 결정
+  const dotColors = ['#ffd93d', '#d4a76a', '#5fcfba', '#a89dc8', '#ff8da1', '#ffb86b', '#7ec8e3', '#b39ddb'];
+  const dotsOuter = dotColors.map((c, i) => {
     const angle = (i / 8) * 360;
     const rad = (angle * Math.PI) / 180;
     const cx = 100 + 70 * Math.cos(rad);
     const cy = 100 + 70 * Math.sin(rad);
-    return `<circle cx="${cx}" cy="${cy}" r="4.5" fill="${c}" opacity="0.85"/>`;
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="${c}" opacity="0.9"><animate attributeName="r" values="5;6.2;5" dur="${2 + (i % 3)}s" repeatCount="indefinite"/></circle>`;
+  }).join('');
+  // 안쪽 작은 헬릭스 (반대 방향 회전)
+  const innerDots = [0,1,2,3,4,5].map(n => {
+    const a = (n / 6) * 360 + 30;
+    const x = 100 + 38 * Math.cos(a * Math.PI / 180);
+    const y = 100 + 38 * Math.sin(a * Math.PI / 180);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="${pathColor}" opacity="0.7"/>`;
   }).join('');
 
   const overlay = document.createElement('div');
@@ -10351,7 +10435,7 @@ function openDnaPearlStory(pearlId) {
   overlay.innerHTML = `
     <div class="shell-story-card dna-pearl-story">
       <div class="dna-pearl-svg-wrap">
-        <svg viewBox="0 0 200 200" width="120" height="120" aria-hidden="true">
+        <svg viewBox="0 0 200 200" width="160" height="160" aria-hidden="true" class="dna-pearl-spin">
           <defs>
             <linearGradient id="dna-mini-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%"   stop-color="#ff6b6b"/>
@@ -10359,12 +10443,22 @@ function openDnaPearlStory(pearlId) {
               <stop offset="66%"  stop-color="#5fcfba"/>
               <stop offset="100%" stop-color="#8b7ec4"/>
             </linearGradient>
+            <radialGradient id="dna-pearl-core" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="${typeof pathColor === 'string' && pathColor.startsWith('#') ? pathColor : '#ffd700'}" stop-opacity="0.45"/>
+              <stop offset="100%" stop-color="${typeof pathColor === 'string' && pathColor.startsWith('#') ? pathColor : '#ffd700'}" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="dna-glow">
+              <feGaussianBlur stdDeviation="3" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
           </defs>
+          <circle cx="100" cy="100" r="92" fill="url(#dna-pearl-core)"/>
           <polygon points="100,12 162,40 188,100 162,160 100,188 38,160 12,100 38,40"
-                   fill="${pathColor}" fill-opacity="0.14"
-                   stroke="${pathColor}" stroke-width="2.5" />
-          ${dotsHtml}
-          <circle cx="100" cy="100" r="3.5" fill="${pathColor}" opacity="0.95"/>
+                   fill="${pathColor}" fill-opacity="0.18"
+                   stroke="${pathColor}" stroke-width="2.5" filter="url(#dna-glow)"/>
+          <g class="dna-pearl-inner-spin">${innerDots}</g>
+          ${dotsOuter}
+          <circle cx="100" cy="100" r="4" fill="${pathColor}" opacity="0.98"/>
         </svg>
       </div>
       <div class="shell-story-tier">${pathLabel}</div>
@@ -13248,9 +13342,10 @@ JSON만 출력.`
     value: JSON.stringify({ layer: o.layer, action: o.action })
   }));
 
+  // V4 비전 톤 (1081줄): "DNA가 진화하기 위한 준비를 마쳤어"
   const picked = await showOptionsModal({
-    title: '🧬 돌연변이 시점',
-    message: `"${card.title}" 가지 끝났어.\n새 가지 어디서?`,
+    title: '🧬 돌연변이 — DNA 진화 준비',
+    message: `"${card.title}" 이 가지에서 발견 충분해.\nDNA가 진화하기 위한 준비를 마쳤어.\n다른 차원에서 시도해볼래?`,
     options: pickerOptions
   });
 
@@ -13261,8 +13356,15 @@ JSON만 출력.`
   }
 
   let parsed;
-  try { parsed = JSON.parse(picked); } catch (e) { return; }
+  try { parsed = JSON.parse(picked); } catch (e) {
+    showToast('⚠️ 옵션 파싱 실패 — 다시 시도');
+    return;
+  }
   const { layer, action } = parsed;
+  if (!layer || !action) {
+    showToast('⚠️ 잘못된 옵션');
+    return;
+  }
   chatRecord.selectedLayer = layer;
   chatRecord.selectedAction = action;
   card.evolutionChats.push(chatRecord);
@@ -13277,11 +13379,12 @@ JSON만 출력.`
     linkedStrategy: card.title
   });
 
-  showToast('🧬 새 가닥 등록. 너만의 코드 형성 중.');
+  showToast(`🧬 새 가닥 등록 — ${_LAYER_NAME[layer] || layer} 차원. 홈에서 부름 확인해.`);
   saveState();
 
   if (typeof renderTodayMission === 'function') renderTodayMission();
   if (typeof renderArchive === 'function') renderArchive();
+  if (typeof showScreen === 'function') showScreen('home');
 }
 
 // V4-1d-4: DNA 진주 결정화 의식.
@@ -13878,15 +13981,32 @@ function renderLibraryHero() {
     const playBtn = pick.track.previewUrl
       ? `<button class="hero-music-play" onclick="event.stopPropagation(); toggleMusicPreview(this, '${escapeHtml(pick.track.previewUrl)}')" aria-label="미리듣기">▶</button>`
       : '';
+    // V4-fix: 음악 placeholder
+    const heroArt = pick.track.artworkUrl
+      ? `<img src="${escapeHtml(pick.track.artworkUrl)}" alt="" class="hero-music-art" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'hero-music-art hero-music-art-placeholder',textContent:'🎵'}))">`
+      : `<div class="hero-music-art hero-music-art-placeholder">🎵</div>`;
     body = `
       <div class="hero-music">
-        <img src="${escapeHtml(pick.track.artworkUrl || '')}" alt="" class="hero-music-art">
+        ${heroArt}
         <div class="hero-music-meta">
           <div class="hero-music-title">${escapeHtml(pick.track.title || '')}</div>
           <div class="hero-music-artist">${escapeHtml(pick.track.artist || '')}</div>
           ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}
         </div>
         ${playBtn}
+      </div>
+    `;
+  } else if (pick.photo) {
+    // V4-fix: 사진 진주 — 정방형 작은 thumbnail (hero 카드 세로 길이 안 늘림)
+    const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 기타: '💎' };
+    const icon = iconMap[pick.category || '기타'] || '💎';
+    body = `
+      <div class="hero-photo">
+        <img src="${pick.photo}" alt="" class="hero-photo-thumb">
+        <div class="hero-photo-meta">
+          <div class="hero-photo-content">${icon} ${escapeHtml(pick.content || '')}</div>
+          ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}
+        </div>
       </div>
     `;
   } else {
@@ -17549,20 +17669,26 @@ function testSeedV4Data() {
       break;
     }
   }
-  // 5 strategy 카드 (다양 embodimentStatus)
+  // strategy 카드 — 진단 5종 다 detect 되도록 보강 (V4 비전 9.5)
   state.topicCards = (state.topicCards || []).filter(c => c.category !== 'strategy');
   const stratSeeds = [
-    { title: '마감 직전 폭발력 신뢰', status: 'embodied', gens: 1, path: 'one-shot', attempts: [['worked',5]] },
-    { title: '거절은 그날 안에', status: 'working', gens: 1, attempts: [['worked',3], ['didnt',1]] },
-    { title: '카페에서 30분 집중', status: 'trying', gens: 1, attempts: [['worked',1], ['didnt',1]] },
-    { title: '잠 부족 시 결정 X', status: 'seedling', gens: 1, attempts: [] },
-    { title: 'SNS 자동 종료', status: 'working', gens: 3, path: 'evolved', attempts: [['didnt',2], ['didnt',1], ['worked',3]] }
+    // 일반 진화 흐름 카드 (5개)
+    { title: '마감 직전 폭발력 신뢰', status: 'embodied', gens: 1, path: 'one-shot', attempts: [['worked',5]], days: 20 },
+    { title: '거절은 그날 안에', status: 'working', gens: 1, attempts: [['worked',3], ['didnt',1]], days: 20 },
+    { title: '카페에서 30분 집중', status: 'trying', gens: 1, attempts: [['worked',1], ['didnt',1]], days: 20 },
+    { title: '잠 부족 시 결정 X', status: 'seedling', gens: 1, attempts: [], days: 35 },  // → avoidance (seedling 30일+)
+    { title: 'SNS 자동 종료', status: 'working', gens: 3, path: 'evolved', attempts: [['didnt',2], ['didnt',1], ['worked',3]], days: 30 },
+    // 진단 5종 발동용 강제 카드 (4개)
+    { title: '진단 시드: 알람 무한 반복', status: 'trying', gens: 1, attempts: [['didnt',4]], layers: ['L2'], days: 25 },          // weak_tool (한 layer, attempts 3+, worked 0)
+    { title: '진단 시드: 인지 차원 막힘', status: 'trying', gens: 1, attempts: [['didnt',3]], layers: ['L1'], days: 25 },          // wrong_layer (L1만 3+ didnt)
+    { title: '진단 시드: 회피 50%', status: 'trying', gens: 1, attempts: [['skipped',3], ['worked',1]], layers: ['L2'], days: 20 },// avoidance (skipped > 50%)
+    { title: '진단 시드: 가치 상충 1', status: 'trying', gens: 1, attempts: [['didnt',2]], layers: ['L2'], days: 20 }              // value_clash (2+ cards all didnt + values 2+)
   ];
   stratSeeds.forEach((s, idx) => {
     const id = 'strat_seed_' + idx;
     const generations = [];
     for (let g = 0; g < s.gens; g++) {
-      const layer = ['L2', 'L3', 'L1'][g] || 'L2';
+      const layer = (s.layers && s.layers[g]) || ['L2', 'L3', 'L1'][g] || 'L2';
       generations.push({
         gen: g + 1, layer,
         action: s.title + (g > 0 ? ` (gen ${g+1})` : ''),
@@ -17582,11 +17708,16 @@ function testSeedV4Data() {
       embodimentStatus: s.status,
       embodimentPath: s.path || null,
       evolutionChats: [],
-      createdAt: new Date(today.getTime() - 20 * 86400000).toISOString(),
+      createdAt: new Date(today.getTime() - s.days * 86400000).toISOString(),
       messageCount: 5,
       source: 'manual'
     });
   });
+  // willpower_cap 발동: rest 모드 30일+ + 신규 가닥 30일 내 X로 만들려면 모든 strategy createdAt 30일+여야.
+  // 시드는 신규 strategy 일부 있어 willpower_cap은 부분 detect — 실 사용 시 자연 발동. 시드는 4종까지 보장.
+  // modeActiveSince.rest 시뮬을 위해 박아두기 (연관 데이터)
+  if (!state.modeActiveSince) state.modeActiveSince = {};
+  state.modeActiveSince.rest = new Date(today.getTime() - 35 * 86400000).toISOString();
   // 토픽 카드 5
   for (let i = 0; i < 5; i++) {
     state.topicCards.push({
@@ -17935,23 +18066,47 @@ function testSeedV4Data() {
 }
 
 async function testForceQuarterlyReview() {
-  if (!state.apiKey) { showToast('⚠️ API 키 필요'); return; }
   showToast('📊 분기 리뷰 강제 생성 중...');
   const today = new Date();
   const prevQ = new Date(today.getFullYear(), today.getMonth() - 3, 15);
   const prevQuarterKey = getQuarterKey(prevQ);
-  // 이미 있으면 제거 (재생성 위해)
   if (Array.isArray(state.quarterlyReviews)) {
     state.quarterlyReviews = state.quarterlyReviews.filter(r => r.quarterKey !== prevQuarterKey);
   }
-  // preferences cooldown reset
-  if (state.preferences) state.preferences._diagLastRunAt = null;
-  try {
-    await runQuarterlyAutoReviewIfNeeded();
-    showToast('✅ 분기 리뷰 생성됨 (도서관 → 갈피·리뷰 → 🌙 리뷰 모음)');
-  } catch (e) {
-    showToast('실패: ' + (e.message || ''));
+  // V4-fix: 가드 우회 — runQuarterlyAutoReviewIfNeeded는 dayOfMonth<=7 필요. 직접 build.
+  const stats = (typeof getQuarterlyStats === 'function' && getQuarterlyStats(prevQuarterKey)) || {
+    checkins: 28, attempts: 12, worked: 8, pearls: 5, dnaPearls: 1,
+    modeCount: { rest: 4, period: 3 },
+    trackerStats: [],
+    problemsTotal: 4, strengthsTotal: 4, growthCount: 2,
+    quarterKey: prevQuarterKey
+  };
+  let summary = '';
+  let sections = [];
+  if (state.apiKey && typeof generateQuarterlyReview === 'function') {
+    try {
+      const aiReview = await generateQuarterlyReview(prevQuarterKey, stats);
+      summary = aiReview.summary || '';
+      sections = Array.isArray(aiReview.sections) ? aiReview.sections : [];
+    } catch (e) { console.warn('quarterly AI failed:', e); }
   }
+  if (!sections.length) {
+    summary = '이번 분기, 환경 차원에서 작동하는 도구가 늘어남. 거절 패턴 깨끗해지는 중.';
+    sections = [
+      { label: '🌊 흐름', body: '이 분기 너는 환경 차원에 무게를 실음. 카페·자동 종료 등 의지에 덜 기대는 도구.' },
+      { label: '🌱 새로 자라난 것', body: '"마감 직전 폭발력 신뢰" 가닥이 결정화됨 — DNA 진주.' },
+      { label: '🌫 작동 중인 패턴', body: '"거절 후 부채감" 패턴이 N회 등장. 환경 도구로 일부 풀림.' },
+      { label: '🧭 다음 분기에', body: '거절 → "그날 안에 한 줄" 자동화 시도.' }
+    ];
+  }
+  state.quarterlyReviews.push({
+    id: 'qr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    quarterKey: prevQuarterKey,
+    completedAt: new Date().toISOString(),
+    stats, summary, sections, auto: true
+  });
+  saveState({ force: true });
+  showToast('✅ 분기 리뷰 생성됨 (도서관 → 갈피·리뷰 → 🌙 리뷰 모음)');
 }
 
 function testForceDiagnoses() {
@@ -18105,25 +18260,40 @@ function testForceTutorial() {
   showToast('🎓 풀 튜토리얼 시작');
 }
 
-// 월간 리뷰 강제 생성 (V3.12)
+// 월간 리뷰 강제 생성 (V3.12) — 가드 우회 (dayOfMonth>7 무시)
 async function testForceMonthlyReview() {
-  if (typeof runMonthlyAutoReviewIfNeeded !== 'function') {
-    showToast('⚠️ runMonthlyAutoReviewIfNeeded 함수 X');
-    return;
-  }
+  showToast('🌙 월간 리뷰 강제 생성 중...');
   const today = new Date();
   const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 15);
   const lastMonthKey = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
   if (Array.isArray(state.monthlyReviews)) {
     state.monthlyReviews = state.monthlyReviews.filter(r => r.monthKey !== lastMonthKey);
   }
-  showToast('🌙 월간 리뷰 강제 생성 중...');
-  try {
-    await runMonthlyAutoReviewIfNeeded();
-    showToast('✅ 월간 리뷰 생성됨 (도서관 → 갈피·리뷰 → 🌙 리뷰 모음)');
-  } catch (e) {
-    showToast('실패: ' + (e.message || ''));
+  let summary = '';
+  let sections = null;
+  if (state.apiKey && typeof generateReview === 'function') {
+    try {
+      const r = await generateReview('monthly');
+      summary = r.summary || '';
+      sections = r.sections;
+    } catch (e) { console.warn('monthly AI failed:', e); }
   }
+  if (!sections) {
+    summary = '지난 달, 논문 진척과 일상 회복 둘 다 진행됨. drained 모드 4일.';
+    sections = {
+      patterns: '월 후반부에 마감 전 폭발력 작동.',
+      good_moments: '환경 도구 (카페, 자동 종료) 시도 늘어남.',
+      hard_moments: '거절 후 부채감 패턴 N회 등장.',
+      next_suggestion: '거절 직후 5분 산책 — 부채감 소화 자동화.'
+    };
+  }
+  state.monthlyReviews.push({
+    completedAt: new Date().toISOString(),
+    summary, sections, userNote: '',
+    monthKey: lastMonthKey, auto: true
+  });
+  saveState({ force: true });
+  showToast('✅ 월간 리뷰 생성됨 (도서관 → 갈피·리뷰 → 🌙 리뷰 모음)');
 }
 
 // drained 모드 active 강제
@@ -18151,18 +18321,27 @@ function testForceDecisionRoom() {
   }
 }
 
-// 진단 다음 채팅 응답에 자연 인용 강제 (citation tag flag 박기)
+// V4 9.5: 진단은 채팅 응답에 자연스럽게 한 줄 인용으로 노출 (별도 라벨 X).
+// generateAIResponse가 active 진단을 system prompt에 hint로 inject (line 12632 구현됨).
+// 이미 본 진단(shown)은 다시 안 띄움 — 이 버튼은 active 상태로 복구해 다음 응답에 다시 인용되게 함.
 function testForceDiagnosisCitation() {
-  const active = (state.diagnoses || []).find(d => d.status === 'active');
+  let active = (state.diagnoses || []).find(d => d.status === 'active');
   if (!active) {
-    showToast('⚠️ active 진단 X — 시드 박거나 진단 5종 detect 후 시도');
+    // shown 진단 중 첫 번째를 active로 복구
+    const shown = (state.diagnoses || []).find(d => d.status === 'shown');
+    if (shown) {
+      shown.status = 'active';
+      active = shown;
+    }
+  }
+  if (!active) {
+    showToast('⚠️ 진단 X — "진단 5종 즉시 detect" 먼저 누르거나 시드 박기');
     return;
   }
-  // _diagnosisCitationPending flag 박기 — 다음 generateAIResponse가 system prompt에 자연 인용 지시
-  if (!state.preferences) state.preferences = {};
-  state.preferences._diagnosisCitationPending = active.id;
+  active.status = 'active';
   saveState({ force: true });
-  showToast(`🩺 "${active.type}" 진단 — 다음 채팅 응답에 자연 인용 예약됨. 대화 탭에서 메시지 보내봐.`);
+  const labels = { weak_tool: '도구 약함', wrong_layer: '차원 안 맞음', value_clash: '가치 상충', avoidance: '회피 패턴', willpower_cap: '의지 임계치' };
+  showToast(`🩺 "${labels[active.type] || active.type}" — 다음 응답에 한 줄로 자연 인용. 대화 탭에서 메시지 보내봐.`);
 }
 
 // 숙고 질문 새로 박기 (스크랩 진입점 시뮬레이션)
@@ -21492,11 +21671,15 @@ function renderMusicCardHTML(track, opts = {}) {
   const linkBtn = track.trackUrl
     ? `<a class="music-card-btn" href="${escapeHtml(track.trackUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation();" aria-label="Apple Music에서 듣기">↗</a>`
     : '';
+  // V4-fix: artworkUrl 비었거나 broken 시 placeholder 박스 (🎵 이모지 + 그라디언트)
+  const art = track.artworkUrl
+    ? `<img class="music-card-art" src="${escapeHtml(track.artworkUrl)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'music-card-art music-card-art-placeholder',textContent:'🎵'}))">`
+    : `<div class="music-card-art music-card-art-placeholder">🎵</div>`;
   return `
     <div class="music-card-wrap">
       ${removeBtn}
       <div class="music-card">
-        <img class="music-card-art" src="${escapeHtml(track.artworkUrl || '')}" alt="" onerror="this.style.opacity=0.3;">
+        ${art}
         <div class="music-card-info">
           <div class="music-card-title">${escapeHtml(track.title || '')}</div>
           <div class="music-card-artist">${escapeHtml(track.artist || '')}</div>
@@ -22025,7 +22208,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.67-tester-fix-reviews';
+const APP_VERSION = 'v4.0.68-diag-mutation-dna-beach';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
