@@ -3731,6 +3731,94 @@
     border-left: 3px solid var(--purple);
     margin: 10px 0;
   }
+  /* V4-fix: 분기 리뷰 deep dive — 6 비교 축 시각 카드 */
+  .dd-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .dd-card {
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    min-height: 80px;
+  }
+  .dd-card-empty {
+    opacity: 0.55;
+    background: transparent;
+    border-style: dashed;
+  }
+  .dd-card-label {
+    font-size: 10px;
+    color: var(--text-soft);
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .dd-card-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.1;
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .dd-card-value-text {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+  .dd-card-unit {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+  .dd-card-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .dd-card-empty-msg {
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-top: 4px;
+    font-style: italic;
+  }
+  .dd-up   { font-size: 10px; color: #8fc88f; font-weight: 500; }
+  .dd-down { font-size: 10px; color: #c98c8c; font-weight: 500; }
+  .dd-flat { font-size: 10px; color: var(--text-soft); font-weight: 500; }
+  .dd-bar-track {
+    height: 4px;
+    background: var(--bg);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .dd-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #a89dc8, #d4a76a, #8fc88f);
+    transition: width 0.35s;
+  }
+  .dd-card-dim-row {
+    display: flex; gap: 10px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .dd-card-dim-row span { display: inline-flex; align-items: center; gap: 3px; }
+  .dd-dim-icon { font-size: 12px; }
+  .dd-stagnation {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(139,126,196,0.10);
+    border: 1px dashed rgba(139,126,196,0.35);
+    border-radius: 10px;
+    font-size: 12px;
+    color: #b9aedc;
+    line-height: 1.6;
+    font-style: italic;
+  }
+
   /* V4-fix: 일기 Q+A 세트 박스 */
   .day-qa-set {
     margin-top: 12px;
@@ -18824,6 +18912,118 @@ function showArchiveReviews() {
   renderArchiveReviews();
 }
 
+// V4-fix: 분기 리뷰 deep dive — 6 비교 축 시각 카드 (anchor 3 / 비전 7.10)
+// 1. 8 차원 (problems↓ / strengths↑) / 2. 추적 항목 / 3. 모드 빈도
+// 4. 미션 작동률 / 5. 진주 수 / 6. growth 차원
+// 직전 분기와 비교 (있으면) → ↑↓ 표시. 정체 감지 → "변화 X도 의미"
+function renderQuarterlyDeepDive(review) {
+  const s = review.stats || {};
+  // 직전 분기 stats (비교용)
+  const prevQ = (() => {
+    const m = String(review.quarterKey || '').match(/^(\d{4})-Q(\d)$/);
+    if (!m) return null;
+    let y = parseInt(m[1]);
+    let q = parseInt(m[2]) - 1;
+    if (q < 1) { q = 4; y -= 1; }
+    const prevKey = `${y}-Q${q}`;
+    const prev = (state.quarterlyReviews || []).find(r => r.quarterKey === prevKey);
+    return prev?.stats || null;
+  })();
+
+  const trend = (cur, prev) => {
+    if (prev == null || cur == null) return '';
+    if (cur > prev) return `<span class="dd-up" title="이전 분기 ${prev}">↑${cur - prev}</span>`;
+    if (cur < prev) return `<span class="dd-down" title="이전 분기 ${prev}">↓${prev - cur}</span>`;
+    return '<span class="dd-flat" title="이전 분기와 같음">→</span>';
+  };
+
+  // 1. 미션 작동률 — 막대 + %
+  const workRate = s.workRate != null ? Math.round(s.workRate * 100) : null;
+  const prevWorkRate = prevQ?.workRate != null ? Math.round(prevQ.workRate * 100) : null;
+  const workCard = workRate != null
+    ? `<div class="dd-card">
+         <div class="dd-card-label">🎯 미션 작동률</div>
+         <div class="dd-card-value">${workRate}<span class="dd-card-unit">%</span> ${trend(workRate, prevWorkRate)}</div>
+         <div class="dd-bar-track"><div class="dd-bar-fill" style="width:${workRate}%;"></div></div>
+         <div class="dd-card-sub">${s.worked || 0}/${s.attempts || 0} 시도</div>
+       </div>`
+    : `<div class="dd-card dd-card-empty">
+         <div class="dd-card-label">🎯 미션 작동률</div>
+         <div class="dd-card-empty-msg">아직 시도 X</div>
+       </div>`;
+
+  // 2. 진주 수
+  const pearlsTotal = (s.pearls || 0) + (s.dnaPearls || 0);
+  const prevPearlsTotal = prevQ ? (prevQ.pearls || 0) + (prevQ.dnaPearls || 0) : null;
+  const pearlCard = `<div class="dd-card">
+    <div class="dd-card-label">🔮 진주</div>
+    <div class="dd-card-value">${pearlsTotal} ${trend(pearlsTotal, prevPearlsTotal)}</div>
+    <div class="dd-card-sub">${s.pearls || 0} 일반${s.dnaPearls ? ` · ${s.dnaPearls} DNA` : ''}</div>
+  </div>`;
+
+  // 3. 체크인 일수
+  const checkinCard = `<div class="dd-card">
+    <div class="dd-card-label">📔 체크인</div>
+    <div class="dd-card-value">${s.checkins || 0}<span class="dd-card-unit">일</span> ${trend(s.checkins || 0, prevQ?.checkins)}</div>
+  </div>`;
+
+  // 4. 모드 빈도 (top 1)
+  const modes = s.modeCount || {};
+  const topMode = Object.entries(modes).sort((a,b) => b[1] - a[1])[0];
+  const modeMap = { exam: '📚 시험', travel: '✈️ 여행', sick: '🤒 아픔', rest: '🏖 휴식', period: '🩸 월경', drained: '🪫 방전' };
+  const modeCard = topMode
+    ? `<div class="dd-card">
+         <div class="dd-card-label">🌫 자주 활성된 모드</div>
+         <div class="dd-card-value-text">${modeMap[topMode[0]] || topMode[0]}</div>
+         <div class="dd-card-sub">${topMode[1]}일</div>
+       </div>`
+    : `<div class="dd-card dd-card-empty">
+         <div class="dd-card-label">🌫 모드</div>
+         <div class="dd-card-empty-msg">활성 모드 거의 없음</div>
+       </div>`;
+
+  // 5. 추적 항목 변화 (top 1)
+  const trackerTop = (s.trackerStats || [])[0];
+  const trackerCard = trackerTop
+    ? `<div class="dd-card">
+         <div class="dd-card-label">📊 추적 항목</div>
+         <div class="dd-card-value-text">${escapeHtml(trackerTop.title)}</div>
+         <div class="dd-card-sub">${trackerTop.first ?? '?'} → ${trackerTop.last ?? '?'}${trackerTop.unit || ''} (${trackerTop.count}회)</div>
+       </div>`
+    : `<div class="dd-card dd-card-empty">
+         <div class="dd-card-label">📊 추적 항목</div>
+         <div class="dd-card-empty-msg">기록 X</div>
+       </div>`;
+
+  // 6. 8 차원 (problems / strengths / growth)
+  const dimsCard = `<div class="dd-card">
+    <div class="dd-card-label">🪞 8 차원</div>
+    <div class="dd-card-dim-row">
+      <span title="문제"><span class="dd-dim-icon">💧</span> ${s.problemsTotal || 0}</span>
+      <span title="강점"><span class="dd-dim-icon">✨</span> ${s.strengthsTotal || 0}</span>
+      <span title="성장"><span class="dd-dim-icon">🌱</span> ${s.growthCount || 0}</span>
+    </div>
+  </div>`;
+
+  // 정체 감지 — 모든 비교 축에서 변화 거의 없음
+  let stagnationMsg = '';
+  if (prevQ) {
+    const flat = (workRate === prevWorkRate) && (pearlsTotal === prevPearlsTotal) && ((s.checkins || 0) === (prevQ.checkins || 0));
+    if (flat && (workRate != null || pearlsTotal > 0)) {
+      stagnationMsg = `<div class="dd-stagnation">머무는 시간도 의미 있어. 변화 X = 안정 또는 숙성 중일 수도.</div>`;
+    }
+  }
+
+  return `<div class="dd-grid">
+    ${workCard}
+    ${pearlCard}
+    ${checkinCard}
+    ${modeCard}
+    ${trackerCard}
+    ${dimsCard}
+  </div>${stagnationMsg}`;
+}
+
 function renderArchiveReviews() {
   const container = document.getElementById('archiveReviewsList');
   if (!container) return;
@@ -18860,18 +19060,9 @@ function renderArchiveReviews() {
         <div style="font-size:11px; color:var(--accent); margin-bottom:4px;">${escapeHtml(s.label || '')}</div>
         <div style="font-size:13px; line-height:1.7; color:var(--text);">${escapeHtml(s.body || '')}</div>
       </div>`).join('');
-      // V4 stats 표시
+      // V4-fix: 다차원 진전 비교 deep dive (anchor 3 / 비전 7.10) — 6 축 시각 카드
       if (r.stats) {
-        const s = r.stats;
-        const statLines = [
-          `체크인 ${s.checkins || 0}일`,
-          s.workRate != null ? `미션 ${Math.round(s.workRate * 100)}% (${s.worked}/${s.attempts})` : '',
-          s.pearls ? `진주 ${s.pearls}` : '',
-          s.dnaPearls ? `DNA 진주 ${s.dnaPearls}` : ''
-        ].filter(Boolean).join(' · ');
-        if (statLines) {
-          detailHtml += `<div style="margin-top:10px; padding:8px 10px; background:var(--surface2); border-radius:8px; font-size:11px; color:var(--text-dim); letter-spacing:0.04em;">📊 ${statLines}</div>`;
-        }
+        detailHtml += renderQuarterlyDeepDive(r);
       }
     } else if (r.sections) {
       // V3 형식 (object)
@@ -19740,7 +19931,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.54-chat-history';
+const APP_VERSION = 'v4.0.55-deep-dive';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
