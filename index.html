@@ -5822,12 +5822,12 @@
     box-shadow: 0 0 0 9999px rgba(15,14,23,0.7), 0 0 16px 4px rgba(201,169,110,0.5);
     border: 2px solid var(--accent);
     pointer-events: none;
-    /* 사용자 요청 2026-04-28: step 전환 부드럽게 — duration↑ + soft easing + will-change */
-    transition: top 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-                left 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-                width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-                height 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-                border-radius 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    /* 사용자 보고 2026-04-28: 0.42s → 0.26s 단축 + snappy easing */
+    transition: top 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                left 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                border-radius 0.26s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: top, left, width, height;
     background: transparent;
     animation: onbPulse 2s ease-in-out infinite;
@@ -5862,24 +5862,24 @@
     box-shadow: 0 12px 36px rgba(0,0,0,0.6);
     pointer-events: auto;
     z-index: 9100;
-    animation: onbFadeIn 0.3s ease;
-    /* 사용자 요청 2026-04-28: step 전환 더 부드럽게 — duration↑ + soft easing + max-width transition + will-change */
-    transition: top 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-                left 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-                right 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-                bottom 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-                transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-                max-width 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    animation: onbFadeIn 0.22s ease;
+    /* 사용자 보고 2026-04-28: 너무 느리고 버벅거림 — 0.42s → 0.26s + 더 snappy easing */
+    transition: top 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                left 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                right 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                bottom 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                max-width 0.26s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: top, left, right, bottom, transform;
   }
-  /* 사용자 요청 2026-04-28: 같은 위치에서 다음 step으로 넘어갈 때 content 변경 부드럽게 — title/body 짧은 cross-fade */
+  /* 같은 위치 step 전환 시 content cross-fade (단축) */
   .onb-coachmark .onb-title,
   .onb-coachmark .onb-body {
-    transition: opacity 0.18s ease;
+    transition: opacity 0.10s ease;
   }
   .onb-coachmark.swapping .onb-title,
   .onb-coachmark.swapping .onb-body {
-    opacity: 0.25;
+    opacity: 0.4;
   }
   /* 드래그 중엔 transition 끔 */
   .onb-coachmark.dragging {
@@ -7811,10 +7811,19 @@ function migrateToV7() {
   }
 
   // chatMessages chapterStart에 chapterMeta 보강
+  // 사용자 요청 2026-04-28 V3 audit: V3의 chapterCategory/chapterSummary 값을 chapterMeta로 옮김 (이전엔 빈 wrapper만 만들어 데이터 잃음)
   if (Array.isArray(state.chatMessages)) {
     state.chatMessages.forEach(msg => {
       if (msg.chapterStart === true && !msg.chapterMeta) {
-        msg.chapterMeta = { category: null, summary: null, strategyId: null };
+        msg.chapterMeta = {
+          category: msg.chapterCategory || null,
+          summary: msg.chapterSummary || null,
+          strategyId: msg.chapterStrategyId || null
+        };
+      } else if (msg.chapterMeta && (msg.chapterCategory || msg.chapterSummary)) {
+        // chapterMeta는 있는데 빈 값이고 V3 top-level 필드에 데이터 있으면 채움
+        if (!msg.chapterMeta.category && msg.chapterCategory) msg.chapterMeta.category = msg.chapterCategory;
+        if (!msg.chapterMeta.summary && msg.chapterSummary) msg.chapterMeta.summary = msg.chapterSummary;
       }
     });
   }
@@ -9217,10 +9226,12 @@ function onbRenderStep() {
     // 사용자가 직접 누르길 기다림 — 자동 전환 X (학습 의도 + showScreen 훅에서 advance)
   }
 
-  // 2. 잠시 후 (DOM 업데이트 기다림) UI 위치 잡기
-  setTimeout(() => {
-    onbPositionStep(step);
-  }, 250);
+  // 2. requestAnimationFrame으로 DOM 안정 후 즉시 위치 잡기 (250ms → ~16ms)
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      onbPositionStep(step);
+    });
+  });
 }
 
 function onbPositionStep(step, retryCount) {
@@ -9243,21 +9254,19 @@ function onbPositionStep(step, retryCount) {
   if (ovEl) ovEl.style.zIndex = step.aboveModal ? '10500' : '9000';
 
   stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
-  // 사용자 요청 2026-04-28: 같은 위치 step 전환 시 움찔 방지 — title/body 짧은 cross-fade (이미 같은 content면 skip)
+  // 사용자 보고 2026-04-28: 너무 버벅거림 — swap fade 140ms→60ms 단축 + same-target 추가 skip
   const sameTitle = (titleEl.textContent === step.title);
   const sameBody = (bodyEl.innerHTML === step.body);
   if (sameTitle && sameBody) {
-    // 컨텐츠 동일 — fade 안 함
-  } else if (!coachmark.classList.contains('swapping')) {
+    // content 동일 — fade 완전 skip
+  } else {
+    // fade 짧게 (60ms) — 너무 답답하지 않게
     coachmark.classList.add('swapping');
     setTimeout(() => {
       titleEl.textContent = step.title;
       bodyEl.innerHTML = step.body;
       requestAnimationFrame(() => coachmark.classList.remove('swapping'));
-    }, 140);
-  } else {
-    titleEl.textContent = step.title;
-    bodyEl.innerHTML = step.body;
+    }, 60);
   }
   nextBtn.textContent = step.nextLabel || (_onbStep === ONBOARDING_STEPS.length - 1 ? '끝!' : '다음 →');
 
@@ -9268,23 +9277,15 @@ function onbPositionStep(step, retryCount) {
     const ovDim = document.getElementById('onbOverlay');
     if (ovDim) ovDim.style.pointerEvents = 'none';
   }
-  // V3.13.x: coachmarkPosition:'corner' — coachmark만 우상단 컴팩트 (spotlight/mask는 그대로)
-  // dimBackground:false인 경우에도 자동 corner 적용
+  // V3.13.x: coachmarkPosition:'corner' — coachmark만 우상단 컴팩트
   if (step.coachmarkPosition === 'corner' || step.dimBackground === false) {
-    coachmark.style.top = '20px';
-    coachmark.style.right = '12px';
-    coachmark.style.left = 'auto';
-    coachmark.style.transform = 'none';
-    coachmark.style.maxWidth = '260px';
-    coachmark.style.bottom = 'auto';
-    // 사용자 보고 2026-04-28: 양생방 등 비동기 렌더 후 코치마크 사라지는 버그 — z-index 강제 + visibility 보장
-    coachmark.style.visibility = 'visible';
-    coachmark.style.opacity = '1';
-    coachmark.style.display = '';
+    const cs = coachmark.style;
+    cs.top = '20px'; cs.right = '12px'; cs.left = 'auto';
+    cs.transform = 'none'; cs.maxWidth = '260px'; cs.bottom = 'auto';
+    cs.visibility = 'visible'; cs.opacity = '1'; cs.display = '';
     const ovEl0 = document.getElementById('onbOverlay');
-    if (ovEl0 && !step.aboveModal) ovEl0.style.zIndex = '9500';  // 9000 → 9500 (다른 컨테이너 위로 안전)
+    if (ovEl0 && !step.aboveModal) ovEl0.style.zIndex = '9500';
   } else {
-    // 평소 위치 reset (이전 step에서 corner 썼을 수 있음)
     coachmark.style.maxWidth = '';
     coachmark.style.right = 'auto';
   }
@@ -9314,14 +9315,17 @@ function onbPositionStep(step, retryCount) {
         coachmark.style.bottom = 'auto';
       }
 
+      // 사용자 보고 2026-04-28: polling 빨리 — 200ms → 첫 retry 50ms (DOM 거의 즉시), 그 후 점진적 backoff
       const tries = retryCount || 0;
-      if (tries < 30) {  // 최대 6초 (200ms × 30)
+      if (tries < 30) {
         window._onbStepAtPositionCall = _onbStep;
+        // 첫 retry 50ms, 이후 100ms, 그 후 200ms (총 ~5.5초 within 30회)
+        const interval = tries < 1 ? 50 : tries < 5 ? 100 : 200;
         setTimeout(() => {
           if (_onbStep === window._onbStepAtPositionCall && window._onbTutorialMode) {
             onbPositionStep(step, tries + 1);
           }
-        }, 200);
+        }, interval);
         return;
       }
     }
@@ -9354,7 +9358,8 @@ function onbPositionStep(step, retryCount) {
         mask.classList.add('show-full');
       }
       target.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
-      setTimeout(() => onbPositionStep(step, retryCount), 100);
+      // 스크롤 안정화 후 즉시 재배치 (100ms → rAF로 단축)
+      requestAnimationFrame(() => requestAnimationFrame(() => onbPositionStep(step, retryCount)));
       return;
     }
   }
@@ -14204,9 +14209,24 @@ function renderModelItem(item, category, idx) {
     `;
   }
 
+  // 사용자 요청 2026-04-28 V3 audit: values.sdt_need / patterns.trigger,sequence 노출 (이전엔 추출만 하고 안 보임)
+  const sdtLabel = { autonomy: '자율', competence: '유능감', relatedness: '관계' };
+  const subMeta = (() => {
+    if (category === 'values' && item.sdt_need && sdtLabel[item.sdt_need]) {
+      return `<div class="model-item-sub" style="font-size:11px; color:var(--accent2); margin-top:4px;">🎯 SDT: ${sdtLabel[item.sdt_need]}</div>`;
+    }
+    if (category === 'patterns' && (item.trigger || item.sequence)) {
+      const parts = [];
+      if (item.trigger) parts.push(`<b>trigger</b> ${escapeHtml(item.trigger)}`);
+      if (item.sequence) parts.push(`<b>흐름</b> ${escapeHtml(item.sequence)}`);
+      return `<div class="model-item-sub" style="font-size:11px; color:var(--text-soft); margin-top:4px; line-height:1.6;">${parts.join(' · ')}</div>`;
+    }
+    return '';
+  })();
   return `<div class="model-item${newClass}" data-cat="${category}" data-idx="${idx}">
     <div class="model-item-name">${newBadge}${escapeHtml(item.name)}</div>
     <div class="model-item-desc">${escapeHtml(item.description || '')}</div>
+    ${subMeta}
     <div class="model-item-meta">
       <span class="conf">${confLabel}${item.confidence != null ? ` ${Math.round((item.confidence || 0) * 100)}%` : ''}</span>
       ${item.evidence_count ? `<span>근거 ${item.evidence_count}개</span>` : ''}
@@ -14444,12 +14464,18 @@ function renderChat() {
     let vaultCard = '';
 
     // V3.8: 챕터 구분선 (4시간 비활성 후 새 메시지)
+    // 사용자 요청 2026-04-28 V3 audit: chapterMeta.category/summary 있으면 같이 표시
     let chapterDivider = '';
     if (m.chapterStart) {
       const ts = m.timestamp ? new Date(m.timestamp) : new Date();
       const dateStr = ts.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
       const timeStr = ts.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
-      chapterDivider = `<div class="chapter-divider"><span>${dateStr} · ${timeStr}</span></div>`;
+      const meta = m.chapterMeta || {};
+      const cat = meta.category || m.chapterCategory;
+      const sum = meta.summary || m.chapterSummary;
+      const catLabel = cat ? ` · ${escapeHtml(cat)}` : '';
+      const sumLine = sum ? `<div style="font-size:11px; color:var(--text-soft); margin-top:4px; line-height:1.5; max-width:280px; margin-left:auto; margin-right:auto; text-align:center;">${escapeHtml(sum)}</div>` : '';
+      chapterDivider = `<div class="chapter-divider"><span>${dateStr} · ${timeStr}${catLabel}</span></div>${sumLine}`;
     }
 
     // V4-1m: 진주 능동 제안 — user 메시지에 행복 신호 감지된 경우 작은 칩
@@ -27667,7 +27693,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.136-tutorial-polish-A';
+const APP_VERSION = 'v4.0.137-perf-v3audit';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
