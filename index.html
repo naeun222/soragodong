@@ -20609,15 +20609,15 @@ function testSeedV4Data() {
   state.reflectionQuestions = [
     {
       id: 'rq_seed_active',
-      text: '내가 이 일을 진정으로 원하는 게 맞는지',
-      shortText: '진정으로 원하는지',
+      text: '내가 진짜 원하는 일을 하면 워라밸이 없어도 괜찮은 사람인가?',
+      shortText: '워라밸 vs 원하는 일',
       createdAt: new Date(today.getTime() - 5 * 86400000).toISOString(),
       source: 'manual',
       status: 'active',
       chatMessages: [
         { role: 'assistant', content: '이 질문, 같이 천천히 보자. 무엇이 처음 떠올라?', timestamp: new Date(today.getTime() - 5 * 86400000).toISOString() },
-        { role: 'user', content: '아침마다 무겁게 일어나. 일 자체가 싫은 건지, 단지 피곤한 건지 모르겠어.', timestamp: new Date(today.getTime() - 4 * 86400000).toISOString() },
-        { role: 'assistant', content: '그 무거움이 어디서 와? 시작이 두려운 건지, 의미를 못 느끼는 건지, 사람이 힘든 건지...', timestamp: new Date(today.getTime() - 4 * 86400000).toISOString() }
+        { role: 'user', content: '논문 막판엔 잠 4시간 자도 살 수 있겠는데 — 내가 정말 그런 사람인지 잘 모르겠어. 일에 빠져도 괜찮은 건지, 결국 망가지는 건지.', timestamp: new Date(today.getTime() - 4 * 86400000).toISOString() },
+        { role: 'assistant', content: '그 \'살 수 있겠다\'는 게 어떤 시기야? 며칠짜리 폭발 vs 몇 달 지속 — 둘은 진짜 다르거든.', timestamp: new Date(today.getTime() - 4 * 86400000).toISOString() }
       ]
     },
     // V4-fix v3 (사용자 요청): 가장 깊었던 숙고 시드 — chatMessages 풍부 (Stories용)
