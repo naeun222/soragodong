@@ -8521,24 +8521,7 @@ const ONBOARDING_STEPS = [
     aboveModal: true,
     fallbackPosition: 'top'
   },
-  {
-    id: 'mission_proposal_walkthrough',
-    targetSelector: null,
-    title: '🌿 어떤 상황? → 오늘의 제안',
-    body: '\'어떤 상황?\' 모달이 뜨면 답 적어 → 오늘의 제안 → \'<b>✦ 부름으로 등록</b>\' 눌러봐.<br><br><span class="small">소라고동이 너 상황에 맞는 구체 제안을 만들어줘.</span>',
-    waitFor: 'next',
-    manualAdvance: true,
-    dimBackground: false,
-    aboveModal: true
-  },
-  {
-    id: 'see_new_mission',
-    targetSelector: '#missionContainer',
-    title: '⭐ 새 \'소라의 부름\'',
-    body: '홈에 <b>새 \'소라의 부름\'</b>이 등록됐어! ✨<br>아까 만든 \'오늘의 제안\'이 미션이 됐지.',
-    waitFor: 'next',
-    dimBackground: false
-  },
+  // mission_proposal_walkthrough / see_new_mission 보류 (사용자 요청 2026-04-28)
   {
     id: 'go_archive_evolved',
     targetSelector: '.nav-item[data-screen="archive"]',
