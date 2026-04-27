@@ -2499,6 +2499,8 @@
   }
   .hero-text { display: flex; gap: 10px; align-items: flex-start; }
   .hero-icon { font-size: 24px; flex-shrink: 0; }
+  /* 사용자 요청 2026-04-28: 텍스트 진주 — note 작은 글씨가 content 아래로 (이전엔 옆에) */
+  .hero-text-col { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
   .hero-content {
     flex: 1;
     font-family: 'Gowun Batang', serif;
@@ -9558,6 +9560,25 @@ function onbPositionStep(step, retryCount) {
       const at = document.querySelector(step.advanceClickSelector);
       if (at) advanceTarget = at;
     }
+    // 사용자 보고 2026-04-28: '더 알고 싶어' 버튼 등 — step 렌더 시점에 element가 DOM에 없으면 listener 안 붙던 버그
+    // 해결: targetSelector null + advanceClickSelector 만 있고 hideUntilElementHidden 없는 경우 document delegation
+    if (!target && step.advanceClickSelector && !step.hideUntilElementHidden) {
+      const sel = step.advanceClickSelector;
+      const stepIdxAtDel = stepIdxAtRender;
+      const delegateHandler = (ev) => {
+        if (!window._onbTutorialMode || _onbStep !== stepIdxAtDel) return;
+        const matched = ev.target && ev.target.closest && ev.target.closest(sel);
+        if (matched) safeAdvance(step.advanceDelay || 350);
+      };
+      onbAddListener(document, 'click', delegateHandler);
+      if (step.manualAdvance) {
+        nextBtn.style.display = '';
+        nextBtn.textContent = '눌렀어 →';
+      } else {
+        nextBtn.style.display = 'none';
+      }
+      return;
+    }
     if (advanceTarget) {
       // 사용자 요청 2026-04-28: hideUntilElementHidden — 클릭 후 코치마크 숨김 + 지정 element가 hidden 될 때까지 대기 → 다시 띄우고 advance
       if (step.hideUntilElementHidden) {
@@ -14120,12 +14141,13 @@ function renderModel() {
       `).join('')}
     </div>`;
   }
-  // 사용자 요청 2026-04-28: 세부 섹션 (values/traits/patterns/진단) 접힘 처리
+  // 사용자 요청 2026-04-28: 더 자세히 그냥 보이게 (이전엔 접힘) — 주제별로 묶어서 노출
+  // detailsHtml에 이미 각 model-section (가치/특성/패턴/진단)가 들어있음 — 그대로 펼쳐서 박음
   if (detailsHtml) {
-    html += `<details class="model-collapse" style="margin-top:8px;">
-      <summary style="font-size:13px; font-weight:600; color:var(--accent); padding:10px 0; cursor:pointer; list-style:none;">▾ 더 자세히 (특성·가치·패턴·진단)</summary>
-      <div style="margin-top:14px;">${detailsHtml}</div>
-    </details>`;
+    html += `<div style="margin-top:18px;">
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; letter-spacing:0.04em;">— 더 자세히 —</div>
+      ${detailsHtml}
+    </div>`;
   }
   container.innerHTML = html;
 }
@@ -17684,8 +17706,10 @@ function renderLibraryHero() {
     body = `
       <div class="hero-text">
         <div class="hero-icon">${icon}</div>
-        <div class="hero-content">${escapeHtml(pick.content || '')}</div>
-        ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}
+        <div class="hero-text-col">
+          <div class="hero-content">${escapeHtml(pick.content || '')}</div>
+          ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}
+        </div>
       </div>
     `;
   }
@@ -27692,7 +27716,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.140-extract-render';
+const APP_VERSION = 'v4.0.141-deeper-hero-detail';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
