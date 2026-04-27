@@ -4371,12 +4371,16 @@ async function createV6Backup(dataToBackup) {
 }
 
 function migrateToV7() {
-  // V6 → V7: V4 신규 필드만 보강. 기존 V6 데이터는 보존 (파괴 X).
+  // V6 → V7: V4 신규 필드 보강. 기존 V6 데이터는 보존 (파괴 X).
   // - caseFormulation: goals/growth + unverified 8차원
   // - reflectionQuestions, todaySchedule
   // - preferences: tutorialVersion, tutorialCompleted, miniTutorialsSeen, progressiveUnlockLevel
-  // 추가 V4 필드 (strategyCard.generations, mission.strategyId, chapterMeta, pearls.type, archive.type 등)는
-  // V4-1c에서 별도 마이그레이션. 지금은 빈 default로만 두면 V4 코드가 안전하게 처리.
+  // V4-1c 깊은 변환:
+  // - strategy topicCards → generations[0] + embodimentStatus + embodimentPath + evolutionChats
+  // - missions → strategyId / generationIdx (null default)
+  // - chatMessages chapterStart → chapterMeta {category, summary, strategyId}
+  // - pearls → type:'pearl' default
+  // - archive → type:'scrap' default + tags:[]
   console.log('🔄 Migrating V6 → V7...');
 
   if (!state.caseFormulation) {
@@ -4397,6 +4401,60 @@ function migrateToV7() {
   if (state.preferences.tutorialCompleted === undefined) state.preferences.tutorialCompleted = false;
   if (!Array.isArray(state.preferences.miniTutorialsSeen)) state.preferences.miniTutorialsSeen = [];
   if (state.preferences.progressiveUnlockLevel === undefined) state.preferences.progressiveUnlockLevel = null;
+
+  // V4-1c: 깊은 데이터 모델 변환
+  // strategy topicCards에 generations / embodiment 필드 보강
+  if (Array.isArray(state.topicCards)) {
+    state.topicCards.forEach(card => {
+      if (card.category !== 'strategy') return;
+      if (!Array.isArray(card.generations)) {
+        card.generations = [{
+          gen: 1,
+          layer: 'L2',
+          action: card.actionStrategy || card.summary || card.title || '',
+          missions: [],
+          shells: [],
+          attempts: [],
+          status: 'working'
+        }];
+      }
+      if (card.embodimentStatus === undefined) card.embodimentStatus = 'seedling';
+      if (card.embodimentPath === undefined) card.embodimentPath = null;
+      if (!Array.isArray(card.evolutionChats)) card.evolutionChats = [];
+    });
+  }
+
+  // missions에 strategyId / generationIdx 보강
+  if (Array.isArray(state.missions)) {
+    state.missions.forEach(m => {
+      if (!('strategyId' in m)) m.strategyId = null;
+      if (!('generationIdx' in m)) m.generationIdx = null;
+    });
+  }
+
+  // chatMessages chapterStart에 chapterMeta 보강
+  if (Array.isArray(state.chatMessages)) {
+    state.chatMessages.forEach(msg => {
+      if (msg.chapterStart === true && !msg.chapterMeta) {
+        msg.chapterMeta = { category: null, summary: null, strategyId: null };
+      }
+    });
+  }
+
+  // pearls에 type:'pearl' default
+  if (Array.isArray(state.pearls)) {
+    state.pearls.forEach(p => {
+      if (!p.type) p.type = 'pearl';
+    });
+  }
+
+  // archive에 type:'scrap' + tags:[] default
+  if (Array.isArray(state.archive)) {
+    state.archive.forEach(a => {
+      if (!a.type) a.type = 'scrap';
+      if (!Array.isArray(a.tags)) a.tags = [];
+    });
+  }
 
   console.log('✅ Migration to V7 complete');
 }
@@ -6326,7 +6384,9 @@ function saveReview(type) {
     date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
     insight: reviewData.summary + (userNote ? ' — ' + userNote : ''),
     source: type === 'weekly' ? '주간 리뷰' : '월간 리뷰',
-    savedAt: new Date().toISOString()
+    savedAt: new Date().toISOString(),
+    type: 'scrap',
+    tags: []
   });
 
   saveState();
@@ -6395,7 +6455,9 @@ async function saveFollowup(followupId) {
     date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
     insight: `[Future Self] "${decision?.title}" 결정의 ${followup.horizon} 후 — 예측 정확도 ${accuracy}/10. ${reflection || outcome.slice(0, 100)}`,
     source: 'Future Self',
-    savedAt: new Date().toISOString()
+    savedAt: new Date().toISOString(),
+    type: 'scrap',
+    tags: []
   });
 
   saveState();
@@ -7132,7 +7194,9 @@ function createMission(title, description, options = {}) {
     scheduledFor: options.scheduledFor || todayKey(),
     status: 'pending',
     sourceMessageIdx: options.sourceMessageIdx,
-    linkedStrategy: options.linkedStrategy
+    linkedStrategy: options.linkedStrategy,
+    strategyId: options.strategyId || null,
+    generationIdx: options.generationIdx ?? null
   };
   state.missions.push(mission);
   saveState();
@@ -8157,6 +8221,7 @@ async function submitCheckin() {
           content: currentCheckin.music.title,
           note: `체크인 ${sameCount}번 등장 → 자동 보관`,
           autoAdded: true,
+          type: 'pearl',
           createdAt: new Date().toISOString()
         });
         _autoPearlAdded = currentCheckin.music.title;
@@ -8672,7 +8737,9 @@ async function sendChat() {
     content: text,
     timestamp: new Date().toISOString(),
     ...(isDiary ? { isDiary: true } : {}),
-    ...(isNewChapter && state.chatMessages.length > 0 ? { chapterStart: true } : {})
+    ...(isNewChapter && state.chatMessages.length > 0
+      ? { chapterStart: true, chapterMeta: { category: null, summary: null, strategyId: null } }
+      : {})
   });
   input.value = ''; input.style.height = 'auto';
   renderChat();
@@ -9726,7 +9793,7 @@ ${msg.content}
   const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
   // headline + body 형식 저장. insight는 backwards-compat 결합 string.
   const insight = headline ? `${headline} — ${body}` : body;
-  state.archive.unshift({ date, insight, headline, body, original: msg.content, source: '대화', savedAt: new Date().toISOString() });
+  state.archive.unshift({ date, insight, headline, body, original: msg.content, source: '대화', savedAt: new Date().toISOString(), type: 'scrap', tags: [] });
   msg.saved = true;
   saveState();
   renderChat();
@@ -9805,8 +9872,9 @@ ${msg.content}
   // backward-compat summary 결합 (legacy 코드가 summary 참조)
   const summary = [problemContext, psychConcept, actionStrategy].filter(Boolean).join(' / ');
   state.topicCards = state.topicCards || [];
+  const stratId = 'strat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   state.topicCards.push({
-    id: 'strat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    id: stratId,
     category: 'strategy',
     title,
     summary,
@@ -9817,7 +9885,20 @@ ${msg.content}
     chapterEndedAt: now,
     createdAt: now,
     messageCount: 1,
-    source: 'deeper'
+    source: 'deeper',
+    // V4: 체화 시스템
+    generations: [{
+      gen: 1,
+      layer: 'L2',
+      action: actionStrategy || title,
+      missions: [],
+      shells: [],
+      attempts: [],
+      status: 'working'
+    }],
+    embodimentStatus: 'seedling',
+    embodimentPath: null,
+    evolutionChats: []
   });
   msg.savedStrategy = true;
   saveState();
@@ -10222,7 +10303,8 @@ function topicToPearl(id) {
     content: card.title + (card.summary ? '\n' + card.summary : ''),
     category: '순간',
     createdAt: new Date().toISOString(),
-    sourceTopicCardId: id
+    sourceTopicCardId: id,
+    type: 'pearl'
   });
   saveState();
   renderArchive();
@@ -10335,16 +10417,31 @@ async function addManualStrategy() {
     okLabel: '추가'
   });
   // summary가 null이면 취소했지만 title은 살림 — 사용자 의도 존중
+  const _trimmedTitle = title.trim().slice(0, 60);
+  const _trimmedSummary = (summary || '').trim().slice(0, 300);
   state.topicCards.push({
     id: 'tc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-    title: title.trim().slice(0, 60),
-    summary: (summary || '').trim().slice(0, 300),
+    title: _trimmedTitle,
+    summary: _trimmedSummary,
     category: 'strategy',
     chapterStartedAt: null,
     chapterEndedAt: null,
     messageCount: 0,
     createdAt: new Date().toISOString(),
-    source: 'manual'
+    source: 'manual',
+    // V4: 체화 시스템
+    generations: [{
+      gen: 1,
+      layer: 'L2',
+      action: _trimmedSummary || _trimmedTitle,
+      missions: [],
+      shells: [],
+      attempts: [],
+      status: 'working'
+    }],
+    embodimentStatus: 'seedling',
+    embodimentPath: null,
+    evolutionChats: []
   });
   saveState();
   renderArchive();
@@ -11679,16 +11776,34 @@ JSON만 출력. 마크다운 X. 다른 설명 X.`;
       if (!t.title || !t.summary) return;
       const validCats = ['decision', 'task', 'emotional', 'memory', 'idea', 'strategy'];
       const category = validCats.includes(t.category) ? t.category : 'memory';
-      state.topicCards.push({
+      const cardTitle = String(t.title).trim().slice(0, 60);
+      const cardSummary = String(t.summary).trim().slice(0, 300);
+      const card = {
         id: 'tc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         chapterStartedAt,
         chapterEndedAt,
-        title: String(t.title).trim().slice(0, 60),
-        summary: String(t.summary).trim().slice(0, 300),
+        title: cardTitle,
+        summary: cardSummary,
         category,
         messageCount: prevChapterMsgs.length,
         createdAt: new Date().toISOString()
-      });
+      };
+      // V4: strategy 카드면 체화 시스템 필드 박기
+      if (category === 'strategy') {
+        card.generations = [{
+          gen: 1,
+          layer: 'L2',
+          action: cardSummary || cardTitle,
+          missions: [],
+          shells: [],
+          attempts: [],
+          status: 'working'
+        }];
+        card.embodimentStatus = 'seedling';
+        card.embodimentPath = null;
+        card.evolutionChats = [];
+      }
+      state.topicCards.push(card);
     });
     saveState();
     console.log(`✦ 챕터 토픽 ${parsed.topics.length}개 추출됨`);
@@ -12023,7 +12138,9 @@ async function runMonthlyAutoReviewIfNeeded() {
       date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
       insight: reviewData.summary,
       source: '월간 리뷰 (자동)',
-      savedAt: new Date().toISOString()
+      savedAt: new Date().toISOString(),
+      type: 'scrap',
+      tags: []
     });
     saveState();
     showToast('📅 지난 달 자동 정리 완료. 아카이브 → 리뷰 모음 확인.');
@@ -14111,7 +14228,8 @@ async function addPearl() {
         track,
         content: track.title,
         note: (note || '').trim() || null,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        type: 'pearl'
       });
       saveState();
       renderLensPearls();
@@ -14132,7 +14250,8 @@ async function addPearl() {
     id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     content: content.trim(),
     category,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    type: 'pearl'
   });
   saveState();
   renderLensPearls();
@@ -14434,7 +14553,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.1-data-import';
+const APP_VERSION = 'v4.0.2-data-model';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
