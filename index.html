@@ -9907,6 +9907,119 @@ ${msg.content}
 }
 
 // ═══════════════════════════════════════════════════════════════
+// V4 EMBODIMENT STATE MACHINE (체화 상태 머신)
+// ───────────────────────────────────────────────────────────────
+// 전략 카드의 generations[] 안 attempts[]를 기록하고,
+// 누적 worked 수에 따라 embodimentStatus 자동 전환.
+// V4 비전 5.4 전환 규칙:
+//   🌱 seedling → 🌿 trying: 자동 (시도 1회+)
+//   🌿 trying → 🌳 working: 누적 worked 3회 + 사용자 확인 (V4-1d-2 prompt)
+//   🌳 working → 🍃 embodied: 누적 worked 5회 + 사용자 확인 (V4-1d-4 결정화 의식)
+//   any → 🪦 mutated: 사용자 "안 통함" 클릭 → 새 generation
+// ═══════════════════════════════════════════════════════════════
+
+function getStrategyCard(strategyId) {
+  if (!strategyId || !Array.isArray(state.topicCards)) return null;
+  return state.topicCards.find(c => c.id === strategyId && c.category === 'strategy') || null;
+}
+
+function getCurrentGeneration(card) {
+  if (!card || !Array.isArray(card.generations) || !card.generations.length) return null;
+  return card.generations[card.generations.length - 1];
+}
+
+function countWorkedAttempts(card) {
+  if (!card || !Array.isArray(card.generations)) return 0;
+  return card.generations.reduce((acc, g) =>
+    acc + (Array.isArray(g.attempts) ? g.attempts.filter(a => a.status === 'worked').length : 0)
+  , 0);
+}
+
+function countTotalAttempts(card) {
+  if (!card || !Array.isArray(card.generations)) return 0;
+  return card.generations.reduce((acc, g) =>
+    acc + (Array.isArray(g.attempts) ? g.attempts.length : 0)
+  , 0);
+}
+
+// status: 'worked' | 'meh' | 'didnt' | 'skipped'
+function recordStrategyAttempt(strategyId, status, missionId) {
+  const card = getStrategyCard(strategyId);
+  if (!card) return null;
+  const gen = getCurrentGeneration(card);
+  if (!gen) return null;
+  if (!Array.isArray(gen.attempts)) gen.attempts = [];
+  gen.attempts.push({
+    missionId: missionId || null,
+    status,
+    at: new Date().toISOString()
+  });
+  if (missionId && Array.isArray(gen.missions) && !gen.missions.includes(missionId)) {
+    gen.missions.push(missionId);
+  }
+  updateEmbodimentStatus(card);
+  saveState();
+  return card;
+}
+
+function updateEmbodimentStatus(card) {
+  if (!card) return;
+  // 이미 결정화 / 종료된 경우 자동 전환 X
+  if (card.embodimentStatus === 'embodied' || card.embodimentStatus === 'archived') return;
+
+  const total = countTotalAttempts(card);
+  const worked = countWorkedAttempts(card);
+
+  // seedling → trying: 첫 시도부터
+  if (card.embodimentStatus === 'seedling' && total >= 1) {
+    card.embodimentStatus = 'trying';
+  }
+
+  // trying → working prompt: worked 3회+ (사용자 확인은 V4-1d-2에서)
+  // working → embodied prompt: worked 5회+ (V4-1d-4 결정화 의식)
+  if (worked >= 5 && card.embodimentStatus !== 'embodied') {
+    if (typeof promptCrystallize === 'function') {
+      try { promptCrystallize(card); } catch (e) { console.warn('promptCrystallize:', e); }
+    }
+  } else if (worked >= 3 && card.embodimentStatus === 'trying') {
+    if (typeof promptWorkingTransition === 'function') {
+      try { promptWorkingTransition(card); } catch (e) { console.warn('promptWorkingTransition:', e); }
+    }
+  }
+}
+
+// V4-1d-3 wire용: 사용자 "안 통함" → 새 generation 생성, 이전 gen은 mutated.
+function mutateToNewGeneration(strategyId, layer, action) {
+  const card = getStrategyCard(strategyId);
+  if (!card) return null;
+  if (!Array.isArray(card.generations)) card.generations = [];
+  const prevGen = getCurrentGeneration(card);
+  if (prevGen) prevGen.status = 'mutated';
+  const newGen = {
+    gen: card.generations.length + 1,
+    layer: layer || 'L2',
+    action: action || '',
+    missions: [],
+    shells: [],
+    attempts: [],
+    status: 'working'
+  };
+  card.generations.push(newGen);
+  card.embodimentStatus = 'trying'; // 새 가지 시작 — 다시 trying
+  saveState();
+  return card;
+}
+
+// V4-1d-4 wire용: 5.6 3 경로 결정.
+function determineEmbodimentPath(card) {
+  if (!card || !Array.isArray(card.generations)) return 'one-shot';
+  const gens = card.generations;
+  if (gens.length === 1) return 'one-shot';
+  if (gens.length <= 2) return 'quick-discovery';
+  return 'evolved';
+}
+
+// ═══════════════════════════════════════════════════════════════
 // PROPOSAL HANDLING (Phase 2 upgrade)
 // ═══════════════════════════════════════════════════════════════
 function acceptProposal(idx) {
@@ -14553,7 +14666,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.2-data-model';
+const APP_VERSION = 'v4.0.3-embodiment-machine';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
