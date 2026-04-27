@@ -13603,35 +13603,8 @@ function renderChat() {
       decisionCard = `<div style="font-size:11px; color:var(--purple); margin-top:8px; padding: 0 4px;">${icon}</div>`;
     }
 
-    // V3.6: Vault proposal card (대화 → 서랍장 자동 추가 시 확인 step)
+    // 사용자 요청 2026-04-28: 대화 중 '📥 서랍장에 넣을까?' 카드 제거 (난잡함)
     let vaultCard = '';
-    if (m.role === 'assistant' && Array.isArray(m.vaultProposals) && m.vaultProposals.length > 0 && !m.typing) {
-      const pending = m.vaultProposals.filter(p => !p.responded);
-      const responded = m.vaultProposals.filter(p => p.responded);
-      if (pending.length > 0) {
-        const itemsHtml = pending.map(p => `
-          <div class="vault-proposal-item">
-            <div class="vpi-text">${escapeHtml(p.content)}</div>
-            <div class="vpi-buttons">
-              <button class="vpi-btn yes" onclick="acceptVaultProposal(${i}, '${p.proposalId}')">📥 응</button>
-              <button class="vpi-btn no" onclick="declineVaultProposal(${i}, '${p.proposalId}')">괜찮아</button>
-            </div>
-          </div>
-        `).join('');
-        vaultCard = `<div class="vault-proposal-card">
-          <div class="vpc-header">📥 서랍장에 넣을까?</div>
-          ${itemsHtml}
-        </div>`;
-      }
-      if (responded.length > 0) {
-        const accepted = responded.filter(p => p.accepted).length;
-        const declined = responded.length - accepted;
-        const parts = [];
-        if (accepted) parts.push(`${accepted}개 서랍장으로`);
-        if (declined) parts.push(`${declined}개 그냥 둠`);
-        vaultCard += `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; padding: 0 4px;">📥 ${parts.join(' · ')}</div>`;
-      }
-    }
 
     // V3.8: 챕터 구분선 (4시간 비활성 후 새 메시지)
     let chapterDivider = '';
