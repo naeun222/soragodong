@@ -6031,6 +6031,93 @@
     100% { transform: var(--mr-end, translate(0, -200px)) scale(0.5) rotate(360deg); opacity: 0; }
   }
 
+  /* 사용자 요청 2026-04-28: DNA 진주 3종 슬라이더 모달 (튜토리얼) */
+  .dna-pearl-types-overlay {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(20,15,40,0.92), rgba(8,5,18,0.96));
+    z-index: 9800;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    animation: dpt-fade 0.3s ease;
+  }
+  @keyframes dpt-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .dna-pearl-types-modal {
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border: 1px solid var(--accent);
+    border-radius: 20px;
+    padding: 22px;
+    max-width: 360px;
+    width: calc(100vw - 32px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+    position: relative;
+    animation: dpt-rise 0.4s cubic-bezier(0.2, 1.4, 0.4, 1);
+  }
+  @keyframes dpt-rise {
+    from { transform: translateY(20px) scale(0.95); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  .dna-pearl-types-close {
+    position: absolute; top: 8px; right: 12px;
+    background: transparent; border: none; color: var(--text-dim);
+    font-size: 22px; cursor: pointer; padding: 4px 8px;
+  }
+  .dna-pearl-types-close:hover { color: var(--text); }
+  .dna-pearl-types-slide {
+    text-align: center;
+    padding: 10px 0 14px;
+  }
+  .dna-pearl-types-label {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px;
+    color: var(--accent);
+    margin-top: 8px;
+  }
+  .dna-pearl-types-desc {
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.7;
+    margin-top: 10px;
+    padding: 0 8px;
+  }
+  .dna-pearl-types-counter {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 12px;
+  }
+  .dna-pearl-types-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 8px; gap: 12px;
+  }
+  .dna-pearl-types-arrow {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .dna-pearl-types-arrow:hover { background: rgba(212,167,106,0.15); }
+  .dna-pearl-types-arrow:active { transform: scale(0.92); }
+  .dna-pearl-types-dots {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .dpt-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .dpt-dot.active {
+    background: var(--accent);
+    transform: scale(1.4);
+  }
+
   /* DNA 박히는 효과 (사용자 요청 2026-04-27) — 작동했어 → 가닥에 흔적 */
   .dna-insert-fx {
     position: fixed;
@@ -8522,9 +8609,11 @@ const ONBOARDING_STEPS = [
     id: 'dna_pearl_types',
     targetSelector: null,
     title: '🔮 DNA 진주 3가지',
-    body: 'DNA 진주는 3가지 종류:<br><br>· <b>🌱 빠른 발견</b> — 한 차원에서 바로 통한 전략<br>· <b>🌳 영그는 길</b> — 한 차원에서 반복 시도로 도달<br>· <b>🧬 진화한 길</b> — 여러 차원 거쳐 진화로 도달',
+    body: 'DNA 진주는 3가지 종류 — 슬라이더로 살펴봐 ↑',
     waitFor: 'next',
-    dimBackground: false
+    dimBackground: false,
+    aboveModal: true,
+    demoDnaPearlTypes: true
   },
   // 도서관 카테고리들 (깨달음 / 갈피·리뷰 / Stories) 설명 일단 보류 (사용자 요청 2026-04-28) — 양생방만 진행
 
@@ -9021,6 +9110,14 @@ function onbPositionStep(step, retryCount) {
           };
           showCrystallizeRitualModal(fakeCard, fakePearl);
         } catch (e) { console.warn('demoCrystallize:', e); }
+      }
+    }, 500);
+  }
+  // 사용자 요청 2026-04-28: DNA 진주 3종 슬라이더 모달 (튜토리얼 dna_pearl_types step)
+  if (step.demoDnaPearlTypes) {
+    setTimeout(() => {
+      if (typeof showDnaPearlTypesModal === 'function') {
+        try { showDnaPearlTypesModal(); } catch (e) { console.warn('demoDnaPearlTypes:', e); }
       }
     }, 500);
   }
@@ -11708,6 +11805,114 @@ function playMissionRewardEffect(shell) {
     setTimeout(() => p.remove(), 2100);
   }
   setTimeout(() => overlay.remove(), 2700);
+}
+
+// 사용자 요청 2026-04-28: DNA 진주 3종 슬라이더 모달 (튜토리얼)
+let _dnaPearlTypesIdx = 0;
+function showDnaPearlTypesModal() {
+  const types = [
+    {
+      path: 'one-shot',
+      emoji: '🌱',
+      label: '빠른 발견',
+      color: '#8fc88f',
+      description: '한 차원에서 바로 통한 전략.\n시도 = 첫 번째에 통함. 너 자신을 잘 알아서 빠르게 찾았어.',
+      shells: ['⭐', '🌟', '✨', '💫', '🌙']
+    },
+    {
+      path: 'quick-discovery',
+      emoji: '🌳',
+      label: '영그는 길',
+      color: '#ffd93d',
+      description: '한 차원에서 반복 시도로 도달.\n같은 방향 끈질기게 — 7번 8번 시도해서 영글었어.',
+      shells: ['⭐', '⭐', '🌟', '✨', '💫', '⭐', '🌟']
+    },
+    {
+      path: 'evolved',
+      emoji: '🧬',
+      label: '진화한 길',
+      color: 'gradient',
+      description: '여러 차원 거쳐 진화로 도달.\n안 통한 차원 → 다른 차원 시도 → 결국 너에게 맞는 모양.',
+      shells: ['⭐', '🌟', '🦄', '✨', '💎', '🌌']
+    }
+  ];
+  _dnaPearlTypesIdx = 0;
+  let overlay = document.getElementById('dnaPearlTypesOverlay');
+  if (overlay) overlay.remove();
+  overlay = document.createElement('div');
+  overlay.id = 'dnaPearlTypesOverlay';
+  overlay.className = 'dna-pearl-types-overlay';
+  overlay.innerHTML = `
+    <div class="dna-pearl-types-modal" onclick="event.stopPropagation()">
+      <button class="dna-pearl-types-close" onclick="closeDnaPearlTypesModal()">✕</button>
+      <div class="dna-pearl-types-slide" id="dnaPearlTypesSlide"></div>
+      <div class="dna-pearl-types-nav">
+        <button class="dna-pearl-types-arrow" onclick="navDnaPearlTypes(-1)">‹</button>
+        <div class="dna-pearl-types-dots" id="dnaPearlTypesDots"></div>
+        <button class="dna-pearl-types-arrow" onclick="navDnaPearlTypes(1)">›</button>
+      </div>
+    </div>
+  `;
+  overlay.onclick = (e) => { if (e.target === overlay) closeDnaPearlTypesModal(); };
+  document.body.appendChild(overlay);
+  window._dnaPearlTypesData = types;
+  _renderDnaPearlTypesSlide();
+}
+function _renderDnaPearlTypesSlide() {
+  const types = window._dnaPearlTypesData || [];
+  const t = types[_dnaPearlTypesIdx];
+  if (!t) return;
+  const slideEl = document.getElementById('dnaPearlTypesSlide');
+  const dotsEl = document.getElementById('dnaPearlTypesDots');
+  if (!slideEl || !dotsEl) return;
+  // 미니 진주 SVG (간단 + path별 색)
+  const colorFill = t.color === 'gradient' ? 'url(#dpt-rainbow)' : t.color;
+  const shellsRing = t.shells.map((emoji, i) => {
+    const angle = (i / t.shells.length) * 360 - 90;
+    const cx = 100 + 70 * Math.cos(angle * Math.PI / 180);
+    const cy = 100 + 70 * Math.sin(angle * Math.PI / 180);
+    return `<text x="${cx.toFixed(1)}" y="${(cy + 5).toFixed(1)}" text-anchor="middle" font-size="18" style="filter:drop-shadow(0 0 3px gold);">${emoji}</text>`;
+  }).join('');
+  slideEl.innerHTML = `
+    <svg viewBox="0 0 200 200" width="220" height="220" style="display:block; margin: 0 auto;">
+      <defs>
+        <radialGradient id="dpt-pearl-${t.path}" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="white" stop-opacity="0.9"/>
+          <stop offset="60%" stop-color="${t.color === 'gradient' ? '#ffd93d' : t.color}" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="${t.color === 'gradient' ? '#5fcfba' : t.color}" stop-opacity="0.4"/>
+        </radialGradient>
+        <linearGradient id="dpt-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#ff6b6b"/>
+          <stop offset="33%" stop-color="#ffd93d"/>
+          <stop offset="66%" stop-color="#5fcfba"/>
+          <stop offset="100%" stop-color="#8b7ec4"/>
+        </linearGradient>
+      </defs>
+      <circle cx="100" cy="100" r="38" fill="url(#dpt-pearl-${t.path})" stroke="${t.color === 'gradient' ? '#ffd93d' : t.color}" stroke-width="2" opacity="0.9"/>
+      <text x="100" y="115" text-anchor="middle" font-size="40">${t.emoji}</text>
+      ${shellsRing}
+    </svg>
+    <div class="dna-pearl-types-label">${t.emoji} ${t.label}</div>
+    <div class="dna-pearl-types-desc">${escapeHtml(t.description).replace(/\n/g, '<br>')}</div>
+    <div class="dna-pearl-types-counter">${_dnaPearlTypesIdx + 1} / ${types.length}</div>
+  `;
+  dotsEl.innerHTML = types.map((_, i) =>
+    `<span class="dpt-dot${i === _dnaPearlTypesIdx ? ' active' : ''}" onclick="_jumpDnaPearlTypes(${i})"></span>`
+  ).join('');
+}
+function navDnaPearlTypes(delta) {
+  const types = window._dnaPearlTypesData || [];
+  _dnaPearlTypesIdx = (_dnaPearlTypesIdx + delta + types.length) % types.length;
+  _renderDnaPearlTypesSlide();
+}
+function _jumpDnaPearlTypes(idx) {
+  _dnaPearlTypesIdx = idx;
+  _renderDnaPearlTypesSlide();
+}
+function closeDnaPearlTypesModal() {
+  const overlay = document.getElementById('dnaPearlTypesOverlay');
+  if (overlay) overlay.remove();
+  window._dnaPearlTypesData = null;
 }
 
 // DNA 박히는 효과 — 가닥에 worked 흔적 박힐 때 시각 피드백 (사용자 요청 2026-04-27, 전체 적용)
