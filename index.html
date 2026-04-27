@@ -8857,9 +8857,9 @@ function onbPositionStep(step, retryCount) {
       }
     }
   }
-  // V3.13.x: 자동 스크롤 (dimBackground !== false에서만)
-  // 2026-04-27: bottom-nav (76px+) 가림 방지 — 하단 버퍼 130px 로 확대
-  if (target && step.dimBackground !== false) {
+  // V3.13.x + 사용자 보고 2026-04-28: 자동 스크롤 — dimBackground 무관 (target 무조건 view 안으로)
+  // bottom-nav (76px+) 가림 방지 — 하단 버퍼 130px
+  if (target) {
     const r0 = target.getBoundingClientRect();
     const vhCheck = window.innerHeight;
     const cs = window.getComputedStyle(target);
@@ -8867,8 +8867,11 @@ function onbPositionStep(step, retryCount) {
     const outOfView = r0.bottom < 60 || r0.top > vhCheck - 130 || r0.bottom > vhCheck - 90;
     if (outOfView && !isFixed && window._onbScrolledStep !== _onbStep) {
       window._onbScrolledStep = _onbStep;
-      spotlight.style.display = 'none';
-      mask.classList.add('show-full');
+      // dimBackground:true 일 때만 mask 띄움
+      if (step.dimBackground !== false) {
+        spotlight.style.display = 'none';
+        mask.classList.add('show-full');
+      }
       target.scrollIntoView({ behavior: 'auto', block: 'center' });
       setTimeout(() => onbPositionStep(step, retryCount), 100);
       return;
