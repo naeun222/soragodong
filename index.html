@@ -6976,7 +6976,8 @@ const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮
 // V4 prod URL은 'me_v4' row만 읽고 씀 → V3 데이터(`me`)는 영원히 안전.
 // ═══════════════════════════════════════════════════════════════
 const V4_USER_ID = 'me_v4';
-const V4_BACKUP_USER_ID = 'backup_v6_pre_v7';
+const V4_BACKUP_USER_ID = 'backup_v6_pre_v7';  // V3→V4 마이그레이션 1회 백업
+const V4_TESTER_BACKUP_USER_ID = 'me_v4_backup';  // testerMode ON 시점 cloud 백업 (사용자 요청 2026-04-28)
 const V4_LOCAL_STORAGE_KEY = 'soragodong_v4';
 const V4_LAST_USER_KEY = 'soragodong_v4_last_user_id';
 
@@ -26235,34 +26236,103 @@ window.addEventListener('load', () => {
 // V3.13.x: 테스터 모드 토글 — ON 시 메모리 snapshot 백업, OFF 시 그 snapshot으로 복원
 // (이전: ON/OFF 모두 saveState(true) → 메모리 누적 변경 사항이 cloud에 저장되버림)
 let _testerModeBackupState = null;
-function toggleTesterMode() {
+async function toggleTesterMode() {
   state.preferences = state.preferences || {};
   if (!state.preferences.testerMode) {
-    // ON: 현재 state 백업 + testerMode flag 메모리에만 set (cloud엔 저장 X — 새로고침 시 자동 OFF)
+    // ON: 현재 state 백업 — 메모리 + cloud row 둘 다 (사용자 요청 2026-04-28: reload 후에도 복원 가능)
     _testerModeBackupState = JSON.parse(JSON.stringify(state));
+    try {
+      await _saveTesterBackupToCloud(_testerModeBackupState);
+    } catch (e) { console.warn('tester backup cloud save:', e); }
     state.preferences.testerMode = true;
     refreshTesterModeUI();
-    showToast('🧪 테스터 모드 ON — 변경 저장 안 됨. OFF 또는 새로고침 시 ON 직전 상태로 복원.');
+    showToast('🧪 테스터 모드 ON — 변경 저장 X. OFF 또는 새로고침 후 OFF 시 ON 직전 상태로 복원.');
     return;
   }
-  // OFF: 백업 복원 후 정상 저장
+  // OFF: 메모리 backup 우선, 없으면 cloud backup row에서 복원
   if (_testerModeBackupState) {
     Object.keys(state).forEach(k => delete state[k]);
     Object.assign(state, _testerModeBackupState);
     _testerModeBackupState = null;
     saveState(true);
+    await _deleteTesterBackupFromCloud();
     refreshTesterModeUI();
-    showToast('✦ 테스터 모드 OFF — ON 직전 상태로 복원됨. 화면 다시 그리는 중...');
+    showToast('✦ 테스터 모드 OFF — ON 직전 상태로 복원됨. 새로고침...');
     setTimeout(() => location.reload(), 600);
-  } else {
-    // 백업 없음 (이전 버그로 cloud에 testerMode=true가 남았거나 reload 후 OFF 누른 경우)
-    // testerMode flag만 명시적으로 끄고 강제 cloud save (testerMode=false로) — 무한 루프 깨기
+    return;
+  }
+  // 메모리 backup 없음 — cloud backup row 시도
+  showToast('🔄 cloud 백업 검색 중...');
+  const cloudBackup = await _loadTesterBackupFromCloud();
+  if (cloudBackup) {
+    Object.keys(state).forEach(k => delete state[k]);
+    Object.assign(state, cloudBackup);
+    state.preferences = state.preferences || {};
     state.preferences.testerMode = false;
     saveState(true);
+    await _deleteTesterBackupFromCloud();
     refreshTesterModeUI();
-    showToast('✦ 테스터 모드 OFF (백업 X — flag 만 지움)');
+    showToast('✦ cloud 백업에서 복원됨. 새로고침...');
     setTimeout(() => location.reload(), 600);
+    return;
   }
+  // cloud 백업도 없음 — flag만 끄기
+  state.preferences.testerMode = false;
+  saveState(true);
+  refreshTesterModeUI();
+  showToast('✦ 테스터 모드 OFF (백업 X — flag 만 지움)');
+  setTimeout(() => location.reload(), 600);
+}
+
+// 사용자 요청 2026-04-28: testerMode backup cloud 저장/복원/삭제 헬퍼
+async function _saveTesterBackupToCloud(stateData) {
+  if (!authUserId) return;
+  // testerMode flag 자체는 backup에서 false로 저장 (복원 후 자동 OFF 상태)
+  const sanitized = JSON.parse(JSON.stringify(stateData));
+  if (sanitized.preferences) sanitized.preferences.testerMode = false;
+  // 기존 backup row 있는지 체크
+  const checkResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_TESTER_BACKUP_USER_ID}&select=id&limit=1`,
+    { headers: authHeaders() }
+  );
+  const existing = await checkResp.json();
+  const body = JSON.stringify({ data: { ...sanitized, _backup_meta: { type: 'tester_mode', createdAt: new Date().toISOString() } } });
+  if (existing.length > 0) {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_TESTER_BACKUP_USER_ID}`,
+      { method: 'PATCH', headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body }
+    );
+  } else {
+    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_TESTER_BACKUP_USER_ID, data: { ...sanitized, _backup_meta: { type: 'tester_mode', createdAt: new Date().toISOString() } } })
+    });
+  }
+}
+async function _loadTesterBackupFromCloud() {
+  if (!authUserId) return null;
+  try {
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_TESTER_BACKUP_USER_ID}&select=data&limit=1`,
+      { headers: authHeaders() }
+    );
+    if (!resp.ok) return null;
+    const rows = await resp.json();
+    if (rows.length === 0) return null;
+    const data = rows[0].data;
+    if (data && data._backup_meta) delete data._backup_meta;
+    return data;
+  } catch (e) { console.warn('load tester backup:', e); return null; }
+}
+async function _deleteTesterBackupFromCloud() {
+  if (!authUserId) return;
+  try {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_TESTER_BACKUP_USER_ID}`,
+      { method: 'DELETE', headers: authHeaders() }
+    );
+  } catch (e) { console.warn('delete tester backup:', e); }
 }
 function refreshTesterModeUI() {
   const btn = document.getElementById('testerModeToggleBtn');
