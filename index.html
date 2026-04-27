@@ -24398,13 +24398,29 @@ async function forceAnalyze() {
 
   setSyncStatus('syncing');
   try {
+    // V4-fix v3 (사용자 보고 — API 429): dataDump 크기 대폭 줄임 (token 한계 + rate limit)
+    const sliceEntry = (e) => ({
+      date: e.date, mood: e.mood, vitality: e.vitality,
+      sleep: e.sleepStart && e.sleepEnd ? `${e.sleepStart}-${e.sleepEnd}` : null,
+      modes: Object.keys(e.modes || {}).filter(k => e.modes[k]),
+      diary: e.diary ? e.diary.slice(0, 100) : null,
+      note: e.note ? e.note.slice(0, 80) : null
+    });
     const dataDump = {
-      entries: state.entries,
-      chatMessages: state.chatMessages.filter(m => !m.typing && !m.error).slice(-50),
-      archive: state.archive,
-      missions: state.missions,
-      decisions: state.decisions || [],
-      activeModes: Object.keys(state.modes).filter(k => state.modes[k])
+      entries: (state.entries || []).slice(-60).map(sliceEntry),
+      chatMessages: state.chatMessages.filter(m => !m.typing && !m.error).slice(-25).map(m => ({
+        role: m.role, content: (m.content || '').slice(0, 200)
+      })),
+      archive: (state.archive || []).slice(0, 15).map(a => ({
+        type: a.type, headline: a.headline, body: (a.body || '').slice(0, 100)
+      })),
+      missions: (state.missions || []).slice(-15).map(m => ({
+        title: m.title, status: m.status, attemptStatus: m.attemptStatus
+      })),
+      decisions: (state.decisions || []).slice(-5).map(d => ({
+        topic: d.topic || d.title, status: d.status
+      })),
+      activeModes: Object.keys(state.modes || {}).filter(k => state.modes[k])
     };
     const prompt = `너는 임상심리학자로서 이 사용자의 Case Formulation을 구축한다.
 
@@ -24439,7 +24455,11 @@ JSON으로 출력:
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({ model: 'claude-opus-4-7', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
     });
-    if (!response.ok) throw new Error('API ' + response.status);
+    if (!response.ok) {
+      if (response.status === 429) throw new Error('API 429 — Rate limit. 1-2분 후 다시.');
+      if (response.status === 413) throw new Error('데이터 너무 큼. testerMode OFF 후 다시.');
+      throw new Error('API ' + response.status);
+    }
     const result = await response.json();
     const text = result.content[0].text;
     // V4-fix v3 (사용자 보고): code block fence 제거 + truncated 응답 복구
@@ -24680,7 +24700,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.98-insights-pretty';
+const APP_VERSION = 'v4.0.99-analyze-rate-limit';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.

@@ -1,1 +1,1 @@
-v4.0.98-insights-pretty
+v4.0.99-analyze-rate-limit
