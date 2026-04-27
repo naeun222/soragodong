@@ -9906,21 +9906,17 @@ function getCurrentWeekKey() { return getWeekKey(new Date()); }
 function getCurrentMonthKey() { return getMonthKey(new Date()); }
 
 function isWeeklyReviewAvailable() {
-  // Available on Sunday OR if last review was more than 6 days ago
+  // 사용자 요청 2026-04-28: 일요일에만 (이번주 안 한 경우만)
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0 = Sunday
+  if (dayOfWeek !== 0) return false;
   const currentWeekKey = getCurrentWeekKey();
   const hasThisWeek = (state.weeklyReviews || []).some(r => r.weekKey === currentWeekKey);
   if (hasThisWeek) return false;
-  // Available Saturday and Sunday or after 7 days from last
-  if (dayOfWeek === 0 || dayOfWeek === 6) return true;
+  // 첫 리뷰는 데이터 5개 이상 (의미 있게)
   const last = (state.weeklyReviews || []).slice(-1)[0];
-  if (!last) {
-    // Need at least 5 entries to be useful
-    return state.entries.length >= 5;
-  }
-  const daysSince = Math.floor((today - new Date(last.completedAt)) / 86400000);
-  return daysSince >= 7;
+  if (!last) return (state.entries || []).length >= 5;
+  return true;
 }
 
 function isMonthlyReviewAvailable() {
