@@ -17142,29 +17142,67 @@ function showArchiveReviews() {
 function renderArchiveReviews() {
   const container = document.getElementById('archiveReviewsList');
   if (!container) return;
-  
+
   const weekly = (state.weeklyReviews || []).map(r => ({...r, type: 'weekly'}));
   const monthly = (state.monthlyReviews || []).map(r => ({...r, type: 'monthly'}));
-  const all = [...weekly, ...monthly].sort((a, b) => 
+  // V4-1y-3: 분기 리뷰 추가
+  const quarterly = (state.quarterlyReviews || []).map(r => ({...r, type: 'quarterly'}));
+  const all = [...weekly, ...monthly, ...quarterly].sort((a, b) =>
     new Date(b.completedAt) - new Date(a.completedAt)
   );
-  
+
   if (all.length === 0) {
     container.innerHTML = `<div class="timeline-empty">
       <div class="icon">🌙</div>
       아직 리뷰가 없어.<br>
-      주말이나 매월 1주차에<br>
-      홈에 리뷰 카드가 떠.
+      주말 / 매월 1주차 / 매분기 1주차에<br>
+      자동으로 정리돼.
     </div>`;
     return;
   }
-  
+
   container.innerHTML = all.map((r, idx) => {
     const date = new Date(r.completedAt);
     const dateStr = date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-    const typeLabel = r.type === 'weekly' ? '🌙 주간' : '📅 월간';
-    const periodLabel = r.weekKey || r.monthKey || '';
+    const typeLabel = r.type === 'weekly' ? '🌙 주간' : r.type === 'monthly' ? '📅 월간' : '📊 분기';
+    const periodLabel = r.weekKey || r.monthKey || r.quarterKey || '';
     const autoTag = r.auto ? ' <span style="font-size:9px; color:var(--purple); padding:1px 6px; background:var(--purple-dim); border-radius:6px; margin-left:4px;">🤖 자동</span>' : '';
+
+    // V4-1y-3: 분기 리뷰는 V4 sections 배열 형식 ({label, body})
+    let detailHtml = '';
+    if (r.type === 'quarterly' && Array.isArray(r.sections)) {
+      detailHtml = r.sections.map(s => `<div style="margin-bottom:10px;">
+        <div style="font-size:11px; color:var(--accent); margin-bottom:4px;">${escapeHtml(s.label || '')}</div>
+        <div style="font-size:13px; line-height:1.7; color:var(--text);">${escapeHtml(s.body || '')}</div>
+      </div>`).join('');
+      // V4 stats 표시
+      if (r.stats) {
+        const s = r.stats;
+        const statLines = [
+          `체크인 ${s.checkins || 0}일`,
+          s.workRate != null ? `미션 ${Math.round(s.workRate * 100)}% (${s.worked}/${s.attempts})` : '',
+          s.pearls ? `진주 ${s.pearls}` : '',
+          s.dnaPearls ? `DNA 진주 ${s.dnaPearls}` : ''
+        ].filter(Boolean).join(' · ');
+        if (statLines) {
+          detailHtml += `<div style="margin-top:10px; padding:8px 10px; background:var(--surface2); border-radius:8px; font-size:11px; color:var(--text-dim); letter-spacing:0.04em;">📊 ${statLines}</div>`;
+        }
+      }
+    } else if (r.sections) {
+      // V3 형식 (object)
+      detailHtml = Object.entries(r.sections).map(([k, v]) => {
+        const labels = {
+          patterns: '💫 너의 모습',
+          good_moments: '✨ 잘된 순간들',
+          hard_moments: '🌊 어려웠던 순간',
+          next_suggestion: '🐚 다음 제안'
+        };
+        return `<div style="margin-bottom:10px;">
+          <div style="font-size:11px; color:var(--accent); margin-bottom:4px;">${labels[k] || k}</div>
+          <div style="font-size:13px; line-height:1.7; color:var(--text);">${escapeHtml(v || '')}</div>
+        </div>`;
+      }).join('');
+    }
 
     return `
       <div class="timeline-day" onclick="toggleReviewDetail(${idx})" style="cursor:pointer;">
@@ -17174,18 +17212,7 @@ function renderArchiveReviews() {
         </div>
         <div class="timeline-day-meta"><span>${dateStr}</span></div>
         <div id="reviewDetail-${idx}" style="display:none; margin-top:14px;">
-          ${r.sections ? Object.entries(r.sections).map(([k, v]) => {
-            const labels = {
-              patterns: '💫 너의 모습',
-              good_moments: '✨ 잘된 순간들',
-              hard_moments: '🌊 어려웠던 순간',
-              next_suggestion: '🐚 다음 제안'
-            };
-            return `<div style="margin-bottom:10px;">
-              <div style="font-size:11px; color:var(--accent); margin-bottom:4px;">${labels[k] || k}</div>
-              <div style="font-size:13px; line-height:1.7; color:var(--text);">${escapeHtml(v || '')}</div>
-            </div>`;
-          }).join('') : ''}
+          ${detailHtml}
           ${r.userNote ? `<div style="margin-top:10px; padding:10px; background:var(--surface2); border-radius:8px; font-size:12px; color:var(--accent2);">📝 ${escapeHtml(r.userNote)}</div>` : ''}
         </div>
       </div>
@@ -17932,7 +17959,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.35-quarterly-ai';
+const APP_VERSION = 'v4.0.36-quarterly-view';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
