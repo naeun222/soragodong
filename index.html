@@ -7678,7 +7678,7 @@ const ONBOARDING_STEPS = [
     id: 'welcome',
     targetSelector: null,
     title: '안녕! 나 소라고동이야 🐚',
-    body: '만나서 반가워! 같이 한 바퀴 돌아보면서 익혀보자. 부담 없이 해봐 ✦<br><br><span class="small">튜토리얼 동안 만든 데이터(체크인·메시지·미션 등)는 끝날 때 내가 다 지워줄게.</span>',
+    body: '<b>너보다 너를 더 잘 아는 나 소라고동이, 네가 더 나은 선택을 할 수 있도록 길라잡이를 해주는 앱</b>이야 ✦<br>같이 한 바퀴 돌아보자. 부담 없이!<br><br><span class="small">튜토리얼 동안 만든 데이터(체크인·메시지·미션 등)는 끝날 때 내가 다 지워줄게.</span>',
     waitFor: 'next'
   },
 
@@ -7771,6 +7771,14 @@ const ONBOARDING_STEPS = [
     fallbackPosition: 'bottom'
   },
   {
+    id: 'tracker_intro',
+    targetSelector: null,
+    title: '📊 추적 항목 (선택)',
+    body: '체크인 안에 + 항목 추가로 매일 추적할 거 등록 가능 — 수면 시간, 카페인, 운동, 명상 등.<br><br>· <b>숫자형</b>: 수면 7.5시간, 러닝 5km<br>· <b>체크형</b>: 명상 했음 ✓, 운동 했음 ✓<br><br><span class="small">안 해도 OK. 평소엔 필요할 때만.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
     id: 'submit_checkin',
     targetSelector: 'button[onclick="submitCheckin()"]',
     title: '✦ 기록 완료',
@@ -7794,7 +7802,7 @@ const ONBOARDING_STEPS = [
     id: 'chat_intro',
     targetSelector: null,
     title: '대화창에서 할 수 있는 것',
-    body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진한 곳이야.<br>머릿속에 엉킨 생각도, 좋았던 일도, 웃긴 에피소드도 — 다 여기다 풀어. 분위기에 맞게 답해줄게.<br><br>예시 (전부 OK):<br>· <b>오늘 있었던 일</b> — "오늘 카페에서 공부했어"<br>· <b>좋았던 거</b> — "발표 잘 끝냈어 ✨" / "친구랑 맛있는 거 먹음"<br>· <b>웃긴 일</b> — "오늘 진짜 웃긴 일 있었는데"<br>· <b>머릿속 와다다</b> — "할 일 너무 많아 어디서부터 해야 해"<br>· <b>짧은 한 마디</b> — "졸려" / "심심" / "ㅋㅋㅋ"<br>· <b>도움 요청</b> — "어떡하지?" / "도와줘" → 4단 분석으로 답해줘<br>· <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장<br><br><span class="small">두 가지 더:<br>· <b>📝 입력창 옆 버튼</b> — 일기 템플릿 5종 (인지심리학 기반). 글쓰기 귀찮은 날 쓰기.<br>· <b>메시지 우상단 ⋮</b> — 복사 / 수정 / 다시 보내기 / 삭제 가능.</span>',
+    body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진한 곳이야.<br>머릿속에 엉킨 생각도, 좋았던 일도, 웃긴 에피소드도 — 다 여기다 풀어. 분위기에 맞게 답해줄게.<br><br>예시 (전부 OK):<br>· <b>오늘 있었던 일</b> — "오늘 카페에서 공부했어"<br>· <b>좋았던 거</b> — "발표 잘 끝냈어 ✨" / "친구랑 맛있는 거 먹음"<br>· <b>웃긴 일</b> — "오늘 진짜 웃긴 일 있었는데"<br>· <b>머릿속 와다다</b> — "할 일 너무 많아 어디서부터 해야 해"<br>· <b>짧은 한 마디</b> — "졸려" / "심심" / "ㅋㅋㅋ"<br>· <b>도움 요청</b> — "어떡하지?" / "도와줘" → 4단 분석으로 답해줘<br>· <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장<br><br><span class="small">세 가지 더:<br>· <b>📝 입력창 옆 + 버튼</b> — 일기 템플릿 5종 (인지심리학 기반) / ✎ 메모 / ✓ 챕터 마무리.<br>· <b>메시지 우상단 ⋮</b> — 복사 / 수정 / 삭제 / 🌊 숙고 질문으로 보내기.<br>· <b>🔮 진주 능동 제안</b> — 대화에서 "진짜 좋아" 흐르면 내가 "진주에 넣을래?" 알아서 물어봐.</span>',
     waitFor: 'next'
   },
   {
@@ -7867,6 +7875,30 @@ const ONBOARDING_STEPS = [
     fallbackPosition: 'top'
   },
   {
+    id: 'attempt_result_intro',
+    targetSelector: null,
+    title: '결과 체크 4 옵션',
+    body: '미션 ✓ 누르면 4 옵션이 떠 (전략 가닥 미션일 때):<br><br>· <b>👍 작동했어</b> — 가닥에 흔적 박힘, 5번 작동 시 결정화 prompt<br>· <b>🤔 그저 그래</b> — "돌연변이 해볼래?" yes/no<br>· <b>👎 안 통했어</b> — 임시 대화창 자동 (다른 차원 4 옵션)<br>· <b>😅 못 시도</b> — 자책 X, 다음 기회<br><br><span class="small">자책 X. 모든 결과 = 발견.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'mutation_intro',
+    targetSelector: null,
+    title: '🧬 돌연변이 — 다른 차원으로',
+    body: '👎 안 통했으면 임시 대화창 자동:<br>"이 전략 안 맞았군. <b>DNA가 진화할 준비 됐어</b>. 다른 차원에서 시도해볼래?"<br><br>5 차원 (인지/행동/환경/사회/메타) 중 4 옵션 → 옵션 클릭 → AI가 <b>오늘부터 가능한 step by step</b> → ✦ 해볼게로 새 가닥 등록.',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'crystallize_intro',
+    targetSelector: null,
+    title: '💎 결정화 의식 (한 번뿐)',
+    body: '한 가닥이 5번 작동하면 → "<b>DNA 진주로 결정화할까?</b>" prompt.<br>응 → 결정화 의식 모달 (faceted gem + 회전 헬릭스 + 박힌 소라들).<br>→ 너 일부가 됨. <b>모래사장 최상위</b>로 올라가.',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
     id: 'open_beach',
     targetSelector: '.home-small-card[onclick="openShellCollection()"]',
     title: '🏖 모래사장',
@@ -7902,30 +7934,48 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
 
-  // === Phase 6: 아카이브 + 전략 확인 (2) ===
+  // === Phase 6: 도서관 5 카테고리 (V4) — 부가 기능 (5) ===
   {
     id: 'go_archive',
     targetSelector: '.nav-item[data-screen="archive"]',
-    title: '📚 아카이브 탭으로',
-    body: '<b>네가 하루동안 입력한 정보 + 일기가 날짜별로 자동 정리</b>되는 곳이야!<br>대화·일기·깨달음·🧭 전략·💎 진주가 다 여기 모여.<br><br>아래 📚 아카이브 탭 눌러봐.',
+    title: '📚 인생 도서관',
+    body: '<b>네가 하루동안 입력한 정보 + 일기가 카테고리별로 자동 정리</b>되는 곳이야!<br>대화·일기·진주·전략·깨달음·갈피·리뷰가 다 여기 모여.<br><br>아래 📚 도서관 탭 눌러봐.',
     waitFor: 'visit',
     visitScreen: 'archive'
   },
   {
-    id: 'switch_wisdom',
-    targetSelector: '.lens-tab[data-lens="wisdom"]',
-    title: '✨ 깨달음 렌즈로',
-    body: '아카이브는 두 렌즈로 나뉘어:<br>📜 대화 (날짜별 일기 + 챕터 토픽) / ✨ 깨달음 (인사이트 + 🧭 전략 + 💎 진주)<br><br>"✨ 깨달음" 탭 눌러서 방금 저장한 전략 같이 확인해보자!',
-    waitFor: 'click',
-    advanceDelay: 600,
+    id: 'library_categories',
+    targetSelector: null,
+    title: '5 카테고리',
+    body: '도서관은 <b>5 카테고리</b>로 정리돼:<br><br>· <b>📔 일기·대화</b> — 캘린더 무드 그리드 + 8 서브칩 (일기/일상/고민/감정/기억/할 일/아이디어/관계)<br>· <b>🔮 진주</b> — Pinterest 갤러리 (음악/음식/장소/순간/사람) + ★ 즐겨찾기<br>· <b>🧬 양생방</b> — 너의 행동 전략 가닥들. 진화 트리.<br>· <b>✨ 깨달음</b> — 📌 스크랩 / ✎ 메모 / 🌊 숙고 결론. 해시태그 자동.<br>· <b>🌀 갈피·리뷰</b> — 갈피의 방 + 주간/월간/분기/연간 리뷰<br><br>맨 위 <b>🌟 오늘의 너</b> 카드는 진주 1개 회전 (안 본 거 우선).',
+    waitFor: 'next',
     dimBackground: false
   },
   {
-    id: 'wisdom_intro',
-    targetSelector: null,
-    title: '깨달음 렌즈 ✨',
-    body: '여기 보이는 건:<br><br>· <b>🔮 인사이트</b> — 체크인 데이터 쌓이면 내가 패턴/인과관계 분석해서 알려줘 (지금은 비어있음)<br>· <b>🧭 전략</b> — 방금 저장한 전략이 여기 보일 거야! 챕터 자동 추출 + 더 알아보기로 저장한 거 다 모임<br>· <b>💎 진주</b> — "좋다" 느낀 작은 순간들. 음악·음식·장소·사람·순간 보관소<br><br>천천히 둘러보고 다음 눌러줘.',
-    waitFor: 'next',
+    id: 'yangsaeng_tree',
+    targetSelector: '[data-cat="yangsaeng"]',
+    title: '🧬 양생방 — 진화 트리',
+    body: '양생방 칩 눌러서 들어가보자!<br><br>가닥 카드 <b>제목 클릭</b> → 진화 트리 펼침.<br>점 = 시도들. <b>색 = 그 미션의 소라 색</b>. 회색 = 안 통한 시도 (사라짐 X).<br>돌연변이 후엔 카드 제목이 새 행동으로 바뀌고 history 보존.',
+    waitFor: 'click',
+    advanceDelay: 800,
+    dimBackground: false
+  },
+  {
+    id: 'insights_intro',
+    targetSelector: '[data-cat="insights"]',
+    title: '✨ 깨달음 + 🔮 인사이트',
+    body: '깨달음 칩 눌러봐!<br><br>· <b>🔮 인사이트</b> — 체크인 데이터 쌓이면 [🔮 새 인사이트 찾기] → AI 인과/패턴 분석. 맞아 ✓ / 아니야로 검증.<br>· <b>📌 스크랩 / ✎ 메모 / 🌊 숙고 결론</b> — 카드 클릭 → 원본 모달.<br>· <b>해시태그</b> 자동.',
+    waitFor: 'click',
+    advanceDelay: 800,
+    dimBackground: false
+  },
+  {
+    id: 'galpi_reviews',
+    targetSelector: '[data-cat="galpi"]',
+    title: '🌀 갈피·리뷰 — Stories Replay',
+    body: '갈피·리뷰 칩 눌러봐!<br><br>· <b>⚖️ 갈피의 방</b> — 큰 결정 14일 숙성 (관점/예측/가치 정렬)<br>· <b>🌙 리뷰 모음</b> — 주간/월간/분기/연간 자동 리뷰<br>· <b>▶ Stories Replay</b> — 분기 (10) / 연간 (15 슬라이드). <b>진주 음악 슬라이드마다</b>. tap 진행.<br>· <b>✨ 깨달음 가공</b> — 사고 모드 / 화두 무게중심 / 시간 분포 / 클러스터 / AI 메타 요약 / 살아있는 통찰.',
+    waitFor: 'click',
+    advanceDelay: 800,
     dimBackground: false
   },
 
@@ -7983,8 +8033,24 @@ const ONBOARDING_STEPS = [
   {
     id: 'model_intro',
     targetSelector: null,
-    title: '"나" 탭 안내',
-    body: '여기서 볼 수 있는 거:<br><br>· <b>📊 추적 항목</b> — 체크인에 입력한 측정값(수면, 카페인, 운동 등) 그래프로<br>· <b>📈 진행 중인 프로젝트</b> — 장기 목표 추적<br>· <b>🎯 가치 / 🐚 특성 / 🔄 패턴</b> — 대화 쌓이면 내가 너 모델링해서 보여줘<br>· <b>💼 케이스 정리</b> — 너의 강점·문제·메커니즘 임상가 시각<br><br><span class="small">지금은 비어있을 거야. 대화 쌓이면 자동으로 채워져!</span><br><br>천천히 둘러보고 다음 눌러줘.',
+    title: '"나" 탭 안내 — 8 차원',
+    body: '여기서 볼 수 있는 거:<br><br>· <b>📊 추적 항목</b> — 체크인 측정값 그래프<br>· <b>📈 진행 중인 프로젝트</b> — 장기 목표 추적<br>· <b>🎯 가치 / 🐚 특성 / 🔄 패턴</b> — 대화 쌓이면 내가 너 모델링해서 보여줘<br>· <b>💼 케이스 정리</b> — 강점·문제·메커니즘·목표·성장 (8 차원, 임상가 시각)<br><br>· <b>NEW 보라 좌측 바</b> — AI 추출 새 항목. <b>맞아 ✓ / 아니야</b>로 검증해.<br><br><span class="small">지금은 비어있을 거야. 대화 쌓이면 자동으로 채워져!</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'diagnoses_intro',
+    targetSelector: null,
+    title: '🩺 진단 5종 (V4)',
+    body: '대화 + 양생방 데이터로 내가 5 진단을 자동 detect해:<br><br>· <b>🔧 도구 약함</b> — 같은 차원 N회 X<br>· <b>📐 차원 안 맞음</b> — 한 layer 다 X<br>· <b>⚖️ 가치 상충</b> — 모든 layer X + 가치 충돌<br>· <b>🌫 회피 패턴</b> — seedling 30일+ / skipped 50%+<br>· <b>🪫 의지 임계치</b> — 모든 게 X<br><br>대화 [더 알고 싶어 ▾] 응답에 한 줄 자연 인용. <b>시도 결과로 confidence 갱신</b>.',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'reflection_intro',
+    targetSelector: null,
+    title: '🌊 숙고 질문 (한 번에 1개)',
+    body: '큰 질문 한 번에 1개 — 별도 대화창에서 깊이 사색.<br><br>· <b>박는 법</b>: 홈 "더 깊이 볼 거" + 새 질문 / 대화 메시지 ⋮ → "🌊 숙고 질문으로"<br>· <b>대화창</b>: 메인챗과 분리. 결론은 너 직접.<br>· <b>✓ 결론</b> → archive 깨달음에 자동. 대화 흐름 보관 여부 yes/no.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -7992,7 +8058,7 @@ const ONBOARDING_STEPS = [
     id: 'finish',
     targetSelector: null,
     title: '준비 끝 ✦',
-    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br><b>내가 너한테 어떤 도움이 될까?</b><br>네가 체크인으로 입력한 정보 + 나랑 한 대화를 모아서, 나는 너의 <b>가치·성향·반복 패턴·강점·취약점</b>을 시간 들여 천천히 파악해. 그걸 바탕으로 — 결정 앞에선 같이 14일 숙성하고, 미션은 너 페이스에 맞게 제안하고, 매주/매달 너 자신을 더 깊게 이해하도록 분석해줄게. <b>네가 앞으로 더 너답게, 더 나은 선택을 할 수 있도록</b> 옆에서 도울게 ✦<br><br><span class="small">튜토리얼 동안 만든 데이터는 내가 다 지웠어. 진짜 시작!</span>',
+    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br><b>다시 한 번 — 너보다 너를 더 잘 아는 나 소라고동이, 네가 더 나은 선택을 할 수 있도록 길라잡이를 해줄게</b> ✦<br><br>· <b>핵심 1: 체크인</b> — 매일 (또는 원할 때) 30초. 너의 거울이 쌓이는 곳.<br>· <b>핵심 2: 대화 탭</b> — 무슨 말이든. 4단 분석 + 너만의 전략으로 박아.<br>· 나머지 (도서관 / 양생방 / 모래사장 / 실행 / 나)는 부가 — 네가 쌓는 만큼 자연스럽게 차올라.<br><br>매일 안 봐도 OK. 너에게 맞춰지는 도구야 — 안 통하면 알려줘.<br><br><span class="small">튜토리얼 동안 만든 데이터는 내가 다 지웠어. 진짜 시작!</span>',
     waitFor: 'next',
     nextLabel: '시작! ✦'
   }
@@ -24803,7 +24869,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.102-stories-seeds-music';
+const APP_VERSION = 'v4.0.103-tutorial-v4-full';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
