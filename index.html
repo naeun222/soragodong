@@ -15190,6 +15190,7 @@ ${(msg.content || '').slice(0, 1500)}
     evolutionChats: []
   });
   msg.savedStrategy = true;
+  msg.strategyId = stratId;  // 사용자 요청 2026-04-28: msg에 strategyId 박기 → acceptProposal에서 mission 만들 때 자동 link
   saveState();
   renderChat();
   showToast('전략 카드로 저장됐어 🧬');
@@ -16338,7 +16339,17 @@ function acceptProposal(idx) {
   const description = proposalData.description || '';
 
   if (title) {
-    createMission(title, description, { sourceMessageIdx: idx });
+    // 사용자 요청 2026-04-28: 같은 메시지에서 'transition 전략으로'를 먼저 누른 경우 strategyId link → 미션 완료 시 shell이 DNA 조각으로 박힘
+    const opts = { sourceMessageIdx: idx };
+    if (msg.strategyId) {
+      opts.strategyId = msg.strategyId;
+      const card = (state.topicCards || []).find(c => c.id === msg.strategyId);
+      if (card && Array.isArray(card.generations)) {
+        opts.generationIdx = card.generations.length - 1;
+        opts.linkedStrategy = card.title;
+      }
+    }
+    createMission(title, description, opts);
     // V3.12.x: 해볼게 효과 — 소라의 부름 등장 celebration
     showCelebration('🐚', '소라가 널 부르고 있어!', '✨');
   }
