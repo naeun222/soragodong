@@ -8778,6 +8778,12 @@ function onbPositionStep(step, retryCount) {
     coachmark.style.transform = 'none';
     coachmark.style.maxWidth = '260px';
     coachmark.style.bottom = 'auto';
+    // 사용자 보고 2026-04-28: 양생방 등 비동기 렌더 후 코치마크 사라지는 버그 — z-index 강제 + visibility 보장
+    coachmark.style.visibility = 'visible';
+    coachmark.style.opacity = '1';
+    coachmark.style.display = '';
+    const ovEl0 = document.getElementById('onbOverlay');
+    if (ovEl0 && !step.aboveModal) ovEl0.style.zIndex = '9500';  // 9000 → 9500 (다른 컨테이너 위로 안전)
   } else {
     // 평소 위치 reset (이전 step에서 corner 썼을 수 있음)
     coachmark.style.maxWidth = '';
