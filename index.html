@@ -21485,7 +21485,8 @@ async function testSeedV4Data() {
         previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c2/9f/30c29f0b-bed7-d993-6909-0392418d4dcc/mzaf_15564917017364106254.plus.aac.p.m4a',
         trackUrl: ''
       } },
-    { c: '음식', content: '엄마 김치찌개', daysAgo: 8, note: '비 오는 날 — 고등학교 그 부엌 생각.' },
+    // 사용자 요청 2026-04-28: '잊지 못할 순간' 슬라이드에 노출되는 카드 — 김치찌개 사진 박음 (Wikimedia Commons 320px, 저용량)
+    { c: '음식', content: '엄마 김치찌개', daysAgo: 8, note: '비 오는 날 — 고등학교 그 부엌 생각.', photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Korean_stew-Kimchi_jjigae-01.jpg/320px-Korean_stew-Kimchi_jjigae-01.jpg' },
     { c: '장소', content: '한강 벤치 새벽 4시', daysAgo: 12, note: '논문 막힌 날. 30분 앉아있다 머리 풀림.' },
     { c: '순간', content: '논문 첫 단락 완성한 순간', daysAgo: 18 },
     { c: '사람', content: '오랜 친구가 갑자기 카톡', daysAgo: 22, note: '"잘 지내?" 그 한 마디.' },
@@ -21494,7 +21495,14 @@ async function testSeedV4Data() {
     { c: '장소', content: '학교 도서관 창가 5층', daysAgo: 42, note: '거기 앉으면 항상 잘 됨.' },
     { c: '순간', content: '새벽 깨달음 — 환경이 의지보다 강함', daysAgo: 48 },
     { c: '사람', content: '교수님 한 마디 칭찬', daysAgo: 55, note: '"이 부분 좋다" — 한 줄인데 컸음.' },
-    { c: '음악', content: '제니 - Love Hangover', daysAgo: 65, searchQuery: 'Jennie Love Hangover' },
+    { c: '음악', content: '제니 - Love Hangover', daysAgo: 65, note: '논문 풀릴 때.', track: {
+        id: 'pinned_jennie_love',
+        title: 'Love Hangover',
+        artist: 'JENNIE & Dominic Fike',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/1c/57/15/1c571583-f4bc-3307-6e5e-8b9e68d05913/196872850918.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/f6/4c/16/f64c164b-bd28-87fd-5217-7409675e6374/mzaf_10560279388547786839.plus.aac.p.m4a',
+        trackUrl: ''
+      } },
     { c: '음식', content: '엄마가 보낸 김장 김치', daysAgo: 75, note: '한 통이 한 달 가요.' },
     { c: '장소', content: '카페 모서리 자리', daysAgo: 85, note: '거기 앉으면 두 시간은 집중.' },
     { c: '순간', content: '실험 결과 첫 success', daysAgo: 95, note: '진짜 소름. 6개월 만의 보상.' },
@@ -21521,7 +21529,47 @@ async function testSeedV4Data() {
     { c: '장소', content: '제주도 협재 — 휴식', daysAgo: 300, note: '3박 4일.' },
     { c: '순간', content: '학회 첫 발표', daysAgo: 320 },
     { c: '사람', content: '동기 결혼식 축하', daysAgo: 340 },
-    { c: '음악', content: 'KATSEYE - PINKY UP', daysAgo: 360, searchQuery: 'KATSEYE Pretty Girls' }
+    { c: '음악', content: 'KATSEYE - PINKY UP', daysAgo: 360, note: '봄 첫날 들음.', track: {
+        id: 'pinned_katseye_pinky',
+        title: 'PINKY UP',
+        artist: 'KATSEYE',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/1a/77/46/1a77460d-493c-a795-92ef-84674905409e/26UMGIM25100.rgb.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/8a/2d/f8/8a2df8c0-e0d3-d040-5a98-958d4ad25ceb/mzaf_16340910211187354178.plus.aac.p.m4a',
+        trackUrl: ''
+      } },
+    // 사용자 요청 2026-04-28: 추가 4곡 — 실제 iTunes preview + artwork 직박음
+    { c: '음악', content: 'Cloonee - Stephanie', daysAgo: 45, note: '신나는 클럽 트랙.', track: {
+        id: 'pinned_cloonee_stephanie',
+        title: 'Stephanie',
+        artist: 'Cloonee, Young M.A & InntRaw',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/97/e4/10/97e41086-cff2-f7b5-83b3-3a085b4d2026/cover.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/d0/1e/40/d01e4015-c383-2c2a-9445-f47edb4ae5e0/mzaf_10847000075002169806.plus.aac.p.m4a',
+        trackUrl: ''
+      } },
+    { c: '음악', content: 'Frank Ocean - Pink + White', daysAgo: 90, note: '늦은 밤 한 사람 생각나는 곡.', track: {
+        id: 'pinned_frank_pinkwhite',
+        title: 'Pink + White',
+        artist: 'Frank Ocean',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/bb/45/68/bb4568f3-68cd-619d-fbcb-4e179916545d/BlondCover-Final.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/45/a8/a2/45a8a2e0-9516-86b2-66ea-e8b2bf71de68/mzaf_10773372944954067241.plus.aac.p.m4a',
+        trackUrl: ''
+      } },
+    { c: '음악', content: '엔하이픈 - Upper Side Dreamin\'', daysAgo: 150, note: '첫 들었을 때 바로 박힘.', track: {
+        id: 'pinned_enhypen_upperside',
+        title: 'Upper Side Dreamin\'',
+        artist: 'ENHYPEN',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/07/f2/86/07f286a5-be02-94dd-4e0e-a781aba6d1d4/192641841651_Cover.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/49/a6/68/49a66800-4e6c-68e6-1e35-3be2919ac57e/mzaf_6950604213995548513.plus.aac.p.m4a',
+        trackUrl: ''
+      } },
+    { c: '음악', content: 'Charli XCX - Club classics', daysAgo: 270, note: '파티 모드 trigger.', track: {
+        id: 'pinned_charli_club',
+        title: 'Club classics',
+        artist: 'Charli xcx',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/88/4e/63/884e6321-ad41-aab1-f6f0-20efcafcfd55/075679666130.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/a5/bb/db/a5bbdb33-3887-5abb-81d5-de75e72c6abc/mzaf_8271755484089764888.plus.aac.p.m4a',
+        trackUrl: ''
+      } }
   ];
   // 사용자 요청 2026-04-28: 음악 시드 — iTunes Search API로 실제 Apple preview URL 가져오기
   for (let i = 0; i < pearlSeeds.length; i++) {
@@ -25063,7 +25111,7 @@ async function buildQuarterlySlides(review) {
     const diff = prevCheckins - checkinsCnt;
     heroComparison = `<div class="stories-body">지난 분기보다 ${diff}번 적었어. 바빴거나 다른 데 살았던 분기일 거야.</div>`;
   } else if (avgGap > 0) {
-    heroComparison = `<div class="stories-body">평균 ${avgGap}일에 한 번씩 들여다봤어. 꾸준한 흐름이야.</div>`;
+    heroComparison = `<div class="stories-body">평균 ${avgGap}일에 한 번씩 체크인. 꾸준한 흐름이야.</div>`;
   }
   slides.push({
     tone: 'tone-emo',
@@ -25071,7 +25119,8 @@ async function buildQuarterlySlides(review) {
       <div class="stories-label">${escapeHtml(review.quarterKey || '')}</div>
       ${heroPhoto ? `<img class="stories-photo" src="${heroPhoto}" alt="">` : ''}
       <div class="stories-hero-num">${checkinsCnt}</div>
-      <div class="stories-hero-unit">번 너 자신을 들여다봤어</div>
+      <div class="stories-hero-unit">번 체크인했어</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:6px;">자기 자신을 기록한 시간</div>
       ${heroComparison}
     `
   });
@@ -25114,7 +25163,13 @@ async function buildQuarterlySlides(review) {
   });
 
   // 5. 감성 top 진주
+  // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드면 '엄마 김치찌개' 카드 고정 (시각 검증)
+  const isAutoFix = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
   const topPearl = (() => {
+    if (isAutoFix) {
+      const fixed = (state.pearls || []).find(p => p && p.content === '엄마 김치찌개');
+      if (fixed) return fixed;
+    }
     const pearls = (state.pearls || []).filter(p => p.type !== 'dna_pearl' && p.category !== '음악' && inRange(p.createdAt));
     if (pearls.length === 0) {
       // 음악 빼고 없으면 음악도 OK
@@ -25126,14 +25181,14 @@ async function buildQuarterlySlides(review) {
   slides.push({
     tone: 'tone-emo-3',
     html: topPearl ? `
-      <div class="stories-label">잊지 말 순간</div>
+      <div class="stories-label">잊지 못할 순간</div>
       <div class="stories-pearl-card">
-        <div class="stories-pearl-emoji">${({음악:'🎵',음식:'🍴',장소:'📍',순간:'✨',사람:'👥'})[topPearl.category] || '💎'}</div>
+        ${topPearl.photo ? `<img src="${escapeHtml(topPearl.photo)}" alt="" style="width:100%; max-width:240px; aspect-ratio:1; object-fit:cover; border-radius:14px; margin:0 auto 14px; display:block; border:1px solid rgba(255,255,255,0.2);">` : `<div class="stories-pearl-emoji">${({음악:'🎵',음식:'🍴',장소:'📍',순간:'✨',사람:'👥'})[topPearl.category] || '💎'}</div>`}
         <div class="stories-pearl-content">${escapeHtml(topPearl.content || '')}</div>
         ${topPearl.note ? `<div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:10px; font-style:italic;">${escapeHtml(topPearl.note)}</div>` : ''}
       </div>
     ` : `
-      <div class="stories-label">잊지 말 순간</div>
+      <div class="stories-label">잊지 못할 순간</div>
       <div class="stories-empty">이 분기 진주 없음</div>
     `
   });
@@ -25306,7 +25361,7 @@ function _buildEvolutionSlideHTML(stats, inRange) {
   // 사용자 요청 2026-04-28: 체화된 전략 카드 — 뿌듯하게, 시각적으로
   const embodiedHtml = embodiedStrategies.length > 0 ? `
     <div style="margin-top:18px; padding:14px 16px; background:linear-gradient(135deg, rgba(212,167,106,0.18), rgba(143,200,143,0.14)); border:1px solid rgba(212,167,106,0.35); border-radius:14px;">
-      <div style="font-size:11px; color:rgba(255,255,255,0.7); margin-bottom:8px; letter-spacing:0.04em;">🧬 네 거가 된 전략</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.7); margin-bottom:8px; letter-spacing:0.04em;">🧬 네 것이 된 전략</div>
       ${embodiedStrategies.slice(0, 4).map(s => `
         <div style="font-size:14px; color:white; padding:5px 0; line-height:1.5; font-weight:500;">
           ✨ ${escapeHtml((s.title || '').slice(0, 36))}
@@ -27390,7 +27445,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.129-stories-polish';
+const APP_VERSION = 'v4.0.130-music-checkin-clarify';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
