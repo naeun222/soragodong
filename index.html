@@ -6289,6 +6289,7 @@
           <button class="btn-secondary" onclick="testForceDiagnoses()" style="margin-top:6px;">🩺 진단 5종 즉시 detect</button>
           <button class="btn-secondary" onclick="testForceCrystallize()" style="margin-top:6px;">🧬 첫 strategy DNA 결정화 강제</button>
           <button class="btn-secondary" onclick="testForceMutation()" style="margin-top:6px;">🪦 첫 strategy 돌연변이 진화 강제</button>
+          <button class="btn-secondary" onclick="testForceStrategyFollowup()" style="margin-top:6px;">🔄 전략 팔로업 → 안 통함 → 돌연변이 풀 흐름</button>
           <button class="btn-secondary" onclick="testForcePearlSuggestion()" style="margin-top:6px;">🔮 진주 능동 제안 (마지막 user msg)</button>
           <button class="btn-secondary" onclick="testForceMissionExpire()" style="margin-top:6px;">⏰ 미션 3일 expire 강제</button>
           <button class="btn-secondary" onclick="testForceQuarterlyStories()" style="margin-top:6px;">▶ 분기 Stories 즉시 보기</button>
@@ -19265,6 +19266,53 @@ function testForceDiagnoses() {
   showToast(`🩺 ${detected.length}개 진단 감지됨 (${types}) — 테스트 모드라 다음 응답에 자동 인용. 대화 탭에서 메시지 보내봐.`);
 }
 
+// V4-fix v3 (사용자 요청): 전략 팔로업 → 안 통함 → 돌연변이 임시 대화창 흐름 풀 시뮬
+async function testForceStrategyFollowup() {
+  if (!state.preferences || !state.preferences.testerMode) {
+    showToast('⚠️ 테스터 모드 ON 후 사용');
+    return;
+  }
+  // 첫 active strategy 카드 (진단 시드 제외, embodied 제외)
+  const card = (state.topicCards || []).find(c =>
+    c.category === 'strategy' && !c._isDiagnosticSeed && c.embodimentStatus !== 'embodied'
+  );
+  if (!card) {
+    showToast('⚠️ 시도 가능한 가닥 X — 시드 박은 후');
+    return;
+  }
+  // pending mission 찾거나 임시 생성
+  let mission = (state.missions || []).find(m => m.strategyId === card.id && m.status === 'pending');
+  if (!mission) {
+    const gen = card.generations && card.generations[card.generations.length - 1];
+    const action = gen?.action || card.actionStrategy || card.title;
+    if (typeof createMission === 'function') {
+      mission = createMission(action, card.title, {
+        strategyId: card.id,
+        generationIdx: Math.max(0, (card.generations?.length || 1) - 1),
+        linkedStrategy: card.title
+      });
+    }
+  }
+  if (!mission) {
+    showToast('⚠️ 미션 생성 실패');
+    return;
+  }
+  // didnt 결과 강제 — 사용자가 ✕ 눌렀다 가정
+  mission.status = 'completed';
+  mission.completedDate = todayKey();
+  mission.completedAt = new Date().toISOString();
+  mission.attemptStatus = 'didnt';
+  if (typeof recordStrategyAttempt === 'function') {
+    try { recordStrategyAttempt(card.id, 'didnt', mission.id); } catch (e) { console.warn('recordStrategyAttempt:', e); }
+  }
+  saveState({ force: true });
+  showToast(`👎 "${card.title}" 안 통함 → 돌연변이 흐름 시작`);
+  // openMutationChat 호출 — 임시 대화창 자동 진입
+  if (typeof openMutationChat === 'function') {
+    setTimeout(() => openMutationChat(card.id, mission.title), 400);
+  }
+}
+
 async function testForceCrystallize() {
   const card = (state.topicCards || []).find(c => c.category === 'strategy' && c.embodimentStatus !== 'embodied');
   if (!card) {
@@ -23466,7 +23514,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.78-vault-modal-schedule-modes';
+const APP_VERSION = 'v4.0.79-strategy-followup-flow';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
