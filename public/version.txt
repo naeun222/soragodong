@@ -1,1 +1,1 @@
-v4.0.97-mutation-rename-title
+v4.0.98-insights-pretty

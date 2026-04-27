@@ -3889,22 +3889,106 @@
     font-size: 10px; color: var(--text-dim);
   }
 
-  /* Insights cards */
+  /* V4-fix v3 (사용자 요청): 인사이트 카드 — 가독성 + 친절 톤 + 깔끔한 버튼 */
   .insight-card {
     background: linear-gradient(135deg, rgba(139,126,196,0.12), rgba(201,169,110,0.06));
     border: 1px solid rgba(139,126,196,0.25);
     border-radius: 16px;
-    padding: 18px;
-    margin-bottom: 14px;
-    cursor: pointer;
+    padding: 16px 16px 14px;
+    margin-bottom: 12px;
     transition: all 0.2s;
   }
-  .insight-card:hover { transform: translateY(-1px); }
-  .insight-card-label { font-size: 10px; color: var(--purple); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
-  .insight-card-text { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 8px; }
-  .insight-card-evidence { font-size: 11px; color: var(--text-dim); }
-  .insight-card-actions { display: flex; gap: 6px; margin-top: 10px; }
-  .insight-card.dismissed { opacity: 0.4; }
+  .insight-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(139,126,196,0.40);
+  }
+  .insight-card-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed rgba(139,126,196,0.20);
+  }
+  .insight-card-type {
+    font-size: 11px; color: var(--purple);
+    background: rgba(139,126,196,0.15);
+    padding: 3px 9px;
+    border-radius: 100px;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .insight-card-conf {
+    font-size: 10px; color: var(--text-soft);
+    margin-left: auto;
+    letter-spacing: 0.04em;
+  }
+  .insight-card-conf-bar {
+    display: inline-block;
+    width: 50px; height: 4px;
+    background: rgba(255,255,255,0.10);
+    border-radius: 2px;
+    overflow: hidden;
+    vertical-align: middle;
+    margin-right: 5px;
+  }
+  .insight-card-conf-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--purple), var(--accent));
+    border-radius: 2px;
+  }
+  .insight-card-text {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px; line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 10px;
+    word-break: keep-all;
+  }
+  .insight-card-evidence {
+    font-size: 11.5px; color: var(--text-dim);
+    line-height: 1.55;
+    padding: 8px 10px;
+    background: rgba(0,0,0,0.18);
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  .insight-card-evidence-label {
+    color: var(--accent2); font-weight: 600;
+    margin-right: 4px;
+  }
+  .insight-card-actions {
+    display: flex; gap: 8px;
+    margin-top: 6px;
+  }
+  .insight-card-btn {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  }
+  .insight-card-btn:active { transform: scale(0.97); }
+  .insight-card-btn.confirm {
+    background: rgba(143,200,143,0.15);
+    border-color: rgba(143,200,143,0.45);
+    color: #c5e8c5;
+  }
+  .insight-card-btn.confirm:hover { background: rgba(143,200,143,0.25); }
+  .insight-card-btn.reject {
+    background: rgba(180,180,200,0.08);
+    border-color: rgba(180,180,200,0.20);
+    color: var(--text-dim);
+  }
+  .insight-card-btn.reject:hover { background: rgba(180,180,200,0.16); }
+  .insight-card.confirmed {
+    background: linear-gradient(135deg, rgba(143,200,143,0.12), rgba(143,200,143,0.04));
+    border-color: rgba(143,200,143,0.30);
+  }
+  .insight-card.confirmed .insight-card-type { background: rgba(143,200,143,0.18); color: #c5e8c5; }
+  .insight-card.dismissed { opacity: 0.45; }
 
   .insights-empty, .pearls-empty, .timeline-empty, .archive-empty {
     text-align: center;
@@ -16887,17 +16971,34 @@ function renderLensInsights() {
       <div style="font-size:11px; color:var(--text-soft);">너만의 패턴이 천천히 드러나.</div>
     </div>`;
   } else {
-    html += insights.map(insight => `
-      <div class="insight-card" data-id="${insight.id}">
-        <div class="insight-card-label">${insight.type === 'causal' ? '🔗 인과관계' : '🔄 반복 패턴'} · 신뢰도 ${Math.round((insight.confidence || 0.5) * 100)}%</div>
-        <div class="insight-card-text">${escapeHtml(insight.content)}</div>
-        ${insight.evidence ? `<div class="insight-card-evidence">근거: ${escapeHtml(insight.evidence)}</div>` : ''}
-        <div class="insight-card-actions">
-          <button class="small-btn" onclick="confirmInsight('${insight.id}')">✓ 맞아</button>
-          <button class="small-btn" onclick="dismissInsight('${insight.id}')">아니야</button>
+    html += insights.map(insight => {
+      // V4-fix v3 (사용자 요청): 친절한 type 라벨
+      const typeLabel = insight.type === 'causal'
+        ? '🔗 어떤 X 다음 Y가 따라와'
+        : '🔄 자주 보이는 패턴';
+      const confPct = Math.round((insight.confidence || 0.5) * 100);
+      const isConfirmed = insight.user_verified === true;
+      return `
+        <div class="insight-card${isConfirmed ? ' confirmed' : ''}" data-id="${insight.id}">
+          <div class="insight-card-header">
+            <span class="insight-card-type">${typeLabel}</span>
+            <span class="insight-card-conf">
+              <span class="insight-card-conf-bar"><span class="insight-card-conf-bar-fill" style="width:${confPct}%;"></span></span>
+              ${confPct}%
+            </span>
+          </div>
+          <div class="insight-card-text">${escapeHtml(insight.content)}</div>
+          ${insight.evidence ? `<div class="insight-card-evidence"><span class="insight-card-evidence-label">📊 근거</span>${escapeHtml(insight.evidence)}</div>` : ''}
+          ${isConfirmed
+            ? `<div style="font-size:11px; color:#8fc88f; padding:4px 0;">✓ 확인됨 — 너 안의 살아있는 패턴</div>`
+            : `<div class="insight-card-actions">
+                <button class="insight-card-btn confirm" onclick="confirmInsight('${insight.id}')">맞아 ✓</button>
+                <button class="insight-card-btn reject" onclick="dismissInsight('${insight.id}')">아니야</button>
+              </div>`
+          }
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
   
   container.innerHTML = html;
@@ -16999,10 +17100,11 @@ function confirmInsight(id) {
   const ins = state.insights.find(i => i.id === id);
   if (!ins) return;
   ins.confirmed = true;
+  ins.user_verified = true;  // V4-fix v3: insight 카드에서 ✓ 시각 분기 위해
   ins.confidence = Math.min(1.0, (ins.confidence || 0.5) + 0.2);
   saveState();
   renderLensInsights();
-  showToast('확인됨 ✦');
+  showToast('확인됨 ✓');
 }
 
 function dismissInsight(id) {
@@ -24578,7 +24680,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.97-mutation-rename-title';
+const APP_VERSION = 'v4.0.98-insights-pretty';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
