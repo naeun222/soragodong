@@ -22866,6 +22866,8 @@ function renderArchiveReviews() {
         </div>`;
       }).join('');
     }
+    // V4-fix v3 (사용자 요청): 모든 리뷰에 깨달음 정리 추가
+    detailHtml += _buildReviewArchiveSummaryHTML(r);
     // V4-fix: 분기 리뷰면 deep dive + Stories 버튼 추가 (sections 형식과 무관)
     if (r.type === 'quarterly' && r.stats) {
       detailHtml += renderQuarterlyDeepDive(r);
@@ -22886,6 +22888,55 @@ function renderArchiveReviews() {
       </div>
     `;
   }).join('');
+}
+
+// V4-fix v3 (사용자 요청): 리뷰별 깨달음 정리 (주간/월간/분기 공통)
+function _buildReviewArchiveSummaryHTML(review) {
+  let startMs = null, endMs = null;
+  if (review.quarterKey && typeof getQuarterRange === 'function') {
+    const range = getQuarterRange(review.quarterKey);
+    if (range) { startMs = new Date(range.start).getTime(); endMs = new Date(range.end).getTime(); }
+  } else if (review.monthKey) {
+    const mm = String(review.monthKey).match(/^(\d{4})-(\d{2})$/);
+    if (mm) {
+      const y = parseInt(mm[1]); const mo = parseInt(mm[2]) - 1;
+      startMs = new Date(y, mo, 1).getTime();
+      endMs = new Date(y, mo + 1, 0, 23, 59, 59).getTime();
+    }
+  } else if (review.weekKey || review.completedAt) {
+    // 주간: completedAt 기준 7일 전 ~ completedAt
+    const compMs = new Date(review.completedAt).getTime();
+    startMs = compMs - 7 * 86400000;
+    endMs = compMs;
+  }
+  if (startMs == null || endMs == null) return '';
+  const arrs = (state.archive || []).filter(a => {
+    if (!a.savedAt) return false;
+    const t = new Date(a.savedAt).getTime();
+    return t >= startMs && t <= endMs;
+  });
+  if (arrs.length === 0) return '';
+  const tCount = { scrap: 0, memo: 0, reflection: 0 };
+  arrs.forEach(a => { const t = a.type || 'scrap'; tCount[t] = (tCount[t] || 0) + 1; });
+  const tagFreq = {};
+  arrs.forEach(a => (a.tags || []).forEach(t => { tagFreq[t] = (tagFreq[t] || 0) + 1; }));
+  const topTags = Object.entries(tagFreq).sort((a,b) => b[1] - a[1]).slice(0, 5);
+  const heads = arrs.filter(a => a.headline).slice(0, 5);
+  return `
+    <div style="margin-top:14px; padding:12px 14px; background:var(--surface2); border-radius:10px; border-left:3px solid var(--accent);">
+      <div style="font-size:12px; color:var(--accent); margin-bottom:8px; letter-spacing:0.04em;">✨ 이 기간 깨달음 ${arrs.length}개</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">
+        📌 스크랩 ${tCount.scrap || 0} · ✎ 메모 ${tCount.memo || 0}${tCount.reflection ? ` · 🌊 숙고 ${tCount.reflection}` : ''}
+      </div>
+      ${topTags.length > 0 ? `<div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:2;">자주 떠올린: ${topTags.map(([t, c]) => `<span style="background:rgba(212,167,106,0.10); padding:2px 7px; border-radius:6px; margin-right:4px; color:var(--text);">#${escapeHtml(t)} <span style="color:var(--text-soft); font-size:10px;">${c}</span></span>`).join('')}</div>` : ''}
+      ${heads.length > 0 ? `<div style="display:flex; flex-direction:column; gap:7px; margin-top:8px;">
+        ${heads.map(h => `<div style="font-size:13px; line-height:1.55; padding:6px 0; border-top:1px dashed var(--border);">
+          <span style="color:var(--accent);">✦</span> ${escapeHtml(h.headline)}
+          ${h.body ? `<div style="font-size:11px; color:var(--text-dim); margin-top:3px; padding-left:14px;">${escapeHtml((h.body || '').slice(0, 80))}</div>` : ''}
+        </div>`).join('')}
+      </div>` : ''}
+    </div>
+  `;
 }
 
 function toggleReviewDetail(idx) {
@@ -23766,7 +23817,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.88-followup-deeper-prompt';
+const APP_VERSION = 'v4.0.89-review-archive-summary';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
