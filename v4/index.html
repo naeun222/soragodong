@@ -9580,6 +9580,8 @@ async function showMessageMenu(idx) {
     options.push({ label: '✎ 텍스트만 수정', value: 'editText' });
     options.push({ label: '↻ 여기서부터 다시 보내기', value: 'editResend' });
   }
+  // V4-1j-a: 숙고 질문으로 보내기 (메시지 텍스트 → 질문 prefill)
+  options.push({ label: '🌊 숙고 질문으로 보내기', value: 'reflection' });
   options.push({ label: '✕ 삭제', value: 'delete' });
   const action = await showOptionsModal({
     title: isUser ? '내 메시지' : '소라고동 메시지',
@@ -9592,6 +9594,28 @@ async function showMessageMenu(idx) {
       showToast('📋 복사됨');
     } catch (e) {
       showToast('복사 실패. 직접 선택해서 복사해줘.');
+    }
+    return;
+  }
+  if (action === 'reflection') {
+    // V4-1j-a: 메시지 텍스트를 prefill로 → 사용자 편집 → addReflectionQuestion
+    const prefilled = (msg.content || '').slice(0, 280);
+    const qText = await showInputModal({
+      title: '🌊 숙고 질문으로',
+      message: '깊이 보고 싶은 질문 형태로 다듬어. 답이 바로 안 나와도 OK.',
+      defaultValue: prefilled,
+      multiline: true,
+      maxLength: 300,
+      okLabel: '추가'
+    });
+    if (qText && qText.trim()) {
+      const q = await addReflectionQuestion(qText.trim());
+      if (q && q.id) {
+        // sourceMsgIdx 박음 (스크랩 출처 추적)
+        q.source = 'scrap';
+        q.sourceMsgIdx = idx;
+        saveState();
+      }
     }
     return;
   }
@@ -15794,7 +15818,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.11-reflection-1';
+const APP_VERSION = 'v4.0.12-reflection-scrap';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
