@@ -12272,6 +12272,24 @@ function renderBeach() {
   // 'tier' 탭 + 'all' 탭에서 최상단 섹션으로 표시. 'card'/'call' 탭에선 X.
   const dnaPearls = (state.pearls || []).filter(p => p.type === 'dna_pearl');
   const showDnaSection = (_beachTab === 'tier' || _beachTab === 'all') && dnaPearls.length > 0;
+  // 사용자 요청 2026-04-28: DNA 조각 검출 강화 — strategy generations.shells / attempts.shellId 모두 체크
+  const _dnaShellIdSet = new Set();
+  (state.topicCards || []).forEach(c => {
+    if (c.category !== 'strategy' || !Array.isArray(c.generations)) return;
+    c.generations.forEach(g => {
+      if (Array.isArray(g.shells)) g.shells.forEach(sid => _dnaShellIdSet.add(sid));
+      (g.attempts || []).forEach(a => { if (a.shellId) _dnaShellIdSet.add(a.shellId); });
+    });
+  });
+  function _isDnaShell(s) {
+    if (!s) return false;
+    // 사용자 요청 2026-04-28: DNA 조각은 '소라의 부름' tier (call/legend)만 — 일반 오늘카드 소라는 제외
+    if (s.tier !== 'call' && s.tier !== 'legend') return false;
+    if (s._id && _dnaShellIdSet.has(s._id)) return true;
+    // legacy: missionId → mission.strategyId
+    if (s.missionId && (state.missions || []).some(m => m.id === s.missionId && m.strategyId)) return true;
+    return false;
+  }
   const dnaPathColor = {
     'one-shot':        '#ffd700',
     'quick-discovery': '#5fcfba',
@@ -12360,8 +12378,7 @@ function renderBeach() {
         <div class="beach-tier-header">${label} · ${grouped[tier].length}</div>
         <div class="beach-tier-grid">`;
       grouped[tier].forEach(s => {
-        // V4-fix v3 (사용자 요청): 가닥 DNA 조각 shell 별도 디자인
-        const isDnaPiece = s.missionId && (state.missions || []).some(m => m.id === s.missionId && m.strategyId);
+        const isDnaPiece = _isDnaShell(s);
         html += `<div class="beach-shell tier-${tier}${isDnaPiece ? ' dna-shell' : ''}" onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
       });
       html += `</div></div>`;
@@ -12402,7 +12419,7 @@ function renderBeach() {
     grid.innerHTML = dnaSectionHtml +
       `<div class="beach-tier-grid${isAllTab ? ' scatter' : ''}">` +
       sorted.map((s, i) => {
-        const isDnaPiece = s.missionId && (state.missions || []).some(m => m.id === s.missionId && m.strategyId);
+        const isDnaPiece = _isDnaShell(s);
         return `<div class="beach-shell tier-${s.tier || 'unknown'}${isDnaPiece ? ' dna-shell' : ''}"${scatterStyle(s, i)} onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
       }).join('') +
       `</div>`;
