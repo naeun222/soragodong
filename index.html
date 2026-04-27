@@ -5860,6 +5860,48 @@
     color: var(--text-soft);
     cursor: default;
   }
+  .onb-back {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    min-height: 40px;
+  }
+  .onb-back:active { transform: scale(0.97); }
+  .onb-back[hidden] { display: none !important; }
+
+  /* DNA 박히는 효과 (사용자 요청 2026-04-27) — 작동했어 → 가닥에 흔적 */
+  .dna-insert-fx {
+    position: fixed;
+    top: 50%; left: 50%;
+    z-index: 99999;
+    pointer-events: none;
+    font-size: 96px;
+    text-shadow: 0 0 24px rgba(139, 126, 196, 0.7), 0 0 48px rgba(201, 169, 110, 0.5);
+    animation: dna-insert 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  @keyframes dna-insert {
+    0%   { transform: translate(-50%, -50%) scale(0.2) rotate(-30deg); opacity: 0; }
+    25%  { transform: translate(-50%, -50%) scale(1.4) rotate(10deg);  opacity: 1; }
+    55%  { transform: translate(-50%, -50%) scale(1.0) rotate(0deg);   opacity: 0.95; }
+    100% { transform: translate(-50%, -150%) scale(0.4) rotate(20deg); opacity: 0; }
+  }
+  .dna-insert-particle {
+    position: fixed;
+    z-index: 99998;
+    pointer-events: none;
+    font-size: 22px;
+    animation: dna-particle 1.4s ease-out forwards;
+  }
+  @keyframes dna-particle {
+    0%   { transform: translate(0, 0) scale(0); opacity: 0; }
+    20%  { opacity: 1; }
+    100% { transform: var(--end-transform, translate(0, -100px)) scale(0.6); opacity: 0; }
+  }
 
   /* ─── Phase 4: Reviews ─── */
   .review-card {
@@ -6039,6 +6081,7 @@
     <div class="onb-body" id="onbBody"></div>
     <div class="onb-actions">
       <button class="onb-skip" onclick="onbSkip()">건너뛰기</button>
+      <button class="onb-back" id="onbBackBtn" onclick="onbBack()" title="이전 단계로">← 뒤로</button>
       <button class="onb-next" id="onbNextBtn" onclick="onbNext()">다음 →</button>
     </div>
   </div>
@@ -7760,7 +7803,7 @@ const ONBOARDING_STEPS = [
     id: 'go_checkin',
     targetSelector: '.action-card[onclick*="checkin"]',
     title: '✓ 체크인 카드',
-    body: '여기 메인 카드가 체크인이야! 매일 짧게 기록하는 곳 — 4개만 누르면 끝나니까 부담 없어.<br><br>한 번 눌러볼래?<br><br><span class="small">📌 <b>중요</b>: 체크인 메인 카드는 <b>밤 9시 ~ 새벽 6시 사이에만</b> 떠. 하루 기록은 하루 끝에 차분히 닫는 게 자연스러우니까.<br>그 외 시간엔 ⚙ 설정에서 체크인 직접 가거나 다음 날 밤에 해도 돼.<br>튜토리얼 동안엔 내가 항상 메인으로 보여줄게.</span>',
+    body: '이 앱에서 <b>가장 먼저 할 일은 \'체크인\'이야</b> ✨<br>매일 짧게 기록하는 곳 — 4개만 누르면 끝나니까 부담 없어.<br><br>한 번 눌러볼래?<br><br><span class="small">📌 평소엔 밤 9시 ~ 새벽 6시 사이에만 메인 카드로 떠. 하루 끝에 차분히 닫는 게 자연스러우니까. 그 외 시간엔 ⚙ 설정 → 체크인.</span>',
     waitFor: 'click',
     advanceDelay: 800,
     fallbackPosition: 'bottom'
@@ -7769,7 +7812,7 @@ const ONBOARDING_STEPS = [
     id: 'pick_mode',
     targetSelector: '.mode-row',
     title: '오늘 컨디션 어때?',
-    body: '모드는 안 골라도 돼! 진짜 선택사항이야.<br>근데 시험 기간이거나 여행 중이거나 아프면 골라두면 좋아 — 내가 너 상황 더 잘 이해할 수 있거든. 여기선 한 번 시험 삼아 골라보자.<br><br>시험 / 여행 / 아픔 / 휴식 / 월경 / 🪫방전 중 아무거나!',
+    body: '특별한 날이면 골라봐. AI가 그 맥락에 맞춰 너 데이터를 학습해.<br>예를 들면 시험기간엔 밤낮이 바뀔 수 있잖아 — 다 괜찮아.<br><br>시험 / 여행 / 아픔 / 휴식 / 월경 / 🪫방전 중 아무거나.<br><br><span class="small">선택 안 해도 됨. 여기선 시험 삼아 한 번 골라보자.</span>',
     waitFor: 'click',
     advanceDelay: 500,
     fallbackPosition: 'bottom'
@@ -7784,31 +7827,6 @@ const ONBOARDING_STEPS = [
     fallbackPosition: 'bottom'
   },
   {
-    id: 'pick_mood',
-    targetSelector: '.mood-options',
-    title: '💭 기분은?',
-    body: '오늘 기분 어때? 대충 골라도 괜찮아.<br>정확하지 않아도 OK — 그냥 첫 느낌으로!',
-    waitFor: 'click',
-    advanceDelay: 500,
-    fallbackPosition: 'bottom'
-  },
-  {
-    id: 'tracker_intro',
-    targetSelector: null,
-    title: '📊 추적 항목 (선택)',
-    body: '체크인 안 + 항목 추가로 매일 추적할 거 등록 — 수면 시간, 운동, 명상 등.<br>숫자형 / 체크형 둘 다.<br><span class="small">안 해도 OK.</span>',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
-    id: 'checkin_extras',
-    targetSelector: null,
-    title: '✨ 더 많이 기록할 수도 있어',
-    body: '체크인 더 내려보면:<br>· <b>📷 사진</b> — 그날 한 장<br>· <b>🎵 음악</b> — 그날 들은 곡 (검색해서 첨부)<br>· <b>📔 일기</b> — 한 줄도 OK<br>· <b>오늘의 질문</b> — 무작위 질문 (답 안 해도 됨)<br><br><span class="small">다 선택사항 — 원할 때만.</span>',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
     id: 'cutoff_intro',
     targetSelector: null,
     title: '🌙 새벽 4시까지 = 어제',
@@ -7817,18 +7835,10 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   {
-    id: 'auto_pearl_music',
-    targetSelector: null,
-    title: '🎵 같은 곡 5번 = 자동 진주',
-    body: '체크인에서 같은 곡을 5번 이상 등장시키면 — 내가 알아서 <b>그 곡을 진주로 박아</b>줄게.<br><br><span class="small">자주 듣는 곡 = 너의 사운드트랙.</span>',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
     id: 'submit_checkin',
     targetSelector: 'button[onclick="submitCheckin()"]',
     title: '✦ 기록 완료',
-    body: '여기까지로 충분해! 한 번 눌러볼래?<br><br><span class="small">오늘의 질문 / 추적 항목 / 더 기록하기 / 수면 — 다 선택사항이야. 평소엔 원할 때만 채우면 돼.</span>',
+    body: '여기까지로 충분해! 한 번 눌러볼래?',
     waitFor: 'click',
     advanceDelay: 1500,
     fallbackPosition: 'top'
@@ -7848,7 +7858,7 @@ const ONBOARDING_STEPS = [
     id: 'chat_intro',
     targetSelector: null,
     title: '대화창에서 할 수 있는 것',
-    body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진한 곳이야.<br>머릿속에 엉킨 생각도, 좋았던 일도, 웃긴 에피소드도 — 다 여기다 풀어. 분위기에 맞게 답해줄게.<br><br>예시 (전부 OK):<br>· <b>오늘 있었던 일</b> — "오늘 카페에서 공부했어"<br>· <b>좋았던 거</b> — "발표 잘 끝냈어 ✨" / "친구랑 맛있는 거 먹음"<br>· <b>웃긴 일</b> — "오늘 진짜 웃긴 일 있었는데"<br>· <b>머릿속 와다다</b> — "할 일 너무 많아 어디서부터 해야 해"<br>· <b>짧은 한 마디</b> — "졸려" / "심심" / "ㅋㅋㅋ"<br>· <b>도움 요청</b> — "어떡하지?" / "도와줘" → 4단 분석으로 답해줘<br>· <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장<br><br><span class="small">세 가지 더:<br>· <b>📝 입력창 옆 + 버튼</b> — 일기 템플릿 5종 (인지심리학 기반) / ✎ 메모 / ✓ 챕터 마무리.<br>· <b>메시지 우상단 ⋮</b> — 복사 / 수정 / 삭제 / 🌊 숙고 질문으로 보내기.<br>· <b>🔮 진주 능동 제안</b> — 대화에서 "진짜 좋아" 흐르면 내가 "진주에 넣을래?" 알아서 물어봐.</span>',
+    body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진해.<br>분위기에 맞게 답해줄게.<br><br><b>예시 (전부 OK)</b><br>🪶 <b>짧은 한 마디</b> — "졸려" / "심심" / "ㅋㅋㅋ"<br>☕ <b>일상 공유</b> — "오늘 점심 마라탕 먹었어"<br>😆 <b>웃긴 에피소드</b> — "오늘 진짜 웃긴 일 있었어..."<br>🔍 <b>가벼운 호기심</b> — "발표할 때 떨림 줄이는 법?"<br>🌟 <b>자랑·뿌듯</b> — "발표 끝났어! 잘 마무리함 ㅎㅎ"<br><br>🌀 <b>와다다 풀기</b> — "회의 너무 길었어 진짜 별 거 없는데..."<br>💭 <b>감정 한 단어</b> — "기뻐" / "짜증" / "허전해"<br>🤔 <b>의견 듣기</b> — "이 옷 살까 말까ㅋㅋ"<br><br>🚧 <b>막혔을 때</b> — "내일 발표인데 자료 하나도 없어. 시작도 못 하겠어"<br>💧 <b>자책 흐를 때</b> — "방금 회의에서 말 더듬었어. 다들 별로라고 생각할 듯"<br>🔁 <b>패턴 의심</b> — "또 마감 임박해서야 시작이네. 왜?"<br><br>📔 <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장<br>🔮 <b>진주 신호</b> — "방금 마신 라떼 진짜 맛있어" → 내가 "진주에 넣을래?" 알아서 물어봐',
     waitFor: 'next'
   },
   {
@@ -7866,7 +7876,7 @@ const ONBOARDING_STEPS = [
     id: 'click_deeper',
     targetSelector: '.msg-action[onclick^="askDeeper"]',
     title: '"더 알고 싶어 ▾"',
-    body: '내가 답해주면 그 답 아래에 "더 알고 싶어 ▾" 버튼이 떠. 한 번 눌러볼래?<br>눌러주면 4단 분석 + 전략으로 더 깊게 들어가줄게.<br><br><span class="small">답변 길이에 따라 버튼 위치가 달라. 직접 찾아서 누르고 "눌렀어 →" 눌러줘.<br>[내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 4단 형식이야.</span>',
+    body: '평소엔 친구처럼 짧고 다정하게 답해줄게.<br><br>근데 <b>심리학적으로 깊이 분석해보고 싶을 땐</b> — 내 답 아래 <b>"더 알고 싶어 ▾"</b> 누르면 돼! 4단 분석 + 너만의 전략까지 들어가줄게.<br><br>한 번 눌러볼래?<br><br><span class="small">답변 길이에 따라 버튼 위치가 달라. 직접 찾아서 누르고 "눌렀어 →" 눌러줘.<br>[내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 4단.</span>',
     waitFor: 'click',
     advanceDelay: 1500,
     manualAdvance: true,
@@ -7902,26 +7912,66 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   {
-    id: 'msg_menu_intro',
+    id: 'diary_keyword',
     targetSelector: null,
-    title: '⋮ 메시지 메뉴',
-    body: '메시지 우상단 <b>⋮</b> 누르면:<br>· 복사<br>· 수정 / 다시 보내기<br>· 🌊 숙고 질문으로 보내기<br>· 삭제',
+    title: '📔 "일기:" 키워드',
+    body: '대화 첫 줄을 <b>"일기:"</b>로 시작하면 그날 entry에 원본 그대로 저장돼.<br><br>근데 일기 쓰는 또 다른 방법 — <b>+ 메뉴 → 일기 템플릿</b>!<br>인지심리학 기반 5종 (힘든 날 / 좋은 날 / 한 줄 / 계획 / 감정).<br><br>직접 해보자. 다음에서 + 버튼 보여줄게.',
     waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'open_plus_menu',
+    targetSelector: '#chatPlusBtn',
+    title: '+ 버튼 눌러봐',
+    body: '입력창 옆 <b>+</b> 버튼 보이지? 한 번 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 500,
+    dimBackground: false,
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'pick_diary_template',
+    targetSelector: '.chat-plus-item[onclick*="diary"]',
+    title: '📝 일기 템플릿 눌러봐',
+    body: '"📝 일기 템플릿" 한 번 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'diary_walkthrough',
+    targetSelector: null,
+    title: '🌧 힘든 날 → 완성',
+    body: '템플릿 picker 떴지?<br>1️⃣ <b>"🌧 힘든 날"</b> 눌러<br>2️⃣ 한 줄 적거나 비워두고<br>3️⃣ <b>"완성 ✦"</b> 누르면 자동으로 저장!<br><br>다 했으면 "눌렀어 →" 눌러줘.',
+    waitFor: 'next',
+    manualAdvance: true,
     dimBackground: false
   },
   {
     id: 'chapter_auto',
     targetSelector: null,
     title: '📖 챕터 자동 분류',
-    body: '대화는 4시간 이상 멈추면 자동 챕터 끊김 (또는 ✓ 직접).<br>각 챕터를 <b>8 카테고리로 자동 분류</b>:<br>일기 / 일상 / 고민 / 감정 / 기억 / 할 일 / 아이디어 / 관계.<br><br><span class="small">→ 도서관 일기·대화에 카테고리별로 모임.</span>',
+    body: '우리가 여기서 한 대화는 <b>4시간 이상 멈추거나, 입력창 왼쪽 하단의 ✓ 버튼을 누르면 마무리</b>돼.<br>그럼 내가 이 대화 챕터를 <b>8가지 주제 중 하나</b>로 자동 분류해서 <b>📚 도서관</b>에 저장해줄게:<br>일기 / 일상 / 고민 / 감정 / 기억 / 할 일 / 아이디어 / 관계.<br><br><span class="small">자세한 건 이따가 알아보자.</span>',
     waitFor: 'next',
     dimBackground: false
   },
   {
-    id: 'auto_diary_summary',
+    id: 'chapter_close_btn',
+    targetSelector: '.chat-end-btn',
+    title: '지금 마무리해볼까?',
+    body: '입력창 왼쪽 하단의 <b>✓ 버튼</b> 눌러줘. 그 다음 "마무리"까지 눌러줘.<br><br><span class="small">다 했으면 "눌렀어 →" 눌러줘.</span>',
+    waitFor: 'click',
+    advanceDelay: 800,
+    manualAdvance: true,
+    dimBackground: false,
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'chat_archive_note',
     targetSelector: null,
-    title: '🤖 일기 자동 요약',
-    body: '체크인이나 대화로 그 날 활동이 쌓이면 — 내가 자동으로 <b>그 날 한 단락 요약</b>을 만들어줘.<br>일기 안 적은 날도 흐름이 보여.<br><br><span class="small">도서관 일기·대화 카드에 🤖 자동 요약 라벨로 표시.</span>',
+    title: '📜 이전 대화는 어디?',
+    body: '마무리한 대화는 채팅 화면 위쪽 <b>📜 이전 대화</b>에서 다시 볼 수 있어.<br><br><b>7일이 지나면 자동으로 사라져</b>.<br><br><span class="small">(원하는 대화 골라서 영구 보관하고 싶으면 개발자한테 말해줘 — 만들어볼게!)</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -7939,44 +7989,11 @@ const ONBOARDING_STEPS = [
     id: 'mission_done',
     targetSelector: '.mission-btn.complete',
     title: '⭐ 소라의 부름',
-    body: '홈에 ⭐ 미션 카드가 떠있을 거야!<br>너 스스로 결정한 약속이지.<br><br>실제로는 완료 시 <b>인증샷</b>을 찍어서 내가 봐주고 검증해. 검증되면 ⭐ 부름 / ✨ 특별 — 가장 희귀한 결.<br><br>지금은 튜토리얼이라 인증샷 우회. ✓ 해냈어 눌러봐.',
+    body: '홈에 <b>⭐ 미션 카드</b>가 떠있을 거야!<br>이건 우리가 대화하다가 네가 고민을 전략적으로 해결하고 싶고, 그걸 \'소라가 제안\'했을 때만 나타나는 특별한 녀석이야.<br><br><b>부담은 전혀 안 가져도 돼. 안 해도 완전 괜찮음 ㅋㅋ 귀찮다 싶으면 과감히 패스해!</b> (부탁할게)<br><br>미션 완료 시 <b>인증샷</b>을 찍어서 내가 봐주고 검증해. 검증되면 \'특별한\' 소라를 얻을 수 있어.<br><br>지금은 튜토리얼이라 인증샷 넘어갈게. <b>해냈어</b> 눌러봐.',
     waitFor: 'click',
     advanceDelay: 2000,
     coachmarkPosition: 'corner',
     fallbackPosition: 'top'
-  },
-  {
-    id: 'mission_carryover',
-    targetSelector: null,
-    title: '📆 못 한 부름은 어떻게?',
-    body: '바로 못 해도 괜찮아.<br>· <b>1~2일</b>은 홈에 그대로 (carryover 표시 ‹ N/M ›)<br>· <b>3일 지나면</b> 모래사장 "📜 못 한 부름"으로 만료됨<br>· 거기서 <b>"다시 받기"</b> 누르면 오늘로 부활<br><br><span class="small">자책 X. 하루 못 한 거 = 너 X 도구 또는 타이밍.</span>',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
-    id: 'attempt_result_intro',
-    targetSelector: null,
-    title: '결과 체크 4 옵션',
-    body: '<b>언제 떠?</b><br>· 미션 ✓ 즉시 누르면 → 바로 4 옵션<br>· 미션 받은 <b>다음 날 (1~7일 후) 체크인 또는 대화 탭 진입 시 자동으로 떠</b><br><br><b>4 옵션</b>:<br>· <b>👍 작동했어</b> — 가닥에 흔적 박힘, 5번 작동 시 결정화 prompt<br>· <b>🤔 그저 그래</b> — "돌연변이 해볼래?" yes/no<br>· <b>👎 안 통했어</b> — 임시 대화창 자동 (다른 차원 4 옵션)<br>· <b>😅 못 시도</b> — 자책 X, 다음 기회<br><br><span class="small">자책 X. 모든 결과 = 발견.</span>',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
-    id: 'mutation_intro',
-    targetSelector: null,
-    title: '🧬 돌연변이 — 다른 차원으로',
-    body: '👎 안 통했으면 임시 대화창 자동:<br>"이 전략 안 맞았군. <b>DNA가 진화할 준비 됐어</b>. 다른 차원에서 시도해볼래?"<br><br>5 차원 (인지/행동/환경/사회/메타) 중 4 옵션 → 옵션 클릭 → AI가 <b>오늘부터 가능한 step by step</b> → ✦ 해볼게로 새 가닥 등록.',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
-    id: 'crystallize_intro',
-    targetSelector: null,
-    title: '💎 너 일부가 되는 순간',
-    body: '한 전략이 <b>5번 작동</b>하면 → "이거 너 일부로 만들까?" 물어봐.<br>응 → <b>특별한 의식 화면</b>이 떠 (예쁜 보석 + 박힌 소라들 회전).<br>→ 의지 X로도 자동 작동. <b>모래사장 맨 위</b>로 올라가.<br><br><span class="small">한 번뿐인 의식이야. 진짜로 너 안에 박힘.</span>',
-    waitFor: 'next',
-    dimBackground: false,
-    demoCrystallize: true
   },
   {
     id: 'open_beach',
@@ -7990,11 +8007,12 @@ const ONBOARDING_STEPS = [
   {
     id: 'tier_tab',
     targetSelector: '.beach-tab[data-beach-tab="tier"]',
-    title: '"결별로" 탭으로',
-    body: '결(= 등급)별로 묶어서 보는 탭이야!<br>탭 눌러서 방금 받은 소라가 어떤 결인지 같이 보자.',
+    title: '"등급으로" 탭으로',
+    body: '등급별로 묶어서 보는 탭이야!<br>탭 눌러서 방금 받은 소라가 어떤 등급인지 같이 보자.',
     waitFor: 'click',
     advanceDelay: 800,
-    fallbackPosition: 'bottom'
+    fallbackPosition: 'bottom',
+    dimBackground: false
   },
   {
     id: 'close_beach',
@@ -8007,12 +8025,55 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   {
-    id: 'home_features_intro',
+    id: 'sora_obtain_methods',
     targetSelector: null,
-    title: '홈에 두 가지 더 있어',
-    body: '홈을 자세히 보면 두 가지 더 있어 — <b>🌙 주간/월간/분기 리뷰</b>와 <b>⚖️ 갈피의 방</b>.<br>다음에 하나씩 자세히 알려줄게!',
+    title: '🐚 소라는 어떻게 얻어?',
+    body: '<b>소라의 부름</b>을 클리어 하거나,<br><b>오늘의 카드</b>를 완료하거나,<br><b>DNA 체화</b>를 했을 때.<br><br><span class="small">나머지는 이따가 더 설명해줄게.</span>',
     waitFor: 'next',
     dimBackground: false
+  },
+  {
+    id: 'special_shell_5pct',
+    targetSelector: null,
+    title: '✨ 5% 특별 소라',
+    body: '가끔씩 <b>5%의 확률</b>로 \'<b>특별</b>\'한 소라가 떠.<br><br>오늘의 카드, 소라의 부름 — 어디서든 등장 가능 ✨',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'mission_carryover',
+    targetSelector: null,
+    title: '📆 못 한 부름은?',
+    body: '\'소라의 부름\'은 <b>3일 동안 안 하면</b> 모래사장의 "📜 지난 부름"으로 가서 <b>7일 동안</b> 있다가 알아서 사라져.<br><br>거기서 <b>"다시 받기"</b> 누르면 오늘로 부활!<br><br><span class="small">자책 X. 하루 못 한 거 = 너 X 도구 또는 타이밍.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'crystallize_intro',
+    targetSelector: null,
+    title: '💎 너 일부가 되는 순간',
+    body: '한 전략이 <b>5번 작동</b>하면 → "이거 너 일부로 만들까?" 물어봐.<br>응 → <b>특별한 의식 화면</b>이 떠 (예쁜 보석 + 박힌 소라들 회전).<br>→ 의지 X로도 자동 작동. <b>모래사장 맨 위</b>로 올라가.<br><br><span class="small">한 번뿐인 의식이야. 진짜로 너 안에 박힘.</span>',
+    waitFor: 'next',
+    dimBackground: false,
+    demoCrystallize: true
+  },
+  {
+    id: 'attempt_result_explain',
+    targetSelector: null,
+    title: '🔍 결과 체크',
+    body: '근데, 미션은 성공해도 <b>고민이 해결 안 될 수도 있잖아</b>: 맞아.<br><br>그래서 고민이 해결됐는지 <b>결과 체크</b>를 할 거야.<br>다음날 <b>체크인이나 대화 탭에 들어올 때 자동으로 떠</b>.',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'attempt_result_demo',
+    targetSelector: null,
+    title: '직접 해보자',
+    body: '결과 체크 모달이 떴지?<br>여기서 <b>\'👍 작동했어\'</b>를 눌러볼까?<br><br><span class="small">실제로는 다음날 자동으로 떠. \'⏸ 아직 결과 안 나왔어\'를 누르면 더 미룰 수도 있어.</span>',
+    waitFor: 'next',
+    manualAdvance: true,
+    dimBackground: false,
+    demoAttemptResult: true
   },
 
   // === Phase 6: 도서관 5 카테고리 (V4) — 부가 기능 (5) ===
@@ -8036,7 +8097,7 @@ const ONBOARDING_STEPS = [
     id: 'diary_calendar',
     targetSelector: null,
     title: '📔 일기·대화',
-    body: '<b>캘린더 무드 그리드</b> — 한 달 한눈에 (칸 색 = 그날 기분).<br>· 칸 클릭 → 그날 카드 펼침<br>· 위 8 서브칩 (일기/일상/고민/감정/기억/할 일/아이디어/관계)<br>· ▦ 그리드 ↔ ≡ 타임라인 토글',
+    body: '<b>캘린더 무드 그리드</b> — 한 달 한눈에 (칸 색 = 그날 기분).<br>· 칸 클릭 → 그날 카드 펼침<br>· 위 8 서브칩 (일기/일상/고민/감정/기억/할 일/아이디어/관계)<br>· ▦ 그리드 ↔ ≡ 타임라인 토글<br><br>🤖 <b>일기 자동 요약</b>: 체크인이나 대화로 그 날 활동이 쌓이면 — 내가 자동으로 <b>그 날 한 단락 요약</b>을 만들어줘. 일기 안 적은 날도 흐름이 보여.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8053,7 +8114,7 @@ const ONBOARDING_STEPS = [
     id: 'pearls_intro',
     targetSelector: null,
     title: 'Pinterest 갤러리',
-    body: '· <b>+ 진주 추가</b> — 직접 입력 + 사진/음악 첨부<br>· <b>★</b> 즐겨찾기<br>· 카테고리 칩으로 필터<br><br><span class="small">대화에서 "진짜 좋아" 흐르면 내가 알아서 "진주에 넣을래?" 물어봐.</span>',
+    body: '· <b>+ 진주 추가</b> — 직접 입력 + 사진/음악 첨부<br>· <b>★</b> 즐겨찾기<br>· 카테고리 칩으로 필터<br><br>🎵 <b>같은 곡 5번 = 자동 진주</b>: 체크인에서 같은 곡을 5번 이상 등장시키면 — 내가 알아서 그 곡을 진주로 박아줘.<br><br><span class="small">대화에서 "진짜 좋아" 흐르면 내가 알아서 "진주에 넣을래?" 물어봐.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8449,10 +8510,13 @@ function onbPositionStep(step, retryCount) {
   const titleEl = document.getElementById('onbTitle');
   const bodyEl = document.getElementById('onbBody');
   const nextBtn = document.getElementById('onbNextBtn');
+  const backBtn = document.getElementById('onbBackBtn');
   const spotlight = document.getElementById('onbSpotlight');
   const coachmark = document.getElementById('onbCoachmark');
   const mask = document.getElementById('onbMask');
   if (!stepNum || !titleEl || !bodyEl || !nextBtn || !spotlight || !coachmark || !mask) return;
+  // 뒤로 버튼 — step 0에선 숨김
+  if (backBtn) backBtn.hidden = (_onbStep === 0);
 
   stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
   titleEl.textContent = step.title;
@@ -8601,34 +8665,57 @@ function onbPositionStep(step, retryCount) {
       }
     }, 500);
   }
-  // V3.13 + V4-fix v3 prefill: input에 예시 값 자동 주입 (retry + 즉시 시도)
+  // 결과 체크 모달 데모 (튜토리얼 attempt_result_demo step)
+  if (step.demoAttemptResult) {
+    setTimeout(async () => {
+      if (typeof showAttemptResultModal !== 'function') return;
+      try {
+        const status = await showAttemptResultModal('튜토리얼 미션');
+        // 사용자가 옵션 선택 후 자동 next
+        if (status && window._onbTutorialMode && _onbStep === stepIdxAtRender) {
+          // DNA 박히는 효과 데모 (작동했어 시)
+          if (status === 'worked' && typeof playDnaInsertionEffect === 'function') {
+            try { playDnaInsertionEffect(); } catch (e) {}
+          }
+          setTimeout(() => onbNext(), 600);
+        }
+      } catch (e) { console.warn('demoAttemptResult:', e); }
+    }, 500);
+  }
+  // V3.13 + V4-fix v3 + 2026-04-27 prefill: input에 예시 값 자동 주입 (retry + RAF + 즉시 시도)
   if (step.prefill && !step._prefillApplied) {
     const applyPrefill = () => {
       const el = document.querySelector(step.prefill.selector);
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-        if (!el.value || step.prefill.force) {
-          el.value = step.prefill.value;
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          if (el.tagName === 'TEXTAREA') {
-            el.style.height = 'auto';
-            el.style.height = Math.min(120, el.scrollHeight) + 'px';
-          }
-          el.focus();
-          step._prefillApplied = true;  // 이 step에서 한 번만 prefill (re-position 시 안 다시)
-          return true;
-        }
+      if (!el) return false;
+      if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return false;
+      // 화면이 hidden이거나 display:none이면 다음 retry까지 대기
+      if (el.offsetParent === null && el.tagName !== 'BODY') return false;
+      if (el.value && !step.prefill.force) {
+        step._prefillApplied = true;
+        return true;
       }
-      return false;
+      el.value = step.prefill.value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      if (el.tagName === 'TEXTAREA') {
+        el.style.height = 'auto';
+        el.style.height = Math.min(140, el.scrollHeight) + 'px';
+      }
+      try { el.focus(); } catch (e) {}
+      step._prefillApplied = true;
+      return true;
     };
-    // 즉시 + retry 둘 다 시도
-    if (!applyPrefill()) {
+    // 즉시 + RAF + retry 모두 시도 (화면 전환 race 방지)
+    requestAnimationFrame(() => {
+      if (step._prefillApplied) return;
+      if (applyPrefill()) return;
       const tryPrefill = (attempts) => {
         if (step._prefillApplied) return;
         if (applyPrefill()) return;
         if (attempts > 0) setTimeout(() => tryPrefill(attempts - 1), 150);
       };
-      setTimeout(() => tryPrefill(15), 100);  // 최대 100 + 15*150 = 2.35s
-    }
+      setTimeout(() => tryPrefill(20), 80);  // 최대 80 + 20*150 = 3.08s
+    });
   }
 
   // 행동 대기 처리. V3.13.x: 모든 setTimeout에 step 가드 (double advance 방지).
@@ -8679,6 +8766,15 @@ function onbNext() {
     onbFinish();
     return;
   }
+  onbRenderStep();
+}
+
+function onbBack() {
+  if (_onbStep <= 0) return;
+  _onbStep--;
+  // prefill flag 초기화 — 다시 진입 시 prefill 다시 박히도록
+  const prevStep = ONBOARDING_STEPS[_onbStep];
+  if (prevStep && prevStep._prefillApplied) delete prevStep._prefillApplied;
   onbRenderStep();
 }
 
@@ -11052,6 +11148,7 @@ function _findPendingStrategyFollowup() {
 }
 
 // V4 비전 6.2: 결과 체크 (체크인/채팅 진입 시 자동 팔로업)
+// 사용자 요청 2026-04-27: 다음날 자동만, '⏸ 아직 결과 안 나왔어' 미루기, meh→돌연변이 confirm
 async function offerStrategyFollowup() {
   if (!state.preferences) state.preferences = {};
   const todayK = todayKey();
@@ -11060,32 +11157,128 @@ async function offerStrategyFollowup() {
   if (!isTester && state.preferences._lastFollowupAt === todayK) return;
   const mission = _findPendingStrategyFollowup();
   if (!mission) return;
-  // 묻기 마킹 — 결과 답 X여도 같은 미션 다시 안 띄움
+  // 묻기 마킹 — 결과 답 X여도 같은 미션 다시 안 띄움 (defer 시는 아래에서 해제)
   mission._followupAsked = true;
   state.preferences._lastFollowupAt = todayK;
   saveState();
   // 화면 전환 후 약간 딜레이 — 사용자가 화면 인지하고 모달
-  setTimeout(async () => {
-    if (typeof showAttemptResultModal !== 'function') return;
-    const card = (state.topicCards || []).find(c => c.id === mission.strategyId);
-    const cardTitle = card ? card.title : mission.title;
-    const status = await showAttemptResultModal(`"${cardTitle}" — ${mission.title}`);
-    if (!status) return;
-    mission.status = 'completed';
-    mission.completedDate = todayK;
-    mission.completedAt = new Date().toISOString();
-    mission.attemptStatus = status;
-    if (typeof recordStrategyAttempt === 'function') {
-      try { recordStrategyAttempt(mission.strategyId, status, mission.id); } catch (e) { console.warn('recordStrategyAttempt:', e); }
+  setTimeout(() => triggerAttemptResultFlow(mission), 600);
+}
+
+// 결과 체크 흐름 단일화 — followup / DNA 카드 버튼 / 튜토리얼 모두 같은 흐름
+async function triggerAttemptResultFlow(mission) {
+  if (!mission || typeof showAttemptResultModal !== 'function') return;
+  const todayK = todayKey();
+  const card = (state.topicCards || []).find(c => c.id === mission.strategyId);
+  const cardTitle = card ? card.title : mission.title;
+  const status = await showAttemptResultModal(`"${cardTitle}" — ${mission.title}`);
+  if (!status) return;
+  // ⏸ 미루기 — 날짜 picker → mission.scheduledFor 갱신, 결과 답 안 함
+  if (status === 'defer') {
+    const dateChoice = await showDeferDatePicker();
+    if (dateChoice) {
+      mission.scheduledFor = dateChoice;
+      mission._followupAsked = false;  // 그날 다시 묻도록
+      // 그날 모달 다시 뜨도록 _lastFollowupAt 초기화
+      if (state.preferences) delete state.preferences._lastFollowupAt;
+      saveState({ force: true });
+      showToast(`⏸ ${dateChoice}에 다시 물어볼게`);
+      if (typeof renderTodayMission === 'function') renderTodayMission();
+      if (typeof renderArchive === 'function') renderArchive();
     }
-    saveState({ force: true });
-    if (status === 'didnt' && typeof openMutationChat === 'function') {
-      setTimeout(() => openMutationChat(mission.strategyId, mission.title), 300);
-    } else {
-      showToast(`✦ "${mission.title}" 결과 기록됨`);
+    return;
+  }
+  // 일반 결과 기록
+  mission.status = 'completed';
+  mission.completedDate = todayK;
+  mission.completedAt = new Date().toISOString();
+  mission.attemptStatus = status;
+  if (typeof recordStrategyAttempt === 'function') {
+    try { recordStrategyAttempt(mission.strategyId, status, mission.id); } catch (e) { console.warn('recordStrategyAttempt:', e); }
+  }
+  saveState({ force: true });
+  // 작동했어 → DNA 박히는 효과 재생 (사용자 요청 2026-04-27)
+  if (status === 'worked' && typeof playDnaInsertionEffect === 'function') {
+    try { playDnaInsertionEffect(); } catch (e) {}
+  }
+  if (status === 'didnt' && typeof openMutationChat === 'function') {
+    setTimeout(() => openMutationChat(mission.strategyId, mission.title), 300);
+  } else if (status === 'meh' && typeof openMutationChat === 'function') {
+    const yes = await showConfirmModal({
+      title: '🌫 그저 그랬어',
+      message: '이 도구가 너에게 충분히 안 맞은 듯.\n다른 차원에서 시도해볼까?',
+      okLabel: '🧬 돌연변이 해볼게',
+      cancelLabel: '아직 그대로'
+    });
+    if (yes) {
+      try { openMutationChat(mission.strategyId, mission.title); } catch (e) { console.warn('openMutationChat:', e); }
     }
-    if (typeof renderTodayMission === 'function') renderTodayMission();
-  }, 600);
+  } else {
+    showToast(`✦ "${mission.title}" 결과 기록됨`);
+  }
+  if (typeof renderTodayMission === 'function') renderTodayMission();
+  if (typeof renderArchive === 'function') renderArchive();
+}
+
+// 미루기 날짜 picker — 1·3·7일 후 또는 직접
+async function showDeferDatePicker() {
+  const choice = await showOptionsModal({
+    title: '⏸ 언제 다시 물어볼까?',
+    message: '결과가 나올 만한 날 골라줘.',
+    options: [
+      { label: '내일',     value: 1 },
+      { label: '3일 후',   value: 3 },
+      { label: '1주일 후', value: 7 },
+      { label: '2주일 후', value: 14 }
+    ]
+  });
+  if (!choice) return null;
+  const today = new Date();
+  today.setDate(today.getDate() + choice);
+  // todayKey 형식 (YYYY-MM-DD)
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// DNA 박히는 효과 — 가닥에 worked 흔적 박힐 때 시각 피드백 (사용자 요청 2026-04-27, 전체 적용)
+function playDnaInsertionEffect() {
+  const main = document.createElement('div');
+  main.className = 'dna-insert-fx';
+  main.textContent = '🧬';
+  document.body.appendChild(main);
+  // 주변 입자 (소라 + 진주)
+  const particles = ['🐚','✨','⭐','💫','🪐','🌟'];
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  for (let i = 0; i < 8; i++) {
+    const p = document.createElement('div');
+    p.className = 'dna-insert-particle';
+    p.textContent = particles[i % particles.length];
+    p.style.left = cx + 'px';
+    p.style.top = cy + 'px';
+    const angle = (i / 8) * Math.PI * 2;
+    const dist = 120 + Math.random() * 40;
+    const ex = Math.cos(angle) * dist;
+    const ey = Math.sin(angle) * dist;
+    p.style.setProperty('--end-transform', `translate(${ex}px, ${ey}px)`);
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1500);
+  }
+  setTimeout(() => main.remove(), 1700);
+}
+
+// 양생방 DNA 카드에서 결과 체크 버튼 → 같은 흐름 호출
+async function triggerAttemptResultFromCard(strategyId) {
+  const mission = (state.missions || []).find(m =>
+    m.strategyId === strategyId && m.status === 'pending'
+  );
+  if (!mission) {
+    showToast('대기 중인 미션이 없어');
+    return;
+  }
+  await triggerAttemptResultFlow(mission);
 }
 
 // V3.13.x: 오늘 list = 오늘 + 1·2일 전 pending. 0일 먼저 정렬. 없으면 오늘 완료 1개.
@@ -11216,31 +11409,8 @@ async function completeMission(missionId) {
   mission.photoThumb = photo.thumb;
   mission.aiVerification = photo.verification.reason;
 
-  // V4-1d-2: 전략 가닥에 묶인 미션이면 결과 체크 모달 (4 옵션). 일반 미션은 skip.
-  // 안티-자책 (5.9): 모든 결과 = 발견. shell은 항상 줌. 톤만 다름.
-  if (mission.strategyId && !window._onbTutorialMode) {
-    const attemptStatus = await showAttemptResultModal(mission.title);
-    if (attemptStatus) {
-      mission.attemptStatus = attemptStatus;
-      recordStrategyAttempt(mission.strategyId, attemptStatus, mission.id);
-      // 'didnt' → 임시 채팅 진화 자동 trigger
-      if (attemptStatus === 'didnt' && typeof openMutationChat === 'function') {
-        try { openMutationChat(mission.strategyId, mission.title); } catch (e) { console.warn('openMutationChat:', e); }
-      }
-      // V4-fix v3 (사용자 요청): 'meh' → 돌연변이 할지 확인 (강제 X, 사용자 자율)
-      else if (attemptStatus === 'meh' && typeof openMutationChat === 'function') {
-        const yes = await showConfirmModal({
-          title: '🌫 그저 그랬어',
-          message: '이 도구가 너에게 충분히 안 맞은 듯.\n다른 차원에서 시도해볼까?',
-          okLabel: '🧬 돌연변이 해볼게',
-          cancelLabel: '아직 그대로'
-        });
-        if (yes) {
-          try { openMutationChat(mission.strategyId, mission.title); } catch (e) { console.warn('openMutationChat:', e); }
-        }
-      }
-    }
-  }
+  // 결과 체크는 '다음날 자동' (offerStrategyFollowup)으로 통일 — 즉시 트리거 X.
+  // 사용자 요청 2026-04-27: 즉시 모달 띄우지 말고, 다음날부터 followup만.
 
   // V3.13: 부름은 항상 call/legend 티어 (pickShellForTask 사용 — 5% legendary 가챠)
   const shell = pickShellForTask({ source: 'ai_mission', title: mission.title });
@@ -14633,7 +14803,7 @@ ${(msg.content || '').slice(0, 1500)}
   msg.savedStrategy = true;
   saveState();
   renderChat();
-  showToast('전략 카드로 저장됐어 🧭');
+  showToast('전략 카드로 저장됐어 🧬');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -14807,7 +14977,8 @@ async function showAttemptResultModal(missionTitle) {
     { label: '👍 작동했어',    value: 'worked' },
     { label: '🤔 그저 그래',    value: 'meh' },
     { label: '👎 안 통했어',    value: 'didnt' },
-    { label: '😅 못 시도했어',  value: 'skipped' }
+    { label: '😅 못 시도했어',  value: 'skipped' },
+    { label: '⏸ 아직 결과 안 나왔어',  value: 'defer' }
   ];
   return await showOptionsModal({
     title: '어땠어?',
@@ -16635,7 +16806,7 @@ function topicToStrategy(id) {
     card.category = 'strategy';
     saveState();
     renderArchive();
-    showToast('전략 카드로 옮겼어 🧭');
+    showToast('전략 카드로 옮겼어 🧬');
   }
 }
 
@@ -16749,7 +16920,7 @@ function _renderStrategyCardHtml(s) {
     : '';
   const tryBtnHtml = (_status && !_isEmbodied)
     ? (_hasPending
-        ? `<button disabled style="opacity:0.55;">🐚 부름 받음</button>`
+        ? `<button class="strategy-try-btn" style="background:#7d6fa8;" onclick="triggerAttemptResultFromCard('${s.id}')">🔍 결과 체크</button>`
         : `<button class="strategy-try-btn" onclick="callTryStrategy('${s.id}')">✦ 해볼게</button>`)
     : '';
   const metaHtml = metaLine ? `<div class="strategy-card-meta${_isEmbodied ? ' embodied' : ''}">${metaLine}</div>` : '';
@@ -18081,25 +18252,26 @@ async function rerollQuest(taskId) {
 
 // === COMPLETE ===
 // === SHELL REWARD SYSTEM (V3.1) ===
+// 사용자 요청 2026-04-27: 특별/탑티어 소라 아이콘 다양화 — DNA 조각 후보가 더 예쁘게
 const SHELL_POOLS = {
-  light:    { emojis: ['🐚','🐌','🪸','🌱','🍃','🌾','🪺'],            tier: 'light',   points: 1,  label: '가벼움' },
-  daily:    { emojis: ['🌀','🐠','🪼','🐟','🪷','🫧','🐡','🐳'],         tier: 'daily',   points: 2,  label: '일상' },
-  main:     { emojis: ['🐢','🐬','🦀','🦭','🦦','🪻','🦩','🌷'],         tier: 'main',    points: 5,  label: '메인' },
-  golden:   { emojis: ['🦑','🐙','🦞','🐉','🦚','🌸','🌺','🪐'],         tier: 'golden',  points: 10, label: '황금' },
-  call:     { emojis: ['⭐','🌟','💫','🌙','🪄','💎'],                    tier: 'call',    points: 20, label: '부름' },
-  legendary:{ emojis: ['✨','🌈','🎆','🎇','🪩','🦄'],                    tier: 'legend',  points: 50, label: '특별' }
+  light:    { emojis: ['🐚','🐌','🪸','🌱','🍃','🌾','🪺'],                                  tier: 'light',   points: 1,  label: '가벼움' },
+  daily:    { emojis: ['🌀','🐠','🪼','🐟','🪷','🫧','🐡','🐳'],                              tier: 'daily',   points: 2,  label: '일상' },
+  main:     { emojis: ['🐢','🐬','🦀','🦭','🦦','🪻','🦩','🌷'],                              tier: 'main',    points: 5,  label: '메인' },
+  golden:   { emojis: ['🦑','🐙','🦞','🐉','🦚','🌸','🌺','🪐'],                              tier: 'golden',  points: 10, label: '황금' },
+  call:     { emojis: ['⭐','🌟','💫','🌙','🪄','💎','🌠','🔮','💠','🎐','🪬','🫧','🪻','🌹'],   tier: 'call',    points: 20, label: '부름' },
+  legendary:{ emojis: ['✨','🌈','🎆','🎇','🪩','🦄','🌌','🦋','🌺','🦚','🌸','💖','🎀','🪷','🩵','🪐','🌷','🦢'], tier: 'legend',  points: 50, label: '특별' }
 };
 
 function pickShellForTask(task) {
   // Returns {emoji, tier, points, label, rarity}
   if (!task) return null;
+  // 사용자 요청 2026-04-27: 특별 소라 어디서든 5% 등장 (오늘 카드/부름 모두)
+  if (Math.random() < 0.05) {
+    const pool = SHELL_POOLS.legendary;
+    const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
+    return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity: 'legendary' };
+  }
   if (task.source === 'ai_mission') {
-    // 5% gacha — legendary
-    if (Math.random() < 0.05) {
-      const pool = SHELL_POOLS.legendary;
-      const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
-      return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity: 'legendary' };
-    }
     const pool = SHELL_POOLS.call;
     const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
     return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity: 'rare' };
@@ -18110,7 +18282,7 @@ function pickShellForTask(task) {
   else if (task.weight === 'main') pool = SHELL_POOLS.main;
   else if (task.weight === 'daily') pool = SHELL_POOLS.daily;
   else pool = SHELL_POOLS.light;
-  
+
   const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
   const rarity = pool.tier === 'golden' ? 'rare' : 'common';
   return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity };
@@ -20114,7 +20286,9 @@ function testSeedV4Data() {
   ];
   // 가닥 미션 ID 풀 (DNA 조각으로 박힘 — strategy seed 미션 ID + 새 미션)
   const strategyMissionIds = ['mis_seed_2', 'mis_seed_carryover_1'];
-  for (let i = 0; i < 360; i++) {
+  // 사용자 요청 2026-04-27: 시드 소라 50개 cap
+  const SEED_SHELL_CAP = 50;
+  for (let i = 0; i < 360 && state.shellCollection.length < SEED_SHELL_CAP; i++) {
     const dayOffset = i;
     const dayShells = (i % 2 === 0) ? 1 : 0;
     if (dayShells === 0) continue;
@@ -25246,7 +25420,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.111-prefill-robust';
+const APP_VERSION = 'v4.0.112-tutorial-overhaul';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
