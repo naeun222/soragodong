@@ -4530,6 +4530,104 @@
     transform-origin: 100px 100px;
     transform-box: fill-box;
   }
+  /* V4-fix v3 (사용자 요청 — 깨달음 가공 1~6): 리뷰 깨달음 정리 섹션 */
+  .review-archive-summary {
+    margin-top: 14px; padding: 14px;
+    background: var(--surface2);
+    border-radius: 12px;
+    border-left: 3px solid var(--accent);
+  }
+  .ras-title {
+    font-size: 13px; color: var(--accent);
+    margin-bottom: 12px;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .ras-meta {
+    margin-bottom: 14px; padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.15), rgba(139,126,196,0.10));
+    border: 1px solid rgba(212,167,106,0.30);
+    border-radius: 10px;
+    font-size: 12.5px; line-height: 1.6;
+    color: var(--text);
+    font-style: italic;
+    font-family: 'Gowun Batang', serif;
+  }
+  .ras-meta-btn {
+    background: rgba(212,167,106,0.15);
+    border: 1px solid rgba(212,167,106,0.40);
+    color: var(--accent2);
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .ras-meta-btn:active { transform: scale(0.97); }
+  .ras-section {
+    margin-bottom: 14px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+  }
+  .ras-section:first-of-type { border-top: none; padding-top: 0; }
+  .ras-section-label {
+    font-size: 11px; color: var(--accent2);
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .ras-mode-bars { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+  .ras-mode-row {
+    display: flex; justify-content: space-between;
+    font-size: 11.5px; color: var(--text);
+    padding: 4px 0;
+  }
+  .ras-mode-row span:last-child { color: var(--text-dim); font-size: 11px; }
+  .ras-insight {
+    margin-top: 8px; font-size: 11.5px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    font-style: italic;
+  }
+  .ras-tag {
+    background: rgba(212,167,106,0.10);
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-right: 4px;
+    color: var(--text);
+    font-size: 11px;
+    display: inline-block;
+  }
+  .ras-tag-count { color: var(--text-soft); font-size: 10px; margin-left: 2px; }
+  .ras-cluster {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.18);
+    border-radius: 8px;
+  }
+  .ras-cluster-tag {
+    font-size: 11px; color: var(--accent);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .ras-cluster-path { display: flex; flex-direction: column; gap: 3px; }
+  .ras-cluster-step {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 3px 0;
+    font-size: 12px; line-height: 1.4;
+    color: var(--text);
+  }
+  .ras-cluster-num {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    background: rgba(212,167,106,0.20);
+    border: 1px solid rgba(212,167,106,0.45);
+    color: var(--accent2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 600;
+  }
+  .ras-cluster-text { flex: 1; }
   .stories-pearl-emoji { font-size: 32px; margin-bottom: 10px; }
   .stories-pearl-content {
     font-family: 'Gowun Batang', serif;
@@ -7109,10 +7207,13 @@ function migrateToV7() {
   }
 
   // archive에 type:'scrap' + tags:[] default
+  // V4-fix v3 (사용자 요청 — 깨달음 가공): revisitCount + starred 마이그레이션
   if (Array.isArray(state.archive)) {
     state.archive.forEach(a => {
       if (!a.type) a.type = 'scrap';
       if (!Array.isArray(a.tags)) a.tags = [];
+      if (typeof a.revisitCount !== 'number') a.revisitCount = 0;
+      if (typeof a.starred !== 'boolean') a.starred = false;
     });
   }
 
@@ -14057,7 +14158,7 @@ async function openMutationChat(strategyId, missionTitle) {
     confirmStep: false,
     messages: [{
       role: 'assistant',
-      content: `"${card.title}" 이 전략은 잘 안 맞았군.\nDNA가 진화할 준비 됐어.\n\n다른 차원에서 시도해볼래?`
+      content: `🌿 "${card.title}" — 이 전략은 잘 안 맞았군.\n🧬 DNA가 진화할 준비 됐어. ✨\n\n🌱 다른 차원에서 시도해볼래?`
     }],
     loading: true,
     chatRecord: {
@@ -19013,6 +19114,10 @@ function testSeedV4Data() {
     { type: 'scrap', headline: '봄 첫날 = 시작', body: '계절 변화 = 리셋 기회.', daysAgo: 360, tags: ['계절'] }
   ];
   archiveSeeds.forEach((a, i) => {
+    // V4-fix v3 (사용자 요청 — 깨달음 가공): revisitCount + starred 다양화
+    // 자주 본 깨달음 = 살아있는 통찰 (★ 일부 표시)
+    const revisitCount = (i % 4 === 0) ? Math.floor((30 - i) / 4) + 2 : Math.max(0, Math.floor(Math.random() * 3));
+    const starred = (i % 7 === 1 || i % 5 === 3);  // 약 25% 즐겨찾기
     state.archive.push({
       type: a.type,
       headline: a.headline,
@@ -19023,7 +19128,9 @@ function testSeedV4Data() {
       tags: a.tags,
       date: new Date(today.getTime() - a.daysAgo * 86400000).toLocaleDateString('ko-KR'),
       source: a.type === 'memo' ? '메모' : a.type === 'reflection' ? '숙고' : '대화',
-      savedAt: new Date(today.getTime() - a.daysAgo * 86400000).toISOString()
+      savedAt: new Date(today.getTime() - a.daysAgo * 86400000).toISOString(),
+      revisitCount,
+      starred
     });
   });
   // traits/values/patterns 각 4 (NEW + verified mix)
@@ -22977,7 +23084,7 @@ function renderArchiveReviews() {
   }).join('');
 }
 
-// V4-fix v3 (사용자 요청): 리뷰별 깨달음 정리 (주간/월간/분기 공통)
+// V4-fix v3 (사용자 요청 — 1~6 통합): 리뷰별 깨달음 깊은 가공
 function _buildReviewArchiveSummaryHTML(review) {
   let startMs = null, endMs = null;
   if (review.quarterKey && typeof getQuarterRange === 'function') {
@@ -22991,7 +23098,6 @@ function _buildReviewArchiveSummaryHTML(review) {
       endMs = new Date(y, mo + 1, 0, 23, 59, 59).getTime();
     }
   } else if (review.weekKey || review.completedAt) {
-    // 주간: completedAt 기준 7일 전 ~ completedAt
     const compMs = new Date(review.completedAt).getTime();
     startMs = compMs - 7 * 86400000;
     endMs = compMs;
@@ -23003,27 +23109,158 @@ function _buildReviewArchiveSummaryHTML(review) {
     return t >= startMs && t <= endMs;
   });
   if (arrs.length === 0) return '';
-  const tCount = { scrap: 0, memo: 0, reflection: 0 };
-  arrs.forEach(a => { const t = a.type || 'scrap'; tCount[t] = (tCount[t] || 0) + 1; });
+  const total = arrs.length;
+
+  // 1) 태그 + 분기 비교
   const tagFreq = {};
   arrs.forEach(a => (a.tags || []).forEach(t => { tagFreq[t] = (tagFreq[t] || 0) + 1; }));
-  const topTags = Object.entries(tagFreq).sort((a,b) => b[1] - a[1]).slice(0, 5);
-  const heads = arrs.filter(a => a.headline).slice(0, 5);
-  return `
-    <div style="margin-top:14px; padding:12px 14px; background:var(--surface2); border-radius:10px; border-left:3px solid var(--accent);">
-      <div style="font-size:12px; color:var(--accent); margin-bottom:8px; letter-spacing:0.04em;">✨ 이 기간 깨달음 ${arrs.length}개</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">
-        📌 스크랩 ${tCount.scrap || 0} · ✎ 메모 ${tCount.memo || 0}${tCount.reflection ? ` · 🌊 숙고 ${tCount.reflection}` : ''}
+  const topTags = Object.entries(tagFreq).sort((a,b) => b[1] - a[1]).slice(0, 6);
+  const periodLen = endMs - startMs;
+  const prevArrs = (state.archive || []).filter(a => {
+    if (!a.savedAt) return false;
+    const t = new Date(a.savedAt).getTime();
+    return t >= (startMs - periodLen) && t < startMs;
+  });
+  const prevTags = new Set();
+  prevArrs.forEach(a => (a.tags || []).forEach(t => prevTags.add(t)));
+  const curTags = new Set(Object.keys(tagFreq));
+  const newTags = [...curTags].filter(t => !prevTags.has(t));
+  const goneTags = [...prevTags].filter(t => !curTags.has(t));
+  const stayedTags = [...curTags].filter(t => prevTags.has(t));
+
+  // 2) type 분포 = 사고 모드
+  const tCount = { scrap: 0, memo: 0, reflection: 0 };
+  arrs.forEach(a => { const t = a.type || 'scrap'; tCount[t] = (tCount[t] || 0) + 1; });
+  const scrapPct = Math.round((tCount.scrap || 0) / total * 100);
+  const memoPct  = Math.round((tCount.memo  || 0) / total * 100);
+  const reflPct  = Math.round((tCount.reflection || 0) / total * 100);
+  const modeInsight = (() => {
+    if (scrapPct >= 60) return '대화 흐름에서 통찰을 잡는 편 — 외부 자극이 트리거.';
+    if (memoPct >= 50)  return '자유롭게 ✎ 메모 — 능동적으로 통찰을 박는 편.';
+    if (reflPct >= 30)  return '🌊 숙고로 깊이 파는 편 — 큰 질문을 안고 가.';
+    return '세 가지 모드 골고루 — 다층 사고가 흐르고 있어.';
+  })();
+
+  // 3) 시간 분포 (3등분)
+  const third = periodLen / 3;
+  const timeBins = [0, 0, 0];
+  arrs.forEach(a => {
+    const t = new Date(a.savedAt).getTime();
+    const bin = Math.min(2, Math.max(0, Math.floor((t - startMs) / third)));
+    timeBins[bin]++;
+  });
+  const timeMaxBin = timeBins.indexOf(Math.max(...timeBins));
+  const timeInsight = (() => {
+    if (Math.max(...timeBins) - Math.min(...timeBins) <= 1) return '기간 내내 균등하게 — 꾸준한 사색.';
+    if (timeMaxBin === 0) return '초반에 통찰 몰림 — 시작이 또렷했어.';
+    if (timeMaxBin === 2) return '말미에 통찰 몰림 — 정리할 때 깊어지는 편.';
+    return '중반에 통찰 몰림 — 흐름 중간이 깊어.';
+  })();
+  const tbMax = Math.max(...timeBins, 1);
+  const timeBars = timeBins.map((n, i) => {
+    const pct = (n / tbMax) * 100;
+    const labels = ['초반', '중반', '말미'];
+    return `<div style="flex:1; text-align:center;"><div style="height:36px; display:flex; align-items:flex-end;"><div style="width:100%; height:${pct}%; background:linear-gradient(180deg, var(--accent), rgba(212,167,106,0.25)); border-radius:3px 3px 0 0; min-height:3px;"></div></div><div style="font-size:9px; color:var(--text-soft); margin-top:3px;">${labels[i]} ${n}</div></div>`;
+  }).join('');
+
+  // 4) 클러스터
+  const clusters = topTags.slice(0, 3).map(([tag, count]) => ({
+    tag, count,
+    items: arrs.filter(a => (a.tags || []).includes(tag)).sort((a, b) => new Date(a.savedAt) - new Date(b.savedAt))
+  })).filter(c => c.items.length >= 2);
+
+  // 6) ★ + 다시 본
+  const starredArrs = arrs.filter(a => a.starred);
+  const topRevisited = arrs.slice().sort((a, b) => (b.revisitCount || 0) - (a.revisitCount || 0)).filter(a => (a.revisitCount || 0) > 0).slice(0, 3);
+
+  // 5) AI 메타 요약 (캐시)
+  const metaSummary = review.archiveMetaSummary || '';
+  const heads = arrs.filter(a => a.headline).slice(0, 6);
+
+  return `<div class="review-archive-summary">
+    <div class="ras-title">✨ 이 기간 깨달음 ${total}개</div>
+    ${metaSummary ? `<div class="ras-meta">"${escapeHtml(metaSummary)}"</div>` : `
+      <div style="margin-bottom:12px;"><button class="ras-meta-btn" onclick="event.stopPropagation(); generateReviewArchiveMetaSummary('${review.id || ''}')">🤖 AI 핵심 통찰 요약 받기</button></div>
+    `}
+    <div class="ras-section">
+      <div class="ras-section-label">너의 사고 모드</div>
+      <div class="ras-mode-bars">
+        <div class="ras-mode-row"><span>📌 스크랩 (대화에서)</span><span>${tCount.scrap || 0} · ${scrapPct}%</span></div>
+        <div class="ras-mode-row"><span>✎ 메모 (자유)</span><span>${tCount.memo || 0} · ${memoPct}%</span></div>
+        ${tCount.reflection ? `<div class="ras-mode-row"><span>🌊 숙고 (깊이)</span><span>${tCount.reflection} · ${reflPct}%</span></div>` : ''}
       </div>
-      ${topTags.length > 0 ? `<div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:2;">자주 떠올린: ${topTags.map(([t, c]) => `<span style="background:rgba(212,167,106,0.10); padding:2px 7px; border-radius:6px; margin-right:4px; color:var(--text);">#${escapeHtml(t)} <span style="color:var(--text-soft); font-size:10px;">${c}</span></span>`).join('')}</div>` : ''}
-      ${heads.length > 0 ? `<div style="display:flex; flex-direction:column; gap:7px; margin-top:8px;">
-        ${heads.map(h => `<div style="font-size:13px; line-height:1.55; padding:6px 0; border-top:1px dashed var(--border);">
-          <span style="color:var(--accent);">✦</span> ${escapeHtml(h.headline)}
-          ${h.body ? `<div style="font-size:11px; color:var(--text-dim); margin-top:3px; padding-left:14px;">${escapeHtml((h.body || '').slice(0, 80))}</div>` : ''}
-        </div>`).join('')}
-      </div>` : ''}
+      <div class="ras-insight">${escapeHtml(modeInsight)}</div>
     </div>
-  `;
+    ${topTags.length > 0 ? `<div class="ras-section">
+      <div class="ras-section-label">너의 화두 무게중심</div>
+      <div style="font-size:11px; line-height:2;">${topTags.map(([t, c]) => `<span class="ras-tag">#${escapeHtml(t)} <span class="ras-tag-count">${c}</span></span>`).join('')}</div>
+      ${(newTags.length || goneTags.length || stayedTags.length) ? `<div style="margin-top:10px; font-size:11px; line-height:1.7;">
+        ${stayedTags.length > 0 ? `<div style="color:var(--text-dim);">↻ 계속되는: ${stayedTags.slice(0,4).map(t => '#' + escapeHtml(t)).join(' · ')}</div>` : ''}
+        ${newTags.length > 0 ? `<div style="color:#8fc88f;">+ 새로 등장: ${newTags.slice(0,4).map(t => '#' + escapeHtml(t)).join(' · ')}</div>` : ''}
+        ${goneTags.length > 0 ? `<div style="color:var(--text-soft);">− 사라진: ${goneTags.slice(0,4).map(t => '#' + escapeHtml(t)).join(' · ')}</div>` : ''}
+      </div>` : ''}
+    </div>` : ''}
+    <div class="ras-section">
+      <div class="ras-section-label">언제 통찰이 깊었나</div>
+      <div style="display:flex; gap:6px; align-items:flex-end; padding:4px 0; max-width:240px;">${timeBars}</div>
+      <div class="ras-insight">${escapeHtml(timeInsight)}</div>
+    </div>
+    ${(starredArrs.length > 0 || topRevisited.length > 0) ? `<div class="ras-section">
+      <div class="ras-section-label">살아있는 통찰</div>
+      ${starredArrs.length > 0 ? `<div style="font-size:11px; color:var(--text-dim); margin-bottom:6px;">★ 즐겨찾기 ${starredArrs.length}개</div>` : ''}
+      ${topRevisited.length > 0 ? `<div style="display:flex; flex-direction:column; gap:4px;">${topRevisited.map(a => `<div style="font-size:12px; padding:4px 0;"><span style="color:var(--accent);">↻ ${a.revisitCount}번</span> ${escapeHtml(a.headline || (a.body || '').slice(0,40))}</div>`).join('')}</div>` : ''}
+    </div>` : ''}
+    ${clusters.length > 0 ? `<div class="ras-section">
+      <div class="ras-section-label">테마별 갈래 — 한 화두가 어떻게 자랐나</div>
+      ${clusters.map(c => `<div class="ras-cluster"><div class="ras-cluster-tag">#${escapeHtml(c.tag)} (${c.count})</div><div class="ras-cluster-path">${c.items.slice(0, 4).map((a, i) => `<div class="ras-cluster-step"><span class="ras-cluster-num">${i + 1}</span><span class="ras-cluster-text">${escapeHtml(a.headline || (a.body || '').slice(0, 30))}</span></div>`).join('')}</div></div>`).join('')}
+    </div>` : ''}
+    ${heads.length > 0 ? `<div class="ras-section">
+      <div class="ras-section-label">전체 헤드라인</div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        ${heads.map(h => `<div style="font-size:12px; line-height:1.55; padding:5px 0; border-top:1px dashed var(--border);">${h.starred ? '<span style="color:#ffd93d;">★</span> ' : ''}<span style="color:var(--accent);">✦</span> ${escapeHtml(h.headline)}${h.body ? `<div style="font-size:10.5px; color:var(--text-dim); margin-top:2px; padding-left:14px;">${escapeHtml((h.body || '').slice(0, 70))}</div>` : ''}</div>`).join('')}
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+
+// V4-fix v3 (5번): AI 메타 요약 — 깨달음들 한 단락 narrative
+async function generateReviewArchiveMetaSummary(reviewId) {
+  if (!state.apiKey) {
+    showToast('⚠️ API 키 필요');
+    return;
+  }
+  const review = (state.weeklyReviews || []).concat(state.monthlyReviews || []).concat(state.quarterlyReviews || []).find(r => r.id === reviewId);
+  if (!review) { showToast('리뷰 못 찾음'); return; }
+  showToast('🤖 AI 통찰 요약 진행 중...');
+  let startMs = null, endMs = null;
+  if (review.quarterKey && typeof getQuarterRange === 'function') {
+    const range = getQuarterRange(review.quarterKey);
+    if (range) { startMs = new Date(range.start).getTime(); endMs = new Date(range.end).getTime(); }
+  } else if (review.monthKey) {
+    const mm = String(review.monthKey).match(/^(\d{4})-(\d{2})$/);
+    if (mm) { const y = parseInt(mm[1]); const mo = parseInt(mm[2]) - 1; startMs = new Date(y, mo, 1).getTime(); endMs = new Date(y, mo + 1, 0, 23, 59, 59).getTime(); }
+  } else { const compMs = new Date(review.completedAt).getTime(); startMs = compMs - 7 * 86400000; endMs = compMs; }
+  const arrs = (state.archive || []).filter(a => { if (!a.savedAt) return false; const t = new Date(a.savedAt).getTime(); return t >= startMs && t <= endMs; });
+  if (arrs.length === 0) { showToast('이 기간 깨달음 X'); return; }
+  const archiveText = arrs.map(a => `[${a.type}] ${a.headline || ''}: ${a.body || a.userMemo || ''}`).join('\n');
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6', max_tokens: 250,
+        messages: [{ role: 'user', content: `이 기간 사용자 깨달음 ${arrs.length}개. 핵심 통찰 한 단락 (3-4문장)으로 요약. 친구 톤, 외재화 ("X 패턴이 작동" / "너 X적이야" X), 따뜻하게.\n\n${archiveText.slice(0, 3500)}\n\n[출력 — 한 단락만, 마크다운/인용부호 X]` }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.[0]?.text?.trim() || '';
+    if (text) {
+      review.archiveMetaSummary = text.slice(0, 400);
+      saveState();
+      if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
+      showToast('✓ 핵심 통찰 요약됨');
+    } else { showToast('AI 응답 비어있음'); }
+  } catch (e) { showToast('실패: ' + (e.message || '')); }
 }
 
 function toggleReviewDetail(idx) {
@@ -23694,9 +23931,37 @@ JSON으로 출력:
     if (!response.ok) throw new Error('API ' + response.status);
     const result = await response.json();
     const text = result.content[0].text;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    // V4-fix v3 (사용자 보고): code block fence 제거 + truncated 응답 복구
+    let cleaned = text.replace(/^```\w*\s*/m, '').replace(/\s*```\s*$/m, '').trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('JSON 파싱 실패');
-    const analysis = JSON.parse(jsonMatch[0]);
+    let analysis;
+    try {
+      analysis = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      // truncated 응답 복구 시도 — 마지막 완전한 } 위치까지
+      const partial = jsonMatch[0];
+      let depth = 0, lastValidEnd = -1, inStr = false, escNext = false;
+      for (let i = 0; i < partial.length; i++) {
+        const c = partial[i];
+        if (escNext) { escNext = false; continue; }
+        if (c === '\\' && inStr) { escNext = true; continue; }
+        if (c === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (c === '{') depth++;
+        else if (c === '}') { depth--; if (depth === 0) lastValidEnd = i; }
+      }
+      if (lastValidEnd > 0) {
+        try {
+          analysis = JSON.parse(partial.slice(0, lastValidEnd + 1));
+        } catch (e2) {
+          // 마지막 array 또는 trailing comma 깨진 case — 키별 분리 추출
+          throw new Error('JSON 파싱 실패: ' + parseErr.message);
+        }
+      } else {
+        throw parseErr;
+      }
+    }
 
     // V3.13.x: 덮어씌움 X. 추가 + 중복은 합치기 (evidence_count↑, confidence/description 더 좋은 거 채택)
     const mergeModelItem = (existing, incoming) => {
@@ -23904,7 +24169,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.90-insights-seed-test';
+const APP_VERSION = 'v4.0.91-archive-deep-meta';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
