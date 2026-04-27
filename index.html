@@ -11800,7 +11800,7 @@ function renderModel() {
     html += '</div>';
   }
   if (state.traits.length > 0) {
-    const split = splitItems(state.traits, 5);
+    const split = splitItems(state.traits, 5, 0.4, true);
     html += `<div class="model-section"><div class="model-section-title">💫 너의 특성</div>`;
     split.top.forEach((t, i) => { 
       const realIdx = state.traits.indexOf(t);
@@ -11885,9 +11885,8 @@ function renderMoreSection(category, more, draft) {
 
 function renderModelItem(item, category, idx) {
   const confLabel = item.confidence >= 0.7 ? '확신' : item.confidence >= 0.4 ? '관찰 중' : '가설';
-  // V4-1l-mini: values/patterns는 '맞아' / '아니야' / '확인됨' 토글 (✎ 수정 / ✕ 삭제 X).
-  // 다른 카테고리 (traits 등)는 기존 ✎ 수정 / ✕ 삭제 유지.
-  const isVerifiable = (category === 'values' || category === 'patterns');
+  // V4-1l-mini + 사용자 fix: values/patterns/traits 모두 '맞아' / '아니야' / '확인됨' 토글
+  const isVerifiable = (category === 'values' || category === 'patterns' || category === 'traits');
   const isVerified = isVerifiable && item.user_verified === true;
   const showNew = isVerifiable && !isVerified;
   const newClass = showNew ? ' model-item-new' : '';
@@ -23514,7 +23513,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.79-strategy-followup-flow';
+const APP_VERSION = 'v4.0.80-traits-confirm';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
