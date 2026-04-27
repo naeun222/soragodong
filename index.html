@@ -7986,10 +7986,12 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'yangsaeng_intro',
-    targetSelector: null,
-    title: '전략 카드 — 너의 도구들',
-    body: '여기 보이는 카드 하나하나가 너의 전략이야.<br><br>· <b>제목 클릭</b>하면 — 그 전략이 어떻게 자랐는지 흐름이 보여.<br>· <b>점 색깔</b>은 — 그날 시도해서 받은 소라 색.<br>· <b>회색 점</b>은 — 안 통했던 시도. 사라지지 않고 흔적으로 남아.<br><br><span class="small">시도 → 안 통하면 다른 차원으로 옮겨가고 → 5번 작동하면 너 일부가 돼.</span>',
-    waitFor: 'next',
+    targetSelector: '.strategy-card-title',
+    title: '전략 카드 — 직접 눌러보자',
+    body: '여기 카드 하나하나가 너의 전략이야.<br><b>카드 제목 한 번 눌러봐</b> — 그 전략이 어떻게 자랐는지 흐름이 펼쳐져.<br><br><span class="small">점 색깔 = 그날 받은 소라 색. 회색 = 안 통한 시도. 사라지지 않고 흔적으로 남아.</span>',
+    waitFor: 'click',
+    advanceDelay: 800,
+    manualAdvance: true,
     dimBackground: false
   },
   {
@@ -8003,10 +8005,12 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'insights_kinds',
-    targetSelector: null,
-    title: '세 가지 통찰',
-    body: '· <b>📌 스크랩</b> — 대화에서 [✦ 깨달음으로]로 박은 거<br>· <b>✎ 메모</b> — 네가 직접 적은 한 줄<br>· <b>🌊 숙고 결론</b> — 큰 질문에 결론 낸 거<br><br>카드 클릭하면 원본까지 다 보여.',
-    waitFor: 'next',
+    targetSelector: '.archive-card',
+    title: '깨달음 카드 — 클릭해보자',
+    body: '카드 하나 눌러봐. 원본 메시지까지 보여.<br><br><span class="small">📌 스크랩 (대화에서 박은 거) / ✎ 메모 (네가 적은 한 줄) / 🌊 숙고 결론 — 셋 다 모여.</span>',
+    waitFor: 'click',
+    advanceDelay: 800,
+    manualAdvance: true,
     dimBackground: false
   },
   {
@@ -8080,16 +8084,26 @@ const ONBOARDING_STEPS = [
   {
     id: 'exec_brain_dump_btn',
     targetSelector: 'button[onclick="openBrainDump()"]',
-    title: '🧠 머릿속 풀기',
-    body: '이 버튼 보이지? 와다다 쏟아내면 내가 정리해서 <b>오늘의 카드 3장</b>으로 만들어줘.<br>네가 어디서부터 해야 할지 모를 때 가장 좋은 첫 단계야.<br><br><span class="small">지금 직접 눌러볼 필요 X. 어디 있는지만 기억해.</span>',
-    waitFor: 'next',
+    title: '🧠 머릿속 풀기 — 직접 해보자',
+    body: '이 버튼 누르면 네 할 일을 와다다 적을 수 있어.<br>예시 미리 채워줄게 — 그냥 눌러봐!<br><br><span class="small">와다다 적으면 내가 가장 중요한 3장으로 골라줄게.</span>',
+    waitFor: 'click',
+    advanceDelay: 800,
+    dimBackground: false
+  },
+  {
+    id: 'exec_brain_dump_submit',
+    targetSelector: '#brainDumpSubmit',
+    title: '소라에게 맡기기 ✦',
+    body: '예시가 자동으로 채워졌지?<br>이제 <b>"소라에게 맡기기"</b> 한 번 눌러봐.<br><br><span class="small">잠깐 기다리면 — 가장 중요한 3장 + 서랍장으로 정리돼.</span>',
+    waitFor: 'click',
+    advanceDelay: 1500,
     dimBackground: false
   },
   {
     id: 'exec_cards_intro',
     targetSelector: null,
-    title: '오늘의 카드 3장',
-    body: '머릿속 풀기 누르면 카드 3장이 떠. 가장 중요한 것만.<br><br>· <b>완료하면 중요도에 따라 다른 결의 소라가 보상</b>으로 와! (가벼움/일상/메인/황금)<br>· 카드 옆 ✎ <b>수정</b> / ✕ <b>삭제</b> 가능<br>· 카드 밑에 <b>📂 서랍장</b> — 대화에서 발견한 할 일이 우선순위순으로 자동 모임',
+    title: '✦ 오늘의 카드 3장',
+    body: '오늘의 카드 = 가장 중요한 3장. 다 끝내면 다른 거 꺼내는 식.<br><br>· 완료하면 <b>다른 결의 소라가 보상</b>으로 와<br>· 카드 옆 ✎ 수정 / ✕ 삭제<br>· 카드 밑 <b>📂 서랍장</b> — 나머지 할 일 자동 모임 (4 그룹 분류)',
     waitFor: 'next',
     dimBackground: false
   },
@@ -25038,7 +25052,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.105-tutorial-newbie-tone';
+const APP_VERSION = 'v4.0.106-tutorial-action-steps';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
