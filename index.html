@@ -2414,6 +2414,132 @@
     color: var(--accent);
   }
 
+  /* V4-1i: 🌊 숙고 질문 시스템 — 홈 카드 */
+  .reflection-empty-card {
+    margin: 12px 0 4px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(98,165,200,0.10), rgba(139,126,196,0.06));
+    border: 1px dashed rgba(98,165,200,0.30);
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .reflection-empty-card:active { background: rgba(98,165,200,0.16); }
+  .reflection-active-card {
+    margin: 12px 0 6px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, rgba(98,165,200,0.16), rgba(139,126,196,0.10));
+    border: 1px solid rgba(98,165,200,0.35);
+    border-radius: 14px;
+  }
+  .reflection-active-label {
+    font-size: 11px;
+    color: #a3d2e8;
+    letter-spacing: 0.10em;
+    margin-bottom: 8px;
+  }
+  .reflection-active-text {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 12px;
+    white-space: pre-line;
+  }
+  .reflection-active-actions {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .reflection-active-actions button {
+    flex: 1; min-width: 110px;
+    background: transparent;
+    border: 1px solid rgba(98,165,200,0.35);
+    color: #c5e0f0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .reflection-active-actions button:active { background: rgba(98,165,200,0.20); }
+  .reflection-pending-link {
+    margin: 6px 0 4px;
+    padding: 8px 14px;
+    text-align: right;
+    font-size: 11px;
+    color: var(--accent2);
+    cursor: pointer;
+  }
+  .reflection-pending-link:active { color: var(--accent); }
+
+  /* 숙고 목록 모달 */
+  .reflection-list-modal-content { padding: 8px 4px; }
+  .reflection-list-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 17px;
+    color: var(--text);
+    margin-bottom: 14px;
+  }
+  .reflection-add-new {
+    width: 100%;
+    background: rgba(98,165,200,0.15);
+    border: 1px dashed rgba(98,165,200,0.40);
+    color: #a3d2e8;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    margin-bottom: 14px;
+  }
+  .reflection-add-new:active { background: rgba(98,165,200,0.25); }
+  .reflection-list-group { margin-bottom: 16px; }
+  .reflection-list-group-label {
+    font-size: 11px;
+    color: var(--text-soft);
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .reflection-list-item {
+    position: relative;
+    padding: 10px 36px 10px 12px;
+    margin-bottom: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .reflection-list-item:active { background: var(--surface); }
+  .reflection-list-item.status-active {
+    border-color: rgba(98,165,200,0.45);
+    background: linear-gradient(135deg, rgba(98,165,200,0.10), rgba(139,126,196,0.06));
+    cursor: default;
+  }
+  .reflection-list-item.status-resolved { opacity: 0.75; }
+  .reflection-list-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .reflection-list-conclusion {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-style: italic;
+  }
+  .reflection-list-del {
+    position: absolute; top: 8px; right: 8px;
+    background: transparent; border: none;
+    color: var(--text-soft);
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    cursor: pointer; font-size: 11px;
+  }
+  .reflection-list-del:active { background: var(--bg); color: var(--danger); }
+
   /* V4-1f: 모래사장 DNA 진주 (작은 다면체) */
   .beach-dna-section .beach-tier-header {
     color: #d4a76a;
@@ -3360,6 +3486,9 @@
 
       <!-- ★★★ 소라의 부름 (AI 발급 미션) -->
       <div id="missionContainer"></div>
+
+      <!-- V4-1i: 🌊 숙고 질문 (active 1개 + pending 카운트) -->
+      <div id="reflectionContainer"></div>
 
       <!-- 여백 (메인과 작은 항목 분리) -->
       <div style="height: 24px;"></div>
@@ -4789,6 +4918,7 @@ async function init() {
   renderPredictionFollowups();
   renderMainAction();
   renderDecisionMiniLink();
+  if (typeof renderReflectionHome === 'function') renderReflectionHome();
   renderModel();
   renderProjects();
   renderArchive();
@@ -6842,6 +6972,264 @@ async function triggerSOS() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// V4-1i: 🌊 REFLECTION QUESTIONS (숙고 질문 시스템)
+// ───────────────────────────────────────────────────────────────
+// V4 비전 8장 + anchor 30:
+// - 사용자가 직접 박은 큰 질문 1개 (active). AI 자동 큐레이션 X.
+// - status: pending | active | paused | resolved
+// - 결론은 사용자가 직접 적고 명시적으로 닫음 → archive에 type='reflection' 자동 push.
+// - 작업 분량: V4-1i (1차) — 데이터 함수 + 홈 카드 + 추가/활성/결론 흐름.
+//   숙고 전용 채팅 화면(screen-reflection)은 V4-1j로 분리.
+// ═══════════════════════════════════════════════════════════════
+
+function renderReflectionHome() {
+  const container = document.getElementById('reflectionContainer');
+  if (!container) return;
+  const all = state.reflectionQuestions || [];
+  const active = all.find(q => q.status === 'active');
+  const pending = all.filter(q => q.status === 'pending').length;
+
+  if (!active && pending === 0) {
+    // 비어 있을 때 — 작은 "+ 질문 추가" 카드
+    container.innerHTML = `
+      <div class="reflection-empty-card" onclick="addReflectionQuestion()">
+        🌊 깊이 보고 싶은 큰 질문 있어? <span style="color:var(--accent2);">+ 추가</span>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  if (active) {
+    const dateStr = active.createdAt ? new Date(active.createdAt).toLocaleDateString('ko-KR', { month:'short', day:'numeric' }) : '';
+    html += `
+      <div class="reflection-active-card">
+        <div class="reflection-active-label">🌊 숙고 중 · ${escapeHtml(dateStr)}</div>
+        <div class="reflection-active-text">${escapeHtml(active.text)}</div>
+        <div class="reflection-active-actions">
+          <button onclick="resolveReflectionQuestion('${active.id}')">✓ 결론 내고 닫기</button>
+          <button onclick="pauseReflectionQuestion('${active.id}')">⏸ 보류</button>
+        </div>
+      </div>
+    `;
+  }
+  if (pending > 0) {
+    html += `
+      <div class="reflection-pending-link" onclick="showReflectionList()">
+        📋 더 깊이 볼 거 ${pending}개 →
+      </div>
+    `;
+  } else if (active) {
+    html += `
+      <div class="reflection-pending-link" onclick="addReflectionQuestion()">
+        + 새 질문 추가
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+}
+
+async function addReflectionQuestion(text) {
+  // text 인자 없으면 직접 입력 모달
+  let qText = text;
+  if (!qText) {
+    qText = await showInputModal({
+      title: '🌊 숙고 질문 추가',
+      message: '깊이 보고 싶은 질문 한 줄. 답이 바로 안 나와도 OK — 시간 들여 숙성.',
+      placeholder: '예: 박사 끝까지 갈지 / 이 관계 계속할지 / 내가 진짜 원하는 게 뭔지',
+      multiline: true,
+      maxLength: 300,
+      okLabel: '추가'
+    });
+  }
+  if (!qText || !qText.trim()) return null;
+
+  const all = state.reflectionQuestions || (state.reflectionQuestions = []);
+  const hasActive = all.some(q => q.status === 'active');
+  // 첫 질문이거나 active 없으면 즉시 active. 아니면 pending.
+  const status = hasActive ? 'pending' : 'active';
+
+  const newQ = {
+    id: 'rq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    text: qText.trim(),
+    createdAt: new Date().toISOString(),
+    source: 'manual',
+    sourceMsgIdx: null,
+    status,
+    resolvedAt: null,
+    conclusion: null,
+    chatMessages: []
+  };
+  all.push(newQ);
+  saveState();
+  renderReflectionHome();
+  showToast(status === 'active' ? '🌊 숙고 시작' : '🌊 대기 등록');
+  return newQ;
+}
+
+async function activateReflectionQuestion(id) {
+  const all = state.reflectionQuestions || [];
+  const q = all.find(x => x.id === id);
+  if (!q) return;
+  if (q.status === 'active') return;
+  if (q.status === 'resolved') {
+    showToast('이미 결론 내린 질문이야');
+    return;
+  }
+  // 기존 active를 pending으로 강등 (chatMessages 보존)
+  const currentActive = all.find(x => x.status === 'active');
+  if (currentActive) {
+    const ok = await showConfirmModal({
+      title: '활성 질문 교체',
+      message: `현재 숙고 중: "${currentActive.text}"\n\n이걸 보류하고 새 질문 활성화할까?`,
+      okLabel: '교체',
+      cancelLabel: '취소'
+    });
+    if (!ok) return;
+    currentActive.status = 'pending';
+  }
+  q.status = 'active';
+  saveState();
+  renderReflectionHome();
+  showToast('🌊 활성화됨');
+}
+
+async function pauseReflectionQuestion(id) {
+  const q = (state.reflectionQuestions || []).find(x => x.id === id);
+  if (!q) return;
+  q.status = 'paused';
+  saveState();
+  renderReflectionHome();
+  showToast('⏸ 보류');
+}
+
+async function resolveReflectionQuestion(id) {
+  const q = (state.reflectionQuestions || []).find(x => x.id === id);
+  if (!q) return;
+  const conclusion = await showInputModal({
+    title: '✓ 결론',
+    message: `"${q.text}"\n\n지금까지 보고 느낀 결론을 한두 문장으로.`,
+    placeholder: '예: 다음 학기까지 가보고 그때 결정',
+    multiline: true,
+    maxLength: 500,
+    okLabel: '결론 내고 닫기 ✦'
+  });
+  if (!conclusion || !conclusion.trim()) return;
+
+  const trimmed = conclusion.trim();
+  q.status = 'resolved';
+  q.conclusion = trimmed;
+  q.resolvedAt = new Date().toISOString();
+
+  // V4 비전 8.5: resolved → archive에 type='reflection' 자동 push (V4 비전 9.2 confidence 1.0 갈래)
+  const _dayKey = todayKey();
+  const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  if (!Array.isArray(state.archive)) state.archive = [];
+  state.archive.unshift({
+    type: 'reflection',
+    headline: q.text.slice(0, 30),
+    body: trimmed.slice(0, 200),
+    insight: `${q.text} → ${trimmed}`,
+    userMemo: trimmed,
+    tags: ['숙고'],
+    date,
+    source: '숙고',
+    savedAt: q.resolvedAt,
+    reflectionQuestionId: q.id
+  });
+  saveState();
+  renderReflectionHome();
+  if (typeof renderArchive === 'function') renderArchive();
+  showToast('✓ 숙고 결론 — 깨달음에 보관됨');
+}
+
+function deleteReflectionQuestion(id) {
+  const all = state.reflectionQuestions || [];
+  const idx = all.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  all.splice(idx, 1);
+  saveState();
+  renderReflectionHome();
+}
+
+// 간단 목록 모달 (V4-1i 1차 — 별도 화면 X). pending/paused/resolved 보기.
+async function showReflectionList() {
+  const all = state.reflectionQuestions || [];
+  if (all.length === 0) {
+    addReflectionQuestion();
+    return;
+  }
+  const grouped = {
+    active:   all.filter(q => q.status === 'active'),
+    pending:  all.filter(q => q.status === 'pending'),
+    paused:   all.filter(q => q.status === 'paused'),
+    resolved: all.filter(q => q.status === 'resolved')
+  };
+  const STATUS_LABEL = { active: '🌊 진행 중', pending: '⏳ 대기', paused: '⏸ 보류', resolved: '✓ 결론' };
+  let listHtml = '<div class="reflection-list-modal-content">';
+  listHtml += `<div class="reflection-list-title">🌊 숙고 질문</div>`;
+  listHtml += `<button class="reflection-add-new" onclick="closeReflectionListModal(); addReflectionQuestion();">+ 새 질문</button>`;
+  ['active', 'pending', 'paused', 'resolved'].forEach(s => {
+    const qs = grouped[s];
+    if (!qs.length) return;
+    listHtml += `<div class="reflection-list-group">`;
+    listHtml += `<div class="reflection-list-group-label">${STATUS_LABEL[s]} · ${qs.length}</div>`;
+    qs.forEach(q => {
+      const cls = `reflection-list-item status-${q.status}`;
+      const action = q.status === 'pending' || q.status === 'paused'
+        ? `onclick="closeReflectionListModal(); activateReflectionQuestion('${q.id}')"`
+        : (q.status === 'resolved'
+            ? `onclick="closeReflectionListModal(); openResolvedReflection('${q.id}')"`
+            : '');
+      const conclusion = q.conclusion ? `<div class="reflection-list-conclusion">→ ${escapeHtml(q.conclusion.slice(0, 60))}${q.conclusion.length > 60 ? '…' : ''}</div>` : '';
+      listHtml += `
+        <div class="${cls}" ${action}>
+          <div class="reflection-list-text">${escapeHtml(q.text)}</div>
+          ${conclusion}
+          <button class="reflection-list-del" onclick="event.stopPropagation(); confirmDeleteReflection('${q.id}')">✕</button>
+        </div>
+      `;
+    });
+    listHtml += `</div>`;
+  });
+  listHtml += '</div>';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'reflectionListModal';
+  overlay.className = 'topic-modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) closeReflectionListModal(); };
+  overlay.innerHTML = `
+    <div class="topic-modal" onclick="event.stopPropagation()" style="max-height:80vh; overflow-y:auto;">
+      <button class="topic-modal-close" onclick="closeReflectionListModal()">×</button>
+      ${listHtml}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeReflectionListModal() {
+  const el = document.getElementById('reflectionListModal');
+  if (el) el.remove();
+}
+
+async function confirmDeleteReflection(id) {
+  if (!await confirmDelete('이 숙고 질문', '히스토리에서 영구 삭제됩니다.')) return;
+  deleteReflectionQuestion(id);
+  closeReflectionListModal();
+}
+
+function openResolvedReflection(id) {
+  const q = (state.reflectionQuestions || []).find(x => x.id === id);
+  if (!q) return;
+  showConfirmModal({
+    title: '✓ 결론',
+    message: `${q.text}\n\n→ ${q.conclusion || '(결론 없음)'}`,
+    okLabel: '닫기',
+    cancelLabel: ''
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
 // PHASE 5: DAILY QUESTION POOL & ROTATION
 // ═══════════════════════════════════════════════════════════════
 
@@ -8222,6 +8610,7 @@ function showScreen(name) {
     if (typeof expireOldMissions === 'function') expireOldMissions();
     applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3();
     renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink();
+    if (typeof renderReflectionHome === 'function') renderReflectionHome();
     // V3.13.x: 배너는 홈에만 (헤더와 함께)
     if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
   }
@@ -15405,7 +15794,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.10-memo-tags';
+const APP_VERSION = 'v4.0.11-reflection-1';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
