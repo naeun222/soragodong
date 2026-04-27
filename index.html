@@ -3229,6 +3229,27 @@
     cursor: pointer; font-family: inherit;
   }
   .mutation-options-toggle:hover { color: var(--accent2); }
+  /* 사용자 요청 2026-04-28: 선택한 차원 헤더 chip (제목 옆 토글) */
+  .mutation-chat-header-title {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .mutation-selected-chip {
+    background: rgba(212,167,106,0.18);
+    border: 1px solid rgba(212,167,106,0.50);
+    color: var(--accent);
+    border-radius: 14px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .mutation-selected-chip:hover {
+    background: rgba(212,167,106,0.30);
+  }
+  .mutation-selected-chip.open {
+    background: rgba(212,167,106,0.32);
+  }
   .mutation-option-card {
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(212,167,106,0.30);
@@ -15529,7 +15550,10 @@ function _renderMutationChat() {
       <div class="mutation-chat-modal" onclick="event.stopPropagation()">
         <div class="mutation-chat-header">
           <div style="flex:1;">
-            <div class="mutation-chat-header-title">🧬 돌연변이 — DNA 진화</div>
+            <div class="mutation-chat-header-title">
+              <span>🧬 돌연변이 — DNA 진화</span>
+              <span id="mutationChatSelectedChip"></span>
+            </div>
             <div class="mutation-chat-header-sub" id="mutationChatSubtitle"></div>
           </div>
           <button class="mutation-chat-close" onclick="closeMutationChat(false)" aria-label="닫기">✕</button>
@@ -15579,6 +15603,18 @@ function _renderMutationChat() {
   // subtitle: 가닥 제목
   const subEl = document.getElementById('mutationChatSubtitle');
   if (subEl) subEl.textContent = `"${card.title}"`;
+  // 사용자 요청 2026-04-28: 선택한 차원 chip — 헤더 제목 옆에 표시 (토글 클릭 시 옵션 다시 펼침)
+  const chipEl = document.getElementById('mutationChatSelectedChip');
+  if (chipEl) {
+    const sel = _mutationChatState.selected;
+    if (sel != null && _mutationChatState.options[sel]) {
+      const opt = _mutationChatState.options[sel];
+      const expanded = _mutationChatState._optionsExpanded;
+      chipEl.innerHTML = `<button class="mutation-selected-chip${expanded ? ' open' : ''}" onclick="_toggleMutationOptions()" title="다른 옵션 보기">${_LAYER_EMOJI[opt.layer] || '✦'} ${_LAYER_NAME[opt.layer] || opt.layer} ${expanded ? '▴' : '▾'}</button>`;
+    } else {
+      chipEl.innerHTML = '';
+    }
+  }
   // 채팅 영역
   const area = document.getElementById('mutationChatArea');
   if (area) {
@@ -15590,24 +15626,21 @@ function _renderMutationChat() {
       html += `<div class="mutation-msg assistant" style="opacity:0.6;">옵션 생성 중...</div>`;
     } else if (_mutationChatState.options.length) {
       const sel = _mutationChatState.selected;
-      // 사용자 요청 2026-04-27: 선택 후 다른 옵션 접고 위로 — 대화 방해 X (토글로 다시 열기 가능)
-      const showAll = sel == null || _mutationChatState._optionsExpanded;
-      html += `<div class="mutation-msg assistant" style="background:transparent; border:none; padding:0; max-width:100%;">
-        ${sel == null ? '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">하나 골라봐 ↓ (또는 자유롭게 입력)</div>' : ''}
-        <div class="mutation-options-stack${sel != null && !showAll ? ' compact' : ''}">
-          ${_mutationChatState.options.map((o, i) => {
-            const isSel = sel === i;
-            if (sel != null && !showAll && !isSel) return '';
-            return `
-              <button class="mutation-option-card${isSel ? ' selected' : ''}" onclick="selectMutationOption(${i})">
+      // 사용자 요청 2026-04-28: 선택 후 옵션 영역 완전 숨김 (헤더 chip만). 토글 시 다시 펼침
+      const showOptionsList = sel == null || _mutationChatState._optionsExpanded;
+      if (showOptionsList) {
+        html += `<div class="mutation-msg assistant" style="background:transparent; border:none; padding:0; max-width:100%;">
+          ${sel == null ? '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">하나 골라봐 ↓ (또는 자유롭게 입력)</div>' : ''}
+          <div class="mutation-options-stack">
+            ${_mutationChatState.options.map((o, i) => `
+              <button class="mutation-option-card${sel === i ? ' selected' : ''}" onclick="selectMutationOption(${i})">
                 <div class="mutation-option-layer">${_LAYER_EMOJI[o.layer] || '✦'} ${_LAYER_NAME[o.layer] || o.layer}</div>
                 <div class="mutation-option-action">${escapeHtml(o.action)}</div>
               </button>
-            `;
-          }).join('')}
-        </div>
-        ${sel != null ? `<button class="mutation-options-toggle" onclick="_toggleMutationOptions()">${showAll ? '▴ 옵션 접기' : '▾ 다른 옵션 보기'}</button>` : ''}
-      </div>`;
+            `).join('')}
+          </div>
+        </div>`;
+      }
     }
     area.innerHTML = html;
     area.scrollTop = area.scrollHeight;
