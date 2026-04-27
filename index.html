@@ -6896,8 +6896,7 @@
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
 
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
-        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:8px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동으로 박힌 백업 (rolling 5개) 에서 복구">🕰 자동 백업에서 복구 (주 1회 + 업데이트 시)</button>
-        <button class="btn-secondary" onclick="recoverFromBackup()" style="margin-top:8px;" title="V3→V4 마이그레이션 시 자동 백업된 cloud row 또는 localStorage 옛 데이터로 복구 시도">🔄 옛 백업에서 복구 시도 (V3 마이그레이션)</button>
+        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:8px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동으로 박힌 백업 (rolling 5개) 에서 복구">🕰 자동 백업에서 복구</button>
       </div>
 
       <div style="margin-top:24px;">
@@ -6913,52 +6912,7 @@
         <div id="accountInfo" style="font-size:12px; color:var(--text-dim); padding:12px; background:var(--surface); border-radius:12px; margin-bottom:8px;"></div>
         <button class="btn-secondary btn-danger" onclick="logout()">로그아웃</button>
       </div>
-      <details class="model-collapse" style="margin-top:24px;">
-        <summary>🧪 테스트 도구 (시간 시뮬레이션)</summary>
-        <div class="model-collapse-content" style="padding: 10px 14px;">
-          <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">
-            시간 trigger 동작 (챕터 분리, 토픽 추출, 아카이브 정리) 즉시 실행.
-          </div>
-          <button class="btn-secondary" onclick="testSkip4Hours()">⏭ 마지막 메시지 4시간 전으로</button>
-          <button class="btn-secondary" onclick="testForceExtract()">📚 챕터 토픽 즉시 추출</button>
-          <button class="btn-secondary" onclick="testForceArchive()">🗂 채팅 아카이브 즉시 실행</button>
-          <button class="btn-secondary" onclick="testForceMonthlyAuto()">📅 월간 자동 통합 즉시 실행</button>
-          <button class="btn-secondary btn-danger" onclick="testResetExecute()">🚀 실행 탭 데이터 초기화</button>
-        </div>
-      </details>
-
-      <!-- V4-fix: 테스터 모드 V4 시드 + 강제 trigger -->
-      <details class="model-collapse" style="margin-top:14px; border:1px solid rgba(212,167,106,0.30); border-radius:12px;">
-        <summary style="padding:12px 14px;">🧪 V4 전체 기능 테스트</summary>
-        <div class="model-collapse-content" style="padding: 10px 14px;">
-          <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
-            <strong style="color:var(--accent2);">⚠️ 테스터 모드 ON 후 사용</strong> — 변경 저장 X, 다시 OFF 하면 원래 데이터로 복원.<br>
-            특수 상황 (시간/누적/임계값) 모두 즉시 시뮬.
-          </div>
-          <button class="btn-secondary" onclick="testSeedV4Data()" style="background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(212,167,106,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🌱 V4 전체 시드 데이터 박기</button>
-          <button class="btn-secondary" onclick="testForceQuarterlyReview()" style="margin-top:6px;">📊 분기 리뷰 강제 생성</button>
-          <button class="btn-secondary" onclick="testForceDiagnoses()" style="margin-top:6px;">🩺 진단 5종 즉시 detect</button>
-          <button class="btn-secondary" onclick="testForceCrystallize()" style="margin-top:6px;">🧬 첫 strategy DNA 결정화 강제</button>
-          <button class="btn-secondary" onclick="testForceMutation()" style="margin-top:6px;">🪦 첫 strategy 돌연변이 진화 강제</button>
-          <button class="btn-secondary" onclick="testForceStrategyFollowup()" style="margin-top:6px;" title="첫 가닥 미션 → 4 옵션 모달 (작동/그저그래/안통함/못시도) → 결과별 분기 흐름. 안통함 자동 돌연변이, 그저그래 yes/no, 작동 결정화 prompt, 못시도 자책 X.">🔄 전략 팔로업 풀 흐름 (4 옵션 + 분기 다 검증)</button>
-          <button class="btn-secondary" onclick="testForceFullAnalysis()" style="margin-top:6px;">📊 통합 분석 강제 (시드 데이터로 traits/values/patterns 채움)</button>
-          <button class="btn-secondary" onclick="testForceDiscoverInsights()" style="margin-top:6px;">🔮 인사이트 발견 강제 (causal/pattern, 깨달음 카테고리)</button>
-          <button class="btn-secondary" onclick="testForcePearlSuggestion()" style="margin-top:6px;">🔮 진주 능동 제안 (마지막 user msg)</button>
-          <button class="btn-secondary" onclick="testForceMissionExpire()" style="margin-top:6px;">⏰ 미션 3일 expire 강제</button>
-          <button class="btn-secondary" onclick="testForceQuarterlyStories()" style="margin-top:6px;">▶ 분기 Stories 즉시 보기</button>
-          <button class="btn-secondary" onclick="testForceAnnualStories()" style="margin-top:6px;">▶ 연간 Stories 즉시 보기</button>
-          <button class="btn-secondary" onclick="testForceMonthlyReview()" style="margin-top:6px;">🌙 월간 리뷰 강제 생성 (V3.12)</button>
-          <button class="btn-secondary" onclick="testForceMusicAutoPearl()" style="margin-top:6px;">🎵 음악 5번 → 자동 진주 발동</button>
-          <button class="btn-secondary" onclick="testForceDrainedMode()" style="margin-top:6px;">🪫 방전 모드 ON</button>
-          <button class="btn-secondary" onclick="testForceDecisionRoom()" style="margin-top:6px;">🌀 갈피의 방 active 진입</button>
-          <button class="btn-secondary" onclick="testForceDiagnosisCitation()" style="margin-top:6px;" title="V4 9.5 + 사용자 정합: 진단은 '더 알아보기' 눌렀을 때만 자연 인용 (사용자 의도 표명 순간). active 진단을 복구해 다음 더 알아보기 응답에 한 줄로 노출되게 함.">🩺 진단 → 다음 "더 알아보기" 응답에 한 줄 인용</button>
-          <button class="btn-secondary" onclick="testForceQuestionScrap()" style="margin-top:6px;">🌊 새 숙고 질문 박기 (스크랩)</button>
-          <button class="btn-secondary" onclick="testForceTutorial()" style="margin-top:6px;">🎓 풀 튜토리얼 강제 시작</button>
-          <button class="btn-secondary" onclick="testStartTutorialFromStep()" style="margin-top:6px;" title="특정 step부터 튜토리얼 시작 (디버그 편의)">🎯 튜토리얼 step N부터 시작</button>
-          <button class="btn-secondary" onclick="testForceExtract()" style="margin-top:6px;">📌 토픽 추출 강제 (가드 우회)</button>
-          <button class="btn-secondary" onclick="testForceArchive()" style="margin-top:6px;">📜 채팅 아카이브 강제 (cutoff 우회)</button>
-        </div>
-      </details>
+      <!-- 테스트 도구 섹션 삭제 (사용자 요청 2026-04-28). testSeedV4Data 등 함수는 코드에 남아있어 콘솔에서 호출 가능. recoverFromBackup도 함수만 보존. -->
       <div style="margin-top:24px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
         <strong style="color:var(--accent)">프라이버시</strong><br>
         이메일 기반 인증으로 너만 접근 가능. 다른 사람은 너의 데이터를 볼 수 없어.<br>
