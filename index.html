@@ -2055,6 +2055,64 @@
     font-weight: 500;
   }
 
+  /* V4-1t: 🌟 오늘의 너 (도서관 메인 hero 카드) */
+  .library-hero {
+    margin: 8px 0 14px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.14), rgba(139,126,196,0.10));
+    border: 1px solid rgba(212,167,106,0.32);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .library-hero:active { transform: scale(0.99); border-color: rgba(212,167,106,0.55); }
+  .hero-label {
+    font-size: 11px;
+    color: var(--accent2);
+    letter-spacing: 0.10em;
+    margin-bottom: 8px;
+  }
+  .hero-text { display: flex; gap: 10px; align-items: flex-start; }
+  .hero-icon { font-size: 24px; flex-shrink: 0; }
+  .hero-content {
+    flex: 1;
+    font-family: 'Gowun Batang', serif;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .hero-music { display: flex; gap: 10px; align-items: center; }
+  .hero-music-art { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+  .hero-music-meta { flex: 1; min-width: 0; }
+  .hero-music-title { font-size: 13px; color: var(--text); font-weight: 600; line-height: 1.4; }
+  .hero-music-artist { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .hero-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-style: italic;
+    line-height: 1.5;
+  }
+  .hero-meta {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(212,167,106,0.18);
+    font-size: 10px;
+    color: var(--text-soft);
+    letter-spacing: 0.04em;
+  }
+  /* V4-1t: 카테고리 칩 새 항목 ● 점 */
+  .lib-cat-chip { position: relative; }
+  .lib-cat-chip.has-new::after {
+    content: '';
+    position: absolute;
+    top: 4px; right: 5px;
+    width: 6px; height: 6px;
+    background: var(--accent2);
+    border-radius: 50%;
+    box-shadow: 0 0 4px var(--accent2);
+  }
+
   /* V4-1l-a + V4-1p: 도서관 5 카테고리 칩 + 그리드/타임라인 토글 */
   .library-top-row {
     display: flex;
@@ -4079,6 +4137,9 @@
     <div class="screen" id="screen-archive">
       <div class="screen-title">📚 인생 도서관</div>
       <div class="screen-sub">너의 일기, 패턴, 좋아하는 것들 — 다섯 칸.</div>
+
+      <!-- V4-1t: 🌟 오늘의 너 (진주 회전 카드) -->
+      <div id="libraryHero"></div>
 
       <!-- V4-1l-a: 5 카테고리 칩 (가로 스크롤) + V4-1p 토글 -->
       <div class="library-top-row">
@@ -12020,7 +12081,92 @@ function renderArchive() {
   renderLensStrategies();
   renderLensPearls();
   if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
+  if (typeof renderLibraryHero === 'function') renderLibraryHero();
+  if (typeof updateLibraryCatNewDots === 'function') updateLibraryCatNewDots();
   updateArchiveQuickCounts();
+}
+
+// V4-1t: 🌟 오늘의 너 — 진주 1개 회전 (안 본 진주 우선)
+function renderLibraryHero() {
+  const container = document.getElementById('libraryHero');
+  if (!container) return;
+  const pearls = (state.pearls || []).filter(p => p.type !== 'dna_pearl');
+  if (pearls.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  // 안 본 우선: state.preferences._libHeroSeen[]
+  if (!state.preferences) state.preferences = {};
+  if (!Array.isArray(state.preferences._libHeroSeen)) state.preferences._libHeroSeen = [];
+  let seen = state.preferences._libHeroSeen;
+  // 모든 진주 다 봤으면 reset
+  const unseen = pearls.filter(p => !seen.includes(p.id));
+  const pool = unseen.length > 0 ? unseen : pearls;
+  // 가장 오래된 unseen 또는 random
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  if (!seen.includes(pick.id)) {
+    seen.push(pick.id);
+    if (seen.length > pearls.length) seen = seen.slice(-pearls.length);
+    state.preferences._libHeroSeen = seen;
+    saveState();
+  }
+
+  const dateStr = pick.createdAt
+    ? new Date(pick.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
+    : '';
+
+  let body;
+  if (pick.category === '음악' && pick.track) {
+    body = `
+      <div class="hero-music">
+        <img src="${escapeHtml(pick.track.artworkUrl || '')}" alt="" class="hero-music-art">
+        <div class="hero-music-meta">
+          <div class="hero-music-title">${escapeHtml(pick.track.title || '')}</div>
+          <div class="hero-music-artist">${escapeHtml(pick.track.artist || '')}</div>
+          ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  } else {
+    const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 기타: '💎' };
+    const icon = iconMap[pick.category || '기타'] || '💎';
+    body = `
+      <div class="hero-text">
+        <div class="hero-icon">${icon}</div>
+        <div class="hero-content">${escapeHtml(pick.content || '')}</div>
+        ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="library-hero" onclick="openPearl('${pick.id}')">
+      <div class="hero-label">🌟 오늘의 너</div>
+      ${body}
+      <div class="hero-meta">${escapeHtml(pick.category || '')}${dateStr ? ` · ${dateStr}` : ''}</div>
+    </div>
+  `;
+}
+
+// V4-1t: 카테고리 칩 새 항목 ● 점 (24시간 내 추가)
+function updateLibraryCatNewDots() {
+  const since = Date.now() - 24 * 3600000;
+  const checks = {
+    diary:     () => (state.entries || []).some(e => e.timestamp && new Date(e.timestamp).getTime() > since)
+                  || (state.chatMessages || []).some(m => m.timestamp && new Date(m.timestamp).getTime() > since),
+    yangsaeng: () => (state.topicCards || []).some(c => c.category === 'strategy' && c.createdAt && new Date(c.createdAt).getTime() > since),
+    insights:  () => (state.archive || []).some(a => a.savedAt && new Date(a.savedAt).getTime() > since),
+    pearls:    () => (state.pearls || []).some(p => p.type !== 'dna_pearl' && p.createdAt && new Date(p.createdAt).getTime() > since),
+    galpi:     () => (state.decisions || []).some(d => d.startedAt && new Date(d.startedAt).getTime() > since)
+                  || (state.weeklyReviews || []).some(r => r.completedAt && new Date(r.completedAt).getTime() > since)
+                  || (state.monthlyReviews || []).some(r => r.completedAt && new Date(r.completedAt).getTime() > since)
+  };
+  document.querySelectorAll('.lib-cat-chip').forEach(chip => {
+    const cat = chip.dataset.cat;
+    const fn = checks[cat];
+    const has = !!(fn && fn());
+    chip.classList.toggle('has-new', has);
+  });
 }
 
 // V4-1s: 📔 일기·대화 캘린더 무드 그리드 (월 단위)
@@ -16823,7 +16969,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.22-cal-grid';
+const APP_VERSION = 'v4.0.23-hero';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
