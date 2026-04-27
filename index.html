@@ -13256,14 +13256,24 @@ function buildSystemPromptParts() {
   const activeDiag = (_isDeeperContext || _isTesterMode) ? (state.diagnoses || []).find(d => d.status === 'active') : null;
   if (activeDiag && _DIAG_LABELS && _DIAG_LABELS[activeDiag.type]) {
     const lbl = _DIAG_LABELS[activeDiag.type];
-    volatile.push(`[관찰된 패턴 — "더 알아보기" 트리거됨, 자연스러운 흐름에 한 번 인용]`);
-    volatile.push(`- ${lbl.emoji} ${lbl.name}: ${activeDiag.evidence}`);
-    volatile.push(`  · 톤: 외재화("X 패턴이 작동 중" / "너 X적이야" X), 사용자 자기 발견 유도(결론 단정 X)`);
-    volatile.push(`  · 한 번만. 사용자 거부하면 다시 X.`);
-    volatile.push('');
-    // V4-1o-2: 즉시 shown 마킹 — 같은 진단 다시 안 띄움
-    if (typeof markDiagnosisShown === 'function') {
-      try { markDiagnosisShown(activeDiag.id); } catch (e) { console.warn('markDiagnosisShown:', e); }
+    if (_isTesterMode) {
+      // V4-fix v3 (사용자 보고): 테스트 모드 — 강제 인용 (자연스럽지 않아도 검증 가능)
+      volatile.push(`[관찰된 패턴 — 테스트 모드 강제 인용. 응답 안에 반드시 한 줄 끼워야]`);
+      volatile.push(`- ${lbl.emoji} ${lbl.name}: ${activeDiag.evidence}`);
+      volatile.push(`  · 응답 마지막에 한 줄로 자연스럽게 한 번 인용. "${lbl.name}" 단어 직접 써도 OK.`);
+      volatile.push(`  · 톤: 외재화 (X 패턴이 작동 중 / 이 도구 안 맞을 수도). 단정 X.`);
+      volatile.push('');
+      // testerMode면 markDiagnosisShown 호출 X — status='active' 유지 (매 응답 인용)
+    } else {
+      volatile.push(`[관찰된 패턴 — "더 알아보기" 트리거됨, 자연스러운 흐름에 한 번 인용]`);
+      volatile.push(`- ${lbl.emoji} ${lbl.name}: ${activeDiag.evidence}`);
+      volatile.push(`  · 톤: 외재화("X 패턴이 작동 중" / "너 X적이야" X), 사용자 자기 발견 유도(결론 단정 X)`);
+      volatile.push(`  · 한 번만. 사용자 거부하면 다시 X.`);
+      volatile.push('');
+      // V4-1o-2: 즉시 shown 마킹 — 같은 진단 다시 안 띄움
+      if (typeof markDiagnosisShown === 'function') {
+        try { markDiagnosisShown(activeDiag.id); } catch (e) { console.warn('markDiagnosisShown:', e); }
+      }
     }
   }
 
@@ -23537,7 +23547,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.81-force-analysis';
+const APP_VERSION = 'v4.0.82-diag-force-cite';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
