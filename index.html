@@ -1433,8 +1433,17 @@
   }
   .beach-tier-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+    gap: 6px;
+  }
+  /* V4-fix: 전체 탭 — 랜덤 흩뿌림 (모래사장 느낌). row gap 좁고 각 shell 회전·offset */
+  .beach-tier-grid.scatter {
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap: 4px;
+    padding: 6px 4px;
+  }
+  .beach-tier-grid.scatter .beach-shell {
+    transition: transform 0.25s ease;
   }
   .beach-shell {
     aspect-ratio: 1;
@@ -9593,9 +9602,19 @@ function renderBeach() {
   } else {
     // 시간순 평면 (최신 위)
     const sorted = filtered.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+    // V4-fix: 'all' 탭 → 모래사장 흩뿌림 (각 shell deterministic random rotate + offset)
+    const isAllTab = _beachTab === 'all';
+    const scatterStyle = (s, idx) => {
+      if (!isAllTab) return '';
+      const seed = (s._id ? s._id.split('').reduce((a,c) => a + c.charCodeAt(0), 0) : idx) * 9301 + 49297;
+      const rot = ((seed % 21) - 10);            // -10° ~ +10°
+      const tx = (((seed * 7) % 17) - 8);        // -8px ~ +8px
+      const ty = (((seed * 13) % 13) - 6);       // -6px ~ +6px
+      return ` style="transform: translate(${tx}px, ${ty}px) rotate(${rot}deg);"`;
+    };
     grid.innerHTML = dnaSectionHtml +
-      `<div class="beach-tier-grid">` +
-      sorted.map(s => `<div class="beach-shell tier-${s.tier || 'unknown'}" onclick="openShellStory(${state.shellCollection.indexOf(s)})">${s.type}</div>`).join('') +
+      `<div class="beach-tier-grid${isAllTab ? ' scatter' : ''}">` +
+      sorted.map((s, i) => `<div class="beach-shell tier-${s.tier || 'unknown'}"${scatterStyle(s, i)} onclick="openShellStory(${state.shellCollection.indexOf(s)})">${s.type}</div>`).join('') +
       `</div>`;
   }
 
@@ -19442,7 +19461,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.49-reflection-picker';
+const APP_VERSION = 'v4.0.50-beach-scatter';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
