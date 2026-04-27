@@ -4880,17 +4880,18 @@
   /* 진주 음악 카드는 grid에서 한 줄 다 차지 */
   .pearl-music-row { grid-column: 1 / -1; }
   .pearl-music-card { padding: 0; background: transparent; border: none; }
-  /* V4-fix: 체크인 사진 슬롯 — 음악 카드 height에 맞춰 정사각 (왼쪽 작게) */
+  /* V4-fix v3 (사용자 버그 보고): 체크인 사진 슬롯 — 고정 크기 정사각 (음악 stretch에 휘둘리지 않게) */
   .checkin-mp-row #checkinPhotoSlot { display: flex; }
   .checkin-photo-card {
     position: relative;
-    aspect-ratio: 1;
-    height: auto;
-    align-self: stretch;
+    width: 90px;
+    height: 90px;
+    align-self: flex-start;
     border-radius: 10px;
     overflow: hidden;
     background: var(--surface);
     border: 1px solid var(--border);
+    flex: 0 0 90px;
   }
   .checkin-photo-img {
     width: 100%; height: 100%;
@@ -4910,9 +4911,10 @@
     padding: 0;
   }
   .checkin-photo-add-btn {
-    aspect-ratio: 1;
-    height: auto;
-    align-self: stretch;
+    width: 90px;
+    height: 90px;
+    align-self: flex-start;
+    flex: 0 0 90px;
     background: var(--surface);
     border: 1px dashed var(--border);
     border-radius: 10px;
@@ -16401,6 +16403,32 @@ function renderExecute() {
 // === BRAIN DUMP ===
 function openBrainDump() {
   document.getElementById('brainDumpOverlay').style.display = 'flex';
+  // V4-fix (사용자 요청): 테스터 모드면 예시 자동 채움 (사용자 의도 표명 한 번 더 X)
+  if (state.preferences && state.preferences.testerMode) {
+    const ta = document.getElementById('brainDumpInput');
+    if (ta && !ta.value.trim()) {
+      ta.value = `교수님 메일 답장 — 다음 주까지
+논문 서론 첫 단락 쓰기
+실험 데이터 정리 (어제 받은 거)
+샴푸 떨어졌어 사야 함
+동생 생일 선물 — 주말 안에
+운동 가야지 진짜 일주일째 미룸
+세탁기 점검 신청
+세금 신고 미뤄놓은 거
+친구 결혼식 답장
+연구실 청소 좀
+SNS 줄여야 하는데
+저녁 약속 답장 안 함
+도서관 책 반납 (오늘 마지막 날)
+약 처방 받기
+휴대폰 데이터 확인
+부모님께 안부 전화
+아 맞다 영양제 떨어짐
+학회 발표 슬라이드 시작
+주간 회의 자료 정리
+새 노트북 케이스 알아보기`;
+    }
+  }
   setTimeout(() => document.getElementById('brainDumpInput').focus(), 100);
   selectExecMode('balance');
 }
@@ -18125,23 +18153,96 @@ function testSeedV4Data() {
   }
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
-  // 30일 entries (mood/vitality 다양 + 일부 모드 + 7일에 한 번 사진/일기)
+  // V4-fix v3 (사용자 요청): 1년 치 entries — 질적으로 진짜 같은 패턴 (계절·주기·마감·주말 효과)
   state.entries = [];
-  for (let i = 30; i >= 0; i--) {
+  // 의미 있는 일기 풀 (날짜별 다양)
+  const diaryPool = [
+    '오늘 한강 산책 30분. 머리 비워짐. 논문 한 단락 쓰고 끝남.',
+    '교수님 미팅. 별로였어. 데이터 부족이라고. 그래도 방향성은 잡힘.',
+    '엄마 김치찌개. 고등학교 그때 생각났어. 비도 그 때처럼 옴.',
+    '실험 데이터 정리만 4시간. 머리 멍해짐. 카페 가서 환기.',
+    '오늘 진짜 하나도 안 했어. 침대에서 종일. 무력했음.',
+    '친구 결혼식. 오랜만에 다 만남. 좋았는데 피곤. 사람 많은 거 한계 인정.',
+    '논문 서론 첫 단락 완성. 짧지만 시작이라 의미 있음.',
+    '아침 6시 깨서 새벽 작업. 진짜 잘 됨. 이 시간이 나의 골든.',
+    '동기 술자리. 박사 진로 얘기. 다들 비슷한 고민. 위로됨.',
+    '월경 1일차. 진짜 아무것도 못함. 누워서 책만 읽음.',
+    '카페 옮겨다니며 작업. 환경 바꾸니까 머리 다시 돌아감.',
+    '학회 발표 준비. 슬라이드 30장 다 만듦. 늦게까지 했지만 뿌듯.',
+    '주말 푹 쉬었음. 늦잠 + 산책 + 책. 회복 모드.',
+    '교수님께 데이터 보냄. 답장 기다림 — 긴장됨.',
+    '실험실 정리. 마음도 정리되는 느낌.',
+    '엄마랑 한 시간 통화. 안 보고 살았다고 잔소리. 미안.',
+    '오늘 거절했어. 술자리. 처음엔 부채감 있었는데 지나니 괜찮음.',
+    '논문 쓰다가 막힘. 새벽까지 봤는데 답 안 나옴.',
+    '친구가 갑자기 카톡. 그냥 안부. 진짜 고마웠어.',
+    '오늘 운동 갔어 일주일 만에. 30분 뛰니 머리 맑아짐.',
+    '책 1권 완독. 오랜만에 종이책. 집중 잘 됨.',
+    '실험 한 개 망함. 처음부터 다시 해야 함. 짜증보다 무력감.',
+    '오늘 SNS 안 봤음. 평소보다 시간 많이 남았어.',
+    '친구 만남. 오래 못 본 친구라 어색했는데 풀림.',
+    '논문 결과 부분 시작. 표 3개 만듦.',
+    '주말 종일 침대. 죄책감보단 회복.',
+    '교수님 칭찬. "이 부분 좋다" 한 마디인데 컸음.',
+    '아침에 명상 10분. 진짜 차분해짐. 매일 하고 싶음.',
+    '엄마 아프시다고. 주말에 가봐야겠음.',
+    '오늘 일찍 잠. 11시. 쥐어짜낸 결정이지만 잘 한 듯.'
+  ];
+  const dailyQs = [
+    '오늘 잘 됐던 한 순간은?', '하루 중 가장 차분했던 순간?',
+    '내일의 너에게 한 줄?', '오늘 너답지 않게 한 일이 있다면?',
+    '오늘 만난 사람 중 한 사람을 떠올려봐. 어떤 인상이었어?',
+    '오늘 너에게 작은 자랑거리?', '내가 오늘 놓친 것 중 가장 아까운 건?'
+  ];
+  const noteSnips = [
+    '카페 작업 잘됨', '오늘 거절 한 번 성공', '논문 한 단락',
+    '운동 30분 — 머리 맑아짐', '엄마 통화 — 짧게',
+    '교수님 회의 — 별로', '실험 한 개 완료', '책 50p',
+    '커피 끊어본 첫날', '아침 일찍 일어남'
+  ];
+  // 현재 → 1년 전 거꾸로 — 의미 있는 패턴
+  for (let i = 365; i >= 0; i--) {
     const d = new Date(today.getTime() - i * 86400000);
     const dk = d.toISOString().split('T')[0];
+    const dow = d.getDay(); // 0 = 일, 6 = 토
+    const isWeekend = (dow === 0 || dow === 6);
+    const month = d.getMonth();
+    const dayOfMonth = d.getDate();
+    // mood/vitality 곡선:
+    // - 주말 mood +1 / vitality +0.5
+    // - 월경 (4주 주기 5일간) mood -1 / vitality -2
+    // - 학기 마감 (3월/6월/9월/12월 말 주) vitality -1
+    // - 휴식 모드 일부 일에
+    const cycleDay = i % 28;
+    const isPeriodDay = (cycleDay >= 0 && cycleDay <= 4);
+    const isExamWeek = (dayOfMonth >= 22) && (month === 2 || month === 5 || month === 8 || month === 11);
+    let baseMood = 3 + (isWeekend ? 1 : 0) - (isPeriodDay ? 1 : 0);
+    let baseVit = 3 + (isWeekend ? 0.5 : 0) - (isPeriodDay ? 2 : 0) - (isExamWeek ? 1 : 0);
+    // 약간의 noise (deterministic per day)
+    const noise = ((dk.split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % 5) * 0.4 - 0.8;
+    const mood = Math.max(1, Math.min(5, Math.round(baseMood + noise)));
+    const vit = Math.max(1, Math.min(5, Math.round(baseVit + noise)));
+    // 수면 — 평일 좀 늦게 / 주말 늦게 일어남
+    const sleepStarts = isWeekend ? ['00:30', '01:00', '23:30'] : ['22:30', '23:00', '23:30', '00:00'];
+    const sleepEnds = isWeekend ? ['08:30', '09:00', '07:30'] : ['06:30', '07:00', '07:30'];
     const e = {
       date: dk,
-      mood: 1 + Math.floor(Math.random() * 5),
-      vitality: 1 + Math.floor(Math.random() * 5),
-      sleepStart: ['22:00','23:00','23:30','00:30'][i % 4],
-      sleepEnd: ['06:30','07:00','07:30','08:00'][i % 4],
+      mood,
+      vitality: vit,
+      sleepStart: sleepStarts[i % sleepStarts.length],
+      sleepEnd: sleepEnds[i % sleepEnds.length],
       timestamp: d.toISOString(),
-      modes: i % 7 === 0 ? { rest: true } : (i % 11 === 0 ? { period: true } : {})
+      modes: {}
     };
-    if (i % 5 === 0) e.diary = `시드 일기 ${i}일 전 — 오늘은 X에 집중함. Y에서 머무름.`;
-    if (i % 9 === 0) e.note = `짧은 메모: 카페에서 작업이 잘 됐음.`;
-    if (i % 13 === 0) e.dailyQuestion = { text: '오늘 잘 됐던 한 순간은?' };
+    if (isPeriodDay && cycleDay <= 2) e.modes.period = true;
+    if (isExamWeek && i % 4 === 0) e.modes.exam = true;
+    if (vit <= 2 && i % 5 === 0) e.modes.drained = true;
+    // 일기 (3-4일에 한 번)
+    if (i % 3 === 0) e.diary = diaryPool[i % diaryPool.length];
+    // 짧은 노트 (1주에 1-2번)
+    if (i % 5 === 1) e.note = noteSnips[i % noteSnips.length];
+    // 일일 질문 (1주에 한 번)
+    if (i % 7 === 0) e.dailyQuestion = { text: dailyQs[Math.floor(i / 7) % dailyQs.length] };
     state.entries.push(e);
   }
   // chatMessages 다양화 — 5 챕터 (각 4-6 메시지), 8 카테고리 골고루
@@ -18281,27 +18382,48 @@ function testSeedV4Data() {
       createdAt: new Date(today.getTime() - (i+1) * 3 * 86400000).toISOString()
     });
   }
-  // 진주 10개
-  state.pearls = (state.pearls || []).filter(p => false);
+  // V4-fix v3: 진주 30+ (1년에 걸쳐, 월별 평균 2-3개, 4 카테고리 다양)
+  state.pearls = [];
   const pearlSeeds = [
-    { c: '음악', content: '카페 새벽 곡', track: { id: 'seed1', title: 'Vanilla Days', artist: 'LONGSHOT', artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music/v4/3a/3a/3a/seed/300x300bb.jpg' } },
-    { c: '음식', content: '엄마 김치찌개' },
-    { c: '장소', content: '한강 벤치 새벽' },
-    { c: '순간', content: '논문 한 단락 끝낸 순간' },
-    { c: '사람', content: '오랜 친구와 카톡' },
-    { c: '음악', content: '비 오는 날 곡', track: { id: 'seed2', title: 'Rainy Mood', artist: 'X', artworkUrl: '' } },
-    { c: '음식', content: '카페 라떼' },
-    { c: '장소', content: '학교 도서관 창가' },
-    { c: '순간', content: '새벽 깨달음' },
-    { c: '사람', content: '교수님 칭찬' }
+    { c: '음악', content: 'LONGSHOT - Vanilla Days', daysAgo: 5, track: { id: 'seed1', title: 'Vanilla Days', artist: 'LONGSHOT', artworkUrl: '' }, note: '새벽 카페에서 발견. 이 곡 들으면 그 시간으로 돌아감.' },
+    { c: '음식', content: '엄마 김치찌개', daysAgo: 8, note: '비 오는 날 — 고등학교 그 부엌 생각.' },
+    { c: '장소', content: '한강 벤치 새벽 4시', daysAgo: 12, note: '논문 막힌 날. 30분 앉아있다 머리 풀림.' },
+    { c: '순간', content: '논문 첫 단락 완성한 순간', daysAgo: 18 },
+    { c: '사람', content: '오랜 친구가 갑자기 카톡', daysAgo: 22, note: '"잘 지내?" 그 한 마디.' },
+    { c: '음악', content: '비 오는 날 곡', daysAgo: 28, track: { id: 'seed2', title: 'Rainy Mood', artist: 'lofi.bird', artworkUrl: '' }, note: '비 + 작업할 때만.' },
+    { c: '음식', content: '연구실 옥상 도시락', daysAgo: 35, note: '같이 먹은 동기랑 진로 얘기.' },
+    { c: '장소', content: '학교 도서관 창가 5층', daysAgo: 42, note: '거기 앉으면 항상 잘 됨.' },
+    { c: '순간', content: '새벽 깨달음 — 환경이 의지보다 강함', daysAgo: 48 },
+    { c: '사람', content: '교수님 한 마디 칭찬', daysAgo: 55, note: '"이 부분 좋다" — 한 줄인데 컸음.' },
+    { c: '음악', content: '논문 결과 쓸 때 곡', daysAgo: 65, track: { id: 'seed3', title: 'Focus Beats', artist: 'Various', artworkUrl: '' } },
+    { c: '음식', content: '엄마가 보낸 김장 김치', daysAgo: 75, note: '한 통이 한 달 가요.' },
+    { c: '장소', content: '카페 모서리 자리', daysAgo: 85, note: '거기 앉으면 두 시간은 집중.' },
+    { c: '순간', content: '실험 결과 첫 success', daysAgo: 95, note: '진짜 소름. 6개월 만의 보상.' },
+    { c: '사람', content: '동생이 깜짝 방문', daysAgo: 105 },
+    { c: '음악', content: '러닝할 때 듣는 곡', daysAgo: 120, track: { id: 'seed4', title: 'Run', artist: 'Hozier', artworkUrl: '' } },
+    { c: '음식', content: '연구실 동기랑 라멘', daysAgo: 135, note: '진로 고민 토론.' },
+    { c: '장소', content: '집 앞 천변길', daysAgo: 150, note: '운동 + 생각 정리.' },
+    { c: '순간', content: '드디어 거절했어', daysAgo: 165, note: '술자리 — 첫 거절 성공.' },
+    { c: '사람', content: '오래 못 본 친구 결혼식', daysAgo: 175 },
+    { c: '음악', content: '아침 일어날 때 곡', daysAgo: 190, track: { id: 'seed5', title: 'Morning Light', artist: 'soul', artworkUrl: '' } },
+    { c: '음식', content: '아빠 닭볶음탕', daysAgo: 210 },
+    { c: '장소', content: '가을 단풍 — 학교 뒷산', daysAgo: 225 },
+    { c: '순간', content: '새벽 4시 작업 끝낸 순간', daysAgo: 240 },
+    { c: '사람', content: '5년만의 동창', daysAgo: 260 },
+    { c: '음식', content: '겨울 호떡', daysAgo: 280 },
+    { c: '장소', content: '제주도 협재 — 휴식', daysAgo: 300, note: '3박 4일.' },
+    { c: '순간', content: '학회 첫 발표', daysAgo: 320 },
+    { c: '사람', content: '동기 결혼식 축하', daysAgo: 340 },
+    { c: '음악', content: '봄 첫날 곡', daysAgo: 360, track: { id: 'seed6', title: 'Spring', artist: 'Vivaldi', artworkUrl: '' } }
   ];
   pearlSeeds.forEach((p, i) => {
     state.pearls.push({
       id: 'pearl_seed_' + i,
       category: p.c,
       content: p.content,
+      note: p.note || null,
       ...(p.track ? { track: p.track } : {}),
-      createdAt: new Date(today.getTime() - i * 3 * 86400000).toISOString(),
+      createdAt: new Date(today.getTime() - p.daysAgo * 86400000).toISOString(),
       type: 'pearl'
     });
   });
@@ -18319,20 +18441,47 @@ function testSeedV4Data() {
     workedCount: 5,
     createdAt: new Date(today.getTime() - 14 * 86400000).toISOString()
   });
-  // 깨달음 archive 5 (scrap + memo + reflection 3 type, original 필드 포함)
+  // V4-fix v3: 깨달음 archive 25개 (1년 동안, scrap + memo + reflection 골고루)
   state.archive = [];
-  ['scrap', 'memo', 'reflection', 'scrap', 'memo'].forEach((t, i) => {
-    state.archive.unshift({
-      type: t,
-      headline: `시드 깨달음 ${i+1}`,
-      body: `${t === 'memo' ? '메모' : t === 'reflection' ? '숙고 결론' : '깨달음'} — 환경이 의지보다 강함.`,
-      original: t === 'scrap' ? `[내가 본 것]\n환경이 의지보다 강함.\n[이게 뭐냐면]\n인지부담 ↓ 시스템 1 작동.\n[이럴 땐 이렇게]\n도구 셋업 한 번이 의지 매일보다 강함.` : null,
-      insight: `시드 ${i+1}`,
-      ...(t === 'memo' ? { userMemo: '시드 메모 본문' } : {}),
-      tags: t === 'memo' ? ['환경', '습관'] : (t === 'reflection' ? ['숙고'] : ['깨달음']),
-      date: new Date(today.getTime() - i * 4 * 86400000).toLocaleDateString('ko-KR'),
-      source: t === 'memo' ? '메모' : t === 'reflection' ? '숙고' : '대화',
-      savedAt: new Date(today.getTime() - i * 4 * 86400000).toISOString()
+  const archiveSeeds = [
+    { type: 'scrap', headline: '환경이 의지보다 강함', body: '도구 셋업 한 번이 의지 매일보다 효과 큼.', daysAgo: 4, tags: ['환경', '습관'] },
+    { type: 'memo', headline: '저녁 무력감 = 정상', body: '에너지 곡선 자연스러운 저점. 자책 X.', daysAgo: 7, tags: ['에너지', '자기이해'] },
+    { type: 'reflection', headline: '학문 vs 졸업장', body: '학문 좋아함 + 졸업장도 필요. 둘 다 진실.', daysAgo: 10, tags: ['숙고', '진로'] },
+    { type: 'scrap', headline: '거절 = 자기 보호', body: '술자리 거절은 약함 X 강함. 부채감은 일시.', daysAgo: 14, tags: ['거절', '관계'] },
+    { type: 'memo', headline: '아침 6시 = 골든', body: '새벽 작업이 가장 잘 됨. 이거 활용해야.', daysAgo: 18, tags: ['시간', '리듬'] },
+    { type: 'scrap', headline: '매몰비용 함정', body: '이미 쓴 시간 ≠ 미래 결정 가중치.', daysAgo: 25, tags: ['결정', '인지'] },
+    { type: 'memo', headline: '논문 막히면 환경 바꾸기', body: '책상 → 카페 → 도서관 사이클.', daysAgo: 32, tags: ['논문', '환경'] },
+    { type: 'reflection', headline: '직장 6개월 더', body: '바로 그만두기 X. 6개월 학습 후 결정.', daysAgo: 40, tags: ['숙고', '진로'] },
+    { type: 'scrap', headline: '운동 = 인지 회복', body: '30분 운동 후 작업 효율 ↑↑.', daysAgo: 50, tags: ['운동', '효율'] },
+    { type: 'memo', headline: '엄마 통화 한 시간', body: '오랜만에. 잔소리도 위로.', daysAgo: 60, tags: ['가족'] },
+    { type: 'scrap', headline: 'SNS = 시간 누수', body: '하루 평균 2시간. 줄이면 책 1권/주.', daysAgo: 70, tags: ['SNS', '시간'] },
+    { type: 'memo', headline: '실험 한 개 망함', body: '망함 ≠ 너. 망함 = 데이터.', daysAgo: 80, tags: ['실험', '안티자책'] },
+    { type: 'reflection', headline: '박사 끝까지', body: '결론 보류. 1년 더 보고.', daysAgo: 90, tags: ['숙고', '진로'] },
+    { type: 'scrap', headline: '주말 휴식 = 회복', body: '죄책감 X. 회복도 작업.', daysAgo: 105, tags: ['휴식'] },
+    { type: 'memo', headline: '카페 모서리 자리', body: '집중 = 자리. 자리 = 환경.', daysAgo: 120, tags: ['환경', '집중'] },
+    { type: 'scrap', headline: '거절 후 부채감 → 5분 산책', body: '몸 움직이면 부채감 빠짐.', daysAgo: 140, tags: ['거절', '환경'] },
+    { type: 'memo', headline: '교수님 칭찬 한 줄', body: '"이 부분 좋다." 그 한 줄이 일주일 동력.', daysAgo: 160, tags: ['관계', '동력'] },
+    { type: 'reflection', headline: '청강 X 자기 공부', body: '시간 한정. 자기 공부 우선.', daysAgo: 180, tags: ['숙고', '학업'] },
+    { type: 'scrap', headline: '명상 10분', body: '아침 명상 후 인지 명료.', daysAgo: 200, tags: ['명상', '아침'] },
+    { type: 'memo', headline: '책 1권 완독', body: '종이책 집중 잘 됨.', daysAgo: 220, tags: ['독서'] },
+    { type: 'scrap', headline: '실험 첫 success', body: '6개월 만의 보상. 가능성 확인.', daysAgo: 240, tags: ['실험', '돌파'] },
+    { type: 'memo', headline: '학회 발표 마무리', body: '슬라이드 30장. 늦게까지 했지만 뿌듯.', daysAgo: 270, tags: ['학회'] },
+    { type: 'scrap', headline: '잠 부족 = 결정 X', body: '5시간 미만 잤으면 큰 결정 다음날로.', daysAgo: 300, tags: ['수면', '결정'] },
+    { type: 'memo', headline: '제주도 3박', body: '바람 + 바다 + 무직. 회복 끝.', daysAgo: 320, tags: ['휴식', '여행'] },
+    { type: 'scrap', headline: '봄 첫날 = 시작', body: '계절 변화 = 리셋 기회.', daysAgo: 360, tags: ['계절'] }
+  ];
+  archiveSeeds.forEach((a, i) => {
+    state.archive.push({
+      type: a.type,
+      headline: a.headline,
+      body: a.body,
+      original: a.type === 'scrap' ? `[내가 본 것]\n${a.body}\n[이게 뭐냐면]\n반복 패턴.\n[이럴 땐 이렇게]\n환경 셋업 우선.\n[오늘의 제안]\n한 번에 하나.` : null,
+      insight: a.body,
+      ...(a.type === 'memo' ? { userMemo: a.body } : {}),
+      tags: a.tags,
+      date: new Date(today.getTime() - a.daysAgo * 86400000).toLocaleDateString('ko-KR'),
+      source: a.type === 'memo' ? '메모' : a.type === 'reflection' ? '숙고' : '대화',
+      savedAt: new Date(today.getTime() - a.daysAgo * 86400000).toISOString()
     });
   });
   // traits/values/patterns 각 4 (NEW + verified mix)
@@ -18372,29 +18521,39 @@ function testSeedV4Data() {
       created_at: new Date(today.getTime() - (i+1) * 4 * 86400000).toISOString()
     });
   });
-  // 분기 리뷰 1개 (지난 분기)
-  const prevQ = new Date(today.getFullYear(), today.getMonth() - 3, 15);
-  const prevQuarterKey = getQuarterKey(prevQ);
-  state.quarterlyReviews = [{
-    id: 'qr_seed_1',
-    quarterKey: prevQuarterKey,
-    completedAt: new Date(today.getTime() - 7 * 86400000).toISOString(),
-    stats: getQuarterlyStats(prevQuarterKey) || {
-      checkins: 28, attempts: 12, worked: 8, pearls: 8, dnaPearls: 1,
-      modeCount: { rest: 4, period: 3 },
-      trackerStats: [],
-      problemsTotal: 4, strengthsTotal: 4, growthCount: 2,
-      quarterKey: prevQuarterKey
-    },
-    summary: '이번 분기, 환경 차원에서 작동하는 도구가 늘어남. 거절 패턴 깨끗해지는 중.',
-    sections: [
-      { label: '🌊 흐름', body: '이 분기 너는 환경 차원에 무게를 실음. 카페·자동 종료 등 의지에 덜 기대는 도구.' },
-      { label: '🌱 새로 자라난 것', body: '"마감 직전 폭발력 신뢰" 가닥이 결정화됨 — DNA 진주.' },
-      { label: '🌫 작동 중인 패턴', body: '"거절 후 부채감" 패턴이 N회 등장. 환경 도구로 일부 풀림.' },
-      { label: '🧭 다음 분기에', body: '거절 → "그날 안에 한 줄" 자동화 시도.' }
-    ],
-    auto: true
-  }];
+  // V4-fix v3: 분기 리뷰 4개 (지난 1년 4분기)
+  state.quarterlyReviews = [];
+  const quarterlyTones = [
+    { focus: '환경 차원 도구', growth: '"마감 직전 폭발력" 결정화', pattern: '거절 후 부채감 풀림 중', next: '거절 자동화' },
+    { focus: '실험 사이클 + 결과', growth: '실험 첫 success — 6개월 만의 보상', pattern: '잠 부족 패턴 재등장', next: '11시 잠 자동화' },
+    { focus: '학회 발표 + 거절 패턴', growth: '거절 첫 성공 + 발표 마무리', pattern: '발표 후 번아웃', next: '사회 차원 시도' },
+    { focus: '여름 회복 + 시작', growth: '운동 30일 지속', pattern: '회복 모드 정착', next: '아침 리듬' }
+  ];
+  for (let q = 1; q <= 4; q++) {
+    const qDate = new Date(today.getFullYear(), today.getMonth() - q * 3, 15);
+    const quarterKey = getQuarterKey(qDate);
+    const tone = quarterlyTones[q - 1];
+    state.quarterlyReviews.push({
+      id: 'qr_seed_' + q,
+      quarterKey,
+      completedAt: new Date(today.getTime() - (q * 90 - 7) * 86400000).toISOString(),
+      stats: {
+        checkins: 60 + (q * 4), attempts: 12 + q, worked: 8 + q, pearls: 6 + q, dnaPearls: q === 1 ? 1 : 0,
+        modeCount: { rest: 5 + q, period: 9 },
+        trackerStats: [],
+        problemsTotal: 4, strengthsTotal: 5, growthCount: 2,
+        quarterKey
+      },
+      summary: `이번 분기, ${tone.focus}에 무게. ${tone.growth}.`,
+      sections: [
+        { label: '🌊 흐름', body: `${tone.focus} 중심. 의지에 덜 기대는 도구로 이동.` },
+        { label: '🌱 새로 자라난 것', body: tone.growth },
+        { label: '🌫 작동 중인 패턴', body: tone.pattern },
+        { label: '🧭 다음 분기에', body: tone.next }
+      ],
+      auto: true
+    });
+  }
   // 진단 5종 active 1
   state.diagnoses = [{
     id: 'diag_seed_1',
@@ -18445,22 +18604,40 @@ function testSeedV4Data() {
     { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
     { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
   ];
-  // shells 30 (일부에 photoThumb / story 인증샷 검증된 모양)
+  // V4-fix v3: shells 180개 (1년, 평균 0.5/일, 다양한 티어 분포 — light 60% / daily 20% / main 10% / golden 6% / call 3% / legend 1%)
   state.shellCollection = [];
   const shellEmojis = ['🐚','🌀','🐢','🦞','⭐','✨'];
   const shellTiers = ['light','daily','main','golden','call','legend'];
-  for (let i = 0; i < 30; i++) {
-    const tIdx = Math.min(5, Math.floor(Math.random() * 6));
+  const shellLabels = ['가벼움','일상','메인','황금','부름','특별'];
+  const shellStories = [
+    '오늘 한 걸음', '카페 작업 마무리', '논문 한 단락',
+    '운동 30분', '실험 한 사이클', '엄마 통화',
+    '거절 한 번', '책 50p', '명상 10분', '아침 일찍'
+  ];
+  // deterministic per-day shells
+  for (let i = 0; i < 360; i++) {
+    const dayOffset = i;
+    const dayShells = (i % 2 === 0) ? 1 : 0;  // 평균 0.5/day
+    if (dayShells === 0) continue;
+    const seed = (i * 9301 + 49297) % 1000;
+    let tIdx;
+    if (seed < 600) tIdx = 0;       // light 60%
+    else if (seed < 800) tIdx = 1;  // daily 20%
+    else if (seed < 900) tIdx = 2;  // main 10%
+    else if (seed < 960) tIdx = 3;  // golden 6%
+    else if (seed < 990) tIdx = 4;  // call 3%
+    else tIdx = 5;                   // legend 1%
+    const d = new Date(today.getTime() - dayOffset * 86400000);
     state.shellCollection.push({
-      _id: 'shell_seed_' + i,
+      _id: 'shell_seed_' + state.shellCollection.length,
       type: shellEmojis[tIdx],
       tier: shellTiers[tIdx],
       points: tIdx + 1,
-      label: ['가벼움','일상','메인','황금','부름','특별'][tIdx],
+      label: shellLabels[tIdx],
       rarity: tIdx >= 5 ? 'legendary' : (tIdx >= 4 ? 'rare' : 'common'),
-      date: new Date(today.getTime() - i * 86400000).toISOString(),
-      story: `시드 셸 ${i+1}`,
-      title: `시드 ${i+1}`,
+      date: d.toISOString(),
+      story: shellStories[i % shellStories.length],
+      title: shellStories[i % shellStories.length],
       missionId: tIdx >= 4 ? 'mis_seed_2' : null,
       photoThumb: ''
     });
@@ -18581,21 +18758,41 @@ function testSeedV4Data() {
       growth: [{ text: '환경 차원 도구 사용 늘어남 (지난 분기 비교)', addedAt: new Date(today.getTime() - 7 * 86400000).toISOString() }]
     }
   };
-  // monthlyReviews 1 (지난 달 자동, V3.12)
-  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 15);
-  const lastMonthKey = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
-  state.monthlyReviews = [{
-    id: 'mr_seed_1',
-    monthKey: lastMonthKey,
-    completedAt: new Date(today.getTime() - 14 * 86400000).toISOString(),
-    summary: '지난 달, 논문 진척과 일상 회복 둘 다 진행됨. drained 모드 4일.',
-    sections: [
-      { label: '🌊 흐름', body: '월 후반부에 마감 전 폭발력 작동.' },
-      { label: '🌫 패턴', body: '거절 후 부채감 패턴 N회 등장.' }
-    ],
-    auto: true,
-    stats: { checkins: 22, missions: 6, worked: 4, pearls: 3 }
-  }];
+  // V4-fix v3: monthlyReviews 12개 (지난 1년 매달)
+  state.monthlyReviews = [];
+  const monthlyTones = [
+    { flow: '환경 차원 도구 시작 — 카페·자동 종료', pattern: '거절 후 부채감 N회' },
+    { flow: '실험 사이클 정리 + 첫 success', pattern: '주말 휴식 부족' },
+    { flow: '논문 서론 마무리 + 리뷰 받음', pattern: '저녁 무력감 ↑' },
+    { flow: '학회 발표 준비 + 발표 완료', pattern: '발표 후 번아웃 1주' },
+    { flow: '여름 휴식 + 가족 시간', pattern: '회복 모드 — 일 거의 X' },
+    { flow: '실험 새 사이클 + 데이터 수집', pattern: '아침 리듬 회복' },
+    { flow: '논문 결과 부분 시작', pattern: '잠 부족 패턴 재등장' },
+    { flow: '거절 패턴 깨짐 — 첫 거절 성공', pattern: '관계 우선 재정립' },
+    { flow: '운동 루틴 시작 + 30일 지속', pattern: '저녁 명상 시도' },
+    { flow: '결정화 첫 가닥 — 마감 폭발력', pattern: 'DNA 진주 첫' },
+    { flow: '겨울 — 심사숙고 시간 늘어남', pattern: '갈피의 방 활성화' },
+    { flow: '봄 — 새 시작 에너지', pattern: 'SNS 줄임 시작' }
+  ];
+  for (let m = 1; m <= 12; m++) {
+    const monthDate = new Date(today.getFullYear(), today.getMonth() - m, 15);
+    const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+    const tone = monthlyTones[m - 1];
+    state.monthlyReviews.push({
+      id: 'mr_seed_' + m,
+      monthKey,
+      completedAt: new Date(today.getTime() - (m * 30 - 14) * 86400000).toISOString(),
+      summary: `${m}달 전 흐름: ${tone.flow}`,
+      sections: {
+        patterns: tone.pattern,
+        good_moments: '환경 도구 시도 늘어남 + 거절 패턴 부분 풀림.',
+        hard_moments: '저녁 무력감 + 마감 직전 압박.',
+        next_suggestion: '환경 차원 한 가지 더 시도.'
+      },
+      auto: true,
+      stats: { checkins: 18 + (m % 5), missions: 5 + (m % 4), worked: 3 + (m % 3), pearls: 1 + (m % 3) }
+    });
+  }
   // chatArchive 3일치 (V3.13.x 7일 cap, 일부 채워두기)
   state.chatArchive = [];
   for (let d = 7; d >= 5; d--) {
@@ -22754,7 +22951,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.72-mutation-temp-chat';
+const APP_VERSION = 'v4.0.73-1y-seed-bd-photo';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
