@@ -10851,7 +10851,7 @@ function buildSystemPromptParts() {
 
   // V4-1o: 진단 5종 — active 진단 1개를 자연 인용 hint로 전달.
   // 거울 3원칙 (9.6): 외재화 톤 / 균형 노출 / 사용자 자기 발견.
-  // chat에 자연 인용된 후엔 V4-1o-2에서 status='shown' 마킹 (현재는 prompt만, 마킹 X — 다음 단계).
+  // V4-1o-2: prompt에 inject 시점에 즉시 status='shown' 마킹 (다음에 같은 진단 안 띄움).
   const activeDiag = (state.diagnoses || []).find(d => d.status === 'active');
   if (activeDiag && _DIAG_LABELS && _DIAG_LABELS[activeDiag.type]) {
     const lbl = _DIAG_LABELS[activeDiag.type];
@@ -10860,6 +10860,10 @@ function buildSystemPromptParts() {
     volatile.push(`  · 톤: 외재화("X 패턴이 작동 중" / "너 X적이야" X), 사용자 자기 발견 유도(결론 단정 X)`);
     volatile.push(`  · 한 번만. 사용자 거부하면 다시 X.`);
     volatile.push('');
+    // V4-1o-2: 즉시 shown 마킹 — 같은 진단 다시 안 띄움 (cooldown은 detect 단계에서 30일 가드)
+    if (typeof markDiagnosisShown === 'function') {
+      try { markDiagnosisShown(activeDiag.id); } catch (e) { console.warn('markDiagnosisShown:', e); }
+    }
   }
 
   // Recent missions
@@ -16975,7 +16979,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.24-confirmed-text';
+const APP_VERSION = 'v4.0.25-diag-shown';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
