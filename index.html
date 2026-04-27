@@ -21485,8 +21485,8 @@ async function testSeedV4Data() {
         previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c2/9f/30c29f0b-bed7-d993-6909-0392418d4dcc/mzaf_15564917017364106254.plus.aac.p.m4a',
         trackUrl: ''
       } },
-    // 사용자 요청 2026-04-28: '잊지 못할 순간' 슬라이드에 노출되는 카드 — 김치찌개 사진 박음 (Wikimedia Commons 320px, 저용량)
-    { c: '음식', content: '엄마 김치찌개', daysAgo: 8, note: '비 오는 날 — 고등학교 그 부엌 생각.', photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Korean_stew-Kimchi_jjigae-01.jpg/320px-Korean_stew-Kimchi_jjigae-01.jpg' },
+    // 사용자 요청 2026-04-28: '잊지 못할 순간' 슬라이드에 노출되는 카드 — 사용자가 public/kimchi.webp 직접 박음 (66KB 저용량)
+    { c: '음식', content: '엄마 김치찌개', daysAgo: 8, note: '비 오는 날 — 고등학교 그 부엌 생각.', photo: '/kimchi.webp' },
     { c: '장소', content: '한강 벤치 새벽 4시', daysAgo: 12, note: '논문 막힌 날. 30분 앉아있다 머리 풀림.' },
     { c: '순간', content: '논문 첫 단락 완성한 순간', daysAgo: 18 },
     { c: '사람', content: '오랜 친구가 갑자기 카톡', daysAgo: 22, note: '"잘 지내?" 그 한 마디.' },
@@ -27591,7 +27591,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.133-stories-aesthetic';
+const APP_VERSION = 'v4.0.134-kimchi-local';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
