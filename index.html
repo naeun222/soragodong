@@ -11150,6 +11150,8 @@ function _findPendingStrategyFollowup() {
 // V4 비전 6.2: 결과 체크 (체크인/채팅 진입 시 자동 팔로업)
 // 사용자 요청 2026-04-27: 다음날 자동만, '⏸ 아직 결과 안 나왔어' 미루기, meh→돌연변이 confirm
 async function offerStrategyFollowup() {
+  // 튜토리얼 모드에선 자동 팔로업 X (사용자 요청 — 흐름 방해)
+  if (window._onbTutorialMode) return;
   if (!state.preferences) state.preferences = {};
   const todayK = todayKey();
   const isTester = !!(state.preferences && state.preferences.testerMode);
