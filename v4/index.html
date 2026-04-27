@@ -3505,7 +3505,7 @@
 
     <!-- DECISIONS LIST -->
     <div class="screen" id="screen-decisions">
-      <div class="screen-title">결정의 방 ⚖️</div>
+      <div class="screen-title">갈피의 방 ⚖️</div>
       <div class="screen-sub">큰 결정은 천천히, 차가운 머리로.<br>충동 차단, 14일 숙성, 구조화된 단계.</div>
 
       <button class="btn-primary decision" onclick="startNewDecision()">+ 새로운 결정 시작</button>
@@ -3559,7 +3559,7 @@
         </button>
         <button class="archive-quick-btn" onclick="showArchiveDecisions()">
           <span class="aq-icon">⚖️</span>
-          <span class="aq-label">결정의 방</span>
+          <span class="aq-label">갈피의 방</span>
           <span class="aq-count" id="aqDecisionCount"></span>
         </button>
       </div>
@@ -3600,9 +3600,9 @@
       <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">아카이브로 돌아가기</button>
     </div>
 
-    <!-- ARCHIVE-DECISIONS: 모든 결정의 방 모음 -->
+    <!-- ARCHIVE-DECISIONS: 모든 갈피의 방 모음 -->
     <div class="screen" id="screen-archive-decisions">
-      <div class="screen-title">⚖️ 결정의 방</div>
+      <div class="screen-title">⚖️ 갈피의 방</div>
       <div class="screen-sub">지금까지 거쳐온 큰 결정들.</div>
       <div id="archiveDecisionsList"></div>
       <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">아카이브로 돌아가기</button>
@@ -5028,7 +5028,7 @@ const ONBOARDING_STEPS = [
     id: 'home_features_intro',
     targetSelector: null,
     title: '홈 화면에 두 가지 더',
-    body: '홈을 자세히 보면 두 가지 더 있어:<br><br>· <b>🌙 주간 리뷰</b> — 매주 일요일에 떠. 한 주 데이터(체크인·대화·미션)를 내가 분석해서 인사이트 + 전략 + 새로운 가치/특성을 발견해줘. 너 자신을 더 깊게 이해하는 시간이야.<br><br>· <b>⚖️ 결정의 방</b> — 큰 결정(이직·이별·진로·이사 등) 14일 동안 숙성하면서 매일 다른 각도로 같이 생각해보는 곳이야. 충동적 결정 X, 깊이 있는 결정 ○.<br><br>둘 다 너 페이스에 맞춰 떠. <b>이따가 한 번 구경해봐!</b> ✦',
+    body: '홈을 자세히 보면 두 가지 더 있어:<br><br>· <b>🌙 주간 리뷰</b> — 매주 일요일에 떠. 한 주 데이터(체크인·대화·미션)를 내가 분석해서 인사이트 + 전략 + 새로운 가치/특성을 발견해줘. 너 자신을 더 깊게 이해하는 시간이야.<br><br>· <b>⚖️ 갈피의 방</b> — 큰 결정(이직·이별·진로·이사 등) 14일 동안 숙성하면서 매일 다른 각도로 같이 생각해보는 곳이야. 충동적 결정 X, 깊이 있는 결정 ○.<br><br>둘 다 너 페이스에 맞춰 떠. <b>이따가 한 번 구경해봐!</b> ✦',
     waitFor: 'next',
     dimBackground: false
   },
@@ -5875,7 +5875,7 @@ async function askAIForStep(decisionId, stepId) {
     return `[${m.title}]\n${formatStepContent(s)}`;
   }).join('\n\n');
 
-  const userMsg = `[결정의 방 - ${meta.title}]\n결정 주제: "${decision.title}"\n\n지금까지 작성한 단계:\n${completedContext || '(아직 시작 안 함)'}\n\n이번 단계 (${meta.title})에 내가 적은 거:\n${userInput || '(비어있음 - 도움이 필요해)'}\n\n이 단계에서 더 깊이 생각하도록 좋은 질문을 던져줘. 결정을 대신 내려주지 말고.`;
+  const userMsg = `[갈피의 방 - ${meta.title}]\n결정 주제: "${decision.title}"\n\n지금까지 작성한 단계:\n${completedContext || '(아직 시작 안 함)'}\n\n이번 단계 (${meta.title})에 내가 적은 거:\n${userInput || '(비어있음 - 도움이 필요해)'}\n\n이 단계에서 더 깊이 생각하도록 좋은 질문을 던져줘. 결정을 대신 내려주지 말고.`;
 
   state.chatMessages.push({
     role: 'user',
@@ -5884,7 +5884,7 @@ async function askAIForStep(decisionId, stepId) {
   });
   saveState();
   showScreen('chat');
-  // V3.13.x: 결정의 방은 무거운 추론 필요 → opus 4.7
+  // V3.13.x: 갈피의 방은 무거운 추론 필요 → opus 4.7
   await generateAIResponse('claude-opus-4-7');
 }
 
@@ -6683,7 +6683,7 @@ function renderMainAction() {
   }
 }
 
-// 결정의 방 미니 링크 — 작지만 카드 모양
+// 갈피의 방 미니 링크 — 작지만 카드 모양
 function renderDecisionMiniLink() {
   const container = document.getElementById('decisionMiniLinkContainer');
   if (!container) return;
@@ -8857,7 +8857,7 @@ function renderChat() {
     if (m.role === 'assistant' && m.decisionSuggested && !m.decisionResponse && !m.typing) {
       const ds = m.decisionSuggested;
       decisionCard = `<div class="decision-suggest-card">
-        <div class="dsc-header">⚖️ 결정의 방에서 천천히 보면 어때?</div>
+        <div class="dsc-header">⚖️ 갈피의 방에서 천천히 보면 어때?</div>
         <div class="dsc-title">${escapeHtml(ds.title)}</div>
         ${ds.reason ? `<div class="dsc-reason">${escapeHtml(ds.reason)}</div>` : ''}
         <div class="dsc-buttons">
@@ -8866,7 +8866,7 @@ function renderChat() {
         </div>
       </div>`;
     } else if (m.decisionResponse) {
-      const icon = m.decisionResponse === 'accept' ? '⚖️ 결정의 방으로 보냈어' : '괜찮아 — 그냥 듣기만 할게';
+      const icon = m.decisionResponse === 'accept' ? '⚖️ 갈피의 방으로 보냈어' : '괜찮아 — 그냥 듣기만 할게';
       decisionCard = `<div style="font-size:11px; color:var(--purple); margin-top:8px; padding: 0 4px;">${icon}</div>`;
     }
 
@@ -10682,7 +10682,7 @@ function acceptDecisionSuggestion(idx) {
   msg.decisionResponse = 'accept';
   saveState();
   renderChat();
-  showToast('결정의 방으로 보냈어 ⚖️');
+  showToast('갈피의 방으로 보냈어 ⚖️');
   setTimeout(() => openDecision(decision.id), 600);
 }
 
@@ -10898,7 +10898,7 @@ function openTopicCard(id) {
   // 액션 버튼 — 카테고리에 따라
   const actions = [];
   if (card.category === 'decision') {
-    actions.push(`<button class="topic-modal-btn primary" onclick="topicToDecision('${id}'); closeTopicModal()">⚖️ 결정의 방으로</button>`);
+    actions.push(`<button class="topic-modal-btn primary" onclick="topicToDecision('${id}'); closeTopicModal()">⚖️ 갈피의 방으로</button>`);
   }
   if (card.category === 'task') {
     actions.push(`<button class="topic-modal-btn primary" onclick="topicToVault('${id}'); closeTopicModal()">📥 서랍장에</button>`);
@@ -10969,7 +10969,7 @@ function topicToDecision(id) {
   state.decisions.push(decision);
   saveState();
   renderArchive();
-  showToast('결정의 방으로 보냈어 ⚖️');
+  showToast('갈피의 방으로 보냈어 ⚖️');
   setTimeout(() => openDecision(decision.id), 600);
 }
 
@@ -14601,7 +14601,7 @@ function renderArchiveDecisions() {
   if (decisions.length === 0) {
     container.innerHTML = `<div class="timeline-empty">
       <div class="icon">⚖️</div>
-      아직 결정의 방이 없어.<br>
+      아직 갈피의 방이 없어.<br>
       홈에서 "큰 결정 도와줘"로 시작.
     </div>`;
     return;
@@ -15272,7 +15272,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.8-beach-dna';
+const APP_VERSION = 'v4.0.9-galpi-rename';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
