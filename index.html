@@ -14453,7 +14453,10 @@ function renderV4TimetableHTML() {
     <div class="v4-timetable-section">
       <div class="v4-tt-header">
         <span class="v4-tt-label">📅 일정</span>
-        <button class="v4-tt-add-btn" onclick="addV4ScheduleItem()">+ 일정 추가</button>
+        <div style="display:flex; gap:6px;">
+          <button class="v4-tt-add-btn" onclick="openAIScheduler()" style="background:linear-gradient(135deg,rgba(139,126,196,0.20),rgba(212,167,106,0.12));border-color:rgba(139,126,196,0.45);">✨ AI 스케줄러</button>
+          <button class="v4-tt-add-btn" onclick="addV4ScheduleItem()">+ 추가</button>
+        </div>
       </div>
       <div class="v4-tt-grid" id="v4ttGrid">
   `;
@@ -14537,6 +14540,129 @@ async function addV4ScheduleItem() {
   saveState();
   renderExecute();
   showToast('일정 추가됨 📅');
+}
+
+// V4-1u-c: AI 스케줄러 (V4 비전 10.5) — 사용자 텍스트 → AI가 시간 grid 생성
+async function openAIScheduler() {
+  if (!state.apiKey) {
+    showToast('AI 스케줄러는 API 키 필요 (설정 → API 키)');
+    return;
+  }
+  const dump = await showInputModal({
+    title: '✨ AI 스케줄러',
+    message: '오늘 뭐 해야 해? 자유롭게 적어. ADHD 맞춰서 짜줄게.',
+    placeholder: '예: 미팅 14시, 운동, 논문 1챕터, 카페에서 읽을 책...',
+    multiline: true,
+    maxLength: 500,
+    okLabel: '짜줘 ✦'
+  });
+  if (!dump || !dump.trim()) return;
+
+  showToast('🌊 일정 짜는 중...');
+
+  // 활성 모드 / 활력 / 현재 시각 context
+  const now = new Date();
+  const nowStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
+  const todayEntry = (state.entries || []).find(e => e.date === todayKey());
+  const vitality = todayEntry?.vitality;
+
+  const sysContext = [
+    `현재 시각: ${nowStr}`,
+    activeModes.length ? `활성 모드: ${activeModes.join(', ')}` : '',
+    vitality != null ? `오늘 활력: ${vitality}/5` : ''
+  ].filter(Boolean).join(' / ');
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        messages: [{
+          role: 'user',
+          content: `사용자가 ADHD고 박사과정 중. 시간 계획을 ADHD 친화적으로 짜줘 (블록 25% 더 잡기, 버퍼 10-15분, 무거운 일은 활력 높을 때, 가벼운 일은 transition 시간에).
+
+[사용자 dump]
+${dump.trim()}
+
+[컨텍스트]
+${sysContext}
+
+[출력 — JSON만, 마크다운/코드블록 X]
+{
+  "items": [
+    { "title": "미팅", "start": "14:00", "end": "15:00", "note": "선택" },
+    { "title": "운동", "start": "17:30", "end": "18:30", "note": "transition" }
+  ]
+}
+
+[규칙]
+- start/end = 24h 형식 "HH:MM"
+- 현재 시각 (${nowStr}) 이후만
+- 한 항목 최소 30분
+- 항목 간 최소 10분 간격 (버퍼)
+- ${vitality != null && vitality <= 2 ? '활력 낮음 — 가벼운 일 위주, 무거운 거 1-2개만, 충분한 휴식' : '균형 있게'}
+- 5-8개 정도 (너무 많으면 ADHD 부담)
+- title 짧게 (10자 이내)
+
+JSON만 출력. 다른 설명 X.`
+        }]
+      })
+    });
+    const data = await resp.json();
+    let raw = data.content[0].text.trim();
+    raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) {
+      showToast('AI 응답 파싱 실패. 다시 시도해.');
+      return;
+    }
+    const parsed = JSON.parse(m[0]);
+    if (!Array.isArray(parsed.items)) {
+      showToast('AI 응답 형식 오류');
+      return;
+    }
+
+    // 기존 today 일정 비울지 컨펌
+    const todayK = todayKey();
+    const existing = (state.todaySchedule || []).filter(it => !it.date || it.date === todayK);
+    if (existing.length > 0) {
+      const replace = await showConfirmModal({
+        title: '기존 일정 있어',
+        message: `이미 ${existing.length}개 일정 있어. 새 걸로 교체? (취소하면 기존 + 새 거 합침)`,
+        okLabel: '교체',
+        cancelLabel: '합치기'
+      });
+      if (replace) {
+        state.todaySchedule = (state.todaySchedule || []).filter(it => it.date && it.date !== todayK);
+      }
+    }
+
+    if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
+    parsed.items.forEach((it, i) => {
+      if (!it.title || !it.start || !it.end) return;
+      if (!/^\d{1,2}:\d{2}$/.test(it.start) || !/^\d{1,2}:\d{2}$/.test(it.end)) return;
+      state.todaySchedule.push({
+        id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        title: String(it.title).trim().slice(0, 40),
+        start: it.start,
+        end: it.end,
+        date: todayK,
+        source: 'ai',
+        taskId: null,
+        note: it.note ? String(it.note).slice(0, 60) : '',
+        color: _V4_TT_COLORS[i % _V4_TT_COLORS.length]
+      });
+    });
+    saveState();
+    renderExecute();
+    showToast(`✨ ${parsed.items.length}개 일정 박힘`);
+  } catch (e) {
+    console.warn('AI scheduler failed:', e);
+    showToast('AI 스케줄러 실패. 다시 시도해.');
+  }
 }
 
 async function openV4ScheduleItem(id) {
@@ -17275,7 +17401,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.27-timetable';
+const APP_VERSION = 'v4.0.28-ai-scheduler';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
