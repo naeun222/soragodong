@@ -1463,15 +1463,39 @@
     width: 44px;
     height: 44px;
   }
-  /* V4-fix v2: 전체 탭 — 진짜 자유 위치 (absolute 배치, 모래사장 흩뿌림) */
+  /* V4-fix v3 (사용자 보고): 전체 탭 — 격자 + jitter (overlap 최소화) */
   .beach-tier-grid.scatter {
     grid-column: 1 / -1;
     display: block;
     position: relative;
     width: 100%;
-    min-height: 380px;
+    min-height: 420px;
     padding: 0;
   }
+  /* 시드 많을 때 컨테이너 늘림 — JS data-scatter-rows로 height 계산 */
+  .beach-tier-grid.scatter[data-scatter-rows="8"] { min-height: 420px; }
+  .beach-tier-grid.scatter[data-scatter-rows="9"] { min-height: 470px; }
+  .beach-tier-grid.scatter[data-scatter-rows="10"] { min-height: 520px; }
+  .beach-tier-grid.scatter[data-scatter-rows="11"] { min-height: 570px; }
+  .beach-tier-grid.scatter[data-scatter-rows="12"] { min-height: 620px; }
+  .beach-tier-grid.scatter[data-scatter-rows="13"] { min-height: 670px; }
+  .beach-tier-grid.scatter[data-scatter-rows="14"] { min-height: 720px; }
+  .beach-tier-grid.scatter[data-scatter-rows="15"] { min-height: 770px; }
+  .beach-tier-grid.scatter[data-scatter-rows="16"] { min-height: 820px; }
+  .beach-tier-grid.scatter[data-scatter-rows="17"] { min-height: 870px; }
+  .beach-tier-grid.scatter[data-scatter-rows="18"] { min-height: 920px; }
+  .beach-tier-grid.scatter[data-scatter-rows="19"] { min-height: 970px; }
+  .beach-tier-grid.scatter[data-scatter-rows="20"] { min-height: 1020px; }
+  .beach-tier-grid.scatter[data-scatter-rows="21"] { min-height: 1070px; }
+  .beach-tier-grid.scatter[data-scatter-rows="22"] { min-height: 1120px; }
+  .beach-tier-grid.scatter[data-scatter-rows="23"] { min-height: 1170px; }
+  .beach-tier-grid.scatter[data-scatter-rows="24"] { min-height: 1220px; }
+  .beach-tier-grid.scatter[data-scatter-rows="25"] { min-height: 1270px; }
+  .beach-tier-grid.scatter[data-scatter-rows="26"] { min-height: 1320px; }
+  .beach-tier-grid.scatter[data-scatter-rows="27"] { min-height: 1370px; }
+  .beach-tier-grid.scatter[data-scatter-rows="28"] { min-height: 1420px; }
+  .beach-tier-grid.scatter[data-scatter-rows="29"] { min-height: 1470px; }
+  .beach-tier-grid.scatter[data-scatter-rows="30"] { min-height: 1520px; }
   .beach-tier-grid.scatter .beach-shell {
     position: absolute;
     width: 46px;
@@ -1480,6 +1504,7 @@
   }
   .beach-tier-grid.scatter .beach-shell:hover {
     z-index: 10;
+    transform: scale(1.18) rotate(0deg) !important;
   }
   .beach-shell {
     aspect-ratio: 1;
@@ -10906,17 +10931,35 @@ function renderBeach() {
   } else {
     // 시간순 평면 (최신 위)
     const sorted = filtered.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-    // V4-fix v2: 'all' 탭 → 모래사장 절대 위치 자유 흩뿌림 (deterministic per shell, % 단위)
+    // V4-fix v3 (사용자 보고 — 안 겹치게): 'all' 탭 → 격자 칸 + 칸 안 jitter (overlap 최소화)
     const isAllTab = _beachTab === 'all';
+    // shell 개수에 따라 cols 결정 (모바일 ~360px 기준 7 cols, n개 row 자동)
+    const cols = 7;
+    const cellW = 100 / cols;
+    const sortedShellsCnt = filtered.length;
+    const rows = Math.max(8, Math.ceil(sortedShellsCnt / cols) + 1);
+    // 컨테이너 height: rows * 50 + jitter
+    const containerH = Math.max(380, rows * 50);
     const scatterStyle = (s, idx) => {
       if (!isAllTab) return '';
       const seed = (s._id ? s._id.split('').reduce((a,c) => a + c.charCodeAt(0), 0) : idx) * 9301 + 49297;
-      // 컨테이너 380px height, shell 46px → 위치 % 단위로 자유롭게 흩뿌림
-      const left = ((seed * 7) % 88) + 2;        // 2% ~ 90%
-      const top = ((seed * 13) % 84) + 2;        // 2% ~ 86%
-      const rot = (((seed * 19) % 25) - 12);     // -12deg ~ +12deg
-      return ` style="left:${left}%; top:${top}%; transform:rotate(${rot}deg);"`;
+      // 격자 칸 위치
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      // 칸 중심
+      const baseLeft = col * cellW + cellW / 2;
+      const baseTop = (row * 100) / rows + (100 / rows) / 2;
+      // 칸 내 jitter (작게 — 칸 크기 70%만)
+      const jitterX = (((seed * 7) % 11) - 5) * 0.5;       // ±2.5%
+      const jitterY = (((seed * 13) % 11) - 5) * 0.5;      // ±2.5%
+      const rot = (((seed * 19) % 17) - 8);                // -8deg ~ +8deg
+      // shell width 46px → translate -50% 적용해 중심 정렬
+      return ` style="left:calc(${(baseLeft + jitterX).toFixed(1)}% - 23px); top:calc(${(baseTop + jitterY).toFixed(1)}% - 23px); transform:rotate(${rot}deg);"`;
     };
+    // scatter 컨테이너 height 동적
+    if (isAllTab) {
+      grid.dataset.scatterRows = rows;
+    }
     grid.innerHTML = dnaSectionHtml +
       `<div class="beach-tier-grid${isAllTab ? ' scatter' : ''}">` +
       sorted.map((s, i) => `<div class="beach-shell tier-${s.tier || 'unknown'}"${scatterStyle(s, i)} onclick="openShellStory(${state.shellCollection.indexOf(s)})">${s.type}</div>`).join('') +
@@ -23668,7 +23711,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.85-archive-slide-shells-spin';
+const APP_VERSION = 'v4.0.86-beach-no-overlap';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
