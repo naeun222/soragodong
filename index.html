@@ -3696,7 +3696,7 @@
   .crystallize-ritual-overlay {
     position: fixed; inset: 0;
     background: radial-gradient(ellipse at center, rgba(30,28,55,0.92), rgba(10,8,20,0.96));
-    z-index: 10000;
+    z-index: 11000;  /* 사용자 보고 2026-04-28: above-modal coachmark(10500)/onb(10500) 도 위로 */
     display: flex; align-items: center; justify-content: center;
     padding: 20px;
     backdrop-filter: blur(10px);
@@ -8781,7 +8781,7 @@ const ONBOARDING_STEPS = [
     id: 'model_intro',
     targetSelector: null,
     title: '"나" 탭',
-    body: '여기는 <b>내가 너를 분석한 결과</b>가 모이는 곳이야.<br>대화 쌓이면 자동으로 채워져 — 천천히 둘러봐.<br><br>📊 추적 항목 그래프도 여기서 한눈에 (시드 데이터에 예시 박아둠).',
+    body: '여기는 <b>내가 너를 분석한 결과</b>가 모이는 곳이야.<br>대화 쌓이면 자동으로 채워져 — 천천히 둘러봐.<br><br>📊 추적 항목 그래프도 여기서 한눈에.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -21549,16 +21549,21 @@ async function testSeedV4Data() {
       createdAt: new Date(today.getTime() - i * 86400000).toISOString()
     });
   });
-  // projects 3 (numeric 2 + check 1)
+  // projects 2 (사용자 요청 2026-04-28: 추적 항목 2개 그래프 있는 걸로 — 풍부한 측정 데이터)
   state.projects = [
     {
       id: 'proj_seed_1', title: '체중', emoji: '⚖', kind: 'numeric',
       type: 'decrease', unit: 'kg', baseline: 65, target: 60,
       measurements: [
-        { value: 65, date: new Date(today.getTime() - 28 * 86400000).toISOString() },
-        { value: 64.2, date: new Date(today.getTime() - 14 * 86400000).toISOString() },
-        { value: 63.5, date: new Date(today.getTime() - 7 * 86400000).toISOString() },
-        { value: 63.0, date: new Date(today.getTime() - 86400000).toISOString() }
+        { value: 65.0, date: new Date(today.getTime() - 28 * 86400000).toISOString() },
+        { value: 64.5, date: new Date(today.getTime() - 24 * 86400000).toISOString() },
+        { value: 64.2, date: new Date(today.getTime() - 20 * 86400000).toISOString() },
+        { value: 63.8, date: new Date(today.getTime() - 16 * 86400000).toISOString() },
+        { value: 63.5, date: new Date(today.getTime() - 12 * 86400000).toISOString() },
+        { value: 63.4, date: new Date(today.getTime() - 9 * 86400000).toISOString() },
+        { value: 63.0, date: new Date(today.getTime() - 6 * 86400000).toISOString() },
+        { value: 62.8, date: new Date(today.getTime() - 3 * 86400000).toISOString() },
+        { value: 62.5, date: new Date(today.getTime() - 86400000).toISOString() }
       ],
       status: 'active', showGraph: true, createdAt: new Date(today.getTime() - 28 * 86400000).toISOString(), startDate: todayStr
     },
@@ -21566,21 +21571,15 @@ async function testSeedV4Data() {
       id: 'proj_seed_2', title: '러닝 거리', emoji: '🏃', kind: 'numeric',
       type: 'increase', unit: 'km', baseline: 0, target: 30,
       measurements: [
-        { value: 2, date: new Date(today.getTime() - 21 * 86400000).toISOString() },
-        { value: 5, date: new Date(today.getTime() - 14 * 86400000).toISOString() },
-        { value: 12, date: new Date(today.getTime() - 7 * 86400000).toISOString() }
+        { value: 2,  date: new Date(today.getTime() - 21 * 86400000).toISOString() },
+        { value: 4,  date: new Date(today.getTime() - 18 * 86400000).toISOString() },
+        { value: 5,  date: new Date(today.getTime() - 14 * 86400000).toISOString() },
+        { value: 8,  date: new Date(today.getTime() - 11 * 86400000).toISOString() },
+        { value: 12, date: new Date(today.getTime() - 7 * 86400000).toISOString() },
+        { value: 15, date: new Date(today.getTime() - 4 * 86400000).toISOString() },
+        { value: 18, date: new Date(today.getTime() - 86400000).toISOString() }
       ],
       status: 'active', showGraph: true, createdAt: new Date(today.getTime() - 21 * 86400000).toISOString(), startDate: todayStr
-    },
-    {
-      id: 'proj_seed_3', title: '명상', emoji: '🧘', kind: 'check',
-      type: 'increase', unit: '회', baseline: 0, target: 30,
-      measurements: [
-        { value: 1, date: new Date(today.getTime() - 5 * 86400000).toISOString(), dayKey: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0] },
-        { value: 1, date: new Date(today.getTime() - 3 * 86400000).toISOString(), dayKey: new Date(today.getTime() - 3 * 86400000).toISOString().split('T')[0] },
-        { value: 1, date: new Date(today.getTime() - 86400000).toISOString(), dayKey: new Date(today.getTime() - 86400000).toISOString().split('T')[0] }
-      ],
-      status: 'active', showGraph: false, createdAt: new Date(today.getTime() - 14 * 86400000).toISOString(), startDate: todayStr
     }
   ];
   // decisions 3 (active 1 / completed 1 / abandoned 1) — 갈피의 방
@@ -26914,7 +26913,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.114-cleanup-startstep';
+const APP_VERSION = 'v4.0.115-batch-fixes';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
