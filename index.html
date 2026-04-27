@@ -3010,6 +3010,27 @@
     white-space: nowrap;
   }
   .reflection-resolve-btn:active { background: rgba(98,165,200,0.22); }
+  /* V4-fix: 숙고 채팅 AI 메시지 ✦ 깨달음으로 버튼 */
+  .reflection-msg-insight {
+    align-self: flex-start;
+    background: transparent;
+    border: 1px solid rgba(212,167,106,0.35);
+    color: var(--accent2);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 4px;
+    margin-left: 4px;
+    transition: background 0.15s;
+  }
+  .reflection-msg-insight:active { background: rgba(212,167,106,0.15); }
+  .reflection-msg-insight.saved {
+    background: rgba(212,167,106,0.20);
+    color: var(--accent2);
+    cursor: default;
+  }
   .reflection-pause-btn {
     flex-shrink: 0;
     background: transparent;
@@ -8668,11 +8689,52 @@ function renderReflectionChat() {
     `;
     return;
   }
-  container.innerHTML = q.chatMessages.map(m => {
+  container.innerHTML = q.chatMessages.map((m, i) => {
     const cls = m.role === 'user' ? 'user' : 'assistant';
-    return `<div class="msg ${cls}"><div class="msg-bubble">${escapeHtml(m.content || '')}</div></div>`;
+    // V4-fix: AI 메시지에 ✦ 깨달음으로 버튼 (8.5)
+    const insightBtn = (m.role === 'assistant' && !m.error)
+      ? `<button class="reflection-msg-insight ${m.savedAsInsight ? 'saved' : ''}" onclick="saveReflectionMsgAsInsight('${q.id}', ${i})">${m.savedAsInsight ? '✦ 저장됨' : '✦ 깨달음으로'}</button>`
+      : '';
+    return `<div class="msg ${cls}">
+      <div class="msg-bubble">${escapeHtml(m.content || '')}</div>
+      ${insightBtn}
+    </div>`;
   }).join('');
   setTimeout(() => { container.scrollTop = container.scrollHeight; }, 30);
+}
+
+// V4-fix: 숙고 채팅 안 AI 메시지를 ✦ 깨달음(reflection)으로 archive에 저장
+async function saveReflectionMsgAsInsight(qId, msgIdx) {
+  const q = (state.reflectionQuestions || []).find(x => x.id === qId);
+  if (!q || !Array.isArray(q.chatMessages)) return;
+  const msg = q.chatMessages[msgIdx];
+  if (!msg || msg.savedAsInsight) return;
+
+  if (!Array.isArray(state.archive)) state.archive = [];
+  const _dayKey = todayKey();
+  const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  // 직전 user 메시지 찾기
+  let priorUserMsg = '';
+  for (let i = msgIdx - 1; i >= 0; i--) {
+    if (q.chatMessages[i]?.role === 'user') { priorUserMsg = q.chatMessages[i].content; break; }
+  }
+  const body = (msg.content || '').slice(0, 200);
+  state.archive.unshift({
+    type: 'reflection',
+    headline: (q.shortText || q.text).slice(0, 30),
+    body,
+    insight: body,
+    original: msg.content,
+    question: priorUserMsg,
+    source: '숙고',
+    savedAt: new Date().toISOString(),
+    tags: ['숙고'],
+    reflectionQuestionId: qId
+  });
+  msg.savedAsInsight = true;
+  saveState();
+  renderReflectionChat();
+  showToast('✦ 깨달음에 저장됐어');
 }
 
 async function sendReflectionChat() {
@@ -11763,11 +11825,15 @@ async function processAnalysis(analysis, messageIdx) {
   const _triggerMsg = _prevUserIdx >= 0 ? state.chatMessages[_prevUserIdx] : null;
   const isUITrigger = !!(_triggerMsg && _triggerMsg.isDeeperRequest);
 
+  // V4-fix: 9.4 임계값 — 약(<0.5) skip, 중/강(>=0.5) 자동 적재 (NEW 배지 + 사용자 ✓로 컨펌).
+  // 기존 항목 evidence 누적은 confidence 무관 (재등장 자체가 신호).
   if (analysis.new_traits && !isUITrigger) {
     analysis.new_traits.forEach(t => {
+      const conf = t.confidence || 0.5;
       const exists = state.traits.find(e => similarText(e.name, t.name));
       if (!exists && !recentRetry) {
-        state.traits.push({ id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: t.name, description: t.description || '', confidence: t.confidence || 0.5, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
+        if (conf < 0.5) return;  // 약 신호 skip (V4 비전 9.4)
+        state.traits.push({ id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: t.name, description: t.description || '', confidence: conf, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
       } else if (exists) {
         exists.evidence_count = (exists.evidence_count || 1) + 1;
         exists.confidence = Math.min(1.0, exists.confidence + 0.1);
@@ -11776,9 +11842,11 @@ async function processAnalysis(analysis, messageIdx) {
   }
   if (analysis.new_values && !isUITrigger) {
     analysis.new_values.forEach(v => {
+      const conf = v.confidence || 0.5;
       const exists = state.values.find(e => similarText(e.name, v.name));
       if (!exists && !recentRetry) {
-        state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: v.name, description: v.description || '', confidence: v.confidence || 0.5, user_verified: false, evidence_count: 1, sdt_need: v.sdt_need || null, created_at: new Date().toISOString() });
+        if (conf < 0.5) return;  // 약 skip
+        state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: v.name, description: v.description || '', confidence: conf, user_verified: false, evidence_count: 1, sdt_need: v.sdt_need || null, created_at: new Date().toISOString() });
       } else if (exists) {
         exists.evidence_count = (exists.evidence_count || 1) + 1;
         exists.confidence = Math.min(1.0, exists.confidence + 0.1);
@@ -11787,9 +11855,11 @@ async function processAnalysis(analysis, messageIdx) {
   }
   if (analysis.new_patterns && !isUITrigger) {
     analysis.new_patterns.forEach(p => {
+      const conf = p.confidence || 0.5;
       const exists = state.patterns.find(e => similarText(e.name, p.name));
       if (!exists && !recentRetry) {
-        state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: p.name, description: p.description || '', trigger: p.trigger || '', sequence: p.sequence || '', confidence: p.confidence || 0.5, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
+        if (conf < 0.5) return;  // 약 skip
+        state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: p.name, description: p.description || '', trigger: p.trigger || '', sequence: p.sequence || '', confidence: conf, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
       } else if (exists) {
         exists.evidence_count = (exists.evidence_count || 1) + 1;
         exists.confidence = Math.min(1.0, exists.confidence + 0.1);
@@ -13761,13 +13831,11 @@ function switchDayModalTab(tab) {
       </div>`;
     }
   } else if (tab === 'topics') {
+    // V4-fix: 카테고리 분류 X — '✦ 토픽' 단일
     topics.forEach(c => {
-      const cat = TOPIC_CATEGORY_LABELS && TOPIC_CATEGORY_LABELS[c.category];
-      const icon = cat?.icon || '📝';
-      const label = cat?.label || c.category;
       html += `
         <div class="day-card t-topic" onclick="closeDayModal(); openTopicCard('${c.id}')">
-          <div class="day-card-icon-row"><span class="icon">${icon}</span><span>${escapeHtml(label)}</span></div>
+          <div class="day-card-icon-row"><span class="icon">✦</span><span>토픽</span></div>
           <div class="day-card-title">${escapeHtml(c.title || '')}</div>
           ${c.summary ? `<div class="day-card-body">${escapeHtml(c.summary)}</div>` : ''}
         </div>
@@ -13954,6 +14022,11 @@ function switchLibraryCat(cat) {
   // + 캘린더 재렌더 (다른 cat에서 비워졌던 거 복구)
   if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
   if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
+  // V4-fix: 토글은 일기·대화 / 진주에만 (양생방·깨달음·갈피리뷰는 단일 뷰)
+  const toggleEl = document.querySelector('.library-view-toggle');
+  if (toggleEl) {
+    toggleEl.style.display = (cat === 'diary' || cat === 'pearls') ? '' : 'none';
+  }
 }
 
 // V3 호환: 옛 switchLens('conversations'|'wisdom') 호출 지원 (튜토리얼 등 외부 참조)
@@ -14043,7 +14116,6 @@ function renderLensTopicCards() {
       </div>
   `;
   display.forEach(c => {
-    const catInfo = TOPIC_CATEGORY_LABELS[c.category] || { label: '기타', icon: '·' };
     const startedAt = c.chapterStartedAt || c.createdAt;
     const dateStr = new Date(startedAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
     // V3.13.x: 그 날 체크인 신호 칩 (4시 cutoff 적용)
@@ -14060,10 +14132,11 @@ function renderLensTopicCards() {
       }
       if (bits.length) metaExtra = ` · ${bits.join(' ')}`;
     }
+    // V4-fix: 카테고리 분류 X — 모든 토픽 단일 '✦ 토픽' 라벨
     html += `
-      <div class="topic-card cat-${c.category}" onclick="openTopicCard('${c.id}')">
+      <div class="topic-card" onclick="openTopicCard('${c.id}')">
         <div class="topic-card-row1">
-          <span class="topic-card-cat">${catInfo.icon} ${catInfo.label}</span>
+          <span class="topic-card-cat">✦ 토픽</span>
           <span class="topic-card-title">${escapeHtml(c.title)}</span>
         </div>
         <div class="topic-card-summary">${escapeHtml(c.summary)}</div>
@@ -20080,7 +20153,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.61-reflection-one';
+const APP_VERSION = 'v4.0.62-misc-fixes';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
