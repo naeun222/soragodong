@@ -13608,8 +13608,26 @@ function showCrystallizeRitualModal(card, dnaPearl) {
     'quick-discovery': '#5fcfba',
     'evolved':         'url(#crystallize-rainbow)'
   }[path] || '#ffd700';
+  const safeOuter = (typeof outerColor === 'string' && outerColor.startsWith('#')) ? outerColor : '#ffd700';
 
-  // 헬릭스 점들 — shellsUsed 기반, 원형 분포 + group rotate
+  // V4-fix v2: 결정화 모달 — faceted gem (8 삼각 면 + 다층 glow + sparkle)
+  // 8각형 꼭짓점
+  const RV = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * 360 - 90;
+    const r = 88;
+    RV.push({ x: 100 + r * Math.cos(a * Math.PI / 180), y: 100 + r * Math.sin(a * Math.PI / 180) });
+  }
+  // 8 삼각 facet
+  const ritualFacets = RV.map((v, i) => {
+    const next = RV[(i + 1) % 8];
+    return {
+      points: `100,100 ${v.x.toFixed(1)},${v.y.toFixed(1)} ${next.x.toFixed(1)},${next.y.toFixed(1)}`,
+      gradId: `cryst-facet-${i}-${dnaPearl.id.replace(/[^a-zA-Z0-9_-]/g, '')}`
+    };
+  });
+  const polyRitual = RV.map(v => `${v.x.toFixed(1)},${v.y.toFixed(1)}`).join(' ');
+  // 헬릭스 점 — shellsUsed 기반 (없으면 기본 색)
   const shellList = (state.shellCollection || []);
   const shellsToShow = (dnaPearl.shellsUsed || []).slice(0, 8);
   const dotColors = shellsToShow.map(sid => {
@@ -13618,22 +13636,45 @@ function showCrystallizeRitualModal(card, dnaPearl) {
            s?.tier === 'call'   ? '#d4a76a' :
            s?.tier === 'golden' ? '#e8c170' : '#a89dc8';
   });
-  // 시도 수가 8보다 적으면 미니 점 추가 (시각 균형)
-  while (dotColors.length < 8) dotColors.push('#666e8a');
-
-  const dotsHtml = dotColors.map((color, i) => {
-    const angle = (i / 8) * 360;
-    const rad = (angle * Math.PI) / 180;
-    const cx = 100 + 70 * Math.cos(rad);
-    const cy = 100 + 70 * Math.sin(rad);
-    return `<circle cx="${cx}" cy="${cy}" r="5" fill="${color}" opacity="0.92"/>`;
+  while (dotColors.length < 8) dotColors.push('#fff5b8');
+  // 외곽 헬릭스 점 (pulse)
+  const outerDotsRitual = dotColors.map((c, i) => {
+    const angle = (i / 8) * 360 - 90;
+    const cx = 100 + 76 * Math.cos(angle * Math.PI / 180);
+    const cy = 100 + 76 * Math.sin(angle * Math.PI / 180);
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.2" fill="${c}" opacity="0.95">
+      <animate attributeName="r" values="4.2;5.6;4.2" dur="${2 + (i % 3) * 0.5}s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.7;1;0.7" dur="${2 + (i % 3) * 0.5}s" repeatCount="indefinite"/>
+    </circle>`;
+  }).join('');
+  // 안쪽 헬릭스 (역회전)
+  const innerDotsRitual = [0,1,2,3,4,5].map(n => {
+    const a = (n / 6) * 360 + 30;
+    const x = 100 + 32 * Math.cos(a * Math.PI / 180);
+    const y = 100 + 32 * Math.sin(a * Math.PI / 180);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="${safeOuter}" opacity="0.85"/>`;
+  }).join('');
+  // sparkles ✦
+  const sparklesRitual = [
+    { x: 28, y: 48, d: 0 }, { x: 172, y: 56, d: 0.5 }, { x: 48, y: 162, d: 1.0 },
+    { x: 168, y: 160, d: 1.6 }, { x: 100, y: 22, d: 2.2 }, { x: 18, y: 110, d: 0.3 },
+    { x: 182, y: 110, d: 1.2 }, { x: 100, y: 178, d: 1.9 }
+  ].map(s => `<text x="${s.x}" y="${s.y}" class="dna-sparkle" style="animation-delay:${s.d}s" text-anchor="middle" font-size="16">✦</text>`).join('');
+  // facet gradients
+  const facetGradDefsRitual = ritualFacets.map((f, i) => {
+    const o1 = (0.6 - (i % 4) * 0.1).toFixed(2);
+    const o2 = (0.18 - (i % 4) * 0.04).toFixed(2);
+    return `<linearGradient id="${f.gradId}" x1="0%" y1="0%" x2="100%" y2="${100 + (i % 3) * 30}%">
+      <stop offset="0%" stop-color="${safeOuter}" stop-opacity="${o1}"/>
+      <stop offset="100%" stop-color="${safeOuter}" stop-opacity="${o2}"/>
+    </linearGradient>`;
   }).join('');
 
   const html = `
     <div class="crystallize-ritual-overlay" id="crystallizeRitual">
       <div class="crystallize-ritual-modal">
         <div class="crystallize-emoji">${m.emoji}</div>
-        <div class="crystallize-svg-wrap">
+        <div class="crystallize-svg-wrap dna-pearl-stage">
           <svg viewBox="0 0 200 200" width="240" height="240" aria-hidden="true">
             <defs>
               <linearGradient id="crystallize-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -13642,17 +13683,52 @@ function showCrystallizeRitualModal(card, dnaPearl) {
                 <stop offset="66%"  stop-color="#5fcfba"/>
                 <stop offset="100%" stop-color="#8b7ec4"/>
               </linearGradient>
+              <radialGradient id="cryst-core" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="${safeOuter}" stop-opacity="0.6"/>
+                <stop offset="60%" stop-color="${safeOuter}" stop-opacity="0.18"/>
+                <stop offset="100%" stop-color="${safeOuter}" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="cryst-halo" cx="50%" cy="50%" r="50%">
+                <stop offset="60%" stop-color="${safeOuter}" stop-opacity="0"/>
+                <stop offset="80%" stop-color="${safeOuter}" stop-opacity="0.32"/>
+                <stop offset="100%" stop-color="${safeOuter}" stop-opacity="0"/>
+              </radialGradient>
+              <filter id="cryst-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="cryst-bigglow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="7" result="b"/>
+                <feMerge><feMergeNode in="b"/></feMerge>
+              </filter>
+              ${facetGradDefsRitual}
             </defs>
-            <polygon points="100,12 162,40 188,100 162,160 100,188 38,160 12,100 38,40"
-                     fill="${outerColor}" fill-opacity="0.14"
-                     stroke="${outerColor}" stroke-width="2.5" />
-            <g>
-              ${dotsHtml}
-              <animateTransform attributeName="transform" type="rotate"
-                                from="0 100 100" to="360 100 100"
-                                dur="30s" repeatCount="indefinite"/>
+            <!-- 외곽 halo -->
+            <circle cx="100" cy="100" r="98" fill="url(#cryst-halo)"/>
+            <!-- 외곽 회전 ring -->
+            <g class="dna-pearl-ring">
+              <circle cx="100" cy="100" r="92" fill="none" stroke="${safeOuter}" stroke-width="0.9" stroke-opacity="0.6" stroke-dasharray="3 6"/>
+              <circle cx="100" cy="100" r="86" fill="none" stroke="${safeOuter}" stroke-width="0.5" stroke-opacity="0.4" stroke-dasharray="1 5"/>
             </g>
-            <circle cx="100" cy="100" r="3.5" fill="${outerColor}" opacity="0.95"/>
+            <!-- 내부 core glow -->
+            <circle cx="100" cy="100" r="80" fill="url(#cryst-core)"/>
+            <!-- 결정 본체 — 8 facet (회전) -->
+            <g class="dna-pearl-spin">
+              ${ritualFacets.map(f => `<polygon points="${f.points}" fill="url(#${f.gradId})" stroke="${safeOuter}" stroke-width="0.5" stroke-opacity="0.5"/>`).join('')}
+              <polygon points="${polyRitual}" fill="none" stroke="${outerColor}" stroke-width="2.5" filter="url(#cryst-glow)"/>
+              <polygon points="${polyRitual}" fill="none" stroke="${safeOuter}" stroke-width="0.6" stroke-opacity="0.95"/>
+              <polygon points="${RV.map(v => `${(100 + (v.x - 100) * 0.45).toFixed(1)},${(100 + (v.y - 100) * 0.45).toFixed(1)}`).join(' ')}"
+                       fill="none" stroke="${safeOuter}" stroke-width="0.5" stroke-opacity="0.55"/>
+            </g>
+            <!-- 안쪽 헬릭스 (역회전) -->
+            <g class="dna-pearl-inner-spin">${innerDotsRitual}</g>
+            <!-- 외곽 헬릭스 점 (pulse) -->
+            ${outerDotsRitual}
+            <!-- 중심 빛 -->
+            <circle cx="100" cy="100" r="4.2" fill="${safeOuter}" opacity="1"/>
+            <circle cx="100" cy="100" r="7" fill="${safeOuter}" opacity="0.42" filter="url(#cryst-bigglow)"/>
+            <!-- sparkles -->
+            <g fill="${safeOuter}" opacity="0.9">${sparklesRitual}</g>
           </svg>
         </div>
         <div class="crystallize-label">${m.label}</div>
@@ -22339,7 +22415,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.70-dna-gem-beach-free';
+const APP_VERSION = 'v4.0.71-crystallize-gem';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
