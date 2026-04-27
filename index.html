@@ -10882,26 +10882,6 @@ async function captureAndVerifyMissionPhoto(mission) {
   const file = await pickPhotoFile();
   if (!file) return null;
 
-  // V4-fix v3 (사용자 요청): testerMode면 verify 안 하고 토스트만 + 패스 (성공/실패 둘 다)
-  const isTester = !!(state.preferences && state.preferences.testerMode);
-  if (isTester) {
-    try {
-      const resized = await fileToResizedDataUrl(file, 1024);
-      const thumb = await makeSquareThumb(resized, 200);
-      // 50% 확률로 성공/실패 토스트 — 사용자가 두 분기 다 보도록
-      const mockSuccess = Math.random() > 0.5;
-      if (mockSuccess) {
-        showToast('✓ [테스터] 인증 성공 — 사진 확인됨');
-      } else {
-        showToast('⚠ [테스터] 인증 실패 시뮬 — 그래도 패스');
-      }
-      return { thumb, verification: { verified: true, reason: '테스터 모드 — Vision API 우회.' } };
-    } catch (e) {
-      showToast('⚠ [테스터] 사진 처리 실패 — 패스');
-      return { thumb: '', verification: { verified: true, reason: '테스터 모드.' } };
-    }
-  }
-
   showFullscreenLoader('사진 확인 중... 🐚');
   try {
     const resized = await fileToResizedDataUrl(file, 1024);
@@ -24765,7 +24745,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.100-vault-analyze-photo-tester';
+const APP_VERSION = 'v4.0.101-photo-verify-real';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
