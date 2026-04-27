@@ -17383,17 +17383,17 @@ function renderLibraryHero() {
     } else {
       // iTunes 검색 실패 / 시드 안 박힘 — 임시 fixed pearl 객체 (state에 push X, 렌더에만)
       seedMusicPin = {
-        id: 'pearl_pinned_longshot',
+        id: 'pearl_pinned_lngshot_vanilla',
         category: '음악',
-        content: 'LONGSHOT - Vanilla Days',
+        content: 'LNGSHOT - Vanilla Days',
         note: '새벽 카페에서 발견. 이 곡 들으면 그 시간으로 돌아감.',
         createdAt: new Date().toISOString(),
         track: {
-          id: 'pinned_longshot',
+          id: 'pinned_lngshot_vanilla',
           title: 'Vanilla Days',
-          artist: 'LONGSHOT',
+          artist: 'LNGSHOT',
           artworkUrl: '',
-          previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/12/82/7a/12827aa0-7d4e-e2a8-7e00-8920f2c8d885/mzaf_7802841560866563494.plus.aac.p.m4a',
+          previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c2/9f/30c29f0b-bed7-d993-6909-0392418d4dcc/mzaf_15564917017364106254.plus.aac.p.m4a',
           trackUrl: ''
         }
       };
@@ -21105,7 +21105,7 @@ async function testSeedV4Data() {
     const re = state.entries[richEntryIdx];
     re.mood = 4;
     re.vitality = 3;
-    re.diary = '오늘 새벽 카페에서 LONGSHOT 듣다가 진짜 오랜만에 흐름이 트여서 논문 서론 첫 단락 끝냄. 며칠 막혀있던 게 한 시간 만에 풀림. 새벽 공기 + 그 곡 = 마법. 카페 모서리 자리 사진도 한 장 찍었어. 다시 갈 때마다 이 감각 떠올리고 싶어서.';
+    re.diary = '오늘 새벽 카페에서 LNGSHOT 듣다가 진짜 오랜만에 흐름이 트여서 논문 서론 첫 단락 끝냄. 며칠 막혀있던 게 한 시간 만에 풀림. 새벽 공기 + 그 곡 = 마법. 카페 모서리 자리 사진도 한 장 찍었어. 다시 갈 때마다 이 감각 떠올리고 싶어서.';
     re.note = '새벽 카페가 답이다. 환경 셋업 = 진입 마찰 ↓.';
     re.dailyQuestion = {
       text: '오늘 가장 살아있다고 느낀 순간은?',
@@ -21114,9 +21114,9 @@ async function testSeedV4Data() {
     re.music = {
       id: 'seed_rich_track',
       title: 'Vanilla Days',
-      artist: 'LONGSHOT',
+      artist: 'LNGSHOT',
       artworkUrl: '',
-      previewUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c2/9f/30c29f0b-bed7-d993-6909-0392418d4dcc/mzaf_15564917017364106254.plus.aac.p.m4a',
       trackUrl: ''
     };
     // 사용자 요청 2026-04-28: 카페 사진 — Lorem Picsum 결정론적 시드 (캐시 가능 + 항상 같은 사진)
@@ -21301,13 +21301,13 @@ async function testSeedV4Data() {
   // V4-fix v3: 진주 30+ (1년에 걸쳐, 월별 평균 2-3개, 4 카테고리 다양)
   state.pearls = [];
   const pearlSeeds = [
-    // 사용자 요청 2026-04-28: LONGSHOT Vanilla Days는 iTunes에 없는 가상 곡 → 검색 skip + 실제 작동하는 lofi 카페 preview URL 하드코딩
-    { c: '음악', content: 'LONGSHOT - Vanilla Days', daysAgo: 5, note: '새벽 카페에서 발견. 이 곡 들으면 그 시간으로 돌아감.', track: {
-        id: 'pinned_longshot',
+    // 사용자 요청 2026-04-28: 실제 LNGSHOT (LONGSHOT 아님 — 'O' 하나 적음) - Vanilla Days iTunes preview URL 하드코딩 (사용자 보고 — 다른 곡 재생됨 fix)
+    { c: '음악', content: 'LNGSHOT - Vanilla Days', daysAgo: 5, note: '새벽 카페에서 발견. 이 곡 들으면 그 시간으로 돌아감.', track: {
+        id: 'pinned_lngshot_vanilla',
         title: 'Vanilla Days',
-        artist: 'LONGSHOT',
+        artist: 'LNGSHOT',
         artworkUrl: '',
-        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/12/82/7a/12827aa0-7d4e-e2a8-7e00-8920f2c8d885/mzaf_7802841560866563494.plus.aac.p.m4a',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c2/9f/30c29f0b-bed7-d993-6909-0392418d4dcc/mzaf_15564917017364106254.plus.aac.p.m4a',
         trackUrl: ''
       } },
     { c: '음식', content: '엄마 김치찌개', daysAgo: 8, note: '비 오는 날 — 고등학교 그 부엌 생각.' },
@@ -21330,7 +21330,14 @@ async function testSeedV4Data() {
     { c: '순간', content: '드디어 거절했어', daysAgo: 165, note: '술자리 — 첫 거절 성공.' },
     { c: '사람', content: '오래 못 본 친구 결혼식', daysAgo: 175 },
     { c: '음악', content: '하츠투하츠 - RUDE!', daysAgo: 190, searchQuery: 'Hearts2Hearts RUDE' },
-    { c: '음악', content: 'LONGSHOT - Moonwalkin', daysAgo: 240, searchQuery: 'LONGSHOT Moonwalkin' },
+    { c: '음악', content: 'LNGSHOT - Moonwalkin\'', daysAgo: 240, note: '진짜 신남.', track: {
+        id: 'pinned_lngshot_moonwalkin',
+        title: 'Moonwalkin\'',
+        artist: 'LNGSHOT',
+        artworkUrl: '',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/da/1f/e9/da1fe9e9-f784-b4f2-c181-c8f770aa2ede/mzaf_13144624855104730433.plus.aac.p.m4a',
+        trackUrl: ''
+      } },
     { c: '음식', content: '아빠 닭볶음탕', daysAgo: 210 },
     { c: '장소', content: '가을 단풍 — 학교 뒷산', daysAgo: 225 },
     { c: '순간', content: '새벽 4시 작업 끝낸 순간', daysAgo: 240 },
@@ -21944,14 +21951,14 @@ async function testSeedV4Data() {
       { role: 'user',      content: '새벽 카페에서 한 시간 만에 첫 단락 끝남. 진짜 며칠 만에 흐름이 트임.', timestamp: new Date(_richTs).toISOString(), chapterStart: true, chapterMeta: { category: 'diary', summary: '새벽 카페 흐름', strategyId: null } },
       { role: 'assistant', content: '환경 + 음악 콤보가 진짜 강력했나봐. 그 \'됐다\' 순간이 머리 속에 박혔을 거야 — 다음에도 비슷한 셋업이 trigger 될 가능성 ↑.', timestamp: new Date(_richTs + 60000).toISOString() },
       { role: 'user',      content: '맞아. 이 곡 자체가 trigger 같아. 카페 자리도 그 모서리 자리만 됨.', timestamp: new Date(_richTs + 120000).toISOString() },
-      { role: 'assistant', content: '진주 후보야 — 음악 + 장소. "새벽 카페 LONGSHOT" 한 묶음으로 박아두면 다음에 막혔을 때 돌아갈 anchor 돼.', timestamp: new Date(_richTs + 180000).toISOString() }
+      { role: 'assistant', content: '진주 후보야 — 음악 + 장소. "새벽 카페 LNGSHOT" 한 묶음으로 박아두면 다음에 막혔을 때 돌아갈 anchor 돼.', timestamp: new Date(_richTs + 180000).toISOString() }
     );
   }
   if (Array.isArray(state.pearls)) {
     state.pearls.push({
       id: 'pearl_seed_rich_place', category: '장소',
       content: '새벽 카페 모서리 자리',
-      note: 'LONGSHOT 들으면서 첫 단락 푼 자리. 다시 갈 때마다 그 감각.',
+      note: 'LNGSHOT 들으면서 첫 단락 푼 자리. 다시 갈 때마다 그 감각.',
       createdAt: new Date(_richDate + 'T05:45:00').toISOString(),
       type: 'pearl'
     });
@@ -21968,7 +21975,7 @@ async function testSeedV4Data() {
       type: 'scrap',
       headline: '환경 + 음악 = trigger 묶음',
       body: '특정 음악 + 특정 장소 조합이 작업 진입 trigger로 작동. 우연 X 신호.',
-      original: '[나]\n새벽 카페에서 LONGSHOT 들으면서 막힘이 풀렸어. 곡 + 자리 조합이 진짜 trigger 같아.\n\n[소라]\n환경 cuing 효과 — 특정 자극 묶음이 행동 trigger로 학습됨. 같은 셋업 의도적으로 재현하면 같은 흐름 가능성 ↑.',
+      original: '[나]\n새벽 카페에서 LNGSHOT 들으면서 막힘이 풀렸어. 곡 + 자리 조합이 진짜 trigger 같아.\n\n[소라]\n환경 cuing 효과 — 특정 자극 묶음이 행동 trigger로 학습됨. 같은 셋업 의도적으로 재현하면 같은 흐름 가능성 ↑.',
       insight: '환경 cuing — 음악 + 장소 묶음 = 작업 진입 자동화.',
       tags: ['환경', '음악', '집중'],
       date: new Date(_richDate + 'T06:00:00').toLocaleDateString('ko-KR'),
@@ -21983,7 +21990,7 @@ async function testSeedV4Data() {
       id: 'topic_seed_rich_415',
       category: 'memory',
       title: '새벽 카페 흐름의 날',
-      summary: 'LONGSHOT + 카페 모서리 자리 = 첫 단락 완성. 환경 cuing 패턴 인식.',
+      summary: 'LNGSHOT + 카페 모서리 자리 = 첫 단락 완성. 환경 cuing 패턴 인식.',
       chapterStartedAt: new Date(_richTs).toISOString(),
       chapterEndedAt: new Date(_richTs + 1800000).toISOString(),
       messageCount: 4,
@@ -22342,7 +22349,7 @@ async function testForceMusicAutoPearl() {
   }
   const today = new Date();
   const trackId = 'auto_test_track';
-  const track = { id: trackId, title: 'Vanilla Days', artist: 'LONGSHOT', artworkUrl: '' };
+  const track = { id: trackId, title: 'Vanilla Days', artist: 'LNGSHOT', artworkUrl: '' };
   // entries 5개에 같은 트랙 박아 자동 진주 발동
   let pushed = 0;
   for (let i = 0; i < (state.entries || []).length && pushed < 5; i++) {
@@ -27148,7 +27155,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.122-strategy-meta';
+const APP_VERSION = 'v4.0.123-vanilla-real';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
