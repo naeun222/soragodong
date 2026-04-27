@@ -729,6 +729,14 @@
     border-color: var(--accent) !important;
     font-weight: 700;
   }
+  /* V4-1l-mini: 확인됨 토글 (다시 누르면 맞아/아니야로 되돌림) */
+  .cf-confirmed {
+    background: rgba(143,200,143,0.15) !important;
+    color: #c5e8c5 !important;
+    border-color: rgba(143,200,143,0.40) !important;
+    font-weight: 600;
+  }
+  .cf-confirmed:active { background: rgba(143,200,143,0.22) !important; }
   .model-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; line-height: 1.7; }
 
   .archive-item { background: var(--surface); border-radius: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid var(--border); }
@@ -9136,11 +9144,31 @@ function renderMoreSection(category, more, draft) {
 
 function renderModelItem(item, category, idx) {
   const confLabel = item.confidence >= 0.7 ? '확신' : item.confidence >= 0.4 ? '관찰 중' : '가설';
-  // V3.13.x.후속2: values/patterns에 NEW 배지 + ✓ 맞아 버튼 (미컨펌만)
-  const showConfirm = (category === 'values' || category === 'patterns') && item.user_verified === false;
-  const newClass = showConfirm ? ' model-item-new' : '';
-  const newBadge = showConfirm ? `<span class="cf-new-badge">NEW</span>` : '';
-  const confirmBtn = showConfirm ? `<button class="model-item-action cf-confirm" onclick="confirmModelItem('${category}', ${idx})">✓ 맞아</button>` : '';
+  // V4-1l-mini: values/patterns는 '맞아' / '아니야' / '확인됨' 토글 (✎ 수정 / ✕ 삭제 X).
+  // 다른 카테고리 (traits 등)는 기존 ✎ 수정 / ✕ 삭제 유지.
+  const isVerifiable = (category === 'values' || category === 'patterns');
+  const isVerified = isVerifiable && item.user_verified === true;
+  const showNew = isVerifiable && !isVerified;
+  const newClass = showNew ? ' model-item-new' : '';
+  const newBadge = showNew ? `<span class="cf-new-badge">NEW</span>` : '';
+
+  let actionsHtml;
+  if (isVerifiable) {
+    if (isVerified) {
+      actionsHtml = `<button class="model-item-action cf-confirmed" onclick="toggleVerifyModelItem('${category}', ${idx})">✓ 확인됨</button>`;
+    } else {
+      actionsHtml = `
+        <button class="model-item-action cf-confirm" onclick="confirmModelItem('${category}', ${idx})">맞아</button>
+        <button class="model-item-action reject" onclick="rejectItemNow('${category}', ${idx})">아니야</button>
+      `;
+    }
+  } else {
+    actionsHtml = `
+      <button class="model-item-action" onclick="editModelItem('${category}', ${idx})">✎ 수정</button>
+      <button class="model-item-action reject" onclick="rejectItem('${category}', ${idx})">✕ 삭제</button>
+    `;
+  }
+
   return `<div class="model-item${newClass}" data-cat="${category}" data-idx="${idx}">
     <div class="model-item-name">${newBadge}${escapeHtml(item.name)}</div>
     <div class="model-item-desc">${escapeHtml(item.description || '')}</div>
@@ -9149,9 +9177,7 @@ function renderModelItem(item, category, idx) {
       ${item.evidence_count ? `<span>근거 ${item.evidence_count}개</span>` : ''}
     </div>
     <div class="model-item-actions">
-      ${confirmBtn}
-      <button class="model-item-action" onclick="editModelItem('${category}', ${idx})">✎ 수정</button>
-      <button class="model-item-action reject" onclick="rejectItem('${category}', ${idx})">✕ 삭제</button>
+      ${actionsHtml}
     </div>
   </div>`;
 }
@@ -9162,6 +9188,27 @@ async function rejectItem(category, idx) {
   saveState(); renderModel(); renderModelPreview();
 }
 
+// V4-1l-mini: '아니야' = 즉시 삭제 + undo 토스트 (confirmDelete 모달 X — values/patterns 흐름용)
+function rejectItemNow(category, idx) {
+  if (!Array.isArray(state[category])) return;
+  const removed = state[category][idx];
+  if (!removed) return;
+  const removedJson = JSON.stringify(removed);
+  state[category].splice(idx, 1);
+  saveState(); renderModel(); renderModelPreview();
+  if (typeof showUndoToast === 'function') {
+    showUndoToast(`"${removed.name}" 삭제됨`, () => {
+      try {
+        const restored = JSON.parse(removedJson);
+        state[category].splice(idx, 0, restored);
+        saveState(); renderModel(); renderModelPreview();
+      } catch (e) {}
+    });
+  } else {
+    showToast('삭제됨');
+  }
+}
+
 // V3.13.x.후속2: values/patterns 항목 ✓ 맞아 컨펌
 function confirmModelItem(category, idx) {
   if (!Array.isArray(state[category])) return;
@@ -9170,6 +9217,16 @@ function confirmModelItem(category, idx) {
   item.user_verified = true;
   saveState(); renderModel(); renderModelPreview();
   showToast('확인됨 ✓');
+}
+
+// V4-1l-mini: 확인됨 → 다시 누르면 미컨펌(맞아/아니야)으로 토글
+function toggleVerifyModelItem(category, idx) {
+  if (!Array.isArray(state[category])) return;
+  const item = state[category][idx];
+  if (!item) return;
+  item.user_verified = !item.user_verified;
+  saveState(); renderModel(); renderModelPreview();
+  showToast(item.user_verified ? '확인됨 ✓' : '다시 검토');
 }
 
 // V3.13.x: 통합 분석 미컨펌 메타 (텍스트 기준 lookup)
@@ -15890,7 +15947,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.14-library-5cats';
+const APP_VERSION = 'v4.0.15-verify-toggle';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
