@@ -8061,21 +8061,15 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'mission_carryover',
-    targetSelector: null,
+    targetSelector: '#lostCallsSection',
     title: '📆 못 한 부름은?',
     body: '\'소라의 부름\'은 <b>3일 동안 안 하면</b> 모래사장의 "📜 지난 부름"으로 가서 <b>7일 동안</b> 있다가 알아서 사라져.<br><br>거기서 <b>"다시 받기"</b> 누르면 오늘로 부활!<br><br><span class="small">자책 X. 하루 못 한 거 = 너 X 도구 또는 타이밍.</span>',
     waitFor: 'next',
-    dimBackground: false
-  },
-  {
-    id: 'crystallize_intro',
-    targetSelector: null,
-    title: '💎 너 일부가 되는 순간',
-    body: '한 전략이 <b>5번 작동</b>하면 → "이거 너 일부로 만들까?" 물어봐.<br>응 → <b>특별한 의식 화면</b>이 떠 (예쁜 보석 + 박힌 소라들 회전).<br>→ 의지 X로도 자동 작동. <b>모래사장 맨 위</b>로 올라가.<br><br><span class="small">한 번뿐인 의식이야. 진짜로 너 안에 박힘.</span>',
-    waitFor: 'next',
     dimBackground: false,
-    demoCrystallize: true
+    aboveModal: true,
+    fallbackPosition: 'top'
   },
+  // crystallize_intro 일단 보류 (사용자 요청 2026-04-27) — 나중에 다시 넣을 때 demoCrystallize: true 활용
   {
     id: 'attempt_result_explain',
     targetSelector: null,
@@ -20349,6 +20343,29 @@ function testSeedV4Data() {
       photoThumb: ''
     });
   }
+  // 사용자 요청 2026-04-27: '특별' (legendary) 시드 5개 보장 — 등급으로 탭에서 다양한 예쁜 아이콘 보이게
+  const legendarySeeds = [
+    { emoji: '🌈', daysAgo: 3,  story: '발표 후 무지개 같은 해방감' },
+    { emoji: '🦄', daysAgo: 18, story: '한 단락 술술 풀린 마법의 순간' },
+    { emoji: '🌌', daysAgo: 35, story: '새벽 카페에서 별이 박힌 시간' },
+    { emoji: '🦋', daysAgo: 70, story: '아이디어가 변태한 날' },
+    { emoji: '✨', daysAgo: 120,story: '진짜 처음으로 \'할 수 있다\' 느낌' }
+  ];
+  legendarySeeds.forEach((ls, idx) => {
+    state.shellCollection.push({
+      _id: 'shell_seed_legend_' + idx,
+      type: ls.emoji,
+      tier: 'legend',
+      points: 50,
+      label: '특별',
+      rarity: 'legendary',
+      date: new Date(today.getTime() - ls.daysAgo * 86400000).toISOString(),
+      story: ls.story,
+      title: ls.story,
+      missionId: null,
+      photoThumb: ''
+    });
+  });
   // 가닥 generations에 shellId 박기 (gen.shells, missionId 매칭)
   (state.topicCards || []).filter(c => c.category === 'strategy' && !c._isDiagnosticSeed).forEach(card => {
     if (!Array.isArray(card.generations)) return;
