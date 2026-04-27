@@ -12278,12 +12278,13 @@ function playDnaInsertionEffect() {
 }
 
 // 양생방 DNA 카드에서 결과 체크 버튼 → 같은 흐름 호출
+// 사용자 명세 2026-04-28: 결과 체크 대상 = 미션 'completed' + attemptStatus 없음 (이전 'pending' → 'completed && !attemptStatus' 일치)
 async function triggerAttemptResultFromCard(strategyId) {
   const mission = (state.missions || []).find(m =>
-    m.strategyId === strategyId && m.status === 'pending'
+    m.strategyId === strategyId && m.status === 'completed' && !m.attemptStatus
   );
   if (!mission) {
-    showToast('대기 중인 미션이 없어');
+    showToast('결과 체크 대기 중인 미션이 없어');
     return;
   }
   await triggerAttemptResultFlow(mission);
@@ -17392,7 +17393,7 @@ function renderLibraryHero() {
           id: 'pinned_lngshot_vanilla',
           title: 'Vanilla Days',
           artist: 'LNGSHOT',
-          artworkUrl: '',
+          artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/cf/a8/de/cfa8dee7-da1a-eb20-6074-741a4af1a1f6/cover_KM0024394_1.jpg/200x200bb.jpg',
           previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c2/9f/30c29f0b-bed7-d993-6909-0392418d4dcc/mzaf_15564917017364106254.plus.aac.p.m4a',
           trackUrl: ''
         }
@@ -21115,7 +21116,7 @@ async function testSeedV4Data() {
       id: 'seed_rich_track',
       title: 'Vanilla Days',
       artist: 'LNGSHOT',
-      artworkUrl: '',
+      artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/cf/a8/de/cfa8dee7-da1a-eb20-6074-741a4af1a1f6/cover_KM0024394_1.jpg/200x200bb.jpg',
       previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c2/9f/30c29f0b-bed7-d993-6909-0392418d4dcc/mzaf_15564917017364106254.plus.aac.p.m4a',
       trackUrl: ''
     };
@@ -21301,12 +21302,12 @@ async function testSeedV4Data() {
   // V4-fix v3: 진주 30+ (1년에 걸쳐, 월별 평균 2-3개, 4 카테고리 다양)
   state.pearls = [];
   const pearlSeeds = [
-    // 사용자 요청 2026-04-28: 실제 LNGSHOT (LONGSHOT 아님 — 'O' 하나 적음) - Vanilla Days iTunes preview URL 하드코딩 (사용자 보고 — 다른 곡 재생됨 fix)
+    // 사용자 요청 2026-04-28: 실제 LNGSHOT (LONGSHOT 아님 — 'O' 하나 적음) - Vanilla Days iTunes preview URL + artwork 하드코딩
     { c: '음악', content: 'LNGSHOT - Vanilla Days', daysAgo: 5, note: '새벽 카페에서 발견. 이 곡 들으면 그 시간으로 돌아감.', track: {
         id: 'pinned_lngshot_vanilla',
         title: 'Vanilla Days',
         artist: 'LNGSHOT',
-        artworkUrl: '',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/cf/a8/de/cfa8dee7-da1a-eb20-6074-741a4af1a1f6/cover_KM0024394_1.jpg/200x200bb.jpg',
         previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c2/9f/30c29f0b-bed7-d993-6909-0392418d4dcc/mzaf_15564917017364106254.plus.aac.p.m4a',
         trackUrl: ''
       } },
@@ -21334,7 +21335,7 @@ async function testSeedV4Data() {
         id: 'pinned_lngshot_moonwalkin',
         title: 'Moonwalkin\'',
         artist: 'LNGSHOT',
-        artworkUrl: '',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/74/94/a2/7494a26e-4756-c082-5709-8526127baee8/cover_KM0023994_1.jpg/200x200bb.jpg',
         previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/da/1f/e9/da1fe9e9-f784-b4f2-c181-c8f770aa2ede/mzaf_13144624855104730433.plus.aac.p.m4a',
         trackUrl: ''
       } },
@@ -27155,7 +27156,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.123-vanilla-real';
+const APP_VERSION = 'v4.0.124-artwork-card-check';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.

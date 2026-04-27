@@ -1,1 +1,1 @@
-v4.0.123-vanilla-real
+v4.0.124-artwork-card-check
