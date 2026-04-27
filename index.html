@@ -4210,6 +4210,44 @@
   /* 진주 음악 카드는 grid에서 한 줄 다 차지 */
   .pearl-music-row { grid-column: 1 / -1; }
   .pearl-music-card { padding: 0; background: transparent; border: none; }
+  /* V4-fix: 체크인 사진 슬롯 */
+  .checkin-photo-card {
+    position: relative;
+    aspect-ratio: 1;
+    max-width: 200px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .checkin-photo-img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .checkin-photo-remove {
+    position: absolute; top: 6px; right: 6px;
+    width: 26px; height: 26px;
+    background: rgba(15,14,23,0.65);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  /* day-modal 일기 사진 */
+  .day-photo-wrap {
+    margin: 10px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.30);
+  }
+  .day-photo {
+    width: 100%;
+    max-height: 360px;
+    object-fit: cover;
+    display: block;
+  }
   /* V4-fix: 사진 진주 카드 (timeline) */
   .pearl-photo-card {
     grid-column: 1 / -1;
@@ -4758,9 +4796,10 @@
         </div>
       </div>
 
-      <!-- V3.13.x: 음악 슬롯 (optional) -->
-      <div class="input-group">
-        <div id="checkinMusicSlot"></div>
+      <!-- V3.13.x: 음악 슬롯 (optional) + V4: 사진 슬롯 -->
+      <div class="input-group" style="display:flex; gap:8px; flex-wrap:wrap;">
+        <div id="checkinMusicSlot" style="flex:1; min-width:120px;"></div>
+        <div id="checkinPhotoSlot" style="flex:1; min-width:120px;"></div>
       </div>
 
       <div class="optional-section">
@@ -10142,11 +10181,12 @@ function prefillCheckinFromEntry() {
   if (endEl0) endEl0.value = '';
   if (noteEl0) noteEl0.value = '';
 
-  if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart || entry.music)) {
+  if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart || entry.music || entry.photo)) {
     // 오늘 체크인 안 함 — 새로 작성 모드
     if (submitBtn) submitBtn.textContent = '기록 완료 ✦';
     if (subtitle) subtitle.textContent = '오늘 너의 컨디션 한 번 살펴보자.';
     renderCheckinMusicSlot();
+    if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
     return;
   }
   // 오늘 entry 있음 — 수정 모드
@@ -10177,6 +10217,9 @@ function prefillCheckinFromEntry() {
   // V3.13.x: 음악 prefill
   if (entry.music) currentCheckin.music = entry.music;
   renderCheckinMusicSlot();
+  // V4-fix: 사진 prefill
+  if (entry.photo) currentCheckin.photo = entry.photo;
+  if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
   // sleep duration 다시 계산
   if (typeof updateSleepDuration === 'function') updateSleepDuration();
 }
@@ -10295,6 +10338,12 @@ async function submitCheckin() {
     }
   } else {
     delete entry.music;
+  }
+  // V4-fix: 사진 저장 / 제거
+  if (currentCheckin.photo) {
+    entry.photo = currentCheckin.photo;
+  } else {
+    delete entry.photo;
   }
   entry.timestamp = new Date().toISOString();
 
@@ -13357,6 +13406,10 @@ function switchDayModalTab(tab) {
       if (ms.length) {
         html += `<div class="day-mode-chips">${ms.map(m => `<span class="day-mode-chip">${modeMap[m] || m}</span>`).join('')}</div>`;
       }
+    }
+    // V4-fix: 일기 사진 (음악 카드 풍 — 큰 사진)
+    if (entry.photo) {
+      html += `<div class="day-photo-wrap"><img src="${entry.photo}" alt="" class="day-photo"></div>`;
     }
     // 일기 본문
     if (entry.diary)     html += `<div class="day-diary">${escapeHtml(entry.diary)}</div>`;
@@ -19071,6 +19124,48 @@ function removeCheckinMusic() {
   renderCheckinMusicSlot();
 }
 
+// V4-fix: 체크인 사진 슬롯 (음악 옆 자리, 같은 패턴)
+function renderCheckinPhotoSlot() {
+  const slot = document.getElementById('checkinPhotoSlot');
+  if (!slot) return;
+  if (currentCheckin && currentCheckin.photo) {
+    slot.innerHTML = `
+      <div class="checkin-photo-card">
+        <img src="${currentCheckin.photo}" alt="" class="checkin-photo-img">
+        <button class="checkin-photo-remove" onclick="removeCheckinPhoto()" aria-label="제거">✕</button>
+      </div>
+    `;
+  } else {
+    slot.innerHTML = `
+      <button class="music-add-btn" onclick="addCheckinPhoto()">
+        <span style="font-size:16px;">📷</span>
+        <span>사진</span>
+      </button>
+    `;
+  }
+}
+async function addCheckinPhoto() {
+  try {
+    const file = await pickPhotoFile();
+    if (!file) return;
+    showFullscreenLoader('사진 처리 중... 📸');
+    const resized = await fileToResizedDataUrl(file, 800);
+    const square = await makeSquareThumb(resized, 600);
+    hideFullscreenLoader();
+    if (!currentCheckin) currentCheckin = {};
+    currentCheckin.photo = square;
+    renderCheckinPhotoSlot();
+  } catch (e) {
+    hideFullscreenLoader();
+    console.warn('checkin photo failed:', e);
+    showToast('사진 처리 실패');
+  }
+}
+function removeCheckinPhoto() {
+  if (currentCheckin) delete currentCheckin.photo;
+  renderCheckinPhotoSlot();
+}
+
 async function addPearl() {
   const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
   const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
@@ -19461,7 +19556,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.50-beach-scatter';
+const APP_VERSION = 'v4.0.51-checkin-photo';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
