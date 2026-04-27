@@ -1877,6 +1877,14 @@
   }
   .todo-action:hover { opacity: 1; background: var(--surface2); color: var(--text); }
   .todo-action:active { transform: scale(0.92); }
+  /* V4-1u-d: 할 일에 박힌 시간 라벨 */
+  .todo-sched-label {
+    margin-left: 8px;
+    font-size: 10px;
+    color: var(--accent2);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
   .exec-card-actions button {
     padding: 11px 12px;  /* V3.7: 모바일 터치 타겟 확대 (6px → 11px) */
     background: var(--surface2);
@@ -13489,10 +13497,12 @@ function renderExecute() {
         <div class="exec-section-label">📋 오늘 할 일 · ${todayList.length}개</div>
         <div class="todo-list">`;
       todayList.forEach(task => {
+        const schedLabel = task.scheduledStart ? `<span class="todo-sched-label">⏰ ${task.scheduledStart}${task.scheduledEnd ? `–${task.scheduledEnd}` : ''}</span>` : '';
         html += `
           <div class="todo-item" data-task-id="${task.id}">
             <button class="todo-check" onclick="toggleQuestComplete('${task.id}')" aria-label="완료"></button>
-            <span class="todo-title">${escapeHtml(task.title)}</span>
+            <span class="todo-title">${escapeHtml(task.title)}${schedLabel}</span>
+            <button class="todo-action" onclick="scheduleTaskToTime('${task.id}')" title="일정 박기">⏰</button>
             <button class="todo-action" onclick="editTaskCard('${task.id}')" title="수정">✎</button>
             <button class="todo-action" onclick="demoteFromToday('${task.id}')" title="서랍장으로">↩</button>
             <button class="todo-action" onclick="deleteTask('${task.id}')" title="삭제">✕</button>
@@ -14552,6 +14562,82 @@ async function addV4ScheduleItem() {
   saveState();
   renderExecute();
   showToast('일정 추가됨 📅');
+}
+
+// V4-1u-d: 할 일 → 일정 박기 (V4 비전 10.7) — task.scheduledStart/End + state.todaySchedule push (taskId)
+async function scheduleTaskToTime(taskId) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (!task) return;
+
+  // 이미 박힌 일정 있으면 변경/제거 picker
+  const existing = (state.todaySchedule || []).find(it => it.taskId === taskId && (!it.date || it.date === todayKey()));
+  if (existing) {
+    const action = await showOptionsModal({
+      title: `⏰ ${task.title}`,
+      message: `현재 ${existing.start}–${existing.end}`,
+      options: [
+        { label: '✏️ 시간 변경', value: 'change' },
+        { label: '✕ 일정에서 빼기', value: 'remove' },
+        { label: '취소', value: 'cancel' }
+      ]
+    });
+    if (action === 'remove') {
+      state.todaySchedule = state.todaySchedule.filter(it => it.id !== existing.id);
+      task.scheduledStart = null;
+      task.scheduledEnd = null;
+      saveState();
+      renderExecute();
+      showToast('일정에서 뺐어');
+      return;
+    }
+    if (action !== 'change') return;
+    // change → 아래 흐름으로 이어짐
+  }
+
+  const start = await showInputModal({
+    title: '⏰ 시작 시각',
+    message: '24h 형식 — 예: 14:00',
+    placeholder: '14:00',
+    defaultValue: existing?.start || '',
+    maxLength: 5,
+    okLabel: '다음 →'
+  });
+  if (!start || !/^\d{1,2}:\d{2}$/.test(start.trim())) return;
+  const end = await showInputModal({
+    title: '끝 시각',
+    message: '24h 형식 — 예: 15:00',
+    placeholder: '15:00',
+    defaultValue: existing?.end || '',
+    maxLength: 5,
+    okLabel: '박기'
+  });
+  if (!end || !/^\d{1,2}:\d{2}$/.test(end.trim())) return;
+
+  const startT = start.trim();
+  const endT = end.trim();
+  const todayK = todayKey();
+
+  if (existing) {
+    existing.start = startT;
+    existing.end = endT;
+  } else {
+    if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
+    state.todaySchedule.push({
+      id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      title: task.title,
+      start: startT,
+      end: endT,
+      date: todayK,
+      source: 'task',
+      taskId: taskId,
+      color: _V4_TT_COLORS[Math.floor(Math.random() * _V4_TT_COLORS.length)]
+    });
+  }
+  task.scheduledStart = startT;
+  task.scheduledEnd = endT;
+  saveState();
+  renderExecute();
+  showToast(`⏰ ${startT} 박힘`);
 }
 
 // V4-1w-1: 일정 → .ics 파일 export (V4 비전 10.4 단방향)
@@ -17591,7 +17677,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.31-ics-import';
+const APP_VERSION = 'v4.0.32-task-sched';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
