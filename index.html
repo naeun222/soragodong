@@ -13856,6 +13856,13 @@ function mutateToNewGeneration(strategyId, layer, action) {
   };
   card.generations.push(newGen);
   card.embodimentStatus = 'trying'; // 새 가지 시작 — 다시 trying
+  // V4-fix v3 (사용자 보고): 양생방 카드 시각 갱신
+  // - actionStrategy = 새 generation의 action (현재 시도 중인 행동 표시)
+  // - 진화 트리 자동 펼침 (사용자가 즉시 새 generation 보도록)
+  card.actionStrategy = action || card.actionStrategy;
+  if (!state.preferences) state.preferences = {};
+  if (!state.preferences._strategyTreeOpen) state.preferences._strategyTreeOpen = {};
+  state.preferences._strategyTreeOpen[strategyId] = true;
   saveState();
   return card;
 }
@@ -23547,7 +23554,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.82-diag-force-cite';
+const APP_VERSION = 'v4.0.83-mut-action-update';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
