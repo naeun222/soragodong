@@ -5979,12 +5979,21 @@
     border: 1px solid var(--border);
     color: var(--text-soft);
     border-radius: 10px;
-    padding: 8px 12px;
-    font-size: 12px;
+    padding: 6px 10px;
+    font-size: 11px;
     font-family: inherit;
     cursor: pointer;
     min-height: 40px;
+    /* 사용자 요청 2026-04-28: '뒤로' 위에 / '←' 아래에 — 세로 배치 */
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
+    gap: 1px;
   }
+  .onb-back .onb-back-label { font-size: 11px; }
+  .onb-back .onb-back-arrow { font-size: 13px; opacity: 0.85; }
   .onb-back:active { transform: scale(0.97); }
   .onb-back[hidden] { display: none !important; }
 
@@ -6342,7 +6351,7 @@
     <div class="onb-body" id="onbBody"></div>
     <div class="onb-actions">
       <button class="onb-skip" onclick="onbSkip()">건너뛰기</button>
-      <button class="onb-back" id="onbBackBtn" onclick="onbBack()" title="이전 단계로">← 뒤로</button>
+      <button class="onb-back" id="onbBackBtn" onclick="onbBack()" title="이전 단계로"><span class="onb-back-label">뒤로</span><span class="onb-back-arrow">←</span></button>
       <button class="onb-next" id="onbNextBtn" onclick="onbNext()">다음 →</button>
     </div>
   </div>
@@ -8195,7 +8204,7 @@ const ONBOARDING_STEPS = [
     id: 'chat_intro',
     targetSelector: null,
     title: '대화창에서 할 수 있는 것',
-    body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진해.<br>분위기에 맞게 답해줄게.<br><br>☕ <b>일상 공유</b> — "오늘 점심 마라탕 먹었어"<br>😆 <b>웃긴 에피소드</b> — "오늘 진짜 웃긴 일 있었어..."<br>🔍 <b>가벼운 호기심</b> — "오리너구리는 조상이 오리야 너구리야?"<br>🌟 <b>자랑·뿌듯</b> — "발표 끝났어! 잘 마무리함 ㅎㅎ"<br><br>🌀 <b>와다다 풀기</b> — "기쁘기도 하고 슬프기도 하고..."<br>🤔 <b>의견 듣기</b> — "이 옷 살까 말까ㅋㅋ"<br><br>🚧 <b>막혔을 때</b> — "내일 발표인데 자료 하나도 없어. 시작도 못 하겠어"<br>💧 <b>자책 흐를 때</b> — "방금 회의에서 말 더듬었어. 다들 별로라고 생각할 듯"<br>🔁 <b>패턴 의심</b> — "또 마감 임박해서야 시작이네. 왜?"<br><br>📔 <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장',
+    body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진해.<br>분위기에 맞게 답해줄게.<br><br>☕ <b>일상 공유</b> — "오늘 점심 마라탕 먹었어"<br>😆 <b>웃긴 에피소드</b> — "오늘 진짜 웃긴 일 있었어..."<br>🔍 <b>가벼운 호기심</b> — "오리너구리는 조상이 오리야 너구리야?"<br>🌟 <b>자랑·뿌듯</b> — "발표 끝났어! 잘 마무리함 ㅎㅎ"<br><br>🌀 <b>와다다 풀기</b> — "기쁘기도 하고 슬프기도 하고..."<br>🤔 <b>의견 듣기</b> — "이 옷 살까 말까ㅋㅋ"<br><br>🚧 <b>막혔을 때</b> — "내일 발표인데 자료 하나도 없어. 시작도 못 하겠어"<br>💧 <b>자책 흐를 때</b> — "방금 회의에서 말 더듬었어. 다들 별로라고 생각할 듯"<br>🔁 <b>패턴 의심</b> — "또 마감 임박해서야 시작이네. 왜?"<br><br>📅 <b>일정 추가</b> — "내일 3시 회의 잡아줘" / "8시 운동 가자"<br>📔 <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장',
     waitFor: 'next'
   },
   {
@@ -8404,7 +8413,7 @@ const ONBOARDING_STEPS = [
     id: 'attempt_result_demo',
     targetSelector: null,
     title: '직접 해보자',
-    body: '결과 체크 창이 떴지?<br>여기서 <b>\'👍 작동했어\'</b>를 눌러볼까?<br><br><span class="small">실제로는 다음날 자동으로 떠. \'⏸ 아직 결과 안 나왔어\'를 누르면 더 미룰 수도 있어.</span>',
+    body: '결과 체크 창이 떴지?<br>여기서 <b>\'👍 해결 됐어\'</b>를 눌러볼까?<br><br><span class="small">실제로는 다음날 자동으로 떠. \'⏸ 아직 결과 안 나왔어\'를 누르면 더 미룰 수도 있어.</span>',
     waitFor: 'next',
     manualAdvance: true,
     dimBackground: false,
@@ -8906,12 +8915,111 @@ const ONBOARDING_STEPS = [
     manualAdvance: true
   },
   {
-    id: 'galpi_intro',
-    targetSelector: null,
+    id: 'galpi_sub_intro',
+    targetSelector: '[onclick="showArchiveDecisions()"]',
     title: '🌀 마법의 소라고동 + 리뷰',
-    body: '<b>⚖️ 마법의 소라고동</b> — 큰 결정 (이직·이별·진로) 14일 동안 숙성하며 매일 다른 각도로 생각.<br><br><b>🌙 주간/월간/분기/연간 리뷰</b> — 네 페이스에 자동.<br>· 분기 리뷰: ▶ Stories Replay (Spotify Wrapped식) 가능<br>· 진주 음악 슬라이드마다 자동 재생',
+    body: '마법의 소라고동과 리뷰 모음이 있어.<br><br>마법의 소라고동을 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'magic_room_intro',
+    targetSelector: 'button[onclick="startNewDecision()"]',
+    title: '⚖️ 마법의 소라고동',
+    body: '큰 결정(도전, 사랑, 진로)을 후회하지 않고 할 수 있게 도와주는 방이야.<br><br>새로운 결정 시작을 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'magic_modal_seeded',
+    targetSelector: '.input-modal-btn.ok',
+    title: '예시 입력해뒀어',
+    body: '\'그에게 용기를 내볼까 vs 말까\' — 예시로 채워뒀어.<br><br>시작 버튼을 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true,
+    aboveModal: true
+  },
+  {
+    id: 'magic_step1_start',
+    targetSelector: '.step-card.active button.btn-primary.decision',
+    title: 'STEP 1 — 시작',
+    body: '첫 단계 시작 버튼을 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'magic_step1_filled',
+    targetSelector: 'button[onclick*="askAIForStep"]',
+    title: '지금 상황',
+    body: '예시도 채워뒀어.<br><br>🐚 <b>소라고동에게 도움 받기</b> — 이 버튼이 아주 유용해. 나중에 꼭 한 번 눌러봐. 도움 될 거야.',
     waitFor: 'next',
     dimBackground: false
+  },
+  {
+    id: 'magic_step1_complete',
+    targetSelector: 'button[onclick*="saveTextStep"]',
+    title: '완료',
+    body: '완료 버튼을 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'magic_unlock_explain',
+    targetSelector: null,
+    title: '🌙 마법의 시간',
+    body: '3일 후, 7일 후, 14일 후 다시 와서 \'다른 각도\'로 생각해볼 수 있어. 그렇게 가장 현명한 결정을 도와주는 거지.<br><br>잠금이 풀리는 날엔 홈화면에 알림이 떠.',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'back_to_galpi_chip_1',
+    targetSelector: '[data-cat="galpi"]',
+    title: '🌀 마법·리뷰로 돌아가기',
+    body: '마법·리뷰 칩을 다시 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'click_reviews',
+    targetSelector: '[onclick="showArchiveReviews()"]',
+    title: '🌙 리뷰 모음',
+    body: '이번엔 리뷰 모음을 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'annual_stories_show',
+    targetSelector: '.annual-stories-card',
+    title: '🌟 연간 Stories',
+    body: '같이 보자.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
+  },
+  {
+    id: 'annual_stories_done',
+    targetSelector: '[data-cat="galpi"]',
+    title: '🌀 마법·리뷰로 돌아오기',
+    body: 'Stories 다 봤으면 닫고, 마법·리뷰 칩으로 돌아와.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    manualAdvance: true
   },
   {
     id: 'reflection_intro',
@@ -9796,10 +9904,13 @@ function renderDecisionsList() {
 }
 
 async function startNewDecision() {
+  // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드면 예시 시드 입력
+  const isAutoFix = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
   const title = await showInputModal({
     title: '큰 결정 ⚖️',
     message: '14일 동안 천천히 익힐 거야.\n어떤 결정인지 한 줄로.',
-    placeholder: '예: 박사 그만둘까 vs 계속할까',
+    placeholder: '예: 창업할까 공기업 갈까 / 그에게 용기를 내볼까',
+    defaultValue: isAutoFix ? '그에게 용기를 내볼까 vs 말까' : '',
     okLabel: '시작'
   });
   if (!title || !title.trim()) return;
@@ -9932,6 +10043,11 @@ function editStep(decisionId, stepId) {
 
 function openTextStep(decision, step, meta) {
   const screen = document.getElementById('screen-decision-detail');
+  // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드면 '지금 상황' step 예시 시드 prefill
+  const isAutoFix = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
+  if (isAutoFix && step.id === 'situation' && !step.content) {
+    step.content = '사랑에 관한 거. 구체적으로 썸을 타고 있는데 상대 반응이 아리까리해. 내가 더 다가가도 되는지, 지금이 그 타이밍인지 아닌지 잘 모르겠어. 거절당하면 어색해질까 봐 두렵기도 하고, 안 하면 후회할 것 같기도 하고.';
+  }
   let hint = '';
   if (step.id === 'widen') hint = '💡 진짜로 두 가지뿐일까? "둘 다", "둘 다 아님", 새로운 제3의 길, 시간차 두기 등을 적어봐.';
   else if (step.id === 'reality') hint = '💡 가정을 검증할 수 있는 작은 실험. 그 분야 사람에게 연락하기. 짧은 시도. 무엇으로 가설을 깨뜨릴 수 있을까?';
@@ -15912,7 +16028,7 @@ function determineEmbodimentPath(card) {
 // returns: 'worked' | 'meh' | 'didnt' | 'skipped' | 'defer' | null (사용자 취소)
 async function showAttemptResultModal(strategyName) {
   const options = [
-    { label: '👍 작동했어',    value: 'worked' },
+    { label: '👍 해결 됐어',    value: 'worked' },
     { label: '🤔 그저 그래',    value: 'meh' },
     { label: '👎 안 통했어',    value: 'didnt' },
     { label: '😅 못 시도했어',  value: 'skipped' },
@@ -21408,14 +21524,17 @@ async function testSeedV4Data() {
         diagnoses: {},
         trackerStats: [{ name: '러닝', kind: 'numeric', delta: 5, unit: 'km' }] } }
   ];
+  // 사용자 요청 2026-04-28: 4 분기 모두 작년(2025) — 연간 stories 풍부하게
+  const annualYear = today.getFullYear() - 1;
   for (let q = 1; q <= 4; q++) {
-    const qDate = new Date(today.getFullYear(), today.getMonth() - q * 3, 15);
-    const quarterKey = getQuarterKey(qDate);
+    const quarterKey = `${annualYear}-Q${q}`;
+    // Q1 = 작년 1-3월 = today기준 약 15-13개월 전, Q4 = 작년 10-12월 = 약 6-4개월 전
+    const monthsAgo = (12 - q * 3) + 4;  // Q1: 13개월, Q2: 10, Q3: 7, Q4: 4
     const tone = quarterlyTones[q - 1];
     state.quarterlyReviews.push({
       id: 'qr_seed_' + q,
       quarterKey,
-      completedAt: new Date(today.getTime() - (q * 90 - 7) * 86400000).toISOString(),
+      completedAt: new Date(today.getTime() - monthsAgo * 30 * 86400000).toISOString(),
       stats: { ...tone.stats, quarterKey },
       summary: `이 분기, ${tone.focus}에 무게가 실렸어. ${tone.growth}.`,
       sections: [
@@ -25549,6 +25668,28 @@ function renderArchiveReviews() {
     new Date(b.completedAt) - new Date(a.completedAt)
   );
 
+  // 사용자 요청 2026-04-28: 한 해 분기 4개 모두 있으면 '🌟 연간 Stories' 카드 맨 위에 노출
+  const yearGroups = {};
+  (state.quarterlyReviews || []).forEach(r => {
+    const yr = (r.quarterKey || '').split('-')[0];
+    if (!yr) return;
+    if (!yearGroups[yr]) yearGroups[yr] = 0;
+    yearGroups[yr]++;
+  });
+  const fullYears = Object.keys(yearGroups).filter(yr => yearGroups[yr] >= 4).sort().reverse();
+  let annualCardHtml = '';
+  if (fullYears.length > 0) {
+    annualCardHtml = fullYears.map(yr => `
+      <div class="timeline-day annual-stories-card" data-year="${yr}" onclick="event.stopPropagation(); openAnnualStories(${yr})" style="cursor:pointer; background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(168,157,200,0.18)); border: 1px solid var(--accent);">
+        <div class="timeline-day-date">🌟 ${yr}년 연간 Stories</div>
+        <div class="timeline-day-summary" style="font-family: 'Gowun Batang', serif; font-size: 14px;">
+          한 해를 한 편의 이야기로 — 분기별 흐름 + 진주 음악 배경 + Spotify Wrapped식 슬라이드.
+        </div>
+        <div class="timeline-day-meta"><span>▶ 같이 보자</span></div>
+      </div>
+    `).join('');
+  }
+
   if (all.length === 0) {
     container.innerHTML = `<div class="timeline-empty">
       <div class="icon">🌙</div>
@@ -25559,7 +25700,7 @@ function renderArchiveReviews() {
     return;
   }
 
-  container.innerHTML = all.map((r, idx) => {
+  container.innerHTML = annualCardHtml + all.map((r, idx) => {
     const date = new Date(r.completedAt);
     const dateStr = date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
     const typeLabel = r.type === 'weekly' ? '🌙 주간' : r.type === 'monthly' ? '📅 월간' : '📊 분기';
@@ -26991,7 +27132,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.118-magic-rename';
+const APP_VERSION = 'v4.0.119-magic-flow';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
