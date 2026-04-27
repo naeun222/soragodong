@@ -9019,7 +9019,31 @@ function onbFinish() {
   onbCleanupListeners();
   window._onbTutorialMode = false;
 
-  // V3.13: 튜토리얼에서 만든 데이터 정리 (시작 시간 이후)
+  // 사용자 요청 2026-04-28: 테스터 모드 ON 상태였으면 backup 복원으로 한 방 정리 (filter cleanup 중복 X)
+  if (state.preferences && state.preferences.testerMode && _testerModeBackupState) {
+    Object.keys(state).forEach(k => delete state[k]);
+    Object.assign(state, _testerModeBackupState);
+    _testerModeBackupState = null;
+    if (typeof refreshTesterModeUI === 'function') refreshTesterModeUI();
+    state.hasSeenWelcomeTutorial = true;
+    state.hasSeenV3Tour = true;
+    _onbStartTime = null;
+    delete window._onbCFBackup;
+    delete window._onbModesBackup;
+    delete window._onbPeriodStartBackup;
+    saveState(true);
+    const ov = document.getElementById('onbOverlay');
+    if (ov) { ov.classList.remove('active'); ov.style.display = 'none'; }
+    setTimeout(() => location.reload(), 400);
+    return;
+  }
+  // testerMode flag만 있고 backup 없는 경우 — flag만 끄기
+  if (state.preferences && state.preferences.testerMode) {
+    state.preferences.testerMode = false;
+    if (typeof refreshTesterModeUI === 'function') refreshTesterModeUI();
+  }
+
+  // V3.13: 튜토리얼에서 만든 데이터 정리 (시작 시간 이후) — testerMode OFF 상태에서 시작한 케이스
   if (_onbStartTime) {
     const startISO = new Date(_onbStartTime).toISOString();
     const startMs = _onbStartTime;
@@ -9084,6 +9108,7 @@ function onbFinish() {
 
   state.hasSeenWelcomeTutorial = true;
   state.hasSeenV3Tour = true;
+
   saveState();
   const ov = document.getElementById('onbOverlay');
   if (ov) {
