@@ -1,1 +1,1 @@
-v4.0.38-reflection-chat
+v4.0.39-reflection-input-fix

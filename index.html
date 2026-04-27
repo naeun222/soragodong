@@ -2762,17 +2762,10 @@
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
 
-  /* V4-1j-b: 숙고 채팅 별도 화면 */
-  #screen-reflection {
-    display: flex !important;
-    flex-direction: column;
-    padding: 16px;
-    height: calc(100vh - 76px);
-    box-sizing: border-box;
-  }
+  /* V4-1j-b: 숙고 채팅 별도 화면 — chat-input-bar 패턴 (fixed bottom) */
   .reflection-screen-header {
     display: flex; align-items: center; gap: 10px;
-    padding-bottom: 12px;
+    padding: 8px 0 12px;
     border-bottom: 1px solid var(--border);
     margin-bottom: 8px;
   }
@@ -2789,64 +2782,80 @@
   .reflection-screen-back:active { background: var(--surface2); }
   .reflection-screen-q {
     font-family: 'Gowun Batang', serif;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text);
-    line-height: 1.6;
+    line-height: 1.5;
     flex: 1;
     word-break: keep-all;
+    min-width: 0;
   }
   .reflection-chat-area {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 4px;
+    padding: 8px 0 160px;  /* input bar 자리 확보 (76 탭바 + 56 input + 여유 28) */
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-height: 200px;
   }
+  /* fixed bottom input bar — chat-input-bar와 동일 패턴 (V3.10 visualViewport) */
   .reflection-input-bar {
+    position: fixed;
+    bottom: 76px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 520px;
+    padding: 10px 16px;
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
+    z-index: 50;
+    display: none;  /* default hidden — #screen-reflection.active일 때만 표시 (JS) */
+    box-sizing: border-box;
+  }
+  .reflection-input-bar.active { display: block; }
+  .reflection-input-wrap {
     display: flex;
     gap: 8px;
-    padding: 10px 0 8px;
-    border-top: 1px solid var(--border);
     align-items: flex-end;
-  }
-  .reflection-input-bar textarea {
-    flex: 1;
-    min-height: 40px;
-    max-height: 140px;
-    padding: 10px 12px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 18px;
+    padding: 6px 6px 6px 14px;
+  }
+  .reflection-input-wrap textarea {
+    flex: 1;
+    min-height: 36px;
+    max-height: 140px;
+    padding: 8px 4px;
+    background: transparent;
+    border: none;
     color: var(--text);
     font-size: 14px;
     font-family: inherit;
     resize: none;
+    outline: none;
   }
-  .reflection-input-bar .send-btn {
+  .reflection-input-wrap .send-btn {
     flex-shrink: 0;
-    width: 40px; height: 40px;
+    width: 36px; height: 36px;
     border-radius: 50%;
     background: linear-gradient(135deg, rgba(98,165,200,0.30), rgba(139,126,196,0.20));
     border: 1px solid rgba(98,165,200,0.45);
     color: #c5e0f0;
-    font-size: 16px;
+    font-size: 14px;
     cursor: pointer;
+    align-self: flex-end;
   }
-  .reflection-input-bar .send-btn:active { transform: scale(0.95); }
-  .reflection-resolve-row {
-    padding-top: 8px;
-    text-align: center;
-  }
+  .reflection-input-wrap .send-btn:active { transform: scale(0.95); }
   .reflection-resolve-btn {
+    flex-shrink: 0;
     background: rgba(98,165,200,0.12);
     border: 1px solid rgba(98,165,200,0.35);
     color: #a3d2e8;
-    padding: 8px 18px;
+    padding: 6px 12px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: 11px;
     font-family: inherit;
     cursor: pointer;
+    white-space: nowrap;
   }
   .reflection-resolve-btn:active { background: rgba(98,165,200,0.22); }
 
@@ -4452,14 +4461,15 @@
       <div class="reflection-screen-header">
         <button class="reflection-screen-back" onclick="showScreen('home')">←</button>
         <div class="reflection-screen-q" id="reflectionScreenQ"></div>
+        <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론</button>
       </div>
       <div class="reflection-chat-area" id="reflectionChatArea"></div>
-      <div class="reflection-input-bar">
+    </div>
+    <!-- 숙고 입력바 — fixed bottom (V3 chat-input-bar 패턴 따라). #screen-reflection.active 일 때만 표시 -->
+    <div class="reflection-input-bar" id="reflectionInputBar">
+      <div class="reflection-input-wrap">
         <textarea class="chat-textarea" id="reflectionInput" placeholder="천천히, 한 각도씩..." rows="1"></textarea>
         <button class="send-btn" onclick="sendReflectionChat()">↑</button>
-      </div>
-      <div class="reflection-resolve-row">
-        <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론 내고 닫기</button>
       </div>
     </div>
 
@@ -9449,6 +9459,9 @@ function showScreen(name) {
   if (nav) nav.classList.add('active');
   target && target.scrollTo(0, 0);
   document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';
+  // V4-1j-b: 숙고 입력 바 (fixed bottom)
+  const reflInputBar = document.getElementById('reflectionInputBar');
+  if (reflInputBar) reflInputBar.classList.toggle('active', name === 'reflection');
   // V3.13.x: 헤더는 항상 표시 (튜토리얼 sync_dot step 등 의존). 배너만 홈에 한정.
   const bannerEl = document.getElementById('updateBanner');
   if (bannerEl && name !== 'home') bannerEl.style.display = 'none';
@@ -18231,7 +18244,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.38-reflection-chat';
+const APP_VERSION = 'v4.0.39-reflection-input-fix';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
