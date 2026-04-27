@@ -2047,6 +2047,44 @@
     font-weight: 500;
   }
 
+  /* V4-1l-a: 도서관 5 카테고리 칩 (가로 스크롤) */
+  .library-cats {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+    padding: 2px 0 6px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .library-cats::-webkit-scrollbar { display: none; }
+  .lib-cat-chip {
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 9px 14px;
+    border-radius: 18px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
+    min-height: 36px;
+  }
+  .lib-cat-chip:active { transform: scale(0.96); }
+  .lib-cat-chip.active {
+    background: linear-gradient(135deg, rgba(201,169,110,0.20), rgba(139,126,196,0.12));
+    border-color: rgba(201,169,110,0.45);
+    color: var(--accent2);
+    font-weight: 500;
+  }
+  .library-cat-view { animation: lib-cat-fade 0.18s ease; }
+  @keyframes lib-cat-fade {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
   /* V3.8: 토픽 카드 (대화 챕터별 정리) */
   .topic-cards-section {
     margin-bottom: 24px;
@@ -3703,50 +3741,63 @@
       </div>
     </div>
 
-    <!-- ARCHIVE -->
+    <!-- LIBRARY (V4-1l-a: 인생 도서관 5 카테고리) -->
     <div class="screen" id="screen-archive">
-      <div class="screen-title">아카이브 📚</div>
-      <div class="screen-sub">너의 일기, 패턴, 좋아하는 것들.</div>
+      <div class="screen-title">📚 인생 도서관</div>
+      <div class="screen-sub">너의 일기, 패턴, 좋아하는 것들 — 다섯 칸.</div>
 
-      <!-- Quick access to other archives -->
-      <div class="archive-quick-row">
-        <button class="archive-quick-btn" onclick="showArchiveReviews()">
-          <span class="aq-icon">🌙</span>
-          <span class="aq-label">리뷰 모음</span>
-          <span class="aq-count" id="aqReviewCount"></span>
-        </button>
-        <button class="archive-quick-btn" onclick="showArchiveDecisions()">
-          <span class="aq-icon">⚖️</span>
-          <span class="aq-label">갈피의 방</span>
-          <span class="aq-count" id="aqDecisionCount"></span>
-        </button>
+      <!-- V4-1l-a: 5 카테고리 칩 (가로 스크롤) -->
+      <div class="library-cats">
+        <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')">📔 일기·대화</button>
+        <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')">🧬 양생방</button>
+        <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')">✨ 깨달음</button>
+        <button class="lib-cat-chip"        data-cat="pearls"    onclick="switchLibraryCat('pearls')">🔮 진주</button>
+        <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')">🌀 갈피·리뷰</button>
       </div>
 
-      <!-- V3.8: 2 렌즈 그루핑 (📜 대화 / ✨ 깨달음) -->
-      <div class="lens-tabs">
-        <button class="lens-tab active" data-lens="conversations" onclick="switchLens('conversations')">📜 대화</button>
-        <button class="lens-tab" data-lens="wisdom" onclick="switchLens('wisdom')">✨ 깨달음</button>
-      </div>
-
-      <!-- 검색바 (모든 렌즈에서 작동) -->
+      <!-- 검색바 (모든 카테고리에서 작동) -->
       <div id="archiveSearchBar" style="margin-bottom:16px;">
-        <input type="text" id="archiveSearch" placeholder="🔎 키워드, 날짜로 검색..." 
-               oninput="searchArchive()" 
+        <input type="text" id="archiveSearch" placeholder="🔎 키워드, 날짜로 검색..."
+               oninput="searchArchive()"
                style="width:100%; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; font-family:inherit;">
       </div>
 
-      <!-- V3.8: 렌즈 뷰 — 2개로 통합 -->
-      <div id="lensConversations" class="lens-view">
-        <!-- 토픽 카드 + 타임라인 같이 -->
+      <!-- 📔 일기·대화 -->
+      <div id="libDiary" class="library-cat-view">
         <div id="lensTopicCards"></div>
         <div id="lensTimeline"></div>
       </div>
-      <div id="lensWisdom" class="lens-view" style="display:none;">
-        <!-- 사용자 저장 깨달음 + 인사이트 + 전략 + 진주 -->
+      <!-- 🧬 양생방 -->
+      <div id="libYangsaeng" class="library-cat-view" style="display:none;">
+        <div id="lensStrategies"></div>
+      </div>
+      <!-- ✨ 깨달음 -->
+      <div id="libInsights" class="library-cat-view" style="display:none;">
         <div id="lensArchive"></div>
         <div id="lensInsights"></div>
-        <div id="lensStrategies"></div>
+      </div>
+      <!-- 🔮 진주 -->
+      <div id="libPearls" class="library-cat-view" style="display:none;">
         <div id="lensPearls"></div>
+      </div>
+      <!-- 🌀 갈피·리뷰 -->
+      <div id="libGalpi" class="library-cat-view" style="display:none;">
+        <div class="archive-quick-row" style="grid-template-columns:1fr 1fr;">
+          <button class="archive-quick-btn" onclick="showArchiveDecisions()">
+            <span class="aq-icon">⚖️</span>
+            <span class="aq-label">갈피의 방</span>
+            <span class="aq-count" id="aqDecisionCount"></span>
+          </button>
+          <button class="archive-quick-btn" onclick="showArchiveReviews()">
+            <span class="aq-icon">🌙</span>
+            <span class="aq-label">리뷰 모음</span>
+            <span class="aq-count" id="aqReviewCount"></span>
+          </button>
+        </div>
+        <div style="margin-top:14px; font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">
+          큰 결정은 ⚖️ 갈피의 방에서 14일 숙성.<br>
+          주간·월간 회고는 🌙 리뷰 모음에서 다시 보기.
+        </div>
       </div>
     </div>
 
@@ -3997,7 +4048,7 @@
     <div class="nav-item" data-screen="chat" onclick="showScreen('chat')"><div class="nav-icon">🐚</div><div class="nav-label">대화</div></div>
     <div class="nav-item" data-screen="execute" onclick="showScreen('execute')"><div class="nav-icon">🚀</div><div class="nav-label">실행</div></div>
     <div class="nav-item" data-screen="model" onclick="showScreen('model')"><div class="nav-icon">🔮</div><div class="nav-label">나</div></div>
-    <div class="nav-item" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">📚</div><div class="nav-label">아카이브</div></div>
+    <div class="nav-item" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">📚</div><div class="nav-label">도서관</div></div>
   </div>
 </div>
 
@@ -11269,14 +11320,23 @@ function declineVaultProposal(msgIdx, proposalId) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// V3.8 ARCHIVE — 2 Lens 그루핑 (📜 대화 / ✨ 깨달음)
+// V4-1l-a LIBRARY — 5 카테고리 (📔 일기·대화 / 🧬 양생방 / ✨ 깨달음 / 🔮 진주 / 🌀 갈피·리뷰)
+// V3 lens-tabs (conversations/wisdom)에서 5 카테고리 칩으로 확장.
 // ═══════════════════════════════════════════════════════════════
 
-let _currentLens = 'conversations';
+const _LIB_CAT_TO_VIEW = {
+  diary:     'libDiary',
+  yangsaeng: 'libYangsaeng',
+  insights:  'libInsights',
+  pearls:    'libPearls',
+  galpi:     'libGalpi'
+};
+
+let _currentLens = 'diary';
 let _archiveSearchQuery = '';
 
 function renderArchive() {
-  // Render all sub-views; switchLens shows/hides
+  // 모든 하위 뷰 렌더; switchLibraryCat이 표시/숨김 처리
   renderLensTopicCards();
   renderLensTimeline();
   renderLensArchive();
@@ -11286,19 +11346,25 @@ function renderArchive() {
   updateArchiveQuickCounts();
 }
 
-function switchLens(lens) {
-  _currentLens = lens;
-  document.querySelectorAll('.lens-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.lens === lens);
+function switchLibraryCat(cat) {
+  if (!_LIB_CAT_TO_VIEW[cat]) cat = 'diary';
+  _currentLens = cat;
+  document.querySelectorAll('.lib-cat-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.cat === cat);
   });
-  // V3.8: 2 렌즈 (conversations / wisdom)
-  const conv = document.getElementById('lensConversations');
-  const wisdom = document.getElementById('lensWisdom');
-  if (conv) conv.style.display = lens === 'conversations' ? 'block' : 'none';
-  if (wisdom) wisdom.style.display = lens === 'wisdom' ? 'block' : 'none';
-  // 검색바는 모든 렌즈에서 노출
+  Object.entries(_LIB_CAT_TO_VIEW).forEach(([k, vid]) => {
+    const el = document.getElementById(vid);
+    if (el) el.style.display = (k === cat) ? '' : 'none';
+  });
+  // 검색바는 모든 카테고리에서 노출
   const searchBar = document.getElementById('archiveSearchBar');
   if (searchBar) searchBar.style.display = 'block';
+}
+
+// V3 호환: 옛 switchLens('conversations'|'wisdom') 호출 지원 (튜토리얼 등 외부 참조)
+function switchLens(lens) {
+  const map = { conversations: 'diary', wisdom: 'insights' };
+  switchLibraryCat(map[lens] || lens);
 }
 
 function searchArchive() {
@@ -15824,7 +15890,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.13-chapter-cats-8';
+const APP_VERSION = 'v4.0.14-library-5cats';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
