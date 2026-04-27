@@ -5801,7 +5801,7 @@
   }
   /* 모달 위로 떠야 하는 spotlight (modal 안 target) */
   .onb-spotlight.above-modal {
-    z-index: 9950 !important;
+    z-index: 10500 !important;
   }
   @keyframes onbPulseNoDim {
     0%, 100% { box-shadow: 0 0 16px 4px rgba(201,169,110,0.6), 0 0 0 2px rgba(201,169,110,0.2); }
@@ -5831,9 +5831,9 @@
     animation: none !important;
     cursor: grabbing;
   }
-  /* 모달 위로 떠야 하는 step (예: diary_walkthrough) — input/options modal(9900) 위 */
+  /* 모달 위로 떠야 하는 step — input/options modal(9900) + crystallize(10000) 위 */
   .onb-coachmark.above-modal {
-    z-index: 9950 !important;
+    z-index: 10500 !important;
     top: 16px !important;
     bottom: auto !important;
     left: 50% !important;
@@ -8656,12 +8656,12 @@ function onbPositionStep(step, retryCount) {
   if (!stepNum || !titleEl || !bodyEl || !nextBtn || !spotlight || !coachmark || !mask) return;
   // 뒤로 버튼 — step 0에선 숨김
   if (backBtn) backBtn.hidden = (_onbStep === 0);
-  // 모달 위로 떠야 하는 step (예: diary_walkthrough — picker 모달이 위에 떠서 가림)
-  // 부모 .onb-overlay (z-index 9000) 의 stacking context가 자식의 z-index를 가두므로 부모도 같이 올림
+  // 모달 위로 떠야 하는 step (예: diary_walkthrough / attempt_result_demo)
+  // 부모 .onb-overlay 의 stacking context가 자식의 z-index를 가두므로 부모도 같이 올림 (crystallize 10000 위로)
   coachmark.classList.toggle('above-modal', !!step.aboveModal);
   spotlight.classList.toggle('above-modal', !!step.aboveModal);
   const ovEl = document.getElementById('onbOverlay');
-  if (ovEl) ovEl.style.zIndex = step.aboveModal ? '9950' : '9000';
+  if (ovEl) ovEl.style.zIndex = step.aboveModal ? '10500' : '9000';
 
   stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
   titleEl.textContent = step.title;
