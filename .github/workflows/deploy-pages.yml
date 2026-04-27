@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, v4-dev]
+    branches: [main]  # V3 prod만. V4(v4-dev)는 Vercel preview 단독 (gh-pages 배포 X).
   workflow_dispatch:
 
 permissions:
