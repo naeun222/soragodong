@@ -9914,7 +9914,8 @@ function pickPhotoFile() {
   });
 }
 
-async function fileToResizedDataUrl(file, maxSize = 1024) {
+// V4-fix: 사진 화질 향상 (Instagram식) — quality 0.7 → 0.85
+async function fileToResizedDataUrl(file, maxSize = 1024, quality = 0.85) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -9932,8 +9933,11 @@ async function fileToResizedDataUrl(file, maxSize = 1024) {
         }
         const canvas = document.createElement('canvas');
         canvas.width = width; canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7));
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
       };
       img.onerror = reject;
       img.src = e.target.result;
@@ -9943,17 +9947,21 @@ async function fileToResizedDataUrl(file, maxSize = 1024) {
   });
 }
 
-async function makeSquareThumb(dataUrl, size = 200) {
+// V4-fix: 정사각 thumb 화질 향상 (인증샷 검증용은 작은 size로 호출됨, 기본 quality 0.85)
+async function makeSquareThumb(dataUrl, size = 200, quality = 0.85) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       const m = Math.min(img.width, img.height);
       const sx = (img.width - m) / 2;
       const sy = (img.height - m) / 2;
-      canvas.getContext('2d').drawImage(img, sx, sy, m, m, 0, 0, size, size);
-      resolve(canvas.toDataURL('image/jpeg', 0.5));
+      ctx.drawImage(img, sx, sy, m, m, 0, 0, size, size);
+      resolve(canvas.toDataURL('image/jpeg', quality));
     };
     img.src = dataUrl;
   });
@@ -10230,10 +10238,9 @@ function renderBeach() {
     const scatterStyle = (s, idx) => {
       if (!isAllTab) return '';
       const seed = (s._id ? s._id.split('').reduce((a,c) => a + c.charCodeAt(0), 0) : idx) * 9301 + 49297;
-      const rot = ((seed % 21) - 10);            // -10° ~ +10°
-      const tx = (((seed * 7) % 17) - 8);        // -8px ~ +8px
-      const ty = (((seed * 13) % 13) - 6);       // -6px ~ +6px
-      return ` style="transform: translate(${tx}px, ${ty}px) rotate(${rot}deg);"`;
+      const tx = (((seed * 7) % 13) - 6);        // -6px ~ +6px
+      const ty = (((seed * 13) % 11) - 5);       // -5px ~ +5px
+      return ` style="margin-left:${tx}px; margin-top:${ty}px;"`;
     };
     grid.innerHTML = dnaSectionHtml +
       `<div class="beach-tier-grid${isAllTab ? ' scatter' : ''}">` +
@@ -14295,20 +14302,35 @@ function switchLens(lens) {
   switchLibraryCat(map[lens] || lens);
 }
 
-// V4-1p: 그리드 ↔ 타임라인 토글 (모든 카테고리 공통). 카테고리별 그리드 의미 다름.
+// V4-1p: 그리드 ↔ 타임라인 토글
+// V4-fix (audit HIGH #2): active cat의 lens만 재렌더 (전체 7 lens X)
 function switchLibraryView(view) {
   if (view !== 'grid' && view !== 'timeline') view = 'grid';
   _libView = view;
   document.querySelectorAll('.lib-view-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.view === view);
   });
-  renderArchive();
-  // V4-fix #6: 일기·대화 grid 뷰에서는 캘린더만 (lensTopicCards / lensTimeline 숨김)
-  const tc = document.getElementById('lensTopicCards');
-  const tl = document.getElementById('lensTimeline');
-  const calOnly = (_libView === 'grid' && _currentLens === 'diary');
-  if (tc) tc.style.display = calOnly ? 'none' : '';
-  if (tl) tl.style.display = calOnly ? 'none' : '';
+  _renderActiveLens();
+  if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
+}
+
+// V4-fix (audit HIGH #2): 카테고리별 active lens만 재렌더 (전체 7 lens 호출 X — 비효율 fix)
+function _renderActiveLens() {
+  const cat = _currentLens;
+  if (cat === 'diary') {
+    if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
+    if (typeof renderLensTopicCards === 'function') renderLensTopicCards();
+    if (typeof renderLensTimeline === 'function') renderLensTimeline();
+  } else if (cat === 'yangsaeng') {
+    if (typeof renderLensStrategies === 'function') renderLensStrategies();
+  } else if (cat === 'insights') {
+    if (typeof renderLensArchive === 'function') renderLensArchive();
+    if (typeof renderLensInsights === 'function') renderLensInsights();
+  } else if (cat === 'pearls') {
+    if (typeof renderLensPearls === 'function') renderLensPearls();
+  }
+  // galpi: 정적 — quick-counts만
+  if (typeof updateArchiveQuickCounts === 'function') updateArchiveQuickCounts();
 }
 
 // V4-1q: 깨달음 태그 칩 필터 (단일 선택, 같은 태그 다시 누르면 해제)
@@ -21237,7 +21259,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.64-stories';
+const APP_VERSION = 'v4.0.65-perf-photo-scatter';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
