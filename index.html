@@ -8882,24 +8882,30 @@ function onbPositionStep(step, retryCount) {
     setTimeout(() => tryFill(15), 100);
   }
   // 결과 체크 모달 데모 (튜토리얼 attempt_result_demo step)
-  // 사용자 요청 2026-04-28: 가장 최근 소라의 부름 strategy로 매핑 + worked → 실제 recordStrategyAttempt (DNA 매핑)
+  // 사용자 요청 2026-04-28: 모달 제목 = 방금 해낸 소라의 부름 (가장 최근 completed mission). worked → 실제 recordStrategyAttempt (DNA 매핑)
   if (step.demoAttemptResult) {
     setTimeout(async () => {
       if (typeof showAttemptResultModal !== 'function') return;
       try {
-        // 가장 최근 strategyId가 있는 mission 찾기 (createdAt 내림차순)
-        const recentMission = (state.missions || [])
-          .filter(m => m.strategyId)
-          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0];
-        const card = recentMission ? getStrategyCard(recentMission.strategyId) : null;
-        const cardTitle = card?.title || '마감 직전 폭발력 신뢰';
-        const status = await showAttemptResultModal(cardTitle);
+        // 방금 해낸 소라의 부름 = 가장 최근 completed mission (completedAt 내림차순)
+        const recentCompleted = (state.missions || [])
+          .filter(m => m.status === 'completed')
+          .sort((a, b) => new Date(b.completedAt || b.completedDate || 0) - new Date(a.completedAt || a.completedDate || 0))[0];
+        // fallback: pending strategy mission
+        const fallback = !recentCompleted
+          ? (state.missions || [])
+              .filter(m => m.strategyId)
+              .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0]
+          : null;
+        const targetMission = recentCompleted || fallback;
+        const modalTitle = targetMission?.title || '마감 직전 폭발력 신뢰';
+        const status = await showAttemptResultModal(modalTitle);
         if (status && window._onbTutorialMode && _onbStep === stepIdxAtRender) {
-          // worked → 실제 recordStrategyAttempt 호출 (shell이 있으면 DNA 조각으로 매핑)
-          if (status === 'worked' && recentMission && typeof recordStrategyAttempt === 'function') {
-            try { recordStrategyAttempt(recentMission.strategyId, 'worked', recentMission.id); } catch (e) { console.warn('recordStrategyAttempt:', e); }
+          // worked → recordStrategyAttempt (strategyId 있을 때만; shell DNA 매핑 자동)
+          if (status === 'worked' && targetMission?.strategyId && typeof recordStrategyAttempt === 'function') {
+            try { recordStrategyAttempt(targetMission.strategyId, 'worked', targetMission.id); } catch (e) { console.warn('recordStrategyAttempt:', e); }
           }
-          // DNA 박히는 효과 (작동했어 시)
+          // DNA 박히는 효과
           if (status === 'worked' && typeof playDnaInsertionEffect === 'function') {
             try { playDnaInsertionEffect(); } catch (e) {}
           }
