@@ -6892,30 +6892,8 @@
         <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
         <button class="btn-secondary" onclick="exportData()">📤 데이터 내보내기 (백업)</button>
-        <button class="btn-secondary" onclick="importV3Data()">📥 V3 데이터 가져오기 (1회)</button>
-        <div style="font-size:11px; color:var(--text-dim); padding:4px 12px 8px; line-height:1.7;">
-          평소 쓰는 V3 데이터(체크인·대화·미션·진주 등)를 V4 미리보기로 복사. V3 prod는 그대로 안전. V4가 비어있을 때만.
-        </div>
         <button class="btn-secondary" onclick="startInteractiveOnboarding()">🐚 투어 다시 보기</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
-
-        <details class="model-collapse" style="margin-top:12px;">
-          <summary>🧹 부분 초기화 (실수로 잘못 입력한 거 정리)</summary>
-          <div class="model-collapse-content" style="padding: 10px 14px;">
-            <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">
-              해당 데이터만 삭제. 다른 데이터는 그대로.
-            </div>
-            <button class="btn-secondary btn-danger" onclick="resetShellCollection()">🐚 소라 컬렉션만</button>
-            <button class="btn-secondary btn-danger" onclick="resetChatMessages()" style="margin-top:6px;">💬 대화 메시지만</button>
-            <button class="btn-secondary btn-danger" onclick="resetEntries()" style="margin-top:6px;">✓ 체크인 entries만</button>
-            <button class="btn-secondary btn-danger" onclick="resetTopicCards()" style="margin-top:6px;">🐚 토픽 카드 + 전략 카드만</button>
-            <button class="btn-secondary btn-danger" onclick="resetMissions()" style="margin-top:6px;">⭐ 미션만</button>
-            <button class="btn-secondary btn-danger" onclick="resetArchive()" style="margin-top:6px;">📚 아카이브(깨달음)만</button>
-            <button class="btn-secondary btn-danger" onclick="resetPearls()" style="margin-top:6px;">💎 진주만</button>
-            <button class="btn-secondary btn-danger" onclick="resetTasks()" style="margin-top:6px;">📋 할 일(서랍장)만</button>
-            <button class="btn-secondary btn-danger" onclick="cleanupPausedReflections()" style="margin-top:6px;">🌊 보류된 숙고 찌꺼기 정리</button>
-          </div>
-        </details>
 
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
         <button class="btn-secondary" onclick="recoverFromBackup()" style="margin-top:8px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(212,167,106,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="V3→V4 마이그레이션 시 자동 백업된 cloud row 또는 localStorage 옛 데이터로 복구 시도">🔄 백업에서 복구 시도</button>
@@ -8681,9 +8659,92 @@ const ONBOARDING_STEPS = [
     id: 'exec_immerse_btn',
     targetSelector: '.exec-immerse-btn',
     title: '🌧 몰입 시작',
-    body: '진짜 집중하고 싶을 때 이 버튼!<br>빗소리 + 단축어 + 시간 자동 기록까지.<br><br><span class="small">⚙ 설정 → "🌧 몰입 단축어 만들기"에 만드는 법.</span>',
+    body: '진짜 집중하고 싶을 때 이 버튼!<br>빗소리 + 시간 자동 기록.<br><br>한 번 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'exec_immerse_input',
+    targetSelector: null,
+    title: '입력은 미리 채워뒀어',
+    body: '"논문 서론 첫 단락 쓰기"가 자동 입력됐지?<br><b>확인</b> 눌러봐.',
+    waitFor: 'next',
+    manualAdvance: true,
+    dimBackground: false,
+    aboveModal: true
+  },
+  {
+    id: 'exec_immerse_both',
+    targetSelector: '.ritual-btn[onclick*="ritualChooseType(\'both\')"]',
+    title: '✦ 둘 다 약속',
+    body: '<b>"✦ 둘 다"</b> 눌러봐. 시작 약속 + 방해 대비 둘 다 만들 거야.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    aboveModal: true,
+    manualAdvance: true,
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'exec_immerse_start_next',
+    targetSelector: null,
+    title: '시작 IF-THEN',
+    body: '시작 약속 미리 채워뒀어:<br><b>IF</b> 카페 도착해서 자리 앉으면 → <b>THEN</b> 노트북 펴고 한 단락 쓰기<br><br>"<b>다음 →</b>" 눌러봐.',
+    waitFor: 'next',
+    manualAdvance: true,
+    dimBackground: false,
+    aboveModal: true
+  },
+  {
+    id: 'exec_immerse_obstacle',
+    targetSelector: null,
+    title: '방해 대비 IF-THEN',
+    body: '방해 대비도 미리 채워뒀어:<br><b>IF</b> 유튜브 부르면 → <b>THEN</b> 탭 닫고 물 한 모금<br><br>"<b>약속할게 ✦</b>" 눌러봐.',
+    waitFor: 'next',
+    manualAdvance: true,
+    dimBackground: false,
+    aboveModal: true
+  },
+  {
+    id: 'exec_immerse_launch',
+    targetSelector: null,
+    title: '🚀 발사',
+    body: '약속 정리됐지? <b>"🌧 몰입 시작"</b> 눌러봐.<br>빗소리 + 타이머 시작.',
+    waitFor: 'next',
+    manualAdvance: true,
+    dimBackground: false,
+    aboveModal: true
+  },
+  {
+    id: 'exec_iphone_shortcut',
+    targetSelector: null,
+    title: '📱 iPhone 단축어',
+    body: '아이폰이라면 <b>단축어</b>를 설정할 수 있어 — 잠금화면에서 한 번에 몰입 시작.<br><br>자세한 내용은 <b>⚙ 설정</b>에서 \'단축어 설정 매뉴얼\' 항목 확인해봐.',
     waitFor: 'next',
     dimBackground: false
+  },
+  {
+    id: 'exec_immerse_return',
+    targetSelector: '.check-btn[onclick*="ritualReturn"]',
+    title: '✓ 돌아옴',
+    body: '몰입 끝나면 위에 <b>"✓ 돌아옴"</b> 버튼이 떠. 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    manualAdvance: true,
+    dimBackground: false,
+    fallbackPosition: 'top',
+    aboveModal: true
+  },
+  {
+    id: 'exec_immerse_done',
+    targetSelector: null,
+    title: '✦ 했어',
+    body: '몰입 결과 묻는 모달 떴지? <b>"✓ 했어"</b> 눌러봐.<br><br><span class="small">"카드도 완료 처리할까?" 뜨면 <b>확인</b> 눌러줘.</span>',
+    waitFor: 'next',
+    manualAdvance: true,
+    dimBackground: false,
+    aboveModal: true
   },
   {
     id: 'go_model_final',
@@ -8698,23 +8759,7 @@ const ONBOARDING_STEPS = [
     id: 'model_intro',
     targetSelector: null,
     title: '"나" 탭',
-    body: '여기는 <b>내가 너를 분석한 결과</b>가 모이는 곳이야.<br>대화 쌓이면 자동으로 채워져 — 천천히 둘러봐.',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
-    id: 'tracker_graph',
-    targetSelector: null,
-    title: '📊 추적 항목 그래프',
-    body: '체크인에 박은 추적 항목 (수면 / 운동 / 명상 등)이 — <b>나 탭에 그래프</b>로 보여.<br>시간 흐름 + 목표 진행률 한눈에.<br><br><span class="small">숫자 / 체크형 모두 시각화.</span>',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
-    id: 'force_analyze',
-    targetSelector: null,
-    title: '📊 지금까지 데이터 다시 분석',
-    body: '나 탭에 <b>"📊 지금까지 데이터 다시 분석"</b> 버튼.<br>누르면 — 내가 모든 데이터 종합해서 8 차원 모델을 다시 빌드.<br><br><span class="small">대화 많이 쌓인 후에 가끔 누르면 정확도 ↑.</span>',
+    body: '여기는 <b>내가 너를 분석한 결과</b>가 모이는 곳이야.<br>대화 쌓이면 자동으로 채워져 — 천천히 둘러봐.<br><br>📊 추적 항목 그래프도 여기서 한눈에 (시드 데이터에 예시 박아둠).',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8745,9 +8790,9 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'reflection_try',
-    targetSelector: '.reflection-add-btn, [onclick*="addReflectionQuestion"]',
-    title: '직접 박아보자',
-    body: '"+ 새 질문 추가" 버튼 눌러봐.<br>본질적인 질문 한 줄 적어 — 답 강요 X, 천천히.',
+    targetSelector: '.reflection-card, [onclick*="openReflectionChat"]',
+    title: '클릭해보자',
+    body: '시드 데이터에 이미 숙고 질문 하나 박아뒀어.<br><b>카드 한 번 눌러봐</b> — 그 질문 안에서 같이 깊이 들여다보자.',
     waitFor: 'click',
     advanceDelay: 800,
     manualAdvance: true,
@@ -8757,7 +8802,7 @@ const ONBOARDING_STEPS = [
     id: 'help_button',
     targetSelector: null,
     title: '❓ 다시 보고 싶을 때',
-    body: '오른쪽 위 <b>❓</b> 누르면 언제든 이 튜토리얼 다시 시작.<br>기능 추가될 때마다 업데이트 배너로 알려줄게.<br><br><span class="small">모르겠는 건 헤더 ❓에서.</span>',
+    body: '튜토리얼은 언제든 다시 볼 수 있어.<br><br><b>⚙ 설정</b> 화면에서 "<b>🐚 투어 다시 보기</b>" 항목 누르면 처음부터 다시 시작.<br><br><span class="small">기능 추가될 때마다 업데이트 배너로 알려줄게.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -23042,16 +23087,18 @@ function startQuest(taskId) {
 }
 
 function startRitualGame({ taskId, taskTitle }) {
+  // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드 시 IF-THEN 자동 채움
+  const isAutoFill = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
   _ritualState = {
     step: taskId ? 1 : 0,  // if task given, skip goal (it's the task title)
     taskId,
     taskTitle,
     goal: taskTitle || '',
     ifThenType: 'none',
-    startIf: '',
-    startThen: '',
-    obstacle: '',
-    plan: '',
+    startIf: isAutoFill ? '카페 도착해서 자리 앉으면' : '',
+    startThen: isAutoFill ? '노트북 펴고 한 단락 쓰기' : '',
+    obstacle: isAutoFill ? '유튜브 부르면' : '',
+    plan: isAutoFill ? '탭 닫고 물 한 모금' : '',
     startId: null
   };
   document.getElementById('ritualOverlay').style.display = 'flex';
