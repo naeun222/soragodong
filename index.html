@@ -5713,6 +5713,35 @@
           <button class="btn-secondary btn-danger" onclick="testResetExecute()">🚀 실행 탭 데이터 초기화</button>
         </div>
       </details>
+
+      <!-- V4-fix: 테스터 모드 V4 시드 + 강제 trigger -->
+      <details class="model-collapse" style="margin-top:14px; border:1px solid rgba(212,167,106,0.30); border-radius:12px;">
+        <summary style="padding:12px 14px;">🧪 V4 전체 기능 테스트</summary>
+        <div class="model-collapse-content" style="padding: 10px 14px;">
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
+            <strong style="color:var(--accent2);">⚠️ 테스터 모드 ON 후 사용</strong> — 변경 저장 X, 다시 OFF 하면 원래 데이터로 복원.<br>
+            특수 상황 (시간/누적/임계값) 모두 즉시 시뮬.
+          </div>
+          <button class="btn-secondary" onclick="testSeedV4Data()" style="background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(212,167,106,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🌱 V4 전체 시드 데이터 박기</button>
+          <button class="btn-secondary" onclick="testForceQuarterlyReview()" style="margin-top:6px;">📊 분기 리뷰 강제 생성</button>
+          <button class="btn-secondary" onclick="testForceDiagnoses()" style="margin-top:6px;">🩺 진단 5종 즉시 detect</button>
+          <button class="btn-secondary" onclick="testForceCrystallize()" style="margin-top:6px;">🧬 첫 strategy DNA 결정화 강제</button>
+          <button class="btn-secondary" onclick="testForceMutation()" style="margin-top:6px;">🪦 첫 strategy 돌연변이 진화 강제</button>
+          <button class="btn-secondary" onclick="testForcePearlSuggestion()" style="margin-top:6px;">🔮 진주 능동 제안 (마지막 user msg)</button>
+          <button class="btn-secondary" onclick="testForceMissionExpire()" style="margin-top:6px;">⏰ 미션 3일 expire 강제</button>
+          <button class="btn-secondary" onclick="testForceQuarterlyStories()" style="margin-top:6px;">▶ 분기 Stories 즉시 보기</button>
+          <button class="btn-secondary" onclick="testForceAnnualStories()" style="margin-top:6px;">▶ 연간 Stories 즉시 보기</button>
+          <button class="btn-secondary" onclick="testForceMonthlyReview()" style="margin-top:6px;">🌙 월간 리뷰 강제 생성 (V3.12)</button>
+          <button class="btn-secondary" onclick="testForceMusicAutoPearl()" style="margin-top:6px;">🎵 음악 5번 → 자동 진주 발동</button>
+          <button class="btn-secondary" onclick="testForceDrainedMode()" style="margin-top:6px;">🪫 방전 모드 ON</button>
+          <button class="btn-secondary" onclick="testForceDecisionRoom()" style="margin-top:6px;">🌀 갈피의 방 active 진입</button>
+          <button class="btn-secondary" onclick="testForceDiagnosisCitation()" style="margin-top:6px;">🩺 다음 채팅에 진단 자연 인용 예약</button>
+          <button class="btn-secondary" onclick="testForceQuestionScrap()" style="margin-top:6px;">🌊 새 숙고 질문 박기 (스크랩)</button>
+          <button class="btn-secondary" onclick="testForceTutorial()" style="margin-top:6px;">🎓 풀 튜토리얼 강제 시작</button>
+          <button class="btn-secondary" onclick="testForceExtract()" style="margin-top:6px;">📌 토픽 추출 강제 (가드 우회)</button>
+          <button class="btn-secondary" onclick="testForceArchive()" style="margin-top:6px;">📜 채팅 아카이브 강제 (cutoff 우회)</button>
+        </div>
+      </details>
       <div style="margin-top:24px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
         <strong style="color:var(--accent)">프라이버시</strong><br>
         이메일 기반 인증으로 너만 접근 가능. 다른 사람은 너의 데이터를 볼 수 없어.<br>
@@ -9914,8 +9943,8 @@ function pickPhotoFile() {
   });
 }
 
-// V4-fix: 사진 화질 향상 (Instagram식) — quality 0.7 → 0.85
-async function fileToResizedDataUrl(file, maxSize = 1024, quality = 0.85) {
+// V4-fix: 사진 화질/용량 균형 (다른 앱들 수준) — quality 0.65 (용량 절약 우선)
+async function fileToResizedDataUrl(file, maxSize = 1024, quality = 0.65) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -9947,8 +9976,8 @@ async function fileToResizedDataUrl(file, maxSize = 1024, quality = 0.85) {
   });
 }
 
-// V4-fix: 정사각 thumb 화질 향상 (인증샷 검증용은 작은 size로 호출됨, 기본 quality 0.85)
-async function makeSquareThumb(dataUrl, size = 200, quality = 0.85) {
+// V4-fix: 정사각 thumb (용량 절약 우선, 인증샷 검증용은 작은 size로 호출됨)
+async function makeSquareThumb(dataUrl, size = 200, quality = 0.7) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -17418,6 +17447,696 @@ function testSkip4Hours() {
   showToast('🧪 4시간 전으로. 대화창에서 새 메시지 → 챕터 분리 + 토픽 추출');
 }
 
+// V4-fix: 테스터 모드 V4 전체 시드 + 강제 trigger 함수들 (testerMode ON 시 안전)
+function testSeedV4Data() {
+  if (!state.preferences || !state.preferences.testerMode) {
+    showToast('⚠️ 테스터 모드 ON 후 사용 — 사용자 데이터 보호');
+    return;
+  }
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  // 30일 entries (mood/vitality 다양 + 일부 모드 + 7일에 한 번 사진/일기)
+  state.entries = [];
+  for (let i = 30; i >= 0; i--) {
+    const d = new Date(today.getTime() - i * 86400000);
+    const dk = d.toISOString().split('T')[0];
+    const e = {
+      date: dk,
+      mood: 1 + Math.floor(Math.random() * 5),
+      vitality: 1 + Math.floor(Math.random() * 5),
+      sleepStart: ['22:00','23:00','23:30','00:30'][i % 4],
+      sleepEnd: ['06:30','07:00','07:30','08:00'][i % 4],
+      timestamp: d.toISOString(),
+      modes: i % 7 === 0 ? { rest: true } : (i % 11 === 0 ? { period: true } : {})
+    };
+    if (i % 5 === 0) e.diary = `시드 일기 ${i}일 전 — 오늘은 X에 집중함. Y에서 머무름.`;
+    if (i % 9 === 0) e.note = `짧은 메모: 카페에서 작업이 잘 됐음.`;
+    if (i % 13 === 0) e.dailyQuestion = { text: '오늘 잘 됐던 한 순간은?' };
+    state.entries.push(e);
+  }
+  // chatMessages 20개 + 챕터 카테고리 8종 다양화 (5 챕터 마커)
+  state.chatMessages = [];
+  const chapterCats = ['diary', 'concern', 'emotion', 'memory', 'idea', 'relationship', 'todo', 'casual'];
+  for (let i = 19; i >= 0; i--) {
+    const d = new Date(today.getTime() - i * 3 * 3600000);
+    const isChapterStart = i === 19 || i === 15 || i === 11 || i === 7 || i === 3;
+    const catIdx = Math.floor((19 - i) / 4);
+    state.chatMessages.push({
+      role: i % 2 === 0 ? 'user' : 'assistant',
+      content: i % 2 === 0
+        ? `사용자 메시지 ${i}: 오늘 미팅 끝나고 혼자 시간 보냈어.`
+        : `[내가 본 것]\n혼자 시간 보낸 후 정리되는 패턴.\n[이게 뭐냐면]\n과부하 회복 메커니즘.\n[이럴 땐 이렇게]\n의도적 혼자 시간 30분.\n[오늘의 제안]\n저녁 9시 휴식 알람.`,
+      timestamp: d.toISOString(),
+      ...(isChapterStart ? {
+        chapterStart: true,
+        chapterMeta: {
+          category: chapterCats[catIdx % chapterCats.length],
+          summary: `시드 챕터 ${catIdx + 1} — ${chapterCats[catIdx % chapterCats.length]}`,
+          strategyId: null
+        }
+      } : {})
+    });
+  }
+  // 마지막 user 메시지에 진주 제안 + askDeeper 후보 잠재 박기
+  const lastUserI = state.chatMessages.length - 2;
+  if (state.chatMessages[lastUserI]?.role === 'user') {
+    state.chatMessages[lastUserI].pearlSuggestion = false;
+  }
+  // 5 strategy 카드 (다양 embodimentStatus)
+  state.topicCards = (state.topicCards || []).filter(c => c.category !== 'strategy');
+  const stratSeeds = [
+    { title: '마감 직전 폭발력 신뢰', status: 'embodied', gens: 1, path: 'one-shot', attempts: [['worked',5]] },
+    { title: '거절은 그날 안에', status: 'working', gens: 1, attempts: [['worked',3], ['didnt',1]] },
+    { title: '카페에서 30분 집중', status: 'trying', gens: 1, attempts: [['worked',1], ['didnt',1]] },
+    { title: '잠 부족 시 결정 X', status: 'seedling', gens: 1, attempts: [] },
+    { title: 'SNS 자동 종료', status: 'working', gens: 3, path: 'evolved', attempts: [['didnt',2], ['didnt',1], ['worked',3]] }
+  ];
+  stratSeeds.forEach((s, idx) => {
+    const id = 'strat_seed_' + idx;
+    const generations = [];
+    for (let g = 0; g < s.gens; g++) {
+      const layer = ['L2', 'L3', 'L1'][g] || 'L2';
+      generations.push({
+        gen: g + 1, layer,
+        action: s.title + (g > 0 ? ` (gen ${g+1})` : ''),
+        missions: [], shells: [],
+        attempts: g === s.gens - 1 ? (s.attempts.flatMap(([st, n]) => Array(n).fill({}).map(() => ({ status: st, at: new Date(today.getTime() - Math.random() * 30 * 86400000).toISOString() })))) : [{ status: 'didnt', at: new Date(today.getTime() - (s.gens - g) * 7 * 86400000).toISOString() }],
+        status: g === s.gens - 1 ? 'working' : 'mutated'
+      });
+    }
+    state.topicCards.push({
+      id, category: 'strategy',
+      title: s.title,
+      problemContext: '시드 문제 상황',
+      psychConcept: '시드 심리학 개념',
+      actionStrategy: s.title,
+      summary: `${s.title} — 시드`,
+      generations,
+      embodimentStatus: s.status,
+      embodimentPath: s.path || null,
+      evolutionChats: [],
+      createdAt: new Date(today.getTime() - 20 * 86400000).toISOString(),
+      messageCount: 5,
+      source: 'manual'
+    });
+  });
+  // 토픽 카드 5
+  for (let i = 0; i < 5; i++) {
+    state.topicCards.push({
+      id: 'tc_seed_' + i,
+      category: 'memory',
+      title: `시드 토픽 ${i+1}`,
+      summary: `이건 ${i+1}번 시드 토픽 카드 요약.`,
+      chapterStartedAt: new Date(today.getTime() - (i+1) * 3 * 86400000).toISOString(),
+      chapterEndedAt: new Date(today.getTime() - (i+1) * 3 * 86400000).toISOString(),
+      messageCount: 3 + i,
+      createdAt: new Date(today.getTime() - (i+1) * 3 * 86400000).toISOString()
+    });
+  }
+  // 진주 10개
+  state.pearls = (state.pearls || []).filter(p => false);
+  const pearlSeeds = [
+    { c: '음악', content: '카페 새벽 곡', track: { id: 'seed1', title: 'Vanilla Days', artist: 'LONGSHOT', artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music/v4/3a/3a/3a/seed/300x300bb.jpg' } },
+    { c: '음식', content: '엄마 김치찌개' },
+    { c: '장소', content: '한강 벤치 새벽' },
+    { c: '순간', content: '논문 한 단락 끝낸 순간' },
+    { c: '사람', content: '오랜 친구와 카톡' },
+    { c: '음악', content: '비 오는 날 곡', track: { id: 'seed2', title: 'Rainy Mood', artist: 'X', artworkUrl: '' } },
+    { c: '음식', content: '카페 라떼' },
+    { c: '장소', content: '학교 도서관 창가' },
+    { c: '순간', content: '새벽 깨달음' },
+    { c: '사람', content: '교수님 칭찬' }
+  ];
+  pearlSeeds.forEach((p, i) => {
+    state.pearls.push({
+      id: 'pearl_seed_' + i,
+      category: p.c,
+      content: p.content,
+      ...(p.track ? { track: p.track } : {}),
+      createdAt: new Date(today.getTime() - i * 3 * 86400000).toISOString(),
+      type: 'pearl'
+    });
+  });
+  // DNA 진주 1개 (첫 strategy 결정화)
+  state.pearls.push({
+    id: 'dpearl_seed_1',
+    type: 'dna_pearl',
+    content: '마감 직전 폭발력 신뢰',
+    category: 'DNA',
+    strategyId: 'strat_seed_0',
+    embodimentPath: 'one-shot',
+    shellsUsed: [],
+    totalAttempts: 5,
+    totalGens: 1,
+    workedCount: 5,
+    createdAt: new Date(today.getTime() - 14 * 86400000).toISOString()
+  });
+  // 깨달음 archive 5 (scrap + memo + reflection 3 type, original 필드 포함)
+  state.archive = [];
+  ['scrap', 'memo', 'reflection', 'scrap', 'memo'].forEach((t, i) => {
+    state.archive.unshift({
+      type: t,
+      headline: `시드 깨달음 ${i+1}`,
+      body: `${t === 'memo' ? '메모' : t === 'reflection' ? '숙고 결론' : '깨달음'} — 환경이 의지보다 강함.`,
+      original: t === 'scrap' ? `[내가 본 것]\n환경이 의지보다 강함.\n[이게 뭐냐면]\n인지부담 ↓ 시스템 1 작동.\n[이럴 땐 이렇게]\n도구 셋업 한 번이 의지 매일보다 강함.` : null,
+      insight: `시드 ${i+1}`,
+      ...(t === 'memo' ? { userMemo: '시드 메모 본문' } : {}),
+      tags: t === 'memo' ? ['환경', '습관'] : (t === 'reflection' ? ['숙고'] : ['깨달음']),
+      date: new Date(today.getTime() - i * 4 * 86400000).toLocaleDateString('ko-KR'),
+      source: t === 'memo' ? '메모' : t === 'reflection' ? '숙고' : '대화',
+      savedAt: new Date(today.getTime() - i * 4 * 86400000).toISOString()
+    });
+  });
+  // traits/values/patterns 각 4 (NEW + verified mix)
+  state.traits = [];
+  state.values = [];
+  state.patterns = [];
+  ['완벽주의', '아침형', '관계 우선', '깊이 파는 습관'].forEach((n, i) => {
+    state.traits.push({
+      id: 'trait_seed_' + i, name: n,
+      description: `${n} 특성 시드 설명`,
+      confidence: 0.6 + i * 0.1,
+      user_verified: i < 2,
+      evidence_count: 1 + i,
+      created_at: new Date(today.getTime() - (i+1) * 5 * 86400000).toISOString()
+    });
+  });
+  ['기여', '연결', '자율', '성장'].forEach((n, i) => {
+    state.values.push({
+      id: 'val_seed_' + i, name: n,
+      description: `${n} 가치 시드`,
+      confidence: 0.5 + i * 0.12,
+      user_verified: i < 2,
+      evidence_count: 1 + i,
+      sdt_need: ['competence','autonomy','relatedness','autonomy'][i],
+      created_at: new Date(today.getTime() - (i+1) * 5 * 86400000).toISOString()
+    });
+  });
+  ['마감 직전 폭발력', '저녁 무력감', '거절 후 부채감', '새벽 결정 후회'].forEach((n, i) => {
+    state.patterns.push({
+      id: 'pat_seed_' + i, name: n,
+      description: `${n} 패턴 시드`,
+      trigger: '시드 트리거',
+      sequence: '시드 시퀀스',
+      confidence: 0.55 + i * 0.10,
+      user_verified: i < 1,
+      evidence_count: 2 + i,
+      created_at: new Date(today.getTime() - (i+1) * 4 * 86400000).toISOString()
+    });
+  });
+  // 분기 리뷰 1개 (지난 분기)
+  const prevQ = new Date(today.getFullYear(), today.getMonth() - 3, 15);
+  const prevQuarterKey = getQuarterKey(prevQ);
+  state.quarterlyReviews = [{
+    id: 'qr_seed_1',
+    quarterKey: prevQuarterKey,
+    completedAt: new Date(today.getTime() - 7 * 86400000).toISOString(),
+    stats: getQuarterlyStats(prevQuarterKey) || {
+      checkins: 28, attempts: 12, worked: 8, pearls: 8, dnaPearls: 1,
+      modeCount: { rest: 4, period: 3 },
+      trackerStats: [],
+      problemsTotal: 4, strengthsTotal: 4, growthCount: 2,
+      quarterKey: prevQuarterKey
+    },
+    summary: '이번 분기, 환경 차원에서 작동하는 도구가 늘어남. 거절 패턴 깨끗해지는 중.',
+    sections: [
+      { label: '🌊 흐름', body: '이 분기 너는 환경 차원에 무게를 실음. 카페·자동 종료 등 의지에 덜 기대는 도구.' },
+      { label: '🌱 새로 자라난 것', body: '"마감 직전 폭발력 신뢰" 가닥이 결정화됨 — DNA 진주.' },
+      { label: '🌫 작동 중인 패턴', body: '"거절 후 부채감" 패턴이 N회 등장. 환경 도구로 일부 풀림.' },
+      { label: '🧭 다음 분기에', body: '거절 → "그날 안에 한 줄" 자동화 시도.' }
+    ],
+    auto: true
+  }];
+  // 진단 5종 active 1
+  state.diagnoses = [{
+    id: 'diag_seed_1',
+    type: 'wrong_layer',
+    confidence: 0.7,
+    evidence: '"거절 후 부채감" — L2 행동만 시도, 다른 차원 X',
+    targetCardId: 'strat_seed_1',
+    detectedAt: new Date(today.getTime() - 2 * 86400000).toISOString(),
+    status: 'active'
+  }];
+  // reflectionQuestions active 1 + resolved 1
+  state.reflectionQuestions = [
+    {
+      id: 'rq_seed_active',
+      text: '박사 끝까지 갈지 정말 내가 원하는 건지',
+      shortText: '박사 끝까지 갈지',
+      createdAt: new Date(today.getTime() - 5 * 86400000).toISOString(),
+      source: 'manual',
+      status: 'active',
+      chatMessages: [
+        { role: 'assistant', content: '이 질문, 같이 천천히 보자.', timestamp: new Date(today.getTime() - 5 * 86400000).toISOString() },
+        { role: 'user', content: '내가 학문 자체를 좋아하는 건지, 졸업장이 필요한 건지 헷갈려.', timestamp: new Date(today.getTime() - 4 * 86400000).toISOString() },
+        { role: 'assistant', content: '구체적으로, 박사 시작 전 기대했던 거랑 지금 비교하면 어떤 차이가 보여?', timestamp: new Date(today.getTime() - 4 * 86400000).toISOString() }
+      ]
+    },
+    {
+      id: 'rq_seed_resolved',
+      text: '이 직장 계속할지',
+      shortText: '이 직장 계속할지',
+      createdAt: new Date(today.getTime() - 60 * 86400000).toISOString(),
+      source: 'manual',
+      status: 'resolved',
+      conclusion: '6개월 더 보고 결정. 지금은 학습 중.',
+      resolvedAt: new Date(today.getTime() - 30 * 86400000).toISOString(),
+      chatMessages: [
+        { role: 'assistant', content: '이 질문 같이 보자.', timestamp: new Date(today.getTime() - 60 * 86400000).toISOString() },
+        { role: 'user', content: '직장 만족도 낮은데 그만두기 어려워.', timestamp: new Date(today.getTime() - 55 * 86400000).toISOString() }
+      ]
+    }
+  ];
+  // missions 5 (오늘 pending / 어제 carryover pending / 그제 carryover pending / completed / expired)
+  const yesterdayKey = new Date(today.getTime() - 86400000).toISOString().split('T')[0];
+  const dayBeforeKey = new Date(today.getTime() - 2 * 86400000).toISOString().split('T')[0];
+  state.missions = [
+    { id: 'mis_seed_1', title: '오늘 30분 산책', description: '집 → 한강 30분', status: 'pending', scheduledFor: todayStr, createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: null, generationIdx: null },
+    { id: 'mis_seed_carryover_1', title: '어제 받은 가닥 시도', description: 'L3 환경 차원 시도', status: 'pending', scheduledFor: yesterdayKey, createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: 'strat_seed_2', generationIdx: 0 },
+    { id: 'mis_seed_carryover_2', title: '그제 받은 부름', status: 'pending', scheduledFor: dayBeforeKey, createdAt: new Date(today.getTime() - 2 * 86400000).toISOString() },
+    { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
+    { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
+  ];
+  // shells 30 (일부에 photoThumb / story 인증샷 검증된 모양)
+  state.shellCollection = [];
+  const shellEmojis = ['🐚','🌀','🐢','🦞','⭐','✨'];
+  const shellTiers = ['light','daily','main','golden','call','legend'];
+  for (let i = 0; i < 30; i++) {
+    const tIdx = Math.min(5, Math.floor(Math.random() * 6));
+    state.shellCollection.push({
+      _id: 'shell_seed_' + i,
+      type: shellEmojis[tIdx],
+      tier: shellTiers[tIdx],
+      points: tIdx + 1,
+      label: ['가벼움','일상','메인','황금','부름','특별'][tIdx],
+      rarity: tIdx >= 5 ? 'legendary' : (tIdx >= 4 ? 'rare' : 'common'),
+      date: new Date(today.getTime() - i * 86400000).toISOString(),
+      story: `시드 셸 ${i+1}`,
+      title: `시드 ${i+1}`,
+      missionId: tIdx >= 4 ? 'mis_seed_2' : null,
+      photoThumb: ''
+    });
+  }
+  // tasks 6 (오늘의 카드 3 isToday=true + 일반 할 일 3 isToday=false)
+  state.tasks = [];
+  ['논문 서론 마무리', '운동 30분', '책 1챕터'].forEach((t, i) => {
+    state.tasks.push({
+      id: 'task_seed_' + i, title: t,
+      isToday: true, status: 'pending',
+      priority: i,
+      createdAt: new Date(today.getTime() - 86400000).toISOString()
+    });
+  });
+  ['책상 정리', '카드 결제', '약 사기'].forEach((t, i) => {
+    state.tasks.push({
+      id: 'task_seed_extra_' + i, title: t,
+      isToday: false, status: 'pending',
+      priority: 10 + i,
+      createdAt: new Date(today.getTime() - i * 86400000).toISOString()
+    });
+  });
+  // memoryVault 4 (서랍장 항목 / 채팅 아이디어)
+  state.memoryVault = [];
+  ['주말에 카페 가서', '친구 만나서 얘기', '도서관 가서 검색', '주중 깊은 작업'].forEach((t, i) => {
+    state.memoryVault.push({
+      id: 'mv_seed_' + i, title: t,
+      priority: 100 + i,
+      createdAt: new Date(today.getTime() - i * 86400000).toISOString()
+    });
+  });
+  // projects 3 (numeric 2 + check 1)
+  state.projects = [
+    {
+      id: 'proj_seed_1', title: '체중', emoji: '⚖', kind: 'numeric',
+      type: 'decrease', unit: 'kg', baseline: 65, target: 60,
+      measurements: [
+        { value: 65, date: new Date(today.getTime() - 28 * 86400000).toISOString() },
+        { value: 64.2, date: new Date(today.getTime() - 14 * 86400000).toISOString() },
+        { value: 63.5, date: new Date(today.getTime() - 7 * 86400000).toISOString() },
+        { value: 63.0, date: new Date(today.getTime() - 86400000).toISOString() }
+      ],
+      status: 'active', showGraph: true, createdAt: new Date(today.getTime() - 28 * 86400000).toISOString(), startDate: todayStr
+    },
+    {
+      id: 'proj_seed_2', title: '러닝 거리', emoji: '🏃', kind: 'numeric',
+      type: 'increase', unit: 'km', baseline: 0, target: 30,
+      measurements: [
+        { value: 2, date: new Date(today.getTime() - 21 * 86400000).toISOString() },
+        { value: 5, date: new Date(today.getTime() - 14 * 86400000).toISOString() },
+        { value: 12, date: new Date(today.getTime() - 7 * 86400000).toISOString() }
+      ],
+      status: 'active', showGraph: true, createdAt: new Date(today.getTime() - 21 * 86400000).toISOString(), startDate: todayStr
+    },
+    {
+      id: 'proj_seed_3', title: '명상', emoji: '🧘', kind: 'check',
+      type: 'increase', unit: '회', baseline: 0, target: 30,
+      measurements: [
+        { value: 1, date: new Date(today.getTime() - 5 * 86400000).toISOString(), dayKey: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0] },
+        { value: 1, date: new Date(today.getTime() - 3 * 86400000).toISOString(), dayKey: new Date(today.getTime() - 3 * 86400000).toISOString().split('T')[0] },
+        { value: 1, date: new Date(today.getTime() - 86400000).toISOString(), dayKey: new Date(today.getTime() - 86400000).toISOString().split('T')[0] }
+      ],
+      status: 'active', showGraph: false, createdAt: new Date(today.getTime() - 14 * 86400000).toISOString(), startDate: todayStr
+    }
+  ];
+  // decisions 3 (active 1 / completed 1 / abandoned 1) — 갈피의 방
+  state.decisions = [
+    {
+      id: 'dec_seed_active', topic: '논문 주제 변경할지', status: 'active',
+      createdAt: new Date(today.getTime() - 7 * 86400000).toISOString(),
+      messages: [
+        { role: 'assistant', content: '이 결정 같이 보자. 어떤 게 막혀?' , timestamp: new Date(today.getTime() - 7 * 86400000).toISOString() },
+        { role: 'user', content: '지금 주제는 데이터 부족, 새 주제는 시작이 두려워.', timestamp: new Date(today.getTime() - 6 * 86400000).toISOString() },
+        { role: 'assistant', content: '두려움이 어느 차원에서 와? 시작 자체? 매몰비용?', timestamp: new Date(today.getTime() - 6 * 86400000).toISOString() }
+      ],
+      perspectives: [], predictions: [], values: []
+    },
+    {
+      id: 'dec_seed_done', topic: '이번 학기 청강할지', status: 'completed',
+      result: '청강 X, 자기 공부 우선', completedAt: new Date(today.getTime() - 30 * 86400000).toISOString(),
+      createdAt: new Date(today.getTime() - 40 * 86400000).toISOString(),
+      messages: [
+        { role: 'assistant', content: '청강이 너에게 어떤 가치?', timestamp: new Date(today.getTime() - 40 * 86400000).toISOString() }
+      ]
+    },
+    {
+      id: 'dec_seed_aban', topic: '이사할지', status: 'abandoned',
+      createdAt: new Date(today.getTime() - 60 * 86400000).toISOString(),
+      messages: []
+    }
+  ];
+  // caseFormulation 8 차원 (problems / mechanisms / strengths / goals / growth + unverified 일부)
+  state.caseFormulation = {
+    version: 7, lastUpdated: new Date().toISOString(),
+    problems: [
+      { text: '저녁 무력감으로 작업 X', confidence: 0.7, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 10 * 86400000).toISOString() },
+      { text: '거절 후 부채감으로 공부 X', confidence: 0.6, evidence_count: 2, user_verified: true, created_at: new Date(today.getTime() - 20 * 86400000).toISOString() }
+    ],
+    mechanisms: [
+      { text: '과부하 → 회피 → 자책 루프', confidence: 0.65, evidence_count: 4, user_verified: false, created_at: new Date(today.getTime() - 15 * 86400000).toISOString() }
+    ],
+    strengths: [
+      { text: '마감 직전 폭발력 신뢰 가능', confidence: 0.85, evidence_count: 5, user_verified: true, created_at: new Date(today.getTime() - 25 * 86400000).toISOString() },
+      { text: '깊이 파는 습관', confidence: 0.7, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 18 * 86400000).toISOString() }
+    ],
+    goals: [
+      { text: '박사 졸업 (2027)', confidence: 0.9, evidence_count: 1, user_verified: true, created_at: new Date(today.getTime() - 30 * 86400000).toISOString() },
+      { text: '논문 첫 저자 1편 (이번 분기)', confidence: 0.6, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 5 * 86400000).toISOString() }
+    ],
+    growth: [
+      { text: '환경 차원 도구 사용 늘어남 (지난 분기 비교)', confidence: 0.8, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 7 * 86400000).toISOString() }
+    ],
+    unverified: {
+      problems: [{ text: '저녁 무력감으로 작업 X', addedAt: new Date(today.getTime() - 10 * 86400000).toISOString() }],
+      mechanisms: [{ text: '과부하 → 회피 → 자책 루프', addedAt: new Date(today.getTime() - 15 * 86400000).toISOString() }],
+      strengths: [{ text: '깊이 파는 습관', addedAt: new Date(today.getTime() - 18 * 86400000).toISOString() }],
+      goals: [{ text: '논문 첫 저자 1편 (이번 분기)', addedAt: new Date(today.getTime() - 5 * 86400000).toISOString() }],
+      growth: [{ text: '환경 차원 도구 사용 늘어남 (지난 분기 비교)', addedAt: new Date(today.getTime() - 7 * 86400000).toISOString() }]
+    }
+  };
+  // monthlyReviews 1 (지난 달 자동, V3.12)
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 15);
+  const lastMonthKey = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+  state.monthlyReviews = [{
+    id: 'mr_seed_1',
+    monthKey: lastMonthKey,
+    completedAt: new Date(today.getTime() - 14 * 86400000).toISOString(),
+    summary: '지난 달, 논문 진척과 일상 회복 둘 다 진행됨. drained 모드 4일.',
+    sections: [
+      { label: '🌊 흐름', body: '월 후반부에 마감 전 폭발력 작동.' },
+      { label: '🌫 패턴', body: '거절 후 부채감 패턴 N회 등장.' }
+    ],
+    auto: true,
+    stats: { checkins: 22, missions: 6, worked: 4, pearls: 3 }
+  }];
+  // chatArchive 3일치 (V3.13.x 7일 cap, 일부 채워두기)
+  state.chatArchive = [];
+  for (let d = 7; d >= 5; d--) {
+    const ad = new Date(today.getTime() - d * 86400000);
+    state.chatArchive.unshift({
+      date: ad.toISOString().split('T')[0],
+      summary: `${d}일 전 — 가볍게 일상 + 한 가지 고민. 환경 도구 시도.`,
+      messageCount: 8,
+      archivedAt: new Date(today.getTime() - (d - 1) * 86400000).toISOString()
+    });
+  }
+  saveState({ force: true });
+  showToast('🌱 V4 전체 시드 데이터 박힘. 도서관/모래사장/실행/나/홈 둘러보기.');
+  if (typeof renderTodayMission === 'function') renderTodayMission();
+  if (typeof renderShellBar === 'function') renderShellBar();
+  if (typeof renderReflectionHome === 'function') renderReflectionHome();
+  if (typeof renderHome === 'function') renderHome();
+}
+
+async function testForceQuarterlyReview() {
+  if (!state.apiKey) { showToast('⚠️ API 키 필요'); return; }
+  showToast('📊 분기 리뷰 강제 생성 중...');
+  const today = new Date();
+  const prevQ = new Date(today.getFullYear(), today.getMonth() - 3, 15);
+  const prevQuarterKey = getQuarterKey(prevQ);
+  // 이미 있으면 제거 (재생성 위해)
+  if (Array.isArray(state.quarterlyReviews)) {
+    state.quarterlyReviews = state.quarterlyReviews.filter(r => r.quarterKey !== prevQuarterKey);
+  }
+  // preferences cooldown reset
+  if (state.preferences) state.preferences._diagLastRunAt = null;
+  try {
+    await runQuarterlyAutoReviewIfNeeded();
+    showToast('✅ 분기 리뷰 생성됨 (도서관 → 갈피·리뷰 → 🌙 리뷰 모음)');
+  } catch (e) {
+    showToast('실패: ' + (e.message || ''));
+  }
+}
+
+function testForceDiagnoses() {
+  if (state.preferences) state.preferences._diagLastRunAt = null;
+  const detected = detectDiagnoses();
+  if (detected.length === 0) {
+    showToast('🩺 감지된 진단 X — 시드 데이터 박은 후 시도');
+    return;
+  }
+  registerDiagnoses(detected);
+  showToast(`🩺 ${detected.length}개 진단 감지됨 — 다음 챗 응답에 인용`);
+}
+
+async function testForceCrystallize() {
+  const card = (state.topicCards || []).find(c => c.category === 'strategy' && c.embodimentStatus !== 'embodied');
+  if (!card) {
+    showToast('⚠️ 결정화 가능한 strategy 카드 X');
+    return;
+  }
+  // worked 5회 강제 박기
+  if (!Array.isArray(card.generations) || !card.generations.length) {
+    showToast('⚠️ generations 데이터 X');
+    return;
+  }
+  const gen = card.generations[card.generations.length - 1];
+  if (!Array.isArray(gen.attempts)) gen.attempts = [];
+  // 현재 worked 수 부족하면 채움
+  const currentWorked = gen.attempts.filter(a => a.status === 'worked').length;
+  for (let i = currentWorked; i < 5; i++) {
+    gen.attempts.push({ status: 'worked', at: new Date().toISOString(), missionId: null });
+  }
+  // _crystallizePromptShown reset
+  card._crystallizePromptShown = false;
+  saveState({ force: true });
+  showToast(`🧬 "${card.title}" worked 5회 — 결정화 의식 호출`);
+  await promptCrystallize(card);
+}
+
+async function testForceMutation() {
+  const card = (state.topicCards || []).find(c => c.category === 'strategy' && c.embodimentStatus !== 'embodied');
+  if (!card) {
+    showToast('⚠️ 진화 가능한 strategy 카드 X');
+    return;
+  }
+  showToast(`🪦 "${card.title}" 돌연변이 진화 호출`);
+  await openMutationChat(card.id, '시드 미션 (테스트)');
+}
+
+function testForcePearlSuggestion() {
+  // 마지막 user 메시지에 pearlSuggestion 강제
+  let lastUserIdx = -1;
+  for (let i = (state.chatMessages || []).length - 1; i >= 0; i--) {
+    if (state.chatMessages[i]?.role === 'user') { lastUserIdx = i; break; }
+  }
+  if (lastUserIdx < 0) {
+    showToast('⚠️ user 메시지 X — 대화 후 시도');
+    return;
+  }
+  state.chatMessages[lastUserIdx].pearlSuggestion = true;
+  delete state.chatMessages[lastUserIdx].pearlSaved;
+  saveState({ force: true });
+  if (typeof renderChat === 'function') renderChat();
+  showToast('🔮 마지막 user 메시지에 진주 제안 칩 박힘 — 채팅 탭 확인');
+}
+
+function testForceMissionExpire() {
+  const m = (state.missions || []).find(x => x.status === 'pending');
+  if (!m) {
+    showToast('⚠️ pending 미션 X');
+    return;
+  }
+  m.scheduledFor = new Date(Date.now() - 5 * 86400000).toISOString().split('T')[0];
+  saveState({ force: true });
+  if (typeof expireOldMissions === 'function') expireOldMissions();
+  if (typeof renderTodayMission === 'function') renderTodayMission();
+  showToast(`⏰ "${m.title}" 5일 전으로 — expire 처리됨`);
+}
+
+async function testForceQuarterlyStories() {
+  const review = (state.quarterlyReviews || [])[0];
+  if (!review) {
+    showToast('⚠️ 분기 리뷰 X — 시드 박거나 강제 생성 후 시도');
+    return;
+  }
+  await openQuarterlyStories(review.id);
+}
+
+async function testForceAnnualStories() {
+  const reviews = state.quarterlyReviews || [];
+  if (reviews.length === 0) {
+    showToast('⚠️ 분기 리뷰 X');
+    return;
+  }
+  // 가장 최근 리뷰의 연도
+  const yearKey = (reviews[0].quarterKey || '').split('-')[0];
+  await openAnnualStories(parseInt(yearKey) || new Date().getFullYear() - 1);
+}
+
+// 음악 5번 → 자동 진주 발동 시각
+async function testForceMusicAutoPearl() {
+  if (!state.preferences || !state.preferences.testerMode) {
+    showToast('⚠️ 테스터 모드 ON 후 사용');
+    return;
+  }
+  const today = new Date();
+  const trackId = 'auto_test_track';
+  const track = { id: trackId, title: 'Vanilla Days', artist: 'LONGSHOT', artworkUrl: '' };
+  // entries 5개에 같은 트랙 박아 자동 진주 발동
+  let pushed = 0;
+  for (let i = 0; i < (state.entries || []).length && pushed < 5; i++) {
+    if (!state.entries[i].music) {
+      state.entries[i].music = track;
+      pushed++;
+    }
+  }
+  if (pushed < 5) {
+    for (let i = pushed; i < 5; i++) {
+      const d = new Date(today.getTime() - (i + 100) * 86400000);
+      state.entries.push({
+        date: d.toISOString().split('T')[0],
+        mood: 4, vitality: 4,
+        timestamp: d.toISOString(),
+        music: track
+      });
+    }
+  }
+  // 같은 곡 이미 진주에 있으면 제거
+  state.pearls = (state.pearls || []).filter(p => !p.track || p.track.id !== trackId);
+  // 자동 진주 추가
+  state.pearls.push({
+    id: 'pearl_auto_' + Date.now(),
+    category: '음악',
+    content: `${track.title} - ${track.artist}`,
+    track,
+    type: 'pearl',
+    autoAdded: true,
+    createdAt: new Date().toISOString()
+  });
+  saveState({ force: true });
+  showToast(`🎵 "${track.title}" 5번 등장 → 자동 진주 박힘. 도서관 → 진주에서 확인.`);
+}
+
+// 튜토리얼 강제 시작 (full)
+function testForceTutorial() {
+  if (typeof startInteractiveOnboarding !== 'function') {
+    showToast('⚠️ startInteractiveOnboarding 함수 X');
+    return;
+  }
+  if (state.preferences) state.preferences.tutorialVersion = 'full';
+  startInteractiveOnboarding();
+  showToast('🎓 풀 튜토리얼 시작');
+}
+
+// 월간 리뷰 강제 생성 (V3.12)
+async function testForceMonthlyReview() {
+  if (typeof runMonthlyAutoReviewIfNeeded !== 'function') {
+    showToast('⚠️ runMonthlyAutoReviewIfNeeded 함수 X');
+    return;
+  }
+  const today = new Date();
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 15);
+  const lastMonthKey = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+  if (Array.isArray(state.monthlyReviews)) {
+    state.monthlyReviews = state.monthlyReviews.filter(r => r.monthKey !== lastMonthKey);
+  }
+  showToast('🌙 월간 리뷰 강제 생성 중...');
+  try {
+    await runMonthlyAutoReviewIfNeeded();
+    showToast('✅ 월간 리뷰 생성됨 (도서관 → 갈피·리뷰 → 🌙 리뷰 모음)');
+  } catch (e) {
+    showToast('실패: ' + (e.message || ''));
+  }
+}
+
+// drained 모드 active 강제
+function testForceDrainedMode() {
+  if (!state.modes) state.modes = {};
+  state.modes.drained = true;
+  state.modeActiveSince = new Date().toISOString();
+  saveState({ force: true });
+  if (typeof renderHome === 'function') renderHome();
+  if (typeof renderShellBar === 'function') renderShellBar();
+  showToast('🪫 방전 모드 ON — 홈/응답 톤 변화 확인. 다시 OFF는 체크인에서.');
+}
+
+// 갈피의 방 active 결정 진입
+function testForceDecisionRoom() {
+  const active = (state.decisions || []).find(d => d.status === 'active');
+  if (active && typeof openDecision === 'function') {
+    openDecision(active.id);
+    showToast(`🌀 "${active.topic}" 갈피의 방 진입`);
+  } else if (typeof startNewDecision === 'function') {
+    startNewDecision();
+    showToast('🌀 새 갈피 시작');
+  } else {
+    showToast('⚠️ 갈피 관련 함수 X');
+  }
+}
+
+// 진단 다음 채팅 응답에 자연 인용 강제 (citation tag flag 박기)
+function testForceDiagnosisCitation() {
+  const active = (state.diagnoses || []).find(d => d.status === 'active');
+  if (!active) {
+    showToast('⚠️ active 진단 X — 시드 박거나 진단 5종 detect 후 시도');
+    return;
+  }
+  // _diagnosisCitationPending flag 박기 — 다음 generateAIResponse가 system prompt에 자연 인용 지시
+  if (!state.preferences) state.preferences = {};
+  state.preferences._diagnosisCitationPending = active.id;
+  saveState({ force: true });
+  showToast(`🩺 "${active.type}" 진단 — 다음 채팅 응답에 자연 인용 예약됨. 대화 탭에서 메시지 보내봐.`);
+}
+
+// 숙고 질문 새로 박기 (스크랩 진입점 시뮬레이션)
+function testForceQuestionScrap() {
+  if (!Array.isArray(state.reflectionQuestions)) state.reflectionQuestions = [];
+  const newQ = {
+    id: 'rq_test_' + Date.now(),
+    text: '시드: 내가 진짜로 원하는 삶의 모양은?',
+    shortText: '진짜 원하는 삶의 모양',
+    createdAt: new Date().toISOString(),
+    source: 'scrap',
+    sourceMsgIdx: null,
+    status: 'pending',
+    chatMessages: []
+  };
+  state.reflectionQuestions.push(newQ);
+  saveState({ force: true });
+  if (typeof renderReflectionHome === 'function') renderReflectionHome();
+  showToast('🌊 새 숙고 질문 박힘 (대기 중) — 홈 → 더 깊이 볼 거에서 활성화 가능');
+}
+
 async function testForceExtract() {
   showToast('🧪 토픽 추출 시작 (가드 우회)...');
   const before = (state.topicCards || []).length;
@@ -21259,7 +21978,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.65-perf-photo-scatter';
+const APP_VERSION = 'v4.0.66-tester-mode-v4-full';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
