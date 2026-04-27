@@ -7809,6 +7809,22 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   {
+    id: 'cutoff_intro',
+    targetSelector: null,
+    title: '🌙 새벽 4시까지 = 어제',
+    body: '새벽까지 일하다가 체크인 / 일기 적으면 — <b>새벽 4시 이전엔 어제 기록</b>으로 들어가.<br>새벽 4시 지나면 그 날부터 새 날.<br><br><span class="small">밤샘 일하는 너 위한 배려야.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'auto_pearl_music',
+    targetSelector: null,
+    title: '🎵 같은 곡 5번 = 자동 진주',
+    body: '체크인에서 같은 곡을 5번 이상 등장시키면 — 내가 알아서 <b>그 곡을 진주로 박아</b>줄게.<br><br><span class="small">자주 듣는 곡 = 너의 사운드트랙.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
     id: 'submit_checkin',
     targetSelector: 'button[onclick="submitCheckin()"]',
     title: '✦ 기록 완료',
@@ -7889,6 +7905,22 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     title: '⋮ 메시지 메뉴',
     body: '메시지 우상단 <b>⋮</b> 누르면:<br>· 복사<br>· 수정 / 다시 보내기<br>· 🌊 숙고 질문으로 보내기<br>· 삭제',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'chapter_auto',
+    targetSelector: null,
+    title: '📖 챕터 자동 분류',
+    body: '대화는 4시간 이상 멈추면 자동 챕터 끊김 (또는 ✓ 직접).<br>각 챕터를 <b>8 카테고리로 자동 분류</b>:<br>일기 / 일상 / 고민 / 감정 / 기억 / 할 일 / 아이디어 / 관계.<br><br><span class="small">→ 도서관 일기·대화에 카테고리별로 모임.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'auto_diary_summary',
+    targetSelector: null,
+    title: '🤖 일기 자동 요약',
+    body: '체크인이나 대화로 그 날 활동이 쌓이면 — 내가 자동으로 <b>그 날 한 단락 요약</b>을 만들어줘.<br>일기 안 적은 날도 흐름이 보여.<br><br><span class="small">도서관 일기·대화 카드에 🤖 자동 요약 라벨로 표시.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8025,6 +8057,14 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   {
+    id: 'archive_search',
+    targetSelector: null,
+    title: '🔍 검색',
+    body: '도서관 위쪽 <b>🔍 검색</b> — 모든 카테고리에서 한 번에 찾아.<br>일기 / 메모 / 진주 / 깨달음 / 가닥 다.<br><br><span class="small">새 항목 있는 카테고리는 칩에 ● 점.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
     id: 'yangsaeng_tab',
     targetSelector: '[data-cat="yangsaeng"]',
     title: '🧬 양생방',
@@ -8084,6 +8124,14 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     title: '⚖️ 갈피의 방',
     body: '<b>큰 결정 (이직·이별·진로·이사 등) 14일 동안 숙성</b>하면서 매일 다른 각도로 같이 생각해보는 곳.<br><br>· 충동적 결정 X<br>· 깊이 있는 결정 ○<br>· 14일 후 결과 → 도서관 깨달음에 자동 보관',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'galpi_start',
+    targetSelector: null,
+    title: '⚖️ 갈피의 방 시작 (홈에서)',
+    body: '큰 결정 떠오르면:<br>홈 → <b>"+ 새 결정 시작"</b><br>주제 박으면 14일 카운트다운 시작 — 매일 다른 관점 prompt가 와.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8198,6 +8246,22 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   {
+    id: 'tracker_graph',
+    targetSelector: null,
+    title: '📊 추적 항목 그래프',
+    body: '체크인에 박은 추적 항목 (수면 / 운동 / 명상 등)이 — <b>나 탭에 그래프</b>로 보여.<br>시간 흐름 + 목표 진행률 한눈에.<br><br><span class="small">숫자 / 체크형 모두 시각화.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'force_analyze',
+    targetSelector: null,
+    title: '📊 지금까지 데이터 다시 분석',
+    body: '나 탭에 <b>"📊 지금까지 데이터 다시 분석"</b> 버튼.<br>누르면 — 내가 모든 데이터 종합해서 8 차원 모델을 다시 빌드.<br><br><span class="small">대화 많이 쌓인 후에 가끔 누르면 정확도 ↑.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
     id: 'diagnoses_intro',
     targetSelector: null,
     title: '🩺 진단',
@@ -8230,6 +8294,14 @@ const ONBOARDING_STEPS = [
     waitFor: 'click',
     advanceDelay: 800,
     manualAdvance: true,
+    dimBackground: false
+  },
+  {
+    id: 'help_button',
+    targetSelector: null,
+    title: '❓ 다시 보고 싶을 때',
+    body: '오른쪽 위 <b>❓</b> 누르면 언제든 이 튜토리얼 다시 시작.<br>기능 추가될 때마다 업데이트 배너로 알려줄게.<br><br><span class="small">모르겠는 건 헤더 ❓에서.</span>',
+    waitFor: 'next',
     dimBackground: false
   },
   {
@@ -25161,7 +25233,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.108-tutorial-fill-gaps';
+const APP_VERSION = 'v4.0.109-tutorial-more-steps';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
