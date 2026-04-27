@@ -3806,6 +3806,18 @@ const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮
 // ═══════════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// V4: 데이터 분리 (V3 prod와 완전 분리)
+// ───────────────────────────────────────────────────────────────
+// 같은 auth_user_id 안에서 user_id 컬럼으로 V3/V4 구분.
+// V3은 user_id=email, V4는 user_id='me_v4'. localStorage 키도 분리.
+// V4 prod URL은 'me_v4' row만 읽고 씀 → V3 데이터(`me`)는 영원히 안전.
+// ═══════════════════════════════════════════════════════════════
+const V4_USER_ID = 'me_v4';
+const V4_BACKUP_USER_ID = 'backup_v6_pre_v7';
+const V4_LOCAL_STORAGE_KEY = 'soragodong_v4';
+const V4_LAST_USER_KEY = 'soragodong_v4_last_user_id';
+
 const DEFAULT_STATE = {
   // Phase 1
   entries: [],
@@ -3813,7 +3825,14 @@ const DEFAULT_STATE = {
   traits: [],
   values: [],
   patterns: [],
-  caseFormulation: { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [] },
+  // V4: 8 차원 (V3 problems/mechanisms/strengths + goals/growth 신규).
+  // unverified는 미컨펌 텍스트 풀 — 자동 추출 결과는 여기로, 사용자 확인하면 실제 배열로.
+  caseFormulation: {
+    version: 0, lastUpdated: null,
+    problems: [], mechanisms: [], strengths: [],
+    goals: [], growth: [],
+    unverified: { problems: [], mechanisms: [], strengths: [], goals: [], growth: [] }
+  },
   archive: [],
   activeStrategies: [],
   modes: { exam: false, travel: false, sick: false, rest: false, period: false },
@@ -3864,14 +3883,23 @@ const DEFAULT_STATE = {
   preferences: {
     nightModeManual: null,  // null = auto, 'on' | 'off' = manual override
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
-    starRitualSettings: { useShortcut: true, shortcutName: 'SoraRitual' }
+    starRitualSettings: { useShortcut: true, shortcutName: 'SoraRitual' },
+    // V4 신규
+    tutorialVersion: null,        // 'full' | 'update' | 'core' | null (어떤 튜토리얼 버전 봤나)
+    tutorialCompleted: false,
+    miniTutorialsSeen: [],        // ['yangsaeng','galpi','sukgo',...] 화면별 미니 도움
+    progressiveUnlockLevel: null  // 'week1' | 'month1' | 'month3' (코어 선택 시 점진 노출)
   },
 
   // 7. V3.3: 대화 일별 아카이브
   chatArchive: [],          // [{date, summary, messageCount, messages, generatedAt}]
   chatArchiveLastRun: null, // 마지막 archive 작업 실행 날짜
 
-  version: 6
+  // === V7 (V4) 신규 ===
+  reflectionQuestions: [],  // 사고 질문 시스템 (anchor 30): [{id, text, status, conclusion, chatMessages, ...}]
+  todaySchedule: [],        // 타임테이블: [{id, title, start, end, source:'manual'|'ai'|'gcal'|'task', taskId}]
+
+  version: 7
 };
 
 let state = { ...DEFAULT_STATE };
@@ -3886,7 +3914,7 @@ function _flushLocalSave() {
   if (_localSaveTimer) { clearTimeout(_localSaveTimer); _localSaveTimer = null; }
   if (!authUserId) return;
   if (state.preferences && state.preferences.testerMode) return;
-  try { localStorage.setItem('soragodong_v2', JSON.stringify(state)); } catch (e) { console.warn('localStorage save failed:', e); }
+  try { localStorage.setItem(V4_LOCAL_STORAGE_KEY, JSON.stringify(state)); } catch (e) { console.warn('localStorage save failed:', e); }
 }
 function saveState(force) {
   if (!authUserId) return; // Don't save if not logged in
@@ -4033,7 +4061,9 @@ async function logout() {
     } catch (e) {}
   }
   localStorage.removeItem('soragodong_session');
-  localStorage.removeItem('soragodong_v2');
+  localStorage.removeItem('soragodong_v2');  // 혹시 V3 잔존 키 청소
+  localStorage.removeItem(V4_LOCAL_STORAGE_KEY);
+  localStorage.removeItem(V4_LAST_USER_KEY);
   session = null;
   authUserId = null;
   location.reload();
@@ -4050,34 +4080,37 @@ function authHeaders() {
 // SUPABASE
 // ═══════════════════════════════════════════════════════════════
 async function loadFromCloud() {
-  // V3.13.x SECURITY: localStorage 사용자 변경 감지 — 다른 계정 로그인 시 이전 사용자 데이터
-  // 흘러들어가지 않도록 (특히 cloud에 새 사용자 row 없을 때 localStorage fallback 발동되는 케이스 방지)
-  const lastUserId = localStorage.getItem('soragodong_last_user_id');
+  // V4: V4 전용 row만 로드. V3 데이터(`me` row)는 영원히 안 건드림.
+  console.log(`[V4] 소라고동 V4 미리보기 — auth_user_id=${authUserId}, user_id=${V4_USER_ID}`);
+  // V3.13.x SECURITY: localStorage 사용자 변경 감지 (다른 계정 로그인 시 이전 데이터 방지)
+  const lastUserId = localStorage.getItem(V4_LAST_USER_KEY);
   if (lastUserId && lastUserId !== authUserId) {
-    localStorage.removeItem('soragodong_v2');
-    console.log('[security] 다른 사용자 감지 — localStorage 정리');
+    localStorage.removeItem(V4_LOCAL_STORAGE_KEY);
+    console.log('[V4 security] 다른 사용자 감지 — localStorage 정리');
   }
-  localStorage.setItem('soragodong_last_user_id', authUserId);
+  localStorage.setItem(V4_LAST_USER_KEY, authUserId);
 
   setSyncStatus('syncing');
   try {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&order=updated_at.desc&limit=1`,
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&order=updated_at.desc&limit=1`,
       { headers: authHeaders() }
     );
     if (!resp.ok) throw new Error('Load failed');
     const data = await resp.json();
     if (data.length > 0) {
       state = { ...DEFAULT_STATE, ...data[0].data };
-      console.log('✅ Loaded from cloud');
+      console.log('✅ V4 row loaded from cloud');
     } else {
-      // V3.13.x SECURITY: tryMigrateLegacyData 호출 제거.
-      // 이전 버전은 신규 가입자가 처음 로그인 시 user_id='me' 데이터를 가져와 자기 state로
-      // 셋업했는데, 이로 인해 다른 사용자(V5 'me' 단일 row)의 데이터가 무차별 할당되는
-      // 보안/프라이버시 버그가 있었음. 신규 사용자는 진짜 신규로 시작.
-      const local = localStorage.getItem('soragodong_v2');
+      // V4 row 없음 = 첫 V4 진입. 빈 V7 state로 시작.
+      // V3 데이터 import는 별도 UI 버튼(V4-1b)에서 처리.
+      const local = localStorage.getItem(V4_LOCAL_STORAGE_KEY);
       if (local) {
         state = { ...DEFAULT_STATE, ...JSON.parse(local) };
+        console.log('[V4] localStorage fallback 사용');
         await saveToCloudNow();
+      } else {
+        console.log('[V4] 빈 V7 state로 시작');
       }
     }
     // Ensure all collections exist
@@ -4125,11 +4158,29 @@ async function loadFromCloud() {
     if (!state.chatArchive) state.chatArchive = [];
     if (state.chatArchiveLastRun === undefined) state.chatArchiveLastRun = null;
 
-    // === Auto-backup BEFORE V6 migration ===
-    if (state.version < 6) {
-      await createV3Backup();
-      await migrateToV6();
-      state.version = 6;
+    // === V7 (V4) collection 보강 ===
+    if (!state.reflectionQuestions) state.reflectionQuestions = [];
+    if (!state.todaySchedule) state.todaySchedule = [];
+    // caseFormulation 8 차원
+    if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
+    if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
+    if (!Array.isArray(state.caseFormulation.growth)) state.caseFormulation.growth = [];
+    if (!state.caseFormulation.unverified) state.caseFormulation.unverified = {};
+    ['problems','mechanisms','strengths','goals','growth'].forEach(k => {
+      if (!Array.isArray(state.caseFormulation.unverified[k])) state.caseFormulation.unverified[k] = [];
+    });
+    // preferences V4 필드
+    if (!state.preferences) state.preferences = JSON.parse(JSON.stringify(DEFAULT_STATE.preferences));
+    if (state.preferences.tutorialVersion === undefined) state.preferences.tutorialVersion = null;
+    if (state.preferences.tutorialCompleted === undefined) state.preferences.tutorialCompleted = false;
+    if (!Array.isArray(state.preferences.miniTutorialsSeen)) state.preferences.miniTutorialsSeen = [];
+    if (state.preferences.progressiveUnlockLevel === undefined) state.preferences.progressiveUnlockLevel = null;
+
+    // === V6 → V7 마이그레이션 (V3 데이터 import 등으로 V6 형식이 들어왔을 때만 발동) ===
+    if ((state.version || 0) < 7) {
+      await createV6Backup();
+      migrateToV7();
+      state.version = 7;
       await saveToCloudNow();
     }
 
@@ -4143,7 +4194,7 @@ async function loadFromCloud() {
     return true;
   } catch (e) {
     console.error('Cloud load error:', e);
-    const local = localStorage.getItem('soragodong_v2');
+    const local = localStorage.getItem(V4_LOCAL_STORAGE_KEY);
     if (local) {
       state = { ...DEFAULT_STATE, ...JSON.parse(local) };
       state.modes = { ...DEFAULT_STATE.modes, ...(state.modes || {}) };
@@ -4177,14 +4228,24 @@ async function loadFromCloud() {
         state.hasSeenWelcomeTutorial = (state.entries || []).length > 0 || (state.chatMessages || []).length > 0;
       }
       if (!state.modeActiveSince) state.modeActiveSince = {};
-      if (!state.preferences) state.preferences = {
-        nightModeManual: null,
-        pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
-        starRitualSettings: { useShortcut: true, shortcutName: 'SoraRitual' }
-      };
+      if (!state.preferences) state.preferences = JSON.parse(JSON.stringify(DEFAULT_STATE.preferences));
       // V3.3 migration
       if (!state.chatArchive) state.chatArchive = [];
       if (state.chatArchiveLastRun === undefined) state.chatArchiveLastRun = null;
+      // V7 (V4) 신규
+      if (!state.reflectionQuestions) state.reflectionQuestions = [];
+      if (!state.todaySchedule) state.todaySchedule = [];
+      if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
+      if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
+      if (!Array.isArray(state.caseFormulation.growth)) state.caseFormulation.growth = [];
+      if (!state.caseFormulation.unverified) state.caseFormulation.unverified = {};
+      ['problems','mechanisms','strengths','goals','growth'].forEach(k => {
+        if (!Array.isArray(state.caseFormulation.unverified[k])) state.caseFormulation.unverified[k] = [];
+      });
+      if (state.preferences.tutorialVersion === undefined) state.preferences.tutorialVersion = null;
+      if (state.preferences.tutorialCompleted === undefined) state.preferences.tutorialCompleted = false;
+      if (!Array.isArray(state.preferences.miniTutorialsSeen)) state.preferences.miniTutorialsSeen = [];
+      if (state.preferences.progressiveUnlockLevel === undefined) state.preferences.progressiveUnlockLevel = null;
     }
     setSyncStatus('error');
     return false;
@@ -4266,24 +4327,96 @@ async function migrateToV6() {
 // 이전엔 신규 가입자가 cloud의 user_id='me' 단일 row를 가져와 다른 사용자 데이터가
 // 무차별 할당되는 프라이버시 버그가 있었음. 더 이상 호출되지 않음.
 
+// ═══════════════════════════════════════════════════════════════
+// V4: V6 → V7 마이그레이션 + V6 백업
+// ───────────────────────────────────────────────────────────────
+// 호출 시점: loadFromCloud에서 state.version < 7 감지 시 1회.
+// 빈 V7 state로 시작하는 신규 V4 사용자는 호출 안 됨 (DEFAULT_STATE.version=7).
+// V3 데이터 import (V4-1b) 시 V6 형식이 들어오면 호출됨.
+// ═══════════════════════════════════════════════════════════════
+async function createV6Backup() {
+  if (!authUserId) return;
+  try {
+    const checkResp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_BACKUP_USER_ID}&select=id&limit=1`,
+      { headers: authHeaders() }
+    );
+    const existing = await checkResp.json();
+    if (existing.length > 0) {
+      console.log('V6 backup already exists');
+      return;
+    }
+    const backup = JSON.parse(JSON.stringify(state));
+    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        auth_user_id: authUserId,
+        user_id: V4_BACKUP_USER_ID,
+        data: { ...backup, _backup_meta: { type: 'v6_pre_v7', createdAt: new Date().toISOString() } }
+      })
+    });
+    console.log('✅ V6 backup created before V7 migration');
+  } catch (e) {
+    console.error('V6 backup error:', e);
+    // Don't block migration if backup fails — but log it
+  }
+}
+
+function migrateToV7() {
+  // V6 → V7: V4 신규 필드만 보강. 기존 V6 데이터는 보존 (파괴 X).
+  // - caseFormulation: goals/growth + unverified 8차원
+  // - reflectionQuestions, todaySchedule
+  // - preferences: tutorialVersion, tutorialCompleted, miniTutorialsSeen, progressiveUnlockLevel
+  // 추가 V4 필드 (strategyCard.generations, mission.strategyId, chapterMeta, pearls.type, archive.type 등)는
+  // V4-1c에서 별도 마이그레이션. 지금은 빈 default로만 두면 V4 코드가 안전하게 처리.
+  console.log('🔄 Migrating V6 → V7...');
+
+  if (!state.caseFormulation) {
+    state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
+  }
+  if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
+  if (!Array.isArray(state.caseFormulation.growth)) state.caseFormulation.growth = [];
+  if (!state.caseFormulation.unverified) state.caseFormulation.unverified = {};
+  ['problems', 'mechanisms', 'strengths', 'goals', 'growth'].forEach(k => {
+    if (!Array.isArray(state.caseFormulation.unverified[k])) state.caseFormulation.unverified[k] = [];
+  });
+
+  if (!Array.isArray(state.reflectionQuestions)) state.reflectionQuestions = [];
+  if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
+
+  if (!state.preferences) state.preferences = JSON.parse(JSON.stringify(DEFAULT_STATE.preferences));
+  if (state.preferences.tutorialVersion === undefined) state.preferences.tutorialVersion = null;
+  if (state.preferences.tutorialCompleted === undefined) state.preferences.tutorialCompleted = false;
+  if (!Array.isArray(state.preferences.miniTutorialsSeen)) state.preferences.miniTutorialsSeen = [];
+  if (state.preferences.progressiveUnlockLevel === undefined) state.preferences.progressiveUnlockLevel = null;
+
+  console.log('✅ Migration to V7 complete');
+}
+
 async function saveToCloudNow() {
   if (!authUserId) return;
   state.lastSync = new Date().toISOString();
-  const checkResp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&select=id&limit=1`,
+  // V4: V4 row만 PATCH/POST. V3 row(`me`)는 영원히 안 건드림.
+  const checkResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=id&limit=1`,
     { headers: authHeaders() }
   );
   const existing = await checkResp.json();
   if (existing.length > 0) {
-    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}`, {
-      method: 'PATCH',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ data: state, updated_at: state.lastSync })
-    });
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
+      {
+        method: 'PATCH',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ data: state, updated_at: state.lastSync })
+      }
+    );
   } else {
     await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ auth_user_id: authUserId, user_id: session.user.email || 'auth', data: state })
+      body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: state })
     });
   }
 }
@@ -14118,15 +14251,17 @@ function exportData() {
 }
 
 async function resetAll() {
-  if (!confirm('로컬+클라우드 모든 데이터가 삭제돼. 정말?')) return;
+  // V4: V4 row만 삭제. V3 prod 데이터(`me`)는 영원히 안 건드림.
+  if (!confirm('V4 미리보기 데이터만 삭제돼 (V3 prod는 안전). 정말?')) return;
   if (!confirm('한 번 더. 진짜?')) return;
-  localStorage.removeItem('soragodong_v2');
+  localStorage.removeItem(V4_LOCAL_STORAGE_KEY);
+  localStorage.removeItem(V4_LAST_USER_KEY);
   try {
     if (authUserId) {
-      await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}`, {
-        method: 'DELETE',
-        headers: authHeaders()
-      });
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
+        { method: 'DELETE', headers: authHeaders() }
+      );
     }
   } catch (e) { console.error(e); }
   location.reload();
@@ -14212,7 +14347,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = '2026-04-27-perf-fixes';
+const APP_VERSION = 'v4.0.0-data-v7';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
