@@ -1695,6 +1695,23 @@
   }
 
   .exec-now-section { margin-bottom: 20px; }
+  /* V4-1u-b-3: V3 5블록 토글 */
+  .v3-blocks-toggle {
+    margin: 8px 0 12px;
+    text-align: center;
+  }
+  .v3-blocks-toggle button {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--text-soft);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .v3-blocks-toggle button:active { color: var(--text-dim); border-color: var(--text-soft); }
   /* V4-1u-b: 타임테이블 시간 grid */
   .v4-timetable-section {
     margin: 20px 0 24px;
@@ -13660,8 +13677,16 @@ function renderExecute() {
       }, 250);
     }
 
-    // Time table (V3 5블록 — 점진 마이그레이션 위해 일단 유지)
-    html += renderTimetableHTML();
+    // V4-1u-b-3: V3 5블록은 default 숨김 (V4 비전 10.6 5블록 제거). 사용자 명시 토글로 펼침.
+    const show5Blocks = state.preferences && state.preferences.show5Blocks === true;
+    html += `
+      <div class="v3-blocks-toggle">
+        <button onclick="toggle5Blocks()">${show5Blocks ? '▴ V3 5블록 접기' : '▾ V3 5블록 보기 (이전 버전)'}</button>
+      </div>
+    `;
+    if (show5Blocks) {
+      html += renderTimetableHTML();
+    }
   }
 
   container.innerHTML = html;
@@ -14608,6 +14633,14 @@ async function addV4ScheduleItem() {
   saveState();
   renderExecute();
   showToast('일정 추가됨 📅');
+}
+
+// V4-1u-b-3: V3 5블록 토글 (default 숨김)
+function toggle5Blocks() {
+  if (!state.preferences) state.preferences = {};
+  state.preferences.show5Blocks = !state.preferences.show5Blocks;
+  saveState();
+  renderExecute();
 }
 
 // V4-1u-d: 할 일 → 일정 박기 (V4 비전 10.7) — task.scheduledStart/End + state.todaySchedule push (taskId)
@@ -17959,7 +17992,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.36-quarterly-view';
+const APP_VERSION = 'v4.0.37-5blocks-collapse';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
