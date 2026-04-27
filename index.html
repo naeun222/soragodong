@@ -7403,6 +7403,18 @@ async function loadFromCloud() {
       console.log('[testerMode] stale flag 자동 정리됨');
     }
 
+    // 사용자 요청 2026-04-28: resetAll로 보존된 API 키 복원
+    try {
+      const preserved = localStorage.getItem('soragodong_v4_apikey_preserve');
+      if (preserved && !state.apiKey) {
+        state.apiKey = preserved;
+        localStorage.removeItem('soragodong_v4_apikey_preserve');
+        console.log('[apiKey] preserve 키에서 복원됨');
+        // 즉시 cloud에 저장 (key가 매번 잃지 않게)
+        try { await saveToCloudNow(); } catch (e) { console.warn('apikey restore save:', e); }
+      }
+    } catch (e) { console.warn('apikey restore:', e); }
+
     // 사용자 요청 2026-04-28: 시드 데이터가 cloud에 박혀있는 버그 자동 청소
     // (이전 버그로 testerMode 동작 중 force=true / 직접 saveToCloudNow 경로에서 cloud로 새던 시드 정리)
     let seedCleaned = false;
@@ -26061,20 +26073,25 @@ async function recoverFromBackup() {
 
 async function resetAll() {
   // V4: V4 row만 삭제. V3 prod 데이터(`me`)는 영원히 안 건드림.
-  if (!confirm('V4 미리보기 데이터만 삭제돼 (V3 prod는 안전). 정말?')) return;
+  if (!confirm('V4 미리보기 데이터만 삭제돼 (V3 prod는 안전). API 키는 유지. 정말?')) return;
   if (!confirm('한 번 더. 진짜?')) return;
+  // 사용자 요청 2026-04-28: API 키 보존 (별도 localStorage에 임시 저장 → 새 state 만들 때 복원)
+  const preservedApiKey = state.apiKey || '';
+  if (preservedApiKey) {
+    try { localStorage.setItem('soragodong_v4_apikey_preserve', preservedApiKey); } catch (e) {}
+  }
   // 사용자 보고 2026-04-28: 시드 데이터 남는 버그 — 메모리 + storage + cloud 모두 강제 정리
   // 1. 메모리에서 testerMode + 튜토리얼 mode flag 강제 OFF (잔여 backup 무력화)
   if (state.preferences) state.preferences.testerMode = false;
   window._onbTutorialMode = false;
   window._testerModeBackupState = null;
   if (typeof _testerModeBackupState !== 'undefined') _testerModeBackupState = null;
-  // 2. localStorage 모든 V4 키 정리 (다른 키도 cleanup)
+  // 2. localStorage 모든 V4 키 정리 (다른 키도 cleanup) — API 키 preserve 키는 제외
   try {
     localStorage.removeItem(V4_LOCAL_STORAGE_KEY);
     localStorage.removeItem(V4_LAST_USER_KEY);
     Object.keys(localStorage).forEach(k => {
-      if (k.startsWith('soragodong_v4') || k.startsWith('me_v4')) {
+      if ((k.startsWith('soragodong_v4') || k.startsWith('me_v4')) && k !== 'soragodong_v4_apikey_preserve') {
         localStorage.removeItem(k);
       }
     });
