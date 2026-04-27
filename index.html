@@ -20328,6 +20328,18 @@ JSON만 출력. 마크다운 X. 다른 설명 X.`;
       }
       state.topicCards.push(card);
     });
+    // 사용자 요청 2026-04-28 V3 audit: 토픽 추출 후 chapterStart 메시지의 chapterMeta 채우기 (chapter divider 라벨에 노출됨)
+    if (parsed.topics.length > 0 && prevChapterMsgs[0]) {
+      const startMsg = prevChapterMsgs[0];
+      if (startMsg.chapterStart) {
+        const firstTopic = parsed.topics[0];
+        const cat = firstTopic.category || null;
+        const sum = firstTopic.title || null;  // title이 더 짧고 깔끔 (summary는 chapter divider에 길어짐)
+        if (!startMsg.chapterMeta) startMsg.chapterMeta = { category: null, summary: null, strategyId: null };
+        if (cat && !startMsg.chapterMeta.category) startMsg.chapterMeta.category = cat;
+        if (sum && !startMsg.chapterMeta.summary) startMsg.chapterMeta.summary = sum;
+      }
+    }
     saveState();
     console.log(`✦ 챕터 토픽 ${parsed.topics.length}개 추출됨`);
   } catch (e) {
@@ -27672,7 +27684,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.138-settings-cleanup';
+const APP_VERSION = 'v4.0.139-chapter-meta-fill';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
