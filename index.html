@@ -2825,7 +2825,7 @@
   .input-modal-overlay {
     position: fixed; inset: 0;
     background: rgba(15,14,23,0.85);
-    z-index: 9500;
+    z-index: 9900;  /* V4-fix: 돌연변이 임시 대화창 (9800)보다 위로 — 그 안 confirm 모달 가려지지 않게 */
     display: flex; align-items: flex-end; justify-content: center;
     backdrop-filter: blur(8px);
     opacity: 0;
@@ -14061,33 +14061,68 @@ function showCrystallizeRitualModal(card, dnaPearl) {
     };
   });
   const polyRitual = RV.map(v => `${v.x.toFixed(1)},${v.y.toFixed(1)}`).join(' ');
-  // 헬릭스 점 — shellsUsed 기반 (없으면 기본 색)
+  // V4-fix v3 (사용자 보고): 헬릭스 점 — shellsUsed 비어도 다채로운 색 (단일 색 X)
   const shellList = (state.shellCollection || []);
   const shellsToShow = (dnaPearl.shellsUsed || []).slice(0, 8);
+  const tierColors = { legend: '#ffd93d', call: '#d4a76a', golden: '#e8c170', main: '#7ec8e3', daily: '#a89dc8', light: '#b39ddb' };
+  const fallbackPalette = ['#ffd93d', '#5fcfba', '#ff8da1', '#a89dc8', '#7ec8e3', '#ffb86b', '#b39ddb', '#fff5b8'];
   const dotColors = shellsToShow.map(sid => {
     const s = shellList.find(x => x._id === sid);
-    return s?.tier === 'legend' ? '#ffd93d' :
-           s?.tier === 'call'   ? '#d4a76a' :
-           s?.tier === 'golden' ? '#e8c170' : '#a89dc8';
+    return tierColors[s?.tier] || '#a89dc8';
   });
-  while (dotColors.length < 8) dotColors.push('#fff5b8');
-  // 외곽 헬릭스 점 (pulse)
+  while (dotColors.length < 8) {
+    dotColors.push(fallbackPalette[dotColors.length % fallbackPalette.length]);
+  }
+  // 외곽 헬릭스 점 (각 점마다 다른 색 + pulse)
   const outerDotsRitual = dotColors.map((c, i) => {
     const angle = (i / 8) * 360 - 90;
     const cx = 100 + 76 * Math.cos(angle * Math.PI / 180);
     const cy = 100 + 76 * Math.sin(angle * Math.PI / 180);
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.2" fill="${c}" opacity="0.95">
-      <animate attributeName="r" values="4.2;5.6;4.2" dur="${2 + (i % 3) * 0.5}s" repeatCount="indefinite"/>
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.5" fill="${c}" opacity="0.95">
+      <animate attributeName="r" values="4.5;6;4.5" dur="${2 + (i % 3) * 0.5}s" repeatCount="indefinite"/>
       <animate attributeName="opacity" values="0.7;1;0.7" dur="${2 + (i % 3) * 0.5}s" repeatCount="indefinite"/>
-    </circle>`;
+    </circle>
+    <!-- glow ring 외부 -->
+    <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="7" fill="${c}" opacity="0.25" filter="url(#cryst-bigglow)"/>`;
   }).join('');
-  // 안쪽 헬릭스 (역회전)
+  // 안쪽 헬릭스 (역회전, 색 다양화)
+  const innerColors = [dotColors[0], dotColors[2], dotColors[4], dotColors[6], dotColors[1], dotColors[3]];
   const innerDotsRitual = [0,1,2,3,4,5].map(n => {
     const a = (n / 6) * 360 + 30;
     const x = 100 + 32 * Math.cos(a * Math.PI / 180);
     const y = 100 + 32 * Math.sin(a * Math.PI / 180);
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="${safeOuter}" opacity="0.85"/>`;
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="${innerColors[n] || safeOuter}" opacity="0.92"/>`;
   }).join('');
+  // V4-fix v3 (사용자 보고): 진짜 DNA 헬릭스 — 결정 안에 이중 나선 (sine 반대) + 다채로운 사다리(rungs)
+  const helixYStart = 32;
+  const helixYEnd = 168;
+  const helixHeight = helixYEnd - helixYStart;
+  const helixSteps = 28;
+  const helixWaves = 2.2;
+  const helixAmp = 16;
+  const helixPath1 = [];
+  const helixPath2 = [];
+  const helixRungs = [];
+  for (let s = 0; s <= helixSteps; s++) {
+    const t = s / helixSteps;
+    const y = helixYStart + t * helixHeight;
+    const phase = t * helixWaves * Math.PI * 2;
+    const x1 = 100 + Math.sin(phase) * helixAmp;
+    const x2 = 100 + Math.sin(phase + Math.PI) * helixAmp;
+    helixPath1.push(`${s === 0 ? 'M' : 'L'}${x1.toFixed(1)},${y.toFixed(1)}`);
+    helixPath2.push(`${s === 0 ? 'M' : 'L'}${x2.toFixed(1)},${y.toFixed(1)}`);
+    if (s % 3 === 0 && s > 0 && s < helixSteps) {
+      const rungColor = fallbackPalette[s % fallbackPalette.length];
+      helixRungs.push(`<line x1="${x1.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${rungColor}" stroke-width="1.4" opacity="0.7" stroke-linecap="round"/>`);
+    }
+  }
+  const helixHtml = `
+    <g class="cryst-helix-flow" opacity="0.88">
+      <path d="${helixPath1.join(' ')}" fill="none" stroke="${safeOuter}" stroke-width="1.6" stroke-opacity="0.85" stroke-linecap="round"/>
+      <path d="${helixPath2.join(' ')}" fill="none" stroke="${fallbackPalette[2]}" stroke-width="1.6" stroke-opacity="0.85" stroke-linecap="round"/>
+      ${helixRungs.join('')}
+    </g>
+  `;
   // sparkles ✦
   const sparklesRitual = [
     { x: 28, y: 48, d: 0 }, { x: 172, y: 56, d: 0.5 }, { x: 48, y: 162, d: 1.0 },
@@ -14154,6 +14189,8 @@ function showCrystallizeRitualModal(card, dnaPearl) {
               <polygon points="${RV.map(v => `${(100 + (v.x - 100) * 0.45).toFixed(1)},${(100 + (v.y - 100) * 0.45).toFixed(1)}`).join(' ')}"
                        fill="none" stroke="${safeOuter}" stroke-width="0.5" stroke-opacity="0.55"/>
             </g>
+            <!-- V4-fix: 진짜 DNA 헬릭스 (이중 나선 + 다채로운 사다리) — 결정 안 가운데 -->
+            ${helixHtml}
             <!-- 안쪽 헬릭스 (역회전) -->
             <g class="dna-pearl-inner-spin">${innerDotsRitual}</g>
             <!-- 외곽 헬릭스 점 (pulse) -->
@@ -23145,7 +23182,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.74-stories-music-prettier-diag';
+const APP_VERSION = 'v4.0.75-cryst-helix-mut-zfix';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
