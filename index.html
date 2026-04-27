@@ -10303,6 +10303,55 @@ function expireOldMissions() {
   if (changed) saveState();
 }
 
+// V4-fix v3 (사용자 요청): 가닥 미션 팔로업 — 어제~7일 내 pending strategy mission 1개 찾기
+function _findPendingStrategyFollowup() {
+  const today = todayKey();
+  return (state.missions || []).find(m => {
+    if (m.status !== 'pending') return false;
+    if (!m.strategyId || !m.scheduledFor) return false;
+    if (m._followupAsked) return false;
+    const diff = daysBetweenKeys(m.scheduledFor, today);
+    return diff >= 1 && diff <= 7;  // 1-7일 전 pending
+  });
+}
+
+// V4 비전 6.2: 결과 체크 (체크인/채팅 진입 시 자동 팔로업)
+async function offerStrategyFollowup() {
+  if (!state.preferences) state.preferences = {};
+  const todayK = todayKey();
+  const isTester = !!(state.preferences && state.preferences.testerMode);
+  // 하루 한 번 가드 (테스터 모드는 매번 — 검증용)
+  if (!isTester && state.preferences._lastFollowupAt === todayK) return;
+  const mission = _findPendingStrategyFollowup();
+  if (!mission) return;
+  // 묻기 마킹 — 결과 답 X여도 같은 미션 다시 안 띄움
+  mission._followupAsked = true;
+  state.preferences._lastFollowupAt = todayK;
+  saveState();
+  // 화면 전환 후 약간 딜레이 — 사용자가 화면 인지하고 모달
+  setTimeout(async () => {
+    if (typeof showAttemptResultModal !== 'function') return;
+    const card = (state.topicCards || []).find(c => c.id === mission.strategyId);
+    const cardTitle = card ? card.title : mission.title;
+    const status = await showAttemptResultModal(`"${cardTitle}" — ${mission.title}`);
+    if (!status) return;
+    mission.status = 'completed';
+    mission.completedDate = todayK;
+    mission.completedAt = new Date().toISOString();
+    mission.attemptStatus = status;
+    if (typeof recordStrategyAttempt === 'function') {
+      try { recordStrategyAttempt(mission.strategyId, status, mission.id); } catch (e) { console.warn('recordStrategyAttempt:', e); }
+    }
+    saveState({ force: true });
+    if (status === 'didnt' && typeof openMutationChat === 'function') {
+      setTimeout(() => openMutationChat(mission.strategyId, mission.title), 300);
+    } else {
+      showToast(`✦ "${mission.title}" 결과 기록됨`);
+    }
+    if (typeof renderTodayMission === 'function') renderTodayMission();
+  }, 600);
+}
+
 // V3.13.x: 오늘 list = 오늘 + 1·2일 전 pending. 0일 먼저 정렬. 없으면 오늘 완료 1개.
 function getTodayMissions() {
   const today = todayKey();
@@ -11462,7 +11511,11 @@ function showScreen(name) {
   }
   if (name === 'settings') { setTimeout(refreshTesterModeUI, 30); }
   if (name === 'execute') renderExecute();
-  if (name === 'checkin') { renderDailyQuestion(); renderModes(); renderCheckinTrackers(); prefillCheckinFromEntry(); }
+  if (name === 'checkin') {
+    renderDailyQuestion(); renderModes(); renderCheckinTrackers(); prefillCheckinFromEntry();
+    // V4-fix v3 (사용자 요청): 체크인 진입 시 가닥 미션 팔로업 자동 prompt
+    if (typeof offerStrategyFollowup === 'function') { try { offerStrategyFollowup(); } catch (e) {} }
+  }
   if (name === 'model') renderModel();
   if (name === 'archive') {
     // V4-fix #5: 도서관 처음 진입 시 모든 카테고리 lastSeen 초기화 (점 폭발 방지)
@@ -11481,6 +11534,8 @@ function showScreen(name) {
     rotateChatPlaceholder();  // V3.10: 매번 다른 힌트
     renderChat();
     setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50);
+    // V4-fix v3 (사용자 요청): 대화 진입 시 가닥 미션 팔로업 자동 prompt
+    if (typeof offerStrategyFollowup === 'function') { try { offerStrategyFollowup(); } catch (e) {} }
   }
 
   // V3.13.x: 튜토리얼 visit step — 어떤 경로든 화면 도달 시 advance.
@@ -13028,10 +13083,10 @@ async function askDeeper(messageIdx) {
   }
   const userMsg = state.chatMessages[userMsgIdx];
   
-  // Send a follow-up "어떡하지?" message
+  // V4-fix v3 (사용자 요청): 더 알고 싶어 → 4단 + 진단 인용 강제
   state.chatMessages.push({
     role: 'user',
-    content: '아까 그 얘기 좀 더 깊게 분석해줄래? 어떻게 하면 좋을지 전략도 알려줘.',
+    content: '아까 그 얘기, 4단계로 더 깊게 분석해줘. [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. 그리고 너가 관찰한 패턴(진단)도 한 줄 자연스럽게 인용해줘.',
     timestamp: new Date().toISOString(),
     isDeeperRequest: true
   });
@@ -23711,7 +23766,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.86-beach-no-overlap';
+const APP_VERSION = 'v4.0.88-followup-deeper-prompt';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
