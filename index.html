@@ -20662,9 +20662,8 @@ function testSeedV4Data() {
   // missions 5 (오늘 pending / 어제 carryover pending / 그제 carryover pending / completed / expired)
   const yesterdayKey = new Date(today.getTime() - 86400000).toISOString().split('T')[0];
   const dayBeforeKey = new Date(today.getTime() - 2 * 86400000).toISOString().split('T')[0];
+  // 사용자 요청 2026-04-28: pending 미션 시드 제거 (튜토리얼 흐름 깔끔하게). completed/expired만 유지 (시각 검증)
   state.missions = [
-    { id: 'mis_seed_1', title: '오늘 30분 산책', description: '집 → 한강 30분', status: 'pending', scheduledFor: todayStr, createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: null, generationIdx: null },
-    { id: 'mis_seed_carryover_2', title: '그제 받은 부름', status: 'pending', scheduledFor: dayBeforeKey, createdAt: new Date(today.getTime() - 2 * 86400000).toISOString() },
     { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
     { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
   ];
@@ -25241,7 +25240,9 @@ function renderMusicCardHTML(track, opts = {}) {
 
 let _currentMusicAudio = null;
 let _currentMusicBtn = null;
+// 사용자 요청 2026-04-28: V3 동작 참고 — 에러 핸들링 + autoplay 정책 대응 강화
 function toggleMusicPreview(btn, url) {
+  if (!url) { showToast('재생할 음원 URL이 없어'); return; }
   if (_currentMusicAudio && _currentMusicBtn !== btn) {
     try { _currentMusicAudio.pause(); } catch {}
     if (_currentMusicBtn) {
@@ -25253,9 +25254,13 @@ function toggleMusicPreview(btn, url) {
   }
   if (_currentMusicAudio && _currentMusicBtn === btn) {
     if (_currentMusicAudio.paused) {
-      _currentMusicAudio.play().catch(e => console.warn(e));
-      btn.textContent = '⏸';
-      btn.classList.add('playing');
+      _currentMusicAudio.play().then(() => {
+        btn.textContent = '⏸';
+        btn.classList.add('playing');
+      }).catch(e => {
+        console.warn('audio play failed:', e);
+        showToast('재생 실패: ' + (e.message || '알 수 없는 오류'));
+      });
     } else {
       _currentMusicAudio.pause();
       btn.textContent = '▶';
@@ -25263,18 +25268,39 @@ function toggleMusicPreview(btn, url) {
     }
     return;
   }
-  const audio = new Audio(url);
-  audio.play().catch(e => console.warn('audio play failed:', e));
+  const audio = new Audio();
+  audio.preload = 'auto';
+  audio.src = url;
   audio.addEventListener('ended', () => {
     btn.textContent = '▶';
     btn.classList.remove('playing');
     _currentMusicAudio = null;
     _currentMusicBtn = null;
   });
+  audio.addEventListener('error', (e) => {
+    console.warn('audio error:', e, url);
+    btn.textContent = '▶';
+    btn.classList.remove('playing');
+    showToast('음원 로드 실패 — URL 확인 필요');
+    _currentMusicAudio = null;
+    _currentMusicBtn = null;
+  });
+  // 사용자 클릭 직후 즉시 play (gesture 유효)
+  const playPromise = audio.play();
   _currentMusicAudio = audio;
   _currentMusicBtn = btn;
   btn.textContent = '⏸';
   btn.classList.add('playing');
+  if (playPromise && typeof playPromise.then === 'function') {
+    playPromise.catch(e => {
+      console.warn('audio play failed:', e);
+      btn.textContent = '▶';
+      btn.classList.remove('playing');
+      showToast('재생 실패: ' + (e.message || '브라우저 정책'));
+      _currentMusicAudio = null;
+      _currentMusicBtn = null;
+    });
+  }
 }
 
 // 체크인 화면 — 음악 슬롯 렌더 + 추가/제거
