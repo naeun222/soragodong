@@ -5766,6 +5766,10 @@
     box-shadow: 0 0 16px 4px rgba(201,169,110,0.6), 0 0 0 2px rgba(201,169,110,0.2);
     animation: onbPulseNoDim 2s ease-in-out infinite;
   }
+  /* 모달 위로 떠야 하는 spotlight (modal 안 target) */
+  .onb-spotlight.above-modal {
+    z-index: 9950 !important;
+  }
   @keyframes onbPulseNoDim {
     0%, 100% { box-shadow: 0 0 16px 4px rgba(201,169,110,0.6), 0 0 0 2px rgba(201,169,110,0.2); }
     50%      { box-shadow: 0 0 28px 10px rgba(201,169,110,0.85), 0 0 0 3px rgba(201,169,110,0.35); }
@@ -8061,10 +8065,11 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'mission_carryover',
-    targetSelector: '#lostCallsSection',
+    targetSelector: '#shellModal .btn-secondary',
     title: '📆 못 한 부름은?',
-    body: '\'소라의 부름\'은 <b>3일 동안 안 하면</b> 모래사장의 "📜 지난 부름"으로 가서 <b>7일 동안</b> 있다가 알아서 사라져.<br><br>거기서 <b>"다시 받기"</b> 누르면 오늘로 부활!<br><br><span class="small">자책 X. 하루 못 한 거 = 너 X 도구 또는 타이밍.</span>',
-    waitFor: 'next',
+    body: '\'소라의 부름\'은 <b>3일 동안 안 하면</b> 모래사장의 "📜 지난 부름"으로 가서 <b>7일 동안</b> 있다가 알아서 사라져.<br><br>거기서 <b>"다시 받기"</b> 누르면 오늘로 부활!<br><br><span class="small">자책 X. 하루 못 한 거 = 너 X 도구 또는 타이밍.</span><br><br>다 봤으면 <b>닫기</b> 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
     dimBackground: false,
     aboveModal: true,
     fallbackPosition: 'top'
@@ -8074,7 +8079,7 @@ const ONBOARDING_STEPS = [
     id: 'attempt_result_explain',
     targetSelector: null,
     title: '🔍 결과 체크',
-    body: '근데, 미션은 성공해도 <b>고민이 해결 안 될 수도 있잖아</b>: 맞아.<br><br>그래서 고민이 해결됐는지 <b>결과 체크</b>를 할 거야.<br>다음날 <b>체크인이나 대화 탭에 들어올 때 자동으로 떠</b>.',
+    body: '근데, 미션은 성공해도 <b>문제가 해결 안 될 수도 있잖아</b>: 맞아.<br><br>그래서 문제가 해결됐는지 <b>결과 체크</b>를 할 거야.<br>다음날 <b>체크인이나 대화 탭에 들어올 때 자동으로 떠</b>.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8086,7 +8091,8 @@ const ONBOARDING_STEPS = [
     waitFor: 'next',
     manualAdvance: true,
     dimBackground: false,
-    demoAttemptResult: true
+    demoAttemptResult: true,
+    aboveModal: true
   },
 
   // === Phase 6: 도서관 5 카테고리 (V4) — 부가 기능 (5) ===
@@ -8532,6 +8538,7 @@ function onbPositionStep(step, retryCount) {
   if (backBtn) backBtn.hidden = (_onbStep === 0);
   // 모달 위로 떠야 하는 step (예: diary_walkthrough — picker 모달이 위에 떠서 가림)
   coachmark.classList.toggle('above-modal', !!step.aboveModal);
+  spotlight.classList.toggle('above-modal', !!step.aboveModal);
 
   stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
   titleEl.textContent = step.title;
