@@ -8748,16 +8748,22 @@ function onbPositionStep(step, retryCount) {
     if (target && target.offsetParent === null) {
       target = null;
     }
-    // V3.13.x: target 없고 dimBackground !== false면 polling. coachmark는 화면 중앙 임시 표시.
-    if (!target && step.dimBackground !== false) {
+    // V3.13.x + 2026-04-28: target 없으면 polling (dimBackground 무관). coachmark 임시 위치.
+    if (!target) {
       spotlight.style.display = 'none';
-      mask.classList.add('show-full');
-      const ov0 = document.getElementById('onbOverlay');
-      if (ov0) ov0.style.pointerEvents = 'auto';
-      coachmark.style.top = '50%';
-      coachmark.style.left = '50%';
-      coachmark.style.transform = 'translate(-50%, -50%)';
-      coachmark.style.bottom = 'auto';
+      // dimBackground:false면 mask도 안 띄움 (배경 클릭 가능)
+      if (step.dimBackground !== false) {
+        mask.classList.add('show-full');
+        const ov0 = document.getElementById('onbOverlay');
+        if (ov0) ov0.style.pointerEvents = 'auto';
+      }
+      // coachmark 임시 위치 — corner 아니면 중앙
+      if (step.coachmarkPosition !== 'corner' && step.dimBackground !== false) {
+        coachmark.style.top = '50%';
+        coachmark.style.left = '50%';
+        coachmark.style.transform = 'translate(-50%, -50%)';
+        coachmark.style.bottom = 'auto';
+      }
 
       const tries = retryCount || 0;
       if (tries < 30) {  // 최대 6초 (200ms × 30)
