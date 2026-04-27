@@ -6339,6 +6339,7 @@
           <button class="btn-secondary" onclick="testForceMutation()" style="margin-top:6px;">🪦 첫 strategy 돌연변이 진화 강제</button>
           <button class="btn-secondary" onclick="testForceStrategyFollowup()" style="margin-top:6px;">🔄 전략 팔로업 → 안 통함 → 돌연변이 풀 흐름</button>
           <button class="btn-secondary" onclick="testForceFullAnalysis()" style="margin-top:6px;">📊 통합 분석 강제 (시드 데이터로 traits/values/patterns 채움)</button>
+          <button class="btn-secondary" onclick="testForceDiscoverInsights()" style="margin-top:6px;">🔮 인사이트 발견 강제 (causal/pattern, 깨달음 카테고리)</button>
           <button class="btn-secondary" onclick="testForcePearlSuggestion()" style="margin-top:6px;">🔮 진주 능동 제안 (마지막 user msg)</button>
           <button class="btn-secondary" onclick="testForceMissionExpire()" style="margin-top:6px;">⏰ 미션 3일 expire 강제</button>
           <button class="btn-secondary" onclick="testForceQuarterlyStories()" style="margin-top:6px;">▶ 분기 Stories 즉시 보기</button>
@@ -10487,9 +10488,21 @@ async function completeMission(missionId) {
     if (attemptStatus) {
       mission.attemptStatus = attemptStatus;
       recordStrategyAttempt(mission.strategyId, attemptStatus, mission.id);
-      // 'didnt' → 임시 채팅 진화 trigger (V4-1d-3에서 wire, typeof guard)
+      // 'didnt' → 임시 채팅 진화 자동 trigger
       if (attemptStatus === 'didnt' && typeof openMutationChat === 'function') {
         try { openMutationChat(mission.strategyId, mission.title); } catch (e) { console.warn('openMutationChat:', e); }
+      }
+      // V4-fix v3 (사용자 요청): 'meh' → 돌연변이 할지 확인 (강제 X, 사용자 자율)
+      else if (attemptStatus === 'meh' && typeof openMutationChat === 'function') {
+        const yes = await showConfirmModal({
+          title: '🌫 그저 그랬어',
+          message: '이 도구가 너에게 충분히 안 맞은 듯.\n다른 차원에서 시도해볼까?',
+          okLabel: '🧬 돌연변이 해볼게',
+          cancelLabel: '아직 그대로'
+        });
+        if (yes) {
+          try { openMutationChat(mission.strategyId, mission.title); } catch (e) { console.warn('openMutationChat:', e); }
+        }
       }
     }
   }
@@ -19351,6 +19364,38 @@ function testSeedV4Data() {
       archivedAt: new Date(today.getTime() - (d - 1) * 86400000).toISOString()
     });
   }
+  // V4-fix v3 (사용자 요청): insights 시드 — AI 인과관계/패턴 발견 (다양 type/confidence/상태)
+  state.insights = [
+    { id: 'ins_seed_1', type: 'causal',  content: '잠 6시간 미만인 다음 날 vitality가 평균 1.2 떨어짐.',
+      evidence: '지난 30일 중 9번 잠 6시간 미만, 그 다음 날 mood/vit 모두 ↓.',
+      supportingEntryIds: [], confidence: 0.78, discoveredAt: new Date(today.getTime() - 8 * 86400000).toISOString(), dismissed: false, user_verified: false },
+    { id: 'ins_seed_2', type: 'pattern', content: '한강 산책한 날엔 논문 작업이 더 잘 됨.',
+      evidence: '"한강" 키워드 일기 7번, 그 중 6번 작업 진척.',
+      supportingEntryIds: [], confidence: 0.85, discoveredAt: new Date(today.getTime() - 14 * 86400000).toISOString(), dismissed: false, user_verified: true },
+    { id: 'ins_seed_3', type: 'causal',  content: '저녁 9시 이후 작업 시도 → 다음 날 무력감 ↑.',
+      evidence: '늦은 작업 12번, 다음 날 drained 모드 8번.',
+      supportingEntryIds: [], confidence: 0.72, discoveredAt: new Date(today.getTime() - 20 * 86400000).toISOString(), dismissed: false, user_verified: false },
+    { id: 'ins_seed_4', type: 'pattern', content: '월경 첫 2일은 휴식 모드가 안정적 — 죄책감 X 회복 우선.',
+      evidence: '월경 1-2일차 entries 중 78%가 vit≤2 / mood↓ but 다음 주 회복.',
+      supportingEntryIds: [], confidence: 0.68, discoveredAt: new Date(today.getTime() - 30 * 86400000).toISOString(), dismissed: false, user_verified: false },
+    { id: 'ins_seed_5', type: 'causal',  content: '엄마 통화 후 이튿날 mood 평균 +0.8.',
+      evidence: '엄마 키워드 메시지 5번, 그 다음 날 mood 평균 ↑.',
+      supportingEntryIds: [], confidence: 0.65, discoveredAt: new Date(today.getTime() - 45 * 86400000).toISOString(), dismissed: false, user_verified: true },
+    { id: 'ins_seed_6', type: 'pattern', content: '주말 늦잠 후 논문 작업이 평소보다 잘 됨.',
+      evidence: '주말 9시+ 기상 4번, 그 중 3번 작업 진척.',
+      supportingEntryIds: [], confidence: 0.55, discoveredAt: new Date(today.getTime() - 60 * 86400000).toISOString(), dismissed: false, user_verified: false },
+    { id: 'ins_seed_7', type: 'causal',  content: '카페 환경에서 30분 이상 작업한 날 — 그날 일기 톤 긍정.',
+      evidence: '"카페" 일기 11번, 그 중 9번 긍정 톤.',
+      supportingEntryIds: [], confidence: 0.81, discoveredAt: new Date(today.getTime() - 90 * 86400000).toISOString(), dismissed: false, user_verified: false },
+    { id: 'ins_seed_8', type: 'pattern', content: '거절 직후 5분 산책 → 부채감 빨리 풀림.',
+      evidence: '거절 패턴 6번 중 산책 4번 동반, 그 4번 다음 날 mood 정상.',
+      supportingEntryIds: [], confidence: 0.62, discoveredAt: new Date(today.getTime() - 120 * 86400000).toISOString(), dismissed: false, user_verified: false },
+    // dismissed 1개 (시뮬용)
+    { id: 'ins_seed_9', type: 'pattern', content: '비 오는 날 음악 진주 더 자주.',
+      evidence: '비 일기 4번, 음악 진주 박힘 2번.',
+      supportingEntryIds: [], confidence: 0.48, discoveredAt: new Date(today.getTime() - 200 * 86400000).toISOString(), dismissed: true, user_verified: false }
+  ];
+
   // V4-fix v3 (사용자 요청 점검): 오늘 일정 todaySchedule 시드 (V4 비전 10.6 타임테이블)
   state.todaySchedule = [
     { id: 'sch_seed_1', title: '논문 서론 작성', start: '09:00', end: '11:00', source: 'manual', taskId: 'task_seed_0', color: '#d4a76a', date: todayStr },
@@ -19427,6 +19472,48 @@ function testForceDiagnoses() {
   const labels = { weak_tool: '도구 약함', wrong_layer: '차원 안 맞음', value_clash: '가치 상충', avoidance: '회피', willpower_cap: '의지 임계' };
   const types = detected.map(d => labels[d.type] || d.type).join(', ');
   showToast(`🩺 ${detected.length}개 진단 감지됨 (${types}) — 테스트 모드라 다음 응답에 자동 인용. 대화 탭에서 메시지 보내봐.`);
+}
+
+// V4-fix v3 (사용자 요청): AI 인사이트 발견 강제 — 5개 entry 가드 우회 + AI 호출
+async function testForceDiscoverInsights() {
+  if (!state.preferences || !state.preferences.testerMode) {
+    showToast('⚠️ 테스터 모드 ON 후 사용');
+    return;
+  }
+  if (typeof discoverInsights === 'function' && state.apiKey) {
+    showToast('🔮 AI 인사이트 발견 진행 중...');
+    try {
+      await discoverInsights();
+    } catch (e) {
+      showToast('실패 — fallback으로 시드 인사이트 추가');
+      _addFallbackInsights();
+    }
+    return;
+  }
+  // API 키 없으면 fallback 시드 추가
+  _addFallbackInsights();
+}
+
+function _addFallbackInsights() {
+  if (!Array.isArray(state.insights)) state.insights = [];
+  const fallback = [
+    { type: 'causal',  content: '아침 6시 이전 기상한 날 — 작업 진척 평균 ↑',
+      evidence: '시드 데이터 기반 추정.', confidence: 0.7 },
+    { type: 'pattern', content: '실험 직전 명상 10분 → 집중력 ↑',
+      evidence: '명상 체크형 +18회, 실험 success 동반.', confidence: 0.65 },
+    { type: 'causal',  content: '논문 막힘 → 환경 바꾸면 30분 안에 진척',
+      evidence: '"카페" / "도서관" 일기 후 작업 진척 빈번.', confidence: 0.75 }
+  ];
+  fallback.forEach(f => {
+    state.insights.push({
+      id: 'ins_fb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      ...f, supportingEntryIds: [],
+      discoveredAt: new Date().toISOString(), dismissed: false, user_verified: false
+    });
+  });
+  saveState({ force: true });
+  if (typeof renderArchive === 'function') renderArchive();
+  showToast('🔮 fallback 인사이트 3개 추가됨 — 도서관 → 깨달음에서 확인');
 }
 
 // V4-fix v3 (사용자 요청): 시드 데이터로 통합 분석 강제 (forceAnalyze wrapper)
@@ -23817,7 +23904,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.89-review-archive-summary';
+const APP_VERSION = 'v4.0.90-insights-seed-test';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
