@@ -4755,30 +4755,60 @@
     color: var(--text-soft);
     margin-left: 2px;
   }
+  /* V4-fix v2 (사용자 보고): Pinterest masonry — 2 column + 다양 사이즈/회전/날짜 */
   .pearls-pinterest {
     column-count: 2;
-    column-gap: 8px;
+    column-gap: 10px;
     margin-top: 4px;
   }
   .pinterest-tile {
     break-inside: avoid;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 8px;
+    border-radius: 14px;
+    margin-bottom: 10px;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s;
+    transition: transform 0.2s ease, border-color 0.15s, box-shadow 0.2s;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
-  .pinterest-tile:active { transform: scale(0.98); border-color: rgba(212,167,106,0.45); }
-  .tile-music-art {
+  .pinterest-tile:hover {
+    transform: translateY(-2px) rotate(0deg) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+    border-color: rgba(212,167,106,0.35);
+  }
+  .pinterest-tile:active { transform: scale(0.98); }
+  /* 일부 타일 미세 회전 (deterministic via JS data attr) */
+  .pinterest-tile[data-tilt="left"]  { transform: rotate(-1.2deg); }
+  .pinterest-tile[data-tilt="right"] { transform: rotate(1.4deg); }
+  .pinterest-tile[data-tilt="leftS"] { transform: rotate(-0.6deg); }
+  .pinterest-tile[data-tilt="rightS"]{ transform: rotate(0.7deg); }
+  /* 일부 타일 큰 사이즈 (column 안에서 더 강조) */
+  .pinterest-tile.tile-large .tile-music-art,
+  .pinterest-tile.tile-large .tile-photo-art {
+    aspect-ratio: 4/5;  /* 세로로 더 김 */
+  }
+  .pinterest-tile.tile-large .tile-text-content {
+    font-size: 15px;
+    font-family: 'Gowun Batang', serif;
+    line-height: 1.7;
+  }
+  .pinterest-tile.tile-large .tile-icon {
+    font-size: 28px;
+  }
+  .pinterest-tile.tile-large {
+    background: linear-gradient(135deg, rgba(212,167,106,0.08), rgba(139,126,196,0.06));
+    border-color: rgba(212,167,106,0.28);
+  }
+  .tile-music-art, .tile-photo-art {
     width: 100%;
     aspect-ratio: 1;
     object-fit: cover;
     display: block;
   }
   .tile-music-meta {
-    padding: 8px 10px;
+    padding: 9px 11px 8px;
   }
   .tile-music-title {
     font-size: 12px; font-weight: 600;
@@ -4796,26 +4826,44 @@
     color: var(--text-dim);
   }
   .tile-text {
-    padding: 14px 12px 12px;
+    padding: 16px 13px 12px;
     background: linear-gradient(135deg, var(--surface), rgba(139,126,196,0.04));
   }
   .tile-icon {
-    font-size: 20px;
+    font-size: 22px;
     margin-bottom: 8px;
+    display: block;
   }
   .tile-text-content {
     font-size: 13px;
     color: var(--text);
-    line-height: 1.55;
+    line-height: 1.6;
     word-break: break-word;
+    font-family: 'Gowun Batang', serif;
   }
   .tile-note {
-    margin-top: 6px;
-    padding-top: 6px;
+    margin-top: 7px;
+    padding-top: 7px;
     border-top: 1px solid var(--border);
-    font-size: 10px;
+    font-size: 10.5px;
     color: var(--text-dim);
     line-height: 1.5;
+    font-style: italic;
+  }
+  .tile-date {
+    font-size: 9.5px;
+    color: var(--text-soft);
+    letter-spacing: 0.04em;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border);
+    text-align: right;
+    opacity: 0.75;
+  }
+  .pinterest-tile.tile-music .tile-date,
+  .pinterest-tile.tile-photo .tile-date {
+    border: none;
+    padding-top: 4px;
   }
   .pearls-timeline {
     margin-top: 4px;
@@ -5786,9 +5834,9 @@
       <div class="library-top-row">
         <div class="library-cats">
           <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')">📔 일기·대화</button>
+          <button class="lib-cat-chip"        data-cat="pearls"    onclick="switchLibraryCat('pearls')">🔮 진주</button>
           <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')">🧬 양생방</button>
           <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')">✨ 깨달음</button>
-          <button class="lib-cat-chip"        data-cat="pearls"    onclick="switchLibraryCat('pearls')">🔮 진주</button>
           <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')">🌀 갈피·리뷰</button>
         </div>
         <div class="library-view-toggle">
@@ -13318,19 +13366,38 @@ async function saveMsgAsPearl(idx) {
     state.preferences.pearlBasketCategories.push(category);
   }
 
-  state.pearls.push({
+  // V4-fix (사용자 요청): 사진 첨부 묻기 (음악 카테고리 제외 — 음악은 별도 흐름)
+  let photo = null;
+  if (category !== '음악') {
+    const wantPhoto = await showConfirmModal({
+      title: '📷 사진도 같이?',
+      message: '이 진주에 사진 같이 보관할래?\n(원하면 갤러리에서 골라)',
+      okLabel: '응 사진 추가',
+      cancelLabel: '아니 텍스트만'
+    });
+    if (wantPhoto) {
+      try {
+        const file = await pickPhotoFile();
+        if (file) photo = await fileToResizedDataUrl(file, 1024);
+      } catch (e) { console.warn('진주 사진:', e); }
+    }
+  }
+
+  const pearl = {
     id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     content: content.trim(),
     category,
     createdAt: new Date().toISOString(),
     type: 'pearl',
     sourceMsgIdx: idx
-  });
+  };
+  if (photo) pearl.photo = photo;
+  state.pearls.push(pearl);
   msg.pearlSaved = true;
   saveState();
   renderChat();
   if (typeof renderArchive === 'function') renderArchive();
-  showToast('🔮 진주에 보관됨');
+  showToast(`🔮 진주에 보관됨${photo ? ' (사진 같이)' : ''}`);
 }
 
 // V4-1h: ✎ 메모 — 자유 텍스트 + AI 해시태그 자동 생성. 컨텍스트 X (대화 인용 X).
@@ -22518,30 +22585,47 @@ function renderLensPearls() {
       </div>
     </div>`;
   } else if (_libView === 'grid') {
-    // V4-1r: Pinterest 갤러리 — 사진 우위 (음악 앨범아트) + 텍스트 카드 mixed (한 흐름, 카테고리 헤더 X)
+    // V4-fix v2 (사용자 보고): Pinterest masonry — 다양 사이즈 + 미세 회전 + 날짜 + 음악 placeholder
     html += `<div class="pearls-pinterest">`;
-    pearls.forEach(p => {
+    pearls.forEach((p, idx) => {
+      // deterministic seed per pearl
+      const seed = (p.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), idx);
+      // 미세 회전 (4 variant) — 진짜 흩뿌림 느낌
+      const tiltVariants = ['', 'left', 'right', 'leftS', 'rightS', '', '', ''];
+      const tiltAttr = tiltVariants[seed % tiltVariants.length];
+      // 1/4 확률로 큰 타일 (강조)
+      const isLarge = (seed % 7 === 0);
+      const sizeClass = isLarge ? ' tile-large' : '';
+      const tiltStr = tiltAttr ? ` data-tilt="${tiltAttr}"` : '';
+      // 날짜
+      const dateStr = p.createdAt
+        ? new Date(p.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
+        : '';
       if (p.category === '음악' && p.track) {
+        const artHtml = p.track.artworkUrl
+          ? `<img src="${escapeHtml(p.track.artworkUrl)}" alt="${escapeHtml(p.track.title || '')}" class="tile-music-art" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'tile-music-art music-card-art-placeholder',textContent:'🎵'}))">`
+          : `<div class="tile-music-art music-card-art-placeholder">🎵</div>`;
         html += `
-          <div class="pinterest-tile tile-music" onclick="openPearl('${p.id}')">
-            <img src="${escapeHtml(p.track.artworkUrl || '')}" alt="${escapeHtml(p.track.title || '')}" class="tile-music-art">
+          <div class="pinterest-tile tile-music${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
+            ${artHtml}
             <div class="tile-music-meta">
               <div class="tile-music-title">${escapeHtml(p.track.title || '')}</div>
               <div class="tile-music-artist">${escapeHtml(p.track.artist || '')}</div>
               ${p.note ? `<div class="tile-note">${escapeHtml(p.note.slice(0, 40))}</div>` : ''}
+              ${dateStr ? `<div class="tile-date">${dateStr}</div>` : ''}
             </div>
           </div>
         `;
       } else if (p.photo) {
-        // V4-fix: 사진 진주 (음악 카드 풍 — 큰 정사각 사진 + 메타)
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         html += `
-          <div class="pinterest-tile tile-music" onclick="openPearl('${p.id}')">
-            <img src="${p.photo}" alt="${escapeHtml(p.content || '')}" class="tile-music-art">
+          <div class="pinterest-tile tile-photo${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
+            <img src="${p.photo}" alt="${escapeHtml(p.content || '')}" class="tile-photo-art">
             <div class="tile-music-meta">
               <div class="tile-music-title">${icon} ${escapeHtml(p.content || '')}</div>
               ${p.note ? `<div class="tile-note">${escapeHtml(p.note.slice(0, 40))}</div>` : ''}
+              ${dateStr ? `<div class="tile-date">${dateStr}</div>` : ''}
             </div>
           </div>
         `;
@@ -22549,10 +22633,11 @@ function renderLensPearls() {
         const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 기타: '💎' };
         const icon = iconMap[p.category || '기타'] || '💎';
         html += `
-          <div class="pinterest-tile tile-text" onclick="openPearl('${p.id}')">
+          <div class="pinterest-tile tile-text${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
             <div class="tile-icon">${icon}</div>
             <div class="tile-text-content">${escapeHtml(p.content || '')}</div>
             ${p.note ? `<div class="tile-note">${escapeHtml(p.note.slice(0, 50))}</div>` : ''}
+            ${dateStr ? `<div class="tile-date">${dateStr}</div>` : ''}
           </div>
         `;
       }
@@ -23246,7 +23331,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.76-mut-inline-diag-tree';
+const APP_VERSION = 'v4.0.77-cat-order-pin-photo';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
