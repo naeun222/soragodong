@@ -836,7 +836,7 @@
   @keyframes shellPop { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 
   /* Celebration animation */
-  .celebration { position: fixed; inset: 0; pointer-events: none; z-index: 300; display: none; align-items: center; justify-content: center; }
+  .celebration { position: fixed; inset: 0; pointer-events: none; z-index: 9300; display: none; align-items: center; justify-content: center; }
   .celebration.show { display: flex; }
   .celebration-content { text-align: center; animation: celebrationPop 0.5s ease; }
   .celebration-emoji { font-size: 80px; animation: bounce 0.8s ease infinite; }
@@ -16339,7 +16339,7 @@ function acceptProposal(idx) {
   if (title) {
     createMission(title, description, { sourceMessageIdx: idx });
     // V3.12.x: 해볼게 효과 — 소라의 부름 등장 celebration
-    showCelebration('🐚', '소라가 널 부르고 있어!', '✨');
+    showCelebration('🐚', '소라가 우리를 부르고 있어!', '✨');
   }
 
   saveState();
