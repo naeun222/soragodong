@@ -8207,61 +8207,20 @@ const ONBOARDING_STEPS = [
     fallbackPosition: 'top'
   },
 
-  // === Phase 6: 도서관 5 카테고리 (V4) — 부가 기능 (5) ===
+  // === Phase 6: 도서관 → 양생방 직진 (사용자 요청 2026-04-28) ===
   {
     id: 'go_archive',
     targetSelector: '.nav-item[data-screen="archive"]',
-    title: '📚 인생 도서관',
-    body: '<b>네가 하루동안 입력한 정보 + 일기가 카테고리별로 자동 정리</b>되는 곳이야!<br>대화·일기·진주·전략·깨달음·갈피·리뷰가 다 여기 모여.<br><br>아래 📚 도서관 탭 눌러봐.',
+    title: '📚 도서관으로',
+    body: '이제 <b>📚 도서관</b> 탭 눌러봐. 양생방 보러 가자!',
     waitFor: 'visit',
     visitScreen: 'archive'
-  },
-  {
-    id: 'library_categories',
-    targetSelector: null,
-    title: '5 카테고리',
-    body: '도서관은 <b>5 카테고리</b>로 나뉘어:<br>📔 일기·대화 / 🔮 진주 / 🧬 양생방 / ✨ 깨달음 / 🌀 갈피·리뷰<br><br>맨 위 <b>🌟 오늘의 너</b> 카드는 진주 1개 회전.<br>다음에 핵심 몇 개만 짚어줄게.',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
-    id: 'diary_calendar',
-    targetSelector: null,
-    title: '📔 일기·대화',
-    body: '<b>캘린더 무드 그리드</b> — 한 달 한눈에 (칸 색 = 그날 기분).<br>· 칸 클릭 → 그날 카드 펼침<br>· 위 8 서브칩 (일기/일상/고민/감정/기억/할 일/아이디어/관계)<br>· ▦ 그리드 ↔ ≡ 타임라인 토글<br><br>🤖 <b>일기 자동 요약</b>: 체크인이나 대화로 그 날 활동이 쌓이면 — 내가 자동으로 <b>그 날 한 단락 요약</b>을 만들어줘. 일기 안 적은 날도 흐름이 보여.',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
-    id: 'pearls_tab',
-    targetSelector: '[data-cat="pearls"]',
-    title: '🔮 진주',
-    body: '<b>살아있다 느낀 작은 순간들</b> 모음.<br>음악·음식·장소·순간·사람.<br><br>진주 칩 눌러봐.',
-    waitFor: 'click',
-    advanceDelay: 800,
-    dimBackground: false
-  },
-  {
-    id: 'pearls_intro',
-    targetSelector: null,
-    title: 'Pinterest 갤러리',
-    body: '· <b>+ 진주 추가</b> — 직접 입력 + 사진/음악 첨부<br>· <b>★</b> 즐겨찾기<br>· 카테고리 칩으로 필터<br><br>🎵 <b>같은 곡 5번 = 자동 진주</b>: 체크인에서 같은 곡을 5번 이상 등장시키면 — 내가 알아서 그 곡을 진주로 박아줘.<br><br><span class="small">대화에서 "진짜 좋아" 흐르면 내가 알아서 "진주에 넣을래?" 물어봐.</span>',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
-    id: 'archive_search',
-    targetSelector: null,
-    title: '🔍 검색',
-    body: '도서관 위쪽 <b>🔍 검색</b> — 모든 카테고리에서 한 번에 찾아.<br>일기 / 메모 / 진주 / 깨달음 / 가닥 다.<br><br><span class="small">새 항목 있는 카테고리는 칩에 ● 점.</span>',
-    waitFor: 'next',
-    dimBackground: false
   },
   {
     id: 'yangsaeng_tab',
     targetSelector: '[data-cat="yangsaeng"]',
     title: '🧬 양생방',
-    body: '여기는 <b>너만의 행동 도구함</b>이야.<br>대화에서 박은 전략들이 모이는 곳.<br><br>양생방 칩 눌러봐!',
+    body: '여기 <b>양생방</b> 칩 눌러봐!',
     waitFor: 'click',
     advanceDelay: 800,
     dimBackground: false
