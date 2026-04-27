@@ -2055,12 +2055,56 @@
     font-weight: 500;
   }
 
-  /* V4-1l-a: 도서관 5 카테고리 칩 (가로 스크롤) */
+  /* V4-1l-a + V4-1p: 도서관 5 카테고리 칩 + 그리드/타임라인 토글 */
+  .library-top-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .library-view-toggle {
+    display: flex; gap: 2px; flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 3px;
+  }
+  .lib-view-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-soft);
+    padding: 6px 10px;
+    border-radius: 11px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+    min-height: 32px;
+  }
+  .lib-view-btn:active { transform: scale(0.95); }
+  .lib-view-btn.active {
+    background: linear-gradient(135deg, rgba(201,169,110,0.20), rgba(139,126,196,0.12));
+    color: var(--accent2);
+  }
+  /* V4-1p: 양생방 상태 그룹 (그리드 뷰) */
+  .yangsaeng-status-group {
+    margin-bottom: 22px;
+  }
+  .yangsaeng-status-header {
+    font-size: 11px;
+    color: var(--text-soft);
+    letter-spacing: 0.10em;
+    margin: 14px 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
   .library-cats {
     display: flex;
     gap: 8px;
     overflow-x: auto;
-    margin-bottom: 16px;
+    flex: 1;
+    min-width: 0;
     padding: 2px 0 6px;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -3814,13 +3858,19 @@
       <div class="screen-title">📚 인생 도서관</div>
       <div class="screen-sub">너의 일기, 패턴, 좋아하는 것들 — 다섯 칸.</div>
 
-      <!-- V4-1l-a: 5 카테고리 칩 (가로 스크롤) -->
-      <div class="library-cats">
-        <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')">📔 일기·대화</button>
-        <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')">🧬 양생방</button>
-        <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')">✨ 깨달음</button>
-        <button class="lib-cat-chip"        data-cat="pearls"    onclick="switchLibraryCat('pearls')">🔮 진주</button>
-        <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')">🌀 갈피·리뷰</button>
+      <!-- V4-1l-a: 5 카테고리 칩 (가로 스크롤) + V4-1p 토글 -->
+      <div class="library-top-row">
+        <div class="library-cats">
+          <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')">📔 일기·대화</button>
+          <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')">🧬 양생방</button>
+          <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')">✨ 깨달음</button>
+          <button class="lib-cat-chip"        data-cat="pearls"    onclick="switchLibraryCat('pearls')">🔮 진주</button>
+          <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')">🌀 갈피·리뷰</button>
+        </div>
+        <div class="library-view-toggle">
+          <button class="lib-view-btn active" data-view="grid"     onclick="switchLibraryView('grid')"     aria-label="그리드">▦</button>
+          <button class="lib-view-btn"        data-view="timeline" onclick="switchLibraryView('timeline')" aria-label="타임라인">≡</button>
+        </div>
       </div>
 
       <!-- 검색바 (모든 카테고리에서 작동) -->
@@ -11735,6 +11785,7 @@ const _LIB_CAT_TO_VIEW = {
 
 let _currentLens = 'diary';
 let _archiveSearchQuery = '';
+let _libView = 'grid';  // V4-1p: 그리드 ↔ 타임라인 토글
 
 function renderArchive() {
   // 모든 하위 뷰 렌더; switchLibraryCat이 표시/숨김 처리
@@ -11766,6 +11817,16 @@ function switchLibraryCat(cat) {
 function switchLens(lens) {
   const map = { conversations: 'diary', wisdom: 'insights' };
   switchLibraryCat(map[lens] || lens);
+}
+
+// V4-1p: 그리드 ↔ 타임라인 토글 (모든 카테고리 공통). 카테고리별 그리드 의미 다름.
+function switchLibraryView(view) {
+  if (view !== 'grid' && view !== 'timeline') view = 'grid';
+  _libView = view;
+  document.querySelectorAll('.lib-view-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+  renderArchive();
 }
 
 function searchArchive() {
@@ -12057,94 +12118,120 @@ function renderLensStrategies() {
         <span style="font-size:11px; color:var(--text-soft);">직접 추가도 가능 ✦</span>
       </div>
     `;
-  } else {
+  } else if (_libView === 'grid') {
+    // V4-1p: 그리드 = 상태 그룹화 (V4 비전 7.4 양생방)
+    const _groups = { seedling_trying: [], working: [], mutated: [], embodied: [], archived: [] };
     strategies.forEach(s => {
-      const dateStr = new Date(s.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
-      // V3.13.x: 4-필드 구조 (problemContext / psychConcept / actionStrategy) 우선,
-      // 없으면 legacy summary fallback
-      const hasStructured = s.problemContext || s.psychConcept || s.actionStrategy;
-      let bodyHtml;
-      if (hasStructured) {
-        bodyHtml = `
-          ${s.problemContext ? `<div class="strategy-section-row"><div class="strategy-section-icon">🎯</div><div><div class="strategy-section-label">문제 상황</div><div class="strategy-section-text">${escapeHtml(s.problemContext)}</div></div></div>` : ''}
-          ${s.psychConcept ? `<div class="strategy-section-row"><div class="strategy-section-icon">🧠</div><div><div class="strategy-section-label">심리학 개념</div><div class="strategy-section-text">${escapeHtml(s.psychConcept)}</div></div></div>` : ''}
-          ${s.actionStrategy ? `<div class="strategy-section-row"><div class="strategy-section-icon">✦</div><div><div class="strategy-section-label">전략적 행동</div><div class="strategy-section-text strategy-section-action">${escapeHtml(s.actionStrategy)}</div></div></div>` : ''}
-        `;
-      } else if (s.summary) {
-        bodyHtml = `<div class="strategy-card-legacy-summary">${escapeHtml(s.summary)}</div>`;
-      } else {
-        bodyHtml = '';
-      }
-      // V4-1e: embodiment 상태 + 해볼게 버튼
-      const _statusEmoji = { seedling:'🌱', trying:'🌿', working:'🌳', embodied:'🍃', archived:'🍂', mutated:'🪦' };
-      const _statusName  = { seedling:'시작', trying:'시도 중', working:'영그는 중', embodied:'체화됨 ✨', archived:'마무리', mutated:'진화 중' };
-      const _status = s.embodimentStatus || (Array.isArray(s.generations) ? 'seedling' : null);
-      const _worked = _status ? countWorkedAttempts(s) : 0;
-      const _total  = _status ? countTotalAttempts(s) : 0;
-      const _gens   = Array.isArray(s.generations) ? s.generations.length : 0;
-      const _isEmbodied = _status === 'embodied';
-      const _hasPending = (state.missions || []).some(m => m.strategyId === s.id && m.status === 'pending');
-      const metaLine = _status
-        ? (_total > 0
-            ? `${_statusEmoji[_status]||'🌱'} ${_statusName[_status]||''} · 작동 ${_worked}/${_total}${_gens > 1 ? ` · ${_gens}세대` : ''}`
-            : `${_statusEmoji[_status]||'🌱'} 미시도`)
-        : '';
-      const tryBtnHtml = (_status && !_isEmbodied)
-        ? (_hasPending
-            ? `<button disabled style="opacity:0.55;">🐚 부름 받음</button>`
-            : `<button class="strategy-try-btn" onclick="callTryStrategy('${s.id}')">✦ 해볼게</button>`)
-        : '';
-      const metaHtml = metaLine
-        ? `<div class="strategy-card-meta${_isEmbodied ? ' embodied' : ''}">${metaLine}</div>`
-        : '';
-      // V4-1n: 진화 트리 (텍스트 + 이모지, V4 비전 5.7) — generations 2개 이상일 때만 표시
-      let genTreeHtml = '';
-      if (Array.isArray(s.generations) && s.generations.length >= 2) {
-        const _layerEmoji = { L1:'🧠', L2:'🎯', L3:'🌍', L4:'👥', L5:'🪞' };
-        const _layerName  = { L1:'인지', L2:'행동', L3:'환경', L4:'사회', L5:'메타' };
-        const rows = s.generations.map((g, gi) => {
-          const isLast = gi === s.generations.length - 1;
-          const isMutated = g.status === 'mutated';
-          const dots = (g.attempts || []).map(a => {
-            const c = a.status === 'worked' ? '#8fc88f'
-                    : a.status === 'meh'    ? '#d4a76a'
-                    : a.status === 'didnt'  ? '#888a90'
-                                            : '#666';
-            return `<span class="gen-dot" style="background:${c};" title="${a.status}"></span>`;
-          }).join('');
-          const prefix = gi === 0 ? '' : '└─ ';
-          const layer = `${_layerEmoji[g.layer] || '✦'} ${_layerName[g.layer] || g.layer}`;
-          const action = escapeHtml((g.action || '').slice(0, 50));
-          const mark = isMutated ? '🪦' : (isLast && _isEmbodied ? '🍃' : '');
-          return `<div class="strategy-gen-row${isLast ? ' current' : ''}" style="padding-left:${gi * 14}px;">
-            <span class="gen-prefix">${prefix}</span>
-            <span class="gen-layer">${layer}</span>
-            <span class="gen-action">${action}${mark ? ` <span class="gen-mark">${mark}</span>` : ''}</span>
-            <span class="gen-dots">${dots}</span>
-          </div>`;
-        }).join('');
-        genTreeHtml = `<div class="strategy-gens-tree">
-          <div class="gens-tree-label">🧬 진화 트리 · ${s.generations.length}세대</div>
-          ${rows}
-        </div>`;
-      }
-      html += `
-        <div class="strategy-card strategy-card-v2">
-          <div class="strategy-card-title">🧭 ${escapeHtml(s.title)}</div>
-          ${bodyHtml}
-          ${metaHtml}
-          ${genTreeHtml}
-          <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : s.source === 'deeper' ? ' · 더 알고 싶어' : ' · 대화 챕터'}</div>
-          <div class="strategy-card-actions">
-            ${tryBtnHtml}
-            <button onclick="deleteTopicCard('${s.id}')">🗑 삭제</button>
-          </div>
-        </div>
-      `;
+      const st = s.embodimentStatus || 'seedling';
+      const hasMutated = Array.isArray(s.generations) && s.generations.some(g => g.status === 'mutated');
+      if (st === 'embodied')        _groups.embodied.push(s);
+      else if (st === 'archived')   _groups.archived.push(s);
+      else if (st === 'working')    _groups.working.push(s);
+      else if (hasMutated)          _groups.mutated.push(s);
+      else                          _groups.seedling_trying.push(s);
     });
+    const _groupOrder = [
+      { key: 'seedling_trying', label: '🌿 양생 — 시작·시도 중' },
+      { key: 'working',         label: '🌳 영그는 중 — 작동 누적' },
+      { key: 'mutated',         label: '🪦 돌연변이 — 진화 중' },
+      { key: 'embodied',        label: '🍃 체화 완료' },
+      { key: 'archived',        label: '🍂 마무리' }
+    ];
+    _groupOrder.forEach(({ key, label }) => {
+      const cards = _groups[key];
+      if (!cards.length) return;
+      html += `<div class="yangsaeng-status-group">
+        <div class="yangsaeng-status-header">${label} · ${cards.length}</div>`;
+      cards.forEach(s => { html += _renderStrategyCardHtml(s); });
+      html += `</div>`;
+    });
+  } else {
+    // V4-1p: 타임라인 = 시간순 (기존 동작)
+    strategies.forEach(s => { html += _renderStrategyCardHtml(s); });
   }
   html += `</div>`;
   container.innerHTML = html;
+}
+
+// V4-1p: strategy 카드 렌더 함수 추출 (grid/timeline 공용)
+function _renderStrategyCardHtml(s) {
+  const dateStr = new Date(s.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+  const hasStructured = s.problemContext || s.psychConcept || s.actionStrategy;
+  let bodyHtml;
+  if (hasStructured) {
+    bodyHtml = `
+      ${s.problemContext ? `<div class="strategy-section-row"><div class="strategy-section-icon">🎯</div><div><div class="strategy-section-label">문제 상황</div><div class="strategy-section-text">${escapeHtml(s.problemContext)}</div></div></div>` : ''}
+      ${s.psychConcept ? `<div class="strategy-section-row"><div class="strategy-section-icon">🧠</div><div><div class="strategy-section-label">심리학 개념</div><div class="strategy-section-text">${escapeHtml(s.psychConcept)}</div></div></div>` : ''}
+      ${s.actionStrategy ? `<div class="strategy-section-row"><div class="strategy-section-icon">✦</div><div><div class="strategy-section-label">전략적 행동</div><div class="strategy-section-text strategy-section-action">${escapeHtml(s.actionStrategy)}</div></div></div>` : ''}
+    `;
+  } else if (s.summary) {
+    bodyHtml = `<div class="strategy-card-legacy-summary">${escapeHtml(s.summary)}</div>`;
+  } else {
+    bodyHtml = '';
+  }
+  const _statusEmoji = { seedling:'🌱', trying:'🌿', working:'🌳', embodied:'🍃', archived:'🍂', mutated:'🪦' };
+  const _statusName  = { seedling:'시작', trying:'시도 중', working:'영그는 중', embodied:'체화됨 ✨', archived:'마무리', mutated:'진화 중' };
+  const _status = s.embodimentStatus || (Array.isArray(s.generations) ? 'seedling' : null);
+  const _worked = _status ? countWorkedAttempts(s) : 0;
+  const _total  = _status ? countTotalAttempts(s) : 0;
+  const _gens   = Array.isArray(s.generations) ? s.generations.length : 0;
+  const _isEmbodied = _status === 'embodied';
+  const _hasPending = (state.missions || []).some(m => m.strategyId === s.id && m.status === 'pending');
+  const metaLine = _status
+    ? (_total > 0
+        ? `${_statusEmoji[_status]||'🌱'} ${_statusName[_status]||''} · 작동 ${_worked}/${_total}${_gens > 1 ? ` · ${_gens}세대` : ''}`
+        : `${_statusEmoji[_status]||'🌱'} 미시도`)
+    : '';
+  const tryBtnHtml = (_status && !_isEmbodied)
+    ? (_hasPending
+        ? `<button disabled style="opacity:0.55;">🐚 부름 받음</button>`
+        : `<button class="strategy-try-btn" onclick="callTryStrategy('${s.id}')">✦ 해볼게</button>`)
+    : '';
+  const metaHtml = metaLine ? `<div class="strategy-card-meta${_isEmbodied ? ' embodied' : ''}">${metaLine}</div>` : '';
+  // V4-1n: 진화 트리
+  let genTreeHtml = '';
+  if (Array.isArray(s.generations) && s.generations.length >= 2) {
+    const _layerEmoji = { L1:'🧠', L2:'🎯', L3:'🌍', L4:'👥', L5:'🪞' };
+    const _layerName  = { L1:'인지', L2:'행동', L3:'환경', L4:'사회', L5:'메타' };
+    const rows = s.generations.map((g, gi) => {
+      const isLast = gi === s.generations.length - 1;
+      const isMutated = g.status === 'mutated';
+      const dots = (g.attempts || []).map(a => {
+        const c = a.status === 'worked' ? '#8fc88f'
+                : a.status === 'meh'    ? '#d4a76a'
+                : a.status === 'didnt'  ? '#888a90'
+                                        : '#666';
+        return `<span class="gen-dot" style="background:${c};" title="${a.status}"></span>`;
+      }).join('');
+      const prefix = gi === 0 ? '' : '└─ ';
+      const layer = `${_layerEmoji[g.layer] || '✦'} ${_layerName[g.layer] || g.layer}`;
+      const action = escapeHtml((g.action || '').slice(0, 50));
+      const mark = isMutated ? '🪦' : (isLast && _isEmbodied ? '🍃' : '');
+      return `<div class="strategy-gen-row${isLast ? ' current' : ''}" style="padding-left:${gi * 14}px;">
+        <span class="gen-prefix">${prefix}</span>
+        <span class="gen-layer">${layer}</span>
+        <span class="gen-action">${action}${mark ? ` <span class="gen-mark">${mark}</span>` : ''}</span>
+        <span class="gen-dots">${dots}</span>
+      </div>`;
+    }).join('');
+    genTreeHtml = `<div class="strategy-gens-tree">
+      <div class="gens-tree-label">🧬 진화 트리 · ${s.generations.length}세대</div>
+      ${rows}
+    </div>`;
+  }
+  return `
+    <div class="strategy-card strategy-card-v2">
+      <div class="strategy-card-title">🧭 ${escapeHtml(s.title)}</div>
+      ${bodyHtml}
+      ${metaHtml}
+      ${genTreeHtml}
+      <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : s.source === 'deeper' ? ' · 더 알고 싶어' : ' · 대화 챕터'}</div>
+      <div class="strategy-card-actions">
+        ${tryBtnHtml}
+        <button onclick="deleteTopicCard('${s.id}')">🗑 삭제</button>
+      </div>
+    </div>
+  `;
 }
 
 async function addManualStrategy() {
@@ -16323,7 +16410,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.18-diagnoses';
+const APP_VERSION = 'v4.0.19-grid-toggle';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
