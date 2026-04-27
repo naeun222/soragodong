@@ -4299,6 +4299,7 @@ const DEFAULT_STATE = {
   // === V7 (V4) 신규 ===
   reflectionQuestions: [],  // 사고 질문 시스템 (anchor 30): [{id, text, status, conclusion, chatMessages, ...}]
   todaySchedule: [],        // 타임테이블: [{id, title, start, end, source:'manual'|'ai'|'gcal'|'task', taskId}]
+  diagnoses: [],            // V4 비전 9.5 진단 5종: [{id, type, confidence, evidence, detectedAt, status:'active'|'shown'|'dismissed'}]
 
   version: 7
 };
@@ -4562,6 +4563,7 @@ async function loadFromCloud() {
     // === V7 (V4) collection 보강 ===
     if (!state.reflectionQuestions) state.reflectionQuestions = [];
     if (!state.todaySchedule) state.todaySchedule = [];
+    if (!state.diagnoses) state.diagnoses = [];
     // caseFormulation 8 차원
     if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
     if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
@@ -4636,6 +4638,7 @@ async function loadFromCloud() {
       // V7 (V4) 신규
       if (!state.reflectionQuestions) state.reflectionQuestions = [];
       if (!state.todaySchedule) state.todaySchedule = [];
+      if (!state.diagnoses) state.diagnoses = [];
       if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
       if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
       if (!Array.isArray(state.caseFormulation.growth)) state.caseFormulation.growth = [];
@@ -4792,6 +4795,7 @@ function migrateToV7() {
 
   if (!Array.isArray(state.reflectionQuestions)) state.reflectionQuestions = [];
   if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
+  if (!Array.isArray(state.diagnoses)) state.diagnoses = [];
 
   if (!state.preferences) state.preferences = JSON.parse(JSON.stringify(DEFAULT_STATE.preferences));
   if (state.preferences.tutorialVersion === undefined) state.preferences.tutorialVersion = null;
@@ -8730,6 +8734,10 @@ function showScreen(name) {
     applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3();
     renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink();
     if (typeof renderReflectionHome === 'function') renderReflectionHome();
+    // V4-1o: 진단 5종 자동 trigger (24시간 1회 가드, 조용히 등록 — chat 인용용)
+    if (typeof runDiagnosesIfNeeded === 'function') {
+      try { runDiagnosesIfNeeded(); } catch (e) { console.warn('runDiagnoses:', e); }
+    }
     // V3.13.x: 배너는 홈에만 (헤더와 함께)
     if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
   }
@@ -10501,6 +10509,19 @@ function buildSystemPromptParts() {
     volatile.push('');
   }
 
+  // V4-1o: 진단 5종 — active 진단 1개를 자연 인용 hint로 전달.
+  // 거울 3원칙 (9.6): 외재화 톤 / 균형 노출 / 사용자 자기 발견.
+  // chat에 자연 인용된 후엔 V4-1o-2에서 status='shown' 마킹 (현재는 prompt만, 마킹 X — 다음 단계).
+  const activeDiag = (state.diagnoses || []).find(d => d.status === 'active');
+  if (activeDiag && _DIAG_LABELS && _DIAG_LABELS[activeDiag.type]) {
+    const lbl = _DIAG_LABELS[activeDiag.type];
+    volatile.push(`[관찰된 패턴 — 자연스러운 흐름에 한 번 인용해도 OK]`);
+    volatile.push(`- ${lbl.emoji} ${lbl.name}: ${activeDiag.evidence}`);
+    volatile.push(`  · 톤: 외재화("X 패턴이 작동 중" / "너 X적이야" X), 사용자 자기 발견 유도(결론 단정 X)`);
+    volatile.push(`  · 한 번만. 사용자 거부하면 다시 X.`);
+    volatile.push('');
+  }
+
   // Recent missions
   const recentMissions = state.missions.slice(-10);
   if (recentMissions.length > 0) {
@@ -11333,6 +11354,192 @@ function closeCrystallizeRitual() {
   if (typeof renderShellBar === 'function') renderShellBar();
   if (typeof renderArchive === 'function') renderArchive();
   if (typeof renderTodayMission === 'function') renderTodayMission();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// V4-1o: CASE FORMULATION 진단 5종 (anchor 17 / V4 비전 9.5)
+// ───────────────────────────────────────────────────────────────
+// 5종: 도구 약함 / 차원 안 맞음 / 가치 상충 / 회피 패턴 / 의지 임계치 X
+// 노출 위치 (B): 채팅 자연 인용만 (양생방 라벨 X / 나 탭 별도 섹션 X). 한 진단당 1회.
+// 거울 3원칙 (9.6): 외재화 톤 / 균형 노출 / 사용자 자기 발견.
+// 자기 학습 루프: 진단 받고 행동 → 결과로 confidence 갱신 (V4-1o-2 이후).
+// ═══════════════════════════════════════════════════════════════
+
+const _DIAG_LABELS = {
+  weak_tool:    { name: '도구 약함',     emoji: '🔧' },
+  wrong_layer:  { name: '차원 안 맞음',   emoji: '📐' },
+  value_clash:  { name: '가치 상충',     emoji: '⚖️' },
+  avoidance:    { name: '회피 패턴',     emoji: '🌫' },
+  willpower_cap:{ name: '의지 임계치',   emoji: '🪫' }
+};
+
+// 9.5 임계값 기반 신호 검사. 한 가닥 또는 전체 state 검사.
+function detectDiagnoses() {
+  const detected = [];
+  const cards = (state.topicCards || []).filter(c => c.category === 'strategy');
+  if (cards.length === 0) return detected;
+
+  // (1) 도구 약함: 한 가닥 같은 layer attempt 3+ / worked 0
+  cards.forEach(card => {
+    if (!Array.isArray(card.generations)) return;
+    card.generations.forEach(gen => {
+      const attempts = gen.attempts || [];
+      if (attempts.length < 3) return;
+      const worked = attempts.filter(a => a.status === 'worked').length;
+      if (worked === 0) {
+        detected.push({
+          type: 'weak_tool',
+          confidence: 0.7,
+          evidence: `"${card.title}" — ${gen.layer} 차원 ${attempts.length}회 시도, 작동 0`,
+          targetCardId: card.id
+        });
+      }
+    });
+  });
+
+  // (2) 차원 안 맞음: 한 layer 3+ didnt + 같은 카드 다른 layer 시도 X
+  cards.forEach(card => {
+    if (!Array.isArray(card.generations)) return;
+    const usedLayers = new Set();
+    let weakLayer = null;
+    let weakDidntCount = 0;
+    card.generations.forEach(gen => {
+      usedLayers.add(gen.layer);
+      const didnt = (gen.attempts || []).filter(a => a.status === 'didnt').length;
+      if (didnt >= 3 && !weakLayer) {
+        weakLayer = gen.layer;
+        weakDidntCount = didnt;
+      }
+    });
+    if (weakLayer && usedLayers.size === 1) {
+      detected.push({
+        type: 'wrong_layer',
+        confidence: 0.7,
+        evidence: `"${card.title}" — ${weakLayer} 차원만 ${weakDidntCount}회 안 통함. 다른 차원 시도 X.`,
+        targetCardId: card.id
+      });
+    }
+  });
+
+  // (3) 가치 상충: 여러 가닥(2+)에서 모든 attempt didnt + values N개+
+  const totalCardsWithAllDidnt = cards.filter(card => {
+    const allAttempts = (card.generations || []).flatMap(g => g.attempts || []);
+    if (allAttempts.length < 2) return false;
+    return allAttempts.every(a => a.status === 'didnt' || a.status === 'meh');
+  });
+  if (totalCardsWithAllDidnt.length >= 2 && (state.values || []).length >= 2) {
+    detected.push({
+      type: 'value_clash',
+      confidence: 0.6,
+      evidence: `${totalCardsWithAllDidnt.length}개 가닥에서 모든 시도 안 통함 — 가치 상충 가능성`
+    });
+  }
+
+  // (4) 회피 패턴: seedling > 30일 OR skipped > 50%
+  const now = Date.now();
+  cards.forEach(card => {
+    if (card.embodimentStatus === 'seedling' && card.createdAt) {
+      const days = Math.floor((now - new Date(card.createdAt).getTime()) / 86400000);
+      if (days >= 30) {
+        detected.push({
+          type: 'avoidance',
+          confidence: 0.55,
+          evidence: `"${card.title}" — ${days}일째 미시도 (seedling)`,
+          targetCardId: card.id
+        });
+      }
+    }
+    const allAttempts = (card.generations || []).flatMap(g => g.attempts || []);
+    if (allAttempts.length >= 4) {
+      const skipped = allAttempts.filter(a => a.status === 'skipped').length;
+      if (skipped / allAttempts.length > 0.5) {
+        detected.push({
+          type: 'avoidance',
+          confidence: 0.65,
+          evidence: `"${card.title}" — ${allAttempts.length}회 중 ${skipped}회 못 시도 (50%+)`,
+          targetCardId: card.id
+        });
+      }
+    }
+  });
+
+  // (5) 의지 임계치 X: drained 모드 30일+ + strategy 신규 X
+  // (drained 모드는 V3.11.x: state.modes.rest? 아니면 별도 — 단순화: rest 모드 활성 30일+)
+  const restSince = state.modeActiveSince?.rest;
+  if (restSince) {
+    const days = Math.floor((now - new Date(restSince).getTime()) / 86400000);
+    if (days >= 30) {
+      // 신규 strategy 30일 내 X
+      const recentNewStrategy = cards.some(c => {
+        if (!c.createdAt) return false;
+        const cdays = Math.floor((now - new Date(c.createdAt).getTime()) / 86400000);
+        return cdays < 30;
+      });
+      if (!recentNewStrategy) {
+        detected.push({
+          type: 'willpower_cap',
+          confidence: 0.6,
+          evidence: `${days}일째 휴식 모드 + 신규 가닥 X`
+        });
+      }
+    }
+  }
+
+  return detected;
+}
+
+// 진단 결과를 state.diagnoses에 등록 (한 진단당 1회 가드).
+// type별로 detectedAt 30일 이내 같은 type 있으면 skip.
+function registerDiagnoses(detected) {
+  if (!Array.isArray(state.diagnoses)) state.diagnoses = [];
+  const now = Date.now();
+  const cooldown = 30 * 86400000; // 30일
+  let added = 0;
+  detected.forEach(d => {
+    const recentSame = state.diagnoses.find(x =>
+      x.type === d.type && x.targetCardId === d.targetCardId &&
+      x.detectedAt && (now - new Date(x.detectedAt).getTime()) < cooldown
+    );
+    if (recentSame) return;
+    state.diagnoses.push({
+      id: 'diag_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      type: d.type,
+      confidence: d.confidence,
+      evidence: d.evidence,
+      targetCardId: d.targetCardId || null,
+      detectedAt: new Date().toISOString(),
+      status: 'active'
+    });
+    added++;
+  });
+  if (added > 0) saveState();
+  return added;
+}
+
+// 자동 trigger: 홈 진입 시 또는 init 후 1회. 조용히 등록 (UI 표시 X — chat 자연 인용용).
+function runDiagnosesIfNeeded() {
+  // 마지막 실행 24시간 이내면 skip (state.preferences._diagLastRunAt)
+  if (!state.preferences) state.preferences = {};
+  const last = state.preferences._diagLastRunAt;
+  if (last && (Date.now() - new Date(last).getTime()) < 24 * 3600000) return;
+  const detected = detectDiagnoses();
+  registerDiagnoses(detected);
+  state.preferences._diagLastRunAt = new Date().toISOString();
+  saveState();
+}
+
+// active 진단 1개 가져오기 (chat system prompt inject용)
+function getActiveDiagnosis() {
+  return (state.diagnoses || []).find(d => d.status === 'active') || null;
+}
+
+// 진단을 chat에 인용한 후 status='shown' 마킹 (재기 가드)
+function markDiagnosisShown(id) {
+  const d = (state.diagnoses || []).find(x => x.id === id);
+  if (d) {
+    d.status = 'shown';
+    saveState();
+  }
 }
 
 // V4-1e: 양생 미션 흐름 — strategy 카드 "✦ 해볼게" → mission.strategyId 자동.
@@ -16116,7 +16323,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.17-evolution-tree';
+const APP_VERSION = 'v4.0.18-diagnoses';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
