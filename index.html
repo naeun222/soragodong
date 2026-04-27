@@ -7796,7 +7796,15 @@ const ONBOARDING_STEPS = [
     id: 'tracker_intro',
     targetSelector: null,
     title: '📊 추적 항목 (선택)',
-    body: '체크인 안에 + 항목 추가로 매일 추적할 거 등록 가능 — 수면 시간, 카페인, 운동, 명상 등.<br><br>· <b>숫자형</b>: 수면 7.5시간, 러닝 5km<br>· <b>체크형</b>: 명상 했음 ✓, 운동 했음 ✓<br><br><span class="small">안 해도 OK. 평소엔 필요할 때만.</span>',
+    body: '체크인 안 + 항목 추가로 매일 추적할 거 등록 — 수면 시간, 운동, 명상 등.<br>숫자형 / 체크형 둘 다.<br><span class="small">안 해도 OK.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'checkin_extras',
+    targetSelector: null,
+    title: '✨ 더 많이 기록할 수도 있어',
+    body: '체크인 더 내려보면:<br>· <b>📷 사진</b> — 그날 한 장<br>· <b>🎵 음악</b> — 그날 들은 곡 (검색해서 첨부)<br>· <b>📔 일기</b> — 한 줄도 OK<br>· <b>오늘의 질문</b> — 무작위 질문 (답 안 해도 됨)<br><br><span class="small">다 선택사항 — 원할 때만.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -7876,6 +7884,14 @@ const ONBOARDING_STEPS = [
     manualAdvance: true,
     dimBackground: false
   },
+  {
+    id: 'msg_menu_intro',
+    targetSelector: null,
+    title: '⋮ 메시지 메뉴',
+    body: '메시지 우상단 <b>⋮</b> 누르면:<br>· 복사<br>· 수정 / 다시 보내기<br>· 🌊 숙고 질문으로 보내기<br>· 삭제',
+    waitFor: 'next',
+    dimBackground: false
+  },
 
   // === Phase 5: 부름 + 모래사장 + 결별로 (5) ===
   {
@@ -7890,11 +7906,19 @@ const ONBOARDING_STEPS = [
     id: 'mission_done',
     targetSelector: '.mission-btn.complete',
     title: '⭐ 소라의 부름',
-    body: '홈에 ⭐ "소라의 부름" 미션 카드가 떠있을 거야!<br><br><b>"소라의 부름"이란?</b><br>네가 대화에서 받은 4단 분석 + 전략을 ✦ 해볼게로 받아들였을 때 등록되는 미션이야. 너 스스로 결정한 약속이지.<br><br><b>왜 특별해?</b><br>실제로는 미션 완료할 때 <b>인증샷</b>을 찍어서 내가 봐주고 검증해. 검증되면 그 미션의 소라는 ⭐ 부름 또는 ✨ 특별 — 가장 희귀한 결로 들어가! 자기 약속 지킨 흔적이라 특별한 거야.<br><br>지금은 튜토리얼이라 인증샷은 우회할게. ✓ 해냈어 한 번 눌러볼래?',
+    body: '홈에 ⭐ 미션 카드가 떠있을 거야!<br>너 스스로 결정한 약속이지.<br><br>실제로는 완료 시 <b>인증샷</b>을 찍어서 내가 봐주고 검증해. 검증되면 ⭐ 부름 / ✨ 특별 — 가장 희귀한 결.<br><br>지금은 튜토리얼이라 인증샷 우회. ✓ 해냈어 눌러봐.',
     waitFor: 'click',
     advanceDelay: 2000,
     coachmarkPosition: 'corner',
     fallbackPosition: 'top'
+  },
+  {
+    id: 'mission_carryover',
+    targetSelector: null,
+    title: '📆 못 한 부름은 어떻게?',
+    body: '바로 못 해도 괜찮아.<br>· <b>1~2일</b>은 홈에 그대로 (carryover 표시 ‹ N/M ›)<br>· <b>3일 지나면</b> 모래사장 "📜 못 한 부름"으로 만료됨<br>· 거기서 <b>"다시 받기"</b> 누르면 오늘로 부활<br><br><span class="small">자책 X. 하루 못 한 거 = 너 X 도구 또는 타이밍.</span>',
+    waitFor: 'next',
+    dimBackground: false
   },
   {
     id: 'attempt_result_intro',
@@ -7972,6 +7996,31 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     title: '5 카테고리',
     body: '도서관은 <b>5 카테고리</b>로 나뉘어:<br>📔 일기·대화 / 🔮 진주 / 🧬 양생방 / ✨ 깨달음 / 🌀 갈피·리뷰<br><br>맨 위 <b>🌟 오늘의 너</b> 카드는 진주 1개 회전.<br>다음에 핵심 몇 개만 짚어줄게.',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'diary_calendar',
+    targetSelector: null,
+    title: '📔 일기·대화',
+    body: '<b>캘린더 무드 그리드</b> — 한 달 한눈에 (칸 색 = 그날 기분).<br>· 칸 클릭 → 그날 카드 펼침<br>· 위 8 서브칩 (일기/일상/고민/감정/기억/할 일/아이디어/관계)<br>· ▦ 그리드 ↔ ≡ 타임라인 토글',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'pearls_tab',
+    targetSelector: '[data-cat="pearls"]',
+    title: '🔮 진주',
+    body: '<b>살아있다 느낀 작은 순간들</b> 모음.<br>음악·음식·장소·순간·사람.<br><br>진주 칩 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 800,
+    dimBackground: false
+  },
+  {
+    id: 'pearls_intro',
+    targetSelector: null,
+    title: 'Pinterest 갤러리',
+    body: '· <b>+ 진주 추가</b> — 직접 입력 + 사진/음악 첨부<br>· <b>★</b> 즐겨찾기<br>· 카테고리 칩으로 필터<br><br><span class="small">대화에서 "진짜 좋아" 흐르면 내가 알아서 "진주에 넣을래?" 물어봐.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8108,10 +8157,26 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   {
+    id: 'exec_drawer_intro',
+    targetSelector: null,
+    title: '📂 서랍장 4 그룹',
+    body: '오늘의 카드 못 들어간 할 일은 서랍장으로.<br>자동 분류:<br>🌅 지금 가능 / 🎯 큰 것 / 📅 나중 / 💭 아이디어<br><br><span class="small">→ 오늘로 / ✓ 완료 / ✕ 삭제.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'exec_timetable',
+    targetSelector: null,
+    title: '📅 타임테이블',
+    body: '시간 grid에 일정 직접 박을 수 있어.<br>· + 추가로 직접 박기<br>· 📤 구글 캘린더로 내보내기<br>· 📥 가져오기 (.ics)<br><br><span class="small">색깔 자유.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
     id: 'exec_immerse_btn',
     targetSelector: '.exec-immerse-btn',
     title: '🌧 몰입 시작',
-    body: '진짜 집중하고 싶을 때 이 버튼!<br>빗소리 + 단축어 + 시간 자동 기록까지. 작업 끝내고 돌아오면 자동으로 시간 남아있어.<br><br><span class="small">몰입 단축어 만드는 법은 ⚙ 설정 → "🌧 몰입 단축어 만들기"에 자세히 있어!</span>',
+    body: '진짜 집중하고 싶을 때 이 버튼!<br>빗소리 + 단축어 + 시간 자동 기록까지.<br><br><span class="small">⚙ 설정 → "🌧 몰입 단축어 만들기"에 만드는 법.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8142,10 +8207,29 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'reflection_intro',
+    targetSelector: '.nav-item[data-screen="home"]',
+    title: '🌊 숙고 질문 — 홈으로 가자',
+    body: '큰 질문 하나 안고 같이 깊이 들여다보는 곳이야.<br>아래 🏠 홈 탭 눌러봐.',
+    waitFor: 'visit',
+    visitScreen: 'home',
+    dimBackground: false
+  },
+  {
+    id: 'reflection_when',
     targetSelector: null,
-    title: '🌊 숙고 질문',
-    body: '큰 질문 하나 안고 며칠 살고 싶을 때.<br><b>홈에서 + 질문 추가</b> 또는 메시지 ⋮ → "숙고 질문으로".<br>별도 대화창에서 깊이 사색 → 결론은 너 직접.',
+    title: '어떨 때 쓸까',
+    body: '<b>마음을 울리는 큰 물음</b>이 떠올랐을 때.<br><br>예시:<br>· "내가 이 일을 진정으로 원하는 게 맞는지"<br>· "지금 이 관계에서 나는 어떤 사람이 되고 있는지"<br>· "정말 두려워하는 건 뭘까"<br><br><span class="small">하나만 안고 며칠/몇 주 살아봐. 결론은 너 직접 적어.</span>',
     waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'reflection_try',
+    targetSelector: '.reflection-add-btn, [onclick*="addReflectionQuestion"]',
+    title: '직접 박아보자',
+    body: '"+ 새 질문 추가" 버튼 눌러봐.<br>본질적인 질문 한 줄 적어 — 답 강요 X, 천천히.',
+    waitFor: 'click',
+    advanceDelay: 800,
+    manualAdvance: true,
     dimBackground: false
   },
   {
@@ -19871,15 +19955,15 @@ function testSeedV4Data() {
   state.reflectionQuestions = [
     {
       id: 'rq_seed_active',
-      text: '박사 끝까지 갈지 정말 내가 원하는 건지',
-      shortText: '박사 끝까지 갈지',
+      text: '내가 이 일을 진정으로 원하는 게 맞는지',
+      shortText: '진정으로 원하는지',
       createdAt: new Date(today.getTime() - 5 * 86400000).toISOString(),
       source: 'manual',
       status: 'active',
       chatMessages: [
-        { role: 'assistant', content: '이 질문, 같이 천천히 보자.', timestamp: new Date(today.getTime() - 5 * 86400000).toISOString() },
-        { role: 'user', content: '내가 학문 자체를 좋아하는 건지, 졸업장이 필요한 건지 헷갈려.', timestamp: new Date(today.getTime() - 4 * 86400000).toISOString() },
-        { role: 'assistant', content: '구체적으로, 박사 시작 전 기대했던 거랑 지금 비교하면 어떤 차이가 보여?', timestamp: new Date(today.getTime() - 4 * 86400000).toISOString() }
+        { role: 'assistant', content: '이 질문, 같이 천천히 보자. 무엇이 처음 떠올라?', timestamp: new Date(today.getTime() - 5 * 86400000).toISOString() },
+        { role: 'user', content: '아침마다 무겁게 일어나. 일 자체가 싫은 건지, 단지 피곤한 건지 모르겠어.', timestamp: new Date(today.getTime() - 4 * 86400000).toISOString() },
+        { role: 'assistant', content: '그 무거움이 어디서 와? 시작이 두려운 건지, 의미를 못 느끼는 건지, 사람이 힘든 건지...', timestamp: new Date(today.getTime() - 4 * 86400000).toISOString() }
       ]
     },
     // V4-fix v3 (사용자 요청): 가장 깊었던 숙고 시드 — chatMessages 풍부 (Stories용)
@@ -25077,7 +25161,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.107-model-tab-diagnoses';
+const APP_VERSION = 'v4.0.108-tutorial-fill-gaps';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
