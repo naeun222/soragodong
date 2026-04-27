@@ -6596,7 +6596,7 @@
     <!-- DECISIONS LIST -->
     <div class="screen" id="screen-decisions">
       <div class="screen-title">마법의 소라고동 ⚖️</div>
-      <div class="screen-sub">큰 결정은 천천히, 차가운 머리로.<br>충동 차단, 14일 숙성, 구조화된 단계.</div>
+      <div class="screen-sub">마법고동은 천천히, 차가운 머리로.<br>충동 차단, 14일 숙성, 구조화된 단계.</div>
 
       <button class="btn-primary decision" onclick="startNewDecision()">+ 새로운 결정 시작</button>
 
@@ -6765,7 +6765,7 @@
         </div>
         <div style="display:flex; gap:8px; margin-top:14px;">
           <button class="btn-secondary" onclick="closeBrainDump()" style="flex:1;">취소</button>
-          <button class="btn-primary" onclick="processBrainDump()" id="brainDumpSubmit" style="flex:2;">소라에게 맡기기 ✦</button>
+          <button class="btn-primary" onclick="processBrainDump()" id="brainDumpSubmit" style="flex:2;">고동에게 맡기기 ✦</button>
         </div>
       </div>
     </div>
@@ -8470,12 +8470,10 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'yangsaeng_intro',
-    targetSelector: '.strategy-card-title[data-strategy-id="strat_seed_0"]',
+    targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"]',
     title: '🧬 \'마감 직전 폭발력 신뢰\' 카드',
-    body: '여기 \'<b>마감 직전 폭발력 신뢰</b>\' 카드 한 번 눌러봐.<br>3번 성공한 \'영그는 중\' 가닥이야.',
-    waitFor: 'click',
-    advanceDelay: 800,
-    manualAdvance: true,
+    body: '여기 \'<b>마감 직전 폭발력 신뢰</b>\' 전략 DNA 카드가 있어.<br>이건 3번 연속 성공해서 \'<b>성장 중</b>\'이야.',
+    waitFor: 'next',
     dimBackground: false
   },
   {
@@ -8659,8 +8657,8 @@ const ONBOARDING_STEPS = [
   {
     id: 'exec_brain_dump_submit',
     targetSelector: '#brainDumpSubmit',
-    title: '소라에게 맡기기 ✦',
-    body: '예시가 자동으로 채워졌지?<br>이제 <b>"소라에게 맡기기"</b> 한 번 눌러봐.<br><br><span class="small">잠깐 기다리면 — 가장 중요한 3장 + 서랍장으로 정리돼.</span>',
+    title: '고동에게 맡기기 ✦',
+    body: '예시가 자동으로 채워졌지?<br>이제 <b>"고동에게 맡기기"</b> 한 번 눌러봐.<br><br><span class="small">잠깐 기다리면 — 가장 중요한 3장 + 서랍장으로 정리돼.</span>',
     waitFor: 'click',
     advanceDelay: 1500,
     dimBackground: false
@@ -8701,10 +8699,11 @@ const ONBOARDING_STEPS = [
   {
     id: 'exec_immerse_input',
     targetSelector: null,
+    advanceClickSelector: '.input-modal-btn.ok',
     title: '입력은 미리 채워뒀어',
     body: '"논문 서론 첫 단락 쓰기"가 자동 입력됐지?<br><b>확인</b> 눌러봐.',
-    waitFor: 'next',
-    manualAdvance: true,
+    waitFor: 'click',
+    advanceDelay: 600,
     dimBackground: false,
     aboveModal: true
   },
@@ -8726,27 +8725,28 @@ const ONBOARDING_STEPS = [
     title: '시작 IF-THEN',
     body: '시작 약속 미리 채워뒀어:<br><b>IF</b> 카페 도착해서 자리 앉으면 → <b>THEN</b> 노트북 펴고 한 단락 쓰기<br><br>"<b>다음 →</b>" 눌러봐.',
     waitFor: 'next',
-    manualAdvance: true,
     dimBackground: false,
     aboveModal: true
   },
   {
     id: 'exec_immerse_obstacle',
     targetSelector: null,
+    advanceClickSelector: '.ritual-btn.primary[onclick="ritualNextStep()"]',
     title: '방해 대비 IF-THEN',
     body: '방해 대비도 미리 채워뒀어:<br><b>IF</b> 유튜브 부르면 → <b>THEN</b> 탭 닫고 물 한 모금<br><br>"<b>약속할게 ✦</b>" 눌러봐.',
-    waitFor: 'next',
-    manualAdvance: true,
+    waitFor: 'click',
+    advanceDelay: 600,
     dimBackground: false,
     aboveModal: true
   },
   {
     id: 'exec_immerse_launch',
     targetSelector: null,
+    advanceClickSelector: '.ritual-btn.primary[onclick="ritualLaunch()"]',
     title: '🚀 발사',
     body: '약속 정리됐지? <b>"🌧 몰입 시작"</b> 눌러봐.<br>빗소리 + 타이머 시작.',
-    waitFor: 'next',
-    manualAdvance: true,
+    waitFor: 'click',
+    advanceDelay: 600,
     dimBackground: false,
     aboveModal: true
   },
@@ -8797,15 +8797,8 @@ const ONBOARDING_STEPS = [
     waitFor: 'next',
     dimBackground: false
   },
-  {
-    id: 'diagnoses_intro',
-    targetSelector: null,
-    title: '🩺 진단',
-    body: '내가 너 데이터에서 작동 중인 패턴을 발견하면 — <b>대화에서 자연스럽게 한 줄 인용</b>해줄게.<br><br><span class="small">"더 알고 싶어 ▾" 누르면 진단 같이 나와.</span>',
-    waitFor: 'next',
-    dimBackground: false
-  },
   // 사용자 요청 2026-04-28: 도서관 튜토리얼 (reflection 앞으로 이동, 도서관 카테고리 다시 살림)
+  // diagnoses_intro step 생략 (사용자 요청 2026-04-28)
   {
     id: 'go_archive_lib',
     targetSelector: '.nav-item[data-screen="archive"]',
@@ -8846,10 +8839,13 @@ const ONBOARDING_STEPS = [
   {
     id: 'diary_day_modal_explain',
     targetSelector: null,
+    advanceClickSelector: '.day-modal-close',
     title: '📔 그날의 기록',
-    body: '이 날의 일기를 확인할 수 있어.<br><br>대화탭에서 "일기:"라고 쓴 것도 저장되고, 고동이랑 대화한 내용들을 고동이가 알아서 정리해줘.',
-    waitFor: 'next',
-    dimBackground: false
+    body: '이 날의 일기를 확인할 수 있어.<br><br>대화탭에서 "일기:"라고 쓴 것도 저장되고, 고동이랑 대화한 내용들을 고동이가 알아서 정리해줘.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    aboveModal: true
   },
   {
     id: 'click_pearls_chip',
@@ -8960,9 +8956,10 @@ const ONBOARDING_STEPS = [
     id: 'magic_step1_filled',
     targetSelector: 'button[onclick*="askAIForStep"]',
     title: '지금 상황',
-    body: '예시도 채워뒀어.<br><br>🐚 <b>소라고동에게 도움 받기</b> — 이 버튼이 아주 유용해. 나중에 꼭 한 번 눌러봐. 도움 될 거야.',
+    body: '예시도 채워뒀어.<br><br>🐚 <b>소라고동에게 도움 받기</b> — 이 버튼이 아주 유용해. 나중에 꼭 한 번 눌러봐. 도움 될 거야.<br><br>지금은 넘어가자.',
     waitFor: 'next',
-    dimBackground: false
+    dimBackground: false,
+    fallbackPosition: 'top'
   },
   {
     id: 'magic_step1_complete',
@@ -9914,7 +9911,7 @@ async function startNewDecision() {
   // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드면 예시 시드 입력
   const isAutoFix = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
   const title = await showInputModal({
-    title: '큰 결정 ⚖️',
+    title: '마법고동 ⚖️',
     message: '14일 동안 천천히 익힐 거야.\n어떤 결정인지 한 줄로.',
     placeholder: '예: 창업할까 공기업 갈까 / 그에게 용기를 내볼까',
     defaultValue: isAutoFix ? '그에게 용기를 내볼까 vs 말까' : '',
@@ -9934,7 +9931,7 @@ async function startNewDecision() {
   state.decisions.push(decision);
   saveState();
   openDecision(decision.id);
-  showToast('큰 결정 모드 시작. 천천히 가자 ⚖️');
+  showToast('마법고동 시작. 천천히 가자 ⚖️');
 }
 
 function openDecision(decisionId) {
@@ -10053,7 +10050,7 @@ function openTextStep(decision, step, meta) {
   // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드면 '지금 상황' step 예시 시드 prefill
   const isAutoFix = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
   if (isAutoFix && step.id === 'situation' && !step.content) {
-    step.content = '사랑에 관한 거. 구체적으로 썸을 타고 있는데 상대 반응이 아리까리해. 내가 더 다가가도 되는지, 지금이 그 타이밍인지 아닌지 잘 모르겠어. 거절당하면 어색해질까 봐 두렵기도 하고, 안 하면 후회할 것 같기도 하고.';
+    step.content = '3개월 전 같이 듣는 수업에서 처음 만났어. 처음엔 인사만 했는데 지난달 그룹 발표 같이 하면서 자주 카톡하게 됨. 최근 둘이서 점심도 두 번 먹었어.\n\n근데 그 사람 카톡 답이 어떨 땐 1분, 어떨 땐 다음 날이라 진짜 호감 있어서 그런 건지 그냥 친구로 편해서 그런 건지 못 읽겠어.\n\n다음 주 수업 끝나고 둘이 따로 보자고 해볼까 싶은데, 거절당하면 같이 듣는 수업이라 한 학기 내내 어색해질까 봐 망설여져. 안 하면 후회할 것 같기도 하고.';
   }
   let hint = '';
   if (step.id === 'widen') hint = '💡 진짜로 두 가지뿐일까? "둘 다", "둘 다 아님", 새로운 제3의 길, 시간차 두기 등을 적어봐.';
@@ -10916,7 +10913,7 @@ function renderDecisionMiniLink() {
     <div onclick="showScreen('decisions')" class="decision-mini-card">
       <div class="dm-icon">⚖️</div>
       <div class="dm-text">
-        <div class="dm-title">큰 결정</div>
+        <div class="dm-title">마법고동</div>
         <div class="dm-sub">${subText}</div>
       </div>
       <div class="dm-arrow">›</div>
@@ -12157,9 +12154,9 @@ function showDnaPearlTypesModal() {
     {
       path: 'quick-discovery',
       emoji: '🌳',
-      label: '영그는 길',
+      label: '성장의 길',
       color: '#ffd93d',
-      description: '한 차원에서 반복 시도로 도달.\n같은 방향 끈질기게 — 7번 8번 시도해서 영글었어.',
+      description: '한 차원에서 반복 시도로 도달.\n같은 방향 끈질기게 — 7번 8번 시도해서 성장했어.',
       shells: ['⭐', '⭐', '🌟', '✨', '💫', '⭐', '🌟']
     },
     {
@@ -13015,7 +13012,7 @@ function openDnaPearlStory(pearlId) {
   // 사용자 요청 2026-04-28: DNA 진주 3종 라벨 통일
   const pathLabel = ({
     'one-shot':        '🌱 빠른 발견',
-    'quick-discovery': '🌳 영그는 길',
+    'quick-discovery': '🌳 성장의 길',
     'evolved':         '🧬 진화한 길'
   })[pearl.embodimentPath] || '✨ DNA 진주';
 
@@ -13836,11 +13833,101 @@ function renderModelPreview() {
     '<div style="font-size:11px;color:var(--text-dim);margin-top:8px;">탭해서 더 보기 →</div>';
 }
 
+// 사용자 요청 2026-04-28: 메타인지 카드 — 지난 7일 몰입 시간 + 자주 한 활동 + 시간대 패턴
+// (ADHD time blindness 보정 — 객관적 데이터로 자기 사용 시간 보기)
+function computeTimeUsageStats() {
+  const now = Date.now();
+  const weekAgo = now - 7 * 86400000;
+  const recent = (state.starts || []).filter(s => {
+    if (!s.returnedAt) return false;
+    const startMs = new Date(s.startedAt).getTime();
+    return !isNaN(startMs) && startMs >= weekAgo;
+  });
+  if (recent.length === 0) return null;
+
+  const taskMap = {};
+  const periodMap = { dawn: 0, morning: 0, afternoon: 0, evening: 0 };
+  let totalMin = 0;
+  let validSessions = 0;
+
+  recent.forEach(s => {
+    const startMs = new Date(s.startedAt).getTime();
+    const endMs = new Date(s.returnedAt).getTime();
+    let mins = Math.round((endMs - startMs) / 60000);
+    if (mins < 1 || mins > 480) return;  // sanity (1분 이하 / 8시간 초과 제외)
+    const title = (s.taskTitle || '제목 없음').trim();
+    if (!taskMap[title]) taskMap[title] = { mins: 0, count: 0 };
+    taskMap[title].mins += mins;
+    taskMap[title].count += 1;
+    totalMin += mins;
+    validSessions += 1;
+    const hour = new Date(s.startedAt).getHours();
+    if (hour >= 0 && hour < 6) periodMap.dawn += mins;
+    else if (hour < 12) periodMap.morning += mins;
+    else if (hour < 18) periodMap.afternoon += mins;
+    else periodMap.evening += mins;
+  });
+  if (validSessions === 0) return null;
+
+  const topTasks = Object.entries(taskMap)
+    .map(([title, d]) => ({ title, mins: d.mins, count: d.count, avg: Math.round(d.mins / d.count) }))
+    .sort((a, b) => b.mins - a.mins)
+    .slice(0, 3);
+
+  const periodLabels = {
+    dawn: '🌙 새벽 (0-6시)',
+    morning: '🌅 오전 (6-12시)',
+    afternoon: '☀️ 오후 (12-18시)',
+    evening: '🌆 저녁 (18-24시)'
+  };
+  const topPeriod = Object.entries(periodMap).reduce((a, b) => b[1] > a[1] ? b : a);
+
+  return {
+    totalMin,
+    sessionCount: validSessions,
+    topTasks,
+    topPeriod: { key: topPeriod[0], label: periodLabels[topPeriod[0]], mins: topPeriod[1] },
+    days: 7
+  };
+}
+
+function renderTimeUsageCard() {
+  const stats = computeTimeUsageStats();
+  if (!stats) {
+    return `<div class="model-section">
+      <div class="model-section-title">📊 시간 사용 패턴 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
+      <div style="font-size:12px; color:var(--text-dim); padding:8px 0; line-height:1.7;">
+        몰입 기록 쌓이면 여기 표시돼.<br>
+        실행 탭 🚀 → 몰입 시작 → 돌아옴 누르면 자동 기록.
+      </div>
+    </div>`;
+  }
+  const totalH = Math.floor(stats.totalMin / 60);
+  const totalM = stats.totalMin % 60;
+  const totalLabel = totalH > 0 ? `${totalH}시간 ${totalM}분` : `${totalM}분`;
+  return `<div class="model-section">
+    <div class="model-section-title">📊 시간 사용 패턴 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
+    <div style="font-size:13px; color:var(--text); margin-bottom:12px; line-height:1.8;">
+      총 <b>${totalLabel}</b> · ${stats.sessionCount}회 몰입<br>
+      가장 많이 쓴 시간대: <b>${stats.topPeriod.label}</b>
+    </div>
+    <div style="font-size:11px; color:var(--text-dim); margin-bottom:6px;">자주 한 활동 Top ${stats.topTasks.length}</div>
+    ${stats.topTasks.map(t => `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; padding:7px 0; border-bottom:1px dashed rgba(212,167,106,0.15);">
+        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(t.title)}</span>
+        <span style="color:var(--text-dim); font-size:11px; flex-shrink:0;">${t.count}회 · 평균 ${t.avg}분</span>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
 function renderModel() {
   const container = document.getElementById('modelContent');
   if (!container) return;  // FIX BUG-1: null guard
+  // 시간 사용 패턴 카드는 데이터 없어도 placeholder 노출 (사용자 요청 2026-04-28)
+  const timeCardHtml = renderTimeUsageCard();
   if (!state.traits.length && !state.patterns.length && !state.values.length) {
-    container.innerHTML = `<div class="model-empty">
+    container.innerHTML = timeCardHtml + `<div class="model-empty">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
       <div style="font-size:14px; color:var(--text); margin-bottom:10px;">아직은 백지야.</div>
       <div style="margin-bottom:14px;">그게 맞는 시작이야.<br>며칠 같이 지내자 ✦</div>
@@ -13874,42 +13961,45 @@ function renderModel() {
     return { top: main.slice(0, topN), more: main.slice(topN), draft };
   };
   
-  let html = '';
+  // 사용자 요청 2026-04-28: 나 탭 정리 — 시간 사용 패턴 (위) + 통합 분석 (중) 항상 노출, 세부 (values/traits/patterns/diagnoses) 접힘
+  let html = timeCardHtml;
+  // 세부 섹션 모음 — 한 details로 묶음
+  let detailsHtml = '';
   if (state.values.length > 0) {
     const split = splitItems(state.values, 4, 0.4, true);
-    html += `<div class="model-section"><div class="model-section-title">🎯 네가 중시하는 것</div>`;
-    split.top.forEach((v, i) => { 
+    detailsHtml += `<div class="model-section"><div class="model-section-title">🎯 네가 중시하는 것</div>`;
+    split.top.forEach((v, i) => {
       const realIdx = state.values.indexOf(v);
-      html += renderModelItem(v, 'values', realIdx); 
+      detailsHtml += renderModelItem(v, 'values', realIdx);
     });
     if (split.more.length > 0 || split.draft.length > 0) {
-      html += renderMoreSection('values', split.more, split.draft);
+      detailsHtml += renderMoreSection('values', split.more, split.draft);
     }
-    html += '</div>';
+    detailsHtml += '</div>';
   }
   if (state.traits.length > 0) {
     const split = splitItems(state.traits, 5, 0.4, true);
-    html += `<div class="model-section"><div class="model-section-title">💫 너의 특성</div>`;
-    split.top.forEach((t, i) => { 
+    detailsHtml += `<div class="model-section"><div class="model-section-title">💫 너의 특성</div>`;
+    split.top.forEach((t, i) => {
       const realIdx = state.traits.indexOf(t);
-      html += renderModelItem(t, 'traits', realIdx); 
+      detailsHtml += renderModelItem(t, 'traits', realIdx);
     });
     if (split.more.length > 0 || split.draft.length > 0) {
-      html += renderMoreSection('traits', split.more, split.draft);
+      detailsHtml += renderMoreSection('traits', split.more, split.draft);
     }
-    html += '</div>';
+    detailsHtml += '</div>';
   }
   if (state.patterns.length > 0) {
     const split = splitItems(state.patterns, 4, 0.4, true);
-    html += `<div class="model-section"><div class="model-section-title">🔄 보이는 패턴</div>`;
-    split.top.forEach((p, i) => { 
+    detailsHtml += `<div class="model-section"><div class="model-section-title">🔄 보이는 패턴</div>`;
+    split.top.forEach((p, i) => {
       const realIdx = state.patterns.indexOf(p);
-      html += renderModelItem(p, 'patterns', realIdx); 
+      detailsHtml += renderModelItem(p, 'patterns', realIdx);
     });
     if (split.more.length > 0 || split.draft.length > 0) {
-      html += renderMoreSection('patterns', split.more, split.draft);
+      detailsHtml += renderMoreSection('patterns', split.more, split.draft);
     }
-    html += '</div>';
+    detailsHtml += '</div>';
   }
   if (state.caseFormulation.version > 0) {
     html += `<div class="model-section"><div class="model-section-title">📋 통합 분석 v.${state.caseFormulation.version}</div>
@@ -13937,6 +14027,7 @@ function renderModel() {
     html += '</div>';
   }
   // V4-fix v3 (사용자 요청): 진단 5종 나 탭에 표시 (active + shown만, dismissed 제외)
+  // 사용자 요청 2026-04-28: 진단도 세부 섹션으로 — 접힘 처리
   const visibleDiags = (state.diagnoses || []).filter(d => d.status === 'active' || d.status === 'shown');
   if (visibleDiags.length > 0) {
     const diagLabels = {
@@ -13946,7 +14037,7 @@ function renderModel() {
       avoidance: '🌫 회피 패턴',
       willpower_cap: '🪫 의지 임계치'
     };
-    html += `<div class="model-section">
+    detailsHtml += `<div class="model-section">
       <div class="model-section-title">🩺 작동 중인 패턴</div>
       <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">내가 너 데이터에서 발견한 작동 중인 패턴이야. 시도 결과로 신뢰도 갱신돼.</div>
       ${visibleDiags.sort((a,b) => (b.confidence || 0) - (a.confidence || 0)).map(d => `
@@ -13960,6 +14051,13 @@ function renderModel() {
         </div>
       `).join('')}
     </div>`;
+  }
+  // 사용자 요청 2026-04-28: 세부 섹션 (values/traits/patterns/진단) 접힘 처리
+  if (detailsHtml) {
+    html += `<details class="model-collapse" style="margin-top:8px;">
+      <summary style="font-size:13px; font-weight:600; color:var(--accent); padding:10px 0; cursor:pointer; list-style:none;">▾ 더 자세히 (특성·가치·패턴·진단)</summary>
+      <div style="margin-top:14px;">${detailsHtml}</div>
+    </details>`;
   }
   container.innerHTML = html;
 }
@@ -16598,7 +16696,7 @@ async function promptCrystallize(card) {
 function showCrystallizeRitualModal(card, dnaPearl) {
   const path = dnaPearl.embodimentPath;
   // 5.8 톤 (path별)
-  // 사용자 요청 2026-04-28: 3종 라벨 통일 — 빠른 발견 / 영그는 길 / 진화한 길
+  // 사용자 요청 2026-04-28: 3종 라벨 통일 — 빠른 발견 / 성장의 길 / 진화한 길
   const ritualMessages = {
     'one-shot': {
       emoji: '🌱',
@@ -16607,8 +16705,8 @@ function showCrystallizeRitualModal(card, dnaPearl) {
     },
     'quick-discovery': {
       emoji: '🌳',
-      label: '영그는 길',
-      msg: `${dnaPearl.totalAttempts}번 반복 시도로 한 차원에서 끝까지 영글었어.\n\n천천히 도달한 곳, 너만의 진주.`
+      label: '성장의 길',
+      msg: `${dnaPearl.totalAttempts}번 반복 시도로 한 차원에서 끝까지 성장했어.\n\n천천히 도달한 곳, 너만의 진주.`
     },
     'evolved': {
       emoji: '🧬',
@@ -16621,7 +16719,7 @@ function showCrystallizeRitualModal(card, dnaPearl) {
   // 결정 다면체 외곽 색 (path별 — 사용자 요청 2026-04-28 색상 다양화)
   const outerColor = {
     'one-shot':        '#8fc88f',  // 빠른 발견 — 새싹 초록
-    'quick-discovery': '#ffd93d',  // 영그는 길 — 황금
+    'quick-discovery': '#ffd93d',  // 성장의 길 — 황금
     'evolved':         'url(#crystallize-rainbow)'  // 진화한 길 — 무지개
   }[path] || '#ffd700';
   const safeOuter = (typeof outerColor === 'string' && outerColor.startsWith('#')) ? outerColor : '#ffd700';
@@ -18239,7 +18337,7 @@ function renderLensStrategies() {
     });
     const _groupOrder = [
       { key: 'seedling_trying', label: '🌿 양생 — 시작·시도 중' },
-      { key: 'working',         label: '🌳 영그는 중 — 작동 누적' },
+      { key: 'working',         label: '🌳 성장 중 — 작동 누적' },
       { key: 'mutated',         label: '🪦 돌연변이 — 진화 중' },
       { key: 'embodied',        label: '🍃 체화 완료' },
       { key: 'archived',        label: '🍂 마무리' }
@@ -18277,7 +18375,7 @@ function _renderStrategyCardHtml(s) {
     bodyHtml = '';
   }
   const _statusEmoji = { seedling:'🌱', trying:'🌿', working:'🌳', embodied:'🍃', archived:'🍂', mutated:'🪦' };
-  const _statusName  = { seedling:'시작', trying:'시도 중', working:'영그는 중', embodied:'체화됨 ✨', archived:'마무리', mutated:'진화 중' };
+  const _statusName  = { seedling:'시작', trying:'시도 중', working:'성장 중', embodied:'체화됨 ✨', archived:'마무리', mutated:'진화 중' };
   const _status = s.embodimentStatus || (Array.isArray(s.generations) ? 'seedling' : null);
   const _worked = _status ? countWorkedAttempts(s) : 0;
   const _total  = _status ? countTotalAttempts(s) : 0;
@@ -19406,7 +19504,7 @@ async function processBrainDump() {
 
   const submitBtn = document.getElementById('brainDumpSubmit');
   submitBtn.disabled = true;
-  submitBtn.textContent = '소라가 정리 중... ✦';
+  submitBtn.textContent = '고동이 정리 중... ✦';
 
   if (!state.apiKey) {
     // Fallback: split by line, no AI
@@ -19430,7 +19528,7 @@ async function processBrainDump() {
     saveState();
     closeBrainDump();
     submitBtn.disabled = false;
-    submitBtn.textContent = '소라에게 맡기기 ✦';
+    submitBtn.textContent = '고동에게 맡기기 ✦';
     renderExecute();
     showToast('정리 완료. 카드 3장 발급됨 ✦');
     return;
@@ -19544,13 +19642,13 @@ JSON 출력:
     saveState();
     closeBrainDump();
     submitBtn.disabled = false;
-    submitBtn.textContent = '소라에게 맡기기 ✦';
+    submitBtn.textContent = '고동에게 맡기기 ✦';
     renderExecute();
     showToast(`카드 ${(result.now3 || []).length}장 발급됨 ✦`);
   } catch (e) {
     console.error(e);
     submitBtn.disabled = false;
-    submitBtn.textContent = '소라에게 맡기기 ✦';
+    submitBtn.textContent = '고동에게 맡기기 ✦';
     showToast('오류: ' + e.message);
   }
 }
@@ -21394,7 +21492,7 @@ async function testSeedV4Data() {
     workedCount: 4,
     createdAt: new Date(today.getTime() - 100 * 86400000).toISOString()
   });
-  // 🌳 영그는 길 (quick-discovery) — 한 차원에서 반복으로 도달
+  // 🌳 성장의 길 (quick-discovery) — 한 차원에서 반복으로 도달
   state.pearls.push({
     id: 'dpearl_seed_quick',
     type: 'dna_pearl',
@@ -21776,6 +21874,33 @@ async function testSeedV4Data() {
       isToday: false, status: 'pending',
       priority: 10 + i,
       createdAt: new Date(today.getTime() - i * 86400000).toISOString()
+    });
+  });
+  // 사용자 요청 2026-04-28: starts (몰입 세션) 시드 — 나 탭 '시간 사용 패턴' 카드 데이터
+  state.starts = [];
+  // 지난 7일, hour 다양 (시간대 패턴 보이게), task 다양
+  const startSeeds = [
+    { task: '논문 서론 마무리', daysAgo: 0, hour: 5, durationMin: 45, outcome: 'partial' },
+    { task: '논문 서론 마무리', daysAgo: 1, hour: 4, durationMin: 90, outcome: 'done' },
+    { task: '운동 30분', daysAgo: 1, hour: 19, durationMin: 35, outcome: 'done' },
+    { task: '논문 서론 마무리', daysAgo: 2, hour: 6, durationMin: 70, outcome: 'partial' },
+    { task: '책 1챕터', daysAgo: 3, hour: 22, durationMin: 50, outcome: 'done' },
+    { task: '운동 30분', daysAgo: 3, hour: 18, durationMin: 32, outcome: 'done' },
+    { task: '논문 서론 마무리', daysAgo: 4, hour: 5, durationMin: 80, outcome: 'partial' },
+    { task: '실험 데이터 처리', daysAgo: 5, hour: 14, durationMin: 60, outcome: 'done' },
+    { task: '논문 서론 마무리', daysAgo: 6, hour: 4, durationMin: 95, outcome: 'partial' }
+  ];
+  startSeeds.forEach((s, i) => {
+    const start = new Date(today.getTime() - s.daysAgo * 86400000);
+    start.setHours(s.hour, 12, 0, 0);
+    const end = new Date(start.getTime() + s.durationMin * 60000);
+    state.starts.push({
+      id: 'start_seed_' + i,
+      taskId: null,
+      taskTitle: s.task,
+      startedAt: start.toISOString(),
+      returnedAt: end.toISOString(),
+      outcome: s.outcome
     });
   });
   // memoryVault 4 (서랍장 항목 / 채팅 아이디어)
@@ -25963,9 +26088,10 @@ function toggleReviewDetail(idx) {
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
+// 사용자 요청 2026-04-28: 도서관 마법의 소라고동 = 홈의 마법고동 같은 방. archive 별도 화면 X, decisions 화면으로 통일
 function showArchiveDecisions() {
-  showScreen('archive-decisions');
-  renderArchiveDecisions();
+  showScreen('decisions');
+  if (typeof renderDecisionsList === 'function') renderDecisionsList();
 }
 
 function renderArchiveDecisions() {
@@ -27156,7 +27282,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.124-artwork-card-check';
+const APP_VERSION = 'v4.0.125-magicgodong-time-usage';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
