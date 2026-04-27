@@ -2994,6 +2994,9 @@
     align-self: flex-end;
   }
   .reflection-input-wrap .send-btn:active { transform: scale(0.95); }
+  .reflection-screen-actions {
+    display: flex; gap: 4px; align-items: center; flex-shrink: 0;
+  }
   .reflection-resolve-btn {
     flex-shrink: 0;
     background: rgba(98,165,200,0.12);
@@ -3007,6 +3010,20 @@
     white-space: nowrap;
   }
   .reflection-resolve-btn:active { background: rgba(98,165,200,0.22); }
+  .reflection-pause-btn {
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+  .reflection-pause-btn:active { background: var(--surface2); }
 
   /* V4-1i: 🌊 숙고 질문 시스템 — 홈 카드 */
   .reflection-empty-card {
@@ -3049,21 +3066,12 @@
     white-space: nowrap;
     min-width: 0;
   }
-  .reflection-active-mini-actions {
-    display: flex; gap: 4px; flex-shrink: 0;
-  }
-  .reflection-mini-btn {
-    width: 26px; height: 26px;
-    background: transparent;
-    border: 1px solid rgba(98,165,200,0.30);
+  .reflection-active-arrow {
+    flex-shrink: 0;
     color: #a3d2e8;
-    border-radius: 6px;
-    font-size: 11px;
-    font-family: inherit;
-    cursor: pointer;
-    padding: 0;
+    font-size: 16px;
+    opacity: 0.6;
   }
-  .reflection-mini-btn:active { background: rgba(98,165,200,0.20); }
   .reflection-pending-link {
     margin: 6px 0 4px;
     padding: 8px 14px;
@@ -4390,6 +4398,44 @@
   .checkin-photo-add-btn:active { background: var(--surface2); }
   .cpa-icon { font-size: 18px; }
   .cpa-label { font-size: 10px; letter-spacing: 0.05em; }
+  /* V4-fix: 일기 모달 음악 카드 */
+  .day-music-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    margin: 10px 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .day-music-art {
+    width: 50px; height: 50px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .day-music-meta { flex: 1; min-width: 0; }
+  .day-music-title {
+    font-size: 12px; font-weight: 600;
+    color: var(--text); line-height: 1.4;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .day-music-artist { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+  .day-music-play {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    background: rgba(212,167,106,0.18);
+    border: 1px solid rgba(212,167,106,0.35);
+    color: var(--accent2);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .day-music-play:active { transform: scale(0.92); }
+  .day-music-play.playing { background: rgba(212,167,106,0.40); color: #fff; }
   /* day-modal 일기 사진 */
   .day-photo-wrap {
     margin: 10px 0;
@@ -5160,7 +5206,10 @@
       <div class="reflection-screen-header">
         <button class="reflection-screen-back" onclick="showScreen('home')">←</button>
         <div class="reflection-screen-q" id="reflectionScreenQ"></div>
-        <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론</button>
+        <div class="reflection-screen-actions">
+          <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론</button>
+          <button class="reflection-pause-btn" id="reflectionPauseBtn" title="보류">⏸</button>
+        </div>
       </div>
       <div class="reflection-chat-area" id="reflectionChatArea"></div>
     </div>
@@ -8422,14 +8471,12 @@ function renderReflectionHome() {
 
   let html = '';
   if (active) {
+    // V4-fix: 미니 액션 버튼 제거 — 카드 클릭 시 숙고 채팅으로 진입. 결론·보류는 채팅 화면 헤더에서.
     html += `
       <div class="reflection-active-card" onclick="openReflectionChat('${active.id}')">
         <span class="reflection-active-icon">🌊</span>
         <span class="reflection-active-text">${escapeHtml(active.text)}</span>
-        <span class="reflection-active-mini-actions" onclick="event.stopPropagation()">
-          <button class="reflection-mini-btn" onclick="resolveReflectionQuestion('${active.id}')" title="결론 내고 닫기">✓</button>
-          <button class="reflection-mini-btn" onclick="pauseReflectionQuestion('${active.id}')" title="보류">⏸</button>
-        </span>
+        <span class="reflection-active-arrow">›</span>
       </div>
     `;
   }
@@ -8579,10 +8626,17 @@ function openReflectionChat(qId) {
   _activeReflectionId = qId;
   showScreen('reflection');
   renderReflectionChat();
-  // 결론 닫기 버튼 wire
+  // 결론 / 보류 버튼 wire
   const resolveBtn = document.getElementById('reflectionResolveBtn');
   if (resolveBtn) {
     resolveBtn.onclick = () => resolveReflectionQuestion(qId);
+  }
+  const pauseBtn = document.getElementById('reflectionPauseBtn');
+  if (pauseBtn) {
+    pauseBtn.onclick = async () => {
+      await pauseReflectionQuestion(qId);
+      showScreen('home');
+    };
   }
   // 헤더 질문 표시
   const qEl = document.getElementById('reflectionScreenQ');
@@ -13663,6 +13717,23 @@ function switchDayModalTab(tab) {
     // V4-fix: 일기 사진 (음악 카드 풍 — 큰 사진)
     if (entry.photo) {
       html += `<div class="day-photo-wrap"><img src="${entry.photo}" alt="" class="day-photo"></div>`;
+    }
+    // V4-fix: 음악 카드 (entry.music 있으면)
+    if (entry.music && entry.music.title) {
+      const m = entry.music;
+      const playBtn = m.previewUrl
+        ? `<button class="day-music-play" onclick="event.stopPropagation(); toggleMusicPreview(this, '${escapeHtml(m.previewUrl)}')" aria-label="미리듣기">▶</button>`
+        : '';
+      html += `
+        <div class="day-music-card">
+          <img src="${escapeHtml(m.artworkUrl || '')}" alt="" class="day-music-art">
+          <div class="day-music-meta">
+            <div class="day-music-title">${escapeHtml(m.title || '')}</div>
+            <div class="day-music-artist">${escapeHtml(m.artist || '')}</div>
+          </div>
+          ${playBtn}
+        </div>
+      `;
     }
     // 일기 본문
     if (entry.diary)     html += `<div class="day-diary">${escapeHtml(entry.diary)}</div>`;
@@ -20005,7 +20076,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.58-reflection-simple';
+const APP_VERSION = 'v4.0.59-batch-fixes';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.

@@ -1,1 +1,1 @@
-v4.0.58-reflection-simple
+v4.0.59-batch-fixes
