@@ -25233,7 +25233,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.109-tutorial-more-steps';
+const APP_VERSION = 'v4.0.110-banner-v4-text';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
@@ -25252,7 +25252,7 @@ function renderUpdateNotice() {
   }
   banner.style.display = 'flex';
   banner.innerHTML = `
-    <span class="update-banner-text">✨ 앱 업데이트됨 — 한 번 둘러볼래?</span>
+    <span class="update-banner-text">✨ V4 대규모 업데이트 완료! 한 번 둘러볼래? (제발료)</span>
     <div class="update-banner-actions">
       <button onclick="startUpdateTour()" class="update-banner-btn-go">보기</button>
       <button onclick="dismissUpdateNotice()" class="update-banner-btn-dismiss" aria-label="닫기">×</button>
