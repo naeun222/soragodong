@@ -2168,6 +2168,24 @@
     font-family: inherit;
   }
   .strategy-card-actions button:active { background: var(--surface2); }
+  /* V4-1e: 양생 미션 흐름 */
+  .strategy-try-btn {
+    background: linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)) !important;
+    border-color: rgba(143,200,143,0.45) !important;
+    color: #c5e8c5 !important;
+    font-weight: 500;
+  }
+  .strategy-try-btn:active { background: rgba(143,200,143,0.28) !important; }
+  .strategy-card-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin: 4px 0 8px;
+    letter-spacing: 0.02em;
+  }
+  .strategy-card-meta.embodied {
+    color: #d4a76a;
+    font-weight: 500;
+  }
   /* V3.13.x: 전략 카드 4-필드 구조 (문제 상황 / 심리학 개념 / 전략적 행동) */
   .strategy-card-v2 { padding: 16px 18px; }
   .strategy-card-title {
@@ -10424,6 +10442,46 @@ function closeCrystallizeRitual() {
   if (typeof renderTodayMission === 'function') renderTodayMission();
 }
 
+// V4-1e: 양생 미션 흐름 — strategy 카드 "✦ 해볼게" → mission.strategyId 자동.
+// 6.1 시나리오 wire: 가닥에서 미션 받음 → 홈 부름 → 인증샷 → 결과 체크 (V4-1d-2 모달).
+async function callTryStrategy(strategyId) {
+  const card = getStrategyCard(strategyId);
+  if (!card) return;
+
+  // dedupe: 이미 pending mission이 같은 strategyId로 있으면 안내만
+  const existingPending = (state.missions || []).find(m =>
+    m.strategyId === strategyId && m.status === 'pending'
+  );
+  if (existingPending) {
+    showToast('이미 받은 부름이야 🐚');
+    return;
+  }
+
+  // 이미 체화 완료된 경우 다시 미션 받기 X
+  if (card.embodimentStatus === 'embodied') {
+    showToast('이미 체화된 가닥이야 ✨');
+    return;
+  }
+
+  const gen = getCurrentGeneration(card);
+  if (!gen) return;
+
+  const newGenIdx = (card.generations.length || 1) - 1;
+  const missionTitle = card.title;
+  const missionDesc = gen.action || card.actionStrategy || card.summary || '';
+
+  createMission(missionTitle, missionDesc, {
+    strategyId,
+    generationIdx: newGenIdx,
+    linkedStrategy: card.title
+  });
+
+  showToast('🐚 새 부름 — 홈에서 확인');
+
+  if (typeof renderTodayMission === 'function') renderTodayMission();
+  if (typeof renderArchive === 'function') renderArchive();
+}
+
 // ═══════════════════════════════════════════════════════════════
 // PROPOSAL HANDLING (Phase 2 upgrade)
 // ═══════════════════════════════════════════════════════════════
@@ -10902,12 +10960,36 @@ function renderLensStrategies() {
       } else {
         bodyHtml = '';
       }
+      // V4-1e: embodiment 상태 + 해볼게 버튼
+      const _statusEmoji = { seedling:'🌱', trying:'🌿', working:'🌳', embodied:'🍃', archived:'🍂', mutated:'🪦' };
+      const _statusName  = { seedling:'시작', trying:'시도 중', working:'영그는 중', embodied:'체화됨 ✨', archived:'마무리', mutated:'진화 중' };
+      const _status = s.embodimentStatus || (Array.isArray(s.generations) ? 'seedling' : null);
+      const _worked = _status ? countWorkedAttempts(s) : 0;
+      const _total  = _status ? countTotalAttempts(s) : 0;
+      const _gens   = Array.isArray(s.generations) ? s.generations.length : 0;
+      const _isEmbodied = _status === 'embodied';
+      const _hasPending = (state.missions || []).some(m => m.strategyId === s.id && m.status === 'pending');
+      const metaLine = _status
+        ? (_total > 0
+            ? `${_statusEmoji[_status]||'🌱'} ${_statusName[_status]||''} · 작동 ${_worked}/${_total}${_gens > 1 ? ` · ${_gens}세대` : ''}`
+            : `${_statusEmoji[_status]||'🌱'} 미시도`)
+        : '';
+      const tryBtnHtml = (_status && !_isEmbodied)
+        ? (_hasPending
+            ? `<button disabled style="opacity:0.55;">🐚 부름 받음</button>`
+            : `<button class="strategy-try-btn" onclick="callTryStrategy('${s.id}')">✦ 해볼게</button>`)
+        : '';
+      const metaHtml = metaLine
+        ? `<div class="strategy-card-meta${_isEmbodied ? ' embodied' : ''}">${metaLine}</div>`
+        : '';
       html += `
         <div class="strategy-card strategy-card-v2">
           <div class="strategy-card-title">🧭 ${escapeHtml(s.title)}</div>
           ${bodyHtml}
+          ${metaHtml}
           <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : s.source === 'deeper' ? ' · 더 알고 싶어' : ' · 대화 챕터'}</div>
           <div class="strategy-card-actions">
+            ${tryBtnHtml}
             <button onclick="deleteTopicCard('${s.id}')">🗑 삭제</button>
           </div>
         </div>
@@ -15071,7 +15153,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.6-crystallize';
+const APP_VERSION = 'v4.0.7-yangsaeng-flow';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
