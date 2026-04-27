@@ -15447,27 +15447,41 @@ async function openMutationChat(strategyId, missionTitle) {
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
           model: 'claude-opus-4-7',
-          max_tokens: 700,
+          max_tokens: 900,
           messages: [{
             role: 'user',
-            content: `돌연변이 진화 4 옵션 생성.
+            content: `돌연변이 진화 4 옵션 생성 (사용자 요청 2026-04-28: 더 디테일하고 효과적으로).
 
-전략 카드: "${card.title}"
-이전 가지 (${prevLayer} ${_LAYER_NAME[prevLayer]||''}): "${prevAction}"
-미션: "${missionTitle}"
-결과: 안 통했어.
+[전략 카드] "${card.title}"
+[심리학 개념] ${card.psychConcept || '(없음)'}
+[문제 상황] ${card.problemContext || '(없음)'}
+[이전 가지 ${prevLayer} ${_LAYER_NAME[prevLayer]||''}] "${prevAction}"
+[안 통한 미션] "${missionTitle}"
 
-[5 차원]
-- L1 인지: 자기 설득, CBT 재구조화 (의지 100%)
-- L2 행동: 알람, 체크리스트 (의지 90%)
-- L3 환경: 환경 자체 변경, 자동 종료 (의지 30%)
-- L4 사회: 친구 카톡, 책임 파트너 (의지 20%)
-- L5 메타: 가치 재검토, 갈피의 방 (의지 10%)
+[5 차원 — 의지 부담 ↓일수록 ADHD 친화]
+- L1 인지: 생각의 틀 재구조화 (CBT, 인지 재해석) — 의지 100%
+- L2 행동: 알람·체크리스트·시간 박스 — 의지 90%
+- L3 환경: 물리적 환경/도구 자체 변경, 자동 trigger — 의지 30%
+- L4 사회: 친구·책임 파트너·공개 약속 — 의지 20%
+- L5 메타: 가치 재검토, 갈피의 방, 큰 그림 보기 — 의지 10%
 
-이전이 ${prevLayer}라 그 외 4 차원 1개씩.
+이전이 ${prevLayer} 였으니 그 외 4 차원 각 1개.
 
-[출력 JSON만] { "options": [{"layer":"L3","action":"50자 이내"},...] }
-[금지] "실패" X, 마크다운 X, 추상적 다짐 X.`
+[옵션 작성 가이드 — 매우 중요]
+1. 추상 X 구체 ○: "환경 바꿔" X, "오늘 저녁 7시까지 폰을 거실 책상 충전기에 꽂아두기" ○
+2. 첫 행동 명확: 동사로 시작 + 5분 안에 시작 가능
+3. 너의 사용자 ${card.title} 패턴에 맞게 — 일반론 X
+4. 왜 효과적인지 1구절 포함 (예: "도파민 trigger 외부화", "결정 부담 ↓")
+5. ADHD 친화: 의지 부담 ↓ 차원 (L3/L4) 우선, L1·L5는 신중하게
+6. 한 줄 70-100자 (이전 50자 → 더 디테일)
+
+[출력 JSON만 — 마크다운 X 따옴표 안 escape]
+{ "options": [{"layer":"L3","action":"오늘 저녁 7시까지 폰을 거실 충전기에 꽂아두기 — 손에 안 닿으면 자동 차단 (도파민 trigger 외부화)"},...] }
+
+[절대 금지]
+- "실패" / "안 됨" / "왜 못 했지" 단어
+- 추상 다짐 ("열심히", "노력")
+- 마크다운 / 줄바꿈 / 따옴표 escape`
           }]
         })
       });
@@ -15484,12 +15498,13 @@ async function openMutationChat(strategyId, missionTitle) {
     } catch (e) { console.warn('mutation AI failed:', e); }
   }
   if (!aiOptions.length) {
-    // 사용자 요청 2026-04-27: 일상적·이해 쉽게·친절히
+    // 사용자 요청 2026-04-28: 더 디테일/효과적 — 구체 행동 + 왜 효과적인지 명시
     aiOptions = [
-      { layer: 'L3', action: '주변 환경을 바꿔보자 — 폰을 다른 방에 두거나, 카페로 자리 옮기기' },
-      { layer: 'L4', action: '친구한테 한 줄 알리기 — "나 오늘 X 시도 중"' },
-      { layer: 'L1', action: '이 패턴이 어디서 오는지 한 줄 적어보기' },
-      { layer: 'L5', action: '잠깐 멈춰서 — 이게 정말 내가 원하는 길인지 보기' }
+      { layer: 'L3', action: '오늘 저녁 7시까지 폰을 다른 방 충전기에 꽂아두기 — 손에 안 닿으면 자동 차단 (의지 X 환경 차원에서 trigger 외부화)' },
+      { layer: 'L4', action: '믿을 친구 1명한테 카톡 한 줄: "나 오늘부터 X 시도 중. 매일 결과 한 줄 공유" — 책임 파트너 효과 + 외부 시선 = 도파민' },
+      { layer: 'L2', action: '알람 1개 (실제 가능한 시간) + 5분만 시작하기 룰 — 5분 후 그만둬도 OK. 진입 마찰 ↓' },
+      { layer: 'L1', action: '이 행동이 안 됐을 때 머릿속에 뜨는 생각을 적어보기 ("난 못해" 같은 거) → 다른 해석 시도 ("오늘은 못 했을 뿐, 내일 다시")' },
+      { layer: 'L5', action: '갈피의 방에 큰 질문 박기: "이 행동이 정말 지금 나에게 필요한가?" 일주일 안고 살아보기 — 가치 재검토' }
     ].filter(o => o.layer !== prevLayer).slice(0, 4);
   }
   if (!_mutationChatState) return;  // 사용자가 그 사이 닫음
