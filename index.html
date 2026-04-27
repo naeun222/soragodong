@@ -2762,6 +2762,94 @@
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
 
+  /* V4-1j-b: 숙고 채팅 별도 화면 */
+  #screen-reflection {
+    display: flex !important;
+    flex-direction: column;
+    padding: 16px;
+    height: calc(100vh - 76px);
+    box-sizing: border-box;
+  }
+  .reflection-screen-header {
+    display: flex; align-items: center; gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .reflection-screen-back {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .reflection-screen-back:active { background: var(--surface2); }
+  .reflection-screen-q {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+    flex: 1;
+    word-break: keep-all;
+  }
+  .reflection-chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .reflection-input-bar {
+    display: flex;
+    gap: 8px;
+    padding: 10px 0 8px;
+    border-top: 1px solid var(--border);
+    align-items: flex-end;
+  }
+  .reflection-input-bar textarea {
+    flex: 1;
+    min-height: 40px;
+    max-height: 140px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+  }
+  .reflection-input-bar .send-btn {
+    flex-shrink: 0;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(98,165,200,0.30), rgba(139,126,196,0.20));
+    border: 1px solid rgba(98,165,200,0.45);
+    color: #c5e0f0;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .reflection-input-bar .send-btn:active { transform: scale(0.95); }
+  .reflection-resolve-row {
+    padding-top: 8px;
+    text-align: center;
+  }
+  .reflection-resolve-btn {
+    background: rgba(98,165,200,0.12);
+    border: 1px solid rgba(98,165,200,0.35);
+    color: #a3d2e8;
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .reflection-resolve-btn:active { background: rgba(98,165,200,0.22); }
+
   /* V4-1i: 🌊 숙고 질문 시스템 — 홈 카드 */
   .reflection-empty-card {
     margin: 12px 0 4px;
@@ -4357,6 +4445,22 @@
       <div class="screen-sub">지금까지 거쳐온 큰 결정들.</div>
       <div id="archiveDecisionsList"></div>
       <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">아카이브로 돌아가기</button>
+    </div>
+
+    <!-- V4-1j-b: 숙고 채팅 별도 화면 (screen-reflection) -->
+    <div class="screen" id="screen-reflection">
+      <div class="reflection-screen-header">
+        <button class="reflection-screen-back" onclick="showScreen('home')">←</button>
+        <div class="reflection-screen-q" id="reflectionScreenQ"></div>
+      </div>
+      <div class="reflection-chat-area" id="reflectionChatArea"></div>
+      <div class="reflection-input-bar">
+        <textarea class="chat-textarea" id="reflectionInput" placeholder="천천히, 한 각도씩..." rows="1"></textarea>
+        <button class="send-btn" onclick="sendReflectionChat()">↑</button>
+      </div>
+      <div class="reflection-resolve-row">
+        <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론 내고 닫기</button>
+      </div>
     </div>
 
     <!-- EXECUTE (실행 탭 - 다음 메시지에서 빌드) -->
@@ -7610,12 +7714,14 @@ function renderReflectionHome() {
   let html = '';
   if (active) {
     const dateStr = active.createdAt ? new Date(active.createdAt).toLocaleDateString('ko-KR', { month:'short', day:'numeric' }) : '';
+    const msgCount = Array.isArray(active.chatMessages) ? active.chatMessages.length : 0;
     html += `
-      <div class="reflection-active-card">
-        <div class="reflection-active-label">🌊 숙고 중 · ${escapeHtml(dateStr)}</div>
+      <div class="reflection-active-card" onclick="openReflectionChat('${active.id}')">
+        <div class="reflection-active-label">🌊 숙고 중 · ${escapeHtml(dateStr)}${msgCount > 0 ? ` · 대화 ${msgCount}` : ''}</div>
         <div class="reflection-active-text">${escapeHtml(active.text)}</div>
-        <div class="reflection-active-actions">
-          <button onclick="resolveReflectionQuestion('${active.id}')">✓ 결론 내고 닫기</button>
+        <div class="reflection-active-actions" onclick="event.stopPropagation()">
+          <button onclick="openReflectionChat('${active.id}')">💬 이어서 숙고</button>
+          <button onclick="resolveReflectionQuestion('${active.id}')">✓ 결론</button>
           <button onclick="pauseReflectionQuestion('${active.id}')">⏸ 보류</button>
         </div>
       </div>
@@ -7758,6 +7864,139 @@ function deleteReflectionQuestion(id) {
   all.splice(idx, 1);
   saveState();
   renderReflectionHome();
+}
+
+// V4-1j-b: 숙고 채팅 별도 화면 — 메인챗과 분리. q.chatMessages 사용.
+let _activeReflectionId = null;
+
+function openReflectionChat(qId) {
+  const q = (state.reflectionQuestions || []).find(x => x.id === qId);
+  if (!q) return;
+  // 활성화 안 됐으면 먼저 활성화
+  if (q.status === 'pending' || q.status === 'paused') {
+    const others = (state.reflectionQuestions || []).filter(x => x.status === 'active');
+    others.forEach(o => { o.status = 'pending'; });
+    q.status = 'active';
+    saveState();
+  }
+  _activeReflectionId = qId;
+  showScreen('reflection');
+  renderReflectionChat();
+  // 결론 닫기 버튼 wire
+  const resolveBtn = document.getElementById('reflectionResolveBtn');
+  if (resolveBtn) {
+    resolveBtn.onclick = () => resolveReflectionQuestion(qId);
+  }
+  // 헤더 질문 표시
+  const qEl = document.getElementById('reflectionScreenQ');
+  if (qEl) qEl.textContent = q.text;
+}
+
+function renderReflectionChat() {
+  const container = document.getElementById('reflectionChatArea');
+  if (!container) return;
+  const q = (state.reflectionQuestions || []).find(x => x.id === _activeReflectionId);
+  if (!q) {
+    container.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:40px 20px;">활성 질문 없음.</div>';
+    return;
+  }
+  if (!Array.isArray(q.chatMessages)) q.chatMessages = [];
+  if (q.chatMessages.length === 0) {
+    container.innerHTML = `
+      <div class="msg assistant">
+        <div class="msg-bubble">이 질문 같이 보자.\n\n답이 바로 안 나와도 OK. 다양한 각도에서 천천히 — 며칠, 몇 주 걸려도 돼.\n\n첫 한 줄, 떠오르는 생각이나 감각 적어봐.</div>
+      </div>
+    `;
+    return;
+  }
+  container.innerHTML = q.chatMessages.map(m => {
+    const cls = m.role === 'user' ? 'user' : 'assistant';
+    return `<div class="msg ${cls}"><div class="msg-bubble">${escapeHtml(m.content || '')}</div></div>`;
+  }).join('');
+  setTimeout(() => { container.scrollTop = container.scrollHeight; }, 30);
+}
+
+async function sendReflectionChat() {
+  const input = document.getElementById('reflectionInput');
+  const text = (input?.value || '').trim();
+  if (!text) return;
+  const q = (state.reflectionQuestions || []).find(x => x.id === _activeReflectionId);
+  if (!q) return;
+  if (!Array.isArray(q.chatMessages)) q.chatMessages = [];
+
+  q.chatMessages.push({
+    role: 'user',
+    content: text,
+    timestamp: new Date().toISOString()
+  });
+  input.value = ''; input.style.height = 'auto';
+  saveState();
+  renderReflectionChat();
+
+  if (!state.apiKey) {
+    q.chatMessages.push({
+      role: 'assistant',
+      content: '(API 키 없어 — 설정에서 등록해. 일단 너 흐름은 박아둘게.)',
+      timestamp: new Date().toISOString()
+    });
+    saveState();
+    renderReflectionChat();
+    return;
+  }
+
+  // V4 비전 8.4: 숙고 전용 시스템 prompt (페르소나 분석 OFF)
+  const recentMsgs = q.chatMessages.slice(-12).map(m => ({
+    role: m.role,
+    content: m.content
+  }));
+  const sysPrompt = `사용자 김나은 (ADHD, 박사과정). 한 질문에 대한 깊은 숙고를 함께 하는 동반자.
+
+[숙고 질문]
+"${q.text}"
+
+[톤 / 원칙]
+- 잡담 X. 답 강요 X.
+- 다양한 각도에서 끈질기게 (가치 / 두려움 / 욕구 / 시간 스케일 / 외부 압력 / 너의 기록 패턴).
+- 오랜 침묵 OK. 사용자 페이스 따라.
+- 결론 내려주지 X. 사용자 자기 발견 유도.
+- 외재화 톤. "너 X적이야" X.
+- 1-3문장 짧게. 친구 반말.
+- 금지어: 대박/아이고/힘내/화이팅/할 수 있어/오늘도 멋진 하루/대단해.
+
+[너의 일]
+사용자가 새로 적은 한 줄을 받고, 그 각도로 한 발짝 더 들어가는 질문 1-2개 또는 짧은 관찰 한 줄.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-opus-4-7',
+        max_tokens: 400,
+        system: sysPrompt,
+        messages: recentMsgs
+      })
+    });
+    const data = await resp.json();
+    const aiText = data.content?.[0]?.text?.trim() || '(응답 비어있어)';
+    q.chatMessages.push({
+      role: 'assistant',
+      content: aiText,
+      timestamp: new Date().toISOString()
+    });
+    saveState();
+    renderReflectionChat();
+  } catch (e) {
+    console.warn('reflection AI failed:', e);
+    q.chatMessages.push({
+      role: 'assistant',
+      content: '(AI 응답 실패 — 잠시 후 다시 보내봐)',
+      error: true,
+      timestamp: new Date().toISOString()
+    });
+    saveState();
+    renderReflectionChat();
+  }
 }
 
 // 간단 목록 모달 (V4-1i 1차 — 별도 화면 X). pending/paused/resolved 보기.
@@ -17992,7 +18231,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.37-5blocks-collapse';
+const APP_VERSION = 'v4.0.38-reflection-chat';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
