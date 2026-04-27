@@ -729,14 +729,20 @@
     border-color: var(--accent) !important;
     font-weight: 700;
   }
-  /* V4-1l-mini: 확인됨 토글 (다시 누르면 맞아/아니야로 되돌림) */
+  /* V4-1l-mini: 확인됨 토글 (다시 누르면 맞아/아니야로 되돌림)
+     V4-1l-mini-2: 글자 스타일 — 작고 무채색, 버튼 느낌 X */
   .cf-confirmed {
-    background: rgba(143,200,143,0.15) !important;
-    color: #c5e8c5 !important;
-    border-color: rgba(143,200,143,0.40) !important;
-    font-weight: 600;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-soft) !important;
+    font-size: 10px !important;
+    font-weight: 400 !important;
+    padding: 2px 4px !important;
+    min-height: 0 !important;
+    letter-spacing: 0.04em;
+    cursor: pointer;
   }
-  .cf-confirmed:active { background: rgba(143,200,143,0.22) !important; }
+  .cf-confirmed:active { color: var(--text-dim) !important; }
   .model-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; line-height: 1.7; }
 
   .archive-item { background: var(--surface); border-radius: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid var(--border); }
@@ -16969,7 +16975,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.23-hero';
+const APP_VERSION = 'v4.0.24-confirmed-text';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
