@@ -8981,10 +8981,11 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'back_to_galpi_chip_1',
-    targetSelector: '[data-cat="galpi"]',
-    title: '🌀 마법·리뷰로 돌아가기',
-    body: '마법·리뷰 칩을 다시 눌러봐.',
-    waitFor: 'click',
+    targetSelector: '.nav-item[data-screen="archive"]',
+    title: '📚 도서관으로 돌아가기',
+    body: '아래 <b>📚 도서관</b> 탭 한 번 눌러봐.',
+    waitFor: 'visit',
+    visitScreen: 'archive',
     advanceDelay: 600,
     dimBackground: false,
     manualAdvance: true
@@ -13479,7 +13480,7 @@ function showScreen(name) {
     // V4-fix v3 (사용자 요청): 체크인 진입 시 가닥 미션 팔로업 자동 prompt
     if (typeof offerStrategyFollowup === 'function') { try { offerStrategyFollowup(); } catch (e) {} }
   }
-  if (name === 'model') renderModel();
+  if (name === 'model') { renderModel(); if (typeof renderProjects === 'function') renderProjects(); }
   if (name === 'archive') {
     // V4-fix #5: 도서관 처음 진입 시 모든 카테고리 lastSeen 초기화 (점 폭발 방지)
     if (state.preferences && !state.preferences._libCatLastSeenInit) {
@@ -13895,27 +13896,22 @@ function renderTimeUsageCard() {
   const stats = computeTimeUsageStats();
   if (!stats) {
     return `<div class="model-section">
-      <div class="model-section-title">📊 시간 사용 패턴 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
+      <div class="model-section-title">📊 task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
       <div style="font-size:12px; color:var(--text-dim); padding:8px 0; line-height:1.7;">
         몰입 기록 쌓이면 여기 표시돼.<br>
         실행 탭 🚀 → 몰입 시작 → 돌아옴 누르면 자동 기록.
       </div>
     </div>`;
   }
-  const totalH = Math.floor(stats.totalMin / 60);
-  const totalM = stats.totalMin % 60;
-  const totalLabel = totalH > 0 ? `${totalH}시간 ${totalM}분` : `${totalM}분`;
+  // 사용자 요청 2026-04-28: 깔끔하게 — task별 평균 시간만 (최대 4개). 시간대/총시간/세션수 제거 (의미 약함)
+  const tasks = stats.topTasks.slice(0, 4);
   return `<div class="model-section">
-    <div class="model-section-title">📊 시간 사용 패턴 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
-    <div style="font-size:13px; color:var(--text); margin-bottom:12px; line-height:1.8;">
-      총 <b>${totalLabel}</b> · ${stats.sessionCount}회 몰입<br>
-      가장 많이 쓴 시간대: <b>${stats.topPeriod.label}</b>
-    </div>
-    <div style="font-size:11px; color:var(--text-dim); margin-bottom:6px;">자주 한 활동 Top ${stats.topTasks.length}</div>
-    ${stats.topTasks.map(t => `
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; padding:7px 0; border-bottom:1px dashed rgba(212,167,106,0.15);">
+    <div class="model-section-title">📊 task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
+    <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px; line-height:1.6;">다음에 이 일 얼마나 걸릴지 — 객관적 데이터.</div>
+    ${tasks.map(t => `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; padding:9px 0; border-bottom:1px dashed rgba(212,167,106,0.15);">
         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(t.title)}</span>
-        <span style="color:var(--text-dim); font-size:11px; flex-shrink:0;">${t.count}회 · 평균 ${t.avg}분</span>
+        <span style="color:var(--accent2); font-size:13px; font-weight:600; flex-shrink:0;">평균 ${t.avg}분</span>
       </div>
     `).join('')}
   </div>`;
@@ -27282,7 +27278,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.125-magicgodong-time-usage';
+const APP_VERSION = 'v4.0.126-task-avg-only';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
