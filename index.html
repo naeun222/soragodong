@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>소라고동</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -598,9 +598,11 @@
   .msg-action.saved { color: var(--accent); }
   .msg-action.retry { color: var(--accent); border: 1px solid var(--accent); padding: 8px 14px; }
 
-  .chat-input-bar { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; }
+  /* 사용자 요청 2026-04-28: bottom 76px → bottom-nav 76px + safe-area 보장 */
+  .chat-input-bar { position: fixed; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; }
   .chat-input-wrap { display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 10px; }
-  .chat-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.5; outline: none; resize: none; max-height: 140px; padding: 8px 0; min-width: 0; }
+  /* iOS auto-zoom 방지 — input font 16px 이상 */
+  .chat-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 16px; line-height: 1.5; outline: none; resize: none; max-height: 140px; padding: 8px 0; min-width: 0; }
   .send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--bg); border: none; font-size: 16px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   /* V4-fix: 입력바 안 stack — ✓ 위 + 아래 (대화 마무리 prominent) */
   .chat-input-stack {
@@ -682,7 +684,8 @@
   .send-btn:disabled { opacity: 0.4; }
   .send-btn:active { transform: scale(0.95); }
 
-  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 10px 0 26px; z-index: 100; }
+  /* 사용자 요청 2026-04-28: iPhone home indicator / 노치 safe-area 보장 — 26px과 env() 중 큰 값 */
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 10px 0 max(26px, env(safe-area-inset-bottom, 26px)); z-index: 100; }
   .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 8px 0; min-height: 56px; justify-content: center; }
   .nav-item.active { opacity: 1; }
   .nav-icon { font-size: 22px; }
@@ -3024,7 +3027,7 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     color: var(--text);
-    font-size: 14px;
+    font-size: 16px;  /* iOS auto-zoom 방지 — 16px 이상 필수 */
     font-family: inherit;
     margin-bottom: 16px;
     box-sizing: border-box;
@@ -27716,7 +27719,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.141-deeper-hero-detail';
+const APP_VERSION = 'v4.0.142-mobile-safe-area';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
