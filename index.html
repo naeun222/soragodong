@@ -1695,6 +1695,18 @@
   }
 
   .exec-now-section { margin-bottom: 20px; }
+  /* V4-1v: 서랍장 4 그룹 분류 */
+  .drawer-group {
+    margin-bottom: 14px;
+  }
+  .drawer-group-label {
+    font-size: 10px;
+    color: var(--text-soft);
+    letter-spacing: 0.10em;
+    margin: 8px 0 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed var(--border);
+  }
   .exec-section-label {
     font-size: 11px; color: var(--accent); letter-spacing: 0.1em;
     text-transform: uppercase; margin-bottom: 12px; font-weight: 600;
@@ -13412,13 +13424,15 @@ function renderExecute() {
         <div class="exec-now-section">
           <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <span style="flex:1; min-width:0;">📂 서랍장 · ${drawerTasks.length}장${dupCount > 0 ? ` <span style="color:var(--text-soft); font-size:10px;">(중복 ${dupCount}개 숨김)</span>` : ''}</span>
+            <button onclick="toggleDrawerView()" title="자동 분류 / 시간순 토글" style="font-size:11px; padding:4px 10px; background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap;">${_drawerView === 'auto' ? '🌅 자동' : '⏱ 시간순'}</button>
             <button onclick="mergeDuplicateTasks()" title="중복 합치기" style="font-size:12px; padding:5px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap; line-height:1.4; font-weight:500;">🔗 정리</button>
           </div>
       `;
-      drawerTasks.forEach(task => {
+      // V4-1v: 자동 4 그룹 분류
+      const renderDrawerCard = (task) => {
         const isAIMission = task.source === 'ai_mission';
         const tag = isAIMission ? '🐚 부름' : task.weight === 'main' ? '⚡ 메인' : task.weight === 'light' ? '🍃 가벼움' : '📌 일상';
-        html += `
+        return `
           <div class="exec-card drawer-card" data-task-id="${task.id}">
             <span class="exec-card-tag">${tag}</span>
             <div class="exec-card-title">${escapeHtml(task.title)}</div>
@@ -13429,7 +13443,28 @@ function renderExecute() {
             </div>
           </div>
         `;
-      });
+      };
+      if (_drawerView === 'auto') {
+        const groups = { now: [], later: [], idea: [], big: [] };
+        drawerTasks.forEach(t => { groups[classifyDrawerTask(t)].push(t); });
+        const groupOrder = [
+          { key: 'now',   label: '🌅 지금 가능 — 즉시 시도' },
+          { key: 'big',   label: '🎯 큰 것 — 양생 가닥 후속·깊은 작업' },
+          { key: 'later', label: '📅 나중 — 조건 대기' },
+          { key: 'idea',  label: '💭 아이디어 — 검토용' }
+        ];
+        groupOrder.forEach(({ key, label }) => {
+          const items = groups[key];
+          if (!items.length) return;
+          html += `<div class="drawer-group">
+            <div class="drawer-group-label">${label} · ${items.length}</div>`;
+          items.forEach(t => { html += renderDrawerCard(t); });
+          html += `</div>`;
+        });
+      } else {
+        // 시간순 (기존 sort 유지)
+        drawerTasks.forEach(task => { html += renderDrawerCard(task); });
+      }
       html += `</div>`;
     }
 
@@ -14284,6 +14319,30 @@ function toggleQuestComplete(taskId) {
   } else {
     completeQuest(taskId);
   }
+}
+
+// V4-1v: 서랍장 4 그룹 자동 분류 (V4 비전 10.3)
+// 🌅 지금 가능 / 📅 나중 / 💭 아이디어 / 🎯 큰 것
+let _drawerView = 'auto';  // 'auto' | 'time'
+
+function toggleDrawerView() {
+  _drawerView = _drawerView === 'auto' ? 'time' : 'auto';
+  renderExecute();
+}
+
+// 단순 키워드 + heuristic 분류. 토글로 사용자 직접 변경 가능.
+function classifyDrawerTask(task) {
+  const text = ((task.title || '') + ' ' + (task.description || '')).toLowerCase();
+  // 양생 가닥 후속 = 🎯 큰 것
+  if (task.strategyId || task.weight === 'main') return 'big';
+  // 조건 대기 키워드 = 📅 나중
+  const laterKeywords = /(주말|다음|나중|친구|만나|카페|학교|병원|이번 주말|언젠가|올해|올가을)/;
+  if (laterKeywords.test(text)) return 'later';
+  // 아이디어 키워드 / 검토용 = 💭 아이디어
+  const ideaKeywords = /(아이디어|생각|살펴|검토|찾아보|읽어|배워|언젠가는)/;
+  if (ideaKeywords.test(text) && task.weight !== 'main') return 'idea';
+  // default = 🌅 지금 가능
+  return 'now';
 }
 
 async function promoteFromDrawer() {
@@ -16979,7 +17038,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.25-diag-shown';
+const APP_VERSION = 'v4.0.26-drawer-groups';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
