@@ -8456,11 +8456,9 @@ function renderReflectionHome() {
   if (!container) return;
   const all = state.reflectionQuestions || [];
   const active = all.find(q => q.status === 'active');
-  // V4-fix: paused도 "더 깊이 볼 거"에 포함 (사용자가 다시 찾을 수 있게)
-  const pending = all.filter(q => q.status === 'pending' || q.status === 'paused').length;
 
-  if (!active && pending === 0) {
-    // 비어 있을 때 — 작은 "+ 질문 추가" 카드
+  // V4-fix: 한 번에 하나씩 — active 1개만 표시. pending/paused/더 깊이 볼 거 링크 제거.
+  if (!active) {
     container.innerHTML = `
       <div class="reflection-empty-card" onclick="addReflectionQuestion()">
         🌊 깊이 보고 싶은 큰 질문 있어? <span style="color:var(--accent2);">+ 추가</span>
@@ -8469,35 +8467,27 @@ function renderReflectionHome() {
     return;
   }
 
-  let html = '';
-  if (active) {
-    // V4-fix: 미니 액션 버튼 제거 — 카드 클릭 시 숙고 채팅으로 진입. 결론·보류는 채팅 화면 헤더에서.
-    html += `
-      <div class="reflection-active-card" onclick="openReflectionChat('${active.id}')">
-        <span class="reflection-active-icon">🌊</span>
-        <span class="reflection-active-text">${escapeHtml(active.text)}</span>
-        <span class="reflection-active-arrow">›</span>
-      </div>
-    `;
-  }
-  if (pending > 0) {
-    html += `
-      <div class="reflection-pending-link" onclick="showReflectionList()">
-        📋 더 깊이 볼 거 ${pending}개 →
-      </div>
-    `;
-  } else if (active) {
-    html += `
-      <div class="reflection-pending-link" onclick="addReflectionQuestion()">
-        + 새 질문 추가
-      </div>
-    `;
-  }
-  container.innerHTML = html;
+  // V4-fix: 카드 안에 다 보이게 shortText (AI 요약) 우선 표시
+  const display = active.shortText || active.text;
+  container.innerHTML = `
+    <div class="reflection-active-card" onclick="openReflectionChat('${active.id}')">
+      <span class="reflection-active-icon">🌊</span>
+      <span class="reflection-active-text">${escapeHtml(display)}</span>
+      <span class="reflection-active-arrow">›</span>
+    </div>
+  `;
 }
 
 async function addReflectionQuestion(text) {
-  // text 인자 없으면 직접 입력 모달
+  // V4-fix: 한 번에 하나씩 — active 있으면 차단
+  const all = state.reflectionQuestions || (state.reflectionQuestions = []);
+  const activeQ = all.find(q => q.status === 'active');
+  if (activeQ) {
+    showToast('이미 숙고 중인 질문 있어. 결론 내거나 보류 후 시작.');
+    openReflectionChat(activeQ.id);
+    return null;
+  }
+
   let qText = text;
   if (!qText) {
     qText = await showInputModal({
@@ -8511,18 +8501,36 @@ async function addReflectionQuestion(text) {
   }
   if (!qText || !qText.trim()) return null;
 
-  const all = state.reflectionQuestions || (state.reflectionQuestions = []);
-  const hasActive = all.some(q => q.status === 'active');
-  // 첫 질문이거나 active 없으면 즉시 active. 아니면 pending.
-  const status = hasActive ? 'pending' : 'active';
+  const trimmed = qText.trim();
+
+  // V4-fix: 짧은 카드 표시용 AI 요약 (10-25자)
+  let shortText = trimmed.length <= 30 ? trimmed : '';
+  if (!shortText && state.apiKey) {
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 60,
+          messages: [{ role: 'user', content: `다음 질문을 카드에 한 줄로 넣을 수 있게 짧게 요약. 10-25자, 명사형 또는 짧은 명제. 따옴표/마크다운 X.\n\n원본:\n${trimmed.slice(0, 300)}\n\n짧은 요약 한 줄만 출력.` }]
+        })
+      });
+      const data = await resp.json();
+      const raw = (data.content?.[0]?.text || '').trim().replace(/^["'\s]+|["'\s]+$/g, '').replace(/\*\*/g, '');
+      if (raw && raw.length <= 40) shortText = raw;
+    } catch (e) { console.warn('reflection short summary failed:', e); }
+  }
+  if (!shortText) shortText = trimmed.slice(0, 28) + (trimmed.length > 28 ? '…' : '');
 
   const newQ = {
     id: 'rq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-    text: qText.trim(),
+    text: trimmed,
+    shortText,
     createdAt: new Date().toISOString(),
     source: 'manual',
     sourceMsgIdx: null,
-    status,
+    status: 'active',
     resolvedAt: null,
     conclusion: null,
     chatMessages: []
@@ -8530,7 +8538,7 @@ async function addReflectionQuestion(text) {
   all.push(newQ);
   saveState();
   renderReflectionHome();
-  showToast(status === 'active' ? '🌊 숙고 시작' : '🌊 대기 등록');
+  showToast('🌊 숙고 시작');
   return newQ;
 }
 
@@ -8638,9 +8646,9 @@ function openReflectionChat(qId) {
       showScreen('home');
     };
   }
-  // 헤더 질문 표시
+  // V4-fix: 헤더 = 짧은 요약 (긴 원본은 채팅 첫 메시지에)
   const qEl = document.getElementById('reflectionScreenQ');
-  if (qEl) qEl.textContent = q.text;
+  if (qEl) qEl.textContent = q.shortText || q.text;
 }
 
 function renderReflectionChat() {
@@ -20072,7 +20080,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.60-cleanup';
+const APP_VERSION = 'v4.0.61-reflection-one';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
