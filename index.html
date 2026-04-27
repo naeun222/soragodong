@@ -17474,33 +17474,80 @@ function testSeedV4Data() {
     if (i % 13 === 0) e.dailyQuestion = { text: '오늘 잘 됐던 한 순간은?' };
     state.entries.push(e);
   }
-  // chatMessages 20개 + 챕터 카테고리 8종 다양화 (5 챕터 마커)
+  // chatMessages 다양화 — 5 챕터 (각 4-6 메시지), 8 카테고리 골고루
   state.chatMessages = [];
-  const chapterCats = ['diary', 'concern', 'emotion', 'memory', 'idea', 'relationship', 'todo', 'casual'];
-  for (let i = 19; i >= 0; i--) {
-    const d = new Date(today.getTime() - i * 3 * 3600000);
-    const isChapterStart = i === 19 || i === 15 || i === 11 || i === 7 || i === 3;
-    const catIdx = Math.floor((19 - i) / 4);
-    state.chatMessages.push({
-      role: i % 2 === 0 ? 'user' : 'assistant',
-      content: i % 2 === 0
-        ? `사용자 메시지 ${i}: 오늘 미팅 끝나고 혼자 시간 보냈어.`
-        : `[내가 본 것]\n혼자 시간 보낸 후 정리되는 패턴.\n[이게 뭐냐면]\n과부하 회복 메커니즘.\n[이럴 땐 이렇게]\n의도적 혼자 시간 30분.\n[오늘의 제안]\n저녁 9시 휴식 알람.`,
-      timestamp: d.toISOString(),
-      ...(isChapterStart ? {
-        chapterStart: true,
-        chapterMeta: {
-          category: chapterCats[catIdx % chapterCats.length],
-          summary: `시드 챕터 ${catIdx + 1} — ${chapterCats[catIdx % chapterCats.length]}`,
-          strategyId: null
-        }
-      } : {})
+  const chapters = [
+    {
+      cat: 'concern', summary: '논문 주제 변경 고민',
+      msgs: [
+        ['user', '논문 주제 바꿀까 진지하게 고민 중인데 너무 두려워. 매몰비용이 너무 커.'],
+        ['assistant', '[내가 본 것]\n주제 변경 고민이 매몰비용으로 막혀 있어.\n[이게 뭐냐면]\n매몰비용 오류 — 이미 쓴 시간이 미래 결정에 가중치를 주고 있어.\n[이럴 땐 이렇게]\n앞으로 1년만 본다면? 매몰비용 빼고.\n[오늘의 제안]\n갈피의 방에서 14일 숙성 시작해볼래?'],
+        ['user', '음 1년만 본다면 새 주제가 나아. 근데 시작하는 게 너무 두려워.'],
+        ['assistant', '두려움이 어느 차원이야? 시작 자체? 실패? 주변 시선?']
+      ]
+    },
+    {
+      cat: 'emotion', summary: '저녁 무력감',
+      msgs: [
+        ['user', '저녁만 되면 아무것도 못 하겠어. 책상에 앉아도 멍해져.'],
+        ['assistant', '[내가 본 것]\n저녁 시간대 무력감이 반복돼.\n[이게 뭐냐면]\n에너지 곡선상 자연스러운 저점 + 인지 자원 고갈.\n[이럴 땐 이렇게]\n저녁엔 의지 결정 X — 환경 셋업 (휴식 자동화).\n[오늘의 제안]\n9시 알람 → 무조건 책상 떠나기.'],
+        ['user', '환경 차원이라는 게 뭔지 더 알려줘.']
+      ]
+    },
+    {
+      cat: 'memory', summary: '엄마 김치찌개 기억',
+      msgs: [
+        ['user', '오늘 엄마 김치찌개 먹었는데 진짜 좋았어. 고등학생 때 생각났어.'],
+        ['assistant', '그 기억 어떤 모양이야? 맛? 분위기?'],
+        ['user', '둘 다. 그날도 비 왔거든. 진짜 너무 좋아서 진주에 넣고 싶다.'],
+        ['assistant', '진주에 넣을래? 카테고리 가족·연인 어때?']
+      ]
+    },
+    {
+      cat: 'idea', summary: '논문 아이디어',
+      msgs: [
+        ['user', '환경 데이터랑 ADHD 행동 데이터 결합하면 새로운 게 나올 거 같아.'],
+        ['assistant', '[내가 본 것]\n환경×행동 결합 아이디어 — 두 분야 다 깊게 봤구나.\n[이게 뭐냐면]\n학제간 연구 가능성. 너의 강점 (깊이 파는 습관) 작동.\n[이럴 땐 이렇게]\n초안 한 페이지부터.\n[오늘의 제안]\n주말 30분 쓰고 평가.'],
+        ['user', '근데 평가는 어떻게?']
+      ]
+    },
+    {
+      cat: 'diary', summary: '오늘 산책',
+      msgs: [
+        ['user', '일기: 오늘 한강 산책 30분. 머리 비워짐. 논문 한 단락 쓰고 끝남. 보통.'],
+        ['assistant', '한강 → 글쓰기 흐름이 자주 작동했어 (지난 N회). 몸 풀림 + 인지 시작 패턴.'],
+        ['user', '맞아. 산책 후엔 잘 되는 거 같아.'],
+        ['assistant', '"산책 → 글쓰기" 가닥으로 등록할래? 작동 패턴이 데이터로 뚜렷해.']
+      ]
+    }
+  ];
+  let cursor = today.getTime() - 5 * 86400000;
+  chapters.forEach((ch, ci) => {
+    ch.msgs.forEach((m, mi) => {
+      const d = new Date(cursor + mi * 30 * 60000);
+      const isStart = mi === 0;
+      state.chatMessages.push({
+        role: m[0],
+        content: m[1],
+        timestamp: d.toISOString(),
+        ...(isStart ? {
+          chapterStart: true,
+          chapterMeta: {
+            category: ch.cat,
+            summary: ch.summary,
+            strategyId: null
+          }
+        } : {})
+      });
     });
-  }
-  // 마지막 user 메시지에 진주 제안 + askDeeper 후보 잠재 박기
-  const lastUserI = state.chatMessages.length - 2;
-  if (state.chatMessages[lastUserI]?.role === 'user') {
-    state.chatMessages[lastUserI].pearlSuggestion = false;
+    cursor += 18 * 3600000; // 다음 챕터 18시간 후
+  });
+  // 마지막 user 메시지 진주 제안 칩 잠재 (default false)
+  for (let i = state.chatMessages.length - 1; i >= 0; i--) {
+    if (state.chatMessages[i].role === 'user') {
+      state.chatMessages[i].pearlSuggestion = false;
+      break;
+    }
   }
   // 5 strategy 카드 (다양 embodimentStatus)
   state.topicCards = (state.topicCards || []).filter(c => c.category !== 'strategy');
@@ -21077,33 +21124,33 @@ function renderArchiveReviews() {
     const periodLabel = r.weekKey || r.monthKey || r.quarterKey || '';
     const autoTag = r.auto ? ' <span style="font-size:9px; color:var(--purple); padding:1px 6px; background:var(--purple-dim); border-radius:6px; margin-left:4px;">🤖 자동</span>' : '';
 
-    // V4-1y-3: 분기 리뷰는 V4 sections 배열 형식 ({label, body})
+    // V4-fix: sections 형식 둘 다 지원 — 배열 [{label, body}] (V4 분기/월간 시드) + 객체 {patterns,...} (V3 월간/주간)
     let detailHtml = '';
-    if (r.type === 'quarterly' && Array.isArray(r.sections)) {
+    if (Array.isArray(r.sections)) {
       detailHtml = r.sections.map(s => `<div style="margin-bottom:10px;">
         <div style="font-size:11px; color:var(--accent); margin-bottom:4px;">${escapeHtml(s.label || '')}</div>
         <div style="font-size:13px; line-height:1.7; color:var(--text);">${escapeHtml(s.body || '')}</div>
       </div>`).join('');
-      // V4-fix: 다차원 진전 비교 deep dive (anchor 3 / 비전 7.10) — 6 축 시각 카드
-      if (r.stats) {
-        detailHtml += renderQuarterlyDeepDive(r);
-        // V4-1z: Stories 진입 버튼
-        detailHtml += `<button class="btn-primary" style="width:100%; margin-top:14px;" onclick="event.stopPropagation(); openQuarterlyStories('${r.id}')">▶ Stories로 보기</button>`;
-      }
-    } else if (r.sections) {
-      // V3 형식 (object)
+    } else if (r.sections && typeof r.sections === 'object') {
+      // V3 형식 (object {patterns: ..., good_moments: ..., ...})
+      const labels = {
+        patterns: '💫 너의 모습',
+        good_moments: '✨ 잘된 순간들',
+        hard_moments: '🌊 어려웠던 순간',
+        next_suggestion: '🐚 다음 제안'
+      };
       detailHtml = Object.entries(r.sections).map(([k, v]) => {
-        const labels = {
-          patterns: '💫 너의 모습',
-          good_moments: '✨ 잘된 순간들',
-          hard_moments: '🌊 어려웠던 순간',
-          next_suggestion: '🐚 다음 제안'
-        };
+        const text = (v && typeof v === 'object') ? (v.body || JSON.stringify(v)) : (v || '');
         return `<div style="margin-bottom:10px;">
           <div style="font-size:11px; color:var(--accent); margin-bottom:4px;">${labels[k] || k}</div>
-          <div style="font-size:13px; line-height:1.7; color:var(--text);">${escapeHtml(v || '')}</div>
+          <div style="font-size:13px; line-height:1.7; color:var(--text);">${escapeHtml(text)}</div>
         </div>`;
       }).join('');
+    }
+    // V4-fix: 분기 리뷰면 deep dive + Stories 버튼 추가 (sections 형식과 무관)
+    if (r.type === 'quarterly' && r.stats) {
+      detailHtml += renderQuarterlyDeepDive(r);
+      detailHtml += `<button class="btn-primary" style="width:100%; margin-top:14px;" onclick="event.stopPropagation(); openQuarterlyStories('${r.id}')">▶ Stories로 보기</button>`;
     }
 
     return `
@@ -21182,7 +21229,7 @@ function renderArchiveDecisions() {
 
 // Update count badges on archive quick buttons
 function updateArchiveQuickCounts() {
-  const reviewCount = (state.weeklyReviews || []).length + (state.monthlyReviews || []).length;
+  const reviewCount = (state.weeklyReviews || []).length + (state.monthlyReviews || []).length + (state.quarterlyReviews || []).length;
   const decisionCount = (state.decisions || []).length;
   const reviewEl = document.getElementById('aqReviewCount');
   const decisionEl = document.getElementById('aqDecisionCount');
@@ -21978,7 +22025,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.66-tester-mode-v4-full';
+const APP_VERSION = 'v4.0.67-tester-fix-reviews';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
