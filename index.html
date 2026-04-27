@@ -4757,6 +4757,7 @@ const DEFAULT_STATE = {
   reflectionQuestions: [],  // 사고 질문 시스템 (anchor 30): [{id, text, status, conclusion, chatMessages, ...}]
   todaySchedule: [],        // 타임테이블: [{id, title, start, end, source:'manual'|'ai'|'gcal'|'task', taskId}]
   diagnoses: [],            // V4 비전 9.5 진단 5종: [{id, type, confidence, evidence, detectedAt, status:'active'|'shown'|'dismissed'}]
+  quarterlyReviews: [],     // V4 비전 7.9 분기 리뷰: [{id, quarterKey:'2026-Q2', completedAt, summary, sections, stats, auto, deepDive}]
 
   version: 7
 };
@@ -5021,6 +5022,7 @@ async function loadFromCloud() {
     if (!state.reflectionQuestions) state.reflectionQuestions = [];
     if (!state.todaySchedule) state.todaySchedule = [];
     if (!state.diagnoses) state.diagnoses = [];
+    if (!state.quarterlyReviews) state.quarterlyReviews = [];
     // caseFormulation 8 차원
     if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
     if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
@@ -5096,6 +5098,7 @@ async function loadFromCloud() {
       if (!state.reflectionQuestions) state.reflectionQuestions = [];
       if (!state.todaySchedule) state.todaySchedule = [];
       if (!state.diagnoses) state.diagnoses = [];
+      if (!state.quarterlyReviews) state.quarterlyReviews = [];
       if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
       if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
       if (!Array.isArray(state.caseFormulation.growth)) state.caseFormulation.growth = [];
@@ -5253,6 +5256,7 @@ function migrateToV7() {
   if (!Array.isArray(state.reflectionQuestions)) state.reflectionQuestions = [];
   if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
   if (!Array.isArray(state.diagnoses)) state.diagnoses = [];
+  if (!Array.isArray(state.quarterlyReviews)) state.quarterlyReviews = [];
 
   if (!state.preferences) state.preferences = JSON.parse(JSON.stringify(DEFAULT_STATE.preferences));
   if (state.preferences.tutorialVersion === undefined) state.preferences.tutorialVersion = null;
@@ -5519,6 +5523,13 @@ async function init() {
   setTimeout(() => {
     runMonthlyAutoReviewIfNeeded().catch(e => console.warn('monthly auto error:', e));
   }, 5000);
+
+  // V4-1y-1: 분기 자동 통합 (1·4·7·10월 1-7일, 지난 분기 데이터 있고 미생성이면 자동)
+  setTimeout(() => {
+    if (typeof runQuarterlyAutoReviewIfNeeded === 'function') {
+      runQuarterlyAutoReviewIfNeeded().catch(e => console.warn('quarterly auto error:', e));
+    }
+  }, 6000);
 
   // V3.13.x: 일기 자동 요약 (어제부터 거꾸로 보강 안 된 첫 날 1개)
   setTimeout(() => {
@@ -15220,6 +15231,137 @@ async function testResetExecute() {
 // ═══════════════════════════════════════════════════════════════
 // V3.12: 월간 자동 통합 — 매월 1-7일, 지난 달 데이터 있으면 AI가 자동 정리
 // ═══════════════════════════════════════════════════════════════
+// V4-1y-1: 분기 헬퍼 + 데이터 집계 (V4 비전 7.9·7.10 + anchor 3 다차원 진전 비교)
+function getQuarterKey(date) {
+  const d = (typeof date === 'string') ? new Date(date) : date;
+  const Q = Math.floor(d.getMonth() / 3) + 1;
+  return `${d.getFullYear()}-Q${Q}`;
+}
+
+function getQuarterRange(quarterKey) {
+  const m = String(quarterKey).match(/^(\d{4})-Q(\d)$/);
+  if (!m) return null;
+  const year = parseInt(m[1]);
+  const Q = parseInt(m[2]);
+  const startMonth = (Q - 1) * 3;
+  const start = new Date(year, startMonth, 1);
+  const end = new Date(year, startMonth + 3, 0, 23, 59, 59);
+  return { start, end };
+}
+
+// 분기 통계 — 6 비교 축 (V4 비전 7.10):
+// 1. 8 차원 자체 (problems↓ / strengths↑) / 2. 추적 항목 / 3. 모드 빈도
+// 4. 미션 작동률 / 5. 진주 수 / 6. growth 차원
+function getQuarterlyStats(quarterKey) {
+  const range = getQuarterRange(quarterKey);
+  if (!range) return null;
+  const startMs = range.start.getTime();
+  const endMs = range.end.getTime();
+  const inRange = (iso) => {
+    if (!iso) return false;
+    const t = new Date(iso).getTime();
+    return t >= startMs && t <= endMs;
+  };
+
+  // 미션 작동률 (V4 attempts 기준)
+  const cards = (state.topicCards || []).filter(c => c.category === 'strategy');
+  let attempts = 0, worked = 0;
+  cards.forEach(c => {
+    (c.generations || []).forEach(g => {
+      (g.attempts || []).forEach(a => {
+        if (inRange(a.at)) {
+          attempts++;
+          if (a.status === 'worked') worked++;
+        }
+      });
+    });
+  });
+  const workRate = attempts > 0 ? worked / attempts : null;
+
+  // 진주 수
+  const pearls = (state.pearls || []).filter(p => p.type !== 'dna_pearl' && inRange(p.createdAt)).length;
+  const dnaPearls = (state.pearls || []).filter(p => p.type === 'dna_pearl' && inRange(p.createdAt)).length;
+
+  // 모드 빈도 (entry.modes 기반)
+  const modeCount = {};
+  (state.entries || []).forEach(e => {
+    if (!e.date) return;
+    // entry.date는 YYYY-MM-DD — 분기 범위 매칭
+    const eDate = new Date(e.date + 'T12:00:00').getTime();
+    if (eDate < startMs || eDate > endMs) return;
+    const ms = e.modes || {};
+    Object.keys(ms).forEach(k => { if (ms[k]) modeCount[k] = (modeCount[k] || 0) + 1; });
+  });
+
+  // 추적 항목 변화 (kind='numeric' baseline → latest)
+  const trackerStats = (state.projects || []).filter(p => p.measurements && p.measurements.length).map(p => {
+    const inRangeMs = (p.measurements || []).filter(m => inRange(m.at));
+    if (!inRangeMs.length) return null;
+    const first = inRangeMs[0]?.value;
+    const last = inRangeMs[inRangeMs.length - 1]?.value;
+    return { title: p.title, unit: p.unit, first, last, count: inRangeMs.length };
+  }).filter(Boolean);
+
+  // 8 차원 — 분기 시점에 추가된 problems / strengths 수
+  const cf = state.caseFormulation || {};
+  const problemsAdded = (cf.problems || []).filter(p => typeof p === 'string').length;  // V3은 string
+  const strengthsAdded = (cf.strengths || []).filter(s => typeof s === 'string').length;
+  // growth 차원
+  const growthCount = (cf.growth || []).length;
+
+  // entries 수 (체크인 일수)
+  const checkins = (state.entries || []).filter(e => {
+    if (!e.date) return false;
+    const eDate = new Date(e.date + 'T12:00:00').getTime();
+    return eDate >= startMs && eDate <= endMs;
+  }).length;
+
+  return {
+    quarterKey,
+    range: { start: range.start.toISOString(), end: range.end.toISOString() },
+    attempts, worked, workRate,
+    pearls, dnaPearls,
+    modeCount,
+    trackerStats,
+    problemsTotal: problemsAdded,
+    strengthsTotal: strengthsAdded,
+    growthCount,
+    checkins
+  };
+}
+
+// 자동 trigger: 분기 시작 7일 내 (1, 4, 7, 10월 1-7일)
+async function runQuarterlyAutoReviewIfNeeded() {
+  if (!state.apiKey) return;
+  const today = new Date();
+  const dayOfMonth = today.getDate();
+  const month = today.getMonth(); // 0-indexed
+  // 분기 시작 달 = 0, 3, 6, 9
+  if (month % 3 !== 0 || dayOfMonth > 7) return;
+
+  // 직전 분기 = 현재 분기 - 1
+  const prevQuarter = new Date(today.getFullYear(), today.getMonth() - 3, 15);
+  const prevQuarterKey = getQuarterKey(prevQuarter);
+  const exists = (state.quarterlyReviews || []).some(r => r.quarterKey === prevQuarterKey);
+  if (exists) return;
+
+  const stats = getQuarterlyStats(prevQuarterKey);
+  if (!stats || stats.checkins === 0) return;
+
+  // V4-1y-2 (다음 commit)에서 AI Stories 생성. 1차는 stats만 박음.
+  state.quarterlyReviews.push({
+    id: 'qr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    quarterKey: prevQuarterKey,
+    completedAt: new Date().toISOString(),
+    stats,
+    summary: '',  // V4-1y-2에서 AI 생성
+    sections: [],
+    auto: true
+  });
+  saveState();
+  console.log(`[V4-1y-1] 분기 stats 박힘: ${prevQuarterKey}`, stats);
+}
+
 async function runMonthlyAutoReviewIfNeeded() {
   if (!state.apiKey) return;
   const today = new Date();
@@ -17712,7 +17854,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.33-diag-learn';
+const APP_VERSION = 'v4.0.34-quarterly-1';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
