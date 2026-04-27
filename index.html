@@ -8655,8 +8655,9 @@ function _initOnbDrag() {
   handle.addEventListener('touchstart', onStart, { passive: false });
 }
 
-function startInteractiveOnboarding() {
-  _onbStep = 0;
+function startInteractiveOnboarding(startStep) {
+  // 사용자 요청 2026-04-28: startStep 인자로 특정 step부터 시작 가능 (튜토리얼 디버그 편의)
+  _onbStep = (typeof startStep === 'number' && startStep >= 0 && startStep < ONBOARDING_STEPS.length) ? startStep : 0;
   _onbStartTime = Date.now();
   // V4-fix v3: 이전 튜토리얼의 _prefillApplied flag 초기화 (재실행 시 prefill 다시 박히도록)
   if (Array.isArray(ONBOARDING_STEPS)) {
@@ -16339,7 +16340,7 @@ function acceptProposal(idx) {
   if (title) {
     createMission(title, description, { sourceMessageIdx: idx });
     // V3.12.x: 해볼게 효과 — 소라의 부름 등장 celebration
-    showCelebration('🐚', '소라가 우리를 부르고 있어!', '✨');
+    showCelebration('🐚', '소라가 널 부르고 있어!', '✨');
   }
 
   saveState();
@@ -26031,7 +26032,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.113-yangsaeng-flow';
+const APP_VERSION = 'v4.0.114-cleanup-startstep';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
