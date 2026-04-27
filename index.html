@@ -8542,8 +8542,8 @@ const ONBOARDING_STEPS = [
   {
     id: 'click_evolved_card',
     targetSelector: '.strategy-card-title[data-strategy-id="strat_seed_0"]',
-    title: '\'마감 직전 폭발력 신뢰\' 다시',
-    body: '\'마감 직전 폭발력 신뢰\' 카드 다시 눌러봐. 진화 트리에 새 차원 추가됐을 거야.',
+    title: '진화한 전략 카드',
+    body: '방금 진화한 카드 다시 눌러봐.<br>제목이 <b>새 차원으로 바뀌어 있을 거야</b> — 진화 트리에 옛 \'마감 직전 폭발력 신뢰\'도 남아있어.',
     waitFor: 'click',
     advanceDelay: 800,
     manualAdvance: true,
@@ -15646,7 +15646,18 @@ function mutateToNewGeneration(strategyId, layer, action) {
   if (!card) return null;
   if (!Array.isArray(card.generations)) card.generations = [];
   const prevGen = getCurrentGeneration(card);
-  if (prevGen) prevGen.status = 'mutated';
+  if (prevGen) {
+    prevGen.status = 'mutated';
+    // 사용자 요청 2026-04-28: 옛 카드 내용 (title/problem/concept/action) prev gen에 snapshot 보존 — 진화 트리에서 보임
+    if (!prevGen.snapshot) {
+      prevGen.snapshot = {
+        title: card.title || '',
+        problemContext: card.problemContext || '',
+        psychConcept: card.psychConcept || '',
+        actionStrategy: card.actionStrategy || ''
+      };
+    }
+  }
   const newGen = {
     gen: card.generations.length + 1,
     layer: layer || 'L2',
@@ -16098,21 +16109,65 @@ async function _completeMutationToMission(strategyId, opt, chatHistory) {
     cancelLabel: '취소'
   });
   if (!yes) return;
-  // 사용자 요청 2026-04-28: 전략 DNA 카드도 update — 새 차원/제안으로 진화
+  // 사용자 요청 2026-04-28: 전략 DNA 카드도 update — 새 차원/제안으로 진화 + 3 필드 AI 재생성
   mutateToNewGeneration(strategyId, opt.layer, opt.action);
   const refreshed = getStrategyCard(strategyId);
   if (refreshed) {
-    // proposal (한 줄 ~40자) 로 카드 title 갱신 — opt.action 보다 깔끔
     refreshed.title = proposal.length > 50 ? proposal.slice(0, 50) + '...' : proposal;
-    // 새 generation에 proposal도 별도 필드로 보존 (action은 layer 추천 그대로 유지)
     const lastGen = refreshed.generations[refreshed.generations.length - 1];
     if (lastGen) {
       lastGen.proposal = proposal;
       lastGen.layerName = layerName;
     }
-    // psychConcept 도 새 차원에 맞춰 짧게 update
+    // 임시 fallback (AI 호출 실패 대비)
     refreshed.psychConcept = `${layerName} 차원 — ${opt.action.slice(0, 60)}`;
     refreshed.actionStrategy = proposal;
+    // AI로 새 problem/concept/action 3 필드 재생성
+    if (state.apiKey) {
+      try {
+        const oldSnapshot = lastGen?.snapshot || refreshed.generations[refreshed.generations.length - 2]?.snapshot;
+        const oldCtx = oldSnapshot
+          ? `[옛 가닥] ${oldSnapshot.title}\n[옛 문제] ${oldSnapshot.problemContext}\n[옛 심리학] ${oldSnapshot.psychConcept}\n[옛 행동] ${oldSnapshot.actionStrategy}`
+          : `[옛 가닥] ${refreshed.title}`;
+        const aiResp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6', max_tokens: 500,
+            messages: [{
+              role: 'user',
+              content: `진화한 새 가닥 — 카드 3 필드 정리.
+
+${oldCtx}
+[새 차원] ${layerName} (${opt.layer})
+[새 행동] ${opt.action}
+[오늘의 제안] ${proposal}
+
+[너의 일]
+새 차원/행동 맞춰 진화한 카드의 3 필드 작성.
+
+[출력 — 정확히 4줄]
+TITLE: <짧은 제목, 5-14자>
+PROBLEM: <문제 상황, 50-90자, 옛 가닥 안 통한 맥락 반영>
+CONCEPT: <심리학 개념 + 1줄 설명, ${layerName} 차원 메커니즘, 30-80자>
+ACTION: <전략적 행동, 50-120자, 구체적 무엇을 어떻게>
+
+[금지] 마크다운, JSON, 따옴표, "실패" 단어, 추상적 다짐.`
+            }]
+          })
+        });
+        const aiData = await aiResp.json();
+        const raw = (aiData.content?.[0]?.text || '').trim();
+        const titleM = raw.match(/TITLE:\s*(.+)/);
+        const probM = raw.match(/PROBLEM:\s*(.+)/);
+        const conM = raw.match(/CONCEPT:\s*(.+)/);
+        const actM = raw.match(/ACTION:\s*(.+)/);
+        if (titleM) refreshed.title = titleM[1].trim().slice(0, 40);
+        if (probM) refreshed.problemContext = probM[1].trim().slice(0, 200);
+        if (conM) refreshed.psychConcept = conM[1].trim().slice(0, 200);
+        if (actM) refreshed.actionStrategy = actM[1].trim().slice(0, 240);
+      } catch (e) { console.warn('mutation AI 3-field:', e); }
+    }
   }
   const newGenIdx = (refreshed?.generations?.length || 1) - 1;
   createMission(proposal, `🧬 ${card.title} — ${layerName} 차원`, {
