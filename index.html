@@ -6867,9 +6867,18 @@
       <button class="stories-close" onclick="closeStories()" aria-label="닫기">×</button>
       <div class="stories-slide" id="storiesSlide"></div>
       <div class="stories-tap-zones">
-        <div class="stories-tap-prev" onclick="storiesPrev()"></div>
-        <div class="stories-tap-pause" onmousedown="storiesPause()" onmouseup="storiesResume()" ontouchstart="storiesPause()" ontouchend="storiesResume()"></div>
-        <div class="stories-tap-next" onclick="storiesNext()"></div>
+        <!-- 사용자 요청 2026-04-28: 인스타식 long-press pause — 어느 zone에서나 누르고 있으면 멈춤, 짧게 누르면 navigation -->
+        <div class="stories-tap-prev"
+             onclick="_storiesHandleClick('prev')"
+             onmousedown="_storiesHandlePressStart(event)" onmouseup="_storiesHandlePressEnd(event)" onmouseleave="_storiesHandlePressEnd(event)"
+             ontouchstart="_storiesHandlePressStart(event)" ontouchend="_storiesHandlePressEnd(event)" ontouchcancel="_storiesHandlePressEnd(event)"></div>
+        <div class="stories-tap-pause"
+             onmousedown="_storiesHandlePressStart(event)" onmouseup="_storiesHandlePressEnd(event)" onmouseleave="_storiesHandlePressEnd(event)"
+             ontouchstart="_storiesHandlePressStart(event)" ontouchend="_storiesHandlePressEnd(event)" ontouchcancel="_storiesHandlePressEnd(event)"></div>
+        <div class="stories-tap-next"
+             onclick="_storiesHandleClick('next')"
+             onmousedown="_storiesHandlePressStart(event)" onmouseup="_storiesHandlePressEnd(event)" onmouseleave="_storiesHandlePressEnd(event)"
+             ontouchstart="_storiesHandlePressStart(event)" ontouchend="_storiesHandlePressEnd(event)" ontouchcancel="_storiesHandlePressEnd(event)"></div>
       </div>
     </div>
 
@@ -24898,6 +24907,34 @@ function storiesPrev() {
   }
 }
 
+// 사용자 요청 2026-04-28: 인스타식 long-press pause — 200ms 이상 누르면 pause, 짧게 누르면 navigation
+let _storiesPressTimer = null;
+let _storiesPressTriggered = false;
+function _storiesHandlePressStart(e) {
+  if (_storiesPressTimer) clearTimeout(_storiesPressTimer);
+  _storiesPressTriggered = false;
+  _storiesPressTimer = setTimeout(() => {
+    _storiesPressTriggered = true;
+    storiesPause();
+  }, 200);
+}
+function _storiesHandlePressEnd(e) {
+  if (_storiesPressTimer) {
+    clearTimeout(_storiesPressTimer);
+    _storiesPressTimer = null;
+  }
+  if (_storiesPressTriggered) {
+    storiesResume();
+    if (e && e.preventDefault) e.preventDefault();
+    setTimeout(() => { _storiesPressTriggered = false; }, 50);
+  }
+}
+function _storiesHandleClick(action) {
+  if (_storiesPressTriggered) return;  // long-press 중이면 click 무시
+  if (action === 'prev') storiesPrev();
+  else if (action === 'next') storiesNext();
+}
+
 function storiesPause() {
   if (!_storiesState || _storiesState.paused) return;
   _storiesState.paused = true;
@@ -25219,6 +25256,10 @@ function _buildEvolutionSlideHTML(stats, inRange) {
   const cards = (state.topicCards || []).filter(c => c.category === 'strategy' && inRange(c.createdAt));
   const dnaInRange = (state.pearls || []).filter(p => p.type === 'dna_pearl' && inRange(p.createdAt));
   const totalAttempts = stats.attempts || 0;
+  // 사용자 요청 2026-04-28: 체화된 전략 표시 — '네 거가 된 전략' 시각적으로 뿌듯하게
+  const embodiedStrategies = (state.topicCards || []).filter(c =>
+    c.category === 'strategy' && c.embodimentStatus === 'embodied' && inRange(c.createdAt)
+  );
 
   // 가장 진화 많이 한 가닥 1개
   const mostEvolved = cards.slice().sort((a, b) =>
@@ -25262,6 +25303,19 @@ function _buildEvolutionSlideHTML(stats, inRange) {
     }
     return '큰 시도 없이 머무르는 분기였어. 그것도 진화의 한 단계 — 다음 도약을 위한 숨고르기. 🍃';
   })();
+  // 사용자 요청 2026-04-28: 체화된 전략 카드 — 뿌듯하게, 시각적으로
+  const embodiedHtml = embodiedStrategies.length > 0 ? `
+    <div style="margin-top:18px; padding:14px 16px; background:linear-gradient(135deg, rgba(212,167,106,0.18), rgba(143,200,143,0.14)); border:1px solid rgba(212,167,106,0.35); border-radius:14px;">
+      <div style="font-size:11px; color:rgba(255,255,255,0.7); margin-bottom:8px; letter-spacing:0.04em;">🧬 네 거가 된 전략</div>
+      ${embodiedStrategies.slice(0, 4).map(s => `
+        <div style="font-size:14px; color:white; padding:5px 0; line-height:1.5; font-weight:500;">
+          ✨ ${escapeHtml((s.title || '').slice(0, 36))}
+        </div>
+      `).join('')}
+      ${embodiedStrategies.length > 4 ? `<div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:6px;">+ ${embodiedStrategies.length - 4}개 더</div>` : ''}
+    </div>
+  ` : '';
+
   return `
     <div class="stories-label">너의 성장·진화</div>
     <div class="stories-title">너만의 모양을 찾아가는 시간</div>
@@ -25287,6 +25341,7 @@ function _buildEvolutionSlideHTML(stats, inRange) {
         </div>
       ` : ''}
     </div>
+    ${embodiedHtml}
     ${evolHtml ? evolHtml.replace('가장 진화한 가닥', '너가 가장 깊이 시도한 가닥') : ''}
     <div class="stories-body" style="margin-top:14px; max-width:300px;">${escapeHtml(warmInsight)}</div>
   `;
@@ -25481,6 +25536,7 @@ function _buildPatternsSlideHTML(inRange) {
   // 가장 confidence 높은 진단 1-2개
   const topDiags = diags.sort((a, b) => (b.confidence || 0) - (a.confidence || 0)).slice(0, 2);
 
+  // 사용자 요청 2026-04-28: evidence 줄 (예: '여러 가닥 모든 layer X — values 충돌 가능성') 제거 — 진단 라벨 + confidence 만으로 충분
   return `
     <div class="stories-label">작동 중인 패턴</div>
     <div class="stories-title">너 안에서 작동 중</div>
@@ -25492,10 +25548,7 @@ function _buildPatternsSlideHTML(inRange) {
         </div>
       `).join('')}
     </div>
-    <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:14px; max-width:300px; line-height:1.7;">
-      ${escapeHtml(topDiags[0].evidence || '')}
-    </div>
-    <div style="font-size:11px; color:rgba(255,255,255,0.45); margin-top:12px; max-width:280px;">
+    <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:18px; max-width:280px; line-height:1.6;">
       너 ≠ 그 패턴. 작동 중일 뿐.
     </div>
   `;
@@ -25585,6 +25638,20 @@ async function buildAnnualSlides(year, yearReviews) {
   closing.html = closing.html.replace(/\$\{escapeHtml\(review\.quarterKey.*?\)\}/, year + '년');
   slides.push(closing);
 
+  // 사용자 요청 2026-04-28: annual context — '분기' 단어를 '이번 년도'/'한 해' 등으로 치환 (quarterly slides 재사용 시 문맥 맞게)
+  slides.forEach(s => {
+    if (typeof s.html === 'string') {
+      s.html = s.html
+        .replace(/이번 분기엔/g, '이번 한 해엔')
+        .replace(/이번 분기는/g, '이번 한 해는')
+        .replace(/이번 분기/g, '이번 한 해')
+        .replace(/이 분기/g, '이번 한 해')
+        .replace(/지난 분기/g, '지난 해')
+        .replace(/다음 분기/g, '내년')
+        .replace(/한 분기/g, '한 해');
+    }
+  });
+
   return slides;
 }
 
@@ -25611,19 +25678,38 @@ function _buildSeasonalSlide(year, yearReviews) {
     const sum = moodEntries.reduce((a, e) => a + e.mood, 0);
     return Math.round((sum / moodEntries.length) * 10) / 10;
   });
-  const labels = ['봄 (Q1)', '여름 (Q2)', '가을 (Q3)', '겨울 (Q4)'];
+  // 사용자 요청 2026-04-28: 계절별 흐름 시각화 — 4분기 카드 그리드 (계절 색 + 무드 이모지)
+  const seasonData = [
+    { label: '봄',  emoji: '🌸', gradient: 'linear-gradient(135deg, rgba(255,182,193,0.30), rgba(255,218,185,0.20))', border: 'rgba(255,182,193,0.50)' },
+    { label: '여름', emoji: '☀️', gradient: 'linear-gradient(135deg, rgba(255,236,139,0.32), rgba(143,200,143,0.22))', border: 'rgba(255,210,80,0.50)' },
+    { label: '가을', emoji: '🍂', gradient: 'linear-gradient(135deg, rgba(255,167,90,0.30), rgba(212,167,106,0.22))', border: 'rgba(255,140,60,0.50)' },
+    { label: '겨울', emoji: '❄️', gradient: 'linear-gradient(135deg, rgba(160,200,230,0.28), rgba(140,160,210,0.18))', border: 'rgba(160,200,230,0.50)' }
+  ];
+  const moodFace = (m) => {
+    if (m == null) return '·';
+    if (m >= 4.5) return '🥰';
+    if (m >= 3.5) return '😊';
+    if (m >= 2.5) return '😐';
+    if (m >= 1.5) return '😞';
+    return '😢';
+  };
   return {
     tone: 'tone-emo',
     html: `
       <div class="stories-label">너의 ${year}년 무드</div>
       <div class="stories-title">계절별 흐름</div>
-      <div class="stories-stat-list">
-        ${moods.map((m, i) => `
-          <div class="stories-stat-row neutral">
-            <span class="stories-stat-label">${labels[i]}</span>
-            <span class="stories-stat-value">${m != null ? `${m}/5` : '—'}</span>
-          </div>
-        `).join('')}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px; max-width:300px;">
+        ${moods.map((m, i) => {
+          const s = seasonData[i];
+          return `
+            <div style="background:${s.gradient}; border:1px solid ${s.border}; border-radius:14px; padding:14px 10px; text-align:center; aspect-ratio:1; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px;">
+              <div style="font-size:24px; line-height:1;">${s.emoji}</div>
+              <div style="font-size:11px; color:rgba(255,255,255,0.75); font-weight:600; letter-spacing:0.06em;">${s.label}</div>
+              <div style="font-size:28px; line-height:1; margin-top:2px;">${moodFace(m)}</div>
+              <div style="font-size:13px; color:white; font-weight:600;">${m != null ? `${m}/5` : '기록 없음'}</div>
+            </div>
+          `;
+        }).join('')}
       </div>
     `
   };
@@ -27304,7 +27390,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.128-cleanup-pearls';
+const APP_VERSION = 'v4.0.129-stories-polish';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
