@@ -2396,6 +2396,84 @@
     color: var(--accent);
   }
 
+  /* V4-1d-4: DNA 진주 결정화 의식 모달 (1회만, 큰 다면체 + 회전 헬릭스) */
+  .crystallize-ritual-overlay {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(30,28,55,0.92), rgba(10,8,20,0.96));
+    z-index: 10000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+    animation: crystallize-fade-in 0.5s ease;
+  }
+  @keyframes crystallize-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .crystallize-ritual-modal {
+    background: linear-gradient(135deg, rgba(40,36,70,0.95), rgba(60,45,90,0.95));
+    border: 1px solid rgba(212,167,106,0.35);
+    border-radius: 24px;
+    padding: 32px 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 0 80px rgba(212,167,106,0.18), 0 0 140px rgba(139,126,196,0.12);
+    animation: crystallize-rise 0.6s ease 0.1s both;
+  }
+  @keyframes crystallize-rise {
+    from { transform: translateY(20px) scale(0.95); opacity: 0; }
+    to   { transform: translateY(0) scale(1);     opacity: 1; }
+  }
+  .crystallize-emoji {
+    font-size: 36px;
+    margin-bottom: 12px;
+    animation: crystallize-pulse 2s ease-in-out infinite;
+  }
+  @keyframes crystallize-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.08); }
+  }
+  .crystallize-svg-wrap {
+    display: flex; justify-content: center;
+    margin-bottom: 20px;
+  }
+  .crystallize-label {
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: #d4a76a;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .crystallize-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 18px;
+    color: var(--text);
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .crystallize-msg {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 24px;
+    white-space: pre-line;
+  }
+  .crystallize-accept-btn {
+    background: linear-gradient(135deg, #d4a76a, #b88c50);
+    color: #1a1525;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 32px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: transform 0.15s;
+  }
+  .crystallize-accept-btn:active { transform: scale(0.97); }
+
   /* V3.11: 화면 하단 액션 묶음 — 일반화 (V3.13.x: checkin-bottom-bar → sticky-action-bar) */
   /* sticky는 V3.11.x에서 해제 (압도감 행 가림 이슈), 이름은 패턴 식별용 */
   .sticky-action-bar {
@@ -10192,6 +10270,160 @@ JSON만 출력.`
   if (typeof renderArchive === 'function') renderArchive();
 }
 
+// V4-1d-4: DNA 진주 결정화 의식.
+// V4 비전 6.4 + 5.7 + 5.8: worked 5회 도달 시 confirm → 결정화 의식 모달 (1회) → DNA 진주 생성.
+// 데이터 모델 (14.1): state.pearls에 type:'dna_pearl', strategyId, embodimentPath, shellsUsed.
+async function promptCrystallize(card) {
+  if (!card || card.embodimentStatus === 'embodied') return;
+  // 한 카드 기준 한 번만 prompt (재기 가드)
+  if (card._crystallizePromptShown) return;
+  card._crystallizePromptShown = true;
+  saveState();
+
+  const path = determineEmbodimentPath(card);
+  const totalAttempts = countTotalAttempts(card);
+  const totalGens = (card.generations || []).length;
+  const workedCount = countWorkedAttempts(card);
+
+  const yes = await showConfirmModal({
+    title: '🧬 DNA 진주로 결정화할까?',
+    message: `"${card.title}" 가닥이 ${workedCount}번 작동했어.\n\n결정화하면 너의 일부가 돼 — 의식 X 자동 발동.\n한 번뿐인 의식이야.`,
+    okLabel: '응 결정화',
+    cancelLabel: '아직'
+  });
+  if (!yes) {
+    // 사용자가 거절했으면 다음 worked attempt 시 다시 prompt 가능하도록 flag 해제
+    card._crystallizePromptShown = false;
+    saveState();
+    return;
+  }
+
+  card.embodimentStatus = 'embodied';
+  card.embodimentPath = path;
+  card.crystallizedAt = new Date().toISOString();
+
+  // 이 가닥이 받은 모든 shellId 누적
+  const shellsUsed = [];
+  (card.generations || []).forEach(g => {
+    if (Array.isArray(g.shells)) shellsUsed.push(...g.shells);
+  });
+
+  const dnaPearl = {
+    id: 'dpearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    type: 'dna_pearl',
+    content: card.title,
+    category: 'DNA',
+    strategyId: card.id,
+    embodimentPath: path,
+    shellsUsed,
+    totalAttempts,
+    totalGens,
+    workedCount,
+    createdAt: card.crystallizedAt
+  };
+  if (!Array.isArray(state.pearls)) state.pearls = [];
+  state.pearls.push(dnaPearl);
+  saveState();
+
+  showCrystallizeRitualModal(card, dnaPearl);
+}
+
+function showCrystallizeRitualModal(card, dnaPearl) {
+  const path = dnaPearl.embodimentPath;
+  // 5.8 톤 (path별)
+  const ritualMessages = {
+    'one-shot': {
+      emoji: '✨',
+      label: '단번 결정화',
+      msg: `깨끗한 결정화. 첫 가닥이 너 안에 완전히 자리 잡았어.\n\n이제 너 일부야 — 의식 X 자동 발동.\n\n너의 첫 DNA 진주.`
+    },
+    'evolved': {
+      emoji: '🧬',
+      label: '진화 완료',
+      msg: `${dnaPearl.totalAttempts}번 시도, ${Math.max(0, dnaPearl.totalGens - 1)}번 진화, 결국 너에게 맞는 모양 됨.\n\n이 길 걸어와서 도착한 곳, 너만의 진주야.`
+    },
+    'quick-discovery': {
+      emoji: '🧭',
+      label: '빠른 발견',
+      msg: `너 자신을 잘 알아서 빠르게 길 찾았어.\n\n너의 또 하나 진주.`
+    }
+  };
+  const m = ritualMessages[path] || ritualMessages['one-shot'];
+
+  // 결정 다면체 외곽 색 (path별)
+  const outerColor = {
+    'one-shot':        '#ffd700',
+    'quick-discovery': '#5fcfba',
+    'evolved':         'url(#crystallize-rainbow)'
+  }[path] || '#ffd700';
+
+  // 헬릭스 점들 — shellsUsed 기반, 원형 분포 + group rotate
+  const shellList = (state.shellCollection || []);
+  const shellsToShow = (dnaPearl.shellsUsed || []).slice(0, 8);
+  const dotColors = shellsToShow.map(sid => {
+    const s = shellList.find(x => x._id === sid);
+    return s?.tier === 'legend' ? '#ffd93d' :
+           s?.tier === 'call'   ? '#d4a76a' :
+           s?.tier === 'golden' ? '#e8c170' : '#a89dc8';
+  });
+  // 시도 수가 8보다 적으면 미니 점 추가 (시각 균형)
+  while (dotColors.length < 8) dotColors.push('#666e8a');
+
+  const dotsHtml = dotColors.map((color, i) => {
+    const angle = (i / 8) * 360;
+    const rad = (angle * Math.PI) / 180;
+    const cx = 100 + 70 * Math.cos(rad);
+    const cy = 100 + 70 * Math.sin(rad);
+    return `<circle cx="${cx}" cy="${cy}" r="5" fill="${color}" opacity="0.92"/>`;
+  }).join('');
+
+  const html = `
+    <div class="crystallize-ritual-overlay" id="crystallizeRitual">
+      <div class="crystallize-ritual-modal">
+        <div class="crystallize-emoji">${m.emoji}</div>
+        <div class="crystallize-svg-wrap">
+          <svg viewBox="0 0 200 200" width="240" height="240" aria-hidden="true">
+            <defs>
+              <linearGradient id="crystallize-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%"   stop-color="#ff6b6b"/>
+                <stop offset="33%"  stop-color="#ffd93d"/>
+                <stop offset="66%"  stop-color="#5fcfba"/>
+                <stop offset="100%" stop-color="#8b7ec4"/>
+              </linearGradient>
+            </defs>
+            <polygon points="100,12 162,40 188,100 162,160 100,188 38,160 12,100 38,40"
+                     fill="${outerColor}" fill-opacity="0.14"
+                     stroke="${outerColor}" stroke-width="2.5" />
+            <g>
+              ${dotsHtml}
+              <animateTransform attributeName="transform" type="rotate"
+                                from="0 100 100" to="360 100 100"
+                                dur="30s" repeatCount="indefinite"/>
+            </g>
+            <circle cx="100" cy="100" r="3.5" fill="${outerColor}" opacity="0.95"/>
+          </svg>
+        </div>
+        <div class="crystallize-label">${m.label}</div>
+        <div class="crystallize-title">${escapeHtml(card.title)}</div>
+        <div class="crystallize-msg">${escapeHtml(m.msg)}</div>
+        <button class="crystallize-accept-btn" onclick="closeCrystallizeRitual()">받아들여 ✦</button>
+      </div>
+    </div>
+  `;
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = html.trim();
+  document.body.appendChild(wrap.firstElementChild);
+}
+
+function closeCrystallizeRitual() {
+  const el = document.getElementById('crystallizeRitual');
+  if (el) el.remove();
+  if (typeof renderShellBar === 'function') renderShellBar();
+  if (typeof renderArchive === 'function') renderArchive();
+  if (typeof renderTodayMission === 'function') renderTodayMission();
+}
+
 // ═══════════════════════════════════════════════════════════════
 // PROPOSAL HANDLING (Phase 2 upgrade)
 // ═══════════════════════════════════════════════════════════════
@@ -14839,7 +15071,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.5-mutation';
+const APP_VERSION = 'v4.0.6-crystallize';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
