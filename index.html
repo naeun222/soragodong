@@ -6435,7 +6435,7 @@
           <button class="btn-secondary" onclick="testForceDiagnoses()" style="margin-top:6px;">🩺 진단 5종 즉시 detect</button>
           <button class="btn-secondary" onclick="testForceCrystallize()" style="margin-top:6px;">🧬 첫 strategy DNA 결정화 강제</button>
           <button class="btn-secondary" onclick="testForceMutation()" style="margin-top:6px;">🪦 첫 strategy 돌연변이 진화 강제</button>
-          <button class="btn-secondary" onclick="testForceStrategyFollowup()" style="margin-top:6px;">🔄 전략 팔로업 → 안 통함 → 돌연변이 풀 흐름</button>
+          <button class="btn-secondary" onclick="testForceStrategyFollowup()" style="margin-top:6px;" title="첫 가닥 미션 → 4 옵션 모달 (작동/그저그래/안통함/못시도) → 결과별 분기 흐름. 안통함 자동 돌연변이, 그저그래 yes/no, 작동 결정화 prompt, 못시도 자책 X.">🔄 전략 팔로업 풀 흐름 (4 옵션 + 분기 다 검증)</button>
           <button class="btn-secondary" onclick="testForceFullAnalysis()" style="margin-top:6px;">📊 통합 분석 강제 (시드 데이터로 traits/values/patterns 채움)</button>
           <button class="btn-secondary" onclick="testForceDiscoverInsights()" style="margin-top:6px;">🔮 인사이트 발견 강제 (causal/pattern, 깨달음 카테고리)</button>
           <button class="btn-secondary" onclick="testForcePearlSuggestion()" style="margin-top:6px;">🔮 진주 능동 제안 (마지막 user msg)</button>
@@ -19666,7 +19666,8 @@ async function testForceFullAnalysis() {
   }
 }
 
-// V4-fix v3 (사용자 요청): 전략 팔로업 → 안 통함 → 돌연변이 임시 대화창 흐름 풀 시뮬
+// V4-fix v3 (사용자 요청): 전략 팔로업 풀 흐름 — showAttemptResultModal부터 진짜 흐름
+// 4 옵션 (worked/meh/didnt/skipped) 다 검증 가능. yes/no 분기도 다 작동.
 async function testForceStrategyFollowup() {
   if (!state.preferences || !state.preferences.testerMode) {
     showToast('⚠️ 테스터 모드 ON 후 사용');
@@ -19697,20 +19698,63 @@ async function testForceStrategyFollowup() {
     showToast('⚠️ 미션 생성 실패');
     return;
   }
-  // didnt 결과 강제 — 사용자가 ✕ 눌렀다 가정
+
+  // V4 비전 6.2: 진짜 결과 체크 흐름 — showAttemptResultModal 호출 (사용자 4 옵션 선택)
+  if (typeof showAttemptResultModal !== 'function') {
+    showToast('⚠️ showAttemptResultModal 함수 X');
+    return;
+  }
+  const status = await showAttemptResultModal(`"${card.title}" — ${mission.title}`);
+  if (!status) {
+    showToast('취소됨 — 미션 그대로 pending');
+    return;
+  }
+
+  // 결과 기록 (4 분기 공통)
   mission.status = 'completed';
   mission.completedDate = todayKey();
   mission.completedAt = new Date().toISOString();
-  mission.attemptStatus = 'didnt';
+  mission.attemptStatus = status;
   if (typeof recordStrategyAttempt === 'function') {
-    try { recordStrategyAttempt(card.id, 'didnt', mission.id); } catch (e) { console.warn('recordStrategyAttempt:', e); }
+    try { recordStrategyAttempt(card.id, status, mission.id); } catch (e) { console.warn('recordStrategyAttempt:', e); }
   }
-  saveState({ force: true });
-  showToast(`👎 "${card.title}" 안 통함 → 돌연변이 흐름 시작`);
-  // openMutationChat 호출 — 임시 대화창 자동 진입
-  if (typeof openMutationChat === 'function') {
-    setTimeout(() => openMutationChat(card.id, mission.title), 400);
+
+  // V4 비전 5.4 + 5.9 분기 흐름 — 결과별 다른 톤/액션
+  if (status === 'didnt') {
+    saveState({ force: true });
+    showToast(`👎 "${card.title}" 안 통함 — 돌연변이 흐름 자동 시작`);
+    if (typeof openMutationChat === 'function') {
+      setTimeout(() => openMutationChat(card.id, mission.title), 400);
+    }
+  } else if (status === 'meh') {
+    saveState({ force: true });
+    // 'meh' → 돌연변이 yes/no confirm
+    const yes = await showConfirmModal({
+      title: '🌫 그저 그랬어',
+      message: `"${card.title}" 이 도구가 너에게 충분히 안 맞은 듯.\n다른 차원에서 시도해볼래?`,
+      okLabel: '🧬 돌연변이 해볼게',
+      cancelLabel: '아직 그대로'
+    });
+    if (yes) {
+      showToast(`🧬 돌연변이 흐름 시작`);
+      if (typeof openMutationChat === 'function') {
+        setTimeout(() => openMutationChat(card.id, mission.title), 400);
+      }
+    } else {
+      showToast(`🌫 그대로 — 더 시도하기로 결정. 가닥엔 meh 흔적 박힘`);
+    }
+  } else if (status === 'worked') {
+    saveState({ force: true });
+    const workedCount = (typeof countWorkedAttempts === 'function') ? countWorkedAttempts(card) : 0;
+    showToast(`👍 "${card.title}" 작동! 가닥에 흔적 박힘 (worked ${workedCount}/5)${workedCount >= 5 ? ' — 결정화 prompt 곧 등장' : ''}`);
+    // worked 5+이면 promptCrystallize 자동 트리거 (updateEmbodimentStatus가 이미 호출했을 거)
+  } else if (status === 'skipped') {
+    saveState({ force: true });
+    showToast(`😅 못 시도 — 자책 X. 다음 기회.`);
   }
+
+  if (typeof renderTodayMission === 'function') renderTodayMission();
+  if (typeof renderArchive === 'function') renderArchive();
 }
 
 async function testForceCrystallize() {
@@ -24189,7 +24233,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.92-diary-memo-prefill';
+const APP_VERSION = 'v4.0.93-followup-full-branches';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
