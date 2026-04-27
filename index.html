@@ -1449,28 +1449,37 @@
     border-radius: 8px;
     display: inline-block;
   }
-  /* V4-fix: 모래사장 가로 흐름 — flex-wrap + 작은 minmax 로 가로로 더 많이 */
+  /* V4-fix v2: 모래사장 가로 흐름 — 부모 grid 안에서 한 행 다 차지하도록 grid-column 박기 */
   .beach-tier-grid {
+    grid-column: 1 / -1;
     display: flex;
     flex-wrap: wrap;
     gap: 6px 8px;
     align-content: flex-start;
+    width: 100%;
   }
   .beach-tier-grid .beach-shell {
     flex: 0 0 auto;
     width: 44px;
     height: 44px;
   }
-  /* V4-fix: 전체 탭 — 자유로운 랜덤 흩뿌림 (모래사장 느낌). 큰 offset + rotate */
+  /* V4-fix v2: 전체 탭 — 진짜 자유 위치 (absolute 배치, 모래사장 흩뿌림) */
   .beach-tier-grid.scatter {
-    gap: 8px 10px;
-    padding: 10px 6px;
-    justify-content: flex-start;
+    grid-column: 1 / -1;
+    display: block;
+    position: relative;
+    width: 100%;
+    min-height: 380px;
+    padding: 0;
   }
   .beach-tier-grid.scatter .beach-shell {
+    position: absolute;
     width: 46px;
     height: 46px;
     transition: transform 0.25s ease;
+  }
+  .beach-tier-grid.scatter .beach-shell:hover {
+    z-index: 10;
   }
   .beach-shell {
     aspect-ratio: 1;
@@ -3243,11 +3252,43 @@
     display: flex; justify-content: center;
     margin-bottom: 12px;
   }
-  .dna-pearl-spin { animation: dnaSpin 16s linear infinite; transform-origin: center; }
-  .dna-pearl-inner-spin { animation: dnaSpinReverse 10s linear infinite; transform-origin: 100px 100px; transform-box: fill-box; }
+  /* V4-fix v2: DNA 진주 — faceted gem 다층 효과 */
+  .dna-pearl-stage {
+    position: relative;
+    padding: 14px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at center, rgba(255,255,255,0.05) 0%, transparent 60%);
+  }
+  .dna-pearl-stage::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,215,0,0.15), transparent 65%);
+    filter: blur(14px);
+    z-index: -1;
+    animation: dnaGlowPulse 4s ease-in-out infinite;
+  }
+  @keyframes dnaGlowPulse {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50%      { opacity: 1; transform: scale(1.06); }
+  }
+  .dna-pearl-spin { animation: dnaSpin 22s linear infinite; transform-origin: 100px 100px; transform-box: fill-box; }
+  .dna-pearl-inner-spin { animation: dnaSpinReverse 14s linear infinite; transform-origin: 100px 100px; transform-box: fill-box; }
+  .dna-pearl-ring { animation: dnaSpin 32s linear infinite; transform-origin: 100px 100px; transform-box: fill-box; }
   @keyframes dnaSpinReverse {
     from { transform: rotate(0deg); }
     to   { transform: rotate(-360deg); }
+  }
+  .dna-sparkle {
+    fill: #fff5b8;
+    animation: dnaSparkleTwinkle 2.4s ease-in-out infinite;
+    transform-origin: center;
+  }
+  @keyframes dnaSparkleTwinkle {
+    0%, 100% { opacity: 0; transform: scale(0.6); }
+    50%      { opacity: 1; transform: scale(1.1); }
   }
 
   /* V4-1d-4: DNA 진주 결정화 의식 모달 (1회만, 큰 다면체 + 회전 헬릭스) */
@@ -10264,7 +10305,7 @@ function renderBeach() {
     'quick-discovery': '#5fcfba',
     'evolved':         'linear-gradient(135deg,#ff6b6b,#ffd93d 33%,#5fcfba 66%,#8b7ec4)'
   };
-  // V4-fix: DNA 진주 모래사장 — SVG 다면체 (이모지 아닌 결정 모양, 회전 헬릭스 점)
+  // V4-fix v2: DNA 진주 모래사장 — faceted mini gem (8 facet + halo + 회전 + sparkle)
   const dnaSectionHtml = showDnaSection ? `
     <div class="beach-tier-section beach-dna-section">
       <div class="beach-tier-header">🧬 DNA 진주 — 체화 완료 · ${dnaPearls.length}</div>
@@ -10272,17 +10313,28 @@ function renderBeach() {
         ${dnaPearls.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((p, i) => {
           const isEvolved = p.embodimentPath === 'evolved';
           const isQuick = p.embodimentPath === 'quick-discovery';
-          const strokeColor = isEvolved ? `url(#dnaPearlGrad-${p.id})` : (isQuick ? '#5fcfba' : '#ffd700');
-          const fillColor = isEvolved ? `url(#dnaPearlGrad-${p.id})` : (isQuick ? '#5fcfba' : '#ffd700');
-          // 6 헬릭스 점
+          const baseColor = isEvolved ? '#ffd93d' : (isQuick ? '#5fcfba' : '#ffd700');
+          const fillColor = isEvolved ? `url(#dnaPearlGrad-${p.id})` : baseColor;
+          // mini 8 facet
+          const VS = [];
+          for (let k = 0; k < 8; k++) {
+            const a = (k / 8) * 360 - 90;
+            VS.push({ x: 22 + 18 * Math.cos(a * Math.PI / 180), y: 22 + 18 * Math.sin(a * Math.PI / 180) });
+          }
+          const facetsMini = VS.map((v, k) => {
+            const next = VS[(k + 1) % 8];
+            return `<polygon points="22,22 ${v.x.toFixed(1)},${v.y.toFixed(1)} ${next.x.toFixed(1)},${next.y.toFixed(1)}" fill="${fillColor}" fill-opacity="${0.45 - (k % 4) * 0.08}" stroke="${baseColor}" stroke-width="0.3" stroke-opacity="0.5"/>`;
+          }).join('');
+          const polyMini = VS.map(v => `${v.x.toFixed(1)},${v.y.toFixed(1)}`).join(' ');
+          // 6 헬릭스 점 (외곽)
           const dots = [0,1,2,3,4,5].map(n => {
             const a = (n / 6) * 360;
-            const x = 22 + 14 * Math.cos(a * Math.PI / 180);
-            const y = 22 + 14 * Math.sin(a * Math.PI / 180);
-            return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" fill="${fillColor}" opacity="0.85"/>`;
+            const x = 22 + 11 * Math.cos(a * Math.PI / 180);
+            const y = 22 + 11 * Math.sin(a * Math.PI / 180);
+            return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.2" fill="${baseColor}" opacity="0.9"/>`;
           }).join('');
           return `<div class="beach-shell beach-dna-shell" onclick="openDnaPearlStory('${p.id}')" title="${escapeHtml(p.content || '')}">
-            <svg class="dna-mini-svg" viewBox="0 0 44 44" width="38" height="38" aria-hidden="true">
+            <svg class="dna-mini-svg" viewBox="0 0 44 44" width="40" height="40" aria-hidden="true">
               <defs>
                 <linearGradient id="dnaPearlGrad-${p.id}" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="#ff6b6b"/>
@@ -10290,12 +10342,18 @@ function renderBeach() {
                   <stop offset="66%" stop-color="#5fcfba"/>
                   <stop offset="100%" stop-color="#8b7ec4"/>
                 </linearGradient>
+                <radialGradient id="dnaMiniHalo-${p.id}" cx="50%" cy="50%" r="50%">
+                  <stop offset="60%" stop-color="${baseColor}" stop-opacity="0"/>
+                  <stop offset="100%" stop-color="${baseColor}" stop-opacity="0.5"/>
+                </radialGradient>
               </defs>
-              <polygon points="22,3 36,11 41,22 36,33 22,41 8,33 3,22 8,11"
-                       fill="${fillColor}" fill-opacity="0.18"
-                       stroke="${strokeColor}" stroke-width="1.6"/>
+              <circle cx="22" cy="22" r="22" fill="url(#dnaMiniHalo-${p.id})"/>
+              <g class="dna-mini-spin" style="transform-origin: 22px 22px; transform-box: fill-box;">
+                ${facetsMini}
+                <polygon points="${polyMini}" fill="none" stroke="${baseColor}" stroke-width="0.7"/>
+              </g>
               ${dots}
-              <circle cx="22" cy="22" r="2" fill="${fillColor}" opacity="0.95"/>
+              <circle cx="22" cy="22" r="1.5" fill="${baseColor}" opacity="0.95"/>
             </svg>
           </div>`;
         }).join('')}
@@ -10338,15 +10396,16 @@ function renderBeach() {
   } else {
     // 시간순 평면 (최신 위)
     const sorted = filtered.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-    // V4-fix: 'all' 탭 → 모래사장 자유 흩뿌림 (큰 random offset + rotate, deterministic per shell)
+    // V4-fix v2: 'all' 탭 → 모래사장 절대 위치 자유 흩뿌림 (deterministic per shell, % 단위)
     const isAllTab = _beachTab === 'all';
     const scatterStyle = (s, idx) => {
       if (!isAllTab) return '';
       const seed = (s._id ? s._id.split('').reduce((a,c) => a + c.charCodeAt(0), 0) : idx) * 9301 + 49297;
-      const tx = (((seed * 7) % 25) - 12);       // -12px ~ +12px
-      const ty = (((seed * 13) % 19) - 9);       // -9px ~ +9px
-      const rot = (((seed * 19) % 17) - 8);      // -8deg ~ +8deg
-      return ` style="margin-left:${tx}px; margin-top:${ty}px; transform:rotate(${rot}deg);"`;
+      // 컨테이너 380px height, shell 46px → 위치 % 단위로 자유롭게 흩뿌림
+      const left = ((seed * 7) % 88) + 2;        // 2% ~ 90%
+      const top = ((seed * 13) % 84) + 2;        // 2% ~ 86%
+      const rot = (((seed * 19) % 25) - 12);     // -12deg ~ +12deg
+      return ` style="left:${left}%; top:${top}%; transform:rotate(${rot}deg);"`;
     };
     grid.innerHTML = dnaSectionHtml +
       `<div class="beach-tier-grid${isAllTab ? ' scatter' : ''}">` +
@@ -10412,21 +10471,62 @@ function openDnaPearlStory(pearlId) {
     'evolved':         'url(#dna-mini-rainbow)'
   })[pearl.embodimentPath] || '#ffd700';
 
-  // V4-fix: DNA 진주 모달 — 회전하는 헬릭스 점 + 외곽 glow + 내부 결정
-  const dotColors = ['#ffd93d', '#d4a76a', '#5fcfba', '#a89dc8', '#ff8da1', '#ffb86b', '#7ec8e3', '#b39ddb'];
+  // V4-fix v2: DNA 진주 모달 — faceted gem (8 삼각 면) + outer ring + sparkle + 다층 glow
+  const safeColor = (typeof pathColor === 'string' && pathColor.startsWith('#')) ? pathColor : '#ffd700';
+  // 8각형 꼭짓점
+  const VERTICES = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * 360 - 90;
+    const r = 88;
+    VERTICES.push({
+      x: 100 + r * Math.cos(a * Math.PI / 180),
+      y: 100 + r * Math.sin(a * Math.PI / 180)
+    });
+  }
+  // 8 삼각 facet (중심 → 두 인접 꼭짓점)
+  const facets = VERTICES.map((v, i) => {
+    const next = VERTICES[(i + 1) % 8];
+    const gradId = `dna-facet-${i}-${pearl.id.replace(/[^a-zA-Z0-9_-]/g, '')}`;
+    return {
+      points: `100,100 ${v.x.toFixed(1)},${v.y.toFixed(1)} ${next.x.toFixed(1)},${next.y.toFixed(1)}`,
+      gradId
+    };
+  });
+  // 8각형 외곽선 points
+  const polyPoints = VERTICES.map(v => `${v.x.toFixed(1)},${v.y.toFixed(1)}`).join(' ');
+  // 외곽 헬릭스 점 (8개, pulse)
+  const dotColors = ['#fff5b8', '#ffd93d', '#5fcfba', '#a89dc8', '#ff8da1', '#ffb86b', '#7ec8e3', '#b39ddb'];
   const dotsOuter = dotColors.map((c, i) => {
-    const angle = (i / 8) * 360;
-    const rad = (angle * Math.PI) / 180;
-    const cx = 100 + 70 * Math.cos(rad);
-    const cy = 100 + 70 * Math.sin(rad);
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="${c}" opacity="0.9"><animate attributeName="r" values="5;6.2;5" dur="${2 + (i % 3)}s" repeatCount="indefinite"/></circle>`;
+    const angle = (i / 8) * 360 - 90;
+    const cx = 100 + 76 * Math.cos(angle * Math.PI / 180);
+    const cy = 100 + 76 * Math.sin(angle * Math.PI / 180);
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.5" fill="${c}" opacity="0.95">
+      <animate attributeName="r" values="3.5;5;3.5" dur="${2 + (i % 3) * 0.4}s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="${2 + (i % 3) * 0.4}s" repeatCount="indefinite"/>
+    </circle>`;
   }).join('');
-  // 안쪽 작은 헬릭스 (반대 방향 회전)
+  // 안쪽 헬릭스 (역회전)
   const innerDots = [0,1,2,3,4,5].map(n => {
     const a = (n / 6) * 360 + 30;
-    const x = 100 + 38 * Math.cos(a * Math.PI / 180);
-    const y = 100 + 38 * Math.sin(a * Math.PI / 180);
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="${pathColor}" opacity="0.7"/>`;
+    const x = 100 + 32 * Math.cos(a * Math.PI / 180);
+    const y = 100 + 32 * Math.sin(a * Math.PI / 180);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="${safeColor}" opacity="0.8"/>`;
+  }).join('');
+  // sparkles (★ 깜박임)
+  const sparkles = [
+    { x: 30, y: 50, d: 0 }, { x: 170, y: 60, d: 0.6 }, { x: 50, y: 160, d: 1.2 },
+    { x: 165, y: 158, d: 1.8 }, { x: 100, y: 25, d: 2.4 }, { x: 22, y: 110, d: 0.3 }
+  ].map(s => `<text x="${s.x}" y="${s.y}" class="dna-sparkle" style="animation-delay:${s.d}s" text-anchor="middle" font-size="14">✦</text>`).join('');
+
+  // facet gradient defs (각 면 면색 살짝 다르게)
+  const facetGradDefs = facets.map((f, i) => {
+    const lighter = i % 2 === 0 ? safeColor : safeColor;
+    const opacity1 = 0.55 - (i % 4) * 0.08;
+    const opacity2 = 0.18 - (i % 4) * 0.03;
+    return `<linearGradient id="${f.gradId}" x1="0%" y1="0%" x2="100%" y2="${100 + (i % 3) * 30}%">
+      <stop offset="0%" stop-color="${lighter}" stop-opacity="${opacity1.toFixed(2)}"/>
+      <stop offset="100%" stop-color="${lighter}" stop-opacity="${opacity2.toFixed(2)}"/>
+    </linearGradient>`;
   }).join('');
 
   const overlay = document.createElement('div');
@@ -10434,8 +10534,8 @@ function openDnaPearlStory(pearlId) {
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
   overlay.innerHTML = `
     <div class="shell-story-card dna-pearl-story">
-      <div class="dna-pearl-svg-wrap">
-        <svg viewBox="0 0 200 200" width="160" height="160" aria-hidden="true" class="dna-pearl-spin">
+      <div class="dna-pearl-svg-wrap dna-pearl-stage">
+        <svg viewBox="0 0 200 200" width="180" height="180" aria-hidden="true">
           <defs>
             <linearGradient id="dna-mini-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%"   stop-color="#ff6b6b"/>
@@ -10444,21 +10544,53 @@ function openDnaPearlStory(pearlId) {
               <stop offset="100%" stop-color="#8b7ec4"/>
             </linearGradient>
             <radialGradient id="dna-pearl-core" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="${typeof pathColor === 'string' && pathColor.startsWith('#') ? pathColor : '#ffd700'}" stop-opacity="0.45"/>
-              <stop offset="100%" stop-color="${typeof pathColor === 'string' && pathColor.startsWith('#') ? pathColor : '#ffd700'}" stop-opacity="0"/>
+              <stop offset="0%" stop-color="${safeColor}" stop-opacity="0.55"/>
+              <stop offset="60%" stop-color="${safeColor}" stop-opacity="0.15"/>
+              <stop offset="100%" stop-color="${safeColor}" stop-opacity="0"/>
             </radialGradient>
-            <filter id="dna-glow">
-              <feGaussianBlur stdDeviation="3" result="b"/>
+            <radialGradient id="dna-pearl-halo" cx="50%" cy="50%" r="50%">
+              <stop offset="60%" stop-color="${safeColor}" stop-opacity="0"/>
+              <stop offset="80%" stop-color="${safeColor}" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="${safeColor}" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="dna-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2.5" result="b"/>
               <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
+            <filter id="dna-bigglow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="6" result="b"/>
+              <feMerge><feMergeNode in="b"/></feMerge>
+            </filter>
+            ${facetGradDefs}
           </defs>
-          <circle cx="100" cy="100" r="92" fill="url(#dna-pearl-core)"/>
-          <polygon points="100,12 162,40 188,100 162,160 100,188 38,160 12,100 38,40"
-                   fill="${pathColor}" fill-opacity="0.18"
-                   stroke="${pathColor}" stroke-width="2.5" filter="url(#dna-glow)"/>
+          <!-- 외곽 halo (정적) -->
+          <circle cx="100" cy="100" r="98" fill="url(#dna-pearl-halo)"/>
+          <!-- 외곽 ring (회전 dashed) -->
+          <g class="dna-pearl-ring">
+            <circle cx="100" cy="100" r="92" fill="none" stroke="${safeColor}" stroke-width="0.8" stroke-opacity="0.55" stroke-dasharray="2.5 6"/>
+            <circle cx="100" cy="100" r="86" fill="none" stroke="${safeColor}" stroke-width="0.5" stroke-opacity="0.35" stroke-dasharray="1 4"/>
+          </g>
+          <!-- 내부 core glow -->
+          <circle cx="100" cy="100" r="80" fill="url(#dna-pearl-core)"/>
+          <!-- 결정 본체 — 8 facet -->
+          <g class="dna-pearl-spin" style="transform-origin: 100px 100px; transform-box: fill-box;">
+            ${facets.map(f => `<polygon points="${f.points}" fill="url(#${f.gradId})" stroke="${safeColor}" stroke-width="0.5" stroke-opacity="0.45"/>`).join('')}
+            <!-- 외곽 8각 stroke (이중) -->
+            <polygon points="${polyPoints}" fill="none" stroke="${pathColor}" stroke-width="2.5" filter="url(#dna-glow)"/>
+            <polygon points="${polyPoints}" fill="none" stroke="${safeColor}" stroke-width="0.6" stroke-opacity="0.95"/>
+            <!-- 내부 작은 8각 (반사) -->
+            <polygon points="${VERTICES.map(v => `${(100 + (v.x - 100) * 0.45).toFixed(1)},${(100 + (v.y - 100) * 0.45).toFixed(1)}`).join(' ')}"
+                     fill="none" stroke="${safeColor}" stroke-width="0.5" stroke-opacity="0.55"/>
+          </g>
+          <!-- 안쪽 헬릭스 (역회전) -->
           <g class="dna-pearl-inner-spin">${innerDots}</g>
+          <!-- 외곽 헬릭스 점 (정적, pulse) -->
           ${dotsOuter}
-          <circle cx="100" cy="100" r="4" fill="${pathColor}" opacity="0.98"/>
+          <!-- 중심 빛 -->
+          <circle cx="100" cy="100" r="3.5" fill="${safeColor}" opacity="1"/>
+          <circle cx="100" cy="100" r="6" fill="${safeColor}" opacity="0.4" filter="url(#dna-bigglow)"/>
+          <!-- sparkles -->
+          <g fill="${safeColor}" opacity="0.85">${sparkles}</g>
         </svg>
       </div>
       <div class="shell-story-tier">${pathLabel}</div>
@@ -22207,7 +22339,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.69-diag-on-deeper';
+const APP_VERSION = 'v4.0.70-dna-gem-beach-free';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
