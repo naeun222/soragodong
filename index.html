@@ -15840,13 +15840,27 @@ async function _completeMutationToMission(strategyId, opt, chatHistory) {
     cancelLabel: '취소'
   });
   if (!yes) return;
+  // 사용자 요청 2026-04-28: 전략 DNA 카드도 update — 새 차원/제안으로 진화
   mutateToNewGeneration(strategyId, opt.layer, opt.action);
   const refreshed = getStrategyCard(strategyId);
+  if (refreshed) {
+    // proposal (한 줄 ~40자) 로 카드 title 갱신 — opt.action 보다 깔끔
+    refreshed.title = proposal.length > 50 ? proposal.slice(0, 50) + '...' : proposal;
+    // 새 generation에 proposal도 별도 필드로 보존 (action은 layer 추천 그대로 유지)
+    const lastGen = refreshed.generations[refreshed.generations.length - 1];
+    if (lastGen) {
+      lastGen.proposal = proposal;
+      lastGen.layerName = layerName;
+    }
+    // psychConcept 도 새 차원에 맞춰 짧게 update
+    refreshed.psychConcept = `${layerName} 차원 — ${opt.action.slice(0, 60)}`;
+    refreshed.actionStrategy = proposal;
+  }
   const newGenIdx = (refreshed?.generations?.length || 1) - 1;
   createMission(proposal, `🧬 ${card.title} — ${layerName} 차원`, {
     strategyId,
     generationIdx: newGenIdx,
-    linkedStrategy: card.title
+    linkedStrategy: refreshed?.title || card.title
   });
   saveState({ force: true });
   showCelebration('🐚', '소라가 널 부르고 있어!', '✨');
