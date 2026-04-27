@@ -8670,7 +8670,7 @@ function onbPositionStep(step, retryCount) {
     setTimeout(async () => {
       if (typeof showAttemptResultModal !== 'function') return;
       try {
-        const status = await showAttemptResultModal('튜토리얼 미션');
+        const status = await showAttemptResultModal('마감 직전 폭발력 신뢰');
         // 사용자가 옵션 선택 후 자동 next
         if (status && window._onbTutorialMode && _onbStep === stepIdxAtRender) {
           // DNA 박히는 효과 데모 (작동했어 시)
@@ -11173,7 +11173,7 @@ async function triggerAttemptResultFlow(mission) {
   const todayK = todayKey();
   const card = (state.topicCards || []).find(c => c.id === mission.strategyId);
   const cardTitle = card ? card.title : mission.title;
-  const status = await showAttemptResultModal(`"${cardTitle}" — ${mission.title}`);
+  const status = await showAttemptResultModal(cardTitle);
   if (!status) return;
   // ⏸ 미루기 — 날짜 picker → mission.scheduledFor 갱신, 결과 답 안 함
   if (status === 'defer') {
@@ -14973,8 +14973,8 @@ function determineEmbodimentPath(card) {
 
 // V4-1d-2: 시도 결과 체크 4 옵션 모달.
 // 안티-자책 톤 (V4 비전 5.9): "실패" X, "안 통했어 / 못 시도했어" 톤.
-// returns: 'worked' | 'meh' | 'didnt' | 'skipped' | null (사용자 취소)
-async function showAttemptResultModal(missionTitle) {
+// returns: 'worked' | 'meh' | 'didnt' | 'skipped' | 'defer' | null (사용자 취소)
+async function showAttemptResultModal(strategyName) {
   const options = [
     { label: '👍 작동했어',    value: 'worked' },
     { label: '🤔 그저 그래',    value: 'meh' },
@@ -14984,7 +14984,7 @@ async function showAttemptResultModal(missionTitle) {
   ];
   return await showOptionsModal({
     title: '어땠어?',
-    message: missionTitle ? `"${missionTitle}"\n\n너에게 솔직하게.` : '너에게 솔직하게.',
+    message: strategyName ? `「${strategyName}」을 해서\n문제가 해결됐어?` : '문제가 해결됐어?',
     options
   });
 }
