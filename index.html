@@ -5271,10 +5271,10 @@
     </div>
 
     <!-- CHAT ARCHIVE MODAL (V3.3) -->
-    <div class="exec-modal-overlay" id="chatArchiveOverlay" style="display:none;" onclick="if(event.target===this) closeChatArchive()">
-      <div class="exec-modal" style="max-height:88vh; overflow-y:auto;">
+    <div class="exec-modal-overlay" id="chatArchiveOverlay" style="display:none; z-index:600;" onclick="if(event.target===this) closeChatArchive()">
+      <div class="exec-modal" style="max-height:80vh; overflow-y:auto;">
         <div class="exec-modal-title">📚 이전 대화</div>
-        <div class="exec-modal-sub">7일 전 대화는 자동으로 일별 요약되고 보관돼.<br>요약 카드 탭하면 원본도 볼 수 있어.</div>
+        <div class="exec-modal-sub">"이 대화 마무리"하면 여기로. 7일 뒤 자동 사라짐 (잠깐 보관).<br>요약 카드 탭하면 원본도 볼 수 있어.</div>
         <div id="chatArchiveContent"></div>
         <button class="btn-secondary" onclick="closeChatArchive()" style="margin-top:14px; width:100%;">닫기</button>
       </div>
@@ -15584,10 +15584,15 @@ function openChatArchive() {
   _expandedArchiveDates.clear();
   renderChatArchiveModal();
   document.getElementById('chatArchiveOverlay').style.display = 'flex';
+  // V4-fix: 모달이 chat-input-bar에 가려지는 것 방지
+  const chatBar = document.getElementById('chatInputBar');
+  if (chatBar) chatBar.style.visibility = 'hidden';
 }
 
 function closeChatArchive() {
   document.getElementById('chatArchiveOverlay').style.display = 'none';
+  const chatBar = document.getElementById('chatInputBar');
+  if (chatBar) chatBar.style.visibility = '';
 }
 
 function renderChatArchiveModal() {
@@ -19931,7 +19936,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.55-deep-dive';
+const APP_VERSION = 'v4.0.56-archive-z';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
