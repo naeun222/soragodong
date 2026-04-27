@@ -1759,23 +1759,7 @@
     flex-shrink: 0;
   }
 
-  /* V4-1u-b-3: V3 5블록 토글 */
-  .v3-blocks-toggle {
-    margin: 8px 0 12px;
-    text-align: center;
-  }
-  .v3-blocks-toggle button {
-    background: transparent;
-    border: 1px dashed var(--border);
-    color: var(--text-soft);
-    padding: 6px 14px;
-    border-radius: 8px;
-    font-size: 11px;
-    font-family: inherit;
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .v3-blocks-toggle button:active { color: var(--text-dim); border-color: var(--text-soft); }
+  /* V3 5블록 CSS — V4-fix에서 dead code. 보존 (참고용) */
   /* V4-1u-b: 타임테이블 시간 grid */
   .v4-timetable-section {
     margin: 20px 0 24px;
@@ -1873,10 +1857,17 @@
     color: var(--text-dim);
     padding: 14px 8px 6px;
   }
-  /* V4-1v + fix: 서랍장 4 그룹 분류 (한 줄 형태 + collapse) */
+  /* V4-1v + fix: 서랍장 4 그룹 분류 (한 줄 + 그룹별 좌측 컬러 바 + 미리보기) */
   .drawer-group {
     margin-bottom: 10px;
+    border-left: 3px solid transparent;
+    padding-left: 8px;
+    border-radius: 8px;
   }
+  .drawer-group.group-now   { border-left-color: #d4a76a; }
+  .drawer-group.group-big   { border-left-color: #8fc88f; }
+  .drawer-group.group-later { border-left-color: #a89dc8; }
+  .drawer-group.group-idea  { border-left-color: #7ab9d4; }
   .drawer-group-header {
     font-size: 11px;
     color: var(--text-dim);
@@ -1887,8 +1878,17 @@
     cursor: pointer;
     transition: background 0.15s;
     user-select: none;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
   }
   .drawer-group-header:active { background: var(--bg); }
+  .drawer-group-preview {
+    font-size: 10px;
+    color: var(--text-soft);
+    font-style: italic;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 60%;
+    flex-shrink: 1;
+  }
   .drawer-row-list {
     margin: 4px 0 0;
   }
@@ -8802,6 +8802,8 @@ async function showReflectionList() {
     </div>
   `;
   document.body.appendChild(overlay);
+  // V4-fix: opacity 0 → 1 (.show 클래스 안 박으면 안 보임 = 먹통 버그)
+  setTimeout(() => overlay.classList.add('show'), 20);
 }
 
 function closeReflectionListModal() {
@@ -13738,7 +13740,10 @@ function switchDayModalTab(tab) {
     // 일기 본문
     if (entry.diary)     html += `<div class="day-diary">${escapeHtml(entry.diary)}</div>`;
     if (entry.aiSummary) html += `<div class="day-summary">🤖 ${escapeHtml(entry.aiSummary)}</div>`;
-    if (entry.note)      html += `<div class="day-summary" style="border-color:var(--accent2); background:rgba(212,167,106,0.08);">${escapeHtml(entry.note)}</div>`;
+    // V4-fix: dailyQuestion 있으면 entry.note는 답변이라 Q+A 세트 박스에만. 없을 때만 별도 표시.
+    if (entry.note && !entry.dailyQuestion?.text) {
+      html += `<div class="day-summary" style="border-color:var(--accent2); background:rgba(212,167,106,0.08);">${escapeHtml(entry.note)}</div>`;
+    }
     if (entry.dailyQuestion?.text) {
       // V4-fix: Q + A 한 세트 박스로 묶음
       const ans = entry.dailyQuestionAnswer || entry.note || '';
@@ -15261,9 +15266,14 @@ function renderExecute() {
           const items = groups[key];
           if (!items.length) return;
           const isCollapsed = !!collapsed[key];
-          html += `<div class="drawer-group">
+          // V4-fix: collapsed 그룹 헤더에 첫 항목 미리보기 (감 잡기)
+          const preview = isCollapsed && items[0]
+            ? `<span class="drawer-group-preview">${escapeHtml((items[0].title || '').slice(0, 24))}${items.length > 1 ? ` +${items.length - 1}` : ''}</span>`
+            : '';
+          html += `<div class="drawer-group group-${key}">
             <div class="drawer-group-header" onclick="toggleDrawerGroup('${key}')">
-              <span>${isCollapsed ? '▸' : '▾'} ${label} · ${items.length}</span>
+              <span>${isCollapsed ? '▸' : '▾'} ${label} · ${items.length}${preview ? '' : ''}</span>
+              ${preview}
             </div>`;
           if (!isCollapsed) {
             html += `<div class="drawer-row-list">`;
@@ -15320,16 +15330,7 @@ function renderExecute() {
       }, 250);
     }
 
-    // V4-1u-b-3: V3 5블록은 default 숨김 (V4 비전 10.6 5블록 제거). 사용자 명시 토글로 펼침.
-    const show5Blocks = state.preferences && state.preferences.show5Blocks === true;
-    html += `
-      <div class="v3-blocks-toggle">
-        <button onclick="toggle5Blocks()">${show5Blocks ? '▴ V3 5블록 접기' : '▾ V3 5블록 보기 (이전 버전)'}</button>
-      </div>
-    `;
-    if (show5Blocks) {
-      html += renderTimetableHTML();
-    }
+    // V4-fix: V3 5블록 완전 삭제 (사용자 명시). dayPlan 데이터는 보존.
   }
 
   container.innerHTML = html;
@@ -16389,13 +16390,8 @@ async function addTodayTask() {
   showToast('오늘 할 일에 추가됨 📋');
 }
 
-// V4-1u-b-3: V3 5블록 토글 (default 숨김)
-function toggle5Blocks() {
-  if (!state.preferences) state.preferences = {};
-  state.preferences.show5Blocks = !state.preferences.show5Blocks;
-  saveState();
-  renderExecute();
-}
+// V3 5블록 토글 — V4-fix에서 완전 삭제로 dead code (호출 X). 함수 stub만 남겨 onclick 호환.
+function toggle5Blocks() { /* dead — V4 5블록 제거 */ }
 
 // V4-1u-d: 할 일 → 일정 박기 (V4 비전 10.7) — task.scheduledStart/End + state.todaySchedule push (taskId)
 async function scheduleTaskToTime(taskId) {
@@ -20076,7 +20072,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.59-batch-fixes';
+const APP_VERSION = 'v4.0.60-cleanup';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
