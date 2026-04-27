@@ -20256,9 +20256,9 @@ async function testSeedV4Data() {
   const stratSeeds = [
     // 최근 분기 (Q-1) — 환경 차원 도구
     { title: '마감 직전 폭발력 신뢰', status: 'working', gens: 1, attempts: [['worked',3]], days: 20,
-      problem: '논문·발표 마감이 다가올 때마다 일찍 시작하려고 알람도 맞추고 계획도 짰는데, 결국 마감 직전에야 폭발적으로 작업이 되더라. 매번 \'또 미뤘다\'며 자책했지만 사실 일찍 시작했을 때보다 마감 직전 결과가 더 좋을 때가 많아.',
-      concept: 'ADHD의 time-blindness와 activation 곤란 때문에 평소엔 도파민이 안 나와 진입이 어려워. 근데 마감 임박 = 강한 외부 자극 = 도파민 분비 ↑ → 자연스러운 진입. 이건 결함이 아니라 너의 작동 방식. \'미루기\'로 자책할 게 아니라 그 시간 동안 잠재의식이 준비하고 있다고 신뢰하는 게 핵심.',
-      action: '① 마감 5일 전부터 \'폭발력 trigger 시기\' 인지 — 일찍 시작 안 되어도 자책 X.\n② 마감 2-3일 전 환경 셋업: 카페 자리 예약 / 핸드폰 다른 방 / 노이즈 캔슬 헤드폰.\n③ 마감 직전엔 그냥 환경에 들어가기 — 의지로 \'시작하자\' 안 외쳐도 자동 발동.\n④ 끝나고 자책 대신 \'이번엔 어떻게 작동했지\' 한 줄 기록.' },
+      problem: '마감 임박해야 작업이 폭발적으로 돼. 일찍 시작 시도했지만 결국 미루다 자책 반복.',
+      concept: 'ADHD time-blindness + activation 곤란. 마감 임박 = 도파민 ↑ → 자연 진입. 결함 X 작동 방식 ○. \'미루기\' 자책 X, 잠재의식이 준비 중.',
+      action: '① 마감 5일 전 \'폭발력 trigger 시기\' 인지.\n② 2-3일 전 환경 셋업 (카페 / 폰 다른 방 / 노이즈 캔슬).\n③ 마감 직전 환경에 들어가기 — 의지 X 자동 발동.' },
     { title: '거절은 그날 안에', status: 'working', gens: 1, attempts: [['worked',3], ['didnt',1]], days: 25,
       problem: '거절 메일/메시지 며칠 미루다가 더 어려워짐. 부담만 커짐.',
       concept: 'Decisional procrastination. 미룰수록 인지 부하 ↑. 짧게 답하는 게 친절.',
@@ -20694,8 +20694,9 @@ async function testSeedV4Data() {
   // missions 5 (오늘 pending / 어제 carryover pending / 그제 carryover pending / completed / expired)
   const yesterdayKey = new Date(today.getTime() - 86400000).toISOString().split('T')[0];
   const dayBeforeKey = new Date(today.getTime() - 2 * 86400000).toISOString().split('T')[0];
-  // 사용자 요청 2026-04-28: pending 미션 시드 제거 (튜토리얼 흐름 깔끔하게). completed/expired만 유지 (시각 검증)
+  // 사용자 요청 2026-04-28: pending 미션 — 마감 직전 폭발력 신뢰 가닥에 1개만 (양생방 카드에 '🔍 결과 체크' 버튼 뜨도록)
   state.missions = [
+    { id: 'mis_seed_strat0_pending', title: '마감 직전 환경 셋업 1번', description: '카페 자리 + 폰 다른 방', status: 'pending', scheduledFor: new Date(today.getTime() - 86400000).toISOString().split('T')[0], createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: 'strat_seed_0', generationIdx: 0, _followupAsked: true },
     { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
     { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
   ];
