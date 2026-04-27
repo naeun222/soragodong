@@ -21485,8 +21485,8 @@ async function testSeedV4Data() {
         previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c2/9f/30c29f0b-bed7-d993-6909-0392418d4dcc/mzaf_15564917017364106254.plus.aac.p.m4a',
         trackUrl: ''
       } },
-    // 사용자 요청 2026-04-28: '잊지 못할 순간' 슬라이드에 노출되는 카드 — 사용자가 public/kimchi.webp 직접 박음 (66KB 저용량)
-    { c: '음식', content: '엄마 김치찌개', daysAgo: 8, note: '비 오는 날 — 고등학교 그 부엌 생각.', photo: '/kimchi.webp' },
+    // 사용자 요청 2026-04-28: '잊지 못할 순간' 슬라이드에 노출되는 카드 — 사용자가 public/kimchi.jpg 직접 박음 (~90KB)
+    { c: '음식', content: '엄마 김치찌개', daysAgo: 8, note: '비 오는 날 — 고등학교 그 부엌 생각.', photo: '/kimchi.jpg' },
     { c: '장소', content: '한강 벤치 새벽 4시', daysAgo: 12, note: '논문 막힌 날. 30분 앉아있다 머리 풀림.' },
     { c: '순간', content: '논문 첫 단락 완성한 순간', daysAgo: 18 },
     { c: '사람', content: '오랜 친구가 갑자기 카톡', daysAgo: 22, note: '"잘 지내?" 그 한 마디.' },
@@ -25672,38 +25672,62 @@ function _buildNarrativeSlideHTML(review) {
   const sectionsArr = Array.isArray(review.sections) ? review.sections : [];
   const nextSection = sectionsArr.find(s => (s.label || '').includes('다음'));
   const otherSections = sectionsArr.filter(s => s !== nextSection);
-  // 사용자 요청 2026-04-28: 미적 — section별 그라디언트 카드, 라벨 emoji 자동 추출
-  const sectionStyle = (label) => {
+  // 사용자 요청 2026-04-28: 매거진식 pull-quote — 박스 줄이고 type 자체로 elegant
+  const sectionAccent = (label) => {
     const l = label || '';
-    if (l.includes('흐름'))  return { gradient: 'linear-gradient(135deg, rgba(126,200,227,0.18), rgba(140,160,210,0.10))', border: 'rgba(126,200,227,0.4)' };
-    if (l.includes('자라') || l.includes('성장')) return { gradient: 'linear-gradient(135deg, rgba(143,200,143,0.18), rgba(212,167,106,0.10))', border: 'rgba(143,200,143,0.4)' };
-    if (l.includes('패턴'))  return { gradient: 'linear-gradient(135deg, rgba(168,157,200,0.18), rgba(140,140,180,0.10))', border: 'rgba(168,157,200,0.4)' };
-    return { gradient: 'linear-gradient(135deg, rgba(212,167,106,0.18), rgba(168,157,200,0.10))', border: 'rgba(212,167,106,0.4)' };
+    if (l.includes('흐름'))  return '#7ec8e3';   // 파랑
+    if (l.includes('자라') || l.includes('성장')) return '#9fd49f';  // 녹
+    if (l.includes('패턴'))  return '#b3a4d6';   // 보라
+    return '#d4a76a';                              // 금 (default)
   };
   return `
-    <div class="stories-label">너의 분기, 한 단락</div>
-    <div style="background:linear-gradient(135deg, rgba(212,167,106,0.16), rgba(168,157,200,0.10)); border:1px solid rgba(212,167,106,0.4); border-radius:16px; padding:18px 18px; margin-bottom:14px;">
-      <div style="font-size:17px; line-height:1.7; color:white; font-family:'Gowun Batang', serif;">${escapeHtml(summary || '데이터가 더 쌓이면 narrative가 보일 거야.')}</div>
+    <div style="display:flex; flex-direction:column; align-items:center; max-width:320px; padding:20px 16px;">
+      <!-- 라벨 + 가는 양쪽 선 -->
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:24px;">
+        <div style="width:20px; height:1px; background:rgba(212,167,106,0.45);"></div>
+        <div class="stories-label" style="margin:0;">너의 분기, 한 단락</div>
+        <div style="width:20px; height:1px; background:rgba(212,167,106,0.45);"></div>
+      </div>
+
+      <!-- pull quote: 큰 따옴표 + serif 본문 -->
+      <div style="position:relative; padding:8px 6px; margin-bottom:26px;">
+        <div style="position:absolute; top:-12px; left:-8px; font-size:48px; line-height:1; color:rgba(212,167,106,0.55); font-family:'Gowun Batang', serif;">"</div>
+        <div style="font-size:18px; line-height:1.85; color:white; font-family:'Gowun Batang', serif; font-weight:400; text-align:center; padding:0 14px; letter-spacing:0.005em;">
+          ${escapeHtml(summary || '데이터가 더 쌓이면 narrative가 보일 거야.')}
+        </div>
+        <div style="position:absolute; bottom:-30px; right:-4px; font-size:48px; line-height:1; color:rgba(212,167,106,0.55); font-family:'Gowun Batang', serif;">"</div>
+      </div>
+
+      <!-- 가는 구분 ✦ -->
+      ${otherSections.length > 0 ? `
+        <div style="display:flex; align-items:center; gap:8px; margin:20px 0 18px; opacity:0.55;">
+          <div style="width:30px; height:1px; background:rgba(212,167,106,0.4);"></div>
+          <span style="color:rgba(212,167,106,0.75); font-size:11px;">✦</span>
+          <div style="width:30px; height:1px; background:rgba(212,167,106,0.4);"></div>
+        </div>
+
+        <!-- section: 라벨 + 색 dot + 본문 (박스 X, 인라인) -->
+        <div style="display:flex; flex-direction:column; gap:13px; width:100%;">
+          ${otherSections.map(s => {
+            const accent = sectionAccent(s.label);
+            return `
+              <div style="border-left:2px solid ${accent}; padding:2px 0 2px 12px;">
+                <div style="font-size:10px; color:${accent}; margin-bottom:4px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; opacity:0.85;">${escapeHtml(s.label || '')}</div>
+                <div style="font-size:13px; color:rgba(255,255,255,0.88); line-height:1.6;">${escapeHtml(s.body || '')}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : ''}
+
+      <!-- next: 분리된 가벼운 highlight -->
+      ${nextSection ? `
+        <div style="margin-top:22px; padding:14px 16px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(212,167,106,0.10)); border-radius:14px; width:100%; box-sizing:border-box;">
+          <div style="font-size:10px; color:rgba(143,200,143,0.95); margin-bottom:5px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase;">${escapeHtml(nextSection.label || '다음 분기에')}</div>
+          <div style="font-size:13px; color:white; line-height:1.6;">${escapeHtml(nextSection.body || '')}</div>
+        </div>
+      ` : ''}
     </div>
-    ${otherSections.length > 0 ? `
-      <div style="display:flex; flex-direction:column; gap:9px; max-width:300px;">
-        ${otherSections.map(s => {
-          const st = sectionStyle(s.label);
-          return `
-            <div style="background:${st.gradient}; border:1px solid ${st.border}; border-radius:12px; padding:11px 14px;">
-              <div style="font-size:11px; color:rgba(255,255,255,0.75); margin-bottom:5px; font-weight:600; letter-spacing:0.04em;">${escapeHtml(s.label || '')}</div>
-              <div style="font-size:13px; color:rgba(255,255,255,0.92); line-height:1.6;">${escapeHtml(s.body || '')}</div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    ` : ''}
-    ${nextSection ? `
-      <div style="margin-top:12px; background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(212,167,106,0.12)); border:1px solid rgba(143,200,143,0.45); border-radius:14px; padding:13px 16px; max-width:300px;">
-        <div style="font-size:11px; color:rgba(255,255,255,0.75); margin-bottom:5px; font-weight:600; letter-spacing:0.04em;">${escapeHtml(nextSection.label || '다음 분기에')}</div>
-        <div style="font-size:13px; color:white; line-height:1.6;">${escapeHtml(nextSection.body || '')}</div>
-      </div>
-    ` : ''}
   `;
 }
 
@@ -27591,7 +27615,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.134-kimchi-local';
+const APP_VERSION = 'v4.0.135-narrative-magazine';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.

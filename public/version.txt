@@ -1,1 +1,1 @@
-v4.0.134-kimchi-local
+v4.0.135-narrative-magazine
