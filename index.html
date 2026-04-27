@@ -9002,13 +9002,21 @@ function onbPositionStep(step, retryCount) {
     setTimeout(() => {
       if (typeof showCrystallizeRitualModal === 'function') {
         try {
-          const fakeCard = { title: '마감 직전 폭발력 신뢰', id: 'demo_strat' };
+          // 사용자 요청 2026-04-28: 튜토리얼은 진화한 길 path (방금 돌연변이로 진화 경험 후) + shellsUsed 예시
+          const fakeCard = {
+            title: '환경 차원 - 폰 거리두기',
+            id: 'demo_strat',
+            generations: [
+              { gen: 1, layer: 'L2', attempts: [{ status: 'didnt' }, { status: 'didnt' }], shells: [], status: 'mutated' },
+              { gen: 2, layer: 'L3', attempts: [{ status: 'worked' }, { status: 'worked' }, { status: 'worked' }, { status: 'worked' }, { status: 'worked' }], shells: [], status: 'embodied' }
+            ]
+          };
           const fakePearl = {
             id: 'demo_dna_pearl',
-            embodimentPath: 'one-shot',
+            embodimentPath: 'evolved',
             shellsUsed: [],
-            totalAttempts: 5,
-            totalGens: 1,
+            totalAttempts: 7,
+            totalGens: 2,
             workedCount: 5
           };
           showCrystallizeRitualModal(fakeCard, fakePearl);
@@ -16022,29 +16030,45 @@ function showCrystallizeRitualModal(card, dnaPearl) {
     };
   });
   const polyRitual = RV.map(v => `${v.x.toFixed(1)},${v.y.toFixed(1)}`).join(' ');
-  // V4-fix v3 (사용자 보고): 헬릭스 점 — shellsUsed 비어도 다채로운 색 (단일 색 X)
+  // 사용자 요청 2026-04-28: 점 → 매핑된 소라 아이콘 (gens.shells 또는 shellsUsed)
   const shellList = (state.shellCollection || []);
-  const shellsToShow = (dnaPearl.shellsUsed || []).slice(0, 8);
-  const tierColors = { legend: '#ffd93d', call: '#d4a76a', golden: '#e8c170', main: '#7ec8e3', daily: '#a89dc8', light: '#b39ddb' };
-  const fallbackPalette = ['#ffd93d', '#5fcfba', '#ff8da1', '#a89dc8', '#7ec8e3', '#ffb86b', '#b39ddb', '#fff5b8'];
-  const dotColors = shellsToShow.map(sid => {
-    const s = shellList.find(x => x._id === sid);
-    return tierColors[s?.tier] || '#a89dc8';
-  });
-  while (dotColors.length < 8) {
-    dotColors.push(fallbackPalette[dotColors.length % fallbackPalette.length]);
+  // 카드의 모든 generation에서 사용된 shell IDs 모으기 (DNA 박힌 소라들)
+  let collectedShellIds = (dnaPearl.shellsUsed || []).slice();
+  if (collectedShellIds.length === 0 && card && Array.isArray(card.generations)) {
+    card.generations.forEach(g => {
+      if (Array.isArray(g.shells)) collectedShellIds.push(...g.shells);
+    });
+    // attempts에서 shellId도 모음 (record로 박힌 거)
+    card.generations.forEach(g => {
+      (g.attempts || []).forEach(a => {
+        if (a.shellId && !collectedShellIds.includes(a.shellId)) collectedShellIds.push(a.shellId);
+      });
+    });
   }
-  // 외곽 헬릭스 점 (각 점마다 다른 색 + pulse)
-  const outerDotsRitual = dotColors.map((c, i) => {
+  // 시드/튜토리얼 데모 fallback 소라 emoji
+  const demoShellEmojis = ['⭐','🌟','✨','💫','🌙','💎','🪐','🦄'];
+  const tierColors = { legend: '#ffd93d', call: '#d4a76a', golden: '#e8c170', main: '#7ec8e3', daily: '#a89dc8', light: '#b39ddb' };
+  // 8개 슬롯: 매핑된 shell이 있으면 그 emoji, 없으면 demo emoji
+  const ritualShells = [];
+  for (let i = 0; i < 8; i++) {
+    const sid = collectedShellIds[i];
+    const matched = sid ? shellList.find(x => x._id === sid) : null;
+    if (matched) {
+      ritualShells.push({ emoji: matched.type, color: tierColors[matched.tier] || '#a89dc8' });
+    } else {
+      ritualShells.push({ emoji: demoShellEmojis[i % demoShellEmojis.length], color: '#ffd93d' });
+    }
+  }
+  const dotColors = ritualShells.map(s => s.color);
+  // 외곽 헬릭스 — 소라 emoji 텍스트 (각 다른 위치 + pulse glow)
+  const outerDotsRitual = ritualShells.map((s, i) => {
     const angle = (i / 8) * 360 - 90;
     const cx = 100 + 76 * Math.cos(angle * Math.PI / 180);
     const cy = 100 + 76 * Math.sin(angle * Math.PI / 180);
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.5" fill="${c}" opacity="0.95">
-      <animate attributeName="r" values="4.5;6;4.5" dur="${2 + (i % 3) * 0.5}s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0.7;1;0.7" dur="${2 + (i % 3) * 0.5}s" repeatCount="indefinite"/>
-    </circle>
-    <!-- glow ring 외부 -->
-    <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="7" fill="${c}" opacity="0.25" filter="url(#cryst-bigglow)"/>`;
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="11" fill="${s.color}" opacity="0.20" filter="url(#cryst-bigglow)"/>
+      <text x="${cx.toFixed(1)}" y="${(cy + 5).toFixed(1)}" text-anchor="middle" font-size="16" style="filter:drop-shadow(0 0 4px ${s.color});">${s.emoji}
+      <animateTransform attributeName="transform" type="scale" values="1;1.2;1" dur="${2 + (i % 3) * 0.5}s" additive="sum" repeatCount="indefinite"/>
+      </text>`;
   }).join('');
   // 안쪽 헬릭스 (역회전, 색 다양화)
   const innerColors = [dotColors[0], dotColors[2], dotColors[4], dotColors[6], dotColors[1], dotColors[3]];
