@@ -25434,26 +25434,38 @@ function _buildNewFeaturesSlideHTML(inRange) {
     `;
   }
 
-  const items = [];
-  if (newTraits.length) items.push({ label: '특성', icon: '🪞', list: newTraits });
-  if (newValues.length) items.push({ label: '가치', icon: '⭐', list: newValues });
-  if (newPatterns.length) items.push({ label: '패턴', icon: '🌫', list: newPatterns });
-
-  // 가장 confidence 높은 항목 1-3개 highlight
-  const topItems = [...newTraits, ...newValues, ...newPatterns]
-    .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
-    .slice(0, 3);
+  // 사용자 요청 2026-04-28: 미적 보강 — 3 카테고리 카드 그리드 + 그라디언트 + top 항목 highlight
+  const cats = [
+    { key: 'traits',   icon: '🪞', label: '특성', list: newTraits,   gradient: 'linear-gradient(135deg, rgba(168,157,200,0.28), rgba(140,160,210,0.18))', border: 'rgba(168,157,200,0.5)' },
+    { key: 'values',   icon: '⭐', label: '가치', list: newValues,   gradient: 'linear-gradient(135deg, rgba(212,167,106,0.28), rgba(255,210,80,0.18))',   border: 'rgba(212,167,106,0.5)' },
+    { key: 'patterns', icon: '🌫', label: '패턴', list: newPatterns, gradient: 'linear-gradient(135deg, rgba(143,200,143,0.26), rgba(126,200,227,0.18))', border: 'rgba(143,200,143,0.5)' }
+  ];
+  const visible = cats.filter(c => c.list.length > 0);
 
   return `
     <div class="stories-label">AI가 포착한 새 특징</div>
-    <div class="stories-title">${total}개가 너 안에서 처음 보였어</div>
-    <div class="stories-stat-list">
-      ${topItems.map(it => `
-        <div class="stories-stat-row neutral">
-          <span class="stories-stat-label" style="font-style: italic;">${escapeHtml(it.name || '')}</span>
-          <span class="stories-stat-value" style="font-size: 12px; opacity:0.7;">${Math.round((it.confidence || 0) * 100)}%</span>
-        </div>
-      `).join('')}
+    <div class="stories-title" style="margin-bottom:18px;">${total}개가 너 안에서 처음 보였어</div>
+    <div style="display:flex; flex-direction:column; gap:11px; max-width:300px;">
+      ${visible.map(c => {
+        const top = c.list.sort((a,b) => (b.confidence||0) - (a.confidence||0))[0];
+        const confPct = Math.round((top.confidence || 0) * 100);
+        return `
+          <div style="background:${c.gradient}; border:1px solid ${c.border}; border-radius:14px; padding:13px 15px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+              <div style="display:flex; align-items:center; gap:7px;">
+                <span style="font-size:18px;">${c.icon}</span>
+                <span style="font-size:12px; color:rgba(255,255,255,0.85); font-weight:600; letter-spacing:0.04em;">${c.label}</span>
+              </div>
+              <span style="font-size:11px; color:rgba(255,255,255,0.7);">${c.list.length}개</span>
+            </div>
+            <div style="font-size:14px; color:white; font-weight:500; margin-bottom:6px; line-height:1.4;">${escapeHtml(top.name || '')}</div>
+            <div style="height:3px; background:rgba(255,255,255,0.14); border-radius:2px; overflow:hidden;">
+              <div style="height:100%; width:${confPct}%; background:${c.border}; border-radius:2px;"></div>
+            </div>
+            <div style="font-size:10px; color:rgba(255,255,255,0.55); margin-top:4px; text-align:right;">신뢰도 ${confPct}%</div>
+          </div>
+        `;
+      }).join('')}
     </div>
     <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px;">
       나 탭에서 ✓ 맞아 / 아니야 확인할 수 있어
@@ -25608,70 +25620,88 @@ function _buildPatternsSlideHTML(inRange) {
   // 가장 confidence 높은 진단 1-2개
   const topDiags = diags.sort((a, b) => (b.confidence || 0) - (a.confidence || 0)).slice(0, 2);
 
-  // 사용자 요청 2026-04-28: 슬라이드 보충 — 첫 발견일, 상태(active/shown), 짧은 설명
-  const statusLabel = (s) => s === 'active' ? '🔴 active' : s === 'shown' ? '👁 인용됨' : s;
+  // 사용자 요청 2026-04-28: 미적 보강 — type별 색 그라디언트, confidence bar, 깔끔한 메타
+  const statusBadge = (s) => s === 'active' ? '<span style="background:rgba(255,80,80,0.28); color:#ffaaaa; font-size:9px; padding:2px 7px; border-radius:6px; letter-spacing:0.04em;">ACTIVE</span>' : s === 'shown' ? '<span style="background:rgba(168,157,200,0.28); color:#cfc4e8; font-size:9px; padding:2px 7px; border-radius:6px; letter-spacing:0.04em;">인용됨</span>' : '';
   const fmtDate = (iso) => {
     if (!iso) return '';
     const d = new Date(iso);
     return `${d.getMonth() + 1}월 ${d.getDate()}일`;
   };
-  const typeDescription = {
-    weak_tool: '시도해도 안 통하는 도구. 다른 차원으로.',
-    wrong_layer: '차원 자체가 안 맞을 가능성. 인지/행동/환경/사회/메타 다른 곳.',
-    value_clash: '두 가치 충돌. 우선순위 정리 필요.',
-    avoidance: '회피 신호 — 의식적으로 직면하거나 우회 설계.',
-    willpower_cap: '의지 자원 임계치. 환경 자동화 ↑.'
+  const typeStyles = {
+    weak_tool:    { gradient: 'linear-gradient(135deg, rgba(255,140,90,0.22), rgba(212,167,106,0.14))', border: 'rgba(255,140,90,0.5)',  desc: '시도해도 안 통하는 도구. 다른 차원으로.' },
+    wrong_layer:  { gradient: 'linear-gradient(135deg, rgba(126,200,227,0.22), rgba(140,160,210,0.14))', border: 'rgba(126,200,227,0.5)', desc: '차원 자체가 안 맞을 가능성.' },
+    value_clash:  { gradient: 'linear-gradient(135deg, rgba(212,167,106,0.22), rgba(168,157,200,0.14))', border: 'rgba(212,167,106,0.5)', desc: '두 가치 충돌. 우선순위 정리 필요.' },
+    avoidance:    { gradient: 'linear-gradient(135deg, rgba(168,157,200,0.22), rgba(140,140,180,0.14))', border: 'rgba(168,157,200,0.5)', desc: '회피 신호 — 의식적으로 직면하거나 우회 설계.' },
+    willpower_cap:{ gradient: 'linear-gradient(135deg, rgba(143,200,143,0.22), rgba(126,200,227,0.14))', border: 'rgba(143,200,143,0.5)', desc: '의지 자원 임계치. 환경 자동화 ↑.' }
   };
   return `
     <div class="stories-label">작동 중인 패턴</div>
-    <div class="stories-title">너 안에서 작동 중</div>
-    <div style="margin-top:14px;">
-      ${topDiags.map(d => `
-        <div style="background:rgba(255,255,255,0.06); border-left:3px solid rgba(212,167,106,0.55); border-radius:8px; padding:11px 13px; margin-bottom:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px;">
-            <span style="font-size:14px; color:white; font-weight:600;">${labels[d.type] || d.type}</span>
-            <span style="font-size:11px; color:rgba(255,255,255,0.7);">신뢰도 ${Math.round((d.confidence || 0) * 100)}%</span>
+    <div class="stories-title" style="margin-bottom:18px;">너 안에서 작동 중</div>
+    <div style="display:flex; flex-direction:column; gap:11px; max-width:300px;">
+      ${topDiags.map(d => {
+        const ts = typeStyles[d.type] || typeStyles.wrong_layer;
+        const confPct = Math.round((d.confidence || 0) * 100);
+        return `
+          <div style="background:${ts.gradient}; border:1px solid ${ts.border}; border-radius:14px; padding:14px 15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">
+              <span style="font-size:14px; color:white; font-weight:600;">${labels[d.type] || d.type}</span>
+              ${statusBadge(d.status)}
+            </div>
+            <div style="font-size:12px; color:rgba(255,255,255,0.78); line-height:1.5; margin-bottom:10px;">
+              ${ts.desc}
+            </div>
+            <div style="height:4px; background:rgba(255,255,255,0.14); border-radius:2px; overflow:hidden; margin-bottom:6px;">
+              <div style="height:100%; width:${confPct}%; background:${ts.border}; border-radius:2px;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,0.55);">
+              <span>${d.detectedAt ? `📅 ${fmtDate(d.detectedAt)}` : ''}${d.lastUpdate ? ` → ${fmtDate(d.lastUpdate)}` : ''}</span>
+              <span>신뢰도 ${confPct}%</span>
+            </div>
           </div>
-          <div style="font-size:12px; color:rgba(255,255,255,0.7); line-height:1.5; margin-bottom:6px;">
-            ${typeDescription[d.type] || ''}
-          </div>
-          <div style="font-size:10px; color:rgba(255,255,255,0.5); display:flex; gap:8px;">
-            ${d.detectedAt ? `<span>📅 ${fmtDate(d.detectedAt)} 발견</span>` : ''}
-            ${d.lastUpdate ? `<span>🔄 ${fmtDate(d.lastUpdate)} 갱신</span>` : ''}
-            <span>${statusLabel(d.status)}</span>
-          </div>
-        </div>
-      `).join('')}
+        `;
+      }).join('')}
     </div>
-    <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px; line-height:1.6;">
-      너 ≠ 그 패턴. 작동 중일 뿐. 시도 결과로 신뢰도 갱신돼.
+    <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px; line-height:1.6; text-align:center; font-style:italic;">
+      너 ≠ 그 패턴. 작동 중일 뿐.
     </div>
   `;
 }
 
 function _buildNarrativeSlideHTML(review) {
   const summary = review.summary || '';
-  // 사용자 요청 2026-04-28: 보충 — 4 sections 모두 노출 (흐름 / 새로 자라난 것 / 작동 패턴 / 다음 분기)
   const sectionsArr = Array.isArray(review.sections) ? review.sections : [];
   const nextSection = sectionsArr.find(s => (s.label || '').includes('다음'));
   const otherSections = sectionsArr.filter(s => s !== nextSection);
+  // 사용자 요청 2026-04-28: 미적 — section별 그라디언트 카드, 라벨 emoji 자동 추출
+  const sectionStyle = (label) => {
+    const l = label || '';
+    if (l.includes('흐름'))  return { gradient: 'linear-gradient(135deg, rgba(126,200,227,0.18), rgba(140,160,210,0.10))', border: 'rgba(126,200,227,0.4)' };
+    if (l.includes('자라') || l.includes('성장')) return { gradient: 'linear-gradient(135deg, rgba(143,200,143,0.18), rgba(212,167,106,0.10))', border: 'rgba(143,200,143,0.4)' };
+    if (l.includes('패턴'))  return { gradient: 'linear-gradient(135deg, rgba(168,157,200,0.18), rgba(140,140,180,0.10))', border: 'rgba(168,157,200,0.4)' };
+    return { gradient: 'linear-gradient(135deg, rgba(212,167,106,0.18), rgba(168,157,200,0.10))', border: 'rgba(212,167,106,0.4)' };
+  };
   return `
     <div class="stories-label">너의 분기, 한 단락</div>
-    <div class="stories-title" style="font-size:17px; line-height:1.7; margin-bottom:14px;">${escapeHtml(summary || '데이터가 더 쌓이면 narrative가 보일 거야.')}</div>
+    <div style="background:linear-gradient(135deg, rgba(212,167,106,0.16), rgba(168,157,200,0.10)); border:1px solid rgba(212,167,106,0.4); border-radius:16px; padding:18px 18px; margin-bottom:14px;">
+      <div style="font-size:17px; line-height:1.7; color:white; font-family:'Gowun Batang', serif;">${escapeHtml(summary || '데이터가 더 쌓이면 narrative가 보일 거야.')}</div>
+    </div>
     ${otherSections.length > 0 ? `
-      <div style="margin-top:10px;">
-        ${otherSections.map(s => `
-          <div style="margin-bottom:12px;">
-            <div style="font-size:11px; color:rgba(212,167,106,0.85); margin-bottom:4px; letter-spacing:0.04em;">${escapeHtml(s.label || '')}</div>
-            <div style="font-size:13px; color:rgba(255,255,255,0.85); line-height:1.6;">${escapeHtml(s.body || '')}</div>
-          </div>
-        `).join('')}
+      <div style="display:flex; flex-direction:column; gap:9px; max-width:300px;">
+        ${otherSections.map(s => {
+          const st = sectionStyle(s.label);
+          return `
+            <div style="background:${st.gradient}; border:1px solid ${st.border}; border-radius:12px; padding:11px 14px;">
+              <div style="font-size:11px; color:rgba(255,255,255,0.75); margin-bottom:5px; font-weight:600; letter-spacing:0.04em;">${escapeHtml(s.label || '')}</div>
+              <div style="font-size:13px; color:rgba(255,255,255,0.92); line-height:1.6;">${escapeHtml(s.body || '')}</div>
+            </div>
+          `;
+        }).join('')}
       </div>
     ` : ''}
     ${nextSection ? `
-      <div class="stories-prompt" style="margin-top:14px;">
-        <div class="stories-prompt-label">${escapeHtml(nextSection.label || '다음 분기에')}</div>
-        ${escapeHtml(nextSection.body || '')}
+      <div style="margin-top:12px; background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(212,167,106,0.12)); border:1px solid rgba(143,200,143,0.45); border-radius:14px; padding:13px 16px; max-width:300px;">
+        <div style="font-size:11px; color:rgba(255,255,255,0.75); margin-bottom:5px; font-weight:600; letter-spacing:0.04em;">${escapeHtml(nextSection.label || '다음 분기에')}</div>
+        <div style="font-size:13px; color:white; line-height:1.6;">${escapeHtml(nextSection.body || '')}</div>
       </div>
     ` : ''}
   `;
@@ -25713,16 +25743,37 @@ function _buildClosingSlideHTML(review, stats) {
   // sections에서 흐름 또는 첫 번째 section을 시적으로
   const flow = Array.isArray(review.sections) && review.sections[0] ? review.sections[0].body : '';
   const poem = flow ? flow.split(/[.\n]/)[0].slice(0, 28) : `${review.quarterKey || '분기'} — 너의 흔적`;
-  // 사용자 요청 2026-04-28: 마지막 슬라이드 더 예쁘게 — gradient + emoji + 따뜻한 마무리 인사
+  // 사용자 요청 2026-04-28: 미적 — emoji 화환 + 큰 gradient + 시구 카드 + 흐릿한 별 효과
   return `
-    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:30px 20px; max-width:320px;">
-      <div style="font-size:48px; line-height:1;">🐚</div>
-      <div class="stories-label" style="text-align:center;">${escapeHtml(review.quarterKey || '')}</div>
-      <div style="background:linear-gradient(135deg, rgba(212,167,106,0.22), rgba(168,157,200,0.18)); border:1px solid rgba(212,167,106,0.35); border-radius:18px; padding:22px 20px; text-align:center;">
-        <div class="stories-poem" style="font-size:18px; line-height:1.6; color:white; font-family:'Gowun Batang', serif;">${escapeHtml(poem)}</div>
+    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; padding:36px 22px; max-width:320px; position:relative;">
+      <!-- 배경 별 -->
+      <div style="position:absolute; top:18px; left:14px; font-size:14px; opacity:0.35;">✦</div>
+      <div style="position:absolute; top:64px; right:22px; font-size:11px; opacity:0.30;">·</div>
+      <div style="position:absolute; bottom:36px; left:24px; font-size:13px; opacity:0.32;">✧</div>
+      <div style="position:absolute; bottom:80px; right:18px; font-size:10px; opacity:0.28;">·</div>
+
+      <!-- 메인 emoji + 광원 -->
+      <div style="position:relative; display:flex; align-items:center; justify-content:center;">
+        <div style="position:absolute; width:100px; height:100px; background:radial-gradient(circle, rgba(212,167,106,0.30) 0%, transparent 70%); border-radius:50%;"></div>
+        <div style="font-size:60px; line-height:1; position:relative; filter: drop-shadow(0 0 14px rgba(212,167,106,0.5));">🐚</div>
       </div>
-      <div style="font-size:12px; color:rgba(255,255,255,0.65); text-align:center; line-height:1.7; margin-top:6px;">
-        한 페이지가 끝났어.<br>다음 페이지도 같이 ✦
+
+      <!-- 라벨 + 가는 구분선 -->
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:24px; height:1px; background:rgba(212,167,106,0.5);"></div>
+        <div class="stories-label" style="text-align:center; margin:0;">${escapeHtml(review.quarterKey || '')}</div>
+        <div style="width:24px; height:1px; background:rgba(212,167,106,0.5);"></div>
+      </div>
+
+      <!-- 시구 카드 -->
+      <div style="background:linear-gradient(135deg, rgba(212,167,106,0.25), rgba(168,157,200,0.20), rgba(143,200,143,0.18)); border:1px solid rgba(212,167,106,0.45); border-radius:20px; padding:26px 22px; text-align:center; box-shadow:0 4px 24px rgba(212,167,106,0.18);">
+        <div class="stories-poem" style="font-size:19px; line-height:1.7; color:white; font-family:'Gowun Batang', serif; font-weight:500;">${escapeHtml(poem)}</div>
+      </div>
+
+      <!-- 마무리 인사 -->
+      <div style="font-size:13px; color:rgba(255,255,255,0.78); text-align:center; line-height:1.8; letter-spacing:0.02em;">
+        한 페이지가 끝났어.<br>
+        <span style="color:rgba(212,167,106,0.95); font-weight:500;">다음 페이지도 같이 ✦</span>
       </div>
     </div>
   `;
@@ -25935,32 +25986,45 @@ function _buildDiagnosisLearningSlide(year, yearReviews) {
   });
   const sortedTypes = Object.entries(typeMap).sort((a,b) => b[1].count - a[1].count).slice(0, 4);
 
+  // 사용자 요청 2026-04-28: 미적 — month timeline bar (1-12월), type별 활동 시기 시각화
+  const typeColors = {
+    weak_tool:    'rgba(255,140,90,0.7)',
+    wrong_layer:  'rgba(126,200,227,0.7)',
+    value_clash:  'rgba(212,167,106,0.7)',
+    avoidance:    'rgba(168,157,200,0.7)',
+    willpower_cap:'rgba(143,200,143,0.7)'
+  };
   return {
     tone: 'tone-deep-3',
     html: `
       <div class="stories-label">진단 학습 곡선</div>
-      <div class="stories-title">너 안에서 작동한 패턴</div>
-      <div style="margin-top:14px;">
+      <div class="stories-title" style="margin-bottom:18px;">너 안에서 작동한 패턴</div>
+      <div style="display:flex; flex-direction:column; gap:13px; max-width:300px;">
         ${sortedTypes.map(([t, info]) => {
-          const minDate = info.dates.length > 0 ? new Date(Math.min(...info.dates.map(d => d.getTime()))) : null;
-          const maxDate = info.dates.length > 0 ? new Date(Math.max(...info.dates.map(d => d.getTime()))) : null;
-          const span = (minDate && maxDate)
-            ? (minDate.getMonth() === maxDate.getMonth()
-                ? `${minDate.getMonth()+1}월 (${seasonOf(minDate.getMonth())})`
-                : `${minDate.getMonth()+1}월 → ${maxDate.getMonth()+1}월 (${seasonOf(minDate.getMonth())} ~ ${seasonOf(maxDate.getMonth())})`)
-            : '';
+          const monthSet = new Set(info.dates.map(d => d.getMonth()));
+          const color = typeColors[t] || 'rgba(168,157,200,0.7)';
+          const minMonth = info.dates.length > 0 ? Math.min(...info.dates.map(d => d.getMonth())) + 1 : null;
+          const maxMonth = info.dates.length > 0 ? Math.max(...info.dates.map(d => d.getMonth())) + 1 : null;
+          const span = minMonth ? (minMonth === maxMonth ? `${minMonth}월` : `${minMonth}월 → ${maxMonth}월`) : '';
           return `
-            <div style="background:rgba(255,255,255,0.06); border-left:3px solid rgba(168,157,200,0.6); border-radius:8px; padding:10px 13px; margin-bottom:9px;">
-              <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+            <div style="background:rgba(255,255,255,0.05); border:1px solid ${color.replace('0.7', '0.35')}; border-radius:14px; padding:13px 14px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:9px;">
                 <span style="font-size:13px; color:white; font-weight:600;">${labels[t] || t}</span>
                 <span style="font-size:11px; color:rgba(255,255,255,0.7);">${info.count}회</span>
               </div>
-              ${span ? `<div style="font-size:10px; color:rgba(255,255,255,0.55); margin-top:4px;">📅 ${span}</div>` : ''}
+              <div style="display:grid; grid-template-columns:repeat(12, 1fr); gap:2px; margin-bottom:6px;">
+                ${Array.from({length: 12}, (_, i) => `
+                  <div style="height:14px; border-radius:2px; background:${monthSet.has(i) ? color : 'rgba(255,255,255,0.06)'};" title="${i+1}월"></div>
+                `).join('')}
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:9px; color:rgba(255,255,255,0.45); letter-spacing:0.04em;">
+                <span>1월</span><span>${span ? `📅 ${span}` : ''}</span><span>12월</span>
+              </div>
             </div>
           `;
         }).join('')}
       </div>
-      <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px;">
+      <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px; text-align:center; font-style:italic;">
         진단 받고 행동 → 결과로 confidence 갱신.
       </div>
     `
@@ -27527,7 +27591,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.132-annual-year-label';
+const APP_VERSION = 'v4.0.133-stories-aesthetic';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
