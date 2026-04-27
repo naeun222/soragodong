@@ -4482,6 +4482,29 @@
     border-radius: 16px;
     max-width: 320px;
   }
+  /* V4-fix v3 (사용자 요청): 깨달음 정리 슬라이드 */
+  .stories-archive-list {
+    display: flex; flex-direction: column; gap: 8px;
+    max-width: 320px; width: 100%;
+    margin: 8px 0;
+  }
+  .stories-archive-item {
+    padding: 10px 14px;
+    background: rgba(212,167,106,0.08);
+    border-left: 2px solid rgba(212,167,106,0.55);
+    border-radius: 8px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.92);
+    line-height: 1.55;
+    text-align: left;
+    font-family: 'Gowun Batang', serif;
+  }
+  /* V4-fix v3 (사용자 보고): DNA 진주 외곽 소라들 반시계 회전 */
+  .dna-pearl-outer-spin {
+    animation: dnaSpinReverse 18s linear infinite;
+    transform-origin: 100px 100px;
+    transform-box: fill-box;
+  }
   .stories-pearl-emoji { font-size: 32px; margin-bottom: 10px; }
   .stories-pearl-content {
     font-family: 'Gowun Batang', serif;
@@ -11071,8 +11094,8 @@ function openDnaPearlStory(pearlId) {
           </g>
           <!-- 안쪽 헬릭스 (역회전) -->
           <g class="dna-pearl-inner-spin">${innerDots}</g>
-          <!-- 외곽 헬릭스 점 (정적, pulse) -->
-          ${dotsOuter}
+          <!-- 외곽 헬릭스 점 (반시계 회전 — 사용자 요청) -->
+          <g class="dna-pearl-outer-spin">${dotsOuter}</g>
           <!-- 중심 빛 -->
           <circle cx="100" cy="100" r="3.5" fill="${safeColor}" opacity="1"/>
           <circle cx="100" cy="100" r="6" fill="${safeColor}" opacity="0.4" filter="url(#dna-bigglow)"/>
@@ -14456,8 +14479,8 @@ function showCrystallizeRitualModal(card, dnaPearl) {
             ${helixHtml}
             <!-- 안쪽 헬릭스 (역회전) -->
             <g class="dna-pearl-inner-spin">${innerDotsRitual}</g>
-            <!-- 외곽 헬릭스 점 (pulse) -->
-            ${outerDotsRitual}
+            <!-- 외곽 헬릭스 점 (반시계 회전 — 사용자 요청) -->
+            <g class="dna-pearl-outer-spin">${outerDotsRitual}</g>
             <!-- 중심 빛 -->
             <circle cx="100" cy="100" r="4.2" fill="${safeOuter}" opacity="1"/>
             <circle cx="100" cy="100" r="7" fill="${safeOuter}" opacity="0.42" filter="url(#cryst-bigglow)"/>
@@ -22018,6 +22041,12 @@ async function buildQuarterlySlides(review) {
     html: _buildPatternsSlideHTML(inRange)
   });
 
+  // 8.5. 진지 깨달음 정리 (V4-fix v3 사용자 요청)
+  slides.push({
+    tone: 'tone-deep-2',
+    html: _buildArchiveSummarySlideHTML(inRange)
+  });
+
   // 9. 진지 narrative + prompt
   slides.push({
     tone: 'tone-deep',
@@ -22332,6 +22361,38 @@ function _buildNarrativeSlideHTML(review) {
         ${escapeHtml(nextSection.body || '')}
       </div>
     ` : ''}
+  `;
+}
+
+// V4-fix v3 (사용자 요청): 깨달음 정리 슬라이드 — 분기/연간/주간/월간 공통
+function _buildArchiveSummarySlideHTML(inRange) {
+  const arrs = (state.archive || []).filter(a => a.savedAt && inRange(a.savedAt));
+  if (arrs.length === 0) {
+    return `
+      <div class="stories-label">너의 깨달음</div>
+      <div class="stories-title">이 분기 깨달음 카드 없음</div>
+      <div class="stories-body">대화에서 ✦ 깨달음으로, 또는 ✎ 메모로 직접. 다음 분기엔 작은 한 줄도 OK.</div>
+    `;
+  }
+  // type 분포
+  const typeCount = { scrap: 0, memo: 0, reflection: 0 };
+  arrs.forEach(a => { typeCount[a.type || 'scrap'] = (typeCount[a.type || 'scrap'] || 0) + 1; });
+  // 태그 빈도
+  const tagFreq = {};
+  arrs.forEach(a => (a.tags || []).forEach(t => { tagFreq[t] = (tagFreq[t] || 0) + 1; }));
+  const topTags = Object.entries(tagFreq).sort((a,b) => b[1] - a[1]).slice(0, 4).map(t => t[0]);
+  // 헤드라인 top 5 (최신 또는 풍부한 헤드라인)
+  const topHeadlines = arrs.filter(a => a.headline).slice(0, 5);
+
+  return `
+    <div class="stories-label">너의 깨달음</div>
+    <div class="stories-title">${arrs.length}개의 통찰이 자라났어</div>
+    <div class="stories-body" style="margin-bottom:12px;">📌 스크랩 ${typeCount.scrap || 0} · ✎ 메모 ${typeCount.memo || 0}${typeCount.reflection ? ` · 🌊 숙고 ${typeCount.reflection}` : ''}</div>
+    ${topTags.length > 0 ? `<div style="font-size:11px; color:rgba(255,255,255,0.55); margin-bottom:14px; letter-spacing:0.04em;">자주 떠올린: ${topTags.map(t => '#' + escapeHtml(t)).join(' · ')}</div>` : ''}
+    ${topHeadlines.length > 0 ? `<div class="stories-archive-list">
+      ${topHeadlines.map(a => `<div class="stories-archive-item">✦ ${escapeHtml(a.headline)}</div>`).join('')}
+    </div>` : ''}
+    <div class="stories-body" style="margin-top:14px; font-size:12px;">너 안에서 자라난 통찰들. 다음 분기에도 이어질 거야.</div>
   `;
 }
 
@@ -23607,7 +23668,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.84-stories-richer-stats';
+const APP_VERSION = 'v4.0.85-archive-slide-shells-spin';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
