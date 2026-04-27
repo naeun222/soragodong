@@ -7976,21 +7976,45 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   {
-    id: 'yangsaeng_tree',
+    id: 'yangsaeng_tab',
     targetSelector: '[data-cat="yangsaeng"]',
-    title: '🧬 양생방 — 진화 트리',
-    body: '양생방 칩 눌러서 들어가보자!<br><br>가닥 카드 <b>제목 클릭</b> → 진화 트리 펼침.<br>점 = 시도들. <b>색 = 그 미션의 소라 색</b>. 회색 = 안 통한 시도 (사라짐 X).<br>돌연변이 후엔 카드 제목이 새 행동으로 바뀌고 history 보존.',
+    title: '🧬 양생방',
+    body: '여기는 <b>너만의 행동 도구함</b>이야.<br>대화에서 박은 전략들이 모이는 곳.<br><br>양생방 칩 눌러봐!',
     waitFor: 'click',
     advanceDelay: 800,
     dimBackground: false
   },
   {
-    id: 'insights_intro',
+    id: 'yangsaeng_intro',
+    targetSelector: null,
+    title: '전략 카드 — 너의 도구들',
+    body: '여기 보이는 카드 하나하나가 너의 전략이야.<br><br>· <b>제목 클릭</b>하면 — 그 전략이 어떻게 자랐는지 흐름이 보여.<br>· <b>점 색깔</b>은 — 그날 시도해서 받은 소라 색.<br>· <b>회색 점</b>은 — 안 통했던 시도. 사라지지 않고 흔적으로 남아.<br><br><span class="small">시도 → 안 통하면 다른 차원으로 옮겨가고 → 5번 작동하면 너 일부가 돼.</span>',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'insights_tab',
     targetSelector: '[data-cat="insights"]',
-    title: '✨ 깨달음 + 🔮 인사이트',
-    body: '깨달음 칩 눌러봐!<br><br>· <b>🔮 인사이트</b> — 체크인 데이터 쌓이면 [🔮 새 인사이트 찾기] → AI 인과/패턴 분석. 맞아 ✓ / 아니야로 검증.<br>· <b>📌 스크랩 / ✎ 메모 / 🌊 숙고 결론</b> — 카드 클릭 → 원본 모달.<br>· <b>해시태그</b> 자동.',
+    title: '✨ 깨달음',
+    body: '여기는 <b>너 안에서 떠오른 통찰들</b>이 모이는 곳이야.<br>깨달음 칩 눌러봐!',
     waitFor: 'click',
     advanceDelay: 800,
+    dimBackground: false
+  },
+  {
+    id: 'insights_kinds',
+    targetSelector: null,
+    title: '세 가지 통찰',
+    body: '· <b>📌 스크랩</b> — 대화에서 [✦ 깨달음으로]로 박은 거<br>· <b>✎ 메모</b> — 네가 직접 적은 한 줄<br>· <b>🌊 숙고 결론</b> — 큰 질문에 결론 낸 거<br><br>카드 클릭하면 원본까지 다 보여.',
+    waitFor: 'next',
+    dimBackground: false
+  },
+  {
+    id: 'insights_ai',
+    targetSelector: null,
+    title: '🔮 AI 인사이트 발견',
+    body: '체크인이 7일쯤 쌓이면 <b>[🔮 새 인사이트 찾기]</b> 버튼이 떠.<br>네 데이터에서 패턴/인과를 찾아 알려줘.<br>예: <i>"잠 6시간 미만인 다음 날 활력 ↓"</i><br><br><b>맞아 ✓ / 아니야</b>로 검증해.',
+    waitFor: 'next',
     dimBackground: false
   },
   {
@@ -8029,8 +8053,8 @@ const ONBOARDING_STEPS = [
   {
     id: 'archive_meta',
     targetSelector: null,
-    title: '✨ 리뷰 깨달음 가공',
-    body: '리뷰 펼치면 자동 가공:<br><br>· <b>사고 모드</b> — 스크랩/메모/숙고 비율<br>· <b>화두 무게중심</b> — 자주 떠올린 태그 + 분기 비교 (계속/새로/사라진)<br>· <b>시간 분포</b> — 초/중/말 어디서 통찰 깊었나<br>· <b>클러스터</b> — 같은 테마 갈래<br>· <b>AI 메타 요약</b> — 한 단락 narrative<br>· <b>살아있는 통찰</b> — ★ 즐겨찾기 + 다시 본 횟수',
+    title: '리뷰 안 깨달음 정리',
+    body: '리뷰 펼치면 그 기간 깨달음들이 자동으로 정리돼.<br><br>· 자주 떠올린 주제<br>· 언제 통찰이 깊었는지<br>· 비슷한 통찰끼리 묶임<br>· AI가 한 단락으로 요약<br>· 자주 다시 본 통찰들<br><br><span class="small">네가 한 해 어떻게 자랐는지 한눈에 보여.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -25014,7 +25038,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.104-tutorial-seed-drag-demo';
+const APP_VERSION = 'v4.0.105-tutorial-newbie-tone';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
