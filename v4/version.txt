@@ -1,1 +1,1 @@
-v4.0.9-galpi-rename
+v4.0.10-memo-tags
