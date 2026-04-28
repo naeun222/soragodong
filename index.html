@@ -8475,8 +8475,8 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'dna_explanation_close',
-    targetSelector: '#shellModal .shell-story-dna-badge',
-    advanceClickSelector: '#shellModal .btn-secondary',
+    targetSelector: '.shell-story-overlay .shell-story-dna-badge',
+    advanceClickSelector: '.shell-story-overlay .btn-secondary',
     title: '🧬 DNA 한 조각',
     body: '이게 <b>DNA 한 조각</b> 표시야.<br>미션 성공이 → 전략 성공이 되면, <b>그 소라가 DNA의 한 조각</b>이 돼.<br><br>아까 말했던 <b>"전략으로"</b> 버튼 기억 나지? 이게 바로 그 의미야 — 너만의 전략이 시간이 지나면서 너 일부가 되어가.<br><br>준비되면 <b>닫기</b> 눌러서 진행해.',
     waitFor: 'click',
@@ -8535,9 +8535,10 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     advanceClickSelector: '.options-btn[onclick*="didnt"]',
     title: '👎 안 통했어',
-    body: '결과 체크 창 떴지?<br>이번엔 <b>\'👎 안 통했어\'</b>를 눌러봐.',
+    body: '결과 체크 창 떴지?<br>이번엔 <b>\'👎 안 통했어\'</b>를 눌러봐.<br><br><span class="small">눌러도 진행이 안 되면 아래 "눌렀어 →" 직접 눌러줘.</span>',
     waitFor: 'click',
     advanceDelay: 600,
+    manualAdvance: true,
     dimBackground: false,
     aboveModal: true
   },
@@ -8546,9 +8547,10 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     advanceClickSelector: '.input-modal-btn.ok',
     title: '🧬 진화해볼게',
-    body: '\'안 통했네\' 창이 떴지?<br><b>\'🧬 진화해볼게\'</b> 눌러.',
+    body: '\'안 통했네\' 창이 떴지?<br><b>\'🧬 진화해볼게\'</b> 눌러.<br><br><span class="small">눌러도 진행이 안 되면 아래 "눌렀어 →" 직접 눌러줘.</span>',
     waitFor: 'click',
     advanceDelay: 600,
+    manualAdvance: true,
     dimBackground: false,
     aboveModal: true
   },
@@ -27772,7 +27774,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.145-tutorial-always-seed';
+const APP_VERSION = 'v4.0.146-shell-overlay-selector';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
