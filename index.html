@@ -5857,16 +5857,19 @@
   }
   .onb-coachmark {
     position: fixed;
-    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    /* 사용자 보고 2026-04-28: 너무 크고 불투명해서 UI 가림 — 작게 + 반투명 + backdrop blur */
+    background: linear-gradient(135deg, rgba(38,32,52,0.86), rgba(26,22,38,0.86));
+    backdrop-filter: blur(10px) saturate(1.1);
+    -webkit-backdrop-filter: blur(10px) saturate(1.1);
     border: 1px solid var(--accent);
-    border-radius: 18px;
-    padding: 18px 20px;  /* 드래그 핸들 제거 후 균등 padding */
-    cursor: grab;  /* 모달 전체 드래그 가능 표시 */
-    max-width: 320px;
-    width: calc(100vw - 32px);
+    border-radius: 14px;
+    padding: 11px 14px 12px;  /* 320 → 컴팩트 */
+    cursor: grab;
+    max-width: 260px;  /* 320 → 260 */
+    width: calc(100vw - 40px);
     max-height: calc(100vh - 32px);
     overflow-y: auto;
-    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+    box-shadow: 0 8px 26px rgba(0,0,0,0.55);
     pointer-events: auto;
     z-index: 9100;
     animation: onbFadeIn 0.22s ease;
@@ -5876,8 +5879,37 @@
                 right 0.26s cubic-bezier(0.4, 0, 0.2, 1),
                 bottom 0.26s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.26s cubic-bezier(0.4, 0, 0.2, 1),
-                max-width 0.26s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: top, left, right, bottom, transform;
+                max-width 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.18s ease;
+    will-change: top, left, right, bottom, transform, opacity;
+  }
+  /* 사용자 보고 2026-04-28: 흐리게 토글 — 모달이 UI 가릴 때 잠시 투명하게 (탭하면 다시 진하게) */
+  .onb-coachmark.faded {
+    opacity: 0.28;
+  }
+  .onb-coachmark.faded:active,
+  .onb-coachmark.faded:focus-within {
+    opacity: 1;
+  }
+  .onb-fade-toggle {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    font-family: inherit;
+    opacity: 0.65;
+    z-index: 2;
+    border-radius: 6px;
+  }
+  .onb-fade-toggle:active {
+    opacity: 1;
+    background: rgba(212,167,106,0.15);
   }
   /* 같은 위치 step 전환 시 content cross-fade (단축) */
   .onb-coachmark .onb-title,
@@ -5921,29 +5953,30 @@
     to { opacity: 1; }
   }
   .onb-step-num {
-    font-size: 11px;
+    font-size: 10px;  /* 사용자 보고 2026-04-28: 컴팩트 */
     color: var(--accent);
     letter-spacing: 0.12em;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     font-weight: 600;
+    padding-right: 28px;  /* 흐리게 토글 버튼 자리 확보 */
   }
   .onb-title {
     font-family: 'Gowun Batang', serif;
-    font-size: 17px;
+    font-size: 15px;  /* 17 → 15 */
     color: var(--text);
-    margin-bottom: 10px;
-    line-height: 1.4;
+    margin-bottom: 6px;
+    line-height: 1.35;
   }
   .onb-body {
-    font-size: 13px;
-    line-height: 1.7;
+    font-size: 12px;  /* 13 → 12 */
+    line-height: 1.6;
     color: var(--text);
-    margin-bottom: 16px;
+    margin-bottom: 11px;
   }
   .onb-body .highlight { color: var(--accent2); font-weight: 500; }
   .onb-body .small { display: block; font-size: 11px; color: var(--text-dim); margin-top: 6px; }
   .onb-actions {
-    display: flex; gap: 10px;
+    display: flex; gap: 8px;
     align-items: center;
     justify-content: space-between;
   }
@@ -5951,22 +5984,22 @@
     background: transparent;
     border: none;
     color: var(--text-dim);
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
     font-family: inherit;
-    padding: 8px 6px;
+    padding: 6px 4px;
   }
   .onb-next {
     background: linear-gradient(135deg, var(--accent), #b8894a);
     color: var(--bg);
     border: none;
-    border-radius: 12px;
-    padding: 10px 18px;
-    font-size: 13px;
+    border-radius: 10px;
+    padding: 7px 14px;
+    font-size: 12px;
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    min-height: 40px;
+    min-height: 32px;
   }
   .onb-next:active { transform: scale(0.97); }
   .onb-next.waiting {
@@ -5978,22 +6011,22 @@
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text-soft);
-    border-radius: 10px;
-    padding: 6px 10px;
-    font-size: 11px;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 10px;
     font-family: inherit;
     cursor: pointer;
-    min-height: 40px;
+    min-height: 32px;
     /* 사용자 요청 2026-04-28: '뒤로' 위에 / '←' 아래에 — 세로 배치 */
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    line-height: 1.1;
-    gap: 1px;
+    line-height: 1.05;
+    gap: 0px;
   }
-  .onb-back .onb-back-label { font-size: 11px; }
-  .onb-back .onb-back-arrow { font-size: 13px; opacity: 0.85; }
+  .onb-back .onb-back-label { font-size: 10px; }
+  .onb-back .onb-back-arrow { font-size: 11px; opacity: 0.85; }
   .onb-back:active { transform: scale(0.97); }
   .onb-back[hidden] { display: none !important; }
 
@@ -6345,6 +6378,7 @@
   <div class="onb-mask" id="onbMask"></div>
   <div class="onb-spotlight" id="onbSpotlight"></div>
   <div class="onb-coachmark" id="onbCoachmark">
+    <button class="onb-fade-toggle" id="onbFadeToggle" onclick="event.stopPropagation(); onbToggleFade()" title="흐리게 — 가려진 UI 보기">👁</button>
     <div class="onb-drag-handle" id="onbDragHandle" title="드래그해서 옮기기">⋮⋮</div>
     <div class="onb-step-num" id="onbStepNum">1 / 7</div>
     <div class="onb-title" id="onbTitle"></div>
@@ -9239,6 +9273,19 @@ function onbCleanupListeners() {
     if (el) el.removeEventListener(type, fn, opts || false);
   });
   _onbActiveListeners = [];
+}
+
+// 사용자 보고 2026-04-28: 튜토리얼 모달 흐리게 토글 — 모달이 가린 UI 보고 싶을 때
+function onbToggleFade() {
+  const cm = document.getElementById('onbCoachmark');
+  if (!cm) return;
+  cm.classList.toggle('faded');
+  const btn = document.getElementById('onbFadeToggle');
+  if (btn) {
+    const faded = cm.classList.contains('faded');
+    btn.textContent = faded ? '👀' : '👁';
+    btn.title = faded ? '진하게 — 다시 또렷하게' : '흐리게 — 가려진 UI 보기';
+  }
 }
 
 // 사용자 보고 2026-04-28: capture 옵션 추가 — modal 안 element가 stopPropagation 해도 catch (예: showOptionsModal '.input-modal' onclick="event.stopPropagation()")
