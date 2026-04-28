@@ -7171,7 +7171,11 @@ let _localSaveTimer = null;
 function _flushLocalSave() {
   if (_localSaveTimer) { clearTimeout(_localSaveTimer); _localSaveTimer = null; }
   if (!authUserId) return;
-  // 사용자 요청 2026-04-28: testerMode flag는 localStorage로도 안 새게 strip
+  // 사용자 보고 2026-04-28: testerMode ON이면 localStorage 저장도 차단.
+  // (이전엔 beforeunload에서 _flushLocalSave 직접 호출되어 시드 데이터가 localStorage로 새고,
+  //  다음 load에서 cloud row 비어있으면 localStorage fallback → saveToCloudNow로 시드가 cloud까지 박혀버림)
+  if (state.preferences && state.preferences.testerMode) return;
+  // testerMode flag는 localStorage로도 안 새게 strip (방어적)
   const sanitized = { ...state };
   if (sanitized.preferences && sanitized.preferences.testerMode) {
     sanitized.preferences = { ...sanitized.preferences };
@@ -7537,10 +7541,139 @@ async function loadFromCloud() {
     state.insights = stripSeed(state.insights, 'ins_seed_');
     state.diagnoses = stripSeed(state.diagnoses, 'diag_seed_');
     state.monthlyReviews = stripSeed(state.monthlyReviews, 'mr_seed_');
+    // 사용자 보고 2026-04-28: 빠진 시드 prefix 추가 (튜토리얼 시드 → 앱 삭제 후 잔존 버그)
+    state.traits = stripSeed(state.traits, 'trait_seed_');
+    state.values = stripSeed(state.values, 'val_seed_');
+    state.patterns = stripSeed(state.patterns, 'pat_seed_');
+    state.memoryVault = stripSeed(state.memoryVault, 'mv_seed_');
+    state.todaySchedule = stripSeed(state.todaySchedule, 'sch_seed_');
+    state.topicCards = stripSeed(state.topicCards, 'topic_seed_');
     if (Array.isArray(state.shellCollection)) {
       const before = state.shellCollection.length;
       state.shellCollection = state.shellCollection.filter(s => !(s && typeof s._id === 'string' && (s._id.startsWith('shell_seed_'))));
       if (state.shellCollection.length !== before) seedCleaned = true;
+    }
+    // 사용자 보고 2026-04-28: id 없는 시드 컬렉션 (entries/chatMessages/archive/chatArchive/caseFormulation)
+    // — 시드 시그니처 감지 후 sweep. seedCleaned=true 이거나 시그니처 직접 매칭일 때만 작동 (사용자 데이터 보호).
+    const _seedDiarySnips = new Set([
+      '오늘 한강 산책 30분. 머리 비워짐. 논문 한 단락 쓰고 끝남.',
+      '교수님 미팅. 별로였어. 데이터 부족이라고. 그래도 방향성은 잡힘.',
+      '엄마 김치찌개. 고등학교 그때 생각났어. 비도 그 때처럼 옴.',
+      '실험 데이터 정리만 4시간. 머리 멍해짐. 카페 가서 환기.',
+      '오늘 진짜 하나도 안 했어. 침대에서 종일. 무력했음.',
+      '친구 결혼식. 오랜만에 다 만남. 좋았는데 피곤. 사람 많은 거 한계 인정.',
+      '논문 서론 첫 단락 완성. 짧지만 시작이라 의미 있음.',
+      '아침 6시 깨서 새벽 작업. 진짜 잘 됨. 이 시간이 나의 골든.',
+      '동기 술자리. 박사 진로 얘기. 다들 비슷한 고민. 위로됨.',
+      '월경 1일차. 진짜 아무것도 못함. 누워서 책만 읽음.',
+      '카페 옮겨다니며 작업. 환경 바꾸니까 머리 다시 돌아감.',
+      '학회 발표 준비. 슬라이드 30장 다 만듦. 늦게까지 했지만 뿌듯.',
+      '주말 푹 쉬었음. 늦잠 + 산책 + 책. 회복 모드.',
+      '교수님께 데이터 보냄. 답장 기다림 — 긴장됨.',
+      '실험실 정리. 마음도 정리되는 느낌.',
+      '엄마랑 한 시간 통화. 안 보고 살았다고 잔소리. 미안.',
+      '오늘 거절했어. 술자리. 처음엔 부채감 있었는데 지나니 괜찮음.',
+      '논문 쓰다가 막힘. 새벽까지 봤는데 답 안 나옴.',
+      '친구가 갑자기 카톡. 그냥 안부. 진짜 고마웠어.',
+      '오늘 운동 갔어 일주일 만에. 30분 뛰니 머리 맑아짐.',
+      '책 1권 완독. 오랜만에 종이책. 집중 잘 됨.',
+      '실험 한 개 망함. 처음부터 다시 해야 함. 짜증보다 무력감.',
+      '오늘 SNS 안 봤음. 평소보다 시간 많이 남았어.',
+      '친구 만남. 오래 못 본 친구라 어색했는데 풀림.',
+      '논문 결과 부분 시작. 표 3개 만듦.',
+      '주말 종일 침대. 죄책감보단 회복.',
+      '교수님 칭찬. "이 부분 좋다" 한 마디인데 컸음.',
+      '아침에 명상 10분. 진짜 차분해짐. 매일 하고 싶음.',
+      '엄마 아프시다고. 주말에 가봐야겠음.',
+      '오늘 일찍 잠. 11시. 쥐어짜낸 결정이지만 잘 한 듯.'
+    ]);
+    const _seedChapterSummaries = new Set(['논문 주제 변경 고민','저녁 무력감','엄마 김치찌개 기억','논문 아이디어','오늘 산책','새벽 카페 흐름']);
+    const _seedArchiveHeadlines = new Set(['환경이 의지보다 강함','저녁 무력감 = 정상','학문 vs 졸업장','거절 = 자기 보호','아침 6시 = 골든','실패 ≠ 자기 부정','카페 새벽 = 가장 강한 환경','학회 발표 후 깨달음 — 완벽보다 공유','회복 = 일의 일부','몸 신호 먼저 듣기','환경 + 음악 = trigger 묶음']);
+    const _seedCfProblems = new Set(['저녁 무력감으로 작업 X','거절 후 부채감으로 공부 X']);
+    // 시그니처 직접 감지 (id 없는 시드 단독으로도 감지)
+    let signatureHit = seedCleaned;
+    if (!signatureHit && Array.isArray(state.entries)) {
+      signatureHit = state.entries.some(e => e && e.diary && _seedDiarySnips.has(e.diary));
+    }
+    if (!signatureHit && Array.isArray(state.chatMessages)) {
+      signatureHit = state.chatMessages.some(m => m && m.chapterMeta && _seedChapterSummaries.has(m.chapterMeta.summary));
+    }
+    if (!signatureHit && Array.isArray(state.archive)) {
+      signatureHit = state.archive.some(a => a && _seedArchiveHeadlines.has(a.headline));
+    }
+    if (signatureHit) {
+      // entries 시드 (diary 매칭, music id seed_rich_track, dailyQuestion seed text 매칭)
+      const _seedDailyQs = new Set(['오늘 잘 됐던 한 순간은?','하루 중 가장 차분했던 순간?','내일의 너에게 한 줄?','오늘 너답지 않게 한 일이 있다면?','오늘 만난 사람 중 한 사람을 떠올려봐. 어떤 인상이었어?','오늘 너에게 작은 자랑거리?','내가 오늘 놓친 것 중 가장 아까운 건?']);
+      if (Array.isArray(state.entries)) {
+        const before = state.entries.length;
+        state.entries = state.entries.filter(e => {
+          if (!e) return false;
+          if (e.diary && _seedDiarySnips.has(e.diary)) return false;
+          if (e.music && e.music.id === 'seed_rich_track') return false;
+          if (e.dailyQuestion && _seedDailyQs.has(e.dailyQuestion.text) && (!e.dailyQuestion.answer || e.dailyQuestion.answer === '카페 새벽 4시, 첫 단락 마지막 줄 쓰면서 \'됐다\' 한 순간.')) return false;
+          // 시드 photoThumb 시그니처 (Lorem Picsum seed)
+          if (e.photoThumb && typeof e.photoThumb === 'string' && e.photoThumb.includes('picsum.photos/seed/longshot-cafe-415')) return false;
+          return true;
+        });
+        if (state.entries.length !== before) seedCleaned = true;
+      }
+      // chatMessages 시드 (chapterMeta.summary 매칭 + 4/15 rich block)
+      if (Array.isArray(state.chatMessages)) {
+        const before = state.chatMessages.length;
+        // chapter 단위로 같이 박힌 메시지 그룹 정리: 시드 chapter start 메시지 timestamp 모은 후 그 이후 동일 챕터 메시지 정리
+        const seedChapterStartTs = new Set();
+        state.chatMessages.forEach(m => {
+          if (m && m.chapterStart && m.chapterMeta && _seedChapterSummaries.has(m.chapterMeta.summary) && m.timestamp) {
+            seedChapterStartTs.add(m.timestamp);
+          }
+        });
+        state.chatMessages = state.chatMessages.filter(m => {
+          if (!m) return false;
+          if (m.chapterMeta && _seedChapterSummaries.has(m.chapterMeta.summary)) return false;
+          // chapter start 직후 같은 챕터 메시지들도 정리 — chapterStart timestamp + 0~30분 윈도우 시드 매칭
+          if (m.timestamp) {
+            const ts = new Date(m.timestamp).getTime();
+            for (const startTs of seedChapterStartTs) {
+              const startMs = new Date(startTs).getTime();
+              if (ts >= startMs && ts <= startMs + 35 * 60000) return false;
+            }
+          }
+          return true;
+        });
+        if (state.chatMessages.length !== before) seedCleaned = true;
+      }
+      // archive 시드 (headline 매칭)
+      if (Array.isArray(state.archive)) {
+        const before = state.archive.length;
+        state.archive = state.archive.filter(a => !(a && _seedArchiveHeadlines.has(a.headline)));
+        if (state.archive.length !== before) seedCleaned = true;
+      }
+      // chatArchive 시드 (summary 패턴: "N일 전 — 가볍게 일상 + 한 가지 고민. 환경 도구 시도.")
+      if (Array.isArray(state.chatArchive)) {
+        const before = state.chatArchive.length;
+        state.chatArchive = state.chatArchive.filter(a => !(a && a.summary && /^\d+일 전 — 가볍게 일상 \+ 한 가지 고민/.test(a.summary)));
+        if (state.chatArchive.length !== before) seedCleaned = true;
+      }
+      // caseFormulation 시드 (problems 매칭)
+      const cf = state.caseFormulation;
+      if (cf && Array.isArray(cf.problems) && cf.problems.some(p => p && _seedCfProblems.has(p.text))) {
+        state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
+        seedCleaned = true;
+      }
+      // modeActiveSince.rest (시드 박는 유일한 modeActiveSince 키) — 기타 키 있으면 보존
+      if (state.modeActiveSince && state.modeActiveSince.rest && Object.keys(state.modeActiveSince).length === 1) {
+        delete state.modeActiveSince.rest;
+        seedCleaned = true;
+      }
+      // preferences._strategyTreeOpen — strat_seed_ 키만 정리
+      if (state.preferences && state.preferences._strategyTreeOpen) {
+        Object.keys(state.preferences._strategyTreeOpen).forEach(k => {
+          if (k.startsWith('strat_seed_')) {
+            delete state.preferences._strategyTreeOpen[k];
+            seedCleaned = true;
+          }
+        });
+      }
     }
     if (seedCleaned) {
       console.log('[seed cleanup] cloud/localStorage에 박혀있던 시드 데이터 자동 정리됨');
