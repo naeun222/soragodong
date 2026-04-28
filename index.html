@@ -5884,12 +5884,14 @@
     will-change: top, left, right, bottom, transform, opacity;
   }
   /* 사용자 보고 2026-04-28: 흐리게 토글 — 모달이 UI 가릴 때 잠시 투명하게 (탭하면 다시 진하게) */
+  /* 사용자 보고 2026-04-28: 안 흐려지던 원인 — backdrop-filter가 opacity와 별개로 blur 유지해 또렷해 보임. backdrop-filter도 같이 끔. */
+  /* 추가 원인: :focus-within이 클릭 직후 버튼 포커스에 매칭돼 즉시 또렷화. 제거. */
   .onb-coachmark.faded {
-    opacity: 0.28;
-  }
-  .onb-coachmark.faded:active,
-  .onb-coachmark.faded:focus-within {
-    opacity: 1;
+    opacity: 0.22 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(38,32,52,0.18) !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25) !important;
   }
   .onb-fade-toggle {
     position: absolute;
@@ -9285,6 +9287,8 @@ function onbToggleFade() {
     const faded = cm.classList.contains('faded');
     btn.textContent = faded ? '👀' : '👁';
     btn.title = faded ? '진하게 — 다시 또렷하게' : '흐리게 — 가려진 UI 보기';
+    // 버튼 포커스 즉시 해제 (focus-within 등으로 모달 다시 또렷해지는 거 방지 + 모바일 outline 잔존 방지)
+    try { btn.blur(); } catch (e) {}
   }
 }
 
