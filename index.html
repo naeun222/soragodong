@@ -55,7 +55,8 @@
   body::after { content: ''; position: fixed; bottom: -20%; right: -20%; width: 60%; height: 60%; background: radial-gradient(ellipse, rgba(201, 169, 110, 0.08) 0%, transparent 70%); pointer-events: none; z-index: 0; }
 
   .app { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
-  .header { flex-shrink: 0; padding: 52px 24px 12px; display: flex; align-items: center; justify-content: space-between; }
+  /* 사용자 요청 2026-04-28: iPhone 웹앱 (V3 기준) — top padding 52px → 18px (V3 톤). PWA standalone에서 status bar 자동 처리됨 */
+  .header { flex-shrink: 0; padding: 18px 24px 12px; display: flex; align-items: center; justify-content: space-between; }
   .logo { font-family: 'Gowun Batang', serif; font-size: 20px; color: var(--accent); letter-spacing: 0.05em; }
   .date-pill { font-size: 11px; color: var(--text-dim); background: var(--surface); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-soft); }
@@ -27768,7 +27769,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.153-step37-label';
+const APP_VERSION = 'v4.0.154-header-up';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
