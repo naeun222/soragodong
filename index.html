@@ -7181,7 +7181,21 @@ function _flushLocalSave() {
     sanitized.preferences = { ...sanitized.preferences };
     delete sanitized.preferences.testerMode;
   }
-  try { localStorage.setItem(V4_LOCAL_STORAGE_KEY, JSON.stringify(sanitized)); } catch (e) { console.warn('localStorage save failed:', e); }
+  try {
+    localStorage.setItem(V4_LOCAL_STORAGE_KEY, JSON.stringify(sanitized));
+  } catch (e) {
+    console.warn('localStorage save failed:', e);
+    // 사용자 요청 2026-04-28: 저장 실패 사용자 알림 (이전엔 console만)
+    if (e && (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || ''))) {
+      // 한 세션에 한 번만 알림 (반복 토스트 방지)
+      if (!window._localStorageQuotaWarned) {
+        window._localStorageQuotaWarned = true;
+        if (typeof showToast === 'function') {
+          showToast('⚠️ 로컬 저장 공간 가득 — 도서관 → 이전 대화 정리하면 공간 확보 (cloud는 정상)');
+        }
+      }
+    }
+  }
 }
 function saveState(force) {
   if (!authUserId) return; // Don't save if not logged in
@@ -7850,7 +7864,8 @@ async function saveToCloudNow() {
   );
   const existing = await checkResp.json();
   if (existing.length > 0) {
-    await fetch(
+    // 사용자 요청 2026-04-28: 응답 status 체크 + 401/5xx 토스트 (이전엔 silent)
+    const r = await fetch(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
       {
         method: 'PATCH',
@@ -7858,12 +7873,31 @@ async function saveToCloudNow() {
         body: JSON.stringify({ data: sanitized, updated_at: state.lastSync })
       }
     );
+    _handleCloudSyncResponse(r);
   } else {
-    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: sanitized })
     });
+    _handleCloudSyncResponse(r);
+  }
+}
+
+// 사용자 요청 2026-04-28: cloud sync 응답 status별 사용자 알림 (한 세션 1회)
+function _handleCloudSyncResponse(r) {
+  if (!r || r.ok) {
+    window._cloudSyncWarned = false;  // 회복되면 reset
+    return;
+  }
+  if (window._cloudSyncWarned) return;
+  window._cloudSyncWarned = true;
+  if (r.status === 401 || r.status === 403) {
+    if (typeof showToast === 'function') showToast('☁ 클라우드 인증 만료 — 새로고침 후 다시 로그인 필요');
+  } else if (r.status >= 500) {
+    if (typeof showToast === 'function') showToast('☁ 클라우드 서버 일시 불안정 — 자동 재시도');
+  } else {
+    if (typeof showToast === 'function') showToast(`☁ 클라우드 저장 실패 (${r.status}) — 로컬엔 보관됨`);
   }
 }
 
@@ -15110,9 +15144,23 @@ async function generateAIResponse(modelOverride) {
     renderModelPreview();
 
   } catch (err) {
+    // 사용자 요청 2026-04-28: 에러 종류별 명확한 메시지 (이전엔 'err.message' 그대로 노출 — 이해 어려움)
+    const m = (err && err.message) || '';
+    let userMsg;
+    if (/401/.test(m) || /authentication/i.test(m) || /invalid.*api.*key/i.test(m) || /api[_ ]?key/i.test(m)) {
+      userMsg = '🔑 API 키가 유효하지 않아.\n\n나 탭 → 설정에서 키를 다시 확인해봐.';
+    } else if (/429/.test(m) || /rate[_ ]?limit/i.test(m) || /quota/i.test(m)) {
+      userMsg = '⏳ 잠깐 너무 빨라. 1분 정도 후 다시 시도하거나 Anthropic 대시보드에서 사용량 확인해봐.';
+    } else if (/network|failed to fetch|offline/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+      userMsg = '📡 인터넷 연결을 확인해봐.\n\n복구되면 "다시 보내기" 눌러줘.';
+    } else if (/5\d\d/.test(m)) {
+      userMsg = '⚠️ Anthropic 서버 일시 불안정. 잠시 후 다시 보내기 눌러봐.';
+    } else {
+      userMsg = '연결이 안 됐어 😅\n(' + (m || '알 수 없는 오류') + ')\n\n다시 보내기 버튼을 눌러봐.';
+    }
     state.chatMessages[state.chatMessages.length - 1] = {
       role: 'assistant',
-      content: '연결이 안 됐어 😅\n(' + err.message + ')\n\n다시 보내기 버튼을 눌러봐.',
+      content: userMsg,
       error: true,
       canRetry: true,
       timestamp: new Date().toISOString()
@@ -27719,7 +27767,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.142-mobile-safe-area';
+const APP_VERSION = 'v4.0.143-error-handling';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
