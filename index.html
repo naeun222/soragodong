@@ -684,11 +684,11 @@
   .send-btn:disabled { opacity: 0.4; }
   .send-btn:active { transform: scale(0.95); }
 
-  /* 사용자 요청 2026-04-28: V3 정도로 더 아래에 — Galaxy 기준 padding 최소화 (화면 끝에 거의 붙음) */
-  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 8px 0 4px; z-index: 100; }
-  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 8px 0; min-height: 56px; justify-content: center; }
+  /* 사용자 요청 2026-04-28: V3 nav 높이로 압축 — min-height 56→44, nav-item padding 8→2, icon 22→20, gap 4→2 */
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 4px 0 4px; z-index: 100; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 2px 0; min-height: 44px; justify-content: center; }
   .nav-item.active { opacity: 1; }
-  .nav-icon { font-size: 22px; }
+  .nav-icon { font-size: 20px; }
   .nav-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.04em; }
   .nav-item.active .nav-label { color: var(--accent); }
 
@@ -27774,7 +27774,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.149-nav-v3-low';
+const APP_VERSION = 'v4.0.150-nav-v3-compact';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
