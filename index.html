@@ -7171,7 +7171,11 @@ let _localSaveTimer = null;
 function _flushLocalSave() {
   if (_localSaveTimer) { clearTimeout(_localSaveTimer); _localSaveTimer = null; }
   if (!authUserId) return;
-  // 사용자 요청 2026-04-28: testerMode flag는 localStorage로도 안 새게 strip
+  // 사용자 보고 2026-04-28: testerMode ON이면 localStorage 저장도 차단.
+  // (이전엔 beforeunload에서 _flushLocalSave 직접 호출되어 시드 데이터가 localStorage로 새고,
+  //  다음 load에서 cloud row 비어있으면 localStorage fallback → saveToCloudNow로 시드가 cloud까지 박혀버림)
+  if (state.preferences && state.preferences.testerMode) return;
+  // testerMode flag는 localStorage로도 안 새게 strip (방어적)
   const sanitized = { ...state };
   if (sanitized.preferences && sanitized.preferences.testerMode) {
     sanitized.preferences = { ...sanitized.preferences };
