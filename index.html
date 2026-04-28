@@ -684,9 +684,9 @@
   .send-btn:disabled { opacity: 0.4; }
   .send-btn:active { transform: scale(0.95); }
 
-  /* 사용자 요청 2026-04-28: V3 nav 높이로 압축 — min-height 56→44, nav-item padding 8→2, icon 22→20, gap 4→2 */
-  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 4px 0 4px; z-index: 100; }
-  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 2px 0; min-height: 44px; justify-content: center; }
+  /* 사용자 요청 2026-04-28: V3 nav 높이로 — 중간값 (이전 4px은 너무 낮음, 26px은 너무 높음). 약 65-70px */
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 6px 0 14px; z-index: 100; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 4px 0; min-height: 48px; justify-content: center; }
   .nav-item.active { opacity: 1; }
   .nav-icon { font-size: 20px; }
   .nav-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.04em; }
@@ -9595,7 +9595,9 @@ function onbPositionStep(step, retryCount) {
       const handler = (e) => { safeAdvance(350); };
       onbAddListener(target, 'click', handler);
     }
-    nextBtn.style.display = 'none';
+    // 사용자 요청 2026-04-28: 모든 비-'next' step에 '눌렀어' 비상 버튼 노출
+    nextBtn.style.display = '';
+    nextBtn.textContent = '눌렀어 →';
   } else if (step.waitFor === 'click') {
     // 사용자 요청 2026-04-28: advanceClickSelector — spotlight는 다른 element 가리키되 click trigger는 별도 element (예: DNA icon 강조 + 닫기 버튼 클릭으로 advance)
     let advanceTarget = target;
@@ -9615,12 +9617,9 @@ function onbPositionStep(step, retryCount) {
       };
       // 사용자 보고 2026-04-28: capture 사용 — modal 안 stopPropagation 우회 ('안 통했어' 등 options-btn click 못 받던 버그)
       onbAddListener(document, 'click', delegateHandler, true);
-      if (step.manualAdvance) {
-        nextBtn.style.display = '';
-        nextBtn.textContent = '눌렀어 →';
-      } else {
-        nextBtn.style.display = 'none';
-      }
+      // 사용자 요청 2026-04-28: 모든 click step에 '눌렀어' 비상 버튼 항상 노출
+      nextBtn.style.display = '';
+      nextBtn.textContent = '눌렀어 →';
       return;
     }
     if (advanceTarget) {
@@ -9676,14 +9675,9 @@ function onbPositionStep(step, retryCount) {
         onbAddListener(advanceTarget, 'click', handler);
       }
     }
-    // V3.13.x: manualAdvance — spotlight 위치 부정확할 수 있는 step에서
-    // 사용자가 "눌렀어 →" 직접 누를 수 있게 (응답 길이에 따라 버튼 위치 바뀌는 케이스 등)
-    if (step.manualAdvance) {
-      nextBtn.style.display = '';
-      nextBtn.textContent = '눌렀어 →';
-    } else {
-      nextBtn.style.display = 'none';
-    }
+    // 사용자 요청 2026-04-28: 모든 click step에 '눌렀어' 비상 버튼 항상 노출 (manualAdvance flag 무관)
+    nextBtn.style.display = '';
+    nextBtn.textContent = '눌렀어 →';
   } else if (step.waitFor === 'inputFilled') {
     // V3.13: input/textarea에 값이 들어가면 advance
     if (target) {
@@ -27774,7 +27768,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.150-nav-v3-compact';
+const APP_VERSION = 'v4.0.152-emergency-btn-nav-mid';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
