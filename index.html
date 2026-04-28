@@ -9213,17 +9213,20 @@ function startInteractiveOnboarding(startStep) {
 }
 
 function onbCleanupListeners() {
-  _onbActiveListeners.forEach(({el, type, fn}) => {
-    if (el) el.removeEventListener(type, fn);
+  _onbActiveListeners.forEach(({el, type, fn, opts}) => {
+    if (el) el.removeEventListener(type, fn, opts || false);
   });
   _onbActiveListeners = [];
 }
 
-function onbAddListener(el, type, fn) {
+// 사용자 보고 2026-04-28: capture 옵션 추가 — modal 안 element가 stopPropagation 해도 catch (예: showOptionsModal '.input-modal' onclick="event.stopPropagation()")
+function onbAddListener(el, type, fn, useCapture) {
   if (!el) return;
-  el.addEventListener(type, fn);
-  _onbActiveListeners.push({el, type, fn});
+  const opts = useCapture ? true : false;
+  el.addEventListener(type, fn, opts);
+  _onbActiveListeners.push({el, type, fn, opts});
 }
+// onbCleanupListeners도 capture 옵션 같이 사용해서 remove (이전 코드는 default false 였으니 capture listener 정리 안 됐음)
 
 function onbRenderStep() {
   const step = ONBOARDING_STEPS[_onbStep];
@@ -9607,7 +9610,8 @@ function onbPositionStep(step, retryCount) {
         const matched = ev.target && ev.target.closest && ev.target.closest(sel);
         if (matched) safeAdvance(step.advanceDelay || 350);
       };
-      onbAddListener(document, 'click', delegateHandler);
+      // 사용자 보고 2026-04-28: capture 사용 — modal 안 stopPropagation 우회 ('안 통했어' 등 options-btn click 못 받던 버그)
+      onbAddListener(document, 'click', delegateHandler, true);
       if (step.manualAdvance) {
         nextBtn.style.display = '';
         nextBtn.textContent = '눌렀어 →';
@@ -27767,7 +27771,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.143-error-handling';
+const APP_VERSION = 'v4.0.144-delegate-capture';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
