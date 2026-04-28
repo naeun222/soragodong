@@ -7554,7 +7554,9 @@ async function loadFromCloud() {
       if (state.shellCollection.length !== before) seedCleaned = true;
     }
     // 사용자 보고 2026-04-28: id 없는 시드 컬렉션 (entries/chatMessages/archive/chatArchive/caseFormulation)
-    // — 시드 시그니처 감지 후 sweep. seedCleaned=true 이거나 시그니처 직접 매칭일 때만 작동 (사용자 데이터 보호).
+    // — id-prefix 시드가 이미 감지된 경우(seedCleaned=true)에만 sweep 실행.
+    // 사용자 보고 2026-04-28: V3 import 데이터 보호 — 단독 시그니처로는 트리거 X (실제 사용자 데이터에
+    //   '저녁 무력감' / '오늘 산책' 같은 일반적 chapter summary가 우연히 일치할 수 있음)
     const _seedDiarySnips = new Set([
       '오늘 한강 산책 30분. 머리 비워짐. 논문 한 단락 쓰고 끝남.',
       '교수님 미팅. 별로였어. 데이터 부족이라고. 그래도 방향성은 잡힘.',
@@ -7590,18 +7592,8 @@ async function loadFromCloud() {
     const _seedChapterSummaries = new Set(['논문 주제 변경 고민','저녁 무력감','엄마 김치찌개 기억','논문 아이디어','오늘 산책','새벽 카페 흐름']);
     const _seedArchiveHeadlines = new Set(['환경이 의지보다 강함','저녁 무력감 = 정상','학문 vs 졸업장','거절 = 자기 보호','아침 6시 = 골든','실패 ≠ 자기 부정','카페 새벽 = 가장 강한 환경','학회 발표 후 깨달음 — 완벽보다 공유','회복 = 일의 일부','몸 신호 먼저 듣기','환경 + 음악 = trigger 묶음']);
     const _seedCfProblems = new Set(['저녁 무력감으로 작업 X','거절 후 부채감으로 공부 X']);
-    // 시그니처 직접 감지 (id 없는 시드 단독으로도 감지)
-    let signatureHit = seedCleaned;
-    if (!signatureHit && Array.isArray(state.entries)) {
-      signatureHit = state.entries.some(e => e && e.diary && _seedDiarySnips.has(e.diary));
-    }
-    if (!signatureHit && Array.isArray(state.chatMessages)) {
-      signatureHit = state.chatMessages.some(m => m && m.chapterMeta && _seedChapterSummaries.has(m.chapterMeta.summary));
-    }
-    if (!signatureHit && Array.isArray(state.archive)) {
-      signatureHit = state.archive.some(a => a && _seedArchiveHeadlines.has(a.headline));
-    }
-    if (signatureHit) {
+    // V3 사용자 데이터 보호: id-prefix 시드가 이미 감지됐을 때만 시그니처 sweep 실행 (단독 시그니처 감지 X)
+    if (seedCleaned) {
       // entries 시드 (diary 매칭, music id seed_rich_track, dailyQuestion seed text 매칭)
       const _seedDailyQs = new Set(['오늘 잘 됐던 한 순간은?','하루 중 가장 차분했던 순간?','내일의 너에게 한 줄?','오늘 너답지 않게 한 일이 있다면?','오늘 만난 사람 중 한 사람을 떠올려봐. 어떤 인상이었어?','오늘 너에게 작은 자랑거리?','내가 오늘 놓친 것 중 가장 아까운 건?']);
       if (Array.isArray(state.entries)) {
