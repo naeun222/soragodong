@@ -7849,9 +7849,16 @@ function migrateToV7() {
 
 async function saveToCloudNow() {
   if (!authUserId) return;
+  // 사용자 보고 2026-04-28: testerMode ON이면 cloud 저장 자체 차단.
+  // 이전 버그: 튜토리얼 시작 직전 saveState로 예약된 saveToCloud setTimeout이 1초 뒤 fire →
+  //   당시 state엔 시드가 박혀 있어 me_v4 row에 시드 푸시. 튜토리얼 끝나도 cloud에 시드 잔존.
+  // 동기 경로 (V7 migration / V3 import / 백업 복구 등)는 testerMode 자동 정리 후 호출되므로 영향 없음.
+  if (state.preferences && state.preferences.testerMode) {
+    console.log('[saveToCloudNow] testerMode ON — cloud 저장 차단');
+    return;
+  }
   state.lastSync = new Date().toISOString();
-  // 사용자 요청 2026-04-28: testerMode flag는 cloud로 절대 안 새게 strip — 어떤 경로로 saveToCloudNow가 불려도 안전
-  // (이전엔 직접 호출 / force=true 경로에서 testerMode가 cloud에 박혀 stuck됨)
+  // testerMode flag는 cloud로 절대 안 새게 strip (방어적 — 위 가드 통과 시점엔 false지만 race 대비)
   const sanitized = { ...state };
   if (sanitized.preferences && sanitized.preferences.testerMode) {
     sanitized.preferences = { ...sanitized.preferences };
@@ -27894,6 +27901,12 @@ async function toggleTesterMode() {
       await _saveTesterBackupToCloud(_testerModeBackupState);
     } catch (e) { console.warn('tester backup cloud save:', e); }
     state.preferences.testerMode = true;
+    // 사용자 보고 2026-04-28: 튜토리얼 직전 예약된 saveToCloud setTimeout 즉시 취소
+    // (debounce로 1초 후 fire 예정 → 그때 state엔 시드 박혀 있어 cloud로 새던 버그)
+    if (typeof syncTimeout !== 'undefined' && syncTimeout) {
+      clearTimeout(syncTimeout);
+      syncTimeout = null;
+    }
     refreshTesterModeUI();
     showToast('🧪 테스터 모드 ON — 변경 저장 X. OFF 또는 새로고침 후 OFF 시 ON 직전 상태로 복원.');
     return;
