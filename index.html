@@ -21600,6 +21600,10 @@ async function testSeedV4Data() {
       _isDiagnosticSeed: s.title.startsWith('진단 시드:')
     });
   });
+  // 사용자 요청 2026-04-28: 튜토리얼에서 '마감 직전 폭발력 신뢰' (strat_seed_0) DNA 트리 펼침 상태로 시작
+  if (!state.preferences) state.preferences = {};
+  if (!state.preferences._strategyTreeOpen) state.preferences._strategyTreeOpen = {};
+  state.preferences._strategyTreeOpen.strat_seed_0 = true;
   // willpower_cap 발동: rest 모드 30일+ + 신규 가닥 30일 내 X로 만들려면 모든 strategy createdAt 30일+여야.
   // 시드는 신규 strategy 일부 있어 willpower_cap은 부분 detect — 실 사용 시 자연 발동. 시드는 4종까지 보장.
   // modeActiveSince.rest 시뮬을 위해 박아두기 (연관 데이터)
@@ -27792,7 +27796,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.159-nextlabel-fix';
+const APP_VERSION = 'v4.0.160-strat-tree-open';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
