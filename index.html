@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>소라고동</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -598,8 +598,8 @@
   .msg-action.saved { color: var(--accent); }
   .msg-action.retry { color: var(--accent); border: 1px solid var(--accent); padding: 8px 14px; }
 
-  /* 사용자 요청 2026-04-28: bottom 76px → bottom-nav 76px + safe-area 보장 */
-  .chat-input-bar { position: fixed; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; }
+  /* 사용자 보고 2026-04-28: env() 부작용으로 nav 위치 변경 — 원래 76px 복원 */
+  .chat-input-bar { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; }
   .chat-input-wrap { display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 10px; }
   /* iOS auto-zoom 방지 — input font 16px 이상 */
   .chat-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 16px; line-height: 1.5; outline: none; resize: none; max-height: 140px; padding: 8px 0; min-width: 0; }
@@ -684,8 +684,8 @@
   .send-btn:disabled { opacity: 0.4; }
   .send-btn:active { transform: scale(0.95); }
 
-  /* 사용자 요청 2026-04-28: iPhone home indicator / 노치 safe-area 보장 — 26px과 env() 중 큰 값 */
-  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 10px 0 max(26px, env(safe-area-inset-bottom, 26px)); z-index: 100; }
+  /* 사용자 보고 2026-04-28: viewport-fit=cover + env() 시 Galaxy/Android에서 nav 위로 올라가는 문제 — 원래 26px 복원, iPhone notch는 추후 별도 처리 */
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 10px 0 26px; z-index: 100; }
   .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 8px 0; min-height: 56px; justify-content: center; }
   .nav-item.active { opacity: 1; }
   .nav-icon { font-size: 22px; }
@@ -9172,7 +9172,7 @@ function _initOnbDrag() {
   handle.addEventListener('touchstart', onStart, { passive: false });
 }
 
-function startInteractiveOnboarding(startStep) {
+async function startInteractiveOnboarding(startStep) {
   // 사용자 요청 2026-04-28: startStep 인자로 특정 step부터 시작 가능 (튜토리얼 디버그 편의)
   _onbStep = (typeof startStep === 'number' && startStep >= 0 && startStep < ONBOARDING_STEPS.length) ? startStep : 0;
   _onbStartTime = Date.now();
@@ -9187,19 +9187,19 @@ function startInteractiveOnboarding(startStep) {
   // V3.13.x: caseFormulation도 백업 — 튜토리얼 대화로 update됐을 가능성 (timestamp 없어 timestamp 정리 X)
   window._onbCFBackup = JSON.parse(JSON.stringify(state.caseFormulation || { version: 0, problems: [], mechanisms: [], strengths: [] }));
   // V4-fix v3 (사용자 요청): 튜토리얼 시작 시 testerMode ON + 시드 데이터 자동 박기
-  // 사용자 요청 2026-04-28: 배너/투어 다시 보기 둘 다 — 항상 시드 박기 (이전엔 자동 ON 됐을 때만)
+  // 사용자 보고 2026-04-28: toggleTesterMode가 async인데 await 안 해서 testerMode 플래그 set 전에 시드 체크 → 시드 안 박힘. await로 순서 보장
   window._onbAutoTesterMode = false;
   if (state.preferences && !state.preferences.testerMode) {
     if (typeof toggleTesterMode === 'function') {
       try {
-        toggleTesterMode();  // ON: 현재 state 백업 + flag set
+        await toggleTesterMode();  // ON: 백업 + flag set 완료 보장
         window._onbAutoTesterMode = true;
       } catch (e) { console.warn('tutorial testerMode ON:', e); }
     }
   }
-  // 시드는 testerMode ON 상태에서 항상 박음 (이미 ON 이었어도)
+  // testerMode ON 확인 후 시드 박음 (await로 순서 보장)
   if (state.preferences && state.preferences.testerMode && typeof testSeedV4Data === 'function') {
-    try { testSeedV4Data(); } catch (e) { console.warn('tutorial seed:', e); }
+    try { await testSeedV4Data(); } catch (e) { console.warn('tutorial seed:', e); }
   }
   const tourOv = document.getElementById('tourOverlay');
   if (tourOv) tourOv.style.display = 'none';
@@ -27774,7 +27774,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.146-shell-overlay-selector';
+const APP_VERSION = 'v4.0.147-await-tester-revert-safearea';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
