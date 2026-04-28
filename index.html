@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>소라고동</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -55,8 +55,8 @@
   body::after { content: ''; position: fixed; bottom: -20%; right: -20%; width: 60%; height: 60%; background: radial-gradient(ellipse, rgba(201, 169, 110, 0.08) 0%, transparent 70%); pointer-events: none; z-index: 0; }
 
   .app { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
-  /* 사용자 요청 2026-04-28: iPhone 노치 끝에 헤더 딱 정렬 — safe-area-inset-top 사용 (Android는 0이라 영향 X) */
-  .header { flex-shrink: 0; padding: env(safe-area-inset-top, 0px) 24px 10px; display: flex; align-items: center; justify-content: space-between; }
+  /* V3 main 그대로 복원 — 52px top (PWA standalone 상태바 보호 + Safari 브라우저 자연스러운 cushion) */
+  .header { flex-shrink: 0; padding: 52px 24px 12px; display: flex; align-items: center; justify-content: space-between; }
   .logo { font-family: 'Gowun Batang', serif; font-size: 20px; color: var(--accent); letter-spacing: 0.05em; }
   .date-pill { font-size: 11px; color: var(--text-dim); background: var(--surface); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-soft); }
@@ -685,11 +685,11 @@
   .send-btn:disabled { opacity: 0.4; }
   .send-btn:active { transform: scale(0.95); }
 
-  /* 사용자 요청 2026-04-28: 각 기기 safe-area에 맞춤 — Android 0, iPhone 노치/home indicator 자동 cushion */
-  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 6px 0 max(6px, env(safe-area-inset-bottom, 6px)); z-index: 100; }
-  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 4px 0; min-height: 48px; justify-content: center; }
+  /* V3 main 그대로 복원 — 26px bottom (홈 indicator 보호 + iPhone PWA standalone 자연스러움) */
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 10px 0 26px; z-index: 100; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 8px 0; min-height: 56px; justify-content: center; }
   .nav-item.active { opacity: 1; }
-  .nav-icon { font-size: 20px; }
+  .nav-icon { font-size: 22px; }
   .nav-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.04em; }
   .nav-item.active .nav-label { color: var(--accent); }
 
@@ -27792,7 +27792,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.157-nav-safearea-slider';
+const APP_VERSION = 'v4.0.158-v3-restore';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
