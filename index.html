@@ -9185,8 +9185,8 @@ function startInteractiveOnboarding(startStep) {
   // V3.13.x: caseFormulation도 백업 — 튜토리얼 대화로 update됐을 가능성 (timestamp 없어 timestamp 정리 X)
   window._onbCFBackup = JSON.parse(JSON.stringify(state.caseFormulation || { version: 0, problems: [], mechanisms: [], strengths: [] }));
   // V4-fix v3 (사용자 요청): 튜토리얼 시작 시 testerMode ON + 시드 데이터 자동 박기
-  // 튜토리얼 끝(onbFinish) 또는 skip 시 testerMode OFF로 사용자 데이터 복원됨
-  window._onbAutoTesterMode = false;  // 자동 켰는지 마킹 (onbFinish에서 OFF용)
+  // 사용자 요청 2026-04-28: 배너/투어 다시 보기 둘 다 — 항상 시드 박기 (이전엔 자동 ON 됐을 때만)
+  window._onbAutoTesterMode = false;
   if (state.preferences && !state.preferences.testerMode) {
     if (typeof toggleTesterMode === 'function') {
       try {
@@ -9195,7 +9195,8 @@ function startInteractiveOnboarding(startStep) {
       } catch (e) { console.warn('tutorial testerMode ON:', e); }
     }
   }
-  if (window._onbAutoTesterMode && typeof testSeedV4Data === 'function') {
+  // 시드는 testerMode ON 상태에서 항상 박음 (이미 ON 이었어도)
+  if (state.preferences && state.preferences.testerMode && typeof testSeedV4Data === 'function') {
     try { testSeedV4Data(); } catch (e) { console.warn('tutorial seed:', e); }
   }
   const tourOv = document.getElementById('tourOverlay');
@@ -27771,7 +27772,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.144-delegate-capture';
+const APP_VERSION = 'v4.0.145-tutorial-always-seed';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
