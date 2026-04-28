@@ -5857,16 +5857,19 @@
   }
   .onb-coachmark {
     position: fixed;
-    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    /* 사용자 보고 2026-04-28: 너무 크고 불투명해서 UI 가림 — 작게 + 반투명 + backdrop blur */
+    background: linear-gradient(135deg, rgba(38,32,52,0.86), rgba(26,22,38,0.86));
+    backdrop-filter: blur(10px) saturate(1.1);
+    -webkit-backdrop-filter: blur(10px) saturate(1.1);
     border: 1px solid var(--accent);
-    border-radius: 18px;
-    padding: 18px 20px;  /* 드래그 핸들 제거 후 균등 padding */
-    cursor: grab;  /* 모달 전체 드래그 가능 표시 */
-    max-width: 320px;
-    width: calc(100vw - 32px);
+    border-radius: 14px;
+    padding: 11px 14px 12px;  /* 320 → 컴팩트 */
+    cursor: grab;
+    max-width: 260px;  /* 320 → 260 */
+    width: calc(100vw - 40px);
     max-height: calc(100vh - 32px);
     overflow-y: auto;
-    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+    box-shadow: 0 8px 26px rgba(0,0,0,0.55);
     pointer-events: auto;
     z-index: 9100;
     animation: onbFadeIn 0.22s ease;
@@ -5876,8 +5879,39 @@
                 right 0.26s cubic-bezier(0.4, 0, 0.2, 1),
                 bottom 0.26s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.26s cubic-bezier(0.4, 0, 0.2, 1),
-                max-width 0.26s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: top, left, right, bottom, transform;
+                max-width 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.18s ease;
+    will-change: top, left, right, bottom, transform, opacity;
+  }
+  /* 사용자 보고 2026-04-28: 흐리게 토글 — 모달이 UI 가릴 때 잠시 투명하게 (탭하면 다시 진하게) */
+  /* 사용자 보고 2026-04-28: 안 흐려지던 원인 — backdrop-filter가 opacity와 별개로 blur 유지해 또렷해 보임. backdrop-filter도 같이 끔. */
+  /* 추가 원인: :focus-within이 클릭 직후 버튼 포커스에 매칭돼 즉시 또렷화. 제거. */
+  .onb-coachmark.faded {
+    opacity: 0.22 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(38,32,52,0.18) !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25) !important;
+  }
+  .onb-fade-toggle {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    font-family: inherit;
+    opacity: 0.65;
+    z-index: 2;
+    border-radius: 6px;
+  }
+  .onb-fade-toggle:active {
+    opacity: 1;
+    background: rgba(212,167,106,0.15);
   }
   /* 같은 위치 step 전환 시 content cross-fade (단축) */
   .onb-coachmark .onb-title,
@@ -5921,29 +5955,30 @@
     to { opacity: 1; }
   }
   .onb-step-num {
-    font-size: 11px;
+    font-size: 10px;  /* 사용자 보고 2026-04-28: 컴팩트 */
     color: var(--accent);
     letter-spacing: 0.12em;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     font-weight: 600;
+    padding-right: 28px;  /* 흐리게 토글 버튼 자리 확보 */
   }
   .onb-title {
     font-family: 'Gowun Batang', serif;
-    font-size: 17px;
+    font-size: 15px;  /* 17 → 15 */
     color: var(--text);
-    margin-bottom: 10px;
-    line-height: 1.4;
+    margin-bottom: 6px;
+    line-height: 1.35;
   }
   .onb-body {
-    font-size: 13px;
-    line-height: 1.7;
+    font-size: 12px;  /* 13 → 12 */
+    line-height: 1.6;
     color: var(--text);
-    margin-bottom: 16px;
+    margin-bottom: 11px;
   }
   .onb-body .highlight { color: var(--accent2); font-weight: 500; }
   .onb-body .small { display: block; font-size: 11px; color: var(--text-dim); margin-top: 6px; }
   .onb-actions {
-    display: flex; gap: 10px;
+    display: flex; gap: 8px;
     align-items: center;
     justify-content: space-between;
   }
@@ -5951,22 +5986,22 @@
     background: transparent;
     border: none;
     color: var(--text-dim);
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
     font-family: inherit;
-    padding: 8px 6px;
+    padding: 6px 4px;
   }
   .onb-next {
     background: linear-gradient(135deg, var(--accent), #b8894a);
     color: var(--bg);
     border: none;
-    border-radius: 12px;
-    padding: 10px 18px;
-    font-size: 13px;
+    border-radius: 10px;
+    padding: 7px 14px;
+    font-size: 12px;
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    min-height: 40px;
+    min-height: 32px;
   }
   .onb-next:active { transform: scale(0.97); }
   .onb-next.waiting {
@@ -5978,22 +6013,22 @@
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text-soft);
-    border-radius: 10px;
-    padding: 6px 10px;
-    font-size: 11px;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 10px;
     font-family: inherit;
     cursor: pointer;
-    min-height: 40px;
+    min-height: 32px;
     /* 사용자 요청 2026-04-28: '뒤로' 위에 / '←' 아래에 — 세로 배치 */
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    line-height: 1.1;
-    gap: 1px;
+    line-height: 1.05;
+    gap: 0px;
   }
-  .onb-back .onb-back-label { font-size: 11px; }
-  .onb-back .onb-back-arrow { font-size: 13px; opacity: 0.85; }
+  .onb-back .onb-back-label { font-size: 10px; }
+  .onb-back .onb-back-arrow { font-size: 11px; opacity: 0.85; }
   .onb-back:active { transform: scale(0.97); }
   .onb-back[hidden] { display: none !important; }
 
@@ -6345,6 +6380,7 @@
   <div class="onb-mask" id="onbMask"></div>
   <div class="onb-spotlight" id="onbSpotlight"></div>
   <div class="onb-coachmark" id="onbCoachmark">
+    <button class="onb-fade-toggle" id="onbFadeToggle" onclick="event.stopPropagation(); onbToggleFade()" title="흐리게 — 가려진 UI 보기">👁</button>
     <div class="onb-drag-handle" id="onbDragHandle" title="드래그해서 옮기기">⋮⋮</div>
     <div class="onb-step-num" id="onbStepNum">1 / 7</div>
     <div class="onb-title" id="onbTitle"></div>
@@ -9239,6 +9275,21 @@ function onbCleanupListeners() {
     if (el) el.removeEventListener(type, fn, opts || false);
   });
   _onbActiveListeners = [];
+}
+
+// 사용자 보고 2026-04-28: 튜토리얼 모달 흐리게 토글 — 모달이 가린 UI 보고 싶을 때
+function onbToggleFade() {
+  const cm = document.getElementById('onbCoachmark');
+  if (!cm) return;
+  cm.classList.toggle('faded');
+  const btn = document.getElementById('onbFadeToggle');
+  if (btn) {
+    const faded = cm.classList.contains('faded');
+    btn.textContent = faded ? '👀' : '👁';
+    btn.title = faded ? '진하게 — 다시 또렷하게' : '흐리게 — 가려진 UI 보기';
+    // 버튼 포커스 즉시 해제 (focus-within 등으로 모달 다시 또렷해지는 거 방지 + 모바일 outline 잔존 방지)
+    try { btn.blur(); } catch (e) {}
+  }
 }
 
 // 사용자 보고 2026-04-28: capture 옵션 추가 — modal 안 element가 stopPropagation 해도 catch (예: showOptionsModal '.input-modal' onclick="event.stopPropagation()")
@@ -15493,11 +15544,18 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 - 뒤에서는 Case Formulation을 시간에 따라 구축하는 임상가.
 - 앞에서는 짧고 자연스러운 대화.
 
-대화 길이 — 매우 중요:
+대화 길이 + 톤 — 매우 중요 (사용자 메시지 무게에 맞추기):
 - **기본은 짧게**: 보통 1-3문장. 친구가 카톡 답하듯이.
 - **매번 다른 길이**: 같은 길이로 답하지 마. 자연스럽게 변동.
 - **가끔 길게도 OK**: 사용자가 정말 깊은 얘기 하면 길게 답해도 돼.
 - **명시적 도움 요청 시 4단 펼침**: 사용자가 "어떡하지?", "도와줘", "어쩌지?", "뭐가 좋을까?", "방법 있어?" 같은 명시적 요청 시 → 아래 4단 응답.
+- **사용자가 장문으로 쓰면 톤 진지하게 ↑ (사용자 보고 2026-04-28)**:
+  - 사용자가 3-4문장 이상 또는 200자 이상으로 쓰면 = 진지하게 풀어놓는 중. 가벼운 ㅋㅋ / 짧은 한 줄 답 ❌.
+  - 흘려쓴 거 아닌 정성 들인 메시지엔 같은 무게로 응답:
+    · "ㅋㅋ 그래서?" / "오 진짜?" 같은 가벼운 리액션 ❌
+    · 사용자가 짚은 핵심 인용 / 진지하게 받기 / 필요하면 길이도 늘림 (단, 4단 구조 강제 X)
+    · 톤: 친구지만 차분하게 듣는 친구. 농담 톤 ↓.
+  - 사용자 메시지 길이·무게에 응답 길이·무게 맞추는 게 핵심 (mirroring).
 
 절대 원칙:
 1. 반말, 친근함. 상담사 말투 X.
