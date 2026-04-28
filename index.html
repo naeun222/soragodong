@@ -5860,7 +5860,8 @@
     background: linear-gradient(135deg, var(--surface), var(--surface2));
     border: 1px solid var(--accent);
     border-radius: 18px;
-    padding: 18px 20px 18px 30px;  /* V4-fix v3: 드래그 핸들 자리 */
+    padding: 18px 20px;  /* 드래그 핸들 제거 후 균등 padding */
+    cursor: grab;  /* 모달 전체 드래그 가능 표시 */
     max-width: 320px;
     width: calc(100vw - 32px);
     max-height: calc(100vh - 32px);
@@ -5905,23 +5906,16 @@
     transform: translateX(-50%) !important;
     max-width: 280px;
   }
-  /* V4-fix v3 (사용자 요청): 튜토리얼 모달 드래그 핸들 */
-  .onb-drag-handle {
-    position: absolute;
-    top: 0; left: 0;
-    width: 24px; height: 100%;
-    cursor: grab;
-    color: var(--text-soft);
-    font-size: 14px;
-    display: flex; align-items: center; justify-content: center;
-    user-select: none;
-    border-right: 1px dashed rgba(212,167,106,0.20);
-    background: rgba(212,167,106,0.05);
-    border-radius: 18px 0 0 18px;
-    line-height: 1;
-    letter-spacing: -2px;
+  /* 사용자 보고 2026-04-28: above-modal step에서 drag 안 먹던 버그 — dragging 중일 땐 !important position 풀어서 inline style 적용되게 */
+  .onb-coachmark.above-modal.dragging {
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
   }
-  .onb-drag-handle:active { cursor: grabbing; background: rgba(212,167,106,0.15); }
+  /* 사용자 요청 2026-04-28: handle 제거 — 모달 전체 드래그. handle은 hidden (legacy 호환) */
+  .onb-drag-handle { display: none; }
   @keyframes onbFadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -8126,7 +8120,7 @@ const ONBOARDING_STEPS = [
     id: 'tutorial_plea',
     targetSelector: null,
     title: '잠깐 — 부탁 하나만 ㅜㅜ',
-    body: '풀 튜토리얼이 꽤 길어. 그래도 <b>끝까지 봐줘. 내 부탁..</b><br><br>이거 다 모르면 쓰기 어려움 ㅜㅜ.<br><br>나중에 핵심만 짧게 보여주는 <b>코어 튜토리얼</b>도 만들게. 지금은 일단 한 바퀴!',
+    body: '풀 튜토리얼이 꽤 길어. 그래도 <b>끝까지 봐줘. 내 부탁..</b><br><br>이거 다 모르면 쓰기 어려움 ㅜㅜ.<br><br>나중에 핵심만 짧게 보여주는 <b>코어 튜토리얼</b>도 만들게. 지금은 일단 한 바퀴!<br><br><span class="small">💡 <b>"눌렀어 →" 버튼</b>: 시키는 대로 눌렀는데 화면이 안 바뀌면 <b>잠깐 기다려봐</b> (AI 응답이 늦을 수도). 그래도 안 바뀌면 <b>"눌렀어 →"</b> 버튼 직접 눌러서 다음으로 넘기면 돼.</span>',
     waitFor: 'next'
   },
   // === Phase 1: 환영 (1) ===
@@ -9129,17 +9123,25 @@ let _onbActiveListeners = [];
 let _onbStartTime = null;  // V3.12: 튜토리얼 시작 시간 — 종료 시 데이터 정리
 
 // V4-fix v3 (사용자 요청): 튜토리얼 coachmark 드래그
+// 사용자 요청 2026-04-28: handle 제거, coachmark 전체 드래그 가능 (단 버튼/인터랙티브 element는 제외)
 function _initOnbDrag() {
   const coachmark = document.getElementById('onbCoachmark');
-  const handle = document.getElementById('onbDragHandle');
-  if (!coachmark || !handle || handle._dragInited) return;
-  handle._dragInited = true;
-  let dragging = false, startX = 0, startY = 0, baseLeft = 0, baseTop = 0;
+  if (!coachmark || coachmark._dragInited) return;
+  coachmark._dragInited = true;
+  let dragging = false, moved = false, startX = 0, startY = 0, baseLeft = 0, baseTop = 0;
+  const isInteractive = (el) => {
+    if (!el || el === coachmark) return false;
+    const tag = (el.tagName || '').toLowerCase();
+    if (tag === 'button' || tag === 'a' || tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+    if (el.onclick) return true;
+    return isInteractive(el.parentElement);
+  };
   const onMove = (e) => {
     if (!dragging) return;
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
     const dx = cx - startX, dy = cy - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
     coachmark.style.left = (baseLeft + dx) + 'px';
     coachmark.style.top = (baseTop + dy) + 'px';
     coachmark.style.right = 'auto';
@@ -9157,7 +9159,10 @@ function _initOnbDrag() {
     document.removeEventListener('touchend', onEnd);
   };
   const onStart = (e) => {
+    // 버튼/입력 element 클릭은 드래그 X (정상 클릭으로)
+    if (isInteractive(e.target)) return;
     dragging = true;
+    moved = false;
     coachmark.classList.add('dragging');
     const rect = coachmark.getBoundingClientRect();
     baseLeft = rect.left;
@@ -9168,10 +9173,11 @@ function _initOnbDrag() {
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('mouseup', onEnd);
     document.addEventListener('touchend', onEnd);
-    if (e.cancelable) e.preventDefault();
+    // touch는 preventDefault — 스크롤 가로채기 방지. 마우스는 ok.
+    if (e.touches && e.cancelable) e.preventDefault();
   };
-  handle.addEventListener('mousedown', onStart);
-  handle.addEventListener('touchstart', onStart, { passive: false });
+  coachmark.addEventListener('mousedown', onStart);
+  coachmark.addEventListener('touchstart', onStart, { passive: false });
 }
 
 async function startInteractiveOnboarding(startStep) {
@@ -16319,9 +16325,10 @@ function mutateToNewGeneration(strategyId, layer, action) {
     card.actionStrategy = action;
     card.title = action.length > 40 ? action.slice(0, 40) + '...' : action;
   }
+  // 사용자 요청 2026-04-28: 진화 직후엔 트리 접힘 (사용자가 직접 제목 클릭해서 펼치는 경험)
   if (!state.preferences) state.preferences = {};
   if (!state.preferences._strategyTreeOpen) state.preferences._strategyTreeOpen = {};
-  state.preferences._strategyTreeOpen[strategyId] = true;
+  state.preferences._strategyTreeOpen[strategyId] = false;
   saveState();
   return card;
 }
@@ -23960,7 +23967,7 @@ function renderRitualStep() {
       </div>
       <div class="ritual-sub">트리거 → 행동을 묶으면 자동 시동돼.</div>
       <div class="ritual-actions">
-        <button class="ritual-btn primary" onclick="ritualNextStep()">${_ritualState.ifThenType === 'both' ? '다음 →' : '약속할게 ✦'}</button>
+        <button class="ritual-btn primary" onclick="ritualNextStep()">${_ritualState.ifThenType === 'both' ? (window._onbTutorialMode ? '눌렀어 ✦' : '다음 →') : '약속할게 ✦'}</button>
         <button class="ritual-btn skip" onclick="ritualBackStep()">← 이전</button>
       </div>
     `;
@@ -27795,7 +27802,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.161-step69-next-label';
+const APP_VERSION = 'v4.0.162-modal-drag-anywhere';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
