@@ -8563,7 +8563,7 @@ const ONBOARDING_STEPS = [
     title: '🌿 임시 대화창',
     body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>아래 선택지 중 하나를 골라봐.',
     waitFor: 'next',
-    manualAdvance: true,
+    nextLabel: '눌렀어 →',
     dimBackground: false,
     aboveModal: true
   },
@@ -9620,9 +9620,9 @@ function onbPositionStep(step, retryCount) {
       };
       // 사용자 보고 2026-04-28: capture 사용 — modal 안 stopPropagation 우회 ('안 통했어' 등 options-btn click 못 받던 버그)
       onbAddListener(document, 'click', delegateHandler, true);
-      // 사용자 요청 2026-04-28: 모든 click step에 '눌렀어' 비상 버튼 항상 노출
+      // 사용자 요청 2026-04-28: 모든 click step에 비상 버튼 항상 노출 (step.nextLabel 존중)
       nextBtn.style.display = '';
-      nextBtn.textContent = '눌렀어 →';
+      nextBtn.textContent = step.nextLabel || '눌렀어 →';
       return;
     }
     if (advanceTarget) {
@@ -27792,7 +27792,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.158-v3-restore';
+const APP_VERSION = 'v4.0.159-nextlabel-fix';
 
 // V3.13.x: 단순화 — 튜토리얼 진행 중 X + 해당 버전 dismiss X면 무조건 배너.
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
