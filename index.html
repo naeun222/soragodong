@@ -6937,7 +6937,7 @@
       <div class="screen-title">🌙 리뷰 모음</div>
       <div class="screen-sub">지금까지의 주간·월간 회고들.</div>
       <div id="archiveReviewsList"></div>
-      <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">아카이브로 돌아가기</button>
+      <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">도서관으로 돌아가기</button>
     </div>
 
     <!-- V4-1j-b: 숙고 채팅 별도 화면 (screen-reflection) -->
@@ -7150,6 +7150,7 @@
         <button class="btn-secondary" onclick="manualCloudBackup()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드 백업</button>
         <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드 복원</button>
         <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
+        <button class="btn-secondary" onclick="showCoreReplayPicker()">🔧 개별 코어 튜토리얼</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
 
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
@@ -8682,7 +8683,7 @@ const ONBOARDING_STEPS = [
     id: 'chapter_auto',
     targetSelector: null,
     title: '📖 챕터 자동 분류',
-    body: '우리가 여기서 한 대화는 <b>4시간 이상 멈추거나, 입력창 왼쪽 하단의 ✓ 버튼을 누르면 마무리</b>돼.<br><br><br>그럼 내가 이 대화 챕터를 <b>8가지 주제 중 하나</b>로 자동 분류해서 <b>📚 도서관</b>에 저장해줄게:<br>일기 / 일상 / 고민 / 감정 / 기억 / 할 일 / 아이디어 / 관계.<br><br><span class="small">자세한 건 이따가 알아보자.</span>',
+    body: '우리가 여기서 한 대화는 <b>입력창 왼쪽 하단의 ✓ 버튼을 누르면 마무리</b>돼. (24시간 이상 갭이면 자동 마무리 — 안전망)<br><br>그럼 내가 이 대화 챕터를 <b>8가지 주제 중 하나</b>로 자동 분류해서 <b>📚 도서관</b>에 저장해줄게:<br>일기 / 일상 / 고민 / 감정 / 기억 / 할 일 / 아이디어 / 관계.<br><br><span class="small">잠깐 멈췄다가 이어서 하고 싶으면 그냥 메시지 보내. 새 대화 하고 싶을 때만 ✓.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -9302,7 +9303,7 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     advanceClickSelector: '.day-modal-close',
     title: '✦ 토픽 — 카테고리별 자동 분류',
-    body: '4시간 이상 대화 멈추거나 ✓ 마무리하면, 고동이가 챕터를 <b>8 카테고리</b> (일기/일상/고민/감정/기억/할 일/아이디어/관계) 중 하나로 자동 분류해서 여기 박아.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
+    body: '✓ 마무리 누르거나 24시간 이상 갭 생기면, 고동이가 챕터를 <b>8 카테고리</b> (일기/일상/고민/감정/기억/할 일/아이디어/관계) 중 하나로 자동 분류해서 여기 박아.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
     waitFor: 'click',
     dimBackground: false,
     aboveModal: true
@@ -9556,13 +9557,14 @@ const CORE_TUTORIAL_RANGES = {
   core8: { startId: 'magic_room_intro',  endId: 'magic_unlock_explain' }   // 6 step
 };
 
+// 사용자 요청 2026-04-29: 제목 단순화 — '코어' 빼고 단순 명사로
 const CORE_LABELS = {
-  core1: '시작 / 체크인 / 대화 (한 바퀴)',
-  core2: '소라의 부름 + 모래사장 + 양생방',
-  core3: '실행 탭 — 머릿속 풀기 + 몰입',
-  core4: '나 탭 — 분석 결과',
-  core5: '도서관 탭 — 5 카테고리 + 리뷰',
-  core6: '숙고 질문',
+  core1: '시작',
+  core2: '소라의 부름',
+  core3: '실행',
+  core4: '나',
+  core5: '도서관',
+  core6: '숙고',
   core8: '마법의 소라고동'
 };
 
@@ -9595,7 +9597,13 @@ const CORE_BODY_OVERRIDE = {
     }
   },
   galpi_sub_intro: {
-    core5: { body: '여기엔 🧙‍♂️ <b>마법의 소라고동</b>과 🌙 <b>리뷰 모음</b>이 있어.<br><br>🧙‍♂️ 마법의 소라고동은 큰 결정(도전·사랑·진로)을 후회 없이 할 수 있게 도와주는 방이야 — <b>나중에 직접 눌러보면 짧게 안내해줄게</b>.<br><br>지금은 옆의 🌙 <b>리뷰 모음</b> 보러 가자.' }
+    core5: {
+      body: '여기엔 🧙‍♂️ <b>마법의 소라고동</b>과 🌙 <b>리뷰 모음</b>이 있어.<br><br>🧙‍♂️ 마법의 소라고동은 큰 결정(도전·사랑·진로)을 후회 없이 할 수 있게 도와주는 방이야 — <b>나중에 직접 눌러보면 짧게 안내해줄게</b>.<br><br><b style="color:#d4a76a;">⚠ 지금은 누르지 마!!</b> 옆의 🌙 <b>리뷰 모음</b>으로 갈 거야.',
+      waitFor: 'next',
+      nextLabel: '다음 →',
+      targetSelector: null,
+      manualAdvance: false
+    }
   },
   annual_stories_done: {
     core5: { body: 'Stories 잘 봤지? ✨<br><br><b>주마다 · 월마다 · 계절마다 · 년마다</b> 리뷰가 자동으로 생겨.<br><br>아래 📚 도서관 탭 한 번 눌러서 돌아와.' }
@@ -9633,12 +9641,12 @@ function isCoreLocked(coreId) {
 
 // 코어별 잠금 모달용 메타 (이름 + 길이 힌트)
 const CORE_LOCK_INFO = {
-  core1: { name: '시작 / 체크인 / 대화', long: false },
-  core2: { name: '소라의 부름', long: true },   // 사용자 명시: 좀 김
-  core3: { name: '실행 탭',     long: false },
-  core4: { name: '나 탭',        long: false },
-  core5: { name: '도서관',       long: true },   // 사용자 명시: 좀 김
-  core6: { name: '숙고 질문',    long: false },
+  core1: { name: '시작',           long: false },
+  core2: { name: '소라의 부름',     long: true },   // 사용자 명시: 좀 긺
+  core3: { name: '실행',           long: false },
+  core4: { name: '나',             long: false },
+  core5: { name: '도서관',         long: true },   // 사용자 명시: 좀 긺
+  core6: { name: '숙고',           long: false },
   core8: { name: '마법의 소라고동', long: false }
 };
 
@@ -9770,12 +9778,42 @@ function _cleanupCoreOverrides() {
 }
 
 // V4 (사용자 요청 2026-04-29): 설정 → 🐚 투어 다시 보기
-// 홈 화면 업데이트 모달과 똑같은 3 버튼 모달 띄우기 (풀 / 하면서 익히기 / 이미 알아)
+// 홈 화면 업데이트 모달과 똑같은 3 버튼 모달 띄우기 (코어/풀/이미 알아)
 function showTutorialReplayMenu() {
   if (typeof showUpdateChooserModal === 'function') return showUpdateChooserModal();
   // fallback
   if (typeof startCoreTutorial === 'function') return startCoreTutorial('core1');
   return startInteractiveOnboarding();
+}
+
+// V4 (사용자 요청 2026-04-29): 설정 → 🔧 개별 코어 튜토리얼
+// 코어 7개 + 풀 한 번에 골라서 진행. 잠금이랑 무관 — replay 도구.
+async function showCoreReplayPicker() {
+  if (typeof showOptionsModal !== 'function') {
+    return startInteractiveOnboarding();
+  }
+  // 사용자 요청 2026-04-29: 제목 '코어 #N' 제거, 단순 명사 (코어 번호 순서 유지)
+  const opts = [
+    { label: '🐚 시작',             value: 'core1', desc: '체크인 / 대화 한 바퀴 (필수 핵심)' },
+    { label: '⭐ 소라의 부름',      value: 'core2', desc: '미션 / 모래사장 / 양생방 (좀 긺)' },
+    { label: '🚀 실행',             value: 'core3', desc: '머릿속 풀기 + 몰입' },
+    { label: '✦ 나',                value: 'core4', desc: 'AI가 본 너의 패턴·가치·특성' },
+    { label: '📚 도서관',           value: 'core5', desc: '일기 / 진주 / 깨달음 / 리뷰 (좀 긺)' },
+    { label: '🌊 숙고',             value: 'core6', desc: '마음을 울리는 큰 물음' },
+    { label: '🧙‍♂️ 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
+    { label: '✨ 풀 튜토리얼',       value: 'full',  desc: '처음부터 끝까지 (~30분)' }
+  ];
+  const choice = await showOptionsModal({
+    title: '🔧 개별 코어 튜토리얼',
+    message: '코어 골라서 다시 보기. 잠금 상태 영향 X.',
+    options: opts
+  });
+  if (!choice) return;
+  if (choice === 'full') {
+    window._fullTutorialActive = true;
+    return startInteractiveOnboarding();
+  }
+  if (typeof startCoreTutorial === 'function') return startCoreTutorial(choice);
 }
 
 // 잠금 시각 적용/해제 — 셀렉터 + coreId pair 받아서 .core-locked 클래스 + data-core 토글
@@ -9793,8 +9831,8 @@ function applyCoreLockMarkers() {
     { sel: '.home-small-card[onclick="openShellCollection()"]',       core: 'core2' },
     // 도서관 안 양생방 chip — core2 prerequisite (사용자 요청 2026-04-29)
     { sel: '.lib-cat-chip[data-cat="yangsaeng"]',                     core: 'core2' },
-    // 숙고 질문 추가 (홈에 있는 진입점)
-    { sel: '.reflection-empty-card, [onclick="addReflectionQuestion()"]', core: 'core6' },
+    // 숙고 질문 — 추가 진입점 + 이미 active 진행 중인 카드도 잠금 (사용자 요청 2026-04-29)
+    { sel: '.reflection-empty-card, .reflection-active-card, [onclick="addReflectionQuestion()"]', core: 'core6' },
     // 마법의 소라고동 — 도서관 안 진입점 + 홈 mini 카드 + 결정 화면 새 결정 버튼
     { sel: '[onclick="showArchiveDecisions()"], .decision-mini-card, .magic-card', core: 'core8' }
   ];
@@ -10039,9 +10077,9 @@ function onbPositionStep(step, retryCount) {
   const phaseInfo = (typeof _getPhaseInfo === 'function') ? _getPhaseInfo(_onbStep) : null;
   const phaseLabel = document.getElementById('onbPhaseLabel');
   if (phaseLabel) {
-    // 코어 튜토리얼이면 코어 라벨, 아니면 phase 라벨
+    // 코어 튜토리얼이면 단순 명사 라벨, 아니면 phase 라벨
     if (_activeCoreId && CORE_LABELS[_activeCoreId]) {
-      phaseLabel.textContent = '코어 — ' + CORE_LABELS[_activeCoreId];
+      phaseLabel.textContent = CORE_LABELS[_activeCoreId] + ' 튜토리얼';
     } else {
       phaseLabel.textContent = phaseInfo ? phaseInfo.phase.name : '';
     }
@@ -15596,8 +15634,9 @@ async function sendChat() {
   const text = input.value.trim();
   if (!text) return;
   
-  // V3.8: 4시간 비활성 → 새 챕터 시작 마킹
-  const CHAPTER_GAP_MS = 4 * 60 * 60 * 1000;  // 4시간
+  // V4 사용자 요청 2026-04-29: 4시간 → 24시간으로 변경. 사용자가 이어서 대화하고 싶을 수 있음 — 명시적 ✓ 마무리만 챕터 분리.
+  // 24시간은 자동 분리 안전망 (자정 넘기는 일반 케이스 보호).
+  const CHAPTER_GAP_MS = 24 * 60 * 60 * 1000;  // 24시간
   const lastMsg = state.chatMessages[state.chatMessages.length - 1];
   const isNewChapter = !lastMsg || !lastMsg.timestamp || 
     (Date.now() - new Date(lastMsg.timestamp).getTime() >= CHAPTER_GAP_MS);
@@ -17006,7 +17045,7 @@ ${(msg.content || '').slice(0, 1500)}
   msg.saved = true;
   saveState();
   renderChat();
-  showToast('깨달음 아카이브에 저장됐어 ✦');
+  showToast('깨달음 도서관에 저장됐어 ✦');
 }
 
 // V4-1m: 진주 능동 제안 — 사용자 메시지에서 행복/소중함 신호 감지.
@@ -20432,7 +20471,7 @@ function renderLensArchive() {
 }
 
 async function deleteArchiveItem(idx) {
-  if (!await confirmDelete('이 깨달음', '아카이브에서 영구 삭제됩니다.')) return;
+  if (!await confirmDelete('이 깨달음', '도서관에서 영구 삭제됩니다.')) return;
   if (!state.archive || idx < 0 || idx >= state.archive.length) return;
   state.archive.splice(idx, 1);
   saveState();
@@ -22667,10 +22706,11 @@ function testSkip4Hours() {
     return;
   }
   const lastMsg = state.chatMessages[state.chatMessages.length - 1];
-  const fakeTime = new Date(Date.now() - (4 * 60 * 60 * 1000 + 60000));
+  // V4 사용자 요청 2026-04-29: 챕터 갭 4시간 → 24시간으로 변경됨. 테스트 트리거도 동기화.
+  const fakeTime = new Date(Date.now() - (24 * 60 * 60 * 1000 + 60000));
   lastMsg.timestamp = fakeTime.toISOString();
   saveState();
-  showToast('🧪 4시간 전으로. 대화창에서 새 메시지 → 챕터 분리 + 토픽 추출');
+  showToast('🧪 24시간 전으로. 대화창에서 새 메시지 → 챕터 분리 + 토픽 추출');
 }
 
 // V4-fix: 테스터 모드 V4 전체 시드 + 강제 trigger 함수들 (testerMode ON 시 안전)
@@ -24352,7 +24392,7 @@ async function testForceExtract() {
     const after = (state.topicCards || []).length;
     const diff = after - before;
     if (diff > 0) {
-      showToast(`✦ 토픽 ${diff}개 추출됨. 아카이브 → 📜 대화 렌즈에서 확인.`);
+      showToast(`✦ 토픽 ${diff}개 추출됨. 도서관 → 📜 대화 렌즈에서 확인.`);
     } else {
       showToast('⚠ AI가 추출할 만한 토픽 못 찾음. 더 의미 있는 대화 후 시도.');
     }
@@ -24363,7 +24403,7 @@ async function testForceExtract() {
 }
 
 async function testForceArchive() {
-  showToast('🧪 채팅 아카이브 강제 시작 (cutoff 우회)...');
+  showToast('🧪 채팅 도서관 정리 강제 시작 (cutoff 우회)...');
   const before = (state.chatArchive || []).length;
   if (!state.chatMessages || state.chatMessages.length === 0) {
     showToast('⚠ 대화 메시지가 없어.');
@@ -24386,7 +24426,7 @@ async function testForceArchive() {
       .sort()
       .slice(0, 3);  // 한 번에 3일치 (cost)
     if (datesToArchive.length === 0) {
-      showToast('⚠ 아카이브할 새 날짜 없음 (이미 다 됐거나 메시지 없음).');
+      showToast('⚠ 도서관 정리할 새 날짜 없음 (이미 다 됐거나 메시지 없음).');
       return;
     }
     for (const date of datesToArchive) {
@@ -24398,7 +24438,7 @@ async function testForceArchive() {
       });
       saveState();
     }
-    showToast(`✦ ${datesToArchive.length}일치 강제 아카이브됨.`);
+    showToast(`✦ ${datesToArchive.length}일치 도서관에 강제 정리됨.`);
   } catch (e) {
     showToast('❌ 실패: ' + e.message);
   }
@@ -24694,7 +24734,7 @@ async function runMonthlyAutoReviewIfNeeded() {
       tags: []
     });
     saveState();
-    showToast('📅 지난 달 자동 정리 완료. 아카이브 → 리뷰 모음 확인.');
+    showToast('📅 지난 달 자동 정리 완료. 도서관 → 리뷰 모음 확인.');
   } catch (e) {
     console.warn('monthly auto review failed:', e);
   }
@@ -29858,7 +29898,7 @@ async function resetMissions() {
 }
 async function resetArchive() {
   const c = (state.archive || []).length;
-  await _confirmAndReset('아카이브 깨달음', c, () => { state.archive = []; }, () => {
+  await _confirmAndReset('도서관 깨달음', c, () => { state.archive = []; }, () => {
     if (typeof renderArchive === 'function') renderArchive();
   });
 }
@@ -29919,16 +29959,16 @@ function showUpdateChooserModal() {
         한 번 둘러보면 나중에 헷갈릴 일 줄어. (제발료)
       </div>
       <div style="display:flex; flex-direction:column; gap:8px;">
-        <button class="input-modal-btn primary" onclick="_chooseUpdateOption('full')" style="padding:14px;">
-          ✨ 풀 튜토리얼 해보기
-          <div style="font-size:11px; opacity:0.85; margin-top:4px; font-weight:normal;">처음부터 끝까지 한 번에 (좀 긺)</div>
+        <button class="input-modal-btn primary" onclick="_chooseUpdateOption('learn')" style="padding:14px;">
+          🐚 코어 튜토리얼 시작 <span style="font-size:11px; opacity:0.9;">(추천 ✨)</span>
+          <div style="font-size:11px; opacity:0.85; margin-top:4px; font-weight:normal;">짧고 핵심만. 다른 기능은 만날 때마다 안내.</div>
         </button>
-        <button class="input-modal-btn" onclick="_chooseUpdateOption('learn')" style="padding:14px;">
-          🐚 하면서 익히기
-          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">기능 만날 때마다 짧은 안내 받기</div>
-        </button>
-        <button class="input-modal-btn" onclick="_chooseUpdateOption('dismiss')" style="padding:10px; opacity:0.6;">
+        <button class="input-modal-btn" onclick="_chooseUpdateOption('dismiss')" style="padding:12px;">
           이미 알아 (다시 보지 않기)
+        </button>
+        <button class="input-modal-btn" onclick="_chooseUpdateOption('full')" style="padding:10px; opacity:0.55;">
+          ✨ 풀 튜토리얼 <span style="font-size:11px; color:var(--text-dim);">(비추천)</span>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">처음부터 끝까지 — 좀 길어. 각오 됐을 때만.</div>
         </button>
       </div>
     </div>
