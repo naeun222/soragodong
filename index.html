@@ -4388,6 +4388,10 @@
     z-index: 900;
     overflow: hidden;
     animation: stories-fade-in 0.3s ease;
+    /* 사용자 보고 2026-04-29: 길게 누르면 텍스트 선택되던 거 차단 (인스타식 long-press pause만 작동) */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
   @keyframes stories-fade-in { from { opacity: 0; } to { opacity: 1; } }
   .stories-progress {
@@ -25749,50 +25753,119 @@ async function buildQuarterlySlides(review) {
 
 // === 슬라이드 HTML 빌더 ===
 
-// 사용자 요청 2026-04-29: 분기 mood/vitality 곡선 + peak/valley 마커
+// 사용자 요청 2026-04-29: 분기 mood arc — '그래서 뭐?' 안 되게 의미 있는 형태로
+// 주별 평균 막대 + 시작/끝 + peak/valley 일기 발췌 + 한 줄 해석
 function _buildMoodArcSlideHTML(inRange, startMs, endMs) {
   const entries = (state.entries || [])
     .filter(e => e.date && e.mood != null && new Date(e.date + 'T12:00:00').getTime() >= startMs && new Date(e.date + 'T12:00:00').getTime() <= endMs)
     .sort((a, b) => a.date.localeCompare(b.date));
   if (entries.length < 5) return null;
-  const w = 320, h = 180, padX = 14, padY = 22;
-  const maxI = entries.length - 1;
-  const xOf = (i) => padX + (i / maxI) * (w - padX * 2);
-  const yOf = (v) => h - padY - ((v - 1) / 4) * (h - padY * 2);
-  const moodPath = entries.map((e, i) => `${i === 0 ? 'M' : 'L'} ${xOf(i).toFixed(1)} ${yOf(e.mood).toFixed(1)}`).join(' ');
-  const vitEntries = entries.filter(e => e.vitality != null);
-  const vitPath = vitEntries.length >= 2
-    ? vitEntries.map((e, i) => `${i === 0 ? 'M' : 'L'} ${xOf(entries.indexOf(e)).toFixed(1)} ${yOf(e.vitality).toFixed(1)}`).join(' ')
-    : '';
-  // peak / valley
+
+  // 주별 평균 (분기 ~12-13주, 막대로 보기 쉬움)
+  const weekBuckets = [];
+  entries.forEach(e => {
+    const t = new Date(e.date + 'T12:00:00').getTime();
+    const weekIdx = Math.floor((t - startMs) / (7 * 86400000));
+    if (!weekBuckets[weekIdx]) weekBuckets[weekIdx] = { sum: 0, count: 0, vSum: 0, vCount: 0, dates: [] };
+    weekBuckets[weekIdx].sum += e.mood;
+    weekBuckets[weekIdx].count += 1;
+    weekBuckets[weekIdx].dates.push(e.date);
+    if (e.vitality != null) {
+      weekBuckets[weekIdx].vSum += e.vitality;
+      weekBuckets[weekIdx].vCount += 1;
+    }
+  });
+  const weeks = weekBuckets
+    .map((b, i) => b ? { idx: i, avg: b.sum / b.count, vAvg: b.vCount > 0 ? b.vSum / b.vCount : null } : null)
+    .filter(Boolean);
+  if (weeks.length < 2) return null;
+
+  // 시작/끝 (첫 2주 평균 vs 마지막 2주 평균 — 노이즈 줄임)
+  const firstChunk = weeks.slice(0, Math.min(2, Math.ceil(weeks.length / 4)));
+  const lastChunk = weeks.slice(-Math.min(2, Math.ceil(weeks.length / 4)));
+  const startAvg = firstChunk.reduce((s, w) => s + w.avg, 0) / firstChunk.length;
+  const endAvg   = lastChunk.reduce((s, w) => s + w.avg, 0) / lastChunk.length;
+  const overallAvg = entries.reduce((s, e) => s + e.mood, 0) / entries.length;
+
+  const delta = endAvg - startAvg;
+  const trendIcon = delta > 0.3 ? '↑' : delta < -0.3 ? '↓' : '→';
+  const trendColor = delta > 0.3 ? '#8fc88f' : delta < -0.3 ? '#c98c8c' : 'rgba(255,255,255,0.55)';
+  const trendLabel = delta > 0.3 ? '오르며 끝' : delta < -0.3 ? '가라앉으며 끝' : '비슷한 흐름';
+
+  // peak / valley (단일 day 기준)
   let peak = entries[0], valley = entries[0];
   entries.forEach(e => { if (e.mood > peak.mood) peak = e; if (e.mood < valley.mood) valley = e; });
-  const peakI = entries.indexOf(peak), valleyI = entries.indexOf(valley);
-  const avgMood = (entries.reduce((s, e) => s + e.mood, 0) / entries.length).toFixed(1);
+
+  // 막대 그리기
+  const w = 320, h = 100, padX = 16, padY = 14;
+  const maxWeek = weeks.length - 1;
+  const barW = Math.max(8, (w - padX * 2) / weeks.length - 4);
+  const barXOf = (i) => padX + (i / weeks.length) * (w - padX * 2);
+  const barH = (avg) => ((avg - 1) / 4) * (h - padY * 2);
+  const bars = weeks.map(wk => {
+    const x = barXOf(wk.idx);
+    const bh = Math.max(3, barH(wk.avg));
+    const y = h - padY - bh;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" fill="#d4a76a" opacity="${0.45 + (wk.avg - 1) * 0.13}" rx="2"/>`;
+  }).join('');
+  // 평균선
+  const avgY = h - padY - barH(overallAvg);
+
+  // peak/valley 발췌 (diary 한 문장)
+  const _excerpt = (e) => {
+    if (!e) return '';
+    const t = (e.diary || e.aiSummary || e.note || '').replace(/\s+/g, ' ').trim();
+    if (!t) return '';
+    return t.slice(0, 60) + (t.length > 60 ? '…' : '');
+  };
+  const peakLabel = new Date(peak.date + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+  const valleyLabel = new Date(valley.date + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+  const peakExcerpt = _excerpt(peak);
+  const valleyExcerpt = _excerpt(valley);
+
+  // 해석 한 줄
+  const interp = (() => {
+    if (delta > 0.5) return '후반으로 갈수록 오른 분기. 뭔가 풀렸어.';
+    if (delta < -0.5) return '후반에 가라앉은 분기. 뭐가 무거웠을까.';
+    if (overallAvg >= 3.8) return '전반적으로 안정된 분기. 내려간 적 있어도 평균이 받쳐줬어.';
+    if (overallAvg <= 2.5) return '전반적으로 무거운 분기. 잘 버텼어.';
+    return '오르락내리락 한 분기. 그게 너의 자연 리듬이야.';
+  })();
+
   return `
     <div class="stories-label">기분 곡선</div>
-    <div class="stories-title" style="margin-bottom:14px;">이 분기 너의 mood arc</div>
-    <svg viewBox="0 0 ${w} ${h}" style="width:100%; max-width:340px; margin:6px auto 14px; display:block;" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#d4a76a" stop-opacity="0.35"/>
-          <stop offset="100%" stop-color="#d4a76a" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <line x1="${padX}" y1="${yOf(3)}" x2="${w - padX}" y2="${yOf(3)}" stroke="rgba(255,255,255,0.12)" stroke-dasharray="2 4"/>
-      <path d="${moodPath} L ${xOf(maxI).toFixed(1)} ${h - padY} L ${xOf(0).toFixed(1)} ${h - padY} Z" fill="url(#moodGrad)" stroke="none"/>
-      <path d="${moodPath}" stroke="#d4a76a" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      ${vitPath ? `<path d="${vitPath}" stroke="#8fc88f" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 3" opacity="0.75"/>` : ''}
-      <circle cx="${xOf(peakI).toFixed(1)}" cy="${yOf(peak.mood).toFixed(1)}" r="4.5" fill="#ffe28a" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
-      <circle cx="${xOf(valleyI).toFixed(1)}" cy="${yOf(valley.mood).toFixed(1)}" r="4.5" fill="#a89dc8" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
-      <text x="${xOf(peakI).toFixed(1)}" y="${(yOf(peak.mood) - 8).toFixed(1)}" fill="#ffe28a" font-size="10" text-anchor="middle">↑${escapeHtml(peak.date.slice(5))}</text>
-      <text x="${xOf(valleyI).toFixed(1)}" y="${(yOf(valley.mood) + 16).toFixed(1)}" fill="#a89dc8" font-size="10" text-anchor="middle">↓${escapeHtml(valley.date.slice(5))}</text>
-    </svg>
-    <div style="display:flex; justify-content:center; gap:18px; font-size:11px; color:rgba(255,255,255,0.6); margin-bottom:10px;">
-      <span><span style="color:#d4a76a;">━</span> 기분</span>
-      ${vitPath ? `<span><span style="color:#8fc88f;">┄</span> 활력</span>` : ''}
+    <div class="stories-title" style="margin-bottom:6px;">이 분기 너의 mood arc</div>
+    <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-bottom:14px;">주별 평균 · ${entries.length}일 기록</div>
+
+    <div style="display:flex; justify-content:center; align-items:center; gap:14px; margin:0 auto 14px;">
+      <div style="text-align:center;">
+        <div style="font-size:11px; color:rgba(255,255,255,0.55); letter-spacing:0.04em;">시작</div>
+        <div style="font-size:22px; color:white; font-weight:600; line-height:1.1;">${startAvg.toFixed(1)}</div>
+      </div>
+      <div style="font-size:18px; color:${trendColor}; font-weight:600;">${trendIcon}</div>
+      <div style="text-align:center;">
+        <div style="font-size:11px; color:rgba(255,255,255,0.55); letter-spacing:0.04em;">끝</div>
+        <div style="font-size:22px; color:white; font-weight:600; line-height:1.1;">${endAvg.toFixed(1)}</div>
+      </div>
     </div>
-    <div class="stories-body" style="font-size:13px;">평균 ${avgMood}/5. 가장 빛난 날 ${escapeHtml(peak.date.slice(5))} (${peak.mood}/5), 가장 아래 ${escapeHtml(valley.date.slice(5))} (${valley.mood}/5).</div>
+
+    <svg viewBox="0 0 ${w} ${h}" style="width:100%; max-width:320px; display:block; margin:6px auto;" preserveAspectRatio="xMidYMid meet">
+      <line x1="${padX}" y1="${avgY.toFixed(1)}" x2="${w - padX}" y2="${avgY.toFixed(1)}" stroke="rgba(255,255,255,0.18)" stroke-dasharray="2 4"/>
+      <text x="${(w - padX).toFixed(1)}" y="${(avgY - 4).toFixed(1)}" fill="rgba(255,255,255,0.5)" font-size="9" text-anchor="end">평균 ${overallAvg.toFixed(1)}</text>
+      ${bars}
+    </svg>
+
+    <div style="margin-top:14px; padding:10px 14px; background:rgba(255,226,138,0.08); border-left:2px solid #ffe28a; border-radius:0 8px 8px 0; max-width:280px; margin-left:auto; margin-right:auto;">
+      <div style="font-size:10px; color:#ffe28a; letter-spacing:0.04em; margin-bottom:3px;">↑ 가장 빛난 ${escapeHtml(peakLabel)} (${peak.mood}/5)</div>
+      ${peakExcerpt ? `<div style="font-size:12px; color:rgba(255,255,255,0.85); font-style:italic;">"${escapeHtml(peakExcerpt)}"</div>` : ''}
+    </div>
+    ${valleyExcerpt || (valley.date !== peak.date) ? `
+    <div style="margin-top:8px; padding:10px 14px; background:rgba(168,157,200,0.08); border-left:2px solid #a89dc8; border-radius:0 8px 8px 0; max-width:280px; margin-left:auto; margin-right:auto;">
+      <div style="font-size:10px; color:#a89dc8; letter-spacing:0.04em; margin-bottom:3px;">↓ 가장 아래 ${escapeHtml(valleyLabel)} (${valley.mood}/5)</div>
+      ${valleyExcerpt ? `<div style="font-size:12px; color:rgba(255,255,255,0.85); font-style:italic;">"${escapeHtml(valleyExcerpt)}"</div>` : ''}
+    </div>` : ''}
+
+    <div class="stories-body" style="margin-top:18px; font-size:13px; opacity:0.9;">${escapeHtml(trendLabel)} — ${escapeHtml(interp)}</div>
   `;
 }
 
