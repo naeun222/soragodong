@@ -1299,6 +1299,45 @@
   .ft-nav { display: flex; gap: 8px; margin-top: 14px; }
   .ft-nav button { flex: 1; }
 
+  /* === Magic Room Visual Mode (사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 vs 일반 chat 분간) === */
+  .magic-mode-chip {
+    display: none;
+    position: fixed;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 80;
+    padding: 6px 14px;
+    font-size: 11px; font-weight: 600;
+    color: #e6d4ff;
+    background: linear-gradient(135deg, rgba(139,126,196,0.85), rgba(178,140,212,0.75));
+    border: 1px solid rgba(220,180,255,0.50);
+    border-radius: 100px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 18px rgba(139,126,196,0.40);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: magicChipFloat 3.5s ease-in-out infinite;
+  }
+  body.magic-mode .magic-mode-chip { display: block; }
+  @keyframes magicChipFloat {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-2px); }
+  }
+  body.magic-mode #screen-decisions,
+  body.magic-mode #screen-decision-detail {
+    background:
+      radial-gradient(ellipse at top, rgba(139,126,196,0.10), transparent 60%),
+      radial-gradient(ellipse at bottom, rgba(178,140,212,0.06), transparent 70%);
+  }
+  body.magic-mode .screen-title {
+    background: linear-gradient(135deg, #d4b8ff, #b89fde);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  body.magic-mode .chat-input-bar {
+    background: linear-gradient(to top, rgba(48,40,70,0.95) 70%, transparent);
+  }
+
   /* === Welcome Bonus Modal (사용자 요청 2026-04-30 ultrathink: 무료 토큰 화려한 알림 + 법적 고지) === */
   .welcome-bonus-modal {
     position: relative;
@@ -7277,6 +7316,9 @@
   </div>
 </div>
 
+<!-- 사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 화면일 때만 표시되는 fixed chip -->
+<div class="magic-mode-chip" id="magicModeChip">🧙‍♂️ 마법의 소라고동</div>
+
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
   <div class="login-content">
@@ -8146,12 +8188,40 @@ const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮
 // state.apiKey 비어있고 session 활성이면 → /api/chat 백엔드 프록시 (앱 결제 모델)
 // 모든 28개 LLM call 위치 자동 redirect — 코드 변경 X.
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+
+// 사용자 보고 2026-04-30 ultrathink-2: 401 시 session 자동 refresh + retry helper.
+// JWT 만료 (1h) 도중 AI call 시 401 발생 → 자동 refresh + 한 번 retry → 사용자에게 안 보이게.
+let _sessionRefreshInflight = null;
+async function _refreshSessionForApi() {
+  if (!session || !session.refresh_token) return false;
+  if (_sessionRefreshInflight) return _sessionRefreshInflight;
+  _sessionRefreshInflight = (async () => {
+    try {
+      const r = await window._anthropicOrigFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: session.refresh_token })
+      });
+      if (!r.ok) return false;
+      const ns = await r.json();
+      if (!ns || !ns.access_token) return false;
+      session = { ...session, access_token: ns.access_token, refresh_token: ns.refresh_token || session.refresh_token, user: ns.user || session.user };
+      if (ns.user && ns.user.id) authUserId = ns.user.id;
+      try { localStorage.setItem('soragodong_session', JSON.stringify(session)); } catch {}
+      return true;
+    } catch { return false; }
+    finally { setTimeout(() => { _sessionRefreshInflight = null; }, 100); }
+  })();
+  return _sessionRefreshInflight;
+}
+
 (function installAnthropicProxyInterceptor() {
   if (typeof window === 'undefined') return;
   if (window._anthropicProxyInstalled) return;
   window._anthropicProxyInstalled = true;
   const _origFetch = window.fetch.bind(window);
-  window.fetch = function(input, init) {
+  window._anthropicOrigFetch = _origFetch;  // refresh helper에서 무한 인터셉트 안 걸리게
+  window.fetch = async function(input, init) {
     const url = (typeof input === 'string') ? input : (input && input.url) || '';
     if (url !== ANTHROPIC_API_URL) return _origFetch(input, init);
     // 사용자 본인 키 있으면 직접 호출 (interceptor는 _canAI() 사용 X — 본인 키 여부만 봐야 함)
@@ -8161,23 +8231,33 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
       return _origFetch(input, init);
     }
     // 백엔드 프록시로 swap
-    let headers = {};
-    if (init && init.headers) {
-      if (init.headers instanceof Headers) {
-        init.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
-      } else if (Array.isArray(init.headers)) {
-        init.headers.forEach(([k, v]) => { headers[k.toLowerCase()] = v; });
-      } else {
-        Object.keys(init.headers).forEach(k => { headers[k.toLowerCase()] = init.headers[k]; });
+    const buildHeaders = () => {
+      let headers = {};
+      if (init && init.headers) {
+        if (init.headers instanceof Headers) {
+          init.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
+        } else if (Array.isArray(init.headers)) {
+          init.headers.forEach(([k, v]) => { headers[k.toLowerCase()] = v; });
+        } else {
+          Object.keys(init.headers).forEach(k => { headers[k.toLowerCase()] = init.headers[k]; });
+        }
+      }
+      delete headers['x-api-key'];
+      delete headers['anthropic-version'];
+      delete headers['anthropic-dangerous-direct-browser-access'];
+      headers['authorization'] = 'Bearer ' + session.access_token;
+      headers['content-type'] = 'application/json';
+      return headers;
+    };
+    let resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: buildHeaders() }));
+    // 사용자 보고 2026-04-30 ultrathink-2: 401 시 session refresh + 한 번 retry
+    if (resp.status === 401 && session && session.refresh_token) {
+      const refreshed = await _refreshSessionForApi();
+      if (refreshed) {
+        resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: buildHeaders() }));
       }
     }
-    delete headers['x-api-key'];
-    delete headers['anthropic-version'];
-    delete headers['anthropic-dangerous-direct-browser-access'];
-    headers['authorization'] = 'Bearer ' + session.access_token;
-    headers['content-type'] = 'application/json';
-    const newInit = Object.assign({}, init || {}, { headers });
-    return _origFetch('/api/chat', newInit);
+    return resp;
   };
 })();
 function _anthropicHeaders(extraHeaders) {
@@ -16266,9 +16346,9 @@ function _findPendingStrategyFollowup() {
     if (m.status !== 'completed') return false;
     if (m.attemptStatus) return false;  // 이미 result check 끝남 (worked/didnt/meh)
     if (!m.strategyId) return false;
-    // 사용자 보고 2026-04-30 ultrathink: _followupAsked 체크 제거 — 답 안 하고 dismiss 시
-    // 다음날 또 나오게 (daily gate _lastFollowupAt 으로만 same-day re-show 차단).
-    // (옛 _followupAsked=true 박힌 미션도 자동 unblock)
+    // 사용자 보고 2026-04-30 ultrathink-2: defer/일반 둘 다 한 번 prompt → 그 뒤 양생방에서만.
+    // _followupAsked=true → skip. defer 시점에는 reset (만기일에 한 번 더).
+    if (m._followupAsked) return false;
     if (m.scheduledFor && daysBetweenKeys(today, m.scheduledFor) > 0) return false;
     // defer된 미션 (scheduledFor 있음)은 7일 룰 무시 — 사용자 명시적 날짜 우선.
     if (m.scheduledFor) return true;
@@ -16303,16 +16383,23 @@ async function offerStrategyFollowup() {
 async function triggerAttemptResultFlow(mission) {
   if (!mission || typeof showAttemptResultModal !== 'function') return;
   const todayK = todayKey();
+  // 사용자 보고 2026-04-30 ultrathink-2: 자동 prompt는 한 번만. dismiss/응답 모두 _followupAsked=true.
+  // 결과 답 안 해도 다시 자동 prompt 안 함 → 양생방(execute)에서 사용자가 직접 결과 체크.
+  if (mission && !mission.attemptStatus) {
+    mission._followupAsked = true;
+    saveState();
+  }
   const card = (state.topicCards || []).find(c => c.id === mission.strategyId);
   const cardTitle = card ? card.title : mission.title;
   const status = await showAttemptResultModal(cardTitle);
   if (!status) return;
-  // ⏸ 미루기 — 날짜 picker → mission.scheduledFor 갱신, 결과 답 안 함
+  // ⏸ 미루기 — 날짜 picker → mission.scheduledFor 갱신, 결과 답 안 함. 만기일에 한 번 더 prompt.
   if (status === 'defer') {
     const dateChoice = await showDeferDatePicker();
     if (dateChoice) {
       mission.scheduledFor = dateChoice;
-      // _followupAsked 플래그 폐기 (제거됨). scheduledFor만으로 timing 제어.
+      // 사용자 보고 2026-04-30 ultrathink-2: defer 누르면 _followupAsked reset → 만기일에 한 번 더 prompt
+      mission._followupAsked = false;
       saveState({ force: true });
       const formattedDate = new Date(dateChoice + 'T00:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
       showToast(`⏸ ${formattedDate}에 다시 물어볼게`);
@@ -17874,6 +17961,9 @@ function showScreen(name) {
     renderArchive();
   }
   if (name === 'decisions') renderDecisionsList();
+  // 사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 화면(list/detail)에서 일반 chat과 시각 구분
+  // body.magic-mode → 보라/매직 그라디언트 헤더 chip + 색조 살짝 시프트
+  document.body.classList.toggle('magic-mode', name === 'decisions' || name === 'decision-detail');
   if (name === 'chat') {
     rotateChatPlaceholder();  // V3.10: 매번 다른 힌트
     // 사용자 요청 2026-04-29: 채팅 진입 시 _stuckToBottom 강제 true (다시 들어오면 맨 아래 보고 싶어함)
@@ -18345,46 +18435,19 @@ function renderModel() {
   let html = timeCardHtml;
   // 세부 섹션 모음 — 한 details로 묶음
   let detailsHtml = '';
-  // 사용자 요청 2026-04-30: values / traits / patterns — 미컨펌 1개만 메인 표시 → '맞아' / '아니야' 컨펌 시 다음 미컨펌으로.
-  // 모두 컨펌되면 → 원래 흐름 (top 1만 + 나머지 collapse).
+  // 사용자 보고 2026-04-30 ultrathink-2: 자동초안(user_verified=false)도 자연스럽게 스며들게.
+  // "X개 확인 대기" 강요 흐름 제거 → 다른 항목들과 함께 confidence 순 일반 표시.
+  // user_verified는 모델 필드로 유지 (수정/삭제 시 활용). 시각적 강조 X.
   const _renderConfirmableSection = (category, label, arr) => {
     if (!arr || arr.length === 0) return '';
-    const sorted = sortItems(arr, true);  // prioritizeUnverified
-    const unverified = sorted.filter(item => item.user_verified !== true);
-    const verified = sorted.filter(item => item.user_verified === true);
+    const split = splitItems(arr, 1, 0.4, false);
     let inner = `<div class="model-section"><div class="model-section-title">${label}</div>`;
-    if (unverified.length > 0) {
-      // 미컨펌 1개 메인 (confidence 높은 거)
-      const top = unverified[0];
-      const topIdx = arr.indexOf(top);
-      inner += `<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.6;">
-        ${unverified.length}개 확인 대기. 한 번에 하나씩 — 맞으면 ✓, 아니면 ✗.
-      </div>`;
-      inner += renderModelItem(top, category, topIdx);
-      if (unverified.length > 1) {
-        inner += `<div style="font-size:11px;color:var(--text-soft);text-align:center;margin-top:8px;">+ ${unverified.length - 1}개 대기 중</div>`;
-      }
-      // verified는 collapse로 숨김
-      if (verified.length > 0) {
-        inner += `<details class="model-collapse" style="margin-top:10px;">
-          <summary>✓ 확인된 ${verified.length}개</summary>
-          <div class="model-collapse-content">`;
-        verified.forEach(item => {
-          const idx = arr.indexOf(item);
-          inner += renderModelItem(item, category, idx);
-        });
-        inner += `</div></details>`;
-      }
-    } else {
-      // 모두 컨펌됨 — 원래 흐름 (top 1 + 나머지 collapse)
-      const split = splitItems(arr, 1, 0.4, false);
-      split.top.forEach(item => {
-        const idx = arr.indexOf(item);
-        inner += renderModelItem(item, category, idx);
-      });
-      if (split.more.length > 0 || split.draft.length > 0) {
-        inner += renderMoreSection(category, split.more, split.draft);
-      }
+    split.top.forEach(item => {
+      const idx = arr.indexOf(item);
+      inner += renderModelItem(item, category, idx);
+    });
+    if (split.more.length > 0 || split.draft.length > 0) {
+      inner += renderMoreSection(category, split.more, split.draft);
     }
     inner += '</div>';
     return inner;
@@ -19823,10 +19886,17 @@ async function generateAIResponse(modelOverride) {
 
   } catch (err) {
     // 사용자 요청 2026-04-28: 에러 종류별 명확한 메시지 (이전엔 'err.message' 그대로 노출 — 이해 어려움)
+    // 사용자 보고 2026-04-30 ultrathink: Phase C 마이그 후 키 모델 폐기 — 401은 session 만료. 메시지 분기.
     const m = (err && err.message) || '';
     let userMsg;
     if (/401/.test(m) || /authentication/i.test(m) || /invalid.*api.*key/i.test(m) || /api[_ ]?key/i.test(m)) {
-      userMsg = '🔑 API 키가 유효하지 않아.\n\n나 탭 → 설정에서 키를 다시 확인해봐.';
+      if (state && state.apiKey) {
+        userMsg = '🔑 본인 API 키 인증 실패.\n\n나 탭 → 설정에서 키를 다시 확인해봐.';
+      } else if (typeof session !== 'undefined' && session && session.access_token) {
+        userMsg = '⏰ 로그인 세션이 만료된 것 같아.\n\n페이지 새로고침 또는 로그아웃 → 다시 로그인 해줘.';
+      } else {
+        userMsg = '🔑 로그인 필요 — 다시 로그인 해줘.';
+      }
     } else if (/429/.test(m) || /rate[_ ]?limit/i.test(m) || /quota/i.test(m)) {
       userMsg = '⏳ 잠깐 너무 빨라. 1분 정도 후 다시 시도하거나 Anthropic 대시보드에서 사용량 확인해봐.';
     } else if (/network|failed to fetch|offline/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
@@ -23722,7 +23792,8 @@ async function sbSendMessage() {
   renderStrategyBuilderChat();
 
   if (!_canAI()) {
-    _strategyBuilderState.messages.push({ role: 'assistant', content: '(API 키 없음 — 설정에서 등록해.)' });
+    // 사용자 보고 2026-04-30: Phase C 후 키 모델 폐기 — 로그인이 게이트.
+    _strategyBuilderState.messages.push({ role: 'assistant', content: '(로그인이 안 되어있어. 다시 로그인 해줘.)' });
     renderStrategyBuilderChat();
     return;
   }
@@ -27652,7 +27723,8 @@ async function testForceFullAnalysis() {
     return;
   }
   if (!_canAI()) {
-    showToast('⚠️ API 키 필요 — 설정에서 박은 후 시도');
+    // 사용자 보고 2026-04-30: Phase C 후 키 모델 폐기 — 로그인이 게이트.
+    showToast('⚠️ 로그인 필요 — 다시 로그인 해줘');
     return;
   }
   if (typeof forceAnalyze !== 'function') {
@@ -33164,7 +33236,8 @@ async function _pearlViewMore(id) {
 async function forceAnalyze(opts) {
   const isAuto = !!(opts && opts.auto);
   if (!_canAI()) {
-    if (!isAuto) alert('API 키 먼저 설정!');
+    // 사용자 보고 2026-04-30: Phase C 후 키 모델 폐기 — 로그인이 게이트.
+    if (!isAuto) alert('로그인 안 되어있어 — 다시 로그인 해줘.');
     return;
   }
   if (state.entries.length < 3 && state.chatMessages.length < 3) {
@@ -34355,15 +34428,59 @@ async function adminFeedbackLoad(filter) {
       headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
     });
     if (!resp.ok) {
-      // 사용자 보고 2026-04-30: server diagnostic 실제 노출 — 단순 '실패 (500)' 만 보이던 거 fix.
+      // 사용자 보고 2026-04-30 ultrathink-2: 'table 없음' 패턴이면 친화적 셋업 카드 + 복사 가능 SQL.
+      let errData = null;
+      try { errData = await resp.json(); } catch {}
+      const hintTxt = (errData && errData.hint) || '';
+      const upBody  = (errData && errData.upstream_body) || '';
+      const tableMissing = /0003_feedback\.sql|PGRST205|relation .* does not exist|Could not find the table/i.test(hintTxt + '\n' + upBody);
+      if (tableMissing) {
+        body.innerHTML = `
+          <div style="padding:16px; background:rgba(212,167,106,0.08); border:1px solid rgba(212,167,106,0.40); border-radius:10px;">
+            <div style="font-size:14px; font-weight:600; color:var(--accent); margin-bottom:8px;">🛠 셋업 미완 — soragodong_feedback table 없음</div>
+            <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-bottom:12px;">
+              피드백 답변 기능을 쓰려면 Supabase에서 <b>0003_feedback.sql</b>을 실행해야 해.<br>
+              <span style="color:var(--text-soft);">(앱 사용자 입장에선 이 기능 안 보임 — admin 전용)</span>
+            </div>
+            <div style="font-size:11px; color:var(--text-dim); line-height:1.85; margin-bottom:12px;">
+              <b>📋 단계</b>:<br>
+              1. Supabase Dashboard 열기 (<a href="https://supabase.com/dashboard" target="_blank" style="color:var(--accent);">supabase.com/dashboard</a>) → 프로젝트 선택<br>
+              2. 좌측 <b>SQL Editor</b> → <b>+ New query</b><br>
+              3. 아래 SQL 복사해서 붙여넣기 → <b>Run</b><br>
+              4. 새로고침 후 다시 진입
+            </div>
+            <textarea id="adminFeedbackSqlBox" readonly style="width:100%; height:160px; font-family:monospace; font-size:10px; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); white-space:pre; overflow:auto;">CREATE TABLE IF NOT EXISTS soragodong_feedback (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  user_email TEXT,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  admin_reply TEXT,
+  replied_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_status ON soragodong_feedback(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feedback_user ON soragodong_feedback(user_id, created_at DESC);
+ALTER TABLE soragodong_feedback ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "users read own feedback" ON soragodong_feedback;
+CREATE POLICY "users read own feedback"
+  ON soragodong_feedback FOR SELECT
+  USING (auth.uid() = user_id);</textarea>
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn-primary" onclick="(function(){var t=document.getElementById('adminFeedbackSqlBox');t.select();navigator.clipboard.writeText(t.value).then(()=>showToast('📋 SQL 복사됨 — Supabase Dashboard에 붙여넣어'));})()" style="flex:1; font-size:11px;">📋 SQL 복사</button>
+              <button class="btn-secondary" onclick="adminFeedbackLoad('open')" style="flex:1; font-size:11px;">↻ 다시 시도</button>
+            </div>
+          </div>`;
+        return;
+      }
+      // 그 외 에러는 server diagnostic 그대로 노출 (a35d8cd 흐름 유지)
       let serverMsg = '';
-      try {
-        const errData = await resp.json();
+      if (errData) {
         serverMsg = errData.error || '';
         if (errData.upstream_status) serverMsg += ` (upstream ${errData.upstream_status})`;
         if (errData.hint) serverMsg += ` — ${errData.hint}`;
         if (errData.upstream_body) serverMsg += `\n${(errData.upstream_body || '').slice(0, 200)}`;
-      } catch {}
+      }
       body.innerHTML = `<div style="color:#e89090; white-space:pre-wrap; font-size:11px; padding:10px; background:rgba(220,80,80,0.05); border:1px solid rgba(220,80,80,0.30); border-radius:8px;">실패 (${resp.status})${serverMsg ? '\n\n' + escapeHtml(serverMsg) : ''}</div>`;
       return;
     }
