@@ -1299,6 +1299,45 @@
   .ft-nav { display: flex; gap: 8px; margin-top: 14px; }
   .ft-nav button { flex: 1; }
 
+  /* === Magic Room Visual Mode (사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 vs 일반 chat 분간) === */
+  .magic-mode-chip {
+    display: none;
+    position: fixed;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 80;
+    padding: 6px 14px;
+    font-size: 11px; font-weight: 600;
+    color: #e6d4ff;
+    background: linear-gradient(135deg, rgba(139,126,196,0.85), rgba(178,140,212,0.75));
+    border: 1px solid rgba(220,180,255,0.50);
+    border-radius: 100px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 18px rgba(139,126,196,0.40);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: magicChipFloat 3.5s ease-in-out infinite;
+  }
+  body.magic-mode .magic-mode-chip { display: block; }
+  @keyframes magicChipFloat {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-2px); }
+  }
+  body.magic-mode #screen-decisions,
+  body.magic-mode #screen-decision-detail {
+    background:
+      radial-gradient(ellipse at top, rgba(139,126,196,0.10), transparent 60%),
+      radial-gradient(ellipse at bottom, rgba(178,140,212,0.06), transparent 70%);
+  }
+  body.magic-mode .screen-title {
+    background: linear-gradient(135deg, #d4b8ff, #b89fde);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  body.magic-mode .chat-input-bar {
+    background: linear-gradient(to top, rgba(48,40,70,0.95) 70%, transparent);
+  }
+
   /* === Welcome Bonus Modal (사용자 요청 2026-04-30 ultrathink: 무료 토큰 화려한 알림 + 법적 고지) === */
   .welcome-bonus-modal {
     position: relative;
@@ -7276,6 +7315,9 @@
     </div>
   </div>
 </div>
+
+<!-- 사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 화면일 때만 표시되는 fixed chip -->
+<div class="magic-mode-chip" id="magicModeChip">🧙‍♂️ 마법의 소라고동</div>
 
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
@@ -16266,9 +16308,9 @@ function _findPendingStrategyFollowup() {
     if (m.status !== 'completed') return false;
     if (m.attemptStatus) return false;  // 이미 result check 끝남 (worked/didnt/meh)
     if (!m.strategyId) return false;
-    // 사용자 보고 2026-04-30 ultrathink: _followupAsked 체크 제거 — 답 안 하고 dismiss 시
-    // 다음날 또 나오게 (daily gate _lastFollowupAt 으로만 same-day re-show 차단).
-    // (옛 _followupAsked=true 박힌 미션도 자동 unblock)
+    // 사용자 보고 2026-04-30 ultrathink-2: defer/일반 둘 다 한 번 prompt → 그 뒤 양생방에서만.
+    // _followupAsked=true → skip. defer 시점에는 reset (만기일에 한 번 더).
+    if (m._followupAsked) return false;
     if (m.scheduledFor && daysBetweenKeys(today, m.scheduledFor) > 0) return false;
     // defer된 미션 (scheduledFor 있음)은 7일 룰 무시 — 사용자 명시적 날짜 우선.
     if (m.scheduledFor) return true;
@@ -16303,16 +16345,23 @@ async function offerStrategyFollowup() {
 async function triggerAttemptResultFlow(mission) {
   if (!mission || typeof showAttemptResultModal !== 'function') return;
   const todayK = todayKey();
+  // 사용자 보고 2026-04-30 ultrathink-2: 자동 prompt는 한 번만. dismiss/응답 모두 _followupAsked=true.
+  // 결과 답 안 해도 다시 자동 prompt 안 함 → 양생방(execute)에서 사용자가 직접 결과 체크.
+  if (mission && !mission.attemptStatus) {
+    mission._followupAsked = true;
+    saveState();
+  }
   const card = (state.topicCards || []).find(c => c.id === mission.strategyId);
   const cardTitle = card ? card.title : mission.title;
   const status = await showAttemptResultModal(cardTitle);
   if (!status) return;
-  // ⏸ 미루기 — 날짜 picker → mission.scheduledFor 갱신, 결과 답 안 함
+  // ⏸ 미루기 — 날짜 picker → mission.scheduledFor 갱신, 결과 답 안 함. 만기일에 한 번 더 prompt.
   if (status === 'defer') {
     const dateChoice = await showDeferDatePicker();
     if (dateChoice) {
       mission.scheduledFor = dateChoice;
-      // _followupAsked 플래그 폐기 (제거됨). scheduledFor만으로 timing 제어.
+      // 사용자 보고 2026-04-30 ultrathink-2: defer 누르면 _followupAsked reset → 만기일에 한 번 더 prompt
+      mission._followupAsked = false;
       saveState({ force: true });
       const formattedDate = new Date(dateChoice + 'T00:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
       showToast(`⏸ ${formattedDate}에 다시 물어볼게`);
@@ -17874,6 +17923,9 @@ function showScreen(name) {
     renderArchive();
   }
   if (name === 'decisions') renderDecisionsList();
+  // 사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 화면(list/detail)에서 일반 chat과 시각 구분
+  // body.magic-mode → 보라/매직 그라디언트 헤더 chip + 색조 살짝 시프트
+  document.body.classList.toggle('magic-mode', name === 'decisions' || name === 'decision-detail');
   if (name === 'chat') {
     rotateChatPlaceholder();  // V3.10: 매번 다른 힌트
     // 사용자 요청 2026-04-29: 채팅 진입 시 _stuckToBottom 강제 true (다시 들어오면 맨 아래 보고 싶어함)
@@ -18345,46 +18397,19 @@ function renderModel() {
   let html = timeCardHtml;
   // 세부 섹션 모음 — 한 details로 묶음
   let detailsHtml = '';
-  // 사용자 요청 2026-04-30: values / traits / patterns — 미컨펌 1개만 메인 표시 → '맞아' / '아니야' 컨펌 시 다음 미컨펌으로.
-  // 모두 컨펌되면 → 원래 흐름 (top 1만 + 나머지 collapse).
+  // 사용자 보고 2026-04-30 ultrathink-2: 자동초안(user_verified=false)도 자연스럽게 스며들게.
+  // "X개 확인 대기" 강요 흐름 제거 → 다른 항목들과 함께 confidence 순 일반 표시.
+  // user_verified는 모델 필드로 유지 (수정/삭제 시 활용). 시각적 강조 X.
   const _renderConfirmableSection = (category, label, arr) => {
     if (!arr || arr.length === 0) return '';
-    const sorted = sortItems(arr, true);  // prioritizeUnverified
-    const unverified = sorted.filter(item => item.user_verified !== true);
-    const verified = sorted.filter(item => item.user_verified === true);
+    const split = splitItems(arr, 1, 0.4, false);
     let inner = `<div class="model-section"><div class="model-section-title">${label}</div>`;
-    if (unverified.length > 0) {
-      // 미컨펌 1개 메인 (confidence 높은 거)
-      const top = unverified[0];
-      const topIdx = arr.indexOf(top);
-      inner += `<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.6;">
-        ${unverified.length}개 확인 대기. 한 번에 하나씩 — 맞으면 ✓, 아니면 ✗.
-      </div>`;
-      inner += renderModelItem(top, category, topIdx);
-      if (unverified.length > 1) {
-        inner += `<div style="font-size:11px;color:var(--text-soft);text-align:center;margin-top:8px;">+ ${unverified.length - 1}개 대기 중</div>`;
-      }
-      // verified는 collapse로 숨김
-      if (verified.length > 0) {
-        inner += `<details class="model-collapse" style="margin-top:10px;">
-          <summary>✓ 확인된 ${verified.length}개</summary>
-          <div class="model-collapse-content">`;
-        verified.forEach(item => {
-          const idx = arr.indexOf(item);
-          inner += renderModelItem(item, category, idx);
-        });
-        inner += `</div></details>`;
-      }
-    } else {
-      // 모두 컨펌됨 — 원래 흐름 (top 1 + 나머지 collapse)
-      const split = splitItems(arr, 1, 0.4, false);
-      split.top.forEach(item => {
-        const idx = arr.indexOf(item);
-        inner += renderModelItem(item, category, idx);
-      });
-      if (split.more.length > 0 || split.draft.length > 0) {
-        inner += renderMoreSection(category, split.more, split.draft);
-      }
+    split.top.forEach(item => {
+      const idx = arr.indexOf(item);
+      inner += renderModelItem(item, category, idx);
+    });
+    if (split.more.length > 0 || split.draft.length > 0) {
+      inner += renderMoreSection(category, split.more, split.draft);
     }
     inner += '</div>';
     return inner;
