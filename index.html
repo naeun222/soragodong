@@ -7783,7 +7783,7 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
   window.fetch = function(input, init) {
     const url = (typeof input === 'string') ? input : (input && input.url) || '';
     if (url !== ANTHROPIC_API_URL) return _origFetch(input, init);
-    // 사용자 본인 키 있으면 직접 호출
+    // 사용자 본인 키 있으면 직접 호출 (interceptor는 _canAI() 사용 X — 본인 키 여부만 봐야 함)
     if (state && state.apiKey) return _origFetch(input, init);
     // session 없으면 그대로 (오류 발생 → 사용자에게 표시)
     if (typeof session === 'undefined' || !session || !session.access_token) {
@@ -7825,6 +7825,16 @@ async function callAnthropic(body, options) {
     body: typeof body === 'string' ? body : JSON.stringify(body),
     signal: opts.signal
   });
+}
+
+// 사용자 보고 2026-04-30 (Phase C 전수 조사 fix): AI 호출 가능 여부 헬퍼.
+// 개인 apiKey 비웠을 때도 session 활성이면 백엔드 프록시로 동작 가능 → fetch interceptor가 자동 라우팅.
+// 모든 'if (state.apiKey)' 게이트를 이 헬퍼로 교체 — 한 곳에서 통제.
+function _canAI() {
+  if (typeof state === 'undefined' || !state) return false;
+  if (state.apiKey) return true;
+  if (typeof session !== 'undefined' && session && session.access_token) return true;
+  return false;
 }
 
 const V4_USER_ID = 'me_v4';
@@ -9074,7 +9084,7 @@ async function loadFromCloud() {
     if (!state.preferences) state.preferences = {};
     if (!state.preferences._apiKeyWiped_2026_04_30) {
       let wiped = false;
-      if (state.apiKey) {
+      if (_canAI()) {
         state.apiKey = '';
         wiped = true;
       }
@@ -11002,13 +11012,15 @@ let _coreEndIdx = -1;
 let _coreBodyOverridesApplied = [];
 let _coreNeedsHelpAfterEnd = false;  // 코어 #1 외엔 endId 다 지나서 help_button으로 점프 필요
 
-// 잠금 체크 — testerMode ON / 코어 활성 중 / API 키 없음(초기 셋업) / 명시적 unlock 시 통과
+// 잠금 체크 — testerMode ON / 코어 활성 중 / 로그인 X (초기 셋업) / 명시적 unlock 시 통과
 function isCoreLocked(coreId) {
   if (!coreId) return false;
   if (state && state.preferences && state.preferences.testerMode) return false;
   if (window._onbTutorialMode) return false;
-  // 초기 셋업 안 끝난 사용자(API 키 없음) — 잠금 우회 (설정 접근 가능)
-  if (!state || !state.apiKey) return false;
+  // 사용자 보고 2026-04-30 (Phase C 전수 fix): apiKey 비어도 lock 적용 — 로그인 X 일 때만 우회.
+  // 옛 코드는 'apiKey 없음 = 초기 셋업'이었으나 Phase C 후 모든 사용자 apiKey 비어있음.
+  if (!state) return false;
+  if (typeof session === 'undefined' || !session || !session.access_token) return false;
   if (!state.unlocked) return true;
   return state.unlocked[coreId] !== true;
 }
@@ -12599,7 +12611,7 @@ function saveTextStep(decisionId, stepId) {
 // 14일 숙성 중 며칠 걸쳐 이어볼 수 있음. 메인 chat 탭 안 건드림.
 async function askAIForStep(decisionId, stepId) {
   // 사용자 요청 2026-04-30: apiKey 빈 상태에서도 백엔드 프록시로 동작 (Phase C). session 활성만 체크.
-  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) {
+  if (!_canAI() &&(typeof session === 'undefined' || !session?.access_token)) {
     alert('로그인이 필요해요!');
     return;
   }
@@ -12665,7 +12677,7 @@ async function _runMagicHelpAIResponse() {
   if (!meta) return;
 
   // 사용자 요청 2026-04-30: apiKey 빈 상태 + session 활성 시 백엔드 프록시 동작 (fetch interceptor 자동 swap).
-  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) {
+  if (!_canAI() &&(typeof session === 'undefined' || !session?.access_token)) {
     decision.helpChats[stepId].push({ role: 'assistant', content: '(로그인이 필요해요. 새로고침 후 다시 시도해주세요.)', timestamp: new Date().toISOString() });
     _magicHelpState._loading = false;
     saveState();
@@ -13363,7 +13375,7 @@ async function openReview(type) {
 }
 
 async function generateReview(type) {
-  if (!state.apiKey) throw new Error('API 키가 없어');
+  if (!_canAI()) throw new Error('AI 호출 불가능 (로그인 또는 API 키 필요)');
 
   // Collect data window
   const today = new Date();
@@ -13891,7 +13903,7 @@ async function addReflectionQuestion(text) {
 
   // V4-fix: 짧은 카드 표시용 AI 요약 (10-25자)
   let shortText = trimmed.length <= 30 ? trimmed : '';
-  if (!shortText && state.apiKey) {
+  if (!shortText && _canAI()) {
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -14147,7 +14159,7 @@ function renderReflectionChat() {
 // fail silent (사용자 흐름 방해 X). 키 없으면 skip.
 async function extractAndApplyInsightToModel(insightText, userMsg, source) {
   try {
-    if (!state.apiKey) return;
+    if (!_canAI()) return;
     if (!insightText || typeof insightText !== 'string') return;
     const cleanInsight = insightText.trim();
     if (cleanInsight.length < 20) return;  // 너무 짧으면 추출 가치 X
@@ -14315,7 +14327,7 @@ JSON만, 다른 글 X.`;
 // endChapter 시 호출. sonnet 4.6 (자동, 5-10/일 → ROI 좋음). caseFormulation은 unverified 마킹.
 async function extractChapterCaseAnalysis(messages) {
   try {
-    if (!state.apiKey) return;
+    if (!_canAI()) return;
     if (window._onbTutorialMode) return;
     if (state.preferences && state.preferences.testerMode) return;
     if (!Array.isArray(messages) || messages.length < 3) return;
@@ -14593,7 +14605,7 @@ JSON만, 마크다운 X.`;
 // source: 'reflection' | 'magic_help', sourceId: 추출 중복 방지 키 (q.id 또는 decision:step), context: 짧은 컨텍스트 라벨.
 async function extractTopicsFromTempChat(messages, source, sourceId, context) {
   try {
-    if (!state.apiKey) return;
+    if (!_canAI()) return;
     if (!Array.isArray(messages) || messages.length < 4) return;
     if (window._onbTutorialMode) return;
     if (state.preferences && state.preferences.testerMode) return;
@@ -14733,7 +14745,7 @@ async function sendReflectionChat() {
   renderReflectionChat();
 
   // 사용자 요청 2026-04-30: apiKey 빈 상태 + session 활성 시 백엔드 프록시.
-  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) {
+  if (!_canAI() &&(typeof session === 'undefined' || !session?.access_token)) {
     q.chatMessages.push({
       role: 'assistant',
       content: '(로그인이 필요해요. 새로고침 후 다시 시도해주세요.)',
@@ -15780,7 +15792,7 @@ async function completeMission(missionId) {
   }
 
   // Request AI brief encouragement
-  if (state.apiKey) {
+  if (_canAI()) {
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -15934,7 +15946,7 @@ async function makeSquareThumb(dataUrl, size = 200, quality = 0.7) {
 }
 
 async function verifyMissionPhoto(mission, photoBase64) {
-  if (!state.apiKey) {
+  if (!_canAI()) {
     return { verified: true, reason: 'API 키가 없어서 통과.' };
   }
   const base64 = photoBase64.split(',')[1];
@@ -18580,7 +18592,7 @@ async function generateAIResponse(modelOverride) {
 
   // 사용자 요청 2026-04-30 (Phase C): apiKey 비어있어도 백엔드 프록시로 동작.
   // session 활성 여부만 체크 (fetch interceptor가 자동으로 /api/chat 라우팅).
-  if (!state.apiKey && (typeof session === 'undefined' || !session || !session.access_token)) {
+  if (!_canAI() &&(typeof session === 'undefined' || !session || !session.access_token)) {
     state.chatMessages[state.chatMessages.length - 1] = {
       role: 'assistant', content: '로그인이 필요해! 새로고침 후 다시 시도해줘 🐚',
       timestamp: new Date().toISOString()
@@ -19565,7 +19577,7 @@ async function saveMsgAsInsight(idx) {
   let body = '';
   if (msg.insightCandidate) {
     body = msg.insightCandidate;
-  } else if (!state.apiKey) {
+  } else if (!_canAI()) {
     body = msg.content.slice(0, 150);
   } else {
     try {
@@ -19744,7 +19756,7 @@ async function addMemoArchive() {
 
   // AI 해시태그 자동 생성 (3-5개, 짧은 키워드)
   let tags = [];
-  if (state.apiKey) {
+  if (_canAI()) {
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -19816,7 +19828,7 @@ async function saveMsgAsStrategy(idx) {
   const msg = state.chatMessages[idx];
   if (!msg || msg.savedStrategy) return;
   let title = '', problemContext = '', psychConcept = '', actionStrategy = '';
-  if (!state.apiKey) {
+  if (!_canAI()) {
     title = msg.content.slice(0, 30);
     actionStrategy = msg.content.slice(30, 200);
   } else {
@@ -20192,7 +20204,7 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
 
   // AI 호출 (있으면) — fallback 즉시 사용 (UI 멈추지 않게)
   let aiOptions = [];
-  if (state.apiKey) {
+  if (_canAI()) {
     try {
       const resp = await callAnthropic({
           model: 'claude-opus-4-7',
@@ -20483,7 +20495,7 @@ async function selectMutationOption(msgIdx, optIdx) {
   const layerName = _LAYER_NAME[opt.layer] || opt.layer;
   let stepText = '';
 
-  if (state.apiKey) {
+  if (_canAI()) {
     try {
       const resp = await callAnthropic({
           // 사용자 요청 2026-04-30: 고른 후 정리 task → sonnet 4.6 적합.
@@ -20525,7 +20537,7 @@ function sendMutationMessage() {
   ta.value = '';
   ta.style.height = 'auto';
   // AI 호출 — 간단 응답 (fallback 우선)
-  if (!state.apiKey) {
+  if (!_canAI()) {
     _mutationChatState.messages.push({
       role: 'assistant',
       content: '응. 그 부분 같이 보자. 어떤 게 가장 망설여져?'
@@ -20640,7 +20652,7 @@ async function _completeMutationToMission(strategyId, opt, chatHistory) {
       lastGen.layerName = layerName;
     }
     // AI로 새 4 필드 재생성 (TITLE/PROBLEM/CONCEPT/ACTION) — 옛 가닥 맥락 + 새 차원 + 임시 대화 흐름 종합
-    if (state.apiKey) {
+    if (_canAI()) {
       try {
         const oldSnapshot = lastGen?.snapshot || refreshed.generations[refreshed.generations.length - 2]?.snapshot;
         const oldCtx = oldSnapshot
@@ -21261,7 +21273,7 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
   let proposal = '';
   // 사용자 보고 2026-04-30: 개인 API 키 비운 상태에서도 백엔드 프록시로 동작하게.
   // fetch interceptor가 state.apiKey 비어있으면 자동으로 /api/chat 라우팅. 게이트만 풀면 됨.
-  if (state.apiKey || session?.access_token) {
+  if (_canAI()) {
     try {
       const ctx = isMutation
         ? `[전략] ${card.title}\n[새 차원] ${layerName}: ${mutationOpt.action}\n[사용자 상황] ${situation}`
@@ -22695,7 +22707,7 @@ async function sbSendMessage() {
   input.style.height = 'auto';
   renderStrategyBuilderChat();
 
-  if (!state.apiKey) {
+  if (!_canAI()) {
     _strategyBuilderState.messages.push({ role: 'assistant', content: '(API 키 없음 — 설정에서 등록해.)' });
     renderStrategyBuilderChat();
     return;
@@ -23755,7 +23767,7 @@ async function processBrainDump() {
   submitBtn.disabled = true;
   submitBtn.textContent = '고동이 정리 중... ✦';
 
-  if (!state.apiKey) {
+  if (!_canAI()) {
     // Fallback: split by line, no AI
     const lines = dump.split('\n').filter(l => l.trim()).slice(0, 10);
     const todayKeyVal = todayKey();
@@ -24093,7 +24105,7 @@ function completeQuest(taskId) {
     }
     
     // Async: AI가 경험 텍스트 생성 (not blocking)
-    if (state.apiKey && shell.tier !== 'light') {
+    if (_canAI() &&shell.tier !== 'light') {
       generateShellStory(shellIdx, task).catch(e => console.warn('story gen failed:', e));
     }
   }
@@ -24301,7 +24313,7 @@ async function summarizeChatDay(date, messages) {
 // V3.8: 챕터 토픽 추출 — 4시간 비활성 후 새 챕터 시작 시 직전 챕터 분석
 // 결과: state.topicCards에 1-3개 토픽 카드 저장
 async function extractPreviousChapterTopics() {
-  if (!state.apiKey) return;
+  if (!_canAI()) return;
   // 사용자 보고 2026-04-29: 튜토리얼 / 테스터 모드 중 백그라운드 추출이
   // cleanup 끝난 후 state.topicCards에 박혀 살아남던 버그 — 가드 추가
   if (window._onbTutorialMode) return;
@@ -26533,7 +26545,7 @@ async function testForceQuarterlyReview() {
   };
   let summary = '';
   let sections = [];
-  if (state.apiKey && typeof generateQuarterlyReview === 'function') {
+  if (_canAI() &&typeof generateQuarterlyReview === 'function') {
     try {
       const aiReview = await generateQuarterlyReview(prevQuarterKey, stats);
       summary = aiReview.summary || '';
@@ -26583,7 +26595,7 @@ async function testForceDiscoverInsights() {
     showToast('⚠️ 테스터 모드 ON 후 사용');
     return;
   }
-  if (typeof discoverInsights === 'function' && state.apiKey) {
+  if (typeof discoverInsights === 'function' && _canAI()) {
     showToast('🔮 AI 인사이트 발견 진행 중...');
     try {
       await discoverInsights();
@@ -26625,7 +26637,7 @@ async function testForceFullAnalysis() {
     showToast('⚠️ 테스터 모드 ON 후 사용');
     return;
   }
-  if (!state.apiKey) {
+  if (!_canAI()) {
     showToast('⚠️ API 키 필요 — 설정에서 박은 후 시도');
     return;
   }
@@ -26958,7 +26970,7 @@ async function testForceMonthlyReview() {
   }
   let summary = '';
   let sections = null;
-  if (state.apiKey && typeof generateReview === 'function') {
+  if (_canAI() &&typeof generateReview === 'function') {
     try {
       const r = await generateReview('monthly');
       summary = r.summary || '';
@@ -27084,7 +27096,7 @@ async function testForceArchive() {
     return;
   }
   // V3.13.x: 7일 cutoff 우회 — 모든 메시지를 강제로 archive 처리
-  if (!state.apiKey) { showToast('⚠ API 키 필요'); return; }
+  if (!_canAI()) { showToast('⚠ API 키 필요'); return; }
   try {
     // 날짜별 그룹 (모든 메시지)
     const byDate = {};
@@ -27317,7 +27329,7 @@ JSON만 출력.`;
 
 // 자동 trigger: 분기 시작 7일 내 (1, 4, 7, 10월 1-7일)
 async function runQuarterlyAutoReviewIfNeeded() {
-  if (!state.apiKey) return;
+  if (!_canAI()) return;
   const today = new Date();
   const dayOfMonth = today.getDate();
   const month = today.getMonth(); // 0-indexed
@@ -27374,7 +27386,7 @@ async function runQuarterlyAutoReviewIfNeeded() {
 }
 
 async function runMonthlyAutoReviewIfNeeded() {
-  if (!state.apiKey) return;
+  if (!_canAI()) return;
   const today = new Date();
   const dayOfMonth = today.getDate();
   if (dayOfMonth > 7) return;
@@ -27417,7 +27429,7 @@ async function runMonthlyAutoReviewIfNeeded() {
 
 // V3.13.x: 일기 자동 요약 — entry 있는데 diary/aiSummary 둘 다 없는 날 보강 (어제부터 7일 거슬러, 1회 1일치)
 async function runDiaryAutoSummaryIfNeeded() {
-  if (!state.apiKey) return;
+  if (!_canAI()) return;
 
   // V3.13.x: 04:00 cutoff 기준 어제부터 거꾸로
   for (let i = 1; i <= 7; i++) {
@@ -31225,7 +31237,7 @@ function _buildReviewArchiveSummaryHTML(review) {
 
 // V4-fix v3 (5번): AI 메타 요약 — 깨달음들 한 단락 narrative
 async function generateReviewArchiveMetaSummary(reviewId) {
-  if (!state.apiKey) {
+  if (!_canAI()) {
     showToast('⚠️ API 키 필요');
     return;
   }
@@ -32018,7 +32030,7 @@ async function _pearlViewMore(id) {
 // opts.auto = true 시 confirm modal X, 토스트 silent ("일주일 분석 자동 실행됨").
 async function forceAnalyze(opts) {
   const isAuto = !!(opts && opts.auto);
-  if (!state.apiKey) {
+  if (!_canAI()) {
     if (!isAuto) alert('API 키 먼저 설정!');
     return;
   }
@@ -32305,7 +32317,7 @@ async function maybeRunDailyChapterExtract() {
 // 매주 일요일 4AM forceAnalyze (이전 maybeRunWeeklyForceAnalyze 대체).
 async function maybeRunWeeklyForceAnalyze() {
   if (!authUserId || window._onbTutorialMode) return;
-  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (!_canAI() &&(typeof session === 'undefined' || !session?.access_token)) return;
   if (state.preferences && state.preferences.testerMode) return;
   if (!_shouldRunSchedule(state.lastWeeklyAnalyzeAt, _lastWeekly4amCutoff())) return;
   if ((state.entries || []).length < 3 && (state.chatMessages || []).length < 3) return;
@@ -32324,7 +32336,7 @@ async function maybeRunWeeklyForceAnalyze() {
 // 매월 1일 4AM — 한 달 통합 분석 (forceAnalyze 같은 흐름, lastMonthlyAnalyzeAt만 별도 추적).
 async function maybeRunMonthlyAnalyze() {
   if (!authUserId || window._onbTutorialMode) return;
-  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (!_canAI() &&(typeof session === 'undefined' || !session?.access_token)) return;
   if (state.preferences && state.preferences.testerMode) return;
   if (!_shouldRunSchedule(state.lastMonthlyAnalyzeAt, _lastMonthly4amCutoff())) return;
   if ((state.entries || []).length < 5) return;
@@ -32341,7 +32353,7 @@ async function maybeRunMonthlyAnalyze() {
 // 매분기 첫째달 1일 4AM
 async function maybeRunQuarterlyAnalyze() {
   if (!authUserId || window._onbTutorialMode) return;
-  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (!_canAI() &&(typeof session === 'undefined' || !session?.access_token)) return;
   if (state.preferences && state.preferences.testerMode) return;
   if (!_shouldRunSchedule(state.lastQuarterlyAnalyzeAt, _lastQuarterly4amCutoff())) return;
   if ((state.entries || []).length < 10) return;
@@ -32503,7 +32515,7 @@ async function rejectInitialConsent() {
 // 매년 1/1 4AM
 async function maybeRunYearlyAnalyze() {
   if (!authUserId || window._onbTutorialMode) return;
-  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (!_canAI() &&(typeof session === 'undefined' || !session?.access_token)) return;
   if (state.preferences && state.preferences.testerMode) return;
   if (!_shouldRunSchedule(state.lastYearlyAnalyzeAt, _lastYearly4amCutoff())) return;
   if ((state.entries || []).length < 30) return;
