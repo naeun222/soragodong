@@ -7461,6 +7461,11 @@
         <div class="input-label" style="margin-bottom:8px;">👤 계정</div>
         <div id="accountInfo" style="font-size:12px; color:var(--text-dim); padding:12px; background:var(--surface); border-radius:12px; margin-bottom:8px;"></div>
         <button class="btn-secondary btn-danger" onclick="logout()">로그아웃</button>
+        <!-- 사용자 요청 2026-04-30: 약관 8조 — 회원 탈퇴 시 즉시 데이터 삭제 (결제 기록 외 5년 보존). -->
+        <button class="btn-secondary btn-danger" onclick="withdrawAccount()" style="margin-top:8px;">회원 탈퇴 (영구 삭제)</button>
+        <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-top:6px;">
+          탈퇴 시 모든 자기관찰 데이터 즉시 삭제. 결제 기록은 전자상거래법상 5년 보존 (익명화).
+        </div>
       </div>
       <!-- 사용자 요청 2026-04-28: 'V4 전체 기능 테스트' 정리 — 시드 박기 + step N부터 시작 두 개만 보존 (나머지 함수는 콘솔에서 호출 가능) -->
       <details class="model-collapse" style="margin-top:14px; border:1px solid rgba(212,167,106,0.30); border-radius:12px;">
@@ -7971,6 +7976,83 @@ async function logout() {
   localStorage.removeItem(V4_LAST_USER_KEY);
   session = null;
   authUserId = null;
+  location.reload();
+}
+
+// 사용자 요청 2026-04-30: 회원 탈퇴 — 약관 8조 의무 (즉시 데이터 삭제 + 결제 기록만 5년 보존).
+async function withdrawAccount() {
+  const yes1 = await showConfirmModal({
+    title: '회원 탈퇴할까?',
+    message: '⚠️ 모든 자기관찰 데이터가 영구 삭제됩니다.\n\n· 일기 / 체크인 / 대화 / 진주 / 전략 / 모델 — 즉시 삭제\n· 결제 기록 — 5년 보존 (전자상거래법, 익명화)\n· 복구 불가\n\n탈퇴 전 [📁 파일로 백업] 권장.',
+    okLabel: '계속',
+    cancelLabel: '취소'
+  });
+  if (!yes1) return;
+  const yes2 = await showConfirmModal({
+    title: '진짜 탈퇴? (마지막 확인)',
+    message: '이대로 진행하면 데이터 복구 X. 정말?',
+    okLabel: '탈퇴 진행',
+    cancelLabel: '아니, 취소'
+  });
+  if (!yes2) return;
+
+  showToast('탈퇴 처리 중...');
+
+  // 1. cloud DELETE — 사용자의 모든 V4 row (auth_user_id 기준)
+  let cloudDeleted = false;
+  if (authUserId) {
+    for (let attempt = 0; attempt < 3 && !cloudDeleted; attempt++) {
+      try {
+        const resp = await fetch(
+          `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}`,
+          { method: 'DELETE', headers: authHeaders() }
+        );
+        if (resp.ok || resp.status === 204 || resp.status === 200) {
+          cloudDeleted = true;
+        }
+      } catch (e) { console.error('withdraw cloud delete:', e); }
+    }
+    if (!cloudDeleted) {
+      alert('⚠ cloud 삭제 실패. 네트워크 확인 후 다시 시도해줘.');
+      return;
+    }
+  }
+
+  // 2. Supabase auth.users row 삭제 — 백엔드 endpoint 필요 (api/account/delete).
+  // Phase C 활성 후 박힘. 그 전엔 클라이언트에서 logout만 (사용자 row는 남음 — 정책상 미사용 12개월 후 회사가 일괄 정리).
+  if (typeof BACKEND_BASE !== 'undefined' && BACKEND_BASE) {
+    try {
+      await fetch(`${BACKEND_BASE}/api/account/delete`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session?.access_token || ''}`, 'Content-Type': 'application/json' }
+      });
+    } catch (e) { console.warn('withdraw backend:', e); }
+  }
+
+  // 3. localStorage 전부 정리 (API 키 preserve도 X — 탈퇴 = 모든 흔적 제거)
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith('soragodong') || k.startsWith('me_v4') || k.startsWith('sb-')) {
+        localStorage.removeItem(k);
+      }
+    });
+  } catch (e) { console.error('localStorage clear:', e); }
+
+  // 4. Supabase auth signOut
+  if (session && session.access_token) {
+    try {
+      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${session.access_token}` }
+      });
+    } catch (e) {}
+  }
+
+  // 5. 메모리 비우고 reload
+  session = null;
+  authUserId = null;
+  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  alert('탈퇴 완료. 다음 진입 시 재가입 가능해.');
   location.reload();
 }
 

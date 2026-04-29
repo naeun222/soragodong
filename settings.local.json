@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(node --version)",
+      "PowerShell(git config --global user.name)",
+      "PowerShell(git config --global user.email)",
+      "Bash(curl -s https://soragodongee.netlify.app/)",
+      "Bash(curl -sI https://soragodongee.netlify.app/)",
+      "Bash(curl -s https://soragodongee.netlify.app/ -o /tmp/live.html)",
+      "Read(//tmp/**)",
+      "Bash(curl -sI https://naeun222.github.io/soragodong/)",
+      "Bash(curl -sI https://api.github.com/repos/naeun222/soragodong/pages)",
+      "PowerShell(Copy-Item \"c:\\\\Users\\\\user\\\\Downloads\\\\soragodong-repo\\\\index.html\" \"c:\\\\Users\\\\user\\\\Downloads\\\\files\\\\soragodong.html\" -Force; $f = Get-Item \"c:\\\\Users\\\\user\\\\Downloads\\\\files\\\\soragodong.html\"; \"{0} bytes, {1}\" -f $f.Length, $f.LastWriteTime)",
+      "PowerShell(Copy-Item \"c:\\\\Users\\\\user\\\\Downloads\\\\soragodong-repo\\\\index.html\" \"c:\\\\Users\\\\user\\\\Downloads\\\\files\\\\soragodong.html\" -Force; \"soragodong.html: $\\(\\(\\(Get-Item 'c:\\\\Users\\\\user\\\\Downloads\\\\files\\\\soragodong.html'\\).Length\\)\\) bytes\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "PowerShell(Copy-Item \"c:\\\\Users\\\\user\\\\Downloads\\\\soragodong-repo\\\\index.html\" \"c:\\\\Users\\\\user\\\\Downloads\\\\files\\\\soragodong.html\" -Force; \"synced: $\\(\\(\\(Get-Item 'c:\\\\Users\\\\user\\\\Downloads\\\\files\\\\soragodong.html'\\).Length\\)\\) bytes\")",
+      "PowerShell(Copy-Item \"c:\\\\Users\\\\user\\\\Downloads\\\\soragodong-repo\\\\index.html\" \"c:\\\\Users\\\\user\\\\Downloads\\\\files\\\\soragodong.html\" -Force)",
+      "PowerShell(\"synced\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\user\\Downloads\\soragodong-repo"
+    ]
+  }
+}
