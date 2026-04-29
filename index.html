@@ -11699,53 +11699,9 @@ async function sendMagicHelpMessage() {
   await _runMagicHelpAIResponse();
 }
 
-async function closeMagicHelpChat() {
-  // 사용자 요청 2026-04-29: 마법 임시 대화도 깊이 있는 내용 → 닫을 때 도서관 보관 prompt.
-  // 메시지 1턴 이상이면 confirm modal. 보관 = archive에 type='magic_chat' 카드 (대화 전체 fullChat 포함).
-  if (_magicHelpState) {
-    const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
-    const stepId = _magicHelpState.stepId;
-    const messages = (decision && decision.helpChats && decision.helpChats[stepId]) || [];
-    // _starter (자동 컨텍스트) 제외하고 진짜 대화 카운트
-    const realMessages = messages.filter(m => !m._starter);
-    const hasConversation = realMessages.length >= 2;
-    // 이미 archive에 박힌 같은 step 대화는 중복 prompt X
-    const alreadyArchived = (state.archive || []).some(a => a.type === 'magic_chat' && a.decisionId === decision?.id && a.stepId === stepId);
-
-    if (hasConversation && decision && !alreadyArchived) {
-      const keep = await showConfirmModal({
-        title: '대화 보관할까?',
-        message: `${realMessages.length}개 메시지.\n\n도서관 → 깨달음에 통째로 둘 수 있어. 깊은 게 나왔으면 박아두면 좋아.`,
-        okLabel: '응 보관',
-        cancelLabel: '아니'
-      });
-      if (keep) {
-        const meta = (typeof DECISION_STEPS !== 'undefined' ? DECISION_STEPS : []).find(s => s.id === stepId);
-        const stepTitle = meta ? meta.title : stepId;
-        const lastAssistant = [...realMessages].reverse().find(m => m.role === 'assistant');
-        const firstUser = realMessages.find(m => m.role === 'user');
-        const body = (lastAssistant?.content || firstUser?.content || '').slice(0, 200);
-        const _dayKey = todayKey();
-        const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-        if (!Array.isArray(state.archive)) state.archive = [];
-        state.archive.unshift({
-          type: 'magic_chat',
-          headline: `🌀 ${stepTitle}: ${(decision.title || '결정').slice(0, 24)}`,
-          body,
-          fullChat: realMessages.map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp })),
-          date,
-          source: `🌀 마법 (${stepTitle})`,
-          savedAt: new Date().toISOString(),
-          tags: ['마법', '대화'],
-          decisionId: decision.id,
-          stepId
-        });
-        saveState();
-        if (typeof renderArchive === 'function') renderArchive();
-        showToast('✦ 도서관에 보관됐어');
-      }
-    }
-  }
+function closeMagicHelpChat() {
+  // 사용자 요청 2026-04-29: 마법 helpChat은 decision.helpChats[stepId]에 영구 저장됨 (다시 들어가면 그대로).
+  // 도서관 archive 카드는 ✦ 깨달음 버튼 시점에만. close 시 prompt X.
   _magicHelpState = null;
   const inputBar = document.getElementById('magicHelpInputBar');
   if (inputBar) inputBar.classList.remove('active');
@@ -12906,51 +12862,9 @@ function deleteReflectionQuestion(id) {
   renderReflectionHome();
 }
 
-// 사용자 요청 2026-04-29: 숙고 화면 ← 닫을 때 prompt — 깊이 있는 대화 흐름 도서관 보관 여부.
-// 결론 내고 닫기(resolve)와는 다른 흐름 — 결론 없이 paused 상태로 두고 archive에도 카드로 박는 옵션.
-async function closeReflectionScreen() {
-  try {
-    const q = (state.reflectionQuestions || []).find(x => x.id === _activeReflectionId);
-    const messages = (q && Array.isArray(q.chatMessages)) ? q.chatMessages : [];
-    const hasConversation = messages.length >= 2;
-    // 이미 archive에 박힌 같은 질문 대화 흐름은 중복 prompt X (resolve 시 자동 박힘 케이스도 포함)
-    const alreadyArchived = q && (state.archive || []).some(a =>
-      (a.type === 'reflection_chat' || (a.type === 'reflection' && a.reflectionQuestionId === q.id && Array.isArray(a.fullChat)))
-      && a.reflectionQuestionId === q.id
-    );
-    if (q && hasConversation && q.status !== 'resolved' && !alreadyArchived) {
-      const keep = await showConfirmModal({
-        title: '대화 보관할까?',
-        message: `${messages.length}개 메시지.\n\n결론 안 내려도 도서관 → 깨달음에 통째로 둘 수 있어. 깊은 게 나왔으면 박아두면 좋아.`,
-        okLabel: '응 보관',
-        cancelLabel: '아니'
-      });
-      if (keep) {
-        const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
-        const firstUser = messages.find(m => m.role === 'user');
-        const body = (lastAssistant?.content || firstUser?.content || '').slice(0, 200);
-        const _dayKey = todayKey();
-        const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-        if (!Array.isArray(state.archive)) state.archive = [];
-        state.archive.unshift({
-          type: 'reflection_chat',
-          headline: (q.shortText || q.text || '숙고').slice(0, 30),
-          body,
-          fullChat: messages.map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp })),
-          date,
-          source: '🌊 숙고',
-          savedAt: new Date().toISOString(),
-          tags: ['숙고', '대화'],
-          reflectionQuestionId: q.id
-        });
-        saveState();
-        if (typeof renderArchive === 'function') renderArchive();
-        showToast('✦ 도서관에 보관됐어');
-      }
-    }
-  } catch (e) {
-    console.warn('[reflection close] fail:', e);
-  }
+// 사용자 요청 2026-04-29: 숙고 화면 ← 닫을 때 — 어차피 q.chatMessages에 영구 저장됨 (다시 들어가면 그대로).
+// 도서관 archive 카드는 ✦ 깨달음 버튼 / 결론(resolve) 시점에만 박힘. close 시 prompt X.
+function closeReflectionScreen() {
   _activeReflectionId = null;
   if (typeof showScreen === 'function') showScreen('home');
 }
@@ -19029,9 +18943,10 @@ function closeMutationChat(skipSave) {
     // 저장 X로 닫음 — chatRecord에 messages 비움 (선택 X 케이스)
     const card = getStrategyCard(_mutationChatState.strategyId);
     if (card && _mutationChatState.chatRecord && !_mutationChatState.selectedRef) {
-      // 선택 X면 시도 흔적만 보존 (messages 빈 상태)
+      // 사용자 요청 2026-04-29: 가지 선택 X여도 대화 messages 보존 (깊이 있는 내용 가능). kept=false 마킹만.
       _mutationChatState.chatRecord.kept = false;
-      _mutationChatState.chatRecord.messages = [];
+      _mutationChatState.chatRecord.messages = (_mutationChatState.messages || [])
+        .map(m => ({ role: m.role, content: m.content }));
       card.evolutionChats.push(_mutationChatState.chatRecord);
       saveState();
     }
