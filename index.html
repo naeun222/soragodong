@@ -5935,6 +5935,50 @@
     letter-spacing: 0.12em;
     margin-bottom: 4px;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  /* 사용자 요청 2026-04-29: phase 진행 점들 + phase 라벨 + 시뮬 배지 */
+  .onb-phase-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: -2px 0 6px;
+    padding-right: 4px;
+  }
+  .onb-phase-dot {
+    height: 4px;
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    transition: background 0.3s ease;
+  }
+  .onb-phase-dot.done    { background: rgba(212,167,106,0.45); }
+  .onb-phase-dot.current { background: var(--accent); box-shadow: 0 0 8px rgba(212,167,106,0.5); }
+  .onb-phase-label {
+    font-size: 10px;
+    color: var(--accent2);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    opacity: 0.92;
+  }
+  .onb-phase-label::before {
+    content: '·';
+    margin-right: 5px;
+    opacity: 0.5;
+  }
+  .onb-sim-badge {
+    font-size: 9px;
+    background: rgba(168,157,200,0.18);
+    color: #b9aedc;
+    padding: 2px 7px;
+    border-radius: 7px;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(168,157,200,0.32);
+    font-weight: 500;
   }
   .onb-title {
     font-family: 'Gowun Batang', serif;
@@ -6355,7 +6399,12 @@
   <div class="onb-spotlight" id="onbSpotlight"></div>
   <div class="onb-coachmark" id="onbCoachmark">
     <div class="onb-drag-handle" id="onbDragHandle" title="드래그해서 옮기기">⋮⋮</div>
-    <div class="onb-step-num" id="onbStepNum">1 / 7</div>
+    <div class="onb-phase-bar" id="onbPhaseBar"></div>
+    <div class="onb-step-num" id="onbStepNum">
+      <span id="onbStepNumText">1 / 7</span>
+      <span class="onb-phase-label" id="onbPhaseLabel"></span>
+      <span class="onb-sim-badge" id="onbSimBadge" style="display:none;">🎭 시뮬</span>
+    </div>
     <div class="onb-title" id="onbTitle"></div>
     <div class="onb-body" id="onbBody"></div>
     <div class="onb-actions">
@@ -9147,6 +9196,40 @@ let _onbStep = 0;
 let _onbActiveListeners = [];
 let _onbStartTime = null;  // V3.12: 튜토리얼 시작 시간 — 종료 시 데이터 정리
 
+// 사용자 요청 2026-04-29: 튜토리얼 phase 시각화 — "지금 어디 있나"
+// startId 기준으로 phase 묶음 정의. 마지막 phase는 다음 startId 직전까지.
+const ONBOARDING_PHASES = [
+  { startId: 'tutorial_plea',         name: '시작',                  desc: '한 마디 부탁' },
+  { startId: 'go_model_first',         name: 'API 키 등록',           desc: '소라랑 대화 준비' },
+  { startId: 'go_home_for_checkin',    name: '첫 체크인',             desc: '오늘 너 30초 기록' },
+  { startId: 'go_chat',                name: '대화 + 전략',           desc: '소라랑 풀고 무기 박기' },
+  { startId: 'go_home_for_mission',    name: '미션 + 모래사장',       desc: '소라의 부름과 결과 체크' },
+  { startId: 'go_archive',             name: '🧬 양생방',             desc: '전략이 자라는 곳 — 핵심' },
+  { startId: 'go_execute',             name: '실행 + 나',             desc: '몰입 + 자기 모델' },
+  { startId: 'go_archive_lib',         name: '도서관 둘러보기',       desc: '5 카테고리 + 숙고' },
+  { startId: 'finish',                 name: '마무리',                desc: '준비 끝!' }
+];
+
+// step idx → phase info
+function _getPhaseInfo(idx) {
+  if (!Array.isArray(ONBOARDING_STEPS) || idx < 0) return null;
+  // phase startIdx 인덱스 매핑
+  const startIdxs = ONBOARDING_PHASES.map(p => {
+    const i = ONBOARDING_STEPS.findIndex(s => s && s.id === p.startId);
+    return i;
+  });
+  // 어떤 phase에 속하는지
+  let phaseIdx = 0;
+  for (let p = 0; p < ONBOARDING_PHASES.length; p++) {
+    if (startIdxs[p] !== -1 && startIdxs[p] <= idx) phaseIdx = p;
+  }
+  const phase = ONBOARDING_PHASES[phaseIdx];
+  const phaseStartIdx = startIdxs[phaseIdx] >= 0 ? startIdxs[phaseIdx] : 0;
+  const nextStart = (phaseIdx + 1 < startIdxs.length && startIdxs[phaseIdx + 1] >= 0) ? startIdxs[phaseIdx + 1] : ONBOARDING_STEPS.length;
+  const phaseEndIdx = nextStart - 1;
+  return { phaseIdx, phase, phaseStartIdx, phaseEndIdx, totalPhases: ONBOARDING_PHASES.length };
+}
+
 // V4-fix v3 (사용자 요청): 튜토리얼 coachmark 드래그
 // 사용자 요청 2026-04-28: handle 제거, coachmark 전체 드래그 가능 (단 버튼/인터랙티브 element는 제외)
 function _initOnbDrag() {
@@ -9312,7 +9395,30 @@ function onbPositionStep(step, retryCount) {
   const ovEl = document.getElementById('onbOverlay');
   if (ovEl) ovEl.style.zIndex = step.aboveModal ? '10500' : '9000';
 
-  stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
+  // 사용자 요청 2026-04-29: phase 시각화 — step number + phase 라벨 + 시뮬 배지 + phase 진행 바
+  const stepNumText = document.getElementById('onbStepNumText');
+  if (stepNumText) {
+    stepNumText.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
+  } else {
+    stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
+  }
+  const phaseInfo = (typeof _getPhaseInfo === 'function') ? _getPhaseInfo(_onbStep) : null;
+  const phaseLabel = document.getElementById('onbPhaseLabel');
+  if (phaseLabel) {
+    phaseLabel.textContent = phaseInfo ? phaseInfo.phase.name : '';
+  }
+  const simBadge = document.getElementById('onbSimBadge');
+  if (simBadge) {
+    const isSim = !!(step.demoAttemptResult || step.demoCrystallize || step.demoDnaPearlTypes);
+    simBadge.style.display = isSim ? '' : 'none';
+  }
+  const phaseBar = document.getElementById('onbPhaseBar');
+  if (phaseBar && phaseInfo) {
+    phaseBar.innerHTML = ONBOARDING_PHASES.map((p, i) => {
+      const cls = i < phaseInfo.phaseIdx ? 'done' : (i === phaseInfo.phaseIdx ? 'current' : '');
+      return `<span class="onb-phase-dot ${cls}" title="${escapeHtml(p.name)}"></span>`;
+    }).join('');
+  }
   // 사용자 보고 2026-04-28: 너무 버벅거림 — swap fade 140ms→60ms 단축 + same-target 추가 skip
   const sameTitle = (titleEl.textContent === step.title);
   const sameBody = (bodyEl.innerHTML === step.body);
