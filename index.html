@@ -18764,10 +18764,20 @@ function renderLensCalendarGrid() {
   const entriesByDate = {};
   (state.entries || []).forEach(e => { if (e.date) entriesByDate[e.date] = e; });
   const chaptersByDate = {};
-  (state.chatMessages || []).forEach(m => {
-    if (m.chapterStart && m.timestamp) {
-      const dk = getDayKey(m.timestamp);
+  // 사용자 보고 2026-04-29: chatMessages의 chapterStart 마커 timestamp는
+  // "다음 챕터 시작 시점" (4시간 갭 후 첫 메시지)이라 잘못된 날짜에 점이 찍혔음
+  // (예: 28일에 대화 → 29일 첫 메시지에 마커 → 29일에 잘못 표시).
+  // → 실제 챕터 종료 시점 기반으로 변경: topicCards.chapterEndedAt + chatArchive.date
+  (state.topicCards || []).forEach(c => {
+    const endedAt = c && (c.chapterEndedAt || c.chapterStartedAt || c.createdAt);
+    if (endedAt) {
+      const dk = getDayKey(endedAt);
       chaptersByDate[dk] = (chaptersByDate[dk] || 0) + 1;
+    }
+  });
+  (state.chatArchive || []).forEach(a => {
+    if (a && a.date) {
+      chaptersByDate[a.date] = (chaptersByDate[a.date] || 0) + 1;
     }
   });
 
