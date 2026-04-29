@@ -22766,25 +22766,36 @@ async function testSeedV4Data() {
     }
   ];
   // caseFormulation 8 차원 (problems / mechanisms / strengths / goals / growth + unverified 일부)
+  // 사용자 보고 2026-04-29: cf 항목들 분기별 분산 (각 분기 review에 '자기 이해' 카테고리 보이도록)
   state.caseFormulation = {
     version: 7, lastUpdated: new Date().toISOString(),
     problems: [
       { text: '저녁 무력감으로 작업 X', confidence: 0.7, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 10 * 86400000).toISOString() },
-      { text: '거절 후 부채감으로 공부 X', confidence: 0.6, evidence_count: 2, user_verified: true, created_at: new Date(today.getTime() - 20 * 86400000).toISOString() }
+      { text: '거절 후 부채감으로 공부 X', confidence: 0.6, evidence_count: 2, user_verified: true, created_at: new Date(today.getTime() - 100 * 86400000).toISOString() },
+      { text: '잠 부족 시 큰 결정 후회', confidence: 0.55, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 200 * 86400000).toISOString() },
+      { text: '관계 깊이 회피', confidence: 0.5, evidence_count: 1, user_verified: false, created_at: new Date(today.getTime() - 280 * 86400000).toISOString() }
     ],
     mechanisms: [
-      { text: '과부하 → 회피 → 자책 루프', confidence: 0.65, evidence_count: 4, user_verified: false, created_at: new Date(today.getTime() - 15 * 86400000).toISOString() }
+      { text: '과부하 → 회피 → 자책 루프', confidence: 0.65, evidence_count: 4, user_verified: false, created_at: new Date(today.getTime() - 15 * 86400000).toISOString() },
+      { text: '인지 자원 고갈 → 충동적 결정', confidence: 0.6, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 130 * 86400000).toISOString() },
+      { text: '시간 압박 → 도파민 급증 → 폭발력', confidence: 0.7, evidence_count: 3, user_verified: true, created_at: new Date(today.getTime() - 220 * 86400000).toISOString() }
     ],
     strengths: [
       { text: '마감 직전 폭발력 신뢰 가능', confidence: 0.85, evidence_count: 5, user_verified: true, created_at: new Date(today.getTime() - 25 * 86400000).toISOString() },
-      { text: '깊이 파는 습관', confidence: 0.7, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 18 * 86400000).toISOString() }
+      { text: '깊이 파는 습관', confidence: 0.7, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 90 * 86400000).toISOString() },
+      { text: '환경 셋업 능력', confidence: 0.75, evidence_count: 4, user_verified: true, created_at: new Date(today.getTime() - 180 * 86400000).toISOString() },
+      { text: '자기 인식 의식적', confidence: 0.65, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 270 * 86400000).toISOString() }
     ],
     goals: [
       { text: '박사 졸업 (2027)', confidence: 0.9, evidence_count: 1, user_verified: true, created_at: new Date(today.getTime() - 30 * 86400000).toISOString() },
-      { text: '논문 첫 저자 1편 (이번 분기)', confidence: 0.6, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 5 * 86400000).toISOString() }
+      { text: '논문 첫 저자 1편 (이번 분기)', confidence: 0.6, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 5 * 86400000).toISOString() },
+      { text: '거절 패턴 풀기', confidence: 0.65, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 150 * 86400000).toISOString() },
+      { text: '실험 결과 1건 publish', confidence: 0.55, evidence_count: 1, user_verified: false, created_at: new Date(today.getTime() - 240 * 86400000).toISOString() }
     ],
     growth: [
-      { text: '환경 차원 도구 사용 늘어남 (지난 분기 비교)', confidence: 0.8, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 7 * 86400000).toISOString() }
+      { text: '환경 차원 도구 사용 늘어남', confidence: 0.8, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 7 * 86400000).toISOString() },
+      { text: '자기 친절 톤 정착', confidence: 0.6, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 110 * 86400000).toISOString() },
+      { text: '거절 그날 안에 답하기', confidence: 0.7, evidence_count: 3, user_verified: true, created_at: new Date(today.getTime() - 230 * 86400000).toISOString() }
     ],
     unverified: {
       problems: [{ text: '저녁 무력감으로 작업 X', addedAt: new Date(today.getTime() - 10 * 86400000).toISOString() }],
@@ -25842,12 +25853,7 @@ async function buildQuarterlySlides(review) {
     `
   });
 
-  // 1.5. 감성 mood arc — 분기 mood/vitality 곡선 (사용자 요청 2026-04-29)
-  const moodArcHtml = _buildMoodArcSlideHTML(inRange, startMs, endMs);
-  if (moodArcHtml) {
-    slides.push({ tone: 'tone-emo-2', html: moodArcHtml });
-  }
-
+  // 사용자 요청 2026-04-29: Mood arc 슬라이드 제거
   // 2. 진지 변화 — 8 차원 + 모드
   slides.push({
     tone: 'tone-deep',
@@ -25879,11 +25885,12 @@ async function buildQuarterlySlides(review) {
     `
   });
 
-  // 4. 진지 진화 — 가닥 history
-  slides.push({
-    tone: 'tone-deep-4',
-    html: _buildEvolutionSlideHTML(stats, inRange)
-  });
+  // 사용자 요청 2026-04-29: '전략이 네 무기' 슬라이드(_buildEvolutionSlideHTML) 제거
+  // → '🌳 통한 전략들' + '🐚 모은 소라' 두 신규 긍정 슬라이드로 대체
+  const workedSlideHtml = _buildWorkedStrategiesSlideHTML(stats, inRange);
+  if (workedSlideHtml) slides.push({ tone: 'tone-emo-2', html: workedSlideHtml });
+  const shellsSlideHtml = _buildShellsCollectedSlideHTML(stats, inRange, startMs, endMs);
+  if (shellsSlideHtml) slides.push({ tone: 'tone-emo-4', html: shellsSlideHtml });
 
   // 5. 감성 top 진주
   // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드면 '엄마 김치찌개' 카드 고정 (시각 검증)
@@ -25916,12 +25923,7 @@ async function buildQuarterlySlides(review) {
     `
   });
 
-  // 5.5. 감성 — AI가 고른 그날 (highlight 한 순간) (사용자 요청 2026-04-29)
-  const highlightHtml = _buildHighlightSlideHTML(inRange);
-  if (highlightHtml) {
-    slides.push({ tone: 'tone-emo-4', html: highlightHtml });
-  }
-
+  // 사용자 요청 2026-04-29: '기억나는 한 순간' (highlight) 슬라이드 제거
   // 6. 진지 AI 새 특징
   slides.push({
     tone: 'tone-deep-2',
@@ -26221,7 +26223,7 @@ function _buildChangeSlideHTML(stats, prevQ) {
     const gP = stats.growthCount || 0;
     if (gP >= 2 && sP > pP) return '강점도 새로 보였고, 성장 축도 여러 개 움직였어. 네 모양이 더 또렷해진 분기야.';
     if (gP >= 2) return `성장 축이 ${gP}개나 움직였어. 멈춰있던 게 아니야 — 이 자체가 큰 의미야.`;
-    if (sP > pP) return '강점이 문제보다 많이 보였어. 너 자신을 단단하게 알아가고 있어.';
+    if (sP > pP) return '강점이 문제보다 더 많이 보였어. 네 안에 단단한 게 있어.';
     if (pP > sP) return '문제가 더 또렷이 보인 분기야. 그게 보이는 것 자체가 첫 단계니까, 부담 가지지 마.';
     return '큰 흔들림 없이 균형 잡힌 분기였어. 머무는 시간도 너에게 필요한 시간이야.';
   })();
@@ -26237,6 +26239,151 @@ function _buildChangeSlideHTML(stats, prevQ) {
       `).join('')}
     </div>
     <div class="stories-body" style="margin-top:14px;">${escapeHtml(insight)}</div>
+  `;
+}
+
+// 사용자 요청 2026-04-29 (재): '🌳 너의 전략들' — 3 카테고리 카드 (체화 / 가장 많이 진화 / 성장 중)
+// 카테고리별 1개씩. 비면 그 카드 스킵. 셋 다 비면 슬라이드 자체 skip.
+function _buildWorkedStrategiesSlideHTML(stats, inRange) {
+  const cards = (state.topicCards || []).filter(c => c.category === 'strategy' && inRange(c.createdAt));
+
+  // 1. 체화된 전략 — 가장 최근 체화
+  const embodied = cards.filter(c => c.embodimentStatus === 'embodied')
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0];
+
+  // 2. 가장 많이 진화한 전략 — generations.length 최대 (체화 제외, ≥2)
+  const mostEvolved = cards
+    .filter(c => c.embodimentStatus !== 'embodied')
+    .filter(c => Array.isArray(c.generations) && c.generations.length >= 2)
+    .sort((a, b) => (b.generations.length) - (a.generations.length))[0];
+
+  // 3. 성장 중인 전략 — working / trying 중 worked 가장 많이 (체화/most-evolved 제외)
+  const growing = cards
+    .filter(c => (c.embodimentStatus === 'working' || c.embodimentStatus === 'trying'))
+    .filter(c => !embodied || c.id !== embodied.id)
+    .filter(c => !mostEvolved || c.id !== mostEvolved.id)
+    .map(c => {
+      let worked = 0, total = 0;
+      (c.generations || []).forEach(g => {
+        (g.attempts || []).forEach(a => { total++; if (a.status === 'worked') worked++; });
+      });
+      return { card: c, worked, total };
+    })
+    .sort((a, b) => b.worked - a.worked)[0];
+
+  // 셋 다 비면 슬라이드 자체 skip
+  if (!embodied && !mostEvolved && !growing) return null;
+
+  const buildCardBox = (titleLabel, emoji, gradient, border, card, sub) => `
+    <div style="background:${gradient}; border:1px solid ${border}; border-radius:14px; padding:14px 16px; max-width:300px; margin:0 auto;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <span style="font-size:18px;">${emoji}</span>
+        <span style="font-size:11px; color:rgba(255,255,255,0.75); font-weight:600; letter-spacing:0.04em;">${titleLabel}</span>
+      </div>
+      <div style="font-size:14px; color:white; font-weight:500; line-height:1.4; margin-bottom:5px;">${escapeHtml((card.title || '').slice(0, 36))}</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.6);">${sub}</div>
+    </div>
+  `;
+
+  const parts = [];
+  if (embodied) {
+    const _workedAll = (embodied.generations || []).flatMap(g => g.attempts || []).filter(a => a.status === 'worked').length;
+    parts.push(buildCardBox(
+      '✨ 체화 완료',
+      '✨',
+      'linear-gradient(135deg, rgba(212,167,106,0.22), rgba(255,210,80,0.12))',
+      'rgba(212,167,106,0.50)',
+      embodied,
+      `${_workedAll}번 통하고 네 일부가 됨`
+    ));
+  }
+  if (mostEvolved) {
+    parts.push(buildCardBox(
+      '🧬 가장 많이 진화한',
+      '🧬',
+      'linear-gradient(135deg, rgba(168,157,200,0.22), rgba(140,160,210,0.12))',
+      'rgba(168,157,200,0.50)',
+      mostEvolved,
+      `${mostEvolved.generations.length}세대 진화 중`
+    ));
+  }
+  if (growing) {
+    const _stat = `${growing.worked}번 통함${growing.total > 0 ? ` / ${growing.total}번 시도` : ''}`;
+    const _statusLbl = growing.card.embodimentStatus === 'working' ? '🌳 성장 중' : '🌿 양생 중';
+    parts.push(buildCardBox(
+      _statusLbl,
+      growing.card.embodimentStatus === 'working' ? '🌳' : '🌿',
+      'linear-gradient(135deg, rgba(143,200,143,0.20), rgba(126,200,227,0.12))',
+      'rgba(143,200,143,0.45)',
+      growing.card,
+      _stat
+    ));
+  }
+
+  return `
+    <div class="stories-label">너의 전략들</div>
+    <div class="stories-title" style="margin-bottom:18px;">🌳 자라고 있는 무기들</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      ${parts.join('')}
+    </div>
+  `;
+}
+
+// 사용자 요청 2026-04-29: '🐚 모은 소라' — 분기 안 등급별 소라 카운트
+function _buildShellsCollectedSlideHTML(stats, inRange, startMs, endMs) {
+  const inRangeShells = (state.shellCollection || []).filter(s => {
+    if (!s.date) return false;
+    const t = new Date(s.date).getTime();
+    return t >= startMs && t <= endMs;
+  });
+  if (inRangeShells.length === 0) return null;
+
+  const TIER_INFO = [
+    { tier: 'legend', emoji: '✨', label: '특별',   color: '#ffd93d' },
+    { tier: 'call',   emoji: '⭐', label: '부름',   color: '#ff8da1' },
+    { tier: 'golden', emoji: '🦞', label: '황금',   color: '#ffb86b' },
+    { tier: 'main',   emoji: '🐢', label: '메인',   color: '#ffb86b' },
+    { tier: 'daily',  emoji: '🌀', label: '일상',   color: '#7ec8e3' },
+    { tier: 'light',  emoji: '🐚', label: '가벼움', color: '#a89dc8' }
+  ];
+  const counts = {};
+  inRangeShells.forEach(s => { counts[s.tier || 'light'] = (counts[s.tier || 'light'] || 0) + 1; });
+  const visible = TIER_INFO.filter(t => counts[t.tier] > 0);
+  const total = inRangeShells.length;
+  // 가장 빛난 등급 (legend > call > golden > main > daily > light 순으로 첫 0 아닌)
+  const topTier = TIER_INFO.find(t => counts[t.tier] > 0);
+
+  return `
+    <div class="stories-label">모은 소라</div>
+    <div class="stories-title" style="margin-bottom:6px;">🐚 한 분기 동안</div>
+    <div style="margin:18px auto 24px;">
+      <div style="font-size:48px; color:#d4a76a; font-weight:700; line-height:1;">${total}</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:6px;">개의 소라</div>
+    </div>
+
+    ${topTier ? `
+      <div style="display:inline-block; margin-bottom:18px; padding:8px 14px; background:linear-gradient(135deg, ${topTier.color}33, ${topTier.color}10); border:1px solid ${topTier.color}66; border-radius:14px;">
+        <span style="font-size:11px; color:rgba(255,255,255,0.65); margin-right:6px;">가장 빛난 등급</span>
+        <span style="font-size:14px; color:white; font-weight:600;">${topTier.emoji} ${topTier.label}</span>
+      </div>
+    ` : ''}
+
+    <div style="display:flex; flex-direction:column; gap:6px; max-width:280px; margin:0 auto;">
+      ${visible.map(t => {
+        const cnt = counts[t.tier];
+        const pct = Math.min(100, (cnt / total) * 100);
+        return `
+          <div style="display:flex; align-items:center; gap:10px; padding:6px 10px; background:rgba(255,255,255,0.04); border-radius:10px;">
+            <span style="font-size:18px; flex-shrink:0; width:24px;">${t.emoji}</span>
+            <span style="font-size:12px; color:rgba(255,255,255,0.85); flex-shrink:0; width:48px; text-align:left;">${t.label}</span>
+            <div style="flex:1; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+              <div style="height:100%; width:${pct.toFixed(1)}%; background:${t.color}; border-radius:3px;"></div>
+            </div>
+            <span style="font-size:13px; color:white; font-weight:600; flex-shrink:0; width:32px; text-align:right;">${cnt}</span>
+          </div>
+        `;
+      }).join('')}
+    </div>
   `;
 }
 
@@ -26280,17 +26427,25 @@ function _buildEvolutionSlideHTML(stats, inRange) {
   }
 
   // V4-fix v3 (사용자 요청 — 더 따뜻하게): 성장·진화 따뜻한 톤
+  // 사용자 요청 2026-04-29: 성공한 거에 집중해서 뿌듯함 ↑
+  const workedCount = stats.worked || 0;
   const warmInsight = (() => {
-    if (dnaInRange.length > 0 && cards.length > 0) {
-      return `${dnaInRange.length}개 가닥이 네 일부가 됐고, ${cards.length}개 새 가지를 시작했어. 너만의 코드가 깊어지는 분기야. 🧬`;
+    if (dnaInRange.length > 0) {
+      return `🎉 ${dnaInRange.length}개 전략이 진짜 네 일부가 됐어. 이건 너만의 무기야.`;
     }
-    if (cards.length > 0 && totalAttempts > 0) {
-      return `${cards.length}개 가닥에서 ${totalAttempts}번 시도 — 안 통한 시도도 네 발견이야. 그만큼 더 노하우도 쌓이고 단단해졌어. 🌱`;
+    if (embodiedStrategies.length > 0) {
+      return `✨ 체화한 전략 ${embodiedStrategies.length}개. 같은 상황 와도 이젠 자동이야.`;
+    }
+    if (workedCount >= 5) {
+      return `🌳 ${workedCount}번 통했어. 곧 체화 직전 — 곧 너의 무기가 돼.`;
+    }
+    if (workedCount > 0) {
+      return `🌱 ${workedCount}번 통한 시도 — 진짜 작동하는 전략이 쌓이는 중.`;
     }
     if (totalAttempts > 0) {
-      return `${totalAttempts}번 시도. 결과보다 시도 자체가 의미야. 너에게 맞는 모양을 찾고 있어. 🌿`;
+      return `🌿 ${totalAttempts}번 시도해봤어. 시도 자체가 너의 무기야.`;
     }
-    return '큰 시도 없이 머무르는 분기였어. 그것도 진화의 한 단계 — 다음 도약을 위한 숨고르기. 🍃';
+    return '🍃 다음 분기에 새 시도 시작해보자.';
   })();
   // 사용자 요청 2026-04-28: 체화된 전략 카드 — 뿌듯하게, 시각적으로
   const embodiedHtml = embodiedStrategies.length > 0 ? `
@@ -26819,20 +26974,43 @@ function _buildSeasonalSlide(year, yearReviews) {
     if (m >= 1.5) return '😞';
     return '😢';
   };
+  // 사용자 요청 2026-04-29: 계절별 흐름 더 이쁘게 — 큰 카드 + 부드러운 글로우 + 분기 라벨 + 한 단어 코멘트
+  const validMoods = moods.filter(m => m != null);
+  const yearAvg = validMoods.length > 0
+    ? Math.round((validMoods.reduce((a, b) => a + b, 0) / validMoods.length) * 10) / 10
+    : null;
+  const seasonComment = (m) => {
+    if (m == null) return '기록 없음';
+    if (m >= 4.3) return '빛난 계절';
+    if (m >= 3.7) return '잔잔히 좋음';
+    if (m >= 3.0) return '오르내림';
+    if (m >= 2.3) return '무겁고 잔잔';
+    return '많이 무거웠던';
+  };
   return {
     tone: 'tone-emo',
     html: `
-      <div class="stories-label">네${year}년 무드</div>
-      <div class="stories-title">계절별 흐름</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:18px auto 0; max-width:300px; justify-items:center;">
+      <div class="stories-label">${year}년 계절</div>
+      <div class="stories-title" style="margin-bottom:6px;">한 해의 흐름</div>
+      ${yearAvg != null ? `<div style="font-size:11px; color:rgba(255,255,255,0.6); margin-bottom:18px;">연평균 ${yearAvg}/5</div>` : '<div style="height:18px;"></div>'}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:0 auto; max-width:320px;">
         ${moods.map((m, i) => {
           const s = seasonData[i];
+          const labelQ = ['Q1', 'Q2', 'Q3', 'Q4'][i];
+          const monthRange = ['1~3월', '4~6월', '7~9월', '10~12월'][i];
           return `
-            <div style="background:${s.gradient}; border:1px solid ${s.border}; border-radius:14px; padding:14px 10px; text-align:center; aspect-ratio:1; width:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px; box-sizing:border-box;">
-              <div style="font-size:22px; line-height:1; height:24px; display:flex; align-items:center; justify-content:center;">${s.emoji}</div>
-              <div style="font-size:11px; color:rgba(255,255,255,0.75); font-weight:600; letter-spacing:0.06em; line-height:1;">${s.label}</div>
-              <div style="font-size:26px; line-height:1; height:28px; display:flex; align-items:center; justify-content:center; margin-top:2px;">${moodFace(m)}</div>
-              <div style="font-size:13px; color:white; font-weight:600; line-height:1;">${m != null ? `${m}/5` : '기록 없음'}</div>
+            <div style="background:${s.gradient}; border:1px solid ${s.border}; border-radius:18px; padding:18px 14px; text-align:center; aspect-ratio:1; display:flex; flex-direction:column; justify-content:space-between; align-items:center; box-sizing:border-box; box-shadow:0 4px 18px ${s.border.replace('0.50', '0.18')}; position:relative; overflow:hidden;">
+              <div style="position:absolute; top:-20px; right:-20px; width:80px; height:80px; background:${s.border.replace('0.50', '0.20')}; border-radius:50%; filter:blur(20px);"></div>
+              <div style="font-size:11px; color:rgba(255,255,255,0.55); letter-spacing:0.08em; font-weight:600; position:relative;">${labelQ} · ${monthRange}</div>
+              <div style="display:flex; flex-direction:column; align-items:center; gap:4px; position:relative;">
+                <div style="font-size:36px; line-height:1;">${s.emoji}</div>
+                <div style="font-size:13px; color:rgba(255,255,255,0.92); font-weight:600; letter-spacing:0.04em;">${s.label}</div>
+              </div>
+              <div style="display:flex; flex-direction:column; align-items:center; gap:3px; position:relative;">
+                <div style="font-size:24px; line-height:1;">${moodFace(m)}</div>
+                <div style="font-size:11px; color:rgba(255,255,255,0.85); font-weight:500;">${m != null ? `${m}/5` : '—'}</div>
+                <div style="font-size:10px; color:rgba(255,255,255,0.55); margin-top:2px; font-style:italic;">${seasonComment(m)}</div>
+              </div>
             </div>
           `;
         }).join('')}
@@ -26921,18 +27099,21 @@ function _buildDiagnosisLearningSlide(year, yearReviews) {
     return {
       tone: 'tone-deep-3',
       html: `
-        <div class="stories-label">진단 학습 곡선</div>
-        <div class="stories-title">큰 패턴 신호 없는 한 해</div>
+        <div class="stories-label">발견한 패턴들</div>
+        <div class="stories-title">잔잔히 흐른 한 해</div>
+        <div class="stories-body">큰 패턴 신호는 없었지만, 너의 흐름 자체가 데이터야.</div>
       `
     };
   }
-  // 사용자 요청 2026-04-28: 언제 작동했는지 추가 — 진단별 첫 발견월/시기 정보
+  // 사용자 요청 2026-04-29: 진단 학습 곡선 → 긍정적 reframe ('자기 이해 발견')
+  // 이전: '진단 = 문제' 톤
+  // 변경: '발견 = 자기를 알아가는 흔적' 톤
   const labels = {
-    weak_tool: '🔧 도구 약함',
-    wrong_layer: '📐 차원 안 맞음',
-    value_clash: '⚖️ 가치 상충',
-    avoidance: '🌫 회피 패턴',
-    willpower_cap: '🪫 의지 임계치'
+    weak_tool: '🔧 도구 발견',
+    wrong_layer: '📐 차원 발견',
+    value_clash: '⚖️ 가치 발견',
+    avoidance: '🌿 회피 신호 인식',
+    willpower_cap: '🪫 의지 한계 인식'
   };
   const seasonOf = (m) => m <= 2 || m === 11 ? '겨울' : m <= 5 ? '봄' : m <= 8 ? '여름' : '가을';
   // type별 그룹 + 첫 발견 / 마지막 갱신
@@ -26956,8 +27137,9 @@ function _buildDiagnosisLearningSlide(year, yearReviews) {
   return {
     tone: 'tone-deep-3',
     html: `
-      <div class="stories-label">진단 학습 곡선</div>
-      <div class="stories-title" style="margin-bottom:18px;">네 안에서 작동한 패턴</div>
+      <div class="stories-label">발견한 패턴들</div>
+      <div class="stories-title" style="margin-bottom:6px;">🧭 너를 알아가는 흔적</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-bottom:18px;">한 해 동안 너 안에서 보인 신호들</div>
       <div style="display:flex; flex-direction:column; gap:13px; max-width:300px;">
         ${sortedTypes.map(([t, info]) => {
           const monthSet = new Set(info.dates.map(d => d.getMonth()));
@@ -26969,7 +27151,7 @@ function _buildDiagnosisLearningSlide(year, yearReviews) {
             <div style="background:rgba(255,255,255,0.05); border:1px solid ${color.replace('0.7', '0.35')}; border-radius:14px; padding:13px 14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:9px;">
                 <span style="font-size:13px; color:white; font-weight:600;">${labels[t] || t}</span>
-                <span style="font-size:11px; color:rgba(255,255,255,0.7);">${info.count}회</span>
+                <span style="font-size:11px; color:rgba(255,255,255,0.7);">${info.count}회 만남</span>
               </div>
               <div style="display:grid; grid-template-columns:repeat(12, 1fr); gap:2px; margin-bottom:6px;">
                 ${Array.from({length: 12}, (_, i) => `
@@ -26977,30 +27159,68 @@ function _buildDiagnosisLearningSlide(year, yearReviews) {
                 `).join('')}
               </div>
               <div style="display:flex; justify-content:space-between; font-size:9px; color:rgba(255,255,255,0.45); letter-spacing:0.04em;">
-                <span>1월</span><span>${span ? `📅 ${span}` : ''}</span><span>12월</span>
+                <span>1월</span><span>${span ? `🌱 ${span}` : ''}</span><span>12월</span>
               </div>
             </div>
           `;
         }).join('')}
       </div>
-      <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px; text-align:center; font-style:italic;">
-        진단 받고 행동 → 결과로 confidence 갱신.
+      <div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:14px; max-width:280px; text-align:center; font-style:italic;">
+        ✨ 보이는 만큼 알아가는 중 — 발견 자체가 첫 단계야.
       </div>
     `
   };
 }
 
 function _buildAnnualNarrativeSlide(year, yearReviews) {
-  // 4 분기 summary 합쳐서 한 단락 narrative
-  const summaries = yearReviews.map(r => r.summary).filter(Boolean).join(' ');
+  // 사용자 요청 2026-04-29: 가독성 개선 — 분기별 한 줄씩 카드로 분리 (긴 한 단락 X)
+  const sortedReviews = yearReviews.slice().sort((a, b) => {
+    const aQ = parseInt((a.quarterKey || '').split('-Q')[1] || '0');
+    const bQ = parseInt((b.quarterKey || '').split('-Q')[1] || '0');
+    return aQ - bQ;
+  });
+  const QUARTERS = [
+    { q: 'Q1', label: 'Q1', months: '1~3월', color: '#ff9aa2', emoji: '🌸' },
+    { q: 'Q2', label: 'Q2', months: '4~6월', color: '#ffd93d', emoji: '☀️' },
+    { q: 'Q3', label: 'Q3', months: '7~9월', color: '#ff8c5a', emoji: '🍂' },
+    { q: 'Q4', label: 'Q4', months: '10~12월', color: '#a0c8e6', emoji: '❄️' }
+  ];
+  const cardsHtml = QUARTERS.map(qInfo => {
+    const r = sortedReviews.find(x => x.quarterKey && x.quarterKey.endsWith('-' + qInfo.q));
+    const summary = r && r.summary ? r.summary.slice(0, 110) : null;
+    if (!summary) {
+      return `
+        <div style="display:flex; gap:11px; align-items:flex-start; padding:11px 14px; background:rgba(255,255,255,0.03); border-left:2px solid rgba(255,255,255,0.10); border-radius:0 10px 10px 0; opacity:0.55;">
+          <span style="font-size:18px; line-height:1.3;">${qInfo.emoji}</span>
+          <div style="flex:1; min-width:0; text-align:left;">
+            <div style="font-size:11px; color:rgba(255,255,255,0.5); letter-spacing:0.06em; margin-bottom:3px;">${qInfo.label} · ${qInfo.months}</div>
+            <div style="font-size:12px; color:rgba(255,255,255,0.45); font-style:italic;">기록 없는 분기</div>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div style="display:flex; gap:11px; align-items:flex-start; padding:11px 14px; background:linear-gradient(90deg, ${qInfo.color}18, transparent); border-left:2px solid ${qInfo.color}; border-radius:0 10px 10px 0;">
+        <span style="font-size:18px; line-height:1.3;">${qInfo.emoji}</span>
+        <div style="flex:1; min-width:0; text-align:left;">
+          <div style="font-size:11px; color:${qInfo.color}; letter-spacing:0.06em; margin-bottom:4px; font-weight:600;">${qInfo.label} · ${qInfo.months}</div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.92); line-height:1.65;">${escapeHtml(summary)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
   return {
     tone: 'tone-deep',
     html: `
       <div class="stories-label">${year}년 한 단락</div>
-      <div class="stories-title" style="font-size:17px; line-height:1.7;">${escapeHtml(summaries.slice(0, 300) || '한 해의 흐름이 천천히 자리 잡고 있어.')}</div>
-      <div class="stories-prompt" style="margin-top:18px;">
-        <div class="stories-prompt-label">${year + 1}년에</div>
-        같은 길 또는 새로운 길. 네 데이터가 너에게 보여줄 거야.
+      <div class="stories-title" style="font-size:18px; margin-bottom:18px;">분기별 흐름</div>
+      <div style="display:flex; flex-direction:column; gap:8px; max-width:320px; margin:0 auto;">
+        ${cardsHtml}
+      </div>
+      <div style="margin-top:20px; padding:12px 16px; background:rgba(212,167,106,0.08); border:1px solid rgba(212,167,106,0.30); border-radius:12px; max-width:300px; margin-left:auto; margin-right:auto;">
+        <div style="font-size:10px; color:#d4a76a; letter-spacing:0.08em; margin-bottom:4px;">🧭 ${year + 1}년에</div>
+        <div style="font-size:12px; color:rgba(255,255,255,0.85); line-height:1.6;">같은 길 또는 새로운 길. 네 데이터가 너에게 보여줄 거야.</div>
       </div>
     `
   };
