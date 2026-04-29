@@ -9788,6 +9788,12 @@ function onbPositionStep(step, retryCount) {
         const modalTitle = targetMission?.title || '마감 직전 폭발력 신뢰';
         const status = await showAttemptResultModal(modalTitle);
         if (status && window._onbTutorialMode && _onbStep === stepIdxAtRender) {
+          // 사용자 보고 2026-04-29: mission.attemptStatus 설정 누락 — 튜토리얼 후 양생방 카드에 '결과 체크' 버튼 잔존하던 버그
+          if (targetMission) {
+            targetMission.attemptStatus = status;
+            if (!targetMission.completedAt) targetMission.completedAt = new Date().toISOString();
+            if (!targetMission.completedDate) targetMission.completedDate = todayKey();
+          }
           // worked → recordStrategyAttempt (strategyId 있을 때만; shell DNA 매핑 자동)
           if (status === 'worked' && targetMission?.strategyId && typeof recordStrategyAttempt === 'function') {
             try { recordStrategyAttempt(targetMission.strategyId, 'worked', targetMission.id); } catch (e) { console.warn('recordStrategyAttempt:', e); }
