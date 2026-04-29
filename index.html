@@ -359,6 +359,31 @@
     font-size: 13px;
     transition: all 0.2s;
   }
+  /* 사용자 요청 2026-04-29: 새 메시지 플로팅 칩 — 사용자가 위로 스크롤한 상태에서 새 응답 오면 표시 */
+  .chat-new-msg-chip {
+    position: fixed;
+    bottom: 96px;  /* chat-input-bar 위 */
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    padding: 8px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    z-index: 60;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,167,106,0.35);
+    animation: chatChipBounceIn 0.28s cubic-bezier(0.2, 1.6, 0.4, 1);
+    white-space: nowrap;
+  }
+  .chat-new-msg-chip:active { transform: translateX(-50%) scale(0.96); }
+  @keyframes chatChipBounceIn {
+    from { opacity: 0; transform: translate(-50%, 12px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
   .chat-archive-header:hover {
     background: linear-gradient(135deg, rgba(201,169,110,0.15), rgba(139,126,196,0.12));
     border-color: rgba(201,169,110,0.4);
@@ -6660,6 +6685,8 @@
       <div class="screen-sub">뭐든 말해. 일기처럼 길게 써도 돼. 내가 읽고 답할게.</div>
       <div class="chat-messages" id="chatMessages"></div>
     </div>
+    <!-- 사용자 요청 2026-04-29: '↓ 새 메시지' 플로팅 칩 — 위로 스크롤 후 새 메시지 도착 시 표시 -->
+    <button id="chatNewMsgChip" class="chat-new-msg-chip" onclick="scrollChatToBottom(true)" style="display:none;">↓ 새 메시지</button>
 
     <!-- DECISIONS LIST -->
     <div class="screen" id="screen-decisions">
@@ -8512,7 +8539,7 @@ const ONBOARDING_STEPS = [
     id: 'click_new_shell',
     targetSelector: '.beach-shell:not(.dna-shell)',
     title: '🐚 방금 받은 소라',
-    body: '평범한 소라 하나 눌러봐 (🧬 표시 없는 거).<br>그 소라에 담긴 <b>이야기 카드</b>가 떠.',
+    body: '소라 하나 눌러봐.<br>그 소라에 담긴 <b>이야기 카드</b>가 떠.',
     waitFor: 'click',
     advanceDelay: 600,
     dimBackground: false,
@@ -13855,8 +13882,11 @@ function showScreen(name) {
   if (name === 'decisions') renderDecisionsList();
   if (name === 'chat') {
     rotateChatPlaceholder();  // V3.10: 매번 다른 힌트
+    // 사용자 요청 2026-04-29: 채팅 진입 시 _stuckToBottom 강제 true (다시 들어오면 맨 아래 보고 싶어함)
+    _stuckToBottom = true;
+    _unseenSinceScroll = 0;
     renderChat();
-    setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50);
+    setTimeout(() => { const s = document.getElementById('screen-chat'); if (s) s.scrollTop = s.scrollHeight; }, 50);
     // V4-fix v3 (사용자 요청): 대화 진입 시 가닥 미션 팔로업 자동 prompt
     if (typeof offerStrategyFollowup === 'function') { try { offerStrategyFollowup(); } catch (e) {} }
   }
@@ -14638,6 +14668,45 @@ async function editModelItem(category, idx) {
 // ═══════════════════════════════════════════════════════════════
 // 사용자 요청 2026-04-29 (perf #4): renderChat append-only — 새 메시지만 append, 기존 변경 시 full rebuild
 let _chatRenderSig = null;
+
+// 사용자 요청 2026-04-29: 자동 스크롤 가드 + '↓ 새 메시지' 플로팅 칩
+let _stuckToBottom = true;
+let _unseenSinceScroll = 0;
+function _initChatScrollWatcher() {
+  const screen = document.getElementById('screen-chat');
+  if (!screen || screen._scrollWatcherInited) return;
+  screen._scrollWatcherInited = true;
+  screen.addEventListener('scroll', () => {
+    const dist = screen.scrollHeight - screen.scrollTop - screen.clientHeight;
+    const wasStuck = _stuckToBottom;
+    _stuckToBottom = dist < 80;
+    if (_stuckToBottom && !wasStuck) {
+      _unseenSinceScroll = 0;
+      _updateChatNewMsgChip();
+    }
+  }, { passive: true });
+}
+function _updateChatNewMsgChip() {
+  const chip = document.getElementById('chatNewMsgChip');
+  if (!chip) return;
+  if (!_stuckToBottom && _unseenSinceScroll > 0) {
+    chip.textContent = _unseenSinceScroll > 1 ? `↓ 새 메시지 ${_unseenSinceScroll}` : '↓ 새 메시지';
+    chip.style.display = '';
+  } else {
+    chip.style.display = 'none';
+  }
+}
+function scrollChatToBottom(force) {
+  const screen = document.getElementById('screen-chat');
+  if (!screen) return;
+  if (force) _stuckToBottom = true;
+  if (_stuckToBottom) {
+    screen.scrollTop = screen.scrollHeight;
+    _unseenSinceScroll = 0;
+    _updateChatNewMsgChip();
+  }
+}
+
 function _renderChatMessageHTML(m, i) {
     let bubbleContent;
     if (m.role === 'assistant' && !m.typing) {
@@ -14789,13 +14858,31 @@ function renderChat() {
     container.innerHTML = html;
   }
 
+  const prevLen = (prev && prev.len) || 0;
+  const lenDelta = msgs.length - prevLen;
   _chatRenderSig = {
     len: msgs.length,
     firstTs: msgs[0] && msgs[0].timestamp,
     lastTs: msgs[lastIdx] && msgs[lastIdx].timestamp,
     archiveLen
   };
-  setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50);
+  // 사용자 요청 2026-04-29: 자동 스크롤 가드 — 사용자가 직접 보낸 메시지면 무조건 스크롤
+  // 그 외엔 _stuckToBottom 일 때만. 위로 스크롤한 상태에서 새 메시지 오면 칩 띄움.
+  _initChatScrollWatcher();
+  const lastM = msgs[msgs.length - 1];
+  const lastIsUserSend = lastM && lastM.role === 'user' && lenDelta > 0;
+  if (lastIsUserSend) _stuckToBottom = true;
+  if (_stuckToBottom) {
+    setTimeout(() => {
+      const s = document.getElementById('screen-chat');
+      if (s) s.scrollTop = s.scrollHeight;
+    }, 50);
+    _unseenSinceScroll = 0;
+    _updateChatNewMsgChip();
+  } else if (lenDelta > 0) {
+    _unseenSinceScroll += lenDelta;
+    _updateChatNewMsgChip();
+  }
 }
 
 function formatAIResponse(text) {
