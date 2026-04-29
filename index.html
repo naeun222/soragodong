@@ -8911,10 +8911,13 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'exec_immerse_start_next',
+    // 사용자 요청 2026-04-29: 화면의 '눌렀어 ✦' 클릭 → 자동 진행. 모달 버튼 라벨도 '눌렀어 →'로
     targetSelector: null,
+    advanceClickSelector: '.ritual-btn.primary[onclick="ritualNextStep()"]',
     title: '시작 IF-THEN',
     body: '시작 약속 미리 채워뒀어:<br><b>IF</b> 카페 도착해서 자리 앉으면 → <b>THEN</b> 노트북 펴고 한 단락 쓰기<br><br>"<b>눌렀어 ✦</b>" 눌러봐.',
-    waitFor: 'next',
+    waitFor: 'click',
+    advanceDelay: 600,
     dimBackground: false,
     aboveModal: true
   },
