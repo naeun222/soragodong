@@ -11646,10 +11646,11 @@ ${currentDraft ? `[이번 단계 ${meta.title}에 현재 적은 거]\n${currentD
   try {
     const recentMsgs = decision.helpChats[stepId].slice(-15).map(m => ({ role: m.role, content: m.content }));
     const resp = await callAnthropic({
-      model: 'claude-opus-4-7',
+      // 사용자 요청 2026-04-30 비용절감: 마법 helpChat 응답 opus → sonnet (메인 대화 빈도 ↑ → ROI 큼).
+      model: 'claude-sonnet-4-6',
       max_tokens: 400,
       // 사용자 요청 2026-04-29 비용절감: 1h cache TTL — ADHD burst+break 패턴 (5분 break도 cache 살아남음).
-      system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral', ttl: '1h' } }],
+      system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
       messages: recentMsgs
     });
     const data = await resp.json();
@@ -13107,7 +13108,8 @@ ${cleanInsight.slice(0, 1200)}
 JSON만, 다른 글 X.`;
 
     const resp = await callAnthropic({
-      model: 'claude-sonnet-4-6',
+      // 사용자 요청 2026-04-30: 사용자 모델 추출은 정확성 중요 → opus 4.7 (명시 트리거 = 깨달음 버튼).
+      model: 'claude-opus-4-7',
       max_tokens: 700,
       messages: [{ role: 'user', content: prompt }]
     });
@@ -13428,11 +13430,12 @@ async function sendReflectionChat() {
 
   try {
     // 사용자 요청 2026-04-29: prompt caching 적용 (1024 token 미달 시 Anthropic이 자동 무시 — 안전)
+    // 사용자 요청 2026-04-30 비용절감: 숙고 응답 opus → sonnet (사용자 헤비 사용 = 가장 큰 비용 driver였음).
     const resp = await callAnthropic({
-        model: 'claude-opus-4-7',
+        model: 'claude-sonnet-4-6',
         max_tokens: 400,
         // 사용자 요청 2026-04-29 비용절감: 1h cache TTL
-        system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral', ttl: '1h' } }],
+        system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
         messages: recentMsgs
     });
     const data = await resp.json();
@@ -14673,7 +14676,8 @@ async function verifyMissionPhoto(mission, photoBase64) {
       'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      // 사용자 요청 2026-04-30: 미션 사진 검증 = 단순 vision 분류 → haiku 4.5 (재시도 옵션 있어 안전).
+      model: 'claude-haiku-4-5',
       max_tokens: 200,
       messages: [{
         role: 'user',
@@ -17050,7 +17054,7 @@ async function generateAIResponse(modelOverride) {
         type: 'text',
         text: promptParts.stable,
         // 사용자 요청 2026-04-29 비용절감: 1h cache TTL — ADHD burst+break 패턴, 5분 default 만료 회피 → 헤비 사용자 ~10% 절감.
-        cache_control: { type: 'ephemeral', ttl: '1h' }
+        cache_control: { type: 'ephemeral' }
       });
     }
     if (promptParts.volatile && promptParts.volatile.length > 0) {
@@ -18323,7 +18327,8 @@ async function saveMsgAsStrategy(idx) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          // 사용자 요청 2026-04-30: 전략 카드 추출은 정확성 중요 → opus 4.7.
+          model: 'claude-opus-4-7',
           max_tokens: 500,
           messages: [{ role: 'user', content: `아래 4단 분석/전략 응답에서 "전략 카드"로 저장할 핵심을 뽑아줘.
 
@@ -18983,7 +18988,8 @@ async function selectMutationOption(msgIdx, optIdx) {
   if (state.apiKey) {
     try {
       const resp = await callAnthropic({
-          model: 'claude-sonnet-4-6', max_tokens: 400,
+          // 사용자 요청 2026-04-30: 가지 미션화 단계 = 정확성 중요 → opus 4.7.
+          model: 'claude-opus-4-7', max_tokens: 400,
           messages: [{
             role: 'user',
             content: `사용자 가닥 "${card?.title || ''}" — 새 시도 차원: ${opt.layer} ${layerName}\n행동: "${opt.action}"\n\n[네 일]\n이 행동을 *오늘부터 바로 할 수 있도록* 구체적 step-by-step 3-5단계.\n각 단계: 짧고 명확하게 (한 줄 max 40자). 의지 부담↓ 환경 셋업 우선.\n\n[톤]\n진지 모드 친구. 외재화. "실패" 단어 X. ADHD 친화 (작은 단위).\n\n[출력 — 다른 거 X, 단계만]\n1. (첫 단계 — 가장 작게)\n2. ...\n3. ...\n\n도입 한 줄 + 단계 + 마무리 한 줄 ("시작 전에 더 얘기 X면 ✦ 해볼게로 등록").`
@@ -19147,7 +19153,8 @@ async function _completeMutationToMission(strategyId, opt, chatHistory) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-6', max_tokens: 500,
+            // 사용자 요청 2026-04-30: 가지 진화 정리 = 정확성 중요 → opus 4.7.
+            model: 'claude-opus-4-7', max_tokens: 500,
             messages: [{
               role: 'user',
               content: `진화한 새 가닥 — 카드 4 필드 정리.
@@ -19840,7 +19847,8 @@ async function regenerateProposal(idx) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        // 사용자 요청 2026-04-30: 제안 재생성 = 추론 task → opus 4.7.
+        model: 'claude-opus-4-7',
         max_tokens: 250,
         messages: [{
           role: 'user',
@@ -22055,7 +22063,8 @@ JSON 출력:
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
+      // 사용자 요청 2026-04-30: discoverInsights / processBrainDump = 인사이트·정리 추론 task → opus 4.7.
+      body: JSON.stringify({ model: 'claude-opus-4-7', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) throw new Error('API ' + resp.status);
     const data = await resp.json();
@@ -22488,7 +22497,8 @@ JSON 출력:
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
+      // 사용자 요청 2026-04-30: discoverInsights / processBrainDump = 인사이트·정리 추론 task → opus 4.7.
+      body: JSON.stringify({ model: 'claude-opus-4-7', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) throw new Error('API ' + resp.status);
     const data = await resp.json();
