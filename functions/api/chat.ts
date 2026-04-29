@@ -5,21 +5,31 @@ import { verifyAuth, unauthorized, jsonResponse, type Env } from './_lib/auth';
 import { recordUsage, calculateCost } from './_lib/usage';
 import { checkBudget, deductCost } from './_lib/billing';
 
+interface ChatEnv extends Env {
+  ADMIN_USER_ID?: string;
+}
+
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
-export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
+export async function onRequestPost(context: { request: Request; env: ChatEnv }): Promise<Response> {
   const { request, env } = context;
 
   const user = await verifyAuth(request, env);
   if (!user) return unauthorized();
 
-  const budget = await checkBudget(env, user.id);
-  if (!budget.ok) {
-    return jsonResponse({
-      error: budget.reason,
-      code: budget.code,
-      remaining_credit_usd: budget.remaining_credit_usd
-    }, 402);
+  // 사용자 요청 2026-04-30: 관리자 계정은 충전 / 차감 우회 (jade6679@naver.com).
+  // server-side 강제 검증 — env ADMIN_USER_ID와 매칭되는 user 만.
+  const isAdmin = !!(env.ADMIN_USER_ID && user.id === env.ADMIN_USER_ID);
+
+  if (!isAdmin) {
+    const budget = await checkBudget(env, user.id);
+    if (!budget.ok) {
+      return jsonResponse({
+        error: budget.reason,
+        code: budget.code,
+        remaining_credit_usd: budget.remaining_credit_usd
+      }, 402);
+    }
   }
 
   let body: any;
@@ -111,7 +121,8 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
               cache_creation_tokens: usageData.cache_creation_input_tokens || 0,
               cost_usd: cost
             }).catch(() => {});
-            deductCost(env, user.id, cost).catch(() => {});
+            // 관리자 계정 차감 우회
+            if (!isAdmin) deductCost(env, user.id, cost).catch(() => {});
           }
         }
       }
@@ -158,7 +169,8 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     cache_creation_tokens: usage.cache_creation_input_tokens || 0,
     cost_usd: cost
   }).catch(() => {});
-  deductCost(env, user.id, cost).catch(() => {});
+  // 관리자 계정 차감 우회
+  if (!isAdmin) deductCost(env, user.id, cost).catch(() => {});
 
   return jsonResponse(data);
 }
