@@ -9502,7 +9502,8 @@ function onbRenderStep() {
   if (step.visitScreen) {
     const currentActive = document.querySelector('.screen.active');
     if (currentActive && currentActive.id === 'screen-' + step.visitScreen) {
-      setTimeout(() => onbNext(), 600);
+      // 사용자 요청 2026-04-29: 딜레이 제거
+      setTimeout(() => onbNext(), 0);
       return;
     }
     // 사용자가 직접 누르길 기다림 — 자동 전환 X (학습 의도 + showScreen 훅에서 advance)
@@ -9840,7 +9841,7 @@ function onbPositionStep(step, retryCount) {
           if (status === 'worked' && typeof playDnaInsertionEffect === 'function') {
             try { playDnaInsertionEffect(); } catch (e) {}
           }
-          setTimeout(() => onbNext(), 600);
+          setTimeout(() => onbNext(), 0);
         }
       } catch (e) { console.warn('demoAttemptResult:', e); }
     }, 500);
@@ -9888,7 +9889,8 @@ function onbPositionStep(step, retryCount) {
   }, delay);
   if (step.waitFor === 'visit' && step.visitScreen) {
     if (target) {
-      const handler = (e) => { safeAdvance(350); };
+      // 사용자 요청 2026-04-29: 튜토리얼 advance 딜레이 제거 — 클릭 즉시 다음 step
+      const handler = (e) => { safeAdvance(0); };
       onbAddListener(target, 'click', handler);
     }
     // 사용자 요청 2026-04-28: 모든 비-'next' step에 '눌렀어' 비상 버튼 노출
@@ -9909,7 +9911,7 @@ function onbPositionStep(step, retryCount) {
       const delegateHandler = (ev) => {
         if (!window._onbTutorialMode || _onbStep !== stepIdxAtDel) return;
         const matched = ev.target && ev.target.closest && ev.target.closest(sel);
-        if (matched) safeAdvance(step.advanceDelay || 350);
+        if (matched) safeAdvance(0);
       };
       // 사용자 보고 2026-04-28: capture 사용 — modal 안 stopPropagation 우회 ('안 통했어' 등 options-btn click 못 받던 버그)
       onbAddListener(document, 'click', delegateHandler, true);
@@ -9970,7 +9972,7 @@ function onbPositionStep(step, retryCount) {
         // 사용자 요청 2026-04-29: target 클릭해도 자동 진행 X — '눌렀어' 버튼 직접 눌러야 다음
         // (target 클릭 = 다음 화면 전환 등 비동기 작업 트리거 → 튜토리얼은 그 결과 보고 사용자가 진행)
       } else {
-        const handler = (e) => { safeAdvance(step.advanceDelay || 350); };
+        const handler = (e) => { safeAdvance(0); };
         onbAddListener(advanceTarget, 'click', handler);
       }
     }
@@ -9982,7 +9984,7 @@ function onbPositionStep(step, retryCount) {
     if (target) {
       const handler = () => {
         if (target.value && target.value.trim().length >= (step.minLength || 1)) {
-          safeAdvance(step.advanceDelay || 600);
+          safeAdvance(0);
         }
       };
       onbAddListener(target, 'input', handler);
