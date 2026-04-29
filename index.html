@@ -28829,23 +28829,7 @@ function renderLensPearls() {
     <button class="pearls-add-btn" onclick="addPearl()">+ 진주 하나 더하기</button>
   `;
 
-  // V4-1r: grid 뷰 — 카테고리 칩 필터
-  // 사용자 요청 2026-04-29: 카테고리 필터 — view 상관없이 항상 적용 (intro pi-cat 클릭 + grid pearl-cat-chip 둘 다)
-  if (_libView === 'grid' && pearls.length > 0) {
-    const catCount = {};
-    pearls.forEach(p => {
-      const c = p.category || '기타';
-      catCount[c] = (catCount[c] || 0) + 1;
-    });
-    const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 기타: '💎' };
-    const sortedCats = Object.entries(catCount).sort((a, b) => b[1] - a[1]);
-    if (sortedCats.length > 1) {
-      html += `<div class="pearl-cat-chips">
-        ${_pearlCatFilter ? `<button class="pearl-cat-chip clear" onclick="setPearlCatFilter(null)">✕ 전체</button>` : ''}
-        ${sortedCats.map(([c, n]) => `<button class="pearl-cat-chip${_pearlCatFilter === c ? ' active' : ''}" onclick="setPearlCatFilter('${escapeHtml(c).replace(/'/g, "\\'")}')">${iconMap[c] || '💎'} ${escapeHtml(c)} <span class="cat-chip-count">${n}</span></button>`).join('')}
-      </div>`;
-    }
-  }
+  // 사용자 요청 2026-04-29: 진주 grid 뷰의 별도 카테고리 칩 제거 — 위 '살아있다 느낀 순간들' 인트로의 pi-cat이 같은 역할
   if (_pearlCatFilter) {
     pearls = pearls.filter(p => (p.category || '기타') === _pearlCatFilter);
   }
