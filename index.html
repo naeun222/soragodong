@@ -7512,6 +7512,20 @@
         </div>
       </details>
 
+      <!-- 사용자 요청 2026-04-30: E2EE Stage 2 — 회사도 평문 못 보게 (보안 강화) -->
+      <details class="model-collapse" style="margin-top:30px; border:1px solid rgba(143,200,143,0.40); border-radius:12px; background:rgba(143,200,143,0.05);">
+        <summary style="padding:12px 14px; color:#9ed4a0;">🔐 보안 강화 (E2EE)</summary>
+        <div class="model-collapse-content" style="padding: 10px 14px;">
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
+            종단간 암호화 활성 시 <strong>회사조차 본인 데이터의 평문을 볼 수 없습니다</strong>.<br>
+            <span style="color:var(--text-soft);">비밀 단어 12개를 안전한 곳에 보관해야 합니다 (분실 시 데이터 복구 불가능).</span>
+          </div>
+          <div id="e2eeStatus" style="font-size:11px; color:var(--text-dim); margin-bottom:10px; padding:8px; background:var(--surface); border-radius:8px;">상태 확인 중...</div>
+          <button class="btn-secondary" onclick="setupE2EE()" style="background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(126,200,227,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🔐 E2EE 활성화</button>
+          <button class="btn-secondary" onclick="showE2EERecoveryWords()" style="margin-top:6px;" title="비밀 단어 12개 다시 보기 (활성 후만)">📋 비밀 단어 다시 보기</button>
+        </div>
+      </details>
+
       <!-- ═══ ⚠️ 위험 영역 (collapse, 거리 + 색깔 분리) — 사용자 요청 2026-04-30: 잘못 안 눌리게 ═══ -->
       <details class="model-collapse" style="margin-top:50px; border:1px solid rgba(220,80,80,0.40); border-radius:12px; background:rgba(220,80,80,0.05);">
         <summary style="padding:12px 14px; color:#e89090;">⚠️ 위험 영역 (눌러서 펼치기)</summary>
@@ -8373,6 +8387,93 @@ async function _e2eeSetupNewUser() {
   return { passphrase, masterKey, salt: saltB64, encryptedMasterKey };
 }
 
+// 사용자 요청 2026-04-30: E2EE 활성화 흐름 — Settings 버튼에서 호출.
+// 신규 마스터 키 + passphrase 생성 → 사용자에게 12-word 표시 → 다음 saveToCloudNow부터 암호화.
+async function setupE2EE() {
+  if (_e2eeMasterKey && _e2eeEnabled) {
+    alert('이미 E2EE 활성화되어 있어요.');
+    return;
+  }
+  const yes = confirm('🔐 E2EE 활성화\n\n활성 후엔 회사도 본인 데이터의 평문을 볼 수 없게 됩니다. 비밀 단어 12개를 안전한 곳에 보관하세요 (분실 시 데이터 복구 불가능).\n\n진행하시겠습니까?');
+  if (!yes) return;
+
+  try {
+    const result = await _e2eeSetupNewUser();
+    _e2eeEnabled = true;
+    showE2EERecoveryWordsModal(result.passphrase, true);  // 첫 표시 (반드시 저장)
+    // 다음 saveToCloudNow가 자동 암호화. 즉시 한 번 저장.
+    await saveToCloudNow();
+    refreshE2EEStatus();
+    showToast('🔐 E2EE 활성화됨');
+  } catch (e) {
+    alert('E2EE 활성화 실패: ' + (e.message || e));
+  }
+}
+
+// 비밀 단어 12개 다시 보기 (이미 활성된 사용자)
+async function showE2EERecoveryWords() {
+  try {
+    const recovery = JSON.parse(localStorage.getItem('soragodong_v4_e2ee_recovery') || 'null');
+    if (!recovery) {
+      alert('E2EE 미활성화 상태입니다.');
+      return;
+    }
+    // passphrase는 device에 저장돼있지 않음 (보안). 사용자가 첫 표시 때 저장한 것으로만 가능.
+    alert('비밀 단어는 활성화 시점에만 표시됩니다.\n저장하지 않으셨다면 새 device에서 데이터 복구 불가능 — 이 device에서만 사용 가능합니다.\n\n새 device에서 사용하려면: 기존 device에서 데이터 export → 새 device에서 재가입 + import.');
+  } catch (e) {
+    alert('확인 실패: ' + (e.message || e));
+  }
+}
+
+// 비밀 단어 12개 표시 모달 (첫 활성 시)
+function showE2EERecoveryWordsModal(passphrase, mustSave) {
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.style.zIndex = '10001';
+  const words = passphrase.split(' ');
+  const wordsHtml = words.map((w, i) => `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--surface);border-radius:6px;font-size:13px;"><span style="font-size:10px;color:var(--text-soft);min-width:18px;">${i+1}.</span><b>${w}</b></div>`).join('');
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:420px; max-height:90vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">🔐 비밀 단어 12개</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
+        ⚠️ <strong style="color:#e89090;">반드시 안전한 곳에 보관하세요</strong>. 분실 시 데이터 복구 불가능합니다.<br>
+        추천: 1Password / Bitwarden / 손글씨 노트.
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; margin-bottom:14px;">
+        ${wordsHtml}
+      </div>
+      <button class="btn-secondary" onclick="navigator.clipboard.writeText('${passphrase}').then(() => alert('클립보드에 복사됨'))" style="margin-bottom:8px;">📋 복사하기</button>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);margin-bottom:14px;">
+        <input type="checkbox" id="e2eeWordsConfirmed">
+        <span>비밀 단어를 안전한 곳에 보관했음을 확인합니다</span>
+      </label>
+      <button class="btn-primary" onclick="closeE2EEWordsModal(this)" style="width:100%;">확인</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeE2EEWordsModal(btn) {
+  const confirmed = document.getElementById('e2eeWordsConfirmed')?.checked;
+  if (!confirmed) {
+    alert('비밀 단어를 안전하게 보관했음을 확인해주세요.');
+    return;
+  }
+  const overlay = btn.closest('.input-modal-overlay');
+  if (overlay) overlay.remove();
+}
+
+// E2EE 상태 표시 갱신
+function refreshE2EEStatus() {
+  const status = document.getElementById('e2eeStatus');
+  if (!status) return;
+  if (_e2eeEnabled && _e2eeMasterKey) {
+    status.innerHTML = '✅ <b style="color:#9ed4a0;">활성화됨</b> — 회사도 평문 접근 X';
+  } else {
+    status.innerHTML = '⚠️ 미활성 — 회사 (관리자 1명)가 시스템상 평문 접근 가능';
+  }
+}
+
 // passphrase 입력 → cloud 복호화 → 마스터 키 복원 (새 device 진입 시).
 async function _e2eeRestoreFromPassphrase(passphrase) {
   // 일단 localStorage backup에서 복원. 향후 cloud Supabase로.
@@ -8415,8 +8516,35 @@ async function loadFromCloud() {
     if (!resp.ok) throw new Error('Load failed');
     const data = await resp.json();
     if (data.length > 0) {
-      state = { ...DEFAULT_STATE, ...data[0].data };
-      console.log('✅ V4 row loaded from cloud');
+      let cloudData = data[0].data;
+      // 사용자 요청 2026-04-30 (Stage 2 E2EE): _encryptedBody 있으면 마스터 키로 복호화.
+      if (cloudData && cloudData._encryptedBody && cloudData._encryptedBody._e2ee) {
+        await _e2eeInitMasterKey();
+        if (!_e2eeMasterKey) {
+          // 마스터 키 X — 새 device 진입 또는 키 분실. passphrase 입력 모달 표시 (별도 흐름).
+          console.warn('[loadFromCloud] E2EE 활성된 cloud row인데 마스터 키 없음. passphrase 복원 필요.');
+          window._e2eePendingRecovery = cloudData;
+          state = { ...DEFAULT_STATE };
+          // 사용자 흐름: 진입 후 maybeShowE2EERecoveryModal 호출
+        } else {
+          try {
+            const decryptedJson = await _e2eeDecrypt(cloudData._encryptedBody, _e2eeMasterKey);
+            const decryptedBody = decryptedJson ? JSON.parse(decryptedJson) : {};
+            // 평문 메타 + 복호화 본문 합치기
+            const { _encryptedBody, ...metaPart } = cloudData;
+            state = { ...DEFAULT_STATE, ...metaPart, ...decryptedBody };
+            _e2eeEnabled = true;
+            console.log('✅ V4 row loaded + decrypted (E2EE)');
+          } catch (e) {
+            console.error('[loadFromCloud] E2EE 복호화 실패:', e);
+            state = { ...DEFAULT_STATE };
+          }
+        }
+      } else {
+        // 평문 (E2EE 미적용 사용자) — 기존 흐름
+        state = { ...DEFAULT_STATE, ...cloudData };
+        console.log('✅ V4 row loaded from cloud (평문)');
+      }
     } else {
       // V4 row 없음 = 첫 V4 진입. 빈 V7 state로 시작.
       // V3 데이터 import는 별도 UI 버튼(V4-1b)에서 처리.
@@ -8956,15 +9084,51 @@ function migrateToV7() {
 async function saveToCloudNow() {
   if (!authUserId) return;
   // 사용자 보고 2026-04-28: testerMode ON이면 cloud 저장 자체 차단.
-  // 이전 버그: 튜토리얼 시작 직전 saveState로 예약된 saveToCloud setTimeout이 1초 뒤 fire →
-  //   당시 state엔 시드가 박혀 있어 me_v4 row에 시드 푸시. 튜토리얼 끝나도 cloud에 시드 잔존.
-  // 동기 경로 (V7 migration / V3 import / 백업 복구 등)는 testerMode 자동 정리 후 호출되므로 영향 없음.
   if (state.preferences && state.preferences.testerMode) {
     console.log('[saveToCloudNow] testerMode ON — cloud 저장 차단');
     return;
   }
   state.lastSync = new Date().toISOString();
-  // 사용자 요청 2026-04-29 (perf #1): replacer로 transient 필드 strip + testerMode 보호
+
+  // 사용자 요청 2026-04-30 (Stage 2 E2EE): 마스터 키 있으면 state body 암호화.
+  // 메타 (preferences 일부) 평문 유지 — 다음 device 진입 시 동기화 위해.
+  let dataPayload;
+  if (_e2eeEnabled && _e2eeMasterKey) {
+    try {
+      // sensitive body — 사용자 데이터 전부 암호화
+      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences'];
+      const sensitiveBody = {};
+      for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
+      const encryptedBody = await _e2eeEncrypt(JSON.stringify(sensitiveBody, _serializeReplacer), _e2eeMasterKey);
+      // 평문 메타 (consent / billing / version / preferences 일부)
+      const metaBody = {
+        version: state.version,
+        lastSync: state.lastSync,
+        preferences: state.preferences,
+        unlocked: state.unlocked,
+        modes: state.modes,
+        modeActiveSince: state.modeActiveSince,
+        periodStart: state.periodStart,
+        dailyChatCount: state.dailyChatCount,
+        lastForceAnalyzeAt: state.lastForceAnalyzeAt,
+        lastDailyChapterExtractAt: state.lastDailyChapterExtractAt,
+        lastWeeklyAnalyzeAt: state.lastWeeklyAnalyzeAt,
+        lastMonthlyAnalyzeAt: state.lastMonthlyAnalyzeAt,
+        lastQuarterlyAnalyzeAt: state.lastQuarterlyAnalyzeAt,
+        lastYearlyAnalyzeAt: state.lastYearlyAnalyzeAt,
+        _e2eeEnabled: true,
+        _e2eeVersion: _E2EE_VERSION
+      };
+      dataPayload = { ...metaBody, _encryptedBody: encryptedBody };
+    } catch (e) {
+      console.warn('[saveToCloudNow] E2EE 암호화 실패 — 평문 fallback 차단:', e);
+      throw e;  // 암호화 실패 시 cloud 저장 X (사용자 데이터 보호)
+    }
+  } else {
+    // E2EE 비활성 — 기존 평문 흐름 (호환)
+    dataPayload = state;
+  }
+
   // V4: V4 row만 PATCH/POST. V3 row(`me`)는 영원히 안 건드림.
   const checkResp = await fetch(
     `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=id&limit=1`,
@@ -8972,7 +9136,7 @@ async function saveToCloudNow() {
   );
   const existing = await checkResp.json();
   if (existing.length > 0) {
-    const body = JSON.stringify({ data: state, updated_at: state.lastSync }, _serializeReplacer);
+    const body = JSON.stringify({ data: dataPayload, updated_at: state.lastSync }, _serializeReplacer);
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
       {
@@ -8983,7 +9147,7 @@ async function saveToCloudNow() {
     );
     _handleCloudSyncResponse(r);
   } else {
-    const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: state }, _serializeReplacer);
+    const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload }, _serializeReplacer);
     const r = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -31913,6 +32077,8 @@ function loadSettings() {
   }
   // 사용자 요청 2026-04-30 (Phase C): billing 자동 로드
   if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
+  // E2EE 상태 갱신
+  if (typeof refreshE2EEStatus === 'function') refreshE2EEStatus();
 }
 
 function saveSettings() {
