@@ -12225,6 +12225,15 @@ function renderDecisionDetail(decision) {
     const isTimeLocked = !step.completed && daysSince < meta.dayUnlock;
     const cls = step.completed ? 'completed' : (isTimeLocked ? '' : 'active');
 
+    // 사용자 요청 2026-04-30: 마법 helpChat 접근성 — step 카드에 진행 중 대화 표시 + 1-click 재진입.
+    const helpMsgs = (decision.helpChats && Array.isArray(decision.helpChats[step.id]))
+      ? decision.helpChats[step.id].filter(m => !m._starter && !m.error)
+      : [];
+    const helpCount = helpMsgs.length;
+    const helpButton = helpCount > 0
+      ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:6px; background:linear-gradient(135deg, rgba(126,200,227,0.15), rgba(143,200,143,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8; font-size:12px;">🐚 도움 받기 이어서 (${helpCount}개 메시지)</button>`
+      : (decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:6px; font-size:12px;">🐚 도움 받기</button>` : '');
+
     html += `
       <div class="step-card ${cls}">
         <div class="step-header">
@@ -12237,14 +12246,17 @@ function renderDecisionDetail(decision) {
         ${step.completed ? `
           <div class="step-content-saved">${formatStepContent(step)}</div>
           ${decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="editStep('${decision.id}', '${step.id}')" style="margin-top:8px;">수정</button>` : ''}
+          ${helpButton}
         ` : (decision.status === 'in_progress' ? `
           ${isTimeLocked ? `
             <div style="font-size:12px; color:var(--text-dim); padding:10px; background:var(--surface2); border-radius:10px; line-height:1.6;">
               ${meta.dayUnlock - daysSince}일 후에 다시 와. 숙성이 필요해.
             </div>
             <button class="btn-secondary" onclick="editStep('${decision.id}', '${step.id}')" style="margin-top:8px; font-size:11px;">그래도 지금 작성</button>
+            ${helpButton}
           ` : `
             <button class="btn-primary decision" onclick="editStep('${decision.id}', '${step.id}')">시작</button>
+            ${helpButton}
           `}
         ` : '')}
       </div>
@@ -12330,7 +12342,14 @@ function openTextStep(decision, step, meta) {
     </div>
 
     <button class="btn-primary decision" onclick="saveTextStep('${decision.id}', '${step.id}')">완료</button>
-    <button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')">🐚 소라고동에게 도움 받기</button>
+    ${(() => {
+      // 사용자 요청 2026-04-30: 도움 받기 버튼에 진행 중 대화 카운트 표시.
+      const stepHelpMsgs = (decision.helpChats && Array.isArray(decision.helpChats[step.id]))
+        ? decision.helpChats[step.id].filter(m => !m._starter && !m.error) : [];
+      return stepHelpMsgs.length > 0
+        ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(126,200,227,0.15), rgba(143,200,143,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">🐚 도움 받기 이어서 (${stepHelpMsgs.length}개 메시지)</button>`
+        : `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')">🐚 소라고동에게 도움 받기</button>`;
+    })()}
     <button class="btn-secondary" onclick="openDecision('${decision.id}')">돌아가기</button>
   `;
 }
