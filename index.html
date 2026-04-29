@@ -25367,6 +25367,7 @@ async function buildQuarterlySlides(review) {
 
   const slides = [];
 
+  // 사용자 보고 2026-04-29: 신규 슬라이드 4종 추가 — Mood arc / Highlight 한 순간 / Forecast 후일담 / Timecapsule
   // 1. 감성 hook — 큰 숫자 + 사진 + 직전 분기 비교
   const heroPhoto = (() => {
     const entries = (state.entries || []).filter(e => e.photo && e.date && new Date(e.date + 'T12:00:00').getTime() >= startMs && new Date(e.date + 'T12:00:00').getTime() <= endMs);
@@ -25398,6 +25399,12 @@ async function buildQuarterlySlides(review) {
       ${heroComparison}
     `
   });
+
+  // 1.5. 감성 mood arc — 분기 mood/vitality 곡선 (사용자 요청 2026-04-29)
+  const moodArcHtml = _buildMoodArcSlideHTML(inRange, startMs, endMs);
+  if (moodArcHtml) {
+    slides.push({ tone: 'tone-emo-2', html: moodArcHtml });
+  }
 
   // 2. 진지 변화 — 8 차원 + 모드
   slides.push({
@@ -25467,6 +25474,12 @@ async function buildQuarterlySlides(review) {
     `
   });
 
+  // 5.5. 감성 — AI가 고른 그날 (highlight 한 순간) (사용자 요청 2026-04-29)
+  const highlightHtml = _buildHighlightSlideHTML(inRange);
+  if (highlightHtml) {
+    slides.push({ tone: 'tone-emo-4', html: highlightHtml });
+  }
+
   // 6. 진지 AI 새 특징
   slides.push({
     tone: 'tone-deep-2',
@@ -25491,6 +25504,18 @@ async function buildQuarterlySlides(review) {
     html: _buildArchiveSummarySlideHTML(inRange)
   });
 
+  // 8.7. 진지 — 직전 분기 예측 후일담 (사용자 요청 2026-04-29)
+  const forecastHtml = _buildForecastFollowupSlideHTML(review.quarterKey);
+  if (forecastHtml) {
+    slides.push({ tone: 'tone-deep-3', html: forecastHtml });
+  }
+
+  // 8.8. 감성 — 1년 전 너 (Timecapsule) (사용자 요청 2026-04-29)
+  const timecapsuleHtml = _buildTimecapsuleSlideHTML(review.quarterKey);
+  if (timecapsuleHtml) {
+    slides.push({ tone: 'tone-emo-5', html: timecapsuleHtml });
+  }
+
   // 9. 진지 narrative + prompt
   slides.push({
     tone: 'tone-deep',
@@ -25507,6 +25532,130 @@ async function buildQuarterlySlides(review) {
 }
 
 // === 슬라이드 HTML 빌더 ===
+
+// 사용자 요청 2026-04-29: 분기 mood/vitality 곡선 + peak/valley 마커
+function _buildMoodArcSlideHTML(inRange, startMs, endMs) {
+  const entries = (state.entries || [])
+    .filter(e => e.date && e.mood != null && new Date(e.date + 'T12:00:00').getTime() >= startMs && new Date(e.date + 'T12:00:00').getTime() <= endMs)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (entries.length < 5) return null;
+  const w = 320, h = 180, padX = 14, padY = 22;
+  const maxI = entries.length - 1;
+  const xOf = (i) => padX + (i / maxI) * (w - padX * 2);
+  const yOf = (v) => h - padY - ((v - 1) / 4) * (h - padY * 2);
+  const moodPath = entries.map((e, i) => `${i === 0 ? 'M' : 'L'} ${xOf(i).toFixed(1)} ${yOf(e.mood).toFixed(1)}`).join(' ');
+  const vitEntries = entries.filter(e => e.vitality != null);
+  const vitPath = vitEntries.length >= 2
+    ? vitEntries.map((e, i) => `${i === 0 ? 'M' : 'L'} ${xOf(entries.indexOf(e)).toFixed(1)} ${yOf(e.vitality).toFixed(1)}`).join(' ')
+    : '';
+  // peak / valley
+  let peak = entries[0], valley = entries[0];
+  entries.forEach(e => { if (e.mood > peak.mood) peak = e; if (e.mood < valley.mood) valley = e; });
+  const peakI = entries.indexOf(peak), valleyI = entries.indexOf(valley);
+  const avgMood = (entries.reduce((s, e) => s + e.mood, 0) / entries.length).toFixed(1);
+  return `
+    <div class="stories-label">기분 곡선</div>
+    <div class="stories-title" style="margin-bottom:14px;">이 분기 너의 mood arc</div>
+    <svg viewBox="0 0 ${w} ${h}" style="width:100%; max-width:340px; margin:6px auto 14px; display:block;" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#d4a76a" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#d4a76a" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <line x1="${padX}" y1="${yOf(3)}" x2="${w - padX}" y2="${yOf(3)}" stroke="rgba(255,255,255,0.12)" stroke-dasharray="2 4"/>
+      <path d="${moodPath} L ${xOf(maxI).toFixed(1)} ${h - padY} L ${xOf(0).toFixed(1)} ${h - padY} Z" fill="url(#moodGrad)" stroke="none"/>
+      <path d="${moodPath}" stroke="#d4a76a" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      ${vitPath ? `<path d="${vitPath}" stroke="#8fc88f" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 3" opacity="0.75"/>` : ''}
+      <circle cx="${xOf(peakI).toFixed(1)}" cy="${yOf(peak.mood).toFixed(1)}" r="4.5" fill="#ffe28a" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
+      <circle cx="${xOf(valleyI).toFixed(1)}" cy="${yOf(valley.mood).toFixed(1)}" r="4.5" fill="#a89dc8" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
+      <text x="${xOf(peakI).toFixed(1)}" y="${(yOf(peak.mood) - 8).toFixed(1)}" fill="#ffe28a" font-size="10" text-anchor="middle">↑${escapeHtml(peak.date.slice(5))}</text>
+      <text x="${xOf(valleyI).toFixed(1)}" y="${(yOf(valley.mood) + 16).toFixed(1)}" fill="#a89dc8" font-size="10" text-anchor="middle">↓${escapeHtml(valley.date.slice(5))}</text>
+    </svg>
+    <div style="display:flex; justify-content:center; gap:18px; font-size:11px; color:rgba(255,255,255,0.6); margin-bottom:10px;">
+      <span><span style="color:#d4a76a;">━</span> 기분</span>
+      ${vitPath ? `<span><span style="color:#8fc88f;">┄</span> 활력</span>` : ''}
+    </div>
+    <div class="stories-body" style="font-size:13px;">평균 ${avgMood}/5. 가장 빛난 날 ${escapeHtml(peak.date.slice(5))} (${peak.mood}/5), 가장 아래 ${escapeHtml(valley.date.slice(5))} (${valley.mood}/5).</div>
+  `;
+}
+
+// 사용자 요청 2026-04-29: 분기 안 가장 의미 있는 entry 1개 (mood + diary + photo + music 가중치)
+function _buildHighlightSlideHTML(inRange) {
+  const entries = (state.entries || []).filter(e => e.date && inRange(e.date + 'T12:00:00'));
+  if (entries.length === 0) return null;
+  let best = null, bestScore = -Infinity;
+  entries.forEach(e => {
+    const s = (e.mood || 0) * 2
+            + (e.vitality || 0)
+            + (e.diary ? 4 : 0)
+            + (e.photo ? 4 : 0)
+            + (e.music && e.music.title ? 3 : 0)
+            + (e.aiSummary ? 1 : 0)
+            + (e.note ? 1 : 0);
+    if (s > bestScore) { bestScore = s; best = e; }
+  });
+  if (!best || bestScore < 6) return null;
+  const dateStr = new Date(best.date + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  const text = (best.diary || best.aiSummary || best.note || '').slice(0, 220);
+  const photoHtml = best.photo
+    ? `<img src="${escapeHtml(best.photo)}" alt="" style="width:100%; max-width:260px; aspect-ratio:1; object-fit:cover; border-radius:14px; margin:14px auto; display:block; border:1px solid rgba(255,255,255,0.18);">`
+    : '';
+  const musicHtml = best.music && best.music.title
+    ? `<div class="stories-music-card" style="margin-top:14px;">
+         <img class="stories-music-art" src="${escapeHtml(best.music.artworkUrl || '')}" alt="" onerror="this.style.display='none'">
+         <div>
+           <div class="stories-music-title">${escapeHtml(best.music.title)}</div>
+           <div class="stories-music-artist">${escapeHtml(best.music.artist || '')}</div>
+         </div>
+         ${best.music.previewUrl ? `<button class="stories-music-play" onclick="event.stopPropagation(); toggleMusicPreview(this, '${escapeHtml(best.music.previewUrl)}')">▶</button>` : ''}
+       </div>`
+    : '';
+  return `
+    <div class="stories-label">기억나는 한 순간</div>
+    <div class="stories-title">${escapeHtml(dateStr)}</div>
+    ${photoHtml}
+    ${text ? `<div class="stories-body" style="font-style:italic; opacity:0.9; max-width:280px;">"${escapeHtml(text)}"</div>` : ''}
+    ${musicHtml}
+  `;
+}
+
+// 사용자 요청 2026-04-29: 직전 분기 '🧭 다음 분기에' 본문 후일담으로 보여줌 (auto, 사용자 입력 X)
+function _buildForecastFollowupSlideHTML(currentQuarterKey) {
+  const m = String(currentQuarterKey || '').match(/^(\d{4})-Q(\d)$/);
+  if (!m) return null;
+  let y = parseInt(m[1]); let q = parseInt(m[2]) - 1;
+  if (q < 1) { q = 4; y -= 1; }
+  const prevReview = (state.quarterlyReviews || []).find(r => r.quarterKey === `${y}-Q${q}`);
+  if (!prevReview || !Array.isArray(prevReview.sections)) return null;
+  const forecast = prevReview.sections.find(s => s && s.label && (s.label.includes('다음 분기') || s.label.includes('다음에')));
+  if (!forecast || !forecast.body) return null;
+  return `
+    <div class="stories-label">🔮 직전 분기 예측</div>
+    <div class="stories-title" style="margin-bottom:14px;">"${escapeHtml(prevReview.quarterKey)}"에서 던진 한 마디</div>
+    <div style="font-size:14px; color:rgba(255,255,255,0.92); font-style:italic; padding:16px 18px; background:rgba(212,167,106,0.12); border-left:3px solid rgba(212,167,106,0.55); border-radius:4px 12px 12px 4px; margin:10px auto; max-width:280px; line-height:1.65; text-align:left;">"${escapeHtml(forecast.body)}"</div>
+    <div class="stories-body" style="margin-top:18px; font-size:12px; opacity:0.7;">실제로는 어땠어? 한 분기 풀어볼게.</div>
+  `;
+}
+
+// 사용자 요청 2026-04-29: 1년 전 같은 분기 리뷰 한 문장 (Timecapsule)
+function _buildTimecapsuleSlideHTML(currentQuarterKey) {
+  const m = String(currentQuarterKey || '').match(/^(\d{4})-Q(\d)$/);
+  if (!m) return null;
+  const prevYear = parseInt(m[1]) - 1;
+  const prevKey = `${prevYear}-Q${m[2]}`;
+  const prevReview = (state.quarterlyReviews || []).find(r => r.quarterKey === prevKey);
+  if (!prevReview || (!prevReview.summary && !(Array.isArray(prevReview.sections) && prevReview.sections[0]))) return null;
+  const quote = prevReview.summary || prevReview.sections[0].body || '';
+  if (!quote) return null;
+  return `
+    <div class="stories-label">📦 1년 전 너는</div>
+    <div class="stories-title" style="margin-bottom:14px;">${escapeHtml(prevKey)}</div>
+    <div style="font-size:15px; color:white; font-style:italic; padding:18px; background:linear-gradient(135deg, rgba(168,157,200,0.15), rgba(212,167,106,0.10)); border:1px solid rgba(168,157,200,0.3); border-radius:14px; margin:10px auto; max-width:280px; line-height:1.65;">"${escapeHtml(quote.slice(0, 220))}"</div>
+    <div class="stories-body" style="margin-top:18px; font-size:11px; opacity:0.6;">그 분기 너와 비교해보면 어때?</div>
+  `;
+}
+
 function _buildChangeSlideHTML(stats, prevQ) {
   const rows = [];
   const trend = (cur, prev) => {
