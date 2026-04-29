@@ -17659,9 +17659,11 @@ async function generateAIResponse(modelOverride) {
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
   renderChat();
 
-  if (!state.apiKey) {
+  // 사용자 요청 2026-04-30 (Phase C): apiKey 비어있어도 백엔드 프록시로 동작.
+  // session 활성 여부만 체크 (fetch interceptor가 자동으로 /api/chat 라우팅).
+  if (!state.apiKey && (typeof session === 'undefined' || !session || !session.access_token)) {
     state.chatMessages[state.chatMessages.length - 1] = {
-      role: 'assistant', content: 'API 키가 없어! 설정(⚙)에서 넣어줘 🐚',
+      role: 'assistant', content: '로그인이 필요해! 새로고침 후 다시 시도해줘 🐚',
       timestamp: new Date().toISOString()
     };
     saveState(); renderChat(); return;
