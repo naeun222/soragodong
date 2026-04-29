@@ -7190,7 +7190,23 @@
         <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
         <button class="btn-secondary" onclick="showCoreReplayPicker()">🔧 개별 코어 튜토리얼</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
+      </div>
 
+      <!-- 사용자 요청 2026-04-29: 매일 체크인 알림 — Notification API 기반. 탭 열린 상태/PWA 설치 시 작동. -->
+      <div style="margin-top:24px;">
+        <div class="input-label" style="margin-bottom:8px;">🔔 매일 알림</div>
+        <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
+          매일 정해진 시간에 체크인 알림. <b>탭 열려있거나 PWA 설치된 경우</b>에만 작동 (브라우저 제약).<br>
+          진짜 푸시(탭 닫혀도)는 나중에 백엔드 박힌 후.
+        </div>
+        <button class="btn-secondary" id="dailyNotifToggleBtn" onclick="toggleDailyNotification()">🔕 매일 알림: OFF</button>
+        <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+          <span style="font-size:12px; color:var(--text-dim);">시간:</span>
+          <input type="time" id="dailyNotifTimeInput" value="21:00" onchange="setDailyNotificationTime(this.value)" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:6px 10px; font-family:inherit;">
+        </div>
+      </div>
+
+      <div>
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
         <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:8px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동으로 박힌 백업 (rolling 5개) 에서 복원">🕰 자동 백업에서 복원</button>
       </div>
@@ -8384,6 +8400,11 @@ async function init() {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) { refreshHeaderDate(); applyNightMode(); }
   });
+
+  // V4 사용자 요청 2026-04-29: 매일 체크인 알림 자동 스케줄
+  if (typeof scheduleDailyNotification === 'function') {
+    setTimeout(() => { try { scheduleDailyNotification(); } catch (e) { console.warn('daily notif schedule:', e); } }, 1500);
+  }
 
   // V4 코어 튜토리얼 잠금 — 글로벌 클릭 인터셉터 (capture phase로 원래 onclick 가로챔)
   // .core-locked 클래스 + data-core="coreN" 있는 element 클릭 시 잠금 모달 표시.
@@ -29266,9 +29287,18 @@ async function addPearl() {
     title: `💎 ${category}`,
     message: '뭐가 좋았어? 한 줄로.',
     placeholder: '예: 그날 카페 음악',
-    okLabel: ['음식', '장소', '순간'].includes(category) ? '다음 →' : '보관'
+    okLabel: '다음 →'
   });
   if (!content || !content.trim()) return;
+
+  // 사용자 요청 2026-04-29: 모든 카테고리에 작은 메모 한 줄 입력 옵션 (음악처럼)
+  const note = await showInputModal({
+    title: `💎 ${category} — ${content.trim()}`,
+    message: '메모 한 줄 (선택). 비우고 OK 가능.',
+    placeholder: '예: 그날 카페 새벽 4시',
+    okLabel: ['음식', '장소', '순간'].includes(category) ? '다음 →' : '보관'
+  });
+  if (note === null) return;
 
   // V4-fix: 음식/장소/순간은 사진 첨부 옵션 (음악 앨범아트 풍 — 정사각 600px)
   let photo = null;
@@ -29301,6 +29331,7 @@ async function addPearl() {
     id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     content: content.trim(),
     category,
+    note: (note || '').trim() || null,
     ...(photo ? { photo } : {}),
     createdAt: new Date().toISOString(),
     type: 'pearl'
@@ -30340,7 +30371,105 @@ async function _deleteTesterBackupFromCloud() {
     );
   } catch (e) { console.warn('delete tester backup:', e); }
 }
+// 사용자 요청 2026-04-29: 매일 체크인 알림 — Notification API 기반 (탭 열린 / PWA 설치 시 작동)
+let _dailyNotifTimer = null;
+function scheduleDailyNotification() {
+  if (_dailyNotifTimer) { clearTimeout(_dailyNotifTimer); _dailyNotifTimer = null; }
+  if (typeof Notification === 'undefined') return;
+  if (Notification.permission !== 'granted') return;
+  const pref = state.preferences && state.preferences.dailyNotification;
+  if (!pref || !pref.enabled || !pref.time) return;
+  const [h, m] = pref.time.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return;
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(h, m, 0, 0);
+  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
+  const delay = Math.max(1000, next.getTime() - now.getTime());
+  // setTimeout 최대 ~24.8일 — daily 안전
+  _dailyNotifTimer = setTimeout(() => {
+    try {
+      const todayK = (typeof todayKey === 'function') ? todayKey() : null;
+      const hasCheckinToday = todayK && (state.entries || []).some(e => e.date === todayK && (e.mood != null || e.vitality != null));
+      if (!hasCheckinToday) {
+        new Notification('🐚 소라고동', {
+          body: '오늘 체크인 했어? 30초면 돼.',
+          icon: '/icon-192.png',
+          tag: 'daily-checkin',
+          renotify: true
+        });
+      }
+    } catch (e) { console.warn('notification fire:', e); }
+    scheduleDailyNotification();  // 다음 날 다시 스케줄
+  }, delay);
+}
+async function requestNotificationPermission() {
+  if (typeof Notification === 'undefined') {
+    if (typeof showToast === 'function') showToast('이 브라우저는 알림 미지원');
+    return false;
+  }
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') {
+    if (typeof showToast === 'function') showToast('알림 차단됨. 브라우저 설정에서 허용해줘');
+    return false;
+  }
+  try {
+    const result = await Notification.requestPermission();
+    return result === 'granted';
+  } catch (e) {
+    console.warn('notif permission:', e);
+    return false;
+  }
+}
+async function toggleDailyNotification() {
+  state.preferences = state.preferences || {};
+  if (!state.preferences.dailyNotification) {
+    state.preferences.dailyNotification = { enabled: false, time: '21:00' };
+  }
+  if (!state.preferences.dailyNotification.enabled) {
+    const granted = await requestNotificationPermission();
+    if (!granted) return;
+    state.preferences.dailyNotification.enabled = true;
+    if (typeof showToast === 'function') showToast(`🔔 매일 ${state.preferences.dailyNotification.time}에 알림`);
+  } else {
+    state.preferences.dailyNotification.enabled = false;
+    if (typeof showToast === 'function') showToast('🔕 알림 끔');
+  }
+  saveState();
+  scheduleDailyNotification();
+  refreshDailyNotificationUI();
+}
+function setDailyNotificationTime(time) {
+  if (!time || !time.match(/^\d{2}:\d{2}$/)) return;
+  state.preferences = state.preferences || {};
+  if (!state.preferences.dailyNotification) {
+    state.preferences.dailyNotification = { enabled: false, time };
+  } else {
+    state.preferences.dailyNotification.time = time;
+  }
+  saveState();
+  scheduleDailyNotification();
+  if (typeof showToast === 'function' && state.preferences.dailyNotification.enabled) {
+    showToast(`알림 시간 ${time}`);
+  }
+}
+function refreshDailyNotificationUI() {
+  const btn = document.getElementById('dailyNotifToggleBtn');
+  const timeInput = document.getElementById('dailyNotifTimeInput');
+  const pref = state.preferences && state.preferences.dailyNotification;
+  const enabled = !!(pref && pref.enabled);
+  if (btn) {
+    btn.textContent = enabled ? '🔔 매일 알림: ON' : '🔕 매일 알림: OFF';
+    btn.style.background = enabled ? 'linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10))' : '';
+    btn.style.color = enabled ? '#c5e8c5' : '';
+    btn.style.borderColor = enabled ? 'rgba(143,200,143,0.4)' : '';
+  }
+  if (timeInput) timeInput.value = (pref && pref.time) || '21:00';
+}
+
 function refreshTesterModeUI() {
+  // V4: 매일 알림 UI도 함께 새로고침 (설정 화면 진입 시)
+  if (typeof refreshDailyNotificationUI === 'function') refreshDailyNotificationUI();
   const btn = document.getElementById('testerModeToggleBtn');
   if (!btn) return;
   const on = state.preferences && state.preferences.testerMode;
