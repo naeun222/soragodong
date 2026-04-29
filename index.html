@@ -2705,10 +2705,10 @@
     border-color: rgba(201,169,110,0.45);
     color: var(--accent2);
     font-weight: 500;
-    flex-grow: 1;
-    padding: 7px 14px;
+    padding: 7px 12px;
+    flex-shrink: 0;
   }
-  .lib-cat-chip.active .cat-label { display: inline; }
+  .lib-cat-chip.active .cat-label { display: inline; margin-left: 2px; }
   .library-cat-view { animation: lib-cat-fade 0.18s ease; }
   @keyframes lib-cat-fade {
     from { opacity: 0; transform: translateY(4px); }
@@ -6874,8 +6874,8 @@
                oninput="searchArchive()"
                style="flex:1; min-width:0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; font-family:inherit;">
         <div class="library-view-toggle" style="margin:0; flex-shrink:0;">
-          <button class="lib-view-btn active" data-view="grid"     onclick="switchLibraryView('grid')"     aria-label="그리드"><span id="libViewGridLabel">📡</span></button>
-          <button class="lib-view-btn"        data-view="timeline" onclick="switchLibraryView('timeline')" aria-label="타임라인">📋</button>
+          <button class="lib-view-btn active" data-view="grid"     onclick="switchLibraryView('grid')"     aria-label="그리드"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
+          <button class="lib-view-btn"        data-view="timeline" onclick="switchLibraryView('timeline')" aria-label="타임라인"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
         </div>
       </div>
 
@@ -18818,13 +18818,9 @@ function switchLibraryCat(cat) {
   // + 캘린더 재렌더 (다른 cat에서 비워졌던 거 복구)
   if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
   if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
-  // 사용자 요청 2026-04-29: 토글 5 카테고리 모두 통일 + 라벨 동적
+  // 사용자 요청 2026-04-29: 토글 5 카테고리 모두 통일 (SVG 아이콘 — 라벨 동적 X)
   const toggleEl = document.querySelector('.library-view-toggle');
   if (toggleEl) toggleEl.style.display = '';
-  const gridLabel = document.getElementById('libViewGridLabel');
-  if (gridLabel) {
-    gridLabel.textContent = cat === 'diary' ? '📅 캘린더' : '📡 피드';
-  }
 }
 
 // V3 호환: 옛 switchLens('conversations'|'wisdom') 호출 지원 (튜토리얼 등 외부 참조)
