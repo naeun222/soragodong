@@ -3490,6 +3490,29 @@
   }
   .mutation-chat-mission-btn:active:not(:disabled) { transform: scale(0.98); }
 
+  /* 사용자 요청 2026-04-29: 가지 만들기 버튼 — 컴팩트 + 이쁘게 */
+  .mutation-gen-bar {
+    display: flex; justify-content: center;
+    margin-bottom: 4px;
+  }
+  .mutation-gen-btn {
+    background: linear-gradient(135deg, rgba(143,200,143,0.20), rgba(143,200,143,0.10));
+    border: 1px solid rgba(143,200,143,0.45);
+    color: #c5e8c5;
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-size: 12px; font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .mutation-gen-btn:hover:not(:disabled) {
+    box-shadow: 0 2px 10px rgba(143,200,143,0.18);
+  }
+  .mutation-gen-btn:active:not(:disabled) { transform: scale(0.96); }
+  .mutation-gen-btn:disabled { opacity: 0.5; cursor: default; }
+
   .reflection-chat-area {
     padding: 8px 0 160px;  /* input bar 자리 확보 (76 탭바 + 56 input + 여유 28) */
     display: flex;
