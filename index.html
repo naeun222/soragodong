@@ -10501,9 +10501,17 @@ function onbFinish() {
 
   // 사용자 요청 2026-04-28: 테스터 모드 ON 상태였으면 backup 복원으로 한 방 정리 (filter cleanup 중복 X)
   if (state.preferences && state.preferences.testerMode && _testerModeBackupState) {
+    // V4: 튜토리얼 중 사용자가 입력한 API 키 / profile 보존 (backup 복원으로 wipe 방지)
+    const _userInputApiKey = state.apiKey;
+    const _userInputProfile = state.profile;
+    const _backupApiKey = _testerModeBackupState.apiKey;
+    const _backupProfile = _testerModeBackupState.profile;
     Object.keys(state).forEach(k => delete state[k]);
     Object.assign(state, _testerModeBackupState);
     _testerModeBackupState = null;
+    // 사용자가 튜토리얼 중 새로 입력했으면(이전 비어있고 지금 있음) 그 값으로 박음
+    if (_userInputApiKey && !_backupApiKey) state.apiKey = _userInputApiKey;
+    if (_userInputProfile && !_backupProfile) state.profile = _userInputProfile;
     if (typeof refreshTesterModeUI === 'function') refreshTesterModeUI();
     state.hasSeenWelcomeTutorial = true;
     state.hasSeenV3Tour = true;
