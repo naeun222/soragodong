@@ -5826,8 +5826,20 @@
   .pi-cat {
     display: flex; flex-direction: column; align-items: center; gap: 2px;
     font-size: 18px;
-    padding: 6px 0;
+    padding: 6px 4px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    user-select: none;
+    -webkit-user-select: none;
   }
+  .pi-cat:active { transform: scale(0.94); }
+  .pi-cat:hover { background: rgba(212,167,106,0.08); }
+  .pi-cat.active {
+    background: linear-gradient(135deg, rgba(212,167,106,0.20), rgba(139,126,196,0.14));
+    box-shadow: 0 0 0 1px rgba(212,167,106,0.45);
+  }
+  .pi-cat.active span { color: var(--accent2); font-weight: 600; }
   .pi-cat span {
     font-size: 9px;
     color: var(--text-dim);
@@ -27770,17 +27782,18 @@ function renderLensPearls() {
         <div class="pearls-intro-text">살아있다 느낀 순간들</div>
       </div>
       <div class="pearls-intro-grid">
-        <div class="pi-cat">🎵<span>음악</span></div>
-        <div class="pi-cat">🍴<span>맛</span></div>
-        <div class="pi-cat">📍<span>장소</span></div>
-        <div class="pi-cat">✨<span>순간</span></div>
-        <div class="pi-cat">👥<span>사람</span></div>
+        <div class="pi-cat${_pearlCatFilter === '음악' ? ' active' : ''}" onclick="setPearlCatFilter('음악')" role="button" tabindex="0">🎵<span>음악</span></div>
+        <div class="pi-cat${_pearlCatFilter === '음식' ? ' active' : ''}" onclick="setPearlCatFilter('음식')" role="button" tabindex="0">🍴<span>맛</span></div>
+        <div class="pi-cat${_pearlCatFilter === '장소' ? ' active' : ''}" onclick="setPearlCatFilter('장소')" role="button" tabindex="0">📍<span>장소</span></div>
+        <div class="pi-cat${_pearlCatFilter === '순간' ? ' active' : ''}" onclick="setPearlCatFilter('순간')" role="button" tabindex="0">✨<span>순간</span></div>
+        <div class="pi-cat${_pearlCatFilter === '사람' ? ' active' : ''}" onclick="setPearlCatFilter('사람')" role="button" tabindex="0">👥<span>사람</span></div>
       </div>
     </div>
     <button class="pearls-add-btn" onclick="addPearl()">+ 진주 하나 더하기</button>
   `;
 
   // V4-1r: grid 뷰 — 카테고리 칩 필터
+  // 사용자 요청 2026-04-29: 카테고리 필터 — view 상관없이 항상 적용 (intro pi-cat 클릭 + grid pearl-cat-chip 둘 다)
   if (_libView === 'grid' && pearls.length > 0) {
     const catCount = {};
     pearls.forEach(p => {
@@ -27795,9 +27808,9 @@ function renderLensPearls() {
         ${sortedCats.map(([c, n]) => `<button class="pearl-cat-chip${_pearlCatFilter === c ? ' active' : ''}" onclick="setPearlCatFilter('${escapeHtml(c).replace(/'/g, "\\'")}')">${iconMap[c] || '💎'} ${escapeHtml(c)} <span class="cat-chip-count">${n}</span></button>`).join('')}
       </div>`;
     }
-    if (_pearlCatFilter) {
-      pearls = pearls.filter(p => (p.category || '기타') === _pearlCatFilter);
-    }
+  }
+  if (_pearlCatFilter) {
+    pearls = pearls.filter(p => (p.category || '기타') === _pearlCatFilter);
   }
 
   if (pearls.length === 0) {
