@@ -8587,7 +8587,7 @@ const ONBOARDING_STEPS = [
     id: 'chat_archive_note',
     targetSelector: null,
     title: '📜 이전 대화는 어디?',
-    body: '마무리한 대화는 채팅 화면 위쪽 <b>📜 이전 대화</b>에서 다시 볼 수 있어.<br><br><b>7일이 지나면 자동으로 사라져</b>.<br><br>걱정하지 마! 우리가 한 대화는 <b>남김 없이</b> 고동이가 꼼꼼하게 정리해서 도서관에 저장해둬.<br><br><span class="small">(원하는 대화 골라서 영구 보관하고 싶으면 개발자한테 말해줘 — 만들어볼게!)</span>',
+    body: '마무리한 대화는 채팅 화면 위쪽 <b>📜 이전 대화</b>에서 다시 볼 수 있어.<br><br><b>7일이 지나면 자동으로 사라져</b>.<br><br>걱정하지 마! 우리가 한 대화는 <b>남김 없이</b> 고동이가 꼼꼼하게 정리해서 도서관에 저장해둬.<br><br>그리고 영영 보관하고 싶은 대화는 <b>📌 핀</b>을 꽂으면 돼! 📜 이전 대화 모달에서 각 대화 옆 <b>📍 → 📌</b> 토글하면 7일 cap 무시하고 영구 보관.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -18858,13 +18858,14 @@ function setArchiveTagFilter(tag) {
 function searchArchive() {
   const input = document.getElementById('archiveSearch');
   _archiveSearchQuery = input.value.toLowerCase().trim();
-  // 검색은 양 렌즈 다 갱신
+  // 검색은 양 렌즈 다 갱신 (사용자 보고 2026-04-29: galpi 추가)
   renderLensTopicCards();
   renderLensTimeline();
   renderLensArchive();
   renderLensInsights();
   renderLensStrategies();
   renderLensPearls();
+  if (typeof renderLensGalpi === 'function') renderLensGalpi();
 }
 
 // === V3.8 LENS: TOPIC CARDS — 챕터별 토픽 정리 (대화 렌즈 상단) ===
@@ -19945,10 +19946,19 @@ function renderLensGalpi() {
   const container = document.getElementById('libGalpi');
   if (!container) return;
   const view = _galpiView || 'feed';
-  const decisions = state.decisions || [];
-  const weekly = (state.weeklyReviews || []).map(r => ({...r, _type: 'weekly'}));
-  const monthly = (state.monthlyReviews || []).map(r => ({...r, _type: 'monthly'}));
-  const quarterly = (state.quarterlyReviews || []).map(r => ({...r, _type: 'quarterly'}));
+  // 사용자 보고 2026-04-29: 검색 적용 (목록 모드 inline 리스트에)
+  const _qGalpi = _archiveSearchQuery;
+  const matchesQ = (r, ...fields) => !_qGalpi || fields.filter(Boolean).join(' ').toLowerCase().includes(_qGalpi);
+  let decisions = state.decisions || [];
+  let weekly = (state.weeklyReviews || []).map(r => ({...r, _type: 'weekly'}));
+  let monthly = (state.monthlyReviews || []).map(r => ({...r, _type: 'monthly'}));
+  let quarterly = (state.quarterlyReviews || []).map(r => ({...r, _type: 'quarterly'}));
+  if (_qGalpi) {
+    decisions = decisions.filter(d => matchesQ(d, d.title, d.topic));
+    weekly = weekly.filter(r => matchesQ(r, r.summary, r.weekKey));
+    monthly = monthly.filter(r => matchesQ(r, r.summary, r.monthKey));
+    quarterly = quarterly.filter(r => matchesQ(r, r.summary, r.quarterKey, ...(r.sections || []).map(s => s.body)));
+  }
   const allReviews = [...weekly, ...monthly, ...quarterly].sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0));
 
   const toggleHtml = `
@@ -20035,9 +20045,21 @@ function renderLensGalpi() {
 function renderLensInsights() {
   const container = document.getElementById('lensInsights');
   if (!container) return;
-  
-  const insights = (state.insights || []).filter(i => !i.dismissed)
+
+  // 사용자 보고 2026-04-29: 검색 미적용 버그 fix
+  const q = _archiveSearchQuery;
+  let insights = (state.insights || []).filter(i => !i.dismissed)
     .sort((a, b) => new Date(b.discoveredAt) - new Date(a.discoveredAt));
+  if (q) {
+    insights = insights.filter(i =>
+      [i.content, i.evidence, i.type].filter(Boolean).join(' ').toLowerCase().includes(q)
+    );
+  }
+  // 깨달음 목록 모드에서 type이 ai 아니면 AI 인사이트 섹션 숨김
+  if (_insightsView === 'list' && _insightsCatFilter && _insightsCatFilter !== 'ai') {
+    container.innerHTML = '';
+    return;
+  }
   
   let html = `
     <div style="margin-bottom:14px;">
@@ -27992,6 +28014,15 @@ function renderLensPearls() {
   let pearls = (state.pearls || [])
     .filter(p => p.type !== 'dna_pearl')  // DNA 진주는 모래사장 — 도서관 진주 갤러리 X (V4 비전 7.2)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // 사용자 보고 2026-04-29: 검색 미적용 버그 fix
+  const _qPearls = _archiveSearchQuery;
+  if (_qPearls) {
+    pearls = pearls.filter(p => {
+      const fields = [p.content, p.note, p.category];
+      if (p.track) fields.push(p.track.title, p.track.artist);
+      return fields.filter(Boolean).join(' ').toLowerCase().includes(_qPearls);
+    });
+  }
   const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
 
   // V3.12.x: 진주 비언어적 인트로
