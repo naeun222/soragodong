@@ -7527,7 +7527,6 @@
       <div class="screen-sub">소라고동을 네 것으로.</div>
 
       <!-- 사용자 요청 2026-04-30: ANTHROPIC API 키 input 제거. 앱 결제 모델로 전환. -->
-      <input type="hidden" id="apiKeyInput" value="" />
 
       <!-- ═══ 자주 쓰는 거 ═══ -->
       <div class="input-group">
@@ -8932,17 +8931,27 @@ async function loadFromCloud() {
       console.log('[testerMode] stale flag 자동 정리됨');
     }
 
-    // 사용자 요청 2026-04-28: resetAll로 보존된 API 키 복원
-    try {
-      const preserved = localStorage.getItem('soragodong_v4_apikey_preserve');
-      if (preserved && !state.apiKey) {
-        state.apiKey = preserved;
-        localStorage.removeItem('soragodong_v4_apikey_preserve');
-        console.log('[apiKey] preserve 키에서 복원됨');
-        // 즉시 cloud에 저장 (key가 매번 잃지 않게)
-        try { await saveToCloudNow(); } catch (e) { console.warn('apikey restore save:', e); }
+    // 사용자 요청 2026-04-30: 개인 API 키 영구 제거 — Phase C 백엔드 프록시 모델로 전환.
+    // state.apiKey + localStorage preserve key + testerMode backup 전부 정리. 한 번 실행 후 플래그.
+    if (!state.preferences) state.preferences = {};
+    if (!state.preferences._apiKeyWiped_2026_04_30) {
+      let wiped = false;
+      if (state.apiKey) {
+        state.apiKey = '';
+        wiped = true;
       }
-    } catch (e) { console.warn('apikey restore:', e); }
+      try {
+        if (localStorage.getItem('soragodong_v4_apikey_preserve')) {
+          localStorage.removeItem('soragodong_v4_apikey_preserve');
+          wiped = true;
+        }
+      } catch {}
+      state.preferences._apiKeyWiped_2026_04_30 = true;
+      if (wiped) {
+        console.log('[apiKey] 개인 API 키 영구 제거됨 (Phase C 모델 전환).');
+        try { await saveToCloudNow(); } catch (e) { console.warn('apiKey wipe save:', e); }
+      }
+    }
 
     // 사용자 요청 2026-04-28: 시드 데이터가 cloud에 박혀있는 버그 자동 청소
     // (이전 버그로 testerMode 동작 중 force=true / 직접 saveToCloudNow 경로에서 cloud로 새던 시드 정리)
@@ -32363,7 +32372,6 @@ async function maybeRunYearlyAnalyze() {
 // SETTINGS
 // ═══════════════════════════════════════════════════════════════
 function loadSettings() {
-  document.getElementById('apiKeyInput').value = state.apiKey || '';
   document.getElementById('profileInput').value = state.profile || '';
   // 사용자 요청 2026-04-30: 일일 cap input + 현재 사용량 표시
   const capInput = document.getElementById('dailyChatCapInput');
@@ -32393,7 +32401,6 @@ function loadSettings() {
 }
 
 function saveSettings() {
-  state.apiKey = document.getElementById('apiKeyInput').value.trim();
   state.profile = document.getElementById('profileInput').value.trim();
   // 사용자 요청 2026-04-30: 일일 cap 저장
   const capInput = document.getElementById('dailyChatCapInput');
