@@ -18337,7 +18337,7 @@ const TOPIC_CATEGORY_LABELS = {
   decision:  { label: '결정', icon: '🧙‍♂️' },
   task:      { label: '할 일', icon: '📋' },
   emotional: { label: '감정', icon: '💧' },
-  strategy:  { label: '전략', icon: '🧭' }
+  strategy:  { label: '전략', icon: '🧬' }
 };
 
 function renderLensTopicCards() {
@@ -18453,7 +18453,7 @@ function openTopicCard(id) {
     actions.push(`<button class="topic-modal-btn primary" onclick="topicToPearl('${id}'); closeTopicModal()">💎 진주로 보관</button>`);
   }
   if (card.category !== 'strategy') {
-    actions.push(`<button class="topic-modal-btn" onclick="topicToStrategy('${id}'); closeTopicModal()">🧭 전략 카드로</button>`);
+    actions.push(`<button class="topic-modal-btn" onclick="topicToStrategy('${id}'); closeTopicModal()">🧬 전략 카드로</button>`);
   }
   actions.push(`<button class="topic-modal-btn danger" onclick="closeTopicModal(); deleteTopicCard('${id}')">🗑 삭제</button>`);
   
