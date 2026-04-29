@@ -9728,29 +9728,12 @@ function _cleanupCoreOverrides() {
 }
 
 // V4 (사용자 요청 2026-04-29): 설정 → 🐚 투어 다시 보기
-// 코어 7개 + 풀 튜토리얼 중 하나 선택. 선택 시 testerMode + 시드 박고 진행.
-async function showTutorialReplayMenu() {
-  if (typeof showOptionsModal !== 'function') {
-    return startInteractiveOnboarding();
-  }
-  const opts = [
-    { label: '🐚 코어 #1 — 시작 / 체크인 / 대화', value: 'core1', desc: '한 바퀴 (필수 핵심)' },
-    { label: '⭐ 코어 #2 — 소라의 부름 / 모래사장 / 양생방', value: 'core2', desc: '미션 + 결과 체크 + 전략 진화 (좀 김)' },
-    { label: '🚀 코어 #3 — 실행 탭', value: 'core3', desc: '머릿속 풀기 + 몰입 ritual' },
-    { label: '✦ 코어 #4 — 나 탭', value: 'core4', desc: '분석 결과' },
-    { label: '📚 코어 #5 — 도서관 탭', value: 'core5', desc: '5 카테고리 + 리뷰 (좀 김)' },
-    { label: '🌊 코어 #6 — 숙고 질문', value: 'core6', desc: '큰 물음' },
-    { label: '🧙‍♂️ 코어 #8 — 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
-    { label: '✨ 풀 튜토리얼', value: 'full', desc: '처음부터 끝까지 (~30분)' }
-  ];
-  const choice = await showOptionsModal({
-    title: '🐚 어떤 튜토리얼?',
-    message: '다시 보고 싶은 튜토리얼 골라봐.',
-    options: opts
-  });
-  if (!choice) return;
-  if (choice === 'full') return startInteractiveOnboarding();
-  if (typeof startCoreTutorial === 'function') return startCoreTutorial(choice);
+// 홈 화면 업데이트 모달과 똑같은 3 버튼 모달 띄우기 (풀 / 하면서 익히기 / 이미 알아)
+function showTutorialReplayMenu() {
+  if (typeof showUpdateChooserModal === 'function') return showUpdateChooserModal();
+  // fallback
+  if (typeof startCoreTutorial === 'function') return startCoreTutorial('core1');
+  return startInteractiveOnboarding();
 }
 
 // 잠금 시각 적용/해제 — 셀렉터 + coreId pair 받아서 .core-locked 클래스 + data-core 토글
@@ -10578,7 +10561,13 @@ function onbFinish() {
     saveState(true);
     const ov = document.getElementById('onbOverlay');
     if (ov) { ov.classList.remove('active'); ov.style.display = 'none'; }
-    setTimeout(() => location.reload(), 400);
+    // V4 사용자 보고 2026-04-29: saveState의 saveToCloud는 1초 debounce — 400ms reload 전에 cloud 저장 안 끝남.
+    // → saveToCloudNow()를 직접 await 한 다음 reload 해서 unlock 상태가 확실히 cloud에 박힌 후 진입.
+    (async () => {
+      try { if (typeof saveToCloudNow === 'function') await saveToCloudNow(); }
+      catch (e) { console.warn('[onbFinish] cloud save:', e); }
+      location.reload();
+    })();
     return;
   }
   // testerMode flag만 있고 backup 없는 경우 — flag만 끄기
