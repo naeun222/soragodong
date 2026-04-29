@@ -8506,6 +8506,28 @@ const ONBOARDING_STEPS = [
     fallbackPosition: 'bottom',
     dimBackground: false
   },
+  // 사용자 요청 2026-04-29: 받은 소라 직접 눌러서 아이콘 / 이야기 카드 확인
+  {
+    id: 'click_new_shell',
+    targetSelector: '.beach-shell',
+    title: '🐚 방금 받은 소라',
+    body: '아무 소라 하나 눌러봐.<br>그 소라에 담긴 <b>이야기 카드</b>가 떠.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'shell_story_dismiss',
+    targetSelector: '.shell-story-overlay .btn-secondary',
+    title: '소라 이야기 ✦',
+    body: '소라 아이콘 + 등급 + 그날 이야기 보여.<br><br>준비되면 <b>닫기</b> 눌러서 진행해.',
+    waitFor: 'click',
+    advanceDelay: 500,
+    aboveModal: true,
+    dimBackground: false,
+    fallbackPosition: 'top'
+  },
   {
     id: 'close_beach',
     targetSelector: null,
@@ -8550,7 +8572,7 @@ const ONBOARDING_STEPS = [
     id: 'attempt_result_explain',
     targetSelector: null,
     title: '🔍 결과 체크',
-    body: '근데, 미션은 성공해도 <b>문제가 해결 안 될 수도 있잖아</b>: 맞아.<br><br>그래서 문제가 해결됐는지 <b>결과 체크</b>를 할 거야.<br>다음날 <b>체크인이나 대화 탭에 들어올 때 자동으로 떠</b>.',
+    body: '근데, 미션은 성공해도 <b>문제가 해결 안 될 수도 있잖아</b>: 맞아.<br><br>예를 들면, <b>\'알람 설정\'</b> 미션은 했는데, 막상 알람이 울려도 공부를 안 했을 수 있지.<br><br>그래서 문제가 해결됐는지 <b>결과 체크</b>를 할 거야.<br>다음날 <b>체크인이나 대화 탭에 들어올 때 자동으로 떠</b>.',
     waitFor: 'next',
     dimBackground: false,
     aboveModal: true  // 사용자 보고 2026-04-29: 이전 스탭과 같은 위치 유지
@@ -8575,12 +8597,23 @@ const ONBOARDING_STEPS = [
     advanceDelay: 800,
     fallbackPosition: 'bottom'
   },
+  // 사용자 요청 2026-04-29: 결과 체크 후 DNA 붙은 소라 직접 눌러서 확인
+  {
+    id: 'click_dna_shell',
+    targetSelector: '.beach-shell.dna-shell',
+    title: '🧬 DNA 붙은 소라',
+    body: '여기, <b>🧬 마크 붙은 소라들</b> 보여?<br>그 중 하나 눌러봐 — DNA 조각 표시 같이 보자.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    fallbackPosition: 'top'
+  },
   {
     id: 'dna_explanation_close',
     targetSelector: '.shell-story-overlay .shell-story-dna-badge',
     advanceClickSelector: '.shell-story-overlay .btn-secondary',
     title: '🧬 DNA 한 조각',
-    body: 'DNA가 붙은 소라들 보여?<br>이게 <b>DNA 한 조각</b> 표시야.<br>미션 성공이 → 전략 성공이 되면, <b>그 소라가 DNA의 한 조각</b>이 돼.<br><br>아까 눌렀던 <b>"전략으로"</b> 버튼 기억 나지?<br><br>우리가 전략을 성공할수록 그 전략은 성장해. 이게 무슨 의미냐면 — <b>닫기</b> 버튼을 눌러봐.',
+    body: '이게 <b>DNA 한 조각</b> 표시야.<br>미션 성공이 → 전략 성공이 되면, <b>그 소라가 DNA의 한 조각</b>이 돼.<br><br>아까 눌렀던 <b>"전략으로"</b> 버튼 기억 나지?<br><br>우리가 전략을 성공할수록 그 전략은 성장해. 이게 무슨 의미냐면 — <b>닫기</b> 버튼을 눌러봐.',
     waitFor: 'click',
     advanceDelay: 600,
     nextLabel: '다음 →',
