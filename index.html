@@ -9598,6 +9598,17 @@ const CORE_BODY_OVERRIDE = {
   },
   annual_stories_done: {
     core5: { body: 'Stories 잘 봤지? ✨<br><br><b>주마다 · 월마다 · 계절마다 · 년마다</b> 리뷰가 자동으로 생겨.<br><br>아래 📚 도서관 탭 한 번 눌러서 돌아와.' }
+  },
+  // 사용자 요청 2026-04-29: 모든 코어 튜토리얼 끝은 '시작' 버튼 눌러서 종료 (testerMode OFF + 시드 정리).
+  // 코어 #1은 endId='finish'에 이미 nextLabel '시작! ✦' 박혀있음.
+  // 코어 #2~#8은 endId 후 help_button 점프 → help_button의 nextLabel을 '시작! ✦'로 override.
+  help_button: {
+    core2: { nextLabel: '시작! ✦' },
+    core3: { nextLabel: '시작! ✦' },
+    core4: { nextLabel: '시작! ✦' },
+    core5: { nextLabel: '시작! ✦' },
+    core6: { nextLabel: '시작! ✦' },
+    core8: { nextLabel: '시작! ✦' }
   }
 };
 
@@ -29883,8 +29894,14 @@ function _chooseUpdateOption(choice) {
   if (choice === 'full') {
     window._fullTutorialActive = true;
     if (typeof startInteractiveOnboarding === 'function') startInteractiveOnboarding();
+    return;
   }
-  // 'learn' / 'dismiss' — 그냥 닫기 (잠금 클릭 시 코어 모달로 자연 안내)
+  if (choice === 'learn') {
+    // 사용자 요청 2026-04-29: '하면서 익히기' = 코어 #1 (시작 / API 키 / 체크인 / 대화) 진행
+    if (typeof startCoreTutorial === 'function') startCoreTutorial('core1');
+    return;
+  }
+  // 'dismiss' — 그냥 닫기 (이후 잠금 클릭 시 코어 모달로 자연 안내)
 }
 // 하위 호환 — 기존 dismissUpdateNotice 호출처 보호
 function dismissUpdateNotice() {
