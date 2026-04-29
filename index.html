@@ -11652,10 +11652,14 @@ function _renderMagicHelpChat() {
   const area = document.getElementById('magicHelpArea');
   if (area) {
     let html = '';
-    messages.forEach(m => {
+    messages.forEach((m, i) => {
       // _starter는 회색 톤 (자동 컨텍스트 시작 메시지)
       const extraStyle = m._starter ? ' style="background:var(--surface); border:1px dashed var(--border); color:var(--text-dim); white-space:pre-wrap; font-size:11px;"' : '';
       html += `<div class="reflection-msg ${m.role}"${extraStyle}>${escapeHtml(m.content)}</div>`;
+      // 사용자 요청 2026-04-29: 마법 helpChat assistant 메시지에 ✦ 깨달음으로 버튼 (숙고/돌연변이 패턴 통일)
+      if (m.role === 'assistant' && !m._starter && !m.error) {
+        html += `<button class="reflection-msg-insight ${m.savedAsInsight ? 'saved' : ''}" onclick="saveMagicHelpMsgAsInsight(${i})">${m.savedAsInsight ? '✦ 저장됨' : '✦ 깨달음으로'}</button>`;
+      }
     });
     if (_magicHelpState._loading) {
       html += `<div class="reflection-msg assistant" style="opacity:0.6;">생각 중... ✦</div>`;
@@ -11701,6 +11705,52 @@ function closeMagicHelpChat() {
   if (inputBar) inputBar.classList.remove('active');
   // 사용자 요청 2026-04-29: 화면 종료 — 결정 디테일 화면으로 복귀 (마법 진입 컨텍스트)
   if (typeof showScreen === 'function') showScreen('decision-detail');
+}
+
+// 사용자 요청 2026-04-29: 마법 helpChat assistant 메시지를 ✦ 깨달음(scrap)으로 archive에 저장 + caseFormulation feed-in.
+async function saveMagicHelpMsgAsInsight(msgIdx) {
+  if (!_magicHelpState) return;
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) return;
+  const stepId = _magicHelpState.stepId;
+  const messages = (decision.helpChats && decision.helpChats[stepId]) || [];
+  const msg = messages[msgIdx];
+  if (!msg || msg.role !== 'assistant' || msg.savedAsInsight) return;
+
+  // 직전 user 메시지 찾기
+  let priorUserMsg = '';
+  for (let i = msgIdx - 1; i >= 0; i--) {
+    if (messages[i]?.role === 'user') { priorUserMsg = messages[i].content; break; }
+  }
+
+  if (!Array.isArray(state.archive)) state.archive = [];
+  const meta = (typeof DECISION_STEPS !== 'undefined' ? DECISION_STEPS : []).find(s => s.id === stepId);
+  const stepTitle = meta ? meta.title : stepId;
+  const _dayKey = todayKey();
+  const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  const headline = (decision.title || '결정').slice(0, 30);
+  const body = (msg.content || '').slice(0, 200);
+  state.archive.unshift({
+    type: 'scrap',
+    headline,
+    body,
+    insight: msg.content,
+    userMsg: priorUserMsg,
+    assistantMsg: msg.content,
+    date,
+    source: `🌀 마법 (${stepTitle})`,
+    savedAt: new Date().toISOString(),
+    tags: ['마법', '결정'],
+    decisionId: decision.id,
+    stepId
+  });
+  msg.savedAsInsight = true;
+  saveState();
+  if (typeof renderArchive === 'function') renderArchive();
+  showToast('✦ 깨달음에 저장됐어');
+  _renderMagicHelpChat();
+  // 임시 대화 → caseFormulation feed-in (background, fail silent)
+  extractAndApplyInsightToModel(msg.content, priorUserMsg, 'magic_help').catch(() => {});
 }
 
 function openWeightStep(decision, step) {
@@ -12877,6 +12927,172 @@ function renderReflectionChat() {
   setTimeout(() => { container.scrollTop = container.scrollHeight; }, 30);
 }
 
+// 사용자 요청 2026-04-29: 임시 대화창 (숙고/돌연변이/마법) → caseFormulation feed-in 헬퍼.
+// 메인 chat은 매 응답 자동 추출, 임시 대화는 사용자가 ✦ 깨달음 누른 시점에만 (가벼운 탐색 본질 유지).
+// confidence threshold 0.6 (메인 0.5보다 보수적) + caseFormulation 항목은 unverified 풀로 → 사용자 ✓로 컨펌.
+// fail silent (사용자 흐름 방해 X). 키 없으면 skip.
+async function extractAndApplyInsightToModel(insightText, userMsg, source) {
+  try {
+    if (!state.apiKey) return;
+    if (!insightText || typeof insightText !== 'string') return;
+    const cleanInsight = insightText.trim();
+    if (cleanInsight.length < 20) return;  // 너무 짧으면 추출 가치 X
+
+    const prompt = `다음은 사용자가 "✦ 깨달음으로" 보관한 메시지야 (출처: ${source}).
+사용자가 의도적으로 가치 있다고 판단한 텍스트라서 자기 인식 / 패턴 / 가치관 신호가 있을 수 있어.
+
+[사용자 직전 발화]
+${(userMsg || '').slice(0, 600) || '(없음)'}
+
+[깨달음 메시지]
+${cleanInsight.slice(0, 1200)}
+
+이 깨달음에서 사용자가 자기 자신에 대해 새로 발견 / 명확히 한 것이 있으면 JSON으로 뽑아.
+강한 신호 (명시적 자기 인식, 행동·감정 증거 동반) 만. 추측·일반론 X. 근거 약하면 빈 배열.
+
+{
+  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
+  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
+  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."}
+}
+
+JSON만, 다른 글 X.`;
+
+    const resp = await callAnthropic({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 700,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const raw = data?.content?.[0]?.text || '';
+    const jm = raw.match(/\{[\s\S]*\}/);
+    if (!jm) return;
+    let analysis;
+    try { analysis = JSON.parse(jm[0]); } catch { return; }
+    if (!analysis || typeof analysis !== 'object') return;
+
+    const THRESHOLD = 0.6;
+    let touched = false;
+
+    if (Array.isArray(analysis.new_traits)) {
+      analysis.new_traits.forEach(t => {
+        if (!t || !t.name || typeof t.name !== 'string') return;
+        const conf = typeof t.confidence === 'number' ? t.confidence : 0;
+        const exists = (state.traits || []).find(e => similarText(e.name, t.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.traits = state.traits || [];
+          state.traits.push({
+            id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: t.name.trim(), description: (t.description || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            extractedFrom: source,
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+
+    if (Array.isArray(analysis.new_values)) {
+      analysis.new_values.forEach(v => {
+        if (!v || !v.name || typeof v.name !== 'string') return;
+        const conf = typeof v.confidence === 'number' ? v.confidence : 0;
+        const exists = (state.values || []).find(e => similarText(e.name, v.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.values = state.values || [];
+          state.values.push({
+            id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: v.name.trim(), description: (v.description || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            sdt_need: v.sdt_need || null,
+            extractedFrom: source,
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+
+    if (Array.isArray(analysis.new_patterns)) {
+      analysis.new_patterns.forEach(p => {
+        if (!p || !p.name || typeof p.name !== 'string') return;
+        const conf = typeof p.confidence === 'number' ? p.confidence : 0;
+        const exists = (state.patterns || []).find(e => similarText(e.name, p.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.patterns = state.patterns || [];
+          state.patterns.push({
+            id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: p.name.trim(), description: (p.description || '').trim(),
+            trigger: (p.trigger || '').trim(), sequence: (p.sequence || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            extractedFrom: source,
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+
+    // case formulation → 메인 풀에 push + unverified 마킹 (사용자 ✓로 컨펌)
+    const u = analysis.case_formulation_update;
+    if (u && typeof u === 'object') {
+      const cf = state.caseFormulation = state.caseFormulation || { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} };
+      if (!cf.unverified) cf.unverified = {};
+      const fields = [
+        ['new_problem', 'problems'],
+        ['new_mechanism', 'mechanisms'],
+        ['new_strength', 'strengths'],
+        ['new_goal', 'goals'],
+        ['new_growth', 'growth']
+      ];
+      fields.forEach(([key, bucket]) => {
+        const txt = u[key];
+        if (!txt || typeof txt !== 'string') return;
+        const trimmed = txt.trim();
+        if (!trimmed) return;
+        if (!Array.isArray(cf[bucket])) cf[bucket] = [];
+        if (cf[bucket].some(x => similarText(x, trimmed))) return;
+        cf[bucket].push(trimmed);
+        if (!Array.isArray(cf.unverified[bucket])) cf.unverified[bucket] = [];
+        cf.unverified[bucket].push(trimmed);
+        touched = true;
+      });
+      if (touched) {
+        cf.version = (cf.version || 0) + 1;
+        cf.lastUpdated = new Date().toISOString();
+      }
+    }
+
+    if (touched) {
+      saveState();
+      // 모델 화면 열려 있으면 새로고침 (선택)
+      if (typeof renderModel === 'function') {
+        try { renderModel(); } catch {}
+      }
+    }
+  } catch (e) {
+    // silent — 사용자 흐름 방해 X
+    console.warn('[insight extract] fail:', e);
+  }
+}
+
 // V4-fix: 숙고 채팅 안 AI 메시지를 ✦ 깨달음(reflection)으로 archive에 저장
 async function saveReflectionMsgAsInsight(qId, msgIdx) {
   const q = (state.reflectionQuestions || []).find(x => x.id === qId);
@@ -12909,6 +13125,8 @@ async function saveReflectionMsgAsInsight(qId, msgIdx) {
   saveState();
   renderReflectionChat();
   showToast('✦ 깨달음에 저장됐어');
+  // 사용자 요청 2026-04-29: 임시 대화 → caseFormulation feed-in (background, fail silent)
+  extractAndApplyInsightToModel(msg.content, priorUserMsg, 'reflection').catch(() => {});
 }
 
 async function sendReflectionChat() {
@@ -18289,6 +18507,8 @@ async function saveMutationMsgAsInsight(msgIdx) {
   if (typeof renderArchive === 'function') renderArchive();
   showToast('✦ 깨달음에 저장됐어');
   _renderMutationChat();
+  // 사용자 요청 2026-04-29: 임시 대화 → caseFormulation feed-in (background, fail silent)
+  extractAndApplyInsightToModel(m.content, userQuestion, 'mutation').catch(() => {});
 }
 
 // 사용자가 [🌱 가지 만들기] / [🔄 가지 다시 만들기] 버튼 클릭
