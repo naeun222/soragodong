@@ -7470,6 +7470,8 @@
           <button class="btn-secondary" onclick="testStartTutorialFromStep()" style="margin-top:6px;" title="특정 step부터 튜토리얼 시작">🎯 튜토리얼 step N부터 시작</button>
           <button class="btn-secondary" onclick="showNavPaddingSlider()" style="margin-top:6px;" title="하단 nav padding 슬라이더">📏 하단 nav padding 조절</button>
           <button class="btn-secondary" onclick="forceAnalyze()" style="margin-top:6px;" title="opus 4.7 사용 — 비싸. 일주일 자동 실행되니 평소엔 X.">📊 강제 모델 분석 (수동, 비쌈)</button>
+          <!-- 사용자 보고 2026-04-30: 잔존 시드 흔적 강제 정리 (entries / chatMessages / chatArchive 등 _seed marker + 시드 텍스트 매칭). -->
+          <button class="btn-secondary" onclick="cleanLegacySeedData()" style="margin-top:6px; background:linear-gradient(135deg, rgba(220,150,80,0.18), rgba(220,150,80,0.10)); border-color:rgba(220,150,80,0.40); color:#e8c590;" title="entries/chatMessages/chatArchive 등에 잔존하는 시드 텍스트 강제 정리">🧹 잔존 시드 정리 (강제)</button>
         </div>
       </details>
 
@@ -8332,6 +8334,27 @@ async function loadFromCloud() {
       const before = state.shellCollection.length;
       state.shellCollection = state.shellCollection.filter(s => !(s && typeof s._id === 'string' && (s._id.startsWith('shell_seed_'))));
       if (state.shellCollection.length !== before) seedCleaned = true;
+    }
+    // 사용자 보고 2026-04-30: id-prefix 없이 박힌 시드 (entries / chatMessages / chatArchive / weeklyReviews / memoryVault) — _seed marker 매칭으로 sweep.
+    // testSeedV4Data 함수가 _markSeedItems()로 새 박힌 항목에 _seed: timestamp 박음.
+    const stripSeedMarker = (arr) => {
+      if (!Array.isArray(arr)) return arr;
+      const before = arr.length;
+      const filtered = arr.filter(it => !(it && typeof it === 'object' && it._seed));
+      if (filtered.length !== before) seedCleaned = true;
+      return filtered;
+    };
+    state.entries = stripSeedMarker(state.entries);
+    state.chatMessages = stripSeedMarker(state.chatMessages);
+    state.chatArchive = stripSeedMarker(state.chatArchive);
+    state.weeklyReviews = stripSeedMarker(state.weeklyReviews);
+    state.memoryVault = stripSeedMarker(state.memoryVault);
+    // 기존 stripSeed 대상 store들도 _seed marker 추가 매칭 (앞으로 박힐 시드 대비)
+    ['tasks','missions','pearls','archive','topicCards','reflectionQuestions','projects','starts','quarterlyReviews','decisions','insights','diagnoses','monthlyReviews'].forEach(k => {
+      state[k] = stripSeedMarker(state[k]);
+    });
+    if (Array.isArray(state.shellCollection)) {
+      state.shellCollection = stripSeedMarker(state.shellCollection);
     }
     if (seedCleaned) {
       console.log('[seed cleanup] cloud/localStorage에 박혀있던 시드 데이터 자동 정리됨');
@@ -24379,6 +24402,24 @@ async function testSeedV4Data() {
     showToast('⚠️ 테스터 모드 ON 후 사용 — 사용자 데이터 보호');
     return;
   }
+  // 사용자 보고 2026-04-30: 시드 흔적이 entries/chatMessages/chatArchive 등에 잔존 — id-prefix sweep으로 못 잡힘.
+  // 시작 시점 length 기록 → 끝에 새로 박힌 항목만 _seed: true marker. init sweep에서 marker 매칭으로 자동 정리.
+  const _seedMarkerTs = Date.now();
+  const _seedTrackStores = ['entries', 'chatMessages', 'chatArchive', 'weeklyReviews', 'monthlyReviews', 'quarterlyReviews', 'memoryVault', 'tasks', 'missions', 'pearls', 'archive', 'topicCards', 'reflectionQuestions', 'projects', 'starts', 'decisions', 'insights', 'diagnoses', 'shellCollection'];
+  const _seedBeforeLen = {};
+  _seedTrackStores.forEach(k => { _seedBeforeLen[k] = (state[k] || []).length; });
+  const _markSeedItems = () => {
+    _seedTrackStores.forEach(k => {
+      const arr = state[k];
+      if (!Array.isArray(arr)) return;
+      for (let i = _seedBeforeLen[k]; i < arr.length; i++) {
+        if (arr[i] && typeof arr[i] === 'object' && !arr[i]._seed) {
+          arr[i]._seed = _seedMarkerTs;
+        }
+      }
+    });
+  };
+  // 함수 끝 직전에 _markSeedItems() 호출됨 (saveState 직전).
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   // V4-fix v3 (사용자 요청): 1년 치 entries — 질적으로 진짜 같은 패턴 (계절·주기·마감·주말 효과)
@@ -25493,12 +25534,52 @@ async function testSeedV4Data() {
     });
   }
 
+  // 사용자 보고 2026-04-30: 새로 박힌 시드 항목 전부에 _seed marker 박기 → init sweep에서 자동 정리.
+  _markSeedItems();
   saveState({ force: true });
   showToast('🌱 V4 전체 시드 데이터 박힘. 도서관/모래사장/실행/나/홈 둘러보기.');
   if (typeof renderTodayMission === 'function') renderTodayMission();
   if (typeof renderShellBar === 'function') renderShellBar();
   if (typeof renderReflectionHome === 'function') renderReflectionHome();
   if (typeof renderHome === 'function') renderHome();
+}
+
+// 사용자 보고 2026-04-30: 잔존 시드 흔적 강제 정리 (개발자 도구 버튼).
+// id-prefix sweep 못 잡은 것들 + _seed marker 못 박힌 옛 시드 텍스트 매칭.
+async function cleanLegacySeedData() {
+  if (!confirm('잔존 시드 흔적 정리 — entries/chatMessages/chatArchive 등에 박힌 시드 텍스트 매칭으로 sweep. 본인 데이터엔 영향 X (알려진 시드 텍스트만 매칭). 정말 진행?')) return;
+  // 알려진 시드 텍스트 (testSeedV4Data 안 diaryPool / noteSnips / 풍성화 데이터)
+  const seedSnippets = [
+    '엄마 김치찌개', '한강 산책 30분', '교수님 미팅', '실험 데이터 정리만',
+    'LNGSHOT', 'Vanilla Days', '새벽 카페', '논문 서론 첫 단락', '논문 한 단락',
+    '카페 모서리 자리', '한강 산책 후 논문', '머리 비워짐', '데이터 부족이라고',
+    '비도 그 때처럼', '환경 셋업 = 진입 마찰', '며칠 막혀있던 게 한 시간',
+    '카페 새벽 4시', '됐다 한 순간'
+  ];
+  let cleaned = 0;
+  const stores = ['entries', 'chatMessages', 'chatArchive', 'weeklyReviews', 'monthlyReviews', 'quarterlyReviews', 'memoryVault', 'tasks', 'missions', 'pearls', 'archive', 'topicCards', 'reflectionQuestions', 'projects', 'starts', 'decisions', 'insights', 'diagnoses', 'shellCollection'];
+  stores.forEach(k => {
+    if (!Array.isArray(state[k])) return;
+    const before = state[k].length;
+    state[k] = state[k].filter(it => {
+      if (!it || typeof it !== 'object') return true;
+      // _seed marker 매칭
+      if (it._seed) return false;
+      // 알려진 시드 텍스트 매칭
+      try {
+        const txt = JSON.stringify(it).toLowerCase();
+        if (seedSnippets.some(s => txt.includes(s.toLowerCase()))) return false;
+      } catch {}
+      return true;
+    });
+    cleaned += (before - state[k].length);
+  });
+  saveState({ force: true });
+  if (typeof saveToCloudNow === 'function') {
+    try { await saveToCloudNow(); } catch (e) { console.warn('seed cleanup save:', e); }
+  }
+  alert(`✅ ${cleaned}개 시드 항목 정리됨. 새로고침합니다.`);
+  location.reload();
 }
 
 async function testForceQuarterlyReview() {
