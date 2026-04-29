@@ -3347,7 +3347,7 @@
     cursor: pointer; font-family: inherit;
   }
   .mutation-options-toggle:hover { color: var(--accent2); }
-  /* 사용자 요청 2026-04-28: 선택한 차원 헤더 chip (제목 옆 토글) */
+  /* 사용자 요청 2026-04-28: 선택한 가지 헤더 chip (제목 옆 토글) */
   .mutation-chat-header-title {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   }
@@ -3512,6 +3512,25 @@
   }
   .mutation-gen-btn:active:not(:disabled) { transform: scale(0.96); }
   .mutation-gen-btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* 사용자 요청 2026-04-29: 돌연변이 assistant 메시지의 ✦ 깨달음으로 버튼 */
+  .mutation-insight-btn {
+    background: rgba(201,169,110,0.14);
+    border: 1px solid rgba(201,169,110,0.35);
+    color: var(--accent2);
+    border-radius: 999px;
+    padding: 4px 11px;
+    font-size: 11px; font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .mutation-insight-btn:active { transform: scale(0.96); }
+  .mutation-insight-btn.saved {
+    background: rgba(143,200,143,0.14);
+    border-color: rgba(143,200,143,0.35);
+    color: #c5e8c5;
+    cursor: default;
+  }
 
   .reflection-chat-area {
     padding: 8px 0 160px;  /* input bar 자리 확보 (76 탭바 + 56 input + 여유 28) */
@@ -7204,6 +7223,21 @@
       </div>
     </div>
 
+    <!-- 사용자 요청 2026-04-29: 마법 도움 받기 = 풀스크린 (숙고의 방 패턴) -->
+    <div class="screen" id="screen-magic-help">
+      <div class="reflection-screen-header">
+        <button class="reflection-screen-back" onclick="closeMagicHelpChat()">←</button>
+        <div class="reflection-screen-q" id="magicHelpScreenQ"></div>
+      </div>
+      <div class="reflection-chat-area" id="magicHelpArea"></div>
+    </div>
+    <div class="reflection-input-bar" id="magicHelpInputBar">
+      <div class="reflection-input-wrap">
+        <textarea class="chat-textarea" id="magicHelpInput" placeholder="자유롭게 풀어놔..." rows="1"></textarea>
+        <button class="send-btn" onclick="sendMagicHelpMessage()">↑</button>
+      </div>
+    </div>
+
     <!-- EXECUTE (실행 탭 - 다음 메시지에서 빌드) -->
     <div class="screen" id="screen-execute">
       <div id="executeContent"></div>
@@ -9214,7 +9248,7 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     title: '🌿 임시 대화창',
     // 사용자 요청 2026-04-29: '고동이가 답변 만들 때까지 기다려줘' 강조 + 답변 끝나면 '다음' 직접 클릭으로 진행
-    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>여기서 어려웠던 점 풀어놓고, 충분히 풀린 후 <b>[🌱 가지 만들기]</b> 누르면 새 가지 4개 제안할게.<br><br><span class="small">대화 더 진행하면 [🔄 가지 다시 만들기]로 새로 — 같은 차원도 refine OK.</span>',
+    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>여기서 어려웠던 점 풀어놓고, 충분히 풀린 후 <b>[🌱 가지 만들기]</b> 누르면 새 가지 4개 제안할게.<br><br><span class="small">대화 더 진행하면 [🔄 가지 다시 만들기]로 새로 — 같은 가지도 refine OK.</span>',
     waitFor: 'next',
     dimBackground: false,
     aboveModal: true
@@ -9255,7 +9289,7 @@ const ONBOARDING_STEPS = [
     id: 'click_evolved_card',
     targetSelector: '.strategy-card-title[data-strategy-id="strat_seed_0"]',
     title: '진화한 전략 카드',
-    body: '방금 진화한 카드 다시 눌러봐.<br>제목이 <b>새 차원으로 바뀌어 있을 거야</b> — 진화 트리에 옛 \'마감 직전 폭발력 신뢰\'도 남아있어.',
+    body: '방금 진화한 카드 다시 눌러봐.<br>제목이 <b>새 가지로 바뀌어 있을 거야</b> — 진화 트리에 옛 \'마감 직전 폭발력 신뢰\'도 남아있어.',
     waitFor: 'click',
     advanceDelay: 800,
     manualAdvance: true,
@@ -9266,7 +9300,7 @@ const ONBOARDING_STEPS = [
     // 사용자 요청 2026-04-29: 진화한 전략 카드 spotlight (어떤 카드 진화했는지 시각 안내)
     targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"]',
     title: '🧬 진화 트리 봤어?',
-    body: '<b>\'마감 직전 폭발력 신뢰\'</b>가 안 통했네.<br>그래서 <b>새 차원으로 진화</b>했어!<br><br>만약 이 새 전략이 <b>성공한다면</b> 이 DNA는 \'<b>성장</b>\' 해.<br>같은 전략이 <b>5번 성공</b>하면, 네가 이 전략을 \'<b>체화</b>\'했다고 봐.',
+    body: '<b>\'마감 직전 폭발력 신뢰\'</b>가 안 통했네.<br>그래서 <b>새 가지로 진화</b>했어!<br><br>만약 이 새 전략이 <b>성공한다면</b> 이 DNA는 \'<b>성장</b>\' 해.<br>같은 전략이 <b>5번 성공</b>하면, 네가 이 전략을 \'<b>체화</b>\'했다고 봐.',
     waitFor: 'next',
     dimBackground: false,
     fallbackPosition: 'top'
@@ -11482,95 +11516,51 @@ function openMagicHelpChat(decisionId, stepId) {
   if (!decision.helpChats) decision.helpChats = {};
   if (!Array.isArray(decision.helpChats[stepId])) decision.helpChats[stepId] = [];
 
-  // 첫 진입 시 인사 메시지 (이미 대화 있으면 그대로)
+  _magicHelpState = { decisionId, stepId, _loading: false };
+
+  // 사용자 요청 2026-04-29: 첫 진입 시 옛 askAIForStep의 컨텍스트 템플릿을 자동 user msg로 push + AI 응답 트리거
   if (decision.helpChats[stepId].length === 0) {
+    const completedContext = (decision.steps || []).filter(s => s.completed).map(s => {
+      const m = DECISION_STEPS.find(x => x.id === s.id);
+      return `[${m?.title || s.id}]\n${typeof formatStepContent === 'function' ? formatStepContent(s) : (s.content || '')}`;
+    }).join('\n\n');
+    const editor = document.getElementById('stepEditor');
+    const currentDraft = editor ? editor.value.trim() : '';
+
+    const starterMsg = `[${meta.title}] "${decision.title}"
+
+지금까지 작성한 단계:
+${completedContext || '(아직 시작 X)'}
+
+이번 단계 (${meta.title})에 내가 적은 거:
+${currentDraft || '(비어있음 — 도움이 필요해)'}
+
+이 단계에서 더 깊이 생각하게 도와줘. 결정을 대신 내려주지 말고.`;
+
     decision.helpChats[stepId].push({
-      role: 'assistant',
-      content: `🧙‍♂️ "${meta.title}" 단계에 같이 들어가볼까?\n\n결정 주제: "${decision.title}"\n\n어떤 점이 막혔는지 풀어놔. 결론 대신 내려주진 X — 같이 깊이 들여다볼게.`,
-      timestamp: new Date().toISOString()
+      role: 'user',
+      content: starterMsg,
+      timestamp: new Date().toISOString(),
+      _starter: true
     });
     saveState();
+    _renderMagicHelpChat();
+    // AI 자동 응답 트리거
+    setTimeout(() => _runMagicHelpAIResponse(), 200);
+    return;
   }
-
-  _magicHelpState = { decisionId, stepId, _loading: false };
   _renderMagicHelpChat();
 }
 
-function _renderMagicHelpChat() {
+// AI 응답 만 호출 (sendMagicHelpMessage에서 입력 부분만 분리)
+async function _runMagicHelpAIResponse() {
   if (!_magicHelpState) return;
   const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
-  if (!decision) { closeMagicHelpChat(); return; }
-  const meta = DECISION_STEPS.find(m => m.id === _magicHelpState.stepId);
-  if (!meta) { closeMagicHelpChat(); return; }
-  const messages = (decision.helpChats && decision.helpChats[_magicHelpState.stepId]) || [];
-
-  let overlay = document.getElementById('magicHelpOverlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'magicHelpOverlay';
-    overlay.className = 'magic-help-overlay';
-    overlay.innerHTML = `
-      <div class="magic-help-modal" onclick="event.stopPropagation()">
-        <div class="magic-help-header">
-          <div style="flex:1; min-width:0;">
-            <div class="magic-help-title">🧙‍♂️ ${escapeHtml(meta.title)}</div>
-            <div class="magic-help-sub" id="magicHelpSub"></div>
-          </div>
-          <button class="magic-help-close" onclick="closeMagicHelpChat()" aria-label="닫기">✕</button>
-        </div>
-        <div class="magic-help-area" id="magicHelpArea"></div>
-        <div class="magic-help-footer">
-          <div class="magic-help-input-row">
-            <textarea class="magic-help-input" id="magicHelpInput" placeholder="자유롭게 풀어놔..." rows="1"></textarea>
-            <button class="magic-help-send" id="magicHelpSendBtn" onclick="sendMagicHelpMessage()">↑</button>
-          </div>
-        </div>
-      </div>
-    `;
-    overlay.onclick = (e) => { if (e.target === overlay) closeMagicHelpChat(); };
-    document.body.appendChild(overlay);
-  }
-  const subEl = document.getElementById('magicHelpSub');
-  if (subEl) subEl.textContent = `"${decision.title}"`;
-  const area = document.getElementById('magicHelpArea');
-  if (area) {
-    let html = '';
-    messages.forEach(m => {
-      html += `<div class="magic-help-msg ${m.role}">${escapeHtml(m.content)}</div>`;
-    });
-    if (_magicHelpState._loading) {
-      html += `<div class="magic-help-msg assistant" style="opacity:0.6;">생각 중... ✦</div>`;
-    }
-    area.innerHTML = html;
-    area.scrollTop = area.scrollHeight;
-  }
-  const ta = document.getElementById('magicHelpInput');
-  if (ta) {
-    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; });
-    ta.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMagicHelpMessage(); }
-    });
-  }
-}
-
-async function sendMagicHelpMessage() {
-  if (!_magicHelpState || _magicHelpState._loading) return;
-  const ta = document.getElementById('magicHelpInput');
-  if (!ta) return;
-  const text = ta.value.trim();
-  if (!text) return;
-  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
   if (!decision) return;
-  if (!decision.helpChats) decision.helpChats = {};
   const stepId = _magicHelpState.stepId;
-  if (!Array.isArray(decision.helpChats[stepId])) decision.helpChats[stepId] = [];
+  if (!Array.isArray(decision.helpChats?.[stepId])) return;
   const meta = DECISION_STEPS.find(m => m.id === stepId);
-
-  decision.helpChats[stepId].push({ role: 'user', content: text, timestamp: new Date().toISOString() });
-  ta.value = ''; ta.style.height = 'auto';
-  _magicHelpState._loading = true;
-  saveState();
-  _renderMagicHelpChat();
+  if (!meta) return;
 
   if (!state.apiKey) {
     decision.helpChats[stepId].push({ role: 'assistant', content: '(API 키 없어 — 설정에서 등록해.)', timestamp: new Date().toISOString() });
@@ -11580,10 +11570,12 @@ async function sendMagicHelpMessage() {
     return;
   }
 
-  // 진지 모드 + 사용자 본인 데이터 인용 + caching
-  const completedContext = decision.steps.filter(s => s.completed).map(s => {
+  _magicHelpState._loading = true;
+  _renderMagicHelpChat();
+
+  const completedContext = (decision.steps || []).filter(s => s.completed).map(s => {
     const m = DECISION_STEPS.find(x => x.id === s.id);
-    return `[${m.title}]\n${formatStepContent(s)}`;
+    return `[${m?.title || s.id}]\n${typeof formatStepContent === 'function' ? formatStepContent(s) : (s.content || '')}`;
   }).join('\n\n');
   const editor = document.getElementById('stepEditor');
   const currentDraft = editor ? editor.value : '';
@@ -11632,10 +11624,82 @@ ${currentDraft ? `[이번 단계 ${meta.title}에 현재 적은 거]\n${currentD
   _renderMagicHelpChat();
 }
 
+function _renderMagicHelpChat() {
+  if (!_magicHelpState) return;
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) { closeMagicHelpChat(); return; }
+  const meta = DECISION_STEPS.find(m => m.id === _magicHelpState.stepId);
+  if (!meta) { closeMagicHelpChat(); return; }
+  const messages = (decision.helpChats && decision.helpChats[_magicHelpState.stepId]) || [];
+
+  // 사용자 요청 2026-04-29: 풀스크린 (숙고의 방 패턴) — 모달 X
+  if (typeof showScreen === 'function') {
+    const cur = document.querySelector('.screen.active');
+    if (!cur || cur.id !== 'screen-magic-help') {
+      showScreen('magic-help');
+    }
+  }
+  // 헤더 제목 (단계명 + 결정 주제)
+  const qEl = document.getElementById('magicHelpScreenQ');
+  if (qEl) {
+    qEl.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--text);">🧙‍♂️ ${escapeHtml(meta.title)}</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">"${escapeHtml(decision.title)}"</div>`;
+  }
+  // 입력바 표시
+  const inputBar = document.getElementById('magicHelpInputBar');
+  if (inputBar) inputBar.classList.add('active');
+  // 메시지
+  const area = document.getElementById('magicHelpArea');
+  if (area) {
+    let html = '';
+    messages.forEach(m => {
+      // _starter는 회색 톤 (자동 컨텍스트 시작 메시지)
+      const extraStyle = m._starter ? ' style="background:var(--surface); border:1px dashed var(--border); color:var(--text-dim); white-space:pre-wrap; font-size:11px;"' : '';
+      html += `<div class="reflection-msg ${m.role}"${extraStyle}>${escapeHtml(m.content)}</div>`;
+    });
+    if (_magicHelpState._loading) {
+      html += `<div class="reflection-msg assistant" style="opacity:0.6;">생각 중... ✦</div>`;
+    }
+    area.innerHTML = html;
+    area.scrollTop = area.scrollHeight;
+  }
+  // textarea 자동 높이 + Enter 전송
+  const ta = document.getElementById('magicHelpInput');
+  if (ta && !ta._magicWired) {
+    ta._magicWired = true;
+    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; });
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMagicHelpMessage(); }
+    });
+  }
+}
+
+async function sendMagicHelpMessage() {
+  if (!_magicHelpState || _magicHelpState._loading) return;
+  const ta = document.getElementById('magicHelpInput');
+  if (!ta) return;
+  const text = ta.value.trim();
+  if (!text) return;
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) return;
+  if (!decision.helpChats) decision.helpChats = {};
+  const stepId = _magicHelpState.stepId;
+  if (!Array.isArray(decision.helpChats[stepId])) decision.helpChats[stepId] = [];
+
+  decision.helpChats[stepId].push({ role: 'user', content: text, timestamp: new Date().toISOString() });
+  ta.value = ''; ta.style.height = 'auto';
+  saveState();
+  _renderMagicHelpChat();
+  // AI 응답 — _runMagicHelpAIResponse 재사용
+  await _runMagicHelpAIResponse();
+}
+
 function closeMagicHelpChat() {
   _magicHelpState = null;
-  const overlay = document.getElementById('magicHelpOverlay');
-  if (overlay) overlay.remove();
+  const inputBar = document.getElementById('magicHelpInputBar');
+  if (inputBar) inputBar.classList.remove('active');
+  // 사용자 요청 2026-04-29: 화면 종료 — 결정 디테일 화면으로 복귀 (마법 진입 컨텍스트)
+  if (typeof showScreen === 'function') showScreen('decision-detail');
 }
 
 function openWeightStep(decision, step) {
@@ -13582,7 +13646,7 @@ async function triggerAttemptResultFlow(mission) {
       // 첫 번째 didnt — 사용자에게 선택권
       const yes = await showConfirmModal({
         title: '🤔 안 통했네',
-        message: '첫 시도라 우연일 수도 있어.\n\n다른 차원에서 시도해볼래?\n(아니면 한 번 더 해보자)',
+        message: '첫 시도라 우연일 수도 있어.\n\n다른 가지에서 시도해볼래?\n(아니면 한 번 더 해보자)',
         okLabel: '🧬 진화해볼게',
         cancelLabel: '한 번 더'
       });
@@ -13596,7 +13660,7 @@ async function triggerAttemptResultFlow(mission) {
   } else if (status === 'meh' && typeof openMutationChat === 'function') {
     const yes = await showConfirmModal({
       title: '🌫 그저 그랬어',
-      message: '이 도구가 너에게 충분히 안 맞은 듯.\n다른 차원에서 시도해볼까?',
+      message: '이 도구가 너에게 충분히 안 맞은 듯.\n다른 가지에서 시도해볼까?',
       okLabel: '🧬 돌연변이 해볼게',
       cancelLabel: '아직 그대로'
     });
@@ -13677,7 +13741,7 @@ function showDnaPearlTypesModal() {
       emoji: '🌱',
       label: '빠른 발견',
       color: '#8fc88f',
-      description: '한 차원에서 바로 통한 전략.\n시도 = 첫 번째에 통함. 너 자신을 잘 알아서 빠르게 찾았어.',
+      description: '한 가지에서 바로 통한 전략.\n시도 = 첫 번째에 통함. 너 자신을 잘 알아서 빠르게 찾았어.',
       shells: ['⭐', '🌟', '✨', '💫', '🌙']
     },
     {
@@ -13685,7 +13749,7 @@ function showDnaPearlTypesModal() {
       emoji: '🌳',
       label: '성장의 길',
       color: '#ffd93d',
-      description: '한 차원에서 반복 시도로 도달.\n같은 방향 끈질기게 — 7번 8번 시도해서 성장했어.',
+      description: '한 가지에서 반복 시도로 도달.\n같은 방향 끈질기게 — 7번 8번 시도해서 성장했어.',
       shells: ['⭐', '⭐', '🌟', '✨', '💫', '⭐', '🌟']
     },
     {
@@ -13693,7 +13757,7 @@ function showDnaPearlTypesModal() {
       emoji: '🧬',
       label: '진화한 길',
       color: 'gradient',
-      description: '여러 차원 거쳐 진화로 도달.\n안 통한 차원 → 다른 차원 시도 → 결국 너에게 맞는 모양.',
+      description: '여러 가지 거쳐 진화로 도달.\n안 통한 가지 → 다른 가지 시도 → 결국 너에게 맞는 모양.',
       shells: ['⭐', '🌟', '🦄', '✨', '💎', '🌌']
     }
   ];
@@ -15014,6 +15078,9 @@ function showScreen(name) {
   // V4-1j-b: 숙고 입력 바 (fixed bottom)
   const reflInputBar = document.getElementById('reflectionInputBar');
   if (reflInputBar) reflInputBar.classList.toggle('active', name === 'reflection');
+  // 사용자 요청 2026-04-29: 마법 도움 받기 화면도 입력바 토글
+  const magicInputBar = document.getElementById('magicHelpInputBar');
+  if (magicInputBar) magicInputBar.classList.toggle('active', name === 'magic-help');
   // V3.13.x: 헤더는 항상 표시 (튜토리얼 sync_dot step 등 의존). 배너만 홈에 한정.
   const bannerEl = document.getElementById('updateBanner');
   if (bannerEl && name !== 'home') bannerEl.style.display = 'none';
@@ -15590,7 +15657,7 @@ function renderModel() {
   if (visibleDiags.length > 0) {
     const diagLabels = {
       weak_tool: '🔧 도구 약함',
-      wrong_layer: '📐 차원 안 맞음',
+      wrong_layer: '📐 가지 안 맞음',
       value_clash: '⚖️ 가치 상충',
       avoidance: '🌫 회피 패턴',
       willpower_cap: '🪫 의지 임계치'
@@ -18035,7 +18102,7 @@ async function showAttemptResultModal(strategyName) {
 }
 
 // V4-1d-3: 돌연변이 진화 — 임시 채팅 (4 옵션 picker).
-// V4 비전 6.3: 안 통한 가지 → 다른 차원에서 4 옵션 즉석 → 사용자 선택 → 새 generation + 새 미션.
+// V4 비전 6.3: 안 통한 가지 → 다른 가지에서 4 옵션 즉석 → 사용자 선택 → 새 generation + 새 미션.
 // 5.8 톤: "🧬 돌연변이 시점. [전략명] 가지 끝났어 — 발견 [무엇]. 새 가지 어디서? 🌍/👥/🧠/🪞"
 // 메인 흐름 X (anchor 29). non-blocking: completeMission이 await 안 함.
 const _LAYER_EMOJI = { L1: '🧠', L2: '🎯', L3: '🌍', L4: '👥', L5: '🪞' };
@@ -18098,8 +18165,8 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
     .map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`)
     .join('\n');
   const sameLayerNote = allowSameLayer
-    ? `\n[같은 차원 허용] 이전이 ${prevLayer} 여도 OK — 같은 차원에서 refine된 옵션 (이유 분석 + 보완) 도 1-2개 포함 가능. 단 똑같이 X — 대화에서 발견한 이유 반영해서 보완.`
-    : `\n이전이 ${prevLayer} 였으니 그 외 4 차원 각 1개.`;
+    ? `\n[같은 가지 허용] 이전이 ${prevLayer} 여도 OK — 같은 가지에서 refine된 옵션 (이유 분석 + 보완) 도 1-2개 포함 가능. 단 똑같이 X — 대화에서 발견한 이유 반영해서 보완.`
+    : `\n이전이 ${prevLayer} 였으니 그 외 4 가지 각 1개.`;
   const convoNote = recentMsgs
     ? `\n\n[지금까지 대화 — 이 사용자 컨텍스트 우선 반영]\n${recentMsgs}\n\n위 대화에서 사용자가 짚은 진짜 어려움을 옵션에 녹여. generic 답 X.`
     : '';
@@ -18113,7 +18180,7 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
           max_tokens: 900,
           messages: [{
             role: 'user',
-            content: `돌연변이 진화 4 옵션 생성 (사용자 요청 2026-04-29: 대화 흐름 반영, 같은 차원 refine도 허용).
+            content: `돌연변이 진화 4 옵션 생성 (사용자 요청 2026-04-29: 대화 흐름 반영, 같은 가지 refine도 허용).
 
 [전략 카드] "${card.title}"
 [심리학 개념] ${card.psychConcept || '(없음)'}
@@ -18121,7 +18188,7 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
 [이전 가지 ${prevLayer} ${_LAYER_NAME[prevLayer]||''}] "${prevAction}"
 [안 통한 미션] "${missionTitle}"
 
-[5 차원 — 의지 부담 ↓일수록 ADHD 친화]
+[5 가지 — 의지 부담 ↓일수록 ADHD 친화]
 - L1 인지: 생각의 틀 재구조화 (CBT, 인지 재해석) — 의지 100%
 - L2 행동: 알람·체크리스트·시간 박스 — 의지 90%
 - L3 환경: 물리적 환경/도구 자체 변경, 자동 trigger — 의지 30%
@@ -18134,7 +18201,7 @@ ${sameLayerNote}${convoNote}
 2. 첫 행동 명확: 동사로 시작 + 5분 안에 시작 가능
 3. 네 사용자 ${card.title} 패턴에 맞게 — 일반론 X
 4. 왜 효과적인지 1구절 포함 (예: "도파민 trigger 외부화", "결정 부담 ↓")
-5. ADHD 친화: 의지 부담 ↓ 차원 (L3/L4) 우선, L1·L5는 신중하게
+5. ADHD 친화: 의지 부담 ↓ 가지 (L3/L4) 우선, L1·L5는 신중하게
 6. 한 줄 70-100자
 
 [출력 JSON만 — 마크다운 X 따옴표 안 escape]
@@ -18153,7 +18220,7 @@ ${sameLayerNote}${convoNote}
       if (m) {
         const parsed = JSON.parse(m[0]);
         if (Array.isArray(parsed.options)) {
-          // 같은 차원 허용 시 prevLayer filter X
+          // 같은 가지 허용 시 prevLayer filter X
           aiOptions = parsed.options.filter(o =>
             o.layer && o.action && (allowSameLayer || o.layer !== prevLayer)
           );
@@ -18183,6 +18250,43 @@ ${sameLayerNote}${convoNote}
   _mutationChatState.loading = false;
   // chatRecord.options = 가장 최근 (선택용)
   _mutationChatState.chatRecord.options = aiOptions.slice();
+  _renderMutationChat();
+}
+
+// 사용자 요청 2026-04-29: 돌연변이 임시 대화창의 assistant 메시지를 ✦ 깨달음(scrap)으로 archive에 저장
+async function saveMutationMsgAsInsight(msgIdx) {
+  if (!_mutationChatState) return;
+  const m = _mutationChatState.messages[msgIdx];
+  if (!m || m.role !== 'assistant' || m.savedAsInsight) return;
+  // 직전 user 메시지(질문) 같이 저장
+  let priorUser = null;
+  for (let i = msgIdx - 1; i >= 0; i--) {
+    const p = _mutationChatState.messages[i];
+    if (p && p.role === 'user') { priorUser = p; break; }
+  }
+  const userQuestion = priorUser?.content || '';
+  const card = getStrategyCard(_mutationChatState.strategyId);
+  const _dayKey = todayKey();
+  const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  const headline = (m.content || '').slice(0, 30);
+  const body = (m.content || '').slice(0, 200);
+  state.archive = state.archive || [];
+  state.archive.unshift({
+    type: 'scrap',
+    headline,
+    body,
+    insight: m.content,
+    userMsg: userQuestion,
+    assistantMsg: m.content,
+    date,
+    source: card ? `🧬 돌연변이 (${card.title})` : '🧬 돌연변이',
+    savedAt: new Date().toISOString(),
+    tags: ['돌연변이', '진화']
+  });
+  m.savedAsInsight = true;
+  saveState();
+  if (typeof renderArchive === 'function') renderArchive();
+  showToast('✦ 깨달음에 저장됐어');
   _renderMutationChat();
 }
 
@@ -18311,6 +18415,14 @@ function _renderMutationChat() {
                 </button>
               `;
             }).join('')}
+          </div>
+        </div>`;
+      } else if (m.role === 'assistant' && !m._placeholder) {
+        // 사용자 요청 2026-04-29: assistant 메시지에 ✦ 깨달음으로 버튼 (메인 chat과 동일)
+        const saved = !!m.savedAsInsight;
+        html += `<div class="mutation-msg assistant">${escapeHtml(m.content)}
+          <div style="margin-top:8px;">
+            <button class="mutation-insight-btn${saved ? ' saved' : ''}" onclick="saveMutationMsgAsInsight(${msgIdx})">${saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>
           </div>
         </div>`;
       } else {
