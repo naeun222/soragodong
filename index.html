@@ -13376,8 +13376,8 @@ function renderBeach() {
     // 사용자 요청 2026-04-28: DNA 조각은 '소라의 부름' tier (call/legend)만 — 일반 오늘카드 소라는 제외
     if (s.tier !== 'call' && s.tier !== 'legend') return false;
     if (s._id && _dnaShellIdSet.has(s._id)) return true;
-    // legacy: missionId → mission.strategyId
-    if (s.missionId && (state.missions || []).some(m => m.id === s.missionId && m.strategyId)) return true;
+    // 사용자 보고 2026-04-29: legacy fallback이 attemptStatus 체크 없어 결과 체크 안 한 소라도 DNA로 판정. attemptStatus === 'worked' 인 미션만 DNA 인정.
+    if (s.missionId && (state.missions || []).some(m => m.id === s.missionId && m.strategyId && m.attemptStatus === 'worked')) return true;
     return false;
   }
   const dnaPathColor = {
