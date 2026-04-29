@@ -1054,6 +1054,124 @@
   .login-consent-text .badge-soft { font-weight: 600; color: var(--text-soft); }
   .login-consent-text .sub { font-size: 10.5px; color: var(--text-dim); display: block; margin-top: 4px; line-height: 1.6; }
 
+  /* === Settings UI v2 (사용자 요청 2026-04-30 ultrathink redesign) === */
+  .settings-section-divider {
+    font-size: 10.5px;
+    color: var(--text-soft);
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    margin: 28px 4px 10px 4px;
+    font-weight: 600;
+    opacity: 0.7;
+  }
+  .settings-section-divider:first-child { margin-top: 0; }
+  .settings-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+  }
+  .settings-card .input-label { margin-bottom: 8px; }
+  .settings-card .input-group { margin-bottom: 0; }
+  .settings-card-divider {
+    border-top: 1px solid rgba(255,255,255,0.05);
+    margin: 14px 0;
+  }
+  .settings-hint {
+    font-size: 11px;
+    color: var(--text-soft);
+    line-height: 1.6;
+    font-weight: normal;
+  }
+  .settings-collapse {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .settings-collapse > summary {
+    padding: 14px 18px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 500;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .settings-collapse > summary::-webkit-details-marker { display: none; }
+  .settings-collapse > summary::after {
+    content: '▾';
+    font-size: 11px;
+    color: var(--text-soft);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .settings-collapse[open] > summary::after { transform: rotate(180deg); }
+  .settings-collapse-body {
+    padding: 14px 18px 16px 18px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+  .settings-collapse-body button + button { margin-top: 6px; }
+  .settings-collapse-emphasis {
+    border-color: rgba(143,200,143,0.40);
+    background: rgba(143,200,143,0.04);
+  }
+  .settings-collapse-emphasis > summary { color: #b9d8b9; }
+  .settings-collapse-danger {
+    border-color: rgba(220,80,80,0.40);
+    background: rgba(220,80,80,0.04);
+  }
+  .settings-collapse-danger > summary { color: #e89090; }
+  .settings-info-box {
+    font-size: 12px;
+    color: var(--text);
+    background: rgba(255,255,255,0.02);
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    line-height: 1.7;
+  }
+  .settings-mini-label {
+    font-size: 10px;
+    color: var(--text-soft);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .settings-btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .settings-btn-row > button {
+    flex: 1;
+    min-width: 100px;
+    margin-top: 0 !important;
+  }
+  .settings-info-card {
+    background: rgba(126,200,227,0.04);
+    border: 1px solid rgba(126,200,227,0.18);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-top: 24px;
+    font-size: 11px;
+    line-height: 1.85;
+    color: var(--text-dim);
+  }
+  .settings-info-card-title {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+  }
+
   /* === V3 HOME === */
   /* V3.7: todays-shell CSS 제거됨 (Today's Shell 기능 자체 제거) */
   /* V3.7: mode-display CSS 제거됨 (renderModeDisplay dead code, mode-chip만 사용) */
@@ -7526,147 +7644,157 @@
       <div class="ritual-stage" id="ritualStage"></div>
     </div>
 
-    <!-- SETTINGS -->
+    <!-- SETTINGS — 사용자 요청 2026-04-30 ultrathink redesign: 계층화 + 시각적 위계 + wording 통일 -->
     <div class="screen" id="screen-settings">
       <div class="screen-title">설정</div>
       <div class="screen-sub">소라고동을 네 것으로.</div>
 
-      <!-- 사용자 요청 2026-04-30: ANTHROPIC API 키 input 제거. 앱 결제 모델로 전환. -->
+      <!-- ━━━━━━ 자주 보는 거 ━━━━━━ -->
+      <div class="settings-section-divider">자주 보는 거</div>
 
-      <!-- ═══ 자주 쓰는 거 ═══ -->
-      <div class="input-group">
-        <div class="input-label">👤 내 프로필 (AI가 참고)</div>
-        <textarea id="profileInput" placeholder="예: ADHD/ADD 성향, 박사과정, 야행성..." rows="4"></textarea>
-      </div>
-
-      <div class="input-group" id="billingSection">
-        <div class="input-label">💳 결제 / 사용량</div>
-        <div id="billingStatus" style="font-size:12px;color:var(--text);background:var(--surface);padding:12px;border-radius:12px;line-height:1.7;margin-bottom:8px;">불러오는 중...</div>
-        <button class="btn-secondary" onclick="openChargeModal()">⚡ 충전</button>
-        <button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:6px;">📅 월 정액 가입</button>
-        <button class="btn-secondary" onclick="refreshBillingStatus()" style="margin-top:6px;">🔄 새로고침</button>
-      </div>
-
-      <div class="input-group">
-        <div class="input-label">📋 일일 대화 한도</div>
-        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:8px;">
-          하루 메인 chat 메시지 수. 4시 이후 reset. 0 = 무제한.
+      <!-- 프로필 + 일일 한도 한 카드로 통합 -->
+      <div class="settings-card">
+        <div class="input-group">
+          <div class="input-label">👤 내 프로필 <span class="settings-hint">— AI가 답변 시 참고</span></div>
+          <textarea id="profileInput" placeholder="예: ADHD/ADD 성향, 박사과정, 야행성..." rows="3"></textarea>
         </div>
-        <input type="number" id="dailyChatCapInput" min="0" max="9999" placeholder="100" style="width:100%;">
-        <div id="dailyChatCountStatus" style="font-size:11px;color:var(--text-soft);margin-top:6px;"></div>
-      </div>
-
-      <!-- ═══ 사용자 가이드 ═══ -->
-      <div style="margin-top:30px;">
-        <div class="input-label" style="margin-bottom:8px;">📚 가이드</div>
-        <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
-        <button class="btn-secondary" onclick="showCoreReplayPicker()" style="margin-top:6px;">🔧 개별 코어 튜토리얼</button>
-        <button class="btn-secondary" onclick="showShortcutGuide()" style="margin-top:6px;">🌧 몰입 단축어 만들기</button>
-      </div>
-
-      <!-- ═══ 데이터 관리 ═══ -->
-      <div style="margin-top:30px;">
-        <div class="input-label" style="margin-bottom:8px;">☁️ 데이터 관리</div>
-        <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
-        <button class="btn-secondary" onclick="exportData()" style="margin-top:6px;">📁 파일로 백업</button>
-        <button class="btn-secondary" onclick="manualCloudBackup()" style="margin-top:6px; background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드에 저장</button>
-        <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="margin-top:6px; background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드에서 불러오기</button>
-        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:6px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동 박힌 백업 (rolling 5개)">🕰 자동 백업에서 불러오기</button>
-      </div>
-
-      <!-- ═══ 피드백·문의 ═══ -->
-      <div style="margin-top:30px;">
-        <div class="input-label" style="margin-bottom:8px;">💬 나한테 톡 줘 ✦</div>
-        <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
-          버그 / 이런 기능 있었으면 / 결제 문제 / 그냥 잡담 — 다 환영! 🐚<br>
-          <span style="color:var(--text-soft);">카톡 오픈채팅은 익명으로 들어와도 OK (닉네임 자유롭게).</span>
+        <div class="settings-card-divider"></div>
+        <div class="input-group">
+          <div class="input-label">📋 일일 대화 한도 <span class="settings-hint">— 0 = 무제한, 새벽 4시 reset</span></div>
+          <input type="number" id="dailyChatCapInput" min="0" max="9999" placeholder="100" style="width:100%;">
+          <div id="dailyChatCountStatus" class="settings-hint" style="margin-top:6px;"></div>
         </div>
-        <button class="btn-secondary" onclick="openFeedbackKakao()" style="background:linear-gradient(135deg, rgba(255,235,80,0.15), rgba(255,200,80,0.10)); border-color:rgba(255,200,80,0.40); color:#ffe580;">💬 카톡 오픈채팅 (익명 OK)</button>
-        <button class="btn-secondary" onclick="openFeedbackInApp()" style="margin-top:6px;">✉️ 여기서 바로 메시지</button>
-        <button class="btn-secondary" onclick="openMyFeedbackInbox()" id="myFeedbackInboxBtn" style="margin-top:6px;">📬 받은 답변 <span id="myFeedbackUnreadBadge" style="display:none; margin-left:6px; background:#e89090; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:700;"></span></button>
-        <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtn" style="margin-top:6px; display:none; background:linear-gradient(135deg, rgba(126,200,227,0.15), rgba(126,200,227,0.08)); border-color:rgba(126,200,227,0.40); color:#7ec8e3;">🛠 관리자 — 피드백 답변</button>
       </div>
 
-      <!-- ═══ 계정 ═══ -->
-      <div style="margin-top:30px;">
+      <!-- 결제 / 사용량 -->
+      <div class="settings-card" id="billingSection">
+        <div class="input-label" style="margin-bottom:8px;">💳 결제 / 사용량</div>
+        <div id="billingStatus" class="settings-info-box">불러오는 중...</div>
+        <div class="settings-btn-row">
+          <button class="btn-secondary" onclick="openChargeModal()">⚡ 충전</button>
+          <button class="btn-secondary" onclick="openSubscribeModal()">📅 월 정액</button>
+          <button class="btn-secondary" onclick="refreshBillingStatus()">🔄</button>
+        </div>
+      </div>
+
+      <!-- ━━━━━━ 가끔 ━━━━━━ -->
+      <div class="settings-section-divider">가끔</div>
+
+      <!-- 가이드 -->
+      <details class="settings-collapse">
+        <summary>📚 가이드 (튜토리얼 · 단축어)</summary>
+        <div class="settings-collapse-body">
+          <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
+          <button class="btn-secondary" onclick="showCoreReplayPicker()">🔧 개별 코어 튜토리얼</button>
+          <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
+        </div>
+      </details>
+
+      <!-- 백업 / 복원 -->
+      <details class="settings-collapse">
+        <summary>☁️ 백업 / 복원</summary>
+        <div class="settings-collapse-body">
+          <div class="settings-mini-label">백업 (저장)</div>
+          <button class="btn-secondary" onclick="manualSync()">☁️ 지금 클라우드 동기화</button>
+          <button class="btn-secondary" onclick="manualCloudBackup()">☁️ 체크포인트 박기 (10개 보관)</button>
+          <button class="btn-secondary" onclick="exportData()">📁 파일로 받기 (.json)</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">복원 (불러오기)</div>
+          <button class="btn-secondary" onclick="restoreFromCloudBackup()">☁️ 체크포인트에서</button>
+          <button class="btn-secondary" onclick="showAutoBackupList()">🕰 자동 백업에서 (주 1회 자동)</button>
+        </div>
+      </details>
+
+      <!-- 피드백 -->
+      <details class="settings-collapse">
+        <summary>💬 피드백 · 문의</summary>
+        <div class="settings-collapse-body">
+          <div class="settings-hint" style="margin-bottom:10px;">
+            버그 · 아이디어 · 잡담 다 환영 🐚
+          </div>
+          <button class="btn-secondary" onclick="openFeedbackInApp()">✉️ 메시지 보내기</button>
+          <button class="btn-secondary" onclick="openMyFeedbackInbox()" id="myFeedbackInboxBtn">📬 받은 답변 <span id="myFeedbackUnreadBadge" style="display:none; margin-left:6px; background:#e89090; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:700;"></span></button>
+          <button class="btn-secondary" onclick="openFeedbackKakao()">💬 카톡 오픈채팅 (익명 OK)</button>
+          <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtn" style="display:none;">🛠 관리자 — 피드백 답변</button>
+        </div>
+      </details>
+
+      <!-- ━━━━━━ 보안 + 계정 ━━━━━━ -->
+      <div class="settings-section-divider">보안 + 계정</div>
+
+      <!-- E2EE -->
+      <details class="settings-collapse settings-collapse-emphasis">
+        <summary>🔐 종단간 암호화 (E2EE) — 권장</summary>
+        <div class="settings-collapse-body">
+          <div class="settings-hint" style="margin-bottom:10px;">
+            활성 시 <strong>회사조차 본인 데이터를 볼 수 없음</strong>.<br>
+            본인이 정한 비밀번호를 안전한 곳에 보관 (분실 시 복구 X).
+          </div>
+          <div id="e2eeStatus" class="settings-info-box">상태 확인 중...</div>
+          <button class="btn-secondary" onclick="setupE2EE()">🔐 활성화</button>
+          <button class="btn-secondary" onclick="showE2EERecoveryInfo()">📋 비밀번호 안내</button>
+        </div>
+      </details>
+
+      <!-- 계정 -->
+      <div class="settings-card">
         <div class="input-label" style="margin-bottom:8px;">👤 계정</div>
-        <div id="accountInfo" style="font-size:12px; color:var(--text-dim); padding:12px; background:var(--surface); border-radius:12px; margin-bottom:8px;"></div>
+        <div id="accountInfo" class="settings-info-box"></div>
         <button class="btn-secondary btn-danger" onclick="logout()">로그아웃</button>
       </div>
 
-      <!-- ═══ 개발자 도구 (collapse, admin only) ═══ -->
-      <details id="devToolsSection" class="model-collapse" style="display:none; margin-top:30px; border:1px solid rgba(212,167,106,0.30); border-radius:12px;">
-        <summary style="padding:12px 14px;">🧪 개발자 도구</summary>
-        <div class="model-collapse-content" style="padding: 10px 14px;">
-          <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
-            <strong style="color:var(--accent2);">⚠️ 테스터 모드 ON 후 사용</strong> — 변경 저장 X, OFF 시 원래 데이터로 복원.
+      <!-- ━━━━━━ 개발자 (admin only) ━━━━━━ -->
+      <details id="devToolsSection" class="settings-collapse" style="display:none;">
+        <summary>🧪 개발자 도구</summary>
+        <div class="settings-collapse-body">
+          <div class="settings-hint" style="margin-bottom:10px;">
+            <strong style="color:#e8c590;">⚠️ 테스터 모드 ON 후 사용</strong> — 변경 저장 X, OFF 시 원래 데이터 복원.
           </div>
           <button class="btn-secondary" id="testerModeToggleBtn" onclick="toggleTesterMode()">🧪 테스터 모드: OFF</button>
-          <button class="btn-secondary" onclick="testSeedV4Data()" style="margin-top:6px; background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(212,167,106,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🌱 V4 전체 시드 데이터 박기</button>
-          <button class="btn-secondary" onclick="testStartTutorialFromStep()" style="margin-top:6px;" title="특정 step부터 튜토리얼 시작">🎯 튜토리얼 step N부터 시작</button>
-          <button class="btn-secondary" onclick="showNavPaddingSlider()" style="margin-top:6px;" title="하단 nav padding 슬라이더">📏 하단 nav padding 조절</button>
-          <button class="btn-secondary" onclick="forceAnalyze()" style="margin-top:6px;" title="opus 4.7 사용 — 비싸. 일주일 자동 실행되니 평소엔 X.">📊 강제 모델 분석 (수동, 비쌈)</button>
-          <!-- 사용자 보고 2026-04-30: 잔존 시드 흔적 강제 정리 (entries / chatMessages / chatArchive 등 _seed marker + 시드 텍스트 매칭). -->
-          <button class="btn-secondary" onclick="cleanLegacySeedData()" style="margin-top:6px; background:linear-gradient(135deg, rgba(220,150,80,0.18), rgba(220,150,80,0.10)); border-color:rgba(220,150,80,0.40); color:#e8c590;" title="entries/chatMessages/chatArchive 등에 잔존하는 시드 텍스트 강제 정리">🧹 잔존 시드 정리 (강제)</button>
-          <!-- 사용자 요청 2026-04-30: 관리자 — 토스 송금 pending list + 승인/환수 -->
-          <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border);">
-            <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">💼 관리자 (토스 송금 처리)</div>
-            <button class="btn-secondary" onclick="adminLoadPendingCharges()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">📋 대기 중인 송금 list</button>
-            <div id="adminPendingList" style="margin-top:10px; font-size:11px;"></div>
-          </div>
-          <!-- 사용자 요청 2026-04-30: 개발자 도구에서 인앱 피드백 보기 + 답변 -->
-          <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border);">
-            <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">📬 사용자 피드백 (인앱 메시지)</div>
-            <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtnDev" style="background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#9ed4a0;">📬 사용자 피드백 보기 / 답변</button>
-          </div>
+          <button class="btn-secondary" onclick="testSeedV4Data()">🌱 V4 시드 데이터</button>
+          <button class="btn-secondary" onclick="testStartTutorialFromStep()" title="특정 step부터 튜토리얼 시작">🎯 튜토리얼 step N부터</button>
+          <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
+          <button class="btn-secondary" onclick="forceAnalyze()" title="opus 4.7 사용 — 비쌈">📊 강제 모델 분석 (비쌈)</button>
+          <button class="btn-secondary" onclick="cleanLegacySeedData()" title="잔존 시드 텍스트 강제 정리">🧹 잔존 시드 정리</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 토스 송금</div>
+          <button class="btn-secondary" onclick="adminLoadPendingCharges()">📋 대기 중인 송금 list</button>
+          <div id="adminPendingList" style="margin-top:10px; font-size:11px;"></div>
+
+          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 사용자 피드백</div>
+          <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtnDev">📬 피드백 보기 / 답변</button>
         </div>
       </details>
 
-      <!-- 사용자 요청 2026-04-30: E2EE Stage 2 — 회사도 평문 못 보게 (보안 강화) -->
-      <details class="model-collapse" style="margin-top:30px; border:1px solid rgba(143,200,143,0.40); border-radius:12px; background:rgba(143,200,143,0.05);">
-        <summary style="padding:12px 14px; color:#9ed4a0;">🔐 보안 강화 (E2EE)</summary>
-        <div class="model-collapse-content" style="padding: 10px 14px;">
-          <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
-            종단간 암호화 활성 시 <strong>회사조차 본인의 데이터를 볼 수 없습니다</strong>.<br>
-            <span style="color:var(--text-soft);">활성화 시 본인이 정한 비밀번호를 안전한 곳에 보관해주세요 (분실 시 데이터 복구 불가능).</span>
-          </div>
-          <div id="e2eeStatus" style="font-size:11px; color:var(--text-dim); margin-bottom:10px; padding:8px; background:var(--surface); border-radius:8px;">상태 확인 중...</div>
-          <button class="btn-secondary" onclick="setupE2EE()" style="background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(126,200,227,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🔐 E2EE 활성화</button>
-          <button class="btn-secondary" onclick="showE2EERecoveryInfo()" style="margin-top:6px;" title="비밀번호 안내 다시 보기">📋 비밀번호 안내 다시 보기</button>
-        </div>
-      </details>
-
-      <!-- ═══ ⚠️ 위험 영역 (collapse, 거리 + 색깔 분리) — 사용자 요청 2026-04-30: 잘못 안 눌리게 ═══ -->
-      <details class="model-collapse" style="margin-top:50px; border:1px solid rgba(220,80,80,0.40); border-radius:12px; background:rgba(220,80,80,0.05);">
-        <summary style="padding:12px 14px; color:#e89090;">⚠️ 위험 영역 (눌러서 펼치기)</summary>
-        <div class="model-collapse-content" style="padding: 10px 14px;">
-          <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
-            아래 동작들은 <strong style="color:#e89090;">되돌릴 수 없음</strong>. 신중히.
-          </div>
+      <!-- ━━━━━━ 위험 ━━━━━━ -->
+      <div class="settings-section-divider">위험 영역</div>
+      <details class="settings-collapse settings-collapse-danger">
+        <summary>⚠️ 펼쳐서 사용 (되돌릴 수 없음)</summary>
+        <div class="settings-collapse-body">
           <button class="btn-secondary btn-danger" onclick="resetAll()">🔄 모든 데이터 초기화 (V4)</button>
-          <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-top:6px; margin-bottom:14px;">
-            V4 데이터만 삭제 (V3 prod 안 건드림). 계정 / API 키 유지.
+          <div class="settings-hint" style="margin-top:4px; margin-bottom:12px;">
+            V4 데이터만 삭제 (V3 prod 안 건드림). 계정 유지.
           </div>
-          <button class="btn-secondary btn-danger" onclick="withdrawAccount()" style="margin-top:6px;">🚫 회원 탈퇴 (영구 삭제)</button>
-          <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-top:6px;">
+          <button class="btn-secondary btn-danger" onclick="withdrawAccount()">🚫 회원 탈퇴 (영구 삭제)</button>
+          <div class="settings-hint" style="margin-top:4px;">
             모든 자기관찰 데이터 즉시 삭제. 결제 기록은 전자상거래법상 5년 보존 (익명화).
           </div>
         </div>
       </details>
 
-      <!-- ═══ 프라이버시 안내 (E2EE 활성 여부에 따라 동적) ═══ -->
-      <div style="margin-top:30px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; line-height:1.8;">
-        <div style="font-size:13px; color:var(--accent); font-weight:600; margin-bottom:8px;">🛡️ 데이터 보호</div>
-        <div style="color:var(--text);" id="settingsPrivacyAccessInfo">
+      <!-- ━━━━━━ 정보 (마지막) ━━━━━━ -->
+      <div class="settings-info-card">
+        <div class="settings-info-card-title">🛡️ 데이터 보호</div>
+        <div id="settingsPrivacyAccessInfo">
           🔒 본인의 데이터는 본인만 접근 가능합니다<br>
-          🔐 종단간 암호화(E2EE) 활성 시 회사도 본인의 데이터를 볼 수 없습니다 (위 보안 강화 섹션에서 활성)<br>
+          🔐 종단간 암호화(E2EE) 활성 시 회사도 본인의 데이터를 볼 수 없습니다<br>
           🚫 데이터를 광고·판매·외부 공유에 사용하지 않습니다<br>
-          🤖 AI (Anthropic) 서버 데이터는 30일 후 자동 삭제되며, AI 학습에 사용되지 않습니다<br>
+          🤖 AI (Anthropic) 서버 데이터는 30일 후 자동 삭제, 학습에 사용 X<br>
           ✅ Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)<br>
           🔐 모든 통신은 HTTPS로 암호화됩니다
         </div>
         <div style="margin-top:10px; font-size:10px; color:var(--text-soft);">
-          개인정보 보호책임자: 김나은 · 자세한 내용은 <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/privacy.md" target="_blank" style="color:var(--accent);">개인정보처리방침</a>
+          개인정보 보호책임자: 김나은 · <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/privacy.md" target="_blank" style="color:var(--accent);">개인정보처리방침</a>
         </div>
       </div>
 
