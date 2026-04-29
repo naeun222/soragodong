@@ -31775,6 +31775,11 @@ function renderUpdateNotice() {
   const banner = document.getElementById('updateBanner');
   if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
 
+  // 사용자 보고 2026-04-30: 이메일 코드 입력 단계 (인증 미완료)에서 모달 뜨던 버그 fix.
+  // authUserId / session 둘 다 활성일 때만 모달 표시.
+  if (typeof authUserId === 'undefined' || !authUserId) return;
+  if (typeof session === 'undefined' || !session || !session.access_token) return;
+
   const major = _currentMajor();
   const dismissedMajor = state && state.preferences && state.preferences.dismissedMajor;
   const shouldShow = state && dismissedMajor !== major
