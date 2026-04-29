@@ -7596,10 +7596,45 @@ const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮
 // V4 prod URL은 'me_v4' row만 읽고 씀 → V3 데이터(`me`)는 영원히 안전.
 // ═══════════════════════════════════════════════════════════════
 // 사용자 요청 2026-04-29: Phase C swap point — Anthropic API 호출 통합 helper.
-// 현재: 클라이언트가 사용자 키로 직접 Anthropic 호출.
-// Phase C 활성: ANTHROPIC_API_URL → '/api/chat' (백엔드 프록시), 헤더에서 x-api-key 제거 (서버가 키 보유) — 한 줄 변경.
-// 신규 코드는 callAnthropic 사용 권장. 기존 fetch 직접 호출 사이트는 점진 마이그레이션.
+// 사용자 요청 2026-04-30 (Phase C 활성): fetch interceptor로 자동 swap.
+// state.apiKey 박혀있으면 → 직접 Anthropic 호출 (사용자 본인 키 결제)
+// state.apiKey 비어있고 session 활성이면 → /api/chat 백엔드 프록시 (앱 결제 모델)
+// 모든 28개 LLM call 위치 자동 redirect — 코드 변경 X.
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+(function installAnthropicProxyInterceptor() {
+  if (typeof window === 'undefined') return;
+  if (window._anthropicProxyInstalled) return;
+  window._anthropicProxyInstalled = true;
+  const _origFetch = window.fetch.bind(window);
+  window.fetch = function(input, init) {
+    const url = (typeof input === 'string') ? input : (input && input.url) || '';
+    if (url !== ANTHROPIC_API_URL) return _origFetch(input, init);
+    // 사용자 본인 키 있으면 직접 호출
+    if (state && state.apiKey) return _origFetch(input, init);
+    // session 없으면 그대로 (오류 발생 → 사용자에게 표시)
+    if (typeof session === 'undefined' || !session || !session.access_token) {
+      return _origFetch(input, init);
+    }
+    // 백엔드 프록시로 swap
+    let headers = {};
+    if (init && init.headers) {
+      if (init.headers instanceof Headers) {
+        init.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
+      } else if (Array.isArray(init.headers)) {
+        init.headers.forEach(([k, v]) => { headers[k.toLowerCase()] = v; });
+      } else {
+        Object.keys(init.headers).forEach(k => { headers[k.toLowerCase()] = init.headers[k]; });
+      }
+    }
+    delete headers['x-api-key'];
+    delete headers['anthropic-version'];
+    delete headers['anthropic-dangerous-direct-browser-access'];
+    headers['authorization'] = 'Bearer ' + session.access_token;
+    headers['content-type'] = 'application/json';
+    const newInit = Object.assign({}, init || {}, { headers });
+    return _origFetch('/api/chat', newInit);
+  };
+})();
 function _anthropicHeaders(extraHeaders) {
   return Object.assign({
     'Content-Type': 'application/json',
