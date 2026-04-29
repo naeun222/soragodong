@@ -17725,9 +17725,9 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
   }
   _renderMutationChat();
 
-  // 사용자 요청 2026-04-29: 재생성 시 대화 흐름 반영
+  // 사용자 요청 2026-04-29: 재생성 시 대화 흐름 반영 — 전체 임시 대화 (보통 짧아 token 부담 X)
   const recentMsgs = isRegen && _mutationChatState
-    ? _mutationChatState.messages.slice(-10).map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n')
+    ? _mutationChatState.messages.map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n')
     : '';
   const sameLayerNote = allowSameLayer
     ? `\n[같은 차원 허용] 이전이 ${prevLayer} 여도 OK — 같은 차원에서 refine된 옵션 (이유 분석 + 보완) 도 1-2개 포함 가능. 단 똑같이 X — 대화에서 발견한 이유 반영해서 보완.`
@@ -20052,9 +20052,13 @@ function _renderStrategyCardHtml(s) {
       const isMutated = g.status === 'mutated';
       const dots = (g.attempts || []).map(a => {
         // shellId / missionId 로 shell 찾기
+        // 사용자 보고 2026-04-29: 'didnt' attempt도 missionId fallback으로 shell 끌어와 DNA 트리에 박히던 버그.
+        // worked/meh 만 shell 매핑. didnt는 missionId 있어도 shell X.
         let shell = null;
         if (a.shellId) shell = (state.shellCollection || []).find(sc => sc._id === a.shellId);
-        if (!shell && a.missionId) shell = (state.shellCollection || []).find(sc => sc.missionId === a.missionId);
+        if (!shell && a.missionId && (a.status === 'worked' || a.status === 'meh')) {
+          shell = (state.shellCollection || []).find(sc => sc.missionId === a.missionId);
+        }
         let bgColor;
         let extraStyle = '';
         let titleStr = a.status;
