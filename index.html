@@ -7192,19 +7192,7 @@
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
       </div>
 
-      <!-- 사용자 요청 2026-04-29: 매일 체크인 알림 — Notification API 기반. 탭 열린 상태/PWA 설치 시 작동. -->
-      <div style="margin-top:24px;">
-        <div class="input-label" style="margin-bottom:8px;">🔔 매일 알림</div>
-        <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
-          매일 정해진 시간에 체크인 알림. <b>탭 열려있거나 PWA 설치된 경우</b>에만 작동 (브라우저 제약).<br>
-          진짜 푸시(탭 닫혀도)는 나중에 백엔드 박힌 후.
-        </div>
-        <button class="btn-secondary" id="dailyNotifToggleBtn" onclick="toggleDailyNotification()">🔕 매일 알림: OFF</button>
-        <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-          <span style="font-size:12px; color:var(--text-dim);">시간:</span>
-          <input type="time" id="dailyNotifTimeInput" value="21:00" onchange="setDailyNotificationTime(this.value)" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:6px 10px; font-family:inherit;">
-        </div>
-      </div>
+      <!-- 알림 기능 미박힘 — 진짜 백그라운드 푸시는 Phase C (백엔드 + Service Worker) 박힌 후 활성. -->
 
       <div>
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
@@ -7350,6 +7338,29 @@ const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮
 // V3은 user_id=email, V4는 user_id='me_v4'. localStorage 키도 분리.
 // V4 prod URL은 'me_v4' row만 읽고 씀 → V3 데이터(`me`)는 영원히 안전.
 // ═══════════════════════════════════════════════════════════════
+// 사용자 요청 2026-04-29: Phase C swap point — Anthropic API 호출 통합 helper.
+// 현재: 클라이언트가 사용자 키로 직접 Anthropic 호출.
+// Phase C 활성: ANTHROPIC_API_URL → '/api/chat' (백엔드 프록시), 헤더에서 x-api-key 제거 (서버가 키 보유) — 한 줄 변경.
+// 신규 코드는 callAnthropic 사용 권장. 기존 fetch 직접 호출 사이트는 점진 마이그레이션.
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+function _anthropicHeaders(extraHeaders) {
+  return Object.assign({
+    'Content-Type': 'application/json',
+    'x-api-key': state.apiKey,
+    'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-access': 'true'
+  }, extraHeaders || {});
+}
+async function callAnthropic(body, options) {
+  const opts = options || {};
+  return fetch(ANTHROPIC_API_URL, {
+    method: 'POST',
+    headers: _anthropicHeaders(opts.extraHeaders),
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+    signal: opts.signal
+  });
+}
+
 const V4_USER_ID = 'me_v4';
 const V4_BACKUP_USER_ID = 'backup_v6_pre_v7';  // V3→V4 마이그레이션 1회 백업
 const V4_TESTER_BACKUP_USER_ID = 'me_v4_backup';  // testerMode ON 시점 cloud 백업 (사용자 요청 2026-04-28)
@@ -8401,9 +8412,11 @@ async function init() {
     if (!document.hidden) { refreshHeaderDate(); applyNightMode(); }
   });
 
-  // V4 사용자 요청 2026-04-29: 매일 체크인 알림 자동 스케줄
-  if (typeof scheduleDailyNotification === 'function') {
-    setTimeout(() => { try { scheduleDailyNotification(); } catch (e) { console.warn('daily notif schedule:', e); } }, 1500);
+  // V4 사용자 요청 2026-04-29: Service Worker 등록 (오프라인 + 설치 배너 + 푸시 인프라 ready)
+  if ('serviceWorker' in navigator) {
+    setTimeout(() => {
+      navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW register:', e));
+    }, 2000);
   }
 
   // V4 코어 튜토리얼 잠금 — 글로벌 클릭 인터셉터 (capture phase로 원래 onclick 가로챔)
@@ -11758,11 +11771,8 @@ JSON 형식으로 출력:
 
 JSON만 출력. 다른 설명 X.`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] })
-  });
+  // 사용자 요청 2026-04-29: callAnthropic helper 사용 (Phase C swap 대비)
+  const resp = await callAnthropic({ model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
   const text = data.content[0].text;
@@ -30379,105 +30389,9 @@ async function _deleteTesterBackupFromCloud() {
     );
   } catch (e) { console.warn('delete tester backup:', e); }
 }
-// 사용자 요청 2026-04-29: 매일 체크인 알림 — Notification API 기반 (탭 열린 / PWA 설치 시 작동)
-let _dailyNotifTimer = null;
-function scheduleDailyNotification() {
-  if (_dailyNotifTimer) { clearTimeout(_dailyNotifTimer); _dailyNotifTimer = null; }
-  if (typeof Notification === 'undefined') return;
-  if (Notification.permission !== 'granted') return;
-  const pref = state.preferences && state.preferences.dailyNotification;
-  if (!pref || !pref.enabled || !pref.time) return;
-  const [h, m] = pref.time.split(':').map(Number);
-  if (isNaN(h) || isNaN(m)) return;
-  const now = new Date();
-  const next = new Date(now);
-  next.setHours(h, m, 0, 0);
-  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
-  const delay = Math.max(1000, next.getTime() - now.getTime());
-  // setTimeout 최대 ~24.8일 — daily 안전
-  _dailyNotifTimer = setTimeout(() => {
-    try {
-      const todayK = (typeof todayKey === 'function') ? todayKey() : null;
-      const hasCheckinToday = todayK && (state.entries || []).some(e => e.date === todayK && (e.mood != null || e.vitality != null));
-      if (!hasCheckinToday) {
-        new Notification('🐚 소라고동', {
-          body: '오늘 하루 되돌아보자 🫶🫶',
-          icon: '/icon-192.png',
-          tag: 'daily-checkin',
-          renotify: true
-        });
-      }
-    } catch (e) { console.warn('notification fire:', e); }
-    scheduleDailyNotification();  // 다음 날 다시 스케줄
-  }, delay);
-}
-async function requestNotificationPermission() {
-  if (typeof Notification === 'undefined') {
-    if (typeof showToast === 'function') showToast('이 브라우저는 알림 미지원');
-    return false;
-  }
-  if (Notification.permission === 'granted') return true;
-  if (Notification.permission === 'denied') {
-    if (typeof showToast === 'function') showToast('알림 차단됨. 브라우저 설정에서 허용해줘');
-    return false;
-  }
-  try {
-    const result = await Notification.requestPermission();
-    return result === 'granted';
-  } catch (e) {
-    console.warn('notif permission:', e);
-    return false;
-  }
-}
-async function toggleDailyNotification() {
-  state.preferences = state.preferences || {};
-  if (!state.preferences.dailyNotification) {
-    state.preferences.dailyNotification = { enabled: false, time: '21:00' };
-  }
-  if (!state.preferences.dailyNotification.enabled) {
-    const granted = await requestNotificationPermission();
-    if (!granted) return;
-    state.preferences.dailyNotification.enabled = true;
-    if (typeof showToast === 'function') showToast(`🔔 매일 ${state.preferences.dailyNotification.time}에 알림`);
-  } else {
-    state.preferences.dailyNotification.enabled = false;
-    if (typeof showToast === 'function') showToast('🔕 알림 끔');
-  }
-  saveState();
-  scheduleDailyNotification();
-  refreshDailyNotificationUI();
-}
-function setDailyNotificationTime(time) {
-  if (!time || !time.match(/^\d{2}:\d{2}$/)) return;
-  state.preferences = state.preferences || {};
-  if (!state.preferences.dailyNotification) {
-    state.preferences.dailyNotification = { enabled: false, time };
-  } else {
-    state.preferences.dailyNotification.time = time;
-  }
-  saveState();
-  scheduleDailyNotification();
-  if (typeof showToast === 'function' && state.preferences.dailyNotification.enabled) {
-    showToast(`알림 시간 ${time}`);
-  }
-}
-function refreshDailyNotificationUI() {
-  const btn = document.getElementById('dailyNotifToggleBtn');
-  const timeInput = document.getElementById('dailyNotifTimeInput');
-  const pref = state.preferences && state.preferences.dailyNotification;
-  const enabled = !!(pref && pref.enabled);
-  if (btn) {
-    btn.textContent = enabled ? '🔔 매일 알림: ON' : '🔕 매일 알림: OFF';
-    btn.style.background = enabled ? 'linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10))' : '';
-    btn.style.color = enabled ? '#c5e8c5' : '';
-    btn.style.borderColor = enabled ? 'rgba(143,200,143,0.4)' : '';
-  }
-  if (timeInput) timeInput.value = (pref && pref.time) || '21:00';
-}
+// 알림 기능 미박힘 — 진짜 백그라운드 푸시는 Phase C (백엔드 + Service Worker) 박힌 후 활성.
 
 function refreshTesterModeUI() {
-  // V4: 매일 알림 UI도 함께 새로고침 (설정 화면 진입 시)
-  if (typeof refreshDailyNotificationUI === 'function') refreshDailyNotificationUI();
   const btn = document.getElementById('testerModeToggleBtn');
   if (!btn) return;
   const on = state.preferences && state.preferences.testerMode;
