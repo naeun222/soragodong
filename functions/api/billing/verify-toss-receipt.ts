@@ -72,21 +72,25 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   }
 
   // 3. Sonnet vision 분석
-  const prompt = `다음 토스 송금 영수증 캡처를 분석해. JSON으로 출력:
+  const prompt = `다음 송금 관련 캡처를 분석해. 토스 / 우리 / 국민 / 신한 / 하나 / 기업 / 카뱅 / 토스뱅크 등 모든 은행 앱 가능. JSON으로 출력:
 
 {
   "amount_krw": 숫자 (송금 금액, 원 단위),
   "receiver_account_number": "수신 계좌번호 (숫자만, 하이픈 제거). 화면에 안 보이면 null",
   "receiver_bank": "수신 은행명. 안 보이면 null",
-  "receiver_holder": "수신 예금주명",
-  "memo": "송금 메모 (있다면)",
+  "receiver_holder": "수신 예금주명. 본인 계좌 출금 내역 캡처면 출금 받은 상대방 (보낸 곳) 이름",
+  "memo": "송금 메모 (있다면). 본인 통장 거래 내역에는 '받는 분에게 표시할 내용' 또는 메모 칼럼 확인",
   "send_time": "송금 시각 (가능하면 ISO 8601, 없으면 null)",
-  "screen_type": "어느 화면 캡처인지: 'transfer_form' (송금 직전 — 계좌 보임) / 'transfer_complete' (송금 완료 — 계좌 안 보임) / 'transaction_detail' (거래내역 상세 — 계좌 보임) / 'unknown'",
-  "is_toss_receipt": true/false (토스 송금 화면이 맞는지),
+  "screen_type": "어느 화면 캡처인지: 'transfer_form' (송금 직전 — 계좌 보임) / 'transfer_complete' (토스 송금 완료) / 'transaction_detail' (거래내역 상세) / 'own_account_history' (본인 계좌 거래 내역 — 출금 line) / 'unknown'",
+  "is_money_transfer": true/false (송금 관련 화면이 맞는지 — 광고/잔액 X, 송금 거래 O),
   "confidence": 0.0-1.0
 }
 
-토스 송금 완료 화면은 계좌번호가 보이지 않을 수 있음. 그 경우 receiver_account_number는 null로.
+** 본인 계좌 거래 내역 캡처 케이스 **:
+사용자가 송금 보낸 후 자기 통장 / 자기 은행앱 거래 내역에서 출금 line을 캡처할 수도 있음.
+이 경우: 출금 line의 상대방 이름 = receiver_holder, 출금 금액 = amount_krw, 메모 / 적요 = memo.
+보통 line 형식: "[시각] 출금 [상대 이름] -[금액]원 [메모]" 등.
+
 JSON만 출력. 다른 글 X.`;
 
   let aiAnalysis: any;
@@ -136,8 +140,11 @@ JSON만 출력. 다른 글 X.`;
   }
 
   // 4. 검증 — 자동 인증 조건
-  if (!aiAnalysis.is_toss_receipt) {
-    return jsonResponse({ error: '토스 송금 영수증이 아닙니다', ai_analysis: aiAnalysis }, 400);
+  // 사용자 보고 2026-04-30: is_toss_receipt → is_money_transfer (모든 은행 앱 지원).
+  // 옛 버전 호환: is_toss_receipt도 체크.
+  const isMoneyTransfer = aiAnalysis.is_money_transfer === true || aiAnalysis.is_toss_receipt === true;
+  if (!isMoneyTransfer) {
+    return jsonResponse({ error: '송금 화면이 아닙니다', ai_analysis: aiAnalysis }, 400);
   }
   if (aiAnalysis.confidence < 0.7) {
     return jsonResponse({ error: 'AI 분석 신뢰도가 낮습니다 (수동 확인 필요). 카톡 오픈채팅으로 문의해주세요.', ai_analysis: aiAnalysis }, 400);
