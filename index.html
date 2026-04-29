@@ -9557,13 +9557,14 @@ const CORE_TUTORIAL_RANGES = {
   core8: { startId: 'magic_room_intro',  endId: 'magic_unlock_explain' }   // 6 step
 };
 
+// 사용자 요청 2026-04-29: 제목 단순화 — '코어' 빼고 단순 명사로
 const CORE_LABELS = {
-  core1: '시작 / 체크인 / 대화 (한 바퀴)',
-  core2: '소라의 부름 + 모래사장 + 양생방',
-  core3: '실행 탭 — 머릿속 풀기 + 몰입',
-  core4: '나 탭 — 분석 결과',
-  core5: '도서관 탭 — 5 카테고리 + 리뷰',
-  core6: '숙고 질문',
+  core1: '시작',
+  core2: '소라의 부름',
+  core3: '실행',
+  core4: '나',
+  core5: '도서관',
+  core6: '숙고',
   core8: '마법의 소라고동'
 };
 
@@ -9640,12 +9641,12 @@ function isCoreLocked(coreId) {
 
 // 코어별 잠금 모달용 메타 (이름 + 길이 힌트)
 const CORE_LOCK_INFO = {
-  core1: { name: '시작 / 체크인 / 대화', long: false },
-  core2: { name: '소라의 부름', long: true },   // 사용자 명시: 좀 김
-  core3: { name: '실행 탭',     long: false },
-  core4: { name: '나 탭',        long: false },
-  core5: { name: '도서관',       long: true },   // 사용자 명시: 좀 김
-  core6: { name: '숙고 질문',    long: false },
+  core1: { name: '시작',           long: false },
+  core2: { name: '소라의 부름',     long: true },   // 사용자 명시: 좀 긺
+  core3: { name: '실행',           long: false },
+  core4: { name: '나',             long: false },
+  core5: { name: '도서관',         long: true },   // 사용자 명시: 좀 긺
+  core6: { name: '숙고',           long: false },
   core8: { name: '마법의 소라고동', long: false }
 };
 
@@ -9791,15 +9792,16 @@ async function showCoreReplayPicker() {
   if (typeof showOptionsModal !== 'function') {
     return startInteractiveOnboarding();
   }
+  // 사용자 요청 2026-04-29: 제목 '코어 #N' 제거, 단순 명사 (코어 번호 순서 유지)
   const opts = [
-    { label: '🐚 코어 #1 — 시작 / 체크인 / 대화', value: 'core1', desc: '한 바퀴 (필수 핵심)' },
-    { label: '⭐ 코어 #2 — 소라의 부름 / 모래사장 / 양생방', value: 'core2', desc: '미션 + 결과 체크 + 전략 진화 (좀 김)' },
-    { label: '🚀 코어 #3 — 실행 탭', value: 'core3', desc: '머릿속 풀기 + 몰입 ritual' },
-    { label: '✦ 코어 #4 — 나 탭', value: 'core4', desc: '분석 결과' },
-    { label: '📚 코어 #5 — 도서관 탭', value: 'core5', desc: '5 카테고리 + 리뷰 (좀 김)' },
-    { label: '🌊 코어 #6 — 숙고 질문', value: 'core6', desc: '큰 물음' },
-    { label: '🧙‍♂️ 코어 #8 — 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
-    { label: '✨ 풀 튜토리얼', value: 'full', desc: '처음부터 끝까지 (~30분)' }
+    { label: '🐚 시작',             value: 'core1', desc: '체크인 / 대화 한 바퀴 (필수 핵심)' },
+    { label: '⭐ 소라의 부름',      value: 'core2', desc: '미션 / 모래사장 / 양생방 (좀 긺)' },
+    { label: '🚀 실행',             value: 'core3', desc: '머릿속 풀기 + 몰입' },
+    { label: '✦ 나',                value: 'core4', desc: 'AI가 본 너의 패턴·가치·특성' },
+    { label: '📚 도서관',           value: 'core5', desc: '일기 / 진주 / 깨달음 / 리뷰 (좀 긺)' },
+    { label: '🌊 숙고',             value: 'core6', desc: '마음을 울리는 큰 물음' },
+    { label: '🧙‍♂️ 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
+    { label: '✨ 풀 튜토리얼',       value: 'full',  desc: '처음부터 끝까지 (~30분)' }
   ];
   const choice = await showOptionsModal({
     title: '🔧 개별 코어 튜토리얼',
@@ -10075,9 +10077,9 @@ function onbPositionStep(step, retryCount) {
   const phaseInfo = (typeof _getPhaseInfo === 'function') ? _getPhaseInfo(_onbStep) : null;
   const phaseLabel = document.getElementById('onbPhaseLabel');
   if (phaseLabel) {
-    // 코어 튜토리얼이면 코어 라벨, 아니면 phase 라벨
+    // 코어 튜토리얼이면 단순 명사 라벨, 아니면 phase 라벨
     if (_activeCoreId && CORE_LABELS[_activeCoreId]) {
-      phaseLabel.textContent = '코어 — ' + CORE_LABELS[_activeCoreId];
+      phaseLabel.textContent = CORE_LABELS[_activeCoreId] + ' 튜토리얼';
     } else {
       phaseLabel.textContent = phaseInfo ? phaseInfo.phase.name : '';
     }
