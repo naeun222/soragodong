@@ -13407,44 +13407,67 @@ async function generateReview(type) {
   const chatInRange = state.chatMessages.filter(m => m.timestamp && new Date(m.timestamp) >= cutoff && !m.typing && !m.error).slice(-30);
   const decisionsInRange = state.decisions.filter(d => new Date(d.startedAt) >= cutoff || (d.decidedAt && new Date(d.decidedAt) >= cutoff));
 
+  // 사용자 요청 2026-04-30: 리뷰 재설계 — Detective + Quotes + Seeds + One-word.
+  // 이전 리뷰 씨앗 박혔으면 callback 위해 prompt에 주입 (continuity).
+  const prevList = type === 'weekly' ? (state.weeklyReviews || []) : (state.monthlyReviews || []);
+  const prevSeeds = prevList.length > 0 ? (prevList[prevList.length - 1].seeds || []) : [];
+
+  const periodLabel = type === 'weekly' ? '주' : '달';
   const prompt = `너는 사용자의 ${type === 'weekly' ? '주간' : '월간'} 리뷰를 작성한다.
+
+[목표]
+단순 요약 X. **Detective** — 사용자가 못 본 cross-pattern 발견.
+사용자 자신의 인용 5개 → 자기친밀감.
+다음 리뷰 때 다시 볼 '씨앗' 박기 → 리뷰 간 continuity.
+${type === 'monthly' ? '이번 달의 너를 한 단어로 명명 (정체성 hook).' : ''}
 
 [기간 데이터]
 체크인: ${JSON.stringify(entriesInRange, null, 2).slice(0, 4000)}
-
-미션: ${JSON.stringify(missionsInRange.map(m => ({title: m.title, status: m.status})), null, 2).slice(0, 1500)}
-
-대화 발췌 (사용자 메시지만): ${chatInRange.filter(m => m.role === 'user').map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3000)}
-
-진행/완료된 결정: ${JSON.stringify(decisionsInRange.map(d => ({title: d.title, status: d.status, finalDecision: d.finalDecision})), null, 2).slice(0, 1500)}
-
+미션: ${JSON.stringify(missionsInRange.map(m => ({title: m.title, status: m.status, attemptStatus: m.attemptStatus, strategyId: m.strategyId})), null, 2).slice(0, 1500)}
+대화 발췌 (사용자): ${chatInRange.filter(m => m.role === 'user').map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3000)}
+결정 + 예측: ${JSON.stringify(decisionsInRange.map(d => ({title: d.title, status: d.status, finalDecision: d.finalDecision, predictions: d.predictions})), null, 2).slice(0, 1500)}
 활성 모드: ${Object.keys(state.modes || {}).filter(k => state.modes[k]).join(', ') || '없음'}
 
-이미 알려진 사용자 모델 (요약):
+이미 알려진 사용자:
 - traits: ${state.traits.slice(0, 5).map(t => t.name).join(', ')}
 - patterns: ${state.patterns.slice(0, 5).map(p => p.name).join(', ')}
 - values: ${state.values.slice(0, 3).map(v => v.name).join(', ')}
 
-[작성 가이드]
-- 친한 친구 톤, 반말. 상담사 X.
-- 구체적이고 진실되게. 일반론 X.
-- 판단/평가 없이. self-compassion (Neff) 기반.
-- 못 한 거 강조 X. 패턴과 흐름 짚기.
-- ADHD 특성 고려 — 결과보다 과정·시도·태도.
+[패턴 발견 — Detective 가이드]
+- mode + entries + missions + outcomes 교차 봐.
+- 예: "휴식 모드 + 일요일 → 다음주 mood +1.5"
+- 예: "X 가닥 = 4/5 성공 (시험 모드 시기에만)"
+- 예: "관계 entries → 다 시험 모드 시기에 박힘. 시험 = 관계 챙기는 시기?"
+- generic 패턴 X. 구체적 숫자 / 인용으로 입증.
 
-JSON 형식으로 출력:
+[지난 리뷰 씨앗] ${prevSeeds.length > 0 ? '(callback 추천 — 씨앗이 어떻게 됐는지 짚어주면 사용자 신뢰↑)' : '(없음)'}
+${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 첫 리뷰 또는 이전 씨앗 X)'}
 
+[톤]
+친한 친구. 반말. 상담사 X.
+구체 > 일반. specific > generic.
+판단 X. self-compassion.
+짧게. 각 섹션 ≤ 4줄.
+ADHD 친화 — 결과보다 과정·시도·태도.
+
+[출력 JSON]
 {
-  "summary": "이번 ${type === 'weekly' ? '주' : '달'} 한 줄 요약 (15-30자)",
-  "sections": {
-    "patterns": "이번 ${type === 'weekly' ? '주' : '달'} 네 모습. 보인 패턴, 컨디션 추이, 자주 등장한 주제. 2-4문장.",
-    "good_moments": "잘된 순간들 — 미션 완료, 의미 있는 대화, 성장 신호, 작은 승리. 구체적으로. 2-4문장.",
-    "hard_moments": "어려웠던 순간 — 비판단적, 따뜻한 톤. 왜 어려웠는지 컨텍스트도. 2-3문장.",
-    "next_suggestion": "다음 ${type === 'weekly' ? '주' : '달'} 한 가지 제안. 작고 구체적으로. 1-2문장."
-  }${type === 'monthly' ? ',\n  "new_observations": "이번 달 새로 보인 너에 관한 것 (1-3개, 짧게)"' : ''}
+  ${type === 'monthly' ? '"one_word": "이번 달의 너 = 한 단어 (예: \\"관찰자\\", \\"협상자\\", \\"탐험가\\", \\"잠수부\\"). 한 단어만.",' : ''}
+  "summary": "이번 ${periodLabel} 한 줄 요약 (15-30자)",
+  "pattern": {
+    "headline": "발견한 패턴 한 문장 (specific, surprising)",
+    "evidence": "구체적 근거 — entry 인용 1-2개 또는 구체 숫자",
+    "condition": "어떤 조건 / 모드 / 시간에 일어나는지 (1줄)"
+  },
+  "quotes": ["사용자 entries / 대화에서 추출한 짧은 인용 5개 (각 30자 이내, 5개)", "...", "...", "...", "..."],
+  "experiment": {
+    "what": "다음 ${periodLabel} 한 가지 작은 실험 (구체적, 환경 setup 우선, ADHD 친화)",
+    "why": "왜 흥미로울지 (1줄)"
+  },
+  "seeds": ["다음 리뷰 시점에 다시 볼 watch point 1 (구체적, observable)", "...2"]${prevSeeds.length > 0 ? ',\n  "seed_callbacks": "지난 리뷰 씨앗이 이번에 어떻게 됐는지 (1-3문장)"' : ''}
 }
 
-JSON만 출력. 다른 설명 X.`;
+JSON만 출력. 다른 글 X.`;
 
   // 사용자 요청 2026-04-29: callAnthropic helper 사용 (Phase C swap 대비)
   // 사용자 요청 2026-04-30: 리뷰 (사용자 회고, 친구 톤 요약) = 주간/월간 둘 다 sonnet.
@@ -13462,7 +13485,75 @@ function renderReviewScreen(type, reviewData) {
   const screen = document.getElementById('screen-review');
   if (!screen) return;  // FIX BUG-1: null guard
   const periodLabel = type === 'weekly' ? `이번 주 (${getCurrentWeekKey()})` : `지난 달 (${getMonthKey(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15))})`;
+  const periodWord = type === 'weekly' ? '주' : '달';
 
+  // 사용자 요청 2026-04-30: 새 형식 (pattern/quotes/experiment/seeds) — 옛 형식 (sections.patterns 등) backward compat
+  const isNewFormat = !!(reviewData.pattern || reviewData.quotes || reviewData.experiment || reviewData.seeds);
+
+  if (isNewFormat) {
+    // ═══ 새 리뷰 layout ═══
+    const oneWord = reviewData.one_word ? `<div style="font-size:11px; color:var(--text-soft); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px;">이번 달의 너</div>
+      <div style="font-family:'Gowun Batang',serif; font-size:32px; color:var(--accent); margin-bottom:14px; letter-spacing:0.04em;">${escapeHtml(reviewData.one_word)}</div>` : '';
+    const summaryBlock = `<div style="background: linear-gradient(135deg, rgba(139,126,196,0.15), rgba(201,169,110,0.10)); border:1px solid rgba(139,126,196,0.25); border-radius:16px; padding:18px; margin-bottom:24px; font-family:'Gowun Batang',serif; font-size:16px; line-height:1.7;">
+      ${escapeHtml(reviewData.summary || '')}
+    </div>`;
+    const seedCallbackBlock = reviewData.seed_callbacks ? `
+    <div class="review-section" style="background: rgba(143,200,143,0.06); border-left:3px solid rgba(143,200,143,0.40); padding:12px 14px; border-radius:10px; margin-bottom:18px;">
+      <div style="font-size:10px; color:#9ed4a0; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px;">🌱 지난 씨앗 회상</div>
+      <div style="font-size:13px; line-height:1.7; color:var(--text);">${escapeHtml(reviewData.seed_callbacks)}</div>
+    </div>` : '';
+    const pat = reviewData.pattern || {};
+    const patternBlock = (pat.headline || pat.evidence || pat.condition) ? `
+    <div class="review-section" style="background: var(--surface); border-radius:14px; padding:16px 18px; margin-bottom:18px;">
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:8px;">🔍 패턴 발견</div>
+      ${pat.headline ? `<div style="font-size:15px; font-weight:600; color:var(--text); line-height:1.6; margin-bottom:10px;">${escapeHtml(pat.headline)}</div>` : ''}
+      ${pat.evidence ? `<div style="font-size:12px; color:var(--text-dim); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(201,169,110,0.40); border-radius:6px; margin-bottom:8px;">${escapeHtml(pat.evidence)}</div>` : ''}
+      ${pat.condition ? `<div style="font-size:11px; color:var(--text-soft); line-height:1.6;">↳ ${escapeHtml(pat.condition)}</div>` : ''}
+    </div>` : '';
+    const quotesArr = Array.isArray(reviewData.quotes) ? reviewData.quotes.filter(q => q && q.trim()) : [];
+    const quotesBlock = quotesArr.length > 0 ? `
+    <div class="review-section" style="margin-bottom:18px;">
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">📝 너의 인용집</div>
+      ${quotesArr.map(q => `<div style="font-family:'Gowun Batang',serif; font-size:14px; color:var(--text); line-height:1.7; padding:8px 14px; border-left:2px solid rgba(126,200,227,0.40); margin-bottom:8px;">"${escapeHtml(q)}"</div>`).join('')}
+    </div>` : '';
+    const exp = reviewData.experiment || {};
+    const experimentBlock = (exp.what || exp.why) ? `
+    <div class="review-section" style="background: linear-gradient(135deg, rgba(143,200,143,0.10), rgba(126,200,227,0.06)); border:1px solid rgba(143,200,143,0.25); border-radius:14px; padding:16px 18px; margin-bottom:18px;">
+      <div style="font-size:11px; color:#9ed4a0; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:8px;">🌱 다음 ${periodWord} 작은 실험</div>
+      ${exp.what ? `<div style="font-size:14px; color:var(--text); line-height:1.7; margin-bottom:6px;">${escapeHtml(exp.what)}</div>` : ''}
+      ${exp.why ? `<div style="font-size:11px; color:var(--text-soft); line-height:1.6;">${escapeHtml(exp.why)}</div>` : ''}
+    </div>` : '';
+    const seeds = Array.isArray(reviewData.seeds) ? reviewData.seeds.filter(s => s && s.trim()) : [];
+    const seedsBlock = seeds.length > 0 ? `
+    <div class="review-section" style="margin-bottom:18px;">
+      <div style="font-size:11px; color:var(--text-soft); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:8px;">🪄 다음 리뷰까지 지켜볼 씨앗</div>
+      ${seeds.map(s => `<div style="font-size:12px; color:var(--text-dim); line-height:1.7; padding:6px 12px;">· ${escapeHtml(s)}</div>`).join('')}
+      <div style="font-size:10px; color:var(--text-soft); margin-top:6px; font-style:italic;">다음 ${periodWord} 리뷰 때 어떻게 됐는지 짚어줄게</div>
+    </div>` : '';
+    const html = `
+      <div class="screen-title">${type === 'weekly' ? '🌙 주간 리뷰' : '📅 월간 리뷰'}</div>
+      <div class="screen-sub">${periodLabel}</div>
+      ${oneWord}
+      ${summaryBlock}
+      ${seedCallbackBlock}
+      ${patternBlock}
+      ${quotesBlock}
+      ${experimentBlock}
+      ${seedsBlock}
+      <div class="input-group" style="margin-top: 24px;">
+        <div class="input-label">💬 이번 ${periodWord} 한 마디 (선택) — 이 패턴을 너 자신의 말로</div>
+        <textarea id="reviewUserNote" placeholder="네 말로 한 줄..." rows="3"></textarea>
+      </div>
+      <button class="btn-primary" onclick="saveReview('${type}')">저장하고 닫기 ✦</button>
+      <button class="btn-secondary" onclick="showScreen('home')">나중에</button>
+    `;
+    screen.innerHTML = html;
+    screen.dataset.reviewData = JSON.stringify(reviewData);
+    screen.dataset.reviewType = type;
+    return;
+  }
+
+  // ═══ 옛 리뷰 layout (backward compat) ═══
   let html = `
     <div class="screen-title">${type === 'weekly' ? '🌙 주간 리뷰' : '📅 월간 리뷰'}</div>
     <div class="screen-sub">${periodLabel}</div>
@@ -13473,22 +13564,22 @@ function renderReviewScreen(type, reviewData) {
 
     <div class="review-section">
       <div class="review-section-title">💫 네 모습</div>
-      <div class="review-section-content">${escapeHtml(reviewData.sections.patterns || '')}</div>
+      <div class="review-section-content">${escapeHtml(reviewData.sections?.patterns || '')}</div>
     </div>
 
     <div class="review-section">
       <div class="review-section-title">✨ 잘된 순간들</div>
-      <div class="review-section-content">${escapeHtml(reviewData.sections.good_moments || '')}</div>
+      <div class="review-section-content">${escapeHtml(reviewData.sections?.good_moments || '')}</div>
     </div>
 
     <div class="review-section">
       <div class="review-section-title">🌊 어려웠던 순간</div>
-      <div class="review-section-content">${escapeHtml(reviewData.sections.hard_moments || '')}</div>
+      <div class="review-section-content">${escapeHtml(reviewData.sections?.hard_moments || '')}</div>
     </div>
 
     <div class="review-section">
-      <div class="review-section-title">🐚 다음 ${type === 'weekly' ? '주' : '달'} 제안</div>
-      <div class="review-section-content">${escapeHtml(reviewData.sections.next_suggestion || '')}</div>
+      <div class="review-section-title">🐚 다음 ${periodWord} 제안</div>
+      <div class="review-section-content">${escapeHtml(reviewData.sections?.next_suggestion || '')}</div>
     </div>
 
     ${reviewData.new_observations ? `
@@ -13506,7 +13597,6 @@ function renderReviewScreen(type, reviewData) {
     <button class="btn-secondary" onclick="showScreen('home')">나중에</button>
   `;
   screen.innerHTML = html;
-  // Save the data temporarily
   screen.dataset.reviewData = JSON.stringify(reviewData);
   screen.dataset.reviewType = type;
 }
@@ -13519,8 +13609,15 @@ function saveReview(type) {
   const review = {
     completedAt: new Date().toISOString(),
     summary: reviewData.summary,
-    sections: reviewData.sections,
-    userNote
+    sections: reviewData.sections,  // 옛 형식 backward compat
+    userNote,
+    // 사용자 요청 2026-04-30: 새 리뷰 필드 영구 저장 (다음 리뷰 callback 위해)
+    one_word: reviewData.one_word,
+    pattern: reviewData.pattern,
+    quotes: reviewData.quotes,
+    experiment: reviewData.experiment,
+    seeds: reviewData.seeds,
+    seed_callbacks: reviewData.seed_callbacks
   };
 
   if (type === 'weekly') {
@@ -27292,7 +27389,36 @@ async function generateQuarterlyReview(quarterKey, stats) {
   const cards = (state.topicCards || []).filter(c => c.category === 'strategy');
   const recentEmbodied = cards.filter(c => c.embodimentStatus === 'embodied').length;
 
-  const prompt = `사용자 김나은 (ADHD, 박사과정). 지난 분기 ${quarterKey} 리뷰 작성. ADHD 친화 톤 — 외재화 / 균형 노출 / 사용자 자기 발견 유도. 칭찬 inflation X, 사실 관찰 ○.
+  // 사용자 요청 2026-04-30: 분기 리뷰 재설계 — Detective + Quotes + Turning Point + Seeds + One-word.
+  // 이전 분기 씨앗 callback (continuity)
+  const prevQR = state.quarterlyReviews || [];
+  const prevSeeds = prevQR.length > 0 ? (prevQR[prevQR.length - 1].seeds || []) : [];
+
+  // 분기 entries / chat 발췌 (인용집 / 패턴 발견 위해)
+  const range = getQuarterRange(quarterKey);
+  let entriesIn = [], chatIn = [];
+  if (range) {
+    const startMs = range.start.getTime();
+    const endMs = range.end.getTime();
+    entriesIn = (state.entries || []).filter(e => {
+      if (!e.date) return false;
+      const t = new Date(e.date + 'T12:00:00').getTime();
+      return t >= startMs && t <= endMs;
+    });
+    chatIn = (state.chatMessages || []).filter(m => {
+      if (!m.timestamp || m.role !== 'user') return false;
+      const t = new Date(m.timestamp).getTime();
+      return t >= startMs && t <= endMs;
+    }).slice(-40);
+  }
+
+  const prompt = `사용자 김나은 (ADHD, 박사과정). 지난 분기 ${quarterKey} 리뷰 작성.
+
+[목표]
+- 단순 stats 요약 X. **변곡점 (turning point)** 발견 — 분기 내 큰 변화 / 결정 / 정체성 shift.
+- 사용자 본인의 인용 5개 → 자기친밀감.
+- **분기의 너를 한 단어로 명명** (정체성 hook).
+- 다음 분기 씨앗 박기 → 리뷰 간 continuity.
 
 [지난 분기 stats]
 - 체크인: ${stats.checkins}일
@@ -27303,22 +27429,43 @@ async function generateQuarterlyReview(quarterKey, stats) {
 - 8 차원: 문제 ${stats.problemsTotal} / 강점 ${stats.strengthsTotal} / growth ${stats.growthCount}
 - 체화 완료 가닥 (누적): ${recentEmbodied}개
 
+[분기 entries 발췌]
+${JSON.stringify(entriesIn.slice(-30), null, 0).slice(0, 4500)}
+
+[분기 대화 발췌 (사용자)]
+${chatIn.map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3500)}
+
+[패턴 발견 — Detective]
+mode + entries + 가닥 outcomes 교차 봐. 구체적 숫자/인용으로 입증.
+
+[지난 분기 씨앗] ${prevSeeds.length > 0 ? '(callback 추천)' : '(첫 분기 또는 씨앗 X)'}
+${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : ''}
+
+[톤]
+ADHD 친화. 외재화 / 균형 노출. 칭찬 inflation X. 사실 관찰 ○. 친구 톤 (반말 OK).
+
 [출력 — JSON만, 마크다운 X]
 {
-  "summary": "분기 핵심 한 문장 (40-80자, 칭찬 X 사실 관찰)",
-  "sections": [
-    { "label": "🌊 흐름", "body": "분기 전체 흐름 1-2문장" },
-    { "label": "🌱 새로 자라난 것", "body": "강점/체화/진주 등 1-2문장" },
-    { "label": "🌫 작동 중인 패턴", "body": "주의할 패턴 1-2문장 (외재화 톤)" },
-    { "label": "🧭 다음 분기에", "body": "구체 제안 1문장" }
-  ]
+  "one_word": "이번 분기의 너 = 한 단어 (예: \\"탐험가\\", \\"잠수부\\", \\"건축가\\")",
+  "summary": "분기 핵심 한 문장 (40-80자, specific)",
+  "pattern": {
+    "headline": "발견한 패턴 한 문장",
+    "evidence": "구체적 근거 — entry 인용 또는 숫자",
+    "condition": "어떤 조건/모드/시간"
+  },
+  "turning_point": "분기 내 변곡점 — 가장 큰 변화 / 결정 / 정체성 shift. 가능하면 entry 인용. 2-4문장.",
+  "quotes": ["짧은 인용 5개 (entries / 대화에서, 각 30자 이내)", "...", "...", "...", "..."],
+  "experiment": {
+    "what": "다음 분기 한 가지 작은 실험 (구체적, 환경 setup 우선)",
+    "why": "왜 흥미로울지"
+  },
+  "seeds": ["다음 분기 watch point 1 (구체적, observable)", "...2"]${prevSeeds.length > 0 ? ',\n  "seed_callbacks": "지난 분기 씨앗이 어떻게 됐는지 (1-3문장)"' : ''}
 }
 
 [금지]
 - "잘했다 / 멋지다" 류 칭찬 X
-- "당신은 ~ 사람이다" 류 단정 X
-- 마크다운, 코드블록 X
-- 4개 section 외 추가 X
+- 단정 X
+- 마크다운 X
 
 JSON만 출력.`;
 
@@ -27366,7 +27513,15 @@ async function runQuarterlyAutoReviewIfNeeded() {
       completedAt: new Date().toISOString(),
       stats,
       summary: aiReview.summary || '',
-      sections: Array.isArray(aiReview.sections) ? aiReview.sections : [],
+      sections: Array.isArray(aiReview.sections) ? aiReview.sections : [],  // 옛 형식 backward compat
+      // 사용자 요청 2026-04-30: 새 리뷰 필드 영구 저장
+      one_word: aiReview.one_word,
+      pattern: aiReview.pattern,
+      turning_point: aiReview.turning_point,
+      quotes: aiReview.quotes,
+      experiment: aiReview.experiment,
+      seeds: aiReview.seeds,
+      seed_callbacks: aiReview.seed_callbacks,
       auto: true
     });
     state.archive.unshift({
@@ -32820,12 +32975,13 @@ function showTossChargeModal(plan) {
       </div>
 
       <div style="border-top:1px solid var(--border); padding-top:14px; margin-bottom:8px;">
-        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:6px;">📸 송금 보낸 후 — 영수증 캡처 올리기</div>
+        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:6px;">📸 송금 보낸 후 — 캡처 올리기</div>
         <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-bottom:10px;">
-          아래 <strong>둘 중 하나</strong> 캡처해서 올리면 돼:<br>
-          · 송금 직전 화면 (계좌·은행 다 보이는 화면) <span style="color:var(--text-soft);">— 가장 정확</span><br>
-          · 송금 완료 화면 (\"○○○님께 보냄\" 화면)<br>
-          · 또는 토스 거래내역 → 클릭 → 상세 화면<br>
+          <strong>아래 중 아무거나 한 장</strong> 캡처해서 올려:<br>
+          · 송금 직전 화면 (계좌·은행 다 보임) <span style="color:var(--text-soft);">— 가장 정확</span><br>
+          · 송금 완료 화면<br>
+          · 거래내역 → 클릭 → 상세 화면<br>
+          · <strong>본인 통장 거래 내역</strong> 캡처 (출금 line + 메모 보이게) <span style="color:var(--text-soft);">— 토스든 다른 은행이든 OK</span><br>
           <span style="color:var(--text-soft);">AI가 후딱 확인하고 잔액 채워둘게! ✦</span>
         </div>
         <input type="file" id="tossReceiptInput" accept="image/*" style="width:100%; font-size:11px;">
