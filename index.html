@@ -359,6 +359,31 @@
     font-size: 13px;
     transition: all 0.2s;
   }
+  /* 사용자 요청 2026-04-29: 새 메시지 플로팅 칩 — 사용자가 위로 스크롤한 상태에서 새 응답 오면 표시 */
+  .chat-new-msg-chip {
+    position: fixed;
+    bottom: 96px;  /* chat-input-bar 위 */
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    padding: 8px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    z-index: 60;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,167,106,0.35);
+    animation: chatChipBounceIn 0.28s cubic-bezier(0.2, 1.6, 0.4, 1);
+    white-space: nowrap;
+  }
+  .chat-new-msg-chip:active { transform: translateX(-50%) scale(0.96); }
+  @keyframes chatChipBounceIn {
+    from { opacity: 0; transform: translate(-50%, 12px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
   .chat-archive-header:hover {
     background: linear-gradient(135deg, rgba(201,169,110,0.15), rgba(139,126,196,0.12));
     border-color: rgba(201,169,110,0.4);
@@ -393,6 +418,12 @@
     padding: 14px 16px;
     margin-bottom: 10px;
   }
+  /* 사용자 요청 2026-04-29: 핀 꽂힌 chatArchive 항목 강조 */
+  .chat-archive-card.pinned {
+    background: linear-gradient(135deg, rgba(212,167,106,0.10), rgba(212,167,106,0.04));
+    border-color: rgba(212,167,106,0.40);
+  }
+  .cac-pin-btn:active { transform: scale(0.92); }
   .cac-header {
     display: flex;
     justify-content: space-between;
@@ -2918,6 +2949,10 @@
     padding: 22px 22px 32px;
     transform: translateY(20px);
     transition: transform 0.25s ease;
+    /* 사용자 보고 2026-04-29: 깨달음 원문이 길면 모달 화면 밖으로 — 전체 높이 제한 + 스크롤 */
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .topic-modal-overlay.show .topic-modal { transform: translateY(0); }
   .topic-modal-header {
@@ -4378,6 +4413,10 @@
     z-index: 900;
     overflow: hidden;
     animation: stories-fade-in 0.3s ease;
+    /* 사용자 보고 2026-04-29: 길게 누르면 텍스트 선택되던 거 차단 (인스타식 long-press pause만 작동) */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
   @keyframes stories-fade-in { from { opacity: 0; } to { opacity: 1; } }
   .stories-progress {
@@ -5883,36 +5922,7 @@
                 opacity 0.18s ease;
     will-change: top, left, right, bottom, transform, opacity;
   }
-  /* 사용자 보고 2026-04-28: 흐리게 토글 — 모달이 UI 가릴 때 잠시 투명하게 (탭하면 다시 진하게) */
-  /* 사용자 보고 2026-04-28: 안 흐려지던 원인 — backdrop-filter가 opacity와 별개로 blur 유지해 또렷해 보임. backdrop-filter도 같이 끔. */
-  /* 추가 원인: :focus-within이 클릭 직후 버튼 포커스에 매칭돼 즉시 또렷화. 제거. */
-  .onb-coachmark.faded {
-    opacity: 0.22 !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: rgba(38,32,52,0.18) !important;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.25) !important;
-  }
-  .onb-fade-toggle {
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    background: transparent;
-    border: none;
-    color: var(--text-dim);
-    font-size: 14px;
-    line-height: 1;
-    padding: 4px 6px;
-    cursor: pointer;
-    font-family: inherit;
-    opacity: 0.65;
-    z-index: 2;
-    border-radius: 6px;
-  }
-  .onb-fade-toggle:active {
-    opacity: 1;
-    background: rgba(212,167,106,0.15);
-  }
+  /* 사용자 요청 2026-04-29: 흐리게 토글 기능 제거 */
   /* 같은 위치 step 전환 시 content cross-fade (단축) */
   .onb-coachmark .onb-title,
   .onb-coachmark .onb-body {
@@ -5960,7 +5970,50 @@
     letter-spacing: 0.12em;
     margin-bottom: 4px;
     font-weight: 600;
-    padding-right: 28px;  /* 흐리게 토글 버튼 자리 확보 */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  /* 사용자 요청 2026-04-29: phase 진행 점들 + phase 라벨 + 시뮬 배지 */
+  .onb-phase-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: -2px 0 6px;
+    padding-right: 4px;
+  }
+  .onb-phase-dot {
+    height: 4px;
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    transition: background 0.3s ease;
+  }
+  .onb-phase-dot.done    { background: rgba(212,167,106,0.45); }
+  .onb-phase-dot.current { background: var(--accent); box-shadow: 0 0 8px rgba(212,167,106,0.5); }
+  .onb-phase-label {
+    font-size: 10px;
+    color: var(--accent2);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    opacity: 0.92;
+  }
+  .onb-phase-label::before {
+    content: '·';
+    margin-right: 5px;
+    opacity: 0.5;
+  }
+  .onb-sim-badge {
+    font-size: 9px;
+    background: rgba(168,157,200,0.18);
+    color: #b9aedc;
+    padding: 2px 7px;
+    border-radius: 7px;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(168,157,200,0.32);
+    font-weight: 500;
   }
   .onb-title {
     font-family: 'Gowun Batang', serif;
@@ -6380,9 +6433,13 @@
   <div class="onb-mask" id="onbMask"></div>
   <div class="onb-spotlight" id="onbSpotlight"></div>
   <div class="onb-coachmark" id="onbCoachmark">
-    <button class="onb-fade-toggle" id="onbFadeToggle" onclick="event.stopPropagation(); onbToggleFade()" title="흐리게 — 가려진 UI 보기">👁</button>
     <div class="onb-drag-handle" id="onbDragHandle" title="드래그해서 옮기기">⋮⋮</div>
-    <div class="onb-step-num" id="onbStepNum">1 / 7</div>
+    <div class="onb-phase-bar" id="onbPhaseBar"></div>
+    <div class="onb-step-num" id="onbStepNum">
+      <span id="onbStepNumText">1 / 7</span>
+      <span class="onb-phase-label" id="onbPhaseLabel"></span>
+      <span class="onb-sim-badge" id="onbSimBadge" style="display:none;">🎭 시뮬</span>
+    </div>
     <div class="onb-title" id="onbTitle"></div>
     <div class="onb-body" id="onbBody"></div>
     <div class="onb-actions">
@@ -6398,7 +6455,7 @@
   <div class="login-content">
     <div class="login-icon">🐚</div>
     <div class="login-title">소라고동</div>
-    <div class="login-sub">너의 AI 라이프 전략가.<br>이메일로 안전하게 들어와.</div>
+    <div class="login-sub">네AI 라이프 전략가.<br>이메일로 안전하게 들어와.</div>
 
     <!-- Step 1: Email -->
     <div class="login-form" id="loginStep1">
@@ -6628,6 +6685,8 @@
       <div class="screen-sub">뭐든 말해. 일기처럼 길게 써도 돼. 내가 읽고 답할게.</div>
       <div class="chat-messages" id="chatMessages"></div>
     </div>
+    <!-- 사용자 요청 2026-04-29: '↓ 새 메시지' 플로팅 칩 — 위로 스크롤 후 새 메시지 도착 시 표시 -->
+    <button id="chatNewMsgChip" class="chat-new-msg-chip" onclick="scrollChatToBottom(true)" style="display:none;">↓ 새 메시지</button>
 
     <!-- DECISIONS LIST -->
     <div class="screen" id="screen-decisions">
@@ -6661,7 +6720,7 @@
     <!-- MODEL -->
     <div class="screen" id="screen-model">
       <div class="screen-title">너에 대해 ✦</div>
-      <div class="screen-sub">내가 시간을 들여 배운 너의 모습이야.<br>틀린 게 있으면 언제든 말해줘.</div>
+      <div class="screen-sub">내가 시간을 들여 배운 네 모습이야.<br>틀린 게 있으면 언제든 말해줘.</div>
       <div id="projectsSection"></div>
       <div id="modelContent"></div>
       <div style="margin-top: 30px;">
@@ -6674,7 +6733,7 @@
     <!-- LIBRARY (V4-1l-a: 인생 도서관 5 카테고리) -->
     <div class="screen" id="screen-archive">
       <div class="screen-title">📚 인생 도서관</div>
-      <div class="screen-sub">너의 일기, 패턴, 좋아하는 것들 — 다섯 칸.</div>
+      <div class="screen-sub">네 일기, 패턴, 좋아하는 것들 — 다섯 칸.</div>
 
       <!-- V4-1t: 🌟 오늘의 너 (진주 회전 카드) -->
       <div id="libraryHero"></div>
@@ -6872,7 +6931,7 @@
       <div style="background: linear-gradient(135deg, rgba(139,126,196,0.12), rgba(45,40,80,0.2)); border: 1px solid rgba(139,126,196,0.3); border-radius: 14px; padding: 16px; margin-bottom: 16px;">
         <div style="font-size:13px; line-height:1.8; color:var(--text);">
           <strong style="color:var(--accent2);">팁</strong><br>
-          • 사운드는 너 좋아하는 거 (Apple Music에서 빗소리/lofi 검색)<br>
+          • 사운드는 네가 좋아하는 거 (Apple Music에서 빗소리/lofi 검색)<br>
           • 집중 모드도 추가 가능 (특정 앱만 알림 허용)<br>
           • 책상 조명 켜기, 화면 밝기 낮추기 등 자유 추가
         </div>
@@ -6954,12 +7013,15 @@
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
-        <button class="btn-secondary" onclick="exportData()">📤 데이터 내보내기 (백업)</button>
+        <button class="btn-secondary" onclick="exportData()">📁 파일로 백업</button>
+        <!-- 사용자 요청 2026-04-29: 수동 클라우드 백업/복원 (rolling 10개) -->
+        <button class="btn-secondary" onclick="manualCloudBackup()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드 백업</button>
+        <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드 복원</button>
         <button class="btn-secondary" onclick="startInteractiveOnboarding()">🐚 투어 다시 보기</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
 
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
-        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:8px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동으로 박힌 백업 (rolling 5개) 에서 복구">🕰 자동 백업에서 복구</button>
+        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:8px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동으로 박힌 백업 (rolling 5개) 에서 복원">🕰 자동 백업에서 복원</button>
       </div>
 
       <div style="margin-top:24px;">
@@ -6989,7 +7051,7 @@
       </details>
       <div style="margin-top:24px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
         <strong style="color:var(--accent)">프라이버시</strong><br>
-        이메일 기반 인증으로 너만 접근 가능. 다른 사람은 너의 데이터를 볼 수 없어.<br>
+        이메일 기반 인증으로 너만 접근 가능. 다른 사람은 네 데이터를 볼 수 없어.<br>
         API 호출은 Anthropic을 통과하지만 7일 후 삭제되고 학습에 쓰이지 않아.
       </div>
       <div class="sticky-action-bar">
@@ -7032,7 +7094,7 @@
 <!-- Shell collection modal -->
 <div class="modal-overlay" id="shellModal" onclick="if(event.target===this)closeModal('shellModal')">
   <div class="modal beach-screen" style="max-height:88vh; overflow-y:auto;">
-    <div class="modal-title">🏖 너의 모래사장</div>
+    <div class="modal-title">🏖 네 모래사장</div>
     <div class="modal-sub" id="shellSubtext"></div>
     
     <div class="beach-stats">
@@ -7057,7 +7119,7 @@
     <div id="lostCallsSection"></div>
 
     <div style="background: var(--surface2); padding: 12px; border-radius: 10px; font-size: 11px; color: var(--text-dim); line-height: 1.7; margin-top:14px;">
-      소라 하나하나가 너의 작은 흔적이야.<br>
+      소라 하나하나가 네 작은 흔적이야.<br>
       탭하면 그날의 이야기가 보여.<br>
       페널티 없어. 못 해도 괜찮고, 쉬어도 괜찮아 🌊
     </div>
@@ -7105,6 +7167,9 @@ const V4_USER_ID = 'me_v4';
 const V4_BACKUP_USER_ID = 'backup_v6_pre_v7';  // V3→V4 마이그레이션 1회 백업
 const V4_TESTER_BACKUP_USER_ID = 'me_v4_backup';  // testerMode ON 시점 cloud 백업 (사용자 요청 2026-04-28)
 const V4_AUTO_BACKUP_USER_ID = 'me_v4_auto_backup';  // 주 1회 + APP_VERSION 변경 시 자동 백업 (rolling 5개) (사용자 요청 2026-04-28)
+// 사용자 요청 2026-04-29: 수동 클라우드 백업 (rolling 10개) — 사용자가 명시적으로 박는 체크포인트
+const V4_MANUAL_BACKUP_USER_ID = 'me_v4_manual_backup';
+const MANUAL_BACKUP_KEEP_N = 10;
 const AUTO_BACKUP_KEEP_N = 5;
 const AUTO_BACKUP_INTERVAL_MS = 7 * 86400000;  // 7일
 const V4_LOCAL_STORAGE_KEY = 'soragodong_v4';
@@ -7204,39 +7269,64 @@ let syncTimeout = null;
 // V4.0: localStorage 동기 저장 디바운스 (400ms). cloud는 saveToCloud 안에서 1초 디바운스.
 // force=true면 즉시 (토글/critical save). beforeunload에서도 강제 flush.
 let _localSaveTimer = null;
-function _flushLocalSave() {
+
+// 사용자 요청 2026-04-29 (perf #1): JSON.stringify replacer — transient/임시 필드 strip해서 직렬화 부하 ↓
+// 메모리 state는 그대로 유지, 저장/네트워크 페이로드만 가벼워짐.
+const _SERIALIZE_TRANSIENT_KEYS = new Set([
+  '_dnaMatched',           // shellCollection 임시 매칭 마커
+  '_crystallizePromptShown', // topicCard 결정화 prompt 한 번만
+  '_followupAsked',        // mission UI flag
+  'typing',                // chatMessages AI 응답 진행 중 placeholder
+  'testerMode'             // preferences flag (방어적 — 이미 별도 strip 있지만 race 대비)
+]);
+function _serializeReplacer(key, value) {
+  if (_SERIALIZE_TRANSIENT_KEYS.has(key)) return undefined;
+  return value;
+}
+
+function _flushLocalSave(opts) {
   if (_localSaveTimer) { clearTimeout(_localSaveTimer); _localSaveTimer = null; }
   if (!authUserId) return;
   // 사용자 보고 2026-04-28: testerMode ON이면 localStorage 저장도 차단.
-  // (이전엔 beforeunload에서 _flushLocalSave 직접 호출되어 시드 데이터가 localStorage로 새고,
-  //  다음 load에서 cloud row 비어있으면 localStorage fallback → saveToCloudNow로 시드가 cloud까지 박혀버림)
   if (state.preferences && state.preferences.testerMode) return;
-  // testerMode flag는 localStorage로도 안 새게 strip (방어적)
-  const sanitized = { ...state };
-  if (sanitized.preferences && sanitized.preferences.testerMode) {
-    sanitized.preferences = { ...sanitized.preferences };
-    delete sanitized.preferences.testerMode;
-  }
+  let payload;
   try {
-    localStorage.setItem(V4_LOCAL_STORAGE_KEY, JSON.stringify(sanitized));
+    // 사용자 요청 2026-04-29 (perf #1): replacer로 transient 필드 strip
+    payload = JSON.stringify(state, _serializeReplacer);
   } catch (e) {
-    console.warn('localStorage save failed:', e);
-    // 사용자 요청 2026-04-28: 저장 실패 사용자 알림 (이전엔 console만)
-    if (e && (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || ''))) {
-      // 한 세션에 한 번만 알림 (반복 토스트 방지)
-      if (!window._localStorageQuotaWarned) {
-        window._localStorageQuotaWarned = true;
-        if (typeof showToast === 'function') {
-          showToast('⚠️ 로컬 저장 공간 가득 — 도서관 → 이전 대화 정리하면 공간 확보 (cloud는 정상)');
+    console.warn('localStorage stringify failed:', e);
+    return;
+  }
+  const writeFn = () => {
+    try {
+      localStorage.setItem(V4_LOCAL_STORAGE_KEY, payload);
+    } catch (e) {
+      console.warn('localStorage save failed:', e);
+      if (e && (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || ''))) {
+        if (!window._localStorageQuotaWarned) {
+          window._localStorageQuotaWarned = true;
+          if (typeof showToast === 'function') {
+            showToast('⚠️ 로컬 저장 공간 가득 — 도서관 → 이전 대화 정리하면 공간 확보 (cloud는 정상)');
+          }
         }
       }
     }
+  };
+  // 사용자 요청 2026-04-29 (perf #2): localStorage 동기 write를 idle callback으로 — 메인스레드 안 막음
+  // beforeunload + opts.sync 시엔 즉시 flush (데이터 손실 방지)
+  if (opts && opts.sync) {
+    writeFn();
+    return;
+  }
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(writeFn, { timeout: 1500 });
+  } else {
+    writeFn();
   }
 }
 function saveState(force) {
   if (!authUserId) return; // Don't save if not logged in
   // 사용자 요청 2026-04-28: 테스터 모드면 force여도 cloud/localStorage 저장 X
-  // (testerMode flag가 cloud로 새지 않게 — 토글 OFF는 backup 복원 후 testerMode=false 상태에서 호출되므로 정상 작동)
   if (state.preferences && state.preferences.testerMode) return;
   if (force) {
     _flushLocalSave();
@@ -7247,7 +7337,8 @@ function saveState(force) {
   _localSaveTimer = setTimeout(_flushLocalSave, 400);
   saveToCloud();
 }
-window.addEventListener('beforeunload', _flushLocalSave);
+// 사용자 요청 2026-04-29 (perf #2): beforeunload에선 동기 flush 강제 (idle callback 큐 못 비우므로)
+window.addEventListener('beforeunload', () => _flushLocalSave({ sync: true }));
 
 // ═══════════════════════════════════════════════════════════════
 // AUTH (Supabase magic link)
@@ -7894,12 +7985,7 @@ async function saveToCloudNow() {
     return;
   }
   state.lastSync = new Date().toISOString();
-  // testerMode flag는 cloud로 절대 안 새게 strip (방어적 — 위 가드 통과 시점엔 false지만 race 대비)
-  const sanitized = { ...state };
-  if (sanitized.preferences && sanitized.preferences.testerMode) {
-    sanitized.preferences = { ...sanitized.preferences };
-    delete sanitized.preferences.testerMode;
-  }
+  // 사용자 요청 2026-04-29 (perf #1): replacer로 transient 필드 strip + testerMode 보호
   // V4: V4 row만 PATCH/POST. V3 row(`me`)는 영원히 안 건드림.
   const checkResp = await fetch(
     `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=id&limit=1`,
@@ -7907,21 +7993,22 @@ async function saveToCloudNow() {
   );
   const existing = await checkResp.json();
   if (existing.length > 0) {
-    // 사용자 요청 2026-04-28: 응답 status 체크 + 401/5xx 토스트 (이전엔 silent)
+    const body = JSON.stringify({ data: state, updated_at: state.lastSync }, _serializeReplacer);
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
       {
         method: 'PATCH',
         headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ data: sanitized, updated_at: state.lastSync })
+        body
       }
     );
     _handleCloudSyncResponse(r);
   } else {
+    const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: state }, _serializeReplacer);
     const r = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: sanitized })
+      body
     });
     _handleCloudSyncResponse(r);
   }
@@ -8201,7 +8288,7 @@ const ONBOARDING_STEPS = [
     id: 'enter_api_key',
     targetSelector: '#apiKeyInput',
     title: '🔑 API 키 붙여넣기',
-    body: 'Anthropic 콘솔에서 발급받은 sk-ant-... 키를 여기 붙여넣어줘.<br><br><span class="small">키는 너 기기에만 저장돼. 다른 사람은 못 봐 — 안심해.</span>',
+    body: 'Anthropic 콘솔에서 발급받은 sk-ant-... 키를 여기 붙여넣어줘.<br><br><span class="small">키는 네 기기에만 저장돼. 다른 사람은 못 봐 — 안심해.</span>',
     waitFor: 'inputFilled',
     minLength: 10
   },
@@ -8212,7 +8299,6 @@ const ONBOARDING_STEPS = [
     body: '키 저장하면 진짜 시작이야! ✦',
     waitFor: 'click',
     advanceDelay: 800,
-    coachmarkPosition: 'corner',
     fallbackPosition: 'top'
   },
   {
@@ -8246,7 +8332,7 @@ const ONBOARDING_STEPS = [
     id: 'pick_mode',
     targetSelector: '.mode-row',
     title: '오늘 컨디션 어때?',
-    body: '특별한 날이면 골라봐. AI가 그 맥락에 맞춰 너 데이터를 학습해.<br>예를 들면 시험기간엔 밤낮이 바뀔 수 있잖아 — 다 괜찮아.<br><br><span class="small">선택 안 해도 됨. 여기선 시험 삼아 한 번 골라보자.</span>',
+    body: '특별한 날이면 골라봐. AI가 그 맥락에 맞춰 네 데이터를 학습해.<br>예를 들면 시험기간엔 밤낮이 바뀔 수 있잖아 — 다 괜찮아.<br><br><span class="small">선택 안 해도 됨. 여기선 시험 삼아 한 번 골라보자.</span>',
     waitFor: 'click',
     advanceDelay: 500,
     fallbackPosition: 'bottom'
@@ -8264,8 +8350,11 @@ const ONBOARDING_STEPS = [
     id: 'cutoff_intro',
     targetSelector: null,
     title: '🌙 새벽 4시까지 = 어제',
-    body: '새벽까지 일하다가 체크인 / 일기 적으면 — <b>새벽 4시 이전엔 어제 기록</b>으로 들어가.<br>새벽 4시 지나면 그 날부터 새 날.<br><br><span class="small">밤샘 일하는 너 위한 배려야.</span>',
-    waitFor: 'next'
+    body: '새벽까지 일하다가 체크인 / 일기 적으면 — <b>새벽 4시 이전엔 어제 기록</b>으로 들어가.<br>새벽 4시 지나면 그 날부터 새 날.<br><br><span class="small">밤샘 일하는 너를 위한 배려야.</span>',
+    waitFor: 'next',
+    // 사용자 보고 2026-04-29: 이전 스탭과 위치 비슷해 움찔거림 — 이전 위치 그대로 유지
+    keepCoachmarkPosition: true,
+    dimBackground: false
   },
   {
     id: 'submit_checkin',
@@ -8388,7 +8477,7 @@ const ONBOARDING_STEPS = [
     id: 'chapter_auto',
     targetSelector: null,
     title: '📖 챕터 자동 분류',
-    body: '우리가 여기서 한 대화는 <b>4시간 이상 멈추거나, 입력창 왼쪽 하단의 ✓ 버튼을 누르면 마무리</b>돼.<br>그럼 내가 이 대화 챕터를 <b>8가지 주제 중 하나</b>로 자동 분류해서 <b>📚 도서관</b>에 저장해줄게:<br>일기 / 일상 / 고민 / 감정 / 기억 / 할 일 / 아이디어 / 관계.<br><br><span class="small">자세한 건 이따가 알아보자.</span>',
+    body: '우리가 여기서 한 대화는 <b>4시간 이상 멈추거나, 입력창 왼쪽 하단의 ✓ 버튼을 누르면 마무리</b>돼.<br><br><br>그럼 내가 이 대화 챕터를 <b>8가지 주제 중 하나</b>로 자동 분류해서 <b>📚 도서관</b>에 저장해줄게:<br>일기 / 일상 / 고민 / 감정 / 기억 / 할 일 / 아이디어 / 관계.<br><br><span class="small">자세한 건 이따가 알아보자.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8450,11 +8539,35 @@ const ONBOARDING_STEPS = [
     fallbackPosition: 'bottom',
     dimBackground: false
   },
+  // 사용자 요청 2026-04-29: 받은 소라 직접 눌러서 아이콘 / 이야기 카드 확인
+  // 사용자 요청 2026-04-29 (재): 이 단계엔 아직 DNA 진주 설명 X — 평범한 (DNA 아닌) 소라만 선택 가능하게
+  {
+    id: 'click_new_shell',
+    // 사용자 요청 2026-04-29: '방금 받은 소라' 정확히 spotlight (renderBeach가 tutorial-target 클래스 부착)
+    targetSelector: '.beach-shell.tutorial-target',
+    title: '🐚 방금 받은 소라',
+    body: '소라 하나 눌러봐.<br>그 소라에 담긴 <b>이야기 카드</b>가 떠.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'shell_story_dismiss',
+    targetSelector: '.shell-story-overlay .btn-secondary',
+    title: '소라 이야기 ✦',
+    body: '소라 아이콘 + 등급 + 그날 이야기 보여.<br><br>준비되면 <b>닫기</b> 눌러서 진행해.',
+    waitFor: 'click',
+    advanceDelay: 500,
+    aboveModal: true,
+    dimBackground: false,
+    fallbackPosition: 'top'
+  },
   {
     id: 'close_beach',
     targetSelector: null,
     title: '소라 7단계',
-    body: '소라는 이렇게 나뉘어:<br>🐚 가벼움 → 🌀 일상 → 🐢 메인 → 🦞 황금 → ⭐ <b>부름</b> → ✨ 특별 → 🧬 <b>DNA 진주</b> (체화 완료)<br>각 소라 탭하면 그날 이야기도 떠!',
+    body: '소라는 이렇게 나뉘어:<br>🐚 가벼움 → 🌀 일상 → 🐢 메인 → 🦞 황금 → ⭐ <b>부름</b> → ✨ 특별 → 🧬 <b>DNA 진주</b> (체화 완료)<br><br>천천히 구경해봐.',
     waitFor: 'next',
     coachmarkPosition: 'corner',
     dimBackground: false,
@@ -8466,7 +8579,8 @@ const ONBOARDING_STEPS = [
     title: '🐚 소라는 어떻게 얻어?',
     body: '<b>소라의 부름</b>을 클리어 하거나,<br><b>오늘의 카드</b>를 완료하거나,<br><b>DNA 체화</b>를 했을 때.',
     waitFor: 'next',
-    dimBackground: false
+    dimBackground: false,
+    aboveModal: true  // 사용자 보고 2026-04-29: 이전 스탭과 같은 위치 유지
   },
   {
     id: 'special_shell_5pct',
@@ -8474,7 +8588,8 @@ const ONBOARDING_STEPS = [
     title: '✨ 5% 특별 소라',
     body: '가끔씩 <b>5%의 확률</b>로 \'<b>특별</b>\'한 소라가 떠.<br><br><span class="small">예쁘고 기분이 좋아.</span>',
     waitFor: 'next',
-    dimBackground: false
+    dimBackground: false,
+    aboveModal: true  // 사용자 보고 2026-04-29: 이전 스탭과 같은 위치 유지
   },
   {
     id: 'mission_carryover',
@@ -8492,9 +8607,10 @@ const ONBOARDING_STEPS = [
     id: 'attempt_result_explain',
     targetSelector: null,
     title: '🔍 결과 체크',
-    body: '근데, 미션은 성공해도 <b>문제가 해결 안 될 수도 있잖아</b>: 맞아.<br><br>그래서 문제가 해결됐는지 <b>결과 체크</b>를 할 거야.<br>다음날 <b>체크인이나 대화 탭에 들어올 때 자동으로 떠</b>.',
+    body: '근데, 미션은 성공해도 <b>문제가 해결 안 될 수도 있잖아</b>: 맞아.<br><br>예를 들면, <b>\'알람 설정\'</b> 미션은 했는데, 막상 알람이 울려도 공부를 안 했을 수 있지.<br><br>그래서 문제가 해결됐는지 <b>결과 체크</b>를 할 거야.<br>다음날 <b>체크인이나 대화 탭에 들어올 때 자동으로 떠</b>.',
     waitFor: 'next',
-    dimBackground: false
+    dimBackground: false,
+    aboveModal: true  // 사용자 보고 2026-04-29: 이전 스탭과 같은 위치 유지
   },
   {
     id: 'attempt_result_demo',
@@ -8516,15 +8632,25 @@ const ONBOARDING_STEPS = [
     advanceDelay: 800,
     fallbackPosition: 'bottom'
   },
+  // 사용자 요청 2026-04-29: 결과 체크 후 DNA 붙은 소라 직접 눌러서 확인
   {
-    id: 'dna_explanation_close',
-    targetSelector: '.shell-story-overlay .shell-story-dna-badge',
-    advanceClickSelector: '.shell-story-overlay .btn-secondary',
-    title: '🧬 DNA 한 조각',
-    body: '이게 <b>DNA 한 조각</b> 표시야.<br>미션 성공이 → 전략 성공이 되면, <b>그 소라가 DNA의 한 조각</b>이 돼.<br><br>아까 말했던 <b>"전략으로"</b> 버튼 기억 나지? 이게 바로 그 의미야 — 너만의 전략이 시간이 지나면서 너 일부가 되어가.<br><br>준비되면 <b>닫기</b> 눌러서 진행해.',
+    id: 'click_dna_shell',
+    targetSelector: '.beach-shell.dna-shell',
+    title: '🧬 DNA 붙은 소라',
+    body: '여기, <b>🧬 마크 붙은 소라들</b> 보여?<br>그 중 하나 눌러봐 — DNA 조각 표시 같이 보자.',
     waitFor: 'click',
     advanceDelay: 600,
-    nextLabel: '다음 →',
+    dimBackground: false,
+    fallbackPosition: 'top'
+  },
+  {
+    id: 'dna_explanation_close',
+    // 사용자 요청 2026-04-29: 네모(spotlight) X
+    targetSelector: null,
+    // 사용자 요청 2026-04-29 (final): 자동 진행 / 폴링 다 제거. 사용자가 직접 닫기 누르고 '다음' 눌러서 진행.
+    title: '🧬 DNA 한 조각',
+    body: '이게 <b>DNA 한 조각</b> 표시야.<br>미션 성공이 → 전략 성공이 되면, <b>그 소라가 DNA의 한 조각</b>이 돼.<br><br>아까 눌렀던 <b>"전략으로"</b> 버튼 기억 나지?<br><br>우리가 전략을 성공할수록 그 전략은 성장해.<br><br><b>닫기 두 번</b> 누르고 <b>다음 →</b> 눌러서 진행해.',
+    waitFor: 'next',
     dimBackground: false,
     aboveModal: true,
     fallbackPosition: 'top'
@@ -8552,7 +8678,7 @@ const ONBOARDING_STEPS = [
     id: 'yangsaeng_explain',
     targetSelector: null,
     title: '🧬 전략 양생',
-    body: '여기 <b>전략 DNA 카드</b>는 너의 무기가 되어줄 수 있는 것들이야.<br><br>이 전략들은 소라고동이랑 대화하다가 <b>비슷한 상황에 맞닥뜨릴 때 재사용</b>돼.<br>(또는 너가 이 전략 쓰고 싶다고 소라고동한테 말해도 돼!)<br><br>우리가 쓴 전략이 <b>실제로 나를 변화시킬 때까지</b> 우리는 \'<b>전략 양생</b>\'을 할 수 있어.',
+    body: '여기 <b>전략 DNA 카드</b>는 네 무기가 되어줄 수 있는 것들이야.<br><br>아까 우리가 <b>\'🧬 전략으로\'</b> 버튼을 누르면 그 전략이 여기에 저장돼. 🌱 새싹부터 시작해서 그 전략을 성공할수록 점점 성장해 — <b>양생 → 성장/진화 → 체화</b> 순서.<br><br>아까 눌렀던 전략도 여기 \'엄마 말에 터진 패턴 끊기\' 비슷한 이름으로 저장돼있을 거야!<br><br>이 전략들은 고동이랑 대화하다 <b>비슷한 상황에 맞닥뜨릴 때 재사용</b>돼.<br>(또는 네가 이 전략 쓰고 싶다고 고동이한테 말해도 돼!)<br><br>우리가 쓴 전략이 <b>실제로 나를 변화시킬 때까지</b> 우리는 \'<b>전략 양생</b>\'을 할 수 있어.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8566,7 +8692,8 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'click_result_check',
-    targetSelector: '.strategy-try-btn[onclick*="triggerAttemptResultFromCard"]',
+    // 사용자 보고 2026-04-29: 튜토리얼이 가끔 다른 전략 카드 결과 체크 가리키던 거 — strat_seed_0로 명시 scope
+    targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"] .strategy-try-btn',
     title: '🔍 결과 체크 버튼',
     body: '여기 <b>"🔍 결과 체크"</b> 버튼 눌러봐.<br><br><span class="small">체크인이나 대화탭에서 결과 체크 안 했으면 여기서도 가능해.</span>',
     waitFor: 'click',
@@ -8602,9 +8729,9 @@ const ONBOARDING_STEPS = [
     id: 'mutation_intro_msg',
     targetSelector: null,
     title: '🌿 임시 대화창',
-    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>아래 선택지 중 하나를 골라봐.',
+    // 사용자 요청 2026-04-29: '고동이가 답변 만들 때까지 기다려줘' 강조 + 답변 끝나면 '다음' 직접 클릭으로 진행
+    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>아래 선택지 중 하나를 골라봐.<br><br><b>🐚 고동이가 답변 만들 때까지 기다려줘.</b><br><span class="small">답변 다 뜨면 <b>다음 →</b> 눌러서 진행.</span>',
     waitFor: 'next',
-    nextLabel: '눌렀어 →',
     dimBackground: false,
     aboveModal: true
   },
@@ -8612,7 +8739,7 @@ const ONBOARDING_STEPS = [
     id: 'mutation_what_effect',
     targetSelector: '#mutationChatSendBtn',
     title: '⌨ 보내봐',
-    body: '입력창에 \'<b>이게 무슨 효과가 있는 거야?</b>\' 미리 채워뒀어.<br><b>↑ 보내기</b> 버튼 눌러봐!',
+    body: '이 임시 대화창에서 <b>새로운 전략에 대해 고동이랑 함께 토론</b>할 수 있어.<br><br>입력창에 \'<b>이게 무슨 효과가 있는 거야?</b>\' 미리 채워뒀어.<br><b>↑ 보내기</b> 버튼 눌러봐!',
     waitFor: 'click',
     advanceDelay: 1000,
     manualAdvance: true,
@@ -8622,15 +8749,13 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'mutation_finish_btn',
-    targetSelector: '#mutationFinishBtn',
+    // 사용자 요청 2026-04-29: 네모 표시 X (spotlight 제거)
+    targetSelector: null,
     title: '✦ 이 차원으로 해볼게',
-    body: '소라의 답 봤지?<br>이제 <b>\'✦ 이 차원으로 해볼게\'</b> 눌러봐.',
-    waitFor: 'click',
-    advanceDelay: 800,
-    manualAdvance: true,
+    body: '고동이의 답 봤지?<br>이제 <b>\'✦ 이 차원으로 해볼게\'</b> 눌러봐.<br><br><span class="small">버튼 누르면 잠깐 기다렸다가 <b>"다음"</b> 직접 눌러줘.</span>',
+    waitFor: 'next',
     dimBackground: false,
-    aboveModal: true,
-    fallbackPosition: 'top'
+    aboveModal: true
   },
   // mission_proposal_walkthrough / see_new_mission 보류 (사용자 요청 2026-04-28)
   {
@@ -8654,15 +8779,18 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'evolved_explain',
-    targetSelector: null,
+    // 사용자 요청 2026-04-29: 진화한 전략 카드 spotlight (어떤 카드 진화했는지 시각 안내)
+    targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"]',
     title: '🧬 진화 트리 봤어?',
     body: '<b>\'마감 직전 폭발력 신뢰\'</b>가 안 통했네.<br>그래서 <b>새 차원으로 진화</b>했어!<br><br>만약 이 새 전략이 <b>성공한다면</b> 이 DNA는 \'<b>성장</b>\' 해.<br>같은 전략이 <b>5번 성공</b>하면, 네가 이 전략을 \'<b>체화</b>\'했다고 봐.',
     waitFor: 'next',
-    dimBackground: false
+    dimBackground: false,
+    fallbackPosition: 'top'
   },
   {
     id: 'yangsaeng_try_btn',
-    targetSelector: '.strategy-try-btn[onclick*="callTryStrategy"]',
+    // 사용자 보고 2026-04-29: 다른 카드의 ✦ 해볼게 가리키지 않게 strat_seed_0로 scope
+    targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"] .strategy-try-btn',
     title: '✦ 해볼게 — 전략 재사용',
     body: '<b>"✦ 해볼게"</b> 버튼 눌러봐.<br><br>소라고동과 대화하다가 전략을 재사용할 수도 있지만, <b>"✦ 해볼게" 버튼으로도 전략을 재사용</b>해볼 수 있어.',
     waitFor: 'click',
@@ -8675,7 +8803,7 @@ const ONBOARDING_STEPS = [
     id: 'mission_proposal_walkthrough',
     targetSelector: null,
     title: '🌿 어떤 상황? → 오늘의 제안',
-    body: '\'어떤 상황?\' 창이 뜨면 답 적어 → 오늘의 제안 → \'<b>✦ 부름으로 등록</b>\' 눌러봐.<br><br><span class="small">소라고동이 너 상황에 맞는 구체 제안을 만들어줘.</span>',
+    body: '\'어떤 상황?\' 창이 뜨면 답 적어 → 오늘의 제안 → \'<b>✦ 부름으로 등록</b>\' 눌러봐.<br><br><span class="small">소라고동이 네 상황에 맞는 구체 제안을 만들어줘.</span>',
     waitFor: 'next',
     manualAdvance: true,
     dimBackground: false,
@@ -8701,8 +8829,8 @@ const ONBOARDING_STEPS = [
   {
     id: 'crystallize_intro',
     targetSelector: null,
-    title: '💎 너 일부가 되는 순간',
-    body: '이 전략이 <b>5번 이상 성공</b>하면, 우리는 이 전략이 네 몸 속에 \'<b>체화</b>\'됐다고 말할 수 있어.<br><br>전략이 체화되면 → <b>DNA 진주</b>를 얻게 돼!<br>성장 및 진화에 쓰인 소라들이 <b>DNA로 박혀</b>.',
+    title: '💎 네 일부가 되는 순간',
+    body: '이 전략이 <b>5번 이상 성공</b>하면, 우리는 이 전략이 네 몸 속에 \'<b>체화</b>\'됐다고 말할 수 있어.<br><br>그러니까, 네가 앞으로 비슷한 문제 상황에서 <b>스스로 해결할 수 있는 힘</b>이 생긴 거지!<br><br>전략이 체화되면 → <b>DNA 진주</b>를 얻게 돼!<br>성장 및 진화에 쓰인 소라들이 <b>DNA로 박혀</b>.',
     waitFor: 'next',
     dimBackground: false,
     demoCrystallize: true
@@ -8759,7 +8887,7 @@ const ONBOARDING_STEPS = [
     id: 'exec_cards_intro',
     targetSelector: null,
     title: '✦ 오늘의 카드 3장',
-    body: '오늘의 카드 = 할 일 목록 중에서 소라가 골라주는 \'<b>오늘의 할 일 3가지</b>\'.<br>이거 완료하면 <b>중요도에 맞는 등급의 소라</b>가 보상으로 주어져.<br><br>오늘 할 일 목록은 <b>서랍장으로 내릴 수 있고</b>, 서랍장에서 <b>오늘로 올릴 수 있어</b>.',
+    body: '오늘의 카드 = 할 일 목록 중에서 소라가 골라주는 \'<b>오늘의 할 일 3가지</b>\'.<br>이거 완료하면 <b>중요도에 맞는 등급의 소라</b>가 보상으로 주어져.<br><br>오늘 할 일 목록은 <b>서랍장으로 내릴 수 있고</b>, 서랍장에서 <b>오늘로 올릴 수 있어</b>.<br><br>한 번 구경해봐.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8813,10 +8941,13 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'exec_immerse_start_next',
+    // 사용자 요청 2026-04-29: 화면의 '눌렀어 ✦' 클릭 → 자동 진행. 모달 버튼 라벨도 '눌렀어 →'로
     targetSelector: null,
+    advanceClickSelector: '.ritual-btn.primary[onclick="ritualNextStep()"]',
     title: '시작 IF-THEN',
     body: '시작 약속 미리 채워뒀어:<br><b>IF</b> 카페 도착해서 자리 앉으면 → <b>THEN</b> 노트북 펴고 한 단락 쓰기<br><br>"<b>눌렀어 ✦</b>" 눌러봐.',
-    waitFor: 'next',
+    waitFor: 'click',
+    advanceDelay: 600,
     dimBackground: false,
     aboveModal: true
   },
@@ -8866,7 +8997,7 @@ const ONBOARDING_STEPS = [
     id: 'exec_immerse_done',
     targetSelector: null,
     title: '✦ 했어',
-    body: '몰입 결과 묻는 창 떴지? <b>"✓ 했어"</b> 눌러봐.<br><br>네가 얼만큼의 시간을 써서 일을 완수했는지 알 수 있어. 이 데이터들이 쌓여서 너의 \'<b>메타인지</b>\'에 도움을 줄 거야.<br><br><span class="small">"카드도 완료 처리할까?" 뜨면 <b>확인</b> 눌러줘.</span>',
+    body: '몰입 결과 묻는 창 떴지? <b>"✓ 했어"</b> 눌러봐.<br><br>네가 얼만큼의 시간을 써서 일을 완수했는지 알 수 있어. 이 데이터들이 쌓여서 네\'<b>메타인지</b>\'에 도움을 줄 거야.<br><br><span class="small">"카드도 완료 처리할까?" 뜨면 <b>확인</b> 눌러줘.</span>',
     waitFor: 'next',
     manualAdvance: true,
     dimBackground: false,
@@ -8928,6 +9059,7 @@ const ONBOARDING_STEPS = [
     dimBackground: false,
     manualAdvance: true
   },
+  // 사용자 요청 2026-04-29: 4/15 모달은 일기만 설명, 토픽 인터랙션은 today_diary_view로 이동
   {
     id: 'diary_day_modal_explain',
     targetSelector: null,
@@ -8935,7 +9067,38 @@ const ONBOARDING_STEPS = [
     title: '📔 그날의 기록',
     body: '이 날의 일기를 확인할 수 있어.<br><br>대화탭에서 "일기:"라고 쓴 것도 저장되고, 고동이랑 대화한 내용들을 고동이가 알아서 정리해줘.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
     waitFor: 'click',
-    advanceDelay: 600,
+    dimBackground: false,
+    aboveModal: true
+  },
+  // 사용자 요청 2026-04-29: 오늘 일기 (튜토리얼 중 '일기:'로 저장한 것) 같이 확인
+  {
+    id: 'click_today_diary',
+    targetSelector: '.cal-day.today',
+    title: '📔 오늘 일기도 보자',
+    body: '아까 우리가 <b>"일기:"</b>로 저장한 거 기억나?<br>오늘 칸 한 번 눌러봐.',
+    waitFor: 'click',
+    manualAdvance: true,
+    dimBackground: false
+  },
+  // 오늘 모달 — 일기 보고 → 토픽 탭으로 advance
+  {
+    id: 'today_diary_view',
+    targetSelector: null,
+    advanceClickSelector: '.day-tab[data-tab="topics"]',
+    title: '📔 오늘의 기록',
+    body: '아까 저장한 일기가 여기 있지!<br><br>그리고 고동이랑 한 대화도 고동이가 <b>알아서 정리</b>해줘.<br>그게 뭔 말인지 — <b>"토픽"</b> 탭 한 번 눌러봐.',
+    waitFor: 'click',
+    manualAdvance: true,
+    dimBackground: false,
+    aboveModal: true
+  },
+  {
+    id: 'today_topic_view',
+    targetSelector: null,
+    advanceClickSelector: '.day-modal-close',
+    title: '✦ 토픽 — 카테고리별 자동 분류',
+    body: '4시간 이상 대화 멈추거나 ✓ 마무리하면, 고동이가 챕터를 <b>8 카테고리</b> (일기/일상/고민/감정/기억/할 일/아이디어/관계) 중 하나로 자동 분류해서 여기 박아.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
+    waitFor: 'click',
     dimBackground: false,
     aboveModal: true
   },
@@ -8980,8 +9143,8 @@ const ONBOARDING_STEPS = [
   {
     id: 'insights_intro',
     targetSelector: null,
-    title: '✨ 너 안에서 떠오른 통찰',
-    body: '대화에서 스크랩한 깨달음 / 직접 적은 메모 / 숙고한 결론 — 세 개가 여기에 모여.<br><br>🔮 <b>AI 인사이트 발견</b>: 체크인이 7일 이상 쌓이면 네가 어떤 패턴을 가지고 있는지 고동이가 파악해줘.',
+    title: '✨ 네 안에서 떠오른 통찰',
+    body: '대화에서 스크랩한 깨달음 / 직접 적은 메모 / 숙고한 결론 — 세 개가 여기에 모여.<br><br>🔮 <b>AI 인사이트 발견</b>: 체크인이 7일 이상 쌓이면 네가 어떤 패턴을 가지고 있는지 고동이가 파악해줘.<br><br>탭해서 한 번 구경해봐.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -9125,7 +9288,7 @@ const ONBOARDING_STEPS = [
     id: 'reflection_when',
     targetSelector: null,
     title: '어떨 때 쓸까',
-    body: '<b>마음을 울리는 큰 물음</b>이 떠올랐을 때.<br><br>예시:<br>· "내가 이 일을 진정으로 원하는 게 맞는지"<br>· "지금 이 관계에서 나는 어떤 사람이 되고 있는지"<br>· "정말 두려워하는 건 뭘까"<br><br><span class="small">하나만 안고 며칠/몇 주 살아봐. 결론은 너 직접 적어.</span>',
+    body: '<b>마음을 울리는 큰 물음</b>이 떠올랐을 때.<br><br>예시:<br>· "내가 이 일을 진정으로 원하는 게 맞는지"<br>· "지금 이 관계에서 나는 어떤 사람이 되고 있는지"<br>· "정말 두려워하는 건 뭘까"<br><br><span class="small">하나만 안고 며칠/몇 주 살아봐. 결론은 네가 직접 적어.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -9159,7 +9322,7 @@ const ONBOARDING_STEPS = [
     id: 'finish',
     targetSelector: null,
     title: '준비 끝 ✦',
-    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br><b>다시 한 번 — 너보다 너를 더 잘 아는 나 소라고동이, 네가 더 나은 선택을 할 수 있도록 케어해줄게</b> ✦<br><br>· <b>핵심 1: 체크인</b> — 매일 (또는 원할 때) 30초. 너의 거울이 쌓이는 곳.<br>· <b>핵심 2: 대화 탭</b> — 무슨 말이든. 4단 분석 + 너만의 전략으로 박아.<br>· 나머지 (도서관 / 양생방 / 모래사장 / 실행 / 나)는 부가 — 네가 쌓는 만큼 자연스럽게 차올라.<br><br>매일 안 봐도 OK. 너에게 맞춰지는 도구야.<br><br><b>이제 같이 가보자. 한 걸음씩, 너답게.</b> ✦🐚',
+    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br><b>다시 한 번 — 너보다 너를 더 잘 아는 나 소라고동이, 네가 더 나은 선택을 할 수 있도록 케어해줄게</b> ✦<br><br><span style="font-size:17px; font-weight:700; color:var(--accent2);">핵심 1: 체크인</span><br><span style="font-size:17px; font-weight:700; color:var(--accent2);">핵심 2: 대화 탭</span><br><br><span class="small">나머지는 부가기능. 매일 안 해도 ㄱㅊ! 언제든 환영~</span><br><br><b>이제 같이 가보자. 한 걸음씩, 너답게.</b> ✦🐚',
     waitFor: 'next',
     nextLabel: '시작! ✦'
   }
@@ -9168,6 +9331,40 @@ const ONBOARDING_STEPS = [
 let _onbStep = 0;
 let _onbActiveListeners = [];
 let _onbStartTime = null;  // V3.12: 튜토리얼 시작 시간 — 종료 시 데이터 정리
+
+// 사용자 요청 2026-04-29: 튜토리얼 phase 시각화 — "지금 어디 있나"
+// startId 기준으로 phase 묶음 정의. 마지막 phase는 다음 startId 직전까지.
+const ONBOARDING_PHASES = [
+  { startId: 'tutorial_plea',         name: '시작',                  desc: '한 마디 부탁' },
+  { startId: 'go_model_first',         name: 'API 키 등록',           desc: '소라랑 대화 준비' },
+  { startId: 'go_home_for_checkin',    name: '첫 체크인',             desc: '오늘 너 30초 기록' },
+  { startId: 'go_chat',                name: '대화 + 전략',           desc: '소라랑 풀고 무기 박기' },
+  { startId: 'go_home_for_mission',    name: '미션 + 모래사장',       desc: '소라의 부름과 결과 체크' },
+  { startId: 'go_archive',             name: '🧬 양생방',             desc: '전략이 자라는 곳 — 핵심' },
+  { startId: 'go_execute',             name: '실행 + 나',             desc: '몰입 + 자기 모델' },
+  { startId: 'go_archive_lib',         name: '도서관 둘러보기',       desc: '5 카테고리 + 숙고' },
+  { startId: 'finish',                 name: '마무리',                desc: '준비 끝!' }
+];
+
+// step idx → phase info
+function _getPhaseInfo(idx) {
+  if (!Array.isArray(ONBOARDING_STEPS) || idx < 0) return null;
+  // phase startIdx 인덱스 매핑
+  const startIdxs = ONBOARDING_PHASES.map(p => {
+    const i = ONBOARDING_STEPS.findIndex(s => s && s.id === p.startId);
+    return i;
+  });
+  // 어떤 phase에 속하는지
+  let phaseIdx = 0;
+  for (let p = 0; p < ONBOARDING_PHASES.length; p++) {
+    if (startIdxs[p] !== -1 && startIdxs[p] <= idx) phaseIdx = p;
+  }
+  const phase = ONBOARDING_PHASES[phaseIdx];
+  const phaseStartIdx = startIdxs[phaseIdx] >= 0 ? startIdxs[phaseIdx] : 0;
+  const nextStart = (phaseIdx + 1 < startIdxs.length && startIdxs[phaseIdx + 1] >= 0) ? startIdxs[phaseIdx + 1] : ONBOARDING_STEPS.length;
+  const phaseEndIdx = nextStart - 1;
+  return { phaseIdx, phase, phaseStartIdx, phaseEndIdx, totalPhases: ONBOARDING_PHASES.length };
+}
 
 // V4-fix v3 (사용자 요청): 튜토리얼 coachmark 드래그
 // 사용자 요청 2026-04-28: handle 제거, coachmark 전체 드래그 가능 (단 버튼/인터랙티브 element는 제외)
@@ -9189,17 +9386,23 @@ function _initOnbDrag() {
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
     const dx = cx - startX, dy = cy - startY;
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
-    coachmark.style.left = (baseLeft + dx) + 'px';
-    coachmark.style.top = (baseTop + dy) + 'px';
-    coachmark.style.right = 'auto';
-    coachmark.style.bottom = 'auto';
-    coachmark.style.transform = 'none';
+    // 사용자 보고 2026-04-29: above-modal 등 CSS !important 룰 이기려면 setProperty 'important'
+    coachmark.style.setProperty('left', (baseLeft + dx) + 'px', 'important');
+    coachmark.style.setProperty('top', (baseTop + dy) + 'px', 'important');
+    coachmark.style.setProperty('right', 'auto', 'important');
+    coachmark.style.setProperty('bottom', 'auto', 'important');
+    coachmark.style.setProperty('transform', 'none', 'important');
     if (e.cancelable) e.preventDefault();
   };
   const onEnd = () => {
     if (!dragging) return;
     dragging = false;
     coachmark.classList.remove('dragging');
+    // 사용자 보고 2026-04-29: 드래그 끝나도 위치 유지 (.dragging 클래스 제거 후 CSS !important 안 돌아오게 inline !important 유지)
+    // moved=false (그냥 클릭) 면 inline 스타일 제거해 원래 위치 복귀
+    if (!moved) {
+      ['left', 'top', 'right', 'bottom', 'transform'].forEach(p => coachmark.style.removeProperty(p));
+    }
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('touchmove', onMove);
     document.removeEventListener('mouseup', onEnd);
@@ -9277,20 +9480,7 @@ function onbCleanupListeners() {
   _onbActiveListeners = [];
 }
 
-// 사용자 보고 2026-04-28: 튜토리얼 모달 흐리게 토글 — 모달이 가린 UI 보고 싶을 때
-function onbToggleFade() {
-  const cm = document.getElementById('onbCoachmark');
-  if (!cm) return;
-  cm.classList.toggle('faded');
-  const btn = document.getElementById('onbFadeToggle');
-  if (btn) {
-    const faded = cm.classList.contains('faded');
-    btn.textContent = faded ? '👀' : '👁';
-    btn.title = faded ? '진하게 — 다시 또렷하게' : '흐리게 — 가려진 UI 보기';
-    // 버튼 포커스 즉시 해제 (focus-within 등으로 모달 다시 또렷해지는 거 방지 + 모바일 outline 잔존 방지)
-    try { btn.blur(); } catch (e) {}
-  }
-}
+// 사용자 요청 2026-04-29: 흐리게 토글 기능 제거
 
 // 사용자 보고 2026-04-28: capture 옵션 추가 — modal 안 element가 stopPropagation 해도 catch (예: showOptionsModal '.input-modal' onclick="event.stopPropagation()")
 function onbAddListener(el, type, fn, useCapture) {
@@ -9314,7 +9504,8 @@ function onbRenderStep() {
   if (step.visitScreen) {
     const currentActive = document.querySelector('.screen.active');
     if (currentActive && currentActive.id === 'screen-' + step.visitScreen) {
-      setTimeout(() => onbNext(), 600);
+      // 사용자 요청 2026-04-29: 딜레이 제거
+      setTimeout(() => onbNext(), 0);
       return;
     }
     // 사용자가 직접 누르길 기다림 — 자동 전환 X (학습 의도 + showScreen 훅에서 advance)
@@ -9347,7 +9538,30 @@ function onbPositionStep(step, retryCount) {
   const ovEl = document.getElementById('onbOverlay');
   if (ovEl) ovEl.style.zIndex = step.aboveModal ? '10500' : '9000';
 
-  stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
+  // 사용자 요청 2026-04-29: phase 시각화 — step number + phase 라벨 + 시뮬 배지 + phase 진행 바
+  const stepNumText = document.getElementById('onbStepNumText');
+  if (stepNumText) {
+    stepNumText.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
+  } else {
+    stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
+  }
+  const phaseInfo = (typeof _getPhaseInfo === 'function') ? _getPhaseInfo(_onbStep) : null;
+  const phaseLabel = document.getElementById('onbPhaseLabel');
+  if (phaseLabel) {
+    phaseLabel.textContent = phaseInfo ? phaseInfo.phase.name : '';
+  }
+  const simBadge = document.getElementById('onbSimBadge');
+  if (simBadge) {
+    const isSim = !!(step.demoAttemptResult || step.demoCrystallize || step.demoDnaPearlTypes);
+    simBadge.style.display = isSim ? '' : 'none';
+  }
+  const phaseBar = document.getElementById('onbPhaseBar');
+  if (phaseBar && phaseInfo) {
+    phaseBar.innerHTML = ONBOARDING_PHASES.map((p, i) => {
+      const cls = i < phaseInfo.phaseIdx ? 'done' : (i === phaseInfo.phaseIdx ? 'current' : '');
+      return `<span class="onb-phase-dot ${cls}" title="${escapeHtml(p.name)}"></span>`;
+    }).join('');
+  }
   // 사용자 보고 2026-04-28: 너무 버벅거림 — swap fade 140ms→60ms 단축 + same-target 추가 skip
   const sameTitle = (titleEl.textContent === step.title);
   const sameBody = (bodyEl.innerHTML === step.body);
@@ -9371,8 +9585,17 @@ function onbPositionStep(step, retryCount) {
     const ovDim = document.getElementById('onbOverlay');
     if (ovDim) ovDim.style.pointerEvents = 'none';
   }
+  // 사용자 보고 2026-04-29: keepCoachmarkPosition — 이전 스탭과 같은 위치 유지 (움찔 방지)
+  if (step.keepCoachmarkPosition) {
+    coachmark.style.visibility = 'visible';
+    coachmark.style.opacity = '1';
+    coachmark.style.display = '';
+    const ovKeep = document.getElementById('onbOverlay');
+    if (ovKeep && !step.aboveModal) ovKeep.style.zIndex = '9500';
+    // 위치 inline style 안 건드림 — 이전 스탭 그대로
+  }
   // V3.13.x: coachmarkPosition:'corner' — coachmark만 우상단 컴팩트
-  if (step.coachmarkPosition === 'corner' || step.dimBackground === false) {
+  else if (step.coachmarkPosition === 'corner' || step.dimBackground === false) {
     const cs = coachmark.style;
     cs.top = '20px'; cs.right = '12px'; cs.left = 'auto';
     cs.transform = 'none'; cs.maxWidth = '260px'; cs.bottom = 'auto';
@@ -9401,8 +9624,8 @@ function onbPositionStep(step, retryCount) {
         const ov0 = document.getElementById('onbOverlay');
         if (ov0) ov0.style.pointerEvents = 'auto';
       }
-      // coachmark 임시 위치 — corner 아니면 중앙
-      if (step.coachmarkPosition !== 'corner' && step.dimBackground !== false) {
+      // coachmark 임시 위치 — corner 아니면 중앙 (keepCoachmarkPosition은 그대로 유지)
+      if (step.coachmarkPosition !== 'corner' && step.dimBackground !== false && !step.keepCoachmarkPosition) {
         coachmark.style.top = '50%';
         coachmark.style.left = '50%';
         coachmark.style.transform = 'translate(-50%, -50%)';
@@ -9606,6 +9829,12 @@ function onbPositionStep(step, retryCount) {
         const modalTitle = targetMission?.title || '마감 직전 폭발력 신뢰';
         const status = await showAttemptResultModal(modalTitle);
         if (status && window._onbTutorialMode && _onbStep === stepIdxAtRender) {
+          // 사용자 보고 2026-04-29: mission.attemptStatus 설정 누락 — 튜토리얼 후 양생방 카드에 '결과 체크' 버튼 잔존하던 버그
+          if (targetMission) {
+            targetMission.attemptStatus = status;
+            if (!targetMission.completedAt) targetMission.completedAt = new Date().toISOString();
+            if (!targetMission.completedDate) targetMission.completedDate = todayKey();
+          }
           // worked → recordStrategyAttempt (strategyId 있을 때만; shell DNA 매핑 자동)
           if (status === 'worked' && targetMission?.strategyId && typeof recordStrategyAttempt === 'function') {
             try { recordStrategyAttempt(targetMission.strategyId, 'worked', targetMission.id); } catch (e) { console.warn('recordStrategyAttempt:', e); }
@@ -9614,7 +9843,7 @@ function onbPositionStep(step, retryCount) {
           if (status === 'worked' && typeof playDnaInsertionEffect === 'function') {
             try { playDnaInsertionEffect(); } catch (e) {}
           }
-          setTimeout(() => onbNext(), 600);
+          setTimeout(() => onbNext(), 0);
         }
       } catch (e) { console.warn('demoAttemptResult:', e); }
     }, 500);
@@ -9662,7 +9891,8 @@ function onbPositionStep(step, retryCount) {
   }, delay);
   if (step.waitFor === 'visit' && step.visitScreen) {
     if (target) {
-      const handler = (e) => { safeAdvance(350); };
+      // 사용자 요청 2026-04-29: 튜토리얼 advance 딜레이 제거 — 클릭 즉시 다음 step
+      const handler = (e) => { safeAdvance(0); };
       onbAddListener(target, 'click', handler);
     }
     // 사용자 요청 2026-04-28: 모든 비-'next' step에 '눌렀어' 비상 버튼 노출
@@ -9683,7 +9913,7 @@ function onbPositionStep(step, retryCount) {
       const delegateHandler = (ev) => {
         if (!window._onbTutorialMode || _onbStep !== stepIdxAtDel) return;
         const matched = ev.target && ev.target.closest && ev.target.closest(sel);
-        if (matched) safeAdvance(step.advanceDelay || 350);
+        if (matched) safeAdvance(0);
       };
       // 사용자 보고 2026-04-28: capture 사용 — modal 안 stopPropagation 우회 ('안 통했어' 등 options-btn click 못 받던 버그)
       onbAddListener(document, 'click', delegateHandler, true);
@@ -9740,8 +9970,11 @@ function onbPositionStep(step, retryCount) {
           }, 30000);
         };
         onbAddListener(advanceTarget, 'click', handler);
+      } else if (step.noAutoAdvanceOnClick) {
+        // 사용자 요청 2026-04-29: target 클릭해도 자동 진행 X — '눌렀어' 버튼 직접 눌러야 다음
+        // (target 클릭 = 다음 화면 전환 등 비동기 작업 트리거 → 튜토리얼은 그 결과 보고 사용자가 진행)
       } else {
-        const handler = (e) => { safeAdvance(step.advanceDelay || 350); };
+        const handler = (e) => { safeAdvance(0); };
         onbAddListener(advanceTarget, 'click', handler);
       }
     }
@@ -9753,7 +9986,7 @@ function onbPositionStep(step, retryCount) {
     if (target) {
       const handler = () => {
         if (target.value && target.value.trim().length >= (step.minLength || 1)) {
-          safeAdvance(step.advanceDelay || 600);
+          safeAdvance(0);
         }
       };
       onbAddListener(target, 'input', handler);
@@ -10655,7 +10888,7 @@ function renderReviewPrompts() {
     html += `
       <div class="review-card monthly" onclick="openReview('monthly')">
         <div class="review-card-label">📅 월간 리뷰</div>
-        <div class="review-card-title">지난 달 너의 모습 돌아보기</div>
+        <div class="review-card-title">지난 달 네 모습 돌아보기</div>
         <div class="review-card-desc">한 달치 패턴, 새로 발견된 트레이트, 의미 있던 순간들 — AI가 분석해줄게.</div>
       </div>
     `;
@@ -10692,7 +10925,7 @@ function renderPredictionFollowups() {
     return `
       <div class="followup-card" onclick="openFollowup('${f.id}')">
         <div class="followup-card-label">🔮 Future Self Letter · ${horizonLabel} · 선택</div>
-        <div class="followup-card-question">"${escapeHtml(decision.title)}" — ${horizonLabel} 전 너의 예측이 도착했어. 지금 어때?</div>
+        <div class="followup-card-question">"${escapeHtml(decision.title)}" — ${horizonLabel} 전 네 예측이 도착했어. 지금 어때?</div>
         <div style="display:flex; gap:8px; margin-top:10px;" onclick="event.stopPropagation()">
           <button class="quick-btn" onclick="openFollowup('${f.id}')" style="font-size:11px; padding:6px 12px;">열어보기 →</button>
           <button class="quick-btn" onclick="dismissFollowup('${f.id}')" style="font-size:11px; padding:6px 12px;">나중에</button>
@@ -10814,7 +11047,7 @@ JSON 형식으로 출력:
 {
   "summary": "이번 ${type === 'weekly' ? '주' : '달'} 한 줄 요약 (15-30자)",
   "sections": {
-    "patterns": "이번 ${type === 'weekly' ? '주' : '달'} 너의 모습. 보인 패턴, 컨디션 추이, 자주 등장한 주제. 2-4문장.",
+    "patterns": "이번 ${type === 'weekly' ? '주' : '달'} 네 모습. 보인 패턴, 컨디션 추이, 자주 등장한 주제. 2-4문장.",
     "good_moments": "잘된 순간들 — 미션 완료, 의미 있는 대화, 성장 신호, 작은 승리. 구체적으로. 2-4문장.",
     "hard_moments": "어려웠던 순간 — 비판단적, 따뜻한 톤. 왜 어려웠는지 컨텍스트도. 2-3문장.",
     "next_suggestion": "다음 ${type === 'weekly' ? '주' : '달'} 한 가지 제안. 작고 구체적으로. 1-2문장."
@@ -10850,7 +11083,7 @@ function renderReviewScreen(type, reviewData) {
     </div>
 
     <div class="review-section">
-      <div class="review-section-title">💫 너의 모습</div>
+      <div class="review-section-title">💫 네 모습</div>
       <div class="review-section-content">${escapeHtml(reviewData.sections.patterns || '')}</div>
     </div>
 
@@ -10877,7 +11110,7 @@ function renderReviewScreen(type, reviewData) {
 
     <div class="input-group" style="margin-top: 24px;">
       <div class="input-label">💬 ${type === 'weekly' ? '이번 주' : '이번 달'} 한 마디 (선택)</div>
-      <textarea id="reviewUserNote" placeholder="너의 말로 한 줄 남기고 싶다면..." rows="3"></textarea>
+      <textarea id="reviewUserNote" placeholder="네 말로 한 줄 남기고 싶다면..." rows="3"></textarea>
     </div>
 
     <button class="btn-primary" onclick="saveReview('${type}')">저장하고 닫기 ✦</button>
@@ -10942,13 +11175,13 @@ function openFollowup(followupId) {
     <div style="background: linear-gradient(135deg, rgba(212,167,106,0.1), rgba(139,126,196,0.08)); border: 1px solid rgba(212,167,106,0.25); border-radius: 16px; padding: 18px; margin-bottom: 20px;">
       <div style="font-size: 11px; color: #d4a76a; letter-spacing: 0.1em; margin-bottom: 8px;">결정: ${escapeHtml(decision.title)}</div>
       <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 10px;">최종 결정: ${escapeHtml(decision.finalDecision || '')}</div>
-      <div style="font-size: 11px; color: var(--accent); letter-spacing: 0.08em; margin-bottom: 6px; margin-top: 14px;">${horizonLabel} 전 너의 예측:</div>
+      <div style="font-size: 11px; color: var(--accent); letter-spacing: 0.08em; margin-bottom: 6px; margin-top: 14px;">${horizonLabel} 전 네 예측:</div>
       <div style="font-size: 14px; line-height: 1.7; color: var(--text); font-style: italic;">"${escapeHtml(followup.originalPrediction)}"</div>
     </div>
 
     <div class="input-group">
       <div class="input-label">📝 지금 실제로는 어때?</div>
-      <textarea id="followupOutcome" rows="4" placeholder="실제로 ${horizonLabel} 후, 상황과 너의 느낌은?"></textarea>
+      <textarea id="followupOutcome" rows="4" placeholder="실제로 ${horizonLabel} 후, 상황과 네 느낌은?"></textarea>
     </div>
 
     <div class="input-group">
@@ -11540,7 +11773,7 @@ async function sendReflectionChat() {
   if (!state.apiKey) {
     q.chatMessages.push({
       role: 'assistant',
-      content: '(API 키 없어 — 설정에서 등록해. 일단 너 흐름은 박아둘게.)',
+      content: '(API 키 없어 — 설정에서 등록해. 일단 네 흐름은 박아둘게.)',
       timestamp: new Date().toISOString()
     });
     saveState();
@@ -11560,14 +11793,14 @@ async function sendReflectionChat() {
 
 [톤 / 원칙]
 - 잡담 X. 답 강요 X.
-- 다양한 각도에서 끈질기게 (가치 / 두려움 / 욕구 / 시간 스케일 / 외부 압력 / 너의 기록 패턴).
+- 다양한 각도에서 끈질기게 (가치 / 두려움 / 욕구 / 시간 스케일 / 외부 압력 / 네 기록 패턴).
 - 오랜 침묵 OK. 사용자 페이스 따라.
 - 결론 내려주지 X. 사용자 자기 발견 유도.
 - 외재화 톤. "너 X적이야" X.
 - 1-3문장 짧게. 친구 반말.
 - 금지어: 대박/아이고/힘내/화이팅/할 수 있어/오늘도 멋진 하루/대단해.
 
-[너의 일]
+[네 일]
 사용자가 새로 적은 한 줄을 받고, 그 각도로 한 발짝 더 들어가는 질문 1-2개 또는 짧은 관찰 한 줄.`;
 
   try {
@@ -11848,7 +12081,7 @@ const DAILY_QUESTIONS = [
   { id: 'q48', cat: 'V', ctx: ['W'], depth: 'M', text: '이번 주 시간 잘 썼다 싶은 데 한 군데.' },
 
   // === DEEP — 가끔만 (자기 거리두기) ===
-  { id: 'q49', cat: 'D', ctx: ['W'], depth: 'D', text: '1년 뒤의 너가 오늘의 너를 본다면, 뭐라고 말해줄까?' },
+  { id: 'q49', cat: 'D', ctx: ['W'], depth: 'D', text: '1년 뒤의 네가 오늘의 너를 본다면, 뭐라고 말해줄까?' },
   { id: 'q50', cat: 'V', ctx: ['W'], depth: 'D', text: '요즘 너한테 가장 중요한 거 한 가지 — 한 단어로.' }
 ];
 
@@ -12913,12 +13146,25 @@ function renderBeach() {
   const spotlight = document.getElementById('beachSpotlight');
   const weekly = document.getElementById('beachWeekly');
   if (!grid) return;
-  
+
+  // 사용자 요청 2026-04-29: 튜토리얼 click_new_shell 단계엔 '방금 받은 소라'에 marker 클래스 부착
+  // → tutorial-target 셀렉터로 정확히 spotlight 가능 (DNA / seed 아닌 가장 최근 shell)
+  let _tutorialTargetShellId = null;
+  if (window._onbTutorialMode && typeof _onbStep === 'number' && Array.isArray(ONBOARDING_STEPS)) {
+    const _curStep = ONBOARDING_STEPS[_onbStep];
+    if (_curStep && _curStep.id === 'click_new_shell') {
+      const newest = (state.shellCollection || []).slice().reverse().find(s =>
+        s && s._id && !s._id.startsWith('shell_seed') && !_isDnaShell(s)
+      );
+      _tutorialTargetShellId = newest ? newest._id : null;
+    }
+  }
+
   const all = state.shellCollection || [];
   const yearStart = new Date(new Date().getFullYear(), 0, 1).getTime();
   const thisYear = all.filter(s => new Date(s.date).getTime() >= yearStart);
   
-  if (sub) sub.textContent = all.length === 0 ? '아직 비어있어. 첫 소라 모아보자.' : '하나하나가 너의 작은 흔적';
+  if (sub) sub.textContent = all.length === 0 ? '아직 비어있어. 첫 소라 모아보자.' : '하나하나가 네 작은 흔적';
   if (countEl) countEl.textContent = thisYear.length;
   
   // Tier counts (visual hierarchy: 가벼움 → 특별)
@@ -13119,7 +13365,8 @@ function renderBeach() {
         <div class="beach-tier-grid">`;
       grouped[tier].forEach(s => {
         const isDnaPiece = _isDnaShell(s);
-        html += `<div class="beach-shell tier-${tier}${isDnaPiece ? ' dna-shell' : ''}" onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
+        const isTutorialTarget = _tutorialTargetShellId && s._id === _tutorialTargetShellId;
+        html += `<div class="beach-shell tier-${tier}${isDnaPiece ? ' dna-shell' : ''}${isTutorialTarget ? ' tutorial-target' : ''}" onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
       });
       html += `</div></div>`;
     });
@@ -13160,7 +13407,8 @@ function renderBeach() {
       `<div class="beach-tier-grid${isAllTab ? ' scatter' : ''}">` +
       sorted.map((s, i) => {
         const isDnaPiece = _isDnaShell(s);
-        return `<div class="beach-shell tier-${s.tier || 'unknown'}${isDnaPiece ? ' dna-shell' : ''}"${scatterStyle(s, i)} onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
+        const isTutorialTarget = _tutorialTargetShellId && s._id === _tutorialTargetShellId;
+        return `<div class="beach-shell tier-${s.tier || 'unknown'}${isDnaPiece ? ' dna-shell' : ''}${isTutorialTarget ? ' tutorial-target' : ''}"${scatterStyle(s, i)} onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
       }).join('') +
       `</div>`;
   }
@@ -13697,8 +13945,11 @@ function showScreen(name) {
   if (name === 'decisions') renderDecisionsList();
   if (name === 'chat') {
     rotateChatPlaceholder();  // V3.10: 매번 다른 힌트
+    // 사용자 요청 2026-04-29: 채팅 진입 시 _stuckToBottom 강제 true (다시 들어오면 맨 아래 보고 싶어함)
+    _stuckToBottom = true;
+    _unseenSinceScroll = 0;
     renderChat();
-    setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50);
+    setTimeout(() => { const s = document.getElementById('screen-chat'); if (s) s.scrollTop = s.scrollHeight; }, 50);
     // V4-fix v3 (사용자 요청): 대화 진입 시 가닥 미션 팔로업 자동 prompt
     if (typeof offerStrategyFollowup === 'function') { try { offerStrategyFollowup(); } catch (e) {} }
   }
@@ -13803,7 +14054,7 @@ function prefillCheckinFromEntry() {
   if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart || entry.music || entry.photo)) {
     // 오늘 체크인 안 함 — 새로 작성 모드
     if (submitBtn) submitBtn.textContent = '기록 완료 ✦';
-    if (subtitle) subtitle.textContent = '오늘 너의 컨디션 한 번 살펴보자.';
+    if (subtitle) subtitle.textContent = '오늘 네 컨디션 한 번 살펴보자.';
     renderCheckinMusicSlot();
     if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
     return;
@@ -14176,7 +14427,7 @@ function renderModel() {
   }
   if (state.traits.length > 0) {
     const split = splitItems(state.traits, 5, 0.4, true);
-    detailsHtml += `<div class="model-section"><div class="model-section-title">💫 너의 특성</div>`;
+    detailsHtml += `<div class="model-section"><div class="model-section-title">💫 네 특성</div>`;
     split.top.forEach((t, i) => {
       const realIdx = state.traits.indexOf(t);
       detailsHtml += renderModelItem(t, 'traits', realIdx);
@@ -14218,9 +14469,9 @@ function renderModel() {
         <div class="model-item-desc cf-list">${topHtml}</div>
         ${restHtml}</div>`;
     };
-    html += cfSection('🔍 다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 너의 결', state.caseFormulation.problems, 'problems');
-    html += cfSection('⚙️ 어떻게 작동하는지', '너의 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
-    html += cfSection('💪 너의 강점', '', state.caseFormulation.strengths, 'strengths');
+    html += cfSection('🔍 다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 네 결', state.caseFormulation.problems, 'problems');
+    html += cfSection('⚙️ 어떻게 작동하는지', '네 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
+    html += cfSection('💪 네 강점', '', state.caseFormulation.strengths, 'strengths');
     html += '</div>';
   }
   // V4-fix v3 (사용자 요청): 진단 5종 나 탭에 표시 (active + shown만, dismissed 제외)
@@ -14236,7 +14487,7 @@ function renderModel() {
     };
     detailsHtml += `<div class="model-section">
       <div class="model-section-title">🩺 작동 중인 패턴</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">내가 너 데이터에서 발견한 작동 중인 패턴이야. 시도 결과로 신뢰도 갱신돼.</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">내가 네 데이터에서 발견한 작동 중인 패턴이야. 시도 결과로 신뢰도 갱신돼.</div>
       ${visibleDiags.sort((a,b) => (b.confidence || 0) - (a.confidence || 0)).map(d => `
         <div class="model-item" style="border-left: 3px solid var(--purple); padding-left: 12px;">
           <div class="model-item-name">${diagLabels[d.type] || d.type}</div>
@@ -14478,30 +14729,50 @@ async function editModelItem(category, idx) {
 // ═══════════════════════════════════════════════════════════════
 // CHAT
 // ═══════════════════════════════════════════════════════════════
-function renderChat() {
-  const container = document.getElementById('chatMessages');
-  if (!container) return;  // FIX: prevent null.innerHTML error
-  
-  // Archive header (V3.3)
-  let archiveHeader = '';
-  if ((state.chatArchive || []).length > 0) {
-    const count = state.chatArchive.length;
-    archiveHeader = `<div class="chat-archive-header" onclick="openChatArchive()">
-      📚 이전 대화 보기 (${count}일치)
-    </div>`;
-  }
-  
-  if (!state.chatMessages.length) {
-    container.innerHTML = archiveHeader + `<div class="msg assistant">
-      <div class="msg-bubble">안녕 🐚 왔구나.
+// 사용자 요청 2026-04-29 (perf #4): renderChat append-only — 새 메시지만 append, 기존 변경 시 full rebuild
+let _chatRenderSig = null;
 
-오늘 어땠어? 아무 말이나 편하게 해도 돼.
-
-일기처럼 길게 써도 되고, "졸려" 한 마디도 OK.</div>
-    </div>`;
-    return;
+// 사용자 요청 2026-04-29: 자동 스크롤 가드 + '↓ 새 메시지' 플로팅 칩
+let _stuckToBottom = true;
+let _unseenSinceScroll = 0;
+function _initChatScrollWatcher() {
+  const screen = document.getElementById('screen-chat');
+  if (!screen || screen._scrollWatcherInited) return;
+  screen._scrollWatcherInited = true;
+  screen.addEventListener('scroll', () => {
+    const dist = screen.scrollHeight - screen.scrollTop - screen.clientHeight;
+    const wasStuck = _stuckToBottom;
+    _stuckToBottom = dist < 80;
+    if (_stuckToBottom && !wasStuck) {
+      _unseenSinceScroll = 0;
+      _updateChatNewMsgChip();
+    }
+  }, { passive: true });
+}
+function _updateChatNewMsgChip() {
+  const chip = document.getElementById('chatNewMsgChip');
+  if (!chip) return;
+  // 사용자 요청 2026-04-29 (final): ChatGPT/Claude 표준 — 사용자가 위로 스크롤 했을 때만 칩 표시
+  // (맨 아래에 있으면 자동 스크롤로 따라가니 칩 X)
+  if (!_stuckToBottom && _unseenSinceScroll > 0) {
+    chip.textContent = _unseenSinceScroll > 1 ? `↓ 새 메시지 ${_unseenSinceScroll}` : '↓ 새 메시지';
+    chip.style.display = '';
+  } else {
+    chip.style.display = 'none';
   }
-  container.innerHTML = archiveHeader + state.chatMessages.map((m, i) => {
+}
+function scrollChatToBottom(force) {
+  const screen = document.getElementById('screen-chat');
+  if (!screen) return;
+  if (force) _stuckToBottom = true;
+  if (_stuckToBottom) {
+    screen.scrollTop = screen.scrollHeight;
+    _unseenSinceScroll = 0;
+    _updateChatNewMsgChip();
+  }
+}
+
+function _renderChatMessageHTML(m, i) {
     let bubbleContent;
     if (m.role === 'assistant' && !m.typing) {
       bubbleContent = formatAIResponse(m.content);
@@ -14596,8 +14867,89 @@ function renderChat() {
     }
 
     return chapterDivider + `<div class="msg ${msgClass}">${bubble}${pearlSuggestChip}${proposalBtns}${decisionCard}${vaultCard}${actions}</div>`;
-  }).join('');
-  setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50);
+}
+
+function renderChat() {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;  // FIX: prevent null.innerHTML error
+
+  // Archive header (V3.3)
+  let archiveHeader = '';
+  if ((state.chatArchive || []).length > 0) {
+    const count = state.chatArchive.length;
+    archiveHeader = `<div class="chat-archive-header" onclick="openChatArchive()">
+      📚 이전 대화 보기 (${count}일치)
+    </div>`;
+  }
+
+  const msgs = state.chatMessages || [];
+  const archiveLen = (state.chatArchive || []).length;
+
+  if (!msgs.length) {
+    container.innerHTML = archiveHeader + `<div class="msg assistant">
+      <div class="msg-bubble">안녕 🐚 왔구나.
+
+오늘 어땠어? 아무 말이나 편하게 해도 돼.
+
+일기처럼 길게 써도 되고, "졸려" 한 마디도 OK.</div>
+    </div>`;
+    _chatRenderSig = null;
+    return;
+  }
+
+  // 사용자 요청 2026-04-29 (perf #4): append-only 분기 — 길이 증가 + 기존 prefix unchanged
+  // 안전성: 같은 firstTs + prev.len 위치 메시지의 ts 일치 시에만 발동. 중간 변경(saved 등)은 길이 그대로 → full rebuild fallback.
+  const prev = _chatRenderSig;
+  const lastIdx = msgs.length - 1;
+  const canAppendOnly = prev
+    && prev.archiveLen === archiveLen
+    && prev.firstTs === (msgs[0] && msgs[0].timestamp)
+    && msgs.length > prev.len
+    && prev.lastTs === (prev.len > 0 && msgs[prev.len - 1] && msgs[prev.len - 1].timestamp);
+
+  if (canAppendOnly) {
+    let html = '';
+    for (let i = prev.len; i < msgs.length; i++) {
+      html += _renderChatMessageHTML(msgs[i], i);
+    }
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    while (tmp.firstChild) container.appendChild(tmp.firstChild);
+  } else {
+    let html = archiveHeader;
+    for (let i = 0; i < msgs.length; i++) {
+      html += _renderChatMessageHTML(msgs[i], i);
+    }
+    container.innerHTML = html;
+  }
+
+  const prevLen = (prev && prev.len) || 0;
+  const lenDelta = msgs.length - prevLen;
+  _chatRenderSig = {
+    len: msgs.length,
+    firstTs: msgs[0] && msgs[0].timestamp,
+    lastTs: msgs[lastIdx] && msgs[lastIdx].timestamp,
+    archiveLen
+  };
+  // 사용자 요청 2026-04-29 (final): ChatGPT/Claude 표준 동작
+  // - 맨 아래에 붙어 있으면 (_stuckToBottom): 자동으로 따라 내려감
+  // - 위로 스크롤한 상태면: 그 자리 유지 + 새 메시지 칩으로 알림
+  // - 사용자가 직접 보낸 메시지는 무조건 따라가게 (_stuckToBottom 강제 true)
+  _initChatScrollWatcher();
+  const lastM = msgs[msgs.length - 1];
+  const lastIsUserSend = lastM && lastM.role === 'user' && lenDelta > 0;
+  if (lastIsUserSend) _stuckToBottom = true;
+  if (_stuckToBottom) {
+    setTimeout(() => {
+      const s = document.getElementById('screen-chat');
+      if (s) s.scrollTop = s.scrollHeight;
+    }, 50);
+    _unseenSinceScroll = 0;
+    _updateChatNewMsgChip();
+  } else if (lenDelta > 0) {
+    _unseenSinceScroll += lenDelta;
+    _updateChatNewMsgChip();
+  }
 }
 
 function formatAIResponse(text) {
@@ -14628,8 +14980,10 @@ async function sendChat() {
     (Date.now() - new Date(lastMsg.timestamp).getTime() >= CHAPTER_GAP_MS);
   
   // V3.13: '일기:' 키워드 감지 → 오늘 entry에 원본 그대로 저장
+  // 사용자 요청 2026-04-29: 같은 날 여러 번 적으면 덮어쓰기 X — 시각 표시와 함께 append
   const diaryMatch = text.match(/^일기[:：]\s*([\s\S]+)$/);
   let isDiary = false;
+  let diaryAppended = false;
   if (diaryMatch) {
     const diaryContent = diaryMatch[1].trim();
     const todayK = todayKey();
@@ -14638,7 +14992,15 @@ async function sendChat() {
       entry = { date: todayK, timestamp: new Date().toISOString() };
       state.entries.push(entry);
     }
-    entry.diary = diaryContent;
+    if (entry.diary && entry.diary.trim()) {
+      // 두 번째 이상 — 시각 마커와 함께 append
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      entry.diary = entry.diary.trimEnd() + '\n\n— ' + timeStr + ' —\n' + diaryContent;
+      diaryAppended = true;
+    } else {
+      entry.diary = diaryContent;
+    }
     entry.dailySource = 'diary';
     isDiary = true;
   }
@@ -14665,7 +15027,7 @@ async function sendChat() {
   input.value = ''; input.style.height = 'auto';
   renderChat();
   saveState();
-  if (isDiary) showToast('📔 오늘 일기로 저장됨');
+  if (isDiary) showToast(diaryAppended ? '📔 오늘 일기에 이어 저장됨' : '📔 오늘 일기로 저장됨');
   
   // V3.8: 새 챕터 시작 시 → 이전 챕터 토픽 추출 (백그라운드)
   if (isNewChapter && state.chatMessages.length > 1) {
@@ -14843,16 +15205,32 @@ async function endChapter() {
 }
 
 // V4-fix: chatArchive 7일 cap (잠깐 보관용)
+// 사용자 요청 2026-04-29: pinned=true 항목은 영구 보관 (7일 cap 무시)
 function pruneOldChatArchive() {
   if (!Array.isArray(state.chatArchive)) return;
   const cutoff = Date.now() - 7 * 86400000;
   const before = state.chatArchive.length;
   state.chatArchive = state.chatArchive.filter(a => {
+    if (!a) return false;
+    if (a.pinned) return true;  // 핀 꽂힌 거 영구 보관
     if (!a.date) return false;
     const t = new Date(a.date + 'T12:00:00').getTime();
     return t >= cutoff;
   });
   if (state.chatArchive.length < before) saveState();
+}
+
+// 사용자 요청 2026-04-29: chatArchive 항목 핀 토글 — 영구 보관 / 7일 cap 복귀
+function toggleArchivePin(date) {
+  if (!Array.isArray(state.chatArchive)) return;
+  const item = state.chatArchive.find(a => a && a.date === date);
+  if (!item) return;
+  item.pinned = !item.pinned;
+  saveState();
+  if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
+  if (typeof showToast === 'function') {
+    showToast(item.pinned ? '📌 영구 보관됨 — 7일 자동 삭제 안 돼' : '📌 핀 풀림 — 7일 cap 다시 적용');
+  }
 }
 
 async function showDiaryTemplates() {
@@ -15116,8 +15494,12 @@ async function generateAIResponse(modelOverride) {
       const lastIdx = state.chatMessages.length - 1;
       lastBubble.innerHTML = formatAIResponse(text) +
         `<button class="msg-menu-btn" onclick="showMessageMenu(${lastIdx})" aria-label="더보기">⋮</button>`;
-      const screen = document.getElementById('screen-chat');
-      if (screen) screen.scrollTop = screen.scrollHeight;
+      // 사용자 요청 2026-04-29 (final): _stuckToBottom 일 때만 streaming 자동 스크롤 (ChatGPT 표준)
+      // 사용자가 위로 스크롤한 상태면 자동 스크롤 X — 칩으로 새 메시지 알림.
+      if (_stuckToBottom) {
+        const screen = document.getElementById('screen-chat');
+        if (screen) screen.scrollTop = screen.scrollHeight;
+      }
     };
     const scheduleStreamUpdate = (text) => {
       _streamPending = text;
@@ -15449,7 +15831,7 @@ async function askDeeper(messageIdx) {
   // V4-fix v3 (사용자 요청): 더 알고 싶어 → 4단 + 진단 인용 강제
   state.chatMessages.push({
     role: 'user',
-    content: '아까 그 얘기, 4단계로 더 깊게 분석해줘. [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. 그리고 너가 관찰한 패턴(진단)도 한 줄 자연스럽게 인용해줘.',
+    content: '아까 그 얘기, 4단계로 더 깊게 분석해줘. [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. 그리고 네가 관찰한 패턴(진단)도 한 줄 자연스럽게 인용해줘.',
     timestamp: new Date().toISOString(),
     isDeeperRequest: true
   });
@@ -15569,7 +15951,7 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 9. 이모지 1-2개. 🐚 가끔.
 10. 사용자가 그냥 감정 털어놓으면 → 그냥 들어주기. 분석 강요 X.
 11. **모든 메시지를 "고민/문제"로 보지 말기.** 사용자가 즐거운 일·웃긴 에피소드·소소한 일상 얘기하면 → 같이 즐거워하고 공감하기. 분석 X, 전략 제시 X, "이게 어떤 의미일까?" 같은 깊이 파기 X. 그냥 친구처럼 같이 웃고 같이 좋아하기.
-12. **사용자를 "고쳐야 할 대상"으로 보지 말기.** 사용자가 명시적으로 도움 요청 ("어떡하지", "도와줘") 안 했으면 절대 분석/진단/제안 X. "너의 ~한 패턴이 보여" 같은 분석적 톤 강제 X.
+12. **사용자를 "고쳐야 할 대상"으로 보지 말기.** 사용자가 명시적으로 도움 요청 ("어떡하지", "도와줘") 안 했으면 절대 분석/진단/제안 X. "네~한 패턴이 보여" 같은 분석적 톤 강제 X.
 13. **물음표 자제 — 단, 친구 티키타카는 OK.**
     - 매 응답마다 형식적 follow-up 질문 ("오늘 어땠어?", "어떡할 거야?", "왜 그런 거 같아?") X
     - 분석적/탐색적 질문도 명시적 요청 ("어떡하지", "도와줘") 시에만
@@ -15701,27 +16083,42 @@ function buildSystemPromptParts() {
   stable.push('\n━━━━━━━━━━━━━━━━━━━━━\n📂 사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
   if (state.profile) stable.push(`[사용자 프로필]\n${state.profile}\n`);
 
-  if (state.values.length > 0) {
+  // 사용자 요청 2026-04-29 (perf #5): 시스템 프롬프트 cap — 매우 많을 때 verified 우선 + 최대 30개 (확신도 높은 순)
+  const _topByConfVerified = (arr, max) => {
+    if (!Array.isArray(arr)) return [];
+    return arr.slice().sort((a, b) => {
+      const av = a.user_verified ? 1 : 0;
+      const bv = b.user_verified ? 1 : 0;
+      if (av !== bv) return bv - av;
+      return (b.confidence || 0) - (a.confidence || 0);
+    }).slice(0, max);
+  };
+  const _vals = _topByConfVerified(state.values, 30);
+  if (_vals.length > 0) {
     stable.push('[중시하는 가치]');
-    state.values.forEach(v => stable.push(`- ${v.user_verified ? '✓' : '?'} ${v.name}${v.description ? ': ' + v.description : ''}`));
+    _vals.forEach(v => stable.push(`- ${v.user_verified ? '✓' : '?'} ${v.name}${v.description ? ': ' + v.description : ''}`));
     stable.push('');
   }
-  if (state.traits.length > 0) {
+  const _trts = _topByConfVerified(state.traits, 30);
+  if (_trts.length > 0) {
     stable.push('[특성]');
-    state.traits.forEach(t => stable.push(`- ${t.user_verified ? '✓' : '?'} ${t.name}${t.description ? ': ' + t.description : ''}`));
+    _trts.forEach(t => stable.push(`- ${t.user_verified ? '✓' : '?'} ${t.name}${t.description ? ': ' + t.description : ''}`));
     stable.push('');
   }
-  if (state.patterns.length > 0) {
+  const _ptns = _topByConfVerified(state.patterns, 30);
+  if (_ptns.length > 0) {
     stable.push('[관찰된 패턴]');
-    state.patterns.forEach(p => stable.push(`- ${p.user_verified ? '✓' : '?'} ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`));
+    _ptns.forEach(p => stable.push(`- ${p.user_verified ? '✓' : '?'} ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`));
     stable.push('');
   }
   if (state.caseFormulation.version > 0) {
     const cf = state.caseFormulation;
     stable.push(`[Case Formulation v.${cf.version}]`);
-    if (cf.problems.length) stable.push('문제: ' + cf.problems.join('; '));
-    if (cf.mechanisms.length) stable.push('메커니즘: ' + cf.mechanisms.join('; '));
-    if (cf.strengths.length) stable.push('강점: ' + cf.strengths.join('; '));
+    // 사용자 요청 2026-04-29 (perf #5): cf 문자열 array는 너무 길면 슬라이스
+    const _cfTrunc = (arr) => arr.map(s => typeof s === 'string' ? s.slice(0, 120) : (s && s.text ? s.text.slice(0, 120) : '')).filter(Boolean).join('; ');
+    if (cf.problems.length) stable.push('문제: ' + _cfTrunc(cf.problems));
+    if (cf.mechanisms.length) stable.push('메커니즘: ' + _cfTrunc(cf.mechanisms));
+    if (cf.strengths.length) stable.push('강점: ' + _cfTrunc(cf.strengths));
     stable.push('');
   }
 
@@ -15861,7 +16258,8 @@ function buildSystemPromptParts() {
 
   if (state.archive.length > 0) {
     volatile.push('[과거 깨달음 (최근 5개)]');
-    state.archive.slice(0, 5).forEach(a => volatile.push(`- ${a.date}: ${a.insight}`));
+    // 사용자 요청 2026-04-29 (perf #5): insight 길면 자름 (180자)
+    state.archive.slice(0, 5).forEach(a => volatile.push(`- ${a.date}: ${(a.insight || '').slice(0, 180)}`));
   }
 
   // Mission state
@@ -16054,7 +16452,7 @@ async function addMemoArchive() {
   // V4-fix v3 (사용자 요청): 테스터 모드 → 예시 메모 자동 채움
   const isTester = !!(state.preferences && state.preferences.testerMode);
   const memoExamples = [
-    '새벽 작업이 가장 잘 돼. 이 시간이 너의 골든.',
+    '새벽 작업이 가장 잘 돼. 이 시간이 네 골든.',
     '거절 = 약함 X 강함. 부채감은 일시.',
     '환경이 의지보다 강함. 도구 셋업 한 번이 의지 매일보다 효과 큼.',
     '한강 → 글쓰기 흐름 작동. 몸 풀림 + 인지 시작 패턴.',
@@ -16527,7 +16925,7 @@ async function openMutationChat(strategyId, missionTitle) {
 [옵션 작성 가이드 — 매우 중요]
 1. 추상 X 구체 ○: "환경 바꿔" X, "오늘 저녁 7시까지 폰을 거실 책상 충전기에 꽂아두기" ○
 2. 첫 행동 명확: 동사로 시작 + 5분 안에 시작 가능
-3. 너의 사용자 ${card.title} 패턴에 맞게 — 일반론 X
+3. 네 사용자 ${card.title} 패턴에 맞게 — 일반론 X
 4. 왜 효과적인지 1구절 포함 (예: "도파민 trigger 외부화", "결정 부담 ↓")
 5. ADHD 친화: 의지 부담 ↓ 차원 (L3/L4) 우선, L1·L5는 신중하게
 6. 한 줄 70-100자 (이전 50자 → 더 디테일)
@@ -16718,7 +17116,7 @@ async function selectMutationOption(idx) {
           model: 'claude-sonnet-4-6', max_tokens: 400,
           messages: [{
             role: 'user',
-            content: `사용자 가닥 "${card?.title || ''}" — 새 시도 차원: ${opt.layer} ${layerName}\n행동: "${opt.action}"\n\n[너의 일]\n이 행동을 *오늘부터 바로 할 수 있도록* 구체적 step-by-step 3-5단계.\n각 단계: 짧고 명확하게 (한 줄 max 40자). 의지 부담↓ 환경 셋업 우선.\n\n[톤]\n친구. 외재화. "실패" 단어 X. ADHD 친화 (작은 단위).\n\n[출력 — 다른 거 X, 단계만]\n1. (첫 단계 — 가장 작게)\n2. ...\n3. ...\n\n도입 한 줄 + 단계 + 마무리 한 줄 ("시작 전에 더 얘기 X면 ✦ 해볼게로 등록").`
+            content: `사용자 가닥 "${card?.title || ''}" — 새 시도 차원: ${opt.layer} ${layerName}\n행동: "${opt.action}"\n\n[네 일]\n이 행동을 *오늘부터 바로 할 수 있도록* 구체적 step-by-step 3-5단계.\n각 단계: 짧고 명확하게 (한 줄 max 40자). 의지 부담↓ 환경 셋업 우선.\n\n[톤]\n친구. 외재화. "실패" 단어 X. ADHD 친화 (작은 단위).\n\n[출력 — 다른 거 X, 단계만]\n1. (첫 단계 — 가장 작게)\n2. ...\n3. ...\n\n도입 한 줄 + 단계 + 마무리 한 줄 ("시작 전에 더 얘기 X면 ✦ 해볼게로 등록").`
           }]
         })
       });
@@ -16732,7 +17130,7 @@ async function selectMutationOption(idx) {
       L3: `좋아. 환경 차원은 의지 부담 ↓↓ — 한 번 셋업하면 자동 발동.\n\n1. 그 행동이 자연스레 일어날 환경 1가지 정하기 (장소/도구/시간)\n2. 셋업 한 번 (5분 이내) — 예: 폰 차단, 알람 X, 도구 미리 펼침\n3. 다음 trigger가 왔을 때 그 환경에 그냥 들어가기\n4. 작동했는지 한 줄 기록\n\n시작 전에 더 얘기 X면 ✦ 해볼게로 등록.`,
       L4: `좋아. 사회 차원은 의지 부담 ↓ — 다른 사람의 존재가 trigger.\n\n1. 믿을 사람 1명 정하기 (친구/동기/가족)\n2. 카톡 한 줄로 알리기 — "나 X 시도 중이야"\n3. 매주 1번 짧게 결과 공유 (긴 설명 X)\n4. 작동 안 해도 알리기 — 발견 자체가 가치\n\n시작 전에 더 얘기 X면 ✦ 해볼게로 등록.`,
       L1: `좋아. 인지 차원은 의지 부담 높음 — 생각의 틀 자체를 바꿈.\n\n1. 이 패턴이 어디서 오는지 한 줄 적기 (왜 작동하지)\n2. 다른 해석 1개 시도 — "X = Y 아니라 Z일 수도"\n3. 그 해석으로 하루 살아보기\n4. 어떤 차이 있었는지 저녁에 한 줄\n\n시작 전에 더 얘기 X면 ✦ 해볼게로 등록.`,
-      L5: `좋아. 메타 차원은 의지 부담 ↓ — 큰 그림에서 다시 봄.\n\n1. 마법의 소라고동 또는 일기에 큰 질문 박기 — "이게 정말 너의 길인지"\n2. 일주일 그 질문 안고 살기 (답 강요 X)\n3. 일주일 후 한 단락 쓰기\n4. 결론은 "지금은 모름"도 OK — 머무는 시간도 의미\n\n시작 전에 더 얘기 X면 ✦ 해볼게로 등록.`,
+      L5: `좋아. 메타 차원은 의지 부담 ↓ — 큰 그림에서 다시 봄.\n\n1. 마법의 소라고동 또는 일기에 큰 질문 박기 — "이게 정말 네 길인지"\n2. 일주일 그 질문 안고 살기 (답 강요 X)\n3. 일주일 후 한 단락 쓰기\n4. 결론은 "지금은 모름"도 OK — 머무는 시간도 의미\n\n시작 전에 더 얘기 X면 ✦ 해볼게로 등록.`,
       L2: `좋아. 행동 차원 — 알람/체크리스트로 trigger 만들기.\n\n1. 행동을 5분 이하로 쪼개기\n2. 알람 1개 설정 (실제 가능한 시간)\n3. 알람 울리면 그냥 시작 — 5분만\n4. 작동했는지 한 줄 기록\n\n시작 전에 더 얘기 X면 ✦ 해볼게로 등록.`
     };
     stepText = fb[opt.layer] || fb.L2;
@@ -16775,7 +17173,7 @@ function sendMutationMessage() {
           model: 'claude-sonnet-4-6', max_tokens: 250,
           messages: [{
             role: 'user',
-            content: `너는 돌연변이 진화 임시 대화창 안 AI. "${card.title}" 가닥의 다음 차원 시도를 사용자가 고민 중. 짧게 (1-3문장), 친구 톤, 외재화, "실패" X. 사용자 페이스 따라가.\n\n[최근 대화]\n${recentMsgs}\n\n[너의 응답만, 마크다운 X]`
+            content: `너는 돌연변이 진화 임시 대화창 안 AI. "${card.title}" 가닥의 다음 차원 시도를 사용자가 고민 중. 짧게 (1-3문장), 친구 톤, 외재화, "실패" X. 사용자 페이스 따라가.\n\n[최근 대화]\n${recentMsgs}\n\n[네 응답만, 마크다운 X]`
           }]
         })
       });
@@ -16856,7 +17254,7 @@ ${oldCtx}
 [돌연변이 대화]
 ${recentMsgs}
 
-[너의 일]
+[네 일]
 새 차원/행동 맞춰 진화한 카드의 4 필드 작성.
 
 [출력 — 정확히 4줄]
@@ -16952,7 +17350,7 @@ async function promptCrystallize(card) {
 
   const yes = await showConfirmModal({
     title: '🧬 DNA 진주로 결정화할까?',
-    message: `"${card.title}" 가닥이 ${workedCount}번 작동했어.\n\n결정화하면 너의 일부가 돼 — 의식 X 자동 발동.\n한 번뿐인 의식이야.`,
+    message: `"${card.title}" 가닥이 ${workedCount}번 작동했어.\n\n결정화하면 네 일부가 돼 — 의식 X 자동 발동.\n한 번뿐인 의식이야.`,
     okLabel: '응 결정화',
     cancelLabel: '아직'
   });
@@ -17001,7 +17399,7 @@ function showCrystallizeRitualModal(card, dnaPearl) {
     'one-shot': {
       emoji: '🌱',
       label: '빠른 발견',
-      msg: `한 차원에서 바로 통했어. 너 자신을 잘 알아서 빠르게 길 찾은 거야.\n\n이제 너 일부 — 의식 X 자동 발동.\n\n너만의 진주.`
+      msg: `한 차원에서 바로 통했어. 너 자신을 잘 알아서 빠르게 길 찾은 거야.\n\n이제 네 일부 — 의식 X 자동 발동.\n\n너만의 진주.`
     },
     'quick-discovery': {
       emoji: '🌳',
@@ -17464,7 +17862,7 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
           model: 'claude-sonnet-4-6', max_tokens: 120,
           messages: [{
             role: 'user',
-            content: `${ctx}\n\n[너의 일]\n위 상황·전략에 맞춰 '오늘의 제안' 1개 — 오늘 바로 할 수 있는 구체 행동.\n한 줄 (max 40자). 동사로 시작. 환경 셋업 우선. 의지 부담 ↓.\n\n[출력]\n제안만 한 줄. 다른 거 X. 마크다운 X.`
+            content: `${ctx}\n\n[네 일]\n위 상황·전략에 맞춰 '오늘의 제안' 1개 — 오늘 바로 할 수 있는 구체 행동.\n한 줄 (max 40자). 동사로 시작. 환경 셋업 우선. 의지 부담 ↓.\n\n[출력]\n제안만 한 줄. 다른 거 X. 마크다운 X.`
           }]
         })
       });
@@ -17542,10 +17940,10 @@ async function regenerateProposal(idx) {
 [사용자 메시지]
 ${userContext}
 
-[직전 너의 응답]
+[직전 네 응답]
 ${msg.content}
 
-[너의 일]
+[네 일]
 방금 제안 "${oldTitle}"과 다른 차원/접근으로 — 환경 / 시간 / 사회 / 인지 / 메타 중 다른 거.
 오늘 바로 할 수 있는 구체 행동 1개. 동사로 시작. 한 줄 (max 40자).
 
@@ -17576,9 +17974,19 @@ ${msg.content}
   renderChat();
 }
 
-function acceptProposal(idx) {
+async function acceptProposal(idx) {
   const msg = state.chatMessages[idx];
   msg.proposalResponse = 'accept';
+
+  // 사용자 요청 2026-04-29: 전략으로 안 누른 상태에서 해볼게 누르면 전략 DNA 흐름 끊김
+  // (양생방 X / DNA 조각 X / 결정화 추적 X)
+  // → 자동으로 saveMsgAsStrategy 먼저 돌림. 4단 분석 응답 (또는 fromDeeper)일 때만 — 평범한 대화엔 X.
+  const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]/.test(msg.content || '');
+  if (!msg.savedStrategy && !msg.strategyId && msg.role === 'assistant' && !msg.typing && (msg.fromDeeper || has4Stage)) {
+    try {
+      await saveMsgAsStrategy(idx);
+    } catch (e) { console.warn('auto-save strategy on accept:', e); }
+  }
 
   // Create mission
   const proposalData = msg.proposalData || {};
@@ -18093,11 +18501,12 @@ function switchDayModalTab(tab) {
       }
     }
   } else if (tab === 'topics') {
-    // V4-fix: 카테고리 분류 X — '✦ 토픽' 단일
+    // 사용자 보고 2026-04-29: 일기·대화 칩이 step 25에서 말한 8 카테고리(일기/일상/고민/감정/기억/할 일/아이디어/관계)로 분류돼 보이게
     topics.forEach(c => {
+      const catInfo = TOPIC_CATEGORY_LABELS[c.category] || { label: '토픽', icon: '✦' };
       html += `
         <div class="day-card t-topic" onclick="closeDayModal(); openTopicCard('${c.id}')">
-          <div class="day-card-icon-row"><span class="icon">✦</span><span>토픽</span></div>
+          <div class="day-card-icon-row"><span class="icon">${catInfo.icon}</span><span>${escapeHtml(catInfo.label)}</span></div>
           <div class="day-card-title">${escapeHtml(c.title || '')}</div>
           ${c.summary ? `<div class="day-card-body">${escapeHtml(c.summary)}</div>` : ''}
         </div>
@@ -18349,12 +18758,20 @@ function searchArchive() {
 
 // === V3.8 LENS: TOPIC CARDS — 챕터별 토픽 정리 (대화 렌즈 상단) ===
 const TOPIC_CATEGORY_LABELS = {
-  decision: { label: '결정', icon: '🧙‍♂️' },
-  task: { label: '할 일', icon: '📋' },
+  // V4 8 카테고리 (step 25 챕터 자동 분류 기준)
+  diary:        { label: '일기',     icon: '📔' },
+  casual:       { label: '일상',     icon: '☀️' },
+  concern:      { label: '고민',     icon: '💭' },
+  emotion:      { label: '감정',     icon: '💧' },
+  memory:       { label: '기억',     icon: '🔮' },
+  todo:         { label: '할 일',    icon: '📋' },
+  idea:         { label: '아이디어', icon: '💡' },
+  relationship: { label: '관계',     icon: '👥' },
+  // V3 호환 (legacy)
+  decision:  { label: '결정', icon: '🧙‍♂️' },
+  task:      { label: '할 일', icon: '📋' },
   emotional: { label: '감정', icon: '💧' },
-  memory: { label: '기억', icon: '📝' },
-  idea: { label: '아이디어', icon: '💡' },
-  strategy: { label: '전략', icon: '🧭' }
+  strategy:  { label: '전략', icon: '🧬' }
 };
 
 function renderLensTopicCards() {
@@ -18470,7 +18887,7 @@ function openTopicCard(id) {
     actions.push(`<button class="topic-modal-btn primary" onclick="topicToPearl('${id}'); closeTopicModal()">💎 진주로 보관</button>`);
   }
   if (card.category !== 'strategy') {
-    actions.push(`<button class="topic-modal-btn" onclick="topicToStrategy('${id}'); closeTopicModal()">🧭 전략 카드로</button>`);
+    actions.push(`<button class="topic-modal-btn" onclick="topicToStrategy('${id}'); closeTopicModal()">🧬 전략 카드로</button>`);
   }
   actions.push(`<button class="topic-modal-btn danger" onclick="closeTopicModal(); deleteTopicCard('${id}')">🗑 삭제</button>`);
   
@@ -19306,7 +19723,7 @@ function openArchiveItem(idx) {
   const bodyText = a.body || (a.headline ? '' : (a.insight || ''));
   const body = bodyText ? `<div class="archive-modal-body">${escapeHtml(bodyText)}</div>` : '';
   const questionBlock = a.question
-    ? `<div class="archive-modal-section-label">너의 질문</div>
+    ? `<div class="archive-modal-section-label">네 질문</div>
        <div class="archive-modal-original" style="background:rgba(212,167,106,0.06);">${escapeHtml(a.question)}</div>`
     : '';
   const originalBlock = a.original
@@ -19386,7 +19803,7 @@ function renderLensInsights() {
           <div class="insight-card-text">${escapeHtml(insight.content)}</div>
           ${insight.evidence ? `<div class="insight-card-evidence"><span class="insight-card-evidence-label">📊 근거</span>${escapeHtml(insight.evidence)}</div>` : ''}
           ${isConfirmed
-            ? `<div style="font-size:11px; color:#8fc88f; padding:4px 0;">✓ 확인됨 — 너 안의 살아있는 패턴</div>`
+            ? `<div style="font-size:11px; color:#8fc88f; padding:4px 0;">✓ 확인됨 — 네 안의 살아있는 패턴</div>`
             : `<div class="insight-card-actions">
                 <button class="insight-card-btn confirm" onclick="confirmInsight('${insight.id}')">맞아 ✓</button>
                 <button class="insight-card-btn reject" onclick="dismissInsight('${insight.id}')">아니야</button>
@@ -20194,24 +20611,34 @@ function renderChatArchiveModal() {
     container.innerHTML = `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
       <div style="font-size:32px; margin-bottom:12px;">📚</div>
       아직 보관된 대화가 없어.<br>
-      7일 넘은 대화가 자동으로 여기 모일 거야.
+      7일 넘은 대화가 자동으로 여기 모일 거야.<br>
+      <span style="font-size:11px; opacity:0.8;">📌 핀 꽂으면 영구 보관됨.</span>
     </div>`;
     return;
   }
-  
-  container.innerHTML = archive.map(a => {
-    const dateLabel = new Date(a.date).toLocaleDateString('ko-KR', { 
-      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' 
+
+  // 사용자 요청 2026-04-29: 핀 꽂힌 거 위로
+  const sortedArchive = archive.slice().sort((a, b) => {
+    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+    return 0;
+  });
+
+  container.innerHTML = sortedArchive.map(a => {
+    const dateLabel = new Date(a.date).toLocaleDateString('ko-KR', {
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
     });
     const isExpanded = _expandedArchiveDates.has(a.date);
     const messages = isExpanded ? (a.messages || []) : [];
-    
+    const pinIcon = a.pinned ? '📌' : '📍';
+    const pinTitle = a.pinned ? '핀 풀기 (7일 cap 다시)' : '핀 꽂기 (영구 보관)';
+
     return `
-      <div class="chat-archive-card">
+      <div class="chat-archive-card${a.pinned ? ' pinned' : ''}">
         <div class="cac-header" onclick="toggleArchiveDay('${a.date}')">
-          <div class="cac-date">${dateLabel}</div>
+          <div class="cac-date">${a.pinned ? '📌 ' : ''}${dateLabel}</div>
           <div class="cac-meta">
             <span>${a.messageCount || 0}개 메시지</span>
+            <button class="cac-pin-btn" onclick="event.stopPropagation(); toggleArchivePin('${a.date}')" title="${pinTitle}" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; opacity:${a.pinned ? '1' : '0.5'};">${pinIcon}</button>
             <span class="cac-toggle">${isExpanded ? '▾' : '▸'}</span>
           </div>
         </div>
@@ -21574,7 +22001,7 @@ async function testSeedV4Data() {
       cat: 'idea', summary: '논문 아이디어',
       msgs: [
         ['user', '환경 데이터랑 ADHD 행동 데이터 결합하면 새로운 게 나올 거 같아.'],
-        ['assistant', '[내가 본 것]\n환경×행동 결합 아이디어 — 두 분야 다 깊게 봤구나.\n[이게 뭐냐면]\n학제간 연구 가능성. 너의 강점 (깊이 파는 습관) 작동.\n[이럴 땐 이렇게]\n초안 한 페이지부터.\n[오늘의 제안]\n주말 30분 쓰고 평가.'],
+        ['assistant', '[내가 본 것]\n환경×행동 결합 아이디어 — 두 분야 다 깊게 봤구나.\n[이게 뭐냐면]\n학제간 연구 가능성. 네 강점 (깊이 파는 습관) 작동.\n[이럴 땐 이렇게]\n초안 한 페이지부터.\n[오늘의 제안]\n주말 30분 쓰고 평가.'],
         ['user', '근데 평가는 어떻게?']
       ]
     },
@@ -21905,7 +22332,7 @@ async function testSeedV4Data() {
     { type: 'scrap', headline: '거절 = 자기 보호',
       body: '술자리 거절은 약함 X 강함. 부채감은 일시.', daysAgo: 14, tags: ['거절', '관계'],
       userMsg: '오늘 술자리 거절했는데 친구한테 미안하고 부채감이 너무 든다.',
-      assistantMsg: '거절은 약함이 아니라 강함이야 — 자기 시간을 지키는 결단. 부채감은 일시적이고 며칠이면 사라져. 친구도 너 사정 이해할 거야.' },
+      assistantMsg: '거절은 약함이 아니라 강함이야 — 자기 시간을 지키는 결단. 부채감은 일시적이고 며칠이면 사라져. 친구도 네 사정 이해할 거야.' },
     { type: 'memo', headline: '아침 6시 = 골든',
       body: '새벽 작업이 가장 잘 됨. 이거 활용해야.', daysAgo: 18, tags: ['시간', '리듬'],
       userMemo: '새벽 작업이 가장 잘 됨. 이거 활용해야.' },
@@ -21913,7 +22340,7 @@ async function testSeedV4Data() {
     { type: 'scrap', headline: '실패 ≠ 자기 부정',
       body: '한 번 안 통한 = 데이터, 가치 판정 X.', daysAgo: 80, tags: ['실패', '자기이해'],
       userMsg: '이번 시도도 실패. 내가 부족한 건가 싶어.',
-      assistantMsg: '한 번 안 통했다 = 그 방법이 안 맞았다. 너의 가치랑 별개야. 데이터 한 점 늘었어 — 다음 시도 더 정확해질 거야.' },
+      assistantMsg: '한 번 안 통했다 = 그 방법이 안 맞았다. 네가치랑 별개야. 데이터 한 점 늘었어 — 다음 시도 더 정확해질 거야.' },
     { type: 'memo', headline: '카페 새벽 = 가장 강한 환경',
       body: '의지 0%여도 카페 자리 잡으면 시작됨. 환경 신호의 힘.', daysAgo: 130, tags: ['환경', '카페'],
       userMemo: '카페 새벽 = 가장 강한 환경. 의지 0%여도 자리 잡으면 시작됨.' },
@@ -22117,7 +22544,7 @@ async function testSeedV4Data() {
         { role: 'user', content: '데이터로 패턴 발견하는 거. 그리고 그게 누군가에게 도움이 되면 진짜 만족.', timestamp: new Date(today.getTime() - 100 * 86400000).toISOString() },
         { role: 'assistant', content: '도움 = 학계만의 길? 산업 R&D, 공공 정책, NGO 데이터 컨설팅 — 다 같은 핵심을 다른 환경에서.', timestamp: new Date(today.getTime() - 100 * 86400000).toISOString() },
         { role: 'user', content: '아 그렇네. 학계 = 정체성처럼 생각해서 막혔던 듯. 길은 여러 개네.', timestamp: new Date(today.getTime() - 90 * 86400000).toISOString() },
-        { role: 'assistant', content: '학계가 첫 길이 아니어도 너의 핵심은 살아있을 거야. 어떻게 결론?', timestamp: new Date(today.getTime() - 85 * 86400000).toISOString() },
+        { role: 'assistant', content: '학계가 첫 길이 아니어도 네 핵심은 살아있을 거야. 어떻게 결론?', timestamp: new Date(today.getTime() - 85 * 86400000).toISOString() },
         { role: 'user', content: '박사 끝까지 가되, 산업/공공 출구 옵션 열어두기. 학위 자체가 정체성 X.', timestamp: new Date(today.getTime() - 70 * 86400000).toISOString() }
       ]
     },
@@ -22223,6 +22650,8 @@ async function testSeedV4Data() {
     });
   });
   // 가닥 generations에 shellId 박기 (gen.shells, missionId 매칭)
+  // 사용자 보고 2026-04-29: DNA 조각은 'call' (부름) 또는 'legend' (특별) 티어만 — 실제 흐름과 일치
+  // (이전 버그: 황금/메인/일상/가벼움 티어도 DNA로 박혀서 시드만 비현실적으로 보임)
   (state.topicCards || []).filter(c => c.category === 'strategy' && !c._isDiagnosticSeed).forEach(card => {
     if (!Array.isArray(card.generations)) return;
     card.generations.forEach(gen => {
@@ -22231,8 +22660,12 @@ async function testSeedV4Data() {
       // 각 attempt에 마치 shell이 박힌 것처럼 임의 매칭 (시각 검증)
       gen.attempts.forEach((a, ai) => {
         if (a.status !== 'worked' && a.status !== 'meh') return;
-        // 시드 shell 중 임의 1개 매칭 (이미 매칭된 거 제외)
-        const free = state.shellCollection.find(s => !s._dnaMatched && (gen.layer === 'L1' || gen.layer === 'L2' || gen.layer === 'L3'));
+        // 시드 shell 중 'call' 또는 'legend' 티어만 매칭 (이미 매칭된 거 제외)
+        const free = state.shellCollection.find(s =>
+          !s._dnaMatched
+          && (s.tier === 'call' || s.tier === 'legend')
+          && (gen.layer === 'L1' || gen.layer === 'L2' || gen.layer === 'L3')
+        );
         if (free) {
           a.shellId = free._id;
           free._dnaMatched = true;
@@ -22341,25 +22774,36 @@ async function testSeedV4Data() {
     }
   ];
   // caseFormulation 8 차원 (problems / mechanisms / strengths / goals / growth + unverified 일부)
+  // 사용자 보고 2026-04-29: cf 항목들 분기별 분산 (각 분기 review에 '자기 이해' 카테고리 보이도록)
   state.caseFormulation = {
     version: 7, lastUpdated: new Date().toISOString(),
     problems: [
       { text: '저녁 무력감으로 작업 X', confidence: 0.7, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 10 * 86400000).toISOString() },
-      { text: '거절 후 부채감으로 공부 X', confidence: 0.6, evidence_count: 2, user_verified: true, created_at: new Date(today.getTime() - 20 * 86400000).toISOString() }
+      { text: '거절 후 부채감으로 공부 X', confidence: 0.6, evidence_count: 2, user_verified: true, created_at: new Date(today.getTime() - 100 * 86400000).toISOString() },
+      { text: '잠 부족 시 큰 결정 후회', confidence: 0.55, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 200 * 86400000).toISOString() },
+      { text: '관계 깊이 회피', confidence: 0.5, evidence_count: 1, user_verified: false, created_at: new Date(today.getTime() - 280 * 86400000).toISOString() }
     ],
     mechanisms: [
-      { text: '과부하 → 회피 → 자책 루프', confidence: 0.65, evidence_count: 4, user_verified: false, created_at: new Date(today.getTime() - 15 * 86400000).toISOString() }
+      { text: '과부하 → 회피 → 자책 루프', confidence: 0.65, evidence_count: 4, user_verified: false, created_at: new Date(today.getTime() - 15 * 86400000).toISOString() },
+      { text: '인지 자원 고갈 → 충동적 결정', confidence: 0.6, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 130 * 86400000).toISOString() },
+      { text: '시간 압박 → 도파민 급증 → 폭발력', confidence: 0.7, evidence_count: 3, user_verified: true, created_at: new Date(today.getTime() - 220 * 86400000).toISOString() }
     ],
     strengths: [
       { text: '마감 직전 폭발력 신뢰 가능', confidence: 0.85, evidence_count: 5, user_verified: true, created_at: new Date(today.getTime() - 25 * 86400000).toISOString() },
-      { text: '깊이 파는 습관', confidence: 0.7, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 18 * 86400000).toISOString() }
+      { text: '깊이 파는 습관', confidence: 0.7, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 90 * 86400000).toISOString() },
+      { text: '환경 셋업 능력', confidence: 0.75, evidence_count: 4, user_verified: true, created_at: new Date(today.getTime() - 180 * 86400000).toISOString() },
+      { text: '자기 인식 의식적', confidence: 0.65, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 270 * 86400000).toISOString() }
     ],
     goals: [
       { text: '박사 졸업 (2027)', confidence: 0.9, evidence_count: 1, user_verified: true, created_at: new Date(today.getTime() - 30 * 86400000).toISOString() },
-      { text: '논문 첫 저자 1편 (이번 분기)', confidence: 0.6, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 5 * 86400000).toISOString() }
+      { text: '논문 첫 저자 1편 (이번 분기)', confidence: 0.6, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 5 * 86400000).toISOString() },
+      { text: '거절 패턴 풀기', confidence: 0.65, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 150 * 86400000).toISOString() },
+      { text: '실험 결과 1건 publish', confidence: 0.55, evidence_count: 1, user_verified: false, created_at: new Date(today.getTime() - 240 * 86400000).toISOString() }
     ],
     growth: [
-      { text: '환경 차원 도구 사용 늘어남 (지난 분기 비교)', confidence: 0.8, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 7 * 86400000).toISOString() }
+      { text: '환경 차원 도구 사용 늘어남', confidence: 0.8, evidence_count: 3, user_verified: false, created_at: new Date(today.getTime() - 7 * 86400000).toISOString() },
+      { text: '자기 친절 톤 정착', confidence: 0.6, evidence_count: 2, user_verified: false, created_at: new Date(today.getTime() - 110 * 86400000).toISOString() },
+      { text: '거절 그날 안에 답하기', confidence: 0.7, evidence_count: 3, user_verified: true, created_at: new Date(today.getTime() - 230 * 86400000).toISOString() }
     ],
     unverified: {
       problems: [{ text: '저녁 무력감으로 작업 X', addedAt: new Date(today.getTime() - 10 * 86400000).toISOString() }],
@@ -23155,6 +23599,33 @@ function getQuarterRange(quarterKey) {
   const start = new Date(year, startMonth, 1);
   const end = new Date(year, startMonth + 3, 0, 23, 59, 59);
   return { start, end };
+}
+
+// 사용자 요청 2026-04-29: 분기 → 계절 라벨 변환 헬퍼
+// Q1=봄(🌸), Q2=여름(☀️), Q3=가을(🍂), Q4=겨울(❄️)
+const SEASON_LABELS = {
+  Q1: { name: '봄',   emoji: '🌸', months: '1~3월' },
+  Q2: { name: '여름', emoji: '☀️', months: '4~6월' },
+  Q3: { name: '가을', emoji: '🍂', months: '7~9월' },
+  Q4: { name: '겨울', emoji: '❄️', months: '10~12월' }
+};
+function quarterToSeason(quarterKey) {
+  // '2026-Q1' → { name:'봄', emoji:'🌸', year: 2026, q: 'Q1', label: '2026년 봄' }
+  const m = String(quarterKey || '').match(/^(\d{4})-Q(\d)$/);
+  if (!m) return null;
+  const year = m[1];
+  const q = 'Q' + m[2];
+  const info = SEASON_LABELS[q];
+  if (!info) return null;
+  return { ...info, year, q, label: `${year}년 ${info.name}` };
+}
+function seasonLabelOf(quarterKey, opts) {
+  // opts: { withYear: true (default), withEmoji: false }
+  const s = quarterToSeason(quarterKey);
+  if (!s) return quarterKey || '';
+  const wy = !opts || opts.withYear !== false;
+  const we = opts && opts.withEmoji;
+  return `${we ? s.emoji + ' ' : ''}${wy ? s.year + '년 ' : ''}${s.name}`;
 }
 
 // 분기 통계 — 6 비교 축 (V4 비전 7.10):
@@ -25384,6 +25855,7 @@ async function buildQuarterlySlides(review) {
 
   const slides = [];
 
+  // 사용자 보고 2026-04-29: 신규 슬라이드 4종 추가 — Mood arc / Highlight 한 순간 / Forecast 후일담 / Timecapsule
   // 1. 감성 hook — 큰 숫자 + 사진 + 직전 분기 비교
   const heroPhoto = (() => {
     const entries = (state.entries || []).filter(e => e.photo && e.date && new Date(e.date + 'T12:00:00').getTime() >= startMs && new Date(e.date + 'T12:00:00').getTime() <= endMs);
@@ -25407,7 +25879,7 @@ async function buildQuarterlySlides(review) {
   slides.push({
     tone: 'tone-emo',
     html: `
-      <div class="stories-label">${escapeHtml(review.quarterKey || '')}</div>
+      <div class="stories-label">${escapeHtml((typeof seasonLabelOf === 'function' ? seasonLabelOf(review.quarterKey) : review.quarterKey) || '')}</div>
       ${heroPhoto ? `<img class="stories-photo" src="${heroPhoto}" alt="">` : ''}
       <div class="stories-hero-num">${checkinsCnt}</div>
       <div class="stories-hero-unit">번 체크인했어</div>
@@ -25416,6 +25888,7 @@ async function buildQuarterlySlides(review) {
     `
   });
 
+  // 사용자 요청 2026-04-29: Mood arc 슬라이드 제거
   // 2. 진지 변화 — 8 차원 + 모드
   slides.push({
     tone: 'tone-deep',
@@ -25432,7 +25905,7 @@ async function buildQuarterlySlides(review) {
   slides.push({
     tone: 'tone-emo-2',
     html: topMusic ? `
-      <div class="stories-label">너의 사운드트랙</div>
+      <div class="stories-label">네 사운드트랙</div>
       <div class="stories-music-card">
         <img class="stories-music-art" src="${escapeHtml(topMusic.track.artworkUrl || '')}" alt="">
         <div>
@@ -25442,16 +25915,17 @@ async function buildQuarterlySlides(review) {
         ${topMusic.track.previewUrl ? `<button class="stories-music-play" onclick="event.stopPropagation(); toggleMusicPreview(this, '${escapeHtml(topMusic.track.previewUrl)}')">▶</button>` : ''}
       </div>
     ` : `
-      <div class="stories-label">너의 사운드트랙</div>
+      <div class="stories-label">네 사운드트랙</div>
       <div class="stories-empty">이 분기 음악 진주 없음<br>다음 분기엔 ✦</div>
     `
   });
 
-  // 4. 진지 진화 — 가닥 history
-  slides.push({
-    tone: 'tone-deep-4',
-    html: _buildEvolutionSlideHTML(stats, inRange)
-  });
+  // 사용자 요청 2026-04-29: '전략이 네 무기' 슬라이드(_buildEvolutionSlideHTML) 제거
+  // → '🌳 통한 전략들' + '🐚 모은 소라' 두 신규 긍정 슬라이드로 대체
+  const workedSlideHtml = _buildWorkedStrategiesSlideHTML(stats, inRange);
+  if (workedSlideHtml) slides.push({ tone: 'tone-emo-2', html: workedSlideHtml });
+  const shellsSlideHtml = _buildShellsCollectedSlideHTML(stats, inRange, startMs, endMs);
+  if (shellsSlideHtml) slides.push({ tone: 'tone-emo-4', html: shellsSlideHtml });
 
   // 5. 감성 top 진주
   // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드면 '엄마 김치찌개' 카드 고정 (시각 검증)
@@ -25484,6 +25958,7 @@ async function buildQuarterlySlides(review) {
     `
   });
 
+  // 사용자 요청 2026-04-29: '기억나는 한 순간' (highlight) 슬라이드 제거
   // 6. 진지 AI 새 특징
   slides.push({
     tone: 'tone-deep-2',
@@ -25508,6 +25983,18 @@ async function buildQuarterlySlides(review) {
     html: _buildArchiveSummarySlideHTML(inRange)
   });
 
+  // 8.7. 진지 — 직전 분기 예측 후일담 (사용자 요청 2026-04-29)
+  const forecastHtml = _buildForecastFollowupSlideHTML(review.quarterKey);
+  if (forecastHtml) {
+    slides.push({ tone: 'tone-deep-3', html: forecastHtml });
+  }
+
+  // 8.8. 감성 — 1년 전 너 (Timecapsule) (사용자 요청 2026-04-29)
+  const timecapsuleHtml = _buildTimecapsuleSlideHTML(review.quarterKey);
+  if (timecapsuleHtml) {
+    slides.push({ tone: 'tone-emo-5', html: timecapsuleHtml });
+  }
+
   // 9. 진지 narrative + prompt
   slides.push({
     tone: 'tone-deep',
@@ -25524,6 +26011,199 @@ async function buildQuarterlySlides(review) {
 }
 
 // === 슬라이드 HTML 빌더 ===
+
+// 사용자 요청 2026-04-29: 분기 mood arc — '그래서 뭐?' 안 되게 의미 있는 형태로
+// 주별 평균 막대 + 시작/끝 + peak/valley 일기 발췌 + 한 줄 해석
+function _buildMoodArcSlideHTML(inRange, startMs, endMs) {
+  const entries = (state.entries || [])
+    .filter(e => e.date && e.mood != null && new Date(e.date + 'T12:00:00').getTime() >= startMs && new Date(e.date + 'T12:00:00').getTime() <= endMs)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (entries.length < 5) return null;
+
+  // 주별 평균 (분기 ~12-13주, 막대로 보기 쉬움)
+  const weekBuckets = [];
+  entries.forEach(e => {
+    const t = new Date(e.date + 'T12:00:00').getTime();
+    const weekIdx = Math.floor((t - startMs) / (7 * 86400000));
+    if (!weekBuckets[weekIdx]) weekBuckets[weekIdx] = { sum: 0, count: 0, vSum: 0, vCount: 0, dates: [] };
+    weekBuckets[weekIdx].sum += e.mood;
+    weekBuckets[weekIdx].count += 1;
+    weekBuckets[weekIdx].dates.push(e.date);
+    if (e.vitality != null) {
+      weekBuckets[weekIdx].vSum += e.vitality;
+      weekBuckets[weekIdx].vCount += 1;
+    }
+  });
+  const weeks = weekBuckets
+    .map((b, i) => b ? { idx: i, avg: b.sum / b.count, vAvg: b.vCount > 0 ? b.vSum / b.vCount : null } : null)
+    .filter(Boolean);
+  if (weeks.length < 2) return null;
+
+  // 시작/끝 (첫 2주 평균 vs 마지막 2주 평균 — 노이즈 줄임)
+  const firstChunk = weeks.slice(0, Math.min(2, Math.ceil(weeks.length / 4)));
+  const lastChunk = weeks.slice(-Math.min(2, Math.ceil(weeks.length / 4)));
+  const startAvg = firstChunk.reduce((s, w) => s + w.avg, 0) / firstChunk.length;
+  const endAvg   = lastChunk.reduce((s, w) => s + w.avg, 0) / lastChunk.length;
+  const overallAvg = entries.reduce((s, e) => s + e.mood, 0) / entries.length;
+
+  const delta = endAvg - startAvg;
+  const trendIcon = delta > 0.3 ? '↑' : delta < -0.3 ? '↓' : '→';
+  const trendColor = delta > 0.3 ? '#8fc88f' : delta < -0.3 ? '#c98c8c' : 'rgba(255,255,255,0.55)';
+  const trendLabel = delta > 0.3 ? '오르며 끝' : delta < -0.3 ? '가라앉으며 끝' : '비슷한 흐름';
+
+  // peak / valley (단일 day 기준)
+  let peak = entries[0], valley = entries[0];
+  entries.forEach(e => { if (e.mood > peak.mood) peak = e; if (e.mood < valley.mood) valley = e; });
+
+  // 막대 그리기
+  const w = 320, h = 100, padX = 16, padY = 14;
+  const maxWeek = weeks.length - 1;
+  const barW = Math.max(8, (w - padX * 2) / weeks.length - 4);
+  const barXOf = (i) => padX + (i / weeks.length) * (w - padX * 2);
+  const barH = (avg) => ((avg - 1) / 4) * (h - padY * 2);
+  const bars = weeks.map(wk => {
+    const x = barXOf(wk.idx);
+    const bh = Math.max(3, barH(wk.avg));
+    const y = h - padY - bh;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" fill="#d4a76a" opacity="${0.45 + (wk.avg - 1) * 0.13}" rx="2"/>`;
+  }).join('');
+  // 평균선
+  const avgY = h - padY - barH(overallAvg);
+
+  // peak/valley 발췌 (diary 한 문장)
+  const _excerpt = (e) => {
+    if (!e) return '';
+    const t = (e.diary || e.aiSummary || e.note || '').replace(/\s+/g, ' ').trim();
+    if (!t) return '';
+    return t.slice(0, 60) + (t.length > 60 ? '…' : '');
+  };
+  const peakLabel = new Date(peak.date + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+  const valleyLabel = new Date(valley.date + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+  const peakExcerpt = _excerpt(peak);
+  const valleyExcerpt = _excerpt(valley);
+
+  // 해석 한 줄
+  const interp = (() => {
+    if (delta > 0.5) return '후반으로 갈수록 오른 분기. 뭔가 풀렸어.';
+    if (delta < -0.5) return '후반에 가라앉은 분기. 뭐가 무거웠을까.';
+    if (overallAvg >= 3.8) return '전반적으로 안정된 분기. 내려간 적 있어도 평균이 받쳐줬어.';
+    if (overallAvg <= 2.5) return '전반적으로 무거운 분기. 잘 버텼어.';
+    return '오르락내리락 한 분기. 그게 네 자연 리듬이야.';
+  })();
+
+  return `
+    <div class="stories-label">기분 곡선</div>
+    <div class="stories-title" style="margin-bottom:6px;">이 분기 네mood arc</div>
+    <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-bottom:14px;">주별 평균 · ${entries.length}일 기록</div>
+
+    <div style="display:flex; justify-content:center; align-items:center; gap:14px; margin:0 auto 14px;">
+      <div style="text-align:center;">
+        <div style="font-size:11px; color:rgba(255,255,255,0.55); letter-spacing:0.04em;">시작</div>
+        <div style="font-size:22px; color:white; font-weight:600; line-height:1.1;">${startAvg.toFixed(1)}</div>
+      </div>
+      <div style="font-size:18px; color:${trendColor}; font-weight:600;">${trendIcon}</div>
+      <div style="text-align:center;">
+        <div style="font-size:11px; color:rgba(255,255,255,0.55); letter-spacing:0.04em;">끝</div>
+        <div style="font-size:22px; color:white; font-weight:600; line-height:1.1;">${endAvg.toFixed(1)}</div>
+      </div>
+    </div>
+
+    <svg viewBox="0 0 ${w} ${h}" style="width:100%; max-width:320px; display:block; margin:6px auto;" preserveAspectRatio="xMidYMid meet">
+      <line x1="${padX}" y1="${avgY.toFixed(1)}" x2="${w - padX}" y2="${avgY.toFixed(1)}" stroke="rgba(255,255,255,0.18)" stroke-dasharray="2 4"/>
+      <text x="${(w - padX).toFixed(1)}" y="${(avgY - 4).toFixed(1)}" fill="rgba(255,255,255,0.5)" font-size="9" text-anchor="end">평균 ${overallAvg.toFixed(1)}</text>
+      ${bars}
+    </svg>
+
+    <div style="margin-top:14px; padding:10px 14px; background:rgba(255,226,138,0.08); border-left:2px solid #ffe28a; border-radius:0 8px 8px 0; max-width:280px; margin-left:auto; margin-right:auto;">
+      <div style="font-size:10px; color:#ffe28a; letter-spacing:0.04em; margin-bottom:3px;">↑ 가장 빛난 ${escapeHtml(peakLabel)} (${peak.mood}/5)</div>
+      ${peakExcerpt ? `<div style="font-size:12px; color:rgba(255,255,255,0.85); font-style:italic;">"${escapeHtml(peakExcerpt)}"</div>` : ''}
+    </div>
+    ${valleyExcerpt || (valley.date !== peak.date) ? `
+    <div style="margin-top:8px; padding:10px 14px; background:rgba(168,157,200,0.08); border-left:2px solid #a89dc8; border-radius:0 8px 8px 0; max-width:280px; margin-left:auto; margin-right:auto;">
+      <div style="font-size:10px; color:#a89dc8; letter-spacing:0.04em; margin-bottom:3px;">↓ 가장 아래 ${escapeHtml(valleyLabel)} (${valley.mood}/5)</div>
+      ${valleyExcerpt ? `<div style="font-size:12px; color:rgba(255,255,255,0.85); font-style:italic;">"${escapeHtml(valleyExcerpt)}"</div>` : ''}
+    </div>` : ''}
+
+    <div class="stories-body" style="margin-top:18px; font-size:13px; opacity:0.9;">${escapeHtml(trendLabel)} — ${escapeHtml(interp)}</div>
+  `;
+}
+
+// 사용자 요청 2026-04-29: 분기 안 가장 의미 있는 entry 1개 (mood + diary + photo + music 가중치)
+function _buildHighlightSlideHTML(inRange) {
+  const entries = (state.entries || []).filter(e => e.date && inRange(e.date + 'T12:00:00'));
+  if (entries.length === 0) return null;
+  let best = null, bestScore = -Infinity;
+  entries.forEach(e => {
+    const s = (e.mood || 0) * 2
+            + (e.vitality || 0)
+            + (e.diary ? 4 : 0)
+            + (e.photo ? 4 : 0)
+            + (e.music && e.music.title ? 3 : 0)
+            + (e.aiSummary ? 1 : 0)
+            + (e.note ? 1 : 0);
+    if (s > bestScore) { bestScore = s; best = e; }
+  });
+  if (!best || bestScore < 6) return null;
+  const dateStr = new Date(best.date + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  const text = (best.diary || best.aiSummary || best.note || '').slice(0, 220);
+  const photoHtml = best.photo
+    ? `<img src="${escapeHtml(best.photo)}" alt="" style="width:100%; max-width:260px; aspect-ratio:1; object-fit:cover; border-radius:14px; margin:14px auto; display:block; border:1px solid rgba(255,255,255,0.18);">`
+    : '';
+  const musicHtml = best.music && best.music.title
+    ? `<div class="stories-music-card" style="margin-top:14px;">
+         <img class="stories-music-art" src="${escapeHtml(best.music.artworkUrl || '')}" alt="" onerror="this.style.display='none'">
+         <div>
+           <div class="stories-music-title">${escapeHtml(best.music.title)}</div>
+           <div class="stories-music-artist">${escapeHtml(best.music.artist || '')}</div>
+         </div>
+         ${best.music.previewUrl ? `<button class="stories-music-play" onclick="event.stopPropagation(); toggleMusicPreview(this, '${escapeHtml(best.music.previewUrl)}')">▶</button>` : ''}
+       </div>`
+    : '';
+  return `
+    <div class="stories-label">기억나는 한 순간</div>
+    <div class="stories-title">${escapeHtml(dateStr)}</div>
+    ${photoHtml}
+    ${text ? `<div class="stories-body" style="font-style:italic; opacity:0.9; max-width:280px;">"${escapeHtml(text)}"</div>` : ''}
+    ${musicHtml}
+  `;
+}
+
+// 사용자 요청 2026-04-29: 직전 분기 '🧭 다음 분기에' 본문 후일담으로 보여줌 (auto, 사용자 입력 X)
+function _buildForecastFollowupSlideHTML(currentQuarterKey) {
+  const m = String(currentQuarterKey || '').match(/^(\d{4})-Q(\d)$/);
+  if (!m) return null;
+  let y = parseInt(m[1]); let q = parseInt(m[2]) - 1;
+  if (q < 1) { q = 4; y -= 1; }
+  const prevReview = (state.quarterlyReviews || []).find(r => r.quarterKey === `${y}-Q${q}`);
+  if (!prevReview || !Array.isArray(prevReview.sections)) return null;
+  const forecast = prevReview.sections.find(s => s && s.label && (s.label.includes('다음 분기') || s.label.includes('다음에')));
+  if (!forecast || !forecast.body) return null;
+  return `
+    <div class="stories-label">🔮 직전 분기 예측</div>
+    <div class="stories-title" style="margin-bottom:14px;">"${escapeHtml(prevReview.quarterKey)}"에서 던진 한 마디</div>
+    <div style="font-size:14px; color:rgba(255,255,255,0.92); font-style:italic; padding:16px 18px; background:rgba(212,167,106,0.12); border-left:3px solid rgba(212,167,106,0.55); border-radius:4px 12px 12px 4px; margin:10px auto; max-width:280px; line-height:1.65; text-align:left;">"${escapeHtml(forecast.body)}"</div>
+    <div class="stories-body" style="margin-top:18px; font-size:12px; opacity:0.7;">실제로는 어땠어? 한 분기 풀어볼게.</div>
+  `;
+}
+
+// 사용자 요청 2026-04-29: 1년 전 같은 분기 리뷰 한 문장 (Timecapsule)
+function _buildTimecapsuleSlideHTML(currentQuarterKey) {
+  const m = String(currentQuarterKey || '').match(/^(\d{4})-Q(\d)$/);
+  if (!m) return null;
+  const prevYear = parseInt(m[1]) - 1;
+  const prevKey = `${prevYear}-Q${m[2]}`;
+  const prevReview = (state.quarterlyReviews || []).find(r => r.quarterKey === prevKey);
+  if (!prevReview || (!prevReview.summary && !(Array.isArray(prevReview.sections) && prevReview.sections[0]))) return null;
+  const quote = prevReview.summary || prevReview.sections[0].body || '';
+  if (!quote) return null;
+  return `
+    <div class="stories-label">📦 1년 전 너는</div>
+    <div class="stories-title" style="margin-bottom:14px;">${escapeHtml(prevKey)}</div>
+    <div style="font-size:15px; color:white; font-style:italic; padding:18px; background:linear-gradient(135deg, rgba(168,157,200,0.15), rgba(212,167,106,0.10)); border:1px solid rgba(168,157,200,0.3); border-radius:14px; margin:10px auto; max-width:280px; line-height:1.65;">"${escapeHtml(quote.slice(0, 220))}"</div>
+    <div class="stories-body" style="margin-top:18px; font-size:11px; opacity:0.6;">그 분기 너와 비교해보면 어때?</div>
+  `;
+}
+
 function _buildChangeSlideHTML(stats, prevQ) {
   const rows = [];
   const trend = (cur, prev) => {
@@ -25576,15 +26256,15 @@ function _buildChangeSlideHTML(stats, prevQ) {
     const sP = stats.strengthsTotal || 0;
     const pP = stats.problemsTotal || 0;
     const gP = stats.growthCount || 0;
-    if (gP >= 2 && sP > pP) return '강점도 새로 보였고, 성장 축도 여러 개 움직였어. 너의 모양이 더 또렷해진 분기야.';
+    if (gP >= 2 && sP > pP) return '강점도 새로 보였고, 성장 축도 여러 개 움직였어. 네 모양이 더 또렷해진 분기야.';
     if (gP >= 2) return `성장 축이 ${gP}개나 움직였어. 멈춰있던 게 아니야 — 이 자체가 큰 의미야.`;
-    if (sP > pP) return '강점이 문제보다 많이 보였어. 너 자신을 단단하게 알아가고 있어.';
+    if (sP > pP) return '강점이 문제보다 더 많이 보였어. 네 안에 단단한 게 있어.';
     if (pP > sP) return '문제가 더 또렷이 보인 분기야. 그게 보이는 것 자체가 첫 단계니까, 부담 가지지 마.';
     return '큰 흔들림 없이 균형 잡힌 분기였어. 머무는 시간도 너에게 필요한 시간이야.';
   })();
   return `
-    <div class="stories-label">너의 변화</div>
-    <div class="stories-title">이 분기 너 안에서 일어난 변화</div>
+    <div class="stories-label">네 변화</div>
+    <div class="stories-title">이 분기 네 안에서 일어난 변화</div>
     <div class="stories-stat-list">
       ${rows.map(r => `
         <div class="stories-stat-row ${cls(r.raw != null ? r.raw : r.val, r.prev)}">
@@ -25594,6 +26274,182 @@ function _buildChangeSlideHTML(stats, prevQ) {
       `).join('')}
     </div>
     <div class="stories-body" style="margin-top:14px;">${escapeHtml(insight)}</div>
+  `;
+}
+
+// 사용자 요청 2026-04-29 (재): '🌳 너의 전략들' — 3 카테고리 카드 (체화 / 가장 많이 진화 / 성장 중)
+// 카테고리별 1개씩. 비면 그 카드 스킵. 셋 다 비면 슬라이드 자체 skip.
+function _buildWorkedStrategiesSlideHTML(stats, inRange) {
+  const cards = (state.topicCards || []).filter(c => c.category === 'strategy' && inRange(c.createdAt));
+
+  // 1. 체화된 전략 — 가장 최근 체화
+  const embodied = cards.filter(c => c.embodimentStatus === 'embodied')
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0];
+
+  // 2. 가장 많이 진화한 전략 — generations.length 최대 (체화 제외, ≥2)
+  const mostEvolved = cards
+    .filter(c => c.embodimentStatus !== 'embodied')
+    .filter(c => Array.isArray(c.generations) && c.generations.length >= 2)
+    .sort((a, b) => (b.generations.length) - (a.generations.length))[0];
+
+  // 3. 성장 중인 전략 — working / trying 중 worked 가장 많이 (체화/most-evolved 제외)
+  const growing = cards
+    .filter(c => (c.embodimentStatus === 'working' || c.embodimentStatus === 'trying'))
+    .filter(c => !embodied || c.id !== embodied.id)
+    .filter(c => !mostEvolved || c.id !== mostEvolved.id)
+    .map(c => {
+      let worked = 0, total = 0;
+      (c.generations || []).forEach(g => {
+        (g.attempts || []).forEach(a => { total++; if (a.status === 'worked') worked++; });
+      });
+      return { card: c, worked, total };
+    })
+    .sort((a, b) => b.worked - a.worked)[0];
+
+  // 셋 다 비면 슬라이드 자체 skip
+  if (!embodied && !mostEvolved && !growing) return null;
+
+  const buildCardBox = (titleLabel, emoji, gradient, border, card, sub) => `
+    <div style="background:${gradient}; border:1px solid ${border}; border-radius:14px; padding:14px 16px; max-width:300px; margin:0 auto;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <span style="font-size:18px;">${emoji}</span>
+        <span style="font-size:11px; color:rgba(255,255,255,0.75); font-weight:600; letter-spacing:0.04em;">${titleLabel}</span>
+      </div>
+      <div style="font-size:14px; color:white; font-weight:500; line-height:1.4; margin-bottom:5px;">${escapeHtml((card.title || '').slice(0, 36))}</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.6);">${sub}</div>
+    </div>
+  `;
+
+  const parts = [];
+  if (embodied) {
+    const _workedAll = (embodied.generations || []).flatMap(g => g.attempts || []).filter(a => a.status === 'worked').length;
+    parts.push(buildCardBox(
+      '✨ 체화 완료',
+      '✨',
+      'linear-gradient(135deg, rgba(212,167,106,0.22), rgba(255,210,80,0.12))',
+      'rgba(212,167,106,0.50)',
+      embodied,
+      `${_workedAll}번 통하고 네 일부가 됨`
+    ));
+  }
+  if (mostEvolved) {
+    parts.push(buildCardBox(
+      '🧬 가장 많이 진화한',
+      '🧬',
+      'linear-gradient(135deg, rgba(168,157,200,0.22), rgba(140,160,210,0.12))',
+      'rgba(168,157,200,0.50)',
+      mostEvolved,
+      `${mostEvolved.generations.length}세대 진화 중`
+    ));
+  }
+  if (growing) {
+    const _stat = `${growing.worked}번 통함${growing.total > 0 ? ` / ${growing.total}번 시도` : ''}`;
+    const _statusLbl = growing.card.embodimentStatus === 'working' ? '🌳 성장 중' : '🌿 양생 중';
+    parts.push(buildCardBox(
+      _statusLbl,
+      growing.card.embodimentStatus === 'working' ? '🌳' : '🌿',
+      'linear-gradient(135deg, rgba(143,200,143,0.20), rgba(126,200,227,0.12))',
+      'rgba(143,200,143,0.45)',
+      growing.card,
+      _stat
+    ));
+  }
+
+  return `
+    <div class="stories-label">너의 전략들</div>
+    <div class="stories-title" style="margin-bottom:6px;">🌳 자라고 있는 무기들</div>
+    <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-bottom:18px; font-style:italic;">이번 분기에 이만큼 자랐어! 🌱</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      ${parts.join('')}
+    </div>
+  `;
+}
+
+// 사용자 요청 2026-04-29: '🐚 모은 소라' — 분기 안 등급별 소라 카운트
+function _buildShellsCollectedSlideHTML(stats, inRange, startMs, endMs) {
+  const inRangeShells = (state.shellCollection || []).filter(s => {
+    if (!s.date) return false;
+    const t = new Date(s.date).getTime();
+    return t >= startMs && t <= endMs;
+  });
+  if (inRangeShells.length === 0) return null;
+
+  const TIER_INFO = [
+    { tier: 'legend', emoji: '✨', label: '특별',   color: '#ffd93d' },
+    { tier: 'call',   emoji: '⭐', label: '부름',   color: '#ff8da1' },
+    { tier: 'golden', emoji: '🦞', label: '황금',   color: '#ffb86b' },
+    { tier: 'main',   emoji: '🐢', label: '메인',   color: '#ffb86b' },
+    { tier: 'daily',  emoji: '🌀', label: '일상',   color: '#7ec8e3' },
+    { tier: 'light',  emoji: '🐚', label: '가벼움', color: '#a89dc8' }
+  ];
+  const counts = {};
+  inRangeShells.forEach(s => { counts[s.tier || 'light'] = (counts[s.tier || 'light'] || 0) + 1; });
+  const visible = TIER_INFO.filter(t => counts[t.tier] > 0);
+  const total = inRangeShells.length;
+  // 가장 빛난 등급 (legend > call > golden > main > daily > light 순으로 첫 0 아닌)
+  const topTier = TIER_INFO.find(t => counts[t.tier] > 0);
+
+  // 사용자 요청 2026-04-29: 대표 소라 아이콘들 (각 티어당 1-2개, 상위 티어 우선) 6-7개
+  const representativeShells = [];
+  const TIER_PRIORITY = ['legend', 'call', 'golden', 'main', 'daily', 'light'];
+  TIER_PRIORITY.forEach(tier => {
+    const found = inRangeShells.find(s => (s.tier || 'light') === tier);
+    if (found) representativeShells.push(found);
+  });
+  if (representativeShells.length < 7) {
+    for (const tier of TIER_PRIORITY) {
+      const more = inRangeShells.filter(s => (s.tier || 'light') === tier).slice(1, 4);
+      for (const s of more) {
+        if (representativeShells.length >= 7) break;
+        representativeShells.push(s);
+      }
+      if (representativeShells.length >= 7) break;
+    }
+  }
+  const tierColorMap = {
+    legend: '#ffd93d', call: '#ff8da1', golden: '#ffb86b',
+    main: '#ffb86b', daily: '#7ec8e3', light: '#a89dc8'
+  };
+
+  return `
+    <div class="stories-label">모은 소라</div>
+    <div class="stories-title" style="margin-bottom:18px;">🐚 한 분기 동안</div>
+
+    <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:0 auto 22px; max-width:300px;">
+      ${representativeShells.map(s => {
+        const tc = tierColorMap[s.tier || 'light'];
+        return `<div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 30% 30%, ${tc}33, ${tc}10); border:1.5px solid ${tc}80; border-radius:50%; font-size:22px; box-shadow:0 0 12px ${tc}30;">${s.type}</div>`;
+      }).join('')}
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <div style="font-size:42px; color:#d4a76a; font-weight:700; line-height:1;">${total}</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:6px;">개의 소라</div>
+    </div>
+
+    ${topTier ? `
+      <div style="display:inline-block; margin-bottom:18px; padding:8px 14px; background:linear-gradient(135deg, ${topTier.color}33, ${topTier.color}10); border:1px solid ${topTier.color}66; border-radius:14px;">
+        <span style="font-size:11px; color:rgba(255,255,255,0.65); margin-right:6px;">가장 빛난 등급</span>
+        <span style="font-size:14px; color:white; font-weight:600;">${topTier.emoji} ${topTier.label}</span>
+      </div>
+    ` : ''}
+
+    <div style="display:flex; flex-direction:column; gap:6px; max-width:280px; margin:0 auto;">
+      ${visible.map(t => {
+        const cnt = counts[t.tier];
+        const pct = Math.min(100, (cnt / total) * 100);
+        return `
+          <div style="display:flex; align-items:center; gap:10px; padding:6px 10px; background:rgba(255,255,255,0.04); border-radius:10px;">
+            <span style="font-size:18px; flex-shrink:0; width:24px;">${t.emoji}</span>
+            <span style="font-size:12px; color:rgba(255,255,255,0.85); flex-shrink:0; width:48px; text-align:left;">${t.label}</span>
+            <div style="flex:1; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+              <div style="height:100%; width:${pct.toFixed(1)}%; background:${t.color}; border-radius:3px;"></div>
+            </div>
+            <span style="font-size:13px; color:white; font-weight:600; flex-shrink:0; width:32px; text-align:right;">${cnt}</span>
+          </div>
+        `;
+      }).join('')}
+    </div>
   `;
 }
 
@@ -25637,17 +26493,25 @@ function _buildEvolutionSlideHTML(stats, inRange) {
   }
 
   // V4-fix v3 (사용자 요청 — 더 따뜻하게): 성장·진화 따뜻한 톤
+  // 사용자 요청 2026-04-29: 성공한 거에 집중해서 뿌듯함 ↑
+  const workedCount = stats.worked || 0;
   const warmInsight = (() => {
-    if (dnaInRange.length > 0 && cards.length > 0) {
-      return `${dnaInRange.length}개 가닥이 너 일부가 됐고, ${cards.length}개 새 가지를 시작했어. 너만의 코드가 깊어지는 분기야. 🧬`;
+    if (dnaInRange.length > 0) {
+      return `🎉 ${dnaInRange.length}개 전략이 진짜 네 일부가 됐어. 이건 너만의 무기야.`;
     }
-    if (cards.length > 0 && totalAttempts > 0) {
-      return `${cards.length}개 가닥에서 ${totalAttempts}번 시도 — 안 통한 시도도 너의 발견이야. 그만큼 더 노하우도 쌓이고 단단해졌어. 🌱`;
+    if (embodiedStrategies.length > 0) {
+      return `✨ 체화한 전략 ${embodiedStrategies.length}개. 같은 상황 와도 이젠 자동이야.`;
+    }
+    if (workedCount >= 5) {
+      return `🌳 ${workedCount}번 통했어. 곧 체화 직전 — 곧 너의 무기가 돼.`;
+    }
+    if (workedCount > 0) {
+      return `🌱 ${workedCount}번 통한 시도 — 진짜 작동하는 전략이 쌓이는 중.`;
     }
     if (totalAttempts > 0) {
-      return `${totalAttempts}번 시도. 결과보다 시도 자체가 의미야. 너에게 맞는 모양을 찾고 있어. 🌿`;
+      return `🌿 ${totalAttempts}번 시도해봤어. 시도 자체가 너의 무기야.`;
     }
-    return '큰 시도 없이 머무르는 분기였어. 그것도 진화의 한 단계 — 다음 도약을 위한 숨고르기. 🍃';
+    return '🍃 다음 분기에 새 시도 시작해보자.';
   })();
   // 사용자 요청 2026-04-28: 체화된 전략 카드 — 뿌듯하게, 시각적으로
   const embodiedHtml = embodiedStrategies.length > 0 ? `
@@ -25663,8 +26527,8 @@ function _buildEvolutionSlideHTML(stats, inRange) {
   ` : '';
 
   return `
-    <div class="stories-label">너의 성장·진화</div>
-    <div class="stories-title">너만의 모양을 찾아가는 시간</div>
+    <div class="stories-label">네 성장·진화</div>
+    <div class="stories-title">전략이 네 무기가 되어가는 시간</div>
     <div class="stories-stat-list">
       <div class="stories-stat-row neutral">
         <span class="stories-stat-label">새 가닥</span>
@@ -25672,7 +26536,7 @@ function _buildEvolutionSlideHTML(stats, inRange) {
       </div>
       ${dnaInRange.length > 0 ? `
         <div class="stories-stat-row up">
-          <span class="stories-stat-label">🧬 너 일부가 된 DNA 진주</span>
+          <span class="stories-stat-label">🧬 네 일부가 된 DNA 진주</span>
           <span class="stories-stat-value">${dnaInRange.length}개</span>
         </div>
         <div class="stories-stat-row neutral">
@@ -25682,13 +26546,13 @@ function _buildEvolutionSlideHTML(stats, inRange) {
       ` : ''}
       ${totalAttempts > 0 ? `
         <div class="stories-stat-row neutral">
-          <span class="stories-stat-label">너의 시도</span>
+          <span class="stories-stat-label">네 시도</span>
           <span class="stories-stat-value">${totalAttempts}회</span>
         </div>
       ` : ''}
     </div>
     ${embodiedHtml}
-    ${evolHtml ? evolHtml.replace('가장 진화한 가닥', '너가 가장 깊이 시도한 가닥') : ''}
+    ${evolHtml ? evolHtml.replace('가장 진화한 가닥', '네가 가장 깊이 시도한 가닥') : ''}
     <div class="stories-body" style="margin-top:14px; max-width:300px;">${escapeHtml(warmInsight)}</div>
   `;
 }
@@ -25698,7 +26562,21 @@ function _buildNewFeaturesSlideHTML(inRange) {
   const newTraits = (state.traits || []).filter(t => inRange(t.created_at) && (t.confidence || 0) >= 0.5);
   const newValues = (state.values || []).filter(v => inRange(v.created_at) && (v.confidence || 0) >= 0.5);
   const newPatterns = (state.patterns || []).filter(p => inRange(p.created_at) && (p.confidence || 0) >= 0.5);
-  const total = newTraits.length + newValues.length + newPatterns.length;
+  // 사용자 보고 2026-04-29: 4번째 카테고리 — caseFormulation 8 차원 (문제/메커니즘/강점/목표/성장)
+  // 이전엔 빠져있어서 3개로만 보임
+  const cf = state.caseFormulation || {};
+  const _collectCf = (key) => (cf[key] || [])
+    .filter(it => it && (typeof it === 'object') && it.created_at && inRange(it.created_at) && (it.confidence == null || it.confidence >= 0.5))
+    .map(it => ({ name: it.text || it.name || '', confidence: it.confidence != null ? it.confidence : 0.6, _cfType: key }));
+  const newCf = [
+    ..._collectCf('problems'),
+    ..._collectCf('mechanisms'),
+    ..._collectCf('strengths'),
+    ..._collectCf('goals'),
+    ..._collectCf('growth')
+  ].filter(it => it.name);
+
+  const total = newTraits.length + newValues.length + newPatterns.length + newCf.length;
 
   if (total === 0) {
     return `
@@ -25708,35 +26586,32 @@ function _buildNewFeaturesSlideHTML(inRange) {
     `;
   }
 
-  // 사용자 요청 2026-04-28: 미적 보강 — 3 카테고리 카드 그리드 + 그라디언트 + top 항목 highlight
+  // 4 카테고리 카드 그리드 + 그라디언트 + top 항목 highlight
   const cats = [
-    { key: 'traits',   icon: '🪞', label: '특성', list: newTraits,   gradient: 'linear-gradient(135deg, rgba(168,157,200,0.28), rgba(140,160,210,0.18))', border: 'rgba(168,157,200,0.5)' },
-    { key: 'values',   icon: '⭐', label: '가치', list: newValues,   gradient: 'linear-gradient(135deg, rgba(212,167,106,0.28), rgba(255,210,80,0.18))',   border: 'rgba(212,167,106,0.5)' },
-    { key: 'patterns', icon: '🌫', label: '패턴', list: newPatterns, gradient: 'linear-gradient(135deg, rgba(143,200,143,0.26), rgba(126,200,227,0.18))', border: 'rgba(143,200,143,0.5)' }
+    { key: 'traits',   icon: '🪞', label: '특성',     list: newTraits,   gradient: 'linear-gradient(135deg, rgba(168,157,200,0.28), rgba(140,160,210,0.18))', border: 'rgba(168,157,200,0.5)' },
+    { key: 'values',   icon: '⭐', label: '가치',     list: newValues,   gradient: 'linear-gradient(135deg, rgba(212,167,106,0.28), rgba(255,210,80,0.18))',   border: 'rgba(212,167,106,0.5)' },
+    { key: 'patterns', icon: '🌫', label: '패턴',     list: newPatterns, gradient: 'linear-gradient(135deg, rgba(143,200,143,0.26), rgba(126,200,227,0.18))', border: 'rgba(143,200,143,0.5)' },
+    { key: 'cf',       icon: '🧭', label: '자기 이해', list: newCf,       gradient: 'linear-gradient(135deg, rgba(126,200,227,0.26), rgba(168,157,200,0.18))', border: 'rgba(126,200,227,0.5)' }
   ];
   const visible = cats.filter(c => c.list.length > 0);
 
+  // 사용자 요청 2026-04-29: 빈 카테고리 완전 숨김 (placeholder X) — 있는 것만 2x2 grid
   return `
     <div class="stories-label">AI가 포착한 새 특징</div>
-    <div class="stories-title" style="margin-bottom:18px;">${total}개가 너 안에서 처음 보였어</div>
-    <div style="display:flex; flex-direction:column; gap:11px; max-width:300px;">
+    <div class="stories-title" style="margin-bottom:18px;">${total}개가 네 안에서 처음 보였어</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:300px; margin:0 auto;">
       ${visible.map(c => {
-        const top = c.list.sort((a,b) => (b.confidence||0) - (a.confidence||0))[0];
-        const confPct = Math.round((top.confidence || 0) * 100);
+        const first = c.list[0];  // 정렬 X — 첫 아이템 그대로
         return `
-          <div style="background:${c.gradient}; border:1px solid ${c.border}; border-radius:14px; padding:13px 15px;">
-            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
-              <div style="display:flex; align-items:center; gap:7px;">
-                <span style="font-size:18px;">${c.icon}</span>
-                <span style="font-size:12px; color:rgba(255,255,255,0.85); font-weight:600; letter-spacing:0.04em;">${c.label}</span>
+          <div style="background:${c.gradient}; border:1px solid ${c.border}; border-radius:14px; padding:13px; min-height:96px; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:16px;">${c.icon}</span>
+                <span style="font-size:11px; color:rgba(255,255,255,0.85); font-weight:600;">${c.label}</span>
               </div>
               <span style="font-size:11px; color:rgba(255,255,255,0.7);">${c.list.length}개</span>
             </div>
-            <div style="font-size:14px; color:white; font-weight:500; margin-bottom:6px; line-height:1.4;">${escapeHtml(top.name || '')}</div>
-            <div style="height:3px; background:rgba(255,255,255,0.14); border-radius:2px; overflow:hidden;">
-              <div style="height:100%; width:${confPct}%; background:${c.border}; border-radius:2px;"></div>
-            </div>
-            <div style="font-size:10px; color:rgba(255,255,255,0.55); margin-top:4px; text-align:right;">신뢰도 ${confPct}%</div>
+            <div style="font-size:13px; color:white; font-weight:500; line-height:1.35; margin-top:6px;">${escapeHtml((first.name || '').slice(0, 24))}</div>
           </div>
         `;
       }).join('')}
@@ -25781,7 +26656,7 @@ function _buildFunStatsSlideHTML(stats, inRange) {
     shells.forEach(s => { emojiCount[s.type] = (emojiCount[s.type] || 0) + 1; });
     const topEmoji = Object.entries(emojiCount).sort((a,b) => b[1] - a[1])[0];
     if (topEmoji && topEmoji[1] >= 2) {
-      items.push({ icon: topEmoji[0], big: `${topEmoji[1]}번`, label: `이 분기 너의 시그니처 소라`, tone: 'pink' });
+      items.push({ icon: topEmoji[0], big: `${topEmoji[1]}번`, label: `이 분기 네 시그니처 소라`, tone: 'pink' });
     }
   }
 
@@ -25809,7 +26684,7 @@ function _buildFunStatsSlideHTML(stats, inRange) {
     const topCat = Object.entries(catCount).sort((a,b) => b[1] - a[1])[0];
     const iconMap = { 음악:'🎵', 음식:'🍴', 장소:'📍', 순간:'✨', 사람:'👥' };
     if (topCat) {
-      items.push({ icon: iconMap[topCat[0]] || '💎', big: `${topCat[1]}개`, label: `${topCat[0]} 진주 — 너의 취향`, tone: 'purple' });
+      items.push({ icon: iconMap[topCat[0]] || '💎', big: `${topCat[1]}개`, label: `${topCat[0]} 진주 — 네 취향`, tone: 'purple' });
     }
   }
 
@@ -25910,7 +26785,7 @@ function _buildPatternsSlideHTML(inRange) {
   };
   return `
     <div class="stories-label">작동 중인 패턴</div>
-    <div class="stories-title" style="margin-bottom:18px;">너 안에서 작동 중</div>
+    <div class="stories-title" style="margin-bottom:18px;">네 안에서 작동 중</div>
     <div style="display:flex; flex-direction:column; gap:11px; max-width:300px;">
       ${topDiags.map(d => {
         const ts = typeStyles[d.type] || typeStyles.wrong_layer;
@@ -25959,7 +26834,7 @@ function _buildNarrativeSlideHTML(review) {
       <!-- 라벨 + 가는 양쪽 선 -->
       <div style="display:flex; align-items:center; gap:10px; margin-bottom:24px;">
         <div style="width:20px; height:1px; background:rgba(212,167,106,0.45);"></div>
-        <div class="stories-label" style="margin:0;">너의 분기, 한 단락</div>
+        <div class="stories-label" style="margin:0;">네 분기, 한 단락</div>
         <div style="width:20px; height:1px; background:rgba(212,167,106,0.45);"></div>
       </div>
 
@@ -26010,7 +26885,7 @@ function _buildArchiveSummarySlideHTML(inRange) {
   const arrs = (state.archive || []).filter(a => a.savedAt && inRange(a.savedAt));
   if (arrs.length === 0) {
     return `
-      <div class="stories-label">너의 깨달음</div>
+      <div class="stories-label">네 깨달음</div>
       <div class="stories-title">이 분기 깨달음 카드 없음</div>
       <div class="stories-body">대화에서 ✦ 깨달음으로, 또는 ✎ 메모로 직접. 다음 분기엔 작은 한 줄도 OK.</div>
     `;
@@ -26026,21 +26901,21 @@ function _buildArchiveSummarySlideHTML(inRange) {
   const topHeadlines = arrs.filter(a => a.headline).slice(0, 5);
 
   return `
-    <div class="stories-label">너의 깨달음</div>
+    <div class="stories-label">네 깨달음</div>
     <div class="stories-title">${arrs.length}개의 통찰이 자라났어</div>
     <div class="stories-body" style="margin-bottom:12px;">📌 스크랩 ${typeCount.scrap || 0} · ✎ 메모 ${typeCount.memo || 0}${typeCount.reflection ? ` · 🌊 숙고 ${typeCount.reflection}` : ''}</div>
     ${topTags.length > 0 ? `<div style="font-size:11px; color:rgba(255,255,255,0.55); margin-bottom:14px; letter-spacing:0.04em;">자주 떠올린: ${topTags.map(t => '#' + escapeHtml(t)).join(' · ')}</div>` : ''}
     ${topHeadlines.length > 0 ? `<div class="stories-archive-list">
       ${topHeadlines.map(a => `<div class="stories-archive-item">✦ ${escapeHtml(a.headline)}</div>`).join('')}
     </div>` : ''}
-    <div class="stories-body" style="margin-top:14px; font-size:12px;">너 안에서 자라난 통찰들. 다음 분기에도 이어질 거야.</div>
+    <div class="stories-body" style="margin-top:14px; font-size:12px;">네 안에서 자라난 통찰들. 다음 분기에도 이어질 거야.</div>
   `;
 }
 
 function _buildClosingSlideHTML(review, stats) {
   // sections에서 흐름 또는 첫 번째 section을 시적으로
   const flow = Array.isArray(review.sections) && review.sections[0] ? review.sections[0].body : '';
-  const poem = flow ? flow.split(/[.\n]/)[0].slice(0, 28) : `${review.quarterKey || '분기'} — 너의 흔적`;
+  const poem = flow ? flow.split(/[.\n]/)[0].slice(0, 28) : `${review.quarterKey || '분기'} — 네 흔적`;
   // 사용자 요청 2026-04-28: 미적 — emoji 화환 + 큰 gradient + 시구 카드 + 흐릿한 별 효과
   return `
     <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; padding:36px 22px; max-width:320px; position:relative;">
@@ -26114,7 +26989,7 @@ async function buildAnnualSlides(year, yearReviews) {
         .replace(/지난 분기/g, '지난 해')
         .replace(/다음 분기/g, '내년')
         .replace(/한 분기/g, '한 해')
-        .replace(/너의 분기, 한 단락/g, `${year}년, 한 단락`)
+        .replace(/네 분기, 한 단락/g, `${year}년, 한 단락`)
         // 3. 잔여 '분기' (살았던 분기 / 분기야 / 분기였어 / 분기일 거야 등) — 한 해로 sweep
         .replace(/분기/g, '해');
     }
@@ -26161,20 +27036,43 @@ function _buildSeasonalSlide(year, yearReviews) {
     if (m >= 1.5) return '😞';
     return '😢';
   };
+  // 사용자 요청 2026-04-29: 계절별 흐름 더 이쁘게 — 큰 카드 + 부드러운 글로우 + 분기 라벨 + 한 단어 코멘트
+  const validMoods = moods.filter(m => m != null);
+  const yearAvg = validMoods.length > 0
+    ? Math.round((validMoods.reduce((a, b) => a + b, 0) / validMoods.length) * 10) / 10
+    : null;
+  const seasonComment = (m) => {
+    if (m == null) return '기록 없음';
+    if (m >= 4.3) return '빛난 계절';
+    if (m >= 3.7) return '잔잔히 좋음';
+    if (m >= 3.0) return '오르내림';
+    if (m >= 2.3) return '무겁고 잔잔';
+    return '많이 무거웠던';
+  };
   return {
     tone: 'tone-emo',
     html: `
-      <div class="stories-label">너의 ${year}년 무드</div>
-      <div class="stories-title">계절별 흐름</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:18px auto 0; max-width:300px; justify-items:center;">
+      <div class="stories-label">${year}년 계절</div>
+      <div class="stories-title" style="margin-bottom:6px;">한 해의 흐름</div>
+      ${yearAvg != null ? `<div style="font-size:11px; color:rgba(255,255,255,0.6); margin-bottom:18px;">연평균 ${yearAvg}/5</div>` : '<div style="height:18px;"></div>'}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:0 auto; max-width:320px;">
         ${moods.map((m, i) => {
           const s = seasonData[i];
+          const labelQ = ['Q1', 'Q2', 'Q3', 'Q4'][i];
+          const monthRange = ['1~3월', '4~6월', '7~9월', '10~12월'][i];
           return `
-            <div style="background:${s.gradient}; border:1px solid ${s.border}; border-radius:14px; padding:14px 10px; text-align:center; aspect-ratio:1; width:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px; box-sizing:border-box;">
-              <div style="font-size:22px; line-height:1; height:24px; display:flex; align-items:center; justify-content:center;">${s.emoji}</div>
-              <div style="font-size:11px; color:rgba(255,255,255,0.75); font-weight:600; letter-spacing:0.06em; line-height:1;">${s.label}</div>
-              <div style="font-size:26px; line-height:1; height:28px; display:flex; align-items:center; justify-content:center; margin-top:2px;">${moodFace(m)}</div>
-              <div style="font-size:13px; color:white; font-weight:600; line-height:1;">${m != null ? `${m}/5` : '기록 없음'}</div>
+            <div style="background:${s.gradient}; border:1px solid ${s.border}; border-radius:18px; padding:14px 12px; text-align:center; min-height:170px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; box-sizing:border-box; box-shadow:0 4px 18px ${s.border.replace('0.50', '0.18')}; position:relative; overflow:hidden; gap:6px;">
+              <div style="position:absolute; top:-20px; right:-20px; width:80px; height:80px; background:${s.border.replace('0.50', '0.20')}; border-radius:50%; filter:blur(20px); pointer-events:none;"></div>
+              <div style="font-size:10px; color:rgba(255,255,255,0.6); letter-spacing:0.08em; font-weight:600; position:relative; line-height:1.2;">${labelQ} · ${monthRange}</div>
+              <div style="display:flex; flex-direction:column; align-items:center; gap:2px; position:relative;">
+                <div style="font-size:30px; line-height:1.2; min-height:36px; display:flex; align-items:center; justify-content:center;">${s.emoji}</div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.92); font-weight:600; letter-spacing:0.04em;">${s.label}</div>
+              </div>
+              <div style="display:flex; flex-direction:column; align-items:center; gap:2px; position:relative;">
+                <div style="font-size:22px; line-height:1.2; min-height:26px; display:flex; align-items:center; justify-content:center;">${moodFace(m)}</div>
+                <div style="font-size:11px; color:rgba(255,255,255,0.85); font-weight:500; line-height:1.2;">${m != null ? `${m}/5` : '—'}</div>
+                <div style="font-size:10px; color:rgba(255,255,255,0.55); font-style:italic; line-height:1.3;">${seasonComment(m)}</div>
+              </div>
             </div>
           `;
         }).join('')}
@@ -26206,7 +27104,7 @@ function _buildDeepReflectionSlide(year) {
       <div class="stories-label">가장 깊었던 숙고</div>
       <div class="stories-title" style="font-size:18px;">${escapeHtml(deepest.text)}</div>
       <div class="stories-prompt" style="margin-top:18px;">
-        <div class="stories-prompt-label">너의 결론</div>
+        <div class="stories-prompt-label">네 결론</div>
         ${escapeHtml(deepest.conclusion || '')}
       </div>
     `
@@ -26224,7 +27122,7 @@ function _buildTopMusicSlide(year) {
     return {
       tone: 'tone-emo-2',
       html: `
-        <div class="stories-label">너의 ${year}년 사운드</div>
+        <div class="stories-label">네${year}년 사운드</div>
         <div class="stories-empty">음악 진주 없음</div>
       `
     };
@@ -26234,7 +27132,7 @@ function _buildTopMusicSlide(year) {
   return {
     tone: 'tone-emo-2',
     html: `
-      <div class="stories-label">너의 ${year}년 사운드</div>
+      <div class="stories-label">네${year}년 사운드</div>
       <div class="stories-title">top ${top5.length} 곡</div>
       <div class="stories-stat-list">
         ${top5.map((p, i) => `
@@ -26263,18 +27161,21 @@ function _buildDiagnosisLearningSlide(year, yearReviews) {
     return {
       tone: 'tone-deep-3',
       html: `
-        <div class="stories-label">진단 학습 곡선</div>
-        <div class="stories-title">큰 패턴 신호 없는 한 해</div>
+        <div class="stories-label">발견한 패턴들</div>
+        <div class="stories-title">잔잔히 흐른 한 해</div>
+        <div class="stories-body">큰 패턴 신호는 없었지만, 너의 흐름 자체가 데이터야.</div>
       `
     };
   }
-  // 사용자 요청 2026-04-28: 언제 작동했는지 추가 — 진단별 첫 발견월/시기 정보
+  // 사용자 요청 2026-04-29: 진단 학습 곡선 → 긍정적 reframe ('자기 이해 발견')
+  // 이전: '진단 = 문제' 톤
+  // 변경: '발견 = 자기를 알아가는 흔적' 톤
   const labels = {
-    weak_tool: '🔧 도구 약함',
-    wrong_layer: '📐 차원 안 맞음',
-    value_clash: '⚖️ 가치 상충',
-    avoidance: '🌫 회피 패턴',
-    willpower_cap: '🪫 의지 임계치'
+    weak_tool: '🔧 도구 발견',
+    wrong_layer: '📐 차원 발견',
+    value_clash: '⚖️ 가치 발견',
+    avoidance: '🌿 회피 신호 인식',
+    willpower_cap: '🪫 의지 한계 인식'
   };
   const seasonOf = (m) => m <= 2 || m === 11 ? '겨울' : m <= 5 ? '봄' : m <= 8 ? '여름' : '가을';
   // type별 그룹 + 첫 발견 / 마지막 갱신
@@ -26295,54 +27196,93 @@ function _buildDiagnosisLearningSlide(year, yearReviews) {
     avoidance:    'rgba(168,157,200,0.7)',
     willpower_cap:'rgba(143,200,143,0.7)'
   };
+  // 사용자 요청 2026-04-29: 더 부드럽고 가독성 좋게 — 데이터 dashboard 톤 → 따뜻한 카드 톤
+  // 월 timeline 그리드 제거, 계절 라벨만 표시. 이모지 크게, 더 많은 여백.
+  const monthToSeason = (m) => m >= 2 && m <= 4 ? '봄' : m >= 5 && m <= 7 ? '여름' : m >= 8 && m <= 10 ? '가을' : '겨울';
   return {
     tone: 'tone-deep-3',
     html: `
-      <div class="stories-label">진단 학습 곡선</div>
-      <div class="stories-title" style="margin-bottom:18px;">너 안에서 작동한 패턴</div>
-      <div style="display:flex; flex-direction:column; gap:13px; max-width:300px;">
+      <div class="stories-label">발견한 패턴들</div>
+      <div class="stories-title" style="margin-bottom:6px;">🧭 너를 알아가는 흔적</div>
+      <div style="font-size:12px; color:rgba(255,255,255,0.65); margin-bottom:22px; font-style:italic;">한 해 동안 너 안에서 보인 신호들 ✨</div>
+      <div style="display:flex; flex-direction:column; gap:14px; max-width:300px; margin:0 auto;">
         ${sortedTypes.map(([t, info]) => {
-          const monthSet = new Set(info.dates.map(d => d.getMonth()));
           const color = typeColors[t] || 'rgba(168,157,200,0.7)';
-          const minMonth = info.dates.length > 0 ? Math.min(...info.dates.map(d => d.getMonth())) + 1 : null;
-          const maxMonth = info.dates.length > 0 ? Math.max(...info.dates.map(d => d.getMonth())) + 1 : null;
-          const span = minMonth ? (minMonth === maxMonth ? `${minMonth}월` : `${minMonth}월 → ${maxMonth}월`) : '';
+          const lightColor = color.replace('0.7', '0.18');
+          const borderColor = color.replace('0.7', '0.35');
+          const seasonsSet = new Set(info.dates.map(d => monthToSeason(d.getMonth())));
+          const seasonsList = ['봄', '여름', '가을', '겨울'].filter(s => seasonsSet.has(s)).join(' · ');
           return `
-            <div style="background:rgba(255,255,255,0.05); border:1px solid ${color.replace('0.7', '0.35')}; border-radius:14px; padding:13px 14px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:9px;">
-                <span style="font-size:13px; color:white; font-weight:600;">${labels[t] || t}</span>
-                <span style="font-size:11px; color:rgba(255,255,255,0.7);">${info.count}회</span>
+            <div style="background:linear-gradient(135deg, ${lightColor}, ${color.replace('0.7', '0.05')}); border:1px solid ${borderColor}; border-radius:18px; padding:16px 18px; text-align:left;">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <span style="font-size:22px; flex-shrink:0;">${(labels[t] || '').match(/^(\S+)/)?.[1] || '🧭'}</span>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:14px; color:white; font-weight:600; line-height:1.3;">${escapeHtml((labels[t] || t).replace(/^\S+\s/, ''))}</div>
+                  <div style="font-size:10px; color:rgba(255,255,255,0.55); margin-top:2px;">${info.count}번 만남</div>
+                </div>
               </div>
-              <div style="display:grid; grid-template-columns:repeat(12, 1fr); gap:2px; margin-bottom:6px;">
-                ${Array.from({length: 12}, (_, i) => `
-                  <div style="height:14px; border-radius:2px; background:${monthSet.has(i) ? color : 'rgba(255,255,255,0.06)'};" title="${i+1}월"></div>
-                `).join('')}
-              </div>
-              <div style="display:flex; justify-content:space-between; font-size:9px; color:rgba(255,255,255,0.45); letter-spacing:0.04em;">
-                <span>1월</span><span>${span ? `📅 ${span}` : ''}</span><span>12월</span>
-              </div>
+              ${seasonsList ? `<div style="font-size:11px; color:rgba(255,255,255,0.7); padding-left:32px; line-height:1.5;">🌱 ${seasonsList}에 떠올랐어</div>` : ''}
             </div>
           `;
         }).join('')}
       </div>
-      <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:14px; max-width:280px; text-align:center; font-style:italic;">
-        진단 받고 행동 → 결과로 confidence 갱신.
+      <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:20px; max-width:280px; text-align:center; line-height:1.6; font-style:italic;">
+        ✨ 보이는 만큼 알아가는 중<br>발견 자체가 첫 단계야.
       </div>
     `
   };
 }
 
 function _buildAnnualNarrativeSlide(year, yearReviews) {
-  // 4 분기 summary 합쳐서 한 단락 narrative
-  const summaries = yearReviews.map(r => r.summary).filter(Boolean).join(' ');
+  // 사용자 요청 2026-04-29: 가독성 개선 — 분기별 한 줄씩 카드로 분리 (긴 한 단락 X)
+  const sortedReviews = yearReviews.slice().sort((a, b) => {
+    const aQ = parseInt((a.quarterKey || '').split('-Q')[1] || '0');
+    const bQ = parseInt((b.quarterKey || '').split('-Q')[1] || '0');
+    return aQ - bQ;
+  });
+  // 사용자 요청 2026-04-29: Q1/Q2/Q3/Q4 → 봄/여름/가을/겨울
+  const QUARTERS = [
+    { q: 'Q1', label: '봄',   months: '1~3월',   color: '#ff9aa2', emoji: '🌸' },
+    { q: 'Q2', label: '여름', months: '4~6월',   color: '#ffd93d', emoji: '☀️' },
+    { q: 'Q3', label: '가을', months: '7~9월',   color: '#ff8c5a', emoji: '🍂' },
+    { q: 'Q4', label: '겨울', months: '10~12월', color: '#a0c8e6', emoji: '❄️' }
+  ];
+  const cardsHtml = QUARTERS.map(qInfo => {
+    const r = sortedReviews.find(x => x.quarterKey && x.quarterKey.endsWith('-' + qInfo.q));
+    const summary = r && r.summary ? r.summary.slice(0, 110) : null;
+    if (!summary) {
+      return `
+        <div style="display:flex; gap:11px; align-items:flex-start; padding:11px 14px; background:rgba(255,255,255,0.03); border-left:2px solid rgba(255,255,255,0.10); border-radius:0 10px 10px 0; opacity:0.55;">
+          <span style="font-size:18px; line-height:1.3;">${qInfo.emoji}</span>
+          <div style="flex:1; min-width:0; text-align:left;">
+            <div style="font-size:11px; color:rgba(255,255,255,0.5); letter-spacing:0.06em; margin-bottom:3px;">${qInfo.label} · ${qInfo.months}</div>
+            <div style="font-size:12px; color:rgba(255,255,255,0.45); font-style:italic;">기록 없는 분기</div>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div style="display:flex; gap:11px; align-items:flex-start; padding:11px 14px; background:linear-gradient(90deg, ${qInfo.color}18, transparent); border-left:2px solid ${qInfo.color}; border-radius:0 10px 10px 0;">
+        <span style="font-size:18px; line-height:1.3;">${qInfo.emoji}</span>
+        <div style="flex:1; min-width:0; text-align:left;">
+          <div style="font-size:11px; color:${qInfo.color}; letter-spacing:0.06em; margin-bottom:4px; font-weight:600;">${qInfo.label} · ${qInfo.months}</div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.92); line-height:1.65;">${escapeHtml(summary)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
   return {
     tone: 'tone-deep',
     html: `
       <div class="stories-label">${year}년 한 단락</div>
-      <div class="stories-title" style="font-size:17px; line-height:1.7;">${escapeHtml(summaries.slice(0, 300) || '한 해의 흐름이 천천히 자리 잡고 있어.')}</div>
-      <div class="stories-prompt" style="margin-top:18px;">
-        <div class="stories-prompt-label">${year + 1}년에</div>
-        같은 길 또는 새로운 길. 너의 데이터가 너에게 보여줄 거야.
+      <div class="stories-title" style="font-size:18px; margin-bottom:18px;">계절별 흐름</div>
+      <div style="display:flex; flex-direction:column; gap:8px; max-width:320px; margin:0 auto;">
+        ${cardsHtml}
+      </div>
+      <div style="margin-top:20px; padding:12px 16px; background:rgba(212,167,106,0.08); border:1px solid rgba(212,167,106,0.30); border-radius:12px; max-width:300px; margin-left:auto; margin-right:auto;">
+        <div style="font-size:10px; color:#d4a76a; letter-spacing:0.08em; margin-bottom:4px;">🧭 ${year + 1}년에</div>
+        <div style="font-size:12px; color:rgba(255,255,255,0.85); line-height:1.6;">같은 길 또는 새로운 길. 네 데이터가 너에게 보여줄 거야.</div>
       </div>
     `
   };
@@ -26507,8 +27447,14 @@ function renderArchiveReviews() {
   container.innerHTML = annualCardHtml + all.map((r, idx) => {
     const date = new Date(r.completedAt);
     const dateStr = date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-    const typeLabel = r.type === 'weekly' ? '🌙 주간' : r.type === 'monthly' ? '📅 월간' : '📊 분기';
-    const periodLabel = r.weekKey || r.monthKey || r.quarterKey || '';
+    // 사용자 요청 2026-04-29: 분기 리뷰 라벨을 봄/여름/가을/겨울 + 연도 + 이모지로
+    const seasonLabel = r.type === 'quarterly' && r.quarterKey && typeof seasonLabelOf === 'function'
+      ? seasonLabelOf(r.quarterKey, { withEmoji: true })
+      : null;
+    const typeLabel = r.type === 'weekly' ? '🌙 주간 리뷰'
+      : r.type === 'monthly' ? '📅 월간 리뷰'
+      : (seasonLabel ? `${seasonLabel} 리뷰` : '📊 분기 리뷰');
+    const periodLabel = r.type === 'quarterly' ? '' : (r.weekKey || r.monthKey || '');
     const autoTag = r.auto ? ' <span style="font-size:9px; color:var(--purple); padding:1px 6px; background:var(--purple-dim); border-radius:6px; margin-left:4px;">🤖 자동</span>' : '';
 
     // V4-fix: sections 형식 둘 다 지원 — 배열 [{label, body}] (V4 분기/월간 시드) + 객체 {patterns,...} (V3 월간/주간)
@@ -26521,7 +27467,7 @@ function renderArchiveReviews() {
     } else if (r.sections && typeof r.sections === 'object') {
       // V3 형식 (object {patterns: ..., good_moments: ..., ...})
       const labels = {
-        patterns: '💫 너의 모습',
+        patterns: '💫 네 모습',
         good_moments: '✨ 잘된 순간들',
         hard_moments: '🌊 어려웠던 순간',
         next_suggestion: '🐚 다음 제안'
@@ -26544,7 +27490,7 @@ function renderArchiveReviews() {
 
     return `
       <div class="timeline-day" onclick="toggleReviewDetail(${idx})" style="cursor:pointer;">
-        <div class="timeline-day-date">${typeLabel} 리뷰 · ${periodLabel}${autoTag}</div>
+        <div class="timeline-day-date">${typeLabel}${periodLabel ? ` · ${periodLabel}` : ''}${autoTag}</div>
         <div class="timeline-day-summary" style="font-family: 'Gowun Batang', serif; font-size: 14px;">
           ${escapeHtml(r.summary || '(요약 없음)')}
         </div>
@@ -26657,7 +27603,7 @@ function _buildReviewArchiveSummaryHTML(review) {
       <div style="margin-bottom:12px;"><button class="ras-meta-btn" onclick="event.stopPropagation(); generateReviewArchiveMetaSummary('${review.id || ''}')">🤖 AI 핵심 통찰 요약 받기</button></div>
     `}
     <div class="ras-section">
-      <div class="ras-section-label">너의 사고 모드</div>
+      <div class="ras-section-label">네 사고 모드</div>
       <div class="ras-mode-bars">
         <div class="ras-mode-row"><span>📌 스크랩 (대화에서)</span><span>${tCount.scrap || 0} · ${scrapPct}%</span></div>
         <div class="ras-mode-row"><span>✎ 메모 (자유)</span><span>${tCount.memo || 0} · ${memoPct}%</span></div>
@@ -26666,7 +27612,7 @@ function _buildReviewArchiveSummaryHTML(review) {
       <div class="ras-insight">${escapeHtml(modeInsight)}</div>
     </div>
     ${topTags.length > 0 ? `<div class="ras-section">
-      <div class="ras-section-label">너의 화두 무게중심</div>
+      <div class="ras-section-label">네 화두 무게중심</div>
       <div style="font-size:11px; line-height:2;">${topTags.map(([t, c]) => `<span class="ras-tag">#${escapeHtml(t)} <span class="ras-tag-count">${c}</span></span>`).join('')}</div>
       ${(newTags.length || goneTags.length || stayedTags.length) ? `<div style="margin-top:10px; font-size:11px; line-height:1.7;">
         ${stayedTags.length > 0 ? `<div style="color:var(--text-dim);">↻ 계속되는: ${stayedTags.slice(0,4).map(t => '#' + escapeHtml(t)).join(' · ')}</div>` : ''}
@@ -27622,6 +28568,116 @@ async function runAutoBackupIfNeeded() {
   } catch (e) { console.warn('autoBackup:', e); }
 }
 
+// 사용자 요청 2026-04-29: 수동 클라우드 백업 — 사용자가 명시적으로 박는 체크포인트 (rolling 10개)
+async function manualCloudBackup() {
+  if (!authUserId) { showToast('로그인 필요'); return; }
+  if (state.preferences && state.preferences.testerMode) {
+    showToast('⚠️ 테스터 모드 ON — OFF 후 시도');
+    return;
+  }
+  // 메모 입력 (선택)
+  const note = await showInputModal({
+    title: '☁️ 클라우드 백업',
+    message: '이 시점에 메모 남길래? (선택, 안 적어도 OK)\n나중에 복원할 때 어떤 시점인지 알아보기 쉬워.',
+    placeholder: '예: 새 학기 시작 전',
+    okLabel: '백업'
+  });
+  if (note === null) return;  // 취소
+  showToast('☁️ 클라우드 백업 중...');
+  try {
+    // 기존 snapshots 로드
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_MANUAL_BACKUP_USER_ID}&select=data,id&limit=1`,
+      { headers: authHeaders() }
+    );
+    let snapshots = [];
+    let existingId = null;
+    if (resp.ok) {
+      const rows = await resp.json();
+      if (rows.length > 0 && rows[0].data && Array.isArray(rows[0].data.snapshots)) {
+        snapshots = rows[0].data.snapshots;
+        existingId = rows[0].id;
+      }
+    }
+    // 새 snapshot
+    const sanitized = JSON.parse(JSON.stringify(state, _serializeReplacer));
+    snapshots.push({
+      ts: new Date().toISOString(),
+      note: (note || '').trim().slice(0, 80),
+      appVersion: typeof APP_VERSION !== 'undefined' ? APP_VERSION : '',
+      data: sanitized
+    });
+    // rolling cap
+    if (snapshots.length > MANUAL_BACKUP_KEEP_N) {
+      snapshots = snapshots.slice(-MANUAL_BACKUP_KEEP_N);
+    }
+    const body = JSON.stringify({ data: { snapshots } });
+    if (existingId) {
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_MANUAL_BACKUP_USER_ID}`,
+        { method: 'PATCH', headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body }
+      );
+    } else {
+      await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_MANUAL_BACKUP_USER_ID, data: { snapshots } })
+      });
+    }
+    showToast(`☁️ 백업됨 (${snapshots.length}/${MANUAL_BACKUP_KEEP_N})`);
+  } catch (e) {
+    console.error('manualCloudBackup:', e);
+    showToast('백업 실패: ' + (e.message || e));
+  }
+}
+
+// 사용자 요청 2026-04-29: 수동 클라우드 복원 — 백업 목록에서 선택해서 복원
+async function restoreFromCloudBackup() {
+  if (!authUserId) { showToast('로그인 필요'); return; }
+  showToast('🔍 클라우드 백업 검색 중...');
+  try {
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_MANUAL_BACKUP_USER_ID}&select=data&limit=1`,
+      { headers: authHeaders() }
+    );
+    if (!resp.ok) { showToast('백업 검색 실패'); return; }
+    const rows = await resp.json();
+    if (rows.length === 0 || !rows[0].data || !Array.isArray(rows[0].data.snapshots) || rows[0].data.snapshots.length === 0) {
+      showToast('클라우드 백업 없음 — "☁️ 클라우드 백업"으로 먼저 박아둬');
+      return;
+    }
+    const snapshots = rows[0].data.snapshots.slice().reverse();  // 최신 먼저
+    const opts = snapshots.map((s, i) => {
+      const dt = new Date(s.ts).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const noteLabel = s.note ? ` · ${s.note}` : '';
+      return { label: `${dt}${noteLabel}`, value: String(i) };
+    });
+    const choice = await showOptionsModal({
+      title: '☁️ 클라우드 복원',
+      message: `${snapshots.length}개 백업 중 선택. 복원하면 현재 데이터는 사라져.`,
+      options: opts
+    });
+    if (!choice) return;
+    const idx = parseInt(choice, 10);
+    const snap = snapshots[idx];
+    if (!snap || !snap.data) { showToast('백업 데이터 X'); return; }
+    const yes = await showConfirmModal({
+      title: '복원 확정?',
+      message: `${new Date(snap.ts).toLocaleString('ko-KR')}${snap.note ? '\n메모: ' + snap.note : ''}\n\n현재 데이터 사라지고 이 시점 상태로 돌아가.`,
+      okLabel: '복원',
+      cancelLabel: '취소'
+    });
+    if (!yes) return;
+    state = { ...DEFAULT_STATE, ...snap.data };
+    await saveToCloudNow();
+    showToast('✦ 복원됨 — 새로고침 중...');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    console.error('restoreFromCloudBackup:', e);
+    showToast('복원 실패: ' + (e.message || e));
+  }
+}
+
 // 자동 백업 목록 → modal로 보여주고 선택 복구
 async function showAutoBackupList() {
   if (!authUserId) { showToast('로그인 필요'); return; }
@@ -27644,7 +28700,7 @@ async function showAutoBackupList() {
       return { label: `${dt} · ${reasonLabel}`, value: String(i) };
     });
     const choice = await showOptionsModal({
-      title: '🕰 자동 백업에서 복구',
+      title: '🕰 자동 백업에서 복원',
       message: `최근 ${snapshots.length}개 중 선택. 복구하면 현재 데이터는 사라져.`,
       options: opts
     });
