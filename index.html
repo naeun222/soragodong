@@ -7013,12 +7013,15 @@
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
-        <button class="btn-secondary" onclick="exportData()">📤 데이터 내보내기 (백업)</button>
+        <button class="btn-secondary" onclick="exportData()">📁 파일로 백업</button>
+        <!-- 사용자 요청 2026-04-29: 수동 클라우드 백업/복원 (rolling 10개) -->
+        <button class="btn-secondary" onclick="manualCloudBackup()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드 백업</button>
+        <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드 복원</button>
         <button class="btn-secondary" onclick="startInteractiveOnboarding()">🐚 투어 다시 보기</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
 
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
-        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:8px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동으로 박힌 백업 (rolling 5개) 에서 복구">🕰 자동 백업에서 복구</button>
+        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:8px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동으로 박힌 백업 (rolling 5개) 에서 복원">🕰 자동 백업에서 복원</button>
       </div>
 
       <div style="margin-top:24px;">
@@ -7164,6 +7167,9 @@ const V4_USER_ID = 'me_v4';
 const V4_BACKUP_USER_ID = 'backup_v6_pre_v7';  // V3→V4 마이그레이션 1회 백업
 const V4_TESTER_BACKUP_USER_ID = 'me_v4_backup';  // testerMode ON 시점 cloud 백업 (사용자 요청 2026-04-28)
 const V4_AUTO_BACKUP_USER_ID = 'me_v4_auto_backup';  // 주 1회 + APP_VERSION 변경 시 자동 백업 (rolling 5개) (사용자 요청 2026-04-28)
+// 사용자 요청 2026-04-29: 수동 클라우드 백업 (rolling 10개) — 사용자가 명시적으로 박는 체크포인트
+const V4_MANUAL_BACKUP_USER_ID = 'me_v4_manual_backup';
+const MANUAL_BACKUP_KEEP_N = 10;
 const AUTO_BACKUP_KEEP_N = 5;
 const AUTO_BACKUP_INTERVAL_MS = 7 * 86400000;  // 7일
 const V4_LOCAL_STORAGE_KEY = 'soragodong_v4';
@@ -28210,6 +28216,116 @@ async function runAutoBackupIfNeeded() {
   } catch (e) { console.warn('autoBackup:', e); }
 }
 
+// 사용자 요청 2026-04-29: 수동 클라우드 백업 — 사용자가 명시적으로 박는 체크포인트 (rolling 10개)
+async function manualCloudBackup() {
+  if (!authUserId) { showToast('로그인 필요'); return; }
+  if (state.preferences && state.preferences.testerMode) {
+    showToast('⚠️ 테스터 모드 ON — OFF 후 시도');
+    return;
+  }
+  // 메모 입력 (선택)
+  const note = await showInputModal({
+    title: '☁️ 클라우드 백업',
+    message: '이 시점에 메모 남길래? (선택, 안 적어도 OK)\n나중에 복원할 때 어떤 시점인지 알아보기 쉬워.',
+    placeholder: '예: 새 학기 시작 전',
+    okLabel: '백업'
+  });
+  if (note === null) return;  // 취소
+  showToast('☁️ 클라우드 백업 중...');
+  try {
+    // 기존 snapshots 로드
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_MANUAL_BACKUP_USER_ID}&select=data,id&limit=1`,
+      { headers: authHeaders() }
+    );
+    let snapshots = [];
+    let existingId = null;
+    if (resp.ok) {
+      const rows = await resp.json();
+      if (rows.length > 0 && rows[0].data && Array.isArray(rows[0].data.snapshots)) {
+        snapshots = rows[0].data.snapshots;
+        existingId = rows[0].id;
+      }
+    }
+    // 새 snapshot
+    const sanitized = JSON.parse(JSON.stringify(state, _serializeReplacer));
+    snapshots.push({
+      ts: new Date().toISOString(),
+      note: (note || '').trim().slice(0, 80),
+      appVersion: typeof APP_VERSION !== 'undefined' ? APP_VERSION : '',
+      data: sanitized
+    });
+    // rolling cap
+    if (snapshots.length > MANUAL_BACKUP_KEEP_N) {
+      snapshots = snapshots.slice(-MANUAL_BACKUP_KEEP_N);
+    }
+    const body = JSON.stringify({ data: { snapshots } });
+    if (existingId) {
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_MANUAL_BACKUP_USER_ID}`,
+        { method: 'PATCH', headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body }
+      );
+    } else {
+      await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_MANUAL_BACKUP_USER_ID, data: { snapshots } })
+      });
+    }
+    showToast(`☁️ 백업됨 (${snapshots.length}/${MANUAL_BACKUP_KEEP_N})`);
+  } catch (e) {
+    console.error('manualCloudBackup:', e);
+    showToast('백업 실패: ' + (e.message || e));
+  }
+}
+
+// 사용자 요청 2026-04-29: 수동 클라우드 복원 — 백업 목록에서 선택해서 복원
+async function restoreFromCloudBackup() {
+  if (!authUserId) { showToast('로그인 필요'); return; }
+  showToast('🔍 클라우드 백업 검색 중...');
+  try {
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_MANUAL_BACKUP_USER_ID}&select=data&limit=1`,
+      { headers: authHeaders() }
+    );
+    if (!resp.ok) { showToast('백업 검색 실패'); return; }
+    const rows = await resp.json();
+    if (rows.length === 0 || !rows[0].data || !Array.isArray(rows[0].data.snapshots) || rows[0].data.snapshots.length === 0) {
+      showToast('클라우드 백업 없음 — "☁️ 클라우드 백업"으로 먼저 박아둬');
+      return;
+    }
+    const snapshots = rows[0].data.snapshots.slice().reverse();  // 최신 먼저
+    const opts = snapshots.map((s, i) => {
+      const dt = new Date(s.ts).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const noteLabel = s.note ? ` · ${s.note}` : '';
+      return { label: `${dt}${noteLabel}`, value: String(i) };
+    });
+    const choice = await showOptionsModal({
+      title: '☁️ 클라우드 복원',
+      message: `${snapshots.length}개 백업 중 선택. 복원하면 현재 데이터는 사라져.`,
+      options: opts
+    });
+    if (!choice) return;
+    const idx = parseInt(choice, 10);
+    const snap = snapshots[idx];
+    if (!snap || !snap.data) { showToast('백업 데이터 X'); return; }
+    const yes = await showConfirmModal({
+      title: '복원 확정?',
+      message: `${new Date(snap.ts).toLocaleString('ko-KR')}${snap.note ? '\n메모: ' + snap.note : ''}\n\n현재 데이터 사라지고 이 시점 상태로 돌아가.`,
+      okLabel: '복원',
+      cancelLabel: '취소'
+    });
+    if (!yes) return;
+    state = { ...DEFAULT_STATE, ...snap.data };
+    await saveToCloudNow();
+    showToast('✦ 복원됨 — 새로고침 중...');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    console.error('restoreFromCloudBackup:', e);
+    showToast('복원 실패: ' + (e.message || e));
+  }
+}
+
 // 자동 백업 목록 → modal로 보여주고 선택 복구
 async function showAutoBackupList() {
   if (!authUserId) { showToast('로그인 필요'); return; }
@@ -28232,7 +28348,7 @@ async function showAutoBackupList() {
       return { label: `${dt} · ${reasonLabel}`, value: String(i) };
     });
     const choice = await showOptionsModal({
-      title: '🕰 자동 백업에서 복구',
+      title: '🕰 자동 백업에서 복원',
       message: `최근 ${snapshots.length}개 중 선택. 복구하면 현재 데이터는 사라져.`,
       options: opts
     });
