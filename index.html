@@ -14580,30 +14580,9 @@ async function editModelItem(category, idx) {
 // ═══════════════════════════════════════════════════════════════
 // CHAT
 // ═══════════════════════════════════════════════════════════════
-function renderChat() {
-  const container = document.getElementById('chatMessages');
-  if (!container) return;  // FIX: prevent null.innerHTML error
-  
-  // Archive header (V3.3)
-  let archiveHeader = '';
-  if ((state.chatArchive || []).length > 0) {
-    const count = state.chatArchive.length;
-    archiveHeader = `<div class="chat-archive-header" onclick="openChatArchive()">
-      📚 이전 대화 보기 (${count}일치)
-    </div>`;
-  }
-  
-  if (!state.chatMessages.length) {
-    container.innerHTML = archiveHeader + `<div class="msg assistant">
-      <div class="msg-bubble">안녕 🐚 왔구나.
-
-오늘 어땠어? 아무 말이나 편하게 해도 돼.
-
-일기처럼 길게 써도 되고, "졸려" 한 마디도 OK.</div>
-    </div>`;
-    return;
-  }
-  container.innerHTML = archiveHeader + state.chatMessages.map((m, i) => {
+// 사용자 요청 2026-04-29 (perf #4): renderChat append-only — 새 메시지만 append, 기존 변경 시 full rebuild
+let _chatRenderSig = null;
+function _renderChatMessageHTML(m, i) {
     let bubbleContent;
     if (m.role === 'assistant' && !m.typing) {
       bubbleContent = formatAIResponse(m.content);
@@ -14698,7 +14677,68 @@ function renderChat() {
     }
 
     return chapterDivider + `<div class="msg ${msgClass}">${bubble}${pearlSuggestChip}${proposalBtns}${decisionCard}${vaultCard}${actions}</div>`;
-  }).join('');
+}
+
+function renderChat() {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;  // FIX: prevent null.innerHTML error
+
+  // Archive header (V3.3)
+  let archiveHeader = '';
+  if ((state.chatArchive || []).length > 0) {
+    const count = state.chatArchive.length;
+    archiveHeader = `<div class="chat-archive-header" onclick="openChatArchive()">
+      📚 이전 대화 보기 (${count}일치)
+    </div>`;
+  }
+
+  const msgs = state.chatMessages || [];
+  const archiveLen = (state.chatArchive || []).length;
+
+  if (!msgs.length) {
+    container.innerHTML = archiveHeader + `<div class="msg assistant">
+      <div class="msg-bubble">안녕 🐚 왔구나.
+
+오늘 어땠어? 아무 말이나 편하게 해도 돼.
+
+일기처럼 길게 써도 되고, "졸려" 한 마디도 OK.</div>
+    </div>`;
+    _chatRenderSig = null;
+    return;
+  }
+
+  // 사용자 요청 2026-04-29 (perf #4): append-only 분기 — 길이 증가 + 기존 prefix unchanged
+  // 안전성: 같은 firstTs + prev.len 위치 메시지의 ts 일치 시에만 발동. 중간 변경(saved 등)은 길이 그대로 → full rebuild fallback.
+  const prev = _chatRenderSig;
+  const lastIdx = msgs.length - 1;
+  const canAppendOnly = prev
+    && prev.archiveLen === archiveLen
+    && prev.firstTs === (msgs[0] && msgs[0].timestamp)
+    && msgs.length > prev.len
+    && prev.lastTs === (prev.len > 0 && msgs[prev.len - 1] && msgs[prev.len - 1].timestamp);
+
+  if (canAppendOnly) {
+    let html = '';
+    for (let i = prev.len; i < msgs.length; i++) {
+      html += _renderChatMessageHTML(msgs[i], i);
+    }
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    while (tmp.firstChild) container.appendChild(tmp.firstChild);
+  } else {
+    let html = archiveHeader;
+    for (let i = 0; i < msgs.length; i++) {
+      html += _renderChatMessageHTML(msgs[i], i);
+    }
+    container.innerHTML = html;
+  }
+
+  _chatRenderSig = {
+    len: msgs.length,
+    firstTs: msgs[0] && msgs[0].timestamp,
+    lastTs: msgs[lastIdx] && msgs[lastIdx].timestamp,
+    archiveLen
+  };
   setTimeout(() => { const s = document.getElementById('screen-chat'); s.scrollTop = s.scrollHeight; }, 50);
 }
 
