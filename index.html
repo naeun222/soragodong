@@ -5484,6 +5484,83 @@
     color: var(--text-dim);
   }
 
+  /* 사용자 요청 2026-04-29: 마법의 소라고동 도움 받기 — 별도 helpChat 모달 (영구 저장, 며칠 걸쳐 이어가기) */
+  .magic-help-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,14,23,0.85);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 9600;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .magic-help-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    width: 100%; max-width: 480px;
+    max-height: 90vh;
+    display: flex; flex-direction: column;
+  }
+  .magic-help-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .magic-help-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .magic-help-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .magic-help-close {
+    background: var(--surface2); border: none; color: var(--text);
+    width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; font-size: 14px; flex-shrink: 0;
+  }
+  .magic-help-close:active { transform: scale(0.94); }
+  .magic-help-area {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .magic-help-msg {
+    font-size: 13px; line-height: 1.6;
+    padding: 10px 14px; border-radius: 14px;
+    max-width: 85%;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .magic-help-msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, rgba(139,126,196,0.22), rgba(139,126,196,0.10));
+    border: 1px solid rgba(139,126,196,0.35);
+    color: var(--text);
+  }
+  .magic-help-msg.assistant {
+    align-self: flex-start;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .magic-help-footer {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+  }
+  .magic-help-input-row {
+    display: flex; gap: 8px; align-items: flex-end;
+  }
+  .magic-help-input {
+    flex: 1; min-width: 0;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text); font-family: inherit; font-size: 13px;
+    resize: none; max-height: 120px;
+  }
+  .magic-help-input:focus { outline: none; border-color: var(--accent); }
+  .magic-help-send {
+    background: var(--accent); border: none; color: white;
+    width: 38px; height: 38px; border-radius: 50%;
+    cursor: pointer; font-size: 16px; flex-shrink: 0;
+  }
+  .magic-help-send:active { transform: scale(0.94); }
+
   /* 사용자 요청 2026-04-29: 진주 큰 보기 모달 (클릭 시) — 더보기 ⋮로 수정/삭제 */
   .pearl-view-overlay {
     position: fixed; inset: 0;
@@ -11342,30 +11419,179 @@ function saveTextStep(decisionId, stepId) {
   showToast('저장됐어 🧙‍♂️');
 }
 
+// 사용자 요청 2026-04-29: 마법 도움 받기 = 별도 helpChat 모달. decision/step별 영구 저장.
+// 14일 숙성 중 며칠 걸쳐 이어볼 수 있음. 메인 chat 탭 안 건드림.
 async function askAIForStep(decisionId, stepId) {
-  const decision = state.decisions.find(d => d.id === decisionId);
-  const meta = DECISION_STEPS.find(m => m.id === stepId);
-  const editor = document.getElementById('stepEditor');
-  const userInput = editor ? editor.value : '';
-
   if (!state.apiKey) { alert('API 키 먼저 설정!'); return; }
+  openMagicHelpChat(decisionId, stepId);
+}
 
+// helpChat state
+let _magicHelpState = null;
+
+function openMagicHelpChat(decisionId, stepId) {
+  const decision = (state.decisions || []).find(d => d.id === decisionId);
+  if (!decision) return;
+  const meta = DECISION_STEPS.find(m => m.id === stepId);
+  if (!meta) return;
+  // helpChat 영구 저장 위치: decision.helpChats[stepId] = []
+  if (!decision.helpChats) decision.helpChats = {};
+  if (!Array.isArray(decision.helpChats[stepId])) decision.helpChats[stepId] = [];
+
+  // 첫 진입 시 인사 메시지 (이미 대화 있으면 그대로)
+  if (decision.helpChats[stepId].length === 0) {
+    decision.helpChats[stepId].push({
+      role: 'assistant',
+      content: `🧙‍♂️ "${meta.title}" 단계에 같이 들어가볼까?\n\n결정 주제: "${decision.title}"\n\n어떤 점이 막혔는지 풀어놔. 결론 대신 내려주진 X — 같이 깊이 들여다볼게.`,
+      timestamp: new Date().toISOString()
+    });
+    saveState();
+  }
+
+  _magicHelpState = { decisionId, stepId, _loading: false };
+  _renderMagicHelpChat();
+}
+
+function _renderMagicHelpChat() {
+  if (!_magicHelpState) return;
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) { closeMagicHelpChat(); return; }
+  const meta = DECISION_STEPS.find(m => m.id === _magicHelpState.stepId);
+  if (!meta) { closeMagicHelpChat(); return; }
+  const messages = (decision.helpChats && decision.helpChats[_magicHelpState.stepId]) || [];
+
+  let overlay = document.getElementById('magicHelpOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'magicHelpOverlay';
+    overlay.className = 'magic-help-overlay';
+    overlay.innerHTML = `
+      <div class="magic-help-modal" onclick="event.stopPropagation()">
+        <div class="magic-help-header">
+          <div style="flex:1; min-width:0;">
+            <div class="magic-help-title">🧙‍♂️ ${escapeHtml(meta.title)}</div>
+            <div class="magic-help-sub" id="magicHelpSub"></div>
+          </div>
+          <button class="magic-help-close" onclick="closeMagicHelpChat()" aria-label="닫기">✕</button>
+        </div>
+        <div class="magic-help-area" id="magicHelpArea"></div>
+        <div class="magic-help-footer">
+          <div class="magic-help-input-row">
+            <textarea class="magic-help-input" id="magicHelpInput" placeholder="자유롭게 풀어놔..." rows="1"></textarea>
+            <button class="magic-help-send" id="magicHelpSendBtn" onclick="sendMagicHelpMessage()">↑</button>
+          </div>
+        </div>
+      </div>
+    `;
+    overlay.onclick = (e) => { if (e.target === overlay) closeMagicHelpChat(); };
+    document.body.appendChild(overlay);
+  }
+  const subEl = document.getElementById('magicHelpSub');
+  if (subEl) subEl.textContent = `"${decision.title}"`;
+  const area = document.getElementById('magicHelpArea');
+  if (area) {
+    let html = '';
+    messages.forEach(m => {
+      html += `<div class="magic-help-msg ${m.role}">${escapeHtml(m.content)}</div>`;
+    });
+    if (_magicHelpState._loading) {
+      html += `<div class="magic-help-msg assistant" style="opacity:0.6;">생각 중... ✦</div>`;
+    }
+    area.innerHTML = html;
+    area.scrollTop = area.scrollHeight;
+  }
+  const ta = document.getElementById('magicHelpInput');
+  if (ta) {
+    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; });
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMagicHelpMessage(); }
+    });
+  }
+}
+
+async function sendMagicHelpMessage() {
+  if (!_magicHelpState || _magicHelpState._loading) return;
+  const ta = document.getElementById('magicHelpInput');
+  if (!ta) return;
+  const text = ta.value.trim();
+  if (!text) return;
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) return;
+  if (!decision.helpChats) decision.helpChats = {};
+  const stepId = _magicHelpState.stepId;
+  if (!Array.isArray(decision.helpChats[stepId])) decision.helpChats[stepId] = [];
+  const meta = DECISION_STEPS.find(m => m.id === stepId);
+
+  decision.helpChats[stepId].push({ role: 'user', content: text, timestamp: new Date().toISOString() });
+  ta.value = ''; ta.style.height = 'auto';
+  _magicHelpState._loading = true;
+  saveState();
+  _renderMagicHelpChat();
+
+  if (!state.apiKey) {
+    decision.helpChats[stepId].push({ role: 'assistant', content: '(API 키 없어 — 설정에서 등록해.)', timestamp: new Date().toISOString() });
+    _magicHelpState._loading = false;
+    saveState();
+    _renderMagicHelpChat();
+    return;
+  }
+
+  // 진지 모드 + 사용자 본인 데이터 인용 + caching
   const completedContext = decision.steps.filter(s => s.completed).map(s => {
     const m = DECISION_STEPS.find(x => x.id === s.id);
     return `[${m.title}]\n${formatStepContent(s)}`;
   }).join('\n\n');
+  const editor = document.getElementById('stepEditor');
+  const currentDraft = editor ? editor.value : '';
 
-  const userMsg = `[마법의 소라고동 - ${meta.title}]\n결정 주제: "${decision.title}"\n\n지금까지 작성한 단계:\n${completedContext || '(아직 시작 안 함)'}\n\n이번 단계 (${meta.title})에 내가 적은 거:\n${userInput || '(비어있음 - 도움이 필요해)'}\n\n이 단계에서 더 깊이 생각하도록 좋은 질문을 던져줘. 결정을 대신 내려주지 말고.`;
+  const _topByConf = (arr, n) => (arr || []).slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0)).slice(0, n);
+  const traits = _topByConf(state.traits, 5).map(t => `- ${t.name}${t.description ? ': ' + t.description : ''}`).join('\n');
+  const patterns = _topByConf(state.patterns, 5).map(p => `- ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`).join('\n');
+  const values = _topByConf(state.values, 3).map(v => `- ${v.name}`).join('\n');
 
-  state.chatMessages.push({
-    role: 'user',
-    content: userMsg,
-    timestamp: new Date().toISOString()
-  });
+  const sysPrompt = `너는 마법의 소라고동 — 큰 결정 14일 숙성 도구 안 도우미. 사용자가 "${decision.title}" 결정의 [${meta.title}] 단계에서 막힘.
+
+[톤 — 진지 모드. 매우 중요]
+- 큰 결정 = 가벼운 ㅋㅋ / 농담 / 한 줄 리액션 ❌. 차분한 친구.
+- 1-3문장 짧게. 외재화 톤. 결론 강요 X — 사용자 자기 발견 유도.
+- 사용자 페이스 따라. 추궁 X. 같은 질문 반복 X.
+- 짧은 응답("응", "맞아")에도 톤 유지 (sticky).
+
+[사용자 본인 데이터 — 우선 인용. generic 회피]
+${traits ? '특성:\n' + traits : ''}
+${patterns ? '\n패턴:\n' + patterns : ''}
+${values ? '\n가치:\n' + values : ''}
+
+[지금까지 결정 흐름]
+${completedContext || '(아직 시작 X)'}
+
+${currentDraft ? `[이번 단계 ${meta.title}에 현재 적은 거]\n${currentDraft}\n` : ''}
+[네 응답만, 마크다운 X]`;
+
+  try {
+    const recentMsgs = decision.helpChats[stepId].slice(-15).map(m => ({ role: m.role, content: m.content }));
+    const resp = await callAnthropic({
+      model: 'claude-opus-4-7',
+      max_tokens: 400,
+      system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
+      messages: recentMsgs
+    });
+    const data = await resp.json();
+    const aiText = data.content?.[0]?.text?.trim() || '(응답 비어있어)';
+    decision.helpChats[stepId].push({ role: 'assistant', content: aiText, timestamp: new Date().toISOString() });
+  } catch (e) {
+    console.warn('magic help AI:', e);
+    decision.helpChats[stepId].push({ role: 'assistant', content: '(응답 실패 — 잠시 후 다시)', error: true, timestamp: new Date().toISOString() });
+  }
+  _magicHelpState._loading = false;
   saveState();
-  showScreen('chat');
-  // V3.13.x: 마법의 소라고동은 무거운 추론 필요 → opus 4.7
-  await generateAIResponse('claude-opus-4-7');
+  _renderMagicHelpChat();
+}
+
+function closeMagicHelpChat() {
+  _magicHelpState = null;
+  const overlay = document.getElementById('magicHelpOverlay');
+  if (overlay) overlay.remove();
 }
 
 function openWeightStep(decision, step) {
