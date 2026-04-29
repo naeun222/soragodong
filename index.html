@@ -7150,6 +7150,7 @@
         <button class="btn-secondary" onclick="manualCloudBackup()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드 백업</button>
         <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드 복원</button>
         <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
+        <button class="btn-secondary" onclick="showCoreReplayPicker()">🔧 개별 코어 튜토리얼</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
 
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
@@ -8682,7 +8683,7 @@ const ONBOARDING_STEPS = [
     id: 'chapter_auto',
     targetSelector: null,
     title: '📖 챕터 자동 분류',
-    body: '우리가 여기서 한 대화는 <b>4시간 이상 멈추거나, 입력창 왼쪽 하단의 ✓ 버튼을 누르면 마무리</b>돼.<br><br><br>그럼 내가 이 대화 챕터를 <b>8가지 주제 중 하나</b>로 자동 분류해서 <b>📚 도서관</b>에 저장해줄게:<br>일기 / 일상 / 고민 / 감정 / 기억 / 할 일 / 아이디어 / 관계.<br><br><span class="small">자세한 건 이따가 알아보자.</span>',
+    body: '우리가 여기서 한 대화는 <b>입력창 왼쪽 하단의 ✓ 버튼을 누르면 마무리</b>돼. (24시간 이상 갭이면 자동 마무리 — 안전망)<br><br>그럼 내가 이 대화 챕터를 <b>8가지 주제 중 하나</b>로 자동 분류해서 <b>📚 도서관</b>에 저장해줄게:<br>일기 / 일상 / 고민 / 감정 / 기억 / 할 일 / 아이디어 / 관계.<br><br><span class="small">잠깐 멈췄다가 이어서 하고 싶으면 그냥 메시지 보내. 새 대화 하고 싶을 때만 ✓.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -9302,7 +9303,7 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     advanceClickSelector: '.day-modal-close',
     title: '✦ 토픽 — 카테고리별 자동 분류',
-    body: '4시간 이상 대화 멈추거나 ✓ 마무리하면, 고동이가 챕터를 <b>8 카테고리</b> (일기/일상/고민/감정/기억/할 일/아이디어/관계) 중 하나로 자동 분류해서 여기 박아.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
+    body: '✓ 마무리 누르거나 24시간 이상 갭 생기면, 고동이가 챕터를 <b>8 카테고리</b> (일기/일상/고민/감정/기억/할 일/아이디어/관계) 중 하나로 자동 분류해서 여기 박아.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
     waitFor: 'click',
     dimBackground: false,
     aboveModal: true
@@ -9776,12 +9777,41 @@ function _cleanupCoreOverrides() {
 }
 
 // V4 (사용자 요청 2026-04-29): 설정 → 🐚 투어 다시 보기
-// 홈 화면 업데이트 모달과 똑같은 3 버튼 모달 띄우기 (풀 / 하면서 익히기 / 이미 알아)
+// 홈 화면 업데이트 모달과 똑같은 3 버튼 모달 띄우기 (코어/풀/이미 알아)
 function showTutorialReplayMenu() {
   if (typeof showUpdateChooserModal === 'function') return showUpdateChooserModal();
   // fallback
   if (typeof startCoreTutorial === 'function') return startCoreTutorial('core1');
   return startInteractiveOnboarding();
+}
+
+// V4 (사용자 요청 2026-04-29): 설정 → 🔧 개별 코어 튜토리얼
+// 코어 7개 + 풀 한 번에 골라서 진행. 잠금이랑 무관 — replay 도구.
+async function showCoreReplayPicker() {
+  if (typeof showOptionsModal !== 'function') {
+    return startInteractiveOnboarding();
+  }
+  const opts = [
+    { label: '🐚 코어 #1 — 시작 / 체크인 / 대화', value: 'core1', desc: '한 바퀴 (필수 핵심)' },
+    { label: '⭐ 코어 #2 — 소라의 부름 / 모래사장 / 양생방', value: 'core2', desc: '미션 + 결과 체크 + 전략 진화 (좀 김)' },
+    { label: '🚀 코어 #3 — 실행 탭', value: 'core3', desc: '머릿속 풀기 + 몰입 ritual' },
+    { label: '✦ 코어 #4 — 나 탭', value: 'core4', desc: '분석 결과' },
+    { label: '📚 코어 #5 — 도서관 탭', value: 'core5', desc: '5 카테고리 + 리뷰 (좀 김)' },
+    { label: '🌊 코어 #6 — 숙고 질문', value: 'core6', desc: '큰 물음' },
+    { label: '🧙‍♂️ 코어 #8 — 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
+    { label: '✨ 풀 튜토리얼', value: 'full', desc: '처음부터 끝까지 (~30분)' }
+  ];
+  const choice = await showOptionsModal({
+    title: '🔧 개별 코어 튜토리얼',
+    message: '코어 골라서 다시 보기. 잠금 상태 영향 X.',
+    options: opts
+  });
+  if (!choice) return;
+  if (choice === 'full') {
+    window._fullTutorialActive = true;
+    return startInteractiveOnboarding();
+  }
+  if (typeof startCoreTutorial === 'function') return startCoreTutorial(choice);
 }
 
 // 잠금 시각 적용/해제 — 셀렉터 + coreId pair 받아서 .core-locked 클래스 + data-core 토글
@@ -15602,8 +15632,9 @@ async function sendChat() {
   const text = input.value.trim();
   if (!text) return;
   
-  // V3.8: 4시간 비활성 → 새 챕터 시작 마킹
-  const CHAPTER_GAP_MS = 4 * 60 * 60 * 1000;  // 4시간
+  // V4 사용자 요청 2026-04-29: 4시간 → 24시간으로 변경. 사용자가 이어서 대화하고 싶을 수 있음 — 명시적 ✓ 마무리만 챕터 분리.
+  // 24시간은 자동 분리 안전망 (자정 넘기는 일반 케이스 보호).
+  const CHAPTER_GAP_MS = 24 * 60 * 60 * 1000;  // 24시간
   const lastMsg = state.chatMessages[state.chatMessages.length - 1];
   const isNewChapter = !lastMsg || !lastMsg.timestamp || 
     (Date.now() - new Date(lastMsg.timestamp).getTime() >= CHAPTER_GAP_MS);
@@ -22673,10 +22704,11 @@ function testSkip4Hours() {
     return;
   }
   const lastMsg = state.chatMessages[state.chatMessages.length - 1];
-  const fakeTime = new Date(Date.now() - (4 * 60 * 60 * 1000 + 60000));
+  // V4 사용자 요청 2026-04-29: 챕터 갭 4시간 → 24시간으로 변경됨. 테스트 트리거도 동기화.
+  const fakeTime = new Date(Date.now() - (24 * 60 * 60 * 1000 + 60000));
   lastMsg.timestamp = fakeTime.toISOString();
   saveState();
-  showToast('🧪 4시간 전으로. 대화창에서 새 메시지 → 챕터 분리 + 토픽 추출');
+  showToast('🧪 24시간 전으로. 대화창에서 새 메시지 → 챕터 분리 + 토픽 추출');
 }
 
 // V4-fix: 테스터 모드 V4 전체 시드 + 강제 trigger 함수들 (testerMode ON 시 안전)
@@ -29925,16 +29957,16 @@ function showUpdateChooserModal() {
         한 번 둘러보면 나중에 헷갈릴 일 줄어. (제발료)
       </div>
       <div style="display:flex; flex-direction:column; gap:8px;">
-        <button class="input-modal-btn primary" onclick="_chooseUpdateOption('full')" style="padding:14px;">
-          ✨ 풀 튜토리얼 해보기
-          <div style="font-size:11px; opacity:0.85; margin-top:4px; font-weight:normal;">처음부터 끝까지 한 번에 (좀 긺)</div>
+        <button class="input-modal-btn primary" onclick="_chooseUpdateOption('learn')" style="padding:14px;">
+          🐚 코어 튜토리얼 시작 <span style="font-size:11px; opacity:0.9;">(추천 ✨)</span>
+          <div style="font-size:11px; opacity:0.85; margin-top:4px; font-weight:normal;">짧고 핵심만. 다른 기능은 만날 때마다 안내.</div>
         </button>
-        <button class="input-modal-btn" onclick="_chooseUpdateOption('learn')" style="padding:14px;">
-          🐚 하면서 익히기
-          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">기능 만날 때마다 짧은 안내 받기</div>
-        </button>
-        <button class="input-modal-btn" onclick="_chooseUpdateOption('dismiss')" style="padding:10px; opacity:0.6;">
+        <button class="input-modal-btn" onclick="_chooseUpdateOption('dismiss')" style="padding:12px;">
           이미 알아 (다시 보지 않기)
+        </button>
+        <button class="input-modal-btn" onclick="_chooseUpdateOption('full')" style="padding:10px; opacity:0.55;">
+          ✨ 풀 튜토리얼 <span style="font-size:11px; color:var(--text-dim);">(비추천)</span>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">처음부터 끝까지 — 좀 길어. 각오 됐을 때만.</div>
         </button>
       </div>
     </div>
