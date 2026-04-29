@@ -8188,12 +8188,40 @@ const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮
 // state.apiKey 비어있고 session 활성이면 → /api/chat 백엔드 프록시 (앱 결제 모델)
 // 모든 28개 LLM call 위치 자동 redirect — 코드 변경 X.
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+
+// 사용자 보고 2026-04-30 ultrathink-2: 401 시 session 자동 refresh + retry helper.
+// JWT 만료 (1h) 도중 AI call 시 401 발생 → 자동 refresh + 한 번 retry → 사용자에게 안 보이게.
+let _sessionRefreshInflight = null;
+async function _refreshSessionForApi() {
+  if (!session || !session.refresh_token) return false;
+  if (_sessionRefreshInflight) return _sessionRefreshInflight;
+  _sessionRefreshInflight = (async () => {
+    try {
+      const r = await window._anthropicOrigFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: session.refresh_token })
+      });
+      if (!r.ok) return false;
+      const ns = await r.json();
+      if (!ns || !ns.access_token) return false;
+      session = { ...session, access_token: ns.access_token, refresh_token: ns.refresh_token || session.refresh_token, user: ns.user || session.user };
+      if (ns.user && ns.user.id) authUserId = ns.user.id;
+      try { localStorage.setItem('soragodong_session', JSON.stringify(session)); } catch {}
+      return true;
+    } catch { return false; }
+    finally { setTimeout(() => { _sessionRefreshInflight = null; }, 100); }
+  })();
+  return _sessionRefreshInflight;
+}
+
 (function installAnthropicProxyInterceptor() {
   if (typeof window === 'undefined') return;
   if (window._anthropicProxyInstalled) return;
   window._anthropicProxyInstalled = true;
   const _origFetch = window.fetch.bind(window);
-  window.fetch = function(input, init) {
+  window._anthropicOrigFetch = _origFetch;  // refresh helper에서 무한 인터셉트 안 걸리게
+  window.fetch = async function(input, init) {
     const url = (typeof input === 'string') ? input : (input && input.url) || '';
     if (url !== ANTHROPIC_API_URL) return _origFetch(input, init);
     // 사용자 본인 키 있으면 직접 호출 (interceptor는 _canAI() 사용 X — 본인 키 여부만 봐야 함)
@@ -8203,23 +8231,33 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
       return _origFetch(input, init);
     }
     // 백엔드 프록시로 swap
-    let headers = {};
-    if (init && init.headers) {
-      if (init.headers instanceof Headers) {
-        init.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
-      } else if (Array.isArray(init.headers)) {
-        init.headers.forEach(([k, v]) => { headers[k.toLowerCase()] = v; });
-      } else {
-        Object.keys(init.headers).forEach(k => { headers[k.toLowerCase()] = init.headers[k]; });
+    const buildHeaders = () => {
+      let headers = {};
+      if (init && init.headers) {
+        if (init.headers instanceof Headers) {
+          init.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
+        } else if (Array.isArray(init.headers)) {
+          init.headers.forEach(([k, v]) => { headers[k.toLowerCase()] = v; });
+        } else {
+          Object.keys(init.headers).forEach(k => { headers[k.toLowerCase()] = init.headers[k]; });
+        }
+      }
+      delete headers['x-api-key'];
+      delete headers['anthropic-version'];
+      delete headers['anthropic-dangerous-direct-browser-access'];
+      headers['authorization'] = 'Bearer ' + session.access_token;
+      headers['content-type'] = 'application/json';
+      return headers;
+    };
+    let resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: buildHeaders() }));
+    // 사용자 보고 2026-04-30 ultrathink-2: 401 시 session refresh + 한 번 retry
+    if (resp.status === 401 && session && session.refresh_token) {
+      const refreshed = await _refreshSessionForApi();
+      if (refreshed) {
+        resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: buildHeaders() }));
       }
     }
-    delete headers['x-api-key'];
-    delete headers['anthropic-version'];
-    delete headers['anthropic-dangerous-direct-browser-access'];
-    headers['authorization'] = 'Bearer ' + session.access_token;
-    headers['content-type'] = 'application/json';
-    const newInit = Object.assign({}, init || {}, { headers });
-    return _origFetch('/api/chat', newInit);
+    return resp;
   };
 })();
 function _anthropicHeaders(extraHeaders) {
@@ -19848,10 +19886,17 @@ async function generateAIResponse(modelOverride) {
 
   } catch (err) {
     // 사용자 요청 2026-04-28: 에러 종류별 명확한 메시지 (이전엔 'err.message' 그대로 노출 — 이해 어려움)
+    // 사용자 보고 2026-04-30 ultrathink: Phase C 마이그 후 키 모델 폐기 — 401은 session 만료. 메시지 분기.
     const m = (err && err.message) || '';
     let userMsg;
     if (/401/.test(m) || /authentication/i.test(m) || /invalid.*api.*key/i.test(m) || /api[_ ]?key/i.test(m)) {
-      userMsg = '🔑 API 키가 유효하지 않아.\n\n나 탭 → 설정에서 키를 다시 확인해봐.';
+      if (state && state.apiKey) {
+        userMsg = '🔑 본인 API 키 인증 실패.\n\n나 탭 → 설정에서 키를 다시 확인해봐.';
+      } else if (typeof session !== 'undefined' && session && session.access_token) {
+        userMsg = '⏰ 로그인 세션이 만료된 것 같아.\n\n페이지 새로고침 또는 로그아웃 → 다시 로그인 해줘.';
+      } else {
+        userMsg = '🔑 로그인 필요 — 다시 로그인 해줘.';
+      }
     } else if (/429/.test(m) || /rate[_ ]?limit/i.test(m) || /quota/i.test(m)) {
       userMsg = '⏳ 잠깐 너무 빨라. 1분 정도 후 다시 시도하거나 Anthropic 대시보드에서 사용량 확인해봐.';
     } else if (/network|failed to fetch|offline/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
@@ -23747,7 +23792,8 @@ async function sbSendMessage() {
   renderStrategyBuilderChat();
 
   if (!_canAI()) {
-    _strategyBuilderState.messages.push({ role: 'assistant', content: '(API 키 없음 — 설정에서 등록해.)' });
+    // 사용자 보고 2026-04-30: Phase C 후 키 모델 폐기 — 로그인이 게이트.
+    _strategyBuilderState.messages.push({ role: 'assistant', content: '(로그인이 안 되어있어. 다시 로그인 해줘.)' });
     renderStrategyBuilderChat();
     return;
   }
@@ -27677,7 +27723,8 @@ async function testForceFullAnalysis() {
     return;
   }
   if (!_canAI()) {
-    showToast('⚠️ API 키 필요 — 설정에서 박은 후 시도');
+    // 사용자 보고 2026-04-30: Phase C 후 키 모델 폐기 — 로그인이 게이트.
+    showToast('⚠️ 로그인 필요 — 다시 로그인 해줘');
     return;
   }
   if (typeof forceAnalyze !== 'function') {
@@ -33189,7 +33236,8 @@ async function _pearlViewMore(id) {
 async function forceAnalyze(opts) {
   const isAuto = !!(opts && opts.auto);
   if (!_canAI()) {
-    if (!isAuto) alert('API 키 먼저 설정!');
+    // 사용자 보고 2026-04-30: Phase C 후 키 모델 폐기 — 로그인이 게이트.
+    if (!isAuto) alert('로그인 안 되어있어 — 다시 로그인 해줘.');
     return;
   }
   if (state.entries.length < 3 && state.chatMessages.length < 3) {
