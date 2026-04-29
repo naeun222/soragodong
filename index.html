@@ -7406,94 +7406,99 @@
     <div class="screen" id="screen-settings">
       <div class="screen-title">설정</div>
       <div class="screen-sub">소라고동을 네 것으로.</div>
-      
-      <div class="input-group">
-        <div class="input-label">🔑 Anthropic API 키</div>
-        <div class="api-key-box">
-          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." style="width:100%;">
-        </div>
-        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;">
-          <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>에서 발급
-        </div>
-      </div>
+
+      <!-- 사용자 요청 2026-04-30: ANTHROPIC API 키 input 제거. 앱 결제 모델로 전환. -->
+      <input type="hidden" id="apiKeyInput" value="" />
+
+      <!-- ═══ 자주 쓰는 거 ═══ -->
       <div class="input-group">
         <div class="input-label">👤 내 프로필 (AI가 참고)</div>
-        <textarea id="profileInput" placeholder="예: ADHD/ADD 성향..." rows="5"></textarea>
+        <textarea id="profileInput" placeholder="예: ADHD/ADD 성향, 박사과정, 야행성..." rows="4"></textarea>
       </div>
-      <!-- 사용자 요청 2026-04-30: 일일 메시지 cap (비용 폭발 방지). 0 = 무제한. -->
-      <div class="input-group">
-        <div class="input-label">📋 일일 대화 한도</div>
-        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:8px;">
-          하루 메인 chat 메시지 수 한도. 4시 이후 reset. 0 = 무제한.<br>
-          비용 폭발 방지용 — 헤비 사용자면 풀거나 ↑.
-        </div>
-        <input type="number" id="dailyChatCapInput" min="0" max="9999" placeholder="100" style="width:100%;">
-        <div id="dailyChatCountStatus" style="font-size:11px;color:var(--text-soft);margin-top:6px;"></div>
-      </div>
-      <!-- 사용자 요청 2026-04-30 (Phase C): 사용량 / 충전 잔액 표시 + 결제·충전 진입점 -->
-      <div class="input-group" id="billingSection" style="display:none;">
+
+      <div class="input-group" id="billingSection">
         <div class="input-label">💳 결제 / 사용량</div>
         <div id="billingStatus" style="font-size:12px;color:var(--text);background:var(--surface);padding:12px;border-radius:12px;line-height:1.7;margin-bottom:8px;">불러오는 중...</div>
         <button class="btn-secondary" onclick="openChargeModal()">⚡ 충전</button>
         <button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:6px;">📅 월 정액 가입</button>
-        <button class="btn-secondary" onclick="refreshBillingStatus()" style="margin-top:6px;">🔄 사용량 새로고침</button>
-      </div>
-      <div style="margin-top:30px;">
-        <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
-        <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
-        <button class="btn-secondary" onclick="exportData()">📁 파일로 백업</button>
-        <!-- 사용자 요청 2026-04-29: 수동 클라우드 백업/복원 (rolling 10개) -->
-        <button class="btn-secondary" onclick="manualCloudBackup()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드 백업</button>
-        <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드 복원</button>
-        <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
-        <button class="btn-secondary" onclick="showCoreReplayPicker()">🔧 개별 코어 튜토리얼</button>
-        <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
+        <button class="btn-secondary" onclick="refreshBillingStatus()" style="margin-top:6px;">🔄 새로고침</button>
       </div>
 
-      <!-- 알림 기능 미박힘 — 진짜 백그라운드 푸시는 Phase C (백엔드 + Service Worker) 박힌 후 활성. -->
-
-      <div>
-        <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
-        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:8px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동으로 박힌 백업 (rolling 5개) 에서 복원">🕰 자동 백업에서 복원</button>
-      </div>
-
-      <div style="margin-top:24px;">
-        <div class="input-label" style="margin-bottom:8px;">🧪 테스터 모드</div>
-        <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
-          ON 시 모든 변경(체크인/대화/미션 등)이 <b>저장되지 않아</b>. 새로고침하면 ON 켜기 전 상태로 돌아옴.<br>
-          기능 테스트하면서 데이터 더럽히기 싫을 때 켜둬.
+      <div class="input-group">
+        <div class="input-label">📋 일일 대화 한도</div>
+        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:8px;">
+          하루 메인 chat 메시지 수. 4시 이후 reset. 0 = 무제한.
         </div>
-        <button class="btn-secondary" id="testerModeToggleBtn" onclick="toggleTesterMode()">🧪 테스터 모드: OFF</button>
+        <input type="number" id="dailyChatCapInput" min="0" max="9999" placeholder="100" style="width:100%;">
+        <div id="dailyChatCountStatus" style="font-size:11px;color:var(--text-soft);margin-top:6px;"></div>
       </div>
+
+      <!-- ═══ 사용자 가이드 ═══ -->
+      <div style="margin-top:30px;">
+        <div class="input-label" style="margin-bottom:8px;">📚 가이드</div>
+        <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
+        <button class="btn-secondary" onclick="showCoreReplayPicker()" style="margin-top:6px;">🔧 개별 코어 튜토리얼</button>
+        <button class="btn-secondary" onclick="showShortcutGuide()" style="margin-top:6px;">🌧 몰입 단축어 만들기</button>
+      </div>
+
+      <!-- ═══ 데이터 관리 ═══ -->
+      <div style="margin-top:30px;">
+        <div class="input-label" style="margin-bottom:8px;">☁️ 데이터 관리</div>
+        <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
+        <button class="btn-secondary" onclick="exportData()" style="margin-top:6px;">📁 파일로 백업</button>
+        <button class="btn-secondary" onclick="manualCloudBackup()" style="margin-top:6px; background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드 백업</button>
+        <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="margin-top:6px; background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드 복원</button>
+        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:6px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동 박힌 백업 (rolling 5개)">🕰 자동 백업에서 복원</button>
+      </div>
+
+      <!-- ═══ 계정 ═══ -->
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">👤 계정</div>
         <div id="accountInfo" style="font-size:12px; color:var(--text-dim); padding:12px; background:var(--surface); border-radius:12px; margin-bottom:8px;"></div>
         <button class="btn-secondary btn-danger" onclick="logout()">로그아웃</button>
-        <!-- 사용자 요청 2026-04-30: 약관 8조 — 회원 탈퇴 시 즉시 데이터 삭제 (결제 기록 외 5년 보존). -->
-        <button class="btn-secondary btn-danger" onclick="withdrawAccount()" style="margin-top:8px;">회원 탈퇴 (영구 삭제)</button>
-        <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-top:6px;">
-          탈퇴 시 모든 자기관찰 데이터 즉시 삭제. 결제 기록은 전자상거래법상 5년 보존 (익명화).
-        </div>
       </div>
-      <!-- 사용자 요청 2026-04-28: 'V4 전체 기능 테스트' 정리 — 시드 박기 + step N부터 시작 두 개만 보존 (나머지 함수는 콘솔에서 호출 가능) -->
-      <details class="model-collapse" style="margin-top:14px; border:1px solid rgba(212,167,106,0.30); border-radius:12px;">
+
+      <!-- ═══ 개발자 도구 (collapse) ═══ -->
+      <details class="model-collapse" style="margin-top:30px; border:1px solid rgba(212,167,106,0.30); border-radius:12px;">
         <summary style="padding:12px 14px;">🧪 개발자 도구</summary>
         <div class="model-collapse-content" style="padding: 10px 14px;">
           <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
-            <strong style="color:var(--accent2);">⚠️ 테스터 모드 ON 후 사용</strong> — 변경 저장 X, OFF 하면 원래 데이터로 복원.
+            <strong style="color:var(--accent2);">⚠️ 테스터 모드 ON 후 사용</strong> — 변경 저장 X, OFF 시 원래 데이터로 복원.
           </div>
-          <button class="btn-secondary" onclick="testSeedV4Data()" style="background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(212,167,106,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🌱 V4 전체 시드 데이터 박기</button>
+          <button class="btn-secondary" id="testerModeToggleBtn" onclick="toggleTesterMode()">🧪 테스터 모드: OFF</button>
+          <button class="btn-secondary" onclick="testSeedV4Data()" style="margin-top:6px; background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(212,167,106,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🌱 V4 전체 시드 데이터 박기</button>
           <button class="btn-secondary" onclick="testStartTutorialFromStep()" style="margin-top:6px;" title="특정 step부터 튜토리얼 시작">🎯 튜토리얼 step N부터 시작</button>
-          <button class="btn-secondary" onclick="showNavPaddingSlider()" style="margin-top:6px;" title="아래 nav padding-bottom 슬라이더 (디버그)">📏 하단 nav padding 조절</button>
-          <!-- 사용자 요청 2026-04-30: forceAnalyze는 일주일마다 자동. 디버깅 / 강제 갱신 시만 수동 호출. -->
+          <button class="btn-secondary" onclick="showNavPaddingSlider()" style="margin-top:6px;" title="하단 nav padding 슬라이더">📏 하단 nav padding 조절</button>
           <button class="btn-secondary" onclick="forceAnalyze()" style="margin-top:6px;" title="opus 4.7 사용 — 비싸. 일주일 자동 실행되니 평소엔 X.">📊 강제 모델 분석 (수동, 비쌈)</button>
         </div>
       </details>
-      <div style="margin-top:24px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
-        <strong style="color:var(--accent)">프라이버시</strong><br>
+
+      <!-- ═══ ⚠️ 위험 영역 (collapse, 거리 + 색깔 분리) — 사용자 요청 2026-04-30: 잘못 안 눌리게 ═══ -->
+      <details class="model-collapse" style="margin-top:50px; border:1px solid rgba(220,80,80,0.40); border-radius:12px; background:rgba(220,80,80,0.05);">
+        <summary style="padding:12px 14px; color:#e89090;">⚠️ 위험 영역 (눌러서 펼치기)</summary>
+        <div class="model-collapse-content" style="padding: 10px 14px;">
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
+            아래 동작들은 <strong style="color:#e89090;">되돌릴 수 없음</strong>. 신중히.
+          </div>
+          <button class="btn-secondary btn-danger" onclick="resetAll()">🔄 모든 데이터 초기화 (V4)</button>
+          <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-top:6px; margin-bottom:14px;">
+            V4 데이터만 삭제 (V3 prod 안 건드림). 계정 / API 키 유지.
+          </div>
+          <button class="btn-secondary btn-danger" onclick="withdrawAccount()" style="margin-top:6px;">🚫 회원 탈퇴 (영구 삭제)</button>
+          <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-top:6px;">
+            모든 자기관찰 데이터 즉시 삭제. 결제 기록은 전자상거래법상 5년 보존 (익명화).
+          </div>
+        </div>
+      </details>
+
+      <!-- ═══ 프라이버시 안내 ═══ -->
+      <div style="margin-top:30px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
+        <strong style="color:var(--accent)">🛡️ 프라이버시</strong><br>
         이메일 기반 인증으로 너만 접근 가능. 다른 사람은 네 데이터를 볼 수 없어.<br>
-        API 호출은 Anthropic을 통과하지만 7일 후 삭제되고 학습에 쓰이지 않아.
+        AI 호출은 Anthropic 미국 서버를 통과하지만 30일 후 자동 삭제 + 학습에 안 써.<br>
+        회사도 너 데이터를 광고/판매에 사용하지 않아.
       </div>
+
       <div class="sticky-action-bar">
         <button class="btn-primary" onclick="saveSettings()">저장</button>
         <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
@@ -8974,40 +8979,8 @@ const ONBOARDING_STEPS = [
   },
 
   // === Phase 2: API 키 (4) ===
-  {
-    id: 'go_model_first',
-    targetSelector: '.nav-item[data-screen="model"]',
-    title: '먼저 키부터 등록하자',
-    body: '나랑 대화하려면 Anthropic API 키가 필요해. 키는 "나" 탭 안 설정에서 등록할 수 있어.<br><br>아래 <b>"나"</b> 탭 한 번 눌러볼래?',
-    waitFor: 'visit',
-    visitScreen: 'model'
-  },
-  {
-    id: 'go_settings',
-    targetSelector: 'button[onclick*="settings"]',
-    title: '⚙ 설정으로',
-    body: '여기 ⚙ 설정 버튼 보이지? 눌러서 설정 화면으로 가보자.',
-    waitFor: 'click',
-    advanceDelay: 500,
-    fallbackPosition: 'top'
-  },
-  {
-    id: 'enter_api_key',
-    targetSelector: '#apiKeyInput',
-    title: '🔑 API 키 붙여넣기',
-    body: 'Anthropic 콘솔에서 발급받은 sk-ant-... 키를 여기 붙여넣어줘.<br><br><span class="small">키는 네 기기에만 저장돼. 다른 사람은 못 봐 — 안심해.</span>',
-    waitFor: 'inputFilled',
-    minLength: 10
-  },
-  {
-    id: 'save_settings',
-    targetSelector: 'button[onclick="saveSettings()"]',
-    title: '저장',
-    body: '키 저장하면 진짜 시작이야! ✦',
-    waitFor: 'click',
-    advanceDelay: 800,
-    fallbackPosition: 'top'
-  },
+  // 사용자 요청 2026-04-30: API 키 관련 step (go_model_first / go_settings / enter_api_key / save_settings) 제거.
+  // 앱 결제 모델로 전환 — 사용자가 직접 키 박을 필요 X. 무료 충전 토큰 자동 부여.
   {
     id: 'sync_dot_intro',
     targetSelector: '#syncDot',
@@ -16464,9 +16437,10 @@ function renderModel() {
         <div class="model-item-desc cf-list">${topHtml}</div>
         ${restHtml}</div>`;
     };
-    html += cfSection('🔍 다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 네 결', state.caseFormulation.problems, 'problems');
-    html += cfSection('⚙️ 어떻게 작동하는지', '네 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
+    // 사용자 요청 2026-04-30: 강점 → 작동 → 다루어야 할 특성 순서 (긍정 먼저)
     html += cfSection('💪 네 강점', '', state.caseFormulation.strengths, 'strengths');
+    html += cfSection('⚙️ 어떻게 작동하는지', '네 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
+    html += cfSection('🔍 다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 네 결', state.caseFormulation.problems, 'problems');
     html += '</div>';
   }
   // V4-fix v3 (사용자 요청): 진단 5종 나 탭에 표시 (active + shown만, dismissed 제외)
@@ -31288,6 +31262,8 @@ function loadSettings() {
   if (accountInfo && session?.user) {
     accountInfo.innerHTML = `로그인된 계정: <strong style="color:var(--text)">${escapeHtml(session.user.email || '')}</strong>`;
   }
+  // 사용자 요청 2026-04-30 (Phase C): billing 자동 로드
+  if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
 }
 
 function saveSettings() {
@@ -31304,6 +31280,56 @@ function saveSettings() {
   }
   saveState();
   showToast('저장됐어 ✦');
+  // 사용자 요청 2026-04-30 (Phase C): 설정 진입 시 billing 상태 자동 로드.
+  if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
+}
+
+// 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
+async function refreshBillingStatus() {
+  const status = document.getElementById('billingStatus');
+  if (!status) return;
+  if (typeof session === 'undefined' || !session || !session.access_token) {
+    status.textContent = '로그인 필요';
+    return;
+  }
+  try {
+    const resp = await fetch('/api/usage', {
+      headers: { 'Authorization': 'Bearer ' + session.access_token }
+    });
+    if (!resp.ok) {
+      status.textContent = `사용량 조회 실패 (${resp.status})`;
+      return;
+    }
+    const data = await resp.json();
+    const billing = data.billing || {};
+    const monthly = data.monthly || { tokens: 0, cost_usd: 0 };
+    const balance = (billing.credit_balance_usd || 0).toFixed(4);
+    const subActive = !!billing.subscription_active;
+    const subExpires = billing.subscription_expires_at ? new Date(billing.subscription_expires_at).toLocaleDateString('ko-KR') : null;
+    const monthCostKrw = Math.round(monthly.cost_usd * 1400);
+    let html = '';
+    html += `<div><b>충전 잔액</b>: $${balance} (~${Math.round(parseFloat(balance) * 1400).toLocaleString()}원)</div>`;
+    if (subActive) {
+      html += `<div><b>월 정액</b>: ${billing.subscription_plan || 'active'} — ${subExpires}까지</div>`;
+    } else {
+      html += `<div><b>월 정액</b>: 미가입</div>`;
+    }
+    html += `<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;"><b>이번 달 사용</b>: ${monthly.tokens.toLocaleString()} tokens / $${monthly.cost_usd.toFixed(4)} (~${monthCostKrw.toLocaleString()}원)</div>`;
+    if (billing.free_credit_granted) {
+      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 무료 충전 토큰 받음</div>`;
+    }
+    status.innerHTML = html;
+  } catch (e) {
+    status.textContent = '조회 실패: ' + (e.message || e);
+  }
+}
+
+// 충전 모달 (포트원 SDK 활성 후 동작) — 일단 안내 + 사업자등록 후 활성 안내
+async function openChargeModal() {
+  alert('충전 기능 준비 중 — 사업자등록 + 포트원 가입 후 활성됩니다.\n현재는 무료 충전 토큰만 사용 가능.');
+}
+async function openSubscribeModal() {
+  alert('월 정액 가입 준비 중 — 사업자등록 + 포트원 가입 후 활성됩니다.');
 }
 
 function exportData() {
