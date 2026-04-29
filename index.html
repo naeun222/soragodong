@@ -12383,7 +12383,8 @@ JSON 형식으로 출력:
 JSON만 출력. 다른 설명 X.`;
 
   // 사용자 요청 2026-04-29: callAnthropic helper 사용 (Phase C swap 대비)
-  const resp = await callAnthropic({ model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] });
+  // 사용자 요청 2026-04-30: 리뷰 = 데이터 요약·패턴 정리 task → sonnet 4.6 적합 (큰 추론 X).
+  const resp = await callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
   const text = data.content[0].text;
@@ -14059,92 +14060,10 @@ function renderPoolQuestion() {
   recordQuestionShown(q.id);
 }
 
-async function generateAIDailyQuestion() {
-  // Check cache - only regen once per day per "shown" attempt
-  const todayKeyVal = todayKey();
-  const cached = state._aiQuestionCache;
-  if (cached && cached.date === todayKeyVal && cached.text) {
-    _currentDailyQuestion = { id: 'ai_' + todayKeyVal, cat: 'mixed', text: cached.text, isAI: true };
-    const iconEl = document.getElementById('dailyQuestionIcon');
-    const labelEl = document.getElementById('dailyQuestionLabel');
-    const textEl = document.getElementById('dailyQuestionText');
-    if (iconEl) iconEl.textContent = '✨';
-    if (labelEl) labelEl.textContent = '오늘의 질문';
-    if (textEl) textEl.textContent = cached.text;
-    return;
-  }
-  
-  const traits = (state.traits || []).slice(0, 5).map(t => t.name).join(', ');
-  const patterns = (state.patterns || []).slice(0, 3).map(p => p.name).join(', ');
-  const recent = (state.entries || []).slice(-3).map(e => 
-    `${e.date}: v${e.vitality||'?'} m${e.mood||'?'} ${e.note?.slice(0,50)||''}`
-  ).join('\n');
-  
-  const prompt = `너는 사용자의 친구 "소라고동". 오늘의 체크인 질문 1개를 만든다.
-
-[사용자 정보]
-특성: ${traits || '아직 모름'}
-패턴: ${patterns || '아직 모름'}
-최근:
-${recent || '없음'}
-
-[규칙]
-- 진짜 가볍고 일상적. 하루의 작은 디테일 포착.
-- 짧게. 한 줄.
-- 친근한 반말, 친구 말투
-- "오늘 어땠어?" 같은 뻔한 거 X
-- 자기성찰 X. 분석 X. "왜?" 다그치지 X.
-- 그냥 호기심 가는 가벼운 질문
-
-[좋은 예시 — 이 정도 가볍게]
-"오늘 점심 뭐 먹었어?"
-"지금 뭐 입고 있어?"
-"오늘 본 거 중에 웃겼던 거?"
-"커피 마셨어?"
-"오늘 노래 들었어?"
-"날씨 어때?"
-"지금 어디야?"
-"오늘 누구 만났어?"
-"방금 뭐 하고 있었어?"
-"오늘 5분이라도 밖에 나갔어?"
-"가장 최근에 웃은 게 언제야?"
-"오늘 뭐 마시고 있어?"
-"지금 옆에 뭐 있어?"
-"오늘 이불 정리했어?"
-"머리 감았어?"
-
-이 정도 가볍게. 한 줄만 출력. 따옴표 X.`;
-
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 150, messages: [{ role: 'user', content: prompt }] })
-  });
-  if (!resp.ok) throw new Error('API ' + resp.status);
-  const data = await resp.json();
-  let text = data.content[0].text.trim().replace(/^["'`]+|["'`]+$/g, '');
-  
-  state._aiQuestionCache = { date: todayKeyVal, text };
-  saveState();
-  
-  _currentDailyQuestion = { id: 'ai_' + todayKeyVal, cat: 'mixed', text, isAI: true };
-  const iconEl = document.getElementById('dailyQuestionIcon');
-  const labelEl = document.getElementById('dailyQuestionLabel');
-  const textEl = document.getElementById('dailyQuestionText');
-  if (iconEl) iconEl.textContent = '✨';
-  if (labelEl) labelEl.textContent = '오늘의 질문';
-  if (textEl) textEl.textContent = text;
-}
+// 사용자 요청 2026-04-30: generateAIDailyQuestion 함수 제거 — pool만 사용. dead code 정리.
 
 function rerollDailyQuestion() {
-  // For AI questions, regenerate fresh
-  if (_currentDailyQuestion?.isAI && state.apiKey) {
-    state._aiQuestionCache = null;
-    saveState();
-    generateAIDailyQuestion().catch(() => renderPoolQuestion());
-    showToast('다른 질문 ✦');
-    return;
-  }
+  // 사용자 요청 2026-04-30: pool만 사용. AI 질문 분기 제거.
   const q = pickDailyQuestion(true);
   if (!q) return;
   _currentDailyQuestion = q;
@@ -17484,67 +17403,8 @@ async function processAnalysis(analysis, messageIdx) {
   // V3.4: retry로 인한 중복 방지. 직전 3분 내 retry 호출되었다면 신규 추가 X
   const recentRetry = state._lastRetryAt && (Date.now() - state._lastRetryAt < 3 * 60 * 1000);
 
-  // V3.13.x: 직전 user 메시지가 단순 UI 트리거(askDeeper 등)면 사용자 발화 분석 스킵
-  // → "협상형 종료 패턴" 같은 잘못된 trait/pattern 박힘 방지.
-  // insight / proposal / extracted_tasks / decision_suggested는 응답 내용에 대한 것이라 유지.
-  let _prevUserIdx = messageIdx - 1;
-  while (_prevUserIdx >= 0 && state.chatMessages[_prevUserIdx]?.role !== 'user') _prevUserIdx--;
-  const _triggerMsg = _prevUserIdx >= 0 ? state.chatMessages[_prevUserIdx] : null;
-  const isUITrigger = !!(_triggerMsg && _triggerMsg.isDeeperRequest);
-
-  // 사용자 요청 2026-04-30: traits/values/patterns/case_formulation_update 처리 챕터 시점으로 이동.
-  // applyChapterCaseAnalysis()에서 통합 처리 (endChapter 시 LLM call). 매 메시지 추출 X.
-  // 여기 남은 코드 블록은 하위호환 — 옛 응답에 JSON 들어있어도 일단 처리 유지 (점진 deprecate).
-  if (false && analysis.new_traits && !isUITrigger) {
-    analysis.new_traits.forEach(t => {
-      const conf = t.confidence || 0.5;
-      const exists = state.traits.find(e => similarText(e.name, t.name));
-      if (!exists && !recentRetry) {
-        if (conf < 0.5) return;  // 약 신호 skip (V4 비전 9.4)
-        state.traits.push({ id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: t.name, description: t.description || '', confidence: conf, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
-      } else if (exists) {
-        exists.evidence_count = (exists.evidence_count || 1) + 1;
-        exists.confidence = Math.min(1.0, exists.confidence + 0.1);
-      }
-    });
-  }
-  if (false && analysis.new_values && !isUITrigger) {
-    analysis.new_values.forEach(v => {
-      const conf = v.confidence || 0.5;
-      const exists = state.values.find(e => similarText(e.name, v.name));
-      if (!exists && !recentRetry) {
-        if (conf < 0.5) return;  // 약 skip
-        state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: v.name, description: v.description || '', confidence: conf, user_verified: false, evidence_count: 1, sdt_need: v.sdt_need || null, created_at: new Date().toISOString() });
-      } else if (exists) {
-        exists.evidence_count = (exists.evidence_count || 1) + 1;
-        exists.confidence = Math.min(1.0, exists.confidence + 0.1);
-      }
-    });
-  }
-  if (false && analysis.new_patterns && !isUITrigger) {
-    analysis.new_patterns.forEach(p => {
-      const conf = p.confidence || 0.5;
-      const exists = state.patterns.find(e => similarText(e.name, p.name));
-      if (!exists && !recentRetry) {
-        if (conf < 0.5) return;  // 약 skip
-        state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: p.name, description: p.description || '', trigger: p.trigger || '', sequence: p.sequence || '', confidence: conf, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
-      } else if (exists) {
-        exists.evidence_count = (exists.evidence_count || 1) + 1;
-        exists.confidence = Math.min(1.0, exists.confidence + 0.1);
-      }
-    });
-  }
-  if (false && analysis.case_formulation_update && !recentRetry && !isUITrigger) {
-    const cf = state.caseFormulation;
-    const u = analysis.case_formulation_update;
-    if (u.new_problem && !cf.problems.some(p => similarText(p, u.new_problem))) cf.problems.push(u.new_problem);
-    if (u.new_mechanism && !cf.mechanisms.some(m => similarText(m, u.new_mechanism))) cf.mechanisms.push(u.new_mechanism);
-    if (u.new_strength && !cf.strengths.some(s => similarText(s, u.new_strength))) cf.strengths.push(u.new_strength);
-    if (u.new_problem || u.new_mechanism || u.new_strength) {
-      cf.version += 1;
-      cf.lastUpdated = new Date().toISOString();
-    }
-  }
+  // 사용자 요청 2026-04-30: traits/values/patterns/case_formulation_update 처리 → extractChapterCaseAnalysis (endChapter 시점).
+  // 매 메시지 추출 + isUITrigger 가드 + _prevUserIdx 부분 dead code로 제거. insight/proposal/decision_suggested/extracted_tasks 등 메시지 단위는 아래 유지.
   // === [나 탭 자동 정리] 신규 추가 후 완전 일치 strict dedupe 한 번 더 ===
   // similarText fuzzy로 못 잡힌 케이스 (다른 이름인데 description 완전 일치 등) 정리
   dedupeAllModelExactDuplicates();
@@ -20043,69 +19903,7 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
 // PROPOSAL HANDLING (Phase 2 upgrade)
 // ═══════════════════════════════════════════════════════════════
 // 사용자 요청 2026-04-28: 전략 제안 별로면 AI에게 다른 각도의 제안 요청
-async function regenerateProposal(idx) {
-  const msg = state.chatMessages[idx];
-  if (!msg || !msg.proposal) return;
-  if (!state.apiKey) { showToast('AI 키가 필요해'); return; }
-  msg._regenLoading = true;
-  renderChat();
-  try {
-    const oldTitle = msg.proposalData?.title || '';
-    // 직전 user 메시지 (맥락) 찾기
-    let userContext = '';
-    for (let j = idx - 1; j >= 0; j--) {
-      if (state.chatMessages[j].role === 'user') {
-        userContext = state.chatMessages[j].content || '';
-        break;
-      }
-    }
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({
-        // 사용자 요청 2026-04-30: 메인 chat proposal 재생성 (돌연변이 X) → sonnet 4.6 적합.
-        model: 'claude-sonnet-4-6',
-        max_tokens: 250,
-        messages: [{
-          role: 'user',
-          content: `사용자가 직전 제안 "${oldTitle}"이 별로래. 같은 맥락에서 다른 각도의 '오늘의 제안' 1개 만들어줘.
-
-[사용자 메시지]
-${userContext}
-
-[직전 네 응답]
-${msg.content}
-
-[네 일]
-방금 제안 "${oldTitle}"과 다른 차원/접근으로 — 환경 / 시간 / 사회 / 인지 / 메타 중 다른 거.
-오늘 바로 할 수 있는 구체 행동 1개. 동사로 시작. 한 줄 (max 40자).
-
-[출력 JSON만]
-{"title": "...", "description": "..."}
-
-[금지] 마크다운, 추상 다짐, 직전 제안 반복.`
-        }]
-      })
-    });
-    const data = await resp.json();
-    let raw = (data.content?.[0]?.text || '').trim();
-    raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (m) {
-      const parsed = JSON.parse(m[0]);
-      if (parsed.title) {
-        msg.proposalData = { title: parsed.title, description: parsed.description || '' };
-        showToast('🔄 새 제안 생성됨');
-      }
-    }
-  } catch (e) {
-    console.warn('regenerate proposal:', e);
-    showToast('재생성 실패: ' + (e.message || e));
-  }
-  msg._regenLoading = false;
-  saveState();
-  renderChat();
-}
+// 사용자 요청 2026-04-30: regenerateProposal 함수 제거 — UI 버튼 + 호출처 X. dead code 정리.
 
 async function acceptProposal(idx) {
   const msg = state.chatMessages[idx];
@@ -22220,98 +22018,7 @@ function renderLensInsights() {
   container.innerHTML = html;
 }
 
-async function discoverInsights() {
-  if (!state.apiKey) { alert('API 키 먼저 설정!'); return; }
-  if ((state.entries || []).length < 5) {
-    alert('체크인이 최소 5번 이상 쌓여야 인사이트를 찾을 수 있어.');
-    return;
-  }
-  
-  showToast('패턴 분석 중... 1분 정도 걸려');
-  
-  try {
-    const recentEntries = state.entries.slice(-30); // last 30 days
-    const recentChats = state.chatMessages.filter(m => !m.typing && !m.error && m.role === 'user').slice(-30);
-    
-    const prompt = `너는 행동 데이터에서 인과관계와 반복 패턴을 발견하는 분석가다.
-
-[최근 체크인 데이터]
-${JSON.stringify(recentEntries.map(e => ({
-  date: e.date,
-  vitality: e.vitality,
-  mood: e.mood,
-  sleep: e.sleepStart && e.sleepEnd ? computeSleepDuration(e.sleepStart, e.sleepEnd) : null,
-  modes: Object.keys(e.modes || {}).filter(k => e.modes[k]),
-  meals: e.meals, movement: e.movement, focus: e.focus, social: e.social, overwhelm: e.overwhelm,
-  note: e.note?.slice(0, 100)
-})), null, 2).slice(0, 6000)}
-
-[최근 사용자 메시지]
-${recentChats.map(m => m.content?.slice(0, 100)).filter(Boolean).join('\n').slice(0, 2000)}
-
-기존 인사이트 (중복 X):
-${(state.insights || []).filter(i => !i.dismissed).map(i => `- ${i.content}`).join('\n')}
-
-이 데이터에서 흥미롭고 행동에 도움되는 인과관계 또는 반복 패턴 1-3개를 발견해.
-
-좋은 인사이트 예:
-- "밥 충분히 먹은 날(meals=규칙적) 집중력이 평균 1.2점 높음 (12회 중 9회)"
-- "수면 6시간 미만 다음날 압도감 50% 증가"
-- "카페 작업한 날 vs 집 작업한 날 — 카페에서 집중 30% 더 높음"
-- "월경 시작 3일 전후 자기 비판 표현 빈도 증가"
-
-JSON 출력:
-{
-  "insights": [
-    {
-      "type": "causal" | "pattern",
-      "content": "인사이트 한 문장 (담백, 구체적, 숫자 포함 가능)",
-      "evidence": "어떤 데이터에서 발견됐는지",
-      "confidence": 0.0-1.0
-    }
-  ]
-}
-
-인사이트가 없으면 빈 배열 반환. JSON만 출력. 다른 설명 X.`;
-
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      // 사용자 요청 2026-04-30: discoverInsights / processBrainDump = 인사이트·정리 추론 task → opus 4.7.
-      body: JSON.stringify({ model: 'claude-opus-4-7', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
-    });
-    if (!resp.ok) throw new Error('API ' + resp.status);
-    const data = await resp.json();
-    const text = data.content[0].text;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('JSON 파싱 실패');
-    const result = JSON.parse(jsonMatch[0]);
-    
-    if (!result.insights || result.insights.length === 0) {
-      showToast('이번엔 새 패턴 못 찾았어');
-      return;
-    }
-    
-    result.insights.forEach(ins => {
-      state.insights.push({
-        id: 'ins_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        type: ins.type || 'pattern',
-        content: ins.content,
-        evidence: ins.evidence || '',
-        confidence: ins.confidence || 0.5,
-        discoveredAt: new Date().toISOString(),
-        dismissed: false,
-        confirmed: false
-      });
-    });
-    saveState();
-    renderLensInsights();
-    showToast(`${result.insights.length}개 새 인사이트 발견 ✦`);
-  } catch (err) {
-    console.error(err);
-    showToast('분석 중 오류: ' + err.message);
-  }
-}
+// 사용자 요청 2026-04-30: discoverInsights 함수 제거 — 일주일 자동 forceAnalyze에 통합. dead code 정리.
 
 function confirmInsight(id) {
   const ins = state.insights.find(i => i.id === id);
@@ -23170,50 +22877,7 @@ async function summarizeChatDay(date, messages) {
   const seqNum = (state.chatArchive || []).length + 1;
   return `대화 #${seqNum}`;
 }
-async function _summarizeChatDay_legacy_unused(date, messages) {
-  if (!state.apiKey) {
-    return `${messages.length}개의 대화 (${messages[0]?.content?.slice(0, 40) || ''}...)`;
-  }
-  // Build chat log
-  const chatLog = messages.map(m => {
-    const role = m.role === 'user' ? '나' : '소라';
-    let content = m.content || '';
-    content = content.replace(/```json[\s\S]*?```/g, '').trim();
-    content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
-    return `${role}: ${content}`;
-  }).join('\n\n');
-  
-  const dateLabel = new Date(date).toLocaleDateString('ko-KR', { 
-    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' 
-  });
-  
-  const prompt = `다음은 사용자가 ${dateLabel}에 AI 친구 "소라고동"과 나눈 대화야. 이걸 짧은 일기처럼 요약해.
-
-[대화 원문]
-${chatLog.slice(0, 8000)}
-
-[요약 규칙]
-- 1단락, 3-6문장 (200자 이내)
-- 사용자 시점 ("나는 ~했다") 또는 객관적 둘 다 OK — 자연스럽게
-- 그날의 감정·상황·결정·중요한 인사이트만
-- 잡담은 짧게 압축
-- 친근한 톤, 반말 OK
-- 형식: 그냥 한 단락. 제목 X, 불릿 X
-
-[좋은 예시]
-"논문 1장 마감 직전이라 압박받는 상태. 새벽까지 작업하다가 새벽 3시 한계. 소라랑 얘기하면서 한 단락만 끝내자고 정함. 끝내고 잠. 마감 직전 폭발력 또 발동."
-
-요약만 출력. 다른 설명 X.`;
-
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
-  });
-  if (!resp.ok) throw new Error('API ' + resp.status);
-  const data = await resp.json();
-  return data.content[0].text.trim();
-}
+// 사용자 요청 2026-04-30: _summarizeChatDay_legacy_unused 함수 제거 — 사용 X. dead code 정리.
 
 // V3.8: 챕터 토픽 추출 — 4시간 비활성 후 새 챕터 시작 시 직전 챕터 분석
 // 결과: state.topicCards에 1-3개 토픽 카드 저장
@@ -26160,7 +25824,8 @@ JSON만 출력.`;
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
     body: JSON.stringify({
-      model: 'claude-opus-4-7',
+      // 사용자 요청 2026-04-30: 분기 리뷰 = 데이터 요약 task → sonnet 4.6 적합.
+      model: 'claude-sonnet-4-6',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     })
