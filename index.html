@@ -13133,8 +13133,9 @@ ${cleanInsight.slice(0, 1200)}
 JSON만, 다른 글 X.`;
 
     const resp = await callAnthropic({
-      // 사용자 요청 2026-04-30: 사용자 모델 추출은 정확성 중요 → opus 4.7 (명시 트리거 = 깨달음 버튼).
-      model: 'claude-opus-4-7',
+      // 사용자 요청 2026-04-30 (재조정): 깨달음 버튼 ~10/일 자주 호출 → "자주 안 하는 거 = Opus" 원칙 따라 sonnet 복원.
+      // 정확도는 confidence 0.5 threshold + user_verified ✓ 컨펌 흐름으로 보호.
+      model: 'claude-sonnet-4-6',
       max_tokens: 700,
       messages: [{ role: 'user', content: prompt }]
     });
