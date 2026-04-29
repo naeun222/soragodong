@@ -12383,7 +12383,8 @@ JSON 형식으로 출력:
 JSON만 출력. 다른 설명 X.`;
 
   // 사용자 요청 2026-04-29: callAnthropic helper 사용 (Phase C swap 대비)
-  // 사용자 요청 2026-04-30: 리뷰 = 데이터 요약·패턴 정리 task → sonnet 4.6 적합 (큰 추론 X).
+  // 사용자 요청 2026-04-30: 리뷰 (사용자 회고, 친구 톤 요약) = 주간/월간 둘 다 sonnet.
+  // 분석 (모델 업데이트, 깊은 통합) = forceAnalyze (일주일 자동 opus). 리뷰랑 별개.
   const resp = await callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
