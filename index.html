@@ -7614,6 +7614,11 @@
             <button class="btn-secondary" onclick="adminLoadPendingCharges()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">📋 대기 중인 송금 list</button>
             <div id="adminPendingList" style="margin-top:10px; font-size:11px;"></div>
           </div>
+          <!-- 사용자 요청 2026-04-30: 개발자 도구에서 인앱 피드백 보기 + 답변 -->
+          <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border);">
+            <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">📬 사용자 피드백 (인앱 메시지)</div>
+            <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtnDev" style="background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#9ed4a0;">📬 사용자 피드백 보기 / 답변</button>
+          </div>
         </div>
       </details>
 
@@ -18272,6 +18277,8 @@ function formatAIResponse(text) {
 // 사용자 요청 2026-04-30: 메인 chat 일일 cap 헬퍼. 4시 cutoff 기준. cap=0 = 무제한.
 function _checkDailyChatCap() {
   if (!state.preferences) state.preferences = {};
+  // 사용자 요청 2026-04-30: 관리자 (jade6679@naver.com) 일일 cap 우회.
+  if (typeof _isAdmin === 'function' && _isAdmin()) return { ok: true };
   const cap = state.preferences.dailyChatCap;
   if (cap === 0 || cap == null) return { ok: true };
   const todayK = todayKey();
@@ -32782,6 +32789,17 @@ async function refreshBillingStatus() {
     status.textContent = '로그인 필요';
     return;
   }
+  // 사용자 요청 2026-04-30: 관리자는 충전/잔액 표시 X (admin은 무료 + 차감 X)
+  if (typeof _isAdmin === 'function' && _isAdmin()) {
+    status.innerHTML = '<div style="color:#9ed4a0;">✦ 관리자 계정 — 무료 사용 (잔액 / 한도 제한 없음)</div>';
+    const billingSection = document.getElementById('billingSection');
+    if (billingSection) {
+      // 관리자에게 충전 버튼 등 숨기기 — billing input 자체를 숨겨도 됨
+      const refreshBtn = billingSection.querySelector('button[onclick*="refreshBillingStatus"]');
+      if (refreshBtn) refreshBtn.style.display = 'none';
+    }
+    return;
+  }
   try {
     const resp = await fetch('/api/usage', {
       headers: { 'Authorization': 'Bearer ' + session.access_token }
@@ -32826,7 +32844,7 @@ const CHARGE_PLANS = [
   { krw: 30000, bonus_pct: 8, name: '🌊 30,000원 (+8% 보너스)' },
   { krw: 50000, bonus_pct: 12, name: '🐋 50,000원 (+12% 보너스)' }
 ];
-const SUBSCRIBE_PLAN = { krw: 15000, daily_cap: 12, name: '🪸 월 정액', desc: '월 ₩15,000 — 일 12 메시지 cap (20% 보너스)' };
+const SUBSCRIBE_PLAN = { krw: 15000, daily_cap: 12, name: '🪸 월 정액', desc: '월 ₩15,000 — 일 12 메시지 cap (20% 할인)' };
 
 // 사용자 요청 2026-04-30: 베타 단계 — 포트원 가입 전이라 토스 송금으로 충전.
 const TOSS_ACCOUNT = {
