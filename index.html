@@ -11648,7 +11648,8 @@ ${currentDraft ? `[이번 단계 ${meta.title}에 현재 적은 거]\n${currentD
     const resp = await callAnthropic({
       model: 'claude-opus-4-7',
       max_tokens: 400,
-      system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
+      // 사용자 요청 2026-04-29 비용절감: 1h cache TTL — ADHD burst+break 패턴 (5분 break도 cache 살아남음).
+      system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral', ttl: '1h' } }],
       messages: recentMsgs
     });
     const data = await resp.json();
@@ -12829,7 +12830,7 @@ async function addReflectionQuestion(text) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5',
           max_tokens: 60,
           messages: [{ role: 'user', content: `다음 질문을 카드에 한 줄로 넣을 수 있게 짧게 요약. 10-25자, 명사형 또는 짧은 명제. 따옴표/마크다운 X.\n\n원본:\n${trimmed.slice(0, 300)}\n\n짧은 요약 한 줄만 출력.` }]
         })
@@ -13285,7 +13286,7 @@ ${chatLog.slice(0, 8000)}
 JSON만, 마크다운 X.`;
 
     const resp = await callAnthropic({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5',
       max_tokens: 600,
       messages: [{ role: 'user', content: prompt }]
     });
@@ -13430,7 +13431,8 @@ async function sendReflectionChat() {
     const resp = await callAnthropic({
         model: 'claude-opus-4-7',
         max_tokens: 400,
-        system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
+        // 사용자 요청 2026-04-29 비용절감: 1h cache TTL
+        system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral', ttl: '1h' } }],
         messages: recentMsgs
     });
     const data = await resp.json();
@@ -13932,7 +13934,7 @@ ${recent || '없음'}
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 150, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 150, messages: [{ role: 'user', content: prompt }] })
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -14510,7 +14512,7 @@ async function completeMission(missionId) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5',
           max_tokens: 150,
           messages: [{
             role: 'user',
@@ -17047,7 +17049,8 @@ async function generateAIResponse(modelOverride) {
       systemBlocks.push({
         type: 'text',
         text: promptParts.stable,
-        cache_control: { type: 'ephemeral' }
+        // 사용자 요청 2026-04-29 비용절감: 1h cache TTL — ADHD burst+break 패턴, 5분 default 만료 회피 → 헤비 사용자 ~10% 절감.
+        cache_control: { type: 'ephemeral', ttl: '1h' }
       });
     }
     if (promptParts.volatile && promptParts.volatile.length > 0) {
@@ -17064,11 +17067,11 @@ async function generateAIResponse(modelOverride) {
     for (let i = validMsgs.length - 1; i >= 0; i--) {
       if (validMsgs[i].chapterStart) { chapterStartIdx = i; break; }
     }
-    // V4-fix #3 토큰 효율: 챕터 시작 후 30개 cap (긴 챕터에서 token 폭발 방지)
-    // 챕터 없으면 최근 20개. 있으면 그 챕터 안 최대 30개.
+    // V4-fix #3 + 사용자 요청 2026-04-29: 챕터 시작 후 25개 cap (이전 30 → 25, 컨텍스트 안전 마진).
+    // 업계 sweet spot 20-30 안. 헤비 사용자 input 토큰 ~10% 절감 + 컨텍스트 단절 위험 낮음.
     const fromChapter = validMsgs.slice(chapterStartIdx);
-    const sliced = fromChapter.length > 30
-      ? fromChapter.slice(-30)
+    const sliced = fromChapter.length > 25
+      ? fromChapter.slice(-25)
       : fromChapter.length > 0
         ? fromChapter
         : validMsgs.slice(-20);
@@ -17924,10 +17927,11 @@ function buildSystemPromptParts() {
 
   // 사용자 요청 2026-04-29: 최근 chatArchive (마무리한 대화) summary 주입 — narrative continuity
   // 이전 대화 기억 강화. topicCards보다 풍부 (실제 대화 흐름).
+  // 비용 절감: 5 → 3개 (~3% 절감)
   const recentArchives = (state.chatArchive || [])
     .slice() // copy
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-    .slice(0, 5);  // 최근 5개 챕터
+    .slice(0, 3);  // 최근 3개 챕터
   if (recentArchives.length > 0) {
     volatile.push('[최근 대화 챕터 (참고용 — 사용자가 명시적으로 짚으면 자연스럽게 활용)]');
     recentArchives.forEach(a => {
@@ -18067,7 +18071,7 @@ async function saveMsgAsInsight(idx) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5',
           max_tokens: 180,
           messages: [{ role: 'user', content: `아래 대화에서 사용자가 얻은 "지혜(깨달음)"를 뽑아.
 
@@ -18244,7 +18248,7 @@ async function addMemoArchive() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5',
           max_tokens: 100,
           messages: [{
             role: 'user',
@@ -23067,7 +23071,7 @@ JSON만 출력. 마크다운 X. 다른 설명 X.`;
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -23179,7 +23183,7 @@ ${task.description ? `설명: ${task.description}` : ''}
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 80, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 80, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -29878,7 +29882,7 @@ async function generateReviewArchiveMetaSummary(reviewId) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6', max_tokens: 250,
+        model: 'claude-haiku-4-5', max_tokens: 250,
         messages: [{ role: 'user', content: `이 기간 사용자 깨달음 ${arrs.length}개. 핵심 통찰 한 단락 (3-4문장)으로 요약. 친구 톤, 외재화 ("X 패턴이 작동" / "너 X적이야" X), 따뜻하게.\n\n${archiveText.slice(0, 3500)}\n\n[출력 — 한 단락만, 마크다운/인용부호 X]` }]
       })
     });
