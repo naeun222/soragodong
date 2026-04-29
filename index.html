@@ -7134,7 +7134,7 @@
       <div id="projectsSection"></div>
       <div id="modelContent"></div>
       <div style="margin-top: 30px;">
-        <button class="btn-secondary" onclick="forceAnalyze()">📊 지금까지 데이터 다시 분석</button>
+        <!-- 사용자 요청 2026-04-30: forceAnalyze 버튼 나 탭에서 제거 — 일주일 자동 실행. 개발자 도구에서 수동 호출 가능. -->
         <button class="btn-secondary" onclick="showScreen('settings')">⚙ 설정</button>
         <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
       </div>
@@ -7462,6 +7462,8 @@
           <button class="btn-secondary" onclick="testSeedV4Data()" style="background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(212,167,106,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🌱 V4 전체 시드 데이터 박기</button>
           <button class="btn-secondary" onclick="testStartTutorialFromStep()" style="margin-top:6px;" title="특정 step부터 튜토리얼 시작">🎯 튜토리얼 step N부터 시작</button>
           <button class="btn-secondary" onclick="showNavPaddingSlider()" style="margin-top:6px;" title="아래 nav padding-bottom 슬라이더 (디버그)">📏 하단 nav padding 조절</button>
+          <!-- 사용자 요청 2026-04-30: forceAnalyze는 일주일마다 자동. 디버깅 / 강제 갱신 시만 수동 호출. -->
+          <button class="btn-secondary" onclick="forceAnalyze()" style="margin-top:6px;" title="opus 4.7 사용 — 비싸. 일주일 자동 실행되니 평소엔 X.">📊 강제 모델 분석 (수동, 비쌈)</button>
         </div>
       </details>
       <div style="margin-top:24px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
@@ -7708,6 +7710,7 @@ const DEFAULT_STATE = {
   todaySchedule: [],        // 타임테이블: [{id, title, start, end, source:'manual'|'ai'|'gcal'|'task', taskId}]
   diagnoses: [],            // V4 비전 9.5 진단 5종: [{id, type, confidence, evidence, detectedAt, status:'active'|'shown'|'dismissed'}]
   quarterlyReviews: [],     // V4 비전 7.9 분기 리뷰: [{id, quarterKey:'2026-Q2', completedAt, summary, sections, stats, auto, deepDive}]
+  lastForceAnalyzeAt: null, // 사용자 요청 2026-04-30: forceAnalyze 일주일 자동화 — 마지막 실행 시각.
 
   // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
   // 시스템 프롬프트 stable 부분에 박혀서 cache_control 적용 → cache_read만 (사실상 무료).
@@ -8730,6 +8733,11 @@ async function init() {
   // 사용자 요청 2026-04-28: 자동 백업 (주 1회 + APP_VERSION 변경 시) — fire-and-forget
   if (typeof runAutoBackupIfNeeded === 'function') {
     setTimeout(() => { runAutoBackupIfNeeded().catch(e => console.warn('autoBackup:', e)); }, 3000);
+  }
+
+  // 사용자 요청 2026-04-30: 일주일 자동 forceAnalyze — background, fire-and-forget. 5초 후 실행 (앱 진입 부담 회피).
+  if (typeof maybeRunWeeklyForceAnalyze === 'function') {
+    setTimeout(() => { maybeRunWeeklyForceAnalyze().catch(e => console.warn('weeklyForceAnalyze:', e)); }, 5000);
   }
 
   applyNightMode();
@@ -18327,8 +18335,8 @@ async function saveMsgAsStrategy(idx) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          // 사용자 요청 2026-04-30: 전략 카드 추출은 정확성 중요 → opus 4.7.
-          model: 'claude-opus-4-7',
+          // 사용자 요청 2026-04-30: 사실상 대화 내용 정리 → sonnet 4.6 적합 (opus 과함).
+          model: 'claude-sonnet-4-6',
           max_tokens: 500,
           messages: [{ role: 'user', content: `아래 4단 분석/전략 응답에서 "전략 카드"로 저장할 핵심을 뽑아줘.
 
@@ -18988,8 +18996,8 @@ async function selectMutationOption(msgIdx, optIdx) {
   if (state.apiKey) {
     try {
       const resp = await callAnthropic({
-          // 사용자 요청 2026-04-30: 가지 미션화 단계 = 정확성 중요 → opus 4.7.
-          model: 'claude-opus-4-7', max_tokens: 400,
+          // 사용자 요청 2026-04-30: 고른 후 정리 task → sonnet 4.6 적합.
+          model: 'claude-sonnet-4-6', max_tokens: 400,
           messages: [{
             role: 'user',
             content: `사용자 가닥 "${card?.title || ''}" — 새 시도 차원: ${opt.layer} ${layerName}\n행동: "${opt.action}"\n\n[네 일]\n이 행동을 *오늘부터 바로 할 수 있도록* 구체적 step-by-step 3-5단계.\n각 단계: 짧고 명확하게 (한 줄 max 40자). 의지 부담↓ 환경 셋업 우선.\n\n[톤]\n진지 모드 친구. 외재화. "실패" 단어 X. ADHD 친화 (작은 단위).\n\n[출력 — 다른 거 X, 단계만]\n1. (첫 단계 — 가장 작게)\n2. ...\n3. ...\n\n도입 한 줄 + 단계 + 마무리 한 줄 ("시작 전에 더 얘기 X면 ✦ 해볼게로 등록").`
@@ -19153,8 +19161,8 @@ async function _completeMutationToMission(strategyId, opt, chatHistory) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
           body: JSON.stringify({
-            // 사용자 요청 2026-04-30: 가지 진화 정리 = 정확성 중요 → opus 4.7.
-            model: 'claude-opus-4-7', max_tokens: 500,
+            // 사용자 요청 2026-04-30: 4 필드 정리 task → sonnet 4.6 적합.
+            model: 'claude-sonnet-4-6', max_tokens: 500,
             messages: [{
               role: 'user',
               content: `진화한 새 가닥 — 카드 4 필드 정리.
@@ -19847,8 +19855,8 @@ async function regenerateProposal(idx) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
-        // 사용자 요청 2026-04-30: 제안 재생성 = 추론 task → opus 4.7.
-        model: 'claude-opus-4-7',
+        // 사용자 요청 2026-04-30: 메인 chat proposal 재생성 (돌연변이 X) → sonnet 4.6 적합.
+        model: 'claude-sonnet-4-6',
         max_tokens: 250,
         messages: [{
           role: 'user',
@@ -30658,19 +30666,27 @@ async function _pearlViewMore(id) {
 // ═══════════════════════════════════════════════════════════════
 // FORCE ANALYZE
 // ═══════════════════════════════════════════════════════════════
-async function forceAnalyze() {
-  if (!state.apiKey) { alert('API 키 먼저 설정!'); return; }
-  if (state.entries.length < 3 && state.chatMessages.length < 3) {
-    alert('분석하려면 체크인이나 대화가 최소 3개 이상 쌓여야 해.');
+// 사용자 요청 2026-04-30: 일주일마다 자동 실행. 수동 호출 (개발자 도구 버튼)도 같은 함수.
+// opts.auto = true 시 confirm modal X, 토스트 silent ("일주일 분석 자동 실행됨").
+async function forceAnalyze(opts) {
+  const isAuto = !!(opts && opts.auto);
+  if (!state.apiKey) {
+    if (!isAuto) alert('API 키 먼저 설정!');
     return;
   }
-  const yes = await showConfirmModal({
-    title: '나에 대한 모델 업데이트',
-    message: '지금까지의 데이터를 분석해서\n특성·가치·패턴을 새로 정리할게.\n1-2분 걸려.',
-    okLabel: '분석 시작',
-    cancelLabel: '나중에'
-  });
-  if (!yes) return;
+  if (state.entries.length < 3 && state.chatMessages.length < 3) {
+    if (!isAuto) alert('분석하려면 체크인이나 대화가 최소 3개 이상 쌓여야 해.');
+    return;
+  }
+  if (!isAuto) {
+    const yes = await showConfirmModal({
+      title: '나에 대한 모델 업데이트',
+      message: '지금까지의 데이터를 분석해서\n특성·가치·패턴을 새로 정리할게.\n1-2분 걸려.',
+      okLabel: '분석 시작',
+      cancelLabel: '나중에'
+    });
+    if (!yes) return;
+  }
 
   setSyncStatus('syncing');
   try {
@@ -30851,14 +30867,37 @@ JSON으로 출력:
       cf.mechanisms = mergeStrings(cf.mechanisms, analysis.case_formulation.mechanisms);
       cf.strengths = mergeStrings(cf.strengths, analysis.case_formulation.strengths);
     }
+    state.lastForceAnalyzeAt = new Date().toISOString();
     saveState();
     renderModel(); renderModelPreview();
     setSyncStatus('online');
-    showToast('분석 완료 ✦');
+    showToast(isAuto ? '🔍 일주일 모델 분석 자동 완료 ✦' : '분석 완료 ✦');
   } catch (err) {
     console.error(err);
-    alert('분석 실패: ' + err.message);
+    if (!isAuto) alert('분석 실패: ' + err.message);
+    else console.warn('[force analyze auto] 실패:', err);
     setSyncStatus('error');
+  }
+}
+
+// 사용자 요청 2026-04-30: 일주일 자동 forceAnalyze. 마지막 실행 7일 경과 + 데이터 충분 시 background 실행.
+async function maybeRunWeeklyForceAnalyze() {
+  if (!authUserId) return;
+  if (!state.apiKey) return;
+  if (window._onbTutorialMode) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  const last = state.lastForceAnalyzeAt;
+  if (last) {
+    const ageMs = Date.now() - new Date(last).getTime();
+    if (ageMs < 7 * 86400000) return;  // 7일 미만이면 skip
+  }
+  // 데이터 충분 가드 (forceAnalyze 자체와 동일)
+  if ((state.entries || []).length < 3 && (state.chatMessages || []).length < 3) return;
+  console.log('[force analyze] 일주일 경과 — background 자동 실행');
+  try {
+    await forceAnalyze({ auto: true });
+  } catch (e) {
+    console.warn('[force analyze auto] 외부 실패:', e);
   }
 }
 
