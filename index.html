@@ -3347,7 +3347,7 @@
     cursor: pointer; font-family: inherit;
   }
   .mutation-options-toggle:hover { color: var(--accent2); }
-  /* 사용자 요청 2026-04-28: 선택한 차원 헤더 chip (제목 옆 토글) */
+  /* 사용자 요청 2026-04-28: 선택한 가지 헤더 chip (제목 옆 토글) */
   .mutation-chat-header-title {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   }
@@ -3489,6 +3489,48 @@
     cursor: default;
   }
   .mutation-chat-mission-btn:active:not(:disabled) { transform: scale(0.98); }
+
+  /* 사용자 요청 2026-04-29: 가지 만들기 버튼 — 컴팩트 + 이쁘게 */
+  .mutation-gen-bar {
+    display: flex; justify-content: center;
+    margin-bottom: 4px;
+  }
+  .mutation-gen-btn {
+    background: linear-gradient(135deg, rgba(143,200,143,0.20), rgba(143,200,143,0.10));
+    border: 1px solid rgba(143,200,143,0.45);
+    color: #c5e8c5;
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-size: 12px; font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .mutation-gen-btn:hover:not(:disabled) {
+    box-shadow: 0 2px 10px rgba(143,200,143,0.18);
+  }
+  .mutation-gen-btn:active:not(:disabled) { transform: scale(0.96); }
+  .mutation-gen-btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* 사용자 요청 2026-04-29: 돌연변이 assistant 메시지의 ✦ 깨달음으로 버튼 */
+  .mutation-insight-btn {
+    background: rgba(201,169,110,0.14);
+    border: 1px solid rgba(201,169,110,0.35);
+    color: var(--accent2);
+    border-radius: 999px;
+    padding: 4px 11px;
+    font-size: 11px; font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .mutation-insight-btn:active { transform: scale(0.96); }
+  .mutation-insight-btn.saved {
+    background: rgba(143,200,143,0.14);
+    border-color: rgba(143,200,143,0.35);
+    color: #c5e8c5;
+    cursor: default;
+  }
 
   .reflection-chat-area {
     padding: 8px 0 160px;  /* input bar 자리 확보 (76 탭바 + 56 input + 여유 28) */
@@ -5474,6 +5516,189 @@
     aspect-ratio: 1;
     overflow: hidden;
   }
+  /* 사용자 보고 2026-04-29: artwork 로드 실패 시 placeholder (DOM replace 안 하고 CSS로) */
+  .tile-music-art-wrap.art-failed::before {
+    content: '🎵';
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    color: var(--text-dim);
+  }
+
+  /* 사용자 요청 2026-04-29: 마법의 소라고동 도움 받기 — 별도 helpChat 모달 (영구 저장, 며칠 걸쳐 이어가기) */
+  .magic-help-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,14,23,0.85);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 9600;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .magic-help-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    width: 100%; max-width: 480px;
+    max-height: 90vh;
+    display: flex; flex-direction: column;
+  }
+  .magic-help-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .magic-help-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .magic-help-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .magic-help-close {
+    background: var(--surface2); border: none; color: var(--text);
+    width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; font-size: 14px; flex-shrink: 0;
+  }
+  .magic-help-close:active { transform: scale(0.94); }
+  .magic-help-area {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .magic-help-msg {
+    font-size: 13px; line-height: 1.6;
+    padding: 10px 14px; border-radius: 14px;
+    max-width: 85%;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .magic-help-msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, rgba(139,126,196,0.22), rgba(139,126,196,0.10));
+    border: 1px solid rgba(139,126,196,0.35);
+    color: var(--text);
+  }
+  .magic-help-msg.assistant {
+    align-self: flex-start;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .magic-help-footer {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+  }
+  .magic-help-input-row {
+    display: flex; gap: 8px; align-items: flex-end;
+  }
+  .magic-help-input {
+    flex: 1; min-width: 0;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text); font-family: inherit; font-size: 13px;
+    resize: none; max-height: 120px;
+  }
+  .magic-help-input:focus { outline: none; border-color: var(--accent); }
+  .magic-help-send {
+    background: var(--accent); border: none; color: white;
+    width: 38px; height: 38px; border-radius: 50%;
+    cursor: pointer; font-size: 16px; flex-shrink: 0;
+  }
+  .magic-help-send:active { transform: scale(0.94); }
+
+  /* 사용자 요청 2026-04-29: 진주 큰 보기 모달 (클릭 시) — 더보기 ⋮로 수정/삭제 */
+  .pearl-view-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15, 14, 23, 0.85);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 9500;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    animation: pearlViewFadeIn 0.2s ease-out;
+  }
+  @keyframes pearlViewFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .pearl-view-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    width: 100%; max-width: 420px;
+    max-height: 90vh; overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  .pearl-view-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pearl-view-cat { font-size: 13px; color: var(--text-dim); }
+  .pearl-view-more, .pearl-view-close {
+    background: var(--surface2); border: none; color: var(--text);
+    width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; font-size: 16px;
+  }
+  .pearl-view-more:active, .pearl-view-close:active { transform: scale(0.94); }
+  .pearl-view-body {
+    padding: 18px 18px 22px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .pearl-view-media {
+    position: relative; width: 100%;
+    aspect-ratio: 1; max-width: 320px; margin: 0 auto;
+    border-radius: 14px; overflow: hidden;
+    background: linear-gradient(135deg, var(--surface2), var(--surface));
+  }
+  .pearl-view-media.art-failed::before {
+    content: '🎵'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 60px; color: var(--text-dim);
+  }
+  .pearl-view-art, .pearl-view-photo {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .pearl-view-art-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 60px; color: var(--text-dim);
+  }
+  .pearl-view-play {
+    position: absolute; bottom: 12px; right: 12px;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(0,0,0,0.65); border: none; color: white;
+    cursor: pointer; font-size: 16px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .pearl-view-play:active { transform: scale(0.92); }
+  .pearl-view-music-meta, .pearl-view-text-meta {
+    text-align: center;
+  }
+  .pearl-view-text-only {
+    text-align: center; padding: 30px 12px;
+  }
+  .pearl-view-icon { font-size: 56px; margin-bottom: 12px; opacity: 0.85; }
+  .pearl-view-title {
+    font-size: 17px; font-weight: 500; color: var(--text);
+    margin-bottom: 4px; line-height: 1.4;
+  }
+  .pearl-view-sub {
+    font-size: 13px; color: var(--text-dim);
+  }
+  .pearl-view-apple {
+    display: inline-block;
+    font-size: 12px; padding: 6px 14px;
+    background: linear-gradient(135deg, rgba(252,176,69,0.18), rgba(252,90,77,0.18));
+    border: 1px solid rgba(252,176,69,0.3);
+    color: #ffb86b; border-radius: 16px;
+    text-decoration: none;
+  }
+  .pearl-view-note {
+    font-size: 13px; color: var(--text);
+    background: var(--surface2);
+    border-left: 3px solid var(--accent2);
+    padding: 12px 14px; border-radius: 8px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  .pearl-view-date {
+    font-size: 11px; color: var(--text-dim);
+    text-align: center;
+  }
   .pearl-tile-play, .pearl-tile-apple {
     position: absolute;
     width: 30px;
@@ -6909,7 +7134,7 @@
       <div id="projectsSection"></div>
       <div id="modelContent"></div>
       <div style="margin-top: 30px;">
-        <button class="btn-secondary" onclick="forceAnalyze()">📊 지금까지 데이터 다시 분석</button>
+        <!-- 사용자 요청 2026-04-30: forceAnalyze 버튼 나 탭에서 제거 — 일주일 자동 실행. 개발자 도구에서 수동 호출 가능. -->
         <button class="btn-secondary" onclick="showScreen('settings')">⚙ 설정</button>
         <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
       </div>
@@ -6981,7 +7206,7 @@
     <!-- V4-1j-b: 숙고 채팅 별도 화면 (screen-reflection) -->
     <div class="screen" id="screen-reflection">
       <div class="reflection-screen-header">
-        <button class="reflection-screen-back" onclick="showScreen('home')">←</button>
+        <button class="reflection-screen-back" onclick="closeReflectionScreen()">←</button>
         <div class="reflection-screen-q" id="reflectionScreenQ"></div>
         <div class="reflection-screen-actions">
           <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론</button>
@@ -6995,6 +7220,21 @@
       <div class="reflection-input-wrap">
         <textarea class="chat-textarea" id="reflectionInput" placeholder="천천히, 한 각도씩..." rows="1"></textarea>
         <button class="send-btn" onclick="sendReflectionChat()">↑</button>
+      </div>
+    </div>
+
+    <!-- 사용자 요청 2026-04-29: 마법 도움 받기 = 풀스크린 (숙고의 방 패턴) -->
+    <div class="screen" id="screen-magic-help">
+      <div class="reflection-screen-header">
+        <button class="reflection-screen-back" onclick="closeMagicHelpChat()">←</button>
+        <div class="reflection-screen-q" id="magicHelpScreenQ"></div>
+      </div>
+      <div class="reflection-chat-area" id="magicHelpArea"></div>
+    </div>
+    <div class="reflection-input-bar" id="magicHelpInputBar">
+      <div class="reflection-input-wrap">
+        <textarea class="chat-textarea" id="magicHelpInput" placeholder="자유롭게 풀어놔..." rows="1"></textarea>
+        <button class="send-btn" onclick="sendMagicHelpMessage()">↑</button>
       </div>
     </div>
 
@@ -7047,7 +7287,7 @@
       <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px;">
         <div style="font-family:'Gowun Batang',serif; font-size:16px; color:var(--accent); margin-bottom:14px;">왜 만들면 좋은가</div>
         <div style="font-size:13px; line-height:1.8; color:var(--text);">
-          앱에서 🌧 몰입 시작 누르면<br>
+          앱에서 🌧 시작 누르면<br>
           <strong style="color:var(--accent2);">방해 금지 + 빗소리 + 집중 모드</strong>가 자동으로 켜져.<br><br>
           뇌한테 "이제 다른 세계 들어간다" 신호 줌. 도파민 트리거.
         </div>
@@ -7180,6 +7420,16 @@
         <div class="input-label">👤 내 프로필 (AI가 참고)</div>
         <textarea id="profileInput" placeholder="예: ADHD/ADD 성향..." rows="5"></textarea>
       </div>
+      <!-- 사용자 요청 2026-04-30: 일일 메시지 cap (비용 폭발 방지). 0 = 무제한. -->
+      <div class="input-group">
+        <div class="input-label">📋 일일 대화 한도</div>
+        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:8px;">
+          하루 메인 chat 메시지 수 한도. 4시 이후 reset. 0 = 무제한.<br>
+          비용 폭발 방지용 — 헤비 사용자면 풀거나 ↑.
+        </div>
+        <input type="number" id="dailyChatCapInput" min="0" max="9999" placeholder="100" style="width:100%;">
+        <div id="dailyChatCountStatus" style="font-size:11px;color:var(--text-soft);margin-top:6px;"></div>
+      </div>
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
@@ -7192,19 +7442,7 @@
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
       </div>
 
-      <!-- 사용자 요청 2026-04-29: 매일 체크인 알림 — Notification API 기반. 탭 열린 상태/PWA 설치 시 작동. -->
-      <div style="margin-top:24px;">
-        <div class="input-label" style="margin-bottom:8px;">🔔 매일 알림</div>
-        <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
-          매일 정해진 시간에 체크인 알림. <b>탭 열려있거나 PWA 설치된 경우</b>에만 작동 (브라우저 제약).<br>
-          진짜 푸시(탭 닫혀도)는 나중에 백엔드 박힌 후.
-        </div>
-        <button class="btn-secondary" id="dailyNotifToggleBtn" onclick="toggleDailyNotification()">🔕 매일 알림: OFF</button>
-        <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-          <span style="font-size:12px; color:var(--text-dim);">시간:</span>
-          <input type="time" id="dailyNotifTimeInput" value="21:00" onchange="setDailyNotificationTime(this.value)" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:6px 10px; font-family:inherit;">
-        </div>
-      </div>
+      <!-- 알림 기능 미박힘 — 진짜 백그라운드 푸시는 Phase C (백엔드 + Service Worker) 박힌 후 활성. -->
 
       <div>
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
@@ -7234,6 +7472,8 @@
           <button class="btn-secondary" onclick="testSeedV4Data()" style="background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(212,167,106,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🌱 V4 전체 시드 데이터 박기</button>
           <button class="btn-secondary" onclick="testStartTutorialFromStep()" style="margin-top:6px;" title="특정 step부터 튜토리얼 시작">🎯 튜토리얼 step N부터 시작</button>
           <button class="btn-secondary" onclick="showNavPaddingSlider()" style="margin-top:6px;" title="아래 nav padding-bottom 슬라이더 (디버그)">📏 하단 nav padding 조절</button>
+          <!-- 사용자 요청 2026-04-30: forceAnalyze는 일주일마다 자동. 디버깅 / 강제 갱신 시만 수동 호출. -->
+          <button class="btn-secondary" onclick="forceAnalyze()" style="margin-top:6px;" title="opus 4.7 사용 — 비싸. 일주일 자동 실행되니 평소엔 X.">📊 강제 모델 분석 (수동, 비쌈)</button>
         </div>
       </details>
       <div style="margin-top:24px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
@@ -7350,6 +7590,29 @@ const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮
 // V3은 user_id=email, V4는 user_id='me_v4'. localStorage 키도 분리.
 // V4 prod URL은 'me_v4' row만 읽고 씀 → V3 데이터(`me`)는 영원히 안전.
 // ═══════════════════════════════════════════════════════════════
+// 사용자 요청 2026-04-29: Phase C swap point — Anthropic API 호출 통합 helper.
+// 현재: 클라이언트가 사용자 키로 직접 Anthropic 호출.
+// Phase C 활성: ANTHROPIC_API_URL → '/api/chat' (백엔드 프록시), 헤더에서 x-api-key 제거 (서버가 키 보유) — 한 줄 변경.
+// 신규 코드는 callAnthropic 사용 권장. 기존 fetch 직접 호출 사이트는 점진 마이그레이션.
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+function _anthropicHeaders(extraHeaders) {
+  return Object.assign({
+    'Content-Type': 'application/json',
+    'x-api-key': state.apiKey,
+    'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-access': 'true'
+  }, extraHeaders || {});
+}
+async function callAnthropic(body, options) {
+  const opts = options || {};
+  return fetch(ANTHROPIC_API_URL, {
+    method: 'POST',
+    headers: _anthropicHeaders(opts.extraHeaders),
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+    signal: opts.signal
+  });
+}
+
 const V4_USER_ID = 'me_v4';
 const V4_BACKUP_USER_ID = 'backup_v6_pre_v7';  // V3→V4 마이그레이션 1회 백업
 const V4_TESTER_BACKUP_USER_ID = 'me_v4_backup';  // testerMode ON 시점 cloud 백업 (사용자 요청 2026-04-28)
@@ -7445,7 +7708,9 @@ const DEFAULT_STATE = {
     tutorialVersion: null,        // 'full' | 'update' | 'core' | null (어떤 튜토리얼 버전 봤나)
     tutorialCompleted: false,
     miniTutorialsSeen: [],        // ['yangsaeng','galpi','sukgo',...] 화면별 미니 도움
-    progressiveUnlockLevel: null  // 'week1' | 'month1' | 'month3' (코어 선택 시 점진 노출)
+    progressiveUnlockLevel: null,  // 'week1' | 'month1' | 'month3' (코어 선택 시 점진 노출)
+    // 사용자 요청 2026-04-30: 메인 chat 일일 cap. 0 = 무제한. default 100/일 (헤비 사용자 본인이 풀 수 있게 settings 조절).
+    dailyChatCap: 100
   },
 
   // 7. V3.3: 대화 일별 아카이브
@@ -7457,6 +7722,37 @@ const DEFAULT_STATE = {
   todaySchedule: [],        // 타임테이블: [{id, title, start, end, source:'manual'|'ai'|'gcal'|'task', taskId}]
   diagnoses: [],            // V4 비전 9.5 진단 5종: [{id, type, confidence, evidence, detectedAt, status:'active'|'shown'|'dismissed'}]
   quarterlyReviews: [],     // V4 비전 7.9 분기 리뷰: [{id, quarterKey:'2026-Q2', completedAt, summary, sections, stats, auto, deepDive}]
+  lastForceAnalyzeAt: null, // 사용자 요청 2026-04-30: forceAnalyze 일주일 자동화 — 마지막 실행 시각.
+  // 사용자 요청 2026-04-30: 메인 chat 일일 메시지 cap (비용 폭발 방지). 4시 cutoff 기준 reset.
+  dailyChatCount: { date: null, count: 0 },
+
+  // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
+  // 시스템 프롬프트 stable 부분에 박혀서 cache_control 적용 → cache_read만 (사실상 무료).
+  // 점진 입력 (한 번에 다 X). 각 필드는 사용자가 직접 입력 또는 임시대화 추출에서 채워짐.
+  userDeepProfile: {
+    version: 0,
+    lastUpdated: null,
+    // 1. 발달·역사 맥락
+    development: {
+      childhood: '',          // 어린 시절·가족 구조·양육 톤
+      schoolYears: '',        // 학창 시절 핵심 사건
+      adhdDiscovery: '',      // ADHD 발견 시점 + 그 전 어떻게 살았는지
+      turningPoints: []       // [{id, when:'YYYY-MM-DD'|free, title, description, impact}]
+    },
+    // 2. 관계 맵
+    relationships: [],         // [{id, name, relation:'가족|친구|연인|동료|치료자|기타', tone:'안전|자극|혼합', influence:'positive|negative|mixed', notes}]
+    // 5. 자기서사·핵심 신념
+    selfNarrative: {
+      selfStory: '',          // 한 단락 자기소개
+      coreBeliefs: {
+        aboutSelf: [],         // ["나는 ..." 형태]
+        aboutWorld: [],        // ["세상은 ..." 형태]
+        aboutFuture: []        // ["미래는 ..." 형태]
+      },
+      howWantToBeSeen: '',    // 어떻게 보이고 싶은지
+      identityKeywords: []     // 정체성 키워드 (예: queer, 연구자, 큰언니)
+    }
+  },
 
   version: 7
 };
@@ -7819,6 +8115,17 @@ async function loadFromCloud() {
     if (!state.todaySchedule) state.todaySchedule = [];
     if (!state.diagnoses) state.diagnoses = [];
     if (!state.quarterlyReviews) state.quarterlyReviews = [];
+    // 사용자 요청 2026-04-29 (Q2): userDeepProfile 보강 — 점진 입력 schema
+    if (!state.userDeepProfile) state.userDeepProfile = JSON.parse(JSON.stringify(DEFAULT_STATE.userDeepProfile));
+    if (!state.userDeepProfile.development) state.userDeepProfile.development = { childhood: '', schoolYears: '', adhdDiscovery: '', turningPoints: [] };
+    if (!Array.isArray(state.userDeepProfile.development.turningPoints)) state.userDeepProfile.development.turningPoints = [];
+    if (!Array.isArray(state.userDeepProfile.relationships)) state.userDeepProfile.relationships = [];
+    if (!state.userDeepProfile.selfNarrative) state.userDeepProfile.selfNarrative = { selfStory: '', coreBeliefs: { aboutSelf: [], aboutWorld: [], aboutFuture: [] }, howWantToBeSeen: '', identityKeywords: [] };
+    if (!state.userDeepProfile.selfNarrative.coreBeliefs) state.userDeepProfile.selfNarrative.coreBeliefs = { aboutSelf: [], aboutWorld: [], aboutFuture: [] };
+    ['aboutSelf', 'aboutWorld', 'aboutFuture'].forEach(k => {
+      if (!Array.isArray(state.userDeepProfile.selfNarrative.coreBeliefs[k])) state.userDeepProfile.selfNarrative.coreBeliefs[k] = [];
+    });
+    if (!Array.isArray(state.userDeepProfile.selfNarrative.identityKeywords)) state.userDeepProfile.selfNarrative.identityKeywords = [];
     // caseFormulation 8 차원
     if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
     if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
@@ -7833,6 +8140,9 @@ async function loadFromCloud() {
     if (state.preferences.tutorialCompleted === undefined) state.preferences.tutorialCompleted = false;
     if (!Array.isArray(state.preferences.miniTutorialsSeen)) state.preferences.miniTutorialsSeen = [];
     if (state.preferences.progressiveUnlockLevel === undefined) state.preferences.progressiveUnlockLevel = null;
+    // 사용자 요청 2026-04-30: 일일 chat cap default 100. 이미 있으면 그대로 (사용자 설정 보존).
+    if (state.preferences.dailyChatCap === undefined) state.preferences.dailyChatCap = 100;
+    if (!state.dailyChatCount || typeof state.dailyChatCount !== 'object') state.dailyChatCount = { date: null, count: 0 };
 
     // 사용자 요청 2026-04-28: cloud/localStorage에 stale testerMode 플래그가 있으면 항상 false로 (메모리에서만 토글되어야 하는 flag — 새로고침 시 무조건 OFF)
     if (state.preferences.testerMode) {
@@ -8401,9 +8711,11 @@ async function init() {
     if (!document.hidden) { refreshHeaderDate(); applyNightMode(); }
   });
 
-  // V4 사용자 요청 2026-04-29: 매일 체크인 알림 자동 스케줄
-  if (typeof scheduleDailyNotification === 'function') {
-    setTimeout(() => { try { scheduleDailyNotification(); } catch (e) { console.warn('daily notif schedule:', e); } }, 1500);
+  // V4 사용자 요청 2026-04-29: Service Worker 등록 (오프라인 + 설치 배너 + 푸시 인프라 ready)
+  if ('serviceWorker' in navigator) {
+    setTimeout(() => {
+      navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW register:', e));
+    }, 2000);
   }
 
   // V4 코어 튜토리얼 잠금 — 글로벌 클릭 인터셉터 (capture phase로 원래 onclick 가로챔)
@@ -8438,6 +8750,11 @@ async function init() {
   // 사용자 요청 2026-04-28: 자동 백업 (주 1회 + APP_VERSION 변경 시) — fire-and-forget
   if (typeof runAutoBackupIfNeeded === 'function') {
     setTimeout(() => { runAutoBackupIfNeeded().catch(e => console.warn('autoBackup:', e)); }, 3000);
+  }
+
+  // 사용자 요청 2026-04-30: 일주일 자동 forceAnalyze — background, fire-and-forget. 5초 후 실행 (앱 진입 부담 회피).
+  if (typeof maybeRunWeeklyForceAnalyze === 'function') {
+    setTimeout(() => { maybeRunWeeklyForceAnalyze().catch(e => console.warn('weeklyForceAnalyze:', e)); }, 5000);
   }
 
   applyNightMode();
@@ -8995,7 +9312,7 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     title: '🌿 임시 대화창',
     // 사용자 요청 2026-04-29: '고동이가 답변 만들 때까지 기다려줘' 강조 + 답변 끝나면 '다음' 직접 클릭으로 진행
-    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>아래 선택지 중 하나를 골라봐.<br><br><b>🐚 고동이가 답변 만들 때까지 기다려줘.</b><br><span class="small">답변 다 뜨면 <b>다음 →</b> 눌러서 진행.</span>',
+    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>여기서 어려웠던 점 풀어놓고, 충분히 풀린 후 <b>[🌱 가지 만들기]</b> 누르면 새 가지 4개 제안할게.<br><br><span class="small">대화 더 진행하면 [🔄 가지 다시 만들기]로 새로 — 같은 가지도 refine OK.</span>',
     waitFor: 'next',
     dimBackground: false,
     aboveModal: true
@@ -9016,8 +9333,8 @@ const ONBOARDING_STEPS = [
     id: 'mutation_finish_btn',
     // 사용자 요청 2026-04-29: 네모 표시 X (spotlight 제거)
     targetSelector: null,
-    title: '✦ 이 차원으로 해볼게',
-    body: '고동이의 답 봤지?<br>이제 <b>\'✦ 이 차원으로 해볼게\'</b> 눌러봐.<br><br><span class="small">버튼 누르면 잠깐 기다렸다가 <b>"다음"</b> 직접 눌러줘.</span>',
+    title: '✦ 이 가지로 해볼게',
+    body: '가지 4개 봤지?<br>마음에 드는 가지 하나 클릭하고, <b>\'✦ 이 가지로 해볼게\'</b> 눌러봐.<br><br><span class="small">버튼 누르면 잠깐 기다렸다가 <b>"다음"</b> 직접 눌러줘.</span>',
     waitFor: 'next',
     dimBackground: false,
     aboveModal: true
@@ -9036,7 +9353,7 @@ const ONBOARDING_STEPS = [
     id: 'click_evolved_card',
     targetSelector: '.strategy-card-title[data-strategy-id="strat_seed_0"]',
     title: '진화한 전략 카드',
-    body: '방금 진화한 카드 다시 눌러봐.<br>제목이 <b>새 차원으로 바뀌어 있을 거야</b> — 진화 트리에 옛 \'마감 직전 폭발력 신뢰\'도 남아있어.',
+    body: '방금 진화한 카드 다시 눌러봐.<br>제목이 <b>새 가지로 바뀌어 있을 거야</b> — 진화 트리에 옛 \'마감 직전 폭발력 신뢰\'도 남아있어.',
     waitFor: 'click',
     advanceDelay: 800,
     manualAdvance: true,
@@ -9047,7 +9364,7 @@ const ONBOARDING_STEPS = [
     // 사용자 요청 2026-04-29: 진화한 전략 카드 spotlight (어떤 카드 진화했는지 시각 안내)
     targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"]',
     title: '🧬 진화 트리 봤어?',
-    body: '<b>\'마감 직전 폭발력 신뢰\'</b>가 안 통했네.<br>그래서 <b>새 차원으로 진화</b>했어!<br><br>만약 이 새 전략이 <b>성공한다면</b> 이 DNA는 \'<b>성장</b>\' 해.<br>같은 전략이 <b>5번 성공</b>하면, 네가 이 전략을 \'<b>체화</b>\'했다고 봐.',
+    body: '<b>\'마감 직전 폭발력 신뢰\'</b>가 안 통했네.<br>그래서 <b>새 가지로 진화</b>했어!<br><br>만약 이 새 전략이 <b>성공한다면</b> 이 DNA는 \'<b>성장</b>\' 해.<br>같은 전략이 <b>5번 성공</b>하면, 네가 이 전략을 \'<b>체화</b>\'했다고 봐.',
     waitFor: 'next',
     dimBackground: false,
     fallbackPosition: 'top'
@@ -9175,7 +9492,7 @@ const ONBOARDING_STEPS = [
   {
     id: 'exec_immerse_btn',
     targetSelector: '.exec-immerse-btn',
-    title: '🌧 몰입 시작',
+    title: '🌧 시작',
     body: '진짜 집중하고 싶을 때 이 버튼!<br>빗소리 + 시간 자동 기록.<br><br>한 번 눌러봐.',
     waitFor: 'click',
     advanceDelay: 600,
@@ -9232,7 +9549,7 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     advanceClickSelector: '.ritual-btn.primary[onclick="ritualLaunch()"]',
     title: '🚀 발사',
-    body: '약속 정리됐지? <b>"🌧 몰입 시작"</b> 눌러봐.<br>빗소리 + 타이머 시작.',
+    body: '약속 정리됐지? <b>"🌧 시작"</b> 눌러봐.<br>빗소리 + 타이머 시작.',
     waitFor: 'click',
     advanceDelay: 600,
     dimBackground: false,
@@ -9242,7 +9559,7 @@ const ONBOARDING_STEPS = [
     id: 'exec_iphone_shortcut',
     targetSelector: null,
     title: '📱 iPhone 단축어',
-    body: '아이폰이라면 <b>단축어</b>를 설정할 수 있어 — 잠금화면에서 한 번에 몰입 시작.<br><br>자세한 내용은 <b>⚙ 설정</b>에서 \'단축어 설정 매뉴얼\' 항목 확인해봐.',
+    body: '아이폰이라면 <b>단축어</b>를 설정할 수 있어 — 잠금화면에서 한 번에 시작.<br><br>자세한 내용은 <b>⚙ 설정</b>에서 \'단축어 설정 매뉴얼\' 항목 확인해봐.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -9779,6 +10096,27 @@ async function startCoreTutorial(coreId) {
 
   // 인프라 재사용 (testerMode ON + 시드 자동)
   await startInteractiveOnboarding(startIdx);
+
+  // 사용자 요청 2026-04-29: 코어별 시드 후처리 — 그 코어 흐름에 직접 필요한 시드만 유지 (혼란 차단)
+  setTimeout(() => { try { _scrubSeedsForCore(coreId); } catch (e) { console.warn('seed scrub:', e); } }, 50);
+}
+
+// 코어별 시드 정리 — testSeedV4Data가 박은 거 중 그 코어 흐름에 안 필요한 거 제거
+function _scrubSeedsForCore(coreId) {
+  if (!state || !state.preferences || !state.preferences.testerMode) return;
+  if (coreId === 'core2') {
+    // 코어 #2 (소라의 부름) 흐름 필수: active 부름 + 양생방 결과 체크 대기 미션
+    // 다른 양생 dot 시뮬용 / 지난 부름 시뮬용 미션은 혼란만 → 제거
+    if (Array.isArray(state.missions)) {
+      state.missions = state.missions.filter(m => {
+        if (!m || !m.id) return true;
+        if (!m.id.startsWith('mis_seed_')) return true;
+        return m.id === 'mis_seed_active_call' || m.id === 'mis_seed_strat0_done_unchecked';
+      });
+    }
+  }
+  // 다른 코어 후처리는 추후 보고 받으면 추가
+  if (typeof renderTodayMission === 'function') renderTodayMission();
 }
 
 // V4 코어 튜토리얼 진행 카운트 — 글로벌 step idx 대신 코어 내부 local 카운트.
@@ -11223,30 +11561,316 @@ function saveTextStep(decisionId, stepId) {
   showToast('저장됐어 🧙‍♂️');
 }
 
+// 사용자 요청 2026-04-29: 마법 도움 받기 = 별도 helpChat 모달. decision/step별 영구 저장.
+// 14일 숙성 중 며칠 걸쳐 이어볼 수 있음. 메인 chat 탭 안 건드림.
 async function askAIForStep(decisionId, stepId) {
-  const decision = state.decisions.find(d => d.id === decisionId);
-  const meta = DECISION_STEPS.find(m => m.id === stepId);
-  const editor = document.getElementById('stepEditor');
-  const userInput = editor ? editor.value : '';
-
   if (!state.apiKey) { alert('API 키 먼저 설정!'); return; }
+  openMagicHelpChat(decisionId, stepId);
+}
 
-  const completedContext = decision.steps.filter(s => s.completed).map(s => {
+// helpChat state
+let _magicHelpState = null;
+
+function openMagicHelpChat(decisionId, stepId) {
+  const decision = (state.decisions || []).find(d => d.id === decisionId);
+  if (!decision) return;
+  const meta = DECISION_STEPS.find(m => m.id === stepId);
+  if (!meta) return;
+  // helpChat 영구 저장 위치: decision.helpChats[stepId] = []
+  if (!decision.helpChats) decision.helpChats = {};
+  if (!Array.isArray(decision.helpChats[stepId])) decision.helpChats[stepId] = [];
+
+  _magicHelpState = { decisionId, stepId, _loading: false };
+
+  // 사용자 요청 2026-04-29: 첫 진입 시 옛 askAIForStep의 컨텍스트 템플릿을 자동 user msg로 push + AI 응답 트리거
+  if (decision.helpChats[stepId].length === 0) {
+    const completedContext = (decision.steps || []).filter(s => s.completed).map(s => {
+      const m = DECISION_STEPS.find(x => x.id === s.id);
+      return `[${m?.title || s.id}]\n${typeof formatStepContent === 'function' ? formatStepContent(s) : (s.content || '')}`;
+    }).join('\n\n');
+    const editor = document.getElementById('stepEditor');
+    const currentDraft = editor ? editor.value.trim() : '';
+
+    const starterMsg = `[${meta.title}] "${decision.title}"
+
+지금까지 작성한 단계:
+${completedContext || '(아직 시작 X)'}
+
+이번 단계 (${meta.title})에 내가 적은 거:
+${currentDraft || '(비어있음 — 도움이 필요해)'}
+
+이 단계에서 더 깊이 생각하게 도와줘. 결정을 대신 내려주지 말고.`;
+
+    decision.helpChats[stepId].push({
+      role: 'user',
+      content: starterMsg,
+      timestamp: new Date().toISOString(),
+      _starter: true
+    });
+    saveState();
+    _renderMagicHelpChat();
+    // AI 자동 응답 트리거
+    setTimeout(() => _runMagicHelpAIResponse(), 200);
+    return;
+  }
+  _renderMagicHelpChat();
+}
+
+// AI 응답 만 호출 (sendMagicHelpMessage에서 입력 부분만 분리)
+async function _runMagicHelpAIResponse() {
+  if (!_magicHelpState) return;
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) return;
+  const stepId = _magicHelpState.stepId;
+  if (!Array.isArray(decision.helpChats?.[stepId])) return;
+  const meta = DECISION_STEPS.find(m => m.id === stepId);
+  if (!meta) return;
+
+  if (!state.apiKey) {
+    decision.helpChats[stepId].push({ role: 'assistant', content: '(API 키 없어 — 설정에서 등록해.)', timestamp: new Date().toISOString() });
+    _magicHelpState._loading = false;
+    saveState();
+    _renderMagicHelpChat();
+    return;
+  }
+
+  _magicHelpState._loading = true;
+  _renderMagicHelpChat();
+
+  const completedContext = (decision.steps || []).filter(s => s.completed).map(s => {
     const m = DECISION_STEPS.find(x => x.id === s.id);
-    return `[${m.title}]\n${formatStepContent(s)}`;
+    return `[${m?.title || s.id}]\n${typeof formatStepContent === 'function' ? formatStepContent(s) : (s.content || '')}`;
   }).join('\n\n');
+  const editor = document.getElementById('stepEditor');
+  const currentDraft = editor ? editor.value : '';
 
-  const userMsg = `[마법의 소라고동 - ${meta.title}]\n결정 주제: "${decision.title}"\n\n지금까지 작성한 단계:\n${completedContext || '(아직 시작 안 함)'}\n\n이번 단계 (${meta.title})에 내가 적은 거:\n${userInput || '(비어있음 - 도움이 필요해)'}\n\n이 단계에서 더 깊이 생각하도록 좋은 질문을 던져줘. 결정을 대신 내려주지 말고.`;
+  const _topByConf = (arr, n) => (arr || []).slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0)).slice(0, n);
+  const traits = _topByConf(state.traits, 5).map(t => `- ${t.name}${t.description ? ': ' + t.description : ''}`).join('\n');
+  const patterns = _topByConf(state.patterns, 5).map(p => `- ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`).join('\n');
+  const values = _topByConf(state.values, 3).map(v => `- ${v.name}`).join('\n');
 
-  state.chatMessages.push({
-    role: 'user',
-    content: userMsg,
-    timestamp: new Date().toISOString()
-  });
+  const sysPrompt = `너는 마법의 소라고동 — 큰 결정 14일 숙성 도구 안 도우미. 사용자가 "${decision.title}" 결정의 [${meta.title}] 단계에서 막힘.
+
+[톤 — 진지 모드. 매우 중요]
+- 큰 결정 = 가벼운 ㅋㅋ / 농담 / 한 줄 리액션 ❌. 차분한 친구.
+- 1-3문장 짧게. 외재화 톤. 결론 강요 X — 사용자 자기 발견 유도.
+- 사용자 페이스 따라. 추궁 X. 같은 질문 반복 X.
+- 짧은 응답("응", "맞아")에도 톤 유지 (sticky).
+
+[사용자 본인 데이터 — 우선 인용. generic 회피]
+${traits ? '특성:\n' + traits : ''}
+${patterns ? '\n패턴:\n' + patterns : ''}
+${values ? '\n가치:\n' + values : ''}
+
+[지금까지 결정 흐름]
+${completedContext || '(아직 시작 X)'}
+
+${currentDraft ? `[이번 단계 ${meta.title}에 현재 적은 거]\n${currentDraft}\n` : ''}
+[네 응답만, 마크다운 X]`;
+
+  try {
+    const recentMsgs = decision.helpChats[stepId].slice(-15).map(m => ({ role: m.role, content: m.content }));
+    const resp = await callAnthropic({
+      // 사용자 요청 2026-04-30 비용절감: 마법 helpChat 응답 opus → sonnet (메인 대화 빈도 ↑ → ROI 큼).
+      model: 'claude-sonnet-4-6',
+      max_tokens: 400,
+      // 사용자 요청 2026-04-29 비용절감: 1h cache TTL — ADHD burst+break 패턴 (5분 break도 cache 살아남음).
+      system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
+      messages: recentMsgs
+    });
+    const data = await resp.json();
+    const aiText = data.content?.[0]?.text?.trim() || '(응답 비어있어)';
+    decision.helpChats[stepId].push({ role: 'assistant', content: aiText, timestamp: new Date().toISOString() });
+  } catch (e) {
+    console.warn('magic help AI:', e);
+    decision.helpChats[stepId].push({ role: 'assistant', content: '(응답 실패 — 잠시 후 다시)', error: true, timestamp: new Date().toISOString() });
+  }
+  _magicHelpState._loading = false;
   saveState();
-  showScreen('chat');
-  // V3.13.x: 마법의 소라고동은 무거운 추론 필요 → opus 4.7
-  await generateAIResponse('claude-opus-4-7');
+  _renderMagicHelpChat();
+}
+
+function _renderMagicHelpChat() {
+  if (!_magicHelpState) return;
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) { closeMagicHelpChat(); return; }
+  const meta = DECISION_STEPS.find(m => m.id === _magicHelpState.stepId);
+  if (!meta) { closeMagicHelpChat(); return; }
+  const messages = (decision.helpChats && decision.helpChats[_magicHelpState.stepId]) || [];
+
+  // 사용자 요청 2026-04-29: 풀스크린 (숙고의 방 패턴) — 모달 X
+  if (typeof showScreen === 'function') {
+    const cur = document.querySelector('.screen.active');
+    if (!cur || cur.id !== 'screen-magic-help') {
+      showScreen('magic-help');
+    }
+  }
+  // 헤더 제목 (단계명 + 결정 주제)
+  const qEl = document.getElementById('magicHelpScreenQ');
+  if (qEl) {
+    qEl.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--text);">🧙‍♂️ ${escapeHtml(meta.title)}</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">"${escapeHtml(decision.title)}"</div>`;
+  }
+  // 입력바 표시
+  const inputBar = document.getElementById('magicHelpInputBar');
+  if (inputBar) inputBar.classList.add('active');
+  // 메시지
+  const area = document.getElementById('magicHelpArea');
+  if (area) {
+    let html = '';
+    messages.forEach((m, i) => {
+      // _starter는 회색 톤 (자동 컨텍스트 시작 메시지)
+      const extraStyle = m._starter ? ' style="background:var(--surface); border:1px dashed var(--border); color:var(--text-dim); white-space:pre-wrap; font-size:11px;"' : '';
+      html += `<div class="reflection-msg ${m.role}"${extraStyle}>${escapeHtml(m.content)}</div>`;
+      // 사용자 요청 2026-04-29: 마법 helpChat assistant 메시지에 ✦ 깨달음으로 버튼 (숙고/돌연변이 패턴 통일)
+      if (m.role === 'assistant' && !m._starter && !m.error) {
+        html += `<button class="reflection-msg-insight ${m.savedAsInsight ? 'saved' : ''}" onclick="saveMagicHelpMsgAsInsight(${i})">${m.savedAsInsight ? '✦ 저장됨' : '✦ 깨달음으로'}</button>`;
+      }
+    });
+    if (_magicHelpState._loading) {
+      html += `<div class="reflection-msg assistant" style="opacity:0.6;">생각 중... ✦</div>`;
+    }
+    area.innerHTML = html;
+    area.scrollTop = area.scrollHeight;
+  }
+  // textarea 자동 높이 + Enter 전송
+  const ta = document.getElementById('magicHelpInput');
+  if (ta && !ta._magicWired) {
+    ta._magicWired = true;
+    // 사용자 요청 2026-04-29: 메인 chat 탭처럼 자동 높이 (max 140px)
+    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(140, ta.scrollHeight) + 'px'; });
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMagicHelpMessage(); }
+    });
+  }
+}
+
+async function sendMagicHelpMessage() {
+  if (!_magicHelpState || _magicHelpState._loading) return;
+  const ta = document.getElementById('magicHelpInput');
+  if (!ta) return;
+  const text = ta.value.trim();
+  if (!text) return;
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) return;
+  if (!decision.helpChats) decision.helpChats = {};
+  const stepId = _magicHelpState.stepId;
+  if (!Array.isArray(decision.helpChats[stepId])) decision.helpChats[stepId] = [];
+
+  decision.helpChats[stepId].push({ role: 'user', content: text, timestamp: new Date().toISOString() });
+  ta.value = ''; ta.style.height = 'auto';
+  saveState();
+  _renderMagicHelpChat();
+  // AI 응답 — _runMagicHelpAIResponse 재사용
+  await _runMagicHelpAIResponse();
+}
+
+async function closeMagicHelpChat() {
+  // 사용자 요청 2026-04-29: 마법 helpChat ← 닫을 때 — 원본 보관 prompt + 토픽 자동 추출.
+  if (_magicHelpState) {
+    try {
+      const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+      const stepId = _magicHelpState.stepId;
+      const messages = (decision && decision.helpChats && decision.helpChats[stepId]) || [];
+      const realMessages = messages.filter(m => !m._starter && !m.error);
+      const hasConversation = realMessages.length >= 2;
+      if (decision && hasConversation) {
+        const alreadyHistoried = (state.archive || []).some(a => a.type === 'magic_chat' && a.decisionId === decision.id && a.stepId === stepId);
+        let keepHistory = false;
+        if (!alreadyHistoried) {
+          keepHistory = await showConfirmModal({
+            title: '원본 대화 보관?',
+            message: `${realMessages.length}개 메시지.\n\n원본 흐름 그대로 도서관 → 깨달음에 박아둘까?\n(토픽 정리는 자동으로 됨)`,
+            okLabel: '응 보관',
+            cancelLabel: '아니'
+          });
+        }
+        if (keepHistory) {
+          const meta = (typeof DECISION_STEPS !== 'undefined' ? DECISION_STEPS : []).find(s => s.id === stepId);
+          const stepTitle = meta ? meta.title : stepId;
+          const lastAssistant = [...realMessages].reverse().find(m => m.role === 'assistant');
+          const firstUser = realMessages.find(m => m.role === 'user');
+          const body = (lastAssistant?.content || firstUser?.content || '').slice(0, 200);
+          const _dayKey = todayKey();
+          const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+          if (!Array.isArray(state.archive)) state.archive = [];
+          state.archive.unshift({
+            type: 'magic_chat',
+            headline: `🌀 ${stepTitle}: ${(decision.title || '결정').slice(0, 24)}`,
+            body,
+            fullChat: realMessages.map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp })),
+            date,
+            source: `🌀 마법 (${stepTitle})`,
+            savedAt: new Date().toISOString(),
+            tags: ['마법', '대화'],
+            decisionId: decision.id,
+            stepId
+          });
+          saveState();
+          if (typeof renderArchive === 'function') renderArchive();
+          showToast('✦ 도서관에 보관됐어');
+        }
+        // 토픽 카드 자동 정리
+        if (realMessages.length >= 4) {
+          const stepTitleForCtx = (typeof DECISION_STEPS !== 'undefined' ? DECISION_STEPS : []).find(s => s.id === stepId)?.title || stepId;
+          extractTopicsFromTempChat(realMessages, 'magic_help', `${decision.id}:${stepId}`, `${decision.title || '결정'} — ${stepTitleForCtx}`).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('[magic close] fail:', e);
+    }
+  }
+  _magicHelpState = null;
+  const inputBar = document.getElementById('magicHelpInputBar');
+  if (inputBar) inputBar.classList.remove('active');
+  // 사용자 요청 2026-04-29: 화면 종료 — 결정 디테일 화면으로 복귀 (마법 진입 컨텍스트)
+  if (typeof showScreen === 'function') showScreen('decision-detail');
+}
+
+// 사용자 요청 2026-04-29: 마법 helpChat assistant 메시지를 ✦ 깨달음(scrap)으로 archive에 저장 + caseFormulation feed-in.
+async function saveMagicHelpMsgAsInsight(msgIdx) {
+  if (!_magicHelpState) return;
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) return;
+  const stepId = _magicHelpState.stepId;
+  const messages = (decision.helpChats && decision.helpChats[stepId]) || [];
+  const msg = messages[msgIdx];
+  if (!msg || msg.role !== 'assistant' || msg.savedAsInsight) return;
+
+  // 직전 user 메시지 찾기
+  let priorUserMsg = '';
+  for (let i = msgIdx - 1; i >= 0; i--) {
+    if (messages[i]?.role === 'user') { priorUserMsg = messages[i].content; break; }
+  }
+
+  if (!Array.isArray(state.archive)) state.archive = [];
+  const meta = (typeof DECISION_STEPS !== 'undefined' ? DECISION_STEPS : []).find(s => s.id === stepId);
+  const stepTitle = meta ? meta.title : stepId;
+  const _dayKey = todayKey();
+  const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  const headline = (decision.title || '결정').slice(0, 30);
+  const body = (msg.content || '').slice(0, 200);
+  state.archive.unshift({
+    type: 'scrap',
+    headline,
+    body,
+    insight: msg.content,
+    userMsg: priorUserMsg,
+    assistantMsg: msg.content,
+    date,
+    source: `🌀 마법 (${stepTitle})`,
+    savedAt: new Date().toISOString(),
+    tags: ['마법', '결정'],
+    decisionId: decision.id,
+    stepId
+  });
+  msg.savedAsInsight = true;
+  saveState();
+  if (typeof renderArchive === 'function') renderArchive();
+  showToast('✦ 깨달음에 저장됐어');
+  _renderMagicHelpChat();
+  // 임시 대화 → caseFormulation feed-in (background, fail silent)
+  extractAndApplyInsightToModel(msg.content, priorUserMsg, 'magic_help').catch(() => {});
 }
 
 function openWeightStep(decision, step) {
@@ -11758,11 +12382,10 @@ JSON 형식으로 출력:
 
 JSON만 출력. 다른 설명 X.`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] })
-  });
+  // 사용자 요청 2026-04-29: callAnthropic helper 사용 (Phase C swap 대비)
+  // 사용자 요청 2026-04-30: 리뷰 (사용자 회고, 친구 톤 요약) = 주간/월간 둘 다 sonnet.
+  // 분석 (모델 업데이트, 깊은 통합) = forceAnalyze (일주일 자동 opus). 리뷰랑 별개.
+  const resp = await callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
   const text = data.content[0].text;
@@ -12235,7 +12858,7 @@ async function addReflectionQuestion(text) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5',
           max_tokens: 60,
           messages: [{ role: 'user', content: `다음 질문을 카드에 한 줄로 넣을 수 있게 짧게 요약. 10-25자, 명사형 또는 짧은 명제. 따옴표/마크다운 X.\n\n원본:\n${trimmed.slice(0, 300)}\n\n짧은 요약 한 줄만 출력.` }]
         })
@@ -12359,6 +12982,59 @@ function deleteReflectionQuestion(id) {
   renderReflectionHome();
 }
 
+// 사용자 요청 2026-04-29: 숙고 ← 닫을 때 — 원본 대화 히스토리(도서관) 보관 prompt + 토픽 카드 자동 추출.
+// 메인 chat 챕터 마무리 패턴 통일: 토픽은 자동, 원본 보관은 사용자 결정.
+async function closeReflectionScreen() {
+  try {
+    const q = (state.reflectionQuestions || []).find(x => x.id === _activeReflectionId);
+    const messages = (q && Array.isArray(q.chatMessages)) ? q.chatMessages : [];
+    const realMessages = messages.filter(m => !m.typing && !m.error);
+    const hasConversation = realMessages.length >= 2;
+    if (q && hasConversation && q.status !== 'resolved') {
+      const alreadyHistoried = (state.archive || []).some(a => a.type === 'reflection_chat' && a.reflectionQuestionId === q.id);
+      let keepHistory = false;
+      if (!alreadyHistoried) {
+        keepHistory = await showConfirmModal({
+          title: '원본 대화 보관?',
+          message: `${realMessages.length}개 메시지.\n\n원본 흐름 그대로 도서관 → 깨달음에 박아둘까?\n(토픽 정리는 자동으로 됨)`,
+          okLabel: '응 보관',
+          cancelLabel: '아니'
+        });
+      }
+      if (keepHistory) {
+        const lastAssistant = [...realMessages].reverse().find(m => m.role === 'assistant');
+        const firstUser = realMessages.find(m => m.role === 'user');
+        const body = (lastAssistant?.content || firstUser?.content || '').slice(0, 200);
+        const _dayKey = todayKey();
+        const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+        if (!Array.isArray(state.archive)) state.archive = [];
+        state.archive.unshift({
+          type: 'reflection_chat',
+          headline: (q.shortText || q.text || '숙고').slice(0, 30),
+          body,
+          fullChat: realMessages.map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp })),
+          date,
+          source: '🌊 숙고',
+          savedAt: new Date().toISOString(),
+          tags: ['숙고', '대화'],
+          reflectionQuestionId: q.id
+        });
+        saveState();
+        if (typeof renderArchive === 'function') renderArchive();
+        showToast('✦ 도서관에 보관됐어');
+      }
+      // 토픽 카드 자동 정리 — 메시지 ≥4면 자동 추출 (background, fail silent)
+      if (realMessages.length >= 4) {
+        extractTopicsFromTempChat(realMessages, 'reflection', q.id, q.shortText || q.text || '').catch(() => {});
+      }
+    }
+  } catch (e) {
+    console.warn('[reflection close] fail:', e);
+  }
+  _activeReflectionId = null;
+  if (typeof showScreen === 'function') showScreen('home');
+}
+
 // V4-1j-b: 숙고 채팅 별도 화면 — 메인챗과 분리. q.chatMessages 사용.
 let _activeReflectionId = null;
 
@@ -12426,6 +13102,428 @@ function renderReflectionChat() {
   setTimeout(() => { container.scrollTop = container.scrollHeight; }, 30);
 }
 
+// 사용자 요청 2026-04-29: 임시 대화창 (숙고/돌연변이/마법) → caseFormulation feed-in 헬퍼.
+// 메인 chat은 매 응답 자동 추출, 임시 대화는 사용자가 ✦ 깨달음 누른 시점에만 (가벼운 탐색 본질 유지).
+// confidence threshold 0.6 (메인 0.5보다 보수적) + caseFormulation 항목은 unverified 풀로 → 사용자 ✓로 컨펌.
+// fail silent (사용자 흐름 방해 X). 키 없으면 skip.
+async function extractAndApplyInsightToModel(insightText, userMsg, source) {
+  try {
+    if (!state.apiKey) return;
+    if (!insightText || typeof insightText !== 'string') return;
+    const cleanInsight = insightText.trim();
+    if (cleanInsight.length < 20) return;  // 너무 짧으면 추출 가치 X
+
+    const prompt = `다음은 사용자가 "✦ 깨달음으로" 보관한 메시지야 (출처: ${source}).
+사용자가 의도적으로 가치 있다고 판단한 텍스트라서 자기 인식 / 패턴 / 가치관 신호가 있을 수 있어.
+
+[사용자 직전 발화]
+${(userMsg || '').slice(0, 600) || '(없음)'}
+
+[깨달음 메시지]
+${cleanInsight.slice(0, 1200)}
+
+이 깨달음에서 사용자가 자기 자신에 대해 새로 발견 / 명확히 한 것이 있으면 JSON으로 뽑아.
+강한 신호 (명시적 자기 인식, 행동·감정 증거 동반) 만. 추측·일반론 X. 근거 약하면 빈 배열.
+
+{
+  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
+  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
+  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."}
+}
+
+JSON만, 다른 글 X.`;
+
+    const resp = await callAnthropic({
+      // 사용자 요청 2026-04-30 (재조정): 깨달음 버튼 ~10/일 자주 호출 → "자주 안 하는 거 = Opus" 원칙 따라 sonnet 복원.
+      // 정확도는 confidence 0.5 threshold + user_verified ✓ 컨펌 흐름으로 보호.
+      model: 'claude-sonnet-4-6',
+      max_tokens: 700,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const raw = data?.content?.[0]?.text || '';
+    const jm = raw.match(/\{[\s\S]*\}/);
+    if (!jm) return;
+    let analysis;
+    try { analysis = JSON.parse(jm[0]); } catch { return; }
+    if (!analysis || typeof analysis !== 'object') return;
+
+    // 사용자 요청 2026-04-29: "임시" 대화도 깊이 있는 내용 → 메인 chat과 동일 0.5 threshold.
+    // unverified 마킹은 유지 → 사용자 ✓ 컨펌 흐름.
+    const THRESHOLD = 0.5;
+    let touched = false;
+
+    if (Array.isArray(analysis.new_traits)) {
+      analysis.new_traits.forEach(t => {
+        if (!t || !t.name || typeof t.name !== 'string') return;
+        const conf = typeof t.confidence === 'number' ? t.confidence : 0;
+        const exists = (state.traits || []).find(e => similarText(e.name, t.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.traits = state.traits || [];
+          state.traits.push({
+            id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: t.name.trim(), description: (t.description || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            extractedFrom: source,
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+
+    if (Array.isArray(analysis.new_values)) {
+      analysis.new_values.forEach(v => {
+        if (!v || !v.name || typeof v.name !== 'string') return;
+        const conf = typeof v.confidence === 'number' ? v.confidence : 0;
+        const exists = (state.values || []).find(e => similarText(e.name, v.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.values = state.values || [];
+          state.values.push({
+            id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: v.name.trim(), description: (v.description || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            sdt_need: v.sdt_need || null,
+            extractedFrom: source,
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+
+    if (Array.isArray(analysis.new_patterns)) {
+      analysis.new_patterns.forEach(p => {
+        if (!p || !p.name || typeof p.name !== 'string') return;
+        const conf = typeof p.confidence === 'number' ? p.confidence : 0;
+        const exists = (state.patterns || []).find(e => similarText(e.name, p.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.patterns = state.patterns || [];
+          state.patterns.push({
+            id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: p.name.trim(), description: (p.description || '').trim(),
+            trigger: (p.trigger || '').trim(), sequence: (p.sequence || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            extractedFrom: source,
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+
+    // case formulation → 메인 풀에 push + unverified 마킹 (사용자 ✓로 컨펌)
+    const u = analysis.case_formulation_update;
+    if (u && typeof u === 'object') {
+      const cf = state.caseFormulation = state.caseFormulation || { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} };
+      if (!cf.unverified) cf.unverified = {};
+      const fields = [
+        ['new_problem', 'problems'],
+        ['new_mechanism', 'mechanisms'],
+        ['new_strength', 'strengths'],
+        ['new_goal', 'goals'],
+        ['new_growth', 'growth']
+      ];
+      fields.forEach(([key, bucket]) => {
+        const txt = u[key];
+        if (!txt || typeof txt !== 'string') return;
+        const trimmed = txt.trim();
+        if (!trimmed) return;
+        if (!Array.isArray(cf[bucket])) cf[bucket] = [];
+        if (cf[bucket].some(x => similarText(x, trimmed))) return;
+        cf[bucket].push(trimmed);
+        if (!Array.isArray(cf.unverified[bucket])) cf.unverified[bucket] = [];
+        cf.unverified[bucket].push(trimmed);
+        touched = true;
+      });
+      if (touched) {
+        cf.version = (cf.version || 0) + 1;
+        cf.lastUpdated = new Date().toISOString();
+      }
+    }
+
+    if (touched) {
+      saveState();
+      // 모델 화면 열려 있으면 새로고침 (선택)
+      if (typeof renderModel === 'function') {
+        try { renderModel(); } catch {}
+      }
+    }
+  } catch (e) {
+    // silent — 사용자 흐름 방해 X
+    console.warn('[insight extract] fail:', e);
+  }
+}
+
+// 사용자 요청 2026-04-30: 매 메시지 자동 추출 → 챕터 마무리 시점만.
+// endChapter 시 호출. sonnet 4.6 (자동, 5-10/일 → ROI 좋음). caseFormulation은 unverified 마킹.
+async function extractChapterCaseAnalysis(messages) {
+  try {
+    if (!state.apiKey) return;
+    if (window._onbTutorialMode) return;
+    if (state.preferences && state.preferences.testerMode) return;
+    if (!Array.isArray(messages) || messages.length < 3) return;
+
+    const chatLog = messages.map(m => {
+      const role = m.role === 'user' ? '나' : '소라';
+      let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|insight|extracted_tasks)[\s\S]*\}\s*$/g, '').trim();
+      return `${role}: ${content}`;
+    }).join('\n\n');
+
+    const prompt = `사용자가 AI 친구 "소라고동"과 한 챕터(연속 대화 묶음)에서 나눈 대화 전체.
+챕터 전반에 걸쳐 발견된 사용자 자기 인식 / 패턴 / 가치관 / 문제·강점·목표를 JSON으로 추출.
+강한 신호 (명시적 자기 인식, 행동·감정 증거 동반)만. 추측·일반론 X. 근거 약하면 빈 배열.
+
+[대화 원문]
+${chatLog.slice(0, 8000)}
+
+[출력 — JSON만]
+{
+  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
+  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
+  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."}
+}
+
+JSON만, 마크다운 X.`;
+
+    const resp = await callAnthropic({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const raw = data?.content?.[0]?.text || '';
+    const jm = raw.match(/\{[\s\S]*\}/);
+    if (!jm) return;
+    let analysis;
+    try { analysis = JSON.parse(jm[0]); } catch { return; }
+    if (!analysis || typeof analysis !== 'object') return;
+
+    let touched = false;
+    const THRESHOLD = 0.5;
+
+    if (Array.isArray(analysis.new_traits)) {
+      analysis.new_traits.forEach(t => {
+        if (!t || !t.name) return;
+        const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
+        const exists = (state.traits || []).find(e => similarText(e.name, t.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.traits = state.traits || [];
+          state.traits.push({
+            id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: t.name.trim(), description: (t.description || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            extractedFrom: 'chapter',
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+    if (Array.isArray(analysis.new_values)) {
+      analysis.new_values.forEach(v => {
+        if (!v || !v.name) return;
+        const conf = typeof v.confidence === 'number' ? v.confidence : 0.5;
+        const exists = (state.values || []).find(e => similarText(e.name, v.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.values = state.values || [];
+          state.values.push({
+            id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: v.name.trim(), description: (v.description || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            sdt_need: v.sdt_need || null,
+            extractedFrom: 'chapter',
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+    if (Array.isArray(analysis.new_patterns)) {
+      analysis.new_patterns.forEach(p => {
+        if (!p || !p.name) return;
+        const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
+        const exists = (state.patterns || []).find(e => similarText(e.name, p.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.patterns = state.patterns || [];
+          state.patterns.push({
+            id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: p.name.trim(), description: (p.description || '').trim(),
+            trigger: (p.trigger || '').trim(), sequence: (p.sequence || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            extractedFrom: 'chapter',
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+    const u = analysis.case_formulation_update;
+    if (u && typeof u === 'object') {
+      const cf = state.caseFormulation = state.caseFormulation || { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} };
+      if (!cf.unverified) cf.unverified = {};
+      const fields = [
+        ['new_problem', 'problems'],
+        ['new_mechanism', 'mechanisms'],
+        ['new_strength', 'strengths'],
+        ['new_goal', 'goals'],
+        ['new_growth', 'growth']
+      ];
+      fields.forEach(([key, bucket]) => {
+        const txt = u[key];
+        if (!txt || typeof txt !== 'string') return;
+        const trimmed = txt.trim();
+        if (!trimmed) return;
+        if (!Array.isArray(cf[bucket])) cf[bucket] = [];
+        if (cf[bucket].some(x => similarText(x, trimmed))) return;
+        cf[bucket].push(trimmed);
+        // 챕터 자동 추출 = unverified 마킹
+        if (!Array.isArray(cf.unverified[bucket])) cf.unverified[bucket] = [];
+        cf.unverified[bucket].push(trimmed);
+        touched = true;
+      });
+      if (touched) {
+        cf.version = (cf.version || 0) + 1;
+        cf.lastUpdated = new Date().toISOString();
+      }
+    }
+    if (touched) {
+      saveState();
+      if (typeof renderModel === 'function') {
+        try { renderModel(); } catch {}
+      }
+    }
+  } catch (e) {
+    console.warn('[chapter case extract] fail:', e);
+  }
+}
+
+// 사용자 요청 2026-04-29: 임시대화 (숙고/마법) close 시 → 도서관 토픽 카드 자동 추출.
+// 메인 chat extractPreviousChapterTopics 패턴 통일. background, fail silent.
+// source: 'reflection' | 'magic_help', sourceId: 추출 중복 방지 키 (q.id 또는 decision:step), context: 짧은 컨텍스트 라벨.
+async function extractTopicsFromTempChat(messages, source, sourceId, context) {
+  try {
+    if (!state.apiKey) return;
+    if (!Array.isArray(messages) || messages.length < 4) return;
+    if (window._onbTutorialMode) return;
+    if (state.preferences && state.preferences.testerMode) return;
+
+    // 이미 같은 sourceId로 추출됐으면 skip (중복 prompt + 중복 비용 방지)
+    const dupKey = `${source}:${sourceId}`;
+    if (Array.isArray(state.topicCards) && state.topicCards.some(c => c.tempChatKey === dupKey)) return;
+
+    const chatLog = messages.map(m => {
+      const role = m.role === 'user' ? '나' : '소라';
+      let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
+      return `${role}: ${content}`;
+    }).join('\n\n');
+
+    const sourceLabel = source === 'reflection' ? '🌊 숙고 (사용자가 한 질문에 대해 깊이 파고드는 임시 대화)'
+      : source === 'magic_help' ? '🌀 마법 도움 받기 (큰 결정의 한 단계에서 도움 요청한 임시 대화)'
+      : '임시 대화';
+
+    const prompt = `사용자가 AI 친구 "소라고동"과 ${sourceLabel} 모드에서 나눈 대화를 토픽 카드로 정리해.
+
+[컨텍스트] ${context || '(없음)'}
+
+[대화 원문]
+${chatLog.slice(0, 8000)}
+
+[토픽 카드 추출 규칙]
+- 의미 있는 토픽 1-3개 (잡담은 X)
+- 카테고리 (V4 8 카테고리): diary | casual | concern | emotion | memory | todo | idea | relationship
+- 각 카드: 짧은 제목 (~25자) + 1-2문장 요약
+- 의미 없으면 빈 배열
+
+[출력 형식 — JSON만]
+{ "topics": [ { "title": "...", "summary": "...", "category": "concern" } ] }
+
+JSON만, 마크다운 X.`;
+
+    const resp = await callAnthropic({
+      model: 'claude-haiku-4-5',
+      max_tokens: 600,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    let text = (data?.content?.[0]?.text || '').trim();
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) return;
+    const parsed = JSON.parse(m[0]);
+    if (!parsed.topics || !Array.isArray(parsed.topics)) return;
+
+    if (!Array.isArray(state.topicCards)) state.topicCards = [];
+    const _dayKey = todayKey();
+    const nowIso = new Date().toISOString();
+    let pushed = 0;
+    parsed.topics.forEach(t => {
+      if (!t || !t.title) return;
+      const title = String(t.title).trim().slice(0, 60);
+      if (!title) return;
+      // 정확 동일 제목 + 같은 sourceId면 중복 방지
+      if (state.topicCards.some(c => c.title === title && c.tempChatKey === dupKey)) return;
+      state.topicCards.push({
+        id: 'tc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        title,
+        summary: String(t.summary || '').trim().slice(0, 300),
+        category: ['diary','casual','concern','emotion','memory','todo','idea','relationship'].includes(t.category) ? t.category : 'casual',
+        date: _dayKey,
+        createdAt: nowIso,
+        source: source,           // 'reflection' / 'magic_help'
+        tempChatKey: dupKey,      // 중복 방지 키
+        sourceLabel: sourceLabel.split(' ')[0]
+      });
+      pushed += 1;
+    });
+    if (pushed > 0) {
+      saveState();
+      if (typeof renderArchive === 'function') {
+        try { renderArchive(); } catch {}
+      }
+    }
+  } catch (e) {
+    console.warn('[temp topic extract] fail:', e);
+  }
+}
+
 // V4-fix: 숙고 채팅 안 AI 메시지를 ✦ 깨달음(reflection)으로 archive에 저장
 async function saveReflectionMsgAsInsight(qId, msgIdx) {
   const q = (state.reflectionQuestions || []).find(x => x.id === qId);
@@ -12458,6 +13556,8 @@ async function saveReflectionMsgAsInsight(qId, msgIdx) {
   saveState();
   renderReflectionChat();
   showToast('✦ 깨달음에 저장됐어');
+  // 사용자 요청 2026-04-29: 임시 대화 → caseFormulation feed-in (background, fail silent)
+  extractAndApplyInsightToModel(msg.content, priorUserMsg, 'reflection').catch(() => {});
 }
 
 async function sendReflectionChat() {
@@ -12489,6 +13589,7 @@ async function sendReflectionChat() {
   }
 
   // V4 비전 8.4: 숙고 전용 시스템 prompt (페르소나 분석 OFF)
+  // 사용자 요청 2026-04-29: 진지 모드 강화 + sticky 룰 (짧은 응답에도 톤 유지)
   const recentMsgs = q.chatMessages.slice(-12).map(m => ({
     role: m.role,
     content: m.content
@@ -12498,28 +13599,33 @@ async function sendReflectionChat() {
 [숙고 질문]
 "${q.text}"
 
-[톤 / 원칙]
-- 잡담 X. 답 강요 X.
+[톤 / 원칙 — 진지 모드]
+- 잡담 X. 답 강요 X. **가벼운 ㅋㅋ / 농담 / 짧은 한 줄 리액션 ❌**.
 - 다양한 각도에서 끈질기게 (가치 / 두려움 / 욕구 / 시간 스케일 / 외부 압력 / 네 기록 패턴).
 - 오랜 침묵 OK. 사용자 페이스 따라.
 - 결론 내려주지 X. 사용자 자기 발견 유도.
 - 외재화 톤. "너 X적이야" X.
-- 1-3문장 짧게. 친구 반말.
+- 1-3문장 짧게. 차분한 친구 반말.
 - 금지어: 대박/아이고/힘내/화이팅/할 수 있어/오늘도 멋진 하루/대단해.
+
+[모드 sticky — 매우 중요]
+숙고 = 큰 물음 안고 며칠 살아보는 도구. **무조건 진지 모드 유지**.
+- 사용자가 "응" / "맞아" / "그러게" / "음" 같은 짧은 응답 보내도 가벼운 톤으로 튀지 X.
+- 짧은 응답 = "듣고 있다 / 정리 중" 신호. 같은 차분한 톤으로 한 박자 호흡 주기.
+- 의심 시: 이전 응답의 톤 유지가 default.
 
 [네 일]
 사용자가 새로 적은 한 줄을 받고, 그 각도로 한 발짝 더 들어가는 질문 1-2개 또는 짧은 관찰 한 줄.`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({
-        model: 'claude-opus-4-7',
+    // 사용자 요청 2026-04-29: prompt caching 적용 (1024 token 미달 시 Anthropic이 자동 무시 — 안전)
+    // 사용자 요청 2026-04-30 비용절감: 숙고 응답 opus → sonnet (사용자 헤비 사용 = 가장 큰 비용 driver였음).
+    const resp = await callAnthropic({
+        model: 'claude-sonnet-4-6',
         max_tokens: 400,
-        system: sysPrompt,
+        // 사용자 요청 2026-04-29 비용절감: 1h cache TTL
+        system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
         messages: recentMsgs
-      })
     });
     const data = await resp.json();
     const aiText = data.content?.[0]?.text?.trim() || '(응답 비어있어)';
@@ -12937,15 +14043,9 @@ function recordQuestionShown(questionId) {
 }
 
 function renderDailyQuestion() {
-  // Try AI-generated question first; fallback to pool
-  if (state.apiKey && (state.traits || []).length > 0) {
-    generateAIDailyQuestion().catch(err => {
-      console.warn('AI question gen failed, using pool:', err);
-      renderPoolQuestion();
-    });
-  } else {
-    renderPoolQuestion();
-  }
+  // 사용자 요청 2026-04-30: AI 생성 분기 제거 — pool만 회전. LLM call 0, 비용 0.
+  // generateAIDailyQuestion 함수는 dead code로 남김 (다른 데서 안 호출).
+  renderPoolQuestion();
 }
 
 function renderPoolQuestion() {
@@ -12961,92 +14061,10 @@ function renderPoolQuestion() {
   recordQuestionShown(q.id);
 }
 
-async function generateAIDailyQuestion() {
-  // Check cache - only regen once per day per "shown" attempt
-  const todayKeyVal = todayKey();
-  const cached = state._aiQuestionCache;
-  if (cached && cached.date === todayKeyVal && cached.text) {
-    _currentDailyQuestion = { id: 'ai_' + todayKeyVal, cat: 'mixed', text: cached.text, isAI: true };
-    const iconEl = document.getElementById('dailyQuestionIcon');
-    const labelEl = document.getElementById('dailyQuestionLabel');
-    const textEl = document.getElementById('dailyQuestionText');
-    if (iconEl) iconEl.textContent = '✨';
-    if (labelEl) labelEl.textContent = '오늘의 질문';
-    if (textEl) textEl.textContent = cached.text;
-    return;
-  }
-  
-  const traits = (state.traits || []).slice(0, 5).map(t => t.name).join(', ');
-  const patterns = (state.patterns || []).slice(0, 3).map(p => p.name).join(', ');
-  const recent = (state.entries || []).slice(-3).map(e => 
-    `${e.date}: v${e.vitality||'?'} m${e.mood||'?'} ${e.note?.slice(0,50)||''}`
-  ).join('\n');
-  
-  const prompt = `너는 사용자의 친구 "소라고동". 오늘의 체크인 질문 1개를 만든다.
-
-[사용자 정보]
-특성: ${traits || '아직 모름'}
-패턴: ${patterns || '아직 모름'}
-최근:
-${recent || '없음'}
-
-[규칙]
-- 진짜 가볍고 일상적. 하루의 작은 디테일 포착.
-- 짧게. 한 줄.
-- 친근한 반말, 친구 말투
-- "오늘 어땠어?" 같은 뻔한 거 X
-- 자기성찰 X. 분석 X. "왜?" 다그치지 X.
-- 그냥 호기심 가는 가벼운 질문
-
-[좋은 예시 — 이 정도 가볍게]
-"오늘 점심 뭐 먹었어?"
-"지금 뭐 입고 있어?"
-"오늘 본 거 중에 웃겼던 거?"
-"커피 마셨어?"
-"오늘 노래 들었어?"
-"날씨 어때?"
-"지금 어디야?"
-"오늘 누구 만났어?"
-"방금 뭐 하고 있었어?"
-"오늘 5분이라도 밖에 나갔어?"
-"가장 최근에 웃은 게 언제야?"
-"오늘 뭐 마시고 있어?"
-"지금 옆에 뭐 있어?"
-"오늘 이불 정리했어?"
-"머리 감았어?"
-
-이 정도 가볍게. 한 줄만 출력. 따옴표 X.`;
-
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 150, messages: [{ role: 'user', content: prompt }] })
-  });
-  if (!resp.ok) throw new Error('API ' + resp.status);
-  const data = await resp.json();
-  let text = data.content[0].text.trim().replace(/^["'`]+|["'`]+$/g, '');
-  
-  state._aiQuestionCache = { date: todayKeyVal, text };
-  saveState();
-  
-  _currentDailyQuestion = { id: 'ai_' + todayKeyVal, cat: 'mixed', text, isAI: true };
-  const iconEl = document.getElementById('dailyQuestionIcon');
-  const labelEl = document.getElementById('dailyQuestionLabel');
-  const textEl = document.getElementById('dailyQuestionText');
-  if (iconEl) iconEl.textContent = '✨';
-  if (labelEl) labelEl.textContent = '오늘의 질문';
-  if (textEl) textEl.textContent = text;
-}
+// 사용자 요청 2026-04-30: generateAIDailyQuestion 함수 제거 — pool만 사용. dead code 정리.
 
 function rerollDailyQuestion() {
-  // For AI questions, regenerate fresh
-  if (_currentDailyQuestion?.isAI && state.apiKey) {
-    state._aiQuestionCache = null;
-    saveState();
-    generateAIDailyQuestion().catch(() => renderPoolQuestion());
-    showToast('다른 질문 ✦');
-    return;
-  }
+  // 사용자 요청 2026-04-30: pool만 사용. AI 질문 분기 제거.
   const q = pickDailyQuestion(true);
   if (!q) return;
   _currentDailyQuestion = q;
@@ -13192,7 +14210,7 @@ async function triggerAttemptResultFlow(mission) {
       // 첫 번째 didnt — 사용자에게 선택권
       const yes = await showConfirmModal({
         title: '🤔 안 통했네',
-        message: '첫 시도라 우연일 수도 있어.\n\n다른 차원에서 시도해볼래?\n(아니면 한 번 더 해보자)',
+        message: '첫 시도라 우연일 수도 있어.\n\n다른 가지에서 시도해볼래?\n(아니면 한 번 더 해보자)',
         okLabel: '🧬 진화해볼게',
         cancelLabel: '한 번 더'
       });
@@ -13206,7 +14224,7 @@ async function triggerAttemptResultFlow(mission) {
   } else if (status === 'meh' && typeof openMutationChat === 'function') {
     const yes = await showConfirmModal({
       title: '🌫 그저 그랬어',
-      message: '이 도구가 너에게 충분히 안 맞은 듯.\n다른 차원에서 시도해볼까?',
+      message: '이 도구가 너에게 충분히 안 맞은 듯.\n다른 가지에서 시도해볼까?',
       okLabel: '🧬 돌연변이 해볼게',
       cancelLabel: '아직 그대로'
     });
@@ -13287,7 +14305,7 @@ function showDnaPearlTypesModal() {
       emoji: '🌱',
       label: '빠른 발견',
       color: '#8fc88f',
-      description: '한 차원에서 바로 통한 전략.\n시도 = 첫 번째에 통함. 너 자신을 잘 알아서 빠르게 찾았어.',
+      description: '한 가지에서 바로 통한 전략.\n시도 = 첫 번째에 통함. 너 자신을 잘 알아서 빠르게 찾았어.',
       shells: ['⭐', '🌟', '✨', '💫', '🌙']
     },
     {
@@ -13295,7 +14313,7 @@ function showDnaPearlTypesModal() {
       emoji: '🌳',
       label: '성장의 길',
       color: '#ffd93d',
-      description: '한 차원에서 반복 시도로 도달.\n같은 방향 끈질기게 — 7번 8번 시도해서 성장했어.',
+      description: '한 가지에서 반복 시도로 도달.\n같은 방향 끈질기게 — 7번 8번 시도해서 성장했어.',
       shells: ['⭐', '⭐', '🌟', '✨', '💫', '⭐', '🌟']
     },
     {
@@ -13303,7 +14321,7 @@ function showDnaPearlTypesModal() {
       emoji: '🧬',
       label: '진화한 길',
       color: 'gradient',
-      description: '여러 차원 거쳐 진화로 도달.\n안 통한 차원 → 다른 차원 시도 → 결국 너에게 맞는 모양.',
+      description: '여러 가지 거쳐 진화로 도달.\n안 통한 가지 → 다른 가지 시도 → 결국 너에게 맞는 모양.',
       shells: ['⭐', '🌟', '🦄', '✨', '💎', '🌌']
     }
   ];
@@ -13598,7 +14616,7 @@ async function completeMission(missionId) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5',
           max_tokens: 150,
           messages: [{
             role: 'user',
@@ -13759,7 +14777,8 @@ async function verifyMissionPhoto(mission, photoBase64) {
       'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      // 사용자 요청 2026-04-30: 미션 사진 검증 = 단순 vision 분류 → haiku 4.5 (재시도 옵션 있어 안전).
+      model: 'claude-haiku-4-5',
       max_tokens: 200,
       messages: [{
         role: 'user',
@@ -14624,6 +15643,9 @@ function showScreen(name) {
   // V4-1j-b: 숙고 입력 바 (fixed bottom)
   const reflInputBar = document.getElementById('reflectionInputBar');
   if (reflInputBar) reflInputBar.classList.toggle('active', name === 'reflection');
+  // 사용자 요청 2026-04-29: 마법 도움 받기 화면도 입력바 토글
+  const magicInputBar = document.getElementById('magicHelpInputBar');
+  if (magicInputBar) magicInputBar.classList.toggle('active', name === 'magic-help');
   // V3.13.x: 헤더는 항상 표시 (튜토리얼 sync_dot step 등 의존). 배너만 홈에 한정.
   const bannerEl = document.getElementById('updateBanner');
   if (bannerEl && name !== 'home') bannerEl.style.display = 'none';
@@ -15071,7 +16093,7 @@ function renderTimeUsageCard() {
       <div class="model-section-title">📊 task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
       <div style="font-size:12px; color:var(--text-dim); padding:8px 0; line-height:1.7;">
         몰입 기록 쌓이면 여기 표시돼.<br>
-        실행 탭 🚀 → 몰입 시작 → 돌아옴 누르면 자동 기록.
+        실행 탭 🚀 → 🌧 시작 → 돌아옴 누르면 자동 기록.
       </div>
     </div>`;
   }
@@ -15200,7 +16222,7 @@ function renderModel() {
   if (visibleDiags.length > 0) {
     const diagLabels = {
       weak_tool: '🔧 도구 약함',
-      wrong_layer: '📐 차원 안 맞음',
+      wrong_layer: '📐 가지 안 맞음',
       value_clash: '⚖️ 가치 상충',
       avoidance: '🌫 회피 패턴',
       willpower_cap: '🪫 의지 임계치'
@@ -15532,9 +16554,9 @@ function _renderChatMessageHTML(m, i) {
       const regenLabel = m._regenLoading ? '🔄 만드는 중...' : '🔄 다시 만들기';
       const propTitle = m.proposalData?.title ? escapeHtml(m.proposalData.title) : '';
       const propChip = propTitle ? `<div class="proposal-title-chip">🌿 오늘의 제안: <b>${propTitle}</b></div>` : '';
+      // 사용자 요청 2026-04-30: regenerateProposal 버튼 제거. 4단 응답에서 나온 제안은 한 번으로 끝.
       proposalBtns = `${propChip}<div class="proposal-buttons">
         <button class="proposal-btn accept" onclick="acceptProposal(${i})">✦ 해볼게</button>
-        <button class="proposal-btn decline" onclick="regenerateProposal(${i})" ${m._regenLoading ? 'disabled' : ''} title="다른 각도의 제안 받기">${regenLabel}</button>
         <button class="proposal-btn decline" onclick="declineProposal(${i})">나중에</button>
       </div>`;
     } else if (m.proposalResponse) {
@@ -15596,9 +16618,8 @@ function renderChat() {
   // Archive header (V3.3)
   let archiveHeader = '';
   if ((state.chatArchive || []).length > 0) {
-    const count = state.chatArchive.length;
     archiveHeader = `<div class="chat-archive-header" onclick="openChatArchive()">
-      📚 이전 대화 보기 (${count}일치)
+      📚 이전 대화 보기
     </div>`;
   }
 
@@ -15688,11 +16709,37 @@ function formatAIResponse(text) {
   return formatted;
 }
 
+// 사용자 요청 2026-04-30: 메인 chat 일일 cap 헬퍼. 4시 cutoff 기준. cap=0 = 무제한.
+function _checkDailyChatCap() {
+  if (!state.preferences) state.preferences = {};
+  const cap = state.preferences.dailyChatCap;
+  if (cap === 0 || cap == null) return { ok: true };
+  const todayK = todayKey();
+  if (!state.dailyChatCount || state.dailyChatCount.date !== todayK) {
+    state.dailyChatCount = { date: todayK, count: 0 };
+  }
+  return { ok: state.dailyChatCount.count < cap, current: state.dailyChatCount.count, cap };
+}
+function _incrementDailyChatCount() {
+  const todayK = todayKey();
+  if (!state.dailyChatCount || state.dailyChatCount.date !== todayK) {
+    state.dailyChatCount = { date: todayK, count: 0 };
+  }
+  state.dailyChatCount.count += 1;
+}
+
 async function sendChat() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if (!text) return;
-  
+
+  // 사용자 요청 2026-04-30: 일일 cap 체크 (비용 폭발 방지). 도달 시 토스트 + 차단.
+  const capCheck = _checkDailyChatCap();
+  if (!capCheck.ok) {
+    showToast(`📋 오늘 대화 한도 (${capCheck.cap}개) 다 됐어 — 내일 4시 이후 풀려.\n설정에서 한도 조절 가능.`);
+    return;
+  }
+
   // V4 사용자 요청 2026-04-29: 4시간 → 24시간으로 변경. 사용자가 이어서 대화하고 싶을 수 있음 — 명시적 ✓ 마무리만 챕터 분리.
   // 24시간은 자동 분리 안전망 (자정 넘기는 일반 케이스 보호).
   const CHAPTER_GAP_MS = 24 * 60 * 60 * 1000;  // 24시간
@@ -15735,6 +16782,8 @@ async function sendChat() {
       ? { chapterStart: true, chapterMeta: { category: null, summary: null, strategyId: null } }
       : {})
   });
+  // 사용자 요청 2026-04-30: 일일 cap 카운트 증가 (메시지 push 직후, AI call 전).
+  _incrementDailyChatCount();
   // V4-1m: 진주 능동 제안 신호 감지 (행복/소중함). 같은 날 1회 가드.
   if (typeof detectPearlSignal === 'function' && detectPearlSignal(text)) {
     const todayK = todayKey();
@@ -15888,6 +16937,13 @@ async function endChapter() {
     await extractPreviousChapterTopics();
   } catch (e) {
     console.warn('topic extract failed:', e);
+  }
+  // 사용자 요청 2026-04-30: 매 메시지 자동 추출 → 챕터 시점만. 이전 챕터 메시지 통째로 보내 모델 추출.
+  // background, fail silent. 사용자 흐름 방해 X.
+  try {
+    extractChapterCaseAnalysis(validMsgs.slice()).catch(() => {});
+  } catch (e) {
+    console.warn('chapter case extract failed:', e);
   }
 
   // 2. summary — API 안 씀 (사용자 요청 2026-04-27). 순번 라벨만.
@@ -16133,6 +17189,7 @@ async function generateAIResponse(modelOverride) {
       systemBlocks.push({
         type: 'text',
         text: promptParts.stable,
+        // 사용자 요청 2026-04-29 비용절감: 1h cache TTL — ADHD burst+break 패턴, 5분 default 만료 회피 → 헤비 사용자 ~10% 절감.
         cache_control: { type: 'ephemeral' }
       });
     }
@@ -16150,11 +17207,11 @@ async function generateAIResponse(modelOverride) {
     for (let i = validMsgs.length - 1; i >= 0; i--) {
       if (validMsgs[i].chapterStart) { chapterStartIdx = i; break; }
     }
-    // V4-fix #3 토큰 효율: 챕터 시작 후 30개 cap (긴 챕터에서 token 폭발 방지)
-    // 챕터 없으면 최근 20개. 있으면 그 챕터 안 최대 30개.
+    // V4-fix #3 + 사용자 요청 2026-04-29: 챕터 시작 후 25개 cap (이전 30 → 25, 컨텍스트 안전 마진).
+    // 업계 sweet spot 20-30 안. 헤비 사용자 input 토큰 ~10% 절감 + 컨텍스트 단절 위험 낮음.
     const fromChapter = validMsgs.slice(chapterStartIdx);
-    const sliced = fromChapter.length > 30
-      ? fromChapter.slice(-30)
+    const sliced = fromChapter.length > 25
+      ? fromChapter.slice(-25)
       : fromChapter.length > 0
         ? fromChapter
         : validMsgs.slice(-20);
@@ -16347,66 +17404,8 @@ async function processAnalysis(analysis, messageIdx) {
   // V3.4: retry로 인한 중복 방지. 직전 3분 내 retry 호출되었다면 신규 추가 X
   const recentRetry = state._lastRetryAt && (Date.now() - state._lastRetryAt < 3 * 60 * 1000);
 
-  // V3.13.x: 직전 user 메시지가 단순 UI 트리거(askDeeper 등)면 사용자 발화 분석 스킵
-  // → "협상형 종료 패턴" 같은 잘못된 trait/pattern 박힘 방지.
-  // insight / proposal / extracted_tasks / decision_suggested는 응답 내용에 대한 것이라 유지.
-  let _prevUserIdx = messageIdx - 1;
-  while (_prevUserIdx >= 0 && state.chatMessages[_prevUserIdx]?.role !== 'user') _prevUserIdx--;
-  const _triggerMsg = _prevUserIdx >= 0 ? state.chatMessages[_prevUserIdx] : null;
-  const isUITrigger = !!(_triggerMsg && _triggerMsg.isDeeperRequest);
-
-  // V4-fix: 9.4 임계값 — 약(<0.5) skip, 중/강(>=0.5) 자동 적재 (NEW 배지 + 사용자 ✓로 컨펌).
-  // 기존 항목 evidence 누적은 confidence 무관 (재등장 자체가 신호).
-  if (analysis.new_traits && !isUITrigger) {
-    analysis.new_traits.forEach(t => {
-      const conf = t.confidence || 0.5;
-      const exists = state.traits.find(e => similarText(e.name, t.name));
-      if (!exists && !recentRetry) {
-        if (conf < 0.5) return;  // 약 신호 skip (V4 비전 9.4)
-        state.traits.push({ id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: t.name, description: t.description || '', confidence: conf, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
-      } else if (exists) {
-        exists.evidence_count = (exists.evidence_count || 1) + 1;
-        exists.confidence = Math.min(1.0, exists.confidence + 0.1);
-      }
-    });
-  }
-  if (analysis.new_values && !isUITrigger) {
-    analysis.new_values.forEach(v => {
-      const conf = v.confidence || 0.5;
-      const exists = state.values.find(e => similarText(e.name, v.name));
-      if (!exists && !recentRetry) {
-        if (conf < 0.5) return;  // 약 skip
-        state.values.push({ id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: v.name, description: v.description || '', confidence: conf, user_verified: false, evidence_count: 1, sdt_need: v.sdt_need || null, created_at: new Date().toISOString() });
-      } else if (exists) {
-        exists.evidence_count = (exists.evidence_count || 1) + 1;
-        exists.confidence = Math.min(1.0, exists.confidence + 0.1);
-      }
-    });
-  }
-  if (analysis.new_patterns && !isUITrigger) {
-    analysis.new_patterns.forEach(p => {
-      const conf = p.confidence || 0.5;
-      const exists = state.patterns.find(e => similarText(e.name, p.name));
-      if (!exists && !recentRetry) {
-        if (conf < 0.5) return;  // 약 skip
-        state.patterns.push({ id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: p.name, description: p.description || '', trigger: p.trigger || '', sequence: p.sequence || '', confidence: conf, user_verified: false, evidence_count: 1, created_at: new Date().toISOString() });
-      } else if (exists) {
-        exists.evidence_count = (exists.evidence_count || 1) + 1;
-        exists.confidence = Math.min(1.0, exists.confidence + 0.1);
-      }
-    });
-  }
-  if (analysis.case_formulation_update && !recentRetry && !isUITrigger) {
-    const cf = state.caseFormulation;
-    const u = analysis.case_formulation_update;
-    if (u.new_problem && !cf.problems.some(p => similarText(p, u.new_problem))) cf.problems.push(u.new_problem);
-    if (u.new_mechanism && !cf.mechanisms.some(m => similarText(m, u.new_mechanism))) cf.mechanisms.push(u.new_mechanism);
-    if (u.new_strength && !cf.strengths.some(s => similarText(s, u.new_strength))) cf.strengths.push(u.new_strength);
-    if (u.new_problem || u.new_mechanism || u.new_strength) {
-      cf.version += 1;
-      cf.lastUpdated = new Date().toISOString();
-    }
-  }
+  // 사용자 요청 2026-04-30: traits/values/patterns/case_formulation_update 처리 → extractChapterCaseAnalysis (endChapter 시점).
+  // 매 메시지 추출 + isUITrigger 가드 + _prevUserIdx 부분 dead code로 제거. insight/proposal/decision_suggested/extracted_tasks 등 메시지 단위는 아래 유지.
   // === [나 탭 자동 정리] 신규 추가 후 완전 일치 strict dedupe 한 번 더 ===
   // similarText fuzzy로 못 잡힌 케이스 (다른 이름인데 description 완전 일치 등) 정리
   dedupeAllModelExactDuplicates();
@@ -16558,7 +17557,8 @@ async function askDeeper(messageIdx) {
   });
   saveState();
   renderChat();
-  await generateAIResponse();
+  // 사용자 요청 2026-04-30: '더 알아보기' 4단 응답 = 깊은 분석 → opus 4.7. 평소 메인 chat은 sonnet 유지.
+  await generateAIResponse('claude-opus-4-7');
 }
 
 function similarText(a, b) {
@@ -16781,10 +17781,6 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 
 \`\`\`json
 {
-  "new_traits": [{"name": "...", "description": "...", "confidence": 0.5}],
-  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy/competence/relatedness", "confidence": 0.5}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.5}],
-  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "..."},
   "insight": "오늘 대화의 핵심 통찰 한 문장",
   "extracted_tasks": ["사용자가 흘린 할 일 (예: '샴푸 사기', '교수님 메일 답하기'). 명확한 행동만. 추측 X."],
   "extracted_schedule": [{"title": "미팅", "start": "14:00", "end": "15:00"}],
@@ -16796,6 +17792,8 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
   }
 }
 \`\`\`
+
+⚠️ 사용자 요청 2026-04-30: 모델 추출 (traits/values/patterns/case_formulation)은 챕터 마무리 시점에 별도 LLM call로 처리. 매 응답에 그것들 박지 마 (응답 토큰 절감).
 
 extracted_tasks: 사용자가 대화에서 "~해야 해", "~하기로 했어", "나중에 ~할게" 같은 명확한 할 일/의도를 표현했을 때만 추출. 추측이나 일반론 X.
 
@@ -16865,6 +17863,60 @@ function buildSystemPromptParts() {
     if (cf.problems.length) stable.push('문제: ' + _cfTrunc(cf.problems));
     if (cf.mechanisms.length) stable.push('메커니즘: ' + _cfTrunc(cf.mechanisms));
     if (cf.strengths.length) stable.push('강점: ' + _cfTrunc(cf.strengths));
+    stable.push('');
+  }
+
+  // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
+  // stable 부분이라 cache_control 90% 할인 적용 — 추가 비용 사실상 무료.
+  const udp = state.userDeepProfile;
+  if (udp && udp.version > 0) {
+    stable.push(`[더 깊은 사용자 모델 v.${udp.version}]`);
+    // 발달 맥락
+    const dev = udp.development || {};
+    const devLines = [];
+    if (dev.childhood) devLines.push('어린 시절: ' + dev.childhood.slice(0, 300));
+    if (dev.schoolYears) devLines.push('학창 시절: ' + dev.schoolYears.slice(0, 300));
+    if (dev.adhdDiscovery) devLines.push('ADHD 발견·이전: ' + dev.adhdDiscovery.slice(0, 300));
+    if (Array.isArray(dev.turningPoints) && dev.turningPoints.length) {
+      const tps = dev.turningPoints.slice(0, 8).map(tp => `${tp.when || '?'}: ${(tp.title || '').slice(0, 40)}${tp.impact ? ' (' + tp.impact.slice(0, 60) + ')' : ''}`).join(' | ');
+      devLines.push('전환점: ' + tps);
+    }
+    if (devLines.length) {
+      stable.push('— 발달·역사 맥락 —');
+      devLines.forEach(l => stable.push(l));
+    }
+    // 관계 맵
+    const rels = Array.isArray(udp.relationships) ? udp.relationships.slice(0, 10) : [];
+    if (rels.length) {
+      stable.push('— 관계 맵 —');
+      rels.forEach(r => {
+        const tone = r.tone ? `[${r.tone}]` : '';
+        const inf = r.influence ? `(${r.influence})` : '';
+        const notes = r.notes ? ' — ' + r.notes.slice(0, 80) : '';
+        stable.push(`- ${r.name || '?'} (${r.relation || '관계'}) ${tone}${inf}${notes}`);
+      });
+    }
+    // 자기서사·핵심 신념
+    const sn = udp.selfNarrative || {};
+    const snLines = [];
+    if (sn.selfStory) snLines.push('자기 이야기: ' + sn.selfStory.slice(0, 400));
+    if (sn.howWantToBeSeen) snLines.push('보이고 싶은 모습: ' + sn.howWantToBeSeen.slice(0, 200));
+    const beliefs = sn.coreBeliefs || {};
+    const _beliefSlice = (arr) => Array.isArray(arr) ? arr.slice(0, 5).map(s => typeof s === 'string' ? s.slice(0, 100) : '').filter(Boolean).join(' / ') : '';
+    const bs = _beliefSlice(beliefs.aboutSelf);
+    const bw = _beliefSlice(beliefs.aboutWorld);
+    const bf = _beliefSlice(beliefs.aboutFuture);
+    if (bs) snLines.push('자신에 대해: ' + bs);
+    if (bw) snLines.push('세상에 대해: ' + bw);
+    if (bf) snLines.push('미래에 대해: ' + bf);
+    if (Array.isArray(sn.identityKeywords) && sn.identityKeywords.length) {
+      snLines.push('정체성: ' + sn.identityKeywords.slice(0, 12).join(', '));
+    }
+    if (snLines.length) {
+      stable.push('— 자기서사·핵심 신념 —');
+      snLines.forEach(l => stable.push(l));
+    }
+    stable.push('  · 위 정보는 사용자가 직접 입력한 깊은 자기 정보. 자연스럽게 짚어 인용 가능 (단정 X, 외재화 톤).');
     stable.push('');
   }
 
@@ -16956,10 +18008,11 @@ function buildSystemPromptParts() {
 
   // 사용자 요청 2026-04-29: 최근 chatArchive (마무리한 대화) summary 주입 — narrative continuity
   // 이전 대화 기억 강화. topicCards보다 풍부 (실제 대화 흐름).
+  // 비용 절감: 5 → 3개 (~3% 절감)
   const recentArchives = (state.chatArchive || [])
     .slice() // copy
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-    .slice(0, 5);  // 최근 5개 챕터
+    .slice(0, 3);  // 최근 3개 챕터
   if (recentArchives.length > 0) {
     volatile.push('[최근 대화 챕터 (참고용 — 사용자가 명시적으로 짚으면 자연스럽게 활용)]');
     recentArchives.forEach(a => {
@@ -17099,7 +18152,7 @@ async function saveMsgAsInsight(idx) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5',
           max_tokens: 180,
           messages: [{ role: 'user', content: `아래 대화에서 사용자가 얻은 "지혜(깨달음)"를 뽑아.
 
@@ -17276,7 +18329,7 @@ async function addMemoArchive() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5',
           max_tokens: 100,
           messages: [{
             role: 'user',
@@ -17351,6 +18404,7 @@ async function saveMsgAsStrategy(idx) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
+          // 사용자 요청 2026-04-30: 사실상 대화 내용 정리 → sonnet 4.6 적합 (opus 과함).
           model: 'claude-sonnet-4-6',
           max_tokens: 500,
           messages: [{ role: 'user', content: `아래 4단 분석/전략 응답에서 "전략 카드"로 저장할 핵심을 뽑아줘.
@@ -17646,7 +18700,7 @@ async function showAttemptResultModal(strategyName) {
 }
 
 // V4-1d-3: 돌연변이 진화 — 임시 채팅 (4 옵션 picker).
-// V4 비전 6.3: 안 통한 가지 → 다른 차원에서 4 옵션 즉석 → 사용자 선택 → 새 generation + 새 미션.
+// V4 비전 6.3: 안 통한 가지 → 다른 가지에서 4 옵션 즉석 → 사용자 선택 → 새 generation + 새 미션.
 // 5.8 톤: "🧬 돌연변이 시점. [전략명] 가지 끝났어 — 발견 [무엇]. 새 가지 어디서? 🌍/👥/🧠/🪞"
 // 메인 흐름 X (anchor 29). non-blocking: completeMission이 await 안 함.
 const _LAYER_EMOJI = { L1: '🧠', L2: '🎯', L3: '🌍', L4: '👥', L5: '🪞' };
@@ -17659,25 +18713,21 @@ let _mutationChatState = null;
 async function openMutationChat(strategyId, missionTitle) {
   const card = getStrategyCard(strategyId);
   if (!card) return;
-
   const prevGen = getCurrentGeneration(card);
-  const prevAction = prevGen?.action || card.actionStrategy || card.summary || '';
   const prevLayer = prevGen?.layer || 'L2';
-
-  // overlay 즉시 열어 사용자에게 즉각 피드백
+  // 사용자 요청 2026-04-29: 자동 생성 X. 사용자가 대화 후 [🌱 가지 만들기] 버튼 누를 때 생성.
   if (!Array.isArray(card.evolutionChats)) card.evolutionChats = [];
   _mutationChatState = {
     strategyId,
     missionTitle,
     prevLayer,
-    options: [],
-    selected: null,
+    selectedRef: null,  // { msgIdx, optIdx } 또는 null
     confirmStep: false,
     messages: [{
       role: 'assistant',
-      content: `🌿 "${card.title}" — 이 전략은 잘 안 맞았군.\n🧬 DNA가 진화할 준비 됐어. ✨\n\n🌱 다른 차원에서 시도해볼래?`
+      content: `🌿 "${card.title}" — 이 전략은 잘 안 맞았군.\n🧬 DNA가 진화할 준비 됐어. ✨\n\n어떤 점이 어려웠는지 같이 풀어보자. 충분히 풀고 [🌱 가지 만들기] 누르면 새 가지 4개 제안할게.`
     }],
-    loading: true,
+    loading: false,
     chatRecord: {
       gen: (card.generations?.length || 0),
       triggerMission: missionTitle,
@@ -17689,20 +18739,46 @@ async function openMutationChat(strategyId, missionTitle) {
     }
   };
   _renderMutationChat();
+}
+
+// 사용자 요청 2026-04-29: 대화 흐름 반영해 가지 생성 — 인라인 메시지로 박힘. 같은 차원 refine OK.
+async function _generateMutationOptions(strategyId, missionTitle, opts) {
+  if (!_mutationChatState) return;
+  const card = getStrategyCard(strategyId);
+  if (!card) return;
+  const allowSameLayer = !!(opts && opts.allowSameLayer);
+  const prevGen = getCurrentGeneration(card);
+  const prevAction = prevGen?.action || card.actionStrategy || card.summary || '';
+  const prevLayer = prevGen?.layer || 'L2';
+
+  // 가지 만드는 중 — 임시 placeholder 메시지
+  _mutationChatState.loading = true;
+  _mutationChatState.messages.push({ role: 'assistant', content: '가지 만들고 있어... ✦', _placeholder: true });
+  _renderMutationChat();
+
+  // 사용자 보고 2026-04-29: 'isRegen' 변수 제거됐는데 reference 남아있던 ReferenceError fix.
+  // 항상 임시 대화 전체를 컨텍스트로 (인사 메시지만 있어도 무해, 대화 풀린 상태면 사용자 컨텍스트 반영).
+  const recentMsgs = _mutationChatState.messages
+    .filter(m => m.role !== 'options' && !m._placeholder)
+    .map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`)
+    .join('\n');
+  const sameLayerNote = allowSameLayer
+    ? `\n[같은 가지 허용] 이전이 ${prevLayer} 여도 OK — 같은 가지에서 refine된 옵션 (이유 분석 + 보완) 도 1-2개 포함 가능. 단 똑같이 X — 대화에서 발견한 이유 반영해서 보완.`
+    : `\n이전이 ${prevLayer} 였으니 그 외 4 가지 각 1개.`;
+  const convoNote = recentMsgs
+    ? `\n\n[지금까지 대화 — 이 사용자 컨텍스트 우선 반영]\n${recentMsgs}\n\n위 대화에서 사용자가 짚은 진짜 어려움을 옵션에 녹여. generic 답 X.`
+    : '';
 
   // AI 호출 (있으면) — fallback 즉시 사용 (UI 멈추지 않게)
   let aiOptions = [];
   if (state.apiKey) {
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({
+      const resp = await callAnthropic({
           model: 'claude-opus-4-7',
           max_tokens: 900,
           messages: [{
             role: 'user',
-            content: `돌연변이 진화 4 옵션 생성 (사용자 요청 2026-04-28: 더 디테일하고 효과적으로).
+            content: `돌연변이 진화 4 옵션 생성 (사용자 요청 2026-04-29: 대화 흐름 반영, 같은 가지 refine도 허용).
 
 [전략 카드] "${card.title}"
 [심리학 개념] ${card.psychConcept || '(없음)'}
@@ -17710,22 +18786,21 @@ async function openMutationChat(strategyId, missionTitle) {
 [이전 가지 ${prevLayer} ${_LAYER_NAME[prevLayer]||''}] "${prevAction}"
 [안 통한 미션] "${missionTitle}"
 
-[5 차원 — 의지 부담 ↓일수록 ADHD 친화]
+[5 가지 — 의지 부담 ↓일수록 ADHD 친화]
 - L1 인지: 생각의 틀 재구조화 (CBT, 인지 재해석) — 의지 100%
 - L2 행동: 알람·체크리스트·시간 박스 — 의지 90%
 - L3 환경: 물리적 환경/도구 자체 변경, 자동 trigger — 의지 30%
 - L4 사회: 친구·책임 파트너·공개 약속 — 의지 20%
 - L5 메타: 가치 재검토, 마법의 소라고동, 큰 그림 보기 — 의지 10%
-
-이전이 ${prevLayer} 였으니 그 외 4 차원 각 1개.
+${sameLayerNote}${convoNote}
 
 [옵션 작성 가이드 — 매우 중요]
 1. 추상 X 구체 ○: "환경 바꿔" X, "오늘 저녁 7시까지 폰을 거실 책상 충전기에 꽂아두기" ○
 2. 첫 행동 명확: 동사로 시작 + 5분 안에 시작 가능
 3. 네 사용자 ${card.title} 패턴에 맞게 — 일반론 X
 4. 왜 효과적인지 1구절 포함 (예: "도파민 trigger 외부화", "결정 부담 ↓")
-5. ADHD 친화: 의지 부담 ↓ 차원 (L3/L4) 우선, L1·L5는 신중하게
-6. 한 줄 70-100자 (이전 50자 → 더 디테일)
+5. ADHD 친화: 의지 부담 ↓ 가지 (L3/L4) 우선, L1·L5는 신중하게
+6. 한 줄 70-100자
 
 [출력 JSON만 — 마크다운 X 따옴표 안 escape]
 { "options": [{"layer":"L3","action":"오늘 저녁 7시까지 폰을 거실 충전기에 꽂아두기 — 손에 안 닿으면 자동 차단 (도파민 trigger 외부화)"},...] }
@@ -17735,7 +18810,6 @@ async function openMutationChat(strategyId, missionTitle) {
 - 추상 다짐 ("열심히", "노력")
 - 마크다운 / 줄바꿈 / 따옴표 escape`
           }]
-        })
       });
       const data = await resp.json();
       let raw = data.content[0].text.trim();
@@ -17744,7 +18818,10 @@ async function openMutationChat(strategyId, missionTitle) {
       if (m) {
         const parsed = JSON.parse(m[0]);
         if (Array.isArray(parsed.options)) {
-          aiOptions = parsed.options.filter(o => o.layer && o.action && o.layer !== prevLayer);
+          // 같은 가지 허용 시 prevLayer filter X
+          aiOptions = parsed.options.filter(o =>
+            o.layer && o.action && (allowSameLayer || o.layer !== prevLayer)
+          );
         }
       }
     } catch (e) { console.warn('mutation AI failed:', e); }
@@ -17757,13 +18834,71 @@ async function openMutationChat(strategyId, missionTitle) {
       { layer: 'L2', action: '알람 1개 (실제 가능한 시간) + 5분만 시작하기 룰 — 5분 후 그만둬도 OK. 진입 마찰 ↓' },
       { layer: 'L1', action: '이 행동이 안 됐을 때 머릿속에 뜨는 생각을 적어보기 ("난 못해" 같은 거) → 다른 해석 시도 ("오늘은 못 했을 뿐, 내일 다시")' },
       { layer: 'L5', action: '마법의 소라고동에 큰 질문 박기: "이 행동이 정말 지금 나에게 필요한가?" 일주일 안고 살아보기 — 가치 재검토' }
-    ].filter(o => o.layer !== prevLayer).slice(0, 4);
+    ].filter(o => allowSameLayer || o.layer !== prevLayer).slice(0, 4);
   }
   if (!_mutationChatState) return;  // 사용자가 그 사이 닫음
-  _mutationChatState.options = aiOptions;
+  // placeholder 메시지 제거
+  _mutationChatState.messages = _mutationChatState.messages.filter(m => !m._placeholder);
+  // 사용자 요청 2026-04-29: 가지를 인라인 메시지로 박음 (대화 흐름에 자연 박힘 — 시간순)
+  _mutationChatState.messages.push({
+    role: 'options',
+    options: aiOptions,
+    generatedAt: new Date().toISOString()
+  });
   _mutationChatState.loading = false;
+  // chatRecord.options = 가장 최근 (선택용)
   _mutationChatState.chatRecord.options = aiOptions.slice();
   _renderMutationChat();
+}
+
+// 사용자 요청 2026-04-29: 돌연변이 임시 대화창의 assistant 메시지를 ✦ 깨달음(scrap)으로 archive에 저장
+async function saveMutationMsgAsInsight(msgIdx) {
+  if (!_mutationChatState) return;
+  const m = _mutationChatState.messages[msgIdx];
+  if (!m || m.role !== 'assistant' || m.savedAsInsight) return;
+  // 직전 user 메시지(질문) 같이 저장
+  let priorUser = null;
+  for (let i = msgIdx - 1; i >= 0; i--) {
+    const p = _mutationChatState.messages[i];
+    if (p && p.role === 'user') { priorUser = p; break; }
+  }
+  const userQuestion = priorUser?.content || '';
+  const card = getStrategyCard(_mutationChatState.strategyId);
+  const _dayKey = todayKey();
+  const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  const headline = (m.content || '').slice(0, 30);
+  const body = (m.content || '').slice(0, 200);
+  state.archive = state.archive || [];
+  state.archive.unshift({
+    type: 'scrap',
+    headline,
+    body,
+    insight: m.content,
+    userMsg: userQuestion,
+    assistantMsg: m.content,
+    date,
+    source: card ? `🧬 돌연변이 (${card.title})` : '🧬 돌연변이',
+    savedAt: new Date().toISOString(),
+    tags: ['돌연변이', '진화']
+  });
+  m.savedAsInsight = true;
+  saveState();
+  if (typeof renderArchive === 'function') renderArchive();
+  showToast('✦ 깨달음에 저장됐어');
+  _renderMutationChat();
+  // 사용자 요청 2026-04-29: 임시 대화 → caseFormulation feed-in (background, fail silent)
+  extractAndApplyInsightToModel(m.content, userQuestion, 'mutation').catch(() => {});
+}
+
+// 사용자가 [🌱 가지 만들기] / [🔄 가지 다시 만들기] 버튼 클릭
+async function triggerGenerateMutationOptions() {
+  if (!_mutationChatState) return;
+  if (_mutationChatState.loading) return;
+  const { strategyId, missionTitle } = _mutationChatState;
+  // 첫 가지: allowSameLayer = false (다른 차원 권유)
+  // 그 이후 (이미 options 메시지 있으면): allowSameLayer = true (같은 차원 refine OK)
+  const hasPrior = _mutationChatState.messages.some(m => m.role === 'options');
+  await _generateMutationOptions(strategyId, missionTitle, { allowSameLayer: hasPrior });
 }
 
 function _renderMutationChat() {
@@ -17797,11 +18932,17 @@ function _renderMutationChat() {
     document.body.appendChild(overlay);
   }
   // V4-fix v2: footer는 매번 재렌더 (confirm bar 분기)
+  // 선택된 가지 — 모든 'options' 메시지 중 selectedRef 위치
+  const sel = _mutationChatState.selectedRef;
+  const selectedOpt = sel
+    ? (_mutationChatState.messages[sel.msgIdx]?.options || [])[sel.optIdx]
+    : null;
+  const hasPriorOptions = _mutationChatState.messages.some(m => m.role === 'options');
+
   const footer = document.getElementById('mutationChatFooter');
   if (footer) {
-    if (_mutationChatState.confirmStep) {
-      const opt = _mutationChatState.options[_mutationChatState.selected];
-      const layerName = _LAYER_NAME[opt.layer] || opt.layer;
+    if (_mutationChatState.confirmStep && selectedOpt) {
+      const layerName = _LAYER_NAME[selectedOpt.layer] || selectedOpt.layer;
       footer.innerHTML = `
         <div class="mutation-confirm-bar">
           <div class="mutation-confirm-text">"${escapeHtml(card.title)}" → ${escapeHtml(layerName)} 차원 새 가닥 등록.<br>
@@ -17813,13 +18954,23 @@ function _renderMutationChat() {
         </div>
       `;
     } else {
+      // 사용자 요청 2026-04-29: [🌱 가지 만들기] / [🔄 가지 다시 만들기] 버튼 — 입력 위 sticky
+      const genBtnLabel = hasPriorOptions ? '🔄 가지 다시 만들기' : '🌱 가지 만들기';
+      const genBtnTitle = hasPriorOptions
+        ? '대화 반영해서 새 가지 4개 — 같은 차원 refine OK'
+        : '대화 좀 풀고 가지 만들거나, 바로 만들어도 OK';
       footer.innerHTML = `
+        <div class="mutation-gen-bar">
+          <button class="mutation-gen-btn" onclick="triggerGenerateMutationOptions()" title="${genBtnTitle}" ${_mutationChatState.loading ? 'disabled' : ''}>
+            ${genBtnLabel}
+          </button>
+        </div>
         <div class="mutation-chat-input-row">
           <textarea class="mutation-chat-input" id="mutationChatInput" placeholder="자유롭게 대화..." rows="1"></textarea>
           <button class="mutation-chat-send" id="mutationChatSendBtn" onclick="sendMutationMessage()">↑</button>
         </div>
         <div class="mutation-chat-actions">
-          <button class="mutation-chat-mission-btn" id="mutationFinishBtn" onclick="finishMutationChat()" ${_mutationChatState.selected == null ? 'disabled' : ''}>✦ 이 차원으로 해볼게</button>
+          <button class="mutation-chat-mission-btn" id="mutationFinishBtn" onclick="finishMutationChat()" ${!selectedOpt ? 'disabled' : ''}>✦ 이 가지로 해볼게</button>
         </div>
       `;
       const ta = document.getElementById('mutationChatInput');
@@ -17834,62 +18985,69 @@ function _renderMutationChat() {
   // subtitle: 가닥 제목
   const subEl = document.getElementById('mutationChatSubtitle');
   if (subEl) subEl.textContent = `"${card.title}"`;
-  // 사용자 요청 2026-04-28: 선택한 차원 chip — 헤더 제목 옆에 표시 (토글 클릭 시 옵션 다시 펼침)
+  // 헤더 chip — 선택된 가지 표시 (선택 시만)
   const chipEl = document.getElementById('mutationChatSelectedChip');
   if (chipEl) {
-    const sel = _mutationChatState.selected;
-    if (sel != null && _mutationChatState.options[sel]) {
-      const opt = _mutationChatState.options[sel];
-      const expanded = _mutationChatState._optionsExpanded;
-      chipEl.innerHTML = `<button class="mutation-selected-chip${expanded ? ' open' : ''}" onclick="_toggleMutationOptions()" title="다른 옵션 보기">${_LAYER_EMOJI[opt.layer] || '✦'} ${_LAYER_NAME[opt.layer] || opt.layer} ${expanded ? '▴' : '▾'}</button>`;
+    if (selectedOpt) {
+      chipEl.innerHTML = `<span class="mutation-selected-chip" title="선택된 가지">${_LAYER_EMOJI[selectedOpt.layer] || '✦'} ${_LAYER_NAME[selectedOpt.layer] || selectedOpt.layer}</span>`;
     } else {
       chipEl.innerHTML = '';
     }
   }
-  // 채팅 영역
+  // 채팅 영역 — 메시지 시간순 (options 메시지 인라인 박힘)
   const area = document.getElementById('mutationChatArea');
   if (area) {
     let html = '';
-    _mutationChatState.messages.forEach(m => {
-      html += `<div class="mutation-msg ${m.role}">${escapeHtml(m.content)}</div>`;
-    });
-    if (_mutationChatState.loading) {
-      html += `<div class="mutation-msg assistant" style="opacity:0.6;">옵션 생성 중...</div>`;
-    } else if (_mutationChatState.options.length) {
-      const sel = _mutationChatState.selected;
-      // 사용자 요청 2026-04-28: 선택 후 옵션 영역 완전 숨김 (헤더 chip만). 토글 시 다시 펼침
-      const showOptionsList = sel == null || _mutationChatState._optionsExpanded;
-      if (showOptionsList) {
+    _mutationChatState.messages.forEach((m, msgIdx) => {
+      if (m.role === 'options') {
+        // 가지 카드 4개 인라인
+        const opts = m.options || [];
         html += `<div class="mutation-msg assistant" style="background:transparent; border:none; padding:0; max-width:100%;">
-          ${sel == null ? '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">하나 골라봐 ↓ (또는 자유롭게 입력)</div>' : ''}
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">🌱 가지 ${opts.length}개</div>
           <div class="mutation-options-stack">
-            ${_mutationChatState.options.map((o, i) => `
-              <button class="mutation-option-card${sel === i ? ' selected' : ''}" onclick="selectMutationOption(${i})">
-                <div class="mutation-option-layer">${_LAYER_EMOJI[o.layer] || '✦'} ${_LAYER_NAME[o.layer] || o.layer}</div>
-                <div class="mutation-option-action">${escapeHtml(o.action)}</div>
-              </button>
-            `).join('')}
+            ${opts.map((o, oi) => {
+              const isSelected = sel && sel.msgIdx === msgIdx && sel.optIdx === oi;
+              const otherSelected = sel && !isSelected;
+              return `
+                <button class="mutation-option-card${isSelected ? ' selected' : ''}${otherSelected ? ' dim' : ''}" onclick="selectMutationOption(${msgIdx}, ${oi})">
+                  <div class="mutation-option-layer">${_LAYER_EMOJI[o.layer] || '✦'} ${_LAYER_NAME[o.layer] || o.layer}</div>
+                  <div class="mutation-option-action">${escapeHtml(o.action)}</div>
+                </button>
+              `;
+            }).join('')}
           </div>
         </div>`;
+      } else if (m.role === 'assistant' && !m._placeholder) {
+        // 사용자 요청 2026-04-29: assistant 메시지에 ✦ 깨달음으로 버튼 (메인 chat과 동일)
+        const saved = !!m.savedAsInsight;
+        html += `<div class="mutation-msg assistant">${escapeHtml(m.content)}
+          <div style="margin-top:8px;">
+            <button class="mutation-insight-btn${saved ? ' saved' : ''}" onclick="saveMutationMsgAsInsight(${msgIdx})">${saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>
+          </div>
+        </div>`;
+      } else {
+        html += `<div class="mutation-msg ${m.role}">${escapeHtml(m.content)}</div>`;
       }
-    }
+    });
     area.innerHTML = html;
     area.scrollTop = area.scrollHeight;
   }
 }
 
-function _toggleMutationOptions() {
+async function selectMutationOption(msgIdx, optIdx) {
   if (!_mutationChatState) return;
-  _mutationChatState._optionsExpanded = !_mutationChatState._optionsExpanded;
-  _renderMutationChat();
-}
-
-async function selectMutationOption(idx) {
-  if (!_mutationChatState) return;
-  const opt = _mutationChatState.options[idx];
+  const optMsg = _mutationChatState.messages[msgIdx];
+  if (!optMsg || optMsg.role !== 'options') return;
+  const opt = (optMsg.options || [])[optIdx];
   if (!opt) return;
-  _mutationChatState.selected = idx;
-  _mutationChatState._optionsExpanded = false;
+  // 같은 가지 다시 클릭 = 선택 해제 (toggle)
+  const cur = _mutationChatState.selectedRef;
+  if (cur && cur.msgIdx === msgIdx && cur.optIdx === optIdx) {
+    _mutationChatState.selectedRef = null;
+    _renderMutationChat();
+    return;
+  }
+  _mutationChatState.selectedRef = { msgIdx, optIdx };
   _mutationChatState.chatRecord.selectedLayer = opt.layer;
   _mutationChatState.chatRecord.selectedAction = opt.action;
   _mutationChatState.messages.push({
@@ -17906,16 +19064,13 @@ async function selectMutationOption(idx) {
 
   if (state.apiKey) {
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({
+      const resp = await callAnthropic({
+          // 사용자 요청 2026-04-30: 고른 후 정리 task → sonnet 4.6 적합.
           model: 'claude-sonnet-4-6', max_tokens: 400,
           messages: [{
             role: 'user',
-            content: `사용자 가닥 "${card?.title || ''}" — 새 시도 차원: ${opt.layer} ${layerName}\n행동: "${opt.action}"\n\n[네 일]\n이 행동을 *오늘부터 바로 할 수 있도록* 구체적 step-by-step 3-5단계.\n각 단계: 짧고 명확하게 (한 줄 max 40자). 의지 부담↓ 환경 셋업 우선.\n\n[톤]\n친구. 외재화. "실패" 단어 X. ADHD 친화 (작은 단위).\n\n[출력 — 다른 거 X, 단계만]\n1. (첫 단계 — 가장 작게)\n2. ...\n3. ...\n\n도입 한 줄 + 단계 + 마무리 한 줄 ("시작 전에 더 얘기 X면 ✦ 해볼게로 등록").`
+            content: `사용자 가닥 "${card?.title || ''}" — 새 시도 차원: ${opt.layer} ${layerName}\n행동: "${opt.action}"\n\n[네 일]\n이 행동을 *오늘부터 바로 할 수 있도록* 구체적 step-by-step 3-5단계.\n각 단계: 짧고 명확하게 (한 줄 max 40자). 의지 부담↓ 환경 셋업 우선.\n\n[톤]\n진지 모드 친구. 외재화. "실패" 단어 X. ADHD 친화 (작은 단위).\n\n[출력 — 다른 거 X, 단계만]\n1. (첫 단계 — 가장 작게)\n2. ...\n3. ...\n\n도입 한 줄 + 단계 + 마무리 한 줄 ("시작 전에 더 얘기 X면 ✦ 해볼게로 등록").`
           }]
-        })
       });
       const data = await resp.json();
       stepText = data.content?.[0]?.text?.trim() || '';
@@ -17962,17 +19117,48 @@ function sendMutationMessage() {
   (async () => {
     try {
       const card = getStrategyCard(_mutationChatState.strategyId);
-      const recentMsgs = _mutationChatState.messages.slice(-8).map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n\n');
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6', max_tokens: 250,
+      // 사용자 요청 2026-04-29: 임시 대화 전체 활용 + 진지 모드 + 사용자 본인 데이터 인용
+      const allMsgs = _mutationChatState.messages
+        .filter(m => m.role !== 'options' && !m._placeholder)
+        .map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n');
+      // 사용자 본인 데이터 인용용
+      const _topByConf = (arr, n) => (arr || []).slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0)).slice(0, n);
+      const traits = _topByConf(state.traits, 5).map(t => `- ${t.name}${t.description ? ': ' + t.description : ''}`).join('\n');
+      const patterns = _topByConf(state.patterns, 5).map(p => `- ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`).join('\n');
+      const values = _topByConf(state.values, 3).map(v => `- ${v.name}`).join('\n');
+      const cf = state.caseFormulation;
+      const cfLine = (cf && cf.version > 0)
+        ? `통합분석 v.${cf.version}: 문제 ${(cf.problems||[]).slice(0,2).map(p => typeof p==='string'?p:p.text||'').join('; ').slice(0,150)}`
+        : '';
+      const activeDiag = (state.diagnoses || []).find(d => d.status === 'active' || d.status === 'shown');
+      const diagLine = activeDiag && _DIAG_LABELS && _DIAG_LABELS[activeDiag.type]
+        ? `진단: ${_DIAG_LABELS[activeDiag.type].name} — ${activeDiag.evidence || ''}`
+        : '';
+
+      const resp = await callAnthropic({
+          model: 'claude-sonnet-4-6', max_tokens: 350,
           messages: [{
             role: 'user',
-            content: `너는 돌연변이 진화 임시 대화창 안 AI. "${card.title}" 가닥의 다음 차원 시도를 사용자가 고민 중. 짧게 (1-3문장), 친구 톤, 외재화, "실패" X. 사용자 페이스 따라가.\n\n[최근 대화]\n${recentMsgs}\n\n[네 응답만, 마크다운 X]`
+            content: `너는 돌연변이 진화 임시 대화창 안 AI. "${card.title}" 가닥의 다음 시도를 사용자가 진지하게 고민 중.
+
+[톤 — 진지 모드 (가벼운 ㅋㅋ / 농담 X)]
+- 1-4문장. 차분한 친구. 외재화 ("X 패턴이 작동" / "이 도구 안 맞을 수도"). "실패" 단어 X.
+- 사용자 페이스 따라가. 추궁성 질문 X.
+- 사용자 메시지 짧아도 진지 톤 유지 (모드 sticky).
+- 분석/제안 강요 X. 사용자가 자기 발견하도록.
+
+[사용자 본인 데이터 — 우선 인용. generic textbook 단독 회피]
+${traits ? '특성:\n' + traits : ''}
+${patterns ? '\n패턴:\n' + patterns : ''}
+${values ? '\n가치:\n' + values : ''}
+${cfLine ? '\n' + cfLine : ''}
+${diagLine ? '\n' + diagLine : ''}
+
+[지금 대화 전체]
+${allMsgs}
+
+[네 응답만, 마크다운 X]`
           }]
-        })
       });
       const data = await resp.json();
       const text = data.content?.[0]?.text?.trim() || '응. 더 얘기해봐.';
@@ -17991,10 +19177,14 @@ function sendMutationMessage() {
 
 // 사용자 요청 2026-04-28: ✦ 클릭 → 임시 대화창 닫고 → openStrategyMissionChat (어떤 상황? → 오늘의 제안 → 부름 등록)
 async function finishMutationChat() {
-  if (!_mutationChatState || _mutationChatState.selected == null) return;
+  if (!_mutationChatState) return;
+  const sel = _mutationChatState.selectedRef;
+  if (!sel) return;
   const card = getStrategyCard(_mutationChatState.strategyId);
   if (!card) { closeMutationChat(false); return; }
-  const opt = _mutationChatState.options[_mutationChatState.selected];
+  const optMsg = _mutationChatState.messages[sel.msgIdx];
+  if (!optMsg || optMsg.role !== 'options') return;
+  const opt = (optMsg.options || [])[sel.optIdx];
   if (!opt) return;
   // chatRecord 자동 보관
   _mutationChatState.chatRecord.messages = _mutationChatState.messages.slice();
@@ -18040,6 +19230,7 @@ async function _completeMutationToMission(strategyId, opt, chatHistory) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
           body: JSON.stringify({
+            // 사용자 요청 2026-04-30: 4 필드 정리 task → sonnet 4.6 적합.
             model: 'claude-sonnet-4-6', max_tokens: 500,
             messages: [{
               role: 'user',
@@ -18085,10 +19276,14 @@ ACTION: <전략적 행동, 50-120자, 구체적 무엇을 어떻게>
 
 // V4-fix v2: 보관 여부 결정 후 실제 미션 생성
 function _completeMutationFinish(keepHistory) {
-  if (!_mutationChatState || _mutationChatState.selected == null) return;
+  if (!_mutationChatState) return;
+  const sel = _mutationChatState.selectedRef;
+  if (!sel) return;
   const card = getStrategyCard(_mutationChatState.strategyId);
   if (!card) { closeMutationChat(false); return; }
-  const opt = _mutationChatState.options[_mutationChatState.selected];
+  const optMsg = _mutationChatState.messages[sel.msgIdx];
+  if (!optMsg || optMsg.role !== 'options') return;
+  const opt = (optMsg.options || [])[sel.optIdx];
   if (!opt) return;
 
   _mutationChatState.chatRecord.messages = keepHistory ? _mutationChatState.messages.slice() : [];
@@ -18117,10 +19312,11 @@ function closeMutationChat(skipSave) {
   if (!skipSave && _mutationChatState) {
     // 저장 X로 닫음 — chatRecord에 messages 비움 (선택 X 케이스)
     const card = getStrategyCard(_mutationChatState.strategyId);
-    if (card && _mutationChatState.chatRecord && _mutationChatState.selected == null) {
-      // 선택 X면 시도 흔적만 보존 (messages 빈 상태)
+    if (card && _mutationChatState.chatRecord && !_mutationChatState.selectedRef) {
+      // 사용자 요청 2026-04-29: 가지 선택 X여도 대화 messages 보존 (깊이 있는 내용 가능). kept=false 마킹만.
       _mutationChatState.chatRecord.kept = false;
-      _mutationChatState.chatRecord.messages = [];
+      _mutationChatState.chatRecord.messages = (_mutationChatState.messages || [])
+        .map(m => ({ role: m.role, content: m.content }));
       card.evolutionChats.push(_mutationChatState.chatRecord);
       saveState();
     }
@@ -18708,68 +19904,7 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
 // PROPOSAL HANDLING (Phase 2 upgrade)
 // ═══════════════════════════════════════════════════════════════
 // 사용자 요청 2026-04-28: 전략 제안 별로면 AI에게 다른 각도의 제안 요청
-async function regenerateProposal(idx) {
-  const msg = state.chatMessages[idx];
-  if (!msg || !msg.proposal) return;
-  if (!state.apiKey) { showToast('AI 키가 필요해'); return; }
-  msg._regenLoading = true;
-  renderChat();
-  try {
-    const oldTitle = msg.proposalData?.title || '';
-    // 직전 user 메시지 (맥락) 찾기
-    let userContext = '';
-    for (let j = idx - 1; j >= 0; j--) {
-      if (state.chatMessages[j].role === 'user') {
-        userContext = state.chatMessages[j].content || '';
-        break;
-      }
-    }
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 250,
-        messages: [{
-          role: 'user',
-          content: `사용자가 직전 제안 "${oldTitle}"이 별로래. 같은 맥락에서 다른 각도의 '오늘의 제안' 1개 만들어줘.
-
-[사용자 메시지]
-${userContext}
-
-[직전 네 응답]
-${msg.content}
-
-[네 일]
-방금 제안 "${oldTitle}"과 다른 차원/접근으로 — 환경 / 시간 / 사회 / 인지 / 메타 중 다른 거.
-오늘 바로 할 수 있는 구체 행동 1개. 동사로 시작. 한 줄 (max 40자).
-
-[출력 JSON만]
-{"title": "...", "description": "..."}
-
-[금지] 마크다운, 추상 다짐, 직전 제안 반복.`
-        }]
-      })
-    });
-    const data = await resp.json();
-    let raw = (data.content?.[0]?.text || '').trim();
-    raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (m) {
-      const parsed = JSON.parse(m[0]);
-      if (parsed.title) {
-        msg.proposalData = { title: parsed.title, description: parsed.description || '' };
-        showToast('🔄 새 제안 생성됨');
-      }
-    }
-  } catch (e) {
-    console.warn('regenerate proposal:', e);
-    showToast('재생성 실패: ' + (e.message || e));
-  }
-  msg._regenLoading = false;
-  saveState();
-  renderChat();
-}
+// 사용자 요청 2026-04-30: regenerateProposal 함수 제거 — UI 버튼 + 호출처 X. dead code 정리.
 
 async function acceptProposal(idx) {
   const msg = state.chatMessages[idx];
@@ -19995,9 +21130,13 @@ function _renderStrategyCardHtml(s) {
       const isMutated = g.status === 'mutated';
       const dots = (g.attempts || []).map(a => {
         // shellId / missionId 로 shell 찾기
+        // 사용자 보고 2026-04-29: 'didnt' attempt도 missionId fallback으로 shell 끌어와 DNA 트리에 박히던 버그.
+        // worked/meh 만 shell 매핑. didnt는 missionId 있어도 shell X.
         let shell = null;
         if (a.shellId) shell = (state.shellCollection || []).find(sc => sc._id === a.shellId);
-        if (!shell && a.missionId) shell = (state.shellCollection || []).find(sc => sc.missionId === a.missionId);
+        if (!shell && a.missionId && (a.status === 'worked' || a.status === 'meh')) {
+          shell = (state.shellCollection || []).find(sc => sc.missionId === a.missionId);
+        }
         let bgColor;
         let extraStyle = '';
         let titleStr = a.status;
@@ -20835,11 +21974,9 @@ function renderLensInsights() {
     return;
   }
   
-  let html = `
-    <div style="margin-bottom:14px;">
-      <button class="quick-btn" onclick="discoverInsights()" style="font-size:11px; padding:8px 14px;">🔮 새 인사이트 찾기</button>
-    </div>
-  `;
+  // 사용자 요청 2026-04-30: '🔮 새 인사이트 찾기' 버튼 제거 — 일주일 자동 forceAnalyze에 통합.
+  // discoverInsights 함수 자체는 dead code로 남김 (개발자 도구 등에서 수동 호출 가능).
+  let html = '';
   
   if (insights.length === 0) {
     html += `<div class="insights-empty">
@@ -20882,97 +22019,7 @@ function renderLensInsights() {
   container.innerHTML = html;
 }
 
-async function discoverInsights() {
-  if (!state.apiKey) { alert('API 키 먼저 설정!'); return; }
-  if ((state.entries || []).length < 5) {
-    alert('체크인이 최소 5번 이상 쌓여야 인사이트를 찾을 수 있어.');
-    return;
-  }
-  
-  showToast('패턴 분석 중... 1분 정도 걸려');
-  
-  try {
-    const recentEntries = state.entries.slice(-30); // last 30 days
-    const recentChats = state.chatMessages.filter(m => !m.typing && !m.error && m.role === 'user').slice(-30);
-    
-    const prompt = `너는 행동 데이터에서 인과관계와 반복 패턴을 발견하는 분석가다.
-
-[최근 체크인 데이터]
-${JSON.stringify(recentEntries.map(e => ({
-  date: e.date,
-  vitality: e.vitality,
-  mood: e.mood,
-  sleep: e.sleepStart && e.sleepEnd ? computeSleepDuration(e.sleepStart, e.sleepEnd) : null,
-  modes: Object.keys(e.modes || {}).filter(k => e.modes[k]),
-  meals: e.meals, movement: e.movement, focus: e.focus, social: e.social, overwhelm: e.overwhelm,
-  note: e.note?.slice(0, 100)
-})), null, 2).slice(0, 6000)}
-
-[최근 사용자 메시지]
-${recentChats.map(m => m.content?.slice(0, 100)).filter(Boolean).join('\n').slice(0, 2000)}
-
-기존 인사이트 (중복 X):
-${(state.insights || []).filter(i => !i.dismissed).map(i => `- ${i.content}`).join('\n')}
-
-이 데이터에서 흥미롭고 행동에 도움되는 인과관계 또는 반복 패턴 1-3개를 발견해.
-
-좋은 인사이트 예:
-- "밥 충분히 먹은 날(meals=규칙적) 집중력이 평균 1.2점 높음 (12회 중 9회)"
-- "수면 6시간 미만 다음날 압도감 50% 증가"
-- "카페 작업한 날 vs 집 작업한 날 — 카페에서 집중 30% 더 높음"
-- "월경 시작 3일 전후 자기 비판 표현 빈도 증가"
-
-JSON 출력:
-{
-  "insights": [
-    {
-      "type": "causal" | "pattern",
-      "content": "인사이트 한 문장 (담백, 구체적, 숫자 포함 가능)",
-      "evidence": "어떤 데이터에서 발견됐는지",
-      "confidence": 0.0-1.0
-    }
-  ]
-}
-
-인사이트가 없으면 빈 배열 반환. JSON만 출력. 다른 설명 X.`;
-
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
-    });
-    if (!resp.ok) throw new Error('API ' + resp.status);
-    const data = await resp.json();
-    const text = data.content[0].text;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('JSON 파싱 실패');
-    const result = JSON.parse(jsonMatch[0]);
-    
-    if (!result.insights || result.insights.length === 0) {
-      showToast('이번엔 새 패턴 못 찾았어');
-      return;
-    }
-    
-    result.insights.forEach(ins => {
-      state.insights.push({
-        id: 'ins_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        type: ins.type || 'pattern',
-        content: ins.content,
-        evidence: ins.evidence || '',
-        confidence: ins.confidence || 0.5,
-        discoveredAt: new Date().toISOString(),
-        dismissed: false,
-        confirmed: false
-      });
-    });
-    saveState();
-    renderLensInsights();
-    showToast(`${result.insights.length}개 새 인사이트 발견 ✦`);
-  } catch (err) {
-    console.error(err);
-    showToast('분석 중 오류: ' + err.message);
-  }
-}
+// 사용자 요청 2026-04-30: discoverInsights 함수 제거 — 일주일 자동 forceAnalyze에 통합. dead code 정리.
 
 function confirmInsight(id) {
   const ins = state.insights.find(i => i.id === id);
@@ -21025,7 +22072,7 @@ function renderExecute() {
     <div class="screen-sub">머릿속 짐 → 오늘의 카드 → 차근히.</div>
     
     <button class="exec-immerse-btn" onclick="openImmerseStart()">
-      🌧 몰입 시작
+      🌧 시작
       <div class="sub">빗소리·방해금지·집중 모드 ON</div>
     </button>
   `;
@@ -21372,6 +22419,7 @@ JSON 출력:
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      // 사용자 요청 2026-04-30: 뇌 풀기 = 분류·정리 task → sonnet 4.6.
       body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) throw new Error('API ' + resp.status);
@@ -21830,50 +22878,7 @@ async function summarizeChatDay(date, messages) {
   const seqNum = (state.chatArchive || []).length + 1;
   return `대화 #${seqNum}`;
 }
-async function _summarizeChatDay_legacy_unused(date, messages) {
-  if (!state.apiKey) {
-    return `${messages.length}개의 대화 (${messages[0]?.content?.slice(0, 40) || ''}...)`;
-  }
-  // Build chat log
-  const chatLog = messages.map(m => {
-    const role = m.role === 'user' ? '나' : '소라';
-    let content = m.content || '';
-    content = content.replace(/```json[\s\S]*?```/g, '').trim();
-    content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
-    return `${role}: ${content}`;
-  }).join('\n\n');
-  
-  const dateLabel = new Date(date).toLocaleDateString('ko-KR', { 
-    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' 
-  });
-  
-  const prompt = `다음은 사용자가 ${dateLabel}에 AI 친구 "소라고동"과 나눈 대화야. 이걸 짧은 일기처럼 요약해.
-
-[대화 원문]
-${chatLog.slice(0, 8000)}
-
-[요약 규칙]
-- 1단락, 3-6문장 (200자 이내)
-- 사용자 시점 ("나는 ~했다") 또는 객관적 둘 다 OK — 자연스럽게
-- 그날의 감정·상황·결정·중요한 인사이트만
-- 잡담은 짧게 압축
-- 친근한 톤, 반말 OK
-- 형식: 그냥 한 단락. 제목 X, 불릿 X
-
-[좋은 예시]
-"논문 1장 마감 직전이라 압박받는 상태. 새벽까지 작업하다가 새벽 3시 한계. 소라랑 얘기하면서 한 단락만 끝내자고 정함. 끝내고 잠. 마감 직전 폭발력 또 발동."
-
-요약만 출력. 다른 설명 X.`;
-
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
-  });
-  if (!resp.ok) throw new Error('API ' + resp.status);
-  const data = await resp.json();
-  return data.content[0].text.trim();
-}
+// 사용자 요청 2026-04-30: _summarizeChatDay_legacy_unused 함수 제거 — 사용 X. dead code 정리.
 
 // V3.8: 챕터 토픽 추출 — 4시간 비활성 후 새 챕터 시작 시 직전 챕터 분석
 // 결과: state.topicCards에 1-3개 토픽 카드 저장
@@ -21955,7 +22960,7 @@ JSON만 출력. 마크다운 X. 다른 설명 X.`;
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -22067,7 +23072,7 @@ ${task.description ? `설명: ${task.description}` : ''}
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 80, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 80, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -22820,7 +23825,7 @@ async function openImmerseStart() {
   const isTutorial = !!window._onbTutorialMode;
   const isTester = !!(state.preferences && state.preferences.testerMode);
   const title = await showInputModal({
-    title: '🌧 몰입 시작',
+    title: '🌧 시작',
     message: '뭐에 몰입할 거야?',
     placeholder: '예: 논문 쓰기, 코드 짜기, 청소',
     maxLength: 50,
@@ -24820,7 +25825,8 @@ JSON만 출력.`;
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
     body: JSON.stringify({
-      model: 'claude-opus-4-7',
+      // 사용자 요청 2026-04-30: 분기 리뷰 = 데이터 요약 task → sonnet 4.6 적합.
+      model: 'claude-sonnet-4-6',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     })
@@ -25675,7 +26681,7 @@ function renderRitualStep() {
       ` : ''}
       <div class="ritual-sub">갔다 와. 돌아오면 위에 작은 알림이 떠.<br>아무 때나 탭하면 돼.</div>
       <div class="ritual-actions">
-        <button class="ritual-btn primary" onclick="ritualLaunch()">🌧 몰입 시작</button>
+        <button class="ritual-btn primary" onclick="ritualLaunch()">🌧 시작</button>
         <button class="ritual-btn skip" onclick="ritualBackStep()">← 이전</button>
       </div>
     `;
@@ -25800,7 +26806,7 @@ function ritualLaunch() {
   // Show floating "in progress" bar
   showRitualActiveBar();
   
-  showToast('🌧 몰입 시작! 갔다 와');
+  showToast('🌧 시작! 갔다 와');
 }
 
 function closeRitual() {
@@ -28766,7 +29772,7 @@ async function generateReviewArchiveMetaSummary(reviewId) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6', max_tokens: 250,
+        model: 'claude-haiku-4-5', max_tokens: 250,
         messages: [{ role: 'user', content: `이 기간 사용자 깨달음 ${arrs.length}개. 핵심 통찰 한 단락 (3-4문장)으로 요약. 친구 톤, 외재화 ("X 패턴이 작동" / "너 X적이야" X), 따뜻하게.\n\n${archiveText.slice(0, 3500)}\n\n[출력 — 한 단락만, 마크다운/인용부호 X]` }]
       })
     });
@@ -28880,8 +29886,10 @@ function renderLensPearls() {
         ? new Date(p.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
         : '';
       if (p.category === '음악' && p.track) {
+        // 사용자 보고 2026-04-29: artwork onerror replaceWith가 DOM 변경 → masonry layout 재계산 → 첫 카드 깜빡임.
+        // onerror=null로 무한 retry 차단 + decoding/loading 힌트로 안정적 로드.
         const artHtml = p.track.artworkUrl
-          ? `<img src="${escapeHtml(p.track.artworkUrl)}" alt="${escapeHtml(p.track.title || '')}" class="tile-music-art" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'tile-music-art music-card-art-placeholder',textContent:'🎵'}))">`
+          ? `<img src="${escapeHtml(p.track.artworkUrl)}" alt="${escapeHtml(p.track.title || '')}" class="tile-music-art" loading="lazy" decoding="async" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('art-failed');">`
           : `<div class="tile-music-art music-card-art-placeholder">🎵</div>`;
         // 사용자 요청 2026-04-29: 진주에서 ▶ 미리듣기 + 🍎 Apple Music 열기
         const playBtnHtml = p.track.previewUrl
@@ -29283,10 +30291,19 @@ async function addPearl() {
     return;
   }
 
+  // 사용자 요청 2026-04-29: 카테고리별 자연스러운 placeholder
+  const placeholderMap = {
+    음식: { title: '예: 라멘',                memo: '예: 신촌 그 집, 짠한 국물' },
+    장소: { title: '예: 한강 산책',           memo: '예: 노을 진 시각, 바람' },
+    순간: { title: '예: 첫 단락 끝낸 새벽',   memo: '예: "됐다" 한 순간' },
+    사람: { title: '예: 친구 ㅇㅇ',          memo: '예: 오랜만에 풀린 마음' }
+  };
+  const ph = placeholderMap[category] || { title: '한 줄로', memo: '구체적으로 한 줄' };
+
   const content = await showInputModal({
     title: `💎 ${category}`,
     message: '뭐가 좋았어? 한 줄로.',
-    placeholder: '예: 그날 카페 음악',
+    placeholder: ph.title,
     okLabel: '다음 →'
   });
   if (!content || !content.trim()) return;
@@ -29294,8 +30311,8 @@ async function addPearl() {
   // 사용자 요청 2026-04-29: 모든 카테고리에 작은 메모 한 줄 입력 옵션 (음악처럼)
   const note = await showInputModal({
     title: `💎 ${category} — ${content.trim()}`,
-    message: '메모 한 줄 (선택). 비우고 OK 가능.',
-    placeholder: '예: 그날 카페 새벽 4시',
+    message: '구체적으로 한 줄 (선택). 비우고 OK 가능.',
+    placeholder: ph.memo,
     okLabel: ['음식', '장소', '순간'].includes(category) ? '다음 →' : '보관'
   });
   if (note === null) return;
@@ -29341,28 +30358,120 @@ async function addPearl() {
   showToast('진주 추가됨 💎');
 }
 
+// 사용자 요청 2026-04-29: 진주 클릭 = 큰 보기 모달. 수정/삭제 등은 더보기 ⋮ 메뉴.
 async function openPearl(id) {
   const pearl = state.pearls.find(p => p.id === id);
   if (!pearl) return;
+  showPearlViewModal(pearl);
+}
 
-  // 사용자 요청 2026-04-29: 음악 진주는 iTunes 검색으로 음악 변경 + Apple Music 열기 옵션
+function showPearlViewModal(pearl) {
+  // 기존 모달 제거
+  document.querySelectorAll('.pearl-view-overlay').forEach(o => o.remove());
+  const isMusic = pearl.category === '음악' && pearl.track;
+  const isPhoto = !!pearl.photo;
+  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
+  const icon = iconMap[pearl.category] || '💎';
+  const dateStr = pearl.createdAt
+    ? new Date(pearl.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
+
+  let mediaHtml = '';
+  if (isMusic) {
+    const artUrl = pearl.track.artworkUrl || '';
+    const playBtn = pearl.track.previewUrl
+      ? `<button class="pearl-view-play" onclick="_pearlViewPlayPreview('${escapeHtml(pearl.track.previewUrl)}', this)" aria-label="미리듣기">▶</button>`
+      : '';
+    const appleBtn = pearl.track.trackUrl
+      ? `<a class="pearl-view-apple" href="${escapeHtml(pearl.track.trackUrl)}" target="_blank" rel="noopener" aria-label="Apple Music">🍎 Apple Music</a>`
+      : '';
+    mediaHtml = `
+      <div class="pearl-view-media${artUrl ? '' : ' no-art'}">
+        ${artUrl ? `<img src="${escapeHtml(artUrl)}" alt="" class="pearl-view-art" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('art-failed');">` : '<div class="pearl-view-art-placeholder">🎵</div>'}
+        ${playBtn}
+      </div>
+      <div class="pearl-view-music-meta">
+        <div class="pearl-view-title">${escapeHtml(pearl.track.title || pearl.content || '')}</div>
+        <div class="pearl-view-sub">${escapeHtml(pearl.track.artist || '')}</div>
+        ${appleBtn ? `<div style="margin-top:10px;">${appleBtn}</div>` : ''}
+      </div>
+    `;
+  } else if (isPhoto) {
+    mediaHtml = `
+      <div class="pearl-view-media">
+        <img src="${pearl.photo}" alt="" class="pearl-view-photo">
+      </div>
+      <div class="pearl-view-text-meta">
+        <div class="pearl-view-title">${icon} ${escapeHtml(pearl.content || '')}</div>
+      </div>
+    `;
+  } else {
+    mediaHtml = `
+      <div class="pearl-view-text-only">
+        <div class="pearl-view-icon">${icon}</div>
+        <div class="pearl-view-title">${escapeHtml(pearl.content || '')}</div>
+      </div>
+    `;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'pearl-view-overlay';
+  overlay.innerHTML = `
+    <div class="pearl-view-modal" onclick="event.stopPropagation()">
+      <div class="pearl-view-header">
+        <span class="pearl-view-cat">${icon} ${escapeHtml(pearl.category)}</span>
+        <div style="display:flex; gap:6px;">
+          <button class="pearl-view-more" onclick="_pearlViewMore('${pearl.id}')" aria-label="더보기">⋮</button>
+          <button class="pearl-view-close" onclick="_closePearlView()" aria-label="닫기">✕</button>
+        </div>
+      </div>
+      <div class="pearl-view-body">
+        ${mediaHtml}
+        ${pearl.note ? `<div class="pearl-view-note">${escapeHtml(pearl.note)}</div>` : ''}
+        ${dateStr ? `<div class="pearl-view-date">${dateStr}</div>` : ''}
+      </div>
+    </div>
+  `;
+  overlay.onclick = (e) => { if (e.target === overlay) _closePearlView(); };
+  document.body.appendChild(overlay);
+}
+
+function _closePearlView() {
+  document.querySelectorAll('.pearl-view-overlay').forEach(o => o.remove());
+  // 미리듣기 정지
+  if (window._pearlAudio && !window._pearlAudio.paused) {
+    try { window._pearlAudio.pause(); } catch (e) {}
+  }
+}
+
+function _pearlViewPlayPreview(url, btn) {
+  if (!window._pearlAudio) window._pearlAudio = new Audio();
+  const audio = window._pearlAudio;
+  if (audio.src === url && !audio.paused) {
+    audio.pause();
+    if (btn) btn.textContent = '▶';
+    return;
+  }
+  audio.src = url;
+  audio.volume = 0.5;
+  audio.play().then(() => {
+    if (btn) btn.textContent = '⏸';
+    audio.onended = () => { if (btn) btn.textContent = '▶'; };
+  }).catch(e => showToast('재생 실패'));
+}
+
+async function _pearlViewMore(id) {
+  const pearl = state.pearls.find(p => p.id === id);
+  if (!pearl) return;
   const isMusic = pearl.category === '음악' && pearl.track;
   const opts = [];
-  if (isMusic && pearl.track.previewUrl) {
-    opts.push({ label: '▶ 미리듣기', value: 'play' });
-  }
-  if (isMusic && pearl.track.trackUrl) {
-    opts.push({ label: '🍎 Apple Music에서 열기', value: 'apple' });
-  }
-  if (isMusic) {
-    opts.push({ label: '🎵 곡 바꾸기', value: 'change_music' });
-  }
-  opts.push({ label: '✏️ 수정', value: 'edit' });
+  if (isMusic) opts.push({ label: '🎵 곡 바꾸기', value: 'change_music' });
+  opts.push({ label: '✏️ 제목 / 메모 수정', value: 'edit' });
   opts.push({ label: '🗑 삭제', value: 'delete' });
 
   const action = await showOptionsModal({
     title: `💎 ${pearl.category}`,
-    message: `"${pearl.content}"`,
+    message: pearl.content || '',
     options: opts
   });
   if (!action) return;
@@ -29379,46 +30488,46 @@ async function openPearl(id) {
       saveState();
       renderLensPearls();
       showToast('삭제됨');
+      _closePearlView();
     }
   } else if (action === 'edit') {
-    const updated = await showInputModal({
-      title: `💎 ${pearl.category} 수정`,
-      defaultValue: pearl.content,
-      multiline: true,
+    // 제목 + 메모 두 단계 (음악은 제목 = track 자동, 메모만)
+    if (!isMusic) {
+      const updated = await showInputModal({
+        title: `💎 ${pearl.category} — 제목 수정`,
+        defaultValue: pearl.content,
+        multiline: true,
+        okLabel: '다음 →'
+      });
+      if (updated === null) return;
+      if (updated.trim()) pearl.content = updated.trim();
+    }
+    const updatedNote = await showInputModal({
+      title: `💎 ${pearl.category} — 메모 수정`,
+      defaultValue: pearl.note || '',
+      placeholder: '비우면 메모 X',
       okLabel: '저장'
     });
-    if (updated && updated.trim()) {
-      pearl.content = updated.trim();
-      saveState();
-      renderLensPearls();
-      showToast('수정됨');
-    }
-  } else if (action === 'play' && isMusic) {
-    // 미리듣기 — 임시 audio
-    if (!window._pearlAudio) window._pearlAudio = new Audio();
-    const audio = window._pearlAudio;
-    if (audio.src === pearl.track.previewUrl && !audio.paused) {
-      audio.pause();
-      showToast('⏸ 정지');
-    } else {
-      audio.src = pearl.track.previewUrl;
-      audio.volume = 0.5;
-      audio.play().then(() => showToast('▶ 재생 중')).catch(e => showToast('재생 실패: ' + (e.message || '')));
-    }
-  } else if (action === 'apple' && isMusic) {
-    window.open(pearl.track.trackUrl, '_blank', 'noopener');
+    if (updatedNote === null) return;
+    pearl.note = updatedNote.trim() || null;
+    saveState();
+    renderLensPearls();
+    showToast('수정됨 ✦');
+    // 모달 다시 열어서 변경 반영
+    showPearlViewModal(pearl);
   } else if (action === 'change_music' && isMusic) {
     if (typeof showMusicSearchModal === 'function') {
       showMusicSearchModal((track) => {
         if (!track) return;
         pearl.track = track;
-        // content 동기화 — 새 곡명-아티스트로
         if (track.title && track.artist) {
           pearl.content = `${track.artist} - ${track.title}`;
         }
         saveState();
         renderLensPearls();
         showToast('🎵 곡 변경됨');
+        // 모달 다시 열어서 변경 반영
+        showPearlViewModal(pearl);
       });
     } else {
       showToast('음악 검색 기능 X');
@@ -29429,19 +30538,27 @@ async function openPearl(id) {
 // ═══════════════════════════════════════════════════════════════
 // FORCE ANALYZE
 // ═══════════════════════════════════════════════════════════════
-async function forceAnalyze() {
-  if (!state.apiKey) { alert('API 키 먼저 설정!'); return; }
-  if (state.entries.length < 3 && state.chatMessages.length < 3) {
-    alert('분석하려면 체크인이나 대화가 최소 3개 이상 쌓여야 해.');
+// 사용자 요청 2026-04-30: 일주일마다 자동 실행. 수동 호출 (개발자 도구 버튼)도 같은 함수.
+// opts.auto = true 시 confirm modal X, 토스트 silent ("일주일 분석 자동 실행됨").
+async function forceAnalyze(opts) {
+  const isAuto = !!(opts && opts.auto);
+  if (!state.apiKey) {
+    if (!isAuto) alert('API 키 먼저 설정!');
     return;
   }
-  const yes = await showConfirmModal({
-    title: '나에 대한 모델 업데이트',
-    message: '지금까지의 데이터를 분석해서\n특성·가치·패턴을 새로 정리할게.\n1-2분 걸려.',
-    okLabel: '분석 시작',
-    cancelLabel: '나중에'
-  });
-  if (!yes) return;
+  if (state.entries.length < 3 && state.chatMessages.length < 3) {
+    if (!isAuto) alert('분석하려면 체크인이나 대화가 최소 3개 이상 쌓여야 해.');
+    return;
+  }
+  if (!isAuto) {
+    const yes = await showConfirmModal({
+      title: '나에 대한 모델 업데이트',
+      message: '지금까지의 데이터를 분석해서\n특성·가치·패턴을 새로 정리할게.\n1-2분 걸려.',
+      okLabel: '분석 시작',
+      cancelLabel: '나중에'
+    });
+    if (!yes) return;
+  }
 
   setSyncStatus('syncing');
   try {
@@ -29622,14 +30739,37 @@ JSON으로 출력:
       cf.mechanisms = mergeStrings(cf.mechanisms, analysis.case_formulation.mechanisms);
       cf.strengths = mergeStrings(cf.strengths, analysis.case_formulation.strengths);
     }
+    state.lastForceAnalyzeAt = new Date().toISOString();
     saveState();
     renderModel(); renderModelPreview();
     setSyncStatus('online');
-    showToast('분석 완료 ✦');
+    showToast(isAuto ? '🔍 일주일 모델 분석 자동 완료 ✦' : '분석 완료 ✦');
   } catch (err) {
     console.error(err);
-    alert('분석 실패: ' + err.message);
+    if (!isAuto) alert('분석 실패: ' + err.message);
+    else console.warn('[force analyze auto] 실패:', err);
     setSyncStatus('error');
+  }
+}
+
+// 사용자 요청 2026-04-30: 일주일 자동 forceAnalyze. 마지막 실행 7일 경과 + 데이터 충분 시 background 실행.
+async function maybeRunWeeklyForceAnalyze() {
+  if (!authUserId) return;
+  if (!state.apiKey) return;
+  if (window._onbTutorialMode) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  const last = state.lastForceAnalyzeAt;
+  if (last) {
+    const ageMs = Date.now() - new Date(last).getTime();
+    if (ageMs < 7 * 86400000) return;  // 7일 미만이면 skip
+  }
+  // 데이터 충분 가드 (forceAnalyze 자체와 동일)
+  if ((state.entries || []).length < 3 && (state.chatMessages || []).length < 3) return;
+  console.log('[force analyze] 일주일 경과 — background 자동 실행');
+  try {
+    await forceAnalyze({ auto: true });
+  } catch (e) {
+    console.warn('[force analyze auto] 외부 실패:', e);
   }
 }
 
@@ -29639,6 +30779,23 @@ JSON으로 출력:
 function loadSettings() {
   document.getElementById('apiKeyInput').value = state.apiKey || '';
   document.getElementById('profileInput').value = state.profile || '';
+  // 사용자 요청 2026-04-30: 일일 cap input + 현재 사용량 표시
+  const capInput = document.getElementById('dailyChatCapInput');
+  if (capInput) {
+    const cap = (state.preferences && state.preferences.dailyChatCap != null) ? state.preferences.dailyChatCap : 100;
+    capInput.value = cap;
+  }
+  const status = document.getElementById('dailyChatCountStatus');
+  if (status) {
+    const todayK = todayKey();
+    const cur = (state.dailyChatCount && state.dailyChatCount.date === todayK) ? state.dailyChatCount.count : 0;
+    const cap = (state.preferences && state.preferences.dailyChatCap) || 100;
+    if (cap === 0) {
+      status.textContent = `오늘 ${cur}회 사용 (무제한)`;
+    } else {
+      status.textContent = `오늘 ${cur}/${cap}회 사용`;
+    }
+  }
   const accountInfo = document.getElementById('accountInfo');
   if (accountInfo && session?.user) {
     accountInfo.innerHTML = `로그인된 계정: <strong style="color:var(--text)">${escapeHtml(session.user.email || '')}</strong>`;
@@ -29648,6 +30805,15 @@ function loadSettings() {
 function saveSettings() {
   state.apiKey = document.getElementById('apiKeyInput').value.trim();
   state.profile = document.getElementById('profileInput').value.trim();
+  // 사용자 요청 2026-04-30: 일일 cap 저장
+  const capInput = document.getElementById('dailyChatCapInput');
+  if (capInput) {
+    const v = parseInt(capInput.value, 10);
+    if (!isNaN(v) && v >= 0 && v <= 9999) {
+      if (!state.preferences) state.preferences = {};
+      state.preferences.dailyChatCap = v;
+    }
+  }
   saveState();
   showToast('저장됐어 ✦');
 }
@@ -30371,105 +31537,9 @@ async function _deleteTesterBackupFromCloud() {
     );
   } catch (e) { console.warn('delete tester backup:', e); }
 }
-// 사용자 요청 2026-04-29: 매일 체크인 알림 — Notification API 기반 (탭 열린 / PWA 설치 시 작동)
-let _dailyNotifTimer = null;
-function scheduleDailyNotification() {
-  if (_dailyNotifTimer) { clearTimeout(_dailyNotifTimer); _dailyNotifTimer = null; }
-  if (typeof Notification === 'undefined') return;
-  if (Notification.permission !== 'granted') return;
-  const pref = state.preferences && state.preferences.dailyNotification;
-  if (!pref || !pref.enabled || !pref.time) return;
-  const [h, m] = pref.time.split(':').map(Number);
-  if (isNaN(h) || isNaN(m)) return;
-  const now = new Date();
-  const next = new Date(now);
-  next.setHours(h, m, 0, 0);
-  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
-  const delay = Math.max(1000, next.getTime() - now.getTime());
-  // setTimeout 최대 ~24.8일 — daily 안전
-  _dailyNotifTimer = setTimeout(() => {
-    try {
-      const todayK = (typeof todayKey === 'function') ? todayKey() : null;
-      const hasCheckinToday = todayK && (state.entries || []).some(e => e.date === todayK && (e.mood != null || e.vitality != null));
-      if (!hasCheckinToday) {
-        new Notification('🐚 소라고동', {
-          body: '오늘 체크인 했어? 30초면 돼.',
-          icon: '/icon-192.png',
-          tag: 'daily-checkin',
-          renotify: true
-        });
-      }
-    } catch (e) { console.warn('notification fire:', e); }
-    scheduleDailyNotification();  // 다음 날 다시 스케줄
-  }, delay);
-}
-async function requestNotificationPermission() {
-  if (typeof Notification === 'undefined') {
-    if (typeof showToast === 'function') showToast('이 브라우저는 알림 미지원');
-    return false;
-  }
-  if (Notification.permission === 'granted') return true;
-  if (Notification.permission === 'denied') {
-    if (typeof showToast === 'function') showToast('알림 차단됨. 브라우저 설정에서 허용해줘');
-    return false;
-  }
-  try {
-    const result = await Notification.requestPermission();
-    return result === 'granted';
-  } catch (e) {
-    console.warn('notif permission:', e);
-    return false;
-  }
-}
-async function toggleDailyNotification() {
-  state.preferences = state.preferences || {};
-  if (!state.preferences.dailyNotification) {
-    state.preferences.dailyNotification = { enabled: false, time: '21:00' };
-  }
-  if (!state.preferences.dailyNotification.enabled) {
-    const granted = await requestNotificationPermission();
-    if (!granted) return;
-    state.preferences.dailyNotification.enabled = true;
-    if (typeof showToast === 'function') showToast(`🔔 매일 ${state.preferences.dailyNotification.time}에 알림`);
-  } else {
-    state.preferences.dailyNotification.enabled = false;
-    if (typeof showToast === 'function') showToast('🔕 알림 끔');
-  }
-  saveState();
-  scheduleDailyNotification();
-  refreshDailyNotificationUI();
-}
-function setDailyNotificationTime(time) {
-  if (!time || !time.match(/^\d{2}:\d{2}$/)) return;
-  state.preferences = state.preferences || {};
-  if (!state.preferences.dailyNotification) {
-    state.preferences.dailyNotification = { enabled: false, time };
-  } else {
-    state.preferences.dailyNotification.time = time;
-  }
-  saveState();
-  scheduleDailyNotification();
-  if (typeof showToast === 'function' && state.preferences.dailyNotification.enabled) {
-    showToast(`알림 시간 ${time}`);
-  }
-}
-function refreshDailyNotificationUI() {
-  const btn = document.getElementById('dailyNotifToggleBtn');
-  const timeInput = document.getElementById('dailyNotifTimeInput');
-  const pref = state.preferences && state.preferences.dailyNotification;
-  const enabled = !!(pref && pref.enabled);
-  if (btn) {
-    btn.textContent = enabled ? '🔔 매일 알림: ON' : '🔕 매일 알림: OFF';
-    btn.style.background = enabled ? 'linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10))' : '';
-    btn.style.color = enabled ? '#c5e8c5' : '';
-    btn.style.borderColor = enabled ? 'rgba(143,200,143,0.4)' : '';
-  }
-  if (timeInput) timeInput.value = (pref && pref.time) || '21:00';
-}
+// 알림 기능 미박힘 — 진짜 백그라운드 푸시는 Phase C (백엔드 + Service Worker) 박힌 후 활성.
 
 function refreshTesterModeUI() {
-  // V4: 매일 알림 UI도 함께 새로고침 (설정 화면 진입 시)
-  if (typeof refreshDailyNotificationUI === 'function') refreshDailyNotificationUI();
   const btn = document.getElementById('testerModeToggleBtn');
   if (!btn) return;
   const on = state.preferences && state.preferences.testerMode;
@@ -30506,6 +31576,19 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault(); sendChat();
     }
   });
+  // 사용자 요청 2026-04-29: 숙고 입력바도 메인 chat 처럼 자동 높이 (max 140px)
+  const reflTa = document.getElementById('reflectionInput');
+  if (reflTa) {
+    reflTa.addEventListener('input', () => {
+      reflTa.style.height = 'auto';
+      reflTa.style.height = Math.min(reflTa.scrollHeight, 140) + 'px';
+    });
+    reflTa.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !isMobile()) {
+        e.preventDefault(); sendReflectionChat();
+      }
+    });
+  }
   ['sleepStart', 'sleepEnd'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', updateSleepDuration);
