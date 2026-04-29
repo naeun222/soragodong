@@ -2638,14 +2638,18 @@
     background: transparent;
     border: none;
     color: var(--text-soft);
-    padding: 6px 10px;
+    padding: 8px 11px;
     border-radius: 11px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 16px;
     font-family: inherit;
     line-height: 1;
     transition: background 0.15s, color 0.15s;
-    min-height: 32px;
+    min-height: 38px;
+    min-width: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .lib-view-btn:active { transform: scale(0.95); }
   .lib-view-btn.active {
@@ -2664,38 +2668,47 @@
     padding-bottom: 6px;
     border-bottom: 1px solid var(--border);
   }
+  /* 사용자 요청 2026-04-29: 5 chip 한 줄 fit + 활성만 라벨 펼침 */
   .library-cats {
     display: flex;
-    gap: 8px;
-    overflow-x: auto;
+    gap: 6px;
     flex: 1;
     min-width: 0;
     padding: 2px 0 6px;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    width: 100%;
   }
   .library-cats::-webkit-scrollbar { display: none; }
   .lib-cat-chip {
-    flex-shrink: 0;
+    flex-shrink: 1;
+    flex-grow: 0;
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--text-dim);
-    padding: 9px 14px;
+    padding: 7px 11px;
     border-radius: 18px;
-    font-size: 12px;
+    font-size: 18px;  /* 아이콘 크게 */
     font-family: inherit;
     cursor: pointer;
     white-space: nowrap;
     transition: transform 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
-    min-height: 36px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
   }
   .lib-cat-chip:active { transform: scale(0.96); }
+  .lib-cat-chip .cat-icon { font-size: 18px; line-height: 1; }
+  .lib-cat-chip .cat-label { display: none; font-size: 12px; font-weight: 500; }
   .lib-cat-chip.active {
     background: linear-gradient(135deg, rgba(201,169,110,0.20), rgba(139,126,196,0.12));
     border-color: rgba(201,169,110,0.45);
     color: var(--accent2);
     font-weight: 500;
+    flex-grow: 1;
+    padding: 7px 14px;
   }
+  .lib-cat-chip.active .cat-label { display: inline; }
   .library-cat-view { animation: lib-cat-fade 0.18s ease; }
   @keyframes lib-cat-fade {
     from { opacity: 0; transform: translateY(4px); }
@@ -6844,26 +6857,26 @@
       <!-- V4-1t: 🌟 오늘의 너 (진주 회전 카드) -->
       <div id="libraryHero"></div>
 
-      <!-- V4-1l-a: 5 카테고리 칩 (가로 스크롤) + V4-1p 토글 -->
+      <!-- 사용자 요청 2026-04-29: 5 카테고리 chip B 형식 (활성만 라벨 펼침), 토글은 검색바 우측 -->
       <div class="library-top-row">
         <div class="library-cats">
-          <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')">📔 일기·대화</button>
-          <button class="lib-cat-chip"        data-cat="pearls"    onclick="switchLibraryCat('pearls')">🔮 진주</button>
-          <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')">🧬 양생방</button>
-          <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')">✨ 깨달음</button>
-          <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')">🌀 마법·리뷰</button>
-        </div>
-        <div class="library-view-toggle">
-          <button class="lib-view-btn active" data-view="grid"     onclick="switchLibraryView('grid')"     aria-label="그리드">▦</button>
-          <button class="lib-view-btn"        data-view="timeline" onclick="switchLibraryView('timeline')" aria-label="타임라인">≡</button>
+          <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')"><span class="cat-icon">📔</span><span class="cat-label">일기·대화</span></button>
+          <button class="lib-cat-chip"        data-cat="pearls"    onclick="switchLibraryCat('pearls')"><span class="cat-icon">🔮</span><span class="cat-label">진주</span></button>
+          <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')"><span class="cat-icon">🧬</span><span class="cat-label">양생방</span></button>
+          <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')"><span class="cat-icon">✨</span><span class="cat-label">깨달음</span></button>
+          <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')"><span class="cat-icon">🌀</span><span class="cat-label">마법·리뷰</span></button>
         </div>
       </div>
 
-      <!-- 검색바 (모든 카테고리에서 작동) -->
-      <div id="archiveSearchBar" style="margin-bottom:16px;">
+      <!-- 검색바 + 토글 (사용자 요청 2026-04-29: 토글 우측 배치) -->
+      <div id="archiveSearchBar" style="margin-bottom:16px; display:flex; gap:8px; align-items:center;">
         <input type="text" id="archiveSearch" placeholder="🔎 키워드, 날짜로 검색..."
                oninput="searchArchive()"
-               style="width:100%; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; font-family:inherit;">
+               style="flex:1; min-width:0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; font-family:inherit;">
+        <div class="library-view-toggle" style="margin:0; flex-shrink:0;">
+          <button class="lib-view-btn active" data-view="grid"     onclick="switchLibraryView('grid')"     aria-label="그리드"><span id="libViewGridLabel">📡</span></button>
+          <button class="lib-view-btn"        data-view="timeline" onclick="switchLibraryView('timeline')" aria-label="타임라인">📋</button>
+        </div>
       </div>
 
       <!-- 📔 일기·대화 -->
@@ -18805,10 +18818,12 @@ function switchLibraryCat(cat) {
   // + 캘린더 재렌더 (다른 cat에서 비워졌던 거 복구)
   if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
   if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
-  // V4-fix: 토글은 일기·대화 / 진주에만 (양생방·깨달음·마법리뷰는 단일 뷰)
+  // 사용자 요청 2026-04-29: 토글 5 카테고리 모두 통일 + 라벨 동적
   const toggleEl = document.querySelector('.library-view-toggle');
-  if (toggleEl) {
-    toggleEl.style.display = (cat === 'diary' || cat === 'pearls') ? '' : 'none';
+  if (toggleEl) toggleEl.style.display = '';
+  const gridLabel = document.getElementById('libViewGridLabel');
+  if (gridLabel) {
+    gridLabel.textContent = cat === 'diary' ? '📅 캘린더' : '📡 피드';
   }
 }
 
@@ -18844,8 +18859,9 @@ function _renderActiveLens() {
     if (typeof renderLensInsights === 'function') renderLensInsights();
   } else if (cat === 'pearls') {
     if (typeof renderLensPearls === 'function') renderLensPearls();
+  } else if (cat === 'galpi') {
+    if (typeof renderLensGalpi === 'function') renderLensGalpi();
   }
-  // galpi: 정적 — quick-counts만
   if (typeof updateArchiveQuickCounts === 'function') updateArchiveQuickCounts();
 }
 
@@ -19138,20 +19154,14 @@ function renderLensStrategies() {
     new Date(b.createdAt) - new Date(a.createdAt)
   );
   
-  // 사용자 요청 2026-04-29: 양생방 view 토글 (피드 / 목록) — 목록 모드는 카테고리 chip 필터
-  const _ysView = (typeof _yangsaengView !== 'undefined') ? _yangsaengView : 'feed';
+  // 사용자 요청 2026-04-29: 공용 _libView 사용 ('grid'=피드, 'timeline'=목록) — 자체 토글 제거
+  const _ysView = _libView === 'timeline' ? 'list' : 'feed';
   let html = `
     <div class="strategy-section">
       <div class="strategy-section-header">
         <div class="topic-cards-title">🧬 전략 DNA</div>
         <button class="strategy-add-btn" onclick="addManualStrategy()">+ 같이 만들기</button>
       </div>
-      ${strategies.length > 0 ? `
-        <div class="yangsaeng-view-toggle">
-          <button class="ys-view-btn${_ysView === 'feed' ? ' active' : ''}" onclick="setYangsaengView('feed')">📡 피드</button>
-          <button class="ys-view-btn${_ysView === 'list' ? ' active' : ''}" onclick="setYangsaengView('list')">📋 목록</button>
-        </div>
-      ` : ''}
   `;
 
   if (strategies.length === 0) {
@@ -19776,8 +19786,8 @@ function renderLensArchive() {
   if (_libView === 'grid' && _archiveTagFilter) {
     filtered = filtered.filter(a => Array.isArray(a.tags) && a.tags.includes(_archiveTagFilter));
   }
-  // 사용자 요청 2026-04-29: 깨달음 피드/목록 토글 — 목록 모드에서 type 필터 적용
-  const insightView = _insightsView || 'feed';
+  // 사용자 요청 2026-04-29: 공용 _libView 사용 (자체 토글 제거)
+  const insightView = _libView === 'timeline' ? 'list' : 'feed';
   const insightCat = _insightsCatFilter;
   if (insightView === 'list' && insightCat && insightCat !== 'ai') {
     filtered = filtered.filter(a => (a.type || 'scrap') === insightCat);
@@ -19786,13 +19796,7 @@ function renderLensArchive() {
   }
 
   let html = '<div class="archive-section-wrap">';
-  // 사용자 요청 2026-04-29: 토글 + chips
-  html += `
-    <div class="lib-view-toggle">
-      <button class="lvt-btn${insightView === 'feed' ? ' active' : ''}" onclick="setInsightsView('feed')">📡 피드</button>
-      <button class="lvt-btn${insightView === 'list' ? ' active' : ''}" onclick="setInsightsView('list')">📋 목록</button>
-    </div>
-  `;
+  // 사용자 요청 2026-04-29: 공용 toggle 사용 — 자체 토글 X. 목록 모드에서만 chip 표시.
   if (insightView === 'list') {
     const counts = { scrap: 0, memo: 0, reflection: 0, ai: 0 };
     items.forEach(a => { counts[a.type || 'scrap'] = (counts[a.type || 'scrap'] || 0) + 1; });
@@ -19945,7 +19949,8 @@ function closeArchiveModal() {
 function renderLensGalpi() {
   const container = document.getElementById('libGalpi');
   if (!container) return;
-  const view = _galpiView || 'feed';
+  // 사용자 요청 2026-04-29: 공용 _libView 사용
+  const view = _libView === 'timeline' ? 'list' : 'feed';
   // 사용자 보고 2026-04-29: 검색 적용 (목록 모드 inline 리스트에)
   const _qGalpi = _archiveSearchQuery;
   const matchesQ = (r, ...fields) => !_qGalpi || fields.filter(Boolean).join(' ').toLowerCase().includes(_qGalpi);
@@ -19961,12 +19966,8 @@ function renderLensGalpi() {
   }
   const allReviews = [...weekly, ...monthly, ...quarterly].sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0));
 
-  const toggleHtml = `
-    <div class="lib-view-toggle">
-      <button class="lvt-btn${view === 'feed' ? ' active' : ''}" onclick="setGalpiView('feed')">📡 피드</button>
-      <button class="lvt-btn${view === 'list' ? ' active' : ''}" onclick="setGalpiView('list')">📋 목록</button>
-    </div>
-  `;
+  // 사용자 요청 2026-04-29: 공용 toggle 사용 (자체 토글 X)
+  const toggleHtml = '';
 
   let body = '';
   if (view === 'feed') {
@@ -27248,6 +27249,32 @@ async function buildAnnualSlides(year, yearReviews) {
   // 가장 최근 분기 review 선택 (또는 합산 stats 새로 계산)
   const lastReview = yearReviews[yearReviews.length - 1];
   const slides = await buildQuarterlySlides(lastReview);
+
+  // 사용자 요청 2026-04-29: '모은 소라' 슬라이드 — 연 단위 범위로 교체 (분기 X)
+  const yearStart = new Date(year, 0, 1).getTime();
+  const yearEnd = new Date(year, 11, 31, 23, 59, 59).getTime();
+  const yearInRange = (iso) => {
+    if (!iso) return false;
+    const t = new Date(iso).getTime();
+    return t >= yearStart && t <= yearEnd;
+  };
+  // 연 단위 stats 합산 (각 분기 stats sum)
+  const yearStats = {
+    worked: yearReviews.reduce((s, r) => s + ((r.stats || {}).worked || 0), 0),
+    attempts: yearReviews.reduce((s, r) => s + ((r.stats || {}).attempts || 0), 0)
+  };
+  const annualShellsHtml = (typeof _buildShellsCollectedSlideHTML === 'function')
+    ? _buildShellsCollectedSlideHTML(yearStats, yearInRange, yearStart, yearEnd)
+    : null;
+  const shellsIdx = slides.findIndex(s => typeof s.html === 'string' && s.html.includes('모은 소라'));
+  if (shellsIdx >= 0) {
+    if (annualShellsHtml) {
+      slides[shellsIdx] = { tone: 'tone-emo-4', html: annualShellsHtml };
+    } else {
+      slides.splice(shellsIdx, 1);  // 연 단위로도 0개면 슬라이드 제거
+    }
+  }
+
   // 마지막 (시적) 슬라이드 잠시 빼고 추가 5개 + 시적 끝에 다시
   const closing = slides.pop();
 
