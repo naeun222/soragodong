@@ -6867,10 +6867,47 @@
     <div class="login-title">소라고동</div>
     <div class="login-sub">네 AI 라이프 전략가.<br>이메일로 안전하게 들어와.</div>
 
-    <!-- Step 1: Email -->
+    <!-- Step 1: Email + 동의 (사용자 요청 2026-04-30 변호사 검수: PIPA + 전자상거래법 의무 + 안전 어필) -->
     <div class="login-form" id="loginStep1">
       <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
-      <button class="btn-primary" id="loginBtn" onclick="handleSendCode()">로그인 코드 받기</button>
+
+      <!-- 사용자 요청 2026-04-30: 정직 + 정중한 보안 안내 (E2EE 미적용 명시) -->
+      <div style="margin-top:14px; padding:14px; background:linear-gradient(135deg, rgba(126,200,227,0.10), rgba(143,200,143,0.08)); border:1px solid rgba(126,200,227,0.30); border-radius:10px; font-size:11px; line-height:1.9;">
+        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px;">🛡️ 데이터 보호 안내</div>
+        <div style="color:var(--text); padding-left:6px;">
+          <div>🔒 다른 사용자는 본인의 데이터에 접근할 수 없습니다</div>
+          <div>👤 시스템 운영상 관리자 1명만 데이터에 접근 가능하며, 회사 정책상 평소 조회하지 않습니다</div>
+          <div>🚫 데이터를 광고·판매·외부 공유에 사용하지 않습니다</div>
+          <div>🤖 AI (Anthropic) 서버에 전송된 데이터는 <b>30일 후 자동 삭제</b>되며, AI 학습에 사용되지 않습니다</div>
+          <div>✅ Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)</div>
+          <div>🔐 모든 통신은 HTTPS로 암호화됩니다</div>
+          <div style="margin-top:6px; padding:6px 8px; background:rgba(255,255,255,0.05); border-radius:6px; font-size:10px; color:var(--text-soft); line-height:1.6;">
+            ℹ️ 추후 적용 예정인 종단간 암호화(E2EE) 활성 후엔 회사조차 평문 데이터에 접근할 수 없게 됩니다.
+          </div>
+          <div style="margin-top:6px; font-size:10px; color:var(--text-soft);">자세한 내용: <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/cross-border.md" target="_blank" style="color:var(--accent);">데이터 보호 안내</a></div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px; padding:10px; background:var(--surface); border-radius:10px;">
+        <label style="display:flex; align-items:flex-start; gap:6px; cursor:pointer; margin-bottom:10px;">
+          <input type="checkbox" id="loginConsentAll" style="margin-top:3px;">
+          <span style="font-size:11px; line-height:1.7;">
+            <b>(필수)</b> 다음 항목에 모두 동의합니다:<br>
+            · <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/terms.md" target="_blank" style="color:var(--accent);">이용약관</a> + <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/privacy.md" target="_blank" style="color:var(--accent);">개인정보처리방침</a><br>
+            · 기분·감정·자기관찰 기록 처리 <i style="color:var(--text-soft);">(법률상 '민감정보')</i><br>
+            · 미국 서버 이용 (AI 처리 / 저장 / 호스팅)<br>
+            · 만 14세 이상
+          </span>
+        </label>
+        <label style="display:flex; align-items:flex-start; gap:6px; cursor:pointer;">
+          <input type="checkbox" id="loginConsentAdult" style="margin-top:3px;">
+          <span style="font-size:11px; line-height:1.6;">
+            <b>(권장)</b> 만 18세 이상입니다 — 미체크 시 결제 단계에서 법정대리인 동의 절차가 진행됩니다
+          </span>
+        </label>
+        <!-- 사용자 요청 2026-04-30: 별도 통계 동의 제거 — Cloudflare Analytics + Anthropic usage 자동 (별도 동의 불필요). -->
+      </div>
+      <button class="btn-primary" id="loginBtn" onclick="handleSendCode()" style="margin-top:14px;">로그인 코드 받기</button>
       <div class="login-status" id="loginStatus"></div>
     </div>
 
@@ -7494,11 +7531,19 @@
       </details>
 
       <!-- ═══ 프라이버시 안내 ═══ -->
-      <div style="margin-top:30px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
-        <strong style="color:var(--accent)">🛡️ 프라이버시</strong><br>
-        이메일 기반 인증으로 너만 접근 가능. 다른 사람은 네 데이터를 볼 수 없어.<br>
-        AI 호출은 Anthropic 미국 서버를 통과하지만 30일 후 자동 삭제 + 학습에 안 써.<br>
-        회사도 너 데이터를 광고/판매에 사용하지 않아.
+      <div style="margin-top:30px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; line-height:1.8;">
+        <div style="font-size:13px; color:var(--accent); font-weight:600; margin-bottom:8px;">🛡️ 데이터 보호</div>
+        <div style="color:var(--text);">
+          🔒 본인의 데이터는 본인만 접근 가능합니다<br>
+          👤 회사 내부 접근은 관리자 1명에 한정됩니다<br>
+          🚫 데이터를 광고·판매·외부 공유에 사용하지 않습니다<br>
+          🤖 AI (Anthropic) 서버 데이터는 30일 후 자동 삭제되며, AI 학습에 사용되지 않습니다<br>
+          ✅ Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)<br>
+          🔐 모든 통신은 HTTPS로 암호화됩니다
+        </div>
+        <div style="margin-top:10px; font-size:10px; color:var(--text-soft);">
+          개인정보 보호책임자: 김나은 · 자세한 내용은 <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/privacy.md" target="_blank" style="color:var(--accent);">개인정보처리방침</a>
+        </div>
       </div>
 
       <div class="sticky-action-bar">
@@ -7765,7 +7810,12 @@ const DEFAULT_STATE = {
     miniTutorialsSeen: [],        // ['yangsaeng','galpi','sukgo',...] 화면별 미니 도움
     progressiveUnlockLevel: null,  // 'week1' | 'month1' | 'month3' (코어 선택 시 점진 노출)
     // 사용자 요청 2026-04-30: 메인 chat 일일 cap. 0 = 무제한. default 100/일 (헤비 사용자 본인이 풀 수 있게 settings 조절).
-    dailyChatCap: 100
+    dailyChatCap: 100,
+    // 사용자 요청 2026-04-30 (변호사 검수): 동의 audit trail. PIPA / 전자상거래법 의무 — 모든 동의 시점·버전 기록.
+    // 첫 진입 시 박힘. 정책 버전 변경 시 재동의.
+    consentLog: [],
+    // 자동 갱신 default OFF (다크 패턴 회피, terms 4.4)
+    autoRenew: false
   },
 
   // 7. V3.3: 대화 일별 아카이브
@@ -8281,6 +8331,33 @@ async function loadFromCloud() {
     // 사용자 요청 2026-04-30: 일일 chat cap default 100. 이미 있으면 그대로 (사용자 설정 보존).
     if (state.preferences.dailyChatCap === undefined) state.preferences.dailyChatCap = 100;
     if (!state.dailyChatCount || typeof state.dailyChatCount !== 'object') state.dailyChatCount = { date: null, count: 0 };
+    // 사용자 요청 2026-04-30 (변호사 검수): consentLog 보강 + pending_consent localStorage → state 옮기기.
+    if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
+    if (state.preferences.autoRenew === undefined) state.preferences.autoRenew = false;
+    try {
+      const pendingRaw = localStorage.getItem('soragodong_pending_consent');
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if (pending && pending.consentAll && pending.versions) {
+          const at = pending.at || new Date().toISOString();
+          // 이미 같은 버전 동의 박혀있으면 skip (재로그인 케이스)
+          const has = (type, version) => state.preferences.consentLog.some(c => c.type === type && c.version === version && c.confirmed);
+          if (!has('terms', pending.versions.terms)) state.preferences.consentLog.push({ type: 'terms', version: pending.versions.terms, confirmed: true, at });
+          if (!has('privacy', pending.versions.privacy)) state.preferences.consentLog.push({ type: 'privacy', version: pending.versions.privacy, confirmed: true, at });
+          if (!has('crossBorder', pending.versions.crossBorder)) state.preferences.consentLog.push({ type: 'crossBorder', version: pending.versions.crossBorder, confirmed: true, at });
+          if (!has('age14', '1.0')) state.preferences.consentLog.push({ type: 'age14', version: '1.0', confirmed: true, at });
+          // 만 18세 (성인) 동의
+          state.preferences.requiresLegalGuardianForPayment = !pending.consentAdult;
+          if (pending.consentAdult && !has('adult18', '1.0')) {
+            state.preferences.consentLog.push({ type: 'adult18', version: '1.0', confirmed: true, at });
+          }
+          // 통계 동의 (선택)
+          state.preferences.consentLog.push({ type: 'analytics', version: '1.0', confirmed: !!pending.consentAnalytics, at });
+          localStorage.removeItem('soragodong_pending_consent');
+          console.log('[consent] pending → state 동의 옮김');
+        }
+      }
+    } catch (e) { console.warn('pending consent migrate:', e); }
 
     // 사용자 요청 2026-04-28: cloud/localStorage에 stale testerMode 플래그가 있으면 항상 false로 (메모리에서만 토글되어야 하는 flag — 새로고침 시 무조건 OFF)
     if (state.preferences.testerMode) {
@@ -8905,6 +8982,8 @@ async function init() {
   syncServerTime();  // fire-and-forget
 
   await loadFromCloud();
+
+  // 사용자 요청 2026-04-30 (변호사 검수): 동의는 이메일 로그인 화면에 통합 (모달 X). consentLog 박힘.
 
   // 사용자 요청 2026-04-28: 자동 백업 (주 1회 + APP_VERSION 변경 시) — fire-and-forget
   if (typeof runAutoBackupIfNeeded === 'function') {
@@ -11357,6 +11436,23 @@ async function handleSendCode() {
   const emailInput = document.getElementById('loginEmail');
   const email = emailInput.value.trim();
   if (!email || !email.includes('@')) { alert('이메일을 정확히 입력해줘'); return; }
+
+  // 사용자 요청 2026-04-30 (변호사 검수): 동의 검증 — 필수 박혀야 코드 받기 가능. PIPA + 전자상거래법 의무.
+  const consentAll = document.getElementById('loginConsentAll')?.checked;
+  const consentAdult = document.getElementById('loginConsentAdult')?.checked;
+  const consentAnalytics = document.getElementById('loginConsentAnalytics')?.checked;
+  if (!consentAll) { alert('필수 동의 항목을 체크해야 시작 가능해. (약관·프라이버시·국외이전·만 14세)'); return; }
+
+  // 동의 시점 임시 저장 — verify 성공 후 cloud (state.preferences.consentLog) 박힘.
+  try {
+    localStorage.setItem('soragodong_pending_consent', JSON.stringify({
+      consentAll: !!consentAll,
+      consentAdult: !!consentAdult,
+      consentAnalytics: !!consentAnalytics,
+      at: new Date().toISOString(),
+      versions: { terms: '1.0', privacy: '1.0', crossBorder: '2.0', refund: '1.0' }
+    }));
+  } catch (e) { console.warn('pending consent save:', e); }
 
   const btn = document.getElementById('loginBtn');
   const status = document.getElementById('loginStatus');
@@ -19291,7 +19387,7 @@ ${sameLayerNote}${convoNote}
 1. 추상 X 구체 ○: "환경 바꿔" X, "오늘 저녁 7시까지 폰을 거실 책상 충전기에 꽂아두기" ○
 2. 첫 행동 명확: 동사로 시작 + 5분 안에 시작 가능
 3. 네 사용자 ${card.title} 패턴에 맞게 — 일반론 X
-4. 왜 효과적인지 1구절 포함 (예: "도파민 trigger 외부화", "결정 부담 ↓")
+4. 왜 도움되는지 1구절 포함 (예: "도파민 trigger 외부화", "결정 부담 ↓")
 5. ADHD 친화: 의지 부담 ↓ 가지 (L3/L4) 우선, L1·L5는 신중하게
 6. 한 줄 70-100자
 
@@ -19320,7 +19416,7 @@ ${sameLayerNote}${convoNote}
     } catch (e) { console.warn('mutation AI failed:', e); }
   }
   if (!aiOptions.length) {
-    // 사용자 요청 2026-04-28: 더 디테일/효과적 — 구체 행동 + 왜 효과적인지 명시
+    // 사용자 요청 2026-04-28: 더 디테일·실용 — 구체 행동 + 왜 도움되는지 명시 (의료법 회피 wording).
     aiOptions = [
       { layer: 'L3', action: '오늘 저녁 7시까지 폰을 다른 방 충전기에 꽂아두기 — 손에 안 닿으면 자동 차단 (의지 X 환경 차원에서 trigger 외부화)' },
       { layer: 'L4', action: '믿을 친구 1명한테 카톡 한 줄: "나 오늘부터 X 시도 중. 매일 결과 한 줄 공유" — 책임 파트너 효과 + 외부 시선 = 도파민' },
@@ -31427,6 +31523,151 @@ async function maybeRunQuarterlyAnalyze() {
     saveState();
   } catch (e) {
     console.warn('[quarterly analyze] 실패:', e);
+  }
+}
+
+// 사용자 요청 2026-04-30 (변호사 검수): 첫 진입 동의 모달.
+// consentLog 비어있으면 표시. 만 14세 미만 = 가입 거부 + 데이터 삭제. 만 14-17 = 결제 시 법정대리인 동의 안내. 18세+ = 정상.
+const CONSENT_VERSIONS = { terms: '1.0', privacy: '1.0', crossBorder: '2.0', refund: '1.0' };
+
+async function maybeShowInitialConsent() {
+  if (!authUserId) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (!state.preferences) state.preferences = {};
+  if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
+
+  // 모든 필수 동의 + 현 버전이 박혀있는지 체크
+  const has = (type, version) => state.preferences.consentLog.some(c => c.type === type && c.version === version && c.confirmed);
+  const needsConsent = !has('terms', CONSENT_VERSIONS.terms)
+    || !has('privacy', CONSENT_VERSIONS.privacy)
+    || !has('crossBorder', CONSENT_VERSIONS.crossBorder)
+    || !has('age14', '1.0');
+  if (!needsConsent) return;
+
+  // 동의 모달 — overlay + 동의 항목들
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.style.zIndex = '10001';
+  overlay.id = 'initialConsentOverlay';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:420px; max-height:90vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:14px;">🐚 시작하기 전에 — 동의 확인</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:18px;">
+        법적으로 받아야 하는 동의들이야. 나중에 [설정 → 프라이버시]에서 다시 볼 수 있어.
+      </div>
+
+      <div style="margin-bottom:16px; padding:12px; background:var(--surface); border-radius:10px;">
+        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px;">생년월일 (만 14세 이상 확인 필수)</div>
+        <input type="date" id="consentBirthdate" style="width:100%;" max="${new Date(Date.now() - 14*365.25*86400000).toISOString().split('T')[0]}">
+        <div style="font-size:10px; color:var(--text-soft); margin-top:6px; line-height:1.5;">
+          만 14세 미만은 가입 불가 (개인정보보호법). 만 18세 미만은 결제 시 법정대리인 동의 필요.
+        </div>
+      </div>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; padding:10px; background:var(--surface); border-radius:8px; cursor:pointer;">
+        <input type="checkbox" id="consentTerms" style="margin-top:3px;">
+        <span style="font-size:12px; line-height:1.6;">
+          <b>(필수)</b> <a href="#" onclick="event.preventDefault(); window.open('https://github.com/naeun222/soragodong/blob/main/legal_draft/terms.md', '_blank');" style="color:var(--accent);">이용약관</a> 동의
+        </span>
+      </label>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; padding:10px; background:var(--surface); border-radius:8px; cursor:pointer;">
+        <input type="checkbox" id="consentPrivacy" style="margin-top:3px;">
+        <span style="font-size:12px; line-height:1.6;">
+          <b>(필수)</b> <a href="#" onclick="event.preventDefault(); window.open('https://github.com/naeun222/soragodong/blob/main/legal_draft/privacy.md', '_blank');" style="color:var(--accent);">개인정보처리방침</a> 동의 — 정신건강 자기관찰 데이터 (민감정보) 처리 포함
+        </span>
+      </label>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; padding:10px; background:var(--surface); border-radius:8px; cursor:pointer;">
+        <input type="checkbox" id="consentCrossBorder" style="margin-top:3px;">
+        <span style="font-size:12px; line-height:1.6;">
+          <b>(필수)</b> 미국 (Anthropic, Supabase, Cloudflare) 으로 데이터 이전 동의 — Anthropic SOC 2 Type II / ISO 27001 인증 + 30일 자동 삭제 정책. <a href="#" onclick="event.preventDefault(); window.open('https://github.com/naeun222/soragodong/blob/main/legal_draft/cross-border.md', '_blank');" style="color:var(--accent);">자세히</a>
+        </span>
+      </label>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; padding:10px; background:var(--surface); border-radius:8px; cursor:pointer;">
+        <input type="checkbox" id="consentAge14" style="margin-top:3px;">
+        <span style="font-size:12px; line-height:1.6;">
+          <b>(필수)</b> 만 14세 이상임을 확인합니다.
+        </span>
+      </label>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:18px; padding:10px; background:var(--surface); border-radius:8px; cursor:pointer;">
+        <input type="checkbox" id="consentAnalytics" style="margin-top:3px;">
+        <span style="font-size:12px; line-height:1.6;">
+          <i>(선택)</i> 익명화된 사용 통계를 서비스 개선에 활용 — 거부해도 모든 기능 사용 가능
+        </span>
+      </label>
+
+      <div style="display:flex; gap:8px;">
+        <button class="btn-primary" onclick="submitInitialConsent()" style="flex:1;">동의하고 시작 ✦</button>
+        <button class="btn-secondary" onclick="rejectInitialConsent()" style="flex:1;">거부 (탈퇴)</button>
+      </div>
+      <div style="font-size:10px; color:var(--text-soft); margin-top:10px; line-height:1.5;">
+        필수 항목 거부 시 서비스 이용 불가. 데이터 즉시 삭제됨.
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function submitInitialConsent() {
+  const birthdateEl = document.getElementById('consentBirthdate');
+  const termsEl = document.getElementById('consentTerms');
+  const privacyEl = document.getElementById('consentPrivacy');
+  const xborderEl = document.getElementById('consentCrossBorder');
+  const age14El = document.getElementById('consentAge14');
+  const analyticsEl = document.getElementById('consentAnalytics');
+
+  if (!birthdateEl?.value) { alert('생년월일 입력해줘'); return; }
+  const birthdate = new Date(birthdateEl.value);
+  const ageMs = Date.now() - birthdate.getTime();
+  const ageYears = ageMs / (365.25 * 86400000);
+  if (ageYears < 14) {
+    alert('만 14세 미만은 가입 불가야. 데이터 삭제됩니다.');
+    rejectInitialConsent();
+    return;
+  }
+  if (!termsEl?.checked || !privacyEl?.checked || !xborderEl?.checked || !age14El?.checked) {
+    alert('필수 항목 모두 체크해야 시작 가능해.');
+    return;
+  }
+
+  // consentLog 박기
+  const now = new Date().toISOString();
+  if (!state.preferences) state.preferences = {};
+  if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
+  state.preferences.consentLog.push(
+    { type: 'terms', version: CONSENT_VERSIONS.terms, confirmed: true, at: now },
+    { type: 'privacy', version: CONSENT_VERSIONS.privacy, confirmed: true, at: now },
+    { type: 'crossBorder', version: CONSENT_VERSIONS.crossBorder, confirmed: true, at: now },
+    { type: 'age14', version: '1.0', confirmed: true, at: now },
+    { type: 'birthdate', version: '1.0', confirmed: true, at: now, value: birthdateEl.value },
+    { type: 'analytics', version: '1.0', confirmed: !!analyticsEl?.checked, at: now }
+  );
+  // 만 18세 미만 마커 (결제 시 법정대리인 동의 필요)
+  if (ageYears < 18) {
+    state.preferences.consentLog.push({ type: 'minor18', confirmed: true, at: now });
+    state.preferences.requiresLegalGuardianForPayment = true;
+  } else {
+    state.preferences.requiresLegalGuardianForPayment = false;
+  }
+  saveState();
+
+  const overlay = document.getElementById('initialConsentOverlay');
+  if (overlay) overlay.remove();
+  showToast('🐚 시작 ✦');
+}
+
+async function rejectInitialConsent() {
+  const yes = confirm('필수 동의 거부 시 서비스 이용 불가 + 가입 데이터 즉시 삭제. 진짜?');
+  if (!yes) return;
+  const overlay = document.getElementById('initialConsentOverlay');
+  if (overlay) overlay.remove();
+  if (typeof withdrawAccount === 'function') {
+    await withdrawAccount();
+  } else if (typeof logout === 'function') {
+    await logout();
   }
 }
 
