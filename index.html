@@ -7226,39 +7226,64 @@ let syncTimeout = null;
 // V4.0: localStorage 동기 저장 디바운스 (400ms). cloud는 saveToCloud 안에서 1초 디바운스.
 // force=true면 즉시 (토글/critical save). beforeunload에서도 강제 flush.
 let _localSaveTimer = null;
-function _flushLocalSave() {
+
+// 사용자 요청 2026-04-29 (perf #1): JSON.stringify replacer — transient/임시 필드 strip해서 직렬화 부하 ↓
+// 메모리 state는 그대로 유지, 저장/네트워크 페이로드만 가벼워짐.
+const _SERIALIZE_TRANSIENT_KEYS = new Set([
+  '_dnaMatched',           // shellCollection 임시 매칭 마커
+  '_crystallizePromptShown', // topicCard 결정화 prompt 한 번만
+  '_followupAsked',        // mission UI flag
+  'typing',                // chatMessages AI 응답 진행 중 placeholder
+  'testerMode'             // preferences flag (방어적 — 이미 별도 strip 있지만 race 대비)
+]);
+function _serializeReplacer(key, value) {
+  if (_SERIALIZE_TRANSIENT_KEYS.has(key)) return undefined;
+  return value;
+}
+
+function _flushLocalSave(opts) {
   if (_localSaveTimer) { clearTimeout(_localSaveTimer); _localSaveTimer = null; }
   if (!authUserId) return;
   // 사용자 보고 2026-04-28: testerMode ON이면 localStorage 저장도 차단.
-  // (이전엔 beforeunload에서 _flushLocalSave 직접 호출되어 시드 데이터가 localStorage로 새고,
-  //  다음 load에서 cloud row 비어있으면 localStorage fallback → saveToCloudNow로 시드가 cloud까지 박혀버림)
   if (state.preferences && state.preferences.testerMode) return;
-  // testerMode flag는 localStorage로도 안 새게 strip (방어적)
-  const sanitized = { ...state };
-  if (sanitized.preferences && sanitized.preferences.testerMode) {
-    sanitized.preferences = { ...sanitized.preferences };
-    delete sanitized.preferences.testerMode;
-  }
+  let payload;
   try {
-    localStorage.setItem(V4_LOCAL_STORAGE_KEY, JSON.stringify(sanitized));
+    // 사용자 요청 2026-04-29 (perf #1): replacer로 transient 필드 strip
+    payload = JSON.stringify(state, _serializeReplacer);
   } catch (e) {
-    console.warn('localStorage save failed:', e);
-    // 사용자 요청 2026-04-28: 저장 실패 사용자 알림 (이전엔 console만)
-    if (e && (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || ''))) {
-      // 한 세션에 한 번만 알림 (반복 토스트 방지)
-      if (!window._localStorageQuotaWarned) {
-        window._localStorageQuotaWarned = true;
-        if (typeof showToast === 'function') {
-          showToast('⚠️ 로컬 저장 공간 가득 — 도서관 → 이전 대화 정리하면 공간 확보 (cloud는 정상)');
+    console.warn('localStorage stringify failed:', e);
+    return;
+  }
+  const writeFn = () => {
+    try {
+      localStorage.setItem(V4_LOCAL_STORAGE_KEY, payload);
+    } catch (e) {
+      console.warn('localStorage save failed:', e);
+      if (e && (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || ''))) {
+        if (!window._localStorageQuotaWarned) {
+          window._localStorageQuotaWarned = true;
+          if (typeof showToast === 'function') {
+            showToast('⚠️ 로컬 저장 공간 가득 — 도서관 → 이전 대화 정리하면 공간 확보 (cloud는 정상)');
+          }
         }
       }
     }
+  };
+  // 사용자 요청 2026-04-29 (perf #2): localStorage 동기 write를 idle callback으로 — 메인스레드 안 막음
+  // beforeunload + opts.sync 시엔 즉시 flush (데이터 손실 방지)
+  if (opts && opts.sync) {
+    writeFn();
+    return;
+  }
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(writeFn, { timeout: 1500 });
+  } else {
+    writeFn();
   }
 }
 function saveState(force) {
   if (!authUserId) return; // Don't save if not logged in
   // 사용자 요청 2026-04-28: 테스터 모드면 force여도 cloud/localStorage 저장 X
-  // (testerMode flag가 cloud로 새지 않게 — 토글 OFF는 backup 복원 후 testerMode=false 상태에서 호출되므로 정상 작동)
   if (state.preferences && state.preferences.testerMode) return;
   if (force) {
     _flushLocalSave();
@@ -7269,7 +7294,8 @@ function saveState(force) {
   _localSaveTimer = setTimeout(_flushLocalSave, 400);
   saveToCloud();
 }
-window.addEventListener('beforeunload', _flushLocalSave);
+// 사용자 요청 2026-04-29 (perf #2): beforeunload에선 동기 flush 강제 (idle callback 큐 못 비우므로)
+window.addEventListener('beforeunload', () => _flushLocalSave({ sync: true }));
 
 // ═══════════════════════════════════════════════════════════════
 // AUTH (Supabase magic link)
@@ -7916,12 +7942,7 @@ async function saveToCloudNow() {
     return;
   }
   state.lastSync = new Date().toISOString();
-  // testerMode flag는 cloud로 절대 안 새게 strip (방어적 — 위 가드 통과 시점엔 false지만 race 대비)
-  const sanitized = { ...state };
-  if (sanitized.preferences && sanitized.preferences.testerMode) {
-    sanitized.preferences = { ...sanitized.preferences };
-    delete sanitized.preferences.testerMode;
-  }
+  // 사용자 요청 2026-04-29 (perf #1): replacer로 transient 필드 strip + testerMode 보호
   // V4: V4 row만 PATCH/POST. V3 row(`me`)는 영원히 안 건드림.
   const checkResp = await fetch(
     `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=id&limit=1`,
@@ -7929,21 +7950,22 @@ async function saveToCloudNow() {
   );
   const existing = await checkResp.json();
   if (existing.length > 0) {
-    // 사용자 요청 2026-04-28: 응답 status 체크 + 401/5xx 토스트 (이전엔 silent)
+    const body = JSON.stringify({ data: state, updated_at: state.lastSync }, _serializeReplacer);
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
       {
         method: 'PATCH',
         headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ data: sanitized, updated_at: state.lastSync })
+        body
       }
     );
     _handleCloudSyncResponse(r);
   } else {
+    const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: state }, _serializeReplacer);
     const r = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: sanitized })
+      body
     });
     _handleCloudSyncResponse(r);
   }
