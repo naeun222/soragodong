@@ -8543,7 +8543,8 @@ const ONBOARDING_STEPS = [
   // 사용자 요청 2026-04-29 (재): 이 단계엔 아직 DNA 진주 설명 X — 평범한 (DNA 아닌) 소라만 선택 가능하게
   {
     id: 'click_new_shell',
-    targetSelector: '.beach-shell:not(.dna-shell)',
+    // 사용자 요청 2026-04-29: '방금 받은 소라' 정확히 spotlight (renderBeach가 tutorial-target 클래스 부착)
+    targetSelector: '.beach-shell.tutorial-target',
     title: '🐚 방금 받은 소라',
     body: '소라 하나 눌러봐.<br>그 소라에 담긴 <b>이야기 카드</b>가 떠.',
     waitFor: 'click',
@@ -8644,7 +8645,8 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'dna_explanation_close',
-    targetSelector: '.shell-story-overlay .shell-story-dna-badge',
+    // 사용자 요청 2026-04-29: 네모(spotlight) X
+    targetSelector: null,
     // 사용자 요청 2026-04-29 (final): 자동 진행 / 폴링 다 제거. 사용자가 직접 닫기 누르고 '다음' 눌러서 진행.
     title: '🧬 DNA 한 조각',
     body: '이게 <b>DNA 한 조각</b> 표시야.<br>미션 성공이 → 전략 성공이 되면, <b>그 소라가 DNA의 한 조각</b>이 돼.<br><br>아까 눌렀던 <b>"전략으로"</b> 버튼 기억 나지?<br><br>우리가 전략을 성공할수록 그 전략은 성장해.<br><br><b>닫기</b> 누르고 <b>다음 →</b> 눌러서 진행해.',
@@ -13104,7 +13106,20 @@ function renderBeach() {
   const spotlight = document.getElementById('beachSpotlight');
   const weekly = document.getElementById('beachWeekly');
   if (!grid) return;
-  
+
+  // 사용자 요청 2026-04-29: 튜토리얼 click_new_shell 단계엔 '방금 받은 소라'에 marker 클래스 부착
+  // → tutorial-target 셀렉터로 정확히 spotlight 가능 (DNA / seed 아닌 가장 최근 shell)
+  let _tutorialTargetShellId = null;
+  if (window._onbTutorialMode && typeof _onbStep === 'number' && Array.isArray(ONBOARDING_STEPS)) {
+    const _curStep = ONBOARDING_STEPS[_onbStep];
+    if (_curStep && _curStep.id === 'click_new_shell') {
+      const newest = (state.shellCollection || []).slice().reverse().find(s =>
+        s && s._id && !s._id.startsWith('shell_seed') && !_isDnaShell(s)
+      );
+      _tutorialTargetShellId = newest ? newest._id : null;
+    }
+  }
+
   const all = state.shellCollection || [];
   const yearStart = new Date(new Date().getFullYear(), 0, 1).getTime();
   const thisYear = all.filter(s => new Date(s.date).getTime() >= yearStart);
@@ -13310,7 +13325,8 @@ function renderBeach() {
         <div class="beach-tier-grid">`;
       grouped[tier].forEach(s => {
         const isDnaPiece = _isDnaShell(s);
-        html += `<div class="beach-shell tier-${tier}${isDnaPiece ? ' dna-shell' : ''}" onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
+        const isTutorialTarget = _tutorialTargetShellId && s._id === _tutorialTargetShellId;
+        html += `<div class="beach-shell tier-${tier}${isDnaPiece ? ' dna-shell' : ''}${isTutorialTarget ? ' tutorial-target' : ''}" onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
       });
       html += `</div></div>`;
     });
@@ -13351,7 +13367,8 @@ function renderBeach() {
       `<div class="beach-tier-grid${isAllTab ? ' scatter' : ''}">` +
       sorted.map((s, i) => {
         const isDnaPiece = _isDnaShell(s);
-        return `<div class="beach-shell tier-${s.tier || 'unknown'}${isDnaPiece ? ' dna-shell' : ''}"${scatterStyle(s, i)} onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
+        const isTutorialTarget = _tutorialTargetShellId && s._id === _tutorialTargetShellId;
+        return `<div class="beach-shell tier-${s.tier || 'unknown'}${isDnaPiece ? ' dna-shell' : ''}${isTutorialTarget ? ' tutorial-target' : ''}"${scatterStyle(s, i)} onclick="openShellStory(${state.shellCollection.indexOf(s)})" title="${isDnaPiece ? '🧬 가닥 DNA 조각' : ''}">${s.type}</div>`;
       }).join('') +
       `</div>`;
   }
