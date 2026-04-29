@@ -8409,19 +8409,19 @@ async function maybeShowE2EERecoveryModal() {
   overlay.id = 'e2eeRecoveryOverlay';
   overlay.innerHTML = `
     <div class="input-modal" style="max-width:420px; padding:24px;">
-      <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">🔐 비밀 단어 입력</div>
+      <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">🔐 비밀번호 입력</div>
       <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
-        새 기기에서 처음 로그인하셨네요. E2EE로 암호화된 데이터를 복호화하려면 <strong>비밀 단어 12개</strong>를 입력해주세요.<br><br>
-        <span style="color:var(--text-soft);">활성화 시 받으신 단어들 (공백으로 구분).</span>
+        새 기기에서 처음 로그인하셨네요. 활성화 시 설정하신 <strong>비밀번호</strong>를 입력해주세요.<br><br>
+        <span style="color:var(--text-soft);">암호화된 데이터를 복호화해서 가져옵니다.</span>
       </div>
-      <textarea id="e2eePassphraseInput" rows="3" placeholder="예: 가족 바다 달빛 ... (12개)" style="width:100%; font-family:monospace; font-size:14px; padding:10px; resize:vertical;"></textarea>
+      <input type="password" id="e2eePassphraseInput" placeholder="비밀번호 (12자 이상)" autocomplete="current-password" style="width:100%; font-size:14px; padding:10px;">
       <div id="e2eeRecoveryStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px;"></div>
       <div style="display:flex; gap:8px; margin-top:14px;">
-        <button class="btn-primary" onclick="submitE2EERecovery()" style="flex:1;">복호화 시도</button>
+        <button class="btn-primary" onclick="submitE2EERecovery()" style="flex:1;">복호화하고 시작</button>
         <button class="btn-secondary" onclick="cancelE2EERecovery()" style="flex:1;">나중에</button>
       </div>
       <div style="font-size:10px; color:var(--text-soft); margin-top:10px; line-height:1.5;">
-        ⚠️ 비밀 단어 분실 시 데이터 복구 불가능합니다. 회사도 복원 X.
+        ⚠️ 비밀번호 분실 시 데이터 복구 불가능합니다. 회사도 복원해드릴 수 없습니다.
       </div>
     </div>
   `;
@@ -8432,19 +8432,18 @@ async function submitE2EERecovery() {
   const input = document.getElementById('e2eePassphraseInput');
   const status = document.getElementById('e2eeRecoveryStatus');
   if (!input || !status) return;
-  const passphrase = input.value.trim().split(/\s+/).join(' ');
-  const wordCount = passphrase.split(' ').length;
-  if (wordCount !== 12) {
-    status.textContent = `12개 단어 필요 (현재 ${wordCount}개)`;
+  const password = input.value;
+  if (!password || password.length < 12) {
+    status.textContent = `비밀번호 12자 이상 (현재 ${password.length}자)`;
     status.style.color = '#e89090';
     return;
   }
   status.textContent = '복호화 중...';
   status.style.color = 'var(--text-soft)';
   try {
-    const masterKey = await _e2eeRestoreFromPassphrase(passphrase);
+    const masterKey = await _e2eeRestoreFromPassphrase(password);
     if (!masterKey) {
-      status.textContent = '비밀 단어 일치 X. 다시 확인해주세요.';
+      status.textContent = '비밀번호 일치 X. 다시 확인해주세요.';
       status.style.color = '#e89090';
       return;
     }
@@ -8472,7 +8471,7 @@ async function submitE2EERecovery() {
 }
 
 function cancelE2EERecovery() {
-  const yes = confirm('비밀 단어 입력 X면 본인 데이터 접근 불가능. 나중에 입력하시려면 새로고침. 정말 취소?');
+  const yes = confirm('비밀번호 입력 X면 본인 데이터 접근 불가능 (회사도 못 봅니다). 나중에 입력하시려면 새로고침. 정말 취소?');
   if (!yes) return;
   const overlay = document.getElementById('e2eeRecoveryOverlay');
   if (overlay) overlay.remove();
@@ -9263,6 +9262,12 @@ async function saveToCloudNow() {
   // 사용자 보고 2026-04-28: testerMode ON이면 cloud 저장 자체 차단.
   if (state.preferences && state.preferences.testerMode) {
     console.log('[saveToCloudNow] testerMode ON — cloud 저장 차단');
+    return;
+  }
+  // 사용자 보고 2026-04-30 데이터 손실 fix: pending E2EE 복원 중이면 cloud 저장 차단.
+  // 이거 없으면 빈 default state가 cloud의 _encryptedBody를 평문으로 덮어쓰기.
+  if (window._e2eePendingRecovery) {
+    console.warn('[saveToCloudNow] E2EE 복원 대기 중 — cloud 저장 차단 (데이터 보호)');
     return;
   }
   state.lastSync = new Date().toISOString();
