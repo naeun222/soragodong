@@ -1172,6 +1172,40 @@
     letter-spacing: 0.04em;
   }
 
+  /* === First-Touch Quiz / Result (사용자 요청 2026-04-30 ultrathink) === */
+  .ft-q { margin-bottom: 14px; }
+  .ft-q-label { font-size: 12px; color: var(--text); margin-bottom: 6px; font-weight: 500; }
+  .ft-q input[type="text"] {
+    width: 100%; padding: 8px 10px; font-size: 13px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+  }
+  .ft-options { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ft-options label {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px; padding: 6px 10px;
+    background: var(--surface); border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .ft-options label:hover { background: rgba(139,126,196,0.10); }
+  .ft-options input[type="radio"], .ft-options input[type="checkbox"] { margin: 0; cursor: pointer; }
+  .ft-hypothesis label {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 10px 12px; margin-bottom: 6px;
+    background: var(--surface); border-radius: 10px;
+    cursor: pointer;
+    font-size: 12.5px; line-height: 1.6;
+    border: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .ft-hypothesis label:hover { background: rgba(139,126,196,0.08); }
+  .ft-hypothesis input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; }
+  .ft-watch {
+    font-size: 12px; color: var(--text-dim);
+    padding: 6px 12px; line-height: 1.7;
+  }
+
   /* === V3 HOME === */
   /* V3.7: todays-shell CSS 제거됨 (Today's Shell 기능 자체 제거) */
   /* V3.7: mode-display CSS 제거됨 (renderModeDisplay dead code, mode-chip만 사용) */
@@ -7084,7 +7118,7 @@
           <div><span class="pi-icon">🔒</span><span>다른 사용자는 본인의 데이터에 접근할 수 없습니다</span></div>
           <div id="loginAccessInfo"><span class="pi-icon">🔐</span><span>종단간 암호화(E2EE) 활성 시 회사도 본인의 데이터를 볼 수 없습니다 <span style="color:var(--text-soft);">(설정 → 보안 강화)</span></span></div>
           <div><span class="pi-icon">🚫</span><span>데이터를 광고·판매·외부 공유에 사용하지 않습니다</span></div>
-          <div><span class="pi-icon">🤖</span><span>AI (Anthropic) 서버 데이터는 <b>30일 후 자동 삭제</b>, 학습에 사용 X</span></div>
+          <div><span class="pi-icon">🤖</span><span>AI (Anthropic) 서버 데이터는 <b>30일 후 자동 삭제</b>되며, 학습에 절대 사용되지 않습니다</span></div>
           <div><span class="pi-icon">✅</span><span>Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)</span></div>
           <div><span class="pi-icon">🔐</span><span>모든 통신은 HTTPS로 암호화됩니다</span></div>
           <div style="margin-top:6px; font-size:10.5px; color:var(--text-soft);">
@@ -7686,6 +7720,7 @@
         <div class="settings-collapse-body">
           <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
           <button class="btn-secondary" onclick="showCoreReplayPicker()">🔧 개별 코어 튜토리얼</button>
+          <button class="btn-secondary" onclick="_chooseUpdateOption('full')">✨ 풀 튜토리얼 (처음부터 끝까지)</button>
           <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
         </div>
       </details>
@@ -7789,7 +7824,7 @@
           🔒 본인의 데이터는 본인만 접근 가능합니다<br>
           🔐 종단간 암호화(E2EE) 활성 시 회사도 본인의 데이터를 볼 수 없습니다<br>
           🚫 데이터를 광고·판매·외부 공유에 사용하지 않습니다<br>
-          🤖 AI (Anthropic) 서버 데이터는 30일 후 자동 삭제, 학습에 사용 X<br>
+          🤖 AI (Anthropic) 서버 데이터는 30일 후 자동 삭제되며, 학습에 절대 사용되지 않습니다<br>
           ✅ Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)<br>
           🔐 모든 통신은 HTTPS로 암호화됩니다
         </div>
@@ -8684,12 +8719,20 @@ async function submitE2EERecovery() {
     status.style.color = '#e89090';
     return;
   }
+  // 사용자 보고 2026-04-30: localStorage에 recovery 자체가 없는 경우 명확히 안내.
+  // 비밀번호 일치 X 메시지 = 비밀번호 잘못 입력 vs recovery 자체 없음 구분 안 됨 → 사용자 혼란.
+  const hasRecoveryLocal = !!(typeof localStorage !== 'undefined' && localStorage.getItem('soragodong_v4_e2ee_recovery'));
+  if (!hasRecoveryLocal) {
+    status.textContent = '이 기기에 비밀번호 정보가 없어요. 아래 [🔓 비밀번호 잊음] 으로 백업에서 복원해주세요.';
+    status.style.color = '#e89090';
+    return;
+  }
   status.textContent = '복호화 중...';
   status.style.color = 'var(--text-soft)';
   try {
     const masterKey = await _e2eeRestoreFromPassphrase(password);
     if (!masterKey) {
-      status.textContent = '비밀번호 일치 X. 다시 확인해주세요.';
+      status.textContent = '비밀번호 일치 X. 다시 확인해주세요. (Caps Lock / 한영 / 자판 확인)';
       status.style.color = '#e89090';
       return;
     }
@@ -8856,6 +8899,266 @@ async function e2eeForgotPasswordReset() {
 
 // 사용자 요청 2026-04-30: 가입 시 E2EE password 자동 권유 (신규 사용자 + 미설정).
 // 가입 직후 / 로그인 직후 진입 시 마스터 키 X + 미활성 + 진입 모달 안 떠있으면 자동 권유.
+// ═══════════════════════════════════════════════════════════════
+// FIRST-TOUCH ANALYSIS — 사용자 요청 2026-04-30 ultrathink
+// 신규 사용자 진입 즉시 5문항 quiz → AI 첫 진단 (정체성 + 가설 + 관찰 거리)
+// 가설 ✓ → traits/patterns에 unverified 시드. 관찰 거리 → 첫 weekly review의 prevSeeds.
+// ═══════════════════════════════════════════════════════════════
+async function maybeShowFirstTouchQuiz() {
+  if (!authUserId) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (window._onbTutorialMode) return;
+  if (state.preferences && state.preferences._firstTouchDone) return;
+  // 이미 진입한 사용자 (entries 4개 이상) — quiz 안 띄우고 done 마킹 (후일 기능 안 뜸)
+  const entriesObj = state.entries || {};
+  const entriesCount = Array.isArray(entriesObj) ? entriesObj.length : Object.keys(entriesObj).length;
+  if (entriesCount > 3) {
+    state.preferences = state.preferences || {};
+    state.preferences._firstTouchDone = true;
+    saveState();
+    return;
+  }
+  // 다른 모달 떠있으면 skip (튜토리얼 / E2EE / update chooser)
+  if (document.getElementById('e2eeRecoveryOverlay')) return;
+  if (document.getElementById('e2eeSetupOverlay')) return;
+  if (document.querySelector('.update-chooser-overlay')) return;
+  if (document.getElementById('onbOverlay') && document.getElementById('onbOverlay').classList.contains('active')) return;
+  showFirstTouchQuiz();
+}
+
+function showFirstTouchQuiz() {
+  if (document.getElementById('firstTouchQuizOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'firstTouchQuizOverlay';
+  overlay.style.zIndex = '10001';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:440px; max-height:90vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:11px; color:var(--text-soft); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px;">너의 첫 진단 ✦</div>
+      <div style="font-size:18px; font-weight:600; color:var(--text); margin-bottom:6px;">5가지만 답해줘</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:18px;">
+        1분 안 걸려. AI가 너에 대한 첫 가설을 박을게.<br>
+        <span style="color:var(--text-soft);">한두 개만 답해도 돼. 부담 X.</span>
+      </div>
+      <div class="ft-q">
+        <div class="ft-q-label">1. 지금 가장 신경 쓰이는 한 단어?</div>
+        <input type="text" id="ftQ1" placeholder="예: 논문 / 관계 / 잠 / 진로..." maxlength="20">
+      </div>
+      <div class="ft-q">
+        <div class="ft-q-label">2. 결정 스타일?</div>
+        <div class="ft-options">
+          <label><input type="radio" name="ftQ2" value="빠른">빠르게</label>
+          <label><input type="radio" name="ftQ2" value="정보">정보 모으고</label>
+          <label><input type="radio" name="ftQ2" value="미루기">미루다가</label>
+          <label><input type="radio" name="ftQ2" value="직감">직감으로</label>
+        </div>
+      </div>
+      <div class="ft-q">
+        <div class="ft-q-label">3. 에너지 좋은 시간?</div>
+        <div class="ft-options">
+          <label><input type="radio" name="ftQ3" value="아침">아침</label>
+          <label><input type="radio" name="ftQ3" value="점심">점심</label>
+          <label><input type="radio" name="ftQ3" value="저녁">저녁</label>
+          <label><input type="radio" name="ftQ3" value="새벽">새벽</label>
+        </div>
+      </div>
+      <div class="ft-q">
+        <div class="ft-q-label">4. 자주 듣는 말 / 자기에 대해 자주 하는 생각?</div>
+        <div class="ft-options">
+          <label><input type="checkbox" data-q4 value="산만">산만</label>
+          <label><input type="checkbox" data-q4 value="다 잘하려다 망함">다 잘하려다 망함</label>
+          <label><input type="checkbox" data-q4 value="꼼꼼">꼼꼼</label>
+          <label><input type="checkbox" data-q4 value="느려">느려</label>
+          <label><input type="checkbox" data-q4 value="기복 큼">기복 큼</label>
+          <label><input type="checkbox" data-q4 value="감정 풍부">감정 풍부</label>
+          <label><input type="checkbox" data-q4 value="말이 많아">말이 많아</label>
+          <label><input type="checkbox" data-q4 value="혼자가 편해">혼자가 편해</label>
+        </div>
+      </div>
+      <div class="ft-q">
+        <div class="ft-q-label">5. 한 줄 자기소개 (자유, 선택)</div>
+        <input type="text" id="ftQ5" placeholder="예: ADHD/ADD, 박사과정, 야행성..." maxlength="60">
+      </div>
+      <div id="firstTouchStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px;"></div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn-primary" onclick="submitFirstTouchQuiz()" style="flex:1;">첫 진단 받기 ✦</button>
+        <button class="btn-secondary" onclick="skipFirstTouchQuiz()" style="flex:1;">나중에</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function skipFirstTouchQuiz() {
+  const overlay = document.getElementById('firstTouchQuizOverlay');
+  if (overlay) overlay.remove();
+  // skip = 영구 dismiss (다시 안 묻기)
+  state.preferences = state.preferences || {};
+  state.preferences._firstTouchDone = true;
+  saveState();
+}
+
+async function submitFirstTouchQuiz() {
+  const status = document.getElementById('firstTouchStatus');
+  const q1 = document.getElementById('ftQ1')?.value.trim() || '';
+  const q2 = document.querySelector('input[name="ftQ2"]:checked')?.value || '';
+  const q3 = document.querySelector('input[name="ftQ3"]:checked')?.value || '';
+  const q4Inputs = [...document.querySelectorAll('#firstTouchQuizOverlay input[type="checkbox"]:checked')].map(i => i.value);
+  const q5 = document.getElementById('ftQ5')?.value.trim() || '';
+
+  if (!q1 && !q2 && !q3 && q4Inputs.length === 0 && !q5) {
+    if (status) { status.textContent = '한 가지라도 답해줘 — 다 비어있으면 분석 X'; status.style.color = '#e89090'; }
+    return;
+  }
+  if (typeof _canAI === 'function' && !_canAI()) {
+    if (status) { status.textContent = 'AI 호출 불가능 (로그인 필요)'; status.style.color = '#e89090'; }
+    return;
+  }
+  if (status) { status.textContent = '첫 진단 분석 중... (5-10초)'; status.style.color = 'var(--text-soft)'; }
+
+  const answers = {
+    concern: q1,
+    decision_style: q2,
+    energy_time: q3,
+    self_descriptors: q4Inputs,
+    self_intro: q5
+  };
+
+  try {
+    const insight = await generateFirstTouchAnalysis(answers);
+    if (!insight || !insight.one_word) throw new Error('분석 결과 비어있음');
+    state.firstTouchInsight = { ...insight, answers, completedAt: new Date().toISOString() };
+    state.preferences = state.preferences || {};
+    state.preferences._firstTouchDone = true;
+    saveState();
+    const overlay = document.getElementById('firstTouchQuizOverlay');
+    if (overlay) overlay.remove();
+    showFirstTouchResult(insight);
+  } catch (e) {
+    console.warn('[firstTouch] generate failed:', e);
+    if (status) { status.textContent = '실패: ' + (e.message || e) + ' — 나중에 다시'; status.style.color = '#e89090'; }
+  }
+}
+
+async function generateFirstTouchAnalysis(answers) {
+  const prompt = `사용자의 첫 진단을 작성한다.
+
+[사용자 답변]
+- 신경 쓰이는 한 단어: ${answers.concern || '(미응답)'}
+- 결정 스타일: ${answers.decision_style || '(미응답)'}
+- 에너지 시간대: ${answers.energy_time || '(미응답)'}
+- 자주 듣는 말 / 자기에 대해 하는 생각: ${(answers.self_descriptors || []).join(', ') || '(미응답)'}
+- 자기소개: ${answers.self_intro || '(미응답)'}
+
+[목표]
+- 한 단어 정체성 명명 (정형 X — 사용자 답변 기반 고유)
+- 가설 3개 (사용자가 ✓로 검증 가능 — 단정 X 추측, 물음표 OK)
+- 다음 1주 관찰 거리 2개 (구체, observable)
+- 한 줄 친근 인사 + 첫 인상 (40자 이내)
+
+[톤]
+친한 친구. 반말. 상담사 X. judgment X. self-compassion (Neff).
+Surprise > Truth — '어, 어떻게 알았어?' 트리거.
+Specific > Generic. 사용자 답변 인용 / 구체.
+
+[출력 JSON]
+{
+  "one_word": "한 단어 정체성 (예: '관찰자', '협상자', '잠수부', '탐험가', '분주한 발명가')",
+  "intro_line": "한 줄 친근 인사 + 첫 인상 (40자 이내, 사용자 답변 reflect)",
+  "hypotheses": [
+    "추측 1 (사용자 답변 reflect, ?로 끝나도 OK)",
+    "추측 2",
+    "추측 3"
+  ],
+  "watch_points": [
+    "다음 1주 관찰 거리 1 (구체, observable, 일기/대화로 확인 가능)",
+    "다음 1주 관찰 거리 2"
+  ]
+}
+
+JSON만 출력. 다른 글 X.`;
+
+  const resp = await callAnthropic({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 700,
+    messages: [{ role: 'user', content: prompt }]
+  });
+  if (!resp.ok) throw new Error('API ' + resp.status);
+  const data = await resp.json();
+  const text = data?.content?.[0]?.text || '';
+  const jm = text.match(/\{[\s\S]*\}/);
+  if (!jm) throw new Error('JSON 파싱 실패');
+  return JSON.parse(jm[0]);
+}
+
+function showFirstTouchResult(insight) {
+  if (document.getElementById('firstTouchResultOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'firstTouchResultOverlay';
+  overlay.style.zIndex = '10001';
+  const hypothesesHtml = (insight.hypotheses || []).map((h, i) => `
+    <div class="ft-hypothesis">
+      <label>
+        <input type="checkbox" id="ftHyp${i}" data-hyp="${escapeHtml(h)}">
+        <span>${escapeHtml(h)}</span>
+      </label>
+    </div>
+  `).join('');
+  const watchPointsHtml = (insight.watch_points || []).map(w => `
+    <div class="ft-watch">· ${escapeHtml(w)}</div>
+  `).join('');
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:440px; max-height:90vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:11px; color:var(--text-soft); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px;">너의 첫 진단</div>
+      <div style="font-family:'Gowun Batang',serif; font-size:32px; color:var(--accent); margin-bottom:8px; letter-spacing:0.04em;">${escapeHtml(insight.one_word || '')}</div>
+      <div style="font-size:14px; color:var(--text); line-height:1.7; margin-bottom:18px; padding:14px; background:linear-gradient(135deg, rgba(139,126,196,0.12), rgba(201,169,110,0.07)); border-radius:12px;">
+        ${escapeHtml(insight.intro_line || '')}
+      </div>
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px; margin-top:14px;">🔍 가설 (✓ 맞으면 체크)</div>
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
+        체크한 건 너의 첫 traits/patterns로 박힘 (검증 미완료 표시 — 나중에 ✓ 확정 가능).
+      </div>
+      <div class="ft-hypotheses">${hypothesesHtml}</div>
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px; margin-top:18px;">🪄 다음 1주 관찰 거리</div>
+      <div class="ft-watches">${watchPointsHtml}</div>
+      <div style="font-size:11px; color:var(--text-soft); margin-top:8px; font-style:italic;">
+        다음 주간 리뷰 때 어떻게 됐는지 같이 봐.
+      </div>
+      <button class="btn-primary" onclick="closeFirstTouchResult()" style="width:100%; margin-top:20px;">시작하기 ✦</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeFirstTouchResult() {
+  // ✓한 가설 → traits/patterns에 unverified 박기
+  const checked = [...document.querySelectorAll('#firstTouchResultOverlay input[type="checkbox"]:checked')];
+  if (checked.length > 0) {
+    if (!Array.isArray(state.patterns)) state.patterns = [];
+    if (!Array.isArray(state.traits)) state.traits = [];
+    for (const cb of checked) {
+      const text = cb.dataset.hyp;
+      if (!text) continue;
+      // 짧으면 trait, 길면 pattern (heuristic)
+      const id = 'ft_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+      if (text.length < 25) {
+        state.traits.push({ id, name: text, source: 'first_touch', verified: false, addedAt: new Date().toISOString() });
+      } else {
+        state.patterns.push({ id, name: text, source: 'first_touch', verified: false, addedAt: new Date().toISOString() });
+      }
+    }
+  }
+  // 첫 weekly review에서 callback 위해 watch points seeds로 저장
+  if (state.firstTouchInsight && Array.isArray(state.firstTouchInsight.watch_points)) {
+    state._firstTouchSeeds = state.firstTouchInsight.watch_points.slice();
+  }
+  saveState();
+  const overlay = document.getElementById('firstTouchResultOverlay');
+  if (overlay) overlay.remove();
+  showToast('✦ 첫 진단 완료. 시작하자.');
+}
+
 async function maybeShowE2EESetupForNewUser() {
   if (!authUserId) return;
   if (state.preferences && state.preferences.testerMode) return;
@@ -9945,6 +10248,11 @@ async function init() {
   // 사용자 요청 2026-04-28: 자동 백업 (주 1회 + APP_VERSION 변경 시) — fire-and-forget
   if (typeof runAutoBackupIfNeeded === 'function') {
     setTimeout(() => { runAutoBackupIfNeeded().catch(e => console.warn('autoBackup:', e)); }, 3000);
+  }
+
+  // 사용자 요청 2026-04-30: 신규 사용자 첫 진단 quiz (5문항 → AI 첫 가설). 한 번만 띄움.
+  if (typeof maybeShowFirstTouchQuiz === 'function') {
+    setTimeout(() => { maybeShowFirstTouchQuiz().catch(e => console.warn('firstTouch:', e)); }, 4500);
   }
 
   // 사용자 요청 2026-04-30: 자동 분석 4단계 — 새벽 4시 cutoff 기반 background trigger.
@@ -13565,7 +13873,11 @@ async function generateReview(type) {
   // 사용자 요청 2026-04-30: 리뷰 재설계 — Detective + Quotes + Seeds + One-word.
   // 이전 리뷰 씨앗 박혔으면 callback 위해 prompt에 주입 (continuity).
   const prevList = type === 'weekly' ? (state.weeklyReviews || []) : (state.monthlyReviews || []);
-  const prevSeeds = prevList.length > 0 ? (prevList[prevList.length - 1].seeds || []) : [];
+  let prevSeeds = prevList.length > 0 ? (prevList[prevList.length - 1].seeds || []) : [];
+  // 첫 weekly 리뷰는 first-touch quiz의 watch_points을 prevSeeds로 사용 (continuity).
+  if (prevSeeds.length === 0 && type === 'weekly' && Array.isArray(state._firstTouchSeeds) && state._firstTouchSeeds.length > 0) {
+    prevSeeds = state._firstTouchSeeds;
+  }
 
   const periodLabel = type === 'weekly' ? '주' : '달';
   const prompt = `너는 사용자의 ${type === 'weekly' ? '주간' : '월간'} 리뷰를 작성한다.
@@ -32917,14 +33229,35 @@ async function refreshBillingStatus() {
     status.textContent = '로그인 필요';
     return;
   }
-  // 사용자 요청 2026-04-30: 관리자는 충전/잔액 표시 X (admin은 무료 + 차감 X)
+  // 사용자 요청 2026-04-30: 관리자는 충전/잔액 제한 X but 사용량 (토큰/비용)은 표시.
   if (typeof _isAdmin === 'function' && _isAdmin()) {
-    status.innerHTML = '<div style="color:#9ed4a0;">✦ 관리자 계정 — 무료 사용 (잔액 / 한도 제한 없음)</div>';
+    try {
+      const resp = await fetch('/api/usage', {
+        headers: { 'Authorization': 'Bearer ' + session.access_token }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const monthly = data.monthly || { tokens: 0, cost_usd: 0 };
+        const monthCostKrw = Math.round((monthly.cost_usd || 0) * 1400);
+        status.innerHTML = `
+          <div style="color:#9ed4a0; font-weight:600; margin-bottom:6px;">✦ 관리자 계정 — 무료 사용 (잔액·한도 제한 X)</div>
+          <div style="border-top:1px solid var(--border); padding-top:6px; margin-top:6px; color:var(--text-dim);">
+            <b>이번 달 사용 (참고용)</b>: ${(monthly.tokens || 0).toLocaleString()} tokens / $${(monthly.cost_usd || 0).toFixed(4)} <span style="color:var(--text-soft);">(~${monthCostKrw.toLocaleString()}원)</span>
+          </div>
+        `;
+      } else {
+        status.innerHTML = '<div style="color:#9ed4a0;">✦ 관리자 계정 — 무료 사용 (사용량 조회 실패)</div>';
+      }
+    } catch (e) {
+      status.innerHTML = '<div style="color:#9ed4a0;">✦ 관리자 계정 — 무료 사용 (사용량 조회 예외)</div>';
+    }
+    // 관리자에게 충전·월정액 버튼 숨기기
     const billingSection = document.getElementById('billingSection');
     if (billingSection) {
-      // 관리자에게 충전 버튼 등 숨기기 — billing input 자체를 숨겨도 됨
-      const refreshBtn = billingSection.querySelector('button[onclick*="refreshBillingStatus"]');
-      if (refreshBtn) refreshBtn.style.display = 'none';
+      const chargeBtn = billingSection.querySelector('button[onclick*="openChargeModal"]');
+      const subBtn = billingSection.querySelector('button[onclick*="openSubscribeModal"]');
+      if (chargeBtn) chargeBtn.style.display = 'none';
+      if (subBtn) subBtn.style.display = 'none';
     }
     return;
   }
@@ -34232,15 +34565,12 @@ function showUpdateChooserModal() {
       </div>
       <div style="display:flex; flex-direction:column; gap:8px;">
         <button class="input-modal-btn primary" onclick="_chooseUpdateOption('learn')" style="padding:14px;">
-          🐚 코어 튜토리얼 시작 <span style="font-size:11px; opacity:0.9;">(추천 ✨)</span>
+          🐚 하면서 익히기 <span style="font-size:11px; opacity:0.9;">(추천 ✨)</span>
           <div style="font-size:11px; opacity:0.85; margin-top:4px; font-weight:normal;">짧고 핵심만. 다른 기능은 만날 때마다 안내.</div>
         </button>
         <button class="input-modal-btn" onclick="_chooseUpdateOption('dismiss')" style="padding:12px;">
-          이미 알아 (다시 보지 않기)
-        </button>
-        <button class="input-modal-btn" onclick="_chooseUpdateOption('full')" style="padding:10px; opacity:0.55;">
-          ✨ 풀 튜토리얼 <span style="font-size:11px; color:var(--text-dim);">(비추천)</span>
-          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">처음부터 끝까지 — 좀 길어. 각오 됐을 때만.</div>
+          이미 알아
+          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">바로 시작. 풀 튜토리얼은 설정에서 가능.</div>
         </button>
       </div>
     </div>
