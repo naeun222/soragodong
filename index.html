@@ -9008,7 +9008,7 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     title: '🌿 임시 대화창',
     // 사용자 요청 2026-04-29: '고동이가 답변 만들 때까지 기다려줘' 강조 + 답변 끝나면 '다음' 직접 클릭으로 진행
-    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>아래 선택지 중 하나를 골라봐.<br><br><b>🐚 고동이가 답변 만들 때까지 기다려줘.</b><br><span class="small">답변 다 뜨면 <b>다음 →</b> 눌러서 진행.</span>',
+    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>여기서 어려웠던 점 풀어놓고, 충분히 풀린 후 <b>[🌱 가지 만들기]</b> 누르면 새 가지 4개 제안할게.<br><br><span class="small">대화 더 진행하면 [🔄 가지 다시 만들기]로 새로 — 같은 차원도 refine OK.</span>',
     waitFor: 'next',
     dimBackground: false,
     aboveModal: true
@@ -9029,8 +9029,8 @@ const ONBOARDING_STEPS = [
     id: 'mutation_finish_btn',
     // 사용자 요청 2026-04-29: 네모 표시 X (spotlight 제거)
     targetSelector: null,
-    title: '✦ 이 차원으로 해볼게',
-    body: '고동이의 답 봤지?<br>이제 <b>\'✦ 이 차원으로 해볼게\'</b> 눌러봐.<br><br><span class="small">버튼 누르면 잠깐 기다렸다가 <b>"다음"</b> 직접 눌러줘.</span>',
+    title: '✦ 이 가지로 해볼게',
+    body: '가지 4개 봤지?<br>마음에 드는 가지 하나 클릭하고, <b>\'✦ 이 가지로 해볼게\'</b> 눌러봐.<br><br><span class="small">버튼 누르면 잠깐 기다렸다가 <b>"다음"</b> 직접 눌러줘.</span>',
     waitFor: 'next',
     dimBackground: false,
     aboveModal: true
@@ -17668,61 +17668,47 @@ let _mutationChatState = null;
 async function openMutationChat(strategyId, missionTitle) {
   const card = getStrategyCard(strategyId);
   if (!card) return;
-
   const prevGen = getCurrentGeneration(card);
-  const prevAction = prevGen?.action || card.actionStrategy || card.summary || '';
   const prevLayer = prevGen?.layer || 'L2';
-  // 사용자 요청 2026-04-29: 첫 옵션 = 다른 차원 권유. 재생성 시 같은 차원도 허용 (refined version).
-  await _generateMutationOptions(strategyId, missionTitle, { allowSameLayer: false, isRegen: false });
+  // 사용자 요청 2026-04-29: 자동 생성 X. 사용자가 대화 후 [🌱 가지 만들기] 버튼 누를 때 생성.
+  if (!Array.isArray(card.evolutionChats)) card.evolutionChats = [];
+  _mutationChatState = {
+    strategyId,
+    missionTitle,
+    prevLayer,
+    selectedRef: null,  // { msgIdx, optIdx } 또는 null
+    confirmStep: false,
+    messages: [{
+      role: 'assistant',
+      content: `🌿 "${card.title}" — 이 전략은 잘 안 맞았군.\n🧬 DNA가 진화할 준비 됐어. ✨\n\n어떤 점이 어려웠는지 같이 풀어보자. 충분히 풀고 [🌱 가지 만들기] 누르면 새 가지 4개 제안할게.`
+    }],
+    loading: false,
+    chatRecord: {
+      gen: (card.generations?.length || 0),
+      triggerMission: missionTitle,
+      triggerAt: new Date().toISOString(),
+      options: [],
+      selectedLayer: null,
+      selectedAction: null,
+      messages: []
+    }
+  };
+  _renderMutationChat();
 }
 
-// 사용자 요청 2026-04-29: 대화 흐름 반영해 옵션 재생성 — 같은 차원 허용 (refined)
+// 사용자 요청 2026-04-29: 대화 흐름 반영해 가지 생성 — 인라인 메시지로 박힘. 같은 차원 refine OK.
 async function _generateMutationOptions(strategyId, missionTitle, opts) {
+  if (!_mutationChatState) return;
   const card = getStrategyCard(strategyId);
   if (!card) return;
   const allowSameLayer = !!(opts && opts.allowSameLayer);
-  const isRegen = !!(opts && opts.isRegen);
   const prevGen = getCurrentGeneration(card);
   const prevAction = prevGen?.action || card.actionStrategy || card.summary || '';
   const prevLayer = prevGen?.layer || 'L2';
 
-  // overlay 즉시 열어 사용자에게 즉각 피드백 — 첫 호출 시만 state 초기화
-  if (!Array.isArray(card.evolutionChats)) card.evolutionChats = [];
-  if (!isRegen) {
-    _mutationChatState = {
-      strategyId,
-      missionTitle,
-      prevLayer,
-      options: [],
-      selected: null,
-      confirmStep: false,
-      messages: [{
-        role: 'assistant',
-        content: `🌿 "${card.title}" — 이 전략은 잘 안 맞았군.\n🧬 DNA가 진화할 준비 됐어. ✨\n\n🌱 다른 차원에서 시도해볼래?`
-      }],
-      loading: true,
-      chatRecord: {
-        gen: (card.generations?.length || 0),
-        triggerMission: missionTitle,
-        triggerAt: new Date().toISOString(),
-        options: [],
-        selectedLayer: null,
-        selectedAction: null,
-        messages: []
-      }
-    };
-  } else {
-    // 재생성: 기존 state 유지, 옵션만 새로
-    if (!_mutationChatState) return;
-    _mutationChatState.selected = null;
-    _mutationChatState.options = [];
-    _mutationChatState.loading = true;
-    _mutationChatState._optionsExpanded = true;
-    _mutationChatState.messages.push({
-      role: 'assistant',
-      content: '대화 흐름 반영해서 옵션 다시 만들게... ✦'
-    });
-  }
+  // 가지 만드는 중 — 임시 placeholder 메시지
+  _mutationChatState.loading = true;
+  _mutationChatState.messages.push({ role: 'assistant', content: '가지 만들고 있어... ✦', _placeholder: true });
   _renderMutationChat();
 
   // 사용자 요청 2026-04-29: 재생성 시 대화 흐름 반영 — 전체 임시 대화 (보통 짧아 token 부담 X)
@@ -17804,10 +17790,29 @@ ${sameLayerNote}${convoNote}
     ].filter(o => allowSameLayer || o.layer !== prevLayer).slice(0, 4);
   }
   if (!_mutationChatState) return;  // 사용자가 그 사이 닫음
-  _mutationChatState.options = aiOptions;
+  // placeholder 메시지 제거
+  _mutationChatState.messages = _mutationChatState.messages.filter(m => !m._placeholder);
+  // 사용자 요청 2026-04-29: 가지를 인라인 메시지로 박음 (대화 흐름에 자연 박힘 — 시간순)
+  _mutationChatState.messages.push({
+    role: 'options',
+    options: aiOptions,
+    generatedAt: new Date().toISOString()
+  });
   _mutationChatState.loading = false;
+  // chatRecord.options = 가장 최근 (선택용)
   _mutationChatState.chatRecord.options = aiOptions.slice();
   _renderMutationChat();
+}
+
+// 사용자가 [🌱 가지 만들기] / [🔄 가지 다시 만들기] 버튼 클릭
+async function triggerGenerateMutationOptions() {
+  if (!_mutationChatState) return;
+  if (_mutationChatState.loading) return;
+  const { strategyId, missionTitle } = _mutationChatState;
+  // 첫 가지: allowSameLayer = false (다른 차원 권유)
+  // 그 이후 (이미 options 메시지 있으면): allowSameLayer = true (같은 차원 refine OK)
+  const hasPrior = _mutationChatState.messages.some(m => m.role === 'options');
+  await _generateMutationOptions(strategyId, missionTitle, { allowSameLayer: hasPrior });
 }
 
 function _renderMutationChat() {
@@ -17841,11 +17846,17 @@ function _renderMutationChat() {
     document.body.appendChild(overlay);
   }
   // V4-fix v2: footer는 매번 재렌더 (confirm bar 분기)
+  // 선택된 가지 — 모든 'options' 메시지 중 selectedRef 위치
+  const sel = _mutationChatState.selectedRef;
+  const selectedOpt = sel
+    ? (_mutationChatState.messages[sel.msgIdx]?.options || [])[sel.optIdx]
+    : null;
+  const hasPriorOptions = _mutationChatState.messages.some(m => m.role === 'options');
+
   const footer = document.getElementById('mutationChatFooter');
   if (footer) {
-    if (_mutationChatState.confirmStep) {
-      const opt = _mutationChatState.options[_mutationChatState.selected];
-      const layerName = _LAYER_NAME[opt.layer] || opt.layer;
+    if (_mutationChatState.confirmStep && selectedOpt) {
+      const layerName = _LAYER_NAME[selectedOpt.layer] || selectedOpt.layer;
       footer.innerHTML = `
         <div class="mutation-confirm-bar">
           <div class="mutation-confirm-text">"${escapeHtml(card.title)}" → ${escapeHtml(layerName)} 차원 새 가닥 등록.<br>
@@ -17857,13 +17868,23 @@ function _renderMutationChat() {
         </div>
       `;
     } else {
+      // 사용자 요청 2026-04-29: [🌱 가지 만들기] / [🔄 가지 다시 만들기] 버튼 — 입력 위 sticky
+      const genBtnLabel = hasPriorOptions ? '🔄 가지 다시 만들기' : '🌱 가지 만들기';
+      const genBtnTitle = hasPriorOptions
+        ? '대화 반영해서 새 가지 4개 — 같은 차원 refine OK'
+        : '대화 좀 풀고 가지 만들거나, 바로 만들어도 OK';
       footer.innerHTML = `
+        <div class="mutation-gen-bar">
+          <button class="mutation-gen-btn" onclick="triggerGenerateMutationOptions()" title="${genBtnTitle}" ${_mutationChatState.loading ? 'disabled' : ''}>
+            ${genBtnLabel}
+          </button>
+        </div>
         <div class="mutation-chat-input-row">
           <textarea class="mutation-chat-input" id="mutationChatInput" placeholder="자유롭게 대화..." rows="1"></textarea>
           <button class="mutation-chat-send" id="mutationChatSendBtn" onclick="sendMutationMessage()">↑</button>
         </div>
         <div class="mutation-chat-actions">
-          <button class="mutation-chat-mission-btn" id="mutationFinishBtn" onclick="finishMutationChat()" ${_mutationChatState.selected == null ? 'disabled' : ''}>✦ 이 차원으로 해볼게</button>
+          <button class="mutation-chat-mission-btn" id="mutationFinishBtn" onclick="finishMutationChat()" ${!selectedOpt ? 'disabled' : ''}>✦ 이 가지로 해볼게</button>
         </div>
       `;
       const ta = document.getElementById('mutationChatInput');
@@ -17878,75 +17899,61 @@ function _renderMutationChat() {
   // subtitle: 가닥 제목
   const subEl = document.getElementById('mutationChatSubtitle');
   if (subEl) subEl.textContent = `"${card.title}"`;
-  // 사용자 요청 2026-04-28: 선택한 차원 chip — 헤더 제목 옆에 표시 (토글 클릭 시 옵션 다시 펼침)
+  // 헤더 chip — 선택된 가지 표시 (선택 시만)
   const chipEl = document.getElementById('mutationChatSelectedChip');
   if (chipEl) {
-    const sel = _mutationChatState.selected;
-    if (sel != null && _mutationChatState.options[sel]) {
-      const opt = _mutationChatState.options[sel];
-      const expanded = _mutationChatState._optionsExpanded;
-      chipEl.innerHTML = `<button class="mutation-selected-chip${expanded ? ' open' : ''}" onclick="_toggleMutationOptions()" title="다른 옵션 보기">${_LAYER_EMOJI[opt.layer] || '✦'} ${_LAYER_NAME[opt.layer] || opt.layer} ${expanded ? '▴' : '▾'}</button>`;
+    if (selectedOpt) {
+      chipEl.innerHTML = `<span class="mutation-selected-chip" title="선택된 가지">${_LAYER_EMOJI[selectedOpt.layer] || '✦'} ${_LAYER_NAME[selectedOpt.layer] || selectedOpt.layer}</span>`;
     } else {
       chipEl.innerHTML = '';
     }
   }
-  // 채팅 영역
+  // 채팅 영역 — 메시지 시간순 (options 메시지 인라인 박힘)
   const area = document.getElementById('mutationChatArea');
   if (area) {
     let html = '';
-    _mutationChatState.messages.forEach(m => {
-      html += `<div class="mutation-msg ${m.role}">${escapeHtml(m.content)}</div>`;
-    });
-    if (_mutationChatState.loading) {
-      html += `<div class="mutation-msg assistant" style="opacity:0.6;">옵션 생성 중...</div>`;
-    } else if (_mutationChatState.options.length) {
-      const sel = _mutationChatState.selected;
-      // 사용자 요청 2026-04-28: 선택 후 옵션 영역 완전 숨김 (헤더 chip만). 토글 시 다시 펼침
-      const showOptionsList = sel == null || _mutationChatState._optionsExpanded;
-      if (showOptionsList) {
+    _mutationChatState.messages.forEach((m, msgIdx) => {
+      if (m.role === 'options') {
+        // 가지 카드 4개 인라인
+        const opts = m.options || [];
         html += `<div class="mutation-msg assistant" style="background:transparent; border:none; padding:0; max-width:100%;">
-          ${sel == null ? '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">하나 골라봐 ↓ (또는 자유롭게 입력)</div>' : ''}
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">🌱 가지 ${opts.length}개</div>
           <div class="mutation-options-stack">
-            ${_mutationChatState.options.map((o, i) => `
-              <button class="mutation-option-card${sel === i ? ' selected' : ''}" onclick="selectMutationOption(${i})">
-                <div class="mutation-option-layer">${_LAYER_EMOJI[o.layer] || '✦'} ${_LAYER_NAME[o.layer] || o.layer}</div>
-                <div class="mutation-option-action">${escapeHtml(o.action)}</div>
-              </button>
-            `).join('')}
-          </div>
-          <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
-            <button class="quick-btn" onclick="regenerateMutationOptions()" style="font-size:11px; padding:7px 12px;" title="대화 흐름 반영해서 옵션 다시 — 같은 차원 refine 도 OK">
-              🔄 옵션 다시 만들기
-            </button>
-            <span style="font-size:10px; color:var(--text-dim); align-self:center;">대화 후 짚은 거 반영해서 새로 / 같은 차원 refine 가능</span>
+            ${opts.map((o, oi) => {
+              const isSelected = sel && sel.msgIdx === msgIdx && sel.optIdx === oi;
+              const otherSelected = sel && !isSelected;
+              return `
+                <button class="mutation-option-card${isSelected ? ' selected' : ''}${otherSelected ? ' dim' : ''}" onclick="selectMutationOption(${msgIdx}, ${oi})">
+                  <div class="mutation-option-layer">${_LAYER_EMOJI[o.layer] || '✦'} ${_LAYER_NAME[o.layer] || o.layer}</div>
+                  <div class="mutation-option-action">${escapeHtml(o.action)}</div>
+                </button>
+              `;
+            }).join('')}
           </div>
         </div>`;
+      } else {
+        html += `<div class="mutation-msg ${m.role}">${escapeHtml(m.content)}</div>`;
       }
-    }
+    });
     area.innerHTML = html;
     area.scrollTop = area.scrollHeight;
   }
 }
 
-function _toggleMutationOptions() {
+async function selectMutationOption(msgIdx, optIdx) {
   if (!_mutationChatState) return;
-  _mutationChatState._optionsExpanded = !_mutationChatState._optionsExpanded;
-  _renderMutationChat();
-}
-
-// 사용자 요청 2026-04-29: 대화 흐름 반영해 옵션 재생성 — 같은 차원 refine 도 OK
-async function regenerateMutationOptions() {
-  if (!_mutationChatState) return;
-  const { strategyId, missionTitle } = _mutationChatState;
-  await _generateMutationOptions(strategyId, missionTitle, { allowSameLayer: true, isRegen: true });
-}
-
-async function selectMutationOption(idx) {
-  if (!_mutationChatState) return;
-  const opt = _mutationChatState.options[idx];
+  const optMsg = _mutationChatState.messages[msgIdx];
+  if (!optMsg || optMsg.role !== 'options') return;
+  const opt = (optMsg.options || [])[optIdx];
   if (!opt) return;
-  _mutationChatState.selected = idx;
-  _mutationChatState._optionsExpanded = false;
+  // 같은 가지 다시 클릭 = 선택 해제 (toggle)
+  const cur = _mutationChatState.selectedRef;
+  if (cur && cur.msgIdx === msgIdx && cur.optIdx === optIdx) {
+    _mutationChatState.selectedRef = null;
+    _renderMutationChat();
+    return;
+  }
+  _mutationChatState.selectedRef = { msgIdx, optIdx };
   _mutationChatState.chatRecord.selectedLayer = opt.layer;
   _mutationChatState.chatRecord.selectedAction = opt.action;
   _mutationChatState.messages.push({
@@ -17963,16 +17970,12 @@ async function selectMutationOption(idx) {
 
   if (state.apiKey) {
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({
+      const resp = await callAnthropic({
           model: 'claude-sonnet-4-6', max_tokens: 400,
           messages: [{
             role: 'user',
-            content: `사용자 가닥 "${card?.title || ''}" — 새 시도 차원: ${opt.layer} ${layerName}\n행동: "${opt.action}"\n\n[네 일]\n이 행동을 *오늘부터 바로 할 수 있도록* 구체적 step-by-step 3-5단계.\n각 단계: 짧고 명확하게 (한 줄 max 40자). 의지 부담↓ 환경 셋업 우선.\n\n[톤]\n친구. 외재화. "실패" 단어 X. ADHD 친화 (작은 단위).\n\n[출력 — 다른 거 X, 단계만]\n1. (첫 단계 — 가장 작게)\n2. ...\n3. ...\n\n도입 한 줄 + 단계 + 마무리 한 줄 ("시작 전에 더 얘기 X면 ✦ 해볼게로 등록").`
+            content: `사용자 가닥 "${card?.title || ''}" — 새 시도 차원: ${opt.layer} ${layerName}\n행동: "${opt.action}"\n\n[네 일]\n이 행동을 *오늘부터 바로 할 수 있도록* 구체적 step-by-step 3-5단계.\n각 단계: 짧고 명확하게 (한 줄 max 40자). 의지 부담↓ 환경 셋업 우선.\n\n[톤]\n진지 모드 친구. 외재화. "실패" 단어 X. ADHD 친화 (작은 단위).\n\n[출력 — 다른 거 X, 단계만]\n1. (첫 단계 — 가장 작게)\n2. ...\n3. ...\n\n도입 한 줄 + 단계 + 마무리 한 줄 ("시작 전에 더 얘기 X면 ✦ 해볼게로 등록").`
           }]
-        })
       });
       const data = await resp.json();
       stepText = data.content?.[0]?.text?.trim() || '';
@@ -18019,17 +18022,48 @@ function sendMutationMessage() {
   (async () => {
     try {
       const card = getStrategyCard(_mutationChatState.strategyId);
-      const recentMsgs = _mutationChatState.messages.slice(-8).map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n\n');
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6', max_tokens: 250,
+      // 사용자 요청 2026-04-29: 임시 대화 전체 활용 + 진지 모드 + 사용자 본인 데이터 인용
+      const allMsgs = _mutationChatState.messages
+        .filter(m => m.role !== 'options' && !m._placeholder)
+        .map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n');
+      // 사용자 본인 데이터 인용용
+      const _topByConf = (arr, n) => (arr || []).slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0)).slice(0, n);
+      const traits = _topByConf(state.traits, 5).map(t => `- ${t.name}${t.description ? ': ' + t.description : ''}`).join('\n');
+      const patterns = _topByConf(state.patterns, 5).map(p => `- ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`).join('\n');
+      const values = _topByConf(state.values, 3).map(v => `- ${v.name}`).join('\n');
+      const cf = state.caseFormulation;
+      const cfLine = (cf && cf.version > 0)
+        ? `통합분석 v.${cf.version}: 문제 ${(cf.problems||[]).slice(0,2).map(p => typeof p==='string'?p:p.text||'').join('; ').slice(0,150)}`
+        : '';
+      const activeDiag = (state.diagnoses || []).find(d => d.status === 'active' || d.status === 'shown');
+      const diagLine = activeDiag && _DIAG_LABELS && _DIAG_LABELS[activeDiag.type]
+        ? `진단: ${_DIAG_LABELS[activeDiag.type].name} — ${activeDiag.evidence || ''}`
+        : '';
+
+      const resp = await callAnthropic({
+          model: 'claude-sonnet-4-6', max_tokens: 350,
           messages: [{
             role: 'user',
-            content: `너는 돌연변이 진화 임시 대화창 안 AI. "${card.title}" 가닥의 다음 차원 시도를 사용자가 고민 중. 짧게 (1-3문장), 친구 톤, 외재화, "실패" X. 사용자 페이스 따라가.\n\n[최근 대화]\n${recentMsgs}\n\n[네 응답만, 마크다운 X]`
+            content: `너는 돌연변이 진화 임시 대화창 안 AI. "${card.title}" 가닥의 다음 시도를 사용자가 진지하게 고민 중.
+
+[톤 — 진지 모드 (가벼운 ㅋㅋ / 농담 X)]
+- 1-4문장. 차분한 친구. 외재화 ("X 패턴이 작동" / "이 도구 안 맞을 수도"). "실패" 단어 X.
+- 사용자 페이스 따라가. 추궁성 질문 X.
+- 사용자 메시지 짧아도 진지 톤 유지 (모드 sticky).
+- 분석/제안 강요 X. 사용자가 자기 발견하도록.
+
+[사용자 본인 데이터 — 우선 인용. generic textbook 단독 회피]
+${traits ? '특성:\n' + traits : ''}
+${patterns ? '\n패턴:\n' + patterns : ''}
+${values ? '\n가치:\n' + values : ''}
+${cfLine ? '\n' + cfLine : ''}
+${diagLine ? '\n' + diagLine : ''}
+
+[지금 대화 전체]
+${allMsgs}
+
+[네 응답만, 마크다운 X]`
           }]
-        })
       });
       const data = await resp.json();
       const text = data.content?.[0]?.text?.trim() || '응. 더 얘기해봐.';
@@ -18048,10 +18082,14 @@ function sendMutationMessage() {
 
 // 사용자 요청 2026-04-28: ✦ 클릭 → 임시 대화창 닫고 → openStrategyMissionChat (어떤 상황? → 오늘의 제안 → 부름 등록)
 async function finishMutationChat() {
-  if (!_mutationChatState || _mutationChatState.selected == null) return;
+  if (!_mutationChatState) return;
+  const sel = _mutationChatState.selectedRef;
+  if (!sel) return;
   const card = getStrategyCard(_mutationChatState.strategyId);
   if (!card) { closeMutationChat(false); return; }
-  const opt = _mutationChatState.options[_mutationChatState.selected];
+  const optMsg = _mutationChatState.messages[sel.msgIdx];
+  if (!optMsg || optMsg.role !== 'options') return;
+  const opt = (optMsg.options || [])[sel.optIdx];
   if (!opt) return;
   // chatRecord 자동 보관
   _mutationChatState.chatRecord.messages = _mutationChatState.messages.slice();
@@ -18142,10 +18180,14 @@ ACTION: <전략적 행동, 50-120자, 구체적 무엇을 어떻게>
 
 // V4-fix v2: 보관 여부 결정 후 실제 미션 생성
 function _completeMutationFinish(keepHistory) {
-  if (!_mutationChatState || _mutationChatState.selected == null) return;
+  if (!_mutationChatState) return;
+  const sel = _mutationChatState.selectedRef;
+  if (!sel) return;
   const card = getStrategyCard(_mutationChatState.strategyId);
   if (!card) { closeMutationChat(false); return; }
-  const opt = _mutationChatState.options[_mutationChatState.selected];
+  const optMsg = _mutationChatState.messages[sel.msgIdx];
+  if (!optMsg || optMsg.role !== 'options') return;
+  const opt = (optMsg.options || [])[sel.optIdx];
   if (!opt) return;
 
   _mutationChatState.chatRecord.messages = keepHistory ? _mutationChatState.messages.slice() : [];
@@ -18174,7 +18216,7 @@ function closeMutationChat(skipSave) {
   if (!skipSave && _mutationChatState) {
     // 저장 X로 닫음 — chatRecord에 messages 비움 (선택 X 케이스)
     const card = getStrategyCard(_mutationChatState.strategyId);
-    if (card && _mutationChatState.chatRecord && _mutationChatState.selected == null) {
+    if (card && _mutationChatState.chatRecord && !_mutationChatState.selectedRef) {
       // 선택 X면 시도 흔적만 보존 (messages 빈 상태)
       _mutationChatState.chatRecord.kept = false;
       _mutationChatState.chatRecord.messages = [];
