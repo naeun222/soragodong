@@ -270,6 +270,17 @@
     cursor: pointer; font-family: inherit;
   }
   .update-banner-btn-dismiss:active { background: var(--surface2); }
+
+  /* V4 코어 튜토리얼 잠금 시각 (사용자 요청 2026-04-29: 카드 우상단 자물쇠 + 그레이아웃) */
+  .core-locked { opacity: 0.45; position: relative; }
+  .core-locked::after {
+    content: '🔒'; position: absolute; top: 4px; right: 6px;
+    font-size: 13px; line-height: 1; pointer-events: none;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+  .nav-item.core-locked::after { font-size: 10px; top: 2px; right: 4px; }
+  .core-locked.btn-secondary::after { top: 2px; right: 4px; }
+
   .action-card:active { background: var(--surface2); transform: scale(0.98); }
   .action-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
   .action-card.chat .action-icon { background: linear-gradient(135deg, rgba(139,126,196,0.25), rgba(201,169,110,0.15)); }
@@ -6591,7 +6602,7 @@
   <div class="login-content">
     <div class="login-icon">🐚</div>
     <div class="login-title">소라고동</div>
-    <div class="login-sub">네AI 라이프 전략가.<br>이메일로 안전하게 들어와.</div>
+    <div class="login-sub">네 AI 라이프 전략가.<br>이메일로 안전하게 들어와.</div>
 
     <!-- Step 1: Email -->
     <div class="login-form" id="loginStep1">
@@ -7138,7 +7149,7 @@
         <!-- 사용자 요청 2026-04-29: 수동 클라우드 백업/복원 (rolling 10개) -->
         <button class="btn-secondary" onclick="manualCloudBackup()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드 백업</button>
         <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드 복원</button>
-        <button class="btn-secondary" onclick="startInteractiveOnboarding()">🐚 투어 다시 보기</button>
+        <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
 
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
@@ -7353,6 +7364,19 @@ const DEFAULT_STATE = {
   // 4. 환영 투어
   hasSeenV3Tour: false,
   hasSeenWelcomeTutorial: false,
+
+  // V4 코어 튜토리얼 잠금 시스템 (사용자 요청 2026-04-29)
+  // 각 코어 완료 시 해당 키 true. 기존 사용자는 마이그레이션에서 모두 true로 박힘.
+  // testerMode ON이면 잠금 우회.
+  unlocked: {
+    core1: false,  // 시작/체크인/대화 (한 바퀴) — 업데이트 배너 보기 → 코어 튜토리얼
+    core2: false,  // 소라의 부름 → 모래사장 → 양생방
+    core3: false,  // 실행 탭 — 머릿속 풀기 + 몰입
+    core4: false,  // 나 탭 — 분석 결과
+    core5: false,  // 도서관 탭 5 카테고리 + 리뷰
+    core6: false,  // 숙고 질문
+    core8: false   // 마법의 소라고동
+  },
 
   // 5. 모드 활성 시 표시용
   modeActiveSince: {},   // {exam: '2026-04-20', ...}
@@ -7705,6 +7729,26 @@ async function loadFromCloud() {
       // 기존 사용자(데이터 있음)는 본 걸로 처리, 신규는 false
       state.hasSeenWelcomeTutorial = (state.entries || []).length > 0 || (state.chatMessages || []).length > 0;
     }
+    // V4 코어 튜토리얼 잠금 시스템 마이그레이션 (사용자 요청 2026-04-29)
+    // 기존 사용자(어떤 데이터든 있음 OR 풀 튜토리얼 본 적 있음) → 모든 코어 unlocked
+    // 신규 사용자 → 모두 false (코어 #1만 업데이트 배너에서 시작 가능)
+    if (state.unlocked === undefined || typeof state.unlocked !== 'object') {
+      const hasData = (state.entries || []).length > 0 ||
+                      (state.chatMessages || []).length > 0 ||
+                      (state.shellCollection || []).length > 0 ||
+                      (state.topicCards || []).length > 0 ||
+                      state.hasSeenWelcomeTutorial === true ||
+                      state.hasSeenV3Tour === true;
+      state.unlocked = {
+        core1: hasData, core2: hasData, core3: hasData,
+        core4: hasData, core5: hasData, core6: hasData, core8: hasData
+      };
+    } else {
+      // 누락 키 보강 (이미 unlocked 객체 있는 사용자)
+      ['core1','core2','core3','core4','core5','core6','core8'].forEach(k => {
+        if (state.unlocked[k] === undefined) state.unlocked[k] = false;
+      });
+    }
     if (!state.modeActiveSince) state.modeActiveSince = {};
     if (!state.preferences) state.preferences = {
       nightModeManual: null,
@@ -7850,6 +7894,23 @@ async function loadFromCloud() {
       if (state.hasSeenV3Tour === undefined) state.hasSeenV3Tour = false;
       if (state.hasSeenWelcomeTutorial === undefined) {
         state.hasSeenWelcomeTutorial = (state.entries || []).length > 0 || (state.chatMessages || []).length > 0;
+      }
+      // V4 코어 튜토리얼 잠금 시스템 마이그레이션 — 같은 룰
+      if (state.unlocked === undefined || typeof state.unlocked !== 'object') {
+        const _hasData = (state.entries || []).length > 0 ||
+                         (state.chatMessages || []).length > 0 ||
+                         (state.shellCollection || []).length > 0 ||
+                         (state.topicCards || []).length > 0 ||
+                         state.hasSeenWelcomeTutorial === true ||
+                         state.hasSeenV3Tour === true;
+        state.unlocked = {
+          core1: _hasData, core2: _hasData, core3: _hasData,
+          core4: _hasData, core5: _hasData, core6: _hasData, core8: _hasData
+        };
+      } else {
+        ['core1','core2','core3','core4','core5','core6','core8'].forEach(k => {
+          if (state.unlocked[k] === undefined) state.unlocked[k] = false;
+        });
       }
       if (!state.modeActiveSince) state.modeActiveSince = {};
       if (!state.preferences) state.preferences = JSON.parse(JSON.stringify(DEFAULT_STATE.preferences));
@@ -8285,6 +8346,20 @@ async function init() {
     if (!document.hidden) { refreshHeaderDate(); applyNightMode(); }
   });
 
+  // V4 코어 튜토리얼 잠금 — 글로벌 클릭 인터셉터 (capture phase로 원래 onclick 가로챔)
+  // .core-locked 클래스 + data-core="coreN" 있는 element 클릭 시 잠금 모달 표시.
+  // testerMode ON / 코어 활성 / unlocked=true 면 통과.
+  document.addEventListener('click', function _coreLockInterceptor(e) {
+    const el = e.target && e.target.closest && e.target.closest('.core-locked');
+    if (!el) return;
+    const coreId = el.getAttribute('data-core');
+    if (!coreId) return;
+    if (typeof isCoreLocked === 'function' && !isCoreLocked(coreId)) return; // 풀려있으면 통과
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof showCoreLockModal === 'function') showCoreLockModal(coreId);
+  }, true);
+
   // ── AUTH GATE ──
   const authed = await checkSession();
   if (!authed) {
@@ -8358,6 +8433,15 @@ async function init() {
 
   // V3.13.x: 신규 사용자 자동 튜토리얼 분기 제거. 배너로 통일.
   // (isBrandNewUser 신규 사용자도 배너로 자기 페이스에 시작 가능)
+
+  // V4 사용자 요청 2026-04-29: 모든 코어 unlock 직후 reload 시 토스트 (onbFinish가 박은 플래그)
+  if (state.preferences && state.preferences._allTutorialsJustCompleted) {
+    state.preferences._allTutorialsJustCompleted = false;
+    saveState();
+    setTimeout(() => {
+      if (typeof showToast === 'function') showToast('🎉 모든 튜토리얼 끝났어! 🐚');
+    }, 1800);
+  }
 }
 
 // V3.7: startWelcomeTutorial을 인터랙티브 온보딩으로 가로채기
@@ -9118,7 +9202,7 @@ const ONBOARDING_STEPS = [
     id: 'exec_immerse_done',
     targetSelector: null,
     title: '✦ 했어',
-    body: '몰입 결과 묻는 창 떴지? <b>"✓ 했어"</b> 눌러봐.<br><br>네가 얼만큼의 시간을 써서 일을 완수했는지 알 수 있어. 이 데이터들이 쌓여서 네\'<b>메타인지</b>\'에 도움을 줄 거야.<br><br><span class="small">"카드도 완료 처리할까?" 뜨면 <b>확인</b> 눌러줘.</span>',
+    body: '몰입 결과 묻는 창 떴지? <b>"✓ 했어"</b> 눌러봐.<br><br>네가 얼만큼의 시간을 써서 일을 완수했는지 알 수 있어. 이 데이터들이 쌓여서 네 \'<b>메타인지</b>\'에 도움을 줄 거야.<br><br><span class="small">"카드도 완료 처리할까?" 뜨면 <b>확인</b> 눌러줘.</span>',
     waitFor: 'next',
     manualAdvance: true,
     dimBackground: false,
@@ -9453,6 +9537,246 @@ let _onbStep = 0;
 let _onbActiveListeners = [];
 let _onbStartTime = null;  // V3.12: 튜토리얼 시작 시간 — 종료 시 데이터 정리
 
+// ═══════════════════════════════════════════════════════════════
+// V4 코어 튜토리얼 시스템 (사용자 요청 2026-04-29)
+// 풀 튜토리얼 ONBOARDING_STEPS를 코어 7개로 분리. 각 코어는 독립적으로 잠금 해제.
+// 핵심 룰:
+// - testerMode ON → 잠금 우회 (코어 진행 중 다른 잠금 영역 자유 통과)
+// - 시드 prefix `seed_` (CLAUDE.md 시드 안전)
+// - 종료(완료/건너뛰기/앱 종료) 시 testerMode backup으로 원복
+// ═══════════════════════════════════════════════════════════════
+const CORE_TUTORIAL_RANGES = {
+  core1: { startId: 'tutorial_plea',     endId: 'finish' },                // 28 step + finish
+  core2: { startId: 'mission_done',      endId: 'dna_pearl_types' },       // 33 step
+  core3: { startId: 'exec_overview',     endId: 'exec_immerse_done' },     // 15 step
+  core4: { startId: 'model_intro',       endId: 'model_intro' },           // 1 step
+  core5: { startId: 'library_categories', endId: 'annual_stories_done' },   // 15 step (skip 포함)
+  core6: { startId: 'reflection_when',   endId: 'reflection_from_chat' },  // 3 step
+  core8: { startId: 'magic_room_intro',  endId: 'magic_unlock_explain' }   // 6 step
+};
+
+const CORE_LABELS = {
+  core1: '시작 / 체크인 / 대화 (한 바퀴)',
+  core2: '소라의 부름 + 모래사장 + 양생방',
+  core3: '실행 탭 — 머릿속 풀기 + 몰입',
+  core4: '나 탭 — 분석 결과',
+  core5: '도서관 탭 — 5 카테고리 + 리뷰',
+  core6: '숙고 질문',
+  core8: '마법의 소라고동'
+};
+
+// 코어 #5에서 제외할 step ID (사용자 명시: today_* 3개 / magic_* 6개 / back_to_galpi)
+const CORE_SKIP_IDS = {
+  core5: new Set([
+    'click_today_diary', 'today_diary_view', 'today_topic_view',
+    'magic_room_intro', 'magic_modal_seeded', 'magic_step1_start',
+    'magic_step1_filled', 'magic_step1_complete', 'magic_unlock_explain',
+    'back_to_galpi_chip_1'
+  ])
+};
+
+// 코어별 step 필드 override — { stepId: { coreId: { body?, nextLabel?, ... } } }
+// 풀 튜토리얼 그대로 두되, 특정 코어에서만 본문/버튼 라벨 다르게.
+const CORE_BODY_OVERRIDE = {
+  mission_done: {
+    core2: { body: '이 ⭐ 미션 카드가 \'<b>소라의 부름</b>\'이야.<br>대화하다가 네가 고민을 전략적으로 해결하고 싶고, 그걸 \'소라가 제안\'했을 때만 나타나는 특별한 녀석.<br><br><b>부담은 전혀 안 가져도 돼. 안 해도 완전 괜찮음 ㅋㅋ 귀찮다 싶으면 과감히 패스해!</b> (부탁할게)<br><br>미션 완료 시 <b>인증샷</b>을 찍어서 내가 봐주고 검증해. 검증되면 \'특별한\' 소라를 얻을 수 있어.<br><br>지금은 튜토리얼이라 인증샷 넘어갈게. <b>해냈어</b> 눌러봐.' }
+  },
+  yangsaeng_explain: {
+    core2: { body: '여기 <b>전략 DNA 카드</b>는 네 무기가 되어줄 수 있는 것들이야.<br><br>대화 중 <b>\'🧬 전략으로\'</b> 버튼을 누르면 그 전략이 여기에 저장돼. 🌱 새싹부터 시작해서 그 전략을 성공할수록 점점 성장해 — <b>양생 → 성장/진화 → 체화</b> 순서.<br><br>아래 <b>\'마감 직전 폭발력 신뢰\'</b> 카드가 예시 — 3번 성공해서 \'성장 중\'이야.<br><br>이 전략들은 고동이랑 대화하다 <b>비슷한 상황에 맞닥뜨릴 때 재사용</b>돼.<br>(또는 네가 이 전략 쓰고 싶다고 고동이한테 말해도 돼!)<br><br>우리가 쓴 전략이 <b>실제로 나를 변화시킬 때까지</b> 우리는 \'<b>전략 양생</b>\'을 할 수 있어.' }
+  },
+  exec_immerse_done: {
+    core3: { body: '몰입 결과 묻는 창 떴지? <b>"✓ 했어"</b> 눌러봐.<br><br>네가 얼만큼의 시간을 써서 일을 완수했는지 알 수 있어. <b>이건 ✦ 나 탭에서 확인할 수 있어</b> (아직 잠겨있다면 풀고 보러 와). 이 데이터들이 쌓여서 네 \'<b>메타인지</b>\'에 도움을 줄 거야.<br><br><span class="small">"카드도 완료 처리할까?" 뜨면 <b>확인</b> 눌러줘.</span>' }
+  },
+  model_intro: {
+    core4: {
+      body: '여기는 <b>내가 너를 분석한 결과</b>가 모이는 곳이야.<br><br>🎯 <b>가치</b> — 네가 중시하는 것들<br>💫 <b>특성</b> — 일관된 너의 모습<br>🔄 <b>패턴</b> — 반복되는 행동/상황 흐름<br>📋 <b>통합 분석</b> — 문제·메커니즘·강점 한눈에<br>📊 <b>task별 평균 시간</b> (지난 7일) — 실행 탭에서 쌓인 몰입 데이터<br><br>대화·체크인이 쌓이면 자동으로 채워져 — 천천히 둘러봐.<br>틀린 거 있으면 ✕ 눌러서 지우거나 ✓ 눌러서 검증해줘.<br>📊 "지금까지 데이터 다시 분석" 버튼으로 강제 재분석도 가능.',
+      nextLabel: '확인했어 ✦'
+    }
+  },
+  galpi_sub_intro: {
+    core5: { body: '여기엔 🧙‍♂️ <b>마법의 소라고동</b>과 🌙 <b>리뷰 모음</b>이 있어.<br><br>🧙‍♂️ 마법의 소라고동은 큰 결정(도전·사랑·진로)을 후회 없이 할 수 있게 도와주는 방이야 — <b>나중에 직접 눌러보면 짧게 안내해줄게</b>.<br><br>지금은 옆의 🌙 <b>리뷰 모음</b> 보러 가자.' }
+  },
+  annual_stories_done: {
+    core5: { body: 'Stories 잘 봤지? ✨<br><br><b>주마다 · 월마다 · 계절마다 · 년마다</b> 리뷰가 자동으로 생겨.<br><br>아래 📚 도서관 탭 한 번 눌러서 돌아와.' }
+  }
+};
+
+// 활성 코어 추적 (onbFinish가 unlock 박을 수 있게)
+let _activeCoreId = null;
+let _coreEndIdx = -1;
+let _coreBodyOverridesApplied = [];
+let _coreNeedsHelpAfterEnd = false;  // 코어 #1 외엔 endId 다 지나서 help_button으로 점프 필요
+
+// 잠금 체크 — testerMode ON / 코어 활성 중 / API 키 없음(초기 셋업) / 명시적 unlock 시 통과
+function isCoreLocked(coreId) {
+  if (!coreId) return false;
+  if (state && state.preferences && state.preferences.testerMode) return false;
+  if (window._onbTutorialMode) return false;
+  // 초기 셋업 안 끝난 사용자(API 키 없음) — 잠금 우회 (설정 접근 가능)
+  if (!state || !state.apiKey) return false;
+  if (!state.unlocked) return true;
+  return state.unlocked[coreId] !== true;
+}
+
+// 코어별 잠금 모달용 메타 (이름 + 길이 힌트)
+const CORE_LOCK_INFO = {
+  core1: { name: '시작 / 체크인 / 대화', long: false },
+  core2: { name: '소라의 부름', long: true },   // 사용자 명시: 좀 김
+  core3: { name: '실행 탭',     long: false },
+  core4: { name: '나 탭',        long: false },
+  core5: { name: '도서관',       long: true },   // 사용자 명시: 좀 김
+  core6: { name: '숙고 질문',    long: false },
+  core8: { name: '마법의 소라고동', long: false }
+};
+
+// 잠금 모달 띄우기 → "지금 해볼게" 누르면 startCoreTutorial 호출
+async function showCoreLockModal(coreId) {
+  if (!coreId || !CORE_TUTORIAL_RANGES[coreId]) return;
+  if (typeof showConfirmModal !== 'function') {
+    if (typeof startCoreTutorial === 'function') startCoreTutorial(coreId);
+    return;
+  }
+  const info = CORE_LOCK_INFO[coreId] || { name: '이 기능', long: false };
+  const lengthHint = info.long ? '\n(좀 길어 — 5~10분 정도)' : '';
+  const yes = await showConfirmModal({
+    title: '🔒 잠겨있어',
+    message: `'${info.name}' 튜토리얼을 완료해야 사용할 수 있어. 해볼래?${lengthHint}`,
+    okLabel: '지금 해볼게 ✦',
+    cancelLabel: '나중에'
+  });
+  if (yes) startCoreTutorial(coreId);
+}
+
+// 코어별 진입 화면 — startInteractiveOnboarding의 showScreen('home') 덮어씌움
+const CORE_INITIAL_SCREEN = {
+  core1: 'home',
+  core2: 'home',     // mission_done은 홈의 mission 카드
+  core3: 'execute',  // exec_overview는 실행 탭
+  core4: 'model',    // model_intro는 나 탭
+  core5: 'archive',  // library_categories는 도서관 탭
+  core6: 'home',     // reflection은 홈에 있음 (사용자 명시: 추가 버튼)
+  core8: 'decisions' // magic_room_intro는 마법의 소라고동 화면 — showScreen('decisions') + renderDecisionsList
+};
+
+// 코어별 진입 후 추가 액션 — 마법의 소라고동 등 특수 진입 처리
+const CORE_INITIAL_ACTION = {
+  core8: () => {
+    if (typeof renderDecisionsList === 'function') renderDecisionsList();
+  }
+};
+
+// 코어 튜토리얼 시작 — startInteractiveOnboarding 인프라 재사용
+async function startCoreTutorial(coreId) {
+  const range = CORE_TUTORIAL_RANGES[coreId];
+  if (!range) { console.warn('[core] unknown id:', coreId); return; }
+  const startIdx = ONBOARDING_STEPS.findIndex(s => s.id === range.startId);
+  const endIdx = ONBOARDING_STEPS.findIndex(s => s.id === range.endId);
+  if (startIdx < 0 || endIdx < 0) { console.warn('[core] step ID missing:', range); return; }
+
+  // step 필드 override 적용 (cleanup에서 원복)
+  _coreBodyOverridesApplied = [];
+  Object.entries(CORE_BODY_OVERRIDE).forEach(([stepId, perCore]) => {
+    const ov = perCore[coreId];
+    if (!ov) return;
+    const step = ONBOARDING_STEPS.find(s => s.id === stepId);
+    if (!step) return;
+    const snapshot = {};
+    Object.keys(ov).forEach(k => {
+      snapshot[k] = step[k];  // 원본 보존 (없는 필드도 undefined로 박힘)
+      step[k] = ov[k];
+    });
+    _coreBodyOverridesApplied.push({ step, snapshot });
+  });
+
+  _activeCoreId = coreId;
+  _coreEndIdx = endIdx;
+  // 코어 #1은 endId='finish'라 help_button 자연히 포함. 나머지는 끝나고 help_button 점프 필요.
+  _coreNeedsHelpAfterEnd = (coreId !== 'core1');
+  // 진입 화면 override (startInteractiveOnboarding이 기본 home으로 가는 거 덮어씌움)
+  window._coreInitialScreen = CORE_INITIAL_SCREEN[coreId] || 'home';
+  // 진입 후 추가 액션 (예: 마법의 소라고동 — renderDecisionsList)
+  window._coreInitialAction = CORE_INITIAL_ACTION[coreId] || null;
+
+  // 인프라 재사용 (testerMode ON + 시드 자동)
+  await startInteractiveOnboarding(startIdx);
+}
+
+// 코어 종료 시 cleanup (onbFinish에서 호출)
+function _cleanupCoreOverrides() {
+  (_coreBodyOverridesApplied || []).forEach(({step, snapshot}) => {
+    if (!step || !snapshot) return;
+    Object.keys(snapshot).forEach(k => {
+      if (snapshot[k] === undefined) delete step[k];
+      else step[k] = snapshot[k];
+    });
+  });
+  _coreBodyOverridesApplied = [];
+  _activeCoreId = null;
+  _coreEndIdx = -1;
+  _coreNeedsHelpAfterEnd = false;
+}
+
+// V4 (사용자 요청 2026-04-29): 설정 → 🐚 투어 다시 보기
+// 코어 7개 + 풀 튜토리얼 중 하나 선택. 선택 시 testerMode + 시드 박고 진행.
+async function showTutorialReplayMenu() {
+  if (typeof showOptionsModal !== 'function') {
+    return startInteractiveOnboarding();
+  }
+  const opts = [
+    { label: '🐚 코어 #1 — 시작 / 체크인 / 대화', value: 'core1', desc: '한 바퀴 (필수 핵심)' },
+    { label: '⭐ 코어 #2 — 소라의 부름 / 모래사장 / 양생방', value: 'core2', desc: '미션 + 결과 체크 + 전략 진화 (좀 김)' },
+    { label: '🚀 코어 #3 — 실행 탭', value: 'core3', desc: '머릿속 풀기 + 몰입 ritual' },
+    { label: '✦ 코어 #4 — 나 탭', value: 'core4', desc: '분석 결과' },
+    { label: '📚 코어 #5 — 도서관 탭', value: 'core5', desc: '5 카테고리 + 리뷰 (좀 김)' },
+    { label: '🌊 코어 #6 — 숙고 질문', value: 'core6', desc: '큰 물음' },
+    { label: '🧙‍♂️ 코어 #8 — 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
+    { label: '✨ 풀 튜토리얼', value: 'full', desc: '처음부터 끝까지 (~30분)' }
+  ];
+  const choice = await showOptionsModal({
+    title: '🐚 어떤 튜토리얼?',
+    message: '다시 보고 싶은 튜토리얼 골라봐.',
+    options: opts
+  });
+  if (!choice) return;
+  if (choice === 'full') return startInteractiveOnboarding();
+  if (typeof startCoreTutorial === 'function') return startCoreTutorial(choice);
+}
+
+// 잠금 시각 적용/해제 — 셀렉터 + coreId pair 받아서 .core-locked 클래스 + data-core 토글
+// 매 화면 render 끝에 호출 (renderHome / renderNav / renderArchive 등).
+function applyCoreLockMarkers() {
+  if (typeof document === 'undefined' || !document.querySelectorAll) return;
+  // 매핑: 셀렉터 → coreId
+  const lockMap = [
+    // 탭 nav (3개)
+    { sel: '.nav-item[data-screen="execute"]', core: 'core3' },
+    { sel: '.nav-item[data-screen="model"]',   core: 'core4' },
+    { sel: '.nav-item[data-screen="archive"]', core: 'core5' },
+    // 홈 카드들
+    { sel: '#missionContainer .mission-card',                         core: 'core2' },
+    { sel: '.home-small-card[onclick="openShellCollection()"]',       core: 'core2' },
+    // 도서관 안 양생방 chip — core2 prerequisite (사용자 요청 2026-04-29)
+    { sel: '.lib-cat-chip[data-cat="yangsaeng"]',                     core: 'core2' },
+    // 숙고 질문 추가 (홈에 있는 진입점)
+    { sel: '.reflection-empty-card, [onclick="addReflectionQuestion()"]', core: 'core6' },
+    // 마법의 소라고동 — 도서관 안 진입점 + 홈 mini 카드 + 결정 화면 새 결정 버튼
+    { sel: '[onclick="showArchiveDecisions()"], .decision-mini-card, .magic-card', core: 'core8' }
+  ];
+  lockMap.forEach(({sel, core}) => {
+    const locked = isCoreLocked(core);
+    document.querySelectorAll(sel).forEach(el => {
+      if (locked) {
+        el.classList.add('core-locked');
+        el.setAttribute('data-core', core);
+      } else {
+        // 풀린 거: 클래스 + data 제거 (안전: 다른 data-core 쓰는 element와 충돌 X — 우리 앱엔 그런 예 없음)
+        el.classList.remove('core-locked');
+        if (el.getAttribute('data-core')) el.removeAttribute('data-core');
+      }
+    });
+  });
+}
+
 // 사용자 요청 2026-04-29: 튜토리얼 phase 시각화 — "지금 어디 있나"
 // startId 기준으로 phase 묶음 정의. 마지막 phase는 다음 startId 직전까지.
 const ONBOARDING_PHASES = [
@@ -9582,7 +9906,12 @@ async function startInteractiveOnboarding(startStep) {
   }
   const tourOv = document.getElementById('tourOverlay');
   if (tourOv) tourOv.style.display = 'none';
-  showScreen('home');
+  // V4 코어 튜토리얼 — 진입 화면 override + 진입 후 추가 액션
+  showScreen(window._coreInitialScreen || 'home');
+  if (typeof window._coreInitialAction === 'function') {
+    try { window._coreInitialAction(); } catch (e) { console.warn('core initial action:', e); }
+    window._coreInitialAction = null;
+  }
   setTimeout(() => {
     const ov = document.getElementById('onbOverlay');
     if (ov) {
@@ -10122,6 +10451,42 @@ function onbPositionStep(step, retryCount) {
 
 function onbNext() {
   _onbStep++;
+  // V4 코어 종료 — 마지막 step 지나면 help_button 점프 또는 onbFinish
+  if (_activeCoreId && _coreEndIdx >= 0 && _onbStep > _coreEndIdx) {
+    // 코어 #2~#8: endId 후 help_button (다시 보고 싶을 때)으로 점프
+    if (_coreNeedsHelpAfterEnd) {
+      const helpIdx = ONBOARDING_STEPS.findIndex(s => s && s.id === 'help_button');
+      if (helpIdx >= 0) {
+        _onbStep = helpIdx;
+        _coreEndIdx = helpIdx;  // 다음 next에 finish
+        _coreNeedsHelpAfterEnd = false;
+        onbRenderStep();
+        return;
+      }
+    }
+    onbFinish();
+    return;
+  }
+  // V4 코어 skip — 코어별 제외 step 자동 통과
+  const skipSet = _activeCoreId && CORE_SKIP_IDS[_activeCoreId];
+  while (skipSet && _onbStep <= _coreEndIdx && _onbStep < ONBOARDING_STEPS.length &&
+         skipSet.has(ONBOARDING_STEPS[_onbStep] && ONBOARDING_STEPS[_onbStep].id)) {
+    _onbStep++;
+  }
+  if (_activeCoreId && _coreEndIdx >= 0 && _onbStep > _coreEndIdx) {
+    if (_coreNeedsHelpAfterEnd) {
+      const helpIdx = ONBOARDING_STEPS.findIndex(s => s && s.id === 'help_button');
+      if (helpIdx >= 0) {
+        _onbStep = helpIdx;
+        _coreEndIdx = helpIdx;
+        _coreNeedsHelpAfterEnd = false;
+        onbRenderStep();
+        return;
+      }
+    }
+    onbFinish();
+    return;
+  }
   if (_onbStep >= ONBOARDING_STEPS.length) {
     onbFinish();
     return;
@@ -10153,14 +10518,48 @@ function onbFinish() {
   onbCleanupListeners();
   window._onbTutorialMode = false;
 
+  // V4: 활성 코어 unlock 박을 ID 보존 (cleanup 함수가 _activeCoreId를 null로 만들기 전에)
+  const _completedCoreId = _activeCoreId;
+  // V4: body override 복원 + 코어 활성 상태 정리
+  if (typeof _cleanupCoreOverrides === 'function') _cleanupCoreOverrides();
+
   // 사용자 요청 2026-04-28: 테스터 모드 ON 상태였으면 backup 복원으로 한 방 정리 (filter cleanup 중복 X)
   if (state.preferences && state.preferences.testerMode && _testerModeBackupState) {
+    // V4: 튜토리얼 중 사용자가 입력한 API 키 / profile 보존 (backup 복원으로 wipe 방지)
+    const _userInputApiKey = state.apiKey;
+    const _userInputProfile = state.profile;
+    const _backupApiKey = _testerModeBackupState.apiKey;
+    const _backupProfile = _testerModeBackupState.profile;
     Object.keys(state).forEach(k => delete state[k]);
     Object.assign(state, _testerModeBackupState);
     _testerModeBackupState = null;
+    // 사용자가 튜토리얼 중 새로 입력했으면(이전 비어있고 지금 있음) 그 값으로 박음
+    if (_userInputApiKey && !_backupApiKey) state.apiKey = _userInputApiKey;
+    if (_userInputProfile && !_backupProfile) state.profile = _userInputProfile;
     if (typeof refreshTesterModeUI === 'function') refreshTesterModeUI();
     state.hasSeenWelcomeTutorial = true;
     state.hasSeenV3Tour = true;
+    // V4 코어 unlock 박기 (backup 복원 후 — 사용자 진행 상태에 추가)
+    if (_completedCoreId) {
+      state.unlocked = state.unlocked || {};
+      state.unlocked[_completedCoreId] = true;
+    }
+    // V4 풀 튜토리얼 완주 시 모든 코어 unlock
+    if (window._fullTutorialActive) {
+      state.unlocked = state.unlocked || {};
+      ['core1','core2','core3','core4','core5','core6','core8'].forEach(k => state.unlocked[k] = true);
+      window._fullTutorialActive = false;
+    }
+    // V4 사용자 요청 2026-04-29: 모든 코어 unlock 시 다음 reload 후 토스트
+    {
+      const _all = ['core1','core2','core3','core4','core5','core6','core8'];
+      const _allDone = state.unlocked && _all.every(k => state.unlocked[k] === true);
+      state.preferences = state.preferences || {};
+      if (_allDone && !state.preferences._allTutorialsCompletedShown) {
+        state.preferences._allTutorialsCompletedShown = true;
+        state.preferences._allTutorialsJustCompleted = true;
+      }
+    }
     _onbStartTime = null;
     delete window._onbCFBackup;
     delete window._onbModesBackup;
@@ -10246,6 +10645,28 @@ function onbFinish() {
 
   state.hasSeenWelcomeTutorial = true;
   state.hasSeenV3Tour = true;
+  // V4 코어 unlock 박기 (no-backup 경로)
+  if (_completedCoreId) {
+    state.unlocked = state.unlocked || {};
+    state.unlocked[_completedCoreId] = true;
+  }
+  // V4 풀 튜토리얼 완주 시 모든 코어 unlock (no-backup 경로도 동일)
+  if (window._fullTutorialActive) {
+    state.unlocked = state.unlocked || {};
+    ['core1','core2','core3','core4','core5','core6','core8'].forEach(k => state.unlocked[k] = true);
+    window._fullTutorialActive = false;
+  }
+  // V4 모든 코어 unlock 토스트 플래그 (no-backup 경로)
+  {
+    const _all = ['core1','core2','core3','core4','core5','core6','core8'];
+    const _allDone = state.unlocked && _all.every(k => state.unlocked[k] === true);
+    state.preferences = state.preferences || {};
+    if (_allDone && !state.preferences._allTutorialsCompletedShown) {
+      state.preferences._allTutorialsCompletedShown = true;
+      // no-backup 경로는 reload 안 함 → 직접 토스트
+      setTimeout(() => { if (typeof showToast === 'function') showToast('🎉 모든 튜토리얼 끝났어! 🐚'); }, 800);
+    }
+  }
 
   saveState();
   const ov = document.getElementById('onbOverlay');
@@ -11457,11 +11878,11 @@ function renderMainAction() {
 function renderDecisionMiniLink() {
   const container = document.getElementById('decisionMiniLinkContainer');
   if (!container) return;
-  
+
   // 진행 중인 결정 개수
   const inProgressCount = (state.decisions || []).filter(d => d.status === 'in_progress').length;
   const subText = inProgressCount > 0 ? `숙성 중 ${inProgressCount}개` : '14일 숙성';
-  
+
   container.innerHTML = `
     <div onclick="showScreen('decisions')" class="decision-mini-card">
       <div class="dm-icon">🧙‍♂️</div>
@@ -11472,6 +11893,8 @@ function renderDecisionMiniLink() {
       <div class="dm-arrow">›</div>
     </div>
   `;
+  // V4: 잠금 시각 갱신
+  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
 }
 
 // V3.7: Today's Shell 제거 — 자존감 외부화 / habituation / Anti-sycophancy 충돌 우려.
@@ -11594,6 +12017,9 @@ function renderReflectionHome() {
   if (!container) return;
   const all = state.reflectionQuestions || [];
   const active = all.find(q => q.status === 'active');
+
+  // V4: render 후 잠금 시각 갱신
+  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
 
   // V4-fix: 한 번에 하나씩 — active 1개만 표시. pending/paused/더 깊이 볼 거 링크 제거.
   if (!active) {
@@ -12874,6 +13300,9 @@ function renderTodayMission() {
   if (!container) return;
   const list = getTodayMissions();
 
+  // V4: render 후 잠금 시각 갱신
+  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
+
   if (list.length === 0) {
     container.innerHTML = '';
     return;
@@ -14016,6 +14445,14 @@ function showUndoToast(msg, undoFn, durationMs = 5000) {
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 function showScreen(name) {
+  // V4 코어 잠금 — 잠긴 탭/화면 진입 시 잠금 모달 (testerMode/코어활성/unlocked면 통과)
+  // (글로벌 클릭 인터셉터가 잡지만, 다른 곳에서 showScreen 직접 호출하는 케이스도 가드)
+  const _navLockMap = { execute: 'core3', model: 'core4', archive: 'core5', decisions: 'core8' };
+  const _lockCoreId = _navLockMap[name];
+  if (_lockCoreId && typeof isCoreLocked === 'function' && isCoreLocked(_lockCoreId)) {
+    if (typeof showCoreLockModal === 'function') showCoreLockModal(_lockCoreId);
+    return;
+  }
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const target = document.getElementById('screen-' + name);
@@ -14044,6 +14481,8 @@ function showScreen(name) {
     if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
   }
   if (name === 'settings') { setTimeout(refreshTesterModeUI, 30); }
+  // V4: 화면 전환 후 잠금 시각 갱신 (모든 화면 공통)
+  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 50);
   if (name === 'execute') renderExecute();
   if (name === 'checkin') {
     renderDailyQuestion(); renderModes(); renderCheckinTrackers(); prefillCheckinFromEntry();
@@ -18764,10 +19203,20 @@ function renderLensCalendarGrid() {
   const entriesByDate = {};
   (state.entries || []).forEach(e => { if (e.date) entriesByDate[e.date] = e; });
   const chaptersByDate = {};
-  (state.chatMessages || []).forEach(m => {
-    if (m.chapterStart && m.timestamp) {
-      const dk = getDayKey(m.timestamp);
+  // 사용자 보고 2026-04-29: chatMessages의 chapterStart 마커 timestamp는
+  // "다음 챕터 시작 시점" (4시간 갭 후 첫 메시지)이라 잘못된 날짜에 점이 찍혔음
+  // (예: 28일에 대화 → 29일 첫 메시지에 마커 → 29일에 잘못 표시).
+  // → 실제 챕터 종료 시점 기반으로 변경: topicCards.chapterEndedAt + chatArchive.date
+  (state.topicCards || []).forEach(c => {
+    const endedAt = c && (c.chapterEndedAt || c.chapterStartedAt || c.createdAt);
+    if (endedAt) {
+      const dk = getDayKey(endedAt);
       chaptersByDate[dk] = (chaptersByDate[dk] || 0) + 1;
+    }
+  });
+  (state.chatArchive || []).forEach(a => {
+    if (a && a.date) {
+      chaptersByDate[a.date] = (chaptersByDate[a.date] || 0) + 1;
     }
   });
 
@@ -18840,6 +19289,8 @@ function switchLibraryCat(cat) {
     renderLensArchive();
     if (typeof renderLensInsights === 'function') renderLensInsights();
   }
+  // V4: 카테고리 전환 후 잠금 시각 갱신 (마법의 소라고동 등)
+  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 30);
   // 검색바는 모든 카테고리에서 노출 (사용자 보고 2026-04-29: 'block' 으로 덮으면 flex 깨져 토글이 검색창 밑으로 wrap — 'flex' 유지)
   const searchBar = document.getElementById('archiveSearchBar');
   if (searchBar) searchBar.style.display = 'flex';
@@ -22663,7 +23114,7 @@ async function testSeedV4Data() {
     { type: 'scrap', headline: '실패 ≠ 자기 부정',
       body: '한 번 안 통한 = 데이터, 가치 판정 X.', daysAgo: 80, tags: ['실패', '자기이해'],
       userMsg: '이번 시도도 실패. 내가 부족한 건가 싶어.',
-      assistantMsg: '한 번 안 통했다 = 그 방법이 안 맞았다. 네가치랑 별개야. 데이터 한 점 늘었어 — 다음 시도 더 정확해질 거야.' },
+      assistantMsg: '한 번 안 통했다 = 그 방법이 안 맞았다. 네 가치랑 별개야. 데이터 한 점 늘었어 — 다음 시도 더 정확해질 거야.' },
     { type: 'memo', headline: '카페 새벽 = 가장 강한 환경',
       body: '의지 0%여도 카페 자리 잡으면 시작됨. 환경 신호의 힘.', daysAgo: 130, tags: ['환경', '카페'],
       userMemo: '카페 새벽 = 가장 강한 환경. 의지 0%여도 자리 잡으면 시작됨.' },
@@ -22893,7 +23344,9 @@ async function testSeedV4Data() {
   const yesterdayKey = new Date(today.getTime() - 86400000).toISOString().split('T')[0];
   const dayBeforeKey = new Date(today.getTime() - 2 * 86400000).toISOString().split('T')[0];
   // 사용자 요청 2026-04-28: 결과 체크 트리거 — 미션 'completed' + attemptStatus 없음 (양생방 카드에 '🔍 결과 체크' 버튼 뜨도록)
+  // 사용자 요청 2026-04-29: 코어 #2(소라의 부름)용 active 미션 추가 — 풀 튜토리얼은 ✦해볼게로 만들지만 코어 #2는 시드로 박음
   state.missions = [
+    { id: 'mis_seed_active_call', title: '엄마 통화 시작 전 3초 호흡', description: '"나도 알아!" 나오기 전에 한 호흡 끼우기', status: 'active', scheduledFor: todayStr, createdAt: new Date(today.getTime() - 3600000).toISOString() },
     { id: 'mis_seed_strat0_done_unchecked', title: '마감 직전 환경 셋업 1번', description: '카페 자리 + 폰 다른 방', status: 'completed', completedDate: new Date(today.getTime() - 86400000).toISOString().split('T')[0], completedAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: 'strat_seed_0', generationIdx: 0, _followupAsked: true },
     { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
     { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
@@ -26416,7 +26869,7 @@ function _buildMoodArcSlideHTML(inRange, startMs, endMs) {
 
   return `
     <div class="stories-label">기분 곡선</div>
-    <div class="stories-title" style="margin-bottom:6px;">이 분기 네mood arc</div>
+    <div class="stories-title" style="margin-bottom:6px;">이 분기 네 mood arc</div>
     <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-bottom:14px;">주별 평균 · ${entries.length}일 기록</div>
 
     <div style="display:flex; justify-content:center; align-items:center; gap:14px; margin:0 auto 14px;">
@@ -29367,36 +29820,105 @@ const APP_VERSION = 'v4.0.163-step69-body';
 function autoTourOnUpdate() {
   if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
 }
+// V4 (사용자 요청 2026-04-29): 배너 → 3 버튼 모달
+// dismiss 단위는 메이저 버전 (V4/V5/...). 같은 메이저면 한 번 dismiss로 끝까지 안 떠.
+// 이전 사용자의 dismissedAppVersion 플래그는 이제 무효 (사용자 명시 — 지금 이후부터).
+function _currentMajor() {
+  const v = (typeof APP_VERSION === 'string' ? APP_VERSION : '') || '';
+  const m = v.match(/^v(\d+)/i);
+  return m ? ('V' + m[1]) : 'V4';
+}
 function renderUpdateNotice() {
+  // 기존 배너 element 비활성 (잔여 시각 제거)
   const banner = document.getElementById('updateBanner');
-  if (!banner) return;
-  const dismissed = state && state.preferences && state.preferences.dismissedAppVersion;
-  const shouldShow = state && dismissed !== APP_VERSION && !window._onbTutorialMode;
-  if (!shouldShow) {
-    banner.style.display = 'none';
-    banner.innerHTML = '';
-    return;
-  }
-  banner.style.display = 'flex';
-  banner.innerHTML = `
-    <span class="update-banner-text">✨ V4 대규모 업데이트 완료! 한 번 둘러볼래? (제발료)</span>
-    <div class="update-banner-actions">
-      <button onclick="startUpdateTour()" class="update-banner-btn-go">보기</button>
-      <button onclick="dismissUpdateNotice()" class="update-banner-btn-dismiss" aria-label="닫기">×</button>
+  if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
+
+  const major = _currentMajor();
+  const dismissedMajor = state && state.preferences && state.preferences.dismissedMajor;
+  const shouldShow = state && dismissedMajor !== major
+    && !window._onbTutorialMode && !window._updateChooserShownThisSession;
+  if (!shouldShow) return;
+  // 한 세션에 한 번만
+  window._updateChooserShownThisSession = true;
+  showUpdateChooserModal();
+}
+function showUpdateChooserModal() {
+  // 이미 떠있으면 중복 X
+  if (document.querySelector('.update-chooser-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show update-chooser-overlay';
+  overlay.style.zIndex = '10000';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:340px; padding:24px;">
+      <div style="font-size:38px; text-align:center; margin-bottom:8px;">🐚</div>
+      <div style="font-size:18px; font-weight:600; text-align:center; margin-bottom:8px;">${escapeHtml(_currentMajor())} 대규모 업데이트!</div>
+      <div style="font-size:13px; color:var(--text-dim); text-align:center; line-height:1.6; margin-bottom:20px;">
+        한 번 둘러보면 나중에 헷갈릴 일 줄어. (제발료)
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="input-modal-btn primary" onclick="_chooseUpdateOption('full')" style="padding:14px;">
+          ✨ 풀 튜토리얼 해보기
+          <div style="font-size:11px; opacity:0.85; margin-top:4px; font-weight:normal;">처음부터 끝까지 한 번에 (좀 김)</div>
+        </button>
+        <button class="input-modal-btn" onclick="_chooseUpdateOption('learn')" style="padding:14px;">
+          🐚 하면서 익히기
+          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">기능 만날 때마다 짧은 안내 받기</div>
+        </button>
+        <button class="input-modal-btn" onclick="_chooseUpdateOption('dismiss')" style="padding:10px; opacity:0.6;">
+          이미 알아 (다시 보지 않기)
+        </button>
+      </div>
     </div>
   `;
+  // 외부 클릭으로 닫히지 않게 — overlay onclick 핸들러 X (사용자 명시: 3 버튼 중 하나만)
+  document.body.appendChild(overlay);
 }
+function _chooseUpdateOption(choice) {
+  // 모달 제거
+  document.querySelectorAll('.update-chooser-overlay').forEach(o => o.remove());
+  // 어떤 선택이든 dismiss (현재 메이저 기준 — V5 등 새 메이저 시 다시 뜸)
+  state.preferences = state.preferences || {};
+  state.preferences.dismissedMajor = _currentMajor();
+  saveState();
+  if (choice === 'full') {
+    window._fullTutorialActive = true;
+    if (typeof startInteractiveOnboarding === 'function') startInteractiveOnboarding();
+  }
+  // 'learn' / 'dismiss' — 그냥 닫기 (잠금 클릭 시 코어 모달로 자연 안내)
+}
+// 하위 호환 — 기존 dismissUpdateNotice 호출처 보호
 function dismissUpdateNotice() {
   state.preferences = state.preferences || {};
-  state.preferences.dismissedAppVersion = APP_VERSION;
+  state.preferences.dismissedMajor = _currentMajor();
   saveState();
-  renderUpdateNotice();
 }
-function startUpdateTour() {
+async function startUpdateTour() {
   state.preferences = state.preferences || {};
   state.preferences.dismissedAppVersion = APP_VERSION;
   saveState();
   renderUpdateNotice();
+
+  // V4 (사용자 요청 2026-04-29): 업데이트 배너 → 코어/풀 chooser
+  if (typeof showOptionsModal !== 'function') {
+    // fallback: 코어 #1 직행
+    if (typeof startCoreTutorial === 'function') return startCoreTutorial('core1');
+    window._fullTutorialActive = true;
+    return startInteractiveOnboarding();
+  }
+  const choice = await showOptionsModal({
+    title: '🐚 어떤 튜토리얼?',
+    message: '코어는 핵심만 짧게. 풀은 처음부터 끝까지.',
+    options: [
+      { label: '코어 튜토리얼 ✦', value: 'core', desc: '시작 / 체크인 / 대화 — 한 바퀴' },
+      { label: '풀 튜토리얼',    value: 'full', desc: '모든 기능 한 번에 (~30분)' }
+    ]
+  });
+  if (!choice) return;
+  if (choice === 'core') {
+    if (typeof startCoreTutorial === 'function') return startCoreTutorial('core1');
+  }
+  // 풀 튜토리얼 — 완주 시 모든 코어 unlock 박기 위해 플래그
+  window._fullTutorialActive = true;
   startInteractiveOnboarding();
 }
 
