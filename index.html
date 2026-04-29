@@ -7420,6 +7420,16 @@
         <div class="input-label">👤 내 프로필 (AI가 참고)</div>
         <textarea id="profileInput" placeholder="예: ADHD/ADD 성향..." rows="5"></textarea>
       </div>
+      <!-- 사용자 요청 2026-04-30: 일일 메시지 cap (비용 폭발 방지). 0 = 무제한. -->
+      <div class="input-group">
+        <div class="input-label">📋 일일 대화 한도</div>
+        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:8px;">
+          하루 메인 chat 메시지 수 한도. 4시 이후 reset. 0 = 무제한.<br>
+          비용 폭발 방지용 — 헤비 사용자면 풀거나 ↑.
+        </div>
+        <input type="number" id="dailyChatCapInput" min="0" max="9999" placeholder="100" style="width:100%;">
+        <div id="dailyChatCountStatus" style="font-size:11px;color:var(--text-soft);margin-top:6px;"></div>
+      </div>
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
@@ -7698,7 +7708,9 @@ const DEFAULT_STATE = {
     tutorialVersion: null,        // 'full' | 'update' | 'core' | null (어떤 튜토리얼 버전 봤나)
     tutorialCompleted: false,
     miniTutorialsSeen: [],        // ['yangsaeng','galpi','sukgo',...] 화면별 미니 도움
-    progressiveUnlockLevel: null  // 'week1' | 'month1' | 'month3' (코어 선택 시 점진 노출)
+    progressiveUnlockLevel: null,  // 'week1' | 'month1' | 'month3' (코어 선택 시 점진 노출)
+    // 사용자 요청 2026-04-30: 메인 chat 일일 cap. 0 = 무제한. default 100/일 (헤비 사용자 본인이 풀 수 있게 settings 조절).
+    dailyChatCap: 100
   },
 
   // 7. V3.3: 대화 일별 아카이브
@@ -7711,6 +7723,8 @@ const DEFAULT_STATE = {
   diagnoses: [],            // V4 비전 9.5 진단 5종: [{id, type, confidence, evidence, detectedAt, status:'active'|'shown'|'dismissed'}]
   quarterlyReviews: [],     // V4 비전 7.9 분기 리뷰: [{id, quarterKey:'2026-Q2', completedAt, summary, sections, stats, auto, deepDive}]
   lastForceAnalyzeAt: null, // 사용자 요청 2026-04-30: forceAnalyze 일주일 자동화 — 마지막 실행 시각.
+  // 사용자 요청 2026-04-30: 메인 chat 일일 메시지 cap (비용 폭발 방지). 4시 cutoff 기준 reset.
+  dailyChatCount: { date: null, count: 0 },
 
   // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
   // 시스템 프롬프트 stable 부분에 박혀서 cache_control 적용 → cache_read만 (사실상 무료).
@@ -8126,6 +8140,9 @@ async function loadFromCloud() {
     if (state.preferences.tutorialCompleted === undefined) state.preferences.tutorialCompleted = false;
     if (!Array.isArray(state.preferences.miniTutorialsSeen)) state.preferences.miniTutorialsSeen = [];
     if (state.preferences.progressiveUnlockLevel === undefined) state.preferences.progressiveUnlockLevel = null;
+    // 사용자 요청 2026-04-30: 일일 chat cap default 100. 이미 있으면 그대로 (사용자 설정 보존).
+    if (state.preferences.dailyChatCap === undefined) state.preferences.dailyChatCap = 100;
+    if (!state.dailyChatCount || typeof state.dailyChatCount !== 'object') state.dailyChatCount = { date: null, count: 0 };
 
     // 사용자 요청 2026-04-28: cloud/localStorage에 stale testerMode 플래그가 있으면 항상 false로 (메모리에서만 토글되어야 하는 flag — 새로고침 시 무조건 OFF)
     if (state.preferences.testerMode) {
@@ -16777,11 +16794,37 @@ function formatAIResponse(text) {
   return formatted;
 }
 
+// 사용자 요청 2026-04-30: 메인 chat 일일 cap 헬퍼. 4시 cutoff 기준. cap=0 = 무제한.
+function _checkDailyChatCap() {
+  if (!state.preferences) state.preferences = {};
+  const cap = state.preferences.dailyChatCap;
+  if (cap === 0 || cap == null) return { ok: true };
+  const todayK = todayKey();
+  if (!state.dailyChatCount || state.dailyChatCount.date !== todayK) {
+    state.dailyChatCount = { date: todayK, count: 0 };
+  }
+  return { ok: state.dailyChatCount.count < cap, current: state.dailyChatCount.count, cap };
+}
+function _incrementDailyChatCount() {
+  const todayK = todayKey();
+  if (!state.dailyChatCount || state.dailyChatCount.date !== todayK) {
+    state.dailyChatCount = { date: todayK, count: 0 };
+  }
+  state.dailyChatCount.count += 1;
+}
+
 async function sendChat() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if (!text) return;
-  
+
+  // 사용자 요청 2026-04-30: 일일 cap 체크 (비용 폭발 방지). 도달 시 토스트 + 차단.
+  const capCheck = _checkDailyChatCap();
+  if (!capCheck.ok) {
+    showToast(`📋 오늘 대화 한도 (${capCheck.cap}개) 다 됐어 — 내일 4시 이후 풀려.\n설정에서 한도 조절 가능.`);
+    return;
+  }
+
   // V4 사용자 요청 2026-04-29: 4시간 → 24시간으로 변경. 사용자가 이어서 대화하고 싶을 수 있음 — 명시적 ✓ 마무리만 챕터 분리.
   // 24시간은 자동 분리 안전망 (자정 넘기는 일반 케이스 보호).
   const CHAPTER_GAP_MS = 24 * 60 * 60 * 1000;  // 24시간
@@ -16824,6 +16867,8 @@ async function sendChat() {
       ? { chapterStart: true, chapterMeta: { category: null, summary: null, strategyId: null } }
       : {})
   });
+  // 사용자 요청 2026-04-30: 일일 cap 카운트 증가 (메시지 push 직후, AI call 전).
+  _incrementDailyChatCount();
   // V4-1m: 진주 능동 제안 신호 감지 (행복/소중함). 같은 날 1회 가드.
   if (typeof detectPearlSignal === 'function' && detectPearlSignal(text)) {
     const todayK = todayKey();
@@ -31075,6 +31120,23 @@ async function maybeRunWeeklyForceAnalyze() {
 function loadSettings() {
   document.getElementById('apiKeyInput').value = state.apiKey || '';
   document.getElementById('profileInput').value = state.profile || '';
+  // 사용자 요청 2026-04-30: 일일 cap input + 현재 사용량 표시
+  const capInput = document.getElementById('dailyChatCapInput');
+  if (capInput) {
+    const cap = (state.preferences && state.preferences.dailyChatCap != null) ? state.preferences.dailyChatCap : 100;
+    capInput.value = cap;
+  }
+  const status = document.getElementById('dailyChatCountStatus');
+  if (status) {
+    const todayK = todayKey();
+    const cur = (state.dailyChatCount && state.dailyChatCount.date === todayK) ? state.dailyChatCount.count : 0;
+    const cap = (state.preferences && state.preferences.dailyChatCap) || 100;
+    if (cap === 0) {
+      status.textContent = `오늘 ${cur}회 사용 (무제한)`;
+    } else {
+      status.textContent = `오늘 ${cur}/${cap}회 사용`;
+    }
+  }
   const accountInfo = document.getElementById('accountInfo');
   if (accountInfo && session?.user) {
     accountInfo.innerHTML = `로그인된 계정: <strong style="color:var(--text)">${escapeHtml(session.user.email || '')}</strong>`;
@@ -31084,6 +31146,15 @@ function loadSettings() {
 function saveSettings() {
   state.apiKey = document.getElementById('apiKeyInput').value.trim();
   state.profile = document.getElementById('profileInput').value.trim();
+  // 사용자 요청 2026-04-30: 일일 cap 저장
+  const capInput = document.getElementById('dailyChatCapInput');
+  if (capInput) {
+    const v = parseInt(capInput.value, 10);
+    if (!isNaN(v) && v >= 0 && v <= 9999) {
+      if (!state.preferences) state.preferences = {};
+      state.preferences.dailyChatCap = v;
+    }
+  }
   saveState();
   showToast('저장됐어 ✦');
 }
