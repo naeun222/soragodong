@@ -7485,6 +7485,17 @@
         <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:6px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동 박힌 백업 (rolling 5개)">🕰 자동 백업에서 불러오기</button>
       </div>
 
+      <!-- ═══ 피드백·문의 ═══ -->
+      <div style="margin-top:30px;">
+        <div class="input-label" style="margin-bottom:8px;">💬 피드백·문의</div>
+        <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
+          버그 신고 / 기능 제안 / 결제 문제 / 기타 — 편하게 연락해주세요.<br>
+          <span style="color:var(--text-soft);">카톡 오픈채팅은 익명으로 참여하실 수 있습니다 (닉네임 자유 변경).</span>
+        </div>
+        <button class="btn-secondary" onclick="openFeedbackKakao()" style="background:linear-gradient(135deg, rgba(255,235,80,0.15), rgba(255,200,80,0.10)); border-color:rgba(255,200,80,0.40); color:#ffe580;">💬 카톡 오픈채팅 (익명)</button>
+        <button class="btn-secondary" onclick="openFeedbackInApp()" style="margin-top:6px;">✉️ 앱에서 메시지 보내기</button>
+      </div>
+
       <!-- ═══ 계정 ═══ -->
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">👤 계정</div>
@@ -32357,8 +32368,13 @@ const SUBSCRIBE_PLAN = { krw: 15000, daily_cap: 12, name: '🪸 월 정액', des
 const TOSS_ACCOUNT = {
   bank: '우리은행',
   number: '1002-963-062525',
-  holder: '김나은'
+  number_raw: '1002963062525',  // deep link용 (하이픈 X)
+  holder: '김나은',
+  bankCode: '20'  // 우리은행 표준 코드
 };
+
+// 카톡 오픈채팅 (문제 시 문의)
+const KAKAO_OPEN_CHAT = 'https://open.kakao.com/o/[TBD-카톡오픈채팅-링크]';  // [TBD] 김나은 직접 박음
 
 // 사용자별 송금 메모 코드 (unique, 8자) — auth_user_id 기반
 function _generateUserMemoCode() {
@@ -32471,7 +32487,7 @@ async function proceedCharge(planIdx) {
   });
 }
 
-// 사용자 요청 2026-04-30: 베타 단계 토스 송금 충전 모달 (포트원 가입 전).
+// 사용자 요청 2026-04-30: 베타 단계 토스 송금 충전 모달 + AI 자동 인증.
 function showTossChargeModal(plan) {
   if (document.getElementById('tossChargeOverlay')) return;
   const memoCode = _generateUserMemoCode();
@@ -32482,14 +32498,14 @@ function showTossChargeModal(plan) {
   overlay.id = 'tossChargeOverlay';
   overlay.style.zIndex = '10001';
   overlay.innerHTML = `
-    <div class="input-modal" style="max-width:380px; max-height:90vh; overflow-y:auto; padding:24px;">
-      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">💸 토스 송금 충전</div>
+    <div class="input-modal" style="max-width:400px; max-height:92vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">💸 토스로 충전하기</div>
       <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
-        포트원 결제 시스템 가입 전 베타 기간 동안 토스로 송금 받습니다. 송금 완료 후 즉시 잔액이 반영됩니다.
+        토스 앱으로 송금 → 영수증 캡처 업로드 → AI가 자동 확인 → 잔액 즉시 반영 ✦
       </div>
 
       <div style="padding:14px; background:var(--surface); border-radius:10px; margin-bottom:14px;">
-        <div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">송금 금액</div>
+        <div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">충전 금액</div>
         <div style="font-size:18px; font-weight:700; color:var(--text);">${plan.krw.toLocaleString()}원</div>
         ${plan.bonus_pct > 0 ? `<div style="font-size:11px; color:#9ed4a0; margin-top:4px;">+ 보너스 ${bonusKrw.toLocaleString()}원 (총 ${totalKrw.toLocaleString()}원 어치 사용 가능)</div>` : ''}
       </div>
@@ -32503,21 +32519,96 @@ function showTossChargeModal(plan) {
           <b>금액</b>: ${plan.krw.toLocaleString()}원<br>
           <b style="color:var(--accent);">메모 (필수)</b>: <code style="background:rgba(212,167,106,0.20); padding:2px 6px; border-radius:4px; font-family:monospace;">${memoCode}</code>
         </div>
-        <button class="btn-secondary" onclick="navigator.clipboard.writeText('${memoCode}').then(() => showToast('메모 코드 복사됨'))" style="margin-top:8px; width:100%; font-size:11px; padding:6px;">📋 메모 코드 복사</button>
       </div>
 
-      <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-bottom:14px; padding:8px; background:rgba(126,200,227,0.05); border-left:3px solid rgba(126,200,227,0.40); border-radius:4px;">
-        💡 메모에 위 코드 꼭 넣어주세요 — 누구 송금인지 찾아야 해서요 😅<br>
-        🤝 베타라 신뢰 기반으로 운영해요. 잔액은 송금 전에도 미리 채워둘게요!
+      <div style="display:flex; gap:6px; margin-bottom:8px;">
+        <button class="btn-secondary" onclick="openTossApp(${plan.krw}, '${memoCode}')" style="flex:1; background:linear-gradient(135deg, rgba(0,100,255,0.15), rgba(0,100,255,0.08)); border-color:rgba(0,100,255,0.40); color:#a8c5ff;">📲 토스 앱 열기 (자동 입력)</button>
+      </div>
+      <div style="display:flex; gap:6px; margin-bottom:14px;">
+        <button class="btn-secondary" onclick="navigator.clipboard.writeText('${TOSS_ACCOUNT.number_raw}').then(() => showToast('계좌번호 복사됨'))" style="flex:1; font-size:11px;">📋 계좌번호 복사</button>
+        <button class="btn-secondary" onclick="navigator.clipboard.writeText('${memoCode}').then(() => showToast('메모 코드 복사됨'))" style="flex:1; font-size:11px;">📋 메모 코드 복사</button>
+      </div>
+      <div style="font-size:10px; color:var(--text-soft); margin-bottom:14px; line-height:1.6;">
+        💡 다른 은행 앱(우리·국민·신한 등) 사용 시 계좌번호·메모 복사하셔서 송금하세요.
       </div>
 
-      <div style="display:flex; gap:8px;">
-        <button class="btn-primary" onclick="confirmTossSent(${plan.krw}, '${memoCode}')" style="flex:1;">송금 완료</button>
-        <button class="btn-secondary" onclick="closeTossChargeModal()" style="flex:1;">취소</button>
+      <div style="border-top:1px solid var(--border); padding-top:14px; margin-bottom:8px;">
+        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:6px;">📸 송금 후 — 영수증 캡처 업로드</div>
+        <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
+          토스 앱 송금 완료 화면을 캡처하셔서 업로드해주세요. AI가 자동 확인 후 잔액에 반영합니다.
+        </div>
+        <input type="file" id="tossReceiptInput" accept="image/*" style="width:100%; font-size:11px;">
+        <button class="btn-primary" onclick="verifyTossReceipt(${plan.krw}, '${memoCode}')" style="width:100%; margin-top:8px;">✦ 자동 확인 + 충전</button>
       </div>
+
+      <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-top:10px; padding:8px; background:rgba(126,200,227,0.05); border-left:3px solid rgba(126,200,227,0.40); border-radius:4px;">
+        💡 AI 인식 실패 / 잘 안 됨 / 송금했는데 충전 안 됨 → <a href="${KAKAO_OPEN_CHAT}" target="_blank" style="color:var(--accent); font-weight:600;">💬 카톡 오픈채팅 문의</a>
+      </div>
+
+      <button class="btn-secondary" onclick="closeTossChargeModal()" style="width:100%; margin-top:10px;">닫기</button>
     </div>
   `;
   document.body.appendChild(overlay);
+}
+
+// 토스 앱 deep link — supertoss:// scheme + fallback.
+function openTossApp(amountKrw, memoCode) {
+  // supertoss deep link — 토스 앱 송금 화면으로 이동.
+  // 정확한 spec은 비공식 — 사용자가 토스 앱에서 직접 박는 게 더 확실. 일단 시도.
+  const tossLink = `supertoss://send?bankCode=${TOSS_ACCOUNT.bankCode}&accountNo=${TOSS_ACCOUNT.number_raw}&amount=${amountKrw}&recvName=${encodeURIComponent(TOSS_ACCOUNT.holder)}&msg=${encodeURIComponent(memoCode)}`;
+  window.location.href = tossLink;
+  // fallback — 5초 안 토스 앱 안 열리면 안내
+  setTimeout(() => {
+    if (document.hasFocus()) {
+      alert('토스 앱이 안 열리는 것 같아요.\n\n토스 앱 직접 켜고 송금해주세요:\n' + TOSS_ACCOUNT.bank + ' ' + TOSS_ACCOUNT.number + '\n금액: ' + amountKrw.toLocaleString() + '원\n메모: ' + memoCode);
+    }
+  }, 3000);
+}
+
+// 영수증 캡처 → AI 자동 인증
+async function verifyTossReceipt(amountKrw, memoCode) {
+  const input = document.getElementById('tossReceiptInput');
+  if (!input || !input.files || input.files.length === 0) {
+    alert('영수증 캡처 파일을 먼저 선택해주세요.');
+    return;
+  }
+  const file = input.files[0];
+  if (file.size > 5 * 1024 * 1024) {
+    alert('파일이 너무 커요 (5MB 이하)');
+    return;
+  }
+  showToast('🔍 AI 분석 중...');
+  try {
+    // Base64 변환
+    const reader = new FileReader();
+    const base64Promise = new Promise((resolve, reject) => {
+      reader.onload = () => resolve((reader.result || '').toString().split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const base64 = await base64Promise;
+    // sha256 해시 (중복 차단)
+    const arrayBuffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const resp = await fetch('/api/billing/verify-toss-receipt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ image_base64: base64, expected_amount_krw: amountKrw, user_memo_code: memoCode, image_sha256: sha256 })
+    });
+    const result = await resp.json();
+    if (resp.ok && result.ok && result.verified) {
+      showToast(`✦ AI 인증 완료 — ${amountKrw.toLocaleString()}원 충전됨 (신뢰도 ${Math.round((result.ai_confidence || 0) * 100)}%)`);
+      closeTossChargeModal();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+    } else {
+      alert('AI 자동 인증 실패: ' + (result.error || '알 수 없음') + '\n\n💬 카톡 오픈채팅으로 문의해주세요:\n' + KAKAO_OPEN_CHAT);
+    }
+  } catch (e) {
+    alert('업로드 실패: ' + (e.message || e) + '\n\n💬 카톡 오픈채팅: ' + KAKAO_OPEN_CHAT);
+  }
 }
 
 function closeTossChargeModal() {
@@ -32527,6 +32618,78 @@ function closeTossChargeModal() {
 
 // 사용자 요청 2026-04-30: admin 도구 — pending 송금 list + 승인/환수.
 // ADMIN_USER_ID env 박혀있는 사용자 (= 김나은) 만 동작.
+// 사용자 요청 2026-04-30: 피드백·문의 — 카톡 오픈채팅 + 인앱 메시지.
+function openFeedbackKakao() {
+  if (!KAKAO_OPEN_CHAT || KAKAO_OPEN_CHAT.includes('[TBD')) {
+    alert('카톡 오픈채팅 링크가 아직 박혀있지 않아요. 잠시 후 다시 시도해주세요.');
+    return;
+  }
+  window.open(KAKAO_OPEN_CHAT, '_blank');
+}
+
+function openFeedbackInApp() {
+  if (document.getElementById('feedbackOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'feedbackOverlay';
+  overlay.style.zIndex = '10001';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:380px; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">✉️ 메시지 보내기</div>
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
+        버그 / 기능 제안 / 결제 문제 / 기타 — 편하게 적어주세요.<br>
+        <span style="color:var(--text-soft);">답변은 가입 이메일로 드릴 수 있습니다.</span>
+      </div>
+      <textarea id="feedbackMessageInput" rows="6" placeholder="자유롭게..." maxlength="2000" style="width:100%; font-size:12px; padding:10px; resize:vertical;"></textarea>
+      <div style="font-size:10px; color:var(--text-soft); margin-top:6px;">최대 2000자</div>
+      <div id="feedbackStatus" style="font-size:11px; margin-top:10px; min-height:14px;"></div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn-primary" onclick="submitFeedback()" style="flex:1;">보내기</button>
+        <button class="btn-secondary" onclick="closeFeedbackModal()" style="flex:1;">취소</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('feedbackMessageInput')?.focus(), 100);
+}
+
+function closeFeedbackModal() {
+  const overlay = document.getElementById('feedbackOverlay');
+  if (overlay) overlay.remove();
+}
+
+async function submitFeedback() {
+  const ta = document.getElementById('feedbackMessageInput');
+  const status = document.getElementById('feedbackStatus');
+  if (!ta || !status) return;
+  const msg = ta.value.trim();
+  if (msg.length < 5) {
+    status.textContent = '5자 이상 적어주세요';
+    status.style.color = '#e89090';
+    return;
+  }
+  status.textContent = '전송 중...';
+  status.style.color = 'var(--text-soft)';
+  try {
+    const resp = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ message: msg })
+    });
+    if (resp.ok) {
+      status.textContent = '✓ 전송 완료. 감사합니다 ✦';
+      status.style.color = '#9ed4a0';
+      setTimeout(() => closeFeedbackModal(), 1500);
+    } else {
+      status.textContent = '전송 실패. 카톡 오픈채팅으로 시도해주세요.';
+      status.style.color = '#e89090';
+    }
+  } catch (e) {
+    status.textContent = '예외: ' + (e.message || e);
+    status.style.color = '#e89090';
+  }
+}
+
 async function adminLoadPendingCharges() {
   const container = document.getElementById('adminPendingList');
   if (!container) return;
