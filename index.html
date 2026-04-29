@@ -8729,9 +8729,9 @@ const ONBOARDING_STEPS = [
     id: 'mutation_intro_msg',
     targetSelector: null,
     title: '🌿 임시 대화창',
-    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>아래 선택지 중 하나를 골라봐.<br><br><span class="small">고동이가 답변 만들 때까지 기다려줘.</span>',
+    // 사용자 요청 2026-04-29: '고동이가 답변 만들 때까지 기다려줘' 강조 + 답변 끝나면 '다음' 직접 클릭으로 진행
+    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>아래 선택지 중 하나를 골라봐.<br><br><b>🐚 고동이가 답변 만들 때까지 기다려줘.</b><br><span class="small">답변 다 뜨면 <b>다음 →</b> 눌러서 진행.</span>',
     waitFor: 'next',
-    nextLabel: '눌렀어 →',
     dimBackground: false,
     aboveModal: true
   },
