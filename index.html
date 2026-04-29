@@ -29282,10 +29282,19 @@ async function addPearl() {
     return;
   }
 
+  // 사용자 요청 2026-04-29: 카테고리별 자연스러운 placeholder
+  const placeholderMap = {
+    음식: { title: '예: 라멘',                memo: '예: 신촌 그 집, 짠한 국물' },
+    장소: { title: '예: 한강 산책',           memo: '예: 노을 진 시각, 바람' },
+    순간: { title: '예: 첫 단락 끝낸 새벽',   memo: '예: "됐다" 한 순간' },
+    사람: { title: '예: 친구 ㅇㅇ',          memo: '예: 오랜만에 풀린 마음' }
+  };
+  const ph = placeholderMap[category] || { title: '한 줄로', memo: '구체적으로 한 줄' };
+
   const content = await showInputModal({
     title: `💎 ${category}`,
     message: '뭐가 좋았어? 한 줄로.',
-    placeholder: '예: 그날 카페 음악',
+    placeholder: ph.title,
     okLabel: '다음 →'
   });
   if (!content || !content.trim()) return;
@@ -29293,8 +29302,8 @@ async function addPearl() {
   // 사용자 요청 2026-04-29: 모든 카테고리에 작은 메모 한 줄 입력 옵션 (음악처럼)
   const note = await showInputModal({
     title: `💎 ${category} — ${content.trim()}`,
-    message: '메모 한 줄 (선택). 비우고 OK 가능.',
-    placeholder: '예: 그날 카페 새벽 4시',
+    message: '구체적으로 한 줄 (선택). 비우고 OK 가능.',
+    placeholder: ph.memo,
     okLabel: ['음식', '장소', '순간'].includes(category) ? '다음 →' : '보관'
   });
   if (note === null) return;
@@ -30392,7 +30401,7 @@ function scheduleDailyNotification() {
       const hasCheckinToday = todayK && (state.entries || []).some(e => e.date === todayK && (e.mood != null || e.vitality != null));
       if (!hasCheckinToday) {
         new Notification('🐚 소라고동', {
-          body: '오늘 체크인 했어? 30초면 돼.',
+          body: '오늘 하루 되돌아보자 🫶🫶',
           icon: '/icon-192.png',
           tag: 'daily-checkin',
           renotify: true
