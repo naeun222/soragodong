@@ -6871,19 +6871,16 @@
     <div class="login-form" id="loginStep1">
       <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
 
-      <!-- 사용자 요청 2026-04-30: 정직 + 정중한 보안 안내 (E2EE 미적용 명시) -->
+      <!-- 사용자 요청 2026-04-30: 정직 + 정중. E2EE 활성 시 wording 변경. -->
       <div style="margin-top:14px; padding:14px; background:linear-gradient(135deg, rgba(126,200,227,0.10), rgba(143,200,143,0.08)); border:1px solid rgba(126,200,227,0.30); border-radius:10px; font-size:11px; line-height:1.9;">
         <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px;">🛡️ 데이터 보호 안내</div>
         <div style="color:var(--text); padding-left:6px;">
           <div>🔒 다른 사용자는 본인의 데이터에 접근할 수 없습니다</div>
-          <div>👤 시스템 운영상 관리자 1명만 데이터에 접근 가능하며, 회사 정책상 평소 조회하지 않습니다</div>
+          <div id="loginAccessInfo">🔐 종단간 암호화(E2EE) 활성 시 회사도 평문 데이터를 볼 수 없습니다 (설정 → 보안 강화에서 활성)</div>
           <div>🚫 데이터를 광고·판매·외부 공유에 사용하지 않습니다</div>
           <div>🤖 AI (Anthropic) 서버에 전송된 데이터는 <b>30일 후 자동 삭제</b>되며, AI 학습에 사용되지 않습니다</div>
           <div>✅ Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)</div>
           <div>🔐 모든 통신은 HTTPS로 암호화됩니다</div>
-          <div style="margin-top:6px; padding:6px 8px; background:rgba(255,255,255,0.05); border-radius:6px; font-size:10px; color:var(--text-soft); line-height:1.6;">
-            ℹ️ 추후 적용 예정인 종단간 암호화(E2EE) 활성 후엔 회사조차 평문 데이터에 접근할 수 없게 됩니다.
-          </div>
           <div style="margin-top:6px; font-size:10px; color:var(--text-soft);">자세한 내용: <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/cross-border.md" target="_blank" style="color:var(--accent);">데이터 보호 안내</a></div>
         </div>
       </div>
@@ -7483,9 +7480,9 @@
         <div class="input-label" style="margin-bottom:8px;">☁️ 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
         <button class="btn-secondary" onclick="exportData()" style="margin-top:6px;">📁 파일로 백업</button>
-        <button class="btn-secondary" onclick="manualCloudBackup()" style="margin-top:6px; background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드 백업</button>
-        <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="margin-top:6px; background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드 복원</button>
-        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:6px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동 박힌 백업 (rolling 5개)">🕰 자동 백업에서 복원</button>
+        <button class="btn-secondary" onclick="manualCloudBackup()" style="margin-top:6px; background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드에 저장</button>
+        <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="margin-top:6px; background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드에서 불러오기</button>
+        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:6px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동 박힌 백업 (rolling 5개)">🕰 자동 백업에서 불러오기</button>
       </div>
 
       <!-- ═══ 계정 ═══ -->
@@ -7544,12 +7541,12 @@
         </div>
       </details>
 
-      <!-- ═══ 프라이버시 안내 ═══ -->
+      <!-- ═══ 프라이버시 안내 (E2EE 활성 여부에 따라 동적) ═══ -->
       <div style="margin-top:30px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; line-height:1.8;">
         <div style="font-size:13px; color:var(--accent); font-weight:600; margin-bottom:8px;">🛡️ 데이터 보호</div>
-        <div style="color:var(--text);">
+        <div style="color:var(--text);" id="settingsPrivacyAccessInfo">
           🔒 본인의 데이터는 본인만 접근 가능합니다<br>
-          👤 회사 내부 접근은 관리자 1명에 한정됩니다<br>
+          🔐 종단간 암호화(E2EE) 활성 시 회사도 평문 데이터를 볼 수 없습니다 (위 보안 강화 섹션에서 활성)<br>
           🚫 데이터를 광고·판매·외부 공유에 사용하지 않습니다<br>
           🤖 AI (Anthropic) 서버 데이터는 30일 후 자동 삭제되며, AI 학습에 사용되지 않습니다<br>
           ✅ Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)<br>
@@ -8267,7 +8264,8 @@ async function _e2eeImportKey(b64) {
   return await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
 }
 
-// passphrase (12-word) → 256-bit key (PBKDF2)
+// 사용자 지정 password → 256-bit key (PBKDF2 1M iterations — brute-force 매우 어려움)
+// 12자 이상 password + PBKDF2 1M = 보안 강도 충분 (1Password / Bitwarden 표준).
 async function _e2eePassphraseToKey(passphrase, saltB64) {
   const enc = new TextEncoder();
   const baseKey = await crypto.subtle.importKey(
@@ -8277,7 +8275,7 @@ async function _e2eePassphraseToKey(passphrase, saltB64) {
     {
       name: 'PBKDF2',
       salt: _b64decode(saltB64),
-      iterations: 100000,
+      iterations: 1000000,  // 1M (사용자 요청 2026-04-30 단순화 — 사용자 지정 password 보안 강화)
       hash: 'SHA-256'
     },
     baseKey,
@@ -8287,15 +8285,12 @@ async function _e2eePassphraseToKey(passphrase, saltB64) {
   );
 }
 
-// 12-word passphrase 생성 (256-단어 wordlist)
-function _e2eeGeneratePassphrase() {
-  const words = [];
-  const buf = new Uint8Array(12);
-  crypto.getRandomValues(buf);
-  for (let i = 0; i < 12; i++) {
-    words.push(E2EE_WORDLIST[buf[i] % E2EE_WORDLIST.length]);
-  }
-  return words.join(' ');
+// password 강도 검증 (12자 이상, 단순 brute-force 회피)
+function _e2eeValidatePassword(pw) {
+  if (!pw || typeof pw !== 'string') return { ok: false, reason: '비밀번호를 입력해주세요' };
+  if (pw.length < 12) return { ok: false, reason: '12자 이상 필요해요 (현재 ' + pw.length + '자)' };
+  if (/^\d+$/.test(pw)) return { ok: false, reason: '숫자만으로는 약해요. 단어 + 숫자 섞어주세요' };
+  return { ok: true };
 }
 
 // 평문 → 암호문 (객체 형태: {iv, data})
@@ -8354,11 +8349,12 @@ async function _e2eeInitMasterKey() {
   }
 }
 
-// 새 마스터 키 + passphrase 생성 → localStorage 저장 + cloud에 passphrase로 암호화 마스터 키 저장.
-// 가입 흐름에서 호출. 사용자에게 passphrase 표시 모달.
-async function _e2eeSetupNewUser() {
+// 새 마스터 키 + 사용자 지정 password → localStorage 저장 + cloud에 password로 암호화 마스터 키 저장.
+async function _e2eeSetupNewUser(userPassword) {
+  const validation = _e2eeValidatePassword(userPassword);
+  if (!validation.ok) throw new Error(validation.reason);
+
   const masterKey = await _e2eeGenerateMasterKey();
-  const passphrase = _e2eeGeneratePassphrase();
   const masterKeyB64 = await _e2eeExportKey(masterKey);
 
   // localStorage에 마스터 키
@@ -8366,16 +8362,14 @@ async function _e2eeSetupNewUser() {
     localStorage.setItem(_E2EE_LOCAL_KEY, masterKeyB64);
   } catch (e) { console.warn('[e2ee] localStorage 저장 실패:', e); }
 
-  // passphrase로 마스터 키 암호화 → cloud 저장 (Supabase soragodong_e2ee_recovery 테이블 향후 박힘. 일단 localStorage backup)
+  // password로 마스터 키 암호화 (PBKDF2 1M)
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const saltB64 = _b64encode(salt);
-  const passphraseKey = await _e2eePassphraseToKey(passphrase, saltB64);
-  const encryptedMasterKey = await _e2eeEncrypt(masterKeyB64, passphraseKey);
+  const passwordKey = await _e2eePassphraseToKey(userPassword, saltB64);
+  const encryptedMasterKey = await _e2eeEncrypt(masterKeyB64, passwordKey);
 
-  // 메모리에 active key 박힘
   _e2eeMasterKey = masterKey;
 
-  // 향후: cloud Supabase에 박힘. 일단 localStorage backup
   try {
     localStorage.setItem('soragodong_v4_e2ee_recovery', JSON.stringify({
       salt: saltB64,
@@ -8384,7 +8378,7 @@ async function _e2eeSetupNewUser() {
     }));
   } catch (e) {}
 
-  return { passphrase, masterKey, salt: saltB64, encryptedMasterKey };
+  return { masterKey, salt: saltB64, encryptedMasterKey };
 }
 
 // 사용자 요청 2026-04-30: 새 device 진입 시 passphrase 복원 모달.
@@ -8467,27 +8461,83 @@ function cancelE2EERecovery() {
   if (overlay) overlay.remove();
 }
 
-// 사용자 요청 2026-04-30: E2EE 활성화 흐름 — Settings 버튼에서 호출.
-// 신규 마스터 키 + passphrase 생성 → 사용자에게 12-word 표시 → 다음 saveToCloudNow부터 암호화.
+// 사용자 요청 2026-04-30 (단순화): E2EE 활성화 — 사용자 지정 password 모달.
 async function setupE2EE() {
   if (_e2eeMasterKey && _e2eeEnabled) {
-    alert('이미 E2EE 활성화되어 있어요.');
+    alert('이미 종단간 암호화(E2EE)가 활성화되어 있어요.');
     return;
   }
-  const yes = confirm('🔐 E2EE 활성화\n\n활성 후엔 회사도 본인 데이터의 평문을 볼 수 없게 됩니다. 비밀 단어 12개를 안전한 곳에 보관하세요 (분실 시 데이터 복구 불가능).\n\n진행하시겠습니까?');
-  if (!yes) return;
+  showE2EEPasswordSetupModal();
+}
 
+function showE2EEPasswordSetupModal() {
+  if (document.getElementById('e2eeSetupOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.style.zIndex = '10001';
+  overlay.id = 'e2eeSetupOverlay';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:400px; padding:24px;">
+      <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">🔐 비밀번호 설정</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
+        활성화 후 <strong>회사조차 본인 데이터의 평문을 볼 수 없습니다</strong>.<br>
+        본인이 외울 수 있는 비밀번호를 입력해주세요. 다른 기기에서 로그인하실 때도 같은 비밀번호로 데이터를 복원하실 수 있습니다.
+      </div>
+      <div style="margin-bottom:10px;">
+        <input type="password" id="e2eePasswordInput" placeholder="비밀번호 (12자 이상)" autocomplete="new-password" style="width:100%; font-family:inherit;">
+      </div>
+      <div style="margin-bottom:10px;">
+        <input type="password" id="e2eePasswordConfirmInput" placeholder="비밀번호 다시 입력" autocomplete="new-password" style="width:100%; font-family:inherit;">
+      </div>
+      <div id="e2eePasswordStatus" style="font-size:11px; color:var(--text-soft); margin-bottom:14px; min-height:14px;"></div>
+      <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-bottom:14px; padding:8px; background:rgba(220,80,80,0.05); border-left:3px solid rgba(220,80,80,0.40); border-radius:4px;">
+        ⚠️ 비밀번호 분실 시 데이터를 복구할 수 없습니다. 회사도 복원해드릴 수 없습니다. 안전한 곳에 보관해주세요 (예: 1Password, Bitwarden, 손글씨 메모).
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-primary" onclick="submitE2EESetup()" style="flex:1;">활성화</button>
+        <button class="btn-secondary" onclick="cancelE2EESetup()" style="flex:1;">취소</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('e2eePasswordInput')?.focus(), 100);
+}
+
+async function submitE2EESetup() {
+  const pw1 = document.getElementById('e2eePasswordInput')?.value || '';
+  const pw2 = document.getElementById('e2eePasswordConfirmInput')?.value || '';
+  const status = document.getElementById('e2eePasswordStatus');
+  if (!status) return;
+  if (pw1 !== pw2) {
+    status.textContent = '비밀번호가 일치하지 않습니다';
+    status.style.color = '#e89090';
+    return;
+  }
+  const validation = _e2eeValidatePassword(pw1);
+  if (!validation.ok) {
+    status.textContent = validation.reason;
+    status.style.color = '#e89090';
+    return;
+  }
+  status.textContent = '활성화 중...';
+  status.style.color = 'var(--text-soft)';
   try {
-    const result = await _e2eeSetupNewUser();
+    await _e2eeSetupNewUser(pw1);
     _e2eeEnabled = true;
-    showE2EERecoveryWordsModal(result.passphrase, true);  // 첫 표시 (반드시 저장)
-    // 다음 saveToCloudNow가 자동 암호화. 즉시 한 번 저장.
     await saveToCloudNow();
     refreshE2EEStatus();
-    showToast('🔐 E2EE 활성화됨');
+    const overlay = document.getElementById('e2eeSetupOverlay');
+    if (overlay) overlay.remove();
+    showToast('🔐 E2EE 활성화 완료 — 회사도 평문 못 봅니다');
   } catch (e) {
-    alert('E2EE 활성화 실패: ' + (e.message || e));
+    status.textContent = '실패: ' + (e.message || e);
+    status.style.color = '#e89090';
   }
+}
+
+function cancelE2EESetup() {
+  const overlay = document.getElementById('e2eeSetupOverlay');
+  if (overlay) overlay.remove();
 }
 
 // 비밀 단어 12개 다시 보기 (이미 활성된 사용자)
@@ -8495,11 +8545,24 @@ async function showE2EERecoveryWords() {
   try {
     const recovery = JSON.parse(localStorage.getItem('soragodong_v4_e2ee_recovery') || 'null');
     if (!recovery) {
-      alert('E2EE 미활성화 상태입니다.');
+      alert('아직 종단간 암호화(E2EE)가 활성화되지 않았어요.\n\n위의 [🔐 E2EE 활성화] 버튼을 먼저 눌러주세요.');
       return;
     }
-    // passphrase는 device에 저장돼있지 않음 (보안). 사용자가 첫 표시 때 저장한 것으로만 가능.
-    alert('비밀 단어는 활성화 시점에만 표시됩니다.\n저장하지 않으셨다면 새 device에서 데이터 복구 불가능 — 이 device에서만 사용 가능합니다.\n\n새 device에서 사용하려면: 기존 device에서 데이터 export → 새 device에서 재가입 + import.');
+    alert(
+      '비밀 단어 12개는 보안상 이 기기에 저장되어 있지 않습니다.\n\n' +
+      '처음 활성화하실 때 표시된 단어들을 그때 한 번만 안내해드립니다. ' +
+      '안전한 곳(예: 1Password, Bitwarden, 손글씨 메모)에 저장해 두셨어야 합니다.\n\n' +
+      '✓ 만약 저장해 두셨다면:\n' +
+      '   다른 기기/브라우저에서 처음 로그인하실 때 그 비밀 단어를 입력하시면 데이터가 복원됩니다.\n\n' +
+      '⚠️ 만약 저장하지 않으셨다면:\n' +
+      '   새 기기에서는 본인의 데이터에 접근하실 수 없습니다 (회사도 복구해드릴 수 없습니다).\n' +
+      '   현재 사용 중인 이 기기에서는 계속 사용 가능합니다.\n\n' +
+      '대안 (지금이라도 백업하시려면):\n' +
+      '   1. [☁️ 클라우드에 저장] 으로 데이터 저장\n' +
+      '   2. 새 기기에서 같은 이메일로 로그인 후 [☁️ 클라우드에서 불러오기]\n' +
+      '   3. 단 이 방법은 E2EE 활성 전 평문 데이터에만 적용됩니다.\n\n' +
+      '안전을 위해 지금이라도 [📁 파일로 백업] 을 권장드립니다.'
+    );
   } catch (e) {
     alert('확인 실패: ' + (e.message || e));
   }
@@ -32241,7 +32304,7 @@ async function refreshBillingStatus() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 결제 — 사용자 요청 2026-04-30 (포트원 통합)
+// 결제 — 사용자 요청 2026-04-30 (포트원 통합 + 토스 베타)
 // ═══════════════════════════════════════════════════════════════
 
 // 충전 plans (단계별 보너스, refund.md / terms.md 정합)
@@ -32253,6 +32316,21 @@ const CHARGE_PLANS = [
   { krw: 100000, bonus_pct: 18, name: '🌌 100,000원 (+18% 보너스)' }
 ];
 const SUBSCRIBE_PLAN = { krw: 15000, daily_cap: 12, name: '🪸 월 정액', desc: '월 ₩15,000 — 일 12 메시지 cap (20% 보너스)' };
+
+// 사용자 요청 2026-04-30: 베타 단계 — 포트원 가입 전이라 토스 송금으로 충전.
+// [TBD] 사업자등록 후 김나은 본인 계좌 박음.
+const TOSS_ACCOUNT = {
+  bank: '카카오뱅크',         // [TBD] 본인 은행
+  number: '[계좌번호-TBD]',   // [TBD] 본인 계좌번호
+  holder: '김나은'            // [TBD] 본인 이름
+};
+
+// 사용자별 송금 메모 코드 (unique, 8자) — auth_user_id 기반
+function _generateUserMemoCode() {
+  const uid = (typeof authUserId === 'string' && authUserId) ? authUserId : '';
+  const short = uid.replace(/-/g, '').slice(0, 8).toUpperCase();
+  return 'SO-' + short;
+}
 
 // 충전 모달
 async function openChargeModal() {
@@ -32293,17 +32371,24 @@ function closeChargeModal() {
   if (overlay) overlay.remove();
 }
 
-// 충전 진행 (포트원 결제 시작)
+// 충전 진행 — 포트원 미설정 시 토스 송금 안내, 활성 시 카드 결제.
 async function proceedCharge(planIdx) {
   const plan = CHARGE_PLANS[planIdx];
   if (!plan) return;
-  // 결제 직전 명시 (terms 4.5 다크 패턴 회피)
+
+  // 포트원 채널 키 미설정 = 베타 (토스 송금)
+  const channelKey = window.PORTONE_CHANNEL_KEY || '';
+  if (!channelKey) {
+    closeChargeModal();
+    showTossChargeModal(plan);
+    return;
+  }
+
+  // 포트원 활성 — 카드 결제 흐름
   const yes = confirm(`${plan.name}\n\n결제 금액: ${plan.krw.toLocaleString()}원\n결제 주기: 일회성\n자동 갱신: X\n해지: 결제 후 [설정 → 결제] 환불 가능 (환불 정책 적용)\n\n진행하시겠습니까?`);
   if (!yes) return;
 
-  // 포트원 SDK 로드 확인
   if (typeof window.IMP === 'undefined') {
-    // 동적 로드
     await new Promise((resolve, reject) => {
       const s = document.createElement('script');
       s.src = 'https://cdn.iamport.kr/v1/iamport.js';
@@ -32316,19 +32401,11 @@ async function proceedCharge(planIdx) {
     alert('결제 시스템 로드 실패. 다시 시도해주세요.');
     return;
   }
-
-  // 포트원 가맹점 ID — Cloudflare env로 frontend에 전달 (PORTONE_CHANNEL_KEY)
-  const channelKey = window.PORTONE_CHANNEL_KEY || '';
-  if (!channelKey) {
-    alert('결제 시스템 미설정. 사업자등록 / 포트원 가입 후 활성됩니다.');
-    closeChargeModal();
-    return;
-  }
   IMP.init(channelKey);
 
   const merchantUid = `charge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   IMP.request_pay({
-    pg: 'tosspayments',  // 또는 'kakaopay' / 'inicis' 등
+    pg: 'tosspayments',
     pay_method: 'card',
     merchant_uid: merchantUid,
     name: `소라고동 충전 ${plan.krw.toLocaleString()}원`,
@@ -32339,7 +32416,6 @@ async function proceedCharge(planIdx) {
       alert('결제 실패: ' + (rsp.error_msg || '취소됨'));
       return;
     }
-    // 백엔드 검증
     try {
       const verifyResp = await fetch('/api/billing/charge', {
         method: 'POST',
@@ -32358,6 +32434,82 @@ async function proceedCharge(planIdx) {
       alert('백엔드 통신 실패: ' + (e.message || e));
     }
   });
+}
+
+// 사용자 요청 2026-04-30: 베타 단계 토스 송금 충전 모달 (포트원 가입 전).
+function showTossChargeModal(plan) {
+  if (document.getElementById('tossChargeOverlay')) return;
+  const memoCode = _generateUserMemoCode();
+  const bonusKrw = Math.round(plan.krw * plan.bonus_pct / 100);
+  const totalKrw = plan.krw + bonusKrw;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'tossChargeOverlay';
+  overlay.style.zIndex = '10001';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:380px; max-height:90vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">💸 토스 송금 충전</div>
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
+        포트원 결제 시스템 가입 전 베타 기간 동안 토스로 송금 받습니다. 송금 완료 후 즉시 잔액이 반영됩니다.
+      </div>
+
+      <div style="padding:14px; background:var(--surface); border-radius:10px; margin-bottom:14px;">
+        <div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">송금 금액</div>
+        <div style="font-size:18px; font-weight:700; color:var(--text);">${plan.krw.toLocaleString()}원</div>
+        ${plan.bonus_pct > 0 ? `<div style="font-size:11px; color:#9ed4a0; margin-top:4px;">+ 보너스 ${bonusKrw.toLocaleString()}원 (총 ${totalKrw.toLocaleString()}원 어치 사용 가능)</div>` : ''}
+      </div>
+
+      <div style="padding:14px; background:linear-gradient(135deg, rgba(126,200,227,0.10), rgba(143,200,143,0.05)); border:1px solid rgba(126,200,227,0.30); border-radius:10px; margin-bottom:14px;">
+        <div style="font-size:11px; color:var(--text-dim); margin-bottom:6px;">📲 토스 송금 정보</div>
+        <div style="font-size:13px; color:var(--text); line-height:1.8;">
+          <b>은행</b>: ${TOSS_ACCOUNT.bank}<br>
+          <b>계좌</b>: ${TOSS_ACCOUNT.number}<br>
+          <b>예금주</b>: ${TOSS_ACCOUNT.holder}<br>
+          <b>금액</b>: ${plan.krw.toLocaleString()}원<br>
+          <b style="color:var(--accent);">메모 (필수)</b>: <code style="background:rgba(212,167,106,0.20); padding:2px 6px; border-radius:4px; font-family:monospace;">${memoCode}</code>
+        </div>
+        <button class="btn-secondary" onclick="navigator.clipboard.writeText('${memoCode}').then(() => showToast('메모 코드 복사됨'))" style="margin-top:8px; width:100%; font-size:11px; padding:6px;">📋 메모 코드 복사</button>
+      </div>
+
+      <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-bottom:14px; padding:8px; background:rgba(220,150,80,0.05); border-left:3px solid rgba(220,150,80,0.40); border-radius:4px;">
+        ⚠️ 메모에 위 코드를 정확히 입력해주세요. 코드 누락 시 충전 처리가 늦어질 수 있습니다.<br>
+        ⚠️ 거짓 송금 시 계정 차단 + 데이터 삭제됩니다.
+      </div>
+
+      <div style="display:flex; gap:8px;">
+        <button class="btn-primary" onclick="confirmTossSent(${plan.krw}, '${memoCode}')" style="flex:1;">송금 완료</button>
+        <button class="btn-secondary" onclick="closeTossChargeModal()" style="flex:1;">취소</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeTossChargeModal() {
+  const overlay = document.getElementById('tossChargeOverlay');
+  if (overlay) overlay.remove();
+}
+
+async function confirmTossSent(amountKrw, memoCode) {
+  const yes = confirm(`${amountKrw.toLocaleString()}원을 메모 "${memoCode}"로 송금하셨나요?\n\n송금 안 하셨거나 거짓 신고 시 계정 차단 + 데이터 삭제됩니다.`);
+  if (!yes) return;
+  try {
+    const resp = await fetch('/api/billing/manual-charge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ amount_krw: amountKrw, user_memo_code: memoCode })
+    });
+    const result = await resp.json();
+    if (resp.ok && result.ok) {
+      showToast(`✦ ${amountKrw.toLocaleString()}원 충전 완료 (확인 후 정식 처리됩니다)`);
+      closeTossChargeModal();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+    } else {
+      alert('충전 실패: ' + (result.error || '알 수 없음'));
+    }
+  } catch (e) {
+    alert('통신 실패: ' + (e.message || e));
+  }
 }
 
 // 구독 모달
