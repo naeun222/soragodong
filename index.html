@@ -8503,6 +8503,13 @@ function _togglePwView(inputId, btn) {
 // loadFromCloud에서 _encryptedBody 있는데 마스터 키 X면 window._e2eePendingRecovery 박음. 진입 후 모달.
 async function maybeShowE2EERecoveryModal() {
   if (!window._e2eePendingRecovery) return;
+  // 사용자 보고 2026-04-30 (paranoid): master key 이미 활성이면 modal 띄우지 X.
+  // 정상 흐름에선 pending 박힐 때 master key는 null인데, 어떤 race로 둘 다 set되면 modal 잘못 뜸.
+  if (_e2eeMasterKey && _e2eeEnabled) {
+    console.warn('[E2EE] pending recovery flag stale — clearing (master key already active)');
+    window._e2eePendingRecovery = null;
+    return;
+  }
   if (document.getElementById('e2eeRecoveryOverlay')) return;
   const overlay = document.createElement('div');
   overlay.className = 'input-modal-overlay show';
@@ -34118,8 +34125,11 @@ function _chooseUpdateOption(choice) {
   if (choice === 'dismiss') {
     // 사용자 요청 2026-04-29: '이미 알아' = 일반 사용자와 동일 — 모든 코어 unlock
     state.unlocked = { core1: true, core2: true, core3: true, core4: true, core5: true, core6: true, core8: true };
-    saveState();
-    // 잠금 시각 즉시 해제
+    // 사용자 보고 2026-04-30: dismiss 즉시 cloud 박음 — 탭 닫기 race 방지 (다음 진입 시 튜토리얼 재출현 막기)
+    saveState({ force: true });
+    if (typeof saveToCloudNow === 'function') {
+      saveToCloudNow().catch(e => console.warn('[dismiss] cloud save:', e));
+    }
     if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers();
     return;
   }
@@ -34202,6 +34212,20 @@ async function checkServerVersionAndReload() {
     if (serverVersion && serverVersion !== APP_VERSION) {
       // 새 버전 — 강제 reload (메모리 state 폐기, cloud에서 다시 로드 → 새 HTML 받음)
       console.log(`[version] new version ${serverVersion} (current ${APP_VERSION}) — reloading`);
+      // 사용자 보고 2026-04-30: reload 전 cloud 저장 강제 — 미저장 변경 손실 방지.
+      // (saveState 는 debounced 1초 → 강제 reload 시 cloud 저장 안 끝남)
+      try {
+        if (typeof saveState === 'function' && typeof authUserId !== 'undefined' && authUserId) {
+          saveState({ force: true });
+        }
+        if (typeof saveToCloudNow === 'function' && typeof authUserId !== 'undefined' && authUserId) {
+          // 3초 timeout — 네트워크 느려도 reload는 진행
+          await Promise.race([
+            saveToCloudNow(),
+            new Promise(resolve => setTimeout(resolve, 3000))
+          ]);
+        }
+      } catch (e) { console.warn('[version reload] cloud save:', e); }
       location.reload();
       return true;
     }
