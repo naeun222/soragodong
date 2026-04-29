@@ -13425,14 +13425,31 @@ ${chatLog.slice(0, 8000)}
   "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
   "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
   "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
-  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."}
+  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."},
+  "deep_profile_update": {
+    "development": {
+      "childhood_addition": "어린 시절·가족·양육에 대한 새 정보 한 줄 (있을 때만, 사용자가 명시 언급)",
+      "school_addition": "학창 시절 새 정보 한 줄",
+      "adhd_addition": "ADHD 발견·이전 새 정보 한 줄",
+      "turning_point": {"when": "YYYY-MM 또는 시기", "title": "전환점 제목", "impact": "영향 한 줄"}
+    },
+    "relationships": [{"name": "이름 (있을 때)", "relation": "가족|친구|연인|동료|치료자|기타", "tone": "안전|자극|혼합", "influence": "positive|negative|mixed", "notes": "한 줄"}],
+    "self_narrative": {
+      "self_belief": "자신에 대한 신념 한 줄 (\"나는 ...\")",
+      "world_belief": "세상에 대한 신념 한 줄 (\"세상은 ...\")",
+      "future_belief": "미래에 대한 신념 한 줄 (\"미래는 ...\")",
+      "identity_keyword": "정체성 keyword 1개"
+    }
+  }
 }
+
+deep_profile_update는 사용자가 챕터에서 명시적으로 언급한 정보만 (예: "엄마가 늘 비교해" / "고등학교 때 처음 ADHD 의심" / "나는 패턴 인식이 강해"). 추측 X. 빈 부분은 빈 string 또는 null.
 
 JSON만, 마크다운 X.`;
 
     const resp = await callAnthropic({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
+      max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     });
     if (!resp.ok) return;
@@ -13547,6 +13564,105 @@ JSON만, 마크다운 X.`;
         cf.lastUpdated = new Date().toISOString();
       }
     }
+
+    // 사용자 요청 2026-04-30: deep_profile_update 자동 추출 (Q2 더 깊은 나).
+    // 사용자가 챕터에서 명시 언급한 발달·관계·자기서사 정보만. user_verified=false → 사용자 ✓ 컨펌.
+    const dpu = analysis.deep_profile_update;
+    if (dpu && typeof dpu === 'object') {
+      if (!state.userDeepProfile) state.userDeepProfile = JSON.parse(JSON.stringify(DEFAULT_STATE.userDeepProfile));
+      const udp = state.userDeepProfile;
+      let dpuTouched = false;
+      // development 추가 — append (기존 텍스트에 누적)
+      if (dpu.development && typeof dpu.development === 'object') {
+        if (!udp.development) udp.development = { childhood: '', schoolYears: '', adhdDiscovery: '', turningPoints: [] };
+        const appendIfNew = (current, addition) => {
+          if (!addition || typeof addition !== 'string') return current;
+          const t = addition.trim();
+          if (!t) return current;
+          if ((current || '').includes(t)) return current;
+          return (current ? current + '\n' : '') + t;
+        };
+        const newCh = appendIfNew(udp.development.childhood, dpu.development.childhood_addition);
+        if (newCh !== udp.development.childhood) { udp.development.childhood = newCh; dpuTouched = true; }
+        const newSc = appendIfNew(udp.development.schoolYears, dpu.development.school_addition);
+        if (newSc !== udp.development.schoolYears) { udp.development.schoolYears = newSc; dpuTouched = true; }
+        const newAd = appendIfNew(udp.development.adhdDiscovery, dpu.development.adhd_addition);
+        if (newAd !== udp.development.adhdDiscovery) { udp.development.adhdDiscovery = newAd; dpuTouched = true; }
+        // turning_point — 단일 객체
+        const tp = dpu.development.turning_point;
+        if (tp && tp.title && typeof tp.title === 'string') {
+          if (!Array.isArray(udp.development.turningPoints)) udp.development.turningPoints = [];
+          const exists = udp.development.turningPoints.find(t => similarText(t.title, tp.title));
+          if (!exists) {
+            udp.development.turningPoints.push({
+              id: 'tp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+              when: (tp.when || '?').toString().slice(0, 30),
+              title: tp.title.slice(0, 60),
+              description: '',
+              impact: (tp.impact || '').slice(0, 100),
+              extractedFrom: 'chapter',
+              user_verified: false
+            });
+            dpuTouched = true;
+          }
+        }
+      }
+      // relationships
+      if (Array.isArray(dpu.relationships)) {
+        if (!Array.isArray(udp.relationships)) udp.relationships = [];
+        dpu.relationships.forEach(r => {
+          if (!r || !r.name || typeof r.name !== 'string') return;
+          const exists = udp.relationships.find(e => similarText(e.name, r.name));
+          if (!exists) {
+            udp.relationships.push({
+              id: 'rel_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+              name: r.name.trim().slice(0, 30),
+              relation: (r.relation || '').slice(0, 20),
+              tone: (r.tone || '').slice(0, 20),
+              influence: (r.influence || '').slice(0, 20),
+              notes: (r.notes || '').slice(0, 100),
+              extractedFrom: 'chapter',
+              user_verified: false
+            });
+            dpuTouched = true;
+          }
+        });
+      }
+      // self_narrative — beliefs + identity keyword
+      if (dpu.self_narrative && typeof dpu.self_narrative === 'object') {
+        if (!udp.selfNarrative) udp.selfNarrative = { selfStory: '', coreBeliefs: { aboutSelf: [], aboutWorld: [], aboutFuture: [] }, howWantToBeSeen: '', identityKeywords: [] };
+        if (!udp.selfNarrative.coreBeliefs) udp.selfNarrative.coreBeliefs = { aboutSelf: [], aboutWorld: [], aboutFuture: [] };
+        const cb = udp.selfNarrative.coreBeliefs;
+        const sn = dpu.self_narrative;
+        const pushBelief = (arrKey, txt) => {
+          if (!txt || typeof txt !== 'string') return;
+          const t = txt.trim();
+          if (!t) return;
+          if (!Array.isArray(cb[arrKey])) cb[arrKey] = [];
+          if (!cb[arrKey].some(s => similarText(s, t))) {
+            cb[arrKey].push(t.slice(0, 100));
+            dpuTouched = true;
+          }
+        };
+        pushBelief('aboutSelf', sn.self_belief);
+        pushBelief('aboutWorld', sn.world_belief);
+        pushBelief('aboutFuture', sn.future_belief);
+        if (sn.identity_keyword && typeof sn.identity_keyword === 'string') {
+          if (!Array.isArray(udp.selfNarrative.identityKeywords)) udp.selfNarrative.identityKeywords = [];
+          const kw = sn.identity_keyword.trim().slice(0, 30);
+          if (kw && !udp.selfNarrative.identityKeywords.some(k => similarText(k, kw))) {
+            udp.selfNarrative.identityKeywords.push(kw);
+            dpuTouched = true;
+          }
+        }
+      }
+      if (dpuTouched) {
+        udp.version = (udp.version || 0) + 1;
+        udp.lastUpdated = new Date().toISOString();
+        touched = true;
+      }
+    }
+
     if (touched) {
       saveState();
       if (typeof renderModel === 'function') {
