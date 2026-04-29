@@ -9566,25 +9566,29 @@ const CORE_SKIP_IDS = {
   ])
 };
 
-// 코어별 본문 override — 풀 튜토리얼 wording이 코어 컨텍스트랑 안 맞을 때
+// 코어별 step 필드 override — { stepId: { coreId: { body?, nextLabel?, ... } } }
+// 풀 튜토리얼 그대로 두되, 특정 코어에서만 본문/버튼 라벨 다르게.
 const CORE_BODY_OVERRIDE = {
   mission_done: {
-    core2: '이 ⭐ 미션 카드가 \'<b>소라의 부름</b>\'이야.<br>대화하다가 네가 고민을 전략적으로 해결하고 싶고, 그걸 \'소라가 제안\'했을 때만 나타나는 특별한 녀석.<br><br><b>부담은 전혀 안 가져도 돼. 안 해도 완전 괜찮음 ㅋㅋ 귀찮다 싶으면 과감히 패스해!</b> (부탁할게)<br><br>미션 완료 시 <b>인증샷</b>을 찍어서 내가 봐주고 검증해. 검증되면 \'특별한\' 소라를 얻을 수 있어.<br><br>지금은 튜토리얼이라 인증샷 넘어갈게. <b>해냈어</b> 눌러봐.'
+    core2: { body: '이 ⭐ 미션 카드가 \'<b>소라의 부름</b>\'이야.<br>대화하다가 네가 고민을 전략적으로 해결하고 싶고, 그걸 \'소라가 제안\'했을 때만 나타나는 특별한 녀석.<br><br><b>부담은 전혀 안 가져도 돼. 안 해도 완전 괜찮음 ㅋㅋ 귀찮다 싶으면 과감히 패스해!</b> (부탁할게)<br><br>미션 완료 시 <b>인증샷</b>을 찍어서 내가 봐주고 검증해. 검증되면 \'특별한\' 소라를 얻을 수 있어.<br><br>지금은 튜토리얼이라 인증샷 넘어갈게. <b>해냈어</b> 눌러봐.' }
   },
   yangsaeng_explain: {
-    core2: '여기 <b>전략 DNA 카드</b>는 네 무기가 되어줄 수 있는 것들이야.<br><br>대화 중 <b>\'🧬 전략으로\'</b> 버튼을 누르면 그 전략이 여기에 저장돼. 🌱 새싹부터 시작해서 그 전략을 성공할수록 점점 성장해 — <b>양생 → 성장/진화 → 체화</b> 순서.<br><br>아래 <b>\'마감 직전 폭발력 신뢰\'</b> 카드가 예시 — 3번 성공해서 \'성장 중\'이야.<br><br>이 전략들은 고동이랑 대화하다 <b>비슷한 상황에 맞닥뜨릴 때 재사용</b>돼.<br>(또는 네가 이 전략 쓰고 싶다고 고동이한테 말해도 돼!)<br><br>우리가 쓴 전략이 <b>실제로 나를 변화시킬 때까지</b> 우리는 \'<b>전략 양생</b>\'을 할 수 있어.'
+    core2: { body: '여기 <b>전략 DNA 카드</b>는 네 무기가 되어줄 수 있는 것들이야.<br><br>대화 중 <b>\'🧬 전략으로\'</b> 버튼을 누르면 그 전략이 여기에 저장돼. 🌱 새싹부터 시작해서 그 전략을 성공할수록 점점 성장해 — <b>양생 → 성장/진화 → 체화</b> 순서.<br><br>아래 <b>\'마감 직전 폭발력 신뢰\'</b> 카드가 예시 — 3번 성공해서 \'성장 중\'이야.<br><br>이 전략들은 고동이랑 대화하다 <b>비슷한 상황에 맞닥뜨릴 때 재사용</b>돼.<br>(또는 네가 이 전략 쓰고 싶다고 고동이한테 말해도 돼!)<br><br>우리가 쓴 전략이 <b>실제로 나를 변화시킬 때까지</b> 우리는 \'<b>전략 양생</b>\'을 할 수 있어.' }
   },
   exec_immerse_done: {
-    core3: '몰입 결과 묻는 창 떴지? <b>"✓ 했어"</b> 눌러봐.<br><br>네가 얼만큼의 시간을 써서 일을 완수했는지 알 수 있어. <b>이건 ✦ 나 탭에서 확인할 수 있어</b> (아직 잠겨있다면 풀고 보러 와). 이 데이터들이 쌓여서 네 \'<b>메타인지</b>\'에 도움을 줄 거야.<br><br><span class="small">"카드도 완료 처리할까?" 뜨면 <b>확인</b> 눌러줘.</span>'
+    core3: { body: '몰입 결과 묻는 창 떴지? <b>"✓ 했어"</b> 눌러봐.<br><br>네가 얼만큼의 시간을 써서 일을 완수했는지 알 수 있어. <b>이건 ✦ 나 탭에서 확인할 수 있어</b> (아직 잠겨있다면 풀고 보러 와). 이 데이터들이 쌓여서 네 \'<b>메타인지</b>\'에 도움을 줄 거야.<br><br><span class="small">"카드도 완료 처리할까?" 뜨면 <b>확인</b> 눌러줘.</span>' }
   },
   model_intro: {
-    core4: '여기는 <b>내가 너를 분석한 결과</b>가 모이는 곳이야.<br><br>🎯 <b>가치</b> — 네가 중시하는 것들<br>💫 <b>특성</b> — 일관된 너의 모습<br>🔄 <b>패턴</b> — 반복되는 행동/상황 흐름<br>📋 <b>통합 분석</b> — 문제·메커니즘·강점 한눈에<br>📊 <b>task별 평균 시간</b> (지난 7일) — 실행 탭에서 쌓인 몰입 데이터<br><br>대화·체크인이 쌓이면 자동으로 채워져 — 천천히 둘러봐.<br>틀린 거 있으면 ✕ 눌러서 지우거나 ✓ 눌러서 검증해줘.<br>📊 "지금까지 데이터 다시 분석" 버튼으로 강제 재분석도 가능.'
+    core4: {
+      body: '여기는 <b>내가 너를 분석한 결과</b>가 모이는 곳이야.<br><br>🎯 <b>가치</b> — 네가 중시하는 것들<br>💫 <b>특성</b> — 일관된 너의 모습<br>🔄 <b>패턴</b> — 반복되는 행동/상황 흐름<br>📋 <b>통합 분석</b> — 문제·메커니즘·강점 한눈에<br>📊 <b>task별 평균 시간</b> (지난 7일) — 실행 탭에서 쌓인 몰입 데이터<br><br>대화·체크인이 쌓이면 자동으로 채워져 — 천천히 둘러봐.<br>틀린 거 있으면 ✕ 눌러서 지우거나 ✓ 눌러서 검증해줘.<br>📊 "지금까지 데이터 다시 분석" 버튼으로 강제 재분석도 가능.',
+      nextLabel: '확인했어 ✦'
+    }
   },
   galpi_sub_intro: {
-    core5: '여기엔 🧙‍♂️ <b>마법의 소라고동</b>과 🌙 <b>리뷰 모음</b>이 있어.<br><br>🧙‍♂️ 마법의 소라고동은 큰 결정(도전·사랑·진로)을 후회 없이 할 수 있게 도와주는 방이야 — <b>나중에 직접 눌러보면 짧게 안내해줄게</b>.<br><br>지금은 옆의 🌙 <b>리뷰 모음</b> 보러 가자.'
+    core5: { body: '여기엔 🧙‍♂️ <b>마법의 소라고동</b>과 🌙 <b>리뷰 모음</b>이 있어.<br><br>🧙‍♂️ 마법의 소라고동은 큰 결정(도전·사랑·진로)을 후회 없이 할 수 있게 도와주는 방이야 — <b>나중에 직접 눌러보면 짧게 안내해줄게</b>.<br><br>지금은 옆의 🌙 <b>리뷰 모음</b> 보러 가자.' }
   },
   annual_stories_done: {
-    core5: 'Stories 잘 봤지? ✨<br><br><b>주마다 · 월마다 · 계절마다 · 년마다</b> 리뷰가 자동으로 생겨.<br><br>아래 📚 도서관 탭 한 번 눌러서 돌아와.'
+    core5: { body: 'Stories 잘 봤지? ✨<br><br><b>주마다 · 월마다 · 계절마다 · 년마다</b> 리뷰가 자동으로 생겨.<br><br>아래 📚 도서관 탭 한 번 눌러서 돌아와.' }
   }
 };
 
@@ -9647,16 +9651,19 @@ async function startCoreTutorial(coreId) {
   const endIdx = ONBOARDING_STEPS.findIndex(s => s.id === range.endId);
   if (startIdx < 0 || endIdx < 0) { console.warn('[core] step ID missing:', range); return; }
 
-  // 본문 override 적용 (cleanup에서 복원)
+  // step 필드 override 적용 (cleanup에서 원복)
   _coreBodyOverridesApplied = [];
   Object.entries(CORE_BODY_OVERRIDE).forEach(([stepId, perCore]) => {
-    if (perCore[coreId]) {
-      const step = ONBOARDING_STEPS.find(s => s.id === stepId);
-      if (step) {
-        _coreBodyOverridesApplied.push({ step, originalBody: step.body });
-        step.body = perCore[coreId];
-      }
-    }
+    const ov = perCore[coreId];
+    if (!ov) return;
+    const step = ONBOARDING_STEPS.find(s => s.id === stepId);
+    if (!step) return;
+    const snapshot = {};
+    Object.keys(ov).forEach(k => {
+      snapshot[k] = step[k];  // 원본 보존 (없는 필드도 undefined로 박힘)
+      step[k] = ov[k];
+    });
+    _coreBodyOverridesApplied.push({ step, snapshot });
   });
 
   _activeCoreId = coreId;
@@ -9674,8 +9681,12 @@ async function startCoreTutorial(coreId) {
 
 // 코어 종료 시 cleanup (onbFinish에서 호출)
 function _cleanupCoreOverrides() {
-  (_coreBodyOverridesApplied || []).forEach(({step, originalBody}) => {
-    if (step) step.body = originalBody;
+  (_coreBodyOverridesApplied || []).forEach(({step, snapshot}) => {
+    if (!step || !snapshot) return;
+    Object.keys(snapshot).forEach(k => {
+      if (snapshot[k] === undefined) delete step[k];
+      else step[k] = snapshot[k];
+    });
   });
   _coreBodyOverridesApplied = [];
   _activeCoreId = null;
