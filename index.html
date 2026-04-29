@@ -2668,7 +2668,7 @@
     padding-bottom: 6px;
     border-bottom: 1px solid var(--border);
   }
-  /* 사용자 요청 2026-04-29: 5 chip 한 줄 fit + 활성만 라벨 펼침 */
+  /* 사용자 요청 2026-04-29 v2: 5 chip 가로 fit + 아이콘 크게 + 활성 라벨 펼치면 가로 스크롤 */
   .library-cats {
     display: flex;
     gap: 6px;
@@ -2676,39 +2676,43 @@
     min-width: 0;
     padding: 2px 0 6px;
     width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
   }
   .library-cats::-webkit-scrollbar { display: none; }
   .lib-cat-chip {
-    flex-shrink: 1;
-    flex-grow: 0;
+    flex: 1 0 auto;
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--text-dim);
-    padding: 7px 11px;
+    padding: 8px 12px;
     border-radius: 18px;
-    font-size: 18px;  /* 아이콘 크게 */
+    font-size: 22px;  /* 아이콘 더 크게 */
     font-family: inherit;
     cursor: pointer;
     white-space: nowrap;
     transition: transform 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
-    min-height: 40px;
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 4px;
     line-height: 1;
+    scroll-snap-align: start;
   }
   .lib-cat-chip:active { transform: scale(0.96); }
-  .lib-cat-chip .cat-icon { font-size: 18px; line-height: 1; }
-  .lib-cat-chip .cat-label { display: none; font-size: 12px; font-weight: 500; }
+  .lib-cat-chip .cat-icon { font-size: 22px; line-height: 1; }
+  .lib-cat-chip .cat-label { display: none; font-size: 13px; font-weight: 500; }
   .lib-cat-chip.active {
     background: linear-gradient(135deg, rgba(201,169,110,0.20), rgba(139,126,196,0.12));
     border-color: rgba(201,169,110,0.45);
     color: var(--accent2);
     font-weight: 500;
-    padding: 7px 12px;
-    flex-shrink: 0;
+    padding: 8px 14px;
+    flex: 0 0 auto;  /* 라벨 펼치면 자기 크기만큼만 */
   }
-  .lib-cat-chip.active .cat-label { display: inline; margin-left: 2px; }
+  .lib-cat-chip.active .cat-label { display: inline; margin-left: 4px; }
   .library-cat-view { animation: lib-cat-fade 0.18s ease; }
   @keyframes lib-cat-fade {
     from { opacity: 0; transform: translateY(4px); }
@@ -5326,9 +5330,15 @@
 
   /* V4-1r: 진주 Pinterest 갤러리 (grid 뷰) + 카테고리 칩 */
   .pearl-cat-chips {
-    display: flex; flex-wrap: wrap; gap: 6px;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
     margin: 10px 0 14px;
+    justify-content: flex-end;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
+  .pearl-cat-chips::-webkit-scrollbar { display: none; }
   .pearl-cat-chip {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -5886,11 +5896,18 @@
     font-weight: 600;
   }
   .ys-view-btn:active, .lvt-btn:active { transform: scale(0.96); }
-  /* 카테고리 chips 공용 */
+  /* 사용자 요청 2026-04-29: 카테고리 chips 공용 — 우측 정렬 + 가로 스크롤 */
   .yangsaeng-cat-chips, .lib-cat-list-chips {
-    display: flex; flex-wrap: wrap; gap: 6px;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
     margin: 10px 0 14px;
+    justify-content: flex-end;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
+  .yangsaeng-cat-chips::-webkit-scrollbar,
+  .lib-cat-list-chips::-webkit-scrollbar { display: none; }
   .ys-cat-chip, .lcl-chip {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -18805,9 +18822,9 @@ function switchLibraryCat(cat) {
     renderLensArchive();
     if (typeof renderLensInsights === 'function') renderLensInsights();
   }
-  // 검색바는 모든 카테고리에서 노출
+  // 검색바는 모든 카테고리에서 노출 (사용자 보고 2026-04-29: 'block' 으로 덮으면 flex 깨져 토글이 검색창 밑으로 wrap — 'flex' 유지)
   const searchBar = document.getElementById('archiveSearchBar');
-  if (searchBar) searchBar.style.display = 'block';
+  if (searchBar) searchBar.style.display = 'flex';
   // V4-fix #5: 클릭한 카테고리는 본 것 → ● 점 사라짐
   if (typeof _markLibCatSeen === 'function') {
     _markLibCatSeen(cat);
