@@ -8625,7 +8625,8 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'click_result_check',
-    targetSelector: '.strategy-try-btn[onclick*="triggerAttemptResultFromCard"]',
+    // 사용자 보고 2026-04-29: 튜토리얼이 가끔 다른 전략 카드 결과 체크 가리키던 거 — strat_seed_0로 명시 scope
+    targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"] .strategy-try-btn',
     title: '🔍 결과 체크 버튼',
     body: '여기 <b>"🔍 결과 체크"</b> 버튼 눌러봐.<br><br><span class="small">체크인이나 대화탭에서 결과 체크 안 했으면 여기서도 가능해.</span>',
     waitFor: 'click',
@@ -8721,7 +8722,8 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'yangsaeng_try_btn',
-    targetSelector: '.strategy-try-btn[onclick*="callTryStrategy"]',
+    // 사용자 보고 2026-04-29: 다른 카드의 ✦ 해볼게 가리키지 않게 strat_seed_0로 scope
+    targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"] .strategy-try-btn',
     title: '✦ 해볼게 — 전략 재사용',
     body: '<b>"✦ 해볼게"</b> 버튼 눌러봐.<br><br>소라고동과 대화하다가 전략을 재사용할 수도 있지만, <b>"✦ 해볼게" 버튼으로도 전략을 재사용</b>해볼 수 있어.',
     waitFor: 'click',
