@@ -9998,6 +9998,27 @@ async function startCoreTutorial(coreId) {
 
   // 인프라 재사용 (testerMode ON + 시드 자동)
   await startInteractiveOnboarding(startIdx);
+
+  // 사용자 요청 2026-04-29: 코어별 시드 후처리 — 그 코어 흐름에 직접 필요한 시드만 유지 (혼란 차단)
+  setTimeout(() => { try { _scrubSeedsForCore(coreId); } catch (e) { console.warn('seed scrub:', e); } }, 50);
+}
+
+// 코어별 시드 정리 — testSeedV4Data가 박은 거 중 그 코어 흐름에 안 필요한 거 제거
+function _scrubSeedsForCore(coreId) {
+  if (!state || !state.preferences || !state.preferences.testerMode) return;
+  if (coreId === 'core2') {
+    // 코어 #2 (소라의 부름) 흐름 필수: active 부름 + 양생방 결과 체크 대기 미션
+    // 다른 양생 dot 시뮬용 / 지난 부름 시뮬용 미션은 혼란만 → 제거
+    if (Array.isArray(state.missions)) {
+      state.missions = state.missions.filter(m => {
+        if (!m || !m.id) return true;
+        if (!m.id.startsWith('mis_seed_')) return true;
+        return m.id === 'mis_seed_active_call' || m.id === 'mis_seed_strat0_done_unchecked';
+      });
+    }
+  }
+  // 다른 코어 후처리는 추후 보고 받으면 추가
+  if (typeof renderTodayMission === 'function') renderTodayMission();
 }
 
 // V4 코어 튜토리얼 진행 카운트 — 글로벌 step idx 대신 코어 내부 local 카운트.
