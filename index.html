@@ -8746,17 +8746,14 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'mutation_finish_btn',
-    targetSelector: '#mutationFinishBtn',
+    // 사용자 요청 2026-04-29: 네모 표시 X (spotlight 제거)
+    targetSelector: null,
     title: '✦ 이 차원으로 해볼게',
     body: '고동이의 답 봤지?<br>이제 <b>\'✦ 이 차원으로 해볼게\'</b> 눌러봐.<br><br><span class="small">버튼 누르면 잠깐 기다렸다가 <b>"눌렀어"</b> 직접 눌러줘.</span>',
-    waitFor: 'click',
-    advanceDelay: 800,
-    manualAdvance: true,
-    // 사용자 요청 2026-04-29: target 클릭해도 자동 진행 X — '눌렀어' 직접 클릭으로만 진행
-    noAutoAdvanceOnClick: true,
+    waitFor: 'next',
+    nextLabel: '눌렀어 →',
     dimBackground: false,
-    aboveModal: true,
-    fallbackPosition: 'top'
+    aboveModal: true
   },
   // mission_proposal_walkthrough / see_new_mission 보류 (사용자 요청 2026-04-28)
   {
