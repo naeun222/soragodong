@@ -5395,6 +5395,43 @@
     object-fit: cover;
     display: block;
   }
+  /* 사용자 요청 2026-04-29: 진주 음악 타일에 ▶ 미리듣기 + 🍎 Apple Music 버튼 */
+  .tile-music-art-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+  }
+  .pearl-tile-play, .pearl-tile-apple {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    text-decoration: none;
+    color: white;
+    z-index: 2;
+  }
+  .pearl-tile-play {
+    bottom: 6px; right: 6px;
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    font-weight: 700;
+  }
+  .pearl-tile-play.playing { background: linear-gradient(135deg, #c98c8c, #a06868); }
+  .pearl-tile-apple {
+    top: 6px; right: 6px;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .pearl-tile-play:active, .pearl-tile-apple:active { transform: scale(0.92); }
   .tile-music-meta {
     padding: 9px 11px 8px;
   }
@@ -27791,9 +27828,20 @@ function renderLensPearls() {
         const artHtml = p.track.artworkUrl
           ? `<img src="${escapeHtml(p.track.artworkUrl)}" alt="${escapeHtml(p.track.title || '')}" class="tile-music-art" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'tile-music-art music-card-art-placeholder',textContent:'🎵'}))">`
           : `<div class="tile-music-art music-card-art-placeholder">🎵</div>`;
+        // 사용자 요청 2026-04-29: 진주에서 ▶ 미리듣기 + 🍎 Apple Music 열기
+        const playBtnHtml = p.track.previewUrl
+          ? `<button class="pearl-tile-play" onclick="event.stopPropagation(); toggleMusicPreview(this, '${escapeHtml(p.track.previewUrl)}')" aria-label="미리듣기">▶</button>`
+          : '';
+        const appleBtnHtml = p.track.trackUrl
+          ? `<a class="pearl-tile-apple" href="${escapeHtml(p.track.trackUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation();" aria-label="Apple Music">🍎</a>`
+          : '';
         html += `
           <div class="pinterest-tile tile-music${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
-            ${artHtml}
+            <div class="tile-music-art-wrap">
+              ${artHtml}
+              ${playBtnHtml}
+              ${appleBtnHtml}
+            </div>
             <div class="tile-music-meta">
               <div class="tile-music-title">${escapeHtml(p.track.title || '')}</div>
               <div class="tile-music-artist">${escapeHtml(p.track.artist || '')}</div>
@@ -28231,17 +28279,29 @@ async function addPearl() {
 async function openPearl(id) {
   const pearl = state.pearls.find(p => p.id === id);
   if (!pearl) return;
-  
+
+  // 사용자 요청 2026-04-29: 음악 진주는 iTunes 검색으로 음악 변경 + Apple Music 열기 옵션
+  const isMusic = pearl.category === '음악' && pearl.track;
+  const opts = [];
+  if (isMusic && pearl.track.previewUrl) {
+    opts.push({ label: '▶ 미리듣기', value: 'play' });
+  }
+  if (isMusic && pearl.track.trackUrl) {
+    opts.push({ label: '🍎 Apple Music에서 열기', value: 'apple' });
+  }
+  if (isMusic) {
+    opts.push({ label: '🎵 곡 바꾸기', value: 'change_music' });
+  }
+  opts.push({ label: '✏️ 수정', value: 'edit' });
+  opts.push({ label: '🗑 삭제', value: 'delete' });
+
   const action = await showOptionsModal({
     title: `💎 ${pearl.category}`,
     message: `"${pearl.content}"`,
-    options: [
-      { label: '✏️ 수정', value: 'edit' },
-      { label: '🗑 삭제', value: 'delete' }
-    ]
+    options: opts
   });
   if (!action) return;
-  
+
   if (action === 'delete') {
     const yes = await showConfirmModal({
       title: '정말 삭제할까?',
@@ -28267,6 +28327,36 @@ async function openPearl(id) {
       saveState();
       renderLensPearls();
       showToast('수정됨');
+    }
+  } else if (action === 'play' && isMusic) {
+    // 미리듣기 — 임시 audio
+    if (!window._pearlAudio) window._pearlAudio = new Audio();
+    const audio = window._pearlAudio;
+    if (audio.src === pearl.track.previewUrl && !audio.paused) {
+      audio.pause();
+      showToast('⏸ 정지');
+    } else {
+      audio.src = pearl.track.previewUrl;
+      audio.volume = 0.5;
+      audio.play().then(() => showToast('▶ 재생 중')).catch(e => showToast('재생 실패: ' + (e.message || '')));
+    }
+  } else if (action === 'apple' && isMusic) {
+    window.open(pearl.track.trackUrl, '_blank', 'noopener');
+  } else if (action === 'change_music' && isMusic) {
+    if (typeof showMusicSearchModal === 'function') {
+      showMusicSearchModal((track) => {
+        if (!track) return;
+        pearl.track = track;
+        // content 동기화 — 새 곡명-아티스트로
+        if (track.title && track.artist) {
+          pearl.content = `${track.artist} - ${track.title}`;
+        }
+        saveState();
+        renderLensPearls();
+        showToast('🎵 곡 변경됨');
+      });
+    } else {
+      showToast('음악 검색 기능 X');
     }
   }
 }
