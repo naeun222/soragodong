@@ -9062,9 +9062,45 @@ const ONBOARDING_STEPS = [
   {
     id: 'diary_day_modal_explain',
     targetSelector: null,
-    advanceClickSelector: '.day-modal-close',
+    // 사용자 요청 2026-04-29: '토픽' 탭 클릭으로 advance — '고동이가 알아서 정리'의 의미 보여주기
+    advanceClickSelector: '.day-tab[data-tab="topics"]',
     title: '📔 그날의 기록',
-    body: '이 날의 일기를 확인할 수 있어.<br><br>대화탭에서 "일기:"라고 쓴 것도 저장되고, 고동이랑 대화한 내용들을 고동이가 알아서 정리해줘.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
+    body: '이 날의 일기를 확인할 수 있어.<br><br>대화탭에서 "일기:"라고 쓴 것도 저장되고, 고동이랑 대화한 내용들을 고동이가 <b>알아서 정리</b>해줘.<br><br>그게 뭔 말인지 — <b>"토픽"</b> 탭 한 번 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    manualAdvance: true,
+    dimBackground: false,
+    aboveModal: true
+  },
+  // 사용자 요청 2026-04-29: 토픽 탭에서 '고동이가 정리해준다' 의미 설명
+  {
+    id: 'diary_topic_view',
+    targetSelector: null,
+    advanceClickSelector: '.day-modal-close',
+    title: '✦ 토픽 — 카테고리별 자동 분류',
+    body: '4시간 이상 대화 멈추거나 ✓ 마무리하면, 고동이가 챕터를 <b>8 카테고리</b> (일기/일상/고민/감정/기억/할 일/아이디어/관계) 중 하나로 자동 분류해서 여기 박아.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    dimBackground: false,
+    aboveModal: true
+  },
+  // 사용자 요청 2026-04-29: 오늘 일기 (튜토리얼 중 '일기:'로 저장한 것) 같이 확인
+  {
+    id: 'click_today_diary',
+    targetSelector: '.cal-day.today',
+    title: '📔 오늘 일기도 보자',
+    body: '아까 우리가 <b>"일기:"</b>로 저장한 거 기억나?<br>오늘 칸 한 번 눌러봐.',
+    waitFor: 'click',
+    advanceDelay: 600,
+    manualAdvance: true,
+    dimBackground: false
+  },
+  {
+    id: 'today_diary_view',
+    targetSelector: null,
+    advanceClickSelector: '.day-modal-close',
+    title: '📔 오늘의 기록',
+    body: '아까 저장한 일기가 여기 있지!<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
     waitFor: 'click',
     advanceDelay: 600,
     dimBackground: false,
