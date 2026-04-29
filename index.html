@@ -9629,7 +9629,14 @@ const CORE_INITIAL_SCREEN = {
   core4: 'model',    // model_intro는 나 탭
   core5: 'archive',  // library_categories는 도서관 탭
   core6: 'home',     // reflection은 홈에 있음 (사용자 명시: 추가 버튼)
-  core8: 'archive'   // magic_room_intro는 도서관 → 마법·리뷰 → 마법의 소라고동 (또는 홈 카드)
+  core8: 'decisions' // magic_room_intro는 마법의 소라고동 화면 — showScreen('decisions') + renderDecisionsList
+};
+
+// 코어별 진입 후 추가 액션 — 마법의 소라고동 등 특수 진입 처리
+const CORE_INITIAL_ACTION = {
+  core8: () => {
+    if (typeof renderDecisionsList === 'function') renderDecisionsList();
+  }
 };
 
 // 코어 튜토리얼 시작 — startInteractiveOnboarding 인프라 재사용
@@ -9658,6 +9665,8 @@ async function startCoreTutorial(coreId) {
   _coreNeedsHelpAfterEnd = (coreId !== 'core1');
   // 진입 화면 override (startInteractiveOnboarding이 기본 home으로 가는 거 덮어씌움)
   window._coreInitialScreen = CORE_INITIAL_SCREEN[coreId] || 'home';
+  // 진입 후 추가 액션 (예: 마법의 소라고동 — renderDecisionsList)
+  window._coreInitialAction = CORE_INITIAL_ACTION[coreId] || null;
 
   // 인프라 재사용 (testerMode ON + 시드 자동)
   await startInteractiveOnboarding(startIdx);
@@ -9862,8 +9871,12 @@ async function startInteractiveOnboarding(startStep) {
   }
   const tourOv = document.getElementById('tourOverlay');
   if (tourOv) tourOv.style.display = 'none';
-  // V4 코어 튜토리얼 — 진입 화면 override
+  // V4 코어 튜토리얼 — 진입 화면 override + 진입 후 추가 액션
   showScreen(window._coreInitialScreen || 'home');
+  if (typeof window._coreInitialAction === 'function') {
+    try { window._coreInitialAction(); } catch (e) { console.warn('core initial action:', e); }
+    window._coreInitialAction = null;
+  }
   setTimeout(() => {
     const ov = document.getElementById('onbOverlay');
     if (ov) {
