@@ -13252,6 +13252,167 @@ JSON만, 다른 글 X.`;
   }
 }
 
+// 사용자 요청 2026-04-30: 매 메시지 자동 추출 → 챕터 마무리 시점만.
+// endChapter 시 호출. sonnet 4.6 (자동, 5-10/일 → ROI 좋음). caseFormulation은 unverified 마킹.
+async function extractChapterCaseAnalysis(messages) {
+  try {
+    if (!state.apiKey) return;
+    if (window._onbTutorialMode) return;
+    if (state.preferences && state.preferences.testerMode) return;
+    if (!Array.isArray(messages) || messages.length < 3) return;
+
+    const chatLog = messages.map(m => {
+      const role = m.role === 'user' ? '나' : '소라';
+      let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|insight|extracted_tasks)[\s\S]*\}\s*$/g, '').trim();
+      return `${role}: ${content}`;
+    }).join('\n\n');
+
+    const prompt = `사용자가 AI 친구 "소라고동"과 한 챕터(연속 대화 묶음)에서 나눈 대화 전체.
+챕터 전반에 걸쳐 발견된 사용자 자기 인식 / 패턴 / 가치관 / 문제·강점·목표를 JSON으로 추출.
+강한 신호 (명시적 자기 인식, 행동·감정 증거 동반)만. 추측·일반론 X. 근거 약하면 빈 배열.
+
+[대화 원문]
+${chatLog.slice(0, 8000)}
+
+[출력 — JSON만]
+{
+  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
+  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
+  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."}
+}
+
+JSON만, 마크다운 X.`;
+
+    const resp = await callAnthropic({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const raw = data?.content?.[0]?.text || '';
+    const jm = raw.match(/\{[\s\S]*\}/);
+    if (!jm) return;
+    let analysis;
+    try { analysis = JSON.parse(jm[0]); } catch { return; }
+    if (!analysis || typeof analysis !== 'object') return;
+
+    let touched = false;
+    const THRESHOLD = 0.5;
+
+    if (Array.isArray(analysis.new_traits)) {
+      analysis.new_traits.forEach(t => {
+        if (!t || !t.name) return;
+        const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
+        const exists = (state.traits || []).find(e => similarText(e.name, t.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.traits = state.traits || [];
+          state.traits.push({
+            id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: t.name.trim(), description: (t.description || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            extractedFrom: 'chapter',
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+    if (Array.isArray(analysis.new_values)) {
+      analysis.new_values.forEach(v => {
+        if (!v || !v.name) return;
+        const conf = typeof v.confidence === 'number' ? v.confidence : 0.5;
+        const exists = (state.values || []).find(e => similarText(e.name, v.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.values = state.values || [];
+          state.values.push({
+            id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: v.name.trim(), description: (v.description || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            sdt_need: v.sdt_need || null,
+            extractedFrom: 'chapter',
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+    if (Array.isArray(analysis.new_patterns)) {
+      analysis.new_patterns.forEach(p => {
+        if (!p || !p.name) return;
+        const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
+        const exists = (state.patterns || []).find(e => similarText(e.name, p.name));
+        if (!exists) {
+          if (conf < THRESHOLD) return;
+          state.patterns = state.patterns || [];
+          state.patterns.push({
+            id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: p.name.trim(), description: (p.description || '').trim(),
+            trigger: (p.trigger || '').trim(), sequence: (p.sequence || '').trim(),
+            confidence: conf, user_verified: false, evidence_count: 1,
+            extractedFrom: 'chapter',
+            created_at: new Date().toISOString()
+          });
+          touched = true;
+        } else {
+          exists.evidence_count = (exists.evidence_count || 1) + 1;
+          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          touched = true;
+        }
+      });
+    }
+    const u = analysis.case_formulation_update;
+    if (u && typeof u === 'object') {
+      const cf = state.caseFormulation = state.caseFormulation || { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} };
+      if (!cf.unverified) cf.unverified = {};
+      const fields = [
+        ['new_problem', 'problems'],
+        ['new_mechanism', 'mechanisms'],
+        ['new_strength', 'strengths'],
+        ['new_goal', 'goals'],
+        ['new_growth', 'growth']
+      ];
+      fields.forEach(([key, bucket]) => {
+        const txt = u[key];
+        if (!txt || typeof txt !== 'string') return;
+        const trimmed = txt.trim();
+        if (!trimmed) return;
+        if (!Array.isArray(cf[bucket])) cf[bucket] = [];
+        if (cf[bucket].some(x => similarText(x, trimmed))) return;
+        cf[bucket].push(trimmed);
+        // 챕터 자동 추출 = unverified 마킹
+        if (!Array.isArray(cf.unverified[bucket])) cf.unverified[bucket] = [];
+        cf.unverified[bucket].push(trimmed);
+        touched = true;
+      });
+      if (touched) {
+        cf.version = (cf.version || 0) + 1;
+        cf.lastUpdated = new Date().toISOString();
+      }
+    }
+    if (touched) {
+      saveState();
+      if (typeof renderModel === 'function') {
+        try { renderModel(); } catch {}
+      }
+    }
+  } catch (e) {
+    console.warn('[chapter case extract] fail:', e);
+  }
+}
+
 // 사용자 요청 2026-04-29: 임시대화 (숙고/마법) close 시 → 도서관 토픽 카드 자동 추출.
 // 메인 chat extractPreviousChapterTopics 패턴 통일. background, fail silent.
 // source: 'reflection' | 'magic_help', sourceId: 추출 중복 방지 키 (q.id 또는 decision:step), context: 짧은 컨텍스트 라벨.
@@ -16461,9 +16622,9 @@ function _renderChatMessageHTML(m, i) {
       const regenLabel = m._regenLoading ? '🔄 만드는 중...' : '🔄 다시 만들기';
       const propTitle = m.proposalData?.title ? escapeHtml(m.proposalData.title) : '';
       const propChip = propTitle ? `<div class="proposal-title-chip">🌿 오늘의 제안: <b>${propTitle}</b></div>` : '';
+      // 사용자 요청 2026-04-30: regenerateProposal 버튼 제거. 4단 응답에서 나온 제안은 한 번으로 끝.
       proposalBtns = `${propChip}<div class="proposal-buttons">
         <button class="proposal-btn accept" onclick="acceptProposal(${i})">✦ 해볼게</button>
-        <button class="proposal-btn decline" onclick="regenerateProposal(${i})" ${m._regenLoading ? 'disabled' : ''} title="다른 각도의 제안 받기">${regenLabel}</button>
         <button class="proposal-btn decline" onclick="declineProposal(${i})">나중에</button>
       </div>`;
     } else if (m.proposalResponse) {
@@ -16816,6 +16977,13 @@ async function endChapter() {
     await extractPreviousChapterTopics();
   } catch (e) {
     console.warn('topic extract failed:', e);
+  }
+  // 사용자 요청 2026-04-30: 매 메시지 자동 추출 → 챕터 시점만. 이전 챕터 메시지 통째로 보내 모델 추출.
+  // background, fail silent. 사용자 흐름 방해 X.
+  try {
+    extractChapterCaseAnalysis(validMsgs.slice()).catch(() => {});
+  } catch (e) {
+    console.warn('chapter case extract failed:', e);
   }
 
   // 2. summary — API 안 씀 (사용자 요청 2026-04-27). 순번 라벨만.
@@ -17284,9 +17452,10 @@ async function processAnalysis(analysis, messageIdx) {
   const _triggerMsg = _prevUserIdx >= 0 ? state.chatMessages[_prevUserIdx] : null;
   const isUITrigger = !!(_triggerMsg && _triggerMsg.isDeeperRequest);
 
-  // V4-fix: 9.4 임계값 — 약(<0.5) skip, 중/강(>=0.5) 자동 적재 (NEW 배지 + 사용자 ✓로 컨펌).
-  // 기존 항목 evidence 누적은 confidence 무관 (재등장 자체가 신호).
-  if (analysis.new_traits && !isUITrigger) {
+  // 사용자 요청 2026-04-30: traits/values/patterns/case_formulation_update 처리 챕터 시점으로 이동.
+  // applyChapterCaseAnalysis()에서 통합 처리 (endChapter 시 LLM call). 매 메시지 추출 X.
+  // 여기 남은 코드 블록은 하위호환 — 옛 응답에 JSON 들어있어도 일단 처리 유지 (점진 deprecate).
+  if (false && analysis.new_traits && !isUITrigger) {
     analysis.new_traits.forEach(t => {
       const conf = t.confidence || 0.5;
       const exists = state.traits.find(e => similarText(e.name, t.name));
@@ -17299,7 +17468,7 @@ async function processAnalysis(analysis, messageIdx) {
       }
     });
   }
-  if (analysis.new_values && !isUITrigger) {
+  if (false && analysis.new_values && !isUITrigger) {
     analysis.new_values.forEach(v => {
       const conf = v.confidence || 0.5;
       const exists = state.values.find(e => similarText(e.name, v.name));
@@ -17312,7 +17481,7 @@ async function processAnalysis(analysis, messageIdx) {
       }
     });
   }
-  if (analysis.new_patterns && !isUITrigger) {
+  if (false && analysis.new_patterns && !isUITrigger) {
     analysis.new_patterns.forEach(p => {
       const conf = p.confidence || 0.5;
       const exists = state.patterns.find(e => similarText(e.name, p.name));
@@ -17325,7 +17494,7 @@ async function processAnalysis(analysis, messageIdx) {
       }
     });
   }
-  if (analysis.case_formulation_update && !recentRetry && !isUITrigger) {
+  if (false && analysis.case_formulation_update && !recentRetry && !isUITrigger) {
     const cf = state.caseFormulation;
     const u = analysis.case_formulation_update;
     if (u.new_problem && !cf.problems.some(p => similarText(p, u.new_problem))) cf.problems.push(u.new_problem);
@@ -17487,7 +17656,8 @@ async function askDeeper(messageIdx) {
   });
   saveState();
   renderChat();
-  await generateAIResponse();
+  // 사용자 요청 2026-04-30: '더 알아보기' 4단 응답 = 깊은 분석 → opus 4.7. 평소 메인 chat은 sonnet 유지.
+  await generateAIResponse('claude-opus-4-7');
 }
 
 function similarText(a, b) {
@@ -17710,10 +17880,6 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 
 \`\`\`json
 {
-  "new_traits": [{"name": "...", "description": "...", "confidence": 0.5}],
-  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy/competence/relatedness", "confidence": 0.5}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.5}],
-  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "..."},
   "insight": "오늘 대화의 핵심 통찰 한 문장",
   "extracted_tasks": ["사용자가 흘린 할 일 (예: '샴푸 사기', '교수님 메일 답하기'). 명확한 행동만. 추측 X."],
   "extracted_schedule": [{"title": "미팅", "start": "14:00", "end": "15:00"}],
@@ -17725,6 +17891,8 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
   }
 }
 \`\`\`
+
+⚠️ 사용자 요청 2026-04-30: 모델 추출 (traits/values/patterns/case_formulation)은 챕터 마무리 시점에 별도 LLM call로 처리. 매 응답에 그것들 박지 마 (응답 토큰 절감).
 
 extracted_tasks: 사용자가 대화에서 "~해야 해", "~하기로 했어", "나중에 ~할게" 같은 명확한 할 일/의도를 표현했을 때만 추출. 추측이나 일반론 X.
 
