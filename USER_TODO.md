@@ -2,22 +2,49 @@
 
 Claude Code가 못 하는 거. 너가 침대에서 / 외출 없이 다 가능. 우선순위 순.
 
+진행 상황: ✅ 완료 / ⏸️ 대기 / 🔴 다음 액션
+
 ---
 
 ## 🔴 P0 — 지금 / 바로 (Stage 1 완료 위해 필요)
 
-### 1. Supabase RLS 정책 적용 (5분, 침대 가능)
-1. https://supabase.com/dashboard 로그인
-2. soragodong 프로젝트 → **SQL Editor**
-3. `supabase/migrations/0001_rls.sql` 파일 내용 복사 → 붙여넣기 → **Run**
-4. **Database → Roles**에서 anon role이 `service_role` 권한 없는지 확인
-5. **Settings → API**에서 `service_role key`는 *다시는 클라이언트 코드에 넣지 않음*. 백엔드 전용으로 보관.
+### 1. ✅ Supabase RLS 정책 적용 (2026-04-29 완료)
+- `supabase/migrations/0001_rls.sql` Supabase SQL Editor에서 실행함.
+- 본인 row만 read/write. 다른 사용자 row 접근 차단.
+- 단 service_role key 가진 사람(=dev)은 우회 가능 — Stage 2 (E2EE) 에서 그것도 차단 예정.
 
-### 2. Anthropic API 키 (백엔드용) 따로 받기 (5분)
+### 2. ⏸️ Anthropic API 키 (백엔드용) 따로 받기 (5분) — 미룸
+**시점**: Phase C 본격 활성 직전 (수익화 시작 무렵)
 1. https://console.anthropic.com → API Keys → New Key
 2. 이름: `soragodong-backend`
 3. 키 복사 → 안전한 곳 (1Password / Bitwarden / Apple Notes 잠금)
 4. **이 키는 Vercel 환경변수에만 박힘. 절대 클라이언트 코드 X.**
+
+---
+
+---
+
+## 📌 다음 진행 트리거 (인계)
+
+**현 상태 (2026-04-29):**
+- Stage 1 RLS 박힘. 사용자 row 본인만 접근.
+- 풀 튜토리얼·코어 잠금 시스템·E2EE 인계 다 박힘 (CLAUDE.md / src/README.md / api_draft/README.md 참고).
+- 사용자 본인(김나은)이 1–2주 베타 사용 후 다음 단계.
+
+**다음 세션 들어가기 전 본인 검증:**
+- [ ] 앱 정상 동작 확인 (RLS 박힌 후 로그인 / 데이터 read/write OK?)
+- [ ] 매일 체크인·대화 자연스럽게 됨?
+- [ ] 4시간 → 24시간 갭 변경 후 이어서 대화 자연스러움?
+- [ ] 잠금 시스템 / 튜토리얼 첫 진입 흐름 본인 데이터로 자연스러움?
+- [ ] 양생방 전략이 실제로 행동 바꾸는 거 같음?
+- [ ] 모래사장 / 마법의 소라고동 / 숙고 질문 — 진짜 쓰게 됨?
+
+문제 발견 시 → 다음 세션에서 fix.
+
+**다음 세션 진입 시 우선순위 (Claude 역할):**
+1. 베타 사용 중 발견된 버그 fix
+2. Phase A 다음 모듈 추출 (`src/utils/format.ts`, `src/utils/dedupe.ts` 등)
+3. (사용자 결정 시) 베타 사용자 1–2명 모집 시작 — 그러면 P1 ↓ 활성
 
 ---
 

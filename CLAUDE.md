@@ -68,11 +68,12 @@ index.html이 거대한 단일 파일이라 Grep 적극 활용:
 
 ## 보안 / 인프라 로드맵 (2026-04-29 시작)
 
-### Stage 1 — RLS (지금 진행)
+### Stage 1 — RLS ✅ 완료 (2026-04-29)
 - Supabase Row Level Security 강화. 사용자는 본인 row만 read/write.
 - 클라이언트에서 service_role key 절대 X. anon key만.
 - 마이그레이션 SQL: `supabase/migrations/0001_rls.sql`
-- 사용자 직접 작업 (Supabase 콘솔에서 SQL 실행) — `USER_TODO.md` 참고.
+- 사용자(김나은)가 직접 Supabase SQL Editor에서 실행 완료.
+- **알려진 한계**: service_role key 가진 사람(dev)은 RLS 우회 가능. 완전 차단은 Stage 2 E2EE.
 
 ### Stage 2 — 클라이언트 E2EE (다음 세션 / 베타 사용자 받기 전 필수)
 **왜**: ADHD/정신건강 데이터 = PIPA 민감정보. 저장 시 암호화 의무. 개발자(나)도 평문 못 보게.
