@@ -7578,6 +7578,8 @@
         </div>
         <button class="btn-secondary" onclick="openFeedbackKakao()" style="background:linear-gradient(135deg, rgba(255,235,80,0.15), rgba(255,200,80,0.10)); border-color:rgba(255,200,80,0.40); color:#ffe580;">💬 카톡 오픈채팅 (익명 OK)</button>
         <button class="btn-secondary" onclick="openFeedbackInApp()" style="margin-top:6px;">✉️ 여기서 바로 메시지</button>
+        <button class="btn-secondary" onclick="openMyFeedbackInbox()" id="myFeedbackInboxBtn" style="margin-top:6px;">📬 받은 답변 <span id="myFeedbackUnreadBadge" style="display:none; margin-left:6px; background:#e89090; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:700;"></span></button>
+        <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtn" style="margin-top:6px; display:none; background:linear-gradient(135deg, rgba(126,200,227,0.15), rgba(126,200,227,0.08)); border-color:rgba(126,200,227,0.40); color:#7ec8e3;">🛠 관리자 — 피드백 답변</button>
       </div>
 
       <!-- ═══ 계정 ═══ -->
@@ -15289,6 +15291,9 @@ function _findPendingStrategyFollowup() {
     if (m.attemptStatus) return false;  // 이미 result check 끝남
     if (!m.strategyId) return false;
     if (m._followupAsked) return false;
+    // 사용자 보고 2026-04-30: defer 후 같은 세션 화면 전환 시 모달 재출현 버그 fix.
+    // mission.scheduledFor 미래 날짜면 그날까지 안 묻기.
+    if (m.scheduledFor && daysBetweenKeys(today, m.scheduledFor) > 0) return false;
     const dateKey = m.completedDate || (m.completedAt ? new Date(m.completedAt).toISOString().split('T')[0] : null);
     if (!dateKey) return false;
     const diff = daysBetweenKeys(dateKey, today);
@@ -15329,9 +15334,9 @@ async function triggerAttemptResultFlow(mission) {
     const dateChoice = await showDeferDatePicker();
     if (dateChoice) {
       mission.scheduledFor = dateChoice;
-      mission._followupAsked = false;  // 그날 다시 묻도록
-      // 그날 모달 다시 뜨도록 _lastFollowupAt 초기화
-      if (state.preferences) delete state.preferences._lastFollowupAt;
+      mission._followupAsked = false;  // 그날 다시 묻도록 (scheduledFor 미래면 _findPendingStrategyFollowup이 차단)
+      // 사용자 보고 2026-04-30 fix: _lastFollowupAt 삭제 X — 어차피 자동 다음날 갱신됨.
+      // 삭제하면 같은 세션 화면 전환 시 모달 재출현 (scheduledFor 미래면 _findPendingStrategyFollowup이 막아주지만 daily gate는 즉시 효과 좋음).
       saveState({ force: true });
       showToast(`⏸ ${dateChoice}에 다시 물어볼게`);
       if (typeof renderTodayMission === 'function') renderTodayMission();
@@ -21248,7 +21253,9 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
 
   showToast('🐚 오늘의 제안 생성 중...');
   let proposal = '';
-  if (state.apiKey) {
+  // 사용자 보고 2026-04-30: 개인 API 키 비운 상태에서도 백엔드 프록시로 동작하게.
+  // fetch interceptor가 state.apiKey 비어있으면 자동으로 /api/chat 라우팅. 게이트만 풀면 됨.
+  if (state.apiKey || session?.access_token) {
     try {
       const ctx = isMutation
         ? `[전략] ${card.title}\n[새 차원] ${layerName}: ${mutationOpt.action}\n[사용자 상황] ${situation}`
@@ -32534,6 +32541,9 @@ function loadSettings() {
   if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
   // E2EE 상태 갱신
   if (typeof refreshE2EEStatus === 'function') refreshE2EEStatus();
+  // 사용자 요청 2026-04-30: 피드백 inbox — 미읽음 답변 badge + admin 버튼 (jade6679@naver.com만 보임)
+  if (typeof refreshFeedbackUnreadBadge === 'function') refreshFeedbackUnreadBadge().catch(() => {});
+  if (typeof refreshAdminFeedbackButton === 'function') refreshAdminFeedbackButton().catch(() => {});
 }
 
 function saveSettings() {
@@ -32881,7 +32891,7 @@ function openFeedbackInApp() {
       <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">✉️ 메세지 보내기</div>
       <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
         뭐든 편하게 적어줘! 버그·아이디어·잡담 다 OK 🐚<br>
-        <span style="color:var(--text-soft);">답변 필요하면 가입 이메일로 회신해줄게.</span>
+        <span style="color:var(--text-soft);">답변 시 이 앱에서 바로 받아볼 수 있어 (설정 → 받은 답변).</span>
       </div>
       <textarea id="feedbackMessageInput" rows="6" placeholder="자유롭게 적어줘..." maxlength="2000" style="width:100%; font-size:12px; padding:10px; resize:vertical;"></textarea>
       <div style="font-size:10px; color:var(--text-soft); margin-top:6px;">최대 2000자</div>
@@ -32930,6 +32940,217 @@ async function submitFeedback() {
   } catch (e) {
     status.textContent = '오류: ' + (e.message || e);
     status.style.color = '#e89090';
+  }
+}
+
+// 사용자 요청 2026-04-30: 인앱 피드백 inbox — RLS 직접 SELECT (본인 row만).
+async function fetchMyFeedback() {
+  if (!authUserId || !session?.access_token) return [];
+  try {
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_feedback?user_id=eq.${authUserId}&select=*&order=created_at.desc&limit=100`,
+      { headers: authHeaders() }
+    );
+    if (!resp.ok) return [];
+    return await resp.json() || [];
+  } catch (e) { console.warn('fetchMyFeedback:', e); return []; }
+}
+
+function _getReadFeedbackIds() {
+  try {
+    const raw = localStorage.getItem('soragodong_v4_feedback_read');
+    return new Set(JSON.parse(raw || '[]'));
+  } catch { return new Set(); }
+}
+
+function _markFeedbackRead(ids) {
+  try {
+    const set = _getReadFeedbackIds();
+    for (const id of ids) set.add(id);
+    localStorage.setItem('soragodong_v4_feedback_read', JSON.stringify([...set]));
+  } catch {}
+}
+
+// 미읽음 답변 수 — Settings 진입 / 주기 갱신
+async function refreshFeedbackUnreadBadge() {
+  const badge = document.getElementById('myFeedbackUnreadBadge');
+  if (!badge) return;
+  try {
+    const list = await fetchMyFeedback();
+    const read = _getReadFeedbackIds();
+    const unread = list.filter(f => f.admin_reply && !read.has(f.id));
+    if (unread.length > 0) {
+      badge.style.display = 'inline-block';
+      badge.textContent = String(unread.length);
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch {}
+}
+
+async function openMyFeedbackInbox() {
+  if (document.getElementById('myFeedbackInboxOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'myFeedbackInboxOverlay';
+  overlay.style.zIndex = '10001';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:480px; max-height:85vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">📬 받은 답변</div>
+      <div id="myFeedbackInboxBody" style="font-size:12px; color:var(--text-dim); line-height:1.7;">불러오는 중...</div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn-secondary" onclick="closeMyFeedbackInbox()" style="flex:1;">닫기</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const list = await fetchMyFeedback();
+  const body = document.getElementById('myFeedbackInboxBody');
+  if (!body) return;
+  if (list.length === 0) {
+    body.innerHTML = '<span style="color:var(--text-soft);">아직 보낸 메시지가 없어 🐚</span>';
+    return;
+  }
+  body.innerHTML = list.map(f => {
+    const dt = new Date(f.created_at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const replyHtml = f.admin_reply
+      ? `<div style="margin-top:10px; padding:10px 12px; background:rgba(143,200,143,0.08); border-left:3px solid rgba(143,200,143,0.40); border-radius:6px;">
+           <div style="font-size:10px; color:#9ed4a0; font-weight:600; margin-bottom:4px;">🐚 소라고동 답변 · ${f.replied_at ? new Date(f.replied_at).toLocaleString('ko-KR', { month: 'long', day: 'numeric' }) : ''}</div>
+           <div style="white-space:pre-wrap; color:var(--text);">${escapeHtml(f.admin_reply)}</div>
+         </div>`
+      : `<div style="margin-top:10px; font-size:10.5px; color:var(--text-soft);">⏳ 아직 답변 안 왔음</div>`;
+    return `
+      <div style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.04);">
+        <div style="font-size:10px; color:var(--text-soft); margin-bottom:4px;">${dt}</div>
+        <div style="white-space:pre-wrap; color:var(--text);">${escapeHtml(f.message)}</div>
+        ${replyHtml}
+      </div>
+    `;
+  }).join('');
+  // mark all replied as read
+  const replied = list.filter(f => f.admin_reply).map(f => f.id);
+  if (replied.length > 0) {
+    _markFeedbackRead(replied);
+    refreshFeedbackUnreadBadge();
+  }
+}
+
+function closeMyFeedbackInbox() {
+  const overlay = document.getElementById('myFeedbackInboxOverlay');
+  if (overlay) overlay.remove();
+}
+
+// 사용자 요청 2026-04-30: admin 피드백 답변 inbox — ADMIN_USER_ID env 박힌 사용자만 동작 (jade6679@naver.com).
+async function refreshAdminFeedbackButton() {
+  const btn = document.getElementById('adminFeedbackBtn');
+  if (!btn) return;
+  try {
+    const resp = await fetch('/api/admin/feedback-list?status=open', {
+      headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
+    });
+    if (resp.status === 403) { btn.style.display = 'none'; return; }
+    if (!resp.ok) { btn.style.display = 'none'; return; }
+    const data = await resp.json();
+    const openCount = (data.feedback || []).length;
+    btn.style.display = 'block';
+    btn.innerHTML = `🛠 관리자 — 피드백 답변${openCount > 0 ? ` <span style="margin-left:6px; background:#e89090; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:700;">${openCount}</span>` : ''}`;
+  } catch { btn.style.display = 'none'; }
+}
+
+async function openAdminFeedbackInbox() {
+  if (document.getElementById('adminFeedbackOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'adminFeedbackOverlay';
+  overlay.style.zIndex = '10001';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:560px; max-height:88vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">🛠 관리자 — 피드백 답변</div>
+      <div style="margin-bottom:12px; display:flex; gap:6px;">
+        <button class="btn-secondary" onclick="adminFeedbackLoad('open')" style="flex:1; font-size:11px; padding:6px 8px;">미답변</button>
+        <button class="btn-secondary" onclick="adminFeedbackLoad('replied')" style="flex:1; font-size:11px; padding:6px 8px;">답변 완료</button>
+        <button class="btn-secondary" onclick="adminFeedbackLoad('all')" style="flex:1; font-size:11px; padding:6px 8px;">전체</button>
+      </div>
+      <div id="adminFeedbackBody" style="font-size:12px; color:var(--text-dim); line-height:1.7;">불러오는 중...</div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn-secondary" onclick="closeAdminFeedbackInbox()" style="flex:1;">닫기</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  await adminFeedbackLoad('open');
+}
+
+function closeAdminFeedbackInbox() {
+  const overlay = document.getElementById('adminFeedbackOverlay');
+  if (overlay) overlay.remove();
+}
+
+async function adminFeedbackLoad(filter) {
+  const body = document.getElementById('adminFeedbackBody');
+  if (!body) return;
+  body.innerHTML = '<span style="color:var(--text-soft);">불러오는 중...</span>';
+  try {
+    const resp = await fetch('/api/admin/feedback-list?status=' + encodeURIComponent(filter), {
+      headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
+    });
+    if (!resp.ok) {
+      body.innerHTML = `<span style="color:#e89090;">실패 (${resp.status})</span>`;
+      return;
+    }
+    const data = await resp.json();
+    const list = data.feedback || [];
+    if (list.length === 0) {
+      body.innerHTML = '<span style="color:var(--text-soft);">표시할 피드백 X</span>';
+      return;
+    }
+    body.innerHTML = list.map(f => {
+      const dt = new Date(f.created_at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const replyHtml = f.admin_reply
+        ? `<div style="margin-top:8px; padding:8px 10px; background:rgba(143,200,143,0.08); border-left:3px solid rgba(143,200,143,0.40); border-radius:6px;">
+             <div style="font-size:10px; color:#9ed4a0; font-weight:600; margin-bottom:4px;">답변됨 · ${f.replied_at ? new Date(f.replied_at).toLocaleString('ko-KR') : ''}</div>
+             <div style="white-space:pre-wrap; color:var(--text);">${escapeHtml(f.admin_reply)}</div>
+           </div>`
+        : `<div style="margin-top:8px;">
+             <textarea id="adminReplyInput_${f.id}" rows="3" placeholder="답변 작성..." style="width:100%; font-size:12px; padding:8px;"></textarea>
+             <button class="btn-primary" onclick="adminFeedbackSubmitReply(${f.id})" style="margin-top:6px; font-size:11px; padding:6px 12px;">답변 보내기</button>
+           </div>`;
+      return `
+        <div style="margin-bottom:14px; padding:12px; background:var(--surface); border-radius:8px;">
+          <div style="font-size:10px; color:var(--text-soft); margin-bottom:4px;">
+            ${dt} · ${escapeHtml(f.user_email || '익명')} · #${f.id}
+          </div>
+          <div style="white-space:pre-wrap; color:var(--text); margin-bottom:6px;">${escapeHtml(f.message)}</div>
+          ${replyHtml}
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    body.innerHTML = '<span style="color:#e89090;">예외: ' + (e.message || e) + '</span>';
+  }
+}
+
+async function adminFeedbackSubmitReply(feedbackId) {
+  const ta = document.getElementById('adminReplyInput_' + feedbackId);
+  if (!ta) return;
+  const reply = ta.value.trim();
+  if (!reply) { showToast('답변 내용 없음'); return; }
+  try {
+    const resp = await fetch('/api/admin/feedback-reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ feedback_id: feedbackId, reply })
+    });
+    if (resp.ok) {
+      showToast('✓ 답변 완료');
+      adminFeedbackLoad('open');
+      refreshAdminFeedbackButton();
+    } else {
+      const t = await resp.text();
+      alert('실패: ' + t.slice(0, 200));
+    }
+  } catch (e) {
+    alert('예외: ' + (e.message || e));
   }
 }
 
