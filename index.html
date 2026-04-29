@@ -5474,6 +5474,112 @@
     aspect-ratio: 1;
     overflow: hidden;
   }
+  /* 사용자 보고 2026-04-29: artwork 로드 실패 시 placeholder (DOM replace 안 하고 CSS로) */
+  .tile-music-art-wrap.art-failed::before {
+    content: '🎵';
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    color: var(--text-dim);
+  }
+
+  /* 사용자 요청 2026-04-29: 진주 큰 보기 모달 (클릭 시) — 더보기 ⋮로 수정/삭제 */
+  .pearl-view-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15, 14, 23, 0.85);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 9500;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    animation: pearlViewFadeIn 0.2s ease-out;
+  }
+  @keyframes pearlViewFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .pearl-view-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    width: 100%; max-width: 420px;
+    max-height: 90vh; overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  .pearl-view-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pearl-view-cat { font-size: 13px; color: var(--text-dim); }
+  .pearl-view-more, .pearl-view-close {
+    background: var(--surface2); border: none; color: var(--text);
+    width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; font-size: 16px;
+  }
+  .pearl-view-more:active, .pearl-view-close:active { transform: scale(0.94); }
+  .pearl-view-body {
+    padding: 18px 18px 22px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .pearl-view-media {
+    position: relative; width: 100%;
+    aspect-ratio: 1; max-width: 320px; margin: 0 auto;
+    border-radius: 14px; overflow: hidden;
+    background: linear-gradient(135deg, var(--surface2), var(--surface));
+  }
+  .pearl-view-media.art-failed::before {
+    content: '🎵'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 60px; color: var(--text-dim);
+  }
+  .pearl-view-art, .pearl-view-photo {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .pearl-view-art-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 60px; color: var(--text-dim);
+  }
+  .pearl-view-play {
+    position: absolute; bottom: 12px; right: 12px;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(0,0,0,0.65); border: none; color: white;
+    cursor: pointer; font-size: 16px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .pearl-view-play:active { transform: scale(0.92); }
+  .pearl-view-music-meta, .pearl-view-text-meta {
+    text-align: center;
+  }
+  .pearl-view-text-only {
+    text-align: center; padding: 30px 12px;
+  }
+  .pearl-view-icon { font-size: 56px; margin-bottom: 12px; opacity: 0.85; }
+  .pearl-view-title {
+    font-size: 17px; font-weight: 500; color: var(--text);
+    margin-bottom: 4px; line-height: 1.4;
+  }
+  .pearl-view-sub {
+    font-size: 13px; color: var(--text-dim);
+  }
+  .pearl-view-apple {
+    display: inline-block;
+    font-size: 12px; padding: 6px 14px;
+    background: linear-gradient(135deg, rgba(252,176,69,0.18), rgba(252,90,77,0.18));
+    border: 1px solid rgba(252,176,69,0.3);
+    color: #ffb86b; border-radius: 16px;
+    text-decoration: none;
+  }
+  .pearl-view-note {
+    font-size: 13px; color: var(--text);
+    background: var(--surface2);
+    border-left: 3px solid var(--accent2);
+    padding: 12px 14px; border-radius: 8px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  .pearl-view-date {
+    font-size: 11px; color: var(--text-dim);
+    text-align: center;
+  }
   .pearl-tile-play, .pearl-tile-apple {
     position: absolute;
     width: 30px;
@@ -12528,15 +12634,12 @@ async function sendReflectionChat() {
 사용자가 새로 적은 한 줄을 받고, 그 각도로 한 발짝 더 들어가는 질문 1-2개 또는 짧은 관찰 한 줄.`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({
+    // 사용자 요청 2026-04-29: prompt caching 적용 (1024 token 미달 시 Anthropic이 자동 무시 — 안전)
+    const resp = await callAnthropic({
         model: 'claude-opus-4-7',
         max_tokens: 400,
-        system: sysPrompt,
+        system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
         messages: recentMsgs
-      })
     });
     const data = await resp.json();
     const aiText = data.content?.[0]?.text?.trim() || '(응답 비어있어)';
@@ -28990,8 +29093,10 @@ function renderLensPearls() {
         ? new Date(p.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
         : '';
       if (p.category === '음악' && p.track) {
+        // 사용자 보고 2026-04-29: artwork onerror replaceWith가 DOM 변경 → masonry layout 재계산 → 첫 카드 깜빡임.
+        // onerror=null로 무한 retry 차단 + decoding/loading 힌트로 안정적 로드.
         const artHtml = p.track.artworkUrl
-          ? `<img src="${escapeHtml(p.track.artworkUrl)}" alt="${escapeHtml(p.track.title || '')}" class="tile-music-art" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'tile-music-art music-card-art-placeholder',textContent:'🎵'}))">`
+          ? `<img src="${escapeHtml(p.track.artworkUrl)}" alt="${escapeHtml(p.track.title || '')}" class="tile-music-art" loading="lazy" decoding="async" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('art-failed');">`
           : `<div class="tile-music-art music-card-art-placeholder">🎵</div>`;
         // 사용자 요청 2026-04-29: 진주에서 ▶ 미리듣기 + 🍎 Apple Music 열기
         const playBtnHtml = p.track.previewUrl
@@ -29460,28 +29565,120 @@ async function addPearl() {
   showToast('진주 추가됨 💎');
 }
 
+// 사용자 요청 2026-04-29: 진주 클릭 = 큰 보기 모달. 수정/삭제 등은 더보기 ⋮ 메뉴.
 async function openPearl(id) {
   const pearl = state.pearls.find(p => p.id === id);
   if (!pearl) return;
+  showPearlViewModal(pearl);
+}
 
-  // 사용자 요청 2026-04-29: 음악 진주는 iTunes 검색으로 음악 변경 + Apple Music 열기 옵션
+function showPearlViewModal(pearl) {
+  // 기존 모달 제거
+  document.querySelectorAll('.pearl-view-overlay').forEach(o => o.remove());
+  const isMusic = pearl.category === '음악' && pearl.track;
+  const isPhoto = !!pearl.photo;
+  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
+  const icon = iconMap[pearl.category] || '💎';
+  const dateStr = pearl.createdAt
+    ? new Date(pearl.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
+
+  let mediaHtml = '';
+  if (isMusic) {
+    const artUrl = pearl.track.artworkUrl || '';
+    const playBtn = pearl.track.previewUrl
+      ? `<button class="pearl-view-play" onclick="_pearlViewPlayPreview('${escapeHtml(pearl.track.previewUrl)}', this)" aria-label="미리듣기">▶</button>`
+      : '';
+    const appleBtn = pearl.track.trackUrl
+      ? `<a class="pearl-view-apple" href="${escapeHtml(pearl.track.trackUrl)}" target="_blank" rel="noopener" aria-label="Apple Music">🍎 Apple Music</a>`
+      : '';
+    mediaHtml = `
+      <div class="pearl-view-media${artUrl ? '' : ' no-art'}">
+        ${artUrl ? `<img src="${escapeHtml(artUrl)}" alt="" class="pearl-view-art" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('art-failed');">` : '<div class="pearl-view-art-placeholder">🎵</div>'}
+        ${playBtn}
+      </div>
+      <div class="pearl-view-music-meta">
+        <div class="pearl-view-title">${escapeHtml(pearl.track.title || pearl.content || '')}</div>
+        <div class="pearl-view-sub">${escapeHtml(pearl.track.artist || '')}</div>
+        ${appleBtn ? `<div style="margin-top:10px;">${appleBtn}</div>` : ''}
+      </div>
+    `;
+  } else if (isPhoto) {
+    mediaHtml = `
+      <div class="pearl-view-media">
+        <img src="${pearl.photo}" alt="" class="pearl-view-photo">
+      </div>
+      <div class="pearl-view-text-meta">
+        <div class="pearl-view-title">${icon} ${escapeHtml(pearl.content || '')}</div>
+      </div>
+    `;
+  } else {
+    mediaHtml = `
+      <div class="pearl-view-text-only">
+        <div class="pearl-view-icon">${icon}</div>
+        <div class="pearl-view-title">${escapeHtml(pearl.content || '')}</div>
+      </div>
+    `;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'pearl-view-overlay';
+  overlay.innerHTML = `
+    <div class="pearl-view-modal" onclick="event.stopPropagation()">
+      <div class="pearl-view-header">
+        <span class="pearl-view-cat">${icon} ${escapeHtml(pearl.category)}</span>
+        <div style="display:flex; gap:6px;">
+          <button class="pearl-view-more" onclick="_pearlViewMore('${pearl.id}')" aria-label="더보기">⋮</button>
+          <button class="pearl-view-close" onclick="_closePearlView()" aria-label="닫기">✕</button>
+        </div>
+      </div>
+      <div class="pearl-view-body">
+        ${mediaHtml}
+        ${pearl.note ? `<div class="pearl-view-note">${escapeHtml(pearl.note)}</div>` : ''}
+        ${dateStr ? `<div class="pearl-view-date">${dateStr}</div>` : ''}
+      </div>
+    </div>
+  `;
+  overlay.onclick = (e) => { if (e.target === overlay) _closePearlView(); };
+  document.body.appendChild(overlay);
+}
+
+function _closePearlView() {
+  document.querySelectorAll('.pearl-view-overlay').forEach(o => o.remove());
+  // 미리듣기 정지
+  if (window._pearlAudio && !window._pearlAudio.paused) {
+    try { window._pearlAudio.pause(); } catch (e) {}
+  }
+}
+
+function _pearlViewPlayPreview(url, btn) {
+  if (!window._pearlAudio) window._pearlAudio = new Audio();
+  const audio = window._pearlAudio;
+  if (audio.src === url && !audio.paused) {
+    audio.pause();
+    if (btn) btn.textContent = '▶';
+    return;
+  }
+  audio.src = url;
+  audio.volume = 0.5;
+  audio.play().then(() => {
+    if (btn) btn.textContent = '⏸';
+    audio.onended = () => { if (btn) btn.textContent = '▶'; };
+  }).catch(e => showToast('재생 실패'));
+}
+
+async function _pearlViewMore(id) {
+  const pearl = state.pearls.find(p => p.id === id);
+  if (!pearl) return;
   const isMusic = pearl.category === '음악' && pearl.track;
   const opts = [];
-  if (isMusic && pearl.track.previewUrl) {
-    opts.push({ label: '▶ 미리듣기', value: 'play' });
-  }
-  if (isMusic && pearl.track.trackUrl) {
-    opts.push({ label: '🍎 Apple Music에서 열기', value: 'apple' });
-  }
-  if (isMusic) {
-    opts.push({ label: '🎵 곡 바꾸기', value: 'change_music' });
-  }
-  opts.push({ label: '✏️ 수정', value: 'edit' });
+  if (isMusic) opts.push({ label: '🎵 곡 바꾸기', value: 'change_music' });
+  opts.push({ label: '✏️ 제목 / 메모 수정', value: 'edit' });
   opts.push({ label: '🗑 삭제', value: 'delete' });
 
   const action = await showOptionsModal({
     title: `💎 ${pearl.category}`,
-    message: `"${pearl.content}"`,
+    message: pearl.content || '',
     options: opts
   });
   if (!action) return;
@@ -29498,46 +29695,46 @@ async function openPearl(id) {
       saveState();
       renderLensPearls();
       showToast('삭제됨');
+      _closePearlView();
     }
   } else if (action === 'edit') {
-    const updated = await showInputModal({
-      title: `💎 ${pearl.category} 수정`,
-      defaultValue: pearl.content,
-      multiline: true,
+    // 제목 + 메모 두 단계 (음악은 제목 = track 자동, 메모만)
+    if (!isMusic) {
+      const updated = await showInputModal({
+        title: `💎 ${pearl.category} — 제목 수정`,
+        defaultValue: pearl.content,
+        multiline: true,
+        okLabel: '다음 →'
+      });
+      if (updated === null) return;
+      if (updated.trim()) pearl.content = updated.trim();
+    }
+    const updatedNote = await showInputModal({
+      title: `💎 ${pearl.category} — 메모 수정`,
+      defaultValue: pearl.note || '',
+      placeholder: '비우면 메모 X',
       okLabel: '저장'
     });
-    if (updated && updated.trim()) {
-      pearl.content = updated.trim();
-      saveState();
-      renderLensPearls();
-      showToast('수정됨');
-    }
-  } else if (action === 'play' && isMusic) {
-    // 미리듣기 — 임시 audio
-    if (!window._pearlAudio) window._pearlAudio = new Audio();
-    const audio = window._pearlAudio;
-    if (audio.src === pearl.track.previewUrl && !audio.paused) {
-      audio.pause();
-      showToast('⏸ 정지');
-    } else {
-      audio.src = pearl.track.previewUrl;
-      audio.volume = 0.5;
-      audio.play().then(() => showToast('▶ 재생 중')).catch(e => showToast('재생 실패: ' + (e.message || '')));
-    }
-  } else if (action === 'apple' && isMusic) {
-    window.open(pearl.track.trackUrl, '_blank', 'noopener');
+    if (updatedNote === null) return;
+    pearl.note = updatedNote.trim() || null;
+    saveState();
+    renderLensPearls();
+    showToast('수정됨 ✦');
+    // 모달 다시 열어서 변경 반영
+    showPearlViewModal(pearl);
   } else if (action === 'change_music' && isMusic) {
     if (typeof showMusicSearchModal === 'function') {
       showMusicSearchModal((track) => {
         if (!track) return;
         pearl.track = track;
-        // content 동기화 — 새 곡명-아티스트로
         if (track.title && track.artist) {
           pearl.content = `${track.artist} - ${track.title}`;
         }
         saveState();
         renderLensPearls();
         showToast('🎵 곡 변경됨');
+        // 모달 다시 열어서 변경 반영
+        showPearlViewModal(pearl);
       });
     } else {
       showToast('음악 검색 기능 X');
