@@ -271,6 +271,44 @@
   }
   .update-banner-btn-dismiss:active { background: var(--surface2); }
 
+  /* 사용자 요청 2026-04-29: 양생방·깨달음·마법리뷰 timeline 카테고리 = 펼침/접힘 큰 카드 */
+  .lib-cat-accordion { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .lib-cat-accordion-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .lib-cat-accordion-item.expanded { border-color: var(--accent-dim); }
+  .lib-cat-accordion-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .lib-cat-accordion-header:active { background: var(--surface2); }
+  .lcaa-icon { font-size: 22px; line-height: 1; flex-shrink: 0; }
+  .lcaa-label { flex: 1; font-size: 15px; font-weight: 500; color: var(--text); }
+  .lcaa-count {
+    font-size: 11px; color: var(--text-dim);
+    background: var(--surface2);
+    padding: 3px 9px; border-radius: 10px;
+    margin-right: 4px; flex-shrink: 0;
+  }
+  .lcaa-count.empty { opacity: 0.5; }
+  .lcaa-chevron { color: var(--text-dim); transition: transform 0.2s; flex-shrink: 0; font-size: 14px; }
+  .lib-cat-accordion-item.expanded .lcaa-chevron { transform: rotate(180deg); }
+  .lib-cat-accordion-body {
+    padding: 4px 16px 14px;
+    border-top: 1px solid var(--border);
+    display: none;
+  }
+  .lib-cat-accordion-item.expanded .lib-cat-accordion-body { display: block; }
+  .lcaa-empty {
+    padding: 18px 0; color: var(--text-dim); font-size: 12px; text-align: center; line-height: 1.6;
+  }
+
   /* V4 코어 튜토리얼 잠금 시각 (사용자 요청 2026-04-29: 카드 우상단 자물쇠 + 그레이아웃) */
   .core-locked { opacity: 0.45; position: relative; }
   .core-locked::after {
@@ -16690,6 +16728,13 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구이자 
 
 - 구분: 즐거운 일·웃긴 에피소드·소소한 일상은 여전히 가볍게 (원칙 11 유지). 고민 상담 모드는 "고민 신호"가 있을 때만.
 
+- **모드 sticky 룰 (사용자 보고 2026-04-29) — 매우 중요**:
+  · 고민 상담 모드 한 번 ON되면 **그 챕터 안에선 유지**. 사용자가 짧게 "응" / "맞아" / "그러게" 같은 confirm 메시지 보내도 **친구 톤으로 튀지 X**.
+  · 짧은 응답은 사용자가 "듣고 있다 / 정리 중"이라는 신호. 같은 차분한 톤 유지하면서 한 박자 호흡 주기.
+  · 명시적으로 사용자가 다른 주제로 전환("아 근데 다른 얘기인데", "오늘 점심 뭐 먹지" 등) 또는 가벼운 톤으로 전환 (ㅋㅋ + 일상)하면 그때 모드 해제 OK.
+  · 사용자가 진지하게 풀던 중 → 짧은 응답 → AI가 갑자기 친구 톤으로 튀면 사용자 입장에선 "내 얘기 흘려들었나" 느낌. 절대 X.
+  · 의심 시: **이전 응답의 톤 유지**가 default. 모드 전환은 명확한 신호 있을 때만.
+
 【명시적 도움 요청 시 — 4단 응답】
 사용자가 "어떡하지?", "도와줘", "방법 있어?" 같은 표현 쓸 때만:
 
@@ -18834,8 +18879,8 @@ let _insightsCatFilter = null;   // 'scrap' | 'memo' | 'reflection' | 'ai'
 let _galpiView = 'feed';         // 'feed' | 'list'
 let _galpiCatFilter = null;      // 'decision' | 'weekly' | 'monthly' | 'quarterly'
 
-function setYangsaengView(v) { _yangsaengView = v; if (v === 'feed') _yangsaengCatFilter = null; if (typeof renderLensYangsaeng === 'function') renderLensYangsaeng(); }
-function setYangsaengCatFilter(c) { _yangsaengCatFilter = (_yangsaengCatFilter === c) ? null : c; if (typeof renderLensYangsaeng === 'function') renderLensYangsaeng(); }
+function setYangsaengView(v) { _yangsaengView = v; if (v === 'feed') _yangsaengCatFilter = null; if (typeof renderLensStrategies === 'function') renderLensStrategies(); }
+function setYangsaengCatFilter(c) { _yangsaengCatFilter = (_yangsaengCatFilter === c) ? null : c; if (typeof renderLensStrategies === 'function') renderLensStrategies(); }
 function setInsightsView(v) { _insightsView = v; if (v === 'feed') _insightsCatFilter = null; if (typeof renderLensArchive === 'function') renderLensArchive(); if (typeof renderLensInsights === 'function') renderLensInsights(); }
 function setInsightsCatFilter(c) { _insightsCatFilter = (_insightsCatFilter === c) ? null : c; if (typeof renderLensArchive === 'function') renderLensArchive(); if (typeof renderLensInsights === 'function') renderLensInsights(); }
 function setGalpiView(v) { _galpiView = v; if (v === 'feed') _galpiCatFilter = null; if (typeof renderLensGalpi === 'function') renderLensGalpi(); }
@@ -19385,12 +19430,8 @@ function switchLibraryCat(cat) {
     const el = document.getElementById(vid);
     if (el) el.style.display = (k === cat) ? '' : 'none';
   });
-  // 사용자 요청 2026-04-29: 마법·리뷰 카테고리 진입 시 동적 렌더
-  if (cat === 'galpi' && typeof renderLensGalpi === 'function') renderLensGalpi();
-  if (cat === 'insights' && typeof renderLensArchive === 'function') {
-    renderLensArchive();
-    if (typeof renderLensInsights === 'function') renderLensInsights();
-  }
+  // 사용자 보고 2026-04-29: 칩 전환 시 active lens 재렌더 — 토글 상태(_libView)와 보이는 view 동기화
+  if (typeof _renderActiveLens === 'function') _renderActiveLens();
   // V4: 카테고리 전환 후 잠금 시각 갱신 (마법의 소라고동 등)
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 30);
   // 검색바는 모든 카테고리에서 노출 (사용자 보고 2026-04-29: 'block' 으로 덮으면 flex 깨져 토글이 검색창 밑으로 wrap — 'flex' 유지)
@@ -19770,28 +19811,35 @@ function renderLensStrategies() {
     });
 
     if (_ysView === 'list') {
-      // 목록식: 카테고리 chips → 클릭 시 해당 카테고리 카드들만
+      // 사용자 요청 2026-04-29: 카테고리 = 큰 카드 펼침/접힘 (진주 음악 카드 스타일)
+      // 데이터 없는 카테고리도 살림 ("아직 없어")
       const _catFilter = (typeof _yangsaengCatFilter !== 'undefined') ? _yangsaengCatFilter : null;
       const STATUS_CATS = [
-        { key: 'seedling_trying', label: '🌿 양생', count: _groups.seedling_trying.length },
-        { key: 'working',         label: '🌳 성장', count: _groups.working.length },
-        { key: 'mutated',         label: '🪦 진화', count: _groups.mutated.length },
-        { key: 'embodied',        label: '🍃 체화', count: _groups.embodied.length }
-      ].filter(c => c.count > 0);
-      html += `<div class="yangsaeng-cat-chips">
-        ${STATUS_CATS.map(c => `
-          <button class="ys-cat-chip${_catFilter === c.key ? ' active' : ''}" onclick="setYangsaengCatFilter('${c.key}')">
-            ${c.label} <span class="cat-chip-count">${c.count}</span>
-          </button>
-        `).join('')}
+        { key: 'seedling_trying', icon: '🌿', label: '양생',  count: _groups.seedling_trying.length, emptyMsg: '아직 시작·시도 중인 전략 없어' },
+        { key: 'working',         icon: '🌳', label: '성장',  count: _groups.working.length,         emptyMsg: '아직 작동 누적된 전략 없어' },
+        { key: 'mutated',         icon: '🪦', label: '진화',  count: _groups.mutated.length,         emptyMsg: '아직 돌연변이된 전략 없어' },
+        { key: 'embodied',        icon: '🍃', label: '체화',  count: _groups.embodied.length,        emptyMsg: '아직 체화된 전략 없어' }
+      ];
+      html += `<div class="lib-cat-accordion">
+        ${STATUS_CATS.map(c => {
+          const expanded = _catFilter === c.key;
+          const cards = _groups[c.key] || [];
+          const bodyInner = cards.length === 0
+            ? `<div class="lcaa-empty">${c.emptyMsg}</div>`
+            : cards.map(s => _renderStrategyCardHtml(s)).join('');
+          return `
+            <div class="lib-cat-accordion-item${expanded ? ' expanded' : ''}">
+              <div class="lib-cat-accordion-header" onclick="setYangsaengCatFilter('${c.key}')">
+                <span class="lcaa-icon">${c.icon}</span>
+                <span class="lcaa-label">${c.label}</span>
+                <span class="lcaa-count${c.count === 0 ? ' empty' : ''}">${c.count}</span>
+                <span class="lcaa-chevron">▾</span>
+              </div>
+              <div class="lib-cat-accordion-body">${bodyInner}</div>
+            </div>
+          `;
+        }).join('')}
       </div>`;
-      if (_catFilter && _groups[_catFilter]) {
-        _groups[_catFilter].forEach(s => { html += _renderStrategyCardHtml(s); });
-      } else {
-        html += `<div style="padding:30px 16px; color:var(--text-dim); font-size:12px; line-height:1.7; text-align:center;">
-          위에서 카테고리 한 번 눌러봐 ✦
-        </div>`;
-      }
     } else {
       // 피드: 상태별 그룹 (기존 grid 동작)
       const _groupOrder = [
@@ -20380,25 +20428,81 @@ function renderLensArchive() {
   }
 
   let html = '<div class="archive-section-wrap">';
-  // 사용자 요청 2026-04-29: 공용 toggle 사용 — 자체 토글 X. 목록 모드에서만 chip 표시.
+  // 사용자 요청 2026-04-29: timeline 모드 = 큰 카드 펼침/접힘 accordion (4 카테고리, 데이터 없는 것도 살림)
   if (insightView === 'list') {
-    const counts = { scrap: 0, memo: 0, reflection: 0, ai: 0 };
+    const counts = { scrap: 0, memo: 0, reflection: 0 };
     items.forEach(a => { counts[a.type || 'scrap'] = (counts[a.type || 'scrap'] || 0) + 1; });
-    counts.ai = (state.insights || []).filter(i => !i.dismissed).length;
+    const aiInsights = (state.insights || []).filter(i => !i.dismissed)
+      .sort((a, b) => new Date(b.discoveredAt) - new Date(a.discoveredAt));
+    const aiCount = aiInsights.length;
+
+    // 깨달음 카드 렌더 헬퍼 (인라인 — 큰 카드 풍 안 쓰고 간단히)
+    const _archiveCardHtml = (a) => {
+      const realIdx = items.indexOf(a);
+      const t = a.type || 'scrap';
+      const headline = (t !== 'memo' && a.headline)
+        ? `<div class="archive-item-headline">${escapeHtml(a.headline)}</div>` : '';
+      const bodyText = t === 'memo'
+        ? (a.userMemo || a.body || a.insight || '')
+        : (a.body || (a.headline ? '' : (a.insight || '')));
+      const body = bodyText ? `<div class="archive-item-body">${escapeHtml(bodyText)}</div>` : '';
+      const tagsHtml = (Array.isArray(a.tags) && a.tags.length)
+        ? `<div class="archive-item-tags">${a.tags.map(tg => `<span class="archive-tag">#${escapeHtml(tg)}</span>`).join('')}</div>` : '';
+      const dateStr = a.date || '';
+      const sourceStr = a.source ? ` · ${escapeHtml(a.source)}` : '';
+      return `
+        <div class="archive-item-card archive-type-${t}" onclick="openArchiveItem(${realIdx})">
+          <div class="archive-item-meta">${escapeHtml(dateStr)}${sourceStr}</div>
+          ${headline}${body}${tagsHtml}
+        </div>`;
+    };
+    // AI 인사이트 카드 렌더 헬퍼
+    const _aiCardHtml = (i) => {
+      const typeLabel = i.type === 'causal' ? '🔗 어떤 X 다음 Y' : '🔄 자주 보이는 패턴';
+      const confPct = Math.round((i.confidence || 0.5) * 100);
+      const isConfirmed = i.user_verified === true;
+      return `
+        <div class="insight-card${isConfirmed ? ' confirmed' : ''}" data-id="${i.id}" style="margin-bottom:8px;">
+          <div class="insight-card-header">
+            <span class="insight-card-type">${typeLabel}</span>
+            <span class="insight-card-conf"><span class="insight-card-conf-bar"><span class="insight-card-conf-bar-fill" style="width:${confPct}%;"></span></span>${confPct}%</span>
+          </div>
+          <div class="insight-card-text">${escapeHtml(i.content)}</div>
+          ${i.evidence ? `<div class="insight-card-evidence"><span class="insight-card-evidence-label">📊 근거</span>${escapeHtml(i.evidence)}</div>` : ''}
+        </div>`;
+    };
+
     const CATS = [
-      { key: 'scrap',      label: '📌 스크랩',       count: counts.scrap || 0 },
-      { key: 'memo',       label: '✎ 메모',          count: counts.memo || 0 },
-      { key: 'reflection', label: '🌊 숙고 결론',     count: counts.reflection || 0 },
-      { key: 'ai',         label: '🔮 AI 인사이트',   count: counts.ai || 0 }
-    ].filter(c => c.count > 0);
-    html += `<div class="lib-cat-list-chips">${CATS.map(c =>
-      `<button class="lcl-chip${insightCat === c.key ? ' active' : ''}" onclick="setInsightsCatFilter('${c.key}')">${c.label} <span class="cat-chip-count">${c.count}</span></button>`
-    ).join('')}</div>`;
-    if (!insightCat) {
-      html += `<div style="padding:30px 16px; color:var(--text-dim); font-size:12px; line-height:1.7; text-align:center;">위에서 카테고리 한 번 눌러봐 ✦</div>`;
-      container.innerHTML = html + '</div>';
-      return;
-    }
+      { key: 'scrap',      icon: '📌', label: '깨달음 (스크랩)', items: items.filter(a => (a.type || 'scrap') === 'scrap'), emptyMsg: '아직 스크랩한 깨달음 없어. 대화에서 ✦ 깨달음으로 눌러서 모아.' },
+      { key: 'reflection', icon: '🌊', label: '숙고 결론',       items: items.filter(a => a.type === 'reflection'),         emptyMsg: '아직 숙고 결론 없어. 🌊 숙고 질문에서 결론 박으면 여기로.' },
+      { key: 'memo',       icon: '✎',  label: '메모',           items: items.filter(a => a.type === 'memo'),               emptyMsg: '아직 메모 없어. 대화 + 메뉴 → ✎ 메모로 직접 적기.' },
+      { key: 'ai',         icon: '🔮', label: 'AI 인사이트',     items: aiInsights,                                          emptyMsg: '아직 인사이트 없어. 체크인 7일 이상 쌓이면 자동 발견 가능.' }
+    ];
+    html += `<div class="lib-cat-accordion">
+      ${CATS.map(c => {
+        const expanded = insightCat === c.key;
+        const count = c.key === 'ai' ? aiCount : (counts[c.key] || 0);
+        const bodyInner = count === 0
+          ? `<div class="lcaa-empty">${c.emptyMsg}</div>`
+          : (c.key === 'ai' ? c.items.map(_aiCardHtml).join('') : c.items.map(_archiveCardHtml).join(''));
+        // AI 카테고리는 + 새 인사이트 찾기 버튼도
+        const extraBtn = c.key === 'ai'
+          ? `<div style="margin-bottom:10px;"><button class="quick-btn" onclick="event.stopPropagation(); discoverInsights()" style="font-size:11px; padding:7px 12px;">🔮 새 인사이트 찾기</button></div>`
+          : '';
+        return `
+          <div class="lib-cat-accordion-item${expanded ? ' expanded' : ''}">
+            <div class="lib-cat-accordion-header" onclick="setInsightsCatFilter('${c.key}')">
+              <span class="lcaa-icon">${c.icon}</span>
+              <span class="lcaa-label">${c.label}</span>
+              <span class="lcaa-count${count === 0 ? ' empty' : ''}">${count}</span>
+              <span class="lcaa-chevron">▾</span>
+            </div>
+            <div class="lib-cat-accordion-body">${extraBtn}${bodyInner}</div>
+          </div>`;
+      }).join('')}
+    </div></div>`;
+    container.innerHTML = html;
+    return;  // accordion이 모든 데이터 처리 — 아래 grid 렌더 skip
   }
   html += `<div class="archive-section-label">✦ 저장한 깨달음${items.length ? ` <span class="al-count">${items.length}</span>` : ''}</div>`;
 
@@ -20575,53 +20679,61 @@ function renderLensGalpi() {
       </div>
     `;
   } else {
-    // 목록: 4 chips → 클릭 시 inline 리스트
+    // 사용자 요청 2026-04-29: timeline = 큰 카드 펼침/접힘 accordion (5 카테고리, 데이터 없는 것도 살림)
     const cf = _galpiCatFilter;
+    const annual = (state.annualStories || []).map(r => ({...r, _type: 'annual'})); // V4 비전 7.10 (있을 시)
+    const annualCount = annual.length;
+
+    const _decisionCard = (d) => `
+      <div onclick="openDecision('${d.id}')" style="cursor:pointer; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:11px 13px; margin-bottom:7px;">
+        <div style="font-size:14px; color:white; margin-bottom:4px;">${escapeHtml(d.title || d.topic || '')}</div>
+        <div style="font-size:11px; color:var(--text-soft);">${d.status === 'active' ? '숙성 중' : d.status === 'decided' ? '✓ 결정됨' : '중단됨'} · ${new Date(d.startedAt || d.createdAt || 0).toLocaleDateString('ko-KR')}</div>
+      </div>`;
+    const _reviewCard = (r, type) => {
+      const dt = new Date(r.completedAt || 0).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+      const seasonLabel = type === 'quarterly' && r.quarterKey && typeof seasonLabelOf === 'function'
+        ? seasonLabelOf(r.quarterKey, { withEmoji: true }) : '';
+      const periodLabel = seasonLabel || r.weekKey || r.monthKey || r.yearKey || '';
+      const onclickAttr = (type === 'quarterly' || type === 'annual')
+        ? `onclick="openQuarterlyStories('${r.id}')"` : '';
+      return `
+        <div ${onclickAttr} style="${(type === 'quarterly' || type === 'annual') ? 'cursor:pointer;' : ''} background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:11px 13px; margin-bottom:7px;">
+          <div style="font-size:13px; color:white; margin-bottom:4px;">${escapeHtml(periodLabel)} 리뷰</div>
+          <div style="font-size:12px; color:var(--text-soft); margin-bottom:6px; line-height:1.55;">${escapeHtml((r.summary || '').slice(0, 100))}</div>
+          <div style="font-size:10px; color:var(--text-dim);">${dt}${(type === 'quarterly' || type === 'annual') ? ' · ▶ Stories로 보기' : ''}</div>
+        </div>`;
+    };
+
     const CATS = [
-      { key: 'decision',  label: '🧙 마법의 소라고동', count: decisions.length },
-      { key: 'weekly',    label: '🌙 주간',           count: weekly.length },
-      { key: 'monthly',   label: '📅 월간',           count: monthly.length },
-      { key: 'quarterly', label: '🌸 계절',           count: quarterly.length }
-    ].filter(c => c.count > 0);
-    body = `
-      <div class="lib-cat-list-chips">
-        ${CATS.map(c => `<button class="lcl-chip${cf === c.key ? ' active' : ''}" onclick="setGalpiCatFilter('${c.key}')">${c.label} <span class="cat-chip-count">${c.count}</span></button>`).join('')}
-      </div>
-    `;
-    if (!cf) {
-      body += `<div style="padding:30px 16px; color:var(--text-dim); font-size:12px; line-height:1.7; text-align:center;">위에서 카테고리 한 번 눌러봐 ✦</div>`;
-    } else if (cf === 'decision') {
-      if (decisions.length === 0) {
-        body += `<div style="padding:30px 16px; color:var(--text-dim); font-size:12px; text-align:center;">아직 시작한 결정 없어</div>`;
-      } else {
-        body += decisions.map(d => `
-          <div onclick="openDecision('${d.id}')" style="cursor:pointer; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px;">
-            <div style="font-size:14px; color:white; margin-bottom:4px;">${escapeHtml(d.title || '')}</div>
-            <div style="font-size:11px; color:var(--text-soft);">${d.status === 'active' ? '숙성 중' : d.status === 'decided' ? '✓ 결정됨' : '중단됨'} · ${new Date(d.startedAt || d.createdAt || 0).toLocaleDateString('ko-KR')}</div>
-          </div>
-        `).join('');
-      }
-    } else {
-      const reviewsOfType = cf === 'weekly' ? weekly : cf === 'monthly' ? monthly : quarterly;
-      if (reviewsOfType.length === 0) {
-        body += `<div style="padding:30px 16px; color:var(--text-dim); font-size:12px; text-align:center;">아직 ${cf === 'weekly' ? '주간' : cf === 'monthly' ? '월간' : '계절'} 리뷰 없어</div>`;
-      } else {
-        body += reviewsOfType.map(r => {
-          const dt = new Date(r.completedAt || 0).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-          const seasonLabel = cf === 'quarterly' && r.quarterKey && typeof seasonLabelOf === 'function'
-            ? seasonLabelOf(r.quarterKey, { withEmoji: true }) : '';
-          const periodLabel = seasonLabel || r.weekKey || r.monthKey || '';
-          const onclickAttr = cf === 'quarterly' ? `onclick="openQuarterlyStories('${r.id}')"` : '';
-          return `
-            <div ${onclickAttr} style="${cf === 'quarterly' ? 'cursor:pointer;' : ''} background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px;">
-              <div style="font-size:13px; color:white; margin-bottom:4px;">${escapeHtml(periodLabel)} 리뷰</div>
-              <div style="font-size:12px; color:var(--text-soft); margin-bottom:6px; line-height:1.55;">${escapeHtml((r.summary || '').slice(0, 100))}</div>
-              <div style="font-size:10px; color:var(--text-dim);">${dt}${cf === 'quarterly' ? ' · ▶ Stories로 보기' : ''}</div>
+      { key: 'decision',  icon: '🧙‍♂️', label: '마법의 소라고동', items: decisions, count: decisions.length, emptyMsg: '아직 시작한 결정 없어. 큰 결정 있을 때 14일 숙성에 박아.' },
+      { key: 'weekly',    icon: '🌙', label: '주간 리뷰',       items: weekly,    count: weekly.length,    emptyMsg: '아직 주간 리뷰 없어. 일주일 데이터 쌓이면 자동 생성.' },
+      { key: 'monthly',   icon: '📅', label: '월간 리뷰',       items: monthly,   count: monthly.length,   emptyMsg: '아직 월간 리뷰 없어. 한 달 데이터 쌓이면 자동.' },
+      { key: 'quarterly', icon: '🌸', label: '계절 리뷰',       items: quarterly, count: quarterly.length, emptyMsg: '아직 계절 리뷰 없어. 분기 끝날 때 자동.' },
+      { key: 'annual',    icon: '🌟', label: '연간 리뷰',       items: annual,    count: annualCount,      emptyMsg: '아직 연간 리뷰 없어. 한 해 마무리하면 Stories로.' }
+    ];
+    body = `<div class="lib-cat-accordion">
+      ${CATS.map(c => {
+        const expanded = cf === c.key;
+        let inner;
+        if (c.count === 0) {
+          inner = `<div class="lcaa-empty">${c.emptyMsg}</div>`;
+        } else if (c.key === 'decision') {
+          inner = c.items.map(_decisionCard).join('');
+        } else {
+          inner = c.items.map(it => _reviewCard(it, c.key)).join('');
+        }
+        return `
+          <div class="lib-cat-accordion-item${expanded ? ' expanded' : ''}">
+            <div class="lib-cat-accordion-header" onclick="setGalpiCatFilter('${c.key}')">
+              <span class="lcaa-icon">${c.icon}</span>
+              <span class="lcaa-label">${c.label}</span>
+              <span class="lcaa-count${c.count === 0 ? ' empty' : ''}">${c.count}</span>
+              <span class="lcaa-chevron">▾</span>
             </div>
-          `;
-        }).join('');
-      }
-    }
+            <div class="lib-cat-accordion-body">${inner}</div>
+          </div>`;
+      }).join('')}
+    </div>`;
   }
 
   container.innerHTML = toggleHtml + body;
@@ -20640,7 +20752,12 @@ function renderLensInsights() {
       [i.content, i.evidence, i.type].filter(Boolean).join(' ').toLowerCase().includes(q)
     );
   }
-  // 깨달음 목록 모드에서 type이 ai 아니면 AI 인사이트 섹션 숨김
+  // 사용자 요청 2026-04-29: timeline 모드에선 AI 인사이트는 위 accordion이 처리 — 여기선 빈 상태
+  if (_libView === 'timeline') {
+    container.innerHTML = '';
+    return;
+  }
+  // 깨달음 목록 모드에서 type이 ai 아니면 AI 인사이트 섹션 숨김 (legacy)
   if (_insightsView === 'list' && _insightsCatFilter && _insightsCatFilter !== 'ai') {
     container.innerHTML = '';
     return;
