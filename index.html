@@ -9735,8 +9735,8 @@ function applyCoreLockMarkers() {
     { sel: '.home-small-card[onclick="openShellCollection()"]',       core: 'core2' },
     // 숙고 질문 추가 (홈에 있는 진입점)
     { sel: '.reflection-empty-card, [onclick="addReflectionQuestion()"]', core: 'core6' },
-    // 마법의 소라고동 — 도서관 안 진입점 + 홈 카드 (있다면)
-    { sel: '[onclick="showArchiveDecisions()"], [onclick="startNewDecision()"], .magic-card', core: 'core8' }
+    // 마법의 소라고동 — 도서관 안 진입점 + 홈 mini 카드 + 결정 화면 새 결정 버튼
+    { sel: '[onclick="showArchiveDecisions()"], .decision-mini-card, .magic-card', core: 'core8' }
   ];
   lockMap.forEach(({sel, core}) => {
     const locked = isCoreLocked(core);
@@ -11825,11 +11825,11 @@ function renderMainAction() {
 function renderDecisionMiniLink() {
   const container = document.getElementById('decisionMiniLinkContainer');
   if (!container) return;
-  
+
   // 진행 중인 결정 개수
   const inProgressCount = (state.decisions || []).filter(d => d.status === 'in_progress').length;
   const subText = inProgressCount > 0 ? `숙성 중 ${inProgressCount}개` : '14일 숙성';
-  
+
   container.innerHTML = `
     <div onclick="showScreen('decisions')" class="decision-mini-card">
       <div class="dm-icon">🧙‍♂️</div>
@@ -11840,6 +11840,8 @@ function renderDecisionMiniLink() {
       <div class="dm-arrow">›</div>
     </div>
   `;
+  // V4: 잠금 시각 갱신
+  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
 }
 
 // V3.7: Today's Shell 제거 — 자존감 외부화 / habituation / Anti-sycophancy 충돌 우려.
@@ -14390,9 +14392,9 @@ function showUndoToast(msg, undoFn, durationMs = 5000) {
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 function showScreen(name) {
-  // V4 코어 잠금 — 잠긴 탭 진입 시 잠금 모달 (testerMode/코어활성/unlocked면 통과)
+  // V4 코어 잠금 — 잠긴 탭/화면 진입 시 잠금 모달 (testerMode/코어활성/unlocked면 통과)
   // (글로벌 클릭 인터셉터가 잡지만, 다른 곳에서 showScreen 직접 호출하는 케이스도 가드)
-  const _navLockMap = { execute: 'core3', model: 'core4', archive: 'core5' };
+  const _navLockMap = { execute: 'core3', model: 'core4', archive: 'core5', decisions: 'core8' };
   const _lockCoreId = _navLockMap[name];
   if (_lockCoreId && typeof isCoreLocked === 'function' && isCoreLocked(_lockCoreId)) {
     if (typeof showCoreLockModal === 'function') showCoreLockModal(_lockCoreId);
