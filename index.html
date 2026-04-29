@@ -8918,16 +8918,25 @@ function testFirstTouchQuiz() {
 
 async function maybeShowFirstTouchQuiz() {
   if (!authUserId) return;
-  if (state.preferences && state.preferences.testerMode) return;
+  if (state.preferences && state.preferences.testerMode) {
+    // 테스터 모드도 tutorial chooser fallback (관리자 사용성)
+    if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
+    return;
+  }
   if (window._onbTutorialMode) return;
-  if (state.preferences && state.preferences._firstTouchDone) return;
-  // 이미 진입한 사용자 (entries 4개 이상) — quiz 안 띄우고 done 마킹 (후일 기능 안 뜸)
+  // 이미 first touch 완료 → tutorial chooser 직접 trigger
+  if (state.preferences && state.preferences._firstTouchDone) {
+    if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
+    return;
+  }
+  // 이미 진입한 사용자 (entries 4개 이상) — quiz 안 띄우고 done 마킹 + tutorial chooser fallback
   const entriesObj = state.entries || {};
   const entriesCount = Array.isArray(entriesObj) ? entriesObj.length : Object.keys(entriesObj).length;
   if (entriesCount > 3) {
     state.preferences = state.preferences || {};
     state.preferences._firstTouchDone = true;
     saveState();
+    if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
     return;
   }
   // 다른 모달 떠있으면 skip (튜토리얼 / E2EE / update chooser)
@@ -9008,6 +9017,8 @@ function skipFirstTouchQuiz() {
   state.preferences = state.preferences || {};
   state.preferences._firstTouchDone = true;
   saveState();
+  // 사용자 요청 2026-04-30: skip 후에도 tutorial chooser 띄움 (dismiss flag 없으면)
+  setTimeout(() => { if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate(); }, 300);
 }
 
 async function submitFirstTouchQuiz() {
@@ -9169,6 +9180,8 @@ function closeFirstTouchResult() {
   const overlay = document.getElementById('firstTouchResultOverlay');
   if (overlay) overlay.remove();
   showToast('✦ 첫 진단 완료. 시작하자.');
+  // 사용자 요청 2026-04-30: 첫 진단 close 후 → tutorial chooser (dismiss flag 없으면)
+  setTimeout(() => { if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate(); }, 800);
 }
 
 async function maybeShowE2EESetupForNewUser() {
@@ -10334,7 +10347,9 @@ async function init() {
   }
 
   // V3.13.x: 새 APP_VERSION 진입 시 튜토리얼 자동 시작
-  setTimeout(() => autoTourOnUpdate(), 2000);
+  // 사용자 요청 2026-04-30: 첫 진단 quiz가 먼저 → quiz close 후 autoTourOnUpdate 호출.
+  // 신규 사용자가 아니거나 (entries 4+) 이미 first touch done이면 maybeShowFirstTouchQuiz가 직접 trigger.
+  // setTimeout(() => autoTourOnUpdate(), 2000);  // ← 옛 직접 호출 제거
 
   // V3.13.x: 신규 사용자 자동 튜토리얼 분기 제거. 배너로 통일.
   // (isBrandNewUser 신규 사용자도 배너로 자기 페이스에 시작 가능)
@@ -15889,15 +15904,15 @@ function _findPendingStrategyFollowup() {
   const today = todayKey();
   return (state.missions || []).find(m => {
     if (m.status !== 'completed') return false;
-    if (m.attemptStatus) return false;  // 이미 result check 끝남
+    if (m.attemptStatus) return false;  // 이미 result check 끝남 (worked/didnt/meh)
     if (!m.strategyId) return false;
-    if (m._followupAsked) return false;
-    // 사용자 보고 2026-04-30: defer 후 scheduledFor 미래 날짜면 그날까지 안 묻기.
+    // 사용자 보고 2026-04-30 ultrathink: _followupAsked 체크 제거 — 답 안 하고 dismiss 시
+    // 다음날 또 나오게 (daily gate _lastFollowupAt 으로만 same-day re-show 차단).
+    // (옛 _followupAsked=true 박힌 미션도 자동 unblock)
     if (m.scheduledFor && daysBetweenKeys(today, m.scheduledFor) > 0) return false;
-    // 사용자 보고 2026-04-30 ultrathink fix: defer된 미션 (scheduledFor 있음)은 7일 룰 무시.
-    // 사용자가 명시적으로 "2주일 후" 박았으면 14일 후라도 물어봐야 함.
+    // defer된 미션 (scheduledFor 있음)은 7일 룰 무시 — 사용자 명시적 날짜 우선.
     if (m.scheduledFor) return true;
-    // 일반 미션 (defer 없음) — 완료 후 7일 자동 follow-up window
+    // 일반 미션 (자동 follow-up) — 완료 후 7일 window
     const dateKey = m.completedDate || (m.completedAt ? new Date(m.completedAt).toISOString().split('T')[0] : null);
     if (!dateKey) return false;
     const diff = daysBetweenKeys(dateKey, today);
@@ -15917,11 +15932,10 @@ async function offerStrategyFollowup() {
   if (!isTester && state.preferences._lastFollowupAt === todayK) return;
   const mission = _findPendingStrategyFollowup();
   if (!mission) return;
-  // 묻기 마킹 — 결과 답 X여도 같은 미션 다시 안 띄움 (defer 시는 아래에서 해제)
-  mission._followupAsked = true;
+  // 사용자 보고 2026-04-30 ultrathink: mission._followupAsked 제거.
+  // 답 안 하고 dismiss시 다음날 또 나오게. daily gate (_lastFollowupAt) 만으로 same-day re-show 차단.
   state.preferences._lastFollowupAt = todayK;
   saveState();
-  // 화면 전환 후 약간 딜레이 — 사용자가 화면 인지하고 모달
   setTimeout(() => triggerAttemptResultFlow(mission), 600);
 }
 
@@ -15938,11 +15952,10 @@ async function triggerAttemptResultFlow(mission) {
     const dateChoice = await showDeferDatePicker();
     if (dateChoice) {
       mission.scheduledFor = dateChoice;
-      mission._followupAsked = false;  // 그날 다시 묻도록 (scheduledFor 미래면 _findPendingStrategyFollowup이 차단)
-      // 사용자 보고 2026-04-30 fix: _lastFollowupAt 삭제 X — 어차피 자동 다음날 갱신됨.
-      // 삭제하면 같은 세션 화면 전환 시 모달 재출현 (scheduledFor 미래면 _findPendingStrategyFollowup이 막아주지만 daily gate는 즉시 효과 좋음).
+      // _followupAsked 플래그 폐기 (제거됨). scheduledFor만으로 timing 제어.
       saveState({ force: true });
-      showToast(`⏸ ${dateChoice}에 다시 물어볼게`);
+      const formattedDate = new Date(dateChoice + 'T00:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+      showToast(`⏸ ${formattedDate}에 다시 물어볼게`);
       if (typeof renderTodayMission === 'function') renderTodayMission();
       if (typeof renderArchive === 'function') renderArchive();
     }
@@ -16010,10 +16023,16 @@ async function showDeferDatePicker() {
       { label: '내일',     value: 1 },
       { label: '3일 후',   value: 3 },
       { label: '1주일 후', value: 7 },
-      { label: '2주일 후', value: 14 }
+      { label: '2주일 후', value: 14 },
+      { label: '한 달 후', value: 30 },
+      { label: '📅 직접 고르기', value: 'custom' }
     ]
   });
   if (!choice) return null;
+  // 사용자 요청 2026-04-30: '직접 고르기' = 캘린더 picker
+  if (choice === 'custom') {
+    return await _showCustomDatePicker();
+  }
   // 사용자 요청 2026-04-28: 서버 시간 기반 (디바이스 시계 잘못돼도 정확)
   const today = (typeof getServerNow === 'function') ? getServerNow() : new Date();
   today.setDate(today.getDate() + choice);
@@ -16021,6 +16040,40 @@ async function showDeferDatePicker() {
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const dd = String(today.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
+}
+
+async function _showCustomDatePicker() {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'input-modal-overlay show';
+    overlay.style.zIndex = '10001';
+    const today = (typeof getServerNow === 'function') ? getServerNow() : new Date();
+    const tomorrow = new Date(today.getTime() + 86400000);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    const maxDate = new Date(today.getTime() + 365 * 86400000);
+    const maxStr = maxDate.toISOString().split('T')[0];
+    overlay.innerHTML = `
+      <div class="input-modal" style="max-width:340px; padding:24px;">
+        <div style="font-size:16px; font-weight:600; color:var(--text); margin-bottom:8px;">📅 날짜 고르기</div>
+        <div style="font-size:11px; color:var(--text-dim); margin-bottom:14px;">결과 나올 만한 날 골라줘.</div>
+        <input type="date" id="customDeferDate" min="${tomorrowStr}" max="${maxStr}" value="${tomorrowStr}" style="width:100%; padding:10px 12px; font-size:14px; border-radius:10px; background:var(--surface); border:1px solid var(--border); color:var(--text); color-scheme: dark;">
+        <div style="display:flex; gap:8px; margin-top:14px;">
+          <button class="btn-primary" id="customDeferOk" style="flex:1;">고르기 ✦</button>
+          <button class="btn-secondary" id="customDeferCancel" style="flex:1;">취소</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('customDeferOk').onclick = () => {
+      const val = document.getElementById('customDeferDate').value;
+      overlay.remove();
+      resolve(val || null);
+    };
+    document.getElementById('customDeferCancel').onclick = () => {
+      overlay.remove();
+      resolve(null);
+    };
+  });
 }
 
 // 미션 해냈어 → 얻은 소라 화려한 효과 (사용자 요청 2026-04-28)
@@ -18290,10 +18343,11 @@ function renderMoreSection(category, more, draft) {
   if (draft.length > 0) {
     html += `
       <details class="model-collapse model-draft">
-        <summary>📝 초안 (${draft.length}개) — 아직 확신 안 가는 가설</summary>
+        <summary>🔍 보이는 패턴 (${draft.length}개)</summary>
         <div class="model-collapse-content">
           <div style="font-size:11px; color:var(--text-soft); margin-bottom:10px; line-height:1.6;">
-            증거 더 쌓이면 위로 올라가. 아니면 알려줘.
+            너에 대한 새로운 가설이 보여. 맞으면 ✓, 아니면 ✗로 알려줘.<br>
+            증거 더 쌓이면 위로 올라가.
           </div>
     `;
     draft.forEach(item => {
