@@ -8671,7 +8671,7 @@ const ONBOARDING_STEPS = [
     id: 'mutation_what_effect',
     targetSelector: '#mutationChatSendBtn',
     title: '⌨ 보내봐',
-    body: '입력창에 \'<b>이게 무슨 효과가 있는 거야?</b>\' 미리 채워뒀어.<br><b>↑ 보내기</b> 버튼 눌러봐!',
+    body: '이 임시 대화창에서 <b>새로운 전략에 대해 고동이랑 함께 토론</b>할 수 있어.<br><br>입력창에 \'<b>이게 무슨 효과가 있는 거야?</b>\' 미리 채워뒀어.<br><b>↑ 보내기</b> 버튼 눌러봐!',
     waitFor: 'click',
     advanceDelay: 1000,
     manualAdvance: true,
@@ -17770,9 +17770,19 @@ ${msg.content}
   renderChat();
 }
 
-function acceptProposal(idx) {
+async function acceptProposal(idx) {
   const msg = state.chatMessages[idx];
   msg.proposalResponse = 'accept';
+
+  // 사용자 요청 2026-04-29: 전략으로 안 누른 상태에서 해볼게 누르면 전략 DNA 흐름 끊김
+  // (양생방 X / DNA 조각 X / 결정화 추적 X)
+  // → 자동으로 saveMsgAsStrategy 먼저 돌림. 4단 분석 응답 (또는 fromDeeper)일 때만 — 평범한 대화엔 X.
+  const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]/.test(msg.content || '');
+  if (!msg.savedStrategy && !msg.strategyId && msg.role === 'assistant' && !msg.typing && (msg.fromDeeper || has4Stage)) {
+    try {
+      await saveMsgAsStrategy(idx);
+    } catch (e) { console.warn('auto-save strategy on accept:', e); }
+  }
 
   // Create mission
   const proposalData = msg.proposalData || {};
