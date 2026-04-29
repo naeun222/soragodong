@@ -16397,42 +16397,53 @@ function renderModel() {
   let html = timeCardHtml;
   // 세부 섹션 모음 — 한 details로 묶음
   let detailsHtml = '';
-  if (state.values.length > 0) {
-    const split = splitItems(state.values, 4, 0.4, true);
-    detailsHtml += `<div class="model-section"><div class="model-section-title">🎯 네가 중시하는 것</div>`;
-    split.top.forEach((v, i) => {
-      const realIdx = state.values.indexOf(v);
-      detailsHtml += renderModelItem(v, 'values', realIdx);
-    });
-    if (split.more.length > 0 || split.draft.length > 0) {
-      detailsHtml += renderMoreSection('values', split.more, split.draft);
+  // 사용자 요청 2026-04-30: values / traits / patterns — 미컨펌 1개만 메인 표시 → '맞아' / '아니야' 컨펌 시 다음 미컨펌으로.
+  // 모두 컨펌되면 → 원래 흐름 (top 1만 + 나머지 collapse).
+  const _renderConfirmableSection = (category, label, arr) => {
+    if (!arr || arr.length === 0) return '';
+    const sorted = sortItems(arr, true);  // prioritizeUnverified
+    const unverified = sorted.filter(item => item.user_verified !== true);
+    const verified = sorted.filter(item => item.user_verified === true);
+    let inner = `<div class="model-section"><div class="model-section-title">${label}</div>`;
+    if (unverified.length > 0) {
+      // 미컨펌 1개 메인 (confidence 높은 거)
+      const top = unverified[0];
+      const topIdx = arr.indexOf(top);
+      inner += `<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.6;">
+        ${unverified.length}개 확인 대기. 한 번에 하나씩 — 맞으면 ✓, 아니면 ✗.
+      </div>`;
+      inner += renderModelItem(top, category, topIdx);
+      if (unverified.length > 1) {
+        inner += `<div style="font-size:11px;color:var(--text-soft);text-align:center;margin-top:8px;">+ ${unverified.length - 1}개 대기 중</div>`;
+      }
+      // verified는 collapse로 숨김
+      if (verified.length > 0) {
+        inner += `<details class="model-collapse" style="margin-top:10px;">
+          <summary>✓ 확인된 ${verified.length}개</summary>
+          <div class="model-collapse-content">`;
+        verified.forEach(item => {
+          const idx = arr.indexOf(item);
+          inner += renderModelItem(item, category, idx);
+        });
+        inner += `</div></details>`;
+      }
+    } else {
+      // 모두 컨펌됨 — 원래 흐름 (top 1 + 나머지 collapse)
+      const split = splitItems(arr, 1, 0.4, false);
+      split.top.forEach(item => {
+        const idx = arr.indexOf(item);
+        inner += renderModelItem(item, category, idx);
+      });
+      if (split.more.length > 0 || split.draft.length > 0) {
+        inner += renderMoreSection(category, split.more, split.draft);
+      }
     }
-    detailsHtml += '</div>';
-  }
-  if (state.traits.length > 0) {
-    const split = splitItems(state.traits, 5, 0.4, true);
-    detailsHtml += `<div class="model-section"><div class="model-section-title">💫 네 특성</div>`;
-    split.top.forEach((t, i) => {
-      const realIdx = state.traits.indexOf(t);
-      detailsHtml += renderModelItem(t, 'traits', realIdx);
-    });
-    if (split.more.length > 0 || split.draft.length > 0) {
-      detailsHtml += renderMoreSection('traits', split.more, split.draft);
-    }
-    detailsHtml += '</div>';
-  }
-  if (state.patterns.length > 0) {
-    const split = splitItems(state.patterns, 4, 0.4, true);
-    detailsHtml += `<div class="model-section"><div class="model-section-title">🔄 보이는 패턴</div>`;
-    split.top.forEach((p, i) => {
-      const realIdx = state.patterns.indexOf(p);
-      detailsHtml += renderModelItem(p, 'patterns', realIdx);
-    });
-    if (split.more.length > 0 || split.draft.length > 0) {
-      detailsHtml += renderMoreSection('patterns', split.more, split.draft);
-    }
-    detailsHtml += '</div>';
-  }
+    inner += '</div>';
+    return inner;
+  };
+  detailsHtml += _renderConfirmableSection('values', '🎯 네가 중시하는 것', state.values);
+  detailsHtml += _renderConfirmableSection('traits', '💫 네 특성', state.traits);
+  detailsHtml += _renderConfirmableSection('patterns', '🔄 보이는 패턴', state.patterns);
   if (state.caseFormulation.version > 0) {
     html += `<div class="model-section"><div class="model-section-title">📋 통합 분석 v.${state.caseFormulation.version}</div>
       <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">너에 대해 내가 종합한 그림이야. 잘못된 거 있으면 ✎ 수정 / ✕ 삭제.</div>`;
