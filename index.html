@@ -8477,7 +8477,7 @@ async function maybeShowE2EERecoveryModal() {
         새 기기에서 처음 로그인하셨네요. 활성화 시 설정하신 <strong>비밀번호</strong>를 입력해주세요.<br><br>
         <span style="color:var(--text-soft);">암호화된 데이터를 복호화해서 가져옵니다.</span>
       </div>
-      <input type="password" id="e2eePassphraseInput" placeholder="비밀번호 (12자 이상)" autocomplete="current-password" style="width:100%; font-size:14px; padding:10px;">
+      <input type="password" id="e2eePassphraseInput" placeholder="비밀번호 (12자 이상)" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-size:14px; padding:10px;">
       <div id="e2eeRecoveryStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px;"></div>
       <div style="display:flex; gap:8px; margin-top:14px;">
         <button class="btn-primary" onclick="submitE2EERecovery()" style="flex:1;">복호화하고 시작</button>
@@ -8713,10 +8713,10 @@ function showE2EEPasswordSetupModal() {
         본인이 외울 수 있는 비밀번호를 입력해주세요. 다른 기기에서 로그인하실 때도 같은 비밀번호로 데이터를 복원하실 수 있습니다.
       </div>
       <div style="margin-bottom:10px;">
-        <input type="password" id="e2eePasswordInput" placeholder="비밀번호 (12자 이상)" autocomplete="new-password" style="width:100%; font-family:inherit;">
+        <input type="password" id="e2eePasswordInput" placeholder="비밀번호 (12자 이상)" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-family:inherit;">
       </div>
       <div style="margin-bottom:10px;">
-        <input type="password" id="e2eePasswordConfirmInput" placeholder="비밀번호 다시 입력" autocomplete="new-password" style="width:100%; font-family:inherit;">
+        <input type="password" id="e2eePasswordConfirmInput" placeholder="비밀번호 다시 입력" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-family:inherit;">
       </div>
       <div id="e2eePasswordStatus" style="font-size:11px; color:var(--text-soft); margin-bottom:14px; min-height:14px;"></div>
       <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-bottom:14px; padding:8px; background:rgba(220,80,80,0.05); border-left:3px solid rgba(220,80,80,0.40); border-radius:4px;">
