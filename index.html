@@ -7430,6 +7430,14 @@
         <input type="number" id="dailyChatCapInput" min="0" max="9999" placeholder="100" style="width:100%;">
         <div id="dailyChatCountStatus" style="font-size:11px;color:var(--text-soft);margin-top:6px;"></div>
       </div>
+      <!-- 사용자 요청 2026-04-30 (Phase C): 사용량 / 충전 잔액 표시 + 결제·충전 진입점 -->
+      <div class="input-group" id="billingSection" style="display:none;">
+        <div class="input-label">💳 결제 / 사용량</div>
+        <div id="billingStatus" style="font-size:12px;color:var(--text);background:var(--surface);padding:12px;border-radius:12px;line-height:1.7;margin-bottom:8px;">불러오는 중...</div>
+        <button class="btn-secondary" onclick="openChargeModal()">⚡ 충전</button>
+        <button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:6px;">📅 월 정액 가입</button>
+        <button class="btn-secondary" onclick="refreshBillingStatus()" style="margin-top:6px;">🔄 사용량 새로고침</button>
+      </div>
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
         <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
