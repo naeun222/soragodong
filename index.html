@@ -7149,7 +7149,7 @@
         <!-- 사용자 요청 2026-04-29: 수동 클라우드 백업/복원 (rolling 10개) -->
         <button class="btn-secondary" onclick="manualCloudBackup()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드 백업</button>
         <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드 복원</button>
-        <button class="btn-secondary" onclick="startInteractiveOnboarding()">🐚 투어 다시 보기</button>
+        <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
         <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
 
         <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
@@ -9653,6 +9653,32 @@ function _cleanupCoreOverrides() {
   _coreBodyOverridesApplied = [];
   _activeCoreId = null;
   _coreEndIdx = -1;
+}
+
+// V4 (사용자 요청 2026-04-29): 설정 → 🐚 투어 다시 보기
+// 코어 7개 + 풀 튜토리얼 중 하나 선택. 선택 시 testerMode + 시드 박고 진행.
+async function showTutorialReplayMenu() {
+  if (typeof showOptionsModal !== 'function') {
+    return startInteractiveOnboarding();
+  }
+  const opts = [
+    { label: '🐚 코어 #1 — 시작 / 체크인 / 대화', value: 'core1', desc: '한 바퀴 (필수 핵심)' },
+    { label: '⭐ 코어 #2 — 소라의 부름 / 모래사장 / 양생방', value: 'core2', desc: '미션 + 결과 체크 + 전략 진화' },
+    { label: '🚀 코어 #3 — 실행 탭', value: 'core3', desc: '머릿속 풀기 + 몰입 ritual' },
+    { label: '✦ 코어 #4 — 나 탭', value: 'core4', desc: '분석 결과' },
+    { label: '📚 코어 #5 — 도서관 탭', value: 'core5', desc: '5 카테고리 + 리뷰' },
+    { label: '🌊 코어 #6 — 숙고 질문', value: 'core6', desc: '큰 물음' },
+    { label: '🧙‍♂️ 코어 #8 — 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
+    { label: '✨ 풀 튜토리얼', value: 'full', desc: '처음부터 끝까지 (~30분)' }
+  ];
+  const choice = await showOptionsModal({
+    title: '🐚 어떤 튜토리얼?',
+    message: '다시 보고 싶은 튜토리얼 골라봐.',
+    options: opts
+  });
+  if (!choice) return;
+  if (choice === 'full') return startInteractiveOnboarding();
+  if (typeof startCoreTutorial === 'function') return startCoreTutorial(choice);
 }
 
 // 잠금 시각 적용/해제 — 셀렉터 + coreId pair 받아서 .core-locked 클래스 + data-core 토글
