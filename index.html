@@ -5845,6 +5845,63 @@
     color: var(--text-dim);
     letter-spacing: 0.04em;
   }
+  /* 사용자 요청 2026-04-29: 피드/목록 view 토글 (양생방/깨달음/마법·리뷰 공용) */
+  .yangsaeng-view-toggle, .lib-view-toggle {
+    display: flex;
+    gap: 4px;
+    margin: 14px 0 8px;
+    padding: 4px;
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    width: fit-content;
+  }
+  .ys-view-btn, .lvt-btn {
+    background: transparent;
+    border: none;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.15s;
+  }
+  .ys-view-btn.active, .lvt-btn.active {
+    background: linear-gradient(135deg, rgba(212,167,106,0.20), rgba(139,126,196,0.14));
+    color: var(--accent2);
+    font-weight: 600;
+  }
+  .ys-view-btn:active, .lvt-btn:active { transform: scale(0.96); }
+  /* 카테고리 chips 공용 */
+  .yangsaeng-cat-chips, .lib-cat-list-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin: 10px 0 14px;
+  }
+  .ys-cat-chip, .lcl-chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ys-cat-chip:hover, .lcl-chip:hover { background: var(--surface2); }
+  .ys-cat-chip.active, .lcl-chip.active {
+    background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(139,126,196,0.12));
+    border-color: rgba(212,167,106,0.45);
+    color: var(--accent2);
+    font-weight: 500;
+  }
+  .ys-cat-chip:active, .lcl-chip:active { transform: scale(0.96); }
+  .ys-cat-chip .cat-chip-count, .lcl-chip .cat-chip-count {
+    font-size: 10px;
+    color: var(--text-soft);
+    margin-left: 2px;
+  }
 
   /* Pearls grid */
   .pearls-add-btn {
@@ -6830,22 +6887,7 @@
       </div>
       <!-- 🌀 마법·리뷰 -->
       <div id="libGalpi" class="library-cat-view" style="display:none;">
-        <div class="archive-quick-row" style="grid-template-columns:1fr 1fr;">
-          <button class="archive-quick-btn" onclick="showArchiveDecisions()">
-            <span class="aq-icon">🧙‍♂️</span>
-            <span class="aq-label">마법의 소라고동</span>
-            <span class="aq-count" id="aqDecisionCount"></span>
-          </button>
-          <button class="archive-quick-btn" onclick="showArchiveReviews()">
-            <span class="aq-icon">🌙</span>
-            <span class="aq-label">리뷰 모음</span>
-            <span class="aq-count" id="aqReviewCount"></span>
-          </button>
-        </div>
-        <div style="margin-top:14px; font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">
-          큰 결정은 🧙‍♂️ 마법의 소라고동에서 14일 숙성.<br>
-          주간·월간 회고는 🌙 리뷰 모음에서 다시 보기.
-        </div>
+        <!-- 사용자 요청 2026-04-29: 피드/목록 토글 통일 — JS에서 동적 렌더 -->
       </div>
     </div>
 
@@ -18195,6 +18237,20 @@ let _currentLens = 'diary';
 let _archiveSearchQuery = '';
 let _libView = 'grid';  // V4-1p: 그리드 ↔ 타임라인 토글
 let _archiveTagFilter = null;  // V4-1q: 깨달음 태그 칩 필터 (단일 선택)
+// 사용자 요청 2026-04-29: 카테고리별 피드/목록 토글 + 목록 모드 카테고리 필터
+let _yangsaengView = 'feed';     // 'feed' | 'list'
+let _yangsaengCatFilter = null;  // 'seedling_trying' | 'working' | 'mutated' | 'embodied'
+let _insightsView = 'feed';      // 'feed' | 'list'
+let _insightsCatFilter = null;   // 'scrap' | 'memo' | 'reflection' | 'ai'
+let _galpiView = 'feed';         // 'feed' | 'list'
+let _galpiCatFilter = null;      // 'decision' | 'weekly' | 'monthly' | 'quarterly'
+
+function setYangsaengView(v) { _yangsaengView = v; if (v === 'feed') _yangsaengCatFilter = null; if (typeof renderLensYangsaeng === 'function') renderLensYangsaeng(); }
+function setYangsaengCatFilter(c) { _yangsaengCatFilter = (_yangsaengCatFilter === c) ? null : c; if (typeof renderLensYangsaeng === 'function') renderLensYangsaeng(); }
+function setInsightsView(v) { _insightsView = v; if (v === 'feed') _insightsCatFilter = null; if (typeof renderLensArchive === 'function') renderLensArchive(); if (typeof renderLensInsights === 'function') renderLensInsights(); }
+function setInsightsCatFilter(c) { _insightsCatFilter = (_insightsCatFilter === c) ? null : c; if (typeof renderLensArchive === 'function') renderLensArchive(); if (typeof renderLensInsights === 'function') renderLensInsights(); }
+function setGalpiView(v) { _galpiView = v; if (v === 'feed') _galpiCatFilter = null; if (typeof renderLensGalpi === 'function') renderLensGalpi(); }
+function setGalpiCatFilter(c) { _galpiCatFilter = (_galpiCatFilter === c) ? null : c; if (typeof renderLensGalpi === 'function') renderLensGalpi(); }
 
 function renderArchive() {
   // 모든 하위 뷰 렌더; switchLibraryCat이 표시/숨김 처리
@@ -18730,6 +18786,12 @@ function switchLibraryCat(cat) {
     const el = document.getElementById(vid);
     if (el) el.style.display = (k === cat) ? '' : 'none';
   });
+  // 사용자 요청 2026-04-29: 마법·리뷰 카테고리 진입 시 동적 렌더
+  if (cat === 'galpi' && typeof renderLensGalpi === 'function') renderLensGalpi();
+  if (cat === 'insights' && typeof renderLensArchive === 'function') {
+    renderLensArchive();
+    if (typeof renderLensInsights === 'function') renderLensInsights();
+  }
   // 검색바는 모든 카테고리에서 노출
   const searchBar = document.getElementById('archiveSearchBar');
   if (searchBar) searchBar.style.display = 'block';
@@ -19075,12 +19137,20 @@ function renderLensStrategies() {
     new Date(b.createdAt) - new Date(a.createdAt)
   );
   
+  // 사용자 요청 2026-04-29: 양생방 view 토글 (피드 / 목록) — 목록 모드는 카테고리 chip 필터
+  const _ysView = (typeof _yangsaengView !== 'undefined') ? _yangsaengView : 'feed';
   let html = `
     <div class="strategy-section">
       <div class="strategy-section-header">
         <div class="topic-cards-title">🧬 전략 DNA</div>
         <button class="strategy-add-btn" onclick="addManualStrategy()">+ 같이 만들기</button>
       </div>
+      ${strategies.length > 0 ? `
+        <div class="yangsaeng-view-toggle">
+          <button class="ys-view-btn${_ysView === 'feed' ? ' active' : ''}" onclick="setYangsaengView('feed')">📡 피드</button>
+          <button class="ys-view-btn${_ysView === 'list' ? ' active' : ''}" onclick="setYangsaengView('list')">📋 목록</button>
+        </div>
+      ` : ''}
   `;
 
   if (strategies.length === 0) {
@@ -19091,8 +19161,8 @@ function renderLensStrategies() {
         <span style="font-size:11px; color:var(--text-soft);">+ 같이 만들기로 직접 추가 가능</span>
       </div>
     `;
-  } else if (_libView === 'grid') {
-    // V4-1p: 그리드 = 상태 그룹화 (V4 비전 7.4 양생방)
+  } else {
+    // 상태 그룹 — 피드/목록 둘 다 사용
     const _groups = { seedling_trying: [], working: [], mutated: [], embodied: [], archived: [] };
     strategies.forEach(s => {
       const st = s.embodimentStatus || 'seedling';
@@ -19103,24 +19173,48 @@ function renderLensStrategies() {
       else if (hasMutated)          _groups.mutated.push(s);
       else                          _groups.seedling_trying.push(s);
     });
-    const _groupOrder = [
-      { key: 'seedling_trying', label: '🌿 양생 — 시작·시도 중' },
-      { key: 'working',         label: '🌳 성장 중 — 작동 누적' },
-      { key: 'mutated',         label: '🪦 돌연변이 — 진화 중' },
-      { key: 'embodied',        label: '🍃 체화 완료' },
-      { key: 'archived',        label: '🍂 마무리' }
-    ];
-    _groupOrder.forEach(({ key, label }) => {
-      const cards = _groups[key];
-      if (!cards.length) return;
-      html += `<div class="yangsaeng-status-group">
-        <div class="yangsaeng-status-header">${label} · ${cards.length}</div>`;
-      cards.forEach(s => { html += _renderStrategyCardHtml(s); });
-      html += `</div>`;
-    });
-  } else {
-    // V4-1p: 타임라인 = 시간순 (기존 동작)
-    strategies.forEach(s => { html += _renderStrategyCardHtml(s); });
+
+    if (_ysView === 'list') {
+      // 목록식: 카테고리 chips → 클릭 시 해당 카테고리 카드들만
+      const _catFilter = (typeof _yangsaengCatFilter !== 'undefined') ? _yangsaengCatFilter : null;
+      const STATUS_CATS = [
+        { key: 'seedling_trying', label: '🌿 양생', count: _groups.seedling_trying.length },
+        { key: 'working',         label: '🌳 성장', count: _groups.working.length },
+        { key: 'mutated',         label: '🪦 진화', count: _groups.mutated.length },
+        { key: 'embodied',        label: '🍃 체화', count: _groups.embodied.length }
+      ].filter(c => c.count > 0);
+      html += `<div class="yangsaeng-cat-chips">
+        ${STATUS_CATS.map(c => `
+          <button class="ys-cat-chip${_catFilter === c.key ? ' active' : ''}" onclick="setYangsaengCatFilter('${c.key}')">
+            ${c.label} <span class="cat-chip-count">${c.count}</span>
+          </button>
+        `).join('')}
+      </div>`;
+      if (_catFilter && _groups[_catFilter]) {
+        _groups[_catFilter].forEach(s => { html += _renderStrategyCardHtml(s); });
+      } else {
+        html += `<div style="padding:30px 16px; color:var(--text-dim); font-size:12px; line-height:1.7; text-align:center;">
+          위에서 카테고리 한 번 눌러봐 ✦
+        </div>`;
+      }
+    } else {
+      // 피드: 상태별 그룹 (기존 grid 동작)
+      const _groupOrder = [
+        { key: 'seedling_trying', label: '🌿 양생 — 시작·시도 중' },
+        { key: 'working',         label: '🌳 성장 중 — 작동 누적' },
+        { key: 'mutated',         label: '🪦 돌연변이 — 진화 중' },
+        { key: 'embodied',        label: '🍃 체화 완료' },
+        { key: 'archived',        label: '🍂 마무리' }
+      ];
+      _groupOrder.forEach(({ key, label }) => {
+        const cards = _groups[key];
+        if (!cards.length) return;
+        html += `<div class="yangsaeng-status-group">
+          <div class="yangsaeng-status-header">${label} · ${cards.length}</div>`;
+        cards.forEach(s => { html += _renderStrategyCardHtml(s); });
+        html += `</div>`;
+      });
+    }
   }
   html += `</div>`;
   container.innerHTML = html;
@@ -19681,8 +19775,42 @@ function renderLensArchive() {
   if (_libView === 'grid' && _archiveTagFilter) {
     filtered = filtered.filter(a => Array.isArray(a.tags) && a.tags.includes(_archiveTagFilter));
   }
+  // 사용자 요청 2026-04-29: 깨달음 피드/목록 토글 — 목록 모드에서 type 필터 적용
+  const insightView = _insightsView || 'feed';
+  const insightCat = _insightsCatFilter;
+  if (insightView === 'list' && insightCat && insightCat !== 'ai') {
+    filtered = filtered.filter(a => (a.type || 'scrap') === insightCat);
+  } else if (insightView === 'list' && insightCat === 'ai') {
+    filtered = [];  // AI 인사이트만 보고싶을 때 archive는 숨김
+  }
 
   let html = '<div class="archive-section-wrap">';
+  // 사용자 요청 2026-04-29: 토글 + chips
+  html += `
+    <div class="lib-view-toggle">
+      <button class="lvt-btn${insightView === 'feed' ? ' active' : ''}" onclick="setInsightsView('feed')">📡 피드</button>
+      <button class="lvt-btn${insightView === 'list' ? ' active' : ''}" onclick="setInsightsView('list')">📋 목록</button>
+    </div>
+  `;
+  if (insightView === 'list') {
+    const counts = { scrap: 0, memo: 0, reflection: 0, ai: 0 };
+    items.forEach(a => { counts[a.type || 'scrap'] = (counts[a.type || 'scrap'] || 0) + 1; });
+    counts.ai = (state.insights || []).filter(i => !i.dismissed).length;
+    const CATS = [
+      { key: 'scrap',      label: '📌 스크랩',       count: counts.scrap || 0 },
+      { key: 'memo',       label: '✎ 메모',          count: counts.memo || 0 },
+      { key: 'reflection', label: '🌊 숙고 결론',     count: counts.reflection || 0 },
+      { key: 'ai',         label: '🔮 AI 인사이트',   count: counts.ai || 0 }
+    ].filter(c => c.count > 0);
+    html += `<div class="lib-cat-list-chips">${CATS.map(c =>
+      `<button class="lcl-chip${insightCat === c.key ? ' active' : ''}" onclick="setInsightsCatFilter('${c.key}')">${c.label} <span class="cat-chip-count">${c.count}</span></button>`
+    ).join('')}</div>`;
+    if (!insightCat) {
+      html += `<div style="padding:30px 16px; color:var(--text-dim); font-size:12px; line-height:1.7; text-align:center;">위에서 카테고리 한 번 눌러봐 ✦</div>`;
+      container.innerHTML = html + '</div>';
+      return;
+    }
+  }
   html += `<div class="archive-section-label">✦ 저장한 깨달음${items.length ? ` <span class="al-count">${items.length}</span>` : ''}</div>`;
 
   // V4-1q: grid 뷰에서 자주 쓰는 태그 5-10개 칩
@@ -19812,6 +19940,98 @@ function closeArchiveModal() {
 }
 
 // === LENS 2: INSIGHTS — AI 인과관계 발견 ===
+// 사용자 요청 2026-04-29: 마법·리뷰 카테고리 — 피드(분리 sub) / 목록(4 chips) 토글
+function renderLensGalpi() {
+  const container = document.getElementById('libGalpi');
+  if (!container) return;
+  const view = _galpiView || 'feed';
+  const decisions = state.decisions || [];
+  const weekly = (state.weeklyReviews || []).map(r => ({...r, _type: 'weekly'}));
+  const monthly = (state.monthlyReviews || []).map(r => ({...r, _type: 'monthly'}));
+  const quarterly = (state.quarterlyReviews || []).map(r => ({...r, _type: 'quarterly'}));
+  const allReviews = [...weekly, ...monthly, ...quarterly].sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0));
+
+  const toggleHtml = `
+    <div class="lib-view-toggle">
+      <button class="lvt-btn${view === 'feed' ? ' active' : ''}" onclick="setGalpiView('feed')">📡 피드</button>
+      <button class="lvt-btn${view === 'list' ? ' active' : ''}" onclick="setGalpiView('list')">📋 목록</button>
+    </div>
+  `;
+
+  let body = '';
+  if (view === 'feed') {
+    // 피드: 기존 archive-quick-row 두 버튼 (마법의 소라고동 / 리뷰 모음)
+    body = `
+      <div class="archive-quick-row" style="grid-template-columns:1fr 1fr;">
+        <button class="archive-quick-btn" onclick="showArchiveDecisions()">
+          <span class="aq-icon">🧙‍♂️</span>
+          <span class="aq-label">마법의 소라고동</span>
+          <span class="aq-count">${decisions.length}건</span>
+        </button>
+        <button class="archive-quick-btn" onclick="showArchiveReviews()">
+          <span class="aq-icon">🌙</span>
+          <span class="aq-label">리뷰 모음</span>
+          <span class="aq-count">${allReviews.length}건</span>
+        </button>
+      </div>
+      <div style="margin-top:14px; font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">
+        큰 결정은 🧙‍♂️ 마법의 소라고동에서 14일 숙성.<br>
+        주간·월간 회고는 🌙 리뷰 모음에서 다시 보기.
+      </div>
+    `;
+  } else {
+    // 목록: 4 chips → 클릭 시 inline 리스트
+    const cf = _galpiCatFilter;
+    const CATS = [
+      { key: 'decision',  label: '🧙 마법의 소라고동', count: decisions.length },
+      { key: 'weekly',    label: '🌙 주간',           count: weekly.length },
+      { key: 'monthly',   label: '📅 월간',           count: monthly.length },
+      { key: 'quarterly', label: '🌸 계절',           count: quarterly.length }
+    ].filter(c => c.count > 0);
+    body = `
+      <div class="lib-cat-list-chips">
+        ${CATS.map(c => `<button class="lcl-chip${cf === c.key ? ' active' : ''}" onclick="setGalpiCatFilter('${c.key}')">${c.label} <span class="cat-chip-count">${c.count}</span></button>`).join('')}
+      </div>
+    `;
+    if (!cf) {
+      body += `<div style="padding:30px 16px; color:var(--text-dim); font-size:12px; line-height:1.7; text-align:center;">위에서 카테고리 한 번 눌러봐 ✦</div>`;
+    } else if (cf === 'decision') {
+      if (decisions.length === 0) {
+        body += `<div style="padding:30px 16px; color:var(--text-dim); font-size:12px; text-align:center;">아직 시작한 결정 없어</div>`;
+      } else {
+        body += decisions.map(d => `
+          <div onclick="openDecision('${d.id}')" style="cursor:pointer; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px;">
+            <div style="font-size:14px; color:white; margin-bottom:4px;">${escapeHtml(d.title || '')}</div>
+            <div style="font-size:11px; color:var(--text-soft);">${d.status === 'active' ? '숙성 중' : d.status === 'decided' ? '✓ 결정됨' : '중단됨'} · ${new Date(d.startedAt || d.createdAt || 0).toLocaleDateString('ko-KR')}</div>
+          </div>
+        `).join('');
+      }
+    } else {
+      const reviewsOfType = cf === 'weekly' ? weekly : cf === 'monthly' ? monthly : quarterly;
+      if (reviewsOfType.length === 0) {
+        body += `<div style="padding:30px 16px; color:var(--text-dim); font-size:12px; text-align:center;">아직 ${cf === 'weekly' ? '주간' : cf === 'monthly' ? '월간' : '계절'} 리뷰 없어</div>`;
+      } else {
+        body += reviewsOfType.map(r => {
+          const dt = new Date(r.completedAt || 0).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+          const seasonLabel = cf === 'quarterly' && r.quarterKey && typeof seasonLabelOf === 'function'
+            ? seasonLabelOf(r.quarterKey, { withEmoji: true }) : '';
+          const periodLabel = seasonLabel || r.weekKey || r.monthKey || '';
+          const onclickAttr = cf === 'quarterly' ? `onclick="openQuarterlyStories('${r.id}')"` : '';
+          return `
+            <div ${onclickAttr} style="${cf === 'quarterly' ? 'cursor:pointer;' : ''} background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px;">
+              <div style="font-size:13px; color:white; margin-bottom:4px;">${escapeHtml(periodLabel)} 리뷰</div>
+              <div style="font-size:12px; color:var(--text-soft); margin-bottom:6px; line-height:1.55;">${escapeHtml((r.summary || '').slice(0, 100))}</div>
+              <div style="font-size:10px; color:var(--text-dim);">${dt}${cf === 'quarterly' ? ' · ▶ Stories로 보기' : ''}</div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+  }
+
+  container.innerHTML = toggleHtml + body;
+}
+
 function renderLensInsights() {
   const container = document.getElementById('lensInsights');
   if (!container) return;
