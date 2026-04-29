@@ -15701,9 +15701,20 @@ function prevMission() {
 }
 
 function createMission(title, description, options = {}) {
+  // 사용자 요청 2026-04-30: 같은 strategy 여러 미션 OK. 단 동일 title pending 중복은 차단 (anti-double-click).
+  const titleNorm = (title || '').trim();
+  if (titleNorm) {
+    const dupe = (state.missions || []).find(m =>
+      m.status === 'pending' && (m.title || '').trim() === titleNorm
+    );
+    if (dupe) {
+      showToast('이미 같은 부름이 등록되어 있어 🐚');
+      return dupe;
+    }
+  }
   const mission = {
     id: 'mis_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-    title: title,
+    title: titleNorm,
     description: description || '',
     createdAt: new Date().toISOString(),
     scheduledFor: options.scheduledFor || todayKey(),
@@ -21212,13 +21223,8 @@ async function callTryStrategy(strategyId) {
   const card = getStrategyCard(strategyId);
   if (!card) return;
 
-  const existingPending = (state.missions || []).find(m =>
-    m.strategyId === strategyId && m.status === 'pending'
-  );
-  if (existingPending) {
-    showToast('이미 받은 부름이야 🐚');
-    return;
-  }
+  // 사용자 요청 2026-04-30: 같은 strategy로 여러 미션 OK (내용 다르면).
+  // strategyId 기반 blanket 차단 제거. 동일 title 중복은 createMission 직전에 체크 (createMission 안에).
 
   if (card.embodimentStatus === 'embodied') {
     showToast('이미 체화된 가닥이야 ✨');
