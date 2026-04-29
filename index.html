@@ -26119,7 +26119,21 @@ function _buildNewFeaturesSlideHTML(inRange) {
   const newTraits = (state.traits || []).filter(t => inRange(t.created_at) && (t.confidence || 0) >= 0.5);
   const newValues = (state.values || []).filter(v => inRange(v.created_at) && (v.confidence || 0) >= 0.5);
   const newPatterns = (state.patterns || []).filter(p => inRange(p.created_at) && (p.confidence || 0) >= 0.5);
-  const total = newTraits.length + newValues.length + newPatterns.length;
+  // 사용자 보고 2026-04-29: 4번째 카테고리 — caseFormulation 8 차원 (문제/메커니즘/강점/목표/성장)
+  // 이전엔 빠져있어서 3개로만 보임
+  const cf = state.caseFormulation || {};
+  const _collectCf = (key) => (cf[key] || [])
+    .filter(it => it && (typeof it === 'object') && it.created_at && inRange(it.created_at) && (it.confidence == null || it.confidence >= 0.5))
+    .map(it => ({ name: it.text || it.name || '', confidence: it.confidence != null ? it.confidence : 0.6, _cfType: key }));
+  const newCf = [
+    ..._collectCf('problems'),
+    ..._collectCf('mechanisms'),
+    ..._collectCf('strengths'),
+    ..._collectCf('goals'),
+    ..._collectCf('growth')
+  ].filter(it => it.name);
+
+  const total = newTraits.length + newValues.length + newPatterns.length + newCf.length;
 
   if (total === 0) {
     return `
@@ -26129,11 +26143,12 @@ function _buildNewFeaturesSlideHTML(inRange) {
     `;
   }
 
-  // 사용자 요청 2026-04-28: 미적 보강 — 3 카테고리 카드 그리드 + 그라디언트 + top 항목 highlight
+  // 4 카테고리 카드 그리드 + 그라디언트 + top 항목 highlight
   const cats = [
-    { key: 'traits',   icon: '🪞', label: '특성', list: newTraits,   gradient: 'linear-gradient(135deg, rgba(168,157,200,0.28), rgba(140,160,210,0.18))', border: 'rgba(168,157,200,0.5)' },
-    { key: 'values',   icon: '⭐', label: '가치', list: newValues,   gradient: 'linear-gradient(135deg, rgba(212,167,106,0.28), rgba(255,210,80,0.18))',   border: 'rgba(212,167,106,0.5)' },
-    { key: 'patterns', icon: '🌫', label: '패턴', list: newPatterns, gradient: 'linear-gradient(135deg, rgba(143,200,143,0.26), rgba(126,200,227,0.18))', border: 'rgba(143,200,143,0.5)' }
+    { key: 'traits',   icon: '🪞', label: '특성',     list: newTraits,   gradient: 'linear-gradient(135deg, rgba(168,157,200,0.28), rgba(140,160,210,0.18))', border: 'rgba(168,157,200,0.5)' },
+    { key: 'values',   icon: '⭐', label: '가치',     list: newValues,   gradient: 'linear-gradient(135deg, rgba(212,167,106,0.28), rgba(255,210,80,0.18))',   border: 'rgba(212,167,106,0.5)' },
+    { key: 'patterns', icon: '🌫', label: '패턴',     list: newPatterns, gradient: 'linear-gradient(135deg, rgba(143,200,143,0.26), rgba(126,200,227,0.18))', border: 'rgba(143,200,143,0.5)' },
+    { key: 'cf',       icon: '🧭', label: '자기 이해', list: newCf,       gradient: 'linear-gradient(135deg, rgba(126,200,227,0.26), rgba(168,157,200,0.18))', border: 'rgba(126,200,227,0.5)' }
   ];
   const visible = cats.filter(c => c.list.length > 0);
 
