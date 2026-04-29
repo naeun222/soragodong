@@ -8387,6 +8387,86 @@ async function _e2eeSetupNewUser() {
   return { passphrase, masterKey, salt: saltB64, encryptedMasterKey };
 }
 
+// 사용자 요청 2026-04-30: 새 device 진입 시 passphrase 복원 모달.
+// loadFromCloud에서 _encryptedBody 있는데 마스터 키 X면 window._e2eePendingRecovery 박음. 진입 후 모달.
+async function maybeShowE2EERecoveryModal() {
+  if (!window._e2eePendingRecovery) return;
+  if (document.getElementById('e2eeRecoveryOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.style.zIndex = '10001';
+  overlay.id = 'e2eeRecoveryOverlay';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:420px; padding:24px;">
+      <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">🔐 비밀 단어 입력</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
+        새 기기에서 처음 로그인하셨네요. E2EE로 암호화된 데이터를 복호화하려면 <strong>비밀 단어 12개</strong>를 입력해주세요.<br><br>
+        <span style="color:var(--text-soft);">활성화 시 받으신 단어들 (공백으로 구분).</span>
+      </div>
+      <textarea id="e2eePassphraseInput" rows="3" placeholder="예: 가족 바다 달빛 ... (12개)" style="width:100%; font-family:monospace; font-size:14px; padding:10px; resize:vertical;"></textarea>
+      <div id="e2eeRecoveryStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px;"></div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn-primary" onclick="submitE2EERecovery()" style="flex:1;">복호화 시도</button>
+        <button class="btn-secondary" onclick="cancelE2EERecovery()" style="flex:1;">나중에</button>
+      </div>
+      <div style="font-size:10px; color:var(--text-soft); margin-top:10px; line-height:1.5;">
+        ⚠️ 비밀 단어 분실 시 데이터 복구 불가능합니다. 회사도 복원 X.
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function submitE2EERecovery() {
+  const input = document.getElementById('e2eePassphraseInput');
+  const status = document.getElementById('e2eeRecoveryStatus');
+  if (!input || !status) return;
+  const passphrase = input.value.trim().split(/\s+/).join(' ');
+  const wordCount = passphrase.split(' ').length;
+  if (wordCount !== 12) {
+    status.textContent = `12개 단어 필요 (현재 ${wordCount}개)`;
+    status.style.color = '#e89090';
+    return;
+  }
+  status.textContent = '복호화 중...';
+  status.style.color = 'var(--text-soft)';
+  try {
+    const masterKey = await _e2eeRestoreFromPassphrase(passphrase);
+    if (!masterKey) {
+      status.textContent = '비밀 단어 일치 X. 다시 확인해주세요.';
+      status.style.color = '#e89090';
+      return;
+    }
+    // 복호화 성공 — pending recovery 데이터로 state 복원
+    const pending = window._e2eePendingRecovery;
+    if (pending && pending._encryptedBody) {
+      const decryptedJson = await _e2eeDecrypt(pending._encryptedBody, masterKey);
+      if (decryptedJson) {
+        const decryptedBody = JSON.parse(decryptedJson);
+        const { _encryptedBody, ...metaPart } = pending;
+        state = { ...DEFAULT_STATE, ...metaPart, ...decryptedBody };
+        _e2eeEnabled = true;
+      }
+    }
+    window._e2eePendingRecovery = null;
+    saveState();
+    const overlay = document.getElementById('e2eeRecoveryOverlay');
+    if (overlay) overlay.remove();
+    showToast('🔐 복호화 완료 ✦');
+    location.reload();
+  } catch (e) {
+    status.textContent = '복호화 실패: ' + (e.message || e);
+    status.style.color = '#e89090';
+  }
+}
+
+function cancelE2EERecovery() {
+  const yes = confirm('비밀 단어 입력 X면 본인 데이터 접근 불가능. 나중에 입력하시려면 새로고침. 정말 취소?');
+  if (!yes) return;
+  const overlay = document.getElementById('e2eeRecoveryOverlay');
+  if (overlay) overlay.remove();
+}
+
 // 사용자 요청 2026-04-30: E2EE 활성화 흐름 — Settings 버튼에서 호출.
 // 신규 마스터 키 + passphrase 생성 → 사용자에게 12-word 표시 → 다음 saveToCloudNow부터 암호화.
 async function setupE2EE() {
@@ -9344,6 +9424,13 @@ async function init() {
   await loadFromCloud();
 
   // 사용자 요청 2026-04-30 (변호사 검수): 동의는 이메일 로그인 화면에 통합 (모달 X). consentLog 박힘.
+
+  // 사용자 요청 2026-04-30 (E2EE Stage 2): 새 device 진입 시 passphrase 복원 모달
+  setTimeout(() => {
+    if (typeof maybeShowE2EERecoveryModal === 'function') {
+      maybeShowE2EERecoveryModal().catch(e => console.warn('e2eeRecovery:', e));
+    }
+  }, 1500);
 
   // 사용자 요청 2026-04-28: 자동 백업 (주 1회 + APP_VERSION 변경 시) — fire-and-forget
   if (typeof runAutoBackupIfNeeded === 'function') {
@@ -18186,6 +18273,20 @@ async function generateAIResponse(modelOverride) {
     if (!response.ok) {
       const err = await response.text();
       console.error('API error response:', err);
+      // 사용자 요청 2026-04-30: 402 (잔액·cap 도달) → 결제 모달 자동 표시 (Claude 패턴)
+      if (response.status === 402) {
+        let parsed = {};
+        try { parsed = JSON.parse(err); } catch {}
+        // 마지막 typing 메시지 제거 (응답 자리)
+        if (state.chatMessages[state.chatMessages.length - 1]?.typing) {
+          state.chatMessages.pop();
+        }
+        saveState(); renderChat();
+        if (typeof showBudgetExceededModal === 'function') {
+          showBudgetExceededModal(parsed.error || '잔액 / 한도 도달');
+        }
+        return;
+      }
       // V3.13.x: 응답 본문에서 message 추출해서 사용자에게 보여주기
       let detail = '';
       try {
@@ -32139,12 +32240,229 @@ async function refreshBillingStatus() {
   }
 }
 
-// 충전 모달 (포트원 SDK 활성 후 동작) — 일단 안내 + 사업자등록 후 활성 안내
+// ═══════════════════════════════════════════════════════════════
+// 결제 — 사용자 요청 2026-04-30 (포트원 통합)
+// ═══════════════════════════════════════════════════════════════
+
+// 충전 plans (단계별 보너스, refund.md / terms.md 정합)
+const CHARGE_PLANS = [
+  { krw: 5000, bonus_pct: 0, name: '🐚 5,000원' },
+  { krw: 10000, bonus_pct: 3, name: '🪸 10,000원 (+3% 보너스)' },
+  { krw: 30000, bonus_pct: 8, name: '🌊 30,000원 (+8% 보너스)' },
+  { krw: 50000, bonus_pct: 12, name: '🐋 50,000원 (+12% 보너스)' },
+  { krw: 100000, bonus_pct: 18, name: '🌌 100,000원 (+18% 보너스)' }
+];
+const SUBSCRIBE_PLAN = { krw: 15000, daily_cap: 12, name: '🪸 월 정액', desc: '월 ₩15,000 — 일 12 메시지 cap (20% 보너스)' };
+
+// 충전 모달
 async function openChargeModal() {
-  alert('충전 기능 준비 중 — 사업자등록 + 포트원 가입 후 활성됩니다.\n현재는 무료 충전 토큰만 사용 가능.');
+  if (document.getElementById('chargeModalOverlay')) return;
+  const minorWarning = state.preferences?.requiresLegalGuardianForPayment
+    ? `<div style="padding:10px; background:rgba(220,150,80,0.10); border:1px solid rgba(220,150,80,0.40); border-radius:8px; font-size:11px; color:#e8c590; margin-bottom:14px;">⚠️ 만 18세 미만은 결제 시 법정대리인 동의 필요 — 부모님께 동의받은 후 진행해주세요.</div>`
+    : '';
+  const plansHtml = CHARGE_PLANS.map((p, i) => `
+    <button class="btn-secondary" onclick="proceedCharge(${i})" style="display:flex; justify-content:space-between; align-items:center; padding:14px; margin-bottom:6px; text-align:left; width:100%;">
+      <span style="font-weight:600;">${p.name}</span>
+      <span style="font-size:11px; color:var(--text-soft);">${p.bonus_pct > 0 ? `+${Math.round(p.krw * p.bonus_pct / 100).toLocaleString()}원` : '기본'}</span>
+    </button>
+  `).join('');
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'chargeModalOverlay';
+  overlay.style.zIndex = '10000';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:380px; max-height:90vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">⚡ 충전</div>
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:14px;">
+        많이 충전할수록 보너스 ↑. 잔액은 무기한 유지됩니다.<br>
+        <strong>자동 결제 X</strong> — 한 번만 결제됩니다.
+      </div>
+      ${minorWarning}
+      ${plansHtml}
+      <div style="font-size:10px; color:var(--text-soft); margin-top:14px; line-height:1.6;">
+        결제 직후 잔액 즉시 반영. 환불은 <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/refund.md" target="_blank" style="color:var(--accent);">환불 정책</a> 참고.
+      </div>
+      <button class="btn-secondary" onclick="closeChargeModal()" style="margin-top:8px; width:100%;">닫기</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
 }
+
+function closeChargeModal() {
+  const overlay = document.getElementById('chargeModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+// 충전 진행 (포트원 결제 시작)
+async function proceedCharge(planIdx) {
+  const plan = CHARGE_PLANS[planIdx];
+  if (!plan) return;
+  // 결제 직전 명시 (terms 4.5 다크 패턴 회피)
+  const yes = confirm(`${plan.name}\n\n결제 금액: ${plan.krw.toLocaleString()}원\n결제 주기: 일회성\n자동 갱신: X\n해지: 결제 후 [설정 → 결제] 환불 가능 (환불 정책 적용)\n\n진행하시겠습니까?`);
+  if (!yes) return;
+
+  // 포트원 SDK 로드 확인
+  if (typeof window.IMP === 'undefined') {
+    // 동적 로드
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.iamport.kr/v1/iamport.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    }).catch(() => alert('포트원 SDK 로드 실패. 인터넷 연결 확인.'));
+  }
+  if (typeof window.IMP === 'undefined') {
+    alert('결제 시스템 로드 실패. 다시 시도해주세요.');
+    return;
+  }
+
+  // 포트원 가맹점 ID — Cloudflare env로 frontend에 전달 (PORTONE_CHANNEL_KEY)
+  const channelKey = window.PORTONE_CHANNEL_KEY || '';
+  if (!channelKey) {
+    alert('결제 시스템 미설정. 사업자등록 / 포트원 가입 후 활성됩니다.');
+    closeChargeModal();
+    return;
+  }
+  IMP.init(channelKey);
+
+  const merchantUid = `charge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  IMP.request_pay({
+    pg: 'tosspayments',  // 또는 'kakaopay' / 'inicis' 등
+    pay_method: 'card',
+    merchant_uid: merchantUid,
+    name: `소라고동 충전 ${plan.krw.toLocaleString()}원`,
+    amount: plan.krw,
+    buyer_email: session?.user?.email || ''
+  }, async (rsp) => {
+    if (!rsp.success) {
+      alert('결제 실패: ' + (rsp.error_msg || '취소됨'));
+      return;
+    }
+    // 백엔드 검증
+    try {
+      const verifyResp = await fetch('/api/billing/charge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+        body: JSON.stringify({ imp_uid: rsp.imp_uid, merchant_uid: merchantUid })
+      });
+      const result = await verifyResp.json();
+      if (verifyResp.ok && result.ok) {
+        showToast(`✦ ${plan.krw.toLocaleString()}원 충전 완료`);
+        closeChargeModal();
+        if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+      } else {
+        alert('결제 검증 실패: ' + (result.error || '알 수 없음'));
+      }
+    } catch (e) {
+      alert('백엔드 통신 실패: ' + (e.message || e));
+    }
+  });
+}
+
+// 구독 모달
 async function openSubscribeModal() {
-  alert('월 정액 가입 준비 중 — 사업자등록 + 포트원 가입 후 활성됩니다.');
+  if (document.getElementById('subscribeModalOverlay')) return;
+  const minorWarning = state.preferences?.requiresLegalGuardianForPayment
+    ? `<div style="padding:10px; background:rgba(220,150,80,0.10); border:1px solid rgba(220,150,80,0.40); border-radius:8px; font-size:11px; color:#e8c590; margin-bottom:14px;">⚠️ 만 18세 미만은 결제 시 법정대리인 동의 필요</div>`
+    : '';
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'subscribeModalOverlay';
+  overlay.style.zIndex = '10000';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:380px; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">📅 ${SUBSCRIBE_PLAN.name}</div>
+      <div style="font-size:13px; color:var(--text); line-height:1.7; margin-bottom:14px;">
+        <b>${SUBSCRIBE_PLAN.desc}</b><br>
+        <span style="font-size:11px; color:var(--text-soft);">한도 도달 시 다음날 4시 reset 또는 충전</span>
+      </div>
+      ${minorWarning}
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-bottom:14px; padding:10px; background:var(--surface); border-radius:8px;">
+        결제 금액: <b>${SUBSCRIBE_PLAN.krw.toLocaleString()}원/월</b><br>
+        결제 주기: 월 1회 (30일)<br>
+        <b>자동 갱신: X</b> (다음 달 명시 결제 시 연장)<br>
+        해지: 결제 후 [설정 → 결제] 1-click 환불 (잔여일 비례)<br>
+        환불 정책: <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/refund.md" target="_blank" style="color:var(--accent);">자세히</a>
+      </div>
+      <button class="btn-primary" onclick="proceedSubscribe()" style="width:100%;">월 ${SUBSCRIBE_PLAN.krw.toLocaleString()}원 결제</button>
+      <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:6px;">취소</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeSubscribeModal() {
+  const overlay = document.getElementById('subscribeModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+async function proceedSubscribe() {
+  if (typeof window.IMP === 'undefined') {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.iamport.kr/v1/iamport.js';
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    }).catch(() => alert('포트원 SDK 로드 실패'));
+  }
+  if (typeof window.IMP === 'undefined') return;
+  const channelKey = window.PORTONE_CHANNEL_KEY || '';
+  if (!channelKey) {
+    alert('결제 시스템 미설정. 사업자등록 / 포트원 가입 후 활성됩니다.');
+    closeSubscribeModal();
+    return;
+  }
+  IMP.init(channelKey);
+
+  const merchantUid = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  IMP.request_pay({
+    pg: 'tosspayments', pay_method: 'card', merchant_uid: merchantUid,
+    name: '소라고동 월 정액',
+    amount: SUBSCRIBE_PLAN.krw,
+    buyer_email: session?.user?.email || ''
+  }, async (rsp) => {
+    if (!rsp.success) { alert('결제 실패: ' + (rsp.error_msg || '취소됨')); return; }
+    try {
+      const verifyResp = await fetch('/api/billing/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+        body: JSON.stringify({ imp_uid: rsp.imp_uid, merchant_uid: merchantUid, plan: 'monthly' })
+      });
+      const result = await verifyResp.json();
+      if (verifyResp.ok && result.ok) {
+        showToast(`📅 월 정액 가입 완료 (${SUBSCRIBE_PLAN.krw.toLocaleString()}원/월)`);
+        closeSubscribeModal();
+        if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+      } else {
+        alert('결제 검증 실패: ' + (result.error || '알 수 없음'));
+      }
+    } catch (e) {
+      alert('백엔드 통신 실패: ' + (e.message || e));
+    }
+  });
+}
+
+// Cap 도달 흐름 (Claude 패턴) — 잔액 / 한도 부족 시 자동 모달
+function showBudgetExceededModal(reason) {
+  if (document.getElementById('budgetExceededOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'budgetExceededOverlay';
+  overlay.style.zIndex = '10000';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:340px; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">⏳ 한도 도달</div>
+      <div style="font-size:12px; color:var(--text); line-height:1.7; margin-bottom:14px;">
+        ${escapeHtml(reason || '오늘 사용 한도가 다 됐어요.')}<br><br>
+        다음 옵션 중 선택:
+      </div>
+      <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openChargeModal();" style="width:100%; margin-bottom:6px;">⚡ 충전</button>
+      <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 월 정액 가입</button>
+      <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">⏰ 내일 4시 이후 사용</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
 }
 
 function exportData() {
