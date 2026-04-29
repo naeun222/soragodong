@@ -18822,9 +18822,9 @@ function switchLibraryCat(cat) {
     renderLensArchive();
     if (typeof renderLensInsights === 'function') renderLensInsights();
   }
-  // 검색바는 모든 카테고리에서 노출
+  // 검색바는 모든 카테고리에서 노출 (사용자 보고 2026-04-29: 'block' 으로 덮으면 flex 깨져 토글이 검색창 밑으로 wrap — 'flex' 유지)
   const searchBar = document.getElementById('archiveSearchBar');
-  if (searchBar) searchBar.style.display = 'block';
+  if (searchBar) searchBar.style.display = 'flex';
   // V4-fix #5: 클릭한 카테고리는 본 것 → ● 점 사라짐
   if (typeof _markLibCatSeen === 'function') {
     _markLibCatSeen(cat);
