@@ -14780,8 +14780,10 @@ async function sendChat() {
     (Date.now() - new Date(lastMsg.timestamp).getTime() >= CHAPTER_GAP_MS);
   
   // V3.13: '일기:' 키워드 감지 → 오늘 entry에 원본 그대로 저장
+  // 사용자 요청 2026-04-29: 같은 날 여러 번 적으면 덮어쓰기 X — 시각 표시와 함께 append
   const diaryMatch = text.match(/^일기[:：]\s*([\s\S]+)$/);
   let isDiary = false;
+  let diaryAppended = false;
   if (diaryMatch) {
     const diaryContent = diaryMatch[1].trim();
     const todayK = todayKey();
@@ -14790,7 +14792,15 @@ async function sendChat() {
       entry = { date: todayK, timestamp: new Date().toISOString() };
       state.entries.push(entry);
     }
-    entry.diary = diaryContent;
+    if (entry.diary && entry.diary.trim()) {
+      // 두 번째 이상 — 시각 마커와 함께 append
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      entry.diary = entry.diary.trimEnd() + '\n\n— ' + timeStr + ' —\n' + diaryContent;
+      diaryAppended = true;
+    } else {
+      entry.diary = diaryContent;
+    }
     entry.dailySource = 'diary';
     isDiary = true;
   }
@@ -14817,7 +14827,7 @@ async function sendChat() {
   input.value = ''; input.style.height = 'auto';
   renderChat();
   saveState();
-  if (isDiary) showToast('📔 오늘 일기로 저장됨');
+  if (isDiary) showToast(diaryAppended ? '📔 오늘 일기에 이어 저장됨' : '📔 오늘 일기로 저장됨');
   
   // V3.8: 새 챕터 시작 시 → 이전 챕터 토픽 추출 (백그라운드)
   if (isNewChapter && state.chatMessages.length > 1) {
