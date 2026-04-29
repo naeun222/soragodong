@@ -1213,6 +1213,160 @@
   }
   .ft-options label:hover { background: rgba(139,126,196,0.10); }
   .ft-options input[type="radio"], .ft-options input[type="checkbox"] { margin: 0; cursor: pointer; }
+
+  /* === First-Touch Step Wizard (사용자 요청 2026-04-30 ultrathink: step 방식 + visual) === */
+  .ft-wizard { position: relative; min-height: 320px; }
+  .ft-progress { display: flex; gap: 6px; justify-content: center; margin: 4px 0 18px; }
+  .ft-progress-dot {
+    width: 24px; height: 4px; border-radius: 2px;
+    background: var(--border);
+    transition: background 0.4s, transform 0.3s;
+  }
+  .ft-progress-dot.done { background: var(--accent); }
+  .ft-progress-dot.current { background: linear-gradient(90deg, var(--accent), rgba(212,167,106,0.4)); transform: scaleY(1.5); }
+  .ft-step { display: none; animation: ftFadeIn 0.35s ease-out; }
+  .ft-step.active { display: block; }
+  @keyframes ftFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .ft-step-emoji {
+    font-size: 44px; text-align: center; margin: 10px 0 6px;
+    animation: ftEmojiBounce 0.7s ease-out;
+  }
+  @keyframes ftEmojiBounce {
+    0%   { transform: scale(0.4) rotate(-8deg); opacity: 0; }
+    60%  { transform: scale(1.15) rotate(4deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); }
+  }
+  .ft-step-title {
+    font-size: 17px; font-weight: 600; color: var(--text);
+    text-align: center; margin-bottom: 4px; line-height: 1.5;
+  }
+  .ft-step-sub {
+    font-size: 11px; color: var(--text-soft);
+    text-align: center; margin-bottom: 18px; line-height: 1.6;
+  }
+  .ft-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .ft-card-grid.three { grid-template-columns: 1fr 1fr; }
+  .ft-card {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 14px 10px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    text-align: center;
+  }
+  .ft-card:hover { border-color: rgba(212,167,106,0.5); transform: translateY(-1px); }
+  .ft-card.selected {
+    background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(212,167,106,0.06));
+    border-color: var(--accent);
+  }
+  .ft-card-icon { font-size: 24px; margin-bottom: 4px; }
+  .ft-card-label { font-size: 12px; color: var(--text); font-weight: 500; line-height: 1.4; }
+  .ft-card input { display: none; }
+  .ft-tag-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .ft-tag {
+    padding: 7px 12px; font-size: 12px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 100px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
+  }
+  .ft-tag:hover { border-color: rgba(212,167,106,0.4); }
+  .ft-tag.selected {
+    background: linear-gradient(135deg, rgba(212,167,106,0.20), rgba(212,167,106,0.08));
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .ft-tag input { display: none; }
+  .ft-step-input {
+    width: 100%; padding: 12px 14px;
+    font-size: 15px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .ft-step-input:focus { outline: none; border-color: var(--accent); }
+  .ft-nav { display: flex; gap: 8px; margin-top: 14px; }
+  .ft-nav button { flex: 1; }
+
+  /* === Welcome Bonus Modal (사용자 요청 2026-04-30 ultrathink: 무료 토큰 화려한 알림 + 법적 고지) === */
+  .welcome-bonus-modal {
+    position: relative;
+    max-width: 380px; padding: 28px 24px 22px;
+    background: linear-gradient(155deg, rgba(212,167,106,0.18), rgba(139,126,196,0.10) 50%, rgba(126,200,227,0.10));
+    border: 1.5px solid rgba(212,167,106,0.40);
+    border-radius: 18px;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+    overflow: hidden;
+    text-align: center;
+    animation: wbScaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes wbScaleIn {
+    0%   { opacity: 0; transform: scale(0.7) translateY(10px); }
+    60%  { opacity: 1; transform: scale(1.02); }
+    100% { transform: scale(1) translateY(0); }
+  }
+  .welcome-bonus-stars {
+    position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  }
+  .welcome-bonus-stars span {
+    position: absolute; font-size: 14px;
+    color: var(--accent); opacity: 0;
+    animation: wbStarTwinkle 2.4s ease-in-out infinite;
+  }
+  .welcome-bonus-stars span:nth-child(1) { top:  10%; left: 12%; animation-delay: 0.1s; }
+  .welcome-bonus-stars span:nth-child(2) { top:  18%; right: 14%; animation-delay: 0.6s; font-size: 10px; }
+  .welcome-bonus-stars span:nth-child(3) { top:  62%; left:  8%; animation-delay: 1.0s; font-size: 11px; }
+  .welcome-bonus-stars span:nth-child(4) { top:  74%; right: 10%; animation-delay: 1.4s; }
+  .welcome-bonus-stars span:nth-child(5) { top:  44%; right: 16%; animation-delay: 0.4s; font-size: 9px; }
+  .welcome-bonus-stars span:nth-child(6) { top:  36%; left: 14%; animation-delay: 1.8s; font-size: 12px; }
+  @keyframes wbStarTwinkle {
+    0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+    50%      { opacity: 0.85; transform: scale(1) rotate(180deg); }
+  }
+  .welcome-bonus-gift {
+    font-size: 56px; margin-bottom: 8px;
+    display: inline-block;
+    animation: wbGiftSway 2.2s ease-in-out infinite;
+    filter: drop-shadow(0 6px 14px rgba(212,167,106,0.45));
+  }
+  @keyframes wbGiftSway {
+    0%, 100% { transform: rotate(-6deg) scale(1); }
+    50%      { transform: rotate(6deg) scale(1.08); }
+  }
+  .welcome-bonus-title {
+    font-size: 18px; font-weight: 700; color: var(--text);
+    margin-bottom: 6px; letter-spacing: 0.02em;
+  }
+  .welcome-bonus-amount {
+    font-size: 32px; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), #f5d59c);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin-bottom: 4px;
+  }
+  .welcome-bonus-sub {
+    font-size: 13px; color: var(--text-dim);
+    line-height: 1.6; margin-bottom: 16px;
+  }
+  .welcome-bonus-info {
+    text-align: left; padding: 12px 14px;
+    background: rgba(0,0,0,0.20); border-radius: 10px;
+    margin-bottom: 16px;
+  }
+  .welcome-bonus-info div {
+    font-size: 11px; color: var(--text-soft); line-height: 1.7;
+  }
+  .welcome-bonus-btn { width: 100%; padding: 12px; font-size: 14px; font-weight: 600; }
   .ft-hypothesis label {
     display: flex; align-items: flex-start; gap: 8px;
     padding: 10px 12px; margin-bottom: 6px;
@@ -7857,6 +8011,19 @@
         </div>
       </div>
 
+      <!-- ━━━━━━ 위기 안내 (정신건강 앱 의무 권고) ━━━━━━ -->
+      <!-- 사용자 보고 2026-04-30 ultrathink: 정신건강복지법 §15-6 권고. AI ≠ 의료/심리 상담 명시 + 위기 핫라인. -->
+      <div class="settings-info-card" style="margin-top:12px; border-left:3px solid #d4a76a;">
+        <div class="settings-info-card-title">🆘 위기 안내</div>
+        <div style="font-size:11.5px; line-height:1.85; color:var(--text-dim);">
+          소라고동의 AI 답변은 <b>의료·법적·심리 상담이 아닙니다</b>. 자기관찰 보조 도구일 뿐.<br>
+          자해·자살 충동, 심한 우울, 응급 상황에는 즉시 전문가:<br>
+          <span style="color:var(--text);">☎ <b>1393</b> 자살예방상담 (24시간)</span><br>
+          <span style="color:var(--text);">☎ <b>1577-0199</b> 정신건강위기상담</span><br>
+          <span style="color:var(--text);">☎ <b>119</b> 응급</span>
+        </div>
+      </div>
+
       <!-- ━━━━━━ 사업자 정보 (전자상거래법 의무) ━━━━━━ -->
       <!-- 사업자등록증 발급 후 BUSINESS_INFO 상수만 갈아끼우면 자동 표시. 이전엔 회사명만. -->
       <div class="settings-info-card" id="businessInfoCard" style="margin-top:12px;">
@@ -8974,9 +9141,55 @@ async function maybeShowFirstTouchQuiz() {
   if (document.getElementById('e2eeSetupOverlay')) return;
   if (document.querySelector('.update-chooser-overlay')) return;
   if (document.getElementById('onbOverlay') && document.getElementById('onbOverlay').classList.contains('active')) return;
+  // 사용자 요청 2026-04-30 ultrathink: quiz 직전 환영 선물 모달 (한 번만)
+  if (!state.preferences._welcomeBonusShown) {
+    await showWelcomeBonusModal();
+  }
   showFirstTouchQuiz();
 }
 
+// 사용자 요청 2026-04-30 ultrathink: 무료 토큰 화려한 환영 모달 + 법적 고지 (전상법 §13/§17, 표시광고법 §3)
+function showWelcomeBonusModal() {
+  return new Promise(resolve => {
+    if (document.getElementById('welcomeBonusOverlay')) { resolve(); return; }
+    const overlay = document.createElement('div');
+    overlay.className = 'input-modal-overlay show';
+    overlay.id = 'welcomeBonusOverlay';
+    overlay.style.zIndex = '10002';
+    overlay.innerHTML = `
+      <div class="welcome-bonus-modal">
+        <div class="welcome-bonus-stars" aria-hidden="true">
+          <span>✦</span><span>★</span><span>✧</span><span>✦</span><span>★</span><span>✧</span>
+        </div>
+        <div class="welcome-bonus-gift">🎁</div>
+        <div class="welcome-bonus-title">환영 선물 도착 ✦</div>
+        <div class="welcome-bonus-amount">$1.00</div>
+        <div class="welcome-bonus-sub">
+          <span style="color:var(--text-soft);">(약 1,400원)</span> 어치 무료 토큰 박혀 있어.<br>
+          첫 진단 + 가벼운 대화에 충분.
+        </div>
+        <div class="welcome-bonus-info">
+          <div>✦ AI 응답 시 사용량 비례 차감 (Sonnet 4.6 기준)</div>
+          <div>♾️ 만료 X — 천천히 써도 OK</div>
+          <div>💸 무료 제공분이라 환불 X (전자상거래법 §17 청약철회 대상 아님)</div>
+          <div>＋ 더 쓰려면 충전 (별도 결제·이용약관 따름)</div>
+        </div>
+        <button class="btn-primary welcome-bonus-btn" id="welcomeBonusOkBtn">시작 ✦</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('welcomeBonusOkBtn').onclick = () => {
+      state.preferences = state.preferences || {};
+      state.preferences._welcomeBonusShown = true;
+      saveState();
+      overlay.remove();
+      resolve();
+    };
+  });
+}
+
+// 사용자 요청 2026-04-30 ultrathink: 5문항 한 화면 → step wizard (피곤함 줄이기)
+// 기존 ID/name 유지 (ftQ1/ftQ2/ftQ3/data-q4/ftQ5) — submitFirstTouchQuiz 호환.
 function showFirstTouchQuiz() {
   if (document.getElementById('firstTouchQuizOverlay')) return;
   const overlay = document.createElement('div');
@@ -8984,60 +9197,143 @@ function showFirstTouchQuiz() {
   overlay.id = 'firstTouchQuizOverlay';
   overlay.style.zIndex = '10001';
   overlay.innerHTML = `
-    <div class="input-modal" style="max-width:440px; max-height:90vh; overflow-y:auto; padding:24px;">
-      <div style="font-size:11px; color:var(--text-soft); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px;">너의 첫 진단 ✦</div>
-      <div style="font-size:18px; font-weight:600; color:var(--text); margin-bottom:6px;">5가지만 답해줘</div>
-      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:18px;">
-        1분 안 걸려. AI가 너에 대한 첫 가설을 세워볼게.<br>
-        <span style="color:var(--text-soft);">한두 개만 답해도 돼. 부담 X.</span>
+    <div class="input-modal" style="max-width:440px; max-height:92vh; overflow-y:auto; padding:24px 22px;">
+      <div style="font-size:10px; color:var(--text-soft); letter-spacing:0.18em; text-transform:uppercase; text-align:center; margin-bottom:8px;">너의 첫 진단 ✦</div>
+      <div class="ft-progress" id="ftProgressBar">
+        <div class="ft-progress-dot current" data-step="1"></div>
+        <div class="ft-progress-dot" data-step="2"></div>
+        <div class="ft-progress-dot" data-step="3"></div>
+        <div class="ft-progress-dot" data-step="4"></div>
+        <div class="ft-progress-dot" data-step="5"></div>
       </div>
-      <div class="ft-q">
-        <div class="ft-q-label">1. 지금 가장 신경 쓰이는 한 단어?</div>
-        <input type="text" id="ftQ1" placeholder="예: 논문 / 관계 / 잠 / 진로..." maxlength="20">
-      </div>
-      <div class="ft-q">
-        <div class="ft-q-label">2. 결정 스타일?</div>
-        <div class="ft-options">
-          <label><input type="radio" name="ftQ2" value="빠른">빠르게</label>
-          <label><input type="radio" name="ftQ2" value="정보">정보 모으고</label>
-          <label><input type="radio" name="ftQ2" value="미루기">미루다가</label>
-          <label><input type="radio" name="ftQ2" value="직감">직감으로</label>
+
+      <div class="ft-wizard">
+        <!-- Step 1: 신경 쓰이는 한 단어 -->
+        <div class="ft-step active" data-step="1">
+          <div class="ft-step-emoji">🌱</div>
+          <div class="ft-step-title">지금 가장 신경 쓰이는 한 단어</div>
+          <div class="ft-step-sub">머릿속에 자주 도는 거 — 단어 하나만</div>
+          <input type="text" id="ftQ1" class="ft-step-input" placeholder="예: 논문 / 관계 / 잠 / 진로" maxlength="20">
+        </div>
+
+        <!-- Step 2: 결정 스타일 -->
+        <div class="ft-step" data-step="2">
+          <div class="ft-step-emoji">🎯</div>
+          <div class="ft-step-title">결정 스타일</div>
+          <div class="ft-step-sub">평소 무언가 정할 때 — 가장 가까운 거</div>
+          <div class="ft-card-grid">
+            <label class="ft-card" data-radio="ftQ2" data-val="빠른"><input type="radio" name="ftQ2" value="빠른"><div class="ft-card-icon">⚡</div><div class="ft-card-label">바로 박는다</div></label>
+            <label class="ft-card" data-radio="ftQ2" data-val="정보"><input type="radio" name="ftQ2" value="정보"><div class="ft-card-icon">🔍</div><div class="ft-card-label">정보 모으고</div></label>
+            <label class="ft-card" data-radio="ftQ2" data-val="미루기"><input type="radio" name="ftQ2" value="미루기"><div class="ft-card-icon">⏳</div><div class="ft-card-label">미루다가</div></label>
+            <label class="ft-card" data-radio="ftQ2" data-val="직감"><input type="radio" name="ftQ2" value="직감"><div class="ft-card-icon">🌀</div><div class="ft-card-label">직감으로</div></label>
+          </div>
+        </div>
+
+        <!-- Step 3: 에너지 시간 -->
+        <div class="ft-step" data-step="3">
+          <div class="ft-step-emoji">⏰</div>
+          <div class="ft-step-title">에너지 좋은 시간</div>
+          <div class="ft-step-sub">머리 잘 돌아가는 시간대</div>
+          <div class="ft-card-grid">
+            <label class="ft-card" data-radio="ftQ3" data-val="아침"><input type="radio" name="ftQ3" value="아침"><div class="ft-card-icon">🌅</div><div class="ft-card-label">아침</div></label>
+            <label class="ft-card" data-radio="ftQ3" data-val="점심"><input type="radio" name="ftQ3" value="점심"><div class="ft-card-icon">☀️</div><div class="ft-card-label">점심</div></label>
+            <label class="ft-card" data-radio="ftQ3" data-val="저녁"><input type="radio" name="ftQ3" value="저녁"><div class="ft-card-icon">🌆</div><div class="ft-card-label">저녁</div></label>
+            <label class="ft-card" data-radio="ftQ3" data-val="새벽"><input type="radio" name="ftQ3" value="새벽"><div class="ft-card-icon">🌙</div><div class="ft-card-label">새벽</div></label>
+          </div>
+        </div>
+
+        <!-- Step 4: 자주 듣는 말 -->
+        <div class="ft-step" data-step="4">
+          <div class="ft-step-emoji">🪞</div>
+          <div class="ft-step-title">자주 듣는 말 / 자주 하는 생각</div>
+          <div class="ft-step-sub">너에 대해 — 여러 개 골라도 돼</div>
+          <div class="ft-tag-grid">
+            <label class="ft-tag" data-tag-q4 data-val="산만"><input type="checkbox" data-q4 value="산만">🦋 산만</label>
+            <label class="ft-tag" data-tag-q4 data-val="다 잘하려다 망함"><input type="checkbox" data-q4 value="다 잘하려다 망함">🎢 다 잘하려다 망함</label>
+            <label class="ft-tag" data-tag-q4 data-val="꼼꼼"><input type="checkbox" data-q4 value="꼼꼼">🔬 꼼꼼</label>
+            <label class="ft-tag" data-tag-q4 data-val="느려"><input type="checkbox" data-q4 value="느려">🐌 느려</label>
+            <label class="ft-tag" data-tag-q4 data-val="기복 큼"><input type="checkbox" data-q4 value="기복 큼">🌊 기복 큼</label>
+            <label class="ft-tag" data-tag-q4 data-val="감정 풍부"><input type="checkbox" data-q4 value="감정 풍부">💧 감정 풍부</label>
+            <label class="ft-tag" data-tag-q4 data-val="말이 많아"><input type="checkbox" data-q4 value="말이 많아">🗣 말이 많아</label>
+            <label class="ft-tag" data-tag-q4 data-val="혼자가 편해"><input type="checkbox" data-q4 value="혼자가 편해">🌑 혼자가 편해</label>
+          </div>
+        </div>
+
+        <!-- Step 5: 한 줄 자기소개 -->
+        <div class="ft-step" data-step="5">
+          <div class="ft-step-emoji">🐚</div>
+          <div class="ft-step-title">한 줄 자기소개 <span style="color:var(--text-soft); font-size:11px; font-weight:400;">(선택)</span></div>
+          <div class="ft-step-sub">건너뛰어도 OK — 더 정확한 가설을 위해</div>
+          <input type="text" id="ftQ5" class="ft-step-input" placeholder="예: ADHD/ADD, 박사과정, 야행성..." maxlength="60">
+          <div style="font-size:10px; color:var(--text-soft); margin-top:6px; padding:8px; background:rgba(126,200,227,0.05); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px; line-height:1.6;">
+            ✦ AI 분석에 무료 토큰 약 $0.01–0.02 쓰여. 무료 한도 $1.0 안에서 진행.
+          </div>
         </div>
       </div>
-      <div class="ft-q">
-        <div class="ft-q-label">3. 에너지 좋은 시간?</div>
-        <div class="ft-options">
-          <label><input type="radio" name="ftQ3" value="아침">아침</label>
-          <label><input type="radio" name="ftQ3" value="점심">점심</label>
-          <label><input type="radio" name="ftQ3" value="저녁">저녁</label>
-          <label><input type="radio" name="ftQ3" value="새벽">새벽</label>
-        </div>
-      </div>
-      <div class="ft-q">
-        <div class="ft-q-label">4. 자주 듣는 말 / 자기에 대해 자주 하는 생각?</div>
-        <div class="ft-options">
-          <label><input type="checkbox" data-q4 value="산만">산만</label>
-          <label><input type="checkbox" data-q4 value="다 잘하려다 망함">다 잘하려다 망함</label>
-          <label><input type="checkbox" data-q4 value="꼼꼼">꼼꼼</label>
-          <label><input type="checkbox" data-q4 value="느려">느려</label>
-          <label><input type="checkbox" data-q4 value="기복 큼">기복 큼</label>
-          <label><input type="checkbox" data-q4 value="감정 풍부">감정 풍부</label>
-          <label><input type="checkbox" data-q4 value="말이 많아">말이 많아</label>
-          <label><input type="checkbox" data-q4 value="혼자가 편해">혼자가 편해</label>
-        </div>
-      </div>
-      <div class="ft-q">
-        <div class="ft-q-label">5. 한 줄 자기소개 (자유, 선택)</div>
-        <input type="text" id="ftQ5" placeholder="예: ADHD/ADD, 박사과정, 야행성..." maxlength="60">
-      </div>
-      <div id="firstTouchStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px;"></div>
-      <div style="display:flex; gap:8px; margin-top:14px;">
-        <button class="btn-primary" onclick="submitFirstTouchQuiz()" style="flex:1;">첫 진단 받기 ✦</button>
-        <button class="btn-secondary" onclick="skipFirstTouchQuiz()" style="flex:1;">나중에</button>
+
+      <div id="firstTouchStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px; text-align:center;"></div>
+
+      <div class="ft-nav">
+        <button class="btn-secondary" id="ftPrevBtn" onclick="ftStep(-1)" style="display:none;">← 뒤로</button>
+        <button class="btn-secondary" id="ftSkipBtn" onclick="skipFirstTouchQuiz()">나중에</button>
+        <button class="btn-primary" id="ftNextBtn" onclick="ftStep(1)">다음 →</button>
+        <button class="btn-primary" id="ftSubmitBtn" onclick="submitFirstTouchQuiz()" style="display:none;">첫 진단 받기 ✦</button>
       </div>
     </div>
   `;
   document.body.appendChild(overlay);
+
+  // 카드/태그 클릭 → 해당 input 토글
+  overlay.querySelectorAll('[data-radio]').forEach(card => {
+    card.addEventListener('click', () => {
+      const grp = card.getAttribute('data-radio');
+      overlay.querySelectorAll(`[data-radio="${grp}"]`).forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      const inp = card.querySelector('input');
+      if (inp) inp.checked = true;
+    });
+  });
+  overlay.querySelectorAll('[data-tag-q4]').forEach(tag => {
+    tag.addEventListener('click', (e) => {
+      e.preventDefault();
+      tag.classList.toggle('selected');
+      const inp = tag.querySelector('input');
+      if (inp) inp.checked = tag.classList.contains('selected');
+    });
+  });
+
+  // 첫 step input 자동 focus
+  setTimeout(() => document.getElementById('ftQ1')?.focus(), 100);
+}
+
+// step navigation — current 1..5
+function ftStep(delta) {
+  const overlay = document.getElementById('firstTouchQuizOverlay');
+  if (!overlay) return;
+  const steps = overlay.querySelectorAll('.ft-step');
+  let cur = 1;
+  steps.forEach((s, i) => { if (s.classList.contains('active')) cur = i + 1; });
+  const next = Math.max(1, Math.min(5, cur + delta));
+  if (next === cur) return;
+  steps.forEach(s => s.classList.remove('active'));
+  overlay.querySelector(`.ft-step[data-step="${next}"]`)?.classList.add('active');
+
+  // 진행도 dot
+  overlay.querySelectorAll('.ft-progress-dot').forEach((d, i) => {
+    d.classList.remove('current', 'done');
+    if (i + 1 < next) d.classList.add('done');
+    else if (i + 1 === next) d.classList.add('current');
+  });
+
+  // nav 버튼 표시 토글
+  document.getElementById('ftPrevBtn').style.display = next > 1 ? '' : 'none';
+  document.getElementById('ftSkipBtn').style.display = next > 1 ? 'none' : '';
+  document.getElementById('ftNextBtn').style.display = next < 5 ? '' : 'none';
+  document.getElementById('ftSubmitBtn').style.display = next === 5 ? '' : 'none';
+
+  // step별 자동 focus
+  if (next === 1) setTimeout(() => document.getElementById('ftQ1')?.focus(), 50);
+  if (next === 5) setTimeout(() => document.getElementById('ftQ5')?.focus(), 50);
 }
 
 function skipFirstTouchQuiz() {
@@ -16099,7 +16395,9 @@ async function showDeferDatePicker() {
   }
   // 사용자 요청 2026-04-28: 서버 시간 기반 (디바이스 시계 잘못돼도 정확)
   const today = (typeof getServerNow === 'function') ? getServerNow() : new Date();
-  today.setDate(today.getDate() + choice);
+  // 사용자 보고 2026-04-30: showOptionsModal이 onclick HTML로 value 직렬화하면서 string 변환됨.
+  // `30 + "7"` = "307" → setDate(307) = 2027-02-01 같은 정신나간 날짜. Number 강제.
+  today.setDate(today.getDate() + Number(choice));
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const dd = String(today.getDate()).padStart(2, '0');
@@ -28179,9 +28477,16 @@ async function runMonthlyAutoReviewIfNeeded() {
     const review = {
       completedAt: new Date().toISOString(),
       summary: reviewData.summary,
-      sections: reviewData.sections,
+      sections: reviewData.sections,  // 옛 schema backward compat
       userNote: '',
       monthKey: lastMonthKey,
+      // 사용자 보고 2026-04-30: 자동 월간 리뷰도 새 schema 박기 (옛 코드 = sections만 저장 → 새 디자인 깨짐)
+      one_word: reviewData.one_word,
+      pattern: reviewData.pattern,
+      quotes: reviewData.quotes,
+      experiment: reviewData.experiment,
+      seeds: reviewData.seeds,
+      seed_callbacks: reviewData.seed_callbacks,
       auto: true
     };
     if (reviewData.new_observations) review.newObservations = reviewData.new_observations;
@@ -31823,9 +32128,63 @@ function renderArchiveReviews() {
     const periodLabel = r.type === 'quarterly' ? '' : (r.weekKey || r.monthKey || '');
     const autoTag = r.auto ? ' <span style="font-size:9px; color:var(--purple); padding:1px 6px; background:var(--purple-dim); border-radius:6px; margin-left:4px;">🤖 자동</span>' : '';
 
-    // V4-fix: sections 형식 둘 다 지원 — 배열 [{label, body}] (V4 분기/월간 시드) + 객체 {patterns,...} (V3 월간/주간)
+    // 사용자 요청 2026-04-30: 새 schema (one_word/pattern/quotes/experiment/seeds/turning_point) 지원.
+    // 옛 schema (sections) 도 backward compat — 옛 리뷰는 옛 layout으로.
     let detailHtml = '';
-    if (Array.isArray(r.sections)) {
+    const isNewSchema = !!(r.pattern || r.quotes || r.experiment || r.seeds || r.one_word || r.turning_point);
+    if (isNewSchema) {
+      // 새 layout — Detective + Quotes + Seeds + One-word
+      if (r.one_word) {
+        detailHtml += `<div style="font-size:10px; color:var(--text-soft); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:4px;">이번 ${r.type === 'monthly' ? '달' : (r.type === 'quarterly' ? '분기' : '주')}의 너</div>
+          <div style="font-family:'Gowun Batang',serif; font-size:24px; color:var(--accent); margin-bottom:12px; letter-spacing:0.04em;">${escapeHtml(r.one_word)}</div>`;
+      }
+      if (r.seed_callbacks) {
+        detailHtml += `<div style="margin-bottom:12px; padding:10px 12px; background:rgba(143,200,143,0.06); border-left:3px solid rgba(143,200,143,0.40); border-radius:6px;">
+          <div style="font-size:10px; color:#9ed4a0; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:4px;">🌱 지난 씨앗 회상</div>
+          <div style="font-size:12px; color:var(--text); line-height:1.7;">${escapeHtml(r.seed_callbacks)}</div>
+        </div>`;
+      }
+      if (r.pattern && (r.pattern.headline || r.pattern.evidence || r.pattern.condition)) {
+        detailHtml += `<div style="margin-bottom:12px;">
+          <div style="font-size:10px; color:var(--accent); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px;">🔍 패턴 발견</div>
+          ${r.pattern.headline ? `<div style="font-size:13px; font-weight:600; color:var(--text); line-height:1.6; margin-bottom:6px;">${escapeHtml(r.pattern.headline)}</div>` : ''}
+          ${r.pattern.evidence ? `<div style="font-size:11px; color:var(--text-dim); line-height:1.7; padding:8px 10px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(201,169,110,0.40); border-radius:4px; margin-bottom:6px;">${escapeHtml(r.pattern.evidence)}</div>` : ''}
+          ${r.pattern.condition ? `<div style="font-size:10.5px; color:var(--text-soft); line-height:1.6;">↳ ${escapeHtml(r.pattern.condition)}</div>` : ''}
+        </div>`;
+      }
+      if (r.turning_point) {
+        detailHtml += `<div style="margin-bottom:12px;">
+          <div style="font-size:10px; color:var(--accent); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px;">🌊 변곡점</div>
+          <div style="font-size:12px; line-height:1.7; color:var(--text);">${escapeHtml(r.turning_point)}</div>
+        </div>`;
+      }
+      if (Array.isArray(r.quotes) && r.quotes.length > 0) {
+        const quotesH = r.quotes.filter(q => q && q.trim()).map(q => `<div style="font-family:'Gowun Batang',serif; font-size:12.5px; color:var(--text); line-height:1.7; padding:6px 12px; border-left:2px solid rgba(126,200,227,0.40); margin-bottom:6px;">"${escapeHtml(q)}"</div>`).join('');
+        if (quotesH) {
+          detailHtml += `<div style="margin-bottom:12px;">
+            <div style="font-size:10px; color:var(--accent); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px;">📝 너의 인용집</div>
+            ${quotesH}
+          </div>`;
+        }
+      }
+      if (r.experiment && (r.experiment.what || r.experiment.why)) {
+        detailHtml += `<div style="margin-bottom:12px; padding:10px 12px; background:linear-gradient(135deg, rgba(143,200,143,0.08), rgba(126,200,227,0.05)); border:1px solid rgba(143,200,143,0.20); border-radius:8px;">
+          <div style="font-size:10px; color:#9ed4a0; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px;">🌱 작은 실험</div>
+          ${r.experiment.what ? `<div style="font-size:12.5px; line-height:1.7; color:var(--text); margin-bottom:4px;">${escapeHtml(r.experiment.what)}</div>` : ''}
+          ${r.experiment.why ? `<div style="font-size:10.5px; color:var(--text-soft); line-height:1.6;">${escapeHtml(r.experiment.why)}</div>` : ''}
+        </div>`;
+      }
+      if (Array.isArray(r.seeds) && r.seeds.length > 0) {
+        const seedsH = r.seeds.filter(s => s && s.trim()).map(s => `<div style="font-size:11.5px; color:var(--text-dim); line-height:1.7; padding:3px 10px;">· ${escapeHtml(s)}</div>`).join('');
+        if (seedsH) {
+          detailHtml += `<div style="margin-bottom:8px;">
+            <div style="font-size:10px; color:var(--text-soft); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:4px;">🪄 다음 리뷰까지 지켜볼 씨앗</div>
+            ${seedsH}
+          </div>`;
+        }
+      }
+    } else if (Array.isArray(r.sections)) {
+      // V4-fix: sections 배열 [{label, body}] (V4 분기/월간 시드)
       detailHtml = r.sections.map(s => `<div style="margin-bottom:10px;">
         <div style="font-size:11px; color:var(--accent); margin-bottom:4px;">${escapeHtml(s.label || '')}</div>
         <div style="font-size:13px; line-height:1.7; color:var(--text);">${escapeHtml(s.body || '')}</div>
@@ -33658,7 +34017,24 @@ function showTossChargeModal(plan) {
           · <strong>본인 통장 거래 내역</strong> 캡처 (출금 line + 메모 보이게) <span style="color:var(--text-soft);">— 토스든 다른 은행이든 OK</span><br>
           <span style="color:var(--text-soft);">AI가 후딱 확인하고 잔액 채워둘게! ✦</span>
         </div>
+        <div style="font-size:10px; color:var(--text-soft); margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.15); border-radius:6px; line-height:1.6;">
+          📋 <b>AI(Anthropic Sonnet)가 캡처에서 추출하는 정보</b>:<br>
+          금액 · 수신 계좌번호/은행/예금주 · 메모 코드 · 송금 시각 · 화면 종류 (검증 목적). 추출 결과는 결제 검증 후 즉시 사용·삭제 (학습 X). <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/privacy.md" target="_blank" style="color:var(--accent);">자세히</a>
+        </div>
         <input type="file" id="tossReceiptInput" accept="image/*" style="width:100%; font-size:11px;">
+
+        <!-- 사용자 보고 2026-04-30: 전상법 §13 청약 직전 명시 고지 — 약관/환불 재확인 -->
+        <div style="margin-top:12px; padding:10px; background:var(--surface); border-radius:8px;">
+          <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; font-size:11px; line-height:1.6; cursor:pointer;">
+            <input type="checkbox" id="chargeConsentRefund" style="margin-top:3px; flex-shrink:0;">
+            <span><b>(필수)</b> <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/refund.md" target="_blank" style="color:var(--accent);">환불정책</a> 확인 — 충전 후 미사용 잔액은 30일 내 청약철회 가능, 사용 분은 차감 후 환불</span>
+          </label>
+          <label style="display:flex; align-items:flex-start; gap:8px; font-size:11px; line-height:1.6; cursor:pointer;">
+            <input type="checkbox" id="chargeConsentTerms" style="margin-top:3px; flex-shrink:0;">
+            <span><b>(필수)</b> <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/terms.md" target="_blank" style="color:var(--accent);">이용약관</a> 동의 — AI 토큰 차감 방식 및 ${plan.krw.toLocaleString()}원 결제 진행</span>
+          </label>
+        </div>
+
         <button class="btn-primary" onclick="verifyTossReceipt(${plan.krw}, '${memoCode}')" style="width:100%; margin-top:8px;">✦ 자동 확인하고 충전!</button>
       </div>
 
@@ -33688,6 +34064,13 @@ function openTossApp(amountKrw, memoCode) {
 
 // 영수증 캡처 → AI 자동 인증
 async function verifyTossReceipt(amountKrw, memoCode) {
+  // 사용자 보고 2026-04-30: 전상법 §13 — 청약 직전 환불정책 + 약관 재확인 필수
+  const refundOk = document.getElementById('chargeConsentRefund')?.checked;
+  const termsOk = document.getElementById('chargeConsentTerms')?.checked;
+  if (!refundOk || !termsOk) {
+    alert('충전 진행하려면 환불정책 + 이용약관 동의 체크해야 해.');
+    return;
+  }
   const input = document.getElementById('tossReceiptInput');
   if (!input || !input.files || input.files.length === 0) {
     alert('영수증 캡처 먼저 골라줘! 📸');
@@ -33698,6 +34081,15 @@ async function verifyTossReceipt(amountKrw, memoCode) {
     alert('파일 너무 커 (5MB 이하로) 🐚');
     return;
   }
+  // 충전 시점 동의 기록 (사용자 보고 2026-04-30: 전상법 §13 청약별 동의 증빙)
+  try {
+    const now = new Date().toISOString();
+    state.preferences = state.preferences || {};
+    state.preferences.consentLog = state.preferences.consentLog || [];
+    state.preferences.consentLog.push({ type: 'charge_refund', version: '1.0', confirmed: true, at: now, amount_krw: amountKrw, memo_code: memoCode });
+    state.preferences.consentLog.push({ type: 'charge_terms',  version: '1.0', confirmed: true, at: now, amount_krw: amountKrw, memo_code: memoCode });
+    saveState();
+  } catch (e) { console.warn('charge consent log:', e); }
   showToast('🔍 한 번 볼게...');
   try {
     // Base64 변환
@@ -33963,7 +34355,16 @@ async function adminFeedbackLoad(filter) {
       headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
     });
     if (!resp.ok) {
-      body.innerHTML = `<span style="color:#e89090;">실패 (${resp.status})</span>`;
+      // 사용자 보고 2026-04-30: server diagnostic 실제 노출 — 단순 '실패 (500)' 만 보이던 거 fix.
+      let serverMsg = '';
+      try {
+        const errData = await resp.json();
+        serverMsg = errData.error || '';
+        if (errData.upstream_status) serverMsg += ` (upstream ${errData.upstream_status})`;
+        if (errData.hint) serverMsg += ` — ${errData.hint}`;
+        if (errData.upstream_body) serverMsg += `\n${(errData.upstream_body || '').slice(0, 200)}`;
+      } catch {}
+      body.innerHTML = `<div style="color:#e89090; white-space:pre-wrap; font-size:11px; padding:10px; background:rgba(220,80,80,0.05); border:1px solid rgba(220,80,80,0.30); border-radius:8px;">실패 (${resp.status})${serverMsg ? '\n\n' + escapeHtml(serverMsg) : ''}</div>`;
       return;
     }
     const data = await resp.json();
