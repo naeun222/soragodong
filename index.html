@@ -9390,17 +9390,23 @@ function _initOnbDrag() {
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
     const dx = cx - startX, dy = cy - startY;
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
-    coachmark.style.left = (baseLeft + dx) + 'px';
-    coachmark.style.top = (baseTop + dy) + 'px';
-    coachmark.style.right = 'auto';
-    coachmark.style.bottom = 'auto';
-    coachmark.style.transform = 'none';
+    // 사용자 보고 2026-04-29: above-modal 등 CSS !important 룰 이기려면 setProperty 'important'
+    coachmark.style.setProperty('left', (baseLeft + dx) + 'px', 'important');
+    coachmark.style.setProperty('top', (baseTop + dy) + 'px', 'important');
+    coachmark.style.setProperty('right', 'auto', 'important');
+    coachmark.style.setProperty('bottom', 'auto', 'important');
+    coachmark.style.setProperty('transform', 'none', 'important');
     if (e.cancelable) e.preventDefault();
   };
   const onEnd = () => {
     if (!dragging) return;
     dragging = false;
     coachmark.classList.remove('dragging');
+    // 사용자 보고 2026-04-29: 드래그 끝나도 위치 유지 (.dragging 클래스 제거 후 CSS !important 안 돌아오게 inline !important 유지)
+    // moved=false (그냥 클릭) 면 inline 스타일 제거해 원래 위치 복귀
+    if (!moved) {
+      ['left', 'top', 'right', 'bottom', 'transform'].forEach(p => coachmark.style.removeProperty(p));
+    }
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('touchmove', onMove);
     document.removeEventListener('mouseup', onEnd);
@@ -26353,11 +26359,41 @@ function _buildShellsCollectedSlideHTML(stats, inRange, startMs, endMs) {
   // 가장 빛난 등급 (legend > call > golden > main > daily > light 순으로 첫 0 아닌)
   const topTier = TIER_INFO.find(t => counts[t.tier] > 0);
 
+  // 사용자 요청 2026-04-29: 대표 소라 아이콘들 (각 티어당 1-2개, 상위 티어 우선) 6-7개
+  const representativeShells = [];
+  const TIER_PRIORITY = ['legend', 'call', 'golden', 'main', 'daily', 'light'];
+  TIER_PRIORITY.forEach(tier => {
+    const found = inRangeShells.find(s => (s.tier || 'light') === tier);
+    if (found) representativeShells.push(found);
+  });
+  if (representativeShells.length < 7) {
+    for (const tier of TIER_PRIORITY) {
+      const more = inRangeShells.filter(s => (s.tier || 'light') === tier).slice(1, 4);
+      for (const s of more) {
+        if (representativeShells.length >= 7) break;
+        representativeShells.push(s);
+      }
+      if (representativeShells.length >= 7) break;
+    }
+  }
+  const tierColorMap = {
+    legend: '#ffd93d', call: '#ff8da1', golden: '#ffb86b',
+    main: '#ffb86b', daily: '#7ec8e3', light: '#a89dc8'
+  };
+
   return `
     <div class="stories-label">모은 소라</div>
-    <div class="stories-title" style="margin-bottom:6px;">🐚 한 분기 동안</div>
-    <div style="margin:18px auto 24px;">
-      <div style="font-size:48px; color:#d4a76a; font-weight:700; line-height:1;">${total}</div>
+    <div class="stories-title" style="margin-bottom:18px;">🐚 한 분기 동안</div>
+
+    <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:0 auto 22px; max-width:300px;">
+      ${representativeShells.map(s => {
+        const tc = tierColorMap[s.tier || 'light'];
+        return `<div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 30% 30%, ${tc}33, ${tc}10); border:1.5px solid ${tc}80; border-radius:50%; font-size:22px; box-shadow:0 0 12px ${tc}30;">${s.type}</div>`;
+      }).join('')}
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <div style="font-size:42px; color:#d4a76a; font-weight:700; line-height:1;">${total}</div>
       <div style="font-size:11px; color:rgba(255,255,255,0.55); margin-top:6px;">개의 소라</div>
     </div>
 
