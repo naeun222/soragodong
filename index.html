@@ -8197,6 +8197,202 @@ function getServerNowMs() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// E2EE (Stage 2) — 사용자 요청 2026-04-30
+// 사용자도 / 회사도 평문 못 보게. WebCrypto AES-256-GCM + PBKDF2.
+// 마스터 키: localStorage에 평문 저장 (device 도난 시 사용자 책임).
+// passphrase: 256-단어 wordlist × 12 = 96-bit entropy. 사용자 분실 시 cloud 복호화 X.
+// ═══════════════════════════════════════════════════════════════
+
+// 활성 토글 — 마이그레이션 + UI 박힌 후 true. 현재는 비활성 (saveState/loadState wrapper 박혀도 우회).
+let _e2eeEnabled = false;
+let _e2eeMasterKey = null;  // CryptoKey object (메모리만)
+const _E2EE_LOCAL_KEY = 'soragodong_v4_e2ee_mk';
+const _E2EE_VERSION = '1';
+
+// 256-단어 wordlist (간단 + 한국어 친화). BIP39 표준 X but use case OK.
+// 각 단어 짧고 명확 (3-5음절). 12-word 조합 = 256^12 = 2^96 entropy.
+const E2EE_WORDLIST = [
+  '가족','가위','감자','강물','거울','걸음','계절','고래','고양이','고요','구름','국화','귤','그림','그늘','금색',
+  '기억','기차','길','꽃','꿀','나무','나비','나침반','난로','날개','노래','노을','녹차','놀이','눈송이','눈물',
+  '느낌','늑대','달빛','달팽이','담요','당근','대나무','도서관','도토리','독수리','돌멩이','동굴','두루미','등대','땅콩','땅속',
+  '뜨개','라일락','로켓','마음','마을','만년필','말','맥주','메모','면도','명상','모래','모자','목련','무지개','문구',
+  '물고기','물길','물방울','미소','민들레','바구니','바다','바람','바위','반딧불','반지','밤하늘','별','보석','보름달','보리',
+  '복숭아','봉투','부엉이','북극','분필','불꽃','붓','비단','비누','비밀','뿌리','사과','사탕','산','산호','상자',
+  '새벽','새우','샛별','생각','생일','석양','선물','섬','성냥','세월','소나기','소녀','소년','소라','소망','소파',
+  '손길','솔잎','수박','수선화','수정','숲','쉼','스카프','시계','시냇물','시인','신발','심장','쌀','쌍둥이','아기',
+  '아침','안개','앵두','약속','어린이','어머니','얼음','연못','연필','열매','오렌지','오로라','오솔길','오월','오후','옥수수',
+  '온천','올빼미','외투','우물','우산','우유','운명','웃음','월계수','유리','은하수','음악','이끼','이슬','인사','잎새',
+  '자갈','자수','자작','잠자리','장미','장미수','재즈','저녁','저울','전등','전지','정원','젤리','종이','종소리','주머니',
+  '주전자','지도','지붕','지팡이','진주','집','짚','참새','책','책방','천둥','첫눈','체리','초롱','초승달','초콜릿',
+  '추억','축하','축제','출발','춤','치즈','치자','친구','침묵','카카오','커튼','커피','컵','코끼리','코스모스','콩',
+  '큰바위','클로버','키위','타래','탁자','터널','토끼','토마토','튤립','파도','파랑','파인애플','팥','편지','평화','포도',
+  '포옹','폭포','폭풍','풀숲','풍경','풍선','피아노','하늘','하루','하트','한라','함박','항구','해바라기','해변','해질녘',
+  '향기','허공','헌책','호두','호박','호수','홍차','화로','화살','황혼','회오리','후추','휘파람','흙','희망','히아신스'
+];
+
+// === 핵심 헬퍼 ===
+
+// 256-bit random 마스터 키 생성 (CryptoKey)
+async function _e2eeGenerateMasterKey() {
+  return await crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true,  // extractable (passphrase 암호화 / device 이전 위해)
+    ['encrypt', 'decrypt']
+  );
+}
+
+// CryptoKey → base64 raw bytes
+async function _e2eeExportKey(key) {
+  const raw = await crypto.subtle.exportKey('raw', key);
+  return _b64encode(new Uint8Array(raw));
+}
+
+// base64 → CryptoKey
+async function _e2eeImportKey(b64) {
+  const raw = _b64decode(b64);
+  return await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+}
+
+// passphrase (12-word) → 256-bit key (PBKDF2)
+async function _e2eePassphraseToKey(passphrase, saltB64) {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    'raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']
+  );
+  return await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: _b64decode(saltB64),
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  );
+}
+
+// 12-word passphrase 생성 (256-단어 wordlist)
+function _e2eeGeneratePassphrase() {
+  const words = [];
+  const buf = new Uint8Array(12);
+  crypto.getRandomValues(buf);
+  for (let i = 0; i < 12; i++) {
+    words.push(E2EE_WORDLIST[buf[i] % E2EE_WORDLIST.length]);
+  }
+  return words.join(' ');
+}
+
+// 평문 → 암호문 (객체 형태: {iv, data})
+async function _e2eeEncrypt(plaintext, key) {
+  if (plaintext == null) return null;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder();
+  const data = enc.encode(typeof plaintext === 'string' ? plaintext : JSON.stringify(plaintext));
+  const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+  return {
+    _e2ee: _E2EE_VERSION,
+    iv: _b64encode(iv),
+    data: _b64encode(new Uint8Array(cipher))
+  };
+}
+
+// 암호문 → 평문 (string)
+async function _e2eeDecrypt(cipher, key) {
+  if (!cipher || typeof cipher !== 'object' || !cipher._e2ee) return cipher;
+  try {
+    const iv = _b64decode(cipher.iv);
+    const data = _b64decode(cipher.data);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+    const dec = new TextDecoder();
+    return dec.decode(plain);
+  } catch (e) {
+    console.warn('[e2ee] decrypt 실패:', e);
+    return null;
+  }
+}
+
+// base64 인코딩/디코딩 헬퍼
+function _b64encode(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+function _b64decode(b64) {
+  const s = atob(b64);
+  const bytes = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
+  return bytes;
+}
+
+// 마스터 키 init — localStorage 있으면 import, 없으면 X (가입 흐름에서 생성).
+async function _e2eeInitMasterKey() {
+  if (_e2eeMasterKey) return _e2eeMasterKey;
+  try {
+    const raw = localStorage.getItem(_E2EE_LOCAL_KEY);
+    if (!raw) return null;
+    _e2eeMasterKey = await _e2eeImportKey(raw);
+    return _e2eeMasterKey;
+  } catch (e) {
+    console.warn('[e2ee] master key init 실패:', e);
+    return null;
+  }
+}
+
+// 새 마스터 키 + passphrase 생성 → localStorage 저장 + cloud에 passphrase로 암호화 마스터 키 저장.
+// 가입 흐름에서 호출. 사용자에게 passphrase 표시 모달.
+async function _e2eeSetupNewUser() {
+  const masterKey = await _e2eeGenerateMasterKey();
+  const passphrase = _e2eeGeneratePassphrase();
+  const masterKeyB64 = await _e2eeExportKey(masterKey);
+
+  // localStorage에 마스터 키
+  try {
+    localStorage.setItem(_E2EE_LOCAL_KEY, masterKeyB64);
+  } catch (e) { console.warn('[e2ee] localStorage 저장 실패:', e); }
+
+  // passphrase로 마스터 키 암호화 → cloud 저장 (Supabase soragodong_e2ee_recovery 테이블 향후 박힘. 일단 localStorage backup)
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const saltB64 = _b64encode(salt);
+  const passphraseKey = await _e2eePassphraseToKey(passphrase, saltB64);
+  const encryptedMasterKey = await _e2eeEncrypt(masterKeyB64, passphraseKey);
+
+  // 메모리에 active key 박힘
+  _e2eeMasterKey = masterKey;
+
+  // 향후: cloud Supabase에 박힘. 일단 localStorage backup
+  try {
+    localStorage.setItem('soragodong_v4_e2ee_recovery', JSON.stringify({
+      salt: saltB64,
+      encryptedMasterKey,
+      version: _E2EE_VERSION
+    }));
+  } catch (e) {}
+
+  return { passphrase, masterKey, salt: saltB64, encryptedMasterKey };
+}
+
+// passphrase 입력 → cloud 복호화 → 마스터 키 복원 (새 device 진입 시).
+async function _e2eeRestoreFromPassphrase(passphrase) {
+  // 일단 localStorage backup에서 복원. 향후 cloud Supabase로.
+  try {
+    const recovery = JSON.parse(localStorage.getItem('soragodong_v4_e2ee_recovery') || 'null');
+    if (!recovery) return null;
+    const passphraseKey = await _e2eePassphraseToKey(passphrase, recovery.salt);
+    const masterKeyB64 = await _e2eeDecrypt(recovery.encryptedMasterKey, passphraseKey);
+    if (!masterKeyB64) throw new Error('passphrase 일치 X');
+    const masterKey = await _e2eeImportKey(masterKeyB64);
+    _e2eeMasterKey = masterKey;
+    localStorage.setItem(_E2EE_LOCAL_KEY, masterKeyB64);
+    return masterKey;
+  } catch (e) {
+    console.warn('[e2ee] passphrase 복원 실패:', e);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // SUPABASE
 // ═══════════════════════════════════════════════════════════════
 async function loadFromCloud() {
