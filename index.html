@@ -9098,26 +9098,39 @@ async function generateFirstTouchAnalysis(answers) {
 
 [목표]
 - 한 단어 정체성 명명 (정형 X — 사용자 답변 기반 고유)
-- 가설 3개 (사용자가 ✓로 검증 가능 — 단정 X 추측, 물음표 OK)
+- 가설 3개 — trait / value / pattern 중 적절한 카테고리로 분류 (기존 자기관찰 모델 schema 매칭)
 - 다음 1주 관찰 거리 2개 (구체, observable)
 - 한 줄 친근 인사 + 첫 인상 (40자 이내)
 
+[가설 schema 가이드]
+- trait (특성): "꼼꼼한 편", "예민한 감각" 같은 짧은 명사구. name (10자 이내) + description (한 문장 설명).
+- value (가치): "성장", "관계", "자율" 같은 한 단어. name (5자 이내) + description (한 문장).
+- pattern (패턴): "X 상황 → Y 행동 → Z 결과" 시퀀스. name (10자 이내 라벨) + trigger (조건) + sequence (행동 흐름).
+- display_text: 사용자한테 ✓ 박스에 보일 친근한 한 줄. 자연스러운 한국어 (예: "꼼꼼한 편인 거 같아", "관계가 너한테 중요해 보여").
+
 [톤]
-친한 친구. 반말. 상담사 X. judgment X. self-compassion (Neff).
+친한 친구 반말. 상담사 X. judgment X. self-compassion.
 Surprise > Truth — '어, 어떻게 알았어?' 트리거.
-Specific > Generic. 사용자 답변 인용 / 구체.
+Specific > Generic.
 
 [출력 JSON]
 {
-  "one_word": "한 단어 정체성 (예: '관찰자', '협상자', '잠수부', '탐험가', '분주한 발명가')",
-  "intro_line": "한 줄 친근 인사 + 첫 인상 (40자 이내, 사용자 답변 reflect)",
+  "one_word": "한 단어 정체성",
+  "intro_line": "한 줄 친근 인사 + 첫 인상 (40자 이내)",
   "hypotheses": [
-    "추측 1 (사용자 답변 reflect, ?로 끝나도 OK)",
-    "추측 2",
-    "추측 3"
+    {
+      "category": "trait" | "value" | "pattern",
+      "name": "표준 이름 (짧게)",
+      "description": "한 문장 설명 (trait/value 용, pattern이면 null OK)",
+      "trigger": "조건 (pattern 용, 그 외 null)",
+      "sequence": "행동 흐름 (pattern 용, 그 외 null)",
+      "confidence": 0.4-0.6,
+      "display_text": "사용자에게 ✓ 박스에서 보일 친근한 한 줄"
+    },
+    ...3개
   ],
   "watch_points": [
-    "다음 1주 관찰 거리 1 (구체, observable, 일기/대화로 확인 가능)",
+    "다음 1주 관찰 거리 1 (구체, observable)",
     "다음 1주 관찰 거리 2"
   ]
 }
@@ -9143,14 +9156,21 @@ function showFirstTouchResult(insight) {
   overlay.className = 'input-modal-overlay show';
   overlay.id = 'firstTouchResultOverlay';
   overlay.style.zIndex = '10001';
-  const hypothesesHtml = (insight.hypotheses || []).map((h, i) => `
-    <div class="ft-hypothesis">
-      <label>
-        <input type="checkbox" id="ftHyp${i}" data-hyp="${escapeHtml(h)}">
-        <span>${escapeHtml(h)}</span>
-      </label>
-    </div>
-  `).join('');
+  const hypothesesHtml = (insight.hypotheses || []).map((h, i) => {
+    // 새 schema: { category, name, description, trigger, sequence, display_text, confidence }
+    // 옛 schema: 그냥 string (backward compat)
+    const displayText = (typeof h === 'string') ? h : (h.display_text || h.name || '');
+    const catLabel = (typeof h === 'object' && h.category) ?
+      `<span style="font-size:9px; color:var(--text-soft); letter-spacing:0.1em; text-transform:uppercase; margin-right:6px;">${h.category === 'trait' ? '특성' : h.category === 'value' ? '가치' : '패턴'}</span>` : '';
+    return `
+      <div class="ft-hypothesis">
+        <label>
+          <input type="checkbox" id="ftHyp${i}" data-idx="${i}">
+          <span>${catLabel}${escapeHtml(displayText)}</span>
+        </label>
+      </div>
+    `;
+  }).join('');
   const watchPointsHtml = (insight.watch_points || []).map(w => `
     <div class="ft-watch">· ${escapeHtml(w)}</div>
   `).join('');
@@ -9178,20 +9198,34 @@ function showFirstTouchResult(insight) {
 }
 
 function closeFirstTouchResult() {
-  // ✓한 가설 → traits/patterns에 unverified 박기
+  // ✓한 가설 → 카테고리별 (traits/values/patterns) 표준 schema 박기 — 기존 분석 흐름과 동일
   const checked = [...document.querySelectorAll('#firstTouchResultOverlay input[type="checkbox"]:checked')];
-  if (checked.length > 0) {
-    if (!Array.isArray(state.patterns)) state.patterns = [];
+  if (checked.length > 0 && state.firstTouchInsight && Array.isArray(state.firstTouchInsight.hypotheses)) {
     if (!Array.isArray(state.traits)) state.traits = [];
+    if (!Array.isArray(state.values)) state.values = [];
+    if (!Array.isArray(state.patterns)) state.patterns = [];
+    const nowIso = new Date().toISOString();
     for (const cb of checked) {
-      const text = cb.dataset.hyp;
-      if (!text) continue;
-      // 짧으면 trait, 길면 pattern (heuristic)
+      const idx = parseInt(cb.dataset.idx, 10);
+      const hyp = state.firstTouchInsight.hypotheses[idx];
+      if (!hyp) continue;
       const id = 'ft_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-      if (text.length < 25) {
-        state.traits.push({ id, name: text, source: 'first_touch', verified: false, addedAt: new Date().toISOString() });
+      const conf = typeof hyp.confidence === 'number' ? hyp.confidence : 0.5;
+      // 옛 schema (string) 호환 — trait로 폴백
+      if (typeof hyp === 'string') {
+        state.traits.push({ id, name: hyp.slice(0, 20), description: hyp, confidence: conf, source: 'first_touch', user_verified: false, addedAt: nowIso });
+        continue;
+      }
+      const cat = hyp.category;
+      if (cat === 'trait') {
+        state.traits.push({ id, name: hyp.name || '', description: hyp.description || hyp.display_text || '', confidence: conf, source: 'first_touch', user_verified: false, addedAt: nowIso });
+      } else if (cat === 'value') {
+        state.values.push({ id, name: hyp.name || '', description: hyp.description || hyp.display_text || '', confidence: conf, source: 'first_touch', user_verified: false, addedAt: nowIso });
+      } else if (cat === 'pattern') {
+        state.patterns.push({ id, name: hyp.name || '', trigger: hyp.trigger || '', sequence: hyp.sequence || hyp.display_text || '', confidence: conf, source: 'first_touch', user_verified: false, addedAt: nowIso });
       } else {
-        state.patterns.push({ id, name: text, source: 'first_touch', verified: false, addedAt: new Date().toISOString() });
+        // 카테고리 없거나 알 수 없으면 trait로 폴백
+        state.traits.push({ id, name: hyp.name || (hyp.display_text || '').slice(0, 20), description: hyp.display_text || '', confidence: conf, source: 'first_touch', user_verified: false, addedAt: nowIso });
       }
     }
   }
@@ -18366,11 +18400,10 @@ function renderMoreSection(category, more, draft) {
   if (draft.length > 0) {
     html += `
       <details class="model-collapse model-draft">
-        <summary>🔍 보이는 패턴 (${draft.length}개)</summary>
+        <summary>📝 초안 (${draft.length}개) — 아직 확신 안 가는 가설</summary>
         <div class="model-collapse-content">
           <div style="font-size:11px; color:var(--text-soft); margin-bottom:10px; line-height:1.6;">
-            너에 대한 새로운 가설이 보여. 맞으면 ✓, 아니면 ✗로 알려줘.<br>
-            증거 더 쌓이면 위로 올라가.
+            증거 더 쌓이면 위로 올라가. 아니면 알려줘.
           </div>
     `;
     draft.forEach(item => {
