@@ -7778,6 +7778,12 @@ const DEFAULT_STATE = {
   diagnoses: [],            // V4 비전 9.5 진단 5종: [{id, type, confidence, evidence, detectedAt, status:'active'|'shown'|'dismissed'}]
   quarterlyReviews: [],     // V4 비전 7.9 분기 리뷰: [{id, quarterKey:'2026-Q2', completedAt, summary, sections, stats, auto, deepDive}]
   lastForceAnalyzeAt: null, // 사용자 요청 2026-04-30: forceAnalyze 일주일 자동화 — 마지막 실행 시각.
+  // 사용자 요청 2026-04-30: 자동 분석 4단계 (매일/매주/매월/매분기/매년 새벽 4시 cutoff).
+  lastDailyChapterExtractAt: null,    // 매일 4AM
+  lastWeeklyAnalyzeAt: null,           // 매주 일요일 4AM
+  lastMonthlyAnalyzeAt: null,          // 매월 1일 4AM
+  lastQuarterlyAnalyzeAt: null,        // 매분기 첫째달 1일 4AM
+  lastYearlyAnalyzeAt: null,           // 매년 1월 1일 4AM
   // 사용자 요청 2026-04-30: 메인 chat 일일 메시지 cap (비용 폭발 방지). 4시 cutoff 기준 reset.
   dailyChatCount: { date: null, count: 0 },
 
@@ -8905,9 +8911,22 @@ async function init() {
     setTimeout(() => { runAutoBackupIfNeeded().catch(e => console.warn('autoBackup:', e)); }, 3000);
   }
 
-  // 사용자 요청 2026-04-30: 일주일 자동 forceAnalyze — background, fire-and-forget. 5초 후 실행 (앱 진입 부담 회피).
+  // 사용자 요청 2026-04-30: 자동 분석 4단계 — 새벽 4시 cutoff 기반 background trigger.
+  // 매일 (4초) → 매주 일요일 (5초) → 매월 1일 (6초) → 매분기 (7초) → 매년 1/1 (8초).
+  if (typeof maybeRunDailyChapterExtract === 'function') {
+    setTimeout(() => { maybeRunDailyChapterExtract().catch(e => console.warn('dailyChapterExtract:', e)); }, 4000);
+  }
   if (typeof maybeRunWeeklyForceAnalyze === 'function') {
     setTimeout(() => { maybeRunWeeklyForceAnalyze().catch(e => console.warn('weeklyForceAnalyze:', e)); }, 5000);
+  }
+  if (typeof maybeRunMonthlyAnalyze === 'function') {
+    setTimeout(() => { maybeRunMonthlyAnalyze().catch(e => console.warn('monthlyAnalyze:', e)); }, 6000);
+  }
+  if (typeof maybeRunQuarterlyAnalyze === 'function') {
+    setTimeout(() => { maybeRunQuarterlyAnalyze().catch(e => console.warn('quarterlyAnalyze:', e)); }, 7000);
+  }
+  if (typeof maybeRunYearlyAnalyze === 'function') {
+    setTimeout(() => { maybeRunYearlyAnalyze().catch(e => console.warn('yearlyAnalyze:', e)); }, 8000);
   }
 
   applyNightMode();
@@ -17412,22 +17431,11 @@ async function endChapter() {
   });
   if (!yes) return;
 
-  // 1. 토픽 카드 추출 (마지막 메시지에 chapterStart 마커)
+  // 1. 마지막 메시지에 chapterStart 마커 박음. 추출 LLM call X — 매일 새벽 4시 통합 추출.
+  // 사용자 요청 2026-04-30: 챕터 마무리할 때마다 추출 X → 누적 → 매일 4AM maybeRunDailyChapterExtract에서 통합.
   const lastMsg = validMsgs[validMsgs.length - 1];
   if (!lastMsg.chapterStart) lastMsg.chapterStart = true;
   saveState();
-  try {
-    await extractPreviousChapterTopics();
-  } catch (e) {
-    console.warn('topic extract failed:', e);
-  }
-  // 사용자 요청 2026-04-30: 매 메시지 자동 추출 → 챕터 시점만. 이전 챕터 메시지 통째로 보내 모델 추출.
-  // background, fail silent. 사용자 흐름 방해 X.
-  try {
-    extractChapterCaseAnalysis(validMsgs.slice()).catch(() => {});
-  } catch (e) {
-    console.warn('chapter case extract failed:', e);
-  }
 
   // 2. summary — API 안 씀 (사용자 요청 2026-04-27). 순번 라벨만.
   if (!Array.isArray(state.chatArchive)) state.chatArchive = [];
@@ -31295,24 +31303,147 @@ JSON으로 출력:
   }
 }
 
-// 사용자 요청 2026-04-30: 일주일 자동 forceAnalyze. 마지막 실행 7일 경과 + 데이터 충분 시 background 실행.
-async function maybeRunWeeklyForceAnalyze() {
-  if (!authUserId) return;
-  if (!state.apiKey) return;
-  if (window._onbTutorialMode) return;
+// 사용자 요청 2026-04-30: 자동 분석 4단계 — 새벽 4시 cutoff 기반 트리거.
+// 매일 / 매주 일요일 / 매월 1일 / 매분기 첫째달 1일 / 매년 1/1.
+
+// 직전 매일 새벽 4시 cutoff (오늘 4AM 또는 어제 4AM)
+function _lastDaily4amCutoff() {
+  const now = new Date();
+  const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 4, 0, 0, 0);
+  if (cutoff > now) cutoff.setDate(cutoff.getDate() - 1);
+  return cutoff;
+}
+// 직전 일요일 4AM
+function _lastWeekly4amCutoff() {
+  const now = new Date();
+  const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 4, 0, 0, 0);
+  // 오늘 4AM 이후 + 일요일이면 today, 그 외엔 직전 일요일
+  if (cutoff > now) cutoff.setDate(cutoff.getDate() - 1);
+  while (cutoff.getDay() !== 0) cutoff.setDate(cutoff.getDate() - 1);
+  return cutoff;
+}
+// 직전 월 1일 4AM
+function _lastMonthly4amCutoff() {
+  const now = new Date();
+  let cutoff = new Date(now.getFullYear(), now.getMonth(), 1, 4, 0, 0, 0);
+  if (cutoff > now) cutoff = new Date(now.getFullYear(), now.getMonth() - 1, 1, 4, 0, 0, 0);
+  return cutoff;
+}
+// 직전 분기 첫째달 1일 4AM (1/4/7/10월)
+function _lastQuarterly4amCutoff() {
+  const now = new Date();
+  const qStart = Math.floor(now.getMonth() / 3) * 3;
+  let cutoff = new Date(now.getFullYear(), qStart, 1, 4, 0, 0, 0);
+  if (cutoff > now) cutoff = new Date(now.getFullYear(), qStart - 3, 1, 4, 0, 0, 0);
+  return cutoff;
+}
+// 직전 1/1 4AM
+function _lastYearly4amCutoff() {
+  const now = new Date();
+  let cutoff = new Date(now.getFullYear(), 0, 1, 4, 0, 0, 0);
+  if (cutoff > now) cutoff = new Date(now.getFullYear() - 1, 0, 1, 4, 0, 0, 0);
+  return cutoff;
+}
+
+function _shouldRunSchedule(lastAt, cutoff) {
+  if (!lastAt) return true;
+  return new Date(lastAt) < cutoff;
+}
+
+// 매일 챕터 추출 — 어제 누적된 챕터들 1번 통합 추출.
+async function maybeRunDailyChapterExtract() {
+  if (!authUserId || window._onbTutorialMode) return;
   if (state.preferences && state.preferences.testerMode) return;
-  const last = state.lastForceAnalyzeAt;
-  if (last) {
-    const ageMs = Date.now() - new Date(last).getTime();
-    if (ageMs < 7 * 86400000) return;  // 7일 미만이면 skip
+  if (!_shouldRunSchedule(state.lastDailyChapterExtractAt, _lastDaily4amCutoff())) return;
+  // 데이터 충분 — 최근 24시간 내 챕터 메시지 ≥3
+  const cutoffMs = Date.now() - 86400000;
+  const recentMsgs = (state.chatMessages || []).filter(m => m.timestamp && new Date(m.timestamp).getTime() > cutoffMs);
+  if (recentMsgs.length < 3) {
+    state.lastDailyChapterExtractAt = new Date().toISOString();
+    saveState();
+    return;
   }
-  // 데이터 충분 가드 (forceAnalyze 자체와 동일)
+  console.log('[daily chapter extract] 새벽 4시 경과 — background 실행');
+  try {
+    await extractChapterCaseAnalysis(recentMsgs.slice());
+    if (typeof extractPreviousChapterTopics === 'function') {
+      // chapterStart 마커 있는 직전 챕터만 — 단순화
+      try { await extractPreviousChapterTopics(); } catch {}
+    }
+    state.lastDailyChapterExtractAt = new Date().toISOString();
+    saveState();
+  } catch (e) {
+    console.warn('[daily chapter extract] 실패:', e);
+  }
+}
+
+// 매주 일요일 4AM forceAnalyze (이전 maybeRunWeeklyForceAnalyze 대체).
+async function maybeRunWeeklyForceAnalyze() {
+  if (!authUserId || window._onbTutorialMode) return;
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (!_shouldRunSchedule(state.lastWeeklyAnalyzeAt, _lastWeekly4amCutoff())) return;
   if ((state.entries || []).length < 3 && (state.chatMessages || []).length < 3) return;
-  console.log('[force analyze] 일주일 경과 — background 자동 실행');
+  console.log('[weekly analyze] 일요일 4시 경과 — background 실행');
   try {
     await forceAnalyze({ auto: true });
+    state.lastWeeklyAnalyzeAt = new Date().toISOString();
+    // 하위호환 — lastForceAnalyzeAt도 갱신 (기존 코드 의존)
+    state.lastForceAnalyzeAt = state.lastWeeklyAnalyzeAt;
+    saveState();
   } catch (e) {
-    console.warn('[force analyze auto] 외부 실패:', e);
+    console.warn('[weekly analyze] 실패:', e);
+  }
+}
+
+// 매월 1일 4AM — 한 달 통합 분석 (forceAnalyze 같은 흐름, lastMonthlyAnalyzeAt만 별도 추적).
+async function maybeRunMonthlyAnalyze() {
+  if (!authUserId || window._onbTutorialMode) return;
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (!_shouldRunSchedule(state.lastMonthlyAnalyzeAt, _lastMonthly4amCutoff())) return;
+  if ((state.entries || []).length < 5) return;
+  console.log('[monthly analyze] 매월 1일 4시 경과 — background 실행');
+  try {
+    await forceAnalyze({ auto: true });
+    state.lastMonthlyAnalyzeAt = new Date().toISOString();
+    saveState();
+  } catch (e) {
+    console.warn('[monthly analyze] 실패:', e);
+  }
+}
+
+// 매분기 첫째달 1일 4AM
+async function maybeRunQuarterlyAnalyze() {
+  if (!authUserId || window._onbTutorialMode) return;
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (!_shouldRunSchedule(state.lastQuarterlyAnalyzeAt, _lastQuarterly4amCutoff())) return;
+  if ((state.entries || []).length < 10) return;
+  console.log('[quarterly analyze] 분기 첫 날 4시 경과 — background 실행');
+  try {
+    await forceAnalyze({ auto: true });
+    state.lastQuarterlyAnalyzeAt = new Date().toISOString();
+    saveState();
+  } catch (e) {
+    console.warn('[quarterly analyze] 실패:', e);
+  }
+}
+
+// 매년 1/1 4AM
+async function maybeRunYearlyAnalyze() {
+  if (!authUserId || window._onbTutorialMode) return;
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (!_shouldRunSchedule(state.lastYearlyAnalyzeAt, _lastYearly4amCutoff())) return;
+  if ((state.entries || []).length < 30) return;
+  console.log('[yearly analyze] 1/1 4시 경과 — background 실행');
+  try {
+    await forceAnalyze({ auto: true });
+    state.lastYearlyAnalyzeAt = new Date().toISOString();
+    saveState();
+  } catch (e) {
+    console.warn('[yearly analyze] 실패:', e);
   }
 }
 
