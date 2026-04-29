@@ -393,6 +393,12 @@
     padding: 14px 16px;
     margin-bottom: 10px;
   }
+  /* 사용자 요청 2026-04-29: 핀 꽂힌 chatArchive 항목 강조 */
+  .chat-archive-card.pinned {
+    background: linear-gradient(135deg, rgba(212,167,106,0.10), rgba(212,167,106,0.04));
+    border-color: rgba(212,167,106,0.40);
+  }
+  .cac-pin-btn:active { transform: scale(0.92); }
   .cac-header {
     display: flex;
     justify-content: space-between;
@@ -14985,16 +14991,32 @@ async function endChapter() {
 }
 
 // V4-fix: chatArchive 7일 cap (잠깐 보관용)
+// 사용자 요청 2026-04-29: pinned=true 항목은 영구 보관 (7일 cap 무시)
 function pruneOldChatArchive() {
   if (!Array.isArray(state.chatArchive)) return;
   const cutoff = Date.now() - 7 * 86400000;
   const before = state.chatArchive.length;
   state.chatArchive = state.chatArchive.filter(a => {
+    if (!a) return false;
+    if (a.pinned) return true;  // 핀 꽂힌 거 영구 보관
     if (!a.date) return false;
     const t = new Date(a.date + 'T12:00:00').getTime();
     return t >= cutoff;
   });
   if (state.chatArchive.length < before) saveState();
+}
+
+// 사용자 요청 2026-04-29: chatArchive 항목 핀 토글 — 영구 보관 / 7일 cap 복귀
+function toggleArchivePin(date) {
+  if (!Array.isArray(state.chatArchive)) return;
+  const item = state.chatArchive.find(a => a && a.date === date);
+  if (!item) return;
+  item.pinned = !item.pinned;
+  saveState();
+  if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
+  if (typeof showToast === 'function') {
+    showToast(item.pinned ? '📌 영구 보관됨 — 7일 자동 삭제 안 돼' : '📌 핀 풀림 — 7일 cap 다시 적용');
+  }
 }
 
 async function showDiaryTemplates() {
@@ -15843,27 +15865,42 @@ function buildSystemPromptParts() {
   stable.push('\n━━━━━━━━━━━━━━━━━━━━━\n📂 사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
   if (state.profile) stable.push(`[사용자 프로필]\n${state.profile}\n`);
 
-  if (state.values.length > 0) {
+  // 사용자 요청 2026-04-29 (perf #5): 시스템 프롬프트 cap — 매우 많을 때 verified 우선 + 최대 30개 (확신도 높은 순)
+  const _topByConfVerified = (arr, max) => {
+    if (!Array.isArray(arr)) return [];
+    return arr.slice().sort((a, b) => {
+      const av = a.user_verified ? 1 : 0;
+      const bv = b.user_verified ? 1 : 0;
+      if (av !== bv) return bv - av;
+      return (b.confidence || 0) - (a.confidence || 0);
+    }).slice(0, max);
+  };
+  const _vals = _topByConfVerified(state.values, 30);
+  if (_vals.length > 0) {
     stable.push('[중시하는 가치]');
-    state.values.forEach(v => stable.push(`- ${v.user_verified ? '✓' : '?'} ${v.name}${v.description ? ': ' + v.description : ''}`));
+    _vals.forEach(v => stable.push(`- ${v.user_verified ? '✓' : '?'} ${v.name}${v.description ? ': ' + v.description : ''}`));
     stable.push('');
   }
-  if (state.traits.length > 0) {
+  const _trts = _topByConfVerified(state.traits, 30);
+  if (_trts.length > 0) {
     stable.push('[특성]');
-    state.traits.forEach(t => stable.push(`- ${t.user_verified ? '✓' : '?'} ${t.name}${t.description ? ': ' + t.description : ''}`));
+    _trts.forEach(t => stable.push(`- ${t.user_verified ? '✓' : '?'} ${t.name}${t.description ? ': ' + t.description : ''}`));
     stable.push('');
   }
-  if (state.patterns.length > 0) {
+  const _ptns = _topByConfVerified(state.patterns, 30);
+  if (_ptns.length > 0) {
     stable.push('[관찰된 패턴]');
-    state.patterns.forEach(p => stable.push(`- ${p.user_verified ? '✓' : '?'} ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`));
+    _ptns.forEach(p => stable.push(`- ${p.user_verified ? '✓' : '?'} ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`));
     stable.push('');
   }
   if (state.caseFormulation.version > 0) {
     const cf = state.caseFormulation;
     stable.push(`[Case Formulation v.${cf.version}]`);
-    if (cf.problems.length) stable.push('문제: ' + cf.problems.join('; '));
-    if (cf.mechanisms.length) stable.push('메커니즘: ' + cf.mechanisms.join('; '));
-    if (cf.strengths.length) stable.push('강점: ' + cf.strengths.join('; '));
+    // 사용자 요청 2026-04-29 (perf #5): cf 문자열 array는 너무 길면 슬라이스
+    const _cfTrunc = (arr) => arr.map(s => typeof s === 'string' ? s.slice(0, 120) : (s && s.text ? s.text.slice(0, 120) : '')).filter(Boolean).join('; ');
+    if (cf.problems.length) stable.push('문제: ' + _cfTrunc(cf.problems));
+    if (cf.mechanisms.length) stable.push('메커니즘: ' + _cfTrunc(cf.mechanisms));
+    if (cf.strengths.length) stable.push('강점: ' + _cfTrunc(cf.strengths));
     stable.push('');
   }
 
@@ -16003,7 +16040,8 @@ function buildSystemPromptParts() {
 
   if (state.archive.length > 0) {
     volatile.push('[과거 깨달음 (최근 5개)]');
-    state.archive.slice(0, 5).forEach(a => volatile.push(`- ${a.date}: ${a.insight}`));
+    // 사용자 요청 2026-04-29 (perf #5): insight 길면 자름 (180자)
+    state.archive.slice(0, 5).forEach(a => volatile.push(`- ${a.date}: ${(a.insight || '').slice(0, 180)}`));
   }
 
   // Mission state
@@ -20345,24 +20383,34 @@ function renderChatArchiveModal() {
     container.innerHTML = `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
       <div style="font-size:32px; margin-bottom:12px;">📚</div>
       아직 보관된 대화가 없어.<br>
-      7일 넘은 대화가 자동으로 여기 모일 거야.
+      7일 넘은 대화가 자동으로 여기 모일 거야.<br>
+      <span style="font-size:11px; opacity:0.8;">📌 핀 꽂으면 영구 보관됨.</span>
     </div>`;
     return;
   }
-  
-  container.innerHTML = archive.map(a => {
-    const dateLabel = new Date(a.date).toLocaleDateString('ko-KR', { 
-      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' 
+
+  // 사용자 요청 2026-04-29: 핀 꽂힌 거 위로
+  const sortedArchive = archive.slice().sort((a, b) => {
+    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+    return 0;
+  });
+
+  container.innerHTML = sortedArchive.map(a => {
+    const dateLabel = new Date(a.date).toLocaleDateString('ko-KR', {
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
     });
     const isExpanded = _expandedArchiveDates.has(a.date);
     const messages = isExpanded ? (a.messages || []) : [];
-    
+    const pinIcon = a.pinned ? '📌' : '📍';
+    const pinTitle = a.pinned ? '핀 풀기 (7일 cap 다시)' : '핀 꽂기 (영구 보관)';
+
     return `
-      <div class="chat-archive-card">
+      <div class="chat-archive-card${a.pinned ? ' pinned' : ''}">
         <div class="cac-header" onclick="toggleArchiveDay('${a.date}')">
-          <div class="cac-date">${dateLabel}</div>
+          <div class="cac-date">${a.pinned ? '📌 ' : ''}${dateLabel}</div>
           <div class="cac-meta">
             <span>${a.messageCount || 0}개 메시지</span>
+            <button class="cac-pin-btn" onclick="event.stopPropagation(); toggleArchivePin('${a.date}')" title="${pinTitle}" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; opacity:${a.pinned ? '1' : '0.5'};">${pinIcon}</button>
             <span class="cac-toggle">${isExpanded ? '▾' : '▸'}</span>
           </div>
         </div>
