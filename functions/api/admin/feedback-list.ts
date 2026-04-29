@@ -14,6 +14,9 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
   if (!env.ADMIN_USER_ID || user.id !== env.ADMIN_USER_ID) {
     return jsonResponse({ error: '관리자 권한 필요' }, 403);
   }
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return jsonResponse({ error: 'env 미설정 — Cloudflare에 SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 박혀있는지 확인' }, 500);
+  }
 
   const url = new URL(request.url);
   const filter = url.searchParams.get('status') || '';  // 'open' | 'replied' | 'all'
@@ -33,7 +36,16 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
       }
     );
     if (!resp.ok) {
-      return jsonResponse({ error: '조회 실패' }, 500);
+      const upstreamBody = await resp.text();
+      // table 없음 / RLS 차단 / 인증 오류 등 — 자세한 에러 표시 (admin 진단용)
+      return jsonResponse({
+        error: 'soragodong_feedback 조회 실패',
+        upstream_status: resp.status,
+        upstream_body: upstreamBody.slice(0, 500),
+        hint: resp.status === 404 || /relation .* does not exist/i.test(upstreamBody)
+          ? 'soragodong_feedback table 없음 — supabase/migrations/0003_feedback.sql 실행 필요'
+          : '환경변수 / RLS 정책 확인'
+      }, 500);
     }
     const rows: any = await resp.json();
     return jsonResponse({ feedback: rows });
