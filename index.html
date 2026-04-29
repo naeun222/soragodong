@@ -8433,6 +8433,15 @@ async function init() {
 
   // V3.13.x: 신규 사용자 자동 튜토리얼 분기 제거. 배너로 통일.
   // (isBrandNewUser 신규 사용자도 배너로 자기 페이스에 시작 가능)
+
+  // V4 사용자 요청 2026-04-29: 모든 코어 unlock 직후 reload 시 토스트 (onbFinish가 박은 플래그)
+  if (state.preferences && state.preferences._allTutorialsJustCompleted) {
+    state.preferences._allTutorialsJustCompleted = false;
+    saveState();
+    setTimeout(() => {
+      if (typeof showToast === 'function') showToast('🎉 모든 튜토리얼 끝났어! 🐚');
+    }, 1800);
+  }
 }
 
 // V3.7: startWelcomeTutorial을 인터랙티브 온보딩으로 가로채기
@@ -9609,6 +9618,17 @@ function isCoreLocked(coreId) {
   return state.unlocked[coreId] !== true;
 }
 
+// 코어별 잠금 모달용 메타 (이름 + 길이 힌트)
+const CORE_LOCK_INFO = {
+  core1: { name: '시작 / 체크인 / 대화', long: false },
+  core2: { name: '소라의 부름', long: true },   // 사용자 명시: 좀 김
+  core3: { name: '실행 탭',     long: false },
+  core4: { name: '나 탭',        long: false },
+  core5: { name: '도서관',       long: true },   // 사용자 명시: 좀 김
+  core6: { name: '숙고 질문',    long: false },
+  core8: { name: '마법의 소라고동', long: false }
+};
+
 // 잠금 모달 띄우기 → "지금 해볼게" 누르면 startCoreTutorial 호출
 async function showCoreLockModal(coreId) {
   if (!coreId || !CORE_TUTORIAL_RANGES[coreId]) return;
@@ -9616,9 +9636,11 @@ async function showCoreLockModal(coreId) {
     if (typeof startCoreTutorial === 'function') startCoreTutorial(coreId);
     return;
   }
+  const info = CORE_LOCK_INFO[coreId] || { name: '이 기능', long: false };
+  const lengthHint = info.long ? '\n(좀 길어 — 5~10분 정도)' : '';
   const yes = await showConfirmModal({
     title: '🔒 잠겨있어',
-    message: '이 기능은 아직 풀리지 않았어.\n짧은 튜토리얼 한 번 보면 바로 풀려.\n\n' + (CORE_LABELS[coreId] || ''),
+    message: `'${info.name}' 튜토리얼을 완료해야 사용할 수 있어. 해볼래?${lengthHint}`,
     okLabel: '지금 해볼게 ✦',
     cancelLabel: '나중에'
   });
@@ -9702,10 +9724,10 @@ async function showTutorialReplayMenu() {
   }
   const opts = [
     { label: '🐚 코어 #1 — 시작 / 체크인 / 대화', value: 'core1', desc: '한 바퀴 (필수 핵심)' },
-    { label: '⭐ 코어 #2 — 소라의 부름 / 모래사장 / 양생방', value: 'core2', desc: '미션 + 결과 체크 + 전략 진화' },
+    { label: '⭐ 코어 #2 — 소라의 부름 / 모래사장 / 양생방', value: 'core2', desc: '미션 + 결과 체크 + 전략 진화 (좀 김)' },
     { label: '🚀 코어 #3 — 실행 탭', value: 'core3', desc: '머릿속 풀기 + 몰입 ritual' },
     { label: '✦ 코어 #4 — 나 탭', value: 'core4', desc: '분석 결과' },
-    { label: '📚 코어 #5 — 도서관 탭', value: 'core5', desc: '5 카테고리 + 리뷰' },
+    { label: '📚 코어 #5 — 도서관 탭', value: 'core5', desc: '5 카테고리 + 리뷰 (좀 김)' },
     { label: '🌊 코어 #6 — 숙고 질문', value: 'core6', desc: '큰 물음' },
     { label: '🧙‍♂️ 코어 #8 — 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
     { label: '✨ 풀 튜토리얼', value: 'full', desc: '처음부터 끝까지 (~30분)' }
@@ -9733,6 +9755,8 @@ function applyCoreLockMarkers() {
     // 홈 카드들
     { sel: '#missionContainer .mission-card',                         core: 'core2' },
     { sel: '.home-small-card[onclick="openShellCollection()"]',       core: 'core2' },
+    // 도서관 안 양생방 chip — core2 prerequisite (사용자 요청 2026-04-29)
+    { sel: '.lib-cat-chip[data-cat="yangsaeng"]',                     core: 'core2' },
     // 숙고 질문 추가 (홈에 있는 진입점)
     { sel: '.reflection-empty-card, [onclick="addReflectionQuestion()"]', core: 'core6' },
     // 마법의 소라고동 — 도서관 안 진입점 + 홈 mini 카드 + 결정 화면 새 결정 버튼
@@ -10526,6 +10550,16 @@ function onbFinish() {
       ['core1','core2','core3','core4','core5','core6','core8'].forEach(k => state.unlocked[k] = true);
       window._fullTutorialActive = false;
     }
+    // V4 사용자 요청 2026-04-29: 모든 코어 unlock 시 다음 reload 후 토스트
+    {
+      const _all = ['core1','core2','core3','core4','core5','core6','core8'];
+      const _allDone = state.unlocked && _all.every(k => state.unlocked[k] === true);
+      state.preferences = state.preferences || {};
+      if (_allDone && !state.preferences._allTutorialsCompletedShown) {
+        state.preferences._allTutorialsCompletedShown = true;
+        state.preferences._allTutorialsJustCompleted = true;
+      }
+    }
     _onbStartTime = null;
     delete window._onbCFBackup;
     delete window._onbModesBackup;
@@ -10621,6 +10655,17 @@ function onbFinish() {
     state.unlocked = state.unlocked || {};
     ['core1','core2','core3','core4','core5','core6','core8'].forEach(k => state.unlocked[k] = true);
     window._fullTutorialActive = false;
+  }
+  // V4 모든 코어 unlock 토스트 플래그 (no-backup 경로)
+  {
+    const _all = ['core1','core2','core3','core4','core5','core6','core8'];
+    const _allDone = state.unlocked && _all.every(k => state.unlocked[k] === true);
+    state.preferences = state.preferences || {};
+    if (_allDone && !state.preferences._allTutorialsCompletedShown) {
+      state.preferences._allTutorialsCompletedShown = true;
+      // no-backup 경로는 reload 안 함 → 직접 토스트
+      setTimeout(() => { if (typeof showToast === 'function') showToast('🎉 모든 튜토리얼 끝났어! 🐚'); }, 800);
+    }
   }
 
   saveState();
@@ -29775,30 +29820,77 @@ const APP_VERSION = 'v4.0.163-step69-body';
 function autoTourOnUpdate() {
   if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
 }
+// V4 (사용자 요청 2026-04-29): 배너 → 3 버튼 모달
+// dismiss 단위는 메이저 버전 (V4/V5/...). 같은 메이저면 한 번 dismiss로 끝까지 안 떠.
+// 이전 사용자의 dismissedAppVersion 플래그는 이제 무효 (사용자 명시 — 지금 이후부터).
+function _currentMajor() {
+  const v = (typeof APP_VERSION === 'string' ? APP_VERSION : '') || '';
+  const m = v.match(/^v(\d+)/i);
+  return m ? ('V' + m[1]) : 'V4';
+}
 function renderUpdateNotice() {
+  // 기존 배너 element 비활성 (잔여 시각 제거)
   const banner = document.getElementById('updateBanner');
-  if (!banner) return;
-  const dismissed = state && state.preferences && state.preferences.dismissedAppVersion;
-  const shouldShow = state && dismissed !== APP_VERSION && !window._onbTutorialMode;
-  if (!shouldShow) {
-    banner.style.display = 'none';
-    banner.innerHTML = '';
-    return;
-  }
-  banner.style.display = 'flex';
-  banner.innerHTML = `
-    <span class="update-banner-text">✨ V4 대규모 업데이트 완료! 한 번 둘러볼래? (제발료)</span>
-    <div class="update-banner-actions">
-      <button onclick="startUpdateTour()" class="update-banner-btn-go">보기</button>
-      <button onclick="dismissUpdateNotice()" class="update-banner-btn-dismiss" aria-label="닫기">×</button>
+  if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
+
+  const major = _currentMajor();
+  const dismissedMajor = state && state.preferences && state.preferences.dismissedMajor;
+  const shouldShow = state && dismissedMajor !== major
+    && !window._onbTutorialMode && !window._updateChooserShownThisSession;
+  if (!shouldShow) return;
+  // 한 세션에 한 번만
+  window._updateChooserShownThisSession = true;
+  showUpdateChooserModal();
+}
+function showUpdateChooserModal() {
+  // 이미 떠있으면 중복 X
+  if (document.querySelector('.update-chooser-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show update-chooser-overlay';
+  overlay.style.zIndex = '10000';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:340px; padding:24px;">
+      <div style="font-size:38px; text-align:center; margin-bottom:8px;">🐚</div>
+      <div style="font-size:18px; font-weight:600; text-align:center; margin-bottom:8px;">${escapeHtml(_currentMajor())} 대규모 업데이트!</div>
+      <div style="font-size:13px; color:var(--text-dim); text-align:center; line-height:1.6; margin-bottom:20px;">
+        한 번 둘러보면 나중에 헷갈릴 일 줄어. (제발료)
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="input-modal-btn primary" onclick="_chooseUpdateOption('full')" style="padding:14px;">
+          ✨ 풀 튜토리얼 해보기
+          <div style="font-size:11px; opacity:0.85; margin-top:4px; font-weight:normal;">처음부터 끝까지 한 번에 (좀 김)</div>
+        </button>
+        <button class="input-modal-btn" onclick="_chooseUpdateOption('learn')" style="padding:14px;">
+          🐚 하면서 익히기
+          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">기능 만날 때마다 짧은 안내 받기</div>
+        </button>
+        <button class="input-modal-btn" onclick="_chooseUpdateOption('dismiss')" style="padding:10px; opacity:0.6;">
+          이미 알아 (다시 보지 않기)
+        </button>
+      </div>
     </div>
   `;
+  // 외부 클릭으로 닫히지 않게 — overlay onclick 핸들러 X (사용자 명시: 3 버튼 중 하나만)
+  document.body.appendChild(overlay);
 }
+function _chooseUpdateOption(choice) {
+  // 모달 제거
+  document.querySelectorAll('.update-chooser-overlay').forEach(o => o.remove());
+  // 어떤 선택이든 dismiss (현재 메이저 기준 — V5 등 새 메이저 시 다시 뜸)
+  state.preferences = state.preferences || {};
+  state.preferences.dismissedMajor = _currentMajor();
+  saveState();
+  if (choice === 'full') {
+    window._fullTutorialActive = true;
+    if (typeof startInteractiveOnboarding === 'function') startInteractiveOnboarding();
+  }
+  // 'learn' / 'dismiss' — 그냥 닫기 (잠금 클릭 시 코어 모달로 자연 안내)
+}
+// 하위 호환 — 기존 dismissUpdateNotice 호출처 보호
 function dismissUpdateNotice() {
   state.preferences = state.preferences || {};
-  state.preferences.dismissedAppVersion = APP_VERSION;
+  state.preferences.dismissedMajor = _currentMajor();
   saveState();
-  renderUpdateNotice();
 }
 async function startUpdateTour() {
   state.preferences = state.preferences || {};
