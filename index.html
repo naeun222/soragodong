@@ -9712,6 +9712,48 @@ async function startCoreTutorial(coreId) {
   await startInteractiveOnboarding(startIdx);
 }
 
+// V4 코어 튜토리얼 진행 카운트 — 글로벌 step idx 대신 코어 내부 local 카운트.
+// skip step 제외 + 코어 #2~#8은 끝에 help_button 1개 추가.
+function _coreStepCount() {
+  if (!_activeCoreId) return null;
+  const range = CORE_TUTORIAL_RANGES[_activeCoreId];
+  if (!range) return null;
+  const startIdx = ONBOARDING_STEPS.findIndex(s => s && s.id === range.startId);
+  const endIdx = ONBOARDING_STEPS.findIndex(s => s && s.id === range.endId);
+  if (startIdx < 0 || endIdx < 0) return null;
+  const skipSet = CORE_SKIP_IDS[_activeCoreId] || new Set();
+  let count = 0;
+  for (let i = startIdx; i <= endIdx; i++) {
+    const id = ONBOARDING_STEPS[i] && ONBOARDING_STEPS[i].id;
+    if (!skipSet.has(id)) count++;
+  }
+  // 코어 #1은 endId='finish'에 자연 포함, 나머지는 help_button 추가됨
+  if (_activeCoreId !== 'core1') count++;
+  return count;
+}
+function _coreCurrentStep() {
+  if (!_activeCoreId) return null;
+  const range = CORE_TUTORIAL_RANGES[_activeCoreId];
+  if (!range) return null;
+  const startIdx = ONBOARDING_STEPS.findIndex(s => s && s.id === range.startId);
+  const endIdx = ONBOARDING_STEPS.findIndex(s => s && s.id === range.endId);
+  if (startIdx < 0) return null;
+  const skipSet = CORE_SKIP_IDS[_activeCoreId] || new Set();
+  // help_button 점프 후 위치면 마지막 step
+  const helpIdx = ONBOARDING_STEPS.findIndex(s => s && s.id === 'help_button');
+  if (_activeCoreId !== 'core1' && _onbStep === helpIdx) {
+    return _coreStepCount();
+  }
+  // startIdx ~ _onbStep 사이 skip 제외하고 카운트
+  let pos = 0;
+  const upto = Math.min(_onbStep, endIdx);
+  for (let i = startIdx; i <= upto; i++) {
+    const id = ONBOARDING_STEPS[i] && ONBOARDING_STEPS[i].id;
+    if (!skipSet.has(id)) pos++;
+  }
+  return pos;
+}
+
 // 코어 종료 시 cleanup (onbFinish에서 호출)
 function _cleanupCoreOverrides() {
   (_coreBodyOverridesApplied || []).forEach(({step, snapshot}) => {
@@ -9983,16 +10025,26 @@ function onbPositionStep(step, retryCount) {
   if (ovEl) ovEl.style.zIndex = step.aboveModal ? '10500' : '9000';
 
   // 사용자 요청 2026-04-29: phase 시각화 — step number + phase 라벨 + 시뮬 배지 + phase 진행 바
+  // V4 코어 튜토리얼이면 글로벌 idx 대신 코어 로컬 카운트 (사용자 요청 2026-04-29)
+  const _coreTotal = (typeof _coreStepCount === 'function') ? _coreStepCount() : null;
+  const _coreCur   = (typeof _coreCurrentStep === 'function') ? _coreCurrentStep() : null;
   const stepNumText = document.getElementById('onbStepNumText');
   if (stepNumText) {
-    stepNumText.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
+    if (_coreTotal && _coreCur) stepNumText.textContent = `${_coreCur} / ${_coreTotal}`;
+    else stepNumText.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
   } else {
-    stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
+    if (_coreTotal && _coreCur) stepNum.textContent = `${_coreCur} / ${_coreTotal}`;
+    else stepNum.textContent = `${_onbStep + 1} / ${ONBOARDING_STEPS.length}`;
   }
   const phaseInfo = (typeof _getPhaseInfo === 'function') ? _getPhaseInfo(_onbStep) : null;
   const phaseLabel = document.getElementById('onbPhaseLabel');
   if (phaseLabel) {
-    phaseLabel.textContent = phaseInfo ? phaseInfo.phase.name : '';
+    // 코어 튜토리얼 (코어 #1 외)이면 코어 라벨, 아니면 phase 라벨
+    if (_activeCoreId && _activeCoreId !== 'core1' && CORE_LABELS[_activeCoreId]) {
+      phaseLabel.textContent = '코어 — ' + CORE_LABELS[_activeCoreId];
+    } else {
+      phaseLabel.textContent = phaseInfo ? phaseInfo.phase.name : '';
+    }
   }
   const simBadge = document.getElementById('onbSimBadge');
   if (simBadge) {
@@ -10000,11 +10052,22 @@ function onbPositionStep(step, retryCount) {
     simBadge.style.display = isSim ? '' : 'none';
   }
   const phaseBar = document.getElementById('onbPhaseBar');
-  if (phaseBar && phaseInfo) {
-    phaseBar.innerHTML = ONBOARDING_PHASES.map((p, i) => {
-      const cls = i < phaseInfo.phaseIdx ? 'done' : (i === phaseInfo.phaseIdx ? 'current' : '');
-      return `<span class="onb-phase-dot ${cls}" title="${escapeHtml(p.name)}"></span>`;
-    }).join('');
+  if (phaseBar) {
+    if (_activeCoreId && _activeCoreId !== 'core1' && _coreTotal && _coreCur) {
+      // 코어 #2~#8: 코어 내부 step별 dot — 글로벌 9 phase 대신 코어 step 진행도
+      const dots = [];
+      for (let i = 1; i <= _coreTotal; i++) {
+        const cls = i < _coreCur ? 'done' : (i === _coreCur ? 'current' : '');
+        dots.push(`<span class="onb-phase-dot ${cls}"></span>`);
+      }
+      phaseBar.innerHTML = dots.join('');
+    } else if (phaseInfo) {
+      // 코어 #1 또는 풀 튜토리얼: 9 phase dot
+      phaseBar.innerHTML = ONBOARDING_PHASES.map((p, i) => {
+        const cls = i < phaseInfo.phaseIdx ? 'done' : (i === phaseInfo.phaseIdx ? 'current' : '');
+        return `<span class="onb-phase-dot ${cls}" title="${escapeHtml(p.name)}"></span>`;
+      }).join('');
+    }
   }
   // 사용자 보고 2026-04-28: 너무 버벅거림 — swap fade 140ms→60ms 단축 + same-target 추가 skip
   const sameTitle = (titleEl.textContent === step.title);
