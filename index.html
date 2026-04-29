@@ -8717,10 +8717,12 @@ const ONBOARDING_STEPS = [
     id: 'mutation_finish_btn',
     targetSelector: '#mutationFinishBtn',
     title: '✦ 이 차원으로 해볼게',
-    body: '고동이의 답 봤지?<br>이제 <b>\'✦ 이 차원으로 해볼게\'</b> 눌러봐.',
+    body: '고동이의 답 봤지?<br>이제 <b>\'✦ 이 차원으로 해볼게\'</b> 눌러봐.<br><br><span class="small">버튼 누르면 잠깐 기다렸다가 <b>"눌렀어"</b> 직접 눌러줘.</span>',
     waitFor: 'click',
     advanceDelay: 800,
     manualAdvance: true,
+    // 사용자 요청 2026-04-29: target 클릭해도 자동 진행 X — '눌렀어' 직접 클릭으로만 진행
+    noAutoAdvanceOnClick: true,
     dimBackground: false,
     aboveModal: true,
     fallbackPosition: 'top'
@@ -8747,11 +8749,13 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'evolved_explain',
-    targetSelector: null,
+    // 사용자 요청 2026-04-29: 진화한 전략 카드 spotlight (어떤 카드 진화했는지 시각 안내)
+    targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"]',
     title: '🧬 진화 트리 봤어?',
     body: '<b>\'마감 직전 폭발력 신뢰\'</b>가 안 통했네.<br>그래서 <b>새 차원으로 진화</b>했어!<br><br>만약 이 새 전략이 <b>성공한다면</b> 이 DNA는 \'<b>성장</b>\' 해.<br>같은 전략이 <b>5번 성공</b>하면, 네가 이 전략을 \'<b>체화</b>\'했다고 봐.',
     waitFor: 'next',
-    dimBackground: false
+    dimBackground: false,
+    fallbackPosition: 'top'
   },
   {
     id: 'yangsaeng_try_btn',
@@ -9887,6 +9891,9 @@ function onbPositionStep(step, retryCount) {
           }, 30000);
         };
         onbAddListener(advanceTarget, 'click', handler);
+      } else if (step.noAutoAdvanceOnClick) {
+        // 사용자 요청 2026-04-29: target 클릭해도 자동 진행 X — '눌렀어' 버튼 직접 눌러야 다음
+        // (target 클릭 = 다음 화면 전환 등 비동기 작업 트리거 → 튜토리얼은 그 결과 보고 사용자가 진행)
       } else {
         const handler = (e) => { safeAdvance(step.advanceDelay || 350); };
         onbAddListener(advanceTarget, 'click', handler);
