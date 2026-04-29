@@ -29942,18 +29942,28 @@ function _chooseUpdateOption(choice) {
   // 어떤 선택이든 dismiss (현재 메이저 기준 — V5 등 새 메이저 시 다시 뜸)
   state.preferences = state.preferences || {};
   state.preferences.dismissedMajor = _currentMajor();
-  saveState();
   if (choice === 'full') {
+    saveState();
     window._fullTutorialActive = true;
     if (typeof startInteractiveOnboarding === 'function') startInteractiveOnboarding();
     return;
   }
   if (choice === 'learn') {
-    // 사용자 요청 2026-04-29: '하면서 익히기' = 코어 #1 (시작 / API 키 / 체크인 / 대화) 진행
+    // 사용자 요청 2026-04-29: '하면서 익히기' = 처음 코어 사용자처럼 — 모든 잠금 리셋 후 코어 #1
+    state.unlocked = { core1: false, core2: false, core3: false, core4: false, core5: false, core6: false, core8: false };
+    state.preferences._allTutorialsCompletedShown = false;  // 모든 unlock 토스트 다시 가능
+    saveState();
     if (typeof startCoreTutorial === 'function') startCoreTutorial('core1');
     return;
   }
-  // 'dismiss' — 그냥 닫기 (이후 잠금 클릭 시 코어 모달로 자연 안내)
+  if (choice === 'dismiss') {
+    // 사용자 요청 2026-04-29: '이미 알아' = 일반 사용자와 동일 — 모든 코어 unlock
+    state.unlocked = { core1: true, core2: true, core3: true, core4: true, core5: true, core6: true, core8: true };
+    saveState();
+    // 잠금 시각 즉시 해제
+    if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers();
+    return;
+  }
 }
 // 하위 호환 — 기존 dismissUpdateNotice 호출처 보호
 function dismissUpdateNotice() {
