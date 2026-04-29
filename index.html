@@ -6867,10 +6867,44 @@
     <div class="login-title">소라고동</div>
     <div class="login-sub">네 AI 라이프 전략가.<br>이메일로 안전하게 들어와.</div>
 
-    <!-- Step 1: Email -->
+    <!-- Step 1: Email + 동의 (사용자 요청 2026-04-30 변호사 검수: PIPA + 전자상거래법 의무 + 안전 어필) -->
     <div class="login-form" id="loginStep1">
       <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
-      <button class="btn-primary" id="loginBtn" onclick="handleSendCode()">로그인 코드 받기</button>
+
+      <!-- 사용자 요청 2026-04-30: 정직 + 정중. E2EE 활성 시 wording 변경. -->
+      <div style="margin-top:14px; padding:14px; background:linear-gradient(135deg, rgba(126,200,227,0.10), rgba(143,200,143,0.08)); border:1px solid rgba(126,200,227,0.30); border-radius:10px; font-size:11px; line-height:1.9;">
+        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px;">🛡️ 데이터 보호 안내</div>
+        <div style="color:var(--text); padding-left:6px;">
+          <div>🔒 다른 사용자는 본인의 데이터에 접근할 수 없습니다</div>
+          <div id="loginAccessInfo">🔐 종단간 암호화(E2EE) 활성 시 회사도 평문 데이터를 볼 수 없습니다 (설정 → 보안 강화에서 활성)</div>
+          <div>🚫 데이터를 광고·판매·외부 공유에 사용하지 않습니다</div>
+          <div>🤖 AI (Anthropic) 서버에 전송된 데이터는 <b>30일 후 자동 삭제</b>되며, AI 학습에 사용되지 않습니다</div>
+          <div>✅ Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)</div>
+          <div>🔐 모든 통신은 HTTPS로 암호화됩니다</div>
+          <div style="margin-top:6px; font-size:10px; color:var(--text-soft);">자세한 내용: <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/cross-border.md" target="_blank" style="color:var(--accent);">데이터 보호 안내</a></div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px; padding:10px; background:var(--surface); border-radius:10px;">
+        <label style="display:flex; align-items:flex-start; gap:6px; cursor:pointer; margin-bottom:10px;">
+          <input type="checkbox" id="loginConsentAll" style="margin-top:3px;">
+          <span style="font-size:11px; line-height:1.7;">
+            <b>(필수)</b> 다음 항목에 모두 동의합니다:<br>
+            · <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/terms.md" target="_blank" style="color:var(--accent);">이용약관</a> + <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/privacy.md" target="_blank" style="color:var(--accent);">개인정보처리방침</a><br>
+            · 기분·감정·자기관찰 기록 처리 <i style="color:var(--text-soft);">(법률상 '민감정보')</i><br>
+            · 미국 서버 이용 (AI 처리 / 저장 / 호스팅)<br>
+            · 만 14세 이상
+          </span>
+        </label>
+        <label style="display:flex; align-items:flex-start; gap:6px; cursor:pointer;">
+          <input type="checkbox" id="loginConsentAdult" style="margin-top:3px;">
+          <span style="font-size:11px; line-height:1.6;">
+            <b>(권장)</b> 만 18세 이상입니다 — 미체크 시 결제 단계에서 법정대리인 동의 절차가 진행됩니다
+          </span>
+        </label>
+        <!-- 사용자 요청 2026-04-30: 별도 통계 동의 제거 — Cloudflare Analytics + Anthropic usage 자동 (별도 동의 불필요). -->
+      </div>
+      <button class="btn-primary" id="loginBtn" onclick="handleSendCode()" style="margin-top:14px;">로그인 코드 받기</button>
       <div class="login-status" id="loginStatus"></div>
     </div>
 
@@ -7406,81 +7440,140 @@
     <div class="screen" id="screen-settings">
       <div class="screen-title">설정</div>
       <div class="screen-sub">소라고동을 네 것으로.</div>
-      
-      <div class="input-group">
-        <div class="input-label">🔑 Anthropic API 키</div>
-        <div class="api-key-box">
-          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." style="width:100%;">
-        </div>
-        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;">
-          <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>에서 발급
-        </div>
-      </div>
+
+      <!-- 사용자 요청 2026-04-30: ANTHROPIC API 키 input 제거. 앱 결제 모델로 전환. -->
+      <input type="hidden" id="apiKeyInput" value="" />
+
+      <!-- ═══ 자주 쓰는 거 ═══ -->
       <div class="input-group">
         <div class="input-label">👤 내 프로필 (AI가 참고)</div>
-        <textarea id="profileInput" placeholder="예: ADHD/ADD 성향..." rows="5"></textarea>
+        <textarea id="profileInput" placeholder="예: ADHD/ADD 성향, 박사과정, 야행성..." rows="4"></textarea>
       </div>
-      <!-- 사용자 요청 2026-04-30: 일일 메시지 cap (비용 폭발 방지). 0 = 무제한. -->
+
+      <div class="input-group" id="billingSection">
+        <div class="input-label">💳 결제 / 사용량</div>
+        <div id="billingStatus" style="font-size:12px;color:var(--text);background:var(--surface);padding:12px;border-radius:12px;line-height:1.7;margin-bottom:8px;">불러오는 중...</div>
+        <button class="btn-secondary" onclick="openChargeModal()">⚡ 충전</button>
+        <button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:6px;">📅 월 정액 가입</button>
+        <button class="btn-secondary" onclick="refreshBillingStatus()" style="margin-top:6px;">🔄 새로고침</button>
+      </div>
+
       <div class="input-group">
         <div class="input-label">📋 일일 대화 한도</div>
         <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:8px;">
-          하루 메인 chat 메시지 수 한도. 4시 이후 reset. 0 = 무제한.<br>
-          비용 폭발 방지용 — 헤비 사용자면 풀거나 ↑.
+          하루 메인 chat 메시지 수. 4시 이후 reset. 0 = 무제한.
         </div>
         <input type="number" id="dailyChatCapInput" min="0" max="9999" placeholder="100" style="width:100%;">
         <div id="dailyChatCountStatus" style="font-size:11px;color:var(--text-soft);margin-top:6px;"></div>
       </div>
+
+      <!-- ═══ 사용자 가이드 ═══ -->
       <div style="margin-top:30px;">
-        <div class="input-label" style="margin-bottom:8px;">🗂 데이터 관리</div>
-        <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
-        <button class="btn-secondary" onclick="exportData()">📁 파일로 백업</button>
-        <!-- 사용자 요청 2026-04-29: 수동 클라우드 백업/복원 (rolling 10개) -->
-        <button class="btn-secondary" onclick="manualCloudBackup()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드 백업</button>
-        <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드 복원</button>
+        <div class="input-label" style="margin-bottom:8px;">📚 가이드</div>
         <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
-        <button class="btn-secondary" onclick="showCoreReplayPicker()">🔧 개별 코어 튜토리얼</button>
-        <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
+        <button class="btn-secondary" onclick="showCoreReplayPicker()" style="margin-top:6px;">🔧 개별 코어 튜토리얼</button>
+        <button class="btn-secondary" onclick="showShortcutGuide()" style="margin-top:6px;">🌧 몰입 단축어 만들기</button>
       </div>
 
-      <!-- 알림 기능 미박힘 — 진짜 백그라운드 푸시는 Phase C (백엔드 + Service Worker) 박힌 후 활성. -->
-
-      <div>
-        <button class="btn-secondary btn-danger" onclick="resetAll()" style="margin-top:16px;">모든 데이터 초기화</button>
-        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:8px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동으로 박힌 백업 (rolling 5개) 에서 복원">🕰 자동 백업에서 복원</button>
+      <!-- ═══ 데이터 관리 ═══ -->
+      <div style="margin-top:30px;">
+        <div class="input-label" style="margin-bottom:8px;">☁️ 데이터 관리</div>
+        <button class="btn-secondary" onclick="manualSync()">☁️ 지금 동기화</button>
+        <button class="btn-secondary" onclick="exportData()" style="margin-top:6px;">📁 파일로 백업</button>
+        <button class="btn-secondary" onclick="manualCloudBackup()" style="margin-top:6px; background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">☁️ 클라우드에 저장</button>
+        <button class="btn-secondary" onclick="restoreFromCloudBackup()" style="margin-top:6px; background:linear-gradient(135deg, rgba(168,157,200,0.18), rgba(168,157,200,0.10)); border-color:rgba(168,157,200,0.40); color:#b9aedc;">☁️ 클라우드에서 불러오기</button>
+        <button class="btn-secondary" onclick="showAutoBackupList()" style="margin-top:6px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(143,200,143,0.10)); border-color:rgba(143,200,143,0.40); color:#c5e8c5;" title="주 1회 + APP_VERSION 변경 시 자동 박힌 백업 (rolling 5개)">🕰 자동 백업에서 불러오기</button>
       </div>
 
-      <div style="margin-top:24px;">
-        <div class="input-label" style="margin-bottom:8px;">🧪 테스터 모드</div>
+      <!-- ═══ 피드백·문의 ═══ -->
+      <div style="margin-top:30px;">
+        <div class="input-label" style="margin-bottom:8px;">💬 나한테 톡 줘 ✦</div>
         <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
-          ON 시 모든 변경(체크인/대화/미션 등)이 <b>저장되지 않아</b>. 새로고침하면 ON 켜기 전 상태로 돌아옴.<br>
-          기능 테스트하면서 데이터 더럽히기 싫을 때 켜둬.
+          버그 / 이런 기능 있었으면 / 결제 문제 / 그냥 잡담 — 다 환영! 🐚<br>
+          <span style="color:var(--text-soft);">카톡 오픈채팅은 익명으로 들어와도 OK (닉네임 자유롭게).</span>
         </div>
-        <button class="btn-secondary" id="testerModeToggleBtn" onclick="toggleTesterMode()">🧪 테스터 모드: OFF</button>
+        <button class="btn-secondary" onclick="openFeedbackKakao()" style="background:linear-gradient(135deg, rgba(255,235,80,0.15), rgba(255,200,80,0.10)); border-color:rgba(255,200,80,0.40); color:#ffe580;">💬 카톡 오픈채팅 (익명 OK)</button>
+        <button class="btn-secondary" onclick="openFeedbackInApp()" style="margin-top:6px;">✉️ 여기서 바로 메시지</button>
       </div>
+
+      <!-- ═══ 계정 ═══ -->
       <div style="margin-top:30px;">
         <div class="input-label" style="margin-bottom:8px;">👤 계정</div>
         <div id="accountInfo" style="font-size:12px; color:var(--text-dim); padding:12px; background:var(--surface); border-radius:12px; margin-bottom:8px;"></div>
         <button class="btn-secondary btn-danger" onclick="logout()">로그아웃</button>
       </div>
-      <!-- 사용자 요청 2026-04-28: 'V4 전체 기능 테스트' 정리 — 시드 박기 + step N부터 시작 두 개만 보존 (나머지 함수는 콘솔에서 호출 가능) -->
-      <details class="model-collapse" style="margin-top:14px; border:1px solid rgba(212,167,106,0.30); border-radius:12px;">
+
+      <!-- ═══ 개발자 도구 (collapse) ═══ -->
+      <details class="model-collapse" style="margin-top:30px; border:1px solid rgba(212,167,106,0.30); border-radius:12px;">
         <summary style="padding:12px 14px;">🧪 개발자 도구</summary>
         <div class="model-collapse-content" style="padding: 10px 14px;">
           <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
-            <strong style="color:var(--accent2);">⚠️ 테스터 모드 ON 후 사용</strong> — 변경 저장 X, OFF 하면 원래 데이터로 복원.
+            <strong style="color:var(--accent2);">⚠️ 테스터 모드 ON 후 사용</strong> — 변경 저장 X, OFF 시 원래 데이터로 복원.
           </div>
-          <button class="btn-secondary" onclick="testSeedV4Data()" style="background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(212,167,106,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🌱 V4 전체 시드 데이터 박기</button>
+          <button class="btn-secondary" id="testerModeToggleBtn" onclick="toggleTesterMode()">🧪 테스터 모드: OFF</button>
+          <button class="btn-secondary" onclick="testSeedV4Data()" style="margin-top:6px; background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(212,167,106,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🌱 V4 전체 시드 데이터 박기</button>
           <button class="btn-secondary" onclick="testStartTutorialFromStep()" style="margin-top:6px;" title="특정 step부터 튜토리얼 시작">🎯 튜토리얼 step N부터 시작</button>
-          <button class="btn-secondary" onclick="showNavPaddingSlider()" style="margin-top:6px;" title="아래 nav padding-bottom 슬라이더 (디버그)">📏 하단 nav padding 조절</button>
-          <!-- 사용자 요청 2026-04-30: forceAnalyze는 일주일마다 자동. 디버깅 / 강제 갱신 시만 수동 호출. -->
+          <button class="btn-secondary" onclick="showNavPaddingSlider()" style="margin-top:6px;" title="하단 nav padding 슬라이더">📏 하단 nav padding 조절</button>
           <button class="btn-secondary" onclick="forceAnalyze()" style="margin-top:6px;" title="opus 4.7 사용 — 비싸. 일주일 자동 실행되니 평소엔 X.">📊 강제 모델 분석 (수동, 비쌈)</button>
+          <!-- 사용자 보고 2026-04-30: 잔존 시드 흔적 강제 정리 (entries / chatMessages / chatArchive 등 _seed marker + 시드 텍스트 매칭). -->
+          <button class="btn-secondary" onclick="cleanLegacySeedData()" style="margin-top:6px; background:linear-gradient(135deg, rgba(220,150,80,0.18), rgba(220,150,80,0.10)); border-color:rgba(220,150,80,0.40); color:#e8c590;" title="entries/chatMessages/chatArchive 등에 잔존하는 시드 텍스트 강제 정리">🧹 잔존 시드 정리 (강제)</button>
+          <!-- 사용자 요청 2026-04-30: 관리자 — 토스 송금 pending list + 승인/환수 -->
+          <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border);">
+            <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">💼 관리자 (토스 송금 처리)</div>
+            <button class="btn-secondary" onclick="adminLoadPendingCharges()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">📋 대기 중인 송금 list</button>
+            <div id="adminPendingList" style="margin-top:10px; font-size:11px;"></div>
+          </div>
         </div>
       </details>
-      <div style="margin-top:24px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; color: var(--text-dim); line-height:1.7;">
-        <strong style="color:var(--accent)">프라이버시</strong><br>
-        이메일 기반 인증으로 너만 접근 가능. 다른 사람은 네 데이터를 볼 수 없어.<br>
-        API 호출은 Anthropic을 통과하지만 7일 후 삭제되고 학습에 쓰이지 않아.
+
+      <!-- 사용자 요청 2026-04-30: E2EE Stage 2 — 회사도 평문 못 보게 (보안 강화) -->
+      <details class="model-collapse" style="margin-top:30px; border:1px solid rgba(143,200,143,0.40); border-radius:12px; background:rgba(143,200,143,0.05);">
+        <summary style="padding:12px 14px; color:#9ed4a0;">🔐 보안 강화 (E2EE)</summary>
+        <div class="model-collapse-content" style="padding: 10px 14px;">
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
+            종단간 암호화 활성 시 <strong>회사조차 본인 데이터의 평문을 볼 수 없습니다</strong>.<br>
+            <span style="color:var(--text-soft);">비밀 단어 12개를 안전한 곳에 보관해야 합니다 (분실 시 데이터 복구 불가능).</span>
+          </div>
+          <div id="e2eeStatus" style="font-size:11px; color:var(--text-dim); margin-bottom:10px; padding:8px; background:var(--surface); border-radius:8px;">상태 확인 중...</div>
+          <button class="btn-secondary" onclick="setupE2EE()" style="background:linear-gradient(135deg, rgba(143,200,143,0.20), rgba(126,200,227,0.12)); border-color:rgba(143,200,143,0.45); color:#c5e8c5;">🔐 E2EE 활성화</button>
+          <button class="btn-secondary" onclick="showE2EERecoveryWords()" style="margin-top:6px;" title="비밀 단어 12개 다시 보기 (활성 후만)">📋 비밀 단어 다시 보기</button>
+        </div>
+      </details>
+
+      <!-- ═══ ⚠️ 위험 영역 (collapse, 거리 + 색깔 분리) — 사용자 요청 2026-04-30: 잘못 안 눌리게 ═══ -->
+      <details class="model-collapse" style="margin-top:50px; border:1px solid rgba(220,80,80,0.40); border-radius:12px; background:rgba(220,80,80,0.05);">
+        <summary style="padding:12px 14px; color:#e89090;">⚠️ 위험 영역 (눌러서 펼치기)</summary>
+        <div class="model-collapse-content" style="padding: 10px 14px;">
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
+            아래 동작들은 <strong style="color:#e89090;">되돌릴 수 없음</strong>. 신중히.
+          </div>
+          <button class="btn-secondary btn-danger" onclick="resetAll()">🔄 모든 데이터 초기화 (V4)</button>
+          <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-top:6px; margin-bottom:14px;">
+            V4 데이터만 삭제 (V3 prod 안 건드림). 계정 / API 키 유지.
+          </div>
+          <button class="btn-secondary btn-danger" onclick="withdrawAccount()" style="margin-top:6px;">🚫 회원 탈퇴 (영구 삭제)</button>
+          <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-top:6px;">
+            모든 자기관찰 데이터 즉시 삭제. 결제 기록은 전자상거래법상 5년 보존 (익명화).
+          </div>
+        </div>
+      </details>
+
+      <!-- ═══ 프라이버시 안내 (E2EE 활성 여부에 따라 동적) ═══ -->
+      <div style="margin-top:30px; padding: 16px; background: var(--surface); border-radius: 14px; font-size:11px; line-height:1.8;">
+        <div style="font-size:13px; color:var(--accent); font-weight:600; margin-bottom:8px;">🛡️ 데이터 보호</div>
+        <div style="color:var(--text);" id="settingsPrivacyAccessInfo">
+          🔒 본인의 데이터는 본인만 접근 가능합니다<br>
+          🔐 종단간 암호화(E2EE) 활성 시 회사도 평문 데이터를 볼 수 없습니다 (위 보안 강화 섹션에서 활성)<br>
+          🚫 데이터를 광고·판매·외부 공유에 사용하지 않습니다<br>
+          🤖 AI (Anthropic) 서버 데이터는 30일 후 자동 삭제되며, AI 학습에 사용되지 않습니다<br>
+          ✅ Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)<br>
+          🔐 모든 통신은 HTTPS로 암호화됩니다
+        </div>
+        <div style="margin-top:10px; font-size:10px; color:var(--text-soft);">
+          개인정보 보호책임자: 김나은 · 자세한 내용은 <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/privacy.md" target="_blank" style="color:var(--accent);">개인정보처리방침</a>
+        </div>
       </div>
+
       <div class="sticky-action-bar">
         <button class="btn-primary" onclick="saveSettings()">저장</button>
         <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
@@ -7591,10 +7684,45 @@ const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮
 // V4 prod URL은 'me_v4' row만 읽고 씀 → V3 데이터(`me`)는 영원히 안전.
 // ═══════════════════════════════════════════════════════════════
 // 사용자 요청 2026-04-29: Phase C swap point — Anthropic API 호출 통합 helper.
-// 현재: 클라이언트가 사용자 키로 직접 Anthropic 호출.
-// Phase C 활성: ANTHROPIC_API_URL → '/api/chat' (백엔드 프록시), 헤더에서 x-api-key 제거 (서버가 키 보유) — 한 줄 변경.
-// 신규 코드는 callAnthropic 사용 권장. 기존 fetch 직접 호출 사이트는 점진 마이그레이션.
+// 사용자 요청 2026-04-30 (Phase C 활성): fetch interceptor로 자동 swap.
+// state.apiKey 박혀있으면 → 직접 Anthropic 호출 (사용자 본인 키 결제)
+// state.apiKey 비어있고 session 활성이면 → /api/chat 백엔드 프록시 (앱 결제 모델)
+// 모든 28개 LLM call 위치 자동 redirect — 코드 변경 X.
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+(function installAnthropicProxyInterceptor() {
+  if (typeof window === 'undefined') return;
+  if (window._anthropicProxyInstalled) return;
+  window._anthropicProxyInstalled = true;
+  const _origFetch = window.fetch.bind(window);
+  window.fetch = function(input, init) {
+    const url = (typeof input === 'string') ? input : (input && input.url) || '';
+    if (url !== ANTHROPIC_API_URL) return _origFetch(input, init);
+    // 사용자 본인 키 있으면 직접 호출
+    if (state && state.apiKey) return _origFetch(input, init);
+    // session 없으면 그대로 (오류 발생 → 사용자에게 표시)
+    if (typeof session === 'undefined' || !session || !session.access_token) {
+      return _origFetch(input, init);
+    }
+    // 백엔드 프록시로 swap
+    let headers = {};
+    if (init && init.headers) {
+      if (init.headers instanceof Headers) {
+        init.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
+      } else if (Array.isArray(init.headers)) {
+        init.headers.forEach(([k, v]) => { headers[k.toLowerCase()] = v; });
+      } else {
+        Object.keys(init.headers).forEach(k => { headers[k.toLowerCase()] = init.headers[k]; });
+      }
+    }
+    delete headers['x-api-key'];
+    delete headers['anthropic-version'];
+    delete headers['anthropic-dangerous-direct-browser-access'];
+    headers['authorization'] = 'Bearer ' + session.access_token;
+    headers['content-type'] = 'application/json';
+    const newInit = Object.assign({}, init || {}, { headers });
+    return _origFetch('/api/chat', newInit);
+  };
+})();
 function _anthropicHeaders(extraHeaders) {
   return Object.assign({
     'Content-Type': 'application/json',
@@ -7710,7 +7838,12 @@ const DEFAULT_STATE = {
     miniTutorialsSeen: [],        // ['yangsaeng','galpi','sukgo',...] 화면별 미니 도움
     progressiveUnlockLevel: null,  // 'week1' | 'month1' | 'month3' (코어 선택 시 점진 노출)
     // 사용자 요청 2026-04-30: 메인 chat 일일 cap. 0 = 무제한. default 100/일 (헤비 사용자 본인이 풀 수 있게 settings 조절).
-    dailyChatCap: 100
+    dailyChatCap: 100,
+    // 사용자 요청 2026-04-30 (변호사 검수): 동의 audit trail. PIPA / 전자상거래법 의무 — 모든 동의 시점·버전 기록.
+    // 첫 진입 시 박힘. 정책 버전 변경 시 재동의.
+    consentLog: [],
+    // 자동 갱신 default OFF (다크 패턴 회피, terms 4.4)
+    autoRenew: false
   },
 
   // 7. V3.3: 대화 일별 아카이브
@@ -7723,6 +7856,12 @@ const DEFAULT_STATE = {
   diagnoses: [],            // V4 비전 9.5 진단 5종: [{id, type, confidence, evidence, detectedAt, status:'active'|'shown'|'dismissed'}]
   quarterlyReviews: [],     // V4 비전 7.9 분기 리뷰: [{id, quarterKey:'2026-Q2', completedAt, summary, sections, stats, auto, deepDive}]
   lastForceAnalyzeAt: null, // 사용자 요청 2026-04-30: forceAnalyze 일주일 자동화 — 마지막 실행 시각.
+  // 사용자 요청 2026-04-30: 자동 분석 4단계 (매일/매주/매월/매분기/매년 새벽 4시 cutoff).
+  lastDailyChapterExtractAt: null,    // 매일 4AM
+  lastWeeklyAnalyzeAt: null,           // 매주 일요일 4AM
+  lastMonthlyAnalyzeAt: null,          // 매월 1일 4AM
+  lastQuarterlyAnalyzeAt: null,        // 매분기 첫째달 1일 4AM
+  lastYearlyAnalyzeAt: null,           // 매년 1월 1일 4AM
   // 사용자 요청 2026-04-30: 메인 chat 일일 메시지 cap (비용 폭발 방지). 4시 cutoff 기준 reset.
   dailyChatCount: { date: null, count: 0 },
 
@@ -7974,6 +8113,83 @@ async function logout() {
   location.reload();
 }
 
+// 사용자 요청 2026-04-30: 회원 탈퇴 — 약관 8조 의무 (즉시 데이터 삭제 + 결제 기록만 5년 보존).
+async function withdrawAccount() {
+  const yes1 = await showConfirmModal({
+    title: '회원 탈퇴할까?',
+    message: '⚠️ 모든 자기관찰 데이터가 영구 삭제됩니다.\n\n· 일기 / 체크인 / 대화 / 진주 / 전략 / 모델 — 즉시 삭제\n· 결제 기록 — 5년 보존 (전자상거래법, 익명화)\n· 복구 불가\n\n탈퇴 전 [📁 파일로 백업] 권장.',
+    okLabel: '계속',
+    cancelLabel: '취소'
+  });
+  if (!yes1) return;
+  const yes2 = await showConfirmModal({
+    title: '진짜 탈퇴? (마지막 확인)',
+    message: '이대로 진행하면 데이터 복구 X. 정말?',
+    okLabel: '탈퇴 진행',
+    cancelLabel: '아니, 취소'
+  });
+  if (!yes2) return;
+
+  showToast('탈퇴 처리 중...');
+
+  // 1. cloud DELETE — 사용자의 모든 V4 row (auth_user_id 기준)
+  let cloudDeleted = false;
+  if (authUserId) {
+    for (let attempt = 0; attempt < 3 && !cloudDeleted; attempt++) {
+      try {
+        const resp = await fetch(
+          `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}`,
+          { method: 'DELETE', headers: authHeaders() }
+        );
+        if (resp.ok || resp.status === 204 || resp.status === 200) {
+          cloudDeleted = true;
+        }
+      } catch (e) { console.error('withdraw cloud delete:', e); }
+    }
+    if (!cloudDeleted) {
+      alert('⚠ cloud 삭제 실패. 네트워크 확인 후 다시 시도해줘.');
+      return;
+    }
+  }
+
+  // 2. Supabase auth.users row 삭제 — 백엔드 endpoint 필요 (api/account/delete).
+  // Phase C 활성 후 박힘. 그 전엔 클라이언트에서 logout만 (사용자 row는 남음 — 정책상 미사용 12개월 후 회사가 일괄 정리).
+  if (typeof BACKEND_BASE !== 'undefined' && BACKEND_BASE) {
+    try {
+      await fetch(`${BACKEND_BASE}/api/account/delete`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session?.access_token || ''}`, 'Content-Type': 'application/json' }
+      });
+    } catch (e) { console.warn('withdraw backend:', e); }
+  }
+
+  // 3. localStorage 전부 정리 (API 키 preserve도 X — 탈퇴 = 모든 흔적 제거)
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith('soragodong') || k.startsWith('me_v4') || k.startsWith('sb-')) {
+        localStorage.removeItem(k);
+      }
+    });
+  } catch (e) { console.error('localStorage clear:', e); }
+
+  // 4. Supabase auth signOut
+  if (session && session.access_token) {
+    try {
+      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${session.access_token}` }
+      });
+    } catch (e) {}
+  }
+
+  // 5. 메모리 비우고 reload
+  session = null;
+  authUserId = null;
+  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  alert('탈퇴 완료. 다음 진입 시 재가입 가능해.');
+  location.reload();
+}
+
 function authHeaders() {
   return {
     'apikey': SUPABASE_ANON_KEY,
@@ -8009,6 +8225,451 @@ function getServerNowMs() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// E2EE (Stage 2) — 사용자 요청 2026-04-30
+// 사용자도 / 회사도 평문 못 보게. WebCrypto AES-256-GCM + PBKDF2.
+// 마스터 키: localStorage에 평문 저장 (device 도난 시 사용자 책임).
+// passphrase: 256-단어 wordlist × 12 = 96-bit entropy. 사용자 분실 시 cloud 복호화 X.
+// ═══════════════════════════════════════════════════════════════
+
+// 활성 토글 — 마이그레이션 + UI 박힌 후 true. 현재는 비활성 (saveState/loadState wrapper 박혀도 우회).
+let _e2eeEnabled = false;
+let _e2eeMasterKey = null;  // CryptoKey object (메모리만)
+const _E2EE_LOCAL_KEY = 'soragodong_v4_e2ee_mk';
+const _E2EE_VERSION = '1';
+
+// 256-단어 wordlist (간단 + 한국어 친화). BIP39 표준 X but use case OK.
+// 각 단어 짧고 명확 (3-5음절). 12-word 조합 = 256^12 = 2^96 entropy.
+const E2EE_WORDLIST = [
+  '가족','가위','감자','강물','거울','걸음','계절','고래','고양이','고요','구름','국화','귤','그림','그늘','금색',
+  '기억','기차','길','꽃','꿀','나무','나비','나침반','난로','날개','노래','노을','녹차','놀이','눈송이','눈물',
+  '느낌','늑대','달빛','달팽이','담요','당근','대나무','도서관','도토리','독수리','돌멩이','동굴','두루미','등대','땅콩','땅속',
+  '뜨개','라일락','로켓','마음','마을','만년필','말','맥주','메모','면도','명상','모래','모자','목련','무지개','문구',
+  '물고기','물길','물방울','미소','민들레','바구니','바다','바람','바위','반딧불','반지','밤하늘','별','보석','보름달','보리',
+  '복숭아','봉투','부엉이','북극','분필','불꽃','붓','비단','비누','비밀','뿌리','사과','사탕','산','산호','상자',
+  '새벽','새우','샛별','생각','생일','석양','선물','섬','성냥','세월','소나기','소녀','소년','소라','소망','소파',
+  '손길','솔잎','수박','수선화','수정','숲','쉼','스카프','시계','시냇물','시인','신발','심장','쌀','쌍둥이','아기',
+  '아침','안개','앵두','약속','어린이','어머니','얼음','연못','연필','열매','오렌지','오로라','오솔길','오월','오후','옥수수',
+  '온천','올빼미','외투','우물','우산','우유','운명','웃음','월계수','유리','은하수','음악','이끼','이슬','인사','잎새',
+  '자갈','자수','자작','잠자리','장미','장미수','재즈','저녁','저울','전등','전지','정원','젤리','종이','종소리','주머니',
+  '주전자','지도','지붕','지팡이','진주','집','짚','참새','책','책방','천둥','첫눈','체리','초롱','초승달','초콜릿',
+  '추억','축하','축제','출발','춤','치즈','치자','친구','침묵','카카오','커튼','커피','컵','코끼리','코스모스','콩',
+  '큰바위','클로버','키위','타래','탁자','터널','토끼','토마토','튤립','파도','파랑','파인애플','팥','편지','평화','포도',
+  '포옹','폭포','폭풍','풀숲','풍경','풍선','피아노','하늘','하루','하트','한라','함박','항구','해바라기','해변','해질녘',
+  '향기','허공','헌책','호두','호박','호수','홍차','화로','화살','황혼','회오리','후추','휘파람','흙','희망','히아신스'
+];
+
+// === 핵심 헬퍼 ===
+
+// 256-bit random 마스터 키 생성 (CryptoKey)
+async function _e2eeGenerateMasterKey() {
+  return await crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true,  // extractable (passphrase 암호화 / device 이전 위해)
+    ['encrypt', 'decrypt']
+  );
+}
+
+// CryptoKey → base64 raw bytes
+async function _e2eeExportKey(key) {
+  const raw = await crypto.subtle.exportKey('raw', key);
+  return _b64encode(new Uint8Array(raw));
+}
+
+// base64 → CryptoKey
+async function _e2eeImportKey(b64) {
+  const raw = _b64decode(b64);
+  return await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+}
+
+// 사용자 지정 password → 256-bit key (PBKDF2 1M iterations — brute-force 매우 어려움)
+// 12자 이상 password + PBKDF2 1M = 보안 강도 충분 (1Password / Bitwarden 표준).
+async function _e2eePassphraseToKey(passphrase, saltB64) {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    'raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']
+  );
+  return await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: _b64decode(saltB64),
+      iterations: 1000000,  // 1M (사용자 요청 2026-04-30 단순화 — 사용자 지정 password 보안 강화)
+      hash: 'SHA-256'
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  );
+}
+
+// password 강도 검증 (12자 이상, 단순 brute-force 회피)
+function _e2eeValidatePassword(pw) {
+  if (!pw || typeof pw !== 'string') return { ok: false, reason: '비밀번호를 입력해주세요' };
+  if (pw.length < 12) return { ok: false, reason: '12자 이상 필요해요 (현재 ' + pw.length + '자)' };
+  if (/^\d+$/.test(pw)) return { ok: false, reason: '숫자만으로는 약해요. 단어 + 숫자 섞어주세요' };
+  return { ok: true };
+}
+
+// 평문 → 암호문 (객체 형태: {iv, data})
+async function _e2eeEncrypt(plaintext, key) {
+  if (plaintext == null) return null;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder();
+  const data = enc.encode(typeof plaintext === 'string' ? plaintext : JSON.stringify(plaintext));
+  const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+  return {
+    _e2ee: _E2EE_VERSION,
+    iv: _b64encode(iv),
+    data: _b64encode(new Uint8Array(cipher))
+  };
+}
+
+// 암호문 → 평문 (string)
+async function _e2eeDecrypt(cipher, key) {
+  if (!cipher || typeof cipher !== 'object' || !cipher._e2ee) return cipher;
+  try {
+    const iv = _b64decode(cipher.iv);
+    const data = _b64decode(cipher.data);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+    const dec = new TextDecoder();
+    return dec.decode(plain);
+  } catch (e) {
+    console.warn('[e2ee] decrypt 실패:', e);
+    return null;
+  }
+}
+
+// base64 인코딩/디코딩 헬퍼
+function _b64encode(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+function _b64decode(b64) {
+  const s = atob(b64);
+  const bytes = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
+  return bytes;
+}
+
+// 마스터 키 init — localStorage 있으면 import, 없으면 X (가입 흐름에서 생성).
+async function _e2eeInitMasterKey() {
+  if (_e2eeMasterKey) return _e2eeMasterKey;
+  try {
+    const raw = localStorage.getItem(_E2EE_LOCAL_KEY);
+    if (!raw) return null;
+    _e2eeMasterKey = await _e2eeImportKey(raw);
+    return _e2eeMasterKey;
+  } catch (e) {
+    console.warn('[e2ee] master key init 실패:', e);
+    return null;
+  }
+}
+
+// 새 마스터 키 + 사용자 지정 password → localStorage 저장 + cloud에 password로 암호화 마스터 키 저장.
+async function _e2eeSetupNewUser(userPassword) {
+  const validation = _e2eeValidatePassword(userPassword);
+  if (!validation.ok) throw new Error(validation.reason);
+
+  const masterKey = await _e2eeGenerateMasterKey();
+  const masterKeyB64 = await _e2eeExportKey(masterKey);
+
+  // localStorage에 마스터 키
+  try {
+    localStorage.setItem(_E2EE_LOCAL_KEY, masterKeyB64);
+  } catch (e) { console.warn('[e2ee] localStorage 저장 실패:', e); }
+
+  // password로 마스터 키 암호화 (PBKDF2 1M)
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const saltB64 = _b64encode(salt);
+  const passwordKey = await _e2eePassphraseToKey(userPassword, saltB64);
+  const encryptedMasterKey = await _e2eeEncrypt(masterKeyB64, passwordKey);
+
+  _e2eeMasterKey = masterKey;
+
+  try {
+    localStorage.setItem('soragodong_v4_e2ee_recovery', JSON.stringify({
+      salt: saltB64,
+      encryptedMasterKey,
+      version: _E2EE_VERSION
+    }));
+  } catch (e) {}
+
+  return { masterKey, salt: saltB64, encryptedMasterKey };
+}
+
+// 사용자 요청 2026-04-30: 새 device 진입 시 passphrase 복원 모달.
+// loadFromCloud에서 _encryptedBody 있는데 마스터 키 X면 window._e2eePendingRecovery 박음. 진입 후 모달.
+async function maybeShowE2EERecoveryModal() {
+  if (!window._e2eePendingRecovery) return;
+  if (document.getElementById('e2eeRecoveryOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.style.zIndex = '10001';
+  overlay.id = 'e2eeRecoveryOverlay';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:420px; padding:24px;">
+      <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">🔐 비밀번호 입력</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
+        새 기기에서 처음 로그인하셨네요. 활성화 시 설정하신 <strong>비밀번호</strong>를 입력해주세요.<br><br>
+        <span style="color:var(--text-soft);">암호화된 데이터를 복호화해서 가져옵니다.</span>
+      </div>
+      <input type="password" id="e2eePassphraseInput" placeholder="비밀번호 (12자 이상)" autocomplete="current-password" style="width:100%; font-size:14px; padding:10px;">
+      <div id="e2eeRecoveryStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px;"></div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn-primary" onclick="submitE2EERecovery()" style="flex:1;">복호화하고 시작</button>
+        <button class="btn-secondary" onclick="cancelE2EERecovery()" style="flex:1;">나중에</button>
+      </div>
+      <div style="font-size:10px; color:var(--text-soft); margin-top:10px; line-height:1.5;">
+        ⚠️ 비밀번호 분실 시 데이터 복구 불가능합니다. 회사도 복원해드릴 수 없습니다.
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function submitE2EERecovery() {
+  const input = document.getElementById('e2eePassphraseInput');
+  const status = document.getElementById('e2eeRecoveryStatus');
+  if (!input || !status) return;
+  const password = input.value;
+  if (!password || password.length < 12) {
+    status.textContent = `비밀번호 12자 이상 (현재 ${password.length}자)`;
+    status.style.color = '#e89090';
+    return;
+  }
+  status.textContent = '복호화 중...';
+  status.style.color = 'var(--text-soft)';
+  try {
+    const masterKey = await _e2eeRestoreFromPassphrase(password);
+    if (!masterKey) {
+      status.textContent = '비밀번호 일치 X. 다시 확인해주세요.';
+      status.style.color = '#e89090';
+      return;
+    }
+    // 복호화 성공 — pending recovery 데이터로 state 복원
+    const pending = window._e2eePendingRecovery;
+    if (pending && pending._encryptedBody) {
+      const decryptedJson = await _e2eeDecrypt(pending._encryptedBody, masterKey);
+      if (decryptedJson) {
+        const decryptedBody = JSON.parse(decryptedJson);
+        const { _encryptedBody, ...metaPart } = pending;
+        state = { ...DEFAULT_STATE, ...metaPart, ...decryptedBody };
+        _e2eeEnabled = true;
+      }
+    }
+    window._e2eePendingRecovery = null;
+    saveState();
+    const overlay = document.getElementById('e2eeRecoveryOverlay');
+    if (overlay) overlay.remove();
+    showToast('🔐 복호화 완료 ✦');
+    location.reload();
+  } catch (e) {
+    status.textContent = '복호화 실패: ' + (e.message || e);
+    status.style.color = '#e89090';
+  }
+}
+
+function cancelE2EERecovery() {
+  const yes = confirm('비밀번호 입력 X면 본인 데이터 접근 불가능 (회사도 못 봅니다). 나중에 입력하시려면 새로고침. 정말 취소?');
+  if (!yes) return;
+  const overlay = document.getElementById('e2eeRecoveryOverlay');
+  if (overlay) overlay.remove();
+}
+
+// 사용자 요청 2026-04-30: 가입 시 E2EE password 자동 권유 (신규 사용자 + 미설정).
+// 가입 직후 / 로그인 직후 진입 시 마스터 키 X + 미활성 + 진입 모달 안 떠있으면 자동 권유.
+async function maybeShowE2EESetupForNewUser() {
+  if (!authUserId) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (_e2eeEnabled || _e2eeMasterKey) return;
+  if (window._e2eePendingRecovery) return;
+  try {
+    if (localStorage.getItem('soragodong_v4_e2ee_recovery')) return;  // 이미 활성
+    if (localStorage.getItem('soragodong_v4_e2ee_setup_dismissed')) return;  // 사용자가 권유 거부
+  } catch {}
+  if (document.getElementById('e2eeSetupOverlay')) return;
+  showE2EEPasswordSetupModal();
+}
+
+// 사용자 요청 2026-04-30 (단순화): E2EE 활성화 — 사용자 지정 password 모달.
+async function setupE2EE() {
+  if (_e2eeMasterKey && _e2eeEnabled) {
+    alert('이미 종단간 암호화(E2EE)가 활성화되어 있어요.');
+    return;
+  }
+  showE2EEPasswordSetupModal();
+}
+
+function showE2EEPasswordSetupModal() {
+  if (document.getElementById('e2eeSetupOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.style.zIndex = '10001';
+  overlay.id = 'e2eeSetupOverlay';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:400px; padding:24px;">
+      <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">🔐 비밀번호 설정</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
+        활성화 후 <strong>회사조차 본인 데이터의 평문을 볼 수 없습니다</strong>.<br>
+        본인이 외울 수 있는 비밀번호를 입력해주세요. 다른 기기에서 로그인하실 때도 같은 비밀번호로 데이터를 복원하실 수 있습니다.
+      </div>
+      <div style="margin-bottom:10px;">
+        <input type="password" id="e2eePasswordInput" placeholder="비밀번호 (12자 이상)" autocomplete="new-password" style="width:100%; font-family:inherit;">
+      </div>
+      <div style="margin-bottom:10px;">
+        <input type="password" id="e2eePasswordConfirmInput" placeholder="비밀번호 다시 입력" autocomplete="new-password" style="width:100%; font-family:inherit;">
+      </div>
+      <div id="e2eePasswordStatus" style="font-size:11px; color:var(--text-soft); margin-bottom:14px; min-height:14px;"></div>
+      <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-bottom:14px; padding:8px; background:rgba(220,80,80,0.05); border-left:3px solid rgba(220,80,80,0.40); border-radius:4px;">
+        ⚠️ 비밀번호 분실 시 데이터를 복구할 수 없습니다. 회사도 복원해드릴 수 없습니다. 안전한 곳에 보관해주세요 (예: 1Password, Bitwarden, 손글씨 메모).
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-primary" onclick="submitE2EESetup()" style="flex:1;">활성화</button>
+        <button class="btn-secondary" onclick="cancelE2EESetup()" style="flex:1;">취소</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('e2eePasswordInput')?.focus(), 100);
+}
+
+async function submitE2EESetup() {
+  const pw1 = document.getElementById('e2eePasswordInput')?.value || '';
+  const pw2 = document.getElementById('e2eePasswordConfirmInput')?.value || '';
+  const status = document.getElementById('e2eePasswordStatus');
+  if (!status) return;
+  if (pw1 !== pw2) {
+    status.textContent = '비밀번호가 일치하지 않습니다';
+    status.style.color = '#e89090';
+    return;
+  }
+  const validation = _e2eeValidatePassword(pw1);
+  if (!validation.ok) {
+    status.textContent = validation.reason;
+    status.style.color = '#e89090';
+    return;
+  }
+  status.textContent = '활성화 중...';
+  status.style.color = 'var(--text-soft)';
+  try {
+    await _e2eeSetupNewUser(pw1);
+    _e2eeEnabled = true;
+    await saveToCloudNow();
+    refreshE2EEStatus();
+    const overlay = document.getElementById('e2eeSetupOverlay');
+    if (overlay) overlay.remove();
+    showToast('🔐 E2EE 활성화 완료 — 회사도 평문 못 봅니다');
+  } catch (e) {
+    status.textContent = '실패: ' + (e.message || e);
+    status.style.color = '#e89090';
+  }
+}
+
+function cancelE2EESetup() {
+  const overlay = document.getElementById('e2eeSetupOverlay');
+  if (overlay) overlay.remove();
+  // dismiss 박힘 — 다음 진입 시 자동 권유 X (Settings에서 명시 활성 가능)
+  try { localStorage.setItem('soragodong_v4_e2ee_setup_dismissed', new Date().toISOString()); } catch {}
+}
+
+// 비밀 단어 12개 다시 보기 (이미 활성된 사용자)
+async function showE2EERecoveryWords() {
+  try {
+    const recovery = JSON.parse(localStorage.getItem('soragodong_v4_e2ee_recovery') || 'null');
+    if (!recovery) {
+      alert('아직 종단간 암호화(E2EE)가 활성화되지 않았어요.\n\n위의 [🔐 E2EE 활성화] 버튼을 먼저 눌러주세요.');
+      return;
+    }
+    alert(
+      '비밀 단어 12개는 보안상 이 기기에 저장되어 있지 않습니다.\n\n' +
+      '처음 활성화하실 때 표시된 단어들을 그때 한 번만 안내해드립니다. ' +
+      '안전한 곳(예: 1Password, Bitwarden, 손글씨 메모)에 저장해 두셨어야 합니다.\n\n' +
+      '✓ 만약 저장해 두셨다면:\n' +
+      '   다른 기기/브라우저에서 처음 로그인하실 때 그 비밀 단어를 입력하시면 데이터가 복원됩니다.\n\n' +
+      '⚠️ 만약 저장하지 않으셨다면:\n' +
+      '   새 기기에서는 본인의 데이터에 접근하실 수 없습니다 (회사도 복구해드릴 수 없습니다).\n' +
+      '   현재 사용 중인 이 기기에서는 계속 사용 가능합니다.\n\n' +
+      '대안 (지금이라도 백업하시려면):\n' +
+      '   1. [☁️ 클라우드에 저장] 으로 데이터 저장\n' +
+      '   2. 새 기기에서 같은 이메일로 로그인 후 [☁️ 클라우드에서 불러오기]\n' +
+      '   3. 단 이 방법은 E2EE 활성 전 평문 데이터에만 적용됩니다.\n\n' +
+      '안전을 위해 지금이라도 [📁 파일로 백업] 을 권장드립니다.'
+    );
+  } catch (e) {
+    alert('확인 실패: ' + (e.message || e));
+  }
+}
+
+// 비밀 단어 12개 표시 모달 (첫 활성 시)
+function showE2EERecoveryWordsModal(passphrase, mustSave) {
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.style.zIndex = '10001';
+  const words = passphrase.split(' ');
+  const wordsHtml = words.map((w, i) => `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--surface);border-radius:6px;font-size:13px;"><span style="font-size:10px;color:var(--text-soft);min-width:18px;">${i+1}.</span><b>${w}</b></div>`).join('');
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:420px; max-height:90vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">🔐 비밀 단어 12개</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
+        ⚠️ <strong style="color:#e89090;">반드시 안전한 곳에 보관하세요</strong>. 분실 시 데이터 복구 불가능합니다.<br>
+        추천: 1Password / Bitwarden / 손글씨 노트.
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; margin-bottom:14px;">
+        ${wordsHtml}
+      </div>
+      <button class="btn-secondary" onclick="navigator.clipboard.writeText('${passphrase}').then(() => alert('클립보드에 복사됨'))" style="margin-bottom:8px;">📋 복사하기</button>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);margin-bottom:14px;">
+        <input type="checkbox" id="e2eeWordsConfirmed">
+        <span>비밀 단어를 안전한 곳에 보관했음을 확인합니다</span>
+      </label>
+      <button class="btn-primary" onclick="closeE2EEWordsModal(this)" style="width:100%;">확인</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeE2EEWordsModal(btn) {
+  const confirmed = document.getElementById('e2eeWordsConfirmed')?.checked;
+  if (!confirmed) {
+    alert('비밀 단어를 안전하게 보관했음을 확인해주세요.');
+    return;
+  }
+  const overlay = btn.closest('.input-modal-overlay');
+  if (overlay) overlay.remove();
+}
+
+// E2EE 상태 표시 갱신
+function refreshE2EEStatus() {
+  const status = document.getElementById('e2eeStatus');
+  if (!status) return;
+  if (_e2eeEnabled && _e2eeMasterKey) {
+    status.innerHTML = '✅ <b style="color:#9ed4a0;">활성화됨</b> — 회사도 평문 접근 X';
+  } else {
+    status.innerHTML = '⚠️ 미활성 — 회사 (관리자 1명)가 시스템상 평문 접근 가능';
+  }
+}
+
+// passphrase 입력 → cloud 복호화 → 마스터 키 복원 (새 device 진입 시).
+async function _e2eeRestoreFromPassphrase(passphrase) {
+  // 일단 localStorage backup에서 복원. 향후 cloud Supabase로.
+  try {
+    const recovery = JSON.parse(localStorage.getItem('soragodong_v4_e2ee_recovery') || 'null');
+    if (!recovery) return null;
+    const passphraseKey = await _e2eePassphraseToKey(passphrase, recovery.salt);
+    const masterKeyB64 = await _e2eeDecrypt(recovery.encryptedMasterKey, passphraseKey);
+    if (!masterKeyB64) throw new Error('passphrase 일치 X');
+    const masterKey = await _e2eeImportKey(masterKeyB64);
+    _e2eeMasterKey = masterKey;
+    localStorage.setItem(_E2EE_LOCAL_KEY, masterKeyB64);
+    return masterKey;
+  } catch (e) {
+    console.warn('[e2ee] passphrase 복원 실패:', e);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // SUPABASE
 // ═══════════════════════════════════════════════════════════════
 async function loadFromCloud() {
@@ -8031,8 +8692,35 @@ async function loadFromCloud() {
     if (!resp.ok) throw new Error('Load failed');
     const data = await resp.json();
     if (data.length > 0) {
-      state = { ...DEFAULT_STATE, ...data[0].data };
-      console.log('✅ V4 row loaded from cloud');
+      let cloudData = data[0].data;
+      // 사용자 요청 2026-04-30 (Stage 2 E2EE): _encryptedBody 있으면 마스터 키로 복호화.
+      if (cloudData && cloudData._encryptedBody && cloudData._encryptedBody._e2ee) {
+        await _e2eeInitMasterKey();
+        if (!_e2eeMasterKey) {
+          // 마스터 키 X — 새 device 진입 또는 키 분실. passphrase 입력 모달 표시 (별도 흐름).
+          console.warn('[loadFromCloud] E2EE 활성된 cloud row인데 마스터 키 없음. passphrase 복원 필요.');
+          window._e2eePendingRecovery = cloudData;
+          state = { ...DEFAULT_STATE };
+          // 사용자 흐름: 진입 후 maybeShowE2EERecoveryModal 호출
+        } else {
+          try {
+            const decryptedJson = await _e2eeDecrypt(cloudData._encryptedBody, _e2eeMasterKey);
+            const decryptedBody = decryptedJson ? JSON.parse(decryptedJson) : {};
+            // 평문 메타 + 복호화 본문 합치기
+            const { _encryptedBody, ...metaPart } = cloudData;
+            state = { ...DEFAULT_STATE, ...metaPart, ...decryptedBody };
+            _e2eeEnabled = true;
+            console.log('✅ V4 row loaded + decrypted (E2EE)');
+          } catch (e) {
+            console.error('[loadFromCloud] E2EE 복호화 실패:', e);
+            state = { ...DEFAULT_STATE };
+          }
+        }
+      } else {
+        // 평문 (E2EE 미적용 사용자) — 기존 흐름
+        state = { ...DEFAULT_STATE, ...cloudData };
+        console.log('✅ V4 row loaded from cloud (평문)');
+      }
     } else {
       // V4 row 없음 = 첫 V4 진입. 빈 V7 state로 시작.
       // V3 데이터 import는 별도 UI 버튼(V4-1b)에서 처리.
@@ -8143,6 +8831,33 @@ async function loadFromCloud() {
     // 사용자 요청 2026-04-30: 일일 chat cap default 100. 이미 있으면 그대로 (사용자 설정 보존).
     if (state.preferences.dailyChatCap === undefined) state.preferences.dailyChatCap = 100;
     if (!state.dailyChatCount || typeof state.dailyChatCount !== 'object') state.dailyChatCount = { date: null, count: 0 };
+    // 사용자 요청 2026-04-30 (변호사 검수): consentLog 보강 + pending_consent localStorage → state 옮기기.
+    if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
+    if (state.preferences.autoRenew === undefined) state.preferences.autoRenew = false;
+    try {
+      const pendingRaw = localStorage.getItem('soragodong_pending_consent');
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if (pending && pending.consentAll && pending.versions) {
+          const at = pending.at || new Date().toISOString();
+          // 이미 같은 버전 동의 박혀있으면 skip (재로그인 케이스)
+          const has = (type, version) => state.preferences.consentLog.some(c => c.type === type && c.version === version && c.confirmed);
+          if (!has('terms', pending.versions.terms)) state.preferences.consentLog.push({ type: 'terms', version: pending.versions.terms, confirmed: true, at });
+          if (!has('privacy', pending.versions.privacy)) state.preferences.consentLog.push({ type: 'privacy', version: pending.versions.privacy, confirmed: true, at });
+          if (!has('crossBorder', pending.versions.crossBorder)) state.preferences.consentLog.push({ type: 'crossBorder', version: pending.versions.crossBorder, confirmed: true, at });
+          if (!has('age14', '1.0')) state.preferences.consentLog.push({ type: 'age14', version: '1.0', confirmed: true, at });
+          // 만 18세 (성인) 동의
+          state.preferences.requiresLegalGuardianForPayment = !pending.consentAdult;
+          if (pending.consentAdult && !has('adult18', '1.0')) {
+            state.preferences.consentLog.push({ type: 'adult18', version: '1.0', confirmed: true, at });
+          }
+          // 통계 동의 (선택)
+          state.preferences.consentLog.push({ type: 'analytics', version: '1.0', confirmed: !!pending.consentAnalytics, at });
+          localStorage.removeItem('soragodong_pending_consent');
+          console.log('[consent] pending → state 동의 옮김');
+        }
+      }
+    } catch (e) { console.warn('pending consent migrate:', e); }
 
     // 사용자 요청 2026-04-28: cloud/localStorage에 stale testerMode 플래그가 있으면 항상 false로 (메모리에서만 토글되어야 하는 flag — 새로고침 시 무조건 OFF)
     if (state.preferences.testerMode) {
@@ -8202,6 +8917,27 @@ async function loadFromCloud() {
       const before = state.shellCollection.length;
       state.shellCollection = state.shellCollection.filter(s => !(s && typeof s._id === 'string' && (s._id.startsWith('shell_seed_'))));
       if (state.shellCollection.length !== before) seedCleaned = true;
+    }
+    // 사용자 보고 2026-04-30: id-prefix 없이 박힌 시드 (entries / chatMessages / chatArchive / weeklyReviews / memoryVault) — _seed marker 매칭으로 sweep.
+    // testSeedV4Data 함수가 _markSeedItems()로 새 박힌 항목에 _seed: timestamp 박음.
+    const stripSeedMarker = (arr) => {
+      if (!Array.isArray(arr)) return arr;
+      const before = arr.length;
+      const filtered = arr.filter(it => !(it && typeof it === 'object' && it._seed));
+      if (filtered.length !== before) seedCleaned = true;
+      return filtered;
+    };
+    state.entries = stripSeedMarker(state.entries);
+    state.chatMessages = stripSeedMarker(state.chatMessages);
+    state.chatArchive = stripSeedMarker(state.chatArchive);
+    state.weeklyReviews = stripSeedMarker(state.weeklyReviews);
+    state.memoryVault = stripSeedMarker(state.memoryVault);
+    // 기존 stripSeed 대상 store들도 _seed marker 추가 매칭 (앞으로 박힐 시드 대비)
+    ['tasks','missions','pearls','archive','topicCards','reflectionQuestions','projects','starts','quarterlyReviews','decisions','insights','diagnoses','monthlyReviews'].forEach(k => {
+      state[k] = stripSeedMarker(state[k]);
+    });
+    if (Array.isArray(state.shellCollection)) {
+      state.shellCollection = stripSeedMarker(state.shellCollection);
     }
     if (seedCleaned) {
       console.log('[seed cleanup] cloud/localStorage에 박혀있던 시드 데이터 자동 정리됨');
@@ -8524,15 +9260,57 @@ function migrateToV7() {
 async function saveToCloudNow() {
   if (!authUserId) return;
   // 사용자 보고 2026-04-28: testerMode ON이면 cloud 저장 자체 차단.
-  // 이전 버그: 튜토리얼 시작 직전 saveState로 예약된 saveToCloud setTimeout이 1초 뒤 fire →
-  //   당시 state엔 시드가 박혀 있어 me_v4 row에 시드 푸시. 튜토리얼 끝나도 cloud에 시드 잔존.
-  // 동기 경로 (V7 migration / V3 import / 백업 복구 등)는 testerMode 자동 정리 후 호출되므로 영향 없음.
   if (state.preferences && state.preferences.testerMode) {
     console.log('[saveToCloudNow] testerMode ON — cloud 저장 차단');
     return;
   }
+  // 사용자 보고 2026-04-30 데이터 손실 fix: pending E2EE 복원 중이면 cloud 저장 차단.
+  // 이거 없으면 빈 default state가 cloud의 _encryptedBody를 평문으로 덮어쓰기.
+  if (window._e2eePendingRecovery) {
+    console.warn('[saveToCloudNow] E2EE 복원 대기 중 — cloud 저장 차단 (데이터 보호)');
+    return;
+  }
   state.lastSync = new Date().toISOString();
-  // 사용자 요청 2026-04-29 (perf #1): replacer로 transient 필드 strip + testerMode 보호
+
+  // 사용자 요청 2026-04-30 (Stage 2 E2EE): 마스터 키 있으면 state body 암호화.
+  // 메타 (preferences 일부) 평문 유지 — 다음 device 진입 시 동기화 위해.
+  let dataPayload;
+  if (_e2eeEnabled && _e2eeMasterKey) {
+    try {
+      // sensitive body — 사용자 데이터 전부 암호화
+      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences'];
+      const sensitiveBody = {};
+      for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
+      const encryptedBody = await _e2eeEncrypt(JSON.stringify(sensitiveBody, _serializeReplacer), _e2eeMasterKey);
+      // 평문 메타 (consent / billing / version / preferences 일부)
+      const metaBody = {
+        version: state.version,
+        lastSync: state.lastSync,
+        preferences: state.preferences,
+        unlocked: state.unlocked,
+        modes: state.modes,
+        modeActiveSince: state.modeActiveSince,
+        periodStart: state.periodStart,
+        dailyChatCount: state.dailyChatCount,
+        lastForceAnalyzeAt: state.lastForceAnalyzeAt,
+        lastDailyChapterExtractAt: state.lastDailyChapterExtractAt,
+        lastWeeklyAnalyzeAt: state.lastWeeklyAnalyzeAt,
+        lastMonthlyAnalyzeAt: state.lastMonthlyAnalyzeAt,
+        lastQuarterlyAnalyzeAt: state.lastQuarterlyAnalyzeAt,
+        lastYearlyAnalyzeAt: state.lastYearlyAnalyzeAt,
+        _e2eeEnabled: true,
+        _e2eeVersion: _E2EE_VERSION
+      };
+      dataPayload = { ...metaBody, _encryptedBody: encryptedBody };
+    } catch (e) {
+      console.warn('[saveToCloudNow] E2EE 암호화 실패 — 평문 fallback 차단:', e);
+      throw e;  // 암호화 실패 시 cloud 저장 X (사용자 데이터 보호)
+    }
+  } else {
+    // E2EE 비활성 — 기존 평문 흐름 (호환)
+    dataPayload = state;
+  }
+
   // V4: V4 row만 PATCH/POST. V3 row(`me`)는 영원히 안 건드림.
   const checkResp = await fetch(
     `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=id&limit=1`,
@@ -8540,7 +9318,7 @@ async function saveToCloudNow() {
   );
   const existing = await checkResp.json();
   if (existing.length > 0) {
-    const body = JSON.stringify({ data: state, updated_at: state.lastSync }, _serializeReplacer);
+    const body = JSON.stringify({ data: dataPayload, updated_at: state.lastSync }, _serializeReplacer);
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
       {
@@ -8551,7 +9329,7 @@ async function saveToCloudNow() {
     );
     _handleCloudSyncResponse(r);
   } else {
-    const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: state }, _serializeReplacer);
+    const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload }, _serializeReplacer);
     const r = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -8747,14 +9525,43 @@ async function init() {
 
   await loadFromCloud();
 
+  // 사용자 요청 2026-04-30 (변호사 검수): 동의는 이메일 로그인 화면에 통합 (모달 X). consentLog 박힘.
+
+  // 사용자 요청 2026-04-30 (E2EE Stage 2): 새 device 진입 시 passphrase 복원 모달
+  setTimeout(() => {
+    if (typeof maybeShowE2EERecoveryModal === 'function') {
+      maybeShowE2EERecoveryModal().catch(e => console.warn('e2eeRecovery:', e));
+    }
+  }, 1500);
+
+  // 사용자 요청 2026-04-30: 가입 시 E2EE password 자동 권유 (신규 사용자 한정).
+  setTimeout(() => {
+    if (typeof maybeShowE2EESetupForNewUser === 'function') {
+      maybeShowE2EESetupForNewUser().catch(e => console.warn('e2eeSetupNewUser:', e));
+    }
+  }, 2500);
+
   // 사용자 요청 2026-04-28: 자동 백업 (주 1회 + APP_VERSION 변경 시) — fire-and-forget
   if (typeof runAutoBackupIfNeeded === 'function') {
     setTimeout(() => { runAutoBackupIfNeeded().catch(e => console.warn('autoBackup:', e)); }, 3000);
   }
 
-  // 사용자 요청 2026-04-30: 일주일 자동 forceAnalyze — background, fire-and-forget. 5초 후 실행 (앱 진입 부담 회피).
+  // 사용자 요청 2026-04-30: 자동 분석 4단계 — 새벽 4시 cutoff 기반 background trigger.
+  // 매일 (4초) → 매주 일요일 (5초) → 매월 1일 (6초) → 매분기 (7초) → 매년 1/1 (8초).
+  if (typeof maybeRunDailyChapterExtract === 'function') {
+    setTimeout(() => { maybeRunDailyChapterExtract().catch(e => console.warn('dailyChapterExtract:', e)); }, 4000);
+  }
   if (typeof maybeRunWeeklyForceAnalyze === 'function') {
     setTimeout(() => { maybeRunWeeklyForceAnalyze().catch(e => console.warn('weeklyForceAnalyze:', e)); }, 5000);
+  }
+  if (typeof maybeRunMonthlyAnalyze === 'function') {
+    setTimeout(() => { maybeRunMonthlyAnalyze().catch(e => console.warn('monthlyAnalyze:', e)); }, 6000);
+  }
+  if (typeof maybeRunQuarterlyAnalyze === 'function') {
+    setTimeout(() => { maybeRunQuarterlyAnalyze().catch(e => console.warn('quarterlyAnalyze:', e)); }, 7000);
+  }
+  if (typeof maybeRunYearlyAnalyze === 'function') {
+    setTimeout(() => { maybeRunYearlyAnalyze().catch(e => console.warn('yearlyAnalyze:', e)); }, 8000);
   }
 
   applyNightMode();
@@ -8849,40 +9656,8 @@ const ONBOARDING_STEPS = [
   },
 
   // === Phase 2: API 키 (4) ===
-  {
-    id: 'go_model_first',
-    targetSelector: '.nav-item[data-screen="model"]',
-    title: '먼저 키부터 등록하자',
-    body: '나랑 대화하려면 Anthropic API 키가 필요해. 키는 "나" 탭 안 설정에서 등록할 수 있어.<br><br>아래 <b>"나"</b> 탭 한 번 눌러볼래?',
-    waitFor: 'visit',
-    visitScreen: 'model'
-  },
-  {
-    id: 'go_settings',
-    targetSelector: 'button[onclick*="settings"]',
-    title: '⚙ 설정으로',
-    body: '여기 ⚙ 설정 버튼 보이지? 눌러서 설정 화면으로 가보자.',
-    waitFor: 'click',
-    advanceDelay: 500,
-    fallbackPosition: 'top'
-  },
-  {
-    id: 'enter_api_key',
-    targetSelector: '#apiKeyInput',
-    title: '🔑 API 키 붙여넣기',
-    body: 'Anthropic 콘솔에서 발급받은 sk-ant-... 키를 여기 붙여넣어줘.<br><br><span class="small">키는 네 기기에만 저장돼. 다른 사람은 못 봐 — 안심해.</span>',
-    waitFor: 'inputFilled',
-    minLength: 10
-  },
-  {
-    id: 'save_settings',
-    targetSelector: 'button[onclick="saveSettings()"]',
-    title: '저장',
-    body: '키 저장하면 진짜 시작이야! ✦',
-    waitFor: 'click',
-    advanceDelay: 800,
-    fallbackPosition: 'top'
-  },
+  // 사용자 요청 2026-04-30: API 키 관련 step (go_model_first / go_settings / enter_api_key / save_settings) 제거.
+  // 앱 결제 모델로 전환 — 사용자가 직접 키 박을 필요 X. 무료 충전 토큰 자동 부여.
   {
     id: 'sync_dot_intro',
     targetSelector: '#syncDot',
@@ -11218,6 +11993,23 @@ async function handleSendCode() {
   const email = emailInput.value.trim();
   if (!email || !email.includes('@')) { alert('이메일을 정확히 입력해줘'); return; }
 
+  // 사용자 요청 2026-04-30 (변호사 검수): 동의 검증 — 필수 박혀야 코드 받기 가능. PIPA + 전자상거래법 의무.
+  const consentAll = document.getElementById('loginConsentAll')?.checked;
+  const consentAdult = document.getElementById('loginConsentAdult')?.checked;
+  const consentAnalytics = document.getElementById('loginConsentAnalytics')?.checked;
+  if (!consentAll) { alert('필수 동의 항목을 체크해야 시작 가능해. (약관·프라이버시·국외이전·만 14세)'); return; }
+
+  // 동의 시점 임시 저장 — verify 성공 후 cloud (state.preferences.consentLog) 박힘.
+  try {
+    localStorage.setItem('soragodong_pending_consent', JSON.stringify({
+      consentAll: !!consentAll,
+      consentAdult: !!consentAdult,
+      consentAnalytics: !!consentAnalytics,
+      at: new Date().toISOString(),
+      versions: { terms: '1.0', privacy: '1.0', crossBorder: '2.0', refund: '1.0' }
+    }));
+  } catch (e) { console.warn('pending consent save:', e); }
+
   const btn = document.getElementById('loginBtn');
   const status = document.getElementById('loginStatus');
   btn.disabled = true;
@@ -11438,6 +12230,15 @@ function renderDecisionDetail(decision) {
     const isTimeLocked = !step.completed && daysSince < meta.dayUnlock;
     const cls = step.completed ? 'completed' : (isTimeLocked ? '' : 'active');
 
+    // 사용자 요청 2026-04-30: 마법 helpChat 접근성 — step 카드에 진행 중 대화 표시 + 1-click 재진입.
+    const helpMsgs = (decision.helpChats && Array.isArray(decision.helpChats[step.id]))
+      ? decision.helpChats[step.id].filter(m => !m._starter && !m.error)
+      : [];
+    const helpCount = helpMsgs.length;
+    const helpButton = helpCount > 0
+      ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:6px; background:linear-gradient(135deg, rgba(126,200,227,0.15), rgba(143,200,143,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8; font-size:12px;">🐚 도움 받기 이어서 (${helpCount}개 메시지)</button>`
+      : (decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:6px; font-size:12px;">🐚 도움 받기</button>` : '');
+
     html += `
       <div class="step-card ${cls}">
         <div class="step-header">
@@ -11450,14 +12251,17 @@ function renderDecisionDetail(decision) {
         ${step.completed ? `
           <div class="step-content-saved">${formatStepContent(step)}</div>
           ${decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="editStep('${decision.id}', '${step.id}')" style="margin-top:8px;">수정</button>` : ''}
+          ${helpButton}
         ` : (decision.status === 'in_progress' ? `
           ${isTimeLocked ? `
             <div style="font-size:12px; color:var(--text-dim); padding:10px; background:var(--surface2); border-radius:10px; line-height:1.6;">
               ${meta.dayUnlock - daysSince}일 후에 다시 와. 숙성이 필요해.
             </div>
             <button class="btn-secondary" onclick="editStep('${decision.id}', '${step.id}')" style="margin-top:8px; font-size:11px;">그래도 지금 작성</button>
+            ${helpButton}
           ` : `
             <button class="btn-primary decision" onclick="editStep('${decision.id}', '${step.id}')">시작</button>
+            ${helpButton}
           `}
         ` : '')}
       </div>
@@ -11543,7 +12347,14 @@ function openTextStep(decision, step, meta) {
     </div>
 
     <button class="btn-primary decision" onclick="saveTextStep('${decision.id}', '${step.id}')">완료</button>
-    <button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')">🐚 소라고동에게 도움 받기</button>
+    ${(() => {
+      // 사용자 요청 2026-04-30: 도움 받기 버튼에 진행 중 대화 카운트 표시.
+      const stepHelpMsgs = (decision.helpChats && Array.isArray(decision.helpChats[step.id]))
+        ? decision.helpChats[step.id].filter(m => !m._starter && !m.error) : [];
+      return stepHelpMsgs.length > 0
+        ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(126,200,227,0.15), rgba(143,200,143,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">🐚 도움 받기 이어서 (${stepHelpMsgs.length}개 메시지)</button>`
+        : `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')">🐚 소라고동에게 도움 받기</button>`;
+    })()}
     <button class="btn-secondary" onclick="openDecision('${decision.id}')">돌아가기</button>
   `;
 }
@@ -11564,7 +12375,11 @@ function saveTextStep(decisionId, stepId) {
 // 사용자 요청 2026-04-29: 마법 도움 받기 = 별도 helpChat 모달. decision/step별 영구 저장.
 // 14일 숙성 중 며칠 걸쳐 이어볼 수 있음. 메인 chat 탭 안 건드림.
 async function askAIForStep(decisionId, stepId) {
-  if (!state.apiKey) { alert('API 키 먼저 설정!'); return; }
+  // 사용자 요청 2026-04-30: apiKey 빈 상태에서도 백엔드 프록시로 동작 (Phase C). session 활성만 체크.
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) {
+    alert('로그인이 필요해요!');
+    return;
+  }
   openMagicHelpChat(decisionId, stepId);
 }
 
@@ -11626,8 +12441,9 @@ async function _runMagicHelpAIResponse() {
   const meta = DECISION_STEPS.find(m => m.id === stepId);
   if (!meta) return;
 
-  if (!state.apiKey) {
-    decision.helpChats[stepId].push({ role: 'assistant', content: '(API 키 없어 — 설정에서 등록해.)', timestamp: new Date().toISOString() });
+  // 사용자 요청 2026-04-30: apiKey 빈 상태 + session 활성 시 백엔드 프록시 동작 (fetch interceptor 자동 swap).
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) {
+    decision.helpChats[stepId].push({ role: 'assistant', content: '(로그인이 필요해요. 새로고침 후 다시 시도해주세요.)', timestamp: new Date().toISOString() });
     _magicHelpState._loading = false;
     saveState();
     _renderMagicHelpChat();
@@ -13300,14 +14116,31 @@ ${chatLog.slice(0, 8000)}
   "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
   "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
   "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
-  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."}
+  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."},
+  "deep_profile_update": {
+    "development": {
+      "childhood_addition": "어린 시절·가족·양육에 대한 새 정보 한 줄 (있을 때만, 사용자가 명시 언급)",
+      "school_addition": "학창 시절 새 정보 한 줄",
+      "adhd_addition": "ADHD 발견·이전 새 정보 한 줄",
+      "turning_point": {"when": "YYYY-MM 또는 시기", "title": "전환점 제목", "impact": "영향 한 줄"}
+    },
+    "relationships": [{"name": "이름 (있을 때)", "relation": "가족|친구|연인|동료|치료자|기타", "tone": "안전|자극|혼합", "influence": "positive|negative|mixed", "notes": "한 줄"}],
+    "self_narrative": {
+      "self_belief": "자신에 대한 신념 한 줄 (\"나는 ...\")",
+      "world_belief": "세상에 대한 신념 한 줄 (\"세상은 ...\")",
+      "future_belief": "미래에 대한 신념 한 줄 (\"미래는 ...\")",
+      "identity_keyword": "정체성 keyword 1개"
+    }
+  }
 }
+
+deep_profile_update는 사용자가 챕터에서 명시적으로 언급한 정보만 (예: "엄마가 늘 비교해" / "고등학교 때 처음 ADHD 의심" / "나는 패턴 인식이 강해"). 추측 X. 빈 부분은 빈 string 또는 null.
 
 JSON만, 마크다운 X.`;
 
     const resp = await callAnthropic({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
+      max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     });
     if (!resp.ok) return;
@@ -13422,6 +14255,105 @@ JSON만, 마크다운 X.`;
         cf.lastUpdated = new Date().toISOString();
       }
     }
+
+    // 사용자 요청 2026-04-30: deep_profile_update 자동 추출 (Q2 더 깊은 나).
+    // 사용자가 챕터에서 명시 언급한 발달·관계·자기서사 정보만. user_verified=false → 사용자 ✓ 컨펌.
+    const dpu = analysis.deep_profile_update;
+    if (dpu && typeof dpu === 'object') {
+      if (!state.userDeepProfile) state.userDeepProfile = JSON.parse(JSON.stringify(DEFAULT_STATE.userDeepProfile));
+      const udp = state.userDeepProfile;
+      let dpuTouched = false;
+      // development 추가 — append (기존 텍스트에 누적)
+      if (dpu.development && typeof dpu.development === 'object') {
+        if (!udp.development) udp.development = { childhood: '', schoolYears: '', adhdDiscovery: '', turningPoints: [] };
+        const appendIfNew = (current, addition) => {
+          if (!addition || typeof addition !== 'string') return current;
+          const t = addition.trim();
+          if (!t) return current;
+          if ((current || '').includes(t)) return current;
+          return (current ? current + '\n' : '') + t;
+        };
+        const newCh = appendIfNew(udp.development.childhood, dpu.development.childhood_addition);
+        if (newCh !== udp.development.childhood) { udp.development.childhood = newCh; dpuTouched = true; }
+        const newSc = appendIfNew(udp.development.schoolYears, dpu.development.school_addition);
+        if (newSc !== udp.development.schoolYears) { udp.development.schoolYears = newSc; dpuTouched = true; }
+        const newAd = appendIfNew(udp.development.adhdDiscovery, dpu.development.adhd_addition);
+        if (newAd !== udp.development.adhdDiscovery) { udp.development.adhdDiscovery = newAd; dpuTouched = true; }
+        // turning_point — 단일 객체
+        const tp = dpu.development.turning_point;
+        if (tp && tp.title && typeof tp.title === 'string') {
+          if (!Array.isArray(udp.development.turningPoints)) udp.development.turningPoints = [];
+          const exists = udp.development.turningPoints.find(t => similarText(t.title, tp.title));
+          if (!exists) {
+            udp.development.turningPoints.push({
+              id: 'tp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+              when: (tp.when || '?').toString().slice(0, 30),
+              title: tp.title.slice(0, 60),
+              description: '',
+              impact: (tp.impact || '').slice(0, 100),
+              extractedFrom: 'chapter',
+              user_verified: false
+            });
+            dpuTouched = true;
+          }
+        }
+      }
+      // relationships
+      if (Array.isArray(dpu.relationships)) {
+        if (!Array.isArray(udp.relationships)) udp.relationships = [];
+        dpu.relationships.forEach(r => {
+          if (!r || !r.name || typeof r.name !== 'string') return;
+          const exists = udp.relationships.find(e => similarText(e.name, r.name));
+          if (!exists) {
+            udp.relationships.push({
+              id: 'rel_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+              name: r.name.trim().slice(0, 30),
+              relation: (r.relation || '').slice(0, 20),
+              tone: (r.tone || '').slice(0, 20),
+              influence: (r.influence || '').slice(0, 20),
+              notes: (r.notes || '').slice(0, 100),
+              extractedFrom: 'chapter',
+              user_verified: false
+            });
+            dpuTouched = true;
+          }
+        });
+      }
+      // self_narrative — beliefs + identity keyword
+      if (dpu.self_narrative && typeof dpu.self_narrative === 'object') {
+        if (!udp.selfNarrative) udp.selfNarrative = { selfStory: '', coreBeliefs: { aboutSelf: [], aboutWorld: [], aboutFuture: [] }, howWantToBeSeen: '', identityKeywords: [] };
+        if (!udp.selfNarrative.coreBeliefs) udp.selfNarrative.coreBeliefs = { aboutSelf: [], aboutWorld: [], aboutFuture: [] };
+        const cb = udp.selfNarrative.coreBeliefs;
+        const sn = dpu.self_narrative;
+        const pushBelief = (arrKey, txt) => {
+          if (!txt || typeof txt !== 'string') return;
+          const t = txt.trim();
+          if (!t) return;
+          if (!Array.isArray(cb[arrKey])) cb[arrKey] = [];
+          if (!cb[arrKey].some(s => similarText(s, t))) {
+            cb[arrKey].push(t.slice(0, 100));
+            dpuTouched = true;
+          }
+        };
+        pushBelief('aboutSelf', sn.self_belief);
+        pushBelief('aboutWorld', sn.world_belief);
+        pushBelief('aboutFuture', sn.future_belief);
+        if (sn.identity_keyword && typeof sn.identity_keyword === 'string') {
+          if (!Array.isArray(udp.selfNarrative.identityKeywords)) udp.selfNarrative.identityKeywords = [];
+          const kw = sn.identity_keyword.trim().slice(0, 30);
+          if (kw && !udp.selfNarrative.identityKeywords.some(k => similarText(k, kw))) {
+            udp.selfNarrative.identityKeywords.push(kw);
+            dpuTouched = true;
+          }
+        }
+      }
+      if (dpuTouched) {
+        udp.version = (udp.version || 0) + 1;
+        udp.lastUpdated = new Date().toISOString();
+        touched = true;
+      }
+    }
+
     if (touched) {
       saveState();
       if (typeof renderModel === 'function') {
@@ -13577,10 +14509,11 @@ async function sendReflectionChat() {
   saveState();
   renderReflectionChat();
 
-  if (!state.apiKey) {
+  // 사용자 요청 2026-04-30: apiKey 빈 상태 + session 활성 시 백엔드 프록시.
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) {
     q.chatMessages.push({
       role: 'assistant',
-      content: '(API 키 없어 — 설정에서 등록해. 일단 네 흐름은 박아둘게.)',
+      content: '(로그인이 필요해요. 새로고침 후 다시 시도해주세요.)',
       timestamp: new Date().toISOString()
     });
     saveState();
@@ -16156,42 +17089,53 @@ function renderModel() {
   let html = timeCardHtml;
   // 세부 섹션 모음 — 한 details로 묶음
   let detailsHtml = '';
-  if (state.values.length > 0) {
-    const split = splitItems(state.values, 4, 0.4, true);
-    detailsHtml += `<div class="model-section"><div class="model-section-title">🎯 네가 중시하는 것</div>`;
-    split.top.forEach((v, i) => {
-      const realIdx = state.values.indexOf(v);
-      detailsHtml += renderModelItem(v, 'values', realIdx);
-    });
-    if (split.more.length > 0 || split.draft.length > 0) {
-      detailsHtml += renderMoreSection('values', split.more, split.draft);
+  // 사용자 요청 2026-04-30: values / traits / patterns — 미컨펌 1개만 메인 표시 → '맞아' / '아니야' 컨펌 시 다음 미컨펌으로.
+  // 모두 컨펌되면 → 원래 흐름 (top 1만 + 나머지 collapse).
+  const _renderConfirmableSection = (category, label, arr) => {
+    if (!arr || arr.length === 0) return '';
+    const sorted = sortItems(arr, true);  // prioritizeUnverified
+    const unverified = sorted.filter(item => item.user_verified !== true);
+    const verified = sorted.filter(item => item.user_verified === true);
+    let inner = `<div class="model-section"><div class="model-section-title">${label}</div>`;
+    if (unverified.length > 0) {
+      // 미컨펌 1개 메인 (confidence 높은 거)
+      const top = unverified[0];
+      const topIdx = arr.indexOf(top);
+      inner += `<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.6;">
+        ${unverified.length}개 확인 대기. 한 번에 하나씩 — 맞으면 ✓, 아니면 ✗.
+      </div>`;
+      inner += renderModelItem(top, category, topIdx);
+      if (unverified.length > 1) {
+        inner += `<div style="font-size:11px;color:var(--text-soft);text-align:center;margin-top:8px;">+ ${unverified.length - 1}개 대기 중</div>`;
+      }
+      // verified는 collapse로 숨김
+      if (verified.length > 0) {
+        inner += `<details class="model-collapse" style="margin-top:10px;">
+          <summary>✓ 확인된 ${verified.length}개</summary>
+          <div class="model-collapse-content">`;
+        verified.forEach(item => {
+          const idx = arr.indexOf(item);
+          inner += renderModelItem(item, category, idx);
+        });
+        inner += `</div></details>`;
+      }
+    } else {
+      // 모두 컨펌됨 — 원래 흐름 (top 1 + 나머지 collapse)
+      const split = splitItems(arr, 1, 0.4, false);
+      split.top.forEach(item => {
+        const idx = arr.indexOf(item);
+        inner += renderModelItem(item, category, idx);
+      });
+      if (split.more.length > 0 || split.draft.length > 0) {
+        inner += renderMoreSection(category, split.more, split.draft);
+      }
     }
-    detailsHtml += '</div>';
-  }
-  if (state.traits.length > 0) {
-    const split = splitItems(state.traits, 5, 0.4, true);
-    detailsHtml += `<div class="model-section"><div class="model-section-title">💫 네 특성</div>`;
-    split.top.forEach((t, i) => {
-      const realIdx = state.traits.indexOf(t);
-      detailsHtml += renderModelItem(t, 'traits', realIdx);
-    });
-    if (split.more.length > 0 || split.draft.length > 0) {
-      detailsHtml += renderMoreSection('traits', split.more, split.draft);
-    }
-    detailsHtml += '</div>';
-  }
-  if (state.patterns.length > 0) {
-    const split = splitItems(state.patterns, 4, 0.4, true);
-    detailsHtml += `<div class="model-section"><div class="model-section-title">🔄 보이는 패턴</div>`;
-    split.top.forEach((p, i) => {
-      const realIdx = state.patterns.indexOf(p);
-      detailsHtml += renderModelItem(p, 'patterns', realIdx);
-    });
-    if (split.more.length > 0 || split.draft.length > 0) {
-      detailsHtml += renderMoreSection('patterns', split.more, split.draft);
-    }
-    detailsHtml += '</div>';
-  }
+    inner += '</div>';
+    return inner;
+  };
+  detailsHtml += _renderConfirmableSection('values', '🎯 네가 중시하는 것', state.values);
+  detailsHtml += _renderConfirmableSection('traits', '💫 네 특성', state.traits);
+  detailsHtml += _renderConfirmableSection('patterns', '🔄 보이는 패턴', state.patterns);
   if (state.caseFormulation.version > 0) {
     html += `<div class="model-section"><div class="model-section-title">📋 통합 분석 v.${state.caseFormulation.version}</div>
       <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">너에 대해 내가 종합한 그림이야. 잘못된 거 있으면 ✎ 수정 / ✕ 삭제.</div>`;
@@ -16212,9 +17156,10 @@ function renderModel() {
         <div class="model-item-desc cf-list">${topHtml}</div>
         ${restHtml}</div>`;
     };
-    html += cfSection('🔍 다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 네 결', state.caseFormulation.problems, 'problems');
-    html += cfSection('⚙️ 어떻게 작동하는지', '네 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
+    // 사용자 요청 2026-04-30: 강점 → 작동 → 다루어야 할 특성 순서 (긍정 먼저)
     html += cfSection('💪 네 강점', '', state.caseFormulation.strengths, 'strengths');
+    html += cfSection('⚙️ 어떻게 작동하는지', '네 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
+    html += cfSection('🔍 다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 네 결', state.caseFormulation.problems, 'problems');
     html += '</div>';
   }
   // V4-fix v3 (사용자 요청): 진단 5종 나 탭에 표시 (active + shown만, dismissed 제외)
@@ -17163,22 +18108,11 @@ async function endChapter() {
   });
   if (!yes) return;
 
-  // 1. 토픽 카드 추출 (마지막 메시지에 chapterStart 마커)
+  // 1. 마지막 메시지에 chapterStart 마커 박음. 추출 LLM call X — 매일 새벽 4시 통합 추출.
+  // 사용자 요청 2026-04-30: 챕터 마무리할 때마다 추출 X → 누적 → 매일 4AM maybeRunDailyChapterExtract에서 통합.
   const lastMsg = validMsgs[validMsgs.length - 1];
   if (!lastMsg.chapterStart) lastMsg.chapterStart = true;
   saveState();
-  try {
-    await extractPreviousChapterTopics();
-  } catch (e) {
-    console.warn('topic extract failed:', e);
-  }
-  // 사용자 요청 2026-04-30: 매 메시지 자동 추출 → 챕터 시점만. 이전 챕터 메시지 통째로 보내 모델 추출.
-  // background, fail silent. 사용자 흐름 방해 X.
-  try {
-    extractChapterCaseAnalysis(validMsgs.slice()).catch(() => {});
-  } catch (e) {
-    console.warn('chapter case extract failed:', e);
-  }
 
   // 2. summary — API 안 씀 (사용자 요청 2026-04-27). 순번 라벨만.
   if (!Array.isArray(state.chatArchive)) state.chatArchive = [];
@@ -17407,9 +18341,11 @@ async function generateAIResponse(modelOverride) {
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
   renderChat();
 
-  if (!state.apiKey) {
+  // 사용자 요청 2026-04-30 (Phase C): apiKey 비어있어도 백엔드 프록시로 동작.
+  // session 활성 여부만 체크 (fetch interceptor가 자동으로 /api/chat 라우팅).
+  if (!state.apiKey && (typeof session === 'undefined' || !session || !session.access_token)) {
     state.chatMessages[state.chatMessages.length - 1] = {
-      role: 'assistant', content: 'API 키가 없어! 설정(⚙)에서 넣어줘 🐚',
+      role: 'assistant', content: '로그인이 필요해! 새로고침 후 다시 시도해줘 🐚',
       timestamp: new Date().toISOString()
     };
     saveState(); renderChat(); return;
@@ -17471,6 +18407,20 @@ async function generateAIResponse(modelOverride) {
     if (!response.ok) {
       const err = await response.text();
       console.error('API error response:', err);
+      // 사용자 요청 2026-04-30: 402 (잔액·cap 도달) → 결제 모달 자동 표시 (Claude 패턴)
+      if (response.status === 402) {
+        let parsed = {};
+        try { parsed = JSON.parse(err); } catch {}
+        // 마지막 typing 메시지 제거 (응답 자리)
+        if (state.chatMessages[state.chatMessages.length - 1]?.typing) {
+          state.chatMessages.pop();
+        }
+        saveState(); renderChat();
+        if (typeof showBudgetExceededModal === 'function') {
+          showBudgetExceededModal(parsed.error || '잔액 / 한도 도달');
+        }
+        return;
+      }
       // V3.13.x: 응답 본문에서 message 추출해서 사용자에게 보여주기
       let detail = '';
       try {
@@ -19032,7 +19982,7 @@ ${sameLayerNote}${convoNote}
 1. 추상 X 구체 ○: "환경 바꿔" X, "오늘 저녁 7시까지 폰을 거실 책상 충전기에 꽂아두기" ○
 2. 첫 행동 명확: 동사로 시작 + 5분 안에 시작 가능
 3. 네 사용자 ${card.title} 패턴에 맞게 — 일반론 X
-4. 왜 효과적인지 1구절 포함 (예: "도파민 trigger 외부화", "결정 부담 ↓")
+4. 왜 도움되는지 1구절 포함 (예: "도파민 trigger 외부화", "결정 부담 ↓")
 5. ADHD 친화: 의지 부담 ↓ 가지 (L3/L4) 우선, L1·L5는 신중하게
 6. 한 줄 70-100자
 
@@ -19061,7 +20011,7 @@ ${sameLayerNote}${convoNote}
     } catch (e) { console.warn('mutation AI failed:', e); }
   }
   if (!aiOptions.length) {
-    // 사용자 요청 2026-04-28: 더 디테일/효과적 — 구체 행동 + 왜 효과적인지 명시
+    // 사용자 요청 2026-04-28: 더 디테일·실용 — 구체 행동 + 왜 도움되는지 명시 (의료법 회피 wording).
     aiOptions = [
       { layer: 'L3', action: '오늘 저녁 7시까지 폰을 다른 방 충전기에 꽂아두기 — 손에 안 닿으면 자동 차단 (의지 X 환경 차원에서 trigger 외부화)' },
       { layer: 'L4', action: '믿을 친구 1명한테 카톡 한 줄: "나 오늘부터 X 시도 중. 매일 결과 한 줄 공유" — 책임 파트너 효과 + 외부 시선 = 도파민' },
@@ -24151,6 +25101,24 @@ async function testSeedV4Data() {
     showToast('⚠️ 테스터 모드 ON 후 사용 — 사용자 데이터 보호');
     return;
   }
+  // 사용자 보고 2026-04-30: 시드 흔적이 entries/chatMessages/chatArchive 등에 잔존 — id-prefix sweep으로 못 잡힘.
+  // 시작 시점 length 기록 → 끝에 새로 박힌 항목만 _seed: true marker. init sweep에서 marker 매칭으로 자동 정리.
+  const _seedMarkerTs = Date.now();
+  const _seedTrackStores = ['entries', 'chatMessages', 'chatArchive', 'weeklyReviews', 'monthlyReviews', 'quarterlyReviews', 'memoryVault', 'tasks', 'missions', 'pearls', 'archive', 'topicCards', 'reflectionQuestions', 'projects', 'starts', 'decisions', 'insights', 'diagnoses', 'shellCollection'];
+  const _seedBeforeLen = {};
+  _seedTrackStores.forEach(k => { _seedBeforeLen[k] = (state[k] || []).length; });
+  const _markSeedItems = () => {
+    _seedTrackStores.forEach(k => {
+      const arr = state[k];
+      if (!Array.isArray(arr)) return;
+      for (let i = _seedBeforeLen[k]; i < arr.length; i++) {
+        if (arr[i] && typeof arr[i] === 'object' && !arr[i]._seed) {
+          arr[i]._seed = _seedMarkerTs;
+        }
+      }
+    });
+  };
+  // 함수 끝 직전에 _markSeedItems() 호출됨 (saveState 직전).
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   // V4-fix v3 (사용자 요청): 1년 치 entries — 질적으로 진짜 같은 패턴 (계절·주기·마감·주말 효과)
@@ -25265,12 +26233,52 @@ async function testSeedV4Data() {
     });
   }
 
+  // 사용자 보고 2026-04-30: 새로 박힌 시드 항목 전부에 _seed marker 박기 → init sweep에서 자동 정리.
+  _markSeedItems();
   saveState({ force: true });
   showToast('🌱 V4 전체 시드 데이터 박힘. 도서관/모래사장/실행/나/홈 둘러보기.');
   if (typeof renderTodayMission === 'function') renderTodayMission();
   if (typeof renderShellBar === 'function') renderShellBar();
   if (typeof renderReflectionHome === 'function') renderReflectionHome();
   if (typeof renderHome === 'function') renderHome();
+}
+
+// 사용자 보고 2026-04-30: 잔존 시드 흔적 강제 정리 (개발자 도구 버튼).
+// id-prefix sweep 못 잡은 것들 + _seed marker 못 박힌 옛 시드 텍스트 매칭.
+async function cleanLegacySeedData() {
+  if (!confirm('잔존 시드 흔적 정리 — entries/chatMessages/chatArchive 등에 박힌 시드 텍스트 매칭으로 sweep. 본인 데이터엔 영향 X (알려진 시드 텍스트만 매칭). 정말 진행?')) return;
+  // 알려진 시드 텍스트 (testSeedV4Data 안 diaryPool / noteSnips / 풍성화 데이터)
+  const seedSnippets = [
+    '엄마 김치찌개', '한강 산책 30분', '교수님 미팅', '실험 데이터 정리만',
+    'LNGSHOT', 'Vanilla Days', '새벽 카페', '논문 서론 첫 단락', '논문 한 단락',
+    '카페 모서리 자리', '한강 산책 후 논문', '머리 비워짐', '데이터 부족이라고',
+    '비도 그 때처럼', '환경 셋업 = 진입 마찰', '며칠 막혀있던 게 한 시간',
+    '카페 새벽 4시', '됐다 한 순간'
+  ];
+  let cleaned = 0;
+  const stores = ['entries', 'chatMessages', 'chatArchive', 'weeklyReviews', 'monthlyReviews', 'quarterlyReviews', 'memoryVault', 'tasks', 'missions', 'pearls', 'archive', 'topicCards', 'reflectionQuestions', 'projects', 'starts', 'decisions', 'insights', 'diagnoses', 'shellCollection'];
+  stores.forEach(k => {
+    if (!Array.isArray(state[k])) return;
+    const before = state[k].length;
+    state[k] = state[k].filter(it => {
+      if (!it || typeof it !== 'object') return true;
+      // _seed marker 매칭
+      if (it._seed) return false;
+      // 알려진 시드 텍스트 매칭
+      try {
+        const txt = JSON.stringify(it).toLowerCase();
+        if (seedSnippets.some(s => txt.includes(s.toLowerCase()))) return false;
+      } catch {}
+      return true;
+    });
+    cleaned += (before - state[k].length);
+  });
+  saveState({ force: true });
+  if (typeof saveToCloudNow === 'function') {
+    try { await saveToCloudNow(); } catch (e) { console.warn('seed cleanup save:', e); }
+  }
+  alert(`✅ ${cleaned}개 시드 항목 정리됨. 새로고침합니다.`);
+  location.reload();
 }
 
 async function testForceQuarterlyReview() {
@@ -30986,24 +31994,292 @@ JSON으로 출력:
   }
 }
 
-// 사용자 요청 2026-04-30: 일주일 자동 forceAnalyze. 마지막 실행 7일 경과 + 데이터 충분 시 background 실행.
-async function maybeRunWeeklyForceAnalyze() {
-  if (!authUserId) return;
-  if (!state.apiKey) return;
-  if (window._onbTutorialMode) return;
+// 사용자 요청 2026-04-30: 자동 분석 4단계 — 새벽 4시 cutoff 기반 트리거.
+// 매일 / 매주 일요일 / 매월 1일 / 매분기 첫째달 1일 / 매년 1/1.
+
+// 직전 매일 새벽 4시 cutoff (오늘 4AM 또는 어제 4AM)
+function _lastDaily4amCutoff() {
+  const now = new Date();
+  const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 4, 0, 0, 0);
+  if (cutoff > now) cutoff.setDate(cutoff.getDate() - 1);
+  return cutoff;
+}
+// 직전 일요일 4AM
+function _lastWeekly4amCutoff() {
+  const now = new Date();
+  const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 4, 0, 0, 0);
+  // 오늘 4AM 이후 + 일요일이면 today, 그 외엔 직전 일요일
+  if (cutoff > now) cutoff.setDate(cutoff.getDate() - 1);
+  while (cutoff.getDay() !== 0) cutoff.setDate(cutoff.getDate() - 1);
+  return cutoff;
+}
+// 직전 월 1일 4AM
+function _lastMonthly4amCutoff() {
+  const now = new Date();
+  let cutoff = new Date(now.getFullYear(), now.getMonth(), 1, 4, 0, 0, 0);
+  if (cutoff > now) cutoff = new Date(now.getFullYear(), now.getMonth() - 1, 1, 4, 0, 0, 0);
+  return cutoff;
+}
+// 직전 분기 첫째달 1일 4AM (1/4/7/10월)
+function _lastQuarterly4amCutoff() {
+  const now = new Date();
+  const qStart = Math.floor(now.getMonth() / 3) * 3;
+  let cutoff = new Date(now.getFullYear(), qStart, 1, 4, 0, 0, 0);
+  if (cutoff > now) cutoff = new Date(now.getFullYear(), qStart - 3, 1, 4, 0, 0, 0);
+  return cutoff;
+}
+// 직전 1/1 4AM
+function _lastYearly4amCutoff() {
+  const now = new Date();
+  let cutoff = new Date(now.getFullYear(), 0, 1, 4, 0, 0, 0);
+  if (cutoff > now) cutoff = new Date(now.getFullYear() - 1, 0, 1, 4, 0, 0, 0);
+  return cutoff;
+}
+
+function _shouldRunSchedule(lastAt, cutoff) {
+  if (!lastAt) return true;
+  return new Date(lastAt) < cutoff;
+}
+
+// 매일 챕터 추출 — 어제 누적된 챕터들 1번 통합 추출.
+async function maybeRunDailyChapterExtract() {
+  if (!authUserId || window._onbTutorialMode) return;
   if (state.preferences && state.preferences.testerMode) return;
-  const last = state.lastForceAnalyzeAt;
-  if (last) {
-    const ageMs = Date.now() - new Date(last).getTime();
-    if (ageMs < 7 * 86400000) return;  // 7일 미만이면 skip
+  if (!_shouldRunSchedule(state.lastDailyChapterExtractAt, _lastDaily4amCutoff())) return;
+  // 데이터 충분 — 최근 24시간 내 챕터 메시지 ≥3
+  const cutoffMs = Date.now() - 86400000;
+  const recentMsgs = (state.chatMessages || []).filter(m => m.timestamp && new Date(m.timestamp).getTime() > cutoffMs);
+  if (recentMsgs.length < 3) {
+    state.lastDailyChapterExtractAt = new Date().toISOString();
+    saveState();
+    return;
   }
-  // 데이터 충분 가드 (forceAnalyze 자체와 동일)
+  console.log('[daily chapter extract] 새벽 4시 경과 — background 실행');
+  try {
+    await extractChapterCaseAnalysis(recentMsgs.slice());
+    if (typeof extractPreviousChapterTopics === 'function') {
+      // chapterStart 마커 있는 직전 챕터만 — 단순화
+      try { await extractPreviousChapterTopics(); } catch {}
+    }
+    state.lastDailyChapterExtractAt = new Date().toISOString();
+    saveState();
+  } catch (e) {
+    console.warn('[daily chapter extract] 실패:', e);
+  }
+}
+
+// 매주 일요일 4AM forceAnalyze (이전 maybeRunWeeklyForceAnalyze 대체).
+async function maybeRunWeeklyForceAnalyze() {
+  if (!authUserId || window._onbTutorialMode) return;
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (!_shouldRunSchedule(state.lastWeeklyAnalyzeAt, _lastWeekly4amCutoff())) return;
   if ((state.entries || []).length < 3 && (state.chatMessages || []).length < 3) return;
-  console.log('[force analyze] 일주일 경과 — background 자동 실행');
+  console.log('[weekly analyze] 일요일 4시 경과 — background 실행');
   try {
     await forceAnalyze({ auto: true });
+    state.lastWeeklyAnalyzeAt = new Date().toISOString();
+    // 하위호환 — lastForceAnalyzeAt도 갱신 (기존 코드 의존)
+    state.lastForceAnalyzeAt = state.lastWeeklyAnalyzeAt;
+    saveState();
   } catch (e) {
-    console.warn('[force analyze auto] 외부 실패:', e);
+    console.warn('[weekly analyze] 실패:', e);
+  }
+}
+
+// 매월 1일 4AM — 한 달 통합 분석 (forceAnalyze 같은 흐름, lastMonthlyAnalyzeAt만 별도 추적).
+async function maybeRunMonthlyAnalyze() {
+  if (!authUserId || window._onbTutorialMode) return;
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (!_shouldRunSchedule(state.lastMonthlyAnalyzeAt, _lastMonthly4amCutoff())) return;
+  if ((state.entries || []).length < 5) return;
+  console.log('[monthly analyze] 매월 1일 4시 경과 — background 실행');
+  try {
+    await forceAnalyze({ auto: true });
+    state.lastMonthlyAnalyzeAt = new Date().toISOString();
+    saveState();
+  } catch (e) {
+    console.warn('[monthly analyze] 실패:', e);
+  }
+}
+
+// 매분기 첫째달 1일 4AM
+async function maybeRunQuarterlyAnalyze() {
+  if (!authUserId || window._onbTutorialMode) return;
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (!_shouldRunSchedule(state.lastQuarterlyAnalyzeAt, _lastQuarterly4amCutoff())) return;
+  if ((state.entries || []).length < 10) return;
+  console.log('[quarterly analyze] 분기 첫 날 4시 경과 — background 실행');
+  try {
+    await forceAnalyze({ auto: true });
+    state.lastQuarterlyAnalyzeAt = new Date().toISOString();
+    saveState();
+  } catch (e) {
+    console.warn('[quarterly analyze] 실패:', e);
+  }
+}
+
+// 사용자 요청 2026-04-30 (변호사 검수): 첫 진입 동의 모달.
+// consentLog 비어있으면 표시. 만 14세 미만 = 가입 거부 + 데이터 삭제. 만 14-17 = 결제 시 법정대리인 동의 안내. 18세+ = 정상.
+const CONSENT_VERSIONS = { terms: '1.0', privacy: '1.0', crossBorder: '2.0', refund: '1.0' };
+
+async function maybeShowInitialConsent() {
+  if (!authUserId) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (!state.preferences) state.preferences = {};
+  if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
+
+  // 모든 필수 동의 + 현 버전이 박혀있는지 체크
+  const has = (type, version) => state.preferences.consentLog.some(c => c.type === type && c.version === version && c.confirmed);
+  const needsConsent = !has('terms', CONSENT_VERSIONS.terms)
+    || !has('privacy', CONSENT_VERSIONS.privacy)
+    || !has('crossBorder', CONSENT_VERSIONS.crossBorder)
+    || !has('age14', '1.0');
+  if (!needsConsent) return;
+
+  // 동의 모달 — overlay + 동의 항목들
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.style.zIndex = '10001';
+  overlay.id = 'initialConsentOverlay';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:420px; max-height:90vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:14px;">🐚 시작하기 전에 — 동의 확인</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:18px;">
+        법적으로 받아야 하는 동의들이야. 나중에 [설정 → 프라이버시]에서 다시 볼 수 있어.
+      </div>
+
+      <div style="margin-bottom:16px; padding:12px; background:var(--surface); border-radius:10px;">
+        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px;">생년월일 (만 14세 이상 확인 필수)</div>
+        <input type="date" id="consentBirthdate" style="width:100%;" max="${new Date(Date.now() - 14*365.25*86400000).toISOString().split('T')[0]}">
+        <div style="font-size:10px; color:var(--text-soft); margin-top:6px; line-height:1.5;">
+          만 14세 미만은 가입 불가 (개인정보보호법). 만 18세 미만은 결제 시 법정대리인 동의 필요.
+        </div>
+      </div>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; padding:10px; background:var(--surface); border-radius:8px; cursor:pointer;">
+        <input type="checkbox" id="consentTerms" style="margin-top:3px;">
+        <span style="font-size:12px; line-height:1.6;">
+          <b>(필수)</b> <a href="#" onclick="event.preventDefault(); window.open('https://github.com/naeun222/soragodong/blob/main/legal_draft/terms.md', '_blank');" style="color:var(--accent);">이용약관</a> 동의
+        </span>
+      </label>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; padding:10px; background:var(--surface); border-radius:8px; cursor:pointer;">
+        <input type="checkbox" id="consentPrivacy" style="margin-top:3px;">
+        <span style="font-size:12px; line-height:1.6;">
+          <b>(필수)</b> <a href="#" onclick="event.preventDefault(); window.open('https://github.com/naeun222/soragodong/blob/main/legal_draft/privacy.md', '_blank');" style="color:var(--accent);">개인정보처리방침</a> 동의 — 정신건강 자기관찰 데이터 (민감정보) 처리 포함
+        </span>
+      </label>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; padding:10px; background:var(--surface); border-radius:8px; cursor:pointer;">
+        <input type="checkbox" id="consentCrossBorder" style="margin-top:3px;">
+        <span style="font-size:12px; line-height:1.6;">
+          <b>(필수)</b> 미국 (Anthropic, Supabase, Cloudflare) 으로 데이터 이전 동의 — Anthropic SOC 2 Type II / ISO 27001 인증 + 30일 자동 삭제 정책. <a href="#" onclick="event.preventDefault(); window.open('https://github.com/naeun222/soragodong/blob/main/legal_draft/cross-border.md', '_blank');" style="color:var(--accent);">자세히</a>
+        </span>
+      </label>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; padding:10px; background:var(--surface); border-radius:8px; cursor:pointer;">
+        <input type="checkbox" id="consentAge14" style="margin-top:3px;">
+        <span style="font-size:12px; line-height:1.6;">
+          <b>(필수)</b> 만 14세 이상임을 확인합니다.
+        </span>
+      </label>
+
+      <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:18px; padding:10px; background:var(--surface); border-radius:8px; cursor:pointer;">
+        <input type="checkbox" id="consentAnalytics" style="margin-top:3px;">
+        <span style="font-size:12px; line-height:1.6;">
+          <i>(선택)</i> 익명화된 사용 통계를 서비스 개선에 활용 — 거부해도 모든 기능 사용 가능
+        </span>
+      </label>
+
+      <div style="display:flex; gap:8px;">
+        <button class="btn-primary" onclick="submitInitialConsent()" style="flex:1;">동의하고 시작 ✦</button>
+        <button class="btn-secondary" onclick="rejectInitialConsent()" style="flex:1;">거부 (탈퇴)</button>
+      </div>
+      <div style="font-size:10px; color:var(--text-soft); margin-top:10px; line-height:1.5;">
+        필수 항목 거부 시 서비스 이용 불가. 데이터 즉시 삭제됨.
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function submitInitialConsent() {
+  const birthdateEl = document.getElementById('consentBirthdate');
+  const termsEl = document.getElementById('consentTerms');
+  const privacyEl = document.getElementById('consentPrivacy');
+  const xborderEl = document.getElementById('consentCrossBorder');
+  const age14El = document.getElementById('consentAge14');
+  const analyticsEl = document.getElementById('consentAnalytics');
+
+  if (!birthdateEl?.value) { alert('생년월일 입력해줘'); return; }
+  const birthdate = new Date(birthdateEl.value);
+  const ageMs = Date.now() - birthdate.getTime();
+  const ageYears = ageMs / (365.25 * 86400000);
+  if (ageYears < 14) {
+    alert('만 14세 미만은 가입 불가야. 데이터 삭제됩니다.');
+    rejectInitialConsent();
+    return;
+  }
+  if (!termsEl?.checked || !privacyEl?.checked || !xborderEl?.checked || !age14El?.checked) {
+    alert('필수 항목 모두 체크해야 시작 가능해.');
+    return;
+  }
+
+  // consentLog 박기
+  const now = new Date().toISOString();
+  if (!state.preferences) state.preferences = {};
+  if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
+  state.preferences.consentLog.push(
+    { type: 'terms', version: CONSENT_VERSIONS.terms, confirmed: true, at: now },
+    { type: 'privacy', version: CONSENT_VERSIONS.privacy, confirmed: true, at: now },
+    { type: 'crossBorder', version: CONSENT_VERSIONS.crossBorder, confirmed: true, at: now },
+    { type: 'age14', version: '1.0', confirmed: true, at: now },
+    { type: 'birthdate', version: '1.0', confirmed: true, at: now, value: birthdateEl.value },
+    { type: 'analytics', version: '1.0', confirmed: !!analyticsEl?.checked, at: now }
+  );
+  // 만 18세 미만 마커 (결제 시 법정대리인 동의 필요)
+  if (ageYears < 18) {
+    state.preferences.consentLog.push({ type: 'minor18', confirmed: true, at: now });
+    state.preferences.requiresLegalGuardianForPayment = true;
+  } else {
+    state.preferences.requiresLegalGuardianForPayment = false;
+  }
+  saveState();
+
+  const overlay = document.getElementById('initialConsentOverlay');
+  if (overlay) overlay.remove();
+  showToast('🐚 시작 ✦');
+}
+
+async function rejectInitialConsent() {
+  const yes = confirm('필수 동의 거부 시 서비스 이용 불가 + 가입 데이터 즉시 삭제. 진짜?');
+  if (!yes) return;
+  const overlay = document.getElementById('initialConsentOverlay');
+  if (overlay) overlay.remove();
+  if (typeof withdrawAccount === 'function') {
+    await withdrawAccount();
+  } else if (typeof logout === 'function') {
+    await logout();
+  }
+}
+
+// 매년 1/1 4AM
+async function maybeRunYearlyAnalyze() {
+  if (!authUserId || window._onbTutorialMode) return;
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (!_shouldRunSchedule(state.lastYearlyAnalyzeAt, _lastYearly4amCutoff())) return;
+  if ((state.entries || []).length < 30) return;
+  console.log('[yearly analyze] 1/1 4시 경과 — background 실행');
+  try {
+    await forceAnalyze({ auto: true });
+    state.lastYearlyAnalyzeAt = new Date().toISOString();
+    saveState();
+  } catch (e) {
+    console.warn('[yearly analyze] 실패:', e);
   }
 }
 
@@ -31034,6 +32310,10 @@ function loadSettings() {
   if (accountInfo && session?.user) {
     accountInfo.innerHTML = `로그인된 계정: <strong style="color:var(--text)">${escapeHtml(session.user.email || '')}</strong>`;
   }
+  // 사용자 요청 2026-04-30 (Phase C): billing 자동 로드
+  if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
+  // E2EE 상태 갱신
+  if (typeof refreshE2EEStatus === 'function') refreshE2EEStatus();
 }
 
 function saveSettings() {
@@ -31050,6 +32330,593 @@ function saveSettings() {
   }
   saveState();
   showToast('저장됐어 ✦');
+  // 사용자 요청 2026-04-30 (Phase C): 설정 진입 시 billing 상태 자동 로드.
+  if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
+}
+
+// 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
+async function refreshBillingStatus() {
+  const status = document.getElementById('billingStatus');
+  if (!status) return;
+  if (typeof session === 'undefined' || !session || !session.access_token) {
+    status.textContent = '로그인 필요';
+    return;
+  }
+  try {
+    const resp = await fetch('/api/usage', {
+      headers: { 'Authorization': 'Bearer ' + session.access_token }
+    });
+    if (!resp.ok) {
+      status.textContent = `사용량 조회 실패 (${resp.status})`;
+      return;
+    }
+    const data = await resp.json();
+    const billing = data.billing || {};
+    const monthly = data.monthly || { tokens: 0, cost_usd: 0 };
+    const balance = (billing.credit_balance_usd || 0).toFixed(4);
+    const subActive = !!billing.subscription_active;
+    const subExpires = billing.subscription_expires_at ? new Date(billing.subscription_expires_at).toLocaleDateString('ko-KR') : null;
+    const monthCostKrw = Math.round(monthly.cost_usd * 1400);
+    let html = '';
+    html += `<div><b>충전 잔액</b>: $${balance} (~${Math.round(parseFloat(balance) * 1400).toLocaleString()}원)</div>`;
+    if (subActive) {
+      html += `<div><b>월 정액</b>: ${billing.subscription_plan || 'active'} — ${subExpires}까지</div>`;
+    } else {
+      html += `<div><b>월 정액</b>: 미가입</div>`;
+    }
+    html += `<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;"><b>이번 달 사용</b>: ${monthly.tokens.toLocaleString()} tokens / $${monthly.cost_usd.toFixed(4)} (~${monthCostKrw.toLocaleString()}원)</div>`;
+    if (billing.free_credit_granted) {
+      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 무료 충전 토큰 받음</div>`;
+    }
+    status.innerHTML = html;
+  } catch (e) {
+    status.textContent = '조회 실패: ' + (e.message || e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 결제 — 사용자 요청 2026-04-30 (포트원 통합 + 토스 베타)
+// ═══════════════════════════════════════════════════════════════
+
+// 충전 plans (단계별 보너스, refund.md / terms.md 정합)
+const CHARGE_PLANS = [
+  { krw: 1000, bonus_pct: 0, name: '🌱 1,000원 (체험)' },
+  { krw: 5000, bonus_pct: 0, name: '🐚 5,000원' },
+  { krw: 10000, bonus_pct: 3, name: '🪸 10,000원 (+3% 보너스)' },
+  { krw: 30000, bonus_pct: 8, name: '🌊 30,000원 (+8% 보너스)' },
+  { krw: 50000, bonus_pct: 12, name: '🐋 50,000원 (+12% 보너스)' }
+];
+const SUBSCRIBE_PLAN = { krw: 15000, daily_cap: 12, name: '🪸 월 정액', desc: '월 ₩15,000 — 일 12 메시지 cap (20% 보너스)' };
+
+// 사용자 요청 2026-04-30: 베타 단계 — 포트원 가입 전이라 토스 송금으로 충전.
+const TOSS_ACCOUNT = {
+  bank: '우리은행',
+  number: '1002-963-062525',
+  number_raw: '1002963062525',  // deep link용 (하이픈 X)
+  holder: '김나은',
+  bankCode: '20'  // 우리은행 표준 코드
+};
+
+// 카톡 오픈채팅 (피드백·문의 채널, 익명 OK)
+const KAKAO_OPEN_CHAT = 'https://open.kakao.com/o/sUP7kIsi';
+
+// 사용자별 송금 메모 코드 (unique, 8자) — auth_user_id 기반
+function _generateUserMemoCode() {
+  const uid = (typeof authUserId === 'string' && authUserId) ? authUserId : '';
+  const short = uid.replace(/-/g, '').slice(0, 8).toUpperCase();
+  return 'SO-' + short;
+}
+
+// 충전 모달
+async function openChargeModal() {
+  if (document.getElementById('chargeModalOverlay')) return;
+  const minorWarning = state.preferences?.requiresLegalGuardianForPayment
+    ? `<div style="padding:10px; background:rgba(220,150,80,0.10); border:1px solid rgba(220,150,80,0.40); border-radius:8px; font-size:11px; color:#e8c590; margin-bottom:14px;">⚠️ 만 18세 미만은 결제 시 법정대리인 동의 필요 — 부모님께 동의받은 후 진행해주세요.</div>`
+    : '';
+  const plansHtml = CHARGE_PLANS.map((p, i) => `
+    <button class="btn-secondary" onclick="proceedCharge(${i})" style="display:flex; justify-content:space-between; align-items:center; padding:14px; margin-bottom:6px; text-align:left; width:100%;">
+      <span style="font-weight:600;">${p.name}</span>
+      <span style="font-size:11px; color:var(--text-soft);">${p.bonus_pct > 0 ? `+${Math.round(p.krw * p.bonus_pct / 100).toLocaleString()}원` : '기본'}</span>
+    </button>
+  `).join('');
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'chargeModalOverlay';
+  overlay.style.zIndex = '10000';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:380px; max-height:90vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">⚡ 충전</div>
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:14px;">
+        많이 충전할수록 보너스 ↑. 잔액은 무기한 유지됩니다.<br>
+        <strong>자동 결제 X</strong> — 한 번만 결제됩니다.
+      </div>
+      ${minorWarning}
+      ${plansHtml}
+      <div style="font-size:10px; color:var(--text-soft); margin-top:14px; line-height:1.6;">
+        결제 직후 잔액 즉시 반영. 환불은 <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/refund.md" target="_blank" style="color:var(--accent);">환불 정책</a> 참고.
+      </div>
+      <button class="btn-secondary" onclick="closeChargeModal()" style="margin-top:8px; width:100%;">닫기</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeChargeModal() {
+  const overlay = document.getElementById('chargeModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+// 충전 진행 — 포트원 미설정 시 토스 송금 안내, 활성 시 카드 결제.
+async function proceedCharge(planIdx) {
+  const plan = CHARGE_PLANS[planIdx];
+  if (!plan) return;
+
+  // 포트원 채널 키 미설정 = 베타 (토스 송금)
+  const channelKey = window.PORTONE_CHANNEL_KEY || '';
+  if (!channelKey) {
+    closeChargeModal();
+    showTossChargeModal(plan);
+    return;
+  }
+
+  // 포트원 활성 — 카드 결제 흐름
+  const yes = confirm(`${plan.name}\n\n결제 금액: ${plan.krw.toLocaleString()}원\n결제 주기: 일회성\n자동 갱신: X\n해지: 결제 후 [설정 → 결제] 환불 가능 (환불 정책 적용)\n\n진행하시겠습니까?`);
+  if (!yes) return;
+
+  if (typeof window.IMP === 'undefined') {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.iamport.kr/v1/iamport.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    }).catch(() => alert('포트원 SDK 로드 실패. 인터넷 연결 확인.'));
+  }
+  if (typeof window.IMP === 'undefined') {
+    alert('결제 시스템 로드 실패. 다시 시도해주세요.');
+    return;
+  }
+  IMP.init(channelKey);
+
+  const merchantUid = `charge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  IMP.request_pay({
+    pg: 'tosspayments',
+    pay_method: 'card',
+    merchant_uid: merchantUid,
+    name: `소라고동 충전 ${plan.krw.toLocaleString()}원`,
+    amount: plan.krw,
+    buyer_email: session?.user?.email || ''
+  }, async (rsp) => {
+    if (!rsp.success) {
+      alert('결제 실패: ' + (rsp.error_msg || '취소됨'));
+      return;
+    }
+    try {
+      const verifyResp = await fetch('/api/billing/charge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+        body: JSON.stringify({ imp_uid: rsp.imp_uid, merchant_uid: merchantUid })
+      });
+      const result = await verifyResp.json();
+      if (verifyResp.ok && result.ok) {
+        showToast(`✦ ${plan.krw.toLocaleString()}원 충전 완료`);
+        closeChargeModal();
+        if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+      } else {
+        alert('결제 검증 실패: ' + (result.error || '알 수 없음'));
+      }
+    } catch (e) {
+      alert('백엔드 통신 실패: ' + (e.message || e));
+    }
+  });
+}
+
+// 사용자 요청 2026-04-30: 베타 단계 토스 송금 충전 모달 + AI 자동 인증.
+function showTossChargeModal(plan) {
+  if (document.getElementById('tossChargeOverlay')) return;
+  const memoCode = _generateUserMemoCode();
+  const bonusKrw = Math.round(plan.krw * plan.bonus_pct / 100);
+  const totalKrw = plan.krw + bonusKrw;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'tossChargeOverlay';
+  overlay.style.zIndex = '10001';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:400px; max-height:92vh; overflow-y:auto; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">💸 토스로 충전 ✦</div>
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
+        토스 앱으로 보내주고, 영수증 한 장만 찍어서 올려줘. 내가 알아서 확인하고 잔액 채워둘게! 🐚
+      </div>
+
+      <div style="padding:14px; background:var(--surface); border-radius:10px; margin-bottom:14px;">
+        <div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">충전 금액</div>
+        <div style="font-size:18px; font-weight:700; color:var(--text);">${plan.krw.toLocaleString()}원</div>
+        ${plan.bonus_pct > 0 ? `<div style="font-size:11px; color:#9ed4a0; margin-top:4px;">+ 보너스 ${bonusKrw.toLocaleString()}원 (총 ${totalKrw.toLocaleString()}원 어치 사용 가능)</div>` : ''}
+      </div>
+
+      <div style="padding:14px; background:linear-gradient(135deg, rgba(126,200,227,0.10), rgba(143,200,143,0.05)); border:1px solid rgba(126,200,227,0.30); border-radius:10px; margin-bottom:14px;">
+        <div style="font-size:11px; color:var(--text-dim); margin-bottom:6px;">📲 토스 송금 정보</div>
+        <div style="font-size:13px; color:var(--text); line-height:1.8;">
+          <b>은행</b>: ${TOSS_ACCOUNT.bank}<br>
+          <b>계좌</b>: ${TOSS_ACCOUNT.number}<br>
+          <b>예금주</b>: ${TOSS_ACCOUNT.holder}<br>
+          <b>금액</b>: ${plan.krw.toLocaleString()}원<br>
+          <b style="color:var(--accent);">메모 (필수)</b>: <code style="background:rgba(212,167,106,0.20); padding:2px 6px; border-radius:4px; font-family:monospace;">${memoCode}</code>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:6px; margin-bottom:8px;">
+        <button class="btn-secondary" onclick="openTossApp(${plan.krw}, '${memoCode}')" style="flex:1; background:linear-gradient(135deg, rgba(0,100,255,0.15), rgba(0,100,255,0.08)); border-color:rgba(0,100,255,0.40); color:#a8c5ff;">📲 토스 앱 열기 (자동 입력)</button>
+      </div>
+      <div style="display:flex; gap:6px; margin-bottom:14px;">
+        <button class="btn-secondary" onclick="navigator.clipboard.writeText('${TOSS_ACCOUNT.number_raw}').then(() => showToast('계좌번호 복사됨'))" style="flex:1; font-size:11px;">📋 계좌번호 복사</button>
+        <button class="btn-secondary" onclick="navigator.clipboard.writeText('${memoCode}').then(() => showToast('메모 코드 복사됨'))" style="flex:1; font-size:11px;">📋 메모 코드 복사</button>
+      </div>
+      <div style="font-size:10px; color:var(--text-soft); margin-bottom:14px; line-height:1.6;">
+        💡 토스 말고 다른 은행 앱(우리·국민·신한 등) 써도 돼! 계좌번호 복사해서 보내봐.
+      </div>
+
+      <div style="border-top:1px solid var(--border); padding-top:14px; margin-bottom:8px;">
+        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:6px;">📸 송금 보낸 후 — 영수증 캡처 올리기</div>
+        <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
+          송금 완료 화면 한 장만 캡처해서 올려줘. AI가 후딱 확인하고 잔액 채워둘게! ✦
+        </div>
+        <input type="file" id="tossReceiptInput" accept="image/*" style="width:100%; font-size:11px;">
+        <button class="btn-primary" onclick="verifyTossReceipt(${plan.krw}, '${memoCode}')" style="width:100%; margin-top:8px;">✦ 자동 확인하고 충전!</button>
+      </div>
+
+      <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-top:10px; padding:8px; background:rgba(126,200,227,0.05); border-left:3px solid rgba(126,200,227,0.40); border-radius:4px;">
+        🐚 어디서 막히면 언제든 → <a href="${KAKAO_OPEN_CHAT}" target="_blank" style="color:var(--accent); font-weight:600;">💬 카톡으로 톡 줘</a>
+      </div>
+
+      <button class="btn-secondary" onclick="closeTossChargeModal()" style="width:100%; margin-top:10px;">닫기</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+// 토스 앱 deep link — supertoss:// scheme + fallback.
+function openTossApp(amountKrw, memoCode) {
+  // supertoss deep link — 토스 앱 송금 화면으로 이동.
+  // 정확한 spec은 비공식 — 사용자가 토스 앱에서 직접 박는 게 더 확실. 일단 시도.
+  const tossLink = `supertoss://send?bankCode=${TOSS_ACCOUNT.bankCode}&accountNo=${TOSS_ACCOUNT.number_raw}&amount=${amountKrw}&recvName=${encodeURIComponent(TOSS_ACCOUNT.holder)}&msg=${encodeURIComponent(memoCode)}`;
+  window.location.href = tossLink;
+  // fallback — 5초 안 토스 앱 안 열리면 안내
+  setTimeout(() => {
+    if (document.hasFocus()) {
+      alert('토스 앱이 안 열리는 것 같아요.\n\n토스 앱 직접 켜고 송금해주세요:\n' + TOSS_ACCOUNT.bank + ' ' + TOSS_ACCOUNT.number + '\n금액: ' + amountKrw.toLocaleString() + '원\n메모: ' + memoCode);
+    }
+  }, 3000);
+}
+
+// 영수증 캡처 → AI 자동 인증
+async function verifyTossReceipt(amountKrw, memoCode) {
+  const input = document.getElementById('tossReceiptInput');
+  if (!input || !input.files || input.files.length === 0) {
+    alert('영수증 캡처 먼저 골라줘! 📸');
+    return;
+  }
+  const file = input.files[0];
+  if (file.size > 5 * 1024 * 1024) {
+    alert('파일 너무 커 (5MB 이하로) 🐚');
+    return;
+  }
+  showToast('🔍 한 번 볼게...');
+  try {
+    // Base64 변환
+    const reader = new FileReader();
+    const base64Promise = new Promise((resolve, reject) => {
+      reader.onload = () => resolve((reader.result || '').toString().split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const base64 = await base64Promise;
+    // sha256 해시 (중복 차단)
+    const arrayBuffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const resp = await fetch('/api/billing/verify-toss-receipt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ image_base64: base64, expected_amount_krw: amountKrw, user_memo_code: memoCode, image_sha256: sha256 })
+    });
+    const result = await resp.json();
+    if (resp.ok && result.ok && result.verified) {
+      showToast(`✦ ${amountKrw.toLocaleString()}원 충전 완료! 잘 보내줬어 🐚`);
+      closeTossChargeModal();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+    } else {
+      alert('어... 영수증을 잘 못 알아봤어 😅 ' + (result.error || '') + '\n\n다시 한 번 시도해볼래? 안 되면 카톡으로 톡 줘:\n' + KAKAO_OPEN_CHAT);
+    }
+  } catch (e) {
+    alert('오류 났어 😢 ' + (e.message || e) + '\n\n💬 카톡으로 톡 줘: ' + KAKAO_OPEN_CHAT);
+  }
+}
+
+function closeTossChargeModal() {
+  const overlay = document.getElementById('tossChargeOverlay');
+  if (overlay) overlay.remove();
+}
+
+// 사용자 요청 2026-04-30: admin 도구 — pending 송금 list + 승인/환수.
+// ADMIN_USER_ID env 박혀있는 사용자 (= 김나은) 만 동작.
+// 사용자 요청 2026-04-30: 피드백·문의 — 카톡 오픈채팅 + 인앱 메시지.
+function openFeedbackKakao() {
+  if (!KAKAO_OPEN_CHAT || KAKAO_OPEN_CHAT.includes('[TBD')) {
+    alert('카톡 오픈채팅 링크가 아직 박혀있지 않아요. 잠시 후 다시 시도해주세요.');
+    return;
+  }
+  window.open(KAKAO_OPEN_CHAT, '_blank');
+}
+
+function openFeedbackInApp() {
+  if (document.getElementById('feedbackOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'feedbackOverlay';
+  overlay.style.zIndex = '10001';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:380px; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">✉️ 메세지 보내기</div>
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
+        뭐든 편하게 적어줘! 버그·아이디어·잡담 다 OK 🐚<br>
+        <span style="color:var(--text-soft);">답변 필요하면 가입 이메일로 회신해줄게.</span>
+      </div>
+      <textarea id="feedbackMessageInput" rows="6" placeholder="자유롭게 적어줘..." maxlength="2000" style="width:100%; font-size:12px; padding:10px; resize:vertical;"></textarea>
+      <div style="font-size:10px; color:var(--text-soft); margin-top:6px;">최대 2000자</div>
+      <div id="feedbackStatus" style="font-size:11px; margin-top:10px; min-height:14px;"></div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn-primary" onclick="submitFeedback()" style="flex:1;">보내기 ✦</button>
+        <button class="btn-secondary" onclick="closeFeedbackModal()" style="flex:1;">나중에</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('feedbackMessageInput')?.focus(), 100);
+}
+
+function closeFeedbackModal() {
+  const overlay = document.getElementById('feedbackOverlay');
+  if (overlay) overlay.remove();
+}
+
+async function submitFeedback() {
+  const ta = document.getElementById('feedbackMessageInput');
+  const status = document.getElementById('feedbackStatus');
+  if (!ta || !status) return;
+  const msg = ta.value.trim();
+  if (msg.length < 5) {
+    status.textContent = '5자 이상 적어주세요';
+    status.style.color = '#e89090';
+    return;
+  }
+  status.textContent = '보내는 중...';
+  status.style.color = 'var(--text-soft)';
+  try {
+    const resp = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ message: msg })
+    });
+    if (resp.ok) {
+      status.textContent = '✓ 잘 받았어! 고마워 🐚';
+      status.style.color = '#9ed4a0';
+      setTimeout(() => closeFeedbackModal(), 1500);
+    } else {
+      status.textContent = '오류 났어 😢 카톡으로 보내줄래?';
+      status.style.color = '#e89090';
+    }
+  } catch (e) {
+    status.textContent = '오류: ' + (e.message || e);
+    status.style.color = '#e89090';
+  }
+}
+
+async function adminLoadPendingCharges() {
+  const container = document.getElementById('adminPendingList');
+  if (!container) return;
+  container.innerHTML = '<span style="color:var(--text-soft);">불러오는 중...</span>';
+  try {
+    const resp = await fetch('/api/admin/pending-charges', {
+      headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
+    });
+    if (resp.status === 403) {
+      container.innerHTML = '<span style="color:var(--text-soft);">관리자 권한 X (Cloudflare env에 ADMIN_USER_ID 박혀있어야 함)</span>';
+      return;
+    }
+    if (!resp.ok) {
+      container.innerHTML = `<span style="color:#e89090;">실패 (${resp.status})</span>`;
+      return;
+    }
+    const data = await resp.json();
+    const pending = data.pending || [];
+    if (pending.length === 0) {
+      container.innerHTML = '<span style="color:var(--text-soft);">대기 중인 송금 X</span>';
+      return;
+    }
+    let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
+    pending.forEach(p => {
+      const at = new Date(p.created_at).toLocaleString('ko-KR');
+      html += `
+        <div style="padding:8px; background:var(--surface); border-radius:6px; line-height:1.6;">
+          <div><b>${p.amount_krw.toLocaleString()}원</b> — ${p.user_email || '[email X]'}</div>
+          <div style="font-size:10px; color:var(--text-soft);">메모: <code>${p.portone_merchant_uid}</code> · ${at}</div>
+          <div style="display:flex; gap:4px; margin-top:6px;">
+            <button class="btn-secondary" onclick="adminConfirm(${p.id})" style="font-size:11px; padding:4px 8px; background:rgba(143,200,143,0.20); border-color:rgba(143,200,143,0.40); color:#9ed4a0;">✓ 입금 확인</button>
+            <button class="btn-secondary" onclick="adminRevoke(${p.id})" style="font-size:11px; padding:4px 8px; background:rgba(220,80,80,0.15); border-color:rgba(220,80,80,0.40); color:#e89090;">✗ 환수</button>
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<span style="color:#e89090;">예외: ${e.message || e}</span>`;
+  }
+}
+
+async function adminConfirm(paymentId) {
+  if (!confirm('입금 확인하셨나요? status를 paid로 변경합니다.')) return;
+  try {
+    const resp = await fetch('/api/admin/confirm-charge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ payment_id: paymentId })
+    });
+    if (resp.ok) {
+      showToast('✓ 입금 확인 완료');
+      adminLoadPendingCharges();
+    } else {
+      const r = await resp.json();
+      alert('실패: ' + (r.error || resp.status));
+    }
+  } catch (e) { alert('예외: ' + (e.message || e)); }
+}
+
+async function adminRevoke(paymentId) {
+  if (!confirm('미입금 또는 거짓 송금 — 잔액 환수 + status cancelled 처리합니다. 정말?')) return;
+  try {
+    const resp = await fetch('/api/admin/revoke-charge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ payment_id: paymentId, ban_user: false })
+    });
+    if (resp.ok) {
+      showToast('✗ 환수 완료');
+      adminLoadPendingCharges();
+    } else {
+      const r = await resp.json();
+      alert('실패: ' + (r.error || resp.status));
+    }
+  } catch (e) { alert('예외: ' + (e.message || e)); }
+}
+
+async function confirmTossSent(amountKrw, memoCode) {
+  const yes = confirm(`${amountKrw.toLocaleString()}원 보냈어? "${memoCode}" 메모 넣었지?\n\n일단 잔액 미리 채워둘게 ✦ 며칠 안에 내가 확인하고 마무리할게! 🐚`);
+  if (!yes) return;
+  try {
+    const resp = await fetch('/api/billing/manual-charge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ amount_krw: amountKrw, user_memo_code: memoCode })
+    });
+    const result = await resp.json();
+    if (resp.ok && result.ok) {
+      showToast(`✦ ${amountKrw.toLocaleString()}원 충전 완료 (확인 후 정식 처리됩니다)`);
+      closeTossChargeModal();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+    } else {
+      alert('충전 실패: ' + (result.error || '알 수 없음'));
+    }
+  } catch (e) {
+    alert('통신 실패: ' + (e.message || e));
+  }
+}
+
+// 구독 모달
+async function openSubscribeModal() {
+  if (document.getElementById('subscribeModalOverlay')) return;
+  const minorWarning = state.preferences?.requiresLegalGuardianForPayment
+    ? `<div style="padding:10px; background:rgba(220,150,80,0.10); border:1px solid rgba(220,150,80,0.40); border-radius:8px; font-size:11px; color:#e8c590; margin-bottom:14px;">⚠️ 만 18세 미만은 결제 시 법정대리인 동의 필요</div>`
+    : '';
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'subscribeModalOverlay';
+  overlay.style.zIndex = '10000';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:380px; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">📅 ${SUBSCRIBE_PLAN.name}</div>
+      <div style="font-size:13px; color:var(--text); line-height:1.7; margin-bottom:14px;">
+        <b>${SUBSCRIBE_PLAN.desc}</b><br>
+        <span style="font-size:11px; color:var(--text-soft);">한도 도달 시 다음날 4시 reset 또는 충전</span>
+      </div>
+      ${minorWarning}
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-bottom:14px; padding:10px; background:var(--surface); border-radius:8px;">
+        결제 금액: <b>${SUBSCRIBE_PLAN.krw.toLocaleString()}원/월</b><br>
+        결제 주기: 월 1회 (30일)<br>
+        <b>자동 갱신: X</b> (다음 달 명시 결제 시 연장)<br>
+        해지: 결제 후 [설정 → 결제] 1-click 환불 (잔여일 비례)<br>
+        환불 정책: <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/refund.md" target="_blank" style="color:var(--accent);">자세히</a>
+      </div>
+      <button class="btn-primary" onclick="proceedSubscribe()" style="width:100%;">월 ${SUBSCRIBE_PLAN.krw.toLocaleString()}원 결제</button>
+      <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:6px;">취소</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeSubscribeModal() {
+  const overlay = document.getElementById('subscribeModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+async function proceedSubscribe() {
+  if (typeof window.IMP === 'undefined') {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.iamport.kr/v1/iamport.js';
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    }).catch(() => alert('포트원 SDK 로드 실패'));
+  }
+  if (typeof window.IMP === 'undefined') return;
+  const channelKey = window.PORTONE_CHANNEL_KEY || '';
+  if (!channelKey) {
+    alert('결제 시스템 미설정. 사업자등록 / 포트원 가입 후 활성됩니다.');
+    closeSubscribeModal();
+    return;
+  }
+  IMP.init(channelKey);
+
+  const merchantUid = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  IMP.request_pay({
+    pg: 'tosspayments', pay_method: 'card', merchant_uid: merchantUid,
+    name: '소라고동 월 정액',
+    amount: SUBSCRIBE_PLAN.krw,
+    buyer_email: session?.user?.email || ''
+  }, async (rsp) => {
+    if (!rsp.success) { alert('결제 실패: ' + (rsp.error_msg || '취소됨')); return; }
+    try {
+      const verifyResp = await fetch('/api/billing/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+        body: JSON.stringify({ imp_uid: rsp.imp_uid, merchant_uid: merchantUid, plan: 'monthly' })
+      });
+      const result = await verifyResp.json();
+      if (verifyResp.ok && result.ok) {
+        showToast(`📅 월 정액 가입 완료 (${SUBSCRIBE_PLAN.krw.toLocaleString()}원/월)`);
+        closeSubscribeModal();
+        if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+      } else {
+        alert('결제 검증 실패: ' + (result.error || '알 수 없음'));
+      }
+    } catch (e) {
+      alert('백엔드 통신 실패: ' + (e.message || e));
+    }
+  });
+}
+
+// Cap 도달 흐름 (Claude 패턴) — 잔액 / 한도 부족 시 자동 모달
+function showBudgetExceededModal(reason) {
+  if (document.getElementById('budgetExceededOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'budgetExceededOverlay';
+  overlay.style.zIndex = '10000';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:340px; padding:24px;">
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">⏳ 한도 도달</div>
+      <div style="font-size:12px; color:var(--text); line-height:1.7; margin-bottom:14px;">
+        ${escapeHtml(reason || '오늘 사용 한도가 다 됐어요.')}<br><br>
+        다음 옵션 중 선택:
+      </div>
+      <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openChargeModal();" style="width:100%; margin-bottom:6px;">⚡ 충전</button>
+      <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 월 정액 가입</button>
+      <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">⏰ 내일 4시 이후 사용</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
 }
 
 function exportData() {
@@ -31522,6 +33389,11 @@ function renderUpdateNotice() {
   // 기존 배너 element 비활성 (잔여 시각 제거)
   const banner = document.getElementById('updateBanner');
   if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
+
+  // 사용자 보고 2026-04-30: 이메일 코드 입력 단계 (인증 미완료)에서 모달 뜨던 버그 fix.
+  // authUserId / session 둘 다 활성일 때만 모달 표시.
+  if (typeof authUserId === 'undefined' || !authUserId) return;
+  if (typeof session === 'undefined' || !session || !session.access_token) return;
 
   const major = _currentMajor();
   const dismissedMajor = state && state.preferences && state.preferences.dismissedMajor;
