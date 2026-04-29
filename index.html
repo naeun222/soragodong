@@ -15596,9 +15596,8 @@ function renderChat() {
   // Archive header (V3.3)
   let archiveHeader = '';
   if ((state.chatArchive || []).length > 0) {
-    const count = state.chatArchive.length;
     archiveHeader = `<div class="chat-archive-header" onclick="openChatArchive()">
-      📚 이전 대화 보기 (${count}일치)
+      📚 이전 대화 보기
     </div>`;
   }
 
