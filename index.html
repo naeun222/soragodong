@@ -9621,6 +9621,17 @@ async function showCoreLockModal(coreId) {
   if (yes) startCoreTutorial(coreId);
 }
 
+// 코어별 진입 화면 — startInteractiveOnboarding의 showScreen('home') 덮어씌움
+const CORE_INITIAL_SCREEN = {
+  core1: 'home',
+  core2: 'home',     // mission_done은 홈의 mission 카드
+  core3: 'execute',  // exec_overview는 실행 탭
+  core4: 'model',    // model_intro는 나 탭
+  core5: 'archive',  // library_categories는 도서관 탭
+  core6: 'home',     // reflection은 홈에 있음 (사용자 명시: 추가 버튼)
+  core8: 'archive'   // magic_room_intro는 도서관 → 마법·리뷰 → 마법의 소라고동 (또는 홈 카드)
+};
+
 // 코어 튜토리얼 시작 — startInteractiveOnboarding 인프라 재사용
 async function startCoreTutorial(coreId) {
   const range = CORE_TUTORIAL_RANGES[coreId];
@@ -9645,6 +9656,8 @@ async function startCoreTutorial(coreId) {
   _coreEndIdx = endIdx;
   // 코어 #1은 endId='finish'라 help_button 자연히 포함. 나머지는 끝나고 help_button 점프 필요.
   _coreNeedsHelpAfterEnd = (coreId !== 'core1');
+  // 진입 화면 override (startInteractiveOnboarding이 기본 home으로 가는 거 덮어씌움)
+  window._coreInitialScreen = CORE_INITIAL_SCREEN[coreId] || 'home';
 
   // 인프라 재사용 (testerMode ON + 시드 자동)
   await startInteractiveOnboarding(startIdx);
@@ -9849,7 +9862,8 @@ async function startInteractiveOnboarding(startStep) {
   }
   const tourOv = document.getElementById('tourOverlay');
   if (tourOv) tourOv.style.display = 'none';
-  showScreen('home');
+  // V4 코어 튜토리얼 — 진입 화면 override
+  showScreen(window._coreInitialScreen || 'home');
   setTimeout(() => {
     const ov = document.getElementById('onbOverlay');
     if (ov) {
@@ -10474,6 +10488,12 @@ function onbFinish() {
       state.unlocked = state.unlocked || {};
       state.unlocked[_completedCoreId] = true;
     }
+    // V4 풀 튜토리얼 완주 시 모든 코어 unlock
+    if (window._fullTutorialActive) {
+      state.unlocked = state.unlocked || {};
+      ['core1','core2','core3','core4','core5','core6','core8'].forEach(k => state.unlocked[k] = true);
+      window._fullTutorialActive = false;
+    }
     _onbStartTime = null;
     delete window._onbCFBackup;
     delete window._onbModesBackup;
@@ -10563,6 +10583,12 @@ function onbFinish() {
   if (_completedCoreId) {
     state.unlocked = state.unlocked || {};
     state.unlocked[_completedCoreId] = true;
+  }
+  // V4 풀 튜토리얼 완주 시 모든 코어 unlock (no-backup 경로도 동일)
+  if (window._fullTutorialActive) {
+    state.unlocked = state.unlocked || {};
+    ['core1','core2','core3','core4','core5','core6','core8'].forEach(k => state.unlocked[k] = true);
+    window._fullTutorialActive = false;
   }
 
   saveState();
@@ -29750,6 +29776,7 @@ async function startUpdateTour() {
   if (typeof showOptionsModal !== 'function') {
     // fallback: 코어 #1 직행
     if (typeof startCoreTutorial === 'function') return startCoreTutorial('core1');
+    window._fullTutorialActive = true;
     return startInteractiveOnboarding();
   }
   const choice = await showOptionsModal({
@@ -29764,6 +29791,8 @@ async function startUpdateTour() {
   if (choice === 'core') {
     if (typeof startCoreTutorial === 'function') return startCoreTutorial('core1');
   }
+  // 풀 튜토리얼 — 완주 시 모든 코어 unlock 박기 위해 플래그
+  window._fullTutorialActive = true;
   startInteractiveOnboarding();
 }
 
