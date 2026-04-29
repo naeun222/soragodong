@@ -7506,6 +7506,12 @@
           <button class="btn-secondary" onclick="forceAnalyze()" style="margin-top:6px;" title="opus 4.7 사용 — 비싸. 일주일 자동 실행되니 평소엔 X.">📊 강제 모델 분석 (수동, 비쌈)</button>
           <!-- 사용자 보고 2026-04-30: 잔존 시드 흔적 강제 정리 (entries / chatMessages / chatArchive 등 _seed marker + 시드 텍스트 매칭). -->
           <button class="btn-secondary" onclick="cleanLegacySeedData()" style="margin-top:6px; background:linear-gradient(135deg, rgba(220,150,80,0.18), rgba(220,150,80,0.10)); border-color:rgba(220,150,80,0.40); color:#e8c590;" title="entries/chatMessages/chatArchive 등에 잔존하는 시드 텍스트 강제 정리">🧹 잔존 시드 정리 (강제)</button>
+          <!-- 사용자 요청 2026-04-30: 관리자 — 토스 송금 pending list + 승인/환수 -->
+          <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border);">
+            <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">💼 관리자 (토스 송금 처리)</div>
+            <button class="btn-secondary" onclick="adminLoadPendingCharges()" style="background:linear-gradient(135deg, rgba(126,200,227,0.18), rgba(126,200,227,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">📋 대기 중인 송금 list</button>
+            <div id="adminPendingList" style="margin-top:10px; font-size:11px;"></div>
+          </div>
         </div>
       </details>
 
@@ -8461,6 +8467,21 @@ function cancelE2EERecovery() {
   if (overlay) overlay.remove();
 }
 
+// 사용자 요청 2026-04-30: 가입 시 E2EE password 자동 권유 (신규 사용자 + 미설정).
+// 가입 직후 / 로그인 직후 진입 시 마스터 키 X + 미활성 + 진입 모달 안 떠있으면 자동 권유.
+async function maybeShowE2EESetupForNewUser() {
+  if (!authUserId) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (_e2eeEnabled || _e2eeMasterKey) return;
+  if (window._e2eePendingRecovery) return;
+  try {
+    if (localStorage.getItem('soragodong_v4_e2ee_recovery')) return;  // 이미 활성
+    if (localStorage.getItem('soragodong_v4_e2ee_setup_dismissed')) return;  // 사용자가 권유 거부
+  } catch {}
+  if (document.getElementById('e2eeSetupOverlay')) return;
+  showE2EEPasswordSetupModal();
+}
+
 // 사용자 요청 2026-04-30 (단순화): E2EE 활성화 — 사용자 지정 password 모달.
 async function setupE2EE() {
   if (_e2eeMasterKey && _e2eeEnabled) {
@@ -8538,6 +8559,8 @@ async function submitE2EESetup() {
 function cancelE2EESetup() {
   const overlay = document.getElementById('e2eeSetupOverlay');
   if (overlay) overlay.remove();
+  // dismiss 박힘 — 다음 진입 시 자동 권유 X (Settings에서 명시 활성 가능)
+  try { localStorage.setItem('soragodong_v4_e2ee_setup_dismissed', new Date().toISOString()); } catch {}
 }
 
 // 비밀 단어 12개 다시 보기 (이미 활성된 사용자)
@@ -9494,6 +9517,13 @@ async function init() {
       maybeShowE2EERecoveryModal().catch(e => console.warn('e2eeRecovery:', e));
     }
   }, 1500);
+
+  // 사용자 요청 2026-04-30: 가입 시 E2EE password 자동 권유 (신규 사용자 한정).
+  setTimeout(() => {
+    if (typeof maybeShowE2EESetupForNewUser === 'function') {
+      maybeShowE2EESetupForNewUser().catch(e => console.warn('e2eeSetupNewUser:', e));
+    }
+  }, 2500);
 
   // 사용자 요청 2026-04-28: 자동 백업 (주 1회 + APP_VERSION 변경 시) — fire-and-forget
   if (typeof runAutoBackupIfNeeded === 'function') {
@@ -32318,11 +32348,10 @@ const CHARGE_PLANS = [
 const SUBSCRIBE_PLAN = { krw: 15000, daily_cap: 12, name: '🪸 월 정액', desc: '월 ₩15,000 — 일 12 메시지 cap (20% 보너스)' };
 
 // 사용자 요청 2026-04-30: 베타 단계 — 포트원 가입 전이라 토스 송금으로 충전.
-// [TBD] 사업자등록 후 김나은 본인 계좌 박음.
 const TOSS_ACCOUNT = {
-  bank: '카카오뱅크',         // [TBD] 본인 은행
-  number: '[계좌번호-TBD]',   // [TBD] 본인 계좌번호
-  holder: '김나은'            // [TBD] 본인 이름
+  bank: '우리은행',
+  number: '1002-963-062525',
+  holder: '김나은'
 };
 
 // 사용자별 송금 메모 코드 (unique, 8자) — auth_user_id 기반
@@ -32488,6 +32517,86 @@ function showTossChargeModal(plan) {
 function closeTossChargeModal() {
   const overlay = document.getElementById('tossChargeOverlay');
   if (overlay) overlay.remove();
+}
+
+// 사용자 요청 2026-04-30: admin 도구 — pending 송금 list + 승인/환수.
+// ADMIN_USER_ID env 박혀있는 사용자 (= 김나은) 만 동작.
+async function adminLoadPendingCharges() {
+  const container = document.getElementById('adminPendingList');
+  if (!container) return;
+  container.innerHTML = '<span style="color:var(--text-soft);">불러오는 중...</span>';
+  try {
+    const resp = await fetch('/api/admin/pending-charges', {
+      headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
+    });
+    if (resp.status === 403) {
+      container.innerHTML = '<span style="color:var(--text-soft);">관리자 권한 X (Cloudflare env에 ADMIN_USER_ID 박혀있어야 함)</span>';
+      return;
+    }
+    if (!resp.ok) {
+      container.innerHTML = `<span style="color:#e89090;">실패 (${resp.status})</span>`;
+      return;
+    }
+    const data = await resp.json();
+    const pending = data.pending || [];
+    if (pending.length === 0) {
+      container.innerHTML = '<span style="color:var(--text-soft);">대기 중인 송금 X</span>';
+      return;
+    }
+    let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
+    pending.forEach(p => {
+      const at = new Date(p.created_at).toLocaleString('ko-KR');
+      html += `
+        <div style="padding:8px; background:var(--surface); border-radius:6px; line-height:1.6;">
+          <div><b>${p.amount_krw.toLocaleString()}원</b> — ${p.user_email || '[email X]'}</div>
+          <div style="font-size:10px; color:var(--text-soft);">메모: <code>${p.portone_merchant_uid}</code> · ${at}</div>
+          <div style="display:flex; gap:4px; margin-top:6px;">
+            <button class="btn-secondary" onclick="adminConfirm(${p.id})" style="font-size:11px; padding:4px 8px; background:rgba(143,200,143,0.20); border-color:rgba(143,200,143,0.40); color:#9ed4a0;">✓ 입금 확인</button>
+            <button class="btn-secondary" onclick="adminRevoke(${p.id})" style="font-size:11px; padding:4px 8px; background:rgba(220,80,80,0.15); border-color:rgba(220,80,80,0.40); color:#e89090;">✗ 환수</button>
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<span style="color:#e89090;">예외: ${e.message || e}</span>`;
+  }
+}
+
+async function adminConfirm(paymentId) {
+  if (!confirm('입금 확인하셨나요? status를 paid로 변경합니다.')) return;
+  try {
+    const resp = await fetch('/api/admin/confirm-charge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ payment_id: paymentId })
+    });
+    if (resp.ok) {
+      showToast('✓ 입금 확인 완료');
+      adminLoadPendingCharges();
+    } else {
+      const r = await resp.json();
+      alert('실패: ' + (r.error || resp.status));
+    }
+  } catch (e) { alert('예외: ' + (e.message || e)); }
+}
+
+async function adminRevoke(paymentId) {
+  if (!confirm('미입금 또는 거짓 송금 — 잔액 환수 + status cancelled 처리합니다. 정말?')) return;
+  try {
+    const resp = await fetch('/api/admin/revoke-charge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ payment_id: paymentId, ban_user: false })
+    });
+    if (resp.ok) {
+      showToast('✗ 환수 완료');
+      adminLoadPendingCharges();
+    } else {
+      const r = await resp.json();
+      alert('실패: ' + (r.error || resp.status));
+    }
+  } catch (e) { alert('예외: ' + (e.message || e)); }
 }
 
 async function confirmTossSent(amountKrw, memoCode) {
