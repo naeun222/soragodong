@@ -9729,8 +9729,8 @@ function _coreStepCount() {
     const id = ONBOARDING_STEPS[i] && ONBOARDING_STEPS[i].id;
     if (!skipSet.has(id)) count++;
   }
-  // 코어 #1은 endId='finish'에 자연 포함, 나머지는 help_button 추가됨
-  if (_activeCoreId !== 'core1') count++;
+  // 모든 코어 끝에 help_button 추가됨
+  count++;
   return count;
 }
 function _coreCurrentStep() {
@@ -9743,9 +9743,7 @@ function _coreCurrentStep() {
   const skipSet = CORE_SKIP_IDS[_activeCoreId] || new Set();
   // help_button 점프 후 위치면 마지막 step
   const helpIdx = ONBOARDING_STEPS.findIndex(s => s && s.id === 'help_button');
-  if (_activeCoreId !== 'core1' && _onbStep === helpIdx) {
-    return _coreStepCount();
-  }
+  if (_onbStep === helpIdx) return _coreStepCount();
   // startIdx ~ _onbStep 사이 skip 제외하고 카운트
   let pos = 0;
   const upto = Math.min(_onbStep, endIdx);
@@ -10041,8 +10039,8 @@ function onbPositionStep(step, retryCount) {
   const phaseInfo = (typeof _getPhaseInfo === 'function') ? _getPhaseInfo(_onbStep) : null;
   const phaseLabel = document.getElementById('onbPhaseLabel');
   if (phaseLabel) {
-    // 코어 튜토리얼 (코어 #1 외)이면 코어 라벨, 아니면 phase 라벨
-    if (_activeCoreId && _activeCoreId !== 'core1' && CORE_LABELS[_activeCoreId]) {
+    // 코어 튜토리얼이면 코어 라벨, 아니면 phase 라벨
+    if (_activeCoreId && CORE_LABELS[_activeCoreId]) {
       phaseLabel.textContent = '코어 — ' + CORE_LABELS[_activeCoreId];
     } else {
       phaseLabel.textContent = phaseInfo ? phaseInfo.phase.name : '';
@@ -10055,8 +10053,8 @@ function onbPositionStep(step, retryCount) {
   }
   const phaseBar = document.getElementById('onbPhaseBar');
   if (phaseBar) {
-    if (_activeCoreId && _activeCoreId !== 'core1' && _coreTotal && _coreCur) {
-      // 코어 #2~#8: 코어 내부 step별 dot — 글로벌 9 phase 대신 코어 step 진행도
+    if (_activeCoreId && _coreTotal && _coreCur) {
+      // 코어 튜토리얼: 코어 step별 dot
       const dots = [];
       for (let i = 1; i <= _coreTotal; i++) {
         const cls = i < _coreCur ? 'done' : (i === _coreCur ? 'current' : '');
@@ -10064,7 +10062,7 @@ function onbPositionStep(step, retryCount) {
       }
       phaseBar.innerHTML = dots.join('');
     } else if (phaseInfo) {
-      // 코어 #1 또는 풀 튜토리얼: 9 phase dot
+      // 풀 튜토리얼: 9 phase dot
       phaseBar.innerHTML = ONBOARDING_PHASES.map((p, i) => {
         const cls = i < phaseInfo.phaseIdx ? 'done' : (i === phaseInfo.phaseIdx ? 'current' : '');
         return `<span class="onb-phase-dot ${cls}" title="${escapeHtml(p.name)}"></span>`;
@@ -29944,18 +29942,28 @@ function _chooseUpdateOption(choice) {
   // 어떤 선택이든 dismiss (현재 메이저 기준 — V5 등 새 메이저 시 다시 뜸)
   state.preferences = state.preferences || {};
   state.preferences.dismissedMajor = _currentMajor();
-  saveState();
   if (choice === 'full') {
+    saveState();
     window._fullTutorialActive = true;
     if (typeof startInteractiveOnboarding === 'function') startInteractiveOnboarding();
     return;
   }
   if (choice === 'learn') {
-    // 사용자 요청 2026-04-29: '하면서 익히기' = 코어 #1 (시작 / API 키 / 체크인 / 대화) 진행
+    // 사용자 요청 2026-04-29: '하면서 익히기' = 처음 코어 사용자처럼 — 모든 잠금 리셋 후 코어 #1
+    state.unlocked = { core1: false, core2: false, core3: false, core4: false, core5: false, core6: false, core8: false };
+    state.preferences._allTutorialsCompletedShown = false;  // 모든 unlock 토스트 다시 가능
+    saveState();
     if (typeof startCoreTutorial === 'function') startCoreTutorial('core1');
     return;
   }
-  // 'dismiss' — 그냥 닫기 (이후 잠금 클릭 시 코어 모달로 자연 안내)
+  if (choice === 'dismiss') {
+    // 사용자 요청 2026-04-29: '이미 알아' = 일반 사용자와 동일 — 모든 코어 unlock
+    state.unlocked = { core1: true, core2: true, core3: true, core4: true, core5: true, core6: true, core8: true };
+    saveState();
+    // 잠금 시각 즉시 해제
+    if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers();
+    return;
+  }
 }
 // 하위 호환 — 기존 dismissUpdateNotice 호출처 보호
 function dismissUpdateNotice() {
