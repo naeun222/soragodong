@@ -7791,6 +7791,7 @@
           <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
           <button class="btn-secondary" onclick="forceAnalyze()" title="opus 4.7 사용 — 비쌈">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="cleanLegacySeedData()" title="잔존 시드 텍스트 강제 정리">🧹 잔존 시드 정리</button>
+          <button class="btn-secondary" onclick="testFirstTouchQuiz()" title="신규 사용자 첫 진단 quiz 시뮬레이션 (테스터 모드 필수)">🆕 첫 진단 quiz 미리보기</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">관리자 — 토스 송금</div>
           <button class="btn-secondary" onclick="adminLoadPendingCharges()">📋 대기 중인 송금 list</button>
@@ -8904,6 +8905,17 @@ async function e2eeForgotPasswordReset() {
 // 신규 사용자 진입 즉시 5문항 quiz → AI 첫 진단 (정체성 + 가설 + 관찰 거리)
 // 가설 ✓ → traits/patterns에 unverified 시드. 관찰 거리 → 첫 weekly review의 prevSeeds.
 // ═══════════════════════════════════════════════════════════════
+// 사용자 요청 2026-04-30: 개발자 도구 — 신규 사용자 첫 진단 quiz 미리보기 (시뮬레이션).
+function testFirstTouchQuiz() {
+  if (!state.preferences || !state.preferences.testerMode) {
+    alert('테스터 모드 ON 후 사용해주세요.\n\n실제 데이터에 영향 없이 quiz 흐름을 미리 볼 수 있어요.\n(테스터 모드 OFF 시 자동 복원됨)');
+    return;
+  }
+  // _firstTouchDone 우회 (testerMode라 어차피 cloud 저장 X)
+  state.preferences._firstTouchDone = false;
+  showFirstTouchQuiz();
+}
+
 async function maybeShowFirstTouchQuiz() {
   if (!authUserId) return;
   if (state.preferences && state.preferences.testerMode) return;
