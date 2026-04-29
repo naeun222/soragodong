@@ -30,6 +30,13 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   if (!CHARGE_PLANS_KRW.includes(expected_amount_krw)) {
     return jsonResponse({ error: '유효하지 않은 충전 금액' }, 400);
   }
+  // 사용자 보고 2026-04-30: prompt injection 차단 — user_memo_code는 alphanumeric+하이픈, 4-20자만.
+  if (typeof user_memo_code !== 'string' || !/^[A-Z0-9-]{4,20}$/.test(user_memo_code)) {
+    return jsonResponse({ error: '메모 코드 형식 오류 (대문자 영숫자/하이픈 4-20자)' }, 400);
+  }
+  if (typeof image_base64 !== 'string' || image_base64.length > 8_000_000) {
+    return jsonResponse({ error: '이미지 크기 초과' }, 400);
+  }
 
   // 1. 같은 캡처 (sha256) 중복 차단
   if (image_sha256) {

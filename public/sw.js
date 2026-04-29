@@ -2,7 +2,9 @@
 // 사용자 요청 2026-04-29: 오프라인 fallback + Chrome 설치 배너 활성 + Phase C 푸시 인프라 준비.
 // 진짜 푸시는 Phase C 백엔드 박힌 후 활성. 현재는 SW 등록 + cache-first 전략만.
 
-const CACHE_NAME = 'soragodong-v4-cache-v1';
+// 사용자 보고 2026-04-30: 큰 변경 (E2EE / API 마이그/암호화) 박힐 때마다 v 숫자 올리기.
+// activate에서 옛 캐시 자동 삭제 → stale 평문/구조 캐시 노출 차단.
+const CACHE_NAME = 'soragodong-v4-cache-v2';
 const PRECACHE_URLS = [
   './',
   './index.html',

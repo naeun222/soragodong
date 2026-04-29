@@ -49,9 +49,9 @@
 | **Anthropic, PBC** | AI 응답 생성 (Claude API) | 사용자 입력 텍스트 + 시스템 컨텍스트 (이름·이메일·결제 정보 X) | 미국 (San Francisco, CA) |
 | **Supabase, Inc.** | 인증 + 데이터 저장 (PostgreSQL) | 이메일, 사용자 데이터 | 미국 (AWS us-east-1) |
 | **포트원 (PortOne)** | 결제 처리 | 결제 정보 (카드번호 직접 보유 X, 토큰만) | 한국 |
-| **Vercel, Inc.** | 백엔드 호스팅 | 사용자 요청 라우팅 | 미국 |
+| **Cloudflare, Inc.** | 백엔드 호스팅 + 정적 자원 + Edge Functions | 사용자 요청 라우팅, 정적 파일 전송 | 미국 본사 (글로벌 edge 분산) |
 
-**국외이전 동의**: Anthropic / Supabase / Vercel은 미국 소재. 사용자가 별도 동의 시에만 데이터 전송된다 (제2조 2항 참고).
+**국외이전 동의**: Anthropic / Supabase / Cloudflare은 미국 소재 (Cloudflare는 글로벌 edge 네트워크). 사용자가 별도 동의 시에만 데이터 전송된다 (제2조 2항 참고).
 
 회사는 위 수탁자 외 제3자에게 사용자 데이터를 제공하지 않는다. 단 법령상 요구가 있는 경우 (수사 영장 등) 최소 범위에서 협조한다.
 

@@ -23,6 +23,10 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   if (!user_memo_code || typeof user_memo_code !== 'string') {
     return jsonResponse({ error: '송금 메모 코드 필수' }, 400);
   }
+  // 사용자 보고 2026-04-30: 메모 코드 형식 검증 (alphanumeric+하이픈, 4-20자).
+  if (!/^[A-Z0-9-]{4,20}$/.test(user_memo_code)) {
+    return jsonResponse({ error: '메모 코드 형식 오류 (대문자 영숫자/하이픈 4-20자)' }, 400);
+  }
 
   // 같은 user_memo_code 중복 방지 (사용자 한 번 송금 = 한 번 충전)
   try {

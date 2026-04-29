@@ -61,9 +61,12 @@ export async function getMonthlyUsage(env: Env, userId: string): Promise<{ token
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     return { tokens: 0, cost_usd: 0 };
   }
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
+  // 사용자 보고 2026-04-30: Cloudflare Workers는 UTC. 한국 사용자 월 경계는 KST(UTC+9).
+  // KST 월 1일 00:00 = UTC 월 직전 마지막 날 15:00. KST 시각으로 계산해서 UTC로 변환.
+  const KST_OFFSET_MS = 9 * 3600 * 1000;
+  const nowKst = new Date(Date.now() + KST_OFFSET_MS);
+  const startOfMonthKstUtc = Date.UTC(nowKst.getUTCFullYear(), nowKst.getUTCMonth(), 1, 0, 0, 0);
+  const startOfMonth = new Date(startOfMonthKstUtc - KST_OFFSET_MS);  // UTC 시각 (DB 저장 형식)
   const url = `${env.SUPABASE_URL}/rest/v1/soragodong_usage?user_id=eq.${userId}&recorded_at=gte.${startOfMonth.toISOString()}&select=input_tokens,output_tokens,cache_read_tokens,cache_creation_tokens,cost_usd`;
   try {
     const resp = await fetch(url, {

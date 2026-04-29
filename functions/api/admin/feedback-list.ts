@@ -11,7 +11,11 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
   const { request, env } = context;
   const user = await verifyAuth(request, env);
   if (!user) return unauthorized();
-  if (!env.ADMIN_USER_ID || user.id !== env.ADMIN_USER_ID) {
+  if (!env.ADMIN_USER_ID) {
+    console.error('[admin] ADMIN_USER_ID env 미설정 — Cloudflare 대시보드에서 박아야 합니다');
+    return jsonResponse({ error: '서버 설정 오류 (관리자에게 문의)' }, 500);
+  }
+  if (user.id !== env.ADMIN_USER_ID) {
     return jsonResponse({ error: '관리자 권한 필요' }, 403);
   }
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
