@@ -2918,6 +2918,10 @@
     padding: 22px 22px 32px;
     transform: translateY(20px);
     transition: transform 0.25s ease;
+    /* 사용자 보고 2026-04-29: 깨달음 원문이 길면 모달 화면 밖으로 — 전체 높이 제한 + 스크롤 */
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .topic-modal-overlay.show .topic-modal { transform: translateY(0); }
   .topic-modal-header {
@@ -5883,36 +5887,7 @@
                 opacity 0.18s ease;
     will-change: top, left, right, bottom, transform, opacity;
   }
-  /* 사용자 보고 2026-04-28: 흐리게 토글 — 모달이 UI 가릴 때 잠시 투명하게 (탭하면 다시 진하게) */
-  /* 사용자 보고 2026-04-28: 안 흐려지던 원인 — backdrop-filter가 opacity와 별개로 blur 유지해 또렷해 보임. backdrop-filter도 같이 끔. */
-  /* 추가 원인: :focus-within이 클릭 직후 버튼 포커스에 매칭돼 즉시 또렷화. 제거. */
-  .onb-coachmark.faded {
-    opacity: 0.22 !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: rgba(38,32,52,0.18) !important;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.25) !important;
-  }
-  .onb-fade-toggle {
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    background: transparent;
-    border: none;
-    color: var(--text-dim);
-    font-size: 14px;
-    line-height: 1;
-    padding: 4px 6px;
-    cursor: pointer;
-    font-family: inherit;
-    opacity: 0.65;
-    z-index: 2;
-    border-radius: 6px;
-  }
-  .onb-fade-toggle:active {
-    opacity: 1;
-    background: rgba(212,167,106,0.15);
-  }
+  /* 사용자 요청 2026-04-29: 흐리게 토글 기능 제거 */
   /* 같은 위치 step 전환 시 content cross-fade (단축) */
   .onb-coachmark .onb-title,
   .onb-coachmark .onb-body {
@@ -5960,7 +5935,6 @@
     letter-spacing: 0.12em;
     margin-bottom: 4px;
     font-weight: 600;
-    padding-right: 28px;  /* 흐리게 토글 버튼 자리 확보 */
   }
   .onb-title {
     font-family: 'Gowun Batang', serif;
@@ -6380,7 +6354,6 @@
   <div class="onb-mask" id="onbMask"></div>
   <div class="onb-spotlight" id="onbSpotlight"></div>
   <div class="onb-coachmark" id="onbCoachmark">
-    <button class="onb-fade-toggle" id="onbFadeToggle" onclick="event.stopPropagation(); onbToggleFade()" title="흐리게 — 가려진 UI 보기">👁</button>
     <div class="onb-drag-handle" id="onbDragHandle" title="드래그해서 옮기기">⋮⋮</div>
     <div class="onb-step-num" id="onbStepNum">1 / 7</div>
     <div class="onb-title" id="onbTitle"></div>
@@ -8212,7 +8185,6 @@ const ONBOARDING_STEPS = [
     body: '키 저장하면 진짜 시작이야! ✦',
     waitFor: 'click',
     advanceDelay: 800,
-    coachmarkPosition: 'corner',
     fallbackPosition: 'top'
   },
   {
@@ -8265,7 +8237,10 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     title: '🌙 새벽 4시까지 = 어제',
     body: '새벽까지 일하다가 체크인 / 일기 적으면 — <b>새벽 4시 이전엔 어제 기록</b>으로 들어가.<br>새벽 4시 지나면 그 날부터 새 날.<br><br><span class="small">밤샘 일하는 너 위한 배려야.</span>',
-    waitFor: 'next'
+    waitFor: 'next',
+    // 사용자 보고 2026-04-29: 이전 스탭과 위치 비슷해 움찔거림 — 이전 위치 그대로 유지
+    keepCoachmarkPosition: true,
+    dimBackground: false
   },
   {
     id: 'submit_checkin',
@@ -8388,7 +8363,7 @@ const ONBOARDING_STEPS = [
     id: 'chapter_auto',
     targetSelector: null,
     title: '📖 챕터 자동 분류',
-    body: '우리가 여기서 한 대화는 <b>4시간 이상 멈추거나, 입력창 왼쪽 하단의 ✓ 버튼을 누르면 마무리</b>돼.<br>그럼 내가 이 대화 챕터를 <b>8가지 주제 중 하나</b>로 자동 분류해서 <b>📚 도서관</b>에 저장해줄게:<br>일기 / 일상 / 고민 / 감정 / 기억 / 할 일 / 아이디어 / 관계.<br><br><span class="small">자세한 건 이따가 알아보자.</span>',
+    body: '우리가 여기서 한 대화는 <b>4시간 이상 멈추거나, 입력창 왼쪽 하단의 ✓ 버튼을 누르면 마무리</b>돼.<br><br><br>그럼 내가 이 대화 챕터를 <b>8가지 주제 중 하나</b>로 자동 분류해서 <b>📚 도서관</b>에 저장해줄게:<br>일기 / 일상 / 고민 / 감정 / 기억 / 할 일 / 아이디어 / 관계.<br><br><span class="small">자세한 건 이따가 알아보자.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8454,7 +8429,7 @@ const ONBOARDING_STEPS = [
     id: 'close_beach',
     targetSelector: null,
     title: '소라 7단계',
-    body: '소라는 이렇게 나뉘어:<br>🐚 가벼움 → 🌀 일상 → 🐢 메인 → 🦞 황금 → ⭐ <b>부름</b> → ✨ 특별 → 🧬 <b>DNA 진주</b> (체화 완료)<br>각 소라 탭하면 그날 이야기도 떠!',
+    body: '소라는 이렇게 나뉘어:<br>🐚 가벼움 → 🌀 일상 → 🐢 메인 → 🦞 황금 → ⭐ <b>부름</b> → ✨ 특별 → 🧬 <b>DNA 진주</b> (체화 완료)<br>각 소라 탭하면 그날 이야기도 떠!<br><br>천천히 구경해봐.',
     waitFor: 'next',
     coachmarkPosition: 'corner',
     dimBackground: false,
@@ -8466,7 +8441,8 @@ const ONBOARDING_STEPS = [
     title: '🐚 소라는 어떻게 얻어?',
     body: '<b>소라의 부름</b>을 클리어 하거나,<br><b>오늘의 카드</b>를 완료하거나,<br><b>DNA 체화</b>를 했을 때.',
     waitFor: 'next',
-    dimBackground: false
+    dimBackground: false,
+    aboveModal: true  // 사용자 보고 2026-04-29: 이전 스탭과 같은 위치 유지
   },
   {
     id: 'special_shell_5pct',
@@ -8474,7 +8450,8 @@ const ONBOARDING_STEPS = [
     title: '✨ 5% 특별 소라',
     body: '가끔씩 <b>5%의 확률</b>로 \'<b>특별</b>\'한 소라가 떠.<br><br><span class="small">예쁘고 기분이 좋아.</span>',
     waitFor: 'next',
-    dimBackground: false
+    dimBackground: false,
+    aboveModal: true  // 사용자 보고 2026-04-29: 이전 스탭과 같은 위치 유지
   },
   {
     id: 'mission_carryover',
@@ -8494,7 +8471,8 @@ const ONBOARDING_STEPS = [
     title: '🔍 결과 체크',
     body: '근데, 미션은 성공해도 <b>문제가 해결 안 될 수도 있잖아</b>: 맞아.<br><br>그래서 문제가 해결됐는지 <b>결과 체크</b>를 할 거야.<br>다음날 <b>체크인이나 대화 탭에 들어올 때 자동으로 떠</b>.',
     waitFor: 'next',
-    dimBackground: false
+    dimBackground: false,
+    aboveModal: true  // 사용자 보고 2026-04-29: 이전 스탭과 같은 위치 유지
   },
   {
     id: 'attempt_result_demo',
@@ -8521,7 +8499,7 @@ const ONBOARDING_STEPS = [
     targetSelector: '.shell-story-overlay .shell-story-dna-badge',
     advanceClickSelector: '.shell-story-overlay .btn-secondary',
     title: '🧬 DNA 한 조각',
-    body: '이게 <b>DNA 한 조각</b> 표시야.<br>미션 성공이 → 전략 성공이 되면, <b>그 소라가 DNA의 한 조각</b>이 돼.<br><br>아까 말했던 <b>"전략으로"</b> 버튼 기억 나지? 이게 바로 그 의미야 — 너만의 전략이 시간이 지나면서 너 일부가 되어가.<br><br>준비되면 <b>닫기</b> 눌러서 진행해.',
+    body: 'DNA가 붙은 소라들 보여?<br>이게 <b>DNA 한 조각</b> 표시야.<br>미션 성공이 → 전략 성공이 되면, <b>그 소라가 DNA의 한 조각</b>이 돼.<br><br>아까 눌렀던 <b>"전략으로"</b> 버튼 기억 나지?<br><br>우리가 전략을 성공할수록 그 전략은 성장해. 이게 무슨 의미냐면 — <b>닫기</b> 버튼을 눌러봐.',
     waitFor: 'click',
     advanceDelay: 600,
     nextLabel: '다음 →',
@@ -8552,7 +8530,7 @@ const ONBOARDING_STEPS = [
     id: 'yangsaeng_explain',
     targetSelector: null,
     title: '🧬 전략 양생',
-    body: '여기 <b>전략 DNA 카드</b>는 너의 무기가 되어줄 수 있는 것들이야.<br><br>이 전략들은 소라고동이랑 대화하다가 <b>비슷한 상황에 맞닥뜨릴 때 재사용</b>돼.<br>(또는 너가 이 전략 쓰고 싶다고 소라고동한테 말해도 돼!)<br><br>우리가 쓴 전략이 <b>실제로 나를 변화시킬 때까지</b> 우리는 \'<b>전략 양생</b>\'을 할 수 있어.',
+    body: '여기 <b>전략 DNA 카드</b>는 너의 무기가 되어줄 수 있는 것들이야.<br><br>아까 우리가 <b>\'🧬 전략으로\'</b> 버튼을 누르면 그 전략이 여기에 저장돼. 🌱 새싹부터 시작해서 그 전략을 성공할수록 점점 성장해 — <b>양생 → 성장/진화 → 체화</b> 순서.<br><br>아까 눌렀던 전략도 여기 \'엄마 말에 터진 패턴 끊기\' 비슷한 이름으로 저장돼있을 거야!<br><br>이 전략들은 고동이랑 대화하다 <b>비슷한 상황에 맞닥뜨릴 때 재사용</b>돼.<br>(또는 너가 이 전략 쓰고 싶다고 고동이한테 말해도 돼!)<br><br>우리가 쓴 전략이 <b>실제로 나를 변화시킬 때까지</b> 우리는 \'<b>전략 양생</b>\'을 할 수 있어.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -8602,7 +8580,7 @@ const ONBOARDING_STEPS = [
     id: 'mutation_intro_msg',
     targetSelector: null,
     title: '🌿 임시 대화창',
-    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>아래 선택지 중 하나를 골라봐.',
+    body: '전략이 실패한 게 아니라 <b>진화</b>한 거야!<br>네가 문제를 해결할 때까지 맞는 방법을 찾아보자.<br><br>(네 탓 X — 이 전략이 안 맞은 거!)<br><br>아래 선택지 중 하나를 골라봐.<br><br><span class="small">고동이가 답변 만들 때까지 기다려줘.</span>',
     waitFor: 'next',
     nextLabel: '눌렀어 →',
     dimBackground: false,
@@ -8624,7 +8602,7 @@ const ONBOARDING_STEPS = [
     id: 'mutation_finish_btn',
     targetSelector: '#mutationFinishBtn',
     title: '✦ 이 차원으로 해볼게',
-    body: '소라의 답 봤지?<br>이제 <b>\'✦ 이 차원으로 해볼게\'</b> 눌러봐.',
+    body: '고동이의 답 봤지?<br>이제 <b>\'✦ 이 차원으로 해볼게\'</b> 눌러봐.',
     waitFor: 'click',
     advanceDelay: 800,
     manualAdvance: true,
@@ -8702,7 +8680,7 @@ const ONBOARDING_STEPS = [
     id: 'crystallize_intro',
     targetSelector: null,
     title: '💎 너 일부가 되는 순간',
-    body: '이 전략이 <b>5번 이상 성공</b>하면, 우리는 이 전략이 네 몸 속에 \'<b>체화</b>\'됐다고 말할 수 있어.<br><br>전략이 체화되면 → <b>DNA 진주</b>를 얻게 돼!<br>성장 및 진화에 쓰인 소라들이 <b>DNA로 박혀</b>.',
+    body: '이 전략이 <b>5번 이상 성공</b>하면, 우리는 이 전략이 네 몸 속에 \'<b>체화</b>\'됐다고 말할 수 있어.<br><br>그러니까, 네가 앞으로 비슷한 문제 상황에서 <b>스스로 해결할 수 있는 힘</b>이 생긴 거지!<br><br>전략이 체화되면 → <b>DNA 진주</b>를 얻게 돼!<br>성장 및 진화에 쓰인 소라들이 <b>DNA로 박혀</b>.',
     waitFor: 'next',
     dimBackground: false,
     demoCrystallize: true
@@ -8759,7 +8737,7 @@ const ONBOARDING_STEPS = [
     id: 'exec_cards_intro',
     targetSelector: null,
     title: '✦ 오늘의 카드 3장',
-    body: '오늘의 카드 = 할 일 목록 중에서 소라가 골라주는 \'<b>오늘의 할 일 3가지</b>\'.<br>이거 완료하면 <b>중요도에 맞는 등급의 소라</b>가 보상으로 주어져.<br><br>오늘 할 일 목록은 <b>서랍장으로 내릴 수 있고</b>, 서랍장에서 <b>오늘로 올릴 수 있어</b>.',
+    body: '오늘의 카드 = 할 일 목록 중에서 소라가 골라주는 \'<b>오늘의 할 일 3가지</b>\'.<br>이거 완료하면 <b>중요도에 맞는 등급의 소라</b>가 보상으로 주어져.<br><br>오늘 할 일 목록은 <b>서랍장으로 내릴 수 있고</b>, 서랍장에서 <b>오늘로 올릴 수 있어</b>.<br><br>한 번 구경해봐.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -9159,7 +9137,7 @@ const ONBOARDING_STEPS = [
     id: 'finish',
     targetSelector: null,
     title: '준비 끝 ✦',
-    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br><b>다시 한 번 — 너보다 너를 더 잘 아는 나 소라고동이, 네가 더 나은 선택을 할 수 있도록 케어해줄게</b> ✦<br><br>· <b>핵심 1: 체크인</b> — 매일 (또는 원할 때) 30초. 너의 거울이 쌓이는 곳.<br>· <b>핵심 2: 대화 탭</b> — 무슨 말이든. 4단 분석 + 너만의 전략으로 박아.<br>· 나머지 (도서관 / 양생방 / 모래사장 / 실행 / 나)는 부가 — 네가 쌓는 만큼 자연스럽게 차올라.<br><br>매일 안 봐도 OK. 너에게 맞춰지는 도구야.<br><br><b>이제 같이 가보자. 한 걸음씩, 너답게.</b> ✦🐚',
+    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br><b>다시 한 번 — 너보다 너를 더 잘 아는 나 소라고동이, 네가 더 나은 선택을 할 수 있도록 케어해줄게</b> ✦<br><br><span style="font-size:17px; font-weight:700; color:var(--accent2);">핵심 1: 체크인</span><br><span style="font-size:17px; font-weight:700; color:var(--accent2);">핵심 2: 대화 탭</span><br><br><span class="small">나머지는 부가기능. 매일 안 해도 ㄱㅊ! 언제든 환영~</span><br><br><b>이제 같이 가보자. 한 걸음씩, 너답게.</b> ✦🐚',
     waitFor: 'next',
     nextLabel: '시작! ✦'
   }
@@ -9277,20 +9255,7 @@ function onbCleanupListeners() {
   _onbActiveListeners = [];
 }
 
-// 사용자 보고 2026-04-28: 튜토리얼 모달 흐리게 토글 — 모달이 가린 UI 보고 싶을 때
-function onbToggleFade() {
-  const cm = document.getElementById('onbCoachmark');
-  if (!cm) return;
-  cm.classList.toggle('faded');
-  const btn = document.getElementById('onbFadeToggle');
-  if (btn) {
-    const faded = cm.classList.contains('faded');
-    btn.textContent = faded ? '👀' : '👁';
-    btn.title = faded ? '진하게 — 다시 또렷하게' : '흐리게 — 가려진 UI 보기';
-    // 버튼 포커스 즉시 해제 (focus-within 등으로 모달 다시 또렷해지는 거 방지 + 모바일 outline 잔존 방지)
-    try { btn.blur(); } catch (e) {}
-  }
-}
+// 사용자 요청 2026-04-29: 흐리게 토글 기능 제거
 
 // 사용자 보고 2026-04-28: capture 옵션 추가 — modal 안 element가 stopPropagation 해도 catch (예: showOptionsModal '.input-modal' onclick="event.stopPropagation()")
 function onbAddListener(el, type, fn, useCapture) {
@@ -9371,8 +9336,17 @@ function onbPositionStep(step, retryCount) {
     const ovDim = document.getElementById('onbOverlay');
     if (ovDim) ovDim.style.pointerEvents = 'none';
   }
+  // 사용자 보고 2026-04-29: keepCoachmarkPosition — 이전 스탭과 같은 위치 유지 (움찔 방지)
+  if (step.keepCoachmarkPosition) {
+    coachmark.style.visibility = 'visible';
+    coachmark.style.opacity = '1';
+    coachmark.style.display = '';
+    const ovKeep = document.getElementById('onbOverlay');
+    if (ovKeep && !step.aboveModal) ovKeep.style.zIndex = '9500';
+    // 위치 inline style 안 건드림 — 이전 스탭 그대로
+  }
   // V3.13.x: coachmarkPosition:'corner' — coachmark만 우상단 컴팩트
-  if (step.coachmarkPosition === 'corner' || step.dimBackground === false) {
+  else if (step.coachmarkPosition === 'corner' || step.dimBackground === false) {
     const cs = coachmark.style;
     cs.top = '20px'; cs.right = '12px'; cs.left = 'auto';
     cs.transform = 'none'; cs.maxWidth = '260px'; cs.bottom = 'auto';
@@ -9401,8 +9375,8 @@ function onbPositionStep(step, retryCount) {
         const ov0 = document.getElementById('onbOverlay');
         if (ov0) ov0.style.pointerEvents = 'auto';
       }
-      // coachmark 임시 위치 — corner 아니면 중앙
-      if (step.coachmarkPosition !== 'corner' && step.dimBackground !== false) {
+      // coachmark 임시 위치 — corner 아니면 중앙 (keepCoachmarkPosition은 그대로 유지)
+      if (step.coachmarkPosition !== 'corner' && step.dimBackground !== false && !step.keepCoachmarkPosition) {
         coachmark.style.top = '50%';
         coachmark.style.left = '50%';
         coachmark.style.transform = 'translate(-50%, -50%)';
@@ -18093,11 +18067,12 @@ function switchDayModalTab(tab) {
       }
     }
   } else if (tab === 'topics') {
-    // V4-fix: 카테고리 분류 X — '✦ 토픽' 단일
+    // 사용자 보고 2026-04-29: 일기·대화 칩이 step 25에서 말한 8 카테고리(일기/일상/고민/감정/기억/할 일/아이디어/관계)로 분류돼 보이게
     topics.forEach(c => {
+      const catInfo = TOPIC_CATEGORY_LABELS[c.category] || { label: '토픽', icon: '✦' };
       html += `
         <div class="day-card t-topic" onclick="closeDayModal(); openTopicCard('${c.id}')">
-          <div class="day-card-icon-row"><span class="icon">✦</span><span>토픽</span></div>
+          <div class="day-card-icon-row"><span class="icon">${catInfo.icon}</span><span>${escapeHtml(catInfo.label)}</span></div>
           <div class="day-card-title">${escapeHtml(c.title || '')}</div>
           ${c.summary ? `<div class="day-card-body">${escapeHtml(c.summary)}</div>` : ''}
         </div>
@@ -18349,12 +18324,20 @@ function searchArchive() {
 
 // === V3.8 LENS: TOPIC CARDS — 챕터별 토픽 정리 (대화 렌즈 상단) ===
 const TOPIC_CATEGORY_LABELS = {
-  decision: { label: '결정', icon: '🧙‍♂️' },
-  task: { label: '할 일', icon: '📋' },
+  // V4 8 카테고리 (step 25 챕터 자동 분류 기준)
+  diary:        { label: '일기',     icon: '📔' },
+  casual:       { label: '일상',     icon: '☀️' },
+  concern:      { label: '고민',     icon: '💭' },
+  emotion:      { label: '감정',     icon: '💧' },
+  memory:       { label: '기억',     icon: '🔮' },
+  todo:         { label: '할 일',    icon: '📋' },
+  idea:         { label: '아이디어', icon: '💡' },
+  relationship: { label: '관계',     icon: '👥' },
+  // V3 호환 (legacy)
+  decision:  { label: '결정', icon: '🧙‍♂️' },
+  task:      { label: '할 일', icon: '📋' },
   emotional: { label: '감정', icon: '💧' },
-  memory: { label: '기억', icon: '📝' },
-  idea: { label: '아이디어', icon: '💡' },
-  strategy: { label: '전략', icon: '🧭' }
+  strategy:  { label: '전략', icon: '🧭' }
 };
 
 function renderLensTopicCards() {
