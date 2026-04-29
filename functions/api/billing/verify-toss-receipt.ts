@@ -76,15 +76,17 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
 
 {
   "amount_krw": 숫자 (송금 금액, 원 단위),
-  "receiver_account_number": "수신 계좌번호 (숫자만, 하이픈 제거)",
-  "receiver_bank": "수신 은행명",
+  "receiver_account_number": "수신 계좌번호 (숫자만, 하이픈 제거). 화면에 안 보이면 null",
+  "receiver_bank": "수신 은행명. 안 보이면 null",
   "receiver_holder": "수신 예금주명",
   "memo": "송금 메모 (있다면)",
   "send_time": "송금 시각 (가능하면 ISO 8601, 없으면 null)",
-  "is_toss_receipt": true/false (토스 송금 영수증이 맞는지),
+  "screen_type": "어느 화면 캡처인지: 'transfer_form' (송금 직전 — 계좌 보임) / 'transfer_complete' (송금 완료 — 계좌 안 보임) / 'transaction_detail' (거래내역 상세 — 계좌 보임) / 'unknown'",
+  "is_toss_receipt": true/false (토스 송금 화면이 맞는지),
   "confidence": 0.0-1.0
 }
 
+토스 송금 완료 화면은 계좌번호가 보이지 않을 수 있음. 그 경우 receiver_account_number는 null로.
 JSON만 출력. 다른 글 X.`;
 
   let aiAnalysis: any;
@@ -145,10 +147,22 @@ JSON만 출력. 다른 글 X.`;
   if (!amountMatch) {
     return jsonResponse({ error: `금액 불일치 (영수증: ${aiAnalysis.amount_krw}원, 충전: ${expected_amount_krw}원)`, ai_analysis: aiAnalysis }, 400);
   }
-  // 계좌번호 매칭
+  // 계좌번호 매칭 — 사용자 보고 2026-04-30: 토스 '송금 완료' 화면은 계좌번호 안 보임 → optional 처리.
+  // 계좌번호 보이면 strict 매칭, 안 보이면 receiver_holder (예금주명) 으로 매칭.
   const accountNorm = (aiAnalysis.receiver_account_number || '').replace(/[^0-9]/g, '');
-  if (accountNorm !== RECEIVER_ACCOUNT.number_normalized) {
-    return jsonResponse({ error: `수신 계좌 불일치 (영수증: ${aiAnalysis.receiver_account_number}, 회사: ${RECEIVER_ACCOUNT.number_normalized})`, ai_analysis: aiAnalysis }, 400);
+  if (accountNorm) {
+    // 계좌번호 보임 — strict 매칭
+    if (accountNorm !== RECEIVER_ACCOUNT.number_normalized) {
+      return jsonResponse({ error: `수신 계좌 불일치 (영수증: ${aiAnalysis.receiver_account_number}, 회사: ${RECEIVER_ACCOUNT.number_normalized})`, ai_analysis: aiAnalysis }, 400);
+    }
+  } else {
+    // 계좌번호 안 보임 (송금 완료 화면) — 예금주명으로 매칭
+    const holderNorm = (aiAnalysis.receiver_holder || '').replace(/\s/g, '');
+    const expectedHolder = RECEIVER_ACCOUNT.holder.replace(/\s/g, '');
+    if (!holderNorm.includes(expectedHolder)) {
+      return jsonResponse({ error: `예금주명 불일치 (영수증: "${aiAnalysis.receiver_holder}", 회사: "${RECEIVER_ACCOUNT.holder}")`, ai_analysis: aiAnalysis }, 400);
+    }
+    // 송금 완료 화면 = 계좌 검증 못 함 → 메모 코드로 검증 (메모는 unique, 도용 방지)
   }
   // 메모 코드 매칭
   const memoNorm = (aiAnalysis.memo || '').toUpperCase().replace(/\s/g, '');

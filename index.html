@@ -270,6 +270,10 @@
     cursor: pointer; font-family: inherit;
   }
   .update-banner-btn-dismiss:active { background: var(--surface2); }
+  .feedback-banner {
+    background: linear-gradient(135deg, rgba(126,200,227,0.14), rgba(143,200,143,0.10));
+    border-bottom: 1px solid rgba(126,200,227,0.30);
+  }
 
   /* 사용자 요청 2026-04-29: 양생방·깨달음·마법리뷰 timeline 카테고리 = 펼침/접힘 큰 카드 */
   .lib-cat-accordion { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
@@ -7020,6 +7024,7 @@
   </div>
 
   <div id="updateBanner" class="update-banner" style="display:none;"></div>
+  <div id="feedbackBanner" class="update-banner feedback-banner" style="display:none;"></div>
 
   <div class="screens">
     <!-- HOME -->
@@ -7589,8 +7594,8 @@
         <button class="btn-secondary btn-danger" onclick="logout()">로그아웃</button>
       </div>
 
-      <!-- ═══ 개발자 도구 (collapse) ═══ -->
-      <details class="model-collapse" style="margin-top:30px; border:1px solid rgba(212,167,106,0.30); border-radius:12px;">
+      <!-- ═══ 개발자 도구 (collapse, admin only) ═══ -->
+      <details id="devToolsSection" class="model-collapse" style="display:none; margin-top:30px; border:1px solid rgba(212,167,106,0.30); border-radius:12px;">
         <summary style="padding:12px 14px;">🧪 개발자 도구</summary>
         <div class="model-collapse-content" style="padding: 10px 14px;">
           <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
@@ -7835,6 +7840,14 @@ function _canAI() {
   if (state.apiKey) return true;
   if (typeof session !== 'undefined' && session && session.access_token) return true;
   return false;
+}
+
+// 사용자 요청 2026-04-30: admin 헬퍼. 김나은 (jade6679@naver.com) 전용 UI 노출 조건.
+// 백엔드 admin endpoint은 server-side ADMIN_USER_ID env로 강제 검증 — 이 클라이언트 헬퍼는 UI 숨김 용도일 뿐.
+const ADMIN_EMAIL = 'jade6679@naver.com';
+function _isAdmin() {
+  if (typeof session === 'undefined' || !session || !session.user) return false;
+  return (session.user.email || '').toLowerCase() === ADMIN_EMAIL;
 }
 
 const V4_USER_ID = 'me_v4';
@@ -32562,6 +32575,9 @@ function loadSettings() {
   // 사용자 요청 2026-04-30: 피드백 inbox — 미읽음 답변 badge + admin 버튼 (jade6679@naver.com만 보임)
   if (typeof refreshFeedbackUnreadBadge === 'function') refreshFeedbackUnreadBadge().catch(() => {});
   if (typeof refreshAdminFeedbackButton === 'function') refreshAdminFeedbackButton().catch(() => {});
+  // 사용자 요청 2026-04-30: 개발자 도구 admin only (jade6679@naver.com만 보임)
+  const devSection = document.getElementById('devToolsSection');
+  if (devSection) devSection.style.display = _isAdmin() ? 'block' : 'none';
 }
 
 function saveSettings() {
@@ -32805,8 +32821,12 @@ function showTossChargeModal(plan) {
 
       <div style="border-top:1px solid var(--border); padding-top:14px; margin-bottom:8px;">
         <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:6px;">📸 송금 보낸 후 — 영수증 캡처 올리기</div>
-        <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
-          송금 완료 화면 한 장만 캡처해서 올려줘. AI가 후딱 확인하고 잔액 채워둘게! ✦
+        <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-bottom:10px;">
+          아래 <strong>둘 중 하나</strong> 캡처해서 올리면 돼:<br>
+          · 송금 직전 화면 (계좌·은행 다 보이는 화면) <span style="color:var(--text-soft);">— 가장 정확</span><br>
+          · 송금 완료 화면 (\"○○○님께 보냄\" 화면)<br>
+          · 또는 토스 거래내역 → 클릭 → 상세 화면<br>
+          <span style="color:var(--text-soft);">AI가 후딱 확인하고 잔액 채워둘게! ✦</span>
         </div>
         <input type="file" id="tossReceiptInput" accept="image/*" style="width:100%; font-size:11px;">
         <button class="btn-primary" onclick="verifyTossReceipt(${plan.krw}, '${memoCode}')" style="width:100%; margin-top:8px;">✦ 자동 확인하고 충전!</button>
@@ -33844,6 +33864,7 @@ const APP_VERSION = 'v4.0.163-step69-body';
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
 function autoTourOnUpdate() {
   if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
+  if (typeof renderFeedbackBanner === 'function') renderFeedbackBanner();
 }
 // V4 (사용자 요청 2026-04-29): 배너 → 3 버튼 모달
 // dismiss 단위는 메이저 버전 (V4/V5/...). 같은 메이저면 한 번 dismiss로 끝까지 안 떠.
@@ -33937,6 +33958,37 @@ function dismissUpdateNotice() {
   state.preferences = state.preferences || {};
   state.preferences.dismissedMajor = _currentMajor();
   saveState();
+}
+
+// 사용자 요청 2026-04-30: 헤더 배너 '고동MOM에게 한 마디' — 인앱 피드백 직진.
+// dismiss 시 v4 기간 동안 안 뜸 (V5 시 다시 등장).
+function renderFeedbackBanner() {
+  const banner = document.getElementById('feedbackBanner');
+  if (!banner) return;
+  if (typeof authUserId === 'undefined' || !authUserId) { banner.style.display = 'none'; return; }
+  if (typeof session === 'undefined' || !session || !session.access_token) { banner.style.display = 'none'; return; }
+  if (window._onbTutorialMode) { banner.style.display = 'none'; return; }
+  if (state && state.preferences && state.preferences.testerMode) { banner.style.display = 'none'; return; }
+  const major = _currentMajor();
+  const dismissed = state && state.preferences && state.preferences.dismissedFeedbackBannerMajor;
+  if (dismissed === major) { banner.style.display = 'none'; return; }
+  banner.style.display = 'flex';
+  banner.innerHTML = `
+    <div class="update-banner-text">💌 고동MOM에게 한 마디:</div>
+    <div class="update-banner-actions">
+      <button class="update-banner-btn-go" onclick="openFeedbackInApp(); dismissFeedbackBanner();">메시지 보내기</button>
+      <button class="update-banner-btn-dismiss" onclick="dismissFeedbackBanner()" aria-label="닫기">×</button>
+    </div>
+  `;
+}
+
+function dismissFeedbackBanner() {
+  if (!state) return;
+  state.preferences = state.preferences || {};
+  state.preferences.dismissedFeedbackBannerMajor = _currentMajor();
+  saveState();
+  const banner = document.getElementById('feedbackBanner');
+  if (banner) banner.style.display = 'none';
 }
 async function startUpdateTour() {
   state.preferences = state.preferences || {};
