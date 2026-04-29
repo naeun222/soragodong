@@ -12340,7 +12340,11 @@ function saveTextStep(decisionId, stepId) {
 // 사용자 요청 2026-04-29: 마법 도움 받기 = 별도 helpChat 모달. decision/step별 영구 저장.
 // 14일 숙성 중 며칠 걸쳐 이어볼 수 있음. 메인 chat 탭 안 건드림.
 async function askAIForStep(decisionId, stepId) {
-  if (!state.apiKey) { alert('API 키 먼저 설정!'); return; }
+  // 사용자 요청 2026-04-30: apiKey 빈 상태에서도 백엔드 프록시로 동작 (Phase C). session 활성만 체크.
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) {
+    alert('로그인이 필요해요!');
+    return;
+  }
   openMagicHelpChat(decisionId, stepId);
 }
 
@@ -12402,8 +12406,9 @@ async function _runMagicHelpAIResponse() {
   const meta = DECISION_STEPS.find(m => m.id === stepId);
   if (!meta) return;
 
-  if (!state.apiKey) {
-    decision.helpChats[stepId].push({ role: 'assistant', content: '(API 키 없어 — 설정에서 등록해.)', timestamp: new Date().toISOString() });
+  // 사용자 요청 2026-04-30: apiKey 빈 상태 + session 활성 시 백엔드 프록시 동작 (fetch interceptor 자동 swap).
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) {
+    decision.helpChats[stepId].push({ role: 'assistant', content: '(로그인이 필요해요. 새로고침 후 다시 시도해주세요.)', timestamp: new Date().toISOString() });
     _magicHelpState._loading = false;
     saveState();
     _renderMagicHelpChat();
@@ -14469,10 +14474,11 @@ async function sendReflectionChat() {
   saveState();
   renderReflectionChat();
 
-  if (!state.apiKey) {
+  // 사용자 요청 2026-04-30: apiKey 빈 상태 + session 활성 시 백엔드 프록시.
+  if (!state.apiKey && (typeof session === 'undefined' || !session?.access_token)) {
     q.chatMessages.push({
       role: 'assistant',
-      content: '(API 키 없어 — 설정에서 등록해. 일단 네 흐름은 박아둘게.)',
+      content: '(로그인이 필요해요. 새로고침 후 다시 시도해주세요.)',
       timestamp: new Date().toISOString()
     });
     saveState();
@@ -32339,11 +32345,11 @@ async function refreshBillingStatus() {
 
 // 충전 plans (단계별 보너스, refund.md / terms.md 정합)
 const CHARGE_PLANS = [
+  { krw: 1000, bonus_pct: 0, name: '🌱 1,000원 (체험)' },
   { krw: 5000, bonus_pct: 0, name: '🐚 5,000원' },
   { krw: 10000, bonus_pct: 3, name: '🪸 10,000원 (+3% 보너스)' },
   { krw: 30000, bonus_pct: 8, name: '🌊 30,000원 (+8% 보너스)' },
-  { krw: 50000, bonus_pct: 12, name: '🐋 50,000원 (+12% 보너스)' },
-  { krw: 100000, bonus_pct: 18, name: '🌌 100,000원 (+18% 보너스)' }
+  { krw: 50000, bonus_pct: 12, name: '🐋 50,000원 (+12% 보너스)' }
 ];
 const SUBSCRIBE_PLAN = { krw: 15000, daily_cap: 12, name: '🪸 월 정액', desc: '월 ₩15,000 — 일 12 메시지 cap (20% 보너스)' };
 
@@ -32500,9 +32506,9 @@ function showTossChargeModal(plan) {
         <button class="btn-secondary" onclick="navigator.clipboard.writeText('${memoCode}').then(() => showToast('메모 코드 복사됨'))" style="margin-top:8px; width:100%; font-size:11px; padding:6px;">📋 메모 코드 복사</button>
       </div>
 
-      <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-bottom:14px; padding:8px; background:rgba(220,150,80,0.05); border-left:3px solid rgba(220,150,80,0.40); border-radius:4px;">
-        ⚠️ 메모에 위 코드를 정확히 입력해주세요. 코드 누락 시 충전 처리가 늦어질 수 있습니다.<br>
-        ⚠️ 거짓 송금 시 계정 차단 + 데이터 삭제됩니다.
+      <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-bottom:14px; padding:8px; background:rgba(126,200,227,0.05); border-left:3px solid rgba(126,200,227,0.40); border-radius:4px;">
+        💡 메모에 위 코드 꼭 넣어주세요 — 누구 송금인지 찾아야 해서요 😅<br>
+        🤝 베타라 신뢰 기반으로 운영해요. 잔액은 송금 전에도 미리 채워둘게요!
       </div>
 
       <div style="display:flex; gap:8px;">
@@ -32600,7 +32606,7 @@ async function adminRevoke(paymentId) {
 }
 
 async function confirmTossSent(amountKrw, memoCode) {
-  const yes = confirm(`${amountKrw.toLocaleString()}원을 메모 "${memoCode}"로 송금하셨나요?\n\n송금 안 하셨거나 거짓 신고 시 계정 차단 + 데이터 삭제됩니다.`);
+  const yes = confirm(`${amountKrw.toLocaleString()}원 송금 메모에 "${memoCode}" 넣고 송금 보내셨나요?\n\n잔액은 미리 채워둘게요 ✦ 며칠 안에 송금 확인 후 정식 처리돼요.`);
   if (!yes) return;
   try {
     const resp = await fetch('/api/billing/manual-charge', {

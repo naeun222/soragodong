@@ -6,8 +6,8 @@ import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 
 const KRW_PER_USD = 1400;
 
-const CHARGE_PLANS_KRW = [5000, 10000, 30000, 50000, 100000];
-const BONUS_PCT = [0, 3, 8, 12, 18];
+const CHARGE_PLANS_KRW = [1000, 5000, 10000, 30000, 50000];
+const BONUS_PCT = [0, 0, 3, 8, 12];
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
