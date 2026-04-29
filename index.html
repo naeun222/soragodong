@@ -8477,14 +8477,16 @@ async function maybeShowE2EERecoveryModal() {
         새 기기에서 처음 로그인하셨네요. 활성화 시 설정하신 <strong>비밀번호</strong>를 입력해주세요.<br><br>
         <span style="color:var(--text-soft);">암호화된 데이터를 복호화해서 가져옵니다.</span>
       </div>
-      <input type="password" id="e2eePassphraseInput" placeholder="비밀번호 (12자 이상)" autocomplete="current-password" style="width:100%; font-size:14px; padding:10px;">
+      <input type="password" id="e2eePassphraseInput" placeholder="비밀번호 (12자 이상)" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-size:14px; padding:10px;">
       <div id="e2eeRecoveryStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px;"></div>
       <div style="display:flex; gap:8px; margin-top:14px;">
         <button class="btn-primary" onclick="submitE2EERecovery()" style="flex:1;">복호화하고 시작</button>
         <button class="btn-secondary" onclick="cancelE2EERecovery()" style="flex:1;">나중에</button>
       </div>
+      <button class="btn-secondary" onclick="e2eeForgotPasswordReset()" style="width:100%; margin-top:10px; font-size:12px; color:#e89090; border-color:rgba(220,80,80,0.30); background:rgba(220,80,80,0.05);">🔓 비밀번호 잊음 — 백업으로 새로 시작</button>
       <div style="font-size:10px; color:var(--text-soft); margin-top:10px; line-height:1.5;">
-        ⚠️ 비밀번호 분실 시 데이터 복구 불가능합니다. 회사도 복원해드릴 수 없습니다.
+        ⚠️ 비밀번호 분실 시 암호화된 데이터는 복구 불가능 (회사도 X).<br>
+        대신 자동 백업 (E2EE 전 평문)에서 복원 가능.
       </div>
     </div>
   `;
@@ -8538,6 +8540,122 @@ function cancelE2EERecovery() {
   if (!yes) return;
   const overlay = document.getElementById('e2eeRecoveryOverlay');
   if (overlay) overlay.remove();
+}
+
+// 사용자 요청 2026-04-30: 비밀번호 잊음 — 자동 백업 (평문) 에서 복원하고 새로 시작.
+// E2EE 암호화된 cloud row는 영원히 복구 불가능 (회사도 X) — 단 자동 백업은 평문이라 복구 가능.
+async function e2eeForgotPasswordReset() {
+  if (!authUserId) { alert('로그인이 필요해요.'); return; }
+  // 1. auto-backup 조회
+  const status = document.getElementById('e2eeRecoveryStatus');
+  if (status) { status.textContent = '백업 검색 중...'; status.style.color = 'var(--text-soft)'; }
+  let snapshots = [];
+  try {
+    const resp = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_AUTO_BACKUP_USER_ID}&select=data&limit=1`,
+      { headers: authHeaders() }
+    );
+    if (resp.ok) {
+      const rows = await resp.json();
+      if (rows.length > 0 && rows[0].data && Array.isArray(rows[0].data.snapshots)) {
+        snapshots = rows[0].data.snapshots.slice();
+      }
+    }
+    // 수동 백업도 함께 검색
+    const resp2 = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_MANUAL_BACKUP_USER_ID}&select=data&limit=1`,
+      { headers: authHeaders() }
+    );
+    if (resp2.ok) {
+      const rows2 = await resp2.json();
+      if (rows2.length > 0 && rows2[0].data && Array.isArray(rows2[0].data.snapshots)) {
+        for (const s of rows2[0].data.snapshots) snapshots.push({ ...s, _manual: true });
+      }
+    }
+  } catch (e) {
+    if (status) { status.textContent = '백업 조회 실패: ' + (e.message || e); status.style.color = '#e89090'; }
+    return;
+  }
+  // 평문 (E2EE 적용 전) snapshot만 필터 — _encryptedBody 있으면 암호화됨이라 복원 X
+  const validSnaps = snapshots.filter(s => s && s.data && !s.data._encryptedBody);
+  if (validSnaps.length === 0) {
+    alert(
+      '복원 가능한 평문 백업이 없어요.\n\n' +
+      '자동/수동 백업이 모두 E2EE 활성 후에 박힌 거라 같은 비밀번호로만 복호화돼요.\n\n' +
+      '해결책 (위에서 시도):\n' +
+      '· 비밀번호 다시 떠올려보기 (Caps Lock / 자판 / 자주 쓰는 변형)\n' +
+      '· 1Password / Bitwarden / 메모 앱 검색\n\n' +
+      '정말 비밀번호를 모르신다면 [회원 탈퇴 → 재가입] 으로 빈 상태 시작이 마지막 옵션이에요.'
+    );
+    return;
+  }
+  // snapshot 시간순 (최신 먼저)
+  validSnaps.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
+  // 2. 사용자에게 옵션 제시
+  const list = validSnaps.map((s, i) => {
+    const dt = new Date(s.ts).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const reasonLabel = s._manual ? '수동' : (s.reason || '자동');
+    const entriesCount = Object.keys(s.data?.entries || {}).length;
+    const noteLabel = s.note ? ` · ${s.note}` : '';
+    return `${i + 1}. ${dt} (${reasonLabel}, 일기 ${entriesCount}개)${noteLabel}`;
+  }).join('\n');
+  const idxStr = prompt(
+    '복원 가능한 백업:\n\n' + list + '\n\n' +
+    '복원할 번호를 입력해주세요 (1 = 최신).\n' +
+    '취소하시려면 빈 칸으로 확인.'
+  );
+  if (!idxStr) return;
+  const idx = parseInt(idxStr, 10) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= validSnaps.length) {
+    alert('번호가 잘못됐어요.');
+    return;
+  }
+  const chosen = validSnaps[idx];
+
+  // 3. 마지막 확인
+  const confirmMsg =
+    `복원: ${new Date(chosen.ts).toLocaleString('ko-KR')}\n` +
+    (chosen.note ? `메모: ${chosen.note}\n` : '') +
+    `일기 ${Object.keys(chosen.data?.entries || {}).length}개\n\n` +
+    `⚠️ 진행 시:\n` +
+    `· 현재 E2EE 비밀번호 영구 무효화\n` +
+    `· 암호화된 cloud 데이터 영구 손실 (이미 복구 X 이므로 OK)\n` +
+    `· 위 백업 시점으로 데이터 복구\n` +
+    `· E2EE OFF 상태로 시작 (필요하면 설정에서 새 비밀번호로 재활성화)\n\n` +
+    `진행할까요?`;
+  if (!confirm(confirmMsg)) return;
+
+  // 4. E2EE 상태 전부 정리
+  try {
+    localStorage.removeItem('soragodong_v4_e2ee_recovery');
+    localStorage.removeItem('soragodong_v4_e2ee_mk');
+    localStorage.removeItem('soragodong_v4_e2ee_setup_dismissed');
+  } catch {}
+  _e2eeMasterKey = null;
+  _e2eeEnabled = false;
+  window._e2eePendingRecovery = null;  // 중요: saveToCloudNow 차단 풀음
+
+  // 5. state를 snapshot으로 교체
+  state = { ...DEFAULT_STATE, ...JSON.parse(JSON.stringify(chosen.data)) };
+  // E2EE 메타도 초기화 (혹시 snapshot에 _e2eeEnabled 박혀있으면 정리)
+  delete state._encryptedBody;
+  delete state._e2eeRecovery;
+  if (state.preferences) {
+    delete state.preferences._e2eeEnabled;
+    delete state.preferences._e2eeVersion;
+  }
+
+  // 6. cloud 평문 저장 (메인 row의 _encryptedBody 영구 덮어쓰기)
+  try {
+    if (typeof saveToCloudNow === 'function') await saveToCloudNow();
+  } catch (e) {
+    alert('cloud 저장 실패: ' + (e.message || e) + '\n\n새로고침 후 자동 재시도됩니다.');
+  }
+
+  // 7. 완료 → reload
+  alert('✦ 복원 완료. 새로고침합니다.');
+  location.reload();
 }
 
 // 사용자 요청 2026-04-30: 가입 시 E2EE password 자동 권유 (신규 사용자 + 미설정).
@@ -8595,10 +8713,10 @@ function showE2EEPasswordSetupModal() {
         본인이 외울 수 있는 비밀번호를 입력해주세요. 다른 기기에서 로그인하실 때도 같은 비밀번호로 데이터를 복원하실 수 있습니다.
       </div>
       <div style="margin-bottom:10px;">
-        <input type="password" id="e2eePasswordInput" placeholder="비밀번호 (12자 이상)" autocomplete="new-password" style="width:100%; font-family:inherit;">
+        <input type="password" id="e2eePasswordInput" placeholder="비밀번호 (12자 이상)" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-family:inherit;">
       </div>
       <div style="margin-bottom:10px;">
-        <input type="password" id="e2eePasswordConfirmInput" placeholder="비밀번호 다시 입력" autocomplete="new-password" style="width:100%; font-family:inherit;">
+        <input type="password" id="e2eePasswordConfirmInput" placeholder="비밀번호 다시 입력" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-family:inherit;">
       </div>
       <div id="e2eePasswordStatus" style="font-size:11px; color:var(--text-soft); margin-bottom:14px; min-height:14px;"></div>
       <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-bottom:14px; padding:8px; background:rgba(220,80,80,0.05); border-left:3px solid rgba(220,80,80,0.40); border-radius:4px;">
