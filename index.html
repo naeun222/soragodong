@@ -6937,7 +6937,7 @@
       <div class="screen-title">🌙 리뷰 모음</div>
       <div class="screen-sub">지금까지의 주간·월간 회고들.</div>
       <div id="archiveReviewsList"></div>
-      <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">아카이브로 돌아가기</button>
+      <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">도서관으로 돌아가기</button>
     </div>
 
     <!-- V4-1j-b: 숙고 채팅 별도 화면 (screen-reflection) -->
@@ -9595,7 +9595,13 @@ const CORE_BODY_OVERRIDE = {
     }
   },
   galpi_sub_intro: {
-    core5: { body: '여기엔 🧙‍♂️ <b>마법의 소라고동</b>과 🌙 <b>리뷰 모음</b>이 있어.<br><br>🧙‍♂️ 마법의 소라고동은 큰 결정(도전·사랑·진로)을 후회 없이 할 수 있게 도와주는 방이야 — <b>나중에 직접 눌러보면 짧게 안내해줄게</b>.<br><br>지금은 옆의 🌙 <b>리뷰 모음</b> 보러 가자.' }
+    core5: {
+      body: '여기엔 🧙‍♂️ <b>마법의 소라고동</b>과 🌙 <b>리뷰 모음</b>이 있어.<br><br>🧙‍♂️ 마법의 소라고동은 큰 결정(도전·사랑·진로)을 후회 없이 할 수 있게 도와주는 방이야 — <b>나중에 직접 눌러보면 짧게 안내해줄게</b>.<br><br><b style="color:#d4a76a;">⚠ 지금은 누르지 마!!</b> 옆의 🌙 <b>리뷰 모음</b>으로 갈 거야.',
+      waitFor: 'next',
+      nextLabel: '다음 →',
+      targetSelector: null,
+      manualAdvance: false
+    }
   },
   annual_stories_done: {
     core5: { body: 'Stories 잘 봤지? ✨<br><br><b>주마다 · 월마다 · 계절마다 · 년마다</b> 리뷰가 자동으로 생겨.<br><br>아래 📚 도서관 탭 한 번 눌러서 돌아와.' }
@@ -9793,8 +9799,8 @@ function applyCoreLockMarkers() {
     { sel: '.home-small-card[onclick="openShellCollection()"]',       core: 'core2' },
     // 도서관 안 양생방 chip — core2 prerequisite (사용자 요청 2026-04-29)
     { sel: '.lib-cat-chip[data-cat="yangsaeng"]',                     core: 'core2' },
-    // 숙고 질문 추가 (홈에 있는 진입점)
-    { sel: '.reflection-empty-card, [onclick="addReflectionQuestion()"]', core: 'core6' },
+    // 숙고 질문 — 추가 진입점 + 이미 active 진행 중인 카드도 잠금 (사용자 요청 2026-04-29)
+    { sel: '.reflection-empty-card, .reflection-active-card, [onclick="addReflectionQuestion()"]', core: 'core6' },
     // 마법의 소라고동 — 도서관 안 진입점 + 홈 mini 카드 + 결정 화면 새 결정 버튼
     { sel: '[onclick="showArchiveDecisions()"], .decision-mini-card, .magic-card', core: 'core8' }
   ];
@@ -17006,7 +17012,7 @@ ${(msg.content || '').slice(0, 1500)}
   msg.saved = true;
   saveState();
   renderChat();
-  showToast('깨달음 아카이브에 저장됐어 ✦');
+  showToast('깨달음 도서관에 저장됐어 ✦');
 }
 
 // V4-1m: 진주 능동 제안 — 사용자 메시지에서 행복/소중함 신호 감지.
@@ -20432,7 +20438,7 @@ function renderLensArchive() {
 }
 
 async function deleteArchiveItem(idx) {
-  if (!await confirmDelete('이 깨달음', '아카이브에서 영구 삭제됩니다.')) return;
+  if (!await confirmDelete('이 깨달음', '도서관에서 영구 삭제됩니다.')) return;
   if (!state.archive || idx < 0 || idx >= state.archive.length) return;
   state.archive.splice(idx, 1);
   saveState();
@@ -24352,7 +24358,7 @@ async function testForceExtract() {
     const after = (state.topicCards || []).length;
     const diff = after - before;
     if (diff > 0) {
-      showToast(`✦ 토픽 ${diff}개 추출됨. 아카이브 → 📜 대화 렌즈에서 확인.`);
+      showToast(`✦ 토픽 ${diff}개 추출됨. 도서관 → 📜 대화 렌즈에서 확인.`);
     } else {
       showToast('⚠ AI가 추출할 만한 토픽 못 찾음. 더 의미 있는 대화 후 시도.');
     }
@@ -24363,7 +24369,7 @@ async function testForceExtract() {
 }
 
 async function testForceArchive() {
-  showToast('🧪 채팅 아카이브 강제 시작 (cutoff 우회)...');
+  showToast('🧪 채팅 도서관 정리 강제 시작 (cutoff 우회)...');
   const before = (state.chatArchive || []).length;
   if (!state.chatMessages || state.chatMessages.length === 0) {
     showToast('⚠ 대화 메시지가 없어.');
@@ -24386,7 +24392,7 @@ async function testForceArchive() {
       .sort()
       .slice(0, 3);  // 한 번에 3일치 (cost)
     if (datesToArchive.length === 0) {
-      showToast('⚠ 아카이브할 새 날짜 없음 (이미 다 됐거나 메시지 없음).');
+      showToast('⚠ 도서관 정리할 새 날짜 없음 (이미 다 됐거나 메시지 없음).');
       return;
     }
     for (const date of datesToArchive) {
@@ -24398,7 +24404,7 @@ async function testForceArchive() {
       });
       saveState();
     }
-    showToast(`✦ ${datesToArchive.length}일치 강제 아카이브됨.`);
+    showToast(`✦ ${datesToArchive.length}일치 도서관에 강제 정리됨.`);
   } catch (e) {
     showToast('❌ 실패: ' + e.message);
   }
@@ -24694,7 +24700,7 @@ async function runMonthlyAutoReviewIfNeeded() {
       tags: []
     });
     saveState();
-    showToast('📅 지난 달 자동 정리 완료. 아카이브 → 리뷰 모음 확인.');
+    showToast('📅 지난 달 자동 정리 완료. 도서관 → 리뷰 모음 확인.');
   } catch (e) {
     console.warn('monthly auto review failed:', e);
   }
@@ -29858,7 +29864,7 @@ async function resetMissions() {
 }
 async function resetArchive() {
   const c = (state.archive || []).length;
-  await _confirmAndReset('아카이브 깨달음', c, () => { state.archive = []; }, () => {
+  await _confirmAndReset('도서관 깨달음', c, () => { state.archive = []; }, () => {
     if (typeof renderArchive === 'function') renderArchive();
   });
 }
