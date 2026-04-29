@@ -16117,6 +16117,7 @@ function renderModel() {
   // 시간 사용 패턴 카드는 데이터 없어도 placeholder 노출 (사용자 요청 2026-04-28)
   const timeCardHtml = renderTimeUsageCard();
   if (!state.traits.length && !state.patterns.length && !state.values.length) {
+    // 사용자 요청 2026-04-29 (Q2): 모델 비어있어도 더 깊은 나 입력은 시작 가능 — Q2 섹션 같이 노출.
     container.innerHTML = timeCardHtml + `<div class="model-empty">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
       <div style="font-size:14px; color:var(--text); margin-bottom:10px;">아직은 백지야.</div>
@@ -16125,7 +16126,7 @@ function renderModel() {
         대화 한 줄, 체크인 하나씩 쌓일 때마다<br>
         네 모습이 천천히 보이기 시작해.
       </div>
-    </div>`;
+    </div>` + _renderUserDeepProfileSection();
     return;
   }
   
@@ -16250,7 +16251,240 @@ function renderModel() {
       ${detailsHtml}
     </div>`;
   }
+  // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 입력 UI — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
+  html += _renderUserDeepProfileSection();
   container.innerHTML = html;
+}
+
+// 사용자 요청 2026-04-29 (Q2): 더 깊은 나 — state.userDeepProfile 입력 섹션.
+// 점진 입력 (한 번에 다 X). 각 필드 ✎ 누르면 modal로 입력. stable cache 적용 → 비용 부담 ~$3/월.
+function _renderUserDeepProfileSection() {
+  const udp = state.userDeepProfile || {};
+  const dev = udp.development || {};
+  const rels = udp.relationships || [];
+  const sn = udp.selfNarrative || {};
+  const cb = sn.coreBeliefs || {};
+
+  const fieldRow = (label, value, fnCall, placeholder = '비어있음') => {
+    const display = value
+      ? `<div style="font-size:12px;color:var(--text);line-height:1.6;flex:1;white-space:pre-wrap;">${escapeHtml(value.length > 200 ? value.slice(0, 200) + '…' : value)}</div>`
+      : `<div style="font-size:11px;color:var(--text-soft);font-style:italic;flex:1;">${placeholder}</div>`;
+    return `<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);">
+      <div style="font-size:11px;color:var(--text-dim);min-width:90px;font-weight:500;">${label}</div>
+      ${display}
+      <button onclick="${fnCall}" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:14px;padding:2px 6px;">✎</button>
+    </div>`;
+  };
+
+  const arrayRow = (label, items, formatter, fnCall, placeholder = '비어있음') => {
+    const display = (items && items.length > 0)
+      ? `<div style="font-size:12px;color:var(--text);line-height:1.7;flex:1;">${items.slice(0, 5).map(s => `<div>• ${escapeHtml(formatter(s))}</div>`).join('')}${items.length > 5 ? `<div style="font-size:11px;color:var(--text-soft);">+${items.length - 5}</div>` : ''}</div>`
+      : `<div style="font-size:11px;color:var(--text-soft);font-style:italic;flex:1;">${placeholder}</div>`;
+    return `<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);">
+      <div style="font-size:11px;color:var(--text-dim);min-width:90px;font-weight:500;">${label}</div>
+      ${display}
+      <button onclick="${fnCall}" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:14px;padding:2px 6px;">✎</button>
+    </div>`;
+  };
+
+  const isEmpty = !dev.childhood && !dev.schoolYears && !dev.adhdDiscovery
+    && (dev.turningPoints || []).length === 0 && rels.length === 0
+    && !sn.selfStory && !sn.howWantToBeSeen
+    && (cb.aboutSelf || []).length === 0 && (cb.aboutWorld || []).length === 0 && (cb.aboutFuture || []).length === 0
+    && (sn.identityKeywords || []).length === 0;
+
+  return `<details class="model-section" ${isEmpty ? '' : 'open'} style="margin-top:18px;">
+    <summary style="font-size:13px;font-weight:600;color:var(--text);padding:10px 0;cursor:pointer;">🌳 더 깊은 나 ${udp.version > 0 ? `<span style="font-size:10px;color:var(--text-soft);font-weight:400;">v.${udp.version}</span>` : ''}</summary>
+    <div style="font-size:11px;color:var(--text-dim);margin:6px 0 14px;line-height:1.7;">
+      네 발달 맥락 / 관계 / 자기서사. 직접 입력하면 고동이가 더 정확하게 너를 이해해.<br>
+      한 번에 다 안 채워도 돼 — 천천히, 떠오를 때마다.
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">📜 발달·역사 맥락</div>
+      ${fieldRow('어린 시절', dev.childhood, "editDeepDevField('childhood','어린 시절·가족 구조·양육 톤')", '가족·양육 분위기')}
+      ${fieldRow('학창 시절', dev.schoolYears, "editDeepDevField('schoolYears','학창 시절 핵심 사건')", '의미 있는 사건')}
+      ${fieldRow('ADHD 발견·이전', dev.adhdDiscovery, "editDeepDevField('adhdDiscovery','ADHD 발견 시점 + 그 전 어떻게 살았는지')", '발견 시점, 그 전 삶')}
+      ${arrayRow('전환점', dev.turningPoints, (tp) => `${tp.when || '?'}: ${(tp.title || '').slice(0, 40)}${tp.impact ? ' — ' + tp.impact.slice(0, 40) : ''}`, "editDeepTurningPoints()", '큰 이사·이별·진학·손실')}
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">👥 관계 맵</div>
+      ${arrayRow('핵심 인물', rels, (r) => `${r.name || '?'}${r.relation ? ' (' + r.relation : ''}${r.tone ? ', ' + r.tone : ''}${r.relation ? ')' : ''}${r.notes ? ' — ' + r.notes.slice(0, 40) : ''}`, "editDeepRelationships()", '가족·친구·연인·동료 5–8명')}
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">🪞 자기서사·핵심 신념</div>
+      ${fieldRow('자기 이야기', sn.selfStory, "editDeepSelfNarrativeField('selfStory','자기 이야기 한 단락 (자기소개처럼)')", '한 단락 자기소개')}
+      ${fieldRow('보이고 싶은 모습', sn.howWantToBeSeen, "editDeepSelfNarrativeField('howWantToBeSeen','어떻게 보이고 싶은지')", '이상적 모습')}
+      ${arrayRow('자신에 대한 신념', cb.aboutSelf, (s) => s, "editDeepCoreBeliefs('aboutSelf')", '\"나는 …\" 형태')}
+      ${arrayRow('세상에 대한 신념', cb.aboutWorld, (s) => s, "editDeepCoreBeliefs('aboutWorld')", '\"세상은 …\" 형태')}
+      ${arrayRow('미래에 대한 신념', cb.aboutFuture, (s) => s, "editDeepCoreBeliefs('aboutFuture')", '\"미래는 …\" 형태')}
+      ${arrayRow('정체성 keyword', sn.identityKeywords, (s) => s, "editDeepIdentityKeywords()", '예: 연구자, queer, 큰언니')}
+    </div>
+  </details>`;
+}
+
+// === Q2 편집 함수들 ===
+function _ensureUserDeepProfile() {
+  if (!state.userDeepProfile) state.userDeepProfile = JSON.parse(JSON.stringify(DEFAULT_STATE.userDeepProfile));
+  if (!state.userDeepProfile.development) state.userDeepProfile.development = { childhood: '', schoolYears: '', adhdDiscovery: '', turningPoints: [] };
+  if (!Array.isArray(state.userDeepProfile.development.turningPoints)) state.userDeepProfile.development.turningPoints = [];
+  if (!Array.isArray(state.userDeepProfile.relationships)) state.userDeepProfile.relationships = [];
+  if (!state.userDeepProfile.selfNarrative) state.userDeepProfile.selfNarrative = { selfStory: '', coreBeliefs: { aboutSelf: [], aboutWorld: [], aboutFuture: [] }, howWantToBeSeen: '', identityKeywords: [] };
+  if (!state.userDeepProfile.selfNarrative.coreBeliefs) state.userDeepProfile.selfNarrative.coreBeliefs = { aboutSelf: [], aboutWorld: [], aboutFuture: [] };
+  ['aboutSelf','aboutWorld','aboutFuture'].forEach(k => {
+    if (!Array.isArray(state.userDeepProfile.selfNarrative.coreBeliefs[k])) state.userDeepProfile.selfNarrative.coreBeliefs[k] = [];
+  });
+  if (!Array.isArray(state.userDeepProfile.selfNarrative.identityKeywords)) state.userDeepProfile.selfNarrative.identityKeywords = [];
+}
+
+function _bumpUserDeepProfile() {
+  state.userDeepProfile.version = (state.userDeepProfile.version || 0) + 1;
+  state.userDeepProfile.lastUpdated = new Date().toISOString();
+}
+
+async function editDeepDevField(field, title) {
+  _ensureUserDeepProfile();
+  const current = state.userDeepProfile.development[field] || '';
+  const newText = await showInputModal({
+    title,
+    message: '천천히 떠올리는 만큼, 자유롭게.',
+    defaultValue: current, multiline: true, maxLength: 800, okLabel: '저장'
+  });
+  if (newText === null) return;
+  state.userDeepProfile.development[field] = (newText || '').trim();
+  _bumpUserDeepProfile();
+  saveState();
+  renderModel();
+}
+
+async function editDeepSelfNarrativeField(field, title) {
+  _ensureUserDeepProfile();
+  const current = state.userDeepProfile.selfNarrative[field] || '';
+  const newText = await showInputModal({
+    title,
+    message: '자유롭게 — 떠오르는 만큼.',
+    defaultValue: current, multiline: true, maxLength: 800, okLabel: '저장'
+  });
+  if (newText === null) return;
+  state.userDeepProfile.selfNarrative[field] = (newText || '').trim();
+  _bumpUserDeepProfile();
+  saveState();
+  renderModel();
+}
+
+async function editDeepCoreBeliefs(category) {
+  _ensureUserDeepProfile();
+  const labels = { aboutSelf: '자신', aboutWorld: '세상', aboutFuture: '미래' };
+  const current = (state.userDeepProfile.selfNarrative.coreBeliefs[category] || []).join('\n');
+  const newText = await showInputModal({
+    title: `${labels[category] || '?'}에 대한 신념`,
+    message: '한 줄에 하나씩. enter로 분리.\n예: "나는 패턴 인식이 강해" / "세상은 예측 불가능해"',
+    defaultValue: current, multiline: true, maxLength: 1500, okLabel: '저장'
+  });
+  if (newText === null) return;
+  const items = newText.split('\n').map(s => s.trim()).filter(Boolean);
+  state.userDeepProfile.selfNarrative.coreBeliefs[category] = items;
+  _bumpUserDeepProfile();
+  saveState();
+  renderModel();
+}
+
+async function editDeepIdentityKeywords() {
+  _ensureUserDeepProfile();
+  const current = (state.userDeepProfile.selfNarrative.identityKeywords || []).join(', ');
+  const newText = await showInputModal({
+    title: '정체성 keyword',
+    message: '콤마로 분리. 예: 연구자, queer, 큰언니, ADHD, 작가',
+    defaultValue: current, maxLength: 500, okLabel: '저장'
+  });
+  if (newText === null) return;
+  const items = newText.split(',').map(s => s.trim()).filter(Boolean);
+  state.userDeepProfile.selfNarrative.identityKeywords = items;
+  _bumpUserDeepProfile();
+  saveState();
+  renderModel();
+}
+
+async function editDeepTurningPoints() {
+  _ensureUserDeepProfile();
+  const tps = state.userDeepProfile.development.turningPoints || [];
+  const current = tps.map(tp => {
+    const w = tp.when || '?';
+    const t = tp.title || '';
+    const imp = tp.impact || '';
+    return imp ? `${w}: ${t} — ${imp}` : `${w}: ${t}`;
+  }).join('\n');
+  const newText = await showInputModal({
+    title: '전환점',
+    message: '한 줄에 하나씩. 형식: "YYYY-MM: 제목 — 영향"\n예: 2020-03: 첫 자취 — 갑자기 자유 + 스스로 챙겨야 함',
+    defaultValue: current, multiline: true, maxLength: 2000, okLabel: '저장'
+  });
+  if (newText === null) return;
+  const items = newText.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+    let when = '', rest = line;
+    const colonIdx = line.indexOf(':');
+    if (colonIdx > 0 && colonIdx < 30) {
+      when = line.slice(0, colonIdx).trim();
+      rest = line.slice(colonIdx + 1).trim();
+    }
+    let title = rest, impact = '';
+    const dashIdx = rest.indexOf(' — ');
+    if (dashIdx > 0) {
+      title = rest.slice(0, dashIdx).trim();
+      impact = rest.slice(dashIdx + 3).trim();
+    }
+    return { id: 'tp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5), when, title, description: '', impact };
+  });
+  state.userDeepProfile.development.turningPoints = items;
+  _bumpUserDeepProfile();
+  saveState();
+  renderModel();
+}
+
+async function editDeepRelationships() {
+  _ensureUserDeepProfile();
+  const rels = state.userDeepProfile.relationships || [];
+  const current = rels.map(r => {
+    const meta = [r.relation, r.tone, r.influence].filter(Boolean).join(', ');
+    const notes = r.notes ? ' — ' + r.notes : '';
+    return meta ? `${r.name || '?'} (${meta})${notes}` : `${r.name || '?'}${notes}`;
+  }).join('\n');
+  const newText = await showInputModal({
+    title: '관계 맵',
+    message: '한 줄에 한 명. 형식: "이름 (관계, 톤, 영향) — 메모"\n관계: 가족|친구|연인|동료|치료자|기타\n톤: 안전|자극|혼합\n영향: positive|negative|mixed\n예: 엄마 (가족, 혼합, mixed) — 매일 연락, 비교 많음',
+    defaultValue: current, multiline: true, maxLength: 3000, okLabel: '저장'
+  });
+  if (newText === null) return;
+  const items = newText.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+    let name = line, relation = '', tone = '', influence = '', notes = '';
+    const metaMatch = line.match(/^([^(]+)\s*\(([^)]+)\)\s*(.*)$/);
+    if (metaMatch) {
+      name = metaMatch[1].trim();
+      const parts = metaMatch[2].split(',').map(s => s.trim());
+      relation = parts[0] || '';
+      tone = parts[1] || '';
+      influence = parts[2] || '';
+      const tail = metaMatch[3].trim();
+      const dashIdx = tail.indexOf('—');
+      if (dashIdx >= 0) notes = tail.slice(dashIdx + 1).trim();
+    } else {
+      const dashIdx = line.indexOf('—');
+      if (dashIdx > 0) {
+        name = line.slice(0, dashIdx).trim();
+        notes = line.slice(dashIdx + 1).trim();
+      }
+    }
+    return {
+      id: 'rel_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      name, relation, tone, influence, notes
+    };
+  });
+  state.userDeepProfile.relationships = items;
+  _bumpUserDeepProfile();
+  saveState();
+  renderModel();
 }
 
 function renderMoreSection(category, more, draft) {
