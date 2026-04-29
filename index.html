@@ -14694,9 +14694,9 @@ function _initChatScrollWatcher() {
 function _updateChatNewMsgChip() {
   const chip = document.getElementById('chatNewMsgChip');
   if (!chip) return;
-  // 사용자 요청 2026-04-29 (재): 자동 스크롤 X 정책 — 새 메시지 있으면 무조건 칩 표시 (stuck 무관)
-  // 칩 클릭으로만 맨 아래 이동
-  if (_unseenSinceScroll > 0) {
+  // 사용자 요청 2026-04-29 (final): ChatGPT/Claude 표준 — 사용자가 위로 스크롤 했을 때만 칩 표시
+  // (맨 아래에 있으면 자동 스크롤로 따라가니 칩 X)
+  if (!_stuckToBottom && _unseenSinceScroll > 0) {
     chip.textContent = _unseenSinceScroll > 1 ? `↓ 새 메시지 ${_unseenSinceScroll}` : '↓ 새 메시지';
     chip.style.display = '';
   } else {
@@ -14873,15 +14873,15 @@ function renderChat() {
     lastTs: msgs[lastIdx] && msgs[lastIdx].timestamp,
     archiveLen
   };
-  // 사용자 요청 2026-04-29 (재): 자동 스크롤 정책
-  // - 사용자가 직접 보낸 메시지: 자기 메시지 보고 싶으니까 맨 아래로 스크롤
-  // - AI typing / streaming / 완료 응답: 자동 스크롤 X (사용자가 자유롭게 읽도록)
-  // - 새 메시지(AI 포함) 시 _stuckToBottom 무관하게 칩으로만 알림
+  // 사용자 요청 2026-04-29 (final): ChatGPT/Claude 표준 동작
+  // - 맨 아래에 붙어 있으면 (_stuckToBottom): 자동으로 따라 내려감
+  // - 위로 스크롤한 상태면: 그 자리 유지 + 새 메시지 칩으로 알림
+  // - 사용자가 직접 보낸 메시지는 무조건 따라가게 (_stuckToBottom 강제 true)
   _initChatScrollWatcher();
   const lastM = msgs[msgs.length - 1];
   const lastIsUserSend = lastM && lastM.role === 'user' && lenDelta > 0;
-  if (lastIsUserSend) {
-    _stuckToBottom = true;
+  if (lastIsUserSend) _stuckToBottom = true;
+  if (_stuckToBottom) {
     setTimeout(() => {
       const s = document.getElementById('screen-chat');
       if (s) s.scrollTop = s.scrollHeight;
@@ -14889,7 +14889,6 @@ function renderChat() {
     _unseenSinceScroll = 0;
     _updateChatNewMsgChip();
   } else if (lenDelta > 0) {
-    // AI 새 메시지 (typing 또는 완료) — 자동 스크롤 X. 칩으로만 알림.
     _unseenSinceScroll += lenDelta;
     _updateChatNewMsgChip();
   }
@@ -15437,7 +15436,12 @@ async function generateAIResponse(modelOverride) {
       const lastIdx = state.chatMessages.length - 1;
       lastBubble.innerHTML = formatAIResponse(text) +
         `<button class="msg-menu-btn" onclick="showMessageMenu(${lastIdx})" aria-label="더보기">⋮</button>`;
-      // 사용자 요청 2026-04-29 (재): AI 응답 streaming 중 자동 스크롤 X (사용자가 자유롭게 읽도록)
+      // 사용자 요청 2026-04-29 (final): _stuckToBottom 일 때만 streaming 자동 스크롤 (ChatGPT 표준)
+      // 사용자가 위로 스크롤한 상태면 자동 스크롤 X — 칩으로 새 메시지 알림.
+      if (_stuckToBottom) {
+        const screen = document.getElementById('screen-chat');
+        if (screen) screen.scrollTop = screen.scrollHeight;
+      }
     };
     const scheduleStreamUpdate = (text) => {
       _streamPending = text;
