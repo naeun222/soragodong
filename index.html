@@ -8507,11 +8507,12 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   // 사용자 요청 2026-04-29: 받은 소라 직접 눌러서 아이콘 / 이야기 카드 확인
+  // 사용자 요청 2026-04-29 (재): 이 단계엔 아직 DNA 진주 설명 X — 평범한 (DNA 아닌) 소라만 선택 가능하게
   {
     id: 'click_new_shell',
-    targetSelector: '.beach-shell',
+    targetSelector: '.beach-shell:not(.dna-shell)',
     title: '🐚 방금 받은 소라',
-    body: '아무 소라 하나 눌러봐.<br>그 소라에 담긴 <b>이야기 카드</b>가 떠.',
+    body: '평범한 소라 하나 눌러봐 (🧬 표시 없는 거).<br>그 소라에 담긴 <b>이야기 카드</b>가 떠.',
     waitFor: 'click',
     advanceDelay: 600,
     dimBackground: false,
