@@ -7709,6 +7709,34 @@ const DEFAULT_STATE = {
   diagnoses: [],            // V4 비전 9.5 진단 5종: [{id, type, confidence, evidence, detectedAt, status:'active'|'shown'|'dismissed'}]
   quarterlyReviews: [],     // V4 비전 7.9 분기 리뷰: [{id, quarterKey:'2026-Q2', completedAt, summary, sections, stats, auto, deepDive}]
 
+  // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
+  // 시스템 프롬프트 stable 부분에 박혀서 cache_control 적용 → cache_read만 (사실상 무료).
+  // 점진 입력 (한 번에 다 X). 각 필드는 사용자가 직접 입력 또는 임시대화 추출에서 채워짐.
+  userDeepProfile: {
+    version: 0,
+    lastUpdated: null,
+    // 1. 발달·역사 맥락
+    development: {
+      childhood: '',          // 어린 시절·가족 구조·양육 톤
+      schoolYears: '',        // 학창 시절 핵심 사건
+      adhdDiscovery: '',      // ADHD 발견 시점 + 그 전 어떻게 살았는지
+      turningPoints: []       // [{id, when:'YYYY-MM-DD'|free, title, description, impact}]
+    },
+    // 2. 관계 맵
+    relationships: [],         // [{id, name, relation:'가족|친구|연인|동료|치료자|기타', tone:'안전|자극|혼합', influence:'positive|negative|mixed', notes}]
+    // 5. 자기서사·핵심 신념
+    selfNarrative: {
+      selfStory: '',          // 한 단락 자기소개
+      coreBeliefs: {
+        aboutSelf: [],         // ["나는 ..." 형태]
+        aboutWorld: [],        // ["세상은 ..." 형태]
+        aboutFuture: []        // ["미래는 ..." 형태]
+      },
+      howWantToBeSeen: '',    // 어떻게 보이고 싶은지
+      identityKeywords: []     // 정체성 키워드 (예: queer, 연구자, 큰언니)
+    }
+  },
+
   version: 7
 };
 
@@ -8070,6 +8098,17 @@ async function loadFromCloud() {
     if (!state.todaySchedule) state.todaySchedule = [];
     if (!state.diagnoses) state.diagnoses = [];
     if (!state.quarterlyReviews) state.quarterlyReviews = [];
+    // 사용자 요청 2026-04-29 (Q2): userDeepProfile 보강 — 점진 입력 schema
+    if (!state.userDeepProfile) state.userDeepProfile = JSON.parse(JSON.stringify(DEFAULT_STATE.userDeepProfile));
+    if (!state.userDeepProfile.development) state.userDeepProfile.development = { childhood: '', schoolYears: '', adhdDiscovery: '', turningPoints: [] };
+    if (!Array.isArray(state.userDeepProfile.development.turningPoints)) state.userDeepProfile.development.turningPoints = [];
+    if (!Array.isArray(state.userDeepProfile.relationships)) state.userDeepProfile.relationships = [];
+    if (!state.userDeepProfile.selfNarrative) state.userDeepProfile.selfNarrative = { selfStory: '', coreBeliefs: { aboutSelf: [], aboutWorld: [], aboutFuture: [] }, howWantToBeSeen: '', identityKeywords: [] };
+    if (!state.userDeepProfile.selfNarrative.coreBeliefs) state.userDeepProfile.selfNarrative.coreBeliefs = { aboutSelf: [], aboutWorld: [], aboutFuture: [] };
+    ['aboutSelf', 'aboutWorld', 'aboutFuture'].forEach(k => {
+      if (!Array.isArray(state.userDeepProfile.selfNarrative.coreBeliefs[k])) state.userDeepProfile.selfNarrative.coreBeliefs[k] = [];
+    });
+    if (!Array.isArray(state.userDeepProfile.selfNarrative.identityKeywords)) state.userDeepProfile.selfNarrative.identityKeywords = [];
     // caseFormulation 8 차원
     if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
     if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
@@ -11699,9 +11738,61 @@ async function sendMagicHelpMessage() {
   await _runMagicHelpAIResponse();
 }
 
-function closeMagicHelpChat() {
-  // 사용자 요청 2026-04-29: 마법 helpChat은 decision.helpChats[stepId]에 영구 저장됨 (다시 들어가면 그대로).
-  // 도서관 archive 카드는 ✦ 깨달음 버튼 시점에만. close 시 prompt X.
+async function closeMagicHelpChat() {
+  // 사용자 요청 2026-04-29: 마법 helpChat ← 닫을 때 — 원본 보관 prompt + 토픽 자동 추출.
+  if (_magicHelpState) {
+    try {
+      const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+      const stepId = _magicHelpState.stepId;
+      const messages = (decision && decision.helpChats && decision.helpChats[stepId]) || [];
+      const realMessages = messages.filter(m => !m._starter && !m.error);
+      const hasConversation = realMessages.length >= 2;
+      if (decision && hasConversation) {
+        const alreadyHistoried = (state.archive || []).some(a => a.type === 'magic_chat' && a.decisionId === decision.id && a.stepId === stepId);
+        let keepHistory = false;
+        if (!alreadyHistoried) {
+          keepHistory = await showConfirmModal({
+            title: '원본 대화 보관?',
+            message: `${realMessages.length}개 메시지.\n\n원본 흐름 그대로 도서관 → 깨달음에 박아둘까?\n(토픽 정리는 자동으로 됨)`,
+            okLabel: '응 보관',
+            cancelLabel: '아니'
+          });
+        }
+        if (keepHistory) {
+          const meta = (typeof DECISION_STEPS !== 'undefined' ? DECISION_STEPS : []).find(s => s.id === stepId);
+          const stepTitle = meta ? meta.title : stepId;
+          const lastAssistant = [...realMessages].reverse().find(m => m.role === 'assistant');
+          const firstUser = realMessages.find(m => m.role === 'user');
+          const body = (lastAssistant?.content || firstUser?.content || '').slice(0, 200);
+          const _dayKey = todayKey();
+          const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+          if (!Array.isArray(state.archive)) state.archive = [];
+          state.archive.unshift({
+            type: 'magic_chat',
+            headline: `🌀 ${stepTitle}: ${(decision.title || '결정').slice(0, 24)}`,
+            body,
+            fullChat: realMessages.map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp })),
+            date,
+            source: `🌀 마법 (${stepTitle})`,
+            savedAt: new Date().toISOString(),
+            tags: ['마법', '대화'],
+            decisionId: decision.id,
+            stepId
+          });
+          saveState();
+          if (typeof renderArchive === 'function') renderArchive();
+          showToast('✦ 도서관에 보관됐어');
+        }
+        // 토픽 카드 자동 정리
+        if (realMessages.length >= 4) {
+          const stepTitleForCtx = (typeof DECISION_STEPS !== 'undefined' ? DECISION_STEPS : []).find(s => s.id === stepId)?.title || stepId;
+          extractTopicsFromTempChat(realMessages, 'magic_help', `${decision.id}:${stepId}`, `${decision.title || '결정'} — ${stepTitleForCtx}`).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('[magic close] fail:', e);
+    }
+  }
   _magicHelpState = null;
   const inputBar = document.getElementById('magicHelpInputBar');
   if (inputBar) inputBar.classList.remove('active');
@@ -12862,9 +12953,55 @@ function deleteReflectionQuestion(id) {
   renderReflectionHome();
 }
 
-// 사용자 요청 2026-04-29: 숙고 화면 ← 닫을 때 — 어차피 q.chatMessages에 영구 저장됨 (다시 들어가면 그대로).
-// 도서관 archive 카드는 ✦ 깨달음 버튼 / 결론(resolve) 시점에만 박힘. close 시 prompt X.
-function closeReflectionScreen() {
+// 사용자 요청 2026-04-29: 숙고 ← 닫을 때 — 원본 대화 히스토리(도서관) 보관 prompt + 토픽 카드 자동 추출.
+// 메인 chat 챕터 마무리 패턴 통일: 토픽은 자동, 원본 보관은 사용자 결정.
+async function closeReflectionScreen() {
+  try {
+    const q = (state.reflectionQuestions || []).find(x => x.id === _activeReflectionId);
+    const messages = (q && Array.isArray(q.chatMessages)) ? q.chatMessages : [];
+    const realMessages = messages.filter(m => !m.typing && !m.error);
+    const hasConversation = realMessages.length >= 2;
+    if (q && hasConversation && q.status !== 'resolved') {
+      const alreadyHistoried = (state.archive || []).some(a => a.type === 'reflection_chat' && a.reflectionQuestionId === q.id);
+      let keepHistory = false;
+      if (!alreadyHistoried) {
+        keepHistory = await showConfirmModal({
+          title: '원본 대화 보관?',
+          message: `${realMessages.length}개 메시지.\n\n원본 흐름 그대로 도서관 → 깨달음에 박아둘까?\n(토픽 정리는 자동으로 됨)`,
+          okLabel: '응 보관',
+          cancelLabel: '아니'
+        });
+      }
+      if (keepHistory) {
+        const lastAssistant = [...realMessages].reverse().find(m => m.role === 'assistant');
+        const firstUser = realMessages.find(m => m.role === 'user');
+        const body = (lastAssistant?.content || firstUser?.content || '').slice(0, 200);
+        const _dayKey = todayKey();
+        const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+        if (!Array.isArray(state.archive)) state.archive = [];
+        state.archive.unshift({
+          type: 'reflection_chat',
+          headline: (q.shortText || q.text || '숙고').slice(0, 30),
+          body,
+          fullChat: realMessages.map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp })),
+          date,
+          source: '🌊 숙고',
+          savedAt: new Date().toISOString(),
+          tags: ['숙고', '대화'],
+          reflectionQuestionId: q.id
+        });
+        saveState();
+        if (typeof renderArchive === 'function') renderArchive();
+        showToast('✦ 도서관에 보관됐어');
+      }
+      // 토픽 카드 자동 정리 — 메시지 ≥4면 자동 추출 (background, fail silent)
+      if (realMessages.length >= 4) {
+        extractTopicsFromTempChat(realMessages, 'reflection', q.id, q.shortText || q.text || '').catch(() => {});
+      }
+    }
+  } catch (e) {
+    console.warn('[reflection close] fail:', e);
+  }
   _activeReflectionId = null;
   if (typeof showScreen === 'function') showScreen('home');
 }
@@ -13101,6 +13238,97 @@ JSON만, 다른 글 X.`;
   } catch (e) {
     // silent — 사용자 흐름 방해 X
     console.warn('[insight extract] fail:', e);
+  }
+}
+
+// 사용자 요청 2026-04-29: 임시대화 (숙고/마법) close 시 → 도서관 토픽 카드 자동 추출.
+// 메인 chat extractPreviousChapterTopics 패턴 통일. background, fail silent.
+// source: 'reflection' | 'magic_help', sourceId: 추출 중복 방지 키 (q.id 또는 decision:step), context: 짧은 컨텍스트 라벨.
+async function extractTopicsFromTempChat(messages, source, sourceId, context) {
+  try {
+    if (!state.apiKey) return;
+    if (!Array.isArray(messages) || messages.length < 4) return;
+    if (window._onbTutorialMode) return;
+    if (state.preferences && state.preferences.testerMode) return;
+
+    // 이미 같은 sourceId로 추출됐으면 skip (중복 prompt + 중복 비용 방지)
+    const dupKey = `${source}:${sourceId}`;
+    if (Array.isArray(state.topicCards) && state.topicCards.some(c => c.tempChatKey === dupKey)) return;
+
+    const chatLog = messages.map(m => {
+      const role = m.role === 'user' ? '나' : '소라';
+      let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
+      return `${role}: ${content}`;
+    }).join('\n\n');
+
+    const sourceLabel = source === 'reflection' ? '🌊 숙고 (사용자가 한 질문에 대해 깊이 파고드는 임시 대화)'
+      : source === 'magic_help' ? '🌀 마법 도움 받기 (큰 결정의 한 단계에서 도움 요청한 임시 대화)'
+      : '임시 대화';
+
+    const prompt = `사용자가 AI 친구 "소라고동"과 ${sourceLabel} 모드에서 나눈 대화를 토픽 카드로 정리해.
+
+[컨텍스트] ${context || '(없음)'}
+
+[대화 원문]
+${chatLog.slice(0, 8000)}
+
+[토픽 카드 추출 규칙]
+- 의미 있는 토픽 1-3개 (잡담은 X)
+- 카테고리 (V4 8 카테고리): diary | casual | concern | emotion | memory | todo | idea | relationship
+- 각 카드: 짧은 제목 (~25자) + 1-2문장 요약
+- 의미 없으면 빈 배열
+
+[출력 형식 — JSON만]
+{ "topics": [ { "title": "...", "summary": "...", "category": "concern" } ] }
+
+JSON만, 마크다운 X.`;
+
+    const resp = await callAnthropic({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 600,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    let text = (data?.content?.[0]?.text || '').trim();
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) return;
+    const parsed = JSON.parse(m[0]);
+    if (!parsed.topics || !Array.isArray(parsed.topics)) return;
+
+    if (!Array.isArray(state.topicCards)) state.topicCards = [];
+    const _dayKey = todayKey();
+    const nowIso = new Date().toISOString();
+    let pushed = 0;
+    parsed.topics.forEach(t => {
+      if (!t || !t.title) return;
+      const title = String(t.title).trim().slice(0, 60);
+      if (!title) return;
+      // 정확 동일 제목 + 같은 sourceId면 중복 방지
+      if (state.topicCards.some(c => c.title === title && c.tempChatKey === dupKey)) return;
+      state.topicCards.push({
+        id: 'tc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        title,
+        summary: String(t.summary || '').trim().slice(0, 300),
+        category: ['diary','casual','concern','emotion','memory','todo','idea','relationship'].includes(t.category) ? t.category : 'casual',
+        date: _dayKey,
+        createdAt: nowIso,
+        source: source,           // 'reflection' / 'magic_help'
+        tempChatKey: dupKey,      // 중복 방지 키
+        sourceLabel: sourceLabel.split(' ')[0]
+      });
+      pushed += 1;
+    });
+    if (pushed > 0) {
+      saveState();
+      if (typeof renderArchive === 'function') {
+        try { renderArchive(); } catch {}
+      }
+    }
+  } catch (e) {
+    console.warn('[temp topic extract] fail:', e);
   }
 }
 
@@ -17551,6 +17779,60 @@ function buildSystemPromptParts() {
     if (cf.problems.length) stable.push('문제: ' + _cfTrunc(cf.problems));
     if (cf.mechanisms.length) stable.push('메커니즘: ' + _cfTrunc(cf.mechanisms));
     if (cf.strengths.length) stable.push('강점: ' + _cfTrunc(cf.strengths));
+    stable.push('');
+  }
+
+  // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
+  // stable 부분이라 cache_control 90% 할인 적용 — 추가 비용 사실상 무료.
+  const udp = state.userDeepProfile;
+  if (udp && udp.version > 0) {
+    stable.push(`[더 깊은 사용자 모델 v.${udp.version}]`);
+    // 발달 맥락
+    const dev = udp.development || {};
+    const devLines = [];
+    if (dev.childhood) devLines.push('어린 시절: ' + dev.childhood.slice(0, 300));
+    if (dev.schoolYears) devLines.push('학창 시절: ' + dev.schoolYears.slice(0, 300));
+    if (dev.adhdDiscovery) devLines.push('ADHD 발견·이전: ' + dev.adhdDiscovery.slice(0, 300));
+    if (Array.isArray(dev.turningPoints) && dev.turningPoints.length) {
+      const tps = dev.turningPoints.slice(0, 8).map(tp => `${tp.when || '?'}: ${(tp.title || '').slice(0, 40)}${tp.impact ? ' (' + tp.impact.slice(0, 60) + ')' : ''}`).join(' | ');
+      devLines.push('전환점: ' + tps);
+    }
+    if (devLines.length) {
+      stable.push('— 발달·역사 맥락 —');
+      devLines.forEach(l => stable.push(l));
+    }
+    // 관계 맵
+    const rels = Array.isArray(udp.relationships) ? udp.relationships.slice(0, 10) : [];
+    if (rels.length) {
+      stable.push('— 관계 맵 —');
+      rels.forEach(r => {
+        const tone = r.tone ? `[${r.tone}]` : '';
+        const inf = r.influence ? `(${r.influence})` : '';
+        const notes = r.notes ? ' — ' + r.notes.slice(0, 80) : '';
+        stable.push(`- ${r.name || '?'} (${r.relation || '관계'}) ${tone}${inf}${notes}`);
+      });
+    }
+    // 자기서사·핵심 신념
+    const sn = udp.selfNarrative || {};
+    const snLines = [];
+    if (sn.selfStory) snLines.push('자기 이야기: ' + sn.selfStory.slice(0, 400));
+    if (sn.howWantToBeSeen) snLines.push('보이고 싶은 모습: ' + sn.howWantToBeSeen.slice(0, 200));
+    const beliefs = sn.coreBeliefs || {};
+    const _beliefSlice = (arr) => Array.isArray(arr) ? arr.slice(0, 5).map(s => typeof s === 'string' ? s.slice(0, 100) : '').filter(Boolean).join(' / ') : '';
+    const bs = _beliefSlice(beliefs.aboutSelf);
+    const bw = _beliefSlice(beliefs.aboutWorld);
+    const bf = _beliefSlice(beliefs.aboutFuture);
+    if (bs) snLines.push('자신에 대해: ' + bs);
+    if (bw) snLines.push('세상에 대해: ' + bw);
+    if (bf) snLines.push('미래에 대해: ' + bf);
+    if (Array.isArray(sn.identityKeywords) && sn.identityKeywords.length) {
+      snLines.push('정체성: ' + sn.identityKeywords.slice(0, 12).join(', '));
+    }
+    if (snLines.length) {
+      stable.push('— 자기서사·핵심 신념 —');
+      snLines.forEach(l => stable.push(l));
+    }
+    stable.push('  · 위 정보는 사용자가 직접 입력한 깊은 자기 정보. 자연스럽게 짚어 인용 가능 (단정 X, 외재화 톤).');
     stable.push('');
   }
 
