@@ -5330,9 +5330,15 @@
 
   /* V4-1r: 진주 Pinterest 갤러리 (grid 뷰) + 카테고리 칩 */
   .pearl-cat-chips {
-    display: flex; flex-wrap: wrap; gap: 6px;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
     margin: 10px 0 14px;
+    justify-content: flex-end;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
+  .pearl-cat-chips::-webkit-scrollbar { display: none; }
   .pearl-cat-chip {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -5890,11 +5896,18 @@
     font-weight: 600;
   }
   .ys-view-btn:active, .lvt-btn:active { transform: scale(0.96); }
-  /* 카테고리 chips 공용 */
+  /* 사용자 요청 2026-04-29: 카테고리 chips 공용 — 우측 정렬 + 가로 스크롤 */
   .yangsaeng-cat-chips, .lib-cat-list-chips {
-    display: flex; flex-wrap: wrap; gap: 6px;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
     margin: 10px 0 14px;
+    justify-content: flex-end;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
+  .yangsaeng-cat-chips::-webkit-scrollbar,
+  .lib-cat-list-chips::-webkit-scrollbar { display: none; }
   .ys-cat-chip, .lcl-chip {
     background: var(--surface);
     border: 1px solid var(--border);
