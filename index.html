@@ -9729,8 +9729,8 @@ function _coreStepCount() {
     const id = ONBOARDING_STEPS[i] && ONBOARDING_STEPS[i].id;
     if (!skipSet.has(id)) count++;
   }
-  // 코어 #1은 endId='finish'에 자연 포함, 나머지는 help_button 추가됨
-  if (_activeCoreId !== 'core1') count++;
+  // 모든 코어 끝에 help_button 추가됨
+  count++;
   return count;
 }
 function _coreCurrentStep() {
@@ -9743,9 +9743,7 @@ function _coreCurrentStep() {
   const skipSet = CORE_SKIP_IDS[_activeCoreId] || new Set();
   // help_button 점프 후 위치면 마지막 step
   const helpIdx = ONBOARDING_STEPS.findIndex(s => s && s.id === 'help_button');
-  if (_activeCoreId !== 'core1' && _onbStep === helpIdx) {
-    return _coreStepCount();
-  }
+  if (_onbStep === helpIdx) return _coreStepCount();
   // startIdx ~ _onbStep 사이 skip 제외하고 카운트
   let pos = 0;
   const upto = Math.min(_onbStep, endIdx);
@@ -10041,8 +10039,8 @@ function onbPositionStep(step, retryCount) {
   const phaseInfo = (typeof _getPhaseInfo === 'function') ? _getPhaseInfo(_onbStep) : null;
   const phaseLabel = document.getElementById('onbPhaseLabel');
   if (phaseLabel) {
-    // 코어 튜토리얼 (코어 #1 외)이면 코어 라벨, 아니면 phase 라벨
-    if (_activeCoreId && _activeCoreId !== 'core1' && CORE_LABELS[_activeCoreId]) {
+    // 코어 튜토리얼이면 코어 라벨, 아니면 phase 라벨
+    if (_activeCoreId && CORE_LABELS[_activeCoreId]) {
       phaseLabel.textContent = '코어 — ' + CORE_LABELS[_activeCoreId];
     } else {
       phaseLabel.textContent = phaseInfo ? phaseInfo.phase.name : '';
@@ -10055,8 +10053,8 @@ function onbPositionStep(step, retryCount) {
   }
   const phaseBar = document.getElementById('onbPhaseBar');
   if (phaseBar) {
-    if (_activeCoreId && _activeCoreId !== 'core1' && _coreTotal && _coreCur) {
-      // 코어 #2~#8: 코어 내부 step별 dot — 글로벌 9 phase 대신 코어 step 진행도
+    if (_activeCoreId && _coreTotal && _coreCur) {
+      // 코어 튜토리얼: 코어 step별 dot
       const dots = [];
       for (let i = 1; i <= _coreTotal; i++) {
         const cls = i < _coreCur ? 'done' : (i === _coreCur ? 'current' : '');
@@ -10064,7 +10062,7 @@ function onbPositionStep(step, retryCount) {
       }
       phaseBar.innerHTML = dots.join('');
     } else if (phaseInfo) {
-      // 코어 #1 또는 풀 튜토리얼: 9 phase dot
+      // 풀 튜토리얼: 9 phase dot
       phaseBar.innerHTML = ONBOARDING_PHASES.map((p, i) => {
         const cls = i < phaseInfo.phaseIdx ? 'done' : (i === phaseInfo.phaseIdx ? 'current' : '');
         return `<span class="onb-phase-dot ${cls}" title="${escapeHtml(p.name)}"></span>`;
