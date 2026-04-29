@@ -22650,6 +22650,8 @@ async function testSeedV4Data() {
     });
   });
   // 가닥 generations에 shellId 박기 (gen.shells, missionId 매칭)
+  // 사용자 보고 2026-04-29: DNA 조각은 'call' (부름) 또는 'legend' (특별) 티어만 — 실제 흐름과 일치
+  // (이전 버그: 황금/메인/일상/가벼움 티어도 DNA로 박혀서 시드만 비현실적으로 보임)
   (state.topicCards || []).filter(c => c.category === 'strategy' && !c._isDiagnosticSeed).forEach(card => {
     if (!Array.isArray(card.generations)) return;
     card.generations.forEach(gen => {
@@ -22658,8 +22660,12 @@ async function testSeedV4Data() {
       // 각 attempt에 마치 shell이 박힌 것처럼 임의 매칭 (시각 검증)
       gen.attempts.forEach((a, ai) => {
         if (a.status !== 'worked' && a.status !== 'meh') return;
-        // 시드 shell 중 임의 1개 매칭 (이미 매칭된 거 제외)
-        const free = state.shellCollection.find(s => !s._dnaMatched && (gen.layer === 'L1' || gen.layer === 'L2' || gen.layer === 'L3'));
+        // 시드 shell 중 'call' 또는 'legend' 티어만 매칭 (이미 매칭된 거 제외)
+        const free = state.shellCollection.find(s =>
+          !s._dnaMatched
+          && (s.tier === 'call' || s.tier === 'legend')
+          && (gen.layer === 'L1' || gen.layer === 'L2' || gen.layer === 'L3')
+        );
         if (free) {
           a.shellId = free._id;
           free._dnaMatched = true;
