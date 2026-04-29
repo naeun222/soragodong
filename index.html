@@ -9592,13 +9592,16 @@ const CORE_BODY_OVERRIDE = {
 let _activeCoreId = null;
 let _coreEndIdx = -1;
 let _coreBodyOverridesApplied = [];
+let _coreNeedsHelpAfterEnd = false;  // 코어 #1 외엔 endId 다 지나서 help_button으로 점프 필요
 
-// 잠금 체크 — testerMode ON / 코어 활성 중 / 명시적 unlock 시 통과
+// 잠금 체크 — testerMode ON / 코어 활성 중 / API 키 없음(초기 셋업) / 명시적 unlock 시 통과
 function isCoreLocked(coreId) {
   if (!coreId) return false;
   if (state && state.preferences && state.preferences.testerMode) return false;
   if (window._onbTutorialMode) return false;
-  if (!state || !state.unlocked) return true;
+  // 초기 셋업 안 끝난 사용자(API 키 없음) — 잠금 우회 (설정 접근 가능)
+  if (!state || !state.apiKey) return false;
+  if (!state.unlocked) return true;
   return state.unlocked[coreId] !== true;
 }
 
@@ -9640,6 +9643,8 @@ async function startCoreTutorial(coreId) {
 
   _activeCoreId = coreId;
   _coreEndIdx = endIdx;
+  // 코어 #1은 endId='finish'라 help_button 자연히 포함. 나머지는 끝나고 help_button 점프 필요.
+  _coreNeedsHelpAfterEnd = (coreId !== 'core1');
 
   // 인프라 재사용 (testerMode ON + 시드 자동)
   await startInteractiveOnboarding(startIdx);
@@ -9653,6 +9658,7 @@ function _cleanupCoreOverrides() {
   _coreBodyOverridesApplied = [];
   _activeCoreId = null;
   _coreEndIdx = -1;
+  _coreNeedsHelpAfterEnd = false;
 }
 
 // V4 (사용자 요청 2026-04-29): 설정 → 🐚 투어 다시 보기
@@ -9694,10 +9700,10 @@ function applyCoreLockMarkers() {
     // 홈 카드들
     { sel: '#missionContainer .mission-card',                         core: 'core2' },
     { sel: '.home-small-card[onclick="openShellCollection()"]',       core: 'core2' },
-    // 숙고 질문 추가 (홈에 있는 진입점) — selector는 reflection 영역 매칭
-    { sel: '.reflection-add-btn, [onclick*="openReflectionInput"], [onclick*="addReflectionQuestion"]', core: 'core6' },
-    // 마법의 소라고동 — 홈/도서관 양쪽 진입점
-    { sel: '.magic-card, [onclick="showArchiveDecisions()"]',         core: 'core8' }
+    // 숙고 질문 추가 (홈에 있는 진입점)
+    { sel: '.reflection-empty-card, [onclick="addReflectionQuestion()"]', core: 'core6' },
+    // 마법의 소라고동 — 도서관 안 진입점 + 홈 카드 (있다면)
+    { sel: '[onclick="showArchiveDecisions()"], [onclick="startNewDecision()"], .magic-card', core: 'core8' }
   ];
   lockMap.forEach(({sel, core}) => {
     const locked = isCoreLocked(core);
@@ -10383,8 +10389,19 @@ function onbPositionStep(step, retryCount) {
 
 function onbNext() {
   _onbStep++;
-  // V4 코어 종료 — 마지막 step 지나면 onbFinish
+  // V4 코어 종료 — 마지막 step 지나면 help_button 점프 또는 onbFinish
   if (_activeCoreId && _coreEndIdx >= 0 && _onbStep > _coreEndIdx) {
+    // 코어 #2~#8: endId 후 help_button (다시 보고 싶을 때)으로 점프
+    if (_coreNeedsHelpAfterEnd) {
+      const helpIdx = ONBOARDING_STEPS.findIndex(s => s && s.id === 'help_button');
+      if (helpIdx >= 0) {
+        _onbStep = helpIdx;
+        _coreEndIdx = helpIdx;  // 다음 next에 finish
+        _coreNeedsHelpAfterEnd = false;
+        onbRenderStep();
+        return;
+      }
+    }
     onbFinish();
     return;
   }
@@ -10395,6 +10412,16 @@ function onbNext() {
     _onbStep++;
   }
   if (_activeCoreId && _coreEndIdx >= 0 && _onbStep > _coreEndIdx) {
+    if (_coreNeedsHelpAfterEnd) {
+      const helpIdx = ONBOARDING_STEPS.findIndex(s => s && s.id === 'help_button');
+      if (helpIdx >= 0) {
+        _onbStep = helpIdx;
+        _coreEndIdx = helpIdx;
+        _coreNeedsHelpAfterEnd = false;
+        onbRenderStep();
+        return;
+      }
+    }
     onbFinish();
     return;
   }
@@ -11886,6 +11913,9 @@ function renderReflectionHome() {
   const all = state.reflectionQuestions || [];
   const active = all.find(q => q.status === 'active');
 
+  // V4: render 후 잠금 시각 갱신
+  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
+
   // V4-fix: 한 번에 하나씩 — active 1개만 표시. pending/paused/더 깊이 볼 거 링크 제거.
   if (!active) {
     container.innerHTML = `
@@ -13164,6 +13194,9 @@ function renderTodayMission() {
   const container = document.getElementById('missionContainer');
   if (!container) return;
   const list = getTodayMissions();
+
+  // V4: render 후 잠금 시각 갱신
+  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
 
   if (list.length === 0) {
     container.innerHTML = '';
@@ -19151,6 +19184,8 @@ function switchLibraryCat(cat) {
     renderLensArchive();
     if (typeof renderLensInsights === 'function') renderLensInsights();
   }
+  // V4: 카테고리 전환 후 잠금 시각 갱신 (마법의 소라고동 등)
+  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 30);
   // 검색바는 모든 카테고리에서 노출 (사용자 보고 2026-04-29: 'block' 으로 덮으면 flex 깨져 토글이 검색창 밑으로 wrap — 'flex' 유지)
   const searchBar = document.getElementById('archiveSearchBar');
   if (searchBar) searchBar.style.display = 'flex';
@@ -23204,7 +23239,9 @@ async function testSeedV4Data() {
   const yesterdayKey = new Date(today.getTime() - 86400000).toISOString().split('T')[0];
   const dayBeforeKey = new Date(today.getTime() - 2 * 86400000).toISOString().split('T')[0];
   // 사용자 요청 2026-04-28: 결과 체크 트리거 — 미션 'completed' + attemptStatus 없음 (양생방 카드에 '🔍 결과 체크' 버튼 뜨도록)
+  // 사용자 요청 2026-04-29: 코어 #2(소라의 부름)용 active 미션 추가 — 풀 튜토리얼은 ✦해볼게로 만들지만 코어 #2는 시드로 박음
   state.missions = [
+    { id: 'mis_seed_active_call', title: '엄마 통화 시작 전 3초 호흡', description: '"나도 알아!" 나오기 전에 한 호흡 끼우기', status: 'active', scheduledFor: todayStr, createdAt: new Date(today.getTime() - 3600000).toISOString() },
     { id: 'mis_seed_strat0_done_unchecked', title: '마감 직전 환경 셋업 1번', description: '카페 자리 + 폰 다른 방', status: 'completed', completedDate: new Date(today.getTime() - 86400000).toISOString().split('T')[0], completedAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: 'strat_seed_0', generationIdx: 0, _followupAsked: true },
     { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
     { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
