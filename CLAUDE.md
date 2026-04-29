@@ -49,3 +49,106 @@ index.html이 거대한 단일 파일이라 Grep 적극 활용:
 - `console.error`는 정상. 로깅 패턴.
 - 시드 데이터 / testerMode: 사용자 V3 데이터 절대 건드리지 않게 — id-prefix `seed_` sweep만 안전. signature 기반 sweep 금지.
 - Korean 문법: "너의/네" 둘 다 가능. 일괄 치환 X.
+
+---
+
+## V4 코어 튜토리얼 잠금 시스템 (2026-04-29 박힘)
+
+`state.unlocked.{core1, core2, core3, core4, core5, core6, core8}` 7개 코어 잠금. 자세한 룰은 `index.html` 안 `CORE_TUTORIAL_RANGES` / `CORE_LABELS` / `CORE_LOCK_INFO` / `CORE_BODY_OVERRIDE` 주석 참고.
+
+핵심:
+- testerMode ON 또는 API 키 없음 → 잠금 우회
+- 코어 끝 = `help_button` ("시작! ✦") → onbFinish → testerMode backup restore + saveToCloudNow await
+- 풀 튜토리얼 완주 시 모든 코어 unlock
+- '이미 알아' = 모두 unlock, '하면서 익히기' = 모두 lock 후 코어 #1, '풀 튜토리얼' = 풀 진행
+
+업데이트 모달 dismiss 단위: `dismissedMajor` (V4). V5 등 새 메이저 시 재출현.
+
+---
+
+## 보안 / 인프라 로드맵 (2026-04-29 시작)
+
+### Stage 1 — RLS (지금 진행)
+- Supabase Row Level Security 강화. 사용자는 본인 row만 read/write.
+- 클라이언트에서 service_role key 절대 X. anon key만.
+- 마이그레이션 SQL: `supabase/migrations/0001_rls.sql`
+- 사용자 직접 작업 (Supabase 콘솔에서 SQL 실행) — `USER_TODO.md` 참고.
+
+### Stage 2 — 클라이언트 E2EE (다음 세션 / 베타 사용자 받기 전 필수)
+**왜**: ADHD/정신건강 데이터 = PIPA 민감정보. 저장 시 암호화 의무. 개발자(나)도 평문 못 보게.
+
+**설계**:
+- 마스터 키: 사용자 device localStorage (256-bit random, base64). 서버 X.
+- BIP39 12단어 백업 passphrase 표시. 사용자가 어딘가 저장.
+- 새 device 진입 시 passphrase 입력 → 키 복원.
+- AES-256-GCM (필드별 random IV). PBKDF2 100k iterations.
+- WebCrypto API 사용 (브라우저 표준).
+
+**암호화 대상 (민감)**:
+```
+entries[*].diary, .note, .dailyQuestion.answer, .music
+chatMessages[*].content
+chatArchive[*]
+topicCards[*]
+pearls[*].content, .note
+decisions[*]
+reflectionQuestions[*]
+traits / values / patterns / caseFormulation
+state.profile (사용자 직접 입력 자기 소개)
+```
+
+**비암호화 (메타데이터 OK)**:
+```
+date keys, mood/vitality 숫자, timestamps, IDs, preferences
+```
+
+**리스크**:
+- passphrase 분실 = 영구 데이터 손실 (의도적 설계).
+- 마이그레이션 시 자동 백업 의무 (기존 `runAutoBackupIfNeeded` 활용).
+- AI API call 시점은 클라이언트가 평문 보냄 (Anthropic은 어차피 평문 봐야 함).
+
+**작업 양**: 4–7일.
+
+**시작 트리거**: 베타 사용자 1명이라도 받기 시작 직전. 그전엔 너 본인 데이터만 있으니 우선순위 X.
+
+### Phase A — 모듈 분리 (점진)
+1.3MB 단일 HTML → `src/` 디렉토리 구조. 한 번에 X, 점진 추출.
+첫 단계: state / services / utils 일부만 먼저.
+나머지 (UI 컴포넌트, screens) 는 새 화면 / 큰 변경 있을 때 점진.
+
+### Phase B — Framework (선택, 후순위)
+1인 단계엔 vanilla로 충분. 협업 / 채용 시작 시 React/Svelte 도입 검토.
+
+### Phase C — 백엔드 프록시 (Vercel Functions)
+**왜**: 사용자 API 키 노출 차단 + 사용량 추적 + 청구 인프라.
+- `/api/chat.ts` — Anthropic SDK proxy. 인증 미들웨어 + 사용량 logging.
+- `/api/usage.ts` — 사용자 토큰 사용량 조회.
+- `/api/auth.ts` — Supabase JWT 검증.
+- 환경변수: `ANTHROPIC_API_KEY` (서버 전용), `SUPABASE_SERVICE_ROLE_KEY` (서버 전용).
+- 배포: Vercel (free tier 충분).
+
+### Phase D — 앱 패키징 (선택)
+PWA만으로 충분. App Store 노릴 때만 Apple Developer + Google Play 가입 ($124/년).
+
+### Phase E — DevOps
+GitHub Actions CI (build + typecheck), Sentry 에러 트래킹.
+
+### Phase F — TypeScript / Test
+점진적 TS 마이그레이션 (Phase A와 함께). Vitest 단위 테스트 인프라.
+
+---
+
+## 비용 추정 (참고)
+
+### Heavy user API 비용 (Anthropic)
+- 매일 30분 대화 + 일기 + 양생방 + 마법의 소라고동 풀가동
+- 월 $10–15 (~1.5–2만 원). prompt caching 적용 기준.
+- → 100명이면 월 $1500 (~200만 원) API 원가.
+
+### 1년차 1인 단계 외부 비용
+- Vercel/Supabase: 거의 free
+- Domain: 1.5–3만 원/년
+- 변호사 1회 자문: 30–50만 원 (선택)
+- Apple Developer: $99/년 (앱 스토어 시)
+- Google Play Console: $25 일회성 (앱 스토어 시)
+- ISMS / 보안 audit: 의무 X (1년차)
