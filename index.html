@@ -17672,46 +17672,80 @@ async function openMutationChat(strategyId, missionTitle) {
   const prevGen = getCurrentGeneration(card);
   const prevAction = prevGen?.action || card.actionStrategy || card.summary || '';
   const prevLayer = prevGen?.layer || 'L2';
+  // 사용자 요청 2026-04-29: 첫 옵션 = 다른 차원 권유. 재생성 시 같은 차원도 허용 (refined version).
+  await _generateMutationOptions(strategyId, missionTitle, { allowSameLayer: false, isRegen: false });
+}
 
-  // overlay 즉시 열어 사용자에게 즉각 피드백
+// 사용자 요청 2026-04-29: 대화 흐름 반영해 옵션 재생성 — 같은 차원 허용 (refined)
+async function _generateMutationOptions(strategyId, missionTitle, opts) {
+  const card = getStrategyCard(strategyId);
+  if (!card) return;
+  const allowSameLayer = !!(opts && opts.allowSameLayer);
+  const isRegen = !!(opts && opts.isRegen);
+  const prevGen = getCurrentGeneration(card);
+  const prevAction = prevGen?.action || card.actionStrategy || card.summary || '';
+  const prevLayer = prevGen?.layer || 'L2';
+
+  // overlay 즉시 열어 사용자에게 즉각 피드백 — 첫 호출 시만 state 초기화
   if (!Array.isArray(card.evolutionChats)) card.evolutionChats = [];
-  _mutationChatState = {
-    strategyId,
-    missionTitle,
-    prevLayer,
-    options: [],
-    selected: null,
-    confirmStep: false,
-    messages: [{
-      role: 'assistant',
-      content: `🌿 "${card.title}" — 이 전략은 잘 안 맞았군.\n🧬 DNA가 진화할 준비 됐어. ✨\n\n🌱 다른 차원에서 시도해볼래?`
-    }],
-    loading: true,
-    chatRecord: {
-      gen: (card.generations?.length || 0),
-      triggerMission: missionTitle,
-      triggerAt: new Date().toISOString(),
+  if (!isRegen) {
+    _mutationChatState = {
+      strategyId,
+      missionTitle,
+      prevLayer,
       options: [],
-      selectedLayer: null,
-      selectedAction: null,
-      messages: []
-    }
-  };
+      selected: null,
+      confirmStep: false,
+      messages: [{
+        role: 'assistant',
+        content: `🌿 "${card.title}" — 이 전략은 잘 안 맞았군.\n🧬 DNA가 진화할 준비 됐어. ✨\n\n🌱 다른 차원에서 시도해볼래?`
+      }],
+      loading: true,
+      chatRecord: {
+        gen: (card.generations?.length || 0),
+        triggerMission: missionTitle,
+        triggerAt: new Date().toISOString(),
+        options: [],
+        selectedLayer: null,
+        selectedAction: null,
+        messages: []
+      }
+    };
+  } else {
+    // 재생성: 기존 state 유지, 옵션만 새로
+    if (!_mutationChatState) return;
+    _mutationChatState.selected = null;
+    _mutationChatState.options = [];
+    _mutationChatState.loading = true;
+    _mutationChatState._optionsExpanded = true;
+    _mutationChatState.messages.push({
+      role: 'assistant',
+      content: '대화 흐름 반영해서 옵션 다시 만들게... ✦'
+    });
+  }
   _renderMutationChat();
+
+  // 사용자 요청 2026-04-29: 재생성 시 대화 흐름 반영
+  const recentMsgs = isRegen && _mutationChatState
+    ? _mutationChatState.messages.slice(-10).map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n')
+    : '';
+  const sameLayerNote = allowSameLayer
+    ? `\n[같은 차원 허용] 이전이 ${prevLayer} 여도 OK — 같은 차원에서 refine된 옵션 (이유 분석 + 보완) 도 1-2개 포함 가능. 단 똑같이 X — 대화에서 발견한 이유 반영해서 보완.`
+    : `\n이전이 ${prevLayer} 였으니 그 외 4 차원 각 1개.`;
+  const convoNote = recentMsgs
+    ? `\n\n[지금까지 대화 — 이 사용자 컨텍스트 우선 반영]\n${recentMsgs}\n\n위 대화에서 사용자가 짚은 진짜 어려움을 옵션에 녹여. generic 답 X.`
+    : '';
 
   // AI 호출 (있으면) — fallback 즉시 사용 (UI 멈추지 않게)
   let aiOptions = [];
   if (state.apiKey) {
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({
+      const resp = await callAnthropic({
           model: 'claude-opus-4-7',
           max_tokens: 900,
           messages: [{
             role: 'user',
-            content: `돌연변이 진화 4 옵션 생성 (사용자 요청 2026-04-28: 더 디테일하고 효과적으로).
+            content: `돌연변이 진화 4 옵션 생성 (사용자 요청 2026-04-29: 대화 흐름 반영, 같은 차원 refine도 허용).
 
 [전략 카드] "${card.title}"
 [심리학 개념] ${card.psychConcept || '(없음)'}
@@ -17725,8 +17759,7 @@ async function openMutationChat(strategyId, missionTitle) {
 - L3 환경: 물리적 환경/도구 자체 변경, 자동 trigger — 의지 30%
 - L4 사회: 친구·책임 파트너·공개 약속 — 의지 20%
 - L5 메타: 가치 재검토, 마법의 소라고동, 큰 그림 보기 — 의지 10%
-
-이전이 ${prevLayer} 였으니 그 외 4 차원 각 1개.
+${sameLayerNote}${convoNote}
 
 [옵션 작성 가이드 — 매우 중요]
 1. 추상 X 구체 ○: "환경 바꿔" X, "오늘 저녁 7시까지 폰을 거실 책상 충전기에 꽂아두기" ○
@@ -17734,7 +17767,7 @@ async function openMutationChat(strategyId, missionTitle) {
 3. 네 사용자 ${card.title} 패턴에 맞게 — 일반론 X
 4. 왜 효과적인지 1구절 포함 (예: "도파민 trigger 외부화", "결정 부담 ↓")
 5. ADHD 친화: 의지 부담 ↓ 차원 (L3/L4) 우선, L1·L5는 신중하게
-6. 한 줄 70-100자 (이전 50자 → 더 디테일)
+6. 한 줄 70-100자
 
 [출력 JSON만 — 마크다운 X 따옴표 안 escape]
 { "options": [{"layer":"L3","action":"오늘 저녁 7시까지 폰을 거실 충전기에 꽂아두기 — 손에 안 닿으면 자동 차단 (도파민 trigger 외부화)"},...] }
@@ -17744,7 +17777,6 @@ async function openMutationChat(strategyId, missionTitle) {
 - 추상 다짐 ("열심히", "노력")
 - 마크다운 / 줄바꿈 / 따옴표 escape`
           }]
-        })
       });
       const data = await resp.json();
       let raw = data.content[0].text.trim();
@@ -17753,7 +17785,10 @@ async function openMutationChat(strategyId, missionTitle) {
       if (m) {
         const parsed = JSON.parse(m[0]);
         if (Array.isArray(parsed.options)) {
-          aiOptions = parsed.options.filter(o => o.layer && o.action && o.layer !== prevLayer);
+          // 같은 차원 허용 시 prevLayer filter X
+          aiOptions = parsed.options.filter(o =>
+            o.layer && o.action && (allowSameLayer || o.layer !== prevLayer)
+          );
         }
       }
     } catch (e) { console.warn('mutation AI failed:', e); }
@@ -17766,7 +17801,7 @@ async function openMutationChat(strategyId, missionTitle) {
       { layer: 'L2', action: '알람 1개 (실제 가능한 시간) + 5분만 시작하기 룰 — 5분 후 그만둬도 OK. 진입 마찰 ↓' },
       { layer: 'L1', action: '이 행동이 안 됐을 때 머릿속에 뜨는 생각을 적어보기 ("난 못해" 같은 거) → 다른 해석 시도 ("오늘은 못 했을 뿐, 내일 다시")' },
       { layer: 'L5', action: '마법의 소라고동에 큰 질문 박기: "이 행동이 정말 지금 나에게 필요한가?" 일주일 안고 살아보기 — 가치 재검토' }
-    ].filter(o => o.layer !== prevLayer).slice(0, 4);
+    ].filter(o => allowSameLayer || o.layer !== prevLayer).slice(0, 4);
   }
   if (!_mutationChatState) return;  // 사용자가 그 사이 닫음
   _mutationChatState.options = aiOptions;
@@ -17879,6 +17914,12 @@ function _renderMutationChat() {
               </button>
             `).join('')}
           </div>
+          <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="quick-btn" onclick="regenerateMutationOptions()" style="font-size:11px; padding:7px 12px;" title="대화 흐름 반영해서 옵션 다시 — 같은 차원 refine 도 OK">
+              🔄 옵션 다시 만들기
+            </button>
+            <span style="font-size:10px; color:var(--text-dim); align-self:center;">대화 후 짚은 거 반영해서 새로 / 같은 차원 refine 가능</span>
+          </div>
         </div>`;
       }
     }
@@ -17891,6 +17932,13 @@ function _toggleMutationOptions() {
   if (!_mutationChatState) return;
   _mutationChatState._optionsExpanded = !_mutationChatState._optionsExpanded;
   _renderMutationChat();
+}
+
+// 사용자 요청 2026-04-29: 대화 흐름 반영해 옵션 재생성 — 같은 차원 refine 도 OK
+async function regenerateMutationOptions() {
+  if (!_mutationChatState) return;
+  const { strategyId, missionTitle } = _mutationChatState;
+  await _generateMutationOptions(strategyId, missionTitle, { allowSameLayer: true, isRegen: true });
 }
 
 async function selectMutationOption(idx) {
