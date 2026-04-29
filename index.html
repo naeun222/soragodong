@@ -7047,7 +7047,7 @@
       <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px;">
         <div style="font-family:'Gowun Batang',serif; font-size:16px; color:var(--accent); margin-bottom:14px;">왜 만들면 좋은가</div>
         <div style="font-size:13px; line-height:1.8; color:var(--text);">
-          앱에서 🌧 몰입 시작 누르면<br>
+          앱에서 🌧 시작 누르면<br>
           <strong style="color:var(--accent2);">방해 금지 + 빗소리 + 집중 모드</strong>가 자동으로 켜져.<br><br>
           뇌한테 "이제 다른 세계 들어간다" 신호 줌. 도파민 트리거.
         </div>
@@ -9188,7 +9188,7 @@ const ONBOARDING_STEPS = [
   {
     id: 'exec_immerse_btn',
     targetSelector: '.exec-immerse-btn',
-    title: '🌧 몰입 시작',
+    title: '🌧 시작',
     body: '진짜 집중하고 싶을 때 이 버튼!<br>빗소리 + 시간 자동 기록.<br><br>한 번 눌러봐.',
     waitFor: 'click',
     advanceDelay: 600,
@@ -9245,7 +9245,7 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     advanceClickSelector: '.ritual-btn.primary[onclick="ritualLaunch()"]',
     title: '🚀 발사',
-    body: '약속 정리됐지? <b>"🌧 몰입 시작"</b> 눌러봐.<br>빗소리 + 타이머 시작.',
+    body: '약속 정리됐지? <b>"🌧 시작"</b> 눌러봐.<br>빗소리 + 타이머 시작.',
     waitFor: 'click',
     advanceDelay: 600,
     dimBackground: false,
@@ -9255,7 +9255,7 @@ const ONBOARDING_STEPS = [
     id: 'exec_iphone_shortcut',
     targetSelector: null,
     title: '📱 iPhone 단축어',
-    body: '아이폰이라면 <b>단축어</b>를 설정할 수 있어 — 잠금화면에서 한 번에 몰입 시작.<br><br>자세한 내용은 <b>⚙ 설정</b>에서 \'단축어 설정 매뉴얼\' 항목 확인해봐.',
+    body: '아이폰이라면 <b>단축어</b>를 설정할 수 있어 — 잠금화면에서 한 번에 시작.<br><br>자세한 내용은 <b>⚙ 설정</b>에서 \'단축어 설정 매뉴얼\' 항목 확인해봐.',
     waitFor: 'next',
     dimBackground: false
   },
@@ -12499,6 +12499,7 @@ async function sendReflectionChat() {
   }
 
   // V4 비전 8.4: 숙고 전용 시스템 prompt (페르소나 분석 OFF)
+  // 사용자 요청 2026-04-29: 진지 모드 강화 + sticky 룰 (짧은 응답에도 톤 유지)
   const recentMsgs = q.chatMessages.slice(-12).map(m => ({
     role: m.role,
     content: m.content
@@ -12508,14 +12509,20 @@ async function sendReflectionChat() {
 [숙고 질문]
 "${q.text}"
 
-[톤 / 원칙]
-- 잡담 X. 답 강요 X.
+[톤 / 원칙 — 진지 모드]
+- 잡담 X. 답 강요 X. **가벼운 ㅋㅋ / 농담 / 짧은 한 줄 리액션 ❌**.
 - 다양한 각도에서 끈질기게 (가치 / 두려움 / 욕구 / 시간 스케일 / 외부 압력 / 네 기록 패턴).
 - 오랜 침묵 OK. 사용자 페이스 따라.
 - 결론 내려주지 X. 사용자 자기 발견 유도.
 - 외재화 톤. "너 X적이야" X.
-- 1-3문장 짧게. 친구 반말.
+- 1-3문장 짧게. 차분한 친구 반말.
 - 금지어: 대박/아이고/힘내/화이팅/할 수 있어/오늘도 멋진 하루/대단해.
+
+[모드 sticky — 매우 중요]
+숙고 = 큰 물음 안고 며칠 살아보는 도구. **무조건 진지 모드 유지**.
+- 사용자가 "응" / "맞아" / "그러게" / "음" 같은 짧은 응답 보내도 가벼운 톤으로 튀지 X.
+- 짧은 응답 = "듣고 있다 / 정리 중" 신호. 같은 차분한 톤으로 한 박자 호흡 주기.
+- 의심 시: 이전 응답의 톤 유지가 default.
 
 [네 일]
 사용자가 새로 적은 한 줄을 받고, 그 각도로 한 발짝 더 들어가는 질문 1-2개 또는 짧은 관찰 한 줄.`;
@@ -15081,7 +15088,7 @@ function renderTimeUsageCard() {
       <div class="model-section-title">📊 task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
       <div style="font-size:12px; color:var(--text-dim); padding:8px 0; line-height:1.7;">
         몰입 기록 쌓이면 여기 표시돼.<br>
-        실행 탭 🚀 → 몰입 시작 → 돌아옴 누르면 자동 기록.
+        실행 탭 🚀 → 🌧 시작 → 돌아옴 누르면 자동 기록.
       </div>
     </div>`;
   }
@@ -21128,7 +21135,7 @@ function renderExecute() {
     <div class="screen-sub">머릿속 짐 → 오늘의 카드 → 차근히.</div>
     
     <button class="exec-immerse-btn" onclick="openImmerseStart()">
-      🌧 몰입 시작
+      🌧 시작
       <div class="sub">빗소리·방해금지·집중 모드 ON</div>
     </button>
   `;
@@ -22923,7 +22930,7 @@ async function openImmerseStart() {
   const isTutorial = !!window._onbTutorialMode;
   const isTester = !!(state.preferences && state.preferences.testerMode);
   const title = await showInputModal({
-    title: '🌧 몰입 시작',
+    title: '🌧 시작',
     message: '뭐에 몰입할 거야?',
     placeholder: '예: 논문 쓰기, 코드 짜기, 청소',
     maxLength: 50,
@@ -25778,7 +25785,7 @@ function renderRitualStep() {
       ` : ''}
       <div class="ritual-sub">갔다 와. 돌아오면 위에 작은 알림이 떠.<br>아무 때나 탭하면 돼.</div>
       <div class="ritual-actions">
-        <button class="ritual-btn primary" onclick="ritualLaunch()">🌧 몰입 시작</button>
+        <button class="ritual-btn primary" onclick="ritualLaunch()">🌧 시작</button>
         <button class="ritual-btn skip" onclick="ritualBackStep()">← 이전</button>
       </div>
     `;
@@ -25903,7 +25910,7 @@ function ritualLaunch() {
   // Show floating "in progress" bar
   showRitualActiveBar();
   
-  showToast('🌧 몰입 시작! 갔다 와');
+  showToast('🌧 시작! 갔다 와');
 }
 
 function closeRitual() {
