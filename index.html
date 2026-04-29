@@ -11667,7 +11667,8 @@ function _renderMagicHelpChat() {
   const ta = document.getElementById('magicHelpInput');
   if (ta && !ta._magicWired) {
     ta._magicWired = true;
-    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; });
+    // 사용자 요청 2026-04-29: 메인 chat 탭처럼 자동 높이 (max 140px)
+    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(140, ta.scrollHeight) + 'px'; });
     ta.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMagicHelpMessage(); }
     });
@@ -31110,6 +31111,19 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault(); sendChat();
     }
   });
+  // 사용자 요청 2026-04-29: 숙고 입력바도 메인 chat 처럼 자동 높이 (max 140px)
+  const reflTa = document.getElementById('reflectionInput');
+  if (reflTa) {
+    reflTa.addEventListener('input', () => {
+      reflTa.style.height = 'auto';
+      reflTa.style.height = Math.min(reflTa.scrollHeight, 140) + 'px';
+    });
+    reflTa.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !isMobile()) {
+        e.preventDefault(); sendReflectionChat();
+      }
+    });
+  }
   ['sleepStart', 'sleepEnd'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', updateSleepDuration);
