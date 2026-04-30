@@ -11685,10 +11685,6 @@ function devPreviewWeeklyReview() {
       signals: ['주말 수면 5h 1회 — 평일 패턴 무너지지 않게 주의'],
       suggestion: '주말도 평일 패턴 ±1h 안에서 유지하면 mood 안정. 무리 X — 의식적으로만.'
     },
-    experiment: {
-      what: '다음 주 월~일 11시 알람 + 자기 전 핸드폰 거실 두기',
-      why: '7h+ 패턴 유지하면 mood 안정 → 작업 quality ↑. 환경 변경 = setup 비용 X 자동 효과.'
-    },
     seeds: [
       '평일 11시 알람 지킨 날 수 (목표: 5/5)',
       '카페 setup 한 날 작업 시간 vs 집 작업 시간'
@@ -17760,11 +17756,7 @@ ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 
     "signals": ["감지된 신호 (구체, 부드럽게). 'none' 일 때 빈 array.", "..."],
     "suggestion": "부드러운 제안 1줄. concern 일 때 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 포함. watch 면 self-care 제안. none 이면 빈 문자열."
   },
-  "experiment": {
-    "what": "다음 ${periodLabel} 한 가지 작은 실험 (구체적, 환경 setup 우선, 관찰 친화)",
-    "why": "왜 흥미로울지 (1줄)"
-  },
-  "seeds": ["다음 리뷰 시점에 다시 볼 watch point 1 (구체적, observable)", "...2"]${prevSeeds.length > 0 ? ',\n  "seed_callbacks": "지난 리뷰 씨앗이 이번에 어떻게 됐는지 (1-3문장)"' : ''}
+  "seeds": ["다음 리뷰 시점에 다시 볼 watch point 1 (구체적, observable)", "...2"]${prevSeeds.length > 0 ? ',\n  "seed_callbacks": "지난 리뷰 씨앗이 이번 ' + periodLabel + ' 어떻게 됐는지 (1-3문장)"' : ''}
 }
 
 JSON만 출력. 다른 글 X.`;
@@ -17792,7 +17784,7 @@ function renderReviewScreen(type, reviewData) {
   const periodWord = type === 'weekly' ? '주' : '달';
 
   // 사용자 요청 2026-04-30: 새 형식 (pattern/quotes/experiment/seeds) — 옛 형식 (sections.patterns 등) backward compat
-  const isNewFormat = !!(reviewData.pattern || reviewData.quotes || reviewData.experiment || reviewData.seeds);
+  const isNewFormat = !!(reviewData.pattern || reviewData.quotes || reviewData.seeds);
 
   if (isNewFormat) {
     // ═══ 새 리뷰 layout ═══
@@ -17806,7 +17798,7 @@ function renderReviewScreen(type, reviewData) {
     </div>`;
     const seedCallbackBlock = reviewData.seed_callbacks ? `
     <div class="review-section" style="background: rgba(143,200,143,0.06); border-left:3px solid rgba(143,200,143,0.40); padding:12px 14px; border-radius:10px; margin-bottom:18px;">
-      <div style="font-size:10px; color:#9ed4a0; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px;">🌱 지난 씨앗 회상</div>
+      <div style="font-size:10px; color:#9ed4a0; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px;">🌱 지난 추적 결과</div>
       <div style="font-size:13px; line-height:1.7; color:var(--text);">${escapeHtml(reviewData.seed_callbacks)}</div>
     </div>` : '';
     const pat = reviewData.pattern || {};
@@ -17822,13 +17814,6 @@ function renderReviewScreen(type, reviewData) {
     <div class="review-section" style="margin-bottom:18px;">
       <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">📝 너의 인용집</div>
       ${quotesArr.map(q => `<div style="font-family:'Gowun Batang',serif; font-size:14px; color:var(--text); line-height:1.7; padding:8px 14px; border-left:2px solid rgba(126,200,227,0.40); margin-bottom:8px;">"${escapeHtml(q)}"</div>`).join('')}
-    </div>` : '';
-    const exp = reviewData.experiment || {};
-    const experimentBlock = (exp.what || exp.why) ? `
-    <div class="review-section" style="background: linear-gradient(135deg, rgba(143,200,143,0.10), rgba(126,200,227,0.06)); border:1px solid rgba(143,200,143,0.25); border-radius:14px; padding:16px 18px; margin-bottom:18px;">
-      <div style="font-size:11px; color:#9ed4a0; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:8px;">🌱 다음 ${periodWord} 작은 실험</div>
-      ${exp.what ? `<div style="font-size:14px; color:var(--text); line-height:1.7; margin-bottom:6px;">${escapeHtml(exp.what)}</div>` : ''}
-      ${exp.why ? `<div style="font-size:11px; color:var(--text-soft); line-height:1.6;">${escapeHtml(exp.why)}</div>` : ''}
     </div>` : '';
     const seeds = Array.isArray(reviewData.seeds) ? reviewData.seeds.filter(s => s && s.trim()) : [];
     const seedsBlock = seeds.length > 0 ? `
@@ -17946,7 +17931,6 @@ function renderReviewScreen(type, reviewData) {
       ${emotionsBlock}
       ${valueAlignBlock}
       ${riskBlock}
-      ${experimentBlock}
       ${seedsBlock}
       ${selfEvalBlock}
       <div style="display:flex; gap:8px; margin-top:14px;">
@@ -18034,7 +18018,6 @@ function saveReview(type) {
     emotions: reviewData.emotions,
     value_align: reviewData.value_align,
     risk_signals: reviewData.risk_signals,
-    experiment: reviewData.experiment,
     seeds: reviewData.seeds,
     seed_callbacks: reviewData.seed_callbacks
   };
@@ -31232,7 +31215,6 @@ async function testSeedV4Data() {
       emotions: [{ word: '안심', count: 5 }, { word: '집중', count: 4 }, { word: '압도', count: 2 }],
       value_align: { score: 8, aligned: '회복 + 자기 친밀 가치와 align — 잠 챙김 + 산책', gap: '' },
       risk_signals: { level: 'none', signals: [], suggestion: '' },
-      experiment: { what: '다음 주 월~금 11시 알람 + 자기 전 핸드폰 거실 두기', why: '7h+ 패턴 유지하면 mood 안정 → 작업 quality ↑' },
       seeds: ['평일 11시 알람 지킨 날 수', '카페 setup 한 날 작업 시간']
     },
     {
@@ -31246,7 +31228,6 @@ async function testSeedV4Data() {
       emotions: [{ word: '몰입', count: 6 }, { word: '피곤', count: 3 }, { word: '뿌듯', count: 3 }],
       value_align: { score: 7, aligned: '성취 + 몰입 가치 align', gap: '회복 가치는 일시적으로 낮춤 (의도된 trade-off)' },
       risk_signals: { level: 'watch', signals: ['수면 6h 4일 연속 — 다음 주 회복 자리 확보'], suggestion: '마감 후 주말 휴식 의식적으로. 자책 X — 의도된 spike.' },
-      experiment: { what: '다음 주 월요일 풀 휴식 (책 + 산책 + 잠 9h)', why: 'spike 후 회복 패턴 정착 — 만성 burnout 차단' },
       seeds: ['마감 후 회복 timeline (며칠 걸리는지)', '잠 6h 일주일 → mood 임계점']
     },
     {
@@ -31260,7 +31241,6 @@ async function testSeedV4Data() {
       emotions: [{ word: '무기력', count: 7 }, { word: '공허', count: 4 }, { word: '평온', count: 2 }],
       value_align: { score: 4, aligned: '회복 가치 일치 — 무리 X', gap: '성장·연결 가치는 잠시 멈춤 (의도 X 자연 흐름)' },
       risk_signals: { level: 'watch', signals: ['mood 평균 2.3 — 평소보다 낮음 3일+', '사람 만남 0건'], suggestion: '무리 X 자기 친밀. 1-2명 가까운 사람 짧은 카톡 만 시도. 안 되면 패스 OK.' },
-      experiment: { what: '다음 주 친구 1명 카톡 한 줄 — "잘 지내?" 부담 X', why: '연결 작은 시도가 mood 끌어올릴 가능성 ↑' },
       seeds: ['mood 회복 시점 (며칠 걸리는지)', '카톡 한 줄 vs 만남 effect 차이']
     },
     {
@@ -31274,7 +31254,6 @@ async function testSeedV4Data() {
       emotions: [{ word: '평온', count: 5 }, { word: '집중', count: 4 }, { word: '뿌듯', count: 3 }],
       value_align: { score: 8, aligned: '회복 + 작은 성장 가치 다 align', gap: '' },
       risk_signals: { level: 'none', signals: [], suggestion: '' },
-      experiment: { what: '다음 주 아침 산책 5일 + 카페 setup 4회', why: '이 패턴이 정착되면 mood 안정 + 작업 quality 동시' },
       seeds: ['아침 산책 일관성', '환경 setup 빈도 vs 작업 시간']
     }
   ];
@@ -31293,7 +31272,6 @@ async function testSeedV4Data() {
       emotions: s.emotions,
       value_align: s.value_align,
       risk_signals: s.risk_signals,
-      experiment: s.experiment,
       seeds: s.seeds,
       auto: true
     });
