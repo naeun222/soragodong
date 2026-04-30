@@ -11763,19 +11763,75 @@ window._toggleInputSpeech = function(taId, btnId) {
   try { recognition.start(); } catch (e) { console.warn('[input speech] start fail', e); }
 };
 
-// 사용자 명시 2026-04-30 ultrathink: 코어 #1 chat_intake_entry step 안 button 핸들러. button 누름 → 모달 풀 흐름 → 끝나면 onbNext 자동 진행.
+// 사용자 명시 2026-04-30 ultrathink: chat_intake_entry step 안 button 핸들러.
+// 모달 풀 흐름 종료 → 분석 결과를 대화창에 4단 형식 + proposal 메시지로 자동 표시
+// → 튜토리얼은 click_strategy step 으로 점프 (send_diary / click_deeper / await_deeper_response 생략 — intake 가 동일 분석을 만들었으므로 중복 단계 회피).
 window._startIntakeFromTutorial = async function() {
   if (document.getElementById('intakeModalOverlay')) return;
   try {
     await runIntakeFlow();
-    // 분석 끝났으면 _firstTouchDone flag (testerMode OFF 흐름에서 cloud 저장될 거)
     if (state.intakeWorry && state.intakeWorry.length > 0) {
       state.preferences = state.preferences || {};
       state.preferences._firstTouchDone = true;
     }
     saveState();
   } catch (e) { console.warn('[intake] tutorial 흐름 실패', e); }
-  // 튜토리얼 다음 step 자동 진행
+
+  // intake 분석 stash → 대화창으로 전달
+  const analysis = window._lastIntakeAnalysis;
+  const worries = Array.isArray(window._lastIntakeWorries) ? window._lastIntakeWorries : [];
+  delete window._lastIntakeAnalysis;
+  delete window._lastIntakeWorries;
+
+  if (analysis && (analysis.diagnosis || analysis.strategy)) {
+    state.chatMessages = state.chatMessages || [];
+    const nowIso = new Date().toISOString();
+    if (worries.length > 0) {
+      state.chatMessages.push({
+        role: 'user',
+        content: worries.join('\n\n'),
+        timestamp: nowIso
+      });
+    }
+    const dim = (analysis.dimension || '환경').trim();
+    const para = (analysis.paraphrase || '').trim();
+    const diag = (analysis.diagnosis || '').trim();
+    const strat = (analysis.strategy || '').trim();
+    const observation = para || (diag ? diag.split(/[.。]\s/)[0] + '.' : '방금 들려준 마음, 정리해봤어.');
+    const concept = `${dim} 차원이 작동하는 모습이 보여.${diag ? '\n' + diag : ''}`;
+    const guide = strat || '천천히 같이 가보자.';
+    const proposalText = strat ? strat.split(/[.。]\s/)[0].slice(0, 80) : '천천히 한 걸음';
+    const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}\n\n[오늘의 제안]\n${proposalText}`;
+    state.chatMessages.push({
+      role: 'assistant',
+      content: fourStage,
+      fromDeeper: true,
+      proposal: true,
+      proposalData: { title: proposalText.slice(0, 40) || '오늘 한 걸음' },
+      timestamp: nowIso
+    });
+    state.chatMessages.push({
+      role: 'assistant',
+      content: '처음이라 위 4단으로 친절히 정리해줬어 ✦\n평소 대화에서는 답 아래 "더 알고 싶어 ▾" 누르면 이렇게 깊게 풀어줄게.\n\n바로 위 응답 아래 두 버튼 — 🧬 전략으로 (전략 카드로 저장) / ✦ 해볼게 (오늘 미션으로 등록) — 한 번 눌러보자.',
+      timestamp: nowIso
+    });
+    saveState();
+    if (typeof renderChat === 'function') renderChat();
+    setTimeout(() => { if (typeof scrollChatToBottom === 'function') scrollChatToBottom(true); }, 80);
+
+    const targetIdx = Array.isArray(ONBOARDING_STEPS)
+      ? ONBOARDING_STEPS.findIndex(s => s && s.id === 'click_strategy')
+      : -1;
+    if (targetIdx >= 0 && typeof _onbStep !== 'undefined') {
+      _onbStep = targetIdx;
+      if (typeof onbRenderStep === 'function') {
+        setTimeout(() => onbRenderStep(), 200);
+      }
+      return;
+    }
+  }
+
+  // fallback — 분석 결과 없거나 jump 실패: 기존 동작 (다음 step)
   if (typeof onbNext === 'function') onbNext();
 };
 
@@ -15607,6 +15663,32 @@ async function onbSkip() {
 }
 
 function onbFinish() {
+  // 사용자 보고 2026-04-30 ultrathink (CRITICAL): 튜토리얼 끝 시점 원본 데이터 소실 버그 방어.
+  // 옛 버그: testerMode 가 ON 인데 메모리 _testerModeBackupState 가 null 인 경로 (e.g. mid-tutorial reload 후 재진입)
+  //         → restore 분기 안 타고 fallback 으로 떨어져 seed 데이터가 살아남은 채 cloud 저장됨.
+  // 수정: cloud backup row (me_v4_backup) 한 번 더 fetch 시도 후 재진입. 무한 재귀 방지 flag.
+  if (state && state.preferences && state.preferences.testerMode &&
+      !_testerModeBackupState &&
+      !window._onbCloudRecoverAttempted &&
+      typeof authUserId !== 'undefined' && authUserId &&
+      typeof _loadTesterBackupFromCloud === 'function') {
+    window._onbCloudRecoverAttempted = true;
+    (async () => {
+      try {
+        const cb = await _loadTesterBackupFromCloud();
+        if (cb && typeof cb === 'object' && Object.keys(cb).length > 0) {
+          _testerModeBackupState = cb;
+          console.log('[onbFinish] cloud backup 으로 메모리 backup 복원');
+        } else {
+          console.warn('[onbFinish] cloud backup 비어있거나 없음');
+        }
+      } catch (e) { console.warn('[onbFinish] cloud backup 복원 실패:', e); }
+      onbFinish();  // 재진입 — 이번엔 정상 경로 또는 fallback (seed sweep)
+    })();
+    return;
+  }
+  delete window._onbCloudRecoverAttempted;
+
   onbCleanupListeners();
   window._onbTutorialMode = false;
 
@@ -15685,10 +15767,21 @@ function onbFinish() {
     })();
     return;
   }
-  // testerMode flag만 있고 backup 없는 경우 — flag만 끄기
+  // testerMode flag만 있고 backup 없는 경우 — flag만 끄기 + 사용자 보고 2026-04-30 ultrathink (CRITICAL): seed marker sweep 강제.
+  // 옛 버그: backup 없으면 flag 만 끄고 떨어져서 _seed marker 항목이 cloud 저장 → 데이터 손실.
   if (state.preferences && state.preferences.testerMode) {
     state.preferences.testerMode = false;
     if (typeof refreshTesterModeUI === 'function') refreshTesterModeUI();
+    // _seed 마커 강제 sweep (방어). 사용자 데이터엔 이 마커 X — 안전.
+    const _stripSeed = (arr) => Array.isArray(arr)
+      ? arr.filter(it => !(it && typeof it === 'object' && it._seed))
+      : arr;
+    ['entries','chatMessages','chatArchive','weeklyReviews','memoryVault',
+     'tasks','missions','pearls','archive','topicCards','reflectionQuestions',
+     'projects','starts','quarterlyReviews','decisions','insights','diagnoses',
+     'monthlyReviews','shellCollection','traits','values','patterns'
+    ].forEach(k => { state[k] = _stripSeed(state[k]); });
+    console.warn('[onbFinish] backup 없는 fallback — _seed sweep 실행');
   }
 
   // V3.13: 튜토리얼에서 만든 데이터 정리 (시작 시간 이후) — testerMode OFF 상태에서 시작한 케이스
