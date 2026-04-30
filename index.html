@@ -35793,15 +35793,19 @@ function showTossChargeModal(plan) {
         </div>
         <input type="file" id="tossReceiptInput" accept="image/*" style="width:100%; font-size:11px;">
 
-        <!-- 사용자 보고 2026-04-30: 전상법 §13 청약 직전 명시 고지 — 약관/환불 재확인 -->
+        <!-- 사용자 보고 2026-04-30: 전상법 §13 청약 직전 명시 고지 — 약관/환불 재확인 + 민감정보 별도 동의 (사용자 명시 ultrathink) -->
         <div style="margin-top:12px; padding:10px; background:var(--surface); border-radius:8px;">
           <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; font-size:11px; line-height:1.6; cursor:pointer;">
             <input type="checkbox" id="chargeConsentRefund" style="margin-top:3px; flex-shrink:0;">
             <span><b>(필수)</b> <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/refund.md" target="_blank" style="color:var(--accent);">환불정책</a> 확인 — 충전 후 미사용 잔액은 30일 내 청약철회 가능, 사용 분은 차감 후 환불</span>
           </label>
-          <label style="display:flex; align-items:flex-start; gap:8px; font-size:11px; line-height:1.6; cursor:pointer;">
+          <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; font-size:11px; line-height:1.6; cursor:pointer;">
             <input type="checkbox" id="chargeConsentTerms" style="margin-top:3px; flex-shrink:0;">
             <span><b>(필수)</b> <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/terms.md" target="_blank" style="color:var(--accent);">이용약관</a> 동의 — AI 토큰 차감 방식 및 ${plan.krw.toLocaleString()}원 결제 진행</span>
+          </label>
+          <label style="display:flex; align-items:flex-start; gap:8px; font-size:11px; line-height:1.6; cursor:pointer;">
+            <input type="checkbox" id="chargeConsentSensitive" style="margin-top:3px; flex-shrink:0;">
+            <span><b>(필수)</b> <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/privacy.md" target="_blank" style="color:var(--accent);">개인정보처리방침</a> — 정신건강 자기관찰 데이터(기분·감정·고민 기록) 처리에 별도 동의 (개인정보보호법 §23)</span>
           </label>
         </div>
 
@@ -35834,11 +35838,12 @@ function openTossApp(amountKrw, memoCode) {
 
 // 영수증 캡처 → AI 자동 인증
 async function verifyTossReceipt(amountKrw, memoCode) {
-  // 사용자 보고 2026-04-30: 전상법 §13 — 청약 직전 환불정책 + 약관 재확인 필수
+  // 사용자 보고 2026-04-30: 전상법 §13 — 청약 직전 환불정책 + 약관 + 민감정보(개인정보보호법 §23) 별도 동의 필수
   const refundOk = document.getElementById('chargeConsentRefund')?.checked;
   const termsOk = document.getElementById('chargeConsentTerms')?.checked;
-  if (!refundOk || !termsOk) {
-    alert('충전 진행하려면 환불정책 + 이용약관 동의 체크해야 해.');
+  const sensitiveOk = document.getElementById('chargeConsentSensitive')?.checked;
+  if (!refundOk || !termsOk || !sensitiveOk) {
+    alert('충전 진행하려면 환불정책 + 이용약관 + 민감정보 처리 동의 체크해야 해.');
     return;
   }
   const input = document.getElementById('tossReceiptInput');
@@ -35858,6 +35863,7 @@ async function verifyTossReceipt(amountKrw, memoCode) {
     state.preferences.consentLog = state.preferences.consentLog || [];
     state.preferences.consentLog.push({ type: 'charge_refund', version: '1.0', confirmed: true, at: now, amount_krw: amountKrw, memo_code: memoCode });
     state.preferences.consentLog.push({ type: 'charge_terms',  version: '1.0', confirmed: true, at: now, amount_krw: amountKrw, memo_code: memoCode });
+    state.preferences.consentLog.push({ type: 'charge_sensitive_data', version: '1.0', confirmed: true, at: now, amount_krw: amountKrw, memo_code: memoCode, scope: 'mental_health_self_observation' });
     saveState();
   } catch (e) { console.warn('charge consent log:', e); }
   showToast('🔍 한 번 볼게...');
