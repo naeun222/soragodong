@@ -2,7 +2,8 @@
 
 import type { Env } from './auth';
 
-export const FREE_INITIAL_CREDIT_USD = 1.0;
+// 사용자 명시 2026-04-30: 무료 토큰 1,400원 → 4,000원 (4 천원어치). 1USD = 1,400원 환산.
+export const FREE_INITIAL_CREDIT_USD = 2.86;
 
 export type UserBilling = {
   user_id: string;

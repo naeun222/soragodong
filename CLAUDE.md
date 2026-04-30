@@ -110,7 +110,7 @@ soragodong-repo/
 - AI 호출 가능 헬퍼: `_canAI()` = `state.apiKey || session.access_token` (30+ 곳 게이트 통일).
 - `_anthropicHeaders()` 헬퍼 — interceptor swap 후 dead pattern 17곳 cleanup 완료.
 - 인터셉터 401 자동 refresh + retry (`_refreshSessionForApi()` + inflight guard).
-- billing: 충전 잔액 (USD) + 월 정액. 무료 토큰 $1.0 자동.
+- billing: 충전 잔액 (USD) + 월 정액. 무료 토큰 $2.86 (≈ 4,000원) 자동.
 - 결제: 토스 수동 송금 + Sonnet vision 자동 인증 (`verify-toss-receipt`). PG (포트원) 통합 대기.
 
 ### Admin 시스템 (jade6679@naver.com)
