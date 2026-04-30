@@ -11067,7 +11067,10 @@ function _annualReviewBuildCardPearl(d) {
           ${summary ? `<div style="font-size:12.5px; color:rgba(255,255,255,0.72); line-height:1.6;">${escapeHtml(summary)}</div>` : ''}
         </div>
       </div>
-      ${why ? `<div style="font-size:11.5px; color:rgba(255,250,205,0.6); font-style:italic; margin-top:18px; padding:12px 14px; background:rgba(255,250,205,0.06); border-left:2px solid rgba(255,250,205,0.30); border-radius:0 8px 8px 0; max-width:320px; line-height:1.6; text-align:left;">🦉 ${escapeHtml(why)}</div>` : ''}
+      ${why ? `<div style="margin-top:18px; padding:12px 14px; background:rgba(255,250,205,0.06); border-left:2px solid rgba(255,250,205,0.30); border-radius:0 8px 8px 0; max-width:320px; text-align:left;">
+        <div style="font-size:9.5px; color:rgba(255,250,205,0.75); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:6px; font-weight:600;">🦉 Opus — 왜 가장 현명한지</div>
+        <div style="font-size:11.5px; color:rgba(255,250,205,0.7); font-style:italic; line-height:1.6;">${escapeHtml(why)}</div>
+      </div>` : ''}
       <div class="stories-body" style="margin-top:16px; font-size:12px; opacity:0.7;">네 안에서 자라난 ${total > 0 ? total + '개 ' : ''}통찰 중. 내년에도 이어질 거야.</div>
     </div>
   `;
