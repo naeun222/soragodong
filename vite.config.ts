@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import { readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 // 사용자 명시 2026-05-01 (agent audit): APP_VERSION (index.html) → version.txt 자동 sync.
 // 이전 = 수동 갱신 2자리 → 한 곳만 갱신 시 checkServerVersionAndReload 무한 reload loop risk.
 function appVersionSyncPlugin() {
@@ -39,7 +41,7 @@ export default defineConfig({
   esbuild: {
     pure: ['console.log']
   },
-  plugins: [appVersionSyncPlugin()],
+  plugins: [appVersionSyncPlugin(), cloudflare()],
   server: {
     port: 3000,
     open: false,
