@@ -1654,48 +1654,68 @@
     padding: 60px 28px 150px; box-sizing: border-box;
     animation: ann-rv-fadeIn 0.5s ease;
   }
-  /* 슬라이드 노래 player (사용자 명시 2026-04-30: 슬라이드마다 진주 노래) */
+  /* 슬라이드 노래 player (사용자 명시 2026-04-30: artwork 강화 + 자동 재생) */
   .ann-rv-song {
     position: absolute;
-    bottom: 78px; left: 50%;
+    bottom: 84px; left: 50%;
     transform: translateX(-50%);
     width: 92%; max-width: 320px;
-    z-index: 6;
+    z-index: 10;
   }
   .ann-rv-song-info {
     display: flex; gap: 10px; align-items: center;
-    background: rgba(0,0,0,0.55);
-    border: 1px solid rgba(255,255,255,0.18);
-    border-radius: 30px;
-    padding: 5px 14px 5px 5px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(20,18,30,0.85);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 14px;
+    padding: 7px 12px 7px 7px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
-  .ann-rv-song-play {
-    width: 30px; height: 30px;
-    background: rgba(255,255,255,0.18);
-    border: 1px solid rgba(255,255,255,0.30);
-    border-radius: 50%;
-    color: #fff;
-    font-size: 11px;
-    display: flex; align-items: center; justify-content: center;
-    text-decoration: none;
+  .ann-rv-song-art {
+    width: 38px; height: 38px;
+    border-radius: 8px;
+    object-fit: cover;
     flex-shrink: 0;
+    background: linear-gradient(135deg, #d4a76a, #8b7ec4);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
   }
-  .ann-rv-song-play:active { transform: scale(0.92); }
   .ann-rv-song-meta {
     flex: 1; min-width: 0;
-    display: flex; flex-direction: column; gap: 1px;
+    display: flex; flex-direction: column; gap: 2px;
     overflow: hidden;
   }
   .ann-rv-song-title {
-    font-size: 11.5px; color: #e8d4a8; font-weight: 600;
+    font-size: 12px; color: #f5e6c8; font-weight: 600;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .ann-rv-song-artist {
-    font-size: 9.5px; color: rgba(232,212,168,0.65);
+    font-size: 10px; color: rgba(245,230,200,0.7);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  .ann-rv-song-play {
+    width: 34px; height: 34px;
+    background: rgba(212,167,106,0.25);
+    border: 1px solid rgba(212,167,106,0.55);
+    border-radius: 50%;
+    color: #f0d9a8;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .ann-rv-song-play:hover { background: rgba(212,167,106,0.40); }
+  .ann-rv-song-play:active { transform: scale(0.92); }
+  .ann-rv-song-link {
+    color: rgba(245,230,200,0.55);
+    font-size: 14px;
+    text-decoration: none;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+  .ann-rv-song-link:hover { color: rgba(245,230,200,0.95); }
   @keyframes ann-rv-fadeIn {
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -1750,10 +1770,13 @@
   }
   .ann-rv-card-1 .ann-rv-persona {
     font-size: 16px; color: #e8d4a8; font-weight: 400;
-    line-height: 1.55; max-width: 320px;
+    line-height: 1.7; max-width: 320px;
+    text-align: center;
   }
+  .ann-rv-card-1 .ann-rv-persona > div { margin: 4px 0; }
   .ann-rv-card-1 .ann-rv-persona em {
     font-style: normal; color: #f0d9a8; font-weight: 700;
+    font-size: 18px;
   }
   .ann-rv-card-1 .ann-rv-stats {
     display: grid; grid-template-columns: repeat(3, 1fr);
@@ -2162,7 +2185,61 @@
     text-shadow: 0 1px 4px rgba(0,0,0,0.4);
   }
 
-  /* ─── 카드 8: Top 5 깨달음 + 가장 깊었던 숙고 (Q→A) ─── */
+  /* ─── 카드 8: 올해의 깨달음 (1개, 큰 typography — 사용자 명시 2026-04-30) ─── */
+  .ann-rv-card-pearl {
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(255,250,205,0.18), transparent 65%),
+      #0a0912;
+    text-align: center;
+  }
+  .ann-rv-pearl-label {
+    font-size: 11px; letter-spacing: 0.3em;
+    color: rgba(255,250,205,0.7);
+    margin-bottom: 32px; text-transform: uppercase;
+  }
+  .ann-rv-pearl-emoji {
+    font-size: 56px;
+    filter: drop-shadow(0 0 24px rgba(255,250,205,0.85));
+    margin-bottom: 32px;
+    animation: ann-rv-tree-glow 2s ease-in-out infinite alternate;
+  }
+  .ann-rv-pearl-text {
+    font-size: clamp(20px, 5vw, 28px);
+    color: #fff8e8; font-weight: 600;
+    line-height: 1.55;
+    letter-spacing: 0.02em;
+    max-width: 360px;
+    text-shadow: 0 0 18px rgba(255,250,205,0.35);
+  }
+
+  /* ─── 카드 9: 가장 깊었던 숙고 (질문 하나 웅장 — 사용자 명시 예전 형식) ─── */
+  .ann-rv-card-deep {
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(126,200,200,0.13), transparent 60%),
+      #060410;
+    text-align: center;
+  }
+  .ann-rv-deep-label {
+    font-size: 11px; letter-spacing: 0.3em;
+    color: rgba(126,200,200,0.7);
+    margin-bottom: 40px; text-transform: uppercase;
+  }
+  .ann-rv-deep-question {
+    font-size: clamp(22px, 5.5vw, 32px);
+    color: #c5e0f0; font-weight: 500;
+    font-style: italic;
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+    max-width: 380px;
+    text-shadow: 0 0 24px rgba(126,200,200,0.35);
+  }
+  .ann-rv-deep-date {
+    font-size: 10.5px; letter-spacing: 0.25em;
+    color: rgba(126,200,200,0.45);
+    margin-top: 44px;
+  }
+
+  /* (legacy — 사용 안 함, 호환성) */
   .ann-rv-card-best { background: linear-gradient(180deg, #121a26, #0a0912); }
   .ann-rv-best-grid {
     display: flex; flex-direction: column;
@@ -10464,7 +10541,7 @@ function openAnnualReviewPreview() {
     ],
     seasonCaption: '12월 7일이 너의 <strong>변곡점</strong> 이었어',
     finding1: {
-      label: '1년 보다가 어, 한 거',
+      label: '너는 몰랐지만 내가 발견한 것',
       quote: '"논문 부담돼"',
       dataNum: '+30%',
       dataText: '근데 논문 한 다음 날엔\n4번 중 3번 활력이 더 높았어',
@@ -10496,7 +10573,7 @@ function openAnnualReviewPreview() {
         { name: '감정 후 운동', emoji: '🌿' },
         { name: '회의 30분 전', emoji: '🌿' }
       ],
-      caption: '이제 이 정도는 너 혼자서도 해낼 수 있어'
+      caption: '이제 이 정도는 너 혼자서도 해낼 수 있어 🐚'
     },
     beach: {
       diaryCount: 226,
@@ -10508,17 +10585,12 @@ function openAnnualReviewPreview() {
       { date: '2025.11.28', text: '14일 결정에 맡긴 첫날',          emoji: '🌊', bg: 'linear-gradient(135deg, rgba(126,200,180,0.45), rgba(98,165,200,0.30))' },
       { date: '2026.04.12', text: '학회 D-3, 폰 다른 방에 둠',     emoji: '⚡', bg: 'linear-gradient(135deg, rgba(255,215,122,0.40), rgba(180,130,90,0.30))' }
     ],
-    top_pearls: [
-      '결함 X · 작동 방식 ○',
-      '환경이 의지보다 강해',
-      '마감 임박 = 도파민 trigger',
-      '내 머리 ≠ 결정 도구',
-      '회피 대상 = 엔진'
-    ],
+    // 사용자 명시 2026-04-30: 올해의 깨달음 = 가장 통찰력 깊고 현명한 1개만 (5개 X). 다음 phase = AI 자동 선정.
+    best_pearl: '결함 X · 작동 방식 ○',
+    // 사용자 명시: 깊은 숙고 = 질문 하나 딱 놓고 웅장. 답 X.
     deep: {
       question: '"이 주제 못 끝낼 거 같아.\n지도교수랑 안 맞아."',
-      conclusion: '"지도교수 변경 X / 주제 변경"',
-      date: '2025.11.28 → 12.11 (14일)'
+      date: '2025.11.28'
     },
     final: {
       message: '1년 전 너 — "<strong>왜 나는?</strong>"\n지금 너 — "<strong>아 나 이런 사람</strong>"\n\n이 차이가 진짜 큰 거야.',
@@ -10531,30 +10603,77 @@ function openAnnualReviewPreview() {
     },
     // 사용자 명시 2026-04-30: 시드 데이터 (testSeedV4Data) 안 진주 음악 카테고리에 박힌 8곡 그대로.
     // narrative arc 매핑 — 표지 = 마지막 = LNGSHOT Vanilla Days (수미상관).
+    // 사용자 명시 2026-04-30: 시드 (testSeedV4Data) 진주 음악 8곡 그대로 — artworkUrl + previewUrl + trackUrl. 자동 재생.
     songs: {
-      card1: { title: 'Vanilla Days',         artist: 'LNGSHOT',                       url: 'https://music.apple.com/us/album/vanilla-days/1885487042?i=1885487047' },
-      card2: { title: 'Pink + White',         artist: 'Frank Ocean',                   url: 'https://music.apple.com/us/album/pink-white/1146195596?i=1146195714' },
-      card3: { title: 'Love Hangover',        artist: 'JENNIE & Dominic Fike',         url: 'https://music.apple.com/us/album/love-hangover/1793379140?i=1793379141' },
-      card4: { title: 'Stephanie',            artist: 'Cloonee, Young M.A & InntRaw',  url: 'https://music.apple.com/us/album/stephanie/1779339882?i=1779339883' },
-      card5: { title: "Moonwalkin'",          artist: 'LNGSHOT',                       url: 'https://music.apple.com/us/album/moonwalkin/1866762522?i=1866762525' },
-      card6: { title: 'PINKY UP',             artist: 'KATSEYE',                       url: 'https://music.apple.com/us/album/pinky-up-clean-edit/1891174008?i=1891174353' },
-      card7: { title: "Upper Side Dreamin'",  artist: 'ENHYPEN',                       url: 'https://music.apple.com/us/album/upper-side-dreamin/1587989646?i=1587989649' },
-      card8: { title: 'Club classics',        artist: 'Charli xcx',                    url: 'https://music.apple.com/us/album/club-classics/1739079974?i=1739080339' },
-      card9: { title: 'Vanilla Days',         artist: 'LNGSHOT',                       url: 'https://music.apple.com/us/album/vanilla-days/1885487042?i=1885487047' }
+      card1: {
+        title: 'Vanilla Days', artist: 'LNGSHOT',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/cf/a8/de/cfa8dee7-da1a-eb20-6074-741a4af1a1f6/cover_KM0024394_1.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c2/9f/30c29f0b-bed7-d993-6909-0392418d4dcc/mzaf_15564917017364106254.plus.aac.p.m4a',
+        url: 'https://music.apple.com/us/album/vanilla-days/1885487042?i=1885487047'
+      },
+      card2: {
+        title: 'Pink + White', artist: 'Frank Ocean',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/bb/45/68/bb4568f3-68cd-619d-fbcb-4e179916545d/BlondCover-Final.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/45/a8/a2/45a8a2e0-9516-86b2-66ea-e8b2bf71de68/mzaf_10773372944954067241.plus.aac.p.m4a',
+        url: 'https://music.apple.com/us/album/pink-white/1146195596?i=1146195714'
+      },
+      card3: {
+        title: 'Love Hangover', artist: 'JENNIE & Dominic Fike',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/1c/57/15/1c571583-f4bc-3307-6e5e-8b9e68d05913/196872850918.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/f6/4c/16/f64c164b-bd28-87fd-5217-7409675e6374/mzaf_10560279388547786839.plus.aac.p.m4a',
+        url: 'https://music.apple.com/us/album/love-hangover/1793379140?i=1793379141'
+      },
+      card4: {
+        title: 'Stephanie', artist: 'Cloonee, Young M.A & InntRaw',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/97/e4/10/97e41086-cff2-f7b5-83b3-3a085b4d2026/cover.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/d0/1e/40/d01e4015-c383-2c2a-9445-f47edb4ae5e0/mzaf_10847000075002169806.plus.aac.p.m4a',
+        url: 'https://music.apple.com/us/album/stephanie/1779339882?i=1779339883'
+      },
+      card5: {
+        title: "Moonwalkin'", artist: 'LNGSHOT',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/74/94/a2/7494a26e-4756-c082-5709-8526127baee8/cover_KM0023994_1.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/da/1f/e9/da1fe9e9-f784-b4f2-c181-c8f770aa2ede/mzaf_13144624855104730433.plus.aac.p.m4a',
+        url: 'https://music.apple.com/us/album/moonwalkin/1866762522?i=1866762525'
+      },
+      card6: {
+        title: 'PINKY UP', artist: 'KATSEYE',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/1a/77/46/1a77460d-493c-a795-92ef-84674905409e/26UMGIM25100.rgb.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/8a/2d/f8/8a2df8c0-e0d3-d040-5a98-958d4ad25ceb/mzaf_16340910211187354178.plus.aac.p.m4a',
+        url: 'https://music.apple.com/us/album/pinky-up-clean-edit/1891174008?i=1891174353'
+      },
+      card7: {
+        title: "Upper Side Dreamin'", artist: 'ENHYPEN',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/07/f2/86/07f286a5-be02-94dd-4e0e-a781aba6d1d4/192641841651_Cover.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/49/a6/68/49a66800-4e6c-68e6-1e35-3be2919ac57e/mzaf_6950604213995548513.plus.aac.p.m4a',
+        url: 'https://music.apple.com/us/album/upper-side-dreamin/1587989646?i=1587989649'
+      },
+      card8: {
+        title: 'Club classics', artist: 'Charli xcx',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/88/4e/63/884e6321-ad41-aab1-f6f0-20efcafcfd55/075679666130.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/a5/bb/db/a5bbdb33-3887-5abb-81d5-de75e72c6abc/mzaf_8271755484089764888.plus.aac.p.m4a',
+        url: 'https://music.apple.com/us/album/club-classics/1739079974?i=1739080339'
+      },
+      card9: {
+        title: 'Vanilla Days', artist: 'LNGSHOT',
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/cf/a8/de/cfa8dee7-da1a-eb20-6074-741a4af1a1f6/cover_KM0024394_1.jpg/200x200bb.jpg',
+        previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/30/c2/9f/30c29f0b-bed7-d993-6909-0392418d4dcc/mzaf_15564917017364106254.plus.aac.p.m4a',
+        url: 'https://music.apple.com/us/album/vanilla-days/1885487042?i=1885487047'
+      }
     }
   };
   _annualReviewState = {
     data,
     cards: [
-      _annualReviewBuildCard1, // 1. 표지
-      _annualReviewBuildCard2, // 2. 한 해 흐름 (365 dot)
-      _annualReviewBuildCard3, // 3. 발견 #1 (Opus)
-      _annualReviewBuildCard4, // 4. 발견 #2 (Opus)
-      _annualReviewBuildCard5, // 5. 무기 DNA tree
-      _annualReviewBuildCard6, // 6. 모래사장 + 진주
-      _annualReviewBuildCardMoments, // 7. 잊지 못할 순간 (사진 grid) — 사용자 명시 별 슬라이드
-      _annualReviewBuildCardBest,    // 8. Top 5 깨달음 + 가장 깊은 숙고 (Q→A)
-      _annualReviewBuildCard9        // 9. 마지막 + 다음 1년 (이전 카드 8 그대로)
+      _annualReviewBuildCard1,        // 1. 표지
+      _annualReviewBuildCard2,        // 2. 한 해 흐름 (365 dot)
+      _annualReviewBuildCard3,        // 3. 발견 #1 (Opus 4.7)
+      _annualReviewBuildCard4,        // 4. 발견 #2 (Opus 4.7)
+      _annualReviewBuildCard5,        // 5. 무기 DNA tree
+      _annualReviewBuildCard6,        // 6. 모래사장 + 진주
+      _annualReviewBuildCardMoments,  // 7. 잊지 못할 순간 (사진 grid)
+      _annualReviewBuildCardPearl,    // 8. 올해의 깨달음 1 (가장 통찰력 깊은 — 사용자 명시)
+      _annualReviewBuildCardDeep,     // 9. 가장 깊은 숙고 — 질문 하나 웅장 (사용자 명시 예전 형식)
+      _annualReviewBuildCard9         // 10. 마지막 + 다음 1년 (그대로)
     ],
     currentIdx: 0
   };
@@ -10567,7 +10686,11 @@ function _annualReviewBuildCard1(d) {
       <div class="ann-rv-year">${escapeHtml(d.yearRange)}</div>
       <div class="ann-rv-oneword">${escapeHtml(d.oneWord)}</div>
       <div class="ann-rv-persona-wrap">
-        <div class="ann-rv-persona">너는 <em>${escapeHtml(d.persona)}</em>이야.</div>
+        <div class="ann-rv-persona">
+          <div>너는</div>
+          <div><em>${escapeHtml(d.persona)}</em></div>
+          <div>이야.</div>
+        </div>
       </div>
       <div class="ann-rv-stats">
         ${d.stats.map(s => `
@@ -10757,26 +10880,25 @@ function _annualReviewBuildCardMoments(d) {
   `;
 }
 
-// 카드 8 (새): Top 5 깨달음 + 가장 깊은 숙고 (질문 → 결론)
-// 사용자 명시 2026-04-30: 인용 5 → 깨달음 5 / 깊은 숙고 = Q + A 형태
-function _annualReviewBuildCardBest(d) {
-  const pearls = (d.top_pearls || []).map(p => `<div class="ann-rv-best-pearl">◇  ${escapeHtml(p)}</div>`).join('');
-  const deep = d.deep || {};
+// 카드 8: 올해의 깨달음 1 — 사용자 명시 2026-04-30: 가장 통찰력 깊고 현명한 1개만 (큰 typography)
+function _annualReviewBuildCardPearl(d) {
   return `
-    <div class="ann-rv-card ann-rv-card-best">
-      <div class="ann-rv-label">올해 빛난 것들</div>
-      <div class="ann-rv-best-grid">
-        <div class="ann-rv-best-section">
-          <div class="ann-rv-best-section-label">✨ Top 5 깨달음</div>
-          <div class="ann-rv-best-pearls">${pearls}</div>
-        </div>
-        <div class="ann-rv-best-section">
-          <div class="ann-rv-best-section-label">🌊 가장 깊었던 숙고</div>
-          <div class="ann-rv-best-deep-q">${escapeHtml(deep.question || '').replace(/\n/g, '<br>')}</div>
-          <div class="ann-rv-best-deep-arrow">↓ <span>${escapeHtml(deep.date || '')}</span></div>
-          <div class="ann-rv-best-deep-c">${escapeHtml(deep.conclusion || '')}</div>
-        </div>
-      </div>
+    <div class="ann-rv-card ann-rv-card-pearl">
+      <div class="ann-rv-pearl-label">올해의 깨달음</div>
+      <div class="ann-rv-pearl-emoji">✨</div>
+      <div class="ann-rv-pearl-text">${escapeHtml(d.best_pearl || '')}</div>
+    </div>
+  `;
+}
+
+// 카드 9: 가장 깊었던 숙고 — 사용자 명시 2026-04-30: 질문 하나 딱 놓고 웅장한 느낌 (예전 리뷰 형식)
+function _annualReviewBuildCardDeep(d) {
+  const dq = d.deep || {};
+  return `
+    <div class="ann-rv-card ann-rv-card-deep">
+      <div class="ann-rv-deep-label">가장 깊었던 숙고</div>
+      <div class="ann-rv-deep-question">${escapeHtml(dq.question || '').replace(/\n/g, '<br>')}</div>
+      <div class="ann-rv-deep-date">${escapeHtml(dq.date || '')}</div>
     </div>
   `;
 }
@@ -10818,16 +10940,32 @@ function _annualReviewRender() {
       <button class="ann-rv-nav-btn" onclick="_annualReviewNext()" ${s.currentIdx === total - 1 ? 'disabled' : ''} aria-label="다음">→</button>
     </div>
   ` : '';
-  // 슬라이드별 노래 (사용자 명시 2026-04-30: 진주 노래)
+  // 슬라이드별 노래 (사용자 명시 2026-04-30: 진주 노래 + 자동 재생 + artwork)
   const songData = (s.data && s.data.songs) ? s.data.songs[`card${s.currentIdx + 1}`] : null;
+  // audio 인스턴스 (singleton) — 카드 진입 시 자동 재생
+  if (songData && songData.previewUrl) {
+    if (!window._annAudio) {
+      window._annAudio = new Audio();
+      window._annAudio.volume = 0.5;
+    }
+    if (window._annAudio.src !== songData.previewUrl) {
+      window._annAudio.src = songData.previewUrl;
+      window._annAudio.play().catch(e => console.warn('[ann-rv] autoplay blocked:', e));
+    }
+  } else if (window._annAudio) {
+    try { window._annAudio.pause(); } catch {}
+  }
+  const playState = (window._annAudio && !window._annAudio.paused) ? '⏸' : '▶';
   const songHtml = songData ? `
     <div class="ann-rv-song">
       <div class="ann-rv-song-info">
-        <a class="ann-rv-song-play" href="${escapeHtml(songData.url)}" target="_blank" rel="noopener" aria-label="노래 듣기">▶</a>
+        <img class="ann-rv-song-art" src="${escapeHtml(songData.artworkUrl || '')}" alt="">
         <div class="ann-rv-song-meta">
           <span class="ann-rv-song-title">${escapeHtml(songData.title)}</span>
           <span class="ann-rv-song-artist">${escapeHtml(songData.artist)}</span>
         </div>
+        <button class="ann-rv-song-play" onclick="_annTogglePlay(this)" aria-label="재생/일시정지">${playState}</button>
+        <a class="ann-rv-song-link" href="${escapeHtml(songData.url)}" target="_blank" rel="noopener" aria-label="Apple Music">↗</a>
       </div>
     </div>
   ` : '';
@@ -10882,6 +11020,23 @@ function _annualReviewClose() {
   if (overlay) { overlay.classList.remove('open'); overlay.innerHTML = ''; overlay._annRvBound = false; }
   document.removeEventListener('keydown', _annualReviewKeyHandler);
   _annualReviewState = null;
+  // 사용자 명시 2026-04-30: 닫을 때 audio 정리
+  if (window._annAudio) {
+    try { window._annAudio.pause(); window._annAudio.src = ''; } catch {}
+    window._annAudio = null;
+  }
+}
+
+// 사용자 명시 2026-04-30: 노래 ▶/⏸ 토글 (자동 재생 후에도 사용자가 멈출 수 있게)
+function _annTogglePlay(btn) {
+  if (!window._annAudio) return;
+  if (window._annAudio.paused) {
+    window._annAudio.play().catch(() => {});
+    if (btn) btn.textContent = '⏸';
+  } else {
+    window._annAudio.pause();
+    if (btn) btn.textContent = '▶';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
