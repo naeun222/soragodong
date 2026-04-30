@@ -9523,7 +9523,7 @@ function _canAI() {
   return false;
 }
 
-// 사용자 요청 2026-04-30: admin 헬퍼. 나은 랩 (jade6679@naver.com) 전용 UI 노출 조건.
+// 사용자 요청 2026-04-30: admin 헬퍼. Soragodong (jade6679@naver.com) 전용 UI 노출 조건.
 // 백엔드 admin endpoint은 server-side ADMIN_USER_ID env로 강제 검증 — 이 클라이언트 헬퍼는 UI 숨김 용도일 뿐.
 // 사용자 보고 2026-04-30 review (agent P0-4): email 비교는 console 우회 가능 (session.user.email 직접 변경). UID 비교로 강화.
 // UID 가 클라이언트에 hardcoded 노출되어도 OK — 서버는 별도 ADMIN_USER_ID env 검증, 이 헬퍼는 UI 노출 분기일 뿐.
@@ -10768,7 +10768,7 @@ async function generateAnnualReview(year) {
 }
 
 async function _callOpusForAnnualNarrative(ctx) {
-  const prompt = `사용자 (ADHD, 박사과정). ${ctx.year}년 연간 리뷰 narrative 작성.
+  const prompt = `${ctx.year}년 연간 리뷰 narrative 작성.
 
 [목표]
 1년 데이터 → 정체성 변화 / 핵심 finding 2개 / 가장 깊은 숙고 / 가장 현명한 깨달음 발견.
@@ -11435,9 +11435,10 @@ function showWelcomeBonusModal(opts) {
   });
 }
 
-// 개발자 도구 — 환영 선물 모달 미리보기 (state 안 건드림).
+// 개발자 도구 — 환영 선물 모달 (사용자 명시 2026-04-30: 원래 흐름처럼 backend 실제 grant).
+// idempotent — 이미 받은 사용자는 backend 가 자동 skip ('이미 받았어요'). 다시 테스트 하려면 admin reset-balance 도구로 free_credit_granted=false 리셋 후 재진입.
 function devPreviewWelcomeBonus() {
-  showWelcomeBonusModal({ preview: true });
+  showWelcomeBonusModal();  // preview X — 받기 click 시 backend POST → 잔액 += $2.86
 }
 
 // 옛 5문항 quiz 함수들 (showFirstTouchQuiz / ftStep / skipFirstTouchQuiz / submitFirstTouchQuiz / generateFirstTouchAnalysis)
@@ -18838,7 +18839,7 @@ async function sendReflectionChat() {
     role: m.role,
     content: m.content
   }));
-  const sysPrompt = `사용자 (ADHD, 박사과정). 한 질문에 대한 깊은 숙고를 함께 하는 동반자.
+  const sysPrompt = `한 질문에 대한 깊은 숙고를 함께 하는 동반자.
 
 [숙고 질문]
 "${q.text}"
@@ -26865,7 +26866,7 @@ async function sbSendMessage() {
     .slice(-8)
     .map(m => ({ role: m.role, content: m.content }));
 
-  const sys = `사용자 (ADHD, 박사과정). "전략 DNA" 카드를 같이 만드는 동반자.
+  const sys = `"전략 DNA" 카드를 같이 만드는 동반자.
 
 [흐름]
 1. 사용자가 막히는 상황 한 줄 적음.
@@ -31458,7 +31459,7 @@ async function generateQuarterlyReview(quarterKey, stats) {
     chaptersIn = (state.chatArchive || []).filter(c => inMs(c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null)));
   }
 
-  const prompt = `사용자 (ADHD, 박사과정). 지난 분기 ${quarterKey} 리뷰 작성.
+  const prompt = `지난 분기 ${quarterKey} 리뷰 작성.
 
 [목표]
 - 단순 stats 요약 X. **변곡점 (turning point)** 발견 — 분기 내 큰 변화 / 결정 / 정체성 shift.
