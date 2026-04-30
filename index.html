@@ -1130,6 +1130,26 @@
     margin: 4px 0 14px;
     letter-spacing: 0.08em;
   }
+  /* 사용자 명시 2026-04-30: 모바일 브라우저 takeover — 로그인 폼 숨기고 PWA 안내 우선. desktop / standalone 은 영향 X. escape link 로 강제 안 됨. */
+  body.pwa-takeover #loginStep1,
+  body.pwa-takeover #loginStep2,
+  body.pwa-takeover .login-pwa-divider {
+    display: none !important;
+  }
+  .pwa-escape-link {
+    display: none;
+    text-align: center;
+    margin-top: 22px;
+    padding: 10px;
+    font-size: 12px;
+    color: var(--text-soft);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  body.pwa-takeover .pwa-escape-link {
+    display: block;
+  }
   .pwa-install-1tap {
     background: linear-gradient(135deg, #d4a76a, #b8894a) !important;
     color: var(--bg) !important;
@@ -8657,6 +8677,9 @@
     </div>
     <div class="login-pwa-divider">— 로그인 ↓ —</div>
 
+    <!-- 사용자 명시 2026-04-30: 모바일 브라우저 takeover 시 escape — iOS 인앱 / 빠른 로그인 사용자용 -->
+    <a class="pwa-escape-link" onclick="escapePwaTakeover()">그냥 브라우저에서 로그인 →</a>
+
     <!-- Step 1: Email + 동의 (사용자 요청 2026-04-30 변호사 검수: PIPA + 전자상거래법 의무 + 안전 어필) -->
     <div class="login-form" id="loginStep1">
       <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
@@ -8757,18 +8780,26 @@
     if (ios) ios.style.display = os === 'ios' ? '' : 'none';
     if (and) and.style.display = os === 'android' ? '' : 'none';
   }
+  // 사용자 명시 2026-04-30: 모바일 브라우저면 PWA takeover (login form 숨김), desktop/standalone 은 PWA 카드 자체 숨김.
+  function escapePwaTakeover() {
+    document.body.classList.remove('pwa-takeover');
+  }
   (function initLoginPwa() {
     var card = document.getElementById('loginPwaCard');
     if (!card) return;
-    // 이미 PWA로 실행 중 (standalone) — 안내 숨김
     var isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
       || window.navigator.standalone === true;
-    if (isStandalone) { card.style.display = 'none'; return; }
-    // 자동 device 감지 → tab preselect
     var ua = navigator.userAgent;
+    var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    if (isStandalone || !isMobile) {
+      // standalone (이미 PWA) 또는 desktop — PWA 카드 자체 숨김
+      card.style.display = 'none';
+      return;
+    }
+    // 모바일 브라우저 — takeover 모드 (login form 숨김, PWA 우선)
+    document.body.classList.add('pwa-takeover');
     var defaultOs = 'ios';
     if (/Android/i.test(ua)) defaultOs = 'android';
-    else if (/iPhone|iPad|iPod/i.test(ua)) defaultOs = 'ios';
     setPwaTab(defaultOs);
   })();
 </script>
