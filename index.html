@@ -1359,6 +1359,45 @@
     background: linear-gradient(to top, rgba(48,40,70,0.95) 70%, transparent);
   }
 
+  /* === Reflection Room Visual Mode (사용자 요청 2026-04-30: 마법 보라 vs 숙고 청록 차별화) === */
+  .reflection-mode-chip {
+    display: none;
+    position: fixed;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 80;
+    padding: 6px 14px;
+    font-size: 11px; font-weight: 600;
+    color: #cfeef0;
+    background: linear-gradient(135deg, rgba(76,175,180,0.85), rgba(126,200,227,0.75));
+    border: 1px solid rgba(176,232,236,0.50);
+    border-radius: 100px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 18px rgba(76,175,180,0.40);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: magicChipFloat 3.5s ease-in-out infinite;
+  }
+  body.reflection-mode .reflection-mode-chip { display: block; }
+  body.reflection-mode #screen-reflection {
+    background:
+      radial-gradient(ellipse at top, rgba(76,175,180,0.10), transparent 60%),
+      radial-gradient(ellipse at bottom, rgba(126,200,227,0.06), transparent 70%);
+  }
+  body.reflection-mode .reflection-screen-q {
+    background: linear-gradient(135deg, #b0e8ec, #7ec8e3);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  body.reflection-mode .reflection-input-bar {
+    background: linear-gradient(to top, rgba(36,52,58,0.95) 70%, transparent);
+  }
+  body.reflection-mode .reflection-screen-back { color: #b0e8ec; }
+  body.reflection-mode .reflection-resolve-btn {
+    border-color: rgba(126,200,227,0.50);
+    color: #b0e8ec;
+  }
+
   /* === Welcome Bonus Modal (사용자 요청 2026-04-30 ultrathink: 무료 토큰 화려한 알림 + 법적 고지) === */
   .welcome-bonus-modal {
     position: relative;
@@ -7383,6 +7422,7 @@
 
 <!-- 사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 화면일 때만 표시되는 fixed chip -->
 <div class="magic-mode-chip" id="magicModeChip">🧙‍♂️ 마법의 소라고동</div>
+<div class="reflection-mode-chip" id="reflectionModeChip">🌊 숙고의 방</div>
 
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
@@ -7454,8 +7494,11 @@
 <div class="app" style="display:none;">
   <div class="header">
     <div class="logo">🐚 소라고동</div>
-    <div class="date-pill">
-      <span class="sync-dot" id="syncDot"></span>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환">🐚</button>
+      <div class="date-pill">
+        <span class="sync-dot" id="syncDot"></span>
+      </div>
     </div>
   </div>
 
@@ -7769,6 +7812,7 @@
         <button class="reflection-screen-back" onclick="closeReflectionScreen()">←</button>
         <div class="reflection-screen-q" id="reflectionScreenQ"></div>
         <div class="reflection-screen-actions">
+          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환">🐚</button>
           <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론</button>
           <button class="reflection-pause-btn" id="reflectionDeleteBtn" title="삭제">🗑</button>
         </div>
@@ -7788,6 +7832,9 @@
       <div class="reflection-screen-header">
         <button class="reflection-screen-back" onclick="closeMagicHelpChat()">←</button>
         <div class="reflection-screen-q" id="magicHelpScreenQ"></div>
+        <div class="reflection-screen-actions">
+          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환">🐚</button>
+        </div>
       </div>
       <div class="reflection-chat-area" id="magicHelpArea"></div>
     </div>
@@ -8170,7 +8217,6 @@
       <button class="chat-end-btn" onclick="endChapter()" aria-label="이 대화 마무리" title="이 대화 마무리">✓</button>
       <button class="chat-plus-btn" id="chatPlusBtn" onclick="toggleChatPlusMenu(event)" aria-label="더보기">+</button>
     </div>
-    <button class="chat-mode-btn" id="chatModeBtn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환">🐚</button>
     <textarea class="chat-textarea" id="chatInput" placeholder="편하게 말해봐..." rows="1"></textarea>
     <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
   </div>
@@ -18202,6 +18248,8 @@ function showScreen(name) {
   // 사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 화면(list/detail)에서 일반 chat과 시각 구분
   // body.magic-mode → 보라/매직 그라디언트 헤더 chip + 색조 살짝 시프트
   document.body.classList.toggle('magic-mode', name === 'decisions' || name === 'decision-detail');
+  // 사용자 요청 2026-04-30: 숙고의 방 = 청록 차별. magic 보라 vs reflection 청록.
+  document.body.classList.toggle('reflection-mode', name === 'reflection');
   if (name === 'chat') {
     rotateChatPlaceholder();  // V3.10: 매번 다른 힌트
     // 사용자 요청 2026-04-29: 채팅 진입 시 _stuckToBottom 강제 true (다시 들어오면 맨 아래 보고 싶어함)
@@ -19916,12 +19964,16 @@ function toggleChatModel() {
   }
 }
 function updateChatModeBtn() {
-  const btn = document.getElementById('chatModeBtn');
-  if (!btn) return;
+  // 사용자 요청 2026-04-30: 모델 토글 4곳 통일 (메인 헤더 + 숙고의 방 + 마법 helpChat + 돌연변이 임시대화창). 모든 .js-chat-mode-btn 인스턴스 동기 갱신.
   const useOpus = !!(state.preferences && state.preferences.useOpus);
-  btn.classList.toggle('opus', useOpus);
-  btn.textContent = useOpus ? '🦉' : '🐚';
-  btn.setAttribute('title', useOpus ? '🦉 Opus 모드 (잔액 5x 빠르게 차감) — 누르면 Sonnet으로' : '🐚 Sonnet 모드 (기본) — 누르면 Opus로');
+  const titleAttr = useOpus
+    ? '🦉 Opus 모드 (잔액 5x 빠르게 차감) — 누르면 Sonnet으로'
+    : '🐚 Sonnet 모드 (기본) — 누르면 Opus로';
+  document.querySelectorAll('.js-chat-mode-btn').forEach(btn => {
+    btn.classList.toggle('opus', useOpus);
+    btn.textContent = useOpus ? '🦉' : '🐚';
+    btn.setAttribute('title', titleAttr);
+  });
 }
 
 async function generateAIResponse(modelOverride) {
@@ -21697,6 +21749,7 @@ function _renderMutationChat() {
             </div>
             <div class="mutation-chat-header-sub" id="mutationChatSubtitle"></div>
           </div>
+          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환" style="margin-right:8px;">🐚</button>
           <button class="mutation-chat-close" onclick="closeMutationChat(false)" aria-label="닫기">✕</button>
         </div>
         <div class="mutation-chat-area" id="mutationChatArea"></div>
@@ -21705,6 +21758,7 @@ function _renderMutationChat() {
     `;
     overlay.onclick = (e) => { if (e.target === overlay) closeMutationChat(false); };
     document.body.appendChild(overlay);
+    if (typeof updateChatModeBtn === 'function') updateChatModeBtn();
   }
   // V4-fix v2: footer는 매번 재렌더 (confirm bar 분기)
   // 선택된 가지 — 모든 'options' 메시지 중 selectedRef 위치

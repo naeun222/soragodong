@@ -67,12 +67,12 @@ soragodong-repo/
 배포: **Cloudflare Pages** (Vercel X — Hobby tier 상업적 사용 금지로 마이그레이션 완료 2026-04-30).
 브랜치: `v4-dev` = preview, `main` = production.
 
-## Push 정책 (사용자 명시)
+## Push 정책 (사용자 명시 2026-04-30 정정)
 
-1. **자동 push 금지.** v4-dev든 main이든 사용자 요청 시 또는 batch threshold 도달 시만.
-2. **v4-dev 우선:** 평소 commit은 v4-dev에. 10 commit 정도 모이면 push.
-3. **main 직접 push:** 사용자가 "main에 올려" 라고 명시할 때만. main에 push 직전 backup branch (`main-backup-YYYY-MM-DD-N`) 만들기.
-4. main 직접 push 차단 hook 있어 어차피 막힘 — v4-dev → main merge 흐름 사용.
+1. **v4-dev / main 둘 다 push 항상 허락** (사용자 명시). 옛 정책 (자동 push 금지 / batch 10 commit / 명시 허락 필요) 무효.
+2. **commit 후 자연스러운 시점에 push** — 한 작업 단위 마무리 후 또는 사용자가 "수정 다 하고 push" 명시 시.
+3. **main 직접 push 시 backup branch** (`main-backup-YYYY-MM-DD-N`) 사용자가 별도 요청 시만. 옛 의무 항목 무효.
+4. **v4-dev 위주** — 평소 작업 v4-dev. main 은 사용자 명시 또는 큰 단위 merge 시점.
 
 ## 작업 흐름
 
@@ -331,7 +331,9 @@ index.html 거대한 단일 파일. Grep 적극 활용:
 - [ ] **첫 진단 JSON parse error 박힘**: 신규 사용자 quiz 시 "첫 진단 받기" 클릭하면 `실패: JSON Parse error: Expected ']' - 나중에 다시` 뜸. AI 응답 JSON 파싱 robust 박아야 (불완전 JSON 시 재시도 또는 partial parse).
 - [ ] **첫 진단 quiz 자체 재검토**: 사용자 본인 만족 X — "불필요하게 사용자한테 막 요구하는 느낌". skip 더 부드럽게 / 또는 quiz 자체 폐기 / 또는 자연 대화로 흡수 검토.
 - [ ] **첫 진단 → 튜토리얼 대화탭 통합 (사용자 요청 2026-04-30)**: 5문항 quiz form 폐기. 대신 코어 튜토리얼 대화탭에서 자연스러운 대화로 정보 수집 → AI 가설 추출 → '나 탭' (traits/values/patterns) 에 자동 표시. 폼 X, 대화 흐름 안에서 흡수.
-- [ ] **시드데이터 + 리뷰 변경사항 반영 X 진단 (사용자 보고 2026-04-30)**: 시드데이터 넣은 후 리뷰 돌리면 최근 변경/추가가 결과에 반영 안 됨. cache / 옛 transcript / 시드 ID prefix 무시 흐름 / 리뷰 input window 등 의심. 재현 후 진단.
+- [ ] **시드데이터 + 리뷰 변경사항 반영 X 진단 (사용자 보고 2026-04-30)**: 시드데이터 넣은 후 리뷰 돌리면 최근 변경/추가가 결과에 반영 안 됨. cache / 옛 transcript / 시드 ID prefix 무시 흐름 / 리뷰 input window 등 의심. 재현 후 진단. → 1차 fix 적용 (chapters/topicCards/pearls/archive/insights inject + monthly cutoffEnd + chat user-only -40). verify 필요.
+- [ ] **gh-pages 에러 (사용자 보고 2026-04-30)**: GitHub Pages 의 gh-pages 항상 에러. 사용자: "이거 push 안 하면 안 되나? 또는 deploy 안 하면?" → 진단: cloudflare pages 가 main 배포 — gh-pages 무관. workflow 또는 repo 설정 확인 후 제거 검토.
+- [ ] **마법의 방 UI 변경 (사용자 명시 2026-04-30 — 진행 보류)**: "마법의 방 UI 바꿔. 숙고의 방처럼 대화되게" — 정확 의도 확인 필요 (결정 화면 #screen-decisions 자체 대화 형식 변경? helpChat 진입 path 더 명확? 결정 입력 폼 → 대화 폼?). 큰 작업 — 사용자 의도 명확 받은 후 진행.
 
 ### 사용자 대기 노트 (우선순위 낮음)
 
