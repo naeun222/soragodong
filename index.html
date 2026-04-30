@@ -9240,7 +9240,36 @@ async function e2eeForgotPasswordReset() {
     alert('cloud 저장 실패: ' + (e.message || e) + '\n\n새로고침 후 자동 재시도됩니다.');
   }
 
-  // 7. 완료 → reload
+  // 7. 사용자 보고 2026-04-30 review (agent P1-4): backup row 들의 _e2eeRecovery 도 strip.
+  // 안 그러면 다음 setupE2EE 시 multi-source fallback 의 unwrapOnlySuccess path 가 옛 wrap 기반 reload 사이클 트리거.
+  // best-effort — 실패해도 reload 진행.
+  try {
+    const backupIds = [V4_TESTER_BACKUP_USER_ID, V4_AUTO_BACKUP_USER_ID, V4_MANUAL_BACKUP_USER_ID];
+    for (const uid of backupIds) {
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${uid}&select=data&limit=1`,
+          { headers: authHeaders() }
+        );
+        if (!r.ok) continue;
+        const rows = await r.json();
+        if (!rows[0] || !rows[0].data || !rows[0].data._e2eeRecovery) continue;
+        const cleaned = { ...rows[0].data };
+        delete cleaned._e2eeRecovery;
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${uid}`,
+          {
+            method: 'PATCH',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ data: cleaned })
+          }
+        );
+        console.log('[forgot-password] backup row ' + uid + ' 의 _e2eeRecovery strip');
+      } catch (e) { console.warn('[forgot-password] backup row ' + uid + ' strip 실패:', e); }
+    }
+  } catch (e) { console.warn('[forgot-password] backup recovery cleanup 실패:', e); }
+
+  // 8. 완료 → reload
   alert('✦ 복원 완료. 새로고침합니다.');
   location.reload();
 }
@@ -9880,16 +9909,17 @@ async function _e2eeRestoreFromPassphrase(password) {
     throw err;
   }
   console.log('[e2ee] recovery 후보 ' + candidates.length + '개:', candidates.map(c => c.source));
-  // 각 후보 시도 — 비번 unwrap + cloud body decrypt 둘 다 통과해야 truth
+  // 각 후보 시도 — 비번 unwrap + cloud body decrypt 둘 다 통과해야 truth.
+  // 사용자 보고 2026-04-30 review (agent): unwrap 만 성공한 fallback 적용 시 stale master key 가 localStorage 에 영구 저장 → reload 사이클 무한 반복 risk. 제거.
+  // unwrap OK + cloud body 실패 = master key 와 cloud body 가 별도 wrap 된 상태 — 평문 backup 복원 (forgot-password) 흐름으로 유도가 안전.
   const cloudBody = window._e2eePendingRecovery && window._e2eePendingRecovery._encryptedBody;
-  let unwrapOnlySuccess = null;  // unwrap 만 성공한 첫 후보 (cloud body 손상 시 fallback)
   for (const cand of candidates) {
     try {
       const passwordKey = await _e2eePassphraseToKey(password, cand.salt);
       const masterKeyB64 = await _e2eeDecrypt(cand.encryptedMasterKey, passwordKey);
       if (!masterKeyB64) continue;  // 이 source 비번 mismatch
       const masterKey = await _e2eeImportKey(masterKeyB64);
-      // cloud body verify
+      // cloud body verify — 통과해야만 valid
       if (cloudBody) {
         let bodyOk = false;
         try {
@@ -9899,12 +9929,11 @@ async function _e2eeRestoreFromPassphrase(password) {
           console.warn('[e2ee] ' + cand.source + ' cloud body decrypt 예외:', e);
         }
         if (!bodyOk) {
-          console.warn('[e2ee] ' + cand.source + ' unwrap OK 인데 cloud body decrypt 실패. 다음 후보 시도.');
-          if (!unwrapOnlySuccess) unwrapOnlySuccess = { masterKey, masterKeyB64, cand };
+          console.warn('[e2ee] ' + cand.source + ' unwrap OK 인데 cloud body decrypt 실패. 다음 후보 시도. (이 master key 는 저장 X — stale risk 회피)');
           continue;
         }
       }
-      // 성공 — master key 박고 recovery 도 best source 로 갱신
+      // 성공 — master key 저장하고 recovery 도 best source 로 갱신
       _e2eeMasterKey = masterKey;
       localStorage.setItem(_E2EE_LOCAL_KEY, masterKeyB64);
       localStorage.setItem('soragodong_v4_e2ee_recovery', JSON.stringify({ salt: cand.salt, encryptedMasterKey: cand.encryptedMasterKey }));
@@ -9915,15 +9944,7 @@ async function _e2eeRestoreFromPassphrase(password) {
       continue;
     }
   }
-  // 모든 후보가 cloud body verify 실패 → unwrap 만 성공한 거라도 박음 (사용자 비번 옳다는 증거. cloud body 는 별도 master key 로 wrap된 상태 — submit 단계의 blob 손상 alert 흐름으로 자연스럽게 진행)
-  if (unwrapOnlySuccess) {
-    console.warn('[e2ee] cloud body 푸는 master key 없음. ' + unwrapOnlySuccess.cand.source + ' 의 master key 박음 (unwrap 만 성공). cloud body 평문 backup 복원 필요.');
-    _e2eeMasterKey = unwrapOnlySuccess.masterKey;
-    localStorage.setItem(_E2EE_LOCAL_KEY, unwrapOnlySuccess.masterKeyB64);
-    localStorage.setItem('soragodong_v4_e2ee_recovery', JSON.stringify({ salt: unwrapOnlySuccess.cand.salt, encryptedMasterKey: unwrapOnlySuccess.cand.encryptedMasterKey }));
-    return unwrapOnlySuccess.masterKey;
-  }
-  console.warn('[e2ee] 모든 recovery 후보 (' + candidates.length + '개) unwrap 실패 — 비번 mismatch 또는 모든 source 손상');
+  console.warn('[e2ee] 모든 recovery 후보 (' + candidates.length + '개) — 어느 것도 비번 unwrap + cloud body decrypt 둘 다 통과 X. 비번 mismatch 또는 mk/recovery 분기 (forgot-password 권장).');
   return null;
 }
 
@@ -10579,14 +10600,33 @@ async function saveToCloudNow() {
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
       const encryptedBody = await _e2eeEncrypt(JSON.stringify(sensitiveBody, _serializeReplacer), _e2eeMasterKey);
-      // 사용자 보고 2026-04-30 데이터 손실 fix (새 device 복원): encryptedMasterKey + salt도 cloud에 박음.
-      // password로 이미 암호화된 상태라 cloud에 박아도 안전 (회사도 password 모르면 못 풀음).
-      // 안 박으면 새 device에서 복원 불가능.
+      // 사용자 보고 2026-04-30 데이터 손실 fix (새 device 복원): encryptedMasterKey + salt도 cloud에 저장.
+      // password로 이미 암호화된 상태라 cloud에 두어도 안전 (회사도 password 모르면 못 풀음).
+      // 없으면 새 device에서 복원 불가능.
       let recoveryInfo = null;
       try {
         const localRecovery = localStorage.getItem('soragodong_v4_e2ee_recovery');
         if (localRecovery) recoveryInfo = JSON.parse(localRecovery);
       } catch {}
+      // 사용자 보고 2026-04-30 review (agent P0-1): localStorage recovery 비어있으면 cloud 의 옛 _e2eeRecovery 보존.
+      // 안 그러면 cloud null 덮어쓰기 → 모든 device 영구 lock-out (Safari ITP / iOS PWA / 시크릿 / 청소 트리거).
+      if (!recoveryInfo) {
+        try {
+          const r = await fetch(
+            `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=data&limit=1`,
+            { headers: authHeaders() }
+          );
+          if (r.ok) {
+            const rows = await r.json();
+            const cloudRec = rows[0] && rows[0].data && rows[0].data._e2eeRecovery;
+            if (cloudRec && cloudRec.salt && cloudRec.encryptedMasterKey) {
+              recoveryInfo = cloudRec;
+              try { localStorage.setItem('soragodong_v4_e2ee_recovery', JSON.stringify(cloudRec)); } catch {}
+              console.log('[saveToCloudNow] localStorage recovery 비어있어서 cloud 의 _e2eeRecovery 보존 + localStorage 복원');
+            }
+          }
+        } catch (e) { console.warn('[saveToCloudNow] cloud recovery preserve fetch 실패:', e); }
+      }
       // 평문 메타 (consent / billing / version / preferences 일부)
       const metaBody = {
         version: state.version,
