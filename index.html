@@ -3976,6 +3976,34 @@
     color: var(--text-dim);
     line-height: 1.7;
   }
+
+  /* === 모든 입력창 음성 button (사용자 명시 2026-04-30 ultrathink: chat / reflection / magic / mutation 4곳 통합) === */
+  .input-mic-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .input-mic-btn:hover { background: var(--surface3); border-color: var(--border-strong); }
+  .input-mic-btn:active { transform: scale(0.92); }
+  .input-mic-btn.speech-active {
+    background: rgba(220,80,80,0.15);
+    border-color: rgba(220,80,80,0.6);
+    color: #e07070;
+    animation: speechPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes speechPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220,80,80,0); }
+    50%      { box-shadow: 0 0 0 6px rgba(220,80,80,0.18); }
+  }
   .input-modal-title {
     font-family: 'Gowun Batang', serif;
     font-size: 17px;
@@ -8222,6 +8250,7 @@
     <div class="reflection-input-bar" id="reflectionInputBar">
       <div class="reflection-input-wrap">
         <textarea class="chat-textarea" id="reflectionInput" placeholder="천천히, 한 각도씩..." rows="1"></textarea>
+        <button class="input-mic-btn" id="reflectionMicBtn" onclick="_toggleInputSpeech('reflectionInput', 'reflectionMicBtn')" aria-label="음성 입력" title="음성 입력">🎤</button>
         <button class="send-btn" onclick="sendReflectionChat()">↑</button>
       </div>
     </div>
@@ -8240,6 +8269,7 @@
     <div class="reflection-input-bar" id="magicHelpInputBar">
       <div class="reflection-input-wrap">
         <textarea class="chat-textarea" id="magicHelpInput" placeholder="🧙‍♂️ 마법사한테 풀어놔 — 답 대신 더 깊이 보게 도와줘" rows="1"></textarea>
+        <button class="input-mic-btn" id="magicHelpMicBtn" onclick="_toggleInputSpeech('magicHelpInput', 'magicHelpMicBtn')" aria-label="음성 입력" title="음성 입력">🎤</button>
         <button class="send-btn" onclick="sendMagicHelpMessage()">↑</button>
       </div>
     </div>
@@ -8617,6 +8647,7 @@
       <button class="chat-plus-btn" id="chatPlusBtn" onclick="toggleChatPlusMenu(event)" aria-label="더보기">+</button>
     </div>
     <textarea class="chat-textarea" id="chatInput" placeholder="편하게 말해봐..." rows="1"></textarea>
+    <button class="input-mic-btn" id="chatMicBtn" onclick="_toggleInputSpeech('chatInput', 'chatMicBtn')" aria-label="음성 입력" title="음성 입력">🎤</button>
     <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
   </div>
 </div>
@@ -10486,6 +10517,74 @@ async function runIntakeFlow() {
   });
 }
 
+// ─── 공용 입력창 음성 인식 (사용자 명시 2026-04-30 ultrathink: chat / reflection / magic / mutation 4곳) ──────────
+window._inputSpeechActive = null;  // { recognition, btnEl, taEl }
+
+window._toggleInputSpeech = function(taId, btnId) {
+  const ta = document.getElementById(taId);
+  const btn = document.getElementById(btnId);
+  if (!ta || !btn) return;
+  // 같은 button 재누름 = stop
+  if (window._inputSpeechActive && window._inputSpeechActive.btnEl === btn) {
+    try { window._inputSpeechActive.recognition?.stop(); } catch {}
+    return;
+  }
+  // 다른 곳 진행 중이면 먼저 stop
+  if (window._inputSpeechActive) {
+    try { window._inputSpeechActive.recognition?.stop(); } catch {}
+    window._inputSpeechActive = null;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    showToast('🎤 음성 인식이 이 브라우저에서는 안 돼. 직접 적어줘 ✦');
+    return;
+  }
+  // 첫 사용 = privacy 안내 1회
+  if (!localStorage.getItem('soragodong_v4_speech_consent')) {
+    if (!confirm('🎤 음성 입력 안내\n\n음성은 Google 서버를 거쳐 텍스트로 변환됩니다. 동의하시고 사용하시겠어요?')) return;
+    try { localStorage.setItem('soragodong_v4_speech_consent', '1'); } catch {}
+  }
+  const recognition = new SR();
+  recognition.lang = 'ko-KR';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  let finalText = ta.value ? ta.value + ' ' : '';
+  let silenceTimer = null;
+  const resetSilence = () => {
+    if (silenceTimer) clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => { try { recognition.stop(); } catch {} }, 5000);
+  };
+  recognition.onstart = () => {
+    btn.classList.add('speech-active');
+    btn.textContent = '⏹';
+    resetSilence();
+  };
+  recognition.onresult = (event) => {
+    resetSilence();
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const t = event.results[i][0].transcript;
+      if (event.results[i].isFinal) finalText += t + ' ';
+      else interim += t;
+    }
+    ta.value = (finalText + interim).trim();
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+  recognition.onerror = (e) => {
+    console.warn('[input speech] error', e);
+    btn.classList.remove('speech-active');
+    btn.textContent = '🎤';
+  };
+  recognition.onend = () => {
+    btn.classList.remove('speech-active');
+    btn.textContent = '🎤';
+    if (silenceTimer) clearTimeout(silenceTimer);
+    window._inputSpeechActive = null;
+  };
+  window._inputSpeechActive = { recognition, btnEl: btn, taEl: ta };
+  try { recognition.start(); } catch (e) { console.warn('[input speech] start fail', e); }
+};
+
 // 사용자 명시 2026-04-30 ultrathink: 코어 #1 chat_intake_entry step 안 button 핸들러. button 누름 → 모달 풀 흐름 → 끝나면 onbNext 자동 진행.
 window._startIntakeFromTutorial = async function() {
   if (document.getElementById('intakeModalOverlay')) return;
@@ -12231,7 +12330,7 @@ const ONBOARDING_STEPS = [
     id: 'click_strategy',
     targetSelector: '.msg-action[onclick^="saveMsgAsStrategy"]',
     title: '🧬 전략으로',
-    body: '4단 응답 아래에 <b>"🧬 전략으로"</b> 버튼이 있어. 한 번 눌러볼래?<br><br><b>누르고 잠깐 기다려야 돼!</b> AI가 전략 카드 만들어서 "🧬 전략 저장됨"으로 바뀌면 그때 "눌렀어 →" 눌러줘.<br><br><span class="small">응답이 길면 아래로 스크롤해서 찾아봐.</span>',
+    body: '4단 응답 아래에 <b>"🧬 전략으로"</b> 버튼이 있어. 한 번 눌러볼래?<br><br><span class="small">응답이 길면 아래로 스크롤해서 찾아봐.</span>',
     waitFor: 'click',
     advanceDelay: 1200,
     manualAdvance: true,
@@ -22949,6 +23048,7 @@ function _renderMutationChat() {
         </div>
         <div class="mutation-chat-input-row">
           <textarea class="mutation-chat-input" id="mutationChatInput" placeholder="자유롭게 대화..." rows="1"></textarea>
+          <button class="input-mic-btn" id="mutationMicBtn" onclick="_toggleInputSpeech('mutationChatInput', 'mutationMicBtn')" aria-label="음성 입력" title="음성 입력">🎤</button>
           <button class="mutation-chat-send" id="mutationChatSendBtn" onclick="sendMutationMessage()">↑</button>
         </div>
         <div class="mutation-chat-actions">
