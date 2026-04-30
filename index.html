@@ -8682,8 +8682,14 @@
       </div>
 
       <div class="input-group">
-        <div class="input-label">😴 어젯밤 수면</div>
-        <div class="time-pair">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <div class="input-label" style="margin-bottom:0;">😴 어젯밤 수면</div>
+          <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--text-dim); cursor:pointer; user-select:none; padding:4px 8px; border-radius:8px; background:var(--surface);">
+            <input type="checkbox" id="allNighterToggle" onchange="toggleAllNighter(this.checked)" style="margin:0; cursor:pointer;">
+            🌙 밤샘
+          </label>
+        </div>
+        <div class="time-pair" id="sleepTimePair">
           <div class="time-input-wrap">
             <div class="time-label">잠든 시각</div>
             <input type="time" id="sleepStart" value="00:00">
@@ -8693,6 +8699,7 @@
             <input type="time" id="sleepEnd" value="07:30">
           </div>
         </div>
+        <div id="allNighterMsg" style="display:none; font-size:13px; color:var(--accent2); padding:14px; text-align:center; background:rgba(126,200,200,0.08); border:1px dashed rgba(126,200,200,0.3); border-radius:10px;">🌙 밤샘으로 기록 — 수면 시간 X</div>
         <div style="font-size:11px; color:var(--text-dim); margin-top:6px;" id="sleepDuration"></div>
       </div>
 
@@ -9262,7 +9269,7 @@
       <details class="settings-collapse settings-collapse-danger">
         <summary>⚠️ 펼쳐서 사용 (되돌릴 수 없음)</summary>
         <div class="settings-collapse-body">
-          <button class="btn-secondary btn-danger" onclick="resetAll()">🔄 모든 데이터 초기화 (V4)</button>
+          <button class="btn-secondary btn-danger" onclick="resetAll()">🔄 모든 데이터 초기화</button>
           <div class="settings-hint" style="margin-top:4px; margin-bottom:12px;">
             V4 데이터만 삭제 (V3 prod 안 건드림). 계정 유지.
           </div>
@@ -21165,6 +21172,12 @@ function prefillCheckinFromEntry() {
   if (startEl0) startEl0.value = '';
   if (endEl0) endEl0.value = '';
   if (noteEl0) noteEl0.value = '';
+  // 사용자 명시 2026-04-30: 밤샘 토글 reset
+  const allNighterReset = document.getElementById('allNighterToggle');
+  if (allNighterReset) {
+    allNighterReset.checked = false;
+    if (typeof toggleAllNighter === 'function') toggleAllNighter(false);
+  }
 
   if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart || entry.music || entry.photo)) {
     // 오늘 체크인 안 함 — 새로 작성 모드
@@ -21190,7 +21203,12 @@ function prefillCheckinFromEntry() {
     const vitBtns = document.querySelectorAll('#screen-checkin .vitality-btn');
     if (vitBtns[entry.vitality - 1]) vitBtns[entry.vitality - 1].classList.add('selected');
   }
-  // sleep
+  // sleep — 사용자 명시 2026-04-30: 밤샘 토글 상태 복원 (entry.allNighter)
+  const allNighterEl = document.getElementById('allNighterToggle');
+  if (allNighterEl) {
+    allNighterEl.checked = !!entry.allNighter;
+    if (typeof toggleAllNighter === 'function') toggleAllNighter(!!entry.allNighter);
+  }
   if (startEl0 && entry.sleepStart) startEl0.value = entry.sleepStart;
   if (endEl0 && entry.sleepEnd) endEl0.value = entry.sleepEnd;
   // note
@@ -21250,6 +21268,16 @@ function updateSleepDuration() {
   document.getElementById('sleepDuration').textContent = `약 ${hours}시간 ${mins}분`;
 }
 
+// 사용자 명시 2026-04-30: 밤샘 토글 — 시간 입력 hide / 메시지 show.
+function toggleAllNighter(checked) {
+  const pair = document.getElementById('sleepTimePair');
+  const msg = document.getElementById('allNighterMsg');
+  const dur = document.getElementById('sleepDuration');
+  if (pair) pair.style.display = checked ? 'none' : '';
+  if (msg) msg.style.display = checked ? 'block' : 'none';
+  if (dur) dur.style.display = checked ? 'none' : '';
+}
+
 function toggleOptional(key) {
   const toggle = document.querySelector(`[onclick="toggleOptional('${key}')"]`);
   const expand = document.getElementById('expand-' + key);
@@ -21268,14 +21296,23 @@ function selectQuick(btn, key, value) {
 }
 
 async function submitCheckin() {
+  const allNighter = !!document.getElementById('allNighterToggle')?.checked;
   const sleepStart = document.getElementById('sleepStart').value;
   const sleepEnd = document.getElementById('sleepEnd').value;
   const note = document.getElementById('checkinNote').value;
   const key = todayKey();
   let entry = state.entries.find(e => e.date === key);
   if (!entry) { entry = { date: key }; state.entries.push(entry); }
-  entry.sleepStart = sleepStart;
-  entry.sleepEnd = sleepEnd;
+  // 사용자 명시 2026-04-30: 밤샘 시 sleepStart/End 비우고 allNighter flag 만 저장.
+  if (allNighter) {
+    entry.allNighter = true;
+    entry.sleepStart = '';
+    entry.sleepEnd = '';
+  } else {
+    entry.allNighter = false;
+    entry.sleepStart = sleepStart;
+    entry.sleepEnd = sleepEnd;
+  }
   entry.vitality = currentCheckin.vitality;
   entry.mood = currentCheckin.mood;
   entry.note = note;
