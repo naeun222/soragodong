@@ -11111,18 +11111,42 @@ function _annualReviewBuildCardSummary(d) {
   `;
 }
 
-// 카드 13: 마지막 + 다음 1년 (사용자 명시 2026-04-30: 이전 그대로 유지)
+// 카드 13: 마지막 + 다음 1년 (사용자 명시 2026-04-30: 매거진 풍 — narrative slide 구조)
 function _annualReviewBuildCard9(d) {
   const f = d.final || {};
   const buttons = (f.buttons || []).map(b => `
-    <button class="ann-rv-final-btn">✦ ${escapeHtml(b)}</button>
+    <div style="font-size:13px; color:white; line-height:1.7; padding:5px 0;">✦ ${escapeHtml(b)}</div>
   `).join('');
   return `
     <div class="ann-rv-card ann-rv-card-8">
-      <div class="ann-rv-final-message">${f.message || ''}</div>
-      <div class="ann-rv-final-cta-label">${escapeHtml(f.ctaLabel || '')}</div>
-      <div class="ann-rv-final-buttons">${buttons}</div>
-      <div class="ann-rv-final-shell">🐚</div>
+      <div style="display:flex; flex-direction:column; align-items:center; max-width:340px; width:100%; box-sizing:border-box;">
+        <!-- 라벨 + 양쪽 가는 선 -->
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:24px;">
+          <div style="width:20px; height:1px; background:rgba(212,167,106,0.45);"></div>
+          <div class="stories-label" style="margin:0;">한 해, 한 단락</div>
+          <div style="width:20px; height:1px; background:rgba(212,167,106,0.45);"></div>
+        </div>
+        <!-- pull quote -->
+        <div style="position:relative; padding:8px 6px; margin-bottom:18px; width:100%;">
+          <div style="position:absolute; top:-12px; left:-8px; font-size:48px; line-height:1; color:rgba(212,167,106,0.55); font-family:'Gowun Batang', serif;">"</div>
+          <div style="font-size:17px; line-height:1.85; color:white; font-family:'Gowun Batang', serif; font-weight:400; text-align:center; padding:0 14px; letter-spacing:0.005em;">
+            ${(f.message || '').replace(/\n/g, '<br>')}
+          </div>
+          <div style="position:absolute; bottom:-30px; right:-4px; font-size:48px; line-height:1; color:rgba(212,167,106,0.55); font-family:'Gowun Batang', serif;">"</div>
+        </div>
+        <!-- ✦ separator -->
+        <div style="display:flex; align-items:center; gap:8px; margin:30px 0 18px; opacity:0.55;">
+          <div style="width:30px; height:1px; background:rgba(212,167,106,0.4);"></div>
+          <span style="color:rgba(212,167,106,0.75); font-size:11px;">✦</span>
+          <div style="width:30px; height:1px; background:rgba(212,167,106,0.4);"></div>
+        </div>
+        <!-- next: 다음 1년 — gradient highlight -->
+        <div style="padding:14px 16px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(212,167,106,0.10)); border-radius:14px; width:100%; box-sizing:border-box;">
+          <div style="font-size:10px; color:rgba(143,200,143,0.95); margin-bottom:8px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase;">${escapeHtml(f.ctaLabel || '다음 1년')}</div>
+          ${buttons}
+        </div>
+        <div class="ann-rv-final-shell" style="margin-top:20px;">🐚</div>
+      </div>
     </div>
   `;
 }
