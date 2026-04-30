@@ -1222,110 +1222,6 @@
     letter-spacing: 0.04em;
   }
 
-  /* === First-Touch Quiz / Result (사용자 요청 2026-04-30 ultrathink) === */
-  .ft-q { margin-bottom: 14px; }
-  .ft-q-label { font-size: 12px; color: var(--text); margin-bottom: 6px; font-weight: 500; }
-  .ft-q input[type="text"] {
-    width: 100%; padding: 8px 10px; font-size: 13px;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
-  }
-  .ft-options { display: flex; flex-wrap: wrap; gap: 6px; }
-  .ft-options label {
-    display: flex; align-items: center; gap: 5px;
-    font-size: 12px; padding: 6px 10px;
-    background: var(--surface); border-radius: 8px;
-    border: 1px solid var(--border);
-    cursor: pointer;
-    user-select: none;
-  }
-  .ft-options label:hover { background: rgba(139,126,196,0.10); }
-  .ft-options input[type="radio"], .ft-options input[type="checkbox"] { margin: 0; cursor: pointer; }
-
-  /* === First-Touch Step Wizard (사용자 요청 2026-04-30 ultrathink: step 방식 + visual) === */
-  .ft-wizard { position: relative; min-height: 320px; }
-  .ft-progress { display: flex; gap: 6px; justify-content: center; margin: 4px 0 18px; }
-  .ft-progress-dot {
-    width: 24px; height: 4px; border-radius: 2px;
-    background: var(--border);
-    transition: background 0.4s, transform 0.3s;
-  }
-  .ft-progress-dot.done { background: var(--accent); }
-  .ft-progress-dot.current { background: linear-gradient(90deg, var(--accent), rgba(212,167,106,0.4)); transform: scaleY(1.5); }
-  .ft-step { display: none; animation: ftFadeIn 0.35s ease-out; }
-  .ft-step.active { display: block; }
-  @keyframes ftFadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .ft-step-emoji {
-    font-size: 44px; text-align: center; margin: 10px 0 6px;
-    animation: ftEmojiBounce 0.7s ease-out;
-  }
-  @keyframes ftEmojiBounce {
-    0%   { transform: scale(0.4) rotate(-8deg); opacity: 0; }
-    60%  { transform: scale(1.15) rotate(4deg); opacity: 1; }
-    100% { transform: scale(1) rotate(0); }
-  }
-  .ft-step-title {
-    font-size: 17px; font-weight: 600; color: var(--text);
-    text-align: center; margin-bottom: 4px; line-height: 1.5;
-  }
-  .ft-step-sub {
-    font-size: 11px; color: var(--text-soft);
-    text-align: center; margin-bottom: 18px; line-height: 1.6;
-  }
-  .ft-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-  .ft-card-grid.three { grid-template-columns: 1fr 1fr; }
-  .ft-card {
-    display: flex; flex-direction: column; align-items: center;
-    padding: 14px 10px;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-    text-align: center;
-  }
-  .ft-card:hover { border-color: rgba(212,167,106,0.5); transform: translateY(-1px); }
-  .ft-card.selected {
-    background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(212,167,106,0.06));
-    border-color: var(--accent);
-  }
-  .ft-card-icon { font-size: 24px; margin-bottom: 4px; }
-  .ft-card-label { font-size: 12px; color: var(--text); font-weight: 500; line-height: 1.4; }
-  .ft-card input { display: none; }
-  .ft-tag-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-  .ft-tag {
-    padding: 7px 12px; font-size: 12px;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 100px;
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.2s;
-  }
-  .ft-tag:hover { border-color: rgba(212,167,106,0.4); }
-  .ft-tag.selected {
-    background: linear-gradient(135deg, rgba(212,167,106,0.20), rgba(212,167,106,0.08));
-    border-color: var(--accent);
-    color: var(--accent);
-    font-weight: 500;
-  }
-  .ft-tag input { display: none; }
-  .ft-step-input {
-    width: 100%; padding: 12px 14px;
-    font-size: 15px;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    color: var(--text);
-    margin-bottom: 12px;
-  }
-  .ft-step-input:focus { outline: none; border-color: var(--accent); }
-  .ft-nav { display: flex; gap: 8px; margin-top: 14px; }
-  .ft-nav button { flex: 1; }
-
   /* === Magic Room Visual Mode (사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 vs 일반 chat 분간) === */
   .magic-mode-chip {
     display: none;
@@ -1657,77 +1553,47 @@
     padding: 60px 28px 150px; box-sizing: border-box;
     animation: ann-rv-fadeIn 0.5s ease;
   }
-  /* 슬라이드 노래 player (사용자 명시 2026-04-30: artwork 강화 + 자동 재생) */
+  /* 사용자 명시 2026-04-30: CD 왼쪽 상단 / artwork 만 / 제목·아티스트·button 제거 / click toggle */
   .ann-rv-song {
     position: absolute;
-    bottom: 84px; left: 50%;
-    transform: translateX(-50%);
-    width: 92%; max-width: 320px;
+    top: 56px; left: 18px;
     z-index: 10;
   }
-  .ann-rv-song-info {
-    display: flex; gap: 10px; align-items: center;
-    background: rgba(20,18,30,0.85);
-    border: 1px solid rgba(255,255,255,0.22);
-    border-radius: 14px;
-    padding: 7px 12px 7px 7px;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.45);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-  /* 사용자 명시 2026-04-30: artwork = LP 회전 disc (재생 중만 회전) */
+  /* CD 본체 = round artwork + LP spin (재생 중만) */
   .ann-rv-song-art {
-    width: 48px; height: 48px;
+    width: 52px; height: 52px;
     border-radius: 50%;
     object-fit: cover;
-    flex-shrink: 0;
     background: linear-gradient(135deg, #d4a76a, #8b7ec4);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.55), inset 0 0 0 2px rgba(0,0,0,0.4);
-    animation: ann-rv-spin 10s linear infinite;
+    box-shadow:
+      0 4px 16px rgba(0,0,0,0.55),
+      inset 0 0 0 2px rgba(0,0,0,0.55),
+      inset 0 0 0 4px rgba(255,255,255,0.06);
+    animation: ann-rv-spin 8s linear infinite;
     animation-play-state: paused;
+    cursor: pointer;
+    display: block;
+    border: 1px solid rgba(255,255,255,0.12);
   }
   .ann-rv-song.playing .ann-rv-song-art {
     animation-play-state: running;
   }
+  .ann-rv-song-art:active { transform: scale(0.95); }
   @keyframes ann-rv-spin {
     to { transform: rotate(360deg); }
   }
-  .ann-rv-song-meta {
-    flex: 1; min-width: 0;
-    display: flex; flex-direction: column; gap: 2px;
-    overflow: hidden;
-  }
-  .ann-rv-song-title {
-    font-size: 12px; color: #f5e6c8; font-weight: 600;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .ann-rv-song-artist {
-    font-size: 10px; color: rgba(245,230,200,0.7);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .ann-rv-song-play {
-    width: 34px; height: 34px;
-    background: rgba(212,167,106,0.25);
-    border: 1px solid rgba(212,167,106,0.55);
+  /* CD 가운데 hole 점 — pseudo */
+  .ann-rv-song::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 8px; height: 8px;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid rgba(255,255,255,0.20);
     border-radius: 50%;
-    color: #f0d9a8;
-    font-size: 13px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    font-family: inherit;
-    transition: all 0.15s;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
   }
-  .ann-rv-song-play:hover { background: rgba(212,167,106,0.40); }
-  .ann-rv-song-play:active { transform: scale(0.92); }
-  .ann-rv-song-link {
-    color: rgba(245,230,200,0.55);
-    font-size: 14px;
-    text-decoration: none;
-    padding: 0 4px;
-    flex-shrink: 0;
-  }
-  .ann-rv-song-link:hover { color: rgba(245,230,200,0.95); }
   @keyframes ann-rv-fadeIn {
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -10699,7 +10565,6 @@ function openAnnualReviewPreview() {
   const data = {
     yearRange: '2025 → 2026',
     oneWord: '전환',
-    oneWordReason: "'왜 나는?'에서 '아 나 이런 사람'으로",
     persona: '회피하던 게 알고 보니 엔진이었던 사람',
     personaReason: '논문에서 도망간 다음 날, 4번 중 3번 활력이 +30% 였어',
     stats: [
@@ -10732,23 +10597,24 @@ function openAnnualReviewPreview() {
       friendHighLabel: '친구한테\n도움 준 횟수',
       conclusion: '올해는 <span>너 자신보다\n친구들을 더 챙긴 해</span>였어'
     },
+    // 사용자 명시 2026-04-30: 다 새싹 emoji X. 각 무기별 자기 시각 (구체 예시).
     tree: {
       embodied: [
-        { name: '마감 임박 신뢰', emoji: '🍃' },
-        { name: '환경 큐잉', emoji: '🍃' },
-        { name: '14일 숙성', emoji: '🍃' },
-        { name: '논문 = 회복', emoji: '🍃' }
+        { name: '마감 임박 신뢰',  emoji: '⚡' },
+        { name: '환경 큐잉 (폰 멀리)', emoji: '🏠' },
+        { name: '14일 숙성',       emoji: '🐚' },
+        { name: '논문 = 회복',     emoji: '📚' }
       ],
       growing: [
-        { name: '엄마 통화 후 산책', emoji: '🌳' },
-        { name: '새벽 4시 컷오프', emoji: '🌳' },
-        { name: '친구한테 약속', emoji: '🌳' },
-        { name: '딱 5분 룰', emoji: '🌳' }
+        { name: '엄마 통화 후 산책', emoji: '🚶' },
+        { name: '새벽 4시 컷오프',   emoji: '🌙' },
+        { name: '친구한테 약속',     emoji: '🤝' },
+        { name: '딱 5분 룰',         emoji: '⏱' }
       ],
       trying: [
-        { name: '오전 9시 책상', emoji: '🌿' },
-        { name: '감정 후 운동', emoji: '🌿' },
-        { name: '회의 30분 전', emoji: '🌿' }
+        { name: '오전 9시 책상',   emoji: '☀️' },
+        { name: '감정 후 운동',    emoji: '🏃' },
+        { name: '회의 30분 전 정리', emoji: '📋' }
       ],
       caption: '이제 이 정도는 너 혼자서도 해낼 수 있어 🐚'
     },
@@ -10774,6 +10640,28 @@ function openAnnualReviewPreview() {
       conclusion: '"지도교수 변경 X · 주제 변경"',
       date: '2025.11.28 → 12.11 · 14일'
     },
+    // 사용자 명시 2026-04-30: AI 포착 새 특징 (다음 phase = Opus 진짜 분석)
+    new_traits: [
+      { name: '환경 큐잉으로 살아가는 사람', evidence: '폰 다른 방·카페 자리·외재화 9번 시도' },
+      { name: '큰 결정 14일 숙성가',         evidence: '14일 후 결정 7개 중 6개 후회 X' },
+      { name: '회피 → 회복 패턴 사람',       evidence: '논문 한 다음 날 활력 +30% (4/3)' },
+      { name: '친구한테 빠르게 손 내미는 사람', evidence: '도움 준 23번 / 받은 0번' }
+    ],
+    // 사용자 명시 2026-04-30: 사운드 top 5 — 시드 8곡 중 가장 자주 들은 5곡 (가짜 plays)
+    sound_top5: [
+      { title: 'Vanilla Days', artist: 'LNGSHOT', plays: 47,
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/cf/a8/de/cfa8dee7-da1a-eb20-6074-741a4af1a1f6/cover_KM0024394_1.jpg/200x200bb.jpg' },
+      { title: 'Pink + White', artist: 'Frank Ocean', plays: 38,
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/bb/45/68/bb4568f3-68cd-619d-fbcb-4e179916545d/BlondCover-Final.jpg/200x200bb.jpg' },
+      { title: 'Love Hangover', artist: 'JENNIE & Dominic Fike', plays: 29,
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/1c/57/15/1c571583-f4bc-3307-6e5e-8b9e68d05913/196872850918.jpg/200x200bb.jpg' },
+      { title: "Moonwalkin'", artist: 'LNGSHOT', plays: 23,
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/74/94/a2/7494a26e-4756-c082-5709-8526127baee8/cover_KM0023994_1.jpg/200x200bb.jpg' },
+      { title: 'PINKY UP', artist: 'KATSEYE', plays: 18,
+        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/1a/77/46/1a77460d-493c-a795-92ef-84674905409e/26UMGIM25100.rgb.jpg/200x200bb.jpg' }
+    ],
+    // 사용자 명시 2026-04-30: 옛 V4 마지막 슬라이드 형식 — godongicon 크게 + narrative 풍부
+    summary: '봄에 너는 막혔어.\n여름엔 발견했고, 가을엔 시도했고,\n겨울엔 변곡점을 찍었어.\n\n그렇게 너는,\n분석하던 너에서 친구 된 너로 바뀌었어.\n\n다음 1년도, 너랑 함께.',
     final: {
       message: '1년 전 너 — "<strong>왜 나는?</strong>"\n지금 너 — "<strong>아 나 이런 사람</strong>"\n\n이 차이가 진짜 큰 거야.',
       ctaLabel: '다음 1년 같이 해볼 거',
@@ -10867,7 +10755,6 @@ function _annualReviewBuildCard1(d) {
     <div class="ann-rv-card ann-rv-card-1">
       <div class="ann-rv-year">${escapeHtml(d.yearRange)}</div>
       <div class="ann-rv-oneword">${escapeHtml(d.oneWord)}</div>
-      <div class="ann-rv-oneword-reason">${escapeHtml(d.oneWordReason || '')}</div>
       <div class="ann-rv-persona-wrap">
         <div class="ann-rv-persona">
           <div>너는</div>
@@ -11005,40 +10892,35 @@ function _annualReviewBuildCard5(d) {
   `;
 }
 
-// 카드 6: 모래사장 + 진주 — 사용자 명시 2026-04-30: 일기 13개+ 일 때 소라들로 하트 만들기.
+// 카드 6: 모래사장 — 사용자 명시 2026-04-30: 진짜 소라 X / 소라의 부름에서 획득한 아이템들 (SHELL_POOLS 다양 emoji).
 function _annualReviewBuildCard6(d) {
   const b = d.beach || {};
   const dc = b.diaryCount || 0;
+  // 시드 SHELL_POOLS 에서 다양 tier mix (light + daily + main + golden)
+  const shellEmojis = ['🐚','🐌','🪸','🌀','🐠','🐢','🦀','🦦','🐬','🦑','🐉','🦚','🪻'];
   let icons;
   if (dc >= 13) {
-    // 하트 outline 13개 소라 (사용자 명시 2026-04-30)
+    // 하트 outline 13개 (사용자 명시 2026-04-30)
     const heartCoords = [
-      // 위 lobe 왼쪽
       { top: 18, left: 26 }, { top: 10, left: 36 }, { top: 14, left: 44 },
-      // 위 lobe 오른쪽
       { top: 14, left: 56 }, { top: 10, left: 64 }, { top: 18, left: 74 },
-      // 양 outer
       { top: 32, left: 18 }, { top: 32, left: 82 },
-      // 중간
       { top: 48, left: 28 }, { top: 48, left: 72 },
-      // 점점 좁아지는 아래
       { top: 64, left: 38 }, { top: 64, left: 62 },
-      // 끝점
       { top: 80, left: 50 }
     ];
-    icons = heartCoords.map(c => ({ emoji: '🐚', top: c.top, left: c.left, size: 22 }));
-    // 하트 가운데 진주 빛 1개
-    icons.push({ emoji: '✨', top: 46, left: 50, size: 28, pearl: true });
+    icons = heartCoords.map((c, i) => ({ emoji: shellEmojis[i % shellEmojis.length], top: c.top, left: c.left, size: 24 }));
+    // 가운데 legendary ✨ 진주 (가장 빛난 1개)
+    icons.push({ emoji: '✨', top: 46, left: 50, size: 32, pearl: true });
   } else {
-    // 데이터 부족 시 흩어 (이전 7개)
     icons = [
       { emoji: '🐚', top: 28, left: 14, size: 30 },
       { emoji: '✨', top: 62, left: 42, size: 38, pearl: true },
-      { emoji: '🐚', top: 48, left: 75, size: 26 },
+      { emoji: '🐠', top: 48, left: 75, size: 26 },
       { emoji: '✨', top: 18, left: 58, size: 28, pearl: true },
-      { emoji: '🐚', top: 76, left: 22, size: 28 },
+      { emoji: '🪸', top: 76, left: 22, size: 28 },
       { emoji: '✨', top: 8,  left: 32, size: 22, pearl: true },
-      { emoji: '🐚', top: 56, left: 8,  size: 24 }
+      { emoji: '🐢', top: 56, left: 8,  size: 24 }
     ];
   }
   const iconsHtml = icons.map(ic => `
@@ -11220,17 +11102,10 @@ function _annualReviewRender() {
   const isPlaying = (window._annAudio && !window._annAudio.paused);
   const playState = isPlaying ? '⏸' : '▶';
   const playingClass = isPlaying ? ' playing' : '';
+  // 사용자 명시 2026-04-30: CD 만 (artwork) — 제목·아티스트·button 제거. CD click → toggle play/pause.
   const songHtml = songData ? `
     <div class="ann-rv-song${playingClass}">
-      <div class="ann-rv-song-info">
-        <img class="ann-rv-song-art" src="${escapeHtml(songData.artworkUrl || '')}" alt="">
-        <div class="ann-rv-song-meta">
-          <span class="ann-rv-song-title">${escapeHtml(songData.title)}</span>
-          <span class="ann-rv-song-artist">${escapeHtml(songData.artist)}</span>
-        </div>
-        <button class="ann-rv-song-play" onclick="_annTogglePlay(this)" aria-label="재생/일시정지">${playState}</button>
-        <a class="ann-rv-song-link" href="${escapeHtml(songData.url)}" target="_blank" rel="noopener" aria-label="Apple Music">↗</a>
-      </div>
+      <img class="ann-rv-song-art" src="${escapeHtml(songData.artworkUrl || '')}" alt="${escapeHtml((songData.title || '') + ' — ' + (songData.artist || ''))}" title="${escapeHtml(songData.title || '')} — ${escapeHtml(songData.artist || '')}" onclick="_annTogglePlay(this)">
     </div>
   ` : '';
   overlay.innerHTML = `
@@ -11290,17 +11165,15 @@ function _annualReviewClose() {
   }
 }
 
-// 사용자 명시 2026-04-30: 노래 ▶/⏸ 토글 + LP spin class 토글
-function _annTogglePlay(btn) {
+// 사용자 명시 2026-04-30: CD click → toggle play/pause + LP spin class
+function _annTogglePlay() {
   if (!window._annAudio) return;
   const songEl = document.querySelector('.ann-rv-song');
   if (window._annAudio.paused) {
     window._annAudio.play().catch(() => {});
-    if (btn) btn.textContent = '⏸';
     if (songEl) songEl.classList.add('playing');
   } else {
     window._annAudio.pause();
-    if (btn) btn.textContent = '▶';
     if (songEl) songEl.classList.remove('playing');
   }
 }
