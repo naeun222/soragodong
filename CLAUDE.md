@@ -107,11 +107,28 @@ soragodong-repo/
 ### Phase C — 백엔드 프록시 (활성)
 - 모든 Anthropic 호출 = `/api/chat` 프록시. 클라이언트 fetch interceptor 자동 swap.
 - 사용자 본인 API 키 모델 폐기 (`state.apiKey` 영구 wipe 마이그레이션).
-- AI 호출 가능 헬퍼: `_canAI()` = `state.apiKey || session.access_token` (30+ 곳 게이트 통일).
-- `_anthropicHeaders()` 헬퍼 — interceptor swap 후 dead pattern 17곳 cleanup 완료.
+- AI 호출 가능 헬퍼: `_canAI()` = `session.access_token` 기반 (30+ 곳 게이트 통일).
 - 인터셉터 401 자동 refresh + retry (`_refreshSessionForApi()` + inflight guard).
-- billing: 충전 잔액 (USD) + 월 정액. 무료 토큰 $2.86 (≈ 4,000원) 자동.
-- 결제: 토스 수동 송금 + Sonnet vision 자동 인증 (`verify-toss-receipt`). PG (포트원) 통합 대기.
+- 결제: PG (포트원) 통합 — 키 박히면 즉시 활성. legacy 토스 수동 송금 + Sonnet vision 자동 인증 (`verify-toss-receipt`) endpoint 보존 (legacy 호환).
+- chat.ts 에 `context.waitUntil()` — recordUsage / deductCost drop 방지 (사용자 보고 fix).
+- SSE buffer 잔여 처리 — 마지막 message_delta 누락 fix (사용자 보고 critical).
+
+### 결제 모델 — 2-tier 월정액 (사용자 명시 2026-04-30 ultrathink)
+- **무료 토큰**: 4,000원 ($2.86) — 가입 시 1회 자동 (pure API cost / 마진 X). 차감은 Anthropic 가격 그대로.
+- **Light** 8,900원/월 — cap $5 (~7,000원 어치). tagline "가볍게 매일 / 짧은 대화·간단 분석·매일 체크인 위주".
+- **Premium** 25,000원/월 — cap $15 (~21,000원 어치). claude pro 동일 가격. tagline "깊게 자주 / 긴 대화·4단 분석·마법고동·주간/월간 회고 풀 활용".
+- **추가팩** (cap 도달 시): Light 5,000원 = +$4 / Premium 7,000원 = +$5. 사용자 명시 **계속 결제 가능** (1회만 X).
+- **자동 갱신 X** — 다음 달 명시 결제로만 연장.
+- **tier 업그레이드 (Light→Premium)** — endpoint 살아있지만 UI 옵션 제거 (사용자 명시: 불필요). `/api/billing/upgrade-tier` 직접 호출만 가능.
+- **충전 plan 폐기** (CHARGE_PLANS / openChargeModal / showTossChargeModal / verifyTossReceipt 등 frontend ~280줄 정리). 기존 charge 잔액 (`credit_balance_usd > 0`) 사용자: legacy 호환 — 그대로 차감, 0 도달 후 구독 안내.
+- **cap 도달 모달** (claude-style): 추가팩 결제 (계속 가능) / 닫기 만. tier 업그레이드 / 다음 cycle 대기 옵션 X.
+- **DB**: `monthly_quota_usd` 컬럼 (tier cap, USD) + `subscription_plan` CHECK ('light' | 'premium' | NULL) + `deduct_credit_atomic` RPC 갱신 (cap 도달 시 credit_balance_usd 로 fall-through).
+- **migration 0004** ✅ 사용자 실행 완료.
+
+### 결제 critical bug fix 이력 (2026-04-30)
+- ✅ **잔액 race condition** — deductCost read-modify-write → `deduct_credit_atomic` RPC (FOR UPDATE row lock). 동시 chat 호출 시 차감 손실 fix.
+- ✅ **새로고침 시 잔액 자동 충전** — `ensureBillingRow` 가 transient fetch 에러 시 INSERT 재시도하며 balance reset 되던 critical 버그. fix: `Prefer: ignore-duplicates` + 자동 grant X (잔액 0 INSERT). 환영 모달 '받기' click 만 trigger (POST `/api/billing/welcome-bonus` — 별도 endpoint 예정).
+- ✅ **튜토리얼 끝 데이터 소실** — onbFinish 에서 `_testerModeBackupState` 메모리 backup null 시 cloud backup row (`me_v4_backup`) 폴백 + seed marker sweep 강제 (fallback 안전망).
 
 ### Admin 시스템 (jade6679@naver.com)
 - env `ADMIN_USER_ID = 4ba0a92e-7f79-45ec-8c48-b339d259382e` 필수.
@@ -128,18 +145,18 @@ soragodong-repo/
 - 업데이트 모달 dismiss 단위: `dismissedMajor` (V4). V5 등 새 메이저 시 재출현.
 
 ### 첫 진단 (코어 #1 chat_intake_entry — 인터랙티브 모달 풀 흐름)
-- 옛 5문항 quiz 폐기 (bd44e48) → 옛 snapshot 진단 폐기 (be30431). 새 흐름 = 코어 #1 *대화탭 시작 시점* `chat_intake_entry` step 안 button → `runIntakeFlow()` 풀스크린 모달.
+- 옛 5문항 quiz 폐기 + dead code ~275줄 정리 (2026-04-30 ultrathink). 새 흐름 = 코어 #1 *대화탭 시작 시점* `chat_intake_entry` step 안 button → `runIntakeFlow()` 풀스크린 모달.
 - **흐름 (Step1-6)**:
   1. textarea + 🎤 + 예시 chip 1개 랜덤 (한 줄)
-  2. 짧음 detect (15자 미만) → AI deepening 응답 ("좀 더 풀어줘. 상황 → 마음 → 결과")
-  3. textarea + 🎤 + AI 동적 long example chip (`_intakeGenLongExample`)
-  4. paraphrase + "🔍 더 알고 싶어" button (분기 X — '여기까지' 옵션 폐기)
+  2. 짧음 detect (15자 미만) → AI deepening 응답
+  3. textarea + 🎤 + AI 동적 long example chip
+  4. paraphrase + "🔍 더 알고 싶어" button
   5. 차원 진단 + 작은 전략 (`_intakeAnalyze`)
   6. 마무리 — '나 탭' 자라기 시작 안내
-- **데이터** = `state.intakeWorry` 별도 array (회의 결정 B). 분석 결과 traits/values/patterns 자동 합류 (`user_verified=false`, source='intake_core1').
+- **데이터** = `state.intakeWorry` 별도 array. 분석 결과 traits/values/patterns 자동 합류 (`user_verified=false`, source='intake_core1').
+- **튜토리얼 흐름 개선** (사용자 명시 2026-04-30): 모달 종료 → `_startIntakeFromTutorial` 가 분석 결과를 chatMessages 에 자동 4단 분석 형식으로 표시 (`fromDeeper:true` + `proposal:true`) + 친절 안내 메시지 + `_onbStep` 을 `click_strategy` 로 점프 (send_diary / click_deeper / await_deeper_response 생략 — intake 가 동일 분석을 만들었으므로 중복 회피).
 - testerMode ON 경로 = backup restore 직전 intake 데이터 추출 → restore → inject (보존).
-- testerMode OFF 경로 = filter (created_at > startMs) 통과 (살아남음).
-- 음성 = Web Speech API (한국어 80-90%, 무료). 미지원 브라우저 = button 표시 + 토스트 안내.
+- 음성 = Web Speech API (한국어 80-90%, 무료). 튜토리얼에 음성 적극 권장 (`chat_mic_intro` step + intake step1 prompt nudge).
 - 사용자당 ~$0.02 (Sonnet 3-4회 호출).
 
 ### 리뷰 (재설계 — Detective + Quotes + Seeds + One-word)
@@ -162,6 +179,14 @@ soragodong-repo/
 - bracket `[]` 제거 + 단계 사이 1px 부드러운 border-top.
 - 카드 박스 / 그라디언트 / 큰 아이콘 X (과한 디자인 회피).
 
+### Brand DNA — 마법의 소라고동 = 스폰지밥 Magic Conch 모티브 (사용자 명시 2026-04-30)
+- 스폰지밥 Magic Conch = 큰 결정 묻는데 "no" / "maybe someday" 만 답하는 useless oracle (코미디).
+- 우리 마법고동 = 14일 숙성 + WRAP / Pre-mortem / Odyssey 로 *실제 작동하는* 결정 도구.
+- → **"the joke that became real"** — irony 자체가 brand identity. 의도된 패러디라 진지함 X 인 게 의도.
+- 한국 + 영어권 millennial / gen-Z 양쪽에서 작동 (cross-cultural rare brand).
+- 영어 출시 시점에 brand name "Conch" / "Magic Conch" 직접 차용 가능 — Viacom 상표 risk 변호사 검수 자리.
+- 마법고동 / 결정 카피 / 톤 작성 시 이 모티브 의식 (playful + serious 의도된 mix).
+
 ### 인앱 피드백 (사용자 ↔ admin)
 - 사용자: ✉️ → POST `/api/feedback` → soragodong_feedback table.
 - inbox: `fetchMyFeedback` direct RLS SELECT — 미읽음 빨간 dot.
@@ -180,12 +205,19 @@ soragodong-repo/
 - magic-mode UI = 보라 (#d4b8ff/#b89fde). 숙고의 방 = 청록 (#7ec8e3/#4cafb4). `body.magic-mode` / `body.reflection-mode` 토글.
 - 모티프 (0504007) — 14일 모래시계 SVG ring (보라 그라디언트, 14일 도달 시 glow) + 10단계 dot 진행도 (locked/unlocked/done). 홈 + screen-decisions 카드 둘 다.
 
-### Hybrid Opus 토글 (8a5922d)
-- 헤더 🐚/🦉 토글 = `state.preferences.useOpus`. 4곳 헤더 통합 (메인 / 숙고 / 마법 / 돌연변이).
-- 영향 범위 = `sendChat` (메인 대화) + 마법 helpChat + 숙고 reflection (ea779a1).
+### Hybrid Opus 토글
+- 헤더 godongicon/🦉 토글 = `state.preferences.useOpus`. 4곳 헤더 통합 (메인 / 숙고 / 마법 / 돌연변이).
+- 영향 범위 = `sendChat` (메인 대화) + 마법 helpChat + 숙고 reflection.
 - **나머지 (forceAnalyze / generateReview / firstTouch / 돌연변이) 는 고정 Sonnet** — 분석/리뷰는 데이터 요약 task로 Sonnet 충분. 토글 의도 = "지금 대화 깊게" 의 dial.
 - 누를 때 토스트 안내: "🦉 Opus — 5x 빠르게 차감".
-- **코어 #1 Opus 체험 step** (`chat_opus_intro`, 8d204ae) — 튜토리얼 진입 시 자동 useOpus=true + `_opusActivatedByTutorial` flag. onbFinish 끝 = 자동 sonnet 복원. testerMode ON 경로는 backup restore 가 자동 복원.
+- **코어 #1 Opus 체험 step** (`chat_opus_intro`) — 튜토리얼 진입 시 자동 useOpus=true + `_opusActivatedByTutorial` flag. onbFinish 끝 = 자동 sonnet 복원.
+
+### 헤더 / 브랜드 아이콘 (사용자 명시 2026-04-30)
+- 헤더 컴팩트화: top padding `52px` → `max(10px, env(safe-area-inset-top))` (iOS PWA notch 안전영역 보존). justify-content: flex-end (좌측 로고 제거).
+- 좌측 로고 (`🐚 소라고동`) 제거 — 우측 sonnet 토글만 남김. sonnet 표시 = godongicon.png 이미지 (22px). Opus = 🦉 그대로.
+- 대화탭 타이틀: "소라고동 🐚" → "고동이에게" + godong-icon (em 비례 1.25em).
+- 마법고동 핵심 자리 4곳 (chip / screen-title / dm-icon / action-icon) 🧙‍♂️ → godongicon.
+- 인라인 텍스트 (버튼 라벨 / 토스트 / AI prompt) 🧙‍♂️ 는 그대로 보존.
 
 ### 음성 인식 통합 (cbb0eae)
 - 공용 헬퍼 `_toggleInputSpeech(taId, btnId)` — Web Speech API 무료, 한국어.

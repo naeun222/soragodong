@@ -9244,6 +9244,7 @@
           <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 선물 모달 미리보기 (state X)">🎁 환영 선물 모달 미리보기</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>
+          <button class="btn-secondary" onclick="adminResetBalance()" title="이전 누적 잔액 정정 (admin only). 0~$100 범위.">💰 잔액 정정 (admin)</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">관리자 — 토스 송금</div>
           <button class="btn-secondary" onclick="adminLoadPendingCharges()">📋 대기 중인 송금 list</button>
@@ -14704,7 +14705,7 @@ const CORE_BODY_OVERRIDE = {
     core2: { body: '이 ⭐ 미션 카드가 \'<b>소라의 부름</b>\'이야.<br>대화하다가 네가 고민을 전략적으로 해결하고 싶고, 그걸 \'소라가 제안\'했을 때만 나타나는 특별한 녀석.<br><br><b>부담은 전혀 안 가져도 돼. 안 해도 완전 괜찮음 ㅋㅋ 귀찮다 싶으면 과감히 패스해!</b> (부탁할게)<br><br>미션 완료 시 <b>인증샷</b>을 찍어서 내가 봐주고 검증해. 검증되면 \'특별한\' 소라를 얻을 수 있어.<br><br>지금은 튜토리얼이라 인증샷 넘어갈게. <b>해냈어</b> 눌러봐.' }
   },
   yangsaeng_explain: {
-    core2: { body: '여기 <b>전략 DNA 카드</b>는 네 무기가 되어줄 수 있는 것들이야.<br><br>대화 중 <b>\'🧬 전략으로\'</b> 버튼을 누르면 그 전략이 여기에 저장돼. 🌱 새싹부터 시작해서 그 전략을 성공할수록 점점 성장해 — <b>양생 → 성장/진화 → 체화</b> 순서.<br><br>아래 <b>\'마감 직전 폭발력 신뢰\'</b> 카드가 예시 — 3번 성공해서 \'성장 중\'이야.<br><br>이 전략들은 고동이랑 대화하다 <b>비슷한 상황에 맞닥뜨릴 때 재사용</b>돼.<br>(또는 네가 이 전략 쓰고 싶다고 고동이한테 말해도 돼!)<br><br>우리가 쓴 전략이 <b>실제로 나를 변화시킬 때까지</b> 우리는 \'<b>전략 양생</b>\'을 할 수 있어.' }
+    core2: { body: '여기 <b>전략 DNA 카드</b>는 네 무기가 되어줄 수 있는 것들이야.<br><br>대화 중 <b>\'🧬 전략으로\'</b> 버튼을 누르면 그 전략이 여기에 저장돼. 🌱 새싹부터 시작해서 그 전략을 성공할수록 점점 성장해 — <b>양생 → 성장/진화 → 체화</b> 순서.<br><br>이 전략들은 고동이랑 대화하다 <b>비슷한 상황에 맞닥뜨릴 때 재사용</b>돼.<br>(또는 네가 이 전략 쓰고 싶다고 고동이한테 말해도 돼!)<br><br>우리가 쓴 전략이 <b>실제로 나를 변화시킬 때까지</b> 우리는 \'<b>전략 양생</b>\'을 할 수 있어.' }
   },
   exec_immerse_done: {
     core3: { body: '몰입 결과 묻는 창 떴지? <b>"✓ 했어"</b> 눌러봐.<br><br>네가 얼만큼의 시간을 써서 일을 완수했는지 알 수 있어. <b>이건 ✦ 나 탭에서 확인할 수 있어</b> (아직 잠겨있다면 풀고 보러 와). 이 데이터들이 쌓여서 네 \'<b>메타인지</b>\'에 도움을 줄 거야.<br><br><span class="small">"카드도 완료 처리할까?" 뜨면 <b>확인</b> 눌러줘.</span>' }
@@ -15168,20 +15169,21 @@ async function startInteractiveOnboarding(startStep) {
   if (state.preferences && state.preferences.testerMode && typeof testSeedV4Data === 'function') {
     try { await testSeedV4Data(); } catch (e) { console.warn('tutorial seed:', e); }
   }
-  // 사용자 보고 2026-04-30: 코어 튜토리얼 중 '소라의 부름' 안 떠있는 채로 모래사장/양생방 step 진입 버그 — 시드 박힘 후 active mission 강제 보장 (race / sweep 잔여 fallback).
+  // 사용자 보고 2026-04-30 ultrathink: 코어 튜토리얼 시작 시 '소라의 부름' 카드 home 에 떠있도록 보장 (시드 race / sweep 잔여 fallback).
+  // status 'pending' (createMission 표준 / getTodayMissions 필터). 옛 'active' 였던 거 → 'pending' 으로 정정.
   if (state.preferences && state.preferences.testerMode && Array.isArray(state.missions)) {
     const _t = Date.now();
     const _todayStr = new Date(_t).toISOString().split('T')[0];
     const _activeM = state.missions.find(m => m && m.id === 'mis_seed_active_call');
     if (_activeM) {
-      if (_activeM.status !== 'active') _activeM.status = 'active';
+      if (_activeM.status !== 'pending') _activeM.status = 'pending';
       if (!_activeM.scheduledFor) _activeM.scheduledFor = _todayStr;
     } else {
       state.missions.unshift({
         id: 'mis_seed_active_call',
         title: '엄마 통화 시작 전 3초 호흡',
         description: '"나도 알아!" 나오기 전에 한 호흡 끼우기',
-        status: 'active',
+        status: 'pending',
         scheduledFor: _todayStr,
         createdAt: new Date(_t - 3600000).toISOString()
       });
@@ -30243,7 +30245,8 @@ async function testSeedV4Data() {
   // 사용자 요청 2026-04-28: 결과 체크 트리거 — 미션 'completed' + attemptStatus 없음 (양생방 카드에 '🔍 결과 체크' 버튼 뜨도록)
   // 사용자 요청 2026-04-29: 코어 #2(소라의 부름)용 active 미션 추가 — 풀 튜토리얼은 ✦해볼게로 만들지만 코어 #2는 시드로 박음
   state.missions = [
-    { id: 'mis_seed_active_call', title: '엄마 통화 시작 전 3초 호흡', description: '"나도 알아!" 나오기 전에 한 호흡 끼우기', status: 'active', scheduledFor: todayStr, createdAt: new Date(today.getTime() - 3600000).toISOString() },
+    // 사용자 보고 2026-04-30 ultrathink: status 'active' → 'pending' 필수 (createMission 표준 / getTodayMissions 필터). 'active' 면 home 에 표시 X → 튜토리얼 mission_done step 무력화 → demoAttemptResult 가 잘못된 미션(strat0_done) 픽 → step 18 결과 체크 버튼 버그.
+    { id: 'mis_seed_active_call', title: '엄마 통화 시작 전 3초 호흡', description: '"나도 알아!" 나오기 전에 한 호흡 끼우기', status: 'pending', scheduledFor: todayStr, createdAt: new Date(today.getTime() - 3600000).toISOString() },
     { id: 'mis_seed_strat0_done_unchecked', title: '마감 직전 환경 셋업 1번', description: '카페 자리 + 폰 다른 방', status: 'completed', completedDate: new Date(today.getTime() - 86400000).toISOString().split('T')[0], completedAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: 'strat_seed_0', generationIdx: 0, _followupAsked: true },
     { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
     { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
@@ -37428,6 +37431,51 @@ async function adminFeedbackSubmitReply(feedbackId) {
     }
   } catch (e) {
     alert('예외: ' + (e.message || e));
+  }
+}
+
+// 사용자 명시 2026-04-30 ultrathink: admin 잔액 정정 — 이전 누적 잔액 fix 용
+async function adminResetBalance() {
+  if (typeof _isAdmin === 'function' && !_isAdmin()) {
+    showToast('admin 권한 필요');
+    return;
+  }
+  if (!session || !session.access_token) {
+    showToast('로그인 필요');
+    return;
+  }
+  const newBalanceStr = prompt('정정할 잔액 (USD, 0~100):\n예) 0 = 비우기 / 2.86 = 무료 토큰 4000원', '2.86');
+  if (newBalanceStr === null) return;
+  const newBalance = parseFloat(newBalanceStr);
+  if (isNaN(newBalance) || newBalance < 0 || newBalance > 100) {
+    alert('잘못된 값 — 0 ~ 100 USD 범위');
+    return;
+  }
+  const resetIdempotency = confirm('idempotency 기록도 reset?\n\nYes = 과거 결제 다시 처리 가능 (위험)\nNo = 잔액만 정정 (권장)');
+  const _origFetch = window._anthropicOrigFetch || window.fetch;
+  try {
+    const resp = await _origFetch('/api/admin/reset-balance', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + session.access_token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        new_balance_usd: newBalance,
+        reset_idempotency: resetIdempotency
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      alert('실패: ' + (data.error || resp.status));
+      return;
+    }
+    const msg = `✦ 잔액 $${data.old_balance_usd} → $${data.new_balance_usd}` +
+                (data.idempotency_deleted ? ` (idempotency ${data.idempotency_deleted}개 삭제)` : '');
+    showToast(msg);
+    if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true);
+  } catch (e) {
+    alert('에러: ' + (e.message || e));
   }
 }
 
