@@ -8350,11 +8350,11 @@
       </div>
 
       <!-- ━━━━━━ 사업자 정보 (전자상거래법 의무) ━━━━━━ -->
-      <!-- 사업자등록증 발급 후 BUSINESS_INFO 상수만 갈아끼우면 자동 표시. 이전엔 회사명만. -->
-      <div class="settings-info-card" id="businessInfoCard" style="margin-top:12px;">
-        <div class="settings-info-card-title">📋 사업자 정보</div>
-        <div id="businessInfoBody" style="font-size:11px; line-height:1.85; color:var(--text-dim);">불러오는 중...</div>
-      </div>
+      <!-- 사용자 명시 2026-04-30 ultrathink: "아주 작게 어디 안 보이게 구석에" — collapsed details + 작은 폰트. -->
+      <details id="businessInfoCard" style="margin-top:14px; opacity:0.55; font-size:10px;">
+        <summary style="cursor:pointer; color:var(--text-soft); padding:4px 0; letter-spacing:0.02em;">사업자정보 (전자상거래법 §10)</summary>
+        <div id="businessInfoBody" style="font-size:9.5px; line-height:1.75; color:var(--text-soft); padding:6px 4px 0; opacity:0.95;">불러오는 중...</div>
+      </details>
 
       <div class="sticky-action-bar">
         <button class="btn-primary" onclick="saveSettings()">저장</button>
@@ -14917,11 +14917,21 @@ async function generateReview(type) {
   const chatInRange = state.chatMessages.filter(m => m.timestamp && inRange(m.timestamp) && !m.typing && !m.error && m.role === 'user').slice(-40);
   const decisionsInRange = state.decisions.filter(d => inRange(d.startedAt) || (d.decidedAt && inRange(d.decidedAt)));
   // 사용자 보고 2026-04-30 review (agent P1-1): chapters / topicCards / pearls / archive / insights 가 prompt 에 안 들어가서 시드 추가 후 리뷰가 옛 데이터 기반. in-range filter 후 inject.
+  // 사용자 명시 2026-04-30 ultrathink (verify): archive=savedAt / insights=discoveredAt / chatArchive=generatedAt|date — createdAt 만 보면 시드/실 production 다 안 잡힘. fallback chain.
   const topicCardsInRange = (state.topicCards || []).filter(t => t.createdAt && inRange(t.createdAt));
   const pearlsInRange = (state.pearls || []).filter(p => p.createdAt && inRange(p.createdAt));
-  const archiveInRange = (state.archive || []).filter(a => a.createdAt && inRange(a.createdAt));
-  const insightsInRange = (state.insights || []).filter(i => i.createdAt && inRange(i.createdAt));
-  const chaptersInRange = (state.chatArchive || []).filter(c => c.createdAt && inRange(c.createdAt));
+  const archiveInRange = (state.archive || []).filter(a => {
+    const dt = a.savedAt || a.createdAt;
+    return dt && inRange(dt);
+  });
+  const insightsInRange = (state.insights || []).filter(i => {
+    const dt = i.discoveredAt || i.createdAt;
+    return dt && inRange(dt);
+  });
+  const chaptersInRange = (state.chatArchive || []).filter(c => {
+    const dt = c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null);
+    return dt && inRange(dt);
+  });
 
   // 사용자 요청 2026-04-30: 리뷰 재설계 — Detective + Quotes + Seeds + One-word.
   // 이전 리뷰 씨앗 박혔으면 callback 위해 prompt에 주입 (continuity).
@@ -14950,10 +14960,10 @@ ${type === 'monthly' ? '이번 달의 너를 한 단어로 명명 (정체성 hoo
 미션: ${JSON.stringify(missionsInRange.map(m => ({title: m.title, status: m.status, attemptStatus: m.attemptStatus, strategyId: m.strategyId})), null, 2).slice(0, 1500)}
 대화 발췌 (사용자): ${chatInRange.map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3000)}
 결정 + 예측: ${JSON.stringify(decisionsInRange.map(d => ({title: d.title, status: d.status, finalDecision: d.finalDecision, predictions: d.predictions})), null, 2).slice(0, 1500)}
-챕터: ${JSON.stringify(chaptersInRange.map(c => ({title: c.title, summary: c.summary, category: c.category, tags: c.tags})), null, 0).slice(0, 1500)}
+챕터: ${JSON.stringify(chaptersInRange.map(c => ({date: c.date, summary: c.summary, messageCount: c.messageCount})), null, 0).slice(0, 1500)}
 가닥(topicCards): ${JSON.stringify(topicCardsInRange.map(t => ({title: t.title, summary: t.summary, category: t.category})), null, 0).slice(0, 1500)}
 진주: ${JSON.stringify(pearlsInRange.map(p => ({content: p.content, note: p.note})), null, 0).slice(0, 1000)}
-스크랩(archive): ${JSON.stringify(archiveInRange.map(a => ({content: (a.content || '').slice(0, 200), tags: a.tags, starred: a.starred})), null, 0).slice(0, 1200)}
+스크랩(archive): ${JSON.stringify(archiveInRange.map(a => ({headline: a.headline, body: (a.body || '').slice(0, 200), tags: a.tags, starred: a.starred})), null, 0).slice(0, 1200)}
 인사이트: ${JSON.stringify(insightsInRange.map(i => ({content: i.content, type: i.type})), null, 0).slice(0, 800)}
 활성 모드: ${Object.keys(state.modes || {}).filter(k => state.modes[k]).join(', ') || '없음'}
 
@@ -29008,9 +29018,10 @@ async function generateQuarterlyReview(quarterKey, stats) {
     chatIn = (state.chatMessages || []).filter(m => m.timestamp && m.role === 'user' && inMs(m.timestamp)).slice(-40);
     topicCardsIn = (state.topicCards || []).filter(t => inMs(t.createdAt));
     pearlsIn = (state.pearls || []).filter(p => inMs(p.createdAt));
-    archiveIn = (state.archive || []).filter(a => inMs(a.createdAt));
-    insightsIn = (state.insights || []).filter(i => inMs(i.createdAt));
-    chaptersIn = (state.chatArchive || []).filter(c => inMs(c.createdAt));
+    // 사용자 명시 2026-04-30 ultrathink (verify): archive=savedAt / insights=discoveredAt / chatArchive=generatedAt|date — createdAt 만 보면 안 잡힘.
+    archiveIn = (state.archive || []).filter(a => inMs(a.savedAt || a.createdAt));
+    insightsIn = (state.insights || []).filter(i => inMs(i.discoveredAt || i.createdAt));
+    chaptersIn = (state.chatArchive || []).filter(c => inMs(c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null)));
   }
 
   const prompt = `사용자 김나은 (ADHD, 박사과정). 지난 분기 ${quarterKey} 리뷰 작성.
@@ -29037,7 +29048,7 @@ ${JSON.stringify(entriesIn.slice(-30), null, 0).slice(0, 4500)}
 ${chatIn.map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3500)}
 
 [분기 챕터]
-${JSON.stringify(chaptersIn.map(c => ({title: c.title, summary: c.summary, category: c.category, tags: c.tags})), null, 0).slice(0, 1800)}
+${JSON.stringify(chaptersIn.map(c => ({date: c.date, summary: c.summary, messageCount: c.messageCount})), null, 0).slice(0, 1800)}
 
 [분기 가닥(topicCards)]
 ${JSON.stringify(topicCardsIn.map(t => ({title: t.title, summary: t.summary, category: t.category})), null, 0).slice(0, 1800)}
@@ -29046,7 +29057,7 @@ ${JSON.stringify(topicCardsIn.map(t => ({title: t.title, summary: t.summary, cat
 ${JSON.stringify(pearlsIn.map(p => ({content: p.content, note: p.note})), null, 0).slice(0, 1200)}
 
 [분기 스크랩(archive)]
-${JSON.stringify(archiveIn.map(a => ({content: (a.content || '').slice(0, 200), tags: a.tags, starred: a.starred})), null, 0).slice(0, 1500)}
+${JSON.stringify(archiveIn.map(a => ({headline: a.headline, body: (a.body || '').slice(0, 200), tags: a.tags, starred: a.starred})), null, 0).slice(0, 1500)}
 
 [분기 인사이트]
 ${JSON.stringify(insightsIn.map(i => ({content: i.content, type: i.type})), null, 0).slice(0, 1000)}
