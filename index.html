@@ -3749,7 +3749,7 @@
   }
   .input-modal-overlay.show .input-modal { transform: translateY(0); }
 
-  /* === Intake 모달 (코어 #1 첫 진단 — 사용자 명시 2026-04-30 ultrathink) === */
+  /* === Intake 모달 (코어 #1 첫 관찰 — 사용자 명시 2026-04-30 ultrathink) === */
   .intake-modal {
     background: var(--surface);
     border-top: 1px solid var(--border);
@@ -8559,7 +8559,7 @@
           <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
           <button class="btn-secondary" onclick="forceAnalyze()" title="opus 4.7 사용 — 비쌈">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="cleanLegacySeedData()" title="잔존 시드 텍스트 강제 정리">🧹 잔존 시드 정리</button>
-          <button class="btn-secondary" onclick="testFirstTouchQuiz()" title="신규 사용자 첫 진단 quiz 시뮬레이션 (테스터 모드 필수)">🆕 첫 진단 quiz 미리보기</button>
+          <button class="btn-secondary" onclick="testFirstTouchQuiz()" title="신규 사용자 첫 관찰 quiz 시뮬레이션 (테스터 모드 필수)">🆕 첫 관찰 quiz 미리보기</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">관리자 — 토스 송금</div>
           <button class="btn-secondary" onclick="adminLoadPendingCharges()">📋 대기 중인 송금 list</button>
@@ -8958,7 +8958,7 @@ const DEFAULT_STATE = {
   chatArchive: [],          // [{date, summary, messageCount, messages, generatedAt}]
   chatArchiveLastRun: null, // 마지막 archive 작업 실행 날짜
 
-  // 사용자 명시 2026-04-30 ultrathink: 코어 #1 첫 진단 worry 데이터. testerMode OFF / 시드 sweep / backup restore 영향 X.
+  // 사용자 명시 2026-04-30 ultrathink: 코어 #1 첫 관찰 worry 데이터. testerMode OFF / 시드 sweep / backup restore 영향 X.
   // 별도 array — chatMessages 와 격리 (회의 결정 B). traits/values/patterns 자동 합류 input.
   // 형식: [{role:'user'|'assistant', content, ts, kind?:'first'|'deepen_q'|'detailed'|'analysis'}]
   intakeWorry: [],
@@ -8966,7 +8966,7 @@ const DEFAULT_STATE = {
   // === V7 (V4) 신규 ===
   reflectionQuestions: [],  // 사고 질문 시스템 (anchor 30): [{id, text, status, conclusion, chatMessages, ...}]
   todaySchedule: [],        // 타임테이블: [{id, title, start, end, source:'manual'|'ai'|'gcal'|'task', taskId}]
-  diagnoses: [],            // V4 비전 9.5 진단 5종: [{id, type, confidence, evidence, detectedAt, status:'active'|'shown'|'dismissed'}]
+  diagnoses: [],            // V4 비전 9.5 관찰 5종: [{id, type, confidence, evidence, detectedAt, status:'active'|'shown'|'dismissed'}]
   quarterlyReviews: [],     // V4 비전 7.9 분기 리뷰: [{id, quarterKey:'2026-Q2', completedAt, summary, sections, stats, auto, deepDive}]
   lastForceAnalyzeAt: null, // 사용자 요청 2026-04-30: forceAnalyze 일주일 자동화 — 마지막 실행 시각.
   // 사용자 요청 2026-04-30: 자동 분석 4단계 (매일/매주/매월/매분기/매년 새벽 4시 cutoff).
@@ -8992,7 +8992,7 @@ const DEFAULT_STATE = {
       turningPoints: []       // [{id, when:'YYYY-MM-DD'|free, title, description, impact}]
     },
     // 2. 관계 맵
-    relationships: [],         // [{id, name, relation:'가족|친구|연인|동료|치료자|기타', tone:'안전|자극|혼합', influence:'positive|negative|mixed', notes}]
+    relationships: [],         // [{id, name, relation:'가족|친구|연인|동료|전문가|기타', tone:'안전|자극|혼합', influence:'positive|negative|mixed', notes}]
     // 5. 자기서사·핵심 신념
     selfNarrative: {
       selfStory: '',          // 한 단락 자기소개
@@ -9784,10 +9784,10 @@ async function e2eeForgotPasswordReset() {
 // 가입 직후 / 로그인 직후 진입 시 마스터 키 X + 미활성 + 진입 모달 안 떠있으면 자동 권유.
 // ═══════════════════════════════════════════════════════════════
 // FIRST-TOUCH ANALYSIS — 사용자 요청 2026-04-30 ultrathink
-// 신규 사용자 진입 즉시 5문항 quiz → AI 첫 진단 (정체성 + 가설 + 관찰 거리)
+// 신규 사용자 진입 즉시 5문항 quiz → AI 첫 관찰 (정체성 + 가설 + 관찰 거리)
 // 가설 ✓ → traits/patterns에 unverified 시드. 관찰 거리 → 첫 weekly review의 prevSeeds.
 // ═══════════════════════════════════════════════════════════════
-// 사용자 요청 2026-04-30: 개발자 도구 — 신규 사용자 첫 진단 quiz 미리보기 (시뮬레이션).
+// 사용자 요청 2026-04-30: 개발자 도구 — 신규 사용자 첫 관찰 quiz 미리보기 (시뮬레이션).
 function testFirstTouchQuiz() {
   if (!state.preferences || !state.preferences.testerMode) {
     alert('테스터 모드 ON 후 사용해주세요.\n\n실제 데이터에 영향 없이 quiz 흐름을 미리 볼 수 있어요.\n(테스터 모드 OFF 시 자동 복원됨)');
@@ -9841,7 +9841,7 @@ function showWelcomeBonusModal() {
         <div class="welcome-bonus-amount">$1.00</div>
         <div class="welcome-bonus-sub">
           <span style="color:var(--text-soft);">(약 1,400원)</span> 어치 무료 토큰 박혀 있어.<br>
-          첫 진단 + 가벼운 대화에 충분.
+          첫 관찰 + 가벼운 대화에 충분.
         </div>
         <div class="welcome-bonus-info">
           <div>✦ AI 응답 시 사용량 비례 차감 (Sonnet 4.6 기준)</div>
@@ -9873,7 +9873,7 @@ function showFirstTouchQuiz() {
   overlay.style.zIndex = '10001';
   overlay.innerHTML = `
     <div class="input-modal" style="max-width:440px; max-height:92vh; overflow-y:auto; padding:24px 22px;">
-      <div style="font-size:10px; color:var(--text-soft); letter-spacing:0.18em; text-transform:uppercase; text-align:center; margin-bottom:8px;">너의 첫 진단 ✦</div>
+      <div style="font-size:10px; color:var(--text-soft); letter-spacing:0.18em; text-transform:uppercase; text-align:center; margin-bottom:8px;">너의 첫 관찰 ✦</div>
       <div class="ft-progress" id="ftProgressBar">
         <div class="ft-progress-dot current" data-step="1"></div>
         <div class="ft-progress-dot" data-step="2"></div>
@@ -9952,7 +9952,7 @@ function showFirstTouchQuiz() {
         <button class="btn-secondary" id="ftPrevBtn" onclick="ftStep(-1)" style="display:none;">← 뒤로</button>
         <button class="btn-secondary" id="ftSkipBtn" onclick="skipFirstTouchQuiz()">나중에</button>
         <button class="btn-primary" id="ftNextBtn" onclick="ftStep(1)">다음 →</button>
-        <button class="btn-primary" id="ftSubmitBtn" onclick="submitFirstTouchQuiz()" style="display:none;">첫 진단 받기 ✦</button>
+        <button class="btn-primary" id="ftSubmitBtn" onclick="submitFirstTouchQuiz()" style="display:none;">첫 관찰 받기 ✦</button>
       </div>
     </div>
   `;
@@ -10038,7 +10038,7 @@ async function submitFirstTouchQuiz() {
     if (status) { status.textContent = 'AI 호출 불가능 (로그인 필요)'; status.style.color = '#e89090'; }
     return;
   }
-  if (status) { status.textContent = '첫 진단 분석 중... (5-10초)'; status.style.color = 'var(--text-soft)'; }
+  if (status) { status.textContent = '첫 관찰 분석 중... (5-10초)'; status.style.color = 'var(--text-soft)'; }
 
   const answers = {
     concern: q1,
@@ -10091,7 +10091,7 @@ function _robustJsonExtract(text) {
 }
 
 async function generateFirstTouchAnalysis(answers) {
-  const prompt = `사용자의 첫 진단을 작성한다.
+  const prompt = `사용자의 첫 관찰을 작성한다.
 
 [사용자 답변]
 - 신경 쓰이는 한 단어: ${answers.concern || '(미응답)'}
@@ -10154,16 +10154,16 @@ JSON만 출력. 다른 글 X.`;
   return _robustJsonExtract(text);
 }
 
-// 사용자 명시 2026-04-30 (정정): quiz form 폐기 → 코어 #1 종료 snapshot 기반 첫 진단.
+// 사용자 명시 2026-04-30 (정정): quiz form 폐기 → 코어 #1 종료 snapshot 기반 첫 관찰.
 // 코어 #1 동안 사용자가 박은 chatMessages user / entries / 모드 → AI 가설 추출. 동일 출력 schema (showFirstTouchResult 재사용).
 async function generateFirstTouchFromCoreData(snapshot) {
   const userMsgsText = (snapshot.userMessages || []).map(m => m.content).join('\n---\n').slice(0, 2500);
   const entriesText = JSON.stringify(snapshot.entries || [], null, 0).slice(0, 1500);
   const modesText = (snapshot.selectedModes || []).join(', ') || '(없음)';
   const vitalityText = snapshot.pickedVitality || '(미응답)';
-  const prompt = `사용자가 처음 앱에 진입해 코어 #1 (하면서 익히기) 튜토리얼을 끝냈다. 이 동안 사용자가 박은 첫 데이터로 가벼운 첫 진단을 작성한다.
+  const prompt = `사용자가 처음 앱에 진입해 코어 #1 (하면서 익히기) 튜토리얼을 끝냈다. 이 동안 사용자가 남긴 첫 데이터로 가벼운 첫 관찰을 작성한다.
 
-[사용자가 코어 #1 동안 박은 거]
+[사용자가 코어 #1 동안 남긴 거]
 대화 메시지 (사용자 발화):
 ${userMsgsText || '(없음)'}
 
@@ -10262,7 +10262,7 @@ function showFirstTouchResult(insight) {
   `).join('');
   overlay.innerHTML = `
     <div class="input-modal" style="max-width:440px; max-height:90vh; overflow-y:auto; padding:24px;">
-      <div style="font-size:11px; color:var(--text-soft); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px;">너의 첫 진단</div>
+      <div style="font-size:11px; color:var(--text-soft); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px;">너의 첫 관찰</div>
       <div style="font-family:'Gowun Batang',serif; font-size:32px; color:var(--accent); margin-bottom:8px; letter-spacing:0.04em;">${escapeHtml(insight.one_word || '')}</div>
       <div style="font-size:14px; color:var(--text); line-height:1.7; margin-bottom:18px; padding:14px; background:linear-gradient(135deg, rgba(139,126,196,0.12), rgba(201,169,110,0.07)); border-radius:12px;">
         ${escapeHtml(insight.intro_line || '')}
@@ -10322,13 +10322,13 @@ function closeFirstTouchResult() {
   saveState();
   const overlay = document.getElementById('firstTouchResultOverlay');
   if (overlay) overlay.remove();
-  showToast('✦ 첫 진단 완료. 시작하자.');
-  // 사용자 요청 2026-04-30: 첫 진단 close 후 → tutorial chooser (dismiss flag 없으면)
+  showToast('✦ 첫 관찰 완료. 시작하자.');
+  // 사용자 요청 2026-04-30: 첫 관찰 close 후 → tutorial chooser (dismiss flag 없으면)
   setTimeout(() => { if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate(); }, 800);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 코어 #1 첫 진단 — Intake Worry 인터랙티브 흐름 (사용자 명시 2026-04-30 ultrathink)
+// 코어 #1 첫 관찰 — Intake Worry 인터랙티브 흐름 (사용자 명시 2026-04-30 ultrathink)
 // 흐름: Step1 첫 발화 (한 마디/예시chip/음성) → Step2 AI deepening → Step3 장문 발화 → Step4 paraphrase → Step5 더 알고 싶어 → Step6 차원 분석 + 작은 전략 → Step7 traits/values/patterns 자동 합류
 // state.intakeWorry 별도 array — testerMode OFF / 시드 sweep / backup restore 영향 X
 // ═══════════════════════════════════════════════════════════════════════════
@@ -10431,7 +10431,7 @@ async function _intakeGenLongExample(userText) {
 async function _intakeAnalyze(intakeWorry) {
   if (!_canAI()) throw new Error('AI 호출 불가능');
   const chatText = (intakeWorry || []).map(m => `${m.role === 'user' ? '사용자' : '소라고동'}: ${m.content}`).join('\n');
-  const prompt = `사용자 김나은 — 첫 만남 미니 분석. 다음 대화 보고 차원 진단 + 작은 전략 + 자기관찰 가설.
+  const prompt = `사용자 김나은 — 첫 만남 미니 분석. 다음 대화 보고 차원 분석 + 작은 전략 + 자기관찰 가설.
 
 [대화 전체]
 ${chatText}
@@ -12089,7 +12089,7 @@ async function init() {
     setTimeout(() => { runAutoBackupIfNeeded().catch(e => console.warn('autoBackup:', e)); }, 3000);
   }
 
-  // 사용자 요청 2026-04-30: 신규 사용자 첫 진단 quiz (5문항 → AI 첫 가설). 한 번만 띄움.
+  // 사용자 요청 2026-04-30: 신규 사용자 첫 관찰 quiz (5문항 → AI 첫 가설). 한 번만 띄움.
   if (typeof maybeShowFirstTouchQuiz === 'function') {
     setTimeout(() => { maybeShowFirstTouchQuiz().catch(e => console.warn('firstTouch:', e)); }, 4500);
   }
@@ -12165,7 +12165,7 @@ async function init() {
   }
 
   // V3.13.x: 새 APP_VERSION 진입 시 튜토리얼 자동 시작
-  // 사용자 요청 2026-04-30: 첫 진단 quiz가 먼저 → quiz close 후 autoTourOnUpdate 호출.
+  // 사용자 요청 2026-04-30: 첫 관찰 quiz가 먼저 → quiz close 후 autoTourOnUpdate 호출.
   // 신규 사용자가 아니거나 (entries 4+) 이미 first touch done이면 maybeShowFirstTouchQuiz가 직접 trigger.
   // setTimeout(() => autoTourOnUpdate(), 2000);  // ← 옛 직접 호출 제거
 
@@ -12306,7 +12306,7 @@ const ONBOARDING_STEPS = [
     coachmarkPosition: 'corner',
     coachmarkTop: '72px'
   },
-  // 사용자 명시 2026-04-30 ultrathink: 대화탭 시작 시점에 첫 진단 흐름. 코어 #1 안. body 안 button 으로 모달 trigger + 끝나면 onbNext. 사용자가 nextBtn 으로 skip 가능 (선택권 보존).
+  // 사용자 명시 2026-04-30 ultrathink: 대화탭 시작 시점에 첫 관찰 흐름. 코어 #1 안. body 안 button 으로 모달 trigger + 끝나면 onbNext. 사용자가 nextBtn 으로 skip 가능 (선택권 보존).
   {
     id: 'chat_intake_entry',
     targetSelector: null,
@@ -14598,7 +14598,7 @@ function onbFinish() {
   }
 }
 
-// 코어 #1 종료 시점 + 첫 진단 미완료 detect
+// 코어 #1 종료 시점 + 첫 관찰 미완료 detect
 function _isCore1AndFirstTouchPending() {
   if (!state.preferences) return false;
   if (state.preferences._firstTouchDone) return false;
@@ -16964,7 +16964,7 @@ ${chatLog.slice(0, 8000)}
       "adhd_addition": "ADHD 발견·이전 새 정보 한 줄",
       "turning_point": {"when": "YYYY-MM 또는 시기", "title": "전환점 제목", "impact": "영향 한 줄"}
     },
-    "relationships": [{"name": "이름 (있을 때)", "relation": "가족|친구|연인|동료|치료자|기타", "tone": "안전|자극|혼합", "influence": "positive|negative|mixed", "notes": "한 줄"}],
+    "relationships": [{"name": "이름 (있을 때)", "relation": "가족|친구|연인|동료|전문가|기타", "tone": "안전|자극|혼합", "influence": "positive|negative|mixed", "notes": "한 줄"}],
     "self_narrative": {
       "self_belief": "자신에 대한 신념 한 줄 (\"나는 ...\")",
       "world_belief": "세상에 대한 신념 한 줄 (\"세상은 ...\")",
@@ -19488,7 +19488,7 @@ function showScreen(name) {
     applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3();
     renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink();
     if (typeof renderReflectionHome === 'function') renderReflectionHome();
-    // V4-1o: 진단 5종 자동 trigger (24시간 1회 가드, 조용히 등록 — chat 인용용)
+    // V4-1o: 관찰 5종 자동 trigger (24시간 1회 가드, 조용히 등록 — chat 인용용)
     if (typeof runDiagnosesIfNeeded === 'function') {
       try { runDiagnosesIfNeeded(); } catch (e) { console.warn('runDiagnoses:', e); }
     }
@@ -19996,12 +19996,11 @@ function renderModel() {
   let html = timeCardHtml;
   // 세부 섹션 모음 — 한 details로 묶음
   let detailsHtml = '';
-  // 사용자 보고 2026-04-30 ultrathink-2: 자동초안(user_verified=false)도 자연스럽게 스며들게.
-  // "X개 확인 대기" 강요 흐름 제거 → 다른 항목들과 함께 confidence 순 일반 표시.
-  // user_verified는 모델 필드로 유지 (수정/삭제 시 활용). 시각적 강조 X.
+  // 사용자 명시 2026-04-30 ultrathink (재확인): 미확인된(user_verified=false) 항목 = 첫번째 (대표) 자리.
+  // 사용자가 ✓ 컨펌·수정·삭제 가능하게 가장 먼저 노출. "X개 확인 대기" 라벨 강요 X (시각적 강조 X) — 정렬만 unverified 우선.
   const _renderConfirmableSection = (category, label, arr) => {
     if (!arr || arr.length === 0) return '';
-    const split = splitItems(arr, 1, 0.4, false);
+    const split = splitItems(arr, 1, 0.4, true);
     let inner = `<div class="model-section"><div class="model-section-title">${label}</div>`;
     split.top.forEach(item => {
       const idx = arr.indexOf(item);
@@ -20042,7 +20041,7 @@ function renderModel() {
     html += cfSection('🔍 다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 네 결', state.caseFormulation.problems, 'problems');
     html += '</div>';
   }
-  // V4-fix v3 (사용자 요청): 진단 5종 나 탭에 표시 (active + shown만, dismissed 제외)
+  // V4-fix v3 (사용자 요청): 관찰 5종 나 탭에 표시 (active + shown만, dismissed 제외)
   // 사용자 요청 2026-04-28: 진단도 세부 섹션으로 — 접힘 처리
   const visibleDiags = (state.diagnoses || []).filter(d => d.status === 'active' || d.status === 'shown');
   if (visibleDiags.length > 0) {
@@ -20278,7 +20277,7 @@ async function editDeepRelationships() {
   }).join('\n');
   const newText = await showInputModal({
     title: '관계 맵',
-    message: '한 줄에 한 명. 형식: "이름 (관계, 톤, 영향) — 메모"\n관계: 가족|친구|연인|동료|치료자|기타\n톤: 안전|자극|혼합\n영향: positive|negative|mixed\n예: 엄마 (가족, 혼합, mixed) — 매일 연락, 비교 많음',
+    message: '한 줄에 한 명. 형식: "이름 (관계, 톤, 영향) — 메모"\n관계: 가족|친구|연인|동료|전문가|기타\n톤: 안전|자극|혼합\n영향: positive|negative|mixed\n예: 엄마 (가족, 혼합, mixed) — 매일 연락, 비교 많음',
     defaultValue: current, multiline: true, maxLength: 3000, okLabel: '저장'
   });
   if (newText === null) return;
@@ -21650,7 +21649,7 @@ async function askDeeper(messageIdx) {
   // V4-fix v3 (사용자 요청): 더 알고 싶어 → 4단 + 진단 인용 강제
   state.chatMessages.push({
     role: 'user',
-    content: '아까 그 얘기, 4단계로 더 깊게 분석해줘. [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. 그리고 네가 관찰한 패턴(진단)도 한 줄 자연스럽게 인용해줘.',
+    content: '아까 그 얘기, 4단계로 더 깊게 분석해줘. [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. 그리고 네가 관찰한 패턴도 한 줄 자연스럽게 인용해줘.',
     timestamp: new Date().toISOString(),
     isDeeperRequest: true
   });
@@ -22061,7 +22060,7 @@ function buildSystemPromptParts() {
     volatile.push('');
   }
 
-  // V4-1o + 사용자 fix: 진단 5종 — "더 알아보기" 눌렀을 때 / 테스트 모드 시 자연 인용
+  // V4-1o + 사용자 fix: 관찰 5종 — "더 알아보기" 눌렀을 때 / 테스트 모드 시 자연 인용
   // 사용자 보고 2026-04-29: 4단 응답에 진단 인용 누락 — active 외 'shown' 도 deeper context엔 인용 가능
   const _lastUserMsgForDiag = (state.chatMessages || []).slice().reverse().find(m => m.role === 'user');
   const _isDeeperContext = !!(_lastUserMsgForDiag && _lastUserMsgForDiag.isDeeperRequest);
@@ -22099,7 +22098,7 @@ function buildSystemPromptParts() {
     }
   } else if (_isDeeperContext) {
     // 사용자 요청 2026-04-29: 활성 진단이 없을 때도 4단 응답 — 사용자 본인 데이터(traits/patterns/case formulation) 우선 인용 강제
-    volatile.push(`[4단 응답 깊이 강화 — 진단 X여도 사용자 본인 데이터 우선]`);
+    volatile.push(`[4단 응답 깊이 강화 — 관찰 X여도 사용자 본인 데이터 우선]`);
     volatile.push(`  · [내가 본 것]은 사용자 traits/patterns/case formulation에서 직접 인용. generic textbook 개념 (Gollwitzer / Neff 등) 단독 사용 X.`);
     volatile.push(`  · [이게 뭐냐면]에 심리학 개념 들어가도 OK, 단 위 [내가 본 것]에서 짚은 사용자 본인 패턴이랑 연결.`);
     volatile.push(`  · 사용자가 "현실적으로 별로야" 류 반응 보이면 = generic 분석. 다음엔 더 사용자 specific하게.`);
@@ -22659,7 +22658,7 @@ function recordStrategyAttempt(strategyId, status, missionId) {
   }
   updateEmbodimentStatus(card);
   // V4-1o-3: 자기 학습 — recently shown 진단의 confidence를 결과로 갱신
-  // V4 비전 9.5: "진단 받고 행동 → 결과로 confidence 갱신"
+  // V4 비전 9.5: "관찰 받고 행동 → 결과로 confidence 갱신"
   // weak_tool / wrong_layer 진단이 7일 내 shown인 경우, 이 카드 attempt 결과로 confidence 조정
   if (typeof updateDiagnosisConfidence === 'function') {
     try { updateDiagnosisConfidence(strategyId, status); } catch (e) { console.warn('updateDiagConf:', e); }
@@ -23235,7 +23234,7 @@ function sendMutationMessage() {
         : '';
       const activeDiag = (state.diagnoses || []).find(d => d.status === 'active' || d.status === 'shown');
       const diagLine = activeDiag && _DIAG_LABELS && _DIAG_LABELS[activeDiag.type]
-        ? `진단: ${_DIAG_LABELS[activeDiag.type].name} — ${activeDiag.evidence || ''}`
+        ? `관찰: ${_DIAG_LABELS[activeDiag.type].name} — ${activeDiag.evidence || ''}`
         : '';
 
       const resp = await callAnthropic({
@@ -23714,12 +23713,12 @@ function closeCrystallizeRitual() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// V4-1o: CASE FORMULATION 진단 5종 (anchor 17 / V4 비전 9.5)
+// V4-1o: CASE FORMULATION 관찰 5종 (anchor 17 / V4 비전 9.5)
 // ───────────────────────────────────────────────────────────────
 // 5종: 도구 약함 / 차원 안 맞음 / 가치 상충 / 회피 패턴 / 의지 임계치 X
 // 노출 위치 (B): 채팅 자연 인용만 (양생방 라벨 X / 나 탭 별도 섹션 X). 한 진단당 1회.
 // 거울 3원칙 (9.6): 외재화 톤 / 균형 노출 / 사용자 자기 발견.
-// 자기 학습 루프: 진단 받고 행동 → 결과로 confidence 갱신 (V4-1o-2 이후).
+// 자기 학습 루프: 관찰 받고 행동 → 결과로 confidence 갱신 (V4-1o-2 이후).
 // ═══════════════════════════════════════════════════════════════
 
 const _DIAG_LABELS = {
@@ -25071,7 +25070,7 @@ function renderLensStrategies() {
   const container = document.getElementById('lensStrategies');
   if (!container) return;
   
-  // V4-fix (사용자 보고): 진단 시드 카드 양생방 숨김 (detectDiagnoses는 그대로 작동)
+  // V4-fix (사용자 보고): 관찰 시드 카드 양생방 숨김 (detectDiagnoses는 그대로 작동)
   let strategies = (state.topicCards || []).filter(c => c.category === 'strategy' && !c._isDiagnosticSeed);
 
   // 검색 필터
@@ -28237,7 +28236,7 @@ async function testSeedV4Data() {
       break;
     }
   }
-  // strategy 카드 — 진단 5종 detect + 분기별 분산 (Stories 다차원 분석)
+  // strategy 카드 — 관찰 5종 detect + 분기별 분산 (Stories 다차원 분석)
   state.topicCards = (state.topicCards || []).filter(c => c.category !== 'strategy');
   const stratSeeds = [
     // 최근 분기 (Q-1) — 환경 차원 도구
@@ -28280,11 +28279,11 @@ async function testSeedV4Data() {
       problem: '아침에 폰 보면서 압도감으로 시작. 하루 전체 망침.',
       concept: 'Morning routine = 인지 anchor. 명상 = 주의력 회복.',
       action: '폰 알람 X. 일어나서 10분 명상 (앱). 그 다음 폰.' },
-    // 진단 5종 발동용 (양생방 숨김)
-    { title: '진단 시드: 알람 무한 반복', status: 'trying', gens: 1, attempts: [['didnt',4]], layers: ['L2'], days: 25 },
-    { title: '진단 시드: 인지 차원 막힘', status: 'trying', gens: 1, attempts: [['didnt',3]], layers: ['L1'], days: 25 },
-    { title: '진단 시드: 회피 50%', status: 'trying', gens: 1, attempts: [['skipped',3], ['worked',1]], layers: ['L2'], days: 20 },
-    { title: '진단 시드: 가치 상충 1', status: 'trying', gens: 1, attempts: [['didnt',2]], layers: ['L2'], days: 20 }
+    // 관찰 5종 발동용 (양생방 숨김)
+    { title: '관찰 시드: 알람 무한 반복', status: 'trying', gens: 1, attempts: [['didnt',4]], layers: ['L2'], days: 25 },
+    { title: '관찰 시드: 인지 차원 막힘', status: 'trying', gens: 1, attempts: [['didnt',3]], layers: ['L1'], days: 25 },
+    { title: '관찰 시드: 회피 50%', status: 'trying', gens: 1, attempts: [['skipped',3], ['worked',1]], layers: ['L2'], days: 20 },
+    { title: '관찰 시드: 가치 상충 1', status: 'trying', gens: 1, attempts: [['didnt',2]], layers: ['L2'], days: 20 }
   ];
   stratSeeds.forEach((s, idx) => {
     const id = 'strat_seed_' + idx;
@@ -28313,8 +28312,8 @@ async function testSeedV4Data() {
       createdAt: new Date(today.getTime() - s.days * 86400000).toISOString(),
       messageCount: 5,
       source: 'manual',
-      // V4-fix (사용자 보고): 진단 시드는 양생방 숨김 (제목 "진단 시드:"로 시작) — detectDiagnoses는 그대로 작동
-      _isDiagnosticSeed: s.title.startsWith('진단 시드:')
+      // V4-fix (사용자 보고): 관찰 시드는 양생방 숨김 (제목 "관찰 시드:"로 시작) — detectDiagnoses는 그대로 작동
+      _isDiagnosticSeed: s.title.startsWith('관찰 시드:')
     });
   });
   // 사용자 요청 2026-04-28: 튜토리얼에서 '마감 직전 폭발력 신뢰' (strat_seed_0) DNA 트리 펼침 상태로 시작
@@ -28675,7 +28674,7 @@ async function testSeedV4Data() {
       auto: true
     });
   }
-  // V4-fix v3 (사용자 요청): 진단 시드 분기별 분산 + 학습 곡선 (Stories용)
+  // V4-fix v3 (사용자 요청): 관찰 시드 분기별 분산 + 학습 곡선 (Stories용)
   state.diagnoses = [
     // 최근 분기 — active
     { id: 'diag_seed_1', type: 'wrong_layer', confidence: 0.7, status: 'active',
@@ -29246,7 +29245,7 @@ function testForceDiagnoses() {
   if (state.preferences) state.preferences._diagLastRunAt = null;
   const detected = detectDiagnoses();
   if (detected.length === 0) {
-    showToast('🩺 감지된 진단 X — 시드 데이터 박은 후 시도');
+    showToast('🐚 감지된 관찰 X — 시드 데이터 쌓은 후 시도');
     return;
   }
   registerDiagnoses(detected);
@@ -29257,7 +29256,7 @@ function testForceDiagnoses() {
   saveState();
   const labels = { weak_tool: '도구 약함', wrong_layer: '차원 안 맞음', value_clash: '가치 상충', avoidance: '회피', willpower_cap: '의지 임계' };
   const types = detected.map(d => labels[d.type] || d.type).join(', ');
-  showToast(`🩺 ${detected.length}개 진단 감지됨 (${types}) — 테스트 모드라 다음 응답에 자동 인용. 대화 탭에서 메시지 보내봐.`);
+  showToast(`🐚 ${detected.length}개 관찰 감지됨 (${types}) — 테스트 모드라 다음 응답에 자동 인용. 대화 탭에서 메시지 보내봐.`);
 }
 
 // V4-fix v3 (사용자 요청): AI 인사이트 발견 강제 — 5개 entry 가드 우회 + AI 호출
@@ -29359,7 +29358,7 @@ async function testForceStrategyFollowup() {
     showToast('⚠️ 테스터 모드 ON 후 사용');
     return;
   }
-  // 첫 active strategy 카드 (진단 시드 제외, embodied 제외)
+  // 첫 active strategy 카드 (관찰 시드 제외, embodied 제외)
   const card = (state.topicCards || []).find(c =>
     c.category === 'strategy' && !c._isDiagnosticSeed && c.embodimentStatus !== 'embodied'
   );
@@ -29702,13 +29701,13 @@ function testForceDiagnosisCitation() {
     if (shown) { shown.status = 'active'; active = shown; }
   }
   if (!active) {
-    showToast('⚠️ 진단 X — "진단 5종 즉시 detect" 먼저 누르거나 시드 박기');
+    showToast('⚠️ 관찰 X — "관찰 5종 즉시 detect" 먼저 누르거나 시드 쌓기');
     return;
   }
   active.status = 'active';
   saveState({ force: true });
   const labels = { weak_tool: '도구 약함', wrong_layer: '차원 안 맞음', value_clash: '가치 상충', avoidance: '회피 패턴', willpower_cap: '의지 임계치' };
-  showToast(`🩺 "${labels[active.type] || active.type}" 진단 active. 대화 → AI 응답 밑 [더 알고 싶어 ▾] 클릭하면 응답에 한 줄 자연 인용.`);
+  showToast(`🐚 "${labels[active.type] || active.type}" 관찰 active. 대화 → AI 응답 밑 [더 알고 싶어 ▾] 클릭하면 응답에 한 줄 자연 인용.`);
 }
 
 // 숙고 질문 새로 박기 (스크랩 진입점 시뮬레이션)
