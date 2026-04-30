@@ -14045,8 +14045,8 @@ ${currentDraft ? `[이번 단계 ${meta.title}에 현재 적은 거]\n${currentD
   try {
     const recentMsgs = decision.helpChats[stepId].slice(-15).map(m => ({ role: m.role, content: m.content }));
     const resp = await callAnthropic({
-      // 사용자 요청 2026-04-30 비용절감: 마법 helpChat 응답 opus → sonnet (메인 대화 빈도 ↑ → ROI 큼).
-      model: 'claude-sonnet-4-6',
+      // 사용자 명시 2026-04-30 (정정): 헤더 모델 토글 = 모든 대화 영향. useOpus 따르기.
+      model: (state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
       max_tokens: 400,
       // 사용자 요청 2026-04-29 비용절감: 1h cache TTL — ADHD burst+break 패턴 (5분 break도 cache 살아남음).
       system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
@@ -16236,7 +16236,8 @@ async function sendReflectionChat() {
     // 사용자 요청 2026-04-29: prompt caching 적용 (1024 token 미달 시 Anthropic이 자동 무시 — 안전)
     // 사용자 요청 2026-04-30 비용절감: 숙고 응답 opus → sonnet (사용자 헤비 사용 = 가장 큰 비용 driver였음).
     const resp = await callAnthropic({
-        model: 'claude-sonnet-4-6',
+        // 사용자 명시 2026-04-30 (정정): 헤더 모델 토글 = 모든 대화 영향. useOpus 따르기.
+        model: (state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
         max_tokens: 400,
         // 사용자 요청 2026-04-29 비용절감: 1h cache TTL
         system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
@@ -19617,8 +19618,7 @@ function formatAIResponse(text) {
 // 사용자 요청 2026-04-30: 메인 chat 일일 cap 헬퍼. 4시 cutoff 기준. cap=0 = 무제한.
 function _checkDailyChatCap() {
   if (!state.preferences) state.preferences = {};
-  // 사용자 요청 2026-04-30: 관리자 (jade6679@naver.com) 일일 cap 우회.
-  if (typeof _isAdmin === 'function' && _isAdmin()) return { ok: true };
+  // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 cap 적용.
   const cap = state.preferences.dailyChatCap;
   if (cap === 0 || cap == null) return { ok: true };
   const todayK = todayKey();
@@ -34357,38 +34357,7 @@ async function refreshBillingStatus() {
     status.textContent = '로그인 필요';
     return;
   }
-  // 사용자 요청 2026-04-30: 관리자는 충전/잔액 제한 X but 사용량 (토큰/비용)은 표시.
-  if (typeof _isAdmin === 'function' && _isAdmin()) {
-    try {
-      const resp = await fetch('/api/usage', {
-        headers: { 'Authorization': 'Bearer ' + session.access_token }
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        const monthly = data.monthly || { tokens: 0, cost_usd: 0 };
-        const monthCostKrw = Math.round((monthly.cost_usd || 0) * 1400);
-        status.innerHTML = `
-          <div style="color:#9ed4a0; font-weight:600; margin-bottom:6px;">✦ 관리자 계정 — 무료 사용 (잔액·한도 제한 X)</div>
-          <div style="border-top:1px solid var(--border); padding-top:6px; margin-top:6px; color:var(--text-dim);">
-            <b>이번 달 사용 (참고용)</b>: ${(monthly.tokens || 0).toLocaleString()} tokens / $${(monthly.cost_usd || 0).toFixed(4)} <span style="color:var(--text-soft);">(~${monthCostKrw.toLocaleString()}원)</span>
-          </div>
-        `;
-      } else {
-        status.innerHTML = '<div style="color:#9ed4a0;">✦ 관리자 계정 — 무료 사용 (사용량 조회 실패)</div>';
-      }
-    } catch (e) {
-      status.innerHTML = '<div style="color:#9ed4a0;">✦ 관리자 계정 — 무료 사용 (사용량 조회 예외)</div>';
-    }
-    // 관리자에게 충전·월정액 버튼 숨기기
-    const billingSection = document.getElementById('billingSection');
-    if (billingSection) {
-      const chargeBtn = billingSection.querySelector('button[onclick*="openChargeModal"]');
-      const subBtn = billingSection.querySelector('button[onclick*="openSubscribeModal"]');
-      if (chargeBtn) chargeBtn.style.display = 'none';
-      if (subBtn) subBtn.style.display = 'none';
-    }
-    return;
-  }
+  // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 잔액/충전/월정액 흐름 표시.
   try {
     const resp = await fetch('/api/usage', {
       headers: { 'Authorization': 'Bearer ' + session.access_token }
