@@ -21676,7 +21676,13 @@ function openDnaPearlStory(pearlId) {
 
   const overlay = document.createElement('div');
   overlay.className = 'shell-story-overlay';
-  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  // 사용자 명시 2026-05-01 (agent audit): ESC = 닫기.
+  let _shellEscDetach = null;
+  const _close = () => {
+    if (_shellEscDetach) { _shellEscDetach(); _shellEscDetach = null; }
+    overlay.remove();
+  };
+  overlay.onclick = (e) => { if (e.target === overlay) _close(); };
   overlay.innerHTML = `
     <div class="shell-story-card dna-pearl-story">
       <div class="dna-pearl-svg-wrap dna-pearl-stage">
@@ -21812,6 +21818,7 @@ function openShellStory(shellIdx) {
     </div>
   `;
   document.body.appendChild(overlay);
+  _shellEscDetach = _registerModalEsc(overlay, _close);
 }
 
 function closeModal(id) {
@@ -26540,13 +26547,19 @@ function detectDiagnoses() {
 function registerDiagnoses(detected) {
   if (!Array.isArray(state.diagnoses)) state.diagnoses = [];
   const now = Date.now();
-  const cooldown = 30 * 86400000; // 30일
+  // 사용자 명시 2026-05-01 (agent audit): cooldown 분기 — 일반 30일 / dismissed 진단 180일.
+  // dismissed 된 진단 type 이 같은 카드에서 30일 후 재감지되며 반복 dismiss 사이클 자리 차단.
+  const cooldownActive = 30 * 86400000;
+  const cooldownDismissed = 180 * 86400000;
   let added = 0;
   detected.forEach(d => {
-    const recentSame = state.diagnoses.find(x =>
-      x.type === d.type && x.targetCardId === d.targetCardId &&
-      x.detectedAt && (now - new Date(x.detectedAt).getTime()) < cooldown
-    );
+    const recentSame = state.diagnoses.find(x => {
+      if (x.type !== d.type || x.targetCardId !== d.targetCardId) return false;
+      if (!x.detectedAt) return false;
+      const elapsed = now - new Date(x.detectedAt).getTime();
+      const cool = (x.status === 'dismissed') ? cooldownDismissed : cooldownActive;
+      return elapsed < cool;
+    });
     if (recentSame) return;
     state.diagnoses.push({
       id: 'diag_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
