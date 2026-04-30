@@ -35550,10 +35550,18 @@ async function refreshBillingStatus() {
     return;
   }
   // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 잔액/충전/월정액 흐름 표시.
+  // 사용자 보고 2026-04-30: 🔄 새로고침 작동 X 버그 — JWT 1h 만료 시 401 → 인터셉터는 /api/chat 만 swap 이라 /api/usage 401 그대로. 자동 refresh + retry + 시각 피드백 추가.
+  status.textContent = '🔄 갱신 중...';
+  const _origFetch = window._anthropicOrigFetch || window.fetch;
+  const _doFetch = () => _origFetch('/api/usage', {
+    headers: { 'Authorization': 'Bearer ' + session.access_token }
+  });
   try {
-    const resp = await fetch('/api/usage', {
-      headers: { 'Authorization': 'Bearer ' + session.access_token }
-    });
+    let resp = await _doFetch();
+    if (resp.status === 401 && typeof _refreshSessionForApi === 'function') {
+      const refreshed = await _refreshSessionForApi();
+      if (refreshed) resp = await _doFetch();
+    }
     if (!resp.ok) {
       status.textContent = `사용량 조회 실패 (${resp.status})`;
       return;
@@ -35577,6 +35585,7 @@ async function refreshBillingStatus() {
       html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 무료 충전 토큰 받음</div>`;
     }
     status.innerHTML = html;
+    if (typeof showToast === 'function') showToast('🔄 갱신됐어');
   } catch (e) {
     status.textContent = '조회 실패: ' + (e.message || e);
   }
