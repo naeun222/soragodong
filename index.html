@@ -56,7 +56,8 @@
 
   .app { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
   /* V3 main 그대로 복원 — 52px top (PWA standalone 상태바 보호 + Safari 브라우저 자연스러운 cushion) */
-  .header { flex-shrink: 0; padding: 52px 24px 12px; display: flex; align-items: center; justify-content: space-between; }
+  /* 사용자 명시 2026-04-30: 헤더 컴팩트화 — 로고 제거 + top padding ↓. iOS PWA notch 안전영역은 max() 로 보존. */
+  .header { flex-shrink: 0; padding: max(10px, env(safe-area-inset-top)) 24px 8px; display: flex; align-items: center; justify-content: flex-end; }
   .logo { font-family: 'Gowun Batang', serif; font-size: 20px; color: var(--accent); letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 10px; }
   .logo-img { width: 32px; height: 32px; object-fit: contain; display: block; border-radius: 7px; }
   /* godong.webp 인라인 아이콘 — 마법고동 자리 🧙‍♂️ 대체. em 기준이라 부모 font-size에 자동 비례. */
@@ -754,6 +755,8 @@
     box-shadow: 0 0 12px rgba(178,140,212,0.30), inset 0 0 8px rgba(178,140,212,0.10);
   }
   .chat-mode-btn:hover:not(.opus) { background: var(--surface3); border-color: var(--border-strong); }
+  /* 사용자 명시 2026-04-30: Sonnet 표시 = godongicon 이미지. Opus 는 🦉 이모지 유지. */
+  .chat-mode-img { width: 22px; height: 22px; object-fit: contain; display: block; pointer-events: none; }
   /* V3.13.x: + 메뉴 버튼 (일기 템플릿/대화 마무리 통합) */
   .chat-plus-btn {
     width: 32px; height: 32px; border-radius: 50%;
@@ -8814,9 +8817,8 @@
 
 <div class="app" style="display:none;">
   <div class="header">
-    <div class="logo"><img src="/godongicon.png" alt="" class="logo-img" decoding="async">소라고동</div>
     <div style="display:flex; align-items:center; gap:8px;">
-      <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환">🐚</button>
+      <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
       <div class="date-pill">
         <span class="sync-dot" id="syncDot"></span>
       </div>
@@ -9015,7 +9017,7 @@
 
     <!-- CHAT -->
     <div class="screen" id="screen-chat" style="padding-bottom: 180px;">
-      <div class="screen-title">소라고동 🐚</div>
+      <div class="screen-title">고동이에게 <img src="/godongicon.png" alt="" class="godong-icon" decoding="async"></div>
       <div class="screen-sub">뭐든 말해. 일기처럼 길게 써도 돼. 내가 읽고 답할게.</div>
       <div class="chat-messages" id="chatMessages"></div>
     </div>
@@ -9133,7 +9135,7 @@
         <button class="reflection-screen-back" onclick="closeReflectionScreen()">←</button>
         <div class="reflection-screen-q" id="reflectionScreenQ"></div>
         <div class="reflection-screen-actions">
-          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환">🐚</button>
+          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
           <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론</button>
           <button class="reflection-pause-btn" id="reflectionDeleteBtn" title="삭제">🗑</button>
         </div>
@@ -9155,7 +9157,7 @@
         <button class="reflection-screen-back" onclick="closeMagicHelpChat()">←</button>
         <div class="reflection-screen-q" id="magicHelpScreenQ"></div>
         <div class="reflection-screen-actions">
-          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환">🐚</button>
+          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
         </div>
       </div>
       <div class="reflection-chat-area" id="magicHelpArea"></div>
@@ -22787,18 +22789,19 @@ function toggleChatModel() {
   if (next) {
     showToast('🦉 Opus 모드 — Sonnet 대비 잔액 약 5x 빠르게 차감돼');
   } else {
-    showToast('🐚 Sonnet 모드 — 기본 (충분히 깊은 대화)');
+    showToast('고동이 (Sonnet) 모드 — 기본 (충분히 깊은 대화)');
   }
 }
 function updateChatModeBtn() {
   // 사용자 요청 2026-04-30: 모델 토글 4곳 통일 (메인 헤더 + 숙고의 방 + 마법 helpChat + 돌연변이 임시대화창). 모든 .js-chat-mode-btn 인스턴스 동기 갱신.
+  // Sonnet 표시 = godongicon.png 이미지, Opus = 🦉 이모지.
   const useOpus = !!(state.preferences && state.preferences.useOpus);
   const titleAttr = useOpus
     ? '🦉 Opus 모드 (잔액 5x 빠르게 차감) — 누르면 Sonnet으로'
-    : '🐚 Sonnet 모드 (기본) — 누르면 Opus로';
+    : '고동이 (Sonnet) 모드 — 누르면 Opus로'; // 사용자 명시 2026-04-30: 고동이 페르소나
   document.querySelectorAll('.js-chat-mode-btn').forEach(btn => {
     btn.classList.toggle('opus', useOpus);
-    btn.textContent = useOpus ? '🦉' : '🐚';
+    btn.innerHTML = useOpus ? '🦉' : '<img src="/godongicon.png" alt="" class="chat-mode-img">';
     btn.setAttribute('title', titleAttr);
   });
 }
@@ -24577,7 +24580,7 @@ function _renderMutationChat() {
             </div>
             <div class="mutation-chat-header-sub" id="mutationChatSubtitle"></div>
           </div>
-          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환" style="margin-right:8px;">🐚</button>
+          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환" style="margin-right:8px;"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
           <button class="mutation-chat-close" onclick="closeMutationChat(false)" aria-label="닫기">✕</button>
         </div>
         <div class="mutation-chat-area" id="mutationChatArea"></div>
