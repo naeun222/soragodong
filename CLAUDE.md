@@ -127,11 +127,20 @@ soragodong-repo/
 - 코어 끝 = `help_button` ("시작! ✦") → onbFinish → testerMode backup restore + saveToCloudNow await.
 - 업데이트 모달 dismiss 단위: `dismissedMajor` (V4). V5 등 새 메이저 시 재출현.
 
-### 첫 진단 (현재 = 코어 #1 종료 snapshot, **재설계 회의 중**)
-- 옛 5문항 quiz 폐기 (bd44e48) — 사용자 본인 만족 X (강요감).
-- 현재: 코어 #1 종료 시점 snapshot 데이터로 AI 가설 1회 생성 → traits/values/patterns `user_verified=false` 자동 합류.
-- **재설계 진행 중** (회의 1) — testerMode + 시드 X 흐름. 사용자 본인 데이터로 시작. step11 부터 chip 3 라운드 (날씨 + 영역 + 한 단어) + AI 자연 답 + "더 알고 싶어" 옵션. `state.intakeWorry` 별도 array 보관 (testerMode OFF / backup restore 영향 X). 결과 = traits/values/patterns `user_verified=false` 자동 합류 ('나 탭' 통합 분석에 자연 노출, 별도 모달 X).
-- 사용자당 ~$0.01-0.02 (Sonnet 1회).
+### 첫 진단 (코어 #1 chat_intake_entry — 인터랙티브 모달 풀 흐름)
+- 옛 5문항 quiz 폐기 (bd44e48) → 옛 snapshot 진단 폐기 (be30431). 새 흐름 = 코어 #1 *대화탭 시작 시점* `chat_intake_entry` step 안 button → `runIntakeFlow()` 풀스크린 모달.
+- **흐름 (Step1-6)**:
+  1. textarea + 🎤 + 예시 chip 1개 랜덤 (한 줄)
+  2. 짧음 detect (15자 미만) → AI deepening 응답 ("좀 더 풀어줘. 상황 → 마음 → 결과")
+  3. textarea + 🎤 + AI 동적 long example chip (`_intakeGenLongExample`)
+  4. paraphrase + "🔍 더 알고 싶어" button (분기 X — '여기까지' 옵션 폐기)
+  5. 차원 진단 + 작은 전략 (`_intakeAnalyze`)
+  6. 마무리 — '나 탭' 자라기 시작 안내
+- **데이터** = `state.intakeWorry` 별도 array (회의 결정 B). 분석 결과 traits/values/patterns 자동 합류 (`user_verified=false`, source='intake_core1').
+- testerMode ON 경로 = backup restore 직전 intake 데이터 추출 → restore → inject (보존).
+- testerMode OFF 경로 = filter (created_at > startMs) 통과 (살아남음).
+- 음성 = Web Speech API (한국어 80-90%, 무료). 미지원 브라우저 = button 표시 + 토스트 안내.
+- 사용자당 ~$0.02 (Sonnet 3-4회 호출).
 
 ### 리뷰 (재설계 — Detective + Quotes + Seeds + One-word)
 - weekly / monthly: `generateReview` — pattern (headline/evidence/condition) + quotes 5 + experiment + seeds + (monthly) one_word.
@@ -176,6 +185,20 @@ soragodong-repo/
 - 영향 범위 = `sendChat` (메인 대화) + 마법 helpChat + 숙고 reflection (ea779a1).
 - **나머지 (forceAnalyze / generateReview / firstTouch / 돌연변이) 는 고정 Sonnet** — 분석/리뷰는 데이터 요약 task로 Sonnet 충분. 토글 의도 = "지금 대화 깊게" 의 dial.
 - 누를 때 토스트 안내: "🦉 Opus — 5x 빠르게 차감".
+- **코어 #1 Opus 체험 step** (`chat_opus_intro`, 8d204ae) — 튜토리얼 진입 시 자동 useOpus=true + `_opusActivatedByTutorial` flag. onbFinish 끝 = 자동 sonnet 복원. testerMode ON 경로는 backup restore 가 자동 복원.
+
+### 음성 인식 통합 (cbb0eae)
+- 공용 헬퍼 `_toggleInputSpeech(taId, btnId)` — Web Speech API 무료, 한국어.
+- 4곳 입력창 통합: 메인 chat (`chatInput`) / 숙고 (`reflectionInput`) / 마법 helpChat (`magicHelpInput`) / 돌연변이 (`mutationChatInput`).
+- continuous + interimResults + 5초 침묵 자동 종료. ⏹/🎤 toggle + 빨간 펄스 box-shadow.
+- 미지원 브라우저 (iOS Safari < 16.5 등) = button 항상 표시 + 누름 시 토스트 안내 ("예시 누르거나 직접 적어줘").
+- 첫 사용 = privacy 안내 1회 (localStorage `soragodong_v4_speech_consent`).
+- intake 모달 자리도 동일 패턴 (단 별도 _intakeMicToggle 함수 — _intakeState 격리).
+
+### 일상 대화 티키타카 톤 (8d204ae)
+- `sendChat` system prompt rule 13 변경: '물음표 자제' → '티키타카 권장'.
+- 일상·감정·가벼운 얘기 → 자연 호기심 질문 1개 권장 ("오 진짜?", "그래서 어떻게 됐어?", "어땠어?").
+- 분석/추궁/탐색 X 는 유지. 명시 도움 요청 ("어떡하지", "도와줘") 시에만 깊이 진입.
 
 ### 추적 그래프 (7885180)
 - area gradient + 마지막 점 ring pulsing + 현재값 floating tag + grid 3줄 + 시작/끝 날짜 축 + 목표 도달 success 색조.
@@ -219,15 +242,15 @@ soragodong-repo/
 
 ## 다음 작업
 
-### 🟢 코드 (즉시 가능)
-- [ ] **첫 진단 재설계 구현** — 회의 1 흐름 (chip 3 라운드 + state.intakeWorry + testerMode 안전 격리). 사용자 답 받은 후.
-- [ ] **소라고동 일상 대화 티키타카** (사용자 큐 2026-04-30) — 적절한 후속 질문으로 대화 이어가기. 현재 답변이 한 번에 끝나는 경향. 조사 필요: `sendChat` system prompt + 4단 분석 후 자연 follow-up 질문 패턴.
-- [ ] **코어 #1 튜토리얼 — Opus 체험 step** (사용자 큐 2026-04-30) — 대화 시작 전에 헤더 🐚/🦉 토글 설명 + "지금은 무료 토큰 내가 줬으니까 opus로 해보자! ㄱㄱ" 안내. 튜토리얼 끝나면 자동 sonnet 복원 (`state.preferences.useOpus = false`). onbFinish / 시드 정리 흐름에 복원 로직 합치기.
-- [ ] **튜토리얼 "누르고 잠깐 기다려야 돼! ~ 눌러줘" 멘트 삭제** (사용자 큐 2026-04-30) — 일부 튜토리얼 step 안 안내 멘트 정리. 사용자가 누른 후 자동 advance 로 충분.
-- [ ] **모든 대화 입력창 음성 인식 통합 (사용자 큐 2026-04-30)** — Web Speech API (무료) 로 4곳 통합: 메인 chat 입력창 / 임시 대화창 (돌연변이) / 마법 helpChat / 숙고의 방. 미지원 브라우저 mic button hide. 첫 사용 시 privacy 안내 1회.
-- [ ] **튜토리얼 intake 자리 — Whisper API 검토 (사용자 큐 2026-04-30)** — 첫 진단 = 성능 중요. Whisper API ($0.006/분) 추가 검토. 단 UI 에 OpenAI / Whisper / Google 명시 X — 그냥 "음성". 결정 후 swap.
-- [ ] **24시간 갭 vs ✓ 마무리 일관성** 점검
-- [ ] **Performance audit** (1.6MB 단일 — Phase A 진행)
+### 🟢 코드 (즉시 가능 — 이번 세션 끝난 항목)
+- [x] **첫 진단 재설계 구현** ✅ 8cb8e55 + 23ba46c + 040071e + c78cb45 + be30431 — 코어 #1 chat_intake_entry 모달 풀 흐름 (Step1-6) + state.intakeWorry + testerMode 안전 격리 + iOS 토스트 + dead code 청소.
+- [x] **소라고동 일상 대화 티키타카** ✅ 8d204ae — sendChat rule 13 변경 (물음표 자제 → 티키타카 권장).
+- [x] **코어 #1 튜토리얼 — Opus 체험 step** ✅ 8d204ae — chat_opus_intro step + 자동 useOpus=true + _opusActivatedByTutorial flag + onbFinish 자동 복원.
+- [x] **튜토리얼 "누르고 잠깐 기다려야 돼" 멘트 삭제** ✅ cbb0eae — click_strategy step body 정리.
+- [x] **모든 대화 입력창 음성 인식 통합** ✅ cbb0eae — 4곳 통합 + _toggleInputSpeech 공용 헬퍼 + .input-mic-btn CSS.
+- [ ] **튜토리얼 intake 자리 — Whisper API 검토** — 현재 Web Speech (한국어 80-90%). 성능 부족 시 Whisper API ($0.006/분) 검토. UI 에 vendor 명시 X — 그냥 "음성".
+- [ ] **24시간 갭 vs ✓ 마무리 일관성** 점검 — 다음 세션
+- [ ] **Performance audit** (1.6MB 단일 — Phase A 진행) — 다음 세션
 
 ### 🟡 사용자 결정 대기
 - [ ] **useOpus scope** — 분석/리뷰류도 토글 따를지 / 현재대로 대화류만 둘지 (의견: 현재 OK)
