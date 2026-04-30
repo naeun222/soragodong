@@ -35547,10 +35547,10 @@ async function refreshBillingStatus() {
 // 충전 plans (단계별 보너스, refund.md / terms.md 정합)
 const CHARGE_PLANS = [
   { krw: 1000, bonus_pct: 0, name: '🌱 1,000원 (체험)' },
-  { krw: 5000, bonus_pct: 0, name: '🐚 5,000원' },
-  { krw: 10000, bonus_pct: 3, name: '🪸 10,000원 (+3% 보너스)' },
-  { krw: 30000, bonus_pct: 8, name: '🌊 30,000원 (+8% 보너스)' },
-  { krw: 50000, bonus_pct: 12, name: '🐋 50,000원 (+12% 보너스)' }
+  { krw: 5000, bonus_pct: 15, name: '🐚 5,000원 (+15% 보너스)' },
+  { krw: 10000, bonus_pct: 30, name: '🪸 10,000원 (+30% 보너스)' },
+  { krw: 30000, bonus_pct: 50, name: '🌊 30,000원 (+50% 보너스) ← 인기' },
+  { krw: 50000, bonus_pct: 55, name: '🐋 50,000원 (+55% 보너스)' }
 ];
 const SUBSCRIBE_PLAN = { krw: 15000, daily_cap: 12, name: '🪸 월 정액', desc: '월 ₩15,000 — 일 12 메시지 cap (20% 할인)' };
 
@@ -35605,7 +35605,7 @@ async function openChargeModal() {
     <div class="input-modal" style="max-width:380px; max-height:90vh; overflow-y:auto; padding:24px;">
       <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">⚡ 충전</div>
       <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:14px;">
-        많이 충전할수록 보너스 ↑. 잔액은 무기한 유지됩니다.<br>
+        많이 충전할수록 보너스 팍 ↑ — 30,000원이면 <strong style="color:#9ed4a0;">+15,000원 보너스</strong>. 잔액 무기한 유지.<br>
         <strong>자동 결제 X</strong> — 한 번만 결제됩니다.
       </div>
       ${minorWarning}

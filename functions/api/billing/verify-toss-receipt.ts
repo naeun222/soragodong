@@ -14,7 +14,7 @@ const RECEIVER_ACCOUNT = {
 };
 
 const CHARGE_PLANS_KRW = [1000, 5000, 10000, 30000, 50000];
-const BONUS_PCT = [0, 0, 3, 8, 12];
+const BONUS_PCT = [0, 15, 30, 50, 55];
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
