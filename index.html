@@ -10647,9 +10647,11 @@ const _ANNUAL_REVIEW_CARDS = [
 
 // 사용자 명시 2026-04-30 ultrathink: 미리보기 = 시드 OR 실제 생성된 리뷰 둘 다 (state.annualReviews 우선).
 function openAnnualReviewPreview() {
-  const review = (state.annualReviews && state.annualReviews.length > 0)
-    ? state.annualReviews[0]  // 최신
-    : _buildAnnualReviewSeedData();  // fallback (state 비어 있으면)
+  const fromState = state.annualReviews && state.annualReviews.length > 0;
+  const review = fromState ? state.annualReviews[0] : _buildAnnualReviewSeedData();
+  console.log('[annual review preview]', fromState
+    ? `state.annualReviews[0] 사용 (id=${review.id}, year=${review.year}, count=${state.annualReviews.length})`
+    : '시드 fallback 사용 (state 비어 있음 — testSeedV4Data 미실행 또는 sweep 됨)');
   openAnnualReview(review);
 }
 
@@ -10676,11 +10678,13 @@ function openAnnualReview(reviewOrId) {
 // ═══════════════════════════════════════════════════════════════
 async function generateAnnualReview(year) {
   const targetYear = year || (new Date().getFullYear() - 1);
-  if (!_canAI()) {
+  // 사용자 명시 2026-04-30 ultrathink: testerMode 시 Opus 호출 우회 (402 회피). 결정적 helper 결과는 실제 계산, narrative 는 시드.
+  const isTester = !!(state.preferences && state.preferences.testerMode);
+  if (!isTester && !_canAI()) {
     showToast('연간 리뷰 생성 = 결제 정보 필요 (로그인 또는 API 키)');
     return null;
   }
-  showToast('🐚 연간 리뷰 생성 중... (1-2분 소요)');
+  showToast(isTester ? '🧪 테스터 모드 — mock 리뷰 생성 (Opus 호출 X)' : '🐚 연간 리뷰 생성 중... (1-2분 소요)');
   const yearStart = new Date(targetYear, 0, 1).getTime();
   const yearEnd = new Date(targetYear + 1, 0, 1).getTime();
   const inYear = (iso) => {
@@ -10695,7 +10699,7 @@ async function generateAnnualReview(year) {
   const quarterlies = (state.quarterlyReviews || []).filter(r => r.quarterKey && r.quarterKey.startsWith(targetYear + '-'));
   const insights = (state.insights || []).filter(i => inYear(i.discoveredAt || i.createdAt));
   const chatArchive = (state.chatArchive || []).filter(c => inYear(c.generatedAt || (c.date ? c.date + 'T12:00:00' : null)));
-  if (entries.length < 10) {
+  if (!isTester && entries.length < 10) {
     showToast(`${targetYear}년 일기 부족 (${entries.length}개) — 충분한 데이터 쌓인 후 재시도.`);
     return null;
   }
@@ -10706,17 +10710,27 @@ async function generateAnnualReview(year) {
   const realizations = _computeAnnualRealizations(archive);
   const beach = { diaryCount: entries.length, pearlCount: pearls.length, bestPearl: '' };
   let narrative = null;
-  try {
-    narrative = await _callOpusForAnnualNarrative({
-      year: targetYear, entries, pearls, archive, decisions, quarterlies, insights, chatArchive,
-      stats: { entryCount: entries.length, pearlCount: pearls.length, archiveCount: archive.length, decisionCount: decisions.length }
-    });
-  } catch (e) {
-    console.error('[generateAnnualReview]', e);
-    showToast('연간 리뷰 생성 실패: ' + e.message);
-    return null;
+  if (isTester) {
+    // testerMode: 시드 빌더에서 narrative 부분만 가져오기 (Opus 호출 X)
+    const seed = _buildAnnualReviewSeedData(targetYear);
+    narrative = {
+      oneWord: seed.oneWord, persona: seed.persona, personaReason: seed.personaReason,
+      finding1: seed.finding1, finding2: seed.finding2, deep: seed.deep,
+      best_pearl: seed.best_pearl, oneLine: seed.oneLine
+    };
+  } else {
+    try {
+      narrative = await _callOpusForAnnualNarrative({
+        year: targetYear, entries, pearls, archive, decisions, quarterlies, insights, chatArchive,
+        stats: { entryCount: entries.length, pearlCount: pearls.length, archiveCount: archive.length, decisionCount: decisions.length }
+      });
+    } catch (e) {
+      console.error('[generateAnnualReview]', e);
+      showToast('연간 리뷰 생성 실패: ' + e.message);
+      return null;
+    }
+    if (!narrative) return null;
   }
-  if (!narrative) return null;
   beach.bestPearl = (narrative.best_pearl && narrative.best_pearl.title) || '';
   const review = {
     id: 'ar_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -10738,11 +10752,14 @@ async function generateAnnualReview(year) {
     songs,
     auto: false
   };
+  if (isTester) review._mock = true;
   state.annualReviews = state.annualReviews || [];
   state.annualReviews = state.annualReviews.filter(r => r.year !== targetYear);
   state.annualReviews.unshift(review);
   if (typeof saveToCloudNow === 'function') await saveToCloudNow(); else saveState();
-  showToast(`🐚 ${targetYear}년 연간 리뷰 완료. 미리보기에서 확인.`);
+  showToast(isTester
+    ? `🧪 ${targetYear}년 mock 리뷰 완료 (시드 narrative + 실제 helper). 미리보기에서 확인.`
+    : `🐚 ${targetYear}년 연간 리뷰 완료. 미리보기에서 확인.`);
   return review;
 }
 
