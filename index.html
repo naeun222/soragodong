@@ -1096,24 +1096,40 @@
     border-radius: 12px;
     text-align: left;
   }
-  /* PWA install — 사용자 명시 2026-04-30 ultrathink: 로그인 화면, opt-in collapsed, auto-detect, standalone hide. */
-  .login-pwa-card {
-    margin-top: 12px;
-    padding: 12px 14px;
-    background: linear-gradient(135deg, rgba(212,167,106,0.08), rgba(168,157,200,0.05));
-    border: 1px solid rgba(212,167,106,0.25);
-    border-radius: 12px;
+  /* PWA install — 사용자 명시 2026-04-30 ultrathink v2: 로그인 위 prominent, 항상 펼침, standalone hide. */
+  .login-pwa-prominent {
+    margin: 8px 0 16px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(168,157,200,0.10));
+    border: 1.5px solid rgba(212,167,106,0.55);
+    border-radius: 16px;
     text-align: left;
+    box-shadow: 0 4px 18px rgba(212,167,106,0.15);
   }
-  .login-pwa-card > summary {
-    list-style: none; cursor: pointer; font-size: 12px; font-weight: 600;
-    color: var(--text); user-select: none;
-    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  .pwa-prom-title {
+    font-size: 15px; font-weight: 700;
+    color: #f0d9a8; letter-spacing: 0.01em;
+    margin-bottom: 4px;
+    text-shadow: 0 0 10px rgba(212,167,106,0.30);
   }
-  .login-pwa-card > summary::-webkit-details-marker { display: none; }
-  .login-pwa-card > summary::after { content: '▾'; font-size: 10px; color: var(--text-soft); transition: transform 0.2s; }
-  .login-pwa-card[open] > summary::after { transform: rotate(180deg); }
-  .login-pwa-card[open] > summary { margin-bottom: 10px; }
+  .pwa-prom-sub {
+    font-size: 11.5px; color: rgba(255,255,255,0.65);
+    line-height: 1.55; margin-bottom: 12px;
+    letter-spacing: 0.01em;
+  }
+  .login-pwa-divider {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-soft);
+    margin: 4px 0 14px;
+    letter-spacing: 0.08em;
+  }
+  .pwa-install-1tap {
+    background: linear-gradient(135deg, #d4a76a, #b8894a) !important;
+    color: var(--bg) !important;
+    font-weight: 700;
+    box-shadow: 0 2px 12px rgba(212,167,106,0.35);
+  }
   .pwa-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
   .pwa-tab {
     flex: 1; padding: 6px 10px;
@@ -8606,6 +8622,30 @@
     <div class="login-title">소라고동</div>
     <div class="login-sub"><span style="font-size:17px; color:var(--text); font-weight:500; letter-spacing:0.01em;">나를 아는 AI 길라잡이 <span class="accent">✦</span></span><br><span style="color:var(--text-soft); font-size:12px;">이메일로 안전하게 들어와</span></div>
 
+    <!-- 사용자 명시 2026-04-30 ultrathink: PWA 설치 — 로그인 위 prominent (항상 펼침, standalone hide). Android = beforeinstallprompt 1탭 / iOS = manual 3 step. -->
+    <div class="login-pwa-prominent" id="loginPwaCard">
+      <div class="pwa-prom-title">📱 앱으로 쓰면 훨씬 편해</div>
+      <div class="pwa-prom-sub">홈 화면에 추가 → 1탭 진입 / 풀스크린 / 빠름</div>
+      <div class="pwa-tabs">
+        <button type="button" class="pwa-tab" data-os="ios" onclick="setPwaTab('ios')">📱 iPhone</button>
+        <button type="button" class="pwa-tab" data-os="android" onclick="setPwaTab('android')">🤖 Android</button>
+      </div>
+      <div class="pwa-steps" id="pwaStepsIos">
+        <div class="pwa-step">1. <b>사파리(Safari)</b>로 이 사이트 열기</div>
+        <div class="pwa-step">2. 하단 <b>공유 ⬆ 버튼</b> 누르기</div>
+        <div class="pwa-step">3. <b>[홈 화면에 추가]</b> → <b>[추가]</b></div>
+        <div class="pwa-install-note">Apple 정책상 자동 설치 X — 수동 3 단계만 가능.</div>
+      </div>
+      <div class="pwa-steps" id="pwaStepsAndroid" style="display:none;">
+        <button type="button" id="pwaInstallBtn" onclick="triggerPwaInstall()" class="btn-primary pwa-install-1tap" style="display:none; width:100%; margin-bottom:12px; padding:14px;">📱 1탭으로 앱 설치 ✦</button>
+        <div class="pwa-step">1. 우측 상단 <b>메뉴 [⋮]</b> 누르기</div>
+        <div class="pwa-step">2. <b>[홈 화면에 추가]</b> 또는 <b>[앱 설치]</b></div>
+        <div class="pwa-step">3. <b>[설치]</b> → 앱처럼 작동</div>
+        <div class="pwa-install-note">위 1탭 버튼 안 뜨면 수동 3 단계 (브라우저별 위치 다름).</div>
+      </div>
+    </div>
+    <div class="login-pwa-divider">— 또는 바로 로그인 ↓ —</div>
+
     <!-- Step 1: Email + 동의 (사용자 요청 2026-04-30 변호사 검수: PIPA + 전자상거래법 의무 + 안전 어필) -->
     <div class="login-form" id="loginStep1">
       <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
@@ -8662,28 +8702,6 @@
       <div class="login-status" id="verifyStatus"></div>
       <button class="btn-secondary" onclick="resetLoginFlow()" style="margin-top:14px;">이메일 다시 입력</button>
     </div>
-
-    <!-- 사용자 명시 2026-04-30 ultrathink: PWA 설치 안내 (collapsed default, auto-detect, standalone hide). Android = beforeinstallprompt 1탭 / iOS = manual 3 step (Apple 정책상 자동 X). -->
-    <details class="login-pwa-card" id="loginPwaCard">
-      <summary>📱 앱처럼 쓰는 법 (홈 화면 추가) ✦</summary>
-      <div class="pwa-tabs">
-        <button type="button" class="pwa-tab" data-os="ios" onclick="setPwaTab('ios')">📱 iPhone</button>
-        <button type="button" class="pwa-tab" data-os="android" onclick="setPwaTab('android')">🤖 Android</button>
-      </div>
-      <div class="pwa-steps" id="pwaStepsIos">
-        <div class="pwa-step">1. <b>사파리(Safari)</b>로 이 사이트 열기</div>
-        <div class="pwa-step">2. 하단 <b>공유 ⬆ 버튼</b> 누르기</div>
-        <div class="pwa-step">3. <b>[홈 화면에 추가]</b> → <b>[추가]</b></div>
-        <div class="pwa-install-note">Apple 정책상 자동 설치 X — 수동 3 단계만 가능.</div>
-      </div>
-      <div class="pwa-steps" id="pwaStepsAndroid" style="display:none;">
-        <button type="button" id="pwaInstallBtn" onclick="triggerPwaInstall()" class="btn-primary" style="display:none; width:100%; margin-bottom:10px;">📱 1탭으로 앱 설치 ✦</button>
-        <div class="pwa-step">1. 우측 상단 <b>메뉴 [⋮]</b> 누르기</div>
-        <div class="pwa-step">2. <b>[홈 화면에 추가]</b> 또는 <b>[앱 설치]</b></div>
-        <div class="pwa-step">3. <b>[설치]</b> → 앱처럼 작동</div>
-        <div class="pwa-install-note">위 버튼 안 뜨면 수동 3 단계로 (브라우저별 위치 다름).</div>
-      </div>
-    </details>
 
   </div>
 </div>
