@@ -14030,6 +14030,13 @@ async function init() {
     }
   }, 6000);
 
+  // 사용자 명시 2026-05-01 (A 옵션): 연간 자동 통합 (1월 첫째주 일요일만, 작년 데이터 있고 미생성이면 자동)
+  setTimeout(() => {
+    if (typeof runAnnualAutoReviewIfNeeded === 'function') {
+      runAnnualAutoReviewIfNeeded().catch(e => console.warn('annual auto error:', e));
+    }
+  }, 9000);
+
   // V3.13.x: 일기 자동 요약 (어제부터 거꾸로 보강 안 된 첫 날 1개)
   setTimeout(() => {
     runDiaryAutoSummaryIfNeeded().catch(e => console.warn('diary auto summary error:', e));
@@ -17693,10 +17700,11 @@ function isWeeklyReviewAvailable() {
 
 function isMonthlyReviewAvailable() {
   const today = new Date();
+  // 사용자 명시 2026-05-01 (A 옵션): 첫째주 일요일만 (1-7일 + 일요일).
+  if (today.getDay() !== 0) return false;
   const currentMonthKey = getCurrentMonthKey();
   const hasThisMonth = (state.monthlyReviews || []).some(r => r.monthKey === currentMonthKey);
   if (hasThisMonth) return false;
-  // Available in first 7 days of new month
   const dayOfMonth = today.getDate();
   if (dayOfMonth > 7) return false;
   // Need data from previous month
@@ -32609,6 +32617,8 @@ JSON만 출력.`;
 async function runQuarterlyAutoReviewIfNeeded() {
   if (!_canAI()) return;
   const today = new Date();
+  // 사용자 명시 2026-05-01 (A 옵션): 분기 시작 달 첫째주 일요일만.
+  if (today.getDay() !== 0) return;
   const dayOfMonth = today.getDate();
   const month = today.getMonth(); // 0-indexed
   // 분기 시작 달 = 0, 3, 6, 9
@@ -32674,6 +32684,8 @@ async function runQuarterlyAutoReviewIfNeeded() {
 async function runMonthlyAutoReviewIfNeeded() {
   if (!_canAI()) return;
   const today = new Date();
+  // 사용자 명시 2026-05-01 (A 옵션): 첫째주 일요일만 (1-7일 + 일요일).
+  if (today.getDay() !== 0) return;
   const dayOfMonth = today.getDate();
   if (dayOfMonth > 7) return;
 
@@ -32717,6 +32729,27 @@ async function runMonthlyAutoReviewIfNeeded() {
     showToast('📅 지난 달 자동 정리 완료. 도서관 → 리뷰 모음 확인.');
   } catch (e) {
     console.warn('monthly auto review failed:', e);
+  }
+}
+
+// 사용자 명시 2026-05-01 (A 옵션): 연간 리뷰 자동 trigger — 1월 첫째주 일요일만, 작년 데이터 있고 미생성이면 generateAnnualReview(prevYear).
+async function runAnnualAutoReviewIfNeeded() {
+  if (!_canAI()) return;
+  const today = new Date();
+  if (today.getDay() !== 0) return;            // 일요일만
+  if (today.getMonth() !== 0) return;          // 1월 (0-indexed)
+  if (today.getDate() > 7) return;             // 첫째주 (1-7일)
+  const prevYear = today.getFullYear() - 1;
+  const exists = (state.annualReviews || []).some(r => r.year === prevYear);
+  if (exists) return;
+  // 작년 entries 있는지 (회고할 거리 X 면 skip)
+  const hasPrevYearData = (state.entries || []).some(e => e.date && e.date.startsWith(String(prevYear)));
+  if (!hasPrevYearData) return;
+  try {
+    await generateAnnualReview(prevYear);   // state.annualReviews 자동 push
+    showToast(`🐚 ${prevYear}년 한 해 리뷰 완료. 도서관 → 연간 리뷰.`);
+  } catch (e) {
+    console.warn('annual auto review failed:', e);
   }
 }
 
