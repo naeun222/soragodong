@@ -81,23 +81,33 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   } catch (e) { console.warn('[subscribe] payment 기록 실패:', e); }
 
   try {
-    await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
-        subscription_active: true,
-        subscription_expires_at: expiresAt,
-        subscription_plan: plan,
-        monthly_quota_usd: tier.cap_usd,        // 사용자 명시 2026-04-30: tier cap 설정
-        monthly_token_used: 0,                  // 새 cycle — 사용량 reset
-        monthly_period_started_at: periodStartedAt
-      })
-    });
+    // 사용자 명시 2026-05-01 (agent audit): 동시 결제 race 차단 — `?subscription_active=eq.false` 필터.
+    // 이미 active 한 사용자가 빠른 두 번 결제 시 첫 번째 PATCH 만 성공 (winner), 두 번째 = 0 row 응답 → 한 달 결제 사라지는 자리 fix.
+    const patchResp = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&or=(subscription_active.is.null,subscription_active.eq.false,subscription_expires_at.lt.${encodeURIComponent(new Date().toISOString())})`,
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          subscription_active: true,
+          subscription_expires_at: expiresAt,
+          subscription_plan: plan,
+          monthly_quota_usd: tier.cap_usd,
+          monthly_token_used: 0,
+          monthly_period_started_at: periodStartedAt
+        })
+      }
+    );
+    const patched = await patchResp.json().catch(() => []);
+    if (!Array.isArray(patched) || patched.length === 0) {
+      // 이미 active 구독 — race 두 번째 호출이 도달했거나, 아직 만료 X. 결제는 성공 처리 (포트원 환불 정책에 맡김).
+      return jsonResponse({ ok: true, already_active: true, message: '이미 활성 구독이 있어. 만료 시점에 다시 결제해줘.' }, 200);
+    }
     return jsonResponse({ ok: true, expires_at: expiresAt, plan, cap_usd: tier.cap_usd });
   } catch (e: any) {
     return jsonResponse({ error: 'billing 갱신 실패: ' + (e?.message || e) }, 500);

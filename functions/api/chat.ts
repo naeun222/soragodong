@@ -109,11 +109,14 @@ export async function onRequestPost(context: {
         } catch (e) {
           controller.error(e);
         } finally {
-          if (usageData) {
+          // 사용자 명시 2026-05-01 (agent audit): output_tokens=1 (message_start 초기값만 받고 message_delta 누락) 케이스 차감 skip.
+          // upstream 502 / SSE 끊김 / network 중간 끊김 시 output_tokens=1 잘못된 값으로 차감되던 자리 차단.
+          const _outputTokens = usageData?.output_tokens || 0;
+          if (usageData && _outputTokens > 1) {
             const cost = calculateCost(
               body.model,
               usageData.input_tokens || 0,
-              usageData.output_tokens || 0,
+              _outputTokens,
               usageData.cache_read_input_tokens || 0,
               usageData.cache_creation_input_tokens || 0
             );

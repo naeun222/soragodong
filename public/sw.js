@@ -5,7 +5,8 @@
 // 사용자 보고 2026-04-30: 큰 변경 (E2EE / API 마이그/암호화) 박힐 때마다 v 숫자 올리기.
 // activate에서 옛 캐시 자동 삭제 → stale 평문/구조 캐시 노출 차단.
 // v3 (2026-04-30 ultrathink): /api/* cache-first 버그 fix — SW 가 GET /api/usage 등을 캐싱해서 잔액 stale 노출되던 critical 버그.
-const CACHE_NAME = 'soragodong-v4-cache-v3';
+// v4 (2026-05-01 agent audit): E2EE 11 키 sensitiveKeys 추가 / decision 14일 hardcap / 광범위 워딩 정정 / phase 정리. 옛 캐시 stale 차단.
+const CACHE_NAME = 'soragodong-v4-cache-v4';
 const PRECACHE_URLS = [
   './',
   './index.html',

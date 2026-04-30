@@ -291,7 +291,7 @@ soragodong-repo/
 
 ### 🟢 이번 세션 완료 (2026-04-30)
 - [x] **2-tier 월정액 시스템 구현** — DB 0004 + backend (subscribe / overage-pack / upgrade-tier) + frontend (충전 폐기 + 2 카드 구독 + cap 도달 모달)
-- [x] **무료 토큰 1,400원 → 4,000원** ($1.0 → $2.86, pure API cost / 마진 X)
+- [x] **무료 토큰 1,400원 → 2,000원** ($1.0 → $1.43, pure API cost / 마진 X) — 정정 2026-05-01: agent audit 결과 코드 = $1.43 (FREE_INITIAL_CREDIT_USD = 1.43). 이전 메모 표기 ($2.86) stale, 정정.
 - [x] **잔액 race condition fix** — deduct_credit_atomic RPC 활용
 - [x] **recordUsage / deductCost waitUntil** — drop 방지
 - [x] **SSE buffer 잔여 처리** — 마지막 message_delta 누락 fix (output_tokens 거의 0 record 되던 root cause)
