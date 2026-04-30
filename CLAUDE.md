@@ -67,12 +67,12 @@ soragodong-repo/
 배포: **Cloudflare Pages** (Vercel X — Hobby tier 상업적 사용 금지로 마이그레이션 완료 2026-04-30).
 브랜치: `v4-dev` = preview, `main` = production.
 
-## Push 정책 (사용자 명시 2026-04-30 정정)
+## Push 정책 (사용자 명시 2026-04-30 정정 — main 단독)
 
-1. **v4-dev / main 둘 다 push 항상 허락** (사용자 명시). 옛 정책 (자동 push 금지 / batch 10 commit / 명시 허락 필요) 무효.
-2. **commit 후 자연스러운 시점에 push** — 한 작업 단위 마무리 후 또는 사용자가 "수정 다 하고 push" 명시 시.
-3. **main 직접 push 시 backup branch** (`main-backup-YYYY-MM-DD-N`) 사용자가 별도 요청 시만. 옛 의무 항목 무효.
-4. **v4-dev 위주** — 평소 작업 v4-dev. main 은 사용자 명시 또는 큰 단위 merge 시점.
+1. **main 단독 사용** (v4-dev 폐기 2026-04-30). soragodong.com / pages.dev 둘 다 main 배포.
+2. **push 항상 허락** — 자동 push OK. 옛 정책 (batch 10 commit / 명시 허락 필요) 무효.
+3. **commit 후 자연 push** — 한 작업 단위 마무리 후.
+4. **force push 또는 큰 reset 시 backup branch** (`main-backup-YYYY-MM-DD`) 자동 박기. 일반 push 는 backup 안 함.
 
 ## 작업 흐름
 
@@ -334,6 +334,7 @@ index.html 거대한 단일 파일. Grep 적극 활용:
 - [ ] **시드데이터 + 리뷰 변경사항 반영 X 진단 (사용자 보고 2026-04-30)**: 시드데이터 넣은 후 리뷰 돌리면 최근 변경/추가가 결과에 반영 안 됨. cache / 옛 transcript / 시드 ID prefix 무시 흐름 / 리뷰 input window 등 의심. 재현 후 진단. → 1차 fix 적용 (chapters/topicCards/pearls/archive/insights inject + monthly cutoffEnd + chat user-only -40). verify 필요.
 - [x] **gh-pages 에러 (사용자 보고 2026-04-30)**: ✅ fix — `.github/workflows/deploy-pages.yml` 삭제. Cloudflare Pages 마이그레이션 후 GitHub Pages 불필요 (V3 시대 옛 workflow). main / v4-dev push 마다 trigger 됐던 거.
 - [ ] **useOpus 적용 범위 검토 (사용자 질문 2026-04-30)**: 헤더 모델 토글 = `state.preferences.useOpus`. 현재 `sendChat` (line 19982) 만 영향. 다른 호출 (마법 helpChat / 숙고 reflection / 돌연변이 / forceAnalyze / generateReview / firstTouch / 등) 은 *고정 모델*. 사용자 의도 = 토글 박으면 *모든 대화* opus 인지 / *메인 chat 만* opus 인지 결정 후 적용 범위 통일.
+- [ ] **admin 특혜 제거 (사용자 명시 2026-04-30)**: "관리자 계정이라고 결제 / 사용량 다르게 하지 말아줘". `_isAdmin()` 의 client UI 가드 (admin 잔액·충전 숨김) 제거 + `/api/chat` 의 admin 무료 사용 path 제거 + `_checkDailyChatCap` admin 우회 제거. admin 도 일반 사용자처럼 결제 / 사용량 흐름 사용. (admin 답변 권한 같은 *기능* 권한은 보존 — 결제 흐름만 일반화)
 - [ ] **마법의 방 UI 변경 (사용자 명시 2026-04-30 — 진행 보류)**: "마법의 방 UI 바꿔. 숙고의 방처럼 대화되게" — 정확 의도 확인 필요 (결정 화면 #screen-decisions 자체 대화 형식 변경? helpChat 진입 path 더 명확? 결정 입력 폼 → 대화 폼?). 큰 작업 — 사용자 의도 명확 받은 후 진행.
 
 ### 사용자 대기 노트 (우선순위 낮음)
