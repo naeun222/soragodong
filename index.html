@@ -12616,14 +12616,6 @@ const ONBOARDING_STEPS = [
     dimBackground: false
   },
   {
-    id: 'yangsaeng_intro',
-    targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"]',
-    title: '🧬 \'마감 직전 폭발력 신뢰\' 카드',
-    body: '여기 \'<b>마감 직전 폭발력 신뢰</b>\' 전략 DNA 카드가 있어.<br>이건 3번 연속 성공해서 \'<b>성장 중</b>\'이야.',
-    waitFor: 'next',
-    dimBackground: false
-  },
-  {
     id: 'click_result_check',
     // 사용자 보고 2026-04-29: 튜토리얼이 가끔 다른 전략 카드 결과 체크 가리키던 거 — strat_seed_0로 명시 scope
     targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"] .strategy-try-btn',
@@ -13493,6 +13485,27 @@ function _scrubSeedsForCore(coreId) {
         if (!m.id.startsWith('mis_seed_')) return true;
         return m.id === 'mis_seed_active_call' || m.id === 'mis_seed_strat0_done_unchecked';
       });
+      // 사용자 보고 2026-04-30: 양생방 step "결과 체크 버튼" 자리에 '✦ 해볼게' 가 보이던 버그 — mission 의 attemptStatus 가 어디선가 set 되어 _hasUnchecked=false. 코어 #2 진입 시 강제 reset.
+      const _resultMission = state.missions.find(m => m && m.id === 'mis_seed_strat0_done_unchecked');
+      if (_resultMission) {
+        _resultMission.status = 'completed';
+        delete _resultMission.attemptStatus;
+        delete _resultMission._followupAsked;
+      } else {
+        // 누락 시 강제 재 추가
+        const _todayMs = Date.now();
+        state.missions.push({
+          id: 'mis_seed_strat0_done_unchecked',
+          title: '마감 직전 환경 셋업 1번',
+          description: '카페 자리 + 폰 다른 방',
+          status: 'completed',
+          completedDate: new Date(_todayMs - 86400000).toISOString().split('T')[0],
+          completedAt: new Date(_todayMs - 86400000).toISOString(),
+          createdAt: new Date(_todayMs - 86400000).toISOString(),
+          strategyId: 'strat_seed_0',
+          generationIdx: 0
+        });
+      }
     }
   }
   // 다른 코어 후처리는 추후 보고 받으면 추가
@@ -13754,6 +13767,25 @@ async function startInteractiveOnboarding(startStep) {
   // testerMode ON 확인 후 시드 박음 (await로 순서 보장)
   if (state.preferences && state.preferences.testerMode && typeof testSeedV4Data === 'function') {
     try { await testSeedV4Data(); } catch (e) { console.warn('tutorial seed:', e); }
+  }
+  // 사용자 보고 2026-04-30: 코어 튜토리얼 중 '소라의 부름' 안 떠있는 채로 모래사장/양생방 step 진입 버그 — 시드 박힘 후 active mission 강제 보장 (race / sweep 잔여 fallback).
+  if (state.preferences && state.preferences.testerMode && Array.isArray(state.missions)) {
+    const _t = Date.now();
+    const _todayStr = new Date(_t).toISOString().split('T')[0];
+    const _activeM = state.missions.find(m => m && m.id === 'mis_seed_active_call');
+    if (_activeM) {
+      if (_activeM.status !== 'active') _activeM.status = 'active';
+      if (!_activeM.scheduledFor) _activeM.scheduledFor = _todayStr;
+    } else {
+      state.missions.unshift({
+        id: 'mis_seed_active_call',
+        title: '엄마 통화 시작 전 3초 호흡',
+        description: '"나도 알아!" 나오기 전에 한 호흡 끼우기',
+        status: 'active',
+        scheduledFor: _todayStr,
+        createdAt: new Date(_t - 3600000).toISOString()
+      });
+    }
   }
   const tourOv = document.getElementById('tourOverlay');
   if (tourOv) tourOv.style.display = 'none';
