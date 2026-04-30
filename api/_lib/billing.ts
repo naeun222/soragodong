@@ -4,7 +4,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // 무료 충전 토큰 초기 한도 (가입 시 1회 지급). 실제 정책 따라 조정.
-// 사용자 명시 2026-04-30: 1,400원 → 4,000원 (4 천원어치). 1USD = 1,400원 환산.
+// 사용자 명시 2026-04-30: 1,400원 → 4,000원 (4 천원어치). 1USD = 1,400원 환산 → $2.86.
+// pure API cost — 마진 X. 차감은 Anthropic 가격 그대로.
 export const FREE_INITIAL_CREDIT_USD = 2.86;
 
 export type UserBilling = {
@@ -65,16 +66,20 @@ export async function ensureBillingRow(userId: string): Promise<UserBilling | nu
     free_credit_granted: true
   };
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_billing`, {
+    // 사용자 보고 2026-04-30 ultrathink: ignore-duplicates 명시 — 새로고침 시 잔액 자동 충전 버그 fix (functions/ 와 동일 정책).
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_billing`, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_SERVICE_ROLE_KEY,
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+        'Prefer': 'return=minimal,resolution=ignore-duplicates'
       },
       body: JSON.stringify(newRow)
     });
+    if (!resp.ok) {
+      console.warn('[billing] ensureBillingRow INSERT 비-2xx:', resp.status);
+    }
     return await getUserBilling(userId);
   } catch (e) {
     console.warn('[billing] row 생성 실패:', e);
