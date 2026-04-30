@@ -35471,8 +35471,8 @@ function renderBusinessInfo() {
   if (b.representative) rows.push(`<div><b>대표자</b>: ${escapeHtml(b.representative)}</div>`);
   if (b.business_no) rows.push(`<div><b>사업자등록번호</b>: ${escapeHtml(b.business_no)}</div>`);
   if (b.ecommerce_no) rows.push(`<div><b>통신판매업 신고번호</b>: ${escapeHtml(b.ecommerce_no)}</div>`);
-  if (b.address) rows.push(`<div><b>사업장 주소</b>: ${escapeHtml(b.address)}</div>`);
-  if (b.phone) rows.push(`<div><b>연락처</b>: ${escapeHtml(b.phone)}</div>`);
+  // 사용자 명시 2026-04-30 ultrathink: 주소·연락처 = 자택이라 UI 노출 X. 의무 자리는 약관·환불·개인정보 마크다운.
+  rows.push(`<div><b>사업장 주소·연락처</b>: <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/terms.md" target="_blank" style="color:var(--accent);">약관</a> / <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/refund.md" target="_blank" style="color:var(--accent);">환불정책</a> / <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/privacy.md" target="_blank" style="color:var(--accent);">개인정보처리방침</a> 참고</div>`);
   if (b.email) rows.push(`<div><b>이메일</b>: <a href="mailto:${escapeHtml(b.email)}" style="color:var(--accent);">${escapeHtml(b.email)}</a></div>`);
   if (b.cpo) rows.push(`<div><b>개인정보 보호책임자</b>: ${escapeHtml(b.cpo)}</div>`);
   // 등록증 / 통판 미발급 시 안내
@@ -35567,15 +35567,16 @@ const TOSS_ACCOUNT = {
 const KAKAO_OPEN_CHAT = 'https://open.kakao.com/o/sUP7kIsi';
 
 // 사업자 정보 (전자상거래법 의무 노출). 사업자등록증·통신판매업 신고증 발급 후 빈 문자열만 채우면 자동 표시.
+// 주소·연락처는 자택이라 민감 — settings UI 노출 X, 약관·환불·개인정보 마크다운에만 풀 명시 (전상법 §13 의무 자리). 사용자 명시 2026-04-30 ultrathink.
 const BUSINESS_INFO = {
   name: 'Naeun Lab',                       // 상호
   representative: '김나은',                // 대표자
-  business_no: '261-21-02592',             // 사업자등록번호 (2026-04-30 발급, 일반과세)
-  ecommerce_no: '',                        // 통신판매업 신고번호 (예: '제2026-서울강남-12345호') — 사용자가 알려주면 박힘
-  address: '',                             // 사업장 주소 — 사용자가 알려주면 박힘
-  phone: '',                               // 연락처 (선택, 070 가상번호 등)
+  business_no: '261-21-02592',             // 사업자등록번호 (2026-04-30, 일반과세)
+  ecommerce_no: '',                        // 통신판매업 신고번호 — 발급 후 채움
+  address: '서울특별시 동작구 상도로47아길 14',  // 자택 — UI 노출 X, source of truth 만
+  phone: '',                               // 연락처 (선택, 070 가상번호 발급 시)
   email: 'soragodongapp@gmail.com',        // 사업용 이메일 (CPO 공시용)
-  cpo: '김나은'                             // 개인정보 보호책임자 (Chief Privacy Officer)
+  cpo: '김나은'                             // 개인정보 보호책임자
 };
 
 // 사용자별 송금 메모 코드 (unique, 8자) — auth_user_id 기반
