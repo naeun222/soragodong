@@ -9345,6 +9345,7 @@
           <button class="btn-secondary" onclick="forceAnalyze()" title="opus 4.7 사용 — 비쌈">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="cleanLegacySeedData()" title="잔존 시드 텍스트 강제 정리">🧹 잔존 시드 정리</button>
           <button class="btn-secondary" onclick="testFirstTouchQuiz()" title="신규 사용자 첫 관찰 quiz 시뮬레이션 (테스터 모드 필수)">🆕 첫 관찰 quiz 미리보기</button>
+          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 선물 모달 미리보기 (state X)">🎁 환영 선물 모달 미리보기</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (가짜 데이터 prototype)">🐚 연간 리뷰 미리보기</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">관리자 — 토스 송금</div>
@@ -11178,7 +11179,9 @@ async function maybeShowFirstTouchQuiz() {
 }
 
 // 사용자 요청 2026-04-30 ultrathink: 무료 토큰 화려한 환영 모달 + 법적 고지 (전상법 §13/§17, 표시광고법 §3)
-function showWelcomeBonusModal() {
+// opts.preview = true 시 _welcomeBonusShown flag 안 건드림 (개발자 도구 미리보기용).
+function showWelcomeBonusModal(opts) {
+  const preview = !!(opts && opts.preview);
   return new Promise(resolve => {
     if (document.getElementById('welcomeBonusOverlay')) { resolve(); return; }
     const overlay = document.createElement('div');
@@ -11219,13 +11222,20 @@ function showWelcomeBonusModal() {
     `;
     document.body.appendChild(overlay);
     document.getElementById('welcomeBonusOkBtn').onclick = () => {
-      state.preferences = state.preferences || {};
-      state.preferences._welcomeBonusShown = true;
-      saveState();
+      if (!preview) {
+        state.preferences = state.preferences || {};
+        state.preferences._welcomeBonusShown = true;
+        saveState();
+      }
       overlay.remove();
       resolve();
     };
   });
+}
+
+// 개발자 도구 — 환영 선물 모달 미리보기 (state 안 건드림).
+function devPreviewWelcomeBonus() {
+  showWelcomeBonusModal({ preview: true });
 }
 
 // 사용자 요청 2026-04-30 ultrathink: 5문항 한 화면 → step wizard (피곤함 줄이기)
