@@ -2299,6 +2299,107 @@
     text-shadow: 0 0 16px rgba(158,212,160,0.28);
   }
 
+  /* ─── 카드 10: AI 포착 새 특징 (사용자 명시 2026-04-30: 살리자) ─── */
+  .ann-rv-card-traits {
+    background: linear-gradient(180deg, #1a1828 0%, #0a0912 100%);
+  }
+  .ann-rv-traits-list {
+    display: flex; flex-direction: column;
+    gap: 12px; width: 100%; max-width: 380px;
+  }
+  .ann-rv-trait-item {
+    background: rgba(212,167,106,0.06);
+    border: 1px solid rgba(212,167,106,0.20);
+    border-left: 3px solid rgba(212,167,106,0.55);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .ann-rv-trait-name {
+    font-size: 14.5px; color: #f0d9a8;
+    font-weight: 600; letter-spacing: 0.01em;
+    margin-bottom: 6px;
+  }
+  .ann-rv-trait-evidence {
+    font-size: 11.5px; color: rgba(232,212,168,0.55);
+    line-height: 1.5; font-style: italic;
+  }
+
+  /* ─── 카드 11: 사운드 top 5 (사용자 명시 2026-04-30: 살리자) ─── */
+  .ann-rv-card-sound {
+    background:
+      radial-gradient(ellipse at 50% 100%, rgba(139,126,196,0.18), transparent 65%),
+      #0a0912;
+  }
+  .ann-rv-sound-list {
+    display: flex; flex-direction: column;
+    gap: 10px; width: 100%; max-width: 360px;
+  }
+  .ann-rv-sound-row {
+    display: flex; gap: 12px; align-items: center;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 10px 14px 10px 12px;
+  }
+  .ann-rv-sound-rank {
+    font-size: 22px; font-weight: 800;
+    color: rgba(212,167,106,0.85);
+    width: 22px; text-align: center;
+    flex-shrink: 0; font-style: italic;
+  }
+  .ann-rv-sound-art {
+    width: 40px; height: 40px;
+    border-radius: 6px;
+    object-fit: cover; flex-shrink: 0;
+    background: linear-gradient(135deg, #d4a76a, #8b7ec4);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .ann-rv-sound-meta {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column; gap: 2px;
+    overflow: hidden;
+  }
+  .ann-rv-sound-title {
+    font-size: 12.5px; color: #f0d9a8; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ann-rv-sound-artist {
+    font-size: 10.5px; color: rgba(232,212,168,0.6);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ann-rv-sound-plays {
+    font-size: 10.5px; color: rgba(255,255,255,0.45);
+    flex-shrink: 0;
+  }
+
+  /* ─── 카드 12: 1년 summary + 큰 godongicon (사용자 명시 2026-04-30: 옛 V4 형식) ─── */
+  .ann-rv-card-summary {
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(212,167,106,0.18), transparent 65%),
+      #0a0912;
+    text-align: center;
+  }
+  .ann-rv-summary-godong {
+    width: 200px; height: 200px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 24px rgba(212,167,106,0.45));
+    margin-bottom: 36px;
+    animation: ann-rv-summary-float 4s ease-in-out infinite alternate;
+  }
+  @keyframes ann-rv-summary-float {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-8px); }
+  }
+  .ann-rv-summary-text {
+    font-size: 15px;
+    color: #e8d4a8;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    max-width: 340px;
+    text-align: center;
+    font-weight: 400;
+  }
+
   /* (legacy — 사용 안 함, 호환성) */
   .ann-rv-card-best { background: linear-gradient(180deg, #121a26, #0a0912); }
   .ann-rv-best-grid {
@@ -11006,7 +11107,55 @@ function _annualReviewBuildCardDeep(d) {
   `;
 }
 
-// 카드 9: 마지막 + 다음 1년 (사용자 명시 2026-04-30: 이전 그대로 유지)
+// 카드 10: AI 포착 새 특징 — 사용자 명시 2026-04-30: 살리자. 다음 phase = Opus 4.7 진짜 분석.
+function _annualReviewBuildCardNewTraits(d) {
+  const traits = (d.new_traits || []).map(t => `
+    <div class="ann-rv-trait-item">
+      <div class="ann-rv-trait-name">${escapeHtml(t.name)}</div>
+      <div class="ann-rv-trait-evidence">${escapeHtml(t.evidence || '')}</div>
+    </div>
+  `).join('');
+  return `
+    <div class="ann-rv-card ann-rv-card-traits">
+      <div class="ann-rv-label">올해 발견된 너</div>
+      <div class="ann-rv-traits-list">${traits}</div>
+    </div>
+  `;
+}
+
+// 카드 11: 사운드 top 5 — 사용자 명시 2026-04-30: 살리자.
+function _annualReviewBuildCardSoundTop5(d) {
+  const tracks = (d.sound_top5 || []).map((t, i) => `
+    <div class="ann-rv-sound-row">
+      <div class="ann-rv-sound-rank">${i + 1}</div>
+      <img class="ann-rv-sound-art" src="${escapeHtml(t.artworkUrl || '')}" alt="">
+      <div class="ann-rv-sound-meta">
+        <div class="ann-rv-sound-title">${escapeHtml(t.title)}</div>
+        <div class="ann-rv-sound-artist">${escapeHtml(t.artist)}</div>
+      </div>
+      <div class="ann-rv-sound-plays">${t.plays || 0}회</div>
+    </div>
+  `).join('');
+  return `
+    <div class="ann-rv-card ann-rv-card-sound">
+      <div class="ann-rv-label">2025 사운드 Top 5</div>
+      <div class="ann-rv-sound-list">${tracks}</div>
+    </div>
+  `;
+}
+
+// 카드 12: 1년 summary + 큰 godongicon — 사용자 명시 2026-04-30: 옛 V4 형식.
+function _annualReviewBuildCardSummary(d) {
+  const text = (d.summary || '').replace(/\n/g, '<br>');
+  return `
+    <div class="ann-rv-card ann-rv-card-summary">
+      <img class="ann-rv-summary-godong" src="/godongicon.png" alt="소라고동">
+      <div class="ann-rv-summary-text">${text}</div>
+    </div>
+  `;
+}
+
+// 카드 13: 마지막 + 다음 1년 (사용자 명시 2026-04-30: 이전 그대로 유지)
 function _annualReviewBuildCard9(d) {
   const f = d.final || {};
   const buttons = (f.buttons || []).map(b => `
