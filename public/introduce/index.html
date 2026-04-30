@@ -281,74 +281,6 @@
     display: block;
   }
 
-  /* PWA install — 사용자 명시 2026-04-30 ultrathink: 사용자 편의성 X 해치게, 피로감 X. 단일 collapsed details + auto-detect tab. */
-  .pwa-install {
-    margin: 80px auto 0;
-    max-width: 480px;
-    padding: 18px 22px;
-    background: linear-gradient(135deg, rgba(201,169,110,0.08), rgba(139,126,196,0.05));
-    border: 1px solid rgba(201,169,110,0.20);
-    border-radius: 18px;
-    text-align: left;
-  }
-  .pwa-install summary {
-    list-style: none;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-    user-select: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .pwa-install summary::-webkit-details-marker { display: none; }
-  .pwa-install summary::after {
-    content: '▾';
-    font-size: 12px;
-    color: var(--text-soft);
-    transition: transform 0.2s;
-  }
-  .pwa-install[open] summary::after { transform: rotate(180deg); }
-  .pwa-install[open] summary { margin-bottom: 14px; }
-  .pwa-tabs {
-    display: flex; gap: 8px; margin-bottom: 14px;
-  }
-  .pwa-tab {
-    flex: 1; padding: 8px 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text-soft);
-    font-size: 12.5px;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .pwa-tab.active {
-    background: rgba(201,169,110,0.15);
-    border-color: rgba(201,169,110,0.45);
-    color: var(--accent);
-    font-weight: 600;
-  }
-  .pwa-steps {
-    font-size: 13px;
-    line-height: 1.8;
-    color: var(--text);
-  }
-  .pwa-step {
-    padding: 6px 0 6px 14px;
-    border-left: 2px solid rgba(201,169,110,0.30);
-    margin-bottom: 6px;
-  }
-  .pwa-step b { color: var(--accent); font-weight: 600; }
-  .pwa-install-note {
-    margin-top: 10px;
-    font-size: 11px;
-    color: var(--text-soft);
-    line-height: 1.6;
-  }
 
   /* Responsive */
   @media (max-width: 640px) {
@@ -601,54 +533,8 @@
       진지하게.
     </p>
 
-    <!-- PWA install — 사용자 명시 2026-04-30 ultrathink: 로그인 전 단계 (introduce → login 흐름) 안내. auto-detect + collapsed default. -->
-    <details class="pwa-install" id="pwaInstall">
-      <summary>📱 앱처럼 쓰는 법 (홈 화면 추가) ✦</summary>
-      <div class="pwa-tabs">
-        <button type="button" class="pwa-tab" data-os="ios" onclick="setPwaTab('ios')">📱 iPhone</button>
-        <button type="button" class="pwa-tab" data-os="android" onclick="setPwaTab('android')">🤖 Galaxy / Android</button>
-      </div>
-      <div class="pwa-steps" id="pwaStepsIos">
-        <div class="pwa-step">1. <b>사파리(Safari)</b>로 이 사이트 열기</div>
-        <div class="pwa-step">2. 하단 <b>공유 ⬆ 버튼</b> 누르기</div>
-        <div class="pwa-step">3. <b>[홈 화면에 추가]</b> 선택 → <b>[추가]</b></div>
-        <div class="pwa-install-note">홈 화면에 🐚 아이콘 → 누르면 앱처럼 열림. 주소창 X / 풀스크린 / 빠른 진입.</div>
-      </div>
-      <div class="pwa-steps" id="pwaStepsAndroid" style="display:none;">
-        <div class="pwa-step">1. <b>크롬</b> 또는 <b>삼성 인터넷</b>으로 이 사이트 열기</div>
-        <div class="pwa-step">2. 우측 상단 <b>메뉴 [⋮]</b> 누르기</div>
-        <div class="pwa-step">3. <b>[홈 화면에 추가]</b> 또는 <b>[앱 설치]</b> 선택</div>
-        <div class="pwa-install-note">홈 화면에 🐚 아이콘 → 누르면 앱처럼 열림. 주소창 X / 풀스크린 / 빠른 진입.</div>
-      </div>
-    </details>
   </div>
 </section>
-
-<script>
-  // PWA install — auto-detect device + standalone hide
-  function setPwaTab(os) {
-    document.querySelectorAll('.pwa-tab').forEach(b =>
-      b.classList.toggle('active', b.dataset.os === os));
-    var ios = document.getElementById('pwaStepsIos');
-    var and = document.getElementById('pwaStepsAndroid');
-    if (ios) ios.style.display = os === 'ios' ? '' : 'none';
-    if (and) and.style.display = os === 'android' ? '' : 'none';
-  }
-  (function initPwa() {
-    var card = document.getElementById('pwaInstall');
-    if (!card) return;
-    // 이미 PWA 로 설치/실행 중이면 안내 숨김
-    var isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches
-      || window.navigator.standalone === true;
-    if (isStandalone) { card.style.display = 'none'; return; }
-    // 자동 감지 → tab preselect
-    var ua = navigator.userAgent;
-    var defaultOs = 'ios';
-    if (/Android/i.test(ua)) defaultOs = 'android';
-    else if (/iPhone|iPad|iPod/i.test(ua)) defaultOs = 'ios';
-    setPwaTab(defaultOs);
-  })();
-</script>
 
 </body>
 </html>

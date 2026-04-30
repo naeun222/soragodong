@@ -9270,6 +9270,7 @@
           <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 선물 모달 + backend 실제 grant ($1.43 ≈ 2,000원)">🎁 환영 선물 모달 (실제 grant)</button>
           <button class="btn-secondary" onclick="devResetWelcomeBonus()" title="admin 측 본인 free_credit_granted=false + balance=0 → 재테스트 가능">🔄 환영 선물 reset (admin)</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
+          <button class="btn-secondary" onclick="devPreviewWeeklyReview()" title="신규 schema (chart / strengths / cycles / emotions / value_align / risk_signals / 자기 평가 / 공유 카드) 풀 미리보기 — 시드 데이터 사용, AI 호출 X">📅 주간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>
           <button class="btn-secondary" onclick="devForceYesterdayCard()" title="홈 화면의 '어제의 기록 볼래?' 카드 강제 표시 (seen flag reset). 어제 entry 없어도 표시).">🌙 어제 카드 표시</button>
           <button class="btn-secondary" onclick="adminResetBalance()" title="이전 누적 잔액 정정 (admin only). 0~$100 범위.">💰 잔액 정정 (admin)</button>
@@ -11513,6 +11514,81 @@ function showWelcomeBonusModal(opts) {
       }, 1200);
     };
   });
+}
+
+// 개발자 도구 — 주간 리뷰 신규 schema 풀 미리보기 (시드 데이터, AI 호출 X).
+// 사용자 명시 2026-04-30 ultrathink: chart / strengths / cycles / emotions / value_align / risk_signals 모두 demo. 위기 신호 'watch' 케이스 + 가치 align bar + 7일 차트 다 한 화면에.
+function devPreviewWeeklyReview() {
+  if (typeof renderReviewScreen !== 'function') { alert('renderReviewScreen 미정의'); return; }
+  const today = new Date();
+  // entries 가 부족하면 chart 가 표시 X 라 임시 7일 mood/energy 시드 inject (기존 entries 안 건드림 — testerMode 권장)
+  if (!state.preferences || !state.preferences.testerMode) {
+    if (!confirm('테스터 모드 OFF 인데 진행 시 임시 entries 가 state 에 박힐 수 있어. 권장: 테스터 모드 ON 후 진행. 계속?')) return;
+  }
+  const reviewData = {
+    one_word_weekly: '회복중',
+    summary: '잠을 챙긴 주, 마음이 한결 가벼워짐. 마감 후에도 무너지지 않음.',
+    pattern: {
+      headline: '수면 7h+ 인 날, 다음날 mood +1.5',
+      evidence: '"오늘 7시간 잤더니 머리가 맑아." (화) + "잠 짧은 다음날 항상 한 박자 늦어." (목)',
+      condition: '평일 11시 전 취침 시 — 4/5 일 일관'
+    },
+    quotes: [
+      '"오늘 7시간 잤더니 머리가 맑아."',
+      '"엄마 통화 후 5분 산책 = 회복."',
+      '"마감 임박 = 자연 진입, 미루기 X."',
+      '"카페에서 글이 술술 써져."',
+      '"운동 한 날 일기가 길어."'
+    ],
+    strengths: [
+      '월요일 마감 임박에도 잠 7시간 챙김 — 평소 패턴 깸',
+      '엄마 통화 후 5분 산책으로 즉시 회복',
+      '카페 환경 setup 적극 활용 — 3회'
+    ],
+    cycles: {
+      sleep: '평일 7h+ 4일 → 다음날 mood 평균 +1.5. 토요일 5h → 일요일 처짐.',
+      mode: '시험 모드 활성 4일 → 카페인 ↑ but 회복 (산책/일찍 자기) 동시 챙김',
+      other: '비 오는 날 2일 — 무기력 살짝 ↑ 인지'
+    },
+    emotions: [
+      { word: '안심', count: 5 },
+      { word: '집중', count: 4 },
+      { word: '뿌듯', count: 3 },
+      { word: '압도', count: 2 }
+    ],
+    value_align: {
+      score: 8,
+      aligned: '회복 + 자기 친밀 가치 align — 잠 챙김 + 5분 산책',
+      gap: '연결 가치는 살짝 약함 — 친구 만남 0회'
+    },
+    risk_signals: {
+      level: 'watch',
+      signals: ['주말 수면 5h 1회 — 평일 패턴 무너지지 않게 주의'],
+      suggestion: '주말도 평일 패턴 ±1h 안에서 유지하면 mood 안정. 무리 X — 의식적으로만.'
+    },
+    experiment: {
+      what: '다음 주 월~일 11시 알람 + 자기 전 핸드폰 거실 두기',
+      why: '7h+ 패턴 유지하면 mood 안정 → 작업 quality ↑. 환경 변경 = setup 비용 X 자동 효과.'
+    },
+    seeds: [
+      '평일 11시 알람 지킨 날 수 (목표: 5/5)',
+      '카페 setup 한 날 작업 시간 vs 집 작업 시간'
+    ],
+    seed_callbacks: '지난 주 씨앗 "수면 7h+ 다음날 mood 변화" → 4/5 일 +1.5 일관 검증됨. 패턴 확정.'
+  };
+  // chart 표시 위해 임시 entries 7일 inject (state 박지 X — review screen 에서만 cutoff/cutoffEnd 안에서 entries 필터)
+  // renderReviewScreen 가 state.entries 를 cutoff 으로 필터하므로, 시드 entries 있으면 chart 자동 표시
+  // 7일 차트 — 마지막 7일에 mood/energy 변동 있는 시드 entry 가 state.entries 에 있으면 자동 그려짐 (testSeedV4Data 가 entries 채워둠)
+  // entries 부족 시 chart X — graceful empty.
+
+  // dataset 직접 set 후 renderReviewScreen 호출
+  showScreen('review');
+  setTimeout(() => {
+    if (typeof renderReviewScreen === 'function') {
+      renderReviewScreen('weekly', reviewData);
+      showToast('📅 주간 리뷰 미리보기 (시드)');
+    }
+  }, 100);
 }
 
 // 개발자 도구 — 환영 선물 모달 (사용자 명시 2026-04-30: 원래 흐름처럼 backend 실제 grant).
@@ -17646,11 +17722,18 @@ function renderReviewScreen(type, reviewData) {
     // 사용자 명시 2026-04-30 ultrathink: 신규 섹션들 — chart / strengths / cycles / emotions / value_align / risk_signals.
     // 모두 graceful empty — 데이터 없으면 섹션 자체 표시 X (신규 사용자 / 추적 부족 / 사이클 무관 — noise X).
 
-    // mood/energy chart — 이번 기간 entries 시각화
+    // mood/energy chart — 이번 기간 entries 시각화 (cutoff/cutoffEnd 자체 계산 — generateReview scope 와 별개)
+    const _todayChart = new Date();
+    const _cutoffChart = type === 'weekly'
+      ? new Date(_todayChart.getTime() - 7 * 86400000)
+      : new Date(_todayChart.getFullYear(), _todayChart.getMonth() - 1, 1);
+    const _cutoffEndChart = type === 'weekly'
+      ? _todayChart
+      : new Date(_todayChart.getFullYear(), _todayChart.getMonth(), 1);
     const _entriesForChart = (state.entries || []).filter(e => {
       if (!e.date) return false;
       const d = new Date(e.date + 'T12:00:00');
-      return d >= cutoff && d < cutoffEnd;
+      return d >= _cutoffChart && d < _cutoffEndChart;
     }).slice(-7);
     const chartBlock = (typeof _renderReviewMoodChart === 'function' && _entriesForChart.length >= 2)
       ? _renderReviewMoodChart(_entriesForChart)
@@ -31016,6 +31099,87 @@ async function testSeedV4Data() {
       stats: { checkins: 18 + (m % 5), missions: 5 + (m % 4), worked: 3 + (m % 3), pearls: 1 + (m % 3) }
     });
   }
+  // 사용자 명시 2026-04-30 ultrathink: 주간 리뷰 시드 (옛 형식 폐기 → 새 schema 풀세트). 4 주치 — 신규 / 누적 / 위기 / 풀 풍부 케이스 다 demo.
+  state.weeklyReviews = [];
+  const _wkSeeds = [
+    {
+      offset: 5, weekKey: 'W-5',
+      one_word_weekly: '회복중',
+      summary: '잠을 챙긴 주, 마음이 한결 가벼워짐.',
+      pattern: { headline: '수면 7h+ 인 날, 다음날 mood +1.5', evidence: '"오늘 7시간 잤더니 머리가 맑아." (화/금)', condition: '평일 11시 전 취침 시' },
+      quotes: ['"오늘 7시간 잤더니 머리가 맑아."', '"엄마 통화 후 5분 산책 = 회복."', '"마감 임박 = 자연 진입."', '"카페에서 글 잘 써짐."', '"운동 한 날 일기가 길어."'],
+      strengths: ['월요일 마감 임박에도 잠 7시간 챙김', '엄마 통화 후 5분 산책으로 회복', '카페 환경 setup 적극 활용 — 3회'],
+      cycles: { sleep: '평일 7h+ 4일 → mood 평균 +1.5', mode: '시험 모드 활성 → 카페인 ↑ but 회복 동시 챙김', other: '' },
+      emotions: [{ word: '안심', count: 5 }, { word: '집중', count: 4 }, { word: '압도', count: 2 }],
+      value_align: { score: 8, aligned: '회복 + 자기 친밀 가치와 align — 잠 챙김 + 산책', gap: '' },
+      risk_signals: { level: 'none', signals: [], suggestion: '' },
+      experiment: { what: '다음 주 월~금 11시 알람 + 자기 전 핸드폰 거실 두기', why: '7h+ 패턴 유지하면 mood 안정 → 작업 quality ↑' },
+      seeds: ['평일 11시 알람 지킨 날 수', '카페 setup 한 날 작업 시간']
+    },
+    {
+      offset: 4, weekKey: 'W-4',
+      one_word_weekly: '가속중',
+      summary: '논문 마감 가까워서 몰입도 올라감.',
+      pattern: { headline: '마감 임박 = 작업 진입 자연스러움', evidence: '"마감 5일 전부터 도파민 부스터." (수)', condition: 'D-7 안쪽' },
+      quotes: ['"마감 5일 전부터 도파민 부스터."', '"오늘 4시간 통째 몰입."', '"잠 줄여도 일 잘 돼."', '"음악 + 카페 = 시너지."', '"끝나면 다 회복."'],
+      strengths: ['몰입 4시간 세션 2회 성공', '저녁 운동으로 몰입 후 회복 챙김', '음악 환경 일관 setup'],
+      cycles: { sleep: '잠 6h 대로 살짝 줄음 — 마감 mode 일시적 OK', mode: '시험 모드 풀 가동', other: '' },
+      emotions: [{ word: '몰입', count: 6 }, { word: '피곤', count: 3 }, { word: '뿌듯', count: 3 }],
+      value_align: { score: 7, aligned: '성취 + 몰입 가치 align', gap: '회복 가치는 일시적으로 낮춤 (의도된 trade-off)' },
+      risk_signals: { level: 'watch', signals: ['수면 6h 4일 연속 — 다음 주 회복 자리 확보'], suggestion: '마감 후 주말 휴식 의식적으로. 자책 X — 의도된 spike.' },
+      experiment: { what: '다음 주 월요일 풀 휴식 (책 + 산책 + 잠 9h)', why: 'spike 후 회복 패턴 정착 — 만성 burnout 차단' },
+      seeds: ['마감 후 회복 timeline (며칠 걸리는지)', '잠 6h 일주일 → mood 임계점']
+    },
+    {
+      offset: 3, weekKey: 'W-3',
+      one_word_weekly: '휘청중',
+      summary: '마감 끝났는데 회복 아직 못 잡힘.',
+      pattern: { headline: '마감 후 3일째 — 무기력', evidence: '"오늘도 침대에서 못 일어났어." (월/화/수)', condition: '큰 spike 직후' },
+      quotes: ['"오늘도 침대에서 못 일어났어."', '"마감 끝났는데 텅 빈 느낌."', '"산책도 귀찮."', '"그냥 누워있고 싶어."', '"이게 burnout 인가?"'],
+      strengths: ['그래도 매일 일기 한 줄은 남김', '엄마한테 카톡 한 번 답장', '잠은 충분히 잠'],
+      cycles: { sleep: '잠 9h+ 3일 — 회복 mode 자동 진입', mode: '활성 모드 X — 자연 휴식', other: '비 오는 날 3일 → 무기력 ↑ 가능' },
+      emotions: [{ word: '무기력', count: 7 }, { word: '공허', count: 4 }, { word: '평온', count: 2 }],
+      value_align: { score: 4, aligned: '회복 가치 일치 — 무리 X', gap: '성장·연결 가치는 잠시 멈춤 (의도 X 자연 흐름)' },
+      risk_signals: { level: 'watch', signals: ['mood 평균 2.3 — 평소보다 낮음 3일+', '사람 만남 0건'], suggestion: '무리 X 자기 친밀. 1-2명 가까운 사람 짧은 카톡 만 시도. 안 되면 패스 OK.' },
+      experiment: { what: '다음 주 친구 1명 카톡 한 줄 — "잘 지내?" 부담 X', why: '연결 작은 시도가 mood 끌어올릴 가능성 ↑' },
+      seeds: ['mood 회복 시점 (며칠 걸리는지)', '카톡 한 줄 vs 만남 effect 차이']
+    },
+    {
+      offset: 2, weekKey: 'W-2',
+      one_word_weekly: '재정비',
+      summary: '천천히 일상 복귀, 새 리듬 잡는 중.',
+      pattern: { headline: '아침 산책 한 날 = 그날 일기 길어', evidence: '"아침 30분 산책 후 글이 술술." (목/토)', condition: '7시 기상 + 30분 운동' },
+      quotes: ['"아침 30분 산책 후 글이 술술."', '"카페 한 곳 정착 — 환경 안정."', '"친구 카톡 답장 하나 = 하루 좋아짐."', '"잠 일찍 자는 게 가장 큰 효과."', '"느려도 괜찮아."'],
+      strengths: ['아침 7시 기상 4일', '친구 카톡 답장 — 작은 연결 회복', '카페 환경 정착으로 작업 안정'],
+      cycles: { sleep: '평일 7h+ 안정 → mood 평균 3.5', mode: '회복 모드 + 일상 mode 균형', other: '' },
+      emotions: [{ word: '평온', count: 5 }, { word: '집중', count: 4 }, { word: '뿌듯', count: 3 }],
+      value_align: { score: 8, aligned: '회복 + 작은 성장 가치 다 align', gap: '' },
+      risk_signals: { level: 'none', signals: [], suggestion: '' },
+      experiment: { what: '다음 주 아침 산책 5일 + 카페 setup 4회', why: '이 패턴이 정착되면 mood 안정 + 작업 quality 동시' },
+      seeds: ['아침 산책 일관성', '환경 setup 빈도 vs 작업 시간']
+    }
+  ];
+  _wkSeeds.forEach((s, i) => {
+    state.weeklyReviews.push({
+      id: 'wr_seed_' + (i + 1),
+      _seed: today.getTime(),
+      weekKey: s.weekKey,
+      completedAt: new Date(today.getTime() - s.offset * 7 * 86400000).toISOString(),
+      one_word_weekly: s.one_word_weekly,
+      summary: s.summary,
+      pattern: s.pattern,
+      quotes: s.quotes,
+      strengths: s.strengths,
+      cycles: s.cycles,
+      emotions: s.emotions,
+      value_align: s.value_align,
+      risk_signals: s.risk_signals,
+      experiment: s.experiment,
+      seeds: s.seeds,
+      auto: true
+    });
+  });
+
   // chatArchive 3일치 (V3.13.x 7일 cap, 일부 채워두기)
   state.chatArchive = [];
   for (let d = 7; d >= 5; d--) {
