@@ -12294,7 +12294,8 @@ const ONBOARDING_STEPS = [
     waitFor: 'next',
     nextLabel: '✦ 응 좋아',
     dimBackground: false,
-    coachmarkPosition: 'corner'
+    coachmarkPosition: 'corner',
+    coachmarkTop: '72px'
   },
   // 사용자 명시 2026-04-30 ultrathink: 대화탭 시작 시점에 첫 진단 흐름. 코어 #1 안. body 안 button 으로 모달 trigger + 끝나면 onbNext. 사용자가 nextBtn 으로 skip 가능 (선택권 보존).
   {
@@ -13917,9 +13918,10 @@ function onbPositionStep(step, retryCount) {
     // 위치 inline style 안 건드림 — 이전 스탭 그대로
   }
   // V3.13.x: coachmarkPosition:'corner' — coachmark만 우상단 컴팩트
+  // 사용자 명시 2026-04-30 ultrathink: step.coachmarkTop 으로 살짝 아래 override 가능 (헤더 토글 가리는 step 한정)
   else if (step.coachmarkPosition === 'corner' || step.dimBackground === false) {
     const cs = coachmark.style;
-    cs.top = '20px'; cs.right = '12px'; cs.left = 'auto';
+    cs.top = step.coachmarkTop || '20px'; cs.right = '12px'; cs.left = 'auto';
     cs.transform = 'none'; cs.maxWidth = '260px'; cs.bottom = 'auto';
     cs.visibility = 'visible'; cs.opacity = '1'; cs.display = '';
     const ovEl0 = document.getElementById('onbOverlay');
