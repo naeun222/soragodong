@@ -17540,7 +17540,7 @@ ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 
 
 [출력 JSON]
 {
-  ${type === 'monthly' ? '"one_word": "이번 달의 너 = 한 단어 (예: \\"관찰자\\", \\"협상자\\", \\"탐험가\\", \\"잠수부\\"). 한 단어만.",' : ''}
+  ${type === 'monthly' ? '"one_word": "이번 달의 너 = 정체성 한 단어 (예: \\"관찰자\\", \\"협상자\\", \\"탐험가\\", \\"잠수부\\"). 한 단어만.",' : '"one_word_weekly": "이번 주 momentum 한 단어 — 운동·진행 어휘 (예: \\"정착중\\", \\"가속중\\", \\"회복중\\", \\"휘청중\\", \\"재정비\\", \\"몰입\\", \\"숨고르기\\"). monthly 와 다른 dimension (정체성 X 운동성 ○).",'}
   "summary": "이번 ${periodLabel} 한 줄 요약 (15-30자)",
   "pattern": {
     "headline": "발견한 패턴 한 문장 (specific, surprising)",
@@ -17548,6 +17548,23 @@ ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 
     "condition": "어떤 조건 / 모드 / 시간에 일어나는지 (1줄)"
   },
   "quotes": ["사용자 entries / 대화에서 추출한 짧은 인용 5개 (각 30자 이내, 5개)", "...", "...", "...", "..."],
+  "strengths": ["이번 ${periodLabel} 사용자가 잘한 작은 win 3-5개 (구체, 자기 친밀 톤, 자존감 boost). 결과 X 시도·태도·관찰 ○. 예: '월요일 마감 임박에도 잠 7시간 챙김', '엄마 통화 후 5분 산책으로 회복'", "...", "..."],
+  "cycles": {
+    "sleep": "수면 패턴 → 이번 ${periodLabel} 행동·기분 영향 (1줄, 구체 숫자 / 인용). 무관하면 빈 문자열.",
+    "mode": "활성 모드 / 시간대 → 영향 (1줄, 구체)",
+    "other": "황체기·날씨·계절·외부 환경 (확인 가능할 때만 1줄). 없으면 빈 문자열."
+  },
+  "value_align": {
+    "score": "0-10 정수 — 이번 ${periodLabel} 사용자 행동이 본인 가치 (위 values list) 와 얼마나 align 했는지",
+    "aligned": "어떤 가치와 맞았는지 (1줄, 구체 인용 또는 missions/decisions 참조)",
+    "gap": "어떤 가치에서 멀어졌는지 (있으면, 1줄, 부드럽게 — 판단 X). 없으면 빈 문자열."
+  },
+  "emotions": [{"word": "사용자가 자주 쓴 감정 단어 (entries/chat 에서)", "count": "사용 빈도 (정수)"}],
+  "risk_signals": {
+    "level": "'none' | 'watch' | 'concern' — mood drop 3일 이상 / 수면 심하게 불규칙 / 사람 만남 X / 미션 연속 missed 등",
+    "signals": ["감지된 신호 (구체, 부드럽게). 'none' 일 때 빈 array.", "..."],
+    "suggestion": "부드러운 제안 1줄. concern 일 때 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 포함. watch 면 self-care 제안. none 이면 빈 문자열."
+  },
   "experiment": {
     "what": "다음 ${periodLabel} 한 가지 작은 실험 (구체적, 환경 setup 우선, 관찰 친화)",
     "why": "왜 흥미로울지 (1줄)"
@@ -17563,7 +17580,7 @@ JSON만 출력. 다른 글 X.`;
   // 사용자 보고 2026-04-30 review (agent): system prompt 명시 + 견고 parser.
   const resp = await callAnthropic({
     model: 'claude-sonnet-4-6',
-    max_tokens: 2500,
+    max_tokens: 4000,  // 사용자 명시 2026-04-30 ultrathink: 리뷰 schema 확장 (strengths / cycles / value_align / emotions / risk_signals 추가) — 2500 → 4000
     system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
     messages: [{ role: 'user', content: prompt }]
   });
@@ -17584,8 +17601,11 @@ function renderReviewScreen(type, reviewData) {
 
   if (isNewFormat) {
     // ═══ 새 리뷰 layout ═══
+    // 사용자 명시 2026-04-30 ultrathink: weekly = momentum 단어 (운동성), monthly = 정체성. 색·tagline 으로 구별.
     const oneWord = reviewData.one_word ? `<div style="font-size:11px; color:var(--text-soft); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px;">이번 달의 너</div>
       <div style="font-family:'Gowun Batang',serif; font-size:32px; color:var(--accent); margin-bottom:14px; letter-spacing:0.04em;">${escapeHtml(reviewData.one_word)}</div>` : '';
+    const oneWordWeekly = reviewData.one_word_weekly ? `<div style="font-size:11px; color:var(--text-soft); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px;">이번 주 momentum</div>
+      <div style="font-family:'Gowun Batang',serif; font-size:30px; color:#7ec8e3; margin-bottom:14px; letter-spacing:0.04em;">${escapeHtml(reviewData.one_word_weekly)}</div>` : '';
     const summaryBlock = `<div style="background: linear-gradient(135deg, rgba(139,126,196,0.15), rgba(201,169,110,0.10)); border:1px solid rgba(139,126,196,0.25); border-radius:16px; padding:18px; margin-bottom:24px; font-family:'Gowun Batang',serif; font-size:16px; line-height:1.7;">
       ${escapeHtml(reviewData.summary || '')}
     </div>`;
@@ -17622,22 +17642,116 @@ function renderReviewScreen(type, reviewData) {
       ${seeds.map(s => `<div style="font-size:12px; color:var(--text-dim); line-height:1.7; padding:6px 12px;">· ${escapeHtml(s)}</div>`).join('')}
       <div style="font-size:10px; color:var(--text-soft); margin-top:6px; font-style:italic;">다음 ${periodWord} 리뷰 때 어떻게 됐는지 짚어줄게</div>
     </div>` : '';
+
+    // 사용자 명시 2026-04-30 ultrathink: 신규 섹션들 — chart / strengths / cycles / emotions / value_align / risk_signals.
+    // 모두 graceful empty — 데이터 없으면 섹션 자체 표시 X (신규 사용자 / 추적 부족 / 사이클 무관 — noise X).
+
+    // mood/energy chart — 이번 기간 entries 시각화
+    const _entriesForChart = (state.entries || []).filter(e => {
+      if (!e.date) return false;
+      const d = new Date(e.date + 'T12:00:00');
+      return d >= cutoff && d < cutoffEnd;
+    }).slice(-7);
+    const chartBlock = (typeof _renderReviewMoodChart === 'function' && _entriesForChart.length >= 2)
+      ? _renderReviewMoodChart(_entriesForChart)
+      : '';
+
+    // strengths
+    const strengths = Array.isArray(reviewData.strengths) ? reviewData.strengths.filter(s => s && s.trim()) : [];
+    const strengthsBlock = strengths.length > 0 ? `
+    <div class="review-section" style="background: linear-gradient(135deg, rgba(255,215,122,0.08), rgba(212,167,106,0.04)); border:1px solid rgba(255,215,122,0.25); border-radius:14px; padding:16px 18px; margin-bottom:18px;">
+      <div style="font-size:11px; color:#f5c870; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">✨ 이번 ${periodWord} 잘한 것</div>
+      ${strengths.map(s => `<div style="font-size:13px; color:var(--text); line-height:1.7; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04);">• ${escapeHtml(s)}</div>`).join('')}
+    </div>` : '';
+
+    // cycles — 모두 빈 문자열이면 섹션 X
+    const cyc = reviewData.cycles || {};
+    const cyclesItems = [
+      cyc.sleep ? { icon: '😴', label: '수면', text: cyc.sleep } : null,
+      cyc.mode  ? { icon: '🌀', label: '모드', text: cyc.mode  } : null,
+      cyc.other ? { icon: '🌊', label: '환경', text: cyc.other } : null
+    ].filter(Boolean);
+    const cyclesBlock = cyclesItems.length > 0 ? `
+    <div class="review-section" style="background: rgba(126,200,227,0.05); border:1px solid rgba(126,200,227,0.20); border-radius:14px; padding:16px 18px; margin-bottom:18px;">
+      <div style="font-size:11px; color:#7ec8e3; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">🌊 사이클 연결</div>
+      ${cyclesItems.map(c => `<div style="display:flex; align-items:flex-start; gap:10px; padding:6px 0; font-size:12.5px; color:var(--text); line-height:1.7;"><span style="font-size:16px;">${c.icon}</span><div><b style="color:var(--text-soft); font-size:11px; letter-spacing:0.05em;">${c.label}</b><br>${escapeHtml(c.text)}</div></div>`).join('')}
+    </div>` : '';
+
+    // emotions
+    const emotions = Array.isArray(reviewData.emotions) ? reviewData.emotions.filter(e => e && e.word) : [];
+    const emotionsBlock = emotions.length > 0 ? `
+    <div class="review-section" style="margin-bottom:18px;">
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">💬 자주 떠오른 감정</div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px;">${emotions.map(e => `<span style="font-size:13px; color:var(--text); padding:6px 12px; background:rgba(139,126,196,0.15); border:1px solid rgba(139,126,196,0.25); border-radius:100px;">${escapeHtml(e.word)}<span style="color:var(--text-soft); font-size:10px; margin-left:4px;">×${e.count || 1}</span></span>`).join('')}</div>
+    </div>` : '';
+
+    // value align — score 유효 + (aligned 또는 gap) 있을 때만
+    const va = reviewData.value_align || {};
+    const vaScore = Number(va.score);
+    const vaShow = !isNaN(vaScore) && vaScore >= 0 && vaScore <= 10 && (va.aligned || va.gap);
+    const valueAlignBlock = vaShow ? `
+    <div class="review-section" style="background: var(--surface); border-radius:14px; padding:16px 18px; margin-bottom:18px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+        <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase;">🎯 가치와 align</div>
+        <div style="font-size:18px; font-weight:700; color:var(--accent);">${vaScore}<span style="font-size:11px; color:var(--text-soft); font-weight:400;">/10</span></div>
+      </div>
+      <div style="height:6px; background:var(--bg); border-radius:3px; overflow:hidden; margin-bottom:12px;"><div style="height:100%; width:${vaScore * 10}%; background:linear-gradient(90deg, #c9a96e, #e8c99a);"></div></div>
+      ${va.aligned ? `<div style="font-size:12px; color:var(--text); line-height:1.7; margin-bottom:6px;">✓ ${escapeHtml(va.aligned)}</div>` : ''}
+      ${va.gap ? `<div style="font-size:12px; color:var(--text-soft); line-height:1.7;">⌃ ${escapeHtml(va.gap)}</div>` : ''}
+    </div>` : '';
+
+    // risk signals — level !== 'none' + 신호/제안 있을 때만
+    const risk = reviewData.risk_signals || {};
+    const riskLevel = (risk.level || 'none').toLowerCase();
+    const riskShow = riskLevel !== 'none' && ((Array.isArray(risk.signals) && risk.signals.length > 0) || risk.suggestion);
+    const riskBg = riskLevel === 'concern' ? 'rgba(232,144,144,0.10)' : 'rgba(232,200,144,0.08)';
+    const riskBorder = riskLevel === 'concern' ? 'rgba(232,144,144,0.35)' : 'rgba(232,200,144,0.30)';
+    const riskColor = riskLevel === 'concern' ? '#e89090' : '#e8c890';
+    const riskBlock = riskShow ? `
+    <div class="review-section" style="background:${riskBg}; border:1px solid ${riskBorder}; border-radius:14px; padding:16px 18px; margin-bottom:18px;">
+      <div style="font-size:11px; color:${riskColor}; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">${riskLevel === 'concern' ? '🆘 잠깐, 너 괜찮아?' : '🌙 부드러운 알림'}</div>
+      ${(risk.signals || []).map(s => `<div style="font-size:12.5px; color:var(--text); line-height:1.7; padding:4px 0;">· ${escapeHtml(s)}</div>`).join('')}
+      ${risk.suggestion ? `<div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-top:8px; padding:10px 12px; background:rgba(0,0,0,0.15); border-radius:8px;">${escapeHtml(risk.suggestion)}</div>` : ''}
+      ${riskLevel === 'concern' ? `<div style="font-size:11px; color:var(--text-soft); line-height:1.8; margin-top:10px; padding-top:10px; border-top:1px solid ${riskBorder};">☎ <b>1393</b> 자살예방상담 24시간 · ☎ <b>1577-0199</b> 정신건강위기상담 · ☎ <b>119</b> 응급<br><span style="font-size:10px; opacity:0.7;">소라고동의 AI 답변은 의료·법적·심리 상담이 아닙니다.</span></div>` : ''}
+    </div>` : '';
+
+    // 자기 평가 form (사용자 명시 2026-04-30 ultrathink: AI 분석 vs 본인 perception 대조)
+    const selfEvalBlock = `
+    <div class="review-section" style="background:var(--surface); border-radius:14px; padding:16px 18px; margin-bottom:18px;">
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">💭 너의 자기 평가</div>
+      <div style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">이번 ${periodWord} 너의 점수 + 한 마디. AI 분석과 다른 시점에서 너 자신을 한 번 봐.</div>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+        <span style="font-size:11px; color:var(--text-soft); width:30px;">0</span>
+        <input type="range" id="reviewSelfScore" min="0" max="10" value="5" style="flex:1; accent-color:var(--accent);" oninput="document.getElementById('reviewSelfScoreLabel').textContent = this.value">
+        <span style="font-size:11px; color:var(--text-soft); width:30px; text-align:right;">10</span>
+        <span id="reviewSelfScoreLabel" style="font-size:18px; font-weight:700; color:var(--accent); width:32px; text-align:center;">5</span>
+      </div>
+      <textarea id="reviewSelfNote" placeholder="이번 ${periodWord} 한 마디 (선택) — 너의 말로" rows="2" maxlength="120" style="width:100%; padding:10px; font-size:13px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); resize:vertical;"></textarea>
+    </div>`;
+
     const html = `
       <div class="screen-title">${type === 'weekly' ? '🌙 주간 리뷰' : '📅 월간 리뷰'}</div>
       <div class="screen-sub">${periodLabel}</div>
       ${oneWord}
+      ${oneWordWeekly}
       ${summaryBlock}
+      ${chartBlock}
       ${seedCallbackBlock}
+      ${strengthsBlock}
       ${patternBlock}
       ${quotesBlock}
+      ${cyclesBlock}
+      ${emotionsBlock}
+      ${valueAlignBlock}
+      ${riskBlock}
       ${experimentBlock}
       ${seedsBlock}
-      <div class="input-group" style="margin-top: 24px;">
-        <div class="input-label">💬 이번 ${periodWord} 한 마디 (선택) — 이 패턴을 너 자신의 말로</div>
-        <textarea id="reviewUserNote" placeholder="네 말로 한 줄..." rows="3"></textarea>
+      ${selfEvalBlock}
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn-primary" onclick="saveReview('${type}')" style="flex:2;">저장하고 닫기 ✦</button>
+        <button class="btn-secondary" onclick="exportReviewShareCard('${type}')" style="flex:1;">📤 공유 카드</button>
       </div>
-      <button class="btn-primary" onclick="saveReview('${type}')">저장하고 닫기 ✦</button>
-      <button class="btn-secondary" onclick="showScreen('home')">나중에</button>
+      <button class="btn-secondary" onclick="showScreen('home')" style="margin-top:6px; width:100%;">나중에</button>
     `;
     screen.innerHTML = html;
     screen.dataset.reviewData = JSON.stringify(reviewData);
@@ -17696,17 +17810,28 @@ function renderReviewScreen(type, reviewData) {
 function saveReview(type) {
   const screen = document.getElementById('screen-review');
   const reviewData = JSON.parse(screen.dataset.reviewData);
-  const userNote = document.getElementById('reviewUserNote').value.trim();
+  // 사용자 명시 2026-04-30: 옛 reviewUserNote → 신규 reviewSelfNote + reviewSelfScore (자기 평가).
+  const selfNoteEl = document.getElementById('reviewSelfNote') || document.getElementById('reviewUserNote');
+  const userNote = selfNoteEl ? selfNoteEl.value.trim() : '';
+  const selfScoreEl = document.getElementById('reviewSelfScore');
+  const selfScore = selfScoreEl ? Number(selfScoreEl.value) : null;
 
   const review = {
     completedAt: new Date().toISOString(),
     summary: reviewData.summary,
     sections: reviewData.sections,  // 옛 형식 backward compat
     userNote,
+    user_self_eval: (selfScore !== null && !isNaN(selfScore)) ? { score: selfScore, note: userNote, at: new Date().toISOString() } : null,
     // 사용자 요청 2026-04-30: 새 리뷰 필드 영구 저장 (다음 리뷰 callback 위해)
     one_word: reviewData.one_word,
+    one_word_weekly: reviewData.one_word_weekly,
     pattern: reviewData.pattern,
     quotes: reviewData.quotes,
+    strengths: reviewData.strengths,
+    cycles: reviewData.cycles,
+    emotions: reviewData.emotions,
+    value_align: reviewData.value_align,
+    risk_signals: reviewData.risk_signals,
     experiment: reviewData.experiment,
     seeds: reviewData.seeds,
     seed_callbacks: reviewData.seed_callbacks
@@ -17735,6 +17860,154 @@ function saveReview(type) {
   saveState();
   showToast(`${type === 'weekly' ? '주간' : '월간'} 리뷰 저장됨 ✦`);
   showScreen('home');
+}
+
+// 사용자 명시 2026-04-30 ultrathink: 주간/월간 리뷰 mood/energy 7일 차트 (entries 기반 SVG 라인).
+function _renderReviewMoodChart(entries) {
+  if (!Array.isArray(entries) || entries.length < 2) return '';
+  // mood: 1-5 / energy: 1-5 둘 다 정규화 후 0-1 비율로 표시
+  const w = 320, h = 110, pad = 18;
+  const xs = (i) => pad + (i / (entries.length - 1)) * (w - pad * 2);
+  const ys = (v) => h - pad - ((Number(v) - 1) / 4) * (h - pad * 2);  // 1-5 → 0-1 → y
+  const moodValid = entries.filter(e => Number.isFinite(Number(e.mood)) && Number(e.mood) >= 1 && Number(e.mood) <= 5);
+  const energyValid = entries.filter(e => Number.isFinite(Number(e.energy)) && Number(e.energy) >= 1 && Number(e.energy) <= 5);
+  if (moodValid.length < 2 && energyValid.length < 2) return '';
+  const buildPath = (vals, getter) => vals.map((e, i) => {
+    const idx = entries.indexOf(e);
+    return `${i === 0 ? 'M' : 'L'}${xs(idx).toFixed(1)},${ys(getter(e)).toFixed(1)}`;
+  }).join(' ');
+  const moodPath = moodValid.length >= 2 ? buildPath(moodValid, e => e.mood) : '';
+  const energyPath = energyValid.length >= 2 ? buildPath(energyValid, e => e.energy) : '';
+  const dots = (vals, color, getter) => vals.map(e => {
+    const idx = entries.indexOf(e);
+    return `<circle cx="${xs(idx).toFixed(1)}" cy="${ys(getter(e)).toFixed(1)}" r="3.5" fill="${color}"/>`;
+  }).join('');
+  // x-axis dates
+  const labels = entries.map((e, i) => {
+    const x = xs(i);
+    const md = (e.date || '').slice(5);  // MM-DD
+    return `<text x="${x.toFixed(1)}" y="${h - 4}" fill="rgba(255,255,255,0.40)" font-size="9" text-anchor="middle">${md}</text>`;
+  }).join('');
+  // grid lines
+  const gridY = [1, 2, 3, 4, 5].map(v => `<line x1="${pad}" y1="${ys(v).toFixed(1)}" x2="${w - pad}" y2="${ys(v).toFixed(1)}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>`).join('');
+  return `
+    <div class="review-section" style="background:var(--surface); border-radius:14px; padding:14px 16px; margin-bottom:18px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase;">📊 7일 흐름</div>
+        <div style="font-size:10px; color:var(--text-soft);">
+          <span style="color:#e8c890;">● mood</span> <span style="color:#7ec8e3; margin-left:8px;">● energy</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; display:block;" preserveAspectRatio="xMidYMid meet">
+        ${gridY}
+        ${moodPath ? `<path d="${moodPath}" stroke="#e8c890" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+        ${energyPath ? `<path d="${energyPath}" stroke="#7ec8e3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+        ${moodPath ? dots(moodValid, '#e8c890', e => e.mood) : ''}
+        ${energyPath ? dots(energyValid, '#7ec8e3', e => e.energy) : ''}
+        ${labels}
+      </svg>
+    </div>`;
+}
+
+// 사용자 명시 2026-04-30 ultrathink: 공유 카드 PNG export. 1080x1920 (Stories 비율) canvas 직접 그림.
+async function exportReviewShareCard(type) {
+  const screen = document.getElementById('screen-review');
+  if (!screen || !screen.dataset.reviewData) { alert('리뷰 데이터 없음'); return; }
+  const r = JSON.parse(screen.dataset.reviewData);
+  const W = 1080, H = 1920;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // bg gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0f0e17');
+  grad.addColorStop(0.5, '#1a1826');
+  grad.addColorStop(1, '#221f33');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // soft accent radial overlay
+  const r1 = ctx.createRadialGradient(W * 0.5, H * 0.3, 0, W * 0.5, H * 0.3, 700);
+  r1.addColorStop(0, 'rgba(201,169,110,0.18)');
+  r1.addColorStop(1, 'rgba(201,169,110,0)');
+  ctx.fillStyle = r1;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+
+  // 🌙 emoji
+  ctx.font = '120px system-ui';
+  ctx.fillText(type === 'weekly' ? '🌙' : '📅', W / 2, 320);
+
+  // label
+  ctx.font = '600 32px "Noto Sans KR", system-ui';
+  ctx.fillStyle = '#c9a96e';
+  ctx.fillText(type === 'weekly' ? '주간 리뷰' : '월간 리뷰', W / 2, 410);
+
+  // one word (large)
+  const oneWord = r.one_word_weekly || r.one_word || '';
+  if (oneWord) {
+    ctx.font = '700 110px "Gowun Batang", serif';
+    ctx.fillStyle = type === 'weekly' ? '#7ec8e3' : '#c9a96e';
+    ctx.fillText(oneWord, W / 2, 600);
+  }
+
+  // summary (wrap text — 한 줄당 22자 정도)
+  if (r.summary) {
+    ctx.font = '500 38px "Gowun Batang", serif';
+    ctx.fillStyle = '#ede8f5';
+    const lines = _wrapText(r.summary, 22);
+    lines.forEach((ln, i) => ctx.fillText(ln, W / 2, 760 + i * 56));
+  }
+
+  // strengths (top 3)
+  const strengths = (Array.isArray(r.strengths) ? r.strengths : []).slice(0, 3);
+  if (strengths.length > 0) {
+    ctx.font = '600 26px "Noto Sans KR", system-ui';
+    ctx.fillStyle = '#f5c870';
+    ctx.fillText('✨ 이번 ' + (type === 'weekly' ? '주' : '달') + ' 잘한 것', W / 2, 1050);
+    ctx.font = '400 28px "Noto Sans KR", system-ui';
+    ctx.fillStyle = '#ede8f5';
+    strengths.forEach((s, i) => {
+      const lines = _wrapText('• ' + s, 26);
+      lines.forEach((ln, j) => ctx.fillText(ln, W / 2, 1130 + (i * 100) + (j * 36)));
+    });
+  }
+
+  // 🐚 watermark
+  ctx.font = '500 28px "Gowun Batang", serif';
+  ctx.fillStyle = 'rgba(201,169,110,0.65)';
+  ctx.fillText('🐚 소라고동', W / 2, 1820);
+
+  // download
+  canvas.toBlob((blob) => {
+    if (!blob) { alert('PNG 변환 실패'); return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `soragodong_${type}_${new Date().toISOString().split('T')[0]}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('📤 공유 카드 다운로드됨');
+  }, 'image/png');
+}
+
+// helper: 한 줄당 char 수로 줄바꿈
+function _wrapText(text, charsPerLine) {
+  const words = String(text).split(' ');
+  const lines = [];
+  let cur = '';
+  words.forEach(w => {
+    if ((cur + ' ' + w).trim().length > charsPerLine) {
+      if (cur) lines.push(cur.trim());
+      cur = w;
+    } else {
+      cur = (cur + ' ' + w).trim();
+    }
+  });
+  if (cur) lines.push(cur);
+  return lines.slice(0, 4);  // max 4 줄
 }
 
 // ─── Future Self Letter (prediction follow-up) ───
