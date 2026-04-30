@@ -11,16 +11,30 @@ export type UserBilling = {
   credit_balance_usd: number;
   subscription_active: boolean;
   subscription_expires_at: string | null;
-  subscription_plan?: string | null;
+  subscription_plan?: 'light' | 'premium' | string | null;
   monthly_token_quota: number | null;
-  monthly_token_used: number;
+  monthly_quota_usd?: number;          // 사용자 명시 2026-04-30: tier cap (USD). Light 5 / Premium 15.
+  monthly_token_used: number;          // micro-USD 누적 (cost_usd × 1M)
   monthly_period_started_at: string | null;
   free_credit_granted: boolean;
 };
 
 export type BudgetCheck =
-  | { ok: true; remaining_credit_usd: number; subscription_active: boolean; }
+  | { ok: true; remaining_credit_usd: number; subscription_active: boolean; subscription_plan?: string | null; monthly_remaining_usd?: number; }
   | { ok: false; reason: string; code: 'NO_CREDIT' | 'NEED_AUTH' | 'NO_BILLING_ROW'; remaining_credit_usd?: number; };
+
+// 사용자 명시 2026-04-30: 2-tier 가격·cap 표 (서버 사이드 정의 — 클라이언트 위변조 방지).
+export const TIER_PLANS: Record<'light' | 'premium', { krw: number; cap_usd: number; label: string }> = {
+  light:   { krw: 8900,  cap_usd: 5,  label: 'Light' },
+  premium: { krw: 25000, cap_usd: 15, label: 'Premium' }
+};
+export type TierKey = keyof typeof TIER_PLANS;
+
+// 사용자 명시 2026-04-30: cap 도달 시 1회성 추가팩 — credit_balance_usd 에 합쳐짐.
+export const OVERAGE_PACKS: Record<'light_pack' | 'premium_pack', { krw: number; usd: number; for_tier: TierKey }> = {
+  light_pack:   { krw: 5000, usd: 4, for_tier: 'light' },
+  premium_pack: { krw: 7000, usd: 5, for_tier: 'premium' }
+};
 
 export async function getUserBilling(env: Env, userId: string): Promise<UserBilling | null> {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
@@ -84,6 +98,9 @@ export async function ensureBillingRow(env: Env, userId: string): Promise<UserBi
   }
 }
 
+// 사용자 명시 2026-04-30 ultrathink: 2-tier 월정액 도입 후 budget 검증 로직.
+// 1) subscription 활성 → cap 안 남았으면 OK / cap 도달 시 credit_balance_usd 로 fall-through (overage pack 또는 잔여 free credit)
+// 2) subscription X → credit_balance_usd 로 직접 사용 (legacy charge 잔액 또는 free credit)
 export async function checkBudget(env: Env, userId: string): Promise<BudgetCheck> {
   let billing = await getUserBilling(env, userId);
   if (!billing) {
@@ -92,15 +109,46 @@ export async function checkBudget(env: Env, userId: string): Promise<BudgetCheck
       return { ok: false, reason: 'billing row 생성 실패', code: 'NO_BILLING_ROW' };
     }
   }
-  if (billing.subscription_active && billing.subscription_expires_at && new Date(billing.subscription_expires_at) > new Date()) {
-    return { ok: true, remaining_credit_usd: billing.credit_balance_usd, subscription_active: true };
+  const subActive = !!(billing.subscription_active
+    && billing.subscription_expires_at
+    && new Date(billing.subscription_expires_at) > new Date());
+
+  if (subActive) {
+    const quotaUsd = Number(billing.monthly_quota_usd || 0);
+    const usedUsd = Number(billing.monthly_token_used || 0) / 1_000_000;
+    const remainingQuotaUsd = Math.max(0, quotaUsd - usedUsd);
+    const creditUsd = Number(billing.credit_balance_usd || 0);
+    // cap 안 남았거나 잔여 credit (overage pack 등) 으로 사용 가능 → OK
+    if (remainingQuotaUsd > 0 || creditUsd > 0) {
+      return {
+        ok: true,
+        remaining_credit_usd: creditUsd,
+        subscription_active: true,
+        subscription_plan: billing.subscription_plan || null,
+        monthly_remaining_usd: remainingQuotaUsd
+      };
+    }
+    // cap 도달 + credit 0 → 차단
+    return {
+      ok: false,
+      reason: '이번 cycle 한도 다 썼어. 추가팩 결제 / tier 업그레이드 / 다음 cycle 대기 중 선택해줘.',
+      code: 'NO_CREDIT',
+      remaining_credit_usd: 0
+    };
   }
+
   if (billing.credit_balance_usd > 0) {
-    return { ok: true, remaining_credit_usd: billing.credit_balance_usd, subscription_active: false };
+    return {
+      ok: true,
+      remaining_credit_usd: billing.credit_balance_usd,
+      subscription_active: false,
+      subscription_plan: null,
+      monthly_remaining_usd: 0
+    };
   }
   return {
     ok: false,
-    reason: '충전 잔액이 0원이야. 결제 / 충전 후 다시 시도.',
+    reason: '잔액이 0원이야. Light (8,900원) 또는 Premium (25,000원) 구독해줘.',
     code: 'NO_CREDIT',
     remaining_credit_usd: 0
   };

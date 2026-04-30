@@ -1,6 +1,7 @@
-// POST /api/billing/subscribe — 월 정액 가입.
+// POST /api/billing/subscribe — 월 정액 가입 (사용자 명시 2026-04-30 ultrathink: 2-tier light / premium).
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
+import { TIER_PLANS, type TierKey } from '../_lib/billing';
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
@@ -13,6 +14,11 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   if (!imp_uid || !merchant_uid || !plan) {
     return jsonResponse({ error: 'imp_uid + merchant_uid + plan 필수' }, 400);
   }
+  // 사용자 명시 2026-04-30: tier 검증 (서버 사이드 — 클라이언트 위변조 방지).
+  if (plan !== 'light' && plan !== 'premium') {
+    return jsonResponse({ error: 'plan은 light 또는 premium 만 허용' }, 400);
+  }
+  const tier = TIER_PLANS[plan as TierKey];
   if (!env.PORTONE_API_KEY || !env.PORTONE_API_SECRET) {
     return jsonResponse({ error: 'PORTONE env 미설정' }, 500);
   }
@@ -40,6 +46,10 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     payment = payData?.response;
     if (!payment || payment.status !== 'paid' || payment.merchant_uid !== merchant_uid) {
       return jsonResponse({ error: '결제 검증 실패' }, 400);
+    }
+    // 사용자 명시 2026-04-30: 결제 금액이 tier 가격과 일치하는지 검증 (위변조 방지).
+    if (Number(payment.amount) !== tier.krw) {
+      return jsonResponse({ error: `결제 금액 불일치 (${plan} = ${tier.krw}원, 실 ${payment.amount}원)` }, 400);
     }
   } catch (e: any) {
     return jsonResponse({ error: '결제 조회 실패: ' + (e?.message || e) }, 502);
@@ -83,11 +93,12 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
         subscription_active: true,
         subscription_expires_at: expiresAt,
         subscription_plan: plan,
-        monthly_token_used: 0,
+        monthly_quota_usd: tier.cap_usd,        // 사용자 명시 2026-04-30: tier cap 설정
+        monthly_token_used: 0,                  // 새 cycle — 사용량 reset
         monthly_period_started_at: periodStartedAt
       })
     });
-    return jsonResponse({ ok: true, expires_at: expiresAt, plan });
+    return jsonResponse({ ok: true, expires_at: expiresAt, plan, cap_usd: tier.cap_usd });
   } catch (e: any) {
     return jsonResponse({ error: 'billing 갱신 실패: ' + (e?.message || e) }, 500);
   }
