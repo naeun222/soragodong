@@ -7308,7 +7308,11 @@
     border-radius: 10px; display: none;
   }
   .pc-graph-wrap.show { display: block; }
-  .pc-graph-svg { width: 100%; height: 150px; display: block; overflow: visible; }
+  /* 사용자 보고 2026-04-30: preserveAspectRatio="none" 시 text 가로 늘어짐 → aspect-ratio 박고 height auto */
+  .pc-graph-svg {
+    width: 100%; height: auto; aspect-ratio: 320 / 150; max-height: 200px;
+    display: block; overflow: visible;
+  }
 
   /* 사용자 보고 2026-04-30 ultrathink Task 1: 추적 그래프 예쁘게 (area gradient + 마지막 점 강조 + 축 라벨 + grid + 현재값 floating) */
   .pc-graph-grid       { stroke: var(--border); stroke-width: 0.5; stroke-dasharray: 2 3; opacity: 0.45; }
@@ -28974,7 +28978,7 @@ function renderProjectGraphSVG(p) {
     <text class="pc-graph-axis-tick" x="${padL}" y="${axisY}" text-anchor="start">${startLabel}</text>
     <text class="pc-graph-axis-tick" x="${w-padR}" y="${axisY}" text-anchor="end">${endLabel}</text>`;
 
-  return `<svg class="pc-graph-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-label="${escapeHtml(p.title)} 추적 그래프">
+  return `<svg class="pc-graph-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-label="${escapeHtml(p.title)} 추적 그래프">
     <defs>
       <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%"  stop-color="${gradColor}" stop-opacity="0.45"/>
