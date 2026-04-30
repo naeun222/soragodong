@@ -1746,6 +1746,343 @@
     font-size: 10px; color: rgba(255,255,255,0.35);
     letter-spacing: 0.2em; z-index: 5;
   }
+
+  /* 카드 공통 — 작은 라벨 */
+  .ann-rv-card .ann-rv-label {
+    font-size: 11px; letter-spacing: 0.3em;
+    color: rgba(232,197,144,0.7);
+    margin-bottom: 18px; text-transform: uppercase;
+  }
+
+  /* ─── 카드 2: 한 해 흐름 (계절 4 panel + 변곡점) ─── */
+  .ann-rv-card-2 { background: linear-gradient(180deg, #1a1828 0%, #0a0912 100%); }
+  .ann-rv-seasons {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    width: 100%; max-width: 380px; aspect-ratio: 1;
+  }
+  .ann-rv-season {
+    position: relative; padding: 18px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    border-radius: 14px; overflow: hidden;
+  }
+  .ann-rv-season-spring  { background: linear-gradient(135deg, #2d4a3e, #5a8a6e); }
+  .ann-rv-season-summer  { background: linear-gradient(135deg, #2d4a5e, #5a8aae); }
+  .ann-rv-season-autumn  { background: linear-gradient(135deg, #5e3d28, #9e6e3a); }
+  .ann-rv-season-winter  { background: linear-gradient(135deg, #2a2540, #5a4e8e); }
+  .ann-rv-season-name { font-size: 11px; letter-spacing: 0.3em; opacity: 0.7; color: #fff; }
+  .ann-rv-season-vit  { font-size: 38px; font-weight: 800; color: #f0d9a8; line-height: 1; }
+  .ann-rv-season-tag  { font-size: 11px; opacity: 0.85; color: #fff; }
+  .ann-rv-season-star {
+    position: absolute; top: 12px; right: 12px;
+    font-size: 16px;
+    text-shadow: 0 0 12px rgba(255,215,0,0.7);
+    animation: ann-rv-star-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes ann-rv-star-pulse {
+    0%,100% { transform: scale(1); opacity: 1; }
+    50%     { transform: scale(1.25); opacity: 0.85; }
+  }
+  .ann-rv-card-2 .ann-rv-caption {
+    margin-top: 22px; font-size: 12px;
+    color: rgba(232,232,232,0.6); letter-spacing: 0.05em;
+  }
+  .ann-rv-card-2 .ann-rv-caption strong { color: #f0d9a8; }
+
+  /* ─── 카드 3·4: 발견 (Opus 4.7 prompt — 다음 phase) ─── */
+  .ann-rv-card-finding {
+    background: linear-gradient(180deg, #100e1c, #0a0912);
+  }
+  .ann-rv-finding-quote-block {
+    margin: 8px 0 24px; padding: 18px 20px;
+    background: rgba(180,130,90,0.10);
+    border-left: 2px solid rgba(180,130,90,0.5);
+    border-radius: 10px;
+    font-size: 15px; color: #e8d4a8;
+    font-style: italic; max-width: 340px;
+  }
+  .ann-rv-finding-vs-arrow {
+    font-size: 20px; color: rgba(255,255,255,0.3);
+    margin: 8px 0;
+  }
+  .ann-rv-finding-data-block {
+    padding: 20px 22px; background: rgba(126,200,160,0.10);
+    border: 1px solid rgba(126,200,160,0.30);
+    border-radius: 14px; margin-bottom: 26px;
+    text-align: center; max-width: 340px;
+  }
+  .ann-rv-finding-data-num {
+    font-size: 44px; font-weight: 800; color: #9ed4a0;
+    margin-bottom: 6px; line-height: 1;
+  }
+  .ann-rv-finding-data-text {
+    font-size: 12.5px; color: rgba(232,232,232,0.85);
+    line-height: 1.5; letter-spacing: 0.02em;
+  }
+  .ann-rv-finding-conclusion {
+    font-size: 17px; color: #f0d9a8;
+    font-weight: 600; text-align: center;
+    max-width: 320px; line-height: 1.55;
+  }
+  .ann-rv-finding-conclusion span {
+    color: #ffd97a;
+    text-shadow: 0 0 14px rgba(255,217,122,0.5);
+  }
+  .ann-rv-finding-actions {
+    display: flex; gap: 8px; margin-top: 28px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .ann-rv-finding-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.16);
+    color: #e8d4a8;
+    padding: 9px 16px; border-radius: 22px;
+    font-size: 12px; cursor: pointer;
+    font-family: inherit;
+  }
+  .ann-rv-finding-btn:active { transform: scale(0.96); }
+
+  /* 카드 4: 자기 친구 — 큰 숫자 대비 */
+  .ann-rv-friend-vs {
+    display: flex; gap: 30px; margin: 20px 0 28px;
+    align-items: center; justify-content: center;
+  }
+  .ann-rv-friend-side { text-align: center; }
+  .ann-rv-friend-num {
+    font-size: 86px; font-weight: 800;
+    letter-spacing: -0.04em; line-height: 1;
+  }
+  .ann-rv-friend-num-low { color: #d47070; }
+  .ann-rv-friend-num-high { color: #9ed4a0; }
+  .ann-rv-friend-label {
+    font-size: 11px; letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.55);
+    margin-top: 12px; line-height: 1.5;
+    white-space: pre-line;
+  }
+  .ann-rv-friend-vs-divider {
+    font-size: 18px; color: rgba(255,255,255,0.3);
+    font-weight: 200; letter-spacing: 0.1em;
+  }
+
+  /* ─── 카드 5: 무기 DNA tree ─── */
+  .ann-rv-card-5 { background: linear-gradient(180deg, #122014, #0a0912); }
+  .ann-rv-tree {
+    display: flex; flex-direction: column;
+    gap: 18px; align-items: center;
+    width: 100%; max-width: 360px;
+    position: relative;
+  }
+  .ann-rv-tree::before {
+    content: ''; position: absolute;
+    top: 30px; bottom: 30px;
+    left: 50%; transform: translateX(-50%);
+    width: 1px;
+    background: linear-gradient(180deg,
+      rgba(158,212,160,0.4),
+      rgba(126,180,140,0.2),
+      rgba(98,150,110,0.1));
+    z-index: 0;
+  }
+  .ann-rv-tree-layer {
+    display: flex; gap: 12px; justify-content: center;
+    flex-wrap: wrap; z-index: 1; position: relative;
+  }
+  .ann-rv-tree-leaf {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 4px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 10px; padding: 6px 8px;
+    border: 1px solid rgba(158,212,160,0.18);
+  }
+  .ann-rv-tree-emoji { font-size: 22px; }
+  .ann-rv-tree-emoji-embodied {
+    font-size: 26px;
+    filter: drop-shadow(0 0 10px rgba(158,212,160,0.7));
+    animation: ann-rv-tree-glow 2s ease-in-out infinite alternate;
+  }
+  @keyframes ann-rv-tree-glow {
+    from { filter: drop-shadow(0 0 6px rgba(158,212,160,0.5)); }
+    to   { filter: drop-shadow(0 0 16px rgba(158,212,160,0.9)); }
+  }
+  .ann-rv-tree-name {
+    font-size: 9.5px; color: rgba(232,232,232,0.75);
+    text-align: center; max-width: 70px;
+    line-height: 1.3; letter-spacing: 0.02em;
+  }
+  .ann-rv-tree-tier {
+    font-size: 9.5px; letter-spacing: 0.25em;
+    color: rgba(158,212,160,0.6);
+    text-align: center; margin-bottom: 4px;
+  }
+  .ann-rv-tree-best {
+    margin-top: 24px; padding: 12px 18px;
+    background: rgba(158,212,160,0.08);
+    border-radius: 12px;
+    text-align: center; font-size: 12px;
+    color: rgba(232,232,232,0.85); max-width: 320px;
+  }
+  .ann-rv-tree-best em {
+    font-style: normal; color: #9ed4a0; font-weight: 700;
+  }
+
+  /* ─── 카드 6: 모래사장 + 진주 ─── */
+  .ann-rv-card-6 {
+    background:
+      linear-gradient(180deg,
+        #1a1530 0%, #2a2240 30%,
+        #5a4a3a 65%, #b89e72 92%, #d8b888 100%);
+    position: relative; overflow: hidden;
+  }
+  .ann-rv-card-6::before {
+    content: ''; position: absolute;
+    bottom: 0; left: 0; right: 0; height: 45%;
+    background:
+      radial-gradient(ellipse at 30% 80%, rgba(255,250,205,0.40) 0, transparent 12%),
+      radial-gradient(ellipse at 70% 60%, rgba(255,250,205,0.55) 0, transparent 10%),
+      radial-gradient(ellipse at 50% 90%, rgba(255,250,205,0.45) 0, transparent 14%),
+      radial-gradient(ellipse at 20% 50%, rgba(255,250,205,0.35) 0, transparent 9%),
+      radial-gradient(ellipse at 85% 85%, rgba(255,250,205,0.50) 0, transparent 11%),
+      radial-gradient(ellipse at 60% 30%, rgba(255,250,205,0.30) 0, transparent 8%);
+    pointer-events: none;
+    animation: ann-rv-pearl-twinkle 2.5s ease-in-out infinite alternate;
+  }
+  @keyframes ann-rv-pearl-twinkle {
+    from { opacity: 0.7; }
+    to   { opacity: 1; }
+  }
+  .ann-rv-beach-shells {
+    display: grid; grid-template-columns: repeat(15, 1fr);
+    gap: 3px; width: 100%; max-width: 360px;
+    margin: 12px 0 22px; z-index: 1; position: relative;
+  }
+  .ann-rv-beach-shell {
+    aspect-ratio: 1;
+    background: rgba(245,225,180,0.55);
+    border-radius: 50%;
+    box-shadow: inset 0 -1px 1.5px rgba(0,0,0,0.25);
+  }
+  .ann-rv-beach-stats {
+    display: flex; gap: 28px; margin: 4px 0 16px;
+    z-index: 1; position: relative;
+  }
+  .ann-rv-beach-stat { text-align: center; }
+  .ann-rv-beach-stat-num {
+    font-size: 30px; font-weight: 800; color: #fff8e8;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .ann-rv-beach-stat-label {
+    font-size: 10px; letter-spacing: 0.2em;
+    color: rgba(255,248,232,0.75);
+  }
+  .ann-rv-beach-pearl {
+    margin-top: 14px; padding: 16px 24px;
+    background: rgba(0,0,0,0.32);
+    border: 1px solid rgba(255,250,205,0.40);
+    border-radius: 18px;
+    text-align: center; max-width: 320px;
+    z-index: 1; position: relative;
+  }
+  .ann-rv-beach-pearl-emoji {
+    font-size: 30px;
+    filter: drop-shadow(0 0 14px rgba(255,250,205,0.85));
+    animation: ann-rv-tree-glow 2s ease-in-out infinite alternate;
+    margin-bottom: 6px;
+  }
+  .ann-rv-beach-pearl-quote {
+    font-size: 15px; color: #fff8e8;
+    font-weight: 500; line-height: 1.5;
+  }
+  .ann-rv-beach-pearl-label {
+    font-size: 10px; letter-spacing: 0.2em;
+    color: rgba(255,248,232,0.7);
+    margin-top: 8px;
+  }
+
+  /* ─── 카드 7: best 모음 (잊지 못할 + Top 5 + 깊은 숙고) ─── */
+  .ann-rv-card-7 { background: linear-gradient(180deg, #121a26, #0a0912); }
+  .ann-rv-best-grid {
+    display: flex; flex-direction: column;
+    gap: 12px; width: 100%; max-width: 380px;
+  }
+  .ann-rv-best-section {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+  .ann-rv-best-section-label {
+    font-size: 10px; letter-spacing: 0.25em;
+    color: rgba(232,197,144,0.7);
+    margin-bottom: 10px;
+  }
+  .ann-rv-best-moments {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .ann-rv-best-moment {
+    display: flex; gap: 10px; font-size: 12px;
+    color: rgba(232,232,232,0.85); line-height: 1.5;
+  }
+  .ann-rv-best-moment-date {
+    color: #9ed4a0; font-weight: 600;
+    flex-shrink: 0; min-width: 44px;
+  }
+  .ann-rv-best-quotes {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .ann-rv-best-quote {
+    font-size: 12px; color: #e8d4a8;
+    font-style: italic; line-height: 1.4;
+  }
+  .ann-rv-best-deep {
+    font-size: 13.5px; color: #c5e0f0;
+    font-weight: 500; line-height: 1.5;
+  }
+  .ann-rv-best-deep-date {
+    font-size: 10px; color: rgba(197,224,240,0.6);
+    margin-top: 4px; letter-spacing: 0.05em;
+  }
+
+  /* ─── 카드 8: 마지막 + 다음 1년 ─── */
+  .ann-rv-card-8 {
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(212,167,106,0.22), transparent 60%),
+      #0a0912;
+    text-align: center;
+  }
+  .ann-rv-final-message {
+    font-size: 16.5px; color: #e8d4a8;
+    line-height: 1.7; max-width: 320px;
+    margin-bottom: 32px; white-space: pre-line;
+  }
+  .ann-rv-final-message strong {
+    color: #f0d9a8; font-weight: 700;
+  }
+  .ann-rv-final-cta-label {
+    font-size: 11px; letter-spacing: 0.25em;
+    color: rgba(232,197,144,0.7);
+    margin-bottom: 14px;
+  }
+  .ann-rv-final-buttons {
+    display: flex; flex-direction: column; gap: 8px;
+    width: 100%; max-width: 320px;
+  }
+  .ann-rv-final-btn {
+    background: rgba(212,167,106,0.10);
+    border: 1px solid rgba(212,167,106,0.35);
+    color: #e8d4a8; padding: 13px 20px;
+    border-radius: 14px; font-size: 13px;
+    font-family: inherit; cursor: pointer;
+    transition: all 0.2s; text-align: left;
+  }
+  .ann-rv-final-btn:hover {
+    background: rgba(212,167,106,0.22);
+    border-color: rgba(212,167,106,0.55);
+  }
+  .ann-rv-final-shell {
+    font-size: 36px; margin-top: 26px;
+    filter: drop-shadow(0 0 14px rgba(212,167,106,0.5));
+    animation: ann-rv-tree-glow 2s ease-in-out infinite alternate;
+  }
   .ft-hypothesis input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; }
   .ft-watch {
     font-size: 12px; color: var(--text-dim);
@@ -9940,7 +10277,8 @@ async function e2eeForgotPasswordReset() {
 let _annualReviewState = null;
 
 function openAnnualReviewPreview() {
-  // 페르소나 김나은 1년 가짜 데이터 (실제 데이터 binding = 다음 phase)
+  // 페르소나 김나은 1년 가짜 데이터 (실제 state binding = 다음 phase).
+  // 사용자 명시: 발견 카드 (3, 4) prompt 는 Opus 4.7 — 다음 phase 에서 generateAnnualFindings(useOpus=true).
   const data = {
     yearRange: '2025 → 2026',
     oneWord: '전환',
@@ -9952,18 +10290,101 @@ function openAnnualReviewPreview() {
       { emoji: '✨', num: 31, label: '깨달음' },
       { emoji: '🧬', num: 4, label: '체화' },
       { emoji: '🐚', num: 1, label: '큰 결정' }
-    ]
+    ],
+    seasons: [
+      { name: '봄',   vit: '4.2', tag: 'stuck',   cls: 'spring' },
+      { name: '여름', vit: '5.8', tag: '발견',    cls: 'summer' },
+      { name: '가을', vit: '7.1', tag: '시도',    cls: 'autumn' },
+      { name: '겨울', vit: '8.3', tag: '변곡점',  cls: 'winter', star: true }
+    ],
+    seasonCaption: '12월 7일이 너의 <strong>변곡점</strong> 이었어',
+    finding1: {
+      label: '네가 모를 첫 번째',
+      quote: '"논문 부담돼"',
+      dataNum: '+30%',
+      dataText: '근데 논문 한 다음 날\n4번 중 3번은 활력이 더 높았어',
+      conclusion: '네가 도망친 게\n<span>사실은 너를 살리는 일</span>이었나 봐'
+    },
+    finding2: {
+      label: '두 번째',
+      friendLow: '0',
+      friendLowLabel: '도움 요청한\n횟수',
+      friendHigh: '23',
+      friendHighLabel: '친구한테\n도움 준 횟수',
+      conclusion: '너 자신한테는\n<span>친구가 안 됐던 자리</span>같아'
+    },
+    tree: {
+      embodied: [
+        { name: '마감 임박 신뢰', emoji: '🍃' },
+        { name: '환경 큐잉', emoji: '🍃' },
+        { name: '14일 숙성', emoji: '🍃' },
+        { name: '논문 = 회복', emoji: '🍃' }
+      ],
+      growing: [
+        { name: '엄마 통화 후 산책', emoji: '🌳' },
+        { name: '새벽 4시 컷오프', emoji: '🌳' },
+        { name: '친구한테 약속', emoji: '🌳' },
+        { name: '딱 5분 룰', emoji: '🌳' }
+      ],
+      trying: [
+        { name: '오전 9시 책상', emoji: '🌿' },
+        { name: '감정 후 운동', emoji: '🌿' },
+        { name: '회의 30분 전', emoji: '🌿' }
+      ],
+      best: '<em>환경 큐잉</em> — 9번 통한 너의 가장 빛난 무기'
+    },
+    beach: {
+      shellCount: 142,
+      diaryCount: 226,
+      pearlCount: 31,
+      bestPearl: '결함 X · 작동 방식 ○'
+    },
+    best: {
+      moments: [
+        { date: '5/23',  text: '"ADHD 같아" 처음 말한 날' },
+        { date: '11/28', text: '14일 결정에 맡긴 첫날' },
+        { date: '4/12',  text: '학회 D-3, 폰을 다른 방에 둠' }
+      ],
+      quotes: [
+        '"결함 X · 작동 방식 ○"',
+        '"환경이 의지보다 강해"',
+        '"마감 임박 = 도파민 trigger"',
+        '"내 머리 ≠ 결정 도구"',
+        '"고치는 게 아니라 잘 다루는 거"'
+      ],
+      deep: {
+        text: '지도교수 변경 14일 숙성',
+        date: '11/28 → 12/11'
+      }
+    },
+    final: {
+      message: '1년 전 너 — "<strong>왜 나는?</strong>"\n지금 너 — "<strong>아 나 이런 사람</strong>"\n\n이 차이가 진짜 큰 거야.',
+      ctaLabel: '다음 1년 같이 해볼 거',
+      buttons: [
+        '새벽 4시 컷오프 한 달 더',
+        '엄마 통화 톤 한 달',
+        '박사 + Naeun Lab 매일 1h'
+      ]
+    }
   };
   _annualReviewState = {
     data,
-    cards: [_annualReviewBuildCard1],
+    cards: [
+      _annualReviewBuildCard1, // 표지
+      _annualReviewBuildCard2, // 한 해 흐름 (계절)
+      _annualReviewBuildCard3, // 발견: AI 포착 (Opus)
+      _annualReviewBuildCard4, // 발견: 자기 친구 (Opus)
+      _annualReviewBuildCard5, // 무기 DNA tree
+      _annualReviewBuildCard6, // 모래사장 + 진주
+      _annualReviewBuildCard7, // best 모음
+      _annualReviewBuildCard8  // 마지막 + 다음 1년
+    ],
     currentIdx: 0
   };
   _annualReviewRender();
 }
 
 function _annualReviewBuildCard1(d) {
-  const personaParts = (d.persona || '').split(/(".*?")/);
   return `
     <div class="ann-rv-card ann-rv-card-1">
       <div class="ann-rv-year">${escapeHtml(d.yearRange)}</div>
@@ -9981,6 +10402,182 @@ function _annualReviewBuildCard1(d) {
           </div>
         `).join('')}
       </div>
+    </div>
+  `;
+}
+
+// 카드 2: 한 해 흐름 (계절 4 panel + 변곡점 ★)
+function _annualReviewBuildCard2(d) {
+  const seasons = (d.seasons || []).map(s => `
+    <div class="ann-rv-season ann-rv-season-${s.cls}">
+      ${s.star ? '<div class="ann-rv-season-star">★</div>' : ''}
+      <div class="ann-rv-season-name">${escapeHtml(s.name)}</div>
+      <div>
+        <div class="ann-rv-season-vit">${escapeHtml(s.vit)}</div>
+        <div class="ann-rv-season-tag">${escapeHtml(s.tag)}</div>
+      </div>
+    </div>
+  `).join('');
+  return `
+    <div class="ann-rv-card ann-rv-card-2">
+      <div class="ann-rv-label">한 해의 흐름</div>
+      <div class="ann-rv-seasons">${seasons}</div>
+      <div class="ann-rv-caption">${d.seasonCaption || ''}</div>
+    </div>
+  `;
+}
+
+// 카드 3: 발견 #1 (AI 포착) — 다음 phase: Opus 4.7 prompt
+function _annualReviewBuildCard3(d) {
+  const f = d.finding1 || {};
+  return `
+    <div class="ann-rv-card ann-rv-card-finding">
+      <div class="ann-rv-label">${escapeHtml(f.label || '발견')}</div>
+      <div class="ann-rv-finding-quote-block">${escapeHtml(f.quote || '')}</div>
+      <div class="ann-rv-finding-vs-arrow">↓</div>
+      <div class="ann-rv-finding-data-block">
+        <div class="ann-rv-finding-data-num">${escapeHtml(f.dataNum || '')}</div>
+        <div class="ann-rv-finding-data-text">${escapeHtml(f.dataText || '').replace(/\n/g, '<br>')}</div>
+      </div>
+      <div class="ann-rv-finding-conclusion">${(f.conclusion || '').replace(/\n/g, '<br>')}</div>
+      <div class="ann-rv-finding-actions">
+        <button class="ann-rv-finding-btn">✦ 진주로 담을게</button>
+        <button class="ann-rv-finding-btn">🤔 갸우뚱</button>
+      </div>
+    </div>
+  `;
+}
+
+// 카드 4: 발견 #2 (자기 친구) — 다음 phase: Opus 4.7 prompt
+function _annualReviewBuildCard4(d) {
+  const f = d.finding2 || {};
+  return `
+    <div class="ann-rv-card ann-rv-card-finding">
+      <div class="ann-rv-label">${escapeHtml(f.label || '발견')}</div>
+      <div class="ann-rv-friend-vs">
+        <div class="ann-rv-friend-side">
+          <div class="ann-rv-friend-num ann-rv-friend-num-low">${escapeHtml(f.friendLow || '')}</div>
+          <div class="ann-rv-friend-label">${escapeHtml(f.friendLowLabel || '')}</div>
+        </div>
+        <div class="ann-rv-friend-vs-divider">vs</div>
+        <div class="ann-rv-friend-side">
+          <div class="ann-rv-friend-num ann-rv-friend-num-high">${escapeHtml(f.friendHigh || '')}</div>
+          <div class="ann-rv-friend-label">${escapeHtml(f.friendHighLabel || '')}</div>
+        </div>
+      </div>
+      <div class="ann-rv-finding-conclusion">${(f.conclusion || '').replace(/\n/g, '<br>')}</div>
+      <div class="ann-rv-finding-actions">
+        <button class="ann-rv-finding-btn">✦ 진주로 담을게</button>
+        <button class="ann-rv-finding-btn">🤔 갸우뚱</button>
+      </div>
+    </div>
+  `;
+}
+
+// 카드 5: 무기 DNA tree
+function _annualReviewBuildCard5(d) {
+  const t = d.tree || {};
+  const layer = (items, embodied) => `
+    <div class="ann-rv-tree-layer">
+      ${(items || []).map(it => `
+        <div class="ann-rv-tree-leaf">
+          <span class="ann-rv-tree-emoji${embodied ? ' ann-rv-tree-emoji-embodied' : ''}">${it.emoji}</span>
+          <span class="ann-rv-tree-name">${escapeHtml(it.name)}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  return `
+    <div class="ann-rv-card ann-rv-card-5">
+      <div class="ann-rv-label">자라는 무기들</div>
+      <div class="ann-rv-tree">
+        <div class="ann-rv-tree-tier">✨ 체화</div>
+        ${layer(t.embodied, true)}
+        <div class="ann-rv-tree-tier">🌳 성장 중</div>
+        ${layer(t.growing, false)}
+        <div class="ann-rv-tree-tier">🌿 시도 중</div>
+        ${layer(t.trying, false)}
+      </div>
+      <div class="ann-rv-tree-best">${t.best || ''}</div>
+    </div>
+  `;
+}
+
+// 카드 6: 모래사장 + 진주
+function _annualReviewBuildCard6(d) {
+  const b = d.beach || {};
+  const shellCount = Math.min(75, b.shellCount || 0);
+  const shells = Array.from({ length: shellCount }, () => '<div class="ann-rv-beach-shell"></div>').join('');
+  return `
+    <div class="ann-rv-card ann-rv-card-6">
+      <div class="ann-rv-label" style="color:rgba(255,248,232,0.85);">너의 모래사장</div>
+      <div class="ann-rv-beach-shells">${shells}</div>
+      <div class="ann-rv-beach-stats">
+        <div class="ann-rv-beach-stat">
+          <div class="ann-rv-beach-stat-num">${b.diaryCount || 0}</div>
+          <div class="ann-rv-beach-stat-label">소라</div>
+        </div>
+        <div class="ann-rv-beach-stat">
+          <div class="ann-rv-beach-stat-num">${b.pearlCount || 0}</div>
+          <div class="ann-rv-beach-stat-label">진주</div>
+        </div>
+      </div>
+      <div class="ann-rv-beach-pearl">
+        <div class="ann-rv-beach-pearl-emoji">✨</div>
+        <div class="ann-rv-beach-pearl-quote">${escapeHtml(b.bestPearl || '')}</div>
+        <div class="ann-rv-beach-pearl-label">가장 빛난 진주</div>
+      </div>
+    </div>
+  `;
+}
+
+// 카드 7: best 모음 (잊지 못할 + Top 5 + 가장 깊은 숙고)
+function _annualReviewBuildCard7(d) {
+  const b = d.best || {};
+  const moments = (b.moments || []).map(m => `
+    <div class="ann-rv-best-moment">
+      <span class="ann-rv-best-moment-date">${escapeHtml(m.date)}</span>
+      <span>${escapeHtml(m.text)}</span>
+    </div>
+  `).join('');
+  const quotes = (b.quotes || []).map(q => `
+    <div class="ann-rv-best-quote">${escapeHtml(q)}</div>
+  `).join('');
+  const deep = b.deep || {};
+  return `
+    <div class="ann-rv-card ann-rv-card-7">
+      <div class="ann-rv-label">한 해의 best</div>
+      <div class="ann-rv-best-grid">
+        <div class="ann-rv-best-section">
+          <div class="ann-rv-best-section-label">🌱 잊지 못할 순간</div>
+          <div class="ann-rv-best-moments">${moments}</div>
+        </div>
+        <div class="ann-rv-best-section">
+          <div class="ann-rv-best-section-label">🐚 너의 Top 5 인용</div>
+          <div class="ann-rv-best-quotes">${quotes}</div>
+        </div>
+        <div class="ann-rv-best-section">
+          <div class="ann-rv-best-section-label">🌊 가장 깊었던 숙고</div>
+          <div class="ann-rv-best-deep">${escapeHtml(deep.text || '')}</div>
+          <div class="ann-rv-best-deep-date">${escapeHtml(deep.date || '')}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// 카드 8: 마지막 + 다음 1년
+function _annualReviewBuildCard8(d) {
+  const f = d.final || {};
+  const buttons = (f.buttons || []).map(b => `
+    <button class="ann-rv-final-btn">✦ ${escapeHtml(b)}</button>
+  `).join('');
+  return `
+    <div class="ann-rv-card ann-rv-card-8">
+      <div class="ann-rv-final-message">${f.message || ''}</div>
+      <div class="ann-rv-final-cta-label">${escapeHtml(f.ctaLabel || '')}</div>
+      <div class="ann-rv-final-buttons">${buttons}</div>
+      <div class="ann-rv-final-shell">🐚</div>
     </div>
   `;
 }
