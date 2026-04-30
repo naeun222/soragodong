@@ -39066,8 +39066,16 @@ function renderUpdateNotice() {
 
   const major = _currentMajor();
   const dismissedMajor = state && state.preferences && state.preferences.dismissedMajor;
+  // 사용자 보고 2026-04-30: 신규 가입자 환영 모달 뜨기 전에 튜토리얼 chooser 가 먼저 떴음.
+  // gate 추가:
+  //   1. 환영 모달 DOM 떠있는 동안 skip
+  //   2. 신규 사용자 (entries ≤ 3 + _welcomeBonusShown 미설정) — maybeShowFirstTimeIntro 가 환영 → chooser 순서로 처리
+  const welcomeOpenNow = !!document.getElementById('welcomeBonusOverlay');
+  const entriesCount = Array.isArray(state.entries) ? state.entries.length : Object.keys(state.entries || {}).length;
+  const isFreshUser = entriesCount <= 3 && !(state.preferences && state.preferences._welcomeBonusShown);
   const shouldShow = state && dismissedMajor !== major
-    && !window._onbTutorialMode && !window._updateChooserShownThisSession;
+    && !window._onbTutorialMode && !window._updateChooserShownThisSession
+    && !welcomeOpenNow && !isFreshUser;
   if (!shouldShow) return;
   // 한 세션에 한 번만
   window._updateChooserShownThisSession = true;
