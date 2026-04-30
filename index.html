@@ -1373,6 +1373,116 @@
   }
   body.magic-mode .reflection-screen-back { color: #d4b8ff; }
 
+  /* === Magic Room — 14일 모래시계 ring + 10단계 dot (사용자 명시 2026-04-30 ultrathink: 보라 색만으론 부족, 모티프 추가) === */
+  .magic-time-ring {
+    position: relative;
+    width: 46px; height: 46px;
+    flex-shrink: 0;
+  }
+  .magic-time-ring svg {
+    width: 100%; height: 100%;
+    transform: rotate(-90deg);
+  }
+  .magic-time-ring .magic-ring-bg {
+    fill: none;
+    stroke: rgba(139,126,196,0.18);
+    stroke-width: 3;
+  }
+  .magic-time-ring .magic-ring-fill {
+    fill: none;
+    stroke: #c8a8ee;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.6s ease;
+    filter: drop-shadow(0 0 4px rgba(178,140,212,0.5));
+  }
+  .magic-time-ring.ready .magic-ring-fill {
+    stroke: #e6caff;
+    filter: drop-shadow(0 0 8px rgba(220,180,255,0.75));
+    animation: magicRingGlow 2.4s ease-in-out infinite;
+  }
+  @keyframes magicRingGlow {
+    0%, 100% { filter: drop-shadow(0 0 6px rgba(220,180,255,0.55)); }
+    50%      { filter: drop-shadow(0 0 12px rgba(220,180,255,0.95)); }
+  }
+  .magic-time-ring .magic-ring-num {
+    position: absolute;
+    inset: 0;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    font-size: 12px; font-weight: 700;
+    color: #d4b8ff;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .magic-time-ring .magic-ring-num span {
+    font-size: 8px; font-weight: 500;
+    color: rgba(212,184,255,0.55);
+    margin-top: 2px;
+  }
+  .magic-time-ring.ready .magic-ring-num { color: #f0d9ff; }
+
+  .magic-step-dots {
+    display: flex; gap: 5px;
+    margin-top: 10px;
+    align-items: center;
+  }
+  .magic-step-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: rgba(139,126,196,0.18);
+    border: 1px solid rgba(139,126,196,0.32);
+    transition: all 0.3s;
+  }
+  .magic-step-dot.unlocked {
+    background: rgba(178,140,212,0.30);
+    border-color: rgba(178,140,212,0.50);
+  }
+  .magic-step-dot.done {
+    background: linear-gradient(135deg, #e6caff, #b89fde);
+    border-color: rgba(220,180,255,0.7);
+    box-shadow: 0 0 6px rgba(178,140,212,0.6);
+  }
+  .magic-step-dots-label {
+    font-size: 10px;
+    color: rgba(212,184,255,0.65);
+    margin-left: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .decision-card-row {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .decision-card-row-text { flex: 1; min-width: 0; }
+
+  /* magic-mode 결정 카드 분위기 */
+  body.magic-mode .decision-list-item {
+    background: linear-gradient(135deg, rgba(139,126,196,0.10), rgba(48,40,70,0.40));
+    border-color: rgba(139,126,196,0.32);
+  }
+  body.magic-mode .decision-list-item:active {
+    background: linear-gradient(135deg, rgba(139,126,196,0.16), rgba(48,40,70,0.55));
+  }
+  body.magic-mode .decision-list-item.completed {
+    background: rgba(48,40,70,0.30);
+    border-color: rgba(139,126,196,0.18);
+    opacity: 0.78;
+  }
+  body.magic-mode .decision-list-item-meta {
+    color: rgba(212,184,255,0.65);
+  }
+  body.magic-mode .screen-sub {
+    font-style: italic;
+    letter-spacing: 0.01em;
+  }
+  body.magic-mode .model-section-title {
+    color: rgba(212,184,255,0.75);
+    letter-spacing: 0.06em;
+  }
+  body.magic-mode .model-section-title::before {
+    content: '✧ ';
+    color: rgba(220,180,255,0.55);
+  }
+
   /* === Reflection Room Visual Mode (사용자 요청 2026-04-30: 마법 보라 vs 숙고 청록 차별화) === */
   .reflection-mode-chip {
     display: none;
@@ -13712,6 +13822,39 @@ const DECISION_STEPS = [
 
 let _weightSelections = {};
 
+// 14일 숙성 ring SVG (사용자 명시 2026-04-30 ultrathink: 마법의 방 모티프 — 모래시계 진행도)
+function _magicTimeRing(daysSince) {
+  const days = Math.max(0, Math.min(daysSince, 14));
+  const r = 18;
+  const c = 2 * Math.PI * r;
+  const offset = c - (c * (days / 14));
+  const ready = daysSince >= 14;
+  const remain = ready ? 0 : (14 - days);
+  const titleText = ready ? '14일 숙성 완료 ✦' : `${days}일째 — ${remain}일 남음`;
+  return `<div class="magic-time-ring ${ready ? 'ready' : ''}" title="${titleText}">
+    <svg viewBox="0 0 46 46">
+      <circle class="magic-ring-bg" cx="23" cy="23" r="${r}"/>
+      <circle class="magic-ring-fill" cx="23" cy="23" r="${r}" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"/>
+    </svg>
+    <div class="magic-ring-num">${days}<span>/14일</span></div>
+  </div>`;
+}
+
+// 10단계 dot — locked / unlocked / done (사용자 명시 2026-04-30 ultrathink: step 진행도 시각화)
+function _magicStepDots(steps, daysSince) {
+  steps = steps || [];
+  return `<div class="magic-step-dots">
+    ${DECISION_STEPS.map((meta, i) => {
+      const s = steps[i];
+      const done = !!(s && s.completed);
+      const unlocked = (typeof daysSince === 'number') ? (daysSince >= meta.dayUnlock) : true;
+      const cls = done ? 'done' : (unlocked ? 'unlocked' : '');
+      return `<span class="magic-step-dot ${cls}" title="${i+1}. ${meta.title}${done ? ' ✓' : (unlocked ? '' : ` (${meta.timeReq})`)}"></span>`;
+    }).join('')}
+    <span class="magic-step-dots-label">${steps.filter(s => s && s.completed).length}/${DECISION_STEPS.length}</span>
+  </div>`;
+}
+
 function renderActiveDecisionsHome() {
   const container = document.getElementById('activeDecisionsContainer');
   if (!container) return;
@@ -13719,17 +13862,16 @@ function renderActiveDecisionsHome() {
   if (active.length === 0) { container.innerHTML = ''; return; }
 
   container.innerHTML = active.map(d => {
-    const completedSteps = (d.steps || []).filter(s => s.completed).length;
-    const totalSteps = DECISION_STEPS.length;
-    const pct = (completedSteps / totalSteps) * 100;
     const daysSince = Math.floor((new Date() - new Date(d.startedAt)) / 86400000);
     return `
       <div class="decision-card-home" onclick="openDecision('${d.id}')">
-        <div class="decision-card-label">🧙‍♂️ 진행 중인 결정 · ${daysSince}일째</div>
-        <div class="decision-card-title">${escapeHtml(d.title)}</div>
-        <div class="decision-card-progress">
-          <div class="progress-bar-mini"><div class="progress-bar-mini-fill" style="width:${pct}%"></div></div>
-          <span>${completedSteps}/${totalSteps}</span>
+        <div class="decision-card-row">
+          ${_magicTimeRing(daysSince)}
+          <div class="decision-card-row-text">
+            <div class="decision-card-label">🧙‍♂️ 진행 중인 결정 · ${daysSince}일째</div>
+            <div class="decision-card-title">${escapeHtml(d.title)}</div>
+            ${_magicStepDots(d.steps, daysSince)}
+          </div>
         </div>
       </div>
     `;
@@ -13747,14 +13889,19 @@ function renderDecisionsList() {
     activeList.innerHTML = '<div style="font-size:12px; color:var(--text-dim); padding:14px; background:var(--surface); border-radius:12px; line-height:1.7;">지금 숙성 중인 결정 없어.<br>큰 고민 생기면 여기서 천천히 풀자 ✦</div>';
   } else {
     activeList.innerHTML = active.map(d => {
-      const completedSteps = (d.steps || []).filter(s => s.completed).length;
       const daysSince = Math.floor((new Date() - new Date(d.startedAt)) / 86400000);
+      const ready = daysSince >= 14;
       return `
         <div class="decision-list-item" onclick="openDecision('${d.id}')">
-          <div class="decision-list-item-title">${escapeHtml(d.title)}</div>
-          <div class="decision-list-item-meta">
-            <span>${daysSince}일째</span>
-            <span>${completedSteps}/${DECISION_STEPS.length} 단계</span>
+          <div class="decision-card-row">
+            ${_magicTimeRing(daysSince)}
+            <div class="decision-card-row-text">
+              <div class="decision-list-item-title">${escapeHtml(d.title)}</div>
+              <div class="decision-list-item-meta">
+                <span>${daysSince}일째${ready ? ' ✦ 숙성 완료' : ''}</span>
+              </div>
+              ${_magicStepDots(d.steps, daysSince)}
+            </div>
           </div>
         </div>
       `;
