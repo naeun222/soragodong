@@ -7,8 +7,14 @@ import { checkBudget, deductCost } from './_lib/billing';
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
-export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
-  const { request, env } = context;
+// 사용자 보고 2026-04-30: recordUsage / deductCost fire-and-forget → 응답 빠르면 Worker 종료로 drop.
+// context.waitUntil 로 워커 lifetime 연장. Cloudflare Pages Functions API.
+export async function onRequestPost(context: {
+  request: Request;
+  env: Env;
+  waitUntil: (promise: Promise<any>) => void;
+}): Promise<Response> {
+  const { request, env, waitUntil } = context;
 
   const user = await verifyAuth(request, env);
   if (!user) return unauthorized();
@@ -102,7 +108,8 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
               usageData.cache_read_input_tokens || 0,
               usageData.cache_creation_input_tokens || 0
             );
-            recordUsage(env, {
+            // waitUntil — 워커 lifetime 연장으로 logging/차감 drop 방지.
+            waitUntil(recordUsage(env, {
               user_id: user.id,
               endpoint,
               model: body.model,
@@ -111,9 +118,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
               cache_read_tokens: usageData.cache_read_input_tokens || 0,
               cache_creation_tokens: usageData.cache_creation_input_tokens || 0,
               cost_usd: cost
-            }).catch(() => {});
+            }).catch(() => {}));
             // 사용자 명시 2026-04-30: admin 특혜 제거. 항상 차감.
-            deductCost(env, user.id, cost).catch(() => {});
+            waitUntil(deductCost(env, user.id, cost).catch(() => {}));
           }
         }
       }
@@ -150,7 +157,8 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     usage.cache_read_input_tokens || 0,
     usage.cache_creation_input_tokens || 0
   );
-  recordUsage(env, {
+  // waitUntil — non-streaming 경로도 동일. jsonResponse 즉시 반환 후에도 logging/차감 완료 보장.
+  waitUntil(recordUsage(env, {
     user_id: user.id,
     endpoint,
     model: body.model,
@@ -159,9 +167,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     cache_read_tokens: usage.cache_read_input_tokens || 0,
     cache_creation_tokens: usage.cache_creation_input_tokens || 0,
     cost_usd: cost
-  }).catch(() => {});
+  }).catch(() => {}));
   // 사용자 명시 2026-04-30: admin 특혜 제거. 항상 차감.
-  deductCost(env, user.id, cost).catch(() => {});
+  waitUntil(deductCost(env, user.id, cost).catch(() => {}));
 
   return jsonResponse(data);
 }

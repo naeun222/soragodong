@@ -57,7 +57,8 @@
   .app { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
   /* V3 main 그대로 복원 — 52px top (PWA standalone 상태바 보호 + Safari 브라우저 자연스러운 cushion) */
   .header { flex-shrink: 0; padding: 52px 24px 12px; display: flex; align-items: center; justify-content: space-between; }
-  .logo { font-family: 'Gowun Batang', serif; font-size: 20px; color: var(--accent); letter-spacing: 0.05em; }
+  .logo { font-family: 'Gowun Batang', serif; font-size: 20px; color: var(--accent); letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 8px; }
+  .logo-img { width: 26px; height: 26px; object-fit: contain; display: block; }
   .date-pill { font-size: 11px; color: var(--text-dim); background: var(--surface); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-soft); }
   .sync-dot.online { background: var(--success); }
@@ -8573,7 +8574,7 @@
 
 <div class="app" style="display:none;">
   <div class="header">
-    <div class="logo">🐚 소라고동</div>
+    <div class="logo"><img src="/godong.webp" alt="" class="logo-img" decoding="async">소라고동</div>
     <div style="display:flex; align-items:center; gap:8px;">
       <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환">🐚</button>
       <div class="date-pill">

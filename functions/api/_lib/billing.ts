@@ -96,28 +96,25 @@ export async function checkBudget(env: Env, userId: string): Promise<BudgetCheck
   };
 }
 
+// 사용자 보고 2026-04-30: race condition 수정 — read-modify-write PATCH → atomic RPC.
+// 동시 chat 호출 시 같은 잔액 읽고 한쪽 차감만 살아남던 버그 fix.
+// 0002_billing_usage.sql 의 deduct_credit_atomic (FOR UPDATE row lock) 호출.
 export async function deductCost(env: Env, userId: string, costUsd: number): Promise<void> {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
   if (costUsd <= 0) return;
   try {
-    const billing = await getUserBilling(env, userId);
-    if (!billing) return;
-    const updates: any = {};
-    if (billing.subscription_active && billing.subscription_expires_at && new Date(billing.subscription_expires_at) > new Date()) {
-      updates.monthly_token_used = (billing.monthly_token_used || 0) + Math.round(costUsd * 1_000_000);
-    } else {
-      updates.credit_balance_usd = Math.max(0, (billing.credit_balance_usd || 0) - costUsd);
-    }
-    await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${userId}`, {
-      method: 'PATCH',
+    const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/deduct_credit_atomic`, {
+      method: 'POST',
       headers: {
         'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
         'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(updates)
+      body: JSON.stringify({ p_user_id: userId, p_cost_usd: costUsd })
     });
+    if (!resp.ok) {
+      console.warn('[billing] atomic 차감 실패:', resp.status, await resp.text());
+    }
   } catch (e) {
     console.warn('[billing] 차감 실패:', e);
   }
