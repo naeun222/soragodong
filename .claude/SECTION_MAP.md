@@ -76,6 +76,8 @@ agent 들이 자기 도메인만 read 하도록 자리 명세. line 번호 = app
 - `generateAIResponse`: ~23500-24000
 - 4단 분석 prompt: ~23700-24200
 - 스트리밍 partial render: ~23800
+- **NEW** sendChat 끝 (~23413) 신규 가입자 빠른 추출 trigger — 사용자/고동 1 세트 × 3 마다 `extractChapterCaseAnalysis` (10번까지)
+- `state.chatPairsCount` / `state.newUserExtractTriggers`
 
 **Backend**: `functions/api/chat.ts` (Anthropic 프록시)
 
@@ -86,6 +88,7 @@ agent 들이 자기 도메인만 read 하도록 자리 명세. line 번호 = app
 - "진단명 절대 먼저 꺼내지 말 것" 가드 (의료법 §27/§56)
 - Opus / Sonnet 모델 토글 (`useOpus`)
 - prompt caching TTL 1h
+- 신규 가입자 빠른 추출 — testerMode / _onbTutorialMode / 비로그인 가드
 
 **Subagent**: `audit-chat`
 
