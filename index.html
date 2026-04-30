@@ -14395,27 +14395,7 @@ function onbFinish() {
   // V4: body override 복원 + 코어 활성 상태 정리
   if (typeof _cleanupCoreOverrides === 'function') _cleanupCoreOverrides();
 
-  // 사용자 명시 2026-04-30 (정정): quiz form 폐기 → 코어 #1 종료 snapshot 으로 첫 진단.
-  // testerMode OFF + 코어 #1 + 미진단 시 — 데이터 정리 *전* snapshot 보존. 정리 후 background 진단 trigger.
-  let _firstTouchSnapshot = null;
-  const _firstTouchEligible = _completedCoreId === 'core1'
-    && !(state.preferences && state.preferences._firstTouchDone)
-    && !(state.preferences && state.preferences.testerMode)
-    && _onbStartTime;
-  if (_firstTouchEligible) {
-    const startMs = _onbStartTime;
-    _firstTouchSnapshot = {
-      userMessages: (state.chatMessages || []).filter(m =>
-        m.role === 'user' && m.timestamp && new Date(m.timestamp).getTime() >= startMs && !m.typing && !m.error
-      ).slice(-15).map(m => ({ content: m.content })),
-      entries: (state.entries || []).filter(e =>
-        e.timestamp && new Date(e.timestamp).getTime() >= startMs
-      ).slice(-5).map(e => ({ date: e.date, vitality: e.vitality, mood: e.mood, sleep: e.sleep, note: e.note })),
-      selectedModes: Object.keys(state.modes || {}).filter(k => state.modes[k]),
-      pickedVitality: state.preferences?._lastTutorialVitality || null
-    };
-    console.log('[firstTouch core1] snapshot 보존 (msg ' + _firstTouchSnapshot.userMessages.length + ' / entry ' + _firstTouchSnapshot.entries.length + ')');
-  }
+  // 사용자 명시 2026-04-30 ultrathink (위치 이동): 옛 snapshot 진단 흐름 폐기 → chat_intake_entry step 안 모달 풀 흐름으로 대체. 이 자리 _firstTouchSnapshot 코드 제거.
 
   // 사용자 요청 2026-04-28: 테스터 모드 ON 상태였으면 backup 복원으로 한 방 정리 (filter cleanup 중복 X)
   if (state.preferences && state.preferences.testerMode && _testerModeBackupState) {
