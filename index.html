@@ -21875,11 +21875,14 @@ function _modalEscHandler(e) {
 // 취소 시 null 반환.
 let _imResolve = null;
 
+// 사용자 명시 2026-05-01 (agent audit): modal ESC dismiss detach 함수 박음.
+let _imEscDetach = null;
 function _closeInputModal(val) {
   const overlay = document.querySelector('.input-modal-overlay');
   if (!overlay) return;
   overlay.classList.remove('show');
   setTimeout(() => overlay.remove(), 180);
+  if (_imEscDetach) { _imEscDetach(); _imEscDetach = null; }
   if (_imResolve) {
     _imResolve(val);
     _imResolve = null;
@@ -21937,14 +21940,16 @@ function showInputModal(opts = {}) {
     overlay.onclick = () => _closeInputModal(null);
     document.body.appendChild(overlay);
     setTimeout(() => overlay.classList.add('show'), 30);
-    
+    // 사용자 명시 2026-05-01 (agent audit): ESC = cancel.
+    _imEscDetach = _registerModalEsc(overlay, () => _closeInputModal(null));
+
     if (!multiline) {
       const field = document.getElementById('_imField');
       field.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') _closeInputModal(field.value);
       });
     }
-    
+
     setTimeout(() => { const f = document.getElementById('_imField'); if (f) f.focus(); }, 80);
   });
 }
@@ -21974,6 +21979,8 @@ function showConfirmModal(opts = {}) {
     overlay.onclick = () => _closeConfirmModal(false);
     document.body.appendChild(overlay);
     setTimeout(() => overlay.classList.add('show'), 30);
+    // 사용자 명시 2026-05-01 (agent audit): ESC = cancel.
+    _imEscDetach = _registerModalEsc(overlay, () => _closeConfirmModal(false));
   });
 }
 
@@ -31448,7 +31455,9 @@ async function testSeedV4Data() {
   state.missions = [
     // 사용자 보고 2026-04-30 ultrathink: status 'active' → 'pending' 필수 (createMission 표준 / getTodayMissions 필터). 'active' 면 home 에 표시 X → 튜토리얼 mission_done step 무력화 → demoAttemptResult 가 잘못된 미션(strat0_done) 픽 → step 18 결과 체크 버튼 버그.
     { id: 'mis_seed_active_call', title: '엄마 통화 시작 전 3초 호흡', description: '"나도 알아!" 나오기 전에 한 호흡 끼우기', status: 'pending', scheduledFor: todayStr, createdAt: new Date(today.getTime() - 3600000).toISOString() },
-    { id: 'mis_seed_strat0_done_unchecked', title: '마감 직전 환경 셋업 1번', description: '카페 자리 + 폰 다른 방', status: 'completed', completedDate: new Date(today.getTime() - 86400000).toISOString().split('T')[0], completedAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: 'strat_seed_0', generationIdx: 0, _followupAsked: true },
+    // 사용자 명시 2026-05-01 (agent audit): _followupAsked: true 제거 — 시드 일관성. 양생방 button 자리에서 결과 체크 자연 trigger 보장.
+    // 코어 #2 외 코어 (#5 / #8 등) 진입 시 testSeedV4Data 다시 호출돼도 fragile X.
+    { id: 'mis_seed_strat0_done_unchecked', title: '마감 직전 환경 셋업 1번', description: '카페 자리 + 폰 다른 방', status: 'completed', completedDate: new Date(today.getTime() - 86400000).toISOString().split('T')[0], completedAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: 'strat_seed_0', generationIdx: 0 },
     { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
     { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
   ];
