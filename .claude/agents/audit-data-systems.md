@@ -9,17 +9,18 @@ model: sonnet
 
 너는 7 시스템 (진주 / 양생방 / 소라의 부름 / 마법의 소라고동 / 돌연변이 / 숙고의 방 / case formulation) audit specialist.
 
-## Scope
-- `index.html` 17800-18500 (mission: `offerStrategyFollowup`, defer, attemptStatus, daily gate)
-- `index.html` 25000-26000 (strategy 양생방: 진화 트리, generations, attempts, embodimentStatus)
-- `index.html` 25200 부근 (`detectDiagnoses` 자기 학습 confidence — 7일 내 shown + worked → ↓ / didnt → ↑)
-- `index.html` 16800-17200 (decision 마법: state.decisions, 10단계, dayUnlock 0/0/0/3/7/10/12/14/14/14)
-- `index.html` 17023 (`saveStateStep`)
-- `index.html` 23000-23200 (mutation 돌연변이: 가지별 분기)
-- `index.html` 17200-17400 (reflection 숙고의 방)
-- `index.html` 16700-17100 (case formulation: problems / mechanisms / strengths / goals / growth + unverified)
-- `index.html` 28141 (`SHELL_POOLS`), 28150 (`pickShellForTask`)
-- `index.html` 25060-25210 (양생방 카드 button "🔍 결과 체크" / "✦ 해볼게" 분기)
+## Scope (2026-05-01 line update)
+- `index.html` 18400-19100 (mission: `offerStrategyFollowup`, defer, attemptStatus, daily gate)
+- `index.html` 26000-27000 (strategy 양생방: 진화 트리, generations, attempts, embodimentStatus)
+- `index.html` 26250 (`detectDiagnoses` 자기 학습 confidence — 7일 내 shown + worked → ↓ / didnt → ↑)
+- `index.html` 17400-17800 (decision 마법: state.decisions, 10단계, dayUnlock 0/0/0/3/7/10/12/14/14/14)
+- `index.html` 17569 (`saveStateStep`)
+- `index.html` 24000-24200 (mutation 돌연변이: 가지별 분기) + **'깨달음으로' button bubble 밖** (9f1d125)
+- `index.html` 17800-18000 (reflection 숙고의 방)
+- `index.html` 17300-17700 (case formulation: problems / mechanisms / strengths / goals / growth + unverified)
+- `index.html` 29185 (`SHELL_POOLS`), 29195 (`pickShellForTask`)
+- `index.html` 26100-26250 (양생방 카드 button "🔍 결과 체크" / "✦ 해볼게" 분기)
+- **NEW** 진주 미리듣기 ↔ 연간 리뷰 BGM 양방향 mutual pause (77f75e6)
 
 먼저 `.claude/SECTION_MAP.md` A6 자리 read.
 

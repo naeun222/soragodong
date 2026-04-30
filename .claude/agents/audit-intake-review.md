@@ -9,19 +9,21 @@ model: sonnet
 
 너는 intake/review 도메인 audit specialist.
 
-## Scope
-- `index.html` 11800-12300 (intake 모달 풀 흐름 — runIntakeFlow, _intakeStep1-6Html)
-- `index.html` 12011 (`_renderIntakeStep`)
-- `index.html` 11630 부근 (`_intakeGenLongExample`)
-- `index.html` 11920 부근 (intake mic banner)
-- `index.html` 17320 부근 (`async function generateReview`)
-- `index.html` 17500-17800 (review render layout, summary, pattern, quotes, experiment, seeds)
-- `index.html` 31431 부근 (`generateQuarterlyReview`)
-- `index.html` 35621 부근 (`generateReviewArchiveMetaSummary`)
-- `index.html` 10680 부근 (`generateAnnualReview`)
-- `index.html` 10700-11200 (annual 카드 prototype, 13 카드)
-- `index.html` 1657-1810 (CSS .ann-rv-*)
-- `index.html` 1488-1550 (CSS .welcome-bonus-* — intake 와 분리)
+## Scope (2026-05-01 line update)
+- `index.html` 12300-12800 (intake 모달 풀 흐름 — runIntakeFlow, _intakeStep1-6Html)
+- `index.html` 12490 부근 (`_renderIntakeStep`)
+- `index.html` 12150 부근 (`_intakeGenLongExample`)
+- `index.html` 12420 부근 (intake mic banner)
+- `index.html` 17867 부근 (`async function generateReview`)
+- `index.html` 18000-18300 (review render layout, summary, pattern, quotes, experiment, seeds)
+- `index.html` 32535 부근 (`generateQuarterlyReview`)
+- `index.html` 36405 부근 (`generateReviewArchiveMetaSummary`)
+- `index.html` 10959 부근 (`generateAnnualReview`)
+- `index.html` 11000-11500 (annual 카드 prototype, 13 카드)
+- `index.html` 10824 / 11102 / 11426 (whyThisYear 일상어 풀이 — persona 카드)
+- `index.html` 14048 / 17737 / 32656 / 32723 / 32771 (review trigger 첫째주 일요일만 + 연간 자동)
+- CSS `.ann-rv-*`
+- CSS `.welcome-bonus-*` (intake 와 분리)
 
 먼저 `.claude/SECTION_MAP.md` A5 자리 read.
 
@@ -36,6 +38,14 @@ model: sonnet
 8. **intake quotes 5개 인용** — 사용자 본인 워딩 (외부 AI quote X)
 9. **generateAnnualReview Opus 4.7 호출** — 비용 1-2분 소요
 10. **카드 1 페르소나 별명** — Opus 분석 + persona reason (왜 이 별명?)
+11. ⭐ **review trigger 첫째주 일요일만** (사용자 명시 A 옵션 2026-05-01) — weekly/monthly/quarterly/annual 모두 1-7일 + 일요일 조건. 다른 날 자동 trigger X 보장
+12. ⭐ **연간 리뷰 자동 trigger** — 1월 첫째주 일요일 + 작년 데이터 있고 미생성 시 generateAnnualReview(prevYear)
+13. ⭐ **persona whyThisYear 일상어** — 'Q3 카드 #5' / '3월 일기' 같은 dev 용어 X. 자연 한국어 + 사용자 친근 톤. 2-3 문장.
+14. ⭐ **연간 리뷰 BGM ↔ 진주 미리듣기 양방향 mutual pause** (77f75e6) — 한 쪽 재생 시 다른 쪽 자동 pause
+15. ⭐ **월간 리뷰 중복 + '새 인사이트 찾기' 거짓 안내** (d42ea81 fix) — 중복 trigger 차단
+16. ⭐ **연간 리뷰 X 닫기 후 튜토리얼 advance race** (2c2b6c1 fix)
+17. ⭐ **마지막 슬라이드 godongicon.png** (f5686f7) — 이전 🐚 emoji → png
+18. ⭐ **리뷰 모음 카드 삭제 기능** (9f6381f)
 
 ## 보고 형식
 ```
