@@ -70,6 +70,21 @@ export async function onRequestPost(context: {
     const decoder = new TextDecoder();
     let usageData: any = null;
 
+    // 사용자 보고 2026-04-30 ultrathink: SSE 파서 buffer 잔여 처리 누락 → 마지막 message_delta (최종 output_tokens cumulative) 가 chunk 경계에 걸려 영원히 파싱 X 였음.
+    // → output_tokens 가 message_start 초기값 (1) 으로 기록됐을 가능성. 사용량 표시 안 잡히던 root cause 후보.
+    const _parseSseLine = (line: string) => {
+      if (!line.startsWith('data: ')) return;
+      try {
+        const evt = JSON.parse(line.slice(6));
+        if (evt.type === 'message_delta' && evt.usage) {
+          usageData = { ...(usageData || {}), ...evt.usage };
+        }
+        if (evt.type === 'message_start' && evt.message?.usage) {
+          usageData = { ...(usageData || {}), ...evt.message.usage };
+        }
+      } catch {}
+    };
+
     const stream = new ReadableStream({
       async start(controller) {
         try {
@@ -81,20 +96,14 @@ export async function onRequestPost(context: {
             buffer += chunk;
             const lines = buffer.split('\n');
             buffer = lines.pop() || '';
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const evt = JSON.parse(line.slice(6));
-                  if (evt.type === 'message_delta' && evt.usage) {
-                    usageData = { ...(usageData || {}), ...evt.usage };
-                  }
-                  if (evt.type === 'message_start' && evt.message?.usage) {
-                    usageData = { ...(usageData || {}), ...evt.message.usage };
-                  }
-                } catch {}
-              }
-            }
+            for (const line of lines) _parseSseLine(line);
             controller.enqueue(value);
+          }
+          // 루프 종료 후 buffer 잔여 + UTF-8 디코더 flush — 끝부분 message_delta 누락 fix.
+          const tail = decoder.decode();
+          if (tail) buffer += tail;
+          if (buffer) {
+            for (const line of buffer.split('\n')) _parseSseLine(line);
           }
           controller.close();
         } catch (e) {

@@ -42,7 +42,8 @@ export async function recordUsage(env: Env, record: UsageRecord): Promise<void> 
     return;
   }
   try {
-    await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_usage`, {
+    // 사용자 보고 2026-04-30 ultrathink: fetch 가 비-2xx 도 throw X — .ok 검사 + 에러 본문 로깅으로 silent drop 방지.
+    const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_usage`, {
       method: 'POST',
       headers: {
         'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
@@ -52,6 +53,10 @@ export async function recordUsage(env: Env, record: UsageRecord): Promise<void> 
       },
       body: JSON.stringify({ ...record, recorded_at: new Date().toISOString() })
     });
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '<no body>');
+      console.error('[usage] INSERT 실패', resp.status, errText, 'record=', JSON.stringify(record));
+    }
   } catch (e) {
     console.warn('[usage] 기록 실패:', e);
   }
