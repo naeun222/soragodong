@@ -1574,6 +1574,50 @@
     transform: translateY(0);
     filter: brightness(0.97);
   }
+  .welcome-bonus-btn:disabled {
+    opacity: 0.85; cursor: default;
+    background: linear-gradient(135deg, #9ed4a0, #7dba80);
+  }
+  /* 사용자 명시 2026-04-30: button 눌러야 받을 수 있게 — ✨ burst + token 변형 */
+  .welcome-bonus-burst {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 10005;
+    display: flex; gap: 24px;
+    animation: wbBurst 1.2s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  }
+  .welcome-bonus-burst span {
+    display: inline-block;
+    font-size: 64px;
+    filter: drop-shadow(0 0 24px rgba(255,250,205,0.95));
+    animation: wbBurstSpin 1.2s ease-out forwards;
+  }
+  .welcome-bonus-burst span:nth-child(1) { animation-delay: 0s; }
+  .welcome-bonus-burst span:nth-child(2) { animation-delay: 0.08s; transform: scale(1.2); }
+  .welcome-bonus-burst span:nth-child(3) { animation-delay: 0.16s; }
+  @keyframes wbBurst {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+    40%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+    80%  { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+    100% { opacity: 0; transform: translate(-50%, -90%) scale(0.95); }
+  }
+  @keyframes wbBurstSpin {
+    0%   { transform: scale(0.3) rotate(-90deg); }
+    100% { transform: scale(1.0) rotate(20deg); }
+  }
+  .welcome-bonus-token.received {
+    background: linear-gradient(135deg, rgba(158,212,160,0.30), rgba(255,250,205,0.18) 50%, rgba(158,212,160,0.30));
+    border-color: rgba(158,212,160,0.65);
+    color: #b8e6ba;
+    animation: wbTokenReceived 0.6s ease-out;
+  }
+  @keyframes wbTokenReceived {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
   .ft-hypothesis label {
     display: flex; align-items: flex-start; gap: 8px;
     padding: 10px 12px; margin-bottom: 6px;
@@ -11294,18 +11338,32 @@ function showWelcomeBonusModal(opts) {
           <span class="welcome-bonus-token-emoji">🎁</span>
           <span>내 선물! 무료 토큰 <b style="color:var(--accent);">4,000원</b> 어치</span>
         </div>
-        <button class="welcome-bonus-btn" id="welcomeBonusOkBtn">그럼 시작해볼까 →</button>
+        <button class="welcome-bonus-btn" id="welcomeBonusOkBtn">🎁 받기</button>
       </div>
     `;
     document.body.appendChild(overlay);
+    // 사용자 명시 2026-04-30: button 눌러야 받을 수 있게 — click 시 ✨ burst + token block 변형 + 1.1s 후 닫기
     document.getElementById('welcomeBonusOkBtn').onclick = () => {
-      if (!preview) {
-        state.preferences = state.preferences || {};
-        state.preferences._welcomeBonusShown = true;
-        saveState();
-      }
-      overlay.remove();
-      resolve();
+      const btn = document.getElementById('welcomeBonusOkBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '받았어 ✓'; }
+      // ✨ burst 폭발
+      const burst = document.createElement('div');
+      burst.className = 'welcome-bonus-burst';
+      burst.innerHTML = '<span>✨</span><span>🎁</span><span>✨</span>';
+      document.body.appendChild(burst);
+      // token block = "받았어 ✓" 변형
+      const tokenEl = overlay.querySelector('.welcome-bonus-token');
+      if (tokenEl) tokenEl.classList.add('received');
+      setTimeout(() => {
+        try { burst.remove(); } catch {}
+        if (!preview) {
+          state.preferences = state.preferences || {};
+          state.preferences._welcomeBonusShown = true;
+          saveState();
+        }
+        overlay.remove();
+        resolve();
+      }, 1200);
     };
   });
 }
