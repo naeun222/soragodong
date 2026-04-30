@@ -2283,48 +2283,104 @@
   }
   /* 사용자 명시 2026-04-30 ultrathink: 옛 .ann-rv-pearl-* 5개 폐기 — Stories 톤 (stories-label/title/body + stories-archive-*) 재사용 */
 
-  /* ─── 카드 9: 가장 깊었던 숙고 (질문 하나 웅장 — 사용자 명시 예전 형식) ─── */
+  /* ─── 카드 9: 가장 깊었던 숙고 — 사용자 명시 2026-05-01: 웅장하게 (aurora bg + 별 + 큰 따옴표 + 결론 카드 + serif) ─── */
   .ann-rv-card-deep {
     background:
-      radial-gradient(ellipse at 50% 50%, rgba(126,200,200,0.13), transparent 60%),
-      #060410;
+      radial-gradient(ellipse at 30% 20%, rgba(126,200,200,0.22), transparent 55%),
+      radial-gradient(ellipse at 70% 65%, rgba(98,165,200,0.16), transparent 50%),
+      radial-gradient(ellipse at 50% 100%, rgba(168,157,200,0.10), transparent 45%),
+      #050310;
     text-align: center;
+    position: relative;
+  }
+  .ann-rv-card-deep::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(197,224,240,0.55) 0, transparent 1.4px),
+      radial-gradient(circle at 86% 22%, rgba(197,224,240,0.40) 0, transparent 1.1px),
+      radial-gradient(circle at 22% 88%, rgba(197,224,240,0.50) 0, transparent 1.3px),
+      radial-gradient(circle at 78% 78%, rgba(197,224,240,0.35) 0, transparent 1px),
+      radial-gradient(circle at 50% 8%, rgba(197,224,240,0.50) 0, transparent 1.2px);
+    pointer-events: none;
+    animation: ann-rv-twinkle 3.5s ease-in-out infinite alternate;
   }
   .ann-rv-deep-label {
-    font-size: 11px; letter-spacing: 0.3em;
-    color: rgba(126,200,200,0.7);
-    margin-bottom: 40px; text-transform: uppercase;
+    font-size: 11px; letter-spacing: 0.32em;
+    color: rgba(126,200,200,0.85);
+    margin-bottom: 38px; text-transform: uppercase;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    position: relative; z-index: 1;
+    text-shadow: 0 0 14px rgba(126,200,200,0.4);
+  }
+  .ann-rv-deep-label::before, .ann-rv-deep-label::after {
+    content: ''; width: 28px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(126,200,200,0.55), transparent);
   }
   .ann-rv-deep-question {
-    font-size: clamp(22px, 5.5vw, 32px);
-    color: #c5e0f0; font-weight: 500;
+    position: relative; z-index: 1;
+    font-family: 'Gowun Batang', serif;
+    font-size: clamp(22px, 5.8vw, 34px);
+    color: #d8ecf5; font-weight: 400;
     font-style: italic;
-    line-height: 1.6;
-    letter-spacing: 0.01em;
-    max-width: 380px;
-    text-shadow: 0 0 24px rgba(126,200,200,0.35);
+    line-height: 1.7;
+    letter-spacing: 0.005em;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 14px 18px 24px;
+    text-shadow: 0 0 28px rgba(126,200,200,0.45), 0 0 56px rgba(126,200,200,0.15);
   }
-  .ann-rv-deep-date {
-    font-size: 10.5px; letter-spacing: 0.25em;
-    color: rgba(126,200,200,0.45);
-    margin-top: 28px;
+  .ann-rv-deep-question::before {
+    content: '"';
+    position: absolute; top: -10px; left: -4px;
+    font-size: 56px; line-height: 1;
+    color: rgba(126,200,200,0.55);
+    font-family: 'Gowun Batang', serif;
+    pointer-events: none;
   }
-  /* 사용자 명시 2026-04-30: 깊은 숙고 = 결론도 적기 (질문 → 14일 → 결론) */
+  .ann-rv-deep-question::after {
+    content: '"';
+    position: absolute; bottom: -22px; right: -4px;
+    font-size: 56px; line-height: 1;
+    color: rgba(126,200,200,0.55);
+    font-family: 'Gowun Batang', serif;
+    pointer-events: none;
+  }
   .ann-rv-deep-divider {
-    font-size: 9.5px;
+    position: relative; z-index: 1;
+    font-size: 10px;
     letter-spacing: 0.35em;
-    color: rgba(126,200,200,0.42);
-    margin: 30px 0 24px;
+    color: rgba(126,200,200,0.6);
+    margin: 44px 0 26px;
     text-transform: uppercase;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+  }
+  .ann-rv-deep-divider::before, .ann-rv-deep-divider::after {
+    content: ''; width: 30px; height: 1px;
+    background: rgba(126,200,200,0.4);
   }
   .ann-rv-deep-conclusion {
-    font-size: clamp(17px, 4.2vw, 24px);
-    color: #9ed4a0;
-    font-weight: 600;
-    line-height: 1.55;
-    letter-spacing: 0.01em;
+    position: relative; z-index: 1;
+    font-family: 'Gowun Batang', serif;
+    font-size: clamp(18px, 4.5vw, 26px);
+    color: #c5e6c8;
+    font-weight: 500;
+    line-height: 1.6;
+    letter-spacing: 0.005em;
     max-width: 380px;
-    text-shadow: 0 0 16px rgba(158,212,160,0.28);
+    margin: 0 auto;
+    padding: 20px 22px;
+    background: linear-gradient(135deg, rgba(158,212,160,0.10), rgba(126,200,200,0.06));
+    border: 1px solid rgba(158,212,160,0.30);
+    border-radius: 16px;
+    box-shadow: 0 4px 22px rgba(126,200,200,0.10);
+    text-shadow: 0 0 20px rgba(158,212,160,0.30);
+  }
+  .ann-rv-deep-date {
+    position: relative; z-index: 1;
+    font-family: 'Gowun Batang', serif;
+    font-size: 11px; letter-spacing: 0.28em;
+    color: rgba(126,200,200,0.55);
+    margin-top: 32px;
   }
 
   /* ─── 카드 8: 마지막 + 다음 1년 ─── */
@@ -11416,10 +11472,10 @@ function _annualReviewBuildCard9(d) {
       <div style="position:absolute; bottom:32%; right:11%; font-size:10px; opacity:0.28; pointer-events:none;">·</div>
 
       <div style="display:flex; flex-direction:column; align-items:center; max-width:340px; width:100%; box-sizing:border-box; gap:22px; position:relative;">
-        <!-- 🐚 + halo (분기 closing 차용) -->
-        <div style="position:relative; display:flex; align-items:center; justify-content:center; height:60px;">
-          <div style="position:absolute; width:96px; height:96px; background:radial-gradient(circle, rgba(212,167,106,0.32) 0%, transparent 70%); border-radius:50%; animation: ann-rv-final-halo 3s ease-in-out infinite alternate;"></div>
-          <div style="font-size:48px; line-height:1; position:relative; filter: drop-shadow(0 0 14px rgba(212,167,106,0.55));">🐚</div>
+        <!-- godong icon + halo (사용자 명시 2026-05-01: 🐚 emoji → godongicon.png, drop-shadow X 배경 안 보이게) -->
+        <div style="position:relative; display:flex; align-items:center; justify-content:center; height:80px;">
+          <div style="position:absolute; width:110px; height:110px; background:radial-gradient(circle, rgba(212,167,106,0.32) 0%, transparent 70%); border-radius:50%; animation: ann-rv-final-halo 3s ease-in-out infinite alternate;"></div>
+          <img src="/godongicon.png" alt="소라고동" style="width:64px; height:64px; object-fit:contain; position:relative; display:block;" decoding="async">
         </div>
 
         <!-- 라벨 + 양쪽 가는 선 -->
