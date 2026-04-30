@@ -13264,7 +13264,14 @@ async function loadFromCloud() {
       const pendingRaw = localStorage.getItem('soragodong_pending_consent');
       if (pendingRaw) {
         const pending = JSON.parse(pendingRaw);
-        if (pending && pending.consentAll && pending.versions) {
+        // 사용자 명시 2026-05-01 (agent audit): email 일치 verify — 다른 사용자 동의 잘못 옮기는 자리 차단.
+        const currentEmail = (session && session.user && session.user.email) || '';
+        const emailMatch = !pending.email || (currentEmail && pending.email.toLowerCase() === currentEmail.toLowerCase());
+        if (!emailMatch) {
+          // 다른 사용자 pending — 즉시 폐기.
+          localStorage.removeItem('soragodong_pending_consent');
+          console.log('[consent] pending email mismatch — 폐기');
+        } else if (pending && pending.consentAll && pending.versions) {
           const at = pending.at || new Date().toISOString();
           // 이미 같은 버전 동의 박혀있으면 skip (재로그인 케이스)
           const has = (type, version) => state.preferences.consentLog.some(c => c.type === type && c.version === version && c.confirmed);
@@ -16730,8 +16737,10 @@ async function handleSendCode() {
   if (!consentAll) { alert('필수 동의 항목을 체크해야 시작 가능해. (약관·프라이버시·국외이전·만 14세)'); return; }
 
   // 동의 시점 임시 저장 — verify 성공 후 cloud (state.preferences.consentLog) 박힘.
+  // 사용자 명시 2026-05-01 (agent audit): email 박음 — verify 성공 후 일치 확인. 다른 사용자가 같은 device 로그인 시 옛 pending 잘못 옮겨지던 자리 차단.
   try {
     localStorage.setItem('soragodong_pending_consent', JSON.stringify({
+      email: email,
       consentAll: !!consentAll,
       consentAdult: !!consentAdult,
       consentAnalytics: !!consentAnalytics,
