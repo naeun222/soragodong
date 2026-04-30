@@ -8356,10 +8356,13 @@ function _canAI() {
 
 // 사용자 요청 2026-04-30: admin 헬퍼. 김나은 (jade6679@naver.com) 전용 UI 노출 조건.
 // 백엔드 admin endpoint은 server-side ADMIN_USER_ID env로 강제 검증 — 이 클라이언트 헬퍼는 UI 숨김 용도일 뿐.
+// 사용자 보고 2026-04-30 review (agent P0-4): email 비교는 console 우회 가능 (session.user.email 직접 변경). UID 비교로 강화.
+// UID 가 클라이언트에 hardcoded 노출되어도 OK — 서버는 별도 ADMIN_USER_ID env 검증, 이 헬퍼는 UI 노출 분기일 뿐.
 const ADMIN_EMAIL = 'jade6679@naver.com';
+const ADMIN_UID = '4ba0a92e-7f79-45ec-8c48-b339d259382e';
 function _isAdmin() {
   if (typeof session === 'undefined' || !session || !session.user) return false;
-  return (session.user.email || '').toLowerCase() === ADMIN_EMAIL;
+  return session.user.id === ADMIN_UID;
 }
 
 const V4_USER_ID = 'me_v4';
@@ -8773,15 +8776,29 @@ async function withdrawAccount() {
     }
   }
 
-  // 2. Supabase auth.users row 삭제 — 백엔드 endpoint 필요 (api/account/delete).
-  // Phase C 활성 후 박힘. 그 전엔 클라이언트에서 logout만 (사용자 row는 남음 — 정책상 미사용 12개월 후 회사가 일괄 정리).
+  // 2. Supabase auth.users row + billing/payments/feedback/usage 익명화 / 삭제 — 백엔드 endpoint.
+  // 사용자 보고 2026-04-30 review (agent P0-3): 옛 코드는 catch swallow → 결제·사용량 row 잔존인데 "탈퇴 완료" 표시. 응답 검증 + 실패 시 명확 알림 + abort.
   if (typeof BACKEND_BASE !== 'undefined' && BACKEND_BASE) {
+    let backendOk = false;
+    let backendErr = '';
     try {
-      await fetch(`${BACKEND_BASE}/api/account/delete`, {
+      const r = await fetch(`${BACKEND_BASE}/api/account/delete`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session?.access_token || ''}`, 'Content-Type': 'application/json' }
       });
-    } catch (e) { console.warn('withdraw backend:', e); }
+      if (r.ok) {
+        backendOk = true;
+      } else {
+        backendErr = 'HTTP ' + r.status + ' — ' + (await r.text().catch(() => '')).slice(0, 200);
+      }
+    } catch (e) {
+      backendErr = (e && e.message) || String(e);
+    }
+    if (!backendOk) {
+      const proceed = confirm('⚠ 백엔드 탈퇴 실패: ' + backendErr + '\n\nSupabase 인증 row + 결제·사용량 데이터가 남아있을 수 있어. 회사가 사후 일괄 정리할 수 있지만 즉시 정리 X.\n\n그래도 로컬 정리 + 로그아웃은 진행할까?');
+      if (!proceed) return;
+      console.warn('[withdraw] backend 실패 후 사용자 동의로 진행:', backendErr);
+    }
   }
 
   // 3. localStorage 전부 정리 (API 키 preserve도 X — 탈퇴 = 모든 흔적 제거)

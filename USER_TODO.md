@@ -162,6 +162,19 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 
 ---
 
+## 🔴 P1.5 — agent review 후 사용자 결정 필요 (2026-04-30)
+
+### 14. ⏸️ manual-charge 즉시 반영 → admin 확인 후 반영 변경 검토
+
+agent review 결과 (P0): 사용자가 송금 안 하고 `/api/billing/manual-charge` POST 만 해도 즉시 잔액 반영. memo 코드 변경 시 무한 반복 가능. admin 환수도 30일 cutoff (`pending-charges.ts` line 24) → 30일 후 도주 가능.
+
+옵션:
+- (a) 즉시 반영 제거 — admin 확인 후만 +잔액 (UX 느려짐, 사용자 매번 admin 확인 대기)
+- (b) 첫 5천원 cap (그 이상은 admin 확인) — 신규 사용자 신뢰 / 큰 금액 위조 방지
+- (c) 그대로 유지 — 베타 단계 + 사용자 100명 미만 / 위조 사례 발생 시 fix
+
+→ 사용자 결정 필요. 확인 시 알려주면 변경.
+
 ## 🟢 P2 — 베타 시작 후 (선택)
 
 ### 10. ⏸️ Sentry 가입 (5분, 무료)

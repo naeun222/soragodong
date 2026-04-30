@@ -38,6 +38,36 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return jsonResponse({ error: '이미지 크기 초과' }, 400);
   }
 
+  // 사용자 보고 2026-04-30 review (agent P1-5): rate limit. 같은 user 가 verify 호출 1000번 시도 → Sonnet vision call 비용 폭발 방지.
+  // per-user: 최근 1분 5회 / 최근 24시간 10회 cap. 초과 시 429.
+  try {
+    const now = new Date();
+    const min1Ago = new Date(now.getTime() - 60_000).toISOString();
+    const day1Ago = new Date(now.getTime() - 86400_000).toISOString();
+    const recentResp = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/soragodong_payments?user_id=eq.${user.id}&payment_type=eq.toss_auto_verified&created_at=gte.${day1Ago}&select=created_at`,
+      {
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
+        }
+      }
+    );
+    if (recentResp.ok) {
+      const rows: any = await recentResp.json();
+      const last1min = rows.filter((r: any) => r.created_at >= min1Ago).length;
+      if (last1min >= 5) {
+        return jsonResponse({ error: '잠시 후 다시 시도해주세요 (1분당 5회 제한)' }, 429);
+      }
+      if (rows.length >= 10) {
+        return jsonResponse({ error: '하루 인증 한도 초과 (10회). 카톡 오픈채팅으로 문의해주세요.' }, 429);
+      }
+    }
+  } catch (e) {
+    // rate limit 실패 시 그냥 진행 (DDoS 방지보다 사용성 우선 — 별도 모니터링)
+    console.warn('[verify-toss-receipt] rate limit check 실패:', e);
+  }
+
   // 1. 같은 캡처 (sha256) 중복 차단
   if (image_sha256) {
     try {
@@ -170,11 +200,12 @@ JSON만 출력. 다른 글 X.`;
       return jsonResponse({ error: `수신 계좌 불일치 (영수증: ${aiAnalysis.receiver_account_number}, 회사: ${RECEIVER_ACCOUNT.number_normalized})`, ai_analysis: aiAnalysis }, 400);
     }
   } else {
-    // 계좌번호 안 보임 (송금 완료 화면) — 예금주명으로 매칭
+    // 계좌번호 안 보임 (송금 완료 화면) — 예금주명으로 매칭.
+    // 사용자 보고 2026-04-30 review (agent P0-2): includes 매칭은 동명이인 통과 + 위조 영수증 risk. 정확 일치로 강화.
     const holderNorm = (aiAnalysis.receiver_holder || '').replace(/\s/g, '');
     const expectedHolder = RECEIVER_ACCOUNT.holder.replace(/\s/g, '');
-    if (!holderNorm.includes(expectedHolder)) {
-      return jsonResponse({ error: `예금주명 불일치 (영수증: "${aiAnalysis.receiver_holder}", 회사: "${RECEIVER_ACCOUNT.holder}")`, ai_analysis: aiAnalysis }, 400);
+    if (holderNorm !== expectedHolder) {
+      return jsonResponse({ error: `예금주명 불일치 (영수증: "${aiAnalysis.receiver_holder}", 회사: "${RECEIVER_ACCOUNT.holder}"). 정확 일치 필요.`, ai_analysis: aiAnalysis }, 400);
     }
     // 송금 완료 화면 = 계좌 검증 못 함 → 메모 코드로 검증 (메모는 unique, 도용 방지)
   }
