@@ -1764,6 +1764,18 @@
     from { text-shadow: 0 0 14px rgba(240,217,168,0.40), 0 0 32px rgba(212,167,106,0.20); }
     to   { text-shadow: 0 0 22px rgba(240,217,168,0.65), 0 0 48px rgba(212,167,106,0.40); }
   }
+  /* 사용자 명시 2026-04-30: 카드 1 한 단어 '왜?' 한 줄 */
+  .ann-rv-card-1 .ann-rv-oneword-reason {
+    font-size: 12.5px;
+    color: rgba(232,212,168,0.70);
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    margin: -8px 0 18px;
+    text-align: center;
+    font-style: italic;
+    max-width: 320px;
+    z-index: 1;
+  }
   .ann-rv-card-1 .ann-rv-persona-wrap {
     text-align: center; margin: 14px 0 24px;
     z-index: 1;
@@ -10524,6 +10536,7 @@ function openAnnualReviewPreview() {
   const data = {
     yearRange: '2025 → 2026',
     oneWord: '전환',
+    oneWordReason: '분석하던 너에서 친구 된 너로',
     persona: '회피하던 게 알고 보니 엔진이었던 사람',
     stats: [
       { emoji: '📔', num: 226, label: '일기' },
@@ -10685,6 +10698,7 @@ function _annualReviewBuildCard1(d) {
     <div class="ann-rv-card ann-rv-card-1">
       <div class="ann-rv-year">${escapeHtml(d.yearRange)}</div>
       <div class="ann-rv-oneword">${escapeHtml(d.oneWord)}</div>
+      <div class="ann-rv-oneword-reason">${escapeHtml(d.oneWordReason || '')}</div>
       <div class="ann-rv-persona-wrap">
         <div class="ann-rv-persona">
           <div>너는</div>
