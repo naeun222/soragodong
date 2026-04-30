@@ -10564,7 +10564,7 @@ function _buildAnnualReviewSeedData(year) {
     beach: {
       diaryCount: 226,
       pearlCount: 31,
-      bestPearl: '결함이 아니라, 내 결'
+      bestPearl: '마감 임박 = 자연 진입, 미루기 X'
     },
     moments_card: [
       { date: '2025.05.23', text: '"ADHD 같아" 처음 말한 날',     emoji: '🐚', bg: 'linear-gradient(135deg, rgba(212,167,106,0.45), rgba(139,126,196,0.30))' },
@@ -10574,7 +10574,7 @@ function _buildAnnualReviewSeedData(year) {
     // 사용자 명시 2026-04-30 ultrathink: Stories 깨달음 슬라이드 톤 (참고: KakaoTalk 20260430).
     // 통찰 31개 중 가장 현명한 한 마디 + 메타 (count + topTags). best_pearl = 가장 현명한 한 마디 (Opus 선정).
     best_pearl: {
-      title: '결함이 아니라, 내 결',
+      title: '마감 임박 = 자연 진입, 미루기 X',
       summary: '고치려 들지 말고, 작동 방식 알고 잘 다루기',
       whyThisYear: '1년 동안 너의 자기 인식이 가장 크게 바뀐 자리야. 다른 깨달음 30+ 개도 결국 이 한 마디로 풀려.'
     },
@@ -10851,9 +10851,9 @@ ${ctx.decisions.map(d => '· ' + (d.title || '') + ': ' + (d.conclusion || '')).
     "date": "YYYY.MM.DD → YYYY.MM.DD · 14일"
   },
   "best_pearl": {
-    "title": "올해 가장 현명한 한 마디 (8-15자)",
+    "title": "올해 가장 현명한 한 마디 (8-15자) — 위 [깨달음 카드 top 20] 또는 [일기 발췌] 에서 사용자가 실제로 한 말 / 표현 그대로 인용 또는 그 어휘로 paraphrase. 추상 reframe X (예: '결함이 아니라 내 결' 같은 합성 X). 사용자 1인칭 발화 톤 유지 (예: '마감 임박 = 도파민 부스터', '수면 7h 미만 = 그 주 망함', '아침 운동 한 날 일기가 길어').",
     "summary": "그 깨달음 요약 한 줄",
-    "whyThisYear": "왜 가장 현명한지 Opus 분석 (2-3문장)"
+    "whyThisYear": "왜 가장 현명한지 — 사용자 데이터 어디서 발견했는지 명시 (예: 'Q3 깨달음 카드 #5 + 11월 일기 3회 반복'). 추상 X 구체 ○."
   },
   "oneLine": "X 중심으로 움직였어.\\n\\n분석에서 Y로,\\n회피에서 Z로 무게 이동."
 }
