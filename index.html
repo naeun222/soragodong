@@ -37574,6 +37574,15 @@ function saveSettings() {
   if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
 }
 
+// 사용자 명시 2026-05-01: token 수 컴팩트 표기 (16,121 → 16k).
+function _fmtTokens(n) {
+  n = Number(n) || 0;
+  if (n < 1000) return String(n);
+  if (n < 10000) return (n / 1000).toFixed(1) + 'k';
+  if (n < 1_000_000) return Math.round(n / 1000) + 'k';
+  return (n / 1_000_000).toFixed(1) + 'M';
+}
+
 // 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
 async function refreshBillingStatus(manual) {
   // 사용자 명시 2026-04-30: manual=true 일 때만 토스트 (button click). 자동 호출 (settings 진입 등) = 토스트 X.
@@ -37629,7 +37638,7 @@ async function refreshBillingStatus(manual) {
     if (balance > 0) {
       html += `<div style="margin-top:6px;"><b>잔여 credit</b>: $${balance.toFixed(4)} (~${balanceKrw.toLocaleString()}원)</div>`;
     }
-    html += `<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;"><b>이번 달 사용</b>: ${monthly.tokens.toLocaleString()} tokens / $${monthly.cost_usd.toFixed(4)} (~${monthCostKrw.toLocaleString()}원)</div>`;
+    html += `<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;"><b>이번 달 사용</b>: ${_fmtTokens(monthly.tokens)} tokens / $${monthly.cost_usd.toFixed(4)} (~${monthCostKrw.toLocaleString()}원)</div>`;
     if (billing.free_credit_granted) {
       html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 무료 충전 토큰 받음 (2,000원)</div>`;
     }
