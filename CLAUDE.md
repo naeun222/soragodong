@@ -289,39 +289,41 @@ soragodong-repo/
 
 ## 다음 작업
 
-### 🟢 코드 (즉시 가능 — 이번 세션 끝난 항목)
-- [x] **첫 진단 재설계 구현** ✅ 8cb8e55 + 23ba46c + 040071e + c78cb45 + be30431 — 코어 #1 chat_intake_entry 모달 풀 흐름 (Step1-6) + state.intakeWorry + testerMode 안전 격리 + iOS 토스트 + dead code 청소.
-- [x] **소라고동 일상 대화 티키타카** ✅ 8d204ae — sendChat rule 13 변경 (물음표 자제 → 티키타카 권장).
-- [x] **코어 #1 튜토리얼 — Opus 체험 step** ✅ 8d204ae — chat_opus_intro step + 자동 useOpus=true + _opusActivatedByTutorial flag + onbFinish 자동 복원.
-- [x] **튜토리얼 "누르고 잠깐 기다려야 돼" 멘트 삭제** ✅ cbb0eae — click_strategy step body 정리.
-- [x] **모든 대화 입력창 음성 인식 통합** ✅ cbb0eae — 4곳 통합 + _toggleInputSpeech 공용 헬퍼 + .input-mic-btn CSS.
-- [ ] **24시간 갭 vs ✓ 마무리 일관성 점검 + 새벽 4시 cutoff 케이스** (사용자 명시 2026-04-30) — 24시간 자동 챕터 분리와 새벽 4시 daily cutoff 흐름 충돌·race 점검. 갭 사이에 새벽 4시 넘어가면?
-- [ ] **Performance audit + Phase A 모듈 분리** (1.72MB 단일 HTML) — 측정 + 우선순위 매기고 점진 분리.
+### 🟢 이번 세션 완료 (2026-04-30)
+- [x] **2-tier 월정액 시스템 구현** — DB 0004 + backend (subscribe / overage-pack / upgrade-tier) + frontend (충전 폐기 + 2 카드 구독 + cap 도달 모달)
+- [x] **무료 토큰 1,400원 → 4,000원** ($1.0 → $2.86, pure API cost / 마진 X)
+- [x] **잔액 race condition fix** — deduct_credit_atomic RPC 활용
+- [x] **recordUsage / deductCost waitUntil** — drop 방지
+- [x] **SSE buffer 잔여 처리** — 마지막 message_delta 누락 fix (output_tokens 거의 0 record 되던 root cause)
+- [x] **새로고침 잔액 자동 충전 fix** — ensureBillingRow ignore-duplicates + 자동 grant X
+- [x] **튜토리얼 끝 데이터 소실 fix** — onbFinish cloud backup 폴백 + seed sweep
+- [x] **튜토리얼 흐름 개선** — intake 종료 → 4단 분석 자동 + click_strategy 점프 + chat_mic_intro 새 step
+- [x] **옛 5문항 quiz 완전 폐기** (~275줄)
+- [x] **헤더 컴팩트화 + 로고 제거 + sonnet 토글 godongicon**
+- [x] **마법고동 4 자리 godongicon** (chip / screen-title / dm-icon / action-icon)
+- [x] **godongicon HEIC → PNG 변환** (heic-convert)
+- [x] **환영 모달 인스타톤 + 카피 "한 달 쓰면 / 너 자신이 다르게 보일지도."**
+- [x] **결제 모달 카피 정리** — 정량 KRW cap 표기 X / 추가팩 계속 결제 가능 / tier 업그레이드 + 다음 cycle 대기 옵션 제거
+- [x] **Brand DNA 메모 저장** — 마법의 소라고동 = 스폰지밥 Magic Conch 모티브
 
-### ✅ 사용자 결정 확정 (2026-04-30)
-- **useOpus scope = 대화류만** (sendChat / 마법 helpChat / 숙고 reflection). 분석·리뷰류 (forceAnalyze / generateReview / firstTouch / 돌연변이) = Sonnet 고정. 토글 의도 = "지금 대화 깊게" 의 dial.
-- **Whisper API 보류** — Web Speech 한국어 80-90% 충분.
-- **시드 verify** — 사용자 브라우저 직접 테스트 (코드 측 추가 작업 X).
+### 🟡 코드 (대기)
+- [ ] **/api/billing/welcome-bonus endpoint 신규** — 환영 모달 '받기' click 시 호출 → 서버 사이드 free credit grant. ensureBillingRow 자동 grant 폐기 후 명시적 trigger 필요.
+- [ ] **24시간 갭 vs ✓ 마무리 일관성 점검 + 새벽 4시 cutoff 케이스** — 24시간 자동 챕터 분리 vs 새벽 4시 daily cutoff race 점검
+- [ ] **Performance audit + Phase A 모듈 분리** (1.75MB 단일 HTML) — 측정 + 우선순위 매기고 점진 분리
 
-### 🟡 사용자 결정 대기
-- [ ] **useOpus scope** — 분석/리뷰류도 토글 따를지 / 현재대로 대화류만 둘지 (의견: 현재 OK)
-- [ ] **첫 진단 회의 1 잔여** — 날씨 메타포 OK? 라운드 3 chip 단어 / "더 알고 싶어" 후 AI 깊이
-- [ ] **시드 verify** — 5cdcb79 fix 후 시드 넣고 리뷰 돌려서 변경 반영 확인 (브라우저)
+### 🔴 사용자 직접 대기 (USER_TODO.md 참고)
+- [ ] **Cloudflare env 박기** (P0-1) — ANTHROPIC / SUPABASE_* / ADMIN_USER_ID / PORTONE_*
+- [ ] **Supabase migration 0002 / 0003 실행** (P0-2) — 0004 ✅ 완료
+- [ ] **통신판매신고번호 발급 대기** (P1-5)
+- [ ] **legal_draft 갱신 — 충전 → 구독 모델 변경 반영** (P1-10)
+  - terms.md 결제 방식 / 자동 갱신 X / 추가팩 정책
+  - refund.md 구독 잔여일 비례 / 추가팩 청약철회 30일 / legacy charge 잔액 처리
+  - privacy.md PG 위탁자 명시 (포트원 가입 후)
+- [ ] **토스뱅크 사업자 통장** (P1-6) → 정산 계좌
+- [ ] **PG 결정** (P1-7) — 토스페이먼츠 33만원 vs 보류
+- [ ] **Google Play 출시 준비** (P2-13) — Bubblewrap CLI 로 PWA → TWA, $25 일회성
 
-### 🔴 사용자 정보·외부 대기
-- [x] **사업장 주소** (자택, 서울특별시 동작구 상도로47아길 14) — 사용자 명시 ultrathink: settings UI 노출 X (자택이라 민감), 약관·환불·개인정보 마크다운에만 풀 명시 (전상법 §13 의무 자리). ⚠️ grey zone — 1357 자문 권장.
-- [ ] **통신판매신고번호** (정부24 발급 형식 `제 OOOO-시도-OOOOO호`) — `BUSINESS_INFO.ecommerce_no`
-- [ ] **결제 모달 + 약관 동의 모달** — PG 결정 후
-
-### 사용자 직접 (USER_TODO.md 참고)
-- Cloudflare env (`ADMIN_USER_ID` / `SUPABASE_*` / `ANTHROPIC_API_KEY`)
-- Supabase migration 0002, 0003 실행
-- 토스뱅크 사업자 통장 / PG 결정
-- KIPRIS 상표 검색 + 결합 상표 출원
-- 1357 무료 변호사 자문 (cross-border / 약관 / 정신건강 데이터)
-
-### 대기 노트 (낮음)
+### 대기 노트 (낮음 — 재현 시만)
 - '더 깊은 나' 자동 채움 알림 (이미 동작 — 알림 추가만)
-- 코어 튜토리얼 첫 모달 / 풀 튜토리얼 wording (사용자 결정)
 - 튜토리얼 중 첫 진단 401 (인터셉터 자동 refresh 후 재현 시 알리기)
-- 첫 진단 JSON parse error (quiz 폐기 후 stale 가능 — 새 흐름에서 재현 시만)
+- legacy charge 잔액 사용자 — 그대로 차감, 0 도달 후 구독 안내 (호환 유지)
