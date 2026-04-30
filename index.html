@@ -5006,10 +5006,11 @@
     font-size: 14px; line-height: 1.65;
     white-space: pre-wrap;
   }
+  /* 사용자 보고 2026-05-01: 고동이 말풍선 = 메인 chat 패턴 일치 (gold tint → surface 배경 / 사용자 말풍선과 시각 구별 명확) */
   .mutation-msg.assistant {
     align-self: flex-start;
-    background: rgba(212,167,106,0.13);
-    border: 1px solid rgba(212,167,106,0.22);
+    background: var(--surface);
+    border: 1px solid var(--border);
     color: var(--text);
     border-bottom-left-radius: 4px;
   }
@@ -14497,7 +14498,7 @@ const ONBOARDING_STEPS = [
     // 사용자 요청 2026-04-29: 네모 표시 X (spotlight 제거)
     targetSelector: null,
     title: '✦ 이 가지로 해볼게',
-    body: '가지 4개 봤지?<br>마음에 드는 가지 하나 클릭하고, <b>\'✦ 이 가지로 해볼게\'</b> 눌러봐.<br><br><span class="small">버튼 누르면 잠깐 기다렸다가 <b>"다음"</b> 직접 눌러줘.</span>',
+    body: '고동이의 대답 들었지?<br><b>\'✦ 이 가지로 해볼게\'</b> 눌러봐.',
     waitFor: 'next',
     dimBackground: false,
     aboveModal: true
@@ -14632,7 +14633,7 @@ const ONBOARDING_STEPS = [
     id: 'exec_cards_intro',
     targetSelector: null,
     title: '✦ 오늘의 카드 3장',
-    body: '오늘의 카드 = 할 일 목록 중에서 소라가 골라주는 \'<b>오늘의 할 일 3가지</b>\'.<br>이거 완료하면 <b>중요도에 맞는 등급의 소라</b>가 보상으로 주어져.<br><br>오늘 할 일 목록은 <b>서랍장으로 내릴 수 있고</b>, 서랍장에서 <b>오늘로 올릴 수 있어</b>.<br><br>한 번 구경해봐.',
+    body: '오늘의 카드 = 할 일 목록 중에서 고동이 골라주는 \'<b>오늘의 할 일 3가지</b>\'.<br>이거 완료하면 <b>중요도에 맞는 등급의 소라</b>가 보상으로 주어져.<br><br>오늘 할 일 목록은 <b>서랍장으로 내릴 수 있고</b>, 서랍장에서 <b>오늘로 올릴 수 있어</b>.<br><br>한 번 구경해봐.',
     waitFor: 'next',
     dimBackground: false
   },
