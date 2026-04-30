@@ -14798,6 +14798,7 @@ const ONBOARDING_STEPS = [
   {
     id: 'diary_calendar_explain',
     targetSelector: '.cal-day[data-date="2026-04-15"]',
+    calNavToDate: '2026-04-15',  // 사용자 보고 2026-05-01: 4/15 = 옛 달 → 자동 슬라이드
     title: '📔 캘린더 무드 그리드',
     body: '한 달 한눈에 — 칸 색 = 그날 기분.<br><br>이 날을 클릭해봐.',
     waitFor: 'click',
@@ -14820,6 +14821,7 @@ const ONBOARDING_STEPS = [
   {
     id: 'click_today_diary',
     targetSelector: '.cal-day.today',
+    calNavToToday: true,  // 사용자 보고 2026-05-01: 옛 달에 있던 calendar 를 오늘 (이번 달) 로 자동 슬라이드
     title: '📔 오늘 일기도 보자',
     body: '아까 우리가 <b>"일기:"</b>로 저장한 거 기억나?<br>오늘 칸 한 번 눌러봐.',
     waitFor: 'click',
@@ -15662,6 +15664,23 @@ function onbRenderStep() {
       state.preferences.useOpus = true;
       state.preferences._opusActivatedByTutorial = true;
       if (typeof updateChatModeBtn === 'function') updateChatModeBtn();
+    }
+  }
+  // 사용자 보고 2026-05-01: 캘린더 step 진입 시 자동으로 해당 월로 슬라이드 (4/15 시드 = 옛 달 → 자동 -N offset).
+  if (typeof _calMonthOffset !== 'undefined' && typeof renderLensCalendarGrid === 'function') {
+    if (step.calNavToDate) {
+      const target = new Date(step.calNavToDate + 'T12:00:00');
+      const today = new Date();
+      const offset = (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth());
+      if (_calMonthOffset !== offset) {
+        _calMonthOffset = offset;
+        try { renderLensCalendarGrid(); } catch {}
+      }
+    } else if (step.calNavToToday) {
+      if (_calMonthOffset !== 0) {
+        _calMonthOffset = 0;
+        try { renderLensCalendarGrid(); } catch {}
+      }
     }
   }
   
