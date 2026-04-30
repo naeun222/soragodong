@@ -29074,8 +29074,13 @@ function renderExecute() {
 }
 
 // === BRAIN DUMP ===
+let _brainDumpEscDetach = null;
 function openBrainDump() {
-  document.getElementById('brainDumpOverlay').style.display = 'flex';
+  const overlay = document.getElementById('brainDumpOverlay');
+  overlay.style.display = 'flex';
+  // 사용자 명시 2026-05-01 (agent audit): ESC = 닫기.
+  if (_brainDumpEscDetach) _brainDumpEscDetach();
+  _brainDumpEscDetach = _registerModalEsc(overlay, () => closeBrainDump());
   // V4-fix (사용자 요청): 테스터 모드면 예시 자동 채움 (사용자 의도 표명 한 번 더 X)
   if (state.preferences && state.preferences.testerMode) {
     const ta = document.getElementById('brainDumpInput');
@@ -29109,6 +29114,7 @@ SNS 줄여야 하는데
 function closeBrainDump() {
   document.getElementById('brainDumpOverlay').style.display = 'none';
   document.getElementById('brainDumpInput').value = '';
+  if (_brainDumpEscDetach) { _brainDumpEscDetach(); _brainDumpEscDetach = null; }
 }
 
 function selectExecMode(mode) {
@@ -29486,19 +29492,25 @@ function completeQuest(taskId) {
 
 let _expandedArchiveDates = new Set();
 
+let _chatArchiveEscDetach = null;
 function openChatArchive() {
   _expandedArchiveDates.clear();
   renderChatArchiveModal();
-  document.getElementById('chatArchiveOverlay').style.display = 'flex';
+  const overlay = document.getElementById('chatArchiveOverlay');
+  overlay.style.display = 'flex';
   // V4-fix: 모달이 chat-input-bar에 가려지는 것 방지
   const chatBar = document.getElementById('chatInputBar');
   if (chatBar) chatBar.style.visibility = 'hidden';
+  // 사용자 명시 2026-05-01 (agent audit): ESC = 닫기.
+  if (_chatArchiveEscDetach) _chatArchiveEscDetach();
+  _chatArchiveEscDetach = _registerModalEsc(overlay, () => closeChatArchive());
 }
 
 function closeChatArchive() {
   document.getElementById('chatArchiveOverlay').style.display = 'none';
   const chatBar = document.getElementById('chatInputBar');
   if (chatBar) chatBar.style.visibility = '';
+  if (_chatArchiveEscDetach) { _chatArchiveEscDetach(); _chatArchiveEscDetach = null; }
 }
 
 function renderChatArchiveModal() {
@@ -34056,12 +34068,17 @@ function openBlockPicker(block) {
   };
   document.getElementById('blockPickerTitle').textContent = labels[block] || block;
   renderBlockPickerContent();
-  document.getElementById('blockPickerOverlay').style.display = 'flex';
+  const overlay = document.getElementById('blockPickerOverlay');
+  overlay.style.display = 'flex';
+  // 사용자 명시 2026-05-01 (agent audit): ESC = 닫기.
+  if (window._blockPickerEscDetach) window._blockPickerEscDetach();
+  window._blockPickerEscDetach = _registerModalEsc(overlay, () => closeBlockPicker());
 }
 
 function closeBlockPicker() {
   _currentPickerBlock = null;
   document.getElementById('blockPickerOverlay').style.display = 'none';
+  if (window._blockPickerEscDetach) { window._blockPickerEscDetach(); window._blockPickerEscDetach = null; }
 }
 
 function renderBlockPickerContent() {
@@ -34287,13 +34304,19 @@ function liquidFlow() {
 }
 
 // === VAULT (서랍장 + Memory Vault) ===
+let _vaultEscDetach = null;
 function openVault() {
-  document.getElementById('vaultOverlay').style.display = 'flex';
+  const overlay = document.getElementById('vaultOverlay');
+  overlay.style.display = 'flex';
   renderVault();
+  // 사용자 명시 2026-05-01 (agent audit): ESC = 닫기.
+  if (_vaultEscDetach) _vaultEscDetach();
+  _vaultEscDetach = _registerModalEsc(overlay, () => closeVault());
 }
 
 function closeVault() {
   document.getElementById('vaultOverlay').style.display = 'none';
+  if (_vaultEscDetach) { _vaultEscDetach(); _vaultEscDetach = null; }
 }
 
 function renderVault() {
