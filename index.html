@@ -9241,7 +9241,8 @@
           <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
           <button class="btn-secondary" onclick="forceAnalyze()" title="opus 4.7 사용 — 비쌈">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="cleanLegacySeedData()" title="잔존 시드 텍스트 강제 정리">🧹 잔존 시드 정리</button>
-          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 선물 모달 미리보기 (state X)">🎁 환영 선물 모달 미리보기</button>
+          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 선물 모달 + backend 실제 grant ($2.86)">🎁 환영 선물 모달 (실제 grant)</button>
+          <button class="btn-secondary" onclick="devResetWelcomeBonus()" title="admin 측 본인 free_credit_granted=false + balance=0 → 재테스트 가능">🔄 환영 선물 reset (admin)</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>
           <button class="btn-secondary" onclick="adminResetBalance()" title="이전 누적 잔액 정정 (admin only). 0~$100 범위.">💰 잔액 정정 (admin)</button>
@@ -11393,6 +11394,7 @@ function showWelcomeBonusModal(opts) {
       if (btn && btn.dataset._processing === '1') return;
       if (btn) { btn.dataset._processing = '1'; btn.disabled = true; btn.textContent = '받는 중...'; }
       // 1. backend 호출 (preview = X 단순 시각만)
+      // 사용자 보고 2026-04-30: "받았는데 그대로" — 이미 받은 사용자는 backend 가 idempotent skip 하고 토스트로 안내.
       if (!preview && typeof session !== 'undefined' && session && session.access_token) {
         try {
           const _origFetch = window._anthropicOrigFetch || window.fetch;
@@ -11401,9 +11403,17 @@ function showWelcomeBonusModal(opts) {
             headers: { 'Authorization': 'Bearer ' + session.access_token }
           });
           if (resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            if (data.already_granted) {
+              const balKrw = Math.round((data.balance_usd || 0) * 1400).toLocaleString();
+              if (typeof showToast === 'function') showToast(`✦ 이미 받았어 (잔액 ~${balKrw}원). admin 측 reset 후 재시도 가능.`);
+            } else if (data.granted) {
+              if (typeof showToast === 'function') showToast(`🎁 4,000원 받았어 ✦ 마음껏 시작해`);
+            }
             if (typeof refreshBillingStatus === 'function') refreshBillingStatus(false).catch(() => {});
           } else {
             console.warn('[welcome-bonus] backend 응답 비-OK:', resp.status);
+            if (typeof showToast === 'function') showToast('받기 실패: ' + resp.status);
           }
         } catch (e) {
           console.warn('[welcome-bonus] backend 호출 실패:', e);
@@ -11436,9 +11446,46 @@ function showWelcomeBonusModal(opts) {
 }
 
 // 개발자 도구 — 환영 선물 모달 (사용자 명시 2026-04-30: 원래 흐름처럼 backend 실제 grant).
-// idempotent — 이미 받은 사용자는 backend 가 자동 skip ('이미 받았어요'). 다시 테스트 하려면 admin reset-balance 도구로 free_credit_granted=false 리셋 후 재진입.
+// idempotent — 이미 받은 사용자는 backend 가 자동 skip ('이미 받았어요'). 다시 테스트 하려면 devResetWelcomeBonus 후 재진입.
 function devPreviewWelcomeBonus() {
   showWelcomeBonusModal();  // preview X — 받기 click 시 backend POST → 잔액 += $2.86
+}
+
+// 개발자 도구 — 환영 선물 재테스트 위해 admin 본인 free_credit_granted=false + balance=0 reset.
+async function devResetWelcomeBonus() {
+  if (typeof session === 'undefined' || !session || !session.access_token) {
+    alert('로그인 필요'); return;
+  }
+  if (!confirm('admin 본인 잔액 0 + free_credit_granted=false 리셋. 진행?')) return;
+  try {
+    const _origFetch = window._anthropicOrigFetch || window.fetch;
+    const resp = await _origFetch('/api/admin/reset-balance', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({
+        new_balance_usd: 0,
+        reset_free_credit_granted: true
+      })
+    });
+    if (!resp.ok) {
+      const err = await resp.text().catch(() => '');
+      alert('reset 실패: ' + resp.status + ' / ' + err);
+      return;
+    }
+    const data = await resp.json();
+    // 클라이언트 _welcomeBonusShown flag 도 reset (모달 다시 자동 노출 가능)
+    state.preferences = state.preferences || {};
+    state.preferences._welcomeBonusShown = false;
+    saveState();
+    if (typeof saveToCloudNow === 'function') saveToCloudNow().catch(() => {});
+    showToast(`✦ reset 완료. 잔액 ${data.old_balance_usd} → 0. 환영 선물 미리보기 누르면 $2.86 grant 가능.`);
+    if (typeof refreshBillingStatus === 'function') refreshBillingStatus(false).catch(() => {});
+  } catch (e) {
+    alert('reset 실패: ' + (e.message || e));
+  }
 }
 
 // 옛 5문항 quiz 함수들 (showFirstTouchQuiz / ftStep / skipFirstTouchQuiz / submitFirstTouchQuiz / generateFirstTouchAnalysis)
