@@ -281,10 +281,7 @@
     object-fit: contain;
     margin: 0 auto 24px;
     display: block;
-    /* 사용자 보고 2026-04-30: png edge 배경과 안 맞음 → soft mask + 강한 gold halo + float 두둥실 */
-    filter: drop-shadow(0 0 32px rgba(201,169,110,0.6)) drop-shadow(0 4px 16px rgba(139,126,196,0.25));
-    -webkit-mask-image: radial-gradient(circle, black 65%, transparent 100%);
-    mask-image: radial-gradient(circle, black 65%, transparent 100%);
+    filter: drop-shadow(0 0 18px rgba(201,169,110,0.45));
     animation: float 4s ease-in-out infinite;
   }
 
