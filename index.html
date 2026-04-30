@@ -1600,6 +1600,152 @@
     transition: background 0.15s;
   }
   .ft-hypothesis label:hover { background: rgba(139,126,196,0.08); }
+
+  /* ════════════════════════════════════════════════════════════════
+     연간 리뷰 카드 시퀀스 (사용자 명시 2026-04-30 ultrathink)
+     시각 우선 / 텍스트 최소 / Spotify Wrapped 풍 8 카드 narrative
+     ════════════════════════════════════════════════════════════════ */
+  .ann-rv-overlay {
+    position: fixed; inset: 0;
+    background: #0a0912;
+    z-index: 10000;
+    display: none;
+    align-items: center; justify-content: center;
+  }
+  .ann-rv-overlay.open { display: flex; }
+  .ann-rv-card {
+    width: 100%; max-width: 480px; height: 100%; max-height: 100vh;
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 60px 28px; box-sizing: border-box;
+    animation: ann-rv-fadeIn 0.5s ease;
+  }
+  @keyframes ann-rv-fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  /* 카드 1: 표지 */
+  .ann-rv-card-1 {
+    background:
+      radial-gradient(ellipse at 50% 40%, rgba(212,167,106,0.30), transparent 65%),
+      radial-gradient(ellipse at 50% 100%, rgba(139,126,196,0.18), transparent 60%),
+      #0a0912;
+  }
+  .ann-rv-card-1::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      radial-gradient(circle at 18% 22%, rgba(255,215,150,0.55) 0, transparent 1.5px),
+      radial-gradient(circle at 82% 18%, rgba(255,215,150,0.40) 0, transparent 1.2px),
+      radial-gradient(circle at 12% 78%, rgba(255,215,150,0.45) 0, transparent 1.5px),
+      radial-gradient(circle at 88% 82%, rgba(255,215,150,0.35) 0, transparent 1px),
+      radial-gradient(circle at 50% 14%, rgba(255,215,150,0.50) 0, transparent 1.3px),
+      radial-gradient(circle at 28% 90%, rgba(255,215,150,0.30) 0, transparent 1px);
+    background-size: 100% 100%;
+    pointer-events: none;
+    animation: ann-rv-twinkle 3s ease-in-out infinite alternate;
+  }
+  @keyframes ann-rv-twinkle {
+    from { opacity: 0.55; }
+    to   { opacity: 1; }
+  }
+  .ann-rv-card-1 .ann-rv-year {
+    font-size: 12px; color: rgba(232,197,144,0.75);
+    letter-spacing: 0.4em; margin-bottom: 18px;
+    z-index: 1;
+  }
+  .ann-rv-card-1 .ann-rv-oneword {
+    font-size: clamp(80px, 22vw, 140px);
+    font-weight: 800; color: #f0d9a8;
+    letter-spacing: 0.18em; line-height: 1;
+    margin: 12px 0 28px;
+    text-shadow:
+      0 0 28px rgba(240,217,168,0.55),
+      0 0 60px rgba(212,167,106,0.35);
+    animation: ann-rv-glow 2.4s ease-in-out infinite alternate;
+    z-index: 1;
+  }
+  @keyframes ann-rv-glow {
+    from { text-shadow: 0 0 24px rgba(240,217,168,0.45), 0 0 50px rgba(212,167,106,0.25); }
+    to   { text-shadow: 0 0 38px rgba(240,217,168,0.75), 0 0 80px rgba(212,167,106,0.50); }
+  }
+  .ann-rv-card-1 .ann-rv-persona-wrap {
+    text-align: center; margin: 18px 0 28px;
+    z-index: 1;
+  }
+  .ann-rv-card-1 .ann-rv-persona-label {
+    font-size: 11px; color: rgba(232,197,144,0.65);
+    letter-spacing: 0.25em; margin-bottom: 10px;
+  }
+  .ann-rv-card-1 .ann-rv-persona {
+    font-size: 17px; color: #e8d4a8; font-weight: 500;
+    line-height: 1.5; max-width: 320px;
+  }
+  .ann-rv-card-1 .ann-rv-persona em {
+    font-style: normal; color: #f0d9a8; font-weight: 700;
+  }
+  .ann-rv-card-1 .ann-rv-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; width: 100%; max-width: 380px;
+    margin-top: 24px; z-index: 1;
+  }
+  .ann-rv-card-1 .ann-rv-stat {
+    text-align: center; padding: 10px 4px;
+    background: rgba(212,167,106,0.06);
+    border: 1px solid rgba(212,167,106,0.14);
+    border-radius: 12px;
+  }
+  .ann-rv-card-1 .ann-rv-stat-emoji { font-size: 20px; }
+  .ann-rv-card-1 .ann-rv-stat-num {
+    font-size: 20px; font-weight: 700; color: #f0d9a8;
+    margin: 4px 0 2px; letter-spacing: 0.02em;
+  }
+  .ann-rv-card-1 .ann-rv-stat-label {
+    font-size: 9.5px; color: rgba(232,197,144,0.65);
+    letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  /* 진행도 dots — 상단 */
+  .ann-rv-progress {
+    position: absolute; top: 18px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 5px; z-index: 5;
+  }
+  .ann-rv-progress span {
+    width: 26px; height: 2.5px;
+    background: rgba(255,255,255,0.14);
+    border-radius: 2px;
+    transition: background 0.3s;
+  }
+  .ann-rv-progress span.active {
+    background: rgba(240,217,168,0.85);
+  }
+  /* 닫기 button — 우상단 */
+  .ann-rv-close {
+    position: absolute; top: 26px; right: 18px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.6);
+    width: 34px; height: 34px; border-radius: 50%;
+    cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 5;
+  }
+  .ann-rv-close:active { transform: scale(0.92); }
+  /* tap 영역 좌·우 (hidden) */
+  .ann-rv-tap {
+    position: absolute; top: 70px; bottom: 70px;
+    width: 33%;
+    background: transparent; border: none; cursor: pointer;
+    z-index: 4;
+  }
+  .ann-rv-tap-prev { left: 0; }
+  .ann-rv-tap-next { right: 0; }
+  /* 하단 hint */
+  .ann-rv-hint {
+    position: absolute; bottom: 22px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px; color: rgba(255,255,255,0.35);
+    letter-spacing: 0.2em; z-index: 5;
+  }
   .ft-hypothesis input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; }
   .ft-watch {
     font-size: 12px; color: var(--text-dim);
@@ -8560,6 +8706,7 @@
           <button class="btn-secondary" onclick="forceAnalyze()" title="opus 4.7 사용 — 비쌈">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="cleanLegacySeedData()" title="잔존 시드 텍스트 강제 정리">🧹 잔존 시드 정리</button>
           <button class="btn-secondary" onclick="testFirstTouchQuiz()" title="신규 사용자 첫 관찰 quiz 시뮬레이션 (테스터 모드 필수)">🆕 첫 관찰 quiz 미리보기</button>
+          <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (가짜 데이터 prototype)">🐚 연간 리뷰 미리보기</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">관리자 — 토스 송금</div>
           <button class="btn-secondary" onclick="adminLoadPendingCharges()">📋 대기 중인 송금 list</button>
@@ -9786,6 +9933,98 @@ async function e2eeForgotPasswordReset() {
 // FIRST-TOUCH ANALYSIS — 사용자 요청 2026-04-30 ultrathink
 // 신규 사용자 진입 즉시 5문항 quiz → AI 첫 관찰 (정체성 + 가설 + 관찰 거리)
 // 가설 ✓ → traits/patterns에 unverified 시드. 관찰 거리 → 첫 weekly review의 prevSeeds.
+// ═══════════════════════════════════════════════════════════════
+// 사용자 명시 2026-04-30 ultrathink: 연간 리뷰 카드 시퀀스 prototype (Phase 0 인프라 + 카드 1 표지).
+// 시각 우선 / 텍스트 최소 / Spotify Wrapped 풍 8 카드 narrative — 현재 카드 1 만 구현.
+// ═══════════════════════════════════════════════════════════════
+let _annualReviewState = null;
+
+function openAnnualReviewPreview() {
+  // 페르소나 김나은 1년 가짜 데이터 (실제 데이터 binding = 다음 phase)
+  const data = {
+    yearRange: '2025 → 2026',
+    oneWord: '전환',
+    persona: '회피한 게 사실은 엔진이었던 사람',
+    stats: [
+      { emoji: '📔', num: 226, label: '일기' },
+      { emoji: '💬', num: 142, label: '대화' },
+      { emoji: '🎯', num: '67%', label: '성공률' },
+      { emoji: '✨', num: 31, label: '깨달음' },
+      { emoji: '🧬', num: 4, label: '체화' },
+      { emoji: '🐚', num: 1, label: '큰 결정' }
+    ]
+  };
+  _annualReviewState = {
+    data,
+    cards: [_annualReviewBuildCard1],
+    currentIdx: 0
+  };
+  _annualReviewRender();
+}
+
+function _annualReviewBuildCard1(d) {
+  const personaParts = (d.persona || '').split(/(".*?")/);
+  return `
+    <div class="ann-rv-card ann-rv-card-1">
+      <div class="ann-rv-year">${escapeHtml(d.yearRange)}</div>
+      <div class="ann-rv-oneword">${escapeHtml(d.oneWord)}</div>
+      <div class="ann-rv-persona-wrap">
+        <div class="ann-rv-persona-label">너는 ↓</div>
+        <div class="ann-rv-persona"><em>${escapeHtml(d.persona)}</em></div>
+      </div>
+      <div class="ann-rv-stats">
+        ${d.stats.map(s => `
+          <div class="ann-rv-stat">
+            <div class="ann-rv-stat-emoji">${s.emoji}</div>
+            <div class="ann-rv-stat-num">${escapeHtml(String(s.num))}</div>
+            <div class="ann-rv-stat-label">${escapeHtml(s.label)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function _annualReviewRender() {
+  let overlay = document.getElementById('annualReviewOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'annualReviewOverlay';
+    overlay.className = 'ann-rv-overlay';
+    document.body.appendChild(overlay);
+  }
+  const s = _annualReviewState;
+  if (!s) return;
+  const total = s.cards.length;
+  const cardHtml = s.cards[s.currentIdx](s.data);
+  const progressDots = Array.from({ length: total }, (_, i) =>
+    `<span class="${i <= s.currentIdx ? 'active' : ''}"></span>`).join('');
+  const hint = total > 1 ? '← 양옆 탭 / 좌우 →' : '';
+  overlay.innerHTML = `
+    <div class="ann-rv-progress">${progressDots}</div>
+    <button class="ann-rv-close" onclick="_annualReviewClose()" aria-label="닫기">✕</button>
+    ${total > 1 ? '<button class="ann-rv-tap ann-rv-tap-prev" onclick="_annualReviewPrev()" aria-label="이전"></button>' : ''}
+    ${cardHtml}
+    ${total > 1 ? '<button class="ann-rv-tap ann-rv-tap-next" onclick="_annualReviewNext()" aria-label="다음"></button>' : ''}
+    <div class="ann-rv-hint">${hint}</div>
+  `;
+  overlay.classList.add('open');
+}
+
+function _annualReviewNext() {
+  const s = _annualReviewState; if (!s) return;
+  if (s.currentIdx < s.cards.length - 1) { s.currentIdx++; _annualReviewRender(); }
+}
+function _annualReviewPrev() {
+  const s = _annualReviewState; if (!s) return;
+  if (s.currentIdx > 0) { s.currentIdx--; _annualReviewRender(); }
+}
+function _annualReviewClose() {
+  const overlay = document.getElementById('annualReviewOverlay');
+  if (overlay) { overlay.classList.remove('open'); overlay.innerHTML = ''; }
+  _annualReviewState = null;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // 사용자 요청 2026-04-30: 개발자 도구 — 신규 사용자 첫 관찰 quiz 미리보기 (시뮬레이션).
 function testFirstTouchQuiz() {
