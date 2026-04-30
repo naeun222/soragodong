@@ -708,7 +708,7 @@
 
   /* 사용자 보고 2026-04-28: env() 부작용으로 nav 위치 변경 — 원래 76px 복원 */
   .chat-input-bar { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; }
-  .chat-input-wrap { display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 10px; }
+  .chat-input-wrap { position: relative; display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 10px; }
   /* iOS auto-zoom 방지 — input font 16px 이상 */
   .chat-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 16px; line-height: 1.5; outline: none; resize: none; max-height: 140px; padding: 8px 0; min-width: 0; }
   .send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--bg); border: none; font-size: 16px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
@@ -3978,20 +3978,26 @@
   }
 
   /* === 모든 입력창 음성 button (사용자 명시 2026-04-30 ultrathink: chat / reflection / magic / mutation 4곳 통합) === */
+  /* 사용자 명시 2026-04-30 ultrathink: SVG mic + send button 위 살짝 띄움 (ChatGPT/Gemini 풍) */
   .input-mic-btn {
+    position: absolute;
+    right: 6px;
+    bottom: calc(100% + 8px);
+    z-index: 5;
     background: var(--surface2);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     border-radius: 50%;
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     padding: 0;
-    font-size: 14px;
     cursor: pointer;
     transition: all 0.2s;
     color: var(--text);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.32);
   }
+  .input-mic-btn svg { width: 18px; height: 18px; pointer-events: none; display: block; }
   .input-mic-btn:hover { background: var(--surface3); border-color: var(--border-strong); }
   .input-mic-btn:active { transform: scale(0.92); }
   .input-mic-btn.speech-active {
@@ -4336,6 +4342,7 @@
     display: flex; flex-direction: column; gap: 8px;
   }
   .mutation-chat-input-row {
+    position: relative;
     display: flex; gap: 8px; align-items: flex-end;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -4451,6 +4458,7 @@
   }
   .reflection-input-bar.active { display: block; }
   .reflection-input-wrap {
+    position: relative;
     display: flex;
     gap: 8px;
     align-items: flex-end;
@@ -8250,7 +8258,7 @@
     <div class="reflection-input-bar" id="reflectionInputBar">
       <div class="reflection-input-wrap">
         <textarea class="chat-textarea" id="reflectionInput" placeholder="천천히, 한 각도씩..." rows="1"></textarea>
-        <button class="input-mic-btn" id="reflectionMicBtn" onclick="_toggleInputSpeech('reflectionInput', 'reflectionMicBtn')" aria-label="음성 입력" title="음성 입력">🎤</button>
+        <button class="input-mic-btn" id="reflectionMicBtn" onclick="_toggleInputSpeech('reflectionInput', 'reflectionMicBtn')" aria-label="음성 입력" title="음성 입력"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
         <button class="send-btn" onclick="sendReflectionChat()">↑</button>
       </div>
     </div>
@@ -8269,7 +8277,7 @@
     <div class="reflection-input-bar" id="magicHelpInputBar">
       <div class="reflection-input-wrap">
         <textarea class="chat-textarea" id="magicHelpInput" placeholder="🧙‍♂️ 마법사한테 풀어놔 — 답 대신 더 깊이 보게 도와줘" rows="1"></textarea>
-        <button class="input-mic-btn" id="magicHelpMicBtn" onclick="_toggleInputSpeech('magicHelpInput', 'magicHelpMicBtn')" aria-label="음성 입력" title="음성 입력">🎤</button>
+        <button class="input-mic-btn" id="magicHelpMicBtn" onclick="_toggleInputSpeech('magicHelpInput', 'magicHelpMicBtn')" aria-label="음성 입력" title="음성 입력"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
         <button class="send-btn" onclick="sendMagicHelpMessage()">↑</button>
       </div>
     </div>
@@ -8647,7 +8655,7 @@
       <button class="chat-plus-btn" id="chatPlusBtn" onclick="toggleChatPlusMenu(event)" aria-label="더보기">+</button>
     </div>
     <textarea class="chat-textarea" id="chatInput" placeholder="편하게 말해봐..." rows="1"></textarea>
-    <button class="input-mic-btn" id="chatMicBtn" onclick="_toggleInputSpeech('chatInput', 'chatMicBtn')" aria-label="음성 입력" title="음성 입력">🎤</button>
+    <button class="input-mic-btn" id="chatMicBtn" onclick="_toggleInputSpeech('chatInput', 'chatMicBtn')" aria-label="음성 입력" title="음성 입력"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
     <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
   </div>
 </div>
@@ -10570,14 +10578,15 @@ window._toggleInputSpeech = function(taId, btnId) {
     ta.value = (finalText + interim).trim();
     ta.dispatchEvent(new Event('input', { bubbles: true }));
   };
+  const _MIC_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg>';
   recognition.onerror = (e) => {
     console.warn('[input speech] error', e);
     btn.classList.remove('speech-active');
-    btn.textContent = '🎤';
+    btn.innerHTML = _MIC_SVG;
   };
   recognition.onend = () => {
     btn.classList.remove('speech-active');
-    btn.textContent = '🎤';
+    btn.innerHTML = _MIC_SVG;
     if (silenceTimer) clearTimeout(silenceTimer);
     window._inputSpeechActive = null;
   };
@@ -10655,7 +10664,7 @@ function _intakeProgressDots(step) {
 function _intakeStep1Html() {
   const ex = _intakeState.exampleStep1;
   // 사용자 명시 2026-04-30 ultrathink: 미지원 브라우저도 mic button 표시 — 누름 시 토스트 안내 (예시·텍스트 권유).
-  const micHtml = `<button id="intakeMicBtn1" class="intake-mic-btn" onclick="_intakeMicToggle(1)" aria-label="음성"><span id="intakeMicIcon1">🎤</span></button>`;
+  const micHtml = `<button id="intakeMicBtn1" class="intake-mic-btn" onclick="_intakeMicToggle(1)" aria-label="음성"><span id="intakeMicIcon1"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;display:block;"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></span></button>`;
   return `
     <div class="intake-greeting">🐚 안녕 왔구나. 오늘 어땠어?</div>
     <div class="intake-prompt">요즘 마음에 자주 떠오르는 거, 한 마디부터 시작해도 OK.</div>
@@ -10732,7 +10741,7 @@ function _intakeStep3Html() {
   const ex = _intakeState.exampleStep1;
   const fallbackLong = ex.long;
   const longText = _intakeState.aiLong || fallbackLong;
-  const micHtml = `<button id="intakeMicBtn3" class="intake-mic-btn" onclick="_intakeMicToggle(3)" aria-label="음성"><span id="intakeMicIcon3">🎤</span></button>`;
+  const micHtml = `<button id="intakeMicBtn3" class="intake-mic-btn" onclick="_intakeMicToggle(3)" aria-label="음성"><span id="intakeMicIcon3"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;display:block;"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></span></button>`;
   return `
     <div class="intake-ai-msg-small"><b>🐚</b> ${escapeHtml(userText.slice(0, 50))}${userText.length > 50 ? '...' : ''} — 한 번 더 풀어줘.</div>
     <textarea id="intakeInput3" class="intake-textarea" rows="5" placeholder="구체적으로 다 털어놔도 OK. 상황 → 무슨 마음 → 어떻게 됐는지."></textarea>
@@ -10904,7 +10913,7 @@ function _intakeMicToggle(stepNum) {
     _intakeState.recognizing = false;
     _intakeState.recognition = null;
     if (silenceTimer) clearTimeout(silenceTimer);
-    if (iconEl) iconEl.textContent = '🎤';
+    if (iconEl) iconEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;display:block;"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg>';
     if (statusEl) statusEl.style.display = 'none';
   };
   _intakeState.recognition = recognition;
@@ -23060,7 +23069,7 @@ function _renderMutationChat() {
         </div>
         <div class="mutation-chat-input-row">
           <textarea class="mutation-chat-input" id="mutationChatInput" placeholder="자유롭게 대화..." rows="1"></textarea>
-          <button class="input-mic-btn" id="mutationMicBtn" onclick="_toggleInputSpeech('mutationChatInput', 'mutationMicBtn')" aria-label="음성 입력" title="음성 입력">🎤</button>
+          <button class="input-mic-btn" id="mutationMicBtn" onclick="_toggleInputSpeech('mutationChatInput', 'mutationMicBtn')" aria-label="음성 입력" title="음성 입력"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
           <button class="mutation-chat-send" id="mutationChatSendBtn" onclick="sendMutationMessage()">↑</button>
         </div>
         <div class="mutation-chat-actions">
