@@ -1485,11 +1485,21 @@
     text-shadow: 0 0 18px rgba(212,167,106,0.32);
     position: relative; z-index: 1;
   }
+  /* 사용자 명시 2026-04-30 ultrathink: 핵심 프레이밍 (introduce.html 정합) — "너 자신을 알아가는 자리" + 친구 톤 caption */
   .welcome-bonus-sub {
-    font-size: 14.5px; color: #e8d4a8;
-    line-height: 1.65;
-    margin-bottom: 28px;
-    font-weight: 400;
+    font-size: 15px; color: #e8d4a8;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    position: relative; z-index: 1;
+  }
+  .welcome-bonus-sub-caption {
+    font-size: 11.5px;
+    color: rgba(232,212,168,0.58);
+    margin-bottom: 26px;
+    font-style: italic;
+    letter-spacing: 0.05em;
     position: relative; z-index: 1;
   }
   /* 사용자 명시 2026-04-30: "내 선물! 무료 토큰 줄게 🎁" + 화려 효과 (glow + shine + emoji pulse) */
@@ -11265,10 +11275,8 @@ function showWelcomeBonusModal(opts) {
       <div class="welcome-bonus-modal">
         <img class="welcome-bonus-godong" src="/godongicon.png" alt="소라고동">
         <div class="welcome-bonus-greeting">어, 왔네 🐚</div>
-        <div class="welcome-bonus-sub">
-          여기는 친구처럼 곁에서<br>
-          같이 보는 자리야.
-        </div>
+        <div class="welcome-bonus-sub">여기는 너 자신을 알아가는 자리야.</div>
+        <div class="welcome-bonus-sub-caption">친구처럼 곁에서, 천천히</div>
         <div class="welcome-bonus-token">
           <span class="welcome-bonus-token-emoji">🎁</span>
           <span>내 선물! 무료 토큰 줄게</span>
