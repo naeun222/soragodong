@@ -9933,6 +9933,9 @@ const DEFAULT_STATE = {
   lastYearlyAnalyzeAt: null,           // 매년 1월 1일 4AM
   // 사용자 요청 2026-04-30: 메인 chat 일일 메시지 cap (비용 폭발 방지). 4시 cutoff 기준 reset.
   dailyChatCount: { date: null, count: 0 },
+  // 사용자 명시 2026-05-01: 신규 가입자 빠른 추출 카운터 — sendChat 사용자/고동 1 세트 × 3 마다 case 추출 (10번까지).
+  chatPairsCount: 0,
+  newUserExtractTriggers: 0,
 
   // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
   // 시스템 프롬프트 stable 부분에 박혀서 cache_control 적용 → cache_read만 (사실상 무료).
@@ -10177,6 +10180,12 @@ async function logout() {
   localStorage.removeItem('soragodong_v2');  // 혹시 V3 잔존 키 청소
   localStorage.removeItem(V4_LOCAL_STORAGE_KEY);
   localStorage.removeItem(V4_LAST_USER_KEY);
+  // 사용자 명시 2026-05-01 (agent audit): logout E2EE 키 정리. 같은 device 다른 사용자 로그인 시 stale 차단.
+  try {
+    localStorage.removeItem('soragodong_v4_e2ee_mk');
+    localStorage.removeItem('soragodong_v4_e2ee_recovery');
+    localStorage.removeItem('soragodong_v4_e2ee_setup_dismissed');
+  } catch {}
   session = null;
   authUserId = null;
   location.reload();
@@ -12062,7 +12071,7 @@ function showFirstTouchResult(insight) {
       </div>
       <div style="font-size:11px; color:var(--accent); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px; margin-top:14px;">🔍 가설 (✓ 맞으면 체크)</div>
       <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
-        체크한 건 너의 첫 traits/patterns로 박힘 (검증 미완료 표시 — 나중에 ✓ 확정 가능).
+        체크한 건 너의 첫 traits/patterns로 자리잡음 (검증 미완료 표시 — 나중에 ✓ 확정 가능).
       </div>
       <div class="ft-hypotheses">${hypothesesHtml}</div>
       <div style="font-size:11px; color:var(--accent); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px; margin-top:18px;">🪄 다음 1주 관찰 거리</div>
@@ -13683,7 +13692,8 @@ async function saveToCloudNow() {
   if (_e2eeEnabled && _e2eeMasterKey) {
     try {
       // sensitive body — 사용자 데이터 전부 암호화
-      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences'];
+      // 사용자 명시 2026-05-01 (agent audit): 누락된 11 키 추가 — E2EE save 시 cloud 영구 손실 fix.
+      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','chatArchiveLastRun','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers'];
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
       const encryptedBody = await _e2eeEncrypt(JSON.stringify(sensitiveBody, _serializeReplacer), _e2eeMasterKey);
@@ -14664,7 +14674,7 @@ const ONBOARDING_STEPS = [
     id: 'crystallize_intro',
     targetSelector: null,
     title: '💎 네 일부가 되는 순간',
-    body: '이 전략이 <b>5번 이상 성공</b>하면, 우리는 이 전략이 네 몸 속에 \'<b>체화</b>\'됐다고 말할 수 있어.<br><br>그러니까, 네가 앞으로 비슷한 문제 상황에서 <b>스스로 해결할 수 있는 힘</b>이 생긴 거지!<br><br>전략이 체화되면 → <b>DNA 진주</b>를 얻게 돼!<br>성장 및 진화에 쓰인 소라들이 <b>DNA로 박혀</b>.',
+    body: '이 전략이 <b>5번 이상 성공</b>하면, 우리는 이 전략이 네 몸 속에 \'<b>체화</b>\'됐다고 말할 수 있어.<br><br>그러니까, 네가 앞으로 비슷한 문제 상황에서 <b>스스로 해결할 수 있는 힘</b>이 생긴 거지!<br><br>전략이 체화되면 → <b>DNA 진주</b>를 얻게 돼!<br>성장 및 진화에 쓰인 소라들이 <b>DNA에 자리잡아</b>.',
     waitFor: 'next',
     dimBackground: false,
     demoCrystallize: true
@@ -14737,7 +14747,7 @@ const ONBOARDING_STEPS = [
     id: 'exec_timetable',
     targetSelector: null,
     title: '📅 타임테이블',
-    body: '시간 grid에 일정 직접 박을 수 있어.<br>· + 추가로 직접 박기<br>· 📤 구글 캘린더로 내보내기<br>· 📥 가져오기 (.ics)<br><br><span class="small">색깔 자유.</span>',
+    body: '시간 grid에 일정 직접 추가할 수 있어.<br>· + 으로 직접 추가<br>· 📤 구글 캘린더로 내보내기<br>· 📥 가져오기 (.ics)<br><br><span class="small">색깔 자유.</span>',
     waitFor: 'next',
     dimBackground: false
   },
@@ -14933,7 +14943,7 @@ const ONBOARDING_STEPS = [
     targetSelector: null,
     advanceClickSelector: '.day-modal-close',
     title: '✦ 토픽 — 카테고리별 자동 분류',
-    body: '✓ 마무리 누르거나 24시간 이상 갭 생기면, 고동이가 챕터를 <b>8 카테고리</b> (일기/일상/고민/감정/기억/할 일/아이디어/관계) 중 하나로 자동 분류해서 여기 박아.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
+    body: '✓ 마무리 누르거나 24시간 이상 갭 생기면, 고동이가 챕터를 <b>8 카테고리</b> (일기/일상/고민/감정/기억/할 일/아이디어/관계) 중 하나로 자동 분류해서 여기 자리잡아.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
     waitFor: 'click',
     dimBackground: false,
     aboveModal: true
@@ -15132,7 +15142,7 @@ const ONBOARDING_STEPS = [
     id: 'reflection_try',
     targetSelector: '.reflection-card, [onclick*="openReflectionChat"]',
     title: '클릭해보자',
-    body: '예시 숙고 질문 하나 박아뒀어.<br><b>카드 한 번 눌러봐</b> — 그 질문 안에서 같이 깊이 들여다보자.',
+    body: '예시 숙고 질문 하나 미리 넣어뒀어.<br><b>카드 한 번 눌러봐</b> — 그 질문 안에서 같이 깊이 들여다보자.',
     waitFor: 'click',
     advanceDelay: 800,
     manualAdvance: true,
@@ -15556,9 +15566,9 @@ function applyCoreLockMarkers() {
 // startId 기준으로 phase 묶음 정의. 마지막 phase는 다음 startId 직전까지.
 const ONBOARDING_PHASES = [
   { startId: 'tutorial_plea',         name: '시작',                  desc: '한 마디 부탁' },
-  { startId: 'go_model_first',         name: 'API 키 등록',           desc: '소라랑 대화 준비' },
+  // 'go_model_first' (API 키 등록) phase 폐기 (2026-05-01 agent audit) — Phase C 백엔드 프록시 후 사용자 본인 키 model 영구 wipe.
   { startId: 'go_home_for_checkin',    name: '첫 체크인',             desc: '오늘 너 30초 기록' },
-  { startId: 'go_chat',                name: '대화 + 전략',           desc: '소라랑 풀고 무기 박기' },
+  { startId: 'go_chat',                name: '대화 + 전략',           desc: '소라랑 풀고 무기 만들기' },
   { startId: 'go_home_for_mission',    name: '미션 + 모래사장',       desc: '소라의 부름과 결과 체크' },
   { startId: 'go_archive',             name: '🧬 양생방',             desc: '전략이 자라는 곳 — 핵심' },
   { startId: 'go_execute',             name: '실행 + 나',             desc: '몰입 + 자기 모델' },
@@ -17320,7 +17330,7 @@ async function closeMagicHelpChat() {
         if (!alreadyHistoried) {
           keepHistory = await showConfirmModal({
             title: '원본 대화 보관?',
-            message: `${realMessages.length}개 메시지.\n\n원본 흐름 그대로 도서관 → 깨달음에 박아둘까?\n(토픽 정리는 자동으로 됨)`,
+            message: `${realMessages.length}개 메시지.\n\n원본 흐름 그대로 도서관 → 깨달음에 추가할까?\n(토픽 정리는 자동으로 됨)`,
             okLabel: '응 보관',
             cancelLabel: '아니'
           });
@@ -17625,7 +17635,7 @@ function openFinalDecisionStep(decision, step) {
   `;
 }
 
-function saveFinalDecision(decisionId) {
+async function saveFinalDecision(decisionId) {
   const decision = state.decisions.find(d => d.id === decisionId);
   const step = decision.steps.find(s => s.id === 'decision');
   const finalDecision = document.getElementById('finalDecision').value.trim();
@@ -17637,6 +17647,19 @@ function saveFinalDecision(decisionId) {
   };
 
   if (!finalDecision) { alert('최종 결정을 적어주세요.'); return; }
+
+  // 사용자 명시 2026-05-01 (agent audit): 14일 숙성 핵심 가치 보호.
+  // saveTextStep / editStep "그래도 지금 작성" 우회 가능했던 자리. step 10 만 hardcap (decision = 14일).
+  const daysSince = Math.floor((Date.now() - new Date(decision.createdAt).getTime()) / 86400000);
+  if (daysSince < 14) {
+    const yes = await showConfirmModal({
+      title: `⚠️ 14일 숙성 권장`,
+      message: `결정을 시작한 지 ${daysSince}일째야.\n\n마법의 소라고동은 14일 동안 시간을 두고 보는 도구야. 지금 결정하면 hot-cold empathy gap (감정 상태 변화) 후회로 이어지기 쉬워.\n\n그래도 지금 결정할래?`,
+      okLabel: '그래도 결정',
+      cancelLabel: '14일 기다릴게'
+    });
+    if (!yes) return;
+  }
 
   const data = { decision: finalDecision, confidence, predictions };
   step.content = JSON.stringify(data);
@@ -19078,7 +19101,7 @@ async function closeReflectionScreen() {
       if (!alreadyHistoried) {
         keepHistory = await showConfirmModal({
           title: '원본 대화 보관?',
-          message: `${realMessages.length}개 메시지.\n\n원본 흐름 그대로 도서관 → 깨달음에 박아둘까?\n(토픽 정리는 자동으로 됨)`,
+          message: `${realMessages.length}개 메시지.\n\n원본 흐름 그대로 도서관 → 깨달음에 추가할까?\n(토픽 정리는 자동으로 됨)`,
           okLabel: '응 보관',
           cancelLabel: '아니'
         });
@@ -23415,8 +23438,13 @@ async function sendChat() {
   // 11번째부터 = 매일 4AM maybeRunDailyChapterExtract 흐름으로 풀백.
   // 신규 = 첫 인사이트 빠르게. 일반 = 누적 후 통합.
   try {
+    // agent audit fix 2026-05-01: 마지막 메시지가 error bubble 면 카운트 skip (노이즈 추출 차단)
+    const _msgs = state.chatMessages || [];
+    const _lastMsg = _msgs[_msgs.length - 1];
+    const _lastIsError = _lastMsg && _lastMsg.error;
     const _newUserEligible = authUserId && !window._onbTutorialMode &&
-      !(state.preferences && state.preferences.testerMode);
+      !(state.preferences && state.preferences.testerMode) &&
+      !_lastIsError;
     if (_newUserEligible) {
       if (typeof state.chatPairsCount !== 'number') state.chatPairsCount = 0;
       if (typeof state.newUserExtractTriggers !== 'number') state.newUserExtractTriggers = 0;
@@ -24136,7 +24164,7 @@ async function processAnalysis(analysis, messageIdx) {
       added++;
     });
     if (added > 0) {
-      showToast(`📅 ${added}개 일정 박힘`);
+      showToast(`📅 ${added}개 일정 추가됨`);
       // 실행 탭 (timetable 포함) 즉시 갱신
       if (typeof renderExecute === 'function') { try { renderExecute(); } catch {} }
     }
@@ -24168,7 +24196,7 @@ async function processAnalysis(analysis, messageIdx) {
       addedPearls++;
     });
     if (addedPearls > 0) {
-      showToast(`🔮 ${addedPearls}개 진주 박힘`);
+      showToast(`🔮 ${addedPearls}개 진주 추가됨`);
       // 진주 화면 / 도서관 hero 즉시 갱신
       if (typeof renderLensPearls === 'function') { try { renderLensPearls(); } catch {} }
       if (typeof renderLibraryHero === 'function') { try { renderLibraryHero(); } catch {} }
@@ -39422,8 +39450,12 @@ function dismissFeedbackBanner() {
 }
 async function startUpdateTour() {
   state.preferences = state.preferences || {};
-  state.preferences.dismissedAppVersion = APP_VERSION;
-  saveState();
+  // 사용자 명시 2026-05-01 (agent audit): dismissedAppVersion 옛 키 X — dismissedMajor 가 새 시스템 (V5 까지 안 뜸).
+  state.preferences.dismissedMajor = (typeof _currentMajor === 'function') ? _currentMajor() : APP_VERSION;
+  saveState(true);
+  if (typeof saveToCloudNow === 'function') {
+    try { await saveToCloudNow(); } catch {}
+  }
   renderUpdateNotice();
 
   // V4 (사용자 요청 2026-04-29): 업데이트 배너 → 코어/풀 chooser
