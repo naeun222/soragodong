@@ -341,7 +341,7 @@
   .input-group { margin-bottom: 22px; }
   .input-label { font-size: 11px; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
   .input-label .optional { color: var(--text-soft); font-weight: normal; text-transform: none; letter-spacing: 0; font-size: 10px; }
-  textarea, input[type=text], input[type=number], input[type=date], input[type=password], input[type=time] {
+  textarea, input[type=text], input[type=email], input[type=number], input[type=date], input[type=password], input[type=time] {
     width: 100%; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px; padding: 14px; color: var(--text); font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.6; outline: none; transition: border-color 0.2s;
   }
   textarea { resize: none; min-height: 80px; }
@@ -1095,6 +1095,47 @@
     background: var(--surface);
     border-radius: 12px;
     text-align: left;
+  }
+  /* PWA install — 사용자 명시 2026-04-30 ultrathink: 로그인 화면, opt-in collapsed, auto-detect, standalone hide. */
+  .login-pwa-card {
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.08), rgba(168,157,200,0.05));
+    border: 1px solid rgba(212,167,106,0.25);
+    border-radius: 12px;
+    text-align: left;
+  }
+  .login-pwa-card > summary {
+    list-style: none; cursor: pointer; font-size: 12px; font-weight: 600;
+    color: var(--text); user-select: none;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+  .login-pwa-card > summary::-webkit-details-marker { display: none; }
+  .login-pwa-card > summary::after { content: '▾'; font-size: 10px; color: var(--text-soft); transition: transform 0.2s; }
+  .login-pwa-card[open] > summary::after { transform: rotate(180deg); }
+  .login-pwa-card[open] > summary { margin-bottom: 10px; }
+  .pwa-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .pwa-tab {
+    flex: 1; padding: 6px 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-soft);
+    font-size: 11.5px; font-family: inherit; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pwa-tab.active {
+    background: rgba(212,167,106,0.15); border-color: rgba(212,167,106,0.45);
+    color: var(--accent); font-weight: 600;
+  }
+  .pwa-steps { font-size: 11.5px; line-height: 1.7; color: var(--text); }
+  .pwa-step {
+    padding: 4px 0 4px 10px;
+    border-left: 2px solid rgba(212,167,106,0.30);
+    margin-bottom: 4px;
+  }
+  .pwa-step b { color: var(--accent); font-weight: 600; }
+  .pwa-install-note {
+    margin-top: 8px; font-size: 10px;
+    color: var(--text-soft); line-height: 1.5;
   }
   .login-consent-card label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
   .login-consent-card label + label { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.04); }
@@ -8622,8 +8663,86 @@
       <button class="btn-secondary" onclick="resetLoginFlow()" style="margin-top:14px;">이메일 다시 입력</button>
     </div>
 
+    <!-- 사용자 명시 2026-04-30 ultrathink: PWA 설치 안내 (collapsed default, auto-detect, standalone hide). Android = beforeinstallprompt 1탭 / iOS = manual 3 step (Apple 정책상 자동 X). -->
+    <details class="login-pwa-card" id="loginPwaCard">
+      <summary>📱 앱처럼 쓰는 법 (홈 화면 추가) ✦</summary>
+      <div class="pwa-tabs">
+        <button type="button" class="pwa-tab" data-os="ios" onclick="setPwaTab('ios')">📱 iPhone</button>
+        <button type="button" class="pwa-tab" data-os="android" onclick="setPwaTab('android')">🤖 Android</button>
+      </div>
+      <div class="pwa-steps" id="pwaStepsIos">
+        <div class="pwa-step">1. <b>사파리(Safari)</b>로 이 사이트 열기</div>
+        <div class="pwa-step">2. 하단 <b>공유 ⬆ 버튼</b> 누르기</div>
+        <div class="pwa-step">3. <b>[홈 화면에 추가]</b> → <b>[추가]</b></div>
+        <div class="pwa-install-note">Apple 정책상 자동 설치 X — 수동 3 단계만 가능.</div>
+      </div>
+      <div class="pwa-steps" id="pwaStepsAndroid" style="display:none;">
+        <button type="button" id="pwaInstallBtn" onclick="triggerPwaInstall()" class="btn-primary" style="display:none; width:100%; margin-bottom:10px;">📱 1탭으로 앱 설치 ✦</button>
+        <div class="pwa-step">1. 우측 상단 <b>메뉴 [⋮]</b> 누르기</div>
+        <div class="pwa-step">2. <b>[홈 화면에 추가]</b> 또는 <b>[앱 설치]</b></div>
+        <div class="pwa-step">3. <b>[설치]</b> → 앱처럼 작동</div>
+        <div class="pwa-install-note">위 버튼 안 뜨면 수동 3 단계로 (브라우저별 위치 다름).</div>
+      </div>
+    </details>
+
   </div>
 </div>
+
+<script>
+  // PWA 설치 — Android beforeinstallprompt 캡처 + 1탭 설치 / iOS manual fallback (사용자 명시 2026-04-30 ultrathink)
+  var _deferredPwaPrompt = null;
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    _deferredPwaPrompt = e;
+    var btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = '';
+  });
+  window.addEventListener('appinstalled', function() {
+    _deferredPwaPrompt = null;
+    var card = document.getElementById('loginPwaCard');
+    if (card) card.style.display = 'none';
+    if (typeof showToast === 'function') showToast('🐚 앱 설치 완료');
+  });
+  async function triggerPwaInstall() {
+    if (!_deferredPwaPrompt) {
+      if (typeof showToast === 'function') showToast('자동 설치 X — 수동 3 단계 참고');
+      return;
+    }
+    _deferredPwaPrompt.prompt();
+    try {
+      var choice = await _deferredPwaPrompt.userChoice;
+      if (choice && choice.outcome === 'accepted' && typeof showToast === 'function') {
+        showToast('🐚 설치 시작');
+      }
+    } catch (e) { console.warn('[pwa install]', e); }
+    _deferredPwaPrompt = null;
+    var btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = 'none';
+  }
+  function setPwaTab(os) {
+    document.querySelectorAll('.pwa-tab').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.os === os);
+    });
+    var ios = document.getElementById('pwaStepsIos');
+    var and = document.getElementById('pwaStepsAndroid');
+    if (ios) ios.style.display = os === 'ios' ? '' : 'none';
+    if (and) and.style.display = os === 'android' ? '' : 'none';
+  }
+  (function initLoginPwa() {
+    var card = document.getElementById('loginPwaCard');
+    if (!card) return;
+    // 이미 PWA로 실행 중 (standalone) — 안내 숨김
+    var isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+      || window.navigator.standalone === true;
+    if (isStandalone) { card.style.display = 'none'; return; }
+    // 자동 device 감지 → tab preselect
+    var ua = navigator.userAgent;
+    var defaultOs = 'ios';
+    if (/Android/i.test(ua)) defaultOs = 'android';
+    else if (/iPhone|iPad|iPod/i.test(ua)) defaultOs = 'ios';
+    setPwaTab(defaultOs);
+  })();
+</script>
 
 <div class="app" style="display:none;">
   <div class="header">
