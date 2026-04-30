@@ -16221,6 +16221,15 @@ function onbPositionStep(step, retryCount) {
           };
           // overlay 가 보일 때까지 먼저 대기 (open 비동기) — visible 보고 → hidden 확인 후 advance
           let everVisible = false;
+          // 사용자 보고 2026-05-01: 빠르게 X 누른 케이스 (poll 200ms 보다 빨리 close) — sync + rAF 즉시 체크 추가.
+          (function _earlyVisibleCheck() {
+            const elSync = document.querySelector(sel);
+            if (elSync && !isElHidden(elSync)) everVisible = true;
+            requestAnimationFrame(() => {
+              const elRaf = document.querySelector(sel);
+              if (elRaf && !isElHidden(elRaf)) everVisible = true;
+            });
+          })();
           const pollId = setInterval(() => {
             if (!window._onbTutorialMode || _onbStep !== stepIdxAtClick) {
               clearInterval(pollId);
