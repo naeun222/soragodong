@@ -2033,6 +2033,17 @@
   .ann-rv-tree-best em {
     font-style: normal; color: #9ed4a0; font-weight: 700;
   }
+  /* 사용자 명시 2026-04-30: tree caption — best 자리 대신 격려 한 마디 */
+  .ann-rv-tree-caption {
+    margin-top: 26px; padding: 14px 22px;
+    background: rgba(158,212,160,0.10);
+    border: 1px solid rgba(158,212,160,0.22);
+    border-radius: 14px;
+    text-align: center;
+    font-size: 14px; font-weight: 600;
+    color: #9ed4a0;
+    line-height: 1.5; max-width: 320px;
+  }
 
   /* ─── 카드 6: 모래사장 + 진주 ─── */
   .ann-rv-card-6 {
@@ -2059,16 +2070,23 @@
     from { opacity: 0.7; }
     to   { opacity: 1; }
   }
-  .ann-rv-beach-shells {
-    display: grid; grid-template-columns: repeat(15, 1fr);
-    gap: 3px; width: 100%; max-width: 360px;
-    margin: 12px 0 22px; z-index: 1; position: relative;
+  /* 사용자 명시 2026-04-30: 75개 grid → 흩어 emoji 7개 (대표만) */
+  .ann-rv-beach-icons {
+    position: relative;
+    width: 100%; max-width: 320px;
+    height: 200px;
+    margin: 8px 0 18px;
+    z-index: 1;
   }
-  .ann-rv-beach-shell {
-    aspect-ratio: 1;
-    background: rgba(245,225,180,0.55);
-    border-radius: 50%;
-    box-shadow: inset 0 -1px 1.5px rgba(0,0,0,0.25);
+  .ann-rv-beach-icon {
+    position: absolute;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.35));
+    line-height: 1;
+    transform: translate(-50%, -50%);
+  }
+  .ann-rv-beach-icon-pearl {
+    filter: drop-shadow(0 0 12px rgba(255,250,205,0.85));
+    animation: ann-rv-tree-glow 2s ease-in-out infinite alternate;
   }
   .ann-rv-beach-stats {
     display: flex; gap: 28px; margin: 4px 0 16px;
@@ -2107,8 +2125,42 @@
     margin-top: 8px;
   }
 
-  /* ─── 카드 7: best 모음 (잊지 못할 + Top 5 + 깊은 숙고) ─── */
-  .ann-rv-card-7 { background: linear-gradient(180deg, #121a26, #0a0912); }
+  /* ─── 카드 7: 잊지 못할 순간 — 사진 grid 별 슬라이드 (사용자 명시 2026-04-30) ─── */
+  .ann-rv-card-moments { background: linear-gradient(180deg, #1c1828 0%, #0a0912 100%); }
+  .ann-rv-moments-list {
+    display: flex; flex-direction: column;
+    gap: 12px; width: 100%; max-width: 360px;
+  }
+  .ann-rv-moment-card {
+    aspect-ratio: 16/9;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.10);
+    display: flex; flex-direction: column;
+    justify-content: flex-end;
+    padding: 14px 16px;
+  }
+  .ann-rv-moment-bg {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 70px; opacity: 0.55;
+    pointer-events: none;
+  }
+  .ann-rv-moment-content { position: relative; z-index: 1; }
+  .ann-rv-moment-date {
+    font-size: 10px; color: rgba(255,255,255,0.85);
+    letter-spacing: 0.12em; margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .ann-rv-moment-text {
+    font-size: 13px; color: #fff;
+    line-height: 1.4; font-weight: 500;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  }
+
+  /* ─── 카드 8: Top 5 깨달음 + 가장 깊었던 숙고 (Q→A) ─── */
+  .ann-rv-card-best { background: linear-gradient(180deg, #121a26, #0a0912); }
   .ann-rv-best-grid {
     display: flex; flex-direction: column;
     gap: 12px; width: 100%; max-width: 380px;
@@ -2117,38 +2169,39 @@
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.09);
     border-radius: 14px;
-    padding: 14px 16px;
+    padding: 16px 18px;
   }
   .ann-rv-best-section-label {
     font-size: 10px; letter-spacing: 0.25em;
     color: rgba(232,197,144,0.7);
+    margin-bottom: 12px;
+  }
+  .ann-rv-best-pearls { display: flex; flex-direction: column; gap: 4px; }
+  .ann-rv-best-pearl {
+    font-size: 13px; color: #f0d9a8;
+    line-height: 1.55; letter-spacing: 0.01em;
+  }
+  .ann-rv-best-deep-q {
+    font-size: 13px; color: #c5e0f0;
+    font-style: italic; line-height: 1.6;
+    padding-left: 12px;
+    border-left: 2px solid rgba(126,200,200,0.35);
     margin-bottom: 10px;
   }
-  .ann-rv-best-moments {
-    display: flex; flex-direction: column; gap: 6px;
+  .ann-rv-best-deep-arrow {
+    font-size: 11px; color: rgba(197,224,240,0.55);
+    text-align: center; margin: 8px 0;
+    letter-spacing: 0.08em;
   }
-  .ann-rv-best-moment {
-    display: flex; gap: 10px; font-size: 12px;
-    color: rgba(232,232,232,0.85); line-height: 1.5;
+  .ann-rv-best-deep-arrow span {
+    font-size: 9.5px; color: rgba(197,224,240,0.45);
+    margin-left: 4px;
   }
-  .ann-rv-best-moment-date {
-    color: #9ed4a0; font-weight: 600;
-    flex-shrink: 0; min-width: 44px;
-  }
-  .ann-rv-best-quotes {
-    display: flex; flex-direction: column; gap: 5px;
-  }
-  .ann-rv-best-quote {
-    font-size: 12px; color: #e8d4a8;
-    font-style: italic; line-height: 1.4;
-  }
-  .ann-rv-best-deep {
-    font-size: 13.5px; color: #c5e0f0;
-    font-weight: 500; line-height: 1.5;
-  }
-  .ann-rv-best-deep-date {
-    font-size: 10px; color: rgba(197,224,240,0.6);
-    margin-top: 4px; letter-spacing: 0.05em;
+  .ann-rv-best-deep-c {
+    font-size: 14px; color: #9ed4a0;
+    font-weight: 600; line-height: 1.55;
+    padding-left: 12px;
+    border-left: 2px solid rgba(158,212,160,0.5);
   }
 
   /* ─── 카드 8: 마지막 + 다음 1년 ─── */
@@ -10391,7 +10444,7 @@ function openAnnualReviewPreview() {
   const data = {
     yearRange: '2025 → 2026',
     oneWord: '전환',
-    persona: '회피한 게 사실은 엔진이었던 사람',
+    persona: '회피하던 게 알고 보니 엔진이었던 사람',
     stats: [
       { emoji: '📔', num: 226, label: '일기' },
       { emoji: '💬', num: 142, label: '대화' },
@@ -10408,11 +10461,11 @@ function openAnnualReviewPreview() {
     ],
     seasonCaption: '12월 7일이 너의 <strong>변곡점</strong> 이었어',
     finding1: {
-      label: '1년 보다가 어 한 거',
+      label: '1년 보다가 어, 한 거',
       quote: '"논문 부담돼"',
       dataNum: '+30%',
-      dataText: '근데 논문 한 다음 날\n4번 중 3번은 활력이 더 높았어',
-      conclusion: '네가 도망친 게\n<span>사실은 너를 살리는 일</span>이었나 봐'
+      dataText: '근데 논문 한 다음 날엔\n4번 중 3번 활력이 더 높았어',
+      conclusion: '도망간다고 생각했던 게\n<span>사실은 너를 살리는 일</span>이었어'
     },
     finding2: {
       label: '또 하나',
@@ -10420,7 +10473,7 @@ function openAnnualReviewPreview() {
       friendLowLabel: '도움 요청한\n횟수',
       friendHigh: '23',
       friendHighLabel: '친구한테\n도움 준 횟수',
-      conclusion: '<span>네 자신보다 친구들을\n더 도운 해</span>였어.'
+      conclusion: '올해는 <span>너 자신보다\n친구들을 더 챙긴 해</span>였어'
     },
     tree: {
       embodied: [
@@ -10440,7 +10493,7 @@ function openAnnualReviewPreview() {
         { name: '감정 후 운동', emoji: '🌿' },
         { name: '회의 30분 전', emoji: '🌿' }
       ],
-      caption: '이제 네 힘으로 이만큼이나 해결할 수 있어'
+      caption: '이제 이 정도는 너 혼자서도 해낼 수 있어'
     },
     beach: {
       diaryCount: 226,
@@ -10473,18 +10526,18 @@ function openAnnualReviewPreview() {
         '박사 + Naeun Lab 매일 1h'
       ]
     },
-    // 사용자 명시 2026-04-30: 슬라이드마다 진주 노래. 지금은 정적 link 예시 (다음 phase: 노래 API).
-    // 시드 (페르소나 김나은 / 한국어 / 1년 narrative arc) 따라 카드 분위기 매칭 — 한국 노래 위주.
+    // 사용자 명시 2026-04-30: 시드 데이터 (testSeedV4Data) 안 진주 음악 카테고리에 박힌 8곡 그대로.
+    // narrative arc 매핑 — 표지 = 마지막 = LNGSHOT Vanilla Days (수미상관).
     songs: {
-      card1: { title: '서른 즈음에', artist: '김광석', url: 'https://www.youtube.com/results?search_query=%EA%B9%80%EA%B4%91%EC%84%9D+%EC%84%9C%EB%A5%B8+%EC%A6%88%EC%9D%8C%EC%97%90' },
-      card2: { title: '주저하는 연인들을 위해', artist: '잔나비', url: 'https://www.youtube.com/results?search_query=%EC%9E%94%EB%82%98%EB%B9%84+%EC%A3%BC%EC%A0%80%ED%95%98%EB%8A%94+%EC%97%B0%EC%9D%B8%EB%93%A4%EC%9D%84+%EC%9C%84%ED%95%B4' },
-      card3: { title: '바람이 분다', artist: '이소라', url: 'https://www.youtube.com/results?search_query=%EC%9D%B4%EC%86%8C%EB%9D%BC+%EB%B0%94%EB%9E%8C%EC%9D%B4+%EB%B6%84%EB%8B%A4' },
-      card4: { title: '감사', artist: '김동률', url: 'https://www.youtube.com/results?search_query=%EA%B9%80%EB%8F%99%EB%A5%A0+%EA%B0%90%EC%82%AC' },
-      card5: { title: '나의 노래', artist: '양희은', url: 'https://www.youtube.com/results?search_query=%EC%96%91%ED%9D%AC%EC%9D%80+%EB%82%98%EC%9D%98+%EB%85%B8%EB%9E%98' },
-      card6: { title: '모든 날 모든 순간', artist: '폴킴', url: 'https://www.youtube.com/results?search_query=%ED%8F%B4%ED%82%B4+%EB%AA%A8%EB%93%A0+%EB%82%A0+%EB%AA%A8%EB%93%A0+%EC%88%9C%EA%B0%84' },
-      card7: { title: '수고했어 오늘도', artist: '옥상달빛', url: 'https://www.youtube.com/results?search_query=%EC%98%A5%EC%83%81%EB%8B%AC%EB%B9%9B+%EC%88%98%EA%B3%A0%ED%96%88%EC%96%B4+%EC%98%A4%EB%8A%98%EB%8F%84' },
-      card8: { title: '사랑한다는 흔한말', artist: '김연우', url: 'https://www.youtube.com/results?search_query=%EA%B9%80%EC%97%B0%EC%9A%B0+%EC%82%AC%EB%9E%91%ED%95%9C%EB%8B%A4%EB%8A%94+%ED%9D%94%ED%95%9C%EB%A7%90' },
-      card9: { title: '양화대교', artist: '자이언티', url: 'https://www.youtube.com/results?search_query=%EC%9E%90%EC%9D%B4%EC%96%B8%ED%8B%B0+%EC%96%91%ED%99%94%EB%8C%80%EA%B5%90' }
+      card1: { title: 'Vanilla Days',         artist: 'LNGSHOT',                       url: 'https://music.apple.com/us/album/vanilla-days/1885487042?i=1885487047' },
+      card2: { title: 'Pink + White',         artist: 'Frank Ocean',                   url: 'https://music.apple.com/us/album/pink-white/1146195596?i=1146195714' },
+      card3: { title: 'Love Hangover',        artist: 'JENNIE & Dominic Fike',         url: 'https://music.apple.com/us/album/love-hangover/1793379140?i=1793379141' },
+      card4: { title: 'Stephanie',            artist: 'Cloonee, Young M.A & InntRaw',  url: 'https://music.apple.com/us/album/stephanie/1779339882?i=1779339883' },
+      card5: { title: "Moonwalkin'",          artist: 'LNGSHOT',                       url: 'https://music.apple.com/us/album/moonwalkin/1866762522?i=1866762525' },
+      card6: { title: 'PINKY UP',             artist: 'KATSEYE',                       url: 'https://music.apple.com/us/album/pinky-up-clean-edit/1891174008?i=1891174353' },
+      card7: { title: "Upper Side Dreamin'",  artist: 'ENHYPEN',                       url: 'https://music.apple.com/us/album/upper-side-dreamin/1587989646?i=1587989649' },
+      card8: { title: 'Club classics',        artist: 'Charli xcx',                    url: 'https://music.apple.com/us/album/club-classics/1739079974?i=1739080339' },
+      card9: { title: 'Vanilla Days',         artist: 'LNGSHOT',                       url: 'https://music.apple.com/us/album/vanilla-days/1885487042?i=1885487047' }
     }
   };
   _annualReviewState = {
@@ -10567,12 +10620,13 @@ function _annualReviewBuildCard2(d) {
         <span class="ann-rv-yearmap-legend-dot ann-rv-yearmap-day-4"></span>
         활기
       </div>
-      <div class="ann-rv-caption">★ <strong>12월 7일</strong> 너의 변곡점</div>
+      <div class="ann-rv-caption">★ <strong>12월 7일</strong>이 네 변곡점이었어</div>
     </div>
   `;
 }
 
 // 카드 3: 발견 #1 (AI 포착) — 다음 phase: Opus 4.7 prompt
+// 사용자 명시 2026-04-30: button 제거 (진주 담기 / 갸우뚱)
 function _annualReviewBuildCard3(d) {
   const f = d.finding1 || {};
   return `
@@ -10585,15 +10639,12 @@ function _annualReviewBuildCard3(d) {
         <div class="ann-rv-finding-data-text">${escapeHtml(f.dataText || '').replace(/\n/g, '<br>')}</div>
       </div>
       <div class="ann-rv-finding-conclusion">${(f.conclusion || '').replace(/\n/g, '<br>')}</div>
-      <div class="ann-rv-finding-actions">
-        <button class="ann-rv-finding-btn">✦ 진주로 담을게</button>
-        <button class="ann-rv-finding-btn">🤔 갸우뚱</button>
-      </div>
     </div>
   `;
 }
 
 // 카드 4: 발견 #2 (자기 친구) — 다음 phase: Opus 4.7 prompt
+// 사용자 명시 2026-04-30: button 제거 + 결론 워딩 자연화
 function _annualReviewBuildCard4(d) {
   const f = d.finding2 || {};
   return `
@@ -10611,15 +10662,11 @@ function _annualReviewBuildCard4(d) {
         </div>
       </div>
       <div class="ann-rv-finding-conclusion">${(f.conclusion || '').replace(/\n/g, '<br>')}</div>
-      <div class="ann-rv-finding-actions">
-        <button class="ann-rv-finding-btn">✦ 진주로 담을게</button>
-        <button class="ann-rv-finding-btn">🤔 갸우뚱</button>
-      </div>
     </div>
   `;
 }
 
-// 카드 5: 무기 DNA tree
+// 카드 5: 무기 DNA tree — 사용자 명시 2026-04-30: best 자리 = 캡션 ("이제 네 힘으로 이만큼이나 해결할 수 있어")
 function _annualReviewBuildCard5(d) {
   const t = d.tree || {};
   const layer = (items, embodied) => `
@@ -10643,20 +10690,31 @@ function _annualReviewBuildCard5(d) {
         <div class="ann-rv-tree-tier">🌿 시도 중</div>
         ${layer(t.trying, false)}
       </div>
-      <div class="ann-rv-tree-best">${t.best || ''}</div>
+      <div class="ann-rv-tree-caption">${escapeHtml(t.caption || '')}</div>
     </div>
   `;
 }
 
-// 카드 6: 모래사장 + 진주
+// 카드 6: 모래사장 + 진주 — 사용자 명시 2026-04-30: 75 grid 징그러움. 대표 emoji 7개 흩어 배치.
 function _annualReviewBuildCard6(d) {
   const b = d.beach || {};
-  const shellCount = Math.min(75, b.shellCount || 0);
-  const shells = Array.from({ length: shellCount }, () => '<div class="ann-rv-beach-shell"></div>').join('');
+  const icons = [
+    { emoji: '🐚', top: 28, left: 14, size: 30 },
+    { emoji: '✨', top: 62, left: 42, size: 38, pearl: true },
+    { emoji: '🐚', top: 48, left: 75, size: 26 },
+    { emoji: '✨', top: 18, left: 58, size: 28, pearl: true },
+    { emoji: '🐚', top: 76, left: 22, size: 28 },
+    { emoji: '✨', top: 8,  left: 32, size: 22, pearl: true },
+    { emoji: '🐚', top: 56, left: 8,  size: 24 }
+  ];
+  const iconsHtml = icons.map(ic => `
+    <div class="ann-rv-beach-icon ${ic.pearl ? 'ann-rv-beach-icon-pearl' : ''}"
+         style="top:${ic.top}%;left:${ic.left}%;font-size:${ic.size}px;">${ic.emoji}</div>
+  `).join('');
   return `
     <div class="ann-rv-card ann-rv-card-6">
       <div class="ann-rv-label" style="color:rgba(255,248,232,0.85);">너의 모래사장</div>
-      <div class="ann-rv-beach-shells">${shells}</div>
+      <div class="ann-rv-beach-icons">${iconsHtml}</div>
       <div class="ann-rv-beach-stats">
         <div class="ann-rv-beach-stat">
           <div class="ann-rv-beach-stat-num">${b.diaryCount || 0}</div>
@@ -10676,43 +10734,52 @@ function _annualReviewBuildCard6(d) {
   `;
 }
 
-// 카드 7: best 모음 (잊지 못할 + Top 5 + 가장 깊은 숙고)
-function _annualReviewBuildCard7(d) {
-  const b = d.best || {};
-  const moments = (b.moments || []).map(m => `
-    <div class="ann-rv-best-moment">
-      <span class="ann-rv-best-moment-date">${escapeHtml(m.date)}</span>
-      <span>${escapeHtml(m.text)}</span>
+// 카드 7 (새): 잊지 못할 순간 — 사용자 명시 2026-04-30: '사진' 카드 grid 별 슬라이드
+function _annualReviewBuildCardMoments(d) {
+  const moments = d.moments_card || [];
+  const cards = moments.map(m => `
+    <div class="ann-rv-moment-card" style="background:${m.bg || ''};">
+      <div class="ann-rv-moment-bg">${m.emoji || '🌅'}</div>
+      <div class="ann-rv-moment-content">
+        <div class="ann-rv-moment-date">${escapeHtml(m.date)}</div>
+        <div class="ann-rv-moment-text">${escapeHtml(m.text)}</div>
+      </div>
     </div>
   `).join('');
-  const quotes = (b.quotes || []).map(q => `
-    <div class="ann-rv-best-quote">${escapeHtml(q)}</div>
-  `).join('');
-  const deep = b.deep || {};
   return `
-    <div class="ann-rv-card ann-rv-card-7">
-      <div class="ann-rv-label">한 해의 best</div>
+    <div class="ann-rv-card ann-rv-card-moments">
+      <div class="ann-rv-label">잊지 못할 순간</div>
+      <div class="ann-rv-moments-list">${cards}</div>
+    </div>
+  `;
+}
+
+// 카드 8 (새): Top 5 깨달음 + 가장 깊은 숙고 (질문 → 결론)
+// 사용자 명시 2026-04-30: 인용 5 → 깨달음 5 / 깊은 숙고 = Q + A 형태
+function _annualReviewBuildCardBest(d) {
+  const pearls = (d.top_pearls || []).map(p => `<div class="ann-rv-best-pearl">◇  ${escapeHtml(p)}</div>`).join('');
+  const deep = d.deep || {};
+  return `
+    <div class="ann-rv-card ann-rv-card-best">
+      <div class="ann-rv-label">올해 빛난 것들</div>
       <div class="ann-rv-best-grid">
         <div class="ann-rv-best-section">
-          <div class="ann-rv-best-section-label">🌱 잊지 못할 순간</div>
-          <div class="ann-rv-best-moments">${moments}</div>
-        </div>
-        <div class="ann-rv-best-section">
-          <div class="ann-rv-best-section-label">🐚 너의 Top 5 인용</div>
-          <div class="ann-rv-best-quotes">${quotes}</div>
+          <div class="ann-rv-best-section-label">✨ Top 5 깨달음</div>
+          <div class="ann-rv-best-pearls">${pearls}</div>
         </div>
         <div class="ann-rv-best-section">
           <div class="ann-rv-best-section-label">🌊 가장 깊었던 숙고</div>
-          <div class="ann-rv-best-deep">${escapeHtml(deep.text || '')}</div>
-          <div class="ann-rv-best-deep-date">${escapeHtml(deep.date || '')}</div>
+          <div class="ann-rv-best-deep-q">${escapeHtml(deep.question || '').replace(/\n/g, '<br>')}</div>
+          <div class="ann-rv-best-deep-arrow">↓ <span>${escapeHtml(deep.date || '')}</span></div>
+          <div class="ann-rv-best-deep-c">${escapeHtml(deep.conclusion || '')}</div>
         </div>
       </div>
     </div>
   `;
 }
 
-// 카드 8: 마지막 + 다음 1년
-function _annualReviewBuildCard8(d) {
+// 카드 9: 마지막 + 다음 1년 (사용자 명시 2026-04-30: 이전 그대로 유지)
+function _annualReviewBuildCard9(d) {
   const f = d.final || {};
   const buttons = (f.buttons || []).map(b => `
     <button class="ann-rv-final-btn">✦ ${escapeHtml(b)}</button>
