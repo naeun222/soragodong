@@ -1017,10 +1017,12 @@
   /* margin: auto 0 — 콘텐츠가 viewport에 들어오면 자동 가운데 정렬, 넘치면 자연스럽게 위에서 시작 */
   .login-content { max-width: 400px; width: 100%; text-align: center; margin: auto 0; }
   .login-icon {
-    font-size: 52px;
-    margin-bottom: 12px;
-    display: inline-block;
-    filter: drop-shadow(0 4px 18px rgba(126,200,227,0.25));
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    margin: 0 auto 12px;
+    display: block;
+    filter: drop-shadow(0 4px 18px rgba(212,167,106,0.30));
     animation: loginShellFloat 4s ease-in-out infinite;
   }
   @keyframes loginShellFloat {
@@ -1159,12 +1161,12 @@
   }
   .login-consent-card label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
   .login-consent-card label + label { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.04); }
-  /* 사용자 보고 2026-04-30: 체크박스 너무 큼 → 작게 + 테마 컬러 */
+  /* 사용자 보고 2026-04-30: 체크박스 더 작게 + 테마 컬러 */
   .login-consent-card input[type=checkbox] {
-    margin-top: 3px;
+    margin-top: 4px;
     flex: 0 0 auto;
-    width: 14px;
-    height: 14px;
+    width: 11px;
+    height: 11px;
     accent-color: var(--accent);
     cursor: pointer;
   }
@@ -8630,7 +8632,7 @@
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
   <div class="login-content">
-    <div class="login-icon">🐚</div>
+    <img class="login-icon" src="/godongicon.png" alt="소라고동" decoding="async">
     <div class="login-title">소라고동</div>
     <div class="login-sub"><span style="font-size:17px; color:var(--text); font-weight:500; letter-spacing:0.01em;">나를 아는 AI 길라잡이 <span class="accent">✦</span></span><br><span style="color:var(--text-soft); font-size:12px;">이메일로 안전하게 들어와</span></div>
 
