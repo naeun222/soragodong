@@ -1492,21 +1492,54 @@
     font-weight: 400;
     position: relative; z-index: 1;
   }
+  /* 사용자 명시 2026-04-30: "내 선물! 무료 토큰 줄게 🎁" + 화려 효과 (glow + shine + emoji pulse) */
   .welcome-bonus-token {
-    display: inline-flex; align-items: center; gap: 9px;
-    font-size: 12px;
-    color: rgba(232,212,168,0.78);
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px;
+    color: #f0d9a8;
+    font-weight: 600;
     margin-bottom: 26px;
-    padding: 10px 16px;
-    background: rgba(212,167,106,0.08);
-    border: 1px solid rgba(212,167,106,0.22);
-    border-radius: 22px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.22), rgba(255,250,205,0.14) 50%, rgba(212,167,106,0.22));
+    border: 1px solid rgba(255,217,122,0.55);
+    border-radius: 24px;
     position: relative; z-index: 1;
     letter-spacing: 0.01em;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(212,167,106,0.32), 0 0 0 1px rgba(255,250,205,0.10);
+    animation: wbTokenGlow 2.5s ease-in-out infinite alternate;
+  }
+  @keyframes wbTokenGlow {
+    from { box-shadow: 0 4px 16px rgba(212,167,106,0.25), 0 0 0 1px rgba(255,250,205,0.08); }
+    to   { box-shadow: 0 10px 30px rgba(255,217,122,0.55), 0 0 0 1px rgba(255,250,205,0.22); }
+  }
+  /* 빛 stripe 좌→우 */
+  .welcome-bonus-token::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -120%;
+    width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,250,205,0.50), transparent);
+    transform: skewX(-20deg);
+    animation: wbTokenShine 2.8s ease-in-out infinite;
+  }
+  @keyframes wbTokenShine {
+    0%   { left: -120%; }
+    60%  { left: 220%; }
+    100% { left: 220%; }
+  }
+  .welcome-bonus-token > span {
+    position: relative; z-index: 1;
   }
   .welcome-bonus-token-emoji {
-    font-size: 14px;
-    filter: drop-shadow(0 0 6px rgba(255,250,205,0.6));
+    font-size: 18px;
+    display: inline-block;
+    animation: wbEmojiPulse 1.4s ease-in-out infinite alternate;
+    filter: drop-shadow(0 0 10px rgba(255,250,205,0.85));
+  }
+  @keyframes wbEmojiPulse {
+    from { transform: scale(1) rotate(-6deg); }
+    to   { transform: scale(1.20) rotate(6deg); }
   }
   .welcome-bonus-btn {
     width: 100%; padding: 14px;
@@ -11233,12 +11266,12 @@ function showWelcomeBonusModal(opts) {
         <img class="welcome-bonus-godong" src="/godongicon.png" alt="소라고동">
         <div class="welcome-bonus-greeting">어, 왔네 🐚</div>
         <div class="welcome-bonus-sub">
-          여기는 너 자신과 천천히<br>
-          친구 되는 자리야.
+          여기는 친구처럼 곁에서<br>
+          같이 보는 자리야.
         </div>
         <div class="welcome-bonus-token">
-          <span class="welcome-bonus-token-emoji">✨</span>
-          <span>무료 토큰 받았어 — 부담 없이 시작해도 돼</span>
+          <span class="welcome-bonus-token-emoji">🎁</span>
+          <span>내 선물! 무료 토큰 줄게</span>
         </div>
         <button class="welcome-bonus-btn" id="welcomeBonusOkBtn">그럼 시작해볼까 →</button>
       </div>
@@ -11972,6 +12005,14 @@ function _intakeStep5Next() {
   if (_intakeState.analysis && _intakeState.analysis.hypotheses) {
     _intakeApplyHypotheses(_intakeState.analysis.hypotheses);
     saveState();
+  }
+  // 사용자 명시 2026-04-30 ultrathink: 튜토리얼 모드일 때 모달 종료 후 대화창에 4단 분석 자동 표시용 stash.
+  // _startIntakeFromTutorial 가 modal 종료 시점에 읽어서 처리.
+  if (window._onbTutorialMode) {
+    window._lastIntakeAnalysis = _intakeState.analysis ? JSON.parse(JSON.stringify(_intakeState.analysis)) : null;
+    window._lastIntakeWorries = (state.intakeWorry || [])
+      .filter(m => m && m.role === 'user')
+      .map(m => m.content);
   }
   _intakeState.step = 6;
   _renderIntakeStep();
@@ -13435,7 +13476,7 @@ const ONBOARDING_STEPS = [
     id: 'chat_opus_intro',
     targetSelector: '.js-chat-mode-btn',
     title: '🦉 더 깊은 대화 모델',
-    body: '헤더 오른쪽 위 <b>🐚/🦉 토글</b> 보여?<br>누르면 더 깊게 답해주는 <b>Opus 모델</b>로 바뀌어.<br><br>지금은 <b>내가 무료 토큰 줬으니까 opus로 해보자!</b> ㄱㄱ ✦<br><br><span class="small">튜토리얼 끝나면 자동으로 sonnet 으로 돌아와.</span>',
+    body: '헤더 오른쪽 위 <b><img src="/godongicon.png" alt="" class="godong-icon" decoding="async">/🦉 토글</b> 보여?<br>누르면 더 깊게 답해주는 <b>Opus 모델</b>로 바뀌어.<br><br>지금은 <b>내가 무료 토큰 줬으니까 opus 한 번 써봐!</b> ㄱㄱ ✦<br><br><span class="small">튜토리얼 끝나면 자동으로 sonnet 으로 돌아와.</span>',
     waitFor: 'next',
     nextLabel: '✦ 응 좋아',
     dimBackground: false,
