@@ -7600,7 +7600,7 @@
   <div class="login-content">
     <div class="login-icon">🐚</div>
     <div class="login-title">소라고동</div>
-    <div class="login-sub"><span style="font-size:17px; color:var(--text); font-weight:500; letter-spacing:0.01em;">인생의 답 같이 찾자 <span class="accent">✦</span></span><br><span style="color:var(--text-soft); font-size:12px;">이메일로 안전하게 들어와</span></div>
+    <div class="login-sub"><span style="font-size:17px; color:var(--text); font-weight:500; letter-spacing:0.01em;">고동이랑 함께 인생의 답 같이 찾자 <span class="accent">✦</span></span><br><span style="color:var(--text-soft); font-size:12px;">이메일로 안전하게 들어와</span></div>
 
     <!-- Step 1: Email + 동의 (사용자 요청 2026-04-30 변호사 검수: PIPA + 전자상거래법 의무 + 안전 어필) -->
     <div class="login-form" id="loginStep1">
@@ -11336,7 +11336,7 @@ const ONBOARDING_STEPS = [
     id: 'welcome',
     targetSelector: null,
     title: '안녕! 나 소라고동이야 🐚',
-    body: '<b>너보다 너를 더 잘 아는 나 소라고동이, 네가 더 나은 선택을 할 수 있도록 케어해주는 앱</b>이야 ✦<br>같이 한 바퀴 돌아보자. 부담 없이!',
+    body: '<b>고동이랑 함께 인생의 답 같이 찾자</b> ✦<br>같이 한 바퀴 돌아보자. 부담 없이!',
     waitFor: 'next'
   },
 
@@ -12364,7 +12364,7 @@ const ONBOARDING_STEPS = [
     id: 'finish',
     targetSelector: null,
     title: '준비 끝 ✦',
-    body: '한 바퀴 다 돌았어! 수고했어 🐚<br><br><b>다시 한 번 — 너보다 너를 더 잘 아는 나 소라고동이, 네가 더 나은 선택을 할 수 있도록 케어해줄게</b> ✦<br><br><span style="font-size:17px; font-weight:700; color:var(--accent2);">핵심 1: 체크인</span><br><span style="font-size:17px; font-weight:700; color:var(--accent2);">핵심 2: 대화 탭</span><br><br><span class="small">나머지는 부가기능. 매일 안 해도 ㄱㅊ! 언제든 환영~</span><br><br><b>이제 같이 가보자. 한 걸음씩, 너답게.</b> ✦🐚',
+    body: '한 바퀴 다 돌았어 ✦<br>잘 따라왔어 🐚<br><br><b>고동이랑 함께 인생의 답 같이 찾자</b> ✦<br><br><span style="font-size:17px; font-weight:700; color:var(--accent2);">핵심 1: 체크인 — 매일 한 번</span><br><span style="font-size:17px; font-weight:700; color:var(--accent2);">핵심 2: 대화 — 떠오를 때마다</span><br><br><span class="small">나머지는 부가. 매일 안 해도 OK.</span><br><br><b>무리 X. 너답게 ✦🐚</b>',
     waitFor: 'next',
     nextLabel: '시작! ✦'
   }
@@ -12444,17 +12444,44 @@ const CORE_BODY_OVERRIDE = {
   annual_stories_done: {
     core5: { body: 'Stories 잘 봤지? ✨<br><br><b>주마다 · 월마다 · 계절마다 · 년마다</b> 리뷰가 자동으로 생겨.<br><br>아래 📚 도서관 탭 한 번 눌러서 돌아와.' }
   },
-  // 사용자 요청 2026-04-29: 모든 코어 튜토리얼 끝은 '시작' 버튼 눌러서 종료 (testerMode OFF + 시드 정리).
-  // 코어 #1은 endId='finish'에 이미 nextLabel '시작! ✦' 박혀있음.
-  // 코어 #2~#8은 endId 후 help_button 점프 → help_button의 nextLabel을 '시작! ✦'로 override.
+  // 사용자 명시 2026-04-30 ultrathink: 모든 코어 마무리 wording 코어별 다르게 — title + body + nextLabel 통합 override.
+  // 기존엔 nextLabel만 override + body는 공통 "❓ 다시 보고 싶을 때" (setting hint 만). 새 wording 으로 코어 정체성 마무리.
   help_button: {
-    core1: { nextLabel: '시작! ✦' },
-    core2: { nextLabel: '시작! ✦' },
-    core3: { nextLabel: '시작! ✦' },
-    core4: { nextLabel: '시작! ✦' },
-    core5: { nextLabel: '시작! ✦' },
-    core6: { nextLabel: '시작! ✦' },
-    core8: { nextLabel: '시작! ✦' }
+    core1: {
+      title: '✦ 시작 — 마무리',
+      body: '여기까지 잘 따라왔어 🐚<br>방금 네가 풀어준 얘기, 내가 잘 들었어.<br><br>✨ <b>\'나 탭\'</b>에 가면 너에 대해 자라기 시작한 모습이 보여 —<br><span class="small">· 통합 분석<br>· 네가 중시하는 것<br>· 너의 특성<br>· 보이는 패턴</span><br><br>틀린 거 있으면 ✕, 맞으면 ✓ 으로 정리해줘.<br><br>체크인은 매일 한 번. 대화는 떠오를 때마다.<br>너답게 천천히 가자 ✦',
+      nextLabel: '시작! ✦'
+    },
+    core2: {
+      title: '✦ 소라의 부름 — 마무리',
+      body: '전략 DNA 가 어떻게 자라고 진화하는지 한 바퀴 봤어 ✦<br><br>이제 진짜 너의 전략이 쌓일 거야 —<br>대화하다 <b>\'✦ 해볼게\'</b> 누르면 카드로 자라.<br><br>부담 없이. 안 해도 ㄱㅊ.<br>너의 속도로 천천히 ✦',
+      nextLabel: '시작! ✦'
+    },
+    core3: {
+      title: '✦ 실행 — 마무리',
+      body: '실행 탭 한 바퀴 봤어 ✦<br><br>몰입 데이터가 쌓이면 너의 페이스가 보여 —<br>\'나 탭\'의 <b>task별 평균 시간</b>에서 확인 가능.<br><br>무리 X. 떠오를 때만.',
+      nextLabel: '시작! ✦'
+    },
+    core4: {
+      title: '✦ 나 — 마무리',
+      body: '여긴 너의 거울이야 ✦<br><br>가치 / 특성 / 패턴 / 통합 분석 — 대화·체크인이 쌓이면 자동으로 자라.<br>틀린 거 있으면 ✕, 맞는 거 ✓ 으로 정리해줘.<br><br>들여다보고 싶을 때 들러.',
+      nextLabel: '시작! ✦'
+    },
+    core5: {
+      title: '✦ 도서관 — 마무리',
+      body: '도서관 한 바퀴 봤어 ✦<br><br>주마다 · 달마다 · 계절마다 · 년마다 — 리뷰 자동으로 쌓여.<br>Stories 도 자동 생성 — 네가 뭘 했는지 한눈에.<br><br>가끔 들러봐.',
+      nextLabel: '시작! ✦'
+    },
+    core6: {
+      title: '✦ 숙고 — 마무리',
+      body: '숙고의 방 봤어 ✦<br><br>답이 안 나오는 큰 질문 — <b>답 X 흐름 ○</b>.<br>천천히 여러 각도로 들여다보는 곳.<br><br>질문이 떠오를 때 들러.',
+      nextLabel: '시작! ✦'
+    },
+    core8: {
+      title: '✦ 마법의 소라고동 — 마무리',
+      body: '마법의 소라고동 봤어 ✦<br><br>큰 결정 (도전 / 사랑 / 진로) 후회 없이 —<br><b>14일 숙성 + 다층 시점</b>.<br>충동 X / 시간 ○ / 과학 ○.<br><br>진짜 결정 와닿을 때 와.',
+      nextLabel: '시작! ✦'
+    }
   }
 };
 
