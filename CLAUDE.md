@@ -2,8 +2,13 @@
 
 ADHD 자기관찰 PWA. 사용자 김나은 (jade6679@naver.com / Supabase auth uid `4ba0a92e-7f79-45ec-8c48-b339d259382e`) 단독 개발 + 본인 사용 + 향후 다른 사용자.
 
-회사명: **Naeun Lab** (사업자등록 진행 중, 간이과세, 업종 722000 응용 소프트웨어 + 525101 전자상거래 소매업).
+회사명: **Naeun Lab** (✅ 사업자등록 완료 2026-04-30, **일반과세**, 업종 722000 응용 소프트웨어 + 525101 전자상거래 소매업).
+사업자등록번호: **261-21-02592**.
+사업용 이메일: **soragodongapp@gmail.com**.
 도메인: **soragodong.com** (Cloudflare Registrar).
+통신판매업 신고: ✅ 완료 (2026-04-30, 네이버 스마트스토어 무료 구매안전서비스 확인증 우회).
+
+> ⚠️ **중요 학습 (2026-04-30)**: 소프트웨어 개발·공급업 (KSIC 722000)은 **부가가치세법 시행령 §109에 따라 간이과세 배제 업종**. 이전 CLAUDE.md에 "간이과세 진행 중"이라 잘못 박힌 거 정정. 일반과세 = 부가세 10% 받지만 매입세액 공제 가능 (Cloudflare/Anthropic/Supabase 세금계산서 발행 시 유리).
 
 ## 기본 원칙
 
@@ -12,6 +17,19 @@ ADHD 자기관찰 PWA. 사용자 김나은 (jade6679@naver.com / Supabase auth u
 - 사용자가 코드 안 읽음(보통). 행동/결과로 검증.
 - 캐주얼 톤이지만 가벼운 농담 X.
 - "박다" = 사용자·개발자 facing OK. user-facing 모달/안내에는 자연 한국어 ("세워볼게", "박혀있어요" 등).
+
+## 신뢰도 정직 패턴 (2026-04-30 학습)
+
+분야별 정확도 다름. 잘못된 안내로 사용자 시간/비용 낭비 가능. 안내 시 ⚠️ 라벨 + 공식 채널 재확인 권장:
+
+| 분야 | 신뢰도 | 처리 |
+|---|---|---|
+| 코드/기술 | 🟢 높음 | 직접 검증 (빌드/typecheck/grep) |
+| Anthropic/Cloudflare/Vercel API | 🟡 중간 | 공식 문서 + 구현 검증 |
+| 한국 법/세무/행정 (사업자/통신판매/PG) | 🔴 **낮음** | ⚠️ 라벨 박고 사용자에게 공식 채널 (1357/1588-9999/구청) 재확인 권장 |
+| 의료/심리/법률 자문 | ⚫ X | 절대 자문 형태 X — 전문가 |
+
+**과거 사례**: 간이과세 권장 (틀림 — SW 개발업 배제), 토스페이먼츠 가입비 무료 (틀림 — 33만원), 카카오페이 단독 무료 (틀림 — 에스크로 발급처 X). 한국 행정 영역 일반화는 위험.
 
 ## 파일 구조
 
@@ -217,6 +235,51 @@ index.html 거대한 단일 파일. Grep 적극 활용:
    - Naeun Lab (간이과세) 사업자등록 진행 중
    - soragodong.com (Cloudflare) 등록 + Pages 연결 완료
 
+---
+
+## 2026-04-30 v2 세션 (defer/UI/audit/사업자)
+
+### 코드 박힘
+- **defer 한 번만 묻기** (`d9f73ac`) — `_findPendingStrategyFollowup`에 `_followupAsked` 체크 복구. 답 안 하면 양생방에서 직접 결과 체크. defer 시점만 reset.
+- **자동초안(user_verified=false) 자연스럽게** (`d9f73ac`) — `_renderConfirmableSection` 단순화. "X개 확인 대기" 강요 흐름 제거 → 일반 confidence 정렬.
+- **마법의 소라고동 magic-mode UI** (`d9f73ac`) — body.magic-mode 토글 + 🧙‍♂️ chip + 보라 그라디언트 (`screen-decisions`/`screen-decision-detail`)
+- **API 키 stale 메시지 4곳 fix** (`5c1a7df`) — Phase C 마이그 후 잔존. 401/auth 에러 시 state.apiKey/session 분기로 정확한 안내.
+- **인터셉터 401 자동 refresh + retry** (`5c1a7df`) — JWT 1h 만료 후 무한 401 fix. `_refreshSessionForApi()` 헬퍼 + inflight guard.
+- **admin 피드백 'table 없음' 친화적 셋업 카드** (`a0f195d`) — `0003_feedback.sql` 미실행 시 raw 500 → 4단계 가이드 + 복사 가능 SQL textarea.
+- **추적 그래프 예쁘게** (`7885180`, glyph stretch fix `fce29c3`) — area gradient + 마지막 점 ring pulsing + 현재값 floating tag + grid 3줄 + 시작/끝 날짜 축 + 목표 도달 success 색조. preserveAspectRatio + aspect-ratio CSS.
+- **state.apiKey 헤더 dead pattern 17곳 cleanup** (`6ee9ca1`) — Phase C 후 interceptor가 swap하니 dead. `_anthropicHeaders()` 헬퍼 통합. -30줄.
+- **Hybrid Opus 토글 + 차감 토스트** (`8a5922d`) — chat input bar에 🐚/🦉 토글. useOpus 시 generateAIResponse가 Opus 4.7 사용. 누를 때 토스트로 "5x 빠르게 차감" 안내.
+
+### audit 발견 (이전 세션 검증)
+- a35d8cd 4건 (renderArchiveReviews / runMonthly / runQuarterly / adminFeedbackLoad) 다 박혀있음 ✓
+
+### Phase C 추가 fix (이전 batch `53f187d`)
+- 토스 충전 직전 환불정책 + 약관 재확인 체크박스 (전상법 §13)
+- 충전 시점 consentLog 박힘
+- verify-toss-receipt + manual-charge: user_memo_code 형식 검증
+- sw.js CACHE_NAME v1 → v2
+- admin endpoints ADMIN_USER_ID env 분리
+- usage.ts KST 월 경계
+- privacy.md Vercel → Cloudflare
+- 첫 진단 quiz AI 비용 안내 toast
+- 첫 진단 step wizard (5문항 분리, emoji + progress dot)
+- 환영 선물 모달 ($1 + 법적 고지)
+- Settings 위기 안내 카드 (1393 / 1577-0199 / 119)
+- 토스 영수증 OCR 추출 정보 명시
+
+### 사업자 / 행정
+- ✅ **사업자등록 완료** (2026-04-30) — Naeun Lab, **일반과세** (간이 X — 소프트웨어 개발업 배제 업종), 사업자번호 **261-21-02592**, 사업용 이메일 **soragodongapp@gmail.com**
+- ✅ **통신판매업 신고 완료** — 네이버 스마트스토어 가입 → 무료 구매안전서비스 확인증 우회 (5분, 무료)
+- 🟡 **토스뱅크 사업자 통장** 진행 중 (KB는 단기 다중 계좌 제한 → 채권양도 전용계좌만 가능 → 토스뱅크 비대면으로 변경)
+- ⏸️ **PG 결정 대기** — 토스페이먼츠 가입비 33만원 (가입 22만 + 연관리 11만) 또는 다른 PG 또는 보류 (현 단계 결제 없음)
+
+### 네이버 우회의 본질 (사용자 알기)
+- 네이버 스마트스토어 확인증 = 행정 절차 통과 OK
+- 진짜 자체 사이트 거래 보호 ≠ 동일 (네이버 채널 외)
+- 베타 단계 (결제 X 또는 토스 수동) = OK
+- 자체 사이트 카드 결제 시작 시 → PG 추가 필요 (전상법 §13 진짜 보호)
+- 적발 risk: 1년차 1인 사업자 = 매우 낮음
+
 8. **데이터 손실 race 전수조사 fix**:
    - 18개 location.reload 호출 audit
    - checkServerVersionAndReload / _chooseUpdateOption / E2EE 복원 race fix
@@ -237,20 +300,26 @@ index.html 거대한 단일 파일. Grep 적극 활용:
 ### 🔴 사용자가 직접 박을 거 (USER_TODO.md 참고)
 
 가장 중요:
-- [ ] Cloudflare env: `ADMIN_USER_ID` / `SUPABASE_*` / `ANTHROPIC_API_KEY` 박기
+- [ ] Cloudflare env: `ADMIN_USER_ID` / `SUPABASE_*` / `ANTHROPIC_API_KEY` 박기 (안 박혀있으면)
 - [ ] Supabase migration 0002, 0003 실행
-- [ ] 사업자등록증 발급 후 → 통신판매업 신고
-- [ ] 포트원 가입 (사업자등록증 + 통신판매업 신고증 받은 후)
-- [ ] 앱 footer / 약관 페이지에 사업자 정보 (사업자등록증 발급 후)
-- [ ] KIPRIS 상표 검색 ("소라고동" / "Soragodong") + 결합 상표 출원
+- [ ] 토스뱅크 사업자 통장 받기 (비대면 1-2일) → 정산 계좌로 사용
+- [ ] PG 결정 (토스페이먼츠 33만원 가입 vs 보류 vs 다른 PG)
+- [ ] **사업장 주소** 알려주기 (footer/legal placeholder 박는 데 필요)
+- [ ] **통신판매업 신고번호** 받았으면 알려주기 (정부24에서 발급된 번호 형식: `제 OOOO-시도-OOOOO호`)
+- [ ] KIPRIS 상표 검색 + 결합 상표 출원
+- [ ] 1357 무료 변호사 자문 (cross-border / 약관 / 정신건강 데이터)
 
-### 다음 세션 박을 만한 거
+### 다음 세션 박을 만한 거 (사용자 정보 받으면)
 
-- [ ] 앱 footer template (사업자등록증 받으면 숫자만 갈아끼우게 placeholder)
-- [ ] 결제 모달 (포트원 SDK 통합 — 가입 완료 후)
-- [ ] 약관 동의 모달 (결제 시점 — cross-border.md v2 활용)
-- [ ] 무료 충전 토큰 첫 진입 안내 toast
-- [ ] 1357 변호사 자문 결과 반영 (사용자 결과 알려준 후)
+- [ ] 사업자 정보 footer + legal placeholder 박기 (값 박힘 후 5분):
+  - 회사명: Naeun Lab
+  - 대표: 김나은
+  - 사업자번호: 261-21-02592
+  - 통신판매신고번호: (대기)
+  - 주소: (대기)
+  - CPO 이메일: soragodongapp@gmail.com
+- [ ] 결제 모달 (PG 결정 후 통합)
+- [ ] 약관 동의 모달 (결제 시점)
 - [ ] Performance audit (1.6MB 단일 HTML — Phase A 진행)
 - [ ] 24시간 갭 자동 마무리 vs ✓ 마무리 일관성 점검
 
@@ -260,3 +329,4 @@ index.html 거대한 단일 파일. Grep 적극 활용:
 - '더 깊은 나' 자동 채움 confirm (이미 동작 — 알림만 필요할 수도)
 - 코어 튜토리얼 첫 모달 설명 변경 (구체 wording 사용자 결정 필요)
 - 풀 튜토리얼 문구 추가 변경 (구체 wording 사용자 결정 필요)
+- **튜토리얼 대화 중 첫 진단 받기 401** (인터셉터 자동 refresh 박혀서 fix 가능성. 재현 시 알려주기)
