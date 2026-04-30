@@ -67,7 +67,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
       const rows: any = await recentResp.json();
       const last1min = rows.filter((r: any) => r.created_at >= min1Ago).length;
       if (last1min >= 5) return jsonResponse({ error: '잠시 후 다시 시도해주세요 (1분당 5회 제한)' }, 429);
-      if (rows.length >= 15) return jsonResponse({ error: '하루 인증 한도 초과 (15회). 카톡 오픈채팅으로 문의해주세요.' }, 429);
+      if (rows.length >= 10) return jsonResponse({ error: '하루 인증 한도 초과 (10회). 카톡 오픈채팅으로 문의해주세요.' }, 429);
     }
   } catch (e) {
     console.warn('[verify-toss-subscribe] rate limit check 실패:', e);
