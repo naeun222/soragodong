@@ -4135,6 +4135,53 @@
   }
   .reflection-resolve-btn:active { background: rgba(98,165,200,0.22); }
   /* V4-fix: 숙고 채팅 AI 메시지 ✦ 깨달음으로 버튼 */
+  /* 사용자 명시 2026-04-30: 숙고 / 마법 임시대화창 메시지 말풍선 디자인 강화 ("지금 너무 못생김"). magic-mode = 보라 / reflection-mode = 청록 차별 */
+  .reflection-msg {
+    font-size: 14px;
+    line-height: 1.7;
+    padding: 12px 16px;
+    border-radius: 16px;
+    max-width: 86%;
+    white-space: pre-wrap;
+    word-break: break-word;
+    letter-spacing: 0.01em;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.20);
+  }
+  .reflection-msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, rgba(98,165,200,0.22), rgba(126,200,227,0.12));
+    border: 1px solid rgba(126,200,227,0.32);
+    color: var(--text);
+    border-bottom-right-radius: 4px;
+  }
+  .reflection-msg.assistant {
+    align-self: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+  /* magic-mode = 마법 보라 톤 */
+  body.magic-mode .reflection-msg.user {
+    background: linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12));
+    border-color: rgba(178,140,212,0.32);
+  }
+  body.magic-mode .reflection-msg.assistant {
+    background: linear-gradient(135deg, rgba(48,40,70,0.65), rgba(48,40,70,0.40));
+    border-color: rgba(178,140,212,0.20);
+    box-shadow: 0 1px 6px rgba(139,126,196,0.10);
+  }
+  /* reflection-mode = 숙고 청록 톤 */
+  body.reflection-mode .reflection-msg.user {
+    background: linear-gradient(135deg, rgba(76,175,180,0.22), rgba(126,200,227,0.12));
+    border-color: rgba(126,200,227,0.32);
+  }
+  body.reflection-mode .reflection-msg.assistant {
+    background: linear-gradient(135deg, rgba(36,52,58,0.65), rgba(36,52,58,0.40));
+    border-color: rgba(126,200,227,0.20);
+    box-shadow: 0 1px 6px rgba(76,175,180,0.10);
+  }
+
   .reflection-msg-insight {
     align-self: flex-start;
     background: transparent;
@@ -7854,7 +7901,7 @@
     </div>
     <div class="reflection-input-bar" id="magicHelpInputBar">
       <div class="reflection-input-wrap">
-        <textarea class="chat-textarea" id="magicHelpInput" placeholder="자유롭게 풀어놔..." rows="1"></textarea>
+        <textarea class="chat-textarea" id="magicHelpInput" placeholder="🧙‍♂️ 마법사한테 풀어놔 — 답 대신 더 깊이 보게 도와줘" rows="1"></textarea>
         <button class="send-btn" onclick="sendMagicHelpMessage()">↑</button>
       </div>
     </div>
@@ -13793,9 +13840,10 @@ function renderDecisionDetail(decision) {
       ? decision.helpChats[step.id].filter(m => !m._starter && !m.error)
       : [];
     const helpCount = helpMsgs.length;
+    // 사용자 명시 2026-04-30: 임시대화창 접근성 높이기 — 보라 톤 + prominent.
     const helpButton = helpCount > 0
-      ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:6px; background:linear-gradient(135deg, rgba(126,200,227,0.15), rgba(143,200,143,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8; font-size:12px;">🐚 도움 받기 이어서 (${helpCount}개 메시지)</button>`
-      : (decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:6px; font-size:12px;">🐚 도움 받기</button>` : '');
+      ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px; box-shadow:0 2px 8px rgba(139,126,196,0.18);">🧙‍♂️ 마법사와 이어서 — ${helpCount}개 메시지</button>`
+      : (decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px;">🧙‍♂️ 마법사한테 도움 받기 ✦</button>` : '');
 
     html += `
       <div class="step-card ${cls}">
@@ -13909,9 +13957,10 @@ function openTextStep(decision, step, meta) {
       // 사용자 요청 2026-04-30: 도움 받기 버튼에 진행 중 대화 카운트 표시.
       const stepHelpMsgs = (decision.helpChats && Array.isArray(decision.helpChats[step.id]))
         ? decision.helpChats[step.id].filter(m => !m._starter && !m.error) : [];
+      // 사용자 명시 2026-04-30: 임시대화창 접근성 높이기 — 보라 톤 + prominent.
       return stepHelpMsgs.length > 0
-        ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(126,200,227,0.15), rgba(143,200,143,0.10)); border-color:rgba(126,200,227,0.40); color:#a8d4e8;">🐚 도움 받기 이어서 (${stepHelpMsgs.length}개 메시지)</button>`
-        : `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')">🐚 소라고동에게 도움 받기</button>`;
+        ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px; box-shadow:0 2px 10px rgba(139,126,196,0.20);">🧙‍♂️ 마법사와 이어서 — ${stepHelpMsgs.length}개 메시지</button>`
+        : `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px;">🧙‍♂️ 마법사한테 도움 받기 ✦</button>`;
     })()}
     <button class="btn-secondary" onclick="openDecision('${decision.id}')">돌아가기</button>
   `;
@@ -35122,27 +35171,7 @@ async function adminRevoke(paymentId) {
   } catch (e) { alert('예외: ' + (e.message || e)); }
 }
 
-async function confirmTossSent(amountKrw, memoCode) {
-  const yes = confirm(`${amountKrw.toLocaleString()}원 보냈어? "${memoCode}" 메모 넣었지?\n\n일단 잔액 미리 채워둘게 ✦ 며칠 안에 내가 확인하고 마무리할게! 🐚`);
-  if (!yes) return;
-  try {
-    const resp = await fetch('/api/billing/manual-charge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
-      body: JSON.stringify({ amount_krw: amountKrw, user_memo_code: memoCode })
-    });
-    const result = await resp.json();
-    if (resp.ok && result.ok) {
-      showToast(`✦ ${amountKrw.toLocaleString()}원 충전 완료 (확인 후 정식 처리됩니다)`);
-      closeTossChargeModal();
-      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
-    } else {
-      alert('충전 실패: ' + (result.error || '알 수 없음'));
-    }
-  } catch (e) {
-    alert('통신 실패: ' + (e.message || e));
-  }
-}
+// 사용자 명시 2026-04-30: confirmTossSent 폐기 — manual-charge endpoint 410 Gone. 영수증 캡처 (verify-toss-receipt) 만 사용.
 
 // 구독 모달
 async function openSubscribeModal() {

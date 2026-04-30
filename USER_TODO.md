@@ -164,12 +164,14 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 
 ## 🔴 P1.5 — agent review 후 사용자 결정 필요 (2026-04-30)
 
-### 14. ✅ manual-charge 5천원 cap 적용 (2026-04-30, 옵션 b)
+### 14. ✅ manual-charge 폐기 + verify-toss-receipt (AI 점검) 일원화 (2026-04-30 정정)
 
-- 5천원 이하: 즉시 잔액 반영 (베타 신뢰).
-- 5천원 초과: pending_admin_confirm 만 박힘 + 메시지 "admin 확인 후 24시간 내 반영". admin 이 토스 송금 확인 후 admin endpoint 로 +잔액 처리.
-- 위조 충전 risk: 최대 5천원 (admin 환수 가능). 큰 금액은 admin 확인 통과 안 하면 +잔액 X.
-- 추후 사용자 100명+ 도달 또는 위조 사례 발생 시 cap 조정.
+사용자 명시: "AI로 점검하고 즉시 반영되게 하면 안 돼?"
+- manual-charge endpoint 410 Gone 응답 (폐기).
+- confirmTossSent 함수 제거 (이미 dead UI 흐름이었음).
+- 모든 충전 = 영수증 캡처 업로드 → verify-toss-receipt → AI vision 점검 → 즉시 잔액 반영.
+- 영수증 없이 충전 불가능 — UI 에 영수증 input 강제. 사용자가 캡처 못 박는 케이스 = 카톡 오픈채팅 문의 fallback.
+- cap 없음 — AI 점검 통과 시 모든 금액 즉시 반영.
 
 ## 🟢 P2 — 베타 시작 후 (선택)
 
