@@ -4,6 +4,7 @@ import type { Env } from './auth';
 
 // 사용자 명시 2026-04-30: 무료 토큰 1,400원 → 4,000원 (4 천원어치). 1USD = 1,400원 환산 → $2.86.
 // pure API cost — 마진 X. 차감은 Anthropic 가격 그대로 (calculateCost in: 3, out: 15 등). 4,000원 = ~$2.86 어치 sonnet/haiku 호출 가능.
+// 사용자 명시 2026-04-30 ultrathink: 자동 부여 X. 환영 모달 '받기' click 시만 (POST /api/billing/welcome-bonus).
 export const FREE_INITIAL_CREDIT_USD = 2.86;
 
 export type UserBilling = {
@@ -62,20 +63,20 @@ export async function ensureBillingRow(env: Env, userId: string): Promise<UserBi
   const existing = await getUserBilling(env, userId);
   if (existing) return existing;
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
-  // 사용자 보고 2026-04-30 ultrathink (CRITICAL): 새로고침 시 잔액 자동 충전되던 버그 fix.
-  // root cause: getUserBilling 가 transient fetch 에러 / 5xx 로 false null 리턴 → 이 함수가 INSERT 시도
-  //            → 일부 Supabase 설정에서 UPSERT 동작 또는 PK 충돌 silent 처리 → balance 가 FREE_INITIAL_CREDIT_USD 로 reset.
-  // fix: Prefer: resolution=ignore-duplicates 명시 + INSERT 후 무조건 fresh fetch.
-  //      충돌 시 silent skip 으로 balance reset X. 결국 existing row 가 그대로 보존됨.
+  // 사용자 명시 2026-04-30 ultrathink (CRITICAL): 자동 free credit 부여 X. 잔액 0 INSERT.
+  // 사용자가 환영 모달 '받기' button click 시만 POST /api/billing/welcome-bonus 로 부여.
+  // root cause (이전 버그): 새로고침 시 getUserBilling transient 에러 → INSERT FREE_INITIAL_CREDIT_USD →
+  //                       supabase 측 INSERT 동작 mismatch 가능성 → 잔액 reset / 누적 risk.
+  // fix: 잔액 0 INSERT + free_credit_granted=false. 받기 click 만 trigger.
   const newRow: Partial<UserBilling> = {
     user_id: userId,
-    credit_balance_usd: FREE_INITIAL_CREDIT_USD,
+    credit_balance_usd: 0,
     subscription_active: false,
     subscription_expires_at: null,
     monthly_token_quota: null,
     monthly_token_used: 0,
     monthly_period_started_at: null,
-    free_credit_granted: true
+    free_credit_granted: false
   };
   try {
     const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing`, {
