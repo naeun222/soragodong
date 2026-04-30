@@ -58,7 +58,9 @@
   /* V3 main 그대로 복원 — 52px top (PWA standalone 상태바 보호 + Safari 브라우저 자연스러운 cushion) */
   .header { flex-shrink: 0; padding: 52px 24px 12px; display: flex; align-items: center; justify-content: space-between; }
   .logo { font-family: 'Gowun Batang', serif; font-size: 20px; color: var(--accent); letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 8px; }
-  .logo-img { width: 26px; height: 26px; object-fit: contain; display: block; }
+  .logo-img { width: 26px; height: 26px; object-fit: contain; display: block; border-radius: 6px; }
+  /* godong.webp 인라인 아이콘 — 마법고동 자리 🧙‍♂️ 대체. em 기준이라 부모 font-size에 자동 비례. */
+  .godong-icon { display: inline-block; width: 1.25em; height: 1.25em; object-fit: contain; vertical-align: -0.22em; }
   .date-pill { font-size: 11px; color: var(--text-dim); background: var(--surface); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-soft); }
   .sync-dot.online { background: var(--success); }
@@ -8502,7 +8504,7 @@
 </div>
 
 <!-- 사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 화면일 때만 표시되는 fixed chip -->
-<div class="magic-mode-chip" id="magicModeChip">🧙‍♂️ 마법의 소라고동</div>
+<div class="magic-mode-chip" id="magicModeChip"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동</div>
 <div class="reflection-mode-chip" id="reflectionModeChip">🌊 숙고의 방</div>
 
 <!-- LOGIN SCREEN -->
@@ -8574,7 +8576,7 @@
 
 <div class="app" style="display:none;">
   <div class="header">
-    <div class="logo"><img src="/godong.webp" alt="" class="logo-img" decoding="async">소라고동</div>
+    <div class="logo"><img src="/icon-1024.png" alt="" class="logo-img" decoding="async">소라고동</div>
     <div style="display:flex; align-items:center; gap:8px;">
       <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환">🐚</button>
       <div class="date-pill">
@@ -8784,7 +8786,7 @@
 
     <!-- DECISIONS LIST -->
     <div class="screen" id="screen-decisions">
-      <div class="screen-title">마법의 소라고동 🧙‍♂️</div>
+      <div class="screen-title">마법의 소라고동 <img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
       <div class="screen-sub">마법고동은 천천히, 차가운 머리로.<br>충동 차단, 14일 숙성, 구조화된 단계.</div>
 
       <button class="btn-primary decision" onclick="startNewDecision()">+ 새로운 결정 시작</button>
@@ -17463,7 +17465,7 @@ function renderDecisionMiniLink() {
 
   container.innerHTML = `
     <div onclick="showScreen('decisions')" class="decision-mini-card">
-      <div class="dm-icon">🧙‍♂️</div>
+      <div class="dm-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
       <div class="dm-text">
         <div class="dm-title">마법고동</div>
         <div class="dm-sub">${subText}</div>
@@ -17533,7 +17535,7 @@ function renderActiveDecisionsHomeV3() {
     const days = Math.floor((Date.now() - new Date(d.startedAt).getTime()) / 86400000);
     return `
       <div class="action-card decision" onclick="openDecision('${d.id}')">
-        <div class="action-icon">🧙‍♂️</div>
+        <div class="action-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
         <div class="action-text">
           <div class="action-title">결정 들여다볼 때야</div>
           <div class="action-sub">"${escapeHtml(d.title?.slice(0, 40) || '')}"</div>
