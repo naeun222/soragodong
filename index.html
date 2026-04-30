@@ -730,6 +730,27 @@
     transition: transform 0.15s, background 0.15s;
   }
   .chat-end-btn:active { transform: scale(0.92); background: rgba(98,165,200,0.22); }
+
+  /* 사용자 요청 2026-04-30 ultrathink Task 7: Hybrid Opus 토글 — chat input bar 옆 작은 버튼 */
+  .chat-mode-btn {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 16px; line-height: 1;
+    cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    user-select: none;
+  }
+  .chat-mode-btn:active { transform: scale(0.92); }
+  .chat-mode-btn.opus {
+    background: linear-gradient(135deg, rgba(178,140,212,0.20), rgba(139,126,196,0.10));
+    border-color: rgba(220,180,255,0.55);
+    color: #d4b8ff;
+    box-shadow: 0 0 12px rgba(178,140,212,0.30), inset 0 0 8px rgba(178,140,212,0.10);
+  }
+  .chat-mode-btn:hover:not(.opus) { background: var(--surface3); border-color: var(--border-strong); }
   /* V3.13.x: + 메뉴 버튼 (일기 템플릿/대화 마무리 통합) */
   .chat-plus-btn {
     width: 32px; height: 32px; border-radius: 50%;
@@ -7283,11 +7304,51 @@
   .pc-action:active { background: var(--surface3); color: var(--text); }
   .pc-action.primary { background: var(--accent-dim); border-color: rgba(201,169,110,0.4); color: var(--accent); }
   .pc-graph-wrap {
-    margin-top: 12px; padding: 10px; background: var(--surface2);
+    margin-top: 12px; padding: 14px 12px 10px; background: var(--surface2);
     border-radius: 10px; display: none;
   }
   .pc-graph-wrap.show { display: block; }
-  .pc-graph-svg { width: 100%; height: 100px; }
+  .pc-graph-svg { width: 100%; height: 150px; display: block; overflow: visible; }
+
+  /* 사용자 보고 2026-04-30 ultrathink Task 1: 추적 그래프 예쁘게 (area gradient + 마지막 점 강조 + 축 라벨 + grid + 현재값 floating) */
+  .pc-graph-grid       { stroke: var(--border); stroke-width: 0.5; stroke-dasharray: 2 3; opacity: 0.45; }
+  .pc-graph-area       { opacity: 0.65; }
+  .pc-graph-line       { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .pc-graph-line.done  { stroke: var(--success); }
+  .pc-graph-dot        { fill: var(--accent); }
+  .pc-graph-dot.done   { fill: var(--success); }
+  .pc-graph-dot-last-ring {
+    fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.6;
+    animation: pcDotPulse 2s ease-in-out infinite;
+    transform-box: fill-box; transform-origin: center;
+  }
+  .pc-graph-dot-last-ring.done { stroke: var(--success); }
+  @keyframes pcDotPulse {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50%      { transform: scale(1.5); opacity: 0.15; }
+  }
+  .pc-graph-dot-last   { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
+  .pc-graph-dot-last.done { fill: var(--success); filter: drop-shadow(0 0 5px var(--success)); }
+  .pc-graph-target-line {
+    stroke: var(--success); stroke-width: 1; stroke-dasharray: 5 4; opacity: 0.55;
+  }
+  .pc-graph-target-tag {
+    font-size: 9px; fill: var(--success); font-weight: 600; letter-spacing: 0.04em;
+  }
+  .pc-graph-axis-tick    { font-size: 9px; fill: var(--text-soft); }
+  .pc-graph-current-tag-bg {
+    fill: var(--accent); rx: 6; ry: 6; opacity: 0.95;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+  }
+  .pc-graph-current-tag-bg.done { fill: var(--success); }
+  .pc-graph-current-tag-text {
+    font-size: 10.5px; font-weight: 700; fill: #1a1a1a; letter-spacing: 0.02em;
+  }
+  .pc-graph-empty {
+    font-size: 11px; color: var(--text-dim); text-align: center; padding: 22px 14px;
+    line-height: 1.7;
+  }
+  .pc-graph-empty .ge-icon { font-size: 22px; margin-bottom: 6px; opacity: 0.5; }
 </style>
 </head>
 <body>
@@ -8105,6 +8166,7 @@
       <button class="chat-end-btn" onclick="endChapter()" aria-label="이 대화 마무리" title="이 대화 마무리">✓</button>
       <button class="chat-plus-btn" id="chatPlusBtn" onclick="toggleChatPlusMenu(event)" aria-label="더보기">+</button>
     </div>
+    <button class="chat-mode-btn" id="chatModeBtn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환">🐚</button>
     <textarea class="chat-textarea" id="chatInput" placeholder="편하게 말해봐..." rows="1"></textarea>
     <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
   </div>
@@ -14951,7 +15013,7 @@ async function addReflectionQuestion(text) {
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        headers: _anthropicHeaders(),
         body: JSON.stringify({
           model: 'claude-haiku-4-5',
           max_tokens: 60,
@@ -16890,7 +16952,7 @@ async function completeMission(missionId) {
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        headers: _anthropicHeaders(),
         body: JSON.stringify({
           model: 'claude-haiku-4-5',
           max_tokens: 150,
@@ -17046,12 +17108,7 @@ async function verifyMissionPhoto(mission, photoBase64) {
   const base64 = photoBase64.split(',')[1];
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': state.apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
+    headers: _anthropicHeaders(),
     body: JSON.stringify({
       // 사용자 요청 2026-04-30: 미션 사진 검증 = 단순 vision 분류 → haiku 4.5 (재시도 옵션 있어 안전).
       model: 'claude-haiku-4-5',
@@ -17973,6 +18030,8 @@ function showScreen(name) {
     setTimeout(() => { const s = document.getElementById('screen-chat'); if (s) s.scrollTop = s.scrollHeight; }, 50);
     // V4-fix v3 (사용자 요청): 대화 진입 시 가닥 미션 팔로업 자동 prompt
     if (typeof offerStrategyFollowup === 'function') { try { offerStrategyFollowup(); } catch (e) {} }
+    // 사용자 요청 2026-04-30 ultrathink Task 7: chat mode 토글 버튼 상태 반영
+    if (typeof updateChatModeBtn === 'function') updateChatModeBtn();
   }
 
   // V3.13.x: 튜토리얼 visit step — 어떤 경로든 화면 도달 시 advance.
@@ -19662,6 +19721,28 @@ async function retryMessage(errorIdx) {
   await generateAIResponse();
 }
 
+// 사용자 요청 2026-04-30 ultrathink Task 7: Hybrid Opus 토글 — chat 모드 전환 + 토스트 차감 안내
+function toggleChatModel() {
+  state.preferences = state.preferences || {};
+  const next = !state.preferences.useOpus;
+  state.preferences.useOpus = next;
+  saveState();
+  updateChatModeBtn();
+  if (next) {
+    showToast('🦉 Opus 모드 — Sonnet 대비 잔액 약 5x 빠르게 차감돼');
+  } else {
+    showToast('🐚 Sonnet 모드 — 기본 (충분히 깊은 대화)');
+  }
+}
+function updateChatModeBtn() {
+  const btn = document.getElementById('chatModeBtn');
+  if (!btn) return;
+  const useOpus = !!(state.preferences && state.preferences.useOpus);
+  btn.classList.toggle('opus', useOpus);
+  btn.textContent = useOpus ? '🦉' : '🐚';
+  btn.setAttribute('title', useOpus ? '🦉 Opus 모드 (잔액 5x 빠르게 차감) — 누르면 Sonnet으로' : '🐚 Sonnet 모드 (기본) — 누르면 Opus로');
+}
+
 async function generateAIResponse(modelOverride) {
   state.chatMessages = state.chatMessages.filter(m => !m.typing);
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
@@ -19715,14 +19796,10 @@ async function generateAIResponse(modelOverride) {
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': state.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
+      headers: _anthropicHeaders(),
       body: JSON.stringify({
-        model: modelOverride || 'claude-sonnet-4-6',
+        // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet
+        model: modelOverride || ((state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6'),
         max_tokens: 2000,
         stream: true,
         system: systemBlocks,
@@ -20667,7 +20744,7 @@ async function saveMsgAsInsight(idx) {
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        headers: _anthropicHeaders(),
         body: JSON.stringify({
           model: 'claude-haiku-4-5',
           max_tokens: 180,
@@ -20844,7 +20921,7 @@ async function addMemoArchive() {
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        headers: _anthropicHeaders(),
         body: JSON.stringify({
           model: 'claude-haiku-4-5',
           max_tokens: 100,
@@ -20919,7 +20996,7 @@ async function saveMsgAsStrategy(idx) {
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        headers: _anthropicHeaders(),
         body: JSON.stringify({
           // 사용자 요청 2026-04-30: 사실상 대화 내용 정리 → sonnet 4.6 적합 (opus 과함).
           model: 'claude-sonnet-4-6',
@@ -21745,7 +21822,7 @@ async function _completeMutationToMission(strategyId, opt, chatHistory) {
         const recentMsgs = (chatHistory || []).slice(-6).map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n');
         const aiResp = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+          headers: _anthropicHeaders(),
           body: JSON.stringify({
             // 사용자 요청 2026-04-30: 4 필드 정리 task → sonnet 4.6 적합.
             model: 'claude-sonnet-4-6', max_tokens: 500,
@@ -22364,7 +22441,7 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
         : `[전략] ${card.title}\n[전략 행동] ${card.actionStrategy || ''}\n[심리학] ${card.psychConcept || ''}\n[사용자 상황] ${situation}`;
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        headers: _anthropicHeaders(),
         body: JSON.stringify({
           model: 'claude-sonnet-4-6', max_tokens: 120,
           messages: [{
@@ -23835,7 +23912,7 @@ JSON 안 박으면 4단 정리 X — 더 묻기. 사용자가 충분히 답한 �
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: _anthropicHeaders(),
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 800,
@@ -24933,7 +25010,7 @@ JSON 출력:
 
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: _anthropicHeaders(),
       // 사용자 요청 2026-04-30: 뇌 풀기 = 분류·정리 task → sonnet 4.6.
       body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
     });
@@ -25474,7 +25551,7 @@ JSON만 출력. 마크다운 X. 다른 설명 X.`;
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: _anthropicHeaders(),
       body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) return;
@@ -25586,7 +25663,7 @@ ${task.description ? `설명: ${task.description}` : ''}
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: _anthropicHeaders(),
       body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 80, messages: [{ role: 'user', content: prompt }] })
     });
     if (!resp.ok) return;
@@ -28447,7 +28524,7 @@ JSON만 출력.`;
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    headers: _anthropicHeaders(),
     body: JSON.stringify({
       // 사용자 요청 2026-04-30: 분기 리뷰 = 데이터 요약 task → sonnet 4.6 적합.
       model: 'claude-sonnet-4-6',
@@ -28667,7 +28744,7 @@ ${chatLog}
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    headers: _anthropicHeaders(),
     body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 300, messages: [{ role: 'user', content: prompt }] })
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
@@ -28780,43 +28857,138 @@ function computeProjectProgress(p) {
 }
 
 function renderProjectGraphSVG(p) {
-  // V3.12.x: baseline 없으면 첫 측정값을 baseline으로 가정
+  // 사용자 보고 2026-04-30 ultrathink Task 1: 그래프 예쁘게
+  // - area gradient (line 아래 fill fade)
+  // - 마지막 점 강조 (drop-shadow + pulsing ring)
+  // - 현재값 floating tag
+  // - 시작/끝 날짜 축 라벨
+  // - target line + tag (라벨 위치 자동 보정)
+  // - 목표 도달 (>=100%) 시 success 색 톤 전환
   const hasBaseline = p.baseline !== null && p.baseline !== undefined;
   const hasTarget = p.target !== null && p.target !== undefined;
   const points = hasBaseline
     ? [{ value: p.baseline, at: p.startDate || p.createdAt }, ...(p.measurements || [])]
     : (p.measurements || []);
   if (points.length < 2) {
-    return '<div style="font-size:11px; color:var(--text-dim); text-align:center; padding:14px;">측정 기록을 더 쌓으면 그래프가 그려져.</div>';
+    return `<div class="pc-graph-empty">
+      <div class="ge-icon">📈</div>
+      측정 기록 쌓이면 곡선 박힘.<br>
+      <span style="color:var(--text-soft);">최소 2개 필요 (지금 ${points.length}개)</span>
+    </div>`;
   }
   const values = points.map(pt => pt.value).concat(hasTarget ? [p.target] : []);
   const minV = Math.min(...values);
   const maxV = Math.max(...values);
   const range = (maxV - minV) || 1;
-  const w = 300, h = 100, padX = 22, padY = 12;
-  const innerW = w - 2 * padX;
-  const innerH = h - 2 * padY;
-  const polyPoints = points.map((pt, i) => {
-    const x = padX + (i / Math.max(points.length - 1, 1)) * innerW;
-    const y = h - padY - ((pt.value - minV) / range) * innerH;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-  const dots = points.map((pt, i) => {
-    const x = padX + (i / Math.max(points.length - 1, 1)) * innerW;
-    const y = h - padY - ((pt.value - minV) / range) * innerH;
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--accent2)"/>`;
-  }).join('');
-  let targetLine = '';
-  if (hasTarget) {
-    const targetY = h - padY - ((p.target - minV) / range) * innerH;
-    targetLine = `
-      <line x1="${padX}" y1="${targetY.toFixed(1)}" x2="${w-padX}" y2="${targetY.toFixed(1)}" stroke="var(--success)" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
-      <text x="${w-padX}" y="${(targetY-3).toFixed(1)}" text-anchor="end" fill="var(--success)" font-size="10">목표 ${p.target}${p.unit || ''}</text>`;
+  // 살짝 padding (위/아래 여유 8%)
+  const minVPad = minV - range * 0.08;
+  const maxVPad = maxV + range * 0.08;
+  const rangePad = (maxVPad - minVPad) || 1;
+
+  const w = 320, h = 150;
+  const padL = 12, padR = 16, padT = 18, padB = 24;
+  const innerW = w - padL - padR;
+  const innerH = h - padT - padB;
+
+  const xy = (i, v) => {
+    const x = padL + (i / Math.max(points.length - 1, 1)) * innerW;
+    const y = padT + innerH - ((v - minVPad) / rangePad) * innerH;
+    return { x, y };
+  };
+
+  // 목표 도달 (마지막 측정 = target 방향 도달율 100%+) 색조
+  const lastVal = points[points.length - 1].value;
+  let isDone = false;
+  if (hasTarget && hasBaseline) {
+    const total = Math.abs(p.target - p.baseline);
+    const moved = Math.abs(lastVal - p.baseline);
+    isDone = total > 0 && moved >= total;
   }
-  return `<svg class="pc-graph-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    ${targetLine}
-    <polyline points="${polyPoints}" fill="none" stroke="var(--accent)" stroke-width="2"/>
-    ${dots}
+  const doneCls = isDone ? ' done' : '';
+
+  // path (line + area)
+  const linePts = points.map((pt, i) => xy(i, pt.value));
+  const linePath = linePts.map((pt, i) => (i === 0 ? `M ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}` : `L ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`)).join(' ');
+  const areaPath = `${linePath} L ${linePts[linePts.length-1].x.toFixed(1)} ${(padT + innerH).toFixed(1)} L ${linePts[0].x.toFixed(1)} ${(padT + innerH).toFixed(1)} Z`;
+
+  // 그라디언트 색
+  const gradColor = isDone ? '#9ed4a0' : 'var(--accent)';
+  const gradId = `pcg-${p.id.slice(-6)}`;
+
+  // 수평 grid 3줄 (top/mid/bottom of inner)
+  const gridLines = [0, 0.5, 1].map(t => {
+    const y = padT + innerH * t;
+    return `<line class="pc-graph-grid" x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}"/>`;
+  }).join('');
+
+  // dots (last 제외 일반)
+  const dotsBefore = linePts.slice(0, -1).map(pt =>
+    `<circle class="pc-graph-dot${doneCls}" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="2.5"/>`
+  ).join('');
+
+  // 마지막 점 — 큰 ring + filled
+  const lastPt = linePts[linePts.length - 1];
+  const lastDotHtml = `
+    <circle class="pc-graph-dot-last-ring${doneCls}" cx="${lastPt.x.toFixed(1)}" cy="${lastPt.y.toFixed(1)}" r="6"/>
+    <circle class="pc-graph-dot-last${doneCls}" cx="${lastPt.x.toFixed(1)}" cy="${lastPt.y.toFixed(1)}" r="4"/>`;
+
+  // 현재값 floating tag (마지막 점 위쪽; padding 충분치 않으면 아래로)
+  const tagText = `${lastVal}${p.unit || ''}`;
+  const tagW = Math.max(34, tagText.length * 6.5 + 12);
+  const tagH = 18;
+  let tagX = lastPt.x - tagW / 2;
+  // 좌우 boundary 보정
+  if (tagX < padL) tagX = padL;
+  if (tagX + tagW > w - padR) tagX = w - padR - tagW;
+  const tagYAbove = lastPt.y - 14;
+  const tagYBelow = lastPt.y + 14;
+  // 위로 너무 가까우면 아래로
+  const tagY = (tagYAbove - tagH < padT + 2) ? tagYBelow : (tagYAbove - tagH);
+  const tagTextY = tagY + 12.5;
+  const currentTag = `
+    <rect class="pc-graph-current-tag-bg${doneCls}" x="${tagX.toFixed(1)}" y="${tagY.toFixed(1)}" width="${tagW}" height="${tagH}" rx="6"/>
+    <text class="pc-graph-current-tag-text" x="${(tagX + tagW/2).toFixed(1)}" y="${tagTextY.toFixed(1)}" text-anchor="middle">${escapeHtml(tagText)}</text>`;
+
+  // target line
+  let targetHtml = '';
+  if (hasTarget) {
+    const targetY = padT + innerH - ((p.target - minVPad) / rangePad) * innerH;
+    if (targetY >= padT - 1 && targetY <= padT + innerH + 1) {
+      // 라벨 위쪽 vs 아래쪽 자동 (target 라인이 너무 위면 아래로)
+      const labelY = targetY < padT + 12 ? targetY + 12 : targetY - 4;
+      targetHtml = `
+        <line class="pc-graph-target-line" x1="${padL}" y1="${targetY.toFixed(1)}" x2="${w-padR}" y2="${targetY.toFixed(1)}"/>
+        <text class="pc-graph-target-tag" x="${w-padR}" y="${labelY.toFixed(1)}" text-anchor="end">목표 ${p.target}${p.unit || ''}</text>`;
+    }
+  }
+
+  // 축 라벨 — 시작/끝 날짜 (M/D)
+  const fmtDate = (iso) => {
+    if (!iso) return '';
+    try { const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()}`; } catch { return ''; }
+  };
+  const startLabel = fmtDate(points[0].at);
+  const endLabel   = fmtDate(points[points.length-1].at);
+  const axisY = h - 6;
+  const axisHtml = `
+    <text class="pc-graph-axis-tick" x="${padL}" y="${axisY}" text-anchor="start">${startLabel}</text>
+    <text class="pc-graph-axis-tick" x="${w-padR}" y="${axisY}" text-anchor="end">${endLabel}</text>`;
+
+  return `<svg class="pc-graph-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-label="${escapeHtml(p.title)} 추적 그래프">
+    <defs>
+      <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"  stop-color="${gradColor}" stop-opacity="0.45"/>
+        <stop offset="100%" stop-color="${gradColor}" stop-opacity="0.02"/>
+      </linearGradient>
+    </defs>
+    ${gridLines}
+    ${targetHtml}
+    <path class="pc-graph-area" d="${areaPath}" fill="url(#${gradId})"/>
+    <path class="pc-graph-line${doneCls}" d="${linePath}"/>
+    ${dotsBefore}
+    ${lastDotHtml}
+    ${currentTag}
+    ${axisHtml}
   </svg>`;
 }
 
@@ -32463,7 +32635,7 @@ async function generateReviewArchiveMetaSummary(reviewId) {
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: _anthropicHeaders(),
       body: JSON.stringify({
         model: 'claude-haiku-4-5', max_tokens: 250,
         messages: [{ role: 'user', content: `이 기간 사용자 깨달음 ${arrs.length}개. 핵심 통찰 한 단락 (3-4문장)으로 요약. 친구 톤, 외재화 ("X 패턴이 작동" / "너 X적이야" X), 따뜻하게.\n\n${archiveText.slice(0, 3500)}\n\n[출력 — 한 단락만, 마크다운/인용부호 X]` }]
@@ -33311,7 +33483,7 @@ JSON으로 출력:
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': state.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: _anthropicHeaders(),
       body: JSON.stringify({ model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] })
     });
     if (!response.ok) {
