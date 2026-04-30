@@ -11706,28 +11706,28 @@ function devPreviewWeeklyReview() {
   }
   const reviewData = {
     one_word_weekly: '회복중',
-    summary: '잠을 챙긴 주, 마음이 한결 가벼워짐. 마감 후에도 무너지지 않음.',
+    summary: '잠을 챙긴 주, 마음이 한결 가벼웠어.',
     pattern: {
-      headline: '수면 7h+ 인 날, 다음날 mood +1.5',
-      evidence: '"오늘 7시간 잤더니 머리가 맑아." (화) + "잠 짧은 다음날 항상 한 박자 늦어." (목)',
-      condition: '평일 11시 전 취침 시 — 4/5 일 일관'
+      headline: '잘 잔 다음날, 기분이 한 단계 가벼워',
+      evidence: '"오늘 일찍 잤더니 머리 맑아." (화) / "잠 짧으면 한 박자 늦더라." (목)',
+      condition: '평일 11시 전에 잤을 때 — 5일 중 4일'
     },
     quotes: [
-      '"오늘 7시간 잤더니 머리가 맑아."',
-      '"엄마 통화 후 5분 산책 = 회복."',
+      '"오늘 일찍 잤더니 머리 맑아."',
+      '"엄마 통화하고 5분 걸으니까 풀려."',
       '"마감 임박 = 자연 진입, 미루기 X."',
-      '"카페에서 글이 술술 써져."',
+      '"카페에서 글이 술술 써졌어."',
       '"운동 한 날 일기가 길어."'
     ],
     strengths: [
-      '월요일 마감 임박에도 잠 7시간 챙김 — 평소 패턴 깸',
-      '엄마 통화 후 5분 산책으로 즉시 회복',
-      '카페 환경 setup 적극 활용 — 3회'
+      '월요일 마감 임박에도 일찍 자고 잠 챙김 — 평소 패턴 깸',
+      '엄마 통화 끝나고 5분 산책으로 바로 회복',
+      '카페에서 글 쓴 날 3번 — 환경 잘 골랐어'
     ],
     cycles: {
-      sleep: '평일 7h+ 4일 → 다음날 mood 평균 +1.5. 토요일 5h → 일요일 처짐.',
-      mode: '시험 모드 활성 4일 → 카페인 ↑ but 회복 (산책/일찍 자기) 동시 챙김',
-      other: '비 오는 날 2일 — 무기력 살짝 ↑ 인지'
+      sleep: '평일에 일찍 잔 4번, 다음날마다 한결 가벼웠어. 토요일 늦게 잤더니 일요일 처짐.',
+      mode: '시험기인데도 카페 가서 글이 술술 — 카페인 늘되 산책·일찍 자기로 회복 챙김',
+      other: '비 오는 날 2일 살짝 무거웠어'
     },
     emotions: [
       { word: '안심', count: 5 },
@@ -11737,20 +11737,29 @@ function devPreviewWeeklyReview() {
     ],
     value_align: {
       score: 8,
-      aligned: '회복 + 자기 친밀 가치 align — 잠 챙김 + 5분 산책',
-      gap: '연결 가치는 살짝 약함 — 친구 만남 0회'
+      aligned: '"회복" — 잠 일찍 잔 날 4번, 산책 3번 / "자율" — 카페 가는 거 스스로 정함',
+      gap: '"연결"은 살짝 약했어 — 이번 주는 회복기였으니 OK'
     },
     risk_signals: {
       level: 'watch',
-      signals: ['주말 수면 5h 1회 — 평일 패턴 무너지지 않게 주의'],
-      suggestion: '주말도 평일 패턴 ±1h 안에서 유지하면 mood 안정. 무리 X — 의식적으로만.'
+      signals: ['주말에 한 번 늦잠 — 평일 리듬 안 무너지게만 챙기자'],
+      suggestion: '주말도 평일이랑 한 시간 차이 안에서 자면 마음 안정. 무리 X — 의식만 살짝.'
     },
     seeds: [
-      '평일 11시 알람 지킨 날 수 (목표: 5/5)',
-      '카페 setup 한 날 작업 시간 vs 집 작업 시간'
+      '평일 11시 알람 지킨 날 (목표: 5/5)',
+      '카페에서 작업한 날 vs 집에서 작업한 날'
     ],
-    seed_callbacks: '지난 주 씨앗 "수면 7h+ 다음날 mood 변화" → 4/5 일 +1.5 일관 검증됨. 패턴 확정.'
+    seed_callbacks: '지난 주 씨앗 "잘 잔 다음날 어떤지" → 4번 중 4번 가벼웠어. 패턴 확정.'
   };
+
+  // 사용자 피드백 2026-04-30: 깨달음 N개 카드 위해 시드 archive 임시 inject (state 안 박음 — review 화면만)
+  // (실제 generateReview 는 state.archive 에서 cutoff 안 추출 — preview 시 시드 카드 표시용)
+  reviewData._seed_archive_for_preview = [
+    { headline: '아침 산책 한 날 = 그날 일기 길어' },
+    { headline: '카페 한 곳 정착 — 환경 안정' },
+    { headline: '잠 일찍 자는 게 가장 큰 효과' },
+    { headline: '엄마 통화는 반드시 산책 + 짝지어야 회복' }
+  ];
   // chart 표시 위해 임시 entries 7일 inject (state 박지 X — review screen 에서만 cutoff/cutoffEnd 안에서 entries 필터)
   // renderReviewScreen 가 state.entries 를 cutoff 으로 필터하므로, 시드 entries 있으면 chart 자동 표시
   // 7일 차트 — 마지막 7일에 mood/energy 변동 있는 시드 entry 가 state.entries 에 있으면 자동 그려짐 (testSeedV4Data 가 entries 채워둠)
@@ -17774,10 +17783,17 @@ ${type === 'monthly' ? '이번 달의 너를 한 단어로 명명 (정체성 hoo
 
 [패턴 발견 — Detective 가이드]
 - mode + entries + missions + outcomes 교차 봐.
-- 예: "휴식 모드 + 일요일 → 다음주 mood +1.5"
-- 예: "X 가닥 = 4/5 성공 (시험 모드 시기에만)"
-- 예: "관계 entries → 다 시험 모드 시기에 박힘. 시험 = 관계 챙기는 시기?"
-- generic 패턴 X. 구체적 숫자 / 인용으로 입증.
+- 예: "쉰 일요일 다음주, 한결 가벼워" / "X 가닥은 시험기에만 잘 됐어, 4번 중 4번"
+- 예: "관계 entry 들 다 시험 모드 시기에 적혔네 — 시험기가 오히려 관계 챙기는 시기인가?"
+- generic 패턴 X. 구체 (요일 / 인용 / 횟수) 로 입증.
+
+[일상어 강제 — 사용자 명시 2026-04-30 ultrathink]
+- 수치 약어 / 분석가 어휘 절대 X. 일상 한국어 그대로.
+- BAD: "7h+ → mood +1.5", "수면 평균 7시간", "4/5 일관성", "+1.5점"
+- GOOD: "잘 잔 다음날, 한결 가벼웠어 (4번 중 4번)", "평일에 7시간 넘게 잔 날들이 좋았어"
+- 숫자 표시할 때도 단위 풀어 써: "7시간", "4번 중 4번", "30분", "10시 즘"
+- 통계 어휘 (correlation / 평균 / +N% / std dev / 분포) 전면 X.
+- 친구한테 카톡 쓰듯이.
 
 [지난 리뷰 씨앗] ${prevSeeds.length > 0 ? '(callback 추천 — 씨앗이 어떻게 됐는지 짚어주면 사용자 신뢰↑)' : '(없음)'}
 ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 첫 리뷰 또는 이전 씨앗 X)'}
@@ -17794,21 +17810,21 @@ ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 
   ${type === 'monthly' ? '"one_word": "이번 달의 너 = 정체성 한 단어 (예: \\"관찰자\\", \\"협상자\\", \\"탐험가\\", \\"잠수부\\"). 한 단어만.",' : '"one_word_weekly": "이번 주 momentum 한 단어 — 운동·진행 어휘 (예: \\"정착중\\", \\"가속중\\", \\"회복중\\", \\"휘청중\\", \\"재정비\\", \\"몰입\\", \\"숨고르기\\"). monthly 와 다른 dimension (정체성 X 운동성 ○).",'}
   "summary": "이번 ${periodLabel} 한 줄 요약 (15-30자)",
   "pattern": {
-    "headline": "발견한 패턴 한 문장 — 친구 톤 / 일상 어휘. 분석가·연구원 어휘 X. specific + surprising. 예: '잠 7시간 잔 다음날 웃음 많이 나오더라', '마감 임박이면 진짜 진입 빠르네' (X 'sleep duration correlates with elevated affect')",
-    "evidence": "구체적 근거 — entry 인용 1-2개 또는 구체 숫자. 사용자 본인 어휘로.",
-    "condition": "어떤 조건 / 모드 / 시간에 일어나는지 (1줄, 일상 톤)"
+    "headline": "발견한 패턴 한 문장 — 친구 톤 / 일상 어휘. 짧고 surprising. 수치 약어 절대 X. 예: '아침 산책 한 날 = 그날 일기 길어', '잠 잘 잔 다음날, 기분이 한 단계 가벼워', '마감 임박이면 진짜 빨리 진입하네'. (X 'sleep 7h+ → mood +1.5')",
+    "evidence": "구체 근거 — entry 인용 1-2개 + 요일/횟수. 일상 어휘로 풀어 써. 예: '"오늘 일찍 잤더니 머리 맑아." (화/목)'. (X '7h+ 4 days, mood avg 4.2')",
+    "condition": "어떤 조건일 때인지 (1줄, 일상 톤). 예: '11시 전에 자고 30분 산책할 때'. (X 'sleep<23:00 + exercise≥30min')"
   },
   "quotes": ["사용자 entries / 대화에서 추출한 짧은 인용 5개 (각 30자 이내, 5개)", "...", "...", "...", "..."],
   "strengths": ["이번 ${periodLabel} 사용자가 잘한 작은 win 3-5개 (구체, 자기 친밀 톤, 자존감 boost). 결과 X 시도·태도·관찰 ○. 예: '월요일 마감 임박에도 잠 7시간 챙김', '엄마 통화 후 5분 산책으로 회복'", "...", "..."],
   "cycles": {
-    "sleep": "수면 패턴 → 이번 ${periodLabel} 행동·기분 영향 (1줄, 구체 숫자 / 인용). 무관하면 빈 문자열.",
-    "mode": "활성 모드 / 시간대 → 영향 (1줄, 구체)",
-    "other": "황체기·날씨·계절·외부 환경 (확인 가능할 때만 1줄). 없으면 빈 문자열."
+    "sleep": "수면 → 이번 ${periodLabel} 영향 (1줄, 일상어). 예: '잘 잔 날 4번, 다음날마다 한결 가벼웠어'. (X '7h+ avg → +1.5'). 무관하면 빈 문자열.",
+    "mode": "어떤 모드·시간대에서 어땠는지 (1줄, 일상어). 예: '시험기인데도 카페 가서 글이 술술 써졌어'.",
+    "other": "황체기·날씨·계절·외부 (1줄, 일상어). 예: '비 오는 날 살짝 무거웠어'. 모르면 빈 문자열."
   },
   "value_align": {
-    "score": "0-10 정수 — 이번 ${periodLabel} 사용자 행동이 본인 values 와 얼마나 align. 위 [values] 명단 X 면 score=null.",
-    "aligned": "어떤 values 와 맞았는지 — 위 [values] 명단 의 단어 그대로 인용 + 그 가치를 보여준 구체 행동 (1줄). 예: '회복: 잠 챙김 · 5분 산책 3회', '자율: 카페 환경 setup 직접 선택'",
-    "gap": "어떤 values 에서 멀어졌는지 — values 명단 단어 그대로 + 부드럽게 (1줄, 판단 X). 없으면 빈 문자열. 예: '연결: 친구 만남 0회 — 이번 주 회복 mode 라 OK'"
+    "score": "0-10 정수 — 사용자 본인 values 명단 ([values] 위 참고) 와 이번 ${periodLabel} 행동이 얼마나 맞았나. values 명단 X 면 score=null.",
+    "aligned": "values 명단 단어 그대로 + 그 가치 보여준 구체 행동 (1줄, 일상어). 예: '"회복" — 잠 일찍 잔 날 4번, 산책 3번', '"자율" — 카페 가는 거 스스로 정함'.",
+    "gap": "values 명단 중 살짝 멀어진 거 + 부드럽게 (1줄, 판단 X). 빈 문자열 OK. 예: '"연결"은 살짝 약했어 — 이번 주는 회복기였으니 OK'."
   },
   "emotions": [{"word": "사용자가 자주 쓴 감정 단어 (entries/chat 에서)", "count": "사용 빈도 (정수)"}],
   "risk_signals": {
@@ -17896,6 +17912,27 @@ function renderReviewScreen(type, reviewData) {
       ${pat.condition ? `<div style="font-size:11px; color:var(--text-soft); line-height:1.6;">↳ ${escapeHtml(pat.condition)}</div>` : ''}
     </div>` : '';
 
+    // 깨달음 N개 — 사용자 명시 2026-04-30: state.archive 중 이 기간 (cutoff) 안 + preview seed fallback
+    const _archiveItems = (function() {
+      // preview seed (devPreview 에서 inject) 우선
+      if (Array.isArray(reviewData._seed_archive_for_preview) && reviewData._seed_archive_for_preview.length > 0) {
+        return reviewData._seed_archive_for_preview;
+      }
+      // 실제 cutoff (chart cutoff 동일)
+      const arr = (state.archive || []).filter(a => {
+        if (!a.savedAt && !a.discoveredAt) return false;
+        const ts = new Date(a.savedAt || a.discoveredAt).getTime();
+        return ts >= _cutoffChart.getTime() && ts < _cutoffEndChart.getTime();
+      });
+      return arr;
+    })();
+    const insightsBlock = _archiveItems.length > 0 ? `
+    <div style="background:var(--surface); border:1px solid rgba(232,200,144,0.20); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
+      <div style="font-size:11px; color:#e8c890; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">✨ 이 ${type === 'weekly' ? '주' : '달'} 깨달음 ${_archiveItems.length}개</div>
+      ${_archiveItems.slice(0, 6).map(a => `<div style="font-family:'Gowun Batang',serif; font-size:13.5px; color:var(--text); line-height:1.7; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04);">"${escapeHtml(a.headline || '')}"</div>`).join('')}
+      ${_archiveItems.length > 6 ? `<div style="font-size:10.5px; color:var(--text-soft); line-height:1.6; margin-top:8px; text-align:right;">+${_archiveItems.length - 6}개 더</div>` : ''}
+    </div>` : '';
+
     // Quotes — horizontal scroll
     const quotesArr = Array.isArray(reviewData.quotes) ? reviewData.quotes.filter(q => q && q.trim()) : [];
     const quotesBlock = quotesArr.length > 0 ? `
@@ -17915,24 +17952,24 @@ function renderReviewScreen(type, reviewData) {
     ].filter(Boolean);
     const hasCycles = cyclesItems.length > 0;
     const cyclesCard = hasCycles ? `
-    <div style="background:var(--surface); border:1px solid rgba(126,200,227,0.18); border-radius:12px; padding:14px;">
+    <div style="background:var(--surface); border:1px solid rgba(126,200,227,0.18); border-radius:12px; padding:14px 16px;">
       <div style="font-size:10.5px; color:#7ec8e3; letter-spacing:0.13em; text-transform:uppercase; margin-bottom:10px;">🌊 사이클</div>
-      ${cyclesItems.map(c => `<div style="font-size:12px; color:var(--text); line-height:1.6; margin-bottom:6px;"><span style="color:var(--text-soft); font-size:10.5px;">${c.icon} ${c.label}</span><br>${escapeHtml(c.text)}</div>`).join('')}
+      ${cyclesItems.map(c => `<div style="font-size:13px; color:var(--text); line-height:1.7; margin-bottom:9px;"><span style="color:var(--text-soft); font-size:10.5px;">${c.icon} ${c.label}</span><br>${escapeHtml(c.text)}</div>`).join('')}
     </div>` : '';
 
     const emotions = Array.isArray(reviewData.emotions) ? reviewData.emotions.filter(e => e && e.word) : [];
     const hasEmotions = emotions.length > 0;
     const _emoMax = hasEmotions ? Math.max(...emotions.map(e => Number(e.count) || 1)) : 1;
     const emotionsCard = hasEmotions ? `
-    <div style="background:var(--surface); border:1px solid rgba(139,126,196,0.18); border-radius:12px; padding:14px;">
+    <div style="background:var(--surface); border:1px solid rgba(139,126,196,0.18); border-radius:12px; padding:14px 16px;">
       <div style="font-size:10.5px; color:#a89cd6; letter-spacing:0.13em; text-transform:uppercase; margin-bottom:10px;">💬 감정</div>
       ${emotions.slice(0, 5).map(e => {
         const cnt = Number(e.count) || 1;
         const pct = (cnt / _emoMax) * 100;
-        return `<div style="display:flex; align-items:center; gap:7px; margin-bottom:5px;">
-          <div style="font-size:11px; color:var(--text); min-width:42px; max-width:60px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(e.word)}</div>
-          <div style="flex:1; height:7px; background:rgba(139,126,196,0.10); border-radius:4px; overflow:hidden;"><div style="height:100%; width:${pct}%; background:linear-gradient(90deg, #a89cd6, #c9a96e); border-radius:4px;"></div></div>
-          <div style="font-size:10px; color:var(--text-soft); min-width:14px; text-align:right;">${cnt}</div>
+        return `<div style="display:flex; align-items:center; gap:10px; margin-bottom:7px;">
+          <div style="font-size:12px; color:var(--text); min-width:54px; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(e.word)}</div>
+          <div style="flex:1; height:8px; background:rgba(139,126,196,0.10); border-radius:4px; overflow:hidden;"><div style="height:100%; width:${pct}%; background:linear-gradient(90deg, #a89cd6, #c9a96e); border-radius:4px;"></div></div>
+          <div style="font-size:11px; color:var(--text-soft); min-width:16px; text-align:right;">${cnt}</div>
         </div>`;
       }).join('')}
     </div>` : '';
@@ -17941,16 +17978,18 @@ function renderReviewScreen(type, reviewData) {
     const vaScore = Number(va.score);
     const vaShow = !isNaN(vaScore) && vaScore >= 0 && vaScore <= 10 && (va.aligned || va.gap);
     // 가치 align 재설계: score 추상 X / aligned · gap narrative + 사용자 values 직접 (prompt 단에서 values 단어 그대로 인용 강제)
+    // 사용자 명시 2026-04-30: '가치 align' → '나답게' (영어/추상 X 한국어). MATCH/GAP → 부드럽게.
     const valueCard = vaShow ? `
-    <div style="background:var(--surface); border:1px solid rgba(201,169,110,0.18); border-radius:12px; padding:14px;">
-      <div style="font-size:10.5px; color:var(--accent); letter-spacing:0.13em; text-transform:uppercase; margin-bottom:10px;">🎯 가치 align</div>
-      ${va.aligned ? `<div style="font-size:12px; color:var(--text); line-height:1.65; margin-bottom:6px; padding:6px 10px; background:rgba(201,169,110,0.06); border-left:2px solid rgba(201,169,110,0.40); border-radius:0 6px 6px 0;"><b style="color:#9ed4a0; font-size:10.5px;">✓ MATCH</b><br>${escapeHtml(va.aligned)}</div>` : ''}
-      ${va.gap ? `<div style="font-size:12px; color:var(--text-soft); line-height:1.65; padding:6px 10px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(232,200,144,0.30); border-radius:0 6px 6px 0;"><b style="color:#e8c890; font-size:10.5px;">⌃ GAP</b><br>${escapeHtml(va.gap)}</div>` : ''}
+    <div style="background:var(--surface); border:1px solid rgba(201,169,110,0.18); border-radius:12px; padding:14px 16px;">
+      <div style="font-size:10.5px; color:var(--accent); letter-spacing:0.13em; text-transform:uppercase; margin-bottom:10px;">🌿 나답게 산 한 주</div>
+      ${va.aligned ? `<div style="font-size:13px; color:var(--text); line-height:1.7; margin-bottom:6px; padding:8px 12px; background:rgba(158,212,160,0.06); border-left:2px solid rgba(158,212,160,0.40); border-radius:0 6px 6px 0;"><span style="color:#9ed4a0; font-size:10.5px; font-weight:600; letter-spacing:0.1em;">✓ 나다움</span><br>${escapeHtml(va.aligned)}</div>` : ''}
+      ${va.gap ? `<div style="font-size:13px; color:var(--text-soft); line-height:1.7; padding:8px 12px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(232,200,144,0.30); border-radius:0 6px 6px 0;"><span style="color:#e8c890; font-size:10.5px; font-weight:600; letter-spacing:0.1em;">⌃ 살짝 멀어진</span><br>${escapeHtml(va.gap)}</div>` : ''}
     </div>` : '';
 
+    // 사용자 명시 2026-04-30: 사이클/감정/나답게 세로 stack (grid X — 번잡 → 위계 정리)
     const statsCells = [cyclesCard, emotionsCard, valueCard].filter(Boolean);
     const statsGrid = statsCells.length > 0 ? `
-    <div style="display:grid; grid-template-columns:${statsCells.length === 1 ? '1fr' : (statsCells.length === 2 ? '1fr 1fr' : '1fr 1fr')}; gap:10px; margin-bottom:14px;">
+    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:14px;">
       ${statsCells.join('')}
     </div>` : '';
 
@@ -17977,6 +18016,7 @@ function renderReviewScreen(type, reviewData) {
       ${heroBlock}
       ${strengthsBlock}
       ${patternBlock}
+      ${insightsBlock}
       ${quotesBlock}
       ${statsGrid}
       ${riskBlock}
