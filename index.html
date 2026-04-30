@@ -36203,10 +36203,36 @@ function renderArchiveReviews() {
         <div id="reviewDetail-${idx}" style="display:none; margin-top:14px;">
           ${detailHtml}
           ${r.userNote ? `<div style="margin-top:10px; padding:10px; background:var(--surface2); border-radius:8px; font-size:12px; color:var(--accent2);">📝 ${escapeHtml(r.userNote)}</div>` : ''}
+          <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--border); text-align:right;">
+            <button class="btn-secondary" onclick="event.stopPropagation(); deleteReview('${r.type}', '${escapeHtml(r.weekKey || r.monthKey || r.quarterKey || '')}', ${r.completedAt ? `'${r.completedAt}'` : 'null'})" style="font-size:10.5px; padding:5px 12px; opacity:0.6;">🗑 삭제</button>
+          </div>
         </div>
       </div>
     `;
   }).join('');
+}
+
+// 사용자 요청 2026-05-01: 리뷰 모음에서 카드 삭제. type + key 매칭. completedAt 도 같이 받아 동일 key 여러 개 있을 시 정확히 그 instance 만 제거 (방어).
+function deleteReview(type, key, completedAt) {
+  if (!confirm('이 리뷰 삭제할까? 되돌릴 수 X.')) return;
+  const matchInstance = (r) => {
+    if (completedAt && r.completedAt) return r.completedAt === completedAt;
+    return true;  // completedAt 없으면 key 매칭만
+  };
+  if (type === 'weekly') {
+    state.weeklyReviews = (state.weeklyReviews || []).filter(r => !(r.weekKey === key && matchInstance(r)));
+  } else if (type === 'monthly') {
+    state.monthlyReviews = (state.monthlyReviews || []).filter(r => !(r.monthKey === key && matchInstance(r)));
+  } else if (type === 'quarterly') {
+    state.quarterlyReviews = (state.quarterlyReviews || []).filter(r => !(r.quarterKey === key && matchInstance(r)));
+  } else {
+    showToast('알 수 없는 리뷰 타입: ' + type);
+    return;
+  }
+  saveState();
+  if (typeof saveToCloudNow === 'function') saveToCloudNow().catch(() => {});
+  if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
+  showToast('🗑 리뷰 삭제됨');
 }
 
 // V4-fix v3 (사용자 요청 — 1~6 통합): 리뷰별 깨달음 깊은 가공
