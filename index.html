@@ -9271,6 +9271,7 @@
           <button class="btn-secondary" onclick="devResetWelcomeBonus()" title="admin 측 본인 free_credit_granted=false + balance=0 → 재테스트 가능">🔄 환영 선물 reset (admin)</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>
+          <button class="btn-secondary" onclick="devForceYesterdayCard()" title="홈 화면의 '어제의 기록 볼래?' 카드 강제 표시 (seen flag reset). 어제 entry 없어도 표시).">🌙 어제 카드 표시</button>
           <button class="btn-secondary" onclick="adminResetBalance()" title="이전 누적 잔액 정정 (admin only). 0~$100 범위.">💰 잔액 정정 (admin)</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">관리자 — 토스 송금</div>
@@ -19911,7 +19912,7 @@ function renderYesterdayCard() {
     <div class="yesterday-card" onclick="openYesterdayPage('${yesterdayK}')">
       <div class="yc-icon">🌙</div>
       <div class="yc-content">
-        <div class="yc-title">어제 한 페이지</div>
+        <div class="yc-title">어제의 기록 볼래?</div>
         <div class="yc-sub">어제 적어둔 거 다시 보기 →</div>
       </div>
     </div>
@@ -19928,6 +19929,35 @@ function openYesterdayPage(dateKey) {
   setTimeout(() => {
     if (typeof openDayModal === 'function') openDayModal(dateKey);
   }, 350);
+}
+
+// 사용자 명시 2026-04-30 ultrathink: 개발자 도구 — 어제 카드 강제 표시 (어제 entry 없어도 표시).
+function devForceYesterdayCard() {
+  // seen flag reset
+  if (state.preferences) delete state.preferences._yesterdayCardSeen;
+  if (typeof saveState === 'function') saveState();
+  // 홈으로 이동
+  if (typeof showScreen === 'function') showScreen('home');
+  setTimeout(() => {
+    const container = document.getElementById('yesterdayCardContainer');
+    if (!container) { showToast('홈 컨테이너 X'); return; }
+    const nowMs = (typeof getServerNowMs === 'function' ? getServerNowMs() : Date.now());
+    const yesterdayK = getDayKey(nowMs - 86400000);
+    const realEntry = (state.entries || []).find(e => e.date === yesterdayK);
+    // 어제 entry 있으면 정상 카드 / 없어도 강제 표시 (개발 테스트용 mock)
+    const dateForClick = realEntry ? yesterdayK : yesterdayK;  // 어제 날짜 그대로 사용 — modal 자체는 entry 없으면 토스트
+    const noteSuffix = realEntry ? '' : ' (개발: 어제 entry X — 클릭 시 토스트만)';
+    container.innerHTML = `
+      <div class="yesterday-card" onclick="openYesterdayPage('${dateForClick}')">
+        <div class="yc-icon">🌙</div>
+        <div class="yc-content">
+          <div class="yc-title">어제의 기록 볼래?</div>
+          <div class="yc-sub">어제 적어둔 거 다시 보기 →${noteSuffix}</div>
+        </div>
+      </div>
+    `;
+    showToast('🌙 어제 카드 강제 표시 — 홈에서 확인');
+  }, 200);
 }
 
 function renderTodayMission() {
