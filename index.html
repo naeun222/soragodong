@@ -10282,7 +10282,7 @@ async function _e2eeImportKey(b64) {
 }
 
 // 사용자 지정 password → 256-bit key (PBKDF2 1M iterations — brute-force 매우 어려움)
-// 12자 이상 password + PBKDF2 1M = 보안 강도 충분 (1Password / Bitwarden 표준).
+// 12자 이상 password + PBKDF2 1M = 보안 강도 충분 (업계 password manager 표준).
 async function _e2eePassphraseToKey(passphrase, saltB64) {
   const enc = new TextEncoder();
   const baseKey = await crypto.subtle.importKey(
@@ -10571,7 +10571,7 @@ async function e2eeForgotPasswordReset() {
       '자동/수동 백업이 모두 E2EE 활성 후에 박힌 거라 같은 비밀번호로만 복호화돼요.\n\n' +
       '해결책 (위에서 시도):\n' +
       '· 비밀번호 다시 떠올려보기 (Caps Lock / 자판 / 자주 쓰는 변형)\n' +
-      '· 1Password / Bitwarden / 메모 앱 검색\n\n' +
+      '· 카톡 나에게 보내기 / 폰 메모 앱 / 손글씨 메모 검색\n\n' +
       '정말 비밀번호를 모르신다면 [회원 탈퇴 → 재가입] 으로 빈 상태 시작이 마지막 옵션이에요.'
     );
     return;
@@ -12765,7 +12765,7 @@ function showE2EEPasswordSetupModal() {
       </div>
       <div id="e2eePasswordStatus" style="font-size:11px; color:var(--text-soft); margin-bottom:14px; min-height:14px;"></div>
       <div style="font-size:10px; color:var(--text-soft); line-height:1.6; margin-bottom:14px; padding:8px; background:rgba(220,80,80,0.05); border-left:3px solid rgba(220,80,80,0.40); border-radius:4px;">
-        ⚠️ 비밀번호 분실 시 데이터를 복구할 수 없습니다. 회사도 복원해드릴 수 없습니다. 안전한 곳에 보관해주세요 (예: 1Password, Bitwarden, 손글씨 메모).
+        ⚠️ 비밀번호 분실 시 데이터를 복구할 수 없습니다. 회사도 복원해드릴 수 없습니다. 안전한 곳에 보관해주세요 (예: 카톡 나에게 보내기, 폰 메모 앱, 손글씨 메모).
       </div>
       <div style="display:flex; gap:8px;">
         <button class="btn-primary" onclick="submitE2EESetup()" style="flex:1;">활성화</button>
@@ -12827,7 +12827,7 @@ async function showE2EERecoveryInfo() {
     alert(
       '비밀번호는 보안상 이 기기에 그대로 저장되어 있지 않습니다.\n\n' +
       '활성화하실 때 본인이 직접 입력하신 비밀번호를 기억해두셔야 합니다.\n' +
-      '추천: 1Password / Bitwarden / 손글씨 메모.\n\n' +
+      '추천: 카톡 나에게 보내기 / 폰 메모 앱 / 손글씨 메모.\n\n' +
       '✓ 비밀번호 기억하시면:\n' +
       '   다른 기기에서 같은 이메일로 로그인 후 비밀번호 입력 → 데이터 복원.\n\n' +
       '⚠️ 비밀번호 분실 시:\n' +
