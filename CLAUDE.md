@@ -1,100 +1,97 @@
 # 소라고동 (Soragodong) — V4
 
-ADHD 자기관찰 PWA. 사용자 김나은 (jade6679@naver.com / Supabase auth uid `4ba0a92e-7f79-45ec-8c48-b339d259382e`) 단독 개발 + 본인 사용 + 향후 다른 사용자.
+ADHD 자기관찰 PWA. 사용자 김나은 단독 개발 + 본인 사용 + 향후 다른 사용자.
 
-회사명: **Naeun Lab** (✅ 사업자등록 완료 2026-04-30, **일반과세**, 업종 722000 응용 소프트웨어 + 525101 전자상거래 소매업).
-사업자등록번호: **261-21-02592**.
-사업용 이메일: **soragodongapp@gmail.com**.
-도메인: **soragodong.com** (Cloudflare Registrar).
-통신판매업 신고: ✅ 완료 (2026-04-30, 네이버 스마트스토어 무료 구매안전서비스 확인증 우회).
+- 김나은 (jade6679@naver.com / Supabase auth uid `4ba0a92e-7f79-45ec-8c48-b339d259382e`)
+- 회사명: **Naeun Lab** — 사업자번호 **261-21-02592** (2026-04-30 등록, 일반과세, KSIC 722000 + 525101)
+- 사업용 이메일: **soragodongapp@gmail.com**
+- 도메인: **soragodong.com** (Cloudflare Registrar)
+- 통신판매업 신고: ✅ 2026-04-30 (네이버 스마트스토어 무료 구매안전서비스 확인증 우회)
 
-> ⚠️ **중요 학습 (2026-04-30)**: 소프트웨어 개발·공급업 (KSIC 722000)은 **부가가치세법 시행령 §109에 따라 간이과세 배제 업종**. 이전 CLAUDE.md에 "간이과세 진행 중"이라 잘못 박힌 거 정정. 일반과세 = 부가세 10% 받지만 매입세액 공제 가능 (Cloudflare/Anthropic/Supabase 세금계산서 발행 시 유리).
+> ⚠️ **학습 (2026-04-30)**: SW 개발·공급업 (KSIC 722000) = 부가가치세법 시행령 §109에 의해 **간이과세 배제 업종**. 이전 메모에 "간이과세" 잘못 기록됐던 거 정정. 일반과세는 부가세 10% 받지만 매입세액 공제 가능 (Cloudflare/Anthropic/Supabase 세금계산서로 유리).
 
-## 기본 원칙
+---
 
-- **한국어로 소통.** 영어 답변 금지.
+## 작업 원칙
+
+- **한국어로 소통.** 영어 답변 X.
 - **짧고 직관적.** 진단 → 수정 한 줄.
-- 사용자가 코드 안 읽음(보통). 행동/결과로 검증.
+- 사용자 코드 안 읽음. 행동/결과로 검증.
 - 캐주얼 톤이지만 가벼운 농담 X.
-- **"박다" 동사 금지** (사용자 요청 2026-04-30). 사용자·개발자 facing 어디서도 X — 적용/추가/넣다/두다/쓰다 등 자연 동사. user-facing 모달/안내는 당연히 자연 한국어 ("세워볼게" 등).
+- **"박다" 동사 금지** (사용자 명시 2026-04-30, 강조 반복). 사용자·개발자 facing 어디서도 사용 X. 자연 동사로 (적용/추가/넣다/두다/들어가다/자리잡다/자리하다/위치/통합/완성 등). user-facing 모달은 자연 한국어 ("세워볼게" 등).
+- "너의/네" 일괄 치환 X — 둘 다 가능.
+- `console.error` 정상 (로깅 패턴).
+
+## Push 정책 (사용자 명시 2026-04-30)
+
+1. **main 단독** (v4-dev 폐기). soragodong.com / pages.dev 둘 다 main 배포.
+2. **push 항상 허락** — 자동 OK. 옛 batch 10 commit 정책 무효.
+3. commit 후 자연 push (한 작업 단위 마무리 후).
+4. force push / 큰 reset 시에만 backup branch (`main-backup-YYYY-MM-DD`) 자동 생성. 일반 push 는 X.
+
+## 작업 흐름
+
+1. 변경 → 빌드 (`npm run build`) — 신택스 점검.
+2. commit 메시지: `V4 [fix|feat|ui|chore] (사용자 [요청|보고|명시]): <짧은 설명>`
+3. push.
+
+---
 
 ## 신뢰도 정직 패턴 (2026-04-30 학습)
 
-분야별 정확도 다름. 잘못된 안내로 사용자 시간/비용 낭비 가능. 안내 시 ⚠️ 라벨 + 공식 채널 재확인 권장:
+분야별 정확도 다름. 잘못된 안내 = 사용자 시간/비용 낭비. ⚠️ 라벨 + 공식 채널 재확인 권장.
 
 | 분야 | 신뢰도 | 처리 |
 |---|---|---|
 | 코드/기술 | 🟢 높음 | 직접 검증 (빌드/typecheck/grep) |
-| Anthropic/Cloudflare/Vercel API | 🟡 중간 | 공식 문서 + 구현 검증 |
-| 한국 법/세무/행정 (사업자/통신판매/PG) | 🔴 **낮음** | ⚠️ 라벨 박고 사용자에게 공식 채널 (1357/1588-9999/구청) 재확인 권장 |
+| Anthropic/Cloudflare API | 🟡 중간 | 공식 문서 + 구현 검증 |
+| 한국 법/세무/행정 (사업자/통판/PG) | 🔴 **낮음** | ⚠️ 라벨 + 공식 채널 (1357/1588-9779/구청) 권장 |
 | 의료/심리/법률 자문 | ⚫ X | 절대 자문 형태 X — 전문가 |
 
-**과거 사례**: 간이과세 권장 (틀림 — SW 개발업 배제), 토스페이먼츠 가입비 무료 (틀림 — 33만원), 카카오페이 단독 무료 (틀림 — 에스크로 발급처 X). 한국 행정 영역 일반화는 위험.
+**과거 오류 사례**: 간이과세 권장 (틀림 — SW 배제), 토스페이먼츠 가입비 무료 (틀림 — 33만원), 카카오페이 단독 무료 (틀림 — 에스크로 발급처 X). 한국 행정 일반화 위험.
+
+---
 
 ## 파일 구조
 
 ```
 soragodong-repo/
-  index.html              ← 단일 HTML 파일 (~32k 줄, ~1.6MB). 거의 모든 코드 여기.
-  vite.config.*           ← Vite 빌드 설정
-  package.json            ← Vitest 추가됨
-  vitest.config.ts
-  tsconfig.json
-  CLAUDE.md               ← 이 문서
-  USER_TODO.md            ← 사용자 직접 작업 인계
-  src/                    ← Phase A 점진 모듈 (현재 utils/date.ts만)
-  tests/                  ← Vitest 단위 테스트
-  supabase/migrations/    ← RLS / billing / feedback SQL (사용자 직접 실행)
-    0001_rls.sql          ✅ 실행 완료
+  index.html              ← 단일 HTML (~32k 줄, ~1.6MB). 거의 모든 코드.
+  vite.config.* / package.json / tsconfig.json / vitest.config.ts
+  CLAUDE.md / USER_TODO.md
+  src/utils/date.ts        ← Phase A 점진 모듈 (현재 이거만)
+  tests/                   ← Vitest
+  supabase/migrations/
+    0001_rls.sql           ✅ 실행 완료
     0002_billing_usage.sql ⏸️ 사용자 실행 대기
-    0003_feedback.sql     ⏸️ 사용자 실행 대기
-  functions/              ← Cloudflare Pages Functions (Phase C 활성, 배포된 백엔드)
-    api/_lib/             ← auth / billing / usage 헬퍼
-    api/chat.ts           ← Anthropic 프록시 (admin 무료 + 일반 사용자 budget check)
-    api/usage.ts          ← 사용량 조회
-    api/feedback.ts       ← 인앱 피드백 저장
-    api/account/delete.ts ← 회원 탈퇴
-    api/billing/          ← charge / subscribe / refund / manual-charge / verify-toss-receipt
-    api/admin/            ← pending-charges / confirm-charge / revoke-charge / feedback-list / feedback-reply
-  legal_draft/            ← terms / privacy / refund / cross-border (변호사 검수 반영)
-  public/sw.js            ← Service Worker (오프라인 + 설치 배너)
-  .github/workflows/ci.yml← CI: build / typecheck / test
-  api_draft/              ← 옛 Vercel 시절 reference (deprecated, 무시)
+    0003_feedback.sql      ⏸️ 사용자 실행 대기
+  functions/api/           ← Cloudflare Pages Functions (Phase C 활성)
+    _lib/                  ← auth / billing / usage 헬퍼
+    chat.ts                ← Anthropic 프록시
+    usage.ts / feedback.ts / account/delete.ts
+    billing/               ← charge / subscribe / refund / verify-toss-receipt
+    admin/                 ← pending-charges / confirm-charge / feedback-list / feedback-reply
+  legal_draft/             ← terms / privacy / refund / cross-border
+  public/sw.js             ← Service Worker (오프라인 + 설치)
+  .github/workflows/ci.yml ← build / typecheck / test
+  api_draft/               ← 옛 Vercel 시절 (deprecated, 무시)
 ```
 
-빌드: `npm run build` → `dist/index.html`. 테스트: `npm test`. 타입: `npm run typecheck`.
+**빌드/테스트**: `npm run build` / `npm test` / `npm run typecheck`.
+**배포**: Cloudflare Pages (Vercel X — Hobby 상업 금지로 마이그레이션 2026-04-30).
 
-배포: **Cloudflare Pages** (Vercel X — Hobby tier 상업적 사용 금지로 마이그레이션 완료 2026-04-30).
-브랜치: `v4-dev` = preview, `main` = production.
+## 코드 찾기 (index.html grep 위주)
 
-## Push 정책 (사용자 명시 2026-04-30 정정 — main 단독)
+- 튜토리얼 step: `Grep "id: 'step_id'" index.html`
+- `ONBOARDING_PHASES` (9개) / `ONBOARDING_STEPS` (line ~10376)
+- 렌더링: `function renderXxx`
+- 데이터 구조: `memory/reference_codebase.md`
 
-1. **main 단독 사용** (v4-dev 폐기 2026-04-30). soragodong.com / pages.dev 둘 다 main 배포.
-2. **push 항상 허락** — 자동 push OK. 옛 정책 (batch 10 commit / 명시 허락 필요) 무효.
-3. **commit 후 자연 push** — 한 작업 단위 마무리 후.
-4. **force push 또는 큰 reset 시 backup branch** (`main-backup-YYYY-MM-DD`) 자동 박기. 일반 push 는 backup 안 함.
+## 시드 데이터 안전
 
-## 작업 흐름
-
-1. 변경 → 빌드 (`npm run build`) — 신택스 점검.
-2. commit. 메시지: `V4 [fix|feat|ui] (사용자 [요청|보고]): <짧은 설명>`
-3. push (사용자 요청 시).
-
-## 코드 찾기
-
-index.html 거대한 단일 파일. Grep 적극 활용:
-
-- **튜토리얼 step 찾기:** `Grep "id: 'step_id_here'" index.html`
-- **튜토리얼 phase 9개:** `ONBOARDING_PHASES` (search)
-- **튜토리얼 step 배열:** `ONBOARDING_STEPS` (line ~10376)
-- **렌더링 함수:** `function renderXxx`
-- **데이터 구조:** `memory/reference_codebase.md` 참고
-
-## 주의 사항
-
-- `console.error`는 정상 (로깅 패턴).
-- 시드 데이터 / testerMode: 사용자 V3 데이터 절대 건드리지 않게 — id-prefix `seed_` sweep만 안전. signature 기반 sweep 금지.
-- Korean 문법: "너의/네" 둘 다 가능. 일괄 치환 X.
+- 사용자 V3 데이터 절대 X. **id-prefix `seed_` sweep 만 안전. signature sweep 금지.**
+- 시드 항목 `_seed: timestamp` marker → init sweep 매칭 자동 제거.
+- testerMode ON 시 cloud / localStorage 저장 차단 (격리).
 
 ---
 
@@ -102,246 +99,150 @@ index.html 거대한 단일 파일. Grep 적극 활용:
 
 ### 인증 / 데이터 / E2EE
 - Supabase auth (이메일 OTP). JWT 만료 시 refresh.
-- `state` → `soragodong_data` row (cloud) + localStorage. cloud 우선 (loadFromCloud overwrites).
-- Stage 1 RLS ✅ 박힘 (0001_rls.sql).
-- **Stage 2 E2EE** ✅ 박힘 (사용자 password 기반, PBKDF2 1M). password 분실 시 자동 백업 fallback 가능.
-- 데이터 손실 방지 race fix 多 (location.reload 직전 await saveToCloudNow 강제).
+- `state` → `soragodong_data` row (cloud) + localStorage. cloud 우선.
+- Stage 1 RLS ✅ (0001_rls.sql).
+- **Stage 2 E2EE** ✅ — 사용자 password (PBKDF2 1M). 분실 시 자동 백업 fallback. cloud `_e2eeRecovery` 자동 sync (새 device 복원 가능).
+- 데이터 손실 방지: `location.reload` 직전 `await saveToCloudNow` 강제 (18곳 audit). E2EE 복원 race fix.
 
 ### Phase C — 백엔드 프록시 (활성)
-- 모든 Anthropic API 호출 = `/api/chat` 프록시. 클라이언트 fetch interceptor 자동 swap.
-- 사용자 본인 API 키 모델 폐기 (state.apiKey 영구 비움 마이그레이션 박힘).
-- AI 호출 가능 여부 헬퍼: `_canAI()` = state.apiKey OR session.access_token. 30+ 곳 게이트 통일.
-- billing: 충전 잔액 (USD) + 월 정액 (subscription_active). 무료 토큰 $1.0 자동 부여.
-- 결제: 토스 수동 송금 + AI vision 자동 인증 (verify-toss-receipt) 또는 manual-charge (사용자 신뢰 모델). 포트원 통합 대기.
+- 모든 Anthropic 호출 = `/api/chat` 프록시. 클라이언트 fetch interceptor 자동 swap.
+- 사용자 본인 API 키 모델 폐기 (`state.apiKey` 영구 wipe 마이그레이션).
+- AI 호출 가능 헬퍼: `_canAI()` = `state.apiKey || session.access_token` (30+ 곳 게이트 통일).
+- `_anthropicHeaders()` 헬퍼 — interceptor swap 후 dead pattern 17곳 cleanup 완료.
+- 인터셉터 401 자동 refresh + retry (`_refreshSessionForApi()` + inflight guard).
+- billing: 충전 잔액 (USD) + 월 정액. 무료 토큰 $1.0 자동.
+- 결제: 토스 수동 송금 + Sonnet vision 자동 인증 (`verify-toss-receipt`). PG (포트원) 통합 대기.
 
 ### Admin 시스템 (jade6679@naver.com)
-- env `ADMIN_USER_ID = 4ba0a92e-7f79-45ec-8c48-b339d259382e` 박혀있어야 활성.
-- `_isAdmin()` (client) — UI 가드 (개발자 도구 / admin 피드백 답변 버튼 표시).
-- server-side admin endpoint들 — `env.ADMIN_USER_ID` 강제 검증 (403 비-admin 차단).
-- /api/chat — admin 무료 사용 (budget check + cost deduction 우회).
-- 일일 chat cap (`_checkDailyChatCap`) — admin 우회.
-- billing UI — admin은 잔액·충전 버튼 숨김 + 사용량 (토큰/비용) 만 표시.
+- env `ADMIN_USER_ID = 4ba0a92e-7f79-45ec-8c48-b339d259382e` 필수.
+- `_isAdmin()` (client) — 개발자 도구 / admin 피드백 답변 UI 가드.
+- 서버 admin endpoints — `env.ADMIN_USER_ID` 강제 검증 (403 차단).
+- **admin 특혜 제거** (사용자 명시 2026-04-30, ea779a1) — 결제·사용량 일반 사용자와 동일. 답변 권한 등 *기능* 권한만 보존.
 
-### 코어 튜토리얼 잠금 시스템
-- `state.unlocked.{core1, core2, core3, core4, core5, core6, core8}` 7개 코어 잠금.
+### 코어 튜토리얼 잠금
+- `state.unlocked.{core1..core6, core8}` 7개.
 - testerMode ON 또는 로그인 X → 잠금 우회.
-- 코어 #1 = '하면서 익히기'. startId `welcome` (사용자 요청: 'tutorial_plea' 제거됨).
-- 풀 튜토리얼은 Settings → 가이드 → 별도 버튼.
+- 코어 #1 = '하면서 익히기'. startId `welcome`.
+- 풀 튜토리얼 = Settings → 가이드 → 별도 버튼.
 - 코어 끝 = `help_button` ("시작! ✦") → onbFinish → testerMode backup restore + saveToCloudNow await.
 - 업데이트 모달 dismiss 단위: `dismissedMajor` (V4). V5 등 새 메이저 시 재출현.
 
-### 신규 사용자 첫 진단 (First-Touch Analysis)
-- `maybeShowFirstTouchQuiz` — 5문항 mini quiz (1분, skip 가능). 신규 사용자만 (entries ≤ 3 + `_firstTouchDone === false`).
-- Sonnet 4.6 → `generateFirstTouchAnalysis` → 정체성 한 단어 + 친근 인사 + 가설 3 (trait/value/pattern 표준 schema) + 관찰 거리 2.
-- 가설 ✓ → 기존 `state.traits/values/patterns`에 `user_verified: false` 박힘 → `_renderConfirmableSection` 자동 표시.
-- watch_points → `state._firstTouchSeeds` → 첫 weekly review에서 callback (continuity).
-- init 4.5초 setTimeout 트리거. quiz close → `autoTourOnUpdate` (튜토리얼 chooser 직진).
+### 첫 진단 (현재 = 코어 #1 종료 snapshot, **재설계 회의 중**)
+- 옛 5문항 quiz 폐기 (bd44e48) — 사용자 본인 만족 X (강요감).
+- 현재: 코어 #1 종료 시점 snapshot 데이터로 AI 가설 1회 생성 → traits/values/patterns `user_verified=false` 자동 합류.
+- **재설계 진행 중** (회의 1) — testerMode + 시드 X 흐름. 사용자 본인 데이터로 시작. step11 부터 chip 3 라운드 (날씨 + 영역 + 한 단어) + AI 자연 답 + "더 알고 싶어" 옵션. `state.intakeWorry` 별도 array 보관 (testerMode OFF / backup restore 영향 X). 결과 = traits/values/patterns `user_verified=false` 자동 합류 ('나 탭' 통합 분석에 자연 노출, 별도 모달 X).
 - 사용자당 ~$0.01-0.02 (Sonnet 1회).
 
-### 리뷰 시스템 (재설계 — Detective + Quotes + Seeds + One-word)
-- weekly / monthly: `generateReview` — pattern (headline/evidence/condition) + quotes 5개 + experiment + seeds + (monthly) one_word.
+### 리뷰 (재설계 — Detective + Quotes + Seeds + One-word)
+- weekly / monthly: `generateReview` — pattern (headline/evidence/condition) + quotes 5 + experiment + seeds + (monthly) one_word.
 - quarterly: `generateQuarterlyReview` — + turning_point (변곡점).
-- 이전 리뷰 seeds → 다음 리뷰 prompt에 inject → AI callback ("지난 씨앗 어떻게 됐는지").
-- 첫 weekly review는 first-touch quiz의 watch_points 사용 (continuity 시작점).
-- 모델: 모두 Sonnet 4.6 (리뷰 = 데이터 요약 task).
+- 이전 리뷰 seeds → 다음 리뷰 prompt 주입 → AI callback continuity.
+- 첫 weekly review 는 first-touch watch_points 시작점.
+- 모델 = 모두 Sonnet 4.6 (리뷰 = 데이터 요약 task).
+- **시드 verify P1 fix** (5cdcb79) — archive=`savedAt` / insights=`discoveredAt` / chatArchive=`generatedAt|date` mismatch 해결. fallback chain. archive map = `headline+body`, chatArchive map = `date+summary`.
 
-### 결과 체크 (defer 시스템)
+### 결과 체크 / defer
 - 미션 'completed' + attemptStatus 없음 = follow-up 대상.
-- defer 옵션: 내일 / 3일 / 1주 / 2주 / 한 달 / **📅 직접 고르기 (캘린더 picker)**.
-- defer 후 scheduledFor 만기일까지 `_findPendingStrategyFollowup` skip.
-- 만기일 도달 → 매일 prompt (답 안 하면 다음날 또). daily gate (`_lastFollowupAt`)만으로 same-day re-show 차단.
-- 또 미루면 또 미뤄짐 (chain 가능).
-- defer된 미션은 7일 룰 무시 (사용자가 '한 달 후' 박았으면 30일 후 prompt).
+- defer 옵션: 내일 / 3일 / 1주 / 2주 / 한 달 / 📅 직접 고르기 (캘린더).
+- defer 후 만기일까지 `_findPendingStrategyFollowup` skip. 만기일 도달 → 매일 prompt. daily gate (`_lastFollowupAt`) 로 same-day re-show 차단.
+- 또 미루면 chain 가능. defer된 미션은 7일 룰 무시.
+- `_followupAsked` 체크로 한 번만 묻기 — 답 없으면 양생방에서 직접 결과 체크.
 
 ### 4단 분석 디자인
-- 라벨: 🔍 내가 본 것 / 💡 이게 뭐냐면 / 🌱 이럴 땐 이렇게 / ✦ 오늘의 제안 (gold accent — CTA 강조).
-- bracket `[]` 제거 + 단계 사이 1px 부드러운 border-top (gentle separator).
+- 라벨: 🔍 내가 본 것 / 💡 이게 뭐냐면 / 🌱 이럴 땐 이렇게 / ✦ 오늘의 제안 (gold accent CTA).
+- bracket `[]` 제거 + 단계 사이 1px 부드러운 border-top.
 - 카드 박스 / 그라디언트 / 큰 아이콘 X (과한 디자인 회피).
 
 ### 인앱 피드백 (사용자 ↔ admin)
-- 사용자: ✉️ 메시지 → POST `/api/feedback` → soragodong_feedback table.
-- 사용자 inbox (`fetchMyFeedback` direct RLS SELECT) — 미읽음 답변 빨간 dot.
-- admin: GET `/api/admin/feedback-list` (status filter) → POST `/api/admin/feedback-reply` (service_role PATCH).
-- 개발자 도구 안에 admin 답변 버튼 박힘 (`adminFeedbackBtnDev`).
+- 사용자: ✉️ → POST `/api/feedback` → soragodong_feedback table.
+- inbox: `fetchMyFeedback` direct RLS SELECT — 미읽음 빨간 dot.
+- admin: GET `/api/admin/feedback-list` → POST `/api/admin/feedback-reply` (service_role PATCH).
+- admin 답변 버튼 = 개발자 도구 안 (`adminFeedbackBtnDev`).
+- table 미존재 시 친화적 셋업 카드 (4단계 가이드 + SQL textarea).
 
-### Settings UI (계층화 redesign 2026-04-30)
-- 자주 보는 거 (프로필+한도, 결제) / 가끔 (가이드, 백업·복원, 피드백) / 보안+계정 (E2EE, 계정) / 위험 영역 / 개발자 (admin only) / 정보 (데이터 보호).
+### Settings UI (계층화 2026-04-30)
+- 자주 보는 거 (프로필+한도, 결제) / 가끔 (가이드, 백업·복원, 피드백) / 보안+계정 / 위험 / 개발자 (admin) / 정보 (데이터 보호).
 - `.settings-card` / `.settings-collapse` 일관 스타일.
+- 위기 안내 카드 (정신건강복지법 §15-6) — 1393 / 1577-0199 / 119.
+- **사업자정보 표시** = `<details>` collapsed + 폰트 9.5px + opacity 0.55 (사용자 명시 "잘 안 보이게 구석에"). `BUSINESS_INFO` 객체 기반 자동 표시 — 빈 필드 row 자동 숨김.
+
+### 마법의 방 (코어 #8 — 큰 결정 14일 숙성)
+- `state.decisions` array. 10단계 (situation → weight → state → widen → reality → distance → premortem → odyssey → values → decision). dayUnlock 0/0/0/3/7/10/12/14/14/14.
+- magic-mode UI = 보라 (#d4b8ff/#b89fde). 숙고의 방 = 청록 (#7ec8e3/#4cafb4). `body.magic-mode` / `body.reflection-mode` 토글.
+- 모티프 (0504007) — 14일 모래시계 SVG ring (보라 그라디언트, 14일 도달 시 glow) + 10단계 dot 진행도 (locked/unlocked/done). 홈 + screen-decisions 카드 둘 다.
+
+### Hybrid Opus 토글 (8a5922d)
+- 헤더 🐚/🦉 토글 = `state.preferences.useOpus`. 4곳 헤더 통합 (메인 / 숙고 / 마법 / 돌연변이).
+- 영향 범위 = `sendChat` (메인 대화) + 마법 helpChat + 숙고 reflection (ea779a1).
+- **나머지 (forceAnalyze / generateReview / firstTouch / 돌연변이) 는 고정 Sonnet** — 분석/리뷰는 데이터 요약 task로 Sonnet 충분. 토글 의도 = "지금 대화 깊게" 의 dial.
+- 누를 때 토스트 안내: "🦉 Opus — 5x 빠르게 차감".
+
+### 추적 그래프 (7885180)
+- area gradient + 마지막 점 ring pulsing + 현재값 floating tag + grid 3줄 + 시작/끝 날짜 축 + 목표 도달 success 색조.
+- preserveAspectRatio + aspect-ratio CSS (glyph stretch fix).
 
 ---
 
 ## 비용 / 인프라
 
-### Heavy user API 비용 (Anthropic)
-- 매일 30분 대화 + 일기 + 양생방 + 마법의 소라고동 풀가동
-- 월 $10–15 (~1.5–2만 원). prompt caching 적용 기준.
-- → 100명이면 월 $1500 (~200만 원) API 원가.
+### Heavy user API 비용 (Anthropic, prompt caching 기준)
+- 매일 30분 대화 + 일기 + 양생방 + 마법 풀가동 → 월 $10-15 (~1.5-2만 원).
+- 100명 = 월 $1500 (~200만 원) 원가.
 
-### 1년차 1인 단계 외부 비용
-- Cloudflare Pages: free
-- Cloudflare Registrar (.com): ~$10/년
-- Supabase: free tier 충분
-- Anthropic API: monthly cap (사용자 결정)
-- Apple Developer: $99/년 (앱 스토어 시 — PWA만 가면 X)
-- Google Play Console: $25 일회성 (앱 스토어 시 — PWA만 가면 X)
+### 1년차 1인 외부 비용
+- Cloudflare Pages: free / Cloudflare Registrar (.com): ~$10/년 / Supabase: free tier
+- Anthropic: monthly cap (사용자 결정)
+- Apple $99/년 + Google Play $25 1회 = 앱 스토어 시만 (PWA 만 가면 X)
 - ISMS / 보안 audit: 의무 X (1년차)
 
 ---
 
-## 알려진 한계 / 후순위
+## 알려진 한계 / fragile
 
-- index.html 1.6MB 단일 파일 — Phase A 점진 모듈 분리 (현재 utils/date.ts만, 나머지 inline)
+- index.html 1.6MB 단일 — Phase A 점진 분리 (현재 utils/date.ts만)
 - testerMode race (saveToCloud 1초 debounce + 600ms reload) — functional 안전이지만 fragile
-- 24시간 갭 자동 챕터 분리 vs ✓ 마무리 흐름 — 일관성 OK
-- 새 device E2EE 복원 — cloud `_e2eeRecovery` 박힌 후 가능 (옛 cloud 데이터는 same-device 만 가능)
+- 24시간 갭 자동 챕터 분리 vs ✓ 마무리 — 일관성 OK 단 점검 필요
+- 새 device E2EE 복원 — cloud `_e2eeRecovery` 자리잡힌 후 가능. 옛 cloud 데이터는 same-device 만.
 
 ---
 
-## 최근 큰 작업 (2026-04-30 세션)
+## 사업자 / 행정 진행
 
-이번 세션에 박힌 큰 변화들 — 다음 세션 대비:
+- ✅ 사업자등록 (Naeun Lab, 일반과세, 261-21-02592, 2026-04-30)
+- ✅ 통신판매업 신고 (네이버 스마트스토어 우회 — 베타 단계 OK)
+- 🟡 토스뱅크 사업자 통장 진행 (KB 다중 계좌 제한 → 토스뱅크 비대면)
+- ⏸️ PG 결정 대기 — 토스페이먼츠 33만원 (가입 22만 + 연관리 11만) vs 다른 PG vs 보류
 
-1. **Stage 2 E2EE 완전 박힘**:
-   - 12-word passphrase → 사용자 지정 password (PBKDF2 1M)
-   - submitE2EERecovery race fix (await saveToCloudNow 강제)
-   - 비밀번호 잊음 fallback (auto-backup snapshots)
-   - cloud `_e2eeRecovery` 자동 sync (새 device 복원 가능)
-   - data-loss race 6개 일괄 fix (P1-P5 + 새 device 복원)
-
-2. **Phase C 백엔드 프록시 완전 활성**:
-   - Cloudflare Pages Functions 마이그레이션 (Vercel X)
-   - state.apiKey 영구 wipe 마이그레이션
-   - `_canAI()` 헬퍼 + 30+ 게이트 mass replace
-   - 토스 수동 송금 + Sonnet vision 자동 인증
-   - 본인 계좌 내역 캡처 인식 (모든 은행 앱 지원)
-
-3. **관리자 시스템**:
-   - jade6679@naver.com → ADMIN_USER_ID 검증
-   - admin 무료 사용 (chat cap 우회 + budget 우회)
-   - 인앱 피드백 답변 admin UI (개발자 도구 안)
-
-4. **신규 사용자 첫 진단**:
-   - 5문항 quiz → AI 첫 가설 (정체성 + 가설 + 관찰거리)
-   - 가설 ✓ → 기존 traits/values/patterns 표준 schema 편입
-   - watch_points → 첫 weekly review seeds
-
-5. **리뷰 전체 재설계**:
-   - Detective (cross-pattern 발견) + Quotes (인용 5개) + Seeds (다음 리뷰 callback) + One-word (정체성 명명)
-   - quarterly = + turning_point (변곡점)
-
-6. **Settings UI 계층화** + 4단 분석 디자인 + 결과 체크 defer 흐름 + 캘린더 picker.
-
-7. **사업자 / 도메인 진행**:
-   - Naeun Lab (간이과세) 사업자등록 진행 중
-   - soragodong.com (Cloudflare) 등록 + Pages 연결 완료
+**네이버 우회 본질** (사용자 알기): 행정 절차 통과 OK. 자체 사이트 카드 결제 시작 시 → PG 추가 필요 (전상법 §13). 베타 단계 적발 risk = 매우 낮음.
 
 ---
 
-## 2026-04-30 v2 세션 (defer/UI/audit/사업자)
+## 다음 작업
 
-### 코드 박힘
-- **defer 한 번만 묻기** (`d9f73ac`) — `_findPendingStrategyFollowup`에 `_followupAsked` 체크 복구. 답 안 하면 양생방에서 직접 결과 체크. defer 시점만 reset.
-- **자동초안(user_verified=false) 자연스럽게** (`d9f73ac`) — `_renderConfirmableSection` 단순화. "X개 확인 대기" 강요 흐름 제거 → 일반 confidence 정렬.
-- **마법의 소라고동 magic-mode UI** (`d9f73ac`) — body.magic-mode 토글 + 🧙‍♂️ chip + 보라 그라디언트 (`screen-decisions`/`screen-decision-detail`)
-- **API 키 stale 메시지 4곳 fix** (`5c1a7df`) — Phase C 마이그 후 잔존. 401/auth 에러 시 state.apiKey/session 분기로 정확한 안내.
-- **인터셉터 401 자동 refresh + retry** (`5c1a7df`) — JWT 1h 만료 후 무한 401 fix. `_refreshSessionForApi()` 헬퍼 + inflight guard.
-- **admin 피드백 'table 없음' 친화적 셋업 카드** (`a0f195d`) — `0003_feedback.sql` 미실행 시 raw 500 → 4단계 가이드 + 복사 가능 SQL textarea.
-- **추적 그래프 예쁘게** (`7885180`, glyph stretch fix `fce29c3`) — area gradient + 마지막 점 ring pulsing + 현재값 floating tag + grid 3줄 + 시작/끝 날짜 축 + 목표 도달 success 색조. preserveAspectRatio + aspect-ratio CSS.
-- **state.apiKey 헤더 dead pattern 17곳 cleanup** (`6ee9ca1`) — Phase C 후 interceptor가 swap하니 dead. `_anthropicHeaders()` 헬퍼 통합. -30줄.
-- **Hybrid Opus 토글 + 차감 토스트** (`8a5922d`) — chat input bar에 🐚/🦉 토글. useOpus 시 generateAIResponse가 Opus 4.7 사용. 누를 때 토스트로 "5x 빠르게 차감" 안내.
+### 🟢 코드 (즉시 가능)
+- [ ] **첫 진단 재설계 구현** — 회의 1 흐름 (chip 3 라운드 + state.intakeWorry + testerMode 안전 격리). 사용자 답 받은 후.
+- [ ] **24시간 갭 vs ✓ 마무리 일관성** 점검
+- [ ] **Performance audit** (1.6MB 단일 — Phase A 진행)
 
-### audit 발견 (이전 세션 검증)
-- a35d8cd 4건 (renderArchiveReviews / runMonthly / runQuarterly / adminFeedbackLoad) 다 박혀있음 ✓
+### 🟡 사용자 결정 대기
+- [ ] **useOpus scope** — 분석/리뷰류도 토글 따를지 / 현재대로 대화류만 둘지 (의견: 현재 OK)
+- [ ] **첫 진단 회의 1 잔여** — 날씨 메타포 OK? 라운드 3 chip 단어 / "더 알고 싶어" 후 AI 깊이
+- [ ] **시드 verify** — 5cdcb79 fix 후 시드 넣고 리뷰 돌려서 변경 반영 확인 (브라우저)
 
-### Phase C 추가 fix (이전 batch `53f187d`)
-- 토스 충전 직전 환불정책 + 약관 재확인 체크박스 (전상법 §13)
-- 충전 시점 consentLog 박힘
-- verify-toss-receipt + manual-charge: user_memo_code 형식 검증
-- sw.js CACHE_NAME v1 → v2
-- admin endpoints ADMIN_USER_ID env 분리
-- usage.ts KST 월 경계
-- privacy.md Vercel → Cloudflare
-- 첫 진단 quiz AI 비용 안내 toast
-- 첫 진단 step wizard (5문항 분리, emoji + progress dot)
-- 환영 선물 모달 ($1 + 법적 고지)
-- Settings 위기 안내 카드 (1393 / 1577-0199 / 119)
-- 토스 영수증 OCR 추출 정보 명시
+### 🔴 사용자 정보·외부 대기
+- [ ] **사업장 주소** (자택 또는 비상주 오피스) — `BUSINESS_INFO.address` 채울 자리
+- [ ] **통신판매신고번호** (정부24 발급 형식 `제 OOOO-시도-OOOOO호`) — `BUSINESS_INFO.ecommerce_no`
+- [ ] **결제 모달 + 약관 동의 모달** — PG 결정 후
 
-### 사업자 / 행정
-- ✅ **사업자등록 완료** (2026-04-30) — Naeun Lab, **일반과세** (간이 X — 소프트웨어 개발업 배제 업종), 사업자번호 **261-21-02592**, 사업용 이메일 **soragodongapp@gmail.com**
-- ✅ **통신판매업 신고 완료** — 네이버 스마트스토어 가입 → 무료 구매안전서비스 확인증 우회 (5분, 무료)
-- 🟡 **토스뱅크 사업자 통장** 진행 중 (KB는 단기 다중 계좌 제한 → 채권양도 전용계좌만 가능 → 토스뱅크 비대면으로 변경)
-- ⏸️ **PG 결정 대기** — 토스페이먼츠 가입비 33만원 (가입 22만 + 연관리 11만) 또는 다른 PG 또는 보류 (현 단계 결제 없음)
+### 사용자 직접 (USER_TODO.md 참고)
+- Cloudflare env (`ADMIN_USER_ID` / `SUPABASE_*` / `ANTHROPIC_API_KEY`)
+- Supabase migration 0002, 0003 실행
+- 토스뱅크 사업자 통장 / PG 결정
+- KIPRIS 상표 검색 + 결합 상표 출원
+- 1357 무료 변호사 자문 (cross-border / 약관 / 정신건강 데이터)
 
-### 네이버 우회의 본질 (사용자 알기)
-- 네이버 스마트스토어 확인증 = 행정 절차 통과 OK
-- 진짜 자체 사이트 거래 보호 ≠ 동일 (네이버 채널 외)
-- 베타 단계 (결제 X 또는 토스 수동) = OK
-- 자체 사이트 카드 결제 시작 시 → PG 추가 필요 (전상법 §13 진짜 보호)
-- 적발 risk: 1년차 1인 사업자 = 매우 낮음
-
-8. **데이터 손실 race 전수조사 fix**:
-   - 18개 location.reload 호출 audit
-   - checkServerVersionAndReload / _chooseUpdateOption / E2EE 복원 race fix
-
-9. **wording 정리 多**:
-   - "AI 라이프 전략가" → 태그라인 "인생의 답 같이 찾자 ✦"
-   - "평문" → "본인의 데이터" (8군데)
-   - "학습에 사용 X" → "학습에 전혀 사용되지 않습니다"
-   - "가설을 박을게" → "가설을 세워볼게"
-   - "초안 — 아직 확신 안 가는 가설" 원래 wording 유지 (rename 시도 → revert)
-   - "24시간 이상 갭이면 자동 마무리 — 안전망" → "마지막 대화 이후 24시간이 지나도 알아서 마무리 돼"
-   - 등 多
-
----
-
-## 다음 세션 우선순위
-
-### 🔴 사용자가 직접 박을 거 (USER_TODO.md 참고)
-
-가장 중요:
-- [ ] Cloudflare env: `ADMIN_USER_ID` / `SUPABASE_*` / `ANTHROPIC_API_KEY` 박기 (안 박혀있으면)
-- [ ] Supabase migration 0002, 0003 실행
-- [ ] 토스뱅크 사업자 통장 받기 (비대면 1-2일) → 정산 계좌로 사용
-- [ ] PG 결정 (토스페이먼츠 33만원 가입 vs 보류 vs 다른 PG)
-- [ ] **사업장 주소** 알려주기 (footer/legal placeholder 박는 데 필요)
-- [ ] **통신판매업 신고번호** 받았으면 알려주기 (정부24에서 발급된 번호 형식: `제 OOOO-시도-OOOOO호`)
-- [ ] KIPRIS 상표 검색 + 결합 상표 출원
-- [ ] 1357 무료 변호사 자문 (cross-border / 약관 / 정신건강 데이터)
-
-### 다음 세션 박을 만한 거 (사용자 정보 받으면)
-
-- [ ] 사업자 정보 footer + legal placeholder 박기 (값 박힘 후 5분):
-  - 회사명: Naeun Lab
-  - 대표: 김나은
-  - 사업자번호: 261-21-02592
-  - 통신판매신고번호: (대기)
-  - 주소: (대기)
-  - CPO 이메일: soragodongapp@gmail.com
-- [ ] 결제 모달 (PG 결정 후 통합)
-- [ ] 약관 동의 모달 (결제 시점)
-- [ ] Performance audit (1.6MB 단일 HTML — Phase A 진행)
-- [ ] 24시간 갭 자동 마무리 vs ✓ 마무리 일관성 점검
-
-### 🔴 다음 세션 대기 항목 (사용자 요청 2026-04-30 — UI 작업)
-
-- [x] **모델 토글 위치 통일**: ✅ 검증 (2026-04-30 ultrathink) — 4곳 다 이미 헤더에 자리 잡혀있음. line 7559 (메인 헤더) / 7876 (숙고의 방) / 7897 (마법 helpChat) / 21915 (돌연변이 모달). 입력창에 박혀있던 적 X. todo 자체 stale.
-- [x] **마법의 방 UI 변경**: ✅ d9f73ac 에서 magic-mode 토글 + 보라 그라디언트 + .reflection-msg 말풍선 (cb1ce4a 1차). 숙고의 방과 동일 구조.
-- [x] **두 방 색 차별화**: ✅ 박힘. magic-mode = 보라 (#d4b8ff/#b89fde), reflection-mode = 청록 (#7ec8e3/#4cafb4). 1376~ CSS 분리.
-- [ ] **첫 진단 JSON parse error 박힘**: ⚠️ bd44e48 에서 quiz 자체 폐기됨 → 코어 #1 종료 snapshot 진단으로 변경. 이 에러 stale 가능성 — 새 흐름 (snapshot 진단) 에서 동일 에러 재현되는지 확인 필요. 재현 X 면 항목 폐기.
-- [x] **첫 진단 quiz 자체 재검토**: ✅ bd44e48 에서 폐기 + 코어 #1 종료 snapshot 진단으로 교체.
-- [ ] **첫 진단 → 튜토리얼 대화탭 통합 (사용자 요청 2026-04-30)**: 부분 진행 (bd44e48 — quiz 폐기 + snapshot 진단). 단 "튜토리얼 대화탭 안에서 자연 대화로 정보 수집 → 가설 추출" 형태는 아직. snapshot 진단으로 충분한지 사용자 확인 필요.
-- [ ] **시드데이터 + 리뷰 변경사항 반영 X 진단 (사용자 보고 2026-04-30)**: 1차 fix 박힘 (chapters/topicCards/pearls/archive/insights inject + monthly cutoffEnd + chat user-only -40). 시드 넣고 리뷰 돌려서 verify 필요. **사용자 브라우저 테스트만 가능**.
-- [x] **gh-pages 에러 (사용자 보고 2026-04-30)**: ✅ fix — `.github/workflows/deploy-pages.yml` 삭제 (bd44e48).
-- [ ] **useOpus 적용 범위 검토 (사용자 질문 2026-04-30)**: ea779a1 에서 마법/숙고 적용 (line 14098, 16289). 남은 호출 (forceAnalyze / generateReview / firstTouch / 돌연변이 / 등) 은 여전히 고정 모델. 토글 = *모든 AI 호출* opus / *대화 류만* opus 결정 필요.
-- [x] **admin 특혜 제거 (사용자 명시 2026-04-30)**: ✅ ea779a1 — client UI 가드 + /api/chat 무료 path + 일일 cap 우회 제거. 답변 권한 등 기능 권한은 보존.
-- [x] **마법의 방 UI 작업 — 1차 (사용자 명시 2026-04-30)**: ✅ cb1ce4a — askAIForStep 진입 버튼 4곳 보라 + .reflection-msg 말풍선 + magic-mode 보라/reflection-mode 청록 차별.
-- [x] **마법의 방 고유 모티프 (사용자 명시 2026-04-30 ultrathink)**: ✅ 0504007 — 14일 모래시계 SVG ring (보라 그라디언트 + 14일 도달 시 glow 애니메이션) + 10단계 dot 진행도 (locked / unlocked / done, DECISION_STEPS dayUnlock 기반). 홈 진행중 카드 + screen-decisions 둘 다 적용. magic-mode 결정 카드 보라 톤 강화 + screen-sub italic + model-section-title ✧ accent.
-
-### 사용자 대기 노트 (우선순위 낮음)
-
-세션 끝나기 직전 박힐 수도 있는 사용자 발견 항목들 — 다음 세션 시작 시 먼저 정리:
-- '더 깊은 나' 자동 채움 confirm (이미 동작 — 알림만 필요할 수도)
-- 코어 튜토리얼 첫 모달 설명 변경 (구체 wording 사용자 결정 필요)
-- 풀 튜토리얼 문구 추가 변경 (구체 wording 사용자 결정 필요)
-- **튜토리얼 대화 중 첫 진단 받기 401** (인터셉터 자동 refresh 박혀서 fix 가능성. 재현 시 알려주기)
+### 대기 노트 (낮음)
+- '더 깊은 나' 자동 채움 알림 (이미 동작 — 알림 추가만)
+- 코어 튜토리얼 첫 모달 / 풀 튜토리얼 wording (사용자 결정)
+- 튜토리얼 중 첫 진단 401 (인터셉터 자동 refresh 후 재현 시 알리기)
+- 첫 진단 JSON parse error (quiz 폐기 후 stale 가능 — 새 흐름에서 재현 시만)
