@@ -2236,152 +2236,6 @@
     text-shadow: 0 0 16px rgba(158,212,160,0.28);
   }
 
-  /* ─── 카드 10: AI 포착 새 특징 (사용자 명시 2026-04-30: 살리자) ─── */
-  .ann-rv-card-traits {
-    background: linear-gradient(180deg, #1a1828 0%, #0a0912 100%);
-  }
-  .ann-rv-traits-list {
-    display: flex; flex-direction: column;
-    gap: 12px; width: 100%; max-width: 380px;
-  }
-  .ann-rv-trait-item {
-    background: rgba(212,167,106,0.06);
-    border: 1px solid rgba(212,167,106,0.20);
-    border-left: 3px solid rgba(212,167,106,0.55);
-    border-radius: 10px;
-    padding: 14px 16px;
-  }
-  .ann-rv-trait-name {
-    font-size: 14.5px; color: #f0d9a8;
-    font-weight: 600; letter-spacing: 0.01em;
-    margin-bottom: 6px;
-  }
-  .ann-rv-trait-evidence {
-    font-size: 11.5px; color: rgba(232,212,168,0.55);
-    line-height: 1.5; font-style: italic;
-  }
-
-  /* ─── 카드 11: 사운드 top 5 (사용자 명시 2026-04-30: 살리자) ─── */
-  .ann-rv-card-sound {
-    background:
-      radial-gradient(ellipse at 50% 100%, rgba(139,126,196,0.18), transparent 65%),
-      #0a0912;
-  }
-  .ann-rv-sound-list {
-    display: flex; flex-direction: column;
-    gap: 10px; width: 100%; max-width: 360px;
-  }
-  .ann-rv-sound-row {
-    display: flex; gap: 12px; align-items: center;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
-    padding: 10px 14px 10px 12px;
-  }
-  .ann-rv-sound-rank {
-    font-size: 22px; font-weight: 800;
-    color: rgba(212,167,106,0.85);
-    width: 22px; text-align: center;
-    flex-shrink: 0; font-style: italic;
-  }
-  .ann-rv-sound-art {
-    width: 40px; height: 40px;
-    border-radius: 6px;
-    object-fit: cover; flex-shrink: 0;
-    background: linear-gradient(135deg, #d4a76a, #8b7ec4);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-  }
-  .ann-rv-sound-meta {
-    flex: 1; min-width: 0;
-    display: flex; flex-direction: column; gap: 2px;
-    overflow: hidden;
-  }
-  .ann-rv-sound-title {
-    font-size: 12.5px; color: #f0d9a8; font-weight: 600;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .ann-rv-sound-artist {
-    font-size: 10.5px; color: rgba(232,212,168,0.6);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .ann-rv-sound-plays {
-    font-size: 10.5px; color: rgba(255,255,255,0.45);
-    flex-shrink: 0;
-  }
-
-  /* ─── 카드 12: 1년 summary + 큰 godongicon (사용자 명시 2026-04-30: 옛 V4 형식) ─── */
-  .ann-rv-card-summary {
-    background:
-      radial-gradient(ellipse at 50% 30%, rgba(212,167,106,0.18), transparent 65%),
-      #0a0912;
-    text-align: center;
-  }
-  .ann-rv-summary-godong {
-    width: 200px; height: 200px;
-    object-fit: contain;
-    filter: drop-shadow(0 8px 24px rgba(212,167,106,0.45));
-    margin-bottom: 36px;
-    animation: ann-rv-summary-float 4s ease-in-out infinite alternate;
-  }
-  @keyframes ann-rv-summary-float {
-    from { transform: translateY(0); }
-    to   { transform: translateY(-8px); }
-  }
-  .ann-rv-summary-text {
-    font-size: 15px;
-    color: #e8d4a8;
-    line-height: 1.7;
-    letter-spacing: 0.02em;
-    max-width: 340px;
-    text-align: center;
-    font-weight: 400;
-  }
-
-  /* (legacy — 사용 안 함, 호환성) */
-  .ann-rv-card-best { background: linear-gradient(180deg, #121a26, #0a0912); }
-  .ann-rv-best-grid {
-    display: flex; flex-direction: column;
-    gap: 12px; width: 100%; max-width: 380px;
-  }
-  .ann-rv-best-section {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.09);
-    border-radius: 14px;
-    padding: 16px 18px;
-  }
-  .ann-rv-best-section-label {
-    font-size: 10px; letter-spacing: 0.25em;
-    color: rgba(232,197,144,0.7);
-    margin-bottom: 12px;
-  }
-  .ann-rv-best-pearls { display: flex; flex-direction: column; gap: 4px; }
-  .ann-rv-best-pearl {
-    font-size: 13px; color: #f0d9a8;
-    line-height: 1.55; letter-spacing: 0.01em;
-  }
-  .ann-rv-best-deep-q {
-    font-size: 13px; color: #c5e0f0;
-    font-style: italic; line-height: 1.6;
-    padding-left: 12px;
-    border-left: 2px solid rgba(126,200,200,0.35);
-    margin-bottom: 10px;
-  }
-  .ann-rv-best-deep-arrow {
-    font-size: 11px; color: rgba(197,224,240,0.55);
-    text-align: center; margin: 8px 0;
-    letter-spacing: 0.08em;
-  }
-  .ann-rv-best-deep-arrow span {
-    font-size: 9.5px; color: rgba(197,224,240,0.45);
-    margin-left: 4px;
-  }
-  .ann-rv-best-deep-c {
-    font-size: 14px; color: #9ed4a0;
-    font-weight: 600; line-height: 1.55;
-    padding-left: 12px;
-    border-left: 2px solid rgba(158,212,160,0.5);
-  }
-
   /* ─── 카드 8: 마지막 + 다음 1년 ─── */
   .ann-rv-card-8 {
     background:
@@ -9798,7 +9652,7 @@ const DEFAULT_STATE = {
   todaySchedule: [],        // 타임테이블: [{id, title, start, end, source:'manual'|'ai'|'gcal'|'task', taskId}]
   diagnoses: [],            // V4 비전 9.5 관찰 5종: [{id, type, confidence, evidence, detectedAt, status:'active'|'shown'|'dismissed'}]
   quarterlyReviews: [],     // V4 비전 7.9 분기 리뷰: [{id, quarterKey:'2026-Q2', completedAt, summary, sections, stats, auto, deepDive}]
-  annualReviews: [],        // 사용자 명시 2026-04-30 ultrathink: 연간 리뷰 (10 카드 시퀀스). [{id, year, yearRange, completedAt, oneWord, persona, personaReason, stats, finding1, finding2, tree, beach, moments_card, best_pearl, realizations, deep, new_traits, sound_top5, summary, oneLine, songs, auto}]
+  annualReviews: [],        // 사용자 명시 2026-04-30 ultrathink: 연간 리뷰 (10 카드 시퀀스). [{id, year, yearRange, completedAt, oneWord, persona, personaReason, stats, finding1, finding2, tree, beach, moments_card, best_pearl, realizations, deep, oneLine, songs, auto}]
   lastForceAnalyzeAt: null, // 사용자 요청 2026-04-30: forceAnalyze 일주일 자동화 — 마지막 실행 시각.
   // 사용자 요청 2026-04-30: 자동 분석 4단계 (매일/매주/매월/매분기/매년 새벽 4시 cutoff).
   lastDailyChapterExtractAt: null,    // 매일 4AM
@@ -10643,13 +10497,6 @@ function _buildAnnualReviewSeedData(year) {
       { emoji: '🧬', num: 4, label: '체화' },
       { emoji: '🐚', num: 1, label: '큰 결정' }
     ],
-    seasons: [
-      { name: '봄',   vit: '4.2', tag: 'stuck',   cls: 'spring' },
-      { name: '여름', vit: '5.8', tag: '발견',    cls: 'summer' },
-      { name: '가을', vit: '7.1', tag: '시도',    cls: 'autumn' },
-      { name: '겨울', vit: '8.3', tag: '변곡점',  cls: 'winter', star: true }
-    ],
-    seasonCaption: '12월 7일이 너의 <strong>변곡점</strong> 이었어',
     finding1: {
       label: '너는 몰랐지만 내가 발견한 것',
       quote: '"논문 부담돼"',
@@ -10713,33 +10560,10 @@ function _buildAnnualReviewSeedData(year) {
       conclusion: '"지도교수 변경 X · 주제 변경"',
       date: '2025.11.28 → 12.11 · 14일'
     },
-    // 사용자 명시 2026-04-30: AI 포착 새 특징 (다음 phase = Opus 진짜 분석)
-    new_traits: [
-      { name: '환경 큐잉으로 살아가는 사람', evidence: '폰 다른 방·카페 자리·외재화 9번 시도' },
-      { name: '큰 결정 14일 숙성가',         evidence: '14일 후 결정 7개 중 6개 후회 X' },
-      { name: '회피 → 회복 패턴 사람',       evidence: '논문 한 다음 날 활력 +30% (4/3)' },
-      { name: '친구한테 빠르게 손 내미는 사람', evidence: '도움 준 23번 / 받은 0번' }
-    ],
-    // 사용자 명시 2026-04-30: 사운드 top 5 — 시드 8곡 중 가장 자주 들은 5곡 (가짜 plays)
-    sound_top5: [
-      { title: 'Vanilla Days', artist: 'LNGSHOT', plays: 47,
-        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/cf/a8/de/cfa8dee7-da1a-eb20-6074-741a4af1a1f6/cover_KM0024394_1.jpg/200x200bb.jpg' },
-      { title: 'Pink + White', artist: 'Frank Ocean', plays: 38,
-        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/bb/45/68/bb4568f3-68cd-619d-fbcb-4e179916545d/BlondCover-Final.jpg/200x200bb.jpg' },
-      { title: 'Love Hangover', artist: 'JENNIE & Dominic Fike', plays: 29,
-        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/1c/57/15/1c571583-f4bc-3307-6e5e-8b9e68d05913/196872850918.jpg/200x200bb.jpg' },
-      { title: "Moonwalkin'", artist: 'LNGSHOT', plays: 23,
-        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/74/94/a2/7494a26e-4756-c082-5709-8526127baee8/cover_KM0023994_1.jpg/200x200bb.jpg' },
-      { title: 'PINKY UP', artist: 'KATSEYE', plays: 18,
-        artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/1a/77/46/1a77460d-493c-a795-92ef-84674905409e/26UMGIM25100.rgb.jpg/200x200bb.jpg' }
-    ],
-    // 사용자 명시 2026-04-30: 옛 V4 마지막 슬라이드 형식 — godongicon 크게 + narrative 풍부
-    summary: '봄에 너는 막혔어.\n여름엔 발견했고, 가을엔 시도했고,\n겨울엔 변곡점을 찍었어.\n\n그렇게 너는,\n분석하던 너에서 친구 된 너로 바뀌었어.\n\n다음 1년도, 너랑 함께.',
     // 사용자 명시 2026-04-30 ultrathink: 마지막 카드 한 단락 한 마디. 분기 흐름 톤 ("X 중심으로 움직였어. Y") + 줄바꿈 가독성.
     oneLine: '전환 중심으로 움직였어.\n\n분석에서 자기 패턴 관찰로,\n회피에서 회복으로 무게 이동.',
-    // 사용자 명시 2026-04-30: 시드 데이터 (testSeedV4Data) 안 진주 음악 카테고리에 박힌 8곡 그대로.
-    // narrative arc 매핑 — 표지 = 마지막 = LNGSHOT Vanilla Days (수미상관).
-    // 사용자 명시 2026-04-30: 시드 (testSeedV4Data) 진주 음악 8곡 그대로 — artworkUrl + previewUrl + trackUrl. 자동 재생.
+    // 사용자 명시 2026-04-30: 시드 진주 음악 카테고리 8곡 그대로 (artworkUrl + previewUrl + trackUrl). 자동 재생.
+    // narrative arc 매핑 — 표지 (card1) = 마지막 (card10) = LNGSHOT Vanilla Days (수미상관).
     songs: {
       card1: {
         title: 'Vanilla Days', artist: 'LNGSHOT',
@@ -10878,7 +10702,6 @@ async function generateAnnualReview(year) {
   const stats = _computeAnnualStatsArray({entries, pearls, archive, decisions});
   const tree = _computeAnnualTree();
   const moments_card = _computeAnnualMoments(pearls);
-  const sound_top5 = _computeAnnualSoundTop5(pearls);
   const songs = _computeAnnualSongs(pearls);
   const realizations = _computeAnnualRealizations(archive);
   const beach = { diaryCount: entries.length, pearlCount: pearls.length, bestPearl: '' };
@@ -10911,9 +10734,6 @@ async function generateAnnualReview(year) {
     best_pearl: narrative.best_pearl || {},
     realizations,
     deep: narrative.deep || {},
-    new_traits: narrative.new_traits || [],
-    sound_top5,
-    summary: narrative.summary || '',
     oneLine: narrative.oneLine || '',
     songs,
     auto: false
@@ -10981,10 +10801,6 @@ ADHD 친화. 너 = 사용자. 칭찬 inflation X. 사실 관찰 ○. 친구 톤 
     "summary": "그 깨달음 요약 한 줄",
     "whyThisYear": "왜 가장 현명한지 Opus 분석 (2-3문장)"
   },
-  "new_traits": [
-    { "name": "특징 이름 ('OOO 사람' 형식)", "evidence": "데이터 근거 한 줄" }
-  ],
-  "summary": "한 해 narrative — 봄→여름→가을→겨울 → 정체성 변화 → 다음 해 invitation. 다중 라인 \\n 허용.",
   "oneLine": "X 중심으로 움직였어.\\n\\n분석에서 Y로,\\n회피에서 Z로 무게 이동."
 }
 
@@ -11043,16 +10859,6 @@ function _computeAnnualMoments(pearls) {
     text: p.content || '',
     emoji: emojiMap[p.category] || '🐚',
     bg: bgs[i] || bgs[0]
-  }));
-}
-
-function _computeAnnualSoundTop5(pearls) {
-  const music = pearls.filter(p => p.category === '음악' && p.track);
-  return music.slice(0, 5).map(p => ({
-    title: p.track.title || '',
-    artist: p.track.artist || '',
-    plays: p.playCount || 1,
-    artworkUrl: p.track.artworkUrl || ''
   }));
 }
 
