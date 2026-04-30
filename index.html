@@ -1604,10 +1604,11 @@
     padding: 60px 28px 150px; box-sizing: border-box;
     animation: ann-rv-fadeIn 0.5s ease;
   }
-  /* 사용자 명시 2026-04-30: CD 왼쪽 상단 / artwork 만 / 제목·아티스트·button 제거 / click toggle */
+  /* 사용자 명시 2026-04-30: CD 맨 밑 가운데 / artwork 만 / 제목·아티스트·button 제거 / click toggle */
   .ann-rv-song {
     position: absolute;
-    top: 56px; left: 18px;
+    bottom: 88px; left: 50%;
+    transform: translateX(-50%);
     z-index: 10;
   }
   /* CD 본체 = round artwork + LP spin (재생 중만) */
@@ -11900,7 +11901,7 @@ function _intakeStep1Html() {
   const micHtml = `<button id="intakeMicBtn1" class="intake-mic-btn" onclick="_intakeMicToggle(1)" aria-label="음성"><span id="intakeMicIcon1"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;display:block;"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></span></button>`;
   return `
     <div class="intake-greeting">🐚 안녕 왔구나. 오늘 어땠어?</div>
-    <div class="intake-prompt">요즘 마음에 자주 떠오르는 거, 한 마디부터 시작해도 OK.</div>
+    <div class="intake-prompt">요즘 마음에 자주 떠오르는 거, 한 마디부터 시작해도 OK. <span style="color:var(--accent); font-weight:500;">🎤 말로 풀어도 돼.</span></div>
     <textarea id="intakeInput1" class="intake-textarea" rows="3" placeholder="한 줄도 OK. 마음 가는 대로."></textarea>
     <div id="intakeMicStatus1" class="intake-mic-status" style="display:none;"></div>
     <div class="intake-actions">
@@ -13547,12 +13548,24 @@ const ONBOARDING_STEPS = [
     coachmarkPosition: 'corner',
     coachmarkTop: '72px'
   },
+  // 사용자 명시 2026-04-30 ultrathink: 음성 인식 적극 권장 — 입력창 옆 마이크 안내 step.
+  {
+    id: 'chat_mic_intro',
+    targetSelector: '#chatMicBtn',
+    title: '🎤 음성으로도 풀어봐',
+    body: '입력창 옆 <b>🎤 마이크</b> 보여?<br>한 번 누르면 듣기 시작 — 그냥 말하면 자동으로 글로 변환돼.<br><br>긴 마음 풀 때, 손이 바쁠 때, 머리에 떠오르는 대로 <b>음성이 훨씬 편해</b> ✦<br><br><span class="small">5초 침묵하면 자동 종료. 같은 마이크가 마법 / 숙고 / 돌연변이 입력창에도 있어. 음성은 Google 서버를 거쳐 텍스트로 변환돼 (첫 사용 시 한 번 동의).</span>',
+    waitFor: 'next',
+    nextLabel: '✦ 알겠어',
+    dimBackground: false,
+    coachmarkPosition: 'corner',
+    coachmarkTop: 'auto'
+  },
   // 사용자 명시 2026-04-30 ultrathink: 대화탭 시작 시점에 첫 관찰 흐름. 코어 #1 안. body 안 button 으로 모달 trigger + 끝나면 onbNext. 사용자가 nextBtn 으로 skip 가능 (선택권 보존).
   {
     id: 'chat_intake_entry',
     targetSelector: null,
     title: '🐚 잠깐 — 같이 들여다볼까?',
-    body: '본격 대화 시작 전에 — 요즘 마음에 자주 떠오르는 거 한 번 풀어봐 ✦<br><br>같이 들여다볼게. 시간은 1-2분.<br><br><button id="intakeStartTutorialBtn" class="btn-primary" onclick="_startIntakeFromTutorial()" style="margin-top:14px; padding:12px 20px; font-size:14px; width:100%;">✦ 시작해볼게</button>',
+    body: '본격 대화 시작 전에 — 요즘 마음에 자주 떠오르는 거 한 번 풀어봐 ✦<br><br>같이 들여다볼게. 시간은 1-2분.<br><br><span class="small">🎤 모달 안에도 마이크 있어 — 말로 풀어도 돼.</span><br><br><button id="intakeStartTutorialBtn" class="btn-primary" onclick="_startIntakeFromTutorial()" style="margin-top:14px; padding:12px 20px; font-size:14px; width:100%;">✦ 시작해볼게</button>',
     waitFor: 'next',
     nextLabel: '나중에',
     dimBackground: false
