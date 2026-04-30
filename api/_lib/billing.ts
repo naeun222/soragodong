@@ -4,9 +4,9 @@ const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // 무료 충전 토큰 초기 한도 (가입 시 1회 지급). 실제 정책 따라 조정.
-// 사용자 명시 2026-04-30: 1,400원 → 4,000원 (4 천원어치). 1USD = 1,400원 환산 → $2.86.
+// 사용자 명시 2026-04-30: 4,000원 → 2,000원 (사용자 시각 정정). 1USD = 1,400원 환산 → $1.43.
 // pure API cost — 마진 X. 차감은 Anthropic 가격 그대로.
-export const FREE_INITIAL_CREDIT_USD = 2.86;
+export const FREE_INITIAL_CREDIT_USD = 1.43;
 
 export type UserBilling = {
   user_id: string;

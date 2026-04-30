@@ -139,7 +139,7 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 - ❌ **충전 plan 폐기** (CHARGE_PLANS 5단계 / 토스 송금 / 영수증 인증 흐름 모두 frontend 폐기)
 - ✅ **2-tier 월정액**: Light 8,900원 / Premium 25,000원
 - ✅ **추가팩**: Light 5K (+$4) / Premium 7K (+$5) — 계속 결제 가능
-- ✅ **무료 토큰**: 4,000원 (가입 시 자동)
+- ✅ **무료 토큰**: 2,000원 (가입 시 자동)
 
 **갱신 필요 파일**:
 - `legal_draft/terms.md` — 결제 방식 / 자동 갱신 X 명시 / 추가팩 정책
@@ -222,7 +222,7 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 - ✅ **마법고동 핵심 자리 4곳** (chip / screen-title / dm-icon / action-icon) 🧙‍♂️ → godongicon
 - ✅ **godongicon HEIC → PNG 변환** (heic-convert npm, 285KB)
 - ✅ **환영 모달 인스타톤 재설계** + 카피 "한 달 쓰면 / 너 자신이 다르게 보일지도." (introduce.html CTA 차용)
-- ✅ **무료 토큰 1,400원 → 4,000원** ($1.0 → $2.86, pure API cost / 마진 X)
+- ✅ **무료 토큰 1,400원 → 4,000원 → 2,000원** ($1.0 → $2.86, pure API cost / 마진 X)
 - ✅ **튜토리얼 음성 인식 적극 권장** (chat_mic_intro 새 step + intake step1 nudge)
 - ✅ **튜토리얼 흐름 개선** — intake 모달 종료 → 분석 결과 자동 chatMessages 4단 표시 + click_strategy 점프
 - ✅ **튜토리얼 chat_opus_intro 아이콘 godong**
@@ -254,7 +254,7 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 **가격 표 (사용자 확정)**:
 | Tier | 월 | cap (USD) | tagline | 타깃 |
 |---|---|---|---|---|
-| 무료 | 0원 | $2.86 (4K원, 1회) | try-out | 신규 가입 1주 |
+| 무료 | 0원 | $1.43 (2K원, 1회) | try-out | 신규 가입 1주 |
 | Light | 8,900원 | $5 | 가볍게 매일 | 월 ~$3 평균 |
 | Premium | 25,000원 | $15 | 깊게 자주 (claude pro 동일) | 월 ~$9 평균 |
 

@@ -8959,7 +8959,7 @@
     </div>
     <div class="reflection-input-bar" id="magicHelpInputBar">
       <div class="reflection-input-wrap">
-        <textarea class="chat-textarea" id="magicHelpInput" placeholder="🧙‍♂️ 마법사한테 풀어놔 — 답 대신 더 깊이 보게 도와줘" rows="1"></textarea>
+        <textarea class="chat-textarea" id="magicHelpInput" placeholder="🐚 마법고동한테 풀어놔 — 더 깊이 보게 도와줘" rows="1"></textarea>
         <button class="input-mic-btn" id="magicHelpMicBtn" onclick="_toggleInputSpeech('magicHelpInput', 'magicHelpMicBtn')" aria-label="음성 입력" title="음성 입력"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
         <button class="send-btn" onclick="sendMagicHelpMessage()">↑</button>
       </div>
@@ -9152,12 +9152,13 @@
       </div>
 
       <!-- 결제 / 사용량 — 사용자 명시 2026-04-30 ultrathink: 2-tier 월정액 only (충전 제거) -->
+      <!-- 사용자 명시 2026-04-30: 구독 버튼 prominent + 갱신 라벨 명확 + 사용량 정보 가독성 ↑ -->
       <div class="settings-card" id="billingSection">
-        <div class="input-label" style="margin-bottom:8px;">💳 구독 / 사용량</div>
-        <div id="billingStatus" class="settings-info-box">불러오는 중...</div>
-        <div class="settings-btn-row">
-          <button class="btn-secondary" onclick="openSubscribeModal()">📅 구독 (Light / Premium)</button>
-          <button class="btn-secondary" onclick="refreshBillingStatus(true)">🔄</button>
+        <div class="input-label" style="margin-bottom:10px;">💳 구독 / 사용량</div>
+        <div id="billingStatus" class="settings-info-box" style="font-size:13px; line-height:1.75; padding:14px;">불러오는 중...</div>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn-primary" onclick="openSubscribeModal()" style="flex:2; padding:13px; font-size:14px; font-weight:600;">📅 구독 시작 / 변경</button>
+          <button class="btn-secondary" onclick="refreshBillingStatus(true)" style="flex:1; padding:13px; font-size:13px;">🔄 갱신</button>
         </div>
       </div>
 
@@ -9241,7 +9242,7 @@
           <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
           <button class="btn-secondary" onclick="forceAnalyze()" title="opus 4.7 사용 — 비쌈">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="cleanLegacySeedData()" title="잔존 시드 텍스트 강제 정리">🧹 잔존 시드 정리</button>
-          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 선물 모달 + backend 실제 grant ($2.86)">🎁 환영 선물 모달 (실제 grant)</button>
+          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 선물 모달 + backend 실제 grant ($1.43 ≈ 2,000원)">🎁 환영 선물 모달 (실제 grant)</button>
           <button class="btn-secondary" onclick="devResetWelcomeBonus()" title="admin 측 본인 free_credit_granted=false + balance=0 → 재테스트 가능">🔄 환영 선물 reset (admin)</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>
@@ -11385,7 +11386,7 @@ function showWelcomeBonusModal(opts) {
         </div>
         <div class="welcome-bonus-token">
           <span class="welcome-bonus-token-emoji">🎁</span>
-          <span>내 선물! 무료 토큰 <b style="color:var(--accent);">4,000원</b> 어치</span>
+          <span>내 선물! 무료 토큰 <b style="color:var(--accent);">2,000원</b> 어치</span>
         </div>
         <button class="welcome-bonus-btn" id="welcomeBonusOkBtn">🎁 받기</button>
       </div>
@@ -11414,7 +11415,7 @@ function showWelcomeBonusModal(opts) {
               const balKrw = Math.round((data.balance_usd || 0) * 1400).toLocaleString();
               if (typeof showToast === 'function') showToast(`✦ 이미 받았어 (잔액 ~${balKrw}원). admin 측 reset 후 재시도 가능.`);
             } else if (data.granted) {
-              if (typeof showToast === 'function') showToast(`🎁 4,000원 받았어 ✦ 마음껏 시작해`);
+              if (typeof showToast === 'function') showToast(`🎁 2,000원 받았어 ✦ 마음껏 시작해`);
             }
             if (typeof refreshBillingStatus === 'function') refreshBillingStatus(false).catch(() => {});
           } else {
@@ -11492,7 +11493,7 @@ async function devResetWelcomeBonus() {
       try { await saveToCloudNow(); } catch {}
     }
     showToast(`✦ reset 완료 (잔액 ${data.old_balance_usd} → 0). 모달 띄울게...`);
-    // 잠깐 후 환영 모달 자동 오픈 → 받기 click → $2.86 grant
+    // 잠깐 후 환영 모달 자동 오픈 → 받기 click → $1.43 grant
     setTimeout(() => {
       showWelcomeBonusModal();  // preview X — 실제 grant 흐름
     }, 600);
@@ -14566,7 +14567,7 @@ const ONBOARDING_STEPS = [
   {
     id: 'magic_room_intro',
     targetSelector: 'button[onclick="startNewDecision()"]',
-    title: '🧙‍♂️ 마법의 소라고동',
+    title: '🐚 마법의 소라고동',
     body: '큰 결정(도전, 사랑, 진로)을 후회하지 않고 할 수 있게 도와주는 방이야.<br><br>새로운 결정 시작을 눌러봐.',
     waitFor: 'click',
     advanceDelay: 600,
@@ -14779,7 +14780,7 @@ const CORE_BODY_OVERRIDE = {
   },
   galpi_sub_intro: {
     core5: {
-      body: '여기엔 🧙‍♂️ <b>마법의 소라고동</b>과 🌙 <b>리뷰 모음</b>이 있어.<br><br>🧙‍♂️ 마법의 소라고동은 큰 결정(도전·사랑·진로)을 후회 없이 할 수 있게 도와주는 방이야 — <b>나중에 직접 눌러보면 짧게 안내해줄게</b>.<br><br><b style="color:#d4a76a;">⚠ 지금은 누르지 마!!</b> 옆의 🌙 <b>리뷰 모음</b>으로 갈 거야.',
+      body: '여기엔 <img src="/godong.webp" alt="" class="godong-icon" decoding="async"> <b>마법의 소라고동</b>과 🌙 <b>리뷰 모음</b>이 있어.<br><br><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동은 큰 결정(도전·사랑·진로)을 후회 없이 할 수 있게 도와주는 방이야 — <b>나중에 직접 눌러보면 짧게 안내해줄게</b>.<br><br><b style="color:#d4a76a;">⚠ 지금은 누르지 마!!</b> 옆의 🌙 <b>리뷰 모음</b>으로 갈 거야.',
       waitFor: 'next',
       nextLabel: '다음 →',
       targetSelector: null,
@@ -15052,7 +15053,7 @@ async function showCoreReplayPicker() {
     { label: '✦ 나',                value: 'core4', desc: 'AI가 본 너의 패턴·가치·특성' },
     { label: '📚 도서관',           value: 'core5', desc: '일기 / 진주 / 깨달음 / 리뷰 (좀 긺)' },
     { label: '🌊 숙고',             value: 'core6', desc: '마음을 울리는 큰 물음' },
-    { label: '🧙‍♂️ 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
+    { label: '🐚 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
     { label: '✨ 풀 튜토리얼',       value: 'full',  desc: '처음부터 끝까지 (~30분)' }
   ];
   const choice = await showOptionsModal({
@@ -16352,7 +16353,7 @@ function renderActiveDecisionsHome() {
         <div class="decision-card-row">
           ${_magicTimeRing(daysSince)}
           <div class="decision-card-row-text">
-            <div class="decision-card-label">🧙‍♂️ 진행 중인 결정 · ${daysSince}일째</div>
+            <div class="decision-card-label"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 진행 중인 결정 · ${daysSince}일째</div>
             <div class="decision-card-title">${escapeHtml(d.title)}</div>
             ${_magicStepDots(d.steps, daysSince)}
           </div>
@@ -16411,7 +16412,7 @@ async function startNewDecision() {
   // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드면 예시 시드 입력
   const isAutoFix = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
   const title = await showInputModal({
-    title: '마법고동 🧙‍♂️',
+    title: '마법고동 🐚',
     message: '14일 동안 천천히 익힐 거야.\n어떤 결정인지 한 줄로.',
     placeholder: '예: 창업할까 공기업 갈까 / 그에게 용기를 내볼까',
     defaultValue: isAutoFix ? '그에게 용기를 내볼까 vs 말까' : '',
@@ -16431,7 +16432,7 @@ async function startNewDecision() {
   state.decisions.push(decision);
   saveState();
   openDecision(decision.id);
-  showToast('마법고동 시작. 천천히 가자 🧙‍♂️');
+  showToast('마법고동 시작. 천천히 가자 🐚');
 }
 
 function openDecision(decisionId) {
@@ -16473,8 +16474,8 @@ function renderDecisionDetail(decision) {
     const helpCount = helpMsgs.length;
     // 사용자 명시 2026-04-30: 임시대화창 접근성 높이기 — 보라 톤 + prominent.
     const helpButton = helpCount > 0
-      ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px; box-shadow:0 2px 8px rgba(139,126,196,0.18);">🧙‍♂️ 마법사와 이어서 — ${helpCount}개 메시지</button>`
-      : (decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px;">🧙‍♂️ 마법사한테 도움 받기 ✦</button>` : '');
+      ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px; box-shadow:0 2px 8px rgba(139,126,196,0.18);"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법고동과 이어서 — ${helpCount}개 메시지</button>`
+      : (decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px;"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법고동한테 도움 받기 ✦</button>` : '');
 
     html += `
       <div class="step-card ${cls}">
@@ -16590,8 +16591,8 @@ function openTextStep(decision, step, meta) {
         ? decision.helpChats[step.id].filter(m => !m._starter && !m.error) : [];
       // 사용자 명시 2026-04-30: 임시대화창 접근성 높이기 — 보라 톤 + prominent.
       return stepHelpMsgs.length > 0
-        ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px; box-shadow:0 2px 10px rgba(139,126,196,0.20);">🧙‍♂️ 마법사와 이어서 — ${stepHelpMsgs.length}개 메시지</button>`
-        : `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px;">🧙‍♂️ 마법사한테 도움 받기 ✦</button>`;
+        ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px; box-shadow:0 2px 10px rgba(139,126,196,0.20);"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법고동과 이어서 — ${stepHelpMsgs.length}개 메시지</button>`
+        : `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px;"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법고동한테 도움 받기 ✦</button>`;
     })()}
     <button class="btn-secondary" onclick="openDecision('${decision.id}')">돌아가기</button>
   `;
@@ -16607,7 +16608,7 @@ function saveTextStep(decisionId, stepId) {
   }
   saveState();
   openDecision(decisionId);
-  showToast('저장됐어 🧙‍♂️');
+  showToast('저장됐어 🐚');
 }
 
 // 사용자 요청 2026-04-29: 마법 도움 받기 = 별도 helpChat 모달. decision/step별 영구 저장.
@@ -16762,7 +16763,7 @@ function _renderMagicHelpChat() {
   // 헤더 제목 (단계명 + 결정 주제)
   const qEl = document.getElementById('magicHelpScreenQ');
   if (qEl) {
-    qEl.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--text);">🧙‍♂️ ${escapeHtml(meta.title)}</div>
+    qEl.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--text);"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> ${escapeHtml(meta.title)}</div>
       <div style="font-size:11px; color:var(--text-dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">"${escapeHtml(decision.title)}"</div>`;
   }
   // 입력바 표시
@@ -17110,7 +17111,7 @@ function openFinalDecisionStep(decision, step) {
     <div class="screen-sub">결정과 함께 예측을 기록해.<br>미래의 네가 정확도를 확인할 거야 (Wilson & Gilbert, affective forecasting).</div>
 
     <div class="input-group">
-      <div class="input-label">🧙‍♂️ 최종 결정</div>
+      <div class="input-label"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 최종 결정</div>
       <textarea id="finalDecision" rows="3" placeholder="결정을 한 문장으로...">${escapeHtml(saved.decision || '')}</textarea>
     </div>
 
@@ -17164,7 +17165,7 @@ function saveFinalDecision(decisionId) {
   decision.decidedAt = new Date().toISOString();
 
   saveState();
-  showCelebration('🧙‍♂️', '결정 완료', '🐚');
+  showCelebration('🐚', '결정 완료', '✨');
   setTimeout(() => { openDecision(decisionId); renderActiveDecisionsHome(); }, 1800);
 }
 
@@ -17207,7 +17208,7 @@ function resumeDecision(decisionId) {
   // Reset startedAt to today so the cooling-off cycle restarts
   // (actually keep original — user can pick up where they left off)
   saveState();
-  showToast('결정이 다시 열렸어. 천천히 다시 생각해보자 🧙‍♂️');
+  showToast('결정이 다시 열렸어. 천천히 다시 생각해보자 🐚');
   openDecision(decisionId);
 }
 
@@ -22159,7 +22160,7 @@ function _renderChatMessageHTML(m, i) {
     if (m.role === 'assistant' && m.decisionSuggested && !m.decisionResponse && !m.typing) {
       const ds = m.decisionSuggested;
       decisionCard = `<div class="decision-suggest-card">
-        <div class="dsc-header">🧙‍♂️ 마법의 소라고동에서 천천히 보면 어때?</div>
+        <div class="dsc-header"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동에서 천천히 보면 어때?</div>
         <div class="dsc-title">${escapeHtml(ds.title)}</div>
         ${ds.reason ? `<div class="dsc-reason">${escapeHtml(ds.reason)}</div>` : ''}
         <div class="dsc-buttons">
@@ -22168,7 +22169,7 @@ function _renderChatMessageHTML(m, i) {
         </div>
       </div>`;
     } else if (m.decisionResponse) {
-      const icon = m.decisionResponse === 'accept' ? '🧙‍♂️ 마법의 소라고동으로 보냈어' : '괜찮아 — 그냥 듣기만 할게';
+      const icon = m.decisionResponse === 'accept' ? '🐚 마법의 소라고동으로 보냈어' : '괜찮아 — 그냥 듣기만 할게';
       decisionCard = `<div style="font-size:11px; color:var(--purple); margin-top:8px; padding: 0 4px;">${icon}</div>`;
     }
 
@@ -23332,7 +23333,7 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구. 그 �
 
 앱 기능 — 사용자 추천 시 정확히 안내. 헷갈려서 잘못 안내 X:
 
-🧙‍♂️ 마법의 소라고동 (큰 결정용 — 14일 숙성):
+🐚 마법의 소라고동 (큰 결정용 — 14일 숙성):
 - 진로·관계·큰 구매·이직·그만둘지 같은 무거운 선택을 천천히 풀어가는 구조화된 10단계 도구.
 - "지금 당장 결정" 도구 ❌ — 정반대. **충동 차단 + 시간 두고 익히기**가 핵심.
 - 3일 후 / 7일 후 / 14일 후 잠금 풀리며 다른 각도로 다시 봄 (Loewenstein hot-cold gap, Wilson & Gilbert 정서 예측 등).
@@ -23346,7 +23347,7 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구. 그 �
 
 추천 가이드 — 사용자가 "어디서 고민하는 게 나을지" 물을 때:
 - 즉답 가능한 일상 잡담·결정 → 그냥 대화로 ○
-- 큰 결정인데 며칠 걸쳐 다양한 각도로 봐야 함 → 🧙‍♂️ 마법의 소라고동 ○
+- 큰 결정인데 며칠 걸쳐 다양한 각도로 봐야 함 → 🐚 마법의 소라고동 ○
 - 결정 아니고 자기 이해 / 가치 탐색 / 큰 물음 → 🌊 숙고 질문 ○
 - 마법의 소라고동을 "지금 결정하는 즉답 도구"로 안내 ❌ (실제는 14일 숙성 도구)
 - "아직 마법의 소라고동 단계 아니야"라고 막기 ❌ — 큰 질문엔 처음부터 들어가도 OK
@@ -23377,7 +23378,7 @@ const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구. 그 �
   · 충분히 듣고 → 상황 정리 → 같이 풀어가기. 한 번에 결론 강요 X
   · 단정·진단 X. "이런 거 같아 — 맞아?" 처럼 사용자한테 확인받으며 진행
   · 길이는 사용자 무게에 맞춰 늘려도 OK. 단, 4단 구조 강제 X (4단은 명시 요청 시에만)
-  · 결정 무게 크면 🧙‍♂️ 마법의 소라고동 부드럽게 제안 가능
+  · 결정 무게 크면 🐚 마법의 소라고동 부드럽게 제안 가능
 
 - 구분: 즐거운 일·웃긴 에피소드·소소한 일상은 여전히 가볍게 (원칙 11 유지). 고민 상담 모드는 "고민 신호"가 있을 때만.
 
@@ -25636,7 +25637,7 @@ function acceptDecisionSuggestion(idx) {
   msg.decisionResponse = 'accept';
   saveState();
   renderChat();
-  showToast('마법의 소라고동으로 보냈어 🧙‍♂️');
+  showToast('마법의 소라고동으로 보냈어 🐚');
   setTimeout(() => openDecision(decision.id), 600);
 }
 
@@ -26360,7 +26361,7 @@ const TOPIC_CATEGORY_LABELS = {
   idea:         { label: '아이디어', icon: '💡' },
   relationship: { label: '관계',     icon: '👥' },
   // V3 호환 (legacy)
-  decision:  { label: '결정', icon: '🧙‍♂️' },
+  decision:  { label: '결정', icon: '🐚' },
   task:      { label: '할 일', icon: '📋' },
   emotional: { label: '감정', icon: '💧' },
   strategy:  { label: '전략', icon: '🧬' }
@@ -26470,7 +26471,7 @@ function openTopicCard(id) {
   // 액션 버튼 — 카테고리에 따라
   const actions = [];
   if (card.category === 'decision') {
-    actions.push(`<button class="topic-modal-btn primary" onclick="topicToDecision('${id}'); closeTopicModal()">🧙‍♂️ 마법의 소라고동으로</button>`);
+    actions.push(`<button class="topic-modal-btn primary" onclick="topicToDecision('${id}'); closeTopicModal()"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동으로</button>`);
   }
   if (card.category === 'task') {
     actions.push(`<button class="topic-modal-btn primary" onclick="topicToVault('${id}'); closeTopicModal()">📥 서랍장에</button>`);
@@ -26541,7 +26542,7 @@ function topicToDecision(id) {
   state.decisions.push(decision);
   saveState();
   renderArchive();
-  showToast('마법의 소라고동으로 보냈어 🧙‍♂️');
+  showToast('마법의 소라고동으로 보냈어 🐚');
   setTimeout(() => openDecision(decision.id), 600);
 }
 
@@ -27507,7 +27508,7 @@ function renderLensGalpi() {
     body = `
       <div class="archive-quick-row" style="grid-template-columns:1fr 1fr;">
         <button class="archive-quick-btn" onclick="showArchiveDecisions()">
-          <span class="aq-icon">🧙‍♂️</span>
+          <span class="aq-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></span>
           <span class="aq-label">마법의 소라고동</span>
           <span class="aq-count">${decisions.length}건</span>
         </button>
@@ -27518,7 +27519,7 @@ function renderLensGalpi() {
         </button>
       </div>
       <div style="margin-top:14px; font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">
-        큰 결정은 🧙‍♂️ 마법의 소라고동에서 14일 숙성.<br>
+        큰 결정은 <img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동에서 14일 숙성.<br>
         주간·월간 회고는 🌙 리뷰 모음에서 다시 보기.
       </div>
     `;
@@ -27549,7 +27550,7 @@ function renderLensGalpi() {
     };
 
     const CATS = [
-      { key: 'decision',  icon: '🧙‍♂️', label: '마법의 소라고동', items: decisions, count: decisions.length, emptyMsg: '아직 시작한 결정 없어. 큰 결정 있을 때 14일 숙성에 박아.' },
+      { key: 'decision',  icon: '🐚', label: '마법의 소라고동', items: decisions, count: decisions.length, emptyMsg: '아직 시작한 결정 없어. 큰 결정 있을 때 14일 숙성에 박아.' },
       { key: 'weekly',    icon: '🌙', label: '주간 리뷰',       items: weekly,    count: weekly.length,    emptyMsg: '아직 주간 리뷰 없어. 일주일 데이터 쌓이면 자동 생성.' },
       { key: 'monthly',   icon: '📅', label: '월간 리뷰',       items: monthly,   count: monthly.length,   emptyMsg: '아직 월간 리뷰 없어. 한 달 데이터 쌓이면 자동.' },
       { key: 'quarterly', icon: '🌸', label: '계절 리뷰',       items: quarterly, count: quarterly.length, emptyMsg: '아직 계절 리뷰 없어. 분기 끝날 때 자동.' },
@@ -36721,7 +36722,7 @@ async function refreshBillingStatus(manual) {
     }
     html += `<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;"><b>이번 달 사용</b>: ${monthly.tokens.toLocaleString()} tokens / $${monthly.cost_usd.toFixed(4)} (~${monthCostKrw.toLocaleString()}원)</div>`;
     if (billing.free_credit_granted) {
-      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 무료 충전 토큰 받음 (4,000원)</div>`;
+      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 무료 충전 토큰 받음 (2,000원)</div>`;
     }
     status.innerHTML = html;
     // 사용자 명시 2026-04-30: 토스트 = manual button click 시만 (자동 호출 X — 자주 뜨면 부담)
@@ -36785,7 +36786,7 @@ const BUSINESS_INFO = {
 };
 
 // 사용자 명시 2026-04-30 ultrathink: 충전 (CHARGE_PLANS / openChargeModal / proceedCharge / showTossChargeModal / openTossApp / verifyTossReceipt / closeTossChargeModal / _generateUserMemoCode / TOSS_ACCOUNT) 일괄 폐기.
-// 새 흐름: 무료 4,000원 → 소진 후 Light (8,900원) 또는 Premium (25,000원) 월정액. 한도 도달 시 추가팩 (Light 5K = +$4 / Premium 7K = +$5) 또는 tier 업그레이드 (16,100원).
+// 새 흐름: 무료 2,000원 → 소진 후 Light (8,900원) 또는 Premium (25,000원) 월정액. 한도 도달 시 추가팩 (Light 5K = +$4 / Premium 7K = +$5) 또는 tier 업그레이드 (16,100원).
 // 기존 charge 잔액 (credit_balance_usd > 0) 사용자: legacy 호환 — 그대로 차감, 0 도달 후 구독 안내. admin pending charges 도구도 잔존 미해결 건만 처리.
 
 // ─── 피드백 / 문의 (오픈채팅 + 인앱 메시지) ───
@@ -37136,7 +37137,7 @@ async function adminResetBalance() {
     showToast('로그인 필요');
     return;
   }
-  const newBalanceStr = prompt('정정할 잔액 (USD, 0~100):\n예) 0 = 비우기 / 2.86 = 무료 토큰 4000원', '2.86');
+  const newBalanceStr = prompt('정정할 잔액 (USD, 0~100):\n예) 0 = 비우기 / 1.43 = 무료 토큰 2000원', '2.86');
   if (newBalanceStr === null) return;
   const newBalance = parseFloat(newBalanceStr);
   if (isNaN(newBalance) || newBalance < 0 || newBalance > 100) {

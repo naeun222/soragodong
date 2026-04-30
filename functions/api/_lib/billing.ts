@@ -2,10 +2,10 @@
 
 import type { Env } from './auth';
 
-// 사용자 명시 2026-04-30: 무료 토큰 1,400원 → 4,000원 (4 천원어치). 1USD = 1,400원 환산 → $2.86.
-// pure API cost — 마진 X. 차감은 Anthropic 가격 그대로 (calculateCost in: 3, out: 15 등). 4,000원 = ~$2.86 어치 sonnet/haiku 호출 가능.
+// 사용자 명시 2026-04-30: 무료 토큰 4,000원 → 2,000원 (사용자 시각 — 4천 너무 많아). 1USD = 1,400원 환산 → $1.43 (≈ 2,000원).
+// pure API cost — 마진 X. 차감은 Anthropic 가격 그대로 (calculateCost in: 3, out: 15 등). 2,000원 = ~$1.43 어치 sonnet/haiku 호출 가능.
 // 사용자 명시 2026-04-30 ultrathink: 자동 부여 X. 환영 모달 '받기' click 시만 (POST /api/billing/welcome-bonus).
-export const FREE_INITIAL_CREDIT_USD = 2.86;
+export const FREE_INITIAL_CREDIT_USD = 1.43;
 
 export type UserBilling = {
   user_id: string;

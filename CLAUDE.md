@@ -114,7 +114,7 @@ soragodong-repo/
 - SSE buffer 잔여 처리 — 마지막 message_delta 누락 fix (사용자 보고 critical).
 
 ### 결제 모델 — 2-tier 월정액 (사용자 명시 2026-04-30 ultrathink)
-- **무료 토큰**: 4,000원 ($2.86) — 가입 시 1회 자동 (pure API cost / 마진 X). 차감은 Anthropic 가격 그대로.
+- **무료 토큰**: 2,000원 ($1.43) — 가입 시 1회 자동 (pure API cost / 마진 X). 차감은 Anthropic 가격 그대로.
 - **Light** 8,900원/월 — cap $5 (~7,000원 어치). tagline "가볍게 매일 / 짧은 대화·간단 분석·매일 체크인 위주".
 - **Premium** 25,000원/월 — cap $15 (~21,000원 어치). claude pro 동일 가격. tagline "깊게 자주 / 긴 대화·4단 분석·마법고동·주간/월간 회고 풀 활용".
 - **추가팩** (cap 도달 시): Light 5,000원 = +$4 / Premium 7,000원 = +$5. 사용자 명시 **계속 결제 가능** (1회만 X).
