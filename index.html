@@ -12780,9 +12780,10 @@ function _intakeMicToggle(stepNum) {
     return;
   }
   // 첫 사용 = privacy 안내 1회
-  if (!localStorage.getItem('soragodong_v4_intake_speech_consent')) {
+  // 사용자 명시 2026-05-01 (agent audit): consent 키 통합 (chat 4곳 입력창과 동일 키). 사용자가 chat 에서 한 번 동의하면 intake 도 skip.
+  if (!localStorage.getItem('soragodong_v4_speech_consent')) {
     if (!confirm('🎤 음성 입력 안내\n\n음성은 Google 서버를 거쳐 텍스트로 변환됩니다. 동의하시고 사용하시겠어요?')) return;
-    try { localStorage.setItem('soragodong_v4_intake_speech_consent', '1'); } catch {}
+    try { localStorage.setItem('soragodong_v4_speech_consent', '1'); } catch {}
   }
   const ta = document.getElementById('intakeInput' + stepNum);
   const iconEl = document.getElementById('intakeMicIcon' + stepNum);
@@ -20392,6 +20393,20 @@ function expireOldMissions() {
       changed = true;
     }
   });
+  // 사용자 명시 2026-05-01 (agent audit): completed + attemptStatus 없음 + scheduledFor 14일+ 지남 → 자동 unknown.
+  // 이전 = scheduledFor 만기 후 영원히 prompt 노출 stale 자리.
+  (state.missions || []).forEach(m => {
+    if (m.status !== 'completed') return;
+    if (m.attemptStatus) return;
+    if (!m.scheduledFor) return;
+    const diff = daysBetweenKeys(m.scheduledFor, today);
+    if (diff >= 14) {
+      m.attemptStatus = 'unknown';
+      m.attemptCheckedAt = new Date().toISOString();
+      m._autoExpired = true;
+      changed = true;
+    }
+  });
   if (changed) saveState();
 }
 
@@ -21806,11 +21821,53 @@ function showCelebration(emoji, text, shell) {
   setTimeout(() => el.classList.remove('show'), 1800);
 }
 
-function showToast(msg) {
+// 사용자 명시 2026-05-01 (agent audit): toast queue — 빠른 연속 호출 시 첫 메시지 사용자 못 보던 자리 fix.
+let _toastQueue = [];
+let _toastShowing = false;
+function _toastDrain() {
+  const next = _toastQueue.shift();
+  if (!next) { _toastShowing = false; return; }
+  _toastShowing = true;
   const el = document.getElementById('toast');
-  el.textContent = msg;
+  if (!el) { _toastShowing = false; return; }
+  el.textContent = next;
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2500);
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(_toastDrain, 200);  // 다음 표시까지 200ms 간격
+  }, 2500);
+}
+function showToast(msg) {
+  _toastQueue.push(msg);
+  if (!_toastShowing) _toastDrain();
+}
+
+// 사용자 명시 2026-05-01 (agent audit): modal ESC dismiss 공용 헬퍼.
+// 사용: const detach = _registerModalEsc(overlay, () => closeModal()); 닫기 시 detach() 호출.
+// 자동 stack — 마지막 등록 모달만 ESC 응답 (중첩 모달 안전).
+const _modalEscStack = [];
+function _registerModalEsc(overlay, closeFn) {
+  if (!overlay || typeof closeFn !== 'function') return () => {};
+  const entry = { overlay, closeFn };
+  _modalEscStack.push(entry);
+  if (_modalEscStack.length === 1) {
+    document.addEventListener('keydown', _modalEscHandler);
+  }
+  return function detach() {
+    const idx = _modalEscStack.indexOf(entry);
+    if (idx !== -1) _modalEscStack.splice(idx, 1);
+    if (_modalEscStack.length === 0) {
+      document.removeEventListener('keydown', _modalEscHandler);
+    }
+  };
+}
+function _modalEscHandler(e) {
+  if (e.key !== 'Escape') return;
+  const top = _modalEscStack[_modalEscStack.length - 1];
+  if (top && top.closeFn) {
+    e.preventDefault();
+    try { top.closeFn(); } catch {}
+  }
 }
 
 // V3.10: prompt() 대체 — 모달로 사용자 입력 받기 (모바일 친화)
@@ -36910,7 +36967,9 @@ function toggleMusicPreview(btn, url) {
     console.warn('audio error:', e, url);
     btn.textContent = '▶';
     btn.classList.remove('playing');
-    showToast('음원 로드 실패 — URL 확인 필요');
+    // 사용자 명시 2026-05-01 (agent audit): URL 만료 / 지역 차단 / link rot 시 button 자체 숨김 — 토스트 반복 차단.
+    btn.style.display = 'none';
+    showToast('음원 만료됨 — 미리듣기 button 숨김');
     _currentMusicAudio = null;
     _currentMusicBtn = null;
   });
