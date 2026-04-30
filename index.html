@@ -9715,9 +9715,31 @@ async function _refreshSessionForApi() {
       try { localStorage.setItem('soragodong_session', JSON.stringify(session)); } catch {}
       return true;
     } catch { return false; }
-    finally { setTimeout(() => { _sessionRefreshInflight = null; }, 100); }
+    finally {
+      // 사용자 명시 2026-05-01 (agent audit): setTimeout 100ms race window 제거 — try/finally 즉시 nullify.
+      _sessionRefreshInflight = null;
+    }
   })();
   return _sessionRefreshInflight;
+}
+
+// 사용자 명시 2026-05-01 (agent audit): 모든 /api/* 호출 공통 wrapper. 401 자동 refresh + 1회 retry.
+// 이전 = interceptor (line 9750~) 가 ANTHROPIC_API_URL swap 만 → /api/billing /api/admin /api/feedback 등 25곳 401 시 사용자 alert.
+async function _authedFetch(url, init) {
+  init = Object.assign({}, init || {});
+  init.headers = Object.assign({}, init.headers || {});
+  if (typeof session !== 'undefined' && session && session.access_token && !init.headers['Authorization']) {
+    init.headers['Authorization'] = `Bearer ${session.access_token}`;
+  }
+  let resp = await fetch(url, init);
+  if (resp.status === 401 && typeof _refreshSessionForApi === 'function') {
+    const refreshed = await _refreshSessionForApi();
+    if (refreshed && session && session.access_token) {
+      init.headers['Authorization'] = `Bearer ${session.access_token}`;
+      resp = await fetch(url, init);
+    }
+  }
+  return resp;
 }
 
 (function installAnthropicProxyInterceptor() {
@@ -9765,10 +9787,11 @@ async function _refreshSessionForApi() {
     return resp;
   };
 })();
+// 사용자 명시 2026-05-01 (agent audit): Phase C 후 'x-api-key' 헤더는 interceptor (line 9750~) 가 즉시 strip.
+// state.apiKey 영구 wipe (마이그레이션 13276) 라 항상 빈 문자열. 헤더 자리 단순화 — 명확성.
 function _anthropicHeaders(extraHeaders) {
   return Object.assign({
     'Content-Type': 'application/json',
-    'x-api-key': state.apiKey,
     'anthropic-version': '2023-06-01',
     'anthropic-dangerous-direct-browser-access': 'true'
   }, extraHeaders || {});
@@ -10236,7 +10259,7 @@ async function withdrawAccount() {
     let backendOk = false;
     let backendErr = '';
     try {
-      const r = await fetch(`${BACKEND_BASE}/api/account/delete`, {
+      const r = await _authedFetch(`${BACKEND_BASE}/api/account/delete`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session?.access_token || ''}`, 'Content-Type': 'application/json' }
       });
@@ -11708,10 +11731,8 @@ function showWelcomeBonusModal(opts) {
       // 사용자 보고 2026-04-30: "받았는데 그대로" — 이미 받은 사용자는 backend 가 idempotent skip 하고 토스트로 안내.
       if (!preview && typeof session !== 'undefined' && session && session.access_token) {
         try {
-          const _origFetch = window._anthropicOrigFetch || window.fetch;
-          const resp = await _origFetch('/api/billing/welcome-bonus', {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + session.access_token }
+          const resp = await _authedFetch('/api/billing/welcome-bonus', {
+            method: 'POST'
           });
           if (resp.ok) {
             const data = await resp.json().catch(() => ({}));
@@ -11891,13 +11912,9 @@ async function devResetWelcomeBonus() {
   }
   if (!confirm('admin 본인 잔액 0 + free_credit_granted=false 리셋 후 환영 모달 자동 재오픈. 진행?')) return;
   try {
-    const _origFetch = window._anthropicOrigFetch || window.fetch;
-    const resp = await _origFetch('/api/admin/reset-balance', {
+    const resp = await _authedFetch('/api/admin/reset-balance', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + session.access_token
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         new_balance_usd: 0,
         reset_free_credit_granted: true
@@ -24047,9 +24064,8 @@ async function generateAIResponse(modelOverride) {
     const m = (err && err.message) || '';
     let userMsg;
     if (/401/.test(m) || /authentication/i.test(m) || /invalid.*api.*key/i.test(m) || /api[_ ]?key/i.test(m)) {
-      if (state && state.apiKey) {
-        userMsg = '🔑 본인 API 키 인증 실패.\n\n나 탭 → 설정에서 키를 다시 확인해봐.';
-      } else if (typeof session !== 'undefined' && session && session.access_token) {
+      // 사용자 명시 2026-05-01 (agent audit): state.apiKey 영구 wipe (마이그레이션) 후 Phase C 백엔드 프록시 — 본인 키 분기 dead. session 만료 분기만 보존.
+      if (typeof session !== 'undefined' && session && session.access_token) {
         userMsg = '⏰ 로그인 세션이 만료된 것 같아.\n\n페이지 새로고침 또는 로그아웃 → 다시 로그인 해줘.';
       } else {
         userMsg = '🔑 로그인 필요 — 다시 로그인 해줘.';
@@ -38021,7 +38037,7 @@ async function submitFeedback() {
   status.textContent = '보내는 중...';
   status.style.color = 'var(--text-soft)';
   try {
-    const resp = await fetch('/api/feedback', {
+    const resp = await _authedFetch('/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
       body: JSON.stringify({ message: msg })
@@ -38142,7 +38158,7 @@ async function refreshAdminFeedbackButton() {
   const btn = document.getElementById('adminFeedbackBtn');
   if (!btn) return;
   try {
-    const resp = await fetch('/api/admin/feedback-list?status=open', {
+    const resp = await _authedFetch('/api/admin/feedback-list?status=open', {
       headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
     });
     if (resp.status === 403) { btn.style.display = 'none'; return; }
@@ -38188,7 +38204,7 @@ async function adminFeedbackLoad(filter) {
   if (!body) return;
   body.innerHTML = '<span style="color:var(--text-soft);">불러오는 중...</span>';
   try {
-    const resp = await fetch('/api/admin/feedback-list?status=' + encodeURIComponent(filter), {
+    const resp = await _authedFetch('/api/admin/feedback-list?status=' + encodeURIComponent(filter), {
       headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
     });
     if (!resp.ok) {
@@ -38286,7 +38302,7 @@ async function adminFeedbackSubmitReply(feedbackId) {
   const reply = ta.value.trim();
   if (!reply) { showToast('답변 내용 없음'); return; }
   try {
-    const resp = await fetch('/api/admin/feedback-reply', {
+    const resp = await _authedFetch('/api/admin/feedback-reply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
       body: JSON.stringify({ feedback_id: feedbackId, reply })
@@ -38324,12 +38340,9 @@ async function adminResetBalance() {
   const resetIdempotency = confirm('idempotency 기록도 reset?\n\nYes = 과거 결제 다시 처리 가능 (위험)\nNo = 잔액만 정정 (권장)');
   const _origFetch = window._anthropicOrigFetch || window.fetch;
   try {
-    const resp = await _origFetch('/api/admin/reset-balance', {
+    const resp = await _authedFetch('/api/admin/reset-balance', {
       method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + session.access_token,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         new_balance_usd: newBalance,
         reset_idempotency: resetIdempotency
@@ -38354,7 +38367,7 @@ async function adminLoadPendingCharges() {
   if (!container) return;
   container.innerHTML = '<span style="color:var(--text-soft);">불러오는 중...</span>';
   try {
-    const resp = await fetch('/api/admin/pending-charges', {
+    const resp = await _authedFetch('/api/admin/pending-charges', {
       headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
     });
     if (resp.status === 403) {
@@ -38394,7 +38407,7 @@ async function adminLoadPendingCharges() {
 async function adminConfirm(paymentId) {
   if (!confirm('입금 확인하셨나요? status를 paid로 변경합니다.')) return;
   try {
-    const resp = await fetch('/api/admin/confirm-charge', {
+    const resp = await _authedFetch('/api/admin/confirm-charge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
       body: JSON.stringify({ payment_id: paymentId })

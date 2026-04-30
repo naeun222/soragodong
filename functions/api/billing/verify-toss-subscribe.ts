@@ -24,8 +24,9 @@ const RECEIVER_ACCOUNT = {
   holder: '김나은'
 };
 
-export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
+export async function onRequestPost(context: { request: Request; env: Env; waitUntil?: (p: Promise<any>) => void }): Promise<Response> {
   const { request, env } = context;
+  const waitUntil = context.waitUntil ? context.waitUntil.bind(context) : (p: Promise<any>) => { p.catch(() => {}); };
   const user = await verifyAuth(request, env);
   if (!user) return unauthorized();
 
@@ -157,14 +158,15 @@ JSON만 출력. 다른 글 X.`;
     try { aiAnalysis = JSON.parse(jm[0]); } catch { return jsonResponse({ error: 'JSON 파싱 실패' }, 502); }
     const usage = data.usage || {};
     aiCostUsd = calculateCost('claude-sonnet-4-6', usage.input_tokens || 0, usage.output_tokens || 0);
-    recordUsage(env, {
+    // 사용자 명시 2026-05-01 (agent audit): waitUntil 추가 — Worker 빠른 응답 시 logging drop 방지.
+    waitUntil(recordUsage(env, {
       user_id: user.id,
       endpoint: 'verify_toss_subscribe',
       model: 'claude-sonnet-4-6',
       input_tokens: usage.input_tokens || 0,
       output_tokens: usage.output_tokens || 0,
       cost_usd: aiCostUsd
-    }).catch(() => {});
+    }).catch(() => {}));
   } catch (e: any) {
     return jsonResponse({ error: 'AI 호출 예외: ' + (e?.message || e) }, 502);
   }

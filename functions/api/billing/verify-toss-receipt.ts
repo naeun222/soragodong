@@ -16,7 +16,8 @@ const RECEIVER_ACCOUNT = {
 const CHARGE_PLANS_KRW = [1000, 5000, 10000, 30000, 50000];
 const BONUS_PCT = [0, 15, 30, 50, 55];
 
-export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
+export async function onRequestPost(context: { request: Request; env: Env; waitUntil?: (p: Promise<any>) => void }): Promise<Response> {
+  const waitUntil = context.waitUntil ? context.waitUntil.bind(context) : (p: Promise<any>) => { p.catch(() => {}); };
   const { request, env } = context;
   const user = await verifyAuth(request, env);
   if (!user) return unauthorized();
@@ -164,14 +165,15 @@ JSON만 출력. 다른 글 X.`;
     // usage 기록
     const usage = data.usage || {};
     aiCostUsd = calculateCost('claude-sonnet-4-6', usage.input_tokens || 0, usage.output_tokens || 0);
-    recordUsage(env, {
+    // 사용자 명시 2026-05-01 (agent audit): waitUntil 추가 — Worker 빠른 응답 시 logging drop 방지.
+    waitUntil(recordUsage(env, {
       user_id: user.id,
       endpoint: 'verify_toss_receipt',
       model: 'claude-sonnet-4-6',
       input_tokens: usage.input_tokens || 0,
       output_tokens: usage.output_tokens || 0,
       cost_usd: aiCostUsd
-    }).catch(() => {});
+    }).catch(() => {}));
   } catch (e: any) {
     return jsonResponse({ error: 'AI 호출 예외: ' + (e?.message || e) }, 502);
   }
