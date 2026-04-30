@@ -9370,38 +9370,28 @@ function testFirstTouchQuiz() {
 }
 
 async function maybeShowFirstTouchQuiz() {
+  // 사용자 명시 2026-04-30 (정정): quiz form 폐기. "불필요하게 사용자한테 막 요구하는 느낌" + JSON parse 에러 사용자 stuck.
+  // 새 흐름: 코어 #1 종료 시점 (onbFinish) snapshot → AI 진단 자동 추출 → traits/values/patterns 표시.
+  // 이 함수는 호환 + 환영 보너스 + chooser trigger 용도로 단순화. quiz UI 표시 X.
   if (!authUserId) return;
-  if (state.preferences && state.preferences.testerMode) {
-    // 테스터 모드도 tutorial chooser fallback (관리자 사용성)
-    if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
-    return;
-  }
   if (window._onbTutorialMode) return;
-  // 이미 first touch 완료 → tutorial chooser 직접 trigger
-  if (state.preferences && state.preferences._firstTouchDone) {
+  // testerMode = chooser fallback (관리자 사용성)
+  if (state.preferences && state.preferences.testerMode) {
     if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
     return;
   }
-  // 이미 진입한 사용자 (entries 4개 이상) — quiz 안 띄우고 done 마킹 + tutorial chooser fallback
-  const entriesObj = state.entries || {};
-  const entriesCount = Array.isArray(entriesObj) ? entriesObj.length : Object.keys(entriesObj).length;
-  if (entriesCount > 3) {
-    state.preferences = state.preferences || {};
-    state.preferences._firstTouchDone = true;
-    saveState();
-    if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
-    return;
-  }
-  // 다른 모달 떠있으면 skip (튜토리얼 / E2EE / update chooser)
+  // 다른 모달 떠있으면 skip (E2EE / update chooser / 튜토리얼)
   if (document.getElementById('e2eeRecoveryOverlay')) return;
   if (document.getElementById('e2eeSetupOverlay')) return;
   if (document.querySelector('.update-chooser-overlay')) return;
   if (document.getElementById('onbOverlay') && document.getElementById('onbOverlay').classList.contains('active')) return;
-  // 사용자 요청 2026-04-30 ultrathink: quiz 직전 환영 선물 모달 (한 번만)
-  if (!state.preferences._welcomeBonusShown) {
+  // 신규 사용자 (entries ≤ 3 + 환영 보너스 미표시) → 환영 보너스 표시 (1회).
+  const entriesCount = Array.isArray(state.entries) ? state.entries.length : Object.keys(state.entries || {}).length;
+  if (entriesCount <= 3 && state.preferences && !state.preferences._welcomeBonusShown) {
     await showWelcomeBonusModal();
   }
-  showFirstTouchQuiz();
+  // tutorial chooser (코어 #1 진입 안내)
+  if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
 }
 
 // 사용자 요청 2026-04-30 ultrathink: 무료 토큰 화려한 환영 모달 + 법적 고지 (전상법 §13/§17, 표시광고법 §3)
@@ -9733,6 +9723,88 @@ JSON만 출력. 다른 글 X.`;
   const data = await resp.json();
   const text = data?.content?.[0]?.text || '';
   return _robustJsonExtract(text);
+}
+
+// 사용자 명시 2026-04-30 (정정): quiz form 폐기 → 코어 #1 종료 snapshot 기반 첫 진단.
+// 코어 #1 동안 사용자가 박은 chatMessages user / entries / 모드 → AI 가설 추출. 동일 출력 schema (showFirstTouchResult 재사용).
+async function generateFirstTouchFromCoreData(snapshot) {
+  const userMsgsText = (snapshot.userMessages || []).map(m => m.content).join('\n---\n').slice(0, 2500);
+  const entriesText = JSON.stringify(snapshot.entries || [], null, 0).slice(0, 1500);
+  const modesText = (snapshot.selectedModes || []).join(', ') || '(없음)';
+  const vitalityText = snapshot.pickedVitality || '(미응답)';
+  const prompt = `사용자가 처음 앱에 진입해 코어 #1 (하면서 익히기) 튜토리얼을 끝냈다. 이 동안 사용자가 박은 첫 데이터로 가벼운 첫 진단을 작성한다.
+
+[사용자가 코어 #1 동안 박은 거]
+대화 메시지 (사용자 발화):
+${userMsgsText || '(없음)'}
+
+오늘 일기 / 체크인:
+${entriesText}
+
+선택한 모드: ${modesText}
+오늘 활력: ${vitalityText}
+
+[목표]
+- 한 단어 정체성 명명 (정형 X — 사용자 첫 데이터 기반 고유)
+- 가설 3개 — trait / value / pattern 중 적절한 카테고리. confidence 0.3-0.5 (낮음 — 데이터 적음, 첫 인사 수준).
+- 다음 1주 관찰 거리 2개 (구체, observable)
+- 한 줄 친근 인사 + 첫 인상 (40자 이내)
+
+[가설 schema 가이드]
+- trait: name (10자 이내) + description (한 문장)
+- value: name (5자 이내) + description (한 문장)
+- pattern: name (10자 이내 라벨) + trigger (조건) + sequence (행동 흐름)
+- display_text: ✓ 박스에서 보일 친근한 한 줄 (예: "꼼꼼한 편인 거 같아")
+
+[톤]
+친한 친구 반말. judgment X. self-compassion. confidence 낮음 명시 (예: "초안 — 함께 확인해볼 가설").
+Surprise > Truth — '어, 어떻게 알았어?' 트리거. Specific > Generic.
+
+[출력 JSON 만, markdown X]
+{
+  "one_word": "한 단어 정체성",
+  "intro_line": "한 줄 친근 인사 + 첫 인상 (40자 이내)",
+  "hypotheses": [
+    { "category": "trait" | "value" | "pattern", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.3-0.5, "display_text": "..." },
+    ...3개
+  ],
+  "watch_points": [
+    "다음 1주 관찰 거리 1 (구체, observable)",
+    "다음 1주 관찰 거리 2"
+  ]
+}`;
+  const resp = await callAnthropic({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1500,
+    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
+    messages: [{ role: 'user', content: prompt }]
+  });
+  if (!resp.ok) throw new Error('API ' + resp.status);
+  const data = await resp.json();
+  const text = data?.content?.[0]?.text || '';
+  return _robustJsonExtract(text);
+}
+
+// 코어 #1 종료 시점 (onbFinish) 호출. snapshot → AI 진단 → 결과 박기 + showFirstTouchResult.
+// background — 사용자 화면 표시 후 1.5초 후 trigger. 실패 silent (사용자 막힘 X).
+async function _runFirstTouchFromCore1(snapshot) {
+  if (!_canAI()) { console.log('[firstTouch core1] AI 불가능 — skip'); return; }
+  if (!snapshot || (!snapshot.userMessages?.length && !snapshot.entries?.length)) {
+    console.log('[firstTouch core1] snapshot 비어있음 — skip');
+    return;
+  }
+  try {
+    const insight = await generateFirstTouchFromCoreData(snapshot);
+    if (!insight || !insight.one_word) throw new Error('분석 결과 비어있음');
+    state.firstTouchInsight = { ...insight, source: 'core1', completedAt: new Date().toISOString() };
+    state.preferences = state.preferences || {};
+    state.preferences._firstTouchDone = true;
+    saveState();
+    if (typeof showFirstTouchResult === 'function') showFirstTouchResult(insight);
+  } catch (e) {
+    console.warn('[firstTouch core1] 실패 — silent:', e);
+    // 실패 silent. _firstTouchDone 마킹 X — 다음 진단 흐름에서 재시도 가능.
+  }
 }
 
 function showFirstTouchResult(insight) {
@@ -13248,6 +13320,28 @@ function onbFinish() {
   // V4: body override 복원 + 코어 활성 상태 정리
   if (typeof _cleanupCoreOverrides === 'function') _cleanupCoreOverrides();
 
+  // 사용자 명시 2026-04-30 (정정): quiz form 폐기 → 코어 #1 종료 snapshot 으로 첫 진단.
+  // testerMode OFF + 코어 #1 + 미진단 시 — 데이터 정리 *전* snapshot 보존. 정리 후 background 진단 trigger.
+  let _firstTouchSnapshot = null;
+  const _firstTouchEligible = _completedCoreId === 'core1'
+    && !(state.preferences && state.preferences._firstTouchDone)
+    && !(state.preferences && state.preferences.testerMode)
+    && _onbStartTime;
+  if (_firstTouchEligible) {
+    const startMs = _onbStartTime;
+    _firstTouchSnapshot = {
+      userMessages: (state.chatMessages || []).filter(m =>
+        m.role === 'user' && m.timestamp && new Date(m.timestamp).getTime() >= startMs && !m.typing && !m.error
+      ).slice(-15).map(m => ({ content: m.content })),
+      entries: (state.entries || []).filter(e =>
+        e.timestamp && new Date(e.timestamp).getTime() >= startMs
+      ).slice(-5).map(e => ({ date: e.date, vitality: e.vitality, mood: e.mood, sleep: e.sleep, note: e.note })),
+      selectedModes: Object.keys(state.modes || {}).filter(k => state.modes[k]),
+      pickedVitality: state.preferences?._lastTutorialVitality || null
+    };
+    console.log('[firstTouch core1] snapshot 보존 (msg ' + _firstTouchSnapshot.userMessages.length + ' / entry ' + _firstTouchSnapshot.entries.length + ')');
+  }
+
   // 사용자 요청 2026-04-28: 테스터 모드 ON 상태였으면 backup 복원으로 한 방 정리 (filter cleanup 중복 X)
   if (state.preferences && state.preferences.testerMode && _testerModeBackupState) {
     // V4: 튜토리얼 중 사용자가 입력한 API 키 / profile 보존 (backup 복원으로 wipe 방지)
@@ -13411,6 +13505,12 @@ function onbFinish() {
   if (typeof renderShellBar === 'function') renderShellBar();
   if (typeof renderChat === 'function') renderChat();
   setTimeout(() => showToast('잘 왔어 ✦ 진짜 시작!'), 300);
+  // 사용자 명시 2026-04-30: 코어 #1 종료 snapshot 으로 첫 진단 (background, 1.5초 후). 실패 silent.
+  if (_firstTouchSnapshot) {
+    setTimeout(() => {
+      _runFirstTouchFromCore1(_firstTouchSnapshot).catch(e => console.warn('[firstTouch core1] 호출 실패:', e));
+    }, 1500);
+  }
 }
 
 // 화면 회전/리사이즈 시 spotlight 위치 재계산

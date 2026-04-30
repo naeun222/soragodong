@@ -332,7 +332,8 @@ index.html 거대한 단일 파일. Grep 적극 활용:
 - [ ] **첫 진단 quiz 자체 재검토**: 사용자 본인 만족 X — "불필요하게 사용자한테 막 요구하는 느낌". skip 더 부드럽게 / 또는 quiz 자체 폐기 / 또는 자연 대화로 흡수 검토.
 - [ ] **첫 진단 → 튜토리얼 대화탭 통합 (사용자 요청 2026-04-30)**: 5문항 quiz form 폐기. 대신 코어 튜토리얼 대화탭에서 자연스러운 대화로 정보 수집 → AI 가설 추출 → '나 탭' (traits/values/patterns) 에 자동 표시. 폼 X, 대화 흐름 안에서 흡수.
 - [ ] **시드데이터 + 리뷰 변경사항 반영 X 진단 (사용자 보고 2026-04-30)**: 시드데이터 넣은 후 리뷰 돌리면 최근 변경/추가가 결과에 반영 안 됨. cache / 옛 transcript / 시드 ID prefix 무시 흐름 / 리뷰 input window 등 의심. 재현 후 진단. → 1차 fix 적용 (chapters/topicCards/pearls/archive/insights inject + monthly cutoffEnd + chat user-only -40). verify 필요.
-- [ ] **gh-pages 에러 (사용자 보고 2026-04-30)**: GitHub Pages 의 gh-pages 항상 에러. 사용자: "이거 push 안 하면 안 되나? 또는 deploy 안 하면?" → 진단: cloudflare pages 가 main 배포 — gh-pages 무관. workflow 또는 repo 설정 확인 후 제거 검토.
+- [x] **gh-pages 에러 (사용자 보고 2026-04-30)**: ✅ fix — `.github/workflows/deploy-pages.yml` 삭제. Cloudflare Pages 마이그레이션 후 GitHub Pages 불필요 (V3 시대 옛 workflow). main / v4-dev push 마다 trigger 됐던 거.
+- [ ] **useOpus 적용 범위 검토 (사용자 질문 2026-04-30)**: 헤더 모델 토글 = `state.preferences.useOpus`. 현재 `sendChat` (line 19982) 만 영향. 다른 호출 (마법 helpChat / 숙고 reflection / 돌연변이 / forceAnalyze / generateReview / firstTouch / 등) 은 *고정 모델*. 사용자 의도 = 토글 박으면 *모든 대화* opus 인지 / *메인 chat 만* opus 인지 결정 후 적용 범위 통일.
 - [ ] **마법의 방 UI 변경 (사용자 명시 2026-04-30 — 진행 보류)**: "마법의 방 UI 바꿔. 숙고의 방처럼 대화되게" — 정확 의도 확인 필요 (결정 화면 #screen-decisions 자체 대화 형식 변경? helpChat 진입 path 더 명확? 결정 입력 폼 → 대화 폼?). 큰 작업 — 사용자 의도 명확 받은 후 진행.
 
 ### 사용자 대기 노트 (우선순위 낮음)
