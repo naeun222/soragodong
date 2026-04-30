@@ -1036,15 +1036,24 @@
   }
   .login-sub { font-size: 13px; color: var(--text-dim); line-height: 1.7; margin-bottom: 24px; }
   .login-form { width: 100%; }
+  /* 사용자 보고 2026-04-30: 로그인 input 이 login bg 와 너무 비슷 → 입력 자리 안 보임. 대비 강화. */
   .login-form input {
     margin-bottom: 10px;
     text-align: center;
-    padding: 12px 14px;
-    font-size: 14px;
+    padding: 14px 16px;
+    font-size: 15px;
     border-radius: 12px;
-    transition: border-color 0.2s, background-color 0.2s;
+    background: rgba(255,255,255,0.06) !important;
+    border: 1.5px solid rgba(212,167,106,0.35) !important;
+    color: var(--text);
+    transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
   }
-  .login-form input:focus { background: rgba(126,200,227,0.04); }
+  .login-form input::placeholder { color: rgba(255,255,255,0.45); }
+  .login-form input:focus {
+    background: rgba(212,167,106,0.10) !important;
+    border-color: rgba(212,167,106,0.7) !important;
+    box-shadow: 0 0 0 3px rgba(212,167,106,0.12);
+  }
   .login-status { margin-top: 14px; font-size: 13px; line-height: 1.6; min-height: 18px; }
   .login-protect-card {
     margin-top: 12px;
