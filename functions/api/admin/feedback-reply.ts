@@ -1,6 +1,6 @@
 // POST /api/admin/feedback-reply — admin only. 피드백에 답변 작성.
 // body: { feedback_id, reply }
-// 사용자 요청 2026-04-30: 김나은 admin이 인앱에서 답변 → 사용자 inbox에 표시.
+// 사용자 요청 2026-04-30: 나은 랩 admin이 인앱에서 답변 → 사용자 inbox에 표시.
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 

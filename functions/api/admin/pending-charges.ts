@@ -1,5 +1,5 @@
 // GET /api/admin/pending-charges — admin only. 토스 송금 pending list 조회.
-// 사용자 요청 2026-04-30: 김나은 admin이 매일 토스 확인 → pending 송금 list 보고 승인/환수.
+// 사용자 요청 2026-04-30: 나은 랩 admin이 매일 토스 확인 → pending 송금 list 보고 승인/환수.
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 

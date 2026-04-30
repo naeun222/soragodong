@@ -1,5 +1,5 @@
 // GET /api/admin/feedback-list — admin only. 사용자 피드백 list 조회.
-// 사용자 요청 2026-04-30: 김나은 admin이 인앱으로 피드백 답변하기 위한 list endpoint.
+// 사용자 요청 2026-04-30: 나은 랩 admin이 인앱으로 피드백 답변하기 위한 list endpoint.
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 
