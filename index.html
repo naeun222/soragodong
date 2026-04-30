@@ -5263,6 +5263,11 @@
   .mutation-gen-btn:active:not(:disabled) { transform: scale(0.96); }
   .mutation-gen-btn:disabled { opacity: 0.5; cursor: default; }
 
+  /* 사용자 보고 2026-05-01: 깨달음으로 버튼 bubble 밖 sibling 으로 (메인 chat 패턴 일치) */
+  .mutation-msg-actions {
+    align-self: flex-start;
+    margin: -4px 0 0 6px;
+  }
   /* 사용자 요청 2026-04-29: 돌연변이 assistant 메시지의 ✦ 깨달음으로 버튼 */
   .mutation-insight-btn {
     background: rgba(201,169,110,0.14);
@@ -25625,13 +25630,10 @@ function _renderMutationChat() {
           </div>
         </div>`;
       } else if (m.role === 'assistant' && !m._placeholder) {
-        // 사용자 요청 2026-04-29: assistant 메시지에 ✦ 깨달음으로 버튼 (메인 chat과 동일)
+        // 사용자 보고 2026-05-01 ultrathink: '깨달음으로' 버튼 bubble 안 → bubble 밖 sibling 으로 분리 (메인 chat 패턴 일치, gold pill on dark bubble 시각 충돌 해소).
         const saved = !!m.savedAsInsight;
-        html += `<div class="mutation-msg assistant">${escapeHtml(m.content)}
-          <div style="margin-top:8px;">
-            <button class="mutation-insight-btn${saved ? ' saved' : ''}" onclick="saveMutationMsgAsInsight(${msgIdx})">${saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>
-          </div>
-        </div>`;
+        html += `<div class="mutation-msg assistant">${escapeHtml(m.content)}</div>`;
+        html += `<div class="mutation-msg-actions"><button class="mutation-insight-btn${saved ? ' saved' : ''}" onclick="saveMutationMsgAsInsight(${msgIdx})">${saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button></div>`;
       } else {
         html += `<div class="mutation-msg ${m.role}">${escapeHtml(m.content)}</div>`;
       }
