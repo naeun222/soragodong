@@ -221,6 +221,7 @@ soragodong-repo/
 
 ### 🟢 코드 (즉시 가능)
 - [ ] **첫 진단 재설계 구현** — 회의 1 흐름 (chip 3 라운드 + state.intakeWorry + testerMode 안전 격리). 사용자 답 받은 후.
+- [ ] **소라고동 일상 대화 티키타카** (사용자 큐 2026-04-30) — 적절한 후속 질문으로 대화 이어가기. 현재 답변이 한 번에 끝나는 경향. 조사 필요: `sendChat` system prompt + 4단 분석 후 자연 follow-up 질문 패턴.
 - [ ] **24시간 갭 vs ✓ 마무리 일관성** 점검
 - [ ] **Performance audit** (1.6MB 단일 — Phase A 진행)
 
