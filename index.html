@@ -17711,13 +17711,13 @@ function isMonthlyReviewAvailable() {
   const today = new Date();
   // 사용자 명시 2026-05-01 (A 옵션): 첫째주 일요일만 (1-7일 + 일요일).
   if (today.getDay() !== 0) return false;
-  const currentMonthKey = getCurrentMonthKey();
-  const hasThisMonth = (state.monthlyReviews || []).some(r => r.monthKey === currentMonthKey);
-  if (hasThisMonth) return false;
   const dayOfMonth = today.getDate();
   if (dayOfMonth > 7) return false;
-  // Need data from previous month
+  // 사용자 보고 2026-05-01 ultrathink: prevMonthKey 로 체크해야 함.
+  // (옛 버그: currentMonthKey 로 체크 — saveReview / auto 둘 다 prevMonthKey 박는데, current 로 체크하면 절대 매칭 X = 카드 항상 표시 → 자동 push 후에도 사용자 click 시 중복 generate.)
   const prevMonthKey = getMonthKey(new Date(today.getFullYear(), today.getMonth() - 1, 15));
+  const hasPrevMonth = (state.monthlyReviews || []).some(r => r.monthKey === prevMonthKey);
+  if (hasPrevMonth) return false;
   const hasPrevMonthData = state.entries.some(e => e.date.startsWith(prevMonthKey));
   return hasPrevMonthData;
 }
@@ -18230,14 +18230,19 @@ function saveReview(type) {
     risk_signals: reviewData.risk_signals
   };
 
+  // 사용자 보고 2026-05-01 ultrathink: 중복 가드 — 같은 weekKey/monthKey 이미 있으면 replace (auto 가 먼저 push 한 후 사용자 manual click 시 중복 방지)
   if (type === 'weekly') {
     review.weekKey = getCurrentWeekKey();
-    state.weeklyReviews.push(review);
+    const _idx = state.weeklyReviews.findIndex(r => r.weekKey === review.weekKey);
+    if (_idx >= 0) state.weeklyReviews[_idx] = review;
+    else state.weeklyReviews.push(review);
   } else {
     const lastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15);
     review.monthKey = getMonthKey(lastMonth);
-    state.monthlyReviews.push(review);
     if (reviewData.new_observations) review.newObservations = reviewData.new_observations;
+    const _idx = state.monthlyReviews.findIndex(r => r.monthKey === review.monthKey);
+    if (_idx >= 0) state.monthlyReviews[_idx] = review;
+    else state.monthlyReviews.push(review);
   }
 
   // Also add to archive
@@ -28572,7 +28577,7 @@ function renderLensInsights() {
     html += `<div class="insights-empty">
       <div class="icon">🔮</div>
       <div style="font-size:14px; color:var(--text); margin-bottom:8px;">아직 모이는 중 ✦</div>
-      체크인이 7일쯤 쌓이면<br>"새 인사이트 찾기"를 눌러봐.<br><br>
+      체크인이 7일쯤 쌓이면<br>자동으로 인사이트 찾아줄게.<br><br>
       <div style="font-size:11px; color:var(--text-soft);">너만의 패턴이 천천히 드러나.</div>
     </div>`;
   } else {
