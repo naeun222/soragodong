@@ -163,12 +163,15 @@ agent 들이 자기 도메인만 read 하도록 자리 명세. line 번호 = app
 **Backend**: `functions/api/billing/*` + `_lib/billing.ts`
 
 **위험 자리** ⭐:
-- 잔액 += 매 갱신 버그 (이미 fix — atomic helper + idempotency)
-- 환영 모달 받기 button → backend POST /api/billing/welcome-bonus
-- `_welcomeBonusShown` flag cloud sync 보장
+- 잔액 += 매 갱신 버그 (이미 fix — atomic helper + idempotency, 0005 migration 활성)
+- 환영 모달 받기 button → POST /api/billing/welcome-bonus → 잔액 = $1.43 **SET (리셋, 사용자 명시 2026-04-30 변경: ≈ 2,000원)**
+- 받기 idempotent (free_credit_granted=eq.false 필터 PATCH — race-protected)
+- `_welcomeBonusShown` flag = client fast-path cache, **진실 source = backend free_credit_granted**
+- admin/reset-balance.ts = `reset_free_credit_granted` 옵션 (admin 환영 보너스 재테스트용)
 - toss memo_code prompt injection 차단 (`/^[A-Z0-9-]{4,20}$/`)
 - 영수증 image_sha256 dup check
 - rate limit (1분 5회 / 24시간 15회)
+- FREE_INITIAL_CREDIT_USD = **1.43** (4000원 → 2000원 정정 2026-04-30)
 
 **Subagent**: `audit-billing`
 
@@ -216,14 +219,16 @@ agent 들이 자기 도메인만 read 하도록 자리 명세. line 번호 = app
 
 ### 🔴 B2 — Backend BILLING
 **자리**:
-- `functions/api/billing/*.ts` (8 file)
-- `functions/api/_lib/billing.ts` (FREE_INITIAL_CREDIT_USD, ensureBillingRow, addCreditAtomic, subtractCreditAtomic, checkBudget)
-- `functions/api/admin/*.ts` (5 file)
+- `functions/api/billing/*.ts` (9 file: charge / verify-toss-receipt / overage-pack / refund / subscribe / upgrade-tier / welcome-bonus / manual-charge(deprecated 410) / 등)
+- `functions/api/_lib/billing.ts` (`FREE_INITIAL_CREDIT_USD = 1.43`, ensureBillingRow, addCreditAtomic, subtractCreditAtomic, checkBudget, deductCost, TIER_PLANS, OVERAGE_PACKS)
+- `functions/api/admin/*.ts` (6 file: confirm-charge / pending-charges / revoke-charge / reset-balance / feedback-list / feedback-reply)
 
 **위험 자리**:
-- ensureBillingRow 자동 free credit 부여 X (이미 fix — 잔액 0 INSERT)
-- 모든 충전·환불 endpoint atomic + idempotency (이미 fix)
-- imp_uid / image_sha256 / memo_code idempotency
+- ensureBillingRow 자동 free credit 부여 X (이미 fix — 잔액 0 INSERT, free_credit_granted=false)
+- 모든 충전·환불 endpoint atomic + idempotency (0005 migration 활성)
+- welcome-bonus = 잔액 SET ($1.43, 추가 X) + free_credit_granted=eq.false 필터 PATCH (race-safe)
+- admin/reset-balance.ts = `reset_free_credit_granted` 옵션 (admin 환영 보너스 재테스트용)
+- imp_uid / image_sha256 / memo_code idempotency keys
 
 **Subagent**: `audit-backend`
 

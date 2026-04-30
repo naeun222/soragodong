@@ -26,7 +26,7 @@ model: sonnet
 - `functions/api/admin/confirm-charge.ts` (status PATCH 만, 잔액 X)
 - `functions/api/admin/revoke-charge.ts` (subtractCreditAtomic)
 - `functions/api/admin/reset-balance.ts` (admin 직접 PATCH)
-- `functions/api/_lib/billing.ts` (FREE_INITIAL_CREDIT_USD = 2.86, ensureBillingRow, addCreditAtomic, subtractCreditAtomic, checkBudget, deductCost)
+- `functions/api/_lib/billing.ts` (FREE_INITIAL_CREDIT_USD = **1.43** ≈ 2,000원, ensureBillingRow, addCreditAtomic, subtractCreditAtomic, checkBudget, deductCost)
 - `supabase/migrations/0002_billing_usage.sql` (deduct_credit_atomic RPC)
 - `supabase/migrations/0005_atomic_billing.sql` (add_credit_atomic_idempotent, subtract_credit_atomic, soragodong_billing_idempotency 테이블)
 

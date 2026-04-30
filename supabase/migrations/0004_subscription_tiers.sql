@@ -7,7 +7,7 @@
 -- + Overage pack: Light 5K = +$4 / Premium 7K = +$5 (credit_balance_usd 에 합쳐짐)
 --
 -- 기존 charge 잔액 (credit_balance_usd > 0) 사용자: legacy 호환 — 0 도달까지 차감 후 구독 안내.
--- 신규 무료 토큰 4,000원 ($2.86) 도 기존대로 credit_balance_usd 에 들어감.
+-- 신규 무료 토큰 2,000원 ($1.43) 도 기존대로 credit_balance_usd 에 들어감 (사용자 명시 2026-04-30: 4,000원 → 2,000원 정정).
 --
 -- subscription_plan 값:
 --   NULL          = 비구독 (free credit 또는 legacy charge 잔액 사용)

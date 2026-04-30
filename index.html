@@ -11637,7 +11637,7 @@ function showWelcomeBonusModal(opts) {
     document.body.appendChild(overlay);
     // 사용자 명시 2026-04-30 ultrathink:
     //   - button 눌러야만 닫힘 (overlay click X)
-    //   - "받기" click → backend POST /api/billing/welcome-bonus → 잔액 += $2.86 (idempotent)
+    //   - "받기" click → backend POST /api/billing/welcome-bonus → 잔액 = $1.43 SET (≈ 2,000원, idempotent — 이미 받음 시 변경 X)
     //   - flag _welcomeBonusShown saveState force + cloud sync 보장 (다시 안 뜸)
     document.getElementById('welcomeBonusOkBtn').onclick = async () => {
       const btn = document.getElementById('welcomeBonusOkBtn');
@@ -11819,7 +11819,7 @@ function devPreviewWeeklyReview() {
 // 개발자 도구 — 환영 선물 모달 (사용자 명시 2026-04-30: 원래 흐름처럼 backend 실제 grant).
 // idempotent — 이미 받은 사용자는 backend 가 자동 skip ('이미 받았어요'). 다시 테스트 하려면 devResetWelcomeBonus 후 재진입.
 function devPreviewWelcomeBonus() {
-  showWelcomeBonusModal();  // preview X — 받기 click 시 backend POST → 잔액 += $2.86
+  showWelcomeBonusModal();  // preview X — 받기 click 시 backend POST → 잔액 = $1.43 SET (≈ 2,000원)
 }
 
 // 개발자 도구 — admin 본인 환영 보너스 처음부터 재테스트.
@@ -38094,7 +38094,7 @@ async function adminResetBalance() {
     showToast('로그인 필요');
     return;
   }
-  const newBalanceStr = prompt('정정할 잔액 (USD, 0~100):\n예) 0 = 비우기 / 1.43 = 무료 토큰 2000원', '2.86');
+  const newBalanceStr = prompt('정정할 잔액 (USD, 0~100):\n예) 0 = 비우기 / 1.43 = 무료 토큰 2,000원', '1.43');
   if (newBalanceStr === null) return;
   const newBalance = parseFloat(newBalanceStr);
   if (isNaN(newBalance) || newBalance < 0 || newBalance > 100) {
