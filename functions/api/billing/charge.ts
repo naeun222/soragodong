@@ -1,6 +1,8 @@
 // POST /api/billing/charge — 충전 결제 검증 + 잔액 추가.
+// 사용자 명시 2026-04-30 ultrathink: race + idempotency 차단 — atomic RPC 사용.
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
+import { addCreditAtomic } from '../_lib/billing';
 
 const KRW_PER_USD = 1400;
 
@@ -80,32 +82,17 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     });
   } catch (e) { console.warn('[charge] payment 기록 실패:', e); }
 
-  // 4. 잔액 추가
-  try {
-    const billingResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&select=credit_balance_usd`,
-      {
-        headers: {
-          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      }
-    );
-    const billingRows: any = await billingResp.json();
-    const currentBalance = (billingRows[0]?.credit_balance_usd) || 0;
-    const newBalance = Math.round((currentBalance + amount_usd) * 1_000_000) / 1_000_000;
-    await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ credit_balance_usd: newBalance })
-    });
-    return jsonResponse({ ok: true, charged_krw: amount_krw, charged_usd: amount_usd, new_balance_usd: newBalance });
-  } catch (e: any) {
-    return jsonResponse({ error: '잔액 갱신 실패: ' + (e?.message || e) }, 500);
+  // 4. 잔액 추가 — atomic RPC + idempotency (imp_uid base)
+  // 사용자 명시 2026-04-30 ultrathink: 같은 imp_uid 두 번 호출 시 +=  두 번 발생하던 race 차단.
+  const result = await addCreditAtomic(env, user.id, amount_usd, 'portone_charge_' + imp_uid);
+  if (!result.ok) {
+    return jsonResponse({ error: '잔액 갱신 실패: ' + (result.error || 'unknown') }, 500);
   }
+  return jsonResponse({
+    ok: true,
+    charged_krw: amount_krw,
+    charged_usd: amount_usd,
+    new_balance_usd: result.balance_usd,
+    already_applied: result.already_applied || false
+  });
 }

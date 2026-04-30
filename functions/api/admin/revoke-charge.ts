@@ -48,32 +48,12 @@ export async function onRequestPost(context: { request: Request; env: AdminEnv }
     return jsonResponse({ error: '조회 실패: ' + (e?.message || e) }, 500);
   }
 
-  // 2. 사용자 잔액에서 차감
+  // 2. 사용자 잔액에서 차감 — atomic RPC (race-safe, 사용자 명시 2026-04-30 ultrathink)
   try {
-    const billingResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${paymentRow.user_id}&select=credit_balance_usd`,
-      {
-        headers: {
-          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      }
-    );
-    const billingRows: any = await billingResp.json();
-    if (billingRows && billingRows.length > 0) {
-      const currentBalance = (billingRows[0].credit_balance_usd) || 0;
-      const refundUsd = paymentRow.amount_credit_usd || 0;
-      const newBalance = Math.max(0, Math.round((currentBalance - refundUsd) * 1_000_000) / 1_000_000);
-      await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${paymentRow.user_id}`, {
-        method: 'PATCH',
-        headers: {
-          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({ credit_balance_usd: newBalance })
-      });
+    const refundUsd = paymentRow.amount_credit_usd || 0;
+    if (refundUsd > 0) {
+      const { subtractCreditAtomic } = await import('../_lib/billing');
+      await subtractCreditAtomic(env, paymentRow.user_id, refundUsd);
     }
   } catch (e) { console.warn('[admin revoke] 잔액 차감 실패:', e); }
 

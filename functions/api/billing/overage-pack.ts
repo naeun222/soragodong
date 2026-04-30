@@ -8,7 +8,7 @@
 // 결제 검증 후 credit_balance_usd 에 USD 추가 (구독 cap 도달 시 자동 fall-through 차감 — deduct_credit_atomic 참고).
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
-import { OVERAGE_PACKS } from '../_lib/billing';
+import { OVERAGE_PACKS, addCreditAtomic } from '../_lib/billing';
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
@@ -86,47 +86,16 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     });
   } catch (e) { console.warn('[overage-pack] payment 기록 실패:', e); }
 
-  // credit_balance_usd 에 추가 — read-modify-write race 방지 위해 RPC 같은 atomic 권장.
-  // 0002 의 deduct 와 대칭 — increment_credit_atomic 이 없으므로 임시로 read-then-PATCH (사용 빈도 낮음 + race risk 적음).
-  try {
-    const billingResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&select=credit_balance_usd`,
-      {
-        headers: {
-          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      }
-    );
-    const billingRows: any = await billingResp.json();
-    const currentBalance = Number(billingRows?.[0]?.credit_balance_usd) || 0;
-    const newBalance = Math.round((currentBalance + packDef.usd) * 1_000_000) / 1_000_000;
-
-    const patchResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}`,
-      {
-        method: 'PATCH',
-        headers: {
-          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({ credit_balance_usd: newBalance })
-      }
-    );
-    if (!patchResp.ok) {
-      const errText = await patchResp.text().catch(() => '');
-      console.error('[overage-pack] PATCH 실패:', patchResp.status, errText);
-      return jsonResponse({ error: '잔액 갱신 실패' }, 500);
-    }
-    return jsonResponse({
-      ok: true,
-      pack,
-      added_usd: packDef.usd,
-      new_balance_usd: newBalance
-    });
-  } catch (e: any) {
-    return jsonResponse({ error: 'billing 갱신 실패: ' + (e?.message || e) }, 500);
+  // credit_balance_usd 에 추가 — atomic RPC + idempotency (imp_uid base, 사용자 명시 2026-04-30 ultrathink)
+  const result = await addCreditAtomic(env, user.id, packDef.usd, 'portone_overage_' + imp_uid);
+  if (!result.ok) {
+    return jsonResponse({ error: 'billing 갱신 실패: ' + (result.error || 'unknown') }, 500);
   }
+  return jsonResponse({
+    ok: true,
+    pack,
+    added_usd: packDef.usd,
+    new_balance_usd: result.balance_usd,
+    already_applied: result.already_applied || false
+  });
 }

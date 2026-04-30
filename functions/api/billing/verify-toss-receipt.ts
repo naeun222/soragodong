@@ -244,37 +244,22 @@ JSON만 출력. 다른 글 X.`;
       })
     });
 
-    // 잔액 반영
-    const billingResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&select=credit_balance_usd`,
-      {
-        headers: {
-          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      }
-    );
-    const billingRows: any = await billingResp.json();
-    const currentBalance = (billingRows[0]?.credit_balance_usd) || 0;
-    const newBalance = Math.round((currentBalance + usdAmount) * 1_000_000) / 1_000_000;
-    await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ credit_balance_usd: newBalance })
-    });
+    // 잔액 반영 — atomic RPC + idempotency (image_sha256 base, 사용자 명시 2026-04-30 ultrathink)
+    // 같은 영수증 두 번 업로드 시 += 두 번 발생하던 race + 누적 차단.
+    const { addCreditAtomic } = await import('../_lib/billing');
+    const result = await addCreditAtomic(env, user.id, usdAmount, 'toss_receipt_' + image_sha256);
+    if (!result.ok) {
+      return jsonResponse({ error: '잔액 갱신 실패: ' + (result.error || 'unknown') }, 500);
+    }
     return jsonResponse({
       ok: true,
       verified: true,
       charged_krw: expected_amount_krw,
       charged_usd: usdAmount,
-      new_balance_usd: newBalance,
+      new_balance_usd: result.balance_usd,
+      already_applied: result.already_applied || false,
       ai_confidence: aiAnalysis.confidence,
-      message: 'AI 자동 인증 완료 ✦'
+      message: result.already_applied ? '이미 처리된 영수증' : 'AI 자동 인증 완료 ✦'
     });
   } catch (e: any) {
     return jsonResponse({ error: '잔액 반영 실패: ' + (e?.message || e) }, 500);

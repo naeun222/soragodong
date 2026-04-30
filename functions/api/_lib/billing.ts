@@ -99,6 +99,153 @@ export async function ensureBillingRow(env: Env, userId: string): Promise<UserBi
   }
 }
 
+// 사용자 명시 2026-04-30 ultrathink: 충전·환불 측 race condition + idempotency 차단 helper.
+// 0005_atomic_billing.sql 의 add_credit_atomic_idempotent RPC 호출.
+// migration 미실행 시 = fallback (read-modify-write — race risk 단 호환성 유지).
+export async function addCreditAtomic(
+  env: Env,
+  userId: string,
+  amountUsd: number,
+  idempotencyKey: string
+): Promise<{ ok: boolean; balance_usd?: number; already_applied?: boolean; error?: string }> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { ok: false, error: 'env missing' };
+  if (amountUsd <= 0) return { ok: false, error: 'amount <= 0' };
+
+  // 시도 1: atomic RPC (race-safe + idempotency)
+  try {
+    const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/add_credit_atomic_idempotent`, {
+      method: 'POST',
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        p_user_id: userId,
+        p_amount_usd: amountUsd,
+        p_idempotency_key: idempotencyKey
+      })
+    });
+    if (resp.ok) {
+      const data: any = await resp.json();
+      if (data?.ok) {
+        return {
+          ok: true,
+          balance_usd: Number(data.balance_usd) || 0,
+          already_applied: !!data.already_applied
+        };
+      }
+    } else if (resp.status !== 404) {
+      console.warn('[addCreditAtomic] RPC 비-OK:', resp.status, await resp.text().catch(() => ''));
+    }
+  } catch (e) {
+    console.warn('[addCreditAtomic] RPC 실패:', e);
+  }
+
+  // 시도 2: fallback (0005 migration 미실행 시) — read-modify-write + 명시 idempotency check
+  // 사용자 측 0005 migration 실행 권장.
+  console.warn('[addCreditAtomic] fallback 사용 — 0005_atomic_billing.sql 실행 권장 (race risk).');
+  try {
+    // 명시 idempotency: payments 테이블에서 portone_imp_uid / portone_merchant_uid 측 unique check
+    // 단 verify-toss-receipt 측 = image_sha256 base — payments 측에 별도 column 없으므로 best-effort.
+    // 단순 read-modify-write fallback:
+    const billingResp = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${userId}&select=credit_balance_usd`,
+      {
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
+        }
+      }
+    );
+    const rows: any = await billingResp.json();
+    const currentBalance = Number(rows?.[0]?.credit_balance_usd) || 0;
+    const newBalance = Math.round((currentBalance + amountUsd) * 1_000_000) / 1_000_000;
+    const patchResp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ credit_balance_usd: newBalance })
+    });
+    if (!patchResp.ok) return { ok: false, error: 'PATCH 실패: ' + patchResp.status };
+    return { ok: true, balance_usd: newBalance, already_applied: false };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+}
+
+// 잔액 차감 atomic RPC (refund / revoke-charge 측. race-safe + 음수 방지).
+export async function subtractCreditAtomic(
+  env: Env,
+  userId: string,
+  amountUsd: number
+): Promise<{ ok: boolean; balance_usd?: number; subtracted_usd?: number; error?: string }> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { ok: false, error: 'env missing' };
+  if (amountUsd <= 0) return { ok: false, error: 'amount <= 0' };
+
+  // 시도 1: atomic RPC
+  try {
+    const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/subtract_credit_atomic`, {
+      method: 'POST',
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ p_user_id: userId, p_amount_usd: amountUsd })
+    });
+    if (resp.ok) {
+      const data: any = await resp.json();
+      if (data?.ok) {
+        return {
+          ok: true,
+          balance_usd: Number(data.balance_usd) || 0,
+          subtracted_usd: Number(data.subtracted_usd) || 0
+        };
+      }
+    } else if (resp.status !== 404) {
+      console.warn('[subtractCreditAtomic] RPC 비-OK:', resp.status);
+    }
+  } catch (e) {
+    console.warn('[subtractCreditAtomic] RPC 실패:', e);
+  }
+
+  // 시도 2: fallback
+  console.warn('[subtractCreditAtomic] fallback — 0005 migration 실행 권장.');
+  try {
+    const billingResp = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${userId}&select=credit_balance_usd`,
+      {
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
+        }
+      }
+    );
+    const rows: any = await billingResp.json();
+    const currentBalance = Number(rows?.[0]?.credit_balance_usd) || 0;
+    const newBalance = Math.max(0, Math.round((currentBalance - amountUsd) * 1_000_000) / 1_000_000);
+    const patchResp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ credit_balance_usd: newBalance })
+    });
+    if (!patchResp.ok) return { ok: false, error: 'PATCH 실패: ' + patchResp.status };
+    return { ok: true, balance_usd: newBalance, subtracted_usd: currentBalance - newBalance };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+}
+
 // 사용자 명시 2026-04-30 ultrathink: 2-tier 월정액 도입 후 budget 검증 로직.
 // 1) subscription 활성 → cap 안 남았으면 OK / cap 도달 시 credit_balance_usd 로 fall-through (overage pack 또는 잔여 free credit)
 // 2) subscription X → credit_balance_usd 로 직접 사용 (legacy charge 잔액 또는 free credit)

@@ -120,25 +120,11 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     })
   }).catch(() => {});
 
-  // 5. 충전식이면 잔액 차감
+  // 5. 충전식이면 잔액 차감 — atomic RPC (race-safe, 사용자 명시 2026-04-30 ultrathink)
   if (paymentRow.payment_type === 'charge') {
     const refundUsd = refundAmountKrw / KRW_PER_USD;
-    const billingResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&select=credit_balance_usd`,
-      { headers: { 'apikey': env.SUPABASE_SERVICE_ROLE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } }
-    );
-    const rows: any = await billingResp.json();
-    const newBalance = Math.max(0, (rows[0]?.credit_balance_usd || 0) - refundUsd);
-    await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ credit_balance_usd: Math.round(newBalance * 1_000_000) / 1_000_000 })
-    }).catch(() => {});
+    const { subtractCreditAtomic } = await import('../_lib/billing');
+    await subtractCreditAtomic(env, user.id, refundUsd);
   }
 
   return jsonResponse({ ok: true, refunded_krw: refundAmountKrw, message: '환불 완료. 카드사 정책상 3-7영업일 내 카드 명세서 반영.' });
