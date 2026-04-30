@@ -1358,6 +1358,20 @@
   body.magic-mode .chat-input-bar {
     background: linear-gradient(to top, rgba(48,40,70,0.95) 70%, transparent);
   }
+  /* 사용자 요청 2026-04-30: 마법 helpChat (임시 대화창) 보라 톤 — 숙고 청록과 차별 */
+  body.magic-mode #screen-magic-help {
+    background:
+      radial-gradient(ellipse at top, rgba(139,126,196,0.10), transparent 60%),
+      radial-gradient(ellipse at bottom, rgba(178,140,212,0.06), transparent 70%);
+  }
+  body.magic-mode .reflection-screen-q {
+    background: linear-gradient(135deg, #d4b8ff, #b89fde);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  body.magic-mode .reflection-input-bar {
+    background: linear-gradient(to top, rgba(48,40,70,0.95) 70%, transparent);
+  }
+  body.magic-mode .reflection-screen-back { color: #d4b8ff; }
 
   /* === Reflection Room Visual Mode (사용자 요청 2026-04-30: 마법 보라 vs 숙고 청록 차별화) === */
   .reflection-mode-chip {
@@ -18247,8 +18261,8 @@ function showScreen(name) {
   if (name === 'decisions') renderDecisionsList();
   // 사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 화면(list/detail)에서 일반 chat과 시각 구분
   // body.magic-mode → 보라/매직 그라디언트 헤더 chip + 색조 살짝 시프트
-  document.body.classList.toggle('magic-mode', name === 'decisions' || name === 'decision-detail');
-  // 사용자 요청 2026-04-30: 숙고의 방 = 청록 차별. magic 보라 vs reflection 청록.
+  // 사용자 요청 2026-04-30: 마법 helpChat (임시 대화창) 도 magic-mode 박아 보라 톤. 숙고의 방 = 청록, 마법 영역 = 보라.
+  document.body.classList.toggle('magic-mode', name === 'decisions' || name === 'decision-detail' || name === 'magic-help');
   document.body.classList.toggle('reflection-mode', name === 'reflection');
   if (name === 'chat') {
     rotateChatPlaceholder();  // V3.10: 매번 다른 힌트
