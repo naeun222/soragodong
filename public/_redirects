@@ -1,8 +1,5 @@
-# Cloudflare Pages _redirects — 깔끔 URL + canonical redirects
-# 사용자 명시 2026-04-30: /introduce.html → /introduce 깔끔.
+# Cloudflare Pages _redirects — 깔끔 URL only
+# 사용자 보고 2026-04-30 ultrathink: 옛 301 (introduce.html → introduce) 가 200 rewrite 와 conflict → ERR_TOO_MANY_REDIRECTS loop. 301 제거.
 
-# /introduce → introduce.html 내부 rewrite (URL 은 /introduce 로 유지, 200)
+# /introduce → introduce.html 내부 rewrite (URL 은 /introduce 로 유지, 200, redirect X)
 /introduce  /introduce.html  200
-
-# /introduce.html → /introduce canonical 301 redirect (SEO 단일 URL)
-/introduce.html  /introduce  301
