@@ -3748,6 +3748,234 @@
     transition: transform 0.22s ease;
   }
   .input-modal-overlay.show .input-modal { transform: translateY(0); }
+
+  /* === Intake 모달 (코어 #1 첫 진단 — 사용자 명시 2026-04-30 ultrathink) === */
+  .intake-modal {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    max-width: 480px;
+    padding: 22px 20px 28px;
+    transform: translateY(20px);
+    transition: transform 0.22s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .input-modal-overlay.show .intake-modal { transform: translateY(0); }
+  .intake-progress {
+    display: flex; gap: 6px; justify-content: center;
+    margin-bottom: 16px;
+  }
+  .intake-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    transition: all 0.3s;
+  }
+  .intake-dot.on {
+    background: var(--accent);
+    box-shadow: 0 0 6px rgba(212,167,106,0.5);
+  }
+  .intake-greeting {
+    font-family: 'Gowun Batang', serif;
+    font-size: 17px;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+  .intake-prompt {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .intake-prompt-secondary {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin: 14px 0;
+    padding: 10px;
+    background: rgba(212,167,106,0.06);
+    border-left: 3px solid rgba(212,167,106,0.30);
+    border-radius: 6px;
+  }
+  .intake-textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+    margin-bottom: 8px;
+  }
+  .intake-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .intake-mic-status {
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    background: rgba(220,80,80,0.08);
+    border-radius: 6px;
+  }
+  .intake-mic-pulse {
+    color: #e07070;
+    animation: micPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes micPulse {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; }
+  }
+  .intake-actions {
+    display: flex; gap: 10px;
+    margin-top: 12px;
+    align-items: center;
+  }
+  .intake-mic-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text);
+  }
+  .intake-mic-btn:hover { background: var(--surface3); border-color: var(--border-strong); }
+  .intake-send-btn {
+    flex: 1;
+    background: var(--accent);
+    color: #1c1822;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .intake-send-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(212,167,106,0.30); }
+  .intake-deepen-btn { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  .intake-example {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .intake-example-label {
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-bottom: 8px;
+  }
+  .intake-example-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1.6;
+  }
+  .intake-example-chip:hover {
+    background: var(--surface3);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .intake-example-long {
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  .intake-ai-msg {
+    background: rgba(212,167,106,0.08);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .intake-ai-msg-small {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+    line-height: 1.6;
+  }
+  .intake-loading {
+    color: var(--text-soft);
+    font-style: italic;
+  }
+  .intake-quote {
+    font-style: italic;
+    color: var(--text-dim);
+    border-left: 2px solid rgba(212,167,106,0.40);
+    padding-left: 10px;
+  }
+  .intake-analysis {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    line-height: 1.7;
+  }
+  .intake-analysis-paraphrase {
+    font-size: 13px;
+    font-style: italic;
+    color: var(--text-soft);
+    margin-bottom: 10px;
+  }
+  .intake-analysis-dim {
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .intake-analysis-diag {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  .intake-analysis-sep {
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+    margin: 12px 0;
+  }
+  .intake-analysis-strategy {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .intake-finish {
+    text-align: center;
+    padding: 8px 0 16px;
+  }
+  .intake-finish-icon {
+    font-size: 38px;
+    margin-bottom: 8px;
+  }
+  .intake-finish-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 17px;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .intake-finish-body {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
   .input-modal-title {
     font-family: 'Gowun Batang', serif;
     font-size: 17px;
@@ -10239,6 +10467,334 @@ function _intakeApplyHypotheses(hypotheses) {
   });
 }
 
+// ─── Intake 모달 풀 흐름 (Step1-6) + Web Speech API ──────────────────────────
+let _intakeState = null;  // { step, exampleStep1, aiLong, analysis, resolve, recognition, recognizing }
+
+async function runIntakeFlow() {
+  return new Promise((resolve) => {
+    state.intakeWorry = [];
+    _intakeState = {
+      step: 1,
+      exampleStep1: _intakePickRandomExample(),
+      aiLong: null,
+      analysis: null,
+      resolve,
+      recognition: null,
+      recognizing: false
+    };
+    _showIntakeModal();
+  });
+}
+
+function _intakeSpeechSupported() {
+  return ('SpeechRecognition' in window) || ('webkitSpeechRecognition' in window);
+}
+
+function _showIntakeModal() {
+  if (document.getElementById('intakeModalOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'intakeModalOverlay';
+  overlay.className = 'input-modal-overlay show';
+  overlay.style.zIndex = '10002';
+  overlay.innerHTML = `<div class="intake-modal" onclick="event.stopPropagation()" id="intakeModalContent"></div>`;
+  document.body.appendChild(overlay);
+  _renderIntakeStep();
+}
+
+function _closeIntakeModal() {
+  if (_intakeState && _intakeState.recognition) {
+    try { _intakeState.recognition.stop(); } catch {}
+  }
+  const overlay = document.getElementById('intakeModalOverlay');
+  if (overlay) overlay.remove();
+  const resolveFn = _intakeState && _intakeState.resolve;
+  _intakeState = null;
+  if (typeof resolveFn === 'function') resolveFn();
+}
+
+function _renderIntakeStep() {
+  const c = document.getElementById('intakeModalContent');
+  if (!c || !_intakeState) return;
+  const dots = _intakeProgressDots(_intakeState.step);
+  if (_intakeState.step === 1)      c.innerHTML = dots + _intakeStep1Html();
+  else if (_intakeState.step === 2) c.innerHTML = dots + _intakeStep2Html();
+  else if (_intakeState.step === 3) c.innerHTML = dots + _intakeStep3Html();
+  else if (_intakeState.step === 4) c.innerHTML = dots + _intakeStep4Html();
+  else if (_intakeState.step === 5) c.innerHTML = dots + _intakeStep5Html();
+  else if (_intakeState.step === 6) c.innerHTML = dots + _intakeStep6Html();
+  // textarea autofocus (Step1, 3)
+  setTimeout(() => {
+    const ta = document.querySelector('#intakeModalContent textarea');
+    if (ta) ta.focus();
+  }, 100);
+}
+
+function _intakeProgressDots(step) {
+  const total = 6;
+  let html = '<div class="intake-progress">';
+  for (let i = 1; i <= total; i++) html += `<span class="intake-dot ${i <= step ? 'on' : ''}"></span>`;
+  html += '</div>';
+  return html;
+}
+
+function _intakeStep1Html() {
+  const ex = _intakeState.exampleStep1;
+  const micHtml = _intakeSpeechSupported()
+    ? `<button id="intakeMicBtn1" class="intake-mic-btn" onclick="_intakeMicToggle(1)" aria-label="음성"><span id="intakeMicIcon1">🎤</span></button>`
+    : '';
+  return `
+    <div class="intake-greeting">🐚 안녕 왔구나. 오늘 어땠어?</div>
+    <div class="intake-prompt">요즘 마음에 자주 떠오르는 거, 한 마디부터 시작해도 OK.</div>
+    <textarea id="intakeInput1" class="intake-textarea" rows="3" placeholder="한 줄도 OK. 마음 가는 대로."></textarea>
+    <div id="intakeMicStatus1" class="intake-mic-status" style="display:none;"></div>
+    <div class="intake-actions">
+      ${micHtml}
+      <button id="intakeSendBtn1" class="intake-send-btn" onclick="_intakeStep1Send()">✦ 보내기</button>
+    </div>
+    <div class="intake-example">
+      <div class="intake-example-label">↓ 할 말 없으면? 예시</div>
+      <div class="intake-example-chip" onclick="_intakeStep1FillExample()">${ex.icon} "${escapeHtml(ex.short)}"</div>
+    </div>
+  `;
+}
+
+function _intakeStep1FillExample() {
+  const ta = document.getElementById('intakeInput1');
+  if (ta && _intakeState) ta.value = _intakeState.exampleStep1.short;
+}
+
+async function _intakeStep1Send() {
+  const text = (document.getElementById('intakeInput1')?.value || '').trim();
+  if (!text) { showToast('한 줄이라도 적어줘 ✦'); return; }
+  state.intakeWorry.push({ role: 'user', content: text, ts: new Date().toISOString(), kind: 'first' });
+  saveState();
+  // 짧음 detect → Step2 (deepening). 장문이면 Step3 skip 후 Step4 직진.
+  if (_intakeShouldDeepen(text)) {
+    _intakeState.step = 2;
+    _renderIntakeStep();
+    try {
+      const ask = await _intakeDeepenAsk(text);
+      state.intakeWorry.push({ role: 'assistant', content: ask, ts: new Date().toISOString(), kind: 'deepen_q' });
+      saveState();
+      const askDiv = document.getElementById('intakeAIAsk');
+      if (askDiv) askDiv.innerHTML = `<b>🐚</b> ${escapeHtml(ask)}`;
+    } catch (e) {
+      console.warn('[intake] deepen ask 실패 — fallback wording', e);
+      const askDiv = document.getElementById('intakeAIAsk');
+      if (askDiv) askDiv.innerHTML = `<b>🐚</b> 어떤 상황이었고 어떻게 됐는지 좀 더 풀어줄래? 상황 → 무슨 마음 → 어떻게 됐는지, 자유롭게.`;
+      state.intakeWorry.push({ role: 'assistant', content: '어떤 상황이었고 어떻게 됐는지 좀 더 풀어줄래?', ts: new Date().toISOString(), kind: 'deepen_q' });
+      saveState();
+    }
+    // AI 동적 long example 미리 백그라운드 fetch (Step3 진입 시 즉시 표시)
+    _intakeGenLongExample(text)
+      .then(longText => { if (_intakeState) _intakeState.aiLong = longText; })
+      .catch(e => { console.warn('[intake] long example 실패 — INTAKE_EXAMPLES 페어 사용', e); });
+  } else {
+    // 한 번에 장문 발화 → Step3 skip → Step4 (paraphrase + 더 알고 싶어) 직진
+    _intakeState.step = 4;
+    _renderIntakeStep();
+  }
+}
+
+function _intakeStep2Html() {
+  return `
+    <div class="intake-ai-msg" id="intakeAIAsk"><b>🐚</b> <span class="intake-loading">잠깐...</span></div>
+    <div class="intake-prompt-secondary">한 번 더 풀어줘.<br><span class="small">고민을 구체적으로 다 털어놔도 OK. 상황 → 무슨 마음 → 어떻게 됐는지.</span></div>
+    <div class="intake-actions">
+      <button class="intake-send-btn" onclick="_intakeStep2Next()">✦ 다음</button>
+    </div>
+  `;
+}
+
+function _intakeStep2Next() {
+  _intakeState.step = 3;
+  _renderIntakeStep();
+}
+
+function _intakeStep3Html() {
+  const userFirst = state.intakeWorry.find(m => m.role === 'user');
+  const userText = userFirst ? userFirst.content : '';
+  // AI long 우선 / 없으면 페어 long fallback
+  const ex = _intakeState.exampleStep1;
+  const fallbackLong = ex.long;
+  const longText = _intakeState.aiLong || fallbackLong;
+  const micHtml = _intakeSpeechSupported()
+    ? `<button id="intakeMicBtn3" class="intake-mic-btn" onclick="_intakeMicToggle(3)" aria-label="음성"><span id="intakeMicIcon3">🎤</span></button>`
+    : '';
+  return `
+    <div class="intake-ai-msg-small"><b>🐚</b> ${escapeHtml(userText.slice(0, 50))}${userText.length > 50 ? '...' : ''} — 한 번 더 풀어줘.</div>
+    <textarea id="intakeInput3" class="intake-textarea" rows="5" placeholder="구체적으로 다 털어놔도 OK. 상황 → 무슨 마음 → 어떻게 됐는지."></textarea>
+    <div id="intakeMicStatus3" class="intake-mic-status" style="display:none;"></div>
+    <div class="intake-actions">
+      ${micHtml}
+      <button class="intake-send-btn" onclick="_intakeStep3Send()">✦ 보내기</button>
+    </div>
+    <div class="intake-example">
+      <div class="intake-example-label">↓ 풀어 적기 어려우면? 예시</div>
+      <div class="intake-example-chip intake-example-long" onclick="_intakeStep3FillExample()">${ex.icon} "${escapeHtml(longText)}"</div>
+    </div>
+  `;
+}
+
+function _intakeStep3FillExample() {
+  const ta = document.getElementById('intakeInput3');
+  if (!ta) return;
+  const longText = _intakeState.aiLong || _intakeState.exampleStep1.long;
+  ta.value = longText;
+}
+
+async function _intakeStep3Send() {
+  const text = (document.getElementById('intakeInput3')?.value || '').trim();
+  if (!text) { showToast('한 번 더 풀어줘 ✦'); return; }
+  state.intakeWorry.push({ role: 'user', content: text, ts: new Date().toISOString(), kind: 'detailed' });
+  saveState();
+  _intakeState.step = 4;
+  _renderIntakeStep();
+}
+
+function _intakeStep4Html() {
+  // 사용자 발화 paraphrase 한 줄 + "더 알고 싶어" button
+  const lastUser = state.intakeWorry.filter(m => m.role === 'user').slice(-1)[0];
+  const preview = lastUser ? (lastUser.content.length > 80 ? lastUser.content.slice(0, 80) + '...' : lastUser.content) : '';
+  return `
+    <div class="intake-ai-msg"><b>🐚</b> 잘 들었어 ✦<br><br><span class="small intake-quote">"${escapeHtml(preview)}"</span><br><br>이 마음, 어디서 작동하는지 같이 들여다볼래?</div>
+    <div class="intake-actions">
+      <button class="intake-send-btn intake-deepen-btn" onclick="_intakeStep4Analyze()">🔍 더 알고 싶어</button>
+    </div>
+  `;
+}
+
+async function _intakeStep4Analyze() {
+  _intakeState.step = 5;
+  _renderIntakeStep();
+  try {
+    const result = await _intakeAnalyze(state.intakeWorry);
+    _intakeState.analysis = result;
+    state.intakeWorry.push({
+      role: 'assistant',
+      content: `[차원: ${result.dimension}]\n${result.diagnosis}\n\n✦ ${result.strategy}`,
+      ts: new Date().toISOString(),
+      kind: 'analysis'
+    });
+    saveState();
+    _renderIntakeStep();
+  } catch (e) {
+    console.warn('[intake] analyze 실패', e);
+    _intakeState.analysis = {
+      paraphrase: '',
+      dimension: '환경',
+      diagnosis: '잘 들었어. 좀 더 같이 들여다보고 싶어.',
+      strategy: '천천히 가자. 다음 대화에서 이어가자.',
+      hypotheses: []
+    };
+    _renderIntakeStep();
+  }
+}
+
+function _intakeStep5Html() {
+  if (!_intakeState.analysis) {
+    return `<div class="intake-ai-msg"><b>🐚</b> <span class="intake-loading">잠깐 들여다보는 중...</span></div>`;
+  }
+  const a = _intakeState.analysis;
+  return `
+    <div class="intake-analysis">
+      ${a.paraphrase ? `<div class="intake-analysis-paraphrase">${escapeHtml(a.paraphrase)}</div>` : ''}
+      <div class="intake-analysis-dim"><b>${escapeHtml(a.dimension || '')} 차원</b> 이 작동하고 있어 보여.</div>
+      <div class="intake-analysis-diag">${escapeHtml(a.diagnosis || '')}</div>
+      <div class="intake-analysis-sep"></div>
+      <div class="intake-analysis-strategy"><b>✦ 이렇게 한 번 해볼래?</b><br>${escapeHtml(a.strategy || '')}</div>
+    </div>
+    <div class="intake-actions">
+      <button class="intake-send-btn" onclick="_intakeStep5Next()">고마워 ✦</button>
+    </div>
+  `;
+}
+
+function _intakeStep5Next() {
+  // hypotheses → traits/values/patterns 자동 합류
+  if (_intakeState.analysis && _intakeState.analysis.hypotheses) {
+    _intakeApplyHypotheses(_intakeState.analysis.hypotheses);
+    saveState();
+  }
+  _intakeState.step = 6;
+  _renderIntakeStep();
+}
+
+function _intakeStep6Html() {
+  return `
+    <div class="intake-finish">
+      <div class="intake-finish-icon">🐚</div>
+      <div class="intake-finish-title">방금 너 잠깐 들여다봤어 ✦</div>
+      <div class="intake-finish-body">
+        '나 탭' 에 가면 너에 대해 자라기 시작한 모습이 보여:<br>
+        <span class="small">통합 분석 / 네가 중시하는 것 / 너의 특성 / 보이는 패턴</span><br><br>
+        틀린 거 있으면 ✕, 맞는 거 ✓ 으로 정리해줘.
+      </div>
+    </div>
+    <div class="intake-actions">
+      <button class="intake-send-btn" onclick="_closeIntakeModal()">계속 ✦</button>
+    </div>
+  `;
+}
+
+// Web Speech API 통합 — Step1 / Step3 마이크 버튼.
+function _intakeMicToggle(stepNum) {
+  if (!_intakeState) return;
+  if (_intakeState.recognizing) {
+    try { _intakeState.recognition?.stop(); } catch {}
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showToast('이 브라우저는 음성 인식 미지원'); return; }
+  // 첫 사용 = privacy 안내 1회
+  if (!localStorage.getItem('soragodong_v4_intake_speech_consent')) {
+    if (!confirm('🎤 음성 입력 안내\n\n음성은 Google 서버를 거쳐 텍스트로 변환됩니다. 동의하시고 사용하시겠어요?')) return;
+    try { localStorage.setItem('soragodong_v4_intake_speech_consent', '1'); } catch {}
+  }
+  const ta = document.getElementById('intakeInput' + stepNum);
+  const iconEl = document.getElementById('intakeMicIcon' + stepNum);
+  const statusEl = document.getElementById('intakeMicStatus' + stepNum);
+  const recognition = new SR();
+  recognition.lang = 'ko-KR';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  let finalText = ta?.value ? ta.value + ' ' : '';
+  let silenceTimer = null;
+  const resetSilenceTimer = () => {
+    if (silenceTimer) clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => { try { recognition.stop(); } catch {} }, 5000);  // 5초 침묵 자동 종료
+  };
+  recognition.onstart = () => {
+    _intakeState.recognizing = true;
+    if (iconEl) iconEl.textContent = '⏹';
+    if (statusEl) { statusEl.style.display = 'block'; statusEl.innerHTML = '<span class="intake-mic-pulse">●</span> 듣는 중...'; }
+    resetSilenceTimer();
+  };
+  recognition.onresult = (event) => {
+    resetSilenceTimer();
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) finalText += transcript + ' ';
+      else interim += transcript;
+    }
+    if (ta) ta.value = (finalText + interim).trim();
+  };
+  recognition.onerror = (e) => {
+    console.warn('[intake speech] error', e);
+    if (statusEl) statusEl.innerHTML = '⚠️ 음성 인식 오류 — 다시 시도하거나 직접 적어줘';
+  };
+  recognition.onend = () => {
+    _intakeState.recognizing = false;
+    _intakeState.recognition = null;
+    if (silenceTimer) clearTimeout(silenceTimer);
+    if (iconEl) iconEl.textContent = '🎤';
+    if (statusEl) statusEl.style.display = 'none';
+  };
+  _intakeState.recognition = recognition;
+  try { recognition.start(); } catch (e) { console.warn('[intake speech] start fail', e); }
+}
+
 async function maybeShowE2EESetupForNewUser() {
   if (!authUserId) return;
   if (state.preferences && state.preferences.testerMode) return;
@@ -13873,12 +14429,23 @@ function onbFinish() {
   if (typeof renderShellBar === 'function') renderShellBar();
   if (typeof renderChat === 'function') renderChat();
   setTimeout(() => showToast('잘 왔어 ✦ 진짜 시작!'), 300);
-  // 사용자 명시 2026-04-30: 코어 #1 종료 snapshot 으로 첫 진단 (background, 1.5초 후). 실패 silent.
-  if (_firstTouchSnapshot) {
+  // 사용자 명시 2026-04-30 ultrathink: 옛 snapshot 진단 폐기 → intake 모달 풀 흐름 (대화 + AI deepening + 차원 분석 + traits/values/patterns 자동 합류).
+  // 코어 #1 끝 자리에서 trigger. 사용자 발화 → state.intakeWorry → analysis → traits/values/patterns 합류.
+  if (_isCore1AndFirstTouchPending() && typeof runIntakeFlow === 'function' && _canAI()) {
     setTimeout(() => {
-      _runFirstTouchFromCore1(_firstTouchSnapshot).catch(e => console.warn('[firstTouch core1] 호출 실패:', e));
+      runIntakeFlow().then(() => {
+        if (state.preferences) state.preferences._firstTouchDone = true;
+        saveState();
+      }).catch(e => console.warn('[intake] 흐름 실패:', e));
     }, 1500);
   }
+}
+
+// 코어 #1 종료 시점 + 첫 진단 미완료 detect
+function _isCore1AndFirstTouchPending() {
+  if (!state.preferences) return false;
+  if (state.preferences._firstTouchDone) return false;
+  return true;  // _activeCoreId 가 _onbCleanupCore 시점에 이미 null 이라 주체 detect X — pending 만 보면 충분
 }
 
 // 화면 회전/리사이즈 시 spotlight 위치 재계산

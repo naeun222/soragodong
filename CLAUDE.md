@@ -224,6 +224,8 @@ soragodong-repo/
 - [ ] **소라고동 일상 대화 티키타카** (사용자 큐 2026-04-30) — 적절한 후속 질문으로 대화 이어가기. 현재 답변이 한 번에 끝나는 경향. 조사 필요: `sendChat` system prompt + 4단 분석 후 자연 follow-up 질문 패턴.
 - [ ] **코어 #1 튜토리얼 — Opus 체험 step** (사용자 큐 2026-04-30) — 대화 시작 전에 헤더 🐚/🦉 토글 설명 + "지금은 무료 토큰 내가 줬으니까 opus로 해보자! ㄱㄱ" 안내. 튜토리얼 끝나면 자동 sonnet 복원 (`state.preferences.useOpus = false`). onbFinish / 시드 정리 흐름에 복원 로직 합치기.
 - [ ] **튜토리얼 "누르고 잠깐 기다려야 돼! ~ 눌러줘" 멘트 삭제** (사용자 큐 2026-04-30) — 일부 튜토리얼 step 안 안내 멘트 정리. 사용자가 누른 후 자동 advance 로 충분.
+- [ ] **모든 대화 입력창 음성 인식 통합 (사용자 큐 2026-04-30)** — Web Speech API (무료) 로 4곳 통합: 메인 chat 입력창 / 임시 대화창 (돌연변이) / 마법 helpChat / 숙고의 방. 미지원 브라우저 mic button hide. 첫 사용 시 privacy 안내 1회.
+- [ ] **튜토리얼 intake 자리 — Whisper API 검토 (사용자 큐 2026-04-30)** — 첫 진단 = 성능 중요. Whisper API ($0.006/분) 추가 검토. 단 UI 에 OpenAI / Whisper / Google 명시 X — 그냥 "음성". 결정 후 swap.
 - [ ] **24시간 갭 vs ✓ 마무리 일관성** 점검
 - [ ] **Performance audit** (1.6MB 단일 — Phase A 진행)
 
