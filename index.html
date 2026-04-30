@@ -1795,6 +1795,7 @@
     grid-template-columns: repeat(53, 1fr);
     grid-auto-rows: 1fr;
     grid-template-rows: repeat(7, 1fr);
+    grid-auto-flow: column;
     gap: 2px;
     width: 100%; max-width: 360px;
     margin-bottom: 14px;
@@ -10802,7 +10803,14 @@ function _annualReviewBuildCard2(d) {
   }
   // 변곡점 ★ — 12월 7일 부근 (idx 약 220)
   if (days[220]) days[220] = { level: 4, star: true };
-  const cells = days.map(day => {
+  // 사용자 명시 2026-04-30: 컬럼(주 단위)별 활기 → 아래에서 위로 정렬 (low at top, high at bottom)
+  const sortedDays = [];
+  for (let col = 0; col < 53; col++) {
+    const week = days.slice(col * 7, col * 7 + 7);
+    week.sort((a, b) => (a.level || 0) - (b.level || 0));
+    sortedDays.push(...week);
+  }
+  const cells = sortedDays.map(day => {
     if (day.star) return '<div class="ann-rv-yearmap-day ann-rv-yearmap-day-star" title="12/7 변곡점"></div>';
     return `<div class="ann-rv-yearmap-day ann-rv-yearmap-day-${day.level}"></div>`;
   }).join('');
