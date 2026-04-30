@@ -248,9 +248,13 @@ soragodong-repo/
 - [x] **코어 #1 튜토리얼 — Opus 체험 step** ✅ 8d204ae — chat_opus_intro step + 자동 useOpus=true + _opusActivatedByTutorial flag + onbFinish 자동 복원.
 - [x] **튜토리얼 "누르고 잠깐 기다려야 돼" 멘트 삭제** ✅ cbb0eae — click_strategy step body 정리.
 - [x] **모든 대화 입력창 음성 인식 통합** ✅ cbb0eae — 4곳 통합 + _toggleInputSpeech 공용 헬퍼 + .input-mic-btn CSS.
-- [ ] **튜토리얼 intake 자리 — Whisper API 검토** — 현재 Web Speech (한국어 80-90%). 성능 부족 시 Whisper API ($0.006/분) 검토. UI 에 vendor 명시 X — 그냥 "음성".
-- [ ] **24시간 갭 vs ✓ 마무리 일관성** 점검 — 다음 세션
-- [ ] **Performance audit** (1.6MB 단일 — Phase A 진행) — 다음 세션
+- [ ] **24시간 갭 vs ✓ 마무리 일관성 점검 + 새벽 4시 cutoff 케이스** (사용자 명시 2026-04-30) — 24시간 자동 챕터 분리와 새벽 4시 daily cutoff 흐름 충돌·race 점검. 갭 사이에 새벽 4시 넘어가면?
+- [ ] **Performance audit + Phase A 모듈 분리** (1.72MB 단일 HTML) — 측정 + 우선순위 매기고 점진 분리.
+
+### ✅ 사용자 결정 확정 (2026-04-30)
+- **useOpus scope = 대화류만** (sendChat / 마법 helpChat / 숙고 reflection). 분석·리뷰류 (forceAnalyze / generateReview / firstTouch / 돌연변이) = Sonnet 고정. 토글 의도 = "지금 대화 깊게" 의 dial.
+- **Whisper API 보류** — Web Speech 한국어 80-90% 충분.
+- **시드 verify** — 사용자 브라우저 직접 테스트 (코드 측 추가 작업 X).
 
 ### 🟡 사용자 결정 대기
 - [ ] **useOpus scope** — 분석/리뷰류도 토글 따를지 / 현재대로 대화류만 둘지 (의견: 현재 OK)
