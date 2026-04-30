@@ -1672,13 +1672,22 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
   }
+  /* 사용자 명시 2026-04-30: artwork = LP 회전 disc (재생 중만 회전) */
   .ann-rv-song-art {
-    width: 38px; height: 38px;
-    border-radius: 8px;
+    width: 48px; height: 48px;
+    border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
     background: linear-gradient(135deg, #d4a76a, #8b7ec4);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.55), inset 0 0 0 2px rgba(0,0,0,0.4);
+    animation: ann-rv-spin 10s linear infinite;
+    animation-play-state: paused;
+  }
+  .ann-rv-song.playing .ann-rv-song-art {
+    animation-play-state: running;
+  }
+  @keyframes ann-rv-spin {
+    to { transform: rotate(360deg); }
   }
   .ann-rv-song-meta {
     flex: 1; min-width: 0;
@@ -1764,13 +1773,13 @@
     from { text-shadow: 0 0 14px rgba(240,217,168,0.40), 0 0 32px rgba(212,167,106,0.20); }
     to   { text-shadow: 0 0 22px rgba(240,217,168,0.65), 0 0 48px rgba(212,167,106,0.40); }
   }
-  /* 사용자 명시 2026-04-30: 카드 1 한 단어 '왜?' 한 줄 */
+  /* 사용자 명시 2026-04-30: 카드 1 한 단어 '왜?' 작은 글씨 */
   .ann-rv-card-1 .ann-rv-oneword-reason {
-    font-size: 12.5px;
-    color: rgba(232,212,168,0.70);
-    letter-spacing: 0.04em;
+    font-size: 11px;
+    color: rgba(232,212,168,0.55);
+    letter-spacing: 0.05em;
     line-height: 1.5;
-    margin: -8px 0 18px;
+    margin: -10px 0 22px;
     text-align: center;
     font-style: italic;
     max-width: 320px;
@@ -2223,6 +2232,28 @@
     max-width: 360px;
     text-shadow: 0 0 18px rgba(255,250,205,0.35);
   }
+  /* 사용자 명시 2026-04-30: 깨달음 = 제목 + 요약 + 왜 (Opus 분석 코멘트) */
+  .ann-rv-pearl-summary {
+    font-size: 14px;
+    color: rgba(255,248,232,0.78);
+    margin-top: 16px;
+    max-width: 340px;
+    line-height: 1.55;
+    letter-spacing: 0.01em;
+  }
+  .ann-rv-pearl-why {
+    font-size: 11.5px;
+    color: rgba(255,250,205,0.55);
+    font-style: italic;
+    margin-top: 28px;
+    padding: 12px 16px;
+    background: rgba(255,250,205,0.06);
+    border-left: 2px solid rgba(255,250,205,0.30);
+    border-radius: 0 8px 8px 0;
+    max-width: 320px;
+    line-height: 1.6;
+    text-align: left;
+  }
 
   /* ─── 카드 9: 가장 깊었던 숙고 (질문 하나 웅장 — 사용자 명시 예전 형식) ─── */
   .ann-rv-card-deep {
@@ -2248,7 +2279,24 @@
   .ann-rv-deep-date {
     font-size: 10.5px; letter-spacing: 0.25em;
     color: rgba(126,200,200,0.45);
-    margin-top: 44px;
+    margin-top: 28px;
+  }
+  /* 사용자 명시 2026-04-30: 깊은 숙고 = 결론도 적기 (질문 → 14일 → 결론) */
+  .ann-rv-deep-divider {
+    font-size: 9.5px;
+    letter-spacing: 0.35em;
+    color: rgba(126,200,200,0.42);
+    margin: 30px 0 24px;
+    text-transform: uppercase;
+  }
+  .ann-rv-deep-conclusion {
+    font-size: clamp(17px, 4.2vw, 24px);
+    color: #9ed4a0;
+    font-weight: 600;
+    line-height: 1.55;
+    letter-spacing: 0.01em;
+    max-width: 380px;
+    text-shadow: 0 0 16px rgba(158,212,160,0.28);
   }
 
   /* (legacy — 사용 안 함, 호환성) */
@@ -10536,7 +10584,7 @@ function openAnnualReviewPreview() {
   const data = {
     yearRange: '2025 → 2026',
     oneWord: '전환',
-    oneWordReason: '분석하던 너에서 친구 된 너로',
+    oneWordReason: "'왜 나는?'에서 '아 나 이런 사람'으로",
     persona: '회피하던 게 알고 보니 엔진이었던 사람',
     stats: [
       { emoji: '📔', num: 226, label: '일기' },
@@ -10598,12 +10646,17 @@ function openAnnualReviewPreview() {
       { date: '2025.11.28', text: '14일 결정에 맡긴 첫날',          emoji: '🌊', bg: 'linear-gradient(135deg, rgba(126,200,180,0.45), rgba(98,165,200,0.30))' },
       { date: '2026.04.12', text: '학회 D-3, 폰 다른 방에 둠',     emoji: '⚡', bg: 'linear-gradient(135deg, rgba(255,215,122,0.40), rgba(180,130,90,0.30))' }
     ],
-    // 사용자 명시 2026-04-30: 올해의 깨달음 = 가장 통찰력 깊고 현명한 1개만 (5개 X). 다음 phase = AI 자동 선정.
-    best_pearl: '결함 X · 작동 방식 ○',
-    // 사용자 명시: 깊은 숙고 = 질문 하나 딱 놓고 웅장. 답 X.
+    // 사용자 명시 2026-04-30: 올해의 깨달음 = 제목 + 요약 + 왜 올해의 깨달음인지 Opus 분석 (다음 phase = 진짜 호출)
+    best_pearl: {
+      title: '결함 X · 작동 방식 ○',
+      summary: '고치려 들지 말고, 작동 방식 알고 잘 다루기',
+      whyThisYear: '1년 동안 너의 자기 인식이 가장 크게 바뀐 자리야. 다른 깨달음 30+ 개도 결국 이 한 마디로 풀려.'
+    },
+    // 사용자 명시: 깊은 숙고 = 질문 + 결론 둘 다 (질문 main, 결론 sub).
     deep: {
       question: '"이 주제 못 끝낼 거 같아.\n지도교수랑 안 맞아."',
-      date: '2025.11.28'
+      conclusion: '"지도교수 변경 X · 주제 변경"',
+      date: '2025.11.28 → 12.11 · 14일'
     },
     final: {
       message: '1년 전 너 — "<strong>왜 나는?</strong>"\n지금 너 — "<strong>아 나 이런 사람</strong>"\n\n이 차이가 진짜 큰 거야.',
@@ -10835,18 +10888,42 @@ function _annualReviewBuildCard5(d) {
   `;
 }
 
-// 카드 6: 모래사장 + 진주 — 사용자 명시 2026-04-30: 75 grid 징그러움. 대표 emoji 7개 흩어 배치.
+// 카드 6: 모래사장 + 진주 — 사용자 명시 2026-04-30: 일기 13개+ 일 때 소라들로 하트 만들기.
 function _annualReviewBuildCard6(d) {
   const b = d.beach || {};
-  const icons = [
-    { emoji: '🐚', top: 28, left: 14, size: 30 },
-    { emoji: '✨', top: 62, left: 42, size: 38, pearl: true },
-    { emoji: '🐚', top: 48, left: 75, size: 26 },
-    { emoji: '✨', top: 18, left: 58, size: 28, pearl: true },
-    { emoji: '🐚', top: 76, left: 22, size: 28 },
-    { emoji: '✨', top: 8,  left: 32, size: 22, pearl: true },
-    { emoji: '🐚', top: 56, left: 8,  size: 24 }
-  ];
+  const dc = b.diaryCount || 0;
+  let icons;
+  if (dc >= 13) {
+    // 하트 outline 13개 소라 (사용자 명시 2026-04-30)
+    const heartCoords = [
+      // 위 lobe 왼쪽
+      { top: 18, left: 26 }, { top: 10, left: 36 }, { top: 14, left: 44 },
+      // 위 lobe 오른쪽
+      { top: 14, left: 56 }, { top: 10, left: 64 }, { top: 18, left: 74 },
+      // 양 outer
+      { top: 32, left: 18 }, { top: 32, left: 82 },
+      // 중간
+      { top: 48, left: 28 }, { top: 48, left: 72 },
+      // 점점 좁아지는 아래
+      { top: 64, left: 38 }, { top: 64, left: 62 },
+      // 끝점
+      { top: 80, left: 50 }
+    ];
+    icons = heartCoords.map(c => ({ emoji: '🐚', top: c.top, left: c.left, size: 22 }));
+    // 하트 가운데 진주 빛 1개
+    icons.push({ emoji: '✨', top: 46, left: 50, size: 28, pearl: true });
+  } else {
+    // 데이터 부족 시 흩어 (이전 7개)
+    icons = [
+      { emoji: '🐚', top: 28, left: 14, size: 30 },
+      { emoji: '✨', top: 62, left: 42, size: 38, pearl: true },
+      { emoji: '🐚', top: 48, left: 75, size: 26 },
+      { emoji: '✨', top: 18, left: 58, size: 28, pearl: true },
+      { emoji: '🐚', top: 76, left: 22, size: 28 },
+      { emoji: '✨', top: 8,  left: 32, size: 22, pearl: true },
+      { emoji: '🐚', top: 56, left: 8,  size: 24 }
+    ];
+  }
   const iconsHtml = icons.map(ic => `
     <div class="ann-rv-beach-icon ${ic.pearl ? 'ann-rv-beach-icon-pearl' : ''}"
          style="top:${ic.top}%;left:${ic.left}%;font-size:${ic.size}px;">${ic.emoji}</div>
@@ -10894,24 +10971,35 @@ function _annualReviewBuildCardMoments(d) {
   `;
 }
 
-// 카드 8: 올해의 깨달음 1 — 사용자 명시 2026-04-30: 가장 통찰력 깊고 현명한 1개만 (큰 typography)
+// 카드 8: 올해의 깨달음 — 사용자 명시: 제목 + 요약 + 왜 올해 깨달음인지 코멘트 (Opus 분석, 다음 phase 진짜 호출)
 function _annualReviewBuildCardPearl(d) {
+  const p = d.best_pearl || {};
+  // string / object 둘 다 호환
+  const title = (typeof p === 'string') ? p : (p.title || '');
+  const summary = (typeof p === 'object') ? (p.summary || '') : '';
+  const why = (typeof p === 'object') ? (p.whyThisYear || '') : '';
   return `
     <div class="ann-rv-card ann-rv-card-pearl">
       <div class="ann-rv-pearl-label">올해의 깨달음</div>
       <div class="ann-rv-pearl-emoji">✨</div>
-      <div class="ann-rv-pearl-text">${escapeHtml(d.best_pearl || '')}</div>
+      <div class="ann-rv-pearl-text">${escapeHtml(title)}</div>
+      ${summary ? `<div class="ann-rv-pearl-summary">${escapeHtml(summary)}</div>` : ''}
+      ${why ? `<div class="ann-rv-pearl-why">🦉 ${escapeHtml(why)}</div>` : ''}
     </div>
   `;
 }
 
-// 카드 9: 가장 깊었던 숙고 — 사용자 명시 2026-04-30: 질문 하나 딱 놓고 웅장한 느낌 (예전 리뷰 형식)
+// 카드 9: 가장 깊었던 숙고 — 사용자 명시: 질문 + 결론 둘 다 (예전 리뷰 형식)
 function _annualReviewBuildCardDeep(d) {
   const dq = d.deep || {};
   return `
     <div class="ann-rv-card ann-rv-card-deep">
       <div class="ann-rv-deep-label">가장 깊었던 숙고</div>
       <div class="ann-rv-deep-question">${escapeHtml(dq.question || '').replace(/\n/g, '<br>')}</div>
+      ${dq.conclusion ? `
+        <div class="ann-rv-deep-divider">↓ 14일 후 ↓</div>
+        <div class="ann-rv-deep-conclusion">${escapeHtml(dq.conclusion).replace(/\n/g, '<br>')}</div>
+      ` : ''}
       <div class="ann-rv-deep-date">${escapeHtml(dq.date || '')}</div>
     </div>
   `;
@@ -10947,31 +11035,28 @@ function _annualReviewRender() {
   const cardHtml = s.cards[s.currentIdx](s.data);
   const progressDots = Array.from({ length: total }, (_, i) =>
     `<span class="${i <= s.currentIdx ? 'active' : ''}"></span>`).join('');
-  // 사용자 보고 2026-04-30: 다음 슬라이드 안 넘어가짐 — 명시 화살표 button + swipe + 키보드 추가.
-  const navBottom = total > 1 ? `
-    <div class="ann-rv-nav-bottom">
-      <button class="ann-rv-nav-btn" onclick="_annualReviewPrev()" ${s.currentIdx === 0 ? 'disabled' : ''} aria-label="이전">←</button>
-      <button class="ann-rv-nav-btn" onclick="_annualReviewNext()" ${s.currentIdx === total - 1 ? 'disabled' : ''} aria-label="다음">→</button>
-    </div>
-  ` : '';
-  // 슬라이드별 노래 (사용자 명시 2026-04-30: 진주 노래 + 자동 재생 + artwork)
+  // 사용자 명시 2026-04-30: 하단 화살표 button 제거 (좌·우 tap + swipe + 키보드만으로 충분)
+  // 슬라이드별 노래 (사용자 명시 2026-04-30: 자동 재생 + 반복 재생 + LP 회전 artwork)
   const songData = (s.data && s.data.songs) ? s.data.songs[`card${s.currentIdx + 1}`] : null;
-  // audio 인스턴스 (singleton) — 카드 진입 시 자동 재생
   if (songData && songData.previewUrl) {
     if (!window._annAudio) {
       window._annAudio = new Audio();
       window._annAudio.volume = 0.5;
+      window._annAudio.loop = true;  // 사용자 명시 2026-04-30: 끊기면 반복 재생
     }
     if (window._annAudio.src !== songData.previewUrl) {
       window._annAudio.src = songData.previewUrl;
+      window._annAudio.loop = true;
       window._annAudio.play().catch(e => console.warn('[ann-rv] autoplay blocked:', e));
     }
   } else if (window._annAudio) {
     try { window._annAudio.pause(); } catch {}
   }
-  const playState = (window._annAudio && !window._annAudio.paused) ? '⏸' : '▶';
+  const isPlaying = (window._annAudio && !window._annAudio.paused);
+  const playState = isPlaying ? '⏸' : '▶';
+  const playingClass = isPlaying ? ' playing' : '';
   const songHtml = songData ? `
-    <div class="ann-rv-song">
+    <div class="ann-rv-song${playingClass}">
       <div class="ann-rv-song-info">
         <img class="ann-rv-song-art" src="${escapeHtml(songData.artworkUrl || '')}" alt="">
         <div class="ann-rv-song-meta">
@@ -10990,7 +11075,6 @@ function _annualReviewRender() {
     ${cardHtml}
     ${total > 1 ? '<button class="ann-rv-tap ann-rv-tap-next" onclick="_annualReviewNext()" aria-label="다음"></button>' : ''}
     ${songHtml}
-    ${navBottom}
   `;
   overlay.classList.add('open');
   // 처음 1번만 swipe + key listener attach
@@ -11041,15 +11125,18 @@ function _annualReviewClose() {
   }
 }
 
-// 사용자 명시 2026-04-30: 노래 ▶/⏸ 토글 (자동 재생 후에도 사용자가 멈출 수 있게)
+// 사용자 명시 2026-04-30: 노래 ▶/⏸ 토글 + LP spin class 토글
 function _annTogglePlay(btn) {
   if (!window._annAudio) return;
+  const songEl = document.querySelector('.ann-rv-song');
   if (window._annAudio.paused) {
     window._annAudio.play().catch(() => {});
     if (btn) btn.textContent = '⏸';
+    if (songEl) songEl.classList.add('playing');
   } else {
     window._annAudio.pause();
     if (btn) btn.textContent = '▶';
+    if (songEl) songEl.classList.remove('playing');
   }
 }
 
