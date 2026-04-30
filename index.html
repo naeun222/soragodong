@@ -11752,13 +11752,54 @@ function devPreviewWeeklyReview() {
     seed_callbacks: '지난 주 씨앗 "잘 잔 다음날 어떤지" → 4번 중 4번 가벼웠어. 패턴 확정.'
   };
 
-  // 사용자 피드백 2026-04-30: 깨달음 N개 카드 위해 시드 archive 임시 inject (state 안 박음 — review 화면만)
-  // (실제 generateReview 는 state.archive 에서 cutoff 안 추출 — preview 시 시드 카드 표시용)
+  // 사용자 명시 2026-04-30 ultrathink: '이 기간 깨달음 N개' 카드 통째로 보여주기 위해 풍부한 archive 5개 시드.
+  // _buildReviewArchiveSummaryHTML 가 사용하는 모든 필드 inject: tags / type / savedAt / headline / body / starred / revisitCount
+  // savedAt 분포 — 초/중/말미 시각 분포 보여주기 위해 분산 (chart 패턴 + 화두 무게중심 + 갈래 클러스터 시각화)
+  const _seedNow = new Date();
+  const _seedAgo = (days, hours) => new Date(_seedNow.getTime() - days * 86400000 - (hours || 0) * 3600000).toISOString();
   reviewData._seed_archive_for_preview = [
-    { headline: '아침 산책 한 날 = 그날 일기 길어' },
-    { headline: '카페 한 곳 정착 — 환경 안정' },
-    { headline: '잠 일찍 자는 게 가장 큰 효과' },
-    { headline: '엄마 통화는 반드시 산책 + 짝지어야 회복' }
+    {
+      type: 'memo',
+      headline: '아침 산책 한 날 = 그날 일기 길어',
+      body: '아침 30분 걸은 화/목 — 일기에 자연스럽게 손이 가더라. 몸이 풀려야 글이 나오나봐.',
+      tags: ['루틴', '회복', '글쓰기'],
+      savedAt: _seedAgo(6),
+      starred: true,
+      revisitCount: 3
+    },
+    {
+      type: 'scrap',
+      headline: '카페 한 곳 정착 — 환경 안정',
+      body: '같은 카페 3번 가니까 머리 자동 ON. 환경이 만들어주는 거 같아.',
+      tags: ['환경', '집중', '루틴'],
+      savedAt: _seedAgo(5, 4),
+      revisitCount: 1
+    },
+    {
+      type: 'memo',
+      headline: '잠 일찍 자는 게 가장 큰 효과',
+      body: '11시 전 자면 다음날 mood 한 단계 가벼움. 이거 진짜 핵심이야.',
+      tags: ['수면', '회복'],
+      savedAt: _seedAgo(4, 12),
+      starred: true,
+      revisitCount: 5
+    },
+    {
+      type: 'reflection',
+      headline: '엄마 통화는 반드시 산책 + 짝지어야 회복',
+      body: '통화 직후 그냥 앉아있으면 무거움 남음. 5분 산책으로 풀어야 흐르네.',
+      tags: ['회복', '관계'],
+      savedAt: _seedAgo(2, 8)
+    },
+    {
+      type: 'memo',
+      headline: '마감 임박 = 자연 진입, 미루기 X',
+      body: '결함이 아니라 작동 방식. 임박해야 진입 빠른 건 인정하고 활용.',
+      tags: ['집중', '작동방식'],
+      savedAt: _seedAgo(1, 2),
+      starred: true,
+      revisitCount: 2
+    }
   ];
   // chart 표시 위해 임시 entries 7일 inject (state 박지 X — review screen 에서만 cutoff/cutoffEnd 안에서 entries 필터)
   // renderReviewScreen 가 state.entries 를 cutoff 으로 필터하므로, 시드 entries 있으면 chart 자동 표시
@@ -17924,26 +17965,19 @@ function renderReviewScreen(type, reviewData) {
       ${pat.condition ? `<div style="font-size:11px; color:var(--text-soft); line-height:1.6;">↳ ${escapeHtml(pat.condition)}</div>` : ''}
     </div>` : '';
 
-    // 깨달음 N개 — 사용자 명시 2026-04-30: state.archive 중 이 기간 (cutoff) 안 + preview seed fallback
-    const _archiveItems = (function() {
-      // preview seed (devPreview 에서 inject) 우선
-      if (Array.isArray(reviewData._seed_archive_for_preview) && reviewData._seed_archive_for_preview.length > 0) {
-        return reviewData._seed_archive_for_preview;
-      }
-      // 실제 cutoff (chart cutoff 동일)
-      const arr = (state.archive || []).filter(a => {
-        if (!a.savedAt && !a.discoveredAt) return false;
-        const ts = new Date(a.savedAt || a.discoveredAt).getTime();
-        return ts >= _cutoffChart.getTime() && ts < _cutoffEndChart.getTime();
-      });
-      return arr;
-    })();
-    const insightsBlock = _archiveItems.length > 0 ? `
-    <div style="background:var(--surface); border:1px solid rgba(232,200,144,0.20); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
-      <div style="font-size:11px; color:#e8c890; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">✨ 이 ${type === 'weekly' ? '주' : '달'} 깨달음 ${_archiveItems.length}개</div>
-      ${_archiveItems.slice(0, 6).map(a => `<div style="font-family:'Gowun Batang',serif; font-size:13.5px; color:var(--text); line-height:1.7; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04);">"${escapeHtml(a.headline || '')}"</div>`).join('')}
-      ${_archiveItems.length > 6 ? `<div style="font-size:10.5px; color:var(--text-soft); line-height:1.6; margin-top:8px; text-align:right;">+${_archiveItems.length - 6}개 더</div>` : ''}
-    </div>` : '';
+    // 사용자 명시 2026-04-30 ultrathink: 이전 시드의 풍부한 '이 기간 깨달음 N개' 카드 통째로 호출.
+    // _buildReviewArchiveSummaryHTML — 사고 모드 / 화두 무게중심 / 시간 분포 / 살아있는 통찰 / 테마 갈래 / 전체 헤드라인 / AI 통찰
+    // 저장 전이라 review.id X — AI 통찰 button 자리에 '저장 후 가능' placeholder
+    const _tempReviewForSummary = type === 'weekly'
+      ? { weekKey: (typeof getCurrentWeekKey === 'function' ? getCurrentWeekKey() : ''), completedAt: new Date().toISOString(), id: '' }
+      : { monthKey: (typeof getMonthKey === 'function' ? getMonthKey(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15)) : ''), completedAt: new Date().toISOString(), id: '' };
+    const _archiveOverride = Array.isArray(reviewData._seed_archive_for_preview) && reviewData._seed_archive_for_preview.length > 0
+      ? reviewData._seed_archive_for_preview
+      : null;
+    const _insightsHtml = (typeof _buildReviewArchiveSummaryHTML === 'function')
+      ? _buildReviewArchiveSummaryHTML(_tempReviewForSummary, _archiveOverride ? { archiveOverride: _archiveOverride } : {})
+      : '';
+    const insightsBlock = _insightsHtml ? `<div style="margin-bottom:14px;">${_insightsHtml}</div>` : '';
 
     // Quotes — horizontal scroll
     const quotesArr = Array.isArray(reviewData.quotes) ? reviewData.quotes.filter(q => q && q.trim()) : [];
@@ -36062,7 +36096,10 @@ function renderArchiveReviews() {
 }
 
 // V4-fix v3 (사용자 요청 — 1~6 통합): 리뷰별 깨달음 깊은 가공
-function _buildReviewArchiveSummaryHTML(review) {
+// 사용자 명시 2026-04-30 ultrathink: opts.archiveOverride 추가 — 주간 리뷰 본 화면 (저장 전 / preview 시드) 통째로 호출 가능.
+function _buildReviewArchiveSummaryHTML(review, opts) {
+  opts = opts || {};
+  const _archiveSource = Array.isArray(opts.archiveOverride) ? opts.archiveOverride : (state.archive || []);
   let startMs = null, endMs = null;
   if (review.quarterKey && typeof getQuarterRange === 'function') {
     const range = getQuarterRange(review.quarterKey);
@@ -36080,7 +36117,7 @@ function _buildReviewArchiveSummaryHTML(review) {
     endMs = compMs;
   }
   if (startMs == null || endMs == null) return '';
-  const arrs = (state.archive || []).filter(a => {
+  const arrs = _archiveSource.filter(a => {
     if (!a.savedAt) return false;
     const t = new Date(a.savedAt).getTime();
     return t >= startMs && t <= endMs;
@@ -36093,7 +36130,7 @@ function _buildReviewArchiveSummaryHTML(review) {
   arrs.forEach(a => (a.tags || []).forEach(t => { tagFreq[t] = (tagFreq[t] || 0) + 1; }));
   const topTags = Object.entries(tagFreq).sort((a,b) => b[1] - a[1]).slice(0, 6);
   const periodLen = endMs - startMs;
-  const prevArrs = (state.archive || []).filter(a => {
+  const prevArrs = _archiveSource.filter(a => {
     if (!a.savedAt) return false;
     const t = new Date(a.savedAt).getTime();
     return t >= (startMs - periodLen) && t < startMs;
@@ -36156,9 +36193,11 @@ function _buildReviewArchiveSummaryHTML(review) {
 
   return `<div class="review-archive-summary">
     <div class="ras-title">✨ 이 기간 깨달음 ${total}개</div>
-    ${metaSummary ? `<div class="ras-meta">"${escapeHtml(metaSummary)}"</div>` : `
-      <div style="margin-bottom:12px;"><button class="ras-meta-btn" onclick="event.stopPropagation(); generateReviewArchiveMetaSummary('${review.id || ''}')">🤖 AI 핵심 통찰 요약 받기</button></div>
-    `}
+    ${metaSummary ? `<div class="ras-meta">"${escapeHtml(metaSummary)}"</div>` : (review.id ? `
+      <div style="margin-bottom:12px;"><button class="ras-meta-btn" onclick="event.stopPropagation(); generateReviewArchiveMetaSummary('${review.id}')">🤖 AI 핵심 통찰 요약 받기</button></div>
+    ` : `
+      <div style="margin-bottom:12px; font-size:11px; color:var(--text-soft); padding:8px 10px; background:rgba(255,255,255,0.03); border-radius:6px; line-height:1.6;">🤖 리뷰 저장 후 AI 핵심 통찰 요약 받기 가능</div>
+    `)}
     <div class="ras-section">
       <div class="ras-section-label">네 사고 모드</div>
       <div class="ras-mode-bars">
