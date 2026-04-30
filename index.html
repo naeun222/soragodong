@@ -730,6 +730,27 @@
     transition: transform 0.15s, background 0.15s;
   }
   .chat-end-btn:active { transform: scale(0.92); background: rgba(98,165,200,0.22); }
+
+  /* 사용자 요청 2026-04-30 ultrathink Task 7: Hybrid Opus 토글 — chat input bar 옆 작은 버튼 */
+  .chat-mode-btn {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 16px; line-height: 1;
+    cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    user-select: none;
+  }
+  .chat-mode-btn:active { transform: scale(0.92); }
+  .chat-mode-btn.opus {
+    background: linear-gradient(135deg, rgba(178,140,212,0.20), rgba(139,126,196,0.10));
+    border-color: rgba(220,180,255,0.55);
+    color: #d4b8ff;
+    box-shadow: 0 0 12px rgba(178,140,212,0.30), inset 0 0 8px rgba(178,140,212,0.10);
+  }
+  .chat-mode-btn:hover:not(.opus) { background: var(--surface3); border-color: var(--border-strong); }
   /* V3.13.x: + 메뉴 버튼 (일기 템플릿/대화 마무리 통합) */
   .chat-plus-btn {
     width: 32px; height: 32px; border-radius: 50%;
@@ -8145,6 +8166,7 @@
       <button class="chat-end-btn" onclick="endChapter()" aria-label="이 대화 마무리" title="이 대화 마무리">✓</button>
       <button class="chat-plus-btn" id="chatPlusBtn" onclick="toggleChatPlusMenu(event)" aria-label="더보기">+</button>
     </div>
+    <button class="chat-mode-btn" id="chatModeBtn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환">🐚</button>
     <textarea class="chat-textarea" id="chatInput" placeholder="편하게 말해봐..." rows="1"></textarea>
     <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
   </div>
@@ -18008,6 +18030,8 @@ function showScreen(name) {
     setTimeout(() => { const s = document.getElementById('screen-chat'); if (s) s.scrollTop = s.scrollHeight; }, 50);
     // V4-fix v3 (사용자 요청): 대화 진입 시 가닥 미션 팔로업 자동 prompt
     if (typeof offerStrategyFollowup === 'function') { try { offerStrategyFollowup(); } catch (e) {} }
+    // 사용자 요청 2026-04-30 ultrathink Task 7: chat mode 토글 버튼 상태 반영
+    if (typeof updateChatModeBtn === 'function') updateChatModeBtn();
   }
 
   // V3.13.x: 튜토리얼 visit step — 어떤 경로든 화면 도달 시 advance.
@@ -19697,6 +19721,28 @@ async function retryMessage(errorIdx) {
   await generateAIResponse();
 }
 
+// 사용자 요청 2026-04-30 ultrathink Task 7: Hybrid Opus 토글 — chat 모드 전환 + 토스트 차감 안내
+function toggleChatModel() {
+  state.preferences = state.preferences || {};
+  const next = !state.preferences.useOpus;
+  state.preferences.useOpus = next;
+  saveState();
+  updateChatModeBtn();
+  if (next) {
+    showToast('🦉 Opus 모드 — Sonnet 대비 잔액 약 5x 빠르게 차감돼');
+  } else {
+    showToast('🐚 Sonnet 모드 — 기본 (충분히 깊은 대화)');
+  }
+}
+function updateChatModeBtn() {
+  const btn = document.getElementById('chatModeBtn');
+  if (!btn) return;
+  const useOpus = !!(state.preferences && state.preferences.useOpus);
+  btn.classList.toggle('opus', useOpus);
+  btn.textContent = useOpus ? '🦉' : '🐚';
+  btn.setAttribute('title', useOpus ? '🦉 Opus 모드 (잔액 5x 빠르게 차감) — 누르면 Sonnet으로' : '🐚 Sonnet 모드 (기본) — 누르면 Opus로');
+}
+
 async function generateAIResponse(modelOverride) {
   state.chatMessages = state.chatMessages.filter(m => !m.typing);
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
@@ -19752,7 +19798,8 @@ async function generateAIResponse(modelOverride) {
       method: 'POST',
       headers: _anthropicHeaders(),
       body: JSON.stringify({
-        model: modelOverride || 'claude-sonnet-4-6',
+        // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet
+        model: modelOverride || ((state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6'),
         max_tokens: 2000,
         stream: true,
         system: systemBlocks,
