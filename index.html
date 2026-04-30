@@ -10566,17 +10566,19 @@ function _buildAnnualReviewSeedData(year) {
       pearlCount: 31,
       bestPearl: '마감 임박 = 자연 진입, 미루기 X'
     },
+    // 사용자 명시 2026-04-30 ultrathink: '잊지 못할 순간' = 사진 있는 진주 (제목 + 날짜 + 사진).
     moments_card: [
-      { date: '2025.05.23', text: '"ADHD 같아" 처음 말한 날',     emoji: '🐚', bg: 'linear-gradient(135deg, rgba(212,167,106,0.45), rgba(139,126,196,0.30))' },
-      { date: '2025.11.28', text: '14일 결정에 맡긴 첫날',          emoji: '🌊', bg: 'linear-gradient(135deg, rgba(126,200,180,0.45), rgba(98,165,200,0.30))' },
-      { date: '2026.04.12', text: '학회 D-3, 폰 다른 방에 둠',     emoji: '⚡', bg: 'linear-gradient(135deg, rgba(255,215,122,0.40), rgba(180,130,90,0.30))' }
+      { date: '2025.07.12', text: '엄마가 끓여준 김치찌개',                 photo: '/gimchi.webp' },
+      { date: '2025.08.24', text: '친구들이랑 한강 가서 치킨 먹은 날', photo: '/hanriver.jpg' },
+      { date: '2025.10.05', text: '야구에서 승리요정된 날',                photo: '/baseball.jpg' }
     ],
     // 사용자 명시 2026-04-30 ultrathink: Stories 깨달음 슬라이드 톤 (참고: KakaoTalk 20260430).
     // 통찰 31개 중 가장 현명한 한 마디 + 메타 (count + topTags). best_pearl = 가장 현명한 한 마디 (Opus 선정).
+    // 사용자 명시 2026-04-30 ultrathink: 튜토리얼 예시 풍부화 — 사용자 1인칭 어휘 + 데이터 출처 + 1년 변화 narrative.
     best_pearl: {
       title: '마감 임박 = 자연 진입, 미루기 X',
-      summary: '고치려 들지 말고, 작동 방식 알고 잘 다루기',
-      whyThisYear: '1년 동안 너의 자기 인식이 가장 크게 바뀐 자리야. 다른 깨달음 30+ 개도 결국 이 한 마디로 풀려.'
+      summary: '도파미니 부스터 = 마감. 자책할 거 X, ADHD 작동 방식 ○.',
+      whyThisYear: 'Q3 깨달음 카드 #5 + 11월 일기 3회 반복. 자책 → 활용 으로 frame 전환 = 1년 가장 큰 인지 변화. 미루기 → "잠재의식이 도파민 차징 중" 으로 재해석 한 시점 부터 마감 직전 완수율 ↑.'
     },
     realizations: {
       count: { scrap: 12, memo: 14, reflection: 5 },  // 합 31 = stats 의 깨달음 31 일치
@@ -11148,15 +11150,22 @@ function _annualReviewBuildCard6(d) {
 // 카드 7 (새): 잊지 못할 순간 — 사용자 명시 2026-04-30: '사진' 카드 grid 별 슬라이드
 function _annualReviewBuildCardMoments(d) {
   const moments = d.moments_card || [];
-  const cards = moments.map(m => `
-    <div class="ann-rv-moment-card" style="background:${m.bg || ''};">
-      <div class="ann-rv-moment-bg">${m.emoji || '🌅'}</div>
+  const cards = moments.map(m => {
+    // 사용자 명시 2026-04-30 ultrathink: photo 필드 있으면 사진 background (gradient overlay 로 텍스트 가독성). 없으면 옛 emoji + bg gradient.
+    const hasPhoto = !!m.photo;
+    const cardStyle = hasPhoto
+      ? `background-image: linear-gradient(180deg, transparent 35%, rgba(0,0,0,0.72) 100%), url('${escapeHtml(m.photo)}'); background-size: cover; background-position: center;`
+      : `background:${m.bg || ''};`;
+    return `
+    <div class="ann-rv-moment-card" style="${cardStyle}">
+      ${hasPhoto ? '' : `<div class="ann-rv-moment-bg">${m.emoji || '🌅'}</div>`}
       <div class="ann-rv-moment-content">
         <div class="ann-rv-moment-date">${escapeHtml(m.date)}</div>
         <div class="ann-rv-moment-text">${escapeHtml(m.text)}</div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
   return `
     <div class="ann-rv-card ann-rv-card-moments">
       <div class="ann-rv-label">잊지 못할 순간</div>
