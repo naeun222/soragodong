@@ -1802,6 +1802,17 @@
     font-style: normal; color: #f0d9a8; font-weight: 700;
     font-size: 18px;
   }
+  /* 사용자 명시 2026-04-30: 별명 '왜?' — 데이터 기반 한 줄 작은 (페르소나 정당화) */
+  .ann-rv-card-1 .ann-rv-persona-reason {
+    font-size: 11.5px;
+    color: rgba(232,212,168,0.55);
+    font-style: italic;
+    line-height: 1.5;
+    margin-top: 14px;
+    text-align: center;
+    max-width: 320px;
+    letter-spacing: 0.02em;
+  }
   .ann-rv-card-1 .ann-rv-stats {
     display: grid; grid-template-columns: repeat(3, 1fr);
     gap: 10px; width: 100%; max-width: 380px;
@@ -10690,6 +10701,7 @@ function openAnnualReviewPreview() {
     oneWord: '전환',
     oneWordReason: "'왜 나는?'에서 '아 나 이런 사람'으로",
     persona: '회피하던 게 알고 보니 엔진이었던 사람',
+    personaReason: '논문에서 도망간 다음 날, 4번 중 3번 활력이 +30% 였어',
     stats: [
       { emoji: '📔', num: 226, label: '일기' },
       { emoji: '💬', num: 142, label: '대화' },
@@ -10862,6 +10874,7 @@ function _annualReviewBuildCard1(d) {
           <div><em>${escapeHtml(d.persona)}</em></div>
           <div>이야.</div>
         </div>
+        ${d.personaReason ? `<div class="ann-rv-persona-reason">${escapeHtml(d.personaReason)}</div>` : ''}
       </div>
       <div class="ann-rv-stats">
         ${d.stats.map(s => `
