@@ -1522,74 +1522,105 @@
     color: #b0e8ec;
   }
 
-  /* === Welcome Bonus Modal (사용자 요청 2026-04-30 ultrathink: 무료 토큰 화려한 알림 + 법적 고지) === */
+  /* === Welcome Bonus Modal — Instagram-style (사용자 요청 2026-04-30 ultrathink 재설계) === */
   .welcome-bonus-modal {
     position: relative;
-    max-width: 380px; padding: 28px 24px 22px;
-    background: linear-gradient(155deg, rgba(212,167,106,0.18), rgba(139,126,196,0.10) 50%, rgba(126,200,227,0.10));
-    border: 1.5px solid rgba(212,167,106,0.40);
-    border-radius: 18px;
-    box-shadow: 0 18px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
-    overflow: hidden;
+    max-width: 360px; padding: 32px 28px 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55);
     text-align: center;
-    animation: wbScaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: wbFadeUp 0.42s cubic-bezier(0.22, 0.61, 0.36, 1);
   }
-  @keyframes wbScaleIn {
-    0%   { opacity: 0; transform: scale(0.7) translateY(10px); }
-    60%  { opacity: 1; transform: scale(1.02); }
-    100% { transform: scale(1) translateY(0); }
+  @keyframes wbFadeUp {
+    0%   { opacity: 0; transform: translateY(14px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
-  .welcome-bonus-stars {
-    position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  .welcome-bonus-hero {
+    width: 88px; height: 88px;
+    margin: 0 auto 22px;
+    border-radius: 50%;
+    background: conic-gradient(from 45deg, #f58529, #dd2a7b, #8134af, #515bd4, #f58529);
+    padding: 3px;
+    display: flex; align-items: center; justify-content: center;
+    animation: wbHeroSpin 14s linear infinite;
   }
-  .welcome-bonus-stars span {
-    position: absolute; font-size: 14px;
-    color: var(--accent); opacity: 0;
-    animation: wbStarTwinkle 2.4s ease-in-out infinite;
+  @keyframes wbHeroSpin {
+    to { transform: rotate(360deg); }
   }
-  .welcome-bonus-stars span:nth-child(1) { top:  10%; left: 12%; animation-delay: 0.1s; }
-  .welcome-bonus-stars span:nth-child(2) { top:  18%; right: 14%; animation-delay: 0.6s; font-size: 10px; }
-  .welcome-bonus-stars span:nth-child(3) { top:  62%; left:  8%; animation-delay: 1.0s; font-size: 11px; }
-  .welcome-bonus-stars span:nth-child(4) { top:  74%; right: 10%; animation-delay: 1.4s; }
-  .welcome-bonus-stars span:nth-child(5) { top:  44%; right: 16%; animation-delay: 0.4s; font-size: 9px; }
-  .welcome-bonus-stars span:nth-child(6) { top:  36%; left: 14%; animation-delay: 1.8s; font-size: 12px; }
-  @keyframes wbStarTwinkle {
-    0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
-    50%      { opacity: 0.85; transform: scale(1) rotate(180deg); }
+  .welcome-bonus-hero-inner {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 34px;
+    animation: wbHeroSpinReverse 14s linear infinite;
   }
-  .welcome-bonus-gift {
-    font-size: 56px; margin-bottom: 8px;
-    display: inline-block;
-    animation: wbGiftSway 2.2s ease-in-out infinite;
-    filter: drop-shadow(0 6px 14px rgba(212,167,106,0.45));
-  }
-  @keyframes wbGiftSway {
-    0%, 100% { transform: rotate(-6deg) scale(1); }
-    50%      { transform: rotate(6deg) scale(1.08); }
+  @keyframes wbHeroSpinReverse {
+    to { transform: rotate(-360deg); }
   }
   .welcome-bonus-title {
-    font-size: 18px; font-weight: 700; color: var(--text);
-    margin-bottom: 6px; letter-spacing: 0.02em;
+    font-size: 12px; font-weight: 600; color: var(--text-soft);
+    letter-spacing: 0.14em; text-transform: uppercase;
+    margin-bottom: 12px;
   }
   .welcome-bonus-amount {
-    font-size: 32px; font-weight: 800;
-    background: linear-gradient(135deg, var(--accent), #f5d59c);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    margin-bottom: 4px;
+    font-size: 44px; font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.025em; line-height: 1;
+    margin-bottom: 6px;
+  }
+  .welcome-bonus-amount-krw {
+    font-size: 13px; color: var(--text-soft);
+    margin-bottom: 18px;
   }
   .welcome-bonus-sub {
-    font-size: 13px; color: var(--text-dim);
-    line-height: 1.6; margin-bottom: 16px;
+    font-size: 14px; color: var(--text);
+    line-height: 1.55; margin-bottom: 22px;
+    padding: 0 4px;
   }
   .welcome-bonus-info {
-    text-align: left; padding: 12px 14px;
-    background: rgba(0,0,0,0.20); border-radius: 10px;
-    margin-bottom: 16px;
+    text-align: left;
+    margin-bottom: 22px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
   }
-  .welcome-bonus-info div {
-    font-size: 11px; color: var(--text-soft); line-height: 1.7;
+  .welcome-bonus-info-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 4px;
+    font-size: 12.5px; color: var(--text-dim); line-height: 1.5;
   }
-  .welcome-bonus-btn { width: 100%; padding: 12px; font-size: 14px; font-weight: 600; }
+  .welcome-bonus-info-row + .welcome-bonus-info-row {
+    border-top: 1px solid var(--border);
+  }
+  .welcome-bonus-info-row .wb-ico {
+    flex: 0 0 16px; font-size: 13px;
+    color: var(--text-soft);
+    margin-top: 2px;
+    text-align: center;
+  }
+  .welcome-bonus-btn {
+    width: 100%; padding: 14px;
+    font-size: 14px; font-weight: 600;
+    letter-spacing: 0.01em;
+    color: #fff;
+    background: linear-gradient(135deg, #f58529 0%, #dd2a7b 55%, #8134af 100%);
+    border: 0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    box-shadow: 0 8px 22px rgba(221, 42, 123, 0.26);
+  }
+  .welcome-bonus-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(221, 42, 123, 0.34);
+    filter: brightness(1.04);
+  }
+  .welcome-bonus-btn:active {
+    transform: translateY(0);
+    filter: brightness(0.98);
+  }
   .ft-hypothesis label {
     display: flex; align-items: flex-start; gap: 8px;
     padding: 10px 12px; margin-bottom: 6px;
@@ -10377,19 +10408,19 @@ function openAnnualReviewPreview() {
     ],
     seasonCaption: '12월 7일이 너의 <strong>변곡점</strong> 이었어',
     finding1: {
-      label: '네가 모를 첫 번째',
+      label: '1년 보다가 어 한 거',
       quote: '"논문 부담돼"',
       dataNum: '+30%',
       dataText: '근데 논문 한 다음 날\n4번 중 3번은 활력이 더 높았어',
       conclusion: '네가 도망친 게\n<span>사실은 너를 살리는 일</span>이었나 봐'
     },
     finding2: {
-      label: '두 번째',
+      label: '또 하나',
       friendLow: '0',
       friendLowLabel: '도움 요청한\n횟수',
       friendHigh: '23',
       friendHighLabel: '친구한테\n도움 준 횟수',
-      conclusion: '너 자신한테는\n<span>친구가 안 됐던 자리</span>같아'
+      conclusion: '<span>네 자신보다 친구들을\n더 도운 해</span>였어.'
     },
     tree: {
       embodied: [
@@ -10409,31 +10440,29 @@ function openAnnualReviewPreview() {
         { name: '감정 후 운동', emoji: '🌿' },
         { name: '회의 30분 전', emoji: '🌿' }
       ],
-      best: '<em>환경 큐잉</em> — 9번 통한 너의 가장 빛난 무기'
+      caption: '이제 네 힘으로 이만큼이나 해결할 수 있어'
     },
     beach: {
-      shellCount: 142,
       diaryCount: 226,
       pearlCount: 31,
       bestPearl: '결함 X · 작동 방식 ○'
     },
-    best: {
-      moments: [
-        { date: '5/23',  text: '"ADHD 같아" 처음 말한 날' },
-        { date: '11/28', text: '14일 결정에 맡긴 첫날' },
-        { date: '4/12',  text: '학회 D-3, 폰을 다른 방에 둠' }
-      ],
-      quotes: [
-        '"결함 X · 작동 방식 ○"',
-        '"환경이 의지보다 강해"',
-        '"마감 임박 = 도파민 trigger"',
-        '"내 머리 ≠ 결정 도구"',
-        '"고치는 게 아니라 잘 다루는 거"'
-      ],
-      deep: {
-        text: '지도교수 변경 14일 숙성',
-        date: '11/28 → 12/11'
-      }
+    moments_card: [
+      { date: '2025.05.23', text: '"ADHD 같아" 처음 말한 날',     emoji: '🐚', bg: 'linear-gradient(135deg, rgba(212,167,106,0.45), rgba(139,126,196,0.30))' },
+      { date: '2025.11.28', text: '14일 결정에 맡긴 첫날',          emoji: '🌊', bg: 'linear-gradient(135deg, rgba(126,200,180,0.45), rgba(98,165,200,0.30))' },
+      { date: '2026.04.12', text: '학회 D-3, 폰 다른 방에 둠',     emoji: '⚡', bg: 'linear-gradient(135deg, rgba(255,215,122,0.40), rgba(180,130,90,0.30))' }
+    ],
+    top_pearls: [
+      '결함 X · 작동 방식 ○',
+      '환경이 의지보다 강해',
+      '마감 임박 = 도파민 trigger',
+      '내 머리 ≠ 결정 도구',
+      '회피 대상 = 엔진'
+    ],
+    deep: {
+      question: '"이 주제 못 끝낼 거 같아.\n지도교수랑 안 맞아."',
+      conclusion: '"지도교수 변경 X / 주제 변경"',
+      date: '2025.11.28 → 12.11 (14일)'
     },
     final: {
       message: '1년 전 너 — "<strong>왜 나는?</strong>"\n지금 너 — "<strong>아 나 이런 사람</strong>"\n\n이 차이가 진짜 큰 거야.',
@@ -10453,21 +10482,23 @@ function openAnnualReviewPreview() {
       card4: { title: '감사', artist: '김동률', url: 'https://www.youtube.com/results?search_query=%EA%B9%80%EB%8F%99%EB%A5%A0+%EA%B0%90%EC%82%AC' },
       card5: { title: '나의 노래', artist: '양희은', url: 'https://www.youtube.com/results?search_query=%EC%96%91%ED%9D%AC%EC%9D%80+%EB%82%98%EC%9D%98+%EB%85%B8%EB%9E%98' },
       card6: { title: '모든 날 모든 순간', artist: '폴킴', url: 'https://www.youtube.com/results?search_query=%ED%8F%B4%ED%82%B4+%EB%AA%A8%EB%93%A0+%EB%82%A0+%EB%AA%A8%EB%93%A0+%EC%88%9C%EA%B0%84' },
-      card7: { title: '사랑한다는 흔한말', artist: '김연우', url: 'https://www.youtube.com/results?search_query=%EA%B9%80%EC%97%B0%EC%9A%B0+%EC%82%AC%EB%9E%91%ED%95%9C%EB%8B%A4%EB%8A%94+%ED%9D%94%ED%95%9C%EB%A7%90' },
-      card8: { title: '양화대교', artist: '자이언티', url: 'https://www.youtube.com/results?search_query=%EC%9E%90%EC%9D%B4%EC%96%B8%ED%8B%B0+%EC%96%91%ED%99%94%EB%8C%80%EA%B5%90' }
+      card7: { title: '수고했어 오늘도', artist: '옥상달빛', url: 'https://www.youtube.com/results?search_query=%EC%98%A5%EC%83%81%EB%8B%AC%EB%B9%9B+%EC%88%98%EA%B3%A0%ED%96%88%EC%96%B4+%EC%98%A4%EB%8A%98%EB%8F%84' },
+      card8: { title: '사랑한다는 흔한말', artist: '김연우', url: 'https://www.youtube.com/results?search_query=%EA%B9%80%EC%97%B0%EC%9A%B0+%EC%82%AC%EB%9E%91%ED%95%9C%EB%8B%A4%EB%8A%94+%ED%9D%94%ED%95%9C%EB%A7%90' },
+      card9: { title: '양화대교', artist: '자이언티', url: 'https://www.youtube.com/results?search_query=%EC%9E%90%EC%9D%B4%EC%96%B8%ED%8B%B0+%EC%96%91%ED%99%94%EB%8C%80%EA%B5%90' }
     }
   };
   _annualReviewState = {
     data,
     cards: [
-      _annualReviewBuildCard1, // 표지
-      _annualReviewBuildCard2, // 한 해 흐름 (계절)
-      _annualReviewBuildCard3, // 발견: AI 포착 (Opus)
-      _annualReviewBuildCard4, // 발견: 자기 친구 (Opus)
-      _annualReviewBuildCard5, // 무기 DNA tree
-      _annualReviewBuildCard6, // 모래사장 + 진주
-      _annualReviewBuildCard7, // best 모음
-      _annualReviewBuildCard8  // 마지막 + 다음 1년
+      _annualReviewBuildCard1, // 1. 표지
+      _annualReviewBuildCard2, // 2. 한 해 흐름 (365 dot)
+      _annualReviewBuildCard3, // 3. 발견 #1 (Opus)
+      _annualReviewBuildCard4, // 4. 발견 #2 (Opus)
+      _annualReviewBuildCard5, // 5. 무기 DNA tree
+      _annualReviewBuildCard6, // 6. 모래사장 + 진주
+      _annualReviewBuildCardMoments, // 7. 잊지 못할 순간 (사진 grid) — 사용자 명시 별 슬라이드
+      _annualReviewBuildCardBest,    // 8. Top 5 깨달음 + 가장 깊은 숙고 (Q→A)
+      _annualReviewBuildCard9        // 9. 마지막 + 다음 1년 (이전 카드 8 그대로)
     ],
     currentIdx: 0
   };
@@ -10830,23 +10861,34 @@ function showWelcomeBonusModal() {
     overlay.style.zIndex = '10002';
     overlay.innerHTML = `
       <div class="welcome-bonus-modal">
-        <div class="welcome-bonus-stars" aria-hidden="true">
-          <span>✦</span><span>★</span><span>✧</span><span>✦</span><span>★</span><span>✧</span>
+        <div class="welcome-bonus-hero" aria-hidden="true">
+          <div class="welcome-bonus-hero-inner">🎁</div>
         </div>
-        <div class="welcome-bonus-gift">🎁</div>
-        <div class="welcome-bonus-title">환영 선물 도착 ✦</div>
+        <div class="welcome-bonus-title">Welcome Gift</div>
         <div class="welcome-bonus-amount">$1.00</div>
+        <div class="welcome-bonus-amount-krw">약 1,400원 어치 무료 토큰</div>
         <div class="welcome-bonus-sub">
-          <span style="color:var(--text-soft);">(약 1,400원)</span> 어치 무료 토큰 박혀 있어.<br>
-          첫 관찰 + 가벼운 대화에 충분.
+          첫 관찰 + 가벼운 대화에 충분해.<br>천천히 시작해봐.
         </div>
         <div class="welcome-bonus-info">
-          <div>✦ AI 응답 시 사용량 비례 차감 (Sonnet 4.6 기준)</div>
-          <div>♾️ 만료 X — 천천히 써도 OK</div>
-          <div>💸 무료 제공분이라 환불 X (전자상거래법 §17 청약철회 대상 아님)</div>
-          <div>＋ 더 쓰려면 충전 (별도 결제·이용약관 따름)</div>
+          <div class="welcome-bonus-info-row">
+            <div class="wb-ico">◆</div>
+            <div>AI 응답 시 사용량 비례 차감 (Sonnet 4.6 기준)</div>
+          </div>
+          <div class="welcome-bonus-info-row">
+            <div class="wb-ico">∞</div>
+            <div>만료 없음 — 천천히 써도 괜찮아</div>
+          </div>
+          <div class="welcome-bonus-info-row">
+            <div class="wb-ico">◇</div>
+            <div>무료 제공분이라 환불 X (전자상거래법 §17 청약철회 대상 아님)</div>
+          </div>
+          <div class="welcome-bonus-info-row">
+            <div class="wb-ico">+</div>
+            <div>더 쓰려면 충전 (별도 결제·이용약관 따름)</div>
+          </div>
         </div>
-        <button class="btn-primary welcome-bonus-btn" id="welcomeBonusOkBtn">시작 ✦</button>
+        <button class="welcome-bonus-btn" id="welcomeBonusOkBtn">시작하기</button>
       </div>
     `;
     document.body.appendChild(overlay);
