@@ -247,8 +247,23 @@ soragodong-repo/
 ### 1년차 1인 외부 비용
 - Cloudflare Pages: free / Cloudflare Registrar (.com): ~$10/년 / Supabase: free tier
 - Anthropic: monthly cap (사용자 결정)
-- Apple $99/년 + Google Play $25 1회 = 앱 스토어 시만 (PWA 만 가면 X)
+- Google Play $25 1회 (사용자 결정 2026-04-30: PWA + Google Play 우선 출시)
+- Apple $99/년 = 6-12개월 후 한국 검증 후 (Apple IAP 30% 마진 부담)
 - ISMS / 보안 audit: 의무 X (1년차)
+
+### 매출 시뮬레이션 (가중 마진 ~7,000원/sub, Light 70% / Premium 30%)
+- 30 sub (베타): ~210K/월
+- 100 sub: ~700K/월 (알바 부수입)
+- 300 sub: ~2.1M/월 (1인 part-time 생계)
+- 500 sub: ~3.5M/월 (직장인 신입)
+- 1,000 sub: ~7M/월 (안정 1인 사업)
+- 손익분기점: ~15 sub (Supabase Pro $25/월 + 도메인 등 cover)
+
+### 출시 방향 (사용자 명시 2026-04-30)
+- ✅ **Phase 1 (현재)**: PWA (Cloudflare Pages, soragodong.com)
+- 🟢 **Phase 2**: Google Play (PWA → TWA, $25 일회성, Mac 불필요, 사용자 결정 OK)
+- ⏸️ **Phase 3 (6-12개월 후)**: iOS App Store — 한국 사용자 base 검증 후. cloud Mac/build 서비스 + Apple IAP 30% 마진 직격
+- ⏸️ **Phase 4 (1년+)**: 영어권 출시 — i18n 리팩터 + Claude agent 번역 + 영어 변호사 검수 + native review. brand name 후보 "Conch" / "Magic Conch" (Viacom 상표 검수 자리).
 
 ---
 
