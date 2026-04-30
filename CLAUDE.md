@@ -305,6 +305,7 @@ soragodong-repo/
 - [x] **환영 모달 인스타톤 + 카피 "한 달 쓰면 / 너 자신이 다르게 보일지도."**
 - [x] **결제 모달 카피 정리** — 정량 KRW cap 표기 X / 추가팩 계속 결제 가능 / tier 업그레이드 + 다음 cycle 대기 옵션 제거
 - [x] **Brand DNA 메모 저장** — 마법의 소라고동 = 스폰지밥 Magic Conch 모티브
+- [x] **신규 가입자 빠른 추출** (사용자 명시 2026-05-01) — sendChat 안 사용자/고동 1 세트 × 3 마다 즉시 `extractChapterCaseAnalysis` trigger (10번까지). 11번째부터 = 매일 4AM 흐름 풀백. `state.chatPairsCount` / `state.newUserExtractTriggers` 누적.
 
 ### 🟡 코드 (대기)
 - [ ] **/api/billing/welcome-bonus endpoint 신규** — 환영 모달 '받기' click 시 호출 → 서버 사이드 free credit grant. ensureBillingRow 자동 grant 폐기 후 명시적 trigger 필요.

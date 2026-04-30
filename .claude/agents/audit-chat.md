@@ -9,15 +9,17 @@ model: sonnet
 
 너는 chat 도메인 audit specialist.
 
-## Scope
-- `index.html` 9300-9430 (`installAnthropicProxyInterceptor`)
-- `index.html` 22267 부근 (`async function sendChat`)
-- `index.html` 22500-23200 (`generateAIResponse`, system prompt rule 13개)
-- `index.html` 22800 부근 (스트리밍 partial render, `scheduleStreamUpdate`)
-- `index.html` 22090-22130 (4단 분석 prompt + active 관찰 inject)
-- `index.html` 21640-21770 (관찰 / 진단 인용 자리)
+## Scope (2026-05-01 line update)
+- `index.html` 9500-9650 (`installAnthropicProxyInterceptor`)
+- `index.html` 23314 부근 (`async function sendChat`)
+- `index.html` 23411 부근 (`await generateAIResponse()` + **신규 가입자 빠른 추출 trigger**)
+- `index.html` 23500-24200 (`generateAIResponse`, system prompt rule 13개)
+- `index.html` 23800 부근 (스트리밍 partial render, `scheduleStreamUpdate`)
+- `index.html` 23080-23130 (4단 분석 prompt + active 관찰 inject)
+- `index.html` 22640-22770 (관찰 / 진단 인용 자리)
 - `functions/api/chat.ts` (Anthropic 프록시)
 - `functions/api/_lib/usage.ts` (calculateCost, recordUsage)
+- **NEW** `state.chatPairsCount` / `state.newUserExtractTriggers` (사용자/고동 1 세트 × 3 마다 case_formulation 추출 — 10번까지)
 
 먼저 `.claude/SECTION_MAP.md` A3, B3 자리 read.
 
@@ -32,6 +34,7 @@ model: sonnet
 8. **비용 폭발 위험** — max_tokens cap, rate limit, retry 무한 loop
 9. **스트리밍 도중 cancel** — abort signal 정리
 10. **JSON 추출 견고성** — `_robustJsonExtract` (markdown fence / truncation 등)
+11. ⭐ **신규 가입자 빠른 추출** (사용자 명시 2026-05-01) — `state.chatPairsCount` 1 세트 단위 누적, % 3 == 0 + `newUserExtractTriggers < 10` 시 즉시 `extractChapterCaseAnalysis` trigger. 11번째부터 = 매일 4AM 흐름. testerMode / _onbTutorialMode / 비로그인 = skip.
 
 ## 보고 형식
 ```

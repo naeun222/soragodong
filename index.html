@@ -23409,6 +23409,34 @@ async function sendChat() {
   }
 
   await generateAIResponse();
+
+  // V4 신규 가입자 빠른 추출 (사용자 명시 2026-05-01):
+  // 사용자 1 + 고동 1 = 1 세트. 3 세트마다 즉시 case_formulation 추출 (10번까지).
+  // 11번째부터 = 매일 4AM maybeRunDailyChapterExtract 흐름으로 풀백.
+  // 신규 = 첫 인사이트 빠르게. 일반 = 누적 후 통합.
+  try {
+    const _newUserEligible = authUserId && !window._onbTutorialMode &&
+      !(state.preferences && state.preferences.testerMode);
+    if (_newUserEligible) {
+      if (typeof state.chatPairsCount !== 'number') state.chatPairsCount = 0;
+      if (typeof state.newUserExtractTriggers !== 'number') state.newUserExtractTriggers = 0;
+      state.chatPairsCount += 1;
+      if (state.newUserExtractTriggers < 10 && state.chatPairsCount % 3 === 0) {
+        state.newUserExtractTriggers += 1;
+        saveState();
+        const recentMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error).slice(-30);
+        setTimeout(() => {
+          try {
+            if (typeof extractChapterCaseAnalysis === 'function' && recentMsgs.length >= 4) {
+              extractChapterCaseAnalysis(recentMsgs).catch(e => console.warn('[new-user extract] case fail:', e));
+            }
+          } catch(e) { console.warn('[new-user extract] guard:', e); }
+        }, 1500);
+      } else {
+        saveState();
+      }
+    }
+  } catch(e) { console.warn('[new-user extract] outer:', e); }
 }
 
 // V3.13.x: 일기 템플릿 — 인지심리학 연구 기반 5종.
