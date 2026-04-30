@@ -55,9 +55,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((resp) => {
-          // 성공 시 캐시 갱신
-          const respClone = resp.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, respClone)).catch(() => {});
+          // 성공 시 캐시 갱신.
+          // 사용자 보고 2026-04-30 review (agent P2-2): 5xx 응답도 cache.put 했음 → 옛 좋은 캐시 덮음. ok 상태만 캐시.
+          if (resp && resp.ok) {
+            const respClone = resp.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, respClone)).catch(() => {});
+          }
           return resp;
         })
         .catch(() => caches.match(req).then((c) => c || caches.match('./index.html')))
