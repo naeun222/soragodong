@@ -2146,47 +2146,7 @@
       #0a0912;
     text-align: center;
   }
-  .ann-rv-pearl-label {
-    font-size: 11px; letter-spacing: 0.3em;
-    color: rgba(255,250,205,0.7);
-    margin-bottom: 32px; text-transform: uppercase;
-  }
-  .ann-rv-pearl-emoji {
-    font-size: 56px;
-    filter: drop-shadow(0 0 24px rgba(255,250,205,0.85));
-    margin-bottom: 32px;
-    animation: ann-rv-tree-glow 2s ease-in-out infinite alternate;
-  }
-  .ann-rv-pearl-text {
-    font-size: clamp(20px, 5vw, 28px);
-    color: #fff8e8; font-weight: 600;
-    line-height: 1.55;
-    letter-spacing: 0.02em;
-    max-width: 360px;
-    text-shadow: 0 0 18px rgba(255,250,205,0.35);
-  }
-  /* 사용자 명시 2026-04-30: 깨달음 = 제목 + 요약 + 왜 (Opus 분석 코멘트) */
-  .ann-rv-pearl-summary {
-    font-size: 14px;
-    color: rgba(255,248,232,0.78);
-    margin-top: 16px;
-    max-width: 340px;
-    line-height: 1.55;
-    letter-spacing: 0.01em;
-  }
-  .ann-rv-pearl-why {
-    font-size: 11.5px;
-    color: rgba(255,250,205,0.55);
-    font-style: italic;
-    margin-top: 28px;
-    padding: 12px 16px;
-    background: rgba(255,250,205,0.06);
-    border-left: 2px solid rgba(255,250,205,0.30);
-    border-radius: 0 8px 8px 0;
-    max-width: 320px;
-    line-height: 1.6;
-    text-align: left;
-  }
+  /* 사용자 명시 2026-04-30 ultrathink: 옛 .ann-rv-pearl-* 5개 폐기 — Stories 톤 (stories-label/title/body + stories-archive-*) 재사용 */
 
   /* ─── 카드 9: 가장 깊었던 숙고 (질문 하나 웅장 — 사용자 명시 예전 형식) ─── */
   .ann-rv-card-deep {
@@ -10687,11 +10647,16 @@ function openAnnualReviewPreview() {
       { date: '2025.11.28', text: '14일 결정에 맡긴 첫날',          emoji: '🌊', bg: 'linear-gradient(135deg, rgba(126,200,180,0.45), rgba(98,165,200,0.30))' },
       { date: '2026.04.12', text: '학회 D-3, 폰 다른 방에 둠',     emoji: '⚡', bg: 'linear-gradient(135deg, rgba(255,215,122,0.40), rgba(180,130,90,0.30))' }
     ],
-    // 사용자 명시 2026-04-30: 올해의 깨달음 = 제목 + 요약 + 왜 올해의 깨달음인지 Opus 분석 (다음 phase = 진짜 호출)
+    // 사용자 명시 2026-04-30 ultrathink: Stories 깨달음 슬라이드 톤 (참고: KakaoTalk 20260430).
+    // 통찰 31개 중 가장 현명한 한 마디 + 메타 (count + topTags). best_pearl = 가장 현명한 한 마디 (Opus 선정).
     best_pearl: {
       title: '결함 X · 작동 방식 ○',
       summary: '고치려 들지 말고, 작동 방식 알고 잘 다루기',
       whyThisYear: '1년 동안 너의 자기 인식이 가장 크게 바뀐 자리야. 다른 깨달음 30+ 개도 결국 이 한 마디로 풀려.'
+    },
+    realizations: {
+      count: { scrap: 12, memo: 14, reflection: 5 },  // 합 31 = stats 의 깨달음 31 일치
+      topTags: ['환경', '회피', '회복', 'ADHD']
     },
     // 사용자 명시: 깊은 숙고 = 질문 + 결론 둘 다 (질문 main, 결론 sub).
     deep: {
@@ -10721,8 +10686,8 @@ function openAnnualReviewPreview() {
     ],
     // 사용자 명시 2026-04-30: 옛 V4 마지막 슬라이드 형식 — godongicon 크게 + narrative 풍부
     summary: '봄에 너는 막혔어.\n여름엔 발견했고, 가을엔 시도했고,\n겨울엔 변곡점을 찍었어.\n\n그렇게 너는,\n분석하던 너에서 친구 된 너로 바뀌었어.\n\n다음 1년도, 너랑 함께.',
-    // 사용자 명시 2026-04-30 ultrathink: 마지막 카드 = 한 단락 한 마디. 핵심 finding (회피=회복) paradox + 회/회 alliteration.
-    oneLine: '회피가, 회복이었어.',
+    // 사용자 명시 2026-04-30 ultrathink: 마지막 카드 = 한 단락 한 마디. 분기 흐름 톤 ("X 중심으로 움직였어. Y") 그대로.
+    oneLine: '전환 중심으로 움직였어. 분석에서 자기 패턴 관찰로, 회피에서 회복으로 무게 이동.',
     // 사용자 명시 2026-04-30: 시드 데이터 (testSeedV4Data) 안 진주 음악 카테고리에 박힌 8곡 그대로.
     // narrative arc 매핑 — 표지 = 마지막 = LNGSHOT Vanilla Days (수미상관).
     // 사용자 명시 2026-04-30: 시드 (testSeedV4Data) 진주 음악 8곡 그대로 — artworkUrl + previewUrl + trackUrl. 자동 재생.
@@ -11036,20 +11001,30 @@ function _annualReviewBuildCardMoments(d) {
   `;
 }
 
-// 카드 8: 올해의 깨달음 — 사용자 명시: 제목 + 요약 + 왜 올해 깨달음인지 코멘트 (Opus 분석, 다음 phase 진짜 호출)
+// 카드 8: 올해의 깨달음 (사용자 명시 2026-04-30 ultrathink: Stories 톤 — count + tags + 가장 현명한 한 마디)
 function _annualReviewBuildCardPearl(d) {
   const p = d.best_pearl || {};
-  // string / object 둘 다 호환
   const title = (typeof p === 'string') ? p : (p.title || '');
   const summary = (typeof p === 'object') ? (p.summary || '') : '';
   const why = (typeof p === 'object') ? (p.whyThisYear || '') : '';
+  const r = d.realizations || {};
+  const c = r.count || {};
+  const tags = r.topTags || [];
+  const total = (c.scrap || 0) + (c.memo || 0) + (c.reflection || 0);
   return `
-    <div class="ann-rv-card ann-rv-card-pearl">
-      <div class="ann-rv-pearl-label">올해의 깨달음</div>
-      <div class="ann-rv-pearl-emoji">✨</div>
-      <div class="ann-rv-pearl-text">${escapeHtml(title)}</div>
-      ${summary ? `<div class="ann-rv-pearl-summary">${escapeHtml(summary)}</div>` : ''}
-      ${why ? `<div class="ann-rv-pearl-why">🦉 ${escapeHtml(why)}</div>` : ''}
+    <div class="ann-rv-card ann-rv-card-pearl" style="text-align:center;">
+      <div class="stories-label">네 깨달음</div>
+      <div class="stories-title" style="margin-bottom:14px;">올해 가장 현명한 한 마디</div>
+      ${total > 0 ? `<div class="stories-body" style="margin-bottom:8px; font-size:13px;">📌 스크랩 ${c.scrap || 0} · ✎ 메모 ${c.memo || 0}${c.reflection ? ` · 🌊 숙고 ${c.reflection}` : ''}</div>` : ''}
+      ${tags.length > 0 ? `<div style="font-size:11px; color:rgba(255,255,255,0.55); margin-bottom:18px; letter-spacing:0.04em;">자주 떠올린: ${tags.map(t => '#' + escapeHtml(t)).join(' · ')}</div>` : ''}
+      <div class="stories-archive-list" style="max-width:340px;">
+        <div class="stories-archive-item" style="padding:14px 18px; line-height:1.55;">
+          <div style="font-size:14.5px; font-weight:500;${summary ? ' margin-bottom:6px;' : ''}">✦ ${escapeHtml(title)}</div>
+          ${summary ? `<div style="font-size:12.5px; color:rgba(255,255,255,0.72); line-height:1.6;">${escapeHtml(summary)}</div>` : ''}
+        </div>
+      </div>
+      ${why ? `<div style="font-size:11.5px; color:rgba(255,250,205,0.6); font-style:italic; margin-top:18px; padding:12px 14px; background:rgba(255,250,205,0.06); border-left:2px solid rgba(255,250,205,0.30); border-radius:0 8px 8px 0; max-width:320px; line-height:1.6; text-align:left;">🦉 ${escapeHtml(why)}</div>` : ''}
+      <div class="stories-body" style="margin-top:16px; font-size:12px; opacity:0.7;">네 안에서 자라난 ${total > 0 ? total + '개 ' : ''}통찰 중. 내년에도 이어질 거야.</div>
     </div>
   `;
 }
