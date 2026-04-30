@@ -11352,8 +11352,8 @@ function showWelcomeBonusModal(opts) {
         <img class="welcome-bonus-godong" src="/godongicon.png" alt="소라고동">
         <div class="welcome-bonus-greeting">어, 왔네 🐚</div>
         <div class="welcome-bonus-sub">
-          쓸수록 너만의 AI<br>
-          로 자라나는 자리야.
+          나도 나를 잘 모르잖아.<br>
+          같이 알아가자.
         </div>
         <div class="welcome-bonus-token">
           <span class="welcome-bonus-token-emoji">🎁</span>
@@ -37038,9 +37038,12 @@ async function refreshBillingStatus(manual) {
 // ═══════════════════════════════════════════════════════════════
 
 // 사용자 명시 2026-04-30: 2-tier 가격·cap (서버 _lib/billing.ts 의 TIER_PLANS 와 동기 — 위변조 방지로 결제 검증은 서버에서 재확인).
+// description: claude 패턴 따라 정량 KRW 표기 X, 정성적 설명만. cap 자체는 서버 운영 용도.
 const TIER_PLANS_CLIENT = {
-  light:   { krw: 8900,  cap_usd: 5,  cap_krw: 7000,  label: 'Light',   tagline: '가볍게 매일',  emoji: '🐚' },
-  premium: { krw: 25000, cap_usd: 15, cap_krw: 21000, label: 'Premium', tagline: '깊게 자주', emoji: '🌊' }
+  light:   { krw: 8900,  cap_usd: 5,  cap_krw: 7000,  label: 'Light',   tagline: '가볍게 매일',  emoji: '🐚',
+    description: '짧은 대화 / 간단 분석 / 매일 체크인 위주. 가벼운 사용에 충분.' },
+  premium: { krw: 25000, cap_usd: 15, cap_krw: 21000, label: 'Premium', tagline: '깊게 자주', emoji: '🌊',
+    description: '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. 마음껏 깊게.' }
 };
 // 추가팩 (cap 도달 시 1회성)
 const OVERAGE_PACKS_CLIENT = {
@@ -37503,8 +37506,7 @@ async function openSubscribeModal() {
       </div>
       <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${plan.tagline}</div>
       <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
-        월 한도: <b>~${plan.cap_krw.toLocaleString()}원 어치 API</b> 사용 가능<br>
-        한도 도달 시: 추가팩 1회 결제 / tier 업그레이드 / 다음 cycle 대기
+        ${plan.description}
       </div>
       <button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">${plan.label} 구독 (${plan.krw.toLocaleString()}원)</button>
     </div>
@@ -37523,8 +37525,8 @@ async function openSubscribeModal() {
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
-        💡 잘 모르겠으면 <b>Light</b> 부터. 한도 도달 시 추가팩 (5,000원 = +$4) 또는 Premium 업그레이드 (차액 ${TIER_UPGRADE_DIFF_KRW.toLocaleString()}원) 가능.<br>
-        해지: 결제 후 [설정 → 구독] 환불 (잔여일 비례 — <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/refund.md" target="_blank" style="color:var(--accent);">정책</a>).
+        💡 잘 모르겠으면 <b>Light</b> 부터. 더 쓰고 싶으면 추가팩으로 늘려 쓸 수 있어.<br>
+        해지: [설정 → 구독] 환불 (잔여일 비례 — <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/refund.md" target="_blank" style="color:var(--accent);">정책</a>).
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>
     </div>
@@ -37692,17 +37694,19 @@ function showBudgetExceededModal(reason) {
     overlay.className = 'input-modal-overlay show';
     overlay.id = 'budgetExceededOverlay';
     overlay.style.zIndex = '10000';
+    // 사용자 명시 2026-04-30 ultrathink: tier 업그레이드 / 다음 cycle 대기 옵션 제거. 추가팩 계속 결제 가능 (1회만 X).
     let optionsHtml = '';
     if (subActive && plan === 'light') {
       optionsHtml = `
-        <button class="btn-primary" onclick="purchaseOveragePack('light_pack')" style="width:100%; margin-bottom:6px;">🐚 Light 추가팩 5,000원 (+$4 어치)</button>
-        <button class="btn-secondary" onclick="upgradeToPremium()" style="width:100%; margin-bottom:6px;">🌊 Premium 업그레이드 (차액 ${TIER_UPGRADE_DIFF_KRW.toLocaleString()}원)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">⏰ 다음 cycle 대기</button>
+        <button class="btn-primary" onclick="purchaseOveragePack('light_pack')" style="width:100%; margin-bottom:6px;">🐚 Light 추가팩 5,000원 결제</button>
+        <div style="font-size:10.5px; color:var(--text-soft); margin-top:4px; margin-bottom:8px; text-align:center;">계속 결제 가능 — 더 쓰고 싶으면 또 결제.</div>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
     } else if (subActive && plan === 'premium') {
       optionsHtml = `
-        <button class="btn-primary" onclick="purchaseOveragePack('premium_pack')" style="width:100%; margin-bottom:6px;">🌊 Premium 추가팩 7,000원 (+$5 어치)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">⏰ 다음 cycle 대기</button>
+        <button class="btn-primary" onclick="purchaseOveragePack('premium_pack')" style="width:100%; margin-bottom:6px;">🌊 Premium 추가팩 7,000원 결제</button>
+        <div style="font-size:10.5px; color:var(--text-soft); margin-top:4px; margin-bottom:8px; text-align:center;">계속 결제 가능 — 더 쓰고 싶으면 또 결제.</div>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
     } else {
       // 비구독 (무료 + legacy charge 잔액 소진) — 구독 안내
