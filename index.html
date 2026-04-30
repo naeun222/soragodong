@@ -1424,104 +1424,112 @@
     color: #b0e8ec;
   }
 
-  /* === Welcome Bonus Modal — Instagram-style (사용자 요청 2026-04-30 ultrathink 재설계) === */
+  /* === Welcome Modal — 사용자 명시 2026-04-30 ultrathink 재설계: 소라고동 메타포 + 친구 톤 + 별빛 ===
+     이전 = 인스타 conic-gradient + Welcome Gift + $1.00 + info 4 row (구려 보고)
+     변경 = godongicon + 친구 톤 + 별빛 + 한 줄 token + gold CTA */
   .welcome-bonus-modal {
     position: relative;
-    max-width: 360px; padding: 32px 28px 24px;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    max-width: 380px; padding: 44px 28px 30px;
+    background:
+      radial-gradient(ellipse at 50% 28%, rgba(212,167,106,0.22), transparent 60%),
+      radial-gradient(ellipse at 50% 100%, rgba(139,126,196,0.14), transparent 60%),
+      #100e1c;
+    border: 1px solid rgba(212,167,106,0.25);
     border-radius: 24px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+    box-shadow: 0 28px 80px rgba(0,0,0,0.65);
     text-align: center;
-    animation: wbFadeUp 0.42s cubic-bezier(0.22, 0.61, 0.36, 1);
+    overflow: hidden;
+    animation: wbFadeUp 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
   }
   @keyframes wbFadeUp {
     0%   { opacity: 0; transform: translateY(14px); }
     100% { opacity: 1; transform: translateY(0); }
   }
-  .welcome-bonus-hero {
-    width: 88px; height: 88px;
-    margin: 0 auto 22px;
-    border-radius: 50%;
-    background: conic-gradient(from 45deg, #f58529, #dd2a7b, #8134af, #515bd4, #f58529);
-    padding: 3px;
-    display: flex; align-items: center; justify-content: center;
-    animation: wbHeroSpin 14s linear infinite;
+  /* 별빛 배경 — 카드 1 표지와 일관 */
+  .welcome-bonus-modal::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(circle at 16% 18%, rgba(255,215,150,0.55) 0, transparent 1.5px),
+      radial-gradient(circle at 84% 14%, rgba(255,215,150,0.40) 0, transparent 1.2px),
+      radial-gradient(circle at 10% 78%, rgba(255,215,150,0.45) 0, transparent 1.5px),
+      radial-gradient(circle at 90% 84%, rgba(255,215,150,0.35) 0, transparent 1px),
+      radial-gradient(circle at 50% 12%, rgba(255,215,150,0.50) 0, transparent 1.3px),
+      radial-gradient(circle at 30% 92%, rgba(255,215,150,0.30) 0, transparent 1px);
+    pointer-events: none;
+    animation: wbTwinkle 3s ease-in-out infinite alternate;
   }
-  @keyframes wbHeroSpin {
-    to { transform: rotate(360deg); }
+  @keyframes wbTwinkle {
+    from { opacity: 0.6; }
+    to   { opacity: 1; }
   }
-  .welcome-bonus-hero-inner {
-    width: 100%; height: 100%;
-    border-radius: 50%;
-    background: var(--surface);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 34px;
-    animation: wbHeroSpinReverse 14s linear infinite;
+  .welcome-bonus-godong {
+    width: 140px; height: 140px;
+    display: block;
+    margin: 0 auto 26px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 24px rgba(212,167,106,0.42));
+    animation: wbFloat 3.6s ease-in-out infinite alternate;
+    position: relative; z-index: 1;
   }
-  @keyframes wbHeroSpinReverse {
-    to { transform: rotate(-360deg); }
+  @keyframes wbFloat {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-6px); }
   }
-  .welcome-bonus-title {
-    font-size: 12px; font-weight: 600; color: var(--text-soft);
-    letter-spacing: 0.14em; text-transform: uppercase;
-    margin-bottom: 12px;
-  }
-  .welcome-bonus-amount {
-    font-size: 44px; font-weight: 700;
-    color: var(--text);
-    letter-spacing: -0.025em; line-height: 1;
-    margin-bottom: 6px;
-  }
-  .welcome-bonus-amount-krw {
-    font-size: 13px; color: var(--text-soft);
-    margin-bottom: 18px;
+  .welcome-bonus-greeting {
+    font-size: 26px; font-weight: 700;
+    color: #f0d9a8;
+    letter-spacing: 0.01em;
+    line-height: 1.25;
+    margin-bottom: 14px;
+    text-shadow: 0 0 18px rgba(212,167,106,0.32);
+    position: relative; z-index: 1;
   }
   .welcome-bonus-sub {
-    font-size: 14px; color: var(--text);
-    line-height: 1.55; margin-bottom: 22px;
-    padding: 0 4px;
+    font-size: 14.5px; color: #e8d4a8;
+    line-height: 1.65;
+    margin-bottom: 28px;
+    font-weight: 400;
+    position: relative; z-index: 1;
   }
-  .welcome-bonus-info {
-    text-align: left;
-    margin-bottom: 22px;
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
+  .welcome-bonus-token {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-size: 12px;
+    color: rgba(232,212,168,0.78);
+    margin-bottom: 26px;
+    padding: 10px 16px;
+    background: rgba(212,167,106,0.08);
+    border: 1px solid rgba(212,167,106,0.22);
+    border-radius: 22px;
+    position: relative; z-index: 1;
+    letter-spacing: 0.01em;
   }
-  .welcome-bonus-info-row {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 12px 4px;
-    font-size: 12.5px; color: var(--text-dim); line-height: 1.5;
-  }
-  .welcome-bonus-info-row + .welcome-bonus-info-row {
-    border-top: 1px solid var(--border);
-  }
-  .welcome-bonus-info-row .wb-ico {
-    flex: 0 0 16px; font-size: 13px;
-    color: var(--text-soft);
-    margin-top: 2px;
-    text-align: center;
+  .welcome-bonus-token-emoji {
+    font-size: 14px;
+    filter: drop-shadow(0 0 6px rgba(255,250,205,0.6));
   }
   .welcome-bonus-btn {
     width: 100%; padding: 14px;
-    font-size: 14px; font-weight: 600;
+    font-size: 14.5px; font-weight: 600;
     letter-spacing: 0.01em;
-    color: #fff;
-    background: linear-gradient(135deg, #f58529 0%, #dd2a7b 55%, #8134af 100%);
+    color: #1a1530;
+    background: linear-gradient(135deg, #f0d9a8 0%, #d4a76a 100%);
     border: 0;
-    border-radius: 12px;
+    border-radius: 14px;
     cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
-    box-shadow: 0 8px 22px rgba(221, 42, 123, 0.26);
+    transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+    box-shadow: 0 8px 22px rgba(212,167,106,0.32);
+    position: relative; z-index: 1;
+    font-family: inherit;
   }
   .welcome-bonus-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 12px 28px rgba(221, 42, 123, 0.34);
-    filter: brightness(1.04);
+    box-shadow: 0 12px 30px rgba(212,167,106,0.45);
+    filter: brightness(1.05);
   }
   .welcome-bonus-btn:active {
     transform: translateY(0);
-    filter: brightness(0.98);
+    filter: brightness(0.97);
   }
   .ft-hypothesis label {
     display: flex; align-items: flex-start; gap: 8px;
@@ -11214,34 +11222,17 @@ function showWelcomeBonusModal(opts) {
     overlay.style.zIndex = '10002';
     overlay.innerHTML = `
       <div class="welcome-bonus-modal">
-        <div class="welcome-bonus-hero" aria-hidden="true">
-          <div class="welcome-bonus-hero-inner">🎁</div>
-        </div>
-        <div class="welcome-bonus-title">Welcome Gift</div>
-        <div class="welcome-bonus-amount">$1.00</div>
-        <div class="welcome-bonus-amount-krw">약 1,400원 어치 무료 토큰</div>
+        <img class="welcome-bonus-godong" src="/godongicon.png" alt="소라고동">
+        <div class="welcome-bonus-greeting">어, 왔네 🐚</div>
         <div class="welcome-bonus-sub">
-          첫 관찰 + 가벼운 대화에 충분해.<br>천천히 시작해봐.
+          여기는 너 자신과 천천히<br>
+          친구 되는 자리야.
         </div>
-        <div class="welcome-bonus-info">
-          <div class="welcome-bonus-info-row">
-            <div class="wb-ico">◆</div>
-            <div>AI 응답 시 사용량 비례 차감 (Sonnet 4.6 기준)</div>
-          </div>
-          <div class="welcome-bonus-info-row">
-            <div class="wb-ico">∞</div>
-            <div>만료 없음 — 천천히 써도 괜찮아</div>
-          </div>
-          <div class="welcome-bonus-info-row">
-            <div class="wb-ico">◇</div>
-            <div>무료 제공분이라 환불 X (전자상거래법 §17 청약철회 대상 아님)</div>
-          </div>
-          <div class="welcome-bonus-info-row">
-            <div class="wb-ico">+</div>
-            <div>더 쓰려면 충전 (별도 결제·이용약관 따름)</div>
-          </div>
+        <div class="welcome-bonus-token">
+          <span class="welcome-bonus-token-emoji">✨</span>
+          <span>무료 토큰 받았어 — 부담 없이 시작해도 돼</span>
         </div>
-        <button class="welcome-bonus-btn" id="welcomeBonusOkBtn">시작하기</button>
+        <button class="welcome-bonus-btn" id="welcomeBonusOkBtn">그럼 시작해볼까 →</button>
       </div>
     `;
     document.body.appendChild(overlay);
