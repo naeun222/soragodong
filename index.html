@@ -9303,7 +9303,7 @@
         <div id="billingStatus" class="settings-info-box">불러오는 중...</div>
         <div class="settings-btn-row">
           <button class="btn-secondary" onclick="openSubscribeModal()">📅 구독 (Light / Premium)</button>
-          <button class="btn-secondary" onclick="refreshBillingStatus()">🔄</button>
+          <button class="btn-secondary" onclick="refreshBillingStatus(true)">🔄</button>
         </div>
       </div>
 
@@ -11352,55 +11352,7 @@ function _annualReviewBuildCardDeep(d) {
   `;
 }
 
-// 카드 10: AI 포착 새 특징 — 사용자 명시 2026-04-30: 살리자. 다음 phase = Opus 4.7 진짜 분석.
-function _annualReviewBuildCardNewTraits(d) {
-  const traits = (d.new_traits || []).map(t => `
-    <div class="ann-rv-trait-item">
-      <div class="ann-rv-trait-name">${escapeHtml(t.name)}</div>
-      <div class="ann-rv-trait-evidence">${escapeHtml(t.evidence || '')}</div>
-    </div>
-  `).join('');
-  return `
-    <div class="ann-rv-card ann-rv-card-traits">
-      <div class="ann-rv-label">올해 발견된 너</div>
-      <div class="ann-rv-traits-list">${traits}</div>
-    </div>
-  `;
-}
-
-// 카드 11: 사운드 top 5 — 사용자 명시 2026-04-30: 살리자.
-function _annualReviewBuildCardSoundTop5(d) {
-  const tracks = (d.sound_top5 || []).map((t, i) => `
-    <div class="ann-rv-sound-row">
-      <div class="ann-rv-sound-rank">${i + 1}</div>
-      <img class="ann-rv-sound-art" src="${escapeHtml(t.artworkUrl || '')}" alt="">
-      <div class="ann-rv-sound-meta">
-        <div class="ann-rv-sound-title">${escapeHtml(t.title)}</div>
-        <div class="ann-rv-sound-artist">${escapeHtml(t.artist)}</div>
-      </div>
-      <div class="ann-rv-sound-plays">${t.plays || 0}회</div>
-    </div>
-  `).join('');
-  return `
-    <div class="ann-rv-card ann-rv-card-sound">
-      <div class="ann-rv-label">2025 사운드 Top 5</div>
-      <div class="ann-rv-sound-list">${tracks}</div>
-    </div>
-  `;
-}
-
-// 카드 12: 1년 summary + 큰 godongicon — 사용자 명시 2026-04-30: 옛 V4 형식.
-function _annualReviewBuildCardSummary(d) {
-  const text = (d.summary || '').replace(/\n/g, '<br>');
-  return `
-    <div class="ann-rv-card ann-rv-card-summary">
-      <img class="ann-rv-summary-godong" src="/godongicon.png" alt="소라고동">
-      <div class="ann-rv-summary-text">${text}</div>
-    </div>
-  `;
-}
-
-// 카드 13: 마지막 (사용자 명시 2026-04-30 ultrathink: 분기 closing 처럼 한 단락 한 마디 = 단일 시구)
+// 카드 10 (마지막) — 사용자 명시 2026-04-30 ultrathink: 분기 closing 처럼 한 단락 한 마디 = 단일 시구
 function _annualReviewBuildCard9(d) {
   const oneLine = d.oneLine || '한 해, 한 마디';
   return `
@@ -11605,25 +11557,50 @@ function showWelcomeBonusModal(opts) {
       </div>
     `;
     document.body.appendChild(overlay);
-    // 사용자 명시 2026-04-30: button 눌러야 받을 수 있게 — click 시 ✨ burst + token block 변형 + 1.1s 후 닫기
-    document.getElementById('welcomeBonusOkBtn').onclick = () => {
+    // 사용자 명시 2026-04-30 ultrathink:
+    //   - button 눌러야만 닫힘 (overlay click X)
+    //   - "받기" click → backend POST /api/billing/welcome-bonus → 잔액 += $2.86 (idempotent)
+    //   - flag _welcomeBonusShown saveState force + cloud sync 보장 (다시 안 뜸)
+    document.getElementById('welcomeBonusOkBtn').onclick = async () => {
       const btn = document.getElementById('welcomeBonusOkBtn');
-      if (btn) { btn.disabled = true; btn.textContent = '받았어 ✓'; }
-      // ✨ burst 폭발
+      if (btn && btn.dataset._processing === '1') return;
+      if (btn) { btn.dataset._processing = '1'; btn.disabled = true; btn.textContent = '받는 중...'; }
+      // 1. backend 호출 (preview = X 단순 시각만)
+      if (!preview && typeof session !== 'undefined' && session && session.access_token) {
+        try {
+          const _origFetch = window._anthropicOrigFetch || window.fetch;
+          const resp = await _origFetch('/api/billing/welcome-bonus', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + session.access_token }
+          });
+          if (resp.ok) {
+            if (typeof refreshBillingStatus === 'function') refreshBillingStatus(false).catch(() => {});
+          } else {
+            console.warn('[welcome-bonus] backend 응답 비-OK:', resp.status);
+          }
+        } catch (e) {
+          console.warn('[welcome-bonus] backend 호출 실패:', e);
+        }
+      }
+      // 2. ✨ burst 폭발 + token block "받았어 ✓"
       const burst = document.createElement('div');
       burst.className = 'welcome-bonus-burst';
       burst.innerHTML = '<span>✨</span><span>🎁</span><span>✨</span>';
       document.body.appendChild(burst);
-      // token block = "받았어 ✓" 변형
       const tokenEl = overlay.querySelector('.welcome-bonus-token');
       if (tokenEl) tokenEl.classList.add('received');
+      // 3. flag set (cloud + local sync 보장 — 다시 안 뜸)
+      if (!preview) {
+        state.preferences = state.preferences || {};
+        state.preferences._welcomeBonusShown = true;
+        try { saveState({ force: true }); } catch {}
+        if (typeof saveToCloudNow === 'function') {
+          saveToCloudNow().catch(e => console.warn('[welcome-bonus] cloud sync:', e));
+        }
+      }
+      // 4. 1.2s 후 닫기 (받음 시각 보여주기)
       setTimeout(() => {
         try { burst.remove(); } catch {}
-        if (!preview) {
-          state.preferences = state.preferences || {};
-          state.preferences._welcomeBonusShown = true;
-          saveState();
-        }
         overlay.remove();
         resolve();
       }, 1200);
@@ -37185,7 +37162,8 @@ function saveSettings() {
 }
 
 // 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
-async function refreshBillingStatus() {
+async function refreshBillingStatus(manual) {
+  // 사용자 명시 2026-04-30: manual=true 일 때만 토스트 (button click). 자동 호출 (settings 진입 등) = 토스트 X.
   const status = document.getElementById('billingStatus');
   if (!status) return;
   if (typeof session === 'undefined' || !session || !session.access_token) {
@@ -37194,7 +37172,7 @@ async function refreshBillingStatus() {
   }
   // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 잔액/충전/월정액 흐름 표시.
   // 사용자 보고 2026-04-30: 🔄 새로고침 작동 X 버그 — JWT 1h 만료 시 401 → 인터셉터는 /api/chat 만 swap 이라 /api/usage 401 그대로. 자동 refresh + retry + 시각 피드백 추가.
-  status.textContent = '🔄 갱신 중...';
+  if (manual) status.textContent = '🔄 갱신 중...';
   const _origFetch = window._anthropicOrigFetch || window.fetch;
   const _doFetch = () => _origFetch('/api/usage', {
     headers: { 'Authorization': 'Bearer ' + session.access_token }
@@ -37242,7 +37220,8 @@ async function refreshBillingStatus() {
       html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 무료 충전 토큰 받음 (4,000원)</div>`;
     }
     status.innerHTML = html;
-    if (typeof showToast === 'function') showToast('🔄 갱신됐어');
+    // 사용자 명시 2026-04-30: 토스트 = manual button click 시만 (자동 호출 X — 자주 뜨면 부담)
+    if (manual && typeof showToast === 'function') showToast('🔄 갱신됐어');
   } catch (e) {
     status.textContent = '조회 실패: ' + (e.message || e);
   }
@@ -38460,7 +38439,24 @@ function showUpdateChooserModal() {
       </div>
     </div>
   `;
-  // 외부 클릭으로 닫히지 않게 — overlay onclick 핸들러 X (사용자 명시: 3 버튼 중 하나만)
+  // 사용자 명시 2026-04-30 ultrathink (D 옵션): overlay click / ESC 시 자동 dismiss (close 와 동일 효과)
+  const dismissNow = () => {
+    state.preferences = state.preferences || {};
+    state.preferences.dismissedMajor = _currentMajor();
+    try { saveState({ force: true }); } catch {}
+    if (typeof saveToCloudNow === 'function') {
+      saveToCloudNow().catch(() => {});
+    }
+    overlay.remove();
+    document.removeEventListener('keydown', escHandler);
+  };
+  overlay.onclick = (e) => {
+    if (e.target === overlay) dismissNow();
+  };
+  const escHandler = (e) => {
+    if (e.key === 'Escape') dismissNow();
+  };
+  document.addEventListener('keydown', escHandler);
   document.body.appendChild(overlay);
 }
 function _chooseUpdateOption(choice) {
