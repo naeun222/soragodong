@@ -44,8 +44,13 @@ export function unauthorized(message = '인증 필요'): Response {
 }
 
 export function jsonResponse(body: unknown, status = 200): Response {
+  // 사용자 보고 2026-04-30 ultrathink: Cache-Control no-store — 브라우저 / SW / 중간 프록시 캐시 차단.
+  // 옛 버그: GET /api/usage 응답이 SW 캐시 또는 브라우저 heuristic 캐시로 stale 노출.
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' }
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store, no-cache, must-revalidate'
+    }
   });
 }

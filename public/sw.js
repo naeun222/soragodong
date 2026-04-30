@@ -4,7 +4,8 @@
 
 // 사용자 보고 2026-04-30: 큰 변경 (E2EE / API 마이그/암호화) 박힐 때마다 v 숫자 올리기.
 // activate에서 옛 캐시 자동 삭제 → stale 평문/구조 캐시 노출 차단.
-const CACHE_NAME = 'soragodong-v4-cache-v2';
+// v3 (2026-04-30 ultrathink): /api/* cache-first 버그 fix — SW 가 GET /api/usage 등을 캐싱해서 잔액 stale 노출되던 critical 버그.
+const CACHE_NAME = 'soragodong-v4-cache-v3';
 const PRECACHE_URLS = [
   './',
   './index.html',
@@ -45,6 +46,14 @@ self.addEventListener('fetch', (event) => {
   // version.txt는 항상 fresh (배포 감지)
   if (url.pathname.endsWith('/version.txt')) {
     event.respondWith(fetch(req).catch(() => caches.match(req)));
+    return;
+  }
+
+  // 사용자 보고 2026-04-30 ultrathink (CRITICAL): /api/* 는 캐시 절대 X — 인증·잔액·사용량 실시간 데이터.
+  // 옛 버그: GET /api/usage 응답 SW 캐시 → 잔액 갱신 시 stale 데이터 (1$ 고정) 노출.
+  // 추가 bonus: Authorization header 무시한 SW 캐시 = cross-user 데이터 누수 risk 도 차단.
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(req));
     return;
   }
 

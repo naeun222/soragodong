@@ -11451,12 +11451,13 @@ function devPreviewWelcomeBonus() {
   showWelcomeBonusModal();  // preview X — 받기 click 시 backend POST → 잔액 += $2.86
 }
 
-// 개발자 도구 — 환영 선물 재테스트 위해 admin 본인 free_credit_granted=false + balance=0 reset.
+// 개발자 도구 — admin 본인 환영 보너스 처음부터 재테스트.
+// 사용자 보고 2026-04-30: 받기 누르면 잔액 그대로 → admin 측 free_credit_granted=true 잔재 때문이라 자동 reset 후 모달 즉시 띄워주는 원터치 흐름.
 async function devResetWelcomeBonus() {
   if (typeof session === 'undefined' || !session || !session.access_token) {
     alert('로그인 필요'); return;
   }
-  if (!confirm('admin 본인 잔액 0 + free_credit_granted=false 리셋. 진행?')) return;
+  if (!confirm('admin 본인 잔액 0 + free_credit_granted=false 리셋 후 환영 모달 자동 재오픈. 진행?')) return;
   try {
     const _origFetch = window._anthropicOrigFetch || window.fetch;
     const resp = await _origFetch('/api/admin/reset-balance', {
@@ -11472,17 +11473,23 @@ async function devResetWelcomeBonus() {
     });
     if (!resp.ok) {
       const err = await resp.text().catch(() => '');
-      alert('reset 실패: ' + resp.status + ' / ' + err);
+      alert('reset 실패: ' + resp.status + ' / ' + err + '\n\nADMIN_USER_ID env 박혀있는지 확인.');
       return;
     }
     const data = await resp.json();
-    // 클라이언트 _welcomeBonusShown flag 도 reset (모달 다시 자동 노출 가능)
+    console.log('[devReset] backend 응답:', data);
+    // 클라이언트 flag 도 reset
     state.preferences = state.preferences || {};
     state.preferences._welcomeBonusShown = false;
     saveState();
-    if (typeof saveToCloudNow === 'function') saveToCloudNow().catch(() => {});
-    showToast(`✦ reset 완료. 잔액 ${data.old_balance_usd} → 0. 환영 선물 미리보기 누르면 $2.86 grant 가능.`);
-    if (typeof refreshBillingStatus === 'function') refreshBillingStatus(false).catch(() => {});
+    if (typeof saveToCloudNow === 'function') {
+      try { await saveToCloudNow(); } catch {}
+    }
+    showToast(`✦ reset 완료 (잔액 ${data.old_balance_usd} → 0). 모달 띄울게...`);
+    // 잠깐 후 환영 모달 자동 오픈 → 받기 click → $2.86 grant
+    setTimeout(() => {
+      showWelcomeBonusModal();  // preview X — 실제 grant 흐름
+    }, 600);
   } catch (e) {
     alert('reset 실패: ' + (e.message || e));
   }
@@ -37051,8 +37058,9 @@ async function refreshBillingStatus(manual) {
   // 사용자 보고 2026-04-30: 🔄 새로고침 작동 X 버그 — JWT 1h 만료 시 401 → 인터셉터는 /api/chat 만 swap 이라 /api/usage 401 그대로. 자동 refresh + retry + 시각 피드백 추가.
   if (manual) status.textContent = '🔄 갱신 중...';
   const _origFetch = window._anthropicOrigFetch || window.fetch;
-  const _doFetch = () => _origFetch('/api/usage', {
-    headers: { 'Authorization': 'Bearer ' + session.access_token }
+  // 사용자 보고 2026-04-30 ultrathink: cache-bust query — SW 가 옛 버전이라 /api/usage 캐시 잔재 가능 케이스 보호.
+  const _doFetch = () => _origFetch('/api/usage?t=' + Date.now(), {
+    headers: { 'Authorization': 'Bearer ' + session.access_token, 'Cache-Control': 'no-cache' }
   });
   try {
     let resp = await _doFetch();
