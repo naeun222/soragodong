@@ -11955,7 +11955,7 @@ function _intakeStep1Html() {
       <button id="intakeSendBtn1" class="intake-send-btn" onclick="_intakeStep1Send()">✦ 보내기</button>
     </div>
     <div class="intake-example">
-      <div class="intake-example-label">↓ 할 말 없으면? 예시</div>
+      <div class="intake-example-label">↓ 예시 — <b>클릭하면 입력창에 채워져</b></div>
       <div class="intake-example-chip" onclick="_intakeStep1FillExample()">${ex.icon} "${escapeHtml(ex.short)}"</div>
     </div>
   `;
@@ -12009,9 +12009,24 @@ function _intakeStep2Html() {
   `;
 }
 
-function _intakeStep2Next() {
+async function _intakeStep2Next() {
   _intakeState.step = 3;
   _renderIntakeStep();
+  // 사용자 명시 2026-04-30: AI 동적 long example 보장 — 백그라운드 fetch 미완료 시 다시 시도 + await
+  if (!_intakeState.aiLong) {
+    try {
+      const userFirst = state.intakeWorry.find(m => m.role === 'user');
+      if (userFirst && userFirst.content) {
+        const longText = await _intakeGenLongExample(userFirst.content);
+        if (_intakeState && longText) {
+          _intakeState.aiLong = longText;
+          _renderIntakeStep();
+        }
+      }
+    } catch (e) {
+      console.warn('[intake] step3 long example retry failed:', e);
+    }
+  }
 }
 
 function _intakeStep3Html() {
@@ -12024,14 +12039,14 @@ function _intakeStep3Html() {
   const micHtml = `<button id="intakeMicBtn3" class="intake-mic-btn" onclick="_intakeMicToggle(3)" aria-label="음성"><span id="intakeMicIcon3"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;display:block;"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></span></button>`;
   return `
     <div class="intake-ai-msg-small"><b>🐚</b> ${escapeHtml(userText.slice(0, 50))}${userText.length > 50 ? '...' : ''} — 한 번 더 풀어줘.</div>
-    <textarea id="intakeInput3" class="intake-textarea" rows="5" placeholder="구체적으로 다 털어놔도 OK. 상황 → 무슨 마음 → 어떻게 됐는지."></textarea>
+    <textarea id="intakeInput3" class="intake-textarea" rows="5" placeholder="3줄 이상 풀어줘.&#10;상황 → 무슨 마음 → 어떻게 됐는지."></textarea>
     <div id="intakeMicStatus3" class="intake-mic-status" style="display:none;"></div>
     <div class="intake-actions">
       ${micHtml}
       <button class="intake-send-btn" onclick="_intakeStep3Send()">✦ 보내기</button>
     </div>
     <div class="intake-example">
-      <div class="intake-example-label">↓ 풀어 적기 어려우면? 예시</div>
+      <div class="intake-example-label">↓ 예시 — <b>클릭하면 입력창에 채워져</b>${_intakeState.aiLong ? '' : ' <span class="small">(AI 답변 기다리는 중...)</span>'}</div>
       <div class="intake-example-chip intake-example-long" onclick="_intakeStep3FillExample()">${ex.icon} "${escapeHtml(longText)}"</div>
     </div>
   `;
