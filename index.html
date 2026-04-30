@@ -10486,6 +10486,22 @@ async function runIntakeFlow() {
   });
 }
 
+// 사용자 명시 2026-04-30 ultrathink: 코어 #1 chat_intake_entry step 안 button 핸들러. button 누름 → 모달 풀 흐름 → 끝나면 onbNext 자동 진행.
+window._startIntakeFromTutorial = async function() {
+  if (document.getElementById('intakeModalOverlay')) return;
+  try {
+    await runIntakeFlow();
+    // 분석 끝났으면 _firstTouchDone flag (testerMode OFF 흐름에서 cloud 저장될 거)
+    if (state.intakeWorry && state.intakeWorry.length > 0) {
+      state.preferences = state.preferences || {};
+      state.preferences._firstTouchDone = true;
+    }
+    saveState();
+  } catch (e) { console.warn('[intake] tutorial 흐름 실패', e); }
+  // 튜토리얼 다음 step 자동 진행
+  if (typeof onbNext === 'function') onbNext();
+};
+
 function _intakeSpeechSupported() {
   return ('SpeechRecognition' in window) || ('webkitSpeechRecognition' in window);
 }
@@ -10539,9 +10555,8 @@ function _intakeProgressDots(step) {
 
 function _intakeStep1Html() {
   const ex = _intakeState.exampleStep1;
-  const micHtml = _intakeSpeechSupported()
-    ? `<button id="intakeMicBtn1" class="intake-mic-btn" onclick="_intakeMicToggle(1)" aria-label="음성"><span id="intakeMicIcon1">🎤</span></button>`
-    : '';
+  // 사용자 명시 2026-04-30 ultrathink: 미지원 브라우저도 mic button 표시 — 누름 시 토스트 안내 (예시·텍스트 권유).
+  const micHtml = `<button id="intakeMicBtn1" class="intake-mic-btn" onclick="_intakeMicToggle(1)" aria-label="음성"><span id="intakeMicIcon1">🎤</span></button>`;
   return `
     <div class="intake-greeting">🐚 안녕 왔구나. 오늘 어땠어?</div>
     <div class="intake-prompt">요즘 마음에 자주 떠오르는 거, 한 마디부터 시작해도 OK.</div>
@@ -10618,9 +10633,7 @@ function _intakeStep3Html() {
   const ex = _intakeState.exampleStep1;
   const fallbackLong = ex.long;
   const longText = _intakeState.aiLong || fallbackLong;
-  const micHtml = _intakeSpeechSupported()
-    ? `<button id="intakeMicBtn3" class="intake-mic-btn" onclick="_intakeMicToggle(3)" aria-label="음성"><span id="intakeMicIcon3">🎤</span></button>`
-    : '';
+  const micHtml = `<button id="intakeMicBtn3" class="intake-mic-btn" onclick="_intakeMicToggle(3)" aria-label="음성"><span id="intakeMicIcon3">🎤</span></button>`;
   return `
     <div class="intake-ai-msg-small"><b>🐚</b> ${escapeHtml(userText.slice(0, 50))}${userText.length > 50 ? '...' : ''} — 한 번 더 풀어줘.</div>
     <textarea id="intakeInput3" class="intake-textarea" rows="5" placeholder="구체적으로 다 털어놔도 OK. 상황 → 무슨 마음 → 어떻게 됐는지."></textarea>
@@ -10745,7 +10758,11 @@ function _intakeMicToggle(stepNum) {
     return;
   }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { showToast('이 브라우저는 음성 인식 미지원'); return; }
+  if (!SR) {
+    // 사용자 명시 2026-04-30 ultrathink: 미지원 브라우저 (iOS Safari < 16.5 등) = 토스트 안내. 예시·텍스트 권유.
+    showToast('🎤 음성 인식이 이 브라우저에서는 안 돼. 예시 누르거나 직접 적어줘 ✦');
+    return;
+  }
   // 첫 사용 = privacy 안내 1회
   if (!localStorage.getItem('soragodong_v4_intake_speech_consent')) {
     if (!confirm('🎤 음성 입력 안내\n\n음성은 Google 서버를 거쳐 텍스트로 변환됩니다. 동의하시고 사용하시겠어요?')) return;
@@ -12168,6 +12185,16 @@ const ONBOARDING_STEPS = [
     title: '대화창에서 할 수 있는 것',
     body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진해.<br>분위기에 맞게 답해줄게.<br><br>☕ <b>일상 공유</b> — "오늘 점심 마라탕 먹었어"<br>😆 <b>웃긴 에피소드</b> — "오늘 진짜 웃긴 일 있었어..."<br>🔍 <b>가벼운 호기심</b> — "오리너구리는 조상이 오리야 너구리야?"<br>🌟 <b>자랑·뿌듯</b> — "발표 끝났어! 잘 마무리함 ㅎㅎ"<br><br>🌀 <b>와다다 풀기</b> — "기쁘기도 하고 슬프기도 하고..."<br>🤔 <b>의견 듣기</b> — "이 옷 살까 말까ㅋㅋ"<br><br>🚧 <b>막혔을 때</b> — "내일 발표인데 자료 하나도 없어. 시작도 못 하겠어"<br>💧 <b>자책 흐를 때</b> — "방금 회의에서 말 더듬었어. 다들 별로라고 생각할 듯"<br>🔁 <b>패턴 의심</b> — "또 마감 임박해서야 시작이네. 왜?"<br><br>📅 <b>일정 추가</b> — "내일 3시 회의 잡아줘" / "8시 운동 가자"<br>📔 <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장',
     waitFor: 'next'
+  },
+  // 사용자 명시 2026-04-30 ultrathink: 대화탭 시작 시점에 첫 진단 흐름. 코어 #1 안. body 안 button 으로 모달 trigger + 끝나면 onbNext. 사용자가 nextBtn 으로 skip 가능 (선택권 보존).
+  {
+    id: 'chat_intake_entry',
+    targetSelector: null,
+    title: '🐚 잠깐 — 같이 들여다볼까?',
+    body: '본격 대화 시작 전에 — 요즘 마음에 자주 떠오르는 거 한 번 풀어봐 ✦<br><br>같이 들여다볼게. 시간은 1-2분.<br><br><button id="intakeStartTutorialBtn" class="btn-primary" onclick="_startIntakeFromTutorial()" style="margin-top:14px; padding:12px 20px; font-size:14px; width:100%;">✦ 시작해볼게</button>',
+    waitFor: 'next',
+    nextLabel: '나중에',
+    dimBackground: false
   },
   {
     id: 'send_diary',
@@ -14277,12 +14304,27 @@ function onbFinish() {
     const _userInputProfile = state.profile;
     const _backupApiKey = _testerModeBackupState.apiKey;
     const _backupProfile = _testerModeBackupState.profile;
+    // 사용자 명시 2026-04-30 ultrathink: intake 모달 (chat_intake_entry step) 진행 중 박은 데이터 보존 — testerMode ON 동안 박혔으니 backup 에 X. restore 후 다시 inject.
+    const _intakeWorrySaved = Array.isArray(state.intakeWorry) ? state.intakeWorry.slice() : [];
+    const _intakeTraits = (state.traits || []).filter(t => t && t.source === 'intake_core1');
+    const _intakeValues = (state.values || []).filter(v => v && v.source === 'intake_core1');
+    const _intakePatterns = (state.patterns || []).filter(p => p && p.source === 'intake_core1');
+    const _intakeFirstTouchDone = !!(state.preferences && state.preferences._firstTouchDone);
     Object.keys(state).forEach(k => delete state[k]);
     Object.assign(state, _testerModeBackupState);
     _testerModeBackupState = null;
     // 사용자가 튜토리얼 중 새로 입력했으면(이전 비어있고 지금 있음) 그 값으로 박음
     if (_userInputApiKey && !_backupApiKey) state.apiKey = _userInputApiKey;
     if (_userInputProfile && !_backupProfile) state.profile = _userInputProfile;
+    // intake 데이터 다시 inject (튜토리얼 진행 중 박은 거 — 보존)
+    if (_intakeWorrySaved.length > 0) state.intakeWorry = _intakeWorrySaved;
+    if (_intakeTraits.length > 0) state.traits = (state.traits || []).concat(_intakeTraits);
+    if (_intakeValues.length > 0) state.values = (state.values || []).concat(_intakeValues);
+    if (_intakePatterns.length > 0) state.patterns = (state.patterns || []).concat(_intakePatterns);
+    if (_intakeFirstTouchDone) {
+      state.preferences = state.preferences || {};
+      state.preferences._firstTouchDone = true;
+    }
     if (typeof refreshTesterModeUI === 'function') refreshTesterModeUI();
     state.hasSeenWelcomeTutorial = true;
     state.hasSeenV3Tour = true;
@@ -14311,11 +14353,6 @@ function onbFinish() {
     delete window._onbCFBackup;
     delete window._onbModesBackup;
     delete window._onbPeriodStartBackup;
-    // 사용자 명시 2026-04-30 ultrathink: testerMode ON 경로 = reload 됨. intake 흐름은 reload 후 init 시점에 자동 재진입 (_pendingIntake flag).
-    if (_completedCoreId === 'core1' && !state.preferences._firstTouchDone && _canAI()) {
-      state.preferences = state.preferences || {};
-      state.preferences._pendingIntake = true;
-    }
     saveState(true);
     const ov = document.getElementById('onbOverlay');
     if (ov) { ov.classList.remove('active'); ov.style.display = 'none'; }
@@ -14438,16 +14475,8 @@ function onbFinish() {
   if (typeof renderShellBar === 'function') renderShellBar();
   if (typeof renderChat === 'function') renderChat();
   setTimeout(() => showToast('잘 왔어 ✦ 진짜 시작!'), 300);
-  // 사용자 명시 2026-04-30 ultrathink: 옛 snapshot 진단 폐기 → intake 모달 풀 흐름 (대화 + AI deepening + 차원 분석 + traits/values/patterns 자동 합류).
-  // 코어 #1 끝 자리에서 trigger. 사용자 발화 → state.intakeWorry → analysis → traits/values/patterns 합류.
-  if (_isCore1AndFirstTouchPending() && typeof runIntakeFlow === 'function' && _canAI()) {
-    setTimeout(() => {
-      runIntakeFlow().then(() => {
-        if (state.preferences) state.preferences._firstTouchDone = true;
-        saveState();
-      }).catch(e => console.warn('[intake] 흐름 실패:', e));
-    }, 1500);
-  }
+  // 사용자 명시 2026-04-30 ultrathink (위치 이동): intake 모달 = 코어 #1 chat_intake_entry step 자리에서 trigger (대화탭 시작 시점). onbFinish 자리는 X.
+  // 단 _resumePendingIntake 안전망 (이전 _pendingIntake flag 남아있는 사용자 처리) 는 init 시점에서 호출.
 }
 
 // 코어 #1 종료 시점 + 첫 진단 미완료 detect
