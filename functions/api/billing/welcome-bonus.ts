@@ -1,9 +1,10 @@
 // POST /api/billing/welcome-bonus — 사용자 환영 모달 '받기' click 시만 free credit 부여.
 // 사용자 명시 2026-04-30 ultrathink:
 //   - 자동 부여 X (ensureBillingRow 잔액 0 INSERT 으로 변경)
-//   - 첫 click 만 SET = $1.43 (free_credit_granted false → true)
-//   - 두 번째 호출 = 이미 받음 → 잔액 변경 X (idempotent)
-//   - 매 갱신 시 누적 += $X 버그 차단
+//   - 첫 click 만 잔액 = $1.43 (≈ 2,000원) 으로 **SET (리셋)** + free_credit_granted false → true
+//   - 두 번째 호출 = 이미 받음 → 잔액 변경 X (idempotent — race-protected via PATCH filter free_credit_granted=eq.false)
+//   - 매 갱신 시 누적 += $X 버그 차단 (절대 add 아님 — SET)
+//   - flag strict: free_credit_granted 진실 source. client _welcomeBonusShown 은 fast-path cache 만.
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 import { FREE_INITIAL_CREDIT_USD, getUserBilling, ensureBillingRow } from '../_lib/billing';
