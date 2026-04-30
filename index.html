@@ -10657,11 +10657,17 @@ function openAnnualReviewPreview() {
   openAnnualReview(review);
 }
 
-// 사용자 명시 2026-04-30 ultrathink: 실제 리뷰 객체 또는 id 로 열기.
-function openAnnualReview(reviewOrId) {
-  let review = reviewOrId;
-  if (typeof reviewOrId === 'string') {
-    review = (state.annualReviews || []).find(r => r.id === reviewOrId);
+// 사용자 명시 2026-04-30 ultrathink: 리뷰 객체 / id (string) / 연도 (number) 셋 다 지원.
+// year 받으면 state.annualReviews 에서 year 매칭, 없으면 시드 빌더 fallback (NEW 시스템 일관 진입점).
+function openAnnualReview(reviewOrIdOrYear) {
+  let review = null;
+  if (reviewOrIdOrYear && typeof reviewOrIdOrYear === 'object') {
+    review = reviewOrIdOrYear;
+  } else if (typeof reviewOrIdOrYear === 'string') {
+    review = (state.annualReviews || []).find(r => r.id === reviewOrIdOrYear);
+  } else if (typeof reviewOrIdOrYear === 'number') {
+    review = (state.annualReviews || []).find(r => r.year === reviewOrIdOrYear);
+    if (!review) review = _buildAnnualReviewSeedData(reviewOrIdOrYear);  // 시드 fallback
   }
   if (!review) {
     showToast('연간 리뷰 없음 — 시드 데이터 또는 생성 필요');
@@ -14639,17 +14645,17 @@ const ONBOARDING_STEPS = [
   {
     id: 'annual_stories_show',
     targetSelector: '.annual-stories-card',
-    title: '🌟 연간 Stories',
-    body: '같이 보자. 카드 눌러봐.',
+    title: '🌟 연간 리뷰',
+    body: '한 해를 10 카드 시퀀스로 같이 보자. 카드 눌러봐.',
     waitFor: 'click',
-    hideUntilElementHidden: '#storiesOverlay',
+    hideUntilElementHidden: '#annualReviewOverlay',
     dimBackground: false
   },
   {
     id: 'annual_stories_done',
     targetSelector: '.nav-item[data-screen="archive"]',
     title: '📚 도서관으로 돌아오기',
-    body: 'Stories 잘 봤지? 아래 <b>📚 도서관</b> 탭 한 번 눌러서 돌아와.',
+    body: '연간 리뷰 잘 봤지? 아래 <b>📚 도서관</b> 탭 한 번 눌러서 돌아와.',
     waitFor: 'visit',
     visitScreen: 'archive',
     advanceDelay: 600,
@@ -31058,17 +31064,6 @@ async function testForceQuarterlyStories() {
   await openQuarterlyStories(review.id);
 }
 
-async function testForceAnnualStories() {
-  const reviews = state.quarterlyReviews || [];
-  if (reviews.length === 0) {
-    showToast('⚠️ 분기 리뷰 X');
-    return;
-  }
-  // 가장 최근 리뷰의 연도
-  const yearKey = (reviews[0].quarterKey || '').split('-')[0];
-  await openAnnualStories(parseInt(yearKey) || new Date().getFullYear() - 1);
-}
-
 // 음악 5번 → 자동 진주 발동 시각
 async function testForceMusicAutoPearl() {
   if (!state.preferences || !state.preferences.testerMode) {
@@ -33494,20 +33489,6 @@ async function openQuarterlyStories(reviewId) {
   _openStoriesPlayer(slides, 'quarterly');
 }
 
-async function openAnnualStories(year) {
-  // 한 해의 4 분기 + 그 외 데이터 종합
-  const targetYear = year || new Date().getFullYear() - 1;  // default 작년
-  const yearReviews = (state.quarterlyReviews || []).filter(r =>
-    r.quarterKey && r.quarterKey.startsWith(String(targetYear) + '-Q')
-  );
-  if (yearReviews.length === 0) {
-    showToast(`${targetYear}년 분기 리뷰 데이터 없음`);
-    return;
-  }
-  const slides = await buildAnnualSlides(targetYear, yearReviews);
-  _openStoriesPlayer(slides, 'annual');
-}
-
 function _openStoriesPlayer(slides, type) {
   if (!Array.isArray(slides) || slides.length === 0) {
     showToast('표시할 슬라이드 없음');
@@ -34900,368 +34881,6 @@ function _buildClosingSlideHTML(review, stats) {
   `;
 }
 
-// 연간 (15) — 분기 10 + 5 추가
-async function buildAnnualSlides(year, yearReviews) {
-  // 가장 최근 분기 review 선택 (또는 합산 stats 새로 계산)
-  const lastReview = yearReviews[yearReviews.length - 1];
-  const slides = await buildQuarterlySlides(lastReview);
-
-  // 사용자 요청 2026-04-29: '모은 소라' 슬라이드 — 연 단위 범위로 교체 (분기 X)
-  const yearStart = new Date(year, 0, 1).getTime();
-  const yearEnd = new Date(year, 11, 31, 23, 59, 59).getTime();
-  const yearInRange = (iso) => {
-    if (!iso) return false;
-    const t = new Date(iso).getTime();
-    return t >= yearStart && t <= yearEnd;
-  };
-  // 연 단위 stats 합산 (각 분기 stats sum)
-  const yearStats = {
-    worked: yearReviews.reduce((s, r) => s + ((r.stats || {}).worked || 0), 0),
-    attempts: yearReviews.reduce((s, r) => s + ((r.stats || {}).attempts || 0), 0)
-  };
-  const annualShellsHtml = (typeof _buildShellsCollectedSlideHTML === 'function')
-    ? _buildShellsCollectedSlideHTML(yearStats, yearInRange, yearStart, yearEnd)
-    : null;
-  const shellsIdx = slides.findIndex(s => typeof s.html === 'string' && s.html.includes('모은 소라'));
-  if (shellsIdx >= 0) {
-    if (annualShellsHtml) {
-      slides[shellsIdx] = { tone: 'tone-emo-4', html: annualShellsHtml };
-    } else {
-      slides.splice(shellsIdx, 1);  // 연 단위로도 0개면 슬라이드 제거
-    }
-  }
-
-  // 마지막 (시적) 슬라이드 잠시 빼고 추가 5개 + 시적 끝에 다시
-  const closing = slides.pop();
-
-  // 11. 감성 계절별 무드
-  slides.push(_buildSeasonalSlide(year, yearReviews));
-  // 12. 진지 깊었던 숙고
-  slides.push(_buildDeepReflectionSlide(year));
-  // 13. 감성 top 5 곡
-  slides.push(_buildTopMusicSlide(year));
-  // 14. 진지 진단 학습 곡선
-  slides.push(_buildDiagnosisLearningSlide(year, yearReviews));
-  // 15. 진지 한 해 narrative
-  slides.push(_buildAnnualNarrativeSlide(year, yearReviews));
-
-  // 마지막 시적 한 줄 추가
-  closing.html = closing.html.replace(/\$\{escapeHtml\(review\.quarterKey.*?\)\}/, year + '년');
-  slides.push(closing);
-
-  // 사용자 요청 2026-04-28: annual context — '분기' 관련 모든 표현 → '한 해'/'연도' 톤
-  slides.forEach(s => {
-    if (typeof s.html === 'string') {
-      s.html = s.html
-        // 1. quarterKey "YYYY-Q\d" → "YYYY년" (첫 번째 슬라이드 라벨)
-        .replace(/(\d{4})-Q\d/g, '$1년')
-        // 2. 구체 phrase 우선 처리
-        .replace(/이번 분기엔/g, '이번 한 해엔')
-        .replace(/이번 분기는/g, '이번 한 해는')
-        .replace(/이번 분기/g, '이번 한 해')
-        .replace(/이 분기/g, '이번 한 해')
-        .replace(/지난 분기/g, '지난 해')
-        .replace(/다음 분기/g, '내년')
-        .replace(/한 분기/g, '한 해')
-        .replace(/네 분기, 한 단락/g, `${year}년, 한 단락`)
-        // 3. 잔여 '분기' (살았던 분기 / 분기야 / 분기였어 / 분기일 거야 등) — 한 해로 sweep
-        .replace(/분기/g, '해');
-    }
-  });
-
-  return slides;
-}
-
-function _buildSeasonalSlide(year, yearReviews) {
-  // 4 분기 무드 평균 (있으면)
-  const quarters = ['Q1', 'Q2', 'Q3', 'Q4'].map(q => {
-    const r = yearReviews.find(x => x.quarterKey === `${year}-${q}`);
-    return r;
-  });
-  // 분기별 평균 mood
-  const moods = quarters.map(r => {
-    if (!r || !r.stats) return null;
-    // stats에는 mood 평균 X. entries에서 계산
-    const range = getQuarterRange(r.quarterKey);
-    if (!range) return null;
-    const startMs = range.start.getTime();
-    const endMs = range.end.getTime();
-    const moodEntries = (state.entries || []).filter(e => {
-      if (!e.date || e.mood == null) return false;
-      const t = new Date(e.date + 'T12:00:00').getTime();
-      return t >= startMs && t <= endMs;
-    });
-    if (moodEntries.length === 0) return null;
-    const sum = moodEntries.reduce((a, e) => a + e.mood, 0);
-    return Math.round((sum / moodEntries.length) * 10) / 10;
-  });
-  // 사용자 요청 2026-04-28: 계절별 흐름 시각화 — 4분기 카드 그리드 (계절 색 + 무드 이모지)
-  const seasonData = [
-    { label: '봄',  emoji: '🌸', gradient: 'linear-gradient(135deg, rgba(255,182,193,0.30), rgba(255,218,185,0.20))', border: 'rgba(255,182,193,0.50)' },
-    { label: '여름', emoji: '☀️', gradient: 'linear-gradient(135deg, rgba(255,236,139,0.32), rgba(143,200,143,0.22))', border: 'rgba(255,210,80,0.50)' },
-    { label: '가을', emoji: '🍂', gradient: 'linear-gradient(135deg, rgba(255,167,90,0.30), rgba(212,167,106,0.22))', border: 'rgba(255,140,60,0.50)' },
-    { label: '겨울', emoji: '❄️', gradient: 'linear-gradient(135deg, rgba(160,200,230,0.28), rgba(140,160,210,0.18))', border: 'rgba(160,200,230,0.50)' }
-  ];
-  const moodFace = (m) => {
-    if (m == null) return '·';
-    if (m >= 4.5) return '🥰';
-    if (m >= 3.5) return '😊';
-    if (m >= 2.5) return '😐';
-    if (m >= 1.5) return '😞';
-    return '😢';
-  };
-  // 사용자 요청 2026-04-29: 계절별 흐름 더 이쁘게 — 큰 카드 + 부드러운 글로우 + 분기 라벨 + 한 단어 코멘트
-  const validMoods = moods.filter(m => m != null);
-  const yearAvg = validMoods.length > 0
-    ? Math.round((validMoods.reduce((a, b) => a + b, 0) / validMoods.length) * 10) / 10
-    : null;
-  const seasonComment = (m) => {
-    if (m == null) return '기록 없음';
-    if (m >= 4.3) return '빛난 계절';
-    if (m >= 3.7) return '잔잔히 좋음';
-    if (m >= 3.0) return '오르내림';
-    if (m >= 2.3) return '무겁고 잔잔';
-    return '많이 무거웠던';
-  };
-  return {
-    tone: 'tone-emo',
-    html: `
-      <div class="stories-label">${year}년 계절</div>
-      <div class="stories-title" style="margin-bottom:6px;">한 해의 흐름</div>
-      ${yearAvg != null ? `<div style="font-size:11px; color:rgba(255,255,255,0.6); margin-bottom:18px;">연평균 ${yearAvg}/5</div>` : '<div style="height:18px;"></div>'}
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:0 auto; max-width:320px;">
-        ${moods.map((m, i) => {
-          const s = seasonData[i];
-          const labelQ = ['Q1', 'Q2', 'Q3', 'Q4'][i];
-          const monthRange = ['1~3월', '4~6월', '7~9월', '10~12월'][i];
-          return `
-            <div style="background:${s.gradient}; border:1px solid ${s.border}; border-radius:18px; padding:14px 12px; text-align:center; min-height:170px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; box-sizing:border-box; box-shadow:0 4px 18px ${s.border.replace('0.50', '0.18')}; position:relative; overflow:hidden; gap:6px;">
-              <div style="position:absolute; top:-20px; right:-20px; width:80px; height:80px; background:${s.border.replace('0.50', '0.20')}; border-radius:50%; filter:blur(20px); pointer-events:none;"></div>
-              <div style="font-size:10px; color:rgba(255,255,255,0.6); letter-spacing:0.08em; font-weight:600; position:relative; line-height:1.2;">${labelQ} · ${monthRange}</div>
-              <div style="display:flex; flex-direction:column; align-items:center; gap:2px; position:relative;">
-                <div style="font-size:30px; line-height:1.2; min-height:36px; display:flex; align-items:center; justify-content:center;">${s.emoji}</div>
-                <div style="font-size:12px; color:rgba(255,255,255,0.92); font-weight:600; letter-spacing:0.04em;">${s.label}</div>
-              </div>
-              <div style="display:flex; flex-direction:column; align-items:center; gap:2px; position:relative;">
-                <div style="font-size:22px; line-height:1.2; min-height:26px; display:flex; align-items:center; justify-content:center;">${moodFace(m)}</div>
-                <div style="font-size:11px; color:rgba(255,255,255,0.85); font-weight:500; line-height:1.2;">${m != null ? `${m}/5` : '—'}</div>
-                <div style="font-size:10px; color:rgba(255,255,255,0.55); font-style:italic; line-height:1.3;">${seasonComment(m)}</div>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `
-  };
-}
-
-function _buildDeepReflectionSlide(year) {
-  const yearStart = new Date(year, 0, 1).getTime();
-  const yearEnd = new Date(year, 11, 31, 23, 59, 59).getTime();
-  const resolved = (state.reflectionQuestions || []).filter(q =>
-    q.status === 'resolved' && q.resolvedAt && new Date(q.resolvedAt).getTime() >= yearStart && new Date(q.resolvedAt).getTime() <= yearEnd
-  );
-  if (resolved.length === 0) {
-    return {
-      tone: 'tone-deep',
-      html: `
-        <div class="stories-label">가장 깊었던 숙고</div>
-        <div class="stories-title">이 해 결론 낸 숙고 없음</div>
-      `
-    };
-  }
-  // 가장 chatMessages 많이 박힌 거 (깊이 척도)
-  const deepest = resolved.sort((a, b) => (b.chatMessages?.length || 0) - (a.chatMessages?.length || 0))[0];
-  return {
-    tone: 'tone-deep-2',
-    html: `
-      <div class="stories-label">가장 깊었던 숙고</div>
-      <div class="stories-title" style="font-size:18px;">${escapeHtml(deepest.text)}</div>
-      <div class="stories-prompt" style="margin-top:18px;">
-        <div class="stories-prompt-label">네 결론</div>
-        ${escapeHtml(deepest.conclusion || '')}
-      </div>
-    `
-  };
-}
-
-function _buildTopMusicSlide(year) {
-  const yearStart = new Date(year, 0, 1).getTime();
-  const yearEnd = new Date(year, 11, 31, 23, 59, 59).getTime();
-  const musicPearls = (state.pearls || []).filter(p =>
-    p.category === '음악' && p.track && p.createdAt &&
-    new Date(p.createdAt).getTime() >= yearStart && new Date(p.createdAt).getTime() <= yearEnd
-  );
-  if (musicPearls.length === 0) {
-    return {
-      tone: 'tone-emo-2',
-      html: `
-        <div class="stories-label">네${year}년 사운드</div>
-        <div class="stories-empty">음악 진주 없음</div>
-      `
-    };
-  }
-  // top 5 — 등장 횟수 또는 random
-  const top5 = musicPearls.slice(-5);
-  return {
-    tone: 'tone-emo-2',
-    html: `
-      <div class="stories-label">네${year}년 사운드</div>
-      <div class="stories-title">top ${top5.length} 곡</div>
-      <div class="stories-stat-list">
-        ${top5.map((p, i) => `
-          <div class="stories-stat-row neutral" style="display:flex; align-items:center; gap:10px;">
-            <img src="${escapeHtml(p.track.artworkUrl || '')}" style="width:36px; height:36px; border-radius:6px; flex-shrink:0;">
-            <div style="flex:1; min-width:0; text-align:left;">
-              <div style="font-size:13px; color:white; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(p.track.title || '')}</div>
-              <div style="font-size:11px; color:rgba(255,255,255,0.55);">${escapeHtml(p.track.artist || '')}</div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `
-  };
-}
-
-function _buildDiagnosisLearningSlide(year, yearReviews) {
-  const yearStart = new Date(year, 0, 1).getTime();
-  const yearEnd = new Date(year, 11, 31, 23, 59, 59).getTime();
-  const diags = (state.diagnoses || []).filter(d => {
-    if (!d.detectedAt) return false;
-    const t = new Date(d.detectedAt).getTime();
-    return t >= yearStart && t <= yearEnd;
-  });
-  if (diags.length === 0) {
-    return {
-      tone: 'tone-deep-3',
-      html: `
-        <div class="stories-label">발견한 패턴들</div>
-        <div class="stories-title">잔잔히 흐른 한 해</div>
-        <div class="stories-body">큰 패턴 신호는 없었지만, 너의 흐름 자체가 데이터야.</div>
-      `
-    };
-  }
-  // 사용자 요청 2026-04-29: 진단 학습 곡선 → 긍정적 reframe ('자기 이해 발견')
-  // 이전: '진단 = 문제' 톤
-  // 변경: '발견 = 자기를 알아가는 흔적' 톤
-  const labels = {
-    weak_tool: '🔧 도구 발견',
-    wrong_layer: '📐 차원 발견',
-    value_clash: '⚖️ 가치 발견',
-    avoidance: '🌿 회피 신호 인식',
-    willpower_cap: '🪫 의지 한계 인식'
-  };
-  const seasonOf = (m) => m <= 2 || m === 11 ? '겨울' : m <= 5 ? '봄' : m <= 8 ? '여름' : '가을';
-  // type별 그룹 + 첫 발견 / 마지막 갱신
-  const typeMap = {};
-  diags.forEach(d => {
-    if (!typeMap[d.type]) typeMap[d.type] = { count: 0, dates: [] };
-    typeMap[d.type].count++;
-    if (d.detectedAt) typeMap[d.type].dates.push(new Date(d.detectedAt));
-    if (d.lastUpdate) typeMap[d.type].dates.push(new Date(d.lastUpdate));
-  });
-  const sortedTypes = Object.entries(typeMap).sort((a,b) => b[1].count - a[1].count).slice(0, 4);
-
-  // 사용자 요청 2026-04-28: 미적 — month timeline bar (1-12월), type별 활동 시기 시각화
-  const typeColors = {
-    weak_tool:    'rgba(255,140,90,0.7)',
-    wrong_layer:  'rgba(126,200,227,0.7)',
-    value_clash:  'rgba(212,167,106,0.7)',
-    avoidance:    'rgba(168,157,200,0.7)',
-    willpower_cap:'rgba(143,200,143,0.7)'
-  };
-  // 사용자 요청 2026-04-29: 더 부드럽고 가독성 좋게 — 데이터 dashboard 톤 → 따뜻한 카드 톤
-  // 월 timeline 그리드 제거, 계절 라벨만 표시. 이모지 크게, 더 많은 여백.
-  const monthToSeason = (m) => m >= 2 && m <= 4 ? '봄' : m >= 5 && m <= 7 ? '여름' : m >= 8 && m <= 10 ? '가을' : '겨울';
-  return {
-    tone: 'tone-deep-3',
-    html: `
-      <div class="stories-label">발견한 패턴들</div>
-      <div class="stories-title" style="margin-bottom:6px;">🧭 너를 알아가는 흔적</div>
-      <div style="font-size:12px; color:rgba(255,255,255,0.65); margin-bottom:22px; font-style:italic;">한 해 동안 너 안에서 보인 신호들 ✨</div>
-      <div style="display:flex; flex-direction:column; gap:14px; max-width:300px; margin:0 auto;">
-        ${sortedTypes.map(([t, info]) => {
-          const color = typeColors[t] || 'rgba(168,157,200,0.7)';
-          const lightColor = color.replace('0.7', '0.18');
-          const borderColor = color.replace('0.7', '0.35');
-          const seasonsSet = new Set(info.dates.map(d => monthToSeason(d.getMonth())));
-          const seasonsList = ['봄', '여름', '가을', '겨울'].filter(s => seasonsSet.has(s)).join(' · ');
-          return `
-            <div style="background:linear-gradient(135deg, ${lightColor}, ${color.replace('0.7', '0.05')}); border:1px solid ${borderColor}; border-radius:18px; padding:16px 18px; text-align:left;">
-              <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                <span style="font-size:22px; flex-shrink:0;">${(labels[t] || '').match(/^(\S+)/)?.[1] || '🧭'}</span>
-                <div style="flex:1; min-width:0;">
-                  <div style="font-size:14px; color:white; font-weight:600; line-height:1.3;">${escapeHtml((labels[t] || t).replace(/^\S+\s/, ''))}</div>
-                  <div style="font-size:10px; color:rgba(255,255,255,0.55); margin-top:2px;">${info.count}번 만남</div>
-                </div>
-              </div>
-              ${seasonsList ? `<div style="font-size:11px; color:rgba(255,255,255,0.7); padding-left:32px; line-height:1.5;">🌱 ${seasonsList}에 떠올랐어</div>` : ''}
-            </div>
-          `;
-        }).join('')}
-      </div>
-      <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:20px; max-width:280px; text-align:center; line-height:1.6; font-style:italic;">
-        ✨ 보이는 만큼 알아가는 중<br>발견 자체가 첫 단계야.
-      </div>
-    `
-  };
-}
-
-function _buildAnnualNarrativeSlide(year, yearReviews) {
-  // 사용자 요청 2026-04-29: 가독성 개선 — 분기별 한 줄씩 카드로 분리 (긴 한 단락 X)
-  const sortedReviews = yearReviews.slice().sort((a, b) => {
-    const aQ = parseInt((a.quarterKey || '').split('-Q')[1] || '0');
-    const bQ = parseInt((b.quarterKey || '').split('-Q')[1] || '0');
-    return aQ - bQ;
-  });
-  // 사용자 요청 2026-04-29: Q1/Q2/Q3/Q4 → 봄/여름/가을/겨울
-  const QUARTERS = [
-    { q: 'Q1', label: '봄',   months: '1~3월',   color: '#ff9aa2', emoji: '🌸' },
-    { q: 'Q2', label: '여름', months: '4~6월',   color: '#ffd93d', emoji: '☀️' },
-    { q: 'Q3', label: '가을', months: '7~9월',   color: '#ff8c5a', emoji: '🍂' },
-    { q: 'Q4', label: '겨울', months: '10~12월', color: '#a0c8e6', emoji: '❄️' }
-  ];
-  const cardsHtml = QUARTERS.map(qInfo => {
-    const r = sortedReviews.find(x => x.quarterKey && x.quarterKey.endsWith('-' + qInfo.q));
-    const summary = r && r.summary ? r.summary.slice(0, 110) : null;
-    if (!summary) {
-      return `
-        <div style="display:flex; gap:11px; align-items:flex-start; padding:11px 14px; background:rgba(255,255,255,0.03); border-left:2px solid rgba(255,255,255,0.10); border-radius:0 10px 10px 0; opacity:0.55;">
-          <span style="font-size:18px; line-height:1.3;">${qInfo.emoji}</span>
-          <div style="flex:1; min-width:0; text-align:left;">
-            <div style="font-size:11px; color:rgba(255,255,255,0.5); letter-spacing:0.06em; margin-bottom:3px;">${qInfo.label} · ${qInfo.months}</div>
-            <div style="font-size:12px; color:rgba(255,255,255,0.45); font-style:italic;">기록 없는 분기</div>
-          </div>
-        </div>
-      `;
-    }
-    return `
-      <div style="display:flex; gap:11px; align-items:flex-start; padding:11px 14px; background:linear-gradient(90deg, ${qInfo.color}18, transparent); border-left:2px solid ${qInfo.color}; border-radius:0 10px 10px 0;">
-        <span style="font-size:18px; line-height:1.3;">${qInfo.emoji}</span>
-        <div style="flex:1; min-width:0; text-align:left;">
-          <div style="font-size:11px; color:${qInfo.color}; letter-spacing:0.06em; margin-bottom:4px; font-weight:600;">${qInfo.label} · ${qInfo.months}</div>
-          <div style="font-size:13px; color:rgba(255,255,255,0.92); line-height:1.65;">${escapeHtml(summary)}</div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  return {
-    tone: 'tone-deep',
-    html: `
-      <div class="stories-label">${year}년 한 단락</div>
-      <div class="stories-title" style="font-size:18px; margin-bottom:18px;">계절별 흐름</div>
-      <div style="display:flex; flex-direction:column; gap:8px; max-width:320px; margin:0 auto;">
-        ${cardsHtml}
-      </div>
-      <div style="margin-top:20px; padding:12px 16px; background:rgba(212,167,106,0.08); border:1px solid rgba(212,167,106,0.30); border-radius:12px; max-width:300px; margin-left:auto; margin-right:auto;">
-        <div style="font-size:10px; color:#d4a76a; letter-spacing:0.08em; margin-bottom:4px;">🧭 ${year + 1}년에</div>
-        <div style="font-size:12px; color:rgba(255,255,255,0.85); line-height:1.6;">같은 길 또는 새로운 길. 네 데이터가 너에게 보여줄 거야.</div>
-      </div>
-    `
-  };
-}
-
 // V4-fix: 분기 리뷰 deep dive — 6 비교 축 시각 카드 (anchor 3 / 비전 7.10)
 // 1. 8 차원 (problems↓ / strengths↑) / 2. 추적 항목 / 3. 모드 빈도
 // 4. 진화율 / 5. 진주 수 / 6. growth 차원
@@ -35398,10 +35017,10 @@ function renderArchiveReviews() {
   let annualCardHtml = '';
   if (fullYears.length > 0) {
     annualCardHtml = fullYears.map(yr => `
-      <div class="timeline-day annual-stories-card" data-year="${yr}" onclick="event.stopPropagation(); openAnnualStories(${yr})" style="cursor:pointer; background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(168,157,200,0.18)); border: 1px solid var(--accent);">
-        <div class="timeline-day-date">🌟 ${yr}년 연간 Stories</div>
+      <div class="timeline-day annual-stories-card" data-year="${yr}" onclick="event.stopPropagation(); openAnnualReview(${yr})" style="cursor:pointer; background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(168,157,200,0.18)); border: 1px solid var(--accent);">
+        <div class="timeline-day-date">🌟 ${yr}년 연간 리뷰</div>
         <div class="timeline-day-summary" style="font-family: 'Gowun Batang', serif; font-size: 14px;">
-          한 해를 한 편의 이야기로 — 분기별 흐름 + 진주 음악 배경 + Spotify Wrapped식 슬라이드.
+          한 해의 narrative — 표지 / 흐름 / 발견 / 무기 / 깨달음 / 숙고 / 마지막 (10 카드 시퀀스).
         </div>
         <div class="timeline-day-meta"><span>▶ 같이 보자</span></div>
       </div>
