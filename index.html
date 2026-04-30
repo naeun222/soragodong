@@ -10752,7 +10752,10 @@ async function generateAnnualReview(year) {
     songs,
     auto: false
   };
-  if (isTester) review._mock = true;
+  if (isTester) {
+    review._mock = true;
+    review._seed = Date.now();  // 사용자 명시 2026-04-30 ultrathink: testerMode 보호 우회 시 init sweep 자동 청소 (defense in depth)
+  }
   state.annualReviews = state.annualReviews || [];
   state.annualReviews = state.annualReviews.filter(r => r.year !== targetYear);
   state.annualReviews.unshift(review);
@@ -12844,7 +12847,7 @@ async function loadFromCloud() {
     state.weeklyReviews = stripSeedMarker(state.weeklyReviews);
     state.memoryVault = stripSeedMarker(state.memoryVault);
     // 기존 stripSeed 대상 store들도 _seed marker 추가 매칭 (앞으로 박힐 시드 대비)
-    ['tasks','missions','pearls','archive','topicCards','reflectionQuestions','projects','starts','quarterlyReviews','decisions','insights','diagnoses','monthlyReviews'].forEach(k => {
+    ['tasks','missions','pearls','archive','topicCards','reflectionQuestions','projects','starts','quarterlyReviews','decisions','insights','diagnoses','monthlyReviews','annualReviews'].forEach(k => {
       state[k] = stripSeedMarker(state[k]);
     });
     if (Array.isArray(state.shellCollection)) {
