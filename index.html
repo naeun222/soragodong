@@ -8689,7 +8689,7 @@
         <summary>🛡️ 데이터 보호 안내</summary>
         <div class="login-protect-list">
           <div><span class="pi-icon">🔒</span><span>다른 사용자는 본인의 데이터에 접근할 수 없습니다</span></div>
-          <div id="loginAccessInfo"><span class="pi-icon">🔐</span><span>활성화 후 회사조차 귀하의 데이터를 볼 수 없습니다 <span style="color:var(--text-soft);">(설정 → 보안 강화)</span></span></div>
+          <div id="loginAccessInfo"><span class="pi-icon">🔐</span><span>활성화 후 회사조차 귀하의 데이터를 열람할 수 없습니다 <span style="color:var(--text-soft);">(설정 → 보안 강화)</span></span></div>
           <div><span class="pi-icon">🚫</span><span>데이터를 광고·판매·외부 공유에 사용하지 않습니다</span></div>
           <div><span class="pi-icon">🤖</span><span>AI (Anthropic) 서버 데이터는 <b>30일 후 자동 삭제</b>되며, 학습에 전혀 사용되지 않습니다</span></div>
           <div><span class="pi-icon">✅</span><span>Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)</span></div>
@@ -9484,7 +9484,7 @@
         <div class="settings-info-card-title">🛡️ 데이터 보호</div>
         <div id="settingsPrivacyAccessInfo">
           🔒 본인의 데이터는 본인만 접근 가능합니다<br>
-          🔐 활성화 후 회사조차 귀하의 데이터를 볼 수 없습니다<br>
+          🔐 활성화 후 회사조차 귀하의 데이터를 열람할 수 없습니다<br>
           🚫 데이터를 광고·판매·외부 공유에 사용하지 않습니다<br>
           🤖 AI (Anthropic) 서버 데이터는 30일 후 자동 삭제되며, 학습에 전혀 사용되지 않습니다<br>
           ✅ Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)<br>
@@ -12802,7 +12802,13 @@ async function submitE2EESetup() {
     refreshE2EEStatus();
     const overlay = document.getElementById('e2eeSetupOverlay');
     if (overlay) overlay.remove();
-    showToast('🔐 E2EE 활성화 완료 — 회사도 본인 데이터 못 봅니다');
+    showToast('🔐 E2EE 활성화 완료 — 회사조차 귀하의 데이터를 열람할 수 없습니다');
+    // 사용자 보고 2026-04-30: E2EE setup 닫힌 후 환영 모달 + 튜토리얼 chooser 재트리거 (firstTimeIntro race fix).
+    setTimeout(() => {
+      if (typeof maybeShowFirstTimeIntro === 'function') {
+        maybeShowFirstTimeIntro().catch(e => console.warn('firstTimeIntro after e2ee:', e));
+      }
+    }, 700);
   } catch (e) {
     status.textContent = '실패: ' + (e.message || e);
     status.style.color = '#e89090';
@@ -12814,6 +12820,12 @@ function cancelE2EESetup() {
   if (overlay) overlay.remove();
   // dismiss 박힘 — 다음 진입 시 자동 권유 X (Settings에서 명시 활성 가능)
   try { localStorage.setItem('soragodong_v4_e2ee_setup_dismissed', new Date().toISOString()); } catch {}
+  // 사용자 보고 2026-04-30: cancel 후에도 환영 모달 + 튜토리얼 chooser 재트리거.
+  setTimeout(() => {
+    if (typeof maybeShowFirstTimeIntro === 'function') {
+      maybeShowFirstTimeIntro().catch(e => console.warn('firstTimeIntro after e2ee cancel:', e));
+    }
+  }, 600);
 }
 
 // 비밀번호 안내 (이미 활성된 사용자) — 사용자 요청 2026-04-30 password 단순화 후 wording.
