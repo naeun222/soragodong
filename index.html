@@ -9324,7 +9324,6 @@
           <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
           <button class="btn-secondary" onclick="forceAnalyze()" title="opus 4.7 사용 — 비쌈">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="cleanLegacySeedData()" title="잔존 시드 텍스트 강제 정리">🧹 잔존 시드 정리</button>
-          <button class="btn-secondary" onclick="testFirstTouchQuiz()" title="신규 사용자 첫 관찰 quiz 시뮬레이션 (테스터 모드 필수)">🆕 첫 관찰 quiz 미리보기</button>
           <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 선물 모달 미리보기 (state X)">🎁 환영 선물 모달 미리보기</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (가짜 데이터 prototype)">🐚 연간 리뷰 미리보기</button>
 
@@ -11179,21 +11178,9 @@ function _annTogglePlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 사용자 요청 2026-04-30: 개발자 도구 — 신규 사용자 첫 관찰 quiz 미리보기 (시뮬레이션).
-function testFirstTouchQuiz() {
-  if (!state.preferences || !state.preferences.testerMode) {
-    alert('테스터 모드 ON 후 사용해주세요.\n\n실제 데이터에 영향 없이 quiz 흐름을 미리 볼 수 있어요.\n(테스터 모드 OFF 시 자동 복원됨)');
-    return;
-  }
-  // _firstTouchDone 우회 (testerMode라 어차피 cloud 저장 X)
-  state.preferences._firstTouchDone = false;
-  showFirstTouchQuiz();
-}
-
-async function maybeShowFirstTouchQuiz() {
-  // 사용자 명시 2026-04-30 (정정): quiz form 폐기. "불필요하게 사용자한테 막 요구하는 느낌" + JSON parse 에러 사용자 stuck.
-  // 새 흐름: 코어 #1 종료 시점 (onbFinish) snapshot → AI 진단 자동 추출 → traits/values/patterns 표시.
-  // 이 함수는 호환 + 환영 보너스 + chooser trigger 용도로 단순화. quiz UI 표시 X.
+// 사용자 명시 2026-04-30: 옛 5문항 quiz 흐름 완전 폐기. 새 진단 흐름 = chat_intake_entry 모달 + runIntakeFlow.
+// 이 진입 함수는 신규 사용자 환영 보너스 + 튜토리얼 chooser trigger 만 담당.
+async function maybeShowFirstTimeIntro() {
   if (!authUserId) return;
   if (window._onbTutorialMode) return;
   // testerMode = chooser fallback (관리자 사용성)
@@ -11275,210 +11262,12 @@ function devPreviewWelcomeBonus() {
   showWelcomeBonusModal({ preview: true });
 }
 
-// 사용자 요청 2026-04-30 ultrathink: 5문항 한 화면 → step wizard (피곤함 줄이기)
-// 기존 ID/name 유지 (ftQ1/ftQ2/ftQ3/data-q4/ftQ5) — submitFirstTouchQuiz 호환.
-function showFirstTouchQuiz() {
-  if (document.getElementById('firstTouchQuizOverlay')) return;
-  const overlay = document.createElement('div');
-  overlay.className = 'input-modal-overlay show';
-  overlay.id = 'firstTouchQuizOverlay';
-  overlay.style.zIndex = '10001';
-  overlay.innerHTML = `
-    <div class="input-modal" style="max-width:440px; max-height:92vh; overflow-y:auto; padding:24px 22px;">
-      <div style="font-size:10px; color:var(--text-soft); letter-spacing:0.18em; text-transform:uppercase; text-align:center; margin-bottom:8px;">너의 첫 관찰 ✦</div>
-      <div class="ft-progress" id="ftProgressBar">
-        <div class="ft-progress-dot current" data-step="1"></div>
-        <div class="ft-progress-dot" data-step="2"></div>
-        <div class="ft-progress-dot" data-step="3"></div>
-        <div class="ft-progress-dot" data-step="4"></div>
-        <div class="ft-progress-dot" data-step="5"></div>
-      </div>
-
-      <div class="ft-wizard">
-        <!-- Step 1: 신경 쓰이는 한 단어 -->
-        <div class="ft-step active" data-step="1">
-          <div class="ft-step-emoji">🌱</div>
-          <div class="ft-step-title">지금 가장 신경 쓰이는 한 단어</div>
-          <div class="ft-step-sub">머릿속에 자주 도는 거 — 단어 하나만</div>
-          <input type="text" id="ftQ1" class="ft-step-input" placeholder="예: 논문 / 관계 / 잠 / 진로" maxlength="20">
-        </div>
-
-        <!-- Step 2: 결정 스타일 -->
-        <div class="ft-step" data-step="2">
-          <div class="ft-step-emoji">🎯</div>
-          <div class="ft-step-title">결정 스타일</div>
-          <div class="ft-step-sub">평소 무언가 정할 때 — 가장 가까운 거</div>
-          <div class="ft-card-grid">
-            <label class="ft-card" data-radio="ftQ2" data-val="빠른"><input type="radio" name="ftQ2" value="빠른"><div class="ft-card-icon">⚡</div><div class="ft-card-label">바로 박는다</div></label>
-            <label class="ft-card" data-radio="ftQ2" data-val="정보"><input type="radio" name="ftQ2" value="정보"><div class="ft-card-icon">🔍</div><div class="ft-card-label">정보 모으고</div></label>
-            <label class="ft-card" data-radio="ftQ2" data-val="미루기"><input type="radio" name="ftQ2" value="미루기"><div class="ft-card-icon">⏳</div><div class="ft-card-label">미루다가</div></label>
-            <label class="ft-card" data-radio="ftQ2" data-val="직감"><input type="radio" name="ftQ2" value="직감"><div class="ft-card-icon">🌀</div><div class="ft-card-label">직감으로</div></label>
-          </div>
-        </div>
-
-        <!-- Step 3: 에너지 시간 -->
-        <div class="ft-step" data-step="3">
-          <div class="ft-step-emoji">⏰</div>
-          <div class="ft-step-title">에너지 좋은 시간</div>
-          <div class="ft-step-sub">머리 잘 돌아가는 시간대</div>
-          <div class="ft-card-grid">
-            <label class="ft-card" data-radio="ftQ3" data-val="아침"><input type="radio" name="ftQ3" value="아침"><div class="ft-card-icon">🌅</div><div class="ft-card-label">아침</div></label>
-            <label class="ft-card" data-radio="ftQ3" data-val="점심"><input type="radio" name="ftQ3" value="점심"><div class="ft-card-icon">☀️</div><div class="ft-card-label">점심</div></label>
-            <label class="ft-card" data-radio="ftQ3" data-val="저녁"><input type="radio" name="ftQ3" value="저녁"><div class="ft-card-icon">🌆</div><div class="ft-card-label">저녁</div></label>
-            <label class="ft-card" data-radio="ftQ3" data-val="새벽"><input type="radio" name="ftQ3" value="새벽"><div class="ft-card-icon">🌙</div><div class="ft-card-label">새벽</div></label>
-          </div>
-        </div>
-
-        <!-- Step 4: 자주 듣는 말 -->
-        <div class="ft-step" data-step="4">
-          <div class="ft-step-emoji">🪞</div>
-          <div class="ft-step-title">자주 듣는 말 / 자주 하는 생각</div>
-          <div class="ft-step-sub">너에 대해 — 여러 개 골라도 돼</div>
-          <div class="ft-tag-grid">
-            <label class="ft-tag" data-tag-q4 data-val="산만"><input type="checkbox" data-q4 value="산만">🦋 산만</label>
-            <label class="ft-tag" data-tag-q4 data-val="다 잘하려다 망함"><input type="checkbox" data-q4 value="다 잘하려다 망함">🎢 다 잘하려다 망함</label>
-            <label class="ft-tag" data-tag-q4 data-val="꼼꼼"><input type="checkbox" data-q4 value="꼼꼼">🔬 꼼꼼</label>
-            <label class="ft-tag" data-tag-q4 data-val="느려"><input type="checkbox" data-q4 value="느려">🐌 느려</label>
-            <label class="ft-tag" data-tag-q4 data-val="기복 큼"><input type="checkbox" data-q4 value="기복 큼">🌊 기복 큼</label>
-            <label class="ft-tag" data-tag-q4 data-val="감정 풍부"><input type="checkbox" data-q4 value="감정 풍부">💧 감정 풍부</label>
-            <label class="ft-tag" data-tag-q4 data-val="말이 많아"><input type="checkbox" data-q4 value="말이 많아">🗣 말이 많아</label>
-            <label class="ft-tag" data-tag-q4 data-val="혼자가 편해"><input type="checkbox" data-q4 value="혼자가 편해">🌑 혼자가 편해</label>
-          </div>
-        </div>
-
-        <!-- Step 5: 한 줄 자기소개 -->
-        <div class="ft-step" data-step="5">
-          <div class="ft-step-emoji">🐚</div>
-          <div class="ft-step-title">한 줄 자기소개 <span style="color:var(--text-soft); font-size:11px; font-weight:400;">(선택)</span></div>
-          <div class="ft-step-sub">건너뛰어도 OK — 더 정확한 가설을 위해</div>
-          <input type="text" id="ftQ5" class="ft-step-input" placeholder="예: ADHD/ADD, 박사과정, 야행성..." maxlength="60">
-          <div style="font-size:10px; color:var(--text-soft); margin-top:6px; padding:8px; background:rgba(126,200,227,0.05); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px; line-height:1.6;">
-            ✦ AI 분석에 무료 토큰 약 $0.01–0.02 쓰여. 무료 한도 $1.0 안에서 진행.
-          </div>
-        </div>
-      </div>
-
-      <div id="firstTouchStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px; text-align:center;"></div>
-
-      <div class="ft-nav">
-        <button class="btn-secondary" id="ftPrevBtn" onclick="ftStep(-1)" style="display:none;">← 뒤로</button>
-        <button class="btn-secondary" id="ftSkipBtn" onclick="skipFirstTouchQuiz()">나중에</button>
-        <button class="btn-primary" id="ftNextBtn" onclick="ftStep(1)">다음 →</button>
-        <button class="btn-primary" id="ftSubmitBtn" onclick="submitFirstTouchQuiz()" style="display:none;">첫 관찰 받기 ✦</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-
-  // 카드/태그 클릭 → 해당 input 토글
-  overlay.querySelectorAll('[data-radio]').forEach(card => {
-    card.addEventListener('click', () => {
-      const grp = card.getAttribute('data-radio');
-      overlay.querySelectorAll(`[data-radio="${grp}"]`).forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      const inp = card.querySelector('input');
-      if (inp) inp.checked = true;
-    });
-  });
-  overlay.querySelectorAll('[data-tag-q4]').forEach(tag => {
-    tag.addEventListener('click', (e) => {
-      e.preventDefault();
-      tag.classList.toggle('selected');
-      const inp = tag.querySelector('input');
-      if (inp) inp.checked = tag.classList.contains('selected');
-    });
-  });
-
-  // 첫 step input 자동 focus
-  setTimeout(() => document.getElementById('ftQ1')?.focus(), 100);
-}
-
-// step navigation — current 1..5
-function ftStep(delta) {
-  const overlay = document.getElementById('firstTouchQuizOverlay');
-  if (!overlay) return;
-  const steps = overlay.querySelectorAll('.ft-step');
-  let cur = 1;
-  steps.forEach((s, i) => { if (s.classList.contains('active')) cur = i + 1; });
-  const next = Math.max(1, Math.min(5, cur + delta));
-  if (next === cur) return;
-  steps.forEach(s => s.classList.remove('active'));
-  overlay.querySelector(`.ft-step[data-step="${next}"]`)?.classList.add('active');
-
-  // 진행도 dot
-  overlay.querySelectorAll('.ft-progress-dot').forEach((d, i) => {
-    d.classList.remove('current', 'done');
-    if (i + 1 < next) d.classList.add('done');
-    else if (i + 1 === next) d.classList.add('current');
-  });
-
-  // nav 버튼 표시 토글
-  document.getElementById('ftPrevBtn').style.display = next > 1 ? '' : 'none';
-  document.getElementById('ftSkipBtn').style.display = next > 1 ? 'none' : '';
-  document.getElementById('ftNextBtn').style.display = next < 5 ? '' : 'none';
-  document.getElementById('ftSubmitBtn').style.display = next === 5 ? '' : 'none';
-
-  // step별 자동 focus
-  if (next === 1) setTimeout(() => document.getElementById('ftQ1')?.focus(), 50);
-  if (next === 5) setTimeout(() => document.getElementById('ftQ5')?.focus(), 50);
-}
-
-function skipFirstTouchQuiz() {
-  const overlay = document.getElementById('firstTouchQuizOverlay');
-  if (overlay) overlay.remove();
-  // skip = 영구 dismiss (다시 안 묻기)
-  state.preferences = state.preferences || {};
-  state.preferences._firstTouchDone = true;
-  saveState();
-  // 사용자 요청 2026-04-30: skip 후에도 tutorial chooser 띄움 (dismiss flag 없으면)
-  setTimeout(() => { if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate(); }, 300);
-}
-
-async function submitFirstTouchQuiz() {
-  const status = document.getElementById('firstTouchStatus');
-  const q1 = document.getElementById('ftQ1')?.value.trim() || '';
-  const q2 = document.querySelector('input[name="ftQ2"]:checked')?.value || '';
-  const q3 = document.querySelector('input[name="ftQ3"]:checked')?.value || '';
-  const q4Inputs = [...document.querySelectorAll('#firstTouchQuizOverlay input[type="checkbox"]:checked')].map(i => i.value);
-  const q5 = document.getElementById('ftQ5')?.value.trim() || '';
-
-  if (!q1 && !q2 && !q3 && q4Inputs.length === 0 && !q5) {
-    if (status) { status.textContent = '한 가지라도 답해줘 — 다 비어있으면 분석 X'; status.style.color = '#e89090'; }
-    return;
-  }
-  if (typeof _canAI === 'function' && !_canAI()) {
-    if (status) { status.textContent = 'AI 호출 불가능 (로그인 필요)'; status.style.color = '#e89090'; }
-    return;
-  }
-  if (status) { status.textContent = '첫 관찰 분석 중... (5-10초)'; status.style.color = 'var(--text-soft)'; }
-
-  const answers = {
-    concern: q1,
-    decision_style: q2,
-    energy_time: q3,
-    self_descriptors: q4Inputs,
-    self_intro: q5
-  };
-
-  try {
-    const insight = await generateFirstTouchAnalysis(answers);
-    if (!insight || !insight.one_word) throw new Error('분석 결과 비어있음');
-    state.firstTouchInsight = { ...insight, answers, completedAt: new Date().toISOString() };
-    state.preferences = state.preferences || {};
-    state.preferences._firstTouchDone = true;
-    saveState();
-    const overlay = document.getElementById('firstTouchQuizOverlay');
-    if (overlay) overlay.remove();
-    showFirstTouchResult(insight);
-  } catch (e) {
-    console.warn('[firstTouch] generate failed:', e);
-    if (status) { status.textContent = '실패: ' + (e.message || e) + ' — 나중에 다시'; status.style.color = '#e89090'; }
-  }
-}
+// 옛 5문항 quiz 함수들 (showFirstTouchQuiz / ftStep / skipFirstTouchQuiz / submitFirstTouchQuiz / generateFirstTouchAnalysis)
+// 2026-04-30 사용자 명시 ultrathink — 완전 폐기. 새 흐름 = chat_intake_entry step → runIntakeFlow 풀스크린 모달.
 
 // 사용자 보고 2026-04-30 review (agent): AI 응답 JSON 견고 추출.
 // max_tokens 부족 truncation / markdown code fence / 외부 텍스트 등 robust.
-// 사용: generateFirstTouchAnalysis, generateReview 등.
+// 사용: generateFirstTouchFromCoreData, generateReview 등.
 function _robustJsonExtract(text) {
   if (!text || typeof text !== 'string') throw new Error('빈 응답');
   // markdown fence strip
@@ -11500,70 +11289,6 @@ function _robustJsonExtract(text) {
   }
   if (end < 0) throw new Error('JSON 닫힘 없음 (truncated 의심 — max_tokens 부족 가능)');
   return JSON.parse(s.slice(start, end + 1));
-}
-
-async function generateFirstTouchAnalysis(answers) {
-  const prompt = `사용자의 첫 관찰을 작성한다.
-
-[사용자 답변]
-- 신경 쓰이는 한 단어: ${answers.concern || '(미응답)'}
-- 결정 스타일: ${answers.decision_style || '(미응답)'}
-- 에너지 시간대: ${answers.energy_time || '(미응답)'}
-- 자주 듣는 말 / 자기에 대해 하는 생각: ${(answers.self_descriptors || []).join(', ') || '(미응답)'}
-- 자기소개: ${answers.self_intro || '(미응답)'}
-
-[목표]
-- 한 단어 정체성 명명 (정형 X — 사용자 답변 기반 고유)
-- 가설 3개 — trait / value / pattern 중 적절한 카테고리로 분류 (기존 자기관찰 모델 schema 매칭)
-- 다음 1주 관찰 거리 2개 (구체, observable)
-- 한 줄 친근 인사 + 첫 인상 (40자 이내)
-
-[가설 schema 가이드]
-- trait (특성): "꼼꼼한 편", "예민한 감각" 같은 짧은 명사구. name (10자 이내) + description (한 문장 설명).
-- value (가치): "성장", "관계", "자율" 같은 한 단어. name (5자 이내) + description (한 문장).
-- pattern (패턴): "X 상황 → Y 행동 → Z 결과" 시퀀스. name (10자 이내 라벨) + trigger (조건) + sequence (행동 흐름).
-- display_text: 사용자한테 ✓ 박스에 보일 친근한 한 줄. 자연스러운 한국어 (예: "꼼꼼한 편인 거 같아", "관계가 너한테 중요해 보여").
-
-[톤]
-친한 친구 반말. 상담사 X. judgment X. self-compassion.
-Surprise > Truth — '어, 어떻게 알았어?' 트리거.
-Specific > Generic.
-
-[출력 JSON]
-{
-  "one_word": "한 단어 정체성",
-  "intro_line": "한 줄 친근 인사 + 첫 인상 (40자 이내)",
-  "hypotheses": [
-    {
-      "category": "trait" | "value" | "pattern",
-      "name": "표준 이름 (짧게)",
-      "description": "한 문장 설명 (trait/value 용, pattern이면 null OK)",
-      "trigger": "조건 (pattern 용, 그 외 null)",
-      "sequence": "행동 흐름 (pattern 용, 그 외 null)",
-      "confidence": 0.4-0.6,
-      "display_text": "사용자에게 ✓ 박스에서 보일 친근한 한 줄"
-    },
-    ...3개
-  ],
-  "watch_points": [
-    "다음 1주 관찰 거리 1 (구체, observable)",
-    "다음 1주 관찰 거리 2"
-  ]
-}
-
-JSON만 출력. 다른 글 X.`;
-
-  // 사용자 보고 2026-04-30 review (agent): max_tokens 700 한국어 truncation 으로 JSON 끝 잘림 → "Expected ']'" parse 실패. 1500 으로 확대 + system prompt 명시 + 견고 parser.
-  const resp = await callAnthropic({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1500,
-    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
-    messages: [{ role: 'user', content: prompt }]
-  });
-  if (!resp.ok) throw new Error('API ' + resp.status);
-  const data = await resp.json();
-  const text = data?.content?.[0]?.text || '';
-  return _robustJsonExtract(text);
 }
 
 // 사용자 명시 2026-04-30 (정정): quiz form 폐기 → 코어 #1 종료 snapshot 기반 첫 관찰.
@@ -13501,9 +13226,9 @@ async function init() {
     setTimeout(() => { runAutoBackupIfNeeded().catch(e => console.warn('autoBackup:', e)); }, 3000);
   }
 
-  // 사용자 요청 2026-04-30: 신규 사용자 첫 관찰 quiz (5문항 → AI 첫 가설). 한 번만 띄움.
-  if (typeof maybeShowFirstTouchQuiz === 'function') {
-    setTimeout(() => { maybeShowFirstTouchQuiz().catch(e => console.warn('firstTouch:', e)); }, 4500);
+  // 사용자 명시 2026-04-30 ultrathink (정정): 옛 quiz 흐름 폐기 → 환영 보너스 + 튜토리얼 chooser trigger.
+  if (typeof maybeShowFirstTimeIntro === 'function') {
+    setTimeout(() => { maybeShowFirstTimeIntro().catch(e => console.warn('firstTimeIntro:', e)); }, 4500);
   }
   // 사용자 명시 2026-04-30 ultrathink: testerMode ON 경로에서 reload 후 intake 모달 자동 재진입.
   if (typeof _resumePendingIntake === 'function') {
@@ -13577,8 +13302,8 @@ async function init() {
   }
 
   // V3.13.x: 새 APP_VERSION 진입 시 튜토리얼 자동 시작
-  // 사용자 요청 2026-04-30: 첫 관찰 quiz가 먼저 → quiz close 후 autoTourOnUpdate 호출.
-  // 신규 사용자가 아니거나 (entries 4+) 이미 first touch done이면 maybeShowFirstTouchQuiz가 직접 trigger.
+  // 사용자 명시 2026-04-30 ultrathink: 옛 quiz 폐기. 환영 보너스 close 후 autoTourOnUpdate 호출.
+  // 신규 사용자가 아니거나 (entries 4+) 이미 first touch done이면 maybeShowFirstTimeIntro가 직접 trigger.
   // setTimeout(() => autoTourOnUpdate(), 2000);  // ← 옛 직접 호출 제거
 
   // V3.13.x: 신규 사용자 자동 튜토리얼 분기 제거. 배너로 통일.
