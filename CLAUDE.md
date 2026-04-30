@@ -325,18 +325,18 @@ index.html 거대한 단일 파일. Grep 적극 활용:
 
 ### 🔴 다음 세션 대기 항목 (사용자 요청 2026-04-30 — UI 작업)
 
-- [ ] **모델 토글 위치 통일**: sonnet/opus 전환 버튼이 입력창에 박혀있는 거 → 헤더 오른쪽 (동기화 버튼 왼쪽) 으로 이동. 대화탭 / 돌연변이 임시대화창 헤더 / 마법고동 / 숙고의 방 4곳 다 통일.
-- [ ] **마법의 방 UI 변경**: 숙고의 방과 동일한 대화 UI 로 (사용자 요청 2026-04-30 — "제약된 대화" 가치 유지 X, 숙고의 방과 똑같이). 단 색만 차별화.
-- [ ] **두 방 색 차별화**: 숙고의 방 = 파랑 또는 청록, 마법의 방 = 다른 톤. UI 구조는 동일하되 색만 달라서 구분.
-- [ ] **첫 진단 JSON parse error 박힘**: 신규 사용자 quiz 시 "첫 진단 받기" 클릭하면 `실패: JSON Parse error: Expected ']' - 나중에 다시` 뜸. AI 응답 JSON 파싱 robust 박아야 (불완전 JSON 시 재시도 또는 partial parse).
-- [ ] **첫 진단 quiz 자체 재검토**: 사용자 본인 만족 X — "불필요하게 사용자한테 막 요구하는 느낌". skip 더 부드럽게 / 또는 quiz 자체 폐기 / 또는 자연 대화로 흡수 검토.
-- [ ] **첫 진단 → 튜토리얼 대화탭 통합 (사용자 요청 2026-04-30)**: 5문항 quiz form 폐기. 대신 코어 튜토리얼 대화탭에서 자연스러운 대화로 정보 수집 → AI 가설 추출 → '나 탭' (traits/values/patterns) 에 자동 표시. 폼 X, 대화 흐름 안에서 흡수.
-- [ ] **시드데이터 + 리뷰 변경사항 반영 X 진단 (사용자 보고 2026-04-30)**: 시드데이터 넣은 후 리뷰 돌리면 최근 변경/추가가 결과에 반영 안 됨. cache / 옛 transcript / 시드 ID prefix 무시 흐름 / 리뷰 input window 등 의심. 재현 후 진단. → 1차 fix 적용 (chapters/topicCards/pearls/archive/insights inject + monthly cutoffEnd + chat user-only -40). verify 필요.
-- [x] **gh-pages 에러 (사용자 보고 2026-04-30)**: ✅ fix — `.github/workflows/deploy-pages.yml` 삭제. Cloudflare Pages 마이그레이션 후 GitHub Pages 불필요 (V3 시대 옛 workflow). main / v4-dev push 마다 trigger 됐던 거.
-- [ ] **useOpus 적용 범위 검토 (사용자 질문 2026-04-30)**: 헤더 모델 토글 = `state.preferences.useOpus`. 현재 `sendChat` (line 19982) 만 영향. 다른 호출 (마법 helpChat / 숙고 reflection / 돌연변이 / forceAnalyze / generateReview / firstTouch / 등) 은 *고정 모델*. 사용자 의도 = 토글 박으면 *모든 대화* opus 인지 / *메인 chat 만* opus 인지 결정 후 적용 범위 통일.
-- [ ] **admin 특혜 제거 (사용자 명시 2026-04-30)**: "관리자 계정이라고 결제 / 사용량 다르게 하지 말아줘". `_isAdmin()` 의 client UI 가드 (admin 잔액·충전 숨김) 제거 + `/api/chat` 의 admin 무료 사용 path 제거 + `_checkDailyChatCap` admin 우회 제거. admin 도 일반 사용자처럼 결제 / 사용량 흐름 사용. (admin 답변 권한 같은 *기능* 권한은 보존 — 결제 흐름만 일반화)
-- [x] **마법의 방 UI 작업 — 1차 (사용자 명시 2026-04-30)**: ✅ 진행. (1) 임시대화창 접근성 높이기 (askAIForStep 진입 버튼 4곳 보라 톤 + prominent). (2) 대화창 UI 깔끔 (.reflection-msg 말풍선 디자인 + magic-mode 보라 / reflection-mode 청록 차별). placeholder 마법 톤. _starter inline style 그대로 (작은 회색).
-- [ ] **마법의 방 고유 모티프 (다음 세션)**: 보라 색만으로 부족. 모래시계 / 14일 시각화 / 진행도 ring / 페이지 전환 swipe / 결정 detail 안 별 / 마법서 느낌 typography 등 추가 디자인.
+- [x] **모델 토글 위치 통일**: ✅ 검증 (2026-04-30 ultrathink) — 4곳 다 이미 헤더에 자리 잡혀있음. line 7559 (메인 헤더) / 7876 (숙고의 방) / 7897 (마법 helpChat) / 21915 (돌연변이 모달). 입력창에 박혀있던 적 X. todo 자체 stale.
+- [x] **마법의 방 UI 변경**: ✅ d9f73ac 에서 magic-mode 토글 + 보라 그라디언트 + .reflection-msg 말풍선 (cb1ce4a 1차). 숙고의 방과 동일 구조.
+- [x] **두 방 색 차별화**: ✅ 박힘. magic-mode = 보라 (#d4b8ff/#b89fde), reflection-mode = 청록 (#7ec8e3/#4cafb4). 1376~ CSS 분리.
+- [ ] **첫 진단 JSON parse error 박힘**: ⚠️ bd44e48 에서 quiz 자체 폐기됨 → 코어 #1 종료 snapshot 진단으로 변경. 이 에러 stale 가능성 — 새 흐름 (snapshot 진단) 에서 동일 에러 재현되는지 확인 필요. 재현 X 면 항목 폐기.
+- [x] **첫 진단 quiz 자체 재검토**: ✅ bd44e48 에서 폐기 + 코어 #1 종료 snapshot 진단으로 교체.
+- [ ] **첫 진단 → 튜토리얼 대화탭 통합 (사용자 요청 2026-04-30)**: 부분 진행 (bd44e48 — quiz 폐기 + snapshot 진단). 단 "튜토리얼 대화탭 안에서 자연 대화로 정보 수집 → 가설 추출" 형태는 아직. snapshot 진단으로 충분한지 사용자 확인 필요.
+- [ ] **시드데이터 + 리뷰 변경사항 반영 X 진단 (사용자 보고 2026-04-30)**: 1차 fix 박힘 (chapters/topicCards/pearls/archive/insights inject + monthly cutoffEnd + chat user-only -40). 시드 넣고 리뷰 돌려서 verify 필요. **사용자 브라우저 테스트만 가능**.
+- [x] **gh-pages 에러 (사용자 보고 2026-04-30)**: ✅ fix — `.github/workflows/deploy-pages.yml` 삭제 (bd44e48).
+- [ ] **useOpus 적용 범위 검토 (사용자 질문 2026-04-30)**: ea779a1 에서 마법/숙고 적용 (line 14098, 16289). 남은 호출 (forceAnalyze / generateReview / firstTouch / 돌연변이 / 등) 은 여전히 고정 모델. 토글 = *모든 AI 호출* opus / *대화 류만* opus 결정 필요.
+- [x] **admin 특혜 제거 (사용자 명시 2026-04-30)**: ✅ ea779a1 — client UI 가드 + /api/chat 무료 path + 일일 cap 우회 제거. 답변 권한 등 기능 권한은 보존.
+- [x] **마법의 방 UI 작업 — 1차 (사용자 명시 2026-04-30)**: ✅ cb1ce4a — askAIForStep 진입 버튼 4곳 보라 + .reflection-msg 말풍선 + magic-mode 보라/reflection-mode 청록 차별.
+- [x] **마법의 방 고유 모티프 (사용자 명시 2026-04-30 ultrathink)**: ✅ 0504007 — 14일 모래시계 SVG ring (보라 그라디언트 + 14일 도달 시 glow 애니메이션) + 10단계 dot 진행도 (locked / unlocked / done, DECISION_STEPS dayUnlock 기반). 홈 진행중 카드 + screen-decisions 둘 다 적용. magic-mode 결정 카드 보라 톤 강화 + screen-sub italic + model-section-title ✧ accent.
 
 ### 사용자 대기 노트 (우선순위 낮음)
 
