@@ -14499,6 +14499,16 @@ const ONBOARDING_STEPS = [
     waitFor: 'next',
     dimBackground: false
   },
+  // 사용자 보고 2026-05-01: 마감 직전 폭발력 신뢰 시드 카드 explanation 복원 — yangsaeng_explain 본문에서 분리해서 카드 spotlight 전용 step
+  {
+    id: 'yangsaeng_seed_card',
+    targetSelector: '.strategy-card[data-strategy-id="strat_seed_0"]',
+    title: '🌱 마감 직전 폭발력 신뢰',
+    body: '여기 <b>"마감 직전 폭발력 신뢰"</b> 카드가 예시야.<br><b>3번 성공</b>해서 <b>"성장 중"</b> 단계.<br><br>곧 이 카드로 무엇을 할 수 있는지 함께 보자.',
+    waitFor: 'next',
+    dimBackground: false,
+    fallbackPosition: 'top'
+  },
   {
     id: 'click_result_check',
     // 사용자 보고 2026-04-29: 튜토리얼이 가끔 다른 전략 카드 결과 체크 가리키던 거 — strat_seed_0로 명시 scope
