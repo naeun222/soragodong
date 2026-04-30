@@ -8691,6 +8691,11 @@ const DEFAULT_STATE = {
   chatArchive: [],          // [{date, summary, messageCount, messages, generatedAt}]
   chatArchiveLastRun: null, // 마지막 archive 작업 실행 날짜
 
+  // 사용자 명시 2026-04-30 ultrathink: 코어 #1 첫 진단 worry 데이터. testerMode OFF / 시드 sweep / backup restore 영향 X.
+  // 별도 array — chatMessages 와 격리 (회의 결정 B). traits/values/patterns 자동 합류 input.
+  // 형식: [{role:'user'|'assistant', content, ts, kind?:'first'|'deepen_q'|'detailed'|'analysis'}]
+  intakeWorry: [],
+
   // === V7 (V4) 신규 ===
   reflectionQuestions: [],  // 사고 질문 시스템 (anchor 30): [{id, text, status, conclusion, chatMessages, ...}]
   todaySchedule: [],        // 타임테이블: [{id, title, start, end, source:'manual'|'ai'|'gcal'|'task', taskId}]
@@ -10053,6 +10058,185 @@ function closeFirstTouchResult() {
   showToast('✦ 첫 진단 완료. 시작하자.');
   // 사용자 요청 2026-04-30: 첫 진단 close 후 → tutorial chooser (dismiss flag 없으면)
   setTimeout(() => { if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate(); }, 800);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 코어 #1 첫 진단 — Intake Worry 인터랙티브 흐름 (사용자 명시 2026-04-30 ultrathink)
+// 흐름: Step1 첫 발화 (한 마디/예시chip/음성) → Step2 AI deepening → Step3 장문 발화 → Step4 paraphrase → Step5 더 알고 싶어 → Step6 차원 분석 + 작은 전략 → Step7 traits/values/patterns 자동 합류
+// state.intakeWorry 별도 array — testerMode OFF / 시드 sweep / backup restore 영향 X
+// ═══════════════════════════════════════════════════════════════════════════
+
+// 예시 entry 7개 (한 줄 / 장문 페어). Step1 = 랜덤 1개 short chip / Step3 = 같은 페어 long (사용자 직접 입력 시 fallback = 다른 랜덤 또는 AI 동적).
+const INTAKE_EXAMPLES = [
+  {
+    id: 'mom_anger', icon: '💔',
+    short: '엄마한테 화냈어',
+    long: '엄마한테 별거 아닌 일로 화를 냈어. 통화하다가 잔소리해서 톡 쏘아붙였어. 끊고 나서 바로 후회됐는데 자주 그래. 왜 그러는지 모르겠어.'
+  },
+  {
+    id: 'project_block', icon: '💼',
+    short: '할 일이 자꾸 막혀',
+    long: '프로젝트 마감 다가오는데 손도 못 대. 시작만 하면 되는데 자꾸 다른 거 하다가 결국 마감 임박해서야 폭발할까 봐 걱정. 매번 그래.'
+  },
+  {
+    id: 'reject_guilt', icon: '💞',
+    short: '거절했는데 마음이 무거워',
+    long: '친구 부탁 거절했는데 자꾸 마음에 걸려. 거절은 맞다고 생각하는데 부채감이 안 사라져. 며칠째 그 생각만 떠올라.'
+  },
+  {
+    id: 'sleep_fog', icon: '🌙',
+    short: '잠을 못 자',
+    long: '머리는 피곤한데 누우면 잡생각이 멈추질 않아. 다음날 종일 멍해서 아무것도 못 해. 이게 한 달째.'
+  },
+  {
+    id: 'unknown_heavy', icon: '💭',
+    short: '이유 모르겠는데 무거워',
+    long: '큰 일 있는 것도 아닌데 그냥 가라앉아 있어. 며칠 됐어. 뭘 해도 마음이 잡히질 않고 의욕이 없어.'
+  },
+  {
+    id: 'path_doubt', icon: '🌠',
+    short: '이 길이 맞는 건지 헷갈려',
+    long: '지금까지 온 게 아까운 건지 진짜 좋아하는 건지 모르겠어. 가끔 그만두고 싶다가도 끝까지 가야 할 거 같고 — 답이 안 나와.'
+  },
+  {
+    id: 'overwhelmed', icon: '🔥',
+    short: '다 압도돼서 못 따라가',
+    long: '할 일이 너무 많아. 뭐부터 해야 할지 모르겠고 시작도 못 해. 한 발짝도 못 떼고 있는데 시간만 가. 답답해.'
+  }
+];
+
+function _intakePickRandomExample(excludeId) {
+  const pool = excludeId ? INTAKE_EXAMPLES.filter(e => e.id !== excludeId) : INTAKE_EXAMPLES;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// 짧음 detect — 15자 미만 = deepening 필요
+function _intakeShouldDeepen(text) {
+  if (!text) return true;
+  return text.trim().replace(/\s+/g, '').length < 15;
+}
+
+// Step2: AI 가 사용자 첫 짧은 발화 받고 한 번 더 풀어달라 부탁 (1-2 문장).
+async function _intakeDeepenAsk(userText) {
+  if (!_canAI()) throw new Error('AI 호출 불가능');
+  const prompt = `너는 소라고동 — 자기관찰 친구. 따뜻 + 짧게 + 반말.
+사용자가 첫 발화로 짧게 말했어. 한 번 더 풀어달라 부탁해.
+판단 X. 강요 X. 1-2 문장 follow-up 질문.
+사용자 발화의 핵심어 1개를 자연스럽게 paraphrase 안에 넣어.
+
+사용자 첫 발화: "${userText}"
+
+[출력]
+1-2 문장만. 다른 글 X. 따옴표 X.`;
+  const resp = await callAnthropic({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 200,
+    system: '소라고동 톤 — 따뜻하고 짧게. 1-2 문장만 출력. 따옴표·markdown X.',
+    messages: [{ role: 'user', content: prompt }]
+  });
+  if (!resp.ok) throw new Error('API ' + resp.status);
+  const data = await resp.json();
+  return (data?.content?.[0]?.text || '').trim();
+}
+
+// Step3: AI 가 사용자 첫 발화 받고 장문 entry 1개 모방용 생성 (50-100자, 상황+감정+자기관찰).
+async function _intakeGenLongExample(userText) {
+  if (!_canAI()) throw new Error('AI 호출 불가능');
+  const prompt = `사용자가 첫 발화로 "${userText}" 라고 말했어 (짧음).
+이걸 자연스럽게 풀어 적은 장문 entry 1개를 모방용으로 생성해 — "이런 식으로 풀면 돼" 학습용.
+50-100자, 상황 + 감정 + 자기관찰 3축, 반말, 자연 한국어.
+사용자 발화의 핵심 그대로 살리면서 살 붙임.
+
+[출력]
+장문 entry 1개만. 다른 글 X. 따옴표 X.`;
+  const resp = await callAnthropic({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 300,
+    system: '장문 entry 1개만 출력. 50-100자. 따옴표·markdown X.',
+    messages: [{ role: 'user', content: prompt }]
+  });
+  if (!resp.ok) throw new Error('API ' + resp.status);
+  const data = await resp.json();
+  return (data?.content?.[0]?.text || '').trim();
+}
+
+// Step6: 전체 intakeWorry chat 받아 차원 분석 + 작은 전략 + traits/values/patterns 가설 생성.
+async function _intakeAnalyze(intakeWorry) {
+  if (!_canAI()) throw new Error('AI 호출 불가능');
+  const chatText = (intakeWorry || []).map(m => `${m.role === 'user' ? '사용자' : '소라고동'}: ${m.content}`).join('\n');
+  const prompt = `사용자 김나은 — 첫 만남 미니 분석. 다음 대화 보고 차원 진단 + 작은 전략 + 자기관찰 가설.
+
+[대화 전체]
+${chatText}
+
+[너의 일]
+1. paraphrase: 사용자 발화 핵심 1줄 인용 또는 paraphrase
+2. dimension: 환경 / 인지 / 사회 / 정체성 / 가치 중 1개 (가장 작동하는 차원)
+3. diagnosis: 1-2 문장. 판단 X. 자기관찰 톤.
+4. strategy: 1-2 문장. 환경 cuing 우선. ADHD 친화. 구체.
+5. hypotheses: trait / value / pattern 가설 1-3개 (user_verified=false, confidence 0.4-0.6)
+
+[가설 schema]
+- trait: name (10자 이내) + description (한 문장) + display_text (✓ 박스용 친근 한 줄)
+- value: name (5자 이내) + description (한 문장) + display_text
+- pattern: name (10자 이내) + trigger (조건) + sequence (행동 흐름) + display_text
+
+[톤]
+친한 친구 반말. judgment X. self-compassion. 첫 만남이라 confidence 낮게.
+Surprise > Truth. Specific > Generic.
+
+[출력 JSON 만, markdown X]
+{
+  "paraphrase": "...",
+  "dimension": "환경/인지/사회/정체성/가치 중 하나",
+  "diagnosis": "1-2 문장",
+  "strategy": "1-2 문장",
+  "hypotheses": [
+    { "category": "trait" | "value" | "pattern", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." }
+  ]
+}`;
+  const resp = await callAnthropic({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1500,
+    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
+    messages: [{ role: 'user', content: prompt }]
+  });
+  if (!resp.ok) throw new Error('API ' + resp.status);
+  const data = await resp.json();
+  const text = data?.content?.[0]?.text || '';
+  return _robustJsonExtract(text);
+}
+
+// 분석 결과의 hypotheses → state.traits/values/patterns 자동 합류 (user_verified=false).
+function _intakeApplyHypotheses(hypotheses) {
+  if (!Array.isArray(hypotheses)) return;
+  state.traits = state.traits || [];
+  state.values = state.values || [];
+  state.patterns = state.patterns || [];
+  hypotheses.forEach((h, i) => {
+    if (!h || !h.category || !h.name) return;
+    const id = 'intake_' + h.category + '_' + Date.now() + '_' + i;
+    const base = {
+      id,
+      name: h.name,
+      description: h.description || '',
+      display_text: h.display_text || h.name,
+      confidence: typeof h.confidence === 'number' ? h.confidence : 0.5,
+      user_verified: false,
+      evidence_count: 1,
+      created_at: new Date().toISOString(),
+      source: 'intake_core1'
+    };
+    if (h.category === 'trait') state.traits.push(base);
+    else if (h.category === 'value') state.values.push(base);
+    else if (h.category === 'pattern') {
+      state.patterns.push({
+        ...base,
+        trigger: h.trigger || '',
+        sequence: h.sequence || ''
+      });
+    }
+  });
 }
 
 async function maybeShowE2EESetupForNewUser() {
