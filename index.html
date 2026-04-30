@@ -9063,20 +9063,24 @@ async function submitE2EERecovery() {
     status.style.color = '#e89090';
     return;
   }
-  // 사용자 보고 2026-04-30: localStorage에 recovery 자체가 없는 경우 명확히 안내.
-  // 비밀번호 일치 X 메시지 = 비밀번호 잘못 입력 vs recovery 자체 없음 구분 안 됨 → 사용자 혼란.
-  const hasRecoveryLocal = !!(typeof localStorage !== 'undefined' && localStorage.getItem('soragodong_v4_e2ee_recovery'));
-  if (!hasRecoveryLocal) {
-    status.textContent = '이 기기에 비밀번호 정보가 없어요. 아래 [🔓 비밀번호 잊음] 으로 백업에서 복원해주세요.';
-    status.style.color = '#e89090';
-    return;
-  }
-  status.textContent = '복호화 중...';
+  // 사용자 보고 2026-04-30 ultrathink: localStorage 비어있어도 cloud _e2eeRecovery 에서 가져옴 (multi-source fallback).
+  // 옛 hasRecoveryLocal check 는 multi-source fallback 박혀서 더 이상 필요 X — _e2eeRestoreFromPassphrase 가 NO_RECOVERY 던지면 그때 안내.
+  status.textContent = '복호화 중... (recovery 후보 다 시도)';
   status.style.color = 'var(--text-soft)';
   try {
-    const masterKey = await _e2eeRestoreFromPassphrase(password);
+    let masterKey;
+    try {
+      masterKey = await _e2eeRestoreFromPassphrase(password);
+    } catch (e) {
+      if (e && e.code === 'NO_RECOVERY') {
+        status.textContent = 'recovery 정보가 어디에도 없어요 (localStorage + cloud 둘 다). [🔓 비밀번호 잊음] 으로 평문 백업에서 복원해주세요.';
+        status.style.color = '#e89090';
+        return;
+      }
+      throw e;
+    }
     if (!masterKey) {
-      status.textContent = '비밀번호 일치 X. 다시 확인해주세요. (Caps Lock / 한영 / 자판 확인)';
+      status.textContent = '비밀번호 일치 X (모든 recovery source 시도). Caps Lock / 한영 / 자판 / 자주 쓰는 변형 확인. 또는 [🔓 비밀번호 잊음].';
       status.style.color = '#e89090';
       return;
     }
@@ -9840,20 +9844,87 @@ function refreshE2EEStatus() {
 
 // password 입력 → 암호화된 마스터 키 복호화 → 마스터 키 복원 (새 device 진입 시).
 async function _e2eeRestoreFromPassphrase(password) {
+  // 사용자 보고 2026-04-30 ultrathink 진단: localStorage e2ee_recovery 만 보면 cloud sync 분기 / 비번 변경 부분-갱신 / mk rotate 잔여 케이스에서 unwrap 실패.
+  // multi-source fallback — localStorage + cloud(me_v4 / me_v4_backup / auto_backup / manual_backup) 의 _e2eeRecovery 다 시도.
+  // 어느 한 source 가 사용자 비번 + cloud body decrypt 둘 다 통과하면 그게 truth → master key 박음.
+  const candidates = [];
+  // (a) localStorage
   try {
-    const recovery = JSON.parse(localStorage.getItem('soragodong_v4_e2ee_recovery') || 'null');
-    if (!recovery) return null;
-    const passwordKey = await _e2eePassphraseToKey(password, recovery.salt);
-    const masterKeyB64 = await _e2eeDecrypt(recovery.encryptedMasterKey, passwordKey);
-    if (!masterKeyB64) throw new Error('password 일치 X');
-    const masterKey = await _e2eeImportKey(masterKeyB64);
-    _e2eeMasterKey = masterKey;
-    localStorage.setItem(_E2EE_LOCAL_KEY, masterKeyB64);
-    return masterKey;
-  } catch (e) {
-    console.warn('[e2ee] password 복원 실패:', e);
-    return null;
+    const local = JSON.parse(localStorage.getItem('soragodong_v4_e2ee_recovery') || 'null');
+    if (local && local.salt && local.encryptedMasterKey) {
+      candidates.push({ source: 'localStorage', salt: local.salt, encryptedMasterKey: local.encryptedMasterKey });
+    }
+  } catch {}
+  // (b) cloud rows — main + backup 들
+  if (typeof authUserId === 'string' && authUserId && typeof SUPABASE_URL === 'string') {
+    const cloudIds = [V4_USER_ID, V4_TESTER_BACKUP_USER_ID, V4_AUTO_BACKUP_USER_ID, V4_MANUAL_BACKUP_USER_ID];
+    for (const uid of cloudIds) {
+      try {
+        const resp = await fetch(
+          `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${uid}&select=data&limit=1`,
+          { headers: authHeaders() }
+        );
+        if (!resp.ok) continue;
+        const rows = await resp.json();
+        const rec = rows[0] && rows[0].data && rows[0].data._e2eeRecovery;
+        if (rec && rec.salt && rec.encryptedMasterKey) {
+          const dup = candidates.some(c => c.salt === rec.salt && c.encryptedMasterKey === rec.encryptedMasterKey);
+          if (!dup) candidates.push({ source: 'cloud:' + uid, salt: rec.salt, encryptedMasterKey: rec.encryptedMasterKey });
+        }
+      } catch (e) { console.warn('[e2ee] cloud recovery fetch 실패 (' + uid + '):', e); }
+    }
   }
+  if (candidates.length === 0) {
+    const err = new Error('NO_RECOVERY');
+    err.code = 'NO_RECOVERY';
+    throw err;
+  }
+  console.log('[e2ee] recovery 후보 ' + candidates.length + '개:', candidates.map(c => c.source));
+  // 각 후보 시도 — 비번 unwrap + cloud body decrypt 둘 다 통과해야 truth
+  const cloudBody = window._e2eePendingRecovery && window._e2eePendingRecovery._encryptedBody;
+  let unwrapOnlySuccess = null;  // unwrap 만 성공한 첫 후보 (cloud body 손상 시 fallback)
+  for (const cand of candidates) {
+    try {
+      const passwordKey = await _e2eePassphraseToKey(password, cand.salt);
+      const masterKeyB64 = await _e2eeDecrypt(cand.encryptedMasterKey, passwordKey);
+      if (!masterKeyB64) continue;  // 이 source 비번 mismatch
+      const masterKey = await _e2eeImportKey(masterKeyB64);
+      // cloud body verify
+      if (cloudBody) {
+        let bodyOk = false;
+        try {
+          const test = await _e2eeDecrypt(cloudBody, masterKey);
+          bodyOk = !!test;
+        } catch (e) {
+          console.warn('[e2ee] ' + cand.source + ' cloud body decrypt 예외:', e);
+        }
+        if (!bodyOk) {
+          console.warn('[e2ee] ' + cand.source + ' unwrap OK 인데 cloud body decrypt 실패. 다음 후보 시도.');
+          if (!unwrapOnlySuccess) unwrapOnlySuccess = { masterKey, masterKeyB64, cand };
+          continue;
+        }
+      }
+      // 성공 — master key 박고 recovery 도 best source 로 갱신
+      _e2eeMasterKey = masterKey;
+      localStorage.setItem(_E2EE_LOCAL_KEY, masterKeyB64);
+      localStorage.setItem('soragodong_v4_e2ee_recovery', JSON.stringify({ salt: cand.salt, encryptedMasterKey: cand.encryptedMasterKey }));
+      console.log('[e2ee] master key 복원 성공 (source: ' + cand.source + ', cloud body verify: ' + !!cloudBody + ')');
+      return masterKey;
+    } catch (e) {
+      console.warn('[e2ee] ' + cand.source + ' 시도 예외:', e);
+      continue;
+    }
+  }
+  // 모든 후보가 cloud body verify 실패 → unwrap 만 성공한 거라도 박음 (사용자 비번 옳다는 증거. cloud body 는 별도 master key 로 wrap된 상태 — submit 단계의 blob 손상 alert 흐름으로 자연스럽게 진행)
+  if (unwrapOnlySuccess) {
+    console.warn('[e2ee] cloud body 푸는 master key 없음. ' + unwrapOnlySuccess.cand.source + ' 의 master key 박음 (unwrap 만 성공). cloud body 평문 backup 복원 필요.');
+    _e2eeMasterKey = unwrapOnlySuccess.masterKey;
+    localStorage.setItem(_E2EE_LOCAL_KEY, unwrapOnlySuccess.masterKeyB64);
+    localStorage.setItem('soragodong_v4_e2ee_recovery', JSON.stringify({ salt: unwrapOnlySuccess.cand.salt, encryptedMasterKey: unwrapOnlySuccess.cand.encryptedMasterKey }));
+    return unwrapOnlySuccess.masterKey;
+  }
+  console.warn('[e2ee] 모든 recovery 후보 (' + candidates.length + '개) unwrap 실패 — 비번 mismatch 또는 모든 source 손상');
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════════
