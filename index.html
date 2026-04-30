@@ -11527,6 +11527,16 @@ function _annualReviewRender() {
   // 슬라이드별 노래 (사용자 명시 2026-04-30: 자동 재생 + 반복 재생 + LP 회전 artwork)
   const songData = (s.data && s.data.songs) ? s.data.songs[`card${s.currentIdx + 1}`] : null;
   if (songData && songData.previewUrl) {
+    // 사용자 보고 2026-05-01: 진주 미리듣기 (toggleMusicPreview 의 _currentMusicAudio) 와 중첩 차단 — 연간 리뷰 진입 시 강제 pause.
+    if (typeof _currentMusicAudio !== 'undefined' && _currentMusicAudio) {
+      try { _currentMusicAudio.pause(); } catch {}
+      if (typeof _currentMusicBtn !== 'undefined' && _currentMusicBtn) {
+        _currentMusicBtn.textContent = '▶';
+        _currentMusicBtn.classList.remove('playing');
+      }
+      _currentMusicAudio = null;
+      if (typeof _currentMusicBtn !== 'undefined') _currentMusicBtn = null;
+    }
     if (!window._annAudio) {
       window._annAudio = new Audio();
       window._annAudio.volume = 0.5;
@@ -36759,6 +36769,10 @@ let _currentMusicBtn = null;
 // 사용자 요청 2026-04-28: V3 동작 참고 — 에러 핸들링 + autoplay 정책 대응 강화
 function toggleMusicPreview(btn, url) {
   if (!url) { showToast('재생할 음원 URL이 없어'); return; }
+  // 사용자 보고 2026-05-01: 연간 리뷰 BGM (window._annAudio) 와 중첩 차단 — 진주 미리듣기 시 강제 pause.
+  if (window._annAudio && !window._annAudio.paused) {
+    try { window._annAudio.pause(); } catch {}
+  }
   if (_currentMusicAudio && _currentMusicBtn !== btn) {
     try { _currentMusicAudio.pause(); } catch {}
     if (_currentMusicBtn) {
