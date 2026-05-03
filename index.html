@@ -7765,6 +7765,17 @@
     border: 1px solid var(--border);
     border-radius: 14px;
   }
+  /* 사용자 보고 2026-05-04 (VB029): 월 전환 슬라이드 시각 피드백 */
+  @keyframes cal-slide-prev {
+    from { transform: translateX(18px); opacity: 0.35; }
+    to   { transform: translateX(0);     opacity: 1; }
+  }
+  @keyframes cal-slide-next {
+    from { transform: translateX(-18px); opacity: 0.35; }
+    to   { transform: translateX(0);     opacity: 1; }
+  }
+  .cal-grid-wrap.cal-month-slide-prev { animation: cal-slide-prev 0.32s ease; }
+  .cal-grid-wrap.cal-month-slide-next { animation: cal-slide-next 0.32s ease; }
   .cal-nav {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 10px;
@@ -15302,6 +15313,23 @@ async function init() {
 
   await loadFromCloud();
   window._initialDataLoading = false;
+
+  // 사용자 보고 2026-05-04 (VB022): 신규 사용자 기준 초반 잠금이 기존 사용자에게 잘못 적용되던 버그 fix.
+  // root cause = init() 초입 (line ~15206) 의 _core2NotUnlocked detect 가 cloud load 전 → 새 device 진입 한 기존 사용자도 missions/shells/topicCards 비어있어서 신규 처리.
+  // fix = cloud load 후 재평가 — 실제 데이터 (entries / chatMessages / shellCollection / topicCards / hasSeenWelcomeTutorial / hasSeenV3Tour) 있으면 잠금 해제 강제.
+  try {
+    const _hasRealData = (state.entries || []).length > 0
+      || (state.chatMessages || []).length > 0
+      || (state.shellCollection || []).length > 0
+      || (state.topicCards || []).length > 0
+      || (state.missions || []).length > 0
+      || state.hasSeenWelcomeTutorial === true
+      || state.hasSeenV3Tour === true;
+    if (_hasRealData && state._core2NotUnlocked) {
+      state._core2NotUnlocked = false;
+      saveState();
+    }
+  } catch (e) { console.warn('[VB022 unlock re-eval]:', e); }
 
   // 사용자 요청 2026-04-30 (변호사 검수): 동의는 이메일 로그인 화면에 통합 (모달 X). consentLog 적용됨.
 
@@ -24767,18 +24795,33 @@ function renderBeach() {
   const dnaPearls = (state.pearls || []).filter(p => p.type === 'dna_pearl');
   const showDnaSection = (_beachTab === 'tier' || _beachTab === 'all') && dnaPearls.length > 0;
   // 사용자 요청 2026-04-28: DNA 조각 검출 강화 — strategy generations.shells / attempts.shellId 모두 체크
+  // 사용자 보고 2026-05-04 (B14/B15): _dnaShellIdSet 빌드 시 attempt 의 worked/meh 만 인정 — stale 'didnt' shellId / g.shells 잔재 차단.
   const _dnaShellIdSet = new Set();
   (state.topicCards || []).forEach(c => {
     if (c.category !== 'strategy' || !Array.isArray(c.generations)) return;
     c.generations.forEach(g => {
-      if (Array.isArray(g.shells)) g.shells.forEach(sid => _dnaShellIdSet.add(sid));
-      (g.attempts || []).forEach(a => { if (a.shellId) _dnaShellIdSet.add(a.shellId); });
+      const _workedShellIds = new Set();
+      (g.attempts || []).forEach(a => {
+        if (a.shellId && (a.status === 'worked' || a.status === 'meh')) {
+          _workedShellIds.add(a.shellId);
+          _dnaShellIdSet.add(a.shellId);
+        }
+      });
+      // g.shells fallback — 단 같은 generation 의 worked/meh attempt 와 매칭되어야 인정
+      if (Array.isArray(g.shells)) {
+        g.shells.forEach(sid => { if (_workedShellIds.has(sid)) _dnaShellIdSet.add(sid); });
+      }
     });
   });
   function _isDnaShell(s) {
     if (!s) return false;
     // 사용자 요청 2026-04-28: DNA 조각은 '소라의 부름' tier (call/legend)만 — 일반 오늘카드 소라는 제외
     if (s.tier !== 'call' && s.tier !== 'legend') return false;
+    // 사용자 보고 2026-05-04 (B14/B15): missionId 추적 → mission 의 attemptStatus 가 worked/meh 일 때만 DNA. 'didnt'/'skipped'/미해결 (없음) → DNA X.
+    if (s.missionId) {
+      const _m = (state.missions || []).find(mm => mm.id === s.missionId);
+      if (_m && _m.attemptStatus !== 'worked' && _m.attemptStatus !== 'meh') return false;
+    }
     if (s._id && _dnaShellIdSet.has(s._id)) return true;
     // 사용자 보고 2026-04-29: legacy fallback이 attemptStatus 체크 없어 결과 체크 안 한 소라도 DNA로 판정. attemptStatus === 'worked' 인 미션만 DNA 인정.
     if (s.missionId && (state.missions || []).some(m => m.id === s.missionId && m.strategyId && m.attemptStatus === 'worked')) return true;
@@ -25151,10 +25194,17 @@ function openShellStory(shellIdx) {
   })[shell.tier] || '소라';
 
   // 사용자 요청 2026-04-27: DNA 조각인지 확인 (어떤 strategy generation의 shells에 속함)
-  const dnaStrategy = (state.topicCards || []).find(c =>
+  // 사용자 보고 2026-05-04 (B14/B15): missionId 가 있으면 attemptStatus 'worked'/'meh' 일 때만 DNA 인정.
+  // 'didnt' (실패) / 미해결 (attemptStatus 없음) → DNA 표시 X.
+  let _missionGate = true;
+  if (shell.missionId) {
+    const _m = (state.missions || []).find(mm => mm.id === shell.missionId);
+    if (_m && _m.attemptStatus !== 'worked' && _m.attemptStatus !== 'meh') _missionGate = false;
+  }
+  const dnaStrategy = _missionGate ? (state.topicCards || []).find(c =>
     c.category === 'strategy' && Array.isArray(c.generations) &&
     c.generations.some(g => Array.isArray(g.shells) && g.shells.includes(shell._id))
-  );
+  ) : null;
   const isDnaPiece = !!dnaStrategy;
 
   const overlay = document.createElement('div');
@@ -31549,6 +31599,16 @@ let _calMonthOffset = 0;  // 0 = 이번 달, -1 = 지난 달
 function shiftCalMonth(delta) {
   _calMonthOffset += delta;
   renderLensCalendarGrid();
+  // 사용자 보고 2026-05-04 (VB029): 월 전환 시 캘린더 보이게 자동 스크롤 + 슬라이드 시각 피드백 (5월로 넘어가도 4월 캘린더 안 보이던 버그).
+  try {
+    const _wrap = document.querySelector('#lensCalendarGrid .cal-grid-wrap');
+    if (_wrap) {
+      _wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      _wrap.classList.remove('cal-month-slide-prev', 'cal-month-slide-next');
+      _wrap.classList.add(delta < 0 ? 'cal-month-slide-prev' : 'cal-month-slide-next');
+      setTimeout(() => { try { _wrap.classList.remove('cal-month-slide-prev', 'cal-month-slide-next'); } catch {} }, 360);
+    }
+  } catch (e) { console.warn('[shiftCalMonth scroll]:', e); }
 }
 
 function jumpToTimelineDate(dateStr) {
@@ -37396,13 +37456,19 @@ async function runDiaryAutoSummaryIfNeeded() {
     if (entry.diary) continue;
     if (entry.aiSummary) continue;
     if (entry._pendingDiarySummary) continue;  // batch 가 처리 중 — race 차단
+    // 사용자 보고 2026-05-04 (B16): testerMode 아닐 때 시드 entry 제외 — '엄마 김치찌개' 등 더미 데이터 요약 노출 차단.
+    const _isTesterDS = !!(state.preferences && state.preferences.testerMode);
+    if (!_isTesterDS && entry._seed) continue;
 
     let messages = (state.chatMessages || []).filter(m =>
       m.timestamp && getDayKey(m.timestamp) === dateKey && !m.typing && !m.error
+      && (_isTesterDS || !m._seed)
     );
     if (messages.length < 2) {
-      const archived = (state.chatArchive || []).find(a => a.date === dateKey);
-      if (archived && Array.isArray(archived.messages)) messages = archived.messages;
+      const archived = (state.chatArchive || []).find(a => a.date === dateKey && (_isTesterDS || !a._seed));
+      if (archived && Array.isArray(archived.messages)) {
+        messages = archived.messages.filter(m => _isTesterDS || !m._seed);
+      }
     }
 
     const hasContext = messages.length >= 2 || entry.vitality != null || entry.mood != null || (entry.note && entry.note.trim());
@@ -42107,13 +42173,19 @@ function _buildDiaryBatchRequests() {
     if (entry.diary) continue;
     if (entry.aiSummary) continue;
     if (entry._pendingDiarySummary) continue;  // 이미 batch 가 처리 중
+    // 사용자 보고 2026-05-04 (B16): testerMode 아닐 때 시드 entry 제외 — '엄마 김치찌개' 등 더미 데이터 batch 요약 노출 차단.
+    const _isTesterBD = !!(state.preferences && state.preferences.testerMode);
+    if (!_isTesterBD && entry._seed) continue;
 
     let messages = (state.chatMessages || []).filter(m =>
       m.timestamp && (typeof getDayKey === 'function' ? getDayKey(m.timestamp) : '') === dateKey && !m.typing && !m.error
+      && (_isTesterBD || !m._seed)
     );
     if (messages.length < 2) {
-      const archived = (state.chatArchive || []).find(a => a.date === dateKey);
-      if (archived && Array.isArray(archived.messages)) messages = archived.messages;
+      const archived = (state.chatArchive || []).find(a => a.date === dateKey && (_isTesterBD || !a._seed));
+      if (archived && Array.isArray(archived.messages)) {
+        messages = archived.messages.filter(m => _isTesterBD || !m._seed);
+      }
     }
     const hasContext = messages.length >= 2 || entry.vitality != null || entry.mood != null || (entry.note && entry.note.trim());
     if (!hasContext) continue;
