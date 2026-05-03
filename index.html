@@ -10220,7 +10220,7 @@
         <div class="settings-collapse-body">
           <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
           <button class="btn-secondary" onclick="showCoreReplayPicker()">🔧 개별 코어 튜토리얼</button>
-          <button class="btn-secondary" onclick="_chooseUpdateOption('full')">✨ 풀 튜토리얼 (처음부터 끝까지)</button>
+          <button class="btn-secondary" onclick="(function(){ window._fullTutorialActive = true; if (typeof startInteractiveOnboarding === 'function') startInteractiveOnboarding(); })()">✨ 풀 튜토리얼 (처음부터 끝까지)</button>
           <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
         </div>
       </details>
@@ -12729,20 +12729,20 @@ function _annTogglePlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 사용자 명시 2026-04-30: 옛 5문항 quiz 흐름 완전 폐기. 새 진단 흐름 = chat_intake_entry 모달 + runIntakeFlow.
-// 이 진입 함수는 신규 사용자 환영 보너스 + 튜토리얼 chooser trigger 만 담당.
+// 사용자 명시 2026-04-30: 옛 5문항 quiz 흐름 완전 폐기. 새 흐름 = chat_intake_entry 모달 + runIntakeFlow.
+// V4 사용자 명시 (V203): chooser 컴포넌트 폐기. 신규 가입자 = 비밀번호 설정 → 시작 튜토리얼 자동 직진.
+// 이 진입 함수: 신규 사용자 silent welcome bonus grant + 자동 튜토리얼 진입.
 async function maybeShowFirstTimeIntro() {
   if (!authUserId) return;
   if (window._onbTutorialMode) return;
-  // testerMode = chooser fallback (관리자 사용성)
+  // testerMode = banner queue 만 (chooser 폐기)
   if (state.preferences && state.preferences.testerMode) {
     if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
     return;
   }
-  // 다른 모달 떠있으면 skip (E2EE / update chooser / 튜토리얼)
+  // 다른 모달 떠있으면 skip (E2EE / 튜토리얼)
   if (document.getElementById('e2eeRecoveryOverlay')) return;
   if (document.getElementById('e2eeSetupOverlay')) return;
-  if (document.querySelector('.update-chooser-overlay')) return;
   if (document.getElementById('onbOverlay') && document.getElementById('onbOverlay').classList.contains('active')) return;
   // 사용자 명시 2026-04-30 ultrathink: 환영 모달 strict gate — 다시 뜨면 손해 위험.
   // 옛 흐름: client _welcomeBonusShown flag 만 체크 → cloud sync 실패 / clear cache / 새 device 시 재출현 risk.
@@ -12781,7 +12781,21 @@ async function maybeShowFirstTimeIntro() {
       }
     } catch (e) { console.warn('[silent welcome grant]:', e); }
   }
-  // tutorial chooser (코어 #1 진입 안내) — '하면서 익히기' 클릭 시 startCoreTutorial('core1') → 새 4 step → Core 1 끝 환영 선물 모달 (시각 효과만, backend 는 already_granted)
+
+  // V4 사용자 명시 (V203): chooser 폐기. 신규 가입자 = 비밀번호 설정 후 시작 튜토리얼 자동 직진.
+  // 한 번만 (preferences._coreTutorialAutoStarted) — reload 시 재트리거 X.
+  const isFreshUser = entriesCountSilent <= 3 && !(state.preferences && state.preferences._coreTutorialAutoStarted);
+  if (isFreshUser && typeof startCoreTutorial === 'function') {
+    state.preferences = state.preferences || {};
+    state.preferences._coreTutorialAutoStarted = true;
+    state.preferences.dismissedMajor = (typeof _currentMajor === 'function') ? _currentMajor() : (typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V4');
+    try { saveState({ force: true }); } catch {}
+    if (typeof saveToCloudNow === 'function') { saveToCloudNow().catch(() => {}); }
+    setTimeout(() => { try { startCoreTutorial('core1'); } catch (e) { console.warn('[auto core tutorial]:', e); } }, 600);
+    return;
+  }
+
+  // 기존 사용자 = 배너 큐만 (legacy / sync tip / feedback). chooser 모달 X.
   if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
 }
 
@@ -13227,7 +13241,7 @@ function closeFirstTouchResult() {
   const overlay = document.getElementById('firstTouchResultOverlay');
   if (overlay) overlay.remove();
   showToast('✦ 첫 관찰 완료. 시작하자.');
-  // 사용자 요청 2026-04-30: 첫 관찰 close 후 → tutorial chooser (dismiss flag 없으면)
+  // 사용자 요청 2026-04-30 + V203 (chooser 폐기): 첫 관찰 close 후 → 배너 큐 trigger (legacy bonus / sync tip / feedback)
   setTimeout(() => { if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate(); }, 800);
 }
 
@@ -14235,7 +14249,7 @@ async function submitE2EESetup() {
     const overlay = document.getElementById('e2eeSetupOverlay');
     if (overlay) overlay.remove();
     showToast('🔐 E2EE 활성화 완료 — 회사조차 귀하의 데이터를 열람할 수 없습니다');
-    // 사용자 보고 2026-04-30: E2EE setup 닫힌 후 환영 모달 + 튜토리얼 chooser 재트리거 (firstTimeIntro race fix).
+    // 사용자 보고 2026-04-30 + V203 (chooser 폐기): E2EE setup 닫힌 후 firstTimeIntro 재트리거 (silent 환영 보너스 + 자동 코어 튜토리얼 진입).
     setTimeout(() => {
       if (typeof maybeShowFirstTimeIntro === 'function') {
         maybeShowFirstTimeIntro().catch(e => console.warn('firstTimeIntro after e2ee:', e));
@@ -14252,7 +14266,7 @@ function cancelE2EESetup() {
   if (overlay) overlay.remove();
   // dismiss 적용됨 — 다음 진입 시 자동 권유 X (Settings에서 명시 활성 가능)
   try { localStorage.setItem('soragodong_v4_e2ee_setup_dismissed', new Date().toISOString()); } catch {}
-  // 사용자 보고 2026-04-30: cancel 후에도 환영 모달 + 튜토리얼 chooser 재트리거.
+  // 사용자 보고 2026-04-30 + V203 (chooser 폐기): cancel 후에도 firstTimeIntro 재트리거 (silent 환영 보너스 + 자동 코어 튜토리얼 진입).
   setTimeout(() => {
     if (typeof maybeShowFirstTimeIntro === 'function') {
       maybeShowFirstTimeIntro().catch(e => console.warn('firstTimeIntro after e2ee cancel:', e));
@@ -15466,7 +15480,7 @@ async function init() {
     setTimeout(() => { runAutoBackupIfNeeded().catch(e => console.warn('autoBackup:', e)); }, 3000);
   }
 
-  // 사용자 명시 2026-04-30 ultrathink (정정): 옛 quiz 흐름 폐기 → 환영 보너스 + 튜토리얼 chooser trigger.
+  // 사용자 명시 2026-04-30 ultrathink (정정) + V203 (chooser 폐기): silent 환영 보너스 + 자동 코어 튜토리얼 진입.
   if (typeof maybeShowFirstTimeIntro === 'function') {
     setTimeout(() => { maybeShowFirstTimeIntro().catch(e => console.warn('firstTimeIntro:', e)); }, 4500);
   }
@@ -17139,10 +17153,8 @@ function _cleanupCoreOverrides() {
 }
 
 // V4 (사용자 요청 2026-04-29): 설정 → 🐚 투어 다시 보기
-// 홈 화면 업데이트 모달과 똑같은 3 버튼 모달 띄우기 (코어/풀/이미 알아)
+// V4 사용자 명시 (V203): chooser 폐기 — 코어 #1 직접 진입 (사용자가 명시 click 한 거라 명확).
 function showTutorialReplayMenu() {
-  if (typeof showUpdateChooserModal === 'function') return showUpdateChooserModal();
-  // fallback
   if (typeof startCoreTutorial === 'function') return startCoreTutorial('core1');
   return startInteractiveOnboarding();
 }
@@ -20028,35 +20040,24 @@ function _collectReviewData(type) {
 
 // 리뷰 prompt 빌더 — system / model / max_tokens / userMessage / _endpoint 반환.
 // 사용자 명시 2026-05-02 ultrathink (ERROR #9): entries 0개 = null return → caller skip.
+// V4 사용자 명시 (V190): batch API 전환 + cache_control 분리 (buildSystemPrompt 패턴).
+//   stable 가이드 (목표 / Detective / 일상어 / 톤 / 출력 JSON 스키마) → system + ephemeral cache → 90% 비용 ↓
+//   volatile 데이터 (기간 데이터 / 알려진 사용자 / 지난 씨앗) → userMessage
+//   inline (generateReview) / batch (_buildReviewBatchRequests) 둘 다 같은 spec 사용 → 동시 적용.
 function _buildReviewPrompt(type, data) {
   const { entriesInRange, missionsInRange, chatInRange, decisionsInRange, topicCardsInRange, pearlsInRange, archiveInRange, insightsInRange, chaptersInRange, prevSeeds } = data;
   if (!entriesInRange || entriesInRange.length === 0) return null;
 
   const periodLabel = type === 'weekly' ? '주' : '달';
-  const prompt = `너는 사용자의 ${type === 'weekly' ? '주간' : '월간'} 리뷰를 작성한다.
+
+  // ─── STABLE (cache_control ephemeral) ───
+  const stable = `너는 사용자의 ${type === 'weekly' ? '주간' : '월간'} 리뷰를 작성한다.
 
 [목표]
 단순 요약 X. **Detective** — 사용자가 못 본 cross-pattern 발견.
 사용자 자신의 인용 5개 → 자기친밀감.
 다음 리뷰 때 다시 볼 '씨앗' 적용하기 → 리뷰 간 continuity.
 ${type === 'monthly' ? '이번 달의 너를 한 단어로 명명 (정체성 hook).' : ''}
-
-[기간 데이터]
-체크인: ${JSON.stringify(entriesInRange, null, 2).slice(0, 4000)}
-미션: ${JSON.stringify(missionsInRange.map(m => ({title: m.title, status: m.status, attemptStatus: m.attemptStatus, strategyId: m.strategyId})), null, 2).slice(0, 1500)}
-대화 발췌 (사용자): ${chatInRange.map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3000)}
-결정 + 예측: ${JSON.stringify(decisionsInRange.map(d => ({title: d.title, status: d.status, finalDecision: d.finalDecision, predictions: d.predictions})), null, 2).slice(0, 1500)}
-챕터: ${JSON.stringify(chaptersInRange.map(c => ({date: c.date, messageCount: c.messageCount})), null, 0).slice(0, 1500)}
-가닥(topicCards): ${JSON.stringify(topicCardsInRange.map(t => ({title: t.title, summary: t.summary, category: t.category})), null, 0).slice(0, 1500)}
-진주: ${JSON.stringify(pearlsInRange.map(p => ({content: p.content, note: p.note})), null, 0).slice(0, 1000)}
-스크랩(archive): ${JSON.stringify(archiveInRange.map(a => ({headline: a.headline, body: (a.body || '').slice(0, 200), tags: a.tags, starred: a.starred})), null, 0).slice(0, 1200)}
-인사이트: ${JSON.stringify(insightsInRange.map(i => ({content: i.content, type: i.type})), null, 0).slice(0, 800)}
-활성 모드: ${Object.keys(state.modes || {}).filter(k => state.modes[k]).join(', ') || '없음'}
-
-이미 알려진 사용자 (user_verified ✓ 만):
-- traits: ${(state.traits || []).filter(t => t.user_verified !== false).slice(0, 5).map(t => t.name).join(', ')}
-- patterns: ${(state.patterns || []).filter(p => p.user_verified !== false).slice(0, 5).map(p => p.name).join(', ')}
-- values: ${(state.values || []).filter(v => v.user_verified !== false).slice(0, 3).map(v => v.name).join(', ')}
 
 [패턴 발견 — Detective 가이드]
 - mode + entries + missions + outcomes 교차 봐.
@@ -20071,9 +20072,6 @@ ${type === 'monthly' ? '이번 달의 너를 한 단어로 명명 (정체성 hoo
 - 숫자 표시할 때도 단위 풀어 써: "7시간", "4번 중 4번", "30분", "10시 즘"
 - 통계 어휘 (correlation / 평균 / +N% / std dev / 분포) 전면 X.
 - 친구한테 카톡 쓰듯이.
-
-[지난 리뷰 씨앗] ${prevSeeds.length > 0 ? '(callback 추천 — 씨앗이 어떻게 됐는지 짚어주면 사용자 신뢰↑)' : '(없음)'}
-${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 첫 리뷰 또는 이전 씨앗 X)'}
 
 [톤]
 친한 친구. 반말. 상담사 X.
@@ -20099,7 +20097,7 @@ ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 
     "other": "황체기·날씨·계절·외부 (1줄, 일상어). 예: '비 오는 날 살짝 무거웠어'. 모르면 빈 문자열."
   },
   "value_align": {
-    "score": "0-10 정수 — 사용자 본인 values 명단 ([values] 위 참고) 와 이번 ${periodLabel} 행동이 얼마나 맞았나. values 명단 X 면 score=null.",
+    "score": "0-10 정수 — 사용자 본인 values 명단 와 이번 ${periodLabel} 행동이 얼마나 맞았나. values 명단 X 면 score=null.",
     "aligned": "values 명단 단어 그대로 + 그 가치 보여준 구체 행동 (1줄, 일상어). 예: '"회복" — 잠 일찍 잔 날 4번, 산책 3번', '"자율" — 카페 가는 거 스스로 정함'.",
     "gap": "values 명단 중 살짝 멀어진 거 + 부드럽게 (1줄, 판단 X). 빈 문자열 OK. 예: '"연결"은 살짝 약했어 — 이번 주는 회복기였으니 OK'."
   },
@@ -20108,17 +20106,39 @@ ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 
     "level": "'none' | 'watch' | 'concern' — mood drop 3일 이상 / 수면 심하게 불규칙 / 사람 만남 X / 미션 연속 missed 등",
     "signals": ["감지된 신호 (구체, 부드럽게). 'none' 일 때 빈 array.", "..."],
     "suggestion": "부드러운 제안 1줄. concern 일 때 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 포함. watch 면 self-care 제안. none 이면 빈 문자열."
-  },
-
+  }
 }
 
-JSON만 출력. 다른 글 X.`;
+JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.`;
+
+  // ─── VOLATILE (매번 다른 데이터) ───
+  const volatile = `[기간 데이터]
+체크인: ${JSON.stringify(entriesInRange, null, 2).slice(0, 4000)}
+미션: ${JSON.stringify(missionsInRange.map(m => ({title: m.title, status: m.status, attemptStatus: m.attemptStatus, strategyId: m.strategyId})), null, 2).slice(0, 1500)}
+대화 발췌 (사용자): ${chatInRange.map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3000)}
+결정 + 예측: ${JSON.stringify(decisionsInRange.map(d => ({title: d.title, status: d.status, finalDecision: d.finalDecision, predictions: d.predictions})), null, 2).slice(0, 1500)}
+챕터: ${JSON.stringify(chaptersInRange.map(c => ({date: c.date, messageCount: c.messageCount})), null, 0).slice(0, 1500)}
+가닥(topicCards): ${JSON.stringify(topicCardsInRange.map(t => ({title: t.title, summary: t.summary, category: t.category})), null, 0).slice(0, 1500)}
+진주: ${JSON.stringify(pearlsInRange.map(p => ({content: p.content, note: p.note})), null, 0).slice(0, 1000)}
+스크랩(archive): ${JSON.stringify(archiveInRange.map(a => ({headline: a.headline, body: (a.body || '').slice(0, 200), tags: a.tags, starred: a.starred})), null, 0).slice(0, 1200)}
+인사이트: ${JSON.stringify(insightsInRange.map(i => ({content: i.content, type: i.type})), null, 0).slice(0, 800)}
+활성 모드: ${Object.keys(state.modes || {}).filter(k => state.modes[k]).join(', ') || '없음'}
+
+이미 알려진 사용자 (user_verified ✓ 만):
+- traits: ${(state.traits || []).filter(t => t.user_verified !== false).slice(0, 5).map(t => t.name).join(', ')}
+- patterns: ${(state.patterns || []).filter(p => p.user_verified !== false).slice(0, 5).map(p => p.name).join(', ')}
+- values: ${(state.values || []).filter(v => v.user_verified !== false).slice(0, 3).map(v => v.name).join(', ')}
+
+[지난 리뷰 씨앗] ${prevSeeds.length > 0 ? '(callback 추천 — 씨앗이 어떻게 됐는지 짚어주면 사용자 신뢰↑)' : '(없음)'}
+${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 첫 리뷰 또는 이전 씨앗 X)'}
+
+위 데이터로 [출력 JSON] 스키마에 맞춰 JSON 객체 하나만 반환.`;
 
   return {
-    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
+    system: [{ type: 'text', text: stable, cache_control: { type: 'ephemeral' } }],
     model: 'claude-sonnet-4-6',
     max_tokens: 4000,
-    userMessage: prompt,
+    userMessage: volatile,
     _endpoint: type === 'monthly' ? 'review_monthly' : 'review_weekly'
   };
 }
@@ -44590,34 +44610,15 @@ function renderUpdateNotice() {
   const banner = document.getElementById('updateBanner');
   if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
 
-  // 사용자 보고 2026-04-30: 이메일 코드 입력 단계 (인증 미완료)에서 모달 뜨던 버그 fix.
-  // authUserId / session 둘 다 활성일 때만 모달 표시.
+  // V4 사용자 명시 (V203): chooser 컴포넌트 폐기. 이 함수는 배너 큐 trigger 만 담당.
+  // 신규 사용자 자동 튜토리얼 진입은 maybeShowFirstTimeIntro 에서 처리.
   if (typeof authUserId === 'undefined' || !authUserId) return;
   if (typeof session === 'undefined' || !session || !session.access_token) return;
-  // V4 fix (사용자 보고 2026-05-04): 비밀번호 입력 모달 떠있는 동안 chooser 뜨면 위로 가렸다가 dismiss 후 재노출 = 사용자에게 password 재요청처럼 보이는 버그.
   if (document.getElementById('e2eeRecoveryOverlay')) return;
   if (document.getElementById('e2eeSetupOverlay')) return;
 
-  const major = _currentMajor();
-  const dismissedMajor = state && state.preferences && state.preferences.dismissedMajor;
-  // 사용자 보고 2026-04-30: 신규 가입자 환영 모달 뜨기 전에 튜토리얼 chooser 가 먼저 떴음.
-  // gate 추가:
-  //   1. 환영 모달 DOM 떠있는 동안 skip
-  //   2. 신규 사용자 (entries ≤ 3 + _welcomeBonusShown 미설정) — maybeShowFirstTimeIntro 가 환영 → chooser 순서로 처리
-  const welcomeOpenNow = !!document.getElementById('welcomeBonusOverlay');
-  const entriesCount = Array.isArray(state.entries) ? state.entries.length : Object.keys(state.entries || {}).length;
-  const isFreshUser = entriesCount <= 3 && !(state.preferences && state.preferences._welcomeBonusShown);
-  const shouldShow = state && dismissedMajor !== major
-    && !window._onbTutorialMode && !window._updateChooserShownThisSession
-    && !welcomeOpenNow && !isFreshUser;
-  if (!shouldShow) {
-    // V4 사용자 명시 2026-05-01: 메이저 모달 자리 비면 배너 큐 (우선순위 1개씩 — legacy bonus / sync tip 등).
-    if (typeof _renderNextBanner === 'function') _renderNextBanner();
-    return;
-  }
-  // 한 세션에 한 번만
-  window._updateChooserShownThisSession = true;
-  showUpdateChooserModal();
+  // 배너 큐 (legacy bonus / sync tip / feedback) — chooser 모달 X.
+  if (typeof _renderNextBanner === 'function') _renderNextBanner();
 }
 
 // V4 사용자 명시 2026-05-01: 배너 큐 — 우선순위 list, 1개씩만 노출.
@@ -44830,81 +44831,11 @@ function devClosePreviewBanner() {
   if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
   if (fb) { fb.style.display = 'none'; fb.innerHTML = ''; }
 }
-function showUpdateChooserModal() {
-  // V4 fix (사용자 보고 2026-05-04): 이메일 OTP 단계 안 벗어났는데 튜토리얼 chooser 뜨던 버그 (renderUpdateNotice 외 path 보강).
-  // defense-in-depth: 인증 활성 + E2EE 모달 안 떠있을 때만.
-  if (typeof authUserId === 'undefined' || !authUserId) return;
-  if (typeof session === 'undefined' || !session || !session.access_token) return;
-  if (document.getElementById('e2eeRecoveryOverlay')) return;
-  if (document.getElementById('e2eeSetupOverlay')) return;
-  // 이미 떠있으면 중복 X
-  if (document.querySelector('.update-chooser-overlay')) return;
-  const overlay = document.createElement('div');
-  overlay.className = 'input-modal-overlay show update-chooser-overlay';
-  overlay.style.zIndex = '10000';
-  overlay.innerHTML = `
-    <div class="input-modal" style="max-width:340px; padding:24px;">
-      <div style="font-size:38px; text-align:center; margin-bottom:8px;">🐚</div>
-      <div style="font-size:18px; font-weight:600; text-align:center; margin-bottom:8px;">${escapeHtml(_currentMajor())} 대규모 업데이트!</div>
-      <div style="font-size:13px; color:var(--text-dim); text-align:center; line-height:1.6; margin-bottom:20px;">
-        한 번 둘러보면 나중에 헷갈릴 일 줄어. (제발료)
-      </div>
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <button class="input-modal-btn primary" onclick="_chooseUpdateOption('learn')" style="padding:14px;">
-          🐚 하면서 익히기 <span style="font-size:11px; opacity:0.9;">(추천 ✨)</span>
-          <div style="font-size:11px; opacity:0.85; margin-top:4px; font-weight:normal;">짧고 핵심만. 다른 기능은 만날 때마다 안내.</div>
-        </button>
-        <button class="input-modal-btn" onclick="_chooseUpdateOption('dismiss')" style="padding:12px;">
-          이미 알아
-          <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">바로 시작. 풀 튜토리얼은 설정에서 가능.</div>
-        </button>
-      </div>
-    </div>
-  `;
-  // 사용자 명시 2026-05-01: 튜토리얼 chooser = 버튼 안 누르면 안 꺼짐 (옛 overlay click / ESC dismiss 제거).
-  document.body.appendChild(overlay);
-}
-function _chooseUpdateOption(choice) {
-  // 모달 제거
-  document.querySelectorAll('.update-chooser-overlay').forEach(o => o.remove());
-  // 어떤 선택이든 dismiss (현재 메이저 기준 — V5 등 새 메이저 시 다시 뜸)
-  state.preferences = state.preferences || {};
-  state.preferences.dismissedMajor = _currentMajor();
-  if (choice === 'full') {
-    saveState();
-    window._fullTutorialActive = true;
-    if (typeof startInteractiveOnboarding === 'function') startInteractiveOnboarding();
-    return;
-  }
-  if (choice === 'learn') {
-    // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 core3/4/5/6/8 unlock reset 제거. 잠금 메커니즘 dead 라 데이터만.
-    // core1 / core2 만 v8 활성. _allTutorialsCompletedShown 도 dead (옛 잠금 토스트).
-    state.unlocked = { core1: false, core2: false };
-    saveState();
-    if (typeof startCoreTutorial === 'function') startCoreTutorial('core1');
-    return;
-  }
-  if (choice === 'dismiss') {
-    // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 core3/4/5/6/8 unlock 제거. 잠금 메커니즘 dead 라 의미 X.
-    // 사용자 요청 2026-04-29: '이미 알아' = 일반 사용자와 동일.
-    state.unlocked = { core1: true, core2: true };
-    // 사용자 보고 2026-04-30: dismiss 즉시 cloud 넣음 — 탭 닫기 race 방지 (다음 진입 시 튜토리얼 재출현 막기)
-    saveState({ force: true });
-    if (typeof saveToCloudNow === 'function') {
-      saveToCloudNow().catch(e => console.warn('[dismiss] cloud save:', e));
-    }
-    // applyCoreLockMarkers — 함수 자체 noop (잠금 메커니즘 dead). 호출 보존.
-    if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers();
-    return;
-  }
-}
-// 하위 호환 — 기존 dismissUpdateNotice 호출처 보호
-function dismissUpdateNotice() {
-  state.preferences = state.preferences || {};
-  state.preferences.dismissedMajor = _currentMajor();
-  saveState();
-}
-
+// V4 사용자 명시 (V203): showUpdateChooserModal / _chooseUpdateOption 폐기.
+// 신규 사용자 = maybeShowFirstTimeIntro 가 자동 startCoreTutorial('core1') 진입.
+// 기존 사용자 = 배너 큐만 (chooser 모달 X).
+// 설정 → 투어 다시 보기 = startCoreTutorial 직접 호출.
+// 설정 → 풀 튜토리얼 = startInteractiveOnboarding 직접 호출.
 // 사용자 요청 2026-04-30: 헤더 배너 '고동MOM에게 한 마디' — 인앱 피드백 직진.
 // dismiss 시 v4 기간 동안 안 뜸 (V5 시 다시 등장).
 function renderFeedbackBanner() {
@@ -44937,40 +44868,6 @@ function dismissFeedbackBanner() {
   // 사용자 보고 2026-05-02: 고동MOM dismiss 후 다음 배너 큐 (legacy / syncTip) 자동 trigger.
   if (typeof _renderNextBanner === 'function') _renderNextBanner();
 }
-async function startUpdateTour() {
-  state.preferences = state.preferences || {};
-  // 사용자 명시 2026-05-01 (agent audit): dismissedAppVersion 옛 키 X — dismissedMajor 가 새 시스템 (V5 까지 안 뜸).
-  state.preferences.dismissedMajor = (typeof _currentMajor === 'function') ? _currentMajor() : APP_VERSION;
-  saveState(true);
-  if (typeof saveToCloudNow === 'function') {
-    try { await saveToCloudNow(); } catch {}
-  }
-  renderUpdateNotice();
-
-  // V4 (사용자 요청 2026-04-29): 업데이트 배너 → 코어/풀 chooser
-  if (typeof showOptionsModal !== 'function') {
-    // fallback: 코어 #1 직행
-    if (typeof startCoreTutorial === 'function') return startCoreTutorial('core1');
-    window._fullTutorialActive = true;
-    return startInteractiveOnboarding();
-  }
-  const choice = await showOptionsModal({
-    title: '🐚 어떤 튜토리얼?',
-    message: '코어는 핵심만 짧게. 풀은 처음부터 끝까지.',
-    options: [
-      { label: '코어 튜토리얼 ✦', value: 'core', desc: '시작 / 체크인 / 대화 — 한 바퀴' },
-      { label: '풀 튜토리얼',    value: 'full', desc: '모든 기능 한 번에 (~30분)' }
-    ]
-  });
-  if (!choice) return;
-  if (choice === 'core') {
-    if (typeof startCoreTutorial === 'function') return startCoreTutorial('core1');
-  }
-  // 풀 튜토리얼 — 완주 시 모든 코어 unlock 적용하기 위해 플래그
-  window._fullTutorialActive = true;
-  startInteractiveOnboarding();
-}
-
 // V3.13.x: iOS PWA 슬라이드 종료 후 재진입 (또는 탭 복귀) 시 새 버전 체크
 // (visibility hidden → visible. iOS에선 cold start 안 해도 발생.)
 let _lastAutoTourCheck = 0;
