@@ -8829,6 +8829,12 @@
     transform: translateX(-50%) !important;
     max-width: 280px;
   }
+  /* V4 fix (사용자 보고 2026-05-04): day-modal step에서 above-modal 코칭마크가 day-modal-tabs 가리는 버그.
+     aboveModalBottom 옵션으로 코칭마크를 화면 하단 (bottom-nav 위)로 이동 — 모달 상단 탭들이 드러남. */
+  .onb-coachmark.above-modal.above-modal-bottom {
+    top: auto !important;
+    bottom: 92px !important;
+  }
   /* 사용자 보고 2026-04-28: above-modal step에서 drag 안 먹던 버그 — dragging 중일 땐 !important position 풀어서 inline style 적용되게 */
   .onb-coachmark.above-modal.dragging {
     top: auto !important;
@@ -16373,7 +16379,9 @@ const ONBOARDING_STEPS = [
     body: '이 날의 일기를 확인할 수 있어.<br><br>대화탭에서 "일기:"라고 쓴 것도 저장되고, 고동이랑 대화한 내용들을 고동이가 알아서 정리해줘.<br><br>다 봤으면 <b>×</b> 눌러서 닫기.',
     waitFor: 'click',
     dimBackground: false,
-    aboveModal: true
+    aboveModal: true,
+    // V4 fix (사용자 보고 2026-05-04): day-modal-tabs 가리던 버그 — 코칭마크 화면 하단 이동
+    aboveModalBottom: true
   },
   // 사용자 요청 2026-04-29: 오늘 일기 (튜토리얼 중 '일기:'로 저장한 것) 같이 확인
   {
@@ -16396,7 +16404,9 @@ const ONBOARDING_STEPS = [
     waitFor: 'click',
     manualAdvance: true,
     dimBackground: false,
-    aboveModal: true
+    aboveModal: true,
+    // V4 fix (사용자 보고 2026-05-04): 코칭마크가 토픽 탭 가리던 버그 — 화면 하단 이동
+    aboveModalBottom: true
   },
   {
     id: 'today_topic_view',
@@ -16406,7 +16416,9 @@ const ONBOARDING_STEPS = [
     body: '✓ 마무리 누르거나 5시간 동안 안 적으면 (한 번 자고 일어남), 고동이가 챕터를 <b>8 카테고리</b> (일기/일상/고민/감정/기억/할 일/아이디어/관계) 중 하나로 자동 분류해서 여기 자리잡아.<br><br>새벽 4시에 일괄 정리 (신규는 즉시). 다 봤으면 <b>×</b> 눌러서 닫기.',
     waitFor: 'click',
     dimBackground: false,
-    aboveModal: true
+    aboveModal: true,
+    // V4 fix (사용자 보고 2026-05-04): day-modal-tabs 가리던 버그 — 화면 하단 이동
+    aboveModalBottom: true
   },
   {
     id: 'click_pearls_chip',
@@ -17197,10 +17209,18 @@ function _initOnbDrag() {
     if (isInteractive(e.target)) return;
     dragging = true;
     moved = false;
-    coachmark.classList.add('dragging');
+    // V4 fix (사용자 보고 2026-05-04): above-modal 등에서 .dragging class 추가 시 CSS rule (top/left:auto !important) 가 즉시 발동해
+    // getBoundingClientRect 가 강제 reflow 하면 코칭마크가 화면 좌상단으로 점프해 baseLeft/Top 잘못 캡처되던 버그.
+    // fix: rect 캡처 → inline !important 적용 → .dragging class 추가 (이 순서로).
     const rect = coachmark.getBoundingClientRect();
     baseLeft = rect.left;
     baseTop = rect.top;
+    coachmark.style.setProperty('left', baseLeft + 'px', 'important');
+    coachmark.style.setProperty('top', baseTop + 'px', 'important');
+    coachmark.style.setProperty('right', 'auto', 'important');
+    coachmark.style.setProperty('bottom', 'auto', 'important');
+    coachmark.style.setProperty('transform', 'none', 'important');
+    coachmark.classList.add('dragging');
     startX = e.touches ? e.touches[0].clientX : e.clientX;
     startY = e.touches ? e.touches[0].clientY : e.clientY;
     document.addEventListener('mousemove', onMove);
@@ -17382,6 +17402,9 @@ function onbPositionStep(step, retryCount) {
   // 부모 .onb-overlay 의 stacking context가 자식의 z-index를 가두므로 부모도 같이 올림 (crystallize 10000 위로)
   coachmark.classList.toggle('above-modal', !!step.aboveModal);
   spotlight.classList.toggle('above-modal', !!step.aboveModal);
+  // V4 fix (사용자 보고 2026-05-04): day-modal step에서 above-modal 코칭마크가 day-modal-tabs (토픽 칩 등)
+  // 가리던 버그. aboveModalBottom 옵션으로 코칭마크를 화면 하단 (bottom-nav 위)로 이동.
+  coachmark.classList.toggle('above-modal-bottom', !!step.aboveModalBottom);
   const ovEl = document.getElementById('onbOverlay');
   if (ovEl) ovEl.style.zIndex = step.aboveModal ? '10500' : '9000';
 
@@ -25127,7 +25150,15 @@ function openShellStory(shellIdx) {
 
   const overlay = document.createElement('div');
   overlay.className = 'shell-story-overlay';
-  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  // V4 fix (사용자 보고 2026-05-04): _close / _shellEscDetach 미선언 ReferenceError = 튜토리얼 step 'DNA 한 조각'에서
+  // 닫기 버튼 누르면 ESC handler stale 채로 throw → 후속 step (예: 다음 step 의 onShow / 사용자 다른 click 등) 에서 코칭마크 사라짐.
+  // fix: openDnaPearlStory 와 동일 패턴으로 함수 scope 안 _shellEscDetach + _close 명시 선언.
+  let _shellEscDetach = null;
+  const _close = () => {
+    if (_shellEscDetach) { _shellEscDetach(); _shellEscDetach = null; }
+    overlay.remove();
+  };
+  overlay.onclick = (e) => { if (e.target === overlay) _close(); };
   // V3.13: 인증샷이 있으면 thumbnail 표시
   const photoBlock = shell.photoThumb
     ? `<img src="${shell.photoThumb}" alt="인증샷" style="width:100%; max-width:200px; aspect-ratio:1; object-fit:cover; border-radius:12px; margin:12px auto; display:block; border: 2px solid rgba(201,169,110,0.3);">`
@@ -25146,10 +25177,12 @@ function openShellStory(shellIdx) {
       ${dnaBadgeHtml}
       ${photoBlock}
       <div class="shell-story-text">${escapeHtml(shell.story || '')}</div>
-      <button class="btn-secondary" onclick="this.closest('.shell-story-overlay').remove()" style="margin-top:18px; width:100%;">닫기</button>
+      <button class="btn-secondary" id="shellStoryCloseBtn" style="margin-top:18px; width:100%;">닫기</button>
     </div>
   `;
   document.body.appendChild(overlay);
+  const _btn = overlay.querySelector('#shellStoryCloseBtn');
+  if (_btn) _btn.addEventListener('click', _close);
   _shellEscDetach = _registerModalEsc(overlay, _close);
 }
 
@@ -25536,11 +25569,16 @@ function showUndoToast(msg, undoFn, durationMs = 5000) {
 function showScreen(name) {
   // V4 코어 잠금 — 잠긴 탭/화면 진입 시 잠금 모달 (testerMode/코어활성/unlocked면 통과)
   // (글로벌 클릭 인터셉터가 잡지만, 다른 곳에서 showScreen 직접 호출하는 케이스도 가드)
-  const _navLockMap = { execute: 'core3', model: 'core4', archive: 'core5', decisions: 'core8' };
-  const _lockCoreId = _navLockMap[name];
-  if (_lockCoreId && typeof isCoreLocked === 'function' && isCoreLocked(_lockCoreId)) {
-    if (typeof showCoreLockModal === 'function') showCoreLockModal(_lockCoreId);
-    return;
+  // V4 fix (사용자 보고 2026-05-04): 기존 가입자 진입 직후 나 탭 즉시 클릭 시 잠금 모달 잠시 뜨다 사라지던 async 경합 fix.
+  // root cause = cloud load 끝 전 = state.unlocked default (모두 false) → 옛 isCoreLocked = true → 잠금 모달.
+  // v8 dead-code 였지만 stale cached JS / 회귀 대비 _initialDataLoading flag 우회 + 화면 전환 진행 보장.
+  if (!window._initialDataLoading) {
+    const _navLockMap = { execute: 'core3', model: 'core4', archive: 'core5', decisions: 'core8' };
+    const _lockCoreId = _navLockMap[name];
+    if (_lockCoreId && typeof isCoreLocked === 'function' && isCoreLocked(_lockCoreId)) {
+      if (typeof showCoreLockModal === 'function') showCoreLockModal(_lockCoreId);
+      return;
+    }
   }
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -25846,13 +25884,19 @@ function prefillCheckinFromEntry() {
   // note
   if (noteEl0 && entry.note) noteEl0.value = entry.note;
   // optional fields — 사용자 보고 2026-05-03: state 만 복원 + UI .selected class 누락 = 다시 진입 시 click 사라짐 버그.
-  // fix: onclick attr selector 가 매칭하는 button 에 .selected 추가.
+  // V4 fix (사용자 보고 2026-05-04): 속성 selector 가 onclick 문자열 normalization 차이로 매칭 못 하던 케이스 (한글 / 따옴표 escape 등) — 더 안전한 onclick parse 방식으로 교체.
+  const _quickBtns = document.querySelectorAll('#screen-checkin .quick-btn');
   ['meals','movement','focus','social','overwhelm'].forEach(k => {
     if (entry[k]) {
       currentCheckin[k] = entry[k];
-      const sel = `#screen-checkin button.quick-btn[onclick="selectQuick(this, '${k}', '${entry[k]}')"]`;
-      const btn = document.querySelector(sel);
-      if (btn) btn.classList.add('selected');
+      _quickBtns.forEach(btn => {
+        const oc = btn.getAttribute('onclick') || '';
+        // selectQuick(this, 'meals', '규칙적') 같은 패턴에서 key, value 추출
+        const m = oc.match(/selectQuick\(\s*this\s*,\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)/);
+        if (m && m[1] === k && m[2] === entry[k]) {
+          btn.classList.add('selected');
+        }
+      });
     }
   });
   // V3.13.x: 음악 prefill
@@ -44567,6 +44611,9 @@ function renderUpdateNotice() {
   // authUserId / session 둘 다 활성일 때만 모달 표시.
   if (typeof authUserId === 'undefined' || !authUserId) return;
   if (typeof session === 'undefined' || !session || !session.access_token) return;
+  // V4 fix (사용자 보고 2026-05-04): 비밀번호 입력 모달 떠있는 동안 chooser 뜨면 위로 가렸다가 dismiss 후 재노출 = 사용자에게 password 재요청처럼 보이는 버그.
+  if (document.getElementById('e2eeRecoveryOverlay')) return;
+  if (document.getElementById('e2eeSetupOverlay')) return;
 
   const major = _currentMajor();
   const dismissedMajor = state && state.preferences && state.preferences.dismissedMajor;
@@ -44801,6 +44848,12 @@ function devClosePreviewBanner() {
   if (fb) { fb.style.display = 'none'; fb.innerHTML = ''; }
 }
 function showUpdateChooserModal() {
+  // V4 fix (사용자 보고 2026-05-04): 이메일 OTP 단계 안 벗어났는데 튜토리얼 chooser 뜨던 버그 (renderUpdateNotice 외 path 보강).
+  // defense-in-depth: 인증 활성 + E2EE 모달 안 떠있을 때만.
+  if (typeof authUserId === 'undefined' || !authUserId) return;
+  if (typeof session === 'undefined' || !session || !session.access_token) return;
+  if (document.getElementById('e2eeRecoveryOverlay')) return;
+  if (document.getElementById('e2eeSetupOverlay')) return;
   // 이미 떠있으면 중복 X
   if (document.querySelector('.update-chooser-overlay')) return;
   const overlay = document.createElement('div');
