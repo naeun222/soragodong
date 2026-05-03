@@ -758,7 +758,8 @@
   .chat-input-bar { position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; contain: layout style; }
   .chat-input-wrap { position: relative; display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 10px; contain: layout style; }
   /* iOS auto-zoom 방지 — input font 16px 이상 */
-  .chat-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 16px; line-height: 1.5; outline: none; resize: none; max-height: 140px; padding: 8px 0; min-width: 0; }
+  /* V4 (사용자 명시 2026-05-04 ultrathink V181): 모바일 입력창 렉 근본 해결 — contain (height 변경 외부 layout 전파 차단) + field-sizing (지원 브라우저 native auto-size, JS reflow 0) */
+  .chat-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: inherit; font-size: 16px; line-height: 1.5; outline: none; resize: none; max-height: 140px; padding: 8px 0; min-width: 0; contain: layout style; field-sizing: content; }
   .send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--bg); border: none; font-size: 16px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   /* V4-fix: 입력바 안 stack — ✓ 위 + 아래 (대화 마무리 prominent) */
   .chat-input-stack {
@@ -1308,72 +1309,163 @@
   }
   .core2-entry-btn.secondary:hover { background: rgba(255, 255, 255, 0.04); }
 
-  /* V4 (v8 묶음 12): 환영 선물 모달 — Core 1 끝 100만 토큰 */
+  /* V4 (사용자 명시 2026-05-04 ultrathink V193): 환영 선물 모달 UI 전면 개편 — Core 1 끝 100만 토큰 + 첫 한 바퀴 완주 축하 톤 통합 */
   .welcome-gift-overlay {
     position: fixed; inset: 0;
-    background: radial-gradient(ellipse at center, rgba(201,169,110,0.15) 0%, rgba(15,14,23,0.85) 60%);
-    backdrop-filter: blur(8px);
-    z-index: 9999;
+    background: rgba(8, 6, 14, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 10002;
     display: flex; align-items: center; justify-content: center;
-    opacity: 0; transition: opacity 0.4s;
     padding: 20px;
+    opacity: 0; transition: opacity 0.4s;
   }
   .welcome-gift-overlay.show { opacity: 1; }
   .welcome-gift-modal {
-    background: linear-gradient(160deg, var(--surface), rgba(201,169,110,0.08));
+    position: relative;
+    max-width: 420px; width: 100%;
+    background: linear-gradient(180deg, #1d1828 0%, #15111e 100%);
+    border: 1px solid rgba(212, 167, 106, 0.25);
     border-radius: 24px;
-    padding: 40px 28px 28px;
-    max-width: 360px; width: 100%;
-    border: 1px solid rgba(212, 167, 106, 0.3);
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(201, 169, 110, 0.2);
+    padding: 32px 26px 22px;
     text-align: center;
-    animation: welcomeGiftPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    animation: wgPop 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+    overflow: hidden;
   }
-  @keyframes welcomeGiftPop {
-    from { transform: scale(0.7); opacity: 0; }
-    to   { transform: scale(1); opacity: 1; }
+  /* ambient glow — modal 위쪽 accent (subtle) */
+  .welcome-gift-modal::before {
+    content: '';
+    position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
+    width: 260px; height: 260px;
+    background: radial-gradient(circle, rgba(212,167,106,0.20) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
   }
-  .welcome-gift-emoji {
-    font-size: 56px;
-    margin-bottom: 12px;
-    animation: bounce 1.2s ease infinite;
+  .welcome-gift-modal > * { position: relative; z-index: 1; }
+  @keyframes wgPop {
+    0%   { opacity: 0; transform: translateY(16px) scale(0.96); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
   }
-  .welcome-gift-headline {
-    font-family: 'Gowun Batang', serif;
-    font-size: 18px;
-    color: var(--text-dim);
-    margin-bottom: 8px;
+  .welcome-gift-godong {
+    width: 56px; height: 56px;
+    display: block; margin: 0 auto 12px;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 16px rgba(212,167,106,0.32));
+    animation: wgGodongFloat 4s ease-in-out infinite;
   }
-  .welcome-gift-tokens {
-    font-family: 'Gowun Batang', serif;
-    font-size: 28px;
+  @keyframes wgGodongFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+  /* eyebrow — 첫 한 바퀴 완주 축하 톤 (소형 accent) */
+  .welcome-gift-celebrate {
+    font-size: 12px;
     font-weight: 700;
-    background: linear-gradient(135deg, #c9a96e, #e8c99a);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 6px;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+    opacity: 0.95;
   }
+  /* 본문 그리팅 — 따뜻한 톤 (Gowun Batang) */
+  .welcome-gift-greeting {
+    font-family: 'Gowun Batang', serif;
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+  /* 핵심 카피 — 사용자 명시 절대 보존: "한 달 쓰면 너 자신이 / 다르게 보일지도. 🫂" */
   .welcome-gift-sub {
-    font-size: 13px;
-    color: var(--text-soft, var(--text-dim));
-    margin-bottom: 22px;
-    opacity: 0.9;
+    font-size: 14.5px;
+    font-weight: 400;
+    color: var(--text-dim);
+    line-height: 1.65;
+    margin-bottom: 24px;
+    letter-spacing: -0.003em;
+  }
+  /* token hero — vertical stack (label 위 / amount hero / hint 아래) */
+  .welcome-gift-token {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 6px;
+    padding: 20px 18px 18px;
+    background: linear-gradient(180deg, rgba(212,167,106,0.13) 0%, rgba(212,167,106,0.05) 100%);
+    border: 1px solid rgba(212,167,106,0.35);
+    border-radius: 16px;
+    margin: 0 0 20px;
+    transition: background 0.3s, border-color 0.3s, transform 0.4s;
+    box-shadow: 0 4px 16px rgba(212,167,106,0.10);
+  }
+  .welcome-gift-token-label {
+    font-size: 10.5px;
+    color: var(--accent);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 700;
+    opacity: 0.88;
+  }
+  .welcome-gift-token-amount {
+    font-size: 32px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #e8c590 0%, var(--accent) 50%, #c08a4a 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    transition: filter 0.3s;
+  }
+  .welcome-gift-token-hint {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    letter-spacing: 0.005em;
+    margin-top: 2px;
   }
   .welcome-gift-btn {
-    padding: 14px 28px;
-    border-radius: 14px;
-    border: none;
-    background: linear-gradient(135deg, #c9a96e, #e8c99a);
-    color: #1a1826;
+    width: 100%;
+    padding: 14px;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.005em;
+    color: #1a1530;
+    background: linear-gradient(135deg, #e8c590 0%, var(--accent) 100%);
+    border: 0;
+    border-radius: 14px;
     cursor: pointer;
     font-family: inherit;
-    box-shadow: 0 8px 22px rgba(201, 169, 110, 0.35);
-    transition: transform 0.1s, box-shadow 0.15s;
+    transition: transform 0.15s, filter 0.2s, box-shadow 0.2s;
+    box-shadow: 0 6px 20px rgba(212,167,106,0.32), 0 0 0 1px rgba(255,255,255,0.05) inset;
   }
-  .welcome-gift-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(201, 169, 110, 0.45); }
+  .welcome-gift-btn:hover { transform: translateY(-1px); filter: brightness(1.04); box-shadow: 0 8px 24px rgba(212,167,106,0.38); }
+  .welcome-gift-btn:active { transform: translateY(0); filter: brightness(0.97); }
+  .welcome-gift-btn:disabled { opacity: 0.85; cursor: default; background: rgba(120,180,130,0.6); box-shadow: none; }
+  /* 신뢰 라인 — 전상법 §13 / 표시광고법 §3 (소형, 강조 X) */
+  .welcome-gift-trust {
+    font-size: 11px;
+    color: var(--text-dim);
+    opacity: 0.6;
+    letter-spacing: 0.02em;
+    margin-top: 14px;
+    line-height: 1.5;
+  }
+  /* received 상태 — backend POST 후 token block 색감 변환 (gold → green) */
+  .welcome-gift-token.received {
+    background: linear-gradient(180deg, rgba(120,180,130,0.20) 0%, rgba(120,180,130,0.08) 100%);
+    border-color: rgba(120,180,130,0.50);
+    animation: wgTokenReceived 0.6s ease-out;
+  }
+  .welcome-gift-token.received .welcome-gift-token-amount {
+    background: linear-gradient(135deg, #c5e8a8 0%, #9ed4a8 50%, #6fb87f 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  @keyframes wgTokenReceived {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
 
   /* V4 (v8 묶음 13): 전략 카드 시각화 모달 — Core 2 튜토리얼 saveMsgAsStrategy 직후 */
   .strategy-card-preview-overlay {
@@ -2164,154 +2256,6 @@
   .crisis-carousel-close:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
   .crisis-carousel-close:active { transform: scale(0.99); }
 
-  /* === Welcome Modal — 사용자 명시 2026-05-01: 위기 carousel 톤 (차분 + simplicity) + gold accent === */
-  /* 사용자 명시 2026-05-02 ultrathink: 환영 모달 풀 재설계.
-     이전 문제:
-     · token block flex space-between → 새 hint element 옆에 적용돼 시각 깨짐
-     · "반가워" 19px > "🐚 100만 토큰" 16px = hierarchy 역전
-     · token bg 8% accent = 너무 subtle (환영 선물 hero 인데 약함)
-     · trust 9.5px = 거의 안 보임
-     · 6단 vertical stack 어수선
-     신규 = token hero 중심, 카피 secondary, 강한 hierarchy. */
-  .welcome-bonus-overlay {
-    position: fixed; inset: 0;
-    background: rgba(8, 6, 14, 0.94);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 10002;
-    display: flex; align-items: center; justify-content: center;
-    padding: 20px;
-    animation: wbFadeIn 0.4s ease-out;
-  }
-  @keyframes wbFadeIn { from { opacity: 0; } to { opacity: 1; } }
-  .welcome-bonus-modal {
-    position: relative;
-    max-width: 420px; width: 100%;
-    background: linear-gradient(180deg, #1d1828 0%, #15111e 100%);
-    border: 1px solid rgba(212, 167, 106, 0.22);
-    border-radius: 24px;
-    padding: 32px 26px 22px;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255,255,255,0.02) inset;
-    animation: wbSlideUp 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
-    overflow: hidden;
-  }
-  /* 부드러운 ambient glow — modal 위쪽 accent (subtle). */
-  .welcome-bonus-modal::before {
-    content: '';
-    position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
-    width: 240px; height: 240px;
-    background: radial-gradient(circle, rgba(212,167,106,0.18) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-  }
-  .welcome-bonus-modal > * { position: relative; z-index: 1; }
-  @keyframes wbSlideUp {
-    0%   { opacity: 0; transform: translateY(16px) scale(0.98); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .welcome-bonus-godong {
-    width: 56px; height: 56px;
-    display: block; margin: 0 auto 14px;
-    object-fit: contain;
-    filter: drop-shadow(0 6px 16px rgba(212,167,106,0.30));
-    animation: wbGodongFloat 4s ease-in-out infinite;
-  }
-  @keyframes wbGodongFloat {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-3px); }
-  }
-  .welcome-bonus-greeting {
-    font-size: 17px; font-weight: 600;
-    color: var(--text);
-    line-height: 1.4;
-    margin-bottom: 6px;
-    letter-spacing: -0.01em;
-  }
-  /* 핵심 카피 — 사용자 명시 2026-04-30: "한 달 쓰면 너 자신이 / 다르게 보일지도. 🫂" 절대 보존. */
-  .welcome-bonus-sub {
-    font-size: 14.5px; font-weight: 400;
-    color: var(--text-dim);
-    line-height: 1.65;
-    margin-bottom: 24px;
-    letter-spacing: -0.003em;
-  }
-  .welcome-bonus-sub b { color: var(--text); font-weight: 600; }
-  /* Token block — HERO. flex 폐기 → vertical stack (label 위 / amount hero / hint 아래). */
-  .welcome-bonus-token {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 6px;
-    padding: 20px 18px 18px;
-    background: linear-gradient(180deg, rgba(212,167,106,0.12) 0%, rgba(212,167,106,0.05) 100%);
-    border: 1px solid rgba(212,167,106,0.32);
-    border-radius: 16px;
-    margin: 0 0 20px;
-    transition: background 0.3s, border-color 0.3s, transform 0.4s;
-    box-shadow: 0 4px 16px rgba(212,167,106,0.08);
-  }
-  .welcome-bonus-token-label {
-    font-size: 10.5px;
-    color: var(--accent);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    font-weight: 700;
-    opacity: 0.85;
-  }
-  .welcome-bonus-token-amount {
-    font-size: 32px; font-weight: 800;
-    background: linear-gradient(135deg, #e8c590 0%, var(--accent) 50%, #c08a4a 100%);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent; color: transparent;
-    letter-spacing: -0.015em;
-    line-height: 1.15;
-    transition: filter 0.3s;
-  }
-  .welcome-bonus-token-hint {
-    font-size: 12px;
-    color: var(--text-dim);
-    line-height: 1.5;
-    letter-spacing: 0.005em;
-    margin-top: 2px;
-  }
-  .welcome-bonus-btn {
-    width: 100%; padding: 14px;
-    font-size: 15px; font-weight: 700;
-    letter-spacing: 0.005em;
-    color: #1a1530;
-    background: linear-gradient(135deg, #e8c590 0%, var(--accent) 100%);
-    border: 0;
-    border-radius: 14px;
-    cursor: pointer;
-    transition: transform 0.15s, filter 0.2s, box-shadow 0.2s;
-    box-shadow: 0 6px 20px rgba(212,167,106,0.30), 0 0 0 1px rgba(255,255,255,0.05) inset;
-    font-family: inherit;
-  }
-  .welcome-bonus-btn:hover { transform: translateY(-1px); filter: brightness(1.04); box-shadow: 0 8px 24px rgba(212,167,106,0.36); }
-  .welcome-bonus-btn:active { transform: translateY(0); filter: brightness(0.97); }
-  .welcome-bonus-btn:disabled { opacity: 0.85; cursor: default; background: rgba(120,180,130,0.6); box-shadow: none; }
-  .welcome-bonus-trust {
-    font-size: 11px;
-    color: var(--text-dim);
-    opacity: 0.6;
-    letter-spacing: 0.02em;
-    margin-top: 14px;
-    line-height: 1.5;
-  }
-  .welcome-bonus-token.received {
-    background: linear-gradient(180deg, rgba(120,180,130,0.20) 0%, rgba(120,180,130,0.08) 100%);
-    border-color: rgba(120,180,130,0.50);
-    animation: wbTokenReceived 0.6s ease-out;
-  }
-  .welcome-bonus-token.received .welcome-bonus-token-amount {
-    background: linear-gradient(135deg, #c5e8a8 0%, #9ed4a8 50%, #6fb87f 100%);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  @keyframes wbTokenReceived {
-    0%   { transform: scale(1); }
-    50%  { transform: scale(1.04); }
-    100% { transform: scale(1); }
-  }
   .ft-hypothesis label {
     display: flex; align-items: flex-start; gap: 8px;
     padding: 10px 12px; margin-bottom: 6px;
@@ -12744,25 +12688,8 @@ async function maybeShowFirstTimeIntro() {
   if (document.getElementById('e2eeRecoveryOverlay')) return;
   if (document.getElementById('e2eeSetupOverlay')) return;
   if (document.getElementById('onbOverlay') && document.getElementById('onbOverlay').classList.contains('active')) return;
-  // 사용자 명시 2026-04-30 ultrathink: 환영 모달 strict gate — 다시 뜨면 손해 위험.
-  // 옛 흐름: client _welcomeBonusShown flag 만 체크 → cloud sync 실패 / clear cache / 새 device 시 재출현 risk.
-  // 새 strict: backend billing.free_credit_granted = source of truth. client flag 와 다르면 sync 후 skip.
-  // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 신규 진입 즉시 환영 모달 (showWelcomeBonusModal) trigger 폐기.
-  // 새 흐름 = Core 1 끝 _showWelcomeGiftModal 가 환영 + backend POST grant. 둘 다 트리거되면 중복.
-  // _showWelcomeGiftModal (onbFinish hook) 이 동일 backend grant 호출 + idempotent.
-  // showWelcomeBonusModal 함수 자체는 보존 — admin /preview 미리보기 / dev 도구 자리.
-  // 옛 _welcomeBonusShown flag 분기 = legacy 호환 보존 (옛 모달 본 사용자 = grant 받은 사용자).
-  /*
-  const entriesCount = Array.isArray(state.entries) ? state.entries.length : Object.keys(state.entries || {}).length;
-  if (entriesCount > 3) {
-    // 데이터 많은 기존 사용자 — 모달 X
-  } else if (state.preferences && state.preferences._welcomeBonusShown) {
-    // client flag 이미 true — fast path skip
-  } else {
-    // 사용자 보고 2026-05-01: backend granted=true 인데 client 가 모달 못 본 케이스 (race / 옛 데이터 / withdraw 후 잔재) → 모달 skip 되고 chooser 직진. 옛 backend skip path 제거. client flag 만 truth, backend POST 는 idempotent (already_granted 응답 처리).
-    await showWelcomeBonusModal();
-  }
-  */
+  // V4 (사용자 명시 2026-05-04 ultrathink V193): 옛 즉시 환영 모달 (showWelcomeBonusModal) 폐기 — Core 1 끝 _showWelcomeGiftModal 가 환영 + backend grant 통합.
+  // _welcomeBonusShown legacy flag 는 아래 silent backend grant 분기에서 보존 (옛 모달 본 사용자 grant 정합성).
   // V4 (v8 사용자 명시 2026-05-03): silent backend grant — 신규 진입 즉시 backend POST (모달 X). Core 1 안 진행하는 사용자도 grant 보장. idempotent.
   // 신규 사용자 = entries ≤ 3 + _welcomeBonusShown 미설정 + access_token 활성.
   const entriesCountSilent = Array.isArray(state.entries) ? state.entries.length : Object.keys(state.entries || {}).length;
@@ -12799,84 +12726,7 @@ async function maybeShowFirstTimeIntro() {
   if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
 }
 
-// 사용자 요청 2026-04-30 ultrathink: 무료 토큰 화려한 환영 모달 + 법적 고지 (전상법 §13/§17, 표시광고법 §3)
-// opts.preview = true 시 _welcomeBonusShown flag 안 건드림 (개발자 도구 미리보기용).
-function showWelcomeBonusModal(opts) {
-  const preview = !!(opts && opts.preview);
-  return new Promise(resolve => {
-    if (document.getElementById('welcomeBonusOverlay')) { resolve(); return; }
-    const overlay = document.createElement('div');
-    overlay.className = 'welcome-bonus-overlay';
-    overlay.id = 'welcomeBonusOverlay';
-    overlay.innerHTML = `
-      <div class="welcome-bonus-modal">
-        <img class="welcome-bonus-godong" src="/godongicon.png" alt="소라고동">
-        <div class="welcome-bonus-greeting">반가워</div>
-        <div class="welcome-bonus-sub">
-          한 달 쓰면 너 자신이<br>
-          다르게 보일지도. 🫂
-        </div>
-        <div class="welcome-bonus-token">
-          <span class="welcome-bonus-token-label">환영 선물 · 무료 체험</span>
-          <span class="welcome-bonus-token-amount">🐚 100만 토큰</span>
-          <span class="welcome-bonus-token-hint">약 한 달치 자유로운 대화</span>
-        </div>
-        <button class="welcome-bonus-btn" id="welcomeBonusOkBtn">받을게</button>
-        <div class="welcome-bonus-trust">30일 동안 유효 · 자동 결제 X</div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-    // 사용자 명시 2026-04-30 ultrathink:
-    //   - button 눌러야만 닫힘 (overlay click X)
-    //   - "받을게" click → backend POST /api/billing/welcome-bonus → 잔액 = $2.14 SET (≈ 3,000원, idempotent — 이미 받음 시 변경 X)
-    //   - flag _welcomeBonusShown saveState force + cloud sync 보장 (다시 안 뜸)
-    document.getElementById('welcomeBonusOkBtn').onclick = async () => {
-      const btn = document.getElementById('welcomeBonusOkBtn');
-      if (btn && btn.dataset._processing === '1') return;
-      if (btn) { btn.dataset._processing = '1'; btn.disabled = true; btn.textContent = '받는 중...'; }
-      // 1. backend 호출 (preview = X 단순 시각만)
-      // 사용자 보고 2026-04-30: "받았는데 그대로" — 이미 받은 사용자는 backend 가 idempotent skip 하고 토스트로 안내.
-      if (!preview && typeof session !== 'undefined' && session && session.access_token) {
-        try {
-          const resp = await _authedFetch('/api/billing/welcome-bonus', {
-            method: 'POST'
-          });
-          if (resp.ok) {
-            const data = await resp.json().catch(() => ({}));
-            if (data.already_granted) {
-              if (typeof showToast === 'function') showToast(`✦ 이미 받았어`);
-            } else if (data.granted) {
-              if (typeof showToast === 'function') showToast(`🎁 100만 토큰 받았어 ✦ 마음껏 시작해`);
-            }
-            if (typeof refreshBillingStatus === 'function') refreshBillingStatus(false).catch(() => {});
-          } else {
-            console.warn('[welcome-bonus] backend 응답 비-OK:', resp.status);
-            if (typeof showToast === 'function') showToast('받기 실패: ' + resp.status);
-          }
-        } catch (e) {
-          console.warn('[welcome-bonus] backend 호출 실패:', e);
-        }
-      }
-      // 2. token block "받았어" — 색감 미세 변환 (burst 제거 — 사용자 명시 2026-05-01 탑티어 리디자인)
-      const tokenEl = overlay.querySelector('.welcome-bonus-token');
-      if (tokenEl) tokenEl.classList.add('received');
-      // 3. flag set (cloud + local sync 보장 — 다시 안 뜸)
-      if (!preview) {
-        state.preferences = state.preferences || {};
-        state.preferences._welcomeBonusShown = true;
-        try { saveState({ force: true }); } catch {}
-        if (typeof saveToCloudNow === 'function') {
-          saveToCloudNow().catch(e => console.warn('[welcome-bonus] cloud sync:', e));
-        }
-      }
-      // 4. 800ms 후 닫기 (burst 없으므로 단축)
-      setTimeout(() => {
-        overlay.remove();
-        resolve();
-      }, 800);
-    };
-  });
-}
+// V4 (사용자 명시 2026-05-04 ultrathink V193): 옛 showWelcomeBonusModal 함수 삭제. 신규 환영 모달 = _showWelcomeGiftModal (Core 1 끝 trigger).
 
 // 개발자 도구 — 주간 리뷰 신규 schema 풀 미리보기 (시드 데이터, AI 호출 X).
 // 사용자 명시 2026-04-30 ultrathink: chart / strengths / cycles / emotions / value_align / risk_signals 모두 demo. 위기 신호 'watch' 케이스 + 가치 align bar + 7일 차트 다 한 화면에.
@@ -12999,10 +12849,10 @@ function devPreviewWeeklyReview() {
   }, 100);
 }
 
-// 개발자 도구 — 환영 선물 모달 (사용자 명시 2026-04-30: 원래 흐름처럼 backend 실제 grant).
-// idempotent — 이미 받은 사용자는 backend 가 자동 skip ('이미 받았어요'). 다시 테스트 하려면 devResetWelcomeBonus 후 재진입.
+// 개발자 도구 — 환영 선물 모달 (V4 V193: _showWelcomeGiftModal 통합).
+// idempotent — 이미 받은 사용자는 backend 가 자동 skip ('이미 받았어'). 다시 테스트 하려면 devResetWelcomeBonus 후 재진입.
 function devPreviewWelcomeBonus() {
-  showWelcomeBonusModal();  // preview X — 받기 click 시 backend POST → 잔액 = $2.14 SET (≈ 3,000원)
+  if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal();
 }
 
 // 개발자 도구 — admin 본인 환영 보너스 처음부터 재테스트.
@@ -13038,7 +12888,7 @@ async function devResetWelcomeBonus() {
     showToast(`✦ reset 완료 (잔액 ${data.old_balance_usd} → 0). 모달 띄울게...`);
     // 잠깐 후 환영 모달 자동 오픈 → 받기 click → $2.14 grant
     setTimeout(() => {
-      showWelcomeBonusModal();  // preview X — 실제 grant 흐름
+      if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal();  // V193: _showWelcomeGiftModal 통합
     }, 600);
   } catch (e) {
     alert('reset 실패: ' + (e.message || e));
@@ -24494,33 +24344,60 @@ function _showCore2LockedToast() {
   showToast('🔒 잠깐만, 다음 단계에서 알려줄게!');
 }
 
-// V4 (v8 묶음 12): 환영 선물 모달 — Core 1 onbFinish 후 자동 (100만 토큰)
+// V4 (사용자 명시 2026-05-04 ultrathink V193): 신규 환영 모달 UI 전면 개편 — Core 1 끝 100만 토큰
+// 디자인 원칙:
+//  · 첫 한 바퀴 완주 축하 + 환영 두 톤 통합 (eyebrow 'celebrate' / 본문 greeting)
+//  · godong 아이콘 (브랜드 일관성) + ambient gold glow (modal::before radial)
+//  · 토큰 hero: label / amount (대형 그라데이션) / hint — vertical stack
+//  · 신뢰 라인 보존 (전상법 §13 / 표시광고법 §3 — '30일 유효 · 자동 결제 X')
+//  · 받기 click → backend POST (idempotent) → token block 'received' 색감 변환 → 0.8s 후 닫힘
+//  · burst / 별 효과 X (사용자 명시 2026-05-01 탑티어 리디자인 톤 보존)
 function _showWelcomeGiftModal() {
   if (window._showingWelcomeGift) return;
+  if (document.getElementById('welcomeGiftOverlay')) return;
   window._showingWelcomeGift = true;
   const overlay = document.createElement('div');
   overlay.className = 'welcome-gift-overlay';
+  overlay.id = 'welcomeGiftOverlay';
   overlay.innerHTML = `
     <div class="welcome-gift-modal">
-      <div class="welcome-gift-emoji">🎁</div>
-      <div class="welcome-gift-headline">🎁 첫 한 바퀴 끝! 환영 선물 줄게 ✨</div>
-      <div class="welcome-gift-tokens">✨ 100만 토큰</div>
-      <div class="welcome-gift-sub">한 달 동안 마음껏 써봐 🫂</div>
-      <button class="welcome-gift-btn" id="welcomeGiftAccept">고마워!</button>
+      <img class="welcome-gift-godong" src="/godongicon.png" alt="소라고동">
+      <div class="welcome-gift-celebrate">🎉 첫 한 바퀴 끝!</div>
+      <div class="welcome-gift-greeting">잘 따라왔어 🐚</div>
+      <div class="welcome-gift-sub">
+        한 달 쓰면 너 자신이<br>
+        다르게 보일지도. 🫂
+      </div>
+      <div class="welcome-gift-token">
+        <span class="welcome-gift-token-label">환영 선물 · 무료 체험</span>
+        <span class="welcome-gift-token-amount">🐚 100만 토큰</span>
+        <span class="welcome-gift-token-hint">약 한 달치 자유로운 대화</span>
+      </div>
+      <button class="welcome-gift-btn" id="welcomeGiftAccept">받을게</button>
+      <div class="welcome-gift-trust">30일 동안 유효 · 자동 결제 X</div>
     </div>
   `;
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
-  overlay.querySelector('#welcomeGiftAccept').addEventListener('click', () => {
-    _acceptWelcomeGift();
-    overlay.classList.remove('show');
-    setTimeout(() => { try { overlay.remove(); } catch {} }, 300);
-    window._showingWelcomeGift = false;
+  const btn = overlay.querySelector('#welcomeGiftAccept');
+  btn.addEventListener('click', async () => {
+    if (btn.dataset._processing === '1') return;
+    btn.dataset._processing = '1';
+    btn.disabled = true;
+    btn.textContent = '받는 중...';
+    try { await _acceptWelcomeGift(); } catch (e) { console.warn('[welcome-gift] accept:', e); }
+    const tokenEl = overlay.querySelector('.welcome-gift-token');
+    if (tokenEl) tokenEl.classList.add('received');
+    btn.textContent = '받았어 ✦';
+    setTimeout(() => {
+      overlay.classList.remove('show');
+      setTimeout(() => { try { overlay.remove(); } catch {} }, 300);
+      window._showingWelcomeGift = false;
+    }, 800);
   });
 }
 async function _acceptWelcomeGift() {
-  // V4 (v8 사용자 명시 2026-05-03 ultrathink — v2 §8 명시): client-side state.welcomeGift 기록 (30일 카운트 의도) + backend POST 호환 보존.
-  // 옛 showWelcomeBonusModal 의 backend POST 통합. 신규 진입 즉시 환영 = 폐기, Core 1 끝 환영만 활성.
+  // V4 (v8 사용자 명시 2026-05-03 ultrathink — v2 §8): client-side state.welcomeGift 기록 (30일 카운트) + backend POST grant. 신규 진입 즉시 환영 = 폐기, Core 1 끝 환영만 활성.
   state.welcomeGift = {
     grantedAt: new Date().toISOString(),
     tokensGranted: 1_000_000,
@@ -24534,7 +24411,7 @@ async function _acceptWelcomeGift() {
   if (typeof saveToCloudNow === 'function') {
     saveToCloudNow().catch(e => console.warn('[welcomeGift] cloud sync:', e));
   }
-  // backend POST — 옛 showWelcomeBonusModal 의 동일 흐름 (idempotent — already_granted 처리). 실제 grant 보장.
+  // backend POST — idempotent (already_granted 처리). 실제 grant 보장.
   if (typeof session !== 'undefined' && session && session.access_token && typeof _authedFetch === 'function') {
     try {
       const resp = await _authedFetch('/api/billing/welcome-bonus', { method: 'POST' });
@@ -45059,11 +44936,24 @@ function refreshTesterModeUI() {
 // CHAT INPUT
 // ═══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-  // 사용자 보고 2026-05-01: 입력 시 버벅거림 — auto-resize 가 매 keystroke 마다 layout thrash (style.height='auto' + scrollHeight read + setHeight = 2회 reflow).
-  // 1.6MB DOM 에서 누적 → 입력 lag. rAF 로 frame 당 1회 coalesce.
+  // V4 (사용자 명시 2026-05-04 ultrathink V181 근본 해결): 모바일 입력창 렉 다층 해결
+  // 근본 원인 4가지:
+  //  1. _resizeTextarea: style.height='auto' set + scrollHeight read + height set = 매 keystroke 2~3회 강제 reflow (1.6MB DOM 에서 누적 → 모바일 lag 체감)
+  //  2. IME composition 미처리 — 한글 자모(ㅎ→하→한) 입력마다 input event 발생 → 자모 단위 resize
+  //  3. textarea 자체에 contain 미적용 → height 변경이 fixed chat-input-bar 외부로 layout 전파
+  //  4. 동일 높이여도 무조건 set → 불필요한 repaint
+  // 해결 다층 (CSS + JS):
+  //  ① compositionstart/end flag — IME 한글 입력 중 resize skip, end 시 1회 final
+  //  ② height 변화량 1px 미만이면 set skip (max 도달 후 매 keystroke 무동작)
+  //  ③ rAF coalesce 보존 (frame당 1회)
+  //  ④ CSS .chat-textarea { contain: layout style; field-sizing: content; } — Chrome 123+/Safari 17+ native auto-size, 미지원 브라우저는 JS fallback
   const _resizeTextarea = (el, max) => {
+    if (el._composing) return;            // ① IME 한글 입력 중 skip
     el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, max) + 'px';
+    const next = Math.min(el.scrollHeight, max);
+    if (Math.abs(next - el.offsetHeight) >= 1) {  // ② 동일 높이 skip
+      el.style.height = next + 'px';
+    }
   };
   const _makeRafResizer = (el, max) => {
     let raf = 0;
@@ -45072,8 +44962,15 @@ document.addEventListener('DOMContentLoaded', () => {
       raf = requestAnimationFrame(() => { raf = 0; _resizeTextarea(el, max); });
     };
   };
+  const _bindAutoResize = (el, max) => {
+    if (!el) return;
+    const resize = _makeRafResizer(el, max);
+    el.addEventListener('compositionstart', () => { el._composing = true; });
+    el.addEventListener('compositionend',   () => { el._composing = false; resize(); });
+    el.addEventListener('input', resize);
+  };
   const ta = document.getElementById('chatInput');
-  ta.addEventListener('input', _makeRafResizer(ta, 140));
+  _bindAutoResize(ta, 140);
   ta.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !isMobile()) {
       e.preventDefault(); sendChat();
@@ -45082,7 +44979,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 사용자 요청 2026-04-29: 숙고 입력바도 메인 chat 처럼 자동 높이 (max 140px)
   const reflTa = document.getElementById('reflectionInput');
   if (reflTa) {
-    reflTa.addEventListener('input', _makeRafResizer(reflTa, 140));
+    _bindAutoResize(reflTa, 140);
     reflTa.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey && !isMobile()) {
         e.preventDefault(); sendReflectionChat();
