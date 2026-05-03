@@ -9514,7 +9514,7 @@
   <div class="login-content">
     <img class="login-icon" src="/godongicon.png" alt="소라고동" decoding="async">
     <div class="login-title">소라고동</div>
-    <div class="login-sub"><span style="font-size:17px; color:var(--text); font-weight:500; letter-spacing:0.01em;">나를 아는 길라잡이 <span class="accent">✦</span></span></div>
+    <div class="login-sub"><span style="font-size:17px; color:var(--text); font-weight:500; letter-spacing:0.01em;">나를 아는 AI 길라잡이 <span class="accent">✦</span></span></div>
 
     <!-- 사용자 명시 2026-04-30 ultrathink: PWA 설치 — 로그인 위 prominent (항상 펼침, standalone hide). Android = beforeinstallprompt 1탭 / iOS = manual 3 step. -->
     <div class="login-pwa-prominent" id="loginPwaCard">
@@ -19611,6 +19611,19 @@ function _hasFreshBatchReview(arrKey, keyMatch) {
   return arr.find(r => r.auto && !r.user_viewed && (!keyMatch || keyMatch(r)));
 }
 
+// 사용자 명시 2026-05-04: 한 번 진입한 리뷰 카드 같은 주기 안에선 다시 안 뜨게.
+// type ∈ {'weekly','monthly','quarterly','annual'}, key = 해당 주기 식별자 (currentWeekKey / prevMonthKey / prevQuarterKey / prevYear).
+function _reviewDismissed(type, key) {
+  const map = state.preferences && state.preferences._dismissedReviews;
+  return map && map[type] === key;
+}
+function _dismissReview(type, key) {
+  if (!state.preferences) state.preferences = {};
+  if (!state.preferences._dismissedReviews) state.preferences._dismissedReviews = {};
+  state.preferences._dismissedReviews[type] = key;
+  if (typeof saveState === 'function') saveState();
+}
+
 function isWeeklyReviewAvailable() {
   // batch 자동 생성 + 미시청 = 항상 노출 (요일 무관)
   const fresh = _hasFreshBatchReview('weeklyReviews');
@@ -19619,6 +19632,7 @@ function isWeeklyReviewAvailable() {
   const today = _cutoffAdjustedNow();
   if (today.getDay() !== 0) return false;
   const currentWeekKey = getCurrentWeekKey();
+  if (_reviewDismissed('weekly', currentWeekKey)) return false;
   return !(state.weeklyReviews || []).some(r => r.weekKey === currentWeekKey);
 }
 
@@ -19631,6 +19645,7 @@ function isMonthlyReviewAvailable() {
   const dayOfMonth = today.getDate();
   if (dayOfMonth > 7) return false;
   const prevMonthKey = getMonthKey(new Date(today.getFullYear(), today.getMonth() - 1, 15));
+  if (_reviewDismissed('monthly', prevMonthKey)) return false;
   const hasPrevMonth = (state.monthlyReviews || []).some(r => r.monthKey === prevMonthKey);
   if (hasPrevMonth) return false;
   const hasPrevMonthData = state.entries.some(e => e.date.startsWith(prevMonthKey));
@@ -19648,6 +19663,7 @@ function isQuarterlyReviewAvailable() {
   const prevQDate = new Date(today.getFullYear(), today.getMonth() - 1, 15);
   const prevQuarterKey = (typeof getQuarterKey === 'function') ? getQuarterKey(prevQDate) : null;
   if (!prevQuarterKey) return false;
+  if (_reviewDismissed('quarterly', prevQuarterKey)) return false;
   const exists = (state.quarterlyReviews || []).some(r => r.quarterKey === prevQuarterKey);
   if (exists) return false;
   const range = (typeof getQuarterRange === 'function') ? getQuarterRange(prevQuarterKey) : null;
@@ -19666,6 +19682,7 @@ function isAnnualReviewAvailable() {
   if (today.getMonth() !== 0) return false;
   if (today.getDate() > 7) return false;
   const prevYear = today.getFullYear() - 1;
+  if (_reviewDismissed('annual', prevYear)) return false;
   const exists = (state.annualReviews || []).some(r => r.year === prevYear);
   if (exists) return false;
   return (state.entries || []).some(e => e.date && e.date.startsWith(String(prevYear)));
@@ -19806,6 +19823,13 @@ async function openReview(type) {
     showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
     return;
   }
+  // 사용자 명시 2026-05-04: 한 번 진입하면 같은 주기 안에서 카드 다시 안 뜨게.
+  if (type === 'weekly') {
+    _dismissReview('weekly', getCurrentWeekKey());
+  } else if (type === 'monthly') {
+    const _t = _cutoffAdjustedNow();
+    _dismissReview('monthly', getMonthKey(new Date(_t.getFullYear(), _t.getMonth() - 1, 15)));
+  }
   // existing 체크 (ERROR #2) + batch fresh user_viewed 적용하기
   const data = _collectReviewData(type);
   const key = type === 'weekly' ? getWeekKey(data.cutoff) : getMonthKey(data.cutoff);
@@ -19861,6 +19885,8 @@ async function openQuarterlyReviewCard() {
   const now = new Date();
   const Q = Math.floor(now.getMonth() / 3) + 1;
   const prevQuarterKey = Q === 1 ? `${now.getFullYear() - 1}-Q4` : `${now.getFullYear()}-Q${Q - 1}`;
+  // 사용자 명시 2026-05-04: 한 번 진입한 분기 리뷰 카드 다시 안 뜨게.
+  _dismissReview('quarterly', prevQuarterKey);
   // batch fresh 우선 — auto + !user_viewed
   const fresh = (state.quarterlyReviews || []).find(r => r.auto && !r.user_viewed);
   const existing = fresh || (state.quarterlyReviews || []).find(r => r.quarterKey === prevQuarterKey);
@@ -19913,6 +19939,8 @@ async function openAnnualReviewCard() {
     return;
   }
   const prevYear = new Date().getFullYear() - 1;
+  // 사용자 명시 2026-05-04: 한 번 진입한 연간 리뷰 카드 다시 안 뜨게.
+  _dismissReview('annual', prevYear);
   // batch fresh 우선
   const fresh = (state.annualReviews || []).find(r => r.auto && !r.user_viewed);
   const existing = fresh || (state.annualReviews || []).find(r => r.year === prevYear);
@@ -25843,7 +25871,7 @@ function _getEmptyStateExample() {
 const TEACHING_PLACEHOLDERS = [
   { key: 'diary', text: '"일기:"로 시작 → 그날 entry 저장' },
   { key: 'plus', text: '+ 메뉴 → 일기 템플릿 / 일정 / 음성' },
-  { key: 'chapter', text: '대화 끝나면 ✓ 누르면 챕터 정리' },
+  { key: 'chapter', text: '✓ 누르면 이 대화 마무리' },
   { key: 'deeper', text: '내 답 아래 "더 알고 싶어 ▾" — 4단 분석' },
   { key: 'schedule', text: '"내일 3시 회의 잡아줘" — 일정 자동 추가' }
 ];
