@@ -16363,68 +16363,13 @@ const ONBOARDING_STEPS = [
     id: 'exec_immerse_btn',
     targetSelector: '.exec-immerse-btn',
     title: '🌧 시작',
-    body: '진짜 집중하고 싶을 때 이 버튼!<br>빗소리 + 시간 자동 기록.<br><br>한 번 눌러봐.',
+    body: '진짜 집중하고 싶을 때 이 버튼!<br>누르는 즉시 단축어 + 타이머 시작.<br><br>한 번 눌러봐.',
     waitFor: 'click',
     advanceDelay: 600,
     fallbackPosition: 'top'
   },
-  {
-    id: 'exec_immerse_input',
-    targetSelector: null,
-    advanceClickSelector: '.input-modal-btn.ok',
-    title: '입력은 미리 채워뒀어',
-    body: '"보고서 한 단락 쓰기"가 자동 입력됐지?<br><b>확인</b> 눌러봐.',
-    waitFor: 'click',
-    advanceDelay: 600,
-    dimBackground: false,
-    aboveModal: true
-  },
-  {
-    id: 'exec_immerse_both',
-    targetSelector: '.ritual-btn[onclick*="ritualChooseType(\'both\')"]',
-    title: '✦ 둘 다 약속',
-    body: '<b>"✦ 둘 다"</b> 눌러봐. 시작 약속 + 방해 대비 둘 다 만들 거야.',
-    waitFor: 'click',
-    advanceDelay: 600,
-    dimBackground: false,
-    aboveModal: true,
-    manualAdvance: true,
-    fallbackPosition: 'top'
-  },
-  {
-    id: 'exec_immerse_start_next',
-    // 사용자 요청 2026-04-29: 화면의 '눌렀어 ✦' 클릭 → 자동 진행. 모달 버튼 라벨도 '눌렀어 →'로
-    targetSelector: null,
-    advanceClickSelector: '.ritual-btn.primary[onclick="ritualNextStep()"]',
-    title: '시작 IF-THEN',
-    body: '시작 약속 미리 채워뒀어:<br><b>IF</b> 카페 도착해서 자리 앉으면 → <b>THEN</b> 노트북 펴고 한 단락 쓰기<br><br>"<b>눌렀어 ✦</b>" 눌러봐.',
-    waitFor: 'click',
-    advanceDelay: 600,
-    dimBackground: false,
-    aboveModal: true
-  },
-  {
-    id: 'exec_immerse_obstacle',
-    targetSelector: null,
-    advanceClickSelector: '.ritual-btn.primary[onclick="ritualNextStep()"]',
-    title: '방해 대비 IF-THEN',
-    body: '방해 대비도 미리 채워뒀어:<br><b>IF</b> 유튜브 부르면 → <b>THEN</b> 탭 닫고 물 한 모금<br><br>"<b>약속할게 ✦</b>" 눌러봐.',
-    waitFor: 'click',
-    advanceDelay: 600,
-    dimBackground: false,
-    aboveModal: true
-  },
-  {
-    id: 'exec_immerse_launch',
-    targetSelector: null,
-    advanceClickSelector: '.ritual-btn.primary[onclick="ritualLaunch()"]',
-    title: '🚀 발사',
-    body: '약속 정리됐지? <b>"🌧 시작"</b> 눌러봐.<br>빗소리 + 타이머 시작.',
-    waitFor: 'click',
-    advanceDelay: 600,
-    dimBackground: false,
-    aboveModal: true
-  },
+  // V4 redesign (사용자 명시 2026-05-04 ultrathink): 진입장벽 제거 — task input / IF-THEN 4 step 폐기.
+  // 옛 step (exec_immerse_input / both / start_next / obstacle / launch) 모두 제거.
   {
     id: 'exec_iphone_shortcut',
     targetSelector: null,
@@ -35366,41 +35311,46 @@ async function promoteFromDrawer() {
   showToast('새 카드 3장 ✦');
 }
 
-// === IMMERSE START (no task — pure ritual) ===
+// === IMMERSE START — V4 redesign (사용자 명시 2026-05-04 ultrathink): 진입장벽 제거 ===
+// 옛: task 입력 modal → ritual 모달 (IF-THEN 4 step) → 발사
+// 신: 버튼 누르면 즉시 단축어 trigger + start 기록 + active bar
 async function openImmerseStart() {
-  // V3.13: 몰입 시작 시 task 이름 입력 → 서랍장에 저장 + ritual 시작
-  // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드 시 예시 자동 채움
-  const isTutorial = !!window._onbTutorialMode;
-  const isTester = !!(state.preferences && state.preferences.testerMode);
-  const title = await showInputModal({
-    title: '🌧 시작',
-    message: '뭐에 몰입할 거야?',
-    placeholder: '예: 보고서 쓰기, 코드 짜기, 청소',
-    maxLength: 50,
-    defaultValue: (isTutorial || isTester) ? '보고서 한 단락 쓰기' : ''
-  });
-  if (!title || !title.trim()) return;
+  _quickStart({ taskId: null, taskTitle: null });
+}
 
-  const todayKeyVal = todayKey();
-  const newTask = {
-    id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-    title: title.trim(),
-    weight: 'daily',
-    energy: 'medium',
-    source: 'immerse',
-    date: todayKeyVal,
-    slot: 'drawer',
-    priority: getNextDrawerPriority(),
-    status: 'active',
-    createdAt: new Date().toISOString()
+// 공통 헬퍼 — 즉시 단축어 trigger + state.starts 기록 + localStorage active ritual + active bar
+function _quickStart({ taskId, taskTitle }) {
+  if (!Array.isArray(state.starts)) state.starts = [];
+  const startEntry = {
+    id: 'start_' + Date.now(),
+    taskId: taskId || null,
+    taskTitle: taskTitle || null,
+    startIf: null,
+    startThen: null,
+    obstacle: null,
+    plan: null,
+    ifThenType: 'none',
+    startedAt: new Date().toISOString(),
+    returnedAt: null,
+    outcome: null
   };
-  if (!state.tasks) state.tasks = [];
-  state.tasks.push(newTask);
+  state.starts.push(startEntry);
   saveState();
-  if (typeof renderExecute === 'function') renderExecute();
-  showToast(`📂 서랍장에 '${newTask.title}' 추가됨`);
 
-  startRitualGame({ taskId: newTask.id, taskTitle: newTask.title });
+  // localStorage 활성 ritual — 새로고침 / 다른 화면 진입 후에도 active bar 복원
+  try {
+    localStorage.setItem('soragodong_active_ritual', JSON.stringify({
+      startId: startEntry.id,
+      taskId: taskId || null,
+      taskTitle: taskTitle || null,
+      startIf: null, startThen: null, obstacle: null, plan: null,
+      launchedAt: Date.now()
+    }));
+  } catch (e) {}
+
+  triggerShortcut();
+  showRitualActiveBar();
+  showToast(taskTitle ? `🌧 시작 — "${taskTitle}"` : '🌧 시작 — 갔다 와');
 }
 
 // V3.13: 서랍장 task 우선순위 다음 번호 계산 (가장 높은 priority + 1)
@@ -38283,318 +38233,17 @@ function showShortcutGuide() {
   showScreen('shortcut-guide');
 }
 
-// === START RITUAL GAME ===
-let _ritualState = {
-  step: 0,           // 0=goal, 1=type, 2=startIfThen, 3=obstacleIfThen, 4=launch
-  taskId: null,
-  taskTitle: null,
-  goal: '',
-  ifThenType: 'none', // 'none' | 'start' | 'obstacle' | 'both'
-  startIf: '',
-  startThen: '',
-  obstacle: '',
-  plan: '',
-  startId: null
-};
-
+// === START QUEST — V4 redesign: ritual 모달 폐기 (V191 V4-1u 흐름 단순화) ===
+// 옛 _ritualState / startRitualGame / renderRitualStep / setupRitualEnter / ritualChooseType /
+//    ritualSkipToLaunch / ritualNextStep / ritualBackStep / ritualLaunch 모두 제거.
+// 신: startQuest / openImmerseStart 가 _quickStart 직접 호출 → 즉시 단축어 trigger.
 function startQuest(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
-  startRitualGame({ taskId, taskTitle: task.title });
+  // V4 redesign (사용자 명시 2026-05-04 ultrathink): IF-THEN 모달 skip — 즉시 단축어 trigger.
+  _quickStart({ taskId, taskTitle: task.title });
 }
 
-function startRitualGame({ taskId, taskTitle }) {
-  // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드 시 IF-THEN 자동 채움
-  const isAutoFill = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
-  _ritualState = {
-    step: taskId ? 1 : 0,  // if task given, skip goal (it's the task title)
-    taskId,
-    taskTitle,
-    goal: taskTitle || '',
-    ifThenType: 'none',
-    startIf: isAutoFill ? '카페 도착해서 자리 앉으면' : '',
-    startThen: isAutoFill ? '노트북 펴고 한 단락 쓰기' : '',
-    obstacle: isAutoFill ? '유튜브 부르면' : '',
-    plan: isAutoFill ? '탭 닫고 물 한 모금' : '',
-    startId: null
-  };
-  document.getElementById('ritualOverlay').style.display = 'flex';
-  renderRitualStep();
-}
-
-function renderRitualStep() {
-  const stage = document.getElementById('ritualStage');
-  if (!stage) return;
-  
-  if (_ritualState.step === 0) {
-    // Step 0: Goal
-    stage.innerHTML = `
-      <div class="ritual-step-label">— 목표 —</div>
-      <div class="ritual-icon">🎯</div>
-      <div class="ritual-question">지금 뭐 할 거야?</div>
-      <div class="ritual-sub">한 줄로. 작아도 OK.<br>"문서 열기"도 충분해.</div>
-      <input type="text" class="ritual-input" id="ritualGoalInput" placeholder='예: 메일 답장 한 통, 운동 5분, 공부 15분' value="${escapeHtml(_ritualState.goal)}" autofocus>
-      <div class="ritual-actions">
-        <button class="ritual-btn primary" onclick="ritualNextStep()">다음 →</button>
-        <button class="ritual-btn skip" onclick="closeRitual()">취소</button>
-      </div>
-    `;
-    setTimeout(() => document.getElementById('ritualGoalInput')?.focus(), 100);
-    setupRitualEnter('ritualGoalInput', 'ritualNextStep');
-  }
-  else if (_ritualState.step === 1) {
-    // Step 1: Choose ritual type (skip = launch directly)
-    const goalLabel = escapeHtml(_ritualState.goal || '몰입');
-    // FIX BUG-2: 카드에서 시작했으면 "← 이전"이 의미 없으니 "취소"로 표시
-    const backLabel = _ritualState.taskId ? '취소' : '← 이전';
-    stage.innerHTML = `
-      <div class="ritual-step-label">— 약속 (선택) —</div>
-      <div class="ritual-icon">🐚</div>
-      <div class="ritual-question">"${goalLabel}"</div>
-      <div class="ritual-sub">"이러면 → 저러기" 약속을 더하면 뇌가 더 잘 따라와.<br>안 해도 OK.</div>
-      <div class="ritual-actions">
-        <button class="ritual-btn ifthen-choice" onclick="ritualChooseType('start')">
-          <div style="font-weight:600; margin-bottom:2px;">🚀 시작 약속</div>
-          <div style="font-size:11px; color:var(--text-dim);">의자에 앉으면 → 코드 창 열기</div>
-        </button>
-        <button class="ritual-btn ifthen-choice" onclick="ritualChooseType('obstacle')">
-          <div style="font-weight:600; margin-bottom:2px;">🛡 방해 대비</div>
-          <div style="font-size:11px; color:var(--text-dim);">유튜브 부르면 → 창 닫기</div>
-        </button>
-        <button class="ritual-btn ifthen-choice" onclick="ritualChooseType('both')">
-          <div style="font-weight:600; margin-bottom:2px;">✦ 둘 다</div>
-          <div style="font-size:11px; color:var(--text-dim);">시작 + 방해 둘 다 약속</div>
-        </button>
-        <button class="ritual-btn primary" onclick="ritualSkipToLaunch()">바로 발사 🚀</button>
-        <button class="ritual-btn skip" onclick="ritualBackStep()">${backLabel}</button>
-      </div>
-    `;
-  }
-  else if (_ritualState.step === 2) {
-    // Step 2: Start IF-THEN
-    stage.innerHTML = `
-      <div class="ritual-step-label">— 시작 약속 —</div>
-      <div class="ritual-icon">🚀</div>
-      <div class="ritual-question">어떻게 시작할 거야?</div>
-      <div class="ritual-ifthen">
-        <div class="ritual-ifthen-row">
-          <span class="ritual-ifthen-tag">IF</span>
-          <input type="text" class="ritual-input ifthen-inline" id="ritualStartIfInput" 
-                 placeholder='예: 의자에 앉으면'
-                 value="${escapeHtml(_ritualState.startIf)}">
-        </div>
-        <div class="ritual-arrow">↓</div>
-        <div class="ritual-ifthen-row then">
-          <span class="ritual-ifthen-tag">THEN</span>
-          <input type="text" class="ritual-input ifthen-inline" id="ritualStartThenInput"
-                 placeholder='예: VS Code 열기'
-                 value="${escapeHtml(_ritualState.startThen)}">
-        </div>
-      </div>
-      <div class="ritual-sub">트리거 → 행동을 묶으면 자동 시동돼.</div>
-      <div class="ritual-actions">
-        <button class="ritual-btn primary" onclick="ritualNextStep()">${_ritualState.ifThenType === 'both' ? (window._onbTutorialMode ? '눌렀어 ✦' : '다음 →') : '약속할게 ✦'}</button>
-        <button class="ritual-btn skip" onclick="ritualBackStep()">← 이전</button>
-      </div>
-    `;
-    setTimeout(() => document.getElementById('ritualStartIfInput')?.focus(), 100);
-  }
-  else if (_ritualState.step === 3) {
-    // Step 3: Obstacle IF-THEN
-    stage.innerHTML = `
-      <div class="ritual-step-label">— 방해 대비 —</div>
-      <div class="ritual-icon">🛡</div>
-      <div class="ritual-question">방해할 것 같은 게 있어?</div>
-      <div class="ritual-ifthen">
-        <div class="ritual-ifthen-row">
-          <span class="ritual-ifthen-tag">IF</span>
-          <input type="text" class="ritual-input ifthen-inline" id="ritualObstacleIfInput" 
-                 placeholder='예: 유튜브 부르면'
-                 value="${escapeHtml(_ritualState.obstacle)}">
-        </div>
-        <div class="ritual-arrow">↓</div>
-        <div class="ritual-ifthen-row then">
-          <span class="ritual-ifthen-tag">THEN</span>
-          <input type="text" class="ritual-input ifthen-inline" id="ritualObstacleThenInput"
-                 placeholder='예: 창 닫기, 물 한 모금'
-                 value="${escapeHtml(_ritualState.plan)}">
-        </div>
-      </div>
-      <div class="ritual-sub">자동 방어막이 돼.</div>
-      <div class="ritual-actions">
-        <button class="ritual-btn primary" onclick="ritualNextStep()">약속할게 ✦</button>
-        <button class="ritual-btn skip" onclick="ritualBackStep()">← 이전</button>
-      </div>
-    `;
-    setTimeout(() => document.getElementById('ritualObstacleIfInput')?.focus(), 100);
-  }
-  else if (_ritualState.step === 4) {
-    // Step 4: Launch
-    const goalLabel = escapeHtml(_ritualState.goal || '몰입');
-    const hasStart = _ritualState.startIf && _ritualState.startThen;
-    const hasObstacle = _ritualState.obstacle && _ritualState.plan;
-    stage.innerHTML = `
-      <div class="ritual-step-label">— 발사 —</div>
-      <div class="ritual-icon">🚀</div>
-      <div class="ritual-launch-msg">
-        <span class="accent">"${goalLabel}"</span><br>
-        시작!
-      </div>
-      ${hasStart ? `
-        <div class="ritual-ifthen">
-          <div class="ritual-ifthen-row">
-            <span class="ritual-ifthen-tag">시작 IF</span>
-            <span class="ritual-ifthen-text">${escapeHtml(_ritualState.startIf)}</span>
-          </div>
-          <div class="ritual-arrow">↓</div>
-          <div class="ritual-ifthen-row then">
-            <span class="ritual-ifthen-tag">THEN</span>
-            <span class="ritual-ifthen-text">${escapeHtml(_ritualState.startThen)}</span>
-          </div>
-        </div>
-      ` : ''}
-      ${hasObstacle ? `
-        <div class="ritual-ifthen">
-          <div class="ritual-ifthen-row">
-            <span class="ritual-ifthen-tag">방해 IF</span>
-            <span class="ritual-ifthen-text">${escapeHtml(_ritualState.obstacle)}</span>
-          </div>
-          <div class="ritual-arrow">↓</div>
-          <div class="ritual-ifthen-row then">
-            <span class="ritual-ifthen-tag">THEN</span>
-            <span class="ritual-ifthen-text">${escapeHtml(_ritualState.plan)}</span>
-          </div>
-        </div>
-      ` : ''}
-      <div class="ritual-sub">갔다 와. 돌아오면 위에 작은 알림이 떠.<br>아무 때나 탭하면 돼.</div>
-      <div class="ritual-actions">
-        <button class="ritual-btn primary" onclick="ritualLaunch()">🌧 시작</button>
-        <button class="ritual-btn skip" onclick="ritualBackStep()">← 이전</button>
-      </div>
-    `;
-  }
-}
-
-function setupRitualEnter(inputId, fn) {
-  const input = document.getElementById(inputId);
-  if (!input) return;
-  input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      window[fn]();
-    }
-  });
-}
-
-function ritualChooseType(type) {
-  _ritualState.ifThenType = type;
-  if (type === 'start' || type === 'both') {
-    _ritualState.step = 2;
-  } else if (type === 'obstacle') {
-    _ritualState.step = 3;
-  }
-  renderRitualStep();
-}
-
-function ritualSkipToLaunch() {
-  _ritualState.ifThenType = 'none';
-  _ritualState.step = 4;
-  renderRitualStep();
-}
-
-function ritualNextStep() {
-  if (_ritualState.step === 0) {
-    const v = document.getElementById('ritualGoalInput')?.value.trim();
-    if (!v) { showToast('한 줄이라도 적어봐'); return; }
-    _ritualState.goal = v;
-    _ritualState.step = 1;
-  } else if (_ritualState.step === 2) {
-    const ifVal = document.getElementById('ritualStartIfInput')?.value.trim();
-    const thenVal = document.getElementById('ritualStartThenInput')?.value.trim();
-    if (!ifVal || !thenVal) { showToast('IF와 THEN 둘 다 적어봐'); return; }
-    _ritualState.startIf = ifVal;
-    _ritualState.startThen = thenVal;
-    if (_ritualState.ifThenType === 'both') {
-      _ritualState.step = 3;
-    } else {
-      _ritualState.step = 4;
-    }
-  } else if (_ritualState.step === 3) {
-    const ifVal = document.getElementById('ritualObstacleIfInput')?.value.trim();
-    const thenVal = document.getElementById('ritualObstacleThenInput')?.value.trim();
-    if (!ifVal || !thenVal) { showToast('IF와 THEN 둘 다 적어봐'); return; }
-    _ritualState.obstacle = ifVal;
-    _ritualState.plan = thenVal;
-    _ritualState.step = 4;
-  }
-  renderRitualStep();
-}
-
-function ritualBackStep() {
-  // FIX BUG-2: 카드에서 시작한 경우(taskId 있음) step 1에서 이전 누르면 닫기
-  if (_ritualState.step === 1) {
-    if (_ritualState.taskId) {
-      closeRitual();
-      return;
-    }
-    _ritualState.step = 0;
-  }
-  else if (_ritualState.step === 2) _ritualState.step = 1;
-  else if (_ritualState.step === 3) {
-    _ritualState.step = _ritualState.ifThenType === 'both' ? 2 : 1;
-  } else if (_ritualState.step === 4) {
-    if (_ritualState.ifThenType === 'both') _ritualState.step = 3;
-    else if (_ritualState.ifThenType === 'start') _ritualState.step = 2;
-    else if (_ritualState.ifThenType === 'obstacle') _ritualState.step = 3;
-    else _ritualState.step = 1;
-  }
-  renderRitualStep();
-}
-
-function ritualLaunch() {
-  // Record start
-  const startEntry = {
-    id: 'start_' + Date.now(),
-    taskId: _ritualState.taskId,
-    taskTitle: _ritualState.goal,
-    startIf: _ritualState.startIf || null,
-    startThen: _ritualState.startThen || null,
-    obstacle: _ritualState.obstacle || null,
-    plan: _ritualState.plan || null,
-    ifThenType: _ritualState.ifThenType,
-    startedAt: new Date().toISOString(),
-    returnedAt: null,
-    outcome: null
-  };
-  state.starts.push(startEntry);
-  _ritualState.startId = startEntry.id;
-  saveState();
-  
-  // Trigger iOS shortcut
-  triggerShortcut();
-  
-  // Persist active ritual to localStorage so it survives page reload
-  try {
-    localStorage.setItem('soragodong_active_ritual', JSON.stringify({
-      startId: startEntry.id,
-      taskId: _ritualState.taskId,
-      taskTitle: _ritualState.goal,
-      startIf: _ritualState.startIf,
-      startThen: _ritualState.startThen,
-      obstacle: _ritualState.obstacle,
-      plan: _ritualState.plan,
-      launchedAt: Date.now()
-    }));
-  } catch(e) {}
-  
-  // Close modal
-  closeRitual();
-  
-  // Show floating "in progress" bar
-  showRitualActiveBar();
-  
-  showToast('🌧 시작! 갔다 와');
-}
 
 function closeRitual() {
   document.getElementById('ritualOverlay').style.display = 'none';
@@ -38613,9 +38262,11 @@ function showRitualActiveBar() {
   const bar = document.createElement('div');
   bar.className = 'ritual-active-bar';
   bar.id = 'ritualActiveBar';
+  // V4 redesign: taskTitle 없으면 "몰입 중" 만 (옛 "몰입 중: 몰입" 중복 제거)
+  const titleText = active.taskTitle ? `몰입 중: ${escapeHtml(active.taskTitle)}` : '몰입 중';
   bar.innerHTML = `
     <span class="icon">🌧</span>
-    <span class="text">몰입 중: ${escapeHtml(active.taskTitle || '몰입')}</span>
+    <span class="text">${titleText}</span>
     <button class="check-btn" onclick="event.stopPropagation(); ritualReturn()">✓ 돌아옴</button>
   `;
   bar.onclick = () => ritualReturn();
