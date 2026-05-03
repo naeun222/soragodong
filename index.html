@@ -10662,7 +10662,7 @@ const DEFAULT_STATE = {
   },
 
   // 7. V3.3: 대화 일별 아카이브
-  chatArchive: [],          // [{date, summary, messageCount, messages, generatedAt}]
+  chatArchive: [],          // [{date, messageCount, messages, generatedAt}]  ※ V191 폐기로 summary 필드 제거
 
   // 사용자 명시 2026-04-30 ultrathink: 코어 #1 첫 관찰 worry 데이터. testerMode OFF / 시드 sweep / backup restore 영향 X.
   // 별도 array — chatMessages 와 격리 (회의 결정 B). traits/values/patterns 자동 합류 input.
@@ -14462,7 +14462,6 @@ async function loadFromCloud() {
             state.chatArchive.unshift({
               id: 'arch_mig_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 6),
               date: _dateKey,
-              summary: `대화 #${state.chatArchive.length + 1}`,
               messageCount: _chapMsgs.length,
               messages: _chapMsgs,
               generatedAt: new Date().toISOString(),
@@ -19959,7 +19958,7 @@ ${type === 'monthly' ? '이번 달의 너를 한 단어로 명명 (정체성 hoo
 미션: ${JSON.stringify(missionsInRange.map(m => ({title: m.title, status: m.status, attemptStatus: m.attemptStatus, strategyId: m.strategyId})), null, 2).slice(0, 1500)}
 대화 발췌 (사용자): ${chatInRange.map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3000)}
 결정 + 예측: ${JSON.stringify(decisionsInRange.map(d => ({title: d.title, status: d.status, finalDecision: d.finalDecision, predictions: d.predictions})), null, 2).slice(0, 1500)}
-챕터: ${JSON.stringify(chaptersInRange.map(c => ({date: c.date, summary: c.summary, messageCount: c.messageCount})), null, 0).slice(0, 1500)}
+챕터: ${JSON.stringify(chaptersInRange.map(c => ({date: c.date, messageCount: c.messageCount})), null, 0).slice(0, 1500)}
 가닥(topicCards): ${JSON.stringify(topicCardsInRange.map(t => ({title: t.title, summary: t.summary, category: t.category})), null, 0).slice(0, 1500)}
 진주: ${JSON.stringify(pearlsInRange.map(p => ({content: p.content, note: p.note})), null, 0).slice(0, 1000)}
 스크랩(archive): ${JSON.stringify(archiveInRange.map(a => ({headline: a.headline, body: (a.body || '').slice(0, 200), tags: a.tags, starred: a.starred})), null, 0).slice(0, 1200)}
@@ -27677,12 +27676,12 @@ function _archiveCurrentChapter(opts) {
 
   const firstMsgTs = validMsgs[0] && validMsgs[0].timestamp;
   const dateKey = firstMsgTs ? getDayKey(firstMsgTs) : todayKey();
-  const seqNum = state.chatArchive.length + 1;
 
+  // V4 (사용자 명시 2026-05-04 V191): summary 필드 제거 — 히스토리 API 줄거리 요약 기능 폐기.
+  // 표시 / system prompt 주입 / review 입력 모두 raw messages + topicCards 기반으로 통일.
   const archiveItem = {
     id: 'arch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     date: dateKey,
-    summary: `대화 #${seqNum}`,
     messageCount: validMsgs.length,
     messages: validMsgs.slice(),
     generatedAt: new Date().toISOString(),
@@ -29014,26 +29013,10 @@ function buildSystemPromptParts() {
     volatile.push('');
   }
 
-  // 사용자 명시 2026-05-02 ultrathink: 옛 recentArchives (3개) + recentArchive (14일 7개) 중복 주입 → 통합.
-  // 최근 14일, 5개, summary 200자, pinned 보존. system prompt volatile 영역 ~3-5% 절감.
-  const _archiveCutoffMs = Date.now() - 14 * 86400000;
-  const recentArchives = (state.chatArchive || [])
-    .filter(a => {
-      const ts = new Date((a.date || '') + 'T00:00:00').getTime();
-      return ts >= _archiveCutoffMs;
-    })
-    .slice()
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-    .slice(0, 5);
-  if (recentArchives.length > 0) {
-    volatile.push('[최근 대화 챕터 (지난 1-2주)]');
-    recentArchives.forEach(a => {
-      const sum = (a.summary || '대화').slice(0, 200);
-      volatile.push(`- ${a.date || ''}: ${sum}${a.pinned ? ' 📌' : ''}`);
-    });
-    volatile.push('  · 사용자가 직접 짚지 않으면 먼저 인용 X. 비슷한 주제 꺼내면 자연스럽게 "지난번 X 얘기 떠오르네" 가능.');
-    volatile.push('');
-  }
+  // V4 (사용자 명시 2026-05-04 V191): 히스토리 API 줄거리 요약 기능 제거.
+  // 옛: 최근 14일 chatArchive 5개의 AI 생성 summary 를 system prompt 에 주입 → AI 가 과거 챕터 인용.
+  // 제거 이유: AI 가 자기가 생성한 줄거리 요약을 다시 먹는 피드백 루프 — 정확도 ↓ + 토큰 낭비.
+  // chatArchive 자체는 보존 (이전 대화 모달 + resume + topicCards 흐름 정상 작동).
 
   // 사용자 요청 2026-04-29: 사용자가 약속한 followup (예: "나중에 체크해줘") — 시간 지났으면 자발적으로 물어보기
   // mission 중 _followupAsked=false + 지난 결과 미체크인 거 추출
@@ -29104,8 +29087,6 @@ function buildSystemPromptParts() {
     });
     volatile.push('');
   }
-
-  // 사용자 명시 2026-05-02 ultrathink: recentArchive (14일 7개) 통합 → 위쪽 recentArchives 한 자리로. 같은 데이터 중복 주입 제거.
 
   if (state.archive.length > 0) {
     volatile.push('[과거 깨달음 (최근 5개)]');
@@ -34162,7 +34143,6 @@ function renderChatArchiveModal() {
             <span class="cac-toggle">${isExpanded ? '▾' : '▸'}</span>
           </div>
         </div>
-        <div class="cac-summary">${escapeHtml(a.summary || '')}</div>
         ${pendingNote}
         ${isExpanded ? `
           <div class="cac-messages">
@@ -34283,7 +34263,8 @@ ${chatLog.slice(0, 8000)}
 JSON만 출력. 마크다운 X. 다른 설명 X.`;
 }
 
-// parsed JSON 받아 topicCards push + chapterMeta + archive.summary 갱신.
+// parsed JSON 받아 topicCards push + chapterMeta 갱신.
+// V4 (V191): archive.summary 갱신 분기 폐기 — 히스토리 줄거리 요약 흐름 제거.
 function _processExtractTopicData(parsed, prevChapterMsgs) {
   if (!parsed?.topics || !Array.isArray(parsed.topics)) return;
   if (!prevChapterMsgs || prevChapterMsgs.length === 0) return;
@@ -34337,18 +34318,8 @@ function _processExtractTopicData(parsed, prevChapterMsgs) {
     }
   }
 
-  // archive.summary 갱신 (5cdcb79 fix 보존)
-  if (parsed.topics.length > 0) {
-    const _archiveItem = (state.chatArchive || []).find(a =>
-      Array.isArray(a.messages) && a.messages[0] && a.messages[0].timestamp === chapterStartedAt
-    );
-    if (_archiveItem) {
-      const _titles = parsed.topics.map(t => t.title).filter(Boolean).slice(0, 3);
-      if (_titles.length > 0) {
-        _archiveItem.summary = _titles.join(' / ').slice(0, 200);
-      }
-    }
-  }
+  // V4 (사용자 명시 2026-05-04 V191): archive.summary 갱신 제거 — 히스토리 API 줄거리 요약 기능 폐기.
+  // topicCards 추출 흐름은 보존 (도서관 / 나 탭 카드 정상). chatArchive item 자체는 raw messages 그대로 보관.
   saveState();
   if (metaUpdated && typeof renderChat === 'function') renderChat();
   console.log(`✦ 챕터 토픽 ${parsed.topics.length}개 추출됨`);
@@ -37351,7 +37322,7 @@ ${JSON.stringify(entriesIn.slice(-30), null, 0).slice(0, 4500)}
 ${chatIn.map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3500)}
 
 [분기 챕터]
-${JSON.stringify(chaptersIn.map(c => ({date: c.date, summary: c.summary, messageCount: c.messageCount})), null, 0).slice(0, 1800)}
+${JSON.stringify(chaptersIn.map(c => ({date: c.date, messageCount: c.messageCount})), null, 0).slice(0, 1800)}
 
 [분기 가닥(topicCards)]
 ${JSON.stringify(topicCardsIn.map(t => ({title: t.title, summary: t.summary, category: t.category})), null, 0).slice(0, 1800)}
