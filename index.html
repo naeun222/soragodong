@@ -23483,6 +23483,13 @@ function pickVideoTrimRange(file, maxSec) {
 
     v.onloadedmetadata = async () => {
       const dur = v.duration;
+      // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): dur 이 Infinity (live HLS / 일부 Safari mov) 또는 0 / NaN 케이스 가드.
+      // 그대로 진행하면 handle 위치 NaN% / 0% → 사용자가 trim 못 함 → modal 멈춤 신고.
+      if (!Number.isFinite(dur) || dur <= 0.05) {
+        try { showToast('영상 길이 읽기 실패 — 다른 영상 시도'); } catch(_) {}
+        cleanup(null);
+        return;
+      }
       _vtmState = { dur, start: 0, end: Math.min(maxSec, dur), maxSec, v, overlay };
       const minSel = Math.min(0.5, dur);  // 최소 0.5초
 
@@ -23660,7 +23667,17 @@ async function _captureAudioFromVideo(file, startSec, endSec, sampleRate) {
 
       const AC = window.AudioContext || window.webkitAudioContext;
       let ctx;
-      try { ctx = new AC({ sampleRate }); } catch(_) { ctx = new AC(); }
+      // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): path B (createMediaElementSource = iOS Safari 17.4 이하 fallback) 는
+      // source 의 native sampleRate 와 ctx.sampleRate 가 일치해야 throw 안 함. ctx 에 강제 sampleRate 옵션 주면 mismatch → throw.
+      // → path B 시 인자 없이 default 로 만들어 system 매칭. path A (captureStream) 는 createMediaStreamSource 가 자동 resample 이라 OK.
+      if (usePathB) {
+        try { ctx = new AC(); } catch(e) {
+          cleanup();
+          return reject(new Error('AudioContext 생성 실패: ' + (e?.message || e)));
+        }
+      } else {
+        try { ctx = new AC({ sampleRate }); } catch(_) { ctx = new AC(); }
+      }
       // iOS Safari = AudioContext suspended start. 명시적 resume 필요.
       try { if (ctx.state === 'suspended') await ctx.resume(); } catch(_) {}
       const actualSR = ctx.sampleRate;
@@ -23970,10 +23987,12 @@ async function compressVideoWebCodecs(file, opts = {}) {
             : Math.round(1e6 / fps);
           muxer.addVideoChunk(chunk, safeMeta, undefined, dur);
         } catch (err) {
-          encoderError = err;
+          encoderError = err || new Error('addVideoChunk fail (err empty)');
         }
       },
-      error: (e) => { encoderError = e; }
+      // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): Safari 가 error callback 을 null/undefined 인자로 호출하는 케이스 → encoderError = null → infinite loop.
+      // 의미 있는 Error 로 wrap.
+      error: (e) => { encoderError = e || new Error('VideoEncoder error (empty callback)'); }
     });
     encoder.configure({ codec: chosenCodec, width: cw, height: ch, bitrate, framerate: fps });
 
@@ -24002,22 +24021,30 @@ async function compressVideoWebCodecs(file, opts = {}) {
     let firstFrameThumb = null;
     const startCt = video.currentTime;
     const frameDurationUs = Math.round(1e6 / fps);
+    // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): rAF fallback (Safari 17.4 미만 = requestVideoFrameCallback X) 또는
+    // video stalled 케이스 무한 루프 방지 — frame count safety cap.
+    const maxFrames = Math.ceil(maxSec * fps) + 4;
 
     await new Promise((resolveLoop, rejectLoop) => {
       const onFrame = () => {
         try {
           if (encoderError) return rejectLoop(encoderError);
-          const ts = video.currentTime - startCt;
-          if (ts > maxSec || video.ended) return resolveLoop();
-          if (video.readyState >= 2) {
+          const wallTs = video.currentTime - startCt;
+          // V4 fix v6: wallTs > maxSec 또는 video.ended 또는 maxFrames 도달 → 종료.
+          if (wallTs > maxSec || video.ended || frameIdx >= maxFrames) return resolveLoop();
+          // V4 fix v6: wallTs >= 0 가드 — Safari 일부 케이스 currentTime 이 startCt 보다 살짝 작게 진동 → 음수 wallTs.
+          // 음수 timestamp 는 mp4-muxer 가 reject ("must be non-negative") + VideoFrame 자체도 throw. → frame skip, 다음 callback 대기.
+          if (video.readyState >= 2 && wallTs >= 0) {
             ctx.drawImage(video, 0, 0, cw, ch);
             // V4 (사용자 명시): 첫 frame 으로 썸네일 추출 (사진처럼 표시)
             if (frameIdx === 0) {
               try { firstFrameThumb = canvas.toDataURL('image/jpeg', 0.7); } catch(_) {}
             }
+            // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): timestamp = frameIdx * frameDurationUs (단조 증가 + 음수 X 보장).
+            // 직전 wallTs * 1e6 직접 사용 시 Safari currentTime 비단조 케이스 → mp4-muxer reject ("DTS must be monotonic" / "non-negative").
             // duration 명시 — mp4-muxer v5 가 chunk.duration null 거부
             const frame = new VideoFrame(canvas, {
-              timestamp: Math.round(ts * 1e6),
+              timestamp: frameIdx * frameDurationUs,
               duration: frameDurationUs
             });
             encoder.encode(frame, { keyFrame: frameIdx % (fps * 2) === 0 });
@@ -24060,9 +24087,10 @@ async function compressVideoWebCodecs(file, opts = {}) {
                 ? chunk.duration
                 : Math.round((1024 / audioSampleRate) * 1e6);
               muxer.addAudioChunk(chunk, meta, undefined, dur);
-            } catch (err) { audioErr = err; }
+            } catch (err) { audioErr = err || new Error('addAudioChunk fail (err empty)'); }
           },
-          error: (e) => { audioErr = e; }
+          // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): Safari empty error callback 가드 — null audioErr 면 catch 못 함.
+          error: (e) => { audioErr = e || new Error('AudioEncoder error (empty callback)'); }
         });
         aenc.configure({
           codec: audioCodec,
@@ -41215,8 +41243,10 @@ async function addPearl() {
               showFullscreenLoader('동영상 길이 확인 중... 📹');
               const dur = await _getVideoDuration(file);
               hideFullscreenLoader();
-              if (dur < 0) {
-                showToast('동영상 읽기 실패 — 다른 영상 시도');
+              // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): dur Infinity (live HLS / 일부 .mov) / NaN / 0 케이스 가드.
+              // 그대로 dur > 5 분기 들어가면 trim modal 안에서 또 cleanup 되어 "자르기 취소됨" 잘못 안내.
+              if (dur < 0 || !Number.isFinite(dur) || dur <= 0.05) {
+                showToast('동영상 길이 읽기 실패 — 다른 영상 시도');
               } else {
                 // 사용자 명시 2026-05-03: 5초 초과 = trim modal 띄워서 사용자가 구간 선택. 5초 이하 = modal X.
                 let trimStart = 0;
@@ -41338,9 +41368,12 @@ function showPearlViewModal(pearl) {
     }
     // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
     const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(pearl.content || '') : (pearl.content || '');
+    // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): video src 가 hydratePearlVideos 비동기로 적용되는 동안 까만 화면 → 사용자가 "썸네일 안 보임 / 재생 X" 로 인식.
+    // poster 속성에 videoThumbnail 박아서 hydrate 전 + 첫 ▶ 클릭 전까지 thumbnail 보이게.
+    const _posterAttr = pearl.videoThumbnail ? ` poster="${escapeHtml(pearl.videoThumbnail)}"` : '';
     mediaHtml = `
       <div class="pearl-view-media">
-        <video data-pearl-vid="${pearl.id}" class="pearl-view-photo" controls playsinline preload="metadata"></video>
+        <video data-pearl-vid="${pearl.id}" class="pearl-view-photo" controls playsinline preload="metadata"${_posterAttr}></video>
       </div>
       <div class="pearl-view-text-meta">
         <div class="pearl-view-title">${escapeHtml(_vTitle)}</div>
