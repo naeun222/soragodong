@@ -3933,6 +3933,121 @@
   }
 
   .exec-now-section { margin-bottom: 20px; }
+
+  /* V4 (사용자 명시 2026-05-04 ultrathink): 실행 탭 redesign — 타임테이블 strip + 카드 다이어트 + 서랍장 접힘 */
+  .exec-tt-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    margin-bottom: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .exec-tt-strip:active { background: var(--surface2); }
+  .exec-tt-strip-now {
+    font-weight: 600;
+    color: var(--accent2);
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .exec-tt-strip-next {
+    flex: 1;
+    color: var(--text-dim);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .exec-tt-strip-toggle {
+    font-size: 11px;
+    color: var(--text-soft);
+    flex-shrink: 0;
+  }
+
+  /* Now 3 카드 slim 보기 */
+  .exec-card-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .exec-card-row .exec-card-shell-preview-inline {
+    font-size: 22px;
+    flex-shrink: 0;
+    line-height: 1;
+    opacity: 0.85;
+  }
+  .exec-card-row-title {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .exec-card-actions-mini {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .exec-card-actions-mini button {
+    padding: 6px 11px;
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1;
+  }
+  .exec-card-actions-mini button.start-mini {
+    background: var(--accent2);
+    color: var(--bg);
+    border-color: var(--accent2);
+    font-weight: 600;
+  }
+  .exec-card-detail {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .exec-card-detail-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  /* 서랍장 접힘 헤더 */
+  .exec-drawer-header-collapsed {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 16px;
+    margin-bottom: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .exec-drawer-header-collapsed:active { background: var(--surface2); }
+  .exec-drawer-header-collapsed .toggle-arrow {
+    font-size: 11px;
+    color: var(--text-soft);
+  }
+
   /* V4-fix: 시간 범위 picker (input type=time × 2) */
   .time-range-modal { padding: 24px 22px 20px; }
   .time-range-row {
@@ -33418,6 +33533,68 @@ function dismissInsight(id) {
 
 let _execMode = 'balance';
 
+// V4 (사용자 명시 2026-05-04 ultrathink): 실행 탭 redesign 상태
+let _timetableExpanded = false;          // 화면 위 strip 탭으로 전체 타임테이블 펼침 (세션 한정)
+let _expandedExecCards = new Set();      // Now 3 카드 펼침 상태 (세션 한정)
+
+// 화면 위 compact 타임테이블 strip — 현재 시각 + 다음 일정 1개 + 토글 화살표
+function _renderTimetableStripHTML() {
+  const items = (state.todaySchedule || []).slice().sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+  const todayK = todayKey();
+  const todayItems = items.filter(it => !it.date || it.date === todayK);
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const nowLabel = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  // 다음 일정 — 지금 이후 시작하는 항목
+  const upcoming = todayItems.find(it => {
+    const sParts = (it.start || '').split(':');
+    const sMin = (parseInt(sParts[0]) || 0) * 60 + (parseInt(sParts[1]) || 0);
+    return sMin >= nowMin;
+  });
+
+  let nextLabel;
+  if (upcoming) {
+    const sParts = (upcoming.start || '').split(':');
+    const sMin = (parseInt(sParts[0]) || 0) * 60 + (parseInt(sParts[1]) || 0);
+    const remainMin = sMin - nowMin;
+    let remainStr;
+    if (remainMin < 60) remainStr = `${remainMin}분 남음`;
+    else remainStr = `${Math.floor(remainMin / 60)}h ${remainMin % 60}m 남음`;
+    nextLabel = `→ ${upcoming.start} ${escapeHtml(upcoming.title)} (${remainStr})`;
+  } else if (todayItems.length === 0) {
+    nextLabel = '— 오늘 일정 비어있어';
+  } else {
+    nextLabel = '— 오늘 일정 다 끝남';
+  }
+
+  return `
+    <div class="exec-tt-strip" onclick="toggleTimetableSection()" title="탭하면 전체 타임테이블 펼침">
+      <span class="exec-tt-strip-now">⏰ ${nowLabel}</span>
+      <span class="exec-tt-strip-next">${nextLabel}</span>
+      <span class="exec-tt-strip-toggle">${_timetableExpanded ? '▾ 접기' : '▸ 펼치기'}</span>
+    </div>
+  `;
+}
+
+function toggleTimetableSection() {
+  _timetableExpanded = !_timetableExpanded;
+  if (typeof renderExecute === 'function') renderExecute();
+}
+
+function toggleExecCardExpand(taskId) {
+  if (_expandedExecCards.has(taskId)) _expandedExecCards.delete(taskId);
+  else _expandedExecCards.add(taskId);
+  if (typeof renderExecute === 'function') renderExecute();
+}
+
+function toggleDrawerSection() {
+  state.preferences = state.preferences || {};
+  state.preferences._drawerSectionExpanded = !state.preferences._drawerSectionExpanded;
+  saveState();
+  if (typeof renderExecute === 'function') renderExecute();
+}
+
 function renderExecute() {
   const container = document.getElementById('executeContent');
   if (!container) return;
@@ -33440,7 +33617,25 @@ function renderExecute() {
   let html = `
     <div class="screen-title">실행 🚀</div>
     <div class="screen-sub">머릿속 짐 → 오늘의 카드 → 차근히.</div>
+  `;
 
+  // V4 (사용자 명시 2026-05-04 ultrathink): 타임테이블 strip 을 화면 위로.
+  // strip 한 줄 (현재 시각 + 다음 일정) + 탭 시 전체 타임테이블 inline 펼침.
+  html += _renderTimetableStripHTML();
+  if (_timetableExpanded) {
+    html += renderV4TimetableHTML();
+    if (!window._v4ttScrolledOnce) {
+      window._v4ttScrolledOnce = true;
+      setTimeout(() => {
+        const nowLine = document.querySelector('.v4-tt-now-line');
+        if (nowLine && nowLine.scrollIntoView) {
+          try { nowLine.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+        }
+      }, 250);
+    }
+  }
+
+  html += `
     <button class="exec-immerse-btn" onclick="openImmerseStart()">
       🌧 시작
       <div class="sub">빗소리·방해금지·집중 모드 ON</div>
@@ -33464,22 +33659,33 @@ function renderExecute() {
         const preview = previewShellForTask(task);
         const previewEmoji = preview ? preview.emojis[0] : '🐚';
         const rarityClass = preview?.tier === 'golden' ? 'shell-golden' : preview?.tier === 'call' ? 'shell-call' : preview?.tier === 'main' ? 'shell-main' : '';
+        // V4 (사용자 명시 2026-05-04 ultrathink): Now 3 카드 slim 보기 — 기본 = shell+타이틀+[시작][✓]. 탭하면 description/메타/태그/삭제 펼침.
+        const isExpanded = _expandedExecCards.has(task.id);
+        const elapsedStr = getTaskElapsedTime(task.id);
         html += `
           <div class="exec-card" data-task-id="${task.id}">
-            <span class="exec-card-tag">${tag}</span>
-            <div class="exec-card-shell-preview ${rarityClass}" title="이거 깨면 ${preview?.label || ''} 소라">${previewEmoji}</div>
-            <div class="exec-card-title">${escapeHtml(task.title)}</div>
-            ${task.description ? `<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">${escapeHtml(task.description)}</div>` : ''}
-            <div class="exec-card-meta">
-              <span>${energyLabel}</span>
-              ${task.assignedBlock ? `<span>📅 ${getBlockLabel(task.assignedBlock)}</span>` : ''}
-              ${(() => { const t = getTaskElapsedTime(task.id); return t ? `<span>⏱ ${t}</span>` : ''; })()}
+            <div class="exec-card-row" onclick="toggleExecCardExpand('${task.id}')" title="탭하면 자세히 보기">
+              <span class="exec-card-shell-preview-inline ${rarityClass}" title="이거 깨면 ${preview?.label || ''} 소라">${previewEmoji}</span>
+              <span class="exec-card-row-title">${escapeHtml(task.title)}</span>
+              <span class="exec-card-actions-mini" onclick="event.stopPropagation()">
+                <button class="start-mini" onclick="startQuest('${task.id}')">시작</button>
+                <button onclick="toggleQuestComplete('${task.id}')">✓</button>
+              </span>
             </div>
-            <div class="exec-card-actions">
-              <button class="start-btn" onclick="startQuest('${task.id}')">🚀 시작</button>
-              <button class="complete-btn" onclick="toggleQuestComplete('${task.id}')">✓ 완료</button>
-              ${!isAIMission ? `<button onclick="deleteTask('${task.id}')">✕ 삭제</button>` : ''}
-            </div>
+            ${isExpanded ? `
+              <div class="exec-card-detail">
+                <span class="exec-card-tag">${tag}</span>
+                ${task.description ? `<div class="exec-card-detail-desc">${escapeHtml(task.description)}</div>` : ''}
+                <div class="exec-card-meta">
+                  <span>${energyLabel}</span>
+                  ${task.assignedBlock ? `<span>📅 ${getBlockLabel(task.assignedBlock)}</span>` : ''}
+                  ${elapsedStr ? `<span>⏱ ${elapsedStr}</span>` : ''}
+                </div>
+                <div class="exec-card-actions">
+                  ${!isAIMission ? `<button onclick="deleteTask('${task.id}')">✕ 삭제</button>` : ''}
+                </div>
+              </div>
+            ` : ''}
           </div>
         `;
       });
@@ -33531,10 +33737,21 @@ function renderExecute() {
     });
     if (drawerTasks.length > 0) {
       const dupCount = drawerRaw.length - drawerTasks.length;
+      // V4 (사용자 명시 2026-05-04 ultrathink): 서랍장 default 접힘 — 헤더만 보이고 탭하면 전체 목록 + sub-options 펼침.
+      const drawerExpanded = !!(state.preferences && state.preferences._drawerSectionExpanded);
+      if (!drawerExpanded) {
+        html += `
+          <div class="exec-drawer-header-collapsed" onclick="toggleDrawerSection()">
+            <span>📂 서랍장 · ${drawerTasks.length}개${dupCount > 0 ? ` <span style="color:var(--text-soft); font-size:11px;">(중복 ${dupCount} 숨김)</span>` : ''}</span>
+            <span class="toggle-arrow">▸ 펼치기</span>
+          </div>
+        `;
+        // 서랍장 본문 skip — pop out of inner block
+      } else {
       html += `
         <div class="exec-now-section">
           <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-            <span style="flex:1; min-width:0;">📂 서랍장 · ${drawerTasks.length}장${dupCount > 0 ? ` <span style="color:var(--text-soft); font-size:10px;">(중복 ${dupCount}개 숨김)</span>` : ''}</span>
+            <span style="flex:1; min-width:0; cursor:pointer;" onclick="toggleDrawerSection()" title="탭하면 접기">📂 서랍장 · ${drawerTasks.length}개${dupCount > 0 ? ` <span style="color:var(--text-soft); font-size:10px;">(중복 ${dupCount}개 숨김)</span>` : ''} <span style="color:var(--text-soft); font-size:11px;">▾</span></span>
             <button onclick="toggleDrawerView()" title="자동 분류 / 시간순 토글" style="font-size:11px; padding:4px 10px; background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap;">${_drawerView === 'auto' ? '🌅 자동' : '⏱ 시간순'}</button>
             <button onclick="mergeDuplicateTasks()" title="중복 합치기" style="font-size:12px; padding:5px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap; line-height:1.4; font-weight:500;">🔗 정리</button>
           </div>
@@ -33594,6 +33811,7 @@ function renderExecute() {
         html += `</div>`;
       }
       html += `</div>`;
+      }  // V4 redesign: drawerExpanded 분기 닫음
     }
 
     // Completed today
@@ -33622,19 +33840,7 @@ function renderExecute() {
       </div>
     `;
 
-    // V4-1u-b: 타임테이블 시간 grid (V4 비전 10.6) — 위에 표시. 5블록은 그대로 (점진 마이그레이션)
-    html += renderV4TimetableHTML();
-    // V4-1u-b-2: 첫 렌더 시 현재 시각 라인 자동 스크롤 (한 세션 1회만)
-    if (!window._v4ttScrolledOnce) {
-      window._v4ttScrolledOnce = true;
-      setTimeout(() => {
-        const nowLine = document.querySelector('.v4-tt-now-line');
-        if (nowLine && nowLine.scrollIntoView) {
-          try { nowLine.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
-        }
-      }, 250);
-    }
-
+    // V4 (사용자 명시 2026-05-04 ultrathink): 하단 타임테이블 제거 — 화면 위 strip 으로 이동.
     // V4-fix: V3 5블록 완전 삭제 (사용자 명시). dayPlan 데이터는 보존.
   }
 
