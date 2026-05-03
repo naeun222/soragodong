@@ -22476,7 +22476,16 @@ function _findPendingStrategyFollowup() {
     const diff = daysBetweenKeys(dateKey, today);
     // V4 (사용자 보고 2026-05-03): 같은 날 (diff=0, cutoff 안 지남) 자동 trigger 차단 → 다음날부터 (diff>=1).
     // 의도: 미션 완료 직후 결과 체크 모달 X. 4시 cutoff 지나야 자동 prompt.
-    return diff >= 1 && diff <= 7;
+    if (!(diff >= 1 && diff <= 7)) return false;
+    // V4 (사용자 보고 2026-05-04 VB024): cutoff 직후 깨움 edge case 추가 차단.
+    // 예) 23:30 완료 → 다음날 04:30 진입 시 diff=1 통과되지만 실제 5h 만 경과 → "하루 안 지났다" 사용자 체감.
+    // 추가 가드: completedAt 으로부터 최소 12h 경과 (체감상 "하루" 으로 인식 가능 임계).
+    if (m.completedAt) {
+      const _now = (typeof getServerNowMs === 'function' ? getServerNowMs() : Date.now());
+      const _elapsed = _now - new Date(m.completedAt).getTime();
+      if (_elapsed < 12 * 3600000) return false;
+    }
+    return true;
   });
 }
 
@@ -27422,7 +27431,14 @@ async function sendChat() {
   const _nowMs = Date.now();
   const _lastMs = lastMsg && lastMsg.timestamp ? new Date(lastMsg.timestamp).getTime() : null;
   const _gap = _lastMs == null ? Infinity : (_nowMs - _lastMs);
-  const isNewChapter = _gap >= NEW_CHAPTER_GAP_MS;
+  let isNewChapter = _gap >= NEW_CHAPTER_GAP_MS;
+
+  // V4 (사용자 보고 2026-05-04 V199): resumeArchiveChat 직후 첫 sendChat 은 갭 detect 강제 skip.
+  // 옛 fix (resume 시 마지막 timestamp=now) 외 추가 안전장치 — 첫 메시지 보낼 때 새 챕터 분리 방지.
+  if (state._chatResumedAt && (_nowMs - state._chatResumedAt) < NEW_CHAPTER_GAP_MS) {
+    isNewChapter = false;
+  }
+  delete state._chatResumedAt;
 
   // 5h+ 갭 detect → 직전 챕터 즉시 archive 이송 (chatMessages 비움)
   if (isNewChapter && state.chatMessages.length > 0) {
@@ -28236,13 +28252,26 @@ async function generateAIResponse(modelOverride) {
     } else {
       userMsg = '연결이 안 됐어 😅\n(' + (m || '알 수 없는 오류') + ')\n\n다시 보내기 버튼을 눌러봐.';
     }
-    state.chatMessages[state.chatMessages.length - 1] = {
-      role: 'assistant',
-      content: userMsg,
-      error: true,
-      canRetry: true,
-      timestamp: new Date().toISOString()
-    };
+    // V4 (사용자 보고 2026-05-04 VB024): 스트리밍 도중 끊겨도 부분 응답 유지 — 옛 코드는 lastMsg 통째 교체 → 80% 받은 답변도 사라짐.
+    // partial content 가 있으면 보존 + 끊김 안내만 suffix 로 붙임. 없으면 옛 동작 (full error 메시지).
+    const _lastIdx = state.chatMessages.length - 1;
+    const _lastMsg = state.chatMessages[_lastIdx];
+    const _hasPartial = _lastMsg && !_lastMsg.typing && typeof _lastMsg.content === 'string' && _lastMsg.content.trim().length > 30;
+    if (_hasPartial) {
+      _lastMsg.content = _lastMsg.content.trimEnd() + '\n\n— ⚠️ 답변 도중 끊김 — 다시 보내기로 이어가';
+      _lastMsg.error = true;
+      _lastMsg.canRetry = true;
+      _lastMsg.partial = true;
+      _lastMsg.timestamp = _lastMsg.timestamp || new Date().toISOString();
+    } else {
+      state.chatMessages[_lastIdx] = {
+        role: 'assistant',
+        content: userMsg,
+        error: true,
+        canRetry: true,
+        timestamp: new Date().toISOString()
+      };
+    }
     saveState(); renderChat();
   }
 }
@@ -31307,7 +31336,11 @@ function renderArchive() {
 function _applyDiaryGridHide() {
   const tc = document.getElementById('lensTopicCards');
   const tl = document.getElementById('lensTimeline');
-  const calOnly = (_libView === 'grid' && _currentLens === 'diary');
+  // 사용자 보고 2026-05-04 (VB019): 일기·대화 grid 모드에서 검색 입력 시 결과가 안 보이는 버그.
+  // root cause: searchArchive() 가 lensTopicCards/lensTimeline 을 채워도 calOnly 로 display:none → 결과 invisible.
+  // fix: 검색어 있으면 토픽 카드/타임라인 강제 노출 (캘린더는 그대로).
+  const hasSearchQuery = !!(typeof _archiveSearchQuery === 'string' && _archiveSearchQuery.length > 0);
+  const calOnly = (_libView === 'grid' && _currentLens === 'diary') && !hasSearchQuery;
   if (tc) tc.style.display = calOnly ? 'none' : '';
   if (tl) tl.style.display = calOnly ? 'none' : '';
 }
@@ -31542,10 +31575,15 @@ let _dayModalActiveTab = 'diary';
 function openDayModal(dateStr) {
   // 그날 데이터 모음
   const entry = (state.entries || []).find(e => e.date === dateStr);
-  const topics = (state.topicCards || []).filter(c =>
-    (c.chapterStartedAt && getDayKey(c.chapterStartedAt) === dateStr) ||
-    (!c.chapterStartedAt && c.createdAt && getDayKey(c.createdAt) === dateStr)
-  );
+  // 사용자 보고 2026-05-04 (VB018): day modal 도 strategy / 시드 제외 (캘린더 dot 카운트와 동기화).
+  const _isTesterDM = !!(state.preferences && state.preferences.testerMode);
+  const topics = (state.topicCards || []).filter(c => {
+    if (!c) return false;
+    if (c.category === 'strategy') return false;
+    if (!_isTesterDM && c._seed) return false;
+    return (c.chapterStartedAt && getDayKey(c.chapterStartedAt) === dateStr) ||
+      (!c.chapterStartedAt && c.createdAt && getDayKey(c.createdAt) === dateStr);
+  });
   const archives = (state.archive || []).filter(a =>
     a.savedAt && getDayKey(a.savedAt) === dateStr
   );
@@ -31822,17 +31860,24 @@ function renderLensCalendarGrid() {
   // "다음 챕터 시작 시점" (4시간 갭 후 첫 메시지)이라 잘못된 날짜에 점이 찍혔음
   // (예: 28일에 대화 → 29일 첫 메시지에 마커 → 29일에 잘못 표시).
   // → 실제 챕터 종료 시점 기반으로 변경: topicCards.chapterEndedAt + chatArchive.date
+  // 사용자 보고 2026-05-04 (VB018): 캘린더에 잘못 표시되는 챕터 점 + 시드 토픽 노출 fix.
+  // (1) category='strategy' 토픽카드 = 양생방 DNA 카드 → 일기·대화 챕터 dot X.
+  // (2) testerMode 아닐 때는 _seed marker 도 제외 (시드 잔재가 캘린더 오염하는 케이스 방어).
+  const _isTester = !!(state.preferences && state.preferences.testerMode);
   (state.topicCards || []).forEach(c => {
-    const endedAt = c && (c.chapterEndedAt || c.chapterStartedAt || c.createdAt);
+    if (!c) return;
+    if (c.category === 'strategy') return;
+    if (!_isTester && c._seed) return;
+    const endedAt = c.chapterEndedAt || c.chapterStartedAt || c.createdAt;
     if (endedAt) {
       const dk = getDayKey(endedAt);
       chaptersByDate[dk] = (chaptersByDate[dk] || 0) + 1;
     }
   });
   (state.chatArchive || []).forEach(a => {
-    if (a && a.date) {
-      chaptersByDate[a.date] = (chaptersByDate[a.date] || 0) + 1;
-    }
+    if (!a || !a.date) return;
+    if (!_isTester && a._seed) return;
+    chaptersByDate[a.date] = (chaptersByDate[a.date] || 0) + 1;
   });
 
   let html = `
@@ -31964,17 +32009,27 @@ function setArchiveTagFilter(tag) {
   renderLensArchive();
 }
 
+// 사용자 보고 2026-05-04 (VB023): 매 keystroke 마다 7 lens render = 모바일 lag.
+// debounce 200ms 로 coalesce — 빠른 타이핑 중간엔 스킵.
+let _archiveSearchDebounce = 0;
 function searchArchive() {
   const input = document.getElementById('archiveSearch');
-  _archiveSearchQuery = input.value.toLowerCase().trim();
-  // 검색은 양 렌즈 다 갱신 (사용자 보고 2026-04-29: galpi 추가)
-  renderLensTopicCards();
-  renderLensTimeline();
-  renderLensArchive();
-  renderLensInsights();
-  renderLensStrategies();
-  renderLensPearls();
-  if (typeof renderLensGalpi === 'function') renderLensGalpi();
+  if (!input) return;
+  if (_archiveSearchDebounce) clearTimeout(_archiveSearchDebounce);
+  _archiveSearchDebounce = setTimeout(() => {
+    _archiveSearchDebounce = 0;
+    _archiveSearchQuery = input.value.toLowerCase().trim();
+    // 검색은 양 렌즈 다 갱신 (사용자 보고 2026-04-29: galpi 추가)
+    renderLensTopicCards();
+    renderLensTimeline();
+    renderLensArchive();
+    renderLensInsights();
+    renderLensStrategies();
+    renderLensPearls();
+    if (typeof renderLensGalpi === 'function') renderLensGalpi();
+    // 사용자 보고 2026-05-04 (VB019): grid+diary 일 때 검색 결과 보이게 lensTopicCards/Timeline 노출 동기화.
+    if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
+  }, 200);
 }
 
 // === V3.8 LENS: TOPIC CARDS — 챕터별 토픽 정리 (대화 렌즈 상단) ===
@@ -34102,6 +34157,10 @@ async function resumeArchiveChat(archId) {
   if (state.chatMessages.length > 0) {
     state.chatMessages[state.chatMessages.length - 1].timestamp = new Date().toISOString();
   }
+  // V4 (사용자 보고 2026-05-04 V199): belt-and-suspenders — resume 직후 sendChat 1회는 갭 detect 강제 skip.
+  // 옛 fix (마지막 timestamp=now) 만으론 edge case (마지막 메시지 객체 다른 곳에서 mutated 등) 에 취약.
+  // _chatResumedAt 마커 — sendChat 가 5h 내면 isNewChapter=false 강제 후 마커 클리어.
+  state._chatResumedAt = Date.now();
   state.chatArchive = (state.chatArchive || []).filter(a => (a.id || a.date) !== archId);
   saveState();
   if (typeof closeChatArchive === 'function') closeChatArchive();
