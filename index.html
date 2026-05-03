@@ -23280,6 +23280,20 @@ async function fileToResizedDataUrl(file, maxSize = 1024, quality = 0.65) {
   });
 }
 
+// V4 fix v5 (사용자 명시 2026-05-04): 영상 진주 제목 = 이모티콘 prefix X.
+// 옛 진주 / chat 추출 진주 등이 leading emoji 붙여 저장된 케이스 → 표시 시 strip.
+// (음식/장소/순간 카테고리 icon prefix 는 사진 진주에서만 표시 — 영상은 bare content.)
+function _stripLeadingEmoji(s) {
+  if (!s) return s;
+  // unicode emoji + variation selectors + skin tone + ZWJ sequences 까지 leading 부분만 제거.
+  // 안전하게: 첫 character 가 letter/digit 가 아니고 emoji property 가지면 strip.
+  try {
+    return s.replace(/^(?:[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}️‍]+\s*)+/u, '').trimStart();
+  } catch(_) {
+    return s;
+  }
+}
+
 // V4: 진주 동영상 picker — 갤러리/카메라 양쪽 가능
 function pickVideoFile() {
   return new Promise((resolve) => {
@@ -23365,12 +23379,19 @@ function hydratePearlVideos() {
       }
       const pearl = (state.pearls || []).find(p => p.id === id);
       if (!pearl || !pearl.video) return;
+      // V4 fix v5 (사용자 보고 2026-05-04): blob 변환 실패 시 data URL 직접 세팅 fallback (재생 불가 회피).
       fetch(pearl.video).then(r => r.blob()).then(b => {
         const url = URL.createObjectURL(b);
         _pearlVideoBlobCache.set(id, url);
         v.src = url;
         v.dataset.hydrated = '1';
-      }).catch(e => console.warn('video hydrate:', e));
+      }).catch(e => {
+        console.warn('video hydrate blob fail, data URL fallback:', e);
+        try {
+          v.src = pearl.video;
+          v.dataset.hydrated = '1';
+        } catch(_) {}
+      });
     });
   } catch(_) {}
 }
@@ -23419,6 +23440,10 @@ async function _generateVideoThumbnails(video, count) {
 function pickVideoTrimRange(file, maxSec) {
   maxSec = maxSec || 5;
   return new Promise((resolve) => {
+    // V4 fix v5 (사용자 보고 2026-05-04): trim modal 안 열리는 케이스 — 기존 _vtmState 잔여 race 방지.
+    _vtmState = null;
+    // 기존 overlay 잔존 시 제거 (재호출 race)
+    document.querySelectorAll('.vtm-overlay').forEach(o => { try { o.remove(); } catch(_) {} });
     const overlay = document.createElement('div');
     overlay.className = 'vtm-overlay';
     overlay.innerHTML = `
@@ -23553,7 +23578,18 @@ function pickVideoTrimRange(file, maxSec) {
         if (e.target === overlay) cleanup(null);
       });
     };
-    v.onerror = () => cleanup(null);
+    v.onerror = () => {
+      // V4 fix v5 (사용자 보고 2026-05-04): metadata 로드 실패 (Safari .mov / 미지원 코덱) — 사용자 안내.
+      try { showToast('영상 미리보기 못 만듦 — 다른 영상 시도'); } catch(_) {}
+      cleanup(null);
+    };
+    // metadata timeout safety — 8초 안에 onloadedmetadata 안 fire 시 cancel.
+    setTimeout(() => {
+      if (!_vtmState && !cleaned) {
+        try { showToast('영상 로드 timeout — 다시 시도'); } catch(_) {}
+        cleanup(null);
+      }
+    }, 8000);
     setTimeout(() => overlay.classList.add('show'), 10);
   });
 }
@@ -23905,21 +23941,34 @@ async function compressVideoWebCodecs(file, opts = {}) {
     const muxer = new Muxer(muxerOpts);
 
     let encoderError = null;
+    // V4 fix v5 (사용자 보고 2026-05-04): mp4-muxer v5 가 track.info.decoderConfig.colorSpace 의 4 필드 모두 필요.
+    // partial colorSpace (예: { primaries: undefined } 만 있는 케이스) 도 fail. 항상 4필드 force-merge.
+    const _DEFAULT_CS = { primaries: 'bt709', transfer: 'bt709', matrix: 'bt709', fullRange: false };
     const encoder = new VideoEncoder({
       output: (chunk, meta) => {
         try {
-          // mp4-muxer v5 fix: decoderConfig.colorSpace 필수 (없으면 'null is not an object' fail)
           let safeMeta = meta;
-          if (meta && meta.decoderConfig && !meta.decoderConfig.colorSpace) {
+          if (meta && meta.decoderConfig) {
+            const cs = meta.decoderConfig.colorSpace || {};
             safeMeta = {
               ...meta,
               decoderConfig: {
                 ...meta.decoderConfig,
-                colorSpace: { primaries: 'bt709', transfer: 'bt709', matrix: 'bt709', fullRange: false }
+                colorSpace: {
+                  primaries: cs.primaries || _DEFAULT_CS.primaries,
+                  transfer: cs.transfer || _DEFAULT_CS.transfer,
+                  matrix: cs.matrix || _DEFAULT_CS.matrix,
+                  fullRange: typeof cs.fullRange === 'boolean' ? cs.fullRange : _DEFAULT_CS.fullRange
+                }
               }
             };
           }
-          muxer.addVideoChunk(chunk, safeMeta);
+          // chunk.duration null 가드 — Safari WebCodec 일부 케이스 chunk.duration null → addVideoChunkRaw fail.
+          // mp4-muxer 4번째 인자 = explicit duration override (microseconds).
+          const dur = (chunk && typeof chunk.duration === 'number' && chunk.duration >= 0)
+            ? chunk.duration
+            : Math.round(1e6 / fps);
+          muxer.addVideoChunk(chunk, safeMeta, undefined, dur);
         } catch (err) {
           encoderError = err;
         }
@@ -24002,10 +24051,16 @@ async function compressVideoWebCodecs(file, opts = {}) {
     if (audioBuffer) {
       try {
         let audioErr = null;
+        // V4 fix v5 (사용자 보고 2026-05-04): Safari AudioEncoder 가 chunk.duration null/0 emit 가능 → addAudioChunkRaw fail.
+        // 명시적 duration override (samples / sampleRate * 1e6 microseconds).
         const aenc = new AudioEncoder({
           output: (chunk, meta) => {
-            try { muxer.addAudioChunk(chunk, meta); }
-            catch (err) { audioErr = err; }
+            try {
+              const dur = (chunk && typeof chunk.duration === 'number' && chunk.duration > 0)
+                ? chunk.duration
+                : Math.round((1024 / audioSampleRate) * 1e6);
+              muxer.addAudioChunk(chunk, meta, undefined, dur);
+            } catch (err) { audioErr = err; }
           },
           error: (e) => { audioErr = e; }
         });
@@ -24103,18 +24158,25 @@ async function compressVideoWebCodecs(file, opts = {}) {
 async function makeSquareThumb(dataUrl, size = 200, quality = 0.7) {
   return new Promise((resolve) => {
     const img = new Image();
+    let done = false;
+    const _settle = (v) => { if (done) return; done = true; resolve(v); };
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      const m = Math.min(img.width, img.height);
-      const sx = (img.width - m) / 2;
-      const sy = (img.height - m) / 2;
-      ctx.drawImage(img, sx, sy, m, m, 0, 0, size, size);
-      resolve(canvas.toDataURL('image/jpeg', quality));
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        const m = Math.min(img.width, img.height);
+        const sx = (img.width - m) / 2;
+        const sy = (img.height - m) / 2;
+        ctx.drawImage(img, sx, sy, m, m, 0, 0, size, size);
+        _settle(canvas.toDataURL('image/jpeg', quality));
+      } catch(_) { _settle(null); }
     };
+    // V4 fix v5 (사용자 보고 2026-05-04): img decode fail 시 promise hang 방지 — null resolve.
+    img.onerror = () => _settle(null);
+    setTimeout(() => _settle(null), 5000);
     img.src = dataUrl;
   });
 }
@@ -31261,11 +31323,13 @@ function renderLibraryHero() {
     const visual = thumb
       ? `<img src="${thumb}" alt="" class="hero-photo-thumb">`
       : `<div class="hero-photo-thumb video-thumb-placeholder">📹</div>`;
+    // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+    const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(pick.content || '') : (pick.content || '');
     body = `
       <div class="hero-photo">
         ${visual}
         <div class="hero-photo-meta">
-          <div class="hero-photo-content">${escapeHtml(pick.content || '')}</div>
+          <div class="hero-photo-content">${escapeHtml(_vTitle)}</div>
           ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}
         </div>
       </div>
@@ -31601,11 +31665,13 @@ function switchDayModalTab(tab) {
         const visual = thumb
           ? `<img src="${thumb}" alt="" class="day-pearl-art">`
           : `<div class="day-pearl-art video-thumb-placeholder">📹</div>`;
+        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+        const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
         html += `
           <div class="day-card t-pearl t-pearl-music" onclick="closeDayModal(); openPearl('${p.id}')">
             ${visual}
             <div class="day-pearl-music-meta">
-              <div class="day-pearl-music-title">${escapeHtml(p.content || '')}</div>
+              <div class="day-pearl-music-title">${escapeHtml(_vTitle)}</div>
               <div class="day-pearl-music-artist">${escapeHtml(p.category || '진주')}</div>
               ${p.note ? `<div class="day-card-note" style="margin-top:6px; padding-top:6px;">${escapeHtml(p.note)}</div>` : ''}
             </div>
@@ -40580,14 +40646,16 @@ function renderLensPearls() {
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         const thumb = p.videoThumbnail;
+        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+        const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
         const visual = thumb
-          ? `<img src="${thumb}" alt="${escapeHtml(p.content || '')}" class="tile-photo-art">`
+          ? `<img src="${thumb}" alt="${escapeHtml(_vTitle)}" class="tile-photo-art">`
           : `<div class="tile-photo-art video-thumb-placeholder">📹</div>`;
         html += `
           <div class="pinterest-tile tile-photo${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
             ${visual}
             <div class="tile-music-meta">
-              <div class="tile-music-title">${escapeHtml(p.content || '')}</div>
+              <div class="tile-music-title">${escapeHtml(_vTitle)}</div>
               ${p.note ? `<div class="tile-note">${escapeHtml(p.note.slice(0, 40))}</div>` : ''}
               ${dateStr ? `<div class="tile-date">${dateStr}</div>` : ''}
             </div>
@@ -40636,6 +40704,8 @@ function renderLensPearls() {
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         const thumb = p.videoThumbnail;
+        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+        const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
         const visual = thumb
           ? `<img src="${thumb}" alt="" class="pearl-photo-thumb">`
           : `<div class="pearl-photo-thumb video-thumb-placeholder">📹</div>`;
@@ -40643,7 +40713,7 @@ function renderLensPearls() {
           <div class="pearl-card pearl-photo-card" onclick="openPearl('${p.id}')">
             ${visual}
             <div class="pearl-photo-meta">
-              <div class="pearl-card-content">${escapeHtml(p.content || '')}</div>
+              <div class="pearl-card-content">${escapeHtml(_vTitle)}</div>
               ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${escapeHtml(p.note)}</div>` : ''}
             </div>
           </div>
@@ -41266,12 +41336,14 @@ function showPearlViewModal(pearl) {
     } else if (pearl.videoHasAudio === undefined) {
       mutedNotice = '<div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; opacity:0.6;">🔇 소리 안 들리면 옛 진주야 — 새로 만든 진주는 소리 같이 저장돼</div>';
     }
+    // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+    const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(pearl.content || '') : (pearl.content || '');
     mediaHtml = `
       <div class="pearl-view-media">
         <video data-pearl-vid="${pearl.id}" class="pearl-view-photo" controls playsinline preload="metadata"></video>
       </div>
       <div class="pearl-view-text-meta">
-        <div class="pearl-view-title">${escapeHtml(pearl.content || '')}</div>
+        <div class="pearl-view-title">${escapeHtml(_vTitle)}</div>
         ${mutedNotice}
       </div>
     `;
