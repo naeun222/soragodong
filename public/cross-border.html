@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="소라고동 (나은 랩(Lab)) 국외이전 동의 안내. Anthropic Zero Data Retention, E2EE, 카카오 SNS 한국 처리.">
+<title>국외이전 안내 — 소라고동</title>
+<link rel="icon" type="image/png" href="/godongicon.png">
+<link rel="canonical" href="https://soragodong.com/cross-border">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1826;
+    --surface2: #221f33;
+    --accent: #c9a96e;
+    --accent2: #e8c99a;
+    --text: #ede8f5;
+    --text-dim: #9d9aad;
+    --text-soft: #7b7a8e;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+    --good: #98c379;
+    --warn: #e8a3a3;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.8; -webkit-font-smoothing: antialiased;
+    padding-bottom: 80px;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(126, 200, 227, 0.10) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 90%, rgba(143, 200, 143, 0.06) 0%, transparent 55%);
+    pointer-events: none; z-index: 0;
+  }
+  .page-header {
+    position: sticky; top: 0; z-index: 10;
+    backdrop-filter: blur(10px);
+    background: rgba(15, 14, 23, 0.7);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+  }
+  .page-header-inner {
+    max-width: 760px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .back-link {
+    color: var(--text-dim); text-decoration: none;
+    font-size: 13.5px; letter-spacing: 0.02em; transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+  .brand-mark {
+    display: flex; align-items: center; gap: 7px;
+    color: var(--text-soft); font-size: 12.5px; letter-spacing: 0.04em;
+  }
+  .brand-mark img { width: 18px; height: 18px; opacity: 0.75; }
+  .container {
+    position: relative; z-index: 1;
+    max-width: 760px; margin: 0 auto;
+    padding: 56px 24px 40px;
+  }
+  .doc-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 36px; color: var(--accent);
+    letter-spacing: 0.02em; margin-bottom: 6px;
+  }
+  .doc-subtitle {
+    font-size: 16px; color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+  .doc-meta {
+    font-size: 12.5px; color: var(--text-soft);
+    margin-bottom: 36px; line-height: 1.7;
+  }
+  .doc-meta .pill {
+    display: inline-block; padding: 2px 9px; margin: 0 2px;
+    border: 1px solid var(--border-strong); border-radius: 999px;
+    font-size: 11px; color: var(--text-dim);
+  }
+  .lead {
+    font-size: 15.5px; color: var(--text); line-height: 1.85;
+    padding: 20px 22px; background: var(--surface);
+    border-left: 3px solid rgba(126, 200, 227, 0.4);
+    border-radius: 0 12px 12px 0; margin-bottom: 40px;
+  }
+  .lead strong { color: var(--accent); }
+  section { margin-bottom: 38px; }
+  h2 {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px; color: var(--text);
+    margin: 0 0 16px; letter-spacing: 0.01em;
+  }
+  h3 {
+    font-size: 15.5px; color: var(--accent2);
+    margin: 22px 0 10px; font-weight: 600;
+  }
+  p { margin-bottom: 12px; color: var(--text-dim); font-size: 14.5px; }
+  p strong { color: var(--text); font-weight: 600; }
+  p em { color: var(--text); font-style: italic; }
+  ul, ol { margin: 0 0 14px 22px; color: var(--text-dim); font-size: 14.5px; }
+  li { margin-bottom: 5px; }
+  li strong { color: var(--text); }
+  a {
+    color: var(--accent); text-decoration: underline;
+    text-decoration-color: rgba(201, 169, 110, 0.4);
+    text-underline-offset: 3px; transition: text-decoration-color 0.2s;
+  }
+  a:hover { text-decoration-color: var(--accent); }
+
+  .feature-list {
+    list-style: none; margin: 16px 0 0; padding: 0;
+  }
+  .feature-list li {
+    margin-bottom: 12px; padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; gap: 12px; align-items: flex-start;
+    color: var(--text-dim); font-size: 14px; line-height: 1.7;
+  }
+  .feature-list .icon {
+    flex-shrink: 0; font-size: 18px; line-height: 1.4;
+  }
+  .feature-list strong { color: var(--text); }
+  .feature-list .pos { border-left: 3px solid rgba(152, 195, 121, 0.4); }
+  .feature-list .neg { border-left: 3px solid rgba(232, 163, 163, 0.4); }
+  .feature-list .info { border-left: 3px solid rgba(126, 200, 227, 0.4); }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 12px 0;
+  }
+  .col-card {
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .col-card .col-title {
+    font-size: 12px; color: var(--accent);
+    font-weight: 600; letter-spacing: 0.05em;
+    margin-bottom: 10px; text-transform: uppercase;
+  }
+  .col-card.neg .col-title { color: var(--warn); }
+  .col-card ul { margin: 0; padding-left: 18px; font-size: 13px; }
+  .col-card li { margin-bottom: 4px; color: var(--text-dim); }
+
+  .consent-summary {
+    margin: 16px 0; padding: 16px 20px;
+    background: rgba(201, 169, 110, 0.06);
+    border: 1px solid rgba(201, 169, 110, 0.2);
+    border-radius: 10px;
+    color: var(--text); font-size: 14.5px; line-height: 1.85;
+  }
+  .consent-summary strong { color: var(--accent); }
+
+  blockquote {
+    margin: 16px 0; padding: 12px 16px;
+    background: rgba(139, 126, 196, 0.06);
+    border-left: 3px solid rgba(139, 126, 196, 0.4);
+    border-radius: 0 10px 10px 0;
+    color: var(--text-dim); font-size: 13.5px; line-height: 1.7;
+  }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 36px 0; }
+  footer {
+    max-width: 760px; margin: 0 auto;
+    padding: 32px 24px 40px; border-top: 1px solid var(--border);
+    color: var(--text-soft); font-size: 12px;
+    line-height: 1.85; text-align: center;
+    position: relative; z-index: 1;
+  }
+  footer .biz { color: var(--text-dim); margin-bottom: 4px; font-weight: 500; }
+  footer a { color: var(--accent); opacity: 0.8; margin: 0 8px; text-decoration: none; }
+  @media (max-width: 600px) {
+    .container { padding: 40px 18px 32px; }
+    .doc-title { font-size: 28px; }
+    .doc-subtitle { font-size: 14.5px; }
+    h2 { font-size: 19px; }
+    .lead { padding: 16px 18px; font-size: 14.5px; }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    body::before { display: none; }
+    .page-header, footer a { display: none; }
+    .container { padding: 12mm 0; max-width: 100%; }
+    .doc-title, .doc-subtitle, h2, h3 { color: #000; }
+    p, li { color: #000; }
+    .doc-meta, footer { color: #444; }
+    a { color: #000; text-decoration: underline; }
+    .feature-list li, .col-card { background: #f7f5fb; border-color: #888; color: #000; }
+    .feature-list strong, .col-card li { color: #000; }
+    .consent-summary { background: #f9f6ef; border-color: #888; color: #000; }
+    .lead { background: #f3f9fc; border-left-color: #888; color: #000; }
+    blockquote { background: #f7f5fb; border-left-color: #888; }
+    section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<header class="page-header">
+  <div class="page-header-inner">
+    <a class="back-link" href="/">← 소라고동</a>
+    <div class="brand-mark"><img src="/godongicon.png" alt=""><span>나은 랩(Lab)</span></div>
+  </div>
+</header>
+
+<main class="container">
+  <h1 class="doc-title">🛡️ 데이터 안전</h1>
+  <div class="doc-subtitle">미국 서버 처리 안내 (국외이전 동의)</div>
+  <div class="doc-meta">
+    <span class="pill">버전 2.3</span>
+    <span class="pill">최종 갱신 2026-05-02</span>
+    <span class="pill">Cloudflare + E2EE Stage 2 + 카카오</span>
+  </div>
+
+  <p class="lead">
+    소라고동의 AI 친구 기능은 <strong>Anthropic, PBC</strong> (미국 캘리포니아 본사) 의 Claude API를 사용해.
+    너의 대화가 보안 검증된 미국 서버에서 처리되고 응답을 받아오는 구조야.
+  </p>
+
+  <section>
+    <h2>🔒 너의 데이터, 어떻게 보호되는지</h2>
+
+    <h3>Anthropic의 보안 인증</h3>
+    <ul class="feature-list">
+      <li class="pos"><span class="icon">✅</span><span><strong>SOC 2 Type II</strong> 인증 — 미국 보안 감사 최고 수준</span></li>
+      <li class="pos"><span class="icon">✅</span><span><strong>ISO 27001</strong> 정보보안 국제 표준 인증</span></li>
+      <li class="pos"><span class="icon">✅</span><span><strong>HIPAA 준수 가능</strong>한 인프라 (의료 데이터 처리 가능 수준)</span></li>
+    </ul>
+
+    <h3>Anthropic의 데이터 정책</h3>
+    <ul class="feature-list">
+      <li class="info"><span class="icon">📅</span><span><strong>30일 후 자동 삭제</strong> — Anthropic 서버에서 영구 제거</span></li>
+      <li class="neg"><span class="icon">🚫</span><span><strong>AI 학습·재활용 절대 X</strong> — Anthropic Zero Data Retention 정책상 학습·재판매·연구 등 <em>어떤 형태로도 외부 사용 불가</em></span></li>
+      <li class="info"><span class="icon">🔐</span><span><strong>HTTPS / TLS 1.2+ 종단간 암호화</strong> — 전송 중 데이터 노출 X</span></li>
+    </ul>
+
+    <h3>회사(소라고동)의 데이터 정책</h3>
+    <ul class="feature-list">
+      <li class="neg"><span class="icon">🚫</span><span><strong>광고에 사용하지 않음</strong> — 외부 광고 / 마케팅 / 추적 ID 일체 X</span></li>
+      <li class="neg"><span class="icon">🚫</span><span><strong>제3자에게 판매하지 않음</strong> — 어떤 형태로도 외부 공유 X</span></li>
+      <li class="neg"><span class="icon">🚫</span><span><strong>타 사용자에게 노출되지 않음</strong> — RLS (Row Level Security)로 본인 데이터만 본인 접근</span></li>
+      <li class="info"><span class="icon">👤</span><span><strong>회사 내부 접근 1인 한정</strong> — 관리자 본인 외 누구도 접근 불가, 모든 접근 로그 기록</span></li>
+      <li class="pos"><span class="icon">🔐</span><span><strong>End-to-End 암호화 (E2EE — Stage 2 활성 ✅)</strong>: 너 device 에서 미리 암호화 (AES-256-GCM, 사용자 비밀번호 PBKDF2 1M iteration 키 파생) → 회사조차 평문 못 봄. AI 호출 <em>시점에만</em> 평문이 Anthropic 으로 전송 (Anthropic Zero Data Retention 정책으로 학습 X 처리 후 즉시 폐기).</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>📤 어떤 정보가 미국으로 전송되는지</h2>
+    <div class="grid-2">
+      <div class="col-card">
+        <div class="col-title">전송됨</div>
+        <ul>
+          <li>너의 입력 텍스트 (체크인·일기·대화·기록)</li>
+          <li>너에 대한 컨텍스트 요약 (기분·활력 데이터, 자기 인식 모델 — 익명화)</li>
+          <li>시스템 프롬프트 (소라고동 캐릭터 설정)</li>
+        </ul>
+      </div>
+      <div class="col-card neg">
+        <div class="col-title">전송되지 않음</div>
+        <ul>
+          <li>이메일·비밀번호·결제 정보</li>
+          <li>사진·음악 진주의 메타데이터 (텍스트 의미만 전송 가능)</li>
+          <li>다른 사용자의 데이터</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>🇰🇷 SNS 로그인 (카카오) — 한국 내 처리</h2>
+    <p>사용자가 카카오 로그인 선택 시:</p>
+    <ul>
+      <li><strong>수신자</strong>: 카카오 (Kakao Corp.) — 한국 회사</li>
+      <li><strong>처리 항목</strong>:
+        <ul>
+          <li><strong>이메일</strong> (필수) — 회원 식별자</li>
+          <li><strong>닉네임 / 프로필사진</strong> (선택) — Supabase Kakao OAuth provider 표준 scope (override 불가). <em>수신 후 사용·저장·DB 보유 X / 즉시 폐기</em> (PIPA §3-1 데이터 최소 수집)</li>
+        </ul>
+      </li>
+      <li><strong>국외이전 X</strong> (한국 내 처리)</li>
+      <li><strong>회사가 받는 정보</strong>: SNS 인증 후 OAuth token 으로 위 항목 조회</li>
+      <li><strong>사용자의 SNS 비밀번호 / 친구 목록 / 메시지 / 카카오톡 채널 / 배송지 등 X</strong> 접근</li>
+    </ul>
+    <p>카카오 로그인 사용자도 <strong>E2EE master password</strong> 별도 설정 필수 — 정신건강 자기관찰 데이터는 SNS 와 무관하게 사용자 비밀번호로 암호화.</p>
+    <blockquote>네이버 SNS 로그인 = V5 (휴대폰 본인 인증과 함께) 도입 예정. 네이버 정책상 SNS 가입 시 별도 비밀번호 요구 X 의무 — E2EE master password 강제 흐름과 정합 위해 V5 재검토.</blockquote>
+  </section>
+
+  <section>
+    <h2>📚 자세한 정책</h2>
+    <ul>
+      <li>Anthropic 처리방침: <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">anthropic.com/legal/privacy</a></li>
+      <li>회사 <a href="/privacy">개인정보처리방침</a></li>
+      <li>회사 <a href="/terms">이용약관</a></li>
+    </ul>
+  </section>
+
+  <hr>
+
+  <section>
+    <h2>동의 항목</h2>
+    <p>「개인정보보호법 시행령」 제18조 민감정보 처리 의무 준수, 분리 동의:</p>
+    <div class="consent-summary">
+      <strong>(필수)</strong> 정신건강 자기관찰 데이터를 회사가 처리하는 것에 동의합니다.<br>
+      <strong>(필수)</strong> 본 데이터를 미국 (Anthropic, Supabase, Cloudflare 본사) 으로 이전하는 것에 동의합니다.
+    </div>
+    <blockquote>외부 analytics 도구 (Google Analytics / Facebook Pixel 등) X — 회사는 추적 픽셀·광고 ID·외부 통계 일체 사용 X. 미래 외부 analytics 도입 시 별도 동의 받음.</blockquote>
+    <p>가입 시 또는 첫 AI 대화 시 위 동의 항목 모달에서 확인한다. 거부 시 AI 대화·분석 기능을 사용할 수 없으며, 단 체크인·일기도 Supabase 미국 서버에 저장되므로 사실상 서비스 이용 불가.</p>
+  </section>
+
+  <section>
+    <h2>재동의 트리거</h2>
+    <ul>
+      <li>정책 버전 변경 시 (currentVersion ≠ consentVersion)</li>
+      <li>Anthropic 데이터 정책 중대 변경 시</li>
+      <li>6개월 이상 미접속 후 첫 호출 (선택, 인지 환기)</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <div class="biz">나은 랩(Lab) · 사업자번호 261-21-02592</div>
+  <div>대표 김나은 · soragodongapp@gmail.com</div>
+  <div>서울특별시 동작구 상도로47아길 14</div>
+  <div style="margin-top:14px;">
+    <a href="/terms">이용약관</a>
+    <a href="/privacy">개인정보처리방침</a>
+    <a href="/refund">환불정책</a>
+    <a href="/">소라고동 ✦ 홈</a>
+  </div>
+</footer>
+</body>
+</html>

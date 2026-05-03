@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="소라고동 (나은 랩(Lab)) 개인정보처리방침. PIPA 준수, E2EE 암호화, 만 19세 이상.">
+<title>개인정보처리방침 — 소라고동</title>
+<link rel="icon" type="image/png" href="/godongicon.png">
+<link rel="canonical" href="https://soragodong.com/privacy">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1826;
+    --surface2: #221f33;
+    --accent: #c9a96e;
+    --accent2: #e8c99a;
+    --purple: #8b7ec4;
+    --text: #ede8f5;
+    --text-dim: #9d9aad;
+    --text-soft: #7b7a8e;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 80px;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(139, 126, 196, 0.10) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 90%, rgba(201, 169, 110, 0.08) 0%, transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .page-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+    background: rgba(15, 14, 23, 0.7);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+  }
+  .page-header-inner {
+    max-width: 760px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .back-link {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 13.5px;
+    letter-spacing: 0.02em;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+  .brand-mark {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-soft);
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+  }
+  .brand-mark img { width: 18px; height: 18px; opacity: 0.75; }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 56px 24px 40px;
+  }
+
+  .doc-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 38px;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+    margin-bottom: 12px;
+  }
+  .doc-meta {
+    font-size: 12.5px;
+    color: var(--text-soft);
+    margin-bottom: 36px;
+    line-height: 1.7;
+  }
+  .doc-meta .pill {
+    display: inline-block;
+    padding: 2px 9px;
+    margin: 0 2px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .lead {
+    font-size: 15px;
+    color: var(--text-dim);
+    line-height: 1.85;
+    padding: 18px 22px;
+    background: var(--surface);
+    border-left: 3px solid rgba(201, 169, 110, 0.4);
+    border-radius: 0 12px 12px 0;
+    margin-bottom: 40px;
+  }
+
+  section {
+    margin-bottom: 38px;
+  }
+  h2 {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px;
+    color: var(--text);
+    margin: 0 0 14px;
+    letter-spacing: 0.01em;
+  }
+  h3 {
+    font-size: 15.5px;
+    color: var(--accent2);
+    margin: 22px 0 10px;
+    font-weight: 600;
+  }
+
+  p { margin-bottom: 12px; color: var(--text-dim); font-size: 14.5px; }
+  p strong { color: var(--text); font-weight: 600; }
+  p em { color: var(--text); font-style: italic; }
+
+  ul, ol {
+    margin: 0 0 14px 22px;
+    color: var(--text-dim);
+    font-size: 14.5px;
+  }
+  li { margin-bottom: 5px; }
+  li strong { color: var(--text); }
+
+  a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-color: rgba(201, 169, 110, 0.4);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.2s;
+  }
+  a:hover { text-decoration-color: var(--accent); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 16px;
+    font-size: 13.5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  thead {
+    background: var(--surface2);
+  }
+  th {
+    text-align: left;
+    padding: 11px 14px;
+    color: var(--accent2);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  td {
+    padding: 11px 14px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    line-height: 1.65;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td strong { color: var(--text); font-weight: 600; }
+  td em { color: var(--text-dim); font-style: italic; }
+
+  blockquote {
+    margin: 16px 0;
+    padding: 14px 18px;
+    background: rgba(139, 126, 196, 0.06);
+    border-left: 3px solid rgba(139, 126, 196, 0.4);
+    border-radius: 0 10px 10px 0;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1.75;
+  }
+  blockquote strong { color: var(--text); }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 36px 0;
+  }
+
+  footer {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 24px 40px;
+    border-top: 1px solid var(--border);
+    color: var(--text-soft);
+    font-size: 12px;
+    line-height: 1.85;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  footer .biz {
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  footer .home-link {
+    display: inline-block;
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--accent);
+    opacity: 0.8;
+  }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    .container { padding: 40px 18px 32px; }
+    .doc-title { font-size: 30px; }
+    h2 { font-size: 19px; }
+    .lead { padding: 14px 16px; font-size: 14px; }
+    table { font-size: 12.5px; }
+    th, td { padding: 9px 10px; }
+    blockquote { padding: 12px 14px; font-size: 13px; }
+  }
+
+  /* Print — 가독성 우선 흰 배경 */
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    body::before { display: none; }
+    .page-header, footer .home-link { display: none; }
+    .container { padding: 12mm 0; max-width: 100%; }
+    .doc-title { color: #000; }
+    h2, h3 { color: #000; }
+    p, li, td, blockquote { color: #000; }
+    .doc-meta, footer { color: #444; }
+    a { color: #000; text-decoration: underline; }
+    table { background: #fff; border: 1px solid #888; border-radius: 0; }
+    th { background: #f3f3f3; color: #000; border-bottom: 1px solid #888; }
+    td { border-bottom: 1px solid #ddd; }
+    blockquote { background: #f7f5fb; border-left-color: #888; color: #000; }
+    .lead { background: #f9f6ef; border-left-color: #888; color: #000; }
+    section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<header class="page-header">
+  <div class="page-header-inner">
+    <a class="back-link" href="/">← 소라고동</a>
+    <div class="brand-mark"><img src="/godongicon.png" alt=""><span>나은 랩(Lab)</span></div>
+  </div>
+</header>
+
+<main class="container">
+  <h1 class="doc-title">개인정보처리방침</h1>
+  <div class="doc-meta">
+    <span class="pill">시행일 2026-04-30</span>
+    <span class="pill">최종 갱신 2026-05-02</span>
+    <span class="pill">버전 1.3</span>
+  </div>
+
+  <p class="lead">
+    <strong>나은 랩(Lab)</strong> (대표 김나은, 사업자등록번호 261-21-02592, 이하 "회사")는
+    「개인정보보호법」, 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」을 준수하여 사용자의 개인정보를 보호한다.
+  </p>
+
+  <section>
+    <h2>1. 처리 목적</h2>
+    <table>
+      <thead><tr><th>목적</th><th>처리 항목</th></tr></thead>
+      <tbody>
+        <tr><td>회원 가입·인증</td><td>이메일 주소 (Supabase magic link 기반)</td></tr>
+        <tr><td>AI 대화 / 분석 서비스 제공</td><td>사용자 입력 텍스트 (체크인·일기·대화·기록) — <em>E2EE 암호화 저장, 회사 평문 접근 X</em></td></tr>
+        <tr><td>결제 처리</td><td>결제 정보 (포트원 PG사 위탁)</td></tr>
+        <tr><td>사용량 기반 청구</td><td>토큰 사용량, 결제 history (평문 — 비-민감 운영 데이터)</td></tr>
+        <tr><td>위기 자동 안내 (자살예방법 §15-6)</td><td>위기 carousel 표시 시각·트리거 종류 (사용자 단말 내 <em>E2EE 암호화</em>, 회사 접근 X. 분쟁 시 사용자 본인 복호화 가능)</td></tr>
+        <tr><td>법적 의무 이행</td><td>전자상거래법상 결제·환불 기록 보존</td></tr>
+      </tbody>
+    </table>
+    <blockquote><strong>외부 analytics 도구 X</strong>: 회사는 Google Analytics / Facebook Pixel / Mixpanel 등 외부 추적 도구를 사용하지 않는다. 자체 운영 dashboard 의 <em>집계</em> 통계 (개인 식별 X) 만 내부적으로 활용한다. 미래 외부 analytics 도입 시 별도 동의 받음.</blockquote>
+  </section>
+
+  <section>
+    <h2>2. 처리 항목 + 민감정보</h2>
+    <p>본 서비스는 사용자의 <strong>정신건강 관련 자기관찰 데이터</strong>(기분·활력·수면·고민·감정 기록·자기 인식·관계 정보 등)를 처리한다. 이는 「개인정보보호법 시행령 제18조」상 <strong>민감정보</strong>에 해당할 수 있어, 별도 동의를 받는다.</p>
+    <h3>별도 동의 항목</h3>
+    <p>가입 시 또는 첫 AI 대화 시 다음 두 가지 별도 동의를 받는다:</p>
+    <ol>
+      <li><strong>정신건강 자기관찰 데이터 처리 동의</strong> — 사용자가 입력한 기분·고민·감정 기록 처리</li>
+      <li><strong>국외이전 동의</strong> — Anthropic, PBC (미국 캘리포니아) 서버로 사용자 메시지 전송 (자세한 내용 <a href="https://github.com/naeun222/soragodong/blob/main/legal_draft/cross-border.md" target="_blank" rel="noopener">국외이전 동의문</a>)</li>
+    </ol>
+    <p>각 동의는 분리되어 있으며, 사용자가 동의 거부 시 해당 기능은 사용할 수 없다 (단 그 외 기능 일부는 사용 가능).</p>
+  </section>
+
+  <section>
+    <h2>3. 보유 / 이용 기간</h2>
+    <table>
+      <thead><tr><th>항목</th><th>보유 기간</th></tr></thead>
+      <tbody>
+        <tr><td>회원 데이터 (대화·체크인·진주·전략)</td><td>회원 탈퇴 시 즉시 삭제</td></tr>
+        <tr><td>결제 기록</td><td><strong>5년</strong> (전자상거래법 제6조)</td></tr>
+        <tr><td>서비스 이용 로그</td><td><strong>3개월</strong> (통신비밀보호법)</td></tr>
+        <tr><td>부정 사용 기록</td><td><strong>1년</strong> (악용 방지)</td></tr>
+      </tbody>
+    </table>
+    <p>회원 탈퇴 시 위 법령상 보존 의무 항목 외 모든 데이터는 즉시 삭제되며, 사용자는 탈퇴 전 데이터 export를 요청할 수 있다.</p>
+  </section>
+
+  <section>
+    <h2>4. 제3자 제공 / 위탁</h2>
+    <table>
+      <thead><tr><th>수탁자</th><th>위탁 업무</th><th>처리 항목</th><th>위치</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Anthropic, PBC</strong></td>
+          <td>AI 응답 생성 (Claude API)</td>
+          <td>사용자 입력 텍스트 + 시스템 컨텍스트 (이름·이메일·결제 정보 X)</td>
+          <td>미국 (San Francisco, CA)</td>
+        </tr>
+        <tr>
+          <td><strong>Supabase, Inc.</strong></td>
+          <td>인증 + 데이터 저장 (PostgreSQL)</td>
+          <td>이메일, 사용자 데이터</td>
+          <td>미국 (AWS us-east-1)</td>
+        </tr>
+        <tr>
+          <td><strong>포트원 (PortOne)</strong></td>
+          <td>결제 처리</td>
+          <td>결제 정보 (카드번호 직접 보유 X, 토큰만)</td>
+          <td>한국</td>
+        </tr>
+        <tr>
+          <td><strong>Cloudflare, Inc.</strong></td>
+          <td>백엔드 호스팅 + 정적 자원 + Edge Functions</td>
+          <td>사용자 요청 라우팅, 정적 파일 전송</td>
+          <td>미국 본사 (글로벌 edge 분산)</td>
+        </tr>
+        <tr>
+          <td><strong>카카오 (Kakao Corp.)</strong></td>
+          <td>OAuth 로그인 인증 (선택)</td>
+          <td>이메일 (필수) / 닉네임·프로필사진 (선택 — 카카오 OAuth 표준 scope, 수신 후 <em>사용·저장·DB 보유 X / 즉시 폐기</em>)</td>
+          <td>한국</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>국외이전 동의</strong>: Anthropic / Supabase / Cloudflare은 미국 소재 (Cloudflare는 글로벌 edge 네트워크). 사용자가 별도 동의 시에만 데이터 전송된다 (제2조 2항 참고).</p>
+    <p>회사는 위 수탁자 외 제3자에게 사용자 데이터를 제공하지 않는다. 단 법령상 요구가 있는 경우 (수사 영장 등) 최소 범위에서 협조한다.</p>
+  </section>
+
+  <section>
+    <h2>5. 사용자(정보주체) 권리 + 행사 절차</h2>
+    <p>사용자는 다음 권리를 행사할 수 있다:</p>
+    <ol>
+      <li><strong>본인 데이터 조회·수정·삭제</strong></li>
+      <li><strong>처리 정지 요구</strong></li>
+      <li><strong>동의 철회</strong> (탈퇴 시 자동)</li>
+      <li><strong>손해배상 청구</strong></li>
+    </ol>
+
+    <h3>5.1 행사 방법 (3가지 채널)</h3>
+    <p><strong>① 앱 내 직접 (1-click)</strong></p>
+    <ul>
+      <li>데이터 조회: 앱 내 [나 탭] / [도서관] / [설정 → 결제 history]</li>
+      <li>데이터 수정: 모든 항목 ✎ 버튼으로 직접 수정</li>
+      <li>데이터 삭제: ✕ 버튼 또는 [설정 → 회원 탈퇴] (모든 자기관찰 데이터 즉시 삭제)</li>
+      <li>처리 정지: [설정 → 회원 탈퇴]</li>
+    </ul>
+    <p><strong>② 이메일</strong>: <a href="mailto:soragodongapp@gmail.com">soragodongapp@gmail.com</a></p>
+    <ul>
+      <li>본인 인증 (가입 이메일과 일치) 후 영업일 기준 3-7일 내 처리</li>
+    </ul>
+    <p><strong>③ 서면</strong>: 서울특별시 동작구 상도로47아길 14 (나은 랩(Lab) 김나은 대표)</p>
+    <ul>
+      <li>등기우편 + 신분증 사본 첨부</li>
+      <li>영업일 기준 7-14일 내 처리</li>
+    </ul>
+
+    <h3>5.2 행사 시 회사 의무</h3>
+    <p>회사는 정보주체의 권리 행사 요구를 받은 날부터 <strong>10일 이내</strong>에 처리하며, 처리 결과를 사용자에게 통지한다 (개인정보보호법 제35조).</p>
+
+    <h3>5.3 거부 사유</h3>
+    <p>다음의 경우 권리 행사가 제한될 수 있다 (개인정보보호법 제35조 제5항):</p>
+    <ul>
+      <li>다른 법률에 의한 보존 의무 (전자상거래법 결제 기록 5년 등)</li>
+      <li>다른 사람의 생명·신체·재산 위해 가능 시</li>
+      <li>진행 중인 분쟁 해결 또는 수사 협조 시</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>6. 데이터 보안</h2>
+    <ol>
+      <li><strong>저장 시 암호화 (E2EE — Stage 2 활성)</strong>: 민감 필드 (일기·대화·진주·전략·case formulation·위기 carousel 로그 등) 는 클라이언트 측에서 사용자 비밀번호로 파생된 키(PBKDF2 1M iterations)로 AES-256-GCM 암호화 후 저장. <strong>회사는 평문 접근 불가</strong>. 비밀번호 분실 시 자동 백업 fallback 가능.</li>
+      <li><strong>전송 시 암호화</strong>: HTTPS / TLS 1.2 이상 (모든 통신).</li>
+      <li><strong>접근 통제</strong>: 회사 내부 접근은 관리자 본인 (1인 사업자)에 한정. 접근 로그 기록.</li>
+      <li><strong>인증</strong>: Supabase OTP (이메일 코드) + 사용자 비밀번호 (E2EE 키 파생용, 회사 저장 X).</li>
+      <li><strong>결제 정보</strong>: 카드번호·CVC 등 회사 직접 보유 X. 포트원 토큰화만.</li>
+      <li><strong>백업</strong>: 자동 백업 (사용자별 격리, 암호화). Supabase 내장 + 클라이언트 추가 백업 옵션.</li>
+      <li><strong>AI API 호출 시 일시 노출</strong>: Claude API 호출 시점에는 평문 메시지가 Anthropic 서버로 전송된다 (Stage 2 E2EE 의 <em>불가피한 예외</em>). Anthropic 의 <strong>Zero Data Retention</strong> 정책에 따라 <strong>AI 학습·재활용 절대 X</strong> — 학습·재판매·연구 등 <em>어떤 형태로도 외부 사용 불가</em>. 처리 후 즉시 폐기되며 30일 내 자동 삭제. 사용자는 가입 시 별도 동의 (국외이전 §3 참고).</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>7. 자동 수집 정보</h2>
+    <p>본 서비스는 <strong>쿠키 / 광고 ID / 추적 픽셀을 사용하지 않는다.</strong></p>
+    <p>분석 도구는 회사 자체 익명화 통계만 사용 (Google Analytics, Facebook Pixel 등 외부 분석 X).</p>
+  </section>
+
+  <section>
+    <h2>8. 연령 제한 (만 19세 이상 전용)</h2>
+    <h3>8.1 만 19세 이상 가입 제한</h3>
+    <p>본 서비스는 <strong>만 19세 이상</strong> 사용자만 가입·이용 가능하다.</p>
+    <p>근거:</p>
+    <ul>
+      <li><strong>PIPA §22-2</strong>: 만 14세 미만 친권자 동의 필수</li>
+      <li><strong>청소년보호법</strong>: 만 19세 미만 보호 의무</li>
+      <li><strong>정신건강 정보의 민감성</strong>: 자기관찰·정서 기록은 PIPA §23 민감정보 — 미성년자 동의·처리 위험 회피 + 임상 의심 증상 시 전문가 상담 권장이 미성년자에게 더 critical</li>
+    </ul>
+    <p>가입 시 <strong>생년월일 입력 + 만 19세 이상임을 확인하는 별도 체크박스</strong>로 확인한다.</p>
+    <p>만 19세 미만 사용자가 부정한 방법으로 가입한 사실이 확인되면 회사는 즉시 계정을 정지하고 모든 데이터를 삭제한다 (사용자/법정대리인에게 통지).</p>
+  </section>
+
+  <section>
+    <h2>9. 개인정보 보호책임자 (CPO)</h2>
+    <p>소라고동은 「개인정보보호법」 제31조에 따라 개인정보 보호책임자를 다음과 같이 지정한다:</p>
+    <ul>
+      <li><strong>성명</strong>: 김나은</li>
+      <li><strong>직위</strong>: 대표 / 개인정보 보호책임자 (CPO)</li>
+      <li><strong>사업장 주소</strong>: 서울특별시 동작구 상도로47아길 14</li>
+      <li><strong>이메일</strong>: <a href="mailto:soragodongapp@gmail.com">soragodongapp@gmail.com</a></li>
+    </ul>
+    <p>CPO는 다음 업무를 수행한다:</p>
+    <ul>
+      <li>개인정보보호 계획 수립·시행</li>
+      <li>개인정보 처리 실태 점검 + 개선</li>
+      <li>정보주체 권리 행사 요청 처리</li>
+      <li>개인정보 침해 사고 대응</li>
+    </ul>
+
+    <h3>9.1 침해 신고 채널</h3>
+    <p>개인정보 침해 발생 시 회사 CPO 또는 다음 기관에 신고:</p>
+    <ul>
+      <li><strong>개인정보분쟁조정위원회</strong> (<a href="https://privacy.go.kr" target="_blank" rel="noopener">privacy.go.kr</a> / 1833-6972)</li>
+      <li><strong>개인정보침해 신고센터</strong> (<a href="https://privacy.kisa.or.kr" target="_blank" rel="noopener">privacy.kisa.or.kr</a> / 118)</li>
+      <li><strong>대검찰청 사이버수사과</strong> (1301)</li>
+      <li><strong>경찰청 사이버수사국</strong> (<a href="https://cyberbureau.police.go.kr" target="_blank" rel="noopener">cyberbureau.police.go.kr</a> / 182)</li>
+    </ul>
+
+    <h3>9.2 정보보호위원회 신고</h3>
+    <p>회사는 사업자등록 후 「개인정보보호법 시행령」에 따라 정보보호위원회에 개인정보처리자 등록을 진행한다.</p>
+  </section>
+
+  <section>
+    <h2>10. 정책 변경</h2>
+    <p>본 정책 변경 시 시행일 7일 전 앱 내 공지 또는 이메일로 사전 통지한다. 중대한 변경 (위탁자 추가, 처리 목적 확대 등)은 별도 동의를 받는다.</p>
+  </section>
+</main>
+
+<footer>
+  <div class="biz">나은 랩(Lab) · 사업자번호 261-21-02592</div>
+  <div>대표 김나은 · soragodongapp@gmail.com</div>
+  <div>서울특별시 동작구 상도로47아길 14</div>
+  <a class="home-link" href="/">소라고동 ✦ 홈으로</a>
+</footer>
+
+</body>
+</html>

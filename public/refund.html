@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="소라고동 (나은 랩(Lab)) 환불정책. 청약철회 7일, 비례 환불, 추가팩 30일.">
+<title>환불정책 — 소라고동</title>
+<link rel="icon" type="image/png" href="/godongicon.png">
+<link rel="canonical" href="https://soragodong.com/refund">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1826;
+    --surface2: #221f33;
+    --accent: #c9a96e;
+    --accent2: #e8c99a;
+    --text: #ede8f5;
+    --text-dim: #9d9aad;
+    --text-soft: #7b7a8e;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.8; -webkit-font-smoothing: antialiased;
+    padding-bottom: 80px;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(139, 126, 196, 0.10) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 90%, rgba(201, 169, 110, 0.08) 0%, transparent 55%);
+    pointer-events: none; z-index: 0;
+  }
+  .page-header {
+    position: sticky; top: 0; z-index: 10;
+    backdrop-filter: blur(10px);
+    background: rgba(15, 14, 23, 0.7);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+  }
+  .page-header-inner {
+    max-width: 760px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .back-link {
+    color: var(--text-dim); text-decoration: none;
+    font-size: 13.5px; letter-spacing: 0.02em; transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+  .brand-mark {
+    display: flex; align-items: center; gap: 7px;
+    color: var(--text-soft); font-size: 12.5px; letter-spacing: 0.04em;
+  }
+  .brand-mark img { width: 18px; height: 18px; opacity: 0.75; }
+  .container {
+    position: relative; z-index: 1;
+    max-width: 760px; margin: 0 auto;
+    padding: 56px 24px 40px;
+  }
+  .doc-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 38px; color: var(--accent);
+    letter-spacing: 0.02em; margin-bottom: 12px;
+  }
+  .doc-meta {
+    font-size: 12.5px; color: var(--text-soft);
+    margin-bottom: 36px; line-height: 1.7;
+  }
+  .doc-meta .pill {
+    display: inline-block; padding: 2px 9px; margin: 0 2px;
+    border: 1px solid var(--border-strong); border-radius: 999px;
+    font-size: 11px; color: var(--text-dim);
+  }
+  .lead {
+    font-size: 15px; color: var(--text-dim); line-height: 1.85;
+    padding: 18px 22px; background: var(--surface);
+    border-left: 3px solid rgba(201, 169, 110, 0.4);
+    border-radius: 0 12px 12px 0; margin-bottom: 40px;
+  }
+  section { margin-bottom: 38px; }
+  h2 {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px; color: var(--text);
+    margin: 0 0 14px; letter-spacing: 0.01em;
+  }
+  h3 {
+    font-size: 15.5px; color: var(--accent2);
+    margin: 22px 0 10px; font-weight: 600;
+  }
+  p { margin-bottom: 12px; color: var(--text-dim); font-size: 14.5px; }
+  p strong { color: var(--text); font-weight: 600; }
+  p em { color: var(--text); font-style: italic; }
+  ul, ol { margin: 0 0 14px 22px; color: var(--text-dim); font-size: 14.5px; }
+  li { margin-bottom: 5px; }
+  li strong { color: var(--text); }
+  a {
+    color: var(--accent); text-decoration: underline;
+    text-decoration-color: rgba(201, 169, 110, 0.4);
+    text-underline-offset: 3px; transition: text-decoration-color 0.2s;
+  }
+  a:hover { text-decoration-color: var(--accent); }
+  .formula-box {
+    margin: 16px 0; padding: 16px 20px;
+    background: rgba(201, 169, 110, 0.06);
+    border: 1px solid rgba(201, 169, 110, 0.2);
+    border-radius: 10px;
+    color: var(--text); font-size: 14.5px; line-height: 1.8;
+    font-family: 'Gowun Batang', serif;
+  }
+  .formula-box strong { color: var(--accent); }
+  .example-box {
+    margin: 12px 0; padding: 14px 18px;
+    background: rgba(139, 126, 196, 0.06);
+    border-left: 3px solid rgba(139, 126, 196, 0.4);
+    border-radius: 0 10px 10px 0;
+    color: var(--text-dim); font-size: 14px; line-height: 1.75;
+  }
+  .example-box strong { color: var(--text); }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 36px 0; }
+  footer {
+    max-width: 760px; margin: 0 auto;
+    padding: 32px 24px 40px; border-top: 1px solid var(--border);
+    color: var(--text-soft); font-size: 12px;
+    line-height: 1.85; text-align: center;
+    position: relative; z-index: 1;
+  }
+  footer .biz { color: var(--text-dim); margin-bottom: 4px; font-weight: 500; }
+  footer a { color: var(--accent); opacity: 0.8; margin: 0 8px; text-decoration: none; }
+  @media (max-width: 600px) {
+    .container { padding: 40px 18px 32px; }
+    .doc-title { font-size: 30px; }
+    h2 { font-size: 19px; }
+    .lead, .formula-box, .example-box { padding: 14px 16px; font-size: 14px; }
+  }
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    body::before { display: none; }
+    .page-header, footer a { display: none; }
+    .container { padding: 12mm 0; max-width: 100%; }
+    .doc-title, h2, h3 { color: #000; }
+    p, li { color: #000; }
+    .doc-meta, footer { color: #444; }
+    a { color: #000; text-decoration: underline; }
+    .formula-box { background: #f9f6ef; border-color: #888; color: #000; }
+    .formula-box strong { color: #000; }
+    .example-box { background: #f7f5fb; border-left-color: #888; color: #000; }
+    .lead { background: #f9f6ef; border-left-color: #888; color: #000; }
+    section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<header class="page-header">
+  <div class="page-header-inner">
+    <a class="back-link" href="/">← 소라고동</a>
+    <div class="brand-mark"><img src="/godongicon.png" alt=""><span>나은 랩(Lab)</span></div>
+  </div>
+</header>
+
+<main class="container">
+  <h1 class="doc-title">환불정책</h1>
+  <div class="doc-meta">
+    <span class="pill">시행일 2026-04-30</span>
+    <span class="pill">최종 갱신 2026-05-02</span>
+    <span class="pill">버전 1.1</span>
+  </div>
+
+  <p class="lead">
+    <strong>나은 랩(Lab)</strong> (대표 김나은, 사업자등록번호 261-21-02592, 이하 "회사")의
+    "소라고동" 서비스 환불 정책. 청약철회 7일·비례 환불·추가팩 30일·legacy charge 잔액 호환.
+  </p>
+
+  <section>
+    <h2>1. 청약철회권 (전자상거래법 제17조)</h2>
+    <p>사용자는 다음 기간 내 <strong>별도 사유 없이 청약철회</strong>할 수 있다:</p>
+
+    <h3>1.1 결제 후 7일 이내 — 환불 정책</h3>
+    <ul>
+      <li><strong>0회 사용</strong> (한 번도 안 쓴 경우) → <strong>100% 환불</strong></li>
+      <li><strong>1회 이상 사용</strong> → 비례 환불 (아래 2항 공식 적용)</li>
+    </ul>
+
+    <h3>1.2 "사용량" 정의 (명확화)</h3>
+    <p><strong>1회 사용 = 사용자가 메인 chat / 숙고 / 마법 / 돌연변이 임시대화 등에서 메시지 1개를 전송하고 AI 응답을 받은 사례</strong>.</p>
+    <p>다음은 "사용"으로 카운트하지 않음:</p>
+    <ul>
+      <li>AI 응답 실패 (네트워크 오류, API 에러)</li>
+      <li>사용자가 메시지 작성 중 취소</li>
+      <li>자동 생성 (챕터 마무리·일일 질문·forceAnalyze 등 백그라운드)</li>
+    </ul>
+
+    <h3>1.3 디지털 콘텐츠 제한 (전자상거래법 제17조 제2항)</h3>
+    <p>사용자가 결제 후 즉시 사용해 <strong>콘텐츠 가치가 현저히 감소한 경우</strong> (= AI 토큰 사용량 발생) 청약철회가 제한될 수 있다. 회사 정책상 사용량에 비례한 환불은 항상 가능하다.</p>
+  </section>
+
+  <section>
+    <h2>2. 비례 환불 (사용량 기반)</h2>
+
+    <h3>2.1 월 정액 구독 — 비례 환불 공식</h3>
+    <div class="formula-box">
+      <strong>환불액 = (월 정액 × 잔여일 ÷ 30) − 사용량 차감액</strong>
+    </div>
+    <ul>
+      <li><strong>잔여일</strong>: 결제일부터 환불 신청일까지 경과한 일수를 30에서 뺀 값</li>
+      <li><strong>사용량 차감액</strong>: 결제 후 실제 사용한 토큰을 단가 기준으로 환산한 금액 (Anthropic 가격 그대로 차감)</li>
+    </ul>
+    <p><strong>현재 요금제</strong> (부가세 10% 포함):</p>
+    <ul>
+      <li><strong>Light</strong> 8,900원/월 — 월 한도 약 7,000원 어치 ($5)</li>
+      <li><strong>Premium</strong> 25,000원/월 — 월 한도 약 21,000원 어치 ($15)</li>
+    </ul>
+    <div class="example-box">
+      <strong>예시 (Premium)</strong>:<br>
+      25,000원 결제, 10일째 환불 신청, 사용 토큰 4,000원 분<br>
+      환불액 = 25,000 × (30 − 10) ÷ 30 − 4,000 = 16,667 − 4,000 = <strong>약 12,667원</strong>
+    </div>
+
+    <h3>2.2 추가팩 — 청약철회 30일 (전자상거래법)</h3>
+    <p>월 한도 도달 시 결제하는 <strong>추가팩</strong> (Light 5,000원 / Premium 7,000원) 의 환불 정책:</p>
+    <ul>
+      <li>추가팩 결제 후 <strong>0회 사용 시 30일 이내 100% 환불</strong></li>
+      <li>1회 이상 사용 시 잔여 한도 비례 환불 (사용량 차감)</li>
+      <li>사용자 명시: 추가팩은 <em>cap 도달 시마다 계속 결제 가능</em> — 환불도 각 추가팩 별 독립 적용</li>
+    </ul>
+
+    <h3>2.3 Legacy 충전 잔액 (V4 이전 호환)</h3>
+    <p>2026-04-30 V4 결제 모델 전환 <em>이전</em> 사용자가 보유한 <strong>legacy charge 잔액</strong> (<code>credit_balance_usd &gt; 0</code>) 은 그대로 차감하며, 환불 요청 시:</p>
+    <ul>
+      <li>잔여 charge 잔액 100% 환불 (이미 사용된 토큰 환불 X)</li>
+      <li>0 도달 후 구독 모델 (2-tier) 으로 자연 전환 안내</li>
+      <li>신규 charge 결제는 더 이상 불가능 (V4 부터 폐기)</li>
+    </ul>
+
+    <h3>2.4 처리 기한</h3>
+    <ul>
+      <li>환불 신청일로부터 <strong>3-5 영업일</strong> 내 결제 수단으로 자동 환불 (포트원 자동 환불 시스템)</li>
+      <li>카드 결제: 카드사 정책상 7-14일 후 카드 명세서 반영</li>
+      <li>계좌이체: 영업일 기준 1-2일 내 입금</li>
+    </ul>
+
+    <h3>2.5 영수증 갱신 (사업자 의무)</h3>
+    <p>부분 환불 시 회사는 <strong>수정 영수증을 사용자에게 발급한다</strong> (전자상거래법 + 부가세법):</p>
+    <ul>
+      <li>자동 발행 (앱 내 [설정 → 결제 history]에서 다운로드 가능)</li>
+      <li>이메일 별도 송부 (선택)</li>
+      <li>환불 일자, 환불 금액, 사용량, 잔여 결제액 명시</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. 환불 불가 사유</h2>
+    <p>다음의 경우 환불이 제한된다:</p>
+    <ol>
+      <li>사용자가 약관 / 본인 의무를 위반해 서비스 정지된 경우</li>
+      <li>무료 체험 기간만 이용하고 결제 자체가 없는 경우 (환불 대상 아님)</li>
+      <li>부정 사용 (자동화 봇 / 타인 명의 결제 등)이 확인된 경우</li>
+      <li>결제 후 <strong>30일 이상 경과</strong> 후 청약철회 요청 (단 비례 환불은 가능)</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>4. 환불 신청 방법</h2>
+
+    <h3>4.1 앱 내 자동 환불 (권장)</h3>
+    <p>앱 내 [설정 → 결제 / 사용량 → 환불 요청] 버튼 → 사유 선택 → 자동 처리.</p>
+    <p>포트원 자동 환불 시스템 사용 — 회사 직접 처리 X. 결제 수단으로 자동 환불.</p>
+
+    <h3>4.2 이메일 문의</h3>
+    <p>앱 내 자동 환불이 불가능한 경우:</p>
+    <ul>
+      <li>이메일: <a href="mailto:soragodongapp@gmail.com">soragodongapp@gmail.com</a></li>
+      <li>영업일 기준 [3-7]일 내 답변</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5. 부분 환불 / 분쟁</h2>
+    <ol>
+      <li>사용자와 회사 간 환불액 산정에 이견이 있는 경우 협의로 해결한다.</li>
+      <li>협의 불가 시 <strong>소비자분쟁조정위원회</strong> (1372 / <a href="https://ccm.kca.go.kr" target="_blank" rel="noopener">ccm.kca.go.kr</a>)에 조정 신청 가능.</li>
+      <li>한국소비자원 (<a href="https://kca.go.kr" target="_blank" rel="noopener">kca.go.kr</a> / 1372) 분쟁 조정 신청 가능.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>6. 무료 환영 토큰 소진 후 자동 결제 X</h2>
+    <p><strong>무료 환영 토큰 (3,000원 ≈ $1.43) 소진 시 자동으로 유료 전환되지 않는다.</strong> 사용자가 명시적으로 결제 진행 시에만 유료 구독으로 전환된다. 무료 토큰이 남아있는 한 시간 제한 없이 자유 사용 가능하다.</p>
+    <p>또한 <strong>자동 갱신은 default OFF</strong> 다 — 매월 결제 만료 후 사용자가 명시적으로 다시 결제해야 다음 달 이용 가능. 사용자가 옵션으로 자동 갱신 ON 시에만 자동.</p>
+    <p>이는 다크 패턴 (자동결제 함정) 회피를 위한 회사 정책이다.</p>
+  </section>
+</main>
+
+<footer>
+  <div class="biz">나은 랩(Lab) · 사업자번호 261-21-02592</div>
+  <div>대표 김나은 · soragodongapp@gmail.com</div>
+  <div>서울특별시 동작구 상도로47아길 14</div>
+  <div style="margin-top:14px;">
+    <a href="/terms">이용약관</a>
+    <a href="/privacy">개인정보처리방침</a>
+    <a href="/cross-border">국외이전 안내</a>
+    <a href="/">소라고동 ✦ 홈</a>
+  </div>
+</footer>
+</body>
+</html>

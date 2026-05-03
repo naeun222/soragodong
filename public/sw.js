@@ -1,0 +1,98 @@
+// 소라고동 V4 — Service Worker
+// 사용자 요청 2026-04-29: 오프라인 fallback + Chrome 설치 배너 활성 + Phase C 푸시 인프라 준비.
+// 진짜 푸시는 Phase C 백엔드 들어간 후 활성. 현재는 SW 등록 + cache-first 전략만.
+
+// 사용자 보고 2026-04-30: 큰 변경 (E2EE / API 마이그/암호화) 박힐 때마다 v 숫자 올리기.
+// activate에서 옛 캐시 자동 삭제 → stale 평문/구조 캐시 노출 차단.
+// v3 (2026-04-30 ultrathink): /api/* cache-first 버그 fix — SW 가 GET /api/usage 등을 캐싱해서 잔액 stale 노출되던 critical 버그.
+// v4 (2026-05-01 agent audit): E2EE 11 키 sensitiveKeys 추가 / decision 14일 hardcap / 광범위 워딩 정정 / phase 정리. 옛 캐시 stale 차단.
+const CACHE_NAME = 'soragodong-v4-cache-v4';
+const PRECACHE_URLS = [
+  './',
+  './index.html',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-180.png'
+];
+
+// install — 핵심 자원 미리 캐싱
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS).catch(() => null))
+      .then(() => self.skipWaiting())
+  );
+});
+
+// activate — 옛 캐시 정리
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((names) =>
+      Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+// fetch — network-first for HTML (always fresh), cache-first for assets
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  // GET만 다룸 (POST 등은 통과)
+  if (req.method !== 'GET') return;
+
+  const url = new URL(req.url);
+
+  // Anthropic / Supabase / iTunes / 기타 외부 API는 캐시 X — pass-through
+  if (url.origin !== self.location.origin) return;
+
+  // version.txt는 항상 fresh (배포 감지)
+  if (url.pathname.endsWith('/version.txt')) {
+    event.respondWith(fetch(req).catch(() => caches.match(req)));
+    return;
+  }
+
+  // 사용자 보고 2026-04-30 ultrathink (CRITICAL): /api/* 는 캐시 절대 X — 인증·잔액·사용량 실시간 데이터.
+  // 옛 버그: GET /api/usage 응답 SW 캐시 → 잔액 갱신 시 stale 데이터 (1$ 고정) 노출.
+  // 추가 bonus: Authorization header 무시한 SW 캐시 = cross-user 데이터 누수 risk 도 차단.
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(req));
+    return;
+  }
+
+  // HTML 문서는 network-first (최신 우선, 오프라인 시 캐시 fallback)
+  const isHTML = req.headers.get('accept')?.includes('text/html')
+    || url.pathname === '/' || url.pathname.endsWith('.html');
+  if (isHTML) {
+    event.respondWith(
+      fetch(req)
+        .then((resp) => {
+          // 성공 시 캐시 갱신.
+          // 사용자 보고 2026-04-30 review (agent P2-2): 5xx 응답도 cache.put 했음 → 옛 좋은 캐시 덮음. ok 상태만 캐시.
+          if (resp && resp.ok) {
+            const respClone = resp.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, respClone)).catch(() => {});
+          }
+          return resp;
+        })
+        .catch(() => caches.match(req).then((c) => c || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // 정적 자원 (icon, png, css, js) — cache-first
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req).then((resp) => {
+        if (resp && resp.status === 200 && resp.type === 'basic') {
+          const respClone = resp.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, respClone)).catch(() => {});
+        }
+        return resp;
+      }).catch(() => caches.match('./index.html'));
+    })
+  );
+});
+
+// 사용자 요청 2026-04-29: Phase C 시점에 push event handler 활성 예정.
+// self.addEventListener('push', (event) => { ... });
+// self.addEventListener('notificationclick', (event) => { ... });

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="소라고동 (나은 랩(Lab)) 이용약관. 자기관찰 보조 도구, 의료 X.">
+<title>이용약관 — 소라고동</title>
+<link rel="icon" type="image/png" href="/godongicon.png">
+<link rel="canonical" href="https://soragodong.com/terms">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1826;
+    --surface2: #221f33;
+    --accent: #c9a96e;
+    --accent2: #e8c99a;
+    --purple: #8b7ec4;
+    --text: #ede8f5;
+    --text-dim: #9d9aad;
+    --text-soft: #7b7a8e;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 80px;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(139, 126, 196, 0.10) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 90%, rgba(201, 169, 110, 0.08) 0%, transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .page-header {
+    position: sticky; top: 0; z-index: 10;
+    backdrop-filter: blur(10px);
+    background: rgba(15, 14, 23, 0.7);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+  }
+  .page-header-inner {
+    max-width: 760px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .back-link {
+    color: var(--text-dim); text-decoration: none;
+    font-size: 13.5px; letter-spacing: 0.02em; transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+  .brand-mark {
+    display: flex; align-items: center; gap: 7px;
+    color: var(--text-soft); font-size: 12.5px; letter-spacing: 0.04em;
+  }
+  .brand-mark img { width: 18px; height: 18px; opacity: 0.75; }
+  .container {
+    position: relative; z-index: 1;
+    max-width: 760px; margin: 0 auto;
+    padding: 56px 24px 40px;
+  }
+  .doc-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 38px; color: var(--accent);
+    letter-spacing: 0.02em; margin-bottom: 12px;
+  }
+  .doc-meta {
+    font-size: 12.5px; color: var(--text-soft);
+    margin-bottom: 36px; line-height: 1.7;
+  }
+  .doc-meta .pill {
+    display: inline-block; padding: 2px 9px; margin: 0 2px;
+    border: 1px solid var(--border-strong); border-radius: 999px;
+    font-size: 11px; color: var(--text-dim);
+  }
+  .lead {
+    font-size: 15px; color: var(--text-dim); line-height: 1.85;
+    padding: 18px 22px; background: var(--surface);
+    border-left: 3px solid rgba(201, 169, 110, 0.4);
+    border-radius: 0 12px 12px 0; margin-bottom: 40px;
+  }
+  section { margin-bottom: 38px; }
+  h2 {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px; color: var(--text);
+    margin: 0 0 14px; letter-spacing: 0.01em;
+  }
+  h3 {
+    font-size: 15.5px; color: var(--accent2);
+    margin: 22px 0 10px; font-weight: 600;
+  }
+  p { margin-bottom: 12px; color: var(--text-dim); font-size: 14.5px; }
+  p strong { color: var(--text); font-weight: 600; }
+  p em { color: var(--text); font-style: italic; }
+  ul, ol { margin: 0 0 14px 22px; color: var(--text-dim); font-size: 14.5px; }
+  li { margin-bottom: 5px; }
+  li strong { color: var(--text); }
+  a {
+    color: var(--accent); text-decoration: underline;
+    text-decoration-color: rgba(201, 169, 110, 0.4);
+    text-underline-offset: 3px; transition: text-decoration-color 0.2s;
+  }
+  a:hover { text-decoration-color: var(--accent); }
+  blockquote {
+    margin: 16px 0; padding: 14px 18px;
+    background: rgba(139, 126, 196, 0.06);
+    border-left: 3px solid rgba(139, 126, 196, 0.4);
+    border-radius: 0 10px 10px 0;
+    color: var(--text-dim); font-size: 14px; line-height: 1.75;
+  }
+  blockquote strong { color: var(--text); }
+  .danger-box {
+    margin: 16px 0; padding: 14px 18px;
+    background: rgba(232, 163, 163, 0.06);
+    border-left: 3px solid rgba(232, 163, 163, 0.4);
+    border-radius: 0 10px 10px 0;
+    color: var(--text-dim); font-size: 14px; line-height: 1.75;
+  }
+  .danger-box strong { color: #e8a3a3; }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 36px 0; }
+  footer {
+    max-width: 760px; margin: 0 auto;
+    padding: 32px 24px 40px; border-top: 1px solid var(--border);
+    color: var(--text-soft); font-size: 12px;
+    line-height: 1.85; text-align: center;
+    position: relative; z-index: 1;
+  }
+  footer .biz { color: var(--text-dim); margin-bottom: 4px; font-weight: 500; }
+  footer a { color: var(--accent); opacity: 0.8; margin: 0 8px; text-decoration: none; }
+  @media (max-width: 600px) {
+    .container { padding: 40px 18px 32px; }
+    .doc-title { font-size: 30px; }
+    h2 { font-size: 19px; }
+    .lead { padding: 14px 16px; font-size: 14px; }
+    blockquote, .danger-box { padding: 12px 14px; font-size: 13px; }
+  }
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    body::before { display: none; }
+    .page-header, footer a { display: none; }
+    .container { padding: 12mm 0; max-width: 100%; }
+    .doc-title, h2, h3 { color: #000; }
+    p, li, blockquote, .danger-box { color: #000; }
+    .doc-meta, footer { color: #444; }
+    a { color: #000; text-decoration: underline; }
+    blockquote { background: #f7f5fb; border-left-color: #888; }
+    .danger-box { background: #fbe9e9; border-left-color: #888; }
+    .lead { background: #f9f6ef; border-left-color: #888; color: #000; }
+    section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<header class="page-header">
+  <div class="page-header-inner">
+    <a class="back-link" href="/">← 소라고동</a>
+    <div class="brand-mark"><img src="/godongicon.png" alt=""><span>나은 랩(Lab)</span></div>
+  </div>
+</header>
+
+<main class="container">
+  <h1 class="doc-title">이용약관</h1>
+  <div class="doc-meta">
+    <span class="pill">시행일 2026-04-30</span>
+    <span class="pill">최종 갱신 2026-05-02</span>
+    <span class="pill">버전 1.1</span>
+  </div>
+
+  <p class="lead">
+    <strong>나은 랩(Lab)</strong> (대표 김나은, 사업자등록번호 261-21-02592, 이하 "회사")가 운영하는
+    "소라고동" 서비스의 이용에 관한 권리·의무·책임을 정한다.
+  </p>
+
+  <section>
+    <h2>제1조 (목적)</h2>
+    <p>이 약관은 회사가 운영하는 "소라고동" 서비스(이하 "서비스")의 이용에 관한 권리·의무·책임을 정함을 목적으로 한다.</p>
+  </section>
+
+  <section>
+    <h2>제2조 (정의)</h2>
+    <ol>
+      <li><strong>"서비스"</strong>: ADHD 친화적 <em>자기관찰 보조 도구</em>. 사용자의 일기·체크인·자유 대화 기록을 기반으로 AI가 패턴 정리·자기 인식을 돕는 웹/PWA 서비스.</li>
+      <li><strong>"사용자"</strong>: 본 약관에 동의하고 서비스를 이용하는 자.</li>
+      <li><strong>본 서비스는 의료기기·의약품·심리치료 서비스가 아니다.</strong> ADHD 또는 기타 정신건강 상태의 진단·치료·완화·예방 목적으로 사용할 수 없으며, 본 서비스의 어떠한 분석·관찰·제안도 의학적 진단·처방·치료·<strong>전문가 상담을 대체하지 않는다</strong>. AI 응답은 참고용 자기관찰 보조이며 임상적 효력을 갖지 않는다.</li>
+      <li><strong>"자기관찰 도구" 의미</strong>: 사용자가 본인 데이터를 시간에 따라 누적하며 패턴을 <em>가설</em> 형태로 살피는 도구. AI 분석은 임상 진단이 아니며, 사용자가 <em>반증·재해석·거부</em> 가능한 가설로만 사용한다.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>제3조 (서비스 내용)</h2>
+    <ol>
+      <li>일일 체크인 (활력·기분·수면 기록)</li>
+      <li>AI 친구 캐릭터와의 대화 (Claude API 기반)</li>
+      <li>대화 챕터 자동 분류·정리 (도서관)</li>
+      <li>전략·진주·깨달음 등 자기관찰 데이터 누적</li>
+      <li>큰 결정 14일 숙성 도구 ("마법의 소라고동")</li>
+      <li>주간/월간/분기/연간 리뷰 자동 생성</li>
+      <li><strong>End-to-End 암호화 (E2EE)</strong> — 사용자 데이터는 사용자 비밀번호로 파생된 키로 암호화되어 저장됨. 회사는 평문 데이터에 접근할 수 없다 (Stage 2).</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>제4조 (요금)</h2>
+
+    <h3>4.1 무료 환영 토큰 (체험)</h3>
+    <p>신규 가입 사용자에게 가입 직후 일회성 <strong>무료 환영 토큰</strong> (현재 한도 3,000원 ≈ $1.43 API 비용 상당) 을 제공한다. 토큰 잔량 내에서 모든 기능을 자유롭게 이용 가능하다. 한도는 회사 정책에 따라 변경될 수 있다.</p>
+
+    <h3>4.2 유료 이용 (구독)</h3>
+    <p>무료 토큰 소진 시 사용자가 <strong>명시적으로 결제한 경우에 한해</strong> 유료 이용으로 전환된다. 자동 전환은 없다.</p>
+    <p><strong>구독 요금제 (월정액, 부가세 10% 포함)</strong>:</p>
+    <ul>
+      <li><strong>Light</strong> 8,900원/월 — 월 한도 약 7,000원 어치 ($5)</li>
+      <li><strong>Premium</strong> 25,000원/월 — 월 한도 약 21,000원 어치 ($15)</li>
+    </ul>
+    <p>월 한도 도달 시 사용자는 (a) <strong>추가팩</strong> 결제 또는 (b) 다음 결제 cycle 대기 중 선택할 수 있다.</p>
+    <ul>
+      <li>추가팩 (월 한도 보충, 계속 결제 가능): Light 5,000원 / Premium 7,000원</li>
+      <li>다음 cycle 대기 = 무료. AI 호출은 차단되지만 일기/체크인/이전 데이터 조회는 가능</li>
+    </ul>
+
+    <h3>4.3 자동 갱신 default OFF (다크 패턴 회피)</h3>
+    <p><strong>구독은 자동 갱신되지 않는다 (default OFF).</strong> 사용자가 매월 결제 만료 후 명시적으로 결제 정보 입력해야 다음 달 이용 가능하다.</p>
+    <p>사용자가 명시적으로 "자동 갱신 ON" 옵션을 활성화한 경우에만 자동 갱신된다. 이 경우:</p>
+    <ul>
+      <li>갱신 [3]일 전 이메일/앱 내 알림으로 사전 통지</li>
+      <li>사용자가 갱신 직전까지 자동 갱신을 OFF할 수 있음 (1-click)</li>
+      <li>자동 갱신 시점, 금액, 결제 수단 명확 표시</li>
+    </ul>
+
+    <h3>4.4 결제 직전 명시 (다크 패턴 회피)</h3>
+    <p>결제 진행 직전 사용자에게 다음을 명확히 표시한다:</p>
+    <ol>
+      <li>결제 금액 + 부가세 포함 여부</li>
+      <li>결제 주기 (일회성 / 월간)</li>
+      <li>자동 갱신 여부 (default OFF)</li>
+      <li>해지 방법 (앱 내 [설정 → 결제] 1-click)</li>
+      <li>환불 정책 링크</li>
+      <li><strong>본 서비스는 임상 치료/진단/전문가 상담을 대체하지 않는다는 고지</strong></li>
+    </ol>
+
+    <h3>4.5 가격 변경</h3>
+    <p>회사는 [30]일 전 사전 공지 후 요금을 변경할 수 있다. 변경 전 결제한 사용자는 결제 만료일까지 기존 요금으로 이용한다.</p>
+
+    <h3>4.6 부가가치세</h3>
+    <p>요금에 부가가치세 10%가 포함된다. 회사는 일반과세자다 (사업자등록번호 261-21-02592, 한국표준산업분류 722000 — SW 개발·공급업은 부가가치세법 시행령 §109에 의해 간이과세 배제 업종).</p>
+  </section>
+
+  <section>
+    <h2>제5조 (사용자 의무)</h2>
+    <ol>
+      <li>사용자는 본 서비스를 의료적 진단·치료 목적으로 사용하지 않는다.</li>
+      <li><strong>위급한 정신건강 위기 상황에서는 본 서비스 대신</strong> 다음으로 즉시 연락한다:
+        <ul>
+          <li>자살예방상담전화 <strong>1393</strong> (24시간)</li>
+          <li>정신건강위기상담전화 <strong>1577-0199</strong> (24시간)</li>
+          <li>응급실 / <strong>119</strong></li>
+        </ul>
+      </li>
+      <li><strong>본 서비스를 임상 치료·전문가 상담의 대체로 사용하지 않는다.</strong> 깊은 우울·불안·자해 충동 등 임상적 증상 시 전문가 진료를 우선한다.</li>
+      <li>사용자는 본인 명의의 결제 수단으로만 결제한다.</li>
+      <li>사용자는 타인의 계정·데이터에 무단 접근하지 않으며, 서비스를 부정 사용 (자동화 봇 등)하지 않는다.</li>
+    </ol>
+
+    <h3>5.1 위기 상황 자동 안내 (자살예방법 §15-6 협력 권고 충족)</h3>
+    <p>본 서비스는 사용자의 메시지·일기·체크인·정서 패턴 분석 중 자살·자해 신호로 해석될 수 있는 표현·패턴을 감지하면, 외부 전문기관 (1393, 1577-0199, 119) 안내 모달을 자동 표시한다. 이는 사용자 안전을 위한 <em>권고 안내</em>이며, 의료적 진단·치료 행위가 아니다. 사용자는 본 약관 동의 시 이 자동 안내 표시에 동의한 것으로 본다. 자동 안내가 표시된 시각·트리거 종류는 사용자 단말 내 기록되며 (E2EE 암호화 — 회사 접근 불가), 사용자 본인이 분쟁 시 복호화하여 활용할 수 있다.</p>
+
+    <h3>5.2 연령 제한 (만 19세 이상 — 필수)</h3>
+    <p>본 서비스는 <strong>만 19세 이상</strong> 사용자만 이용 가능하다 (PIPA §22-2 친권자 동의 + 청소년보호법 + 정신건강 정보의 민감성 고려).</p>
+    <div class="danger-box">
+      <strong>현재 (V4 베타)</strong>: 가입 시 사용자 자기 신고 (체크박스 — 필수 동의). 사용자가 만 19세 미만이면서 <em>허위로 만 19세 이상이라 신고</em>하여 가입한 경우, 그로 인한 모든 책임은 사용자 본인 (및 법정대리인) 에게 있으며, 회사는 그 사실을 인지한 즉시 계정을 정지하고 모든 데이터를 삭제한다 (사용자/법정대리인에게 통지). 회사는 허위 신고로 인한 손해에 대해 책임지지 않는다.
+    </div>
+    <p><strong>V5 (공개 출시 예정)</strong>: 휴대폰 본인인증 (NICE / PASS / KCB 등) <strong>필수 도입</strong> — 자기 신고 폐기. 정신건강 정보 민감성 고려 + 만 19세 정책 실효성 확보.</p>
+  </section>
+
+  <section>
+    <h2>제6조 (회사의 의무)</h2>
+    <ol>
+      <li>사용자 데이터를 PIPA(개인정보보호법) 및 정보통신망법에 따라 안전하게 처리한다.</li>
+      <li>사용자가 명시적으로 동의한 범위 내에서만 데이터를 처리한다.</li>
+      <li><strong>사용자 데이터를 제3자에게 판매·공유하지 않는다.</strong></li>
+      <li>AI 서비스 제공을 위해 Anthropic, PBC (미국)의 Claude API에 사용자 메시지를 전송한다는 사실을 별도 동의받는다 (자세한 내용 <a href="/cross-border" target="_blank">국외이전 동의문</a> 참고).</li>
+      <li><strong>End-to-End 암호화 (E2EE) 의무</strong>: 회사는 사용자의 일기·대화·진주·전략 등 <em>민감 자기관찰 데이터</em>를 사용자 비밀번호로 파생된 키로 암호화하여 저장한다. 회사는 평문 데이터에 접근할 수 없다. 단 (a) Anthropic API 호출 시점의 메시지 (실시간 처리, 저장 X), (b) 결제·사용량 등 <em>비-민감 운영 데이터</em> 는 평문 처리한다.</li>
+      <li>회사는 본 서비스가 의학적 조언·진단·치료를 대체하지 않음을 사용자에게 명확히 고지한다 (가입 시 + 결제 시 + 상시 약관 명시).</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>제7조 (청약철회 / 환불)</h2>
+    <p>사용자는 「전자상거래 등에서의 소비자보호에 관한 법률」 제17조에 따라 결제일로부터 <strong>7일 이내</strong>에 청약철회할 수 있다. 단 디지털 콘텐츠 (AI 토큰) 의 경우 결제 후 즉시 사용에 따라 청약철회가 제한될 수 있으며, 이 경우에도 사용량에 비례한 환불은 항상 가능하다.</p>
+    <p>자세한 절차·예외·환불 공식은 <a href="/refund" target="_blank">환불정책</a> 참고.</p>
+  </section>
+
+  <section>
+    <h2>제8조 (서비스 중지 / 종료)</h2>
+    <ol>
+      <li>회사는 사용자의 약관 위반 시 사전 통지 후 서비스 이용을 제한할 수 있다.</li>
+      <li>30일 이상 미접속 사용자의 데이터는 회사 정책에 따라 처리되며, 6개월 이상 미접속 시 사용자에게 안내 후 데이터를 삭제할 수 있다 (사용자가 명시적 동의 시 보존).</li>
+      <li>서비스 종료 시 [3]개월 전 사전 공지 + 사용자 데이터 export 옵션 제공.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>제9조 (책임 제한)</h2>
+    <ol>
+      <li><strong>본 서비스에서 제공하는 AI 응답·분석은 참고용이며, 의학적·법률적·재정적 조언이 아니다.</strong> AI 가 제공하는 traits/values/patterns/진단/case formulation 은 <em>가설</em>이며 임상 진단이 아니다.</li>
+      <li><strong>AI hallucination 위험 고지</strong>: LLM 특성상 AI 응답에 부정확하거나 부적절한 내용이 포함될 수 있다. 사용자는 응답을 <em>비판적으로</em> 받아들이고 의심 시 전문가에게 확인한다.</li>
+      <li>회사는 사용자의 자기관찰 결과로 발생한 의사결정·결과에 대해 법적 책임을 지지 않는다.</li>
+      <li><strong>사용자가 본 서비스를 임상 치료·전문가 상담의 <em>대체</em>로 사용하여 발생한 손해에 대해서는 회사는 책임을 지지 않는다.</strong> 회사는 약관 + 가입 안내 + 결제 안내 + 위기 carousel 등 다층 고지를 통해 <em>대체 사용 금지</em>를 사용자에게 명시한다.</li>
+      <li>회사의 고의 또는 중대한 과실로 인한 손해에 대해서만 회사는 책임을 진다.</li>
+      <li>천재지변·전쟁·테러·통신 두절·Anthropic API 장애 등 회사의 통제를 벗어난 사유로 인한 서비스 중단은 회사의 책임이 아니다.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>제10조 (분쟁 해결)</h2>
+    <ol>
+      <li>본 약관에 관한 분쟁은 협의로 해결한다.</li>
+      <li>협의 불가 시 소비자분쟁조정 위원회 (1372) 또는 한국소비자원에 조정 신청 가능.</li>
+      <li>최종적으로 사용자 주소지 관할 지방법원에서 해결한다.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>제11조 (약관 변경)</h2>
+    <ol>
+      <li>회사는 약관을 변경할 수 있으며, 변경 시 시행일 [7]일 전 앱 내 공지 또는 이메일로 사전 통지한다.</li>
+      <li>사용자가 변경된 약관에 동의하지 않을 경우 이용 계약을 해지할 수 있다.</li>
+    </ol>
+  </section>
+
+  <hr>
+
+  <section>
+    <h2>부칙</h2>
+    <p>본 약관은 시행일부터 적용된다. 갱신 이력:</p>
+    <ul>
+      <li>2026-04-30 v1.0: 베타 게시</li>
+      <li>2026-05-02 v1.1: V4 결제 모델 (2-tier 월정액 + 추가팩 + 자동 갱신 X) / E2EE 명시 / 위기 자동 안내 §5.1 / 연령 제한 §5.2 / 책임 제한 §9 강화</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <div class="biz">나은 랩(Lab) · 사업자번호 261-21-02592</div>
+  <div>대표 김나은 · soragodongapp@gmail.com</div>
+  <div>서울특별시 동작구 상도로47아길 14</div>
+  <div style="margin-top:14px;">
+    <a href="/privacy">개인정보처리방침</a>
+    <a href="/refund">환불정책</a>
+    <a href="/cross-border">국외이전 안내</a>
+    <a href="/">소라고동 ✦ 홈</a>
+  </div>
+</footer>
+</body>
+</html>

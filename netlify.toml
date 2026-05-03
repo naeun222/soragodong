@@ -1,0 +1,10 @@
+# v4-dev 브랜치용 Netlify 빌드 설정.
+# main 브랜치엔 이 파일이 없어서 정적 파일 그대로 서빙 (V3 동작 보존).
+# v4-dev에선 Vite로 빌드 → dist 배포.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"

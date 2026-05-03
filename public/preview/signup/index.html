@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<title>회원가입 — 소라고동</title>
+<link rel="icon" type="image/png" href="/godongicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1826;
+    --surface2: #221f33;
+    --accent: #c9a96e;
+    --accent2: #e8c99a;
+    --text: #ede8f5;
+    --text-dim: #9d9aad;
+    --text-soft: #7b7a8e;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+    --good: #98c379;
+    --warn: #e8a3a3;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(139, 126, 196, 0.10) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 90%, rgba(201, 169, 110, 0.08) 0%, transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .signup-screen {
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+  }
+
+  .login-icon {
+    width: 56px;
+    margin: 0 auto 16px;
+    display: block;
+    filter: drop-shadow(0 0 10px rgba(212, 167, 106, 0.3));
+  }
+  .login-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 26px;
+    color: var(--accent);
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+  }
+  .login-sub {
+    font-size: 14.5px;
+    color: var(--text-dim);
+    margin-bottom: 28px;
+    line-height: 1.7;
+  }
+  .login-sub .accent { color: var(--accent); }
+
+  .field-label {
+    text-align: left;
+    font-size: 12.5px;
+    color: var(--text-soft);
+    margin-bottom: 6px;
+    margin-top: 16px;
+    letter-spacing: 0.02em;
+  }
+  .field-label:first-of-type { margin-top: 0; }
+
+  .login-input {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1.5px solid rgba(212, 167, 106, 0.35);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 16px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .login-input::placeholder { color: rgba(255, 255, 255, 0.35); }
+  .login-input:focus {
+    background: rgba(212, 167, 106, 0.10);
+    border-color: rgba(212, 167, 106, 0.7);
+    box-shadow: 0 0 0 3px rgba(212, 167, 106, 0.12);
+  }
+  .login-input.year {
+    text-align: center;
+    letter-spacing: 0.05em;
+  }
+
+  .status-line {
+    margin-top: 10px;
+    margin-bottom: 6px;
+    min-height: 22px;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: left;
+    transition: color 0.2s;
+    color: var(--text-soft);
+  }
+  .status-line.ok { color: var(--good); font-weight: 600; }
+  .status-line.deny { color: var(--warn); font-weight: 600; }
+  .status-line.deny small {
+    display: block;
+    font-size: 11.5px;
+    color: var(--text-soft);
+    font-weight: 400;
+    margin-top: 3px;
+  }
+
+  .age-warn-box {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: rgba(232, 163, 163, 0.06);
+    border-left: 3px solid rgba(232, 163, 163, 0.4);
+    border-radius: 0 8px 8px 0;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    text-align: left;
+  }
+  .age-warn-box b { color: #e8a3a3; }
+
+  .btn-primary {
+    width: 100%;
+    padding: 16px;
+    margin-top: 18px;
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-soft);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .birth-policy {
+    margin-top: 24px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(126, 200, 227, 0.06), rgba(143, 200, 143, 0.04));
+    border: 1px solid rgba(126, 200, 227, 0.12);
+    border-radius: 12px;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    text-align: left;
+  }
+  .birth-policy b { color: var(--text); font-weight: 600; }
+
+  footer {
+    padding: 20px 20px 28px;
+    color: var(--text-soft);
+    font-size: 11px;
+    line-height: 1.85;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  footer .biz { color: var(--text-dim); margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<main>
+  <div class="signup-screen">
+    <img class="login-icon" src="/godongicon.png" alt="소라고동">
+    <div class="login-title">회원가입</div>
+    <div class="login-sub">이메일 + 출생연도 입력해줘 <span class="accent">✦</span></div>
+
+    <div class="field-label">📧 이메일</div>
+    <input
+      class="login-input"
+      id="emailInput"
+      type="email"
+      inputmode="email"
+      autocomplete="email"
+      autocapitalize="off"
+      autocorrect="off"
+      spellcheck="false"
+      placeholder="example@gmail.com">
+
+    <div class="field-label">🎂 출생연도</div>
+    <input
+      class="login-input year"
+      id="birthYear"
+      type="text"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      placeholder="YYYY"
+      maxlength="4"
+      autocomplete="off"
+      autocorrect="off"
+      spellcheck="false">
+
+    <div class="status-line" id="statusLine"></div>
+
+    <div class="age-warn-box">
+      <b>⚠ 허위 입력 시 모든 책임은 본인 (및 법정대리인)에게.</b> 회사는 사실 인지 즉시 계정 정지 + 모든 데이터 삭제.
+    </div>
+
+    <button class="btn-primary" id="nextBtn" disabled onclick="_proceed()">다음</button>
+
+    <div class="birth-policy">
+      <b>🛡️ 출생연도</b>는 만 나이 검증 용도로만 사용 — 검증 후 <b>즉시 폐기</b> (DB 저장 X · 광고·통계·추천 등 다른 용도 사용 X). 청소년보호법 + 「개인정보보호법」 §22-2 · §23 (정신건강 정보 민감성).
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="biz">나은 랩(Lab) · 사업자번호 261-21-02592</div>
+  <div>대표 김나은 · soragodongapp@gmail.com</div>
+</footer>
+
+<script>
+  const emailEl = document.getElementById('emailInput');
+  const yEl = document.getElementById('birthYear');
+  const statusEl = document.getElementById('statusLine');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function isEmailValid(v) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+  }
+
+  // 출생연도만 받음 — 카카오 account_birthyear 표준과 동일.
+  // 만 나이 = 현재 연도 - 출생 연도 (생일 미경과 ±1 차이는 보수 X liberal — 책임은 자기 보고).
+  function calcMinAge(year) {
+    if (!year || year < 1900 || year > 2026) return null;
+    const now = new Date();
+    return now.getFullYear() - year;
+  }
+
+  function update() {
+    const email = emailEl.value;
+    const y = parseInt(yEl.value, 10);
+    const age = calcMinAge(y);
+    const emailOk = isEmailValid(email);
+
+    if (email && !emailOk) {
+      statusEl.textContent = '이메일 형식 확인';
+      statusEl.className = 'status-line deny';
+    } else if (!yEl.value) {
+      statusEl.textContent = '';
+      statusEl.className = 'status-line';
+    } else if (age === null) {
+      statusEl.textContent = '';
+      statusEl.className = 'status-line';
+    } else if (age < 19) {
+      statusEl.innerHTML = `만 ${age}세 — 가입 불가<small>만 19세 이상만 이용 가능</small>`;
+      statusEl.className = 'status-line deny';
+    } else {
+      statusEl.textContent = `만 ${age}세 ✓ 가입 가능`;
+      statusEl.className = 'status-line ok';
+    }
+
+    nextBtn.disabled = !(emailOk && age !== null && age >= 19);
+  }
+
+  yEl.addEventListener('input', () => {
+    const cleaned = yEl.value.replace(/[^0-9]/g, '');
+    if (cleaned !== yEl.value) yEl.value = cleaned;
+    if (yEl.value.length > 4) yEl.value = yEl.value.slice(0, 4);
+    update();
+  });
+  emailEl.addEventListener('input', update);
+
+  function _proceed() {
+    if (nextBtn.disabled) return;
+    alert('[검수용 미리보기] 실제 동작 X — 이메일·만 나이 검증 통과 시 다음 단계로 진행.');
+  }
+
+  emailEl.focus();
+</script>
+
+</body>
+</html>
