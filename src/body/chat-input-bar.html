@@ -1,0 +1,25 @@
+<div class="chat-input-bar" id="chatInputBar" style="display:none;">
+  <div class="chat-plus-menu" id="chatPlusMenu" hidden>
+    <button class="chat-plus-item" onclick="chatPlusAction('diary')">
+      <span class="chat-plus-icon">📝</span>
+      <span class="chat-plus-label">일기 템플릿</span>
+    </button>
+    <button class="chat-plus-item" onclick="chatPlusAction('memo')">
+      <span class="chat-plus-icon">✎</span>
+      <span class="chat-plus-label">메모 (깨달음)</span>
+    </button>
+  </div>
+  <div class="chat-end-hint-banner" id="chatEndHintBanner" style="display:none;">
+    <span class="cehb-text">✓ 눌러서 나 탭 &amp; 도서관에서 확인해봐</span>
+    <button class="cehb-close" onclick="dismissChatEndHint()" aria-label="닫기" title="닫기">×</button>
+  </div>
+  <div class="chat-input-wrap">
+    <div class="chat-input-stack">
+      <button class="chat-end-btn" onclick="endChapter()" aria-label="이 대화 마무리" title="이 대화 마무리">✓</button>
+      <button class="chat-plus-btn" id="chatPlusBtn" onclick="toggleChatPlusMenu(event)" aria-label="더보기">+</button>
+    </div>
+    <textarea class="chat-textarea" id="chatInput" placeholder="편하게 말해봐..." rows="1"></textarea>
+    <button class="input-mic-btn" id="chatMicBtn" onclick="_toggleInputSpeech('chatInput', 'chatMicBtn')" aria-label="음성 입력" title="음성 입력"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
+    <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
+  </div>
+</div>

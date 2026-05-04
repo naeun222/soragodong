@@ -1,408 +1,164 @@
-# 소라고동 (Soragodong) — V4
+# 소라고동 — 작업 가이드
 
-ADHD 자기관찰 PWA. 사용자 김나은 단독 개발 + 본인 사용 + 향후 다른 사용자.
+## 한 줄 요약
 
-- 김나은 (jade6679@naver.com / Supabase auth uid `4ba0a92e-7f79-45ec-8c48-b339d259382e`)
-- 회사명: **나은 랩(Lab)** — 사업자번호 **261-21-02592** (2026-04-30 등록, 일반과세, KSIC 722000 + 525101). 사용자 명시 2026-05-02: 영문 표기 "Naeun Lab" 폐기, 한국어 "나은 랩(Lab)" 통일.
-- 사업용 이메일: **soragodongapp@gmail.com**
-- 도메인: **soragodong.com** (Cloudflare Registrar)
-- 통신판매업 신고: ✅ 2026-04-30 (네이버 스마트스토어 무료 구매안전서비스 확인증 우회)
+`index.html` 은 **빌드 산출물**이다. 절대 손대지 말 것. **`src/` 만 수정**하고 `npm run build` 로 재생성.
 
-> ⚠️ **학습 (2026-04-30)**: SW 개발·공급업 (KSIC 722000) = 부가가치세법 시행령 §109에 의해 **간이과세 배제 업종**. 이전 메모에 "간이과세" 잘못 기록됐던 거 정정. 일반과세는 부가세 10% 받지만 매입세액 공제 가능 (Cloudflare/Anthropic/Supabase 세금계산서로 유리).
-
----
-
-## 작업 원칙
-
-- **한국어로 소통.** 영어 답변 X.
-- **적절한 길이로 직관적.** 진단 → 수정 한 줄.
-- 사용자 코드 안 읽음. 행동/결과로 검증.
-- 캐주얼 톤이지만 가벼운 농담 X.
-- **"적용하다" 동사 금지** (사용자 명시 2026-04-30, 강조 반복). 사용자·개발자 facing 어디서도 사용 X. 자연 동사로 (적용/추가/넣다/두다/들어가다/자리잡다/자리하다/위치/통합/완성 등). user-facing 모달은 자연 한국어 ("세워볼게" 등).
-- "너의/네" 일괄 치환 X — 둘 다 가능.
-- `console.error` 정상 (로깅 패턴).
-
-## Push 정책 (사용자 명시 2026-04-30)
-
-1. **main 단독** (v4-dev 폐기). soragodong.com / pages.dev 둘 다 main 배포.
-2. **push 항상 허락** — 자동 OK. 옛 batch 10 commit 정책 무효.
-3. commit 후 자연 push (한 작업 단위 마무리 후).
-4. force push / 큰 reset 시에만 backup branch (`main-backup-YYYY-MM-DD`) 자동 생성. 일반 push 는 X.
-
-## 작업 흐름
-
-1. 변경 → 빌드 (`npm run build`) — 신택스 점검.
-2. commit 메시지: `V4 [fix|feat|ui|chore] (사용자 [요청|보고|명시]): <짧은 설명>`
-3. push.
-
----
-
-## 신뢰도 정직 패턴 (2026-04-30 학습)
-
-분야별 정확도 다름. 잘못된 안내 = 사용자 시간/비용 낭비. ⚠️ 라벨 + 공식 채널 재확인 권장.
-
-| 분야 | 신뢰도 | 처리 |
-|---|---|---|
-| 코드/기술 | 🟢 높음 | 직접 검증 (빌드/typecheck/grep) |
-| Anthropic/Cloudflare API | 🟡 중간 | 공식 문서 + 구현 검증 |
-| 한국 법/세무/행정 (사업자/통판/PG) | 🔴 **낮음** | ⚠️ 라벨 + 공식 채널 (1357/1588-9779/구청) 권장 |
-| 의료/심리/법률 자문 | ⚫ X | 절대 자문 형태 X — 전문가 |
-
-**과거 오류 사례**: 간이과세 권장 (틀림 — SW 배제), 토스페이먼츠 가입비 무료 (틀림 — 33만원), 카카오페이 단독 무료 (틀림 — 에스크로 발급처 X). 한국 행정 일반화 위험.
-
----
-
-## 파일 구조
+## 레이아웃
 
 ```
-soragodong-repo/
-  index.html              ← 단일 HTML (~32k 줄, ~1.6MB). 거의 모든 코드.
-  vite.config.* / package.json / tsconfig.json / vitest.config.ts
-  CLAUDE.md / USER_TODO.md
-  src/utils/date.ts        ← Phase A 점진 모듈 (현재 이거만)
-  tests/                   ← Vitest
-  supabase/migrations/
-    0001_rls.sql           ✅ 실행 완료
-    0002_billing_usage.sql ⏸️ 사용자 실행 대기
-    0003_feedback.sql      ⏸️ 사용자 실행 대기
-  functions/api/           ← Cloudflare Pages Functions (Phase C 활성)
-    _lib/                  ← auth / billing / usage 헬퍼
-    chat.ts                ← Anthropic 프록시
-    usage.ts / feedback.ts / account/delete.ts
-    billing/               ← charge / subscribe / refund / verify-toss-receipt
-    admin/                 ← pending-charges / confirm-charge / feedback-list / feedback-reply
-  legal_draft/             ← terms / privacy / refund / cross-border
-  public/sw.js             ← Service Worker (오프라인 + 설치)
-  .github/workflows/ci.yml ← build / typecheck / test
-  api_draft/               ← 옛 Vercel 시절 (deprecated, 무시)
+index.html        ← 빌드 산출물 (커밋함, 배포가 그대로 사용)
+build.mjs         ← concat 빌드 (deps 0)
+watch.mjs         ← node --watch 래퍼
+package.json      ← npm scripts
+src/
+  index.template.html       ← {{INCLUDE_*}} 마커가 박힌 셸
+  head.html                 ← meta / manifest / fonts
+  styles/
+    00-tokens.css           ← :root 변수
+    01-reset.css            ← 글로벌 reset
+    02-app-shell.css        ← .app, .header, .screens, .greeting 등
+    09-misc.css             ← (TODO: 컴포넌트별 분할 — Phase 3 후속 작업)
+  body/
+    onboarding.html
+    magic-mode-chips.html
+    login-screen.html
+    app-shell.html          ← <div class="app">: 헤더 + 15 screen + bottom-nav
+    chat-input-bar.html     ← .app 의 sibling
+    modals/shell-modal.html
+    overlays/{celebration,toast}.html
+  scripts/
+    00-pwa-install.js       ← 첫 inline <script> (PWA 설치)
+    main/
+      01-config.js          ← Supabase keys, Sentry init, SHELL_TYPES
+      02-state.js
+      03-auth/              ← 8 파일 (session/OTP, logout, server-time, E2EE 4종, annual seed)
+      04-annual-review-phase1/  ← 10 파일
+      05-supabase.js
+      06-backup-migration.js
+      07-init/              ← 10 파일 (init fn, tutorial, onb, login flow, OTP cooldown 등)
+      08-decision-room.js
+      09-reviews-future-self/   ← 9 파일
+      10-home/              ← 8 파일 (night mode, action, decisions, reflection 5종)
+      11-daily-pool.js
+      12-mission/           ← 15 파일 (helpers, attempt-result, photo/video capture)
+      13-shell-collection/  ← 14 파일 (Core 2/3, beach, DNA pearl SVG/helix)
+      14-celebration-toast.js
+      15-navigation.js
+      16-modes.js
+      17-mood-vitality-sleep.js
+      18-model-rendering.js
+      19-chat/              ← 12 파일 (scroll, render, send, AI generate, deeper)
+      20-system-prompt.js
+      21-insight-saving/    ← 15 파일 (insight, pearl, memo, strategy, mutation 7종)
+      22-proposal.js
+      23-archive/           ← 16 파일 (library, day modal, lens, topic, builder, timeline)
+      24-execute.js
+      25-archive-daily/     ← 12 파일 (chat archive, ICS import/export, drawer)
+      26-test-tools/        ← 11 파일 (testSeedV4Data 1268줄 단일 + force-tests)
+      27-monthly-rollup.js
+      28-project-tracking/  ← 14 파일 (project cards, trackers, Stories, viz)
+      29-music.js
+      30-force-analyze.js
+      31-settings.js
+      32-billing/           ← 20 파일 (tiers, feedback, admin, subscribe, backup, version)
+      33-chat-input.js
 ```
 
-**빌드/테스트**: `npm run build` / `npm test` / `npm run typecheck`.
-**배포**: Cloudflare Pages (Vercel X — Hobby 상업 금지로 마이그레이션 2026-04-30).
+## 핵심 불변식
 
-## 코드 찾기 (index.html grep 위주)
+**`npm run verify` 가 항상 통과해야 한다.**
 
-- 튜토리얼 step: `Grep "id: 'step_id'" index.html`
-- `ONBOARDING_PHASES` (9개) / `ONBOARDING_STEPS` (line ~10376)
-- 렌더링: `function renderXxx`
-- 데이터 구조: `memory/reference_codebase.md`
+`verify` 는 src/ 를 빌드한 결과가 현재 `index.html` 과 **byte-identical** 인지 확인한다. 통과하지 못하는 커밋은 만들지 말 것. 깨졌다는 건 둘 중 하나:
 
-## 시드 데이터 안전
+1. src/ 를 수정한 뒤 `npm run build` 를 빼먹음 → 빌드해서 다시 커밋.
+2. 의도한 변경이라 산출물도 같이 바뀌어야 함 → src/ 수정 + 빌드 → `git add src/ index.html` 같이 커밋.
 
-- 사용자 V3 데이터 절대 X. **id-prefix `seed_` sweep 만 안전. signature sweep 금지.**
-- 시드 항목 `_seed: timestamp` marker → init sweep 매칭 자동 제거.
-- testerMode ON 시 cloud / localStorage 저장 차단 (격리).
+## 워크플로우
 
----
+```bash
+# 개발 중
+npm run watch       # src/ 변경 시 자동 재빌드
 
-## 핵심 시스템 — 한 줄씩
+# 커밋 직전
+npm run build       # src/ → index.html
+npm run verify      # 결과 검사 (빌드 후 verify 는 항상 OK)
+git add src/ index.html
+```
 
-### 인증 / 데이터 / E2EE
-- Supabase auth (이메일 OTP). JWT 만료 시 refresh.
-- `state` → `soragodong_data` row (cloud) + localStorage. cloud 우선.
-- Stage 1 RLS ✅ (0001_rls.sql).
-- **Stage 2 E2EE** ✅ — 사용자 password (PBKDF2 1M, KEK/DEK 분리 key wrapping). 분실 시 multi-source fallback (localStorage + cloud 4 row 의 `_e2eeRecovery`). cloud `_e2eeRecovery` 자동 sync (새 device 복원 가능).
-- **Phase 0 강화** ✅ (2026-05-02) — masterKey (DEK) sessionStorage 저장 (localStorage 평문 저장 폐기). 옛 사용자 자동 마이그레이션. 탭 종료 시 cleanup. recovery (`{ salt, encryptedMasterKey }`) 는 비밀번호로만 unwrap 가능하므로 localStorage 유지 (cloud sync).
-- **Phase 1 비밀번호 변경 UI** ✅ (2026-05-02) — `_e2eeChangePassword(oldP, newP)` KEK 갱신 only / DEK 보존 / round-trip 검증. Settings → 종단간 암호화 → "🔒 비밀번호 변경" button.
-- **Phase 2-4 후속** ⏸️ — 회사 escrow (companyKEK + DB `0008_e2ee_escrow.sql`) + 분실 복구 흐름 (이메일 OTP + 카카오 재인증 + 24h 시간 지연) + 의무화 (회원가입 시 강제 + 카카오 사용자도). 사용자 인프라 준비 후 Phase 2 시작 자리.
-- 데이터 손실 방지: `location.reload` 직전 `await saveToCloudNow` 강제 (18곳 audit). E2EE 복원 race fix.
+## 마커 문법
 
-### Phase C — 백엔드 프록시 (활성)
-- 모든 Anthropic 호출 = `/api/chat` 프록시. 클라이언트 fetch interceptor 자동 swap.
-- 사용자 본인 API 키 모델 폐기 (`state.apiKey` 영구 wipe 마이그레이션).
-- AI 호출 가능 헬퍼: `_canAI()` = `session.access_token` 기반 (30+ 곳 게이트 통일).
-- 인터셉터 401 자동 refresh + retry (`_refreshSessionForApi()` + inflight guard).
-- 결제: PG (포트원) 통합 — 키 들어가면 즉시 활성. legacy 토스 수동 송금 + Sonnet vision 자동 인증 (`verify-toss-receipt`) endpoint 보존 (legacy 호환).
-- chat.ts 에 `context.waitUntil()` — recordUsage / deductCost drop 방지 (사용자 보고 fix).
-- SSE buffer 잔여 처리 — 마지막 message_delta 누락 fix (사용자 보고 critical).
+`src/index.template.html` 안에서 사용:
 
-### 결제 모델 — 2-tier 월정액 + 일일 cap (사용자 명시 2026-05-04 ultrathink — v2 갱신)
-- **무료 토큰**: 2,000원 ($1.43) — 가입 시 1회 자동 (pure API cost / 마진 X). 차감은 Anthropic 가격 그대로.
-- **Light** 8,900원/월 — 월 cap $5 (~7,000원 어치). 일일 cap **$0.20/일** (월 cap × 1.2 / 30, /25 비율 — 마진 보호). tagline "가볍게 매일 / 짧은 대화·간단 분석·매일 체크인 위주".
-- **Premium** 25,000원/월 — 월 cap $15 (~21,000원 어치). 일일 cap **$0.75/일** (월 cap × 1.5 / 30, /20 비율 — 여유). claude pro 동일 가격. tagline "깊게 자주 / 긴 대화·4단 분석·마법고동·주간/월간 회고 풀 활용".
-- **일일 cap 도달 시**: 24h 자연 reset (다음 날 다시 사용 가능). cap 모달 톤 = "내일 또 24h ✨" (충격 X). claude-style.
-- **월 cap 도달 시**: cap 도달 모달 — Premium 권유 / 추가팩 / 다음 cycle 대기 (3 옵션). 단 매일 풀 사용 사용자가 20일째 도달 = *희소* 가정. 적자 영역 진입 시 회사 부담 (베타 단계 LTV 우선).
-- **추가팩 (재설계 v2)**: *24h 못 기다리는 사용자* trigger. 작은 단위 + 자주 결제 패턴.
-  - Light 1,500원 = +$1 (1일분 + α) ← 옛 5,000원 / +$4 폐기
-  - Premium 2,500원 = +$1.5 (2일분) ← 옛 7,000원 / +$5 폐기
-- **3일 연속 cap 도달 → Premium 권유 모달**: state.dailyCapHits 추적. Light 매일 cap 도달 사용자에게 자연 마이그레이션 권유.
-- **자동 갱신 X** — 다음 달 명시 결제로만 연장.
-- **tier 업그레이드 (Light→Premium)** — endpoint 살아있지만 UI 옵션 제거 (사용자 명시: 불필요). `/api/billing/upgrade-tier` 직접 호출만 가능. 단 *3일 detect 모달* 에서 자연 trigger.
-- **충전 plan 폐기** (CHARGE_PLANS / openChargeModal / showTossChargeModal / verifyTossReceipt 등 frontend ~280줄 정리). 기존 charge 잔액 (`credit_balance_usd > 0`) 사용자: legacy 호환 — 그대로 차감, 0 도달 후 구독 안내.
-- **DB**: `monthly_quota_usd` 컬럼 (tier cap, USD) + `subscription_plan` CHECK ('light' | 'premium' | NULL) + `deduct_credit_atomic` RPC 갱신 (cap 도달 시 credit_balance_usd 로 fall-through). v2 추가: `daily_quota_used_today` (USD) + `daily_quota_reset_at` (KST 4AM cutoff) — `consume_daily_atomic` RPC 신규.
-- **migration 0004** ✅ 사용자 실행 완료. **migration 0005** ⏸ (일일 cap — USER_TODO P0).
-- **v2 의도 (사용자 명시 2026-05-04)**: 클로드 Pro 패턴 일관 (5h reset → 24h reset 으로 한국 사용자 친화). 구독제 의미 = "끝났음" X / "내일 또" ○. 적자 영역 (매일 풀 사용 20일+ 사용자) = 5% 이하 가정 + Premium 자연 마이그레이션 detect 로 통제.
+- `{{INCLUDE: head.html}}` — `src/head.html` 의 내용을 그대로 삽입.
+- `{{INCLUDE_DIR: scripts/main}}` — 디렉터리 안의 모든 파일을 **이름순 정렬해서 그대로 이어붙임** (재귀, 구분자 없음). 디렉터리 마커 하나로 폴더 전체 흡수.
 
-### 결제 critical bug fix 이력 (2026-04-30)
-- ✅ **잔액 race condition** — deductCost read-modify-write → `deduct_credit_atomic` RPC (FOR UPDATE row lock). 동시 chat 호출 시 차감 손실 fix.
-- ✅ **새로고침 시 잔액 자동 충전** — `ensureBillingRow` 가 transient fetch 에러 시 INSERT 재시도하며 balance reset 되던 critical 버그. fix: `Prefer: ignore-duplicates` + 자동 grant X (잔액 0 INSERT). 환영 모달 '받기' click 만 trigger (POST `/api/billing/welcome-bonus` — 별도 endpoint 예정).
-- ✅ **튜토리얼 끝 데이터 소실** — onbFinish 에서 `_testerModeBackupState` 메모리 backup null 시 cloud backup row (`me_v4_backup`) 폴백 + seed marker sweep 강제 (fallback 안전망).
+INCLUDE_DIR 가 의존하는 사실: 같은 디렉터리 안에서 파일명 prefix(`01-`, `02-`, …)가 곧 실행 순서. 새 파일은 prefix 를 신중히 골라 배치.
 
-### Admin 시스템 (jade6679@naver.com)
-- env `ADMIN_USER_ID = 4ba0a92e-7f79-45ec-8c48-b339d259382e` 필수.
-- `_isAdmin()` (client) — 개발자 도구 / admin 피드백 답변 UI 가드.
-- 서버 admin endpoints — `env.ADMIN_USER_ID` 강제 검증 (403 차단).
-- **admin 특혜 제거** (사용자 명시 2026-04-30, ea779a1) — 결제·사용량 일반 사용자와 동일. 답변 권한 등 *기능* 권한만 보존.
+`07-init/` 같은 sub-folder 는 `07-` prefix 덕분에 `06-backup-migration.js` 와 `08-decision-room.js` 사이에 자연스럽게 배치된다 (string sort 로 `07-init` < `07-init.js` 이고, 폴더 안 파일들은 재귀로 그 자리에 끼어든다).
 
-### 코어 튜토리얼 잠금
-- `state.unlocked.{core1..core6, core8}` 7개.
-- testerMode ON 또는 로그인 X → 잠금 우회.
-- 코어 #1 = '하면서 익히기'. startId `welcome`.
-- 풀 튜토리얼 = Settings → 가이드 → 별도 버튼.
-- 코어 끝 = `help_button` ("시작! ✦") → onbFinish → testerMode backup restore + saveToCloudNow await.
-- 업데이트 모달 dismiss 단위: `dismissedMajor` (V4). V5 등 새 메이저 시 재출현.
+## 인라인 onclick / 전역 함수 — 절대 깨지 말 것
 
-### 첫 진단 (코어 #1 chat_intake_entry — 인터랙티브 모달 풀 흐름)
-- 옛 5문항 quiz 폐기 + dead code ~275줄 정리 (2026-04-30 ultrathink). 새 흐름 = 코어 #1 *대화탭 시작 시점* `chat_intake_entry` step 안 button → `runIntakeFlow()` 풀스크린 모달.
-- **흐름 (Step1-6)**:
-  1. textarea + 🎤 + 예시 chip 1개 랜덤 (한 줄)
-  2. 짧음 detect (15자 미만) → AI deepening 응답
-  3. textarea + 🎤 + AI 동적 long example chip
-  4. paraphrase + "🔍 더 알고 싶어" button
-  5. 차원 진단 + 작은 전략 (`_intakeAnalyze`)
-  6. 마무리 — '나 탭' 자라기 시작 안내
-- **데이터** = `state.intakeWorry` 별도 array. 분석 결과 traits/values/patterns 자동 합류 (`user_verified=false`, source='intake_core1').
-- **튜토리얼 흐름 개선** (사용자 명시 2026-04-30): 모달 종료 → `_startIntakeFromTutorial` 가 분석 결과를 chatMessages 에 자동 4단 분석 형식으로 표시 (`fromDeeper:true` + `proposal:true`) + 친절 안내 메시지 + `_onbStep` 을 `click_strategy` 로 점프 (send_diary / click_deeper / await_deeper_response 생략 — intake 가 동일 분석을 만들었으므로 중복 회피).
-- testerMode ON 경로 = backup restore 직전 intake 데이터 추출 → restore → inject (보존).
-- 음성 = Web Speech API (한국어 80-90%, 무료). 튜토리얼에 음성 적극 권장 (`chat_mic_intro` step + intake step1 prompt nudge).
-- 사용자당 ~$0.02 (Sonnet 3-4회 호출).
+`<button onclick="foo()">` 같은 인라인 핸들러가 **526개** 있다. 이게 동작하려면 `foo` 가 전역 (window) 스코프에 있어야 한다.
 
-### 리뷰 (재설계 — Detective + Quotes + Seeds + One-word)
-- weekly / monthly: `generateReview` — pattern (headline/evidence/condition) + quotes 5 + experiment + seeds + (monthly) one_word.
-- quarterly: `generateQuarterlyReview` — + turning_point (변곡점).
-- 이전 리뷰 seeds → 다음 리뷰 prompt 주입 → AI callback continuity.
-- 첫 weekly review 는 first-touch watch_points 시작점.
-- 모델 = 모두 Sonnet 4.6 (리뷰 = 데이터 요약 task).
-- **시드 verify P1 fix** (5cdcb79) — archive=`savedAt` / insights=`discoveredAt` / chatArchive=`generatedAt|date` mismatch 해결. fallback chain. archive map = `headline+body`, chatArchive map = `date+summary`.
+- ES module (`<script type="module">`) 로 바꾸면 전부 깨짐 → 금지.
+- `import/export` 도입 금지.
+- 새 함수도 그냥 `function foo() { ... }` 형태로 정의하면 자동으로 전역.
 
-### 결과 체크 / defer
-- 미션 'completed' + attemptStatus 없음 = follow-up 대상.
-- defer 옵션: 내일 / 3일 / 1주 / 2주 / 한 달 / 📅 직접 고르기 (캘린더).
-- defer 후 만기일까지 `_findPendingStrategyFollowup` skip. 만기일 도달 → 매일 prompt. daily gate (`_lastFollowupAt`) 로 same-day re-show 차단.
-- 또 미루면 chain 가능. defer된 미션은 7일 룰 무시.
-- `_followupAsked` 체크로 한 번만 묻기 — 답 없으면 양생방에서 직접 결과 체크.
+## 자주 만지는 곳 매핑
 
-### 4단 분석 디자인
-- 라벨: 🔍 내가 본 것 / 💡 이게 뭐냐면 / 🌱 이럴 땐 이렇게 / ✦ 오늘의 제안 (gold accent CTA).
-- bracket `[]` 제거 + 단계 사이 1px 부드러운 border-top.
-- 카드 박스 / 그라디언트 / 큰 아이콘 X (과한 디자인 회피).
+| 만질 거 | 여기 본다 |
+|---|---|
+| 로그인 / OTP / SNS | `src/body/login-screen.html`, `src/scripts/main/03-auth/01-session-otp.js`, `07-init/08-login-flow.js` |
+| E2EE 비밀번호 | `src/scripts/main/03-auth/04-e2ee-helpers.js` ~ `07-e2ee-recovery-modal.js` |
+| 챗 입력창 | `src/body/chat-input-bar.html`, `src/scripts/main/19-chat/`, `33-chat-input.js` |
+| 챗 메시지 렌더 / 보내기 | `src/scripts/main/19-chat/02-render-message.js`, `05-send-chat.js`, `09-generate-ai-response.js` |
+| 결제 / 구독 / 토스 | `src/scripts/main/32-billing/08-subscribe-modal.js`, `09-toss-subscribe.js`, `10-overage-purchase.js` |
+| 클라우드 백업 / 복원 | `src/scripts/main/32-billing/13-auto-backup.js` ~ `16-migration-backup-recovery.js` |
+| 셸 모달 / 모래사장 | `src/body/modals/shell-modal.html`, `src/scripts/main/13-shell-collection/09-render-beach.js` |
+| DNA 진주 SVG | `src/scripts/main/13-shell-collection/11-dna-pearl-svg.js`, `12-dna-pearl-helix.js` |
+| 셀러브레이션 / 토스트 | `src/body/overlays/`, `src/scripts/main/14-celebration-toast.js` |
+| PWA 설치 카드 | `src/body/login-screen.html` (loginPwaCard), `src/scripts/00-pwa-install.js` |
+| Supabase / 인증 | `src/scripts/main/05-supabase.js`, `06-backup-migration.js` |
+| 시스템 프롬프트 | `src/scripts/main/20-system-prompt.js` |
+| 미션 (오늘의 부름) | `src/scripts/main/12-mission/08-render-today-mission.js`, `09-complete-mission.js` |
+| 사진 / 동영상 캡처 | `src/scripts/main/12-mission/10-photo-capture-verify.js` ~ `13-video-compress.js` |
+| 도서관 / 아카이브 | `src/scripts/main/23-archive/` |
+| 캘린더 / 타임테이블 | `src/scripts/main/25-archive-daily/04-v4-timetable.js`, `07-ics-import-export.js` |
+| 프로젝트 추적 / Stories | `src/scripts/main/28-project-tracking/` |
+| 리뷰 (주/월/분기/연) | `src/scripts/main/09-reviews-future-self/`, `04-annual-review-phase1/` |
+| 인사이트 저장 / 돌연변이 | `src/scripts/main/21-insight-saving/` |
+| 음악 (iTunes) | `src/scripts/main/29-music.js` |
+| 통합 분석 강제 | `src/scripts/main/30-force-analyze.js` |
+| 설정 화면 | `src/scripts/main/31-settings.js` |
+| 테스터 모드 시드 | `src/scripts/main/26-test-tools/02-seed-v4-data.js` (1268줄 단일) |
 
-### Brand DNA — 마법의 소라고동 = 스폰지밥 Magic Conch 모티브 (사용자 명시 2026-04-30)
-- 스폰지밥 Magic Conch = 큰 결정 묻는데 "no" / "maybe someday" 만 답하는 useless oracle (코미디).
-- 우리 마법고동 = 14일 숙성 + WRAP / Pre-mortem / Odyssey 로 *실제 작동하는* 결정 도구.
-- → **"the joke that became real"** — irony 자체가 brand identity. 의도된 패러디라 진지함 X 인 게 의도.
-- 한국 + 영어권 millennial / gen-Z 양쪽에서 작동 (cross-cultural rare brand).
-- 영어 출시 시점에 brand name "Conch" / "Magic Conch" 직접 차용 가능 — Viacom 상표 risk 변호사 검수 자리.
-- 마법고동 / 결정 카피 / 톤 작성 시 이 모티브 의식 (playful + serious 의도된 mix).
+## CSS
 
-### 인앱 피드백 (사용자 ↔ admin)
-- 사용자: ✉️ → POST `/api/feedback` → soragodong_feedback table.
-- inbox: `fetchMyFeedback` direct RLS SELECT — 미읽음 빨간 dot.
-- admin: GET `/api/admin/feedback-list` → POST `/api/admin/feedback-reply` (service_role PATCH).
-- admin 답변 버튼 = 개발자 도구 안 (`adminFeedbackBtnDev`).
-- table 미존재 시 친화적 셋업 카드 (4단계 가이드 + SQL textarea).
+현재 4 파일:
+- `00-tokens.css` — `:root` 변수
+- `01-reset.css` — 글로벌 reset
+- `02-app-shell.css` — `.app`, `.header`, `.date-pill`, `.screens` 등
+- `09-misc.css` — **9,691줄, TODO**: 컴포넌트별로 더 쪼개기. 자연 경계는 `/* Today's mission card */`, `/* Sora's Call */`, `/* DECISION ROOM */`, `/* Shell collection modal */`, `/* Celebration animation */`, `/* Toast */` 같은 주석에서 시작. 한 번에 한 컴포넌트씩 잘라내고 `npm run verify` 로 byte-identical 확인.
 
-### Settings UI (계층화 2026-04-30)
-- 자주 보는 거 (프로필+한도, 결제) / 가끔 (가이드, 백업·복원, 피드백) / 보안+계정 / 위험 / 개발자 (admin) / 정보 (데이터 보호).
-- `.settings-card` / `.settings-collapse` 일관 스타일.
-- 위기 안내 카드 (정신건강복지법 §15-6) — 1393 / 1577-0199 / 119.
-- **사업자정보 표시** = `<details>` collapsed + 폰트 9.5px + opacity 0.55 (사용자 명시 "잘 안 보이게 구석에"). `BUSINESS_INFO` 객체 기반 자동 표시 — 빈 필드 row 자동 숨김.
+## 외부 자산 (이 repo 범위 X)
 
-### 마법의 방 (코어 #8 — 큰 결정 14일 숙성)
-- `state.decisions` array. 10단계 (situation → weight → state → widen → reality → distance → premortem → odyssey → values → decision). dayUnlock 0/0/0/3/7/10/12/14/14/14.
-- magic-mode UI = 보라 (#d4b8ff/#b89fde). 숙고의 방 = 청록 (#7ec8e3/#4cafb4). `body.magic-mode` / `body.reflection-mode` 토글.
-- 모티프 (0504007) — 14일 모래시계 SVG ring (보라 그라디언트, 14일 도달 시 glow) + 10단계 dot 진행도 (locked/unlocked/done). 홈 + screen-decisions 카드 둘 다.
+`/api/billing/*`, `/api/admin/*`, `/sw.js`, `/godong.webp`, `/godongicon.png`, `/icon-180.png`, `/icon-192.png`, `/icon-512.png`, `/baseball.jpg`, `/hanriver.jpg`, `/kimchi.jpg`, `/gimchi.webp` — 배포 환경이 따로 서빙. 이 repo 에는 없음.
 
-### Hybrid Opus 토글
-- 헤더 godongicon/🦉 토글 = `state.preferences.useOpus`. 4곳 헤더 통합 (메인 / 숙고 / 마법 / 돌연변이).
-- 영향 범위 = `sendChat` (메인 대화) + 마법 helpChat + 숙고 reflection.
-- **나머지 (forceAnalyze / generateReview / firstTouch / 돌연변이) 는 고정 Sonnet** — 분석/리뷰는 데이터 요약 task로 Sonnet 충분. 토글 의도 = "지금 대화 깊게" 의 dial.
-- 누를 때 토스트 안내: "🦉 Opus — 5x 빠르게 차감".
-- **코어 #1 Opus 체험 step** (`chat_opus_intro`) — 튜토리얼 진입 시 자동 useOpus=true + `_opusActivatedByTutorial` flag. onbFinish 끝 = 자동 sonnet 복원.
+## 안 하는 것 (의도적 제외)
 
-### 헤더 / 브랜드 아이콘 (사용자 명시 2026-04-30)
-- 헤더 컴팩트화: top padding `52px` → `max(10px, env(safe-area-inset-top))` (iOS PWA notch 안전영역 보존). justify-content: flex-end (좌측 로고 제거).
-- 좌측 로고 (`🐚 소라고동`) 제거 — 우측 sonnet 토글만 남김. sonnet 표시 = godongicon.png 이미지 (22px). Opus = 🦉 그대로.
-- 대화탭 타이틀: "소라고동 🐚" → "고동이에게" + godong-icon (em 비례 1.25em).
-- 마법고동 핵심 자리 4곳 (chip / screen-title / dm-icon / action-icon) 🧙‍♂️ → godongicon.
-- 인라인 텍스트 (버튼 라벨 / 토스트 / AI prompt) 🧙‍♂️ 는 그대로 보존.
+- ES module 전환 — 인라인 onclick 깨짐.
+- 번들러 (Vite/esbuild) — concat 으로 충분, deps 0 유지.
+- index.html 직접 편집.
+- 인라인 onclick → addEventListener 전체 마이그레이션 (별도 작업, 별도 위험).
 
-### 음성 인식 통합 (cbb0eae)
-- 공용 헬퍼 `_toggleInputSpeech(taId, btnId)` — Web Speech API 무료, 한국어.
-- 4곳 입력창 통합: 메인 chat (`chatInput`) / 숙고 (`reflectionInput`) / 마법 helpChat (`magicHelpInput`) / 돌연변이 (`mutationChatInput`).
-- continuous + interimResults + 5초 침묵 자동 종료. ⏹/🎤 toggle + 빨간 펄스 box-shadow.
-- 미지원 브라우저 (iOS Safari < 16.5 등) = button 항상 표시 + 누름 시 토스트 안내 ("예시 누르거나 직접 적어줘").
-- 첫 사용 = privacy 안내 1회 (localStorage `soragodong_v4_speech_consent`).
-- intake 모달 자리도 동일 패턴 (단 별도 _intakeMicToggle 함수 — _intakeState 격리).
+## 후속 작업 (시간 날 때)
 
-### 일상 대화 티키타카 톤 (8d204ae)
-- `sendChat` system prompt rule 13 변경: '물음표 자제' → '티키타카 권장'.
-- 일상·감정·가벼운 얘기 → 자연 호기심 질문 1개 권장 ("오 진짜?", "그래서 어떻게 됐어?", "어땠어?").
-- 분석/추궁/탐색 X 는 유지. 명시 도움 요청 ("어떡하지", "도와줘") 시에만 깊이 진입.
-
-### 추적 그래프 (7885180)
-- area gradient + 마지막 점 ring pulsing + 현재값 floating tag + grid 3줄 + 시작/끝 날짜 축 + 목표 도달 success 색조.
-- preserveAspectRatio + aspect-ratio CSS (glyph stretch fix).
-
----
-
-## 비용 / 인프라
-
-### Heavy user API 비용 (Anthropic, prompt caching 기준)
-- 매일 30분 대화 + 일기 + 양생방 + 마법 풀가동 → 월 $10-15 (~1.5-2만 원).
-- 100명 = 월 $1500 (~200만 원) 원가.
-
-### 1년차 1인 외부 비용
-- Cloudflare Pages: free / Cloudflare Registrar (.com): ~$10/년 / Supabase: free tier
-- Anthropic: monthly cap (사용자 결정)
-- Google Play $25 1회 (사용자 결정 2026-04-30: PWA + Google Play 우선 출시)
-- Apple $99/년 = 6-12개월 후 한국 검증 후 (Apple IAP 30% 마진 부담)
-- ISMS / 보안 audit: 의무 X (1년차)
-
-### 매출 시뮬레이션 (가중 마진 ~7,000원/sub, Light 70% / Premium 30%)
-- 30 sub (베타): ~210K/월
-- 100 sub: ~700K/월 (알바 부수입)
-- 300 sub: ~2.1M/월 (1인 part-time 생계)
-- 500 sub: ~3.5M/월 (직장인 신입)
-- 1,000 sub: ~7M/월 (안정 1인 사업)
-- 손익분기점: ~15 sub (Supabase Pro $25/월 + 도메인 등 cover)
-
-### 출시 방향 (사용자 명시 2026-04-30)
-- ✅ **Phase 1 (현재)**: PWA (Cloudflare Pages, soragodong.com)
-- 🟢 **Phase 2**: Google Play (PWA → TWA, $25 일회성, Mac 불필요, 사용자 결정 OK)
-- ⏸️ **Phase 3 (6-12개월 후)**: iOS App Store — 한국 사용자 base 검증 후. cloud Mac/build 서비스 + Apple IAP 30% 마진 직격
-- ⏸️ **Phase 4 (1년+)**: 영어권 출시 — i18n 리팩터 + Claude agent 번역 + 영어 변호사 검수 + native review. brand name 후보 "Conch" / "Magic Conch" (Viacom 상표 검수 자리).
-
----
-
-## 알려진 한계 / fragile
-
-- index.html 1.6MB 단일 — Phase A 점진 분리 (현재 utils/date.ts만)
-- testerMode race (saveToCloud 1초 debounce + 600ms reload) — functional 안전이지만 fragile
-- 24시간 갭 자동 챕터 분리 vs ✓ 마무리 — 일관성 OK 단 점검 필요
-- 새 device E2EE 복원 — cloud `_e2eeRecovery` 자리잡힌 후 가능. 옛 cloud 데이터는 same-device 만.
-
----
-
-## 사업자 / 행정 진행
-
-- ✅ 사업자등록 (나은 랩(Lab), 일반과세, 261-21-02592, 2026-04-30)
-- ✅ 통신판매업 신고 (네이버 스마트스토어 우회 — 베타 단계 OK)
-- 🟡 토스뱅크 사업자 통장 진행 (KB 다중 계좌 제한 → 토스뱅크 비대면)
-- ⏸️ PG 결정 대기 — 토스페이먼츠 33만원 (가입 22만 + 연관리 11만) vs 다른 PG vs 보류
-
-**네이버 우회 본질** (사용자 알기): 행정 절차 통과 OK. 자체 사이트 카드 결제 시작 시 → PG 추가 필요 (전상법 §13). 베타 단계 적발 risk = 매우 낮음.
-
----
-
-## 다음 작업
-
-### 🟢 이번 세션 완료 (2026-05-02)
-- [x] **로그인 톤·시각 정리 + OTP inline countdown** (5d87d33) — 잠깐!!!→📱앱처럼 쓰기 / 격식체→반말 / 동의 라벨 친화 / 자세히 ▾ 시각 가볍게 / OTP alert→inline countdown
-- [x] **카카오 button ✦ 제거** (fb7ce6e)
-- [x] **입력창 lag fix** (74b0f21) — `.chat-input-bar`/`.chat-input-wrap` `contain: layout style` + visualViewport rAF throttle + magicHelp/mutation rAF coalesce. 80% 개선. 잔여 = 1.6MB DOM 자체 (Phase A 모듈 분리 자리).
-- [x] **/privacy /terms /refund /cross-border 라우트** (45dc53c, 97a657e) — 자체 도메인 legal docs (자체 CSS, 다크 톤, print 친화). GitHub legal_draft link 6곳 → 자체 도메인 갱신.
-- [x] **/preview/signup 카카오 검수 미리보기** (089719e, c7b5a4e, dc0cf17, 1732dd0, 6a68bef) — 출생연도 1 input + 허위 입력 책임 안내. admin 도구 안 button.
-- [x] **brand 명 'Naeun Lab' → '나은 랩(Lab)' 일괄 정정** (2bad8eb).
-- [x] **E2EE Phase 0 + 1** (0fa2c5c) — masterKey localStorage → sessionStorage (탭 종료 자동 cleanup) + `_e2eeChangePassword` 비밀번호 변경 UI (KEK 갱신 only, DEK 보존, round-trip 검증). Settings → 종단간 암호화 → "🔒 비밀번호 변경" button.
-
-### 🟢 이번 세션 완료 (2026-04-30)
-- [x] **2-tier 월정액 시스템 구현** — DB 0004 + backend (subscribe / overage-pack / upgrade-tier) + frontend (충전 폐기 + 2 카드 구독 + cap 도달 모달)
-- [x] **무료 토큰 1,400원 → 2,000원** ($1.0 → $1.43, pure API cost / 마진 X) — 정정 2026-05-01: agent audit 결과 코드 = $1.43 (FREE_INITIAL_CREDIT_USD = 1.43). 이전 메모 표기 ($2.86) stale, 정정.
-- [x] **잔액 race condition fix** — deduct_credit_atomic RPC 활용
-- [x] **recordUsage / deductCost waitUntil** — drop 방지
-- [x] **SSE buffer 잔여 처리** — 마지막 message_delta 누락 fix (output_tokens 거의 0 record 되던 root cause)
-- [x] **새로고침 잔액 자동 충전 fix** — ensureBillingRow ignore-duplicates + 자동 grant X
-- [x] **튜토리얼 끝 데이터 소실 fix** — onbFinish cloud backup 폴백 + seed sweep
-- [x] **튜토리얼 흐름 개선** — intake 종료 → 4단 분석 자동 + click_strategy 점프 + chat_mic_intro 새 step
-- [x] **옛 5문항 quiz 완전 폐기** (~275줄)
-- [x] **헤더 컴팩트화 + 로고 제거 + sonnet 토글 godongicon**
-- [x] **마법고동 4 자리 godongicon** (chip / screen-title / dm-icon / action-icon)
-- [x] **godongicon HEIC → PNG 변환** (heic-convert)
-- [x] **환영 모달 인스타톤 + 카피 "한 달 쓰면 / 너 자신이 다르게 보일지도."**
-- [x] **결제 모달 카피 정리** — 정량 KRW cap 표기 X / 추가팩 계속 결제 가능 / tier 업그레이드 + 다음 cycle 대기 옵션 제거
-- [x] **Brand DNA 메모 저장** — 마법의 소라고동 = 스폰지밥 Magic Conch 모티브
-- [x] **신규 가입자 빠른 추출** (사용자 명시 2026-05-01) — sendChat 안 사용자/고동 1 세트 × 3 마다 즉시 `extractChapterCaseAnalysis` trigger (10번까지). 11번째부터 = 매일 4AM 흐름 풀백. `state.chatPairsCount` / `state.newUserExtractTriggers` 누적.
-
-### 🟡 코드 (대기)
-- [ ] **E2EE Phase 2 escrow 인프라** (사용자 결정 2026-05-02 — Level 1 server-side recovery)
-  - 사용자 인프라 준비 후 시작 (DB migration + Cloudflare Secret — USER_TODO 참고)
-  - Cloudflare Functions: `functions/api/e2ee/{escrow,recovery-request,recovery-cancel,recovery-complete}.ts` + `functions/api/_lib/e2ee.ts` (companyKEK wrap/unwrap helper)
-  - companyKEK 으로 wrap 된 DEK 를 server-side escrow 에 저장 → 분실 시 다중 인증 통과 후 unwrap → 새 비밀번호 설정
-- [ ] **E2EE Phase 3 분실 복구 UI** — Phase 2 완료 후. 로그인 화면 "비밀번호 잊었어?" 링크 + 모달 (이메일 OTP → 카카오 OAuth 재인증 → 24h 시간 지연 → 새 비밀번호 설정) + 이메일 알림 + cancel 흐름. 카카오 안 쓴 사용자 = 시간 지연 72h fallback. ⚠️ 보안 질문 (KBA) X.
-- [ ] **E2EE Phase 4 의무화** — Phase 0-3 완료 + 안정화 후. 회원가입 시 비밀번호 강제 + 카카오 사용자도 1회 설정 + 기존 사용자 마이그레이션 모달.
-- [ ] **/api/billing/welcome-bonus endpoint 신규** — 환영 모달 '받기' click 시 호출 → 서버 사이드 free credit grant. ensureBillingRow 자동 grant 폐기 후 명시적 trigger 필요.
-- [ ] **24시간 갭 vs ✓ 마무리 일관성 점검 + 새벽 4시 cutoff 케이스** — 24시간 자동 챕터 분리 vs 새벽 4시 daily cutoff race 점검
-- [ ] **입력 lag 근본 해결 — Phase A 모듈 분리 + virtualization** (1.6MB 단일 HTML)
-  - 사용자 보고 2026-05-02: **모든 입력창** (chat / 숙고 / 마법 / 돌연변이 / intake / 체크인 textarea / OTP) 에서 typing 버벅. **모바일** 특히 심함. **chat 메시지 누적 시 더 큼** (메시지 list = layout cost).
-  - 즉시 fix (74b0f21) ✅ — `.chat-input-bar` / `.chat-input-wrap` 에 `contain: layout style` (reflow 격리) + visualViewport rAF throttle + magicHelp/mutation rAF coalesce. **80% 개선**, 단 근본 X.
-  - 잔여 20%+ 근본 = **거대 DOM 자체** (수천 노드, 모든 화면 항상 mount). textarea reflow 가 frame 당 1회여도 layout cost 큼.
-  - 해결책 우선순위:
-    1. **chat 메시지 list virtualization** — `screen-chat` 안 message 누적 시 가장 hot. virtua / react-virtual / 자체 windowing.
-    2. **화면별 lazy mount** — 현재 30+ 화면 모두 항상 DOM. off-screen `display:none` 도 layout cost 들음. 화면 전환 시 mount/unmount.
-    3. **index.html → modules** (Phase A) — `src/screens/{home,chat,reflection,magic,decisions,...}.ts`. 점진 (현재 utils/date.ts 만).
-    4. **CSS containment 확대** — 다른 입력바 (.reflection-input-bar, .magic-help-input-bar, .mutation-chat-input) 에도 contain.
-  - 측정 도구: Chrome DevTools Performance — typing 시 frame time / layout cost / scripting 비중 확인 후 우선순위 결정.
-
-### 🔴 사용자 직접 대기 (USER_TODO.md 참고)
-- [ ] **Cloudflare env 등록** (P0-1) — ANTHROPIC / SUPABASE_* / ADMIN_USER_ID / PORTONE_*
-- [ ] **Supabase migration 0002 / 0003 실행** (P0-2) — 0004 ✅ 완료
-- [ ] **통신판매신고번호 발급 대기** (P1-5)
-- [ ] **legal_draft 갱신 — 충전 → 구독 모델 변경 반영** (P1-10)
-  - terms.md 결제 방식 / 자동 갱신 X / 추가팩 정책
-  - refund.md 구독 잔여일 비례 / 추가팩 청약철회 30일 / legacy charge 잔액 처리
-  - privacy.md PG 위탁자 명시 (포트원 가입 후)
-- [ ] **토스뱅크 사업자 통장** (P1-6) → 정산 계좌
-- [ ] **PG 결정** (P1-7) — 토스페이먼츠 33만원 vs 보류
-- [ ] **Google Play 출시 준비** (P2-13) — Bubblewrap CLI 로 PWA → TWA, $25 일회성
-
-### 🟡 사용자 큐 (2026-05-02 명시 — 다음에 할 것)
-- [ ] **앱 진입 시마다 비밀번호 모달 뜨는 버그** — masterKey sessionStorage (Phase 0) 가 탭 종료 cleanup 외에 다른 자리에서 trigger 됐을 가능성. PWA standalone vs Safari sessionStorage 동작 차이 / iOS visibility change 시 cleanup race / cloud `_e2eeRecovery` sync 흐름 race 후보. 재현 케이스 + 발생 frequency 확인 필요.
-- [ ] **이전 대화 불러오기 (이어서 하기) 기능** — `state.chatArchive` 의 archive item click → "이어서 하기" button → archive.messages 를 state.chatMessages 으로 복원 + chatArchive 에서 제거 (또는 already 마무리 표시).
-  - ⚠️ **주의**: 마무리 안 된 현재 대화 (state.chatMessages.length > 0) 가 있으면 = 덮어쓰기 confirm 모달 ("현재 대화는 사라져 — 마무리 안 했어. 그래도 불러올까?"). 확인 시 `_archiveCurrentChapter({ manual: false })` 강제 + 그 후 복원.
-- [ ] **실행 탭 UI 변경 (ultrathink)** — 현재 = "뇌 풀기" button 누른 후 일정/오늘 할 일/서랍장 노출. 변경 = button 전에도 항상 노출. "뇌 풀기" = 별도 entry point (ex 카드 위에) 단 default = 아래 3 영역 항상 보임.
-  - 일정 (오늘 / 캘린더 view) / 오늘 할 일 / 서랍장 (저장 task)
-  - layout — 뇌 풀기 button = 작은 chip / floating action / 또는 한 column 위에 hint
-  - sense of agency 보존 — "뇌 풀기" = 빠른 entry, 단 default UI 와 분리
-- [ ] **체크인 화면 저장/수정 button sticky** (사용자 명시 2026-05-03) — 체크인 화면의 submit button (`기록 완료 ✦` / `수정 완료 ✦`)을 하단 sticky 로. 긴 form scroll 부담 ↓ + 항상 클릭 가능. CSS `position: sticky; bottom: 0` + bg + shadow.
-
-### 대기 노트 (낮음 — 재현 시만)
-- '더 깊은 나' 자동 채움 알림 (이미 동작 — 알림 추가만)
-- 튜토리얼 중 첫 진단 401 (인터셉터 자동 refresh 후 재현 시 알리기)
-- legacy charge 잔액 사용자 — 그대로 차감, 0 도달 후 구독 안내 (호환 유지)
-
-### 🟢 미래 작업 — 진짜 백그라운드 trigger (Phase 3+ / 1년+)
-
-**배경 (사용자 명시 2026-05-02 ultrathink)**:
-- PWA = 백그라운드 cron 정시 trigger 불가능 (브라우저 한계). 현재 = 사용자 활동 시 (init 4초 후) `maybeRunDailyChapterExtract` schedule 도달 체크.
-- "월요일 4AM 정확 trigger" X — "월요일 4AM 이후 첫 사용자 진입 시" trigger.
-- E2EE 보존 의도 = server cron (옵션 C) 폐기 (server 가 평문 prompt body 접근 필요 = E2EE 정신 깨짐).
-
-**현재 batch 흐름 (cutoff 도달 시 trigger)**:
-- chapter extract = batch (50% 절감, 사용자 모르게 backstage)
-- review (weekly/monthly/quarterly/annual) = batch (`FEATURE_BATCH_REVIEWS = true`, 2026-05-02)
-- 결과 도착 시 review-card "✦ NEW" 라벨 + 사용자 click 시 user_viewed=true
-
-**옵션 D — 네이티브 앱 (진짜 백그라운드 + E2EE 보존)**:
-- iOS BGTask (Background Tasks framework) / Android WorkManager 가 정시 trigger
-- 키 (DEK) = device keychain (PWA sessionStorage 보다 안전)
-- 사용자 device 에서 prompt 빌드 + Anthropic submit (server 우회)
-- 즉 정밀 4AM trigger + E2EE 보존 + iOS / Android 둘 다 가능
-
-**비용 / 부담**:
-- iOS = Apple Developer $99/년 + Mac (cloud Mac 또는 본인 Mac) + Apple IAP 30%
-- Android = Google Play $25 일회성 + Bubblewrap (TWA — PWA wrapper 라 백그라운드 X) 또는 Capacitor / React Native (진짜 네이티브)
-- 결제 30% 마진 직격 — 한국 사용자 base 검증 후
-
-**트리거 조건 (Phase 3+ 검토 시점)**:
-- 사용자 100명+ + 월 매출 안정
-- 정밀 timing 가치 > 네이티브 작업 비용
-- iOS 사용자 비율 검증
-
-**옵션 D 외 백그라운드 옵션 (정리)**:
-- A. Service Worker `periodicsync` — Chrome only (iOS X) / 12h+ 정밀 X
-- B. Web Push + tap — iOS PWA 16.4+ + 권한 funnel 큼 / "백그라운드" 보다 "사용자 깨우기"
-- C. Server Cron — E2EE 충돌로 폐기 (사용자 명시 2026-05-02)
-- D. 네이티브 앱 ⭐ — 진짜 백그라운드 + E2EE 보존, 큰 작업
-
-**현재 결정**: 베타 / Phase 1-2 (PWA + Google Play TWA) = 옵션 E (사용자 활동 시 trigger) 유지. 옵션 D 는 Phase 3 (iOS App Store) 검토 시점에 함께 검토.
+1. **CSS 컴포넌트 분할** — `09-misc.css` 9,691줄을 `components/`, `screens/` 로 점진 분리. 매 단계 `npm run verify` 가드.
+2. **남은 큰 JS 파일** — 다음 파일들이 여전히 500줄 이상 (필요할 때 추가 분할):
+   - `26-test-tools/02-seed-v4-data.js` (1269줄, 단일 함수라 분할 어려움)
+   - `07-init/02-tutorial-welcome.js` (1229줄, ONBOARDING_STEPS array 가 절반)
+   - `07-init/06-onb-event-listeners.js` (959줄)
+   - `08-decision-room.js` (948줄)
+   - `30-force-analyze.js` (943줄)
+3. **dead code 청소** — 주석으로 표시된 dead 코드 (`V3 호환`, `V203 폐기`, `chooser 폐기` 등) 별도 PR 로 제거.

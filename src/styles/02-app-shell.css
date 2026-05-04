@@ -1,0 +1,26 @@
+
+  .app { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
+  /* V3 main 그대로 복원 — 52px top (PWA standalone 상태바 보호 + Safari 브라우저 자연스러운 cushion) */
+  /* 사용자 명시 2026-04-30: 헤더 컴팩트화 — 로고 제거 + top padding ↓. iOS PWA notch 안전영역은 max() 로 보존. */
+  .header { flex-shrink: 0; padding: max(10px, env(safe-area-inset-top)) 24px 8px; display: flex; align-items: center; justify-content: flex-end; }
+  .logo { font-family: 'Gowun Batang', serif; font-size: 20px; color: var(--accent); letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 10px; }
+  .logo-img { width: 32px; height: 32px; object-fit: contain; display: block; border-radius: 7px; }
+  /* godong.webp 인라인 아이콘 — 마법고동 자리 🧙‍♂️ 대체. em 기준이라 부모 font-size에 자동 비례. */
+  .godong-icon { display: inline-block; width: 1.25em; height: 1.25em; object-fit: contain; vertical-align: -0.22em; }
+  .date-pill { font-size: 11px; color: var(--text-dim); background: var(--surface); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 6px; cursor: pointer; transition: border-color 0.2s, background 0.15s; outline: none; }
+  .date-pill:hover { background: var(--bg-soft, var(--surface)); border-color: var(--accent); }
+  .date-pill:active { transform: scale(0.96); }
+  .date-pill.checkpointing { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(201,169,110,0.18); animation: pulse 1.4s ease-in-out infinite; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-soft); }
+  .sync-dot.online { background: var(--success); }
+  .sync-dot.syncing { background: var(--accent); animation: pulse 1.5s infinite; }
+  .sync-dot.error { background: var(--danger); }
+
+  .screens { flex: 1; overflow: hidden; position: relative; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 24px 100px; opacity: 0; pointer-events: none; transition: opacity 0.25s; -webkit-overflow-scrolling: touch; }
+  .screen.active { opacity: 1; pointer-events: auto; }
+
+  .greeting { margin-bottom: 18px; }
+  .greeting-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.05em; }
+  .greeting-main { font-family: 'Gowun Batang', serif; font-size: 24px; line-height: 1.4; }
+  .greeting-main .accent { color: var(--accent); }
