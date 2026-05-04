@@ -4,3 +4,19 @@ node_modules/
 .vscode/
 .idea/
 index.html.golden
+
+# Analysis workspace (modularization / fat-question pipeline)
+__pycache__/
+*.pyc
+*.py
+classified.json
+fat_*.json
+fat_*.md
+gap_report*.md
+intents_clustered*.json
+match_results*.json
+feature_inventory.md
+fix_list.md
+my_questions/
+_github_main_*.html
+current_index.html
