@@ -1,0 +1,73 @@
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-content">
+    <img class="login-icon" src="/godongicon.png" alt="소라고동" decoding="async">
+    <div class="login-title">소라고동</div>
+    <div class="login-sub"><span style="font-size:17px; color:var(--text); font-weight:500; letter-spacing:0.01em;">나를 아는 AI 길라잡이 <span class="accent">✦</span></span></div>
+
+    <!-- 사용자 명시 2026-04-30 ultrathink: PWA 설치 — 로그인 위 prominent (항상 펼침, standalone hide). Android = beforeinstallprompt 1탭 / iOS = manual 3 step. -->
+    <div class="login-pwa-prominent" id="loginPwaCard">
+      <div class="pwa-prom-title">📱 앱처럼 쓰기</div>
+      <div class="pwa-tabs">
+        <button type="button" class="pwa-tab" data-os="ios" onclick="setPwaTab('ios')">📱 iPhone</button>
+        <button type="button" class="pwa-tab" data-os="android" onclick="setPwaTab('android')">🤖 Android</button>
+      </div>
+      <div class="pwa-steps" id="pwaStepsIos">
+        <div class="pwa-step">1. <b>사파리(Safari)</b>로 이 사이트 열기</div>
+        <div class="pwa-step">2. 하단 <b>더보기 (⋯)</b> → <b>공유 (⬆)</b> 누르기</div>
+        <div class="pwa-step">3. <b>더보기 (∨)</b> → <b>[홈 화면에 추가]</b></div>
+      </div>
+      <div class="pwa-steps" id="pwaStepsAndroid" style="display:none;">
+        <button type="button" id="pwaInstallBtn" onclick="triggerPwaInstall()" class="btn-primary pwa-install-1tap" style="display:none; width:100%; margin-bottom:12px; padding:14px;">📱 앱 설치 ✦</button>
+        <div class="pwa-step-group">
+          <div class="pwa-step-label">📱 삼성 인터넷 (갤럭시 기본)</div>
+          <div class="pwa-step">1. 우측 하단 <b>더보기 (≡)</b> 누르기</div>
+          <div class="pwa-step">2. <b>[전체 페이지 추가]</b></div>
+          <div class="pwa-step">3. <b>[홈 화면]</b> 누르기</div>
+        </div>
+        <div class="pwa-step-group">
+          <div class="pwa-step-label">🌐 크롬 / Edge / Brave</div>
+          <div class="pwa-step">1. 우측 상단 <b>메뉴 [⋮]</b> 누르기</div>
+          <div class="pwa-step">2. <b>[홈 화면에 추가]</b> 또는 <b>[앱 설치]</b></div>
+          <div class="pwa-step">3. <b>[설치]</b> → 앱처럼 작동</div>
+        </div>
+        <div class="pwa-step-note">Firefox / 인앱 브라우저는 설치 X — 위 둘 중 하나로 열어줘.</div>
+      </div>
+    </div>
+    <div class="login-pwa-divider">— 로그인 ↓ —</div>
+
+    <!-- 사용자 명시 2026-04-30: 모바일 브라우저 takeover 시 escape — iOS 인앱 / 빠른 로그인 사용자용 -->
+    <a class="pwa-escape-link" onclick="escapePwaTakeover()">그냥 브라우저에서 로그인 →</a>
+
+    <!-- Step 1: SNS + Email 로그인 + 동의 (사용자 요청 2026-04-30 변호사 검수: PIPA + 전자상거래법 의무) -->
+    <!-- 사용자 명시 2026-05-02 ultrathink: SNS 로그인 (카카오/네이버) 추가. master password layer (E2EE) 보존. -->
+    <div class="login-form" id="loginStep1">
+      <div class="sns-login-section">
+        <button type="button" class="sns-login-btn kakao" onclick="loginWithProvider('kakao')">
+          <svg class="sns-login-icon" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><path d="M9 1.5C4.86 1.5 1.5 4.18 1.5 7.5c0 2.13 1.42 4 3.55 5.06l-.7 2.61c-.07.27.23.49.46.34l3.06-2.04c.38.04.76.07 1.13.07 4.14 0 7.5-2.68 7.5-6S13.14 1.5 9 1.5z"/></svg>
+          <span>카카오로 시작하기</span>
+        </button>
+        <!-- 사용자 명시 2026-05-02: 네이버 = V5 (휴대폰 본인 인증과 함께) — 네이버 정책상 SNS 가입 시 별도 비밀번호 요구 X 의무. E2EE master password 강제 흐름과 충돌 → V4 카카오만. -->
+      </div>
+
+      <!-- 사용자 명시 2026-05-02: 로그인 화면 단순화 — 카카오 + 이메일 input + '다음' button 만. 동의/데이터 보호 안내는 신규 가입 모달로 이동. -->
+      <div class="email-login-section" id="emailLoginSection">
+        <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
+      </div>
+      <button class="btn-primary" id="loginBtn" onclick="handleSendCode()" style="margin-top:14px; width:100%;">다음</button>
+      <div class="login-status" id="loginStatus"></div>
+    </div>
+
+    <!-- Step 2: Code -->
+    <div class="login-form" id="loginStep2" style="display:none;">
+      <div style="font-size:13px; color:var(--text); margin-bottom:14px; line-height:1.6;">
+        <strong id="loginEmailDisplay"></strong> 으로<br>코드를 보냈어.
+      </div>
+      <input type="text" id="loginCode" placeholder="이메일로 받은 코드" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" style="text-align:center; font-size:22px; letter-spacing:0.25em; font-family:monospace;">
+      <button class="btn-primary" id="verifyBtn" onclick="handleVerifyCode()">로그인</button>
+      <div class="login-status" id="verifyStatus"></div>
+      <button class="btn-secondary" onclick="resetLoginFlow()" style="margin-top:14px;">이메일 다시 입력</button>
+    </div>
+
+  </div>
+</div>

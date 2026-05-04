@@ -1,0 +1,35 @@
+<!-- Shell collection modal -->
+<div class="modal-overlay" id="shellModal" onclick="if(event.target===this)closeModal('shellModal')">
+  <div class="modal beach-screen" style="max-height:88vh; overflow-y:auto;">
+    <div class="modal-title">🏖 네 모래사장</div>
+    <div class="modal-sub" id="shellSubtext"></div>
+    
+    <div class="beach-stats">
+      <div class="beach-count" id="beachCount">0</div>
+      <div class="beach-count-label">올해 모은 소라</div>
+      <div class="beach-tier-row" id="beachTierRow"></div>
+    </div>
+    
+    <div id="beachWeekly"></div>
+    <div id="beachSpotlight"></div>
+    
+    <div class="beach-tabs">
+      <button class="beach-tab active" data-beach-tab="all" onclick="switchBeachTab('all')">전체</button>
+      <button class="beach-tab" data-beach-tab="card" onclick="switchBeachTab('card')">오늘의 카드</button>
+      <button class="beach-tab" data-beach-tab="call" onclick="switchBeachTab('call')">소라의 부름</button>
+      <button class="beach-tab" data-beach-tab="tier" onclick="switchBeachTab('tier')">등급별로</button>
+    </div>
+    
+    <div class="beach-grid" id="beachGrid"></div>
+
+    <!-- V3.13.x: 지난 부름 (3일 지나 만료된 거 — 다시 받기 가능) -->
+    <div id="lostCallsSection"></div>
+
+    <div style="background: var(--surface2); padding: 12px; border-radius: 10px; font-size: 11px; color: var(--text-dim); line-height: 1.7; margin-top:14px;">
+      소라 하나하나가 네 작은 흔적이야.<br>
+      탭하면 그날의 이야기가 보여.<br>
+      페널티 없어. 못 해도 괜찮고, 쉬어도 괜찮아 🌊
+    </div>
+    <button class="btn-secondary" onclick="closeModal('shellModal')" style="margin-top:16px;">닫기</button>
+  </div>
+</div>

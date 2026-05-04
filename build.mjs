@@ -50,8 +50,11 @@ function build() {
     throw new Error(`template not found: ${relative(ROOT, TEMPLATE)} (Phase 1 not yet started?)`);
   }
   const tpl = readFile(TEMPLATE);
+  // marker is replaced by file content verbatim. when marker sits on its own line
+  // ({{INCLUDE: foo}}\n), the trailing \n is consumed too — included files carry
+  // their own line endings, so without this we'd inject extra blank lines.
   return tpl.replace(
-    /\{\{(INCLUDE_DIR|INCLUDE):\s*([^}\s]+)\s*\}\}/g,
+    /\{\{(INCLUDE_DIR|INCLUDE):\s*([^}\s]+)\s*\}\}\n?/g,
     (_, kind, p) => expand(p, kind === 'INCLUDE_DIR')
   );
 }

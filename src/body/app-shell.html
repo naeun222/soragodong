@@ -1,0 +1,998 @@
+<div class="app" style="display:none;">
+  <div class="header">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
+      <div class="date-pill" onclick="quickCheckpointFromHeader()" role="button" tabindex="0" aria-label="클라우드에 백업하기" title="클릭 — 지금 클라우드에 백업(저장)">
+        <span class="sync-dot" id="syncDot"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="updateBanner" class="update-banner" style="display:none;"></div>
+  <div id="feedbackBanner" class="update-banner feedback-banner" style="display:none;"></div>
+
+  <div class="screens">
+    <!-- HOME -->
+    <div class="screen active" id="screen-home">
+      <div class="greeting">
+        <div class="greeting-sub" id="greetingSub"></div>
+        <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
+      </div>
+
+      <!-- 조건부 알림들 (있을 때만 보임 - 작은 카드) -->
+      <div id="reviewPromptsContainer"></div>
+      <div id="predictionFollowupsContainer"></div>
+      <div id="activeDecisionsContainer"></div>
+
+      <!-- 사용자 명시 2026-04-30: 어제 체크인 다음날 1회만 — '어제 한 페이지' 카드 -->
+      <div id="yesterdayCardContainer"></div>
+
+      <!-- ★★★ MAIN: 시간대별 액션 (낮=오늘의 카드, 밤=체크인) -->
+      <div id="mainActionContainer"></div>
+
+      <!-- ★★★ 소라의 부름 (AI 발급 미션) -->
+      <div id="missionContainer"></div>
+
+      <!-- V4-1i: 🌊 숙고 질문 (active 1개 + pending 카운트) -->
+      <div id="reflectionContainer"></div>
+
+      <!-- 여백 (메인과 작은 항목 분리) -->
+      <div style="height: 24px;"></div>
+
+      <!-- ★ 작은 항목들 (가로 한 줄) -->
+      <div class="home-small-row">
+        <div class="home-small-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
+          <span class="pulse-dot" id="beachPulseDot" hidden></span>
+          <div class="hsc-icon">🐚</div>
+          <div class="hsc-text">
+            <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
+            <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
+          </div>
+        </div>
+        <div id="decisionMiniLinkContainer"></div>
+      </div>
+    </div>
+
+    <!-- SOS removed from float — moved to settings -->
+
+    <!-- CHECK-IN -->
+    <div class="screen" id="screen-checkin">
+      <div class="screen-title">오늘 체크인</div>
+      <div class="screen-sub">딱 15초. 부담 없이. 몰라도 괜찮아.</div>
+
+      <!-- Mode (moved from home) -->
+      <div class="input-group">
+        <div style="font-size:12px; color:var(--text-soft); margin-bottom:10px; line-height:1.6;">특별한 날이면 골라봐. 안 골라도 OK.</div>
+        <div class="mode-row" id="modeRow">
+          <div class="mode-chip" data-mode="exam" onclick="toggleMode('exam')">📚 시험</div>
+          <div class="mode-chip" data-mode="travel" onclick="toggleMode('travel')">✈️ 여행</div>
+          <div class="mode-chip" data-mode="sick" onclick="toggleMode('sick')">🤒 아픔</div>
+          <div class="mode-chip" data-mode="rest" onclick="toggleMode('rest')">🏖 휴식</div>
+          <div class="mode-chip" data-mode="period" onclick="toggleMode('period')">🩸 월경</div>
+          <div class="mode-chip mode-sos" data-mode="drained" onclick="toggleMode('drained')">🪫 방전</div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <div class="input-label" style="margin-bottom:0;">😴 어젯밤 수면</div>
+          <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--text-dim); cursor:pointer; user-select:none; padding:4px 8px; border-radius:8px; background:var(--surface);">
+            <input type="checkbox" id="allNighterToggle" onchange="toggleAllNighter(this.checked)" style="margin:0; cursor:pointer;">
+            🌙 밤샘
+          </label>
+        </div>
+        <div class="time-pair" id="sleepTimePair">
+          <div class="time-input-wrap">
+            <div class="time-label">잠든 시각</div>
+            <input type="time" id="sleepStart" value="00:00">
+          </div>
+          <div class="time-input-wrap">
+            <div class="time-label">일어난 시각</div>
+            <input type="time" id="sleepEnd" value="07:30">
+          </div>
+        </div>
+        <div id="allNighterMsg" style="display:none; font-size:13px; color:var(--accent2); padding:14px; text-align:center; background:rgba(126,200,200,0.08); border:1px dashed rgba(126,200,200,0.3); border-radius:10px;">🌙 밤샘으로 기록 — 수면 시간 X</div>
+        <div style="font-size:11px; color:var(--text-dim); margin-top:6px;" id="sleepDuration"></div>
+      </div>
+
+      <div class="input-group">
+        <div class="input-label">⚡ 지금 몸의 에너지는?</div>
+        <div class="vitality-options">
+          <div class="vitality-btn" onclick="selectVitality(this, 1)">😵</div>
+          <div class="vitality-btn" onclick="selectVitality(this, 2)">😴</div>
+          <div class="vitality-btn" onclick="selectVitality(this, 3)">🙂</div>
+          <div class="vitality-btn" onclick="selectVitality(this, 4)">😊</div>
+          <div class="vitality-btn" onclick="selectVitality(this, 5)">✨</div>
+        </div>
+        <div class="vitality-labels">
+          <span>탈진</span>
+          <span>충만</span>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <div class="input-label">💭 지금 기분</div>
+        <div class="mood-options">
+          <div class="mood-btn" onclick="selectMood(this, 1)">😞</div>
+          <div class="mood-btn" onclick="selectMood(this, 2)">😐</div>
+          <div class="mood-btn" onclick="selectMood(this, 3)">🙂</div>
+          <div class="mood-btn" onclick="selectMood(this, 4)">😊</div>
+          <div class="mood-btn" onclick="selectMood(this, 5)">✨</div>
+        </div>
+        <div class="mood-labels">
+          <span>안 좋음</span>
+          <span>좋음</span>
+        </div>
+      </div>
+
+      <!-- DAILY QUESTION (replaces 한 줄로 오늘은) -->
+      <div class="input-group" id="dailyQuestionWrap">
+        <div class="input-label">
+          <span id="dailyQuestionIcon">💬</span>
+          <span id="dailyQuestionLabel">오늘의 질문</span>
+          <span class="optional">(빈칸 OK · 한 줄도 OK)</span>
+        </div>
+        <div id="dailyQuestionText" style="font-size:14px; line-height:1.7; color:var(--text); padding:14px; background:linear-gradient(135deg, rgba(139,126,196,0.08), rgba(201,169,110,0.05)); border:1px solid rgba(139,126,196,0.2); border-radius:14px; margin-bottom:10px; min-height:50px;"></div>
+        <textarea id="checkinNote" placeholder="떠오르는 대로. 한 단어도 좋고, 한 문장도 좋아." rows="3"></textarea>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="quick-btn" onclick="rerollDailyQuestion()" style="font-size:11px; flex: 0 0 auto; padding: 6px 12px;">↻ 다른 질문</button>
+          <button class="quick-btn" onclick="dismissDailyQuestion()" style="font-size:11px; flex: 0 0 auto; padding: 6px 12px;">✕ 이 질문 그만</button>
+        </div>
+      </div>
+
+      <!-- V3.13.x: 음악 슬롯 + V4: 사진 슬롯 (사진 왼쪽 정사각, 음악 오른쪽 가로 길게) -->
+      <div class="input-group checkin-mp-row" style="display:flex; gap:8px; align-items:stretch;">
+        <div id="checkinPhotoSlot" style="flex:0 0 auto;"></div>
+        <div id="checkinMusicSlot" style="flex:1; min-width:0;"></div>
+      </div>
+
+      <div class="optional-section">
+        <div style="font-size:11px; color:var(--text-soft); margin-bottom:14px; letter-spacing:0.06em;">━ 더 기록하기 (선택) ━</div>
+
+        <div class="module-row">
+          <div class="module-label">🍚 식사</div>
+          <div class="quick-row">
+            <button class="quick-btn" onclick="selectQuick(this, 'meals', '규칙적')">규칙적</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'meals', '한두끼')">한두 끼</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'meals', '거의안')">거의 안</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'meals', '폭식')">폭식</button>
+          </div>
+        </div>
+
+        <div class="module-row">
+          <div class="module-label">🏃 움직임</div>
+          <div class="quick-row">
+            <button class="quick-btn" onclick="selectQuick(this, 'movement', '거의안')">거의 안</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'movement', '짧게')">짧게</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'movement', '충분히')">충분히</button>
+          </div>
+        </div>
+
+        <div class="module-row">
+          <div class="module-label">🎯 집중</div>
+          <div class="quick-row">
+            <button class="quick-btn" onclick="selectQuick(this, 'focus', '없음')">없음</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'focus', '짧게')">짧게</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'focus', '몰입')">몰입</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'focus', '과몰입')">과몰입</button>
+          </div>
+        </div>
+
+        <div class="module-row">
+          <div class="module-label">💞 사회적 연결</div>
+          <div class="quick-row">
+            <button class="quick-btn" onclick="selectQuick(this, 'social', '없음')">없음</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'social', '짧게')">짧게</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'social', '깊은대화')">깊은 대화</button>
+          </div>
+        </div>
+
+        <div class="module-row">
+          <div class="module-label">🌊 스트레스</div>
+          <div class="quick-row">
+            <button class="quick-btn" onclick="selectQuick(this, 'overwhelm', '없음')">없음</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'overwhelm', '약간')">약간</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'overwhelm', '많이')">많이</button>
+            <button class="quick-btn" onclick="selectQuick(this, 'overwhelm', '너무')">너무</button>
+          </div>
+        </div>
+
+        <div class="module-row">
+          <div class="module-label">📊 추적 항목 (선택)</div>
+          <div id="checkinTrackersContainer"></div>
+        </div>
+      </div>
+
+      <div class="sticky-action-bar">
+        <button class="btn-primary" onclick="submitCheckin()">기록 완료 ✦</button>
+        <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="screen" id="screen-chat" style="padding-bottom: 180px;">
+      <div class="screen-title">고동이에게 <img src="/godongicon.png" alt="" class="godong-icon" decoding="async"></div>
+      <div class="screen-sub">뭐든 말해. 일기처럼 길게 써도 돼. 내가 읽고 답할게.</div>
+      <div class="chat-messages" id="chatMessages"></div>
+    </div>
+    <!-- 사용자 요청 2026-04-29: '↓ 새 메시지' 플로팅 칩 — 위로 스크롤 후 새 메시지 도착 시 표시 -->
+    <button id="chatNewMsgChip" class="chat-new-msg-chip" onclick="scrollChatToBottom(true)" style="display:none;">↓ 새 메시지</button>
+
+    <!-- DECISIONS LIST -->
+    <div class="screen" id="screen-decisions">
+      <div class="screen-title">마법의 소라고동 <img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
+      <div class="screen-sub">마법고동은 천천히, 차가운 머리로.<br>충동 차단, 14일 숙성, 구조화된 단계.</div>
+
+      <button class="btn-primary decision" onclick="startNewDecision()">+ 새로운 결정 시작</button>
+
+      <div style="margin-top: 30px;">
+        <div class="model-section-title">진행 중</div>
+        <div id="activeDecisionsList"></div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <div class="model-section-title">지난 결정들</div>
+        <div id="completedDecisionsList"></div>
+      </div>
+
+      <button class="btn-secondary" onclick="showScreen('home')" style="margin-top: 20px;">돌아가기</button>
+    </div>
+
+    <!-- DECISION DETAIL -->
+    <div class="screen" id="screen-decision-detail"></div>
+
+    <!-- REVIEW (weekly/monthly) -->
+    <div class="screen" id="screen-review"></div>
+
+    <!-- PREDICTION FOLLOW-UP -->
+    <div class="screen" id="screen-followup"></div>
+
+    <!-- MODEL -->
+    <div class="screen" id="screen-model">
+      <div class="screen-title">너에 대해 ✦</div>
+      <div class="screen-sub">내가 시간을 들여 배운 네 모습이야.<br>틀린 게 있으면 언제든 말해줘.</div>
+      <!-- 사용자 명시 2026-05-02 ultrathink: #projectsSection 위치 이동 — modelContent 다음 (메타 자리). 정체성 (values/traits/patterns) 우선 노출. -->
+      <div id="modelContent"></div>
+      <div id="projectsSection"></div>
+      <div style="margin-top: 30px;">
+        <!-- 사용자 요청 2026-04-30: forceAnalyze 버튼 나 탭에서 제거 — 일주일 자동 실행. 개발자 도구에서 수동 호출 가능. -->
+        <button class="btn-secondary" onclick="showScreen('settings')">⚙ 설정</button>
+        <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
+      </div>
+    </div>
+
+    <!-- LIBRARY (V4-1l-a: 인생 도서관 5 카테고리) -->
+    <div class="screen" id="screen-archive">
+      <div class="screen-title">📚 인생 도서관</div>
+      <div class="screen-sub">네 일기, 패턴, 좋아하는 것들 — 다섯 칸.</div>
+
+      <!-- V4-1t: 🌟 오늘의 너 (진주 회전 카드) -->
+      <div id="libraryHero"></div>
+
+      <!-- 사용자 요청 2026-04-29: 5 카테고리 chip B 형식 (활성만 라벨 펼침), 토글은 검색바 우측 -->
+      <div class="library-top-row">
+        <div class="library-cats">
+          <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')"><span class="cat-icon">📔</span><span class="cat-label">일기·대화</span></button>
+          <button class="lib-cat-chip"        data-cat="pearls"    onclick="switchLibraryCat('pearls')"><span class="cat-icon">🔮</span><span class="cat-label">진주</span></button>
+          <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')"><span class="cat-icon">🧬</span><span class="cat-label">양생방</span></button>
+          <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')"><span class="cat-icon">✨</span><span class="cat-label">깨달음</span></button>
+          <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')"><span class="cat-icon">🌀</span><span class="cat-label">마법·리뷰</span></button>
+        </div>
+      </div>
+
+      <!-- 검색바 + 토글 (사용자 요청 2026-04-29: 토글 우측 배치) -->
+      <div id="archiveSearchBar" style="margin-bottom:16px; display:flex; gap:8px; align-items:center;">
+        <input type="text" id="archiveSearch" placeholder="🔎 키워드, 날짜로 검색..."
+               oninput="searchArchive()"
+               style="flex:1; min-width:0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; font-family:inherit;">
+        <div class="library-view-toggle" style="margin:0; flex-shrink:0;">
+          <button class="lib-view-btn active" data-view="grid"     onclick="switchLibraryView('grid')"     aria-label="그리드"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
+          <button class="lib-view-btn"        data-view="timeline" onclick="switchLibraryView('timeline')" aria-label="타임라인"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
+        </div>
+      </div>
+
+      <!-- 📔 일기·대화 -->
+      <div id="libDiary" class="library-cat-view">
+        <div id="lensCalendarGrid"></div>
+        <div id="lensTopicCards"></div>
+        <div id="lensTimeline"></div>
+      </div>
+      <!-- 🧬 양생방 -->
+      <div id="libYangsaeng" class="library-cat-view" style="display:none;">
+        <div id="lensStrategies"></div>
+      </div>
+      <!-- ✨ 깨달음 -->
+      <div id="libInsights" class="library-cat-view" style="display:none;">
+        <div id="lensArchive"></div>
+        <div id="lensInsights"></div>
+      </div>
+      <!-- 🔮 진주 -->
+      <div id="libPearls" class="library-cat-view" style="display:none;">
+        <div id="lensPearls"></div>
+      </div>
+      <!-- 🌀 마법·리뷰 -->
+      <div id="libGalpi" class="library-cat-view" style="display:none;">
+        <!-- 사용자 요청 2026-04-29: 피드/목록 토글 통일 — JS에서 동적 렌더 -->
+      </div>
+    </div>
+
+    <!-- ARCHIVE-REVIEWS: 모든 주간/월간 리뷰 모음 -->
+    <div class="screen" id="screen-archive-reviews">
+      <div class="screen-title">🌙 리뷰 모음</div>
+      <div class="screen-sub">지금까지의 주간·월간 회고들.</div>
+      <div id="archiveReviewsList"></div>
+      <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">도서관으로 돌아가기</button>
+    </div>
+
+    <!-- V4-1j-b: 숙고 채팅 별도 화면 (screen-reflection) -->
+    <div class="screen" id="screen-reflection">
+      <div class="reflection-screen-header">
+        <button class="reflection-screen-back" onclick="closeReflectionScreen()">←</button>
+        <div class="reflection-screen-q" id="reflectionScreenQ"></div>
+        <div class="reflection-screen-actions">
+          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
+          <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론</button>
+          <button class="reflection-pause-btn" id="reflectionDeleteBtn" title="삭제">🗑</button>
+        </div>
+      </div>
+      <div class="reflection-chat-area" id="reflectionChatArea"></div>
+    </div>
+    <!-- 숙고 입력바 — fixed bottom (V3 chat-input-bar 패턴 따라). #screen-reflection.active 일 때만 표시 -->
+    <div class="reflection-input-bar" id="reflectionInputBar">
+      <div class="reflection-input-wrap">
+        <textarea class="chat-textarea" id="reflectionInput" placeholder="천천히, 한 각도씩..." rows="1"></textarea>
+        <button class="input-mic-btn" id="reflectionMicBtn" onclick="_toggleInputSpeech('reflectionInput', 'reflectionMicBtn')" aria-label="음성 입력" title="음성 입력"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
+        <button class="send-btn" onclick="sendReflectionChat()">↑</button>
+      </div>
+    </div>
+
+    <!-- 사용자 요청 2026-04-29: 마법 도움 받기 = 풀스크린 (숙고의 방 패턴) -->
+    <div class="screen" id="screen-magic-help">
+      <div class="reflection-screen-header">
+        <button class="reflection-screen-back" onclick="closeMagicHelpChat()">←</button>
+        <div class="reflection-screen-q" id="magicHelpScreenQ"></div>
+        <div class="reflection-screen-actions">
+          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
+          <button class="reflection-resolve-btn" id="magicHelpEndBtn" onclick="endMagicHelpChat()" title="이 대화 마무리 — 도서관에 정리">✓ 마무리</button>
+        </div>
+      </div>
+      <div class="reflection-chat-area" id="magicHelpArea"></div>
+    </div>
+    <div class="reflection-input-bar" id="magicHelpInputBar">
+      <div class="reflection-input-wrap">
+        <textarea class="chat-textarea" id="magicHelpInput" placeholder="🐚 마법고동한테 풀어놔 — 더 깊이 보게 도와줘" rows="1"></textarea>
+        <button class="input-mic-btn" id="magicHelpMicBtn" onclick="_toggleInputSpeech('magicHelpInput', 'magicHelpMicBtn')" aria-label="음성 입력" title="음성 입력"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
+        <button class="send-btn" onclick="sendMagicHelpMessage()">↑</button>
+      </div>
+    </div>
+
+    <!-- EXECUTE (실행 탭 - 다음 메시지에서 빌드) -->
+    <div class="screen" id="screen-execute">
+      <div id="executeContent"></div>
+    </div>
+
+    <!-- BRAIN DUMP MODAL -->
+    <div class="exec-modal-overlay" id="brainDumpOverlay" style="display:none;" onclick="if(event.target===this) closeBrainDump()">
+      <div class="exec-modal">
+        <div class="exec-modal-title">🧠 머릿속 짐 풀기</div>
+        <div class="exec-modal-sub">생각나는 대로 다 적어. 우선순위·시간·형식 X.<br>그냥 와다다.</div>
+        <textarea id="brainDumpInput" rows="10" placeholder="예:&#10;카톡 답장&#10;보고서 한 단락 쓰기&#10;아 맞다 샴푸 사야 함&#10;운동 가야 하는데&#10;..." style="width:100%; padding:14px; background:var(--bg); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:14px; font-family:inherit; resize:vertical; line-height:1.7;"></textarea>
+        <div style="margin-top:14px; font-size:12px; color:var(--text-dim);">오늘은 어떤 모드?</div>
+        <div class="exec-mode-row">
+          <button class="exec-mode-btn focus" onclick="selectExecMode('focus')" id="execModeFocus">
+            🔥 몰입 모드
+            <div class="mode-desc">급하고 중요한 일 위주</div>
+          </button>
+          <button class="exec-mode-btn balance" onclick="selectExecMode('balance')" id="execModeBalance">
+            🌿 여유 모드
+            <div class="mode-desc">가벼운 것도 섞어줘</div>
+          </button>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:14px;">
+          <button class="btn-secondary" onclick="closeBrainDump()" style="flex:1;">취소</button>
+          <button class="btn-primary" onclick="processBrainDump()" id="brainDumpSubmit" style="flex:2;">고동에게 맡기기 ✦</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 사용자 명시 2026-05-03: 서랍장 MODAL 제거 — 메인 section drawer-row list 와 중복. -->
+
+    <!-- pearl_design_spec_2026-05-03 §4: 양생방 "어떻게 자라" 다이어그램 모달 -->
+    <div id="yangsaengGrowthOverlay" class="yg-overlay" onclick="if(event.target===this) closeYangsaengGrowthDiagram()">
+      <div class="yg-card" role="dialog" aria-label="양생방 — 어떻게 자라">
+
+        <div class="yg-header">
+          <div class="yg-title">전략은 어떻게 자라</div>
+          <div class="yg-sub">고민에서 DNA 진주까지 — 한 가지의 여정</div>
+        </div>
+
+        <div class="yg-step problem">
+          <div class="yg-step-title">🎯 너의 문제</div>
+          <div class="yg-step-body">예: <em>"시험 공부 자꾸 벼락치기"</em></div>
+        </div>
+
+        <div class="yg-connector"></div>
+
+        <div class="yg-step dialog">
+          <div class="yg-step-title">💬 대화에 풀어놓기</div>
+          <div class="yg-step-body">평소처럼 한 마디. 마음 가는 대로.</div>
+        </div>
+
+        <div class="yg-connector"><div class="yg-connector-label">"더 알아보기"</div></div>
+
+        <div class="yg-step analysis">
+          <div class="yg-step-title">🔍 4단 분석 → 전략 제안</div>
+          <div class="yg-step-body">
+            내가 자세히 봐줄게:<br>
+            <em>"마감을 작게 쪼개기"</em> ← 너에게 맞는 방법
+          </div>
+        </div>
+
+        <div class="yg-connector"><div class="yg-connector-label">"✦ 해볼게"</div></div>
+
+        <div class="yg-step mission">
+          <div class="yg-step-title">⭐ 오늘의 미션 (소라의 부름)</div>
+          <div class="yg-step-body">
+            <em>"오늘 마감 알람 설정하기"</em><br>
+            전략을 작은 행동으로
+          </div>
+        </div>
+
+        <div class="yg-connector"><div class="yg-connector-label">미션 클리어</div></div>
+
+        <div class="yg-step shell">
+          <div class="yg-step-title">🐚 소라 획득</div>
+          <div class="yg-step-visual">
+            <div class="yg-shell-mini">🐚</div>
+            <div class="yg-step-visual-caption">해냈다는 증거 — 모래사장에 쌓여</div>
+          </div>
+        </div>
+
+        <div class="yg-branch-fork">
+          <svg viewBox="0 0 360 30" preserveAspectRatio="none">
+            <path d="M 14 0 L 14 14 Q 14 20 24 20 L 80 20 L 80 30"
+                  stroke="rgba(232,148,136,0.55)" stroke-width="1.5" stroke-dasharray="4 3" fill="none"/>
+            <path d="M 14 0 L 14 14 Q 14 20 24 20 L 280 20 L 280 30"
+                  stroke="rgba(168,216,168,0.6)" stroke-width="1.5" stroke-dasharray="4 3" fill="none"/>
+          </svg>
+        </div>
+
+        <div class="yg-branch-row">
+          <div class="yg-branch-side">
+            <div class="yg-step failed">
+              <div class="yg-step-title">👎 안 통했어</div>
+              <div class="yg-step-body">알람 울려도 공부 안 함.<br><em>너 탓 아니야</em> — 이 방법이 안 맞은 거야.</div>
+            </div>
+            <div style="margin-top:6px;" class="yg-step evolve">
+              <div class="yg-step-title">🧬 진화 → 새 가지</div>
+              <div class="yg-step-body"><em>"친구랑 스터디"</em><br>다른 방법으로</div>
+            </div>
+            <div class="yg-loopback-arc">
+              <svg viewBox="0 0 180 42" preserveAspectRatio="none">
+                <defs>
+                  <marker id="yg-arrow-coral" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                    <path d="M 0 0 L 8 5 L 0 10" fill="rgba(232,148,136,0.85)"/>
+                  </marker>
+                </defs>
+                <path d="M 90 2 Q 6 21 90 40"
+                      stroke="rgba(232,148,136,0.65)" stroke-width="1.5" stroke-dasharray="4 3" fill="none"
+                      marker-end="url(#yg-arrow-coral)"/>
+              </svg>
+              <div class="yg-loopback-label">↻ 다시 미션</div>
+            </div>
+          </div>
+
+          <div class="yg-branch-side">
+            <div class="yg-step worked">
+              <div class="yg-step-title">👍 통했어!</div>
+              <div class="yg-step-body">친구랑 하니까 진짜 안 미루네.</div>
+            </div>
+            <div style="margin-top:6px;" class="yg-step worked">
+              <div class="yg-step-title">🌿 양생방에서 자람</div>
+              <div class="yg-step-visual">
+                <div class="yg-shell-dna-mini">🐚</div>
+                <div class="yg-step-visual-caption">🧬 마크 붙은 소라<br>= <em>전략 DNA 한 조각</em></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="yg-merge-area">
+          <svg viewBox="0 0 360 40" preserveAspectRatio="none">
+            <path d="M 280 0 L 280 20 Q 280 30 270 30 L 90 30 L 90 40"
+                  stroke="rgba(212,184,122,0.6)" stroke-width="1.5" stroke-dasharray="4 3" fill="none"/>
+          </svg>
+          <div class="yg-merge-label">5번 통하면 →</div>
+        </div>
+
+        <div class="yg-step embody">
+          <div class="yg-step-title">💎 체화 — 네 일부가 됨</div>
+          <div class="yg-step-body">
+            비슷한 상황 (과제, 운동, 청소) 에서도<br>
+            자동으로 <em>"누구랑 같이 하자"</em> 떠오름.<br>
+            <span style="color:var(--text-soft); font-size:11.5px;">→ 네가 스스로 해결할 수 있는 힘</span>
+          </div>
+        </div>
+
+        <div class="yg-connector"></div>
+
+        <div class="yg-step dna">
+          <div class="yg-step-title">DNA 진주 — 너만의 무기</div>
+          <div class="yg-pearl-bigvis">
+            <div class="yg-pearl-svg-wrap">
+              <svg id="yg-pearl-svg" viewBox="0 0 220 220" style="overflow: visible;">
+                <defs>
+                  <radialGradient id="yg-halo-near-e" cx="50%" cy="50%" r="50%">
+                    <stop offset="68%" stop-color="#ffd0c0" stop-opacity="0"/>
+                    <stop offset="80%" stop-color="#ffd0c0" stop-opacity="0.55"/>
+                    <stop offset="90%" stop-color="#e8c8e0" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="#fff0e0" stop-opacity="0"/>
+                  </radialGradient>
+                  <linearGradient id="yg-swirl-e4" x1="20%" y1="15%" x2="80%" y2="85%">
+                    <stop offset="0%"   stop-color="#ffe5d4" stop-opacity="0.32"/>
+                    <stop offset="30%"  stop-color="#ffc0a8" stop-opacity="0.22"/>
+                    <stop offset="55%"  stop-color="#ffd870" stop-opacity="0.18"/>
+                    <stop offset="80%"  stop-color="#88d0c8" stop-opacity="0.22"/>
+                    <stop offset="100%" stop-color="#9080c0" stop-opacity="0.24"/>
+                  </linearGradient>
+                  <radialGradient id="yg-pearl-base-e" cx="35%" cy="30%" r="65%">
+                    <stop offset="0%"  stop-color="#fff8e8" stop-opacity="0.18"/>
+                    <stop offset="50%" stop-color="#fff0d8" stop-opacity="0.10"/>
+                    <stop offset="100%" stop-color="#f0d8b8" stop-opacity="0.06"/>
+                  </radialGradient>
+                  <radialGradient id="yg-sphere-e4" cx="35%" cy="30%" r="65%">
+                    <stop offset="0%"   stop-color="#fffce8" stop-opacity="0.5"/>
+                    <stop offset="22%"  stop-color="#fff5e0" stop-opacity="0.22"/>
+                    <stop offset="42%"  stop-color="#fff0d8" stop-opacity="0.14"/>
+                    <stop offset="62%"  stop-color="#f5e0c0" stop-opacity="0.08"/>
+                    <stop offset="82%"  stop-color="#d8b890" stop-opacity="0.06"/>
+                    <stop offset="100%" stop-color="#8a6510" stop-opacity="0"/>
+                  </radialGradient>
+                  <radialGradient id="yg-iridescent-e" cx="50%" cy="55%" r="45%">
+                    <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.38"/>
+                    <stop offset="22%"  stop-color="#fff5b8" stop-opacity="0.22"/>
+                    <stop offset="48%"  stop-color="#ffc0a8" stop-opacity="0.14"/>
+                    <stop offset="72%"  stop-color="#c8c0e8" stop-opacity="0.10"/>
+                    <stop offset="100%" stop-color="#a89dc8" stop-opacity="0"/>
+                  </radialGradient>
+                  <radialGradient id="yg-rainbow-rim-e" cx="50%" cy="50%" r="55%">
+                    <stop offset="60%" stop-color="#ffd0e0" stop-opacity="0"/>
+                    <stop offset="76%" stop-color="#ffd0e0" stop-opacity="0.22"/>
+                    <stop offset="86%" stop-color="#c0e0ff" stop-opacity="0.18"/>
+                    <stop offset="100%" stop-color="#c0e0ff" stop-opacity="0"/>
+                  </radialGradient>
+                  <radialGradient id="yg-highlight-e4" cx="35%" cy="28%" r="22%">
+                    <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.95"/>
+                    <stop offset="40%" stop-color="#ffffff" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+                  </radialGradient>
+                  <radialGradient id="yg-highlight2-e" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.7"/>
+                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+                  </radialGradient>
+                  <radialGradient id="yg-back-reflect-e" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%"  stop-color="#ffe5d4" stop-opacity="0.5"/>
+                    <stop offset="60%" stop-color="#a89dc8" stop-opacity="0.18"/>
+                    <stop offset="100%" stop-color="#a89dc8" stop-opacity="0"/>
+                  </radialGradient>
+                  <radialGradient id="yg-overlay-e4" cx="35%" cy="30%" r="65%">
+                    <stop offset="0%"  stop-color="#fffce8" stop-opacity="0.14"/>
+                    <stop offset="40%" stop-color="#fff0d8" stop-opacity="0.04"/>
+                    <stop offset="100%" stop-color="#a89dc8" stop-opacity="0"/>
+                  </radialGradient>
+                  <linearGradient id="yg-rainbow-e4" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%"   stop-color="#ff6b6b"/>
+                    <stop offset="33%"  stop-color="#ffd93d"/>
+                    <stop offset="66%"  stop-color="#5fcfba"/>
+                    <stop offset="100%" stop-color="#a89dc8"/>
+                  </linearGradient>
+                  <filter id="yg-glow-e" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="6" result="blur"/>
+                    <feMerge>
+                      <feMergeNode in="blur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                <circle class="yg-pearl-halo" cx="110" cy="110" r="105" fill="url(#yg-halo-near-e)" filter="url(#yg-glow-e)"/>
+                <circle cx="110" cy="110" r="76" fill="url(#yg-swirl-e4)"/>
+                <circle cx="110" cy="110" r="76" fill="url(#yg-sphere-e4)"/>
+                <circle cx="110" cy="110" r="76" fill="url(#yg-pearl-base-e)"/>
+                <circle cx="110" cy="110" r="60" fill="url(#yg-iridescent-e)"/>
+                <circle cx="110" cy="110" r="76" fill="url(#yg-rainbow-rim-e)" pointer-events="none"/>
+                <circle cx="110" cy="110" r="76" fill="none" stroke="#ffffff" stroke-width="0.4" stroke-opacity="0.4" filter="url(#yg-glow-e)"/>
+                <circle cx="110" cy="110" r="76" fill="none" stroke="url(#yg-rainbow-e4)" stroke-width="0.3" stroke-opacity="0.45"/>
+                <ellipse cx="135" cy="142" rx="14" ry="9" fill="url(#yg-back-reflect-e)" pointer-events="none"/>
+                <g id="yg-shells-group"></g>
+                <circle cx="110" cy="110" r="76" fill="url(#yg-overlay-e4)" pointer-events="none"/>
+                <g class="yg-pearl-highlight-flow" pointer-events="none">
+                  <ellipse cx="92" cy="85" rx="22" ry="14" fill="url(#yg-highlight-e4)"/>
+                  <ellipse cx="86" cy="76" rx="5" ry="2.5" fill="#ffffff" opacity="0.9"/>
+                  <ellipse cx="138" cy="92" rx="8" ry="4" fill="url(#yg-highlight2-e)"/>
+                </g>
+                <circle class="yg-surface-glint" cx="105" cy="50"  r="1.4" fill="#ffffff" style="animation-delay:0s;"/>
+                <circle class="yg-surface-glint" cx="155" cy="120" r="1.2" fill="#ffffff" style="animation-delay:0.5s;"/>
+                <circle class="yg-surface-glint" cx="78"  cy="150" r="1.5" fill="#ffffff" style="animation-delay:1s;"/>
+                <circle class="yg-surface-glint" cx="60"  cy="100" r="1.1" fill="#ffffff" style="animation-delay:1.5s;"/>
+                <circle class="yg-surface-glint" cx="125" cy="68"  r="1.3" fill="#ffffff" style="animation-delay:2s;"/>
+              </svg>
+              <div class="yg-pearl-sparkle-wrap">
+                <div class="yg-pearl-sparkle rainbow sm" style="left: 80%; top: 28%; animation-delay: 0.6s;">✦</div>
+                <div class="yg-pearl-sparkle iridescent md" style="left: 86%; top: 70%; animation-delay: 1.2s;">✦</div>
+                <div class="yg-pearl-sparkle rainbow sm" style="left: 18%; top: 80%; animation-delay: 1.8s;">✦</div>
+                <div class="yg-pearl-sparkle rainbow sm" style="left: 50%; top: 8%;  animation-delay: 2.4s;">✦</div>
+              </div>
+            </div>
+            <div class="yg-pearl-caption">
+              <em>"누구랑 같이 시작하기"</em><br>
+              DNA 한 조각들이 모여 — 너만의 진주가 됨 ✨
+            </div>
+          </div>
+        </div>
+
+        <div class="yg-connector"></div>
+
+        <div class="yg-step solved">
+          <div class="yg-step-title">🎯 문제 해결됨</div>
+          <div class="yg-step-body">벼락치기 안 하는 사람으로 살게 됨.</div>
+        </div>
+
+        <div class="yg-footer">
+          <button class="yg-close-btn" onclick="closeYangsaengGrowthDiagram()">✦ 좋아!</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SHORTCUT GUIDE -->
+    <div class="screen" id="screen-shortcut-guide">
+      <div class="screen-title">🌧 몰입 단축어 만들기</div>
+      <div class="screen-sub">iOS에서 한 번만 만들면 평생 써. 안 만들어도 앱은 정상 작동.</div>
+
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px;">
+        <div style="font-family:'Gowun Batang',serif; font-size:16px; color:var(--accent); margin-bottom:14px;">왜 만들면 좋은가</div>
+        <div style="font-size:13px; line-height:1.8; color:var(--text);">
+          앱에서 🌧 시작 누르면<br>
+          <strong style="color:var(--accent2);">방해 금지 + 빗소리 + 집중 모드</strong>가 자동으로 켜져.<br><br>
+          뇌한테 "이제 다른 세계 들어간다" 신호 줌. 도파민 트리거.
+        </div>
+      </div>
+
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px;">
+        <div style="font-family:'Gowun Batang',serif; font-size:16px; color:var(--accent); margin-bottom:14px;">만드는 법 (5분)</div>
+        
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; gap:10px; margin-bottom:6px;">
+            <span style="background:var(--accent); color:var(--bg); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">1</span>
+            <div style="font-size:14px; color:var(--text); padding-top:2px;">iPhone에서 <strong>단축어</strong> 앱 열기</div>
+          </div>
+          <div style="font-size:11px; color:var(--text-dim); margin-left:34px;">기본 앱이라 이미 있어. 안 보이면 App Store에서 "단축어" 검색.</div>
+        </div>
+        
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; gap:10px; margin-bottom:6px;">
+            <span style="background:var(--accent); color:var(--bg); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">2</span>
+            <div style="font-size:14px; color:var(--text); padding-top:2px;">우측 상단 <strong>+</strong> 누르기 → "새로운 단축어"</div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; gap:10px; margin-bottom:6px;">
+            <span style="background:var(--accent); color:var(--bg); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">3</span>
+            <div style="font-size:14px; color:var(--text); padding-top:2px;">"<strong>동작 추가</strong>" 누르고 아래 동작들 추가:</div>
+          </div>
+          <div style="margin-left:34px; font-size:12px; color:var(--text-dim); line-height:1.8;">
+            • <strong style="color:var(--accent2);">방해 금지 모드 설정</strong> → 켜기<br>
+            • <strong style="color:var(--accent2);">배경 음악 재생</strong> → 비, 시냇물, 모닥불 등<br>
+            <span style="font-size:10px;">(좋아하는 사운드 자유)</span>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; gap:10px; margin-bottom:6px;">
+            <span style="background:var(--accent); color:var(--bg); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">4</span>
+            <div style="font-size:14px; color:var(--text); padding-top:2px;">단축어 이름을 <strong style="color:var(--accent2);">SoraRitual</strong> 정확히 (대소문자 구분)</div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:6px;">
+          <div style="display:flex; gap:10px; margin-bottom:6px;">
+            <span style="background:var(--accent); color:var(--bg); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">5</span>
+            <div style="font-size:14px; color:var(--text); padding-top:2px;"><strong>저장</strong>. 끝.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: linear-gradient(135deg, rgba(139,126,196,0.12), rgba(45,40,80,0.2)); border: 1px solid rgba(139,126,196,0.3); border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+        <div style="font-size:13px; line-height:1.8; color:var(--text);">
+          <strong style="color:var(--accent2);">팁</strong><br>
+          • 사운드는 네가 좋아하는 거 (Apple Music에서 빗소리/lofi 검색)<br>
+          • 집중 모드도 추가 가능 (특정 앱만 알림 허용)<br>
+          • 책상 조명 켜기, 화면 밝기 낮추기 등 자유 추가
+        </div>
+      </div>
+
+      <div style="background: var(--surface2); padding: 14px; border-radius: 12px; font-size: 12px; color: var(--text-dim); line-height: 1.7;">
+        💡 안 만들어도 앱은 정상 작동해. 단축어 없으면 그냥 ritual 모달만 뜨고 끝.
+      </div>
+
+      <button class="btn-secondary" onclick="showScreen('execute')" style="margin-top:20px;">실행 탭으로</button>
+    </div>
+
+    <!-- BLOCK PICKER MODAL -->
+    <div class="exec-modal-overlay" id="blockPickerOverlay" style="display:none;" onclick="if(event.target===this) closeBlockPicker()">
+      <div class="exec-modal" style="max-height:80vh; overflow-y:auto;">
+        <div class="exec-modal-title" id="blockPickerTitle">시간 블록</div>
+        <div class="exec-modal-sub">여기 넣을 작업 선택. 또는 새로 추가.</div>
+        <div id="blockPickerContent"></div>
+        <button class="btn-secondary" onclick="closeBlockPicker()" style="margin-top:14px; width:100%;">닫기</button>
+      </div>
+    </div>
+
+    <!-- V4-1z + 사용자 fix: Stories Overlay (분기/연간 리뷰 Replay식 + 진주 음악 배경 + mute 토글) -->
+    <div class="stories-overlay" id="storiesOverlay" style="display:none;">
+      <div class="stories-progress" id="storiesProgress"></div>
+      <div class="stories-music-info" id="storiesMusicInfo"></div>
+      <button class="stories-mute-btn" id="storiesMuteBtn" onclick="toggleStoriesMute()" aria-label="음소거">🔊</button>
+      <button class="stories-close" onclick="closeStories()" aria-label="닫기">×</button>
+      <div class="stories-slide" id="storiesSlide"></div>
+      <div class="stories-tap-zones">
+        <!-- 사용자 요청 2026-04-28: 인스타식 long-press pause — 어느 zone에서나 누르고 있으면 멈춤, 짧게 누르면 navigation -->
+        <div class="stories-tap-prev"
+             onclick="_storiesHandleClick('prev')"
+             onmousedown="_storiesHandlePressStart(event)" onmouseup="_storiesHandlePressEnd(event)" onmouseleave="_storiesHandlePressEnd(event)"
+             ontouchstart="_storiesHandlePressStart(event)" ontouchend="_storiesHandlePressEnd(event)" ontouchcancel="_storiesHandlePressEnd(event)"></div>
+        <div class="stories-tap-pause"
+             onmousedown="_storiesHandlePressStart(event)" onmouseup="_storiesHandlePressEnd(event)" onmouseleave="_storiesHandlePressEnd(event)"
+             ontouchstart="_storiesHandlePressStart(event)" ontouchend="_storiesHandlePressEnd(event)" ontouchcancel="_storiesHandlePressEnd(event)"></div>
+        <div class="stories-tap-next"
+             onclick="_storiesHandleClick('next')"
+             onmousedown="_storiesHandlePressStart(event)" onmouseup="_storiesHandlePressEnd(event)" onmouseleave="_storiesHandlePressEnd(event)"
+             ontouchstart="_storiesHandlePressStart(event)" ontouchend="_storiesHandlePressEnd(event)" ontouchcancel="_storiesHandlePressEnd(event)"></div>
+      </div>
+    </div>
+
+    <!-- CHAT ARCHIVE MODAL (V3.3) -->
+    <div class="exec-modal-overlay" id="chatArchiveOverlay" style="display:none; z-index:600;" onclick="if(event.target===this) closeChatArchive()">
+      <div class="exec-modal" style="max-height:80vh; overflow-y:auto;">
+        <div class="exec-modal-title">📚 이전 대화</div>
+        <div class="exec-modal-sub">"이 대화 마무리"하면 여기로. 7일 뒤 자동 사라짐 (잠깐 보관).<br>요약 카드 탭하면 원본도 볼 수 있어.</div>
+        <div id="chatArchiveContent"></div>
+        <button class="btn-secondary" onclick="closeChatArchive()" style="margin-top:14px; width:100%;">닫기</button>
+      </div>
+    </div>
+
+    <!-- START RITUAL — game-like full screen -->
+    <div class="ritual-overlay" id="ritualOverlay" style="display:none;">
+      <div class="ritual-stage" id="ritualStage"></div>
+    </div>
+
+    <!-- SETTINGS — 사용자 요청 2026-04-30 ultrathink redesign: 계층화 + 시각적 위계 + wording 통일 -->
+    <div class="screen" id="screen-settings">
+      <div class="screen-title">설정</div>
+      <div class="screen-sub">소라고동을 네 것으로.</div>
+
+      <!-- ━━━━━━ 자주 보는 거 ━━━━━━ -->
+      <div class="settings-section-divider">자주 보는 거</div>
+
+      <!-- 프로필 + 일일 한도 한 카드로 통합 -->
+      <div class="settings-card">
+        <div class="input-group">
+          <div class="input-label">👤 내 프로필 <span class="settings-hint">— AI가 답변 시 참고</span></div>
+          <textarea id="profileInput" placeholder="예: ADHD/ADD 성향, 야행성, 내향형, 큰언니..." rows="3"></textarea>
+        </div>
+        <div class="settings-card-divider"></div>
+        <div class="input-group">
+          <div class="input-label">📋 일일 대화 한도 <span class="settings-hint">— 0 = 무제한, 새벽 4시 reset</span></div>
+          <input type="number" id="dailyChatCapInput" min="0" max="9999" placeholder="100" style="width:100%;">
+          <div id="dailyChatCountStatus" class="settings-hint" style="margin-top:6px;"></div>
+        </div>
+        <div class="settings-card-divider"></div>
+        <div class="input-group">
+          <div class="input-label">🌤 날씨 자동 인식 <span class="settings-hint">— 체크인 시점 위치 한 번 사용 (저장 X)</span></div>
+          <div id="weatherToggleStatus" class="settings-info-box" style="font-size:12px; padding:8px 10px; margin-bottom:8px;"></div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-secondary" onclick="setWeatherPermission('granted')" style="flex:1; font-size:12px;">✓ 사용 / 재요청</button>
+            <button class="btn-secondary" onclick="setWeatherPermission('denied')" style="flex:1; font-size:12px;">✕ 사용 X</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 결제 / 사용량 — 사용자 명시 2026-04-30 ultrathink: 2-tier 월정액 only (충전 제거) -->
+      <!-- 사용자 명시 2026-04-30: 구독 버튼 prominent + 갱신 라벨 명확 + 사용량 정보 가독성 ↑ -->
+      <div class="settings-card" id="billingSection">
+        <div class="input-label" style="margin-bottom:10px;">💳 구독 / 사용량</div>
+        <div id="billingStatus" class="settings-info-box" style="font-size:13px; line-height:1.75; padding:14px;">불러오는 중...</div>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn-primary" onclick="openSubscribeModal()" style="flex:2; padding:13px; font-size:14px; font-weight:600;">📅 구독 시작 / 변경</button>
+          <button class="btn-secondary" onclick="refreshBillingStatus(true)" style="flex:1; padding:13px; font-size:13px;">🔄 갱신</button>
+        </div>
+      </div>
+
+      <!-- ━━━━━━ 가끔 ━━━━━━ -->
+      <div class="settings-section-divider">가끔</div>
+
+      <!-- 가이드 -->
+      <details class="settings-collapse">
+        <summary>📚 가이드 (튜토리얼 · 단축어)</summary>
+        <div class="settings-collapse-body">
+          <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
+          <button class="btn-secondary" onclick="showCoreReplayPicker()">🔧 개별 코어 튜토리얼</button>
+          <button class="btn-secondary" onclick="(function(){ window._fullTutorialActive = true; if (typeof startInteractiveOnboarding === 'function') startInteractiveOnboarding(); })()">✨ 풀 튜토리얼 (처음부터 끝까지)</button>
+          <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
+        </div>
+      </details>
+
+      <!-- 백업 / 복원 -->
+      <details class="settings-collapse">
+        <summary>☁️ 백업 / 복원</summary>
+        <div class="settings-collapse-body">
+          <div class="settings-mini-label">백업 (저장)</div>
+          <button class="btn-secondary" onclick="manualSync()">☁️ 지금 클라우드 동기화</button>
+          <button class="btn-secondary" onclick="manualCloudBackup()">☁️ 지금 백업 (10개 보관)</button>
+          <button class="btn-secondary" onclick="exportData()">📁 파일로 받기 (.json)</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">복원 (불러오기)</div>
+          <button class="btn-secondary" onclick="restoreFromCloudBackup()">☁️ 체크포인트에서</button>
+          <button class="btn-secondary" onclick="showAutoBackupList()">🕰 자동 백업에서 (주 1회 자동)</button>
+        </div>
+      </details>
+
+      <!-- 피드백 -->
+      <details class="settings-collapse">
+        <summary>💬 피드백 · 문의</summary>
+        <div class="settings-collapse-body">
+          <div class="settings-hint" style="margin-bottom:10px;">
+            버그 · 아이디어 · 잡담 다 환영 🐚
+          </div>
+          <button class="btn-secondary" onclick="openFeedbackInApp()">✉️ 메시지 보내기</button>
+          <button class="btn-secondary" onclick="openMyFeedbackInbox()" id="myFeedbackInboxBtn">📬 받은 답변 <span id="myFeedbackUnreadBadge" style="display:none; margin-left:6px; background:#e89090; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:700;"></span></button>
+          <button class="btn-secondary" onclick="openNotifInbox()" id="notifInboxBtn">🔔 알림함 <span id="notifInboxBadge" style="display:none; margin-left:6px; background:#e89090; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:700;"></span></button>
+          <button class="btn-secondary" onclick="openFeedbackKakao()">💬 카톡 오픈채팅 (익명 OK)</button>
+          <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtn" style="display:none;">🛠 관리자 — 피드백 답변</button>
+        </div>
+      </details>
+
+      <!-- ━━━━━━ 보안 + 계정 ━━━━━━ -->
+      <div class="settings-section-divider">보안 + 계정</div>
+
+      <!-- E2EE -->
+      <details class="settings-collapse settings-collapse-emphasis">
+        <summary>🔐 종단간 암호화 (E2EE) — 권장</summary>
+        <div class="settings-collapse-body">
+          <div class="settings-hint" style="margin-bottom:10px;">
+            활성 시 <strong>회사조차 본인 데이터를 볼 수 없음</strong>.<br>
+            본인이 정한 비밀번호를 안전한 곳에 보관 (분실 시 복구 X).
+          </div>
+          <div id="e2eeStatus" class="settings-info-box">상태 확인 중...</div>
+          <button class="btn-secondary" onclick="setupE2EE()">🔐 활성화</button>
+          <button class="btn-secondary" onclick="setupChangePassword()">🔒 비밀번호 변경</button>
+          <button class="btn-secondary" onclick="showE2EERecoveryInfo()">📋 비밀번호 안내</button>
+        </div>
+      </details>
+
+      <!-- 계정 -->
+      <div class="settings-card">
+        <div class="input-label" style="margin-bottom:8px;">👤 계정</div>
+        <div id="accountInfo" class="settings-info-box"></div>
+        <button class="btn-secondary btn-danger" onclick="logout()">로그아웃</button>
+      </div>
+
+      <!-- ━━━━━━ 개발자 (admin only) ━━━━━━ -->
+      <details id="devToolsSection" class="settings-collapse" style="display:none;">
+        <summary>🧪 개발자 도구</summary>
+        <div class="settings-collapse-body">
+          <div class="settings-hint" style="margin-bottom:10px;">
+            <strong style="color:#e8c590;">⚠️ 테스터 모드 ON 후 사용</strong> — 변경 저장 X, OFF 시 원래 데이터 복원.
+          </div>
+          <button class="btn-secondary" id="testerModeToggleBtn" onclick="toggleTesterMode()">🧪 테스터 모드: OFF</button>
+          <button class="btn-secondary" onclick="testSeedV4Data()">🌱 V4 시드 데이터</button>
+          <button class="btn-secondary" onclick="testStartTutorialFromStep()" title="특정 step부터 튜토리얼 시작">🎯 튜토리얼 step N부터</button>
+          <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
+          <button class="btn-secondary" onclick="forceAnalyze()" title="opus 4.7 사용 — 비쌈">📊 강제 모델 분석 (비쌈)</button>
+          <button class="btn-secondary" onclick="cleanLegacySeedData()" title="잔존 시드 텍스트 강제 정리">🧹 잔존 시드 정리</button>
+          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 선물 모달 + backend 실제 grant ($2.14 ≈ 3,000원)">🎁 환영 선물 모달 (실제 grant)</button>
+          <button class="btn-secondary" onclick="devResetWelcomeBonus()" title="admin 본인 free_credit_granted=false + balance=0 → 재테스트 가능">🔄 환영 선물 reset (admin)</button>
+          <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
+          <button class="btn-secondary" onclick="devPreviewWeeklyReview()" title="신규 schema (chart / strengths / cycles / emotions / value_align / risk_signals / 자기 평가 / 공유 카드) 풀 미리보기 — 시드 데이터 사용, AI 호출 X">📅 주간 리뷰 미리보기</button>
+          <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>
+          <button class="btn-secondary" onclick="devForceYesterdayCard()" title="홈 화면의 '어제의 기록 볼래?' 카드 강제 표시 (seen flag reset). 어제 entry 없어도 표시).">🌙 어제 카드 표시</button>
+          <button class="btn-secondary" onclick="devPreviewAttemptResult()" title="결과 체크 모달 — 미션 완료 후 attemptStatus 묻는 5 옵션 (해결됐어 / 그저 그래 / 안 통했어 / 못 시도 / 아직).">🔍 결과 체크 모달</button>
+          <button class="btn-secondary" onclick="adminResetBalance()" title="이전 누적 잔액 정정 (admin only). 0~$100 범위.">💰 잔액 정정 (admin)</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 배너 미리보기 (실제 사용자 view)</div>
+          <div class="settings-hint" style="margin-bottom:8px;">dismiss flag / backend grant 안 건드림. 진짜 사용자 화면 그대로.</div>
+          <button class="btn-secondary" onclick="devPreviewBanner('legacy')" title="기존 사용자 += 1,000원 1회 — 환영 토큰 받은 사용자 한정">🎁 1,000원 추가 배너</button>
+          <button class="btn-secondary" onclick="devPreviewBanner('feedback')" title="모든 사용자 — '고동MOM에게 한 마디'">💌 고동MOM 배너</button>
+          <button class="btn-secondary" onclick="devPreviewBanner('syncTip')" title="기존 사용자 — 클라우드 백업 헤더 알약 안내. 코어 끝낸 + entries > 3 한정">☁️ 클라우드 백업 안내 배너</button>
+          <button class="btn-secondary" onclick="devClosePreviewBanner()" title="미리보기 닫기 (모든 배너)">✕ 미리보기 닫기</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 위기 carousel 미리보기</div>
+          <div class="settings-hint" style="margin-bottom:8px;">자살예방법 §15-6 + 제조물책임 안전 의무 모달. 일일 cap / log / 가드 무시 — 시각만 확인.</div>
+          <button class="btn-secondary" onclick="devPreviewCrisisCarousel()" title="자살/자해 신호 감지 시 표시되는 강제 모달 (1393/1577/119)">🆘 위기 carousel 미리보기</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 토스 송금</div>
+          <button class="btn-secondary" onclick="adminLoadPendingCharges()">📋 대기 중인 송금 list</button>
+          <div id="adminPendingList" style="margin-top:10px; font-size:11px;"></div>
+
+          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 사용자 피드백</div>
+          <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtnDev">📬 피드백 보기 / 답변</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 사용량 분석</div>
+          <div class="settings-hint" style="margin-bottom:8px;">endpoint / model / 일자 / 사용자 별 비용 분포. 절감 우선순위 결정 도구.</div>
+          <button class="btn-secondary" onclick="openAdminUsageDashboard()">📊 사용량 분석 (admin)</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 검수 자료</div>
+          <div class="settings-hint" style="margin-bottom:8px;">카카오 디벨로퍼 비즈앱 검수 신청 시 회원가입 화면 캡처용 미리보기 (Step 1·2 + 환영 모달 한눈에).</div>
+          <button class="btn-secondary" onclick="window.open('/preview/signup/', '_blank')">📸 회원가입 화면 미리보기 (검수용)</button>
+        </div>
+      </details>
+
+      <!-- ━━━━━━ 위험 ━━━━━━ -->
+      <div class="settings-section-divider">위험 영역</div>
+      <details class="settings-collapse settings-collapse-danger">
+        <summary>⚠️ 펼쳐서 사용 (되돌릴 수 없음)</summary>
+        <div class="settings-collapse-body">
+          <button class="btn-secondary btn-danger" onclick="resetAll()">🔄 모든 데이터 초기화</button>
+          <div class="settings-hint" style="margin-top:4px; margin-bottom:12px;">
+            V4 데이터만 삭제 (V3 prod 안 건드림). 계정 유지.
+          </div>
+          <button class="btn-secondary btn-danger" onclick="withdrawAccount()">🚫 회원 탈퇴 (영구 삭제)</button>
+          <div class="settings-hint" style="margin-top:4px;">
+            모든 자기관찰 데이터 즉시 삭제. 결제 기록은 전자상거래법상 5년 보존 (익명화).
+          </div>
+        </div>
+      </details>
+
+      <!-- ━━━━━━ 정보 (마지막) ━━━━━━ -->
+      <div class="settings-info-card">
+        <div class="settings-info-card-title">🛡️ 데이터 보호</div>
+        <div id="settingsPrivacyAccessInfo">
+          🔒 본인의 데이터는 본인만 접근 가능합니다<br>
+          🔐 활성화 후 회사조차 귀하의 데이터를 열람할 수 없습니다 (E2EE)<br>
+          🚫 데이터를 광고·판매·외부 공유에 사용하지 않습니다<br>
+          🤖 <b>AI 학습·재활용 절대 X</b> — Anthropic Zero Data Retention 정책 (30일 후 자동 삭제 / 학습·재판매·연구 등 외부 사용 불가)<br>
+          ✅ Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)<br>
+          🔐 모든 통신은 HTTPS로 암호화됩니다
+        </div>
+        <div style="margin-top:10px; font-size:10px; color:var(--text-soft);">
+          개인정보 보호책임자: 김나은 · <a href="/privacy" target="_blank" style="color:var(--accent);">개인정보처리방침</a>
+        </div>
+      </div>
+
+      <!-- ━━━━━━ 위기 안내 (정신건강 앱 의무 권고) ━━━━━━ -->
+      <!-- 사용자 보고 2026-04-30 ultrathink: 정신건강복지법 §15-6 권고. AI ≠ 의료/심리 상담 명시 + 위기 핫라인. -->
+      <div class="settings-info-card" style="margin-top:12px; border-left:3px solid #d4a76a;">
+        <div class="settings-info-card-title">🆘 위기 안내</div>
+        <div style="font-size:11.5px; line-height:1.85; color:var(--text-dim);">
+          소라고동의 AI 답변은 <b>의료·법적·심리 상담이 아닙니다</b>. 자기관찰 보조 도구일 뿐.<br>
+          자해·자살 충동, 심한 우울, 응급 상황에는 즉시 전문가:<br>
+          <span style="color:var(--text);">☎ <b>1393</b> 자살예방상담 (24시간)</span><br>
+          <span style="color:var(--text);">☎ <b>1577-0199</b> 정신건강위기상담</span><br>
+          <span style="color:var(--text);">☎ <b>119</b> 응급</span>
+        </div>
+      </div>
+
+      <!-- ━━━━━━ 사업자 정보 (전자상거래법 의무) ━━━━━━ -->
+      <!-- 사용자 명시 2026-04-30 ultrathink: "아주 작게 어디 안 보이게 구석에" — collapsed details + 작은 폰트. -->
+      <details id="businessInfoCard" style="margin-top:14px; opacity:0.55; font-size:10px;">
+        <summary style="cursor:pointer; color:var(--text-soft); padding:4px 0; letter-spacing:0.02em;">사업자정보 (전자상거래법 §10)</summary>
+        <div id="businessInfoBody" style="font-size:9.5px; line-height:1.75; color:var(--text-soft); padding:6px 4px 0; opacity:0.95;">불러오는 중...</div>
+      </details>
+
+      <div class="sticky-action-bar">
+        <button class="btn-primary" onclick="saveSettings()">저장</button>
+        <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active" data-screen="home" onclick="showScreen('home')"><div class="nav-icon">🏠</div><div class="nav-label">홈</div></div>
+    <div class="nav-item" data-screen="chat" onclick="showScreen('chat')"><div class="nav-icon">🐚</div><div class="nav-label">대화</div></div>
+    <div class="nav-item" data-screen="execute" onclick="showScreen('execute')"><div class="nav-icon">🚀</div><div class="nav-label">실행</div></div>
+    <div class="nav-item" data-screen="model" onclick="showScreen('model')"><div class="nav-icon">🔮</div><div class="nav-label">나</div></div>
+    <div class="nav-item" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">📚</div><div class="nav-label">도서관</div></div>
+  </div>
+</div>

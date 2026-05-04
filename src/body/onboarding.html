@@ -1,0 +1,23 @@
+<!-- V3.9: tour-overlay 완전 제거됨 (인터랙티브 온보딩으로 대체) -->
+
+<!-- V3.7: 인터랙티브 온보딩 (게임형) -->
+<div class="onb-overlay" id="onbOverlay" style="display:none;">
+  <div class="onb-mask" id="onbMask"></div>
+  <div class="onb-spotlight" id="onbSpotlight"></div>
+  <div class="onb-coachmark" id="onbCoachmark">
+    <div class="onb-drag-handle" id="onbDragHandle" title="드래그해서 옮기기">⋮⋮</div>
+    <div class="onb-phase-bar" id="onbPhaseBar"></div>
+    <div class="onb-step-num" id="onbStepNum">
+      <span id="onbStepNumText">1 / 7</span>
+      <span class="onb-phase-label" id="onbPhaseLabel"></span>
+      <span class="onb-sim-badge" id="onbSimBadge" style="display:none;">🎭 시뮬</span>
+    </div>
+    <div class="onb-title" id="onbTitle"></div>
+    <div class="onb-body" id="onbBody"></div>
+    <div class="onb-actions">
+      <button class="onb-skip" onclick="onbSkip()">건너뛰기</button>
+      <button class="onb-back" id="onbBackBtn" onclick="onbBack()" title="이전 단계로"><span class="onb-back-label">뒤로</span><span class="onb-back-arrow">←</span></button>
+      <button class="onb-next" id="onbNextBtn" onclick="onbNext()">다음 →</button>
+    </div>
+  </div>
+</div>
