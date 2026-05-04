@@ -1,0 +1,123 @@
+
+// 사용자 명시 2026-05-02 ultrathink: 알림 인박스 — myFeedbackInbox 패턴 일반화.
+// state.notifications array 기반 (client-only). 환영 만료 7일 전 / 결제 영수증 / 카카오 마이그레이션 안내 등 미래 자리.
+// Phase 3 (포트원 + 알림톡) 도입 시 server endpoint 추가.
+function _addNotification({ type, title, body, persistent }) {
+  state.notifications = state.notifications || [];
+  // 동일 type 이미 unread 있으면 skip (중복 방지)
+  const existing = state.notifications.find(n => n.type === type && !n.readAt);
+  if (existing) return existing;
+  const notif = {
+    id: 'notif_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    type, title, body,
+    persistent: !!persistent,
+    createdAt: new Date().toISOString(),
+    readAt: null
+  };
+  state.notifications.unshift(notif);
+  // cap 50
+  if (state.notifications.length > 50) state.notifications = state.notifications.slice(0, 50);
+  saveState();
+  refreshNotifInboxBadge();
+  return notif;
+}
+
+function refreshNotifInboxBadge() {
+  const badge = document.getElementById('notifInboxBadge');
+  if (!badge) return;
+  const unread = (state.notifications || []).filter(n => !n.readAt).length;
+  if (unread > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = unread > 9 ? '9+' : String(unread);
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function openNotifInbox() {
+  if (document.getElementById('notifInboxOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'notifInboxOverlay';
+  overlay.style.zIndex = '9999';
+  const items = state.notifications || [];
+  let body;
+  if (items.length === 0) {
+    body = `<div style="padding:30px 20px; text-align:center; color:var(--text-soft); font-size:13px;">아직 알림 없어 ✦</div>`;
+  } else {
+    body = items.map(n => {
+      const isUnread = !n.readAt;
+      const accentColor = n.type === 'welcome_expiry_warning' ? '#e8c590' : 'var(--accent)';
+      const date = new Date(n.createdAt).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      return `
+        <div class="notif-item" data-notif-id="${n.id}" onclick="_markNotifRead('${n.id}')" style="padding:12px 14px; border-left:3px solid ${isUnread ? accentColor : 'transparent'}; background:${isUnread ? 'rgba(212,167,106,0.04)' : 'transparent'}; cursor:pointer; border-bottom:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <div style="font-size:13px; font-weight:${isUnread ? '600' : '500'}; color:var(--text);">${escapeHtml(n.title || '')}</div>
+            <div style="font-size:10px; color:var(--text-soft);">${date}</div>
+          </div>
+          <div style="font-size:11.5px; color:var(--text-dim); line-height:1.6;">${n.body || ''}</div>
+        </div>
+      `;
+    }).join('');
+  }
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:440px; max-height:80vh; overflow-y:auto; padding:0;">
+      <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:15px; font-weight:700; color:var(--text);">🔔 알림함</div>
+        <button class="btn-icon" onclick="document.getElementById('notifInboxOverlay').remove()" style="background:none; border:none; font-size:18px; color:var(--text-soft); cursor:pointer;">✕</button>
+      </div>
+      <div>${body}</div>
+      ${items.length > 0 ? '<div style="padding:10px 16px; border-top:1px solid var(--border); text-align:center;"><button class="btn-secondary" onclick="_markAllNotifRead()" style="font-size:11px;">모두 읽음 처리</button></div>' : ''}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function _markNotifRead(notifId) {
+  const notif = (state.notifications || []).find(n => n.id === notifId);
+  if (!notif || notif.readAt) return;
+  notif.readAt = new Date().toISOString();
+  saveState();
+  refreshNotifInboxBadge();
+  // 모달 안 표시 갱신 — 간단하게 close + reopen
+  const overlay = document.getElementById('notifInboxOverlay');
+  if (overlay) {
+    overlay.remove();
+    openNotifInbox();
+  }
+}
+
+function _markAllNotifRead() {
+  const now = new Date().toISOString();
+  (state.notifications || []).forEach(n => { if (!n.readAt) n.readAt = now; });
+  saveState();
+  refreshNotifInboxBadge();
+  const overlay = document.getElementById('notifInboxOverlay');
+  if (overlay) {
+    overlay.remove();
+    openNotifInbox();
+  }
+}
+
+// 사용자 명시 2026-05-02 ultrathink: 환영 토큰 만료 7일 전 알림 자동 적용됨 (init 흐름 또는 refreshBillingStatus 후).
+// 부드러운 톤 — "사라져" 같은 다급한 워딩 X.
+function checkWelcomeBonusExpiry() {
+  const billing = window._billingCache;
+  if (!billing) return;
+  const expires = billing.welcome_bonus_expires_at;
+  const remaining = Number(billing.welcome_bonus_tokens_remaining || 0);
+  if (!expires || remaining <= 0) return;
+  const expiresAt = new Date(expires).getTime();
+  const now = Date.now();
+  const remainingDays = (expiresAt - now) / 86400000;
+  if (remainingDays > 7 || remainingDays < 0) return;
+  // 7일 이내 + 만료 안 함 — 알림 자리잡음 (중복 차단은 _addNotification 안에서)
+  const remainingDisplay = remaining >= 10000 ? Math.round(remaining / 10000) + '만' : remaining.toLocaleString();
+  _addNotification({
+    type: 'welcome_expiry_warning',
+    title: '환영 선물 만료가 가까워',
+    body: `한 달 동안 유효해서 알려드려.<br>남은 토큰: 약 <b>${remainingDisplay}</b>`,
+    persistent: true
+  });
+}
+
