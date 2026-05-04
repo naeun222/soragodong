@@ -1,0 +1,19 @@
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1826;
+    --surface2: #221f33;
+    --surface3: #2a2740;
+    --accent: #c9a96e;
+    --accent2: #e8c99a;
+    --accent-dim: rgba(201, 169, 110, 0.15);
+    --purple: #8b7ec4;
+    --purple-dim: rgba(139, 126, 196, 0.15);
+    --text: #ede8f5;
+    --text-dim: #9d9aad;
+    --text-soft: #7b7a8e;
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.1);
+    --danger: #e06c75;
+    --success: #98c379;
+    --gold: #ffd700;
+  }
