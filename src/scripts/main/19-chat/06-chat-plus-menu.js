@@ -19,6 +19,39 @@ document.addEventListener('click', function(e) {
 function _archiveCurrentChapter(opts) {
   opts = opts || {};
   const validMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
+
+  // V4 사용자 명시 2026-05-04: 이어서 후 변경 X 마무리/보관 = 원본 archive 그대로 복귀.
+  // 4AM cutoff 재처리 X / 새 _pendingExtract X / chapterCompletedCount 증가 X — 불필요 API 차단.
+  // 판정: _resumedFromArchive snapshot 의 messages 와 현재 validMsgs 의 (role + content) 가 모두 일치.
+  if (state._resumedFromArchive && state._resumedFromArchive.snapshot
+      && Array.isArray(state._resumedFromArchive.snapshot.messages)) {
+    const snap = state._resumedFromArchive.snapshot;
+    const snapMsgs = snap.messages;
+    let unchanged = snapMsgs.length === validMsgs.length;
+    if (unchanged) {
+      for (let i = 0; i < snapMsgs.length; i++) {
+        if ((snapMsgs[i].role || '') !== (validMsgs[i].role || '')
+            || (snapMsgs[i].content || '') !== (validMsgs[i].content || '')) {
+          unchanged = false; break;
+        }
+      }
+    }
+    if (unchanged) {
+      if (!Array.isArray(state.chatArchive)) state.chatArchive = [];
+      const insertAt = (typeof state._resumedFromArchive.originalIndex === 'number'
+        && state._resumedFromArchive.originalIndex >= 0
+        && state._resumedFromArchive.originalIndex <= state.chatArchive.length)
+        ? state._resumedFromArchive.originalIndex : 0;
+      state.chatArchive.splice(insertAt, 0, snap);
+      state.chatMessages = [];
+      if (typeof _chatWindowStart !== 'undefined') _chatWindowStart = null;
+      delete state._resumedFromArchive;
+      pruneOldChatArchive();
+      saveState();
+      return snap;
+    }
+  }
+
   const minLen = (typeof opts.minMessages === 'number') ? opts.minMessages : 3;
   if (validMsgs.length < minLen) return null;
   if (!Array.isArray(state.chatArchive)) state.chatArchive = [];

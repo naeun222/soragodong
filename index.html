@@ -28372,9 +28372,13 @@ async function sendChat() {
   delete state._chatResumedAt;
 
   // 5h+ 갭 detect → 직전 챕터 즉시 archive 이송 (chatMessages 비움)
+  // (resume 후 무변경 + 5h+ 면 _archiveCurrentChapter 가 원본 snapshot 으로 복귀하고 chatMessages 비움 → 새 메시지는 새 챕터 시작.)
   if (isNewChapter && state.chatMessages.length > 0) {
     _archiveCurrentChapter({ manual: false });
   }
+  // V4 사용자 명시 2026-05-04: 새 메시지 push 직전 — resume snapshot 무효화.
+  // (사용자가 실제로 새 내용 추가 → 더 이상 "변경 X 마무리" 케이스가 아님.)
+  if (state._resumedFromArchive) delete state._resumedFromArchive;
   
   // V3.13: '일기:' 키워드 감지 → 오늘 entry에 원본 그대로 저장
   // 사용자 요청 2026-04-29: 같은 날 여러 번 적으면 덮어쓰기 X — 시각 표시와 함께 append
@@ -28552,6 +28556,39 @@ document.addEventListener('click', function(e) {
 function _archiveCurrentChapter(opts) {
   opts = opts || {};
   const validMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
+
+  // V4 사용자 명시 2026-05-04: 이어서 후 변경 X 마무리/보관 = 원본 archive 그대로 복귀.
+  // 4AM cutoff 재처리 X / 새 _pendingExtract X / chapterCompletedCount 증가 X — 불필요 API 차단.
+  // 판정: _resumedFromArchive snapshot 의 messages 와 현재 validMsgs 의 (role + content) 가 모두 일치.
+  if (state._resumedFromArchive && state._resumedFromArchive.snapshot
+      && Array.isArray(state._resumedFromArchive.snapshot.messages)) {
+    const snap = state._resumedFromArchive.snapshot;
+    const snapMsgs = snap.messages;
+    let unchanged = snapMsgs.length === validMsgs.length;
+    if (unchanged) {
+      for (let i = 0; i < snapMsgs.length; i++) {
+        if ((snapMsgs[i].role || '') !== (validMsgs[i].role || '')
+            || (snapMsgs[i].content || '') !== (validMsgs[i].content || '')) {
+          unchanged = false; break;
+        }
+      }
+    }
+    if (unchanged) {
+      if (!Array.isArray(state.chatArchive)) state.chatArchive = [];
+      const insertAt = (typeof state._resumedFromArchive.originalIndex === 'number'
+        && state._resumedFromArchive.originalIndex >= 0
+        && state._resumedFromArchive.originalIndex <= state.chatArchive.length)
+        ? state._resumedFromArchive.originalIndex : 0;
+      state.chatArchive.splice(insertAt, 0, snap);
+      state.chatMessages = [];
+      if (typeof _chatWindowStart !== 'undefined') _chatWindowStart = null;
+      delete state._resumedFromArchive;
+      pruneOldChatArchive();
+      saveState();
+      return snap;
+    }
+  }
+
   const minLen = (typeof opts.minMessages === 'number') ? opts.minMessages : 3;
   if (validMsgs.length < minLen) return null;
   if (!Array.isArray(state.chatArchive)) state.chatArchive = [];
@@ -35258,6 +35295,11 @@ async function resumeArchiveChat(archId) {
       _archiveCurrentChapter({ manual: true, minMessages: 1 });
     }
   }
+  // V4 사용자 명시 2026-05-04: 이어서 후 변경 X 마무리/보관 시 = 원본 archive 그대로 복귀
+  // (4AM cutoff 재처리 / API 재호출 방지). 원본 snapshot + 원래 index 보관.
+  const _origIdx = (state.chatArchive || []).findIndex(a => (a.id || a.date) === archId);
+  let _origSnapshot = null;
+  try { _origSnapshot = JSON.parse(JSON.stringify(archive)); } catch (e) { _origSnapshot = null; }
   // archive.messages → state.chatMessages 복원 + 그 archive 제거
   state.chatMessages = archive.messages.slice();
   // 사용자 보고 2026-05-03: 이어서 → 새 채팅 가는 버그.
@@ -35271,6 +35313,11 @@ async function resumeArchiveChat(archId) {
   // _chatResumedAt 마커 — sendChat 가 5h 내면 isNewChapter=false 강제 후 마커 클리어.
   state._chatResumedAt = Date.now();
   state.chatArchive = (state.chatArchive || []).filter(a => (a.id || a.date) !== archId);
+  if (_origSnapshot) {
+    state._resumedFromArchive = { snapshot: _origSnapshot, originalIndex: _origIdx };
+  } else {
+    delete state._resumedFromArchive;
+  }
   saveState();
   if (typeof closeChatArchive === 'function') closeChatArchive();
   if (typeof renderChat === 'function') renderChat();

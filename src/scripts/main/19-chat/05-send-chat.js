@@ -33,9 +33,13 @@ async function sendChat() {
   delete state._chatResumedAt;
 
   // 5h+ 갭 detect → 직전 챕터 즉시 archive 이송 (chatMessages 비움)
+  // (resume 후 무변경 + 5h+ 면 _archiveCurrentChapter 가 원본 snapshot 으로 복귀하고 chatMessages 비움 → 새 메시지는 새 챕터 시작.)
   if (isNewChapter && state.chatMessages.length > 0) {
     _archiveCurrentChapter({ manual: false });
   }
+  // V4 사용자 명시 2026-05-04: 새 메시지 push 직전 — resume snapshot 무효화.
+  // (사용자가 실제로 새 내용 추가 → 더 이상 "변경 X 마무리" 케이스가 아님.)
+  if (state._resumedFromArchive) delete state._resumedFromArchive;
   
   // V3.13: '일기:' 키워드 감지 → 오늘 entry에 원본 그대로 저장
   // 사용자 요청 2026-04-29: 같은 날 여러 번 적으면 덮어쓰기 X — 시각 표시와 함께 append

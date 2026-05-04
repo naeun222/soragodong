@@ -129,6 +129,11 @@ async function resumeArchiveChat(archId) {
       _archiveCurrentChapter({ manual: true, minMessages: 1 });
     }
   }
+  // V4 사용자 명시 2026-05-04: 이어서 후 변경 X 마무리/보관 시 = 원본 archive 그대로 복귀
+  // (4AM cutoff 재처리 / API 재호출 방지). 원본 snapshot + 원래 index 보관.
+  const _origIdx = (state.chatArchive || []).findIndex(a => (a.id || a.date) === archId);
+  let _origSnapshot = null;
+  try { _origSnapshot = JSON.parse(JSON.stringify(archive)); } catch (e) { _origSnapshot = null; }
   // archive.messages → state.chatMessages 복원 + 그 archive 제거
   state.chatMessages = archive.messages.slice();
   // 사용자 보고 2026-05-03: 이어서 → 새 채팅 가는 버그.
@@ -142,6 +147,11 @@ async function resumeArchiveChat(archId) {
   // _chatResumedAt 마커 — sendChat 가 5h 내면 isNewChapter=false 강제 후 마커 클리어.
   state._chatResumedAt = Date.now();
   state.chatArchive = (state.chatArchive || []).filter(a => (a.id || a.date) !== archId);
+  if (_origSnapshot) {
+    state._resumedFromArchive = { snapshot: _origSnapshot, originalIndex: _origIdx };
+  } else {
+    delete state._resumedFromArchive;
+  }
   saveState();
   if (typeof closeChatArchive === 'function') closeChatArchive();
   if (typeof renderChat === 'function') renderChat();
