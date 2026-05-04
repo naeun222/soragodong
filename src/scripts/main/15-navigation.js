@@ -81,6 +81,24 @@ function showScreen(name) {
     // 사용자 요청 2026-04-29: 채팅 진입 시 _stuckToBottom 강제 true (다시 들어오면 맨 아래 보고 싶어함)
     _stuckToBottom = true;
     _unseenSinceScroll = 0;
+    // V4 사용자 명시 2026-05-04: 챕터 분리 (5h+ 갭) 를 sendChat 시점이 아니라 chat 탭 진입 시점에 detect.
+    // 5h+ 만에 들어오면 화면이 처음부터 깔끔하게 비어 있는 상태 (옛 챕터는 자동 archive 이송).
+    // resume 직후엔 skip — sendChat 와 동일한 가드.
+    try {
+      const _NEW_CHAPTER_GAP_MS = 5 * 60 * 60 * 1000;
+      const _msgs = state.chatMessages || [];
+      const _lastMsg = _msgs[_msgs.length - 1];
+      const _lastMs = _lastMsg && _lastMsg.timestamp ? new Date(_lastMsg.timestamp).getTime() : null;
+      const _nowMs = Date.now();
+      const _gap = _lastMs == null ? Infinity : (_nowMs - _lastMs);
+      let _isNewChapter = _gap >= _NEW_CHAPTER_GAP_MS;
+      if (state._chatResumedAt && (_nowMs - state._chatResumedAt) < _NEW_CHAPTER_GAP_MS) {
+        _isNewChapter = false;
+      }
+      if (_isNewChapter && _msgs.length > 0 && typeof _archiveCurrentChapter === 'function') {
+        _archiveCurrentChapter({ manual: false });
+      }
+    } catch (e) { console.warn('[chat-entry chapter-gap]', e); }
     renderChat();
     setTimeout(() => { const s = document.getElementById('screen-chat'); if (s) s.scrollTop = s.scrollHeight; }, 50);
     // V4-fix v3 (사용자 요청): 대화 진입 시 가닥 미션 팔로업 자동 prompt

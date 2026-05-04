@@ -21,6 +21,7 @@
 <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi7IaM65286rOg64+Z8J+QmiIsInNob3J0X25hbWUiOiLshozrnbzqs6Drj5nwn5CaIiwiZGVzY3JpcHRpb24iOiJBSSDrnbzsnbTtlIQg7KCE65616rCAIiwic3RhcnRfdXJsIjoiLi8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGYwZTE3IiwidGhlbWVfY29sb3IiOiIjMGYwZTE3IiwiaWNvbnMiOlt7InNyYyI6Imljb24tMTkyLnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifSx7InNyYyI6Imljb24tNTEyLnBuZyIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9wbmcifV19">
 
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+
 <style>
   :root {
     --bg: #0f0e17;
@@ -9770,6 +9771,7 @@
     line-height: 1.7;
   }
   .pc-graph-empty .ge-icon { font-size: 22px; margin-bottom: 6px; opacity: 0.5; }
+
 </style>
 </head>
 <body>
@@ -9798,9 +9800,11 @@
   </div>
 </div>
 
+
 <!-- 사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 화면일 때만 표시되는 fixed chip -->
 <div class="magic-mode-chip" id="magicModeChip"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동</div>
 <div class="reflection-mode-chip" id="reflectionModeChip">🌊 숙고의 방</div>
+
 
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
@@ -9876,6 +9880,7 @@
   </div>
 </div>
 
+
 <script>
   // PWA 설치 — Android beforeinstallprompt 캡처 + 1탭 설치 / iOS manual fallback (사용자 명시 2026-04-30 ultrathink)
   var _deferredPwaPrompt = null;
@@ -9938,6 +9943,7 @@
     if (/Android/i.test(ua)) defaultOs = 'android';
     setPwaTab(defaultOs);
   })();
+
 </script>
 
 <div class="app" style="display:none;">
@@ -10939,6 +10945,7 @@
   </div>
 </div>
 
+
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
   <div class="chat-plus-menu" id="chatPlusMenu" hidden>
     <button class="chat-plus-item" onclick="chatPlusAction('diary')">
@@ -10964,6 +10971,7 @@
     <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
   </div>
 </div>
+
 
 <!-- Shell collection modal -->
 <div class="modal-overlay" id="shellModal" onclick="if(event.target===this)closeModal('shellModal')">
@@ -11001,6 +11009,7 @@
   </div>
 </div>
 
+
 <!-- Celebration -->
 <div class="celebration" id="celebration">
   <div class="celebration-content">
@@ -11010,8 +11019,10 @@
   </div>
 </div>
 
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
 
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -26561,6 +26572,24 @@ function showScreen(name) {
     // 사용자 요청 2026-04-29: 채팅 진입 시 _stuckToBottom 강제 true (다시 들어오면 맨 아래 보고 싶어함)
     _stuckToBottom = true;
     _unseenSinceScroll = 0;
+    // V4 사용자 명시 2026-05-04: 챕터 분리 (5h+ 갭) 를 sendChat 시점이 아니라 chat 탭 진입 시점에 detect.
+    // 5h+ 만에 들어오면 화면이 처음부터 깔끔하게 비어 있는 상태 (옛 챕터는 자동 archive 이송).
+    // resume 직후엔 skip — sendChat 와 동일한 가드.
+    try {
+      const _NEW_CHAPTER_GAP_MS = 5 * 60 * 60 * 1000;
+      const _msgs = state.chatMessages || [];
+      const _lastMsg = _msgs[_msgs.length - 1];
+      const _lastMs = _lastMsg && _lastMsg.timestamp ? new Date(_lastMsg.timestamp).getTime() : null;
+      const _nowMs = Date.now();
+      const _gap = _lastMs == null ? Infinity : (_nowMs - _lastMs);
+      let _isNewChapter = _gap >= _NEW_CHAPTER_GAP_MS;
+      if (state._chatResumedAt && (_nowMs - state._chatResumedAt) < _NEW_CHAPTER_GAP_MS) {
+        _isNewChapter = false;
+      }
+      if (_isNewChapter && _msgs.length > 0 && typeof _archiveCurrentChapter === 'function') {
+        _archiveCurrentChapter({ manual: false });
+      }
+    } catch (e) { console.warn('[chat-entry chapter-gap]', e); }
     renderChat();
     setTimeout(() => { const s = document.getElementById('screen-chat'); if (s) s.scrollTop = s.scrollHeight; }, 50);
     // V4-fix v3 (사용자 요청): 대화 진입 시 가닥 미션 팔로업 자동 prompt
@@ -45992,6 +46021,7 @@ function escapeHtml(str) {
 }
 
 init();
+
 </script>
 </body>
 </html>
