@@ -24,8 +24,8 @@ async function processAnalysis(analysis, messageIdx) {
       similarText(m.decisionSuggested.title || '', ds.title || '')
     );
     // Don't suggest if there's already an active decision with similar title
-    const hasActive = (state.decisions || []).some(d => 
-      d.status === 'in_progress' && similarText(d.title || '', ds.title || '')
+    const hasActive = (state.decisions || []).some(d =>
+      !d._deleted && d.status === 'in_progress' && similarText(d.title || '', ds.title || '')
     );
     if (!alreadyDeclined && !hasActive) {
       state.chatMessages[messageIdx].decisionSuggested = {

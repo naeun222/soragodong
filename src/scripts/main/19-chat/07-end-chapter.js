@@ -26,6 +26,7 @@ async function endChapter() {
 
 // V4-fix: chatArchive 7일 cap (잠깐 보관용)
 // 사용자 요청 2026-04-29: pinned=true 항목은 영구 보관 (7일 cap 무시)
+// V4 사용자 명시 2026-05-04: _deleted (휴지통) 항목도 7일 cap 면제 — 사용자 명시 영구 삭제 전까지 보관.
 function pruneOldChatArchive() {
   if (!Array.isArray(state.chatArchive)) return;
   const cutoff = Date.now() - 7 * 86400000;
@@ -33,6 +34,7 @@ function pruneOldChatArchive() {
   state.chatArchive = state.chatArchive.filter(a => {
     if (!a) return false;
     if (a.pinned) return true;  // 핀 꽂힌 거 영구 보관
+    if (a._deleted) return true;  // 휴지통 항목 영구 보관 (사용자가 영구 삭제 전까지)
     if (!a.date) return false;
     const t = new Date(a.date + 'T12:00:00').getTime();
     return t >= cutoff;

@@ -77,7 +77,7 @@ function _buildFunStatsSlideHTML(stats, inRange) {
   }
 
   // 7) ↻ 가장 다시 본 깨달음
-  const arrs = (state.archive || []).filter(a => a.savedAt && inRange(a.savedAt));
+  const arrs = (state.archive || []).filter(a => !a._deleted && a.savedAt && inRange(a.savedAt));
   const topRevisit = arrs.slice().sort((a,b) => (b.revisitCount || 0) - (a.revisitCount || 0))[0];
   if (topRevisit && (topRevisit.revisitCount || 0) >= 2) {
     items.push({ icon: '↻', big: `${topRevisit.revisitCount}번`, label: `"${(topRevisit.headline || '').slice(0,18)}" — 살아있는 통찰`, tone: 'teal' });

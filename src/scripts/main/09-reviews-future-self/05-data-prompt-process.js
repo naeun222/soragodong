@@ -20,18 +20,21 @@ function _collectReviewData(type) {
   const entriesInRange = state.entries.filter(e => e.date >= cutoffISO && e.date < cutoffEndISO);
   const missionsInRange = state.missions.filter(m => inRange(m.createdAt));
   const chatInRange = state.chatMessages.filter(m => m.timestamp && inRange(m.timestamp) && !m.typing && !m.error && m.role === 'user').slice(-40);
-  const decisionsInRange = state.decisions.filter(d => inRange(d.startedAt) || (d.decidedAt && inRange(d.decidedAt)));
-  const topicCardsInRange = (state.topicCards || []).filter(t => t.createdAt && inRange(t.createdAt));
-  const pearlsInRange = (state.pearls || []).filter(p => p.createdAt && inRange(p.createdAt));
+  const decisionsInRange = state.decisions.filter(d => !d._deleted && (inRange(d.startedAt) || (d.decidedAt && inRange(d.decidedAt))));
+  const topicCardsInRange = (state.topicCards || []).filter(t => !t._deleted && t.createdAt && inRange(t.createdAt));
+  const pearlsInRange = (state.pearls || []).filter(p => !p._deleted && p.createdAt && inRange(p.createdAt));
   const archiveInRange = (state.archive || []).filter(a => {
+    if (a._deleted) return false;
     const dt = a.savedAt || a.createdAt;
     return dt && inRange(dt);
   });
   const insightsInRange = (state.insights || []).filter(i => {
+    if (i._deleted) return false;
     const dt = i.discoveredAt || i.createdAt;
     return dt && inRange(dt);
   });
   const chaptersInRange = (state.chatArchive || []).filter(c => {
+    if (c._deleted) return false;
     const dt = c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null);
     return dt && inRange(dt);
   });

@@ -1,7 +1,8 @@
 function renderLensArchive() {
   const container = document.getElementById('lensArchive');
   if (!container) return;
-  const items = (state.archive || []);
+  // V4 사용자 명시 2026-05-04: chatArchive cascade 로 _deleted 박힌 항목 도서관 비공개 (휴지통은 별도 화면).
+  const items = (state.archive || []).filter(a => !a._deleted);
   const q = _archiveSearchQuery;
   let filtered = q
     ? items.filter(a => [a.headline, a.body, a.insight, a.userMemo, a.date, a.source, ...(a.tags || [])].filter(Boolean).join(' ').toLowerCase().includes(q))
@@ -24,13 +25,14 @@ function renderLensArchive() {
   if (insightView === 'list') {
     const counts = { scrap: 0, memo: 0, reflection: 0, magic: 0 };
     items.forEach(a => { counts[a.type || 'scrap'] = (counts[a.type || 'scrap'] || 0) + 1; });
-    const aiInsights = (state.insights || []).filter(i => !i.dismissed)
+    const aiInsights = (state.insights || []).filter(i => !i._deleted && !i.dismissed)
       .sort((a, b) => new Date(b.discoveredAt) - new Date(a.discoveredAt));
     const aiCount = aiInsights.length;
 
     // 깨달음 카드 렌더 헬퍼 (인라인 — 큰 카드 풍 안 쓰고 간단히)
+    // V4 사용자 명시 2026-05-04: realIdx 는 원본 state.archive 인덱스 (deleteArchiveItem/openArchiveItem 가 state.archive[idx] 으로 접근하므로).
     const _archiveCardHtml = (a) => {
-      const realIdx = items.indexOf(a);
+      const realIdx = (state.archive || []).indexOf(a);
       const t = a.type || 'scrap';
       const headline = (t !== 'memo' && a.headline)
         ? `<div class="archive-item-headline">${escapeHtml(a.headline)}</div>` : '';
@@ -136,7 +138,8 @@ function renderLensArchive() {
       'scrap':      '<span class="archive-type-badge t-scrap" title="대화 깨달음">📌</span>'
     };
     html += filtered.map(a => {
-      const realIdx = items.indexOf(a);
+      // V4 사용자 명시 2026-05-04: realIdx 는 원본 state.archive 인덱스.
+      const realIdx = (state.archive || []).indexOf(a);
       const t = a.type || 'scrap';
       const badge = typeBadge[t] || typeBadge['scrap'];
       // memo는 userMemo가 본문, headline X

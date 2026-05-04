@@ -9,10 +9,11 @@ async function startCore2() {
   }
   saveState();
   // 3. Core 1 분석 자동 복원 — _intakeArchiveId 또는 첫 archive (옛 사용자 fallback = 시드 시나리오)
-  const targetArchive = (Array.isArray(state.chatArchive) && state.chatArchive.length > 0)
+  const _activeArchives = (state.chatArchive || []).filter(a => a && !a._deleted);
+  const targetArchive = _activeArchives.length > 0
     ? (state._intakeArchiveId
-        ? state.chatArchive.find(a => a && a.id === state._intakeArchiveId)
-        : state.chatArchive[0])
+        ? _activeArchives.find(a => a && a.id === state._intakeArchiveId)
+        : _activeArchives[0])
     : null;
   if (targetArchive && Array.isArray(targetArchive.messages) && targetArchive.messages.length > 0) {
     state.chatMessages = JSON.parse(JSON.stringify(targetArchive.messages));

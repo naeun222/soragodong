@@ -87,6 +87,9 @@ function _archiveCurrentChapter(opts) {
       && archiveItem.messages.length >= 6) {
     setTimeout(async () => {
       try {
+        // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
+        // sourceArchiveId 박음 (cascade soft delete 추적용).
+        const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
         if (typeof extractChapterCaseAnalysis === 'function') {
           try { await extractChapterCaseAnalysis(archiveItem.messages); }
           catch (e) { console.warn('[new-user extract] case fail:', e); }
@@ -94,6 +97,9 @@ function _archiveCurrentChapter(opts) {
         if (typeof extractPreviousChapterTopics === 'function') {
           try { await extractPreviousChapterTopics(archiveItem.messages); }
           catch (e) { console.warn('[new-user extract] topic fail:', e); }
+        }
+        if (_before && typeof _stampSourceArchiveId === 'function') {
+          _stampSourceArchiveId(_before, archiveItem.id, archiveItem);
         }
         delete archiveItem._pendingExtract;
         delete archiveItem._pendingCaseAnalysis;  // legacy 호환

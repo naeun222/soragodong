@@ -146,11 +146,11 @@ function _collectQuarterlyData(quarterKey, stats) {
       return t >= startMs && t <= endMs;
     });
     chatIn = (state.chatMessages || []).filter(m => m.timestamp && m.role === 'user' && inMs(m.timestamp)).slice(-40);
-    topicCardsIn = (state.topicCards || []).filter(t => inMs(t.createdAt));
-    pearlsIn = (state.pearls || []).filter(p => inMs(p.createdAt));
-    archiveIn = (state.archive || []).filter(a => inMs(a.savedAt || a.createdAt));
-    insightsIn = (state.insights || []).filter(i => inMs(i.discoveredAt || i.createdAt));
-    chaptersIn = (state.chatArchive || []).filter(c => inMs(c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null)));
+    topicCardsIn = (state.topicCards || []).filter(t => !t._deleted && inMs(t.createdAt));
+    pearlsIn = (state.pearls || []).filter(p => !p._deleted && inMs(p.createdAt));
+    archiveIn = (state.archive || []).filter(a => !a._deleted && inMs(a.savedAt || a.createdAt));
+    insightsIn = (state.insights || []).filter(i => !i._deleted && inMs(i.discoveredAt || i.createdAt));
+    chaptersIn = (state.chatArchive || []).filter(c => !c._deleted && inMs(c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null)));
   }
   return { quarterKey, stats, recentEmbodied, prevSeeds, entriesIn, chatIn, topicCardsIn, pearlsIn, archiveIn, insightsIn, chaptersIn };
 }
@@ -299,7 +299,7 @@ async function runDiaryAutoSummaryIfNeeded() {
       && (_isTesterDS || !m._seed)
     );
     if (messages.length < 2) {
-      const archived = (state.chatArchive || []).find(a => a.date === dateKey && (_isTesterDS || !a._seed));
+      const archived = (state.chatArchive || []).find(a => a.date === dateKey && !a._deleted && (_isTesterDS || !a._seed));
       if (archived && Array.isArray(archived.messages)) {
         messages = archived.messages.filter(m => _isTesterDS || !m._seed);
       }

@@ -13,12 +13,12 @@ function _collectAnnualData(year) {
     return t >= yearStart && t < yearEnd;
   };
   const entries = (state.entries || []).filter(e => e.date && inYear(e.date + 'T12:00:00'));
-  const pearls = (state.pearls || []).filter(p => inYear(p.createdAt));
-  const archive = (state.archive || []).filter(a => inYear(a.savedAt || a.createdAt));
-  const decisions = (state.decisions || []).filter(d => inYear(d.completedAt || d.startedAt));
+  const pearls = (state.pearls || []).filter(p => !p._deleted && inYear(p.createdAt));
+  const archive = (state.archive || []).filter(a => !a._deleted && inYear(a.savedAt || a.createdAt));
+  const decisions = (state.decisions || []).filter(d => !d._deleted && inYear(d.completedAt || d.startedAt));
   const quarterlies = (state.quarterlyReviews || []).filter(r => r.quarterKey && r.quarterKey.startsWith(targetYear + '-'));
-  const insights = (state.insights || []).filter(i => inYear(i.discoveredAt || i.createdAt));
-  const chatArchive = (state.chatArchive || []).filter(c => inYear(c.generatedAt || (c.date ? c.date + 'T12:00:00' : null)));
+  const insights = (state.insights || []).filter(i => !i._deleted && inYear(i.discoveredAt || i.createdAt));
+  const chatArchive = (state.chatArchive || []).filter(c => !c._deleted && inYear(c.generatedAt || (c.date ? c.date + 'T12:00:00' : null)));
   return { targetYear, entries, pearls, archive, decisions, quarterlies, insights, chatArchive };
 }
 

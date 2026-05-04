@@ -12583,12 +12583,12 @@ function _collectAnnualData(year) {
     return t >= yearStart && t < yearEnd;
   };
   const entries = (state.entries || []).filter(e => e.date && inYear(e.date + 'T12:00:00'));
-  const pearls = (state.pearls || []).filter(p => inYear(p.createdAt));
-  const archive = (state.archive || []).filter(a => inYear(a.savedAt || a.createdAt));
-  const decisions = (state.decisions || []).filter(d => inYear(d.completedAt || d.startedAt));
+  const pearls = (state.pearls || []).filter(p => !p._deleted && inYear(p.createdAt));
+  const archive = (state.archive || []).filter(a => !a._deleted && inYear(a.savedAt || a.createdAt));
+  const decisions = (state.decisions || []).filter(d => !d._deleted && inYear(d.completedAt || d.startedAt));
   const quarterlies = (state.quarterlyReviews || []).filter(r => r.quarterKey && r.quarterKey.startsWith(targetYear + '-'));
-  const insights = (state.insights || []).filter(i => inYear(i.discoveredAt || i.createdAt));
-  const chatArchive = (state.chatArchive || []).filter(c => inYear(c.generatedAt || (c.date ? c.date + 'T12:00:00' : null)));
+  const insights = (state.insights || []).filter(i => !i._deleted && inYear(i.discoveredAt || i.createdAt));
+  const chatArchive = (state.chatArchive || []).filter(c => !c._deleted && inYear(c.generatedAt || (c.date ? c.date + 'T12:00:00' : null)));
   return { targetYear, entries, pearls, archive, decisions, quarterlies, insights, chatArchive };
 }
 
@@ -20577,18 +20577,21 @@ function _collectReviewData(type) {
   const entriesInRange = state.entries.filter(e => e.date >= cutoffISO && e.date < cutoffEndISO);
   const missionsInRange = state.missions.filter(m => inRange(m.createdAt));
   const chatInRange = state.chatMessages.filter(m => m.timestamp && inRange(m.timestamp) && !m.typing && !m.error && m.role === 'user').slice(-40);
-  const decisionsInRange = state.decisions.filter(d => inRange(d.startedAt) || (d.decidedAt && inRange(d.decidedAt)));
-  const topicCardsInRange = (state.topicCards || []).filter(t => t.createdAt && inRange(t.createdAt));
-  const pearlsInRange = (state.pearls || []).filter(p => p.createdAt && inRange(p.createdAt));
+  const decisionsInRange = state.decisions.filter(d => !d._deleted && (inRange(d.startedAt) || (d.decidedAt && inRange(d.decidedAt))));
+  const topicCardsInRange = (state.topicCards || []).filter(t => !t._deleted && t.createdAt && inRange(t.createdAt));
+  const pearlsInRange = (state.pearls || []).filter(p => !p._deleted && p.createdAt && inRange(p.createdAt));
   const archiveInRange = (state.archive || []).filter(a => {
+    if (a._deleted) return false;
     const dt = a.savedAt || a.createdAt;
     return dt && inRange(dt);
   });
   const insightsInRange = (state.insights || []).filter(i => {
+    if (i._deleted) return false;
     const dt = i.discoveredAt || i.createdAt;
     return dt && inRange(dt);
   });
   const chaptersInRange = (state.chatArchive || []).filter(c => {
+    if (c._deleted) return false;
     const dt = c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null);
     return dt && inRange(dt);
   });
@@ -25206,10 +25209,11 @@ async function startCore2() {
   }
   saveState();
   // 3. Core 1 분석 자동 복원 — _intakeArchiveId 또는 첫 archive (옛 사용자 fallback = 시드 시나리오)
-  const targetArchive = (Array.isArray(state.chatArchive) && state.chatArchive.length > 0)
+  const _activeArchives = (state.chatArchive || []).filter(a => a && !a._deleted);
+  const targetArchive = _activeArchives.length > 0
     ? (state._intakeArchiveId
-        ? state.chatArchive.find(a => a && a.id === state._intakeArchiveId)
-        : state.chatArchive[0])
+        ? _activeArchives.find(a => a && a.id === state._intakeArchiveId)
+        : _activeArchives[0])
     : null;
   if (targetArchive && Array.isArray(targetArchive.messages) && targetArchive.messages.length > 0) {
     state.chatMessages = JSON.parse(JSON.stringify(targetArchive.messages));
@@ -28742,6 +28746,9 @@ function _archiveCurrentChapter(opts) {
       && archiveItem.messages.length >= 6) {
     setTimeout(async () => {
       try {
+        // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
+        // sourceArchiveId 박음 (cascade soft delete 추적용).
+        const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
         if (typeof extractChapterCaseAnalysis === 'function') {
           try { await extractChapterCaseAnalysis(archiveItem.messages); }
           catch (e) { console.warn('[new-user extract] case fail:', e); }
@@ -28749,6 +28756,9 @@ function _archiveCurrentChapter(opts) {
         if (typeof extractPreviousChapterTopics === 'function') {
           try { await extractPreviousChapterTopics(archiveItem.messages); }
           catch (e) { console.warn('[new-user extract] topic fail:', e); }
+        }
+        if (_before && typeof _stampSourceArchiveId === 'function') {
+          _stampSourceArchiveId(_before, archiveItem.id, archiveItem);
         }
         delete archiveItem._pendingExtract;
         delete archiveItem._pendingCaseAnalysis;  // legacy 호환
@@ -28806,6 +28816,7 @@ async function endChapter() {
 
 // V4-fix: chatArchive 7일 cap (잠깐 보관용)
 // 사용자 요청 2026-04-29: pinned=true 항목은 영구 보관 (7일 cap 무시)
+// V4 사용자 명시 2026-05-04: _deleted (휴지통) 항목도 7일 cap 면제 — 사용자 명시 영구 삭제 전까지 보관.
 function pruneOldChatArchive() {
   if (!Array.isArray(state.chatArchive)) return;
   const cutoff = Date.now() - 7 * 86400000;
@@ -28813,6 +28824,7 @@ function pruneOldChatArchive() {
   state.chatArchive = state.chatArchive.filter(a => {
     if (!a) return false;
     if (a.pinned) return true;  // 핀 꽂힌 거 영구 보관
+    if (a._deleted) return true;  // 휴지통 항목 영구 보관 (사용자가 영구 삭제 전까지)
     if (!a.date) return false;
     const t = new Date(a.date + 'T12:00:00').getTime();
     return t >= cutoff;
@@ -29388,8 +29400,8 @@ async function processAnalysis(analysis, messageIdx) {
       similarText(m.decisionSuggested.title || '', ds.title || '')
     );
     // Don't suggest if there's already an active decision with similar title
-    const hasActive = (state.decisions || []).some(d => 
-      d.status === 'in_progress' && similarText(d.title || '', ds.title || '')
+    const hasActive = (state.decisions || []).some(d =>
+      !d._deleted && d.status === 'in_progress' && similarText(d.title || '', ds.title || '')
     );
     if (!alreadyDeclined && !hasActive) {
       state.chatMessages[messageIdx].decisionSuggested = {
@@ -29872,9 +29884,10 @@ function buildSystemPromptParts() {
   if (state.profile) stable.push(`[사용자 프로필]\n${state.profile}\n`);
 
   // 사용자 요청 2026-04-29 (perf #5): 시스템 프롬프트 cap — 매우 많을 때 verified 우선 + 최대 30개 (확신도 높은 순)
+  // V4 사용자 명시 2026-05-04 ultrathink: _deleted (히스토리 삭제 cascade) 항목 제외.
   const _topByConfVerified = (arr, max) => {
     if (!Array.isArray(arr)) return [];
-    return arr.slice().sort((a, b) => {
+    return arr.filter(x => !x._deleted).slice().sort((a, b) => {
       const av = a.user_verified ? 1 : 0;
       const bv = b.user_verified ? 1 : 0;
       if (av !== bv) return bv - av;
@@ -29921,8 +29934,9 @@ function buildSystemPromptParts() {
     if (dev.childhood) devLines.push('어린 시절: ' + dev.childhood.slice(0, 300));
     if (dev.schoolYears) devLines.push('학창 시절: ' + dev.schoolYears.slice(0, 300));
     if (dev.adhdDiscovery) devLines.push('자기 인식·발견: ' + dev.adhdDiscovery.slice(0, 300));
-    if (Array.isArray(dev.turningPoints) && dev.turningPoints.length) {
-      const tps = dev.turningPoints.slice(0, 8).map(tp => `${tp.when || '?'}: ${(tp.title || '').slice(0, 40)}${tp.impact ? ' (' + tp.impact.slice(0, 60) + ')' : ''}`).join(' | ');
+    const _activeTPs = Array.isArray(dev.turningPoints) ? dev.turningPoints.filter(tp => !tp._deleted) : [];
+    if (_activeTPs.length) {
+      const tps = _activeTPs.slice(0, 8).map(tp => `${tp.when || '?'}: ${(tp.title || '').slice(0, 40)}${tp.impact ? ' (' + tp.impact.slice(0, 60) + ')' : ''}`).join(' | ');
       devLines.push('전환점: ' + tps);
     }
     if (devLines.length) {
@@ -29930,7 +29944,7 @@ function buildSystemPromptParts() {
       devLines.forEach(l => stable.push(l));
     }
     // 관계 맵
-    const rels = Array.isArray(udp.relationships) ? udp.relationships.slice(0, 10) : [];
+    const rels = Array.isArray(udp.relationships) ? udp.relationships.filter(r => !r._deleted).slice(0, 10) : [];
     if (rels.length) {
       stable.push('— 관계 맵 —');
       rels.forEach(r => {
@@ -30125,10 +30139,11 @@ function buildSystemPromptParts() {
     volatile.push('');
   }
 
-  if (state.archive.length > 0) {
+  const _activeArchive = (state.archive || []).filter(a => !a._deleted);
+  if (_activeArchive.length > 0) {
     volatile.push('[과거 깨달음 (최근 5개)]');
     // 사용자 요청 2026-04-29 (perf #5): insight 길면 자름 (180자)
-    state.archive.slice(0, 5).forEach(a => volatile.push(`- ${a.date}: ${(a.insight || '').slice(0, 180)}`));
+    _activeArchive.slice(0, 5).forEach(a => volatile.push(`- ${a.date}: ${(a.insight || '').slice(0, 180)}`));
   }
 
   // Mission state
@@ -34113,7 +34128,8 @@ async function deleteTimelineEntry(date) {
 function renderLensArchive() {
   const container = document.getElementById('lensArchive');
   if (!container) return;
-  const items = (state.archive || []);
+  // V4 사용자 명시 2026-05-04: chatArchive cascade 로 _deleted 박힌 항목 도서관 비공개 (휴지통은 별도 화면).
+  const items = (state.archive || []).filter(a => !a._deleted);
   const q = _archiveSearchQuery;
   let filtered = q
     ? items.filter(a => [a.headline, a.body, a.insight, a.userMemo, a.date, a.source, ...(a.tags || [])].filter(Boolean).join(' ').toLowerCase().includes(q))
@@ -34136,13 +34152,14 @@ function renderLensArchive() {
   if (insightView === 'list') {
     const counts = { scrap: 0, memo: 0, reflection: 0, magic: 0 };
     items.forEach(a => { counts[a.type || 'scrap'] = (counts[a.type || 'scrap'] || 0) + 1; });
-    const aiInsights = (state.insights || []).filter(i => !i.dismissed)
+    const aiInsights = (state.insights || []).filter(i => !i._deleted && !i.dismissed)
       .sort((a, b) => new Date(b.discoveredAt) - new Date(a.discoveredAt));
     const aiCount = aiInsights.length;
 
     // 깨달음 카드 렌더 헬퍼 (인라인 — 큰 카드 풍 안 쓰고 간단히)
+    // V4 사용자 명시 2026-05-04: realIdx 는 원본 state.archive 인덱스 (deleteArchiveItem/openArchiveItem 가 state.archive[idx] 으로 접근하므로).
     const _archiveCardHtml = (a) => {
-      const realIdx = items.indexOf(a);
+      const realIdx = (state.archive || []).indexOf(a);
       const t = a.type || 'scrap';
       const headline = (t !== 'memo' && a.headline)
         ? `<div class="archive-item-headline">${escapeHtml(a.headline)}</div>` : '';
@@ -34248,7 +34265,8 @@ function renderLensArchive() {
       'scrap':      '<span class="archive-type-badge t-scrap" title="대화 깨달음">📌</span>'
     };
     html += filtered.map(a => {
-      const realIdx = items.indexOf(a);
+      // V4 사용자 명시 2026-05-04: realIdx 는 원본 state.archive 인덱스.
+      const realIdx = (state.archive || []).indexOf(a);
       const t = a.type || 'scrap';
       const badge = typeBadge[t] || typeBadge['scrap'];
       // memo는 userMemo가 본문, headline X
@@ -35283,6 +35301,236 @@ function completeQuest(taskId) {
 
 // AI generates short experience text for shell
 // ═══════════════════════════════════════════════════════════════
+// V4 사용자 명시 2026-05-04 ultrathink: 챗 히스토리 삭제 + cascade
+// ───────────────────────────────────────────────────────────────
+// archive 를 지우면 그 archive 에서 4AM 분석으로 추출된 derived 항목 (traits/
+// values/patterns/insights/pearls/topicCards/state.archive 항목 / udp.turning-
+// Points / udp.relationships / cf.problems...) 도 같이 soft delete 되어야
+// 주/월/계절/연 후속 분석에 다시 들어가지 않는다.
+//
+// 추적 방식:
+// - 객체형 derived: 추출 직후 sourceArchiveId 직접 박음 (cascade = filter id)
+// - 텍스트형 derived (cf.* / udp.identityKeywords): archive 에 _derivedRefs 메타
+//   (cascade 시 splice).
+// ═══════════════════════════════════════════════════════════════
+
+// 추출 직전 snapshot — id set + 텍스트 array.
+function _captureDerivedSnapshot() {
+  const idSet = (arr) => new Set((Array.isArray(arr) ? arr : []).map(x => x && x.id).filter(Boolean));
+  const txtArr = (arr) => (Array.isArray(arr) ? arr.slice() : []);
+  const udp = state.userDeepProfile || {};
+  const cf = state.caseFormulation || {};
+  return {
+    traits: idSet(state.traits),
+    values: idSet(state.values),
+    patterns: idSet(state.patterns),
+    archive: idSet(state.archive),
+    pearls: idSet(state.pearls),
+    insights: idSet(state.insights),
+    topicCards: idSet(state.topicCards),
+    udpTurningPoints: idSet(udp.development && udp.development.turningPoints),
+    udpRelationships: idSet(udp.relationships),
+    cfProblems: txtArr(cf.problems),
+    cfMechanisms: txtArr(cf.mechanisms),
+    cfStrengths: txtArr(cf.strengths),
+    cfGoals: txtArr(cf.goals),
+    cfGrowth: txtArr(cf.growth),
+    udpIdentityKeywords: txtArr(udp.selfNarrative && udp.selfNarrative.identityKeywords)
+  };
+}
+
+// 추출 직후 — before snapshot 와 비교 → 새 항목에 sourceArchiveId 박기 +
+// archiveItem._derivedRefs 에 텍스트 ref 저장.
+function _stampSourceArchiveId(before, archiveId, archiveItem) {
+  if (!archiveId || !before) return;
+  const stamp = (arr, beforeSet) => {
+    if (!Array.isArray(arr)) return;
+    arr.forEach(x => {
+      if (!x || !x.id) return;
+      if (beforeSet.has(x.id)) return;
+      // 이미 다른 source 박혀 있으면 덮어쓰지 않음 (magic/reflection 의 sourceChatArchiveId 등)
+      if (!x.sourceArchiveId) x.sourceArchiveId = archiveId;
+    });
+  };
+  stamp(state.traits, before.traits);
+  stamp(state.values, before.values);
+  stamp(state.patterns, before.patterns);
+  stamp(state.archive, before.archive);
+  stamp(state.pearls, before.pearls);
+  stamp(state.insights, before.insights);
+  stamp(state.topicCards, before.topicCards);
+  const udp = state.userDeepProfile || {};
+  stamp(udp.development && udp.development.turningPoints, before.udpTurningPoints);
+  stamp(udp.relationships, before.udpRelationships);
+
+  // 텍스트 array — archive item 에 ref 저장
+  if (!archiveItem) return;
+  if (!archiveItem._derivedRefs) archiveItem._derivedRefs = {};
+  const refs = archiveItem._derivedRefs;
+  const newOnly = (after, beforeArr) => after.filter(x => !beforeArr.includes(x));
+  const cf = state.caseFormulation || {};
+  const pushRefs = (key, after, beforeArr) => {
+    const fresh = newOnly(Array.isArray(after) ? after : [], beforeArr);
+    if (!fresh.length) return;
+    refs[key] = (refs[key] || []).concat(fresh);
+  };
+  pushRefs('cfProblems', cf.problems, before.cfProblems);
+  pushRefs('cfMechanisms', cf.mechanisms, before.cfMechanisms);
+  pushRefs('cfStrengths', cf.strengths, before.cfStrengths);
+  pushRefs('cfGoals', cf.goals, before.cfGoals);
+  pushRefs('cfGrowth', cf.growth, before.cfGrowth);
+  pushRefs('udpIdentityKeywords', udp.selfNarrative && udp.selfNarrative.identityKeywords, before.udpIdentityKeywords);
+}
+
+// archive 한 개 soft delete + cascade. derived 객체엔 _deleted/_deletedAt 박고,
+// 텍스트 ref 는 caseFormulation/identityKeywords 에서 splice (text 동일하면).
+// 반환 = { cascaded: { traits: n, values: n, ... } } 으로 토스트 표시용.
+function _softDeleteArchiveCascade(archiveId) {
+  const arch = (state.chatArchive || []).find(a => a && (a.id === archiveId || a.date === archiveId));
+  if (!arch) return null;
+  const _now = new Date().toISOString();
+  arch._deleted = true;
+  arch._deletedAt = _now;
+
+  const counts = { traits: 0, values: 0, patterns: 0, archive: 0, pearls: 0, insights: 0, topicCards: 0, udpTurningPoints: 0, udpRelationships: 0 };
+  const cascadeArr = (arr, key) => {
+    if (!Array.isArray(arr)) return;
+    arr.forEach(x => {
+      if (!x || x._deleted) return;
+      if (x.sourceArchiveId === archiveId || x.sourceChatArchiveId === archiveId) {
+        x._deleted = true;
+        x._deletedAt = _now;
+        counts[key] += 1;
+      }
+    });
+  };
+  cascadeArr(state.traits, 'traits');
+  cascadeArr(state.values, 'values');
+  cascadeArr(state.patterns, 'patterns');
+  cascadeArr(state.archive, 'archive');
+  cascadeArr(state.pearls, 'pearls');
+  cascadeArr(state.insights, 'insights');
+  cascadeArr(state.topicCards, 'topicCards');
+  const udp = state.userDeepProfile || {};
+  cascadeArr(udp.development && udp.development.turningPoints, 'udpTurningPoints');
+  cascadeArr(udp.relationships, 'udpRelationships');
+
+  // 텍스트 ref — splice (hard remove). 사용자가 archive 영구 삭제 후 복원 X 이라 OK.
+  // 단, restore 할 수 있게 archive._derivedRefsBackup 으로 보존.
+  if (arch._derivedRefs) {
+    const cf = state.caseFormulation || (state.caseFormulation = { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} });
+    const removeFromArr = (arr, items) => {
+      if (!Array.isArray(arr) || !Array.isArray(items)) return 0;
+      let removed = 0;
+      items.forEach(t => {
+        const idx = arr.indexOf(t);
+        if (idx >= 0) { arr.splice(idx, 1); removed += 1; }
+      });
+      return removed;
+    };
+    const r = arch._derivedRefs;
+    let textRemoved = 0;
+    textRemoved += removeFromArr(cf.problems, r.cfProblems);
+    textRemoved += removeFromArr(cf.mechanisms, r.cfMechanisms);
+    textRemoved += removeFromArr(cf.strengths, r.cfStrengths);
+    textRemoved += removeFromArr(cf.goals, r.cfGoals);
+    textRemoved += removeFromArr(cf.growth, r.cfGrowth);
+    // unverified 도 같이 제거 (혹시 등록되어 있으면)
+    if (cf.unverified && typeof cf.unverified === 'object') {
+      ['problems', 'mechanisms', 'strengths', 'goals', 'growth'].forEach(b => {
+        textRemoved += removeFromArr(cf.unverified[b], (r['cf' + b.charAt(0).toUpperCase() + b.slice(1)]) || []);
+      });
+    }
+    if (udp.selfNarrative) {
+      textRemoved += removeFromArr(udp.selfNarrative.identityKeywords, r.udpIdentityKeywords);
+    }
+    counts.cfText = textRemoved;
+  }
+  return counts;
+}
+
+// archive 복원 — _deleted 마커 제거. derived 객체는 sourceArchiveId 매칭으로
+// 같이 복원. 단, cf/identityKeywords 는 splice 됐으니 _derivedRefs 보고 다시 push.
+function _restoreArchiveCascade(archiveId) {
+  const arch = (state.chatArchive || []).find(a => a && (a.id === archiveId || a.date === archiveId));
+  if (!arch || !arch._deleted) return null;
+  delete arch._deleted;
+  delete arch._deletedAt;
+
+  const counts = { traits: 0, values: 0, patterns: 0, archive: 0, pearls: 0, insights: 0, topicCards: 0, udpTurningPoints: 0, udpRelationships: 0 };
+  const restoreArr = (arr, key) => {
+    if (!Array.isArray(arr)) return;
+    arr.forEach(x => {
+      if (!x || !x._deleted) return;
+      if (x.sourceArchiveId === archiveId || x.sourceChatArchiveId === archiveId) {
+        delete x._deleted;
+        delete x._deletedAt;
+        counts[key] += 1;
+      }
+    });
+  };
+  restoreArr(state.traits, 'traits');
+  restoreArr(state.values, 'values');
+  restoreArr(state.patterns, 'patterns');
+  restoreArr(state.archive, 'archive');
+  restoreArr(state.pearls, 'pearls');
+  restoreArr(state.insights, 'insights');
+  restoreArr(state.topicCards, 'topicCards');
+  const udp = state.userDeepProfile || {};
+  restoreArr(udp.development && udp.development.turningPoints, 'udpTurningPoints');
+  restoreArr(udp.relationships, 'udpRelationships');
+
+  // 텍스트 ref — 다시 push (중복 체크)
+  if (arch._derivedRefs) {
+    const cf = state.caseFormulation || (state.caseFormulation = { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} });
+    const pushIfMissing = (arr, items) => {
+      if (!Array.isArray(arr) || !Array.isArray(items)) return;
+      items.forEach(t => { if (!arr.includes(t)) arr.push(t); });
+    };
+    const r = arch._derivedRefs;
+    pushIfMissing(cf.problems, r.cfProblems);
+    pushIfMissing(cf.mechanisms, r.cfMechanisms);
+    pushIfMissing(cf.strengths, r.cfStrengths);
+    pushIfMissing(cf.goals, r.cfGoals);
+    pushIfMissing(cf.growth, r.cfGrowth);
+    if (udp.selfNarrative) {
+      if (!Array.isArray(udp.selfNarrative.identityKeywords)) udp.selfNarrative.identityKeywords = [];
+      pushIfMissing(udp.selfNarrative.identityKeywords, r.udpIdentityKeywords);
+    }
+  }
+  return counts;
+}
+
+// 영구 삭제 (hard delete) — chatArchive + 그 archive 에 sourceArchiveId 박힌
+// derived 객체들 array 에서 완전히 제거. 휴지통 비우기 / 영구 삭제 시 호출.
+function _purgeArchive(archiveId) {
+  const purgeArr = (arr) => {
+    if (!Array.isArray(arr)) return 0;
+    const before = arr.length;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const x = arr[i];
+      if (x && (x.sourceArchiveId === archiveId || x.sourceChatArchiveId === archiveId)) {
+        arr.splice(i, 1);
+      }
+    }
+    return before - arr.length;
+  };
+  purgeArr(state.traits);
+  purgeArr(state.values);
+  purgeArr(state.patterns);
+  purgeArr(state.archive);
+  purgeArr(state.pearls);
+  purgeArr(state.insights);
+  purgeArr(state.topicCards);
+  const udp = state.userDeepProfile || {};
+  if (udp.development) purgeArr(udp.development.turningPoints);
+  purgeArr(udp.relationships);
+  // chatArchive 자체에서 제거
+  if (Array.isArray(state.chatArchive)) {
+    state.chatArchive = state.chatArchive.filter(a => !(a && (a.id === archiveId || a.date === archiveId)));
+  }
+}
+// ═══════════════════════════════════════════════════════════════
 // V3.3: 대화 일별 아카이브 (raw → AI 요약)
 // ═══════════════════════════════════════════════════════════════
 
@@ -35291,6 +35539,7 @@ let _expandedArchiveDates = new Set();
 let _chatArchiveEscDetach = null;
 function openChatArchive() {
   _expandedArchiveDates.clear();
+  _chatArchiveTrashView = false;
   renderChatArchiveModal();
   const overlay = document.getElementById('chatArchiveOverlay');
   overlay.style.display = 'flex';
@@ -35309,21 +35558,50 @@ function closeChatArchive() {
   if (_chatArchiveEscDetach) { _chatArchiveEscDetach(); _chatArchiveEscDetach = null; }
 }
 
+// V4 사용자 명시 2026-05-04: 휴지통 보기 토글 (false = 일반, true = 삭제됨만).
+let _chatArchiveTrashView = false;
+
 function renderChatArchiveModal() {
   const container = document.getElementById('chatArchiveContent');
   if (!container) return;
-  
-  const archive = (state.chatArchive || []).slice().sort((a, b) => 
-    new Date(b.date) - new Date(a.date)
-  );
-  
-  if (archive.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
-      <div style="font-size:32px; margin-bottom:12px;">📚</div>
-      아직 보관된 대화가 없어.<br>
-      7일 넘은 대화가 자동으로 여기 모일 거야.<br>
-      <span style="font-size:11px; opacity:0.8;">📌 핀 꽂으면 영구 보관됨.</span>
+
+  // V4 사용자 명시 2026-05-04: 휴지통 분리 — 일반은 !_deleted, 휴지통은 _deleted 만.
+  const allArchive = (state.chatArchive || []).slice();
+  const trashCount = allArchive.filter(a => a._deleted).length;
+  const archive = allArchive
+    .filter(a => _chatArchiveTrashView ? a._deleted : !a._deleted)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // 헤더 (휴지통 토글 / 비우기)
+  const headerHtml = `
+    <div class="cac-toolbar" style="display:flex; gap:6px; align-items:center; justify-content:space-between; padding:8px 4px 12px; border-bottom:1px solid var(--border); margin-bottom:10px;">
+      <div style="font-size:12px; color:var(--text-soft);">
+        ${_chatArchiveTrashView ? `🗑️ 휴지통 — ${trashCount}개` : `📚 보관된 대화 — ${archive.length}개`}
+      </div>
+      <div style="display:flex; gap:4px;">
+        ${_chatArchiveTrashView && trashCount > 0
+          ? `<button class="btn-secondary" onclick="emptyChatArchiveTrash()" style="font-size:11px; padding:4px 8px; color:#c44;">비우기</button>` : ''}
+        <button class="btn-secondary" onclick="toggleChatArchiveTrashView()" style="font-size:11px; padding:4px 8px;">
+          ${_chatArchiveTrashView ? '← 보관함' : `🗑️ 휴지통${trashCount > 0 ? ` (${trashCount})` : ''}`}
+        </button>
+      </div>
     </div>`;
+
+  if (archive.length === 0) {
+    if (_chatArchiveTrashView) {
+      container.innerHTML = headerHtml + `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
+        <div style="font-size:32px; margin-bottom:12px;">🗑️</div>
+        휴지통이 비어 있어.<br>
+        <span style="font-size:11px; opacity:0.8;">대화 카드 ✕ 누르면 여기로 와.</span>
+      </div>`;
+    } else {
+      container.innerHTML = headerHtml + `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
+        <div style="font-size:32px; margin-bottom:12px;">📚</div>
+        아직 보관된 대화가 없어.<br>
+        7일 넘은 대화가 자동으로 여기 모일 거야.<br>
+        <span style="font-size:11px; opacity:0.8;">📌 핀 꽂으면 영구 보관됨.</span>
+      </div>`;
+    }
     return;
   }
 
@@ -35333,7 +35611,7 @@ function renderChatArchiveModal() {
     return 0;
   });
 
-  container.innerHTML = sortedArchive.map(a => {
+  container.innerHTML = headerHtml + sortedArchive.map(a => {
     const dateLabel = new Date(a.date).toLocaleDateString('ko-KR', {
       year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
     });
@@ -35357,13 +35635,32 @@ function renderChatArchiveModal() {
       : '';
     const cardOpacity = isPending ? '0.7' : '1';
 
+    // V4 사용자 명시 2026-05-04: 휴지통/일반 별 액션 버튼 분기.
+    const isTrash = !!a._deleted;
+    const headerActionsHtml = isTrash ? `
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); restoreChatArchive('${archId}')" title="복구" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px;">↻</button>
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); purgeChatArchive('${archId}')" title="영구 삭제" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; color:#c44;">✕</button>
+    ` : `
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); toggleArchivePin('${a.date}')" title="${pinTitle}" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; opacity:${a.pinned ? '1' : '0.5'};">${pinIcon}</button>
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); softDeleteChatArchive('${archId}')" title="삭제 (휴지통으로)" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; opacity:0.5;">🗑️</button>
+    `;
+    const expandedActions = isTrash ? `
+      <div style="display:flex; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+        <button class="btn-secondary" onclick="event.stopPropagation(); restoreChatArchive('${archId}')" style="flex:1; font-size:11.5px; padding:8px;">↻ 복구</button>
+        <button class="btn-secondary" onclick="event.stopPropagation(); purgeChatArchive('${archId}')" style="flex:1; font-size:11.5px; padding:8px; color:#c44;">✕ 영구 삭제</button>
+      </div>
+    ` : `
+      <div style="display:flex; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+        <button class="btn-secondary" onclick="event.stopPropagation(); resumeArchiveChat('${archId}')" style="flex:1; font-size:11.5px; padding:8px;">↩️ 이어서 하기</button>
+      </div>
+    `;
     return `
-      <div class="chat-archive-card${a.pinned ? ' pinned' : ''}" style="opacity:${cardOpacity};">
+      <div class="chat-archive-card${a.pinned ? ' pinned' : ''}${isTrash ? ' deleted' : ''}" style="opacity:${isTrash ? '0.6' : cardOpacity};">
         <div class="cac-header" onclick="toggleArchiveDay('${archId}')">
-          <div class="cac-date">${a.pinned ? '📌 ' : ''}${dateLabel}</div>
+          <div class="cac-date">${isTrash ? '🗑️ ' : (a.pinned ? '📌 ' : '')}${dateLabel}</div>
           <div class="cac-meta">
             <span>${a.messageCount || 0}개 메시지</span>
-            <button class="cac-pin-btn" onclick="event.stopPropagation(); toggleArchivePin('${a.date}')" title="${pinTitle}" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; opacity:${a.pinned ? '1' : '0.5'};">${pinIcon}</button>
+            ${headerActionsHtml}
             <span class="cac-toggle">${isExpanded ? '▾' : '▸'}</span>
           </div>
         </div>
@@ -35381,9 +35678,7 @@ function renderChatArchiveModal() {
                 <div class="cac-msg-content">${escapeHtml(content.slice(0, 500))}${content.length > 500 ? '...' : ''}</div>
               </div>`;
             }).join('')}
-            <div style="display:flex; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
-              <button class="btn-secondary" onclick="event.stopPropagation(); resumeArchiveChat('${archId}')" style="flex:1; font-size:11.5px; padding:8px;">↩️ 이어서 하기</button>
-            </div>
+            ${expandedActions}
           </div>
         ` : ''}
       </div>
@@ -35450,6 +35745,106 @@ function toggleArchiveDay(date) {
     _expandedArchiveDates.add(date);
   }
   renderChatArchiveModal();
+}
+
+// V4 사용자 명시 2026-05-04: 챗 히스토리 카드 삭제 (휴지통 이동) — _softDeleteArchiveCascade 가
+// derived 항목 (traits/values/patterns/insights/pearls/topicCards/cf.* 등) 도 _deleted 박음 →
+// 미래 주/월/계절/연 분석에 들어가지 않음. 휴지통에서 복구 또는 영구 삭제 가능.
+async function softDeleteChatArchive(archId) {
+  const yes = await showConfirmModal({
+    title: '🗑️ 이 대화를 삭제할까?',
+    message: '휴지통으로 이동돼.\n이 대화에서 추출된 깨달음·특성·가치·패턴도 함께 숨김 처리되고, 앞으로의 주·월·계절·연 분석에 들어가지 않아.\n\n휴지통에서 복구하거나 영구 삭제할 수 있어.',
+    okLabel: '삭제',
+    cancelLabel: '취소'
+  });
+  if (!yes) return;
+  if (typeof _softDeleteArchiveCascade !== 'function') {
+    showToast('삭제 helper 가 로드 안 됐어');
+    return;
+  }
+  const counts = _softDeleteArchiveCascade(archId);
+  saveState();
+  // 토스트 — cascade 영향 요약
+  if (counts) {
+    const total = (counts.traits || 0) + (counts.values || 0) + (counts.patterns || 0)
+                + (counts.archive || 0) + (counts.pearls || 0) + (counts.insights || 0)
+                + (counts.topicCards || 0) + (counts.udpTurningPoints || 0) + (counts.udpRelationships || 0);
+    if (total > 0) {
+      showToast(`🗑️ 삭제 — 추출된 ${total}개 항목도 함께 숨김`);
+    } else {
+      showToast('🗑️ 휴지통으로 이동');
+    }
+  } else {
+    showToast('🗑️ 휴지통으로 이동');
+  }
+  renderChatArchiveModal();
+  // 도서관 / 나탭 등 영향받는 화면 갱신
+  if (typeof renderArchive === 'function') try { renderArchive(); } catch {}
+  if (typeof renderModelTab === 'function') try { renderModelTab(); } catch {}
+}
+
+async function restoreChatArchive(archId) {
+  if (typeof _restoreArchiveCascade !== 'function') {
+    showToast('복구 helper 가 로드 안 됐어');
+    return;
+  }
+  _restoreArchiveCascade(archId);
+  saveState();
+  showToast('↻ 복구됨');
+  renderChatArchiveModal();
+  if (typeof renderArchive === 'function') try { renderArchive(); } catch {}
+  if (typeof renderModelTab === 'function') try { renderModelTab(); } catch {}
+}
+
+async function purgeChatArchive(archId) {
+  const yes = await showConfirmModal({
+    title: '✕ 영구 삭제할까?',
+    message: '복구할 수 없어.\n이 대화 + 그 대화에서 추출된 derived 항목 (객체형) 이 완전히 사라져.',
+    okLabel: '영구 삭제',
+    cancelLabel: '취소'
+  });
+  if (!yes) return;
+  if (typeof _purgeArchive !== 'function') {
+    showToast('영구삭제 helper 가 로드 안 됐어');
+    return;
+  }
+  _purgeArchive(archId);
+  saveState();
+  showToast('✕ 영구 삭제됨');
+  renderChatArchiveModal();
+  if (typeof renderArchive === 'function') try { renderArchive(); } catch {}
+  if (typeof renderModelTab === 'function') try { renderModelTab(); } catch {}
+}
+
+function toggleChatArchiveTrashView() {
+  _chatArchiveTrashView = !_chatArchiveTrashView;
+  _expandedArchiveDates.clear();
+  renderChatArchiveModal();
+}
+
+async function emptyChatArchiveTrash() {
+  const trashIds = (state.chatArchive || []).filter(a => a._deleted).map(a => a.id || a.date);
+  if (trashIds.length === 0) {
+    showToast('휴지통이 이미 비어 있어');
+    return;
+  }
+  const yes = await showConfirmModal({
+    title: '🗑️ 휴지통 비우기',
+    message: `${trashIds.length}개 대화 + 그 대화에서 추출된 derived 항목들이 영구 삭제돼. 복구 X.`,
+    okLabel: '비우기',
+    cancelLabel: '취소'
+  });
+  if (!yes) return;
+  if (typeof _purgeArchive !== 'function') {
+    showToast('영구삭제 helper 가 로드 안 됐어');
+    return;
+  }
+  trashIds.forEach(id => _purgeArchive(id));
+  saveState();
+  showToast(`🗑️ ${trashIds.length}개 영구 삭제됨`);
+  renderChatArchiveModal();
+  if (typeof renderArchive === 'function') try { renderArchive(); } catch {}
+  if (typeof renderModelTab === 'function') try { renderModelTab(); } catch {}
 }
 
 // V3.8: 챕터 토픽 추출. 사용자 명시 2026-05-01 ultrathink: passedMessages arg 받음 (4AM 일괄 batch.messages 직접 처리).
@@ -38523,11 +38918,11 @@ function _collectQuarterlyData(quarterKey, stats) {
       return t >= startMs && t <= endMs;
     });
     chatIn = (state.chatMessages || []).filter(m => m.timestamp && m.role === 'user' && inMs(m.timestamp)).slice(-40);
-    topicCardsIn = (state.topicCards || []).filter(t => inMs(t.createdAt));
-    pearlsIn = (state.pearls || []).filter(p => inMs(p.createdAt));
-    archiveIn = (state.archive || []).filter(a => inMs(a.savedAt || a.createdAt));
-    insightsIn = (state.insights || []).filter(i => inMs(i.discoveredAt || i.createdAt));
-    chaptersIn = (state.chatArchive || []).filter(c => inMs(c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null)));
+    topicCardsIn = (state.topicCards || []).filter(t => !t._deleted && inMs(t.createdAt));
+    pearlsIn = (state.pearls || []).filter(p => !p._deleted && inMs(p.createdAt));
+    archiveIn = (state.archive || []).filter(a => !a._deleted && inMs(a.savedAt || a.createdAt));
+    insightsIn = (state.insights || []).filter(i => !i._deleted && inMs(i.discoveredAt || i.createdAt));
+    chaptersIn = (state.chatArchive || []).filter(c => !c._deleted && inMs(c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null)));
   }
   return { quarterKey, stats, recentEmbodied, prevSeeds, entriesIn, chatIn, topicCardsIn, pearlsIn, archiveIn, insightsIn, chaptersIn };
 }
@@ -38676,7 +39071,7 @@ async function runDiaryAutoSummaryIfNeeded() {
       && (_isTesterDS || !m._seed)
     );
     if (messages.length < 2) {
-      const archived = (state.chatArchive || []).find(a => a.date === dateKey && (_isTesterDS || !a._seed));
+      const archived = (state.chatArchive || []).find(a => a.date === dateKey && !a._deleted && (_isTesterDS || !a._seed));
       if (archived && Array.isArray(archived.messages)) {
         messages = archived.messages.filter(m => _isTesterDS || !m._seed);
       }
@@ -40952,7 +41347,7 @@ function _buildFunStatsSlideHTML(stats, inRange) {
   }
 
   // 7) ↻ 가장 다시 본 깨달음
-  const arrs = (state.archive || []).filter(a => a.savedAt && inRange(a.savedAt));
+  const arrs = (state.archive || []).filter(a => !a._deleted && a.savedAt && inRange(a.savedAt));
   const topRevisit = arrs.slice().sort((a,b) => (b.revisitCount || 0) - (a.revisitCount || 0))[0];
   if (topRevisit && (topRevisit.revisitCount || 0) >= 2) {
     items.push({ icon: '↻', big: `${topRevisit.revisitCount}번`, label: `"${(topRevisit.headline || '').slice(0,18)}" — 살아있는 통찰`, tone: 'teal' });
@@ -42642,13 +43037,13 @@ async function forceAnalyze(opts) {
       chatMessages: state.chatMessages.filter(m => !m.typing && !m.error).slice(-25).map(m => ({
         role: m.role, content: (m.content || '').slice(0, 200)
       })),
-      archive: (state.archive || []).slice(0, 15).map(a => ({
+      archive: (state.archive || []).filter(a => !a._deleted).slice(0, 15).map(a => ({
         type: a.type, headline: a.headline, body: (a.body || '').slice(0, 100)
       })),
       missions: (state.missions || []).slice(-15).map(m => ({
         title: m.title, status: m.status, attemptStatus: m.attemptStatus
       })),
-      decisions: (state.decisions || []).slice(-5).map(d => ({
+      decisions: (state.decisions || []).filter(d => !d._deleted).slice(-5).map(d => ({
         topic: d.topic || d.title, status: d.status
       })),
       activeModes: Object.keys(state.modes || {}).filter(k => state.modes[k])
@@ -42938,6 +43333,9 @@ function _pushMagicReflectionArchive(batch) {
 // inline (일반 API) 처리 — submit 실패 시 fallback / 12h timeout fallback.
 async function _runDailyExtractInline(pending) {
   for (const batch of pending) {
+    // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
+    // sourceArchiveId 박음 (cascade soft delete 추적용).
+    const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
     try {
       if (batch.messages.length >= 6) {
         await extractChapterCaseAnalysis(batch.messages);
@@ -42949,6 +43347,9 @@ async function _runDailyExtractInline(pending) {
       }
     } catch (e) { console.warn('[inline] topic fail:', e); }
     _pushMagicReflectionArchive(batch);
+    if (_before && typeof _stampSourceArchiveId === 'function') {
+      _stampSourceArchiveId(_before, batch.id, batch);
+    }
     delete batch._pendingExtract;
     delete batch._pendingCaseAnalysis;
     delete batch._batchSubmittedAt;
@@ -43094,7 +43495,7 @@ function _buildDiaryBatchRequests() {
       && (_isTesterBD || !m._seed)
     );
     if (messages.length < 2) {
-      const archived = (state.chatArchive || []).find(a => a.date === dateKey && (_isTesterBD || !a._seed));
+      const archived = (state.chatArchive || []).find(a => a.date === dateKey && !a._deleted && (_isTesterBD || !a._seed));
       if (archived && Array.isArray(archived.messages)) {
         messages = archived.messages.filter(m => _isTesterBD || !m._seed);
       }
@@ -43334,8 +43735,11 @@ async function _resumePendingBatch() {
       const type = customId.slice(0, idx);
       const archiveId = customId.slice(idx + 1);
       const archiveItem = (state.chatArchive || []).find(a => a.id === archiveId);
-      if (!archiveItem) continue;
+      if (!archiveItem || archiveItem._deleted) continue;
 
+      // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
+      // sourceArchiveId 박음 (cascade soft delete 추적용).
+      const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
       try {
         if (type === 'case') {
           const jm = text.match(/\{[\s\S]*\}/);
@@ -43356,12 +43760,19 @@ async function _resumePendingBatch() {
           }
         }
       } catch (e) { console.warn('[batch result process] fail:', customId, e); }
+      if (_before && typeof _stampSourceArchiveId === 'function') {
+        _stampSourceArchiveId(_before, archiveItem.id, archiveItem);
+      }
     }
 
     // 정리 — pending 마커 제거 + magic/reflection archive push
     (state.chatArchive || []).forEach(a => {
       if (pb.archive_ids?.includes(a.id)) {
+        const _bef = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
         _pushMagicReflectionArchive(a);
+        if (_bef && typeof _stampSourceArchiveId === 'function') {
+          _stampSourceArchiveId(_bef, a.id, a);
+        }
         delete a._pendingExtract;
         delete a._pendingCaseAnalysis;
         delete a._batchSubmittedAt;
@@ -43434,7 +43845,7 @@ async function _timeoutPendingBatch() {
   const pb = state.pendingBatch;
   if (!pb) return;
   const targets = (state.chatArchive || []).filter(a =>
-    pb.archive_ids?.includes(a.id) && (a._pendingExtract || a._pendingCaseAnalysis)
+    pb.archive_ids?.includes(a.id) && !a._deleted && (a._pendingExtract || a._pendingCaseAnalysis)
   );
   // 사용자 명시 2026-05-02 ultrathink: review_pending / diary_pending_dates 안 것 들 inline fallback.
   const reviewTypes = Array.isArray(pb.review_pending) ? pb.review_pending.slice() : [];
@@ -43527,7 +43938,7 @@ async function maybeRunDailyChapterExtract() {
 
   // 5. pending archive 모음
   const pending = (state.chatArchive || []).filter(a =>
-    a && (a._pendingExtract || a._pendingCaseAnalysis) && Array.isArray(a.messages) && a.messages.length >= 3
+    a && !a._deleted && (a._pendingExtract || a._pendingCaseAnalysis) && Array.isArray(a.messages) && a.messages.length >= 3
   );
   if (pending.length === 0) {
     state.lastDailyChapterExtractAt = new Date().toISOString();

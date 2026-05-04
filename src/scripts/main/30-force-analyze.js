@@ -39,13 +39,13 @@ async function forceAnalyze(opts) {
       chatMessages: state.chatMessages.filter(m => !m.typing && !m.error).slice(-25).map(m => ({
         role: m.role, content: (m.content || '').slice(0, 200)
       })),
-      archive: (state.archive || []).slice(0, 15).map(a => ({
+      archive: (state.archive || []).filter(a => !a._deleted).slice(0, 15).map(a => ({
         type: a.type, headline: a.headline, body: (a.body || '').slice(0, 100)
       })),
       missions: (state.missions || []).slice(-15).map(m => ({
         title: m.title, status: m.status, attemptStatus: m.attemptStatus
       })),
-      decisions: (state.decisions || []).slice(-5).map(d => ({
+      decisions: (state.decisions || []).filter(d => !d._deleted).slice(-5).map(d => ({
         topic: d.topic || d.title, status: d.status
       })),
       activeModes: Object.keys(state.modes || {}).filter(k => state.modes[k])
@@ -335,6 +335,9 @@ function _pushMagicReflectionArchive(batch) {
 // inline (일반 API) 처리 — submit 실패 시 fallback / 12h timeout fallback.
 async function _runDailyExtractInline(pending) {
   for (const batch of pending) {
+    // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
+    // sourceArchiveId 박음 (cascade soft delete 추적용).
+    const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
     try {
       if (batch.messages.length >= 6) {
         await extractChapterCaseAnalysis(batch.messages);
@@ -346,6 +349,9 @@ async function _runDailyExtractInline(pending) {
       }
     } catch (e) { console.warn('[inline] topic fail:', e); }
     _pushMagicReflectionArchive(batch);
+    if (_before && typeof _stampSourceArchiveId === 'function') {
+      _stampSourceArchiveId(_before, batch.id, batch);
+    }
     delete batch._pendingExtract;
     delete batch._pendingCaseAnalysis;
     delete batch._batchSubmittedAt;
@@ -491,7 +497,7 @@ function _buildDiaryBatchRequests() {
       && (_isTesterBD || !m._seed)
     );
     if (messages.length < 2) {
-      const archived = (state.chatArchive || []).find(a => a.date === dateKey && (_isTesterBD || !a._seed));
+      const archived = (state.chatArchive || []).find(a => a.date === dateKey && !a._deleted && (_isTesterBD || !a._seed));
       if (archived && Array.isArray(archived.messages)) {
         messages = archived.messages.filter(m => _isTesterBD || !m._seed);
       }
@@ -731,8 +737,11 @@ async function _resumePendingBatch() {
       const type = customId.slice(0, idx);
       const archiveId = customId.slice(idx + 1);
       const archiveItem = (state.chatArchive || []).find(a => a.id === archiveId);
-      if (!archiveItem) continue;
+      if (!archiveItem || archiveItem._deleted) continue;
 
+      // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
+      // sourceArchiveId 박음 (cascade soft delete 추적용).
+      const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
       try {
         if (type === 'case') {
           const jm = text.match(/\{[\s\S]*\}/);
@@ -753,12 +762,19 @@ async function _resumePendingBatch() {
           }
         }
       } catch (e) { console.warn('[batch result process] fail:', customId, e); }
+      if (_before && typeof _stampSourceArchiveId === 'function') {
+        _stampSourceArchiveId(_before, archiveItem.id, archiveItem);
+      }
     }
 
     // 정리 — pending 마커 제거 + magic/reflection archive push
     (state.chatArchive || []).forEach(a => {
       if (pb.archive_ids?.includes(a.id)) {
+        const _bef = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
         _pushMagicReflectionArchive(a);
+        if (_bef && typeof _stampSourceArchiveId === 'function') {
+          _stampSourceArchiveId(_bef, a.id, a);
+        }
         delete a._pendingExtract;
         delete a._pendingCaseAnalysis;
         delete a._batchSubmittedAt;
@@ -831,7 +847,7 @@ async function _timeoutPendingBatch() {
   const pb = state.pendingBatch;
   if (!pb) return;
   const targets = (state.chatArchive || []).filter(a =>
-    pb.archive_ids?.includes(a.id) && (a._pendingExtract || a._pendingCaseAnalysis)
+    pb.archive_ids?.includes(a.id) && !a._deleted && (a._pendingExtract || a._pendingCaseAnalysis)
   );
   // 사용자 명시 2026-05-02 ultrathink: review_pending / diary_pending_dates 안 것 들 inline fallback.
   const reviewTypes = Array.isArray(pb.review_pending) ? pb.review_pending.slice() : [];
@@ -924,7 +940,7 @@ async function maybeRunDailyChapterExtract() {
 
   // 5. pending archive 모음
   const pending = (state.chatArchive || []).filter(a =>
-    a && (a._pendingExtract || a._pendingCaseAnalysis) && Array.isArray(a.messages) && a.messages.length >= 3
+    a && !a._deleted && (a._pendingExtract || a._pendingCaseAnalysis) && Array.isArray(a.messages) && a.messages.length >= 3
   );
   if (pending.length === 0) {
     state.lastDailyChapterExtractAt = new Date().toISOString();

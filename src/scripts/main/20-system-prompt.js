@@ -207,9 +207,10 @@ function buildSystemPromptParts() {
   if (state.profile) stable.push(`[사용자 프로필]\n${state.profile}\n`);
 
   // 사용자 요청 2026-04-29 (perf #5): 시스템 프롬프트 cap — 매우 많을 때 verified 우선 + 최대 30개 (확신도 높은 순)
+  // V4 사용자 명시 2026-05-04 ultrathink: _deleted (히스토리 삭제 cascade) 항목 제외.
   const _topByConfVerified = (arr, max) => {
     if (!Array.isArray(arr)) return [];
-    return arr.slice().sort((a, b) => {
+    return arr.filter(x => !x._deleted).slice().sort((a, b) => {
       const av = a.user_verified ? 1 : 0;
       const bv = b.user_verified ? 1 : 0;
       if (av !== bv) return bv - av;
@@ -256,8 +257,9 @@ function buildSystemPromptParts() {
     if (dev.childhood) devLines.push('어린 시절: ' + dev.childhood.slice(0, 300));
     if (dev.schoolYears) devLines.push('학창 시절: ' + dev.schoolYears.slice(0, 300));
     if (dev.adhdDiscovery) devLines.push('자기 인식·발견: ' + dev.adhdDiscovery.slice(0, 300));
-    if (Array.isArray(dev.turningPoints) && dev.turningPoints.length) {
-      const tps = dev.turningPoints.slice(0, 8).map(tp => `${tp.when || '?'}: ${(tp.title || '').slice(0, 40)}${tp.impact ? ' (' + tp.impact.slice(0, 60) + ')' : ''}`).join(' | ');
+    const _activeTPs = Array.isArray(dev.turningPoints) ? dev.turningPoints.filter(tp => !tp._deleted) : [];
+    if (_activeTPs.length) {
+      const tps = _activeTPs.slice(0, 8).map(tp => `${tp.when || '?'}: ${(tp.title || '').slice(0, 40)}${tp.impact ? ' (' + tp.impact.slice(0, 60) + ')' : ''}`).join(' | ');
       devLines.push('전환점: ' + tps);
     }
     if (devLines.length) {
@@ -265,7 +267,7 @@ function buildSystemPromptParts() {
       devLines.forEach(l => stable.push(l));
     }
     // 관계 맵
-    const rels = Array.isArray(udp.relationships) ? udp.relationships.slice(0, 10) : [];
+    const rels = Array.isArray(udp.relationships) ? udp.relationships.filter(r => !r._deleted).slice(0, 10) : [];
     if (rels.length) {
       stable.push('— 관계 맵 —');
       rels.forEach(r => {
@@ -460,10 +462,11 @@ function buildSystemPromptParts() {
     volatile.push('');
   }
 
-  if (state.archive.length > 0) {
+  const _activeArchive = (state.archive || []).filter(a => !a._deleted);
+  if (_activeArchive.length > 0) {
     volatile.push('[과거 깨달음 (최근 5개)]');
     // 사용자 요청 2026-04-29 (perf #5): insight 길면 자름 (180자)
-    state.archive.slice(0, 5).forEach(a => volatile.push(`- ${a.date}: ${(a.insight || '').slice(0, 180)}`));
+    _activeArchive.slice(0, 5).forEach(a => volatile.push(`- ${a.date}: ${(a.insight || '').slice(0, 180)}`));
   }
 
   // Mission state

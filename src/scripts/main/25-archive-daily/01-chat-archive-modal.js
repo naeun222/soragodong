@@ -7,6 +7,7 @@ let _expandedArchiveDates = new Set();
 let _chatArchiveEscDetach = null;
 function openChatArchive() {
   _expandedArchiveDates.clear();
+  _chatArchiveTrashView = false;
   renderChatArchiveModal();
   const overlay = document.getElementById('chatArchiveOverlay');
   overlay.style.display = 'flex';
@@ -25,21 +26,50 @@ function closeChatArchive() {
   if (_chatArchiveEscDetach) { _chatArchiveEscDetach(); _chatArchiveEscDetach = null; }
 }
 
+// V4 사용자 명시 2026-05-04: 휴지통 보기 토글 (false = 일반, true = 삭제됨만).
+let _chatArchiveTrashView = false;
+
 function renderChatArchiveModal() {
   const container = document.getElementById('chatArchiveContent');
   if (!container) return;
-  
-  const archive = (state.chatArchive || []).slice().sort((a, b) => 
-    new Date(b.date) - new Date(a.date)
-  );
-  
-  if (archive.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
-      <div style="font-size:32px; margin-bottom:12px;">📚</div>
-      아직 보관된 대화가 없어.<br>
-      7일 넘은 대화가 자동으로 여기 모일 거야.<br>
-      <span style="font-size:11px; opacity:0.8;">📌 핀 꽂으면 영구 보관됨.</span>
+
+  // V4 사용자 명시 2026-05-04: 휴지통 분리 — 일반은 !_deleted, 휴지통은 _deleted 만.
+  const allArchive = (state.chatArchive || []).slice();
+  const trashCount = allArchive.filter(a => a._deleted).length;
+  const archive = allArchive
+    .filter(a => _chatArchiveTrashView ? a._deleted : !a._deleted)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // 헤더 (휴지통 토글 / 비우기)
+  const headerHtml = `
+    <div class="cac-toolbar" style="display:flex; gap:6px; align-items:center; justify-content:space-between; padding:8px 4px 12px; border-bottom:1px solid var(--border); margin-bottom:10px;">
+      <div style="font-size:12px; color:var(--text-soft);">
+        ${_chatArchiveTrashView ? `🗑️ 휴지통 — ${trashCount}개` : `📚 보관된 대화 — ${archive.length}개`}
+      </div>
+      <div style="display:flex; gap:4px;">
+        ${_chatArchiveTrashView && trashCount > 0
+          ? `<button class="btn-secondary" onclick="emptyChatArchiveTrash()" style="font-size:11px; padding:4px 8px; color:#c44;">비우기</button>` : ''}
+        <button class="btn-secondary" onclick="toggleChatArchiveTrashView()" style="font-size:11px; padding:4px 8px;">
+          ${_chatArchiveTrashView ? '← 보관함' : `🗑️ 휴지통${trashCount > 0 ? ` (${trashCount})` : ''}`}
+        </button>
+      </div>
     </div>`;
+
+  if (archive.length === 0) {
+    if (_chatArchiveTrashView) {
+      container.innerHTML = headerHtml + `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
+        <div style="font-size:32px; margin-bottom:12px;">🗑️</div>
+        휴지통이 비어 있어.<br>
+        <span style="font-size:11px; opacity:0.8;">대화 카드 ✕ 누르면 여기로 와.</span>
+      </div>`;
+    } else {
+      container.innerHTML = headerHtml + `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
+        <div style="font-size:32px; margin-bottom:12px;">📚</div>
+        아직 보관된 대화가 없어.<br>
+        7일 넘은 대화가 자동으로 여기 모일 거야.<br>
+        <span style="font-size:11px; opacity:0.8;">📌 핀 꽂으면 영구 보관됨.</span>
+      </div>`;
+    }
     return;
   }
 
@@ -49,7 +79,7 @@ function renderChatArchiveModal() {
     return 0;
   });
 
-  container.innerHTML = sortedArchive.map(a => {
+  container.innerHTML = headerHtml + sortedArchive.map(a => {
     const dateLabel = new Date(a.date).toLocaleDateString('ko-KR', {
       year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
     });
@@ -73,13 +103,32 @@ function renderChatArchiveModal() {
       : '';
     const cardOpacity = isPending ? '0.7' : '1';
 
+    // V4 사용자 명시 2026-05-04: 휴지통/일반 별 액션 버튼 분기.
+    const isTrash = !!a._deleted;
+    const headerActionsHtml = isTrash ? `
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); restoreChatArchive('${archId}')" title="복구" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px;">↻</button>
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); purgeChatArchive('${archId}')" title="영구 삭제" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; color:#c44;">✕</button>
+    ` : `
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); toggleArchivePin('${a.date}')" title="${pinTitle}" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; opacity:${a.pinned ? '1' : '0.5'};">${pinIcon}</button>
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); softDeleteChatArchive('${archId}')" title="삭제 (휴지통으로)" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; opacity:0.5;">🗑️</button>
+    `;
+    const expandedActions = isTrash ? `
+      <div style="display:flex; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+        <button class="btn-secondary" onclick="event.stopPropagation(); restoreChatArchive('${archId}')" style="flex:1; font-size:11.5px; padding:8px;">↻ 복구</button>
+        <button class="btn-secondary" onclick="event.stopPropagation(); purgeChatArchive('${archId}')" style="flex:1; font-size:11.5px; padding:8px; color:#c44;">✕ 영구 삭제</button>
+      </div>
+    ` : `
+      <div style="display:flex; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+        <button class="btn-secondary" onclick="event.stopPropagation(); resumeArchiveChat('${archId}')" style="flex:1; font-size:11.5px; padding:8px;">↩️ 이어서 하기</button>
+      </div>
+    `;
     return `
-      <div class="chat-archive-card${a.pinned ? ' pinned' : ''}" style="opacity:${cardOpacity};">
+      <div class="chat-archive-card${a.pinned ? ' pinned' : ''}${isTrash ? ' deleted' : ''}" style="opacity:${isTrash ? '0.6' : cardOpacity};">
         <div class="cac-header" onclick="toggleArchiveDay('${archId}')">
-          <div class="cac-date">${a.pinned ? '📌 ' : ''}${dateLabel}</div>
+          <div class="cac-date">${isTrash ? '🗑️ ' : (a.pinned ? '📌 ' : '')}${dateLabel}</div>
           <div class="cac-meta">
             <span>${a.messageCount || 0}개 메시지</span>
-            <button class="cac-pin-btn" onclick="event.stopPropagation(); toggleArchivePin('${a.date}')" title="${pinTitle}" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; opacity:${a.pinned ? '1' : '0.5'};">${pinIcon}</button>
+            ${headerActionsHtml}
             <span class="cac-toggle">${isExpanded ? '▾' : '▸'}</span>
           </div>
         </div>
@@ -97,9 +146,7 @@ function renderChatArchiveModal() {
                 <div class="cac-msg-content">${escapeHtml(content.slice(0, 500))}${content.length > 500 ? '...' : ''}</div>
               </div>`;
             }).join('')}
-            <div style="display:flex; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
-              <button class="btn-secondary" onclick="event.stopPropagation(); resumeArchiveChat('${archId}')" style="flex:1; font-size:11.5px; padding:8px;">↩️ 이어서 하기</button>
-            </div>
+            ${expandedActions}
           </div>
         ` : ''}
       </div>
@@ -166,6 +213,106 @@ function toggleArchiveDay(date) {
     _expandedArchiveDates.add(date);
   }
   renderChatArchiveModal();
+}
+
+// V4 사용자 명시 2026-05-04: 챗 히스토리 카드 삭제 (휴지통 이동) — _softDeleteArchiveCascade 가
+// derived 항목 (traits/values/patterns/insights/pearls/topicCards/cf.* 등) 도 _deleted 박음 →
+// 미래 주/월/계절/연 분석에 들어가지 않음. 휴지통에서 복구 또는 영구 삭제 가능.
+async function softDeleteChatArchive(archId) {
+  const yes = await showConfirmModal({
+    title: '🗑️ 이 대화를 삭제할까?',
+    message: '휴지통으로 이동돼.\n이 대화에서 추출된 깨달음·특성·가치·패턴도 함께 숨김 처리되고, 앞으로의 주·월·계절·연 분석에 들어가지 않아.\n\n휴지통에서 복구하거나 영구 삭제할 수 있어.',
+    okLabel: '삭제',
+    cancelLabel: '취소'
+  });
+  if (!yes) return;
+  if (typeof _softDeleteArchiveCascade !== 'function') {
+    showToast('삭제 helper 가 로드 안 됐어');
+    return;
+  }
+  const counts = _softDeleteArchiveCascade(archId);
+  saveState();
+  // 토스트 — cascade 영향 요약
+  if (counts) {
+    const total = (counts.traits || 0) + (counts.values || 0) + (counts.patterns || 0)
+                + (counts.archive || 0) + (counts.pearls || 0) + (counts.insights || 0)
+                + (counts.topicCards || 0) + (counts.udpTurningPoints || 0) + (counts.udpRelationships || 0);
+    if (total > 0) {
+      showToast(`🗑️ 삭제 — 추출된 ${total}개 항목도 함께 숨김`);
+    } else {
+      showToast('🗑️ 휴지통으로 이동');
+    }
+  } else {
+    showToast('🗑️ 휴지통으로 이동');
+  }
+  renderChatArchiveModal();
+  // 도서관 / 나탭 등 영향받는 화면 갱신
+  if (typeof renderArchive === 'function') try { renderArchive(); } catch {}
+  if (typeof renderModelTab === 'function') try { renderModelTab(); } catch {}
+}
+
+async function restoreChatArchive(archId) {
+  if (typeof _restoreArchiveCascade !== 'function') {
+    showToast('복구 helper 가 로드 안 됐어');
+    return;
+  }
+  _restoreArchiveCascade(archId);
+  saveState();
+  showToast('↻ 복구됨');
+  renderChatArchiveModal();
+  if (typeof renderArchive === 'function') try { renderArchive(); } catch {}
+  if (typeof renderModelTab === 'function') try { renderModelTab(); } catch {}
+}
+
+async function purgeChatArchive(archId) {
+  const yes = await showConfirmModal({
+    title: '✕ 영구 삭제할까?',
+    message: '복구할 수 없어.\n이 대화 + 그 대화에서 추출된 derived 항목 (객체형) 이 완전히 사라져.',
+    okLabel: '영구 삭제',
+    cancelLabel: '취소'
+  });
+  if (!yes) return;
+  if (typeof _purgeArchive !== 'function') {
+    showToast('영구삭제 helper 가 로드 안 됐어');
+    return;
+  }
+  _purgeArchive(archId);
+  saveState();
+  showToast('✕ 영구 삭제됨');
+  renderChatArchiveModal();
+  if (typeof renderArchive === 'function') try { renderArchive(); } catch {}
+  if (typeof renderModelTab === 'function') try { renderModelTab(); } catch {}
+}
+
+function toggleChatArchiveTrashView() {
+  _chatArchiveTrashView = !_chatArchiveTrashView;
+  _expandedArchiveDates.clear();
+  renderChatArchiveModal();
+}
+
+async function emptyChatArchiveTrash() {
+  const trashIds = (state.chatArchive || []).filter(a => a._deleted).map(a => a.id || a.date);
+  if (trashIds.length === 0) {
+    showToast('휴지통이 이미 비어 있어');
+    return;
+  }
+  const yes = await showConfirmModal({
+    title: '🗑️ 휴지통 비우기',
+    message: `${trashIds.length}개 대화 + 그 대화에서 추출된 derived 항목들이 영구 삭제돼. 복구 X.`,
+    okLabel: '비우기',
+    cancelLabel: '취소'
+  });
+  if (!yes) return;
+  if (typeof _purgeArchive !== 'function') {
+    showToast('영구삭제 helper 가 로드 안 됐어');
+    return;
+  }
+  trashIds.forEach(id => _purgeArchive(id));
+  saveState();
+  showToast(`🗑️ ${trashIds.length}개 영구 삭제됨`);
+  renderChatArchiveModal();
+  if (typeof renderArchive === 'function') try { renderArchive(); } catch {}
+  if (typeof renderModelTab === 'function') try { renderModelTab(); } catch {}
 }
 
 // V3.8: 챕터 토픽 추출. 사용자 명시 2026-05-01 ultrathink: passedMessages arg 받음 (4AM 일괄 batch.messages 직접 처리).
