@@ -290,7 +290,7 @@ const DEFAULT_STATE = {
   unlocked: {
     core1: false,  // 시작/체크인/대화 (한 바퀴) — 업데이트 배너 보기 → 코어 튜토리얼
     core2: false,  // 소라의 부름 → 모래사장 → 양생방
-    core3: false,  // 실행 탭 — 머릿속 풀기 + 몰입
+    core3: false,  // 실행 탭 — 고동에게 맡기기 + 몰입
     core4: false,  // 나 탭 — 분석 결과
     core5: false,  // 도서관 탭 5 카테고리 + 리뷰
     core6: false,  // 숙고 질문

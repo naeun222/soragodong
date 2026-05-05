@@ -785,7 +785,7 @@ const ONBOARDING_STEPS = [
   {
     id: 'exec_brain_dump_btn',
     targetSelector: 'button[onclick="openBrainDump()"]',
-    title: '🧠 머릿속 풀기 — 직접 해보자',
+    title: '🧠 고동에게 맡기기 — 직접 해보자',
     body: '이 버튼 누르면 네 할 일을 와다다 적을 수 있어.<br>예시 미리 채워줄게 — 그냥 눌러봐!<br><br><span class="small">와다다 적으면 내가 가장 중요한 3장으로 골라줄게.</span>',
     waitFor: 'click',
     advanceDelay: 800,

@@ -306,7 +306,7 @@ function renderExecute() {
     // 사용자 명시 2026-05-03: 서랍장 button 제거 — 메인 section 의 drawer-row list (line 31266+) 와 중복 (이미 있는 기능).
     html += `
       <div class="exec-actions-row">
-        <button onclick="openBrainDump()">🧠 머릿속 풀기</button>
+        <button onclick="openBrainDump()">🧠 고동에게 맡기기</button>
         <button onclick="addManualTask()">➕ 직접 추가</button>
       </div>
     `;

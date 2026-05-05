@@ -11871,7 +11871,7 @@ const DEFAULT_STATE = {
   unlocked: {
     core1: false,  // 시작/체크인/대화 (한 바퀴) — 업데이트 배너 보기 → 코어 튜토리얼
     core2: false,  // 소라의 부름 → 모래사장 → 양생방
-    core3: false,  // 실행 탭 — 머릿속 풀기 + 몰입
+    core3: false,  // 실행 탭 — 고동에게 맡기기 + 몰입
     core4: false,  // 나 탭 — 분석 결과
     core5: false,  // 도서관 탭 5 카테고리 + 리뷰
     core6: false,  // 숙고 질문
@@ -17873,7 +17873,7 @@ const ONBOARDING_STEPS = [
   {
     id: 'exec_brain_dump_btn',
     targetSelector: 'button[onclick="openBrainDump()"]',
-    title: '🧠 머릿속 풀기 — 직접 해보자',
+    title: '🧠 고동에게 맡기기 — 직접 해보자',
     body: '이 버튼 누르면 네 할 일을 와다다 적을 수 있어.<br>예시 미리 채워줄게 — 그냥 눌러봐!<br><br><span class="small">와다다 적으면 내가 가장 중요한 3장으로 골라줄게.</span>',
     waitFor: 'click',
     advanceDelay: 800,
@@ -18708,7 +18708,7 @@ async function showCoreReplayPicker() {
   const opts = [
     { label: '🐚 시작',             value: 'core1', desc: '체크인 / 대화 한 바퀴 (필수 핵심)' },
     { label: '⭐ 소라의 부름',      value: 'core2', desc: '미션 / 모래사장 / 양생방 (좀 긺)' },
-    { label: '🚀 실행',             value: 'core3', desc: '머릿속 풀기 + 몰입' },
+    { label: '🚀 실행',             value: 'core3', desc: '고동에게 맡기기 + 몰입' },
     { label: '✦ 나',                value: 'core4', desc: 'AI가 본 너의 패턴·가치·특성' },
     { label: '📚 도서관',           value: 'core5', desc: '일기 / 진주 / 깨달음 / 리뷰 (좀 긺)' },
     { label: '🌊 숙고',             value: 'core6', desc: '마음을 울리는 큰 물음' },
@@ -36110,7 +36110,7 @@ function renderExecute() {
     // 사용자 명시 2026-05-03: 서랍장 button 제거 — 메인 section 의 drawer-row list (line 31266+) 와 중복 (이미 있는 기능).
     html += `
       <div class="exec-actions-row">
-        <button onclick="openBrainDump()">🧠 머릿속 풀기</button>
+        <button onclick="openBrainDump()">🧠 고동에게 맡기기</button>
         <button onclick="addManualTask()">➕ 직접 추가</button>
       </div>
     `;
@@ -41149,7 +41149,7 @@ function renderBlockPickerContent() {
     html = `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
       넣을 게 없어.<br>
-      "🧠 머릿속 풀기"로 카드 발급받거나<br>
+      "🧠 고동에게 맡기기"로 카드 발급받거나<br>
       대화에서 할 일 흘리면 여기 모여.
     </div>`;
   }

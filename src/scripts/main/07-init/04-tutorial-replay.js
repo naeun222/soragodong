@@ -15,7 +15,7 @@ async function showCoreReplayPicker() {
   const opts = [
     { label: '🐚 시작',             value: 'core1', desc: '체크인 / 대화 한 바퀴 (필수 핵심)' },
     { label: '⭐ 소라의 부름',      value: 'core2', desc: '미션 / 모래사장 / 양생방 (좀 긺)' },
-    { label: '🚀 실행',             value: 'core3', desc: '머릿속 풀기 + 몰입' },
+    { label: '🚀 실행',             value: 'core3', desc: '고동에게 맡기기 + 몰입' },
     { label: '✦ 나',                value: 'core4', desc: 'AI가 본 너의 패턴·가치·특성' },
     { label: '📚 도서관',           value: 'core5', desc: '일기 / 진주 / 깨달음 / 리뷰 (좀 긺)' },
     { label: '🌊 숙고',             value: 'core6', desc: '마음을 울리는 큰 물음' },

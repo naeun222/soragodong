@@ -84,7 +84,7 @@ function renderBlockPickerContent() {
     html = `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
       넣을 게 없어.<br>
-      "🧠 머릿속 풀기"로 카드 발급받거나<br>
+      "🧠 고동에게 맡기기"로 카드 발급받거나<br>
       대화에서 할 일 흘리면 여기 모여.
     </div>`;
   }
