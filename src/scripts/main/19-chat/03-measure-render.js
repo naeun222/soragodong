@@ -12,10 +12,10 @@ function toggleChatEmptyExamples() {
   const isOpen = list.style.display !== 'none' && list.style.display !== '';
   if (isOpen) {
     list.style.display = 'none';
-    btn.textContent = '예시 보기 ▾';
+    btn.textContent = '무슨 말 할까? ▾';
   } else {
     list.style.display = 'flex';
-    btn.textContent = '예시 숨기기 ▴';
+    btn.textContent = '무슨 말 할까? ▴';
   }
 }
 
@@ -97,7 +97,7 @@ function renderChat() {
     // 사용자 명시 2026-05-06: empty bubble — 예시 리스트는 토글 뒤로 숨김 (기본 접힘, 토글 클릭 시 펼침).
     const examples = (typeof EMPTY_STATE_EXAMPLES !== 'undefined' && Array.isArray(EMPTY_STATE_EXAMPLES)) ? EMPTY_STATE_EXAMPLES : [];
     const examplesBlock = examples.length
-      ? `<button class="chat-empty-toggle" id="chatEmptyExamplesToggle" onclick="toggleChatEmptyExamples()">예시 보기 ▾</button><ul class="chat-empty-list" id="chatEmptyExamplesList" style="display:none;">${examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>`
+      ? `<button class="chat-empty-toggle" id="chatEmptyExamplesToggle" onclick="toggleChatEmptyExamples()">무슨 말 할까? ▾</button><ul class="chat-empty-list" id="chatEmptyExamplesList" style="display:none;">${examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>`
       : '';
     container.innerHTML = archiveHeader + `<div class="msg assistant">
       <div class="msg-bubble">안녕 🐚 왔구나.

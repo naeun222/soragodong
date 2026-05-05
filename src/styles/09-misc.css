@@ -694,22 +694,22 @@
   .disabled-locked { opacity: 0.45; cursor: not-allowed; }
   .disabled-locked::after { content: ' 🔒'; font-size: 0.85em; }
   .disabled-locked:hover { opacity: 0.55; }
-  /* 사용자 명시 2026-05-06: 빈 채팅 진입 시 — 예시 리스트 토글 (기본 접힘) */
+  /* 사용자 명시 2026-05-06: empty bubble 예시 토글 — 글씨 형태 (알약 X), 인사 밑 줄 */
   .chat-empty-toggle {
-    display: inline-block;
+    display: block;
     margin-top: 14px;
-    padding: 6px 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    color: var(--text-dim);
-    font-size: 11px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--accent2, var(--text-dim));
+    font-size: 12px;
     font-family: inherit;
     cursor: pointer;
-    transition: background 0.15s, transform 0.12s;
+    text-align: left;
+    transition: opacity 0.15s;
   }
-  .chat-empty-toggle:hover { background: var(--surface2); }
-  .chat-empty-toggle:active { transform: scale(0.97); }
+  .chat-empty-toggle:hover { opacity: 0.75; }
+  .chat-empty-toggle:active { opacity: 0.55; }
   .chat-empty-list {
     list-style: none;
     padding: 0;
