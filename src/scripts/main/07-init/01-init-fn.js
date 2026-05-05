@@ -98,6 +98,11 @@ async function init() {
   await loadFromCloud();
   window._initialDataLoading = false;
 
+  // 사용자 보고 2026-05-06: 모바일 KG이니시스 = 결제창 redirect 흐름 → 돌아온 URL 의 paymentId query 처리.
+  if (typeof _handlePaymentReturn === 'function') {
+    _handlePaymentReturn().catch(e => console.warn('paymentReturn:', e));
+  }
+
   // 사용자 보고 2026-05-04 (VB022): 신규 사용자 기준 초반 잠금이 기존 사용자에게 잘못 적용되던 버그 fix.
   // root cause = init() 초입 (line ~15206) 의 _core2NotUnlocked detect 가 cloud load 전 → 새 device 진입 한 기존 사용자도 missions/shells/topicCards 비어있어서 신규 처리.
   // fix = cloud load 후 재평가 — 실제 데이터 (entries / chatMessages / shellCollection / topicCards / hasSeenWelcomeTutorial / hasSeenV3Tour) 있으면 잠금 해제 강제.

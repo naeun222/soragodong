@@ -34,6 +34,9 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
     const response = await window.PortOne.requestPayment({
       storeId, channelKey, paymentId,
       orderName, totalAmount: amount, currency: 'KRW', payMethod: 'CARD',
+      // 사용자 보고 2026-05-06: 모바일 KG이니시스 = "PC 로 결제" 거부 메시지 → REDIRECTION 강제 + redirectUrl.
+      windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
+      redirectUrl: window.location.origin + (window.location.pathname || '/'),
       customer: { customerId: authUserId || undefined, email: session?.user?.email || undefined, phoneNumber, fullName },
       customData: customData ? JSON.stringify(customData) : undefined
     });
