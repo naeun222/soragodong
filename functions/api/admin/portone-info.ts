@@ -46,15 +46,15 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
         }
       };
       if (probe.method === 'POST') {
-        // PortOne V2 GraphQL 의 Query 루트 = node / merchant / siteAnalysis 만.
-        // merchant 가 핵심 — introspection 으로 inner type 확인 + 직접 query.
+        // __type 이 막혔어 → __schema 로 모든 type 덤프 후 Merchant / Store 검색.
         init.body = JSON.stringify({
           query: `{
-            merchantType: __type(name: "Merchant") {
-              fields { name type { name kind ofType { name kind } } }
-            }
-            merchant {
-              __typename
+            __schema {
+              types {
+                name
+                kind
+                fields { name type { name kind ofType { name kind } } }
+              }
             }
           }`
         });
@@ -63,6 +63,14 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
       const text = await resp.text();
       let data: any;
       try { data = JSON.parse(text); } catch { data = text; }
+      // graphql 응답 = schema 덤프 → Store/Merchant/Channel 관련 type 만 필터.
+      if (probe.name === 'graphql' && data?.data?.__schema?.types) {
+        const filtered = data.data.__schema.types.filter((t: any) => {
+          const n = (t.name || '').toLowerCase();
+          return /store|merchant|channel|platform/.test(n);
+        });
+        data = { filtered_types: filtered, total_types: data.data.__schema.types.length };
+      }
       // 응답 안 storeId 단서 추출 (raw text 검색 — 'store-' prefix UUID).
       const storeIdMatches = text.match(/store-[a-f0-9-]{32,}/gi);
       results[probe.name] = {
