@@ -1,7 +1,68 @@
 // POST /api/billing/refund — 환불 (포트원 자동 환불 + 비례 환불).
+// 사용자 보고 2026-05-06: 단일 409 메시지 ("이미 처리 중이거나 본인 거 X 또는 이미 환불됨") = 진단 어려움
+// → ① 사전 SELECT 분기 진단 ② 'processing' 10분+ stuck 자동 해소 ③ PortOne 측 외부 환불 sync ④ silent catch 제거.
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
-import { cancelPortOnePayment } from '../_lib/portone';
+import { cancelPortOnePayment, fetchPortOnePayment } from '../_lib/portone';
+
+const PROCESSING_STUCK_MS = 10 * 60 * 1000;  // 10분 이상 'processing' = 이전 환불 호출 stuck → 자동 'paid' 복원
+
+async function _restorePaidStatus(env: Env, payment_id: string): Promise<boolean> {
+  try {
+    const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${payment_id}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ status: 'paid', refund_started_at: null })
+    });
+    if (!resp.ok) {
+      const txt = await resp.text().catch(() => '');
+      console.error('[refund] paid 복원 실패:', resp.status, txt.slice(0, 200));
+    }
+    return resp.ok;
+  } catch (e: any) {
+    console.error('[refund] paid 복원 throw:', e?.message || e);
+    return false;
+  }
+}
+
+async function _markRefunded(env: Env, payment_id: string, refund_amount_krw: number, full: boolean, reason: string) {
+  return fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${payment_id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      status: full ? 'refunded' : 'paid',
+      refund_amount_krw,
+      refunded_at: new Date().toISOString(),
+      refund_reason: reason
+    })
+  });
+}
+
+async function _expireSubscription(env: Env, user_id: string) {
+  return fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user_id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      subscription_active: false,
+      subscription_expires_at: new Date().toISOString()
+    })
+  });
+}
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
@@ -15,9 +76,83 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return jsonResponse({ error: 'payment_id 필수' }, 400);
   }
 
-  // 1. 결제 row 조회 + 본인 거 확인 + status='paid' atomic claim (사용자 명시 2026-05-01 agent audit P9)
-  // 이전 = SELECT 후 status check + 그 후 PATCH — 두 번 환불 click race 시 둘 다 paid read → 이중 환불.
-  // fix = PATCH ?status=eq.paid 필터 + status='processing' 으로 atomic 전환. winner 만 진행.
+  // 1. 사전 SELECT — row 존재 / 본인 / status 진단 분기.
+  let existing: any;
+  try {
+    const checkResp = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${payment_id}&user_id=eq.${user.id}&select=id,status,refund_started_at,amount_krw,refund_amount_krw,refunded_at,payment_type,created_at,portone_merchant_uid,portone_imp_uid`,
+      {
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
+        }
+      }
+    );
+    const rows: any[] = await checkResp.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      // user_id 매칭 실패 또는 row 자체가 없음 — 어느 쪽인지 분기.
+      const anyResp = await fetch(
+        `${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${payment_id}&select=id&limit=1`,
+        {
+          headers: {
+            'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
+          }
+        }
+      );
+      const anyRows: any[] = await anyResp.json().catch(() => []);
+      if (Array.isArray(anyRows) && anyRows.length > 0) {
+        return jsonResponse({ error: '본인 결제가 아니야 — 다른 계정으로 로그인했거나 ID 불일치.', code: 'NOT_OWN' }, 403);
+      }
+      return jsonResponse({ error: '결제를 찾을 수 없어 — payment_id 가 잘못됐을 수 있어.', code: 'NOT_FOUND' }, 404);
+    }
+    existing = rows[0];
+  } catch (e: any) {
+    return jsonResponse({ error: '결제 조회 실패: ' + (e?.message || e), code: 'CHECK_FAIL' }, 500);
+  }
+
+  // 1-A. status 별 분기.
+  if (existing.status === 'refunded') {
+    return jsonResponse({
+      error: `이미 환불 완료된 결제 — ${(existing.refund_amount_krw || 0).toLocaleString()}원 환불됨.`,
+      code: 'ALREADY_REFUNDED',
+      refund_amount_krw: existing.refund_amount_krw,
+      refunded_at: existing.refunded_at
+    }, 409);
+  }
+  if (existing.status === 'cancelled' || existing.status === 'partial_cancelled') {
+    return jsonResponse({
+      error: '이미 외부에서 취소된 결제 — 추가 환불 불가.',
+      code: 'ALREADY_CANCELLED'
+    }, 409);
+  }
+  if (existing.status === 'processing') {
+    // stuck 가능성 — refund_started_at 시점 체크.
+    const startedAt = existing.refund_started_at ? new Date(existing.refund_started_at).getTime() : 0;
+    const elapsedMs = startedAt ? Date.now() - startedAt : Infinity;
+    if (elapsedMs > PROCESSING_STUCK_MS) {
+      console.warn('[refund] processing stuck 자동 복원:', payment_id, '경과:', Math.round(elapsedMs / 60000), '분');
+      const restored = await _restorePaidStatus(env, payment_id);
+      if (!restored) {
+        return jsonResponse({ error: 'stuck 해소 실패 — 잠시 후 다시 시도.', code: 'RESTORE_FAIL' }, 500);
+      }
+      // 복원 성공 — 아래 atomic claim 으로.
+    } else {
+      const remainMin = Math.max(1, Math.ceil((PROCESSING_STUCK_MS - elapsedMs) / 60000));
+      return jsonResponse({
+        error: `다른 환불이 처리 중 — 약 ${remainMin}분 후 자동 해제. 잠시 후 다시 시도.`,
+        code: 'PROCESSING'
+      }, 409);
+    }
+  } else if (existing.status !== 'paid') {
+    return jsonResponse({
+      error: `환불 불가 status: ${existing.status}`,
+      code: 'INVALID_STATUS',
+      status: existing.status
+    }, 409);
+  }
+
+  // 2. status='paid' atomic claim (race-safe — 두 번 동시 클릭 시 winner 만 진행).
   let paymentRow: any;
   try {
     const claimResp = await fetch(
@@ -35,15 +170,51 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     );
     const claimed: any = await claimResp.json();
     if (!Array.isArray(claimed) || claimed.length === 0) {
-      // 다른 호출이 winner — 또는 본인 거 X / 이미 refunded.
-      return jsonResponse({ error: '환불 불가 (이미 처리 중이거나 본인 거 X 또는 이미 환불됨)' }, 409);
+      return jsonResponse({ error: '환불 동시 시도 — 잠시 후 다시 시도.', code: 'RACE_LOSER' }, 409);
     }
     paymentRow = claimed[0];
   } catch (e: any) {
-    return jsonResponse({ error: '결제 조회 실패: ' + (e?.message || e) }, 500);
+    return jsonResponse({ error: '결제 claim 실패: ' + (e?.message || e), code: 'CLAIM_FAIL' }, 500);
   }
 
-  // 2. 비례 환불액 계산. 사용자 명시 2026-05-06: 충전 (charge) 흐름 폐기 → subscribe / overage_pack / tier_upgrade 만.
+  const v2PaymentId = paymentRow.portone_merchant_uid || paymentRow.portone_imp_uid;
+
+  // 3. PortOne 측 결제 상태 pre-check — 이미 외부 환불 처리됐으면 우리 DB 만 sync.
+  // 사용자 보고 2026-05-06: 첫 환불 호출이 cloudflare timeout 으로 끊겼지만 PortOne 쪽은 정상 환불된 케이스 가능.
+  try {
+    const fetchResult = await fetchPortOnePayment(env, v2PaymentId);
+    if (fetchResult.ok) {
+      const ponStatus = fetchResult.payment.status;
+      if (ponStatus === 'CANCELLED' || ponStatus === 'PARTIAL_CANCELLED') {
+        const cancelledAmount = Number(fetchResult.payment.amount?.cancelled) || paymentRow.amount_krw;
+        const isFull = ponStatus === 'CANCELLED';
+        await _markRefunded(env, payment_id, cancelledAmount, isFull, reason || '외부 환불 sync');
+        if (paymentRow.payment_type === 'subscribe' || paymentRow.payment_type === 'toss_subscribe') {
+          await _expireSubscription(env, user.id).catch(() => {});
+        }
+        return jsonResponse({
+          ok: true,
+          refunded_krw: cancelledAmount,
+          sync: true,
+          message: '외부에서 이미 환불 처리됨 — DB 동기화 완료. 카드 명세서 확인.'
+        });
+      }
+      // PortOne 측 'PAID' 가 아니면 환불 호출 불가.
+      if (ponStatus !== 'PAID') {
+        await _restorePaidStatus(env, payment_id);
+        return jsonResponse({
+          error: `포트원 측 결제 상태 ${ponStatus} — 환불 호출 불가.`,
+          code: 'PORTONE_NOT_PAID',
+          portone_status: ponStatus
+        }, 409);
+      }
+    }
+    // fetchResult.ok 이 false 여도 cancel 시도 진행 (PortOne 일시 장애 가능).
+  } catch (e) {
+    console.warn('[refund] PortOne pre-check throw — cancel 시도 진행:', e);
+  }
+
+  // 4. 비례 환불액 계산.
   let refundAmountKrw = paymentRow.amount_krw;
   if (paymentRow.payment_type === 'subscribe') {
     const paidAt = new Date(paymentRow.created_at).getTime();
@@ -53,77 +224,43 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   }
 
   if (refundAmountKrw <= 0) {
-    // status atomic claim 했으니 paid 로 복원 (다른 사유 환불 불가).
-    await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${payment_id}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ status: 'paid', refund_started_at: null })
-    }).catch(() => {});
-    return jsonResponse({ error: '환불 가능 금액 0원' }, 400);
+    const restored = await _restorePaidStatus(env, payment_id);
+    if (!restored) console.error('[refund] paid 복원 실패 — 수동 fix 필요:', payment_id);
+    return jsonResponse({ error: '환불 가능 금액 0원 (사용 기간 모두 경과).', code: 'ZERO_REFUND' }, 400);
   }
 
-  // 3. 포트원 V2 환불 (cancelPortOnePayment helper 사용).
-  // 사용자 명시 2026-05-06: V1 (imp_uid + accessToken) 폐기 → V2 (paymentId + Authorization PortOne header).
-  // payments 테이블 portone_merchant_uid 컬럼에 V2 paymentId 저장 (verify-pay 시 — 옛 imp_uid 자리는 txId).
-  const v2PaymentId = paymentRow.portone_merchant_uid || paymentRow.portone_imp_uid;
+  // 5. 포트원 V2 환불.
   const cancelResult = await cancelPortOnePayment(env, v2PaymentId, reason || '사용자 환불 요청', refundAmountKrw);
   if (!cancelResult.ok) {
-    // claim 복원 — 환불 실패 시 status=paid 로 되돌림.
-    await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${payment_id}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ status: 'paid', refund_started_at: null })
-    }).catch(() => {});
-    return jsonResponse({ error: '포트원 환불 실패: ' + cancelResult.error }, 502);
+    const restored = await _restorePaidStatus(env, payment_id);
+    if (!restored) console.error('[refund] paid 복원 실패 (cancel fail 후) — 수동 fix 필요:', payment_id);
+    return jsonResponse({
+      error: '포트원 환불 실패: ' + cancelResult.error,
+      code: 'PORTONE_FAIL',
+      portone_error: cancelResult.error
+    }, 502);
   }
 
-  // 4. payments 갱신
-  await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${payment_id}`, {
-    method: 'PATCH',
-    headers: {
-      'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-      'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal'
-    },
-    body: JSON.stringify({
-      status: refundAmountKrw === paymentRow.amount_krw ? 'refunded' : 'paid',
-      refund_amount_krw: refundAmountKrw,
-      refunded_at: new Date().toISOString(),
-      refund_reason: reason || ''
-    })
-  }).catch(() => {});
+  // 6. payments 갱신 — 명시적 ok 확인.
+  try {
+    const isFull = refundAmountKrw === paymentRow.amount_krw;
+    const patchResp = await _markRefunded(env, payment_id, refundAmountKrw, isFull, reason || '');
+    if (!patchResp.ok) {
+      const txt = await patchResp.text().catch(() => '');
+      console.error('[refund] payments 갱신 실패 — PortOne 환불 됐는데 DB 미반영:', payment_id, patchResp.status, txt.slice(0, 200));
+    }
+  } catch (e) {
+    console.error('[refund] payments 갱신 throw:', e);
+  }
 
-  // 사용자 명시 2026-05-06: 충전 (charge) 차감 분기 제거 — 옛 plan 폐기.
-  // overage_pack 환불 시 잔액 차감은 별도 처리 필요 시 이 자리.
-
-  // 사용자 보고 2026-05-05 (audit High): 구독 환불 시 즉시 만료 처리 추가.
-  // 이전 = subscription_active / expires_at 그대로 → 환불 후 잔여일 동안 무료 사용 가능 (분쟁 risk).
-  // fix: 구독 환불 시 active=false + expires_at=now (Light/Premium/early_light 공통).
+  // 7. 구독 환불 시 즉시 만료.
   if (paymentRow.payment_type === 'subscribe' || paymentRow.payment_type === 'toss_subscribe') {
-    await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
-        subscription_active: false,
-        subscription_expires_at: new Date().toISOString()
-      })
-    }).catch(() => {});
+    try {
+      const expResp = await _expireSubscription(env, user.id);
+      if (!expResp.ok) console.warn('[refund] billing 만료 PATCH 실패:', expResp.status);
+    } catch (e) {
+      console.error('[refund] billing 만료 throw:', e);
+    }
   }
 
   return jsonResponse({ ok: true, refunded_krw: refundAmountKrw, message: '환불 완료. 카드사 정책상 3-7영업일 내 카드 명세서 반영.' });
