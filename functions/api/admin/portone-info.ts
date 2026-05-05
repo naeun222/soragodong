@@ -86,7 +86,8 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
 
   return jsonResponse({
     ok: true,
-    note: 'PortOne V2 API probe — Store ID 가 응답 안에 포함되어 있을 거야 (channels / channel-groups / stores 중 하나).',
+    note: 'PortOne V2 GraphQL schema 덤프 — Merchant / Store / Channel 타입의 fields 검색.',
+    deployVersion: 'v3-schema-dump',
     probes: results
   });
 }
