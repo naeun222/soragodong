@@ -43,7 +43,41 @@ async function _handlePaymentReturn() {
     waited += 200;
   }
   if (!session?.access_token) {
-    setTimeout(() => alert('결제 결과 — 로그인 후 새로고침으로 확인 가능해.'), 300);
+    setTimeout(() => alert('결제 결과 — 로그인 후 새로고침으로 확인 가능해.\n\n결제 ID: ' + paymentId), 300);
+    return;
+  }
+
+  // 사용자 보고 2026-05-06: anonymous 상태에서 verify-pay 호출 차단 (잘못된 user.id 로 INSERT 방지).
+  if (session?.user?.is_anonymous) {
+    setTimeout(() => alert(
+      '익명 게스트 상태 — 결제 검증 X.\n\n' +
+      '결제는 PortOne 쪽에서 정상 처리됐어. 결제했던 정식 계정으로 다시 로그인 후 결제 history 에서 확인.\n\n' +
+      '결제 ID: ' + paymentId
+    ), 300);
+    console.warn('[paymentReturn] anonymous — blocked verify:', paymentId);
+    return;
+  }
+
+  // 결제 시점 marker 와 현재 session 매칭 검증 (30분 만료).
+  let pendingMarker = null;
+  try {
+    const raw = sessionStorage.getItem('soragodong_pending_payment');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && (Date.now() - (parsed.ts || 0)) < 30 * 60 * 1000) pendingMarker = parsed;
+    }
+  } catch {}
+  try { sessionStorage.removeItem('soragodong_pending_payment'); } catch {}
+
+  if (pendingMarker && pendingMarker.paymentId === paymentId && pendingMarker.user_id && pendingMarker.user_id !== session.user.id) {
+    setTimeout(() => alert(
+      '결제 시점의 계정과 현재 로그인 계정이 달라.\n\n' +
+      '결제는 PortOne 쪽에서 정상 처리됐어. 결제했던 계정으로 다시 로그인 후 결제 history 에서 확인.\n\n' +
+      '결제 시점 user_id: ' + pendingMarker.user_id + '\n' +
+      '현재 user_id: ' + session.user.id + '\n' +
+      '결제 ID: ' + paymentId
+    ), 300);
+    console.warn('[paymentReturn] user mismatch — blocked verify:', pendingMarker.user_id, '→', session.user.id);
     return;
   }
 

@@ -45639,14 +45639,27 @@ ${d.reason}`;
     return;
   }
 
-  // 2. 불일치 — sync 옵션 제공
-  if (!confirm(summary + '\n\n→ row.user_id 를 본인 (caller) user_id 로 강제 sync 할까?')) return;
+  // 2. 불일치 — target_user_id 입력 받음 (실제 결제 계정의 user_id 인 경우 등).
+  const promptMsg = summary + '\n\n' +
+    'row.user_id 를 어떤 user_id 로 sync?\n' +
+    '  • 비워두기 = 본인 (caller, admin) user_id 로\n' +
+    '  • UUID 입력 = 그 user_id 로 (실제 결제한 사용자 계정 등)\n\n' +
+    '결제 row 의 user_email = ' + (p.user_email || '(없음)') + '\n' +
+    '→ 이 이메일 계정의 user.id 가 일반 결제 계정. supabase auth.users 에서 조회 가능.\n\n' +
+    '입력:';
+  const targetInput = prompt(promptMsg, '');
+  if (targetInput === null) return;
+  const targetUserId = targetInput.trim() || null;
 
   try {
     const resp = await _authedFetch('/api/admin/payment-fix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentId: paymentId.trim(), action: 'sync_user' })
+      body: JSON.stringify({
+        paymentId: paymentId.trim(),
+        action: 'sync_user',
+        target_user_id: targetUserId
+      })
     });
     const result = await resp.json();
     if (!resp.ok || !result.ok) {
@@ -46007,6 +46020,15 @@ async function proceedSubscribe(tierKey) {
 
   // 결제 시도 — paymentId = 매번 unique. 사용자 본인 식별용 customer 정보 + tier 별 amount.
   const paymentId = `payment-${tierKey}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  // 사용자 보고 2026-05-06: 모바일 redirect 흐름에서 verify-pay 호출 시점 user_id 와 결제 시점 user_id 가 다르면 NOT_OWN.
+  // marker = _handlePaymentReturn 에서 매칭 검증용.
+  try {
+    sessionStorage.setItem('soragodong_pending_payment', JSON.stringify({
+      paymentId,
+      user_id: authUserId || '',
+      ts: Date.now()
+    }));
+  } catch {}
   let response;
   try {
     response = await window.PortOne.requestPayment({
@@ -46124,7 +46146,41 @@ async function _handlePaymentReturn() {
     waited += 200;
   }
   if (!session?.access_token) {
-    setTimeout(() => alert('결제 결과 — 로그인 후 새로고침으로 확인 가능해.'), 300);
+    setTimeout(() => alert('결제 결과 — 로그인 후 새로고침으로 확인 가능해.\n\n결제 ID: ' + paymentId), 300);
+    return;
+  }
+
+  // 사용자 보고 2026-05-06: anonymous 상태에서 verify-pay 호출 차단 (잘못된 user.id 로 INSERT 방지).
+  if (session?.user?.is_anonymous) {
+    setTimeout(() => alert(
+      '익명 게스트 상태 — 결제 검증 X.\n\n' +
+      '결제는 PortOne 쪽에서 정상 처리됐어. 결제했던 정식 계정으로 다시 로그인 후 결제 history 에서 확인.\n\n' +
+      '결제 ID: ' + paymentId
+    ), 300);
+    console.warn('[paymentReturn] anonymous — blocked verify:', paymentId);
+    return;
+  }
+
+  // 결제 시점 marker 와 현재 session 매칭 검증 (30분 만료).
+  let pendingMarker = null;
+  try {
+    const raw = sessionStorage.getItem('soragodong_pending_payment');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && (Date.now() - (parsed.ts || 0)) < 30 * 60 * 1000) pendingMarker = parsed;
+    }
+  } catch {}
+  try { sessionStorage.removeItem('soragodong_pending_payment'); } catch {}
+
+  if (pendingMarker && pendingMarker.paymentId === paymentId && pendingMarker.user_id && pendingMarker.user_id !== session.user.id) {
+    setTimeout(() => alert(
+      '결제 시점의 계정과 현재 로그인 계정이 달라.\n\n' +
+      '결제는 PortOne 쪽에서 정상 처리됐어. 결제했던 계정으로 다시 로그인 후 결제 history 에서 확인.\n\n' +
+      '결제 시점 user_id: ' + pendingMarker.user_id + '\n' +
+      '현재 user_id: ' + session.user.id + '\n' +
+      '결제 ID: ' + paymentId
+    ), 300);
+    console.warn('[paymentReturn] user mismatch — blocked verify:', pendingMarker.user_id, '→', session.user.id);
     return;
   }
 
@@ -46207,6 +46263,14 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
     alert('PortOne SDK 객체 X');
     return null;
   }
+  // 사용자 보고 2026-05-06: 모바일 redirect 흐름에서 verify 시점 user_id 매칭 검증용 marker.
+  try {
+    sessionStorage.setItem('soragodong_pending_payment', JSON.stringify({
+      paymentId,
+      user_id: authUserId || '',
+      ts: Date.now()
+    }));
+  } catch {}
   try {
     const response = await window.PortOne.requestPayment({
       storeId, channelKey, paymentId,

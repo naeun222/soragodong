@@ -57,14 +57,27 @@ ${d.reason}`;
     return;
   }
 
-  // 2. 불일치 — sync 옵션 제공
-  if (!confirm(summary + '\n\n→ row.user_id 를 본인 (caller) user_id 로 강제 sync 할까?')) return;
+  // 2. 불일치 — target_user_id 입력 받음 (실제 결제 계정의 user_id 인 경우 등).
+  const promptMsg = summary + '\n\n' +
+    'row.user_id 를 어떤 user_id 로 sync?\n' +
+    '  • 비워두기 = 본인 (caller, admin) user_id 로\n' +
+    '  • UUID 입력 = 그 user_id 로 (실제 결제한 사용자 계정 등)\n\n' +
+    '결제 row 의 user_email = ' + (p.user_email || '(없음)') + '\n' +
+    '→ 이 이메일 계정의 user.id 가 일반 결제 계정. supabase auth.users 에서 조회 가능.\n\n' +
+    '입력:';
+  const targetInput = prompt(promptMsg, '');
+  if (targetInput === null) return;
+  const targetUserId = targetInput.trim() || null;
 
   try {
     const resp = await _authedFetch('/api/admin/payment-fix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentId: paymentId.trim(), action: 'sync_user' })
+      body: JSON.stringify({
+        paymentId: paymentId.trim(),
+        action: 'sync_user',
+        target_user_id: targetUserId
+      })
     });
     const result = await resp.json();
     if (!resp.ok || !result.ok) {

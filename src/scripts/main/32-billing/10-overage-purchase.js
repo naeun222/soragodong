@@ -30,6 +30,14 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
     alert('PortOne SDK 객체 X');
     return null;
   }
+  // 사용자 보고 2026-05-06: 모바일 redirect 흐름에서 verify 시점 user_id 매칭 검증용 marker.
+  try {
+    sessionStorage.setItem('soragodong_pending_payment', JSON.stringify({
+      paymentId,
+      user_id: authUserId || '',
+      ts: Date.now()
+    }));
+  } catch {}
   try {
     const response = await window.PortOne.requestPayment({
       storeId, channelKey, paymentId,

@@ -169,6 +169,15 @@ async function proceedSubscribe(tierKey) {
 
   // 결제 시도 — paymentId = 매번 unique. 사용자 본인 식별용 customer 정보 + tier 별 amount.
   const paymentId = `payment-${tierKey}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  // 사용자 보고 2026-05-06: 모바일 redirect 흐름에서 verify-pay 호출 시점 user_id 와 결제 시점 user_id 가 다르면 NOT_OWN.
+  // marker = _handlePaymentReturn 에서 매칭 검증용.
+  try {
+    sessionStorage.setItem('soragodong_pending_payment', JSON.stringify({
+      paymentId,
+      user_id: authUserId || '',
+      ts: Date.now()
+    }));
+  } catch {}
   let response;
   try {
     response = await window.PortOne.requestPayment({

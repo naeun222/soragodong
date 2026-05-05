@@ -45,6 +45,21 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     }, 400);
   }
 
+  // 사용자 보고 2026-05-06: customer 매칭 검증 — anonymous swap / multi-account drift 방어.
+  // 결제 시점 PortOne 측 customer.id 가 현재 호출자 user.id 와 같아야 함.
+  const portoneCustomerId = (payment.customer && (payment.customer.id || payment.customer.customerId)) || '';
+  if (portoneCustomerId && portoneCustomerId !== user.id) {
+    return jsonResponse({
+      error: '결제 시점 계정과 현재 로그인 계정이 달라 — 결제했던 계정으로 다시 로그인.',
+      code: 'CUSTOMER_MISMATCH',
+      portone_customer: portoneCustomerId,
+      caller: user.id
+    }, 403);
+  }
+  if (!portoneCustomerId) {
+    console.warn('[verify-pay] payment.customer.id 없음 — 매칭 검증 skip:', paymentId);
+  }
+
   // 금액 검증 (위변조 방지).
   const paidAmount = Number(payment.amount?.total || 0);
   if (paidAmount !== tier.krw) {

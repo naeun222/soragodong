@@ -64,6 +64,17 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   if (payment.status !== 'PAID') {
     return jsonResponse({ error: `결제 상태 ${payment.status}`, code: 'NOT_PAID' }, 400);
   }
+  // 사용자 보고 2026-05-06: customer 매칭 검증 — anonymous swap 방어.
+  const portoneCustomerId = (payment.customer && (payment.customer.id || payment.customer.customerId)) || '';
+  if (portoneCustomerId && portoneCustomerId !== user.id) {
+    return jsonResponse({
+      error: '결제 시점 계정과 현재 로그인 계정이 달라 — 결제했던 계정으로 다시 로그인.',
+      code: 'CUSTOMER_MISMATCH',
+      portone_customer: portoneCustomerId,
+      caller: user.id
+    }, 403);
+  }
+  if (!portoneCustomerId) console.warn('[upgrade-tier] payment.customer.id 없음 — 매칭 skip:', paymentId);
   const paidAmount = Number(payment.amount?.total || 0);
   if (paidAmount !== PREMIUM_KRW) {
     return jsonResponse({ error: `Premium 정가 불일치 (= ${PREMIUM_KRW}원, 실 ${paidAmount}원)` }, 400);
