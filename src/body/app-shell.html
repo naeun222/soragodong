@@ -211,10 +211,12 @@
         </div>
       </div>
 
+      <!-- 사용자 명시 2026-05-06: 돌아가기는 sticky 영역 밖 — 일반 흐름 -->
+      <button class="btn-secondary checkin-back-btn" onclick="showScreen('home')">돌아가기</button>
+
       <div class="sticky-action-bar">
         <div class="checkin-progress-hint" id="checkinProgressHint"></div>
         <button class="btn-primary" id="checkinSubmitBtn" onclick="submitCheckin()">기록 완료 ✦</button>
-        <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
       </div>
     </div>
 

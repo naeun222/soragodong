@@ -694,43 +694,19 @@
   .disabled-locked { opacity: 0.45; cursor: not-allowed; }
   .disabled-locked::after { content: ' 🔒'; font-size: 0.85em; }
   .disabled-locked:hover { opacity: 0.55; }
-  /* 사용자 명시 2026-05-06: 빈 채팅 진입 시 — 모든 예시 + 기능 안내 리스트 */
-  .chat-empty-section {
-    margin-top: 14px;
-    padding: 10px 12px;
-    background: rgba(139,126,196,0.05);
-    border-left: 2px solid rgba(139,126,196,0.3);
-    border-radius: 0 8px 8px 0;
-  }
-  .chat-empty-section + .chat-empty-section {
-    margin-top: 8px;
-    background: rgba(212,167,106,0.05);
-    border-left-color: rgba(212,167,106,0.3);
-  }
-  .ces-title {
-    font-size: 11px;
-    color: var(--text-soft, var(--text-dim));
-    font-weight: 500;
-    margin-bottom: 6px;
-    letter-spacing: 0.04em;
-  }
+  /* 사용자 명시 2026-05-06: 빈 채팅 진입 시 인사 밑 — EMPTY_STATE_EXAMPLES 단일 리스트 (이모티콘 + 한 줄) */
   .chat-empty-list {
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 14px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
   .chat-empty-list li {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-soft, var(--text-dim));
-    padding: 3px 0 3px 14px;
-    position: relative;
-    line-height: 1.55;
-  }
-  .chat-empty-list li::before {
-    content: '·';
-    position: absolute;
-    left: 4px;
-    color: var(--accent2);
+    line-height: 1.6;
   }
 
   /* V4 (v8 묶음 19-I): 진화된 카드 샤랄라 — 금색 glow 2회 펄스 + ✨ 스파클 */
@@ -6795,16 +6771,19 @@
   .crystallize-accept-btn:active { transform: scale(0.97); }
 
   /* V3.11: 화면 하단 액션 묶음 — 일반화 (V3.13.x: checkin-bottom-bar → sticky-action-bar) */
-  /* 사용자 명시 2026-05-06: sticky 재활성화 — Core/Extra 분리 후 가림 이슈 해소 + .screen padding-bottom 160px */
+  /* 사용자 명시 2026-05-06: sticky 재활성화 + nav 에 거의 딱 붙게 padding 축소 */
   .sticky-action-bar {
     position: sticky;
     bottom: 0;
-    margin-top: 24px;
-    padding: 16px 0 12px;
+    margin-top: 16px;
+    padding: 10px 0 4px;
     background: linear-gradient(to top, var(--bg) 60%, rgba(20,15,30,0));
     z-index: 10;
   }
-  .sticky-action-bar .btn-primary { margin-bottom: 8px; }
+  /* 다음 button 이 있을 때만 spacing — settings 화면은 저장+돌아가기 두 버튼이라 spacing 필요 */
+  .sticky-action-bar .btn-primary:not(:last-child) { margin-bottom: 8px; }
+  /* 사용자 명시 2026-05-06: 체크인 화면 돌아가기 — sticky 영역 밖, 일반 흐름 */
+  .checkin-back-btn { margin-top: 14px; }
 
   /* V3.13.x: 인스타 게시물 스타일 timeline 카드 */
   .ig-card {

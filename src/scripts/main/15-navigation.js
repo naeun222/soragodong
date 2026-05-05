@@ -122,6 +122,7 @@ function showScreen(name) {
 
 // V3.10: 대화창 placeholder 회전 (매번 다른 힌트)
 // V3.13.x: 톤 편중 X — 좋은 일·웃긴 에피소드·소소한 일상도 자연스럽게
+// 사용자 명시 2026-05-06: 입력창 placeholder 풀 통합 — 20개 (대화탭 진입 시 1개 회전)
 const CHAT_PLACEHOLDERS = [
   '편하게 말해봐...',
   '오늘 어땠어?',
@@ -130,58 +131,37 @@ const CHAT_PLACEHOLDERS = [
   '오늘 뭐 했어?',
   '오 뭔가 좋은 일?',
   'ㅋㅋㅋ 웃긴 거 있어?',
-  '와다다 쏟아내도 돼',
-  '판단 X. 듣기만 할게',
+  '판단 안 함. 듣기만 할게',
   '지금 뭐 하고 있어?',
   '머릿속에 뭐가 있어?',
   '오늘 뭐 먹었어?',
   '생각나는 거 한 줄',
-  '"졸려" 한 마디도 OK',
+  '"졸려" 한 마디도 좋아',
   '소소한 거 들려줘',
   '비워두는 것도 괜찮아',
-  '뭐 적을지 모르겠으면 그렇게 적어',
-  '"일기:"로 시작하면 일기로 저장돼',
-  // V4 (v8 묶음 16) 2026-05-03: 옛 시나리오 8개 추가 — 사용자 명시 26개 풀
-  '"내일 발표인데 자료 없어" — 막힘 풀기',
-  '"방금 회의에서 말 더듬었어" — 자책 흐를 때',
-  '"또 마감 임박했네" — 패턴 의심',
-  '"이 옷 살까 말까ㅋㅋ" — 의견 듣기',
-  '"발표 끝났어!" — 자랑 / 뿌듯',
-  '"오늘 점심 마라탕" — 일상 공유',
-  '"기쁘기도 슬프기도..." — 와다다 풀기',
-  '"오리너구리 조상은?" — 가벼운 호기심'
+  '뭐 적을지 모르겠으면 모르겠다고 적어',
+  '"일기:"로 시작 -> 원본으로 저장',
+  '(체크) 누르면 이 대화 마무리',
+  '+ 메뉴 -> 일기 템플릿 / 메모',
+  '"더 알고 싶어 ▾" 눌러봐. 심리 분석해줄게.'
 ];
 
-// V4 (v8 묶음 17) 2026-05-03: 빈 채팅 진입 시 회전 예시 — 본인 인사 옆 1 줄
+// 사용자 명시 2026-05-06: 빈 채팅 진입 시 인사 밑 노출 — 10개 (이모티콘 + 한 줄)
 const EMPTY_STATE_EXAMPLES = [
-  '오늘 점심 마라탕 먹었어',
-  '내일 발표인데 시작도 못 함',
-  '방금 회의에서 말 더듬었어',
-  '이 옷 살까 말까ㅋㅋ',
-  '발표 끝났어! 뿌듯',
-  '또 마감 임박했네',
-  '와다다 풀고 싶어',
-  '내일 3시 회의 잡아줘',
-  '"일기:" 오늘 잘 지냄',
-  '일기 템플릿 → + 메뉴'
+  '🍜 오늘 점심 마라탕 먹었어',
+  '😰 내일 발표인데 시작도 못 함',
+  '👗 이 옷 살까 말까ㅋㅋ',
+  '🎉 발표 끝났어! 뿌듯',
+  '📌 또 마감이네...',
+  '🌗 기쁘기도 하고 슬프기도 하고...',
+  '📅 오늘 3시 회의 잡아줘',
+  '📔 "일기:" 오늘 잘 지냄',
+  '💡 내일 발표인데 자료 없어 - 도와줄게',
+  '🦫 오리너구리의 조상은 오리야 너구리야?'
 ];
-function _getEmptyStateExample() {
-  if (!Array.isArray(EMPTY_STATE_EXAMPLES) || EMPTY_STATE_EXAMPLES.length === 0) return '';
-  if (typeof state._emptyExampleIdx !== 'number') state._emptyExampleIdx = 0;
-  const ex = EMPTY_STATE_EXAMPLES[state._emptyExampleIdx % EMPTY_STATE_EXAMPLES.length];
-  state._emptyExampleIdx = (state._emptyExampleIdx + 1) % EMPTY_STATE_EXAMPLES.length;
-  // saveState 별도 X — 회전 인덱스는 휘발성 OK
-  return `예: "${ex}"`;
-}
 
-// V4 (v8 묶음 16) 2026-05-03: 학습 placeholder — 신규 사용자 사용법 안내, 사용자 행동 시 자동 dismiss
-const TEACHING_PLACEHOLDERS = [
-  { key: 'diary', text: '"일기:"로 시작 → 그날 entry 저장' },
-  { key: 'plus', text: '+ 메뉴 → 일기 템플릿 / 일정 / 음성' },
-  { key: 'chapter', text: '✓ 누르면 이 대화 마무리' },
-  { key: 'deeper', text: '내 답 아래 "더 알고 싶어 ▾" — 4단 분석' },
-  { key: 'schedule', text: '"내일 3시 회의 잡아줘" — 일정 자동 추가' }
-];
+// 사용자 명시 2026-05-06: TEACHING_PLACEHOLDERS 풀 → CHAT_PLACEHOLDERS 와 통합. legacy 호환 위해 빈 array 유지.
+const TEACHING_PLACEHOLDERS = [];
 function dismissPlaceholder(key) {
   if (!Array.isArray(state._dismissedPlaceholders)) state._dismissedPlaceholders = [];
   if (!state._dismissedPlaceholders.includes(key)) {
@@ -227,15 +207,7 @@ function enterCheckin() {
 function rotateChatPlaceholder() {
   const input = document.getElementById('chatInput');
   if (!input) return;
-  // V4 (v8 묶음 16): 학습 placeholder 우선 — dismiss 안 된 항목 중 랜덤
-  const dismissed = Array.isArray(state._dismissedPlaceholders) ? state._dismissedPlaceholders : [];
-  const teachingPool = TEACHING_PLACEHOLDERS.filter(t => !dismissed.includes(t.key));
-  if (teachingPool.length > 0) {
-    const t = teachingPool[Math.floor(Math.random() * teachingPool.length)];
-    input.placeholder = t.text;
-    return;
-  }
-  // 전부 dismiss → 일반 풀
+  // 사용자 명시 2026-05-06: 단일 풀 (CHAT_PLACEHOLDERS 20개) 에서 1개 랜덤 — 대화탭 진입 시마다 회전
   const idx = Math.floor(Math.random() * CHAT_PLACEHOLDERS.length);
   input.placeholder = CHAT_PLACEHOLDERS[idx];
 }
