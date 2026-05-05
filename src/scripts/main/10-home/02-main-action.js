@@ -27,31 +27,6 @@ function _shiftDateKey(key, deltaDays) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function getCheckinStreak() {
-  const entries = state.entries || [];
-  if (!entries.length) return 0;
-  const todayK = todayKey();
-  const todayE = entries.find(e => e.date === todayK);
-  let streak = 0;
-  let cursorKey;
-  if (todayE && (todayE.vitality || todayE.mood || todayE.note)) {
-    streak = 1;
-    cursorKey = _shiftDateKey(todayK, -1);
-  } else {
-    cursorKey = _shiftDateKey(todayK, -1);
-  }
-  while (streak < 365) {
-    const e = entries.find(en => en.date === cursorKey);
-    if (e && (e.vitality || e.mood || e.note)) {
-      streak++;
-      cursorKey = _shiftDateKey(cursorKey, -1);
-    } else {
-      break;
-    }
-  }
-  return streak;
-}
-
 function getYesterdayMoodSummary() {
   const yKey = _shiftDateKey(todayKey(), -1);
   const entry = (state.entries || []).find(e => e.date === yKey);
@@ -100,15 +75,12 @@ function renderMainAction() {
   const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
   const slot = getCheckinTimeSlot();
   const copy = _checkinCardCopy(slot, checkinDoneToday);
-  const streak = getCheckinStreak();
-  const streakHtml = streak > 0 ? `<span class="streak-chip">🌊 ${streak}일째</span>` : '';
 
   let cardHtml;
   if (checkinDoneToday) {
     const summary = _todayMoodSummaryHtml(todayEntry);
     cardHtml = `
       <div class="action-card checkin-card is-done" onclick="enterCheckin()">
-        ${streakHtml}
         <div class="action-icon">${copy.icon}</div>
         <div class="action-text">
           <div class="action-title">${copy.title}</div>
@@ -128,7 +100,6 @@ function renderMainAction() {
     }
     cardHtml = `
       <div class="action-card checkin-card" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
-        ${streakHtml}
         <div class="action-icon">${copy.icon}</div>
         <div class="action-text">
           <div class="action-title">${copy.title}</div>

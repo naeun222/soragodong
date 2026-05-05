@@ -172,18 +172,11 @@
   }
 
   .action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; }
-  /* 사용자 명시 2026-05-06: 체크인 카드 — streak chip + 어제 미리보기 + 완료 morph */
+  /* 사용자 명시 2026-05-06: 체크인 카드 — 어제 미리보기 + 완료 morph */
   .action-card.checkin-card { position: relative; }
   .action-card.checkin-card.is-done {
     border-color: rgba(126,200,200,0.35);
     background: linear-gradient(135deg, rgba(126,200,200,0.08), rgba(45,40,80,0.10));
-  }
-  .streak-chip {
-    position: absolute; top: 10px; right: 14px;
-    font-size: 10px; color: var(--accent2);
-    background: rgba(126,200,200,0.12);
-    padding: 2px 8px; border-radius: 10px;
-    letter-spacing: 0.02em;
   }
   .yesterday-preview { font-size: 11px; color: var(--text-soft); margin-top: 4px; }
   /* V3.13.x: 상단 sticky 업데이트 배너 (모든 탭에서 표시, dismiss 시 그 버전 사라짐) */

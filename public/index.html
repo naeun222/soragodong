@@ -262,18 +262,11 @@
   }
 
   .action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; }
-  /* 사용자 명시 2026-05-06: 체크인 카드 — streak chip + 어제 미리보기 + 완료 morph */
+  /* 사용자 명시 2026-05-06: 체크인 카드 — 어제 미리보기 + 완료 morph */
   .action-card.checkin-card { position: relative; }
   .action-card.checkin-card.is-done {
     border-color: rgba(126,200,200,0.35);
     background: linear-gradient(135deg, rgba(126,200,200,0.08), rgba(45,40,80,0.10));
-  }
-  .streak-chip {
-    position: absolute; top: 10px; right: 14px;
-    font-size: 10px; color: var(--accent2);
-    background: rgba(126,200,200,0.12);
-    padding: 2px 8px; border-radius: 10px;
-    letter-spacing: 0.02em;
   }
   .yesterday-preview { font-size: 11px; color: var(--text-soft); margin-top: 4px; }
   /* V3.13.x: 상단 sticky 업데이트 배너 (모든 탭에서 표시, dismiss 시 그 버전 사라짐) */
@@ -22523,31 +22516,6 @@ function _shiftDateKey(key, deltaDays) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function getCheckinStreak() {
-  const entries = state.entries || [];
-  if (!entries.length) return 0;
-  const todayK = todayKey();
-  const todayE = entries.find(e => e.date === todayK);
-  let streak = 0;
-  let cursorKey;
-  if (todayE && (todayE.vitality || todayE.mood || todayE.note)) {
-    streak = 1;
-    cursorKey = _shiftDateKey(todayK, -1);
-  } else {
-    cursorKey = _shiftDateKey(todayK, -1);
-  }
-  while (streak < 365) {
-    const e = entries.find(en => en.date === cursorKey);
-    if (e && (e.vitality || e.mood || e.note)) {
-      streak++;
-      cursorKey = _shiftDateKey(cursorKey, -1);
-    } else {
-      break;
-    }
-  }
-  return streak;
-}
-
 function getYesterdayMoodSummary() {
   const yKey = _shiftDateKey(todayKey(), -1);
   const entry = (state.entries || []).find(e => e.date === yKey);
@@ -22596,15 +22564,12 @@ function renderMainAction() {
   const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
   const slot = getCheckinTimeSlot();
   const copy = _checkinCardCopy(slot, checkinDoneToday);
-  const streak = getCheckinStreak();
-  const streakHtml = streak > 0 ? `<span class="streak-chip">🌊 ${streak}일째</span>` : '';
 
   let cardHtml;
   if (checkinDoneToday) {
     const summary = _todayMoodSummaryHtml(todayEntry);
     cardHtml = `
       <div class="action-card checkin-card is-done" onclick="enterCheckin()">
-        ${streakHtml}
         <div class="action-icon">${copy.icon}</div>
         <div class="action-text">
           <div class="action-title">${copy.title}</div>
@@ -22624,7 +22589,6 @@ function renderMainAction() {
     }
     cardHtml = `
       <div class="action-card checkin-card" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
-        ${streakHtml}
         <div class="action-icon">${copy.icon}</div>
         <div class="action-text">
           <div class="action-title">${copy.title}</div>
