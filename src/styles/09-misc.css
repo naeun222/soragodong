@@ -4600,6 +4600,55 @@
     color: var(--text-soft);
     letter-spacing: 0.04em;
   }
+  /* V4 (사용자 명시 2026-05-05): 진주 0개 — '첫 진주 유도' 빈 hero (홈 + 도서관 공용) */
+  .library-hero.hero-empty {
+    text-align: center;
+    padding: 22px 16px 20px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.10), rgba(139,126,196,0.06));
+    border-style: dashed;
+    border-color: rgba(212,167,106,0.30);
+  }
+  .library-hero.hero-empty .hero-label {
+    margin-bottom: 14px;
+    color: var(--accent2);
+  }
+  .hero-empty-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .hero-empty-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .hero-empty-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+  .hero-empty-cta {
+    margin-top: 10px;
+    display: inline-block;
+    padding: 7px 16px;
+    border-radius: 999px;
+    background: rgba(212,167,106,0.18);
+    border: 1px solid rgba(212,167,106,0.36);
+    color: var(--accent2);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .library-hero.hero-empty:active {
+    border-color: rgba(212,167,106,0.50);
+  }
+  .library-hero.hero-empty:active .hero-empty-cta {
+    background: rgba(212,167,106,0.30);
+    transform: scale(0.98);
+  }
   /* V4-1t: 카테고리 칩 새 항목 ● 점 */
   .lib-cat-chip { position: relative; }
   .lib-cat-chip.has-new::after {

@@ -4682,6 +4682,55 @@
     color: var(--text-soft);
     letter-spacing: 0.04em;
   }
+  /* V4 (사용자 명시 2026-05-05): 진주 0개 — '첫 진주 유도' 빈 hero (홈 + 도서관 공용) */
+  .library-hero.hero-empty {
+    text-align: center;
+    padding: 22px 16px 20px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.10), rgba(139,126,196,0.06));
+    border-style: dashed;
+    border-color: rgba(212,167,106,0.30);
+  }
+  .library-hero.hero-empty .hero-label {
+    margin-bottom: 14px;
+    color: var(--accent2);
+  }
+  .hero-empty-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .hero-empty-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .hero-empty-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+  .hero-empty-cta {
+    margin-top: 10px;
+    display: inline-block;
+    padding: 7px 16px;
+    border-radius: 999px;
+    background: rgba(212,167,106,0.18);
+    border: 1px solid rgba(212,167,106,0.36);
+    color: var(--accent2);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .library-hero.hero-empty:active {
+    border-color: rgba(212,167,106,0.50);
+  }
+  .library-hero.hero-empty:active .hero-empty-cta {
+    background: rgba(212,167,106,0.30);
+    transform: scale(0.98);
+  }
   /* V4-1t: 카테고리 칩 새 항목 ● 점 */
   .lib-cat-chip { position: relative; }
   .lib-cat-chip.has-new::after {
@@ -21498,10 +21547,13 @@ function renderMainAction() {
     `;
   } else {
     // V4 (사용자 명시 2026-05-05): 실행 카드 제거 → '오늘의 너' 큐레이션 (도서관 hero 동일).
-    // 진주 0개면 빈 문자열 → 작은 체크인 링크만 남음.
-    mainCard = (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function')
-      ? _heroCardHtml(_pickHeroPearl())
-      : '';
+    // 진주 0개면 '첫 진주 추가' 유도 카드 (_heroEmptyHtml).
+    if (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function' && typeof _heroEmptyHtml === 'function') {
+      const pick = _pickHeroPearl();
+      mainCard = pick ? _heroCardHtml(pick) : _heroEmptyHtml();
+    } else {
+      mainCard = '';
+    }
   }
   // 메인 카드가 체크인 아닐 때 항상 작은 링크 노출 (이미 했어도 수정 가능)
   let checkinSubLink = '';
@@ -32517,12 +32569,25 @@ function _heroCardHtml(pick) {
   `;
 }
 
+// V4 (사용자 명시 2026-05-05): 진주 0개 — 빈 카드 대신 '첫 진주 유도' 카드 (홈 + 도서관 공통)
+function _heroEmptyHtml() {
+  return `
+    <div class="library-hero hero-empty" onclick="addPearl()">
+      <div class="hero-label">💎 첫 진주</div>
+      <div class="hero-empty-body">
+        <div class="hero-empty-title">살아있다 느낀 순간을 모아봐</div>
+        <div class="hero-empty-sub">좋았던 곡 · 한 끼 · 풍경 · 사람 — 한 줄로</div>
+        <div class="hero-empty-cta">+ 첫 진주 추가</div>
+      </div>
+    </div>
+  `;
+}
+
 function renderLibraryHero() {
   const container = document.getElementById('libraryHero');
   if (!container) return;
   const pick = _pickHeroPearl();
-  if (!pick) { container.innerHTML = ''; return; }
-  container.innerHTML = _heroCardHtml(pick);
+  container.innerHTML = pick ? _heroCardHtml(pick) : _heroEmptyHtml();
 }
 
 // V4-1t + fix: 카테고리 칩 새 항목 ● 점 — 카테고리별 lastSeen 이후 추가된 게 있을 때만.
@@ -45968,7 +46033,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.170-home-todays-you-hero';
+const APP_VERSION = 'v4.0.171-home-first-pearl-cta';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

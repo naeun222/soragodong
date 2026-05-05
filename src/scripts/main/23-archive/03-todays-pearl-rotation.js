@@ -130,11 +130,24 @@ function _heroCardHtml(pick) {
   `;
 }
 
+// V4 (사용자 명시 2026-05-05): 진주 0개 — 빈 카드 대신 '첫 진주 유도' 카드 (홈 + 도서관 공통)
+function _heroEmptyHtml() {
+  return `
+    <div class="library-hero hero-empty" onclick="addPearl()">
+      <div class="hero-label">💎 첫 진주</div>
+      <div class="hero-empty-body">
+        <div class="hero-empty-title">살아있다 느낀 순간을 모아봐</div>
+        <div class="hero-empty-sub">좋았던 곡 · 한 끼 · 풍경 · 사람 — 한 줄로</div>
+        <div class="hero-empty-cta">+ 첫 진주 추가</div>
+      </div>
+    </div>
+  `;
+}
+
 function renderLibraryHero() {
   const container = document.getElementById('libraryHero');
   if (!container) return;
   const pick = _pickHeroPearl();
-  if (!pick) { container.innerHTML = ''; return; }
-  container.innerHTML = _heroCardHtml(pick);
+  container.innerHTML = pick ? _heroCardHtml(pick) : _heroEmptyHtml();
 }
 

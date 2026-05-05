@@ -39,10 +39,13 @@ function renderMainAction() {
     `;
   } else {
     // V4 (사용자 명시 2026-05-05): 실행 카드 제거 → '오늘의 너' 큐레이션 (도서관 hero 동일).
-    // 진주 0개면 빈 문자열 → 작은 체크인 링크만 남음.
-    mainCard = (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function')
-      ? _heroCardHtml(_pickHeroPearl())
-      : '';
+    // 진주 0개면 '첫 진주 추가' 유도 카드 (_heroEmptyHtml).
+    if (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function' && typeof _heroEmptyHtml === 'function') {
+      const pick = _pickHeroPearl();
+      mainCard = pick ? _heroCardHtml(pick) : _heroEmptyHtml();
+    } else {
+      mainCard = '';
+    }
   }
   // 메인 카드가 체크인 아닐 때 항상 작은 링크 노출 (이미 했어도 수정 가능)
   let checkinSubLink = '';
