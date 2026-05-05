@@ -314,11 +314,12 @@
   /* 사용자 명시 2026-05-06: 사진 섹션 스크롤 도착 시 viewport 풀로 채우고, 더 내리면 trust-block 등장 */
   .proof-snap {
     min-height: 100vh;
-    min-height: 100svh;  /* iOS 주소창 보정 */
+    min-height: 100svh;  /* iOS 15.4+ 안정 viewport (URL bar 보일 때) */
+    min-height: 100dvh;  /* iOS 15.4+ 동적 viewport (URL bar 변화 따라감) */
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 40px 0 30px;
+    padding: 24px 0 18px;  /* 작은 모바일에서도 콘텐츠 fit 하도록 축소 */
   }
   .proof-label {
     font-size: 11px;
@@ -963,19 +964,19 @@
          (월간 리뷰 "창업자" hook → 너에 대해 → 진주 → 일기 → 도서관) -->
     <div class="proof-screens">
     <div class="proof-screen">
-      <img src="/drive-real-samples/KakaoTalk_20260505_153438574.png?v=20260506" alt="월간 리뷰 — 이번 달의 너는 '창업자'">
+      <img src="/drive-real-samples/KakaoTalk_20260505_153438574.jpg?v=20260506b" alt="월간 리뷰 — 이번 달의 너는 '창업자'">
     </div>
     <div class="proof-screen">
       <img src="/drive-me-tap/about.jpg?v=20260506" alt="너에 대해 — 가치관 · 특성">
     </div>
     <div class="proof-screen">
-      <img src="/drive-real-samples/jinju.png?v=20260506" alt="진주 — 너의 순간들 (음식·장소·음악·사람)">
+      <img src="/drive-real-samples/jinju.jpg?v=20260506b" alt="진주 — 너의 순간들 (음식·장소·음악·사람)">
     </div>
     <div class="proof-screen">
-      <img src="/drive-real-samples/KakaoTalk_20260505_153551019_04.png?v=20260506" alt="일기 화면 — 활력·기분·수면 + 그날의 음악">
+      <img src="/drive-real-samples/KakaoTalk_20260505_153551019_04.jpg?v=20260506b" alt="일기 화면 — 활력·기분·수면 + 그날의 음악">
     </div>
     <div class="proof-screen">
-      <img src="/drive-real-samples/KakaoTalk_20260505_153551019.png?v=20260506" alt="인생 도서관 — 다섯 칸으로 정리된 너의 모든 것">
+      <img src="/drive-real-samples/KakaoTalk_20260505_153551019.jpg?v=20260506b" alt="인생 도서관 — 다섯 칸으로 정리된 너의 모든 것">
     </div>
     </div>
   </div>
