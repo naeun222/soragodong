@@ -140,16 +140,15 @@ function renderMainAction() {
     `;
   }
 
-  // V4 (사용자 명시 2026-05-06): 도서관 진주 hero 는 체크인 카드 아래 보조 위치.
-  // 낮 시간대에도 체크인 카드가 메인.
+  // V4 (사용자 명시 2026-05-06): '오늘의 너' 큐레이션 = 최상단. 체크인 카드 = 그 아래.
   let heroHtml = '';
   if (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function' && typeof _heroEmptyHtml === 'function') {
     const pick = _pickHeroPearl();
     const inner = pick ? _heroCardHtml(pick, { linkTo: 'pearls-tab' }) : _heroEmptyHtml();
-    if (inner) heroHtml = `<div style="margin-top: 14px;">${inner}</div>`;
+    if (inner) heroHtml = `<div style="margin-bottom: 14px;">${inner}</div>`;
   }
 
-  container.innerHTML = cardHtml + heroHtml;
+  container.innerHTML = heroHtml + cardHtml;
 }
 
 // 마법의 소라고동 미니 링크 — 작지만 카드 모양
