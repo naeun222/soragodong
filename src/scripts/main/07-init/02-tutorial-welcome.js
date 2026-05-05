@@ -1,7 +1,9 @@
 // V3.7: startWelcomeTutorial을 인터랙티브 온보딩으로 가로채기
 // V3.9: WELCOME_SLIDES/TOUR_SLIDES 슬라이드 시스템 완전 제거됨
+// V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 (11-start-tutorial-v8.js) 로 교체.
+// 옛 코어 / 풀 튜토리얼 진입 = 모두 no-op. ONBOARDING_STEPS 본체는 주석 보존.
 function startWelcomeTutorial() {
-  startInteractiveOnboarding();
+  console.warn('[legacy] startWelcomeTutorial() — V8 시작 튜토리얼로 대체됨, no-op');
 }
 
 // === V3.7 인터랙티브 온보딩 시스템 ===
@@ -19,7 +21,12 @@ function startWelcomeTutorial() {
 //   - Core 3-B: mutation_intro / try_evolved_card (2 step)
 //   - Core 4: crystallize_complete (1 step)
 // 옛 잠금 메커니즘 (isCoreLocked / showCoreLockModal / _coreLockInterceptor / applyCoreLockMarkers) = noop dead.
-const ONBOARDING_STEPS = [
+// V4 (사용자 명시 2026-05-06 ultrathink): 옛 80 스텝 = V8 시작 튜토 (11-start-tutorial-v8.js) 대체.
+// 빈 배열로 stub — 진입 함수들 (startInteractiveOnboarding / startCoreTutorial) 도 no-op.
+// 본체 코드는 아래 주석 블록에 보존 (legacy reference / 향후 Tier 3 모듈화 시 발췌).
+const ONBOARDING_STEPS = [];
+/* legacy ONBOARDING_STEPS — 보존만:
+const _LEGACY_ONBOARDING_STEPS = [
   // === Phase 0: 부탁 한 마디 (사용자 요청 2026-04-28) ===
   {
     id: 'tutorial_plea',
@@ -1220,6 +1227,7 @@ const ONBOARDING_STEPS = [
     nextLabel: '시작! ✦'
   }
 ];
+*/
 
 let _onbStep = 0;
 let _onbActiveListeners = [];

@@ -232,6 +232,10 @@ const CORE_INITIAL_ACTION = {
 
 // 코어 튜토리얼 시작 — startInteractiveOnboarding 인프라 재사용
 async function startCoreTutorial(coreId) {
+  // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼로 대체. 옛 코어 진입 = no-op.
+  // 진입점 (Settings → 가이드 / 옛 chooser / 자동 trigger) 모두 작동 안 함.
+  console.warn('[legacy] startCoreTutorial(' + coreId + ') — V8 시작 튜토리얼로 대체됨, no-op');
+  return;
   const range = CORE_TUTORIAL_RANGES[coreId];
   if (!range) { console.warn('[core] unknown id:', coreId); return; }
   const startIdx = ONBOARDING_STEPS.findIndex(s => s.id === range.startId);

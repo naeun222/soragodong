@@ -71,6 +71,10 @@ function _initOnbDrag() {
 }
 
 async function startInteractiveOnboarding(startStep) {
+  // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼로 대체. 옛 진입 = no-op.
+  // ONBOARDING_STEPS 빈 배열로 stub 됐고 모든 진입 (startCoreTutorial / startWelcomeTutorial / replay) 도 no-op.
+  console.warn('[legacy] startInteractiveOnboarding — V8 시작 튜토리얼로 대체됨, no-op');
+  return;
   // 사용자 요청 2026-04-28: startStep 인자로 특정 step부터 시작 가능 (튜토리얼 디버그 편의)
   _onbStep = (typeof startStep === 'number' && startStep >= 0 && startStep < ONBOARDING_STEPS.length) ? startStep : 0;
   _onbStartTime = Date.now();

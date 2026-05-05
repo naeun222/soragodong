@@ -53,7 +53,7 @@ function _intakeStep1Html() {
       <span class="intake-mic-recommend-emoji">🎤</span>
       <span><b>말로 풀어봐 — 적극 추천!</b><br><span class="intake-mic-recommend-sub">손보다 빠르고 자연스러워</span></span>
     </div>
-    <div class="intake-prompt">요즘 마음에 자주 떠오르는 거, 한 마디부터 시작해도 OK.</div>
+    <div class="intake-prompt">머릿속에서 안 떠나는 거. 한 줄도 OK.</div>
     <textarea id="intakeInput1" class="intake-textarea" rows="3" placeholder="한 줄도 OK. 마음 가는 대로."></textarea>
     <div id="intakeMicStatus1" class="intake-mic-status" style="display:none;"></div>
     <div class="intake-actions">
@@ -251,6 +251,21 @@ function _intakeStep5Next() {
 }
 
 function _intakeStep6Html() {
+  // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 모드 — chat 탭 다리 카피.
+  if (window._v8TutorialMode) {
+    return `
+      <div class="intake-finish">
+        <div class="intake-finish-icon">🐚</div>
+        <div class="intake-finish-title">잠깐 들여다봤어.</div>
+        <div class="intake-finish-body">
+          정리해서 채팅으로 보여줄게.
+        </div>
+      </div>
+      <div class="intake-actions">
+        <button class="intake-send-btn" onclick="_closeIntakeModal()">계속 ✦</button>
+      </div>
+    `;
+  }
   return `
     <div class="intake-finish">
       <div class="intake-finish-icon">🐚</div>

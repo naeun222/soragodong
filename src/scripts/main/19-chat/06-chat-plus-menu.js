@@ -85,6 +85,11 @@ function _archiveCurrentChapter(opts) {
       && !window._onbTutorialMode
       && !(state.preferences && state.preferences.testerMode)
       && archiveItem.messages.length >= 6) {
+    // V4 (사용자 명시 2026-05-06 ultrathink): 비구독자는 도서관 챕터 토픽 자동 정리 X.
+    // 도서관은 ✓ (manual) 누를 때만 chapter topic 생성. case_analysis (나 탭 fill) 는 그대로.
+    const _bill = window._billingCache;
+    const _isPremium = !!(_bill && _bill.subscription_plan === 'premium' && _bill.subscription_active);
+    const _allowChapterTopic = !!opts.manual || _isPremium;
     setTimeout(async () => {
       try {
         // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
@@ -94,7 +99,7 @@ function _archiveCurrentChapter(opts) {
           try { await extractChapterCaseAnalysis(archiveItem.messages); }
           catch (e) { console.warn('[new-user extract] case fail:', e); }
         }
-        if (typeof extractPreviousChapterTopics === 'function') {
+        if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
           try { await extractPreviousChapterTopics(archiveItem.messages); }
           catch (e) { console.warn('[new-user extract] topic fail:', e); }
         }

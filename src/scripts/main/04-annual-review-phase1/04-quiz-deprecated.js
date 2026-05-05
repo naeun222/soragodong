@@ -5,6 +5,9 @@
 async function maybeShowFirstTimeIntro() {
   if (!authUserId) return;
   if (window._onbTutorialMode) return;
+  // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼이 진행 중이거나 이미 봤으면 옛 코어 자동 진입 X.
+  if (window._v8TutorialRunning) return;
+  if (state && state.tutorialVersion === 'v8-start') return;
   // testerMode = banner queue 만 (chooser 폐기)
   if (state.preferences && state.preferences.testerMode) {
     if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();

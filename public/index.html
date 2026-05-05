@@ -10302,6 +10302,185 @@
     line-height: 1.7;
   }
   .pc-graph-empty .ge-icon { font-size: 22px; margin-bottom: 6px; opacity: 0.5; }
+/* V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 — cold open hero + 코치마크 */
+
+/* ── HERO (cold open) ──────────────────────────────────────── */
+.v8-hero {
+  position: fixed;
+  inset: 0;
+  background: var(--bg, #0c0c0e);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  animation: v8HeroFadeIn 600ms ease-out both;
+}
+@keyframes v8HeroFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.v8-hero.v8-hero-fadeout {
+  animation: v8HeroFadeOut 420ms ease-in both;
+}
+@keyframes v8HeroFadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.97); }
+}
+.v8-hero-godong {
+  width: 96px;
+  height: 96px;
+  margin-top: -8vh;
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: v8GodongFadeIn 800ms 200ms ease-out forwards;
+}
+@keyframes v8GodongFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.v8-hero-text {
+  color: var(--text, #f3f3f5);
+  font-family: 'Gowun Batang', serif;
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  text-align: center;
+  min-height: 1.5em;
+  padding: 0 24px;
+  transition: opacity 350ms ease-out;
+}
+.v8-hero-text.v8-hero-text-fadeout {
+  opacity: 0;
+}
+.v8-hero-line {
+  font-family: 'Gowun Batang', serif;
+  letter-spacing: 0.02em;
+  margin: 8px 0;
+  opacity: 0;
+  animation: v8LineFadeIn 300ms ease-out forwards;
+}
+.v8-hero-line-1 {
+  font-size: 22px;
+  font-weight: 400;
+  animation-delay: 0ms;
+}
+.v8-hero-line-2 {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--accent, #d4a85a);
+  animation-delay: 600ms;
+}
+.v8-hero-line-3 {
+  font-size: 22px;
+  font-weight: 400;
+  animation-delay: 1200ms;
+}
+@keyframes v8LineFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.v8-hero-tap-hint {
+  position: absolute;
+  bottom: 36px;
+  right: 28px;
+  font-size: 22px;
+  color: var(--accent, #d4a85a);
+  opacity: 0;
+  pointer-events: none;
+}
+.v8-hero-tap-hint.v8-pulse {
+  animation: v8HintPulse 3000ms ease-in-out infinite;
+}
+@keyframes v8HintPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+/* ── 코치마크 ───────────────────────────────────────────────── */
+.v8-coach {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+}
+.v8-coach-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+  animation: v8MaskFadeIn 250ms ease-out both;
+}
+@keyframes v8MaskFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.v8-coach-ring {
+  position: fixed;
+  z-index: 9999;
+  border-radius: 14px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 4px rgba(212, 168, 90, 0.55),
+    0 0 0 9999px rgba(0, 0, 0, 0.55);
+  animation: v8RingPulse 1800ms ease-in-out infinite;
+}
+@keyframes v8RingPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(212, 168, 90, 0.55), 0 0 0 9999px rgba(0, 0, 0, 0.55); }
+  50%      { box-shadow: 0 0 0 7px rgba(212, 168, 90, 0.85), 0 0 0 9999px rgba(0, 0, 0, 0.55); }
+}
+.v8-coach-bubble {
+  position: fixed;
+  z-index: 10000;
+  background: var(--surface, #fff);
+  color: var(--text, #1c1c1e);
+  border-radius: 14px;
+  padding: 16px 18px 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.18);
+  pointer-events: auto;
+  animation: v8BubbleIn 280ms ease-out both;
+}
+@keyframes v8BubbleIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.v8-coach-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent, #d4a85a);
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+.v8-coach-text,
+.v8-coach-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text, #1c1c1e);
+}
+.v8-coach-text-soft {
+  color: var(--text-dim, #888);
+  font-size: 13px;
+}
+.v8-coach-ok {
+  margin-top: 12px;
+  width: 100%;
+  border: none;
+  background: var(--accent, #d4a85a);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: filter 120ms ease-out;
+}
+.v8-coach-ok:hover { filter: brightness(1.05); }
+.v8-coach-ok:active { filter: brightness(0.95); }
 
 </style>
 </head>
@@ -11299,9 +11478,12 @@
       <details class="settings-collapse">
         <summary>📚 가이드 (튜토리얼 · 단축어)</summary>
         <div class="settings-collapse-body">
+          <!-- V4 (사용자 명시 2026-05-06 ultrathink): 옛 80 step 튜토리얼 진입 버튼 = 모두 폐기.
+               V8 시작 튜토리얼은 첫 진입 시 자동 표시. 향후 Tier 3 모듈로 별도 노출 예정.
           <button class="btn-secondary" onclick="showTutorialReplayMenu()">🐚 투어 다시 보기</button>
           <button class="btn-secondary" onclick="showCoreReplayPicker()">🔧 개별 코어 튜토리얼</button>
           <button class="btn-secondary" onclick="(function(){ window._fullTutorialActive = true; if (typeof startInteractiveOnboarding === 'function') startInteractiveOnboarding(); })()">✨ 풀 튜토리얼 (처음부터 끝까지)</button>
+          -->
           <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
         </div>
       </details>
@@ -11552,6 +11734,11 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+
+<!-- V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 — cold open hero overlay + 코치마크 root -->
+<!-- 동작: shouldRunStartTutorialV8 → runStartTutorialV8 가 controller. JS 가 markup 채움. -->
+<div id="v8TutorialRoot" aria-hidden="true"></div>
 
 
 <script>
@@ -14356,6 +14543,9 @@ function _annTogglePlay() {
 async function maybeShowFirstTimeIntro() {
   if (!authUserId) return;
   if (window._onbTutorialMode) return;
+  // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼이 진행 중이거나 이미 봤으면 옛 코어 자동 진입 X.
+  if (window._v8TutorialRunning) return;
+  if (state && state.tutorialVersion === 'v8-start') return;
   // testerMode = banner queue 만 (chooser 폐기)
   if (state.preferences && state.preferences.testerMode) {
     if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
@@ -15139,7 +15329,7 @@ function _intakeStep1Html() {
       <span class="intake-mic-recommend-emoji">🎤</span>
       <span><b>말로 풀어봐 — 적극 추천!</b><br><span class="intake-mic-recommend-sub">손보다 빠르고 자연스러워</span></span>
     </div>
-    <div class="intake-prompt">요즘 마음에 자주 떠오르는 거, 한 마디부터 시작해도 OK.</div>
+    <div class="intake-prompt">머릿속에서 안 떠나는 거. 한 줄도 OK.</div>
     <textarea id="intakeInput1" class="intake-textarea" rows="3" placeholder="한 줄도 OK. 마음 가는 대로."></textarea>
     <div id="intakeMicStatus1" class="intake-mic-status" style="display:none;"></div>
     <div class="intake-actions">
@@ -15337,6 +15527,21 @@ function _intakeStep5Next() {
 }
 
 function _intakeStep6Html() {
+  // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 모드 — chat 탭 다리 카피.
+  if (window._v8TutorialMode) {
+    return `
+      <div class="intake-finish">
+        <div class="intake-finish-icon">🐚</div>
+        <div class="intake-finish-title">잠깐 들여다봤어.</div>
+        <div class="intake-finish-body">
+          정리해서 채팅으로 보여줄게.
+        </div>
+      </div>
+      <div class="intake-actions">
+        <button class="intake-send-btn" onclick="_closeIntakeModal()">계속 ✦</button>
+      </div>
+    `;
+  }
   return `
     <div class="intake-finish">
       <div class="intake-finish-icon">🐚</div>
@@ -17055,9 +17260,19 @@ async function init() {
   }
 
   // 사용자 명시 2026-04-30 ultrathink (정정) + V203 (chooser 폐기): silent 환영 보너스 + 자동 코어 튜토리얼 진입.
-  if (typeof maybeShowFirstTimeIntro === 'function') {
-    setTimeout(() => { maybeShowFirstTimeIntro().catch(e => console.warn('firstTimeIntro:', e)); }, 4500);
-  }
+  // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 우선 — 게스트 첫 진입 / 카카오 신규 (게스트 이력 X) 면 fire.
+  // 그 외 = 기존 maybeShowFirstTimeIntro fallback.
+  setTimeout(async () => {
+    try {
+      if (typeof runStartTutorialV8 === 'function' && typeof shouldRunStartTutorialV8 === 'function' && shouldRunStartTutorialV8()) {
+        await runStartTutorialV8();
+        return;  // V8 가 처리함
+      }
+    } catch (e) { console.warn('[v8 tutorial entry]:', e); }
+    if (typeof maybeShowFirstTimeIntro === 'function') {
+      try { await maybeShowFirstTimeIntro(); } catch (e) { console.warn('firstTimeIntro:', e); }
+    }
+  }, 4500);
   // 사용자 명시 2026-04-30 ultrathink: testerMode ON 경로에서 reload 후 intake 모달 자동 재진입.
   if (typeof _resumePendingIntake === 'function') {
     setTimeout(() => { _resumePendingIntake().catch(e => console.warn('intake resume:', e)); }, 4800);
@@ -17122,8 +17337,10 @@ async function init() {
 
 // V3.7: startWelcomeTutorial을 인터랙티브 온보딩으로 가로채기
 // V3.9: WELCOME_SLIDES/TOUR_SLIDES 슬라이드 시스템 완전 제거됨
+// V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 (11-start-tutorial-v8.js) 로 교체.
+// 옛 코어 / 풀 튜토리얼 진입 = 모두 no-op. ONBOARDING_STEPS 본체는 주석 보존.
 function startWelcomeTutorial() {
-  startInteractiveOnboarding();
+  console.warn('[legacy] startWelcomeTutorial() — V8 시작 튜토리얼로 대체됨, no-op');
 }
 
 // === V3.7 인터랙티브 온보딩 시스템 ===
@@ -17141,7 +17358,12 @@ function startWelcomeTutorial() {
 //   - Core 3-B: mutation_intro / try_evolved_card (2 step)
 //   - Core 4: crystallize_complete (1 step)
 // 옛 잠금 메커니즘 (isCoreLocked / showCoreLockModal / _coreLockInterceptor / applyCoreLockMarkers) = noop dead.
-const ONBOARDING_STEPS = [
+// V4 (사용자 명시 2026-05-06 ultrathink): 옛 80 스텝 = V8 시작 튜토 (11-start-tutorial-v8.js) 대체.
+// 빈 배열로 stub — 진입 함수들 (startInteractiveOnboarding / startCoreTutorial) 도 no-op.
+// 본체 코드는 아래 주석 블록에 보존 (legacy reference / 향후 Tier 3 모듈화 시 발췌).
+const ONBOARDING_STEPS = [];
+/* legacy ONBOARDING_STEPS — 보존만:
+const _LEGACY_ONBOARDING_STEPS = [
   // === Phase 0: 부탁 한 마디 (사용자 요청 2026-04-28) ===
   {
     id: 'tutorial_plea',
@@ -18342,6 +18564,7 @@ const ONBOARDING_STEPS = [
     nextLabel: '시작! ✦'
   }
 ];
+*/
 
 let _onbStep = 0;
 let _onbActiveListeners = [];
@@ -18582,6 +18805,10 @@ const CORE_INITIAL_ACTION = {
 
 // 코어 튜토리얼 시작 — startInteractiveOnboarding 인프라 재사용
 async function startCoreTutorial(coreId) {
+  // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼로 대체. 옛 코어 진입 = no-op.
+  // 진입점 (Settings → 가이드 / 옛 chooser / 자동 trigger) 모두 작동 안 함.
+  console.warn('[legacy] startCoreTutorial(' + coreId + ') — V8 시작 튜토리얼로 대체됨, no-op');
+  return;
   const range = CORE_TUTORIAL_RANGES[coreId];
   if (!range) { console.warn('[core] unknown id:', coreId); return; }
   const startIdx = ONBOARDING_STEPS.findIndex(s => s.id === range.startId);
@@ -18907,6 +19134,10 @@ function _initOnbDrag() {
 }
 
 async function startInteractiveOnboarding(startStep) {
+  // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼로 대체. 옛 진입 = no-op.
+  // ONBOARDING_STEPS 빈 배열로 stub 됐고 모든 진입 (startCoreTutorial / startWelcomeTutorial / replay) 도 no-op.
+  console.warn('[legacy] startInteractiveOnboarding — V8 시작 튜토리얼로 대체됨, no-op');
+  return;
   // 사용자 요청 2026-04-28: startStep 인자로 특정 step부터 시작 가능 (튜토리얼 디버그 편의)
   _onbStep = (typeof startStep === 'number' && startStep >= 0 && startStep < ONBOARDING_STEPS.length) ? startStep : 0;
   _onbStartTime = Date.now();
@@ -20201,6 +20432,338 @@ function getDayKey(input) {
 function todayKey() { return getDayKey(); }
 
 
+// ═══════════════════════════════════════════════════════════════
+// V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼
+// 게스트 첫 진입 / 카카오 신규 (게스트 이력 X) → 자동 fire.
+// 흐름: cold open hero (안녕? → differentiator) → intake 모달 →
+//       chat 탭 자동 + 4단 분석 메시지 inject → 마무리 코치마크 →
+//       헤더 모델 토글 코치마크 → 종료 (tutorialVersion='v8-start' 마킹).
+// 시드 / 테스터 무관 — testerMode 면 skip.
+// ═══════════════════════════════════════════════════════════════
+
+function shouldRunStartTutorialV8() {
+  if (!state) return false;
+  if (state.tutorialVersion === 'v8-start') return false;
+  if (state.preferences && state.preferences.testerMode) return false;
+  // 게스트 첫 진입 — intakeWorry 비어있고 chatMessages 비어있으면 첫 진입
+  if (state.isGuest) {
+    const hadIntake = Array.isArray(state.intakeWorry) && state.intakeWorry.length > 0;
+    return !hadIntake;
+  }
+  // 인증 사용자 (카카오 신규 등) — 데이터 비어있으면 신규
+  const hasAnyData =
+    (Array.isArray(state.entries) && state.entries.length > 0) ||
+    (Array.isArray(state.chatMessages) && state.chatMessages.length > 0) ||
+    (Array.isArray(state.intakeWorry) && state.intakeWorry.length > 0) ||
+    (Array.isArray(state.shellCollection) && state.shellCollection.length > 0) ||
+    (Array.isArray(state.topicCards) && state.topicCards.length > 0) ||
+    (Array.isArray(state.missions) && state.missions.length > 0);
+  return !hasAnyData;
+}
+
+async function runStartTutorialV8() {
+  if (!shouldRunStartTutorialV8()) return;
+  if (window._v8TutorialRunning) return;
+  window._v8TutorialRunning = true;
+  // V8 튜토 동안 다른 자동 모달 (E2EE setup 등) 이 위로 뜨지 않도록 — init 의 setTimeout 이미 발사됐을 수 있음.
+  // 옛 코어 자동 진입 차단 — V8 가 시작 튜토를 책임지므로 maybeShowFirstTimeIntro 의 startCoreTutorial 진입 막기.
+  // tutorialVersion 마킹 = 시작 시점 — 중간 reload 시 재진입 차단 (사용자 신뢰 우선, 같은 화면 반복 회피).
+  state.preferences = state.preferences || {};
+  state.preferences._coreTutorialAutoStarted = true;
+  state.tutorialVersion = 'v8-start';
+  try { saveState(); } catch {}
+  try {
+    await _v8HeroSequence();           // 화면 1·2
+    await _v8RunIntakeAndInject();     // 모달 + chat inject
+    await _v8Sleep(900);               // chat 메시지 / 스크롤 settle
+    await _v8CoachmarkEndChapter();    // 마무리 코치마크
+    await _v8Sleep(250);
+    await _v8CoachmarkModelToggle();   // 헤더 모델 토글 코치마크
+  } catch (e) {
+    console.warn('[v8 tutorial]', e);
+  } finally {
+    window._v8TutorialRunning = false;
+    _v8CleanupAll();
+    // V8 종료 시 Core 2 잠금 해제 — 첫 사이클 (intake → chat → archive) 완수.
+    // 4단 카드의 ✦ 해볼게 / 🧬 전략으로 버튼이 disabled-locked 상태가 안 되도록.
+    if (state._core2NotUnlocked) {
+      state._core2NotUnlocked = false;
+      try { saveState(); } catch {}
+      try { if (typeof renderChat === 'function') renderChat(); } catch {}
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// HERO — 화면 1 "안녕?" + 화면 2 differentiator
+// ─────────────────────────────────────────────────────────────
+
+function _v8HeroSequence() {
+  return new Promise((resolve) => {
+    const root = document.getElementById('v8TutorialRoot');
+    if (!root) { resolve(); return; }
+    root.setAttribute('aria-hidden', 'false');
+    root.innerHTML = `
+      <div id="v8Hero" class="v8-hero">
+        <img class="v8-hero-godong" src="/godongicon.png" alt="">
+        <div class="v8-hero-text" id="v8HeroText"></div>
+        <div class="v8-hero-tap-hint" id="v8HeroTapHint">✦</div>
+      </div>
+    `;
+    const hero = document.getElementById('v8Hero');
+    const textEl = document.getElementById('v8HeroText');
+    const hint = document.getElementById('v8HeroTapHint');
+    if (!hero || !textEl) { resolve(); return; }
+
+    let phase = 1;
+    let acceptingTap = false;
+
+    // 화면 1: "안녕?" 타이핑
+    const screen1 = '안녕?';
+    const typeOne = (i) => {
+      if (i > screen1.length) {
+        setTimeout(() => {
+          if (hint) hint.classList.add('v8-pulse');
+          acceptingTap = true;
+        }, 1100);
+        return;
+      }
+      textEl.textContent = screen1.slice(0, i);
+      setTimeout(() => typeOne(i + 1), 130);
+    };
+    setTimeout(() => typeOne(1), 600);
+
+    // 화면 2: cascade fade
+    const renderScreen2 = () => {
+      acceptingTap = false;
+      if (hint) hint.classList.remove('v8-pulse');
+      textEl.classList.add('v8-hero-text-fadeout');
+      setTimeout(() => {
+        textEl.classList.remove('v8-hero-text-fadeout');
+        textEl.innerHTML = `
+          <div class="v8-hero-line v8-hero-line-1">다른 AI랑 나는 좀 달라.</div>
+          <div class="v8-hero-line v8-hero-line-2">너를 기억해.</div>
+          <div class="v8-hero-line v8-hero-line-3">그리고 시간이 지나면 — 다시 물어봐.</div>
+        `;
+        // 1500ms 정적 후 hint 호흡
+        setTimeout(() => {
+          if (hint) hint.classList.add('v8-pulse');
+          acceptingTap = true;
+        }, 3000);
+      }, 350);
+    };
+
+    const onTap = (e) => {
+      if (!acceptingTap) return;
+      e.preventDefault();
+      if (phase === 1) {
+        phase = 2;
+        renderScreen2();
+      } else {
+        // 화면 2 → 모달로 전환 (hero 페이드 아웃 후 resolve)
+        acceptingTap = false;
+        if (hint) hint.classList.remove('v8-pulse');
+        hero.classList.add('v8-hero-fadeout');
+        setTimeout(() => {
+          root.innerHTML = '';
+          root.setAttribute('aria-hidden', 'true');
+          hero.removeEventListener('click', onTap);
+          resolve();
+        }, 450);
+      }
+    };
+    hero.addEventListener('click', onTap);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// INTAKE 모달 + chat 탭 자동 + 4단 분석 메시지 inject
+// ─────────────────────────────────────────────────────────────
+
+async function _v8RunIntakeAndInject() {
+  // _canAI 가드 — 세션 확보 못 하면 토스트 후 종료
+  if (typeof _canAI === 'function' && !_canAI()) {
+    if (typeof showToast === 'function') showToast('🔑 잠시 후 다시 시도해줘');
+    return;
+  }
+  if (typeof runIntakeFlow !== 'function') {
+    console.warn('[v8] runIntakeFlow 부재');
+    return;
+  }
+  // intake 단계 5 stash 가 _onbTutorialMode 플래그 의존 → 우회 위해 v8 전용 플래그 set
+  window._v8TutorialMode = true;
+  window._onbTutorialMode = true;  // step5 의 stash 분기 reuse — _startIntakeFromTutorial 가 쓰는 그 플래그
+  try {
+    await runIntakeFlow();
+  } catch (e) { console.warn('[v8 intake]', e); }
+  window._onbTutorialMode = false;
+  window._v8TutorialMode = false;
+
+  const analysis = window._lastIntakeAnalysis;
+  const worries = Array.isArray(window._lastIntakeWorries) ? window._lastIntakeWorries : [];
+  delete window._lastIntakeAnalysis;
+  delete window._lastIntakeWorries;
+
+  // chat 탭으로 자동 전환
+  if (typeof showScreen === 'function') showScreen('chat');
+
+  if (!analysis || (!analysis.diagnosis && !analysis.strategy)) return;
+
+  state.chatMessages = state.chatMessages || [];
+  const nowIso = new Date().toISOString();
+  if (worries.length > 0) {
+    state.chatMessages.push({
+      role: 'user',
+      content: worries.join('\n\n'),
+      timestamp: nowIso
+    });
+  }
+  // godong intro line — 사용자 명시 카피
+  state.chatMessages.push({
+    role: 'assistant',
+    content: '방금 들은 거, 이렇게 봤어 —',
+    timestamp: nowIso
+  });
+  // 4단 분석 (기존 _startIntakeFromTutorial 와 동일 포맷)
+  const dim = (analysis.dimension || '환경').trim();
+  const para = (analysis.paraphrase || '').trim();
+  const diag = (analysis.diagnosis || '').trim();
+  const strat = (analysis.strategy || '').trim();
+  const observation = para || (diag ? diag.split(/[.。]\s/)[0] + '.' : '방금 들려준 마음, 정리해봤어.');
+  const concept = `${dim} 차원이 작동하는 모습이 보여.${diag ? '\n' + diag : ''}`;
+  const guide = strat || '천천히 같이 가보자.';
+  const proposalText = strat ? strat.split(/[.。]\s/)[0].slice(0, 80) : '천천히 한 걸음';
+  const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}\n\n[오늘의 제안]\n${proposalText}`;
+  state.chatMessages.push({
+    role: 'assistant',
+    content: fourStage,
+    fromDeeper: true,
+    proposal: true,
+    proposalData: { title: proposalText.slice(0, 40) || '오늘 한 걸음' },
+    timestamp: nowIso
+  });
+  saveState();
+  if (typeof renderChat === 'function') renderChat();
+  setTimeout(() => { if (typeof scrollChatToBottom === 'function') scrollChatToBottom(true); }, 80);
+}
+
+// ─────────────────────────────────────────────────────────────
+// 코치마크 — 가벼운 자체 인프라 (ONBOARDING_STEPS 분리)
+// ─────────────────────────────────────────────────────────────
+
+function _v8ShowCoachmark({ targetSelector, body, position = 'top', onAdvance }) {
+  return new Promise((resolve) => {
+    const root = document.getElementById('v8TutorialRoot');
+    if (!root) { resolve(); return; }
+    const target = targetSelector ? document.querySelector(targetSelector) : null;
+    // 타겟이 화면에 없으면 코치마크 skip — 다음 단계로 진행
+    if (!target || target.offsetParent === null) { resolve(); return; }
+    root.setAttribute('aria-hidden', 'false');
+    root.innerHTML = `
+      <div id="v8Coach" class="v8-coach">
+        <div class="v8-coach-mask"></div>
+        <div class="v8-coach-bubble" id="v8CoachBubble">
+          <div class="v8-coach-body">${body}</div>
+          <button class="v8-coach-ok" id="v8CoachOk">알겠어 ✦</button>
+        </div>
+      </div>
+    `;
+    const bubble = document.getElementById('v8CoachBubble');
+    const okBtn = document.getElementById('v8CoachOk');
+    const ring = document.createElement('div');
+    ring.className = 'v8-coach-ring';
+    document.body.appendChild(ring);
+
+    const place = () => {
+      if (!target || !bubble) return;
+      const r = target.getBoundingClientRect();
+      // ring around target
+      const pad = 8;
+      ring.style.top = (r.top - pad) + 'px';
+      ring.style.left = (r.left - pad) + 'px';
+      ring.style.width = (r.width + pad * 2) + 'px';
+      ring.style.height = (r.height + pad * 2) + 'px';
+      // bubble position
+      const bw = Math.min(320, window.innerWidth - 32);
+      bubble.style.width = bw + 'px';
+      const bh = bubble.offsetHeight || 120;
+      let top, left;
+      if (position === 'bottom') {
+        top = r.bottom + 14;
+        left = Math.max(16, Math.min(window.innerWidth - bw - 16, r.left + r.width / 2 - bw / 2));
+      } else {
+        top = r.top - bh - 14;
+        left = Math.max(16, Math.min(window.innerWidth - bw - 16, r.left + r.width / 2 - bw / 2));
+        if (top < 12) {
+          // 위로 못 올라가면 아래로
+          top = r.bottom + 14;
+        }
+      }
+      bubble.style.top = top + 'px';
+      bubble.style.left = left + 'px';
+    };
+    requestAnimationFrame(() => requestAnimationFrame(place));
+    const onResize = () => place();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onResize, true);
+
+    const cleanup = () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', onResize, true);
+      try { ring.remove(); } catch {}
+      root.innerHTML = '';
+      root.setAttribute('aria-hidden', 'true');
+    };
+
+    const advance = () => {
+      cleanup();
+      if (typeof onAdvance === 'function') {
+        try { onAdvance(); } catch {}
+      }
+      resolve();
+    };
+    if (okBtn) okBtn.addEventListener('click', advance);
+  });
+}
+
+function _v8CoachmarkEndChapter() {
+  const target = '.chat-end-btn';
+  const body = `
+    <div class="v8-coach-title">대화 마무리</div>
+    <div class="v8-coach-text">
+      다 얘기했다 싶으면 여기 눌러 ✓<br>
+      내가 정리해서 도서관에 넣어둘게.<br>
+      <span class="v8-coach-text-soft">나 탭에서도 보여.</span>
+    </div>
+  `;
+  return _v8ShowCoachmark({ targetSelector: target, body, position: 'top' });
+}
+
+function _v8CoachmarkModelToggle() {
+  // 헤더 첫 번째 godongicon button (메인 헤더 안)
+  const target = '.header .js-chat-mode-btn';
+  const body = `
+    <div class="v8-coach-title">모델 깊이</div>
+    <div class="v8-coach-text">
+      여기 누르면 모델 바뀌어.<br>
+      평소엔 가볍게, 깊게 가고 싶을 땐 깊게.
+    </div>
+  `;
+  return _v8ShowCoachmark({ targetSelector: target, body, position: 'bottom' });
+}
+
+function _v8Sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function _v8CleanupAll() {
+  const root = document.getElementById('v8TutorialRoot');
+  if (root) {
+    root.innerHTML = '';
+    root.setAttribute('aria-hidden', 'true');
+  }
+  document.querySelectorAll('.v8-coach-ring').forEach(el => el.remove());
+}
 // ═══════════════════════════════════════════════════════════════
 // DECISION ROOM (Phase 3)
 // ═══════════════════════════════════════════════════════════════
@@ -29973,6 +30536,11 @@ function _archiveCurrentChapter(opts) {
       && !window._onbTutorialMode
       && !(state.preferences && state.preferences.testerMode)
       && archiveItem.messages.length >= 6) {
+    // V4 (사용자 명시 2026-05-06 ultrathink): 비구독자는 도서관 챕터 토픽 자동 정리 X.
+    // 도서관은 ✓ (manual) 누를 때만 chapter topic 생성. case_analysis (나 탭 fill) 는 그대로.
+    const _bill = window._billingCache;
+    const _isPremium = !!(_bill && _bill.subscription_plan === 'premium' && _bill.subscription_active);
+    const _allowChapterTopic = !!opts.manual || _isPremium;
     setTimeout(async () => {
       try {
         // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
@@ -29982,7 +30550,7 @@ function _archiveCurrentChapter(opts) {
           try { await extractChapterCaseAnalysis(archiveItem.messages); }
           catch (e) { console.warn('[new-user extract] case fail:', e); }
         }
-        if (typeof extractPreviousChapterTopics === 'function') {
+        if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
           try { await extractPreviousChapterTopics(archiveItem.messages); }
           catch (e) { console.warn('[new-user extract] topic fail:', e); }
         }
@@ -44574,6 +45142,10 @@ function _pushMagicReflectionArchive(batch) {
 
 // inline (일반 API) 처리 — submit 실패 시 fallback / 12h timeout fallback.
 async function _runDailyExtractInline(pending) {
+  // V4 (사용자 명시 2026-05-06 ultrathink): 비구독자는 도서관 챕터 토픽 자동 정리 X.
+  // 4AM batch 도 manual ✓ (endedManually=true) 또는 premium 만 topic 추출. case_analysis 는 그대로.
+  const _bill = window._billingCache;
+  const _isPremium = !!(_bill && _bill.subscription_plan === 'premium' && _bill.subscription_active);
   for (const batch of pending) {
     // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
     // sourceArchiveId 박음 (cascade soft delete 추적용).
@@ -44583,8 +45155,9 @@ async function _runDailyExtractInline(pending) {
         await extractChapterCaseAnalysis(batch.messages);
       }
     } catch (e) { console.warn('[inline] case fail:', e); }
+    const _allowChapterTopic = !!batch.endedManually || _isPremium;
     try {
-      if (typeof extractPreviousChapterTopics === 'function') {
+      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
         await extractPreviousChapterTopics(batch.messages);
       }
     } catch (e) { console.warn('[inline] topic fail:', e); }

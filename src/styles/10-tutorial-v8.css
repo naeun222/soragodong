@@ -1,0 +1,179 @@
+/* V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 — cold open hero + 코치마크 */
+
+/* ── HERO (cold open) ──────────────────────────────────────── */
+.v8-hero {
+  position: fixed;
+  inset: 0;
+  background: var(--bg, #0c0c0e);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  animation: v8HeroFadeIn 600ms ease-out both;
+}
+@keyframes v8HeroFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.v8-hero.v8-hero-fadeout {
+  animation: v8HeroFadeOut 420ms ease-in both;
+}
+@keyframes v8HeroFadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.97); }
+}
+.v8-hero-godong {
+  width: 96px;
+  height: 96px;
+  margin-top: -8vh;
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: v8GodongFadeIn 800ms 200ms ease-out forwards;
+}
+@keyframes v8GodongFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.v8-hero-text {
+  color: var(--text, #f3f3f5);
+  font-family: 'Gowun Batang', serif;
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  text-align: center;
+  min-height: 1.5em;
+  padding: 0 24px;
+  transition: opacity 350ms ease-out;
+}
+.v8-hero-text.v8-hero-text-fadeout {
+  opacity: 0;
+}
+.v8-hero-line {
+  font-family: 'Gowun Batang', serif;
+  letter-spacing: 0.02em;
+  margin: 8px 0;
+  opacity: 0;
+  animation: v8LineFadeIn 300ms ease-out forwards;
+}
+.v8-hero-line-1 {
+  font-size: 22px;
+  font-weight: 400;
+  animation-delay: 0ms;
+}
+.v8-hero-line-2 {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--accent, #d4a85a);
+  animation-delay: 600ms;
+}
+.v8-hero-line-3 {
+  font-size: 22px;
+  font-weight: 400;
+  animation-delay: 1200ms;
+}
+@keyframes v8LineFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.v8-hero-tap-hint {
+  position: absolute;
+  bottom: 36px;
+  right: 28px;
+  font-size: 22px;
+  color: var(--accent, #d4a85a);
+  opacity: 0;
+  pointer-events: none;
+}
+.v8-hero-tap-hint.v8-pulse {
+  animation: v8HintPulse 3000ms ease-in-out infinite;
+}
+@keyframes v8HintPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+/* ── 코치마크 ───────────────────────────────────────────────── */
+.v8-coach {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+}
+.v8-coach-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+  animation: v8MaskFadeIn 250ms ease-out both;
+}
+@keyframes v8MaskFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.v8-coach-ring {
+  position: fixed;
+  z-index: 9999;
+  border-radius: 14px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 4px rgba(212, 168, 90, 0.55),
+    0 0 0 9999px rgba(0, 0, 0, 0.55);
+  animation: v8RingPulse 1800ms ease-in-out infinite;
+}
+@keyframes v8RingPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(212, 168, 90, 0.55), 0 0 0 9999px rgba(0, 0, 0, 0.55); }
+  50%      { box-shadow: 0 0 0 7px rgba(212, 168, 90, 0.85), 0 0 0 9999px rgba(0, 0, 0, 0.55); }
+}
+.v8-coach-bubble {
+  position: fixed;
+  z-index: 10000;
+  background: var(--surface, #fff);
+  color: var(--text, #1c1c1e);
+  border-radius: 14px;
+  padding: 16px 18px 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.18);
+  pointer-events: auto;
+  animation: v8BubbleIn 280ms ease-out both;
+}
+@keyframes v8BubbleIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.v8-coach-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent, #d4a85a);
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+.v8-coach-text,
+.v8-coach-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text, #1c1c1e);
+}
+.v8-coach-text-soft {
+  color: var(--text-dim, #888);
+  font-size: 13px;
+}
+.v8-coach-ok {
+  margin-top: 12px;
+  width: 100%;
+  border: none;
+  background: var(--accent, #d4a85a);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: filter 120ms ease-out;
+}
+.v8-coach-ok:hover { filter: brightness(1.05); }
+.v8-coach-ok:active { filter: brightness(0.95); }
