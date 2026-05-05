@@ -25,4 +25,6 @@
 
 <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi7IaM65286rOg64+Z8J+QmiIsInNob3J0X25hbWUiOiLshozrnbzqs6Drj5nwn5CaIiwiZGVzY3JpcHRpb24iOiJBSSDrnbzsnbTtlIQg7KCE65616rCAIiwic3RhcnRfdXJsIjoiLi8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGYwZTE3IiwidGhlbWVfY29sb3IiOiIjMGYwZTE3IiwiaWNvbnMiOlt7InNyYyI6Imljb24tMTkyLnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifSx7InNyYyI6Imljb24tNTEyLnBuZyIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9wbmcifV19">
 
-<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<!-- 사용자 보고 2026-05-05 (perf): Google Fonts CSS 가 render-blocking 이라 첫 페인트 전에 흰→검 플래시. preload 후 swap 으로 non-blocking. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet"></noscript>

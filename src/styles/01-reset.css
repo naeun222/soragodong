@@ -1,5 +1,6 @@
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; overflow: hidden; }
+  /* 사용자 보고 2026-05-05: <html> 에 bg-color 없으면 첫 페인트 직전 흰색 디폴트 잠깐 보여서 번쩍 → 다크 톤 매치 (#0f0e17 = --bg) */
+  html, body { height: 100%; overflow: hidden; background: #0f0e17; }
   body {
     font-family: 'Noto Sans KR', sans-serif;
     background: var(--bg);
