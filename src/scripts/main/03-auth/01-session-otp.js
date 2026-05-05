@@ -96,46 +96,7 @@ async function checkSession() {
   return false;
 }
 
-async function sendOTP(email) {
-  const resp = await fetch(`${SUPABASE_URL}/auth/v1/otp`, {
-    method: 'POST',
-    headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email,
-      create_user: true,
-      // No emailRedirectTo → user gets a code AND a link, we use the code
-    })
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(err.msg || err.error_description || err.message || '코드 전송 실패');
-  }
-  return true;
-}
-
-async function verifyOTP(email, token) {
-  const resp = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
-    method: 'POST',
-    headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email,
-      token,
-      type: 'email'
-    })
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(err.msg || err.error_description || err.message || '코드가 틀렸어');
-  }
-  const data = await resp.json();
-  // Returns { access_token, refresh_token, user }
-  session = {
-    access_token: data.access_token,
-    refresh_token: data.refresh_token,
-    user: data.user
-  };
-  authUserId = data.user.id;
-  localStorage.setItem('soragodong_session', JSON.stringify(session));
-  return true;
-}
+// 사용자 명시 2026-05-06: 이메일 OTP 로그인 폐기 (dead code 제거).
+// sendOTP / verifyOTP 폐기. 카카오 OAuth 로그인만 유지.
+// 게스트→가입 전환 모달 (11-guest-conversion.js) 의 이메일 OTP 흐름은 별개 (linkIdentity 패턴, 직접 REST).
 
