@@ -24,7 +24,7 @@
       <!-- ── divider ── -->
       <div class="login-or-divider"><span>또는</span></div>
 
-      <!-- ── 2. Login card (below) — 카카오만 (이메일 OTP 폐기 2026-05-06) ── -->
+      <!-- ── 2. Login card (below) ── -->
       <div class="login-choice-card login-choice-primary">
         <div class="login-choice-title">🔒 같이 시작할까?</div>
         <div class="login-choice-sub">종단간 암호화로 안전하게 보관 · 모든 기기 동기화</div>
@@ -33,8 +33,27 @@
           <svg class="sns-login-icon" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><path d="M9 1.5C4.86 1.5 1.5 4.18 1.5 7.5c0 2.13 1.42 4 3.55 5.06l-.7 2.61c-.07.27.23.49.46.34l3.06-2.04c.38.04.76.07 1.13.07 4.14 0 7.5-2.68 7.5-6S13.14 1.5 9 1.5z"/></svg>
           <span>카카오로 시작하기</span>
         </button>
+
+        <!-- 사용자 명시 2026-05-06 임시 살림: 이메일 OTP 다시 노출 (이전 사용자 환불 처리용). 나중에 제거. -->
+        <div class="login-or-mini">또는 이메일</div>
+
+        <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
+        <button class="btn-primary" id="loginBtn" onclick="handleSendCode()" style="width:100%;">코드 받기 →</button>
+        <div class="login-status" id="loginStatus"></div>
+        <div style="font-size:10.5px; color:var(--text-soft); text-align:center; margin-top:10px; line-height:1.6;">계속하면 <a href="/terms" target="_blank" style="color:var(--text-dim);">약관</a> · <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a> 동의로 간주. 다음 단계에서 자세히 안내해줄게.</div>
       </div>
 
+    </div>
+
+    <!-- Step 2: Code -->
+    <div class="login-form" id="loginStep2" style="display:none;">
+      <div style="font-size:13px; color:var(--text); margin-bottom:14px; line-height:1.6;">
+        <strong id="loginEmailDisplay"></strong> 으로<br>코드를 보냈어.
+      </div>
+      <input type="text" id="loginCode" placeholder="이메일로 받은 코드" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" style="text-align:center; font-size:22px; letter-spacing:0.25em; font-family:monospace;">
+      <button class="btn-primary" id="verifyBtn" onclick="handleVerifyCode()">로그인</button>
+      <div class="login-status" id="verifyStatus"></div>
+      <button class="btn-secondary" onclick="resetLoginFlow()" style="margin-top:14px;">이메일 다시 입력</button>
     </div>
 
     <!-- 사용자 보고 2026-05-05 (PortOne 심사): 약관/환불/개인정보 + 사업자 정보 footer 노출 (전상법 §13 의무 + PG 심사 요구). -->

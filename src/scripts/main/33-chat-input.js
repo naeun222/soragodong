@@ -56,7 +56,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', updateSleepDuration);
   });
-  // 사용자 명시 2026-05-06: 이메일 OTP 로그인 폐기 — loginEmail / loginCode 핸들러 제거.
+  // Enter key on login email
+  const loginEmail = document.getElementById('loginEmail');
+  if (loginEmail) {
+    loginEmail.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); handleSendCode(); }
+    });
+  }
+  // Enter key on login code
+  const loginCode = document.getElementById('loginCode');
+  if (loginCode) {
+    loginCode.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); handleVerifyCode(); }
+    });
+    // Auto-submit when full code entered
+    loginCode.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, ''); // numeric only
+      if (e.target.value.length >= 8) {
+        setTimeout(() => handleVerifyCode(), 100);
+      }
+    });
+  }
 });
 
 function isMobile() {

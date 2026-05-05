@@ -38,3 +38,18 @@ async function enterGuestMode() {
   }
 }
 
+// 4 PIPA 동의 — 전체 동의 토글.
+function _toggleAllLoginConsents(masterEl) {
+  ['loginConsentTerms', 'loginConsentSensitive', 'loginConsentCrossBorder', 'loginConsentAdult'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = masterEl.checked;
+  });
+}
+function _syncAllLoginConsentToggle() {
+  const all = document.getElementById('loginConsentAll');
+  if (!all) return;
+  all.checked = ['loginConsentTerms', 'loginConsentSensitive', 'loginConsentCrossBorder', 'loginConsentAdult'].every(id => {
+    const el = document.getElementById(id);
+    return el && el.checked;
+  });
+}

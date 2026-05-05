@@ -4,8 +4,36 @@ function showLoginScreen() {
   document.getElementById('loginScreen').style.display = 'flex';
 }
 
-// 사용자 명시 2026-05-06: 이메일 OTP 로그인 + 로그인 화면 4 PIPA 동의 폐기 → _checkLoginConsentsAndSavePending 제거.
-// 동의 검증은 비밀번호 설정 모달 (showE2EEPasswordSetupModal) 의 setupConsent* 체크박스에서 일괄 처리.
+// 사용자 명시 2026-05-02 ultrathink: 동의 검증 + pending consent 저장 helper (이메일 OTP / SNS 로그인 둘 다 사용).
+// PIPA §22 / §23 / §17 별도 동의 의무 충족 — 4 분리 체크박스 (약관/민감/국외/만19세).
+function _checkLoginConsentsAndSavePending(emailOrEmpty, loginMethod) {
+  const consentTerms = document.getElementById('loginConsentTerms')?.checked;
+  const consentSensitive = document.getElementById('loginConsentSensitive')?.checked;
+  const consentCrossBorder = document.getElementById('loginConsentCrossBorder')?.checked;
+  const consentAdult = document.getElementById('loginConsentAdult')?.checked;
+  if (!consentTerms || !consentSensitive || !consentCrossBorder || !consentAdult) {
+    const missing = [];
+    if (!consentTerms) missing.push('약관·privacy');
+    if (!consentSensitive) missing.push('민감정보 처리 (§23)');
+    if (!consentCrossBorder) missing.push('국외이전 (§17)');
+    if (!consentAdult) missing.push('만 19세 이상 자기 선언');
+    alert('필수 동의 항목 모두 체크해야 시작 가능해.\n\n미체크: ' + missing.join(' / ') + '\n\n거부 시 서비스 이용 불가.');
+    return false;
+  }
+  try {
+    localStorage.setItem('soragodong_pending_consent', JSON.stringify({
+      email: emailOrEmpty || '',
+      consentTerms: !!consentTerms,
+      consentSensitive: !!consentSensitive,
+      consentCrossBorder: !!consentCrossBorder,
+      consentAdult: !!consentAdult,
+      loginMethod: loginMethod || 'email',
+      at: new Date().toISOString(),
+      versions: { terms: '1.1', privacy: '1.1', crossBorder: '2.1', refund: '1.1' }
+    }));
+  } catch (e) { console.warn('[consent] pending save:', e); }
+  return true;
+}
 
 // 사용자 명시 2026-05-02 ultrathink: SNS 로그인 (카카오만 V4) — Supabase OAuth redirect 흐름.
 // E2EE master password layer 보존 — SNS 인증 후 기존 비밀번호 모달이 자동 trigger.

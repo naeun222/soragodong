@@ -12,8 +12,47 @@ async function adminFixPayment() {
     showToast('로그인 필요');
     return;
   }
-  const paymentId = prompt('paymentId (DB row id, UUID 형식) — settings 결제 history 에서 환불 안 되는 row:', '');
-  if (paymentId === null || !paymentId.trim()) return;
+  const inputId = prompt('paymentId (DB row id, UUID) — 비워두면 최근 결제 20개 list:', '');
+  if (inputId === null) return;
+  const paymentId = inputId.trim();
+
+  // list 모드 — paymentId 모르는 경우 (일반 계정 접근 X 등)
+  if (!paymentId) {
+    try {
+      const listResp = await _authedFetch('/api/admin/payment-fix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list_recent', limit: 20 })
+      });
+      const listData = await listResp.json();
+      if (!listResp.ok || !listData.ok) {
+        alert('list 실패: ' + (listData.error || listResp.status));
+        return;
+      }
+      const rows = listData.rows || [];
+      const lines = rows.map((r, i) => {
+        const dt = (r.created_at || '').slice(0, 16).replace('T', ' ');
+        const amt = (r.amount_krw || 0).toLocaleString();
+        const idShort = (r.id || '').slice(0, 8);
+        const email = r.user_email || '(no email)';
+        return `${String(i + 1).padStart(2)}. ${dt} | ${r.status.padEnd(10)} | ${amt.padStart(7)}원 | ${email} | ${idShort}…`;
+      });
+      console.table(rows.map(r => ({
+        id: r.id, user_id: r.user_id, user_email: r.user_email,
+        status: r.status, amount: r.amount_krw, created: r.created_at
+      })));
+      console.log('[adminFixPayment] full ids:', rows.map(r => r.id));
+      alert(
+        '📋 최근 결제 ' + rows.length + '개 (자세한 정보는 console.table 출력):\n\n' +
+        lines.join('\n') +
+        '\n\n→ 환불할 row 의 id (UUID 전체) 는 console 에서 복사 후 다시 클릭해서 입력.'
+      );
+      return;
+    } catch (e) {
+      alert('list 통신 오류: ' + (e?.message || e));
+      return;
+    }
+  }
 
   // 1. 진단
   let data;

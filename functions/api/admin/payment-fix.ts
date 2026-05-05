@@ -27,13 +27,35 @@ export async function onRequestPost(context: { request: Request; env: AdminEnv }
 
   let body: any;
   try { body = await request.json(); } catch { return jsonResponse({ error: 'invalid JSON' }, 400); }
-  const { paymentId, action, target_user_id } = body;
-  if (!paymentId || typeof paymentId !== 'string') {
-    return jsonResponse({ error: 'paymentId 필수' }, 400);
-  }
+  const { paymentId, action, target_user_id, limit } = body;
+  const act = action || 'diagnose';
 
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     return jsonResponse({ error: 'env missing' }, 500);
+  }
+
+  // 사용자 보고 2026-05-06: paymentId 모르는 경우 (일반 계정 못 들어감) — list_recent 액션으로 최근 결제 조회.
+  if (act === 'list_recent') {
+    const lim = Math.min(Math.max(Number(limit) || 20, 1), 100);
+    try {
+      const resp = await fetch(
+        `${env.SUPABASE_URL}/rest/v1/soragodong_payments?select=id,user_id,user_email,status,payment_type,amount_krw,created_at,portone_merchant_uid,refund_amount_krw,refunded_at&order=created_at.desc&limit=${lim}`,
+        { headers: { 'apikey': env.SUPABASE_SERVICE_ROLE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } }
+      );
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => '');
+        return jsonResponse({ error: 'list 실패: ' + resp.status + ' ' + txt.slice(0, 200) }, 500);
+      }
+      const rows = await resp.json();
+      return jsonResponse({ ok: true, action: 'list_recent', rows });
+    } catch (e: any) {
+      return jsonResponse({ error: 'list 실패: ' + (e?.message || e) }, 500);
+    }
+  }
+
+  // diagnose / sync_user 는 paymentId 필수.
+  if (!paymentId || typeof paymentId !== 'string') {
+    return jsonResponse({ error: 'paymentId 필수' }, 400);
   }
 
   // 1. row 조회.
@@ -53,7 +75,6 @@ export async function onRequestPost(context: { request: Request; env: AdminEnv }
   }
 
   // 2. action='diagnose' (default) — 정보만 반환.
-  const act = action || 'diagnose';
   if (act === 'diagnose') {
     return jsonResponse({
       ok: true,
