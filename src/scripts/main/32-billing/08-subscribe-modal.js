@@ -96,18 +96,19 @@ async function openSubscribeModal() {
     </div>
   `;
   const earlyLifetimePlan = TIER_PLANS_CLIENT.early_lifetime;
+  // 사용자 명시 2026-05-06 ultrathink: 얼리버드 평생 = 하늘색~파란색 gradient (Light 대체 분위기).
   const earlyLifetimeCard = `
-    <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(212,167,106,0.18), rgba(212,167,106,0.06)); border:1.5px solid var(--accent); border-radius:14px; margin-bottom:10px;">
-      <div style="position:absolute; top:-10px; left:16px; background:var(--accent); color:#1a1610; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">출시 전 한정</div>
+    <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(135,206,235,0.18), rgba(74,144,226,0.10)); border:1.5px solid #5fb4d3; border-radius:14px; margin-bottom:10px;">
+      <div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">출시 전 한정</div>
       <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
         <div style="font-size:18px; font-weight:700; color:var(--text);">${earlyLifetimePlan.emoji} ${earlyLifetimePlan.label}</div>
-        <div style="font-size:18px; font-weight:700; color:var(--accent);">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;"> 1회</span></div>
+        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;"> 1회</span></div>
       </div>
       <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${earlyLifetimePlan.tagline}</div>
       <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
         ${earlyLifetimePlan.description}
       </div>
-      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:var(--accent); color:#1a1610;">${earlyLifetimePlan.emoji} 얼리버드 평생 이용권 (${earlyLifetimePlan.krw.toLocaleString()}원)</button>
+      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 평생 이용권 (${earlyLifetimePlan.krw.toLocaleString()}원)</button>
     </div>
   `;
   const overlay = document.createElement('div');
@@ -125,7 +126,7 @@ async function openSubscribeModal() {
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
-        💡 잘 모르겠으면 <b>얼리버드 평생</b> 또는 <b>Light</b>. 깊게 자주 쓰면 Premium.<br>
+        💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드 평생</b> <s style="opacity:0.55;">또는 <b>Light</b></s>. 깊게 자주 쓰면 Premium.<br>
         해지: [설정 → 구독] 환불 (잔여일 비례 — <a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>

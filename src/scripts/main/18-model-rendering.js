@@ -120,8 +120,8 @@ function _dismissGuestNudge() {
 function renderModel() {
   const container = document.getElementById('modelContent');
   if (!container) return;  // FIX BUG-1: null guard
-  // 시간 사용 패턴 카드는 데이터 없어도 placeholder 노출 (사용자 요청 2026-04-28)
-  const timeCardHtml = renderTimeUsageCard();
+  // 사용자 명시 2026-05-06 ultrathink: task 평균 시간 기능 주석 — empty state / details 둘 다 노출 X.
+  const timeCardHtml = '';  // renderTimeUsageCard() 호출 안 함
   const guestNudgeHtml = _renderGuestNudgeBanner();
   if (!state.traits.length && !state.patterns.length && !state.values.length) {
     // 사용자 요청 2026-04-29 (Q2): 모델 비어있어도 더 깊은 나 입력은 시작 가능 — Q2 섹션 같이 노출.
@@ -255,11 +255,14 @@ function renderModel() {
 
   // ── 3. 메타 — task 평균 (collapse default 닫힘) + 더 깊은 나 (collapse default 닫힘) ──
   // 사용자 명시 2026-05-06 ultrathink: 추적 항목 (projectsSection) 실행 탭으로 이동.
+  // 사용자 명시 2026-05-06 추가 ultrathink: task 평균 시간 기능 주석 처리 (의미 약함, 가독성 우선).
   html += `<div class="model-meta-divider">— 메타 —</div>`;
+  /* DEAD (사용자 명시 2026-05-06 — task 평균 폐기):
   html += `<details class="model-meta-collapse">
     <summary class="model-meta-summary">task 평균 시간 <span style="font-size:10px; color:var(--text-soft); margin-left:6px;">지난 7일</span></summary>
     <div class="model-meta-body">${timeCardHtml}</div>
   </details>`;
+  */
 
   // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 입력 UI — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
   html += _renderUserDeepProfileSection();

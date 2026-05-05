@@ -14,11 +14,13 @@ import {
 import { verifyTurnstileToken } from './_lib/turnstile';
 
 // 사용자 명시 2026-05-05: 게스트 (anonymous) 사용자 max_tokens 강제 cap — 비용 폭주 방어.
-// chat = 800 (대화 응답). 분석 endpoint (extract_chapter / extract_topic) = 1500 (JSON 출력 길이 보장).
+// chat = 800 (대화 응답). 분석 endpoint (extract_chapter / extract_topic / intake / first_touch) = 1500 (JSON 출력 길이 보장).
 // $0.30 cap 이 1차 방어선 — max_tokens 는 단일 응답 길이만 제한.
+// 사용자 보고 2026-05-06 ultrathink: intake 분석이 800 으로 truncate → JSON 파싱 fail → fallback 노출.
+//   → intake / first_touch 도 분석 endpoint 화이트리스트 등재.
 const GUEST_MAX_TOKENS_CAP = 800;
 const GUEST_ANALYSIS_MAX_TOKENS = 1500;
-const GUEST_ANALYSIS_ENDPOINTS = new Set(['extract_chapter', 'extract_topic']);
+const GUEST_ANALYSIS_ENDPOINTS = new Set(['extract_chapter', 'extract_topic', 'intake', 'first_touch']);
 // 게스트는 Sonnet/Haiku 만 허용 — Opus 차단 (Premium 전용).
 const GUEST_ALLOWED_MODELS = new Set(['claude-sonnet-4-6', 'claude-haiku-4-5']);
 

@@ -922,7 +922,7 @@
 
   /* V3 main 그대로 복원 — 26px bottom (홈 indicator 보호 + iPhone PWA standalone 자연스러움) */
   .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 10px 0 26px; z-index: 100; }
-  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 8px 0; min-height: 56px; justify-content: center; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 15px 0; min-height: 56px; justify-content: center; }
   .nav-item.active { opacity: 1; }
   .nav-icon { font-size: 22px; }
   .nav-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.04em; }
@@ -10096,19 +10096,29 @@
     font-size: 11px; color: var(--text-dim);
     flex-shrink: 0; min-width: 20px;
   }
+  /* 사용자 보고 2026-05-06 ultrathink: 추적 항목 추가 버튼 못생김 → 세련된 accent 톤. */
   .checkin-tracker-add {
     width: 100%;
-    padding: 8px;
-    background: transparent;
-    border: 1px dashed var(--border-strong);
-    border-radius: 10px;
-    color: var(--text-dim);
-    font-size: 11px;
+    padding: 11px 14px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.10), rgba(212,167,106,0.04));
+    border: 1px solid rgba(212,167,106,0.30);
+    border-radius: 12px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 500;
     font-family: inherit;
+    letter-spacing: 0.02em;
     cursor: pointer;
-    margin-top: 4px;
+    margin-top: 10px;
+    transition: filter 120ms ease-out, transform 120ms ease-out, background 120ms ease-out;
   }
-  .checkin-tracker-add:active { background: var(--surface); color: var(--accent); }
+  .checkin-tracker-add:hover { filter: brightness(1.08); background: linear-gradient(135deg, rgba(212,167,106,0.15), rgba(212,167,106,0.06)); }
+  .checkin-tracker-add:active { transform: scale(0.98); }
+  /* 추적 항목 collapse — chevron 회전 + summary marker 숨김 */
+  .checkin-trackers-collapse summary { list-style: none; padding: 4px 0; }
+  .checkin-trackers-collapse summary::-webkit-details-marker { display: none; }
+  .checkin-trackers-collapse .ctc-chevron { transition: transform 200ms ease-out; display: inline-block; }
+  .checkin-trackers-collapse[open] .ctc-chevron { transform: rotate(90deg); }
 
   /* V3.13.x: 추적 항목 — 체크형 (토글) */
   .checkin-tracker-check {

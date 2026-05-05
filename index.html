@@ -1012,7 +1012,7 @@
 
   /* V3 main 그대로 복원 — 26px bottom (홈 indicator 보호 + iPhone PWA standalone 자연스러움) */
   .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 10px 0 26px; z-index: 100; }
-  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 8px 0; min-height: 56px; justify-content: center; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 15px 0; min-height: 56px; justify-content: center; }
   .nav-item.active { opacity: 1; }
   .nav-icon { font-size: 22px; }
   .nav-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.04em; }
@@ -10186,19 +10186,29 @@
     font-size: 11px; color: var(--text-dim);
     flex-shrink: 0; min-width: 20px;
   }
+  /* 사용자 보고 2026-05-06 ultrathink: 추적 항목 추가 버튼 못생김 → 세련된 accent 톤. */
   .checkin-tracker-add {
     width: 100%;
-    padding: 8px;
-    background: transparent;
-    border: 1px dashed var(--border-strong);
-    border-radius: 10px;
-    color: var(--text-dim);
-    font-size: 11px;
+    padding: 11px 14px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.10), rgba(212,167,106,0.04));
+    border: 1px solid rgba(212,167,106,0.30);
+    border-radius: 12px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 500;
     font-family: inherit;
+    letter-spacing: 0.02em;
     cursor: pointer;
-    margin-top: 4px;
+    margin-top: 10px;
+    transition: filter 120ms ease-out, transform 120ms ease-out, background 120ms ease-out;
   }
-  .checkin-tracker-add:active { background: var(--surface); color: var(--accent); }
+  .checkin-tracker-add:hover { filter: brightness(1.08); background: linear-gradient(135deg, rgba(212,167,106,0.15), rgba(212,167,106,0.06)); }
+  .checkin-tracker-add:active { transform: scale(0.98); }
+  /* 추적 항목 collapse — chevron 회전 + summary marker 숨김 */
+  .checkin-trackers-collapse summary { list-style: none; padding: 4px 0; }
+  .checkin-trackers-collapse summary::-webkit-details-marker { display: none; }
+  .checkin-trackers-collapse .ctc-chevron { transition: transform 200ms ease-out; display: inline-block; }
+  .checkin-trackers-collapse[open] .ctc-chevron { transform: rotate(90deg); }
 
   /* V3.13.x: 추적 항목 — 체크형 (토글) */
   .checkin-tracker-check {
@@ -10367,11 +10377,12 @@
   height: 96px;
   flex-shrink: 0;
   /* 사용자 보고 2026-05-06 ultrathink: -8vh 가 짧은 viewport / iOS URL bar 환경에서 godong 을 화면 밖으로 밀어냄.
-     -4vh 로 완화 + flex-shrink: 0 으로 압축 차단 + drop-shadow 로 다크 bg 위에서 시인성 확보 (login-icon 패턴 재사용). */
+     -4vh 로 완화 + flex-shrink: 0 으로 압축 차단.
+     사용자 명시 2026-05-06 추가: 로고 배경 투명 — drop-shadow halo 제거 (introduce 톤 일관). */
   margin-top: -4vh;
   margin-bottom: 32px;
   object-fit: contain;
-  filter: drop-shadow(0 6px 24px rgba(212, 167, 106, 0.42));
+  background: transparent;
   opacity: 0;
   animation: v8GodongFadeIn 800ms 200ms ease-out forwards;
 }
@@ -10899,10 +10910,14 @@
           </div>
         </div>
 
-        <div class="module-row">
-          <div class="module-label">📊 추적 항목 (선택)</div>
+        <!-- 사용자 명시 2026-05-06 ultrathink: 추적 항목 default 접힘 (details). 펼침 시 trackers + 추가 버튼. -->
+        <details class="module-row checkin-trackers-collapse">
+          <summary class="module-label" style="cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
+            <span>📊 추적 항목 (선택)</span>
+            <span class="ctc-chevron" style="font-size:11px; color:var(--text-dim);">▸</span>
+          </summary>
           <div id="checkinTrackersContainer"></div>
-        </div>
+        </details>
       </div>
 
       <!-- 사용자 명시 2026-05-06: 돌아가기는 sticky 영역 밖 — 일반 흐름 -->
@@ -10963,6 +10978,8 @@
         <button class="screen-settings-btn" onclick="showScreen('settings')" aria-label="설정">⚙</button>
       </div>
       <div id="modelContent"></div>
+      <!-- 사용자 명시 2026-05-06 추가 ultrathink: 맨 밑 설정 버튼 부활 — 우상단 아이콘 + 맨 밑 둘 다 노출. -->
+      <button class="btn-secondary" onclick="showScreen('settings')" style="margin-top:24px; width:100%; padding:12px; font-size:13px;">⚙ 설정</button>
     </div>
 
     <!-- LIBRARY (V4-1l-a: 인생 도서관 5 카테고리) -->
@@ -11692,7 +11709,8 @@
         <div id="businessInfoBody" style="font-size:9.5px; line-height:1.75; color:var(--text-soft); padding:6px 4px 0; opacity:0.95;">불러오는 중...</div>
       </details>
 
-      <div class="sticky-action-bar">
+      <!-- 사용자 명시 2026-05-06 추가 ultrathink: sticky-action-bar → 일반 흐름 (스티커 제거). 맨 밑에 정렬. -->
+      <div style="margin-top:20px; display:flex; flex-direction:column; gap:8px;">
         <button class="btn-primary" onclick="saveSettings()">저장</button>
         <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
       </div>
@@ -17339,17 +17357,18 @@ async function init() {
   // 사용자 명시 2026-04-30 ultrathink (정정) + V203 (chooser 폐기): silent 환영 보너스 + 자동 코어 튜토리얼 진입.
   // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 우선 — 게스트 첫 진입 / 카카오 신규 (게스트 이력 X) 면 fire.
   // 그 외 = 기존 maybeShowFirstTimeIntro fallback.
-  setTimeout(async () => {
-    try {
-      if (typeof runStartTutorialV8 === 'function' && typeof shouldRunStartTutorialV8 === 'function' && shouldRunStartTutorialV8()) {
-        await runStartTutorialV8();
-        return;  // V8 가 처리함
-      }
-    } catch (e) { console.warn('[v8 tutorial entry]:', e); }
-    if (typeof maybeShowFirstTimeIntro === 'function') {
-      try { await maybeShowFirstTimeIntro(); } catch (e) { console.warn('firstTimeIntro:', e); }
+  // 사용자 명시 2026-05-06 추가 ultrathink: V8 면 즉시 fire (300ms — render 직후), legacy 는 4500ms 유지.
+  setTimeout(() => {
+    if (typeof runStartTutorialV8 === 'function' && typeof shouldRunStartTutorialV8 === 'function' && shouldRunStartTutorialV8()) {
+      runStartTutorialV8().catch(e => console.warn('[v8 tutorial entry]:', e));
+    } else {
+      setTimeout(async () => {
+        if (typeof maybeShowFirstTimeIntro === 'function') {
+          try { await maybeShowFirstTimeIntro(); } catch (e) { console.warn('firstTimeIntro:', e); }
+        }
+      }, 4200);  // legacy fallback — 기존 4500 거의 유지
     }
-  }, 4500);
+  }, 300);
   // 사용자 명시 2026-04-30 ultrathink: testerMode ON 경로에서 reload 후 intake 모달 자동 재진입.
   if (typeof _resumePendingIntake === 'function') {
     setTimeout(() => { _resumePendingIntake().catch(e => console.warn('intake resume:', e)); }, 4800);
@@ -29293,8 +29312,8 @@ function _dismissGuestNudge() {
 function renderModel() {
   const container = document.getElementById('modelContent');
   if (!container) return;  // FIX BUG-1: null guard
-  // 시간 사용 패턴 카드는 데이터 없어도 placeholder 노출 (사용자 요청 2026-04-28)
-  const timeCardHtml = renderTimeUsageCard();
+  // 사용자 명시 2026-05-06 ultrathink: task 평균 시간 기능 주석 — empty state / details 둘 다 노출 X.
+  const timeCardHtml = '';  // renderTimeUsageCard() 호출 안 함
   const guestNudgeHtml = _renderGuestNudgeBanner();
   if (!state.traits.length && !state.patterns.length && !state.values.length) {
     // 사용자 요청 2026-04-29 (Q2): 모델 비어있어도 더 깊은 나 입력은 시작 가능 — Q2 섹션 같이 노출.
@@ -29428,11 +29447,14 @@ function renderModel() {
 
   // ── 3. 메타 — task 평균 (collapse default 닫힘) + 더 깊은 나 (collapse default 닫힘) ──
   // 사용자 명시 2026-05-06 ultrathink: 추적 항목 (projectsSection) 실행 탭으로 이동.
+  // 사용자 명시 2026-05-06 추가 ultrathink: task 평균 시간 기능 주석 처리 (의미 약함, 가독성 우선).
   html += `<div class="model-meta-divider">— 메타 —</div>`;
+  /* DEAD (사용자 명시 2026-05-06 — task 평균 폐기):
   html += `<details class="model-meta-collapse">
     <summary class="model-meta-summary">task 평균 시간 <span style="font-size:10px; color:var(--text-soft); margin-left:6px;">지난 7일</span></summary>
     <div class="model-meta-body">${timeCardHtml}</div>
   </details>`;
+  */
 
   // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 입력 UI — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
   html += _renderUserDeepProfileSection();
@@ -41610,7 +41632,7 @@ function renderCheckinTrackers() {
       }
     });
   }
-  html += `<button class="checkin-tracker-add" onclick="addNewTracker()">+ 항목 추가</button>`;
+  html += `<button class="checkin-tracker-add" onclick="addNewTracker()">✦ 추적 항목 추가</button>`;
   container.innerHTML = html;
 }
 
@@ -47150,18 +47172,19 @@ async function openSubscribeModal() {
     </div>
   `;
   const earlyLifetimePlan = TIER_PLANS_CLIENT.early_lifetime;
+  // 사용자 명시 2026-05-06 ultrathink: 얼리버드 평생 = 하늘색~파란색 gradient (Light 대체 분위기).
   const earlyLifetimeCard = `
-    <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(212,167,106,0.18), rgba(212,167,106,0.06)); border:1.5px solid var(--accent); border-radius:14px; margin-bottom:10px;">
-      <div style="position:absolute; top:-10px; left:16px; background:var(--accent); color:#1a1610; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">출시 전 한정</div>
+    <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(135,206,235,0.18), rgba(74,144,226,0.10)); border:1.5px solid #5fb4d3; border-radius:14px; margin-bottom:10px;">
+      <div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">출시 전 한정</div>
       <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
         <div style="font-size:18px; font-weight:700; color:var(--text);">${earlyLifetimePlan.emoji} ${earlyLifetimePlan.label}</div>
-        <div style="font-size:18px; font-weight:700; color:var(--accent);">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;"> 1회</span></div>
+        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;"> 1회</span></div>
       </div>
       <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${earlyLifetimePlan.tagline}</div>
       <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
         ${earlyLifetimePlan.description}
       </div>
-      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:var(--accent); color:#1a1610;">${earlyLifetimePlan.emoji} 얼리버드 평생 이용권 (${earlyLifetimePlan.krw.toLocaleString()}원)</button>
+      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 평생 이용권 (${earlyLifetimePlan.krw.toLocaleString()}원)</button>
     </div>
   `;
   const overlay = document.createElement('div');
@@ -47179,7 +47202,7 @@ async function openSubscribeModal() {
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
-        💡 잘 모르겠으면 <b>얼리버드 평생</b> 또는 <b>Light</b>. 깊게 자주 쓰면 Premium.<br>
+        💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드 평생</b> <s style="opacity:0.55;">또는 <b>Light</b></s>. 깊게 자주 쓰면 Premium.<br>
         해지: [설정 → 구독] 환불 (잔여일 비례 — <a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>

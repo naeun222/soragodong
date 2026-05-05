@@ -144,17 +144,18 @@ async function init() {
   // 사용자 명시 2026-04-30 ultrathink (정정) + V203 (chooser 폐기): silent 환영 보너스 + 자동 코어 튜토리얼 진입.
   // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 우선 — 게스트 첫 진입 / 카카오 신규 (게스트 이력 X) 면 fire.
   // 그 외 = 기존 maybeShowFirstTimeIntro fallback.
-  setTimeout(async () => {
-    try {
-      if (typeof runStartTutorialV8 === 'function' && typeof shouldRunStartTutorialV8 === 'function' && shouldRunStartTutorialV8()) {
-        await runStartTutorialV8();
-        return;  // V8 가 처리함
-      }
-    } catch (e) { console.warn('[v8 tutorial entry]:', e); }
-    if (typeof maybeShowFirstTimeIntro === 'function') {
-      try { await maybeShowFirstTimeIntro(); } catch (e) { console.warn('firstTimeIntro:', e); }
+  // 사용자 명시 2026-05-06 추가 ultrathink: V8 면 즉시 fire (300ms — render 직후), legacy 는 4500ms 유지.
+  setTimeout(() => {
+    if (typeof runStartTutorialV8 === 'function' && typeof shouldRunStartTutorialV8 === 'function' && shouldRunStartTutorialV8()) {
+      runStartTutorialV8().catch(e => console.warn('[v8 tutorial entry]:', e));
+    } else {
+      setTimeout(async () => {
+        if (typeof maybeShowFirstTimeIntro === 'function') {
+          try { await maybeShowFirstTimeIntro(); } catch (e) { console.warn('firstTimeIntro:', e); }
+        }
+      }, 4200);  // legacy fallback — 기존 4500 거의 유지
     }
-  }, 4500);
+  }, 300);
   // 사용자 명시 2026-04-30 ultrathink: testerMode ON 경로에서 reload 후 intake 모달 자동 재진입.
   if (typeof _resumePendingIntake === 'function') {
     setTimeout(() => { _resumePendingIntake().catch(e => console.warn('intake resume:', e)); }, 4800);

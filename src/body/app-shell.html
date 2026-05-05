@@ -205,10 +205,14 @@
           </div>
         </div>
 
-        <div class="module-row">
-          <div class="module-label">📊 추적 항목 (선택)</div>
+        <!-- 사용자 명시 2026-05-06 ultrathink: 추적 항목 default 접힘 (details). 펼침 시 trackers + 추가 버튼. -->
+        <details class="module-row checkin-trackers-collapse">
+          <summary class="module-label" style="cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
+            <span>📊 추적 항목 (선택)</span>
+            <span class="ctc-chevron" style="font-size:11px; color:var(--text-dim);">▸</span>
+          </summary>
           <div id="checkinTrackersContainer"></div>
-        </div>
+        </details>
       </div>
 
       <!-- 사용자 명시 2026-05-06: 돌아가기는 sticky 영역 밖 — 일반 흐름 -->
@@ -269,6 +273,8 @@
         <button class="screen-settings-btn" onclick="showScreen('settings')" aria-label="설정">⚙</button>
       </div>
       <div id="modelContent"></div>
+      <!-- 사용자 명시 2026-05-06 추가 ultrathink: 맨 밑 설정 버튼 부활 — 우상단 아이콘 + 맨 밑 둘 다 노출. -->
+      <button class="btn-secondary" onclick="showScreen('settings')" style="margin-top:24px; width:100%; padding:12px; font-size:13px;">⚙ 설정</button>
     </div>
 
     <!-- LIBRARY (V4-1l-a: 인생 도서관 5 카테고리) -->
@@ -998,7 +1004,8 @@
         <div id="businessInfoBody" style="font-size:9.5px; line-height:1.75; color:var(--text-soft); padding:6px 4px 0; opacity:0.95;">불러오는 중...</div>
       </details>
 
-      <div class="sticky-action-bar">
+      <!-- 사용자 명시 2026-05-06 추가 ultrathink: sticky-action-bar → 일반 흐름 (스티커 제거). 맨 밑에 정렬. -->
+      <div style="margin-top:20px; display:flex; flex-direction:column; gap:8px;">
         <button class="btn-primary" onclick="saveSettings()">저장</button>
         <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
       </div>
