@@ -15150,6 +15150,9 @@ function _intakeMicToggle(stepNum) {
 async function maybeShowE2EESetupForNewUser() {
   if (!authUserId) return;
   if (state.preferences && state.preferences.testerMode) return;
+  // 사용자 보고 2026-05-05 (Phase 1): 게스트 = 비밀번호 설정 모달 X. linkIdentity (가입 모달) 안에서 함께 처리.
+  // 게스트는 cloud sync X 라 마스터 키 불필요 — saveToCloudNow 가 isGuest 분기에서 early return.
+  if (state.isGuest) return;
   if (_e2eeEnabled || _e2eeMasterKey) return;
   if (window._e2eePendingRecovery) return;
   try {
