@@ -7,6 +7,38 @@ import { checkBudget, deductCost, getUserBilling, OPUS_DAILY_LIMIT_PREMIUM } fro
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
+// 사용자 보고 2026-05-05 ultrathink: 'AI 서버 일시 과부하' 토스트 빈도 ↓ — Anthropic upstream 5xx + network throw 1회 재시도 (2s backoff).
+// 클라이언트 callAnthropic 에도 1회 retry 가 있어 총 최대 4회 시도 (backend 2 + client 2). 일반 케이스는 1-2회 안 회복.
+async function _fetchAnthropicWithRetry(
+  headers: Record<string, string>,
+  bodyJson: string,
+  signal?: AbortSignal
+): Promise<Response> {
+  const init: RequestInit = { method: 'POST', headers, body: bodyJson, signal };
+  let resp: Response;
+  try {
+    resp = await fetch(ANTHROPIC_URL, init);
+  } catch (e: any) {
+    console.warn('[chat.ts] Anthropic upstream throw:', e?.message || e);
+    await new Promise(r => setTimeout(r, 2000));
+    return fetch(ANTHROPIC_URL, init);
+  }
+  if (resp.status >= 500 && resp.status < 600) {
+    const _statusForLog = resp.status;
+    console.warn(`[chat.ts] Anthropic upstream ${_statusForLog} — 2s 후 1회 재시도`);
+    await new Promise(r => setTimeout(r, 2000));
+    try {
+      const retry = await fetch(ANTHROPIC_URL, init);
+      if (retry.status >= 500) console.warn(`[chat.ts] retry 도 ${retry.status}`);
+      return retry;
+    } catch (e: any) {
+      console.warn('[chat.ts] retry throw:', e?.message || e);
+      return resp;
+    }
+  }
+  return resp;
+}
+
 // 사용자 명시 2026-05-02 ultrathink: Opus = Premium 전용 + 일일 30번 한도 (메인 대화 한정).
 // 튜토리얼 모드 (body.tutorial_mode === true) = 자유. 일반 사용자가 useOpus 토글 시도 시 client 가드 + server 검증 (이중).
 async function checkOpusGate(env: Env, userId: string, isTutorial: boolean): Promise<{
@@ -158,13 +190,10 @@ export async function onRequestPost(context: {
   };
 
   if (isStream) {
-    const upstream = await fetch(ANTHROPIC_URL, {
-      method: 'POST',
-      headers: upstreamHeaders,
-      body: JSON.stringify(body)
-    });
+    const upstream = await _fetchAnthropicWithRetry(upstreamHeaders, JSON.stringify(body));
     if (!upstream.ok) {
       const errText = await upstream.text();
+      console.error(`[chat.ts] stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500));
       return new Response(errText, { status: upstream.status });
     }
     if (!upstream.body) {
@@ -241,14 +270,11 @@ export async function onRequestPost(context: {
   }
 
   // Non-streaming
-  const upstream = await fetch(ANTHROPIC_URL, {
-    method: 'POST',
-    headers: upstreamHeaders,
-    body: JSON.stringify(body)
-  });
+  const upstream = await _fetchAnthropicWithRetry(upstreamHeaders, JSON.stringify(body));
 
   if (!upstream.ok) {
     const errText = await upstream.text();
+    console.error(`[chat.ts] non-stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500));
     return new Response(errText, { status: upstream.status, headers: { 'Content-Type': 'application/json' } });
   }
 

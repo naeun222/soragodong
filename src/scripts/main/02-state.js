@@ -134,9 +134,10 @@ function _anthropicHeaders(extraHeaders) {
     'anthropic-version': '2023-06-01'
   }, extraHeaders || {});
 }
-// 사용자 보고 2026-05-05: 5xx 또는 network throw 시 1회 자동 재시도 (1.5s backoff).
-// /api/chat 프록시 cold start / Anthropic 일시 과부하 (overloaded_error) 케이스 user-facing "Anthropic 서버 일시 불안정" 토스트 빈도 ↓.
+// 사용자 보고 2026-05-05 ultrathink: 5xx 또는 network throw 시 1회 자동 재시도 (1.5s backoff).
+// /api/chat 프록시 cold start / Anthropic 일시 과부하 (overloaded_error) 케이스 user-facing "AI 서버 일시 과부하" 토스트 빈도 ↓.
 // stream 응답이라도 status 5xx 는 stream 시작 전이라 안전하게 재요청 가능. opts._noRetry=true 시 비활성.
+// Backend (functions/api/chat.ts) 도 자체 1회 재시도 — 총 최대 4회 시도 (backend 2 + client 2). 일반 케이스 1-2회 안 회복.
 async function callAnthropic(body, options) {
   const opts = options || {};
   const init = {
@@ -150,12 +151,21 @@ async function callAnthropic(body, options) {
     resp = await fetch(ANTHROPIC_API_URL, init);
   } catch (e) {
     if (opts._noRetry) throw e;
+    console.warn('[callAnthropic] network throw — 1.5s 후 재시도:', e && e.message);
     await new Promise(r => setTimeout(r, 1500));
     return fetch(ANTHROPIC_API_URL, init);
   }
   if (!opts._noRetry && resp.status >= 500 && resp.status < 600) {
+    console.warn(`[callAnthropic] ${resp.status} — 1.5s 후 1회 재시도`);
     await new Promise(r => setTimeout(r, 1500));
-    try { return await fetch(ANTHROPIC_API_URL, init); } catch { return resp; }
+    try {
+      const retry = await fetch(ANTHROPIC_API_URL, init);
+      if (retry.status >= 500) console.warn(`[callAnthropic] retry 도 ${retry.status}`);
+      return retry;
+    } catch (e) {
+      console.warn('[callAnthropic] retry throw:', e && e.message);
+      return resp;
+    }
   }
   return resp;
 }

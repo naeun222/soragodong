@@ -272,6 +272,8 @@ async function generateAIResponse(modelOverride) {
     renderModelPreview();
 
   } catch (err) {
+    // 사용자 보고 2026-05-05 ultrathink: 정확한 진단 위해 console.error — 사용자가 console 열어 진짜 원인 (status / message) 확인 가능.
+    console.error('[generateAIResponse] error:', err);
     // 사용자 보고 2026-05-05 (audit Medium): _streamRafId 가 catch 시점에 살아있으면 cancel — 안 그러면 에러 메시지 위에 partial RAF flush 가 덮여 깜빡임.
     if (typeof _streamRafId !== 'undefined' && _streamRafId !== null) {
       try { cancelAnimationFrame(_streamRafId); } catch {}
@@ -292,10 +294,13 @@ async function generateAIResponse(modelOverride) {
       userMsg = '⏳ 잠깐 너무 빨라. 1분 정도 후 다시 시도하거나 Anthropic 대시보드에서 사용량 확인해봐.';
     } else if (/network|failed to fetch|offline/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
       userMsg = '📡 인터넷 연결을 확인해봐.\n\n복구되면 "다시 보내기" 눌러줘.';
-    } else if (/5\d\d/.test(m) || /overloaded/i.test(m) || /api_error/i.test(m)) {
-      // 사용자 보고 2026-05-05: callAnthropic 에 1회 자동 재시도 (1.5s) 추가했지만, 두 번째 시도도 5xx / overloaded 면 여기 도달.
-      // 'Anthropic 서버' → 'AI 서버' (실제로는 백엔드 프록시 / Anthropic / 둘 다 가능 — 정확한 표현).
-      userMsg = '⚠️ AI 서버 일시 과부하. 잠시 후 다시 보내기 눌러봐.';
+    } else if (/5\d\d/.test(m) || /overloaded/i.test(m)) {
+      // 사용자 보고 2026-05-05 ultrathink: callAnthropic 1회 retry + backend chat.ts 1회 retry 후도 5xx / overloaded → 진짜 다운.
+      // 'api_error' 매칭 제거 (Anthropic 'invalid_request_error' 등 4xx 도 잘못 매칭하던 거 fix).
+      // status 추출해서 토스트에 표시 — 사용자가 진짜 원인 (백엔드 5xx vs Anthropic 5xx) 추정 가능.
+      const _statusMatch = m.match(/(\b5\d\d\b)/);
+      const _status = _statusMatch ? ` (${_statusMatch[1]})` : '';
+      userMsg = `⚠️ AI 서버 일시 과부하${_status} — 자동 재시도 후에도 실패. 1-2분 후 다시 보내기.`;
     } else {
       userMsg = '연결이 안 됐어 😅\n(' + (m || '알 수 없는 오류') + ')\n\n다시 보내기 버튼을 눌러봐.';
     }
