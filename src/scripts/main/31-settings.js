@@ -289,7 +289,8 @@ async function requestRefund(paymentId, amountKrw, label) {
     } else {
       let extra = '';
       if (data.caller_user_id) extra += '\n\ncaller: ' + data.caller_user_id;
-      if (data.row_user_id_hint) extra += '\nrow:    ' + data.row_user_id_hint;
+      if (data.row_user_id_full) extra += '\nrow:    ' + data.row_user_id_full;
+      else if (data.row_user_id_hint) extra += '\nrow:    ' + data.row_user_id_hint;
       alert('환불 실패: ' + (data.error || resp.status) + extra);
     }
   } catch (e) {

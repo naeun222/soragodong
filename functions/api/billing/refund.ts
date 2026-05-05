@@ -102,14 +102,16 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
       );
       const anyRows: any[] = await anyResp.json().catch(() => []);
       if (Array.isArray(anyRows) && anyRows.length > 0) {
-        // 사용자 보고 2026-05-06: row 의 user_id hint 응답에 포함 → 사용자가 즉시 본인 user_id 와 비교 가능 (admin 다중 로그인 방식 진단).
+        // 사용자 보고 2026-05-06: hint 만 같고 full 다른 케이스 진단 위해 admin caller 시 full 노출.
         const rowUid = anyRows[0].user_id;
+        const isAdminCaller = (env as any).ADMIN_USER_ID && user.id === (env as any).ADMIN_USER_ID;
         const rowUidHint = rowUid ? String(rowUid).slice(0, 8) + '…' + String(rowUid).slice(-4) : '(null)';
         return jsonResponse({
           error: '본인 결제가 아니야 — 다른 계정으로 로그인했거나 ID 불일치.',
           code: 'NOT_OWN',
           caller_user_id: user.id,
-          row_user_id_hint: rowUidHint
+          row_user_id_hint: rowUidHint,
+          row_user_id_full: isAdminCaller ? rowUid : undefined
         }, 403);
       }
       return jsonResponse({ error: '결제를 찾을 수 없어 — payment_id 가 잘못됐을 수 있어.', code: 'NOT_FOUND' }, 404);
