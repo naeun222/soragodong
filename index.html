@@ -35638,11 +35638,11 @@ function renderChatArchiveModal() {
     // V4 사용자 명시 2026-05-04: 휴지통/일반 별 액션 버튼 분기.
     const isTrash = !!a._deleted;
     const headerActionsHtml = isTrash ? `
-      <button class="cac-pin-btn" onclick="event.stopPropagation(); restoreChatArchive('${archId}')" title="복구" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px;">↻</button>
-      <button class="cac-pin-btn" onclick="event.stopPropagation(); purgeChatArchive('${archId}')" title="영구 삭제" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; color:#c44;">✕</button>
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); restoreChatArchive('${archId}')" title="복구" style="background:transparent; border:none; cursor:pointer; font-size:15px; padding:4px 8px;">↻</button>
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); purgeChatArchive('${archId}')" title="영구 삭제" style="background:transparent; border:none; cursor:pointer; font-size:15px; padding:4px 8px; color:#c44;">✕</button>
     ` : `
-      <button class="cac-pin-btn" onclick="event.stopPropagation(); toggleArchivePin('${a.date}')" title="${pinTitle}" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; opacity:${a.pinned ? '1' : '0.5'};">${pinIcon}</button>
-      <button class="cac-pin-btn" onclick="event.stopPropagation(); softDeleteChatArchive('${archId}')" title="삭제 (휴지통으로)" style="background:transparent; border:none; cursor:pointer; font-size:14px; padding:2px 6px; opacity:0.5;">🗑️</button>
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); toggleArchivePin('${a.date}')" title="${pinTitle}" style="background:transparent; border:none; cursor:pointer; font-size:15px; padding:4px 8px; opacity:${a.pinned ? '1' : '0.55'};">${pinIcon}</button>
+      <button class="cac-pin-btn" onclick="event.stopPropagation(); softDeleteChatArchive('${archId}')" title="삭제 (휴지통으로)" style="background:transparent; border:1px solid var(--border); border-radius:6px; cursor:pointer; font-size:15px; padding:4px 8px; opacity:0.85;">🗑️</button>
     `;
     const expandedActions = isTrash ? `
       <div style="display:flex; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
