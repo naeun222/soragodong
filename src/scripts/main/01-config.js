@@ -9,6 +9,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // 사용처: Phase 1 게스트 모드 활성화 시 invisible widget 으로 토큰 발급 → /api/chat 헤더 X-Turnstile-Token.
 const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
 
+// 사용자 명시 2026-05-06: PortOne V2 채널 키 (KG이니시스). 공개 OK — frontend 결제창 호출 시 사용.
+// REST API Key (V2) + Webhook Secret 은 Cloudflare env (PORTONE_API_KEY_V2 / PORTONE_WEBHOOK_SECRET) 에 별도.
+const PORTONE_CHANNEL_KEY = 'channel-key-19a298fa-d855-4e4e-9eae-42d60448848e';
+
 // 사용자 명시 2026-05-01 (100명 대비): Sentry error tracking placeholder.
 // DSN 빈 값 = SDK 로드 X (네트워크 / bundle 영향 0). 사용자가 sentry.io 가입 후 DSN 발급해서 적용하면 자동 활성.
 // 가입 단계: USER_TODO P2-X 참고. Free tier 5K errors/월.
