@@ -203,3 +203,94 @@ async function _doRefreshBillingStatus(manual) {
   }
 }
 
+// 사용자 명시 2026-05-06: 결제 내역 / 환불 UI.
+async function loadPayments() {
+  const container = document.getElementById('paymentsList');
+  if (!container) return;
+  if (!session?.access_token) {
+    container.textContent = '로그인 필요';
+    return;
+  }
+  container.textContent = '불러오는 중...';
+  try {
+    const _origFetch = window._anthropicOrigFetch || window.fetch;
+    const resp = await _origFetch('/api/billing/list-payments?t=' + Date.now(), {
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Cache-Control': 'no-cache' }
+    });
+    if (!resp.ok) {
+      container.textContent = '내역 조회 실패 (' + resp.status + ')';
+      return;
+    }
+    const data = await resp.json();
+    const payments = data.payments || [];
+    if (payments.length === 0) {
+      container.innerHTML = '<div style="color:var(--text-soft); padding:8px 0;">최근 6개월 결제 내역 X</div>';
+      return;
+    }
+    const typeLabel = {
+      subscribe: '📅 월정액 구독',
+      tier_upgrade: '🌊 Premium 업그레이드',
+      overage_pack: '✦ Premium 추가팩',
+      charge: '💰 충전 (legacy)'
+    };
+    container.innerHTML = payments.map(p => {
+      const date = new Date(p.created_at).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' });
+      const label = typeLabel[p.payment_type] || p.payment_type;
+      const krw = (p.amount_krw || 0).toLocaleString();
+      let statusBadge = '';
+      let actionBtn = '';
+      if (p.status === 'paid') {
+        statusBadge = '<span style="font-size:10px; color:#8fc88f;">✓ 결제됨</span>';
+        actionBtn = `<button onclick="requestRefund('${p.id}', ${p.amount_krw}, '${label.replace(/'/g, "\\'")}')" style="background:transparent; border:1px solid rgba(220,80,80,0.40); color:#e89090; font-size:11px; padding:4px 9px; border-radius:6px; cursor:pointer;">환불 요청</button>`;
+      } else if (p.status === 'refunded') {
+        statusBadge = `<span style="font-size:10px; color:var(--text-soft);">↩ ${(p.refund_amount_krw || 0).toLocaleString()}원 환불</span>`;
+      } else if (p.status === 'cancelled' || p.status === 'partial_cancelled') {
+        statusBadge = '<span style="font-size:10px; color:var(--text-soft);">↩ 취소됨</span>';
+      } else if (p.status === 'processing') {
+        statusBadge = '<span style="font-size:10px; color:#e8c590;">⏳ 처리 중</span>';
+      }
+      return `<div style="padding:10px 0; border-bottom:1px dashed rgba(255,255,255,0.06);">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div>
+            <div style="color:var(--text); font-size:12.5px;">${label}</div>
+            <div style="color:var(--text-soft); font-size:10.5px; margin-top:2px;">${date} · ${krw}원 · ${statusBadge}</div>
+          </div>
+          ${actionBtn}
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    container.textContent = '오류: ' + (e?.message || e);
+  }
+}
+
+async function requestRefund(paymentId, amountKrw, label) {
+  if (!session?.access_token) { alert('로그인 필요'); return; }
+  const reason = prompt(`${label} (${(amountKrw || 0).toLocaleString()}원) 환불 사유를 알려줘:\n\n(구독 = 잔여일 비례 환불 / 추가팩 = 잔여 credit 비례)`, '');
+  if (reason === null) return;  // cancel
+  if (!reason.trim()) { alert('환불 사유를 입력해줘.'); return; }
+  if (!confirm(`정말 환불 요청할까?\n\n사유: ${reason}\n\n환불 후 잔여 사용 즉시 종료 (구독 만료) — 카드사 정책상 3-7영업일 내 카드 명세서 반영.`)) return;
+  try {
+    const _origFetch = window._anthropicOrigFetch || window.fetch;
+    const resp = await _origFetch('/api/billing/refund', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({ payment_id: paymentId, reason: reason.trim() })
+    });
+    const data = await resp.json();
+    if (resp.ok && data.ok) {
+      showToast(`↩ ${(data.refunded_krw || 0).toLocaleString()}원 환불 요청 완료`);
+      alert(data.message || '환불 처리됨. 카드사 명세서 3-7영업일 반영.');
+      loadPayments();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true);
+    } else {
+      alert('환불 실패: ' + (data.error || resp.status));
+    }
+  } catch (e) {
+    alert('통신 오류: ' + (e?.message || e));
+  }
+}
+

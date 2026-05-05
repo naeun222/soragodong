@@ -52,6 +52,9 @@ async function _e2eeSetupNewUser(userPassword) {
     }));
   } catch (e) {}
 
+  // 사용자 명시 2026-05-06: 게스트 → 카카오 linkIdentity 후 진입 마커 정리. saveToCloudNow 가드 풀림.
+  try { localStorage.removeItem('soragodong_v4_pending_e2ee_setup'); } catch {}
+
   return { masterKey, salt: saltB64, encryptedMasterKey };
 }
 

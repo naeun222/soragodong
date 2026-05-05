@@ -110,13 +110,26 @@ async function proceedSubscribe(tierKey) {
       customData: JSON.stringify({ tier: tierKey, type: 'subscribe' })
     });
   } catch (e) {
-    alert('결제창 호출 실패: ' + (e?.message || e));
+    alert('결제창을 열 수 없어. 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + (e?.message || e));
     return;
   }
 
-  // V2 SDK 응답 — 사용자가 결제창 닫음 / 결제 실패 시 code 채워짐.
+  // V2 SDK 응답 — 사용자가 결제창 닫음 / 카드 거절 / 잔액 부족 등 시 code 채워짐.
   if (response && response.code != null) {
-    alert('결제 취소 또는 실패: ' + (response.message || response.code));
+    // 사용자 명시 2026-05-06: 결제 실패 카피 다듬기 — 사용자 입장 친절하게.
+    const code = response.code || '';
+    const msg = response.message || '';
+    let userMsg;
+    if (code === 'USER_CANCEL' || /cancel|취소/i.test(msg)) {
+      userMsg = '결제를 취소했어. 다시 시도하려면 다시 눌러줘.';
+    } else if (/잔액|insufficient|한도|limit/i.test(msg)) {
+      userMsg = '카드 한도 / 잔액이 부족해 보여. 다른 카드로 다시 시도해줘.';
+    } else if (/거절|declin|reject/i.test(msg)) {
+      userMsg = '카드사가 결제를 거절했어. 다른 카드로 시도하거나 카드사에 문의해줘.';
+    } else {
+      userMsg = '결제 처리 중 문제가 생겼어 — 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + msg + (code ? ' (' + code + ')' : '');
+    }
+    alert(userMsg);
     return;
   }
 
