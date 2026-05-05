@@ -1,8 +1,8 @@
 // ─── 구독 모달 (사용자 명시 2026-05-06: PortOne V2 카드 결제, 토스 수동 송금 폐기) ───
 // Light 9,900 + Premium 25,000. 자동 갱신 X — 다음 달 명시 결제.
 
-// 사용자 명시 2026-05-06: KG이니시스 V2 일반 결제 = customer.phoneNumber 필수.
-// 한 번 입력받으면 state.preferences.paymentPhone 에 보관해서 재사용.
+// 사용자 명시 2026-05-06: KG이니시스 V2 일반 결제 = customer.phoneNumber + fullName 필수.
+// 한 번 입력받으면 state.preferences.paymentPhone / paymentFullName 에 보관해서 재사용.
 function _getPaymentPhoneNumber() {
   state.preferences = state.preferences || {};
   const saved = state.preferences.paymentPhone;
@@ -17,6 +17,21 @@ function _getPaymentPhoneNumber() {
   state.preferences.paymentPhone = digits;
   try { saveState(); } catch {}
   return digits;
+}
+function _getPaymentFullName() {
+  state.preferences = state.preferences || {};
+  const saved = state.preferences.paymentFullName;
+  if (saved && saved.trim().length >= 2) return saved.trim();
+  const raw = prompt('결제 진행을 위해 구매자 이름 입력 (실명)\n— KG이니시스 정책상 필수');
+  if (raw == null) return null;
+  const name = String(raw).trim();
+  if (name.length < 2) {
+    alert('이름이 너무 짧아 (2자 이상).');
+    return null;
+  }
+  state.preferences.paymentFullName = name;
+  try { saveState(); } catch {}
+  return name;
 }
 
 async function openSubscribeModal() {
@@ -91,6 +106,8 @@ async function proceedSubscribe(tierKey) {
 
   const phoneNumber = _getPaymentPhoneNumber();
   if (!phoneNumber) return;
+  const fullName = _getPaymentFullName();
+  if (!fullName) return;
 
   // PortOne V2 SDK 동적 로드.
   if (typeof window.PortOne === 'undefined') {
@@ -127,7 +144,8 @@ async function proceedSubscribe(tierKey) {
       customer: {
         customerId: authUserId || undefined,
         email: session?.user?.email || undefined,
-        phoneNumber
+        phoneNumber,
+        fullName
       },
       customData: JSON.stringify({ tier: tierKey, type: 'subscribe' })
     });
