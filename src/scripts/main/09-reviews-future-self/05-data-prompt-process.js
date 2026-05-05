@@ -23,8 +23,10 @@ function _collectReviewData(type) {
   const decisionsInRange = state.decisions.filter(d => !d._deleted && (inRange(d.startedAt) || (d.decidedAt && inRange(d.decidedAt))));
   const topicCardsInRange = (state.topicCards || []).filter(t => !t._deleted && t.createdAt && inRange(t.createdAt));
   const pearlsInRange = (state.pearls || []).filter(p => !p._deleted && p.createdAt && inRange(p.createdAt));
+  // 사용자 명시 2026-05-06: 메모 type 은 review prompt 에서 제외 (순수 메모)
   const archiveInRange = (state.archive || []).filter(a => {
     if (a._deleted) return false;
+    if (a.type === 'memo' || a._excludeFromAI) return false;
     const dt = a.savedAt || a.createdAt;
     return dt && inRange(dt);
   });

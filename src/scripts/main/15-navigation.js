@@ -196,7 +196,7 @@ const INLINE_TIPS = {
   specialShell: '✨ 특별한 소라 — 가챠 5% 확률',
   syncDotRed: '🔴 동기화 대기 — 클릭하면 강제 저장',
   syncDotClick: '✓ 강제 저장 완료',
-  cutoffWarning: '🌙 새벽 4시 이후 entry = 그 다음 날',
+  cutoffWarning: '🌙 새벽 4시 이전 체크인 = 전날로 기록돼',
   checkinFirstEntry: '📝 매일 한 번 — 패턴이 쌓여',
   opusToggle: '🦉 Opus = 5x 빠르게 차감 (Premium 만)',
   modeFirstClick: '🌙 모드 전환 — 분위기에 맞게'

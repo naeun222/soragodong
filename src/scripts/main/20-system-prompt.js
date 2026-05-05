@@ -462,7 +462,8 @@ function buildSystemPromptParts() {
     volatile.push('');
   }
 
-  const _activeArchive = (state.archive || []).filter(a => !a._deleted);
+  // 사용자 명시 2026-05-06: 메모 type 은 분석/추출/AI prompt 에서 제외 (순수 메모)
+  const _activeArchive = (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI);
   if (_activeArchive.length > 0) {
     volatile.push('[과거 깨달음 (최근 5개)]');
     // 사용자 요청 2026-04-29 (perf #5): insight 길면 자름 (180자)

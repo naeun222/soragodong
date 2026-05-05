@@ -14,7 +14,8 @@ function _collectAnnualData(year) {
   };
   const entries = (state.entries || []).filter(e => e.date && inYear(e.date + 'T12:00:00'));
   const pearls = (state.pearls || []).filter(p => !p._deleted && inYear(p.createdAt));
-  const archive = (state.archive || []).filter(a => !a._deleted && inYear(a.savedAt || a.createdAt));
+  // 사용자 명시 2026-05-06: 메모 type 은 annual review 에서 제외 (순수 메모)
+  const archive = (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI && inYear(a.savedAt || a.createdAt));
   const decisions = (state.decisions || []).filter(d => !d._deleted && inYear(d.completedAt || d.startedAt));
   const quarterlies = (state.quarterlyReviews || []).filter(r => r.quarterKey && r.quarterKey.startsWith(targetYear + '-'));
   const insights = (state.insights || []).filter(i => !i._deleted && inYear(i.discoveredAt || i.createdAt));

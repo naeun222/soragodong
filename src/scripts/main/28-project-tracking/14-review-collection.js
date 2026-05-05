@@ -203,7 +203,8 @@ async function generateReviewArchiveMetaSummary(reviewId) {
     const mm = String(review.monthKey).match(/^(\d{4})-(\d{2})$/);
     if (mm) { const y = parseInt(mm[1]); const mo = parseInt(mm[2]) - 1; startMs = new Date(y, mo, 1).getTime(); endMs = new Date(y, mo + 1, 0, 23, 59, 59).getTime(); }
   } else { const compMs = new Date(review.completedAt).getTime(); startMs = compMs - 7 * 86400000; endMs = compMs; }
-  const arrs = (state.archive || []).filter(a => { if (!a.savedAt) return false; const t = new Date(a.savedAt).getTime(); return t >= startMs && t <= endMs; });
+  // 사용자 명시 2026-05-06: 메모 type 은 review insight AI 추출 input 에서 제외 (순수 메모)
+  const arrs = (state.archive || []).filter(a => { if (!a.savedAt) return false; if (a.type === 'memo' || a._excludeFromAI) return false; const t = new Date(a.savedAt).getTime(); return t >= startMs && t <= endMs; });
   if (arrs.length === 0) { showToast('이 기간 깨달음 X'); return; }
   const archiveText = arrs.map(a => `[${a.type}] ${a.headline || ''}: ${a.body || a.userMemo || ''}`).join('\n');
   try {

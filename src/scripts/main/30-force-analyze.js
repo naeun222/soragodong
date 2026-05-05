@@ -39,7 +39,8 @@ async function forceAnalyze(opts) {
       chatMessages: state.chatMessages.filter(m => !m.typing && !m.error).slice(-25).map(m => ({
         role: m.role, content: (m.content || '').slice(0, 200)
       })),
-      archive: (state.archive || []).filter(a => !a._deleted).slice(0, 15).map(a => ({
+      // 사용자 명시 2026-05-06: 메모 type 은 강제 분석 input 에서 제외 (순수 메모)
+      archive: (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI).slice(0, 15).map(a => ({
         type: a.type, headline: a.headline, body: (a.body || '').slice(0, 100)
       })),
       missions: (state.missions || []).slice(-15).map(m => ({

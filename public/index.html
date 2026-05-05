@@ -13623,7 +13623,8 @@ function _collectAnnualData(year) {
   };
   const entries = (state.entries || []).filter(e => e.date && inYear(e.date + 'T12:00:00'));
   const pearls = (state.pearls || []).filter(p => !p._deleted && inYear(p.createdAt));
-  const archive = (state.archive || []).filter(a => !a._deleted && inYear(a.savedAt || a.createdAt));
+  // 사용자 명시 2026-05-06: 메모 type 은 annual review 에서 제외 (순수 메모)
+  const archive = (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI && inYear(a.savedAt || a.createdAt));
   const decisions = (state.decisions || []).filter(d => !d._deleted && inYear(d.completedAt || d.startedAt));
   const quarterlies = (state.quarterlyReviews || []).filter(r => r.quarterKey && r.quarterKey.startsWith(targetYear + '-'));
   const insights = (state.insights || []).filter(i => !i._deleted && inYear(i.discoveredAt || i.createdAt));
@@ -21655,8 +21656,10 @@ function _collectReviewData(type) {
   const decisionsInRange = state.decisions.filter(d => !d._deleted && (inRange(d.startedAt) || (d.decidedAt && inRange(d.decidedAt))));
   const topicCardsInRange = (state.topicCards || []).filter(t => !t._deleted && t.createdAt && inRange(t.createdAt));
   const pearlsInRange = (state.pearls || []).filter(p => !p._deleted && p.createdAt && inRange(p.createdAt));
+  // 사용자 명시 2026-05-06: 메모 type 은 review prompt 에서 제외 (순수 메모)
   const archiveInRange = (state.archive || []).filter(a => {
     if (a._deleted) return false;
+    if (a.type === 'memo' || a._excludeFromAI) return false;
     const dt = a.savedAt || a.createdAt;
     return dt && inRange(dt);
   });
@@ -27904,7 +27907,7 @@ const INLINE_TIPS = {
   specialShell: '✨ 특별한 소라 — 가챠 5% 확률',
   syncDotRed: '🔴 동기화 대기 — 클릭하면 강제 저장',
   syncDotClick: '✓ 강제 저장 완료',
-  cutoffWarning: '🌙 새벽 4시 이후 entry = 그 다음 날',
+  cutoffWarning: '🌙 새벽 4시 이전 체크인 = 전날로 기록돼',
   checkinFirstEntry: '📝 매일 한 번 — 패턴이 쌓여',
   opusToggle: '🦉 Opus = 5x 빠르게 차감 (Premium 만)',
   modeFirstClick: '🌙 모드 전환 — 분위기에 맞게'
@@ -31410,7 +31413,8 @@ function buildSystemPromptParts() {
     volatile.push('');
   }
 
-  const _activeArchive = (state.archive || []).filter(a => !a._deleted);
+  // 사용자 명시 2026-05-06: 메모 type 은 분석/추출/AI prompt 에서 제외 (순수 메모)
+  const _activeArchive = (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI);
   if (_activeArchive.length > 0) {
     volatile.push('[과거 깨달음 (최근 5개)]');
     // 사용자 요청 2026-04-29 (perf #5): insight 길면 자름 (180자)
@@ -31553,7 +31557,7 @@ async function saveMsgAsPearl(idx) {
   showToast(`🔮 진주에 보관됨${photo ? ' (사진 같이)' : ''}`);
 }
 
-// V4-1h: ✎ 메모 — 자유 텍스트 + AI 해시태그 자동 생성. 컨텍스트 X (대화 인용 X).
+// V4-1h: ✎ 메모 — 자유 텍스트. 사용자 명시 2026-05-06: AI 호출 X / 분석·추출 input X / 순수 메모.
 // V4 비전 7.6: archive 객체 { type:'memo', userMemo, tags[], date, savedAt, source:'메모' }
 async function addMemoArchive() {
   // V4-fix v3 (사용자 요청): 테스터 모드 → 예시 메모 자동 채움
@@ -31568,7 +31572,7 @@ async function addMemoArchive() {
   const seed = (Date.now() % memoExamples.length);
   const userMemo = await showInputModal({
     title: '✎ 메모',
-    message: '깨달음 한 줄. 자유롭게 — 짧아도 OK.',
+    message: '깨달음 한 줄. 자유롭게 — 짧아도 OK.\n(AI 가 읽지 않음. 순수 메모)',
     placeholder: '예: 새벽엔 결정 미루기 / 카페가 답이다',
     defaultValue: isTester ? memoExamples[seed] : '',
     multiline: true,
@@ -31578,52 +31582,8 @@ async function addMemoArchive() {
   if (!userMemo || !userMemo.trim()) return;
   const trimmed = userMemo.trim();
 
-  // AI 해시태그 자동 생성 (3-5개, 짧은 키워드)
-  let tags = [];
-  if (_canAI()) {
-    try {
-      const resp = await callAnthropic({
-        _endpoint: 'memo',
-        model: 'claude-haiku-4-5',
-        max_tokens: 100,
-        messages: [{
-          role: 'user',
-          content: `메모: "${trimmed}"
-
-이 메모의 핵심을 짧은 해시태그 3-5개로 뽑아.
-각 태그 2-6자 한국어 명사형. 예: 결정, 환경, ADHD, 새벽, 회피, 자기효능감.
-
-[출력 — JSON만]
-{ "tags": ["태그1", "태그2", "태그3"] }
-
-[금지]
-- # 기호 X (태그 텍스트만)
-- 마크다운, 코드블록 X
-- 영어 (단 ADHD/CBT 등 약어 OK)
-- 6자 초과 태그 X
-- 일반 동사·형용사 (행동, 좋다 등) X
-- 5개 초과 X
-
-JSON만 출력.`
-        }]
-      });
-      const data = await resp.json();
-      let raw = data.content[0].text.trim();
-      raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
-      const m = raw.match(/\{[\s\S]*\}/);
-      if (m) {
-        const parsed = JSON.parse(m[0]);
-        if (Array.isArray(parsed.tags)) {
-          tags = parsed.tags
-            .map(t => String(t).replace(/^#/, '').trim())
-            .filter(t => t && t.length <= 8)
-            .slice(0, 5);
-        }
-      }
-    } catch (e) {
-      console.warn('memo tag AI failed:', e);
-    }
-  }
+  // 사용자 명시 2026-05-06: AI 해시태그 자동 생성 제거 — 순수 메모 기능 (API 호출 X).
+  const tags = [];
 
   const _dayKey = todayKey();
   const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -31636,13 +31596,13 @@ JSON만 출력.`
     tags,
     date,
     source: '메모',
-    savedAt: new Date().toISOString()
+    savedAt: new Date().toISOString(),
+    _excludeFromAI: true     // 사용자 명시 2026-05-06: 분석/추출 input 제외 마커
   });
   saveState();
   if (typeof renderArchive === 'function') renderArchive();
-  showToast(tags.length ? `메모 저장됨 ✎  ${tags.map(t => '#' + t).join(' ')}` : '메모 저장됨 ✎');
+  showToast('메모 저장됨 ✎');
 }
-
 // V3.13.x: askDeeper 응답을 전략 카드로 저장 (state.topicCards에 category='strategy')
 // 4-필드 구조: title / problemContext / psychConcept / actionStrategy
 async function saveMsgAsStrategy(idx) {
@@ -40199,7 +40159,8 @@ function _collectQuarterlyData(quarterKey, stats) {
     chatIn = (state.chatMessages || []).filter(m => m.timestamp && m.role === 'user' && inMs(m.timestamp)).slice(-40);
     topicCardsIn = (state.topicCards || []).filter(t => !t._deleted && inMs(t.createdAt));
     pearlsIn = (state.pearls || []).filter(p => !p._deleted && inMs(p.createdAt));
-    archiveIn = (state.archive || []).filter(a => !a._deleted && inMs(a.savedAt || a.createdAt));
+    // 사용자 명시 2026-05-06: 메모 type 은 quarterly rollup 에서 제외 (순수 메모)
+    archiveIn = (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI && inMs(a.savedAt || a.createdAt));
     insightsIn = (state.insights || []).filter(i => !i._deleted && inMs(i.discoveredAt || i.createdAt));
     chaptersIn = (state.chatArchive || []).filter(c => !c._deleted && inMs(c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null)));
   }
@@ -43276,7 +43237,8 @@ async function generateReviewArchiveMetaSummary(reviewId) {
     const mm = String(review.monthKey).match(/^(\d{4})-(\d{2})$/);
     if (mm) { const y = parseInt(mm[1]); const mo = parseInt(mm[2]) - 1; startMs = new Date(y, mo, 1).getTime(); endMs = new Date(y, mo + 1, 0, 23, 59, 59).getTime(); }
   } else { const compMs = new Date(review.completedAt).getTime(); startMs = compMs - 7 * 86400000; endMs = compMs; }
-  const arrs = (state.archive || []).filter(a => { if (!a.savedAt) return false; const t = new Date(a.savedAt).getTime(); return t >= startMs && t <= endMs; });
+  // 사용자 명시 2026-05-06: 메모 type 은 review insight AI 추출 input 에서 제외 (순수 메모)
+  const arrs = (state.archive || []).filter(a => { if (!a.savedAt) return false; if (a.type === 'memo' || a._excludeFromAI) return false; const t = new Date(a.savedAt).getTime(); return t >= startMs && t <= endMs; });
   if (arrs.length === 0) { showToast('이 기간 깨달음 X'); return; }
   const archiveText = arrs.map(a => `[${a.type}] ${a.headline || ''}: ${a.body || a.userMemo || ''}`).join('\n');
   try {
@@ -44308,7 +44270,8 @@ async function forceAnalyze(opts) {
       chatMessages: state.chatMessages.filter(m => !m.typing && !m.error).slice(-25).map(m => ({
         role: m.role, content: (m.content || '').slice(0, 200)
       })),
-      archive: (state.archive || []).filter(a => !a._deleted).slice(0, 15).map(a => ({
+      // 사용자 명시 2026-05-06: 메모 type 은 강제 분석 input 에서 제외 (순수 메모)
+      archive: (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI).slice(0, 15).map(a => ({
         type: a.type, headline: a.headline, body: (a.body || '').slice(0, 100)
       })),
       missions: (state.missions || []).slice(-15).map(m => ({

@@ -148,7 +148,8 @@ function _collectQuarterlyData(quarterKey, stats) {
     chatIn = (state.chatMessages || []).filter(m => m.timestamp && m.role === 'user' && inMs(m.timestamp)).slice(-40);
     topicCardsIn = (state.topicCards || []).filter(t => !t._deleted && inMs(t.createdAt));
     pearlsIn = (state.pearls || []).filter(p => !p._deleted && inMs(p.createdAt));
-    archiveIn = (state.archive || []).filter(a => !a._deleted && inMs(a.savedAt || a.createdAt));
+    // 사용자 명시 2026-05-06: 메모 type 은 quarterly rollup 에서 제외 (순수 메모)
+    archiveIn = (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI && inMs(a.savedAt || a.createdAt));
     insightsIn = (state.insights || []).filter(i => !i._deleted && inMs(i.discoveredAt || i.createdAt));
     chaptersIn = (state.chatArchive || []).filter(c => !c._deleted && inMs(c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null)));
   }
