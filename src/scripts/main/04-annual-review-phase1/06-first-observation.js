@@ -289,8 +289,10 @@ ${chatText}
 1. paraphrase: 사용자 발화 핵심 1줄 인용 또는 paraphrase
 2. dimension: 환경 / 인지 / 사회 / 정체성 / 가치 중 1개 (가장 작동하는 차원)
 3. diagnosis: 1-2 문장. 판단 X. 자기관찰 톤.
-4. strategy: 1-2 문장. 환경 cuing 우선. 관찰 친화. 구체.
-5. hypotheses: trait / value / pattern 가설 1-3개 (user_verified=false, confidence 0.4-0.6)
+4. strategy: 1-2 문장. 원리 / 큰 방향. 환경 cuing 우선. 관찰 친화.
+5. proposal: 25자 이내. 오늘 안에 할 수 있는 한 가지 구체 micro-action. strategy 의 *원리*를 *오늘 한 동작*으로 좁힌 것 — 같은 말 X.
+   예) strategy="환경 자극 줄이는 방향이 도움될 거 같아. 알람 / 자리 같은 거." → proposal="저녁 7시 핸드폰 무음으로 두기"
+6. hypotheses: trait / value / pattern 가설 1-3개 (user_verified=false, confidence 0.4-0.6)
 
 [가설 schema]
 - trait: name (10자 이내) + description (한 문장) + display_text (✓ 박스용 친근 한 줄)
@@ -300,13 +302,15 @@ ${chatText}
 [톤]
 친한 친구 반말. judgment X. self-compassion. 첫 만남이라 confidence 낮게.
 Surprise > Truth. Specific > Generic.
+proposal 은 명령조 X (반말 권유 톤). 오늘 안에 진짜 가능한 micro 단위 (5분-1시간).
 
 [출력 JSON 만, markdown X]
 {
   "paraphrase": "...",
   "dimension": "환경/인지/사회/정체성/가치 중 하나",
   "diagnosis": "1-2 문장",
-  "strategy": "1-2 문장",
+  "strategy": "1-2 문장 (원리)",
+  "proposal": "25자 이내 (오늘 한 동작)",
   "hypotheses": [
     { "category": "trait" | "value" | "pattern", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." }
   ]

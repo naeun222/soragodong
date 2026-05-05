@@ -49,6 +49,7 @@ function _intakeStep1Html() {
   // 사용자 명시 2026-04-30 ultrathink: 미지원 브라우저도 mic button 표시 — 누름 시 토스트 안내 (예시·텍스트 권유).
   const micHtml = `<button id="intakeMicBtn1" class="intake-mic-btn" onclick="_intakeMicToggle(1)" aria-label="음성"><span id="intakeMicIcon1"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;display:block;"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></span></button>`;
   return `
+    <div class="intake-intro">🐚 지금 고민인 거 한 번 말해봐.</div>
     <div class="intake-mic-recommend">
       <span class="intake-mic-recommend-emoji">🎤</span>
       <span><b>말로 풀어봐 — 적극 추천!</b><br><span class="intake-mic-recommend-sub">손보다 빠르고 자연스러워</span></span>

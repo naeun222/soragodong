@@ -109,7 +109,7 @@ function _v8HeroSequence() {
         textEl.innerHTML = `
           <div class="v8-hero-line v8-hero-line-1">다른 AI랑 나는 좀 달라.</div>
           <div class="v8-hero-line v8-hero-line-2">너를 기억해.</div>
-          <div class="v8-hero-line v8-hero-line-3">그리고 시간이 지나면 — 다시 물어봐.</div>
+          <div class="v8-hero-line v8-hero-line-3">그리고 시간이 지나면 —<br>너를 이해해.</div>
         `;
         // 1500ms 정적 후 hint 호흡
         setTimeout(() => {
@@ -190,29 +190,31 @@ async function _v8RunIntakeAndInject() {
     content: '방금 들은 거, 이렇게 봤어 —',
     timestamp: nowIso
   });
-  // 4단 분석 — '오늘의 제안' 본문 섹션 제거 (proposal chip 이 따로 표시되어 중복).
-  // 사용자 보고 2026-05-06 ultrathink: 본문 [오늘의 제안] 이 [이럴 땐 이렇게] 첫 문장과 중복.
+  // 4단 분석 — proposal 필드 별도 (strategy 와 다른 내용: 원리 vs 오늘 한 동작).
+  // 사용자 보고 2026-05-06 ultrathink: 본문 [오늘의 제안] = [이럴 땐 이렇게] 첫 문장 중복 → AI schema proposal 필드 신설.
   const dim = (analysis.dimension || '환경').trim();
   const para = (analysis.paraphrase || '').trim();
   const diag = (analysis.diagnosis || '').trim();
   const strat = (analysis.strategy || '').trim();
+  const prop = (analysis.proposal || '').trim();
   const observation = para || (diag ? diag.split(/[.。]\s/)[0] + '.' : '방금 들려준 마음, 정리해봤어.');
   const concept = `${dim} 차원이 작동하는 모습이 보여.${diag ? '\n' + diag : ''}`;
   const guide = strat || '천천히 같이 가보자.';
-  const proposalChipTitle = (strat ? strat.split(/[.。]\s/)[0].slice(0, 40) : '천천히 한 걸음') || '오늘 한 걸음';
-  const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}`;
+  // proposal fallback — AI 가 proposal 안 줬으면 strategy 첫 문장의 짧은 변형.
+  const proposalText = prop || (strat ? strat.split(/[.。]\s/)[0].slice(0, 40) : '오늘 한 걸음');
+  const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}\n\n[오늘의 제안]\n${proposalText}`;
   state.chatMessages.push({
     role: 'assistant',
     content: fourStage,
     fromDeeper: true,
     proposal: true,
-    proposalData: { title: proposalChipTitle },
+    proposalData: { title: proposalText.slice(0, 40) },
     timestamp: nowIso
   });
-  // 사용자 명시 2026-05-06 ultrathink: 4단 분석 직후 안내 + '아무 얘기나 → 마무리' 권유.
+  // 사용자 명시 2026-05-06 ultrathink: 4단 분석 직후 '더 알고 싶어 ▾' 설명만. 마무리는 코치마크가 책임.
   state.chatMessages.push({
     role: 'assistant',
-    content: '평소엔 답 아래 "더 알고 싶어 ▾" 누르면 이렇게 깊게 풀어줄게 ✦\n\n지금은 아무 얘기나 해봐. 다 했다 싶으면 ✓ 마무리 눌러봐 — 내가 정리해서 도서관에 둘게.',
+    content: '처음이라 위 4단으로 정리해줬어 ✦\n평소엔 답 아래 "더 알고 싶어 ▾" 누르면 이렇게 깊게 풀어줄게.',
     timestamp: nowIso
   });
   saveState();
@@ -224,7 +226,7 @@ async function _v8RunIntakeAndInject() {
 // 코치마크 — 가벼운 자체 인프라 (ONBOARDING_STEPS 분리)
 // ─────────────────────────────────────────────────────────────
 
-function _v8ShowCoachmark({ targetSelector, body, position = 'top', onAdvance }) {
+function _v8ShowCoachmark({ targetSelector, body, position = 'top', interactive = false, waitFor, onAdvance }) {
   return new Promise((resolve) => {
     const root = document.getElementById('v8TutorialRoot');
     if (!root) { resolve(); return; }
@@ -232,12 +234,13 @@ function _v8ShowCoachmark({ targetSelector, body, position = 'top', onAdvance })
     // 타겟이 화면에 없으면 코치마크 skip — 다음 단계로 진행
     if (!target || target.offsetParent === null) { resolve(); return; }
     root.setAttribute('aria-hidden', 'false');
+    // interactive 모드 = mask X (ring 의 box-shadow 가 dim 처리, 타겟 클릭 통과) + OK 버튼 X.
     root.innerHTML = `
-      <div id="v8Coach" class="v8-coach">
-        <div class="v8-coach-mask"></div>
+      <div id="v8Coach" class="v8-coach ${interactive ? 'v8-coach-interactive' : ''}">
+        ${interactive ? '' : '<div class="v8-coach-mask"></div>'}
         <div class="v8-coach-bubble" id="v8CoachBubble">
           <div class="v8-coach-body">${body}</div>
-          <button class="v8-coach-ok" id="v8CoachOk">알겠어 ✦</button>
+          ${interactive ? '' : '<button class="v8-coach-ok" id="v8CoachOk">알겠어 ✦</button>'}
         </div>
       </div>
     `;
@@ -280,7 +283,10 @@ function _v8ShowCoachmark({ targetSelector, body, position = 'top', onAdvance })
     window.addEventListener('resize', onResize);
     window.addEventListener('scroll', onResize, true);
 
+    let watcher = null;
+    let resolved = false;
     const cleanup = () => {
+      if (watcher) { clearInterval(watcher); watcher = null; }
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onResize, true);
       try { ring.remove(); } catch {}
@@ -289,13 +295,28 @@ function _v8ShowCoachmark({ targetSelector, body, position = 'top', onAdvance })
     };
 
     const advance = () => {
+      if (resolved) return;
+      resolved = true;
       cleanup();
       if (typeof onAdvance === 'function') {
         try { onAdvance(); } catch {}
       }
       resolve();
     };
-    if (okBtn) okBtn.addEventListener('click', advance);
+
+    if (interactive) {
+      // 사용자가 타겟 직접 클릭 → 그 액션의 후속 결과 (waitFor) 가 만족되면 advance.
+      // 타겟이 사라지면 (탭 전환 등) 도 advance — 멈춰있지 않게.
+      watcher = setInterval(() => {
+        try {
+          if (waitFor && waitFor()) { advance(); return; }
+          if (!target || target.offsetParent === null) { advance(); return; }
+          place();  // 타겟 위치 변동 시 ring/bubble 재배치
+        } catch {}
+      }, 250);
+    } else {
+      if (okBtn) okBtn.addEventListener('click', advance);
+    }
   });
 }
 
@@ -304,12 +325,20 @@ function _v8CoachmarkEndChapter() {
   const body = `
     <div class="v8-coach-title">대화 마무리</div>
     <div class="v8-coach-text">
-      다 얘기했다 싶으면 여기 눌러 ✓<br>
+      한 번 직접 눌러볼래? ✓<br>
       내가 정리해서 도서관에 넣어둘게.<br>
       <span class="v8-coach-text-soft">나 탭에서도 보여.</span>
     </div>
   `;
-  return _v8ShowCoachmark({ targetSelector: target, body, position: 'top' });
+  // 사용자 명시 2026-05-06 ultrathink: 사용자가 직접 ✓ 눌러 archive 완수해야 advance.
+  // chatMessages.empty 감지 = 새 대화 시작 상태 → 헤더 토글 코치마크.
+  return _v8ShowCoachmark({
+    targetSelector: target,
+    body,
+    position: 'top',
+    interactive: true,
+    waitFor: () => Array.isArray(state.chatMessages) && state.chatMessages.length === 0
+  });
 }
 
 function _v8CoachmarkModelToggle() {
