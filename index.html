@@ -46898,7 +46898,8 @@ function _showPremiumPromoModal() {
         <br>
         <span style="color:var(--text-soft); font-size:11.5px; line-height:1.6;">
           솔직하게 — 단독 개발자 (1인) 라 Premium = <b>iOS 앱 출시 후원</b>.<br>
-          중고 맥북 사서 iOS 빌드 가능 🫂
+          중고 맥북 사서 iOS 빌드 가능 🫂<br>
+          <span style="font-size:10px; opacity:0.6;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>
         </span>
       </div>
       <button class="btn-primary" onclick="document.getElementById('premiumPromoOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기</button>
@@ -46981,7 +46982,8 @@ function showBudgetExceededModal(reason, opts) {
         '<span style="color:var(--accent); font-weight:600;">✨ 얼리버드 평생 이용권</span>이 지금 <b>4,900원</b> (앱 출시 전 한정).<br>' +
         '월정액 대신, 한 번 결제하고 매달 Light 수준으로 평생 이어가.<br><br>' +
         '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
-        '솔직하게 — 단독 개발자 (1인) 라 결제 = iOS 앱 출시 후원이야 🫂' +
+        '솔직하게 — 단독 개발자 (1인) 라 결제 = iOS 앱 출시 후원이야 🫂<br>' +
+        '<span style="font-size:10px; opacity:0.55;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>' +
         '</span>';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 평생 이용권 보기 (4,900원)</button>
@@ -46993,7 +46995,8 @@ function showBudgetExceededModal(reason, opts) {
       const pack = OVERAGE_PACKS_CLIENT.light_pack;
       bodyText = '이번 달 한도 도달했네.<br>Premium 가면 더 깊게 (3x 일일 자유) — Opus 깊은 대화 30번/일.<br><br>' +
         '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
-        '솔직하게 — 단독 개발자 (1인) 라 Premium 결제 = <b>iOS 앱 출시 후원</b>. 중고 맥북 사서 iOS 빌드 가능 🫂' +
+        '솔직하게 — 단독 개발자 (1인) 라 Premium 결제 = <b>iOS 앱 출시 후원</b>. 중고 맥북 사서 iOS 빌드 가능 🫂<br>' +
+        '<span style="font-size:10px; opacity:0.55;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>' +
         '</span>';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기 (25,000원/월)</button>
@@ -47006,7 +47009,8 @@ function showBudgetExceededModal(reason, opts) {
       bodyText = '체험 기간 끝났어 — 깊게 써줘서 고마워.<br><br>' +
         '계속 쓰려면 구독 — <span style="color:var(--accent); font-weight:600;">얼리버드 평생 이용권 4,900원</span>이 지금만.<br><br>' +
         '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
-        '단독 개발자 (1인) 가 후원 = iOS 앱 출시 가능 🫂' +
+        '단독 개발자 (1인) 가 후원 = iOS 앱 출시 가능 🫂<br>' +
+        '<span style="font-size:10px; opacity:0.55;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>' +
         '</span>';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 평생 이용권 보기 (4,900원)</button>
