@@ -253,6 +253,7 @@ async function loadPayments() {
           <div>
             <div style="color:var(--text); font-size:12.5px;">${label}</div>
             <div style="color:var(--text-soft); font-size:10.5px; margin-top:2px;">${date} · ${krw}원 · ${statusBadge}</div>
+            <div style="font-size:9.5px; color:var(--text-soft); font-family:monospace; margin-top:3px; user-select:all; cursor:text;" title="환불 문의 시 이 ID 알려주기 — 길게 눌러 복사">#${p.id}</div>
           </div>
           ${actionBtn}
         </div>

@@ -31,11 +31,11 @@ async function adminFixPayment() {
       }
       const rows = listData.rows || [];
       const lines = rows.map((r, i) => {
-        const dt = (r.created_at || '').slice(0, 16).replace('T', ' ');
+        const dt = String(r.created_at || '').slice(0, 16).replace('T', ' ');
         const amt = (r.amount_krw || 0).toLocaleString();
-        const idShort = (r.id || '').slice(0, 8);
+        const idStr = String(r.id || '');
         const email = r.user_email || '(no email)';
-        return `${String(i + 1).padStart(2)}. ${dt} | ${r.status.padEnd(10)} | ${amt.padStart(7)}원 | ${email} | ${idShort}…`;
+        return `${String(i + 1).padStart(2)}. ${dt} | ${(r.status || '').padEnd(10)} | ${amt.padStart(7)}원 | ${email} | id:${idStr}`;
       });
       console.table(rows.map(r => ({
         id: r.id, user_id: r.user_id, user_email: r.user_email,
