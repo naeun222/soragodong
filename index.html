@@ -6875,12 +6875,12 @@
   .crystallize-accept-btn:active { transform: scale(0.97); }
 
   /* V3.11: 화면 하단 액션 묶음 — 일반화 (V3.13.x: checkin-bottom-bar → sticky-action-bar) */
-  /* 사용자 명시 2026-05-06: sticky 재활성화 + nav 에 거의 딱 붙게 padding 축소 */
+  /* 사용자 명시 2026-05-06: sticky padding-bottom 0 — nav 에 더 딱 붙게 */
   .sticky-action-bar {
     position: sticky;
     bottom: 0;
     margin-top: 16px;
-    padding: 10px 0 4px;
+    padding: 10px 0 0;
     background: linear-gradient(to top, var(--bg) 60%, rgba(20,15,30,0));
     z-index: 10;
   }
