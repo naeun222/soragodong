@@ -2,13 +2,17 @@
 
 ## 한 줄 요약
 
-`index.html` 은 **빌드 산출물**이다. 절대 손대지 말 것. **`src/` 만 수정**하고 `npm run build` 로 재생성.
+`index.html` (root) 와 `public/index.html` 은 **빌드 산출물**이다. 절대 손대지 말 것. **`src/` 만 수정**하고 `npm run build` 로 둘 다 재생성.
 
 ## 레이아웃
 
 ```
-index.html        ← 빌드 산출물 (커밋함, 배포가 그대로 사용)
-build.mjs         ← concat 빌드 (deps 0)
+index.html        ← 빌드 산출물 (커밋함, watch / 로컬 dev 용)
+public/index.html ← 빌드 산출물 (Cloudflare Workers 배포 entry)
+                    wrangler.jsonc assets.directory=./public 참조
+public/           ← 정적 자산 (sw.js / 아이콘 / godong.webp / version.txt 등)
+wrangler.jsonc    ← Cloudflare Workers 설정 (SPA 모드)
+build.mjs         ← concat 빌드 (deps 0, root + public 둘 다 write)
 watch.mjs         ← node --watch 래퍼
 package.json      ← npm scripts
 src/
@@ -69,10 +73,10 @@ src/
 
 **`npm run verify` 가 항상 통과해야 한다.**
 
-`verify` 는 src/ 를 빌드한 결과가 현재 `index.html` 과 **byte-identical** 인지 확인한다. 통과하지 못하는 커밋은 만들지 말 것. 깨졌다는 건 둘 중 하나:
+`verify` 는 src/ 를 빌드한 결과가 현재 `index.html` (root) 과 `public/index.html` 둘 다와 **byte-identical** 인지 확인한다. 통과하지 못하는 커밋은 만들지 말 것. 깨졌다는 건 둘 중 하나:
 
 1. src/ 를 수정한 뒤 `npm run build` 를 빼먹음 → 빌드해서 다시 커밋.
-2. 의도한 변경이라 산출물도 같이 바뀌어야 함 → src/ 수정 + 빌드 → `git add src/ index.html` 같이 커밋.
+2. 의도한 변경이라 산출물도 같이 바뀌어야 함 → src/ 수정 + 빌드 → `git add src/ index.html public/index.html` 같이 커밋.
 
 ## 워크플로우
 
@@ -81,9 +85,9 @@ src/
 npm run watch       # src/ 변경 시 자동 재빌드
 
 # 커밋 직전
-npm run build       # src/ → index.html
+npm run build       # src/ → index.html + public/index.html (둘 다)
 npm run verify      # 결과 검사 (빌드 후 verify 는 항상 OK)
-git add src/ index.html
+git add src/ index.html public/index.html
 ```
 
 ## 마커 문법

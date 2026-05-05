@@ -12,6 +12,9 @@ import { fileURLToPath } from 'node:url';
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SRC = join(ROOT, 'src');
 const OUT = join(ROOT, 'index.html');
+// 사용자 명시 2026-05-05: Cloudflare Workers (wrangler.jsonc assets.directory=./public) 가
+// public/ 을 entry 로 잡아 deploy. public/index.html 도 같이 써서 둘 byte-identical 보장.
+const OUT_PUBLIC = join(ROOT, 'public', 'index.html');
 const TEMPLATE = join(SRC, 'index.template.html');
 
 const args = new Set(process.argv.slice(2));
@@ -77,15 +80,28 @@ if (VERIFY) {
     console.error(`verify: ${relative(ROOT, OUT)} missing`);
     process.exit(1);
   }
+  if (!existsSync(OUT_PUBLIC)) {
+    console.error(`verify: ${relative(ROOT, OUT_PUBLIC)} missing (Cloudflare deploy entry)`);
+    process.exit(1);
+  }
   const current = readFile(OUT);
-  if (current === out) {
-    console.log(`verify: OK (${out.length} bytes, byte-identical)`);
+  const currentPublic = readFile(OUT_PUBLIC);
+  if (current === out && currentPublic === out) {
+    console.log(`verify: OK (${out.length} bytes, root + public byte-identical)`);
     process.exit(0);
   }
   console.error('verify: MISMATCH');
-  showFirstDiff(out, current);
+  if (current !== out) {
+    console.error(`  ${relative(ROOT, OUT)} differs`);
+    showFirstDiff(out, current);
+  }
+  if (currentPublic !== out) {
+    console.error(`  ${relative(ROOT, OUT_PUBLIC)} differs`);
+    showFirstDiff(out, currentPublic);
+  }
   process.exit(1);
 }
 
 writeFileSync(OUT, out);
-console.log(`build: wrote ${relative(ROOT, OUT)} (${out.length} bytes)`);
+writeFileSync(OUT_PUBLIC, out);
+console.log(`build: wrote ${relative(ROOT, OUT)} + ${relative(ROOT, OUT_PUBLIC)} (${out.length} bytes)`);
