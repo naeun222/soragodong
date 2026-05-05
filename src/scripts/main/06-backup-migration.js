@@ -194,6 +194,11 @@ function migrateToV7() {
 
 async function saveToCloudNow() {
   if (!authUserId) return;
+  // 사용자 명시 2026-05-05 ultrathink (Phase 1): 게스트 = cloud sync X (localStorage 만 — saveState 가 처리).
+  // E2EE 미설정이라 평문 저장 X + abandoned 게스트 cloud row 안 만듦. linkIdentity (가입 전환) 시점에 첫 saveToCloudNow.
+  if (state && state.isGuest) {
+    return;
+  }
   // 사용자 보고 2026-04-28: testerMode ON이면 cloud 저장 자체 차단.
   if (state.preferences && state.preferences.testerMode) {
     console.log('[saveToCloudNow] testerMode ON — cloud 저장 차단');

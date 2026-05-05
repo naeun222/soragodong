@@ -11279,12 +11279,31 @@ async function _fetchWithRetry5xx(url, init) {
       headers['content-type'] = 'application/json';
       return headers;
     };
-    let resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: buildHeaders() }));
+    // 사용자 명시 2026-05-05 (Phase 1): 게스트 = Turnstile 토큰 발급 후 헤더 X-Turnstile-Token 으로 chat 호출.
+    // 토큰 = single-use, 5분 유효. 매 chat 호출마다 새로 발급.
+    let _turnstileToken = null;
+    if (state && state.isGuest && typeof getTurnstileToken === 'function') {
+      try {
+        _turnstileToken = await getTurnstileToken();
+      } catch (e) {
+        console.warn('[turnstile] 토큰 발급 실패:', e);
+        // 토큰 없으면 backend 가 403 TURNSTILE_FAIL 반환 → 사용자에게 새로고침 안내.
+      }
+    }
+    const _withTurnstile = (h) => {
+      if (_turnstileToken) h['x-turnstile-token'] = _turnstileToken;
+      return h;
+    };
+    let resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: _withTurnstile(buildHeaders()) }));
     // 사용자 보고 2026-04-30 ultrathink-2: 401 시 session refresh + 한 번 retry
     if (resp.status === 401 && session && session.refresh_token) {
       const refreshed = await _refreshSessionForApi();
       if (refreshed) {
-        resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: buildHeaders() }));
+        // retry 시 Turnstile 토큰 재발급 (이전 토큰 단일사용 소진)
+        if (state && state.isGuest && typeof getTurnstileToken === 'function') {
+          try { _turnstileToken = await getTurnstileToken(); } catch {}
+        }
+        resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: _withTurnstile(buildHeaders()) }));
       }
     }
     return resp;
@@ -11369,6 +11388,10 @@ const V4_LOCAL_STORAGE_KEY = 'soragodong_v4';
 const V4_LAST_USER_KEY = 'soragodong_v4_last_user_id';
 
 const DEFAULT_STATE = {
+  // 사용자 명시 2026-05-05 ultrathink (Phase 1): 게스트 모드 (Supabase anonymous) 사용자 마커.
+  // signInAnonymouslyForGuest 후 true. linkIdentity (가입 전환) 후 false.
+  // saveToCloudNow / loadFromCloud 분기 + Turnstile 토큰 발급 트리거.
+  isGuest: false,
   // Phase 1
   entries: [],
   chatMessages: [],
@@ -11825,6 +11848,10 @@ async function checkSession() {
           const _now = Math.floor(Date.now() / 1000);
           if (_payload.exp && _payload.exp > _now + 60 && _payload.sub === session.user.id) {
             authUserId = session.user.id;
+            // 사용자 명시 2026-05-05 (Phase 1): anonymous 사용자 detect — state.isGuest 마커.
+            if (session.user.is_anonymous && typeof state !== 'undefined' && state) {
+              state.isGuest = true;
+            }
             return true;
           }
         }
@@ -11837,6 +11864,10 @@ async function checkSession() {
         const user = await userResp.json();
         session.user = user;
         authUserId = user.id;
+        // 사용자 명시 2026-05-05 (Phase 1): anonymous 사용자 detect — state.isGuest 마커.
+        if (user.is_anonymous && typeof state !== 'undefined' && state) {
+          state.isGuest = true;
+        }
         return true;
       } else {
         // 사용자 보고 2026-05-05 (audit High): _refreshSessionForApi 와 동일 inflight 가드 공유 — refresh_token rotation race 차단.
@@ -12828,6 +12859,162 @@ function openAnnualReview(reviewOrIdOrYear) {
   _annualReviewRender();
 }
 
+// ═══════════════════════════════════════════════════════════════
+// ANONYMOUS GUEST SIGN-IN (Phase 1)
+// ═══════════════════════════════════════════════════════════════
+// 사용자 명시 2026-05-05 ultrathink: Supabase anonymous sign-in 으로 게스트 진입.
+// 첫 진입자 (세션 X) 자동 anonymous user 가입 → /api/chat verifyAuth 통과 (실제 JWT).
+// linkIdentity (가입 전환) 시 같은 uid 유지 → 마이그레이션 코드 X (uid 영속).
+// Anonymous Sign-Ins 토글 비활성 시 폴백 = login 화면 노출.
+
+async function signInAnonymouslyForGuest() {
+  try {
+    // _anthropicOrigFetch 사용 — fetch interceptor 우회 (chat URL 아니라 안 swap 되긴 하지만 안전)
+    const _fetch = (typeof window !== 'undefined' && window._anthropicOrigFetch) || fetch;
+    const resp = await _fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json'
+      },
+      // body 비우면 anonymous sign-in (Anonymous Sign-Ins 토글 ON 필요).
+      body: JSON.stringify({ data: {} })
+    });
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '');
+      console.error('[anonymous signup] fail:', resp.status, errText);
+      // 422 / 400 = anonymous 비활성. 503 = Supabase 다운.
+      if (resp.status === 422 || resp.status === 400) {
+        return { ok: false, reason: 'anonymous_disabled', detail: errText.slice(0, 200) };
+      }
+      return { ok: false, reason: 'network', status: resp.status, detail: errText.slice(0, 200) };
+    }
+    const data = await resp.json();
+    if (!data?.access_token || !data?.user?.id) {
+      return { ok: false, reason: 'invalid_response' };
+    }
+    session = {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      user: data.user
+    };
+    authUserId = data.user.id;
+    if (typeof state !== 'undefined' && state) {
+      state.isGuest = true;
+    }
+    localStorage.setItem('soragodong_session', JSON.stringify(session));
+    console.log('[guest] anonymous user 생성 — uid=' + authUserId);
+    return { ok: true };
+  } catch (e) {
+    console.error('[anonymous signup] throw:', e);
+    return { ok: false, reason: 'throw', detail: String(e?.message || e).slice(0, 200) };
+  }
+}
+// ═══════════════════════════════════════════════════════════════
+// TURNSTILE WIDGET (Phase 1)
+// ═══════════════════════════════════════════════════════════════
+// 사용자 명시 2026-05-05 ultrathink: Cloudflare Turnstile invisible widget.
+// 게스트 chat 호출 직전 토큰 발급 → /api/chat 헤더 X-Turnstile-Token.
+// Site key (frontend 공개): TURNSTILE_SITE_KEY (01-config.js).
+// Secret key (server env): TURNSTILE_SECRET_KEY (Pages env).
+// Widget mode = Managed — 일반 사용자 invisible 통과, 의심 트래픽만 챌린지 노출.
+// Token = single-use, 5분 유효 — 매 chat 호출마다 새로 발급.
+
+let _turnstileLoaded = false;
+let _turnstileLoadPromise = null;
+
+function _loadTurnstileScript() {
+  if (_turnstileLoaded) return Promise.resolve();
+  if (_turnstileLoadPromise) return _turnstileLoadPromise;
+  _turnstileLoadPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    // Turnstile JS API — explicit render mode (직접 turnstile.render 호출).
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    s.async = true;
+    s.defer = true;
+    s.onload = () => {
+      _turnstileLoaded = true;
+      resolve();
+    };
+    s.onerror = () => {
+      _turnstileLoadPromise = null;  // retry 가능하게 reset
+      reject(new Error('Turnstile 스크립트 로드 실패'));
+    };
+    document.head.appendChild(s);
+  });
+  return _turnstileLoadPromise;
+}
+
+function _ensureTurnstileContainer() {
+  let container = document.getElementById('turnstileContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'turnstileContainer';
+    // fixed bottom-right, hidden by default. 챌린지 시 widget 자동 visible.
+    container.style.cssText = 'position:fixed; bottom:8px; right:8px; z-index:9999; display:none;';
+    document.body.appendChild(container);
+  }
+  return container;
+}
+
+// 사용자 명시 2026-05-05: 매 호출 = 새 widget render → callback 으로 token 받음 → widget remove.
+// Promise pattern + 30s safety timeout.
+async function getTurnstileToken() {
+  if (typeof TURNSTILE_SITE_KEY === 'undefined' || !TURNSTILE_SITE_KEY) {
+    throw new Error('TURNSTILE_SITE_KEY 미설정');
+  }
+  await _loadTurnstileScript();
+  if (!window.turnstile) throw new Error('Turnstile 객체 없음 — 스크립트 로드 실패');
+  const container = _ensureTurnstileContainer();
+  // 챌린지 표시 가능성 — 컨테이너 visible.
+  container.style.display = 'block';
+  return new Promise((resolve, reject) => {
+    let resolved = false;
+    let widgetId = null;
+    const cleanup = () => {
+      try { if (widgetId !== null) window.turnstile.remove(widgetId); } catch {}
+      container.style.display = 'none';
+    };
+    const _safetyTimer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        reject(new Error('Turnstile 30초 timeout'));
+      }
+    }, 30000);
+    try {
+      widgetId = window.turnstile.render(container, {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token) => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(_safetyTimer);
+          cleanup();
+          resolve(token);
+        },
+        'error-callback': (err) => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(_safetyTimer);
+          cleanup();
+          reject(new Error('Turnstile error: ' + (err || 'unknown')));
+        },
+        'timeout-callback': () => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(_safetyTimer);
+          cleanup();
+          reject(new Error('Turnstile widget timeout'));
+        }
+      });
+    } catch (e) {
+      resolved = true;
+      clearTimeout(_safetyTimer);
+      cleanup();
+      reject(e);
+    }
+  });
+}
 // ═══════════════════════════════════════════════════════════════
 // 사용자 명시 2026-04-30 ultrathink: 연간 리뷰 실제 생성 (Phase 1 — Opus narrative + 결정적 helpers).
 // ═══════════════════════════════════════════════════════════════
@@ -15055,6 +15242,37 @@ async function _e2eeRestoreFromPassphrase(password) {
 async function loadFromCloud() {
   // V4: V4 전용 row만 로드. V3 데이터(`me` row)는 영원히 안 건드림.
   console.log(`[V4] 소라고동 V4 미리보기 — auth_user_id=${authUserId}, user_id=${V4_USER_ID}`);
+  // 사용자 명시 2026-05-05 ultrathink (Phase 1): 게스트 = cloud row X — localStorage 만 사용.
+  // 같은 anonymous uid 면 localStorage state 그대로 활용. uid 다르면 wipe (security).
+  if (state && state.isGuest) {
+    const _lastGuestUid = localStorage.getItem(V4_LAST_USER_KEY);
+    if (_lastGuestUid && _lastGuestUid !== authUserId) {
+      // 다른 anonymous uid (브라우저 새 anonymous 생성됨) — 옛 state wipe.
+      localStorage.removeItem(V4_LOCAL_STORAGE_KEY);
+      console.log('[guest] 다른 anonymous uid — localStorage 정리');
+    }
+    if (_lastGuestUid === authUserId) {
+      try {
+        const _localRaw = localStorage.getItem(V4_LOCAL_STORAGE_KEY);
+        if (_localRaw) {
+          const _localState = JSON.parse(_localRaw);
+          state = { ...DEFAULT_STATE, ..._localState, isGuest: true };  // isGuest 강제 유지
+          try {
+            if (typeof applyNightMode === 'function') applyNightMode();
+            if (typeof renderModes === 'function') renderModes();
+            if (typeof renderTodayMission === 'function') renderTodayMission();
+            if (typeof renderShellBar === 'function') renderShellBar();
+            if (typeof renderMainAction === 'function') renderMainAction();
+            if (typeof renderModel === 'function') renderModel();
+            if (typeof renderArchive === 'function') renderArchive();
+          } catch (_e) { console.warn('[guest paint] render:', _e); }
+        }
+      } catch (_e) { console.warn('[guest paint] parse:', _e); }
+    }
+    localStorage.setItem(V4_LAST_USER_KEY, authUserId);
+    if (typeof setSyncStatus === 'function') setSyncStatus('idle');
+    return;
+  }
   // V3.13.x SECURITY: localStorage 사용자 변경 감지 (다른 계정 로그인 시 이전 데이터 방지)
   const lastUserId = localStorage.getItem(V4_LAST_USER_KEY);
   if (lastUserId && lastUserId !== authUserId) {
@@ -15809,6 +16027,11 @@ function migrateToV7() {
 
 async function saveToCloudNow() {
   if (!authUserId) return;
+  // 사용자 명시 2026-05-05 ultrathink (Phase 1): 게스트 = cloud sync X (localStorage 만 — saveState 가 처리).
+  // E2EE 미설정이라 평문 저장 X + abandoned 게스트 cloud row 안 만듦. linkIdentity (가입 전환) 시점에 첫 saveToCloudNow.
+  if (state && state.isGuest) {
+    return;
+  }
   // 사용자 보고 2026-04-28: testerMode ON이면 cloud 저장 자체 차단.
   if (state.preferences && state.preferences.testerMode) {
     console.log('[saveToCloudNow] testerMode ON — cloud 저장 차단');
@@ -16147,11 +16370,21 @@ async function init() {
   window._initialDataLoading = true;
   const authed = await checkSession();
   if (!authed) {
-    showLoginScreen();
-    window._initialDataLoading = false;
-    return;
+    // 사용자 명시 2026-05-05 ultrathink (Phase 1): 세션 X → anonymous 자동 가입 (게스트 모드).
+    // login 화면 스킵하고 바로 chat 가능. 한도 도달 / 사용자가 명시 가입 시 linkIdentity 로 전환.
+    // anonymous 비활성 / 네트워크 X 면 폴백 = 기존 login 화면.
+    const guestResult = (typeof signInAnonymouslyForGuest === 'function')
+      ? await signInAnonymouslyForGuest()
+      : { ok: false, reason: 'fn_missing' };
+    if (!guestResult.ok) {
+      console.warn('[init] 게스트 진입 실패:', guestResult);
+      showLoginScreen();
+      window._initialDataLoading = false;
+      return;
+    }
+    // 게스트 진입 성공 — .app 노출 (login 화면 X)
   }
-  // Authenticated — load data
+  // Authenticated OR Guest — .app 노출
   document.getElementById('loginScreen').style.display = 'none';
   document.querySelector('.app').style.display = 'flex';
 

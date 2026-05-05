@@ -114,12 +114,31 @@ async function _fetchWithRetry5xx(url, init) {
       headers['content-type'] = 'application/json';
       return headers;
     };
-    let resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: buildHeaders() }));
+    // 사용자 명시 2026-05-05 (Phase 1): 게스트 = Turnstile 토큰 발급 후 헤더 X-Turnstile-Token 으로 chat 호출.
+    // 토큰 = single-use, 5분 유효. 매 chat 호출마다 새로 발급.
+    let _turnstileToken = null;
+    if (state && state.isGuest && typeof getTurnstileToken === 'function') {
+      try {
+        _turnstileToken = await getTurnstileToken();
+      } catch (e) {
+        console.warn('[turnstile] 토큰 발급 실패:', e);
+        // 토큰 없으면 backend 가 403 TURNSTILE_FAIL 반환 → 사용자에게 새로고침 안내.
+      }
+    }
+    const _withTurnstile = (h) => {
+      if (_turnstileToken) h['x-turnstile-token'] = _turnstileToken;
+      return h;
+    };
+    let resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: _withTurnstile(buildHeaders()) }));
     // 사용자 보고 2026-04-30 ultrathink-2: 401 시 session refresh + 한 번 retry
     if (resp.status === 401 && session && session.refresh_token) {
       const refreshed = await _refreshSessionForApi();
       if (refreshed) {
-        resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: buildHeaders() }));
+        // retry 시 Turnstile 토큰 재발급 (이전 토큰 단일사용 소진)
+        if (state && state.isGuest && typeof getTurnstileToken === 'function') {
+          try { _turnstileToken = await getTurnstileToken(); } catch {}
+        }
+        resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: _withTurnstile(buildHeaders()) }));
       }
     }
     return resp;
@@ -204,6 +223,10 @@ const V4_LOCAL_STORAGE_KEY = 'soragodong_v4';
 const V4_LAST_USER_KEY = 'soragodong_v4_last_user_id';
 
 const DEFAULT_STATE = {
+  // 사용자 명시 2026-05-05 ultrathink (Phase 1): 게스트 모드 (Supabase anonymous) 사용자 마커.
+  // signInAnonymouslyForGuest 후 true. linkIdentity (가입 전환) 후 false.
+  // saveToCloudNow / loadFromCloud 분기 + Turnstile 토큰 발급 트리거.
+  isGuest: false,
   // Phase 1
   entries: [],
   chatMessages: [],

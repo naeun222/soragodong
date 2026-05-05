@@ -40,6 +40,10 @@ async function checkSession() {
           const _now = Math.floor(Date.now() / 1000);
           if (_payload.exp && _payload.exp > _now + 60 && _payload.sub === session.user.id) {
             authUserId = session.user.id;
+            // 사용자 명시 2026-05-05 (Phase 1): anonymous 사용자 detect — state.isGuest 마커.
+            if (session.user.is_anonymous && typeof state !== 'undefined' && state) {
+              state.isGuest = true;
+            }
             return true;
           }
         }
@@ -52,6 +56,10 @@ async function checkSession() {
         const user = await userResp.json();
         session.user = user;
         authUserId = user.id;
+        // 사용자 명시 2026-05-05 (Phase 1): anonymous 사용자 detect — state.isGuest 마커.
+        if (user.is_anonymous && typeof state !== 'undefined' && state) {
+          state.isGuest = true;
+        }
         return true;
       } else {
         // 사용자 보고 2026-05-05 (audit High): _refreshSessionForApi 와 동일 inflight 가드 공유 — refresh_token rotation race 차단.

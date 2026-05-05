@@ -89,11 +89,21 @@ async function init() {
   window._initialDataLoading = true;
   const authed = await checkSession();
   if (!authed) {
-    showLoginScreen();
-    window._initialDataLoading = false;
-    return;
+    // 사용자 명시 2026-05-05 ultrathink (Phase 1): 세션 X → anonymous 자동 가입 (게스트 모드).
+    // login 화면 스킵하고 바로 chat 가능. 한도 도달 / 사용자가 명시 가입 시 linkIdentity 로 전환.
+    // anonymous 비활성 / 네트워크 X 면 폴백 = 기존 login 화면.
+    const guestResult = (typeof signInAnonymouslyForGuest === 'function')
+      ? await signInAnonymouslyForGuest()
+      : { ok: false, reason: 'fn_missing' };
+    if (!guestResult.ok) {
+      console.warn('[init] 게스트 진입 실패:', guestResult);
+      showLoginScreen();
+      window._initialDataLoading = false;
+      return;
+    }
+    // 게스트 진입 성공 — .app 노출 (login 화면 X)
   }
-  // Authenticated — load data
+  // Authenticated OR Guest — .app 노출
   document.getElementById('loginScreen').style.display = 'none';
   document.querySelector('.app').style.display = 'flex';
 

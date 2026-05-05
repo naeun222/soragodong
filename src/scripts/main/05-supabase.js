@@ -4,6 +4,37 @@
 async function loadFromCloud() {
   // V4: V4 전용 row만 로드. V3 데이터(`me` row)는 영원히 안 건드림.
   console.log(`[V4] 소라고동 V4 미리보기 — auth_user_id=${authUserId}, user_id=${V4_USER_ID}`);
+  // 사용자 명시 2026-05-05 ultrathink (Phase 1): 게스트 = cloud row X — localStorage 만 사용.
+  // 같은 anonymous uid 면 localStorage state 그대로 활용. uid 다르면 wipe (security).
+  if (state && state.isGuest) {
+    const _lastGuestUid = localStorage.getItem(V4_LAST_USER_KEY);
+    if (_lastGuestUid && _lastGuestUid !== authUserId) {
+      // 다른 anonymous uid (브라우저 새 anonymous 생성됨) — 옛 state wipe.
+      localStorage.removeItem(V4_LOCAL_STORAGE_KEY);
+      console.log('[guest] 다른 anonymous uid — localStorage 정리');
+    }
+    if (_lastGuestUid === authUserId) {
+      try {
+        const _localRaw = localStorage.getItem(V4_LOCAL_STORAGE_KEY);
+        if (_localRaw) {
+          const _localState = JSON.parse(_localRaw);
+          state = { ...DEFAULT_STATE, ..._localState, isGuest: true };  // isGuest 강제 유지
+          try {
+            if (typeof applyNightMode === 'function') applyNightMode();
+            if (typeof renderModes === 'function') renderModes();
+            if (typeof renderTodayMission === 'function') renderTodayMission();
+            if (typeof renderShellBar === 'function') renderShellBar();
+            if (typeof renderMainAction === 'function') renderMainAction();
+            if (typeof renderModel === 'function') renderModel();
+            if (typeof renderArchive === 'function') renderArchive();
+          } catch (_e) { console.warn('[guest paint] render:', _e); }
+        }
+      } catch (_e) { console.warn('[guest paint] parse:', _e); }
+    }
+    localStorage.setItem(V4_LAST_USER_KEY, authUserId);
+    if (typeof setSyncStatus === 'function') setSyncStatus('idle');
+    return;
+  }
   // V3.13.x SECURITY: localStorage 사용자 변경 감지 (다른 계정 로그인 시 이전 데이터 방지)
   const lastUserId = localStorage.getItem(V4_LAST_USER_KEY);
   if (lastUserId && lastUserId !== authUserId) {
