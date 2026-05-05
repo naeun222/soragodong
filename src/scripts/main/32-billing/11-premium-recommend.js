@@ -117,19 +117,17 @@ function showBudgetExceededModal(reason, opts) {
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
     } else if (subActive && plan === 'early_light') {
-      // 사용자 명시 2026-05-05: 얼리 플랜 (처음 한 달 무료) 한도 도달 → Premium 결제 유도 + 개발자 후원 메시지.
-      // 정직 톤 — 단독 개발자 (1인) 가 중고 맥북 없어서 iOS 앱 못 만드는 중. 후원 = 앱 출시 가능.
-      titleText = '🐚 한 달 무료 한도 도달';
-      bodyText = '얼리 플랜 한도 다 썼네 — 자유롭게 써줘서 고마워.<br><br>' +
-        '<b>Premium</b> 가면 <b>3x 더 자유</b>롭게 (Opus 깊은 대화 30번/일).<br><br>' +
+      titleText = '🐚 체험 한도 도달';
+      bodyText = '체험 한도 다 썼네 — 써줘서 고마워.<br><br>' +
+        '<span style="color:var(--accent); font-weight:600;">✨ 얼리버드 평생 이용권</span>이 지금 <b>4,900원</b> (앱 출시 전 한정).<br>' +
+        '월정액 대신, 한 번 결제하고 매달 Light 수준으로 평생 이어가.<br><br>' +
         '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
-        '솔직하게 — 단독 개발자 (1인) 라 Premium 결제 = <b>iOS 앱 출시 후원</b> 이야. ' +
-        '중고 맥북이 없어서 iOS 빌드 못 하는 중인데, Premium 사용자분들이 뒷받침해주면 맥북 사서 iOS 앱 출시할 수 있어 🫂' +
+        '솔직하게 — 단독 개발자 (1인) 라 결제 = iOS 앱 출시 후원이야 🫂' +
         '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기 (25,000원/월)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🐚 Light 구독 (9,900원/월)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음에 결정할게</button>
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 평생 이용권 보기 (4,900원)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 월정액 구독 보기</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">나중에 결정할게</button>
       `;
     } else if (subActive && plan === 'light') {
       // Light 월 cap 도달 — 추가팩 OR Premium 권유
@@ -144,16 +142,16 @@ function showBudgetExceededModal(reason, opts) {
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 달 기다릴게</button>
       `;
     } else {
-      // 비구독 (한 달 무료 만료) — 구독 안내 + 개발자 후원 톤
-      titleText = '🐚 한 달 무료 만료';
-      bodyText = '처음 한 달 무료 끝났어 — 깊게 써줘서 고마워.<br><br>' +
-        '계속 쓰려면 Light / Premium 구독.<br><br>' +
+      // 비구독 (체험 만료) — 구독 안내 + 개발자 후원 톤
+      titleText = '🐚 체험 종료';
+      bodyText = '체험 기간 끝났어 — 깊게 써줘서 고마워.<br><br>' +
+        '계속 쓰려면 구독 — <span style="color:var(--accent); font-weight:600;">얼리버드 평생 이용권 4,900원</span>이 지금만.<br><br>' +
         '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
-        '단독 개발자 (1인) 가 중고 맥북 없어서 iOS 앱 출시 못 하는 중. <b>Premium = 후원</b> 으로 iOS 빌드 가능 🫂' +
+        '단독 개발자 (1인) 가 후원 = iOS 앱 출시 가능 🫂' +
         '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기 (25,000원/월)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🐚 Light 구독 (9,900원/월)</button>
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 평생 이용권 보기 (4,900원)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 월정액 구독 보기</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
     }

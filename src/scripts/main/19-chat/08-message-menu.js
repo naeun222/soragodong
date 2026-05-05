@@ -131,9 +131,15 @@ function canUseOpus() {
 }
 
 function toggleChatModel() {
+  // 게스트가 헤더 토글 누르면 → 결제 유도 X, 로그인 유도.
+  if (typeof state !== 'undefined' && state && state.isGuest) {
+    if (typeof showGuestConversionModal === 'function') {
+      showGuestConversionModal({ reason: 'header_toggle' });
+    }
+    return;
+  }
   state.preferences = state.preferences || {};
   const next = !state.preferences.useOpus;
-  // 사용자 명시 2026-05-02 ultrathink: Premium 아닌 사용자가 Opus 켜려고 하면 차단 + 구독 안내.
   if (next && !canUseOpus()) {
     showToast('🦉 Opus 깊은 대화는 Premium 에서만');
     if (typeof openSubscribeModal === 'function') {

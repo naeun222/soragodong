@@ -69,8 +69,23 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     }, 400);
   }
 
-  const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
+  const isLifetime = plan === 'early_lifetime';
+  const expiresAt = isLifetime ? '2099-12-31T23:59:59.000Z' : new Date(Date.now() + 30 * 86400000).toISOString();
   const periodStartedAt = new Date().toISOString();
+
+  // early_lifetime 중복 결제 검출 — 이미 활성이면 환불 안내.
+  if (isLifetime) {
+    try {
+      const checkResp = await fetch(
+        `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&select=subscription_plan,subscription_active`,
+        { headers: { 'apikey': env.SUPABASE_SERVICE_ROLE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } }
+      );
+      const rows: any = await checkResp.json().catch(() => []);
+      if (Array.isArray(rows) && rows[0]?.subscription_plan === 'early_lifetime' && rows[0]?.subscription_active) {
+        return jsonResponse({ ok: true, already_active: true, duplicate: true, message: '이미 얼리버드 평생 이용권이 있어 (중복 결제 감지). 환불 — soragodongapp@gmail.com' }, 200);
+      }
+    } catch {}
+  }
 
   // 결제 기록 저장 (idempotent — paymentId unique 이라 중복 INSERT 자동 무시).
   try {
@@ -96,9 +111,13 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   } catch (e) { console.warn('[portone-verify-pay] payment 기록 실패:', e); }
 
   // billing 갱신 — race-safe (기존 active 면 중복 결제 감지).
+  // early_lifetime = 무조건 갱신 (중복은 위에서 이미 감지). 일반 구독 = 비활성/만료/guest/early_light/early_lifetime 에서만.
+  const patchUrl = isLifetime
+    ? `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}`
+    : `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&or=(subscription_active.is.null,subscription_active.eq.false,subscription_expires_at.lt.${encodeURIComponent(new Date().toISOString())},subscription_plan.eq.guest,subscription_plan.eq.early_light,subscription_plan.eq.early_lifetime)`;
   try {
     const patchResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&or=(subscription_active.is.null,subscription_active.eq.false,subscription_expires_at.lt.${encodeURIComponent(new Date().toISOString())},subscription_plan.eq.guest,subscription_plan.eq.early_light)`,
+      patchUrl,
       {
         method: 'PATCH',
         headers: {

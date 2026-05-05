@@ -169,14 +169,16 @@ async function _doRefreshBillingStatus(manual) {
       const usedPct = quotaUsd > 0 ? Math.min(100, Math.round((usedUsd / quotaUsd) * 100)) : 0;
       const isNearCap = usedPct >= 80;
       html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${subExpires}까지</span></div>`;
-      html += `<div style="margin-top:10px; font-size:13px;">${_quotaStateLabel(usedPct)}</div>`;
-      html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
-      if (isNearCap && planKey !== 'premium') {
-        html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">🌊 Premium 으로 늘리기</button>`;
+      // early_light: 토큰 양 안 보이게 (체험 플랜은 수치 노출 X)
+      if (planKey !== 'early_light') {
+        html += `<div style="margin-top:10px; font-size:13px;">${_quotaStateLabel(usedPct)}</div>`;
+        html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
+        if (isNearCap && planKey !== 'premium') {
+          html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">🌊 Premium 으로 늘리기</button>`;
+        }
       }
     } else {
-      // 사용자 명시 2026-05-05: 처음 한 달 무료 만료 후 = 미가입 분기. Premium 결제 = 개발자 후원 명시.
-      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 한 달 무료 만료. 계속 쓰려면 Light/Premium</span></div>`;
+      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 체험 종료. 계속 쓰려면 구독</span></div>`;
     }
     if (balance > 0) {
       html += `<div style="margin-top:6px;"><b>잔여 credit</b>: $${balance.toFixed(4)} (~${balanceKrw.toLocaleString()}원)</div>`;

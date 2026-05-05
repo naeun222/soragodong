@@ -11,7 +11,7 @@ export type UserBilling = {
   credit_balance_usd: number;
   subscription_active: boolean;
   subscription_expires_at: string | null;
-  subscription_plan?: 'light' | 'premium' | 'early_light' | 'guest' | string | null;
+  subscription_plan?: 'light' | 'premium' | 'early_light' | 'early_lifetime' | 'guest' | string | null;
   monthly_token_quota: number | null;
   monthly_quota_usd?: number;          // tier cap (USD). Light 5 / Premium 13 / early_light 4.
   monthly_token_used: number;          // micro-USD 누적 (cost_usd × 1M)
@@ -27,15 +27,16 @@ export type BudgetCheck =
   | { ok: true; remaining_credit_usd: number; subscription_active: boolean; subscription_plan?: string | null; monthly_remaining_usd?: number; }
   | { ok: false; reason: string; code: 'NO_CREDIT' | 'NEED_AUTH' | 'NO_BILLING_ROW'; remaining_credit_usd?: number; };
 
-// 사용자 명시 2026-05-05: early_light 가격 0 + 자동 한 달 무료 (free trial). requires_early_user 제거 — 모두 자동 부여.
 // Light 9,900원 / Premium 25,000원 (월정액). 자동 갱신 X — 사용자 직접 매월 결제.
-// 사용자 명시 2026-05-05 ultrathink (Phase 0): guest tier 추가 — Supabase anonymous 사용자 한정 cap $0.20 (~10턴).
-//   guest 는 결제 대상 X. linkIdentity (게스트 → 가입자 전환) 시 early_light 로 fresh 갱신.
-export const TIER_PLANS: Record<'light' | 'premium' | 'early_light' | 'guest', { krw: number; cap_usd: number; label: string; auto_grant_first_month?: boolean; is_guest?: boolean }> = {
-  light:        { krw: 9900,  cap_usd: 5,    label: 'Light' },
-  premium:      { krw: 25000, cap_usd: 13,   label: 'Premium' },
-  early_light:  { krw: 0,     cap_usd: 4,    label: '처음 한 달 무료 (얼리)', auto_grant_first_month: true },
-  guest:        { krw: 0,     cap_usd: 0.30, label: '게스트', is_guest: true }
+// early_light: 신규 가입자 자동 체험 ($1.1 cap ≈ 1,400원 상당, 하루치 정도). 만료 후 구독 유도.
+// early_lifetime: 앱 출시 전 얼리버드 평생 이용권 (4,900원 1회 결제). 매월 $3 cap 자동 갱신 (결제 없이).
+// guest: anonymous 사용자 $0.30 cap. linkIdentity 시 early_light 로 fresh 갱신.
+export const TIER_PLANS: Record<'light' | 'premium' | 'early_light' | 'early_lifetime' | 'guest', { krw: number; cap_usd: number; label: string; auto_grant_first_month?: boolean; is_guest?: boolean; is_lifetime?: boolean }> = {
+  light:          { krw: 9900,  cap_usd: 5,    label: 'Light' },
+  premium:        { krw: 25000, cap_usd: 13,   label: 'Premium' },
+  early_light:    { krw: 0,     cap_usd: 1.1,  label: '얼리 플랜', auto_grant_first_month: true },
+  early_lifetime: { krw: 4900,  cap_usd: 3.0,  label: '얼리버드 평생', is_lifetime: true },
+  guest:          { krw: 0,     cap_usd: 0.30, label: '게스트', is_guest: true }
 };
 export type TierKey = keyof typeof TIER_PLANS;
 
@@ -50,13 +51,12 @@ export const OVERAGE_PACKS: Record<'premium_pack', { krw: number; usd: number; f
 // 사용자 명시 2026-05-02 ultrathink: Opus = Premium 전용 + 일일 30번 (메인 대화 한정, 새벽 4시 KST 리셋).
 export const OPUS_DAILY_LIMIT_PREMIUM = 30;
 
-// 사용자 명시 2026-05-05: tier 검증 헬퍼. early_light = 자동 free trial 이라 결제 경로엔 사용 X (light/premium 만 결제).
+// tier 검증 헬퍼. early_light / guest = 자동 부여라 결제 X. early_lifetime / light / premium = 결제 가능.
 export async function validateTier(_env: Env, _userId: string, tierKey: TierKey | string): Promise<{ ok: boolean; error?: string; tier?: typeof TIER_PLANS[TierKey] }> {
   const plan = TIER_PLANS[tierKey as TierKey];
   if (!plan) return { ok: false, error: 'invalid tier' };
-  // early_light 결제 시도는 차단 — 처음 한 달 무료 자동 활성화라 결제 대상 X.
   if (plan.krw === 0) {
-    return { ok: false, error: '처음 한 달 무료 (얼리 플랜) 은 자동 활성화 — 결제 대상 X. light / premium 으로 구독해줘.' };
+    return { ok: false, error: '이 플랜은 자동 활성화 — 결제 대상 X. light / premium / early_lifetime 으로 구독해줘.' };
   }
   return { ok: true, tier: plan };
 }
@@ -327,6 +327,27 @@ export async function checkBudget(env: Env, userId: string): Promise<BudgetCheck
     billing = await ensureBillingRow(env, userId);
     if (!billing) {
       return { ok: false, reason: 'billing row 생성 실패', code: 'NO_BILLING_ROW' };
+    }
+  }
+  // early_lifetime: 30일마다 monthly_token_used 자동 리셋 (결제 없이 계속 갱신).
+  if (billing.subscription_plan === 'early_lifetime' && billing.monthly_period_started_at && env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+    const daysSince = (Date.now() - new Date(billing.monthly_period_started_at).getTime()) / 86400_000;
+    if (daysSince >= 30) {
+      const now = new Date();
+      try {
+        await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${userId}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ monthly_token_used: 0, monthly_period_started_at: now.toISOString() })
+        });
+      } catch {}
+      billing.monthly_token_used = 0;
+      billing.monthly_period_started_at = now.toISOString();
     }
   }
   const subActive = !!(billing.subscription_active

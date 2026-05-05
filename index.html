@@ -356,6 +356,13 @@
 
   .screen-title { font-family: 'Gowun Batang', serif; font-size: 22px; margin-bottom: 6px; }
   .screen-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 24px; line-height: 1.6; }
+  /* 사용자 명시 2026-05-06 ultrathink: '나' 탭 — title/sub 좌측, ⚙ 우측 상단. 맨 아래 '돌아가기'/'설정' 버튼 제거 대체. */
+  .screen-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .screen-header-row .screen-title { margin-bottom: 6px; }
+  .screen-header-row .screen-sub { margin-bottom: 24px; }
+  .screen-settings-btn { background: none; border: none; color: var(--text-dim); font-size: 18px; line-height: 1; padding: 6px 8px; cursor: pointer; flex-shrink: 0; transition: color 0.15s; }
+  .screen-settings-btn:hover { color: var(--accent); }
+  .screen-settings-btn:active { transform: scale(0.92); }
 
   .input-group { margin-bottom: 22px; }
   .input-label { font-size: 11px; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
@@ -10307,7 +10314,6 @@
           <span class="guest-btn-leaf" aria-hidden="true">🌱</span>
           <span class="guest-btn-text">그냥 해보기</span>
         </button>
-        <div class="login-guest-hint">이 기기에만 저장돼</div>
       </div>
 
       <!-- ── divider ── -->
@@ -10323,17 +10329,20 @@
           <span>카카오로 시작하기</span>
         </button>
 
-        <!-- 사용자 명시 2026-05-06 임시 살림: 이메일 OTP 다시 노출 (이전 사용자 환불 처리용). 나중에 제거. -->
+        <!-- 사용자 명시 2026-05-06: 이메일 OTP 로그인 주석 처리 — 카카오 + 게스트만. 함수 (handleSendCode/handleVerifyCode/resetLoginFlow) 는 다른 곳에서도 참조될 수 있어 그대로 둠. -->
+        <!--
         <div class="login-or-mini">또는 이메일</div>
 
         <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
         <button class="btn-primary" id="loginBtn" onclick="handleSendCode()" style="width:100%;">코드 받기 →</button>
         <div class="login-status" id="loginStatus"></div>
+        -->
       </div>
 
     </div>
 
-    <!-- Step 2: Code -->
+    <!-- Step 2: Code (사용자 명시 2026-05-06: 이메일 OTP 비활성으로 주석 처리) -->
+    <!--
     <div class="login-form" id="loginStep2" style="display:none;">
       <div style="font-size:13px; color:var(--text); margin-bottom:14px; line-height:1.6;">
         <strong id="loginEmailDisplay"></strong> 으로<br>코드를 보냈어.
@@ -10343,6 +10352,8 @@
       <div class="login-status" id="verifyStatus"></div>
       <button class="btn-secondary" onclick="resetLoginFlow()" style="margin-top:14px;">이메일 다시 입력</button>
     </div>
+    -->
+
 
     <!-- 사용자 보고 2026-05-05 (PortOne 심사): 약관/환불/개인정보 + 사업자 정보 footer 노출 (전상법 §13 의무 + PG 심사 요구). -->
     <div style="margin-top:32px; padding-top:18px; border-top:1px solid var(--border); font-size:11px; color:var(--text-soft); line-height:1.7; text-align:center;">
@@ -10689,16 +10700,15 @@
 
     <!-- MODEL -->
     <div class="screen" id="screen-model">
-      <div class="screen-title">너에 대해 ✦</div>
-      <div class="screen-sub">내가 시간을 들여 배운 네 모습이야.<br>틀린 게 있으면 언제든 말해줘.</div>
-      <!-- 사용자 명시 2026-05-02 ultrathink: #projectsSection 위치 이동 — modelContent 다음 (메타 자리). 정체성 (values/traits/patterns) 우선 노출. -->
-      <div id="modelContent"></div>
-      <div id="projectsSection"></div>
-      <div style="margin-top: 30px;">
-        <!-- 사용자 요청 2026-04-30: forceAnalyze 버튼 나 탭에서 제거 — 일주일 자동 실행. 개발자 도구에서 수동 호출 가능. -->
-        <button class="btn-secondary" onclick="showScreen('settings')">⚙ 설정</button>
-        <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
+      <!-- 사용자 명시 2026-05-06 ultrathink: 가독성 정리 — ⚙ top-right 아이콘, 돌아가기 제거, 추적 항목 (projectsSection) 실행 탭으로 이동. -->
+      <div class="screen-header-row">
+        <div>
+          <div class="screen-title">너에 대해 ✦</div>
+          <div class="screen-sub">내가 시간을 들여 배운 네 모습이야.<br>틀린 게 있으면 언제든 말해줘.</div>
+        </div>
+        <button class="screen-settings-btn" onclick="showScreen('settings')" aria-label="설정">⚙</button>
       </div>
+      <div id="modelContent"></div>
     </div>
 
     <!-- LIBRARY (V4-1l-a: 인생 도서관 5 카테고리) -->
@@ -27760,7 +27770,7 @@ function showScreen(name) {
     // V4-fix v3 (사용자 요청): 체크인 진입 시 가닥 미션 팔로업 자동 prompt
     if (typeof offerStrategyFollowup === 'function') { try { offerStrategyFollowup(); } catch (e) {} }
   }
-  if (name === 'model') { renderModel(); if (typeof renderProjects === 'function') renderProjects(); }
+  if (name === 'model') { renderModel(); }
   if (name === 'archive') {
     // V4-fix #5: 도서관 처음 진입 시 모든 카테고리 lastSeen 초기화 (점 폭발 방지)
     if (state.preferences && !state.preferences._libCatLastSeenInit) {
@@ -28520,17 +28530,17 @@ function renderTimeUsageCard() {
   const stats = computeTimeUsageStats();
   if (!stats) {
     return `<div class="model-section">
-      <div class="model-section-title">📊 task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
+      <div class="model-section-title">task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
       <div style="font-size:12px; color:var(--text-dim); padding:8px 0; line-height:1.7;">
         몰입 기록 쌓이면 여기 표시돼.<br>
-        실행 탭 🚀 → 🌧 시작 → 돌아옴 누르면 자동 기록.
+        실행 탭 → 시작 → 돌아옴 누르면 자동 기록.
       </div>
     </div>`;
   }
   // 사용자 요청 2026-04-28: 깔끔하게 — task별 평균 시간만 (최대 4개). 시간대/총시간/세션수 제거 (의미 약함)
   const tasks = stats.topTasks.slice(0, 4);
   return `<div class="model-section">
-    <div class="model-section-title">📊 task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
+    <div class="model-section-title">task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
     <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px; line-height:1.6;">다음에 이 일 얼마나 걸릴지 — 객관적 데이터.</div>
     ${tasks.map(t => `
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; padding:9px 0; border-bottom:1px dashed rgba(212,167,106,0.15);">
@@ -28624,20 +28634,20 @@ function renderModel() {
   };
 
   // ── 1. 정체성 — values / traits / patterns (top, 자기친밀 hook 매일) ──
-  html += _renderConfirmableSection('values', '🎯 네가 중시하는 것', state.values);
-  html += _renderConfirmableSection('traits', '💫 네 특성', state.traits);
-  html += _renderConfirmableSection('patterns', '🔄 보이는 패턴', state.patterns);
+  html += _renderConfirmableSection('values', '네가 중시하는 것', state.values);
+  html += _renderConfirmableSection('traits', '네 특성', state.traits);
+  html += _renderConfirmableSection('patterns', '보이는 패턴', state.patterns);
 
   // ── 2. 분석 — 통합 분석 + 작동 중인 패턴 (mid, 큰 그림 가끔) ──
   // 사용자 보고 2026-05-05: 신규 사용자 (caseFormulation.version=0) 한테 '통합 분석' 섹션 자체가 안 떠서 존재 모르던 문제 — placeholder 추가.
   if (state.caseFormulation.version === 0 || !state.caseFormulation.version) {
     html += `<div class="model-section">
-      <div class="model-section-title">📋 통합 분석</div>
+      <div class="model-section-title">통합 분석</div>
       <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">며칠 같이 지내면 너의 데이터에서 큰 그림 (강점 · 어떻게 작동하는지 · 다루어야 할 특성) 을 종합해줄게 ✦</div>
     </div>`;
   } else {
-    html += `<div class="model-section"><div class="model-section-title">📋 통합 분석 v.${state.caseFormulation.version}</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">네 데이터에서 종합한 가설이야. 잘못된 거 있으면 ✎ 수정 / ✕ 삭제 — 너가 더 잘 알아.</div>`;
+    html += `<div class="model-section"><div class="model-section-title">통합 분석</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">네 데이터 종합. 틀린 건 ✎ 수정 / ✕ 삭제.</div>`;
     const cfBullet = (text, field, idx) => `<div class="cf-bullet">
       <span class="cf-text">• ${escapeHtml(text)}</span>
       <span class="cf-actions"><button onclick="editCFItem('${field}', ${idx})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${idx})" title="삭제">✕</button></span>
@@ -28648,7 +28658,7 @@ function renderModel() {
       const rest = items.slice(1);
       const topHtml = top.map((p, i) => cfBullet(p, field, i)).join('');
       const restHtml = rest.length > 0
-        ? `<details class="cf-more"><summary>+ ${rest.length}개 더 보기</summary><div class="cf-list">${rest.map((p, i) => cfBullet(p, field, i + 1)).join('')}</div></details>`
+        ? `<details class="cf-more"><summary>+${rest.length}</summary><div class="cf-list">${rest.map((p, i) => cfBullet(p, field, i + 1)).join('')}</div></details>`
         : '';
       return `<div class="model-item"><div class="model-item-name">${label}</div>
         ${sub ? `<div style="font-size:11px; color:var(--text-soft); margin-bottom:8px;">${sub}</div>` : ''}
@@ -28656,9 +28666,9 @@ function renderModel() {
         ${restHtml}</div>`;
     };
     // 사용자 요청 2026-04-30: 강점 → 작동 → 다루어야 할 특성 순서 (긍정 먼저)
-    html += cfSection('💪 네 강점', '', state.caseFormulation.strengths, 'strengths');
-    html += cfSection('⚙️ 어떻게 작동하는지', '네 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
-    html += cfSection('🔍 다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 네 결', state.caseFormulation.problems, 'problems');
+    html += cfSection('네 강점', '', state.caseFormulation.strengths, 'strengths');
+    html += cfSection('어떻게 작동하는지', '네 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
+    html += cfSection('다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 네 결', state.caseFormulation.problems, 'problems');
     html += '</div>';
   }
 
@@ -28667,27 +28677,23 @@ function renderModel() {
   // disclaimer 도 '의료 진단' → '의료 조언' 으로 워딩 정정.
   const visibleDiags = (state.diagnoses || []).filter(d => d.status === 'active' || d.status === 'shown');
   const diagLabels = {
-    weak_tool: '🔧 도구 약함',
-    wrong_layer: '📐 가지 안 맞음',
-    value_clash: '⚖️ 가치 상충',
-    avoidance: '🌫 회피',
-    willpower_cap: '🪫 의지 임계'
+    weak_tool: '도구 약함',
+    wrong_layer: '가지 안 맞음',
+    value_clash: '가치 상충',
+    avoidance: '회피',
+    willpower_cap: '의지 임계'
   };
   if (visibleDiags.length > 0) {
     html += `<div class="model-section">
-      <div class="model-section-title">🔍 잘 안 풀릴 때 <span style="font-size:10px; color:var(--text-soft); font-weight:400; letter-spacing:0.04em;">(가설)</span></div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:6px; line-height:1.6;">시도가 막히는 결 — 결과 쌓이면 신뢰도 갱신돼.</div>
-      <div style="font-size:10.5px; color:var(--text-soft); margin-bottom:12px; line-height:1.55; padding:8px 10px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(255,255,255,0.08); border-radius:0 6px 6px 0;">⚠️ 의료 조언 아님 — 패턴 가설일 뿐, 마음이 힘들면 전문가 상담 권장.</div>
+      <div class="model-section-title">잘 안 풀릴 때</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">시도가 막히는 결 — 결과 쌓이면 갱신돼.</div>
       ${visibleDiags.sort((a,b) => (b.confidence || 0) - (a.confidence || 0)).map(d => `
         <div class="model-item" style="border-left: 3px solid var(--purple); padding-left: 12px;">
           <div class="model-item-name">${diagLabels[d.type] || d.type}</div>
           <div class="model-item-desc" style="font-size:12px; line-height:1.6;">${escapeHtml(d.evidence || '')}</div>
-          <div class="model-item-meta">
-            <span class="conf">${Math.round((d.confidence || 0.5) * 100)}%</span>
-            ${d.status === 'shown' ? '<span style="color:var(--text-soft);">대화에서 한 번 인용됨</span>' : '<span style="color:#8fc88f;">발견됨</span>'}
-          </div>
         </div>
       `).join('')}
+      <div style="font-size:10px; color:var(--text-soft); margin-top:10px; line-height:1.55; opacity:0.7;">의료 조언 아님 — 마음이 힘들면 전문가 상담 권장.</div>
     </div>`;
   } else {
     // visibleDiags 없을 때 — strategy 유무 따라 분기 placeholder. 둘 다 항상 노출.
@@ -28696,16 +28702,16 @@ function renderModel() {
       ? '아직 살펴볼 만큼 데이터 X — 미션 시도 + 결과 체크 쌓이면 자동 보여줄게 ✦'
       : '지금은 막히는 결 X — 잘 흘러가는 중 ✨';
     html += `<div class="model-section">
-      <div class="model-section-title">🔍 잘 안 풀릴 때 <span style="font-size:10px; color:var(--text-soft); font-weight:400; letter-spacing:0.04em;">(가설)</span></div>
+      <div class="model-section-title">잘 안 풀릴 때</div>
       <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">${placeholderText}</div>
     </div>`;
   }
 
   // ── 3. 메타 — task 평균 (collapse default 닫힘) + 더 깊은 나 (collapse default 닫힘) ──
-  // #projectsSection (추적 항목) = HTML 의 modelContent 다음 위치 → renderProjects 가 wrap 처리.
+  // 사용자 명시 2026-05-06 ultrathink: 추적 항목 (projectsSection) 실행 탭으로 이동.
   html += `<div class="model-meta-divider">— 메타 —</div>`;
   html += `<details class="model-meta-collapse">
-    <summary class="model-meta-summary">⏱ task 평균 시간 <span style="font-size:10px; color:var(--text-soft); margin-left:6px;">지난 7일</span></summary>
+    <summary class="model-meta-summary">task 평균 시간 <span style="font-size:10px; color:var(--text-soft); margin-left:6px;">지난 7일</span></summary>
     <div class="model-meta-body">${timeCardHtml}</div>
   </details>`;
 
@@ -28754,14 +28760,14 @@ function _renderUserDeepProfileSection() {
 
   // 사용자 명시 2026-05-02: 더 깊은 나 = 항상 닫힘 default. 사용자 click 해야 펼침 (긴 폼 방어).
   return `<details class="model-section" style="margin-top:18px;">
-    <summary style="font-size:13px;font-weight:600;color:var(--text);padding:10px 0;cursor:pointer;">🌳 더 깊은 나 ${udp.version > 0 ? `<span style="font-size:10px;color:var(--text-soft);font-weight:400;">v.${udp.version}</span>` : ''}</summary>
+    <summary style="font-size:13px;font-weight:600;color:var(--text);padding:10px 0;cursor:pointer;">더 깊은 나</summary>
     <div style="font-size:11px;color:var(--text-dim);margin:6px 0 14px;line-height:1.7;">
       채워질수록 고동이가 더 깊이 분석해줘.<br>
       대화에서 알아서 채워줄게 — 직접 적어도 돼.
     </div>
 
     <div style="margin-bottom:16px;">
-      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">📜 발달·역사 맥락</div>
+      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">발달·역사 맥락</div>
       ${fieldRow('어린 시절', dev.childhood, "editDeepDevField('childhood','어린 시절·가족 구조·양육 톤')", '가족·양육 분위기')}
       ${fieldRow('학창 시절', dev.schoolYears, "editDeepDevField('schoolYears','학창 시절 핵심 사건')", '의미 있는 사건')}
       ${fieldRow('자기 인식·발견', dev.adhdDiscovery, "editDeepDevField('adhdDiscovery','자기 인식·발견 시점 (진단명·정체성·큰 깨달음 등) + 그 전 어떻게 살았는지')", '발견 시점, 그 전 삶')}
@@ -28769,12 +28775,12 @@ function _renderUserDeepProfileSection() {
     </div>
 
     <div style="margin-bottom:16px;">
-      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">👥 관계 맵</div>
+      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">관계 맵</div>
       ${arrayRow('핵심 인물', rels, (r) => `${r.name || '?'}${r.relation ? ' (' + r.relation : ''}${r.tone ? ', ' + r.tone : ''}${r.relation ? ')' : ''}${r.notes ? ' — ' + r.notes.slice(0, 40) : ''}`, "editDeepRelationships()", '가족·친구·연인·동료 5–8명')}
     </div>
 
     <div style="margin-bottom:16px;">
-      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">🪞 자기서사·핵심 신념</div>
+      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">자기서사·핵심 신념</div>
       ${fieldRow('자기 이야기', sn.selfStory, "editDeepSelfNarrativeField('selfStory','자기 이야기 한 단락 (자기소개처럼)')", '한 단락 자기소개')}
       ${fieldRow('보이고 싶은 모습', sn.howWantToBeSeen, "editDeepSelfNarrativeField('howWantToBeSeen','어떻게 보이고 싶은지')", '이상적 모습')}
       ${arrayRow('자신에 대한 신념', cb.aboutSelf, (s) => s, "editDeepCoreBeliefs('aboutSelf')", '\"나는 …\" 형태')}
@@ -28952,7 +28958,7 @@ function renderMoreSection(category, more, draft) {
   if (more.length > 0) {
     html += `
       <details class="model-collapse">
-        <summary>전체 보기 (+${more.length}개)</summary>
+        <summary>+${more.length}</summary>
         <div class="model-collapse-content">
     `;
     more.forEach(item => {
@@ -28964,11 +28970,8 @@ function renderMoreSection(category, more, draft) {
   if (draft.length > 0) {
     html += `
       <details class="model-collapse model-draft">
-        <summary>📝 초안 (${draft.length}개) — 아직 확신 안 가는 가설</summary>
+        <summary>+${draft.length}</summary>
         <div class="model-collapse-content">
-          <div style="font-size:11px; color:var(--text-soft); margin-bottom:10px; line-height:1.6;">
-            증거 더 쌓이면 위로 올라가. 아니면 알려줘.
-          </div>
     `;
     draft.forEach(item => {
       const realIdx = state[category].indexOf(item);
@@ -28980,7 +28983,6 @@ function renderMoreSection(category, more, draft) {
 }
 
 function renderModelItem(item, category, idx) {
-  const confLabel = item.confidence >= 0.7 ? '확신' : item.confidence >= 0.4 ? '관찰 중' : '가설';
   // V4-1l-mini + 사용자 fix: values/patterns/traits 모두 '맞아' / '아니야' / '확인됨' 토글
   const isVerifiable = (category === 'values' || category === 'patterns' || category === 'traits');
   const isVerified = isVerifiable && item.user_verified === true;
@@ -29023,10 +29025,6 @@ function renderModelItem(item, category, idx) {
     <div class="model-item-name">${newBadge}${escapeHtml(item.name)}</div>
     <div class="model-item-desc">${escapeHtml(item.description || '')}</div>
     ${subMeta}
-    <div class="model-item-meta">
-      <span class="conf">${confLabel}${item.confidence != null ? ` ${Math.round((item.confidence || 0) * 100)}%` : ''}</span>
-      ${item.evidence_count ? `<span>근거 ${item.evidence_count}개</span>` : ''}
-    </div>
     <div class="model-item-actions">
       ${actionsHtml}
     </div>
@@ -30224,9 +30222,15 @@ function canUseOpus() {
 }
 
 function toggleChatModel() {
+  // 게스트가 헤더 토글 누르면 → 결제 유도 X, 로그인 유도.
+  if (typeof state !== 'undefined' && state && state.isGuest) {
+    if (typeof showGuestConversionModal === 'function') {
+      showGuestConversionModal({ reason: 'header_toggle' });
+    }
+    return;
+  }
   state.preferences = state.preferences || {};
   const next = !state.preferences.useOpus;
-  // 사용자 명시 2026-05-02 ultrathink: Premium 아닌 사용자가 Opus 켜려고 하면 차단 + 구독 안내.
   if (next && !canUseOpus()) {
     showToast('🦉 Opus 깊은 대화는 Premium 에서만');
     if (typeof openSubscribeModal === 'function') {
@@ -36119,7 +36123,11 @@ function renderExecute() {
     // V4-fix: V3 5블록 완전 삭제 (사용자 명시). dayPlan 데이터는 보존.
   }
 
+  // 사용자 명시 2026-05-06 ultrathink: 추적 항목 (체중/수면/운동 그래프) '나' 탭에서 실행 탭으로 이동.
+  // 행동 데이터라 실행 탭이 더 자연스러움 — '나' 탭은 정체성 모델 전용.
+  html += `<div id="projectsSection"></div>`;
   container.innerHTML = html;
+  if (typeof renderProjects === 'function') renderProjects();
 }
 
 // === BRAIN DUMP ===
@@ -40407,7 +40415,7 @@ function renderProjects() {
   // 사용자 fold 시 hidden — 본인 통제. 헤더 + 추가 button 보존 (펼침 X 도 click 가능 stopPropagation).
   let html = `<details class="project-section" open>
     <summary class="project-section-header">
-      <span class="project-section-title">📊 추적 항목${visible.length > 0 ? ` <span style="font-size:11px; color:var(--text-soft); font-weight:500; margin-left:4px;">(${visible.length})</span>` : ''}</span>
+      <span class="project-section-title">추적 항목${visible.length > 0 ? ` <span style="font-size:11px; color:var(--text-soft); font-weight:500; margin-left:4px;">(${visible.length})</span>` : ''}</span>
       <button class="project-add-btn" onclick="event.preventDefault(); event.stopPropagation(); addNewTracker()">+ 추가</button>
     </summary>
     <div class="project-section-body">`;
@@ -45339,14 +45347,16 @@ async function _doRefreshBillingStatus(manual) {
       const usedPct = quotaUsd > 0 ? Math.min(100, Math.round((usedUsd / quotaUsd) * 100)) : 0;
       const isNearCap = usedPct >= 80;
       html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${subExpires}까지</span></div>`;
-      html += `<div style="margin-top:10px; font-size:13px;">${_quotaStateLabel(usedPct)}</div>`;
-      html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
-      if (isNearCap && planKey !== 'premium') {
-        html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">🌊 Premium 으로 늘리기</button>`;
+      // early_light: 토큰 양 안 보이게 (체험 플랜은 수치 노출 X)
+      if (planKey !== 'early_light') {
+        html += `<div style="margin-top:10px; font-size:13px;">${_quotaStateLabel(usedPct)}</div>`;
+        html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
+        if (isNearCap && planKey !== 'premium') {
+          html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">🌊 Premium 으로 늘리기</button>`;
+        }
       }
     } else {
-      // 사용자 명시 2026-05-05: 처음 한 달 무료 만료 후 = 미가입 분기. Premium 결제 = 개발자 후원 명시.
-      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 한 달 무료 만료. 계속 쓰려면 Light/Premium</span></div>`;
+      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 체험 종료. 계속 쓰려면 구독</span></div>`;
     }
     if (balance > 0) {
       html += `<div style="margin-top:6px;"><b>잔여 credit</b>: $${balance.toFixed(4)} (~${balanceKrw.toLocaleString()}원)</div>`;
@@ -45472,19 +45482,20 @@ async function requestRefund(paymentId, amountKrw, label) {
 // 결제 — 사용자 명시 2026-04-30 ultrathink: 충전 plan 폐기 → 2-tier 월정액 only
 // ═══════════════════════════════════════════════════════════════
 
-// 사용자 명시 2026-05-05: 처음 한 달 무료 (얼리 플랜) 정책. 자동 결제 X — 사용자가 직접 light/premium 구독 선택.
 // 서버 _lib/billing.ts 의 TIER_PLANS 와 동기 — 위변조 방지로 결제 검증은 서버에서 재확인.
 // description: 정직 톤 — 정량 KRW 표기 X, 정성적 설명만. cap 자체는 서버 운영 용도.
 const TIER_PLANS_CLIENT = {
-  light:        { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Light',        tagline: '매일의 자기관찰', emoji: '🐚',
+  light:          { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Light',          tagline: '매일의 자기관찰', emoji: '🐚',
     description: '일반 대화 + 분석 풀로. 매일의 자기관찰에 충분.' },
-  premium:      { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',      tagline: '깊게 자주', emoji: '🌊',
+  premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '깊게 자주', emoji: '🌊',
     description: '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.' },
-  early_light:  { krw: 0,     cap_usd: 4,    cap_krw: 5600,  label: '처음 한 달 무료', tagline: '얼리 플랜', emoji: '🐚',
-    description: '신규 가입자 자동 활성화 — 30일 자유롭게. 자동 결제 X. 만료 후 원하면 직접 light/premium 구독.', auto_grant_first_month: true },
-  // 사용자 명시 2026-05-05 ultrathink (Phase 0): 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
-  // cap_usd 0.30 = ~15턴 (max_tokens 800 강제 cap + 캐시 히트 가정). 자동 4단 분석 1회 비용 + 후킹용 여유 포함.
-  guest:        { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',        tagline: '한 번 써보기', emoji: '🌱',
+  early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜',       tagline: '체험', emoji: '🐚',
+    description: '신규 가입자 자동 활성화 — 충분히 써보고 마음에 들면 구독.', auto_grant_first_month: true },
+  // 앱 출시 전 얼리버드 평생 이용권 — 4,900원 1회 결제, 매달 Light 수준 자동 갱신 (추가 결제 X).
+  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드 평생',   tagline: '출시 전 감사 혜택', emoji: '✨',
+    description: '한 번 결제하면 영원히. 매달 Light 수준으로 자유롭게, 추가 결제 없이.', is_lifetime: true },
+  // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
+  guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
 };
 // 사용자 명시 2026-05-02 ultrathink: light_pack 제거 — Premium 전용. Light/얼리는 Premium 전환 또는 다음 달 대기.
@@ -45751,8 +45762,8 @@ function checkFreeTrialExpiry() {
   const daysDisplay = Math.max(1, Math.ceil(remainingDays));
   _addNotification({
     type: 'free_trial_expiry_warning',
-    title: '한 달 무료 만료가 가까워',
-    body: `<b>${daysDisplay}일</b> 후 만료. 자동 결제 X — 만료 후 원하면 직접 구독 (Light 9,900원 / Premium 25,000원).<br><br><span style="font-size:11px; color:var(--text-soft);">Premium = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+    title: '체험 한도가 얼마 안 남았어',
+    body: `<b>${daysDisplay}일</b> 후 만료. 자동 결제 X — 계속 쓰고 싶으면 직접 구독.<br><b>얼리버드 평생 이용권</b> 4,900원 (앱 출시 전 한정).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
     persistent: true
   });
 }
@@ -46409,6 +46420,21 @@ async function openSubscribeModal() {
       <button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">${plan.label} 구독 (${plan.krw.toLocaleString()}원)</button>
     </div>
   `;
+  const earlyLifetimePlan = TIER_PLANS_CLIENT.early_lifetime;
+  const earlyLifetimeCard = `
+    <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(212,167,106,0.18), rgba(212,167,106,0.06)); border:1.5px solid var(--accent); border-radius:14px; margin-bottom:10px;">
+      <div style="position:absolute; top:-10px; left:16px; background:var(--accent); color:#1a1610; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">출시 전 한정</div>
+      <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
+        <div style="font-size:18px; font-weight:700; color:var(--text);">${earlyLifetimePlan.emoji} ${earlyLifetimePlan.label}</div>
+        <div style="font-size:18px; font-weight:700; color:var(--accent);">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;"> 1회</span></div>
+      </div>
+      <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${earlyLifetimePlan.tagline}</div>
+      <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
+        ${earlyLifetimePlan.description}
+      </div>
+      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:var(--accent); color:#1a1610;">${earlyLifetimePlan.emoji} 얼리버드 평생 이용권 (${earlyLifetimePlan.krw.toLocaleString()}원)</button>
+    </div>
+  `;
   const overlay = document.createElement('div');
   overlay.className = 'input-modal-overlay show';
   overlay.id = 'subscribeModalOverlay';
@@ -46417,13 +46443,14 @@ async function openSubscribeModal() {
     <div class="input-modal" style="max-width:420px; max-height:92vh; overflow-y:auto; padding:24px;">
       <div style="font-size:17px; font-weight:700; color:var(--text); margin-bottom:6px;">📅 구독</div>
       <div style="font-size:12px; color:var(--text-dim); line-height:1.6; margin-bottom:14px;">
-        무료 토큰 끝나면 마음껏 깊게 쓸 수 있게. 자동 갱신 X — 다음 달 명시 결제.
+        체험 끝나도 계속 쓸 수 있게. 자동 갱신 X — 직접 결제.
       </div>
       ${minorWarning}
+      ${earlyLifetimeCard}
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
-        💡 잘 모르겠으면 <b>Light</b> 부터. 더 쓰고 싶으면 Premium.<br>
+        💡 잘 모르겠으면 <b>얼리버드 평생</b> 또는 <b>Light</b>. 깊게 자주 쓰면 Premium.<br>
         해지: [설정 → 구독] 환불 (잔여일 비례 — <a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>
@@ -46481,6 +46508,7 @@ async function proceedSubscribe(tierKey) {
     return;
   }
 
+  const isLifetimeTier = tierKey === 'early_lifetime';
   // 결제 시도 — paymentId = 매번 unique. 사용자 본인 식별용 customer 정보 + tier 별 amount.
   const paymentId = `payment-${tierKey}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   // 사용자 보고 2026-05-06: 모바일 redirect 흐름에서 verify-pay 호출 시점 user_id 와 결제 시점 user_id 가 다르면 NOT_OWN.
@@ -46498,7 +46526,7 @@ async function proceedSubscribe(tierKey) {
       storeId,
       channelKey,
       paymentId,
-      orderName: `소라고동 ${tier.label} 구독 (1개월)`,
+      orderName: isLifetimeTier ? `소라고동 ${tier.label} 이용권 (평생)` : `소라고동 ${tier.label} 구독 (1개월)`,
       totalAmount: tier.krw,
       currency: 'KRW',
       payMethod: 'CARD',
@@ -46552,6 +46580,8 @@ async function proceedSubscribe(tierKey) {
       if (result.duplicate) {
         showToast('💳 이미 활성 구독 — 영수증 보관, 환불 안내 메일 확인');
         alert(result.message || '이미 활성 구독이 있어. 환불 요청은 이메일로.');
+      } else if (isLifetimeTier) {
+        showToast(`✨ 얼리버드 평생 이용권 완료 — 고마워 🫂`);
       } else {
         showToast(`📅 ${tier.label} 구독 완료 (${tier.krw.toLocaleString()}원/월)`);
       }
@@ -46946,19 +46976,17 @@ function showBudgetExceededModal(reason, opts) {
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
     } else if (subActive && plan === 'early_light') {
-      // 사용자 명시 2026-05-05: 얼리 플랜 (처음 한 달 무료) 한도 도달 → Premium 결제 유도 + 개발자 후원 메시지.
-      // 정직 톤 — 단독 개발자 (1인) 가 중고 맥북 없어서 iOS 앱 못 만드는 중. 후원 = 앱 출시 가능.
-      titleText = '🐚 한 달 무료 한도 도달';
-      bodyText = '얼리 플랜 한도 다 썼네 — 자유롭게 써줘서 고마워.<br><br>' +
-        '<b>Premium</b> 가면 <b>3x 더 자유</b>롭게 (Opus 깊은 대화 30번/일).<br><br>' +
+      titleText = '🐚 체험 한도 도달';
+      bodyText = '체험 한도 다 썼네 — 써줘서 고마워.<br><br>' +
+        '<span style="color:var(--accent); font-weight:600;">✨ 얼리버드 평생 이용권</span>이 지금 <b>4,900원</b> (앱 출시 전 한정).<br>' +
+        '월정액 대신, 한 번 결제하고 매달 Light 수준으로 평생 이어가.<br><br>' +
         '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
-        '솔직하게 — 단독 개발자 (1인) 라 Premium 결제 = <b>iOS 앱 출시 후원</b> 이야. ' +
-        '중고 맥북이 없어서 iOS 빌드 못 하는 중인데, Premium 사용자분들이 뒷받침해주면 맥북 사서 iOS 앱 출시할 수 있어 🫂' +
+        '솔직하게 — 단독 개발자 (1인) 라 결제 = iOS 앱 출시 후원이야 🫂' +
         '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기 (25,000원/월)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🐚 Light 구독 (9,900원/월)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음에 결정할게</button>
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 평생 이용권 보기 (4,900원)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 월정액 구독 보기</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">나중에 결정할게</button>
       `;
     } else if (subActive && plan === 'light') {
       // Light 월 cap 도달 — 추가팩 OR Premium 권유
@@ -46973,16 +47001,16 @@ function showBudgetExceededModal(reason, opts) {
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 달 기다릴게</button>
       `;
     } else {
-      // 비구독 (한 달 무료 만료) — 구독 안내 + 개발자 후원 톤
-      titleText = '🐚 한 달 무료 만료';
-      bodyText = '처음 한 달 무료 끝났어 — 깊게 써줘서 고마워.<br><br>' +
-        '계속 쓰려면 Light / Premium 구독.<br><br>' +
+      // 비구독 (체험 만료) — 구독 안내 + 개발자 후원 톤
+      titleText = '🐚 체험 종료';
+      bodyText = '체험 기간 끝났어 — 깊게 써줘서 고마워.<br><br>' +
+        '계속 쓰려면 구독 — <span style="color:var(--accent); font-weight:600;">얼리버드 평생 이용권 4,900원</span>이 지금만.<br><br>' +
         '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
-        '단독 개발자 (1인) 가 중고 맥북 없어서 iOS 앱 출시 못 하는 중. <b>Premium = 후원</b> 으로 iOS 빌드 가능 🫂' +
+        '단독 개발자 (1인) 가 후원 = iOS 앱 출시 가능 🫂' +
         '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기 (25,000원/월)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🐚 Light 구독 (9,900원/월)</button>
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 평생 이용권 보기 (4,900원)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 월정액 구독 보기</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
     }
