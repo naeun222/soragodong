@@ -46,15 +46,13 @@ async function handleSendCode() {
     return;
   }
 
+  // 사용자 명시 2026-05-06: 4 PIPA 동의 검증 — 로그인 화면에서 직접 (옛 비밀번호 설정 모달 안 검증 대체).
+  if (typeof _checkLoginConsentsAndSavePending === 'function') {
+    if (!_checkLoginConsentsAndSavePending(email, 'email')) return;
+  }
+
   // 사용자 명시 2026-05-02: 60s cooldown — alert() 대신 inline countdown.
   if (_checkOtpCooldownAndStart()) return;
-
-  // 사용자 명시 2026-05-02: 동의는 신규 = 비밀번호 설정 모달 안에서 (로그인 화면 X). 단 loginMethod 넣어둠.
-  try {
-    localStorage.setItem('soragodong_pending_consent', JSON.stringify({
-      email, loginMethod: 'email', at: new Date().toISOString()
-    }));
-  } catch {}
 
   const btn = document.getElementById('loginBtn');
   const status = document.getElementById('loginStatus');

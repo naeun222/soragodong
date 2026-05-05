@@ -899,10 +899,9 @@ function onbFinish() {
     state.unlocked = state.unlocked || {};
     state.unlocked[_completedCoreId] = true;
   }
-  // V4 (v8 묶음 12): Core 1 끝나면 환영 선물 모달 — no-backup 경로 (reload X) 직접 호출
-  if (_completedCoreId === 'core1') {
-    setTimeout(() => { if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal(); }, 600);
-  }
+  // 사용자 명시 2026-05-06: Core 1 끝 환영 선물 모달 자동 트리거 폐기 — '얼리 플랜 자동 적용' 안내가
+  // 가입 전환 모달 done step + 설정 카드에서 이미 노출. Tutorial 끝났을 때 별도 모달 X.
+  // (devPreviewWelcomeBonus 만 dev 도구로 유지.)
   // V4 풀 튜토리얼 완주 시 모든 코어 unlock (no-backup 경로도 동일)
   if (window._fullTutorialActive) {
     state.unlocked = state.unlocked || {};

@@ -1733,6 +1733,140 @@
   }
   .sns-login-btn.naver { background: #03C75A; color: #FFFFFF; }
   .sns-login-icon { width: 20px; height: 20px; flex-shrink: 0; }
+
+  /* 사용자 명시 2026-05-06 ultrathink: 첫 화면 — 로그인 / 게스트 선택 카드 디자인. */
+  /* Primary card (로그인): warm gold gradient + 1px accent border + soft glow.
+     Secondary card (게스트): subtle muted bg, lower visual weight.
+     입장 시 stagger fade-in 으로 시선 자연스럽게 이동. */
+  .login-choice-card {
+    border-radius: 18px;
+    padding: 22px 22px;
+    margin-bottom: 14px;
+    position: relative;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: loginCardFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  @keyframes loginCardFadeIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .login-choice-primary {
+    background:
+      linear-gradient(135deg, rgba(212,167,106,0.10), rgba(168,157,200,0.06)),
+      var(--surface);
+    border: 1px solid rgba(212, 167, 106, 0.40);
+    box-shadow: 0 8px 32px rgba(212, 167, 106, 0.10), 0 2px 8px rgba(0,0,0,0.20);
+    animation-delay: 0.1s;
+  }
+  .login-choice-secondary {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 18px 20px;
+    animation-delay: 0.25s;
+  }
+  .login-choice-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 18px;
+    color: var(--text);
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+  }
+  .login-choice-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  .login-choice-title-2 {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .login-choice-sub-2 {
+    font-size: 11.5px;
+    color: var(--text-soft);
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+  .login-or-mini {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--text-soft);
+    letter-spacing: 0.08em;
+    margin: 12px 0 8px;
+    text-transform: uppercase;
+  }
+  .login-or-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 6px 0 14px;
+    font-size: 11px; color: var(--text-soft);
+    letter-spacing: 0.06em;
+  }
+  .login-or-divider::before, .login-or-divider::after {
+    content: ''; flex: 1; height: 1px;
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .login-or-divider span { padding: 0 4px; }
+
+  /* 게스트 button — 작지만 명확. hover 시 살짝 들어옴. */
+  .login-guest-btn {
+    width: 100%;
+    padding: 11px 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 11px;
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, transform 0.1s;
+  }
+  .login-guest-btn:hover {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(212,167,106,0.35);
+  }
+  .login-guest-btn:active { transform: scale(0.985); }
+  .login-guest-btn:disabled { opacity: 0.6; cursor: wait; }
+
+  /* 4 PIPA 동의 — compact 디자인. 전체동의 master + 4 sub rows. */
+  .login-consents {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255,255,255,0.08);
+  }
+  .login-consent-master {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--text);
+    cursor: pointer;
+    padding: 4px 0;
+  }
+  .login-consent-master input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+  }
+  .login-consent-rows {
+    margin-top: 6px;
+    padding-left: 4px;
+    border-left: 2px solid rgba(212,167,106,0.10);
+    padding-left: 10px;
+  }
+  .login-consent-rows label {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 10.5px; color: var(--text-dim);
+    line-height: 1.6;
+    cursor: pointer;
+    padding: 5px 0;
+  }
+  .login-consent-rows input[type="checkbox"] {
+    width: 14px; height: 14px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .login-consent-rows label:hover span { color: var(--text); }
   .login-divider {
     display: flex; align-items: center; gap: 10px;
     margin: 14px 0;
@@ -9998,23 +10132,51 @@
     <!-- 사용자 명시 2026-04-30: 모바일 브라우저 takeover 시 escape — iOS 인앱 / 빠른 로그인 사용자용 -->
     <a class="pwa-escape-link" onclick="escapePwaTakeover()">그냥 브라우저에서 로그인 →</a>
 
-    <!-- Step 1: SNS + Email 로그인 + 동의 (사용자 요청 2026-04-30 변호사 검수: PIPA + 전자상거래법 의무) -->
-    <!-- 사용자 명시 2026-05-02 ultrathink: SNS 로그인 (카카오/네이버) 추가. master password layer (E2EE) 보존. -->
+    <!-- Step 1: 로그인 / 게스트 선택 — 사용자 명시 2026-05-06 ultrathink. -->
+    <!-- Primary card: 안전하게 시작 (로그인). Secondary: 그냥 둘러보기 (게스트). -->
     <div class="login-form" id="loginStep1">
-      <div class="sns-login-section">
+
+      <!-- ── PRIMARY: Login card ── -->
+      <div class="login-choice-card login-choice-primary">
+        <div class="login-choice-title">🔒 같이 시작할까?</div>
+        <div class="login-choice-sub">종단간 암호화로 안전 보관 · 모든 기기 동기화 · <b style="color:var(--accent2);">첫 달 무료</b></div>
+
         <button type="button" class="sns-login-btn kakao" onclick="loginWithProvider('kakao')">
           <svg class="sns-login-icon" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><path d="M9 1.5C4.86 1.5 1.5 4.18 1.5 7.5c0 2.13 1.42 4 3.55 5.06l-.7 2.61c-.07.27.23.49.46.34l3.06-2.04c.38.04.76.07 1.13.07 4.14 0 7.5-2.68 7.5-6S13.14 1.5 9 1.5z"/></svg>
           <span>카카오로 시작하기</span>
         </button>
-        <!-- 사용자 명시 2026-05-02: 네이버 = V5 (휴대폰 본인 인증과 함께) — 네이버 정책상 SNS 가입 시 별도 비밀번호 요구 X 의무. E2EE master password 강제 흐름과 충돌 → V4 카카오만. -->
+
+        <div class="login-or-mini">또는 이메일</div>
+
+        <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
+        <button class="btn-primary" id="loginBtn" onclick="handleSendCode()" style="width:100%;">코드 받기 →</button>
+        <div class="login-status" id="loginStatus"></div>
+
+        <!-- 4 PIPA 동의 (compact) -->
+        <div class="login-consents">
+          <label class="login-consent-master">
+            <input type="checkbox" id="loginConsentAll" onchange="_toggleAllLoginConsents(this)">
+            <span><b>전체 동의</b></span>
+          </label>
+          <div class="login-consent-rows">
+            <label><input type="checkbox" id="loginConsentTerms" onchange="_syncAllLoginConsentToggle()"><span>이용약관 · 개인정보처리방침 동의 (필수)</span></label>
+            <label><input type="checkbox" id="loginConsentSensitive" onchange="_syncAllLoginConsentToggle()"><span>민감정보 처리 동의 — 정신건강 대화 (필수, PIPA §23)</span></label>
+            <label><input type="checkbox" id="loginConsentCrossBorder" onchange="_syncAllLoginConsentToggle()"><span>국외 이전 동의 — Anthropic API (미국, PIPA §17)</span></label>
+            <label><input type="checkbox" id="loginConsentAdult" onchange="_syncAllLoginConsentToggle()"><span>만 19세 이상 자기 선언 (필수)</span></label>
+          </div>
+        </div>
       </div>
 
-      <!-- 사용자 명시 2026-05-02: 로그인 화면 단순화 — 카카오 + 이메일 input + '다음' button 만. 동의/데이터 보호 안내는 신규 가입 모달로 이동. -->
-      <div class="email-login-section" id="emailLoginSection">
-        <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
+      <!-- ── divider ── -->
+      <div class="login-or-divider"><span>또는</span></div>
+
+      <!-- ── SECONDARY: Guest card ── -->
+      <div class="login-choice-card login-choice-secondary">
+        <div class="login-choice-title-2">🌱 처음이라면 한 번 둘러봐도 돼</div>
+        <div class="login-choice-sub-2">데이터는 이 기기에만 — 나중에 로그인하면 그대로 이어가.</div>
+        <button id="guestEntryBtn" class="login-guest-btn" onclick="enterGuestMode()">둘러보기 →</button>
       </div>
-      <button class="btn-primary" id="loginBtn" onclick="handleSendCode()" style="margin-top:14px; width:100%;">다음</button>
-      <div class="login-status" id="loginStatus"></div>
+
     </div>
 
     <!-- Step 2: Code -->
@@ -10163,17 +10325,6 @@
           </div>
         </div>
         <div id="decisionMiniLinkContainer"></div>
-      </div>
-      <!-- 사용자 보고 2026-05-05 (PortOne 심사): 게스트도 항상 접근 가능한 약관/사업자정보 link.
-           홈 화면 끝 작은 footer — 항상 보이지만 거슬리지 X. /info 통합 페이지로. -->
-      <div style="margin-top:40px; padding:16px 0 8px; text-align:center; font-size:11px; color:var(--text-soft); line-height:1.7;">
-        <a href="/info" target="_blank" style="color:var(--text-soft); text-decoration:none; border-bottom:1px solid rgba(255,255,255,0.06);">사이트 정보</a>
-        <span style="margin:0 6px; opacity:0.4;">·</span>
-        <a href="/terms" target="_blank" style="color:var(--text-soft); text-decoration:none; border-bottom:1px solid rgba(255,255,255,0.06);">이용약관</a>
-        <span style="margin:0 6px; opacity:0.4;">·</span>
-        <a href="/refund" target="_blank" style="color:var(--text-soft); text-decoration:none; border-bottom:1px solid rgba(255,255,255,0.06);">환불정책</a>
-        <span style="margin:0 6px; opacity:0.4;">·</span>
-        <a href="/privacy" target="_blank" style="color:var(--text-soft); text-decoration:none; border-bottom:1px solid rgba(255,255,255,0.06);">개인정보처리방침</a>
       </div>
     </div>
 
@@ -13370,6 +13521,61 @@ async function _guestConvSetupE2EE() {
   }
 }
 // ═══════════════════════════════════════════════════════════════
+// GUEST ENTRY (Phase 1 — UX redesign)
+// ═══════════════════════════════════════════════════════════════
+// 사용자 명시 2026-05-06 ultrathink: 첫 화면 = 로그인 또는 게스트 명시 선택.
+// 자동 anonymous 폐기 — 사용자가 '둘러보기' 누르면 그제야 anonymous signup.
+
+async function enterGuestMode() {
+  const btn = document.getElementById('guestEntryBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '시작하는 중...';
+  }
+  try {
+    if (typeof signInAnonymouslyForGuest !== 'function') {
+      alert('초기화 오류 — 페이지 새로고침');
+      return;
+    }
+    const result = await signInAnonymouslyForGuest();
+    if (!result.ok) {
+      console.warn('[guest entry] fail:', result);
+      const detail = result.detail ? ('\n\n' + result.detail) : '';
+      alert('지금 둘러보기를 시작할 수 없어. 잠시 후 다시 시도하거나 로그인해줘.' + detail);
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '둘러보기 →';
+      }
+      return;
+    }
+    // 게스트 진입 성공 — 페이지 reload 로 init() 다시 (anonymous 세션 적용된 상태로 자연스럽게).
+    window.location.reload();
+  } catch (e) {
+    console.error('[guest entry] throw:', e);
+    alert('네트워크 오류 — 잠시 후 다시');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '둘러보기 →';
+    }
+  }
+}
+
+// 4 PIPA 동의 — 전체 동의 토글.
+function _toggleAllLoginConsents(masterEl) {
+  ['loginConsentTerms', 'loginConsentSensitive', 'loginConsentCrossBorder', 'loginConsentAdult'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = masterEl.checked;
+  });
+}
+function _syncAllLoginConsentToggle() {
+  const all = document.getElementById('loginConsentAll');
+  if (!all) return;
+  all.checked = ['loginConsentTerms', 'loginConsentSensitive', 'loginConsentCrossBorder', 'loginConsentAdult'].every(id => {
+    const el = document.getElementById(id);
+    return el && el.checked;
+  });
+}
+// ═══════════════════════════════════════════════════════════════
 // 사용자 명시 2026-04-30 ultrathink: 연간 리뷰 실제 생성 (Phase 1 — Opus narrative + 결정적 helpers).
 // ═══════════════════════════════════════════════════════════════
 // 사용자 명시 2026-05-02 ultrathink: 연간 리뷰 batch path 재사용 위해 분리.
@@ -16389,6 +16595,13 @@ async function saveToCloudNow() {
   if (state && state.isGuest) {
     return;
   }
+  // 사용자 보고 2026-05-05 (Phase 1d): Kakao linkIdentity redirect 후 E2EE 셋업 모달 뜨기 전 saveToCloudNow 트리거되면
+  // localStorage 의 게스트 데이터가 평문으로 cloud 업로드됨 → 데이터 노출 위험.
+  // _e2eeSetupNewUser 가 끝까지 성공해서 플래그 제거해야 첫 cloud save 가능.
+  if (localStorage.getItem('soragodong_v4_pending_e2ee_setup') === '1' && !_e2eeMasterKey) {
+    console.log('[saveToCloudNow] E2EE 셋업 대기 중 — cloud 저장 차단 (데이터 보호)');
+    return;
+  }
   // 사용자 보고 2026-04-28: testerMode ON이면 cloud 저장 자체 차단.
   if (state.preferences && state.preferences.testerMode) {
     console.log('[saveToCloudNow] testerMode ON — cloud 저장 차단');
@@ -16660,15 +16873,8 @@ async function init() {
   }
   // V4 (v8 묶음 7): Core 2 reload 후 깜빡임 점 갱신 — sessionStorage / state._beachJustUnlocked 체크
   setTimeout(() => { if (typeof _checkCore2JustFinished === 'function') _checkCore2JustFinished(); }, 200);
-  // V4 (v8 묶음 12): Core 1 reload 후 환영 선물 모달 — onbFinish 가 marker stash, init 시점에 표시
-  setTimeout(() => {
-    try {
-      if (sessionStorage.getItem('soragodong_v4_welcome_gift_pending') === '1') {
-        sessionStorage.removeItem('soragodong_v4_welcome_gift_pending');
-        if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal();
-      }
-    } catch {}
-  }, 800);
+  // 사용자 명시 2026-05-06: Core 1 reload 후 환영 선물 모달 자동 트리거 폐기. 마커도 정리.
+  try { sessionStorage.removeItem('soragodong_v4_welcome_gift_pending'); } catch {}
   // V4 (사용자 명시 2026-05-04 — v7 §11 / v8 §11): 4AM cutoff 자동 돌연변이 깨달음 추출 후 다음 진입 안내
   if (state._mutationCutoffExtractedAt) {
     const _atMs = new Date(state._mutationCutoffExtractedAt).getTime();
@@ -16727,19 +16933,11 @@ async function init() {
   window._initialDataLoading = true;
   const authed = await checkSession();
   if (!authed) {
-    // 사용자 명시 2026-05-05 ultrathink (Phase 1): 세션 X → anonymous 자동 가입 (게스트 모드).
-    // login 화면 스킵하고 바로 chat 가능. 한도 도달 / 사용자가 명시 가입 시 linkIdentity 로 전환.
-    // anonymous 비활성 / 네트워크 X 면 폴백 = 기존 login 화면.
-    const guestResult = (typeof signInAnonymouslyForGuest === 'function')
-      ? await signInAnonymouslyForGuest()
-      : { ok: false, reason: 'fn_missing' };
-    if (!guestResult.ok) {
-      console.warn('[init] 게스트 진입 실패:', guestResult);
-      showLoginScreen();
-      window._initialDataLoading = false;
-      return;
-    }
-    // 게스트 진입 성공 — .app 노출 (login 화면 X)
+    // 사용자 명시 2026-05-06 ultrathink: 자동 anonymous 폐기 → 첫 화면에서 사용자가 '로그인' / '둘러보기' 선택.
+    // 게스트는 명시 button click 으로 entry — 의도 분명 + UX 친근.
+    showLoginScreen();
+    window._initialDataLoading = false;
+    return;
   }
   // Authenticated OR Guest — .app 노출
   document.getElementById('loginScreen').style.display = 'none';
@@ -19618,10 +19816,9 @@ function onbFinish() {
     state.unlocked = state.unlocked || {};
     state.unlocked[_completedCoreId] = true;
   }
-  // V4 (v8 묶음 12): Core 1 끝나면 환영 선물 모달 — no-backup 경로 (reload X) 직접 호출
-  if (_completedCoreId === 'core1') {
-    setTimeout(() => { if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal(); }, 600);
-  }
+  // 사용자 명시 2026-05-06: Core 1 끝 환영 선물 모달 자동 트리거 폐기 — '얼리 플랜 자동 적용' 안내가
+  // 가입 전환 모달 done step + 설정 카드에서 이미 노출. Tutorial 끝났을 때 별도 모달 X.
+  // (devPreviewWelcomeBonus 만 dev 도구로 유지.)
   // V4 풀 튜토리얼 완주 시 모든 코어 unlock (no-backup 경로도 동일)
   if (window._fullTutorialActive) {
     state.unlocked = state.unlocked || {};
@@ -19767,13 +19964,10 @@ async function loginWithProvider(provider) {
     alert('지원하지 않는 로그인: ' + provider);
     return;
   }
-  // 사용자 명시 2026-05-02: 동의 검증은 OAuth callback 후 신규 사용자 = 비밀번호 설정 모달 안에서 (로그인 화면 X).
-  // 단 loginMethod 만 pending 에 넣어둠 (callback 후 식별 위해).
-  try {
-    localStorage.setItem('soragodong_pending_consent', JSON.stringify({
-      email: '', loginMethod: provider, at: new Date().toISOString()
-    }));
-  } catch {}
+  // 사용자 명시 2026-05-06: 4 PIPA 동의 검증 — 로그인 화면에서 직접 (옛 비밀번호 설정 모달 안 검증 대체).
+  if (typeof _checkLoginConsentsAndSavePending === 'function') {
+    if (!_checkLoginConsentsAndSavePending('', provider)) return;
+  }
   // Supabase OAuth redirect — /auth/v1/authorize?provider=X&redirect_to=Y
   // 사용자 명시 2026-05-02: 카카오 = 이메일만 (PIPA 데이터 최소 수집). Supabase default scope (profile_nickname/profile_image) 제외 — scopes=account_email 명시.
   const redirectTo = window.location.origin;
@@ -19833,15 +20027,13 @@ async function handleSendCode() {
     return;
   }
 
+  // 사용자 명시 2026-05-06: 4 PIPA 동의 검증 — 로그인 화면에서 직접 (옛 비밀번호 설정 모달 안 검증 대체).
+  if (typeof _checkLoginConsentsAndSavePending === 'function') {
+    if (!_checkLoginConsentsAndSavePending(email, 'email')) return;
+  }
+
   // 사용자 명시 2026-05-02: 60s cooldown — alert() 대신 inline countdown.
   if (_checkOtpCooldownAndStart()) return;
-
-  // 사용자 명시 2026-05-02: 동의는 신규 = 비밀번호 설정 모달 안에서 (로그인 화면 X). 단 loginMethod 넣어둠.
-  try {
-    localStorage.setItem('soragodong_pending_consent', JSON.stringify({
-      email, loginMethod: 'email', at: new Date().toISOString()
-    }));
-  } catch {}
 
   const btn = document.getElementById('loginBtn');
   const status = document.getElementById('loginStatus');

@@ -1643,6 +1643,140 @@
   }
   .sns-login-btn.naver { background: #03C75A; color: #FFFFFF; }
   .sns-login-icon { width: 20px; height: 20px; flex-shrink: 0; }
+
+  /* 사용자 명시 2026-05-06 ultrathink: 첫 화면 — 로그인 / 게스트 선택 카드 디자인. */
+  /* Primary card (로그인): warm gold gradient + 1px accent border + soft glow.
+     Secondary card (게스트): subtle muted bg, lower visual weight.
+     입장 시 stagger fade-in 으로 시선 자연스럽게 이동. */
+  .login-choice-card {
+    border-radius: 18px;
+    padding: 22px 22px;
+    margin-bottom: 14px;
+    position: relative;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: loginCardFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  @keyframes loginCardFadeIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .login-choice-primary {
+    background:
+      linear-gradient(135deg, rgba(212,167,106,0.10), rgba(168,157,200,0.06)),
+      var(--surface);
+    border: 1px solid rgba(212, 167, 106, 0.40);
+    box-shadow: 0 8px 32px rgba(212, 167, 106, 0.10), 0 2px 8px rgba(0,0,0,0.20);
+    animation-delay: 0.1s;
+  }
+  .login-choice-secondary {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 18px 20px;
+    animation-delay: 0.25s;
+  }
+  .login-choice-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 18px;
+    color: var(--text);
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+  }
+  .login-choice-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  .login-choice-title-2 {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .login-choice-sub-2 {
+    font-size: 11.5px;
+    color: var(--text-soft);
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+  .login-or-mini {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--text-soft);
+    letter-spacing: 0.08em;
+    margin: 12px 0 8px;
+    text-transform: uppercase;
+  }
+  .login-or-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 6px 0 14px;
+    font-size: 11px; color: var(--text-soft);
+    letter-spacing: 0.06em;
+  }
+  .login-or-divider::before, .login-or-divider::after {
+    content: ''; flex: 1; height: 1px;
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .login-or-divider span { padding: 0 4px; }
+
+  /* 게스트 button — 작지만 명확. hover 시 살짝 들어옴. */
+  .login-guest-btn {
+    width: 100%;
+    padding: 11px 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 11px;
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, transform 0.1s;
+  }
+  .login-guest-btn:hover {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(212,167,106,0.35);
+  }
+  .login-guest-btn:active { transform: scale(0.985); }
+  .login-guest-btn:disabled { opacity: 0.6; cursor: wait; }
+
+  /* 4 PIPA 동의 — compact 디자인. 전체동의 master + 4 sub rows. */
+  .login-consents {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255,255,255,0.08);
+  }
+  .login-consent-master {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--text);
+    cursor: pointer;
+    padding: 4px 0;
+  }
+  .login-consent-master input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+  }
+  .login-consent-rows {
+    margin-top: 6px;
+    padding-left: 4px;
+    border-left: 2px solid rgba(212,167,106,0.10);
+    padding-left: 10px;
+  }
+  .login-consent-rows label {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 10.5px; color: var(--text-dim);
+    line-height: 1.6;
+    cursor: pointer;
+    padding: 5px 0;
+  }
+  .login-consent-rows input[type="checkbox"] {
+    width: 14px; height: 14px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .login-consent-rows label:hover span { color: var(--text); }
   .login-divider {
     display: flex; align-items: center; gap: 10px;
     margin: 14px 0;

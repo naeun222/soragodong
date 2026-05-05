@@ -39,23 +39,51 @@
     <!-- 사용자 명시 2026-04-30: 모바일 브라우저 takeover 시 escape — iOS 인앱 / 빠른 로그인 사용자용 -->
     <a class="pwa-escape-link" onclick="escapePwaTakeover()">그냥 브라우저에서 로그인 →</a>
 
-    <!-- Step 1: SNS + Email 로그인 + 동의 (사용자 요청 2026-04-30 변호사 검수: PIPA + 전자상거래법 의무) -->
-    <!-- 사용자 명시 2026-05-02 ultrathink: SNS 로그인 (카카오/네이버) 추가. master password layer (E2EE) 보존. -->
+    <!-- Step 1: 로그인 / 게스트 선택 — 사용자 명시 2026-05-06 ultrathink. -->
+    <!-- Primary card: 안전하게 시작 (로그인). Secondary: 그냥 둘러보기 (게스트). -->
     <div class="login-form" id="loginStep1">
-      <div class="sns-login-section">
+
+      <!-- ── PRIMARY: Login card ── -->
+      <div class="login-choice-card login-choice-primary">
+        <div class="login-choice-title">🔒 같이 시작할까?</div>
+        <div class="login-choice-sub">종단간 암호화로 안전 보관 · 모든 기기 동기화 · <b style="color:var(--accent2);">첫 달 무료</b></div>
+
         <button type="button" class="sns-login-btn kakao" onclick="loginWithProvider('kakao')">
           <svg class="sns-login-icon" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><path d="M9 1.5C4.86 1.5 1.5 4.18 1.5 7.5c0 2.13 1.42 4 3.55 5.06l-.7 2.61c-.07.27.23.49.46.34l3.06-2.04c.38.04.76.07 1.13.07 4.14 0 7.5-2.68 7.5-6S13.14 1.5 9 1.5z"/></svg>
           <span>카카오로 시작하기</span>
         </button>
-        <!-- 사용자 명시 2026-05-02: 네이버 = V5 (휴대폰 본인 인증과 함께) — 네이버 정책상 SNS 가입 시 별도 비밀번호 요구 X 의무. E2EE master password 강제 흐름과 충돌 → V4 카카오만. -->
+
+        <div class="login-or-mini">또는 이메일</div>
+
+        <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
+        <button class="btn-primary" id="loginBtn" onclick="handleSendCode()" style="width:100%;">코드 받기 →</button>
+        <div class="login-status" id="loginStatus"></div>
+
+        <!-- 4 PIPA 동의 (compact) -->
+        <div class="login-consents">
+          <label class="login-consent-master">
+            <input type="checkbox" id="loginConsentAll" onchange="_toggleAllLoginConsents(this)">
+            <span><b>전체 동의</b></span>
+          </label>
+          <div class="login-consent-rows">
+            <label><input type="checkbox" id="loginConsentTerms" onchange="_syncAllLoginConsentToggle()"><span>이용약관 · 개인정보처리방침 동의 (필수)</span></label>
+            <label><input type="checkbox" id="loginConsentSensitive" onchange="_syncAllLoginConsentToggle()"><span>민감정보 처리 동의 — 정신건강 대화 (필수, PIPA §23)</span></label>
+            <label><input type="checkbox" id="loginConsentCrossBorder" onchange="_syncAllLoginConsentToggle()"><span>국외 이전 동의 — Anthropic API (미국, PIPA §17)</span></label>
+            <label><input type="checkbox" id="loginConsentAdult" onchange="_syncAllLoginConsentToggle()"><span>만 19세 이상 자기 선언 (필수)</span></label>
+          </div>
+        </div>
       </div>
 
-      <!-- 사용자 명시 2026-05-02: 로그인 화면 단순화 — 카카오 + 이메일 input + '다음' button 만. 동의/데이터 보호 안내는 신규 가입 모달로 이동. -->
-      <div class="email-login-section" id="emailLoginSection">
-        <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
+      <!-- ── divider ── -->
+      <div class="login-or-divider"><span>또는</span></div>
+
+      <!-- ── SECONDARY: Guest card ── -->
+      <div class="login-choice-card login-choice-secondary">
+        <div class="login-choice-title-2">🌱 처음이라면 한 번 둘러봐도 돼</div>
+        <div class="login-choice-sub-2">데이터는 이 기기에만 — 나중에 로그인하면 그대로 이어가.</div>
+        <button id="guestEntryBtn" class="login-guest-btn" onclick="enterGuestMode()">둘러보기 →</button>
       </div>
-      <button class="btn-primary" id="loginBtn" onclick="handleSendCode()" style="margin-top:14px; width:100%;">다음</button>
-      <div class="login-status" id="loginStatus"></div>
+
     </div>
 
     <!-- Step 2: Code -->

@@ -43,13 +43,10 @@ async function loginWithProvider(provider) {
     alert('지원하지 않는 로그인: ' + provider);
     return;
   }
-  // 사용자 명시 2026-05-02: 동의 검증은 OAuth callback 후 신규 사용자 = 비밀번호 설정 모달 안에서 (로그인 화면 X).
-  // 단 loginMethod 만 pending 에 넣어둠 (callback 후 식별 위해).
-  try {
-    localStorage.setItem('soragodong_pending_consent', JSON.stringify({
-      email: '', loginMethod: provider, at: new Date().toISOString()
-    }));
-  } catch {}
+  // 사용자 명시 2026-05-06: 4 PIPA 동의 검증 — 로그인 화면에서 직접 (옛 비밀번호 설정 모달 안 검증 대체).
+  if (typeof _checkLoginConsentsAndSavePending === 'function') {
+    if (!_checkLoginConsentsAndSavePending('', provider)) return;
+  }
   // Supabase OAuth redirect — /auth/v1/authorize?provider=X&redirect_to=Y
   // 사용자 명시 2026-05-02: 카카오 = 이메일만 (PIPA 데이터 최소 수집). Supabase default scope (profile_nickname/profile_image) 제외 — scopes=account_email 명시.
   const redirectTo = window.location.origin;

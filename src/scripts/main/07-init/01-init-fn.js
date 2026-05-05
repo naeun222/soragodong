@@ -22,15 +22,8 @@ async function init() {
   }
   // V4 (v8 묶음 7): Core 2 reload 후 깜빡임 점 갱신 — sessionStorage / state._beachJustUnlocked 체크
   setTimeout(() => { if (typeof _checkCore2JustFinished === 'function') _checkCore2JustFinished(); }, 200);
-  // V4 (v8 묶음 12): Core 1 reload 후 환영 선물 모달 — onbFinish 가 marker stash, init 시점에 표시
-  setTimeout(() => {
-    try {
-      if (sessionStorage.getItem('soragodong_v4_welcome_gift_pending') === '1') {
-        sessionStorage.removeItem('soragodong_v4_welcome_gift_pending');
-        if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal();
-      }
-    } catch {}
-  }, 800);
+  // 사용자 명시 2026-05-06: Core 1 reload 후 환영 선물 모달 자동 트리거 폐기. 마커도 정리.
+  try { sessionStorage.removeItem('soragodong_v4_welcome_gift_pending'); } catch {}
   // V4 (사용자 명시 2026-05-04 — v7 §11 / v8 §11): 4AM cutoff 자동 돌연변이 깨달음 추출 후 다음 진입 안내
   if (state._mutationCutoffExtractedAt) {
     const _atMs = new Date(state._mutationCutoffExtractedAt).getTime();
@@ -89,19 +82,11 @@ async function init() {
   window._initialDataLoading = true;
   const authed = await checkSession();
   if (!authed) {
-    // 사용자 명시 2026-05-05 ultrathink (Phase 1): 세션 X → anonymous 자동 가입 (게스트 모드).
-    // login 화면 스킵하고 바로 chat 가능. 한도 도달 / 사용자가 명시 가입 시 linkIdentity 로 전환.
-    // anonymous 비활성 / 네트워크 X 면 폴백 = 기존 login 화면.
-    const guestResult = (typeof signInAnonymouslyForGuest === 'function')
-      ? await signInAnonymouslyForGuest()
-      : { ok: false, reason: 'fn_missing' };
-    if (!guestResult.ok) {
-      console.warn('[init] 게스트 진입 실패:', guestResult);
-      showLoginScreen();
-      window._initialDataLoading = false;
-      return;
-    }
-    // 게스트 진입 성공 — .app 노출 (login 화면 X)
+    // 사용자 명시 2026-05-06 ultrathink: 자동 anonymous 폐기 → 첫 화면에서 사용자가 '로그인' / '둘러보기' 선택.
+    // 게스트는 명시 button click 으로 entry — 의도 분명 + UX 친근.
+    showLoginScreen();
+    window._initialDataLoading = false;
+    return;
   }
   // Authenticated OR Guest — .app 노출
   document.getElementById('loginScreen').style.display = 'none';

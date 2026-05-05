@@ -199,6 +199,13 @@ async function saveToCloudNow() {
   if (state && state.isGuest) {
     return;
   }
+  // 사용자 보고 2026-05-05 (Phase 1d): Kakao linkIdentity redirect 후 E2EE 셋업 모달 뜨기 전 saveToCloudNow 트리거되면
+  // localStorage 의 게스트 데이터가 평문으로 cloud 업로드됨 → 데이터 노출 위험.
+  // _e2eeSetupNewUser 가 끝까지 성공해서 플래그 제거해야 첫 cloud save 가능.
+  if (localStorage.getItem('soragodong_v4_pending_e2ee_setup') === '1' && !_e2eeMasterKey) {
+    console.log('[saveToCloudNow] E2EE 셋업 대기 중 — cloud 저장 차단 (데이터 보호)');
+    return;
+  }
   // 사용자 보고 2026-04-28: testerMode ON이면 cloud 저장 자체 차단.
   if (state.preferences && state.preferences.testerMode) {
     console.log('[saveToCloudNow] testerMode ON — cloud 저장 차단');
