@@ -108,7 +108,13 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     const patched = await patchResp.json().catch(() => []);
     if (!Array.isArray(patched) || patched.length === 0) {
       // 이미 active 구독 — race 두 번째 호출이 도달했거나, 아직 만료 X. 결제는 성공 처리 (포트원 환불 정책에 맡김).
-      return jsonResponse({ ok: true, already_active: true, message: '이미 활성 구독이 있어. 만료 시점에 다시 결제해줘.' }, 200);
+      // 사용자 보고 2026-05-05 (audit High): 중복 결제 감지 시 환불 안내 명확화 — 사용자가 영수증 보관 + 문의할 수 있도록.
+      return jsonResponse({
+        ok: true,
+        already_active: true,
+        duplicate: true,
+        message: '이미 활성 구독이 있어 (중복 결제 감지됨). 영수증/결제 기록 보관 후 카톡 오픈채팅으로 환불 요청해줘 — 처리해줄게. 만료 시점에 다시 결제 가능.'
+      }, 200);
     }
     return jsonResponse({ ok: true, expires_at: expiresAt, plan, cap_usd: tier.cap_usd });
   } catch (e: any) {

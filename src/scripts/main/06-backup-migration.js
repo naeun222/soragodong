@@ -277,14 +277,17 @@ async function saveToCloudNow() {
   }
 
   // V4: V4 row만 PATCH/POST. V3 row(`me`)는 영원히 안 건드림.
-  const checkResp = await fetch(
+  // 사용자 보고 2026-05-05: Supabase REST 5xx + network throw 1회 자동 재시도 (1.5s).
+  // 이전 = 토스트만 "자동 재시도" 라고 띄우고 실제 재시도 X (거짓 메시지) → 진짜 재시도로 회복.
+  const checkResp = await _fetchWithRetry5xx(
     `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=id&limit=1`,
     { headers: authHeaders() }
   );
+  if (!checkResp.ok) { _handleCloudSyncResponse(checkResp); return; }
   const existing = await checkResp.json();
   if (existing.length > 0) {
     const body = JSON.stringify({ data: dataPayload, updated_at: state.lastSync }, _serializeReplacer);
-    const r = await fetch(
+    const r = await _fetchWithRetry5xx(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
       {
         method: 'PATCH',
@@ -295,7 +298,7 @@ async function saveToCloudNow() {
     _handleCloudSyncResponse(r);
   } else {
     const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload }, _serializeReplacer);
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+    const r = await _fetchWithRetry5xx(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body
@@ -305,6 +308,7 @@ async function saveToCloudNow() {
 }
 
 // 사용자 요청 2026-04-28: cloud sync 응답 status별 사용자 알림 (한 세션 1회)
+// 사용자 보고 2026-05-05: 5xx 는 _fetchWithRetry5xx 가 이미 1회 재시도 후라서 메시지 정확화 — "다음 변경 시 재시도".
 function _handleCloudSyncResponse(r) {
   if (!r || r.ok) {
     window._cloudSyncWarned = false;  // 회복되면 reset
@@ -315,7 +319,7 @@ function _handleCloudSyncResponse(r) {
   if (r.status === 401 || r.status === 403) {
     if (typeof showToast === 'function') showToast('☁ 클라우드 인증 만료 — 새로고침 후 다시 로그인 필요');
   } else if (r.status >= 500) {
-    if (typeof showToast === 'function') showToast('☁ 클라우드 서버 일시 불안정 — 자동 재시도');
+    if (typeof showToast === 'function') showToast('☁ 클라우드 일시 오류 — 로컬엔 안전, 다음 변경 시 자동 재시도');
   } else {
     if (typeof showToast === 'function') showToast(`☁ 클라우드 저장 실패 (${r.status}) — 로컬엔 보관됨`);
   }

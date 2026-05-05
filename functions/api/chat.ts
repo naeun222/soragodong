@@ -245,7 +245,13 @@ export async function onRequestPost(context: {
           const _outputTokens = usageData?.output_tokens || 0;
           if (usageData && _outputTokens > 1) {
             // 사용자 명시 2026-05-02 ultrathink: chargeUsage 헬퍼 — welcome bonus 우선 소진 + overflow USD 차감.
-            await chargeUsage(env, user.id, endpoint, body.model, usageData, waitUntil);
+            // 사용자 보고 2026-05-05 (audit Critical): finally 안 await chargeUsage → stream close 후 워커 lifetime 보장 X → drop risk.
+            // fix = waitUntil 로 명시 위임 + 즉시 finally 종료 (stream 깔끔하게 close).
+            waitUntil(
+              chargeUsage(env, user.id, endpoint, body.model, usageData, waitUntil).catch((e: any) => {
+                console.warn('[chat.ts] chargeUsage 실패:', e);
+              })
+            );
           }
         }
       }

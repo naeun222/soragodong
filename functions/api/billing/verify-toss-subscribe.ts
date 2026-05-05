@@ -16,7 +16,7 @@
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 import { calculateCost, recordUsage } from '../_lib/usage';
-import { TIER_PLANS, type TierKey } from '../_lib/billing';
+import { TIER_PLANS, validateTier, type TierKey } from '../_lib/billing';
 
 const RECEIVER_ACCOUNT = {
   bank: '우리은행',
@@ -36,8 +36,14 @@ export async function onRequestPost(context: { request: Request; env: Env; waitU
   if (!image_base64 || !tier || !user_memo_code) {
     return jsonResponse({ error: 'image_base64 + tier + user_memo_code 필수' }, 400);
   }
-  if (tier !== 'light' && tier !== 'premium') {
-    return jsonResponse({ error: 'tier 는 light 또는 premium 만 허용' }, 400);
+  // 사용자 보고 2026-05-05 (audit P-Critical): early_light 차단 버그 fix.
+  // subscribe.ts 는 validateTier 통해 early_light 지원하는데 verify-toss-subscribe.ts 는 누락 → 얼리 유저가 토스 송금 구독 경로에서 차단됨.
+  if (!TIER_PLANS[tier as TierKey]) {
+    return jsonResponse({ error: 'tier 는 light / premium / early_light 만 허용' }, 400);
+  }
+  const tierValidation = await validateTier(env, user.id, tier);
+  if (!tierValidation.ok) {
+    return jsonResponse({ error: tierValidation.error || 'tier 검증 실패' }, 403);
   }
   const tierPlan = TIER_PLANS[tier as TierKey];
   const expectedKrw = tierPlan.krw;
@@ -51,12 +57,14 @@ export async function onRequestPost(context: { request: Request; env: Env; waitU
   }
 
   // Rate limit (verify-toss-receipt 와 동일 패턴 — 1분 5회 / 24h 10회)
+  // 사용자 보고 2026-05-05 (audit Critical): rate limit 통합 — verify-toss-receipt 와 같은 사용자 vision 호출 합산.
+  // 이전 = payment_type=eq.toss_subscribe 만 카운트 → verify-toss-receipt 와 별도 → 사용자가 양쪽 번갈아 호출 시 총 20회 vision call 비용 폭발.
   try {
     const now = new Date();
     const min1Ago = new Date(now.getTime() - 60_000).toISOString();
     const day1Ago = new Date(now.getTime() - 86400_000).toISOString();
     const recentResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_payments?user_id=eq.${user.id}&payment_type=eq.toss_subscribe&created_at=gte.${day1Ago}&select=created_at`,
+      `${env.SUPABASE_URL}/rest/v1/soragodong_payments?user_id=eq.${user.id}&payment_type=in.(toss_auto_verified,toss_subscribe)&created_at=gte.${day1Ago}&select=created_at`,
       {
         headers: {
           'apikey': env.SUPABASE_SERVICE_ROLE_KEY,

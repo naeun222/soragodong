@@ -39,8 +39,13 @@ async function checkSession() {
         authUserId = user.id;
         return true;
       } else {
-        // Try refresh
-        if (session.refresh_token) {
+        // 사용자 보고 2026-05-05 (audit High): _refreshSessionForApi 와 동일 inflight 가드 공유 — refresh_token rotation race 차단.
+        // 이전 = checkSession 의 refresh 가 별도 fetch → 동시에 다른 fetch interceptor 의 _refreshSessionForApi 와 같은 refresh_token 두 번 사용 → 두 번째 invalid → 강제 로그아웃.
+        if (session.refresh_token && typeof _refreshSessionForApi === 'function') {
+          const refreshed = await _refreshSessionForApi();
+          if (refreshed) return true;
+        } else if (session.refresh_token) {
+          // _refreshSessionForApi 미정의 (init 순서 race) — fallback 기존 직접 fetch
           const refreshResp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
             method: 'POST',
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },

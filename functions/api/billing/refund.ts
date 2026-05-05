@@ -153,5 +153,24 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     await subtractCreditAtomic(env, user.id, refundUsd);
   }
 
+  // 사용자 보고 2026-05-05 (audit High): 구독 환불 시 즉시 만료 처리 추가.
+  // 이전 = subscription_active / expires_at 그대로 → 환불 후 잔여일 동안 무료 사용 가능 (분쟁 risk).
+  // fix: 구독 환불 시 active=false + expires_at=now (Light/Premium/early_light 공통).
+  if (paymentRow.payment_type === 'subscribe' || paymentRow.payment_type === 'toss_subscribe') {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        subscription_active: false,
+        subscription_expires_at: new Date().toISOString()
+      })
+    }).catch(() => {});
+  }
+
   return jsonResponse({ ok: true, refunded_krw: refundAmountKrw, message: '환불 완료. 카드사 정책상 3-7영업일 내 카드 명세서 반영.' });
 }

@@ -63,6 +63,23 @@ async function _authedFetch(url, init) {
   return resp;
 }
 
+// 사용자 보고 2026-05-05: 5xx + network 1회 자동 재시도 (1.5s backoff). saveToCloudNow / 다른 idempotent fetch 에서 사용.
+// 이전 = "자동 재시도" 토스트 띄우면서 실제 재시도 코드 X (거짓 메시지) → 진짜 재시도로 회복.
+async function _fetchWithRetry5xx(url, init) {
+  let resp;
+  try {
+    resp = await fetch(url, init);
+  } catch (e) {
+    await new Promise(r => setTimeout(r, 1500));
+    return fetch(url, init);
+  }
+  if (resp.status >= 500 && resp.status < 600) {
+    await new Promise(r => setTimeout(r, 1500));
+    try { return await fetch(url, init); } catch { return resp; }
+  }
+  return resp;
+}
+
 (function installAnthropicProxyInterceptor() {
   if (typeof window === 'undefined') return;
   if (window._anthropicProxyInstalled) return;
@@ -110,21 +127,37 @@ async function _authedFetch(url, init) {
 })();
 // 사용자 명시 2026-05-01 (agent audit): Phase C 후 'x-api-key' 헤더는 interceptor (line 9750~) 가 즉시 strip.
 // state.apiKey 영구 wipe (마이그레이션 13276) 라 항상 빈 문자열. 헤더 자리 단순화 — 명확성.
+// 사용자 보고 2026-05-05 (audit Low): 'anthropic-dangerous-direct-browser-access' 헤더 제거 — Phase C 이후 직접 브라우저 호출 X (interceptor 가 /api/chat 으로 swap), 백엔드 프록시 경로엔 strip 됨. 코드 혼란 야기 → 제거.
 function _anthropicHeaders(extraHeaders) {
   return Object.assign({
     'Content-Type': 'application/json',
-    'anthropic-version': '2023-06-01',
-    'anthropic-dangerous-direct-browser-access': 'true'
+    'anthropic-version': '2023-06-01'
   }, extraHeaders || {});
 }
+// 사용자 보고 2026-05-05: 5xx 또는 network throw 시 1회 자동 재시도 (1.5s backoff).
+// /api/chat 프록시 cold start / Anthropic 일시 과부하 (overloaded_error) 케이스 user-facing "Anthropic 서버 일시 불안정" 토스트 빈도 ↓.
+// stream 응답이라도 status 5xx 는 stream 시작 전이라 안전하게 재요청 가능. opts._noRetry=true 시 비활성.
 async function callAnthropic(body, options) {
   const opts = options || {};
-  return fetch(ANTHROPIC_API_URL, {
+  const init = {
     method: 'POST',
     headers: _anthropicHeaders(opts.extraHeaders),
     body: typeof body === 'string' ? body : JSON.stringify(body),
     signal: opts.signal
-  });
+  };
+  let resp;
+  try {
+    resp = await fetch(ANTHROPIC_API_URL, init);
+  } catch (e) {
+    if (opts._noRetry) throw e;
+    await new Promise(r => setTimeout(r, 1500));
+    return fetch(ANTHROPIC_API_URL, init);
+  }
+  if (!opts._noRetry && resp.status >= 500 && resp.status < 600) {
+    await new Promise(r => setTimeout(r, 1500));
+    try { return await fetch(ANTHROPIC_API_URL, init); } catch { return resp; }
+  }
+  return resp;
 }
 
 // 사용자 보고 2026-04-30 (Phase C 전수 조사 fix): AI 호출 가능 여부 헬퍼.

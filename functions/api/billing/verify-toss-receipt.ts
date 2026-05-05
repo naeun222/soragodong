@@ -45,8 +45,10 @@ export async function onRequestPost(context: { request: Request; env: Env; waitU
     const now = new Date();
     const min1Ago = new Date(now.getTime() - 60_000).toISOString();
     const day1Ago = new Date(now.getTime() - 86400_000).toISOString();
+    // 사용자 보고 2026-05-05 (audit Critical): rate limit 통합 — verify-toss-subscribe 와 같은 사용자 vision 호출 합산.
+    // 이전 = payment_type=eq.toss_auto_verified 만 카운트 → verify-toss-subscribe (toss_subscribe) 와 별도 → 사용자가 양쪽 번갈아 호출 시 총 20회 vision call 비용 폭발.
     const recentResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_payments?user_id=eq.${user.id}&payment_type=eq.toss_auto_verified&created_at=gte.${day1Ago}&select=created_at`,
+      `${env.SUPABASE_URL}/rest/v1/soragodong_payments?user_id=eq.${user.id}&payment_type=in.(toss_auto_verified,toss_subscribe)&created_at=gte.${day1Ago}&select=created_at`,
       {
         headers: {
           'apikey': env.SUPABASE_SERVICE_ROLE_KEY,

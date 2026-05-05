@@ -20,6 +20,9 @@ async function loadFromCloud() {
   localStorage.setItem(V4_LAST_USER_KEY, authUserId);
 
   setSyncStatus('syncing');
+  // 사용자 보고 2026-05-05 (audit High): loadFromCloud 안에서 saveToCloudNow 가 5곳 (localStorage fallback / apiKey wipe / seedCleaned / V6→V7 / dedupe) 에서 순차 호출되던 race / 중복 저장 fix.
+  // 각 위치는 _needsSaveAfterLoad = true 만 set 하고, 끝에서 1회만 호출.
+  let _needsSaveAfterLoad = false;
   try {
     const resp = await fetch(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&order=updated_at.desc&limit=1`,
@@ -94,7 +97,7 @@ async function loadFromCloud() {
       if (local) {
         state = { ...DEFAULT_STATE, ...JSON.parse(local) };
         console.log('[V4] localStorage fallback 사용');
-        await saveToCloudNow();
+        _needsSaveAfterLoad = true;
       } else {
         console.log('[V4] 빈 V7 state로 시작');
       }
@@ -316,7 +319,7 @@ async function loadFromCloud() {
       state.preferences._apiKeyWiped_2026_04_30 = true;
       if (wiped) {
         console.log('[apiKey] 개인 API 키 영구 제거됨 (Phase C 모델 전환).');
-        try { await saveToCloudNow(); } catch (e) { console.warn('apiKey wipe save:', e); }
+        _needsSaveAfterLoad = true;
       }
     }
 
@@ -386,8 +389,7 @@ async function loadFromCloud() {
     }
     if (seedCleaned) {
       console.log('[seed cleanup] cloud/localStorage에 들어가 있던 시드 데이터 자동 정리됨');
-      // 정리 후 cloud에 즉시 저장 (testerMode false 상태이므로 안전)
-      try { await saveToCloudNow(); } catch (e) { console.warn('seed cleanup save:', e); }
+      _needsSaveAfterLoad = true;
     }
 
     // === V6 → V7 마이그레이션 (V3 데이터 import 등으로 V6 형식이 들어왔을 때만 발동) ===
@@ -395,13 +397,17 @@ async function loadFromCloud() {
       await createV6Backup();
       migrateToV7();
       state.version = 7;
-      await saveToCloudNow();
+      _needsSaveAfterLoad = true;
     }
 
     // === [나 탭 자동 정리] load 시 완전 일치 항목 제거 (마이그레이션) ===
     if (dedupeAllModelExactDuplicates()) {
-      // 변경됐으면 정리된 결과를 클라우드로
-      try { await saveToCloudNow(); } catch(e) { /* 실패해도 다음 saveState에서 됨 */ }
+      _needsSaveAfterLoad = true;
+    }
+
+    // 사용자 보고 2026-05-05 (audit High): load 도중 누적된 변경 사항을 마지막 1회로 cloud sync. 이전엔 5곳 순차 호출 → 누적된 PATCH 가 race risk + Supabase 부하.
+    if (_needsSaveAfterLoad) {
+      try { await saveToCloudNow(); } catch (e) { console.warn('[loadFromCloud] post-load save 실패:', e); }
     }
 
     setSyncStatus('online');
@@ -502,19 +508,27 @@ async function _backupRowFetch(userIdKey, selectFields) {
 }
 
 // PATCH (existingId 있으면) 또는 POST. dataPayload 는 row 의 'data' JSONB 컬럼에 들어갈 값.
+// 사용자 보고 2026-05-05 (audit Medium): .ok 확인 추가 — 4xx/5xx silent drop 방지. 호출부 try/catch 가 진짜 에러 잡게 throw.
 async function _backupRowUpsert(userIdKey, dataPayload, existingId) {
   const headers = { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+  let resp;
   if (existingId) {
-    return fetch(
+    resp = await fetch(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${userIdKey}`,
       { method: 'PATCH', headers, body: JSON.stringify({ data: dataPayload }) }
     );
+  } else {
+    resp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ auth_user_id: authUserId, user_id: userIdKey, data: dataPayload })
+    });
   }
-  return fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ auth_user_id: authUserId, user_id: userIdKey, data: dataPayload })
-  });
+  if (!resp.ok) {
+    const errBody = await resp.text().catch(() => '');
+    throw new Error(`backup upsert ${resp.status}: ${errBody.slice(0, 200)}`);
+  }
+  return resp;
 }
 
 // DELETE — 단일 row 삭제.

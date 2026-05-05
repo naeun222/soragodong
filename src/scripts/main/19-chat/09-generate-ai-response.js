@@ -272,6 +272,11 @@ async function generateAIResponse(modelOverride) {
     renderModelPreview();
 
   } catch (err) {
+    // 사용자 보고 2026-05-05 (audit Medium): _streamRafId 가 catch 시점에 살아있으면 cancel — 안 그러면 에러 메시지 위에 partial RAF flush 가 덮여 깜빡임.
+    if (typeof _streamRafId !== 'undefined' && _streamRafId !== null) {
+      try { cancelAnimationFrame(_streamRafId); } catch {}
+      _streamRafId = null;
+    }
     // 사용자 요청 2026-04-28: 에러 종류별 명확한 메시지 (이전엔 'err.message' 그대로 노출 — 이해 어려움)
     // 사용자 보고 2026-04-30 ultrathink: Phase C 마이그 후 키 모델 폐기 — 401은 session 만료. 메시지 분기.
     const m = (err && err.message) || '';
@@ -287,8 +292,10 @@ async function generateAIResponse(modelOverride) {
       userMsg = '⏳ 잠깐 너무 빨라. 1분 정도 후 다시 시도하거나 Anthropic 대시보드에서 사용량 확인해봐.';
     } else if (/network|failed to fetch|offline/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
       userMsg = '📡 인터넷 연결을 확인해봐.\n\n복구되면 "다시 보내기" 눌러줘.';
-    } else if (/5\d\d/.test(m)) {
-      userMsg = '⚠️ Anthropic 서버 일시 불안정. 잠시 후 다시 보내기 눌러봐.';
+    } else if (/5\d\d/.test(m) || /overloaded/i.test(m) || /api_error/i.test(m)) {
+      // 사용자 보고 2026-05-05: callAnthropic 에 1회 자동 재시도 (1.5s) 추가했지만, 두 번째 시도도 5xx / overloaded 면 여기 도달.
+      // 'Anthropic 서버' → 'AI 서버' (실제로는 백엔드 프록시 / Anthropic / 둘 다 가능 — 정확한 표현).
+      userMsg = '⚠️ AI 서버 일시 과부하. 잠시 후 다시 보내기 눌러봐.';
     } else {
       userMsg = '연결이 안 됐어 😅\n(' + (m || '알 수 없는 오류') + ')\n\n다시 보내기 버튼을 눌러봐.';
     }

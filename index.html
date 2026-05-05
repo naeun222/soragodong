@@ -11138,6 +11138,23 @@ async function _authedFetch(url, init) {
   return resp;
 }
 
+// 사용자 보고 2026-05-05: 5xx + network 1회 자동 재시도 (1.5s backoff). saveToCloudNow / 다른 idempotent fetch 에서 사용.
+// 이전 = "자동 재시도" 토스트 띄우면서 실제 재시도 코드 X (거짓 메시지) → 진짜 재시도로 회복.
+async function _fetchWithRetry5xx(url, init) {
+  let resp;
+  try {
+    resp = await fetch(url, init);
+  } catch (e) {
+    await new Promise(r => setTimeout(r, 1500));
+    return fetch(url, init);
+  }
+  if (resp.status >= 500 && resp.status < 600) {
+    await new Promise(r => setTimeout(r, 1500));
+    try { return await fetch(url, init); } catch { return resp; }
+  }
+  return resp;
+}
+
 (function installAnthropicProxyInterceptor() {
   if (typeof window === 'undefined') return;
   if (window._anthropicProxyInstalled) return;
@@ -11185,21 +11202,37 @@ async function _authedFetch(url, init) {
 })();
 // 사용자 명시 2026-05-01 (agent audit): Phase C 후 'x-api-key' 헤더는 interceptor (line 9750~) 가 즉시 strip.
 // state.apiKey 영구 wipe (마이그레이션 13276) 라 항상 빈 문자열. 헤더 자리 단순화 — 명확성.
+// 사용자 보고 2026-05-05 (audit Low): 'anthropic-dangerous-direct-browser-access' 헤더 제거 — Phase C 이후 직접 브라우저 호출 X (interceptor 가 /api/chat 으로 swap), 백엔드 프록시 경로엔 strip 됨. 코드 혼란 야기 → 제거.
 function _anthropicHeaders(extraHeaders) {
   return Object.assign({
     'Content-Type': 'application/json',
-    'anthropic-version': '2023-06-01',
-    'anthropic-dangerous-direct-browser-access': 'true'
+    'anthropic-version': '2023-06-01'
   }, extraHeaders || {});
 }
+// 사용자 보고 2026-05-05: 5xx 또는 network throw 시 1회 자동 재시도 (1.5s backoff).
+// /api/chat 프록시 cold start / Anthropic 일시 과부하 (overloaded_error) 케이스 user-facing "Anthropic 서버 일시 불안정" 토스트 빈도 ↓.
+// stream 응답이라도 status 5xx 는 stream 시작 전이라 안전하게 재요청 가능. opts._noRetry=true 시 비활성.
 async function callAnthropic(body, options) {
   const opts = options || {};
-  return fetch(ANTHROPIC_API_URL, {
+  const init = {
     method: 'POST',
     headers: _anthropicHeaders(opts.extraHeaders),
     body: typeof body === 'string' ? body : JSON.stringify(body),
     signal: opts.signal
-  });
+  };
+  let resp;
+  try {
+    resp = await fetch(ANTHROPIC_API_URL, init);
+  } catch (e) {
+    if (opts._noRetry) throw e;
+    await new Promise(r => setTimeout(r, 1500));
+    return fetch(ANTHROPIC_API_URL, init);
+  }
+  if (!opts._noRetry && resp.status >= 500 && resp.status < 600) {
+    await new Promise(r => setTimeout(r, 1500));
+    try { return await fetch(ANTHROPIC_API_URL, init); } catch { return resp; }
+  }
+  return resp;
 }
 
 // 사용자 보고 2026-04-30 (Phase C 전수 조사 fix): AI 호출 가능 여부 헬퍼.
@@ -11584,8 +11617,13 @@ async function checkSession() {
         authUserId = user.id;
         return true;
       } else {
-        // Try refresh
-        if (session.refresh_token) {
+        // 사용자 보고 2026-05-05 (audit High): _refreshSessionForApi 와 동일 inflight 가드 공유 — refresh_token rotation race 차단.
+        // 이전 = checkSession 의 refresh 가 별도 fetch → 동시에 다른 fetch interceptor 의 _refreshSessionForApi 와 같은 refresh_token 두 번 사용 → 두 번째 invalid → 강제 로그아웃.
+        if (session.refresh_token && typeof _refreshSessionForApi === 'function') {
+          const refreshed = await _refreshSessionForApi();
+          if (refreshed) return true;
+        } else if (session.refresh_token) {
+          // _refreshSessionForApi 미정의 (init 순서 race) — fallback 기존 직접 fetch
           const refreshResp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
             method: 'POST',
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
@@ -14868,6 +14906,9 @@ async function loadFromCloud() {
   localStorage.setItem(V4_LAST_USER_KEY, authUserId);
 
   setSyncStatus('syncing');
+  // 사용자 보고 2026-05-05 (audit High): loadFromCloud 안에서 saveToCloudNow 가 5곳 (localStorage fallback / apiKey wipe / seedCleaned / V6→V7 / dedupe) 에서 순차 호출되던 race / 중복 저장 fix.
+  // 각 위치는 _needsSaveAfterLoad = true 만 set 하고, 끝에서 1회만 호출.
+  let _needsSaveAfterLoad = false;
   try {
     const resp = await fetch(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&order=updated_at.desc&limit=1`,
@@ -14942,7 +14983,7 @@ async function loadFromCloud() {
       if (local) {
         state = { ...DEFAULT_STATE, ...JSON.parse(local) };
         console.log('[V4] localStorage fallback 사용');
-        await saveToCloudNow();
+        _needsSaveAfterLoad = true;
       } else {
         console.log('[V4] 빈 V7 state로 시작');
       }
@@ -15164,7 +15205,7 @@ async function loadFromCloud() {
       state.preferences._apiKeyWiped_2026_04_30 = true;
       if (wiped) {
         console.log('[apiKey] 개인 API 키 영구 제거됨 (Phase C 모델 전환).');
-        try { await saveToCloudNow(); } catch (e) { console.warn('apiKey wipe save:', e); }
+        _needsSaveAfterLoad = true;
       }
     }
 
@@ -15234,8 +15275,7 @@ async function loadFromCloud() {
     }
     if (seedCleaned) {
       console.log('[seed cleanup] cloud/localStorage에 들어가 있던 시드 데이터 자동 정리됨');
-      // 정리 후 cloud에 즉시 저장 (testerMode false 상태이므로 안전)
-      try { await saveToCloudNow(); } catch (e) { console.warn('seed cleanup save:', e); }
+      _needsSaveAfterLoad = true;
     }
 
     // === V6 → V7 마이그레이션 (V3 데이터 import 등으로 V6 형식이 들어왔을 때만 발동) ===
@@ -15243,13 +15283,17 @@ async function loadFromCloud() {
       await createV6Backup();
       migrateToV7();
       state.version = 7;
-      await saveToCloudNow();
+      _needsSaveAfterLoad = true;
     }
 
     // === [나 탭 자동 정리] load 시 완전 일치 항목 제거 (마이그레이션) ===
     if (dedupeAllModelExactDuplicates()) {
-      // 변경됐으면 정리된 결과를 클라우드로
-      try { await saveToCloudNow(); } catch(e) { /* 실패해도 다음 saveState에서 됨 */ }
+      _needsSaveAfterLoad = true;
+    }
+
+    // 사용자 보고 2026-05-05 (audit High): load 도중 누적된 변경 사항을 마지막 1회로 cloud sync. 이전엔 5곳 순차 호출 → 누적된 PATCH 가 race risk + Supabase 부하.
+    if (_needsSaveAfterLoad) {
+      try { await saveToCloudNow(); } catch (e) { console.warn('[loadFromCloud] post-load save 실패:', e); }
     }
 
     setSyncStatus('online');
@@ -15350,19 +15394,27 @@ async function _backupRowFetch(userIdKey, selectFields) {
 }
 
 // PATCH (existingId 있으면) 또는 POST. dataPayload 는 row 의 'data' JSONB 컬럼에 들어갈 값.
+// 사용자 보고 2026-05-05 (audit Medium): .ok 확인 추가 — 4xx/5xx silent drop 방지. 호출부 try/catch 가 진짜 에러 잡게 throw.
 async function _backupRowUpsert(userIdKey, dataPayload, existingId) {
   const headers = { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+  let resp;
   if (existingId) {
-    return fetch(
+    resp = await fetch(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${userIdKey}`,
       { method: 'PATCH', headers, body: JSON.stringify({ data: dataPayload }) }
     );
+  } else {
+    resp = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ auth_user_id: authUserId, user_id: userIdKey, data: dataPayload })
+    });
   }
-  return fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ auth_user_id: authUserId, user_id: userIdKey, data: dataPayload })
-  });
+  if (!resp.ok) {
+    const errBody = await resp.text().catch(() => '');
+    throw new Error(`backup upsert ${resp.status}: ${errBody.slice(0, 200)}`);
+  }
+  return resp;
 }
 
 // DELETE — 단일 row 삭제.
@@ -15652,14 +15704,17 @@ async function saveToCloudNow() {
   }
 
   // V4: V4 row만 PATCH/POST. V3 row(`me`)는 영원히 안 건드림.
-  const checkResp = await fetch(
+  // 사용자 보고 2026-05-05: Supabase REST 5xx + network throw 1회 자동 재시도 (1.5s).
+  // 이전 = 토스트만 "자동 재시도" 라고 띄우고 실제 재시도 X (거짓 메시지) → 진짜 재시도로 회복.
+  const checkResp = await _fetchWithRetry5xx(
     `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=id&limit=1`,
     { headers: authHeaders() }
   );
+  if (!checkResp.ok) { _handleCloudSyncResponse(checkResp); return; }
   const existing = await checkResp.json();
   if (existing.length > 0) {
     const body = JSON.stringify({ data: dataPayload, updated_at: state.lastSync }, _serializeReplacer);
-    const r = await fetch(
+    const r = await _fetchWithRetry5xx(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
       {
         method: 'PATCH',
@@ -15670,7 +15725,7 @@ async function saveToCloudNow() {
     _handleCloudSyncResponse(r);
   } else {
     const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload }, _serializeReplacer);
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+    const r = await _fetchWithRetry5xx(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body
@@ -15680,6 +15735,7 @@ async function saveToCloudNow() {
 }
 
 // 사용자 요청 2026-04-28: cloud sync 응답 status별 사용자 알림 (한 세션 1회)
+// 사용자 보고 2026-05-05: 5xx 는 _fetchWithRetry5xx 가 이미 1회 재시도 후라서 메시지 정확화 — "다음 변경 시 재시도".
 function _handleCloudSyncResponse(r) {
   if (!r || r.ok) {
     window._cloudSyncWarned = false;  // 회복되면 reset
@@ -15690,7 +15746,7 @@ function _handleCloudSyncResponse(r) {
   if (r.status === 401 || r.status === 403) {
     if (typeof showToast === 'function') showToast('☁ 클라우드 인증 만료 — 새로고침 후 다시 로그인 필요');
   } else if (r.status >= 500) {
-    if (typeof showToast === 'function') showToast('☁ 클라우드 서버 일시 불안정 — 자동 재시도');
+    if (typeof showToast === 'function') showToast('☁ 클라우드 일시 오류 — 로컬엔 안전, 다음 변경 시 자동 재시도');
   } else {
     if (typeof showToast === 'function') showToast(`☁ 클라우드 저장 실패 (${r.status}) — 로컬엔 보관됨`);
   }
@@ -29327,6 +29383,11 @@ async function generateAIResponse(modelOverride) {
     renderModelPreview();
 
   } catch (err) {
+    // 사용자 보고 2026-05-05 (audit Medium): _streamRafId 가 catch 시점에 살아있으면 cancel — 안 그러면 에러 메시지 위에 partial RAF flush 가 덮여 깜빡임.
+    if (typeof _streamRafId !== 'undefined' && _streamRafId !== null) {
+      try { cancelAnimationFrame(_streamRafId); } catch {}
+      _streamRafId = null;
+    }
     // 사용자 요청 2026-04-28: 에러 종류별 명확한 메시지 (이전엔 'err.message' 그대로 노출 — 이해 어려움)
     // 사용자 보고 2026-04-30 ultrathink: Phase C 마이그 후 키 모델 폐기 — 401은 session 만료. 메시지 분기.
     const m = (err && err.message) || '';
@@ -29342,8 +29403,10 @@ async function generateAIResponse(modelOverride) {
       userMsg = '⏳ 잠깐 너무 빨라. 1분 정도 후 다시 시도하거나 Anthropic 대시보드에서 사용량 확인해봐.';
     } else if (/network|failed to fetch|offline/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
       userMsg = '📡 인터넷 연결을 확인해봐.\n\n복구되면 "다시 보내기" 눌러줘.';
-    } else if (/5\d\d/.test(m)) {
-      userMsg = '⚠️ Anthropic 서버 일시 불안정. 잠시 후 다시 보내기 눌러봐.';
+    } else if (/5\d\d/.test(m) || /overloaded/i.test(m) || /api_error/i.test(m)) {
+      // 사용자 보고 2026-05-05: callAnthropic 에 1회 자동 재시도 (1.5s) 추가했지만, 두 번째 시도도 5xx / overloaded 면 여기 도달.
+      // 'Anthropic 서버' → 'AI 서버' (실제로는 백엔드 프록시 / Anthropic / 둘 다 가능 — 정확한 표현).
+      userMsg = '⚠️ AI 서버 일시 과부하. 잠시 후 다시 보내기 눌러봐.';
     } else {
       userMsg = '연결이 안 됐어 😅\n(' + (m || '알 수 없는 오류') + ')\n\n다시 보내기 버튼을 눌러봐.';
     }
