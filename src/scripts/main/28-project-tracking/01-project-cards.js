@@ -13,12 +13,12 @@ function renderProjects() {
   const container = document.getElementById('projectsSection');
   if (!container) return;
   const visible = (state.projects || []).filter(p => p.status !== 'abandoned' && p.target !== undefined);
-  // 사용자 명시 2026-05-02 ultrathink: collapse wrap (default 펼침 — 입력 마찰 ↓).
-  // 사용자 fold 시 hidden — 본인 통제. 헤더 + 추가 button 보존 (펼침 X 도 click 가능 stopPropagation).
-  let html = `<details class="project-section" open>
+  // 사용자 명시 2026-05-06 ultrathink: default 접힘 + 헤더 작은 + 아이콘 (Notion 패턴). 5/2 default open 결정 번복.
+  // 추가 button 은 summary 안에서 stopPropagation — 클릭이 details 토글 트리거 X.
+  let html = `<details class="project-section">
     <summary class="project-section-header">
       <span class="project-section-title">추적 항목${visible.length > 0 ? ` <span style="font-size:11px; color:var(--text-soft); font-weight:500; margin-left:4px;">(${visible.length})</span>` : ''}</span>
-      <button class="project-add-btn" onclick="event.preventDefault(); event.stopPropagation(); addNewTracker()">+ 추가</button>
+      <button class="project-add-icon" onclick="event.preventDefault(); event.stopPropagation(); addNewTracker()" aria-label="추적 항목 추가" title="추적 항목 추가">+</button>
     </summary>
     <div class="project-section-body">`;
   if (visible.length === 0) {

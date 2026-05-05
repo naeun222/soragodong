@@ -10,7 +10,8 @@
 // v6 (2026-05-06 사용자 보고): 모바일 SW 가 /startlite 옛 broken HTML/이미지 캐시 stuck → cache name 올려서 옛 캐시 강제 invalidate.
 // v7 (2026-05-06 사용자 보고: PC OK / 모바일만 사진 X): jsDelivr → same-origin 회귀 + 모바일 SW 가 옛 catch-all rewrite 결과 (HTML 을 PNG 로 캐싱) stuck 가능성 → 또 한번 강제 invalidate.
 // v8 (2026-05-06 사용자 보고): 로그인 화면에 옛 이메일/코드 받기 input 칸 stuck — src/빌드 둘 다 이미 제거됐는데 SW 가 옛 index.html cache-first 로 들고 있음. cache name 올려서 강제 invalidate.
-const CACHE_NAME = 'soragodong-v4-cache-v8';
+// v9 (2026-05-06 사용자 보고): 실행 탭 추적 항목 헤더 버튼 + collapse 변경. PWA 옛 HTML stale-while-revalidate stuck 회피용 강제 invalidate.
+const CACHE_NAME = 'soragodong-v4-cache-v9';
 const PRECACHE_URLS = [
   './',
   './index.html',

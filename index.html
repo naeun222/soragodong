@@ -10251,13 +10251,22 @@
     font-size: 13px; font-weight: 600; color: var(--accent);
     display: flex; align-items: center; gap: 6px;
   }
-  .project-add-btn {
-    font-size: 11px; color: var(--accent); background: var(--accent-dim);
-    border: 1px solid rgba(201,169,110,0.3);
-    padding: 6px 12px; border-radius: 14px; cursor: pointer;
-    font-family: inherit; min-height: 32px;
+  /* 사용자 명시 2026-05-06 ultrathink: pill → ghost 28px + 아이콘 (Notion/Linear 패턴). */
+  .project-add-icon {
+    width: 28px; height: 28px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    color: var(--text-soft);
+    font-size: 16px; line-height: 1;
+    font-family: inherit;
+    cursor: pointer;
+    margin-right: 6px;
+    transition: background 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out, transform 80ms ease-out;
   }
-  .project-add-btn:active { transform: scale(0.96); background: rgba(201,169,110,0.25); }
+  .project-add-icon:hover { background: var(--accent-dim); color: var(--accent); border-color: rgba(201,169,110,0.4); }
+  .project-add-icon:active { transform: scale(0.94); }
   .project-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
@@ -41249,12 +41258,12 @@ function renderProjects() {
   const container = document.getElementById('projectsSection');
   if (!container) return;
   const visible = (state.projects || []).filter(p => p.status !== 'abandoned' && p.target !== undefined);
-  // 사용자 명시 2026-05-02 ultrathink: collapse wrap (default 펼침 — 입력 마찰 ↓).
-  // 사용자 fold 시 hidden — 본인 통제. 헤더 + 추가 button 보존 (펼침 X 도 click 가능 stopPropagation).
-  let html = `<details class="project-section" open>
+  // 사용자 명시 2026-05-06 ultrathink: default 접힘 + 헤더 작은 + 아이콘 (Notion 패턴). 5/2 default open 결정 번복.
+  // 추가 button 은 summary 안에서 stopPropagation — 클릭이 details 토글 트리거 X.
+  let html = `<details class="project-section">
     <summary class="project-section-header">
       <span class="project-section-title">추적 항목${visible.length > 0 ? ` <span style="font-size:11px; color:var(--text-soft); font-weight:500; margin-left:4px;">(${visible.length})</span>` : ''}</span>
-      <button class="project-add-btn" onclick="event.preventDefault(); event.stopPropagation(); addNewTracker()">+ 추가</button>
+      <button class="project-add-icon" onclick="event.preventDefault(); event.stopPropagation(); addNewTracker()" aria-label="추적 항목 추가" title="추적 항목 추가">+</button>
     </summary>
     <div class="project-section-body">`;
   if (visible.length === 0) {
@@ -48390,7 +48399,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.175-error-auto-report-resend';
+const APP_VERSION = 'v4.0.176-trackers-collapse-icon-btn';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
