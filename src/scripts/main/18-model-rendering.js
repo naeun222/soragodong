@@ -104,10 +104,10 @@ function _renderGuestNudgeBanner() {
   if (!state.isGuest || !state._guestAutoExtracted || state._guestNudgeDismissed) return '';
   return `<div class="guest-nudge-banner">
     <button class="guest-nudge-close" onclick="_dismissGuestNudge()" aria-label="닫기">✕</button>
-    <div class="guest-nudge-icon">✦</div>
-    <div class="guest-nudge-title">너에 대해 알아낸 거 — 더 깊게 보고 싶어?</div>
-    <div class="guest-nudge-sub">이 분석 영구 저장 + 모든 기기에서 이어보기 + '더 알아보기' 4단 응답 풀 활용. <b style="color:var(--accent2);">첫 달 무료</b>.</div>
-    <button class="guest-nudge-cta" onclick="showGuestConversionModal({reason:'manual'})">가입하고 이어 쓰기 →</button>
+    <div class="guest-nudge-icon">🔒</div>
+    <div class="guest-nudge-title">데이터 안 잃어버리려면</div>
+    <div class="guest-nudge-sub">이 기기 정리되면 다 사라져. 종단간 암호화 로그인 하면 영구 저장 + 아무도 못 봐 (개발자 포함).</div>
+    <button class="guest-nudge-cta" onclick="showGuestConversionModal({reason:'manual'})">로그인 →</button>
   </div>`;
 }
 

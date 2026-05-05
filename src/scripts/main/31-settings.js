@@ -121,13 +121,13 @@ async function _doRefreshBillingStatus(manual) {
     status.textContent = '로그인 필요';
     return;
   }
-  // Phase 1e: 게스트 사용자 — 가입 유도 카드 (수치/한도 노출 X, 후킹 톤).
+  // Phase 1e: 게스트 사용자 — 가입 유도 카드 (수치/한도 노출 X, 데이터 안전 + E2EE 톤).
   if (state && state.isGuest) {
     status.innerHTML = `
-      <div><b>🌱 게스트 모드</b> <span style="color:var(--text-soft); font-size:11px;">— 한 번 써보는 중</span></div>
-      <div style="font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.7;">데이터는 이 기기에만 저장돼. 브라우저 정리하면 사라져.</div>
-      <button class="btn-primary" onclick="showGuestConversionModal({reason:'manual'})" style="margin-top:12px; width:100%; padding:11px; font-size:13px; font-weight:600;">✦ 가입하고 이어 쓰기 (첫 달 무료)</button>
-      <div style="font-size:10.5px; color:var(--text-soft); margin-top:8px; line-height:1.6;">대화 + 분석 그대로 이어가. 모든 기기 동기화. 모든 분석 풀.</div>
+      <div><b>🌱 게스트 모드</b></div>
+      <div style="font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.7;">데이터 이 기기에만. 브라우저 정리되면 사라져.</div>
+      <button class="btn-primary" onclick="showGuestConversionModal({reason:'manual'})" style="margin-top:12px; width:100%; padding:11px; font-size:13px; font-weight:600;">🔒 종단간 암호화 로그인</button>
+      <div style="font-size:10.5px; color:var(--text-soft); margin-top:8px; line-height:1.6;">데이터 안 잃어버리려면 + 아무도 못 보게 하려면 (개발자 포함).</div>
     `;
     return;
   }

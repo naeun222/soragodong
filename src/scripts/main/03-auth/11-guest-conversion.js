@@ -34,11 +34,11 @@ function _renderGuestConvModal(step, ctx) {
 
   if (step === 'email') {
     const reasonText = (ctx && ctx.reason === 'limit')
-      ? `<div style="background:rgba(212,167,106,0.08); border-left:3px solid var(--accent); padding:12px 14px; border-radius:0 8px 8px 0; margin-bottom:18px; font-size:13px; color:var(--text); line-height:1.7;">잠깐 — 게스트 한도 다 썼어. 데이터는 이 기기에만 저장돼 있고, <b>가입하면 첫 달 무료 + 모든 기기 동기화 + 모든 분석 풀</b>로 풀려.</div>`
+      ? `<div style="background:rgba(212,167,106,0.08); border-left:3px solid var(--accent); padding:12px 14px; border-radius:0 8px 8px 0; margin-bottom:18px; font-size:13px; color:var(--text); line-height:1.7;">잠깐 — 게스트 한도 다 썼어.</div>`
       : '';
     card.innerHTML = `
-      <div style="font-family:'Gowun Batang',serif; font-size:20px; color:var(--accent); margin-bottom:6px;">소라고동에 가입 ✦</div>
-      <div style="font-size:12px; color:var(--text-soft); margin-bottom:18px; line-height:1.6;">개발자 (혼자 만들고 있어 — 중고 맥북도 못 사서 iOS 앱 못 만드는 중🐚) 후원해주는 의미. 첫 달 무료, 만료 후 \\u003c원하면\\u003e 결제.</div>
+      <div style="font-family:'Gowun Batang',serif; font-size:20px; color:var(--accent); margin-bottom:6px;">🔒 종단간 암호화 로그인</div>
+      <div style="font-size:12px; color:var(--text-soft); margin-bottom:18px; line-height:1.7;">데이터 안 잃어버리려면 + 아무도 못 보게 하려면 (개발자도 포함) 로그인 필요.</div>
       ${reasonText}
       <input type="email" id="guestConvEmail" placeholder="이메일" style="width:100%; padding:12px 14px; border-radius:10px; background:var(--surface2); border:1px solid var(--border-strong); color:var(--text); font-size:14px; margin-bottom:14px;">
 
@@ -64,6 +64,7 @@ function _renderGuestConvModal(step, ctx) {
         <button onclick="_closeGuestConvModal()" style="flex:1; padding:11px; background:transparent; border:1px solid var(--border-strong); color:var(--text-dim); border-radius:10px; cursor:pointer; font-size:13px;">나중에</button>
         <button onclick="_guestConvSendOtp()" class="btn-primary" style="flex:2; padding:11px; font-size:13px; font-weight:600;">인증 코드 받기 →</button>
       </div>
+      <div style="font-size:10.5px; color:var(--text-soft); margin-top:14px; line-height:1.6; text-align:center;">로그인 후 ~30일 무료. 만료 후 원하면 직접 light/premium.</div>
     `;
   } else if (step === 'otp') {
     card.innerHTML = `
@@ -97,9 +98,9 @@ function _renderGuestConvModal(step, ctx) {
   } else if (step === 'done') {
     card.innerHTML = `
       <div style="text-align:center; padding:20px 12px;">
-        <div style="font-size:36px; margin-bottom:14px;">✦</div>
-        <div style="font-family:'Gowun Batang',serif; font-size:20px; color:var(--accent); margin-bottom:10px;">가입 완료</div>
-        <div style="font-size:13px; color:var(--text); line-height:1.8; margin-bottom:18px;">기존 대화 + 분석 그대로 이어가.<br>첫 달 무료 (\\$4 cap) 시작 ✦</div>
+        <div style="font-size:36px; margin-bottom:14px;">🔒</div>
+        <div style="font-family:'Gowun Batang',serif; font-size:20px; color:var(--accent); margin-bottom:10px;">암호화 완료</div>
+        <div style="font-size:13px; color:var(--text); line-height:1.8; margin-bottom:18px;">이제 데이터는 너만 풀 수 있어.<br>기존 대화 + 분석 그대로 이어가.</div>
         <button onclick="_closeGuestConvModal()" class="btn-primary" style="width:100%; padding:12px; font-size:14px; font-weight:600;">계속하기</button>
       </div>
     `;
@@ -255,7 +256,7 @@ async function _guestConvSetupE2EE() {
       await saveToCloudNow();
     }
     _renderGuestConvModal('done');
-    if (typeof showToast === 'function') showToast('✨ 가입 완료 — 첫 달 무료 시작');
+    if (typeof showToast === 'function') showToast('🔒 암호화 완료 — 데이터 안전');
   } catch (e) {
     console.error('[guest conv] e2ee setup fail:', e);
     alert('암호화 셋업 실패: ' + (e?.message || e));
