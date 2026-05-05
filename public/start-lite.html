@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>소라고동 — 사적인 얘기 할 수 있는 AI</title>
+<meta name="description" content="사적인 얘기 할 수 있는 AI, 없을까? 지금까지 없었지. 그래서 만들었어.">
+<meta name="theme-color" content="#0f0e17">
+
+<!-- Google Analytics 4 — TODO: 'G-XXXXXXXXXX' 를 실제 GA4 Measurement ID 로 교체 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX', { send_page_view: true });
+</script>
+
+<!-- OG (인스타 / 스레드 / X / 카카오톡 공유 — 썸네일이 첫 인상) -->
+<meta property="og:title" content="사적인 얘기 할 수 있는 AI, 없을까?">
+<meta property="og:description" content="지금까지 없었지. 그래서 만들었어.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://soragodong.com/start-lite/">
+<meta property="og:image" content="https://soragodong.com/godongicon.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1826;
+    --accent: #c9a96e;
+    --accent2: #e8c99a;
+    --purple: #8b7ec4;
+    --text: #ede8f5;
+    --text-dim: #9d9aad;
+    --text-soft: #7b7a8e;
+    --border: rgba(255,255,255,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    min-height: 100vh;
+    /* Sticky CTA 영역 확보 */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* === Atmospheric background === */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 18% 15%, rgba(139, 126, 196, 0.22) 0%, transparent 50%),
+      radial-gradient(ellipse at 82% 85%, rgba(201, 169, 110, 0.16) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(139, 126, 196, 0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 22px;
+  }
+
+  /* === Top minimal header === */
+  .top-bar {
+    position: relative;
+    z-index: 5;
+    padding: 16px 22px 0;
+    text-align: center;
+  }
+  .top-bar .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    opacity: 0;
+    animation: fadeIn 0.5s ease 0.1s forwards;
+  }
+  .top-bar .brand .shell { font-size: 16px; }
+
+  /* === HERO === */
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: calc(100vh - 110px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 24px 22px 100px;
+  }
+
+  .hero-headline {
+    font-family: 'Gowun Batang', serif;
+    font-size: 36px;
+    line-height: 1.32;
+    color: var(--text);
+    margin-bottom: 14px;
+    letter-spacing: -0.015em;
+    opacity: 0;
+    animation: fadeUp 0.7s ease 0.25s forwards;
+  }
+  .hero-headline .accent { color: var(--accent); }
+  .hero-headline .strike {
+    color: var(--text-soft);
+    text-decoration: line-through;
+    text-decoration-color: rgba(157, 154, 173, 0.4);
+    font-weight: 400;
+  }
+
+  .hero-sub {
+    font-size: 15.5px;
+    line-height: 1.7;
+    color: var(--text-dim);
+    margin: 0 auto 36px;
+    max-width: 360px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease 0.45s forwards;
+  }
+  .hero-sub .em { color: var(--accent2); font-weight: 500; }
+
+  /* === Phone duo (chat + about) — visual hook === */
+  .phone-duo {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+    height: 380px;
+    margin: 0 auto 38px;
+    opacity: 0;
+    animation: fadeUp 0.9s ease 0.65s forwards;
+  }
+
+  .phone {
+    position: absolute;
+    border-radius: 28px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: var(--bg);
+    box-shadow:
+      0 28px 60px -22px rgba(0,0,0,0.65),
+      0 0 0 5px rgba(20,18,30,0.55);
+  }
+  .phone img {
+    width: 100%;
+    display: block;
+    margin-top: -13%; /* iPhone status bar 자르기 */
+  }
+
+  /* Front phone — chat */
+  .phone.phone-front {
+    width: 200px;
+    left: 8%;
+    top: 0;
+    transform: rotate(-6deg);
+    z-index: 2;
+    animation: floatA 7s ease-in-out infinite;
+  }
+  /* Back phone — about (peeking) */
+  .phone.phone-back {
+    width: 180px;
+    right: 4%;
+    top: 30px;
+    transform: rotate(8deg);
+    z-index: 1;
+    opacity: 0.92;
+    animation: floatB 8s ease-in-out infinite;
+  }
+
+  @keyframes floatA {
+    0%, 100% { transform: rotate(-6deg) translateY(0); }
+    50% { transform: rotate(-5deg) translateY(-7px); }
+  }
+  @keyframes floatB {
+    0%, 100% { transform: rotate(8deg) translateY(0); }
+    50% { transform: rotate(9deg) translateY(6px); }
+  }
+
+  /* === Hero "왜?" one-liner — chat snippet 의 시각적 hook 을 verbal 로 봉합 === */
+  .hero-why {
+    font-size: 13.5px;
+    color: var(--text-dim);
+    text-align: center;
+    margin: -8px auto 26px;
+    max-width: 340px;
+    line-height: 1.65;
+    letter-spacing: 0.01em;
+    opacity: 0;
+    animation: fadeIn 0.7s ease 0.95s forwards;
+    word-break: keep-all;
+  }
+  .hero-why strong {
+    color: var(--accent2);
+    font-weight: 500;
+  }
+  @media (max-width: 380px) {
+    .hero-why { font-size: 12.5px; max-width: 300px; }
+  }
+
+  /* === Primary CTA === */
+  .cta-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 36px;
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    font-family: inherit;
+    font-size: 15.5px;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 36px;
+    letter-spacing: 0.01em;
+    box-shadow:
+      0 10px 28px rgba(201, 169, 110, 0.32),
+      0 0 0 0 rgba(201, 169, 110, 0.4);
+    transition: transform 0.2s, box-shadow 0.3s;
+    opacity: 0;
+    animation: fadeUp 0.7s ease 0.85s forwards, pulseGlow 3s ease-in-out 1.5s infinite;
+    position: relative;
+  }
+  .cta-primary:hover, .cta-primary:active {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 36px rgba(201, 169, 110, 0.42);
+  }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 10px 28px rgba(201, 169, 110, 0.32), 0 0 0 0 rgba(201, 169, 110, 0); }
+    50%      { box-shadow: 0 10px 28px rgba(201, 169, 110, 0.32), 0 0 0 12px rgba(201, 169, 110, 0); }
+  }
+
+  /* CTA microcopy — 무료 + 베타 솔직함 (trust-micro 자리 대체) */
+  .cta-microcopy {
+    margin-top: 16px;
+    text-align: center;
+    max-width: 380px;
+    margin-left: auto;
+    margin-right: auto;
+    opacity: 0;
+    animation: fadeIn 0.7s ease 1.1s forwards;
+  }
+  .cta-microcopy .cta-mc-main {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 4px;
+    letter-spacing: 0.01em;
+    word-break: keep-all;
+  }
+  .cta-microcopy .cta-mc-main strong {
+    color: var(--accent2);
+    font-weight: 500;
+  }
+  .cta-microcopy .cta-mc-sub {
+    font-size: 11px;
+    color: var(--text-soft);
+    line-height: 1.55;
+    letter-spacing: 0.02em;
+    opacity: 0.85;
+    word-break: keep-all;
+  }
+
+  /* (legacy) Tiny trust line under CTA — 자리는 cta-microcopy 가 대체했지만 dormant 유지 */
+  .trust-micro {
+    margin-top: 16px;
+    font-size: 11.5px;
+    color: var(--text-soft);
+    letter-spacing: 0.04em;
+    opacity: 0;
+    animation: fadeIn 0.6s ease 1.1s forwards;
+  }
+  .trust-micro .lock { color: var(--accent2); margin-right: 4px; }
+  .trust-micro .sep { margin: 0 7px; opacity: 0.5; }
+
+  /* Scroll cue */
+  .scroll-cue {
+    margin-top: 36px;
+    font-size: 11px;
+    color: var(--text-soft);
+    letter-spacing: 0.18em;
+    opacity: 0;
+    animation: fadeIn 0.6s ease 1.3s forwards, bounceFade 2.4s ease 1.9s infinite;
+  }
+  @keyframes bounceFade {
+    0%, 100% { opacity: 0.4; transform: translateY(0); }
+    50%      { opacity: 0.85; transform: translateY(5px); }
+  }
+
+  /* === PROOF section === */
+  .proof {
+    position: relative;
+    z-index: 1;
+    padding: 60px 22px 40px;
+    text-align: center;
+  }
+  .proof-label {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+  .proof-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px;
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 30px;
+    letter-spacing: -0.005em;
+  }
+  .proof-title .accent { color: var(--accent); }
+
+  /* 3-screen scroller */
+  .proof-screens {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 4px 22px 16px;
+    margin: 0 -22px 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .proof-screens::-webkit-scrollbar { display: none; }
+  .proof-screen {
+    flex: 0 0 200px;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: var(--bg);
+    box-shadow: 0 22px 48px -18px rgba(0,0,0,0.55), 0 0 0 4px rgba(20,18,30,0.5);
+    scroll-snap-align: center;
+  }
+  .proof-screen img {
+    width: 100%;
+    display: block;
+    margin-top: -13%;
+  }
+  .proof-cap {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-soft);
+    letter-spacing: 0.16em;
+    text-align: center;
+  }
+
+  /* Trust block — "왜 진짜 안 새냐고?" 카드 */
+  .trust-block {
+    margin: 36px auto 0;
+    max-width: 380px;
+    padding: 22px 22px 18px;
+    background: linear-gradient(135deg, rgba(139, 126, 196, 0.08), rgba(201, 169, 110, 0.04));
+    border: 1px solid rgba(139, 126, 196, 0.25);
+    border-radius: 16px;
+    text-align: left;
+  }
+  .trust-block-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 16px;
+    color: var(--accent);
+    margin-bottom: 14px;
+    letter-spacing: 0.01em;
+  }
+  .trust-block-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .trust-block-list li {
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text-dim);
+    padding-left: 18px;
+    position: relative;
+    word-break: keep-all;
+  }
+  .trust-block-list li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .trust-block-list li strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* Testimonial pull-quote */
+  .pq {
+    margin: 36px auto 0;
+    max-width: 380px;
+    padding: 22px 22px 18px;
+    background: linear-gradient(135deg, rgba(201,169,110,0.08), rgba(139,126,196,0.04));
+    border-left: 3px solid var(--accent);
+    border-radius: 0 16px 16px 0;
+    text-align: left;
+  }
+  .pq-text {
+    font-family: 'Gowun Batang', serif;
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .pq-attrib {
+    font-size: 12px;
+    color: var(--text-soft);
+    letter-spacing: 0.02em;
+  }
+
+  /* Secondary link */
+  .deep-link {
+    display: inline-block;
+    margin-top: 36px;
+    font-size: 13px;
+    color: var(--text-soft);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    border-bottom: 1px dashed rgba(157, 154, 173, 0.3);
+    padding-bottom: 2px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .deep-link:hover {
+    color: var(--accent);
+    border-color: rgba(201, 169, 110, 0.5);
+  }
+
+  /* === STICKY bottom CTA — mobile (인스타 viewer 가 항상 1탭 거리에) === */
+  .sticky-cta {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 50;
+    padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, transparent, rgba(15,14,23,0.92) 28%, rgba(15,14,23,0.96) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    text-align: center;
+    transform: translateY(120%);
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sticky-cta.in {
+    transform: translateY(0);
+  }
+  .sticky-cta a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 32px;
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 30px;
+    letter-spacing: 0.01em;
+    box-shadow: 0 8px 24px rgba(201, 169, 110, 0.32);
+  }
+
+  /* === Animations === */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* === Responsive — phone-first; tighter on small === */
+  @media (max-width: 380px) {
+    .hero-headline { font-size: 32px; }
+    .hero-sub { font-size: 14.5px; margin-bottom: 30px; }
+    .phone-duo { max-width: 280px; height: 340px; margin-bottom: 30px; }
+    .phone.phone-front { width: 180px; }
+    .phone.phone-back { width: 160px; }
+    .cta-primary { padding: 16px 30px; font-size: 14.5px; }
+    .proof-title { font-size: 20px; }
+    .proof-screen { flex: 0 0 180px; }
+    .pq-text { font-size: 16.5px; }
+  }
+  @media (max-width: 340px) {
+    .hero-headline { font-size: 28px; }
+    .phone-duo { max-width: 260px; height: 320px; }
+    .phone.phone-front { width: 165px; }
+    .phone.phone-back { width: 145px; }
+  }
+
+  /* Reduce motion */
+  @media (prefers-reduced-motion: reduce) {
+    .phone.phone-front, .phone.phone-back { animation: none; }
+    .cta-primary { animation: fadeUp 0.5s ease 0.85s forwards; }
+    .scroll-cue { animation: fadeIn 0.5s ease 1.3s forwards; }
+  }
+
+  /* === Editorial Hook (Hero V3) — phone-duo 대체. 잡지 한 컷처럼 === */
+  .hook {
+    position: relative;
+    background:
+      radial-gradient(ellipse at top, rgba(201, 169, 110, 0.07) 0%, transparent 60%),
+      linear-gradient(180deg, rgba(26, 24, 38, 0.78) 0%, rgba(15, 14, 23, 0.92) 100%);
+    border: 1px solid rgba(201, 169, 110, 0.18);
+    border-radius: 26px;
+    padding: 30px 24px 24px;
+    margin: 0 auto 36px;
+    max-width: 420px;
+    width: 100%;
+    text-align: left;
+    box-shadow:
+      0 40px 70px -25px rgba(0, 0, 0, 0.55),
+      0 0 60px rgba(201, 169, 110, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    opacity: 0;
+    animation: fadeUp 0.85s ease 0.6s forwards;
+  }
+  .hook::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 36px; right: 36px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(201, 169, 110, 0.5), transparent);
+  }
+  .hook-label {
+    font-size: 10.5px;
+    color: var(--accent);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 22px;
+    font-weight: 600;
+    opacity: 0.9;
+  }
+  .hook-user {
+    font-family: 'Gowun Batang', serif;
+    font-size: 21px;
+    line-height: 1.55;
+    color: var(--text);
+    margin-bottom: 6px;
+    padding-left: 16px;
+    border-left: 3px solid rgba(201, 169, 110, 0.55);
+    word-break: keep-all;
+    letter-spacing: -0.005em;
+  }
+  .hook-attrib-user {
+    font-size: 11.5px;
+    color: var(--text-soft);
+    text-align: right;
+    margin-bottom: 20px;
+    letter-spacing: 0.06em;
+    font-style: italic;
+  }
+  .hook-divider {
+    text-align: center;
+    margin: 0 auto 20px;
+    width: 36px;
+    height: 36px;
+    line-height: 34px;
+    border: 1px solid rgba(201, 169, 110, 0.32);
+    border-radius: 50%;
+    background: rgba(201, 169, 110, 0.05);
+    color: var(--accent);
+    font-size: 13px;
+    opacity: 0.75;
+  }
+  .hook-shell {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 15.5px;
+    line-height: 1.9;
+    color: var(--text);
+    word-break: keep-all;
+  }
+  .hook-shell p { margin-bottom: 11px; }
+  .hook-shell p:last-of-type { margin-bottom: 0; }
+  .hook-pop {
+    display: inline-block;
+    padding: 4px 12px;
+    margin: 0 3px;
+    background: linear-gradient(135deg, rgba(201, 169, 110, 0.30), rgba(201, 169, 110, 0.14));
+    border: 1px solid rgba(201, 169, 110, 0.55);
+    border-radius: 12px;
+    color: var(--accent2);
+    font-weight: 600;
+    font-size: 0.92em;
+    letter-spacing: 0.01em;
+    box-shadow: 0 0 24px rgba(201, 169, 110, 0.18), 0 2px 6px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+    position: relative;
+    top: -1.5px;
+  }
+  .hook-attrib-shell {
+    font-size: 12px;
+    color: var(--accent);
+    text-align: right;
+    margin-top: 16px;
+    letter-spacing: 0.06em;
+    font-style: italic;
+  }
+  .hook-attrib-shell .shell-icon { font-style: normal; margin-left: 2px; }
+
+  @media (max-width: 380px) {
+    .hook { padding: 26px 18px 20px; border-radius: 22px; }
+    .hook-user { font-size: 18px; padding-left: 13px; }
+    .hook-shell { font-size: 14px; line-height: 1.85; }
+    .hook-pop { padding: 3px 10px; }
+    .hook-divider { width: 32px; height: 32px; line-height: 30px; font-size: 12px; }
+  }
+  @media (max-width: 340px) {
+    .hook { padding: 22px 16px 18px; }
+    .hook-user { font-size: 16.5px; }
+    .hook-shell { font-size: 13px; }
+  }
+
+  /* === Chat snippet (Hero V4) — chat-bubble UI, 강화된 presented 디자인 === */
+  .chat-snippet {
+    background:
+      radial-gradient(ellipse at top, rgba(201, 169, 110, 0.06) 0%, transparent 60%),
+      linear-gradient(180deg, rgba(26, 24, 38, 0.78), rgba(15, 14, 23, 0.92));
+    border: 1px solid rgba(201, 169, 110, 0.18);
+    border-radius: 24px;
+    padding: 18px 16px 18px;
+    margin: 0 auto 32px;
+    max-width: 420px;
+    width: 100%;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow:
+      0 30px 60px -25px rgba(0, 0, 0, 0.5),
+      0 0 50px rgba(201, 169, 110, 0.07);
+    text-align: left;
+    opacity: 0;
+    animation: fadeUp 0.85s ease 0.6s forwards;
+    position: relative;
+  }
+  .chat-snippet::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 30px; right: 30px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(201, 169, 110, 0.45), transparent);
+  }
+  .chat-snippet .chat-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .chat-snippet .chat-header .ch-shell {
+    font-size: 17px;
+    filter: drop-shadow(0 1px 4px rgba(201, 169, 110, 0.4));
+  }
+  .chat-snippet .chat-header .ch-name {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14px;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    flex: 1;
+  }
+  .chat-snippet .chat-header .ch-dot {
+    width: 7px;
+    height: 7px;
+    background: #4ade80;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.55);
+  }
+  .chat-snippet .chat-row {
+    display: flex;
+    margin-bottom: 6px;
+    align-items: flex-end;
+  }
+  .chat-snippet .chat-row.me { justify-content: flex-end; }
+  .chat-snippet .chat-row.shell { justify-content: flex-start; }
+  .chat-snippet .chat-row.shell + .chat-row.shell { margin-top: -2px; }
+  .chat-snippet .chat-row:last-child { margin-bottom: 2px; }
+  .chat-snippet .bubble {
+    max-width: 88%;
+    padding: 11px 15px;
+    border-radius: 18px;
+    font-size: 14.5px;
+    line-height: 1.65;
+    word-break: keep-all;
+  }
+  .chat-snippet .bubble.me {
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    font-weight: 500;
+    border-bottom-right-radius: 6px;
+    box-shadow: 0 4px 16px rgba(201, 169, 110, 0.22);
+  }
+  .chat-snippet .bubble.shell {
+    background: rgba(15, 14, 23, 0.9);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 6px;
+  }
+  .chat-snippet .bubble.shell strong {
+    color: var(--accent2);
+    font-weight: 600;
+  }
+  .chat-snippet .chat-header .ch-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    filter: drop-shadow(0 2px 6px rgba(201, 169, 110, 0.35));
+  }
+  .footer-brand .footer-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+
+  /* === Trust bar — sticky top (start.html 과 동일) === */
+  .trust-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(15, 14, 23, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    padding: 11px 16px;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    letter-spacing: 0.01em;
+    line-height: 1.5;
+  }
+  .trust-bar .lock { color: var(--accent2); margin-right: 5px; }
+  .trust-bar .sep { margin: 0 7px; opacity: 0.4; }
+  .trust-bar b { color: var(--text); font-weight: 500; }
+  @media (max-width: 380px) {
+    .trust-bar { font-size: 11px; padding: 10px 14px; }
+    .trust-bar .sep { margin: 0 5px; }
+  }
+  @media (max-width: 380px) {
+    .chat-snippet { padding: 16px 14px; border-radius: 22px; }
+    .chat-snippet .bubble { font-size: 13.5px; padding: 10px 13px; }
+    .chat-snippet .chat-header .ch-name { font-size: 13px; }
+  }
+  @media (max-width: 340px) {
+    .chat-snippet { padding: 14px 12px; }
+    .chat-snippet .bubble { font-size: 12.5px; padding: 9px 12px; }
+  }
+
+  /* === Faux chat (코드형 카톡 화면 — phone-front 안에 들어감) === */
+  .phone-faux-chat {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    font-family: 'Noto Sans KR', sans-serif;
+    padding: 16px 11px 16px;
+    gap: 6px;
+    min-height: 340px;
+  }
+  .phone-faux-chat .pf-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px 9px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+  .phone-faux-chat .pf-shell { font-size: 13px; }
+  .phone-faux-chat .pf-name {
+    font-family: 'Gowun Batang', serif;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    flex: 1;
+  }
+  .phone-faux-chat .pf-dot {
+    width: 5px;
+    height: 5px;
+    background: #4ade80;
+    border-radius: 50%;
+    box-shadow: 0 0 5px rgba(74, 222, 128, 0.6);
+  }
+  .phone-faux-chat .pf-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 2px 8px;
+    flex: 1;
+  }
+  .phone-faux-chat .pf-bubble {
+    font-size: 9.5px;
+    line-height: 1.55;
+    padding: 7px 9px;
+    border-radius: 11px;
+    max-width: 90%;
+    word-break: keep-all;
+  }
+  .phone-faux-chat .pf-bubble.me {
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    align-self: flex-end;
+    border-bottom-right-radius: 3px;
+    font-weight: 500;
+  }
+  .phone-faux-chat .pf-bubble.shell {
+    background: rgba(26, 24, 38, 0.92);
+    color: var(--text);
+    border: 1px solid var(--border);
+    align-self: flex-start;
+    border-bottom-left-radius: 3px;
+  }
+  .phone-faux-chat .pf-bubble.shell strong {
+    color: var(--accent2);
+    font-weight: 500;
+  }
+  @media (max-width: 380px) {
+    .phone-faux-chat { padding: 13px 9px 13px; min-height: 310px; gap: 5px; }
+    .phone-faux-chat .pf-bubble { font-size: 8.5px; padding: 6px 8px; border-radius: 10px; }
+    .phone-faux-chat .pf-name { font-size: 10px; }
+  }
+  @media (max-width: 340px) {
+    .phone-faux-chat { padding: 11px 8px 11px; min-height: 290px; }
+    .phone-faux-chat .pf-bubble { font-size: 8px; padding: 5px 7px; }
+  }
+
+  /* === Page footer === */
+  .page-footer {
+    position: relative;
+    z-index: 1;
+    padding: 28px 22px calc(110px + env(safe-area-inset-bottom));
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  .footer-brand {
+    font-family: 'Gowun Batang', serif;
+    font-size: 13.5px;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+  }
+  .footer-meta {
+    font-size: 11px;
+    color: var(--text-soft);
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    max-width: 380px;
+    margin: 0 auto;
+  }
+  .footer-meta b { color: var(--text-dim); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<!-- TRUST BAR — sticky top (보안 메시지 항상 노출) -->
+<div class="trust-bar">
+  <span class="lock">🔒</span>학습 X<span class="sep">·</span>어디에도 안 새<span class="sep">·</span><b>너만 봐</b>
+</div>
+
+<!-- ============== HERO ============== -->
+<section class="hero">
+  <div class="container" style="padding:0;">
+
+    <h1 class="hero-headline">
+      "사적인 얘기 할 수 있는<br>
+      <span class="accent">AI</span>, 없을까?"
+    </h1>
+
+    <p class="hero-sub">
+      지금까지 없었지.<br>
+      <span class="em">그래서 만들었어.</span>
+    </p>
+
+    <!-- Chat snippet (Hero V4) — 회사 + 14번째 + 11시 넘게 + identity reframe -->
+    <div class="chat-snippet">
+      <div class="chat-header">
+        <img class="ch-avatar" src="godongicon.png" alt="" loading="lazy">
+        <span class="ch-name">고동</span>
+        <span class="ch-dot"></span>
+      </div>
+
+      <div class="chat-row me">
+        <div class="bubble me">오늘 또 회사 가기 싫어서 인스타 2시간 봤어 ㅠ</div>
+      </div>
+
+      <div class="chat-row shell">
+        <div class="bubble shell">이번 달에만 <strong>14번째</strong>야 ㅋㅋ</div>
+      </div>
+
+      <div class="chat-row shell">
+        <div class="bubble shell">근데 너 이러는 날, 거의 다 <strong>밤 11시 넘게까지</strong> 일한 다음날이더라.</div>
+      </div>
+
+      <div class="chat-row shell">
+        <div class="bubble shell">너 게으른 거 아냐. 그냥 충전이 필요한 거.</div>
+      </div>
+    </div>
+
+    <p class="hero-why">
+      ChatGPT는 매번 처음 만나.<br>
+      <strong>얘는 너를 이해해.</strong>
+    </p>
+
+    <a href="https://soragodong.com/" class="cta-primary">고동이한테 인사하기 🐚</a>
+
+    <div class="cta-microcopy">
+      <p class="cta-mc-main">일단 <strong>무료</strong>로 해봐.</p>
+      <p class="cta-mc-sub">베타버전이라.. 신생 앱이에용..</p>
+    </div>
+
+    <div class="scroll-cue">↓ 어떻게 만들었는지 ↓</div>
+
+  </div>
+</section>
+
+<!-- ============== PROOF ============== -->
+<section class="proof" id="proof">
+  <div class="container">
+    <div class="proof-label">한 번 봐봐</div>
+    <h2 class="proof-title">
+      <span class="accent">다 털어놔도</span> 걱정 없는,<br>
+      <span class="accent">너만 보는</span> AI.
+    </h2>
+    <p style="font-size:12px;color:var(--text-soft);letter-spacing:0.03em;margin-top:-18px;margin-bottom:20px;word-break:keep-all;">개발자가 실제로 쓰는 화면입니닷..</p>
+  </div>
+
+  <!-- 5 screen scroller — Drama → Curiosity → Beauty → Practice → Overview
+       (월간 리뷰 "창업자" hook → 너에 대해 → 진주 → 일기 → 도서관) -->
+  <div class="proof-screens">
+    <div class="proof-screen">
+      <img src="drive-real-samples/KakaoTalk_20260505_153438574.png" alt="월간 리뷰 — 이번 달의 너는 '창업자'" loading="lazy">
+    </div>
+    <div class="proof-screen">
+      <img src="drive-me-tap/about.jpg" alt="너에 대해 — 가치관 · 특성" loading="lazy">
+    </div>
+    <div class="proof-screen">
+      <img src="drive-real-samples/jinju.png" alt="진주 — 너의 순간들 (음식·장소·음악·사람)" loading="lazy">
+    </div>
+    <div class="proof-screen">
+      <img src="drive-real-samples/KakaoTalk_20260505_153551019_04.png" alt="일기 화면 — 활력·기분·수면 + 그날의 음악" loading="lazy">
+    </div>
+    <div class="proof-screen">
+      <img src="drive-real-samples/KakaoTalk_20260505_153551019.png" alt="인생 도서관 — 다섯 칸으로 정리된 너의 모든 것" loading="lazy">
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Trust block — privacy 약속의 구체 풀이 -->
+    <div class="trust-block">
+      <div class="trust-block-title">🔒 왜 진짜 안 새냐고?</div>
+      <ul class="trust-block-list">
+        <li><strong>비밀번호 잠그면</strong> — 종단간 암호화. 개발자도, 회사도 못 열어.</li>
+        <li><strong>AI 학습 X</strong> — Anthropic Zero Data Retention 정책.</li>
+        <li><strong>광고 X · 외부 판매 X · 가공 X</strong></li>
+        <li><strong>회사가 사라져도</strong> — 너의 데이터는 너 거. 언제든 export 가능.</li>
+      </ul>
+    </div>
+
+    <div class="pq">
+      <p class="pq-text">"이거 정리해주는 게 너무 재밌삼 ㅋ"</p>
+      <p class="pq-attrib">— 베타 사용자, 사용 첫 주</p>
+    </div>
+
+    <div style="text-align:center; margin-top:36px;">
+      <a href="/start.html" class="deep-link">자세히 알아보기 →</a>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============== FOOTER ============== -->
+<footer class="page-footer">
+  <div class="footer-brand"><img class="footer-icon" src="godongicon.png" alt="" loading="lazy"> 소라고동</div>
+  <div class="footer-meta">
+    의료·심리상담 대체 앱이 아니야. 정신건강 위기 시 — <b>1393</b> 자살예방 · <b>1577-0199</b> 정신건강.
+  </div>
+</footer>
+
+<!-- ============== STICKY bottom CTA ============== -->
+<div class="sticky-cta" id="stickyCta" aria-hidden="true">
+  <a href="https://soragodong.com/">고동이한테 인사하기 🐚</a>
+</div>
+
+<script>
+  // Reveal sticky CTA after user scrolls past hero (or after 3s — whichever first)
+  (function () {
+    const sticky = document.getElementById('stickyCta');
+    if (!sticky) return;
+    let revealed = false;
+    function reveal() {
+      if (revealed) return;
+      revealed = true;
+      sticky.classList.add('in');
+      sticky.setAttribute('aria-hidden', 'false');
+    }
+    // Reveal on scroll past ~50% of hero
+    const hero = document.querySelector('.hero');
+    const heroHeight = hero ? hero.offsetHeight : 600;
+    let ticking = false;
+    function onScroll() {
+      if (!ticking) {
+        window.requestAnimationFrame(function () {
+          if (window.scrollY > heroHeight * 0.55) reveal();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    // Fallback — reveal after 3.5s even if no scroll
+    setTimeout(reveal, 3500);
+  })();
+
+  // === Scroll depth + CTA click tracking (GA4) ===
+  (function () {
+    if (typeof gtag !== 'function') return;
+    const marks = [25, 50, 75, 100];
+    const fired = new Set();
+    function checkScroll() {
+      const total = document.documentElement.scrollHeight - window.innerHeight;
+      if (total <= 0) return;
+      const pct = Math.min(100, Math.round((window.scrollY / total) * 100));
+      marks.forEach(function (m) {
+        if (pct >= m && !fired.has(m)) {
+          fired.add(m);
+          gtag('event', 'scroll_depth', { value: m, page: 'start-lite' });
+        }
+      });
+    }
+    let ticking = false;
+    window.addEventListener('scroll', function () {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function () { checkScroll(); ticking = false; });
+    }, { passive: true });
+
+    // CTA click tracking — soragodong.com 으로 가는 모든 링크
+    document.querySelectorAll('a[href*="soragodong.com"]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        gtag('event', 'cta_click', {
+          cta_text: (el.textContent || '').trim().substring(0, 40),
+          cta_location: el.closest('.sticky-cta') ? 'sticky' : 'inline',
+          page: 'start-lite'
+        });
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>
