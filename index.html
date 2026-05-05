@@ -44873,6 +44873,16 @@ async function _doRefreshBillingStatus(manual) {
     status.textContent = '로그인 필요';
     return;
   }
+  // Phase 1e: 게스트 사용자 — 가입 유도 카드 (수치/한도 노출 X, 후킹 톤).
+  if (state && state.isGuest) {
+    status.innerHTML = `
+      <div><b>🌱 게스트 모드</b> <span style="color:var(--text-soft); font-size:11px;">— 한 번 써보는 중</span></div>
+      <div style="font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.7;">데이터는 이 기기에만 저장돼. 브라우저 정리하면 사라져.</div>
+      <button class="btn-primary" onclick="showGuestConversionModal({reason:'manual'})" style="margin-top:12px; width:100%; padding:11px; font-size:13px; font-weight:600;">✦ 가입하고 이어 쓰기 (첫 달 무료)</button>
+      <div style="font-size:10.5px; color:var(--text-soft); margin-top:8px; line-height:1.6;">대화 + 분석 그대로 이어가. 모든 기기 동기화. 모든 분석 풀.</div>
+    `;
+    return;
+  }
   // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 잔액/충전/월정액 흐름 표시.
   // 사용자 보고 2026-04-30: 🔄 새로고침 작동 X 버그 — JWT 1h 만료 시 401 → 인터셉터는 /api/chat 만 swap 이라 /api/usage 401 그대로. 자동 refresh + retry + 시각 피드백 추가.
   if (manual) status.textContent = '🔄 갱신 중...';
