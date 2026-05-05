@@ -8,6 +8,9 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
     alert('결제 설정 오류 (PORTONE_CHANNEL_KEY / PORTONE_STORE_ID 미설정)');
     return null;
   }
+  // 사용자 명시 2026-05-06: KG이니시스 V2 일반 결제 = customer.phoneNumber 필수.
+  const phoneNumber = (typeof _getPaymentPhoneNumber === 'function') ? _getPaymentPhoneNumber() : null;
+  if (!phoneNumber) return null;
   if (typeof window.PortOne === 'undefined') {
     try {
       await new Promise((resolve, reject) => {
@@ -30,7 +33,7 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
     const response = await window.PortOne.requestPayment({
       storeId, channelKey, paymentId,
       orderName, totalAmount: amount, currency: 'KRW', payMethod: 'CARD',
-      customer: { customerId: authUserId || undefined, email: session?.user?.email || undefined },
+      customer: { customerId: authUserId || undefined, email: session?.user?.email || undefined, phoneNumber },
       customData: customData ? JSON.stringify(customData) : undefined
     });
     if (response && response.code != null) {

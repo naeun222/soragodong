@@ -1,6 +1,24 @@
 // ─── 구독 모달 (사용자 명시 2026-05-06: PortOne V2 카드 결제, 토스 수동 송금 폐기) ───
 // Light 9,900 + Premium 25,000. 자동 갱신 X — 다음 달 명시 결제.
 
+// 사용자 명시 2026-05-06: KG이니시스 V2 일반 결제 = customer.phoneNumber 필수.
+// 한 번 입력받으면 state.preferences.paymentPhone 에 보관해서 재사용.
+function _getPaymentPhoneNumber() {
+  state.preferences = state.preferences || {};
+  const saved = state.preferences.paymentPhone;
+  if (saved && /^010\d{7,8}$/.test(saved)) return saved;
+  const raw = prompt('결제 진행을 위해 휴대폰 번호 입력 (예: 010-1234-5678)\n— KG이니시스 정책상 필수');
+  if (raw == null) return null;
+  const digits = String(raw).replace(/[^0-9]/g, '');
+  if (!/^010\d{7,8}$/.test(digits)) {
+    alert('휴대폰 번호 형식이 잘못됐어 (010 으로 시작하는 10~11 자리).');
+    return null;
+  }
+  state.preferences.paymentPhone = digits;
+  try { saveState(); } catch {}
+  return digits;
+}
+
 async function openSubscribeModal() {
   if (document.getElementById('subscribeModalOverlay')) return;
   if (typeof refreshBillingStatus === 'function') {
@@ -71,6 +89,9 @@ async function proceedSubscribe(tierKey) {
     return;
   }
 
+  const phoneNumber = _getPaymentPhoneNumber();
+  if (!phoneNumber) return;
+
   // PortOne V2 SDK 동적 로드.
   if (typeof window.PortOne === 'undefined') {
     try {
@@ -105,7 +126,8 @@ async function proceedSubscribe(tierKey) {
       payMethod: 'CARD',
       customer: {
         customerId: authUserId || undefined,
-        email: session?.user?.email || undefined
+        email: session?.user?.email || undefined,
+        phoneNumber
       },
       customData: JSON.stringify({ tier: tierKey, type: 'subscribe' })
     });
