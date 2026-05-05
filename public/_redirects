@@ -1,1 +1,3 @@
+# 사용자 보고 2026-05-06: 옛 /start-lite URL (rename 전) 로 들어오는 모바일 — 브라우저 308 캐시 또는 CDN edge cache stale 가능성. 새 /startlite 로 안내.
+/start-lite  /startlite  200
 /*    /index.html   200
