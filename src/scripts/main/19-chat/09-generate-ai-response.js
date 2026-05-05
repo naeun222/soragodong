@@ -295,12 +295,15 @@ async function generateAIResponse(modelOverride) {
     } else if (/network|failed to fetch|offline/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
       userMsg = '📡 인터넷 연결을 확인해봐.\n\n복구되면 "다시 보내기" 눌러줘.';
     } else if (/5\d\d/.test(m) || /overloaded/i.test(m)) {
-      // 사용자 보고 2026-05-05 ultrathink: callAnthropic 1회 retry + backend chat.ts 1회 retry 후도 5xx / overloaded → 진짜 다운.
-      // 'api_error' 매칭 제거 (Anthropic 'invalid_request_error' 등 4xx 도 잘못 매칭하던 거 fix).
-      // status 추출해서 토스트에 표시 — 사용자가 진짜 원인 (백엔드 5xx vs Anthropic 5xx) 추정 가능.
+      // 사용자 보고 2026-05-05 ultrathink-2: 5xx 토스트가 계속 나와도 진짜 원인 (env 누락 / Anthropic overloaded / 모델 ID 거부 등) 안 보임.
+      // err.message = 'API 500 — <body snippet>' 형태 — 'API XXX —' prefix 제거 후 detail 만 토스트에 노출.
+      // backend (functions/api/chat.ts) 가 Anthropic 응답 본문 그대로 forward 하므로 진단 텍스트 (e.g., 'ANTHROPIC_API_KEY 미설정', 'overloaded_error') 가 detail 에 포함됨.
       const _statusMatch = m.match(/(\b5\d\d\b)/);
       const _status = _statusMatch ? ` (${_statusMatch[1]})` : '';
-      userMsg = `⚠️ AI 서버 일시 과부하${_status} — 자동 재시도 후에도 실패. 1-2분 후 다시 보내기.`;
+      const _detail = m.replace(/^API\s+\d+\s*(—\s*)?/, '').trim().slice(0, 200);
+      const _looksLikeBareCode = !_detail || /^\d{3}$/.test(_detail);
+      const _detailLine = _looksLikeBareCode ? '' : `\n\n${_detail}`;
+      userMsg = `⚠️ AI 서버 일시 과부하${_status} — 자동 재시도 후에도 실패. 1-2분 후 다시 보내기.${_detailLine}`;
     } else {
       userMsg = '연결이 안 됐어 😅\n(' + (m || '알 수 없는 오류') + ')\n\n다시 보내기 버튼을 눌러봐.';
     }
