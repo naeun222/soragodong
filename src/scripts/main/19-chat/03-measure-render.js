@@ -79,15 +79,18 @@ function renderChat() {
   const archiveLen = (state.chatArchive || []).length;
 
   if (!msgs.length) {
-    // V4 (v8 묶음 17): empty state 회전 예시 — 본인 인사 + 1 예시 (회전)
-    const example = (typeof _getEmptyStateExample === 'function') ? _getEmptyStateExample() : '';
-    const exampleHtml = example ? `<div class="chat-empty-example">${escapeHtml(example)}</div>` : '';
+    // 사용자 명시 2026-05-06: empty state + 입력창 placeholder 회전 → 모든 예시 리스트로 노출
+    const examples = (typeof EMPTY_STATE_EXAMPLES !== 'undefined' && Array.isArray(EMPTY_STATE_EXAMPLES)) ? EMPTY_STATE_EXAMPLES : [];
+    const placeholders = (typeof CHAT_PLACEHOLDERS !== 'undefined' && Array.isArray(CHAT_PLACEHOLDERS)) ? CHAT_PLACEHOLDERS : [];
+    const teaching = (typeof TEACHING_PLACEHOLDERS !== 'undefined' && Array.isArray(TEACHING_PLACEHOLDERS)) ? TEACHING_PLACEHOLDERS : [];
+    const examplesHtml = examples.length ? `<div class="chat-empty-section"><div class="ces-title">이런 거 말해봐</div><ul class="chat-empty-list">${examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul></div>` : '';
+    const placeholdersHtml = placeholders.length ? `<div class="chat-empty-section"><div class="ces-title">입력창에 뜨는 예시</div><ul class="chat-empty-list">${placeholders.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul></div>` : '';
+    const teachingHtml = teaching.length ? `<div class="chat-empty-section"><div class="ces-title">이런 기능도 있어</div><ul class="chat-empty-list">${teaching.map(t => `<li>${escapeHtml(t.text)}</li>`).join('')}</ul></div>` : '';
     container.innerHTML = archiveHeader + `<div class="msg assistant">
       <div class="msg-bubble">안녕 🐚 왔구나.
 
 오늘 어땠어? 아무 말이나 편하게 해도 돼.
-
-일기처럼 길게 써도 되고, "졸려" 한 마디도 OK.${exampleHtml}</div>
+일기처럼 길게 써도 되고, "졸려" 한 마디도 OK.${examplesHtml}${placeholdersHtml}${teachingHtml}</div>
     </div>`;
     _chatRenderSig = null;
     _measureChatRender(_t0);

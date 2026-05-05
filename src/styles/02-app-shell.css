@@ -17,7 +17,7 @@
   .sync-dot.error { background: var(--danger); }
 
   .screens { flex: 1; overflow: hidden; position: relative; }
-  .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 24px 100px; opacity: 0; pointer-events: none; transition: opacity 0.25s; -webkit-overflow-scrolling: touch; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 24px 160px; opacity: 0; pointer-events: none; transition: opacity 0.25s; -webkit-overflow-scrolling: touch; }
   .screen.active { opacity: 1; pointer-events: auto; }
 
   .greeting { margin-bottom: 18px; }
