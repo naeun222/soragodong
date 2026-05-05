@@ -163,9 +163,19 @@ function renderModel() {
   // 정체성 위 (values / traits / patterns) → 분석 중 (case_formulation / diagnoses) → 메타 아래 (task 평균 / 더 깊은 나).
   // 자기친밀 hook 우선 / 분석 해석 후순위 / 메타 데이터 collapse.
   let html = '';
-  // _renderConfirmableSection — 정체성 3종 공용 헬퍼
-  const _renderConfirmableSection = (category, label, arr) => {
-    if (!arr || arr.length === 0) return '';
+  // 사용자 보고 2026-05-06 ultrathink (재 X4): values 섹션이 안 보이는 문제 — arr 비어있으면 hidden.
+  //   → 다른 섹션 (traits / patterns) 중 하나라도 차있으면 빈 섹션도 placeholder 노출 (사용자 인지 가능).
+  //   → 진짜 다 비어있는 첫 진입은 그대로 hide (initial empty state 처리는 위 early return 분기).
+  const _hasAnyIdentity = (state.values || []).length > 0 || (state.traits || []).length > 0 || (state.patterns || []).length > 0;
+  const _renderConfirmableSection = (category, label, arr, placeholderHint) => {
+    if (!arr || arr.length === 0) {
+      // 다른 섹션에 데이터 있으면 빈 섹션도 placeholder 노출.
+      if (!_hasAnyIdentity) return '';
+      return `<div class="model-section">
+        <div class="model-section-title">${label}</div>
+        <div style="font-size:11px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">${placeholderHint}</div>
+      </div>`;
+    }
     const split = splitItems(arr, 1, 0.4, true);
     let inner = `<div class="model-section"><div class="model-section-title">${label}</div>`;
     split.top.forEach(item => {
@@ -180,9 +190,9 @@ function renderModel() {
   };
 
   // ── 1. 정체성 — values / traits / patterns (top, 자기친밀 hook 매일) ──
-  html += _renderConfirmableSection('values', '네가 중시하는 것', state.values);
-  html += _renderConfirmableSection('traits', '네 특성', state.traits);
-  html += _renderConfirmableSection('patterns', '보이는 패턴', state.patterns);
+  html += _renderConfirmableSection('values', '네가 중시하는 것', state.values, '대화하다 보면 네가 중시하는 게 자동으로 채워져 ✦');
+  html += _renderConfirmableSection('traits', '네 특성', state.traits, '관찰될수록 네 특성이 여기 쌓여 ✦');
+  html += _renderConfirmableSection('patterns', '보이는 패턴', state.patterns, '반복되는 흐름이 보이면 여기 정리해줄게 ✦');
 
   // ── 2. 분석 — 통합 분석 + 작동 중인 패턴 (mid, 큰 그림 가끔) ──
   // 사용자 보고 2026-05-05: 신규 사용자 (caseFormulation.version=0) 한테 '통합 분석' 섹션 자체가 안 떠서 존재 모르던 문제 — placeholder 추가.

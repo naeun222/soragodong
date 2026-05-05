@@ -34,16 +34,15 @@ window._startIntakeFromTutorial = async function() {
         timestamp: nowIso
       });
     }
-    const dim = (analysis.dimension || '환경').trim();
+    // 사용자 보고 2026-05-06 ultrathink (재 X4): generic 카피 ('X 차원이 작동하는 모습') 제거 — AI 의 diagnosis 자체가 풍부함.
     const para = (analysis.paraphrase || '').trim();
     const diag = (analysis.diagnosis || '').trim();
     const strat = (analysis.strategy || '').trim();
     const prop = (analysis.proposal || '').trim();
-    const observation = para || (diag ? diag.split(/[.。]\s/)[0] + '.' : '방금 들려준 마음, 정리해봤어.');
-    const concept = `${dim} 차원이 작동하는 모습이 보여.${diag ? '\n' + diag : ''}`;
+    const observation = para || '방금 들려준 마음, 정리해봤어.';
+    const concept = diag || '같이 들여다보자.';
     const guide = strat || '천천히 같이 가보자.';
-    // 사용자 보고 2026-05-06 ultrathink: [오늘의 제안] 본문 = AI proposal 필드 (strategy 와 다른 micro-action). fallback = strategy 첫 문장.
-    const proposalText = prop || (strat ? strat.split(/[.。]\s/)[0].slice(0, 40) : '오늘 한 걸음');
+    const proposalText = prop || '오늘 한 걸음';
     const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}\n\n[오늘의 제안]\n${proposalText}`;
     state.chatMessages.push({
       role: 'assistant',

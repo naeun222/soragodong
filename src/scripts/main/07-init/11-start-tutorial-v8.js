@@ -193,18 +193,15 @@ async function _v8RunIntakeAndInject() {
     content: '방금 들은 거, 이렇게 봤어 —',
     timestamp: nowIso
   });
-  // 4단 분석 — proposal 필드 별도 (strategy 와 다른 내용: 원리 vs 오늘 한 동작).
-  // 사용자 보고 2026-05-06 ultrathink: 본문 [오늘의 제안] = [이럴 땐 이렇게] 첫 문장 중복 → AI schema proposal 필드 신설.
-  const dim = (analysis.dimension || '환경').trim();
+  // 사용자 보고 2026-05-06 ultrathink (재 X4): generic 카피 제거 — AI diagnosis 자체가 풍부함 (실제 4단 톤).
   const para = (analysis.paraphrase || '').trim();
   const diag = (analysis.diagnosis || '').trim();
   const strat = (analysis.strategy || '').trim();
   const prop = (analysis.proposal || '').trim();
-  const observation = para || (diag ? diag.split(/[.。]\s/)[0] + '.' : '방금 들려준 마음, 정리해봤어.');
-  const concept = `${dim} 차원이 작동하는 모습이 보여.${diag ? '\n' + diag : ''}`;
+  const observation = para || '방금 들려준 마음, 정리해봤어.';
+  const concept = diag || '같이 들여다보자.';
   const guide = strat || '천천히 같이 가보자.';
-  // proposal fallback — AI 가 proposal 안 줬으면 strategy 첫 문장의 짧은 변형.
-  const proposalText = prop || (strat ? strat.split(/[.。]\s/)[0].slice(0, 40) : '오늘 한 걸음');
+  const proposalText = prop || '오늘 한 걸음';
   const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}\n\n[오늘의 제안]\n${proposalText}`;
   state.chatMessages.push({
     role: 'assistant',

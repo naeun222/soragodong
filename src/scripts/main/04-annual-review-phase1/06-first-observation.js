@@ -277,49 +277,58 @@ async function _intakeGenLongExample(userText) {
 }
 
 // Step6: 전체 intakeWorry chat 받아 차원 분석 + 작은 전략 + traits/values/patterns 가설 생성.
-// 사용자 보고 2026-05-06 ultrathink (재): "잠깐 들여다보는 중..." 무한 retry — 가장 흔한 원인이 JSON truncate.
-//   → max_tokens 1500 → 2000 / hypotheses 3개 → 1-2개로 단축 / description 짧게 강제.
-//   → fail 시 status code 표면화 (사용자가 진짜 원인 식별 가능).
+// 사용자 보고 2026-05-06 ultrathink (재 X4): 4단 분석이 너무 짧음 / values 가설 안 만들어짐.
+//   → 실제 4단 응답 (askDeeper) 톤 + 길이로 복원: 심리학 개념 + 연구자 이름 + 증거 기반 전략.
+//   → hypotheses = trait/value/pattern 각 1개씩 강제 (총 3개) — '네가 중시하는 것' 섹션 비어있는 문제 해결.
 async function _intakeAnalyze(intakeWorry) {
   if (!_canAI()) throw new Error('AI 세션 미준비');
   const chatText = (intakeWorry || []).map(m => `${m.role === 'user' ? '사용자' : '소라고동'}: ${m.content}`).join('\n');
-  const prompt = `사용자 — 첫 만남 미니 분석.
+  const prompt = `사용자 — 첫 만남 4단 분석. 실제 chat 4단 응답과 같은 톤·길이.
 
 [대화 전체]
 ${chatText}
 
-[너의 일]
-1. paraphrase: 사용자 발화 핵심 1줄 (40자 이내)
-2. dimension: 환경 / 인지 / 사회 / 정체성 / 가치 중 1개
-3. diagnosis: 1문장 (60자 이내). 판단 X. 자기관찰 톤.
-4. strategy: 1문장 (60자 이내). 원리 / 큰 방향.
-5. proposal: 25자 이내. 오늘 안에 할 수 있는 micro-action.
-6. hypotheses: 1-2개 (3개 X — 첫 만남이라 짧게).
+[너의 일 — 4단 응답 본문 + 메타]
+1. paraphrase: 사용자 발화 핵심 1-2줄 인용 또는 paraphrase
+2. dimension: 환경 / 인지 / 사회 / 정체성 / 가치 중 1개 (가장 작동하는 차원)
+3. diagnosis: [내가 본 것] = [이게 뭐냐면]에 들어갈 본문. 자유 길이 (2-4문장).
+   · 패턴 담백히 짚기 + 심리학 개념 + 연구자 이름 자연스럽게.
+   · 연구자 예시: Gollwitzer / Neff / Barkley / Hershfield / Wilson & Gilbert / Heath / Klein / Burnett / Dweck / Russell / Buysse 등.
+   · "어떻게 알았어?" 트리거. Specific > Generic.
+4. strategy: [이럴 땐 이렇게] 본문. 자유 길이 (2-3문장).
+   · 증거 기반 전략 1-2개. 환경 cuing 우선. 관찰 친화.
+   · 원리 + 작동 메커니즘.
+5. proposal: [오늘의 제안] 본문. 25자 이내. 오늘 안에 할 수 있는 micro-action. strategy 의 *원리*를 *오늘 한 동작*으로 좁힌 것 — 같은 말 X.
+   예) strategy="환경 자극 줄이는 방향이 도움될 거 같아. Hershfield 의 future self 연구..." → proposal="저녁 7시 핸드폰 무음으로 두기"
+6. hypotheses: trait 1개 + value 1개 + pattern 1개 = **총 3개 모두 채움** (첫 만남이라 confidence 0.4-0.6).
 
-[가설 schema — 모든 필드 짧게]
-- trait: name (10자) + description (40자) + display_text (40자) + confidence 0.4-0.6
-- value: name (5자) + description (40자) + display_text (40자) + confidence 0.4-0.6
-- pattern: name (10자) + trigger (20자) + sequence (40자) + display_text (40자) + confidence 0.4-0.6
+[가설 schema]
+- trait: name (10자 이내) + description (한 문장) + display_text (✓ 박스용 친근 한 줄) + confidence
+- value: name (5자 이내) + description (한 문장 — sdt_need 'autonomy'/'competence'/'relatedness' 1개 자연스럽게) + display_text + confidence + sdt_need
+- pattern: name (10자 이내) + trigger (조건) + sequence (행동 흐름) + display_text + confidence
 
 [톤]
-친한 친구 반말. judgment X. self-compassion. Surprise > Truth.
+친한 친구 반말. judgment X. self-compassion. 첫 만남이라 confidence 낮게.
+proposal 은 명령조 X (반말 권유 톤). 오늘 안에 진짜 가능한 micro 단위 (5분-1시간).
 
-[출력 JSON 만, markdown X — 모든 string 짧게]
+[출력 JSON 만, markdown X — diagnosis/strategy 는 자유 길이로 풍부하게]
 {
   "paraphrase": "...",
-  "dimension": "...",
-  "diagnosis": "...",
-  "strategy": "...",
-  "proposal": "...",
+  "dimension": "환경/인지/사회/정체성/가치 중 하나",
+  "diagnosis": "2-4문장. 심리학 개념 + 연구자 이름.",
+  "strategy": "2-3문장. 원리 + 증거 기반 전략 1-2개.",
+  "proposal": "25자 이내 (오늘 한 동작)",
   "hypotheses": [
-    { "category": "trait", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." }
+    { "category": "trait", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." },
+    { "category": "value", "name": "...", "description": "...", "sdt_need": "autonomy", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." },
+    { "category": "pattern", "name": "...", "description": "...", "trigger": "...", "sequence": "...", "confidence": 0.5, "display_text": "..." }
   ]
 }`;
   const resp = await callAnthropic({
     _endpoint: 'intake',
     model: 'claude-sonnet-4-6',
     max_tokens: 2000,
-    system: 'JSON 객체 하나만 반환. markdown code fence X. 모든 string 짧게. 다른 글 X.',
+    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력. diagnosis/strategy 는 풍부하게 (실제 4단 응답 톤).',
     messages: [{ role: 'user', content: prompt }]
   });
   if (!resp.ok) {
@@ -354,7 +363,14 @@ function _intakeApplyHypotheses(hypotheses) {
       source: 'intake_core1'
     };
     if (h.category === 'trait') state.traits.push(base);
-    else if (h.category === 'value') state.values.push(base);
+    else if (h.category === 'value') {
+      // 사용자 보고 2026-05-06 ultrathink (재 X4): SDT need 필드 보존 — '나' 탭에서 🎯 자율/유능감/관계 라벨 노출.
+      const valueItem = { ...base };
+      if (h.sdt_need && ['autonomy', 'competence', 'relatedness'].includes(h.sdt_need)) {
+        valueItem.sdt_need = h.sdt_need;
+      }
+      state.values.push(valueItem);
+    }
     else if (h.category === 'pattern') {
       state.patterns.push({
         ...base,
