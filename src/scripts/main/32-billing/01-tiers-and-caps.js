@@ -44,22 +44,7 @@ const TIER_UPGRADE_DIFF_KRW = TIER_UPGRADE_KRW;
 // 카톡 오픈채팅 (피드백·문의 채널, 익명 OK)
 const KAKAO_OPEN_CHAT = 'https://open.kakao.com/o/sUP7kIsi';
 
-// 사용자 명시 2026-04-30 ultrathink: 포트원 미설정 단계 — 토스 수동 송금 으로 구독 활성화.
-// verify-toss-subscribe 의 RECEIVER_ACCOUNT 와 동기 — 변경 시 둘 다.
-const TOSS_ACCOUNT = {
-  bank: '우리은행',
-  number: '1002-963-062525',
-  number_raw: '1002963062525',  // deep link 용 (하이픈 X)
-  holder: '김나은',
-  bankCode: '20'
-};
-
-// 사용자별 송금 메모 코드 (unique, 8자) — auth_user_id 기반
-function _generateUserMemoCode() {
-  const uid = (typeof authUserId === 'string' && authUserId) ? authUserId : '';
-  const short = uid.replace(/-/g, '').slice(0, 8).toUpperCase();
-  return 'SO-' + short;
-}
+// 사용자 명시 2026-05-06: 토스 수동 송금 폐기 → PortOne V2 카드 결제. TOSS_ACCOUNT / _generateUserMemoCode 제거.
 
 // 사업자 정보 (전자상거래법 의무 노출). 사업자등록증·통신판매업 신고증 발급 후 빈 문자열만 채우면 자동 표시.
 // 주소·연락처는 자택이라 민감 — settings UI 노출 X, 약관·환불·개인정보 마크다운에만 풀 명시 (전상법 §13 의무 자리). 사용자 명시 2026-04-30 ultrathink.
@@ -74,8 +59,6 @@ const BUSINESS_INFO = {
   cpo: '김나은'                             // 개인정보 보호책임자
 };
 
-// 사용자 명시 2026-04-30 ultrathink: 충전 plan UI/handler (CHARGE_PLANS / openChargeModal / proceedCharge / showTossChargeModal / openTossApp / verifyTossReceipt / closeTossChargeModal) 일괄 폐기.
-// _generateUserMemoCode + TOSS_ACCOUNT 은 신 월정액 송금 흐름에 그대로 재활용 (legacy 폐기 X).
-// 새 흐름: 무료 3,000원 → 소진 후 Light (8,900원) 또는 Premium (25,000원) 월정액. 한도 도달 시 추가팩 (Light 5K = +$4 / Premium 7K = +$5) 또는 tier 업그레이드 (16,100원).
-// 기존 charge 잔액 (credit_balance_usd > 0) 사용자: legacy 호환 — 그대로 차감, 0 도달 후 구독 안내. admin pending charges 도구도 잔존 미해결 건만 처리.
+// 사용자 명시 2026-05-06: 결제 흐름 = PortOne V2 카드 결제만. 옛 충전 / 토스 수동 송금 / V1 IMP 흐름 모두 폐기.
+// 기존 charge 잔액 (credit_balance_usd > 0) 사용자: legacy 호환 — 그대로 차감, 0 도달 후 구독 안내.
 

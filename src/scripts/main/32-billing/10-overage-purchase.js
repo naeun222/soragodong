@@ -1,84 +1,105 @@
+// ─── 추가팩 결제 + Tier 업그레이드 (PortOne V2) ───
+// 사용자 명시 2026-05-06: V1 (IMP/iamport.js) → V2 (PortOne SDK) 마이그레이션.
+
+async function _portOneV2RequestPayment({ paymentId, orderName, amount, customData }) {
+  const channelKey = (typeof PORTONE_CHANNEL_KEY !== 'undefined') ? PORTONE_CHANNEL_KEY : '';
+  const storeId = (typeof PORTONE_STORE_ID !== 'undefined') ? PORTONE_STORE_ID : '';
+  if (!channelKey || !storeId) {
+    alert('결제 설정 오류 (PORTONE_CHANNEL_KEY / PORTONE_STORE_ID 미설정)');
+    return null;
+  }
+  if (typeof window.PortOne === 'undefined') {
+    try {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.portone.io/v2/browser-sdk.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    } catch {
+      alert('PortOne SDK 로드 실패');
+      return null;
+    }
+  }
+  if (typeof window.PortOne === 'undefined') {
+    alert('PortOne SDK 객체 X');
+    return null;
+  }
+  try {
+    const response = await window.PortOne.requestPayment({
+      storeId, channelKey, paymentId,
+      orderName, totalAmount: amount, currency: 'KRW', payMethod: 'CARD',
+      customer: { customerId: authUserId || undefined, email: session?.user?.email || undefined },
+      customData: customData ? JSON.stringify(customData) : undefined
+    });
+    if (response && response.code != null) {
+      alert('결제 취소 / 실패: ' + (response.message || response.code));
+      return null;
+    }
+    return response;
+  } catch (e) {
+    alert('결제창 호출 실패: ' + (e?.message || e));
+    return null;
+  }
+}
+
 // ─── 추가팩 결제 (cap 도달 시) ───
 async function purchaseOveragePack(packKey) {
   const pack = OVERAGE_PACKS_CLIENT[packKey];
   if (!pack) { alert('잘못된 pack'); return; }
-  if (typeof window.IMP === 'undefined') {
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.iamport.kr/v1/iamport.js';
-      s.onload = resolve; s.onerror = reject;
-      document.head.appendChild(s);
-    }).catch(() => alert('포트원 SDK 로드 실패'));
-  }
-  if (typeof window.IMP === 'undefined') return;
-  const channelKey = window.PORTONE_CHANNEL_KEY || '';
-  if (!channelKey) { alert('결제 시스템 미설정.'); return; }
-  IMP.init(channelKey);
-  const merchantUid = `pack_${packKey}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  IMP.request_pay({
-    pg: 'tosspayments', pay_method: 'card', merchant_uid: merchantUid,
-    name: `소라고동 ${pack.label}`,
+  if (!session?.access_token) { alert('로그인 필요'); return; }
+  const paymentId = `pack-${packKey}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const result = await _portOneV2RequestPayment({
+    paymentId,
+    orderName: `소라고동 ${pack.label}`,
     amount: pack.krw,
-    buyer_email: session?.user?.email || ''
-  }, async (rsp) => {
-    if (!rsp.success) { alert('결제 실패: ' + (rsp.error_msg || '취소됨')); return; }
-    try {
-      const verifyResp = await fetch('/api/billing/overage-pack', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
-        body: JSON.stringify({ imp_uid: rsp.imp_uid, merchant_uid: merchantUid, pack: packKey })
-      });
-      const result = await verifyResp.json();
-      if (verifyResp.ok && result.ok) {
-        showToast(`✦ ${pack.label} 결제 완료 (+$${pack.usd})`);
-        const ov = document.getElementById('budgetExceededOverlay');
-        if (ov) ov.remove();
-        if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
-      } else {
-        alert('결제 검증 실패: ' + (result.error || '알 수 없음'));
-      }
-    } catch (e) { alert('백엔드 통신 실패: ' + (e.message || e)); }
+    customData: { type: 'overage_pack', pack: packKey }
   });
+  if (!result) return;
+  try {
+    const verifyResp = await fetch('/api/billing/overage-pack', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ paymentId, pack: packKey })
+    });
+    const data = await verifyResp.json();
+    if (verifyResp.ok && data.ok) {
+      showToast(`✦ ${pack.label} 결제 완료 (+$${pack.usd})`);
+      const ov = document.getElementById('budgetExceededOverlay');
+      if (ov) ov.remove();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+    } else {
+      alert('결제 검증 실패: ' + (data.error || '알 수 없음'));
+    }
+  } catch (e) { alert('백엔드 통신 실패: ' + (e?.message || e)); }
 }
 
-// ─── Tier 업그레이드 (Light → Premium 차액 결제) ───
+// ─── Tier 업그레이드 (Light → Premium 정가 결제) ───
 async function upgradeToPremium() {
-  if (typeof window.IMP === 'undefined') {
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.iamport.kr/v1/iamport.js';
-      s.onload = resolve; s.onerror = reject;
-      document.head.appendChild(s);
-    }).catch(() => alert('포트원 SDK 로드 실패'));
-  }
-  if (typeof window.IMP === 'undefined') return;
-  const channelKey = window.PORTONE_CHANNEL_KEY || '';
-  if (!channelKey) { alert('결제 시스템 미설정.'); return; }
-  IMP.init(channelKey);
-  const merchantUid = `upg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  IMP.request_pay({
-    pg: 'tosspayments', pay_method: 'card', merchant_uid: merchantUid,
-    name: '소라고동 Light → Premium 업그레이드',
-    amount: TIER_UPGRADE_DIFF_KRW,
-    buyer_email: session?.user?.email || ''
-  }, async (rsp) => {
-    if (!rsp.success) { alert('결제 실패: ' + (rsp.error_msg || '취소됨')); return; }
-    try {
-      const verifyResp = await fetch('/api/billing/upgrade-tier', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
-        body: JSON.stringify({ imp_uid: rsp.imp_uid, merchant_uid: merchantUid })
-      });
-      const result = await verifyResp.json();
-      if (verifyResp.ok && result.ok) {
-        showToast('🌊 Premium 업그레이드 완료');
-        const ov = document.getElementById('budgetExceededOverlay');
-        if (ov) ov.remove();
-        if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
-      } else {
-        alert('결제 검증 실패: ' + (result.error || '알 수 없음'));
-      }
-    } catch (e) { alert('백엔드 통신 실패: ' + (e.message || e)); }
+  if (!session?.access_token) { alert('로그인 필요'); return; }
+  const paymentId = `upgrade-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const result = await _portOneV2RequestPayment({
+    paymentId,
+    orderName: '소라고동 Premium 구독 (Light → Premium 전환)',
+    amount: TIER_UPGRADE_KRW,
+    customData: { type: 'tier_upgrade', from: 'light', to: 'premium' }
   });
+  if (!result) return;
+  try {
+    const verifyResp = await fetch('/api/billing/upgrade-tier', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ paymentId })
+    });
+    const data = await verifyResp.json();
+    if (verifyResp.ok && data.ok) {
+      showToast('🌊 Premium 업그레이드 완료');
+      const ov = document.getElementById('budgetExceededOverlay');
+      if (ov) ov.remove();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+    } else {
+      alert('결제 검증 실패: ' + (data.error || '알 수 없음'));
+    }
+  } catch (e) { alert('백엔드 통신 실패: ' + (e?.message || e)); }
 }
-

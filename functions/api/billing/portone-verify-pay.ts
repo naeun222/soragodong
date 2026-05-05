@@ -1,0 +1,119 @@
+// POST /api/billing/portone-verify-pay
+// PortOne V2 결제 검증 — frontend 가 결제창 완료 후 호출.
+// 사용자 명시 2026-05-06: V1 (subscribe.ts) 폐기, V2 마이그레이션. paymentId 만 받고 서버에서 실 status / amount 검증.
+
+import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
+import { TIER_PLANS, type TierKey, validateTier } from '../_lib/billing';
+import { fetchPortOnePayment } from '../_lib/portone';
+
+export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
+  const { request, env } = context;
+  const user = await verifyAuth(request, env);
+  if (!user) return unauthorized();
+  if (user.is_anonymous) {
+    return jsonResponse({ error: '게스트는 결제 X — 로그인 후 진행', code: 'GUEST_BLOCKED' }, 403);
+  }
+
+  let body: any;
+  try { body = await request.json(); } catch { return jsonResponse({ error: 'invalid JSON' }, 400); }
+  const { paymentId, plan } = body;
+  if (!paymentId || typeof paymentId !== 'string') {
+    return jsonResponse({ error: 'paymentId 필수' }, 400);
+  }
+  if (!plan) return jsonResponse({ error: 'plan 필수' }, 400);
+
+  // tier 검증 — 서버 사이드 (클라이언트 위변조 방지).
+  const tierCheck = await validateTier(env, user.id, plan);
+  if (!tierCheck.ok || !tierCheck.tier) {
+    return jsonResponse({ error: tierCheck.error || 'tier 검증 실패' }, 400);
+  }
+  const tier = tierCheck.tier;
+
+  // PortOne V2 단건 조회.
+  const fetchResult = await fetchPortOnePayment(env, paymentId);
+  if (!fetchResult.ok) {
+    return jsonResponse({ error: '결제 조회 실패: ' + fetchResult.error }, 502);
+  }
+  const payment = fetchResult.payment;
+
+  // 결제 상태 검증.
+  if (payment.status !== 'PAID') {
+    return jsonResponse({
+      error: `결제 상태 ${payment.status} — 완료된 결제 X`,
+      code: 'NOT_PAID',
+      portone_status: payment.status
+    }, 400);
+  }
+
+  // 금액 검증 (위변조 방지).
+  const paidAmount = Number(payment.amount?.total || 0);
+  if (paidAmount !== tier.krw) {
+    return jsonResponse({
+      error: `결제 금액 불일치 — 요청 ${tier.krw}원, 실 ${paidAmount}원`,
+      code: 'AMOUNT_MISMATCH'
+    }, 400);
+  }
+
+  const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
+  const periodStartedAt = new Date().toISOString();
+
+  // 결제 기록 저장 (idempotent — paymentId unique 이라 중복 INSERT 자동 무시).
+  try {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_payments`, {
+      method: 'POST',
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal,resolution=ignore-duplicates'
+      },
+      body: JSON.stringify({
+        user_id: user.id,
+        user_email: user.email || null,
+        payment_type: 'subscribe',
+        amount_krw: paidAmount,
+        portone_imp_uid: payment.txId || paymentId,    // V2 txId (옛 imp_uid 자리)
+        portone_merchant_uid: paymentId,                // V2 paymentId (옛 merchant_uid 자리)
+        status: 'paid',
+        raw_response: payment
+      })
+    });
+  } catch (e) { console.warn('[portone-verify-pay] payment 기록 실패:', e); }
+
+  // billing 갱신 — race-safe (기존 active 면 중복 결제 감지).
+  try {
+    const patchResp = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&or=(subscription_active.is.null,subscription_active.eq.false,subscription_expires_at.lt.${encodeURIComponent(new Date().toISOString())},subscription_plan.eq.guest,subscription_plan.eq.early_light)`,
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          subscription_active: true,
+          subscription_expires_at: expiresAt,
+          subscription_plan: plan,
+          monthly_quota_usd: tier.cap_usd,
+          monthly_token_used: 0,
+          monthly_period_started_at: periodStartedAt
+        })
+      }
+    );
+    const patched = await patchResp.json().catch(() => []);
+    if (!Array.isArray(patched) || patched.length === 0) {
+      // 이미 active 한 light/premium 구독 — 중복 결제. 환불 안내.
+      return jsonResponse({
+        ok: true,
+        already_active: true,
+        duplicate: true,
+        message: '이미 활성 구독이 있어 (중복 결제 감지). 영수증 보관 후 환불 요청 — soragodongapp@gmail.com 으로 문의 (잔여일 비례 환불).'
+      }, 200);
+    }
+    return jsonResponse({ ok: true, expires_at: expiresAt, plan, cap_usd: tier.cap_usd });
+  } catch (e: any) {
+    return jsonResponse({ error: 'billing 갱신 실패: ' + (e?.message || e) }, 500);
+  }
+}

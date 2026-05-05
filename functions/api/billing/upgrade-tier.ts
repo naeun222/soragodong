@@ -10,6 +10,7 @@
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 import { TIER_PLANS } from '../_lib/billing';
+import { fetchPortOnePayment } from '../_lib/portone';
 
 const PREMIUM_KRW = TIER_PLANS.premium.krw; // 25,000
 
@@ -17,15 +18,15 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   const { request, env } = context;
   const user = await verifyAuth(request, env);
   if (!user) return unauthorized();
+  if (user.is_anonymous) {
+    return jsonResponse({ error: '게스트는 결제 X', code: 'GUEST_BLOCKED' }, 403);
+  }
 
   let body: any;
   try { body = await request.json(); } catch { return jsonResponse({ error: 'invalid JSON' }, 400); }
-  const { imp_uid, merchant_uid } = body;
-  if (!imp_uid || !merchant_uid) {
-    return jsonResponse({ error: 'imp_uid + merchant_uid 필수' }, 400);
-  }
-  if (!env.PORTONE_API_KEY || !env.PORTONE_API_SECRET) {
-    return jsonResponse({ error: 'PORTONE env 미설정' }, 500);
+  const { paymentId } = body;
+  if (!paymentId) {
+    return jsonResponse({ error: 'paymentId 필수' }, 400);
   }
 
   // 현재 billing 상태 확인 — Light 활성 사용자만 업그레이드 가능
@@ -54,39 +55,21 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return jsonResponse({ error: 'Light 또는 early_light 활성 사용자만 업그레이드 가능. 현재 plan: ' + (currentBilling?.subscription_plan || 'X') }, 400);
   }
 
-  // 포트원 결제 검증
-  let accessToken: string;
-  try {
-    const tokenResp = await fetch('https://api.iamport.kr/users/getToken', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imp_key: env.PORTONE_API_KEY, imp_secret: env.PORTONE_API_SECRET })
-    });
-    const tokenData: any = await tokenResp.json();
-    accessToken = tokenData?.response?.access_token;
-    if (!accessToken) throw new Error('포트원 토큰 없음');
-  } catch (e: any) {
-    return jsonResponse({ error: '포트원 인증 실패: ' + (e?.message || e) }, 502);
+  // PortOne V2 결제 검증.
+  const fetchResult = await fetchPortOnePayment(env, paymentId);
+  if (!fetchResult.ok) {
+    return jsonResponse({ error: '결제 조회 실패: ' + fetchResult.error }, 502);
+  }
+  const payment = fetchResult.payment;
+  if (payment.status !== 'PAID') {
+    return jsonResponse({ error: `결제 상태 ${payment.status}`, code: 'NOT_PAID' }, 400);
+  }
+  const paidAmount = Number(payment.amount?.total || 0);
+  if (paidAmount !== PREMIUM_KRW) {
+    return jsonResponse({ error: `Premium 정가 불일치 (= ${PREMIUM_KRW}원, 실 ${paidAmount}원)` }, 400);
   }
 
-  let payment: any;
-  try {
-    const payResp = await fetch(`https://api.iamport.kr/payments/${imp_uid}`, {
-      headers: { 'Authorization': accessToken }
-    });
-    const payData: any = await payResp.json();
-    payment = payData?.response;
-    if (!payment || payment.status !== 'paid' || payment.merchant_uid !== merchant_uid) {
-      return jsonResponse({ error: '결제 검증 실패' }, 400);
-    }
-    if (Number(payment.amount) !== PREMIUM_KRW) {
-      return jsonResponse({ error: `Premium 정가 불일치 (= ${PREMIUM_KRW}원, 실 ${payment.amount}원)` }, 400);
-    }
-  } catch (e: any) {
-    return jsonResponse({ error: '결제 조회 실패: ' + (e?.message || e) }, 502);
-  }
-
-  // payments 기록
+  // payments 기록.
   try {
     await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_payments`, {
       method: 'POST',
@@ -100,9 +83,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
         user_id: user.id,
         user_email: user.email || null,
         payment_type: 'tier_upgrade',
-        amount_krw: payment.amount,
-        portone_imp_uid: imp_uid,
-        portone_merchant_uid: merchant_uid,
+        amount_krw: paidAmount,
+        portone_imp_uid: payment.txId || paymentId,
+        portone_merchant_uid: paymentId,
         status: 'paid',
         raw_response: payment
       })

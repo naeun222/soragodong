@@ -1,13 +1,11 @@
-// ─── 구독 모달 (사용자 명시 2026-05-02 ultrathink: 일반 / 얼리 분기) ───
-// 일반: Light 9,900 + Premium 25,000
-// 얼리 (early_user=true): ~~9,900~~ → 4,900 강조 + Premium 25,000
+// ─── 구독 모달 (사용자 명시 2026-05-06: PortOne V2 카드 결제, 토스 수동 송금 폐기) ───
+// Light 9,900 + Premium 25,000. 자동 갱신 X — 다음 달 명시 결제.
+
 async function openSubscribeModal() {
   if (document.getElementById('subscribeModalOverlay')) return;
-  // billing 갱신 (얼리 자격 확인용)
   if (typeof refreshBillingStatus === 'function') {
     try { await refreshBillingStatus(false); } catch {}
   }
-  const isEarly = !!(window._billingCache && window._billingCache.early_user);
   const minorWarning = state.preferences?.requiresLegalGuardianForPayment
     ? `<div style="padding:10px; background:rgba(220,150,80,0.10); border:1px solid rgba(220,150,80,0.40); border-radius:8px; font-size:11px; color:#e8c590; margin-bottom:14px;">⚠️ 만 18세 미만은 결제 시 법정대리인 동의 필요</div>`
     : '';
@@ -25,24 +23,6 @@ async function openSubscribeModal() {
       <button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">${plan.label} 구독 (${plan.krw.toLocaleString()}원)</button>
     </div>
   `;
-  // 사용자 명시 2026-05-02 ultrathink: 얼리 카드 — Light 9,900 strike-through + 4,900 강조 + "평생 이 가격" 메시지.
-  const earlyCard = (plan) => `
-    <div class="tier-card tier-early" style="padding:18px 16px; background:linear-gradient(135deg, rgba(126,200,227,0.10), rgba(126,200,227,0.03)); border:1.5px solid rgba(126,200,227,0.45); border-radius:14px; margin-bottom:10px;">
-      <div style="font-size:9px; letter-spacing:0.18em; text-transform:uppercase; color:#7ec8e3; font-weight:700; margin-bottom:6px;">✨ 얼리 유저 — 평생</div>
-      <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
-        <div style="font-size:18px; font-weight:700; color:var(--text);">${plan.emoji} ${plan.label}</div>
-        <div style="display:flex; align-items:baseline; gap:8px;">
-          <div style="font-size:13px; color:var(--text-soft); text-decoration:line-through; font-weight:500;">${TIER_PLANS_CLIENT.light.krw.toLocaleString()}원</div>
-          <div style="font-size:18px; font-weight:700; color:#7ec8e3;">${plan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/월</span></div>
-        </div>
-      </div>
-      <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${plan.tagline}</div>
-      <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
-        ${plan.description}
-      </div>
-      <button class="btn-primary" onclick="proceedSubscribe('early_light')" style="width:100%; padding:11px; background:#7ec8e3; color:#0a1418;">얼리 가격으로 구독 (${plan.krw.toLocaleString()}원)</button>
-    </div>
-  `;
   const overlay = document.createElement('div');
   overlay.className = 'input-modal-overlay show';
   overlay.id = 'subscribeModalOverlay';
@@ -54,10 +34,10 @@ async function openSubscribeModal() {
         무료 토큰 끝나면 마음껏 깊게 쓸 수 있게. 자동 갱신 X — 다음 달 명시 결제.
       </div>
       ${minorWarning}
-      ${isEarly ? earlyCard(TIER_PLANS_CLIENT.early_light) : tierCard('light', TIER_PLANS_CLIENT.light, false)}
+      ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
-        💡 ${isEarly ? '얼리 유저는 평생 이 가격이야. 더 쓰고 싶으면 Premium 으로 가도 돼.' : '잘 모르겠으면 <b>Light</b> 부터. 더 쓰고 싶으면 Premium.'}<br>
+        💡 잘 모르겠으면 <b>Light</b> 부터. 더 쓰고 싶으면 Premium.<br>
         해지: [설정 → 구독] 환불 (잔여일 비례 — <a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>
@@ -71,57 +51,99 @@ function closeSubscribeModal() {
   if (overlay) overlay.remove();
 }
 
-// 사용자 명시 2026-04-30: tier 인자 받음 ('light' | 'premium').
-// 포트원 채널 키 미설정 = 베타 (토스 수동 송금 + AI vision 인증). 활성 시 카드 결제.
+// 사용자 명시 2026-05-06: PortOne V2 SDK 카드 결제. 옛 V1 (IMP) + 토스 수동 송금 fallback 폐기.
+// channelKey + storeId 미설정 시 alert (env 정정 필요).
 async function proceedSubscribe(tierKey) {
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 tier'); return; }
-
-  // 포트원 미설정 = 토스 송금 fallback (한 달 구독, 자동 갱신 X)
-  const channelKey = window.PORTONE_CHANNEL_KEY || '';
-  if (!channelKey) {
-    closeSubscribeModal();
-    showTossSubscribeModal(tierKey);
+  if (!session || !session.access_token) {
+    alert('로그인 필요 — 설정 → 로그아웃 후 재로그인.');
+    return;
+  }
+  if (typeof state !== 'undefined' && state && state.isGuest) {
+    alert('게스트 모드는 결제 X — 먼저 로그인.');
+    return;
+  }
+  const channelKey = (typeof PORTONE_CHANNEL_KEY !== 'undefined') ? PORTONE_CHANNEL_KEY : '';
+  const storeId = (typeof PORTONE_STORE_ID !== 'undefined') ? PORTONE_STORE_ID : '';
+  if (!channelKey || !storeId) {
+    alert('결제 설정 오류 (PORTONE_CHANNEL_KEY / PORTONE_STORE_ID 미설정)');
     return;
   }
 
-  // 포트원 활성 — 카드 결제 흐름
-  if (typeof window.IMP === 'undefined') {
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.iamport.kr/v1/iamport.js';
-      s.onload = resolve; s.onerror = reject;
-      document.head.appendChild(s);
-    }).catch(() => alert('포트원 SDK 로드 실패'));
-  }
-  if (typeof window.IMP === 'undefined') return;
-  IMP.init(channelKey);
-
-  const merchantUid = `sub_${tierKey}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  IMP.request_pay({
-    pg: 'tosspayments', pay_method: 'card', merchant_uid: merchantUid,
-    name: `소라고동 ${tier.label} 구독`,
-    amount: tier.krw,
-    buyer_email: session?.user?.email || ''
-  }, async (rsp) => {
-    if (!rsp.success) { alert('결제 실패: ' + (rsp.error_msg || '취소됨')); return; }
+  // PortOne V2 SDK 동적 로드.
+  if (typeof window.PortOne === 'undefined') {
     try {
-      const verifyResp = await fetch('/api/billing/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
-        body: JSON.stringify({ imp_uid: rsp.imp_uid, merchant_uid: merchantUid, plan: tierKey })
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.portone.io/v2/browser-sdk.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
       });
-      const result = await verifyResp.json();
-      if (verifyResp.ok && result.ok) {
-        showToast(`📅 ${tier.label} 구독 완료 (${tier.krw.toLocaleString()}원/월)`);
-        closeSubscribeModal();
-        if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
-      } else {
-        alert('결제 검증 실패: ' + (result.error || '알 수 없음'));
-      }
     } catch (e) {
-      alert('백엔드 통신 실패: ' + (e.message || e));
+      alert('PortOne SDK 로드 실패 — 네트워크 확인 후 다시');
+      return;
     }
-  });
-}
+  }
+  if (typeof window.PortOne === 'undefined') {
+    alert('PortOne SDK 객체 X');
+    return;
+  }
 
+  // 결제 시도 — paymentId = 매번 unique. 사용자 본인 식별용 customer 정보 + tier 별 amount.
+  const paymentId = `payment-${tierKey}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  let response;
+  try {
+    response = await window.PortOne.requestPayment({
+      storeId,
+      channelKey,
+      paymentId,
+      orderName: `소라고동 ${tier.label} 구독 (1개월)`,
+      totalAmount: tier.krw,
+      currency: 'KRW',
+      payMethod: 'CARD',
+      customer: {
+        customerId: authUserId || undefined,
+        email: session?.user?.email || undefined
+      },
+      customData: JSON.stringify({ tier: tierKey, type: 'subscribe' })
+    });
+  } catch (e) {
+    alert('결제창 호출 실패: ' + (e?.message || e));
+    return;
+  }
+
+  // V2 SDK 응답 — 사용자가 결제창 닫음 / 결제 실패 시 code 채워짐.
+  if (response && response.code != null) {
+    alert('결제 취소 또는 실패: ' + (response.message || response.code));
+    return;
+  }
+
+  // 결제 완료 — backend 검증 호출.
+  try {
+    const verifyResp = await fetch('/api/billing/portone-verify-pay', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({ paymentId, plan: tierKey })
+    });
+    const result = await verifyResp.json();
+    if (verifyResp.ok && result.ok) {
+      if (result.duplicate) {
+        showToast('💳 이미 활성 구독 — 영수증 보관, 환불 안내 메일 확인');
+        alert(result.message || '이미 활성 구독이 있어. 환불 요청은 이메일로.');
+      } else {
+        showToast(`📅 ${tier.label} 구독 완료 (${tier.krw.toLocaleString()}원/월)`);
+      }
+      closeSubscribeModal();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+    } else {
+      alert('결제 검증 실패: ' + (result.error || '알 수 없음'));
+    }
+  } catch (e) {
+    alert('백엔드 통신 실패: ' + (e?.message || e));
+  }
+}

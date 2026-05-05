@@ -1,6 +1,7 @@
 // POST /api/billing/refund — 환불 (포트원 자동 환불 + 비례 환불).
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
+import { cancelPortOnePayment } from '../_lib/portone';
 
 const KRW_PER_USD = 1400;
 
@@ -81,9 +82,13 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return jsonResponse({ error: '환불 가능 금액 0원' }, 400);
   }
 
-  // 3. 포트원 토큰 + 환불 요청
-  if (!env.PORTONE_API_KEY || !env.PORTONE_API_SECRET) {
-    // claim 복원
+  // 3. 포트원 V2 환불 (cancelPortOnePayment helper 사용).
+  // 사용자 명시 2026-05-06: V1 (imp_uid + accessToken) 폐기 → V2 (paymentId + Authorization PortOne header).
+  // payments 테이블 portone_merchant_uid 컬럼에 V2 paymentId 저장 (verify-pay 시 — 옛 imp_uid 자리는 txId).
+  const v2PaymentId = paymentRow.portone_merchant_uid || paymentRow.portone_imp_uid;
+  const cancelResult = await cancelPortOnePayment(env, v2PaymentId, reason || '사용자 환불 요청', refundAmountKrw);
+  if (!cancelResult.ok) {
+    // claim 복원 — 환불 실패 시 status=paid 로 되돌림.
     await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${payment_id}`, {
       method: 'PATCH',
       headers: {
@@ -94,39 +99,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
       },
       body: JSON.stringify({ status: 'paid', refund_started_at: null })
     }).catch(() => {});
-    return jsonResponse({ error: 'PORTONE env 미설정' }, 500);
-  }
-  let accessToken: string;
-  try {
-    const tokenResp = await fetch('https://api.iamport.kr/users/getToken', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imp_key: env.PORTONE_API_KEY, imp_secret: env.PORTONE_API_SECRET })
-    });
-    const tokenData: any = await tokenResp.json();
-    accessToken = tokenData?.response?.access_token;
-    if (!accessToken) throw new Error('토큰 없음');
-  } catch (e: any) {
-    return jsonResponse({ error: '포트원 인증 실패: ' + (e?.message || e) }, 502);
-  }
-
-  try {
-    const refundResp = await fetch('https://api.iamport.kr/payments/cancel', {
-      method: 'POST',
-      headers: { 'Authorization': accessToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        imp_uid: paymentRow.portone_imp_uid,
-        amount: refundAmountKrw,
-        reason: reason || '사용자 환불 요청',
-        checksum: refundAmountKrw
-      })
-    });
-    const refundData: any = await refundResp.json();
-    if (refundData?.code !== 0) {
-      return jsonResponse({ error: '포트원 환불 실패: ' + (refundData?.message || '알 수 없음') }, 502);
-    }
-  } catch (e: any) {
-    return jsonResponse({ error: '환불 요청 예외: ' + (e?.message || e) }, 502);
+    return jsonResponse({ error: '포트원 환불 실패: ' + cancelResult.error }, 502);
   }
 
   // 4. payments 갱신
