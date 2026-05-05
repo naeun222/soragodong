@@ -58,6 +58,12 @@ function prefillCheckinFromEntry() {
     if (subtitle) subtitle.textContent = '오늘 네 컨디션 한 번 살펴보자.';
     renderCheckinMusicSlot();
     if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
+    // 사용자 명시 2026-05-06: Extra 접힘 + submit 상태 reset (신규 작성)
+    const _extraG = document.getElementById('checkinExtraGroup');
+    const _extraT = document.getElementById('checkinExtraToggle');
+    if (_extraG) _extraG.style.display = 'none';
+    if (_extraT) _extraT.classList.remove('is-open');
+    if (typeof _updateCheckinSubmitState === 'function') _updateCheckinSubmitState();
     return;
   }
   // 오늘 entry 있음 — 수정 모드
@@ -110,6 +116,23 @@ function prefillCheckinFromEntry() {
   if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
   // sleep duration 다시 계산
   if (typeof updateSleepDuration === 'function') updateSleepDuration();
+  // 사용자 명시 2026-05-06: Extra 값 있으면 자동 펼침 (수정 모드)
+  const _hasExtraVal = !!(entry.meals || entry.movement || entry.focus ||
+    entry.social || entry.overwhelm || entry.music || entry.photo ||
+    entry.sleepStart || entry.allNighter ||
+    (entry.modes && Object.values(entry.modes).some(Boolean)));
+  const _extraG2 = document.getElementById('checkinExtraGroup');
+  const _extraT2 = document.getElementById('checkinExtraToggle');
+  if (_extraG2 && _extraT2) {
+    if (_hasExtraVal) {
+      _extraG2.style.display = 'block';
+      _extraT2.classList.add('is-open');
+    } else {
+      _extraG2.style.display = 'none';
+      _extraT2.classList.remove('is-open');
+    }
+  }
+  if (typeof _updateCheckinSubmitState === 'function') _updateCheckinSubmitState();
 }
 
 function getCyclePhase() {

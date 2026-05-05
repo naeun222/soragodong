@@ -172,6 +172,20 @@
   }
 
   .action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; }
+  /* 사용자 명시 2026-05-06: 체크인 카드 — streak chip + 어제 미리보기 + 완료 morph */
+  .action-card.checkin-card { position: relative; }
+  .action-card.checkin-card.is-done {
+    border-color: rgba(126,200,200,0.35);
+    background: linear-gradient(135deg, rgba(126,200,200,0.08), rgba(45,40,80,0.10));
+  }
+  .streak-chip {
+    position: absolute; top: 10px; right: 14px;
+    font-size: 10px; color: var(--accent2);
+    background: rgba(126,200,200,0.12);
+    padding: 2px 8px; border-radius: 10px;
+    letter-spacing: 0.02em;
+  }
+  .yesterday-preview { font-size: 11px; color: var(--text-soft); margin-top: 4px; }
   /* V3.13.x: 상단 sticky 업데이트 배너 (모든 탭에서 표시, dismiss 시 그 버전 사라짐) */
   .update-banner {
     display: flex; align-items: center; gap: 10px;
@@ -297,6 +311,58 @@
   /* Always-expanded module rows */
   .module-row { margin-bottom: 16px; }
   .module-label { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; padding-left: 4px; }
+
+  /* 사용자 명시 2026-05-06: 체크인 화면 — Quick Core + Smart Expand */
+  .checkin-extra-toggle {
+    width: 100%; padding: 12px;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 18px 0 10px;
+    text-align: center;
+    transition: background 0.15s, transform 0.12s;
+  }
+  .checkin-extra-toggle:hover { background: var(--surface2); }
+  .checkin-extra-toggle:active { transform: scale(0.99); }
+  .checkin-extra-toggle .cet-arrow {
+    display: inline-block;
+    transition: transform 0.2s;
+    margin-right: 4px;
+  }
+  .checkin-extra-toggle.is-open .cet-arrow { transform: rotate(180deg); }
+  .checkin-extra-toggle .cet-count { color: var(--text-soft); margin-left: 4px; }
+  .checkin-extra-group { animation: onbFadeIn 0.25s ease; }
+  .checkin-extra-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 14px;
+    letter-spacing: 0.04em;
+  }
+  .btn-primary.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .checkin-progress-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 8px;
+    min-height: 14px;
+  }
+  .input-label .nudge-dot {
+    color: var(--text-dim);
+    font-size: 9px;
+    margin-left: 6px;
+    vertical-align: middle;
+    transition: opacity 0.2s;
+  }
+  .input-label .nudge-dot.satisfied { opacity: 0; }
 
   .ai-bubble { background: var(--surface); border: 1px solid rgba(201,169,110,0.15); border-radius: 18px; padding: 20px; margin-bottom: 16px; position: relative; }
   .ai-bubble::before { content: '🐚'; position: absolute; top: -12px; left: 16px; font-size: 20px; }

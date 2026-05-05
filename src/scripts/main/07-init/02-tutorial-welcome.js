@@ -87,12 +87,11 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'pick_mode',
-    targetSelector: '.mode-row',
-    title: '오늘 컨디션 어때?',
-    body: '특별한 날이면 골라봐. AI가 그 맥락에 맞춰 네 데이터를 학습해.<br>예를 들면 시험기간엔 밤낮이 바뀔 수 있잖아 — 다 괜찮아.<br><br><span class="small">선택 안 해도 됨. 여기선 시험 삼아 한 번 골라보자.</span>',
-    waitFor: 'click',
-    advanceDelay: 500,
-    fallbackPosition: 'bottom'
+    targetSelector: '.checkin-extra-toggle',
+    title: '더 기록하고 싶으면 여기',
+    body: '시험·여행·아픔·방전 같은 특별한 날이면 <b>▾ 더 기록하기</b> 펼쳐서 모드 / 수면 / 식사 등을 추가로 골라볼 수 있어.<br><br><span class="small">필수는 ⚡에너지·💭기분 두 개뿐. 나머지는 다 선택이야.</span>',
+    waitFor: 'next',
+    fallbackPosition: 'top'
   },
   {
     id: 'pick_vitality',

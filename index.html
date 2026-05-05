@@ -262,6 +262,20 @@
   }
 
   .action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; }
+  /* 사용자 명시 2026-05-06: 체크인 카드 — streak chip + 어제 미리보기 + 완료 morph */
+  .action-card.checkin-card { position: relative; }
+  .action-card.checkin-card.is-done {
+    border-color: rgba(126,200,200,0.35);
+    background: linear-gradient(135deg, rgba(126,200,200,0.08), rgba(45,40,80,0.10));
+  }
+  .streak-chip {
+    position: absolute; top: 10px; right: 14px;
+    font-size: 10px; color: var(--accent2);
+    background: rgba(126,200,200,0.12);
+    padding: 2px 8px; border-radius: 10px;
+    letter-spacing: 0.02em;
+  }
+  .yesterday-preview { font-size: 11px; color: var(--text-soft); margin-top: 4px; }
   /* V3.13.x: 상단 sticky 업데이트 배너 (모든 탭에서 표시, dismiss 시 그 버전 사라짐) */
   .update-banner {
     display: flex; align-items: center; gap: 10px;
@@ -387,6 +401,58 @@
   /* Always-expanded module rows */
   .module-row { margin-bottom: 16px; }
   .module-label { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; padding-left: 4px; }
+
+  /* 사용자 명시 2026-05-06: 체크인 화면 — Quick Core + Smart Expand */
+  .checkin-extra-toggle {
+    width: 100%; padding: 12px;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 18px 0 10px;
+    text-align: center;
+    transition: background 0.15s, transform 0.12s;
+  }
+  .checkin-extra-toggle:hover { background: var(--surface2); }
+  .checkin-extra-toggle:active { transform: scale(0.99); }
+  .checkin-extra-toggle .cet-arrow {
+    display: inline-block;
+    transition: transform 0.2s;
+    margin-right: 4px;
+  }
+  .checkin-extra-toggle.is-open .cet-arrow { transform: rotate(180deg); }
+  .checkin-extra-toggle .cet-count { color: var(--text-soft); margin-left: 4px; }
+  .checkin-extra-group { animation: onbFadeIn 0.25s ease; }
+  .checkin-extra-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 14px;
+    letter-spacing: 0.04em;
+  }
+  .btn-primary.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .checkin-progress-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 8px;
+    min-height: 14px;
+  }
+  .input-label .nudge-dot {
+    color: var(--text-dim);
+    font-size: 9px;
+    margin-left: 6px;
+    vertical-align: middle;
+    transition: opacity 0.2s;
+  }
+  .input-label .nudge-dot.satisfied { opacity: 0; }
 
   .ai-bubble { background: var(--surface); border: 1px solid rgba(201,169,110,0.15); border-radius: 18px; padding: 20px; margin-bottom: 16px; position: relative; }
   .ai-bubble::before { content: '🐚'; position: absolute; top: -12px; left: 16px; font-size: 20px; }
@@ -10406,43 +10472,9 @@
       <div class="screen-title">오늘 체크인</div>
       <div class="screen-sub">딱 15초. 부담 없이. 몰라도 괜찮아.</div>
 
-      <!-- Mode (moved from home) -->
-      <div class="input-group">
-        <div style="font-size:12px; color:var(--text-soft); margin-bottom:10px; line-height:1.6;">특별한 날이면 골라봐. 안 골라도 OK.</div>
-        <div class="mode-row" id="modeRow">
-          <div class="mode-chip" data-mode="exam" onclick="toggleMode('exam')">📚 시험</div>
-          <div class="mode-chip" data-mode="travel" onclick="toggleMode('travel')">✈️ 여행</div>
-          <div class="mode-chip" data-mode="sick" onclick="toggleMode('sick')">🤒 아픔</div>
-          <div class="mode-chip" data-mode="rest" onclick="toggleMode('rest')">🏖 휴식</div>
-          <div class="mode-chip" data-mode="period" onclick="toggleMode('period')">🩸 월경</div>
-          <div class="mode-chip mode-sos" data-mode="drained" onclick="toggleMode('drained')">🪫 방전</div>
-        </div>
-      </div>
-
-      <div class="input-group">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-          <div class="input-label" style="margin-bottom:0;">😴 어젯밤 수면</div>
-          <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--text-dim); cursor:pointer; user-select:none; padding:4px 8px; border-radius:8px; background:var(--surface);">
-            <input type="checkbox" id="allNighterToggle" onchange="toggleAllNighter(this.checked)" style="margin:0; cursor:pointer;">
-            🌙 밤샘
-          </label>
-        </div>
-        <div class="time-pair" id="sleepTimePair">
-          <div class="time-input-wrap">
-            <div class="time-label">잠든 시각</div>
-            <input type="time" id="sleepStart" value="00:00">
-          </div>
-          <div class="time-input-wrap">
-            <div class="time-label">일어난 시각</div>
-            <input type="time" id="sleepEnd" value="07:30">
-          </div>
-        </div>
-        <div id="allNighterMsg" style="display:none; font-size:13px; color:var(--accent2); padding:14px; text-align:center; background:rgba(126,200,200,0.08); border:1px dashed rgba(126,200,200,0.3); border-radius:10px;">🌙 밤샘으로 기록 — 수면 시간 X</div>
-        <div style="font-size:11px; color:var(--text-dim); margin-top:6px;" id="sleepDuration"></div>
-      </div>
-
-      <div class="input-group">
-        <div class="input-label">⚡ 지금 몸의 에너지는?</div>
+      <!-- Core: vitality (필수) -->
+      <div class="input-group checkin-core checkin-vitality">
+        <div class="input-label">⚡ 지금 몸의 에너지는?<span class="nudge-dot" id="vitalityNudgeDot">●</span></div>
         <div class="vitality-options">
           <div class="vitality-btn" onclick="selectVitality(this, 1)">😵</div>
           <div class="vitality-btn" onclick="selectVitality(this, 2)">😴</div>
@@ -10456,8 +10488,9 @@
         </div>
       </div>
 
-      <div class="input-group">
-        <div class="input-label">💭 지금 기분</div>
+      <!-- Core: mood (필수) -->
+      <div class="input-group checkin-core checkin-mood">
+        <div class="input-label">💭 지금 기분<span class="nudge-dot" id="moodNudgeDot">●</span></div>
         <div class="mood-options">
           <div class="mood-btn" onclick="selectMood(this, 1)">😞</div>
           <div class="mood-btn" onclick="selectMood(this, 2)">😐</div>
@@ -10471,8 +10504,8 @@
         </div>
       </div>
 
-      <!-- DAILY QUESTION (replaces 한 줄로 오늘은) -->
-      <div class="input-group" id="dailyQuestionWrap">
+      <!-- Core: daily question (선택, 가벼움) -->
+      <div class="input-group checkin-core" id="dailyQuestionWrap">
         <div class="input-label">
           <span id="dailyQuestionIcon">💬</span>
           <span id="dailyQuestionLabel">오늘의 질문</span>
@@ -10486,14 +10519,55 @@
         </div>
       </div>
 
-      <!-- V3.13.x: 음악 슬롯 + V4: 사진 슬롯 (사진 왼쪽 정사각, 음악 오른쪽 가로 길게) -->
-      <div class="input-group checkin-mp-row" style="display:flex; gap:8px; align-items:stretch;">
-        <div id="checkinPhotoSlot" style="flex:0 0 auto;"></div>
-        <div id="checkinMusicSlot" style="flex:1; min-width:0;"></div>
-      </div>
+      <!-- 사용자 명시 2026-05-06: Extra 토글 — Core 3개 외 9개 항목 접힘 -->
+      <button class="checkin-extra-toggle" id="checkinExtraToggle" onclick="toggleCheckinExtra()">
+        <span class="cet-arrow">▾</span> 더 기록하기 <span class="cet-count">(9)</span>
+      </button>
 
-      <div class="optional-section">
-        <div style="font-size:11px; color:var(--text-soft); margin-bottom:14px; letter-spacing:0.06em;">━ 더 기록하기 (선택) ━</div>
+      <div id="checkinExtraGroup" class="checkin-extra-group" style="display:none;">
+        <div class="checkin-extra-hint">안 채워도 돼. 기록하고 싶은 것만.</div>
+
+        <!-- Mode (moved into Extra) -->
+        <div class="input-group">
+          <div class="input-label">🌙 오늘 모드 <span class="optional">(선택)</span></div>
+          <div class="mode-row" id="modeRow">
+            <div class="mode-chip" data-mode="exam" onclick="toggleMode('exam')">📚 시험</div>
+            <div class="mode-chip" data-mode="travel" onclick="toggleMode('travel')">✈️ 여행</div>
+            <div class="mode-chip" data-mode="sick" onclick="toggleMode('sick')">🤒 아픔</div>
+            <div class="mode-chip" data-mode="rest" onclick="toggleMode('rest')">🏖 휴식</div>
+            <div class="mode-chip" data-mode="period" onclick="toggleMode('period')">🩸 월경</div>
+            <div class="mode-chip mode-sos" data-mode="drained" onclick="toggleMode('drained')">🪫 방전</div>
+          </div>
+        </div>
+
+        <!-- Sleep -->
+        <div class="input-group">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <div class="input-label" style="margin-bottom:0;">😴 어젯밤 수면 <span class="optional">(선택)</span></div>
+            <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--text-dim); cursor:pointer; user-select:none; padding:4px 8px; border-radius:8px; background:var(--surface);">
+              <input type="checkbox" id="allNighterToggle" onchange="toggleAllNighter(this.checked)" style="margin:0; cursor:pointer;">
+              🌙 밤샘
+            </label>
+          </div>
+          <div class="time-pair" id="sleepTimePair">
+            <div class="time-input-wrap">
+              <div class="time-label">잠든 시각</div>
+              <input type="time" id="sleepStart" value="00:00">
+            </div>
+            <div class="time-input-wrap">
+              <div class="time-label">일어난 시각</div>
+              <input type="time" id="sleepEnd" value="07:30">
+            </div>
+          </div>
+          <div id="allNighterMsg" style="display:none; font-size:13px; color:var(--accent2); padding:14px; text-align:center; background:rgba(126,200,200,0.08); border:1px dashed rgba(126,200,200,0.3); border-radius:10px;">🌙 밤샘으로 기록 — 수면 시간 X</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:6px;" id="sleepDuration"></div>
+        </div>
+
+        <!-- V3.13.x: 음악 슬롯 + V4: 사진 슬롯 -->
+        <div class="input-group checkin-mp-row" style="display:flex; gap:8px; align-items:stretch;">
+          <div id="checkinPhotoSlot" style="flex:0 0 auto;"></div>
+          <div id="checkinMusicSlot" style="flex:1; min-width:0;"></div>
+        </div>
 
         <div class="module-row">
           <div class="module-label">🍚 식사</div>
@@ -10550,7 +10624,8 @@
       </div>
 
       <div class="sticky-action-bar">
-        <button class="btn-primary" onclick="submitCheckin()">기록 완료 ✦</button>
+        <div class="checkin-progress-hint" id="checkinProgressHint"></div>
+        <button class="btn-primary" id="checkinSubmitBtn" onclick="submitCheckin()">기록 완료 ✦</button>
         <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
       </div>
     </div>
@@ -17080,12 +17155,11 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'pick_mode',
-    targetSelector: '.mode-row',
-    title: '오늘 컨디션 어때?',
-    body: '특별한 날이면 골라봐. AI가 그 맥락에 맞춰 네 데이터를 학습해.<br>예를 들면 시험기간엔 밤낮이 바뀔 수 있잖아 — 다 괜찮아.<br><br><span class="small">선택 안 해도 됨. 여기선 시험 삼아 한 번 골라보자.</span>',
-    waitFor: 'click',
-    advanceDelay: 500,
-    fallbackPosition: 'bottom'
+    targetSelector: '.checkin-extra-toggle',
+    title: '더 기록하고 싶으면 여기',
+    body: '시험·여행·아픔·방전 같은 특별한 날이면 <b>▾ 더 기록하기</b> 펼쳐서 모드 / 수면 / 식사 등을 추가로 골라볼 수 있어.<br><br><span class="small">필수는 ⚡에너지·💭기분 두 개뿐. 나머지는 다 선택이야.</span>',
+    waitFor: 'next',
+    fallbackPosition: 'top'
   },
   {
     id: 'pick_vitality',
@@ -22420,15 +22494,92 @@ function applyNightMode() {
 }
 
 // Main action card — 시간대에 따라 (밤=체크인 / 낮=실행) 자동 변경
+// === 체크인 카드 helper (사용자 명시 2026-05-06: 카드 매력 강화) ===
+function getCheckinTimeSlot() {
+  const h = new Date().getHours();
+  if (h >= 4 && h < 11) return 'morning';
+  if (h >= 11 && h < 17) return 'noon';
+  if (h >= 17 && h < 21) return 'evening';
+  return 'night';
+}
+
+function _checkinCardCopy(slot, isDone) {
+  if (isDone) return { icon: '✓', title: '오늘 기록 완료', sub: '' };
+  const map = {
+    morning: { icon: '☀️', title: '오늘 어떻게 시작해?', sub: '어젯밤 잠 + 지금 컨디션 한 줄이면 OK' },
+    noon: { icon: '🌤', title: '지금 컨디션 어때?', sub: '30초만. 점심 전후 짚어두자' },
+    evening: { icon: '🌅', title: '오늘 지나간 흐름 짚어볼래?', sub: '메모 한 줄로도 충분해' },
+    night: { icon: '🌙', title: '오늘 어땠어?', sub: '하루 닫고 자기 전 한 호흡' }
+  };
+  return map[slot] || map.night;
+}
+
+function _shiftDateKey(key, deltaDays) {
+  const d = new Date(key + 'T00:00:00');
+  d.setDate(d.getDate() + deltaDays);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function getCheckinStreak() {
+  const entries = state.entries || [];
+  if (!entries.length) return 0;
+  const todayK = todayKey();
+  const todayE = entries.find(e => e.date === todayK);
+  let streak = 0;
+  let cursorKey;
+  if (todayE && (todayE.vitality || todayE.mood || todayE.note)) {
+    streak = 1;
+    cursorKey = _shiftDateKey(todayK, -1);
+  } else {
+    cursorKey = _shiftDateKey(todayK, -1);
+  }
+  while (streak < 365) {
+    const e = entries.find(en => en.date === cursorKey);
+    if (e && (e.vitality || e.mood || e.note)) {
+      streak++;
+      cursorKey = _shiftDateKey(cursorKey, -1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function getYesterdayMoodSummary() {
+  const yKey = _shiftDateKey(todayKey(), -1);
+  const entry = (state.entries || []).find(e => e.date === yKey);
+  if (!entry) return null;
+  const vEmojis = ['😵', '😴', '🙂', '😊', '✨'];
+  const mEmojis = ['😞', '😐', '🙂', '😊', '✨'];
+  const v = entry.vitality ? vEmojis[entry.vitality - 1] : null;
+  const m = entry.mood ? mEmojis[entry.mood - 1] : null;
+  if (!v && !m) return null;
+  return { vitalityEmoji: v, moodEmoji: m };
+}
+
+function _todayMoodSummaryHtml(entry) {
+  if (!entry) return '';
+  const vEmojis = ['😵', '😴', '🙂', '😊', '✨'];
+  const mEmojis = ['😞', '😐', '🙂', '😊', '✨'];
+  const parts = [];
+  if (entry.vitality) parts.push(`⚡${vEmojis[entry.vitality - 1]}`);
+  if (entry.mood) parts.push(`💭${mEmojis[entry.mood - 1]}`);
+  if (!parts.length && entry.note) return '메모 한 줄 적어뒀어';
+  if (!parts.length) return '기록됨';
+  return parts.join(' · ');
+}
+
 function renderMainAction() {
   const container = document.getElementById('mainActionContainer');
   if (!container) return;
 
   // V3.13.x: 튜토리얼 모드면 시간대/체크인 여부 무관하게 체크인 카드 강제
-  // (낮엔 체크인 카드가 작은 링크 또는 아예 없어서 튜토리얼 spotlight 못 잡힘)
   if (window._onbTutorialMode) {
     container.innerHTML = `
-      <div class="action-card" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
+      <div class="action-card checkin-card" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
         <div class="action-icon">✓</div>
         <div class="action-text">
           <div class="action-title">체크인</div>
@@ -22440,43 +22591,61 @@ function renderMainAction() {
     return;
   }
 
-  const isNight = isNightTime();
   const todayKeyVal = todayKey();
   const todayEntry = state.entries.find(e => e.date === todayKeyVal);
   const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  
-  // V3.13.x: 메인 카드 + 작은 체크인 링크 항상 (이미 했어도 들어가서 수정 가능)
-  let mainCard;
-  if (isNight && !checkinDoneToday) {
-    // 밤 + 미체크인: 체크인 메인
-    mainCard = `
-      <div class="action-card" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
-        <div class="action-icon">🌙</div>
+  const slot = getCheckinTimeSlot();
+  const copy = _checkinCardCopy(slot, checkinDoneToday);
+  const streak = getCheckinStreak();
+  const streakHtml = streak > 0 ? `<span class="streak-chip">🌊 ${streak}일째</span>` : '';
+
+  let cardHtml;
+  if (checkinDoneToday) {
+    const summary = _todayMoodSummaryHtml(todayEntry);
+    cardHtml = `
+      <div class="action-card checkin-card is-done" onclick="enterCheckin()">
+        ${streakHtml}
+        <div class="action-icon">${copy.icon}</div>
         <div class="action-text">
-          <div class="action-title">오늘 어땠어?</div>
-          <div class="action-sub">하루를 차분히 닫아보자</div>
+          <div class="action-title">${copy.title}</div>
+          <div class="action-sub">${summary}</div>
         </div>
         <div class="action-arrow">›</div>
       </div>
     `;
   } else {
-    // V4 (사용자 명시 2026-05-05): 실행 카드 제거 → '오늘의 너' 큐레이션 (도서관 hero 동일).
-    // 진주 0개면 '첫 진주 추가' 유도 카드 (_heroEmptyHtml).
-    if (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function' && typeof _heroEmptyHtml === 'function') {
-      const pick = _pickHeroPearl();
-      // 사용자 명시 2026-05-05: 홈 hero 클릭 → 도서관 진주 칩 이동 (도서관 hero 는 기존대로 모달)
-      mainCard = pick ? _heroCardHtml(pick, { linkTo: 'pearls-tab' }) : _heroEmptyHtml();
-    } else {
-      mainCard = '';
+    const ySum = getYesterdayMoodSummary();
+    let yPreview = '';
+    if (ySum) {
+      const parts = [];
+      if (ySum.vitalityEmoji) parts.push(`⚡${ySum.vitalityEmoji}`);
+      if (ySum.moodEmoji) parts.push(`💭${ySum.moodEmoji}`);
+      yPreview = `<div class="yesterday-preview">어제 ${parts.join(' · ')}</div>`;
     }
+    cardHtml = `
+      <div class="action-card checkin-card" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
+        ${streakHtml}
+        <div class="action-icon">${copy.icon}</div>
+        <div class="action-text">
+          <div class="action-title">${copy.title}</div>
+          <div class="action-sub">${copy.sub}</div>
+          ${yPreview}
+        </div>
+        <div class="action-arrow">›</div>
+      </div>
+    `;
   }
-  // 메인 카드가 체크인 아닐 때 항상 작은 링크 노출 (이미 했어도 수정 가능)
-  let checkinSubLink = '';
-  if (!(isNight && !checkinDoneToday)) {
-    const label = checkinDoneToday ? '✓ 오늘 체크인 보기 / 수정' : '✨ 오늘 체크인하기 →';
-    checkinSubLink = `<div onclick="enterCheckin()" style="font-size:12px; color:var(--text-dim); padding:10px 14px; text-align:center; cursor:pointer; margin-top:6px;">${label}</div>`;
+
+  // V4 (사용자 명시 2026-05-06): 도서관 진주 hero 는 체크인 카드 아래 보조 위치.
+  // 낮 시간대에도 체크인 카드가 메인.
+  let heroHtml = '';
+  if (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function' && typeof _heroEmptyHtml === 'function') {
+    const pick = _pickHeroPearl();
+    const inner = pick ? _heroCardHtml(pick, { linkTo: 'pearls-tab' }) : _heroEmptyHtml();
+    if (inner) heroHtml = `<div style="margin-top: 14px;">${inner}</div>`;
   }
-  container.innerHTML = mainCard + checkinSubLink;
+
+  container.innerHTML = cardHtml + heroHtml;
 }
 
 // 마법의 소라고동 미니 링크 — 작지만 카드 모양
@@ -27853,6 +28022,12 @@ function prefillCheckinFromEntry() {
     if (subtitle) subtitle.textContent = '오늘 네 컨디션 한 번 살펴보자.';
     renderCheckinMusicSlot();
     if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
+    // 사용자 명시 2026-05-06: Extra 접힘 + submit 상태 reset (신규 작성)
+    const _extraG = document.getElementById('checkinExtraGroup');
+    const _extraT = document.getElementById('checkinExtraToggle');
+    if (_extraG) _extraG.style.display = 'none';
+    if (_extraT) _extraT.classList.remove('is-open');
+    if (typeof _updateCheckinSubmitState === 'function') _updateCheckinSubmitState();
     return;
   }
   // 오늘 entry 있음 — 수정 모드
@@ -27905,6 +28080,23 @@ function prefillCheckinFromEntry() {
   if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
   // sleep duration 다시 계산
   if (typeof updateSleepDuration === 'function') updateSleepDuration();
+  // 사용자 명시 2026-05-06: Extra 값 있으면 자동 펼침 (수정 모드)
+  const _hasExtraVal = !!(entry.meals || entry.movement || entry.focus ||
+    entry.social || entry.overwhelm || entry.music || entry.photo ||
+    entry.sleepStart || entry.allNighter ||
+    (entry.modes && Object.values(entry.modes).some(Boolean)));
+  const _extraG2 = document.getElementById('checkinExtraGroup');
+  const _extraT2 = document.getElementById('checkinExtraToggle');
+  if (_extraG2 && _extraT2) {
+    if (_hasExtraVal) {
+      _extraG2.style.display = 'block';
+      _extraT2.classList.add('is-open');
+    } else {
+      _extraG2.style.display = 'none';
+      _extraT2.classList.remove('is-open');
+    }
+  }
+  if (typeof _updateCheckinSubmitState === 'function') _updateCheckinSubmitState();
 }
 
 function getCyclePhase() {
@@ -28038,12 +28230,56 @@ function selectMood(btn, level) {
   document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   currentCheckin.mood = level;
+  if (typeof _updateCheckinSubmitState === 'function') _updateCheckinSubmitState();
 }
 
 function selectVitality(btn, level) {
   document.querySelectorAll('.vitality-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   currentCheckin.vitality = level;
+  if (typeof _updateCheckinSubmitState === 'function') _updateCheckinSubmitState();
+}
+
+// 사용자 명시 2026-05-06: 체크인 화면 — Quick Core + Smart Expand 토글 / validation 헬퍼
+function toggleCheckinExtra() {
+  const group = document.getElementById('checkinExtraGroup');
+  const toggle = document.getElementById('checkinExtraToggle');
+  if (!group || !toggle) return;
+  const isOpen = group.style.display !== 'none' && group.style.display !== '';
+  if (isOpen) {
+    group.style.display = 'none';
+    toggle.classList.remove('is-open');
+  } else {
+    group.style.display = 'block';
+    toggle.classList.add('is-open');
+  }
+}
+
+function _updateCheckinSubmitState() {
+  const btn = document.getElementById('checkinSubmitBtn');
+  const hint = document.getElementById('checkinProgressHint');
+  const vDot = document.getElementById('vitalityNudgeDot');
+  const mDot = document.getElementById('moodNudgeDot');
+  // 수정 모드 판단: submit 버튼 텍스트 보고 결정 (prefillCheckinFromEntry 가 갱신)
+  const isEdit = btn && btn.textContent && btn.textContent.indexOf('수정') !== -1;
+  const hasV = !!currentCheckin.vitality;
+  const hasM = !!currentCheckin.mood;
+  if (vDot) vDot.classList.toggle('satisfied', hasV);
+  if (mDot) mDot.classList.toggle('satisfied', hasM);
+  if (!btn) return;
+  if (isEdit) {
+    btn.classList.remove('disabled');
+    if (hint) hint.textContent = '';
+    return;
+  }
+  const ready = hasV && hasM;
+  btn.classList.toggle('disabled', !ready);
+  if (hint) {
+    const count = (hasV ? 1 : 0) + (hasM ? 1 : 0);
+    if (ready) hint.textContent = '2/2 ✓ 준비 됐어';
+    else if (count === 1) hint.textContent = '1/2 — 하나만 더';
+    else hint.textContent = '0/2 — 두 개만 골라줘';
+  }
 }
 
 function updateSleepDuration() {
@@ -28090,6 +28326,14 @@ function selectQuick(btn, key, value) {
 }
 
 async function submitCheckin() {
+  // 사용자 명시 2026-05-06: vitality + mood validation (신규 작성 모드에서만)
+  const _vmTodayK = todayKey();
+  const _vmExisting = (state.entries || []).find(en => en.date === _vmTodayK);
+  const _vmIsEdit = !!(_vmExisting && (_vmExisting.vitality || _vmExisting.mood));
+  if (!_vmIsEdit && (!currentCheckin.vitality || !currentCheckin.mood)) {
+    if (typeof showToast === 'function') showToast('⚡ 에너지랑 💭 기분 두 개만 골라줘');
+    return;
+  }
   const allNighter = !!document.getElementById('allNighterToggle')?.checked;
   const sleepStart = document.getElementById('sleepStart').value;
   const sleepEnd = document.getElementById('sleepEnd').value;

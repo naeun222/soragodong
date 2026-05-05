@@ -60,43 +60,9 @@
       <div class="screen-title">오늘 체크인</div>
       <div class="screen-sub">딱 15초. 부담 없이. 몰라도 괜찮아.</div>
 
-      <!-- Mode (moved from home) -->
-      <div class="input-group">
-        <div style="font-size:12px; color:var(--text-soft); margin-bottom:10px; line-height:1.6;">특별한 날이면 골라봐. 안 골라도 OK.</div>
-        <div class="mode-row" id="modeRow">
-          <div class="mode-chip" data-mode="exam" onclick="toggleMode('exam')">📚 시험</div>
-          <div class="mode-chip" data-mode="travel" onclick="toggleMode('travel')">✈️ 여행</div>
-          <div class="mode-chip" data-mode="sick" onclick="toggleMode('sick')">🤒 아픔</div>
-          <div class="mode-chip" data-mode="rest" onclick="toggleMode('rest')">🏖 휴식</div>
-          <div class="mode-chip" data-mode="period" onclick="toggleMode('period')">🩸 월경</div>
-          <div class="mode-chip mode-sos" data-mode="drained" onclick="toggleMode('drained')">🪫 방전</div>
-        </div>
-      </div>
-
-      <div class="input-group">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-          <div class="input-label" style="margin-bottom:0;">😴 어젯밤 수면</div>
-          <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--text-dim); cursor:pointer; user-select:none; padding:4px 8px; border-radius:8px; background:var(--surface);">
-            <input type="checkbox" id="allNighterToggle" onchange="toggleAllNighter(this.checked)" style="margin:0; cursor:pointer;">
-            🌙 밤샘
-          </label>
-        </div>
-        <div class="time-pair" id="sleepTimePair">
-          <div class="time-input-wrap">
-            <div class="time-label">잠든 시각</div>
-            <input type="time" id="sleepStart" value="00:00">
-          </div>
-          <div class="time-input-wrap">
-            <div class="time-label">일어난 시각</div>
-            <input type="time" id="sleepEnd" value="07:30">
-          </div>
-        </div>
-        <div id="allNighterMsg" style="display:none; font-size:13px; color:var(--accent2); padding:14px; text-align:center; background:rgba(126,200,200,0.08); border:1px dashed rgba(126,200,200,0.3); border-radius:10px;">🌙 밤샘으로 기록 — 수면 시간 X</div>
-        <div style="font-size:11px; color:var(--text-dim); margin-top:6px;" id="sleepDuration"></div>
-      </div>
-
-      <div class="input-group">
-        <div class="input-label">⚡ 지금 몸의 에너지는?</div>
+      <!-- Core: vitality (필수) -->
+      <div class="input-group checkin-core checkin-vitality">
+        <div class="input-label">⚡ 지금 몸의 에너지는?<span class="nudge-dot" id="vitalityNudgeDot">●</span></div>
         <div class="vitality-options">
           <div class="vitality-btn" onclick="selectVitality(this, 1)">😵</div>
           <div class="vitality-btn" onclick="selectVitality(this, 2)">😴</div>
@@ -110,8 +76,9 @@
         </div>
       </div>
 
-      <div class="input-group">
-        <div class="input-label">💭 지금 기분</div>
+      <!-- Core: mood (필수) -->
+      <div class="input-group checkin-core checkin-mood">
+        <div class="input-label">💭 지금 기분<span class="nudge-dot" id="moodNudgeDot">●</span></div>
         <div class="mood-options">
           <div class="mood-btn" onclick="selectMood(this, 1)">😞</div>
           <div class="mood-btn" onclick="selectMood(this, 2)">😐</div>
@@ -125,8 +92,8 @@
         </div>
       </div>
 
-      <!-- DAILY QUESTION (replaces 한 줄로 오늘은) -->
-      <div class="input-group" id="dailyQuestionWrap">
+      <!-- Core: daily question (선택, 가벼움) -->
+      <div class="input-group checkin-core" id="dailyQuestionWrap">
         <div class="input-label">
           <span id="dailyQuestionIcon">💬</span>
           <span id="dailyQuestionLabel">오늘의 질문</span>
@@ -140,14 +107,55 @@
         </div>
       </div>
 
-      <!-- V3.13.x: 음악 슬롯 + V4: 사진 슬롯 (사진 왼쪽 정사각, 음악 오른쪽 가로 길게) -->
-      <div class="input-group checkin-mp-row" style="display:flex; gap:8px; align-items:stretch;">
-        <div id="checkinPhotoSlot" style="flex:0 0 auto;"></div>
-        <div id="checkinMusicSlot" style="flex:1; min-width:0;"></div>
-      </div>
+      <!-- 사용자 명시 2026-05-06: Extra 토글 — Core 3개 외 9개 항목 접힘 -->
+      <button class="checkin-extra-toggle" id="checkinExtraToggle" onclick="toggleCheckinExtra()">
+        <span class="cet-arrow">▾</span> 더 기록하기 <span class="cet-count">(9)</span>
+      </button>
 
-      <div class="optional-section">
-        <div style="font-size:11px; color:var(--text-soft); margin-bottom:14px; letter-spacing:0.06em;">━ 더 기록하기 (선택) ━</div>
+      <div id="checkinExtraGroup" class="checkin-extra-group" style="display:none;">
+        <div class="checkin-extra-hint">안 채워도 돼. 기록하고 싶은 것만.</div>
+
+        <!-- Mode (moved into Extra) -->
+        <div class="input-group">
+          <div class="input-label">🌙 오늘 모드 <span class="optional">(선택)</span></div>
+          <div class="mode-row" id="modeRow">
+            <div class="mode-chip" data-mode="exam" onclick="toggleMode('exam')">📚 시험</div>
+            <div class="mode-chip" data-mode="travel" onclick="toggleMode('travel')">✈️ 여행</div>
+            <div class="mode-chip" data-mode="sick" onclick="toggleMode('sick')">🤒 아픔</div>
+            <div class="mode-chip" data-mode="rest" onclick="toggleMode('rest')">🏖 휴식</div>
+            <div class="mode-chip" data-mode="period" onclick="toggleMode('period')">🩸 월경</div>
+            <div class="mode-chip mode-sos" data-mode="drained" onclick="toggleMode('drained')">🪫 방전</div>
+          </div>
+        </div>
+
+        <!-- Sleep -->
+        <div class="input-group">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <div class="input-label" style="margin-bottom:0;">😴 어젯밤 수면 <span class="optional">(선택)</span></div>
+            <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--text-dim); cursor:pointer; user-select:none; padding:4px 8px; border-radius:8px; background:var(--surface);">
+              <input type="checkbox" id="allNighterToggle" onchange="toggleAllNighter(this.checked)" style="margin:0; cursor:pointer;">
+              🌙 밤샘
+            </label>
+          </div>
+          <div class="time-pair" id="sleepTimePair">
+            <div class="time-input-wrap">
+              <div class="time-label">잠든 시각</div>
+              <input type="time" id="sleepStart" value="00:00">
+            </div>
+            <div class="time-input-wrap">
+              <div class="time-label">일어난 시각</div>
+              <input type="time" id="sleepEnd" value="07:30">
+            </div>
+          </div>
+          <div id="allNighterMsg" style="display:none; font-size:13px; color:var(--accent2); padding:14px; text-align:center; background:rgba(126,200,200,0.08); border:1px dashed rgba(126,200,200,0.3); border-radius:10px;">🌙 밤샘으로 기록 — 수면 시간 X</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:6px;" id="sleepDuration"></div>
+        </div>
+
+        <!-- V3.13.x: 음악 슬롯 + V4: 사진 슬롯 -->
+        <div class="input-group checkin-mp-row" style="display:flex; gap:8px; align-items:stretch;">
+          <div id="checkinPhotoSlot" style="flex:0 0 auto;"></div>
+          <div id="checkinMusicSlot" style="flex:1; min-width:0;"></div>
+        </div>
 
         <div class="module-row">
           <div class="module-label">🍚 식사</div>
@@ -204,7 +212,8 @@
       </div>
 
       <div class="sticky-action-bar">
-        <button class="btn-primary" onclick="submitCheckin()">기록 완료 ✦</button>
+        <div class="checkin-progress-hint" id="checkinProgressHint"></div>
+        <button class="btn-primary" id="checkinSubmitBtn" onclick="submitCheckin()">기록 완료 ✦</button>
         <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
       </div>
     </div>

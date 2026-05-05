@@ -5,12 +5,56 @@ function selectMood(btn, level) {
   document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   currentCheckin.mood = level;
+  if (typeof _updateCheckinSubmitState === 'function') _updateCheckinSubmitState();
 }
 
 function selectVitality(btn, level) {
   document.querySelectorAll('.vitality-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   currentCheckin.vitality = level;
+  if (typeof _updateCheckinSubmitState === 'function') _updateCheckinSubmitState();
+}
+
+// 사용자 명시 2026-05-06: 체크인 화면 — Quick Core + Smart Expand 토글 / validation 헬퍼
+function toggleCheckinExtra() {
+  const group = document.getElementById('checkinExtraGroup');
+  const toggle = document.getElementById('checkinExtraToggle');
+  if (!group || !toggle) return;
+  const isOpen = group.style.display !== 'none' && group.style.display !== '';
+  if (isOpen) {
+    group.style.display = 'none';
+    toggle.classList.remove('is-open');
+  } else {
+    group.style.display = 'block';
+    toggle.classList.add('is-open');
+  }
+}
+
+function _updateCheckinSubmitState() {
+  const btn = document.getElementById('checkinSubmitBtn');
+  const hint = document.getElementById('checkinProgressHint');
+  const vDot = document.getElementById('vitalityNudgeDot');
+  const mDot = document.getElementById('moodNudgeDot');
+  // 수정 모드 판단: submit 버튼 텍스트 보고 결정 (prefillCheckinFromEntry 가 갱신)
+  const isEdit = btn && btn.textContent && btn.textContent.indexOf('수정') !== -1;
+  const hasV = !!currentCheckin.vitality;
+  const hasM = !!currentCheckin.mood;
+  if (vDot) vDot.classList.toggle('satisfied', hasV);
+  if (mDot) mDot.classList.toggle('satisfied', hasM);
+  if (!btn) return;
+  if (isEdit) {
+    btn.classList.remove('disabled');
+    if (hint) hint.textContent = '';
+    return;
+  }
+  const ready = hasV && hasM;
+  btn.classList.toggle('disabled', !ready);
+  if (hint) {
+    const count = (hasV ? 1 : 0) + (hasM ? 1 : 0);
+    if (ready) hint.textContent = '2/2 ✓ 준비 됐어';
+    else if (count === 1) hint.textContent = '1/2 — 하나만 더';
+    else hint.textContent = '0/2 — 두 개만 골라줘';
+  }
 }
 
 function updateSleepDuration() {
@@ -57,6 +101,14 @@ function selectQuick(btn, key, value) {
 }
 
 async function submitCheckin() {
+  // 사용자 명시 2026-05-06: vitality + mood validation (신규 작성 모드에서만)
+  const _vmTodayK = todayKey();
+  const _vmExisting = (state.entries || []).find(en => en.date === _vmTodayK);
+  const _vmIsEdit = !!(_vmExisting && (_vmExisting.vitality || _vmExisting.mood));
+  if (!_vmIsEdit && (!currentCheckin.vitality || !currentCheckin.mood)) {
+    if (typeof showToast === 'function') showToast('⚡ 에너지랑 💭 기분 두 개만 골라줘');
+    return;
+  }
   const allNighter = !!document.getElementById('allNighterToggle')?.checked;
   const sleepStart = document.getElementById('sleepStart').value;
   const sleepEnd = document.getElementById('sleepEnd').value;
