@@ -17,7 +17,7 @@ function renderProjects() {
   // 사용자 fold 시 hidden — 본인 통제. 헤더 + 추가 button 보존 (펼침 X 도 click 가능 stopPropagation).
   let html = `<details class="project-section" open>
     <summary class="project-section-header">
-      <span class="project-section-title">📊 추적 항목${visible.length > 0 ? ` <span style="font-size:11px; color:var(--text-soft); font-weight:500; margin-left:4px;">(${visible.length})</span>` : ''}</span>
+      <span class="project-section-title">추적 항목${visible.length > 0 ? ` <span style="font-size:11px; color:var(--text-soft); font-weight:500; margin-left:4px;">(${visible.length})</span>` : ''}</span>
       <button class="project-add-btn" onclick="event.preventDefault(); event.stopPropagation(); addNewTracker()">+ 추가</button>
     </summary>
     <div class="project-section-body">`;

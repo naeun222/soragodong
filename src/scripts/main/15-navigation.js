@@ -54,7 +54,7 @@ function showScreen(name) {
     // V4-fix v3 (사용자 요청): 체크인 진입 시 가닥 미션 팔로업 자동 prompt
     if (typeof offerStrategyFollowup === 'function') { try { offerStrategyFollowup(); } catch (e) {} }
   }
-  if (name === 'model') { renderModel(); if (typeof renderProjects === 'function') renderProjects(); }
+  if (name === 'model') { renderModel(); }
   if (name === 'archive') {
     // V4-fix #5: 도서관 처음 진입 시 모든 카테고리 lastSeen 초기화 (점 폭발 방지)
     if (state.preferences && !state.preferences._libCatLastSeenInit) {

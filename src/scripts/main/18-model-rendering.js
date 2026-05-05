@@ -76,17 +76,17 @@ function renderTimeUsageCard() {
   const stats = computeTimeUsageStats();
   if (!stats) {
     return `<div class="model-section">
-      <div class="model-section-title">📊 task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
+      <div class="model-section-title">task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
       <div style="font-size:12px; color:var(--text-dim); padding:8px 0; line-height:1.7;">
         몰입 기록 쌓이면 여기 표시돼.<br>
-        실행 탭 🚀 → 🌧 시작 → 돌아옴 누르면 자동 기록.
+        실행 탭 → 시작 → 돌아옴 누르면 자동 기록.
       </div>
     </div>`;
   }
   // 사용자 요청 2026-04-28: 깔끔하게 — task별 평균 시간만 (최대 4개). 시간대/총시간/세션수 제거 (의미 약함)
   const tasks = stats.topTasks.slice(0, 4);
   return `<div class="model-section">
-    <div class="model-section-title">📊 task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
+    <div class="model-section-title">task별 평균 시간 <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">지난 7일</span></div>
     <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px; line-height:1.6;">다음에 이 일 얼마나 걸릴지 — 객관적 데이터.</div>
     ${tasks.map(t => `
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; padding:9px 0; border-bottom:1px dashed rgba(212,167,106,0.15);">
@@ -180,20 +180,20 @@ function renderModel() {
   };
 
   // ── 1. 정체성 — values / traits / patterns (top, 자기친밀 hook 매일) ──
-  html += _renderConfirmableSection('values', '🎯 네가 중시하는 것', state.values);
-  html += _renderConfirmableSection('traits', '💫 네 특성', state.traits);
-  html += _renderConfirmableSection('patterns', '🔄 보이는 패턴', state.patterns);
+  html += _renderConfirmableSection('values', '네가 중시하는 것', state.values);
+  html += _renderConfirmableSection('traits', '네 특성', state.traits);
+  html += _renderConfirmableSection('patterns', '보이는 패턴', state.patterns);
 
   // ── 2. 분석 — 통합 분석 + 작동 중인 패턴 (mid, 큰 그림 가끔) ──
   // 사용자 보고 2026-05-05: 신규 사용자 (caseFormulation.version=0) 한테 '통합 분석' 섹션 자체가 안 떠서 존재 모르던 문제 — placeholder 추가.
   if (state.caseFormulation.version === 0 || !state.caseFormulation.version) {
     html += `<div class="model-section">
-      <div class="model-section-title">📋 통합 분석</div>
+      <div class="model-section-title">통합 분석</div>
       <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">며칠 같이 지내면 너의 데이터에서 큰 그림 (강점 · 어떻게 작동하는지 · 다루어야 할 특성) 을 종합해줄게 ✦</div>
     </div>`;
   } else {
-    html += `<div class="model-section"><div class="model-section-title">📋 통합 분석 v.${state.caseFormulation.version}</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">네 데이터에서 종합한 가설이야. 잘못된 거 있으면 ✎ 수정 / ✕ 삭제 — 너가 더 잘 알아.</div>`;
+    html += `<div class="model-section"><div class="model-section-title">통합 분석</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">네 데이터 종합. 틀린 건 ✎ 수정 / ✕ 삭제.</div>`;
     const cfBullet = (text, field, idx) => `<div class="cf-bullet">
       <span class="cf-text">• ${escapeHtml(text)}</span>
       <span class="cf-actions"><button onclick="editCFItem('${field}', ${idx})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${idx})" title="삭제">✕</button></span>
@@ -204,7 +204,7 @@ function renderModel() {
       const rest = items.slice(1);
       const topHtml = top.map((p, i) => cfBullet(p, field, i)).join('');
       const restHtml = rest.length > 0
-        ? `<details class="cf-more"><summary>+ ${rest.length}개 더 보기</summary><div class="cf-list">${rest.map((p, i) => cfBullet(p, field, i + 1)).join('')}</div></details>`
+        ? `<details class="cf-more"><summary>+${rest.length}</summary><div class="cf-list">${rest.map((p, i) => cfBullet(p, field, i + 1)).join('')}</div></details>`
         : '';
       return `<div class="model-item"><div class="model-item-name">${label}</div>
         ${sub ? `<div style="font-size:11px; color:var(--text-soft); margin-bottom:8px;">${sub}</div>` : ''}
@@ -212,9 +212,9 @@ function renderModel() {
         ${restHtml}</div>`;
     };
     // 사용자 요청 2026-04-30: 강점 → 작동 → 다루어야 할 특성 순서 (긍정 먼저)
-    html += cfSection('💪 네 강점', '', state.caseFormulation.strengths, 'strengths');
-    html += cfSection('⚙️ 어떻게 작동하는지', '네 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
-    html += cfSection('🔍 다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 네 결', state.caseFormulation.problems, 'problems');
+    html += cfSection('네 강점', '', state.caseFormulation.strengths, 'strengths');
+    html += cfSection('어떻게 작동하는지', '네 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
+    html += cfSection('다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 네 결', state.caseFormulation.problems, 'problems');
     html += '</div>';
   }
 
@@ -223,27 +223,23 @@ function renderModel() {
   // disclaimer 도 '의료 진단' → '의료 조언' 으로 워딩 정정.
   const visibleDiags = (state.diagnoses || []).filter(d => d.status === 'active' || d.status === 'shown');
   const diagLabels = {
-    weak_tool: '🔧 도구 약함',
-    wrong_layer: '📐 가지 안 맞음',
-    value_clash: '⚖️ 가치 상충',
-    avoidance: '🌫 회피',
-    willpower_cap: '🪫 의지 임계'
+    weak_tool: '도구 약함',
+    wrong_layer: '가지 안 맞음',
+    value_clash: '가치 상충',
+    avoidance: '회피',
+    willpower_cap: '의지 임계'
   };
   if (visibleDiags.length > 0) {
     html += `<div class="model-section">
-      <div class="model-section-title">🔍 잘 안 풀릴 때 <span style="font-size:10px; color:var(--text-soft); font-weight:400; letter-spacing:0.04em;">(가설)</span></div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:6px; line-height:1.6;">시도가 막히는 결 — 결과 쌓이면 신뢰도 갱신돼.</div>
-      <div style="font-size:10.5px; color:var(--text-soft); margin-bottom:12px; line-height:1.55; padding:8px 10px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(255,255,255,0.08); border-radius:0 6px 6px 0;">⚠️ 의료 조언 아님 — 패턴 가설일 뿐, 마음이 힘들면 전문가 상담 권장.</div>
+      <div class="model-section-title">잘 안 풀릴 때</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">시도가 막히는 결 — 결과 쌓이면 갱신돼.</div>
       ${visibleDiags.sort((a,b) => (b.confidence || 0) - (a.confidence || 0)).map(d => `
         <div class="model-item" style="border-left: 3px solid var(--purple); padding-left: 12px;">
           <div class="model-item-name">${diagLabels[d.type] || d.type}</div>
           <div class="model-item-desc" style="font-size:12px; line-height:1.6;">${escapeHtml(d.evidence || '')}</div>
-          <div class="model-item-meta">
-            <span class="conf">${Math.round((d.confidence || 0.5) * 100)}%</span>
-            ${d.status === 'shown' ? '<span style="color:var(--text-soft);">대화에서 한 번 인용됨</span>' : '<span style="color:#8fc88f;">발견됨</span>'}
-          </div>
         </div>
       `).join('')}
+      <div style="font-size:10px; color:var(--text-soft); margin-top:10px; line-height:1.55; opacity:0.7;">의료 조언 아님 — 마음이 힘들면 전문가 상담 권장.</div>
     </div>`;
   } else {
     // visibleDiags 없을 때 — strategy 유무 따라 분기 placeholder. 둘 다 항상 노출.
@@ -252,16 +248,16 @@ function renderModel() {
       ? '아직 살펴볼 만큼 데이터 X — 미션 시도 + 결과 체크 쌓이면 자동 보여줄게 ✦'
       : '지금은 막히는 결 X — 잘 흘러가는 중 ✨';
     html += `<div class="model-section">
-      <div class="model-section-title">🔍 잘 안 풀릴 때 <span style="font-size:10px; color:var(--text-soft); font-weight:400; letter-spacing:0.04em;">(가설)</span></div>
+      <div class="model-section-title">잘 안 풀릴 때</div>
       <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">${placeholderText}</div>
     </div>`;
   }
 
   // ── 3. 메타 — task 평균 (collapse default 닫힘) + 더 깊은 나 (collapse default 닫힘) ──
-  // #projectsSection (추적 항목) = HTML 의 modelContent 다음 위치 → renderProjects 가 wrap 처리.
+  // 사용자 명시 2026-05-06 ultrathink: 추적 항목 (projectsSection) 실행 탭으로 이동.
   html += `<div class="model-meta-divider">— 메타 —</div>`;
   html += `<details class="model-meta-collapse">
-    <summary class="model-meta-summary">⏱ task 평균 시간 <span style="font-size:10px; color:var(--text-soft); margin-left:6px;">지난 7일</span></summary>
+    <summary class="model-meta-summary">task 평균 시간 <span style="font-size:10px; color:var(--text-soft); margin-left:6px;">지난 7일</span></summary>
     <div class="model-meta-body">${timeCardHtml}</div>
   </details>`;
 
@@ -310,14 +306,14 @@ function _renderUserDeepProfileSection() {
 
   // 사용자 명시 2026-05-02: 더 깊은 나 = 항상 닫힘 default. 사용자 click 해야 펼침 (긴 폼 방어).
   return `<details class="model-section" style="margin-top:18px;">
-    <summary style="font-size:13px;font-weight:600;color:var(--text);padding:10px 0;cursor:pointer;">🌳 더 깊은 나 ${udp.version > 0 ? `<span style="font-size:10px;color:var(--text-soft);font-weight:400;">v.${udp.version}</span>` : ''}</summary>
+    <summary style="font-size:13px;font-weight:600;color:var(--text);padding:10px 0;cursor:pointer;">더 깊은 나</summary>
     <div style="font-size:11px;color:var(--text-dim);margin:6px 0 14px;line-height:1.7;">
       채워질수록 고동이가 더 깊이 분석해줘.<br>
       대화에서 알아서 채워줄게 — 직접 적어도 돼.
     </div>
 
     <div style="margin-bottom:16px;">
-      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">📜 발달·역사 맥락</div>
+      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">발달·역사 맥락</div>
       ${fieldRow('어린 시절', dev.childhood, "editDeepDevField('childhood','어린 시절·가족 구조·양육 톤')", '가족·양육 분위기')}
       ${fieldRow('학창 시절', dev.schoolYears, "editDeepDevField('schoolYears','학창 시절 핵심 사건')", '의미 있는 사건')}
       ${fieldRow('자기 인식·발견', dev.adhdDiscovery, "editDeepDevField('adhdDiscovery','자기 인식·발견 시점 (진단명·정체성·큰 깨달음 등) + 그 전 어떻게 살았는지')", '발견 시점, 그 전 삶')}
@@ -325,12 +321,12 @@ function _renderUserDeepProfileSection() {
     </div>
 
     <div style="margin-bottom:16px;">
-      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">👥 관계 맵</div>
+      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">관계 맵</div>
       ${arrayRow('핵심 인물', rels, (r) => `${r.name || '?'}${r.relation ? ' (' + r.relation : ''}${r.tone ? ', ' + r.tone : ''}${r.relation ? ')' : ''}${r.notes ? ' — ' + r.notes.slice(0, 40) : ''}`, "editDeepRelationships()", '가족·친구·연인·동료 5–8명')}
     </div>
 
     <div style="margin-bottom:16px;">
-      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">🪞 자기서사·핵심 신념</div>
+      <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">자기서사·핵심 신념</div>
       ${fieldRow('자기 이야기', sn.selfStory, "editDeepSelfNarrativeField('selfStory','자기 이야기 한 단락 (자기소개처럼)')", '한 단락 자기소개')}
       ${fieldRow('보이고 싶은 모습', sn.howWantToBeSeen, "editDeepSelfNarrativeField('howWantToBeSeen','어떻게 보이고 싶은지')", '이상적 모습')}
       ${arrayRow('자신에 대한 신념', cb.aboutSelf, (s) => s, "editDeepCoreBeliefs('aboutSelf')", '\"나는 …\" 형태')}
@@ -508,7 +504,7 @@ function renderMoreSection(category, more, draft) {
   if (more.length > 0) {
     html += `
       <details class="model-collapse">
-        <summary>전체 보기 (+${more.length}개)</summary>
+        <summary>+${more.length}</summary>
         <div class="model-collapse-content">
     `;
     more.forEach(item => {
@@ -520,11 +516,8 @@ function renderMoreSection(category, more, draft) {
   if (draft.length > 0) {
     html += `
       <details class="model-collapse model-draft">
-        <summary>📝 초안 (${draft.length}개) — 아직 확신 안 가는 가설</summary>
+        <summary>+${draft.length}</summary>
         <div class="model-collapse-content">
-          <div style="font-size:11px; color:var(--text-soft); margin-bottom:10px; line-height:1.6;">
-            증거 더 쌓이면 위로 올라가. 아니면 알려줘.
-          </div>
     `;
     draft.forEach(item => {
       const realIdx = state[category].indexOf(item);
@@ -536,7 +529,6 @@ function renderMoreSection(category, more, draft) {
 }
 
 function renderModelItem(item, category, idx) {
-  const confLabel = item.confidence >= 0.7 ? '확신' : item.confidence >= 0.4 ? '관찰 중' : '가설';
   // V4-1l-mini + 사용자 fix: values/patterns/traits 모두 '맞아' / '아니야' / '확인됨' 토글
   const isVerifiable = (category === 'values' || category === 'patterns' || category === 'traits');
   const isVerified = isVerifiable && item.user_verified === true;
@@ -579,10 +571,6 @@ function renderModelItem(item, category, idx) {
     <div class="model-item-name">${newBadge}${escapeHtml(item.name)}</div>
     <div class="model-item-desc">${escapeHtml(item.description || '')}</div>
     ${subMeta}
-    <div class="model-item-meta">
-      <span class="conf">${confLabel}${item.confidence != null ? ` ${Math.round((item.confidence || 0) * 100)}%` : ''}</span>
-      ${item.evidence_count ? `<span>근거 ${item.evidence_count}개</span>` : ''}
-    </div>
     <div class="model-item-actions">
       ${actionsHtml}
     </div>

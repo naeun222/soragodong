@@ -315,7 +315,11 @@ function renderExecute() {
     // V4-fix: V3 5블록 완전 삭제 (사용자 명시). dayPlan 데이터는 보존.
   }
 
+  // 사용자 명시 2026-05-06 ultrathink: 추적 항목 (체중/수면/운동 그래프) '나' 탭에서 실행 탭으로 이동.
+  // 행동 데이터라 실행 탭이 더 자연스러움 — '나' 탭은 정체성 모델 전용.
+  html += `<div id="projectsSection"></div>`;
   container.innerHTML = html;
+  if (typeof renderProjects === 'function') renderProjects();
 }
 
 // === BRAIN DUMP ===

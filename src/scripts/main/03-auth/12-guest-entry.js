@@ -22,7 +22,7 @@ async function enterGuestMode() {
       alert('지금 둘러보기를 시작할 수 없어. 잠시 후 다시 시도하거나 로그인해줘.' + detail);
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<span class="guest-btn-leaf" aria-hidden="true">🌱</span><span class="guest-btn-text">그냥 해보기</span>';
+        btn.innerHTML = '<span class="guest-btn-leaf" aria-hidden="true">🌱</span><span class="guest-btn-text">그냥 해보기</span><span class="guest-btn-arrow" aria-hidden="true">→</span>';
       }
       return;
     }
@@ -33,7 +33,7 @@ async function enterGuestMode() {
     alert('네트워크 오류 — 잠시 후 다시');
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<span class="guest-btn-leaf" aria-hidden="true">🌱</span><span class="guest-btn-text">그냥 해보기</span>';
+      btn.innerHTML = '<span class="guest-btn-leaf" aria-hidden="true">🌱</span><span class="guest-btn-text">그냥 해보기</span><span class="guest-btn-arrow" aria-hidden="true">→</span>';
     }
   }
 }

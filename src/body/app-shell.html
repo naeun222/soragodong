@@ -260,16 +260,15 @@
 
     <!-- MODEL -->
     <div class="screen" id="screen-model">
-      <div class="screen-title">너에 대해 ✦</div>
-      <div class="screen-sub">내가 시간을 들여 배운 네 모습이야.<br>틀린 게 있으면 언제든 말해줘.</div>
-      <!-- 사용자 명시 2026-05-02 ultrathink: #projectsSection 위치 이동 — modelContent 다음 (메타 자리). 정체성 (values/traits/patterns) 우선 노출. -->
-      <div id="modelContent"></div>
-      <div id="projectsSection"></div>
-      <div style="margin-top: 30px;">
-        <!-- 사용자 요청 2026-04-30: forceAnalyze 버튼 나 탭에서 제거 — 일주일 자동 실행. 개발자 도구에서 수동 호출 가능. -->
-        <button class="btn-secondary" onclick="showScreen('settings')">⚙ 설정</button>
-        <button class="btn-secondary" onclick="showScreen('home')">돌아가기</button>
+      <!-- 사용자 명시 2026-05-06 ultrathink: 가독성 정리 — ⚙ top-right 아이콘, 돌아가기 제거, 추적 항목 (projectsSection) 실행 탭으로 이동. -->
+      <div class="screen-header-row">
+        <div>
+          <div class="screen-title">너에 대해 ✦</div>
+          <div class="screen-sub">내가 시간을 들여 배운 네 모습이야.<br>틀린 게 있으면 언제든 말해줘.</div>
+        </div>
+        <button class="screen-settings-btn" onclick="showScreen('settings')" aria-label="설정">⚙</button>
       </div>
+      <div id="modelContent"></div>
     </div>
 
     <!-- LIBRARY (V4-1l-a: 인생 도서관 5 카테고리) -->

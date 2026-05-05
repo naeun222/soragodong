@@ -17,8 +17,8 @@
         <button id="guestEntryBtn" class="login-guest-btn-simple" onclick="enterGuestMode()">
           <span class="guest-btn-leaf" aria-hidden="true">🌱</span>
           <span class="guest-btn-text">그냥 해보기</span>
+          <span class="guest-btn-arrow" aria-hidden="true">→</span>
         </button>
-        <div class="login-guest-hint">이 기기에만 저장돼</div>
       </div>
 
       <!-- ── divider ── -->
@@ -34,26 +34,11 @@
           <span>카카오로 시작하기</span>
         </button>
 
-        <!-- 사용자 명시 2026-05-06 임시 살림: 이메일 OTP 다시 노출 (이전 사용자 환불 처리용). 나중에 제거. -->
-        <div class="login-or-mini">또는 이메일</div>
-
-        <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
-        <button class="btn-primary" id="loginBtn" onclick="handleSendCode()" style="width:100%;">코드 받기 →</button>
-        <div class="login-status" id="loginStatus"></div>
+        <!-- 사용자 명시 2026-05-06: 이메일 OTP 로그인 완전 제거 — 카카오 + 게스트만. 함수 (handleSendCode/handleVerifyCode/resetLoginFlow) 는 다른 곳에서도 참조될 수 있어 코드는 유지. -->
       </div>
 
     </div>
 
-    <!-- Step 2: Code -->
-    <div class="login-form" id="loginStep2" style="display:none;">
-      <div style="font-size:13px; color:var(--text); margin-bottom:14px; line-height:1.6;">
-        <strong id="loginEmailDisplay"></strong> 으로<br>코드를 보냈어.
-      </div>
-      <input type="text" id="loginCode" placeholder="이메일로 받은 코드" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" style="text-align:center; font-size:22px; letter-spacing:0.25em; font-family:monospace;">
-      <button class="btn-primary" id="verifyBtn" onclick="handleVerifyCode()">로그인</button>
-      <div class="login-status" id="verifyStatus"></div>
-      <button class="btn-secondary" onclick="resetLoginFlow()" style="margin-top:14px;">이메일 다시 입력</button>
-    </div>
 
     <!-- 사용자 보고 2026-05-05 (PortOne 심사): 약관/환불/개인정보 + 사업자 정보 footer 노출 (전상법 §13 의무 + PG 심사 요구). -->
     <div style="margin-top:32px; padding-top:18px; border-top:1px solid var(--border); font-size:11px; color:var(--text-soft); line-height:1.7; text-align:center;">
