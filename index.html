@@ -27669,7 +27669,13 @@ function renderModel() {
   html += _renderConfirmableSection('patterns', '🔄 보이는 패턴', state.patterns);
 
   // ── 2. 분석 — 통합 분석 + 작동 중인 패턴 (mid, 큰 그림 가끔) ──
-  if (state.caseFormulation.version > 0) {
+  // 사용자 보고 2026-05-05: 신규 사용자 (caseFormulation.version=0) 한테 '통합 분석' 섹션 자체가 안 떠서 존재 모르던 문제 — placeholder 추가.
+  if (state.caseFormulation.version === 0 || !state.caseFormulation.version) {
+    html += `<div class="model-section">
+      <div class="model-section-title">📋 통합 분석</div>
+      <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">며칠 같이 지내면 너의 데이터에서 큰 그림 (강점 · 어떻게 작동하는지 · 다루어야 할 특성) 을 종합해줄게 ✦</div>
+    </div>`;
+  } else {
     html += `<div class="model-section"><div class="model-section-title">📋 통합 분석 v.${state.caseFormulation.version}</div>
       <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">네 데이터에서 종합한 가설이야. 잘못된 거 있으면 ✎ 수정 / ✕ 삭제 — 너가 더 잘 알아.</div>`;
     const cfBullet = (text, field, idx) => `<div class="cf-bullet">
@@ -44034,6 +44040,9 @@ async function _resumePendingBatch() {
     // 사용자 명시 2026-05-02 ultrathink: batch 처리 끝 → 어제 카드 + 리뷰 카드 자동 갱신.
     if (typeof renderYesterdayCard === 'function') renderYesterdayCard();
     if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
+    // 사용자 보고 2026-05-05: 4시 cutoff batch 후 traits/values/patterns/caseFormulation 갱신돼도 "나" 탭 안 보였던 버그 — renderModel 호출 누락.
+    if (typeof renderModel === 'function') renderModel();
+    if (typeof renderModelPreview === 'function') renderModelPreview();
     console.log(`[batch] ${data.results.length} results processed`);
   } catch (e) {
     console.warn('[batch] resume fail:', e);

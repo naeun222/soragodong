@@ -783,6 +783,9 @@ async function _resumePendingBatch() {
     // 사용자 명시 2026-05-02 ultrathink: batch 처리 끝 → 어제 카드 + 리뷰 카드 자동 갱신.
     if (typeof renderYesterdayCard === 'function') renderYesterdayCard();
     if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
+    // 사용자 보고 2026-05-05: 4시 cutoff batch 후 traits/values/patterns/caseFormulation 갱신돼도 "나" 탭 안 보였던 버그 — renderModel 호출 누락.
+    if (typeof renderModel === 'function') renderModel();
+    if (typeof renderModelPreview === 'function') renderModelPreview();
     console.log(`[batch] ${data.results.length} results processed`);
   } catch (e) {
     console.warn('[batch] resume fail:', e);
