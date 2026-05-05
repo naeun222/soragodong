@@ -571,24 +571,49 @@
     border-color: rgba(212,167,106,0.40);
   }
   .cac-pin-btn:active { transform: scale(0.92); }
+  /* 사용자 보고 2026-05-06 ultrathink: 모바일 좁은 viewport 에서 날짜 + N개 메시지 + 핀/삭제/토글 = 자동 줄바꿈 → 못생김.
+     해결: 날짜는 세로 1행, meta 영역은 nowrap + 한 줄로. 410px 이하 = 세로 stack 으로 깔끔. */
   .cac-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
     margin-bottom: 8px;
+    gap: 8px;
+    flex-wrap: nowrap;
+    min-width: 0;
   }
   .cac-date {
     font-family: 'Gowun Batang', serif;
     font-size: 14px;
     color: var(--accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1 1 auto;
   }
   .cac-meta {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
     font-size: 11px;
     color: var(--text-dim);
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .cac-meta > span { white-space: nowrap; }
+  /* 좁은 viewport (410px 이하) — 날짜 + meta 세로 stack, meta 양 끝 정렬 */
+  @media (max-width: 410px) {
+    .cac-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 4px;
+    }
+    .cac-meta {
+      justify-content: space-between;
+      width: 100%;
+    }
   }
   .cac-toggle {
     font-size: 14px;
@@ -15504,8 +15529,20 @@ function _intakeStep4Html() {
 async function _intakeStep4Analyze() {
   _intakeState.step = 5;
   _renderIntakeStep();
-  try {
-    const result = await _intakeAnalyze(state.intakeWorry);
+  // 사용자 보고 2026-05-06 ultrathink: 첫 호출 실패 시 fallback 보다 먼저 1회 재시도 (1.5초 후) — 사용자가 fallback 보는 빈도 낮춤.
+  let result = null;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      result = await _intakeAnalyze(state.intakeWorry);
+      break;
+    } catch (e) {
+      lastErr = e;
+      console.warn('[intake] analyze attempt ' + attempt + ' 실패', e && e.message);
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+  if (result) {
     _intakeState.analysis = result;
     state.intakeWorry.push({
       role: 'assistant',
@@ -15515,13 +15552,14 @@ async function _intakeStep4Analyze() {
     });
     saveState();
     _renderIntakeStep();
-  } catch (e) {
-    console.warn('[intake] analyze 실패', e);
+  } else {
+    console.warn('[intake] analyze 두 번 다 실패 — fallback', lastErr && lastErr.message);
     _intakeState.analysis = {
       paraphrase: '',
       dimension: '환경',
       diagnosis: '잘 들었어. 좀 더 같이 들여다보고 싶어.',
       strategy: '천천히 가자. 다음 대화에서 이어가자.',
+      proposal: '오늘 한 걸음만 가볍게',
       hypotheses: []
     };
     _renderIntakeStep();
@@ -20758,8 +20796,15 @@ function _v8ShowCoachmark({ targetSelector, body, position = 'top', interactive 
 
     let watcher = null;
     let resolved = false;
+    let onTargetClick = null;
+    let bubbleHiddenTimeout = null;
     const cleanup = () => {
       if (watcher) { clearInterval(watcher); watcher = null; }
+      if (bubbleHiddenTimeout) { clearTimeout(bubbleHiddenTimeout); bubbleHiddenTimeout = null; }
+      if (onTargetClick && target) {
+        try { target.removeEventListener('click', onTargetClick); } catch {}
+        onTargetClick = null;
+      }
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onResize, true);
       try { ring.remove(); } catch {}
@@ -20779,12 +20824,24 @@ function _v8ShowCoachmark({ targetSelector, body, position = 'top', interactive 
 
     if (interactive) {
       // 사용자가 타겟 직접 클릭 → 그 액션의 후속 결과 (waitFor) 가 만족되면 advance.
-      // 타겟이 사라지면 (탭 전환 등) 도 advance — 멈춰있지 않게.
+      // 사용자 보고 2026-05-06 ultrathink: 타겟 클릭 시 confirm modal 이 위로 뜨는데,
+      // ring (z-index 9999) + bubble (10000) 이 confirm modal (9900) 위에 남아 stuck 느낌.
+      // → 클릭 즉시 ring/bubble visual hide. waitFor 만족 시 advance, 6초 안 만족 = 자동 advance.
+      let bubbleHidden = false;
+      onTargetClick = () => {
+        if (bubbleHidden || resolved) return;
+        bubbleHidden = true;
+        bubble.style.opacity = '0';
+        bubble.style.pointerEvents = 'none';
+        ring.style.opacity = '0';
+        bubbleHiddenTimeout = setTimeout(() => { if (!resolved) advance(); }, 6000);
+      };
+      target.addEventListener('click', onTargetClick);
       watcher = setInterval(() => {
         try {
           if (waitFor && waitFor()) { advance(); return; }
           if (!target || target.offsetParent === null) { advance(); return; }
-          place();  // 타겟 위치 변동 시 ring/bubble 재배치
+          if (!bubbleHidden) place();
         } catch {}
       }, 250);
     } else {

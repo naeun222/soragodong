@@ -285,8 +285,15 @@ function _v8ShowCoachmark({ targetSelector, body, position = 'top', interactive 
 
     let watcher = null;
     let resolved = false;
+    let onTargetClick = null;
+    let bubbleHiddenTimeout = null;
     const cleanup = () => {
       if (watcher) { clearInterval(watcher); watcher = null; }
+      if (bubbleHiddenTimeout) { clearTimeout(bubbleHiddenTimeout); bubbleHiddenTimeout = null; }
+      if (onTargetClick && target) {
+        try { target.removeEventListener('click', onTargetClick); } catch {}
+        onTargetClick = null;
+      }
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onResize, true);
       try { ring.remove(); } catch {}
@@ -306,12 +313,24 @@ function _v8ShowCoachmark({ targetSelector, body, position = 'top', interactive 
 
     if (interactive) {
       // 사용자가 타겟 직접 클릭 → 그 액션의 후속 결과 (waitFor) 가 만족되면 advance.
-      // 타겟이 사라지면 (탭 전환 등) 도 advance — 멈춰있지 않게.
+      // 사용자 보고 2026-05-06 ultrathink: 타겟 클릭 시 confirm modal 이 위로 뜨는데,
+      // ring (z-index 9999) + bubble (10000) 이 confirm modal (9900) 위에 남아 stuck 느낌.
+      // → 클릭 즉시 ring/bubble visual hide. waitFor 만족 시 advance, 6초 안 만족 = 자동 advance.
+      let bubbleHidden = false;
+      onTargetClick = () => {
+        if (bubbleHidden || resolved) return;
+        bubbleHidden = true;
+        bubble.style.opacity = '0';
+        bubble.style.pointerEvents = 'none';
+        ring.style.opacity = '0';
+        bubbleHiddenTimeout = setTimeout(() => { if (!resolved) advance(); }, 6000);
+      };
+      target.addEventListener('click', onTargetClick);
       watcher = setInterval(() => {
         try {
           if (waitFor && waitFor()) { advance(); return; }
           if (!target || target.offsetParent === null) { advance(); return; }
-          place();  // 타겟 위치 변동 시 ring/bubble 재배치
+          if (!bubbleHidden) place();
         } catch {}
       }, 250);
     } else {

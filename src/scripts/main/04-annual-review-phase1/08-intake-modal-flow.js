@@ -195,8 +195,20 @@ function _intakeStep4Html() {
 async function _intakeStep4Analyze() {
   _intakeState.step = 5;
   _renderIntakeStep();
-  try {
-    const result = await _intakeAnalyze(state.intakeWorry);
+  // 사용자 보고 2026-05-06 ultrathink: 첫 호출 실패 시 fallback 보다 먼저 1회 재시도 (1.5초 후) — 사용자가 fallback 보는 빈도 낮춤.
+  let result = null;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      result = await _intakeAnalyze(state.intakeWorry);
+      break;
+    } catch (e) {
+      lastErr = e;
+      console.warn('[intake] analyze attempt ' + attempt + ' 실패', e && e.message);
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+  if (result) {
     _intakeState.analysis = result;
     state.intakeWorry.push({
       role: 'assistant',
@@ -206,13 +218,14 @@ async function _intakeStep4Analyze() {
     });
     saveState();
     _renderIntakeStep();
-  } catch (e) {
-    console.warn('[intake] analyze 실패', e);
+  } else {
+    console.warn('[intake] analyze 두 번 다 실패 — fallback', lastErr && lastErr.message);
     _intakeState.analysis = {
       paraphrase: '',
       dimension: '환경',
       diagnosis: '잘 들었어. 좀 더 같이 들여다보고 싶어.',
       strategy: '천천히 가자. 다음 대화에서 이어가자.',
+      proposal: '오늘 한 걸음만 가볍게',
       hypotheses: []
     };
     _renderIntakeStep();
