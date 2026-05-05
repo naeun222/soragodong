@@ -8,5 +8,8 @@
 # 사용자 보고 2026-05-06: 모바일 옛 HTML 캐시 stuck — startlite 페이지도 항상 fresh
 /startlite
   Cache-Control: no-cache, no-store, must-revalidate
-/start-lite.html
+/startlite.html
+  Cache-Control: no-cache, no-store, must-revalidate
+# 사용자 보고 2026-05-06: SW 업데이트가 모바일에서 stuck 하는 원인 — sw.js HTTP 캐시 차단
+/sw.js
   Cache-Control: no-cache, no-store, must-revalidate
