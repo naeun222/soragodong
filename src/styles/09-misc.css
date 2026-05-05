@@ -694,12 +694,26 @@
   .disabled-locked { opacity: 0.45; cursor: not-allowed; }
   .disabled-locked::after { content: ' 🔒'; font-size: 0.85em; }
   .disabled-locked:hover { opacity: 0.55; }
-  /* 사용자 명시 2026-05-06: 빈 채팅 진입 시 인사 밑 — EMPTY_STATE_EXAMPLES 단일 리스트 (이모티콘 + 한 줄) */
+  /* 사용자 명시 2026-05-06: 빈 채팅 진입 시 — 예시 리스트 토글 (기본 접힘) */
+  .chat-empty-toggle {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.12s;
+  }
+  .chat-empty-toggle:hover { background: var(--surface2); }
+  .chat-empty-toggle:active { transform: scale(0.97); }
   .chat-empty-list {
     list-style: none;
     padding: 0;
-    margin: 14px 0 0;
-    display: flex;
+    margin: 10px 0 0;
     flex-direction: column;
     gap: 4px;
   }

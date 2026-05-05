@@ -4,6 +4,21 @@ function _measureChatRender(_t0) {
   if (window.__chatRenderTimes.length > 200) window.__chatRenderTimes.shift();
 }
 
+// 사용자 명시 2026-05-06: empty bubble 예시 리스트 토글
+function toggleChatEmptyExamples() {
+  const list = document.getElementById('chatEmptyExamplesList');
+  const btn = document.getElementById('chatEmptyExamplesToggle');
+  if (!list || !btn) return;
+  const isOpen = list.style.display !== 'none' && list.style.display !== '';
+  if (isOpen) {
+    list.style.display = 'none';
+    btn.textContent = '예시 보기 ▾';
+  } else {
+    list.style.display = 'flex';
+    btn.textContent = '예시 숨기기 ▴';
+  }
+}
+
 window.__seedChatMessages = function(n) {
   n = n || 1000;
   if (typeof state === 'undefined' || !state) return console.warn('[seed] state X');
@@ -79,14 +94,16 @@ function renderChat() {
   const archiveLen = (state.chatArchive || []).length;
 
   if (!msgs.length) {
-    // 사용자 명시 2026-05-06: empty bubble 안 — EMPTY_STATE_EXAMPLES 만 (이모티콘 + 한 줄) 노출. 헤더 X.
+    // 사용자 명시 2026-05-06: empty bubble — 예시 리스트는 토글 뒤로 숨김 (기본 접힘, 토글 클릭 시 펼침).
     const examples = (typeof EMPTY_STATE_EXAMPLES !== 'undefined' && Array.isArray(EMPTY_STATE_EXAMPLES)) ? EMPTY_STATE_EXAMPLES : [];
-    const examplesHtml = examples.length ? `<ul class="chat-empty-list">${examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>` : '';
+    const examplesBlock = examples.length
+      ? `<button class="chat-empty-toggle" id="chatEmptyExamplesToggle" onclick="toggleChatEmptyExamples()">예시 보기 ▾</button><ul class="chat-empty-list" id="chatEmptyExamplesList" style="display:none;">${examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>`
+      : '';
     container.innerHTML = archiveHeader + `<div class="msg assistant">
       <div class="msg-bubble">안녕 🐚 왔구나.
 
 오늘 어땠어? 아무 말이나 편하게 해도 돼.
-일기처럼 길게 써도 되고, "졸려" 한 마디도 OK.${examplesHtml}</div>
+일기처럼 길게 써도 되고, "졸려" 한 마디도 OK.${examplesBlock}</div>
     </div>`;
     _chatRenderSig = null;
     _measureChatRender(_t0);
