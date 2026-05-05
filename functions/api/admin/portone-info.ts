@@ -23,27 +23,45 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
     return jsonResponse({ error: 'PORTONE_API_KEY_V2 env 미설정' }, 500);
   }
 
-  // PortOne V2 = "GET /v2/payments/{paymentId}" 처럼 store-scoped. /stores 같은 list endpoint 가 명시 X.
-  // 대신 channel list 로 시도 → 응답에 storeId 포함. 안 되면 에러로 다른 단서.
-  const probes: { name: string; url: string }[] = [
-    { name: 'channels', url: `${PORTONE_API_BASE}/channels` },
-    { name: 'channel-groups', url: `${PORTONE_API_BASE}/channel-groups` },
-    { name: 'stores', url: `${PORTONE_API_BASE}/stores` }
+  // PortOne V2 = list endpoint 명시 X. GraphQL 또는 console 전용. 여러 URL 시도해서 응답 fingerprint 로 추정.
+  // /payments/{fakeId} = 404 응답에 storeId 단서 있을 수 있음.
+  const probes: { name: string; url: string; method?: string }[] = [
+    { name: 'payments-fake-404', url: `${PORTONE_API_BASE}/payments/probe-${Date.now()}` },
+    { name: 'auth-me', url: `${PORTONE_API_BASE}/users/me` },
+    { name: 'identity-verifications', url: `${PORTONE_API_BASE}/identity-verifications/probe` },
+    { name: 'billing-keys-list', url: `${PORTONE_API_BASE}/billing-keys` },
+    { name: 'platforms', url: `${PORTONE_API_BASE}/platforms` },
+    // V1 호환 endpoint (graphql 도 가능)
+    { name: 'graphql', url: 'https://api.portone.io/graphql', method: 'POST' }
   ];
 
   const results: any = {};
   for (const probe of probes) {
     try {
-      const resp = await fetch(probe.url, {
+      const init: RequestInit = {
+        method: probe.method || 'GET',
         headers: {
           'Authorization': `PortOne ${env.PORTONE_API_KEY_V2}`,
           'Content-Type': 'application/json'
         }
-      });
+      };
+      if (probe.method === 'POST') {
+        init.body = JSON.stringify({
+          query: `query { stores { id name } me { id storeId } }`
+        });
+      }
+      const resp = await fetch(probe.url, init);
       const text = await resp.text();
       let data: any;
       try { data = JSON.parse(text); } catch { data = text; }
-      results[probe.name] = { status: resp.status, ok: resp.ok, data };
+      // 응답 안 storeId 단서 추출 (raw text 검색 — 'store-' prefix UUID).
+      const storeIdMatches = text.match(/store-[a-f0-9-]{32,}/gi);
+      results[probe.name] = {
+        status: resp.status,
+        ok: resp.ok,
+        data,
+        storeIdHints: storeIdMatches || null
+      };
     } catch (e: any) {
       results[probe.name] = { error: e?.message || String(e) };
     }
