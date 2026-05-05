@@ -10308,6 +10308,9 @@
 .v8-hero {
   position: fixed;
   inset: 0;
+  /* iOS Safari URL bar / 짧은 viewport 대응 — dvh 명시 */
+  height: 100vh;
+  height: 100dvh;
   background: var(--bg, #0c0c0e);
   z-index: 9999;
   display: flex;
@@ -10317,6 +10320,9 @@
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  /* safe-area / status bar 위로 안 가도록 */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   animation: v8HeroFadeIn 600ms ease-out both;
 }
 @keyframes v8HeroFadeIn {
@@ -10331,10 +10337,16 @@
   to { opacity: 0; transform: scale(0.97); }
 }
 .v8-hero-godong {
+  display: block;
   width: 96px;
   height: 96px;
-  margin-top: -8vh;
+  flex-shrink: 0;
+  /* 사용자 보고 2026-05-06 ultrathink: -8vh 가 짧은 viewport / iOS URL bar 환경에서 godong 을 화면 밖으로 밀어냄.
+     -4vh 로 완화 + flex-shrink: 0 으로 압축 차단 + drop-shadow 로 다크 bg 위에서 시인성 확보 (login-icon 패턴 재사용). */
+  margin-top: -4vh;
   margin-bottom: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 24px rgba(212, 167, 106, 0.42));
   opacity: 0;
   animation: v8GodongFadeIn 800ms 200ms ease-out forwards;
 }
@@ -20532,7 +20544,7 @@ function _v8HeroSequence() {
     root.setAttribute('aria-hidden', 'false');
     root.innerHTML = `
       <div id="v8Hero" class="v8-hero">
-        <img class="v8-hero-godong" src="/godongicon.png" alt="">
+        <img class="v8-hero-godong" src="/godongicon.png" alt="소라고동" decoding="async" loading="eager">
         <div class="v8-hero-text" id="v8HeroText"></div>
         <div class="v8-hero-tap-hint" id="v8HeroTapHint">✦</div>
       </div>
