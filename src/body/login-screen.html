@@ -12,9 +12,12 @@
     <!-- Step 1: 게스트 / 로그인 선택 — 사용자 명시 2026-05-06 ultrathink. -->
     <div class="login-form" id="loginStep1">
 
-      <!-- ── 1. Guest entry (top, simple) — 사용자 명시 2026-05-06: 카드 X, 버튼 한 줄. ── -->
+      <!-- ── 1. Guest entry (top) — 사용자 명시 2026-05-06 ultrathink: subtle breathing + leaf sway + hover shimmer. ── -->
       <div class="login-guest-simple">
-        <button id="guestEntryBtn" class="login-guest-btn-simple" onclick="enterGuestMode()">🌱 그냥 해보기</button>
+        <button id="guestEntryBtn" class="login-guest-btn-simple" onclick="enterGuestMode()">
+          <span class="guest-btn-leaf" aria-hidden="true">🌱</span>
+          <span class="guest-btn-text">그냥 해보기</span>
+        </button>
         <div class="login-guest-hint">이 기기에만 저장돼</div>
       </div>
 
@@ -31,7 +34,7 @@
           <span>카카오로 시작하기</span>
         </button>
 
-        <div style="font-size:10.5px; color:var(--text-soft); text-align:center; margin-top:14px; line-height:1.6;">계속하면 <a href="/terms" target="_blank" style="color:var(--text-dim);">약관</a> · <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a> 동의로 간주. 다음 단계에서 자세히 안내해줄게.</div>
+        <div style="font-size:10.5px; color:var(--text-soft); text-align:center; margin-top:14px; line-height:1.7;">계속하면 <a href="/terms" target="_blank" style="color:var(--text-dim);">약관</a> · <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a> 동의로 간주.<br>다음 단계에서 자세히 안내해줄게.</div>
       </div>
 
     </div>

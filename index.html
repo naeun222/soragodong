@@ -1830,7 +1830,8 @@
   .login-guest-btn:active { transform: scale(0.985); }
   .login-guest-btn:disabled { opacity: 0.6; cursor: wait; }
 
-  /* 사용자 명시 2026-05-06: 단순 게스트 진입 — 카드 X, 버튼 한 줄 + 작은 hint. */
+  /* 사용자 명시 2026-05-06 ultrathink: 게스트 entry — subtle breathing + leaf sway + hover shimmer.
+     idle = alive 신호 (gold border 4.5s breathing), hover = shimmer sweep + glow + lift. */
   .login-guest-simple {
     text-align: center;
     margin-bottom: 4px;
@@ -1839,29 +1840,107 @@
     animation: loginCardFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
   }
   .login-guest-btn-simple {
+    position: relative;
     width: 100%;
-    padding: 14px 18px;
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 12px;
+    padding: 16px 20px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.018), rgba(255,255,255,0.008));
+    border: 1px solid rgba(212, 167, 106, 0.18);
+    border-radius: 14px;
     color: var(--text);
-    font-size: 14px;
+    font-size: 14.5px;
     font-weight: 500;
     cursor: pointer;
     letter-spacing: 0.01em;
-    transition: background 0.18s, border-color 0.18s, transform 0.1s;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition:
+      background 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 4px 14px rgba(212, 167, 106, 0.04);
+    animation: guestBtnBreathe 4.5s ease-in-out infinite;
+  }
+  /* idle 호흡 — gold border + soft glow alpha pulse. 거슬리지 X subtle. */
+  @keyframes guestBtnBreathe {
+    0%, 100% {
+      border-color: rgba(212, 167, 106, 0.18);
+      box-shadow: 0 4px 14px rgba(212, 167, 106, 0.04);
+    }
+    50% {
+      border-color: rgba(212, 167, 106, 0.34);
+      box-shadow: 0 6px 22px rgba(212, 167, 106, 0.10);
+    }
+  }
+  /* hover 시 한 번 sweep — diagonal light pass, 0.7s. 한 번만 발화 (재진입 시 다시). */
+  .login-guest-btn-simple::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 60%; height: 100%;
+    background: linear-gradient(
+      110deg,
+      transparent 0%,
+      rgba(232, 201, 154, 0.13) 50%,
+      transparent 100%
+    );
+    transform: translateX(-110%) skewX(-14deg);
+    transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
   }
   .login-guest-btn-simple:hover {
-    background: rgba(255,255,255,0.04);
-    border-color: rgba(212,167,106,0.40);
+    background: rgba(212, 167, 106, 0.045);
+    border-color: rgba(212, 167, 106, 0.55);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 28px rgba(212, 167, 106, 0.13);
+    animation: none;  /* hover 동안 호흡 멈춤 — 명확한 hover state */
   }
-  .login-guest-btn-simple:active { transform: scale(0.985); }
-  .login-guest-btn-simple:disabled { opacity: 0.6; cursor: wait; }
+  .login-guest-btn-simple:hover::before {
+    transform: translateX(220%) skewX(-14deg);
+  }
+  .login-guest-btn-simple:active {
+    transform: translateY(0) scale(0.985);
+    transition-duration: 0.08s;
+  }
+  .login-guest-btn-simple:disabled {
+    opacity: 0.55;
+    cursor: wait;
+    animation: none;
+  }
+  /* leaf sway — 5s 좌우 ±4° 회전, 성장 메타포. */
+  .guest-btn-leaf {
+    display: inline-block;
+    transform-origin: 50% 80%;
+    animation: leafSway 5s ease-in-out infinite;
+  }
+  @keyframes leafSway {
+    0%, 100% { transform: rotate(-4deg); }
+    50% { transform: rotate(4deg); }
+  }
+  /* hover 시 잎이 더 활기차게 (1.8s 빠른 sway). */
+  .login-guest-btn-simple:hover .guest-btn-leaf {
+    animation-duration: 1.8s;
+  }
+  .guest-btn-text { display: inline-block; }
   .login-guest-hint {
     font-size: 11px;
     color: var(--text-soft);
-    margin-top: 6px;
+    margin-top: 8px;
     line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+  /* 접근성 — 모션 줄이기 선호 사용자는 모든 애니메이션 끔. */
+  @media (prefers-reduced-motion: reduce) {
+    .login-guest-btn-simple,
+    .guest-btn-leaf {
+      animation: none !important;
+    }
+    .login-guest-btn-simple::before {
+      display: none;
+    }
   }
 
   /* 4 PIPA 동의 — compact 디자인. 전체동의 master + 4 sub rows. */
@@ -10139,9 +10218,12 @@
     <!-- Step 1: 게스트 / 로그인 선택 — 사용자 명시 2026-05-06 ultrathink. -->
     <div class="login-form" id="loginStep1">
 
-      <!-- ── 1. Guest entry (top, simple) — 사용자 명시 2026-05-06: 카드 X, 버튼 한 줄. ── -->
+      <!-- ── 1. Guest entry (top) — 사용자 명시 2026-05-06 ultrathink: subtle breathing + leaf sway + hover shimmer. ── -->
       <div class="login-guest-simple">
-        <button id="guestEntryBtn" class="login-guest-btn-simple" onclick="enterGuestMode()">🌱 그냥 해보기</button>
+        <button id="guestEntryBtn" class="login-guest-btn-simple" onclick="enterGuestMode()">
+          <span class="guest-btn-leaf" aria-hidden="true">🌱</span>
+          <span class="guest-btn-text">그냥 해보기</span>
+        </button>
         <div class="login-guest-hint">이 기기에만 저장돼</div>
       </div>
 
@@ -10158,7 +10240,7 @@
           <span>카카오로 시작하기</span>
         </button>
 
-        <div style="font-size:10.5px; color:var(--text-soft); text-align:center; margin-top:14px; line-height:1.6;">계속하면 <a href="/terms" target="_blank" style="color:var(--text-dim);">약관</a> · <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a> 동의로 간주. 다음 단계에서 자세히 안내해줄게.</div>
+        <div style="font-size:10.5px; color:var(--text-soft); text-align:center; margin-top:14px; line-height:1.7;">계속하면 <a href="/terms" target="_blank" style="color:var(--text-dim);">약관</a> · <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a> 동의로 간주.<br>다음 단계에서 자세히 안내해줄게.</div>
       </div>
 
     </div>
@@ -13478,7 +13560,7 @@ async function enterGuestMode() {
       alert('지금 둘러보기를 시작할 수 없어. 잠시 후 다시 시도하거나 로그인해줘.' + detail);
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '🌱 그냥 해보기';
+        btn.innerHTML = '<span class="guest-btn-leaf" aria-hidden="true">🌱</span><span class="guest-btn-text">그냥 해보기</span>';
       }
       return;
     }
@@ -13489,7 +13571,7 @@ async function enterGuestMode() {
     alert('네트워크 오류 — 잠시 후 다시');
     if (btn) {
       btn.disabled = false;
-      btn.textContent = '🌱 그냥 해보기';
+      btn.innerHTML = '<span class="guest-btn-leaf" aria-hidden="true">🌱</span><span class="guest-btn-text">그냥 해보기</span>';
     }
   }
 }
