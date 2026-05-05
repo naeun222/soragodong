@@ -4,6 +4,8 @@
 export type AuthedUser = {
   id: string;
   email?: string;
+  // 사용자 명시 2026-05-05: Supabase anonymous sign-in 사용자 식별 — 게스트 chat 분기에 사용.
+  is_anonymous?: boolean;
 };
 
 export type Env = {
@@ -56,7 +58,12 @@ export async function verifyAuth(request: Request, env: Env): Promise<AuthedUser
   }
   const user: any = await resp.json();
   if (!user || !user.id) return null;
-  return { id: user.id, email: user.email };
+  // is_anonymous: Supabase /auth/v1/user response 에 직접 포함 (anonymous sign-in 사용자만 true).
+  return {
+    id: user.id,
+    email: user.email,
+    is_anonymous: !!user.is_anonymous
+  };
 }
 
 export function unauthorized(message = '인증 필요'): Response {

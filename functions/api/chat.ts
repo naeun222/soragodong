@@ -3,7 +3,20 @@
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from './_lib/auth';
 import { recordUsage, calculateCost } from './_lib/usage';
-import { checkBudget, deductCost, getUserBilling, OPUS_DAILY_LIMIT_PREMIUM } from './_lib/billing';
+import { checkBudget, deductCost, getUserBilling, ensureBillingRow, OPUS_DAILY_LIMIT_PREMIUM } from './_lib/billing';
+import {
+  checkAndIncIpRate,
+  checkGlobalGuestBudget,
+  recordGuestCost,
+  extractClientIp,
+  type GuestEnv
+} from './_lib/rate-limit';
+import { verifyTurnstileToken } from './_lib/turnstile';
+
+// 사용자 명시 2026-05-05: 게스트 (anonymous) 사용자 max_tokens 강제 cap — 비용 폭주 방어.
+const GUEST_MAX_TOKENS_CAP = 800;
+// 게스트는 Sonnet/Haiku 만 허용 — Opus 차단 (Premium 전용).
+const GUEST_ALLOWED_MODELS = new Set(['claude-sonnet-4-6', 'claude-haiku-4-5']);
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
@@ -107,7 +120,8 @@ async function chargeUsage(
   endpoint: string,
   model: string,
   usageData: any,
-  waitUntil: (promise: Promise<any>) => void
+  waitUntil: (promise: Promise<any>) => void,
+  isGuest = false
 ): Promise<void> {
   const inputTokens = usageData.input_tokens || 0;
   const outputTokens = usageData.output_tokens || 0;
@@ -128,6 +142,10 @@ async function chargeUsage(
 
   if (cost > 0.000001) {
     waitUntil(deductCost(env, userId, cost).catch(() => {}));
+    // Phase 0: 게스트 cost 글로벌 budget 카운터에 누적 (KV) — 일일 총합 cap 방어.
+    if (isGuest) {
+      waitUntil(recordGuestCost(env as GuestEnv, cost).catch(() => {}));
+    }
   }
 }
 
@@ -159,16 +177,41 @@ async function _handleChatRequest(context: {
   waitUntil: (promise: Promise<any>) => void;
 }): Promise<Response> {
   const { request, env, waitUntil } = context;
+  const guestEnv = env as GuestEnv;
 
   const user = await verifyAuth(request, env);
   if (!user) return unauthorized();
 
-  // 사용자 명시 2026-04-30: admin 특혜 제거 ("관리자 계정이라고 결제/사용량 다르게 하지 말아줘"). admin 도 일반 사용자처럼 budget check + 차감.
+  const isGuest = !!user.is_anonymous;
+
+  // 사용자 명시 2026-05-05 ultrathink (Phase 0): 게스트 비용 방어선 — IP rate limit + 글로벌 budget + Turnstile.
+  // 인증 사용자는 이 블록 skip (기존 흐름 그대로).
+  if (isGuest) {
+    const ip = extractClientIp(request);
+    const ipCheck = await checkAndIncIpRate(guestEnv, ip);
+    if (!ipCheck.ok) {
+      return jsonResponse({ error: ipCheck.reason, code: ipCheck.code }, ipCheck.status);
+    }
+    const budgetCheck = await checkGlobalGuestBudget(guestEnv);
+    if (!budgetCheck.ok) {
+      return jsonResponse({ error: budgetCheck.reason, code: budgetCheck.code }, budgetCheck.status);
+    }
+    const turnstileToken = request.headers.get('X-Turnstile-Token');
+    const tsResult = await verifyTurnstileToken(guestEnv.TURNSTILE_SECRET_KEY, turnstileToken, ip);
+    if (!tsResult.ok) {
+      return jsonResponse({ error: tsResult.reason, code: 'TURNSTILE_FAIL' }, 403);
+    }
+  }
+
+  // 사용자 명시 2026-04-30: admin 특혜 제거. admin 도 일반 사용자처럼 budget check + 차감.
+  // Phase 0: 게스트는 'guest' tier ($0.20 cap) 로 자동 생성. checkBudget 진입 전에 명시적 ensure (isAnonymous flag 전달용).
+  // 한도 도달 시 NO_CREDIT → frontend 가 isGuest 분기로 가입 유도 모달.
+  await ensureBillingRow(env, user.id, { isAnonymous: isGuest });
   const budget = await checkBudget(env, user.id);
   if (!budget.ok) {
     return jsonResponse({
       error: budget.reason,
-      code: budget.code,
+      code: isGuest ? 'GUEST_LIMIT' : budget.code,
       remaining_credit_usd: budget.remaining_credit_usd
     }, 402);
   }
@@ -184,6 +227,18 @@ async function _handleChatRequest(context: {
   }
   if (!env.ANTHROPIC_API_KEY) {
     return jsonResponse({ error: 'ANTHROPIC_API_KEY 미설정 (서버)' }, 500);
+  }
+
+  // 게스트 강제 cap — model 화이트리스트 + max_tokens 800 강제. body 변조 후 Anthropic 으로.
+  if (isGuest) {
+    if (!GUEST_ALLOWED_MODELS.has(body.model)) {
+      return jsonResponse({
+        error: '게스트 모드는 기본 모델만 — 가입하면 Opus 등 풀 활용 가능',
+        code: 'GUEST_MODEL_BLOCKED'
+      }, 403);
+    }
+    const requested = Number(body.max_tokens) || GUEST_MAX_TOKENS_CAP;
+    body.max_tokens = Math.min(requested, GUEST_MAX_TOKENS_CAP);
   }
 
   // 사용자 명시 2026-05-02 ultrathink: Opus 가드 (Premium 전용 + 일일 30번 한도, 메인 대화 한정).
@@ -275,7 +330,7 @@ async function _handleChatRequest(context: {
             // 사용자 보고 2026-05-05 (audit Critical): finally 안 await chargeUsage → stream close 후 워커 lifetime 보장 X → drop risk.
             // fix = waitUntil 로 명시 위임 + 즉시 finally 종료 (stream 깔끔하게 close).
             waitUntil(
-              chargeUsage(env, user.id, endpoint, body.model, usageData, waitUntil).catch((e: any) => {
+              chargeUsage(env, user.id, endpoint, body.model, usageData, waitUntil, isGuest).catch((e: any) => {
                 console.warn('[chat.ts] chargeUsage 실패:', e);
               })
             );
@@ -306,7 +361,7 @@ async function _handleChatRequest(context: {
   const data: any = await upstream.json();
   const usage = data.usage || {};
   // 사용자 명시 2026-05-02 ultrathink: chargeUsage 헬퍼 — welcome bonus 우선 소진 + overflow USD 차감.
-  await chargeUsage(env, user.id, endpoint, body.model, usage, waitUntil);
+  await chargeUsage(env, user.id, endpoint, body.model, usage, waitUntil, isGuest);
 
   return jsonResponse(data);
 }

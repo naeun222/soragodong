@@ -11,9 +11,10 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
   if (!user) return unauthorized();
 
   // 신규 가입자 자동 한 달 무료 활성화 — 첫 진입에서 즉시 trigger.
+  // Phase 0: anonymous 사용자는 'guest' tier ($0.20) 로 자동 생성. linkIdentity 시 별도 endpoint 가 'early_light' 로 update.
   let billing = await getUserBilling(env, user.id);
   if (!billing) {
-    billing = await ensureBillingRow(env, user.id);
+    billing = await ensureBillingRow(env, user.id, { isAnonymous: !!user.is_anonymous });
   }
   const usage = await getMonthlyUsage(env, user.id);
 

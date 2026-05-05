@@ -11,7 +11,7 @@ export type UserBilling = {
   credit_balance_usd: number;
   subscription_active: boolean;
   subscription_expires_at: string | null;
-  subscription_plan?: 'light' | 'premium' | 'early_light' | string | null;
+  subscription_plan?: 'light' | 'premium' | 'early_light' | 'guest' | string | null;
   monthly_token_quota: number | null;
   monthly_quota_usd?: number;          // tier cap (USD). Light 5 / Premium 13 / early_light 4.
   monthly_token_used: number;          // micro-USD 누적 (cost_usd × 1M)
@@ -29,10 +29,13 @@ export type BudgetCheck =
 
 // 사용자 명시 2026-05-05: early_light 가격 0 + 자동 한 달 무료 (free trial). requires_early_user 제거 — 모두 자동 부여.
 // Light 9,900원 / Premium 25,000원 (월정액). 자동 갱신 X — 사용자 직접 매월 결제.
-export const TIER_PLANS: Record<'light' | 'premium' | 'early_light', { krw: number; cap_usd: number; label: string; auto_grant_first_month?: boolean }> = {
-  light:        { krw: 9900,  cap_usd: 5,  label: 'Light' },
-  premium:      { krw: 25000, cap_usd: 13, label: 'Premium' },
-  early_light:  { krw: 0,     cap_usd: 4,  label: '처음 한 달 무료 (얼리)', auto_grant_first_month: true }
+// 사용자 명시 2026-05-05 ultrathink (Phase 0): guest tier 추가 — Supabase anonymous 사용자 한정 cap $0.20 (~10턴).
+//   guest 는 결제 대상 X. linkIdentity (게스트 → 가입자 전환) 시 early_light 로 fresh 갱신.
+export const TIER_PLANS: Record<'light' | 'premium' | 'early_light' | 'guest', { krw: number; cap_usd: number; label: string; auto_grant_first_month?: boolean; is_guest?: boolean }> = {
+  light:        { krw: 9900,  cap_usd: 5,    label: 'Light' },
+  premium:      { krw: 25000, cap_usd: 13,   label: 'Premium' },
+  early_light:  { krw: 0,     cap_usd: 4,    label: '처음 한 달 무료 (얼리)', auto_grant_first_month: true },
+  guest:        { krw: 0,     cap_usd: 0.20, label: '게스트', is_guest: true }
 };
 export type TierKey = keyof typeof TIER_PLANS;
 
@@ -80,26 +83,33 @@ export async function getUserBilling(env: Env, userId: string): Promise<UserBill
   }
 }
 
-export async function ensureBillingRow(env: Env, userId: string): Promise<UserBilling | null> {
+export async function ensureBillingRow(env: Env, userId: string, opts?: { isAnonymous?: boolean }): Promise<UserBilling | null> {
   const existing = await getUserBilling(env, userId);
   if (existing) return existing;
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
   // 사용자 명시 2026-05-05: 처음 한 달 자동 무료 (얼리 플랜) 활성화. 자동 갱신 X — 만료 후 active=false 자동.
   // 사용자가 직접 light / premium 구독 결정. 한도 도달 시 → premium 결제 유도 (개발자 후원 메시지).
+  // Phase 0: anonymous (게스트) = 'guest' tier ($0.20 cap). linkIdentity 시 update-tier 로 'early_light' fresh.
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + FREE_TRIAL_DAYS * 86400_000).toISOString();
-  const earlyTier = TIER_PLANS.early_light;
+  const isGuest = !!opts?.isAnonymous;
+  const tierKey: TierKey = isGuest ? 'guest' : 'early_light';
+  const tier = TIER_PLANS[tierKey];
+  // guest = 만료 X (anonymous 계정 자체가 abandoned 시 cron 으로 정리 — Phase 1 후속).
+  // early_light = 30일 만료.
+  const expiresAt = isGuest
+    ? new Date(now.getTime() + 365 * 86400_000).toISOString()
+    : new Date(now.getTime() + FREE_TRIAL_DAYS * 86400_000).toISOString();
   const newRow: Partial<UserBilling> = {
     user_id: userId,
     credit_balance_usd: 0,
     subscription_active: true,
     subscription_expires_at: expiresAt,
-    subscription_plan: 'early_light',
+    subscription_plan: tierKey,
     monthly_token_quota: null,
-    monthly_quota_usd: earlyTier.cap_usd,
+    monthly_quota_usd: tier.cap_usd,
     monthly_token_used: 0,
     monthly_period_started_at: now.toISOString(),
-    free_trial_granted_at: now.toISOString()
+    free_trial_granted_at: isGuest ? null : now.toISOString()
   };
   try {
     const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing`, {

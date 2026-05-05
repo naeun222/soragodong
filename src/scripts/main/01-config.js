@@ -4,6 +4,11 @@
 const SUPABASE_URL = 'https://pfagqvfteqzfhkbxtnwp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmYWdxdmZ0ZXF6ZmhrYnh0bndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjU4MDMsImV4cCI6MjA5MjYwMTgwM30.jDYXky2ga-o_02uWWrqqwti_HfHm8K_61IHPV81YBoA';
 
+// 사용자 명시 2026-05-05 ultrathink (Phase 0): Cloudflare Turnstile site key — 게스트 chat 진입 시 봇 검증.
+// 공개 OK (frontend 에 박혀도 안전). secret key 는 Cloudflare Pages env (TURNSTILE_SECRET_KEY) 에 별도 저장.
+// 사용처: Phase 1 게스트 모드 활성화 시 invisible widget 으로 토큰 발급 → /api/chat 헤더 X-Turnstile-Token.
+const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
+
 // 사용자 명시 2026-05-01 (100명 대비): Sentry error tracking placeholder.
 // DSN 빈 값 = SDK 로드 X (네트워크 / bundle 영향 0). 사용자가 sentry.io 가입 후 DSN 발급해서 적용하면 자동 활성.
 // 가입 단계: USER_TODO P2-X 참고. Free tier 5K errors/월.

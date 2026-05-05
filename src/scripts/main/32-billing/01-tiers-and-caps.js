@@ -6,12 +6,15 @@
 // 서버 _lib/billing.ts 의 TIER_PLANS 와 동기 — 위변조 방지로 결제 검증은 서버에서 재확인.
 // description: 정직 톤 — 정량 KRW 표기 X, 정성적 설명만. cap 자체는 서버 운영 용도.
 const TIER_PLANS_CLIENT = {
-  light:        { krw: 9900,  cap_usd: 5,  cap_krw: 7000,  label: 'Light',        tagline: '매일의 자기관찰', emoji: '🐚',
+  light:        { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Light',        tagline: '매일의 자기관찰', emoji: '🐚',
     description: '일반 대화 + 분석 풀로. 매일의 자기관찰에 충분.' },
-  premium:      { krw: 25000, cap_usd: 13, cap_krw: 18000, label: 'Premium',      tagline: '깊게 자주', emoji: '🌊',
+  premium:      { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',      tagline: '깊게 자주', emoji: '🌊',
     description: '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.' },
-  early_light:  { krw: 0,     cap_usd: 4,  cap_krw: 5600,  label: '처음 한 달 무료', tagline: '얼리 플랜', emoji: '🐚',
-    description: '신규 가입자 자동 활성화 — 30일 자유롭게. 자동 결제 X. 만료 후 원하면 직접 light/premium 구독.', auto_grant_first_month: true }
+  early_light:  { krw: 0,     cap_usd: 4,    cap_krw: 5600,  label: '처음 한 달 무료', tagline: '얼리 플랜', emoji: '🐚',
+    description: '신규 가입자 자동 활성화 — 30일 자유롭게. 자동 결제 X. 만료 후 원하면 직접 light/premium 구독.', auto_grant_first_month: true },
+  // 사용자 명시 2026-05-05 ultrathink (Phase 0): 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
+  guest:        { krw: 0,     cap_usd: 0.20, cap_krw: 280,   label: '게스트',        tagline: '한 번 써보기', emoji: '🌱',
+    description: '계정 없이 ~10턴 무료. 데이터는 이 기기에만. 가입하면 첫 달 무료 + 모든 분석 풀.', is_guest: true }
 };
 // 사용자 명시 2026-05-02 ultrathink: light_pack 제거 — Premium 전용. Light/얼리는 Premium 전환 또는 다음 달 대기.
 // V4 (사용자 명시 2026-05-04 ultrathink — v2 갱신): 추가팩 재설계 — 작은 단위 + 두 tier 다 가능. *24h 못 기다리는 사용자* trigger.
