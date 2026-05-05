@@ -31061,11 +31061,11 @@ ${mode === 'same'
       if (m) {
         const parsed = JSON.parse(m[0]);
         if (Array.isArray(parsed.options)) {
-          // firstGen: 모두 (5 옵션) / mode='same': prevLayer 만 / mode='cross': prevLayer 제외
+          // firstGen: 모두 (5 옵션) / mode='same': prevLayer + reason 필수 (재호출 비용 X — 누락 옵션은 reject 후 fallback) / mode='cross': prevLayer 제외
           aiOptions = parsed.options.filter(o => {
             if (!o.layer || !o.action) return false;
             if (firstGen) return true;
-            if (mode === 'same') return o.layer === prevLayer;
+            if (mode === 'same') return o.layer === prevLayer && !!o.reason;
             return o.layer !== prevLayer;
           });
         }
