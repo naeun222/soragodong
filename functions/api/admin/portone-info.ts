@@ -46,9 +46,17 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
         }
       };
       if (probe.method === 'POST') {
-        // GraphQL introspection — Query 타입 모든 fields 받아옴 (storeId 단서 찾기)
+        // PortOne V2 GraphQL 의 Query 루트 = node / merchant / siteAnalysis 만.
+        // merchant 가 핵심 — introspection 으로 inner type 확인 + 직접 query.
         init.body = JSON.stringify({
-          query: `{ __schema { queryType { fields { name args { name type { name kind } } type { name kind } } } } }`
+          query: `{
+            merchantType: __type(name: "Merchant") {
+              fields { name type { name kind ofType { name kind } } }
+            }
+            merchant {
+              __typename
+            }
+          }`
         });
       }
       const resp = await fetch(probe.url, init);
