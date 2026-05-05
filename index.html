@@ -15435,19 +15435,12 @@ async function _intakeStep1Send() {
   if (!text) { showToast('한 줄이라도 적어줘 ✦'); return; }
   state.intakeWorry.push({ role: 'user', content: text, ts: new Date().toISOString(), kind: 'first' });
   saveState();
-  // 사용자 명시 2026-05-06 ultrathink (재): Step2 (AI deepening 질문) 제거 — 1발화 후 곧장 3장문발화로.
-  // 짧음/장문 무관: 짧으면 Step3 (장문 권유 + 예시), 이미 장문이면 Step4 (paraphrase) 직진.
+  // 사용자 보고 2026-05-06 ultrathink (재): AI 동적 long example 호출 폐기.
+  //   이유: Step2 폐기 후 retry 안전망 사라져 한 번 fail = 라벨 영구 stuck.
+  //   INTAKE_EXAMPLES 페어 long 이 학습 도구로 충분. 비용/지연/실패 risk 0.
   if (_intakeShouldDeepen(text)) {
     _intakeState.step = 3;
     _renderIntakeStep();
-    // 백그라운드 long example fetch — Step3 렌더 후 도착하면 갱신
-    _intakeGenLongExample(text)
-      .then(longText => {
-        if (!_intakeState || !longText) return;
-        _intakeState.aiLong = longText;
-        if (_intakeState.step === 3) _renderIntakeStep();
-      })
-      .catch(e => { console.warn('[intake] long example 실패 — INTAKE_EXAMPLES 페어 사용', e); });
   } else {
     _intakeState.step = 4;
     _renderIntakeStep();
@@ -15487,10 +15480,9 @@ async function _intakeStep2Next() {
 function _intakeStep3Html() {
   const userFirst = state.intakeWorry.find(m => m.role === 'user');
   const userText = userFirst ? userFirst.content : '';
-  // AI long 우선 / 없으면 페어 long fallback
+  // 사용자 보고 2026-05-06 ultrathink (재): AI 동적 long example 폐기 → INTAKE_EXAMPLES 페어 long 만 사용.
   const ex = _intakeState.exampleStep1;
-  const fallbackLong = ex.long;
-  const longText = _intakeState.aiLong || fallbackLong;
+  const longText = ex.long;
   const micHtml = `<button id="intakeMicBtn3" class="intake-mic-btn" onclick="_intakeMicToggle(3)" aria-label="음성"><span id="intakeMicIcon3"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;display:block;"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></span></button>`;
   return `
     <div class="intake-ai-msg-small"><b>🐚</b> ${escapeHtml(userText.slice(0, 50))}${userText.length > 50 ? '...' : ''} — 한 번 더 풀어줘.</div>
@@ -15501,7 +15493,7 @@ function _intakeStep3Html() {
       <button class="intake-send-btn" onclick="_intakeStep3Send()">✦ 보내기</button>
     </div>
     <div class="intake-example">
-      <div class="intake-example-label">↓ 예시 — <b>클릭하면 입력창에 채워져</b>${_intakeState.aiLong ? '' : ' <span class="small">(AI 답변 기다리는 중...)</span>'}</div>
+      <div class="intake-example-label">↓ 예시 — <b>클릭하면 입력창에 채워져</b></div>
       <div class="intake-example-chip intake-example-long" onclick="_intakeStep3FillExample()">${ex.icon} "${escapeHtml(longText)}"</div>
     </div>
   `;
@@ -15510,8 +15502,7 @@ function _intakeStep3Html() {
 function _intakeStep3FillExample() {
   const ta = document.getElementById('intakeInput3');
   if (!ta) return;
-  const longText = _intakeState.aiLong || _intakeState.exampleStep1.long;
-  ta.value = longText;
+  ta.value = _intakeState.exampleStep1.long;
 }
 
 async function _intakeStep3Send() {
