@@ -38,16 +38,11 @@ function renderMainAction() {
       </div>
     `;
   } else {
-    mainCard = `
-      <div class="action-card" onclick="showScreen('execute')">
-        <div class="action-icon">🚀</div>
-        <div class="action-text">
-          <div class="action-title">실행 시작하기</div>
-          <div class="action-sub">머릿속 짐 → 오늘의 카드</div>
-        </div>
-        <div class="action-arrow">›</div>
-      </div>
-    `;
+    // V4 (사용자 명시 2026-05-05): 실행 카드 제거 → '오늘의 너' 큐레이션 (도서관 hero 동일).
+    // 진주 0개면 빈 문자열 → 작은 체크인 링크만 남음.
+    mainCard = (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function')
+      ? _heroCardHtml(_pickHeroPearl())
+      : '';
   }
   // 메인 카드가 체크인 아닐 때 항상 작은 링크 노출 (이미 했어도 수정 가능)
   let checkinSubLink = '';
@@ -56,15 +51,6 @@ function renderMainAction() {
     checkinSubLink = `<div onclick="enterCheckin()" style="font-size:12px; color:var(--text-dim); padding:10px 14px; text-align:center; cursor:pointer; margin-top:6px;">${label}</div>`;
   }
   container.innerHTML = mainCard + checkinSubLink;
-  return;
-  // legacy code below (unreachable, kept for git history reference)
-  if (isNight) {
-    if (checkinDoneToday) {
-      container.innerHTML = '';
-    } else {
-      container.innerHTML = '';
-    }
-  }
 }
 
 // 마법의 소라고동 미니 링크 — 작지만 카드 모양

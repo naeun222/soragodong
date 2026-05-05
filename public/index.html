@@ -21497,16 +21497,11 @@ function renderMainAction() {
       </div>
     `;
   } else {
-    mainCard = `
-      <div class="action-card" onclick="showScreen('execute')">
-        <div class="action-icon">🚀</div>
-        <div class="action-text">
-          <div class="action-title">실행 시작하기</div>
-          <div class="action-sub">머릿속 짐 → 오늘의 카드</div>
-        </div>
-        <div class="action-arrow">›</div>
-      </div>
-    `;
+    // V4 (사용자 명시 2026-05-05): 실행 카드 제거 → '오늘의 너' 큐레이션 (도서관 hero 동일).
+    // 진주 0개면 빈 문자열 → 작은 체크인 링크만 남음.
+    mainCard = (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function')
+      ? _heroCardHtml(_pickHeroPearl())
+      : '';
   }
   // 메인 카드가 체크인 아닐 때 항상 작은 링크 노출 (이미 했어도 수정 가능)
   let checkinSubLink = '';
@@ -21515,15 +21510,6 @@ function renderMainAction() {
     checkinSubLink = `<div onclick="enterCheckin()" style="font-size:12px; color:var(--text-dim); padding:10px 14px; text-align:center; cursor:pointer; margin-top:6px;">${label}</div>`;
   }
   container.innerHTML = mainCard + checkinSubLink;
-  return;
-  // legacy code below (unreachable, kept for git history reference)
-  if (isNight) {
-    if (checkinDoneToday) {
-      container.innerHTML = '';
-    } else {
-      container.innerHTML = '';
-    }
-  }
 }
 
 // 마법의 소라고동 미니 링크 — 작지만 카드 모양
@@ -32400,14 +32386,12 @@ function _applyDiaryGridHide() {
 }
 
 // V4-1t: 🌟 오늘의 너 — 진주 1개 회전 (안 본 진주 우선)
-function renderLibraryHero() {
-  const container = document.getElementById('libraryHero');
-  if (!container) return;
+// V4 (사용자 명시 2026-05-05): 도서관 hero + 홈 메인 카드 자리 — 동일 헬퍼 공유.
+//   _pickHeroPearl() → 진주 1개 선택 (rotation + seed pin)
+//   _heroCardHtml(pick) → 카드 HTML 문자열 (음악/영상/사진/텍스트 분기)
+function _pickHeroPearl() {
   const pearls = (state.pearls || []).filter(p => p.type !== 'dna_pearl');
-  if (pearls.length === 0) {
-    container.innerHTML = '';
-    return;
-  }
+  if (pearls.length === 0) return null;
   // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드는 LONGSHOT - Vanilla Days 음악 고정 (재생 가능 보장 — iTunes 검색 실패 케이스 대비 하드코딩 fallback)
   const isAutoFix = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
   let seedMusicPin = null;
@@ -32449,7 +32433,11 @@ function renderLibraryHero() {
     state.preferences._libHeroSeen = seen;
     saveState();
   }
+  return pick;
+}
 
+function _heroCardHtml(pick) {
+  if (!pick) return '';
   const dateStr = pick.createdAt
     ? new Date(pick.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
     : '';
@@ -32520,13 +32508,21 @@ function renderLibraryHero() {
     `;
   }
 
-  container.innerHTML = `
+  return `
     <div class="library-hero" onclick="openPearl('${pick.id}')">
       <div class="hero-label">🌟 오늘의 너</div>
       ${body}
       <div class="hero-meta">${escapeHtml(pick.category || '')}${dateStr ? ` · ${dateStr}` : ''}</div>
     </div>
   `;
+}
+
+function renderLibraryHero() {
+  const container = document.getElementById('libraryHero');
+  if (!container) return;
+  const pick = _pickHeroPearl();
+  if (!pick) { container.innerHTML = ''; return; }
+  container.innerHTML = _heroCardHtml(pick);
 }
 
 // V4-1t + fix: 카테고리 칩 새 항목 ● 점 — 카테고리별 lastSeen 이후 추가된 게 있을 때만.
@@ -45972,7 +45968,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.169-ios-mov-audio-fallback';
+const APP_VERSION = 'v4.0.170-home-todays-you-hero';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

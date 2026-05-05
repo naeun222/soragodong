@@ -1,12 +1,10 @@
 // V4-1t: 🌟 오늘의 너 — 진주 1개 회전 (안 본 진주 우선)
-function renderLibraryHero() {
-  const container = document.getElementById('libraryHero');
-  if (!container) return;
+// V4 (사용자 명시 2026-05-05): 도서관 hero + 홈 메인 카드 자리 — 동일 헬퍼 공유.
+//   _pickHeroPearl() → 진주 1개 선택 (rotation + seed pin)
+//   _heroCardHtml(pick) → 카드 HTML 문자열 (음악/영상/사진/텍스트 분기)
+function _pickHeroPearl() {
   const pearls = (state.pearls || []).filter(p => p.type !== 'dna_pearl');
-  if (pearls.length === 0) {
-    container.innerHTML = '';
-    return;
-  }
+  if (pearls.length === 0) return null;
   // 사용자 요청 2026-04-28: 튜토리얼/테스터 모드는 LONGSHOT - Vanilla Days 음악 고정 (재생 가능 보장 — iTunes 검색 실패 케이스 대비 하드코딩 fallback)
   const isAutoFix = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
   let seedMusicPin = null;
@@ -48,7 +46,11 @@ function renderLibraryHero() {
     state.preferences._libHeroSeen = seen;
     saveState();
   }
+  return pick;
+}
 
+function _heroCardHtml(pick) {
+  if (!pick) return '';
   const dateStr = pick.createdAt
     ? new Date(pick.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
     : '';
@@ -119,12 +121,20 @@ function renderLibraryHero() {
     `;
   }
 
-  container.innerHTML = `
+  return `
     <div class="library-hero" onclick="openPearl('${pick.id}')">
       <div class="hero-label">🌟 오늘의 너</div>
       ${body}
       <div class="hero-meta">${escapeHtml(pick.category || '')}${dateStr ? ` · ${dateStr}` : ''}</div>
     </div>
   `;
+}
+
+function renderLibraryHero() {
+  const container = document.getElementById('libraryHero');
+  if (!container) return;
+  const pick = _pickHeroPearl();
+  if (!pick) { container.innerHTML = ''; return; }
+  container.innerHTML = _heroCardHtml(pick);
 }
 
