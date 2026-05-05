@@ -46,8 +46,9 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
         }
       };
       if (probe.method === 'POST') {
+        // GraphQL introspection — Query 타입 모든 fields 받아옴 (storeId 단서 찾기)
         init.body = JSON.stringify({
-          query: `query { stores { id name } me { id storeId } }`
+          query: `{ __schema { queryType { fields { name args { name type { name kind } } type { name kind } } } } }`
         });
       }
       const resp = await fetch(probe.url, init);
