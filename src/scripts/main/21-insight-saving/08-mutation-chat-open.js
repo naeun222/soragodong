@@ -18,7 +18,7 @@ async function openMutationChat(strategyId, missionTitle, opts) {
   if (!Array.isArray(card.evolutionChats)) card.evolutionChats = [];
   const inceptionMessage = firstGen
     ? `🌱 "${card.title}" — 이 주제를 *전략 카드*로 결정화해보자.\n\n어떤 상황에서 이 패턴/고민이 자주 나타나? 어떤 게 가장 어렵게 느껴져?\n\n충분히 풀고 [🌱 첫 가지 만들기] 누르면 5 가지 (인지/행동/환경/사회/메타) 제안할게.`
-    : `🌿 "${card.title}" — 이 전략은 잘 안 맞았군.\n🧬 DNA가 진화할 준비 됐어. ✨\n\n어떤 점이 어려웠는지 같이 풀어보자. 충분히 풀고 [🌱 가지 만들기] 누르면 새 가지 4개 제안할게.`;
+    : `🌿 "${card.title}" — 이 전략은 잘 안 맞았군.\n🧬 DNA가 진화할 준비 됐어. ✨\n\n어떤 점이 어려웠는지 같이 풀어보자.\n충분히 얘기하고 버튼 누르면 새 가지 제안할게.`;
   _mutationChatState = {
     strategyId,
     missionTitle,
@@ -50,7 +50,8 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
   const card = getStrategyCard(strategyId);
   if (!card) return;
   const firstGen = !!_mutationChatState.firstGen;
-  const allowSameLayer = !!(opts && opts.allowSameLayer);
+  // V4 (사용자 명시 2026-05-05): mode 분기 — 'same' (지금 차원 보완 — 이유 인용 + 보완 1-2개) / 'cross' (다른 차원 4개). firstGen 은 mode 무관.
+  const mode = opts.mode || (firstGen ? null : 'cross');
   const prevGen = getCurrentGeneration(card);
   const prevAction = prevGen?.action || card.actionStrategy || card.summary || '';
   const prevLayer = prevGen?.layer || 'L2';
@@ -66,11 +67,14 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
     .filter(m => m.role !== 'options' && !m._placeholder)
     .map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`)
     .join('\n');
-  const sameLayerNote = firstGen
-    ? `\n[5 가지 모두 — L1, L2, L3, L4, L5 각 1개. 제외 X.]`
-    : (allowSameLayer
-      ? `\n[같은 가지 허용] 이전이 ${prevLayer} 여도 OK — 같은 가지에서 refine된 옵션 (이유 분석 + 보완) 도 1-2개 포함 가능. 단 똑같이 X — 대화에서 발견한 이유 반영해서 보완.`
-      : `\n이전이 ${prevLayer} 였으니 그 외 4 가지 각 1개.`);
+  let sameLayerNote;
+  if (firstGen) {
+    sameLayerNote = `\n[5 가지 모두 — L1, L2, L3, L4, L5 각 1개. 제외 X.]`;
+  } else if (mode === 'same') {
+    sameLayerNote = `\n[지금 차원 보완 모드] 같은 차원 ${prevLayer} ${_LAYER_NAME[prevLayer]||''} 에서만 1-2개. 사용자가 대화에서 짚은 *이유*를 한 구절 그대로 인용 후, 그 이유를 보완한 행동 작성. 옵션 객체마다 "reason" 필드 필수 (사용자 대화 인용, 30-60자). 옛 행동 똑같이 반복 X — 진짜 보완.`;
+  } else {
+    sameLayerNote = `\n이전이 ${prevLayer} 였으니 그 외 4 가지 각 1개.`;
+  }
   const convoNote = recentMsgs
     ? `\n\n[지금까지 대화 — 이 사용자 컨텍스트 우선 반영]\n${recentMsgs}\n\n위 대화에서 사용자가 짚은 진짜 어려움을 옵션에 녹여. generic 답 X.`
     : '';
@@ -88,7 +92,7 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
           max_tokens: 900,
           messages: [{
             role: 'user',
-            content: `${firstGen ? '토픽 → 전략 결정화: 첫 가지 5 옵션 (L1-L5 각 1개)' : '돌연변이 진화 4 옵션 생성'} (사용자 요청 2026-04-29: 대화 흐름 반영, 같은 가지 refine도 허용).
+            content: `${firstGen ? '토픽 → 전략 결정화: 첫 가지 5 옵션 (L1-L5 각 1개)' : (mode === 'same' ? '돌연변이 같은 차원 보완 옵션 1-2개 (이유 인용 + 보완)' : '돌연변이 진화 다른 차원 4 옵션')} (사용자 요청 2026-04-29: 대화 흐름 반영).
 
 ${headerLine}
 
@@ -109,7 +113,9 @@ ${sameLayerNote}${convoNote}
 6. 한 줄 70-100자
 
 [출력 JSON만 — 마크다운 X 따옴표 안 escape]
-{ "options": [{"layer":"L3","action":"오늘 저녁 7시까지 폰을 거실 충전기에 꽂아두기 — 손에 안 닿으면 자동 차단 (도파민 trigger 외부화)"},...] }
+${mode === 'same'
+  ? `{ "options": [{"layer":"${prevLayer}","action":"보완된 행동","reason":"사용자 대화에서 인용한 이유 한 구절"}] }`
+  : `{ "options": [{"layer":"L3","action":"오늘 저녁 7시까지 폰을 거실 충전기에 꽂아두기 — 손에 안 닿으면 자동 차단 (도파민 trigger 외부화)"},...] }`}
 
 [절대 금지]
 - "실패" / "안 됨" / "왜 못 했지" 단어
@@ -124,10 +130,13 @@ ${sameLayerNote}${convoNote}
       if (m) {
         const parsed = JSON.parse(m[0]);
         if (Array.isArray(parsed.options)) {
-          // firstGen: 모두 허용 (5 옵션) / 같은 가지 허용 시 prevLayer filter X / 기본 4 옵션 (prevLayer 제외)
-          aiOptions = parsed.options.filter(o =>
-            o.layer && o.action && (firstGen || allowSameLayer || o.layer !== prevLayer)
-          );
+          // firstGen: 모두 (5 옵션) / mode='same': prevLayer 만 / mode='cross': prevLayer 제외
+          aiOptions = parsed.options.filter(o => {
+            if (!o.layer || !o.action) return false;
+            if (firstGen) return true;
+            if (mode === 'same') return o.layer === prevLayer;
+            return o.layer !== prevLayer;
+          });
         }
       }
     } catch (e) { console.warn('mutation AI failed:', e); }
@@ -141,10 +150,16 @@ ${sameLayerNote}${convoNote}
       { layer: 'L1', action: '이 행동이 안 됐을 때 머릿속에 뜨는 생각을 적어보기 ("난 못해" 같은 거) → 다른 해석 시도 ("오늘은 못 했을 뿐, 내일 다시")' },
       { layer: 'L5', action: '마법의 소라고동에 큰 질문 적용하기: "이 행동이 정말 지금 나에게 필요한가?" 일주일 안고 살아보기 — 가치 재검토' }
     ];
-    // firstGen: 5개 다 / mutation: prevLayer 제외 4개 (or allowSameLayer 시 4개 무제한)
-    aiOptions = firstGen
-      ? allFallback
-      : allFallback.filter(o => allowSameLayer || o.layer !== prevLayer).slice(0, 4);
+    // firstGen: 5개 다 / mode='same': prevLayer 만 1개 (reason 비움 — 대화 부족 fallback) / mode='cross': prevLayer 제외 4개
+    if (firstGen) {
+      aiOptions = allFallback;
+    } else if (mode === 'same') {
+      const sameOnes = allFallback.filter(o => o.layer === prevLayer);
+      aiOptions = (sameOnes.length ? sameOnes : [{ layer: prevLayer, action: '대화에서 짚은 이유에 맞춰 같은 차원에서 한 단계만 다듬어보자.' }])
+        .map(o => ({ ...o, reason: '' }));
+    } else {
+      aiOptions = allFallback.filter(o => o.layer !== prevLayer).slice(0, 4);
+    }
   }
   if (!_mutationChatState) return;  // 사용자가 그 사이 닫음
   // placeholder 메시지 제거
@@ -152,6 +167,7 @@ ${sameLayerNote}${convoNote}
   // 사용자 요청 2026-04-29: 가지를 인라인 메시지로 넣음 (대화 흐름에 자연 적용됨 — 시간순)
   _mutationChatState.messages.push({
     role: 'options',
+    mode, // V4 (사용자 명시 2026-05-05): 'same' | 'cross' (firstGen 시 null) — 옵션 카드 렌더 분기
     options: aiOptions,
     generatedAt: new Date().toISOString()
   });

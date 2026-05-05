@@ -5772,6 +5772,27 @@
     font-size: 12px; line-height: 1.45;
     color: var(--text);
   }
+  /* V4 (사용자 명시 2026-05-05): 지금 차원 보완 옵션 카드 — 다른 차원과 톤 분리 (살짝 더 골드 톤) */
+  .mutation-option-card.same-layer {
+    background: rgba(212,167,106,0.07);
+    border-color: rgba(212,167,106,0.40);
+  }
+  .mutation-option-card.same-layer:hover {
+    background: rgba(212,167,106,0.13);
+    border-color: rgba(212,167,106,0.60);
+  }
+  .mutation-option-card.same-layer.selected {
+    background: rgba(212,167,106,0.22);
+    border-color: rgba(212,167,106,0.80);
+  }
+  .mutation-option-reason {
+    font-size: 12px; line-height: 1.4;
+    color: var(--text-dim);
+    font-style: italic;
+    padding: 4px 0 4px 8px;
+    border-left: 2px solid rgba(212,167,106,0.40);
+    margin: 2px 0;
+  }
   /* V4-fix: inline confirm bar (보관 여부) */
   .mutation-confirm-bar {
     display: flex; flex-direction: column; gap: 8px;
@@ -5883,8 +5904,9 @@
   .mutation-chat-mission-btn:active:not(:disabled) { transform: scale(0.98); }
 
   /* 사용자 요청 2026-04-29: 가지 만들기 버튼 — 컴팩트 + 이쁘게 */
+  /* V4 (사용자 명시 2026-05-05): 두 버튼 분기 시 gap */
   .mutation-gen-bar {
-    display: flex; justify-content: center;
+    display: flex; justify-content: center; gap: 8px;
     margin-bottom: 4px;
   }
   .mutation-gen-btn {
@@ -5904,6 +5926,14 @@
   }
   .mutation-gen-btn:active:not(:disabled) { transform: scale(0.96); }
   .mutation-gen-btn:disabled { opacity: 0.5; cursor: default; }
+  /* V4 (사용자 명시 2026-05-05): 🔄 지금 차원 보완 — 골드 톤 (정제된 느낌) / 🌱 다른 차원 — 기본 녹색 유지 */
+  .mutation-gen-btn.mutation-gen-same {
+    background: linear-gradient(135deg, rgba(212,167,106,0.20), rgba(212,167,106,0.08));
+    border-color: rgba(212,167,106,0.45);
+  }
+  .mutation-gen-btn.mutation-gen-same:hover:not(:disabled) {
+    box-shadow: 0 2px 10px rgba(212,167,106,0.18);
+  }
 
   /* 사용자 보고 2026-05-01: 깨달음으로 버튼 bubble 밖 sibling 으로 (메인 chat 패턴 일치) */
   .mutation-msg-actions {

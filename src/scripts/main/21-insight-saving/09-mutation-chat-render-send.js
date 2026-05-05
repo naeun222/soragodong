@@ -1,12 +1,11 @@
-// 사용자가 [🌱 가지 만들기] / [🔄 가지 다시 만들기] 버튼 클릭
-async function triggerGenerateMutationOptions() {
+// V4 (사용자 명시 2026-05-05): 사용자가 [🔄 지금 차원 보완] / [🌱 다른 차원] / firstGen [🌱 첫 가지 만들기] 클릭
+async function triggerGenerateMutationOptions(mode) {
   if (!_mutationChatState) return;
   if (_mutationChatState.loading) return;
-  const { strategyId, missionTitle } = _mutationChatState;
-  // 첫 가지: allowSameLayer = false (다른 차원 권유)
-  // 그 이후 (이미 options 메시지 있으면): allowSameLayer = true (같은 차원 refine OK)
-  const hasPrior = _mutationChatState.messages.some(m => m.role === 'options');
-  await _generateMutationOptions(strategyId, missionTitle, { allowSameLayer: hasPrior });
+  const { strategyId, missionTitle, firstGen } = _mutationChatState;
+  // firstGen 은 mode 무관 (5 옵션 L1-L5). mutation 은 'same' 또는 'cross' (기본).
+  const resolved = firstGen ? null : (mode === 'same' ? 'same' : 'cross');
+  await _generateMutationOptions(strategyId, missionTitle, { mode: resolved });
 }
 
 function _renderMutationChat() {
@@ -47,7 +46,6 @@ function _renderMutationChat() {
   const selectedOpt = sel
     ? (_mutationChatState.messages[sel.msgIdx]?.options || [])[sel.optIdx]
     : null;
-  const hasPriorOptions = _mutationChatState.messages.some(m => m.role === 'options');
 
   const footer = document.getElementById('mutationChatFooter');
   if (footer) {
@@ -64,17 +62,17 @@ function _renderMutationChat() {
         </div>
       `;
     } else {
-      // 사용자 요청 2026-04-29: [🌱 가지 만들기] / [🔄 가지 다시 만들기] 버튼 — 입력 위 sticky
-      const genBtnLabel = hasPriorOptions ? '🔄 가지 다시 만들기' : '🌱 가지 만들기';
-      const genBtnTitle = hasPriorOptions
-        ? '대화 반영해서 새 가지 4개 — 같은 차원 refine OK'
-        : '대화 좀 풀고 가지 만들거나, 바로 만들어도 OK';
+      // V4 (사용자 명시 2026-05-05): mutation 케이스 — [🔄 지금 차원 보완] / [🌱 다른 차원] 두 버튼. firstGen 은 [🌱 첫 가지 만들기] 한 버튼.
+      const isFirstGen = !!_mutationChatState.firstGen;
+      const userMsgCount = _mutationChatState.messages.filter(m => m.role === 'user').length;
+      const sameDisabled = userMsgCount < 2; // 대화량 게이트 — 짚을 게 있어야 손볼 수 있음
+      const sameTitle = sameDisabled ? '조금 더 풀어보자 — 짚이는 게 있어야 손볼 수 있어' : '지금 차원에서 이유 짚고 보완';
+      const genBar = isFirstGen
+        ? `<button class="mutation-gen-btn" onclick="triggerGenerateMutationOptions()" title="대화 좀 풀고 가지 만들거나, 바로 만들어도 OK" ${_mutationChatState.loading ? 'disabled' : ''}>🌱 첫 가지 만들기</button>`
+        : `<button class="mutation-gen-btn mutation-gen-same" onclick="triggerGenerateMutationOptions('same')" title="${sameTitle}" ${_mutationChatState.loading || sameDisabled ? 'disabled' : ''}>🔄 지금 차원 보완</button>
+           <button class="mutation-gen-btn mutation-gen-cross" onclick="triggerGenerateMutationOptions('cross')" title="다른 차원으로 4 가지 가지 받기" ${_mutationChatState.loading ? 'disabled' : ''}>🌱 다른 차원</button>`;
       footer.innerHTML = `
-        <div class="mutation-gen-bar">
-          <button class="mutation-gen-btn" onclick="triggerGenerateMutationOptions()" title="${genBtnTitle}" ${_mutationChatState.loading ? 'disabled' : ''}>
-            ${genBtnLabel}
-          </button>
-        </div>
+        <div class="mutation-gen-bar">${genBar}</div>
         <div class="mutation-chat-input-row">
           <textarea class="mutation-chat-input" id="mutationChatInput" placeholder="자유롭게 대화..." rows="1"></textarea>
           <button class="input-mic-btn" id="mutationMicBtn" onclick="_toggleInputSpeech('mutationChatInput', 'mutationMicBtn')" aria-label="음성 입력" title="음성 입력"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
@@ -122,17 +120,32 @@ function _renderMutationChat() {
     let html = '';
     _mutationChatState.messages.forEach((m, msgIdx) => {
       if (m.role === 'options') {
-        // 가지 카드 4개 인라인
+        // V4 (사용자 명시 2026-05-05): mode 분기 — 'same' (지금 차원 보완 — 짚은 점 인용 + → 액션) / 'cross'·firstGen (현재 그대로)
         const opts = m.options || [];
+        const isSame = m.mode === 'same';
+        const headerLabel = isSame ? '🔄 지금 차원 보완' : '🌱 가지';
         html += `<div class="mutation-msg assistant" style="background:transparent; border:none; padding:0; max-width:100%;">
-          <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">🌱 가지 ${opts.length}개</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">${headerLabel} ${opts.length}개</div>
           <div class="mutation-options-stack">
             ${opts.map((o, oi) => {
               const isSelected = sel && sel.msgIdx === msgIdx && sel.optIdx === oi;
               const otherSelected = sel && !isSelected;
+              const layerName = _LAYER_NAME[o.layer] || o.layer;
+              if (isSame) {
+                const reasonLine = o.reason
+                  ? `<div class="mutation-option-reason">"${escapeHtml(o.reason)}"</div>`
+                  : '';
+                return `
+                  <button class="mutation-option-card same-layer${isSelected ? ' selected' : ''}${otherSelected ? ' dim' : ''}" onclick="selectMutationOption(${msgIdx}, ${oi})">
+                    <div class="mutation-option-layer">🔄 ${escapeHtml(layerName)} 차원 — 짚은 점</div>
+                    ${reasonLine}
+                    <div class="mutation-option-action">→ ${escapeHtml(o.action)}</div>
+                  </button>
+                `;
+              }
               return `
                 <button class="mutation-option-card${isSelected ? ' selected' : ''}${otherSelected ? ' dim' : ''}" onclick="selectMutationOption(${msgIdx}, ${oi})">
-                  <div class="mutation-option-layer">${_LAYER_EMOJI[o.layer] || '✦'} ${_LAYER_NAME[o.layer] || o.layer}</div>
+                  <div class="mutation-option-layer">${_LAYER_EMOJI[o.layer] || '✦'} ${escapeHtml(layerName)}</div>
                   <div class="mutation-option-action">${escapeHtml(o.action)}</div>
                 </button>
               `;
