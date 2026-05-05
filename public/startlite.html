@@ -339,38 +339,69 @@
   }
   .proof-title .accent { color: var(--accent); }
 
-  /* 3-screen scroller */
-  .proof-screens {
-    display: flex;
-    gap: 14px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    padding: 4px 22px 16px;
-    margin: 0 -22px 6px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+  /* === Vertical proof cards — 사용자 명시 2026-05-06: 스크롤마다 문구+사진 풀스크린 자동 snap === */
+  .proof-stack {
+    margin: 0 -22px;  /* 부모 .container padding 0 22px 상쇄 → 풀폭 */
   }
-  .proof-screens::-webkit-scrollbar { display: none; }
-  .proof-screen {
-    flex: 0 0 200px;
+  .proof-card {
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 28px 22px;
+    scroll-snap-align: center;
+    scroll-snap-stop: normal;
+    text-align: center;
+  }
+  .proof-card-eyebrow {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 10px;
+    opacity: 0.92;
+  }
+  .proof-card-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 20px;
+    line-height: 1.5;
+    color: var(--text);
+    margin-bottom: 22px;
+    letter-spacing: -0.005em;
+    word-break: keep-all;
+    max-width: 320px;
+  }
+  .proof-card-title .accent { color: var(--accent); }
+  .proof-card-frame {
     border-radius: 24px;
     overflow: hidden;
     border: 1px solid rgba(255,255,255,0.10);
     background: var(--bg);
     box-shadow: 0 22px 48px -18px rgba(0,0,0,0.55), 0 0 0 4px rgba(20,18,30,0.5);
-    scroll-snap-align: center;
+    /* iPhone 1170:2532 ≈ 1:2.16. width 를 vh 기반으로 잡아 모바일 viewport 에 fit. */
+    width: clamp(190px, 28vh, 300px);
   }
-  .proof-screen img {
+  .proof-card-frame img {
     width: 100%;
     display: block;
-    margin-top: -13%;
+    margin-top: -13%;  /* iPhone status bar 잘림 (other proof-screen 과 동일) */
   }
-  .proof-cap {
-    margin-top: 6px;
-    font-size: 11px;
-    color: var(--text-soft);
-    letter-spacing: 0.16em;
-    text-align: center;
+
+  /* === Mobile: 페이지 전체 vertical scroll-snap (proximity = 강제 X, 가까울 때만 자동 정렬) === */
+  @media (max-width: 768px) {
+    html { scroll-snap-type: y proximity; }
+  }
+  @media (max-width: 380px) {
+    .proof-card { padding: 22px 18px; }
+    .proof-card-title { font-size: 18px; margin-bottom: 18px; }
+  }
+  @media (max-height: 700px) {
+    .proof-card-frame { width: clamp(170px, 26vh, 240px); }
+    .proof-card-title { font-size: 17px; margin-bottom: 14px; }
   }
 
   /* Trust block — "왜 진짜 안 새냐고?" 카드 */
@@ -949,41 +980,58 @@
 <!-- ============== PROOF ============== -->
 <section class="proof" id="proof">
 
-  <!-- 사용자 명시 2026-05-06: 사진 섹션 viewport 풀 -->
-  <div class="proof-snap">
-    <div class="container">
-      <div class="proof-label">한 번 봐봐</div>
-      <h2 class="proof-title">
-        <span class="accent">다 털어놔도</span> 걱정 없는,<br>
-        <span class="accent">너만 보는</span> AI.
-      </h2>
-      <p style="font-size:12px;color:var(--text-soft);letter-spacing:0.03em;margin-top:-18px;margin-bottom:20px;word-break:keep-all;">개발자가 실제로 쓰는 화면입니닷..</p>
-    </div>
+  <!-- 사용자 명시 2026-05-06: 인트로 카드 + 5장 풀스크린 vertical-snap 카드 (도서관 사진은 제거) -->
+  <div class="proof-card">
+    <div class="proof-card-eyebrow">한 번 봐봐</div>
+    <h2 class="proof-card-title" style="font-size:24px;max-width:340px;">
+      <span class="accent">다 털어놔도</span> 걱정 없는,<br>
+      <span class="accent">너만 보는</span> AI.
+    </h2>
+    <p style="font-size:12px;color:var(--text-soft);letter-spacing:0.03em;word-break:keep-all;">개발자가 실제로 쓰는 화면입니닷..</p>
+    <div style="margin-top:32px;font-size:11px;color:var(--text-soft);letter-spacing:0.18em;opacity:0.7;">↓ 스크롤 ↓</div>
+  </div>
 
-    <!-- 6 screen scroller — Chat → Drama → Curiosity → Beauty → Practice → Overview
-         (실제 챗 → 월간 리뷰 "창업자" hook → 너에 대해 → 진주 → 일기 → 도서관) -->
-    <div class="proof-screens">
-    <div class="proof-screen">
-      <img src="/drive-real-samples/chat.jpg?v=20260506" alt="고동이랑 챗 — 사적인 얘기 다 털어놓는 화면">
-    </div>
-    <div class="proof-screen">
-      <img src="/drive-real-samples/KakaoTalk_20260505_153438574.jpg?v=20260506b" alt="월간 리뷰 — 이번 달의 너는 '창업자'">
-    </div>
-    <div class="proof-screen">
-      <img src="/drive-me-tap/about.jpg?v=20260506" alt="너에 대해 — 가치관 · 특성">
-    </div>
-    <div class="proof-screen">
-      <img src="/drive-real-samples/jinju.jpg?v=20260506b" alt="진주 — 너의 순간들 (음식·장소·음악·사람)">
-    </div>
-    <div class="proof-screen">
-      <img src="/drive-real-samples/KakaoTalk_20260505_153551019_04.jpg?v=20260506b" alt="일기 화면 — 활력·기분·수면 + 그날의 음악">
-    </div>
-    <div class="proof-screen">
-      <img src="/drive-real-samples/KakaoTalk_20260505_153551019.jpg?v=20260506b" alt="인생 도서관 — 다섯 칸으로 정리된 너의 모든 것">
-    </div>
+  <!-- 5 카드 — Chat → Drama → Curiosity → Beauty → Practice
+       (실제 챗 → 월간 리뷰 "창업자" → 너에 대해 → 진주 → 일기) -->
+  <div class="proof-card">
+    <div class="proof-card-eyebrow">고동이랑 챗</div>
+    <h3 class="proof-card-title">사적인 얘기,<br><span class="accent">다 털어놔도 돼</span></h3>
+    <div class="proof-card-frame">
+      <img src="/drive-real-samples/chat.jpg?v=20260506" alt="">
     </div>
   </div>
-  <!-- /.proof-snap -->
+
+  <div class="proof-card">
+    <div class="proof-card-eyebrow">월간 리뷰</div>
+    <h3 class="proof-card-title">이번 달의 너는,<br><span class="accent">'창업자'</span></h3>
+    <div class="proof-card-frame">
+      <img src="/drive-real-samples/KakaoTalk_20260505_153438574.jpg?v=20260506b" alt="">
+    </div>
+  </div>
+
+  <div class="proof-card">
+    <div class="proof-card-eyebrow">너에 대해</div>
+    <h3 class="proof-card-title"><span class="accent">가치관 · 특성,</span><br>다 적어둘게</h3>
+    <div class="proof-card-frame">
+      <img src="/drive-me-tap/about.jpg?v=20260506" alt="">
+    </div>
+  </div>
+
+  <div class="proof-card">
+    <div class="proof-card-eyebrow">진주</div>
+    <h3 class="proof-card-title">음식·장소·음악·사람,<br><span class="accent">너의 순간들</span></h3>
+    <div class="proof-card-frame">
+      <img src="/drive-real-samples/jinju.jpg?v=20260506b" alt="">
+    </div>
+  </div>
+
+  <div class="proof-card">
+    <div class="proof-card-eyebrow">일기</div>
+    <h3 class="proof-card-title">활력·기분·수면<br><span class="accent">+ 그날의 음악</span></h3>
+    <div class="proof-card-frame">
+      <img src="/drive-real-samples/KakaoTalk_20260505_153551019_04.jpg?v=20260506b" alt="">
+    </div>
+  </div>
 
   <div class="container">
 
