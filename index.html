@@ -10132,42 +10132,11 @@
     <div class="login-title">소라고동</div>
     <div class="login-sub"><span style="font-size:17px; color:var(--text); font-weight:500; letter-spacing:0.01em;">나를 아는 AI 길라잡이 <span class="accent">✦</span></span></div>
 
-    <!-- 사용자 명시 2026-04-30 ultrathink: PWA 설치 — 로그인 위 prominent (항상 펼침, standalone hide). Android = beforeinstallprompt 1탭 / iOS = manual 3 step. -->
-    <div class="login-pwa-prominent" id="loginPwaCard">
-      <div class="pwa-prom-title">📱 앱처럼 쓰기</div>
-      <div class="pwa-tabs">
-        <button type="button" class="pwa-tab" data-os="ios" onclick="setPwaTab('ios')">📱 iPhone</button>
-        <button type="button" class="pwa-tab" data-os="android" onclick="setPwaTab('android')">🤖 Android</button>
-      </div>
-      <div class="pwa-steps" id="pwaStepsIos">
-        <div class="pwa-step">1. <b>사파리(Safari)</b>로 이 사이트 열기</div>
-        <div class="pwa-step">2. 하단 <b>더보기 (⋯)</b> → <b>공유 (⬆)</b> 누르기</div>
-        <div class="pwa-step">3. <b>더보기 (∨)</b> → <b>[홈 화면에 추가]</b></div>
-      </div>
-      <div class="pwa-steps" id="pwaStepsAndroid" style="display:none;">
-        <button type="button" id="pwaInstallBtn" onclick="triggerPwaInstall()" class="btn-primary pwa-install-1tap" style="display:none; width:100%; margin-bottom:12px; padding:14px;">📱 앱 설치 ✦</button>
-        <div class="pwa-step-group">
-          <div class="pwa-step-label">📱 삼성 인터넷 (갤럭시 기본)</div>
-          <div class="pwa-step">1. 우측 하단 <b>더보기 (≡)</b> 누르기</div>
-          <div class="pwa-step">2. <b>[전체 페이지 추가]</b></div>
-          <div class="pwa-step">3. <b>[홈 화면]</b> 누르기</div>
-        </div>
-        <div class="pwa-step-group">
-          <div class="pwa-step-label">🌐 크롬 / Edge / Brave</div>
-          <div class="pwa-step">1. 우측 상단 <b>메뉴 [⋮]</b> 누르기</div>
-          <div class="pwa-step">2. <b>[홈 화면에 추가]</b> 또는 <b>[앱 설치]</b></div>
-          <div class="pwa-step">3. <b>[설치]</b> → 앱처럼 작동</div>
-        </div>
-        <div class="pwa-step-note">Firefox / 인앱 브라우저는 설치 X — 위 둘 중 하나로 열어줘.</div>
-      </div>
-    </div>
-    <div class="login-pwa-divider">— 로그인 ↓ —</div>
-
-    <!-- 사용자 명시 2026-04-30: 모바일 브라우저 takeover 시 escape — iOS 인앱 / 빠른 로그인 사용자용 -->
+    <!-- 사용자 명시 2026-05-06: 모바일 브라우저 takeover 시 escape — iOS 인앱 / 빠른 로그인 사용자용. -->
+    <!-- PWA 설치 카드 = 후속 (가입 완료 시점 노출 — 처음 진입자 강요 X). -->
     <a class="pwa-escape-link" onclick="escapePwaTakeover()">그냥 브라우저에서 로그인 →</a>
 
     <!-- Step 1: 게스트 / 로그인 선택 — 사용자 명시 2026-05-06 ultrathink. -->
-    <!-- 사용자 명시 2026-05-06: 게스트 카드 위로 (처음 진입자 hook), 로그인 카드 아래 + '첫 달 무료' 제거. -->
     <div class="login-form" id="loginStep1">
 
       <!-- ── 1. Guest entry (top, simple) — 사용자 명시 2026-05-06: 카드 X, 버튼 한 줄. ── -->
@@ -10194,20 +10163,7 @@
         <input type="email" id="loginEmail" placeholder="이메일 주소" autocomplete="email">
         <button class="btn-primary" id="loginBtn" onclick="handleSendCode()" style="width:100%;">코드 받기 →</button>
         <div class="login-status" id="loginStatus"></div>
-
-        <!-- 4 PIPA 동의 (compact) -->
-        <div class="login-consents">
-          <label class="login-consent-master">
-            <input type="checkbox" id="loginConsentAll" onchange="_toggleAllLoginConsents(this)">
-            <span><b>전체 동의</b></span>
-          </label>
-          <div class="login-consent-rows">
-            <label><input type="checkbox" id="loginConsentTerms" onchange="_syncAllLoginConsentToggle()"><span>이용약관 · 개인정보처리방침 동의 (필수)</span></label>
-            <label><input type="checkbox" id="loginConsentSensitive" onchange="_syncAllLoginConsentToggle()"><span>민감정보 처리 동의 — 정신건강 대화 (필수, PIPA §23)</span></label>
-            <label><input type="checkbox" id="loginConsentCrossBorder" onchange="_syncAllLoginConsentToggle()"><span>국외 이전 동의 — Anthropic API (미국, PIPA §17)</span></label>
-            <label><input type="checkbox" id="loginConsentAdult" onchange="_syncAllLoginConsentToggle()"><span>만 19세 이상 자기 선언 (필수)</span></label>
-          </div>
-        </div>
+        <div style="font-size:10.5px; color:var(--text-soft); text-align:center; margin-top:10px; line-height:1.6;">계속하면 <a href="/terms" target="_blank" style="color:var(--text-dim);">약관</a> · <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a> 동의로 간주. 다음 단계에서 자세히 안내해줄게.</div>
       </div>
 
     </div>
@@ -19997,10 +19953,13 @@ async function loginWithProvider(provider) {
     alert('지원하지 않는 로그인: ' + provider);
     return;
   }
-  // 사용자 명시 2026-05-06: 4 PIPA 동의 검증 — 로그인 화면에서 직접 (옛 비밀번호 설정 모달 안 검증 대체).
-  if (typeof _checkLoginConsentsAndSavePending === 'function') {
-    if (!_checkLoginConsentsAndSavePending('', provider)) return;
-  }
+  // 사용자 명시 2026-05-06: 동의 검증은 비밀번호 설정 모달 (showE2EEPasswordSetupModal) 에서 일괄 처리.
+  // 로그인 화면 = SNS button 만, 동의 X. callback 후 신규 사용자 식별 위해 loginMethod 만 stash.
+  try {
+    localStorage.setItem('soragodong_pending_consent', JSON.stringify({
+      email: '', loginMethod: provider, at: new Date().toISOString()
+    }));
+  } catch {}
   // Supabase OAuth redirect — /auth/v1/authorize?provider=X&redirect_to=Y
   // 사용자 명시 2026-05-02: 카카오 = 이메일만 (PIPA 데이터 최소 수집). Supabase default scope (profile_nickname/profile_image) 제외 — scopes=account_email 명시.
   const redirectTo = window.location.origin;
@@ -20060,10 +20019,13 @@ async function handleSendCode() {
     return;
   }
 
-  // 사용자 명시 2026-05-06: 4 PIPA 동의 검증 — 로그인 화면에서 직접 (옛 비밀번호 설정 모달 안 검증 대체).
-  if (typeof _checkLoginConsentsAndSavePending === 'function') {
-    if (!_checkLoginConsentsAndSavePending(email, 'email')) return;
-  }
+  // 사용자 명시 2026-05-06: 동의 검증은 비밀번호 설정 모달 (showE2EEPasswordSetupModal) 에서 일괄 처리.
+  // 로그인 화면 = 이메일/카카오만, 동의 X (UX 단순). 이메일 + loginMethod 만 stash.
+  try {
+    localStorage.setItem('soragodong_pending_consent', JSON.stringify({
+      email, loginMethod: 'email', at: new Date().toISOString()
+    }));
+  } catch {}
 
   // 사용자 명시 2026-05-02: 60s cooldown — alert() 대신 inline countdown.
   if (_checkOtpCooldownAndStart()) return;
