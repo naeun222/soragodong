@@ -3,6 +3,15 @@
 // ═══════════════════════════════════════════════════════════════
 
 async function acceptProposal(idx) {
+  // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 ✦ 해볼게 → 옛 Core 2 튜토리얼 (V8 UI) 1회 fire.
+  // 마킹은 즉시 — saveMsgAsStrategy 의 내부 호출 (auto-save) 이 동일 trigger 로 재진입하지 않도록.
+  const _firstC2Tutorial = (typeof shouldRunFirstStrategyTutorial === 'function') && shouldRunFirstStrategyTutorial();
+  if (_firstC2Tutorial) {
+    state.tutorialShown = state.tutorialShown || {};
+    state.tutorialShown.core2 = true;
+    try { saveState(); } catch {}
+  }
+
   const msg = state.chatMessages[idx];
   msg.proposalResponse = 'accept';
 
@@ -57,6 +66,11 @@ async function acceptProposal(idx) {
   });
   saveState();
   renderChat();
+
+  // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 클릭 → 옛 Core 2 튜토리얼 V8 UI 로 fire.
+  if (_firstC2Tutorial && typeof runFirstStrategyTutorialV8 === 'function') {
+    setTimeout(() => { runFirstStrategyTutorialV8('accept', idx).catch(e => console.warn('[c2 first]', e)); }, 1300);
+  }
 }
 
 function extractProposalFromMessage(content) {
