@@ -20637,6 +20637,9 @@ async function runStartTutorialV8() {
     await _v8HeroSequence();           // 화면 1·2
     await _v8RunIntakeAndInject();     // 모달 + chat inject
     await _v8Sleep(900);               // chat 메시지 / 스크롤 settle
+    // 사용자 명시 2026-05-06: 중간 단계 — 4단 분석 카드 읽기 안내 (마무리 직전 압박감 X).
+    await _v8CoachmarkReadFourStage();
+    await _v8Sleep(250);
     await _v8CoachmarkEndChapter();    // 마무리 코치마크
     await _v8Sleep(250);
     await _v8CoachmarkModelToggle();   // 헤더 모델 토글 코치마크
@@ -20821,11 +20824,12 @@ async function _v8RunIntakeAndInject() {
 // 코치마크 — 가벼운 자체 인프라 (ONBOARDING_STEPS 분리)
 // ─────────────────────────────────────────────────────────────
 
-function _v8ShowCoachmark({ targetSelector, body, position = 'top', interactive = false, waitFor, onAdvance }) {
+function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', interactive = false, waitFor, onAdvance }) {
   return new Promise((resolve) => {
     const root = document.getElementById('v8TutorialRoot');
     if (!root) { resolve(); return; }
-    const target = targetSelector ? document.querySelector(targetSelector) : null;
+    // 사용자 명시 2026-05-06: targetEl 직접 받는 옵션 추가 — 동적 selector (chat 메시지 등) 대응.
+    const target = targetEl || (targetSelector ? document.querySelector(targetSelector) : null);
     // 타겟이 화면에 없으면 코치마크 skip — 다음 단계로 진행
     if (!target || target.offsetParent === null) { resolve(); return; }
     root.setAttribute('aria-hidden', 'false');
@@ -20931,6 +20935,28 @@ function _v8ShowCoachmark({ targetSelector, body, position = 'top', interactive 
     } else {
       if (okBtn) okBtn.addEventListener('click', advance);
     }
+  });
+}
+
+// 사용자 명시 2026-05-06: intake → 마무리 사이 중간 단계 — 4단 분석 카드 읽기 안내.
+// chat 메시지 중 [내가 본 것] 포함하는 assistant 메시지 (= 4단 분석) 의 DOM 찾아 가리킴.
+function _v8CoachmarkReadFourStage() {
+  const allMsgs = document.querySelectorAll('#chatMessages .msg.assistant');
+  const fourStageMsg = Array.from(allMsgs).find(m => /\[내가 본 것\]/.test(m.textContent || ''));
+  if (!fourStageMsg) return Promise.resolve();
+  // 사용자가 분석 살펴볼 시간 — 메시지 살짝 보이게 스크롤 후 코치마크.
+  try { fourStageMsg.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+  const body = `
+    <div class="v8-coach-title">내가 본 거야</div>
+    <div class="v8-coach-text">
+      방금 들려준 거 — 이렇게 정리했어.<br>
+      <span class="v8-coach-text-soft">천천히 읽어봐 ✦</span>
+    </div>
+  `;
+  return _v8ShowCoachmark({
+    targetEl: fourStageMsg,
+    body,
+    position: 'bottom'
   });
 }
 
