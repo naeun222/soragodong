@@ -61,9 +61,9 @@ async function checkOpusGate(env: Env, userId: string, isTutorial: boolean): Pro
   }
 }
 
-// 사용자 명시 2026-05-02 ultrathink: 차감 우선순위 = welcome_bonus_tokens (카운트) → quota/credit (USD).
-// caller (chat.ts) 가 consume_welcome_bonus_atomic 먼저 호출 → overflow 분 USD 비율 환산해서 deductCost.
-// 단순 가정: overflow 분 cost = 전체 cost × (overflow / total). input/output 따로 차감 X — 회사 손해 부담.
+// 사용자 명시 2026-05-05: 100만 토큰 환영 선물 정책 폐기 → chargeUsage 단순화.
+// 처음 한 달 무료 (얼리 플랜) = subscription_active=true + monthly_quota_usd cap 으로 처리. 별도 카운트 RPC 불필요.
+// monthly_token_used 누적은 _lib/usage.ts 의 recordUsage 가 RPC 통해 처리. cost 가 cap 초과하면 checkBudget 에서 NO_CREDIT 반환.
 async function chargeUsage(
   env: Env,
   userId: string,
@@ -76,10 +76,8 @@ async function chargeUsage(
   const outputTokens = usageData.output_tokens || 0;
   const cacheReadTokens = usageData.cache_read_input_tokens || 0;
   const cacheCreationTokens = usageData.cache_creation_input_tokens || 0;
-  const totalTokens = inputTokens + outputTokens + cacheReadTokens + cacheCreationTokens;
   const cost = calculateCost(model, inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens);
 
-  // recordUsage 는 항상 정확한 cost 기록 (welcome bonus 와 무관 — 통계용)
   waitUntil(recordUsage(env, {
     user_id: userId,
     endpoint,
@@ -91,34 +89,9 @@ async function chargeUsage(
     cost_usd: cost
   }).catch(() => {}));
 
-  // welcome bonus 우선 소진 + overflow USD 차감 (waitUntil 안 다 처리)
-  waitUntil((async () => {
-    let overflowTokens = totalTokens;
-    if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY && totalTokens > 0) {
-      try {
-        const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/consume_welcome_bonus_atomic`, {
-          method: 'POST',
-          headers: {
-            'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-            'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ p_user_id: userId, p_tokens: totalTokens })
-        });
-        const data: any = await resp.json().catch(() => ({}));
-        if (data?.ok) overflowTokens = data.overflow ?? totalTokens;
-      } catch (e) {
-        console.warn('[charge] welcome bonus consume 실패:', e);
-        // fail-open: overflow = total (welcome bonus 못 차감 시 전체 USD 차감)
-      }
-    }
-    if (overflowTokens > 0) {
-      const overflowCost = totalTokens > 0 ? cost * (overflowTokens / totalTokens) : cost;
-      if (overflowCost > 0.000001) {
-        await deductCost(env, userId, overflowCost).catch(() => {});
-      }
-    }
-  })());
+  if (cost > 0.000001) {
+    waitUntil(deductCost(env, userId, cost).catch(() => {}));
+  }
 }
 
 // 사용자 보고 2026-04-30: recordUsage / deductCost fire-and-forget → 응답 빠르면 Worker 종료로 drop.

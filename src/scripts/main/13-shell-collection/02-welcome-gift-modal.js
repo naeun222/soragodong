@@ -1,4 +1,6 @@
-//  · burst / 별 효과 X (사용자 명시 2026-05-01 탑티어 리디자인 톤 보존)
+// 사용자 명시 2026-05-05: 100만 토큰 환영 선물 정책 폐기 → 처음 한 달 자동 무료 (얼리 플랜) 안내 모달.
+// backend ensureBillingRow 가 신규 가입 시 subscription_active=true + plan='early_light' + 30일 expires 자동 처리.
+// 이 모달은 사용자에게 알림 + 클라이언트 flag set (재출현 방지) 만 — backend grant 호출 X.
 function _showWelcomeGiftModal() {
   if (window._showingWelcomeGift) return;
   if (document.getElementById('welcomeGiftOverlay')) return;
@@ -16,12 +18,12 @@ function _showWelcomeGiftModal() {
         다르게 보일지도. 🫂
       </div>
       <div class="welcome-gift-token">
-        <span class="welcome-gift-token-label">환영 선물 · 무료 체험</span>
-        <span class="welcome-gift-token-amount">🐚 100만 토큰</span>
-        <span class="welcome-gift-token-hint">약 한 달치 자유로운 대화</span>
+        <span class="welcome-gift-token-label">처음 한 달 · 무료</span>
+        <span class="welcome-gift-token-amount">🐚 얼리 플랜 자동 적용</span>
+        <span class="welcome-gift-token-hint">30일 동안 자유롭게</span>
       </div>
-      <button class="welcome-gift-btn" id="welcomeGiftAccept">받을게</button>
-      <div class="welcome-gift-trust">30일 동안 유효 · 자동 결제 X</div>
+      <button class="welcome-gift-btn" id="welcomeGiftAccept">시작할게</button>
+      <div class="welcome-gift-trust">자동 결제 X · 만료 후 원하면 직접 구독</div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -31,11 +33,10 @@ function _showWelcomeGiftModal() {
     if (btn.dataset._processing === '1') return;
     btn.dataset._processing = '1';
     btn.disabled = true;
-    btn.textContent = '받는 중...';
     try { await _acceptWelcomeGift(); } catch (e) { console.warn('[welcome-gift] accept:', e); }
     const tokenEl = overlay.querySelector('.welcome-gift-token');
     if (tokenEl) tokenEl.classList.add('received');
-    btn.textContent = '받았어 ✦';
+    btn.textContent = '시작 ✦';
     setTimeout(() => {
       overlay.classList.remove('show');
       setTimeout(() => { try { overlay.remove(); } catch {} }, 300);
@@ -44,40 +45,20 @@ function _showWelcomeGiftModal() {
   });
 }
 async function _acceptWelcomeGift() {
-  // V4 (v8 사용자 명시 2026-05-03 ultrathink — v2 §8): client-side state.welcomeGift 기록 (30일 카운트) + backend POST grant. 신규 진입 즉시 환영 = 폐기, Core 1 끝 환영만 활성.
-  state.welcomeGift = {
-    grantedAt: new Date().toISOString(),
-    tokensGranted: 1_000_000,
-    tokensRemaining: 1_000_000,
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-  };
+  // 사용자 명시 2026-05-05: backend grant 호출 X — ensureBillingRow 가 신규 가입 시 자동 활성화.
+  // 이 함수 = 클라이언트 flag (재출현 방지) + cloud sync + billing refresh 만.
   state._welcomeGiftAccepted = true;
   state.preferences = state.preferences || {};
-  state.preferences._welcomeBonusShown = true;  // 옛 flag 도 set (재출현 방지)
+  state.preferences._welcomeBonusShown = true;
   try { saveState({ force: true }); } catch {}
   if (typeof saveToCloudNow === 'function') {
     saveToCloudNow().catch(e => console.warn('[welcomeGift] cloud sync:', e));
   }
-  // backend POST — idempotent (already_granted 처리). 실제 grant 보장.
-  if (typeof session !== 'undefined' && session && session.access_token && typeof _authedFetch === 'function') {
-    try {
-      const resp = await _authedFetch('/api/billing/welcome-bonus', { method: 'POST' });
-      if (resp.ok) {
-        const data = await resp.json().catch(() => ({}));
-        if (data.already_granted) {
-          if (typeof showToast === 'function') showToast('✦ 이미 받았어');
-        } else if (data.granted) {
-          if (typeof showToast === 'function') showToast('🎁 100만 토큰 받았어 ✦');
-        }
-        if (typeof refreshBillingStatus === 'function') refreshBillingStatus(false).catch(() => {});
-      } else {
-        console.warn('[welcomeGift] backend 비-OK:', resp.status);
-      }
-    } catch (e) { console.warn('[welcomeGift] backend:', e); }
-  } else {
-    if (typeof showToast === 'function') showToast('🎁 100만 토큰 지급 ✦');
+  if (typeof refreshBillingStatus === 'function') {
+    refreshBillingStatus(false).catch(() => {});
   }
-  // V4 (v8 사용자 명시 2026-05-03 ultrathink — v2 §1 [5] / §6 명시): 환영 선물 후 Core 2 자동 unlock 권유 (passive 안내)
+  if (typeof showToast === 'function') showToast('🐚 처음 한 달 무료 시작 ✦');
+  // Core 2 자동 unlock 권유 (passive 안내) — 기존 흐름 보존.
   setTimeout(() => {
     if (state._core2NotUnlocked && typeof _showCore2EntryModal === 'function') {
       _showCore2EntryModal();

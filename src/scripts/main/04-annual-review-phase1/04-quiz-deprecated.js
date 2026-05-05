@@ -14,26 +14,9 @@ async function maybeShowFirstTimeIntro() {
   if (document.getElementById('e2eeRecoveryOverlay')) return;
   if (document.getElementById('e2eeSetupOverlay')) return;
   if (document.getElementById('onbOverlay') && document.getElementById('onbOverlay').classList.contains('active')) return;
-  // V4 (사용자 명시 2026-05-04 ultrathink V193): 옛 즉시 환영 모달 (showWelcomeBonusModal) 폐기 — Core 1 끝 _showWelcomeGiftModal 가 환영 + backend grant 통합.
-  // _welcomeBonusShown legacy flag 는 아래 silent backend grant 분기에서 보존 (옛 모달 본 사용자 grant 정합성).
-  // V4 (v8 사용자 명시 2026-05-03): silent backend grant — 신규 진입 즉시 backend POST (모달 X). Core 1 안 진행하는 사용자도 grant 보장. idempotent.
-  // 신규 사용자 = entries ≤ 3 + _welcomeBonusShown 미설정 + access_token 활성.
+  // 사용자 명시 2026-05-05: 100만 토큰 silent welcome grant 폐기 → 처음 한 달 무료 (얼리 플랜) 자동 활성화.
+  // backend ensureBillingRow 가 첫 /api/chat 또는 /api/usage 호출 시 자동 활성화. 클라이언트 silent grant 호출 불필요.
   const entriesCountSilent = Array.isArray(state.entries) ? state.entries.length : Object.keys(state.entries || {}).length;
-  const isFreshUserSilent = entriesCountSilent <= 3 && !(state.preferences && state.preferences._welcomeBonusShown);
-  if (isFreshUserSilent && typeof session !== 'undefined' && session && session.access_token && typeof _authedFetch === 'function') {
-    try {
-      const resp = await _authedFetch('/api/billing/welcome-bonus', { method: 'POST' });
-      if (resp.ok) {
-        const data = await resp.json().catch(() => ({}));
-        if (data.granted || data.already_granted) {
-          state.preferences = state.preferences || {};
-          state.preferences._welcomeBonusShown = true;
-          try { saveState({ force: true }); } catch {}
-          if (typeof refreshBillingStatus === 'function') refreshBillingStatus(false).catch(() => {});
-        }
-      }
-    } catch (e) { console.warn('[silent welcome grant]:', e); }
-  }
 
   // V4 사용자 명시 (V203): chooser 폐기. 신규 가입자 = 비밀번호 설정 후 시작 튜토리얼 자동 직진.
   // 한 번만 (preferences._coreTutorialAutoStarted) — reload 시 재트리거 X.

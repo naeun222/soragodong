@@ -47,7 +47,7 @@ function openNotifInbox() {
   } else {
     body = items.map(n => {
       const isUnread = !n.readAt;
-      const accentColor = n.type === 'welcome_expiry_warning' ? '#e8c590' : 'var(--accent)';
+      const accentColor = (n.type === 'free_trial_expiry_warning' || n.type === 'welcome_expiry_warning') ? '#e8c590' : 'var(--accent)';
       const date = new Date(n.createdAt).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
       return `
         <div class="notif-item" data-notif-id="${n.id}" onclick="_markNotifRead('${n.id}')" style="padding:12px 14px; border-left:3px solid ${isUnread ? accentColor : 'transparent'}; background:${isUnread ? 'rgba(212,167,106,0.04)' : 'transparent'}; cursor:pointer; border-bottom:1px solid var(--border);">
@@ -99,25 +99,28 @@ function _markAllNotifRead() {
   }
 }
 
-// 사용자 명시 2026-05-02 ultrathink: 환영 토큰 만료 7일 전 알림 자동 적용됨 (init 흐름 또는 refreshBillingStatus 후).
-// 부드러운 톤 — "사라져" 같은 다급한 워딩 X.
-function checkWelcomeBonusExpiry() {
+// 사용자 명시 2026-05-05: 환영 100만 토큰 정책 폐기 → 처음 한 달 무료 (얼리 플랜) 만료 7일 전 알림.
+// subscription_active=true + plan='early_light' + expires 7일 이내 = 알림 자리잡음.
+// 톤 — Premium 결제 = 개발자 후원 (iOS 앱 출시 자금) 명시.
+function checkFreeTrialExpiry() {
   const billing = window._billingCache;
   if (!billing) return;
-  const expires = billing.welcome_bonus_expires_at;
-  const remaining = Number(billing.welcome_bonus_tokens_remaining || 0);
-  if (!expires || remaining <= 0) return;
+  if (!billing.subscription_active) return;
+  if (billing.subscription_plan !== 'early_light') return;
+  const expires = billing.subscription_expires_at;
+  if (!expires) return;
   const expiresAt = new Date(expires).getTime();
   const now = Date.now();
   const remainingDays = (expiresAt - now) / 86400000;
   if (remainingDays > 7 || remainingDays < 0) return;
-  // 7일 이내 + 만료 안 함 — 알림 자리잡음 (중복 차단은 _addNotification 안에서)
-  const remainingDisplay = remaining >= 10000 ? Math.round(remaining / 10000) + '만' : remaining.toLocaleString();
+  const daysDisplay = Math.max(1, Math.ceil(remainingDays));
   _addNotification({
-    type: 'welcome_expiry_warning',
-    title: '환영 선물 만료가 가까워',
-    body: `한 달 동안 유효해서 알려드려.<br>남은 토큰: 약 <b>${remainingDisplay}</b>`,
+    type: 'free_trial_expiry_warning',
+    title: '한 달 무료 만료가 가까워',
+    body: `<b>${daysDisplay}일</b> 후 만료. 자동 결제 X — 만료 후 원하면 직접 구독 (Light 9,900원 / Premium 25,000원).<br><br><span style="font-size:11px; color:var(--text-soft);">Premium = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
     persistent: true
   });
 }
+// 옛 함수 호환 (외부 호출 잔재 대비) — checkFreeTrialExpiry 로 위임.
+function checkWelcomeBonusExpiry() { return checkFreeTrialExpiry(); }
 

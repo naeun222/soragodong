@@ -121,51 +121,11 @@ function devPreviewWeeklyReview() {
   }, 100);
 }
 
-// 개발자 도구 — 환영 선물 모달 (V4 V193: _showWelcomeGiftModal 통합).
-// idempotent — 이미 받은 사용자는 backend 가 자동 skip ('이미 받았어'). 다시 테스트 하려면 devResetWelcomeBonus 후 재진입.
+// 개발자 도구 — 한 달 무료 안내 모달 미리보기. backend grant 호출 X (ensureBillingRow 자동 활성화).
 function devPreviewWelcomeBonus() {
   if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal();
 }
-
-// 개발자 도구 — admin 본인 환영 보너스 처음부터 재테스트.
-// 사용자 보고 2026-04-30: 받기 누르면 잔액 그대로 → admin 의 free_credit_granted=true 잔재 때문이라 자동 reset 후 모달 즉시 띄워주는 원터치 흐름.
-async function devResetWelcomeBonus() {
-  if (typeof session === 'undefined' || !session || !session.access_token) {
-    alert('로그인 필요'); return;
-  }
-  if (!confirm('admin 본인 잔액 0 + free_credit_granted=false 리셋 후 환영 모달 자동 재오픈. 진행?')) return;
-  try {
-    const resp = await _authedFetch('/api/admin/reset-balance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        new_balance_usd: 0,
-        reset_free_credit_granted: true
-      })
-    });
-    if (!resp.ok) {
-      const err = await resp.text().catch(() => '');
-      alert('reset 실패: ' + resp.status + ' / ' + err + '\n\nADMIN_USER_ID env 들어가 있는지 확인.');
-      return;
-    }
-    const data = await resp.json();
-    console.log('[devReset] backend 응답:', data);
-    // 클라이언트 flag 도 reset
-    state.preferences = state.preferences || {};
-    state.preferences._welcomeBonusShown = false;
-    saveState();
-    if (typeof saveToCloudNow === 'function') {
-      try { await saveToCloudNow(); } catch {}
-    }
-    showToast(`✦ reset 완료 (잔액 ${data.old_balance_usd} → 0). 모달 띄울게...`);
-    // 잠깐 후 환영 모달 자동 오픈 → 받기 click → $2.14 grant
-    setTimeout(() => {
-      if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal();  // V193: _showWelcomeGiftModal 통합
-    }, 600);
-  } catch (e) {
-    alert('reset 실패: ' + (e.message || e));
-  }
-}
+// 사용자 명시 2026-05-05: devResetWelcomeBonus 폐기 — 100만 토큰 환영 선물 정책 폐기, free_credit_granted reset 의미 X.
 
 // 사용자 보고 2026-04-30 review (agent): AI 응답 JSON 견고 추출.
 // max_tokens 부족 truncation / markdown code fence / 외부 텍스트 등 robust.

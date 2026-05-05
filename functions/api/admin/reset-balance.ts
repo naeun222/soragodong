@@ -25,8 +25,8 @@ export async function onRequestPost(context: { request: Request; env: AdminEnv }
 
   let body: any;
   try { body = await request.json(); } catch { return jsonResponse({ error: 'invalid JSON' }, 400); }
-  // 사용자 명시 2026-04-30: reset_free_credit_granted 옵션 추가 — admin 자기 환영 보너스 재테스트 위해 필요.
-  const { target_user_id, new_balance_usd, reset_idempotency, reset_free_credit_granted } = body;
+  // 사용자 명시 2026-05-05: reset_free_credit_granted 옵션 폐기 (100만 토큰 환영 선물 정책 폐기 — free_credit_granted 컬럼 dead).
+  const { target_user_id, new_balance_usd, reset_idempotency } = body;
   const targetId = target_user_id || user.id;
   if (typeof new_balance_usd !== 'number' || isNaN(new_balance_usd)) {
     return jsonResponse({ error: 'new_balance_usd 숫자 필수' }, 400);
@@ -59,13 +59,7 @@ export async function onRequestPost(context: { request: Request; env: AdminEnv }
     const oldRows: any = await oldResp.json();
     oldBalance = Number(oldRows?.[0]?.credit_balance_usd) || 0;
 
-    // 사용자 명시 2026-04-30: free_credit_granted 함께 reset — admin 자기 환영 보너스 재테스트용.
     const patchBody: any = { credit_balance_usd: newBalanceRounded };
-    if (reset_free_credit_granted) {
-      patchBody.free_credit_granted = false;
-      patchBody.free_credit_amount_usd = 0;
-      patchBody.free_credit_granted_at = null;
-    }
     const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${targetId}`, {
       method: 'PATCH',
       headers: {

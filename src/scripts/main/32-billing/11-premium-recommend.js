@@ -37,12 +37,12 @@ function _showPremiumPromoModal() {
         활발하게 쓰고 있네!<br>
         <b>Premium</b> 가면 <b>3.75x 더 자유</b>롭게 — Opus 깊은 대화도 매일 30번까지.<br>
         <br>
-        <span style="color:var(--text-soft); font-size:11px;">
-          매일 추가팩 (1,500원) 사면 한 달 ~45,000원.<br>
-          Premium (25,000원) 가성비 ✨
+        <span style="color:var(--text-soft); font-size:11.5px; line-height:1.6;">
+          솔직하게 — 단독 개발자 (1인) 라 Premium = <b>iOS 앱 출시 후원</b>.<br>
+          중고 맥북 사서 iOS 빌드 가능 🫂
         </span>
       </div>
-      <button class="btn-primary" onclick="document.getElementById('premiumPromoOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 업그레이드</button>
+      <button class="btn-primary" onclick="document.getElementById('premiumPromoOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기</button>
       <button class="btn-secondary" onclick="document.getElementById('premiumPromoOverlay').remove();" style="width:100%;">나중에</button>
     </div>
   `;
@@ -116,20 +116,44 @@ function showBudgetExceededModal(reason, opts) {
         <div style="font-size:10.5px; color:var(--text-soft); margin-top:4px; margin-bottom:8px; text-align:center;">계속 결제 가능.</div>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
-    } else if (subActive && (plan === 'light' || plan === 'early_light')) {
-      // V4 (v2 갱신): Light/얼리 월 cap 도달 — 추가팩 OR Premium 권유
-      const packKey = plan === 'early_light' ? 'early_pack' : 'light_pack';
-      const pack = OVERAGE_PACKS_CLIENT[packKey];
-      bodyText = '이번 달 한도 도달했네.<br>Premium 가면 더 깊게 (3x 일일 자유) — Opus 깊은 대화 30번/일.<br><br><span style="color:var(--text-soft); font-size:11px;">또는 추가팩 작게, 다음 달까지 기다려도 OK 🫂</span>';
+    } else if (subActive && plan === 'early_light') {
+      // 사용자 명시 2026-05-05: 얼리 플랜 (처음 한 달 무료) 한도 도달 → Premium 결제 유도 + 개발자 후원 메시지.
+      // 정직 톤 — 단독 개발자 (1인) 가 중고 맥북 없어서 iOS 앱 못 만드는 중. 후원 = 앱 출시 가능.
+      titleText = '🐚 한 달 무료 한도 도달';
+      bodyText = '얼리 플랜 한도 다 썼네 — 자유롭게 써줘서 고마워.<br><br>' +
+        '<b>Premium</b> 가면 <b>3x 더 자유</b>롭게 (Opus 깊은 대화 30번/일).<br><br>' +
+        '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
+        '솔직하게 — 단독 개발자 (1인) 라 Premium 결제 = <b>iOS 앱 출시 후원</b> 이야. ' +
+        '중고 맥북이 없어서 iOS 빌드 못 하는 중인데, Premium 사용자분들이 뒷받침해주면 맥북 사서 iOS 앱 출시할 수 있어 🫂' +
+        '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 가기 (25,000원/월)</button>
-        ${pack ? `<button class="btn-secondary" onclick="purchaseOveragePack('${packKey}')" style="width:100%; margin-bottom:6px;">🌿 추가팩 ${pack.krw.toLocaleString()}원 (1일분+α)</button>` : ''}
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기 (25,000원/월)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🐚 Light 구독 (9,900원/월)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음에 결정할게</button>
+      `;
+    } else if (subActive && plan === 'light') {
+      // Light 월 cap 도달 — 추가팩 OR Premium 권유
+      const pack = OVERAGE_PACKS_CLIENT.light_pack;
+      bodyText = '이번 달 한도 도달했네.<br>Premium 가면 더 깊게 (3x 일일 자유) — Opus 깊은 대화 30번/일.<br><br>' +
+        '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
+        '솔직하게 — 단독 개발자 (1인) 라 Premium 결제 = <b>iOS 앱 출시 후원</b>. 중고 맥북 사서 iOS 빌드 가능 🫂' +
+        '</span>';
+      optionsHtml = `
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기 (25,000원/월)</button>
+        ${pack ? `<button class="btn-secondary" onclick="purchaseOveragePack('light_pack')" style="width:100%; margin-bottom:6px;">🌿 추가팩 ${pack.krw.toLocaleString()}원 (1일분+α)</button>` : ''}
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 달 기다릴게</button>
       `;
     } else {
-      // 비구독 (무료 + legacy charge 잔액 소진) — 구독 안내
+      // 비구독 (한 달 무료 만료 또는 legacy charge 잔액 소진) — 구독 안내 + 개발자 후원 톤
+      titleText = '🐚 한 달 무료 만료';
+      bodyText = '처음 한 달 무료 끝났어 — 깊게 써줘서 고마워.<br><br>' +
+        '계속 쓰려면 Light / Premium 구독.<br><br>' +
+        '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
+        '단독 개발자 (1인) 가 중고 맥북 없어서 iOS 앱 출시 못 하는 중. <b>Premium = 후원</b> 으로 iOS 빌드 가능 🫂' +
+        '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 구독</button>
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기 (25,000원/월)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🐚 Light 구독 (9,900원/월)</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
     }

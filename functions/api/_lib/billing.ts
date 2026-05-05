@@ -2,16 +2,9 @@
 
 import type { Env } from './auth';
 
-// 사용자 명시 이력: 4,000원 → 2,000원 (2026-04-30) → 3,000원 (2026-05-01). 1USD = 1,400원 환산 → $2.14 (≈ 3,000원).
-// pure API cost — 마진 X. 차감은 Anthropic 가격 그대로 (calculateCost in: 3, out: 15 등). 3,000원 = ~$2.14 어치 sonnet/haiku 호출 가능.
-// 사용자 명시 2026-04-30 ultrathink: 자동 부여 X. 환영 모달 '받기' click 시만 (POST /api/billing/welcome-bonus).
-export const FREE_INITIAL_CREDIT_USD = 2.14;
-
-// 사용자 명시 2026-05-01: 환영 토큰 2,000원 → 3,000원 상향에 따른 기존 사용자 보상 (1회성).
-// 대상: 이미 환영 토큰 받은 사용자 (free_credit_granted=true). 잔액 += $0.71 (≈ 1,000원).
-// 결과: 기존 사용자 = $1.43 + $0.71 = $2.14 (신규 가입자 신정책과 동일 효과).
-// 미수령 사용자 (free_credit_granted=false) = legacy bonus 대상 X — 받기 누르면 새 3,000원 정책 적용.
-export const LEGACY_BONUS_MAY2026_USD = 0.71;
+// 사용자 명시 2026-05-05: $2.14 환영 credit / 1,000원 legacy bonus / 100만 토큰 환영 선물 정책 모두 폐기.
+// 신정책: ensureBillingRow 가 신규 row 생성 시 처음 한 달 자동 무료 (얼리 플랜, 자동 결제 X).
+// 만료 후 사용자가 직접 light/premium 구독 결정. 한도 도달 시 → premium 결제 유도 (개발자 후원 메시지).
 
 export type UserBilling = {
   user_id: string;
@@ -20,36 +13,31 @@ export type UserBilling = {
   subscription_expires_at: string | null;
   subscription_plan?: 'light' | 'premium' | 'early_light' | string | null;
   monthly_token_quota: number | null;
-  monthly_quota_usd?: number;          // 사용자 명시 2026-04-30: tier cap (USD). Light 5 / Premium 13 / early_light 4.
+  monthly_quota_usd?: number;          // tier cap (USD). Light 5 / Premium 13 / early_light 4.
   monthly_token_used: number;          // micro-USD 누적 (cost_usd × 1M)
   monthly_period_started_at: string | null;
-  free_credit_granted: boolean;
-  legacy_bonus_2026_05_granted?: boolean;          // 사용자 명시 2026-05-01: 기존 사용자 1,000원 보너스 수령 여부 (migration 0006)
-  // 사용자 명시 2026-05-02 ultrathink (migration 0008):
-  early_user?: boolean;                            // 출시 전 가입자 = 평생 4,900원 cap $4 자격
-  early_user_granted_at?: string | null;
-  welcome_bonus_tokens_remaining?: number;          // 환영 선물 잔여 토큰 (input + output + cache 합산 카운트)
-  welcome_bonus_total_granted?: number;
-  welcome_bonus_granted_at?: string | null;
-  welcome_bonus_expires_at?: string | null;
-  opus_daily_used?: number;                         // Premium 전용 Opus 일일 사용 횟수 (한도 30)
+  // Opus 일일 한도 (Premium 한정).
+  opus_daily_used?: number;
   opus_daily_reset_at?: string | null;
+  // 사용자 명시 2026-05-05: 처음 한 달 무료 (얼리 플랜) 자동 활성 — 다음 cycle 안 갱신 X.
+  free_trial_granted_at?: string | null;
 };
 
 export type BudgetCheck =
   | { ok: true; remaining_credit_usd: number; subscription_active: boolean; subscription_plan?: string | null; monthly_remaining_usd?: number; }
   | { ok: false; reason: string; code: 'NO_CREDIT' | 'NEED_AUTH' | 'NO_BILLING_ROW'; remaining_credit_usd?: number; };
 
-// 사용자 명시 2026-05-02 ultrathink: 가격 조정 + early_light 신설.
-//   - Light 8,900 → 9,900 (만 원 안쪽 보존)
-//   - Premium cap $15 → $13 (Opus 30번 한도와 결합 cap 보호)
-//   - early_light 4,900/cap $4 (얼리 유저 평생, requires early_user flag)
-export const TIER_PLANS: Record<'light' | 'premium' | 'early_light', { krw: number; cap_usd: number; label: string; requires_early_user?: boolean }> = {
+// 사용자 명시 2026-05-05: early_light 가격 0 + 자동 한 달 무료 (free trial). requires_early_user 제거 — 모두 자동 부여.
+// Light 9,900원 / Premium 25,000원 (월정액). 자동 갱신 X — 사용자 직접 매월 결제.
+export const TIER_PLANS: Record<'light' | 'premium' | 'early_light', { krw: number; cap_usd: number; label: string; auto_grant_first_month?: boolean }> = {
   light:        { krw: 9900,  cap_usd: 5,  label: 'Light' },
   premium:      { krw: 25000, cap_usd: 13, label: 'Premium' },
-  early_light:  { krw: 4900,  cap_usd: 4,  label: 'Light (얼리)', requires_early_user: true }
+  early_light:  { krw: 0,     cap_usd: 4,  label: '처음 한 달 무료 (얼리)', auto_grant_first_month: true }
 };
 export type TierKey = keyof typeof TIER_PLANS;
+
+// 사용자 명시 2026-05-05: 처음 한 달 free trial 기간 (30일).
+export const FREE_TRIAL_DAYS = 30;
 
 // 사용자 명시 2026-05-02 ultrathink: light_pack 제거 — Premium 전용 (Light/얼리는 Premium 전환 또는 다음 달 대기).
 export const OVERAGE_PACKS: Record<'premium_pack', { krw: number; usd: number; for_tier: TierKey }> = {
@@ -59,22 +47,13 @@ export const OVERAGE_PACKS: Record<'premium_pack', { krw: number; usd: number; f
 // 사용자 명시 2026-05-02 ultrathink: Opus = Premium 전용 + 일일 30번 (메인 대화 한정, 새벽 4시 KST 리셋).
 export const OPUS_DAILY_LIMIT_PREMIUM = 30;
 
-// 사용자 명시 2026-05-02 ultrathink: 환영 선물 = 정확히 100만 토큰, 30일 만료, 튜토리얼 완주 후 grant.
-// 100만 토큰 ≈ Sonnet 평균 input:output 4:1 + 캐시 90% hit 기준 ~$2 어치. 회사 손해는 부담.
-// 이전 정책 ($2.14 free credit, free_credit_granted flag) 와 병행 — grant_welcome_bonus_atomic RPC 가 둘 다 추가.
-export const WELCOME_BONUS_TOKENS = 1_000_000;
-export const WELCOME_BONUS_EXPIRES_DAYS = 30;
-
-// 사용자 명시 2026-05-02 ultrathink: tier 검증 헬퍼.
-// early_light 는 early_user flag 필수. UI 위변조 시 backend 가 거부.
-export async function validateTier(env: Env, userId: string, tierKey: TierKey | string): Promise<{ ok: boolean; error?: string; tier?: typeof TIER_PLANS[TierKey] }> {
+// 사용자 명시 2026-05-05: tier 검증 헬퍼. early_light = 자동 free trial 이라 결제 경로엔 사용 X (light/premium 만 결제).
+export async function validateTier(_env: Env, _userId: string, tierKey: TierKey | string): Promise<{ ok: boolean; error?: string; tier?: typeof TIER_PLANS[TierKey] }> {
   const plan = TIER_PLANS[tierKey as TierKey];
   if (!plan) return { ok: false, error: 'invalid tier' };
-  if (plan.requires_early_user) {
-    const billing = await getUserBilling(env, userId);
-    if (!billing?.early_user) {
-      return { ok: false, error: '얼리 유저 자격 X' };
-    }
+  // early_light 결제 시도는 차단 — 처음 한 달 무료 자동 활성화라 결제 대상 X.
+  if (plan.krw === 0) {
+    return { ok: false, error: '처음 한 달 무료 (얼리 플랜) 은 자동 활성화 — 결제 대상 X. light / premium 으로 구독해줘.' };
   }
   return { ok: true, tier: plan };
 }
@@ -105,20 +84,22 @@ export async function ensureBillingRow(env: Env, userId: string): Promise<UserBi
   const existing = await getUserBilling(env, userId);
   if (existing) return existing;
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
-  // 사용자 명시 2026-04-30 ultrathink (CRITICAL): 자동 free credit 부여 X. 잔액 0 INSERT.
-  // 사용자가 환영 모달 '받기' button click 시만 POST /api/billing/welcome-bonus 로 부여.
-  // root cause (이전 버그): 새로고침 시 getUserBilling transient 에러 → INSERT FREE_INITIAL_CREDIT_USD →
-  //                       supabase 의 INSERT 동작 mismatch 가능성 → 잔액 reset / 누적 risk.
-  // fix: 잔액 0 INSERT + free_credit_granted=false. 받기 click 만 trigger.
+  // 사용자 명시 2026-05-05: 처음 한 달 자동 무료 (얼리 플랜) 활성화. 자동 갱신 X — 만료 후 active=false 자동.
+  // 사용자가 직접 light / premium 구독 결정. 한도 도달 시 → premium 결제 유도 (개발자 후원 메시지).
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + FREE_TRIAL_DAYS * 86400_000).toISOString();
+  const earlyTier = TIER_PLANS.early_light;
   const newRow: Partial<UserBilling> = {
     user_id: userId,
     credit_balance_usd: 0,
-    subscription_active: false,
-    subscription_expires_at: null,
+    subscription_active: true,
+    subscription_expires_at: expiresAt,
+    subscription_plan: 'early_light',
     monthly_token_quota: null,
+    monthly_quota_usd: earlyTier.cap_usd,
     monthly_token_used: 0,
-    monthly_period_started_at: null,
-    free_credit_granted: false
+    monthly_period_started_at: now.toISOString(),
+    free_trial_granted_at: now.toISOString()
   };
   try {
     const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing`, {

@@ -10840,8 +10840,7 @@
           <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
           <button class="btn-secondary" onclick="forceAnalyze()" title="opus 4.7 사용 — 비쌈">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="cleanLegacySeedData()" title="잔존 시드 텍스트 강제 정리">🧹 잔존 시드 정리</button>
-          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 선물 모달 + backend 실제 grant ($2.14 ≈ 3,000원)">🎁 환영 선물 모달 (실제 grant)</button>
-          <button class="btn-secondary" onclick="devResetWelcomeBonus()" title="admin 본인 free_credit_granted=false + balance=0 → 재테스트 가능">🔄 환영 선물 reset (admin)</button>
+          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 '한 달 무료' 안내 모달 미리보기 (backend grant 호출 X — ensureBillingRow 자동 활성화)">🐚 한 달 무료 모달 (미리보기)</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="devPreviewWeeklyReview()" title="신규 schema (chart / strengths / cycles / emotions / value_align / risk_signals / 자기 평가 / 공유 카드) 풀 미리보기 — 시드 데이터 사용, AI 호출 X">📅 주간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>
@@ -10851,7 +10850,6 @@
 
           <div class="settings-mini-label" style="margin-top:14px;">관리자 — 배너 미리보기 (실제 사용자 view)</div>
           <div class="settings-hint" style="margin-bottom:8px;">dismiss flag / backend grant 안 건드림. 진짜 사용자 화면 그대로.</div>
-          <button class="btn-secondary" onclick="devPreviewBanner('legacy')" title="기존 사용자 += 1,000원 1회 — 환영 토큰 받은 사용자 한정">🎁 1,000원 추가 배너</button>
           <button class="btn-secondary" onclick="devPreviewBanner('feedback')" title="모든 사용자 — '고동MOM에게 한 마디'">💌 고동MOM 배너</button>
           <button class="btn-secondary" onclick="devPreviewBanner('syncTip')" title="기존 사용자 — 클라우드 백업 헤더 알약 안내. 코어 끝낸 + entries > 3 한정">☁️ 클라우드 백업 안내 배너</button>
           <button class="btn-secondary" onclick="devClosePreviewBanner()" title="미리보기 닫기 (모든 배너)">✕ 미리보기 닫기</button>
@@ -13334,26 +13332,9 @@ async function maybeShowFirstTimeIntro() {
   if (document.getElementById('e2eeRecoveryOverlay')) return;
   if (document.getElementById('e2eeSetupOverlay')) return;
   if (document.getElementById('onbOverlay') && document.getElementById('onbOverlay').classList.contains('active')) return;
-  // V4 (사용자 명시 2026-05-04 ultrathink V193): 옛 즉시 환영 모달 (showWelcomeBonusModal) 폐기 — Core 1 끝 _showWelcomeGiftModal 가 환영 + backend grant 통합.
-  // _welcomeBonusShown legacy flag 는 아래 silent backend grant 분기에서 보존 (옛 모달 본 사용자 grant 정합성).
-  // V4 (v8 사용자 명시 2026-05-03): silent backend grant — 신규 진입 즉시 backend POST (모달 X). Core 1 안 진행하는 사용자도 grant 보장. idempotent.
-  // 신규 사용자 = entries ≤ 3 + _welcomeBonusShown 미설정 + access_token 활성.
+  // 사용자 명시 2026-05-05: 100만 토큰 silent welcome grant 폐기 → 처음 한 달 무료 (얼리 플랜) 자동 활성화.
+  // backend ensureBillingRow 가 첫 /api/chat 또는 /api/usage 호출 시 자동 활성화. 클라이언트 silent grant 호출 불필요.
   const entriesCountSilent = Array.isArray(state.entries) ? state.entries.length : Object.keys(state.entries || {}).length;
-  const isFreshUserSilent = entriesCountSilent <= 3 && !(state.preferences && state.preferences._welcomeBonusShown);
-  if (isFreshUserSilent && typeof session !== 'undefined' && session && session.access_token && typeof _authedFetch === 'function') {
-    try {
-      const resp = await _authedFetch('/api/billing/welcome-bonus', { method: 'POST' });
-      if (resp.ok) {
-        const data = await resp.json().catch(() => ({}));
-        if (data.granted || data.already_granted) {
-          state.preferences = state.preferences || {};
-          state.preferences._welcomeBonusShown = true;
-          try { saveState({ force: true }); } catch {}
-          if (typeof refreshBillingStatus === 'function') refreshBillingStatus(false).catch(() => {});
-        }
-      }
-    } catch (e) { console.warn('[silent welcome grant]:', e); }
-  }
 
   // V4 사용자 명시 (V203): chooser 폐기. 신규 가입자 = 비밀번호 설정 후 시작 튜토리얼 자동 직진.
   // 한 번만 (preferences._coreTutorialAutoStarted) — reload 시 재트리거 X.
@@ -13495,51 +13476,11 @@ function devPreviewWeeklyReview() {
   }, 100);
 }
 
-// 개발자 도구 — 환영 선물 모달 (V4 V193: _showWelcomeGiftModal 통합).
-// idempotent — 이미 받은 사용자는 backend 가 자동 skip ('이미 받았어'). 다시 테스트 하려면 devResetWelcomeBonus 후 재진입.
+// 개발자 도구 — 한 달 무료 안내 모달 미리보기. backend grant 호출 X (ensureBillingRow 자동 활성화).
 function devPreviewWelcomeBonus() {
   if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal();
 }
-
-// 개발자 도구 — admin 본인 환영 보너스 처음부터 재테스트.
-// 사용자 보고 2026-04-30: 받기 누르면 잔액 그대로 → admin 의 free_credit_granted=true 잔재 때문이라 자동 reset 후 모달 즉시 띄워주는 원터치 흐름.
-async function devResetWelcomeBonus() {
-  if (typeof session === 'undefined' || !session || !session.access_token) {
-    alert('로그인 필요'); return;
-  }
-  if (!confirm('admin 본인 잔액 0 + free_credit_granted=false 리셋 후 환영 모달 자동 재오픈. 진행?')) return;
-  try {
-    const resp = await _authedFetch('/api/admin/reset-balance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        new_balance_usd: 0,
-        reset_free_credit_granted: true
-      })
-    });
-    if (!resp.ok) {
-      const err = await resp.text().catch(() => '');
-      alert('reset 실패: ' + resp.status + ' / ' + err + '\n\nADMIN_USER_ID env 들어가 있는지 확인.');
-      return;
-    }
-    const data = await resp.json();
-    console.log('[devReset] backend 응답:', data);
-    // 클라이언트 flag 도 reset
-    state.preferences = state.preferences || {};
-    state.preferences._welcomeBonusShown = false;
-    saveState();
-    if (typeof saveToCloudNow === 'function') {
-      try { await saveToCloudNow(); } catch {}
-    }
-    showToast(`✦ reset 완료 (잔액 ${data.old_balance_usd} → 0). 모달 띄울게...`);
-    // 잠깐 후 환영 모달 자동 오픈 → 받기 click → $2.14 grant
-    setTimeout(() => {
-      if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal();  // V193: _showWelcomeGiftModal 통합
-    }, 600);
-  } catch (e) {
-    alert('reset 실패: ' + (e.message || e));
-  }
-}
+// 사용자 명시 2026-05-05: devResetWelcomeBonus 폐기 — 100만 토큰 환영 선물 정책 폐기, free_credit_granted reset 의미 X.
 
 // 사용자 보고 2026-04-30 review (agent): AI 응답 JSON 견고 추출.
 // max_tokens 부족 truncation / markdown code fence / 외부 텍스트 등 robust.
@@ -18885,17 +18826,7 @@ function onbFinish() {
     saveState();
   }
 
-  // 사용자 명시 2026-05-02 ultrathink: 튜토리얼 완주 시점에 환영 100만 토큰 grant 자동 trigger (idempotent — backend 가 welcome_bonus_total_granted > 0 시 already_granted 응답).
-  // 매 코어 끝마다 호출되지만 첫 호출만 grant. 환영 모달 '받기' click 도 같은 endpoint 호출 — 둘 다 OK.
-  // testerMode 의 backup restore 후 cloud 저장 시작 시점에도 동일 — 첫 1회 만 grant.
-  if (typeof session !== 'undefined' && session && session.access_token && typeof _authedFetch === 'function') {
-    _authedFetch('/api/billing/welcome-bonus', { method: 'POST' })
-      .then(r => r.json().catch(() => ({})))
-      .then(data => {
-        if (data?.granted) console.log('[onbFinish] welcome bonus granted:', data);
-      })
-      .catch(e => console.warn('[onbFinish] welcome bonus 호출 실패:', e));
-  }
+  // 사용자 명시 2026-05-05: 100만 토큰 환영 선물 정책 폐기 → 처음 한 달 무료 (얼리 플랜) 자동 활성화 (ensureBillingRow). 튜토리얼 완주 시 별도 grant 호출 불필요.
 }
 
 // 코어 #1 종료 시점 + 첫 관찰 미완료 detect
@@ -25137,7 +25068,9 @@ function _showCore2LockedToast() {
 //  · 토큰 hero: label / amount (대형 그라데이션) / hint — vertical stack
 //  · 신뢰 라인 보존 (전상법 §13 / 표시광고법 §3 — '30일 유효 · 자동 결제 X')
 //  · 받기 click → backend POST (idempotent) → token block 'received' 색감 변환 → 0.8s 후 닫힘
-//  · burst / 별 효과 X (사용자 명시 2026-05-01 탑티어 리디자인 톤 보존)
+// 사용자 명시 2026-05-05: 100만 토큰 환영 선물 정책 폐기 → 처음 한 달 자동 무료 (얼리 플랜) 안내 모달.
+// backend ensureBillingRow 가 신규 가입 시 subscription_active=true + plan='early_light' + 30일 expires 자동 처리.
+// 이 모달은 사용자에게 알림 + 클라이언트 flag set (재출현 방지) 만 — backend grant 호출 X.
 function _showWelcomeGiftModal() {
   if (window._showingWelcomeGift) return;
   if (document.getElementById('welcomeGiftOverlay')) return;
@@ -25155,12 +25088,12 @@ function _showWelcomeGiftModal() {
         다르게 보일지도. 🫂
       </div>
       <div class="welcome-gift-token">
-        <span class="welcome-gift-token-label">환영 선물 · 무료 체험</span>
-        <span class="welcome-gift-token-amount">🐚 100만 토큰</span>
-        <span class="welcome-gift-token-hint">약 한 달치 자유로운 대화</span>
+        <span class="welcome-gift-token-label">처음 한 달 · 무료</span>
+        <span class="welcome-gift-token-amount">🐚 얼리 플랜 자동 적용</span>
+        <span class="welcome-gift-token-hint">30일 동안 자유롭게</span>
       </div>
-      <button class="welcome-gift-btn" id="welcomeGiftAccept">받을게</button>
-      <div class="welcome-gift-trust">30일 동안 유효 · 자동 결제 X</div>
+      <button class="welcome-gift-btn" id="welcomeGiftAccept">시작할게</button>
+      <div class="welcome-gift-trust">자동 결제 X · 만료 후 원하면 직접 구독</div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -25170,11 +25103,10 @@ function _showWelcomeGiftModal() {
     if (btn.dataset._processing === '1') return;
     btn.dataset._processing = '1';
     btn.disabled = true;
-    btn.textContent = '받는 중...';
     try { await _acceptWelcomeGift(); } catch (e) { console.warn('[welcome-gift] accept:', e); }
     const tokenEl = overlay.querySelector('.welcome-gift-token');
     if (tokenEl) tokenEl.classList.add('received');
-    btn.textContent = '받았어 ✦';
+    btn.textContent = '시작 ✦';
     setTimeout(() => {
       overlay.classList.remove('show');
       setTimeout(() => { try { overlay.remove(); } catch {} }, 300);
@@ -25183,40 +25115,20 @@ function _showWelcomeGiftModal() {
   });
 }
 async function _acceptWelcomeGift() {
-  // V4 (v8 사용자 명시 2026-05-03 ultrathink — v2 §8): client-side state.welcomeGift 기록 (30일 카운트) + backend POST grant. 신규 진입 즉시 환영 = 폐기, Core 1 끝 환영만 활성.
-  state.welcomeGift = {
-    grantedAt: new Date().toISOString(),
-    tokensGranted: 1_000_000,
-    tokensRemaining: 1_000_000,
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-  };
+  // 사용자 명시 2026-05-05: backend grant 호출 X — ensureBillingRow 가 신규 가입 시 자동 활성화.
+  // 이 함수 = 클라이언트 flag (재출현 방지) + cloud sync + billing refresh 만.
   state._welcomeGiftAccepted = true;
   state.preferences = state.preferences || {};
-  state.preferences._welcomeBonusShown = true;  // 옛 flag 도 set (재출현 방지)
+  state.preferences._welcomeBonusShown = true;
   try { saveState({ force: true }); } catch {}
   if (typeof saveToCloudNow === 'function') {
     saveToCloudNow().catch(e => console.warn('[welcomeGift] cloud sync:', e));
   }
-  // backend POST — idempotent (already_granted 처리). 실제 grant 보장.
-  if (typeof session !== 'undefined' && session && session.access_token && typeof _authedFetch === 'function') {
-    try {
-      const resp = await _authedFetch('/api/billing/welcome-bonus', { method: 'POST' });
-      if (resp.ok) {
-        const data = await resp.json().catch(() => ({}));
-        if (data.already_granted) {
-          if (typeof showToast === 'function') showToast('✦ 이미 받았어');
-        } else if (data.granted) {
-          if (typeof showToast === 'function') showToast('🎁 100만 토큰 받았어 ✦');
-        }
-        if (typeof refreshBillingStatus === 'function') refreshBillingStatus(false).catch(() => {});
-      } else {
-        console.warn('[welcomeGift] backend 비-OK:', resp.status);
-      }
-    } catch (e) { console.warn('[welcomeGift] backend:', e); }
-  } else {
-    if (typeof showToast === 'function') showToast('🎁 100만 토큰 지급 ✦');
+  if (typeof refreshBillingStatus === 'function') {
+    refreshBillingStatus(false).catch(() => {});
   }
-  // V4 (v8 사용자 명시 2026-05-03 ultrathink — v2 §1 [5] / §6 명시): 환영 선물 후 Core 2 자동 unlock 권유 (passive 안내)
+  if (typeof showToast === 'function') showToast('🐚 처음 한 달 무료 시작 ✦');
+  // Core 2 자동 unlock 권유 (passive 안내) — 기존 흐름 보존.
   setTimeout(() => {
     if (state._core2NotUnlocked && typeof _showCore2EntryModal === 'function') {
       _showCore2EntryModal();
@@ -44135,35 +44047,27 @@ async function _doRefreshBillingStatus(manual) {
       // 한도 진행 bar
       html += `<div style="margin-top:4px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${usedPct < 80 ? 'var(--accent)' : '#e89090'}; transition:width 0.3s;"></div></div>`;
     } else {
-      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 무료 토큰 또는 잔여 credit 사용 중</span></div>`;
+      // 사용자 명시 2026-05-05: 처음 한 달 무료 만료 후 = 미가입 분기. Premium 결제 = 개발자 후원 명시.
+      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 한 달 무료 만료. 계속 쓰려면 Light/Premium</span></div>`;
     }
     if (balance > 0) {
       html += `<div style="margin-top:6px;"><b>잔여 credit</b>: $${balance.toFixed(4)} (~${balanceKrw.toLocaleString()}원)</div>`;
     }
     html += `<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;"><b>이번 달 사용</b>: ${_fmtTokens(monthly.tokens)} tokens / $${monthly.cost_usd.toFixed(4)} (~${monthCostKrw.toLocaleString()}원)</div>`;
-    // 사용자 명시 2026-05-02 ultrathink: 환영 100만 토큰 잔량 + 만료 표시
-    const wbRemaining = Number(billing.welcome_bonus_tokens_remaining || 0);
-    const wbExpires = billing.welcome_bonus_expires_at;
-    if (wbRemaining > 0 && wbExpires) {
-      const expiresAt = new Date(wbExpires);
+    // 사용자 명시 2026-05-05: 처음 한 달 무료 (얼리 플랜) 만료 표시 — 100만 토큰 표기 폐기.
+    if (subActive && planKey === 'early_light' && subExpires) {
+      const expiresAt = new Date(billing.subscription_expires_at);
       const remainingDays = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / 86400000));
-      const remainingDisplay = wbRemaining >= 10000 ? Math.round(wbRemaining / 10000) + '만' : wbRemaining.toLocaleString();
-      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 환영 토큰 ${remainingDisplay} 남음 (${remainingDays}일 후 만료)</div>`;
-    } else if (billing.free_credit_granted) {
-      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 환영 선물 받음</div>`;
-    }
-    if (billing.early_user) {
-      html += `<div style="font-size:11px;color:#7ec8e3;margin-top:4px;">🌊 얼리 유저 — 평생 4,900원 자격</div>`;
+      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 얼리 무료 — ${remainingDays}일 후 만료 (자동 결제 X)</div>`;
     }
     status.innerHTML = html;
-    // 사용자 명시 2026-05-01: billing cache — legacy bonus 배너 사전 필터용 (refreshBillingStatus 가 여러 곳에서 자동 호출).
     // 사용자 명시 2026-05-05: _billingCacheTs stamp — 30s TTL + showBudgetExceededModal 캐시 재사용용.
     window._billingCache = billing;
     window._billingCacheTs = Date.now();
-    // 캐시 채워졌으니 배너 큐 재시도 (legacy bonus 자격 즉시 반영)
+    // 캐시 채워졌으니 배너 큐 재시도 (sync tip 등)
     if (typeof _renderNextBanner === 'function') { try { _renderNextBanner(); } catch {} }
-    // 사용자 명시 2026-05-02 ultrathink: 환영 토큰 만료 7일 전 알림 + 인박스 badge 갱신.
-    if (typeof checkWelcomeBonusExpiry === 'function') { try { checkWelcomeBonusExpiry(); } catch {} }
+    // 사용자 명시 2026-05-05: 한 달 무료 만료 7일 전 알림 + 인박스 badge 갱신.
+    if (typeof checkFreeTrialExpiry === 'function') { try { checkFreeTrialExpiry(); } catch {} }
     if (typeof refreshNotifInboxBadge === 'function') { try { refreshNotifInboxBadge(); } catch {} }
     // 사용자 명시 2026-04-30: 토스트 = manual button click 시만 (자동 호출 X — 자주 뜨면 부담)
     if (manual && typeof showToast === 'function') showToast('🔄 갱신됐어');
@@ -44176,15 +44080,16 @@ async function _doRefreshBillingStatus(manual) {
 // 결제 — 사용자 명시 2026-04-30 ultrathink: 충전 plan 폐기 → 2-tier 월정액 only
 // ═══════════════════════════════════════════════════════════════
 
-// 사용자 명시 2026-05-02 ultrathink: 가격 조정 + early_light 신설 (서버 _lib/billing.ts 의 TIER_PLANS 와 동기 — 위변조 방지로 결제 검증은 서버에서 재확인).
+// 사용자 명시 2026-05-05: 처음 한 달 무료 (얼리 플랜) 정책. 자동 결제 X — 사용자가 직접 light/premium 구독 선택.
+// 서버 _lib/billing.ts 의 TIER_PLANS 와 동기 — 위변조 방지로 결제 검증은 서버에서 재확인.
 // description: 정직 톤 — 정량 KRW 표기 X, 정성적 설명만. cap 자체는 서버 운영 용도.
 const TIER_PLANS_CLIENT = {
   light:        { krw: 9900,  cap_usd: 5,  cap_krw: 7000,  label: 'Light',        tagline: '매일의 자기관찰', emoji: '🐚',
     description: '일반 대화 + 분석 풀로. 매일의 자기관찰에 충분.' },
   premium:      { krw: 25000, cap_usd: 13, cap_krw: 18000, label: 'Premium',      tagline: '깊게 자주', emoji: '🌊',
     description: '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.' },
-  early_light:  { krw: 4900,  cap_usd: 4,  cap_krw: 5600,  label: 'Light (얼리)', tagline: '평생 절반 가격', emoji: '🐚',
-    description: '출시 전에 함께해준 마음에 감사해서 절반 가격으로 평생 같이 가자.', requires_early_user: true }
+  early_light:  { krw: 0,     cap_usd: 4,  cap_krw: 5600,  label: '처음 한 달 무료', tagline: '얼리 플랜', emoji: '🐚',
+    description: '신규 가입자 자동 활성화 — 30일 자유롭게. 자동 결제 X. 만료 후 원하면 직접 light/premium 구독.', auto_grant_first_month: true }
 };
 // 사용자 명시 2026-05-02 ultrathink: light_pack 제거 — Premium 전용. Light/얼리는 Premium 전환 또는 다음 달 대기.
 // V4 (사용자 명시 2026-05-04 ultrathink — v2 갱신): 추가팩 재설계 — 작은 단위 + 두 tier 다 가능. *24h 못 기다리는 사용자* trigger.
@@ -44398,7 +44303,7 @@ function openNotifInbox() {
   } else {
     body = items.map(n => {
       const isUnread = !n.readAt;
-      const accentColor = n.type === 'welcome_expiry_warning' ? '#e8c590' : 'var(--accent)';
+      const accentColor = (n.type === 'free_trial_expiry_warning' || n.type === 'welcome_expiry_warning') ? '#e8c590' : 'var(--accent)';
       const date = new Date(n.createdAt).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
       return `
         <div class="notif-item" data-notif-id="${n.id}" onclick="_markNotifRead('${n.id}')" style="padding:12px 14px; border-left:3px solid ${isUnread ? accentColor : 'transparent'}; background:${isUnread ? 'rgba(212,167,106,0.04)' : 'transparent'}; cursor:pointer; border-bottom:1px solid var(--border);">
@@ -44450,27 +44355,30 @@ function _markAllNotifRead() {
   }
 }
 
-// 사용자 명시 2026-05-02 ultrathink: 환영 토큰 만료 7일 전 알림 자동 적용됨 (init 흐름 또는 refreshBillingStatus 후).
-// 부드러운 톤 — "사라져" 같은 다급한 워딩 X.
-function checkWelcomeBonusExpiry() {
+// 사용자 명시 2026-05-05: 환영 100만 토큰 정책 폐기 → 처음 한 달 무료 (얼리 플랜) 만료 7일 전 알림.
+// subscription_active=true + plan='early_light' + expires 7일 이내 = 알림 자리잡음.
+// 톤 — Premium 결제 = 개발자 후원 (iOS 앱 출시 자금) 명시.
+function checkFreeTrialExpiry() {
   const billing = window._billingCache;
   if (!billing) return;
-  const expires = billing.welcome_bonus_expires_at;
-  const remaining = Number(billing.welcome_bonus_tokens_remaining || 0);
-  if (!expires || remaining <= 0) return;
+  if (!billing.subscription_active) return;
+  if (billing.subscription_plan !== 'early_light') return;
+  const expires = billing.subscription_expires_at;
+  if (!expires) return;
   const expiresAt = new Date(expires).getTime();
   const now = Date.now();
   const remainingDays = (expiresAt - now) / 86400000;
   if (remainingDays > 7 || remainingDays < 0) return;
-  // 7일 이내 + 만료 안 함 — 알림 자리잡음 (중복 차단은 _addNotification 안에서)
-  const remainingDisplay = remaining >= 10000 ? Math.round(remaining / 10000) + '만' : remaining.toLocaleString();
+  const daysDisplay = Math.max(1, Math.ceil(remainingDays));
   _addNotification({
-    type: 'welcome_expiry_warning',
-    title: '환영 선물 만료가 가까워',
-    body: `한 달 동안 유효해서 알려드려.<br>남은 토큰: 약 <b>${remainingDisplay}</b>`,
+    type: 'free_trial_expiry_warning',
+    title: '한 달 무료 만료가 가까워',
+    body: `<b>${daysDisplay}일</b> 후 만료. 자동 결제 X — 만료 후 원하면 직접 구독 (Light 9,900원 / Premium 25,000원).<br><br><span style="font-size:11px; color:var(--text-soft);">Premium = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
     persistent: true
   });
 }
+// 옛 함수 호환 (외부 호출 잔재 대비) — checkFreeTrialExpiry 로 위임.
+function checkWelcomeBonusExpiry() { return checkFreeTrialExpiry(); }
 
 // 미읽음 답변 수 — Settings 진입 / 주기 갱신
 async function refreshFeedbackUnreadBadge() {
@@ -45398,12 +45306,12 @@ function _showPremiumPromoModal() {
         활발하게 쓰고 있네!<br>
         <b>Premium</b> 가면 <b>3.75x 더 자유</b>롭게 — Opus 깊은 대화도 매일 30번까지.<br>
         <br>
-        <span style="color:var(--text-soft); font-size:11px;">
-          매일 추가팩 (1,500원) 사면 한 달 ~45,000원.<br>
-          Premium (25,000원) 가성비 ✨
+        <span style="color:var(--text-soft); font-size:11.5px; line-height:1.6;">
+          솔직하게 — 단독 개발자 (1인) 라 Premium = <b>iOS 앱 출시 후원</b>.<br>
+          중고 맥북 사서 iOS 빌드 가능 🫂
         </span>
       </div>
-      <button class="btn-primary" onclick="document.getElementById('premiumPromoOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 업그레이드</button>
+      <button class="btn-primary" onclick="document.getElementById('premiumPromoOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기</button>
       <button class="btn-secondary" onclick="document.getElementById('premiumPromoOverlay').remove();" style="width:100%;">나중에</button>
     </div>
   `;
@@ -45477,20 +45385,44 @@ function showBudgetExceededModal(reason, opts) {
         <div style="font-size:10.5px; color:var(--text-soft); margin-top:4px; margin-bottom:8px; text-align:center;">계속 결제 가능.</div>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
-    } else if (subActive && (plan === 'light' || plan === 'early_light')) {
-      // V4 (v2 갱신): Light/얼리 월 cap 도달 — 추가팩 OR Premium 권유
-      const packKey = plan === 'early_light' ? 'early_pack' : 'light_pack';
-      const pack = OVERAGE_PACKS_CLIENT[packKey];
-      bodyText = '이번 달 한도 도달했네.<br>Premium 가면 더 깊게 (3x 일일 자유) — Opus 깊은 대화 30번/일.<br><br><span style="color:var(--text-soft); font-size:11px;">또는 추가팩 작게, 다음 달까지 기다려도 OK 🫂</span>';
+    } else if (subActive && plan === 'early_light') {
+      // 사용자 명시 2026-05-05: 얼리 플랜 (처음 한 달 무료) 한도 도달 → Premium 결제 유도 + 개발자 후원 메시지.
+      // 정직 톤 — 단독 개발자 (1인) 가 중고 맥북 없어서 iOS 앱 못 만드는 중. 후원 = 앱 출시 가능.
+      titleText = '🐚 한 달 무료 한도 도달';
+      bodyText = '얼리 플랜 한도 다 썼네 — 자유롭게 써줘서 고마워.<br><br>' +
+        '<b>Premium</b> 가면 <b>3x 더 자유</b>롭게 (Opus 깊은 대화 30번/일).<br><br>' +
+        '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
+        '솔직하게 — 단독 개발자 (1인) 라 Premium 결제 = <b>iOS 앱 출시 후원</b> 이야. ' +
+        '중고 맥북이 없어서 iOS 빌드 못 하는 중인데, Premium 사용자분들이 뒷받침해주면 맥북 사서 iOS 앱 출시할 수 있어 🫂' +
+        '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 가기 (25,000원/월)</button>
-        ${pack ? `<button class="btn-secondary" onclick="purchaseOveragePack('${packKey}')" style="width:100%; margin-bottom:6px;">🌿 추가팩 ${pack.krw.toLocaleString()}원 (1일분+α)</button>` : ''}
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기 (25,000원/월)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🐚 Light 구독 (9,900원/월)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음에 결정할게</button>
+      `;
+    } else if (subActive && plan === 'light') {
+      // Light 월 cap 도달 — 추가팩 OR Premium 권유
+      const pack = OVERAGE_PACKS_CLIENT.light_pack;
+      bodyText = '이번 달 한도 도달했네.<br>Premium 가면 더 깊게 (3x 일일 자유) — Opus 깊은 대화 30번/일.<br><br>' +
+        '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
+        '솔직하게 — 단독 개발자 (1인) 라 Premium 결제 = <b>iOS 앱 출시 후원</b>. 중고 맥북 사서 iOS 빌드 가능 🫂' +
+        '</span>';
+      optionsHtml = `
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기 (25,000원/월)</button>
+        ${pack ? `<button class="btn-secondary" onclick="purchaseOveragePack('light_pack')" style="width:100%; margin-bottom:6px;">🌿 추가팩 ${pack.krw.toLocaleString()}원 (1일분+α)</button>` : ''}
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 달 기다릴게</button>
       `;
     } else {
-      // 비구독 (무료 + legacy charge 잔액 소진) — 구독 안내
+      // 비구독 (한 달 무료 만료 또는 legacy charge 잔액 소진) — 구독 안내 + 개발자 후원 톤
+      titleText = '🐚 한 달 무료 만료';
+      bodyText = '처음 한 달 무료 끝났어 — 깊게 써줘서 고마워.<br><br>' +
+        '계속 쓰려면 Light / Premium 구독.<br><br>' +
+        '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
+        '단독 개발자 (1인) 가 중고 맥북 없어서 iOS 앱 출시 못 하는 중. <b>Premium = 후원</b> 으로 iOS 빌드 가능 🫂' +
+        '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 구독</button>
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기 (25,000원/월)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🐚 Light 구독 (9,900원/월)</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
     }
@@ -46065,8 +45997,8 @@ function renderUpdateNotice() {
 //
 // 새 배너 추가 = 아래 list 에 항목 + check/render/dismissFlag 정의.
 
+// 사용자 명시 2026-05-05: legacy bonus 정책 폐기 → 배너 candidate 에서 제거.
 const _BANNER_CANDIDATES = [
-  { id: 'legacyBonusMay2026', check: _legacyBonusBanner_check, render: _legacyBonusBanner_render, dismissFlag: 'dismissedLegacyBonusMay2026Banner' },
   { id: 'syncTipMay2026',     check: _syncTipBanner_check,     render: _syncTipBanner_render,     dismissFlag: 'dismissedSyncTipMay2026' }
 ];
 
@@ -46090,105 +46022,8 @@ function _renderNextBanner() {
   }
 }
 
-// === 배너 1: legacy bonus (사용자 명시 2026-05-01) — 환영 토큰 받은 사용자 += 1,000원 1회 ===
-function _legacyBonusBanner_check() {
-  // 사전 필터: refreshBillingStatus 가 채운 캐시 사용. 캐시 없으면 보류 (다음 자동 호출 시 재시도).
-  const billing = window._billingCache;
-  if (!billing) return false;
-  if (!billing.free_credit_granted) return false;       // 환영 토큰 미수령 = legacy 대상 X
-  if (billing.legacy_bonus_2026_05_granted) return false; // 이미 받음
-  // 사용자 보고 2026-05-01 ultrathink: 신규 사용자도 뜨던 버그 fix.
-  // legacy = 2026-05-01 이전부터 사용한 사용자. 첫 entry/chatMessages timestamp 가 5월 1일 이전이어야 적용.
-  // backend billing 캐시에 grant 시점 필드 없어서 client-side 가입 시점 추정.
-  try {
-    const cutoffMs = new Date('2026-05-01T00:00:00').getTime();
-    const _entries = (state.entries || []).slice().sort((a, b) => {
-      const ta = new Date(a.timestamp || a.date || 0).getTime();
-      const tb = new Date(b.timestamp || b.date || 0).getTime();
-      return ta - tb;
-    });
-    const firstEntryMs = _entries.length && _entries[0]
-      ? new Date(_entries[0].timestamp || _entries[0].date || 0).getTime()
-      : Infinity;
-    const firstMsg = (state.chatMessages || []).find(m => m && m.timestamp);
-    const firstMsgMs = firstMsg ? new Date(firstMsg.timestamp).getTime() : Infinity;
-    // chatArchive 도 보존 (옛 사용자가 archive 있을 수 있음)
-    const firstArchive = (state.chatArchive || []).slice().sort((a, b) => {
-      const ta = new Date(a.date + 'T00:00:00' || 0).getTime();
-      const tb = new Date(b.date + 'T00:00:00' || 0).getTime();
-      return ta - tb;
-    })[0];
-    const firstArchiveMs = firstArchive && firstArchive.date
-      ? new Date(firstArchive.date + 'T00:00:00').getTime()
-      : Infinity;
-    const firstUseMs = Math.min(firstEntryMs, firstMsgMs, firstArchiveMs);
-    if (firstUseMs >= cutoffMs) return false;  // 신규 사용자 (2026-05-01 이후 첫 사용) — legacy X
-  } catch (e) {
-    console.warn('[legacyBonus] cutoff guard fail:', e);
-    return false;  // 가드 실패 시 안전하게 안 보임
-  }
-  return true;
-}
-function _legacyBonusBanner_render(banner) {
-  banner.innerHTML = `
-    <div class="update-banner-text">1,000원 더 넣어드렸어용</div>
-    <div class="update-banner-actions">
-      <button class="update-banner-btn-go" id="legacyBonusClaimBtn" onclick="claimLegacyBonusMay2026()">🎁 받기</button>
-      <button class="update-banner-btn-dismiss" onclick="dismissLegacyBonusBanner()" aria-label="닫기" title="닫기">✕</button>
-    </div>
-  `;
-}
-async function claimLegacyBonusMay2026() {
-  const btn = document.getElementById('legacyBonusClaimBtn');
-  if (btn && btn.dataset._processing === '1') return;
-  if (btn) { btn.dataset._processing = '1'; btn.disabled = true; btn.textContent = '받는 중...'; }
-  try {
-    const resp = await _authedFetch('/api/billing/legacy-bonus-may2026', { method: 'POST' });
-    const data = await resp.json().catch(() => ({}));
-    if (resp.ok && data.ok) {
-      const balKrw = Math.round((data.balance_usd || 0) * 1400).toLocaleString();
-      if (data.granted) {
-        if (typeof showToast === 'function') showToast(`🎁 1,000원 받았어 ✦ 잔액 ~${balKrw}원`);
-      } else if (data.already_granted) {
-        if (typeof showToast === 'function') showToast(`✦ 이미 받았어 (잔액 ~${balKrw}원)`);
-      }
-      // flag SET + cloud sync
-      state.preferences = state.preferences || {};
-      state.preferences.dismissedLegacyBonusMay2026Banner = true;
-      try { saveState(true); } catch {}
-      if (typeof saveToCloudNow === 'function') saveToCloudNow().catch(e => console.warn('[legacyBonus] cloud:', e));
-      if (typeof refreshBillingStatus === 'function') refreshBillingStatus(false).catch(() => {});
-      // 배너 즉시 제거 + 다음 배너 자리 (사용자 명시 2026-05-01)
-      const banner = document.getElementById('updateBanner');
-      if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
-      if (typeof _renderNextBanner === 'function') _renderNextBanner();
-    } else {
-      const reason = data?.reason;
-      if (reason === 'not_legacy_user') {
-        if (typeof showToast === 'function') showToast('환영 토큰을 먼저 받아야 해 🐚');
-      } else {
-        if (typeof showToast === 'function') showToast('받기 실패: ' + (data?.error || resp.status));
-      }
-      if (btn) { btn.dataset._processing = ''; btn.disabled = false; btn.textContent = '받기'; }
-    }
-  } catch (e) {
-    console.warn('[legacyBonus] error:', e);
-    if (typeof showToast === 'function') showToast('받기 실패 — 인터넷 점검');
-    if (btn) { btn.dataset._processing = ''; btn.disabled = false; btn.textContent = '받기'; }
-  }
-}
-function dismissLegacyBonusBanner() {
-  const banner = document.getElementById('updateBanner');
-  if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
-  state.preferences = state.preferences || {};
-  state.preferences.dismissedLegacyBonusMay2026Banner = true;
-  saveState(true);
-  if (typeof saveToCloudNow === 'function') saveToCloudNow().catch(e => console.warn('[legacyBonus dismiss] cloud:', e));
-  // 사용자 명시 2026-05-01: 닫으면 다음 배너 즉시 자리 차지 (새로고침 대기 X)
-  if (typeof _renderNextBanner === 'function') _renderNextBanner();
-}
-
-// === 배너 2: sync tip (헤더 알약 안내) — 코어 다 끝낸 기존 사용자 한정 ===
+// === 배너 1: sync tip (헤더 알약 안내) — 코어 다 끝낸 기존 사용자 한정 ===
+// 사용자 명시 2026-05-05: legacy bonus 1,000원 배너 + claim/dismiss 함수 제거 (정책 폐기).
 function _syncTipBanner_check() {
   const coreKeys = ['core1','core2','core3','core4','core5','core6','core8'];
   const allCoresDone = state.unlocked && coreKeys.every(k => state.unlocked[k] === true);
@@ -46231,19 +46066,7 @@ function devPreviewBanner(type) {
   devClosePreviewBanner();
   const banner = document.getElementById('updateBanner');
   const fb = document.getElementById('feedbackBanner');
-  if (type === 'legacy') {
-    if (!banner) return;
-    if (typeof _legacyBonusBanner_render === 'function') _legacyBonusBanner_render(banner);
-    // 실제 grant / dismiss flag 차단 — onclick swap
-    const claimBtn = banner.querySelector('#legacyBonusClaimBtn');
-    if (claimBtn) {
-      claimBtn.setAttribute('onclick', "if (typeof showToast==='function') showToast('🔍 미리보기 — 실제 grant X'); devClosePreviewBanner();");
-    }
-    const dismissBtn = banner.querySelector('.update-banner-btn-dismiss');
-    if (dismissBtn) dismissBtn.setAttribute('onclick', 'devClosePreviewBanner()');
-    banner.style.display = 'flex';
-    if (typeof showToast === 'function') showToast('🔍 미리보기 — 실제 사용자 view');
-  } else if (type === 'syncTip') {
+  if (type === 'syncTip') {
     if (!banner) return;
     if (typeof _syncTipBanner_render === 'function') _syncTipBanner_render(banner);
     const dismissBtn = banner.querySelector('.update-banner-btn-dismiss');

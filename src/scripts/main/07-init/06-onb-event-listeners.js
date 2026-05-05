@@ -944,16 +944,6 @@ function onbFinish() {
     saveState();
   }
 
-  // 사용자 명시 2026-05-02 ultrathink: 튜토리얼 완주 시점에 환영 100만 토큰 grant 자동 trigger (idempotent — backend 가 welcome_bonus_total_granted > 0 시 already_granted 응답).
-  // 매 코어 끝마다 호출되지만 첫 호출만 grant. 환영 모달 '받기' click 도 같은 endpoint 호출 — 둘 다 OK.
-  // testerMode 의 backup restore 후 cloud 저장 시작 시점에도 동일 — 첫 1회 만 grant.
-  if (typeof session !== 'undefined' && session && session.access_token && typeof _authedFetch === 'function') {
-    _authedFetch('/api/billing/welcome-bonus', { method: 'POST' })
-      .then(r => r.json().catch(() => ({})))
-      .then(data => {
-        if (data?.granted) console.log('[onbFinish] welcome bonus granted:', data);
-      })
-      .catch(e => console.warn('[onbFinish] welcome bonus 호출 실패:', e));
-  }
+  // 사용자 명시 2026-05-05: 100만 토큰 환영 선물 정책 폐기 → 처음 한 달 무료 (얼리 플랜) 자동 활성화 (ensureBillingRow). 튜토리얼 완주 시 별도 grant 호출 불필요.
 }
 

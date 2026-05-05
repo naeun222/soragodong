@@ -1,67 +1,14 @@
-// POST /api/billing/welcome-bonus — 환영 선물 100만 토큰 grant.
-// 사용자 명시 2026-05-02 ultrathink:
-//   - 토큰 카운트 모델 (이전 USD $2.14 모델 대체) — welcome_bonus_tokens_remaining BIGINT 컬럼.
-//   - 트리거 = 튜토리얼 완주 시점 (frontend onbFinish 가 호출).
-//   - 30일 만료 — chat 호출 시 만료 lazy 처리 (consume_welcome_bonus_atomic 안에서).
-//   - idempotent — grant_welcome_bonus_atomic RPC 가 welcome_bonus_total_granted > 0 이면 already_granted 응답.
-//   - free_credit_granted=TRUE 도 같이 추가 (옛 flag 호환).
+// 사용자 명시 2026-05-05: 100만 토큰 환영 선물 정책 폐기 → 처음 한 달 자동 무료 (early_light) 정책으로 전환.
+// ensureBillingRow 가 신규 row 생성 시 subscription_active=true + plan='early_light' + 30일 expires 자동 활성화 (in _lib/billing.ts).
+// 이 endpoint 자체는 410 Gone 응답 — 클라이언트가 더 이상 호출 X. 파일 자체 삭제는 사용자 검토 후 별도 결정.
 
-import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
-import { ensureBillingRow, WELCOME_BONUS_TOKENS, WELCOME_BONUS_EXPIRES_DAYS } from '../_lib/billing';
+import { jsonResponse, type Env } from '../_lib/auth';
 
-export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
-  const { request, env } = context;
-  const user = await verifyAuth(request, env);
-  if (!user) return unauthorized();
-
-  // 1. billing row 확보 (없으면 잔액 0 으로 생성)
-  const billing = await ensureBillingRow(env, user.id);
-  if (!billing) {
-    return jsonResponse({ ok: false, error: 'billing row 생성 실패' }, 500);
-  }
-
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    return jsonResponse({ ok: false, error: 'env missing' }, 500);
-  }
-
-  // 2. grant_welcome_bonus_atomic RPC 호출 (idempotent)
-  try {
-    const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/grant_welcome_bonus_atomic`, {
-      method: 'POST',
-      headers: {
-        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        p_user_id: user.id,
-        p_tokens: WELCOME_BONUS_TOKENS,
-        p_expires_days: WELCOME_BONUS_EXPIRES_DAYS
-      })
-    });
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => '');
-      console.warn('[welcome-bonus] RPC 실패:', resp.status, text);
-      return jsonResponse({ ok: false, error: 'RPC 실패: ' + resp.status }, 500);
-    }
-    const data: any = await resp.json();
-    if (data?.already_granted) {
-      return jsonResponse({
-        ok: true,
-        already_granted: true,
-        tokens: WELCOME_BONUS_TOKENS,
-        message: '이미 받았어요'
-      });
-    }
-    return jsonResponse({
-      ok: true,
-      granted: true,
-      tokens: data?.tokens || WELCOME_BONUS_TOKENS,
-      expires_at: data?.expires_at,
-      message: '환영 선물 받았어 — 100만 토큰 ✦'
-    });
-  } catch (e: any) {
-    console.warn('[welcome-bonus] error:', e);
-    return jsonResponse({ ok: false, error: e.message || String(e) }, 500);
-  }
+export async function onRequestPost(_context: { request: Request; env: Env }): Promise<Response> {
+  return jsonResponse({
+    ok: false,
+    deprecated: true,
+    error: '환영 선물 100만 토큰 정책 폐기됨. 처음 한 달 무료 (얼리 플랜) 자동 활성화.',
+    migration: 'ensureBillingRow 가 신규 가입 시 자동 처리'
+  }, 410);
 }

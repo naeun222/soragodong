@@ -162,35 +162,27 @@ async function _doRefreshBillingStatus(manual) {
       // 한도 진행 bar
       html += `<div style="margin-top:4px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${usedPct < 80 ? 'var(--accent)' : '#e89090'}; transition:width 0.3s;"></div></div>`;
     } else {
-      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 무료 토큰 또는 잔여 credit 사용 중</span></div>`;
+      // 사용자 명시 2026-05-05: 처음 한 달 무료 만료 후 = 미가입 분기. Premium 결제 = 개발자 후원 명시.
+      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 한 달 무료 만료. 계속 쓰려면 Light/Premium</span></div>`;
     }
     if (balance > 0) {
       html += `<div style="margin-top:6px;"><b>잔여 credit</b>: $${balance.toFixed(4)} (~${balanceKrw.toLocaleString()}원)</div>`;
     }
     html += `<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;"><b>이번 달 사용</b>: ${_fmtTokens(monthly.tokens)} tokens / $${monthly.cost_usd.toFixed(4)} (~${monthCostKrw.toLocaleString()}원)</div>`;
-    // 사용자 명시 2026-05-02 ultrathink: 환영 100만 토큰 잔량 + 만료 표시
-    const wbRemaining = Number(billing.welcome_bonus_tokens_remaining || 0);
-    const wbExpires = billing.welcome_bonus_expires_at;
-    if (wbRemaining > 0 && wbExpires) {
-      const expiresAt = new Date(wbExpires);
+    // 사용자 명시 2026-05-05: 처음 한 달 무료 (얼리 플랜) 만료 표시 — 100만 토큰 표기 폐기.
+    if (subActive && planKey === 'early_light' && subExpires) {
+      const expiresAt = new Date(billing.subscription_expires_at);
       const remainingDays = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / 86400000));
-      const remainingDisplay = wbRemaining >= 10000 ? Math.round(wbRemaining / 10000) + '만' : wbRemaining.toLocaleString();
-      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 환영 토큰 ${remainingDisplay} 남음 (${remainingDays}일 후 만료)</div>`;
-    } else if (billing.free_credit_granted) {
-      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 환영 선물 받음</div>`;
-    }
-    if (billing.early_user) {
-      html += `<div style="font-size:11px;color:#7ec8e3;margin-top:4px;">🌊 얼리 유저 — 평생 4,900원 자격</div>`;
+      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 얼리 무료 — ${remainingDays}일 후 만료 (자동 결제 X)</div>`;
     }
     status.innerHTML = html;
-    // 사용자 명시 2026-05-01: billing cache — legacy bonus 배너 사전 필터용 (refreshBillingStatus 가 여러 곳에서 자동 호출).
     // 사용자 명시 2026-05-05: _billingCacheTs stamp — 30s TTL + showBudgetExceededModal 캐시 재사용용.
     window._billingCache = billing;
     window._billingCacheTs = Date.now();
-    // 캐시 채워졌으니 배너 큐 재시도 (legacy bonus 자격 즉시 반영)
+    // 캐시 채워졌으니 배너 큐 재시도 (sync tip 등)
     if (typeof _renderNextBanner === 'function') { try { _renderNextBanner(); } catch {} }
-    // 사용자 명시 2026-05-02 ultrathink: 환영 토큰 만료 7일 전 알림 + 인박스 badge 갱신.
-    if (typeof checkWelcomeBonusExpiry === 'function') { try { checkWelcomeBonusExpiry(); } catch {} }
+    // 사용자 명시 2026-05-05: 한 달 무료 만료 7일 전 알림 + 인박스 badge 갱신.
+    if (typeof checkFreeTrialExpiry === 'function') { try { checkFreeTrialExpiry(); } catch {} }
     if (typeof refreshNotifInboxBadge === 'function') { try { refreshNotifInboxBadge(); } catch {} }
     // 사용자 명시 2026-04-30: 토스트 = manual button click 시만 (자동 호출 X — 자주 뜨면 부담)
     if (manual && typeof showToast === 'function') showToast('🔄 갱신됐어');
