@@ -927,6 +927,7 @@
 
           <div class="settings-mini-label" style="margin-top:14px;">🛠 Admin 전용</div>
           <button class="btn-secondary" onclick="adminResetBalance()" title="이전 누적 잔액 정정. 0~$100 범위.">💰 잔액 정정</button>
+          <button class="btn-secondary" onclick="adminFixPayment()" title="paymentId 진단 (row.user_id vs caller.user_id) + 불일치 시 본인 user_id 로 강제 sync. 모바일 redirect 결제에서 NOT_OWN 환불 거부 시 사용.">🔧 결제 row 진단 / sync</button>
           <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtnDev" title="모든 사용자 피드백 inbox + 답변.">📬 피드백 보기 / 답변</button>
           <button class="btn-secondary" onclick="openAdminUsageDashboard()" title="endpoint / model / 일자 / 사용자 별 비용 분포. 절감 우선순위 결정 도구.">📊 사용량 분석</button>
         </div>

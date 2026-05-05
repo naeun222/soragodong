@@ -1,6 +1,84 @@
 // 사용자 명시 2026-05-06: admin charge / pending / confirm / revoke 흐름 통째 폐기 (legacy 충전 / 토스 흐름 정리).
 // adminResetBalance 만 잔존 — 잔액 정정 도구 (overage_pack 등 잔여 처리 케이스).
 
+// 사용자 보고 2026-05-06: 모바일 KG이니시스 redirect 흐름에서 verify-pay 가 다른 user.id 로 INSERT → 환불 NOT_OWN.
+// 이 도구로 paymentId 진단 + 본인 user_id 강제 sync.
+async function adminFixPayment() {
+  if (typeof _isAdmin === 'function' && !_isAdmin()) {
+    showToast('admin 권한 필요');
+    return;
+  }
+  if (!session || !session.access_token) {
+    showToast('로그인 필요');
+    return;
+  }
+  const paymentId = prompt('paymentId (DB row id, UUID 형식) — settings 결제 history 에서 환불 안 되는 row:', '');
+  if (paymentId === null || !paymentId.trim()) return;
+
+  // 1. 진단
+  let data;
+  try {
+    const resp = await _authedFetch('/api/admin/payment-fix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentId: paymentId.trim(), action: 'diagnose' })
+    });
+    data = await resp.json();
+    if (!resp.ok) {
+      alert('진단 실패: ' + (data.error || resp.status));
+      return;
+    }
+  } catch (e) {
+    alert('통신 오류: ' + (e?.message || e));
+    return;
+  }
+
+  const p = data.payment;
+  const c = data.caller;
+  const d = data.diagnose;
+  const summary = `📋 결제 row 진단
+
+ID: ${p.id}
+status: ${p.status}
+type: ${p.payment_type}
+amount: ${(p.amount_krw || 0).toLocaleString()}원
+created: ${p.created_at}
+refund_started_at: ${p.refund_started_at || '(없음)'}
+refunded_at: ${p.refunded_at || '(없음)'}
+
+▶ row.user_id:    ${p.user_id || '(null)'}
+▶ caller.user_id: ${c.user_id}
+▶ 매칭: ${d.match ? '✅ OK' : '❌ 불일치'}
+
+${d.reason}`;
+
+  if (d.match) {
+    alert(summary + '\n\nuser_id 매칭 OK — 환불 안 되는 다른 원인 (status / 외부 환불 / etc).');
+    return;
+  }
+
+  // 2. 불일치 — sync 옵션 제공
+  if (!confirm(summary + '\n\n→ row.user_id 를 본인 (caller) user_id 로 강제 sync 할까?')) return;
+
+  try {
+    const resp = await _authedFetch('/api/admin/payment-fix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentId: paymentId.trim(), action: 'sync_user' })
+    });
+    const result = await resp.json();
+    if (!resp.ok || !result.ok) {
+      alert('sync 실패: ' + (result.error || resp.status));
+      return;
+    }
+    showToast('✦ user_id sync 완료');
+    alert(`${result.message}\n\n이제 결제 history 에서 환불 다시 시도해줘.`);
+    if (typeof loadPayments === 'function') loadPayments();
+  } catch (e) {
+    alert('sync 통신 오류: ' + (e?.message || e));
+  }
+}
+
 async function adminResetBalance() {
   if (typeof _isAdmin === 'function' && !_isAdmin()) {
     showToast('admin 권한 필요');
