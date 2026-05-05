@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="소라고동 (나은 랩) 사업자 정보 · 약관 · 환불정책 · 개인정보처리방침.">
+<title>사이트 정보 — 소라고동</title>
+<link rel="icon" type="image/png" href="/godongicon.png">
+<link rel="canonical" href="https://soragodong.com/info">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1826;
+    --surface2: #221f33;
+    --accent: #c9a96e;
+    --accent2: #e8c99a;
+    --text: #ede8f5;
+    --text-dim: #9d9aad;
+    --text-soft: #7b7a8e;
+    --border: rgba(255, 255, 255, 0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #0f0e17; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    color: var(--text);
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    padding: 32px 20px 80px;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(139, 126, 196, 0.10) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 90%, rgba(201, 169, 110, 0.08) 0%, transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
+  .back-link {
+    display: inline-block;
+    color: var(--text-dim); text-decoration: none;
+    font-size: 13.5px; margin-bottom: 24px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+  h1 {
+    font-family: 'Gowun Batang', serif;
+    font-size: 28px;
+    color: var(--accent);
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+  }
+  .subtitle {
+    font-size: 13px; color: var(--text-soft);
+    margin-bottom: 32px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 26px;
+    margin-bottom: 18px;
+  }
+  .card-title {
+    font-size: 14px; font-weight: 600; color: var(--accent);
+    margin-bottom: 14px; letter-spacing: 0.02em;
+  }
+  .row {
+    display: flex; gap: 12px; padding: 8px 0;
+    font-size: 13.5px; line-height: 1.7;
+    border-bottom: 1px dashed rgba(255,255,255,0.04);
+  }
+  .row:last-child { border-bottom: 0; }
+  .row .label { min-width: 130px; color: var(--text-dim); flex-shrink: 0; }
+  .row .value { color: var(--text); }
+  .row .value a { color: var(--accent); text-decoration: none; }
+  .row .value a:hover { text-decoration: underline; }
+  .legal-links {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    margin-top: 6px;
+  }
+  .legal-links a {
+    display: inline-block;
+    padding: 10px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text); text-decoration: none;
+    font-size: 13.5px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .legal-links a:hover {
+    border-color: var(--accent);
+    background: rgba(212,167,106,0.06);
+  }
+  .footer-note {
+    margin-top: 28px;
+    font-size: 11.5px;
+    color: var(--text-soft);
+    line-height: 1.7;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="/" class="back-link">← 소라고동으로</a>
+  <h1>사이트 정보</h1>
+  <div class="subtitle">전자상거래법 §13 의무 표시 사항</div>
+
+  <div class="card">
+    <div class="card-title">📜 사업자 정보</div>
+    <div class="row"><span class="label">상호</span><span class="value">나은 랩(Lab)</span></div>
+    <div class="row"><span class="label">대표자</span><span class="value">김나은</span></div>
+    <div class="row"><span class="label">사업자등록번호</span><span class="value">261-21-02592</span></div>
+    <div class="row"><span class="label">통신판매업 신고번호</span><span class="value">2026-서울동작-0613</span></div>
+    <div class="row"><span class="label">사업장 주소</span><span class="value">서울특별시 동작구 상도로47아길 14</span></div>
+    <div class="row"><span class="label">이메일</span><span class="value"><a href="mailto:soragodongapp@gmail.com">soragodongapp@gmail.com</a></span></div>
+    <div class="row"><span class="label">개인정보 보호책임자</span><span class="value">김나은 (CPO)</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📑 약관 · 정책</div>
+    <div class="legal-links">
+      <a href="/terms">이용약관 →</a>
+      <a href="/refund">환불정책 →</a>
+      <a href="/privacy">개인정보처리방침 →</a>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    소라고동은 자기관찰 보조 도구입니다. 의료 행위 / 진단 / 처방 X.
+  </div>
+</div>
+</body>
+</html>
