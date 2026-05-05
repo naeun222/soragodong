@@ -14997,8 +14997,9 @@ async function _intakeGenLongExample(userText) {
 장문 entry 1개만. 다른 글 X. 따옴표 X.`;
   const resp = await callAnthropic({
     _endpoint: 'intake',
-    // V4 (사용자 명시 2026-05-04): 짧은 모방 task = Haiku 통일 (saveMsgAsInsight / summarizeForArchive 등 일관)
-    model: 'claude-haiku-4-5',
+    // V4 (사용자 명시 2026-05-06 ultrathink): intake 모달 API 전부 Sonnet 통일.
+    // 첫 진입 = 톤 / 한국어 자연스러움 우선, 가격 차이 < 첫인상 가치.
+    model: 'claude-sonnet-4-6',
     max_tokens: 300,
     system: '장문 entry 1개만 출력. 50-100자. 따옴표·markdown X.',
     messages: [{ role: 'user', content: prompt }]
