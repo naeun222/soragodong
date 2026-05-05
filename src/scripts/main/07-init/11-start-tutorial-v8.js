@@ -190,7 +190,8 @@ async function _v8RunIntakeAndInject() {
     content: '방금 들은 거, 이렇게 봤어 —',
     timestamp: nowIso
   });
-  // 4단 분석 (기존 _startIntakeFromTutorial 와 동일 포맷)
+  // 4단 분석 — '오늘의 제안' 본문 섹션 제거 (proposal chip 이 따로 표시되어 중복).
+  // 사용자 보고 2026-05-06 ultrathink: 본문 [오늘의 제안] 이 [이럴 땐 이렇게] 첫 문장과 중복.
   const dim = (analysis.dimension || '환경').trim();
   const para = (analysis.paraphrase || '').trim();
   const diag = (analysis.diagnosis || '').trim();
@@ -198,14 +199,20 @@ async function _v8RunIntakeAndInject() {
   const observation = para || (diag ? diag.split(/[.。]\s/)[0] + '.' : '방금 들려준 마음, 정리해봤어.');
   const concept = `${dim} 차원이 작동하는 모습이 보여.${diag ? '\n' + diag : ''}`;
   const guide = strat || '천천히 같이 가보자.';
-  const proposalText = strat ? strat.split(/[.。]\s/)[0].slice(0, 80) : '천천히 한 걸음';
-  const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}\n\n[오늘의 제안]\n${proposalText}`;
+  const proposalChipTitle = (strat ? strat.split(/[.。]\s/)[0].slice(0, 40) : '천천히 한 걸음') || '오늘 한 걸음';
+  const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}`;
   state.chatMessages.push({
     role: 'assistant',
     content: fourStage,
     fromDeeper: true,
     proposal: true,
-    proposalData: { title: proposalText.slice(0, 40) || '오늘 한 걸음' },
+    proposalData: { title: proposalChipTitle },
+    timestamp: nowIso
+  });
+  // 사용자 명시 2026-05-06 ultrathink: 4단 분석 직후 안내 + '아무 얘기나 → 마무리' 권유.
+  state.chatMessages.push({
+    role: 'assistant',
+    content: '평소엔 답 아래 "더 알고 싶어 ▾" 누르면 이렇게 깊게 풀어줄게 ✦\n\n지금은 아무 얘기나 해봐. 다 했다 싶으면 ✓ 마무리 눌러봐 — 내가 정리해서 도서관에 둘게.',
     timestamp: nowIso
   });
   saveState();

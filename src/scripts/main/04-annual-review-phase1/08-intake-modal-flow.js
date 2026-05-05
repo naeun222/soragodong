@@ -95,8 +95,13 @@ async function _intakeStep1Send() {
       saveState();
     }
     // AI 동적 long example 미리 백그라운드 fetch (Step3 진입 시 즉시 표시)
+    // 사용자 보고 2026-05-06 ultrathink: 백그라운드 fetch 가 Step3 렌더 후 도착하면 예시 갱신 X 버그 → step=3 시 재렌더.
     _intakeGenLongExample(text)
-      .then(longText => { if (_intakeState) _intakeState.aiLong = longText; })
+      .then(longText => {
+        if (!_intakeState || !longText) return;
+        _intakeState.aiLong = longText;
+        if (_intakeState.step === 3) _renderIntakeStep();
+      })
       .catch(e => { console.warn('[intake] long example 실패 — INTAKE_EXAMPLES 페어 사용', e); });
   } else {
     // 한 번에 장문 발화 → Step3 skip → Step4 (paraphrase + 더 알고 싶어) 직진

@@ -132,8 +132,10 @@
 .v8-coach-bubble {
   position: fixed;
   z-index: 10000;
-  background: var(--surface, #fff);
-  color: var(--text, #1c1c1e);
+  /* 사용자 보고 2026-05-06 ultrathink: 다크 모드에서 var(--surface) 가 어두워 mask 와 구분 X.
+     코치마크는 항상 밝은 배경 강제 — mask 의 어둠 위에 명확히 떠 보이도록. */
+  background: #fafaf7;
+  color: #1c1c1e;
   border-radius: 14px;
   padding: 16px 18px 14px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.18);
@@ -155,10 +157,10 @@
 .v8-coach-body {
   font-size: 14px;
   line-height: 1.55;
-  color: var(--text, #1c1c1e);
+  color: #1c1c1e;
 }
 .v8-coach-text-soft {
-  color: var(--text-dim, #888);
+  color: #6b6b6b;
   font-size: 13px;
 }
 .v8-coach-ok {

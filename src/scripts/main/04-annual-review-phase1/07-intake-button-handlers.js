@@ -41,8 +41,9 @@ window._startIntakeFromTutorial = async function() {
     const observation = para || (diag ? diag.split(/[.。]\s/)[0] + '.' : '방금 들려준 마음, 정리해봤어.');
     const concept = `${dim} 차원이 작동하는 모습이 보여.${diag ? '\n' + diag : ''}`;
     const guide = strat || '천천히 같이 가보자.';
+    // 사용자 보고 2026-05-06 ultrathink: 본문 [오늘의 제안] = [이럴 땐 이렇게] 첫 문장 중복 → chip 만 남기고 본문 섹션 제거.
     const proposalText = strat ? strat.split(/[.。]\s/)[0].slice(0, 80) : '천천히 한 걸음';
-    const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}\n\n[오늘의 제안]\n${proposalText}`;
+    const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}`;
     state.chatMessages.push({
       role: 'assistant',
       content: fourStage,
