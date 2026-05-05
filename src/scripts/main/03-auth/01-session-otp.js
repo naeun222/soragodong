@@ -29,6 +29,21 @@ async function checkSession() {
   if (stored) {
     try {
       session = JSON.parse(stored);
+      // 사용자 명시 2026-05-05 (perf ultrathink): JWT exp 클라이언트 검증 — 만료 임박 X 면 /auth/v1/user RTT skip.
+      // 효과: 앱 진입 첫 Supabase RTT (200-700ms) 절약. 토큰 만료/refresh 는 fetch interceptor 가 401 응답으로 자동 처리.
+      // exp 마진 60s = clock skew 안전 영역. session.user 가 stored 에 있으면 즉시 인증된 것으로 처리.
+      try {
+        const _payloadB64 = (session.access_token || '').split('.')[1];
+        if (_payloadB64 && session.user && session.user.id) {
+          const _b64 = _payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+          const _payload = JSON.parse(decodeURIComponent(escape(atob(_b64))));
+          const _now = Math.floor(Date.now() / 1000);
+          if (_payload.exp && _payload.exp > _now + 60 && _payload.sub === session.user.id) {
+            authUserId = session.user.id;
+            return true;
+          }
+        }
+      } catch (_jwtE) { /* JWT 디코드 실패 시 fallback fetch */ }
       // Verify token still valid
       const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${session.access_token}` }

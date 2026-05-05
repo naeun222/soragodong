@@ -18,6 +18,11 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 
+<!-- 사용자 명시 2026-05-05 (perf): preconnect — checkSession Supabase RTT 의 TLS handshake 200-500ms 절약, 폰트 다운로드 병렬화 -->
+<link rel="preconnect" href="https://pfagqvfteqzfhkbxtnwp.supabase.co" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
 <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi7IaM65286rOg64+Z8J+QmiIsInNob3J0X25hbWUiOiLshozrnbzqs6Drj5nwn5CaIiwiZGVzY3JpcHRpb24iOiJBSSDrnbzsnbTtlIQg7KCE65616rCAIiwic3RhcnRfdXJsIjoiLi8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGYwZTE3IiwidGhlbWVfY29sb3IiOiIjMGYwZTE3IiwiaWNvbnMiOlt7InNyYyI6Imljb24tMTkyLnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifSx7InNyYyI6Imljb24tNTEyLnBuZyIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9wbmcifV19">
 
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -11801,6 +11806,21 @@ async function checkSession() {
   if (stored) {
     try {
       session = JSON.parse(stored);
+      // 사용자 명시 2026-05-05 (perf ultrathink): JWT exp 클라이언트 검증 — 만료 임박 X 면 /auth/v1/user RTT skip.
+      // 효과: 앱 진입 첫 Supabase RTT (200-700ms) 절약. 토큰 만료/refresh 는 fetch interceptor 가 401 응답으로 자동 처리.
+      // exp 마진 60s = clock skew 안전 영역. session.user 가 stored 에 있으면 즉시 인증된 것으로 처리.
+      try {
+        const _payloadB64 = (session.access_token || '').split('.')[1];
+        if (_payloadB64 && session.user && session.user.id) {
+          const _b64 = _payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+          const _payload = JSON.parse(decodeURIComponent(escape(atob(_b64))));
+          const _now = Math.floor(Date.now() / 1000);
+          if (_payload.exp && _payload.exp > _now + 60 && _payload.sub === session.user.id) {
+            authUserId = session.user.id;
+            return true;
+          }
+        }
+      } catch (_jwtE) { /* JWT 디코드 실패 시 fallback fetch */ }
       // Verify token still valid
       const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${session.access_token}` }
@@ -15041,6 +15061,29 @@ async function loadFromCloud() {
     console.log('[V4 security] 다른 사용자 감지 — localStorage + E2EE 키 정리');
   }
   localStorage.setItem(V4_LAST_USER_KEY, authUserId);
+
+  // 사용자 명시 2026-05-05 (perf ultrathink): cloud 응답 기다리는 동안 localStorage state 로 optimistic 화면 그리기.
+  // cloud 도착 시 init() 가 자연스럽게 다시 렌더 → 덮어씀. Supabase RTT (모바일 1-2초) 동안 빈 화면 X.
+  // 같은 device 재방문 시 perceived load 가장 큰 단축. E2EE 새 device 진입 시엔 localStorage 비어있어 자동 skip.
+  if (lastUserId === authUserId) {
+    try {
+      const _localRaw = localStorage.getItem(V4_LOCAL_STORAGE_KEY);
+      if (_localRaw) {
+        const _localState = JSON.parse(_localRaw);
+        state = { ...DEFAULT_STATE, ..._localState };
+        try {
+          if (typeof applyNightMode === 'function') applyNightMode();
+          if (typeof renderModes === 'function') renderModes();
+          if (typeof renderTodayMission === 'function') renderTodayMission();
+          if (typeof renderShellBar === 'function') renderShellBar();
+          if (typeof renderActiveDecisionsHomeV3 === 'function') renderActiveDecisionsHomeV3();
+          if (typeof renderMainAction === 'function') renderMainAction();
+          if (typeof renderModel === 'function') renderModel();
+          if (typeof renderArchive === 'function') renderArchive();
+        } catch (_e) { console.warn('[optimistic paint] render:', _e); }
+      }
+    } catch (_e) { console.warn('[optimistic paint] parse:', _e); }
+  }
 
   setSyncStatus('syncing');
   // 사용자 보고 2026-05-05 (audit High): loadFromCloud 안에서 saveToCloudNow 가 5곳 (localStorage fallback / apiKey wipe / seedCleaned / V6→V7 / dedupe) 에서 순차 호출되던 race / 중복 저장 fix.

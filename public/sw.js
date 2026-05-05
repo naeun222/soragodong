@@ -6,7 +6,8 @@
 // activate에서 옛 캐시 자동 삭제 → stale 평문/구조 캐시 노출 차단.
 // v3 (2026-04-30 ultrathink): /api/* cache-first 버그 fix — SW 가 GET /api/usage 등을 캐싱해서 잔액 stale 노출되던 critical 버그.
 // v4 (2026-05-01 agent audit): E2EE 11 키 sensitiveKeys 추가 / decision 14일 hardcap / 광범위 워딩 정정 / phase 정리. 옛 캐시 stale 차단.
-const CACHE_NAME = 'soragodong-v4-cache-v4';
+// v5 (2026-05-05 perf ultrathink): HTML 전략 network-first → stale-while-revalidate. 재방문 첫 페인트가 네트워크 RTT 안 기다림 (캐시 즉시) + 백그라운드 fetch → 다음 진입 부터 새 버전. version.txt 는 그대로 fresh.
+const CACHE_NAME = 'soragodong-v4-cache-v5';
 const PRECACHE_URLS = [
   './',
   './index.html',
@@ -58,22 +59,34 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML 문서는 network-first (최신 우선, 오프라인 시 캐시 fallback)
+  // HTML 문서는 stale-while-revalidate (사용자 명시 2026-05-05 perf ultrathink):
+  // 1) 캐시 있으면 즉시 반환 (첫 페인트 = 디스크 속도, 네트워크 RTT 안 기다림).
+  // 2) 백그라운드로 fetch → 캐시 갱신 (다음 진입부터 새 버전).
+  // 3) 캐시 없으면 네트워크 fallback.
+  // 새 버전 감지·자동 reload 는 클라이언트 32-billing/19-app-version-banner.js (version.txt 폴링) 가 담당.
+  // 사용자 보고 2026-04-30 review (agent P2-2): 5xx 응답도 cache.put 했음 → 옛 좋은 캐시 덮음. ok 상태만 캐시.
   const isHTML = req.headers.get('accept')?.includes('text/html')
     || url.pathname === '/' || url.pathname.endsWith('.html');
   if (isHTML) {
     event.respondWith(
-      fetch(req)
-        .then((resp) => {
-          // 성공 시 캐시 갱신.
-          // 사용자 보고 2026-04-30 review (agent P2-2): 5xx 응답도 cache.put 했음 → 옛 좋은 캐시 덮음. ok 상태만 캐시.
-          if (resp && resp.ok) {
-            const respClone = resp.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, respClone)).catch(() => {});
-          }
-          return resp;
-        })
-        .catch(() => caches.match(req).then((c) => c || caches.match('./index.html')))
+      caches.match(req).then((cached) => {
+        const networkPromise = fetch(req)
+          .then((resp) => {
+            if (resp && resp.ok) {
+              const respClone = resp.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(req, respClone)).catch(() => {});
+            }
+            return resp;
+          })
+          .catch(() => null);
+        if (cached) {
+          // 캐시 즉시 반환 + 백그라운드 갱신 (revalidate)
+          networkPromise.catch(() => {});
+          return cached;
+        }
+        // 캐시 X — 네트워크 결과 기다림, 그것도 실패면 index.html fallback
+        return networkPromise.then((resp) => resp || caches.match('./index.html'));
+      })
     );
     return;
   }

@@ -19,6 +19,29 @@ async function loadFromCloud() {
   }
   localStorage.setItem(V4_LAST_USER_KEY, authUserId);
 
+  // 사용자 명시 2026-05-05 (perf ultrathink): cloud 응답 기다리는 동안 localStorage state 로 optimistic 화면 그리기.
+  // cloud 도착 시 init() 가 자연스럽게 다시 렌더 → 덮어씀. Supabase RTT (모바일 1-2초) 동안 빈 화면 X.
+  // 같은 device 재방문 시 perceived load 가장 큰 단축. E2EE 새 device 진입 시엔 localStorage 비어있어 자동 skip.
+  if (lastUserId === authUserId) {
+    try {
+      const _localRaw = localStorage.getItem(V4_LOCAL_STORAGE_KEY);
+      if (_localRaw) {
+        const _localState = JSON.parse(_localRaw);
+        state = { ...DEFAULT_STATE, ..._localState };
+        try {
+          if (typeof applyNightMode === 'function') applyNightMode();
+          if (typeof renderModes === 'function') renderModes();
+          if (typeof renderTodayMission === 'function') renderTodayMission();
+          if (typeof renderShellBar === 'function') renderShellBar();
+          if (typeof renderActiveDecisionsHomeV3 === 'function') renderActiveDecisionsHomeV3();
+          if (typeof renderMainAction === 'function') renderMainAction();
+          if (typeof renderModel === 'function') renderModel();
+          if (typeof renderArchive === 'function') renderArchive();
+        } catch (_e) { console.warn('[optimistic paint] render:', _e); }
+      }
+    } catch (_e) { console.warn('[optimistic paint] parse:', _e); }
+  }
+
   setSyncStatus('syncing');
   // 사용자 보고 2026-05-05 (audit High): loadFromCloud 안에서 saveToCloudNow 가 5곳 (localStorage fallback / apiKey wipe / seedCleaned / V6→V7 / dedupe) 에서 순차 호출되던 race / 중복 저장 fix.
   // 각 위치는 _needsSaveAfterLoad = true 만 set 하고, 끝에서 1회만 호출.
