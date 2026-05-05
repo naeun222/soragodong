@@ -339,7 +339,7 @@
   }
   .proof-title .accent { color: var(--accent); }
 
-  /* === Horizontal swipe scroller — 사용자 명시 2026-05-06: 가로 스와이프 + 큰 사진 + 문구랑 같이 풀스크린 === */
+  /* === Horizontal swipe scroller — 사용자 명시 2026-05-06: 사진을 풀스크린급으로 크게 + 위 문구 같이 보이게 === */
   .proof-screens {
     display: flex;
     gap: 14px;
@@ -352,13 +352,14 @@
   }
   .proof-screens::-webkit-scrollbar { display: none; }
   .proof-screen {
-    /* 사용자 viewport 의 60% 폭 — 한 장 크게 보이고 옆 카드 살짝 peek (스와이프 affordance) */
-    flex: 0 0 min(60vw, 280px);
-    border-radius: 24px;
+    /* 카드 폭을 vh 기준 (가용 viewport 세로공간) 으로 → 항상 한 장이 viewport 거의 채움 + 옆 peek
+       (iPhone 1170:2532 ≈ 1:2.16, -13% 잘림 → 카드 height ≈ width × 2.03 → 38vh 폭이면 카드 높이 ≈ 77vh) */
+    flex: 0 0 clamp(260px, 38vh, 360px);
+    border-radius: 26px;
     overflow: hidden;
     border: 1px solid rgba(255,255,255,0.10);
     background: var(--bg);
-    box-shadow: 0 22px 48px -18px rgba(0,0,0,0.55), 0 0 0 4px rgba(20,18,30,0.5);
+    box-shadow: 0 28px 56px -20px rgba(0,0,0,0.6), 0 0 0 5px rgba(20,18,30,0.55);
     scroll-snap-align: center;
   }
   .proof-screen img {
@@ -366,19 +367,15 @@
     display: block;
     margin-top: -13%;
   }
-  /* 작은 모바일 — 사진이 viewport 내에 fit 되게 폭 좁힘 */
-  @media (max-height: 760px) {
-    .proof-screen { flex: 0 0 min(52vw, 240px); }
+  /* 작은 키 모바일 — 위 문구 자리 보장 위해 카드 살짝 축소 */
+  @media (max-height: 700px) {
+    .proof-screen { flex: 0 0 clamp(230px, 34vh, 300px); }
   }
-  @media (max-height: 680px) {
-    .proof-screen { flex: 0 0 min(46vw, 210px); }
+  @media (max-height: 620px) {
+    .proof-screen { flex: 0 0 clamp(200px, 30vh, 260px); }
   }
 
-  /* === proof-snap 섹션을 풀스크린 snap target 으로 — 도착 시 viewport 풀로 정렬, 더 내리면 trust-block 흐름 === */
-  @media (max-width: 768px) {
-    html { scroll-snap-type: y proximity; }
-    .proof-snap { scroll-snap-align: start; scroll-snap-stop: normal; }
-  }
+  /* proof-snap 자체는 100dvh 유지 (문구 + 큰 사진이 한 viewport 안에). y-snap 은 스크롤 방해 → 제거. */
 
   /* Trust block — "왜 진짜 안 새냐고?" 카드 */
   .trust-block {
