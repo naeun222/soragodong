@@ -144,7 +144,7 @@ function showBudgetExceededModal(reason, opts) {
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 달 기다릴게</button>
       `;
     } else {
-      // 비구독 (한 달 무료 만료 또는 legacy charge 잔액 소진) — 구독 안내 + 개발자 후원 톤
+      // 비구독 (한 달 무료 만료) — 구독 안내 + 개발자 후원 톤
       titleText = '🐚 한 달 무료 만료';
       bodyText = '처음 한 달 무료 끝났어 — 깊게 써줘서 고마워.<br><br>' +
         '계속 쓰려면 Light / Premium 구독.<br><br>' +

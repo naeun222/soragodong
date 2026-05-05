@@ -10239,8 +10239,6 @@
           <svg class="sns-login-icon" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><path d="M9 1.5C4.86 1.5 1.5 4.18 1.5 7.5c0 2.13 1.42 4 3.55 5.06l-.7 2.61c-.07.27.23.49.46.34l3.06-2.04c.38.04.76.07 1.13.07 4.14 0 7.5-2.68 7.5-6S13.14 1.5 9 1.5z"/></svg>
           <span>카카오로 시작하기</span>
         </button>
-
-        <div style="font-size:10.5px; color:var(--text-soft); text-align:center; margin-top:14px; line-height:1.7;">계속하면 <a href="/terms" target="_blank" style="color:var(--text-dim);">약관</a> · <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a> 동의로 간주.<br>다음 단계에서 자세히 안내해줄게.</div>
       </div>
 
     </div>
@@ -13332,9 +13330,7 @@ function _renderGuestConvModal(ctx) {
       <span>카카오로 시작하기</span>
     </button>
 
-    <div style="font-size:10.5px; color:var(--text-soft); text-align:center; line-height:1.7;">계속하면 <a href="/terms" target="_blank" style="color:var(--text-dim);">약관</a> · <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a> 동의로 간주.<br>다음 단계에서 비밀번호 설정 + 자세히 안내해줄게.</div>
-
-    <button onclick="_closeGuestConvModal()" style="width:100%; margin-top:18px; padding:10px; background:transparent; border:1px solid var(--border-strong); color:var(--text-dim); border-radius:10px; cursor:pointer; font-size:13px;">나중에</button>
+    <button onclick="_closeGuestConvModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--border-strong); color:var(--text-dim); border-radius:10px; cursor:pointer; font-size:13px;">나중에</button>
   `;
 
   document.body.appendChild(overlay);
@@ -44905,7 +44901,7 @@ async function _doRefreshBillingStatus(manual) {
     `;
     return;
   }
-  // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 잔액/충전/월정액 흐름 표시.
+  // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 월정액 흐름 표시.
   // 사용자 보고 2026-04-30: 🔄 새로고침 작동 X 버그 — JWT 1h 만료 시 401 → 인터셉터는 /api/chat 만 swap 이라 /api/usage 401 그대로. 자동 refresh + retry + 시각 피드백 추가.
   if (manual) status.textContent = '🔄 갱신 중...';
   const _origFetch = window._anthropicOrigFetch || window.fetch;
@@ -45001,8 +44997,7 @@ async function loadPayments() {
     const typeLabel = {
       subscribe: '📅 월정액 구독',
       tier_upgrade: '🌊 Premium 업그레이드',
-      overage_pack: '✦ Premium 추가팩',
-      charge: '💰 충전 (legacy)'
+      overage_pack: '✦ Premium 추가팩'
     };
     container.innerHTML = payments.map(p => {
       const date = new Date(p.created_at).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' });
@@ -45600,7 +45595,9 @@ async function adminFeedbackSubmitReply(feedbackId) {
   }
 }
 
-// 사용자 명시 2026-04-30 ultrathink: admin 잔액 정정 — 이전 누적 잔액 fix 용
+// 사용자 명시 2026-05-06: admin charge / pending / confirm / revoke 흐름 통째 폐기 (legacy 충전 / 토스 흐름 정리).
+// adminResetBalance 만 잔존 — 잔액 정정 도구 (overage_pack 등 잔여 처리 케이스).
+
 async function adminResetBalance() {
   if (typeof _isAdmin === 'function' && !_isAdmin()) {
     showToast('admin 권한 필요');
@@ -45610,7 +45607,7 @@ async function adminResetBalance() {
     showToast('로그인 필요');
     return;
   }
-  const newBalanceStr = prompt('정정할 잔액 (USD, 0~100):\n예) 0 = 비우기 / 2.14 = 무료 토큰 3,000원', '2.14');
+  const newBalanceStr = prompt('정정할 잔액 (USD, 0~100):\n예) 0 = 비우기', '0');
   if (newBalanceStr === null) return;
   const newBalance = parseFloat(newBalanceStr);
   if (isNaN(newBalance) || newBalance < 0 || newBalance > 100) {
@@ -45618,7 +45615,6 @@ async function adminResetBalance() {
     return;
   }
   const resetIdempotency = confirm('idempotency 기록도 reset?\n\nYes = 과거 결제 다시 처리 가능 (위험)\nNo = 잔액만 정정 (권장)');
-  const _origFetch = window._anthropicOrigFetch || window.fetch;
   try {
     const resp = await _authedFetch('/api/admin/reset-balance', {
       method: 'POST',
@@ -45641,87 +45637,6 @@ async function adminResetBalance() {
     alert('에러: ' + (e.message || e));
   }
 }
-
-async function adminLoadPendingCharges() {
-  const container = document.getElementById('adminPendingList');
-  if (!container) return;
-  container.innerHTML = '<span style="color:var(--text-soft);">불러오는 중...</span>';
-  try {
-    const resp = await _authedFetch('/api/admin/pending-charges', {
-      headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
-    });
-    if (resp.status === 403) {
-      container.innerHTML = '<span style="color:var(--text-soft);">관리자 권한 X (Cloudflare env에 ADMIN_USER_ID 포함되어 있어야 함)</span>';
-      return;
-    }
-    if (!resp.ok) {
-      container.innerHTML = `<span style="color:#e89090;">실패 (${resp.status})</span>`;
-      return;
-    }
-    const data = await resp.json();
-    const pending = data.pending || [];
-    if (pending.length === 0) {
-      container.innerHTML = '<span style="color:var(--text-soft);">대기 중인 송금 X</span>';
-      return;
-    }
-    let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
-    pending.forEach(p => {
-      const at = new Date(p.created_at).toLocaleString('ko-KR');
-      html += `
-        <div style="padding:8px; background:var(--surface); border-radius:6px; line-height:1.6;">
-          <div><b>${p.amount_krw.toLocaleString()}원</b> — ${p.user_email || '[email X]'}</div>
-          <div style="font-size:10px; color:var(--text-soft);">메모: <code>${p.portone_merchant_uid}</code> · ${at}</div>
-          <div style="display:flex; gap:4px; margin-top:6px;">
-            <button class="btn-secondary" onclick="adminConfirm(${p.id})" style="font-size:11px; padding:4px 8px; background:rgba(143,200,143,0.20); border-color:rgba(143,200,143,0.40); color:#9ed4a0;">✓ 입금 확인</button>
-            <button class="btn-secondary" onclick="adminRevoke(${p.id})" style="font-size:11px; padding:4px 8px; background:rgba(220,80,80,0.15); border-color:rgba(220,80,80,0.40); color:#e89090;">✗ 환수</button>
-          </div>
-        </div>`;
-    });
-    html += '</div>';
-    container.innerHTML = html;
-  } catch (e) {
-    container.innerHTML = `<span style="color:#e89090;">예외: ${e.message || e}</span>`;
-  }
-}
-
-async function adminConfirm(paymentId) {
-  if (!confirm('입금 확인하셨나요? status를 paid로 변경합니다.')) return;
-  try {
-    const resp = await _authedFetch('/api/admin/confirm-charge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
-      body: JSON.stringify({ payment_id: paymentId })
-    });
-    if (resp.ok) {
-      showToast('✓ 입금 확인 완료');
-      adminLoadPendingCharges();
-    } else {
-      const r = await resp.json();
-      alert('실패: ' + (r.error || resp.status));
-    }
-  } catch (e) { alert('예외: ' + (e.message || e)); }
-}
-
-async function adminRevoke(paymentId) {
-  if (!confirm('미입금 또는 거짓 송금 — 잔액 환수 + status cancelled 처리합니다. 정말?')) return;
-  try {
-    const resp = await fetch('/api/admin/revoke-charge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
-      body: JSON.stringify({ payment_id: paymentId, ban_user: false })
-    });
-    if (resp.ok) {
-      showToast('✗ 환수 완료');
-      adminLoadPendingCharges();
-    } else {
-      const r = await resp.json();
-      alert('실패: ' + (r.error || resp.status));
-    }
-  } catch (e) { alert('예외: ' + (e.message || e)); }
-}
-
-// 사용자 명시 2026-04-30: confirmTossSent 폐기 — manual-charge endpoint 410 Gone. 영수증 캡처 (verify-toss-receipt) 만 사용.
-
 // ─── admin: 사용량 분석 dashboard (사용자 명시 2026-05-02 ultrathink) ───
 // soragodong_usage 테이블 집계 → endpoint / model / 일자 / 사용자 별 비용 분포.
 // 절감 우선순위 결정 + Phase 적용 후 효과 검증 도구.
@@ -46284,7 +46199,7 @@ function showBudgetExceededModal(reason, opts) {
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 달 기다릴게</button>
       `;
     } else {
-      // 비구독 (한 달 무료 만료 또는 legacy charge 잔액 소진) — 구독 안내 + 개발자 후원 톤
+      // 비구독 (한 달 무료 만료) — 구독 안내 + 개발자 후원 톤
       titleText = '🐚 한 달 무료 만료';
       bodyText = '처음 한 달 무료 끝났어 — 깊게 써줘서 고마워.<br><br>' +
         '계속 쓰려면 Light / Premium 구독.<br><br>' +

@@ -3,8 +3,6 @@
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 import { cancelPortOnePayment } from '../_lib/portone';
 
-const KRW_PER_USD = 1400;
-
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
   const user = await verifyAuth(request, env);
@@ -45,22 +43,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return jsonResponse({ error: '결제 조회 실패: ' + (e?.message || e) }, 500);
   }
 
-  // 2. 비례 환불액 계산
+  // 2. 비례 환불액 계산. 사용자 명시 2026-05-06: 충전 (charge) 흐름 폐기 → subscribe / overage_pack / tier_upgrade 만.
   let refundAmountKrw = paymentRow.amount_krw;
-  if (paymentRow.payment_type === 'charge') {
-    const billingResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&select=credit_balance_usd`,
-      {
-        headers: {
-          'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      }
-    );
-    const billingRows: any = await billingResp.json();
-    const balance = billingRows[0]?.credit_balance_usd || 0;
-    refundAmountKrw = Math.min(paymentRow.amount_krw, Math.floor(balance * KRW_PER_USD));
-  } else if (paymentRow.payment_type === 'subscribe') {
+  if (paymentRow.payment_type === 'subscribe') {
     const paidAt = new Date(paymentRow.created_at).getTime();
     const elapsedDays = Math.floor((Date.now() - paidAt) / 86400000);
     const remainingDays = Math.max(0, 30 - elapsedDays);
@@ -119,12 +104,8 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     })
   }).catch(() => {});
 
-  // 5. 충전식이면 잔액 차감 — atomic RPC (race-safe, 사용자 명시 2026-04-30 ultrathink)
-  if (paymentRow.payment_type === 'charge') {
-    const refundUsd = refundAmountKrw / KRW_PER_USD;
-    const { subtractCreditAtomic } = await import('../_lib/billing');
-    await subtractCreditAtomic(env, user.id, refundUsd);
-  }
+  // 사용자 명시 2026-05-06: 충전 (charge) 차감 분기 제거 — 옛 plan 폐기.
+  // overage_pack 환불 시 잔액 차감은 별도 처리 필요 시 이 자리.
 
   // 사용자 보고 2026-05-05 (audit High): 구독 환불 시 즉시 만료 처리 추가.
   // 이전 = subscription_active / expires_at 그대로 → 환불 후 잔여일 동안 무료 사용 가능 (분쟁 risk).

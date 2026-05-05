@@ -42,9 +42,7 @@ function _renderGuestConvModal(ctx) {
       <span>카카오로 시작하기</span>
     </button>
 
-    <div style="font-size:10.5px; color:var(--text-soft); text-align:center; line-height:1.7;">계속하면 <a href="/terms" target="_blank" style="color:var(--text-dim);">약관</a> · <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a> 동의로 간주.<br>다음 단계에서 비밀번호 설정 + 자세히 안내해줄게.</div>
-
-    <button onclick="_closeGuestConvModal()" style="width:100%; margin-top:18px; padding:10px; background:transparent; border:1px solid var(--border-strong); color:var(--text-dim); border-radius:10px; cursor:pointer; font-size:13px;">나중에</button>
+    <button onclick="_closeGuestConvModal()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--border-strong); color:var(--text-dim); border-radius:10px; cursor:pointer; font-size:13px;">나중에</button>
   `;
 
   document.body.appendChild(overlay);

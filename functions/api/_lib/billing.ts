@@ -320,7 +320,7 @@ export async function subtractCreditAtomic(
 
 // 사용자 명시 2026-04-30 ultrathink: 2-tier 월정액 도입 후 budget 검증 로직.
 // 1) subscription 활성 → cap 안 남았으면 OK / cap 도달 시 credit_balance_usd 로 fall-through (overage pack 또는 잔여 free credit)
-// 2) subscription X → credit_balance_usd 로 직접 사용 (legacy charge 잔액 또는 free credit)
+// 2) subscription X → credit_balance_usd 로 직접 사용 (overage_pack 잔여)
 export async function checkBudget(env: Env, userId: string): Promise<BudgetCheck> {
   let billing = await getUserBilling(env, userId);
   if (!billing) {

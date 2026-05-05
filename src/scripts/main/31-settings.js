@@ -134,7 +134,7 @@ async function _doRefreshBillingStatus(manual) {
     `;
     return;
   }
-  // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 잔액/충전/월정액 흐름 표시.
+  // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 월정액 흐름 표시.
   // 사용자 보고 2026-04-30: 🔄 새로고침 작동 X 버그 — JWT 1h 만료 시 401 → 인터셉터는 /api/chat 만 swap 이라 /api/usage 401 그대로. 자동 refresh + retry + 시각 피드백 추가.
   if (manual) status.textContent = '🔄 갱신 중...';
   const _origFetch = window._anthropicOrigFetch || window.fetch;
@@ -230,8 +230,7 @@ async function loadPayments() {
     const typeLabel = {
       subscribe: '📅 월정액 구독',
       tier_upgrade: '🌊 Premium 업그레이드',
-      overage_pack: '✦ Premium 추가팩',
-      charge: '💰 충전 (legacy)'
+      overage_pack: '✦ Premium 추가팩'
     };
     container.innerHTML = payments.map(p => {
       const date = new Date(p.created_at).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' });
