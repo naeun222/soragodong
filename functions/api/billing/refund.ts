@@ -224,13 +224,43 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     console.warn('[refund] PortOne pre-check throw — cancel 시도 진행:', e);
   }
 
-  // 4. 비례 환불액 계산.
+  // 4. 환불액 계산 — 청약철회 (전자상거래법 §17) + 사용량 검증.
+  // 사용자 명시 2026-05-06:
+  //   - 7일 이내 + 사용 X (4AM cutoff 자동 처리는 사용으로 안 침) → 전액 환불 (청약철회)
+  //   - 24시간 이내인데 사용했으면 전액 환불 X → 1일치 차감
+  //   - 그 외 = 일별 비례 (사용 했으면 elapsedDays / 안 했으면 elapsedDays 그대로)
   let refundAmountKrw = paymentRow.amount_krw;
   if (paymentRow.payment_type === 'subscribe') {
     const paidAt = new Date(paymentRow.created_at).getTime();
     const elapsedDays = Math.floor((Date.now() - paidAt) / 86400000);
-    const remainingDays = Math.max(0, 30 - elapsedDays);
-    refundAmountKrw = Math.floor(paymentRow.amount_krw * remainingDays / 30);
+
+    // 사용량 조회 — paymentRow.user_id 기준 (admin force 케이스에서도 결제자 본인 billing).
+    let usedUsd = 0;
+    try {
+      const billingResp = await fetch(
+        `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${paymentRow.user_id}&select=monthly_token_used`,
+        { headers: { 'apikey': env.SUPABASE_SERVICE_ROLE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } }
+      );
+      const billingRows: any[] = await billingResp.json().catch(() => []);
+      const usedMicroUsd = Number(billingRows?.[0]?.monthly_token_used || 0);
+      usedUsd = usedMicroUsd / 1_000_000;
+    } catch (e) {
+      console.warn('[refund] 사용량 조회 실패 — 사용량 0 으로 처리:', e);
+    }
+
+    // 4AM cutoff 자동 처리 비용 (~$0.01-0.03) 보다 위면 "실 사용" 으로 간주.
+    const CUTOFF_THRESHOLD_USD = 0.05;
+    const isClean = usedUsd < CUTOFF_THRESHOLD_USD;
+
+    if (elapsedDays < 7 && isClean) {
+      // 청약철회 — 전액 환불.
+      refundAmountKrw = paymentRow.amount_krw;
+    } else {
+      // 일별 비례 — 사용했으면 24시간 이내라도 1일치 차감 (Math.max).
+      const usedDays = Math.max(elapsedDays, isClean ? 0 : 1);
+      const remainingDays = Math.max(0, 30 - usedDays);
+      refundAmountKrw = Math.floor(paymentRow.amount_krw * remainingDays / 30);
+    }
   }
 
   if (refundAmountKrw <= 0) {
