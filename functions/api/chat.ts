@@ -3,7 +3,7 @@
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from './_lib/auth';
 import { recordUsage, calculateCost } from './_lib/usage';
-import { checkBudget, deductCost, getUserBilling, ensureBillingRow, OPUS_DAILY_LIMIT_PREMIUM } from './_lib/billing';
+import { checkBudget, deductCost, getUserBilling, ensureBillingRow, promoteGuestToEarlyLight, OPUS_DAILY_LIMIT_PREMIUM } from './_lib/billing';
 import {
   checkAndIncIpRate,
   checkGlobalGuestBudget,
@@ -211,6 +211,13 @@ async function _handleChatRequest(context: {
   // Phase 0: 게스트는 'guest' tier ($0.20 cap) 로 자동 생성. checkBudget 진입 전에 명시적 ensure (isAnonymous flag 전달용).
   // 한도 도달 시 NO_CREDIT → frontend 가 isGuest 분기로 가입 유도 모달.
   await ensureBillingRow(env, user.id, { isAnonymous: isGuest });
+  // Phase 1c: 게스트 → 가입자 승격 자동 detect — is_anonymous=false 인데 plan='guest' 면 'early_light' 로 promote.
+  if (!isGuest) {
+    const _curBilling = await getUserBilling(env, user.id);
+    if (_curBilling?.subscription_plan === 'guest') {
+      await promoteGuestToEarlyLight(env, user.id);
+    }
+  }
   const budget = await checkBudget(env, user.id);
   if (!budget.ok) {
     return jsonResponse({

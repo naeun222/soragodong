@@ -77,12 +77,24 @@ async function generateAIResponse(modelOverride) {
       let parsed = {};
       try { parsed = JSON.parse(err); } catch {}
       // 사용자 요청 2026-04-30: 402 (잔액·cap 도달) → 결제 모달 자동 표시 (Claude 패턴)
+      // Phase 1c: 게스트 한도 도달 = 가입 유도 모달 (별도). 인증 사용자 = 기존 결제 모달.
       if (response.status === 402) {
         if (state.chatMessages[state.chatMessages.length - 1]?.typing) state.chatMessages.pop();
         saveState(); renderChat();
-        if (typeof showBudgetExceededModal === 'function') {
+        if (parsed.code === 'GUEST_LIMIT' || (state.isGuest && typeof showGuestConversionModal === 'function')) {
+          if (typeof showGuestConversionModal === 'function') {
+            showGuestConversionModal({ reason: 'limit' });
+          }
+        } else if (typeof showBudgetExceededModal === 'function') {
           showBudgetExceededModal(parsed.error || '잔액 / 한도 도달');
         }
+        return;
+      }
+      // Phase 1c: Turnstile 검증 실패 — 페이지 새로고침 안내.
+      if (response.status === 403 && parsed.code === 'TURNSTILE_FAIL') {
+        if (state.chatMessages[state.chatMessages.length - 1]?.typing) state.chatMessages.pop();
+        saveState(); renderChat();
+        if (typeof showToast === 'function') showToast('🔄 봇 검증 — 페이지 새로고침 필요');
         return;
       }
       // 사용자 명시 2026-05-02 ultrathink: Opus Premium 전용 + 일일 30번 한도 응답 처리.

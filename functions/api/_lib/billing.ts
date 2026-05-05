@@ -132,6 +132,45 @@ export async function ensureBillingRow(env: Env, userId: string, opts?: { isAnon
   }
 }
 
+// 사용자 명시 2026-05-05 ultrathink (Phase 1c): 게스트 → early_light 자동 승격.
+// 흐름: anonymous user 가 linkIdentity 로 이메일 가입 → 다음 /api/chat 또는 /api/usage 호출 시
+//       backend 가 user.is_anonymous=false 인데 billing.subscription_plan='guest' detect → 승격.
+// 효과: monthly_token_used = 0 reset, plan='early_light', cap_usd=$4, 30일 신규 만료.
+export async function promoteGuestToEarlyLight(env: Env, userId: string): Promise<{ ok: boolean; promoted: boolean }> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { ok: false, promoted: false };
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + FREE_TRIAL_DAYS * 86400_000).toISOString();
+  const earlyTier = TIER_PLANS.early_light;
+  try {
+    const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${userId}&subscription_plan=eq.guest`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        subscription_plan: 'early_light',
+        subscription_active: true,
+        subscription_expires_at: expiresAt,
+        monthly_quota_usd: earlyTier.cap_usd,
+        monthly_token_used: 0,
+        monthly_period_started_at: now.toISOString(),
+        free_trial_granted_at: now.toISOString()
+      })
+    });
+    if (!resp.ok) {
+      console.warn('[promote guest] PATCH 비-OK:', resp.status);
+      return { ok: false, promoted: false };
+    }
+    return { ok: true, promoted: true };
+  } catch (e: any) {
+    console.warn('[promote guest] throw:', e?.message || e);
+    return { ok: false, promoted: false };
+  }
+}
+
 // 사용자 명시 2026-04-30 ultrathink: 충전·환불 race condition + idempotency 차단 helper.
 // 0005_atomic_billing.sql 의 add_credit_atomic_idempotent RPC 호출.
 // migration 미실행 시 = fallback (read-modify-write — race risk 단 호환성 유지).

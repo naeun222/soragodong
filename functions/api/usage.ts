@@ -3,7 +3,7 @@
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from './_lib/auth';
 import { getMonthlyUsage } from './_lib/usage';
-import { getUserBilling, ensureBillingRow } from './_lib/billing';
+import { getUserBilling, ensureBillingRow, promoteGuestToEarlyLight } from './_lib/billing';
 
 export async function onRequestGet(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
@@ -11,10 +11,14 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
   if (!user) return unauthorized();
 
   // 신규 가입자 자동 한 달 무료 활성화 — 첫 진입에서 즉시 trigger.
-  // Phase 0: anonymous 사용자는 'guest' tier ($0.20) 로 자동 생성. linkIdentity 시 별도 endpoint 가 'early_light' 로 update.
+  // Phase 0: anonymous 사용자는 'guest' tier ($0.30) 로 자동 생성.
+  // Phase 1c: linkIdentity 후 (is_anonymous=false + plan='guest') → 'early_light' 자동 승격.
   let billing = await getUserBilling(env, user.id);
   if (!billing) {
     billing = await ensureBillingRow(env, user.id, { isAnonymous: !!user.is_anonymous });
+  } else if (!user.is_anonymous && billing.subscription_plan === 'guest') {
+    await promoteGuestToEarlyLight(env, user.id);
+    billing = await getUserBilling(env, user.id);  // refetch
   }
   const usage = await getMonthlyUsage(env, user.id);
 
