@@ -6862,11 +6862,12 @@
   /* V3.11: 화면 하단 액션 묶음 — 일반화 (V3.13.x: checkin-bottom-bar → sticky-action-bar) */
   /* 사용자 명시 2026-05-06: sticky padding-bottom 0 — nav 에 더 딱 붙게 */
   /* 사용자 명시 2026-05-06 (재) ultrathink: 체크인 '기록 완료' button 20px 더 밑 — padding-top 10→30. */
+  /* 사용자 명시 2026-05-06 (3차): 또 20px 더 밑 — padding-top 30→50. */
   .sticky-action-bar {
     position: sticky;
     bottom: 0;
     margin-top: 16px;
-    padding: 30px 0 0;
+    padding: 50px 0 0;
     background: linear-gradient(to top, var(--bg) 60%, rgba(20,15,30,0));
     z-index: 10;
   }
