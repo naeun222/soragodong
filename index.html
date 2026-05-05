@@ -10132,14 +10132,24 @@
     <!-- 사용자 명시 2026-04-30: 모바일 브라우저 takeover 시 escape — iOS 인앱 / 빠른 로그인 사용자용 -->
     <a class="pwa-escape-link" onclick="escapePwaTakeover()">그냥 브라우저에서 로그인 →</a>
 
-    <!-- Step 1: 로그인 / 게스트 선택 — 사용자 명시 2026-05-06 ultrathink. -->
-    <!-- Primary card: 안전하게 시작 (로그인). Secondary: 그냥 둘러보기 (게스트). -->
+    <!-- Step 1: 게스트 / 로그인 선택 — 사용자 명시 2026-05-06 ultrathink. -->
+    <!-- 사용자 명시 2026-05-06: 게스트 카드 위로 (처음 진입자 hook), 로그인 카드 아래 + '첫 달 무료' 제거. -->
     <div class="login-form" id="loginStep1">
 
-      <!-- ── PRIMARY: Login card ── -->
+      <!-- ── 1. Guest card (top) ── -->
+      <div class="login-choice-card login-choice-secondary">
+        <div class="login-choice-title-2">🌱 처음이라면 한 번 둘러봐도 돼</div>
+        <div class="login-choice-sub-2">데이터는 이 기기에만 — 나중에 로그인하면 그대로 이어가.</div>
+        <button id="guestEntryBtn" class="login-guest-btn" onclick="enterGuestMode()">둘러보기 →</button>
+      </div>
+
+      <!-- ── divider ── -->
+      <div class="login-or-divider"><span>또는</span></div>
+
+      <!-- ── 2. Login card (below) ── -->
       <div class="login-choice-card login-choice-primary">
         <div class="login-choice-title">🔒 같이 시작할까?</div>
-        <div class="login-choice-sub">종단간 암호화로 안전 보관 · 모든 기기 동기화 · <b style="color:var(--accent2);">첫 달 무료</b></div>
+        <div class="login-choice-sub">종단간 암호화로 안전하게 보관 · 모든 기기 동기화</div>
 
         <button type="button" class="sns-login-btn kakao" onclick="loginWithProvider('kakao')">
           <svg class="sns-login-icon" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><path d="M9 1.5C4.86 1.5 1.5 4.18 1.5 7.5c0 2.13 1.42 4 3.55 5.06l-.7 2.61c-.07.27.23.49.46.34l3.06-2.04c.38.04.76.07 1.13.07 4.14 0 7.5-2.68 7.5-6S13.14 1.5 9 1.5z"/></svg>
@@ -10165,16 +10175,6 @@
             <label><input type="checkbox" id="loginConsentAdult" onchange="_syncAllLoginConsentToggle()"><span>만 19세 이상 자기 선언 (필수)</span></label>
           </div>
         </div>
-      </div>
-
-      <!-- ── divider ── -->
-      <div class="login-or-divider"><span>또는</span></div>
-
-      <!-- ── SECONDARY: Guest card ── -->
-      <div class="login-choice-card login-choice-secondary">
-        <div class="login-choice-title-2">🌱 처음이라면 한 번 둘러봐도 돼</div>
-        <div class="login-choice-sub-2">데이터는 이 기기에만 — 나중에 로그인하면 그대로 이어가.</div>
-        <button id="guestEntryBtn" class="login-guest-btn" onclick="enterGuestMode()">둘러보기 →</button>
       </div>
 
     </div>
@@ -45279,7 +45279,7 @@ const TIER_PLANS_CLIENT = {
   // 사용자 명시 2026-05-05 ultrathink (Phase 0): 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   // cap_usd 0.30 = ~15턴 (max_tokens 800 강제 cap + 캐시 히트 가정). 자동 4단 분석 1회 비용 + 후킹용 여유 포함.
   guest:        { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',        tagline: '한 번 써보기', emoji: '🌱',
-    description: '계정 없이 ~15턴 무료. 데이터는 이 기기에만. 가입하면 첫 달 무료 + 모든 분석 풀.', is_guest: true }
+    description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
 };
 // 사용자 명시 2026-05-02 ultrathink: light_pack 제거 — Premium 전용. Light/얼리는 Premium 전환 또는 다음 달 대기.
 // V4 (사용자 명시 2026-05-04 ultrathink — v2 갱신): 추가팩 재설계 — 작은 단위 + 두 tier 다 가능. *24h 못 기다리는 사용자* trigger.
