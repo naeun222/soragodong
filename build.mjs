@@ -12,9 +12,13 @@ import { fileURLToPath } from 'node:url';
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SRC = join(ROOT, 'src');
 const OUT = join(ROOT, 'index.html');
-// 사용자 명시 2026-05-05: Cloudflare Workers (wrangler.jsonc assets.directory=./public) 가
+// 사용자 명시 2026-05-05: Cloudflare Pages (pages_build_output_dir=./public) 가
 // public/ 을 entry 로 잡아 deploy. public/index.html 도 같이 써서 둘 byte-identical 보장.
 const OUT_PUBLIC = join(ROOT, 'public', 'index.html');
+// 사용자 보고 2026-05-05: APP_VERSION (src/scripts/main/32-billing/19-app-version-banner.js)
+// 와 public/version.txt 가 mismatch 면 checkServerVersionAndReload 무한 reload loop.
+// 빌드 시점에 산출물에서 APP_VERSION 추출 → public/version.txt 자동 sync (옛 vite plugin 동일).
+const OUT_VERSION = join(ROOT, 'public', 'version.txt');
 const TEMPLATE = join(SRC, 'index.template.html');
 
 const args = new Set(process.argv.slice(2));
@@ -75,6 +79,13 @@ function showFirstDiff(expected, got) {
 
 const out = build();
 
+function extractAppVersion(html) {
+  const m = html.match(/const\s+APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+  return m ? m[1] : null;
+}
+
+const expectedVersion = extractAppVersion(out);
+
 if (VERIFY) {
   if (!existsSync(OUT)) {
     console.error(`verify: ${relative(ROOT, OUT)} missing`);
@@ -84,10 +95,16 @@ if (VERIFY) {
     console.error(`verify: ${relative(ROOT, OUT_PUBLIC)} missing (Cloudflare deploy entry)`);
     process.exit(1);
   }
+  if (!existsSync(OUT_VERSION)) {
+    console.error(`verify: ${relative(ROOT, OUT_VERSION)} missing (APP_VERSION sync)`);
+    process.exit(1);
+  }
   const current = readFile(OUT);
   const currentPublic = readFile(OUT_PUBLIC);
-  if (current === out && currentPublic === out) {
-    console.log(`verify: OK (${out.length} bytes, root + public byte-identical)`);
+  const currentVersion = readFile(OUT_VERSION).trim();
+  const versionOk = expectedVersion && currentVersion === expectedVersion;
+  if (current === out && currentPublic === out && versionOk) {
+    console.log(`verify: OK (${out.length} bytes, root + public byte-identical, version=${currentVersion})`);
     process.exit(0);
   }
   console.error('verify: MISMATCH');
@@ -99,9 +116,18 @@ if (VERIFY) {
     console.error(`  ${relative(ROOT, OUT_PUBLIC)} differs`);
     showFirstDiff(out, currentPublic);
   }
+  if (!versionOk) {
+    console.error(`  ${relative(ROOT, OUT_VERSION)} = "${currentVersion}", expected "${expectedVersion}"`);
+  }
   process.exit(1);
 }
 
 writeFileSync(OUT, out);
 writeFileSync(OUT_PUBLIC, out);
-console.log(`build: wrote ${relative(ROOT, OUT)} + ${relative(ROOT, OUT_PUBLIC)} (${out.length} bytes)`);
+if (expectedVersion) {
+  writeFileSync(OUT_VERSION, expectedVersion);
+  console.log(`build: wrote ${relative(ROOT, OUT)} + ${relative(ROOT, OUT_PUBLIC)} (${out.length} bytes) + version.txt = ${expectedVersion}`);
+} else {
+  console.warn(`[app-version-sync] APP_VERSION 추출 실패 — version.txt 미갱신 (reload loop risk)`);
+  console.log(`build: wrote ${relative(ROOT, OUT)} + ${relative(ROOT, OUT_PUBLIC)} (${out.length} bytes)`);
+}
