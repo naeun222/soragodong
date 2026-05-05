@@ -12,9 +12,10 @@ async function adminFixPayment() {
     showToast('로그인 필요');
     return;
   }
-  const inputId = prompt('paymentId (DB row id, UUID) — 비워두면 최근 결제 20개 list:', '');
+  const inputId = prompt('paymentId (DB row id, 숫자) — 비워두면 최근 결제 20개 list:', '');
   if (inputId === null) return;
-  const paymentId = inputId.trim();
+  // 사용자 보고 2026-05-06: # prefix / 공백 / 따옴표 등 제거 (UI 표시 #12 그대로 복사 케이스).
+  const paymentId = inputId.trim().replace(/^[#\s'"]+/, '').replace(/[\s'"]+$/, '');
 
   // list 모드 — paymentId 모르는 경우 (일반 계정 접근 X 등)
   if (!paymentId) {

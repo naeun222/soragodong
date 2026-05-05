@@ -111,6 +111,7 @@ export async function onRequestPost(context: { request: Request; env: AdminEnv }
     const newUserId = target_user_id || user.id;
     const oldUserId = row.user_id;
     try {
+      // 사용자 보고 2026-05-06: return=representation + 0 row 검증 (옛 return=minimal 은 0 row 매칭 시도 ok 응답하던 silent fail).
       const patchResp = await fetch(
         `${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${paymentId}`,
         {
@@ -119,7 +120,7 @@ export async function onRequestPost(context: { request: Request; env: AdminEnv }
             'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
             'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
             'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
+            'Prefer': 'return=representation'
           },
           body: JSON.stringify({ user_id: newUserId })
         }
@@ -128,11 +129,17 @@ export async function onRequestPost(context: { request: Request; env: AdminEnv }
         const txt = await patchResp.text().catch(() => '');
         return jsonResponse({ error: 'PATCH 실패: ' + patchResp.status + ' ' + txt.slice(0, 200) }, 500);
       }
+      const patchedRows: any = await patchResp.json().catch(() => []);
+      if (!Array.isArray(patchedRows) || patchedRows.length === 0) {
+        return jsonResponse({ error: `PATCH 0 row matched — paymentId 형식 / 값 잘못됐을 수 있어. 입력 = ${paymentId}`, code: 'PATCH_NO_MATCH' }, 404);
+      }
       return jsonResponse({
         ok: true,
         action: 'sync_user',
         old_user_id: oldUserId,
         new_user_id: newUserId,
+        patched_count: patchedRows.length,
+        patched_row: patchedRows[0],
         message: `user_id sync 완료: ${oldUserId || '(null)'} → ${newUserId}`
       });
     } catch (e: any) {
