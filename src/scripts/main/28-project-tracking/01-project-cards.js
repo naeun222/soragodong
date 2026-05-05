@@ -14,11 +14,10 @@ function renderProjects() {
   if (!container) return;
   const visible = (state.projects || []).filter(p => p.status !== 'abandoned' && p.target !== undefined);
   // 사용자 명시 2026-05-06 ultrathink: default 접힘 + 헤더 작은 + 아이콘 (Notion 패턴). 5/2 default open 결정 번복.
-  // 추가 button 은 summary 안에서 stopPropagation — 클릭이 details 토글 트리거 X.
+  // 사용자 명시 2026-05-06 (추가): + 추가 버튼 제거 — 추적 항목 추가는 체크인 화면 (.checkin-tracker-add) 만.
   let html = `<details class="project-section">
     <summary class="project-section-header">
       <span class="project-section-title">추적 항목${visible.length > 0 ? ` <span style="font-size:11px; color:var(--text-soft); font-weight:500; margin-left:4px;">(${visible.length})</span>` : ''}</span>
-      <button class="project-add-icon" onclick="event.preventDefault(); event.stopPropagation(); addNewTracker()" aria-label="추적 항목 추가" title="추적 항목 추가">+</button>
     </summary>
     <div class="project-section-body">`;
   if (visible.length === 0) {

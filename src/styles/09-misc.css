@@ -10165,22 +10165,7 @@
     font-size: 13px; font-weight: 600; color: var(--accent);
     display: flex; align-items: center; gap: 6px;
   }
-  /* 사용자 명시 2026-05-06 ultrathink: pill → ghost 28px + 아이콘 (Notion/Linear 패턴). */
-  .project-add-icon {
-    width: 28px; height: 28px;
-    display: inline-flex; align-items: center; justify-content: center;
-    background: transparent;
-    border: 1px solid var(--border-strong);
-    border-radius: 8px;
-    color: var(--text-soft);
-    font-size: 16px; line-height: 1;
-    font-family: inherit;
-    cursor: pointer;
-    margin-right: 6px;
-    transition: background 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out, transform 80ms ease-out;
-  }
-  .project-add-icon:hover { background: var(--accent-dim); color: var(--accent); border-color: rgba(201,169,110,0.4); }
-  .project-add-icon:active { transform: scale(0.94); }
+  /* 사용자 명시 2026-05-06 (추가): 실행 탭 추적 항목 + 버튼 폐기 (체크인 화면에서만 추가). */
   .project-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
