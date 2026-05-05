@@ -5,3 +5,8 @@
   Cache-Control: public, max-age=0, must-revalidate
 /version.txt
   Cache-Control: no-cache, no-store, must-revalidate
+# 사용자 보고 2026-05-06: 모바일 옛 HTML 캐시 stuck — startlite 페이지도 항상 fresh
+/startlite
+  Cache-Control: no-cache, no-store, must-revalidate
+/start-lite.html
+  Cache-Control: no-cache, no-store, must-revalidate

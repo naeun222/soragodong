@@ -8,7 +8,8 @@
 // v4 (2026-05-01 agent audit): E2EE 11 키 sensitiveKeys 추가 / decision 14일 hardcap / 광범위 워딩 정정 / phase 정리. 옛 캐시 stale 차단.
 // v5 (2026-05-05 perf ultrathink): HTML 전략 network-first → stale-while-revalidate. 재방문 첫 페인트가 네트워크 RTT 안 기다림 (캐시 즉시) + 백그라운드 fetch → 다음 진입 부터 새 버전. version.txt 는 그대로 fresh.
 // v6 (2026-05-06 사용자 보고): 모바일 SW 가 /startlite 옛 broken HTML/이미지 캐시 stuck → cache name 올려서 옛 캐시 강제 invalidate.
-const CACHE_NAME = 'soragodong-v4-cache-v6';
+// v7 (2026-05-06 사용자 보고: PC OK / 모바일만 사진 X): jsDelivr → same-origin 회귀 + 모바일 SW 가 옛 catch-all rewrite 결과 (HTML 을 PNG 로 캐싱) stuck 가능성 → 또 한번 강제 invalidate.
+const CACHE_NAME = 'soragodong-v4-cache-v7';
 const PRECACHE_URLS = [
   './',
   './index.html',
