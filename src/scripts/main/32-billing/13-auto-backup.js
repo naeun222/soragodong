@@ -17,18 +17,12 @@ async function runAutoBackupIfNeeded() {
   const reason = verChanged ? `update_${APP_VERSION}` : 'weekly';
   try {
     // 기존 snapshots 로드
-    const resp = await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_AUTO_BACKUP_USER_ID}&select=data,id&limit=1`,
-      { headers: authHeaders() }
-    );
+    const { ok: _ok, rows } = await _backupRowFetch(V4_AUTO_BACKUP_USER_ID, 'data,id');
     let snapshots = [];
     let existingId = null;
-    if (resp.ok) {
-      const rows = await resp.json();
-      if (rows.length > 0 && rows[0].data && Array.isArray(rows[0].data.snapshots)) {
-        snapshots = rows[0].data.snapshots;
-        existingId = rows[0].id;
-      }
+    if (_ok && rows.length > 0 && rows[0].data && Array.isArray(rows[0].data.snapshots)) {
+      snapshots = rows[0].data.snapshots;
+      existingId = rows[0].id;
     }
     // 사용자 보고 2026-05-01 (profile 날아간 케이스): wipe detection — 직전 snapshot 비해 핵심 데이터 손실 시 skip.
     // crash 후폭풍·partial state·실수 reset 등으로 cloud 빈 데이터 들어가고 옛 snapshot 까지 rotate-out 되던 risk 차단.
@@ -76,19 +70,7 @@ async function runAutoBackupIfNeeded() {
     if (snapshots.length > AUTO_BACKUP_KEEP_N) {
       snapshots = snapshots.slice(-AUTO_BACKUP_KEEP_N);
     }
-    const body = JSON.stringify({ data: { snapshots } });
-    if (existingId) {
-      await fetch(
-        `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_AUTO_BACKUP_USER_ID}`,
-        { method: 'PATCH', headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body }
-      );
-    } else {
-      await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
-        method: 'POST',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_AUTO_BACKUP_USER_ID, data: { snapshots } })
-      });
-    }
+    await _backupRowUpsert(V4_AUTO_BACKUP_USER_ID, { snapshots }, existingId);
     state.preferences._lastAutoBackupAt = now;
     state.preferences._lastAutoBackupVersion = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';
     saveState();

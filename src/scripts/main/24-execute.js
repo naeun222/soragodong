@@ -456,12 +456,8 @@ JSON 출력:
 - 비슷한 거 묶지 마. 별개 항목.
 - JSON만 출력. 다른 설명 X.`;
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: _anthropicHeaders(),
-      // 사용자 요청 2026-04-30: 뇌 풀기 = 분류·정리 task → sonnet 4.6.
-      body: JSON.stringify({ _endpoint: 'brain_dump', model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
-    });
+    // 사용자 요청 2026-04-30: 뇌 풀기 = 분류·정리 task → sonnet 4.6.
+    const resp = await callAnthropic({ _endpoint: 'brain_dump', model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] });
     if (!resp.ok) throw new Error('API ' + resp.status);
     const data = await resp.json();
     const text = data.content[0].text;

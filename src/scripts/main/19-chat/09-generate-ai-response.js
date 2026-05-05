@@ -61,18 +61,14 @@ async function generateAIResponse(modelOverride) {
       };
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: _anthropicHeaders(),
-      body: JSON.stringify({
-        _endpoint: 'chat_main',
-        // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet
-        model: modelOverride || ((state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6'),
-        max_tokens: 2000,
-        stream: true,
-        system: systemBlocks,
-        messages
-      })
+    const response = await callAnthropic({
+      _endpoint: 'chat_main',
+      // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet
+      model: modelOverride || ((state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6'),
+      max_tokens: 2000,
+      stream: true,
+      system: systemBlocks,
+      messages
     });
 
     if (!response.ok) {

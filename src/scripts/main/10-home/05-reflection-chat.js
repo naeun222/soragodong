@@ -81,14 +81,11 @@ async function summarizeForArchive(messageContent, userQuestion) {
   if (!_canAI()) return null;
   if (!messageContent || typeof messageContent !== 'string') return null;
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: _anthropicHeaders(),
-      body: JSON.stringify({
-        _endpoint: 'archive_summary',
-        model: 'claude-haiku-4-5',
-        max_tokens: 180,
-        messages: [{ role: 'user', content: `아래 대화에서 사용자가 얻은 "지혜(깨달음)"를 뽑아.
+    const resp = await callAnthropic({
+      _endpoint: 'archive_summary',
+      model: 'claude-haiku-4-5',
+      max_tokens: 180,
+      messages: [{ role: 'user', content: `아래 대화에서 사용자가 얻은 "지혜(깨달음)"를 뽑아.
 
 [출력 — 정확히 두 줄]
 1줄: 헤드라인 (5-14자, 명사형 또는 짧은 명제)
@@ -115,7 +112,6 @@ ${userQuestion ? `[사용자 질문/맥락]\n${userQuestion.slice(0, 400)}\n` : 
 ${messageContent.slice(0, 1500)}
 
 두 줄만 출력.` }]
-      })
     });
     if (!resp.ok) return null;
     const data = await resp.json();

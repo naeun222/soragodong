@@ -4,12 +4,8 @@ async function recoverFromBackup() {
   showToast('🔍 백업 검색 중...');
   // 1. Supabase backup row 시도
   try {
-    const resp = await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_BACKUP_USER_ID}&select=data,updated_at&limit=1`,
-      { headers: authHeaders() }
-    );
-    if (resp.ok) {
-      const rows = await resp.json();
+    const { ok, rows } = await _backupRowFetch(V4_BACKUP_USER_ID, 'data,updated_at');
+    if (ok) {
       if (rows.length > 0 && rows[0].data) {
         const meta = rows[0].data._backup_meta || {};
         const when = meta.createdAt ? new Date(meta.createdAt).toLocaleString('ko-KR') : '시점 X';
@@ -86,10 +82,7 @@ async function resetAll() {
   if (authUserId) {
     for (let attempt = 0; attempt < 3 && !cloudDeleted; attempt++) {
       try {
-        const resp = await fetch(
-          `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
-          { method: 'DELETE', headers: authHeaders() }
-        );
+        const resp = await _backupRowDelete(V4_USER_ID);
         if (resp.ok || resp.status === 204 || resp.status === 200) {
           cloudDeleted = true;
         } else {
@@ -101,13 +94,9 @@ async function resetAll() {
     }
     // verify — 정말 삭제됐는지 확인
     try {
-      const verifyResp = await fetch(
-        `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=id&limit=1`,
-        { headers: authHeaders() }
-      );
-      if (verifyResp.ok) {
-        const rows = await verifyResp.json();
-        if (rows.length > 0) {
+      const { ok: _vok, rows: _vrows } = await _backupRowFetch(V4_USER_ID, 'id');
+      if (_vok) {
+        if (_vrows.length > 0) {
           alert('⚠ cloud row가 여전히 존재함. 네트워크 오류 가능성 — 다시 시도해줘.');
           return;  // reload 안 함 — 사용자 재시도 가능
         }

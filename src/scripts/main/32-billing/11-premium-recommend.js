@@ -61,16 +61,21 @@ function showBudgetExceededModal(reason, opts) {
   const isDaily = !!opts.isDaily || (typeof reason === 'string' && /일일|daily|24h/i.test(reason));
   (async () => {
     let billing = null;
-    try {
-      const _origFetch = window._anthropicOrigFetch || window.fetch;
-      const resp = await _origFetch('/api/usage', {
-        headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        billing = data.billing || null;
-      }
-    } catch (e) { /* ignore */ }
+    // 사용자 명시 2026-05-05: refreshBillingStatus 가 30s 안에 채운 캐시 재사용 — 별도 /api/usage 호출 절감.
+    if (window._billingCache && window._billingCacheTs && (Date.now() - window._billingCacheTs) < 30000) {
+      billing = window._billingCache;
+    } else {
+      try {
+        const _origFetch = window._anthropicOrigFetch || window.fetch;
+        const resp = await _origFetch('/api/usage', {
+          headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          billing = data.billing || null;
+        }
+      } catch (e) { /* ignore */ }
+    }
     const plan = billing?.subscription_plan || null;
     const subActive = !!billing?.subscription_active;
     const overlay = document.createElement('div');

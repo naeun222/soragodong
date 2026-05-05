@@ -36,11 +36,7 @@ ${task.description ? `설명: ${task.description}` : ''}
 한 줄만 출력. 따옴표 X.`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: _anthropicHeaders(),
-      body: JSON.stringify({ _endpoint: 'shell_story', model: 'claude-haiku-4-5', max_tokens: 80, messages: [{ role: 'user', content: prompt }] })
-    });
+    const resp = await callAnthropic({ _endpoint: 'shell_story', model: 'claude-haiku-4-5', max_tokens: 80, messages: [{ role: 'user', content: prompt }] });
     if (!resp.ok) return;
     const data = await resp.json();
     let text = data.content[0].text.trim().replace(/^["'`]+|["'`]+$/g, '');

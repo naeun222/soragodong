@@ -55,18 +55,14 @@ async function completeMission(missionId) {
   // Request AI brief encouragement
   if (_canAI()) {
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: _anthropicHeaders(),
-        body: JSON.stringify({
-          _endpoint: 'shell_story',
-          model: 'claude-haiku-4-5',
-          max_tokens: 150,
-          messages: [{
-            role: 'user',
-            content: `사용자가 "${mission.title}" 미션을 완료했어. 친구처럼 짧게 (1-2문장) 축하 메시지를 써줘. 과정이나 노력에 초점. 판에 적용된 "잘했어!" 금지. 구체적으로 진심으로. 반말. 이모지 최대 1개.`
-          }]
-        })
+      const resp = await callAnthropic({
+        _endpoint: 'shell_story',
+        model: 'claude-haiku-4-5',
+        max_tokens: 150,
+        messages: [{
+          role: 'user',
+          content: `사용자가 "${mission.title}" 미션을 완료했어. 친구처럼 짧게 (1-2문장) 축하 메시지를 써줘. 과정이나 노력에 초점. 판에 적용된 "잘했어!" 금지. 구체적으로 진심으로. 반말. 이모지 최대 1개.`
+        }]
       });
       const data = await resp.json();
       mission.completionNote = data.content[0].text.trim();

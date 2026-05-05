@@ -27,16 +27,13 @@ async function addMemoArchive() {
   let tags = [];
   if (_canAI()) {
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: _anthropicHeaders(),
-        body: JSON.stringify({
-          _endpoint: 'memo',
-          model: 'claude-haiku-4-5',
-          max_tokens: 100,
-          messages: [{
-            role: 'user',
-            content: `메모: "${trimmed}"
+      const resp = await callAnthropic({
+        _endpoint: 'memo',
+        model: 'claude-haiku-4-5',
+        max_tokens: 100,
+        messages: [{
+          role: 'user',
+          content: `메모: "${trimmed}"
 
 이 메모의 핵심을 짧은 해시태그 3-5개로 뽑아.
 각 태그 2-6자 한국어 명사형. 예: 결정, 환경, ADHD, 새벽, 회피, 자기효능감.
@@ -53,8 +50,7 @@ async function addMemoArchive() {
 - 5개 초과 X
 
 JSON만 출력.`
-          }]
-        })
+        }]
       });
       const data = await resp.json();
       let raw = data.content[0].text.trim();

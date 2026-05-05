@@ -37,18 +37,12 @@ async function manualCloudBackup(opts) {
   showToast('☁️ 클라우드 백업 중...');
   try {
     // 기존 snapshots 로드
-    const resp = await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_MANUAL_BACKUP_USER_ID}&select=data,id&limit=1`,
-      { headers: authHeaders() }
-    );
+    const { ok: _ok, rows } = await _backupRowFetch(V4_MANUAL_BACKUP_USER_ID, 'data,id');
     let snapshots = [];
     let existingId = null;
-    if (resp.ok) {
-      const rows = await resp.json();
-      if (rows.length > 0 && rows[0].data && Array.isArray(rows[0].data.snapshots)) {
-        snapshots = rows[0].data.snapshots;
-        existingId = rows[0].id;
-      }
+    if (_ok && rows.length > 0 && rows[0].data && Array.isArray(rows[0].data.snapshots)) {
+      snapshots = rows[0].data.snapshots;
+      existingId = rows[0].id;
     }
     // 사용자 명시 2026-05-01: 100+ 사용자 대비 효율 — 변경 없는 state 면 backup skip.
     // 1) same-hash skip — 직전 snapshot 의 _stateHash 와 동일하면 의미 없는 backup. 옛 snapshot rotate-out 도 차단.
@@ -81,19 +75,7 @@ async function manualCloudBackup(opts) {
     if (snapshots.length > MANUAL_BACKUP_KEEP_N) {
       snapshots = snapshots.slice(-MANUAL_BACKUP_KEEP_N);
     }
-    const body = JSON.stringify({ data: { snapshots } });
-    if (existingId) {
-      await fetch(
-        `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_MANUAL_BACKUP_USER_ID}`,
-        { method: 'PATCH', headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body }
-      );
-    } else {
-      await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
-        method: 'POST',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_MANUAL_BACKUP_USER_ID, data: { snapshots } })
-      });
-    }
+    await _backupRowUpsert(V4_MANUAL_BACKUP_USER_ID, { snapshots }, existingId);
     showToast(`☁️ 백업됨 (${snapshots.length}/${MANUAL_BACKUP_KEEP_N})`);
   } catch (e) {
     console.error('manualCloudBackup:', e);

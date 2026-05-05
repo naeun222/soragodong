@@ -351,16 +351,13 @@ async function _completeMutationToMission(strategyId, opt, chatHistory) {
           ? `[옛 가닥] ${oldSnapshot.title}\n[옛 문제] ${oldSnapshot.problemContext}\n[옛 심리학] ${oldSnapshot.psychConcept}\n[옛 행동] ${oldSnapshot.actionStrategy}`
           : `[옛 가닥] ${refreshed.title}`;
         const recentMsgs = (chatHistory || []).slice(-6).map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n');
-        const aiResp = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: _anthropicHeaders(),
-          body: JSON.stringify({
-            _endpoint: 'mutation',
-            // 사용자 요청 2026-04-30: 4 필드 정리 task → sonnet 4.6 적합.
-            model: 'claude-sonnet-4-6', max_tokens: 500,
-            messages: [{
-              role: 'user',
-              content: `진화한 새 가닥 — 카드 4 필드 정리.
+        const aiResp = await callAnthropic({
+          _endpoint: 'mutation',
+          // 사용자 요청 2026-04-30: 4 필드 정리 task → sonnet 4.6 적합.
+          model: 'claude-sonnet-4-6', max_tokens: 500,
+          messages: [{
+            role: 'user',
+            content: `진화한 새 가닥 — 카드 4 필드 정리.
 
 ${oldCtx}
 [새 차원] ${layerName} (${opt.layer})
@@ -378,8 +375,7 @@ CONCEPT: <심리학 개념 + 1줄 설명, ${layerName} 차원 메커니즘, 30-8
 ACTION: <전략적 행동, 50-120자, 구체적 무엇을 어떻게>
 
 [금지] 마크다운, JSON, 따옴표, "실패" 단어, 추상적 다짐.`
-            }]
-          })
+          }]
         });
         const aiData = await aiResp.json();
         const raw = (aiData.content?.[0]?.text || '').trim();

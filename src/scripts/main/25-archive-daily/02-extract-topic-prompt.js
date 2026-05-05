@@ -138,11 +138,7 @@ async function extractPreviousChapterTopics(passedMessages) {
 
   const prompt = _buildExtractTopicPrompt(prevChapterMsgs);
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: _anthropicHeaders(),
-      body: JSON.stringify({ _endpoint: 'extract_topic', model: 'claude-haiku-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
-    });
+    const resp = await callAnthropic({ _endpoint: 'extract_topic', model: 'claude-haiku-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] });
     if (!resp.ok) return;
     const data = await resp.json();
     let text = data.content[0].text.trim();

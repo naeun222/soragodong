@@ -3,12 +3,8 @@ async function restoreFromCloudBackup() {
   if (!authUserId) { showToast('로그인 필요'); return; }
   showToast('🔍 클라우드 백업 검색 중...');
   try {
-    const resp = await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_MANUAL_BACKUP_USER_ID}&select=data&limit=1`,
-      { headers: authHeaders() }
-    );
-    if (!resp.ok) { showToast('백업 검색 실패'); return; }
-    const rows = await resp.json();
+    const { ok, rows } = await _backupRowFetch(V4_MANUAL_BACKUP_USER_ID, 'data');
+    if (!ok) { showToast('백업 검색 실패'); return; }
     if (rows.length === 0 || !rows[0].data || !Array.isArray(rows[0].data.snapshots) || rows[0].data.snapshots.length === 0) {
       showToast('클라우드 백업 없음 — "☁️ 클라우드 백업"으로 먼저 넣어둬');
       return;
@@ -50,12 +46,8 @@ async function showAutoBackupList() {
   if (!authUserId) { showToast('로그인 필요'); return; }
   showToast('🔍 자동 백업 검색 중...');
   try {
-    const resp = await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_AUTO_BACKUP_USER_ID}&select=data&limit=1`,
-      { headers: authHeaders() }
-    );
-    if (!resp.ok) { showToast('백업 검색 실패'); return; }
-    const rows = await resp.json();
+    const { ok, rows } = await _backupRowFetch(V4_AUTO_BACKUP_USER_ID, 'data');
+    if (!ok) { showToast('백업 검색 실패'); return; }
     if (rows.length === 0 || !rows[0].data || !Array.isArray(rows[0].data.snapshots) || rows[0].data.snapshots.length === 0) {
       showToast('자동 백업 없음 (주 1회 + 업데이트 시 자동 생성됨)');
       return;

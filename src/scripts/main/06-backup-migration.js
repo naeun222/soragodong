@@ -7,28 +7,16 @@ async function createV3Backup() {
   if (!authUserId) return;
   try {
     // Check if backup already exists
-    const checkResp = await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.backup_v5_pre_v6&select=id&limit=1`,
-      { headers: authHeaders() }
-    );
-    const existing = await checkResp.json();
+    const { rows: existing } = await _backupRowFetch('backup_v5_pre_v6', 'id');
     if (existing.length > 0) {
       console.log('V3 backup already exists');
       return;
     }
-    
+
     // Create backup
     // 사용자 명시 2026-05-01 (agent audit): _serializeReplacer 적용 — typing/_seed/_dnaMatched 등 transient 키 strip.
     const backup = JSON.parse(JSON.stringify(state, _serializeReplacer));
-    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        auth_user_id: authUserId,
-        user_id: 'backup_v5_pre_v6',
-        data: { ...backup, _backup_meta: { type: 'v5_pre_v6', createdAt: new Date().toISOString() } }
-      })
-    });
+    await _backupRowUpsert('backup_v5_pre_v6', { ...backup, _backup_meta: { type: 'v5_pre_v6', createdAt: new Date().toISOString() } }, null);
     console.log('✅ V5 backup created before V6 migration');
   } catch (e) {
     console.error('Backup error:', e);
@@ -86,26 +74,14 @@ async function createV6Backup(dataToBackup) {
   // 인자 없으면 전역 state 사용 (loadFromCloud 자동 마이그레이션 흐름).
   if (!authUserId) return;
   try {
-    const checkResp = await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_BACKUP_USER_ID}&select=id&limit=1`,
-      { headers: authHeaders() }
-    );
-    const existing = await checkResp.json();
+    const { rows: existing } = await _backupRowFetch(V4_BACKUP_USER_ID, 'id');
     if (existing.length > 0) {
       console.log('V6 backup already exists');
       return;
     }
     const source = dataToBackup || state;
     const backup = JSON.parse(JSON.stringify(source));
-    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        auth_user_id: authUserId,
-        user_id: V4_BACKUP_USER_ID,
-        data: { ...backup, _backup_meta: { type: 'v6_pre_v7', createdAt: new Date().toISOString() } }
-      })
-    });
+    await _backupRowUpsert(V4_BACKUP_USER_ID, { ...backup, _backup_meta: { type: 'v6_pre_v7', createdAt: new Date().toISOString() } }, null);
     console.log('✅ V6 backup created before V7 migration');
   } catch (e) {
     console.error('V6 backup error:', e);

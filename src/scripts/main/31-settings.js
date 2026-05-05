@@ -94,7 +94,26 @@ function _fmtTokens(n) {
 }
 
 // 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
+// 사용자 명시 2026-05-05: in-flight dedup + 30s TTL cache. manual=true (🔄 button) 만 항상 fresh fetch.
+// burst 호출 (init 시점 _acceptWelcomeGift / silent welcome / banner trigger 동시) 한 번에 묶음.
+let _billingFetchInflight = null;
+const _BILLING_CACHE_TTL_MS = 30 * 1000;
 async function refreshBillingStatus(manual) {
+  if (!manual) {
+    if (_billingFetchInflight) return _billingFetchInflight;
+    if (window._billingCache && window._billingCacheTs && (Date.now() - window._billingCacheTs) < _BILLING_CACHE_TTL_MS) {
+      // 캐시 fresh — DOM 은 이전 호출이 이미 render 함. fetch skip.
+      return;
+    }
+  }
+  const p = _doRefreshBillingStatus(manual);
+  if (!manual) {
+    _billingFetchInflight = p;
+    p.finally(() => { _billingFetchInflight = null; });
+  }
+  return p;
+}
+async function _doRefreshBillingStatus(manual) {
   // 사용자 명시 2026-04-30: manual=true 일 때만 토스트 (button click). 자동 호출 (settings 진입 등) = 토스트 X.
   const status = document.getElementById('billingStatus');
   if (!status) return;
@@ -165,7 +184,9 @@ async function refreshBillingStatus(manual) {
     }
     status.innerHTML = html;
     // 사용자 명시 2026-05-01: billing cache — legacy bonus 배너 사전 필터용 (refreshBillingStatus 가 여러 곳에서 자동 호출).
+    // 사용자 명시 2026-05-05: _billingCacheTs stamp — 30s TTL + showBudgetExceededModal 캐시 재사용용.
     window._billingCache = billing;
+    window._billingCacheTs = Date.now();
     // 캐시 채워졌으니 배너 큐 재시도 (legacy bonus 자격 즉시 반영)
     if (typeof _renderNextBanner === 'function') { try { _renderNextBanner(); } catch {} }
     // 사용자 명시 2026-05-02 ultrathink: 환영 토큰 만료 7일 전 알림 + 인박스 badge 갱신.

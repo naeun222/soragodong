@@ -154,34 +154,15 @@ async function _saveTesterBackupToCloud(stateData) {
   const sanitized = JSON.parse(JSON.stringify(stateData));
   if (sanitized.preferences) sanitized.preferences.testerMode = false;
   // 기존 backup row 있는지 체크
-  const checkResp = await fetch(
-    `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_TESTER_BACKUP_USER_ID}&select=id&limit=1`,
-    { headers: authHeaders() }
-  );
-  const existing = await checkResp.json();
-  const body = JSON.stringify({ data: { ...sanitized, _backup_meta: { type: 'tester_mode', createdAt: new Date().toISOString() } } });
-  if (existing.length > 0) {
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_TESTER_BACKUP_USER_ID}`,
-      { method: 'PATCH', headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body }
-    );
-  } else {
-    await fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ auth_user_id: authUserId, user_id: V4_TESTER_BACKUP_USER_ID, data: { ...sanitized, _backup_meta: { type: 'tester_mode', createdAt: new Date().toISOString() } } })
-    });
-  }
+  const { rows: existing } = await _backupRowFetch(V4_TESTER_BACKUP_USER_ID, 'id');
+  const dataPayload = { ...sanitized, _backup_meta: { type: 'tester_mode', createdAt: new Date().toISOString() } };
+  await _backupRowUpsert(V4_TESTER_BACKUP_USER_ID, dataPayload, existing[0]?.id || null);
 }
 async function _loadTesterBackupFromCloud() {
   if (!authUserId) return null;
   try {
-    const resp = await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_TESTER_BACKUP_USER_ID}&select=data&limit=1`,
-      { headers: authHeaders() }
-    );
-    if (!resp.ok) return null;
-    const rows = await resp.json();
+    const { ok, rows } = await _backupRowFetch(V4_TESTER_BACKUP_USER_ID, 'data');
+    if (!ok) return null;
     if (rows.length === 0) return null;
     const data = rows[0].data;
     if (data && data._backup_meta) delete data._backup_meta;
@@ -191,10 +172,7 @@ async function _loadTesterBackupFromCloud() {
 async function _deleteTesterBackupFromCloud() {
   if (!authUserId) return;
   try {
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_TESTER_BACKUP_USER_ID}`,
-      { method: 'DELETE', headers: authHeaders() }
-    );
+    await _backupRowDelete(V4_TESTER_BACKUP_USER_ID);
   } catch (e) { console.warn('delete tester backup:', e); }
 }
 // 알림 기능 미적용됨 — 진짜 백그라운드 푸시는 Phase C (백엔드 + Service Worker) 적용된 후 활성.

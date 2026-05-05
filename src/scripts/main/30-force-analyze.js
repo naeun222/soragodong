@@ -84,11 +84,7 @@ JSON으로 출력:
 - 강한 자기상 / 감정 / 관계 / 갈등 / 변곡점 신호만.
 - confidence < 0.6 항목 출력 X (강한 신호 아니면 등록 X).`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: _anthropicHeaders(),
-      body: JSON.stringify({ _endpoint: 'analyze_4stage', model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] })
-    });
+    const response = await callAnthropic({ _endpoint: 'analyze_4stage', model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] });
     if (!response.ok) {
       if (response.status === 429) throw new Error('API 429 — Rate limit. 1-2분 후 다시.');
       if (response.status === 413) throw new Error('데이터 너무 큼. testerMode OFF 후 다시.');

@@ -105,16 +105,12 @@ async function sbSendMessage() {
 JSON 안 적용하면 4단 정리 X — 더 묻기. 사용자가 충분히 답한 후에만 JSON.`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: _anthropicHeaders(),
-      body: JSON.stringify({
-        _endpoint: 'analyze_4stage',
-        model: 'claude-sonnet-4-6',
-        max_tokens: 800,
-        system: sys,
-        messages: recentMsgs
-      })
+    const resp = await callAnthropic({
+      _endpoint: 'analyze_4stage',
+      model: 'claude-sonnet-4-6',
+      max_tokens: 800,
+      system: sys,
+      messages: recentMsgs
     });
     const data = await resp.json();
     let aiText = data.content?.[0]?.text?.trim() || '(응답 비어있어)';

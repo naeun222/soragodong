@@ -385,15 +385,11 @@ function _processDiarySummaryResult(text) {
 
 async function summarizeDayForEntry(date, messages, entry) {
   const promptSpec = _buildDiarySummaryPrompt(date, messages, entry);
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: _anthropicHeaders(),
-    body: JSON.stringify({
-      _endpoint: promptSpec._endpoint,
-      model: promptSpec.model,
-      max_tokens: promptSpec.max_tokens,
-      messages: [{ role: 'user', content: promptSpec.userMessage }]
-    })
+  const resp = await callAnthropic({
+    _endpoint: promptSpec._endpoint,
+    model: promptSpec.model,
+    max_tokens: promptSpec.max_tokens,
+    messages: [{ role: 'user', content: promptSpec.userMessage }]
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();

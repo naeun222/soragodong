@@ -52,17 +52,13 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
       const ctx = isMutation
         ? `[전략] ${card.title}\n[새 차원] ${layerName}: ${mutationOpt.action}\n[사용자 상황] ${situation}`
         : `[전략] ${card.title}\n[전략 행동] ${card.actionStrategy || ''}\n[심리학] ${card.psychConcept || ''}\n[사용자 상황] ${situation}`;
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: _anthropicHeaders(),
-        body: JSON.stringify({
-          _endpoint: 'decision_step',
-          model: 'claude-sonnet-4-6', max_tokens: 120,
-          messages: [{
-            role: 'user',
-            content: `${ctx}\n\n[네 일]\n위 상황·전략에 맞춰 '오늘의 제안' 1개 — 오늘 바로 할 수 있는 구체 행동.\n한 줄 (max 40자). 동사로 시작. 환경 셋업 우선. 의지 부담 ↓.\n\n[출력]\n제안만 한 줄. 다른 거 X. 마크다운 X.`
-          }]
-        })
+      const resp = await callAnthropic({
+        _endpoint: 'decision_step',
+        model: 'claude-sonnet-4-6', max_tokens: 120,
+        messages: [{
+          role: 'user',
+          content: `${ctx}\n\n[네 일]\n위 상황·전략에 맞춰 '오늘의 제안' 1개 — 오늘 바로 할 수 있는 구체 행동.\n한 줄 (max 40자). 동사로 시작. 환경 셋업 우선. 의지 부담 ↓.\n\n[출력]\n제안만 한 줄. 다른 거 X. 마크다운 X.`
+        }]
       });
       const data = await resp.json();
       proposal = (data.content?.[0]?.text || '').trim().replace(/^["「'`]|["」'`]$/g, '').split('\n')[0].trim();

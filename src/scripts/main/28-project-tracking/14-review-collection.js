@@ -207,14 +207,10 @@ async function generateReviewArchiveMetaSummary(reviewId) {
   if (arrs.length === 0) { showToast('이 기간 깨달음 X'); return; }
   const archiveText = arrs.map(a => `[${a.type}] ${a.headline || ''}: ${a.body || a.userMemo || ''}`).join('\n');
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: _anthropicHeaders(),
-      body: JSON.stringify({
-        _endpoint: 'review_insight',
-        model: 'claude-haiku-4-5', max_tokens: 250,
-        messages: [{ role: 'user', content: `이 기간 사용자 깨달음 ${arrs.length}개. 핵심 통찰 한 단락 (3-4문장)으로 요약. 친구 톤, 외재화 ("X 패턴이 작동" / "너 X적이야" X), 따뜻하게.\n\n${archiveText.slice(0, 3500)}\n\n[출력 — 한 단락만, 마크다운/인용부호 X]` }]
-      })
+    const resp = await callAnthropic({
+      _endpoint: 'review_insight',
+      model: 'claude-haiku-4-5', max_tokens: 250,
+      messages: [{ role: 'user', content: `이 기간 사용자 깨달음 ${arrs.length}개. 핵심 통찰 한 단락 (3-4문장)으로 요약. 친구 톤, 외재화 ("X 패턴이 작동" / "너 X적이야" X), 따뜻하게.\n\n${archiveText.slice(0, 3500)}\n\n[출력 — 한 단락만, 마크다운/인용부호 X]` }]
     });
     const data = await resp.json();
     const text = data.content?.[0]?.text?.trim() || '';

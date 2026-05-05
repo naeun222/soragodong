@@ -484,3 +484,44 @@ async function loadFromCloud() {
   }
 }
 
+// 사용자 명시 2026-05-05: backup row HTTP 헬퍼 — auth_user_id + user_id 으로 단일 row 다루는 패턴 통합.
+// 06-backup-migration / 13-auto-backup / 14-manual-backup / 15-manual-restore / 16-migration-backup-recovery / 20-update-misc 6 파일 11+ 곳에서 반복되던 fetch URL/header boilerplate 제거.
+// saveToCloudNow (06-backup-migration.js 의 메인 cloud sync) 는 의도적으로 안 묶음 — 중심부 흐름 + _handleCloudSyncResponse / _serializeReplacer 등 호출부 nuance 보존.
+
+// GET — 단일 row 조회. selectFields = 'id' | 'data' | 'data,id' | 'data,updated_at' 등.
+// 응답 객체와 rows 배열 둘 다 반환 — 호출부가 resp.ok / rows.length 으로 분기 가능.
+async function _backupRowFetch(userIdKey, selectFields) {
+  const sel = selectFields || 'data,id';
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${userIdKey}&select=${sel}&limit=1`,
+    { headers: authHeaders() }
+  );
+  if (!resp.ok) return { ok: false, rows: [], resp };
+  const rows = await resp.json();
+  return { ok: true, rows, resp };
+}
+
+// PATCH (existingId 있으면) 또는 POST. dataPayload 는 row 의 'data' JSONB 컬럼에 들어갈 값.
+async function _backupRowUpsert(userIdKey, dataPayload, existingId) {
+  const headers = { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+  if (existingId) {
+    return fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${userIdKey}`,
+      { method: 'PATCH', headers, body: JSON.stringify({ data: dataPayload }) }
+    );
+  }
+  return fetch(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ auth_user_id: authUserId, user_id: userIdKey, data: dataPayload })
+  });
+}
+
+// DELETE — 단일 row 삭제.
+async function _backupRowDelete(userIdKey) {
+  return fetch(
+    `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${userIdKey}`,
+    { method: 'DELETE', headers: authHeaders() }
+  );
+}
+

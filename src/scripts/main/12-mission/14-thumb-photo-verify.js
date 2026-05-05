@@ -29,22 +29,18 @@ async function verifyMissionPhoto(mission, photoBase64) {
     return { verified: true, reason: 'API 키가 없어서 통과.' };
   }
   const base64 = photoBase64.split(',')[1];
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: _anthropicHeaders(),
-    body: JSON.stringify({
-      _endpoint: 'mission_verify',
-      // 사용자 요청 2026-04-30: 미션 사진 검증 = 단순 vision 분류 → haiku 4.5 (재시도 옵션 있어 안전).
-      model: 'claude-haiku-4-5',
-      max_tokens: 200,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
-          { type: 'text', text: `사용자가 "${mission.title}" 미션을 완료했다고 인증샷을 올렸어. 사진이 미션과 합리적으로 일치하는지 판단해줘.\n\n미션 설명: ${mission.description || '(없음)'}\n\n응답: JSON만 출력. 다른 설명 X.\n{ "verified": true 또는 false, "reason": "한 문장. 친근한 반말. 통과면 격려, 실패면 부드럽게." }\n\n판단 기준: 너무 엄격하지 X. 모호하면 통과. 명백히 무관하거나 빈 화면일 때만 거절. 안티-수치심 톤 — '검증' X '축하/안내'.` }
-        ]
-      }]
-    })
+  const resp = await callAnthropic({
+    _endpoint: 'mission_verify',
+    // 사용자 요청 2026-04-30: 미션 사진 검증 = 단순 vision 분류 → haiku 4.5 (재시도 옵션 있어 안전).
+    model: 'claude-haiku-4-5',
+    max_tokens: 200,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+        { type: 'text', text: `사용자가 "${mission.title}" 미션을 완료했다고 인증샷을 올렸어. 사진이 미션과 합리적으로 일치하는지 판단해줘.\n\n미션 설명: ${mission.description || '(없음)'}\n\n응답: JSON만 출력. 다른 설명 X.\n{ "verified": true 또는 false, "reason": "한 문장. 친근한 반말. 통과면 격려, 실패면 부드럽게." }\n\n판단 기준: 너무 엄격하지 X. 모호하면 통과. 명백히 무관하거나 빈 화면일 때만 거절. 안티-수치심 톤 — '검증' X '축하/안내'.` }
+      ]
+    }]
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
