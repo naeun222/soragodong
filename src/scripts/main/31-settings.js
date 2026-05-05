@@ -287,7 +287,10 @@ async function requestRefund(paymentId, amountKrw, label) {
       loadPayments();
       if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true);
     } else {
-      alert('환불 실패: ' + (data.error || resp.status));
+      let extra = '';
+      if (data.caller_user_id) extra += '\n\ncaller: ' + data.caller_user_id;
+      if (data.row_user_id_hint) extra += '\nrow:    ' + data.row_user_id_hint;
+      alert('환불 실패: ' + (data.error || resp.status) + extra);
     }
   } catch (e) {
     alert('통신 오류: ' + (e?.message || e));

@@ -92,7 +92,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     if (!Array.isArray(rows) || rows.length === 0) {
       // user_id 매칭 실패 또는 row 자체가 없음 — 어느 쪽인지 분기.
       const anyResp = await fetch(
-        `${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${payment_id}&select=id&limit=1`,
+        `${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${payment_id}&select=id,user_id&limit=1`,
         {
           headers: {
             'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
@@ -102,7 +102,15 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
       );
       const anyRows: any[] = await anyResp.json().catch(() => []);
       if (Array.isArray(anyRows) && anyRows.length > 0) {
-        return jsonResponse({ error: '본인 결제가 아니야 — 다른 계정으로 로그인했거나 ID 불일치.', code: 'NOT_OWN' }, 403);
+        // 사용자 보고 2026-05-06: row 의 user_id hint 응답에 포함 → 사용자가 즉시 본인 user_id 와 비교 가능 (admin 다중 로그인 방식 진단).
+        const rowUid = anyRows[0].user_id;
+        const rowUidHint = rowUid ? String(rowUid).slice(0, 8) + '…' + String(rowUid).slice(-4) : '(null)';
+        return jsonResponse({
+          error: '본인 결제가 아니야 — 다른 계정으로 로그인했거나 ID 불일치.',
+          code: 'NOT_OWN',
+          caller_user_id: user.id,
+          row_user_id_hint: rowUidHint
+        }, 403);
       }
       return jsonResponse({ error: '결제를 찾을 수 없어 — payment_id 가 잘못됐을 수 있어.', code: 'NOT_FOUND' }, 404);
     }
