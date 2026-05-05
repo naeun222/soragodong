@@ -49,8 +49,13 @@ function _pickHeroPearl() {
   return pick;
 }
 
-function _heroCardHtml(pick) {
+function _heroCardHtml(pick, opts = {}) {
   if (!pick) return '';
+  // V4 (사용자 명시 2026-05-05): 홈 hero 클릭 → 도서관 진주 칩으로 이동.
+  //   도서관 hero 클릭 → 기존대로 진주 모달.
+  const cardOnClick = opts.linkTo === 'pearls-tab'
+    ? `showScreen('archive'); switchLibraryCat('pearls');`
+    : `openPearl('${pick.id}')`;
   const dateStr = pick.createdAt
     ? new Date(pick.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
     : '';
@@ -122,7 +127,7 @@ function _heroCardHtml(pick) {
   }
 
   return `
-    <div class="library-hero" onclick="openPearl('${pick.id}')">
+    <div class="library-hero" onclick="${cardOnClick}">
       <div class="hero-label">🌟 오늘의 너</div>
       ${body}
       <div class="hero-meta">${escapeHtml(pick.category || '')}${dateStr ? ` · ${dateStr}` : ''}</div>

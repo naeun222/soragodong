@@ -42,7 +42,8 @@ function renderMainAction() {
     // 진주 0개면 '첫 진주 추가' 유도 카드 (_heroEmptyHtml).
     if (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function' && typeof _heroEmptyHtml === 'function') {
       const pick = _pickHeroPearl();
-      mainCard = pick ? _heroCardHtml(pick) : _heroEmptyHtml();
+      // 사용자 명시 2026-05-05: 홈 hero 클릭 → 도서관 진주 칩 이동 (도서관 hero 는 기존대로 모달)
+      mainCard = pick ? _heroCardHtml(pick, { linkTo: 'pearls-tab' }) : _heroEmptyHtml();
     } else {
       mainCard = '';
     }

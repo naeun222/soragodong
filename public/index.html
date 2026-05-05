@@ -21550,7 +21550,8 @@ function renderMainAction() {
     // 진주 0개면 '첫 진주 추가' 유도 카드 (_heroEmptyHtml).
     if (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function' && typeof _heroEmptyHtml === 'function') {
       const pick = _pickHeroPearl();
-      mainCard = pick ? _heroCardHtml(pick) : _heroEmptyHtml();
+      // 사용자 명시 2026-05-05: 홈 hero 클릭 → 도서관 진주 칩 이동 (도서관 hero 는 기존대로 모달)
+      mainCard = pick ? _heroCardHtml(pick, { linkTo: 'pearls-tab' }) : _heroEmptyHtml();
     } else {
       mainCard = '';
     }
@@ -32488,8 +32489,13 @@ function _pickHeroPearl() {
   return pick;
 }
 
-function _heroCardHtml(pick) {
+function _heroCardHtml(pick, opts = {}) {
   if (!pick) return '';
+  // V4 (사용자 명시 2026-05-05): 홈 hero 클릭 → 도서관 진주 칩으로 이동.
+  //   도서관 hero 클릭 → 기존대로 진주 모달.
+  const cardOnClick = opts.linkTo === 'pearls-tab'
+    ? `showScreen('archive'); switchLibraryCat('pearls');`
+    : `openPearl('${pick.id}')`;
   const dateStr = pick.createdAt
     ? new Date(pick.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
     : '';
@@ -32561,7 +32567,7 @@ function _heroCardHtml(pick) {
   }
 
   return `
-    <div class="library-hero" onclick="openPearl('${pick.id}')">
+    <div class="library-hero" onclick="${cardOnClick}">
       <div class="hero-label">🌟 오늘의 너</div>
       ${body}
       <div class="hero-meta">${escapeHtml(pick.category || '')}${dateStr ? ` · ${dateStr}` : ''}</div>
@@ -46033,7 +46039,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.171-home-first-pearl-cta';
+const APP_VERSION = 'v4.0.172-home-hero-link-pearls-tab';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
