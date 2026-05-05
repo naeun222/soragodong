@@ -97,14 +97,35 @@ function renderTimeUsageCard() {
   </div>`;
 }
 
+// 사용자 명시 2026-05-05 Phase 1 (aha moment): 게스트가 자동 추출 결과 본 직후 가입 유도 배너.
+// 조건: state.isGuest && state._guestAutoExtracted && !state._guestNudgeDismissed.
+// 추출 끝나기 전엔 노출 X (premature). dismissable — 한 번 닫으면 같은 anonymous 세션 내 영구 dismiss.
+function _renderGuestNudgeBanner() {
+  if (!state.isGuest || !state._guestAutoExtracted || state._guestNudgeDismissed) return '';
+  return `<div class="guest-nudge-banner">
+    <button class="guest-nudge-close" onclick="_dismissGuestNudge()" aria-label="닫기">✕</button>
+    <div class="guest-nudge-icon">✦</div>
+    <div class="guest-nudge-title">너에 대해 알아낸 거 — 더 깊게 보고 싶어?</div>
+    <div class="guest-nudge-sub">이 분석 영구 저장 + 모든 기기에서 이어보기 + '더 알아보기' 4단 응답 풀 활용. <b style="color:var(--accent2);">첫 달 무료</b>.</div>
+    <button class="guest-nudge-cta" onclick="showGuestConversionModal({reason:'manual'})">가입하고 이어 쓰기 →</button>
+  </div>`;
+}
+
+function _dismissGuestNudge() {
+  state._guestNudgeDismissed = true;
+  saveState();
+  renderModel();
+}
+
 function renderModel() {
   const container = document.getElementById('modelContent');
   if (!container) return;  // FIX BUG-1: null guard
   // 시간 사용 패턴 카드는 데이터 없어도 placeholder 노출 (사용자 요청 2026-04-28)
   const timeCardHtml = renderTimeUsageCard();
+  const guestNudgeHtml = _renderGuestNudgeBanner();
   if (!state.traits.length && !state.patterns.length && !state.values.length) {
     // 사용자 요청 2026-04-29 (Q2): 모델 비어있어도 더 깊은 나 입력은 시작 가능 — Q2 섹션 같이 노출.
-    container.innerHTML = timeCardHtml + `<div class="model-empty">
+    container.innerHTML = guestNudgeHtml + timeCardHtml + `<div class="model-empty">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
       <div style="font-size:14px; color:var(--text); margin-bottom:10px;">아직은 백지야.</div>
       <div style="margin-bottom:14px;">그게 맞는 시작이야.<br>며칠 같이 지내자 ✦</div>
@@ -246,7 +267,8 @@ function renderModel() {
 
   // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 입력 UI — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
   html += _renderUserDeepProfileSection();
-  container.innerHTML = html;
+  // 게스트 가입 유도 배너 — 추출 결과 노출된 화면 최상단.
+  container.innerHTML = guestNudgeHtml + html;
 }
 
 // 사용자 요청 2026-04-29 (Q2): 더 깊은 나 — state.userDeepProfile 입력 섹션.

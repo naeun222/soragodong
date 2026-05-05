@@ -1059,6 +1059,70 @@
   .cf-confirmed:active { color: var(--text-dim) !important; }
   .model-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; line-height: 1.7; }
 
+  /* 사용자 명시 2026-05-05 Phase 1 (aha moment): 게스트 가입 유도 배너 — '나' 탭 상단. */
+  /* 너무 크지 않으면서 시선 끌게 — accent 그라디언트 + soft glow. */
+  .guest-nudge-banner {
+    position: relative;
+    background: linear-gradient(135deg, rgba(212, 167, 106, 0.14), rgba(168, 157, 200, 0.10));
+    border: 1px solid rgba(212, 167, 106, 0.45);
+    border-radius: 14px;
+    padding: 16px 18px 14px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 18px rgba(212, 167, 106, 0.10);
+  }
+  .guest-nudge-icon {
+    font-size: 20px;
+    color: var(--accent2);
+    margin-bottom: 6px;
+    line-height: 1;
+  }
+  .guest-nudge-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
+  .guest-nudge-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.65;
+    margin-bottom: 12px;
+  }
+  .guest-nudge-cta {
+    background: var(--accent);
+    color: #1a1826;
+    border: none;
+    border-radius: 9px;
+    padding: 9px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .guest-nudge-cta:hover { background: var(--accent2); transform: translateY(-1px); }
+  .guest-nudge-cta:active { transform: translateY(0); }
+  .guest-nudge-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-soft);
+    cursor: pointer;
+    font-size: 14px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+  }
+  .guest-nudge-close:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+
   .archive-item { background: var(--surface); border-radius: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid var(--border); }
   .archive-date { font-size: 10px; color: var(--accent); margin-bottom: 6px; letter-spacing: 0.06em; }
   .archive-source { font-size: 10px; color: var(--text-dim); padding: 2px 8px; background: var(--surface2); border-radius: 8px; margin-left: 6px; }
@@ -28104,14 +28168,35 @@ function renderTimeUsageCard() {
   </div>`;
 }
 
+// 사용자 명시 2026-05-05 Phase 1 (aha moment): 게스트가 자동 추출 결과 본 직후 가입 유도 배너.
+// 조건: state.isGuest && state._guestAutoExtracted && !state._guestNudgeDismissed.
+// 추출 끝나기 전엔 노출 X (premature). dismissable — 한 번 닫으면 같은 anonymous 세션 내 영구 dismiss.
+function _renderGuestNudgeBanner() {
+  if (!state.isGuest || !state._guestAutoExtracted || state._guestNudgeDismissed) return '';
+  return `<div class="guest-nudge-banner">
+    <button class="guest-nudge-close" onclick="_dismissGuestNudge()" aria-label="닫기">✕</button>
+    <div class="guest-nudge-icon">✦</div>
+    <div class="guest-nudge-title">너에 대해 알아낸 거 — 더 깊게 보고 싶어?</div>
+    <div class="guest-nudge-sub">이 분석 영구 저장 + 모든 기기에서 이어보기 + '더 알아보기' 4단 응답 풀 활용. <b style="color:var(--accent2);">첫 달 무료</b>.</div>
+    <button class="guest-nudge-cta" onclick="showGuestConversionModal({reason:'manual'})">가입하고 이어 쓰기 →</button>
+  </div>`;
+}
+
+function _dismissGuestNudge() {
+  state._guestNudgeDismissed = true;
+  saveState();
+  renderModel();
+}
+
 function renderModel() {
   const container = document.getElementById('modelContent');
   if (!container) return;  // FIX BUG-1: null guard
   // 시간 사용 패턴 카드는 데이터 없어도 placeholder 노출 (사용자 요청 2026-04-28)
   const timeCardHtml = renderTimeUsageCard();
+  const guestNudgeHtml = _renderGuestNudgeBanner();
   if (!state.traits.length && !state.patterns.length && !state.values.length) {
     // 사용자 요청 2026-04-29 (Q2): 모델 비어있어도 더 깊은 나 입력은 시작 가능 — Q2 섹션 같이 노출.
-    container.innerHTML = timeCardHtml + `<div class="model-empty">
+    container.innerHTML = guestNudgeHtml + timeCardHtml + `<div class="model-empty">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
       <div style="font-size:14px; color:var(--text); margin-bottom:10px;">아직은 백지야.</div>
       <div style="margin-bottom:14px;">그게 맞는 시작이야.<br>며칠 같이 지내자 ✦</div>
@@ -28253,7 +28338,8 @@ function renderModel() {
 
   // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 입력 UI — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
   html += _renderUserDeepProfileSection();
-  container.innerHTML = html;
+  // 게스트 가입 유도 배너 — 추출 결과 노출된 화면 최상단.
+  container.innerHTML = guestNudgeHtml + html;
 }
 
 // 사용자 요청 2026-04-29 (Q2): 더 깊은 나 — state.userDeepProfile 입력 섹션.

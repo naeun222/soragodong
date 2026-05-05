@@ -969,6 +969,70 @@
   .cf-confirmed:active { color: var(--text-dim) !important; }
   .model-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; line-height: 1.7; }
 
+  /* 사용자 명시 2026-05-05 Phase 1 (aha moment): 게스트 가입 유도 배너 — '나' 탭 상단. */
+  /* 너무 크지 않으면서 시선 끌게 — accent 그라디언트 + soft glow. */
+  .guest-nudge-banner {
+    position: relative;
+    background: linear-gradient(135deg, rgba(212, 167, 106, 0.14), rgba(168, 157, 200, 0.10));
+    border: 1px solid rgba(212, 167, 106, 0.45);
+    border-radius: 14px;
+    padding: 16px 18px 14px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 18px rgba(212, 167, 106, 0.10);
+  }
+  .guest-nudge-icon {
+    font-size: 20px;
+    color: var(--accent2);
+    margin-bottom: 6px;
+    line-height: 1;
+  }
+  .guest-nudge-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
+  .guest-nudge-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.65;
+    margin-bottom: 12px;
+  }
+  .guest-nudge-cta {
+    background: var(--accent);
+    color: #1a1826;
+    border: none;
+    border-radius: 9px;
+    padding: 9px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .guest-nudge-cta:hover { background: var(--accent2); transform: translateY(-1px); }
+  .guest-nudge-cta:active { transform: translateY(0); }
+  .guest-nudge-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-soft);
+    cursor: pointer;
+    font-size: 14px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+  }
+  .guest-nudge-close:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+
   .archive-item { background: var(--surface); border-radius: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid var(--border); }
   .archive-date { font-size: 10px; color: var(--accent); margin-bottom: 6px; letter-spacing: 0.06em; }
   .archive-source { font-size: 10px; color: var(--text-dim); padding: 2px 8px; background: var(--surface2); border-radius: 8px; margin-left: 6px; }
