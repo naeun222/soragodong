@@ -233,7 +233,7 @@ async function _v8RunIntakeAndInject() {
 // 코치마크 — 가벼운 자체 인프라 (ONBOARDING_STEPS 분리)
 // ─────────────────────────────────────────────────────────────
 
-function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', interactive = false, waitFor, onAdvance, branchButtons, allowNoTarget = false }) {
+function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', interactive = false, waitFor, onAdvance, branchButtons, allowNoTarget = false, noMask = false }) {
   return new Promise((resolve) => {
     const root = document.getElementById('v8TutorialRoot');
     if (!root) { resolve(); return; }
@@ -252,7 +252,8 @@ function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', in
     } else if (!interactive) {
       buttonsHtml = '<button class="v8-coach-ok" id="v8CoachOk">알겠어 ✦</button>';
     }
-    const showMask = !interactive || branchButtons;
+    // 사용자 보고 2026-05-06: 마스크가 다른 모달(전략카드 미리보기 등) 까지 어둡게 만드는 문제 — noMask 옵션으로 mask 끄기.
+    const showMask = (!interactive || branchButtons) && !noMask;
     root.innerHTML = `
       <div id="v8Coach" class="v8-coach ${interactive && !branchButtons ? 'v8-coach-interactive' : ''}">
         ${showMask ? '<div class="v8-coach-mask"></div>' : ''}

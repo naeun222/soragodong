@@ -25,17 +25,19 @@ async function runFirstStrategyTutorialV8(trigger, msgIdx) {
   state.tutorialShown.core2 = true;
   try { saveState(); } catch {}
   try {
-    // ── Step 1: 방금 저장된 전략 카드 미리보기 (자동 dismiss) ──
+    // ── Step 1: 방금 저장된 전략 카드 미리보기 — '계속 ✦' 사용자 클릭 까지 대기 ──
+    // 사용자 보고 2026-05-06: 자동 2.4s dismiss = 사용자 읽는 중 끊김. 페이스 보장.
     const lastCard = (Array.isArray(state.topicCards) && state.topicCards.length > 0)
       ? state.topicCards[state.topicCards.length - 1]
       : null;
     const cardOk = lastCard && lastCard.category === 'strategy';
     if (cardOk && typeof _showStrategyCardModal === 'function' && !document.querySelector('.strategy-card-preview-overlay')) {
       _showStrategyCardModal(lastCard);
-      await _v8Sleep(2400);
-      try { if (typeof _closeStrategyCardModal === 'function') _closeStrategyCardModal(); } catch {}
-      await _v8Sleep(280);
+      await _v8WaitForOverlayGone('.strategy-card-preview-overlay');
+      await _v8Sleep(220);
     }
+    // 추가 가드: 다른 시스템 모달 (confirm 등) 떠있으면 닫힐 때까지 대기 (max 8s).
+    await _v8WaitForOverlayGone('.confirm-modal-overlay, .modal.show, [role="dialog"]:not([aria-hidden="true"])', 8000);
 
     // ── Step 2: trigger='strategy' 한정 — ✦ 해볼게 클릭 안내 (interactive) ──
     if (trigger === 'strategy') {
@@ -125,6 +127,7 @@ function _c2CoachmarkGoHome() {
 function _c2CoachmarkMissionCard() {
   // 옛 mission_card_intro step — 미션 카드 가리키며 설명만 (클릭 강요 X).
   // 사용자 명시 2026-05-06: 시뮬 X — 진짜 미션이라 인증 흐름 강요는 부담. 안내만.
+  // 사용자 보고 2026-05-06: noMask — 다른 모달이 같이 떠도 어두워지지 않게 + 화면 가독성 보존.
   const target = '.mission-card.sora-call, .mission-btn.complete';
   const body = `
     <div class="v8-coach-title">⭐ 소라의 부름</div>
@@ -138,7 +141,8 @@ function _c2CoachmarkMissionCard() {
   return _v8ShowCoachmark({
     targetSelector: target,
     body,
-    position: 'top'
+    position: 'top',
+    noMask: true
   });
 }
 
@@ -155,6 +159,22 @@ function _c2CoachmarkClosing() {
   return _v8ShowCoachmark({
     body,
     allowNoTarget: true,
-    position: 'bottom'
+    position: 'bottom',
+    noMask: true
+  });
+}
+
+// 사용자 보고 2026-05-06: 다른 모달 닫힐 때까지 폴링. selector 매치하는 첫 element 가 사라지면 resolve.
+function _v8WaitForOverlayGone(selector, maxMs = 30000) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const tick = () => {
+      try {
+        if (!document.querySelector(selector)) { resolve(); return; }
+        if (Date.now() - start >= maxMs) { resolve(); return; }
+      } catch { resolve(); return; }
+      setTimeout(tick, 150);
+    };
+    tick();
   });
 }
