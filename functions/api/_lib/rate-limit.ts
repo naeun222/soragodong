@@ -19,8 +19,9 @@ export interface GuestEnv extends Env {
   TURNSTILE_SECRET_KEY?: string;
 }
 
-const PER_IP_DAILY_LIMIT = 10;
-const DEFAULT_GLOBAL_BUDGET_USD = 5;
+// 사용자 명시 2026-05-06 ultrathink (재): 10회 → 20회 (intake+분석+chat 8-10+retry 여유). 글로벌 $5 → $7 (16명 안전).
+const PER_IP_DAILY_LIMIT = 20;
+const DEFAULT_GLOBAL_BUDGET_USD = 7;
 const KV_TTL_SECONDS = 90000;  // 25h (24h + 1h margin)
 
 function _todayKey(): string {

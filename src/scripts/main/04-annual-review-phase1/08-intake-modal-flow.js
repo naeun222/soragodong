@@ -164,8 +164,8 @@ function _intakeStep3Html() {
   const chipPrefix = aiLong ? '✨' : ex.icon;
   // 라벨 — pending: "✨ 너 발화로 만들고 있어..." / aiLong 있음: "✨ 너 발화로 만들었어" / timedOut/일반: 기본 안내.
   let labelExtra = '';
-  if (aiLong) labelExtra = ' <span class="small" style="color:var(--accent);">✨ 너 발화로 만들었어</span>';
-  else if (_intakeState.aiLongPending) labelExtra = ' <span class="small" style="opacity:0.7;">(✨ 너 발화로 살 붙이는 중...)</span>';
+  if (aiLong) labelExtra = ' <span class="small" style="color:var(--accent);">✨ 네 말 바탕으로 AI 예시</span>';
+  else if (_intakeState.aiLongPending) labelExtra = ' <span class="small" style="opacity:0.7;">(✨ 네 말 바탕으로 AI 예시 생성 중...)</span>';
   // timedOut 면 라벨 추가 표시 X — 기본 안내 + INTAKE_EXAMPLES chip 만 조용히 노출.
   const micHtml = `<button id="intakeMicBtn3" class="intake-mic-btn" onclick="_intakeMicToggle(3)" aria-label="음성"><span id="intakeMicIcon3"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;display:block;"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></span></button>`;
   return `
@@ -257,7 +257,7 @@ function _intakeStep5Html() {
   if (_intakeState.analysisFailed) {
     const errMsg = _intakeState.analysisErrMsg || '';
     let userHint = '네트워크가 잠시 흔들렸을 수도 있어.';
-    if (/429|rate/i.test(errMsg)) userHint = '잠깐 너무 자주 시도했어. 30초 후 다시 해볼래?';
+    if (/429|rate|GUEST_LIMIT|GLOBAL_BUDGET/i.test(errMsg)) userHint = '오늘 게스트 한도 다 썼어. 20회. 가입하면 풀려.';
     else if (/403|turnstile/i.test(errMsg)) userHint = '봇 검증이 만료됐어. 페이지 새로고침 한 번 해줘.';
     else if (/cap|cost|초과|budget/i.test(errMsg)) userHint = '오늘 무료 사용량 cap 에 도달했어. 가입하면 풀려.';
     else if (/JSON|truncated|닫힘/i.test(errMsg)) userHint = 'AI 응답이 잘렸어. 한 번 더 시도하면 보통 됨.';
