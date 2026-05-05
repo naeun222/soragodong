@@ -11222,44 +11222,41 @@
           <div class="settings-hint" style="margin-bottom:10px;">
             <strong style="color:#e8c590;">⚠️ 테스터 모드 ON 후 사용</strong> — 변경 저장 X, OFF 시 원래 데이터 복원.
           </div>
+
+          <div class="settings-mini-label" style="margin-top:0;">🧪 테스터 환경</div>
           <button class="btn-secondary" id="testerModeToggleBtn" onclick="toggleTesterMode()">🧪 테스터 모드: OFF</button>
           <button class="btn-secondary" onclick="testSeedV4Data()">🌱 V4 시드 데이터</button>
-          <button class="btn-secondary" onclick="testStartTutorialFromStep()" title="특정 step부터 튜토리얼 시작">🎯 튜토리얼 step N부터</button>
-          <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
-          <button class="btn-secondary" onclick="forceAnalyze()" title="opus 4.7 사용 — 비쌈">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="cleanLegacySeedData()" title="잔존 시드 텍스트 강제 정리">🧹 잔존 시드 정리</button>
-          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 '한 달 무료' 안내 모달 미리보기 (backend grant 호출 X — ensureBillingRow 자동 활성화)">🐚 한 달 무료 모달 (미리보기)</button>
+          <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">🎯 강제 트리거</div>
+          <button class="btn-secondary" onclick="testStartTutorialFromStep()" title="특정 step 번호 입력 후 튜토리얼 시작">🎯 튜토리얼 step N부터</button>
+          <button class="btn-secondary" onclick="forceAnalyze()" title="Opus 4.7 사용 — 비쌈. 현재 데이터 즉시 통합 분석.">📊 강제 모델 분석 (비쌈)</button>
+          <button class="btn-secondary" onclick="testForceFullAnalysis()" title="forceAnalyze() 래퍼 — 흐름 검증용. 비용 동일.">📊 통합 분석 강제 (래퍼)</button>
+          <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>
+          <button class="btn-secondary" onclick="testForceQuarterlyReview()" title="분기 리뷰 즉시 생성 (실제 데이터 / Opus 호출).">🐚 분기 리뷰 강제 생성</button>
+          <button class="btn-secondary" onclick="testForceDiagnoses()" title="detectDiagnoses 가드 우회 → 진주 / 소라 / 숙고 / 돌연변이 / case 한 번에.">🔬 관찰 5종 즉시 detect</button>
+          <button class="btn-secondary" onclick="testForceDiscoverInsights()" title="5 entry 가드 우회 — 시드 fallback 도 함께 시도.">💡 인사이트 발견 강제</button>
+          <button class="btn-secondary" onclick="testForceStrategyFollowup()" title="전략 팔로업 풀 흐름 (잘됨 / 그저 그래 / 안 됨 / 포기 4 옵션).">🌱 전략 팔로업 강제</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">👁 미리보기</div>
+          <div class="settings-hint" style="margin-bottom:8px;">dismiss flag / backend grant / 일일 cap 안 건드림. 진짜 사용자 화면 그대로.</div>
+          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 '한 달 무료' 안내 모달 미리보기 (backend grant 호출 X — ensureBillingRow 자동 활성화)">🐚 한 달 무료 모달</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="devPreviewWeeklyReview()" title="신규 schema (chart / strengths / cycles / emotions / value_align / risk_signals / 자기 평가 / 공유 카드) 풀 미리보기 — 시드 데이터 사용, AI 호출 X">📅 주간 리뷰 미리보기</button>
-          <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>
-          <button class="btn-secondary" onclick="devForceYesterdayCard()" title="홈 화면의 '어제의 기록 볼래?' 카드 강제 표시 (seen flag reset). 어제 entry 없어도 표시).">🌙 어제 카드 표시</button>
+          <button class="btn-secondary" onclick="devForceYesterdayCard()" title="홈 화면의 '어제의 기록 볼래?' 카드 강제 표시 (seen flag reset). 어제 entry 없어도 표시.">🌙 어제 카드 표시</button>
           <button class="btn-secondary" onclick="devPreviewAttemptResult()" title="결과 체크 모달 — 미션 완료 후 attemptStatus 묻는 5 옵션 (해결됐어 / 그저 그래 / 안 통했어 / 못 시도 / 아직).">🔍 결과 체크 모달</button>
-          <button class="btn-secondary" onclick="adminResetBalance()" title="이전 누적 잔액 정정 (admin only). 0~$100 범위.">💰 잔액 정정 (admin)</button>
-
-          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 배너 미리보기 (실제 사용자 view)</div>
-          <div class="settings-hint" style="margin-bottom:8px;">dismiss flag / backend grant 안 건드림. 진짜 사용자 화면 그대로.</div>
           <button class="btn-secondary" onclick="devPreviewBanner('feedback')" title="모든 사용자 — '고동MOM에게 한 마디'">💌 고동MOM 배너</button>
           <button class="btn-secondary" onclick="devPreviewBanner('syncTip')" title="기존 사용자 — 클라우드 백업 헤더 알약 안내. 코어 끝낸 + entries > 3 한정">☁️ 클라우드 백업 안내 배너</button>
           <button class="btn-secondary" onclick="devClosePreviewBanner()" title="미리보기 닫기 (모든 배너)">✕ 미리보기 닫기</button>
+          <button class="btn-secondary" onclick="devPreviewCrisisCarousel()" title="자살예방법 §15-6 + 제조물책임 안전 의무 모달. 자살/자해 신호 감지 시 표시 (1393/1577/119). 일일 cap / log / 가드 무시 — 시각만.">🆘 위기 carousel</button>
+          <button class="btn-secondary" onclick="devPreviewPaymentInfoModal()" title="결제 사전 정보 입력 모달 (이름 + 휴대폰). 호출 즉시 paymentPhone / paymentFullName 캐시 클리어 → 모달 띄움. 결제는 호출 X.">💳 결제 사전 정보 모달</button>
+          <button class="btn-secondary" onclick="window.open('/preview/signup/', '_blank')" title="카카오 디벨로퍼 비즈앱 검수 신청용 — 회원가입 Step 1·2 + 환영 모달 한눈에.">📸 회원가입 화면 (검수용)</button>
 
-          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 위기 carousel 미리보기</div>
-          <div class="settings-hint" style="margin-bottom:8px;">자살예방법 §15-6 + 제조물책임 안전 의무 모달. 일일 cap / log / 가드 무시 — 시각만 확인.</div>
-          <button class="btn-secondary" onclick="devPreviewCrisisCarousel()" title="자살/자해 신호 감지 시 표시되는 강제 모달 (1393/1577/119)">🆘 위기 carousel 미리보기</button>
-
-          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 토스 송금</div>
-          <button class="btn-secondary" onclick="adminLoadPendingCharges()">📋 대기 중인 송금 list</button>
-          <div id="adminPendingList" style="margin-top:10px; font-size:11px;"></div>
-
-          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 사용자 피드백</div>
-          <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtnDev">📬 피드백 보기 / 답변</button>
-
-          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 사용량 분석</div>
-          <div class="settings-hint" style="margin-bottom:8px;">endpoint / model / 일자 / 사용자 별 비용 분포. 절감 우선순위 결정 도구.</div>
-          <button class="btn-secondary" onclick="openAdminUsageDashboard()">📊 사용량 분석 (admin)</button>
-
-          <div class="settings-mini-label" style="margin-top:14px;">관리자 — 검수 자료</div>
-          <div class="settings-hint" style="margin-bottom:8px;">카카오 디벨로퍼 비즈앱 검수 신청 시 회원가입 화면 캡처용 미리보기 (Step 1·2 + 환영 모달 한눈에).</div>
-          <button class="btn-secondary" onclick="window.open('/preview/signup/', '_blank')">📸 회원가입 화면 미리보기 (검수용)</button>
+          <div class="settings-mini-label" style="margin-top:14px;">🛠 Admin 전용</div>
+          <button class="btn-secondary" onclick="adminResetBalance()" title="이전 누적 잔액 정정. 0~$100 범위.">💰 잔액 정정</button>
+          <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtnDev" title="모든 사용자 피드백 inbox + 답변.">📬 피드백 보기 / 답변</button>
+          <button class="btn-secondary" onclick="openAdminUsageDashboard()" title="endpoint / model / 일자 / 사용자 별 비용 분포. 절감 우선순위 결정 도구.">📊 사용량 분석</button>
         </div>
       </details>
 
@@ -37693,23 +37690,6 @@ function triggerShortcut() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// 🧪 V3.11.x: 테스트 도구 — 시간 trigger 시뮬레이션
-// ═══════════════════════════════════════════════════════════════
-function testSkip4Hours() {
-  if (!state.chatMessages || state.chatMessages.length === 0) {
-    showToast('대화 메시지가 없어. 먼저 대화창에서 메시지 보내봐.');
-    return;
-  }
-  const lastMsg = state.chatMessages[state.chatMessages.length - 1];
-  // V4 사용자 명시 2026-05-01 ultrathink: 챕터 갭 = 5h+. 테스트는 6h 전으로 (마진).
-  const fakeTime = new Date(Date.now() - (6 * 60 * 60 * 1000 + 60000));
-  lastMsg.timestamp = fakeTime.toISOString();
-  saveState();
-  showToast('🧪 6시간 전으로. 대화창에서 새 메시지 → 챕터 분리 + archive 이송');
-}
-
-// V4-fix: 테스터 모드 V4 전체 시드 + 강제 trigger 함수들 (testerMode ON 시 안전)
 async function testSeedV4Data() {
   if (!state.preferences || !state.preferences.testerMode) {
     showToast('⚠️ 테스터 모드 ON 후 사용 — 사용자 데이터 보호');
@@ -45830,6 +45810,20 @@ function _collectPaymentInfoIfNeeded() {
       const el = document.getElementById(target);
       if (el) el.focus();
     }, 50);
+  });
+}
+
+// 사용자 명시 (개발자 도구): 결제 사전 정보 모달 미리보기. 캐시 비우고 다시 띄움 = 처음 결제 경험 재현.
+function devPreviewPaymentInfoModal() {
+  if (typeof _isAdmin === 'function' && !_isAdmin()) return;
+  state.preferences = state.preferences || {};
+  state.preferences.paymentPhone = null;
+  state.preferences.paymentFullName = null;
+  try { saveState(); } catch {}
+  _collectPaymentInfoIfNeeded().then((res) => {
+    if (typeof showToast === 'function') {
+      showToast(res ? `저장됨: ${res.fullName} / ${res.phoneNumber}` : '미리보기 취소');
+    }
   });
 }
 

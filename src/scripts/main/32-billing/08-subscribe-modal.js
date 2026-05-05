@@ -59,6 +59,20 @@ function _collectPaymentInfoIfNeeded() {
   });
 }
 
+// 사용자 명시 (개발자 도구): 결제 사전 정보 모달 미리보기. 캐시 비우고 다시 띄움 = 처음 결제 경험 재현.
+function devPreviewPaymentInfoModal() {
+  if (typeof _isAdmin === 'function' && !_isAdmin()) return;
+  state.preferences = state.preferences || {};
+  state.preferences.paymentPhone = null;
+  state.preferences.paymentFullName = null;
+  try { saveState(); } catch {}
+  _collectPaymentInfoIfNeeded().then((res) => {
+    if (typeof showToast === 'function') {
+      showToast(res ? `저장됨: ${res.fullName} / ${res.phoneNumber}` : '미리보기 취소');
+    }
+  });
+}
+
 async function openSubscribeModal() {
   if (document.getElementById('subscribeModalOverlay')) return;
   if (typeof refreshBillingStatus === 'function') {
