@@ -9,10 +9,9 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
     return null;
   }
   // 사용자 명시 2026-05-06: KG이니시스 V2 일반 결제 = customer.phoneNumber + fullName 필수.
-  const phoneNumber = (typeof _getPaymentPhoneNumber === 'function') ? _getPaymentPhoneNumber() : null;
-  if (!phoneNumber) return null;
-  const fullName = (typeof _getPaymentFullName === 'function') ? _getPaymentFullName() : null;
-  if (!fullName) return null;
+  const info = (typeof _collectPaymentInfoIfNeeded === 'function') ? await _collectPaymentInfoIfNeeded() : null;
+  if (!info) return null;
+  const { phoneNumber, fullName } = info;
   if (typeof window.PortOne === 'undefined') {
     try {
       await new Promise((resolve, reject) => {
