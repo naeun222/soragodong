@@ -129,7 +129,7 @@ function _buildPatternsSlideHTML(inRange) {
   const diags = (state.diagnoses || []).filter(d => inRange(d.detectedAt));
   if (diags.length === 0) {
     return `
-      <div class="stories-label">작동 중인 패턴</div>
+      <div class="stories-label">잘 안 풀릴 때</div>
       <div class="stories-title">이번 분기엔 큰 패턴 신호가 없었어</div>
       <div class="stories-body">평탄한 흐름. 그것도 안정.</div>
     `;
@@ -160,7 +160,7 @@ function _buildPatternsSlideHTML(inRange) {
     willpower_cap:{ gradient: 'linear-gradient(135deg, rgba(143,200,143,0.22), rgba(126,200,227,0.14))', border: 'rgba(143,200,143,0.5)', desc: '의지 자원 임계치. 환경 자동화 ↑.' }
   };
   return `
-    <div class="stories-label">작동 중인 패턴</div>
+    <div class="stories-label">잘 안 풀릴 때</div>
     <div class="stories-title" style="margin-bottom:18px;">네 안에서 작동 중</div>
     <div style="display:flex; flex-direction:column; gap:11px; max-width:300px;">
       ${topDiags.map(d => {

@@ -197,40 +197,43 @@ function renderModel() {
     html += '</div>';
   }
 
-  // 작동 중인 패턴 (가설) — 사용자 명시 2026-05-02 ultrathink: disclaimer 워딩 다듬기 + 데이터 부족 시 placeholder.
+  // 사용자 보고 2026-05-05: 이름 변경 (의료법 회피) + 기존 사용자한테도 항상 노출.
+  // 옛 '작동 중인 패턴' → '잘 안 풀릴 때' (위 '보이는 패턴' 단어 중복 회피, '진단' 의료 단어 회피).
+  // disclaimer 도 '의료 진단' → '의료 조언' 으로 워딩 정정.
   const visibleDiags = (state.diagnoses || []).filter(d => d.status === 'active' || d.status === 'shown');
   const diagLabels = {
     weak_tool: '🔧 도구 약함',
     wrong_layer: '📐 가지 안 맞음',
     value_clash: '⚖️ 가치 상충',
-    avoidance: '🌫 회피 패턴',
-    willpower_cap: '🪫 의지 임계치'
+    avoidance: '🌫 회피',
+    willpower_cap: '🪫 의지 임계'
   };
   if (visibleDiags.length > 0) {
     html += `<div class="model-section">
-      <div class="model-section-title">🔍 작동 중인 패턴 <span style="font-size:10px; color:var(--text-soft); font-weight:400; letter-spacing:0.04em;">(가설)</span></div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:6px; line-height:1.6;">네 데이터에서 보이는 가능성 — 시도 결과로 신뢰도 갱신돼.</div>
-      <div style="font-size:10.5px; color:var(--text-soft); margin-bottom:12px; line-height:1.55; padding:8px 10px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(255,255,255,0.08); border-radius:0 6px 6px 0;">⚠️ 의료 진단 아님 — 패턴 가설일 뿐, 의심되면 전문가 검진 권장.</div>
+      <div class="model-section-title">🔍 잘 안 풀릴 때 <span style="font-size:10px; color:var(--text-soft); font-weight:400; letter-spacing:0.04em;">(가설)</span></div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:6px; line-height:1.6;">시도가 막히는 결 — 결과 쌓이면 신뢰도 갱신돼.</div>
+      <div style="font-size:10.5px; color:var(--text-soft); margin-bottom:12px; line-height:1.55; padding:8px 10px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(255,255,255,0.08); border-radius:0 6px 6px 0;">⚠️ 의료 조언 아님 — 패턴 가설일 뿐, 마음이 힘들면 전문가 상담 권장.</div>
       ${visibleDiags.sort((a,b) => (b.confidence || 0) - (a.confidence || 0)).map(d => `
         <div class="model-item" style="border-left: 3px solid var(--purple); padding-left: 12px;">
           <div class="model-item-name">${diagLabels[d.type] || d.type}</div>
           <div class="model-item-desc" style="font-size:12px; line-height:1.6;">${escapeHtml(d.evidence || '')}</div>
           <div class="model-item-meta">
-            <span class="conf">신뢰도 ${Math.round((d.confidence || 0.5) * 100)}%</span>
+            <span class="conf">${Math.round((d.confidence || 0.5) * 100)}%</span>
             ${d.status === 'shown' ? '<span style="color:var(--text-soft);">대화에서 한 번 인용됨</span>' : '<span style="color:#8fc88f;">발견됨</span>'}
           </div>
         </div>
       `).join('')}
     </div>`;
   } else {
-    // 사용자 명시 2026-05-02 ultrathink: 데이터 부족 시 placeholder — "안 보임" 사용자 인지 수정.
+    // visibleDiags 없을 때 — strategy 유무 따라 분기 placeholder. 둘 다 항상 노출.
     const stratCount = (state.topicCards || []).filter(c => c.category === 'strategy').length;
-    if (stratCount === 0) {
-      html += `<div class="model-section">
-        <div class="model-section-title">🔍 작동 중인 패턴 <span style="font-size:10px; color:var(--text-soft); font-weight:400; letter-spacing:0.04em;">(가설)</span></div>
-        <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">아직 패턴 보일 만큼 데이터 X — 미션 시도 + 결과 체크 쌓이면 자동 적용돼 ✦</div>
-      </div>`;
-    }
+    const placeholderText = stratCount === 0
+      ? '아직 살펴볼 만큼 데이터 X — 미션 시도 + 결과 체크 쌓이면 자동 보여줄게 ✦'
+      : '지금은 막히는 결 X — 잘 흘러가는 중 ✨';
+    html += `<div class="model-section">
+      <div class="model-section-title">🔍 잘 안 풀릴 때 <span style="font-size:10px; color:var(--text-soft); font-weight:400; letter-spacing:0.04em;">(가설)</span></div>
+      <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">${placeholderText}</div>
+    </div>`;
   }
 
   // ── 3. 메타 — task 평균 (collapse default 닫힘) + 더 깊은 나 (collapse default 닫힘) ──
