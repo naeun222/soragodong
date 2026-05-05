@@ -14,7 +14,11 @@ import {
 import { verifyTurnstileToken } from './_lib/turnstile';
 
 // 사용자 명시 2026-05-05: 게스트 (anonymous) 사용자 max_tokens 강제 cap — 비용 폭주 방어.
+// chat = 800 (대화 응답). 분석 endpoint (extract_chapter / extract_topic) = 1500 (JSON 출력 길이 보장).
+// $0.30 cap 이 1차 방어선 — max_tokens 는 단일 응답 길이만 제한.
 const GUEST_MAX_TOKENS_CAP = 800;
+const GUEST_ANALYSIS_MAX_TOKENS = 1500;
+const GUEST_ANALYSIS_ENDPOINTS = new Set(['extract_chapter', 'extract_topic']);
 // 게스트는 Sonnet/Haiku 만 허용 — Opus 차단 (Premium 전용).
 const GUEST_ALLOWED_MODELS = new Set(['claude-sonnet-4-6', 'claude-haiku-4-5']);
 
@@ -229,7 +233,8 @@ async function _handleChatRequest(context: {
     return jsonResponse({ error: 'ANTHROPIC_API_KEY 미설정 (서버)' }, 500);
   }
 
-  // 게스트 강제 cap — model 화이트리스트 + max_tokens 800 강제. body 변조 후 Anthropic 으로.
+  // 게스트 강제 cap — model 화이트리스트 + endpoint-aware max_tokens.
+  // chat = 800 / extract_chapter / extract_topic = 1500 (JSON 출력 길이 보장).
   if (isGuest) {
     if (!GUEST_ALLOWED_MODELS.has(body.model)) {
       return jsonResponse({
@@ -237,8 +242,10 @@ async function _handleChatRequest(context: {
         code: 'GUEST_MODEL_BLOCKED'
       }, 403);
     }
-    const requested = Number(body.max_tokens) || GUEST_MAX_TOKENS_CAP;
-    body.max_tokens = Math.min(requested, GUEST_MAX_TOKENS_CAP);
+    const _ep = body._endpoint || 'chat';
+    const cap = GUEST_ANALYSIS_ENDPOINTS.has(_ep) ? GUEST_ANALYSIS_MAX_TOKENS : GUEST_MAX_TOKENS_CAP;
+    const requested = Number(body.max_tokens) || cap;
+    body.max_tokens = Math.min(requested, cap);
   }
 
   // 사용자 명시 2026-05-02 ultrathink: Opus 가드 (Premium 전용 + 일일 30번 한도, 메인 대화 한정).

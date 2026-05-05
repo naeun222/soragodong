@@ -121,6 +121,26 @@ async function sendChat() {
   // V4 사용자 명시 2026-05-01 ultrathink: 옛 chatPairsCount 즉시 추출 폐기.
   // 신규유저 빠른 추출 = _archiveCurrentChapter 안 chapterCompletedCount<3 분기로 이동.
   // 즉 챕터 마무리 (✓ 또는 5h+ 자동) 시점에 첫 3챕터만 즉시 API 호출.
+
+  // 사용자 명시 2026-05-05 ultrathink (Phase 1b): 게스트 = 3턴째 AI 답변 직후 자동 4단 분석 1회.
+  // 데모 가치 — 가입 유도 hook. 사용자가 '나' 탭에서 즉시 결과 확인 → 가입 동기 ↑.
+  // 1회만 (state._guestAutoExtracted 마커) — cap 보호.
+  if (state.isGuest && !state._guestAutoExtracted) {
+    const _aiCount = (state.chatMessages || []).filter(m => m.role === 'assistant').length;
+    if (_aiCount >= 3) {
+      state._guestAutoExtracted = true;
+      saveState();
+      // background — 결과 도착 시 토스트 + renderModel 자동 갱신.
+      if (typeof extractChapterCaseAnalysis === 'function') {
+        const _msgsSnapshot = state.chatMessages.slice();
+        extractChapterCaseAnalysis(_msgsSnapshot).then(() => {
+          if (typeof showToast === 'function') {
+            showToast('✦ 너에 대해 배운 걸 정리해봤어 — \'나\' 탭');
+          }
+        }).catch((e) => { console.warn('[guest auto-extract] fail:', e); });
+      }
+    }
+  }
 }
 
 // V3.13.x: 일기 템플릿 — 인지심리학 연구 기반 5종.
