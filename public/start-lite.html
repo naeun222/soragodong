@@ -307,8 +307,18 @@
   .proof {
     position: relative;
     z-index: 1;
-    padding: 60px 22px 40px;
+    padding: 0 22px 40px;
     text-align: center;
+  }
+
+  /* 사용자 명시 2026-05-06: 사진 섹션 스크롤 도착 시 viewport 풀로 채우고, 더 내리면 trust-block 등장 */
+  .proof-snap {
+    min-height: 100vh;
+    min-height: 100svh;  /* iOS 주소창 보정 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px 0 30px;
   }
   .proof-label {
     font-size: 11px;
@@ -937,18 +947,21 @@
 
 <!-- ============== PROOF ============== -->
 <section class="proof" id="proof">
-  <div class="container">
-    <div class="proof-label">한 번 봐봐</div>
-    <h2 class="proof-title">
-      <span class="accent">다 털어놔도</span> 걱정 없는,<br>
-      <span class="accent">너만 보는</span> AI.
-    </h2>
-    <p style="font-size:12px;color:var(--text-soft);letter-spacing:0.03em;margin-top:-18px;margin-bottom:20px;word-break:keep-all;">개발자가 실제로 쓰는 화면입니닷..</p>
-  </div>
 
-  <!-- 5 screen scroller — Drama → Curiosity → Beauty → Practice → Overview
-       (월간 리뷰 "창업자" hook → 너에 대해 → 진주 → 일기 → 도서관) -->
-  <div class="proof-screens">
+  <!-- 사용자 명시 2026-05-06: 사진 섹션 viewport 풀 -->
+  <div class="proof-snap">
+    <div class="container">
+      <div class="proof-label">한 번 봐봐</div>
+      <h2 class="proof-title">
+        <span class="accent">다 털어놔도</span> 걱정 없는,<br>
+        <span class="accent">너만 보는</span> AI.
+      </h2>
+      <p style="font-size:12px;color:var(--text-soft);letter-spacing:0.03em;margin-top:-18px;margin-bottom:20px;word-break:keep-all;">개발자가 실제로 쓰는 화면입니닷..</p>
+    </div>
+
+    <!-- 5 screen scroller — Drama → Curiosity → Beauty → Practice → Overview
+         (월간 리뷰 "창업자" hook → 너에 대해 → 진주 → 일기 → 도서관) -->
+    <div class="proof-screens">
     <div class="proof-screen">
       <img src="https://cdn.jsdelivr.net/gh/naeun222/soragodong@main/public/drive-real-samples/KakaoTalk_20260505_153438574.png" alt="월간 리뷰 — 이번 달의 너는 '창업자'" loading="lazy">
     </div>
@@ -964,7 +977,9 @@
     <div class="proof-screen">
       <img src="https://cdn.jsdelivr.net/gh/naeun222/soragodong@main/public/drive-real-samples/KakaoTalk_20260505_153551019.png" alt="인생 도서관 — 다섯 칸으로 정리된 너의 모든 것" loading="lazy">
     </div>
+    </div>
   </div>
+  <!-- /.proof-snap -->
 
   <div class="container">
 
