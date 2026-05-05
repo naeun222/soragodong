@@ -34,11 +34,11 @@ function _renderGuestConvModal(step, ctx) {
 
   if (step === 'email') {
     const reasonText = (ctx && ctx.reason === 'limit')
-      ? `<div style="background:rgba(212,167,106,0.08); border-left:3px solid var(--accent); padding:12px 14px; border-radius:0 8px 8px 0; margin-bottom:18px; font-size:13px; color:var(--text); line-height:1.7;">잠깐 — 게스트 한도 다 썼어.</div>`
+      ? `<div style="background:rgba(212,167,106,0.08); border-left:3px solid var(--accent); padding:12px 14px; border-radius:0 8px 8px 0; margin-bottom:18px; font-size:13px; color:var(--text); line-height:1.7;">잠깐 — 게스트 한도 다 썼어. 여기까지 한 대화는 이 기기에만 있어.</div>`
       : '';
     card.innerHTML = `
-      <div style="font-family:'Gowun Batang',serif; font-size:20px; color:var(--accent); margin-bottom:6px;">🔒 종단간 암호화 로그인</div>
-      <div style="font-size:12px; color:var(--text-soft); margin-bottom:18px; line-height:1.7;">데이터 안 잃어버리려면 + 아무도 못 보게 하려면 (개발자도 포함) 로그인 필요.</div>
+      <div style="font-family:'Gowun Batang',serif; font-size:20px; color:var(--accent); margin-bottom:6px;">🔒 안전하게 이어가자</div>
+      <div style="font-size:13px; color:var(--text); margin-bottom:18px; line-height:1.75;">너의 데이터, <b>너만 풀 수 있게</b> 종단간 암호화로 보관할게. 잃어버릴 일도 없고, 나도 못 봐.</div>
       ${reasonText}
       <input type="email" id="guestConvEmail" placeholder="이메일" style="width:100%; padding:12px 14px; border-radius:10px; background:var(--surface2); border:1px solid var(--border-strong); color:var(--text); font-size:14px; margin-bottom:14px;">
 

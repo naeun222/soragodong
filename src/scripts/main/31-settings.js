@@ -51,8 +51,11 @@ function renderBusinessInfo() {
   if (b.representative) rows.push(`<div><b>대표자</b>: ${escapeHtml(b.representative)}</div>`);
   if (b.business_no) rows.push(`<div><b>사업자등록번호</b>: ${escapeHtml(b.business_no)}</div>`);
   if (b.ecommerce_no) rows.push(`<div><b>통신판매업 신고번호</b>: ${escapeHtml(b.ecommerce_no)}</div>`);
-  // 사용자 명시 2026-04-30 ultrathink: 주소·연락처 = 자택이라 UI 노출 X. 의무 자리는 약관·환불·개인정보 마크다운.
-  rows.push(`<div><b>사업장 주소·연락처</b>: <a href="/terms" target="_blank" style="color:var(--accent);">약관</a> / <a href="/refund" target="_blank" style="color:var(--accent);">환불정책</a> / <a href="/privacy" target="_blank" style="color:var(--accent);">개인정보처리방침</a> 참고</div>`);
+  // 사용자 보고 2026-05-05 (PortOne 심사): 사업장 주소 UI 직접 노출 (전상법 §13 의무 + PG 심사 요구).
+  // 옛 정책 = 자택이라 X — 사업자등록 / 통신판매신고 시점에 이미 정부 DB 공개라 추가 노출 X.
+  if (b.address) rows.push(`<div><b>사업장 주소</b>: ${escapeHtml(b.address)}</div>`);
+  // 약관 / 환불정책 / 개인정보처리방침 — PG 심사 + 사용자 접근성 위해 직접 링크.
+  rows.push(`<div style="margin-top:6px; font-size:12px;"><a href="/terms" target="_blank" style="color:var(--accent);">이용약관</a> · <a href="/refund" target="_blank" style="color:var(--accent);">환불정책</a> · <a href="/privacy" target="_blank" style="color:var(--accent);">개인정보처리방침</a></div>`);
   if (b.email) rows.push(`<div><b>이메일</b>: <a href="mailto:${escapeHtml(b.email)}" style="color:var(--accent);">${escapeHtml(b.email)}</a></div>`);
   if (b.cpo) rows.push(`<div><b>개인정보 보호책임자</b>: ${escapeHtml(b.cpo)}</div>`);
   // 등록증 / 통판 미발급 시 안내
@@ -125,9 +128,9 @@ async function _doRefreshBillingStatus(manual) {
   if (state && state.isGuest) {
     status.innerHTML = `
       <div><b>🌱 게스트 모드</b></div>
-      <div style="font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.7;">데이터 이 기기에만. 브라우저 정리되면 사라져.</div>
-      <button class="btn-primary" onclick="showGuestConversionModal({reason:'manual'})" style="margin-top:12px; width:100%; padding:11px; font-size:13px; font-weight:600;">🔒 종단간 암호화 로그인</button>
-      <div style="font-size:10.5px; color:var(--text-soft); margin-top:8px; line-height:1.6;">데이터 안 잃어버리려면 + 아무도 못 보게 하려면 (개발자 포함).</div>
+      <div style="font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.7;">지금 데이터는 이 기기에만 있어 — 브라우저 정리되면 사라져.</div>
+      <button class="btn-primary" onclick="showGuestConversionModal({reason:'manual'})" style="margin-top:12px; width:100%; padding:11px; font-size:13px; font-weight:600;">🔒 로그인하고 안전하게 이어가기</button>
+      <div style="font-size:10.5px; color:var(--text-soft); margin-top:8px; line-height:1.6;">종단간 암호화로 영구 보관 — 너만 풀 수 있어 (나도 못 봐).</div>
     `;
     return;
   }
