@@ -112,9 +112,24 @@ async function generateAIResponse(modelOverride) {
         return;
       }
       // V3.13.x: 응답 본문에서 message 추출해서 사용자에게 보여주기
+      // V4 (사용자 보고 2026-05-05 ultrathink-3): err 가 HTML (Cloudflare 자체 5xx 페이지) 면 <title> 추출.
+      // backend Worker 가 응답 못 했을 때 Cloudflare 가 자체 페이지 반환 — 진짜 error code (520/522/524 등) 가 title 안에 있음.
       let detail = '';
-      if (parsed.error?.message) detail = ' — ' + parsed.error.message.slice(0, 150);
-      else if (err) detail = ' — ' + err.slice(0, 100);
+      if (parsed.error?.message) {
+        detail = ' — ' + parsed.error.message.slice(0, 200);
+      } else if (err) {
+        const _trimmed = err.trimStart();
+        if (_trimmed.startsWith('<!DOCTYPE') || _trimmed.startsWith('<html') || _trimmed.startsWith('<!--')) {
+          const _titleMatch = err.match(/<title>([^<]+)<\/title>/i);
+          if (_titleMatch) {
+            detail = ' — Cloudflare: ' + _titleMatch[1].trim().slice(0, 200);
+          } else {
+            detail = ' — (HTML 응답 — backend Worker 응답 X. Cloudflare Real-time Logs 확인.)';
+          }
+        } else {
+          detail = ' — ' + err.slice(0, 200);
+        }
+      }
       throw new Error('API ' + response.status + detail);
     }
 
