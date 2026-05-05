@@ -21,7 +21,12 @@ async function _fetchAnthropicWithRetry(
   } catch (e: any) {
     console.warn('[chat.ts] Anthropic upstream throw:', e?.message || e);
     await new Promise(r => setTimeout(r, 2000));
-    return fetch(ANTHROPIC_URL, init);
+    try {
+      return await fetch(ANTHROPIC_URL, init);
+    } catch (e2: any) {
+      console.error('[chat.ts] Anthropic upstream retry throw:', e2?.message || e2);
+      throw new Error('Anthropic upstream unreachable: ' + (e2?.message || String(e2)));
+    }
   }
   if (resp.status >= 500 && resp.status < 600) {
     const _statusForLog = resp.status;
@@ -128,7 +133,27 @@ async function chargeUsage(
 
 // 사용자 보고 2026-04-30: recordUsage / deductCost fire-and-forget → 응답 빠르면 Worker 종료로 drop.
 // context.waitUntil 로 워커 lifetime 연장. Cloudflare Pages Functions API.
+// 사용자 보고 2026-05-05 ultrathink-3: Cloudflare Error 1101 (Worker threw exception) — onRequestPost 안 catch 안 된 throw 가 cf 자체 5xx HTML 페이지로 반환됨.
+// fix = 함수 전체 try/catch wrap. throw 시 controlled 500 + detail (진짜 throw msg) JSON 으로 반환 → 클라이언트 토스트 detail 에 진짜 원인 노출.
 export async function onRequestPost(context: {
+  request: Request;
+  env: Env;
+  waitUntil: (promise: Promise<any>) => void;
+}): Promise<Response> {
+  try {
+    return await _handleChatRequest(context);
+  } catch (e: any) {
+    const _msg = e?.message || String(e);
+    const _stack = e?.stack ? String(e.stack).slice(0, 800) : '';
+    console.error('[chat.ts] uncaught throw:', _stack || _msg);
+    return jsonResponse({
+      error: '백엔드 throw: ' + _msg,
+      stack: _stack || undefined
+    }, 500);
+  }
+}
+
+async function _handleChatRequest(context: {
   request: Request;
   env: Env;
   waitUntil: (promise: Promise<any>) => void;

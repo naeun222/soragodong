@@ -319,6 +319,15 @@ async function generateAIResponse(modelOverride) {
       const _looksLikeBareCode = !_detail || /^\d{3}$/.test(_detail);
       const _detailLine = _looksLikeBareCode ? '' : `\n\n${_detail}`;
       userMsg = `⚠️ AI 서버 일시 과부하${_status} — 자동 재시도 후에도 실패. 1-2분 후 다시 보내기.${_detailLine}`;
+      // 사용자 명시 2026-05-05: 5xx 자동 개발자 보고 (1h dedupe — 같은 signature 1시간 안 1번만).
+      if (typeof reportError === 'function') {
+        let _sig = 'chat-5xx';
+        if (_statusMatch) _sig += `-${_statusMatch[1]}`;
+        const _cfMatch = m.match(/Cloudflare:\s*([^|<\n]+)/i);
+        if (_cfMatch) _sig += `|cf=${_cfMatch[1].trim().slice(0, 80)}`;
+        else _sig += `|${_detail.slice(0, 80)}`;
+        reportError({ signature: _sig, detail: m, stack: err.stack });
+      }
     } else {
       userMsg = '연결이 안 됐어 😅\n(' + (m || '알 수 없는 오류') + ')\n\n다시 보내기 버튼을 눌러봐.';
     }
