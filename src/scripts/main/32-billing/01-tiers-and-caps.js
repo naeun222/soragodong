@@ -13,8 +13,9 @@ const TIER_PLANS_CLIENT = {
   early_light:  { krw: 0,     cap_usd: 4,    cap_krw: 5600,  label: '처음 한 달 무료', tagline: '얼리 플랜', emoji: '🐚',
     description: '신규 가입자 자동 활성화 — 30일 자유롭게. 자동 결제 X. 만료 후 원하면 직접 light/premium 구독.', auto_grant_first_month: true },
   // 사용자 명시 2026-05-05 ultrathink (Phase 0): 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
-  guest:        { krw: 0,     cap_usd: 0.20, cap_krw: 280,   label: '게스트',        tagline: '한 번 써보기', emoji: '🌱',
-    description: '계정 없이 ~10턴 무료. 데이터는 이 기기에만. 가입하면 첫 달 무료 + 모든 분석 풀.', is_guest: true }
+  // cap_usd 0.30 = ~15턴 (max_tokens 800 강제 cap + 캐시 히트 가정). 자동 4단 분석 1회 비용 + 후킹용 여유 포함.
+  guest:        { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',        tagline: '한 번 써보기', emoji: '🌱',
+    description: '계정 없이 ~15턴 무료. 데이터는 이 기기에만. 가입하면 첫 달 무료 + 모든 분석 풀.', is_guest: true }
 };
 // 사용자 명시 2026-05-02 ultrathink: light_pack 제거 — Premium 전용. Light/얼리는 Premium 전환 또는 다음 달 대기.
 // V4 (사용자 명시 2026-05-04 ultrathink — v2 갱신): 추가팩 재설계 — 작은 단위 + 두 tier 다 가능. *24h 못 기다리는 사용자* trigger.

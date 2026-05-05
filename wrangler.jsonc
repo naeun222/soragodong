@@ -10,7 +10,7 @@
   // 비-secret env: vars (이 파일에 평문 OK).
   // secret env (TURNSTILE_SECRET_KEY 등): `npx wrangler pages secret put TURNSTILE_SECRET_KEY` 또는 Dashboard.
   "vars": {
-    "GUEST_DAILY_BUDGET_USD": "2.00"
+    "GUEST_DAILY_BUDGET_USD": "5.00"
   },
   // KV namespace: 게스트 IP rate limit + 글로벌 일일 budget 카운터 저장.
   // 생성: 2026-05-05 `npx wrangler kv namespace create GUEST_KV` (+ --preview).

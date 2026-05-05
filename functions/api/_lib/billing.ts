@@ -35,7 +35,7 @@ export const TIER_PLANS: Record<'light' | 'premium' | 'early_light' | 'guest', {
   light:        { krw: 9900,  cap_usd: 5,    label: 'Light' },
   premium:      { krw: 25000, cap_usd: 13,   label: 'Premium' },
   early_light:  { krw: 0,     cap_usd: 4,    label: '처음 한 달 무료 (얼리)', auto_grant_first_month: true },
-  guest:        { krw: 0,     cap_usd: 0.20, label: '게스트', is_guest: true }
+  guest:        { krw: 0,     cap_usd: 0.30, label: '게스트', is_guest: true }
 };
 export type TierKey = keyof typeof TIER_PLANS;
 
