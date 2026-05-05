@@ -1830,6 +1830,40 @@
   .login-guest-btn:active { transform: scale(0.985); }
   .login-guest-btn:disabled { opacity: 0.6; cursor: wait; }
 
+  /* 사용자 명시 2026-05-06: 단순 게스트 진입 — 카드 X, 버튼 한 줄 + 작은 hint. */
+  .login-guest-simple {
+    text-align: center;
+    margin-bottom: 4px;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: loginCardFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+  }
+  .login-guest-btn-simple {
+    width: 100%;
+    padding: 14px 18px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: background 0.18s, border-color 0.18s, transform 0.1s;
+  }
+  .login-guest-btn-simple:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(212,167,106,0.40);
+  }
+  .login-guest-btn-simple:active { transform: scale(0.985); }
+  .login-guest-btn-simple:disabled { opacity: 0.6; cursor: wait; }
+  .login-guest-hint {
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
   /* 4 PIPA 동의 — compact 디자인. 전체동의 master + 4 sub rows. */
   .login-consents {
     margin-top: 14px;
@@ -10136,11 +10170,10 @@
     <!-- 사용자 명시 2026-05-06: 게스트 카드 위로 (처음 진입자 hook), 로그인 카드 아래 + '첫 달 무료' 제거. -->
     <div class="login-form" id="loginStep1">
 
-      <!-- ── 1. Guest card (top) ── -->
-      <div class="login-choice-card login-choice-secondary">
-        <div class="login-choice-title-2">🌱 처음이라면 한 번 둘러봐도 돼</div>
-        <div class="login-choice-sub-2">데이터는 이 기기에만 — 나중에 로그인하면 그대로 이어가.</div>
-        <button id="guestEntryBtn" class="login-guest-btn" onclick="enterGuestMode()">둘러보기 →</button>
+      <!-- ── 1. Guest entry (top, simple) — 사용자 명시 2026-05-06: 카드 X, 버튼 한 줄. ── -->
+      <div class="login-guest-simple">
+        <button id="guestEntryBtn" class="login-guest-btn-simple" onclick="enterGuestMode()">🌱 그냥 해보기</button>
+        <div class="login-guest-hint">이 기기에만 저장돼</div>
       </div>
 
       <!-- ── divider ── -->
@@ -13544,7 +13577,7 @@ async function enterGuestMode() {
       alert('지금 둘러보기를 시작할 수 없어. 잠시 후 다시 시도하거나 로그인해줘.' + detail);
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '둘러보기 →';
+        btn.textContent = '🌱 그냥 해보기';
       }
       return;
     }
@@ -13555,7 +13588,7 @@ async function enterGuestMode() {
     alert('네트워크 오류 — 잠시 후 다시');
     if (btn) {
       btn.disabled = false;
-      btn.textContent = '둘러보기 →';
+      btn.textContent = '🌱 그냥 해보기';
     }
   }
 }

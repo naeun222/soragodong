@@ -22,7 +22,7 @@ async function enterGuestMode() {
       alert('지금 둘러보기를 시작할 수 없어. 잠시 후 다시 시도하거나 로그인해줘.' + detail);
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '둘러보기 →';
+        btn.textContent = '🌱 그냥 해보기';
       }
       return;
     }
@@ -33,7 +33,7 @@ async function enterGuestMode() {
     alert('네트워크 오류 — 잠시 후 다시');
     if (btn) {
       btn.disabled = false;
-      btn.textContent = '둘러보기 →';
+      btn.textContent = '🌱 그냥 해보기';
     }
   }
 }

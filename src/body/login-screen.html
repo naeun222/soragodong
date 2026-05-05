@@ -43,11 +43,10 @@
     <!-- 사용자 명시 2026-05-06: 게스트 카드 위로 (처음 진입자 hook), 로그인 카드 아래 + '첫 달 무료' 제거. -->
     <div class="login-form" id="loginStep1">
 
-      <!-- ── 1. Guest card (top) ── -->
-      <div class="login-choice-card login-choice-secondary">
-        <div class="login-choice-title-2">🌱 처음이라면 한 번 둘러봐도 돼</div>
-        <div class="login-choice-sub-2">데이터는 이 기기에만 — 나중에 로그인하면 그대로 이어가.</div>
-        <button id="guestEntryBtn" class="login-guest-btn" onclick="enterGuestMode()">둘러보기 →</button>
+      <!-- ── 1. Guest entry (top, simple) — 사용자 명시 2026-05-06: 카드 X, 버튼 한 줄. ── -->
+      <div class="login-guest-simple">
+        <button id="guestEntryBtn" class="login-guest-btn-simple" onclick="enterGuestMode()">🌱 그냥 해보기</button>
+        <div class="login-guest-hint">이 기기에만 저장돼</div>
       </div>
 
       <!-- ── divider ── -->
