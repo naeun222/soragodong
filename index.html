@@ -44287,13 +44287,13 @@ function saveSettings() {
   if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
 }
 
-// 사용자 명시 2026-05-01: token 수 컴팩트 표기 (16,121 → 16k).
-function _fmtTokens(n) {
-  n = Number(n) || 0;
-  if (n < 1000) return String(n);
-  if (n < 10000) return (n / 1000).toFixed(1) + 'k';
-  if (n < 1_000_000) return Math.round(n / 1000) + 'k';
-  return (n / 1_000_000).toFixed(1) + 'M';
+// 사용자 명시 2026-05-05: 토큰/달러 raw 수치 폐기 — 구독제 무드에 맞춰 상태 라벨 4단계로 추상화.
+// Why: 4자리 소수점 달러 + token 수 노출은 "정해진 금액으로 마음껏" 이라는 구독제 핵심 감각을 깬다.
+function _quotaStateLabel(pct) {
+  if (pct < 50) return '이번 달 여유 충분 ✅';
+  if (pct < 80) return '이번 달 적당히 사용 중';
+  if (pct < 95) return '이번 달 거의 다 썼어';
+  return '이번 달 한도 임박 — 잠깐만';
 }
 
 // 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
@@ -44344,7 +44344,6 @@ async function _doRefreshBillingStatus(manual) {
     }
     const data = await resp.json();
     const billing = data.billing || {};
-    const monthly = data.monthly || { tokens: 0, cost_usd: 0 };
     const subActive = !!billing.subscription_active;
     const planKey = billing.subscription_plan;
     const planMeta = (planKey && typeof TIER_PLANS_CLIENT !== 'undefined' && TIER_PLANS_CLIENT[planKey]) ? TIER_PLANS_CLIENT[planKey] : null;
@@ -44353,17 +44352,18 @@ async function _doRefreshBillingStatus(manual) {
     const balanceKrw = Math.round(balance * 1400);
     const quotaUsd = Number(billing.monthly_quota_usd || 0);
     const usedUsd = Number(billing.monthly_token_used || 0) / 1_000_000;
-    const remainingQuotaUsd = Math.max(0, quotaUsd - usedUsd);
-    const monthCostKrw = Math.round(monthly.cost_usd * 1400);
     let html = '';
     // 사용자 명시 2026-04-30 ultrathink: tier-aware 표시 — 구독 상태 / 한도 / 사용량 / 잔여 credit (overage pack 등)
+    // 사용자 명시 2026-05-05: raw 수치 ($/토큰) 폐기 — 진행 bar + 상태 라벨로 추상화. 80%+ 일 때만 Premium CTA.
     if (subActive && planMeta) {
       const usedPct = quotaUsd > 0 ? Math.min(100, Math.round((usedUsd / quotaUsd) * 100)) : 0;
-      const remainingKrw = Math.round(remainingQuotaUsd * 1400);
+      const isNearCap = usedPct >= 80;
       html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${subExpires}까지</span></div>`;
-      html += `<div style="margin-top:6px;"><b>이번 cycle 한도</b>: $${usedUsd.toFixed(4)} / $${quotaUsd.toFixed(2)} (${usedPct}% 사용 — 잔여 ~${remainingKrw.toLocaleString()}원)</div>`;
-      // 한도 진행 bar
-      html += `<div style="margin-top:4px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${usedPct < 80 ? 'var(--accent)' : '#e89090'}; transition:width 0.3s;"></div></div>`;
+      html += `<div style="margin-top:10px; font-size:13px;">${_quotaStateLabel(usedPct)}</div>`;
+      html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
+      if (isNearCap && planKey !== 'premium') {
+        html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">🌊 Premium 으로 늘리기</button>`;
+      }
     } else {
       // 사용자 명시 2026-05-05: 처음 한 달 무료 만료 후 = 미가입 분기. Premium 결제 = 개발자 후원 명시.
       html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 한 달 무료 만료. 계속 쓰려면 Light/Premium</span></div>`;
@@ -44371,7 +44371,6 @@ async function _doRefreshBillingStatus(manual) {
     if (balance > 0) {
       html += `<div style="margin-top:6px;"><b>잔여 credit</b>: $${balance.toFixed(4)} (~${balanceKrw.toLocaleString()}원)</div>`;
     }
-    html += `<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;"><b>이번 달 사용</b>: ${_fmtTokens(monthly.tokens)} tokens / $${monthly.cost_usd.toFixed(4)} (~${monthCostKrw.toLocaleString()}원)</div>`;
     // 사용자 명시 2026-05-05: 처음 한 달 무료 (얼리 플랜) 만료 표시 — 100만 토큰 표기 폐기.
     if (subActive && planKey === 'early_light' && subExpires) {
       const expiresAt = new Date(billing.subscription_expires_at);
