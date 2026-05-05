@@ -117,10 +117,7 @@ async function openSubscribeModal() {
   overlay.style.zIndex = '10000';
   overlay.innerHTML = `
     <div class="input-modal" style="max-width:420px; max-height:92vh; overflow-y:auto; padding:24px;">
-      <div style="font-size:17px; font-weight:700; color:var(--text); margin-bottom:6px;">📅 구독</div>
-      <div style="font-size:12px; color:var(--text-dim); line-height:1.6; margin-bottom:14px;">
-        체험 끝나도 계속 쓸 수 있게. 자동 갱신 X — 직접 결제.
-      </div>
+      <div style="font-size:17px; font-weight:700; color:var(--text); margin-bottom:14px;">📅 구독</div>
       ${minorWarning}
       ${earlyLifetimeCard}
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}

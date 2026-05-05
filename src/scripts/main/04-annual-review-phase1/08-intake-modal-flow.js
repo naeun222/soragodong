@@ -37,9 +37,13 @@ function _renderIntakeStep() {
 }
 
 function _intakeProgressDots(step) {
-  const total = 6;
+  // 사용자 명시 2026-05-06 ultrathink (재): Step2 (AI deepening) 폐기 → 점 5개 (1, 3, 4, 5, 6 단계).
+  // step 값을 시각 인덱스로 매핑.
+  const stepToDot = { 1: 1, 3: 2, 4: 3, 5: 4, 6: 5 };
+  const visualStep = stepToDot[step] || 1;
+  const total = 5;
   let html = '<div class="intake-progress">';
-  for (let i = 1; i <= total; i++) html += `<span class="intake-dot ${i <= step ? 'on' : ''}"></span>`;
+  for (let i = 1; i <= total; i++) html += `<span class="intake-dot ${i <= visualStep ? 'on' : ''}"></span>`;
   html += '</div>';
   return html;
 }
@@ -78,25 +82,12 @@ async function _intakeStep1Send() {
   if (!text) { showToast('한 줄이라도 적어줘 ✦'); return; }
   state.intakeWorry.push({ role: 'user', content: text, ts: new Date().toISOString(), kind: 'first' });
   saveState();
-  // 짧음 detect → Step2 (deepening). 장문이면 Step3 skip 후 Step4 직진.
+  // 사용자 명시 2026-05-06 ultrathink (재): Step2 (AI deepening 질문) 제거 — 1발화 후 곧장 3장문발화로.
+  // 짧음/장문 무관: 짧으면 Step3 (장문 권유 + 예시), 이미 장문이면 Step4 (paraphrase) 직진.
   if (_intakeShouldDeepen(text)) {
-    _intakeState.step = 2;
+    _intakeState.step = 3;
     _renderIntakeStep();
-    try {
-      const ask = await _intakeDeepenAsk(text);
-      state.intakeWorry.push({ role: 'assistant', content: ask, ts: new Date().toISOString(), kind: 'deepen_q' });
-      saveState();
-      const askDiv = document.getElementById('intakeAIAsk');
-      if (askDiv) askDiv.innerHTML = `<b>🐚</b> ${escapeHtml(ask)}`;
-    } catch (e) {
-      console.warn('[intake] deepen ask 실패 — fallback wording', e);
-      const askDiv = document.getElementById('intakeAIAsk');
-      if (askDiv) askDiv.innerHTML = `<b>🐚</b> 어떤 상황이었고 어떻게 됐는지 좀 더 풀어줄래? 상황 → 무슨 마음 → 어떻게 됐는지, 자유롭게.`;
-      state.intakeWorry.push({ role: 'assistant', content: '어떤 상황이었고 어떻게 됐는지 좀 더 풀어줄래?', ts: new Date().toISOString(), kind: 'deepen_q' });
-      saveState();
-    }
-    // AI 동적 long example 미리 백그라운드 fetch (Step3 진입 시 즉시 표시)
-    // 사용자 보고 2026-05-06 ultrathink: 백그라운드 fetch 가 Step3 렌더 후 도착하면 예시 갱신 X 버그 → step=3 시 재렌더.
+    // 백그라운드 long example fetch — Step3 렌더 후 도착하면 갱신
     _intakeGenLongExample(text)
       .then(longText => {
         if (!_intakeState || !longText) return;
@@ -105,7 +96,6 @@ async function _intakeStep1Send() {
       })
       .catch(e => { console.warn('[intake] long example 실패 — INTAKE_EXAMPLES 페어 사용', e); });
   } else {
-    // 한 번에 장문 발화 → Step3 skip → Step4 (paraphrase + 더 알고 싶어) 직진
     _intakeState.step = 4;
     _renderIntakeStep();
   }
@@ -194,18 +184,26 @@ function _intakeStep4Html() {
 
 async function _intakeStep4Analyze() {
   _intakeState.step = 5;
+  _intakeState.analysis = null;
+  _intakeState.analysisFailed = false;
+  _intakeState.analysisErrMsg = '';
   _renderIntakeStep();
-  // 사용자 보고 2026-05-06 ultrathink: 첫 호출 실패 시 fallback 보다 먼저 1회 재시도 (1.5초 후) — 사용자가 fallback 보는 빈도 낮춤.
+  // 사용자 보고 2026-05-06 ultrathink (재): 빈 껍데기 fallback 합성 절대 X.
+  //   AI 가 진짜 분석한 척 가짜 카피 출력 → 사용자 신뢰 깨짐.
+  //   재시도 3회 (1.5초 / 3초 간격). 다 실패하면 → 명시적 "다시 시도" UI 노출 (Step5 분기).
   let result = null;
   let lastErr = null;
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  const RETRY_DELAYS = [1500, 3000];
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       result = await _intakeAnalyze(state.intakeWorry);
-      break;
+      if (result && (result.diagnosis || result.strategy)) break;
+      result = null;
+      throw new Error('빈 응답 — JSON 파싱 실패');
     } catch (e) {
       lastErr = e;
       console.warn('[intake] analyze attempt ' + attempt + ' 실패', e && e.message);
-      if (attempt < 2) await new Promise(r => setTimeout(r, 1500));
+      if (attempt < 3) await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt - 1]));
     }
   }
   if (result) {
@@ -219,20 +217,27 @@ async function _intakeStep4Analyze() {
     saveState();
     _renderIntakeStep();
   } else {
-    console.warn('[intake] analyze 두 번 다 실패 — fallback', lastErr && lastErr.message);
-    _intakeState.analysis = {
-      paraphrase: '',
-      dimension: '환경',
-      diagnosis: '잘 들었어. 좀 더 같이 들여다보고 싶어.',
-      strategy: '천천히 가자. 다음 대화에서 이어가자.',
-      proposal: '오늘 한 걸음만 가볍게',
-      hypotheses: []
-    };
+    console.warn('[intake] analyze 3회 다 실패 — 명시적 retry UI', lastErr && lastErr.message);
+    _intakeState.analysisFailed = true;
+    _intakeState.analysisErrMsg = (lastErr && lastErr.message) || '네트워크 오류';
     _renderIntakeStep();
   }
 }
 
 function _intakeStep5Html() {
+  // 사용자 보고 2026-05-06 ultrathink (재): 분석 실패 → 명시적 retry UI. 가짜 fallback 카피 X.
+  if (_intakeState.analysisFailed) {
+    return `
+      <div class="intake-ai-msg">
+        <b>🐚</b> 잠깐, 분석이 잘 안 됐어 ✦<br><br>
+        <span class="small">네트워크가 잠시 흔들렸을 수도 있어. 한 번 더 시도해볼래?</span>
+      </div>
+      <div class="intake-actions" style="display:flex; gap:8px;">
+        <button class="intake-send-btn" onclick="_intakeRetryAnalyze()" style="flex:2;">🔄 다시 분석</button>
+        <button class="intake-send-btn intake-skip-btn" onclick="_intakeSkipAnalysis()" style="flex:1; background:transparent; border:1px solid var(--border); color:var(--text-dim);">건너뛰기</button>
+      </div>
+    `;
+  }
   if (!_intakeState.analysis) {
     return `<div class="intake-ai-msg"><b>🐚</b> <span class="intake-loading">잠깐 들여다보는 중...</span></div>`;
   }
@@ -249,6 +254,24 @@ function _intakeStep5Html() {
       <button class="intake-send-btn" onclick="_intakeStep5Next()">고마워 ✦</button>
     </div>
   `;
+}
+
+// 사용자 보고 2026-05-06 ultrathink (재): 분석 실패 시 retry — Step4 재호출.
+function _intakeRetryAnalyze() {
+  if (!_intakeState) return;
+  _intakeState.analysisFailed = false;
+  _intakeState.analysis = null;
+  _intakeStep4Analyze();
+}
+
+// 분석 건너뛰고 모달 종료. analysis 없는 채로 close (튜토리얼이면 chat 다리 카피 없이 닫힘).
+function _intakeSkipAnalysis() {
+  if (!_intakeState) return;
+  _intakeState.analysis = null;
+  _intakeState.analysisFailed = false;
+  // tutorial stash X — _startIntakeFromTutorial 가 analysis 없으면 fallback 흐름 (onbNext)
+  _intakeState.step = 6;
+  _renderIntakeStep();
 }
 
 function _intakeStep5Next() {
