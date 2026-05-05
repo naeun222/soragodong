@@ -277,54 +277,59 @@ async function _intakeGenLongExample(userText) {
 }
 
 // Step6: 전체 intakeWorry chat 받아 차원 분석 + 작은 전략 + traits/values/patterns 가설 생성.
+// 사용자 보고 2026-05-06 ultrathink (재): "잠깐 들여다보는 중..." 무한 retry — 가장 흔한 원인이 JSON truncate.
+//   → max_tokens 1500 → 2000 / hypotheses 3개 → 1-2개로 단축 / description 짧게 강제.
+//   → fail 시 status code 표면화 (사용자가 진짜 원인 식별 가능).
 async function _intakeAnalyze(intakeWorry) {
-  if (!_canAI()) throw new Error('AI 호출 불가능');
+  if (!_canAI()) throw new Error('AI 세션 미준비');
   const chatText = (intakeWorry || []).map(m => `${m.role === 'user' ? '사용자' : '소라고동'}: ${m.content}`).join('\n');
-  const prompt = `사용자 — 첫 만남 미니 분석. 다음 대화 보고 차원 분석 + 작은 전략 + 자기관찰 가설.
+  const prompt = `사용자 — 첫 만남 미니 분석.
 
 [대화 전체]
 ${chatText}
 
 [너의 일]
-1. paraphrase: 사용자 발화 핵심 1줄 인용 또는 paraphrase
-2. dimension: 환경 / 인지 / 사회 / 정체성 / 가치 중 1개 (가장 작동하는 차원)
-3. diagnosis: 1-2 문장. 판단 X. 자기관찰 톤.
-4. strategy: 1-2 문장. 원리 / 큰 방향. 환경 cuing 우선. 관찰 친화.
-5. proposal: 25자 이내. 오늘 안에 할 수 있는 한 가지 구체 micro-action. strategy 의 *원리*를 *오늘 한 동작*으로 좁힌 것 — 같은 말 X.
-   예) strategy="환경 자극 줄이는 방향이 도움될 거 같아. 알람 / 자리 같은 거." → proposal="저녁 7시 핸드폰 무음으로 두기"
-6. hypotheses: trait / value / pattern 가설 1-3개 (user_verified=false, confidence 0.4-0.6)
+1. paraphrase: 사용자 발화 핵심 1줄 (40자 이내)
+2. dimension: 환경 / 인지 / 사회 / 정체성 / 가치 중 1개
+3. diagnosis: 1문장 (60자 이내). 판단 X. 자기관찰 톤.
+4. strategy: 1문장 (60자 이내). 원리 / 큰 방향.
+5. proposal: 25자 이내. 오늘 안에 할 수 있는 micro-action.
+6. hypotheses: 1-2개 (3개 X — 첫 만남이라 짧게).
 
-[가설 schema]
-- trait: name (10자 이내) + description (한 문장) + display_text (✓ 박스용 친근 한 줄)
-- value: name (5자 이내) + description (한 문장) + display_text
-- pattern: name (10자 이내) + trigger (조건) + sequence (행동 흐름) + display_text
+[가설 schema — 모든 필드 짧게]
+- trait: name (10자) + description (40자) + display_text (40자) + confidence 0.4-0.6
+- value: name (5자) + description (40자) + display_text (40자) + confidence 0.4-0.6
+- pattern: name (10자) + trigger (20자) + sequence (40자) + display_text (40자) + confidence 0.4-0.6
 
 [톤]
-친한 친구 반말. judgment X. self-compassion. 첫 만남이라 confidence 낮게.
-Surprise > Truth. Specific > Generic.
-proposal 은 명령조 X (반말 권유 톤). 오늘 안에 진짜 가능한 micro 단위 (5분-1시간).
+친한 친구 반말. judgment X. self-compassion. Surprise > Truth.
 
-[출력 JSON 만, markdown X]
+[출력 JSON 만, markdown X — 모든 string 짧게]
 {
   "paraphrase": "...",
-  "dimension": "환경/인지/사회/정체성/가치 중 하나",
-  "diagnosis": "1-2 문장",
-  "strategy": "1-2 문장 (원리)",
-  "proposal": "25자 이내 (오늘 한 동작)",
+  "dimension": "...",
+  "diagnosis": "...",
+  "strategy": "...",
+  "proposal": "...",
   "hypotheses": [
-    { "category": "trait" | "value" | "pattern", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." }
+    { "category": "trait", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." }
   ]
 }`;
   const resp = await callAnthropic({
     _endpoint: 'intake',
     model: 'claude-sonnet-4-6',
-    max_tokens: 1500,
-    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
+    max_tokens: 2000,
+    system: 'JSON 객체 하나만 반환. markdown code fence X. 모든 string 짧게. 다른 글 X.',
     messages: [{ role: 'user', content: prompt }]
   });
-  if (!resp.ok) throw new Error('API ' + resp.status);
+  if (!resp.ok) {
+    let detail = '';
+    try { const t = await resp.text(); detail = t.slice(0, 200); } catch {}
+    throw new Error(`API ${resp.status}${detail ? ': ' + detail : ''}`);
+  }
   const data = await resp.json();
   const text = data?.content?.[0]?.text || '';
+  if (!text) throw new Error('AI 빈 응답');
   return _robustJsonExtract(text);
 }
 

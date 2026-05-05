@@ -15080,54 +15080,59 @@ async function _intakeGenLongExample(userText) {
 }
 
 // Step6: 전체 intakeWorry chat 받아 차원 분석 + 작은 전략 + traits/values/patterns 가설 생성.
+// 사용자 보고 2026-05-06 ultrathink (재): "잠깐 들여다보는 중..." 무한 retry — 가장 흔한 원인이 JSON truncate.
+//   → max_tokens 1500 → 2000 / hypotheses 3개 → 1-2개로 단축 / description 짧게 강제.
+//   → fail 시 status code 표면화 (사용자가 진짜 원인 식별 가능).
 async function _intakeAnalyze(intakeWorry) {
-  if (!_canAI()) throw new Error('AI 호출 불가능');
+  if (!_canAI()) throw new Error('AI 세션 미준비');
   const chatText = (intakeWorry || []).map(m => `${m.role === 'user' ? '사용자' : '소라고동'}: ${m.content}`).join('\n');
-  const prompt = `사용자 — 첫 만남 미니 분석. 다음 대화 보고 차원 분석 + 작은 전략 + 자기관찰 가설.
+  const prompt = `사용자 — 첫 만남 미니 분석.
 
 [대화 전체]
 ${chatText}
 
 [너의 일]
-1. paraphrase: 사용자 발화 핵심 1줄 인용 또는 paraphrase
-2. dimension: 환경 / 인지 / 사회 / 정체성 / 가치 중 1개 (가장 작동하는 차원)
-3. diagnosis: 1-2 문장. 판단 X. 자기관찰 톤.
-4. strategy: 1-2 문장. 원리 / 큰 방향. 환경 cuing 우선. 관찰 친화.
-5. proposal: 25자 이내. 오늘 안에 할 수 있는 한 가지 구체 micro-action. strategy 의 *원리*를 *오늘 한 동작*으로 좁힌 것 — 같은 말 X.
-   예) strategy="환경 자극 줄이는 방향이 도움될 거 같아. 알람 / 자리 같은 거." → proposal="저녁 7시 핸드폰 무음으로 두기"
-6. hypotheses: trait / value / pattern 가설 1-3개 (user_verified=false, confidence 0.4-0.6)
+1. paraphrase: 사용자 발화 핵심 1줄 (40자 이내)
+2. dimension: 환경 / 인지 / 사회 / 정체성 / 가치 중 1개
+3. diagnosis: 1문장 (60자 이내). 판단 X. 자기관찰 톤.
+4. strategy: 1문장 (60자 이내). 원리 / 큰 방향.
+5. proposal: 25자 이내. 오늘 안에 할 수 있는 micro-action.
+6. hypotheses: 1-2개 (3개 X — 첫 만남이라 짧게).
 
-[가설 schema]
-- trait: name (10자 이내) + description (한 문장) + display_text (✓ 박스용 친근 한 줄)
-- value: name (5자 이내) + description (한 문장) + display_text
-- pattern: name (10자 이내) + trigger (조건) + sequence (행동 흐름) + display_text
+[가설 schema — 모든 필드 짧게]
+- trait: name (10자) + description (40자) + display_text (40자) + confidence 0.4-0.6
+- value: name (5자) + description (40자) + display_text (40자) + confidence 0.4-0.6
+- pattern: name (10자) + trigger (20자) + sequence (40자) + display_text (40자) + confidence 0.4-0.6
 
 [톤]
-친한 친구 반말. judgment X. self-compassion. 첫 만남이라 confidence 낮게.
-Surprise > Truth. Specific > Generic.
-proposal 은 명령조 X (반말 권유 톤). 오늘 안에 진짜 가능한 micro 단위 (5분-1시간).
+친한 친구 반말. judgment X. self-compassion. Surprise > Truth.
 
-[출력 JSON 만, markdown X]
+[출력 JSON 만, markdown X — 모든 string 짧게]
 {
   "paraphrase": "...",
-  "dimension": "환경/인지/사회/정체성/가치 중 하나",
-  "diagnosis": "1-2 문장",
-  "strategy": "1-2 문장 (원리)",
-  "proposal": "25자 이내 (오늘 한 동작)",
+  "dimension": "...",
+  "diagnosis": "...",
+  "strategy": "...",
+  "proposal": "...",
   "hypotheses": [
-    { "category": "trait" | "value" | "pattern", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." }
+    { "category": "trait", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." }
   ]
 }`;
   const resp = await callAnthropic({
     _endpoint: 'intake',
     model: 'claude-sonnet-4-6',
-    max_tokens: 1500,
-    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
+    max_tokens: 2000,
+    system: 'JSON 객체 하나만 반환. markdown code fence X. 모든 string 짧게. 다른 글 X.',
     messages: [{ role: 'user', content: prompt }]
   });
-  if (!resp.ok) throw new Error('API ' + resp.status);
+  if (!resp.ok) {
+    let detail = '';
+    try { const t = await resp.text(); detail = t.slice(0, 200); } catch {}
+    throw new Error(`API ${resp.status}${detail ? ': ' + detail : ''}`);
+  }
   const data = await resp.json();
   const text = data?.content?.[0]?.text || '';
+  if (!text) throw new Error('AI 빈 응답');
   return _robustJsonExtract(text);
 }
 
@@ -15435,12 +15440,42 @@ async function _intakeStep1Send() {
   if (!text) { showToast('한 줄이라도 적어줘 ✦'); return; }
   state.intakeWorry.push({ role: 'user', content: text, ts: new Date().toISOString(), kind: 'first' });
   saveState();
-  // 사용자 보고 2026-05-06 ultrathink (재): AI 동적 long example 호출 폐기.
-  //   이유: Step2 폐기 후 retry 안전망 사라져 한 번 fail = 라벨 영구 stuck.
-  //   INTAKE_EXAMPLES 페어 long 이 학습 도구로 충분. 비용/지연/실패 risk 0.
+  // 사용자 명시 2026-05-06 ultrathink (재 X3): AI 동적 long example 부활 — 1단계 발화로 살 붙인 예시 = 사용자 학습 가치 ↑.
+  //   stuck 방지: 5초 timeout + pending/timedOut 분리 → 라벨에 "기다리는 중" 영구 표시 X.
+  //   AI 도착 X 면 INTAKE_EXAMPLES 페어 long 만 조용히 표시.
   if (_intakeShouldDeepen(text)) {
     _intakeState.step = 3;
+    _intakeState.aiLong = null;
+    _intakeState.aiLongPending = true;
+    _intakeState.aiLongTimedOut = false;
     _renderIntakeStep();
+    const timeoutId = setTimeout(() => {
+      if (!_intakeState || _intakeState.aiLong) return;
+      _intakeState.aiLongPending = false;
+      _intakeState.aiLongTimedOut = true;
+      if (_intakeState.step === 3) _renderIntakeStep();
+    }, 5000);
+    _intakeGenLongExample(text)
+      .then(longText => {
+        clearTimeout(timeoutId);
+        if (!_intakeState) return;
+        _intakeState.aiLongPending = false;
+        if (longText && longText.length > 10) {
+          _intakeState.aiLong = longText;
+          _intakeState.aiLongTimedOut = false;
+        } else {
+          _intakeState.aiLongTimedOut = true;
+        }
+        if (_intakeState.step === 3) _renderIntakeStep();
+      })
+      .catch(e => {
+        clearTimeout(timeoutId);
+        if (!_intakeState) return;
+        _intakeState.aiLongPending = false;
+        _intakeState.aiLongTimedOut = true;
+        if (_intakeState.step === 3) _renderIntakeStep();
+        console.warn('[intake] long example 실패 — INTAKE_EXAMPLES 페어 사용', e);
+      });
   } else {
     _intakeState.step = 4;
     _renderIntakeStep();
@@ -15480,9 +15515,16 @@ async function _intakeStep2Next() {
 function _intakeStep3Html() {
   const userFirst = state.intakeWorry.find(m => m.role === 'user');
   const userText = userFirst ? userFirst.content : '';
-  // 사용자 보고 2026-05-06 ultrathink (재): AI 동적 long example 폐기 → INTAKE_EXAMPLES 페어 long 만 사용.
+  // 사용자 명시 2026-05-06 ultrathink (재 X3): AI long 도착 = 너 발화로 살 붙인 chip / 미도착·timeout = INTAKE_EXAMPLES 페어 long.
   const ex = _intakeState.exampleStep1;
-  const longText = ex.long;
+  const aiLong = _intakeState.aiLong;
+  const longText = aiLong || ex.long;
+  const chipPrefix = aiLong ? '✨' : ex.icon;
+  // 라벨 — pending: "✨ 너 발화로 만들고 있어..." / aiLong 있음: "✨ 너 발화로 만들었어" / timedOut/일반: 기본 안내.
+  let labelExtra = '';
+  if (aiLong) labelExtra = ' <span class="small" style="color:var(--accent);">✨ 너 발화로 만들었어</span>';
+  else if (_intakeState.aiLongPending) labelExtra = ' <span class="small" style="opacity:0.7;">(✨ 너 발화로 살 붙이는 중...)</span>';
+  // timedOut 면 라벨 추가 표시 X — 기본 안내 + INTAKE_EXAMPLES chip 만 조용히 노출.
   const micHtml = `<button id="intakeMicBtn3" class="intake-mic-btn" onclick="_intakeMicToggle(3)" aria-label="음성"><span id="intakeMicIcon3"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;display:block;"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></span></button>`;
   return `
     <div class="intake-ai-msg-small"><b>🐚</b> ${escapeHtml(userText.slice(0, 50))}${userText.length > 50 ? '...' : ''} — 한 번 더 풀어줘.</div>
@@ -15493,8 +15535,8 @@ function _intakeStep3Html() {
       <button class="intake-send-btn" onclick="_intakeStep3Send()">✦ 보내기</button>
     </div>
     <div class="intake-example">
-      <div class="intake-example-label">↓ 예시 — <b>클릭하면 입력창에 채워져</b></div>
-      <div class="intake-example-chip intake-example-long" onclick="_intakeStep3FillExample()">${ex.icon} "${escapeHtml(longText)}"</div>
+      <div class="intake-example-label">↓ 예시 — <b>클릭하면 입력창에 채워져</b>${labelExtra}</div>
+      <div class="intake-example-chip intake-example-long" onclick="_intakeStep3FillExample()">${chipPrefix} "${escapeHtml(longText)}"</div>
     </div>
   `;
 }
@@ -15502,7 +15544,7 @@ function _intakeStep3Html() {
 function _intakeStep3FillExample() {
   const ta = document.getElementById('intakeInput3');
   if (!ta) return;
-  ta.value = _intakeState.exampleStep1.long;
+  ta.value = _intakeState.aiLong || _intakeState.exampleStep1.long;
 }
 
 async function _intakeStep3Send() {
@@ -15569,12 +15611,20 @@ async function _intakeStep4Analyze() {
 }
 
 function _intakeStep5Html() {
-  // 사용자 보고 2026-05-06 ultrathink (재): 분석 실패 → 명시적 retry UI. 가짜 fallback 카피 X.
+  // 사용자 보고 2026-05-06 ultrathink (재 X3): 분석 실패 → 진짜 원인 표면화 + 명시적 retry UI.
   if (_intakeState.analysisFailed) {
+    const errMsg = _intakeState.analysisErrMsg || '';
+    let userHint = '네트워크가 잠시 흔들렸을 수도 있어.';
+    if (/429|rate/i.test(errMsg)) userHint = '잠깐 너무 자주 시도했어. 30초 후 다시 해볼래?';
+    else if (/403|turnstile/i.test(errMsg)) userHint = '봇 검증이 만료됐어. 페이지 새로고침 한 번 해줘.';
+    else if (/cap|cost|초과|budget/i.test(errMsg)) userHint = '오늘 무료 사용량 cap 에 도달했어. 가입하면 풀려.';
+    else if (/JSON|truncated|닫힘/i.test(errMsg)) userHint = 'AI 응답이 잘렸어. 한 번 더 시도하면 보통 됨.';
+    else if (/세션 미준비|불가능/i.test(errMsg)) userHint = '아직 인증이 안 끝났어. 5초 후 다시 해줄래?';
     return `
       <div class="intake-ai-msg">
         <b>🐚</b> 잠깐, 분석이 잘 안 됐어 ✦<br><br>
-        <span class="small">네트워크가 잠시 흔들렸을 수도 있어. 한 번 더 시도해볼래?</span>
+        <span class="small">${escapeHtml(userHint)}</span>
+        ${errMsg ? `<div class="small" style="margin-top:8px; opacity:0.55; font-size:10px;">상세: ${escapeHtml(errMsg.slice(0, 80))}</div>` : ''}
       </div>
       <div class="intake-actions" style="display:flex; gap:8px;">
         <button class="intake-send-btn" onclick="_intakeRetryAnalyze()" style="flex:2;">🔄 다시 분석</button>
