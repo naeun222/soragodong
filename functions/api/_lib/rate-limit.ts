@@ -17,6 +17,9 @@ export interface GuestEnv extends Env {
   GUEST_KV?: KVNamespace;
   GUEST_DAILY_BUDGET_USD?: string;
   TURNSTILE_SECRET_KEY?: string;
+  // 사용자 명시 2026-05-06: 개발자 본인 IP 화이트리스트 — 게스트 흐름 테스트 시 IP/글로벌 한도 우회.
+  // 콤마 구분 IPv4/IPv6. secret 으로 관리 권장 (git 커밋 X): npx wrangler pages secret put GUEST_IP_ALLOWLIST.
+  GUEST_IP_ALLOWLIST?: string;
 }
 
 // 사용자 명시 2026-05-06 ultrathink (재): 10회 → 20회 (intake+분석+chat 8-10+retry 여유). 글로벌 $5 → $7 (16명 안전).
@@ -27,6 +30,14 @@ const KV_TTL_SECONDS = 90000;  // 25h (24h + 1h margin)
 function _todayKey(): string {
   // UTC 기준 — 게스트 = anonymous 라 KST 4AM cutoff 무관.
   return new Date().toISOString().slice(0, 10);
+}
+
+// 사용자 명시 2026-05-06: GUEST_IP_ALLOWLIST 안 IP 면 rate limit / 글로벌 budget / cost 카운터 모두 우회.
+// 본인 테스트 IP 만 (가족/사무실 NAT 등 공유 IP 면 옆 사용자도 우회되니 주의).
+export function isAllowlistedGuestIp(env: GuestEnv, ip: string): boolean {
+  const raw = (env.GUEST_IP_ALLOWLIST || '').trim();
+  if (!raw || !ip || ip === 'unknown') return false;
+  return raw.split(',').map(s => s.trim()).filter(Boolean).includes(ip);
 }
 
 export type RateLimitResult =
@@ -40,6 +51,8 @@ export function extractClientIp(request: Request): string {
 }
 
 export async function checkAndIncIpRate(env: GuestEnv, ip: string): Promise<RateLimitResult> {
+  // 사용자 명시 2026-05-06: 화이트리스트 IP 면 카운터 안 증가 + 즉시 통과.
+  if (isAllowlistedGuestIp(env, ip)) return { ok: true };
   if (!env.GUEST_KV) {
     console.error('[rate-limit] GUEST_KV binding 누락 — Pages Dashboard 설정 필요');
     return { ok: false, code: 'KV_UNAVAILABLE', reason: '게스트 모드 미설정 — 잠시 후 다시', status: 503 };
@@ -63,7 +76,9 @@ export async function checkAndIncIpRate(env: GuestEnv, ip: string): Promise<Rate
   }
 }
 
-export async function checkGlobalGuestBudget(env: GuestEnv): Promise<RateLimitResult> {
+export async function checkGlobalGuestBudget(env: GuestEnv, ip?: string): Promise<RateLimitResult> {
+  // 사용자 명시 2026-05-06: 화이트리스트 IP 면 글로벌 budget 검사 우회 (본인 테스트가 일반 게스트 한도 잡아먹지 않도록).
+  if (ip && isAllowlistedGuestIp(env, ip)) return { ok: true };
   if (!env.GUEST_KV) {
     return { ok: false, code: 'KV_UNAVAILABLE', reason: '게스트 모드 미설정', status: 503 };
   }
@@ -88,7 +103,9 @@ export async function checkGlobalGuestBudget(env: GuestEnv): Promise<RateLimitRe
   }
 }
 
-export async function recordGuestCost(env: GuestEnv, costUsd: number): Promise<void> {
+export async function recordGuestCost(env: GuestEnv, costUsd: number, ip?: string): Promise<void> {
+  // 사용자 명시 2026-05-06: 화이트리스트 IP 발생 비용은 글로벌 카운터에서 제외 (개발자 테스트 격리).
+  if (ip && isAllowlistedGuestIp(env, ip)) return;
   if (!env.GUEST_KV || costUsd <= 0) return;
   const key = `global:${_todayKey()}`;
   try {

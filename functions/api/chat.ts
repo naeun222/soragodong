@@ -127,7 +127,8 @@ async function chargeUsage(
   model: string,
   usageData: any,
   waitUntil: (promise: Promise<any>) => void,
-  isGuest = false
+  isGuest = false,
+  guestIp?: string
 ): Promise<void> {
   const inputTokens = usageData.input_tokens || 0;
   const outputTokens = usageData.output_tokens || 0;
@@ -150,7 +151,8 @@ async function chargeUsage(
     waitUntil(deductCost(env, userId, cost).catch(() => {}));
     // Phase 0: 게스트 cost 글로벌 budget 카운터에 누적 (KV) — 일일 총합 cap 방어.
     if (isGuest) {
-      waitUntil(recordGuestCost(env as GuestEnv, cost).catch(() => {}));
+      // 사용자 명시 2026-05-06: 화이트리스트 IP 면 글로벌 카운터 제외 — recordGuestCost 내부에서 isAllowlistedGuestIp check.
+      waitUntil(recordGuestCost(env as GuestEnv, cost, guestIp).catch(() => {}));
     }
   }
 }
@@ -192,13 +194,16 @@ async function _handleChatRequest(context: {
 
   // 사용자 명시 2026-05-05 ultrathink (Phase 0): 게스트 비용 방어선 — IP rate limit + 글로벌 budget + Turnstile.
   // 인증 사용자는 이 블록 skip (기존 흐름 그대로).
+  // 사용자 명시 2026-05-06: 화이트리스트 IP 격리 위해 chargeUsage 까지 ip 전달 — block 밖으로 hoist.
+  let guestIp: string | undefined;
   if (isGuest) {
     const ip = extractClientIp(request);
+    guestIp = ip;
     const ipCheck = await checkAndIncIpRate(guestEnv, ip);
     if (!ipCheck.ok) {
       return jsonResponse({ error: ipCheck.reason, code: ipCheck.code }, ipCheck.status);
     }
-    const budgetCheck = await checkGlobalGuestBudget(guestEnv);
+    const budgetCheck = await checkGlobalGuestBudget(guestEnv, ip);
     if (!budgetCheck.ok) {
       return jsonResponse({ error: budgetCheck.reason, code: budgetCheck.code }, budgetCheck.status);
     }
@@ -346,7 +351,7 @@ async function _handleChatRequest(context: {
             // 사용자 보고 2026-05-05 (audit Critical): finally 안 await chargeUsage → stream close 후 워커 lifetime 보장 X → drop risk.
             // fix = waitUntil 로 명시 위임 + 즉시 finally 종료 (stream 깔끔하게 close).
             waitUntil(
-              chargeUsage(env, user.id, endpoint, body.model, usageData, waitUntil, isGuest).catch((e: any) => {
+              chargeUsage(env, user.id, endpoint, body.model, usageData, waitUntil, isGuest, guestIp).catch((e: any) => {
                 console.warn('[chat.ts] chargeUsage 실패:', e);
               })
             );
@@ -377,7 +382,7 @@ async function _handleChatRequest(context: {
   const data: any = await upstream.json();
   const usage = data.usage || {};
   // 사용자 명시 2026-05-02 ultrathink: chargeUsage 헬퍼 — welcome bonus 우선 소진 + overflow USD 차감.
-  await chargeUsage(env, user.id, endpoint, body.model, usage, waitUntil, isGuest);
+  await chargeUsage(env, user.id, endpoint, body.model, usage, waitUntil, isGuest, guestIp);
 
   return jsonResponse(data);
 }
