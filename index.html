@@ -14858,14 +14858,15 @@ ${entriesText}
 - 한 줄 친근 인사 + 첫 인상 (40자 이내)
 
 [가설 schema 가이드]
-- trait: name (10자 이내) + description (한 문장)
-- value: name (5자 이내) + description (한 문장)
-- pattern: name (10자 이내 라벨) + trigger (조건) + sequence (행동 흐름)
+- trait: name (10자 이내) + description (한 문장, 명사형 분석체)
+- value: name (5자 이내) + description (한 문장, 명사형 분석체)
+- pattern: name (10자 이내 라벨) + trigger (조건) + sequence (행동 흐름, 명사형 분석체)
 - display_text: ✓ 박스에서 보일 친근한 한 줄 (예: "꼼꼼한 편인 거 같아")
 
 [톤]
-친한 친구 반말. judgment X. self-compassion. confidence 낮음 명시 (예: "초안 — 함께 확인해볼 가설").
-Surprise > Truth — '어, 어떻게 알았어?' 트리거. Specific > Generic.
+- description / sequence (나 탭 본문): **명사형 분석체 LOCK**. 관찰자 3인칭. 어미는 "~ 명시", "~ 강하게 느낌", "~ 하는 경향", "~ 한 태도", "~ 함" 같이 명사형 종결. 추측 어미 ("있을 수 있어", "할 수 있어", "~ 인 듯", "~ 일 것") 금지. 친근 반말 X. confidence 낮아도 어미는 분석체 유지 (수치로만 표현).
+- display_text / intro_line: 친한 친구 반말. judgment X. self-compassion. confidence 낮음 명시 (예: "초안 — 함께 확인해볼 가설").
+- 공통: Surprise > Truth — '어, 어떻게 알았어?' 트리거. Specific > Generic.
 
 [출력 JSON 만, markdown X]
 {
@@ -15134,14 +15135,16 @@ ${chatText}
 6. hypotheses: trait / value / pattern 가설 1-3개 (user_verified=false, confidence 0.4-0.6)
 
 [가설 schema]
-- trait: name (10자 이내) + description (한 문장) + display_text (✓ 박스용 친근 한 줄)
-- value: name (5자 이내) + description (한 문장) + display_text
-- pattern: name (10자 이내) + trigger (조건) + sequence (행동 흐름) + display_text
+- trait: name (10자 이내) + description (한 문장, 명사형 분석체) + display_text (✓ 박스용 친근 한 줄)
+- value: name (5자 이내) + description (한 문장, 명사형 분석체) + display_text
+- pattern: name (10자 이내) + trigger (조건) + sequence (행동 흐름, 명사형 분석체) + display_text
 
 [톤]
-친한 친구 반말. judgment X. self-compassion. 첫 만남이라 confidence 낮게.
-Surprise > Truth. Specific > Generic.
-proposal 은 명령조 X (반말 권유 톤). 오늘 안에 진짜 가능한 micro 단위 (5분-1시간).
+- description / sequence (나 탭 본문): **명사형 분석체 LOCK**. 관찰자 시점 3인칭. 어미는 "~ 명시", "~ 강하게 느낌", "~ 하는 경향", "~ 한 태도", "~ 함" 같이 명사형으로 종결. 추측 어미 ("있을 수 있어", "할 수 있어", "~ 인 듯", "~ 일 것") 금지. 친근 반말 X. confidence 가 낮아도 어미는 분석체 유지 (수치로만 표현).
+- display_text (✓ 박스 친근 한 줄): 친한 친구 반말, 친근. judgment X.
+- diagnosis / strategy / proposal (chat 4단 다이얼로그): 친한 친구 반말. judgment X. self-compassion. 첫 만남이라 confidence 낮게.
+- 공통: Surprise > Truth. Specific > Generic.
+- proposal 은 명령조 X (반말 권유 톤). 오늘 안에 진짜 가능한 micro 단위 (5분-1시간).
 
 [출력 JSON 만, markdown X]
 {
@@ -48505,7 +48508,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.180-v8-tutorial-branch-closing-tracker-add-rm';
+const APP_VERSION = 'v4.0.181-intake-tone-lock-noun-analytic';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
