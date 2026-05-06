@@ -286,6 +286,8 @@ function _insightsCoachmarkIntro() {
 function _insightsCoachmarkAiExample() {
   // 옛 insights_ai_example — 인사이트 카드 가리킴. 시드 안 ins_seed_5 = '엄마 통화 후 이튿날 mood 평균 +0.8'.
   // 사용자 명시 2026-05-06 ultrathink: 카드 자동 scrollIntoView + 임시 highlight glow (.sim-tutorial-highlight).
+  // 사용자 보고 2026-05-06: querySelector 콤마 fallback 이 document order 첫 매치 (ins_seed_1) 를 잡던 버그 — fallback 제거.
+  // ins_seed_5 가 DOM 에 없으면 'allowNoTarget: true' 로 가운데 띄움.
   const card = document.querySelector('.insight-card[data-id="ins_seed_5"]');
   if (card) {
     try { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
@@ -301,7 +303,7 @@ function _insightsCoachmarkAiExample() {
     </div>
   `;
   return _v8ShowCoachmark({
-    targetSelector: '.insight-card[data-id="ins_seed_5"], .insight-card.ai-discovered, .insight-card',
+    targetSelector: '.insight-card[data-id="ins_seed_5"]',
     body,
     position: 'top',
     allowNoTarget: true

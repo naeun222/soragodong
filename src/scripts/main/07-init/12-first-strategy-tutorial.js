@@ -33,28 +33,25 @@ async function runFirstStrategyTutorialV8(trigger, msgIdx) {
     const cardOk = lastCard && lastCard.category === 'strategy';
     if (cardOk && typeof _showStrategyCardModal === 'function' && !document.querySelector('.strategy-card-preview-overlay')) {
       _showStrategyCardModal(lastCard);
+      // 사용자 명시 2026-05-06 ultrathink: 카드 '계속' 누르면 직후 홈 코치마크 fire — sleep 220→0, 추가 가드 polling 즉시 1회 check.
       await _v8WaitForOverlayGone('.strategy-card-preview-overlay');
-      await _v8Sleep(220);
     }
-    // 추가 가드: 다른 시스템 모달 (confirm 등) 떠있으면 닫힐 때까지 대기 (max 8s).
-    await _v8WaitForOverlayGone('.confirm-modal-overlay, .modal.show, [role="dialog"]:not([aria-hidden="true"])', 8000);
 
     // ── Step 2: trigger='strategy' 한정 — ✦ 해볼게 클릭 안내 (interactive) ──
     if (trigger === 'strategy') {
       const proceeded = await _c2CoachmarkAccept(msgIdx);
-      if (!proceeded) return;  // 타겟 사라짐 등 — 그래도 cleanup 보장
-      await _v8Sleep(900);  // 미션 생성 + 셀러브 settle
+      if (!proceeded) return;
+      await _v8Sleep(700);  // 미션 생성 + 셀러브 settle
     }
 
-    // ── Step 3: 홈 이동 ──
+    // ── Step 3: 홈 이동 (직후 fire) ──
     await _c2CoachmarkGoHome();
-    await _v8Sleep(450);
     try { if (typeof renderTodayMission === 'function') renderTodayMission(); } catch {}
-    await _v8Sleep(280);
+    await _v8Sleep(150);
 
     // ── Step 4: 미션 카드 안내 ──
     await _c2CoachmarkMissionCard();
-    await _v8Sleep(220);
+    await _v8Sleep(180);
 
     // ── Step 5: 마무리 ──
     await _c2CoachmarkClosing();

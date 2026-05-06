@@ -371,16 +371,25 @@ function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', in
         bubble.style.opacity = '0';
         bubble.style.pointerEvents = 'none';
         ring.style.opacity = '0';
+        // 사용자 명시 2026-05-06 ultrathink: 클릭 즉시 + 짧은 setTimeout 두 번 waitFor 즉시 체크 — 80ms watcher tick 보다 빠르게.
+        const _quickCheck = () => {
+          try { if (waitFor && waitFor() && !resolved) { advance(); return true; } } catch {}
+          return false;
+        };
+        if (_quickCheck()) return;
+        setTimeout(() => { if (!_quickCheck()) {} }, 30);
+        setTimeout(() => { if (!_quickCheck()) {} }, 120);
         bubbleHiddenTimeout = setTimeout(() => { if (!resolved) advance(); }, 6000);
       };
       target.addEventListener('click', onTargetClick);
+      // 사용자 명시 2026-05-06 ultrathink: watcher tick 250→80ms — 코치마크 사라짐 latency 단축.
       watcher = setInterval(() => {
         try {
           if (waitFor && waitFor()) { advance(); return; }
           if (!target || target.offsetParent === null) { advance(); return; }
           if (!bubbleHidden) place();
         } catch {}
-      }, 250);
+      }, 80);
     } else {
       if (okBtn) okBtn.addEventListener('click', advance);
     }

@@ -29,6 +29,13 @@ function renderReflectionHome() {
 }
 
 async function addReflectionQuestion(text) {
+  // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 숙고 진입 시 모달 뜨기 전 V8 sim 튜토리얼 fire.
+  // openReflectionChat 인터셉트 외에도 '+ 새 질문' / 빈 카드 클릭 경로 잡음.
+  if (!text && !window._simTutorialInternalNav
+      && typeof shouldRunReflectionTutorial === 'function' && shouldRunReflectionTutorial()) {
+    runReflectionTutorialV8().catch(e => console.warn('[reflection]', e));
+    return null;
+  }
   // V4-fix: 한 번에 하나씩 — active 있으면 차단
   const all = state.reflectionQuestions || (state.reflectionQuestions = []);
   const activeQ = all.find(q => q.status === 'active');
