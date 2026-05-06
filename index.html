@@ -23,6 +23,33 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
+<!-- 사용자 명시 2026-05-06 ultrathink (perf): boot splash 핵심 이미지 preload + 외부 API DNS resolve. 비용 거의 0 / 첫 페인트 visual 단축. -->
+<link rel="preload" as="image" href="godong.webp">
+<link rel="dns-prefetch" href="https://api.anthropic.com">
+<link rel="dns-prefetch" href="https://itunes.apple.com">
+<link rel="dns-prefetch" href="https://browser.sentry-cdn.com">
+
+<!-- 사용자 명시 2026-05-06 ultrathink (perf): boot splash inline style — head 도착 즉시 페인트되어야 perceived 로딩 단축. -->
+<style>
+  html, body { background: #0f0e17; margin: 0; }
+  #bootSplash {
+    position: fixed; inset: 0; z-index: 99999;
+    background: #0f0e17;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: opacity 280ms ease-out;
+    color: rgba(212,168,90,0.65);
+    font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  }
+  #bootSplash.fade-out { opacity: 0; pointer-events: none; }
+  #bootSplash img { width: 56px; height: 56px; opacity: 0.92; animation: bootSplashPulse 1.4s ease-in-out infinite; }
+  #bootSplash .boot-splash-text { font-size: 13px; margin-top: 14px; letter-spacing: 0.04em; }
+  @keyframes bootSplashPulse {
+    0%, 100% { transform: scale(1); opacity: 0.78; }
+    50%      { transform: scale(1.06); opacity: 1; }
+  }
+</style>
+
 <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi7IaM65286rOg64+Z8J+QmiIsInNob3J0X25hbWUiOiLshozrnbzqs6Drj5nwn5CaIiwiZGVzY3JpcHRpb24iOiJBSSDrnbzsnbTtlIQg7KCE65616rCAIiwic3RhcnRfdXJsIjoiLi8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGYwZTE3IiwidGhlbWVfY29sb3IiOiIjMGYwZTE3IiwiaWNvbnMiOlt7InNyYyI6Imljb24tMTkyLnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifSx7InNyYyI6Imljb24tNTEyLnBuZyIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9wbmcifV19">
 
 <!-- 사용자 보고 2026-05-05 (perf): Google Fonts CSS 가 render-blocking 이라 첫 페인트 전에 흰→검 플래시. preload 후 swap 으로 non-blocking. -->
@@ -10598,6 +10625,12 @@
 </head>
 <body>
 
+<!-- 사용자 명시 2026-05-06 ultrathink (perf): boot splash — HTML 진입 직후 즉시 페인트. JS 실행 끝나면 init() / showLoginScreen 가 fade-out + remove. -->
+<div id="bootSplash">
+  <img src="godong.webp" alt="" decoding="async" loading="eager">
+  <div class="boot-splash-text">🐚</div>
+</div>
+
 <!-- V3.9: tour-overlay 완전 제거됨 (인터랙티브 온보딩으로 대체) -->
 
 <!-- V3.7: 인터랙티브 온보딩 (게임형) -->
@@ -17397,11 +17430,14 @@ async function init() {
   });
 
   // V4 사용자 요청 2026-04-29: Service Worker 등록 (오프라인 + 설치 배너 + 푸시 인프라 ready)
+  // 사용자 명시 2026-05-06 ultrathink (perf): 2000ms → 200ms — 다음 진입 cache-hit 보장 빠르게.
   if ('serviceWorker' in navigator) {
     setTimeout(() => {
       navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW register:', e));
-    }, 2000);
+    }, 200);
   }
+  // 사용자 명시 2026-05-06 ultrathink (perf): boot splash 안전망 — init() 어떤 경로 fail 이라도 7초 후 자동 hide.
+  setTimeout(() => { if (typeof _hideBootSplash === 'function') _hideBootSplash(); }, 7000);
 
   // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 코어 잠금 글로벌 클릭 인터셉터 = 폐기.
   // v8 = "잠금 X / 발견형 학습". Core 2 만 4단 응답 disabled-locked (4단 응답 자리에서 처리) 별도.
@@ -17438,6 +17474,8 @@ async function init() {
   // Authenticated OR Guest — .app 노출
   document.getElementById('loginScreen').style.display = 'none';
   document.querySelector('.app').style.display = 'flex';
+  // 사용자 명시 2026-05-06 ultrathink (perf): 인증 통과 → splash hide.
+  if (typeof _hideBootSplash === 'function') _hideBootSplash();
 
   // 사용자 요청 2026-04-28: 서버 시간 동기화 (디바이스 시계 잘못돼도 보정)
   syncServerTime();  // fire-and-forget
@@ -20450,6 +20488,16 @@ if (window.visualViewport) {
 function showLoginScreen() {
   document.querySelector('.app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
+  if (typeof _hideBootSplash === 'function') _hideBootSplash();
+}
+
+// 사용자 명시 2026-05-06 ultrathink (perf): boot splash hide — init/showLoginScreen 진입 시 호출.
+// 5초 안전망 (어떤 init 경로 fail 이라도 자동 hide) 은 init-fn.js 안 setTimeout 으로 별도.
+function _hideBootSplash() {
+  const s = document.getElementById('bootSplash');
+  if (!s) return;
+  s.classList.add('fade-out');
+  setTimeout(() => { try { s.remove(); } catch {} }, 320);
 }
 
 // 사용자 명시 2026-05-02 ultrathink: 동의 검증 + pending consent 저장 helper (이메일 OTP / SNS 로그인 둘 다 사용).

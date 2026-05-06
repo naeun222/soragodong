@@ -63,11 +63,14 @@ async function init() {
   });
 
   // V4 사용자 요청 2026-04-29: Service Worker 등록 (오프라인 + 설치 배너 + 푸시 인프라 ready)
+  // 사용자 명시 2026-05-06 ultrathink (perf): 2000ms → 200ms — 다음 진입 cache-hit 보장 빠르게.
   if ('serviceWorker' in navigator) {
     setTimeout(() => {
       navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW register:', e));
-    }, 2000);
+    }, 200);
   }
+  // 사용자 명시 2026-05-06 ultrathink (perf): boot splash 안전망 — init() 어떤 경로 fail 이라도 7초 후 자동 hide.
+  setTimeout(() => { if (typeof _hideBootSplash === 'function') _hideBootSplash(); }, 7000);
 
   // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 코어 잠금 글로벌 클릭 인터셉터 = 폐기.
   // v8 = "잠금 X / 발견형 학습". Core 2 만 4단 응답 disabled-locked (4단 응답 자리에서 처리) 별도.
@@ -104,6 +107,8 @@ async function init() {
   // Authenticated OR Guest — .app 노출
   document.getElementById('loginScreen').style.display = 'none';
   document.querySelector('.app').style.display = 'flex';
+  // 사용자 명시 2026-05-06 ultrathink (perf): 인증 통과 → splash hide.
+  if (typeof _hideBootSplash === 'function') _hideBootSplash();
 
   // 사용자 요청 2026-04-28: 서버 시간 동기화 (디바이스 시계 잘못돼도 보정)
   syncServerTime();  // fire-and-forget

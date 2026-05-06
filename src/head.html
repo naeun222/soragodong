@@ -23,6 +23,33 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
+<!-- 사용자 명시 2026-05-06 ultrathink (perf): boot splash 핵심 이미지 preload + 외부 API DNS resolve. 비용 거의 0 / 첫 페인트 visual 단축. -->
+<link rel="preload" as="image" href="godong.webp">
+<link rel="dns-prefetch" href="https://api.anthropic.com">
+<link rel="dns-prefetch" href="https://itunes.apple.com">
+<link rel="dns-prefetch" href="https://browser.sentry-cdn.com">
+
+<!-- 사용자 명시 2026-05-06 ultrathink (perf): boot splash inline style — head 도착 즉시 페인트되어야 perceived 로딩 단축. -->
+<style>
+  html, body { background: #0f0e17; margin: 0; }
+  #bootSplash {
+    position: fixed; inset: 0; z-index: 99999;
+    background: #0f0e17;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: opacity 280ms ease-out;
+    color: rgba(212,168,90,0.65);
+    font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  }
+  #bootSplash.fade-out { opacity: 0; pointer-events: none; }
+  #bootSplash img { width: 56px; height: 56px; opacity: 0.92; animation: bootSplashPulse 1.4s ease-in-out infinite; }
+  #bootSplash .boot-splash-text { font-size: 13px; margin-top: 14px; letter-spacing: 0.04em; }
+  @keyframes bootSplashPulse {
+    0%, 100% { transform: scale(1); opacity: 0.78; }
+    50%      { transform: scale(1.06); opacity: 1; }
+  }
+</style>
+
 <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi7IaM65286rOg64+Z8J+QmiIsInNob3J0X25hbWUiOiLshozrnbzqs6Drj5nwn5CaIiwiZGVzY3JpcHRpb24iOiJBSSDrnbzsnbTtlIQg7KCE65616rCAIiwic3RhcnRfdXJsIjoiLi8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGYwZTE3IiwidGhlbWVfY29sb3IiOiIjMGYwZTE3IiwiaWNvbnMiOlt7InNyYyI6Imljb24tMTkyLnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifSx7InNyYyI6Imljb24tNTEyLnBuZyIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9wbmcifV19">
 
 <!-- 사용자 보고 2026-05-05 (perf): Google Fonts CSS 가 render-blocking 이라 첫 페인트 전에 흰→검 플래시. preload 후 swap 으로 non-blocking. -->

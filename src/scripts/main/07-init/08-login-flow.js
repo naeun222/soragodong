@@ -2,6 +2,16 @@
 function showLoginScreen() {
   document.querySelector('.app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
+  if (typeof _hideBootSplash === 'function') _hideBootSplash();
+}
+
+// 사용자 명시 2026-05-06 ultrathink (perf): boot splash hide — init/showLoginScreen 진입 시 호출.
+// 5초 안전망 (어떤 init 경로 fail 이라도 자동 hide) 은 init-fn.js 안 setTimeout 으로 별도.
+function _hideBootSplash() {
+  const s = document.getElementById('bootSplash');
+  if (!s) return;
+  s.classList.add('fade-out');
+  setTimeout(() => { try { s.remove(); } catch {} }, 320);
 }
 
 // 사용자 명시 2026-05-02 ultrathink: 동의 검증 + pending consent 저장 helper (이메일 OTP / SNS 로그인 둘 다 사용).
