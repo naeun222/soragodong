@@ -33,6 +33,22 @@ function _shouldRunSimTutorial(key) {
   return true;
 }
 
+// 사용자 명시 2026-05-06 ultrathink (모달 충돌 가드): sim 튜토 진입 / 코치마크 사이에서 떠있을 수 있는 모달 정리.
+function _simDismissBlockingOverlays() {
+  const sels = [
+    '.input-modal-overlay',
+    '.options-modal-overlay',
+    '.confirm-modal-overlay',
+    '.strategy-card-preview-overlay',
+    '.fullscreen-loader.show'
+  ];
+  sels.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      try { el.remove(); } catch {}
+    });
+  });
+}
+
 // 공통 sim 진입 helper — testerMode ON + 시드 + screen 진입 + 코치마크 시퀀스 + testerMode OFF (reload).
 async function _runSimTutorial({ tutorialKey, screenAfterSeed, navAction, coachmarks, sessionMarker }) {
   if (window._simTutorialRunning) return;
@@ -66,8 +82,10 @@ async function _runSimTutorial({ tutorialKey, screenAfterSeed, navAction, coachm
       try { await navAction(); } catch {} finally { window._simTutorialInternalNav = false; }
     }
     await _v8Sleep(450);
+    _simDismissBlockingOverlays();  // 코치마크 시작 직전 모달 정리
 
     for (const cm of (coachmarks || [])) {
+      _simDismissBlockingOverlays();  // 각 step 직전에도 — reflection 화면 진입 모달 등 충돌 방지
       try { await cm(); } catch (e) { console.warn('[sim cm]', e); }
       await _v8Sleep(220);
     }
@@ -129,7 +147,8 @@ async function runDiaryLibTutorialV8() {
     coachmarks: [
       _diaryCoachmarkLibIntro,
       _diaryCoachmarkChip,
-      _diaryCoachmarkCalendar,
+      _diaryCoachmarkCalendar415,
+      _diaryCoachmark415Read,
       _diaryCoachmarkChapterAuto,
       _simCoachmarkClosing
     ]
@@ -164,18 +183,55 @@ function _diaryCoachmarkChip() {
   });
 }
 
-function _diaryCoachmarkCalendar() {
+// 사용자 명시 2026-05-06 ultrathink: 4/15 자동 슬라이드 + 강조 + interactive (직접 클릭으로 day modal 진입).
+function _diaryCoachmarkCalendar415() {
+  // 4/15 가 옛 달 → _calMonthOffset 계산해서 자동 슬라이드.
+  try {
+    const target = new Date('2026-04-15T12:00:00');
+    const today = new Date();
+    const offset = (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth());
+    if (typeof _calMonthOffset !== 'undefined' && _calMonthOffset !== offset) {
+      // _calMonthOffset 는 module-let — 같은 concat-build 안 그래도 global 접근 OK.
+      // eslint-disable-next-line no-undef
+      _calMonthOffset = offset;
+      if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
+    }
+  } catch (e) { console.warn('[diary 4/15 nav]', e); }
+
   const body = `
     <div class="v8-coach-title">📔 캘린더 무드 그리드</div>
     <div class="v8-coach-text">
       한 달 한눈에 — 칸 색 = 그날 기분.<br>
-      <span class="v8-coach-text-soft">날짜 칸 누르면 그날의 기록.</span>
+      <b>4월 15일</b> 칸 한 번 눌러봐 ✦
     </div>
   `;
   return _v8ShowCoachmark({
-    targetSelector: '.cal-day, .lib-cal-grid',
+    targetSelector: '.cal-day[data-date="2026-04-15"]',
     body,
-    position: 'bottom',
+    position: 'top',
+    interactive: true,
+    waitFor: () => {
+      // day modal 떠있으면 advance.
+      return !!document.querySelector('.day-modal.active, #dayModal.active, .day-modal:not([hidden])');
+    },
+    allowNoTarget: true
+  });
+}
+
+// 사용자 명시 2026-05-06: 4/15 일기 본문 한 번 읽어보기 안내 — day modal 안 일기 박스 가리킴.
+function _diaryCoachman415Read_NOOP() { /* placeholder reserved */ }
+function _diaryCoachmark415Read() {
+  const body = `
+    <div class="v8-coach-title">📔 그날의 기록</div>
+    <div class="v8-coach-text">
+      이 날의 일기 한 번 읽어봐 ✦<br>
+      <span class="v8-coach-text-soft">다 봤으면 알겠어 — 다음으로.</span>
+    </div>
+  `;
+  return _v8ShowCoachmark({
+    targetSelector: '.day-modal-body, .day-entry, .day-modal .modal-body, .day-tab-content',
+    body,
+    position: 'top',
     allowNoTarget: true
   });
 }
@@ -226,12 +282,20 @@ function _insightsCoachmarkIntro() {
 }
 
 function _insightsCoachmarkAiExample() {
-  // 옛 insights_ai_example — 인사이트 카드 가리킴. 시드 안 ins_seed_5 가 'AI 발견' 예시.
+  // 옛 insights_ai_example — 인사이트 카드 가리킴. 시드 안 ins_seed_5 = '엄마 통화 후 이튿날 mood 평균 +0.8'.
+  // 사용자 명시 2026-05-06 ultrathink: 카드 자동 scrollIntoView + 임시 highlight glow (.sim-tutorial-highlight).
+  const card = document.querySelector('.insight-card[data-id="ins_seed_5"]');
+  if (card) {
+    try { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+    card.classList.add('sim-tutorial-highlight');
+    setTimeout(() => { try { card.classList.remove('sim-tutorial-highlight'); } catch {} }, 8000);
+  }
   const body = `
     <div class="v8-coach-title">🔮 AI 인사이트 예시</div>
     <div class="v8-coach-text">
       이런 걸 고동이가 발견해줘 ✦<br>
-      <span class="v8-coach-text-soft">엄마 통화 후 기분 상승 같은 패턴 — 신기하지?</span>
+      <b>"엄마 통화 후 이튿날 mood 평균 +0.8"</b><br>
+      <span class="v8-coach-text-soft">— 너가 못 봤던 너의 패턴.</span>
     </div>
   `;
   return _v8ShowCoachmark({
@@ -307,7 +371,7 @@ async function runReviewsTutorialV8() {
     },
     coachmarks: [
       _reviewsCoachmarkIntro,
-      _reviewsCoachmarkCadence,
+      _reviewsCoachmarkAnnual,
       _simCoachmarkClosing
     ]
   });
@@ -324,16 +388,32 @@ function _reviewsCoachmarkIntro() {
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
 }
 
-function _reviewsCoachmarkCadence() {
+// 사용자 명시 2026-05-06 ultrathink: 연간 리뷰 카드 한 번 직접 눌러보기 — interactive.
+function _reviewsCoachmarkAnnual() {
+  const card = document.querySelector('.annual-stories-card, .review-card.annual');
+  if (card) {
+    try { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+    card.classList.add('sim-tutorial-highlight');
+    setTimeout(() => { try { card.classList.remove('sim-tutorial-highlight'); } catch {} }, 8000);
+  }
   const body = `
-    <div class="v8-coach-title">자동 안내</div>
+    <div class="v8-coach-title">🌟 연간 리뷰</div>
     <div class="v8-coach-text">
-      때 되면 — 홈에 카드로 떠.<br>
-      직접 만들고 싶으면 카드 클릭 → 생성.<br>
-      <span class="v8-coach-text-soft">데이터 부족하면 '아직 일러' 안내.</span>
+      한 해의 너 — 한 번 들어가봐 ✦<br>
+      <span class="v8-coach-text-soft">Stories 형식으로 한 컷 한 컷 같이 봐.</span>
     </div>
   `;
-  return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'top' });
+  return _v8ShowCoachmark({
+    targetSelector: '.annual-stories-card, .review-card.annual',
+    body,
+    position: 'top',
+    interactive: true,
+    waitFor: () => {
+      // annual review modal 또는 별도 화면 진입 detect.
+      return !!document.querySelector('.annual-review-modal, .annual-stories-modal, #screen-annual-review.active, .ann-rv-overlay, .ann-rv-modal');
+    },
+    allowNoTarget: true
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════

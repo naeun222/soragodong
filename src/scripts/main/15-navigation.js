@@ -4,13 +4,10 @@
 function showScreen(name) {
   // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 진입 시 sim 튜토리얼 fire.
   // _simTutorialInternalNav 플래그 = 튜토리얼 자기 자신이 호출 — 재진입 차단.
+  // 사용자 명시 2026-05-06 (재정정): 마법고동 sim 튜토 폐기 — decisions 분기 제거.
   if (!window._simTutorialInternalNav) {
     if (name === 'archive' && typeof shouldRunDiaryLibTutorial === 'function' && shouldRunDiaryLibTutorial()) {
       runDiaryLibTutorialV8().catch(e => console.warn('[diaryLib]', e));
-      return;
-    }
-    if (name === 'decisions' && typeof shouldRunMagicTutorial === 'function' && shouldRunMagicTutorial()) {
-      runMagicTutorialV8().catch(e => console.warn('[magic]', e));
       return;
     }
     if (name === 'archive-reviews' && typeof shouldRunReviewsTutorial === 'function' && shouldRunReviewsTutorial()) {
@@ -193,7 +190,8 @@ const INLINE_TIPS = {
   syncDotRed: '🔴 동기화 대기 — 클릭하면 강제 저장',
   syncDotClick: '✓ 강제 저장 완료',
   cutoffWarning: '🌙 새벽 4시 이전 체크인 = 전날로 기록돼',
-  checkinFirstEntry: '📝 매일 한 번 — 패턴이 쌓여',
+  // 사용자 명시 2026-05-06 ultrathink: 체크인 = 너에 대한 정보 모으는 핵심 → 강조 톤.
+  checkinFirstEntry: '✦ 매일 한 번 체크인 — 너에 대한 정보가 쌓일수록 고동이가 더 깊게 이해해줘 🐚',
   opusToggle: '🦉 Opus = 5x 빠르게 차감 (Premium 만)',
   modeFirstClick: '🌙 모드 전환 — 분위기에 맞게'
 };
