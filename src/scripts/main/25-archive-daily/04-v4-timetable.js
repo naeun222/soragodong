@@ -1,8 +1,7 @@
 function renderV4TimetableHTML() {
   const items = (state.todaySchedule || []).slice().sort((a, b) => (a.start || '').localeCompare(b.start || ''));
-  const todayK = todayKey();
-  // 오늘 항목만 (date 안 들어가 있으면 모두 오늘로 가정)
-  const todayItems = items.filter(it => !it.date || it.date === todayK);
+  // 사용자 명시 2026-05-06: 새벽 4시 cutoff 후 어제 일정 사라지던 동작 폐기 — 사용자 직접 삭제 시까지 보임.
+  const todayItems = items;
 
   // 사용 시간 범위: 항목 있으면 min~max, 없으면 8-22 default
   let startHour = 8, endHour = 22;
