@@ -15,16 +15,13 @@ function shouldRunFirstPearlTutorial() {
   if (state.tutorialShown.pearls) return false;
   // 사용자 보고 2026-05-06 ultrathink (재): testerMode ON (개발자 본인) = saveState noop 라 마킹 cloud sync X → 매번 fire 버그. skip.
   if (state.preferences && state.preferences.testerMode) return false;
-  // 사용자 명시 2026-05-06 ultrathink (재): "신규 가입자만 처음 눌렀을 때" — hasAnyData true (기존 사용자) = sim 튜토 자체 fire X.
-  const hasAnyData =
+  // 사용자 명시 2026-05-06 ultrathink (재 X2): "신규 가입자만 처음 눌렀을 때". 신규 detect = 사용자 직접 활동 흔적.
+  // V8 / C2 자동 inject 데이터 (chatMessages/topicCards/missions) 는 신규 신호 X. entries / shellCollection / pearls (사용자 직접 추가) 만 신호.
+  const hasUserAction =
     (Array.isArray(state.entries) && state.entries.length > 0) ||
-    (Array.isArray(state.chatMessages) && state.chatMessages.length > 0) ||
     (Array.isArray(state.shellCollection) && state.shellCollection.length > 0) ||
-    (Array.isArray(state.topicCards) && state.topicCards.length > 0) ||
-    (Array.isArray(state.missions) && state.missions.length > 0) ||
-    (Array.isArray(state.pearls) && state.pearls.length > 0) ||
-    (Array.isArray(state.intakeWorry) && state.intakeWorry.length > 0);
-  if (hasAnyData) {
+    (Array.isArray(state.pearls) && state.pearls.length > 0);
+  if (hasUserAction) {
     state.tutorialShown.pearls = true;
     try { saveState(); } catch {}
     return false;
