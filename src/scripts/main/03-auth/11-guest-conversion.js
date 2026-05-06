@@ -37,7 +37,7 @@ function _renderGuestConvModal(ctx) {
     <div style="font-size:13px; color:var(--text); margin-bottom:18px; line-height:1.75;">너의 데이터, <b>너만 풀 수 있게</b> 종단간 암호화로 보관할게. 잃어버릴 일도 없고, 나도 못 봐.</div>
     ${reasonText}
 
-    <button type="button" class="sns-login-btn kakao" onclick="_guestConvKakaoLink()" style="margin-bottom:14px;">
+    <button type="button" class="sns-login-btn kakao" onclick="_guestConvBackToLogin()" style="margin-bottom:14px;">
       <svg class="sns-login-icon" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><path d="M9 1.5C4.86 1.5 1.5 4.18 1.5 7.5c0 2.13 1.42 4 3.55 5.06l-.7 2.61c-.07.27.23.49.46.34l3.06-2.04c.38.04.76.07 1.13.07 4.14 0 7.5-2.68 7.5-6S13.14 1.5 9 1.5z"/></svg>
       <span>카카오로 시작하기</span>
     </button>
@@ -53,9 +53,14 @@ function _closeGuestConvModal() {
   if (m) m.remove();
 }
 
-// 사용자 명시 2026-05-06: 게스트 → 가입 = Supabase linkIdentity 패턴 (uid 영속).
-// 옛 ?provider=kakao 단순 OAuth = 신규 user 생성 (uid 변경 → 데이터 마이그레이션 필요).
-// linkIdentity REST = `/auth/v1/user/identities/authorize` (Bearer auth) — 같은 uid 유지하고 identity 추가.
+// 사용자 명시 2026-05-06 ultrathink: 게스트 → '카카오로 시작' 클릭 = 로그인 창 으로 돌아가기 (linkIdentity 폐기).
+// 사용자 의도: 새 uid 로 깔끔히 시작. 게스트 localStorage 는 다른 사용자 detect 시 자동 wipe.
+function _guestConvBackToLogin() {
+  _closeGuestConvModal();
+  if (typeof showLoginScreen === 'function') showLoginScreen();
+}
+
+// V4 (사용자 명시 2026-05-06 ultrathink): linkIdentity 흐름 폐기. 함수 보존 — 호출처 X 라 dead.
 async function _guestConvKakaoLink() {
   if (!session?.access_token) {
     alert('세션 끊김 — 페이지 새로고침');
