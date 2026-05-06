@@ -23,7 +23,7 @@ function _showWelcomeGiftModal() {
         <span class="welcome-gift-token-hint">30일 동안 자유롭게</span>
       </div>
       <button class="welcome-gift-btn" id="welcomeGiftAccept">시작할게</button>
-      <div class="welcome-gift-trust">자동 결제 X · 만료 후 원하면 직접 구독</div>
+      <div class="welcome-gift-trust">30일 후 자동 갱신 · 원하지 않으면 [설정 → 구독] 해지</div>
     </div>
   `;
   document.body.appendChild(overlay);

@@ -207,13 +207,11 @@ async function _doRefreshBillingStatus(manual) {
         }
       }
       // 사용자 명시 2026-05-06: 다음 갱신 해지 = 작은 link 톤 (text-soft, 10.5px, 밑줄 X). 보고 싶을 때만 보이게.
-      // early_light 는 자동 결제 X (만료 후 별도 구독) 라 버튼 노출 X.
-      if (planKey !== 'early_light') {
-        if (cancelledRenewal) {
-          html += `<div style="margin-top:10px; font-size:10.5px; color:var(--text-soft); text-align:right;">✓ 다음 갱신 해지됨</div>`;
-        } else {
-          html += `<div style="margin-top:10px; text-align:right;"><a href="javascript:void(0)" onclick="cancelNextRenewal()" style="font-size:10.5px; color:var(--text-soft); text-decoration:none; opacity:0.65;">다음 갱신 해지</a></div>`;
-        }
+      // 사용자 명시 2026-05-06 (정정): early_light 도 정기구독 (30일 무료 후 자동 갱신) 이라 버튼 노출 O. 모든 활성 구독 tier 에 표시.
+      if (cancelledRenewal) {
+        html += `<div style="margin-top:10px; font-size:10.5px; color:var(--text-soft); text-align:right;">✓ 다음 갱신 해지됨</div>`;
+      } else {
+        html += `<div style="margin-top:10px; text-align:right;"><a href="javascript:void(0)" onclick="cancelNextRenewal()" style="font-size:10.5px; color:var(--text-soft); text-decoration:none; opacity:0.65;">다음 갱신 해지</a></div>`;
       }
     } else {
       html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 체험 종료. 계속 쓰려면 구독</span></div>`;
@@ -221,11 +219,15 @@ async function _doRefreshBillingStatus(manual) {
     if (balance > 0) {
       html += `<div style="margin-top:6px;"><b>잔여 credit</b>: $${balance.toFixed(4)} (~${balanceKrw.toLocaleString()}원)</div>`;
     }
-    // 사용자 명시 2026-05-05: 처음 한 달 무료 (얼리 플랜) 만료 표시 — 100만 토큰 표기 폐기.
+    // 사용자 명시 2026-05-06 (정정): early_light = 30일 무료 후 자동 갱신 정기구독. '자동 결제 X' 폐기.
     if (subActive && planKey === 'early_light' && subExpires) {
       const expiresAt = new Date(billing.subscription_expires_at);
       const remainingDays = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / 86400000));
-      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 얼리 무료 — ${remainingDays}일 후 만료 (자동 결제 X)</div>`;
+      const cancelledRenewal = !!billing.cancel_at_period_end;
+      const trialNote = cancelledRenewal
+        ? `${remainingDays}일 후 종료 (다음 갱신 해지됨)`
+        : `${remainingDays}일 후 자동 갱신 시작`;
+      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 30일 무료 — ${trialNote}</div>`;
     }
     status.innerHTML = html;
     // 사용자 명시 2026-05-05: _billingCacheTs stamp — 30s TTL + showBudgetExceededModal 캐시 재사용용.

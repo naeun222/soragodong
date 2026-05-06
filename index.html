@@ -28769,7 +28769,7 @@ function _showCore2LockedToast() {
 //  · 첫 한 바퀴 완주 축하 + 환영 두 톤 통합 (eyebrow 'celebrate' / 본문 greeting)
 //  · godong 아이콘 (브랜드 일관성) + ambient gold glow (modal::before radial)
 //  · 토큰 hero: label / amount (대형 그라데이션) / hint — vertical stack
-//  · 신뢰 라인 보존 (전상법 §13 / 표시광고법 §3 — '30일 유효 · 자동 결제 X')
+//  · 신뢰 라인 보존 (전상법 §13 / 표시광고법 §3 — '30일 무료 · 자동 갱신 / 해지: 설정 → 구독')
 //  · 받기 click → backend POST (idempotent) → token block 'received' 색감 변환 → 0.8s 후 닫힘
 // 사용자 명시 2026-05-05: 100만 토큰 환영 선물 정책 폐기 → 처음 한 달 자동 무료 (얼리 플랜) 안내 모달.
 // backend ensureBillingRow 가 신규 가입 시 subscription_active=true + plan='early_light' + 30일 expires 자동 처리.
@@ -28796,7 +28796,7 @@ function _showWelcomeGiftModal() {
         <span class="welcome-gift-token-hint">30일 동안 자유롭게</span>
       </div>
       <button class="welcome-gift-btn" id="welcomeGiftAccept">시작할게</button>
-      <div class="welcome-gift-trust">자동 결제 X · 만료 후 원하면 직접 구독</div>
+      <div class="welcome-gift-trust">30일 후 자동 갱신 · 원하지 않으면 [설정 → 구독] 해지</div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -48105,13 +48105,11 @@ async function _doRefreshBillingStatus(manual) {
         }
       }
       // 사용자 명시 2026-05-06: 다음 갱신 해지 = 작은 link 톤 (text-soft, 10.5px, 밑줄 X). 보고 싶을 때만 보이게.
-      // early_light 는 자동 결제 X (만료 후 별도 구독) 라 버튼 노출 X.
-      if (planKey !== 'early_light') {
-        if (cancelledRenewal) {
-          html += `<div style="margin-top:10px; font-size:10.5px; color:var(--text-soft); text-align:right;">✓ 다음 갱신 해지됨</div>`;
-        } else {
-          html += `<div style="margin-top:10px; text-align:right;"><a href="javascript:void(0)" onclick="cancelNextRenewal()" style="font-size:10.5px; color:var(--text-soft); text-decoration:none; opacity:0.65;">다음 갱신 해지</a></div>`;
-        }
+      // 사용자 명시 2026-05-06 (정정): early_light 도 정기구독 (30일 무료 후 자동 갱신) 이라 버튼 노출 O. 모든 활성 구독 tier 에 표시.
+      if (cancelledRenewal) {
+        html += `<div style="margin-top:10px; font-size:10.5px; color:var(--text-soft); text-align:right;">✓ 다음 갱신 해지됨</div>`;
+      } else {
+        html += `<div style="margin-top:10px; text-align:right;"><a href="javascript:void(0)" onclick="cancelNextRenewal()" style="font-size:10.5px; color:var(--text-soft); text-decoration:none; opacity:0.65;">다음 갱신 해지</a></div>`;
       }
     } else {
       html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 체험 종료. 계속 쓰려면 구독</span></div>`;
@@ -48119,11 +48117,15 @@ async function _doRefreshBillingStatus(manual) {
     if (balance > 0) {
       html += `<div style="margin-top:6px;"><b>잔여 credit</b>: $${balance.toFixed(4)} (~${balanceKrw.toLocaleString()}원)</div>`;
     }
-    // 사용자 명시 2026-05-05: 처음 한 달 무료 (얼리 플랜) 만료 표시 — 100만 토큰 표기 폐기.
+    // 사용자 명시 2026-05-06 (정정): early_light = 30일 무료 후 자동 갱신 정기구독. '자동 결제 X' 폐기.
     if (subActive && planKey === 'early_light' && subExpires) {
       const expiresAt = new Date(billing.subscription_expires_at);
       const remainingDays = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / 86400000));
-      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 얼리 무료 — ${remainingDays}일 후 만료 (자동 결제 X)</div>`;
+      const cancelledRenewal = !!billing.cancel_at_period_end;
+      const trialNote = cancelledRenewal
+        ? `${remainingDays}일 후 종료 (다음 갱신 해지됨)`
+        : `${remainingDays}일 후 자동 갱신 시작`;
+      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 30일 무료 — ${trialNote}</div>`;
     }
     status.innerHTML = html;
     // 사용자 명시 2026-05-05: _billingCacheTs stamp — 30s TTL + showBudgetExceededModal 캐시 재사용용.
@@ -48274,8 +48276,9 @@ const TIER_PLANS_CLIENT = {
     description: '일반 대화 + 분석 풀로. 매일의 자기관찰에 충분.' },
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '깊게 자주', emoji: '🌊',
     description: '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.' },
-  early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜',       tagline: '체험', emoji: '🐚',
-    description: '신규 가입자 자동 활성화 — 충분히 써보고 마음에 들면 구독.', auto_grant_first_month: true },
+  // V4 (사용자 명시 2026-05-06): early_light = 정기구독 — 30일 무료 후 자동 갱신 (얼리버드 가격 락인). 신규 가입 시 ensureBillingRow 가 자동 활성화. 갱신 원하지 않으면 [설정 → 구독] 다음 갱신 해지.
+  early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜',       tagline: '30일 무료 → 자동 갱신', emoji: '🐚',
+    description: '신규 가입자 자동 활성화 — 30일 무료. 만료 시 자동 갱신 (얼리버드 가격 락인). 원하지 않으면 [설정 → 구독] 다음 갱신 해지.', auto_grant_first_month: true },
   // V4 (사용자 명시 2026-05-06): 얼리버드 = 정기구독 (4,900원/월 자동 갱신). "평생" = 이 가격이 평생 lock-in (출시 후에도 동일가 유지). 1회 결제 영구 X.
   early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '출시 전 한정 가격 락인', emoji: '✨',
     description: '4,900원/월 자동 갱신. 출시 전 가입자만 — 이 가격은 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 해지 가능.' },
@@ -48547,8 +48550,8 @@ function checkFreeTrialExpiry() {
   const daysDisplay = Math.max(1, Math.ceil(remainingDays));
   _addNotification({
     type: 'free_trial_expiry_warning',
-    title: '체험 한도가 얼마 안 남았어',
-    body: `<b>${daysDisplay}일</b> 후 만료. 계속 쓰고 싶으면 구독.<br><b>얼리버드 구독 4,900원/월</b> (출시 전 가입자만 이 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+    title: '30일 무료 종료 임박',
+    body: `<b>${daysDisplay}일</b> 후 자동 갱신 시작 — <b>얼리버드 4,900원/월</b> (출시 전 가입자만 이 가격 평생 락인).<br>원하지 않으면 [설정 → 구독] 다음 갱신 해지.<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
     persistent: true
   });
 }

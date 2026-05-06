@@ -53,5 +53,5 @@ function _showCore2LockedToast() {
 //  · 첫 한 바퀴 완주 축하 + 환영 두 톤 통합 (eyebrow 'celebrate' / 본문 greeting)
 //  · godong 아이콘 (브랜드 일관성) + ambient gold glow (modal::before radial)
 //  · 토큰 hero: label / amount (대형 그라데이션) / hint — vertical stack
-//  · 신뢰 라인 보존 (전상법 §13 / 표시광고법 §3 — '30일 유효 · 자동 결제 X')
+//  · 신뢰 라인 보존 (전상법 §13 / 표시광고법 §3 — '30일 무료 · 자동 갱신 / 해지: 설정 → 구독')
 //  · 받기 click → backend POST (idempotent) → token block 'received' 색감 변환 → 0.8s 후 닫힘
