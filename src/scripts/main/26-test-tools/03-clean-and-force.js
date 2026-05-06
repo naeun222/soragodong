@@ -54,11 +54,15 @@ async function testForceQuarterlyReview() {
   };
   let summary = '';
   let sections = [];
+  let transformation = null;
+  let continuity = '';
   if (_canAI() &&typeof generateQuarterlyReview === 'function') {
     try {
       const aiReview = await generateQuarterlyReview(prevQuarterKey, stats);
       summary = aiReview.summary || '';
       sections = Array.isArray(aiReview.sections) ? aiReview.sections : [];
+      transformation = aiReview.transformation || null;
+      continuity = aiReview.continuity || '';
     } catch (e) { console.warn('quarterly AI failed:', e); }
   }
   if (!sections.length) {
@@ -69,12 +73,16 @@ async function testForceQuarterlyReview() {
       { label: '🌫 작동 중인 패턴', body: '"거절 후 부채감" 패턴이 N회 등장. 환경 도구로 일부 풀림.' },
       { label: '🧭 다음 분기에', body: '거절 → "그날 안에 한 줄" 자동화 시도.' }
     ];
+    if (!transformation) {
+      transformation = { start_quote: '또 거절 못해서 일주일 망쳤어', end_quote: '일정 충돌 확인하고 답함 — 의외로 OK', shift: '참는 거에서 명확히 말하기로' };
+      continuity = '그래도 친구 챙기는 마음은 그대로';
+    }
   }
   state.quarterlyReviews.push({
     id: 'qr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     quarterKey: prevQuarterKey,
     completedAt: new Date().toISOString(),
-    stats, summary, sections, auto: true
+    stats, summary, sections, transformation, continuity, auto: true
   });
   saveState({ force: true });
   showToast('✅ 분기 리뷰 생성됨 (도서관 → 마법·리뷰 → 🌙 리뷰 모음)');

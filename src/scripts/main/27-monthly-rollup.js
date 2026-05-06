@@ -169,6 +169,8 @@ function _buildQuarterlyReviewPrompt(quarterKey, stats, data) {
 - 사용자 본인의 인용 5개 → 자기친밀감.
 - **분기의 너를 한 단어로 명명** (정체성 hook).
 - 다음 분기 씨앗 적용하기 → 리뷰 간 continuity.
+- **변화 (transformation)** — 분기 시작과 끝의 너를 사용자 자신의 말로 비교. 사용자 명시 2026-05-06 ultrathink.
+- **anchor (continuity)** — 변하지 않은 정체성 1줄. 변화만 강조하면 사용자 멀미.
 
 [지난 분기 stats]
 - 체크인: ${stats.checkins}일
@@ -219,6 +221,12 @@ ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : ''}
     "condition": "어떤 조건/모드/시간"
   },
   "turning_point": "분기 내 변곡점 — 가장 큰 변화 / 결정 / 정체성 shift. 가능하면 entry 인용. 2-4문장.",
+  "transformation": {
+    "start_quote": "분기 첫 2주 entries / 대화에서 사용자 인용 — 그때의 너 (30자 이내, 따옴표 X — 본문만)",
+    "end_quote": "분기 끝 2주 entries / 대화에서 사용자 인용 — 지금의 너 (30자 이내, 따옴표 X — 본문만). start 와 대조되는 톤·관점 변화 보이게 골라.",
+    "shift": "X에서 Y로 한 줄 (15-30자, 자연 한국어). 예: '자책에서 관찰로', '회피에서 마주봄으로', '버티기에서 흐름으로'. 추상 어휘 X 사용자 어휘 ○."
+  },
+  "continuity": "분기 내내 안 변한 너의 한 가지 (정체성 anchor) — 사용자 어휘. 1줄, 따뜻한 톤. 예: '그래도 매일 한 줄 일기는 남겼어', '엄마 챙기는 마음은 그대로', '카페 가는 리듬은 변함없음'. 변화 narrative 옆 anchor.",
   "quotes": ["짧은 인용 5개 (entries / 대화에서, 각 30자 이내)", "...", "...", "...", "..."],
   "experiment": {
     "what": "다음 분기 한 가지 작은 실험 (구체적, 환경 setup 우선)",

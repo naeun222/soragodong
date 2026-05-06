@@ -256,3 +256,52 @@ function _buildNarrativeSlideHTML(review) {
   `;
 }
 
+// 사용자 명시 2026-05-06 ultrathink: 분기 리뷰 차별화 — transformation 슬라이드.
+//   "그때 너 → 지금 너" — start_quote (분기 첫 2주) ⇂ shift ⇂ end_quote (분기 끝 2주) + continuity anchor.
+//   review.transformation = { start_quote, end_quote, shift } / review.continuity = string.
+function _buildTransformationSlideHTML(review) {
+  const tr = review && review.transformation;
+  if (!tr || !(tr.start_quote || tr.end_quote || tr.shift)) return null;
+  const continuity = (review.continuity || '').trim();
+  return `
+    <div style="display:flex; flex-direction:column; align-items:center; max-width:340px; padding:18px 14px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:22px;">
+        <div style="width:20px; height:1px; background:rgba(168,156,214,0.5);"></div>
+        <div class="stories-label" style="margin:0; color:rgba(168,156,214,0.95);">그때 너 → 지금 너</div>
+        <div style="width:20px; height:1px; background:rgba(168,156,214,0.5);"></div>
+      </div>
+
+      ${tr.start_quote ? `
+        <div style="width:100%; max-width:280px; padding:14px 16px; background:rgba(255,255,255,0.04); border:1px solid rgba(168,156,214,0.18); border-radius:14px; margin-bottom:8px; opacity:0.78;">
+          <div style="font-size:9.5px; color:rgba(168,156,214,0.85); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:6px;">분기 시작</div>
+          <div style="font-family:'Gowun Batang',serif; font-size:14px; color:rgba(255,255,255,0.85); line-height:1.65;">"${escapeHtml(tr.start_quote)}"</div>
+        </div>
+      ` : ''}
+
+      <div style="font-size:18px; color:rgba(168,156,214,0.7); margin:6px 0;">↓</div>
+
+      ${tr.shift ? `
+        <div style="font-family:'Gowun Batang',serif; font-size:18px; color:white; line-height:1.7; text-align:center; padding:10px 14px; letter-spacing:0.01em; margin-bottom:6px;">
+          ${escapeHtml(tr.shift)}
+        </div>
+      ` : ''}
+
+      <div style="font-size:18px; color:rgba(168,156,214,0.7); margin:6px 0;">↓</div>
+
+      ${tr.end_quote ? `
+        <div style="width:100%; max-width:280px; padding:14px 16px; background:linear-gradient(135deg, rgba(168,156,214,0.18), rgba(212,167,106,0.08)); border:1px solid rgba(168,156,214,0.32); border-radius:14px; margin-top:8px;">
+          <div style="font-size:9.5px; color:rgba(212,167,106,0.95); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:6px;">분기 끝</div>
+          <div style="font-family:'Gowun Batang',serif; font-size:15px; color:white; line-height:1.65;">"${escapeHtml(tr.end_quote)}"</div>
+        </div>
+      ` : ''}
+
+      ${continuity ? `
+        <div style="margin-top:24px; padding-top:16px; border-top:1px dashed rgba(255,255,255,0.18); width:100%; text-align:center;">
+          <div style="font-size:10px; color:rgba(143,200,143,0.85); letter-spacing:0.13em; text-transform:uppercase; margin-bottom:6px;">⚓ 안 변한 건</div>
+          <div style="font-size:12.5px; color:rgba(255,255,255,0.82); line-height:1.6; font-style:italic;">${escapeHtml(continuity)}</div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+

@@ -95,6 +95,8 @@ async function openQuarterlyReviewCard() {
       one_word: aiReview.one_word,
       pattern: aiReview.pattern,
       turning_point: aiReview.turning_point,
+      transformation: aiReview.transformation,
+      continuity: aiReview.continuity,
       quotes: aiReview.quotes,
       experiment: aiReview.experiment,
       seeds: aiReview.seeds,

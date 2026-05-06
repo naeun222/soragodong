@@ -24198,6 +24198,8 @@ async function openQuarterlyReviewCard() {
       one_word: aiReview.one_word,
       pattern: aiReview.pattern,
       turning_point: aiReview.turning_point,
+      transformation: aiReview.transformation,
+      continuity: aiReview.continuity,
       quotes: aiReview.quotes,
       experiment: aiReview.experiment,
       seeds: aiReview.seeds,
@@ -41523,6 +41525,8 @@ async function testSeedV4Data() {
   state.quarterlyReviews = [];
   const quarterlyTones = [
     { focus: '환경 차원 도구', growth: '"마감 직전 폭발력" 결정화', pattern: '거절 후 부채감 풀림 중', next: '거절 자동화',
+      transformation: { start_quote: '또 거절 못해서 일주일 망쳤어', end_quote: '일정 충돌 확인하고 답함 — 의외로 OK', shift: '참는 거에서 명확히 말하기로' },
+      continuity: '그래도 친구 챙기는 마음은 그대로',
       stats: { checkins: 72, attempts: 18, worked: 12, didnt: 4, meh: 2, pearls: 11, dnaPearls: 1,
         modeCount: { period: 8, drained: 5, rest: 3, exam: 4 },
         moodAvg: 3.4, vitalityAvg: 3.1, topMusicCount: 4, photoCount: 6, diaryCount: 22,
@@ -41530,6 +41534,8 @@ async function testSeedV4Data() {
         diagnoses: { weak_tool: 1, wrong_layer: 1 },
         trackerStats: [{ name: '체중', kind: 'numeric', delta: -2.0, unit: 'kg' }, { name: '러닝', kind: 'numeric', delta: 12, unit: 'km' }] } },
     { focus: '실험 사이클 + 결과', growth: '실험 첫 success — 6개월 만의 보상', pattern: '잠 부족 패턴 재등장', next: '11시 잠 자동화',
+      transformation: { start_quote: '왜 또 새벽 3시에 깨있지', end_quote: '11시면 자동으로 졸려 오기 시작', shift: '버티기에서 흐름 만들기로' },
+      continuity: '마감은 여전히 직전에 폭발',
       stats: { checkins: 68, attempts: 14, worked: 9, didnt: 3, meh: 2, pearls: 9, dnaPearls: 0,
         modeCount: { period: 9, drained: 7, rest: 5, sick: 2, exam: 2 },
         moodAvg: 3.0, vitalityAvg: 2.8, topMusicCount: 3, photoCount: 4, diaryCount: 18,
@@ -41537,6 +41543,8 @@ async function testSeedV4Data() {
         diagnoses: { avoidance: 1 },
         trackerStats: [{ name: '체중', kind: 'numeric', delta: -0.5, unit: 'kg' }, { name: '러닝', kind: 'numeric', delta: 8, unit: 'km' }] } },
     { focus: '학회 발표 + 거절 패턴', growth: '거절 첫 성공 + 발표 마무리', pattern: '발표 후 번아웃', next: '사회 차원 시도',
+      transformation: { start_quote: '발표 한 달 남았는데 손도 못 대', end_quote: '오늘 발표 끝남 — 떨었지만 했어', shift: '회피에서 마주봄으로' },
+      continuity: '발표 후 며칠 텅 빈 건 변함 X',
       stats: { checkins: 65, attempts: 16, worked: 10, didnt: 4, meh: 2, pearls: 10, dnaPearls: 0,
         modeCount: { period: 8, drained: 9, rest: 7, exam: 5 },
         moodAvg: 3.2, vitalityAvg: 2.9, topMusicCount: 5, photoCount: 7, diaryCount: 20,
@@ -41544,6 +41552,8 @@ async function testSeedV4Data() {
         diagnoses: { value_clash: 1, avoidance: 1 },
         trackerStats: [{ name: '명상', kind: 'check', delta: 18, unit: '회' }] } },
     { focus: '여름 회복 + 시작', growth: '운동 30일 지속', pattern: '회복 모드 정착', next: '아침 리듬',
+      transformation: { start_quote: '운동? 일주일째 한 번도 못 갔어', end_quote: '오늘로 30일째 — 빠지면 오히려 찜찜', shift: '의지 짜내기에서 리듬 타기로' },
+      continuity: '회복 시간 챙기는 자세는 그대로',
       stats: { checkins: 58, attempts: 10, worked: 7, didnt: 2, meh: 1, pearls: 8, dnaPearls: 0,
         modeCount: { period: 8, rest: 12, travel: 3, sick: 2 },
         moodAvg: 3.6, vitalityAvg: 3.3, topMusicCount: 3, photoCount: 8, diaryCount: 15,
@@ -41570,6 +41580,8 @@ async function testSeedV4Data() {
         { label: '🌫 작동 중인 패턴', body: tone.pattern },
         { label: '🧭 다음 분기에', body: tone.next }
       ],
+      transformation: tone.transformation,
+      continuity: tone.continuity,
       auto: true
     });
   }
@@ -42217,11 +42229,15 @@ async function testForceQuarterlyReview() {
   };
   let summary = '';
   let sections = [];
+  let transformation = null;
+  let continuity = '';
   if (_canAI() &&typeof generateQuarterlyReview === 'function') {
     try {
       const aiReview = await generateQuarterlyReview(prevQuarterKey, stats);
       summary = aiReview.summary || '';
       sections = Array.isArray(aiReview.sections) ? aiReview.sections : [];
+      transformation = aiReview.transformation || null;
+      continuity = aiReview.continuity || '';
     } catch (e) { console.warn('quarterly AI failed:', e); }
   }
   if (!sections.length) {
@@ -42232,12 +42248,16 @@ async function testForceQuarterlyReview() {
       { label: '🌫 작동 중인 패턴', body: '"거절 후 부채감" 패턴이 N회 등장. 환경 도구로 일부 풀림.' },
       { label: '🧭 다음 분기에', body: '거절 → "그날 안에 한 줄" 자동화 시도.' }
     ];
+    if (!transformation) {
+      transformation = { start_quote: '또 거절 못해서 일주일 망쳤어', end_quote: '일정 충돌 확인하고 답함 — 의외로 OK', shift: '참는 거에서 명확히 말하기로' };
+      continuity = '그래도 친구 챙기는 마음은 그대로';
+    }
   }
   state.quarterlyReviews.push({
     id: 'qr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     quarterKey: prevQuarterKey,
     completedAt: new Date().toISOString(),
-    stats, summary, sections, auto: true
+    stats, summary, sections, transformation, continuity, auto: true
   });
   saveState({ force: true });
   showToast('✅ 분기 리뷰 생성됨 (도서관 → 마법·리뷰 → 🌙 리뷰 모음)');
@@ -42941,6 +42961,8 @@ function _buildQuarterlyReviewPrompt(quarterKey, stats, data) {
 - 사용자 본인의 인용 5개 → 자기친밀감.
 - **분기의 너를 한 단어로 명명** (정체성 hook).
 - 다음 분기 씨앗 적용하기 → 리뷰 간 continuity.
+- **변화 (transformation)** — 분기 시작과 끝의 너를 사용자 자신의 말로 비교. 사용자 명시 2026-05-06 ultrathink.
+- **anchor (continuity)** — 변하지 않은 정체성 1줄. 변화만 강조하면 사용자 멀미.
 
 [지난 분기 stats]
 - 체크인: ${stats.checkins}일
@@ -42991,6 +43013,12 @@ ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : ''}
     "condition": "어떤 조건/모드/시간"
   },
   "turning_point": "분기 내 변곡점 — 가장 큰 변화 / 결정 / 정체성 shift. 가능하면 entry 인용. 2-4문장.",
+  "transformation": {
+    "start_quote": "분기 첫 2주 entries / 대화에서 사용자 인용 — 그때의 너 (30자 이내, 따옴표 X — 본문만)",
+    "end_quote": "분기 끝 2주 entries / 대화에서 사용자 인용 — 지금의 너 (30자 이내, 따옴표 X — 본문만). start 와 대조되는 톤·관점 변화 보이게 골라.",
+    "shift": "X에서 Y로 한 줄 (15-30자, 자연 한국어). 예: '자책에서 관찰로', '회피에서 마주봄으로', '버티기에서 흐름으로'. 추상 어휘 X 사용자 어휘 ○."
+  },
+  "continuity": "분기 내내 안 변한 너의 한 가지 (정체성 anchor) — 사용자 어휘. 1줄, 따뜻한 톤. 예: '그래도 매일 한 줄 일기는 남겼어', '엄마 챙기는 마음은 그대로', '카페 가는 리듬은 변함없음'. 변화 narrative 옆 anchor.",
   "quotes": ["짧은 인용 5개 (entries / 대화에서, 각 30자 이내)", "...", "...", "...", "..."],
   "experiment": {
     "what": "다음 분기 한 가지 작은 실험 (구체적, 환경 setup 우선)",
@@ -44793,6 +44821,12 @@ async function buildQuarterlySlides(review) {
     slides.push({ tone: 'tone-emo-5', html: timecapsuleHtml });
   }
 
+  // 8.9. 진지 — 그때 너 → 지금 너 (사용자 명시 2026-05-06 ultrathink: 분기 = 변화 렌즈)
+  const transformationHtml = _buildTransformationSlideHTML(review);
+  if (transformationHtml) {
+    slides.push({ tone: 'tone-deep-2', html: transformationHtml });
+  }
+
   // 9. 진지 narrative + prompt
   slides.push({
     tone: 'tone-deep',
@@ -45516,6 +45550,55 @@ function _buildNarrativeSlideHTML(review) {
         <div style="margin-top:22px; padding:14px 16px; background:linear-gradient(135deg, rgba(143,200,143,0.18), rgba(212,167,106,0.10)); border-radius:14px; width:100%; box-sizing:border-box;">
           <div style="font-size:10px; color:rgba(143,200,143,0.95); margin-bottom:5px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase;">${escapeHtml(nextSection.label || '다음 분기에')}</div>
           <div style="font-size:13px; color:white; line-height:1.6;">${escapeHtml(nextSection.body || '')}</div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+// 사용자 명시 2026-05-06 ultrathink: 분기 리뷰 차별화 — transformation 슬라이드.
+//   "그때 너 → 지금 너" — start_quote (분기 첫 2주) ⇂ shift ⇂ end_quote (분기 끝 2주) + continuity anchor.
+//   review.transformation = { start_quote, end_quote, shift } / review.continuity = string.
+function _buildTransformationSlideHTML(review) {
+  const tr = review && review.transformation;
+  if (!tr || !(tr.start_quote || tr.end_quote || tr.shift)) return null;
+  const continuity = (review.continuity || '').trim();
+  return `
+    <div style="display:flex; flex-direction:column; align-items:center; max-width:340px; padding:18px 14px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:22px;">
+        <div style="width:20px; height:1px; background:rgba(168,156,214,0.5);"></div>
+        <div class="stories-label" style="margin:0; color:rgba(168,156,214,0.95);">그때 너 → 지금 너</div>
+        <div style="width:20px; height:1px; background:rgba(168,156,214,0.5);"></div>
+      </div>
+
+      ${tr.start_quote ? `
+        <div style="width:100%; max-width:280px; padding:14px 16px; background:rgba(255,255,255,0.04); border:1px solid rgba(168,156,214,0.18); border-radius:14px; margin-bottom:8px; opacity:0.78;">
+          <div style="font-size:9.5px; color:rgba(168,156,214,0.85); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:6px;">분기 시작</div>
+          <div style="font-family:'Gowun Batang',serif; font-size:14px; color:rgba(255,255,255,0.85); line-height:1.65;">"${escapeHtml(tr.start_quote)}"</div>
+        </div>
+      ` : ''}
+
+      <div style="font-size:18px; color:rgba(168,156,214,0.7); margin:6px 0;">↓</div>
+
+      ${tr.shift ? `
+        <div style="font-family:'Gowun Batang',serif; font-size:18px; color:white; line-height:1.7; text-align:center; padding:10px 14px; letter-spacing:0.01em; margin-bottom:6px;">
+          ${escapeHtml(tr.shift)}
+        </div>
+      ` : ''}
+
+      <div style="font-size:18px; color:rgba(168,156,214,0.7); margin:6px 0;">↓</div>
+
+      ${tr.end_quote ? `
+        <div style="width:100%; max-width:280px; padding:14px 16px; background:linear-gradient(135deg, rgba(168,156,214,0.18), rgba(212,167,106,0.08)); border:1px solid rgba(168,156,214,0.32); border-radius:14px; margin-top:8px;">
+          <div style="font-size:9.5px; color:rgba(212,167,106,0.95); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:6px;">분기 끝</div>
+          <div style="font-family:'Gowun Batang',serif; font-size:15px; color:white; line-height:1.65;">"${escapeHtml(tr.end_quote)}"</div>
+        </div>
+      ` : ''}
+
+      ${continuity ? `
+        <div style="margin-top:24px; padding-top:16px; border-top:1px dashed rgba(255,255,255,0.18); width:100%; text-align:center;">
+          <div style="font-size:10px; color:rgba(143,200,143,0.85); letter-spacing:0.13em; text-transform:uppercase; margin-bottom:6px;">⚓ 안 변한 건</div>
+          <div style="font-size:12.5px; color:rgba(255,255,255,0.82); line-height:1.6; font-style:italic;">${escapeHtml(continuity)}</div>
         </div>
       ` : ''}
     </div>
@@ -47690,6 +47773,8 @@ async function _resumePendingBatch() {
                 one_word: json.one_word,
                 pattern: json.pattern,
                 turning_point: json.turning_point,
+                transformation: json.transformation,
+                continuity: json.continuity,
                 quotes: json.quotes,
                 experiment: json.experiment,
                 seeds: json.seeds,

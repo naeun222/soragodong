@@ -650,6 +650,8 @@ async function testSeedV4Data() {
   state.quarterlyReviews = [];
   const quarterlyTones = [
     { focus: '환경 차원 도구', growth: '"마감 직전 폭발력" 결정화', pattern: '거절 후 부채감 풀림 중', next: '거절 자동화',
+      transformation: { start_quote: '또 거절 못해서 일주일 망쳤어', end_quote: '일정 충돌 확인하고 답함 — 의외로 OK', shift: '참는 거에서 명확히 말하기로' },
+      continuity: '그래도 친구 챙기는 마음은 그대로',
       stats: { checkins: 72, attempts: 18, worked: 12, didnt: 4, meh: 2, pearls: 11, dnaPearls: 1,
         modeCount: { period: 8, drained: 5, rest: 3, exam: 4 },
         moodAvg: 3.4, vitalityAvg: 3.1, topMusicCount: 4, photoCount: 6, diaryCount: 22,
@@ -657,6 +659,8 @@ async function testSeedV4Data() {
         diagnoses: { weak_tool: 1, wrong_layer: 1 },
         trackerStats: [{ name: '체중', kind: 'numeric', delta: -2.0, unit: 'kg' }, { name: '러닝', kind: 'numeric', delta: 12, unit: 'km' }] } },
     { focus: '실험 사이클 + 결과', growth: '실험 첫 success — 6개월 만의 보상', pattern: '잠 부족 패턴 재등장', next: '11시 잠 자동화',
+      transformation: { start_quote: '왜 또 새벽 3시에 깨있지', end_quote: '11시면 자동으로 졸려 오기 시작', shift: '버티기에서 흐름 만들기로' },
+      continuity: '마감은 여전히 직전에 폭발',
       stats: { checkins: 68, attempts: 14, worked: 9, didnt: 3, meh: 2, pearls: 9, dnaPearls: 0,
         modeCount: { period: 9, drained: 7, rest: 5, sick: 2, exam: 2 },
         moodAvg: 3.0, vitalityAvg: 2.8, topMusicCount: 3, photoCount: 4, diaryCount: 18,
@@ -664,6 +668,8 @@ async function testSeedV4Data() {
         diagnoses: { avoidance: 1 },
         trackerStats: [{ name: '체중', kind: 'numeric', delta: -0.5, unit: 'kg' }, { name: '러닝', kind: 'numeric', delta: 8, unit: 'km' }] } },
     { focus: '학회 발표 + 거절 패턴', growth: '거절 첫 성공 + 발표 마무리', pattern: '발표 후 번아웃', next: '사회 차원 시도',
+      transformation: { start_quote: '발표 한 달 남았는데 손도 못 대', end_quote: '오늘 발표 끝남 — 떨었지만 했어', shift: '회피에서 마주봄으로' },
+      continuity: '발표 후 며칠 텅 빈 건 변함 X',
       stats: { checkins: 65, attempts: 16, worked: 10, didnt: 4, meh: 2, pearls: 10, dnaPearls: 0,
         modeCount: { period: 8, drained: 9, rest: 7, exam: 5 },
         moodAvg: 3.2, vitalityAvg: 2.9, topMusicCount: 5, photoCount: 7, diaryCount: 20,
@@ -671,6 +677,8 @@ async function testSeedV4Data() {
         diagnoses: { value_clash: 1, avoidance: 1 },
         trackerStats: [{ name: '명상', kind: 'check', delta: 18, unit: '회' }] } },
     { focus: '여름 회복 + 시작', growth: '운동 30일 지속', pattern: '회복 모드 정착', next: '아침 리듬',
+      transformation: { start_quote: '운동? 일주일째 한 번도 못 갔어', end_quote: '오늘로 30일째 — 빠지면 오히려 찜찜', shift: '의지 짜내기에서 리듬 타기로' },
+      continuity: '회복 시간 챙기는 자세는 그대로',
       stats: { checkins: 58, attempts: 10, worked: 7, didnt: 2, meh: 1, pearls: 8, dnaPearls: 0,
         modeCount: { period: 8, rest: 12, travel: 3, sick: 2 },
         moodAvg: 3.6, vitalityAvg: 3.3, topMusicCount: 3, photoCount: 8, diaryCount: 15,
@@ -697,6 +705,8 @@ async function testSeedV4Data() {
         { label: '🌫 작동 중인 패턴', body: tone.pattern },
         { label: '🧭 다음 분기에', body: tone.next }
       ],
+      transformation: tone.transformation,
+      continuity: tone.continuity,
       auto: true
     });
   }

@@ -694,6 +694,8 @@ async function _resumePendingBatch() {
                 one_word: json.one_word,
                 pattern: json.pattern,
                 turning_point: json.turning_point,
+                transformation: json.transformation,
+                continuity: json.continuity,
                 quotes: json.quotes,
                 experiment: json.experiment,
                 seeds: json.seeds,

@@ -448,6 +448,12 @@ async function buildQuarterlySlides(review) {
     slides.push({ tone: 'tone-emo-5', html: timecapsuleHtml });
   }
 
+  // 8.9. 진지 — 그때 너 → 지금 너 (사용자 명시 2026-05-06 ultrathink: 분기 = 변화 렌즈)
+  const transformationHtml = _buildTransformationSlideHTML(review);
+  if (transformationHtml) {
+    slides.push({ tone: 'tone-deep-2', html: transformationHtml });
+  }
+
   // 9. 진지 narrative + prompt
   slides.push({
     tone: 'tone-deep',
