@@ -441,6 +441,66 @@ function _reviewsCoachmarkAnnual() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// 4-real) 리뷰 모음 *첫 자연 진입* — 사용자 명시 2026-05-06: 실 데이터로 weekly 리뷰 한 번 생성 (비용 회사 부담).
+//   데이터 부족 (entriesInRange 0) / AI 호출 불가 → sim fallback.
+//   설정 picker → 'reviews' 는 그대로 sim (runReviewsTutorialV8). 자연 첫 진입만 real.
+// ═══════════════════════════════════════════════════════════════
+async function runFirstReviewsTutorialReal() {
+  if (window._firstReviewsRealRunning) return;
+  if (typeof _canAI !== 'function' || !_canAI() || typeof openReview !== 'function' || typeof _collectReviewData !== 'function') {
+    return runReviewsTutorialV8();
+  }
+  let data;
+  try { data = _collectReviewData('weekly'); } catch (e) { data = null; }
+  if (!data || !Array.isArray(data.entriesInRange) || data.entriesInRange.length === 0) {
+    return runReviewsTutorialV8();
+  }
+
+  window._firstReviewsRealRunning = true;
+  state.tutorialShown = state.tutorialShown || {};
+  state.tutorialShown.reviews = true;
+  try { saveState(); } catch {}
+
+  try {
+    if (typeof showScreen === 'function') showScreen('archive-reviews');
+    await _v8Sleep(280);
+    await _firstReviewsRealCoachmarkIntro();
+    await _v8Sleep(220);
+    // openReview = screen 전환 + AI 분석 + render 까지 자체 처리.
+    await openReview('weekly');
+    await _v8Sleep(450);
+    await _firstReviewsRealCoachmarkClosing();
+  } catch (e) {
+    console.warn('[firstReviewsReal]', e);
+  } finally {
+    window._firstReviewsRealRunning = false;
+    try { if (typeof _v8CleanupAll === 'function') _v8CleanupAll(); } catch {}
+  }
+}
+
+function _firstReviewsRealCoachmarkIntro() {
+  const body = `
+    <div class="v8-coach-title">📅 너의 첫 리뷰 — 직접 만들어볼게</div>
+    <div class="v8-coach-text">
+      지금까지 쌓인 너의 데이터로 한 번 정리해보자 🐚<br>
+      <span class="v8-coach-text-soft">고동이가 너의 패턴 / 변화 / 성장 찾아줘 ✦</span>
+    </div>
+  `;
+  return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
+}
+
+function _firstReviewsRealCoachmarkClosing() {
+  const body = `
+    <div class="v8-coach-title">✦ 천천히 한 번 봐</div>
+    <div class="v8-coach-text">
+      앞으로 매주 / 매달 / 분기 / 연 마다 자동으로 만들어져.<br>
+      <span class="v8-coach-text-soft">[도서관 → 리뷰 모음] 에서 모아 봐.</span>
+    </div>
+  `;
+  return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
+}
+
+// ═══════════════════════════════════════════════════════════════
 // 5) 숙고 질문 첫 진입 → 숙고 튜토
 // ═══════════════════════════════════════════════════════════════
 

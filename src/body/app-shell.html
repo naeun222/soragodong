@@ -930,6 +930,7 @@
           <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 '한 달 무료' 안내 모달 미리보기 (backend grant 호출 X — ensureBillingRow 자동 활성화)">🐚 한 달 무료 모달</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="devPreviewWeeklyReview()" title="신규 schema (chart / strengths / cycles / emotions / value_align / risk_signals / 자기 평가 / 공유 카드) 풀 미리보기 — 시드 데이터 사용, AI 호출 X">📅 주간 리뷰 미리보기</button>
+          <button class="btn-secondary" onclick="(function(){ if(!confirm('실 데이터로 weekly 리뷰 생성 — Opus 호출 (1-2분, 약 $0.02-0.05). 진행할래?')) return; state.tutorialShown=state.tutorialShown||{}; state.tutorialShown.reviews=false; if(typeof runFirstReviewsTutorialReal==='function') runFirstReviewsTutorialReal().catch(e=>console.warn(e)); else if(typeof showToast==='function') showToast('함수 부재'); })()" title="리뷰 모음 첫 자연 진입 튜토 — 실 데이터 weekly 리뷰 생성 + 코치마크. 데이터 부족 시 sim fallback.">📅 첫 리뷰 튜토 (실 데이터)</button>
           <button class="btn-secondary" onclick="devForceYesterdayCard()" title="홈 화면의 '어제의 기록 볼래?' 카드 강제 표시 (seen flag reset). 어제 entry 없어도 표시.">🌙 어제 카드 표시</button>
           <button class="btn-secondary" onclick="devPreviewAttemptResult()" title="결과 체크 모달 — 미션 완료 후 attemptStatus 묻는 5 옵션 (해결됐어 / 그저 그래 / 안 통했어 / 못 시도 / 아직).">🔍 결과 체크 모달</button>
           <button class="btn-secondary" onclick="devPreviewBanner('feedback')" title="모든 사용자 — '고동MOM에게 한 마디'">💌 고동MOM 배너</button>

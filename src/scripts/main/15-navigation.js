@@ -11,7 +11,13 @@ function showScreen(name) {
       return;
     }
     if (name === 'archive-reviews' && typeof shouldRunReviewsTutorial === 'function' && shouldRunReviewsTutorial()) {
-      runReviewsTutorialV8().catch(e => console.warn('[reviews]', e));
+      // 사용자 명시 2026-05-06: 첫 자연 진입 = 실 데이터로 weekly 리뷰 직접 생성 (비용 회사 부담).
+      // 데이터 부족 / AI 호출 불가 → 함수 안에서 runReviewsTutorialV8() (sim) fallback.
+      if (typeof runFirstReviewsTutorialReal === 'function') {
+        runFirstReviewsTutorialReal().catch(e => console.warn('[reviews]', e));
+      } else {
+        runReviewsTutorialV8().catch(e => console.warn('[reviews]', e));
+      }
       return;
     }
   }
