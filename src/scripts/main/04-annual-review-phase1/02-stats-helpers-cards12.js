@@ -141,6 +141,21 @@ function _annualReviewBuildCard2(d) {
         <span class="ann-rv-yearmap-legend-dot ann-rv-yearmap-day-4"></span>
         활기
       </div>
+      ${d.persona_evolution && (d.persona_evolution.start || d.persona_evolution.end) ? `
+        <div style="margin:14px auto 6px; padding:14px 16px; background:rgba(168,156,214,0.08); border:1px solid rgba(168,156,214,0.22); border-radius:14px; max-width:340px;">
+          <div style="display:flex; align-items:stretch; gap:12px;">
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:9.5px; color:rgba(168,156,214,0.85); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:5px;">1-2월의 너</div>
+              <div style="font-family:'Gowun Batang',serif; font-size:12.5px; color:rgba(255,255,255,0.78); line-height:1.55;">${escapeHtml(d.persona_evolution.start || '')}</div>
+            </div>
+            <div style="display:flex; align-items:center; color:rgba(212,167,106,0.7); font-size:18px;">→</div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:9.5px; color:rgba(212,167,106,0.95); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:5px;">11-12월의 너</div>
+              <div style="font-family:'Gowun Batang',serif; font-size:13px; color:white; line-height:1.55;">${escapeHtml(d.persona_evolution.end || '')}</div>
+            </div>
+          </div>
+        </div>
+      ` : ''}
       <div class="ann-rv-caption">★ <strong>12월 7일</strong>이 네 변곡점이었어</div>
     </div>
   `;

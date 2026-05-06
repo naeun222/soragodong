@@ -1,3 +1,40 @@
+// 사용자 명시 2026-05-06 ultrathink: 연간 리뷰 차별화 — 4 분기 trajectory 카드.
+//   카드 2 (365 dot) 다음에 자연스럽게 — 1년 흐름을 분기별 한 줄로 narrative 화.
+//   d.trajectory = [{quarter_label, line}] x 4
+function _annualReviewBuildCardTrajectory(d) {
+  const traj = Array.isArray(d.trajectory) ? d.trajectory : [];
+  if (traj.length === 0) return `
+    <div class="ann-rv-card">
+      <div class="ann-rv-label">한 해의 4 흐름</div>
+      <div class="stories-empty" style="margin-top:24px;">분기 데이터가 더 쌓이면<br>흐름이 보일 거야</div>
+    </div>
+  `;
+  const accents = ['#9fd49f', '#7ec8e3', '#d4a76a', '#a89cd6']; // Q1 봄=초록 / Q2 여름=하늘 / Q3 가을=금 / Q4 겨울=보라
+  const cards = traj.slice(0, 4).map((q, i) => {
+    const accent = accents[i] || '#d4a76a';
+    return `
+      <div style="position:relative; padding:16px 18px; background:rgba(255,255,255,0.04); border-left:3px solid ${accent}; border-radius:0 12px 12px 0; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+          <div style="width:24px; height:24px; border-radius:50%; background:${accent}; opacity:0.85; color:rgba(0,0,0,0.65); font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center;">${i + 1}</div>
+          <div style="font-size:10.5px; color:${accent}; letter-spacing:0.14em; text-transform:uppercase; font-weight:600;">${escapeHtml(q.quarter_label || ('Q' + (i + 1)))}</div>
+        </div>
+        <div style="font-family:'Gowun Batang',serif; font-size:14.5px; color:rgba(255,255,255,0.92); line-height:1.65; padding-left:34px;">${escapeHtml(q.line || '')}</div>
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="ann-rv-card">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:22px; justify-content:center;">
+        <div style="width:20px; height:1px; background:rgba(212,167,106,0.5);"></div>
+        <div class="ann-rv-label" style="margin:0;">한 해의 4 흐름</div>
+        <div style="width:20px; height:1px; background:rgba(212,167,106,0.5);"></div>
+      </div>
+      <div style="max-width:340px; margin:0 auto;">${cards}</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.55); text-align:center; margin-top:18px; line-height:1.6;">한 해는 한 덩어리가 아니었어<br>네 분기가 나란히 살아.</div>
+    </div>
+  `;
+}
+
 // 카드 3: 발견 #1 (AI 포착) — 다음 phase: Opus 4.7 prompt
 // 사용자 명시 2026-04-30: button 제거 (진주 담기 / 갸우뚱)
 function _annualReviewBuildCard3(d) {
@@ -170,11 +207,26 @@ function _annualReviewBuildCardPearl(d) {
       ${total > 0 ? `<div class="stories-body" style="margin-bottom:8px; font-size:13px;">📌 스크랩 ${c.scrap || 0} · ✎ 메모 ${c.memo || 0}${c.reflection ? ` · 🌊 숙고 ${c.reflection}` : ''}</div>` : ''}
       ${tags.length > 0 ? `<div style="font-size:11px; color:rgba(255,255,255,0.55); margin-bottom:18px; letter-spacing:0.04em;">자주 떠올린: ${tags.map(t => '#' + escapeHtml(t)).join(' · ')}</div>` : ''}
       <div class="stories-archive-list" style="max-width:340px;">
-        <div class="stories-archive-item" style="padding:14px 18px; line-height:1.55;">
-          <div style="font-size:14.5px; font-weight:500;${summary ? ' margin-bottom:6px;' : ''}">✦ ${escapeHtml(title)}</div>
+        <div class="stories-archive-item" style="padding:14px 18px; line-height:1.55; background:linear-gradient(135deg, rgba(255,250,205,0.10), rgba(212,167,106,0.06)); border:1px solid rgba(255,250,205,0.25);">
+          <div style="font-size:9.5px; color:rgba(255,250,205,0.85); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:5px;">✦ 가장 현명한</div>
+          <div style="font-size:14.5px; font-weight:500; color:white;${summary ? ' margin-bottom:6px;' : ''}">${escapeHtml(title)}</div>
           ${summary ? `<div style="font-size:12.5px; color:rgba(255,255,255,0.72); line-height:1.6;">${escapeHtml(summary)}</div>` : ''}
         </div>
       </div>
+      ${Array.isArray(d.top_pearls) && d.top_pearls.length > 0 ? `
+        <div style="max-width:340px; margin:14px auto 0; text-align:left;">
+          <div style="font-size:10px; color:rgba(255,255,255,0.55); letter-spacing:0.13em; text-transform:uppercase; margin-bottom:8px; padding-left:4px;">🐚 올해 진주 더 보기</div>
+          ${d.top_pearls.slice(0, 4).map((p, i) => `
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:10px 14px; margin-bottom:5px; background:rgba(255,255,255,0.025); border-radius:10px;">
+              <div style="font-size:11px; color:rgba(212,167,106,0.85); font-weight:600; min-width:18px; padding-top:2px;">${i + 2}.</div>
+              <div style="flex:1; min-width:0;">
+                <div style="font-family:'Gowun Batang',serif; font-size:13px; color:rgba(255,255,255,0.88); line-height:1.55;">${escapeHtml(p.title || '')}</div>
+                ${p.note ? `<div style="font-size:10.5px; color:rgba(255,255,255,0.5); line-height:1.55; margin-top:3px;">${escapeHtml(p.note)}</div>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
       ${why ? `<div style="margin-top:18px; padding:12px 14px; background:rgba(255,250,205,0.06); border-left:2px solid rgba(255,250,205,0.30); border-radius:0 8px 8px 0; max-width:320px; text-align:left;">
         <div style="font-size:9.5px; color:rgba(255,250,205,0.75); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:6px; font-weight:600;">🦉 Opus — 왜 가장 현명한지</div>
         <div style="font-size:11.5px; color:rgba(255,250,205,0.7); font-style:italic; line-height:1.6;">${escapeHtml(why)}</div>

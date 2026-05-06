@@ -61,6 +61,16 @@ ${ctx.decisions.map(d => '· ' + (d.title || '') + ': ' + (d.conclusion || '')).
   "oneWord": "한 단어 (예: 전환, 회복, 시작)",
   "persona": "한 줄 페르소나 ('OOO한 사람' 형식)",
   "personaReason": "구체적 데이터 한 줄 (수치/날짜)",
+  "persona_evolution": {
+    "start": "올해 1-2월 너의 모습 한 줄 (사용자 어휘, 일기/대화 기반. 예: '거절 못하고 일주일 망치는 사람', '잠 안 자고 버티는 사람'). 따옴표 X.",
+    "end": "올해 11-12월 너의 모습 한 줄 — start 와 대조되는 변화 (예: '명확히 말하는 사람', '11시에 자는 사람'). 따옴표 X."
+  },
+  "trajectory": [
+    {"quarter_label": "Q1 / 봄", "line": "그 분기 한 줄 정체성 (사용자 어휘, 8-20자). 예: '거절 연습 시작한 분기', '잠 부족과 싸운 분기'"},
+    {"quarter_label": "Q2 / 여름", "line": "..."},
+    {"quarter_label": "Q3 / 가을", "line": "..."},
+    {"quarter_label": "Q4 / 겨울", "line": "..."}
+  ],
   "finding1": {
     "label": "발견 라벨 (15자 이내)",
     "quote": "사용자 인용 (10-15자)",
@@ -86,6 +96,11 @@ ${ctx.decisions.map(d => '· ' + (d.title || '') + ': ' + (d.conclusion || '')).
     "summary": "그 깨달음 요약 한 줄 — 사용자 본인 어휘. 추상 X 구체 ○",
     "whyThisYear": "왜 가장 현명한지 — 일상어로 친절히 풀어쓰기. 'Q3 카드 #5' / '3월 일기' 같은 약어·dev 용어 X. '한 해 동안 ~ 반복 등장' / '~ 시점부터 변화' 같은 자연 한국어. 구체적 (어디서 / 언제 / 어떻게 변했는지) + 사용자 친근 톤. 2-3 문장."
   },
+  "top_pearls": [
+    {"title": "best_pearl 다음 2위 진주 한 마디 (8-20자, 사용자 어휘 그대로)", "note": "한 줄 부연 (선택)"},
+    {"title": "3위 ...", "note": "..."},
+    {"title": "4위 ...", "note": "..."}
+  ],
   "oneLine": "한 해 마무리 — 따뜻한 토닥 톤 (분석 X). 친구가 어깨 토닥하며 하는 말. 한국어 자연 어순 + 띄어쓰기·문법 정확. 구조: 첫 줄 = 평가어 ('너 올해 많이 컸어' 류) → 빈 줄 → 변화 (자책에서 관찰로 / 회피에서 회복으로 류 — 2줄, 흐름 metaphor 'X에서 Y로') → 빈 줄 → 마무리 ('수고했어 🫂' 류 + 허그 emoji 🫂). \\n\\n 으로 빈 줄 표현. 예: '너 올해 많이 컸어.\\n\\n자책에서 관찰로,\\n회피에서 회복으로.\\n\\n수고했어 🫂'"
 }
 
@@ -122,11 +137,14 @@ function _processAnnualReviewResult(narrative, year, data, isTester) {
     oneWord: narrative?.oneWord || '',
     persona: narrative?.persona || '',
     personaReason: narrative?.personaReason || '',
+    persona_evolution: narrative?.persona_evolution || null,
+    trajectory: Array.isArray(narrative?.trajectory) ? narrative.trajectory : null,
     stats,
     finding1: narrative?.finding1 || {},
     finding2: narrative?.finding2 || {},
     tree, beach, moments_card,
     best_pearl: narrative?.best_pearl || {},
+    top_pearls: Array.isArray(narrative?.top_pearls) ? narrative.top_pearls : null,
     realizations,
     deep: narrative?.deep || {},
     oneLine: narrative?.oneLine || '',
