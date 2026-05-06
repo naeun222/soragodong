@@ -216,6 +216,8 @@ async function _intakeStep4Analyze() {
   _intakeState.analysisFailed = false;
   _intakeState.analysisErrMsg = '';
   _renderIntakeStep();
+  // 사용자 명시 2026-05-06 ultrathink (perf C): progressive 메시지 — 실제 시간 같음, perceived 단축.
+  _startIntakeProgressMessages();
   // 사용자 보고 2026-05-06 ultrathink (재): 빈 껍데기 fallback 합성 절대 X.
   //   AI 가 진짜 분석한 척 가짜 카피 출력 → 사용자 신뢰 깨짐.
   //   재시도 3회 (1.5초 / 3초 간격). 다 실패하면 → 명시적 "다시 시도" UI 노출 (Step5 분기).
@@ -234,6 +236,7 @@ async function _intakeStep4Analyze() {
       if (attempt < 3) await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt - 1]));
     }
   }
+  _stopIntakeProgressMessages();
   if (result) {
     _intakeState.analysis = result;
     state.intakeWorry.push({
@@ -250,6 +253,33 @@ async function _intakeStep4Analyze() {
     _intakeState.analysisErrMsg = (lastErr && lastErr.message) || '네트워크 오류';
     _renderIntakeStep();
   }
+}
+
+// 사용자 명시 2026-05-06 ultrathink (perf C): intake 분석 wait 동안 progressive 메시지 swap.
+// 실제 latency 와 무관 — perceived 길이 단축 + 시간 경과 표시.
+let _intakeProgressTimer = null;
+function _startIntakeProgressMessages() {
+  if (_intakeProgressTimer) clearInterval(_intakeProgressTimer);
+  const messages = [
+    '잠깐 들여다보는 중...',
+    '환경 단서 살피는 중...',
+    '심리 맥락 정리 중...',
+    '전략 도출 중...',
+    '거의 다 됐어...'
+  ];
+  let idx = 0;
+  _intakeProgressTimer = setInterval(() => {
+    idx = Math.min(idx + 1, messages.length - 1);
+    const el = document.querySelector('.intake-loading');
+    if (el) el.textContent = messages[idx];
+    if (idx >= messages.length - 1) {
+      clearInterval(_intakeProgressTimer);
+      _intakeProgressTimer = null;
+    }
+  }, 1800);
+}
+function _stopIntakeProgressMessages() {
+  if (_intakeProgressTimer) { clearInterval(_intakeProgressTimer); _intakeProgressTimer = null; }
 }
 
 function _intakeStep5Html() {

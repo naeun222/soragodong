@@ -284,49 +284,45 @@ async function _intakeGenLongExample(userText) {
 async function _intakeAnalyze(intakeWorry) {
   if (!_canAI()) throw new Error('AI 세션 미준비');
   const chatText = (intakeWorry || []).map(m => `${m.role === 'user' ? '사용자' : '소라고동'}: ${m.content}`).join('\n');
-  const prompt = `사용자 — 첫 만남 미니 분석. 다음 대화 보고 차원 분석 + 작은 전략 + 자기관찰 가설.
+  // 사용자 명시 2026-05-06 ultrathink (perf): prompt 압축 (1500→800토큰) + max_tokens 2000→1200. 응답 시간 단축.
+  const prompt = `첫 만남 미니 분석. 대화 보고 차원/전략/가설.
 
-[대화 전체]
+[대화]
 ${chatText}
 
-[너의 일]
-1. paraphrase: 사용자 발화 핵심 1줄 인용 또는 paraphrase
-2. dimension: 환경 / 인지 / 사회 / 정체성 / 가치 중 1개 (가장 작동하는 차원)
-3. diagnosis: 2-4문장. 패턴 담백히 짚기 + 심리학 개념 + 연구자 이름 자연스럽게.
-   · 연구자 예시: Gollwitzer / Neff / Barkley / Hershfield / Wilson & Gilbert / Heath / Klein / Burnett / Dweck / Russell / Buysse 등.
-   · "어떻게 알았어?" 트리거. Specific > Generic.
-4. strategy: 2-3문장. 증거 기반 전략 1-2개. 환경 cuing 우선. 관찰 친화. 원리 + 작동 메커니즘.
-5. proposal: 25자 이내. 오늘 안에 할 수 있는 한 가지 구체 micro-action. strategy 의 *원리*를 *오늘 한 동작*으로 좁힌 것 — 같은 말 X.
-   예) strategy="환경 자극 줄이는 방향이 도움될 거 같아. 알람 / 자리 같은 거." → proposal="저녁 7시 핸드폰 무음으로 두기"
-6. hypotheses: trait / value / pattern 가설 1-3개 (user_verified=false, confidence 0.4-0.6)
+[필드]
+1. paraphrase: 사용자 핵심 1줄.
+2. dimension: 환경/인지/사회/정체성/가치 중 1개.
+3. diagnosis: 2-4문장. 심리학 개념 + 연구자 이름 자연스럽게 (Gollwitzer / Neff / Barkley / Dweck / Heath 등). Specific > Generic. "어떻게 알았어?" 트리거.
+4. strategy: 2-3문장. 증거 기반 1-2개. 환경 cuing 우선. 원리 + 메커니즘.
+5. proposal: 25자 이내, 오늘 가능한 micro-action (5분-1시간). strategy 원리를 오늘 한 동작으로. 명령조 X.
+6. hypotheses: trait/value/pattern 1-3개. confidence 0.4-0.6, user_verified=false.
 
-[가설 schema]
-- trait: name (10자 이내) + description (한 문장, 명사형 분석체) + display_text (✓ 박스용 친근 한 줄)
-- value: name (5자 이내) + description (한 문장, 명사형 분석체) + display_text
-- pattern: name (10자 이내) + trigger (조건) + sequence (행동 흐름, 명사형 분석체) + display_text
+[가설]
+- trait: name(10자) + description(명사형) + display_text(친근 ✓ 한 줄)
+- value: name(5자) + description + display_text
+- pattern: name(10자) + trigger + sequence(명사형) + display_text
 
 [톤]
-- description / sequence (나 탭 본문): **명사형 분석체 LOCK**. 관찰자 시점 3인칭. 어미는 "~ 명시", "~ 강하게 느낌", "~ 하는 경향", "~ 한 태도", "~ 함" 같이 명사형으로 종결. 추측 어미 ("있을 수 있어", "할 수 있어", "~ 인 듯", "~ 일 것") 금지. 친근 반말 X. confidence 가 낮아도 어미는 분석체 유지 (수치로만 표현).
-- display_text (✓ 박스 친근 한 줄): 친한 친구 반말, 친근. judgment X.
-- diagnosis / strategy / proposal (chat 4단 다이얼로그): 친한 친구 반말. judgment X. self-compassion. 첫 만남이라 confidence 낮게.
-- 공통: Surprise > Truth. Specific > Generic.
-- proposal 은 명령조 X (반말 권유 톤). 오늘 안에 진짜 가능한 micro 단위 (5분-1시간).
+- description/sequence: **명사형 분석체 LOCK**. 어미 "~ 명시 / ~ 경향 / ~ 함". 추측 어미 ("~ 인 듯", "있을 수 있어") 금지. 3인칭 관찰자.
+- display_text: 친한 친구 반말, judgment X.
+- diagnosis/strategy/proposal: 친한 친구 반말, self-compassion, 첫 만남이라 낮은 confidence.
 
-[출력 JSON 만, markdown X]
+[출력 JSON 만]
 {
   "paraphrase": "...",
   "dimension": "환경/인지/사회/정체성/가치 중 하나",
-  "diagnosis": "2-4문장. 심리학 개념 + 연구자 이름.",
-  "strategy": "2-3문장. 원리 + 증거 기반 전략.",
-  "proposal": "25자 이내 (오늘 한 동작)",
+  "diagnosis": "...",
+  "strategy": "...",
+  "proposal": "25자 이내",
   "hypotheses": [
-    { "category": "trait" | "value" | "pattern", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." }
+    { "category": "trait|value|pattern", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." }
   ]
 }`;
   const resp = await callAnthropic({
     _endpoint: 'intake',
     model: 'claude-sonnet-4-6',
-    max_tokens: 2000,
+    max_tokens: 1200,
     system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
     messages: [{ role: 'user', content: prompt }]
   });
