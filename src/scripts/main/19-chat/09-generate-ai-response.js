@@ -298,6 +298,11 @@ async function generateAIResponse(modelOverride) {
     renderChat();
     renderModelPreview();
 
+    // 사용자 명시 2026-05-06: 미구독/게스트 = 3턴마다 자동 모델 갱신 (forceAnalyze auto). 게스트와 똑같이.
+    if (typeof _maybeAutoForceAnalyzeFreeTier === 'function') {
+      _maybeAutoForceAnalyzeFreeTier().catch(e => console.warn('[auto force]', e));
+    }
+
   } catch (err) {
     // 사용자 보고 2026-05-05 ultrathink: 정확한 진단 위해 console.error — 사용자가 console 열어 진짜 원인 (status / message) 확인 가능.
     console.error('[generateAIResponse] error:', err);

@@ -962,3 +962,41 @@ async function maybeRunDailyChapterExtract() {
 
 // 사용자 요청 2026-04-30 (변호사 검수): 첫 진입 동의 모달은 폐기 — login 화면 inline 동의 (state.preferences.consentLog 의 terms/privacy/crossBorder/age14/adult18/analytics) 로 통합. 처리는 위쪽 pending consent 블록 (localStorage 'soragodong_pending_consent' → consentLog) 단일 경로.
 
+
+// ═══════════════════════════════════════════════════════════════
+// V4 (사용자 명시 2026-05-06): 미구독/게스트 = 3턴마다 자동 모델 갱신 (forceAnalyze auto).
+// trigger: generateAIResponse 끝 hook.
+// 가드:
+//   - 미구독 (게스트 or 인증 X subscription_active) 만
+//   - testerMode X (saveState noop 라 마킹 X / 개발자 본인 = 노이즈)
+//   - chatMessages user role count 가 정확히 3 / 6 / 9 ... (3 배수)
+//   - cooldown 60초 (race + 같은 turn 내 중복 fire 차단)
+// 효과: 미구독 사용자가 데이터 쌓일 때마다 점진적으로 나 탭 (modelTraits/Values/Patterns) 갱신.
+// ═══════════════════════════════════════════════════════════════
+async function _maybeAutoForceAnalyzeFreeTier() {
+  if (typeof state === 'undefined' || !state) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  // 구독 detect — window._billingCache 가 source of truth (refreshBillingStatus 가 채움).
+  const billing = window._billingCache;
+  const isPaid = !!(billing && billing.subscription_active && billing.subscription_plan
+    && ['light', 'premium', 'early_light', 'early_lifetime'].includes(billing.subscription_plan));
+  if (isPaid) return;  // 유료 구독자 = 다른 흐름 (사용자 직접 클릭) — 자동 X
+  // user role 메시지 count
+  const userMsgCount = (state.chatMessages || []).filter(m => m && m.role === 'user' && !m.error && !m.typing).length;
+  if (userMsgCount === 0 || userMsgCount % 3 !== 0) return;
+  // cooldown — 같은 3턴 안에서 multi-fire 차단 + race 안전
+  state.preferences = state.preferences || {};
+  const lastAt = state.preferences._autoForceAnalyzeLastAt;
+  if (lastAt) {
+    try {
+      const last = new Date(lastAt).getTime();
+      if (Date.now() - last < 60000) return;
+    } catch {}
+  }
+  state.preferences._autoForceAnalyzeLastAt = new Date().toISOString();
+  try { saveState(); } catch {}
+  // forceAnalyze auto — confirm modal X / silent toast / 같은 함수 흐름.
+  if (typeof forceAnalyze === 'function') {
+    try { await forceAnalyze({ auto: true }); } catch (e) { console.warn('[auto force analyze]', e); }
+  }
+}
