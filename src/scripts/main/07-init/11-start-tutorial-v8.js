@@ -254,8 +254,8 @@ function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', in
     } else if (!interactive) {
       buttonsHtml = '<button class="v8-coach-ok" id="v8CoachOk">알겠어 ✦</button>';
     }
-    // 사용자 보고 2026-05-06: 마스크가 다른 모달(전략카드 미리보기 등) 까지 어둡게 만드는 문제 — noMask 옵션으로 mask 끄기.
-    const showMask = (!interactive || branchButtons) && !noMask;
+    // 사용자 명시 2026-05-06 ultrathink: 어두운 mask 전면 폐기 — 항상 false. (noMask 옵션 보존, 호환만 위해.)
+    const showMask = false;
     root.innerHTML = `
       <div id="v8Coach" class="v8-coach ${interactive && !branchButtons ? 'v8-coach-interactive' : ''}">
         ${showMask ? '<div class="v8-coach-mask"></div>' : ''}
