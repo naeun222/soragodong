@@ -121,11 +121,11 @@ function devPreviewWeeklyReview() {
   }, 100);
 }
 
-// 개발자 도구 — 한 달 무료 안내 모달 미리보기. backend grant 호출 X (ensureBillingRow 자동 활성화).
+// V4 (사용자 명시 2026-05-06 ultrathink): welcome-gift-modal 통째 폐기 → devPreviewWelcomeBonus 도 dead.
+// 옛 dev tool 진입 stub 보존 — 호출 시 안내 토스트만.
 function devPreviewWelcomeBonus() {
-  if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal();
+  if (typeof showToast === 'function') showToast('환영 모달 폐기됨 — 신규 무료 체험은 설정 카드 표시');
 }
-// 사용자 명시 2026-05-05: devResetWelcomeBonus 폐기 — 100만 토큰 환영 선물 정책 폐기, free_credit_granted reset 의미 X.
 
 // 사용자 보고 2026-04-30 review (agent): AI 응답 JSON 견고 추출.
 // max_tokens 부족 truncation / markdown code fence / 외부 텍스트 등 robust.

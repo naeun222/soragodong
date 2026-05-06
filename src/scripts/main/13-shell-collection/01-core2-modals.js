@@ -44,7 +44,7 @@ function _declineCore2Entry() {
 }
 function _showCore2LockedToast() {
   // V4 (v8 사용자 명시 2026-05-03 ultrathink — v2 §6 명시): 4단 응답 disabled-locked → 단순 토스트.
-  // entry modal 자동 권유는 환영 선물 모달 [고마워!] 후 _acceptWelcomeGift 가 trigger (passive 안내).
+  // V4 (사용자 명시 2026-05-06): welcome-gift-modal 폐기 — entry modal 자동 권유는 다른 trigger 필요 (TODO).
   showToast('🔒 잠깐만, 다음 단계에서 알려줄게!');
 }
 

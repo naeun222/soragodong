@@ -125,3 +125,56 @@ function checkFreeTrialExpiry() {
 // 옛 함수 호환 (외부 호출 잔재 대비) — checkFreeTrialExpiry 로 위임.
 function checkWelcomeBonusExpiry() { return checkFreeTrialExpiry(); }
 
+// V4 (사용자 명시 2026-05-06 ultrathink): 신규 가입 무료 토큰 (credit_balance) 소진 임박 / 소진 알림.
+// 양 비공개 — 절대값 노출 X. self-calibrating: 첫 본 balance 를 _initialFreeBalance 로 저장 후 소진율 계산.
+//   80%+ 소진 → '거의 끝' 알림 (한 번만, _creditDepletionWarned flag)
+//   balance == 0 → '체험 끝' 알림 (별도, _creditDepletedNotified flag)
+// 구독자는 별도 cap 흐름 (showBudgetExceededModal) 으로 처리되니 skip.
+function checkFreeCreditDepletion() {
+  const billing = window._billingCache;
+  if (!billing) return;
+  if (billing.subscription_active) return;  // 구독자 = 별도 cap 알림
+  const balance = Number(billing.credit_balance_usd || 0);
+  if (typeof state === 'undefined' || !state) return;
+  state.preferences = state.preferences || {};
+
+  // 토큰 다 떨어짐 → 'depleted' 알림 (한 번만)
+  if (balance <= 0) {
+    if (state.preferences._creditDepletedNotified) return;
+    state.preferences._creditDepletedNotified = true;
+    try { saveState(); } catch {}
+    _addNotification({
+      type: 'free_credit_depleted',
+      title: '🐚 환영 무료 체험 끝',
+      body: `깊게 써줘서 고마워.<br>계속 쓰려면 구독 — <b>얼리버드 4,900원/월</b> (출시 전 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+      persistent: true
+    });
+    return;
+  }
+
+  // 처음 본 balance = initial 으로 저장. 또는 현 balance 가 더 크면 갱신 (재 grant 케이스).
+  const init = Number(state.preferences._initialFreeBalance || 0);
+  if (balance > init) {
+    state.preferences._initialFreeBalance = balance;
+    // 새로 충전됐으니 옛 warning flag reset — 다시 80% 소진 시 한 번 더 fire.
+    delete state.preferences._creditDepletionWarned;
+    delete state.preferences._creditDepletedNotified;
+    try { saveState(); } catch {}
+    return;
+  }
+
+  // 80%+ 소진 → 'low' 알림 (한 번만)
+  const usedPct = init > 0 ? (init - balance) / init : 0;
+  if (usedPct >= 0.8) {
+    if (state.preferences._creditDepletionWarned) return;
+    state.preferences._creditDepletionWarned = true;
+    try { saveState(); } catch {}
+    _addNotification({
+      type: 'free_credit_low',
+      title: '🐚 환영 무료 체험 거의 끝',
+      body: `이제 얼마 안 남았어.<br>계속 쓰려면 — <b>얼리버드 4,900원/월</b> (출시 전 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+      persistent: true
+    });
+  }
+}
+

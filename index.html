@@ -11825,7 +11825,6 @@
 
           <div class="settings-mini-label" style="margin-top:14px;">👁 미리보기</div>
           <div class="settings-hint" style="margin-bottom:8px;">dismiss flag / backend grant / 일일 cap 안 건드림. 진짜 사용자 화면 그대로.</div>
-          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 모달 미리보기 — 무료 토큰 grant 안내 (양 비공개). backend grant 호출 X.">🎁 환영 모달 미리보기</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="devPreviewWeeklyReview()" title="신규 schema (chart / strengths / cycles / emotions / value_align / risk_signals / 자기 평가 / 공유 카드) 풀 미리보기 — 시드 데이터 사용, AI 호출 X">📅 주간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="(function(){ if(!confirm('실 데이터로 weekly 리뷰 생성 — Opus 호출 (1-2분, 약 $0.02-0.05). 진행할래?')) return; state.tutorialShown=state.tutorialShown||{}; state.tutorialShown.reviews=false; if(typeof runFirstReviewsTutorialReal==='function') runFirstReviewsTutorialReal().catch(e=>console.warn(e)); else if(typeof showToast==='function') showToast('함수 부재'); })()" title="리뷰 모음 첫 자연 진입 튜토 — 실 데이터 weekly 리뷰 생성 + 코치마크. 데이터 부족 시 sim fallback.">📅 첫 리뷰 튜토 (실 데이터)</button>
@@ -15275,11 +15274,11 @@ function devPreviewWeeklyReview() {
   }, 100);
 }
 
-// 개발자 도구 — 한 달 무료 안내 모달 미리보기. backend grant 호출 X (ensureBillingRow 자동 활성화).
+// V4 (사용자 명시 2026-05-06 ultrathink): welcome-gift-modal 통째 폐기 → devPreviewWelcomeBonus 도 dead.
+// 옛 dev tool 진입 stub 보존 — 호출 시 안내 토스트만.
 function devPreviewWelcomeBonus() {
-  if (typeof _showWelcomeGiftModal === 'function') _showWelcomeGiftModal();
+  if (typeof showToast === 'function') showToast('환영 모달 폐기됨 — 신규 무료 체험은 설정 카드 표시');
 }
-// 사용자 명시 2026-05-05: devResetWelcomeBonus 폐기 — 100만 토큰 환영 선물 정책 폐기, free_credit_granted reset 의미 X.
 
 // 사용자 보고 2026-04-30 review (agent): AI 응답 JSON 견고 추출.
 // max_tokens 부족 truncation / markdown code fence / 외부 텍스트 등 robust.
@@ -28823,7 +28822,7 @@ function _declineCore2Entry() {
 }
 function _showCore2LockedToast() {
   // V4 (v8 사용자 명시 2026-05-03 ultrathink — v2 §6 명시): 4단 응답 disabled-locked → 단순 토스트.
-  // entry modal 자동 권유는 환영 선물 모달 [고마워!] 후 _acceptWelcomeGift 가 trigger (passive 안내).
+  // V4 (사용자 명시 2026-05-06): welcome-gift-modal 폐기 — entry modal 자동 권유는 다른 trigger 필요 (TODO).
   showToast('🔒 잠깐만, 다음 단계에서 알려줄게!');
 }
 
@@ -28834,75 +28833,12 @@ function _showCore2LockedToast() {
 //  · 토큰 hero: label / amount (대형 그라데이션) / hint — vertical stack
 //  · 신뢰 라인 보존 (전상법 §13 / 표시광고법 §3 — '30일 무료 · 자동 갱신 / 해지: 설정 → 구독')
 //  · 받기 click → backend POST (idempotent) → token block 'received' 색감 변환 → 0.8s 후 닫힘
-// V4 (사용자 명시 2026-05-06 ultrathink 정정): 옛 "early_light auto-grant 30일 무료" 가정 폐기.
-// 실제 backend = 신규 가입 시 무료 토큰 (credit_balance) grant, plan 자동 활성화 X. 양은 비공개.
-// 이 모달은 환영 인사 + 자유롭게 써보기 안내 + 클라이언트 flag set (재출현 방지) — backend grant 호출 X.
-function _showWelcomeGiftModal() {
-  if (window._showingWelcomeGift) return;
-  if (document.getElementById('welcomeGiftOverlay')) return;
-  window._showingWelcomeGift = true;
-  const overlay = document.createElement('div');
-  overlay.className = 'welcome-gift-overlay';
-  overlay.id = 'welcomeGiftOverlay';
-  overlay.innerHTML = `
-    <div class="welcome-gift-modal">
-      <img class="welcome-gift-godong" src="/godongicon.png" alt="소라고동">
-      <div class="welcome-gift-celebrate">🎉 첫 한 바퀴 끝!</div>
-      <div class="welcome-gift-greeting">잘 따라왔어 🐚</div>
-      <div class="welcome-gift-sub">
-        쓰다 보면 너 자신이<br>
-        다르게 보일지도. 🫂
-      </div>
-      <div class="welcome-gift-token">
-        <span class="welcome-gift-token-label">🎁 환영 선물</span>
-        <span class="welcome-gift-token-amount">자유롭게 써봐</span>
-        <span class="welcome-gift-token-hint">마음에 들면 그때 구독</span>
-      </div>
-      <button class="welcome-gift-btn" id="welcomeGiftAccept">시작할게</button>
-      <div class="welcome-gift-trust">자동 결제 X · 마음에 들 때만 구독</div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  requestAnimationFrame(() => overlay.classList.add('show'));
-  const btn = overlay.querySelector('#welcomeGiftAccept');
-  btn.addEventListener('click', async () => {
-    if (btn.dataset._processing === '1') return;
-    btn.dataset._processing = '1';
-    btn.disabled = true;
-    try { await _acceptWelcomeGift(); } catch (e) { console.warn('[welcome-gift] accept:', e); }
-    const tokenEl = overlay.querySelector('.welcome-gift-token');
-    if (tokenEl) tokenEl.classList.add('received');
-    btn.textContent = '시작 ✦';
-    setTimeout(() => {
-      overlay.classList.remove('show');
-      setTimeout(() => { try { overlay.remove(); } catch {} }, 300);
-      window._showingWelcomeGift = false;
-    }, 800);
-  });
-}
-async function _acceptWelcomeGift() {
-  // 사용자 명시 2026-05-05: backend grant 호출 X — ensureBillingRow 가 신규 가입 시 자동 활성화.
-  // 이 함수 = 클라이언트 flag (재출현 방지) + cloud sync + billing refresh 만.
-  state._welcomeGiftAccepted = true;
-  state.preferences = state.preferences || {};
-  state.preferences._welcomeBonusShown = true;
-  try { saveState({ force: true }); } catch {}
-  if (typeof saveToCloudNow === 'function') {
-    saveToCloudNow().catch(e => console.warn('[welcomeGift] cloud sync:', e));
-  }
-  if (typeof refreshBillingStatus === 'function') {
-    refreshBillingStatus(false).catch(() => {});
-  }
-  if (typeof showToast === 'function') showToast('🐚 자유롭게 써봐 ✦');
-  // Core 2 자동 unlock 권유 (passive 안내) — 기존 흐름 보존.
-  setTimeout(() => {
-    if (state._core2NotUnlocked && typeof _showCore2EntryModal === 'function') {
-      _showCore2EntryModal();
-    }
-  }, 600);
-}
-
-// V4 (v8 묶음 13): 카드 시각화 모달 — Core 2 튜토리얼 saveMsgAsStrategy 직후 자동
+// V4 (사용자 명시 2026-05-06 ultrathink — 폐기): welcome-gift-modal 통째 제거.
+// Core 1 끝 자동 트리거는 이미 폐기 (06-onb-event-listeners.js 참조). 신규 가입 무료 토큰은
+// backend grant + 설정 카드 안 표시 ('🎁 환영 무료 체험 중') 로 충분. 별도 모달 X.
+// 함수 stub 보존 — 외부 stale 호출 (devPreviewWelcomeBonus 등) 안전 fallback.
+function _showWelcomeGiftModal() { /* dead — 폐기 */ }
+async function _acceptWelcomeGift() { /* dead — 폐기 */ }
 function _showStrategyCardModal(card) {
   if (!card) return;
   if (document.querySelector('.strategy-card-preview-overlay')) return;
@@ -48204,6 +48140,8 @@ async function _doRefreshBillingStatus(manual) {
     if (typeof _renderNextBanner === 'function') { try { _renderNextBanner(); } catch {} }
     // 사용자 명시 2026-05-05: 한 달 무료 만료 7일 전 알림 + 인박스 badge 갱신.
     if (typeof checkFreeTrialExpiry === 'function') { try { checkFreeTrialExpiry(); } catch {} }
+    // V4 (사용자 명시 2026-05-06 ultrathink): 신규 무료 토큰 80% 소진 / 0 도달 알림.
+    if (typeof checkFreeCreditDepletion === 'function') { try { checkFreeCreditDepletion(); } catch {} }
     if (typeof refreshNotifInboxBadge === 'function') { try { refreshNotifInboxBadge(); } catch {} }
     // 사용자 명시 2026-04-30: 토스트 = manual button click 시만 (자동 호출 X — 자주 뜨면 부담)
     if (manual && typeof showToast === 'function') showToast('🔄 갱신됐어');
@@ -48651,6 +48589,59 @@ function checkFreeTrialExpiry() {
 }
 // 옛 함수 호환 (외부 호출 잔재 대비) — checkFreeTrialExpiry 로 위임.
 function checkWelcomeBonusExpiry() { return checkFreeTrialExpiry(); }
+
+// V4 (사용자 명시 2026-05-06 ultrathink): 신규 가입 무료 토큰 (credit_balance) 소진 임박 / 소진 알림.
+// 양 비공개 — 절대값 노출 X. self-calibrating: 첫 본 balance 를 _initialFreeBalance 로 저장 후 소진율 계산.
+//   80%+ 소진 → '거의 끝' 알림 (한 번만, _creditDepletionWarned flag)
+//   balance == 0 → '체험 끝' 알림 (별도, _creditDepletedNotified flag)
+// 구독자는 별도 cap 흐름 (showBudgetExceededModal) 으로 처리되니 skip.
+function checkFreeCreditDepletion() {
+  const billing = window._billingCache;
+  if (!billing) return;
+  if (billing.subscription_active) return;  // 구독자 = 별도 cap 알림
+  const balance = Number(billing.credit_balance_usd || 0);
+  if (typeof state === 'undefined' || !state) return;
+  state.preferences = state.preferences || {};
+
+  // 토큰 다 떨어짐 → 'depleted' 알림 (한 번만)
+  if (balance <= 0) {
+    if (state.preferences._creditDepletedNotified) return;
+    state.preferences._creditDepletedNotified = true;
+    try { saveState(); } catch {}
+    _addNotification({
+      type: 'free_credit_depleted',
+      title: '🐚 환영 무료 체험 끝',
+      body: `깊게 써줘서 고마워.<br>계속 쓰려면 구독 — <b>얼리버드 4,900원/월</b> (출시 전 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+      persistent: true
+    });
+    return;
+  }
+
+  // 처음 본 balance = initial 으로 저장. 또는 현 balance 가 더 크면 갱신 (재 grant 케이스).
+  const init = Number(state.preferences._initialFreeBalance || 0);
+  if (balance > init) {
+    state.preferences._initialFreeBalance = balance;
+    // 새로 충전됐으니 옛 warning flag reset — 다시 80% 소진 시 한 번 더 fire.
+    delete state.preferences._creditDepletionWarned;
+    delete state.preferences._creditDepletedNotified;
+    try { saveState(); } catch {}
+    return;
+  }
+
+  // 80%+ 소진 → 'low' 알림 (한 번만)
+  const usedPct = init > 0 ? (init - balance) / init : 0;
+  if (usedPct >= 0.8) {
+    if (state.preferences._creditDepletionWarned) return;
+    state.preferences._creditDepletionWarned = true;
+    try { saveState(); } catch {}
+    _addNotification({
+      type: 'free_credit_low',
+      title: '🐚 환영 무료 체험 거의 끝',
+      body: `이제 얼마 안 남았어.<br>계속 쓰려면 — <b>얼리버드 4,900원/월</b> (출시 전 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+      persistent: true
+    });
+  }
+}
 
 // 미읽음 답변 수 — Settings 진입 / 주기 갱신
 async function refreshFeedbackUnreadBadge() {

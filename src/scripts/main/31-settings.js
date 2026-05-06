@@ -237,6 +237,8 @@ async function _doRefreshBillingStatus(manual) {
     if (typeof _renderNextBanner === 'function') { try { _renderNextBanner(); } catch {} }
     // 사용자 명시 2026-05-05: 한 달 무료 만료 7일 전 알림 + 인박스 badge 갱신.
     if (typeof checkFreeTrialExpiry === 'function') { try { checkFreeTrialExpiry(); } catch {} }
+    // V4 (사용자 명시 2026-05-06 ultrathink): 신규 무료 토큰 80% 소진 / 0 도달 알림.
+    if (typeof checkFreeCreditDepletion === 'function') { try { checkFreeCreditDepletion(); } catch {} }
     if (typeof refreshNotifInboxBadge === 'function') { try { refreshNotifInboxBadge(); } catch {} }
     // 사용자 명시 2026-04-30: 토스트 = manual button click 시만 (자동 호출 X — 자주 뜨면 부담)
     if (manual && typeof showToast === 'function') showToast('🔄 갱신됐어');
