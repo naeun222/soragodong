@@ -17545,17 +17545,6 @@ async function init() {
     if (typeof state.tutorialShown.core4 === 'undefined') state.tutorialShown.core4 = false;
     if (typeof state.tutorialShown.pearls === 'undefined') state.tutorialShown.pearls = false;
   }
-  // 사용자 명시 2026-05-06 ultrathink: 진주 튜토 testerMode OFF reload 후 backup 복원 시 마킹 유지 — sessionStorage 마커 → state 적용.
-  try {
-    if (sessionStorage.getItem('soragodong_v4_pearl_tutorial_done')) {
-      state.tutorialShown.pearls = true;
-      sessionStorage.removeItem('soragodong_v4_pearl_tutorial_done');
-    }
-  } catch {}
-  // 사용자 명시 2026-05-06 ultrathink: 일기/깨달음/마법/리뷰/숙고 sim 튜토 마커 → state.tutorialShown 복원.
-  if (typeof _restoreSimTutorialMarkersFromSession === 'function') {
-    try { _restoreSimTutorialMarkersFromSession(); } catch (e) { console.warn('[sim restore]', e); }
-  }
   // 사용자 명시 2026-05-06 ultrathink: 게스트 출신 detect — 게스트 진입 시 set 한 sessionStorage 마커가 있고 + 인증 사용자면 = promote 직후.
   // state.preferences._wasGuestPromoted 영속화 → 비밀번호 설정 직후 PWA 유도 trigger 에서 사용.
   try {
@@ -17650,6 +17639,21 @@ async function init() {
 
   await loadFromCloud();
   window._initialDataLoading = false;
+
+  // 사용자 보고 2026-05-06 ultrathink (재): sim 튜토 sessionStorage 마커 → state.tutorialShown 복원 = loadFromCloud 후로 이동.
+  // 옛 위치 (cloud load 전) = cloud 데이터가 우리 set 한 true 를 false 로 덮어씀 → 매번 fire 버그.
+  // 인증 사용자: cloud row 가 옛 false 인데 reload 후 마커 살아있으니 우리가 true 강제 set + saveState — 다음 cloud sync 에 반영.
+  try {
+    state.tutorialShown = state.tutorialShown || {};
+    if (sessionStorage.getItem('soragodong_v4_pearl_tutorial_done')) {
+      state.tutorialShown.pearls = true;
+      sessionStorage.removeItem('soragodong_v4_pearl_tutorial_done');
+      try { saveState(); } catch {}
+    }
+  } catch {}
+  if (typeof _restoreSimTutorialMarkersFromSession === 'function') {
+    try { _restoreSimTutorialMarkersFromSession(); } catch (e) { console.warn('[sim restore]', e); }
+  }
 
   // 사용자 보고 2026-05-06: 모바일 KG이니시스 = 결제창 redirect 흐름 → 돌아온 URL 의 paymentId query 처리.
   if (typeof _handlePaymentReturn === 'function') {
