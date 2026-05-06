@@ -35,7 +35,8 @@ async function scheduleTaskToTime(taskId) {
   if (!time) return;
   const startT = time.start;
   const endT = time.end;
-  const todayK = todayKey();
+  // 사용자 명시 2026-05-06 (정정): 자정 cutoff helper.
+  const todayK = (typeof _scheduleDateKey === 'function') ? _scheduleDateKey() : todayKey();
 
   if (existing) {
     existing.start = startT;

@@ -20,7 +20,8 @@ async function addV4ScheduleItem() {
     title: title.trim(),
     start: time.start,
     end: time.end,
-    date: todayKey(),
+    // 사용자 명시 2026-05-06 (정정): 자정 cutoff helper.
+    date: (typeof _scheduleDateKey === 'function') ? _scheduleDateKey() : todayKey(),
     source: 'manual',
     taskId: null,
     color: _V4_TT_COLORS[Math.floor(Math.random() * _V4_TT_COLORS.length)]

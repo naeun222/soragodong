@@ -64,7 +64,8 @@ async function processAnalysis(analysis, messageIdx) {
   // 사용자 요청 2026-04-28: 채팅에서 일정 추출 → 자동 todaySchedule 등록
   if (analysis.extracted_schedule && Array.isArray(analysis.extracted_schedule)) {
     if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
-    const todayK = todayKey();
+    // 사용자 명시 2026-05-06 (정정): 자정 cutoff helper.
+    const todayK = (typeof _scheduleDateKey === 'function') ? _scheduleDateKey() : todayKey();
     const colors = ['#d4a76a','#8fc88f','#7ec8e3','#b39ddb','#ff8da1','#ffb86b','#5fcfba'];
     let added = 0;
     analysis.extracted_schedule.forEach((it, i) => {
