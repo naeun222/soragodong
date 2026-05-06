@@ -50376,12 +50376,30 @@ function _ensurePwaStickyBtn() {
   document.body.appendChild(btn);
 }
 
-function _togglePwaStickyCard() {
+async function _togglePwaStickyCard() {
   const existing = document.getElementById('pwaInstallInlineCard');
   if (existing) {
     _dismissPwaInstallCard();
     return;
   }
+  // 사용자 명시 2026-05-06 ultrathink: Android + beforeinstallprompt 캡처됐으면 native install dialog 즉시 호출 (1탭 흐름).
+  // 거부 (dismissed) 또는 미지원 (iOS / Firefox / 인앱) 시 manual 가이드 카드 fallback.
+  if (window._deferredPwaPrompt) {
+    try {
+      const ev = window._deferredPwaPrompt;
+      ev.prompt();
+      const choice = await ev.userChoice;
+      window._deferredPwaPrompt = null;
+      if (choice && choice.outcome === 'accepted') {
+        if (typeof showToast === 'function') showToast('🐚 설치 시작');
+        return;
+      }
+      // dismissed — 사용자가 native dialog 거부. manual 가이드 fallback 도 추가 부담 → toast 만 띄우고 끝.
+      if (typeof showToast === 'function') showToast('나중에 다시 눌러봐 🐚');
+      return;
+    } catch (e) { console.warn('[pwa native]', e); }
+  }
+  // beforeinstallprompt 미캡처 (iOS / Firefox / 인앱) — manual 가이드 카드.
   renderPwaInstallInlineCard({ target: 'floating', force: true });
 }
 
