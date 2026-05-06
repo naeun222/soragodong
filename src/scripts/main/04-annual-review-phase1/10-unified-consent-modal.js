@@ -161,7 +161,14 @@ async function submitE2EESetup() {
     if (overlay) overlay.remove();
     showToast('🔐 E2EE 활성화 완료 — 회사조차 귀하의 데이터를 열람할 수 없습니다');
     // 사용자 보고 2026-04-30 + V203 (chooser 폐기): E2EE setup 닫힌 후 firstTimeIntro 재트리거 (silent 환영 보너스 + 자동 코어 튜토리얼 진입).
+    // 사용자 명시 2026-05-06 ultrathink: E2EE 비밀번호 설정 직후 V8 시작 튜토 fire (카카오 신규 가입자 — 게스트 이력 X).
+    // shouldRunStartTutorialV8 의 _e2eePending 가드가 init 시 V8 fire 막았으므로 여기서 직접 trigger.
+    // 게스트 promote 케이스는 hasAnyData=true 또는 tutorialVersion='v8-start' 라 자동 skip → 게스트 진행도 그대로.
     setTimeout(() => {
+      if (typeof shouldRunStartTutorialV8 === 'function' && shouldRunStartTutorialV8()) {
+        runStartTutorialV8().catch(e => console.warn('[v8 after e2ee]', e));
+        return;
+      }
       if (typeof maybeShowFirstTimeIntro === 'function') {
         maybeShowFirstTimeIntro().catch(e => console.warn('firstTimeIntro after e2ee:', e));
       }

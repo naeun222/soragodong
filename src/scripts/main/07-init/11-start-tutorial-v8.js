@@ -24,7 +24,19 @@ function shouldRunStartTutorialV8() {
     (Array.isArray(state.shellCollection) && state.shellCollection.length > 0) ||
     (Array.isArray(state.topicCards) && state.topicCards.length > 0) ||
     (Array.isArray(state.missions) && state.missions.length > 0);
-  return !hasAnyData;
+  if (hasAnyData) return false;
+  // 사용자 명시 2026-05-06 ultrathink: 카카오 신규 (게스트 이력 X) = E2EE 비밀번호 모달 강제. V8 hero 가 모달 위로 떠 가독성 X / 사용자가 모달 처리 중 hero step 진행됨 → 보류.
+  // E2EE 활성화 끝나는 hook (_e2eeSetupNewUser 후 setTimeout — 10-unified-consent-modal.js) 에서 직접 runStartTutorialV8 fire.
+  // 게스트 → 카카오 promote (linkIdentity, 같은 uid) 의 경우 = state.tutorialVersion 이 이미 'v8-start' 거나 hasAnyData=true 라 위 가드에 걸려 fire X — 게스트 진행도 그대로 보존.
+  const _e2eePending = !_e2eeEnabled && !_e2eeMasterKey;
+  if (_e2eePending) {
+    // 단, recovery (다른 device 진입) 등으로 이미 활성화 흐름 진행 중이면 fire (모달 안 뜸).
+    try {
+      if (localStorage.getItem('soragodong_v4_e2ee_recovery')) return true;
+    } catch {}
+    return false;
+  }
+  return true;
 }
 
 async function runStartTutorialV8() {
