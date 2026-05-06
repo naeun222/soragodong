@@ -29,6 +29,10 @@ async function init() {
       sessionStorage.removeItem('soragodong_v4_pearl_tutorial_done');
     }
   } catch {}
+  // 사용자 명시 2026-05-06 ultrathink: 일기/깨달음/마법/리뷰/숙고 sim 튜토 마커 → state.tutorialShown 복원.
+  if (typeof _restoreSimTutorialMarkersFromSession === 'function') {
+    try { _restoreSimTutorialMarkersFromSession(); } catch (e) { console.warn('[sim restore]', e); }
+  }
   // V4 (v8 묶음 7): Core 2 reload 후 깜빡임 점 갱신 — sessionStorage / state._beachJustUnlocked 체크
   setTimeout(() => { if (typeof _checkCore2JustFinished === 'function') _checkCore2JustFinished(); }, 200);
   // 사용자 명시 2026-05-06: Core 1 reload 후 환영 선물 모달 자동 트리거 폐기. 마커도 정리.

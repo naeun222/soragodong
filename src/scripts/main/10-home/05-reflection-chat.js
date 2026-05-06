@@ -7,6 +7,12 @@ function closeReflectionScreen() {
 let _activeReflectionId = null;
 
 function openReflectionChat(qId) {
+  // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 숙고 진입 → V8 sim 튜토리얼 fire.
+  if (!window._simTutorialInternalNav
+      && typeof shouldRunReflectionTutorial === 'function' && shouldRunReflectionTutorial()) {
+    runReflectionTutorialV8().catch(e => console.warn('[reflection]', e));
+    return;
+  }
   const q = (state.reflectionQuestions || []).find(x => x.id === qId);
   if (!q) return;
   // 활성화 안 됐으면 먼저 활성화

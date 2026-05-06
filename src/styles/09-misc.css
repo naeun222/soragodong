@@ -178,6 +178,23 @@
     border-color: rgba(126,200,200,0.35);
     background: linear-gradient(135deg, rgba(126,200,200,0.08), rgba(45,40,80,0.10));
   }
+  /* 사용자 명시 2026-05-06 ultrathink: 신규 사용자 체크인 카드 — 우측 상단 깜빡이는 점 ✦ "여기 눌러" 시각 단서. */
+  .action-card.checkin-card.has-pulse::after {
+    content: '';
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--accent, #d4a85a);
+    box-shadow: 0 0 0 0 rgba(212, 168, 90, 0.7);
+    animation: checkinCardPulse 1.6s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes checkinCardPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(212, 168, 90, 0.55); }
+    70%  { box-shadow: 0 0 0 14px rgba(212, 168, 90, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(212, 168, 90, 0); }
+  }
   .yesterday-preview { font-size: 11px; color: var(--text-soft); margin-top: 4px; }
   /* V3.13.x: 상단 sticky 업데이트 배너 (모든 탭에서 표시, dismiss 시 그 버전 사라짐) */
   .update-banner {
@@ -6865,6 +6882,7 @@
   /* 사용자 명시 2026-05-06 (재) ultrathink: 체크인 '기록 완료' button 20px 더 밑 — padding-top 10→30. */
   /* 사용자 명시 2026-05-06 (3차): 또 20px 더 밑 — padding-top 30→50. */
   /* 사용자 명시 2026-05-06 (4차 정직 진단): padding-top 으론 button 화면 절대 좌표 안 변함 (sticky bottom:0 + padding-bottom:0 으로 박혀있어서). 진짜 내리려면 transform translateY. padding-top 50 유지 (gradient bg 미감), translateY(20px) 추가. */
+  /* 사용자 명시 2026-05-06 (5차): 또 20px 더 밑 → translateY 20→40px. */
   .sticky-action-bar {
     position: sticky;
     bottom: 0;
@@ -6872,7 +6890,7 @@
     padding: 50px 0 0;
     background: linear-gradient(to top, var(--bg) 60%, rgba(20,15,30,0));
     z-index: 10;
-    transform: translateY(20px);
+    transform: translateY(40px);
   }
   /* 다음 button 이 있을 때만 spacing — settings 화면은 저장+돌아가기 두 버튼이라 spacing 필요 */
   .sticky-action-bar .btn-primary:not(:last-child) { margin-bottom: 8px; }

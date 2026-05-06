@@ -98,8 +98,11 @@ function renderMainAction() {
       if (ySum.moodEmoji) parts.push(`💭${ySum.moodEmoji}`);
       yPreview = `<div class="yesterday-preview">어제 ${parts.join(' · ')}</div>`;
     }
+    // 사용자 명시 2026-05-06 ultrathink: 신규 사용자 (entries 0개) — 카드 우측 상단 깜빡이는 점 (has-pulse).
+    const isBrandNew = !Array.isArray(state.entries) || state.entries.length === 0;
+    const pulseClass = isBrandNew ? ' has-pulse' : '';
     cardHtml = `
-      <div class="action-card checkin-card" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
+      <div class="action-card checkin-card${pulseClass}" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
         <div class="action-icon">${copy.icon}</div>
         <div class="action-text">
           <div class="action-title">${copy.title}</div>

@@ -2,6 +2,22 @@
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 function showScreen(name) {
+  // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 진입 시 sim 튜토리얼 fire.
+  // _simTutorialInternalNav 플래그 = 튜토리얼 자기 자신이 호출 — 재진입 차단.
+  if (!window._simTutorialInternalNav) {
+    if (name === 'archive' && typeof shouldRunDiaryLibTutorial === 'function' && shouldRunDiaryLibTutorial()) {
+      runDiaryLibTutorialV8().catch(e => console.warn('[diaryLib]', e));
+      return;
+    }
+    if (name === 'decisions' && typeof shouldRunMagicTutorial === 'function' && shouldRunMagicTutorial()) {
+      runMagicTutorialV8().catch(e => console.warn('[magic]', e));
+      return;
+    }
+    if (name === 'archive-reviews' && typeof shouldRunReviewsTutorial === 'function' && shouldRunReviewsTutorial()) {
+      runReviewsTutorialV8().catch(e => console.warn('[reviews]', e));
+      return;
+    }
+  }
   // V4 코어 잠금 — 잠긴 탭/화면 진입 시 잠금 모달 (testerMode/코어활성/unlocked면 통과)
   // (글로벌 클릭 인터셉터가 잡지만, 다른 곳에서 showScreen 직접 호출하는 케이스도 가드)
   // V4 fix (사용자 보고 2026-05-04): 기존 가입자 진입 직후 나 탭 즉시 클릭 시 잠금 모달 잠시 뜨다 사라지던 async 경합 fix.
@@ -172,7 +188,7 @@ function dismissPlaceholder(key) {
 
 // V4 (v8 묶음 18) 2026-05-03: Inline tip 8 trigger — 각 1회만 (state._shownInlineTips 가드)
 const INLINE_TIPS = {
-  firstShell: '🐚 미션 해낸 모든 소라가 여기 모여',
+  firstShell: '🐚 미션 해낸 모든 소라가 여기 모여 — 대화탭에서 ✦ 해볼게 눌러봐',
   specialShell: '✨ 특별한 소라 — 가챠 5% 확률',
   syncDotRed: '🔴 동기화 대기 — 클릭하면 강제 저장',
   syncDotClick: '✓ 강제 저장 완료',
