@@ -11,6 +11,8 @@
     window._deferredPwaPrompt = null;
     var card = document.getElementById('loginPwaCard') || document.getElementById('pwaInstallInlineCard');
     if (card) card.style.display = 'none';
+    // 사용자 명시 2026-05-06 ultrathink: 스티키 button 도 hide — 설치 완료 후 시각 노출 X.
+    if (typeof _hidePwaStickyBtn === 'function') _hidePwaStickyBtn();
     // 사용자 명시 2026-05-06 ultrathink: 설치 완료 마킹 — 인라인 카드 재노출 차단.
     try {
       if (typeof state !== 'undefined' && state) {

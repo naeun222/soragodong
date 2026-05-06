@@ -2226,6 +2226,33 @@
     margin-bottom: 12px;
     line-height: 1.5;
   }
+  /* 사용자 명시 2026-05-06 ultrathink: PWA 설치 가이드 스티키 동그라미 button — 우하단 fixed. 모든 화면 공통. */
+  .pwa-sticky-btn {
+    position: fixed;
+    right: 16px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #d4a76a, #b8894a);
+    border: 0;
+    color: #1c1c1e;
+    cursor: pointer;
+    z-index: 8500;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.32), 0 0 0 0 rgba(212,168,90,0.55);
+    transition: transform 0.18s, box-shadow 0.3s;
+    animation: pwaStickyPulse 2.6s ease-in-out infinite;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+    font-family: inherit;
+  }
+  .pwa-sticky-icon { font-size: 22px; line-height: 1; }
+  .pwa-sticky-btn:active { transform: scale(0.92); }
+  .pwa-sticky-btn:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 0 6px rgba(212,168,90,0.2); }
+  @keyframes pwaStickyPulse {
+    0%, 100% { box-shadow: 0 6px 20px rgba(0,0,0,0.32), 0 0 0 0 rgba(212,168,90,0.5); }
+    60%      { box-shadow: 0 6px 20px rgba(0,0,0,0.32), 0 0 0 11px rgba(212,168,90,0); }
+  }
+  /* 모달 / overlay 떠 있을 때 가려지지 않도록 z-index 그대로 두되, 코치마크 (z-index 9998-10000) 위로는 안 올라감 — 의도. */
   .login-consent-card label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
   .login-consent-card label + label { margin-top: 9px; padding-top: 9px; border-top: 1px solid rgba(255,255,255,0.04); }
   /* 사용자 명시 2026-05-02: '모두 동의' 위쪽 박스 살짝 강조 (한국 표준 패턴) */

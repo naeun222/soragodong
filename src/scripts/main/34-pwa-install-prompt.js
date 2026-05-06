@@ -32,8 +32,10 @@ function shouldShowPwaInstallPrompt() {
 }
 
 // opts.target = 'home' (mainActionContainer 위 inline) | 'floating' (fixed bottom)
+// opts.force = true 면 가드 우회 + 마킹 X — sticky button 누른 사용자 명시 trigger 용.
 function renderPwaInstallInlineCard(opts) {
-  if (!shouldShowPwaInstallPrompt()) return;
+  const force = !!(opts && opts.force);
+  if (!force && !shouldShowPwaInstallPrompt()) return;
   if (document.getElementById('pwaInstallInlineCard')) return;
   const target = (opts && opts.target) || 'home';
 
@@ -56,10 +58,17 @@ function renderPwaInstallInlineCard(opts) {
   const card = document.createElement('div');
   card.id = 'pwaInstallInlineCard';
   card.className = 'pwa-inline-card' + (target === 'floating' ? ' pwa-inline-card-floating' : '');
+  // 사용자 명시 2026-05-06 ultrathink: force (sticky button 누른 사용자) 면 카피 변경 — '앱에서 볼래?' 톤.
+  const titleHtml = force
+    ? '📱 앱에서 볼래?'
+    : '📱 홈 화면에 두면 더 편해';
+  const subHtml = force
+    ? '아직 앱 출시 전이라 — 홈 화면에 두면 앱처럼 ✦'
+    : '매일 한 번 — 한 탭으로 바로 ✦';
   card.innerHTML = `
     <button class="pwa-inline-dismiss" onclick="_dismissPwaInstallCard()" aria-label="닫기">✕</button>
-    <div class="pwa-inline-title">📱 홈 화면에 두면 더 편해</div>
-    <div class="pwa-inline-sub">매일 한 번 — 한 탭으로 바로 ✦</div>
+    <div class="pwa-inline-title">${titleHtml}</div>
+    <div class="pwa-inline-sub">${subHtml}</div>
     ${stepsHtml}
   `;
 
@@ -75,12 +84,52 @@ function renderPwaInstallInlineCard(opts) {
     requestAnimationFrame(() => card.classList.add('show'));
   }
 
-  // 마킹 — count++ / lastAt
-  state.preferences = state.preferences || {};
-  state.preferences.pwaInstallPrompted = state.preferences.pwaInstallPrompted || { count: 0 };
-  state.preferences.pwaInstallPrompted.count = (state.preferences.pwaInstallPrompted.count || 0) + 1;
-  state.preferences.pwaInstallPrompted.lastAt = new Date().toISOString();
-  try { saveState(); } catch {}
+  // 마킹 — count++ / lastAt. force=true (sticky button) 면 마킹 skip — 사용자 명시 클릭이라 자동 trigger cool-down 영향 X.
+  if (!force) {
+    state.preferences = state.preferences || {};
+    state.preferences.pwaInstallPrompted = state.preferences.pwaInstallPrompted || { count: 0 };
+    state.preferences.pwaInstallPrompted.count = (state.preferences.pwaInstallPrompted.count || 0) + 1;
+    state.preferences.pwaInstallPrompted.lastAt = new Date().toISOString();
+    try { saveState(); } catch {}
+  }
+}
+
+// 사용자 명시 2026-05-06 ultrathink: 스티키 동그라미 button — 우하단 fixed. 클릭 시 PWA 설치 카드 토글.
+// 노출 조건: 모바일 + 비-standalone + 미설치. 모든 화면 (홈 / 도서관 / 챗 등) 공통.
+function _ensurePwaStickyBtn() {
+  if (document.getElementById('pwaStickyBtn')) return;
+  try {
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return;
+    if (window.navigator.standalone === true) return;
+    const ua = navigator.userAgent;
+    if (!/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return;
+  } catch {}
+  try {
+    if (state && state.preferences && state.preferences.pwaInstallPrompted
+        && state.preferences.pwaInstallPrompted.installed) return;
+  } catch {}
+  const btn = document.createElement('button');
+  btn.id = 'pwaStickyBtn';
+  btn.className = 'pwa-sticky-btn';
+  btn.type = 'button';
+  btn.setAttribute('aria-label', '앱에서 볼래 — 홈 화면에 설치 가이드');
+  btn.innerHTML = '<span class="pwa-sticky-icon">📱</span>';
+  btn.addEventListener('click', _togglePwaStickyCard);
+  document.body.appendChild(btn);
+}
+
+function _togglePwaStickyCard() {
+  const existing = document.getElementById('pwaInstallInlineCard');
+  if (existing) {
+    _dismissPwaInstallCard();
+    return;
+  }
+  renderPwaInstallInlineCard({ target: 'floating', force: true });
+}
+
+function _hidePwaStickyBtn() {
+  const btn = document.getElementById('pwaStickyBtn');
+  if (btn) btn.remove();
 }
 
 function _dismissPwaInstallCard() {

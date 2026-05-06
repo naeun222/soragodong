@@ -81,6 +81,8 @@ async function init() {
   }
   // 사용자 명시 2026-05-06 ultrathink (perf): boot splash 안전망 — init() 어떤 경로 fail 이라도 7초 후 자동 hide.
   setTimeout(() => { if (typeof _hideBootSplash === 'function') _hideBootSplash(); }, 7000);
+  // 사용자 명시 2026-05-06 ultrathink: PWA 스티키 button — 모든 진입 경로 공통 노출 (가드는 _ensurePwaStickyBtn 안).
+  setTimeout(() => { if (typeof _ensurePwaStickyBtn === 'function') _ensurePwaStickyBtn(); }, 1500);
 
   // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 코어 잠금 글로벌 클릭 인터셉터 = 폐기.
   // v8 = "잠금 X / 발견형 학습". Core 2 만 4단 응답 disabled-locked (4단 응답 자리에서 처리) 별도.
