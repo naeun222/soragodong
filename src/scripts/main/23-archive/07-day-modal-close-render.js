@@ -113,6 +113,13 @@ function renderLensCalendarGrid() {
 }
 
 function switchLibraryCat(cat) {
+  // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 진주 칩 클릭 → V8 진주 튜토리얼 fire.
+  // _pearlTutorialInternalNav 플래그 = 튜토리얼 자기 자신이 호출 — 재진입 차단.
+  if (cat === 'pearls' && !window._pearlTutorialInternalNav
+      && typeof shouldRunFirstPearlTutorial === 'function' && shouldRunFirstPearlTutorial()) {
+    runFirstPearlTutorialV8().catch(e => console.warn('[pearl tutorial]', e));
+    return;
+  }
   if (!_LIB_CAT_TO_VIEW[cat]) cat = 'diary';
   _currentLens = cat;
   document.querySelectorAll('.lib-cat-chip').forEach(c => {

@@ -233,7 +233,9 @@ async function _v8RunIntakeAndInject() {
 // 코치마크 — 가벼운 자체 인프라 (ONBOARDING_STEPS 분리)
 // ─────────────────────────────────────────────────────────────
 
-function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', interactive = false, waitFor, onAdvance, branchButtons, allowNoTarget = false, noMask = false }) {
+function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', interactive = false, waitFor, onAdvance, branchButtons, allowNoTarget = false, noMask = true }) {
+  // 사용자 명시 2026-05-06 ultrathink: 모든 코치마크 default mask off — 다른 모달 / 화면 가독성 보존.
+  // mask 가 진짜 필요한 곳만 noMask: false 로 명시.
   return new Promise((resolve) => {
     const root = document.getElementById('v8TutorialRoot');
     if (!root) { resolve(); return; }

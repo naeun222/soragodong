@@ -353,6 +353,11 @@ function removeCheckinPhoto() {
 }
 
 async function addPearl() {
+  // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 진주 진입 → V8 진주 튜토리얼 (시뮬) fire.
+  if (typeof shouldRunFirstPearlTutorial === 'function' && shouldRunFirstPearlTutorial()) {
+    runFirstPearlTutorialV8().catch(e => console.warn('[pearl tutorial]', e));
+    return;
+  }
   const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
   const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
   const options = categories.map(c => ({

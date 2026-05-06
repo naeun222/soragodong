@@ -11,15 +11,24 @@ async function init() {
     state._core2NotUnlocked = !hasMission && !hasShell && !hasStrategy;
   }
   // V4 (v8 묶음 10): state.tutorialShown — Core 2/3-A/3-B/4 첫 경험 트리거 플래그 (옛 사용자도 한 번 받음 OK)
+  // 사용자 명시 2026-05-06 ultrathink: pearls 추가 — 첫 진주 진입 V8 튜토리얼 마킹.
   if (!state.tutorialShown || typeof state.tutorialShown !== 'object') {
-    state.tutorialShown = { core2: false, core3a: false, core3b: false, core3b_try: false, core4: false };
+    state.tutorialShown = { core2: false, core3a: false, core3b: false, core3b_try: false, core4: false, pearls: false };
   } else {
     if (typeof state.tutorialShown.core2 === 'undefined') state.tutorialShown.core2 = false;
     if (typeof state.tutorialShown.core3a === 'undefined') state.tutorialShown.core3a = false;
     if (typeof state.tutorialShown.core3b === 'undefined') state.tutorialShown.core3b = false;
     if (typeof state.tutorialShown.core3b_try === 'undefined') state.tutorialShown.core3b_try = false;
     if (typeof state.tutorialShown.core4 === 'undefined') state.tutorialShown.core4 = false;
+    if (typeof state.tutorialShown.pearls === 'undefined') state.tutorialShown.pearls = false;
   }
+  // 사용자 명시 2026-05-06 ultrathink: 진주 튜토 testerMode OFF reload 후 backup 복원 시 마킹 유지 — sessionStorage 마커 → state 적용.
+  try {
+    if (sessionStorage.getItem('soragodong_v4_pearl_tutorial_done')) {
+      state.tutorialShown.pearls = true;
+      sessionStorage.removeItem('soragodong_v4_pearl_tutorial_done');
+    }
+  } catch {}
   // V4 (v8 묶음 7): Core 2 reload 후 깜빡임 점 갱신 — sessionStorage / state._beachJustUnlocked 체크
   setTimeout(() => { if (typeof _checkCore2JustFinished === 'function') _checkCore2JustFinished(); }, 200);
   // 사용자 명시 2026-05-06: Core 1 reload 후 환영 선물 모달 자동 트리거 폐기. 마커도 정리.
