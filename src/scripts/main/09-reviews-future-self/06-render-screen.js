@@ -86,14 +86,35 @@ function renderReviewScreen(type, reviewData, opts) {
       ${strengths.map(s => `<div style="font-size:13px; color:var(--text); line-height:1.7; padding:5px 0;">• ${escapeHtml(s)}</div>`).join('')}
     </div>` : '';
 
+    // 사용자 명시 2026-05-06 ultrathink: 주간 = 미시 일기 톤. scenes 카드 = 이번 주 장면 3개 (when/what/feeling).
+    //   weekly only — monthly 는 데이터 X (prompt schema 분리).
+    const scenesArr = Array.isArray(reviewData.scenes) ? reviewData.scenes.filter(s => s && (s.what || s.when)) : [];
+    const scenesBlock = (type === 'weekly' && scenesArr.length > 0) ? `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px; color:#a89cd6; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">📔 이번 주 장면</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        ${scenesArr.slice(0, 3).map(s => `
+          <div style="background:var(--surface); border:1px solid rgba(168,156,214,0.18); border-radius:12px; padding:12px 14px; position:relative;">
+            ${s.when ? `<div style="font-size:10.5px; color:#a89cd6; letter-spacing:0.08em; margin-bottom:5px;">${escapeHtml(s.when)}</div>` : ''}
+            ${s.what ? `<div style="font-family:'Gowun Batang',serif; font-size:14px; color:var(--text); line-height:1.6;">${escapeHtml(s.what)}</div>` : ''}
+            ${s.feeling ? `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; font-style:italic;">— ${escapeHtml(s.feeling)}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>` : '';
+
     // Pattern — 핵심 카드 2
+    // weekly = {headline, note} 가벼움 / monthly = {headline, evidence, condition} Detective.
     const pat = reviewData.pattern || {};
-    const patternBlock = (pat.headline || pat.evidence || pat.condition) ? `
+    const patHasContent = pat.headline || pat.evidence || pat.condition || pat.note;
+    const patternLabel = type === 'weekly' ? '🌙 이번 주 흐름' : '🔍 패턴 발견';
+    const patternBlock = patHasContent ? `
     <div style="background:var(--surface); border:1px solid rgba(201,169,110,0.20); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
-      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">🔍 패턴 발견</div>
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">${patternLabel}</div>
       ${pat.headline ? `<div style="font-size:14.5px; font-weight:600; color:var(--text); line-height:1.6; margin-bottom:8px;">${escapeHtml(pat.headline)}</div>` : ''}
       ${pat.evidence ? `<div style="font-size:12px; color:var(--text-dim); line-height:1.7; padding:8px 12px; background:rgba(0,0,0,0.18); border-left:2px solid rgba(201,169,110,0.40); border-radius:6px; margin-bottom:6px;">${escapeHtml(pat.evidence)}</div>` : ''}
       ${pat.condition ? `<div style="font-size:11px; color:var(--text-soft); line-height:1.6;">↳ ${escapeHtml(pat.condition)}</div>` : ''}
+      ${pat.note ? `<div style="font-size:11.5px; color:var(--text-soft); line-height:1.6;">↳ ${escapeHtml(pat.note)}</div>` : ''}
     </div>` : '';
 
     // 사용자 명시 2026-04-30 ultrathink: 이전 시드의 풍부한 '이 기간 깨달음 N개' 카드 통째로 호출.
@@ -191,6 +212,7 @@ function renderReviewScreen(type, reviewData, opts) {
       <div class="screen-title">${titleText}</div>
       <div class="screen-sub" style="margin-bottom:18px;">${periodLabel}</div>
       ${heroBlock}
+      ${scenesBlock}
       ${strengthsBlock}
       ${patternBlock}
       ${insightsBlock}
@@ -280,7 +302,8 @@ function saveReview(type) {
     cycles: reviewData.cycles,
     emotions: reviewData.emotions,
     value_align: reviewData.value_align,
-    risk_signals: reviewData.risk_signals
+    risk_signals: reviewData.risk_signals,
+    scenes: reviewData.scenes
   };
 
   // 사용자 보고 2026-05-01 ultrathink: 중복 가드 — 같은 weekKey/monthKey 이미 있으면 replace (auto 가 먼저 push 한 후 사용자 manual click 시 중복 방지)

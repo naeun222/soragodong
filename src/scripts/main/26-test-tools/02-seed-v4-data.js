@@ -1087,7 +1087,12 @@ async function testSeedV4Data() {
       offset: 5, weekKey: 'W-5',
       one_word_weekly: '회복중',
       summary: '잠을 챙긴 주, 마음이 한결 가벼워짐.',
-      pattern: { headline: '수면 7h+ 인 날, 다음날 mood +1.5', evidence: '"오늘 7시간 잤더니 머리가 맑아." (화/금)', condition: '평일 11시 전 취침 시' },
+      scenes: [
+        { when: '화요일 밤', what: '7시간 잤더니 다음날 머리가 맑아', feeling: '안심' },
+        { when: '목요일 저녁', what: '엄마 통화 후 5분 산책으로 회복', feeling: '따뜻' },
+        { when: '토요일 새벽', what: '카페 갔는데 글이 술술 써짐', feeling: '풀림' }
+      ],
+      pattern: { headline: '잘 잔 다음날, 한결 가벼웠어', evidence: '"오늘 7시간 잤더니 머리가 맑아." (화/금)', condition: '평일 11시 전 취침 시' },
       quotes: ['"오늘 7시간 잤더니 머리가 맑아."', '"엄마 통화 후 5분 산책 = 회복."', '"마감 임박 = 자연 진입."', '"카페에서 글 잘 써짐."', '"운동 한 날 일기가 길어."'],
       strengths: ['월요일 마감 임박에도 잠 7시간 챙김', '엄마 통화 후 5분 산책으로 회복', '카페 환경 setup 적극 활용 — 3회'],
       cycles: { sleep: '평일 7h+ 4일 → mood 평균 +1.5', mode: '시험 모드 활성 → 카페인 ↑ but 회복 동시 챙김', other: '' },
@@ -1099,7 +1104,12 @@ async function testSeedV4Data() {
       offset: 4, weekKey: 'W-4',
       one_word_weekly: '가속중',
       summary: '논문 마감 가까워서 몰입도 올라감.',
-      pattern: { headline: '마감 임박 = 작업 진입 자연스러움', evidence: '"마감 5일 전부터 도파민 부스터." (수)', condition: 'D-7 안쪽' },
+      scenes: [
+        { when: '수요일 새벽', what: '4시간 통째 몰입 — 시간 사라짐', feeling: '뿌듯' },
+        { when: '금요일 밤', what: '마감 5일 전부터 도파민 부스터', feeling: '몰입' },
+        { when: '일요일 저녁', what: '운동 한 시간으로 몰입 후 회복', feeling: '균형감' }
+      ],
+      pattern: { headline: '마감 임박할수록 진짜 빠르게 몰입돼', evidence: '"마감 5일 전부터 도파민 부스터." (수)', condition: 'D-7 안쪽' },
       quotes: ['"마감 5일 전부터 도파민 부스터."', '"오늘 4시간 통째 몰입."', '"잠 줄여도 일 잘 돼."', '"음악 + 카페 = 시너지."', '"끝나면 다 회복."'],
       strengths: ['몰입 4시간 세션 2회 성공', '저녁 운동으로 몰입 후 회복 챙김', '음악 환경 일관 setup'],
       cycles: { sleep: '잠 6h 대로 살짝 줄음 — 마감 mode 일시적 OK', mode: '시험 모드 풀 가동', other: '' },
@@ -1111,7 +1121,12 @@ async function testSeedV4Data() {
       offset: 3, weekKey: 'W-3',
       one_word_weekly: '휘청중',
       summary: '마감 끝났는데 회복 아직 못 잡힘.',
-      pattern: { headline: '마감 후 3일째 — 무기력', evidence: '"오늘도 침대에서 못 일어났어." (월/화/수)', condition: '큰 spike 직후' },
+      scenes: [
+        { when: '월요일 아침', what: '침대에서 못 일어남 — 그대로 12시', feeling: '텅' },
+        { when: '수요일 밤', what: '산책 가려다 그냥 누움', feeling: '무기력' },
+        { when: '금요일 점심', what: '카톡 답장도 귀찮아서 미룸', feeling: '공허' }
+      ],
+      pattern: { headline: '마감 끝나고 며칠은 텅 빈 느낌이 와', evidence: '"오늘도 침대에서 못 일어났어." (월/화/수)', condition: '큰 spike 직후' },
       quotes: ['"오늘도 침대에서 못 일어났어."', '"마감 끝났는데 텅 빈 느낌."', '"산책도 귀찮."', '"그냥 누워있고 싶어."', '"이게 burnout 인가?"'],
       strengths: ['그래도 매일 일기 한 줄은 남김', '엄마한테 카톡 한 번 답장', '잠은 충분히 잠'],
       cycles: { sleep: '잠 9h+ 3일 — 회복 mode 자동 진입', mode: '활성 모드 X — 자연 휴식', other: '비 오는 날 3일 → 무기력 ↑ 가능' },
@@ -1123,7 +1138,12 @@ async function testSeedV4Data() {
       offset: 2, weekKey: 'W-2',
       one_word_weekly: '재정비',
       summary: '천천히 일상 복귀, 새 리듬 잡는 중.',
-      pattern: { headline: '아침 산책 한 날 = 그날 일기 길어', evidence: '"아침 30분 산책 후 글이 술술." (목/토)', condition: '7시 기상 + 30분 운동' },
+      scenes: [
+        { when: '목요일 아침', what: '30분 산책 후 일기가 길게 써짐', feeling: '풀림' },
+        { when: '토요일 점심', what: '친구 카톡 답장 하나로 하루 살아남', feeling: '따뜻' },
+        { when: '일요일 저녁', what: '카페 한 곳 정착 — 환경 안정됨', feeling: '안정' }
+      ],
+      pattern: { headline: '아침에 움직인 날, 일기가 길게 써졌어', evidence: '"아침 30분 산책 후 글이 술술." (목/토)', condition: '7시 기상 + 30분 운동' },
       quotes: ['"아침 30분 산책 후 글이 술술."', '"카페 한 곳 정착 — 환경 안정."', '"친구 카톡 답장 하나 = 하루 좋아짐."', '"잠 일찍 자는 게 가장 큰 효과."', '"느려도 괜찮아."'],
       strengths: ['아침 7시 기상 4일', '친구 카톡 답장 — 작은 연결 회복', '카페 환경 정착으로 작업 안정'],
       cycles: { sleep: '평일 7h+ 안정 → mood 평균 3.5', mode: '회복 모드 + 일상 mode 균형', other: '' },
@@ -1140,6 +1160,7 @@ async function testSeedV4Data() {
       completedAt: new Date(today.getTime() - s.offset * 7 * 86400000).toISOString(),
       one_word_weekly: s.one_word_weekly,
       summary: s.summary,
+      scenes: s.scenes,
       pattern: s.pattern,
       quotes: s.quotes,
       strengths: s.strengths,

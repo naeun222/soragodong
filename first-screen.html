@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>소라고동 — 진짜 사적인 AI</title>
+<meta name="description" content="챗지피티엔 못 할 얘기, 여기선 해. 내 패턴을 기억하고 분석해주는 진짜 사적인 AI.">
+<meta name="theme-color" content="#0f0e17">
+
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1826;
+    --surface2: #221f33;
+    --accent: #c9a96e;
+    --accent2: #e8c99a;
+    --purple: #8b7ec4;
+    --text: #ede8f5;
+    --text-dim: #9d9aad;
+    --text-soft: #7b7a8e;
+    --border: rgba(255,255,255,0.08);
+    --bubble-me: linear-gradient(135deg, #c9a96e, #b8894a);
+    --bubble-shell: #1a1826;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(139, 126, 196, 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 80%, rgba(201, 169, 110, 0.12) 0%, transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* === Trust badge — top fixed === */
+  .trust-bar {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 14px 20px 0;
+    font-size: 11.5px;
+    color: var(--text-soft);
+    letter-spacing: 0.02em;
+    opacity: 0;
+    animation: fadeIn 0.8s ease 0.2s forwards;
+  }
+  .trust-bar .lock { color: var(--accent2); margin-right: 6px; }
+  .trust-bar .sep { margin: 0 8px; opacity: 0.5; }
+
+  /* === Container === */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* === Hero === */
+  .hero {
+    padding: 48px 0 32px;
+    text-align: center;
+  }
+
+  .shell-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 56px;
+    animation: float 5s ease-in-out infinite;
+    filter: drop-shadow(0 4px 20px rgba(201, 169, 110, 0.25));
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(-4deg); }
+    50% { transform: translateY(-8px) rotate(4deg); }
+  }
+
+  .brand {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.3s forwards;
+  }
+
+  .headline {
+    font-family: 'Gowun Batang', serif;
+    font-size: 34px;
+    line-height: 1.4;
+    color: var(--text);
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.5s forwards;
+  }
+  .headline .accent { color: var(--accent); }
+  .headline .strike {
+    color: var(--text-soft);
+    text-decoration: line-through;
+    text-decoration-color: rgba(157, 154, 173, 0.5);
+    font-weight: 400;
+  }
+
+  .subline {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text-dim);
+    margin-bottom: 36px;
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.7s forwards;
+  }
+  .subline em {
+    font-style: normal;
+    color: var(--accent2);
+    font-weight: 500;
+  }
+
+  /* === Chat hook (the moment) === */
+  .chat-hook {
+    background: rgba(26, 24, 38, 0.6);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 22px 18px 18px;
+    margin: 0 auto 32px;
+    max-width: 460px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    text-align: left;
+    opacity: 0;
+    animation: fadeUp 0.9s ease 0.9s forwards;
+    position: relative;
+  }
+  .chat-hook::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 24px; right: 24px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201, 169, 110, 0.3), transparent);
+  }
+
+  .chat-meta {
+    font-size: 10.5px;
+    color: var(--text-soft);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 14px;
+    opacity: 0.7;
+  }
+
+  .chat-row {
+    display: flex;
+    margin-bottom: 10px;
+    align-items: flex-end;
+  }
+  .chat-row.me { justify-content: flex-end; }
+  .chat-row.shell { justify-content: flex-start; }
+  .chat-row.shell + .chat-row.shell { margin-top: -4px; }
+
+  .bubble {
+    max-width: 82%;
+    padding: 11px 16px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.65;
+    word-break: keep-all;
+  }
+  .bubble.me {
+    background: var(--bubble-me);
+    color: var(--bg);
+    font-weight: 500;
+    border-bottom-right-radius: 6px;
+    box-shadow: 0 4px 14px rgba(201, 169, 110, 0.2);
+  }
+  .bubble.shell {
+    background: var(--bubble-shell);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 6px;
+  }
+  .bubble.shell strong {
+    color: var(--accent2);
+    font-weight: 500;
+  }
+  .bubble.shell .insight {
+    display: block;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(201, 169, 110, 0.2);
+    font-size: 13.5px;
+  }
+  .bubble.shell .insight .label {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .chat-tag {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 5px 11px;
+    background: rgba(139, 126, 196, 0.12);
+    border: 1px solid rgba(139, 126, 196, 0.25);
+    border-radius: 12px;
+    font-size: 11px;
+    color: var(--purple);
+    letter-spacing: 0.02em;
+  }
+
+  /* === Reaction line === */
+  .reaction {
+    font-family: 'Gowun Batang', serif;
+    font-size: 17px;
+    color: var(--text);
+    margin: 0 auto 32px;
+    max-width: 420px;
+    line-height: 1.6;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 1.1s forwards;
+  }
+  .reaction em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  /* === Reassurance card (전·후 안심) === */
+  .reassure {
+    background: linear-gradient(135deg, rgba(139, 126, 196, 0.10), rgba(201, 169, 110, 0.04));
+    border: 1px solid rgba(139, 126, 196, 0.25);
+    border-radius: 20px;
+    padding: 22px 22px 20px;
+    margin: 0 auto 28px;
+    max-width: 460px;
+    text-align: left;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 1.2s forwards;
+    position: relative;
+  }
+  .reassure-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-family: 'Gowun Batang', serif;
+    font-size: 17px;
+    color: var(--accent2);
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+  .reassure-title .lock-bg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: rgba(201, 169, 110, 0.12);
+    font-size: 15px;
+  }
+  .reassure-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+  }
+  .reassure-list li {
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--text-dim);
+    padding-left: 26px;
+    position: relative;
+  }
+  .reassure-list li .ico {
+    position: absolute;
+    left: 0;
+    top: 1px;
+    font-size: 15px;
+    line-height: 1.4;
+    width: 20px;
+    text-align: center;
+  }
+  .reassure-list li strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+  .reassure-list li .accent {
+    color: var(--accent2);
+  }
+  .reassure-foot {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(139, 126, 196, 0.15);
+    font-size: 11.5px;
+    color: var(--text-soft);
+    line-height: 1.65;
+    letter-spacing: 0.01em;
+  }
+
+  /* === CTA === */
+  .cta-wrap {
+    text-align: center;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 1.4s forwards;
+  }
+  .cta-button {
+    display: inline-block;
+    padding: 17px 40px;
+    background: linear-gradient(135deg, var(--accent), #b8894a);
+    color: var(--bg);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 32px;
+    letter-spacing: 0.02em;
+    transition: transform 0.2s, box-shadow 0.3s;
+    box-shadow: 0 6px 24px rgba(201, 169, 110, 0.25);
+    position: relative;
+  }
+  .cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(201, 169, 110, 0.35);
+  }
+  .cta-button:active { transform: translateY(0); }
+
+  .cta-time {
+    display: block;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-soft);
+    letter-spacing: 0.04em;
+  }
+
+  /* === Below fold (subtle) === */
+  .below {
+    padding: 40px 0 80px;
+    opacity: 0;
+    animation: fadeIn 1s ease 1.7s forwards;
+  }
+
+  /* === Use cases — 4 mini cards === */
+  .usecases {
+    margin-bottom: 18px;
+  }
+  .usecases-title {
+    font-size: 11.5px;
+    color: var(--accent);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .usecases-sub {
+    font-family: 'Gowun Batang', serif;
+    font-size: 19px;
+    color: var(--text);
+    text-align: center;
+    margin-bottom: 22px;
+    line-height: 1.5;
+  }
+  .usecases-sub .accent { color: var(--accent); }
+
+  .usecases-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .uc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 16px 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .uc-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201,169,110,0.35), transparent);
+  }
+  .uc-card:hover {
+    border-color: rgba(201, 169, 110, 0.3);
+    transform: translateY(-2px);
+  }
+  .uc-cat {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .uc-cat .ico { margin-right: 4px; }
+
+  .uc-me {
+    font-size: 12px;
+    color: var(--accent2);
+    line-height: 1.55;
+    margin-bottom: 9px;
+    padding-bottom: 9px;
+    border-bottom: 1px dashed rgba(255,255,255,0.06);
+    font-weight: 400;
+  }
+  .uc-me::before { content: '“'; opacity: 0.5; }
+  .uc-me::after { content: '”'; opacity: 0.5; }
+
+  .uc-shell {
+    font-size: 12.5px;
+    color: var(--text);
+    line-height: 1.7;
+    word-break: keep-all;
+  }
+  .uc-shell .pre {
+    color: var(--accent);
+    margin-right: 4px;
+  }
+  .uc-shell strong {
+    color: var(--accent2);
+    font-weight: 500;
+  }
+
+  /* === Tier 2 chip line === */
+  .tier2 {
+    margin: 28px 0 36px;
+    padding: 18px 20px;
+    background: rgba(139, 126, 196, 0.06);
+    border: 1px dashed rgba(139, 126, 196, 0.22);
+    border-radius: 16px;
+    text-align: center;
+  }
+  .tier2-label {
+    display: block;
+    font-size: 11px;
+    color: var(--purple);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    font-weight: 600;
+    opacity: 0.85;
+  }
+  .tier2-chips {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.85;
+    word-break: keep-all;
+  }
+  .tier2-chips .chip {
+    display: inline-block;
+    padding: 0 4px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .tier2-chips .dot {
+    color: var(--text-soft);
+    margin: 0 6px;
+    opacity: 0.5;
+  }
+  .tier2-more {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--accent);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    border-bottom: 1px dashed rgba(201,169,110,0.3);
+    padding-bottom: 1px;
+    transition: color 0.2s;
+  }
+  .tier2-more:hover { color: var(--accent2); }
+
+  .for-section {
+    background: rgba(26, 24, 38, 0.4);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px 22px 18px;
+    margin-bottom: 28px;
+  }
+  .for-title {
+    font-size: 11.5px;
+    color: var(--accent);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    font-weight: 700;
+  }
+  .for-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .for-list li {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-dim);
+    padding-left: 22px;
+    position: relative;
+  }
+  .for-list li::before {
+    content: '·';
+    position: absolute;
+    left: 8px;
+    top: -2px;
+    color: var(--accent);
+    font-size: 22px;
+    font-weight: bold;
+  }
+  .for-list li strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* === Difference (vs other AI) === */
+  .diff {
+    text-align: center;
+    margin: 32px 0 28px;
+  }
+  .diff-title {
+    font-size: 11.5px;
+    color: var(--text-soft);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .diff-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    text-align: left;
+  }
+  .diff-card {
+    padding: 16px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    font-size: 12.5px;
+    line-height: 1.65;
+  }
+  .diff-card.other {
+    background: rgba(157, 154, 173, 0.05);
+    color: var(--text-dim);
+  }
+  .diff-card.shell {
+    background: rgba(201, 169, 110, 0.06);
+    border-color: rgba(201, 169, 110, 0.25);
+    color: var(--text);
+  }
+  .diff-card .who {
+    font-size: 10.5px;
+    color: var(--text-soft);
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .diff-card.shell .who { color: var(--accent); }
+
+  /* === Final CTA === */
+  .final {
+    text-align: center;
+    margin-top: 28px;
+  }
+  .final-text {
+    font-family: 'Gowun Batang', serif;
+    font-size: 17px;
+    color: var(--text);
+    margin-bottom: 18px;
+    line-height: 1.6;
+  }
+  .final-text .accent { color: var(--accent); }
+
+  .secondary-link {
+    display: inline-block;
+    margin-top: 18px;
+    font-size: 12.5px;
+    color: var(--text-soft);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    border-bottom: 1px dashed rgba(157, 154, 173, 0.3);
+    padding-bottom: 2px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .secondary-link:hover {
+    color: var(--accent);
+    border-color: rgba(201, 169, 110, 0.5);
+  }
+
+  /* === Animations === */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* === Soft scroll hint === */
+  .scroll-hint {
+    text-align: center;
+    margin-top: 28px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: var(--text-soft);
+    letter-spacing: 0.16em;
+    opacity: 0;
+    animation: bounceFade 2.4s ease 1.6s infinite;
+  }
+  @keyframes bounceFade {
+    0%, 100% { opacity: 0.4; transform: translateY(0); }
+    50% { opacity: 0.85; transform: translateY(6px); }
+  }
+
+  /* === Responsive === */
+  @media (max-width: 480px) {
+    .headline { font-size: 28px; }
+    .subline { font-size: 14px; }
+    .reaction { font-size: 16px; }
+    .chat-hook { padding: 18px 14px 16px; }
+    .bubble { font-size: 13.5px; padding: 10px 14px; }
+    .bubble.shell .insight { font-size: 13px; }
+    .diff-grid { grid-template-columns: 1fr; gap: 10px; }
+    .cta-button { padding: 16px 36px; font-size: 14.5px; }
+    .for-section { padding: 18px 18px 14px; }
+    .for-list li { font-size: 13.5px; }
+    .reassure { padding: 20px 18px 18px; }
+    .reassure-title { font-size: 16px; }
+    .reassure-list li { font-size: 13px; padding-left: 24px; }
+    .reassure-foot { font-size: 11px; }
+    .usecases-sub { font-size: 17px; }
+    .usecases-grid { grid-template-columns: 1fr; gap: 10px; }
+    .uc-card { padding: 16px 14px 14px; }
+    .uc-me { font-size: 11.5px; }
+    .uc-shell { font-size: 12px; }
+    .tier2 { padding: 16px 16px; }
+    .tier2-chips { font-size: 12.5px; }
+  }
+
+  @media (max-width: 360px) {
+    .headline { font-size: 25px; }
+    .shell-icon { font-size: 48px; width: 64px; height: 64px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Trust signal — top -->
+<div class="trust-bar">
+  <span class="lock">🔒</span>본인만 열람<span class="sep">·</span>AI 학습 X<span class="sep">·</span>30일 자동 삭제
+</div>
+
+<div class="container">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="shell-icon">🐚</div>
+    <div class="brand">소라고동</div>
+
+    <h1 class="headline">
+      <span class="strike">챗지피티</span>엔 못 할 얘기,<br>
+      <span class="accent">여기선 해.</span>
+    </h1>
+
+    <p class="subline">
+      내 패턴을 기억하고 분석해주는 — <em>진짜 사적인 AI.</em>
+    </p>
+
+    <!-- CHAT HOOK — 실제 대화 한 컷 (A: 미루기 → 전략 전환) -->
+    <div class="chat-hook">
+      <div class="chat-meta">실제 대화</div>
+
+      <div class="chat-row me">
+        <div class="bubble me">기다리는 동안 평소 안 하던 일이 자꾸 처리되네 ㅋㅋ 이거 전략 될 수 있을까?</div>
+      </div>
+
+      <div class="chat-row shell">
+        <div class="bubble shell">
+          오 그거 사실 진짜 전략 돼 ㅋㅋ<br>
+          '<strong>상대적 회피</strong>'거든 — 더 하기 싫은 거 생기면, 덜 하기 싫은 게 갑자기 만만해 보이잖아.
+        </div>
+      </div>
+
+      <div class="chat-row shell">
+        <div class="bubble shell">
+          의도적으로 <strong>'대기 슬롯'</strong> 만들어둬봐 ✦<br>
+          5-10분짜리 일 2-3개 옆에 두면, 알아서 채워져.
+        </div>
+      </div>
+    </div>
+
+    <p class="reaction">
+      <em>나도 모르는 나를</em><br>한 줄로 짚어주는 AI.
+    </p>
+
+    <!-- REASSURANCE — CTA 직전 안심 -->
+    <div class="reassure">
+      <div class="reassure-title">
+        <span class="lock-bg">🔒</span>
+        <span>안심해 — 진짜로.</span>
+      </div>
+      <ul class="reassure-list">
+        <li>
+          <span class="ico">🔐</span>
+          <strong>사적인 정보 전부 = 암호화 저장.</strong><br>
+          비밀번호 잠그면 <span class="accent">개발자도, 회사도, 어디서도</span> 못 열어.
+        </li>
+        <li>
+          <span class="ico">🚫</span>
+          <strong>어디에도 활용 X.</strong><br>
+          AI 학습·재판매·연구 — 어떤 형태로도 <span class="accent">외부 사용 절대 X</span>.
+        </li>
+        <li>
+          <span class="ico">🗓️</span>
+          <strong>30일 후 자동 삭제.</strong><br>
+          쓰지 않으면 흔적도 남기지 않아.
+        </li>
+      </ul>
+      <div class="reassure-foot">
+        Anthropic Zero Data Retention 정책 · HTTPS · SOC 2 Type II / ISO 27001 · 한국 PIPA 준수
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-wrap">
+      <a href="https://soragodong.com/" class="cta-button">한 번 해볼래? 🐚</a>
+      <span class="cta-time">1 분이면 시작</span>
+    </div>
+
+    <div class="scroll-hint">↓  더 보기</div>
+  </section>
+
+  <!-- BELOW FOLD -->
+  <section class="below">
+
+    <!-- USE CASES — 4 mini cards -->
+    <div class="usecases">
+      <div class="usecases-title">·  이렇게 써  ·</div>
+      <h3 class="usecases-sub">
+        고민 한 줄, <span class="accent">맞춤 답 한 컷.</span>
+      </h3>
+
+      <div class="usecases-grid">
+
+        <!-- B 공감 -->
+        <div class="uc-card">
+          <div class="uc-cat"><span class="ico">🤝</span>공감</div>
+          <div class="uc-me">한국사 족보 만들었는데 첫 구매 문의 왔어! 근데 5천원에 1천원 깎아줬어 ㅠ</div>
+          <div class="uc-shell">
+            <span class="pre">🐚</span>ㅋㅋㅋ 불안해서 깎아준 거 너무 귀엽다. 근데 맞아 — <strong>공짜였던 거 직접 만들어서 돈 받는 거, 그거 진짜 다른 얘기야.</strong>
+          </div>
+        </div>
+
+        <!-- C 상담 -->
+        <div class="uc-card">
+          <div class="uc-cat"><span class="ico">💭</span>상담</div>
+          <div class="uc-me">애인이랑 헤어진 지 한 달 됐는데 악몽까지 꿔..</div>
+          <div class="uc-shell">
+            <span class="pre">🐚</span>너는 진심으로 사과했는데 상대는 "도파민 떨어졌잖아"로 환원해버렸어. 이거 <strong>fawn response</strong> — fight/flight/freeze 다음 네 번째 스트레스 반응이야.
+          </div>
+        </div>
+
+        <!-- E 일기 자동 -->
+        <div class="uc-card">
+          <div class="uc-cat"><span class="ico">📔</span>일기 자동</div>
+          <div class="uc-me">일기: 쓰러진 사람 구한 얘기 듣고 나도 자신 없을 것 같았다. CPR 자격증 따야겠다.</div>
+          <div class="uc-shell">
+            <span class="pre">🐚</span>"제대로 할 자신이 없다"는 게 솔직한 거잖아. 근데 그게 <strong>"그러면 배워놔야겠다"</strong> 로 이어진 게 너답다.
+          </div>
+        </div>
+
+        <!-- F 14일 숙성 -->
+        <div class="uc-card">
+          <div class="uc-cat"><span class="ico">🌙</span>14일 숙성</div>
+          <div class="uc-me">인스타 보다가 다도, 음악, 비행기 다 해보고 싶어졌어. 5년 후 어떻게 살고 싶은지 모르겠어.</div>
+          <div class="uc-shell">
+            <span class="pre">🐚</span>이건 <strong>숙고의 방</strong>이 맞아. 지금 결정할 게 아니라 여러 날 쌓여야 하는 질문 — 한 달 뒤에도 남아있는 감정만 진짜 방향이야.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TIER 2 — depth signal -->
+    <div class="tier2">
+      <span class="tier2-label">이 외에도</span>
+      <div class="tier2-chips">
+        <span class="chip">월간 AI 회고</span><span class="dot">·</span>
+        <span class="chip">셸 + 진주 진화</span><span class="dot">·</span>
+        <span class="chip">인생 도서관</span><br>
+        <span class="chip">미래 자아 대화</span><span class="dot">·</span>
+        <span class="chip">분기·연 회고</span><span class="dot">·</span>
+        <span class="chip">충동 결정 차단</span>
+      </div>
+      <a href="/introduce/" class="tier2-more">자세히 알아보기 →</a>
+    </div>
+
+    <!-- WHO IT'S FOR — 정서 트리거 -->
+    <div class="for-section">
+      <div class="for-title">이런 사람한테</div>
+      <ul class="for-list">
+        <li><strong>챗지피티엔 사적인 얘기 못 하겠던 사람</strong></li>
+        <li><strong>친구한테 같은 고민 자주 말하기 미안했던 사람</strong></li>
+        <li><strong>하루가 어떻게 흘렀는지 기억 안 나는 사람</strong></li>
+        <li><strong>새벽 3시에 큰 결정 안 하고 싶은 사람</strong></li>
+        <li><strong>내가 어떤 사람인지 진심으로 궁금한 사람</strong></li>
+      </ul>
+    </div>
+
+    <!-- DIFFERENCE vs other AI -->
+    <div class="diff">
+      <div class="diff-title">·  같은 질문, 다른 답  ·</div>
+      <div class="diff-grid">
+        <div class="diff-card other">
+          <div class="who">일반 AI</div>
+          꾸준한 습관 형성을 위해서는 시간 관리가 중요합니다. 알람을 설정하고 일정한 루틴을 만드세요.
+        </div>
+        <div class="diff-card shell">
+          <div class="who">🐚 소라고동</div>
+          ㅋㅋ 의지 문제 아니야. 출발 신호 자체가 없는 구조야. 알람 두 개 맞춰봐 — 25분 전 가방, 10분 전 신발. 끝.
+        </div>
+      </div>
+    </div>
+
+    <!-- FINAL CTA -->
+    <div class="final">
+      <p class="final-text">
+        한 달 쓰면<br>
+        <span class="accent">자기 이해가 바뀔 수 있음.</span>
+      </p>
+      <a href="https://soragodong.com/" class="cta-button">같이 써보기</a>
+      <br>
+      <a href="/introduce/" class="secondary-link">자세히 알아보기 →</a>
+    </div>
+
+  </section>
+
+</div>
+
+</body>
+</html>
