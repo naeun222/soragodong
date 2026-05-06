@@ -22,8 +22,32 @@ const SIM_TUTORIAL_MARKERS = {
 function _shouldRunSimTutorial(key, opts = {}) {
   if (typeof state === 'undefined' || !state) return false;
   state.tutorialShown = state.tutorialShown || {};
-  // 사용자 명시 2026-05-06 ultrathink: force=true (설정 picker 진입) 면 tutorialShown 가드 우회.
-  if (!opts.force && state.tutorialShown[key]) return false;
+  // 사용자 명시 2026-05-06 ultrathink: force=true (설정 picker 진입) 면 모든 가드 우회.
+  if (opts.force) {
+    if (window._simTutorialRunning) return false;
+    if (typeof _v8ShowCoachmark !== 'function') return false;
+    if (typeof toggleTesterMode !== 'function') return false;
+    if (typeof testSeedV4Data !== 'function') return false;
+    return true;
+  }
+  if (state.tutorialShown[key]) return false;
+  // 사용자 보고 2026-05-06 ultrathink (재): testerMode ON 사용자 (개발자 본인) = 이미 다 봄 + saveState noop 라 마킹 cloud sync X → 매번 fire 버그. skip.
+  if (state.preferences && state.preferences.testerMode) return false;
+  // 사용자 명시 2026-05-06 ultrathink (재): "신규 가입자만 처음 눌렀을 때" — 데이터 있는 기존 사용자 = sim 튜토 자체 fire X.
+  // hasAnyData = entries / chatMessages / shellCollection / topicCards / missions / intakeWorry 중 하나라도 있으면 기존.
+  const hasAnyData =
+    (Array.isArray(state.entries) && state.entries.length > 0) ||
+    (Array.isArray(state.chatMessages) && state.chatMessages.length > 0) ||
+    (Array.isArray(state.shellCollection) && state.shellCollection.length > 0) ||
+    (Array.isArray(state.topicCards) && state.topicCards.length > 0) ||
+    (Array.isArray(state.missions) && state.missions.length > 0) ||
+    (Array.isArray(state.intakeWorry) && state.intakeWorry.length > 0);
+  if (hasAnyData) {
+    // 기존 사용자 마킹 영속화 — 다음 클릭에도 빠르게 가드 통과.
+    state.tutorialShown[key] = true;
+    try { saveState(); } catch {}
+    return false;
+  }
   if (window._v8TutorialRunning) return false;
   if (window._c2TutorialRunning) return false;
   if (window._pearlTutorialRunning) return false;
