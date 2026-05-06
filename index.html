@@ -10805,18 +10805,12 @@
     </div>
 
 
-    <!-- 사용자 보고 2026-05-05 (PortOne 심사): 약관/환불/개인정보 + 사업자 정보 footer 노출 (전상법 §13 의무 + PG 심사 요구). -->
-    <div style="margin-top:32px; padding-top:18px; border-top:1px solid var(--border); font-size:11px; color:var(--text-soft); line-height:1.7; text-align:center;">
-      <div style="margin-bottom:8px;">
-        <a href="/terms" target="_blank" style="color:var(--text-dim);">이용약관</a> ·
-        <a href="/refund" target="_blank" style="color:var(--text-dim);">환불정책</a> ·
-        <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a>
-      </div>
-      <div style="font-size:10.5px; line-height:1.7;">
-        나은 랩(Lab) · 대표 김나은 · 사업자등록번호 261-21-02592<br>
-        통신판매업 신고번호 2026-서울동작-0613<br>
-        서울특별시 동작구 상도로47아길 14 · soragodongapp@gmail.com
-      </div>
+    <!-- 사용자 명시 2026-05-06 ultrathink: 사업자 raw text → '사업자 정보 ›' link 모달 (전상법 §13 한 번 클릭 접근 = 충족). 설정에서도 inline 표시. -->
+    <div style="margin-top:32px; padding-top:18px; border-top:1px solid var(--border); font-size:10.5px; color:var(--text-soft); line-height:1.7; text-align:center;">
+      <a href="/terms" target="_blank" style="color:var(--text-dim);">이용약관</a> ·
+      <a href="/refund" target="_blank" style="color:var(--text-dim);">환불정책</a> ·
+      <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a> ·
+      <a href="javascript:void(0)" onclick="showBusinessInfoModal()" style="color:var(--text-dim);">사업자정보</a>
     </div>
 
   </div>
@@ -47497,7 +47491,12 @@ function loadSettings() {
 function renderBusinessInfo() {
   const body = document.getElementById('businessInfoBody');
   if (!body) return;
-  if (typeof BUSINESS_INFO === 'undefined') { body.style.display = 'none'; return; }
+  body.innerHTML = _buildBusinessInfoRowsHtml();
+}
+
+// 사용자 명시 2026-05-06 ultrathink: 사업자 정보 row HTML — 설정 inline + 로그인 footer 모달 공용.
+function _buildBusinessInfoRowsHtml() {
+  if (typeof BUSINESS_INFO === 'undefined') return '';
   const b = BUSINESS_INFO;
   const rows = [];
   if (b.name) rows.push(`<div><b>상호</b>: ${escapeHtml(b.name)}</div>`);
@@ -47505,17 +47504,38 @@ function renderBusinessInfo() {
   if (b.business_no) rows.push(`<div><b>사업자등록번호</b>: ${escapeHtml(b.business_no)}</div>`);
   if (b.ecommerce_no) rows.push(`<div><b>통신판매업 신고번호</b>: ${escapeHtml(b.ecommerce_no)}</div>`);
   // 사용자 보고 2026-05-05 (PortOne 심사): 사업장 주소 UI 직접 노출 (전상법 §13 의무 + PG 심사 요구).
-  // 옛 정책 = 자택이라 X — 사업자등록 / 통신판매신고 시점에 이미 정부 DB 공개라 추가 노출 X.
   if (b.address) rows.push(`<div><b>사업장 주소</b>: ${escapeHtml(b.address)}</div>`);
-  // 약관 / 환불정책 / 개인정보처리방침 — PG 심사 + 사용자 접근성 위해 직접 링크.
   rows.push(`<div style="margin-top:6px; font-size:12px;"><a href="/terms" target="_blank" style="color:var(--accent);">이용약관</a> · <a href="/refund" target="_blank" style="color:var(--accent);">환불정책</a> · <a href="/privacy" target="_blank" style="color:var(--accent);">개인정보처리방침</a></div>`);
   if (b.email) rows.push(`<div><b>이메일</b>: <a href="mailto:${escapeHtml(b.email)}" style="color:var(--accent);">${escapeHtml(b.email)}</a></div>`);
   if (b.cpo) rows.push(`<div><b>개인정보 보호책임자</b>: ${escapeHtml(b.cpo)}</div>`);
-  // 등록증 / 통판 미발급 시 안내
   if (!b.business_no) {
     rows.push(`<div style="font-size:10px; color:var(--text-soft); margin-top:6px; font-style:italic;">사업자등록 진행 중 — 발급 후 정식 정보로 갱신됩니다.</div>`);
   }
-  body.innerHTML = rows.join('');
+  return rows.join('');
+}
+
+// 사용자 명시 2026-05-06 ultrathink: 로그인 화면 footer 의 '사업자정보' link 클릭 시 작은 모달.
+// 전상법 §13 = 거래 화면에서 한 번 클릭으로 접근 가능 = 충족. 인증 후엔 설정에서도 inline 표시.
+function showBusinessInfoModal() {
+  if (document.getElementById('businessInfoOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'businessInfoOverlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:10001; display:flex; align-items:center; justify-content:center; padding:20px;';
+  overlay.onclick = (e) => { if (e.target === overlay) _closeBusinessInfoModal(); };
+  const card = document.createElement('div');
+  card.style.cssText = 'background:var(--surface,#1a1828); border:1px solid var(--border); border-radius:14px; max-width:380px; width:100%; padding:18px 20px; box-shadow:0 16px 48px rgba(0,0,0,0.5); font-size:11.5px; color:var(--text); line-height:1.75;';
+  const rows = _buildBusinessInfoRowsHtml() || '<div style="color:var(--text-soft);">정보 준비 중</div>';
+  card.innerHTML = `
+    <div style="font-size:13px; font-weight:600; color:var(--accent); margin-bottom:10px;">사업자 정보</div>
+    ${rows}
+    <button onclick="_closeBusinessInfoModal()" style="margin-top:14px; width:100%; padding:9px; background:transparent; border:1px solid var(--border-strong,var(--border)); color:var(--text-dim); border-radius:9px; cursor:pointer; font-size:12px; font-family:inherit;">닫기</button>
+  `;
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
+function _closeBusinessInfoModal() {
+  const m = document.getElementById('businessInfoOverlay');
+  if (m) m.remove();
 }
 
 function saveSettings() {

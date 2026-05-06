@@ -40,18 +40,12 @@
     </div>
 
 
-    <!-- 사용자 보고 2026-05-05 (PortOne 심사): 약관/환불/개인정보 + 사업자 정보 footer 노출 (전상법 §13 의무 + PG 심사 요구). -->
-    <div style="margin-top:32px; padding-top:18px; border-top:1px solid var(--border); font-size:11px; color:var(--text-soft); line-height:1.7; text-align:center;">
-      <div style="margin-bottom:8px;">
-        <a href="/terms" target="_blank" style="color:var(--text-dim);">이용약관</a> ·
-        <a href="/refund" target="_blank" style="color:var(--text-dim);">환불정책</a> ·
-        <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a>
-      </div>
-      <div style="font-size:10.5px; line-height:1.7;">
-        나은 랩(Lab) · 대표 김나은 · 사업자등록번호 261-21-02592<br>
-        통신판매업 신고번호 2026-서울동작-0613<br>
-        서울특별시 동작구 상도로47아길 14 · soragodongapp@gmail.com
-      </div>
+    <!-- 사용자 명시 2026-05-06 ultrathink: 사업자 raw text → '사업자 정보 ›' link 모달 (전상법 §13 한 번 클릭 접근 = 충족). 설정에서도 inline 표시. -->
+    <div style="margin-top:32px; padding-top:18px; border-top:1px solid var(--border); font-size:10.5px; color:var(--text-soft); line-height:1.7; text-align:center;">
+      <a href="/terms" target="_blank" style="color:var(--text-dim);">이용약관</a> ·
+      <a href="/refund" target="_blank" style="color:var(--text-dim);">환불정책</a> ·
+      <a href="/privacy" target="_blank" style="color:var(--text-dim);">개인정보처리방침</a> ·
+      <a href="javascript:void(0)" onclick="showBusinessInfoModal()" style="color:var(--text-dim);">사업자정보</a>
     </div>
 
   </div>
