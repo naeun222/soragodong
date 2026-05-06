@@ -120,15 +120,15 @@ function showBudgetExceededModal(reason, opts) {
     } else if (subActive && plan === 'early_light') {
       titleText = '🐚 체험 한도 도달';
       bodyText = '체험 한도 다 썼네 — 써줘서 고마워.<br><br>' +
-        '<span style="color:var(--accent); font-weight:600;">✨ 얼리버드 평생 이용권</span>이 지금 <b>4,900원</b> (앱 출시 전 한정).<br>' +
-        '월정액 대신, 한 번 결제하고 매달 Light 수준으로 평생 이어가.<br><br>' +
+        '<span style="color:var(--accent); font-weight:600;">✨ 얼리버드 구독</span> <b>4,900원/월</b> — 출시 전 가입자만 이 가격으로 평생 락인.<br>' +
+        'Light 수준 자동 갱신, 언제든 해지.<br><br>' +
         '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
         '솔직하게 — 단독 개발자 (1인) 라 결제 = iOS 앱 출시 후원이야 🫂<br>' +
         '<span style="font-size:10px; opacity:0.55;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>' +
         '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 평생 이용권 보기 (4,900원)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 월정액 구독 보기</button>
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 구독 보기 (4,900원/월)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 다른 월정액 구독 보기</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">나중에 결정할게</button>
       `;
     } else if (subActive && plan === 'light') {
@@ -148,14 +148,14 @@ function showBudgetExceededModal(reason, opts) {
       // 비구독 (체험 만료) — 구독 안내 + 개발자 후원 톤
       titleText = '🐚 체험 종료';
       bodyText = '체험 기간 끝났어 — 깊게 써줘서 고마워.<br><br>' +
-        '계속 쓰려면 구독 — <span style="color:var(--accent); font-weight:600;">얼리버드 평생 이용권 4,900원</span>이 지금만.<br><br>' +
+        '계속 쓰려면 구독 — <span style="color:var(--accent); font-weight:600;">얼리버드 4,900원/월</span> (출시 전 가입자만 이 가격 평생 락인).<br><br>' +
         '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
         '단독 개발자 (1인) 가 후원 = iOS 앱 출시 가능 🫂<br>' +
         '<span style="font-size:10px; opacity:0.55;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>' +
         '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 평생 이용권 보기 (4,900원)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 월정액 구독 보기</button>
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 구독 보기 (4,900원/월)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 다른 월정액 구독 보기</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
     }

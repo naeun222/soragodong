@@ -117,7 +117,7 @@ function checkFreeTrialExpiry() {
   _addNotification({
     type: 'free_trial_expiry_warning',
     title: '체험 한도가 얼마 안 남았어',
-    body: `<b>${daysDisplay}일</b> 후 만료. 자동 결제 X — 계속 쓰고 싶으면 직접 구독.<br><b>얼리버드 평생 이용권</b> 4,900원 (앱 출시 전 한정).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+    body: `<b>${daysDisplay}일</b> 후 만료. 계속 쓰고 싶으면 구독.<br><b>얼리버드 구독 4,900원/월</b> (출시 전 가입자만 이 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
     persistent: true
   });
 }

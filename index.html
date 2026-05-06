@@ -48092,13 +48092,25 @@ async function _doRefreshBillingStatus(manual) {
     if (subActive && planMeta) {
       const usedPct = quotaUsd > 0 ? Math.min(100, Math.round((usedUsd / quotaUsd) * 100)) : 0;
       const isNearCap = usedPct >= 80;
-      html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${subExpires}까지</span></div>`;
+      // 사용자 명시 2026-05-06: backend `cancel_at_period_end` true 면 갱신 해지 됨 — '{date}에 종료' 라벨로 대체.
+      const cancelledRenewal = !!billing.cancel_at_period_end;
+      const expiresLabel = cancelledRenewal ? `${subExpires}에 종료` : `${subExpires}까지`;
+      html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${expiresLabel}</span></div>`;
       // early_light: 토큰 양 안 보이게 (체험 플랜은 수치 노출 X)
       if (planKey !== 'early_light') {
         html += `<div style="margin-top:10px; font-size:13px;">${_quotaStateLabel(usedPct)}</div>`;
         html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
         if (isNearCap && planKey !== 'premium') {
           html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">🌊 Premium 으로 늘리기</button>`;
+        }
+      }
+      // 사용자 명시 2026-05-06: 다음 갱신 해지 = 작은 link 톤 (text-soft, 10.5px, 밑줄 X). 보고 싶을 때만 보이게.
+      // early_light 는 자동 결제 X (만료 후 별도 구독) 라 버튼 노출 X.
+      if (planKey !== 'early_light') {
+        if (cancelledRenewal) {
+          html += `<div style="margin-top:10px; font-size:10.5px; color:var(--text-soft); text-align:right;">✓ 다음 갱신 해지됨</div>`;
+        } else {
+          html += `<div style="margin-top:10px; text-align:right;"><a href="javascript:void(0)" onclick="cancelNextRenewal()" style="font-size:10.5px; color:var(--text-soft); text-decoration:none; opacity:0.65;">다음 갱신 해지</a></div>`;
         }
       }
     } else {
@@ -48190,6 +48202,33 @@ async function loadPayments() {
   }
 }
 
+// 사용자 명시 2026-05-06: 다음 갱신 해지 — 현 결제 만료까지 사용, 자동 갱신 차단. 환불 X (잔여일 그대로).
+// 백엔드: /api/billing/cancel-renewal (POST, Bearer auth) — billing.cancel_at_period_end=true set.
+async function cancelNextRenewal() {
+  if (!session?.access_token) { alert('로그인 필요'); return; }
+  if (!confirm('다음 갱신을 해지할까?\n\n현 결제 기간 (만료일까지) 은 그대로 사용하고, 다음 자동 결제만 멈춰. 환불 아니야.\n\n다시 갱신하고 싶으면 [구독 시작 / 변경] 으로 재구독.')) return;
+  try {
+    const _origFetch = window._anthropicOrigFetch || window.fetch;
+    const resp = await _origFetch('/api/billing/cancel-renewal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({})
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok && data.ok) {
+      showToast('✓ 다음 갱신 해지됨 — 만료일까지 사용 가능');
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true);
+    } else {
+      alert('해지 실패: ' + (data.error || resp.status));
+    }
+  } catch (e) {
+    alert('통신 오류: ' + (e?.message || e));
+  }
+}
+
 async function requestRefund(paymentId, amountKrw, label) {
   if (!session?.access_token) { alert('로그인 필요'); return; }
   const reason = prompt(`${label} (${(amountKrw || 0).toLocaleString()}원) 환불 사유를 알려줘:\n\n(구독 = 잔여일 비례 환불 / 추가팩 = 잔여 credit 비례)`, '');
@@ -48237,9 +48276,9 @@ const TIER_PLANS_CLIENT = {
     description: '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.' },
   early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜',       tagline: '체험', emoji: '🐚',
     description: '신규 가입자 자동 활성화 — 충분히 써보고 마음에 들면 구독.', auto_grant_first_month: true },
-  // 앱 출시 전 얼리버드 평생 이용권 — 4,900원 1회 결제, 매달 Light 수준 자동 갱신 (추가 결제 X).
-  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드 평생',   tagline: '출시 전 감사 혜택', emoji: '✨',
-    description: '한 번 결제하면 영원히. 매달 Light 수준으로 자유롭게, 추가 결제 없이.', is_lifetime: true },
+  // V4 (사용자 명시 2026-05-06): 얼리버드 = 정기구독 (4,900원/월 자동 갱신). "평생" = 이 가격이 평생 lock-in (출시 후에도 동일가 유지). 1회 결제 영구 X.
+  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '출시 전 한정 가격 락인', emoji: '✨',
+    description: '4,900원/월 자동 갱신. 출시 전 가입자만 — 이 가격은 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 해지 가능.' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
@@ -48509,7 +48548,7 @@ function checkFreeTrialExpiry() {
   _addNotification({
     type: 'free_trial_expiry_warning',
     title: '체험 한도가 얼마 안 남았어',
-    body: `<b>${daysDisplay}일</b> 후 만료. 자동 결제 X — 계속 쓰고 싶으면 직접 구독.<br><b>얼리버드 평생 이용권</b> 4,900원 (앱 출시 전 한정).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+    body: `<b>${daysDisplay}일</b> 후 만료. 계속 쓰고 싶으면 구독.<br><b>얼리버드 구독 4,900원/월</b> (출시 전 가입자만 이 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
     persistent: true
   });
 }
@@ -49196,19 +49235,19 @@ async function openSubscribeModal() {
     </div>
   `;
   const earlyLifetimePlan = TIER_PLANS_CLIENT.early_lifetime;
-  // 사용자 명시 2026-05-06 ultrathink: 얼리버드 평생 = 하늘색~파란색 gradient (Light 대체 분위기).
+  // 사용자 명시 2026-05-06 ultrathink: 얼리버드 = 하늘색~파란색 gradient (Light 대체 분위기).
   const earlyLifetimeCard = `
     <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(135,206,235,0.18), rgba(74,144,226,0.10)); border:1.5px solid #5fb4d3; border-radius:14px; margin-bottom:10px;">
       <div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">출시 전 한정</div>
       <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
         <div style="font-size:18px; font-weight:700; color:var(--text);">${earlyLifetimePlan.emoji} ${earlyLifetimePlan.label}</div>
-        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;"> 1회</span></div>
+        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/월</span></div>
       </div>
       <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${earlyLifetimePlan.tagline}</div>
       <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
         ${earlyLifetimePlan.description}
       </div>
-      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 평생 이용권 (${earlyLifetimePlan.krw.toLocaleString()}원)</button>
+      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 구독 (${earlyLifetimePlan.krw.toLocaleString()}원/월)</button>
     </div>
   `;
   const overlay = document.createElement('div');
@@ -49223,8 +49262,8 @@ async function openSubscribeModal() {
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
-        💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드 평생</b> <s style="opacity:0.55;">또는 <b>Light</b></s>. 깊게 자주 쓰면 Premium.<br>
-        해지: [설정 → 구독] 환불 (잔여일 비례 — <a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).
+        💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드</b> <s style="opacity:0.55;">또는 <b>Light</b></s>. 깊게 자주 쓰면 Premium.<br>
+        모두 월정액 자동 갱신. 해지: [설정 → 구독] 다음 갱신 해지 / 환불은 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>
     </div>
@@ -49281,7 +49320,7 @@ async function proceedSubscribe(tierKey) {
     return;
   }
 
-  const isLifetimeTier = tierKey === 'early_lifetime';
+  const isEarlyTier = tierKey === 'early_lifetime';
   // 결제 시도 — paymentId = 매번 unique. 사용자 본인 식별용 customer 정보 + tier 별 amount.
   const paymentId = `payment-${tierKey}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   // 사용자 보고 2026-05-06: 모바일 redirect 흐름에서 verify-pay 호출 시점 user_id 와 결제 시점 user_id 가 다르면 NOT_OWN.
@@ -49299,7 +49338,7 @@ async function proceedSubscribe(tierKey) {
       storeId,
       channelKey,
       paymentId,
-      orderName: isLifetimeTier ? `소라고동 ${tier.label} 이용권 (평생)` : `소라고동 ${tier.label} 구독 (1개월)`,
+      orderName: `소라고동 ${tier.label} 구독 (1개월)`,
       totalAmount: tier.krw,
       currency: 'KRW',
       payMethod: 'CARD',
@@ -49353,8 +49392,8 @@ async function proceedSubscribe(tierKey) {
       if (result.duplicate) {
         showToast('💳 이미 활성 구독 — 영수증 보관, 환불 안내 메일 확인');
         alert(result.message || '이미 활성 구독이 있어. 환불 요청은 이메일로.');
-      } else if (isLifetimeTier) {
-        showToast(`✨ 얼리버드 평생 이용권 완료 — 고마워 🫂`);
+      } else if (isEarlyTier) {
+        showToast(`✨ 얼리버드 구독 완료 (${tier.krw.toLocaleString()}원/월) — 고마워 🫂`);
       } else {
         showToast(`📅 ${tier.label} 구독 완료 (${tier.krw.toLocaleString()}원/월)`);
       }
@@ -49752,15 +49791,15 @@ function showBudgetExceededModal(reason, opts) {
     } else if (subActive && plan === 'early_light') {
       titleText = '🐚 체험 한도 도달';
       bodyText = '체험 한도 다 썼네 — 써줘서 고마워.<br><br>' +
-        '<span style="color:var(--accent); font-weight:600;">✨ 얼리버드 평생 이용권</span>이 지금 <b>4,900원</b> (앱 출시 전 한정).<br>' +
-        '월정액 대신, 한 번 결제하고 매달 Light 수준으로 평생 이어가.<br><br>' +
+        '<span style="color:var(--accent); font-weight:600;">✨ 얼리버드 구독</span> <b>4,900원/월</b> — 출시 전 가입자만 이 가격으로 평생 락인.<br>' +
+        'Light 수준 자동 갱신, 언제든 해지.<br><br>' +
         '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
         '솔직하게 — 단독 개발자 (1인) 라 결제 = iOS 앱 출시 후원이야 🫂<br>' +
         '<span style="font-size:10px; opacity:0.55;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>' +
         '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 평생 이용권 보기 (4,900원)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 월정액 구독 보기</button>
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 구독 보기 (4,900원/월)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 다른 월정액 구독 보기</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">나중에 결정할게</button>
       `;
     } else if (subActive && plan === 'light') {
@@ -49780,14 +49819,14 @@ function showBudgetExceededModal(reason, opts) {
       // 비구독 (체험 만료) — 구독 안내 + 개발자 후원 톤
       titleText = '🐚 체험 종료';
       bodyText = '체험 기간 끝났어 — 깊게 써줘서 고마워.<br><br>' +
-        '계속 쓰려면 구독 — <span style="color:var(--accent); font-weight:600;">얼리버드 평생 이용권 4,900원</span>이 지금만.<br><br>' +
+        '계속 쓰려면 구독 — <span style="color:var(--accent); font-weight:600;">얼리버드 4,900원/월</span> (출시 전 가입자만 이 가격 평생 락인).<br><br>' +
         '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
         '단독 개발자 (1인) 가 후원 = iOS 앱 출시 가능 🫂<br>' +
         '<span style="font-size:10px; opacity:0.55;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>' +
         '</span>';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 평생 이용권 보기 (4,900원)</button>
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 월정액 구독 보기</button>
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ 얼리버드 구독 보기 (4,900원/월)</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 다른 월정액 구독 보기</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">닫기</button>
       `;
     }

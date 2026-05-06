@@ -96,19 +96,19 @@ async function openSubscribeModal() {
     </div>
   `;
   const earlyLifetimePlan = TIER_PLANS_CLIENT.early_lifetime;
-  // 사용자 명시 2026-05-06 ultrathink: 얼리버드 평생 = 하늘색~파란색 gradient (Light 대체 분위기).
+  // 사용자 명시 2026-05-06 ultrathink: 얼리버드 = 하늘색~파란색 gradient (Light 대체 분위기).
   const earlyLifetimeCard = `
     <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(135,206,235,0.18), rgba(74,144,226,0.10)); border:1.5px solid #5fb4d3; border-radius:14px; margin-bottom:10px;">
       <div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">출시 전 한정</div>
       <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
         <div style="font-size:18px; font-weight:700; color:var(--text);">${earlyLifetimePlan.emoji} ${earlyLifetimePlan.label}</div>
-        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;"> 1회</span></div>
+        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/월</span></div>
       </div>
       <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${earlyLifetimePlan.tagline}</div>
       <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
         ${earlyLifetimePlan.description}
       </div>
-      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 평생 이용권 (${earlyLifetimePlan.krw.toLocaleString()}원)</button>
+      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 구독 (${earlyLifetimePlan.krw.toLocaleString()}원/월)</button>
     </div>
   `;
   const overlay = document.createElement('div');
@@ -123,8 +123,8 @@ async function openSubscribeModal() {
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
-        💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드 평생</b> <s style="opacity:0.55;">또는 <b>Light</b></s>. 깊게 자주 쓰면 Premium.<br>
-        해지: [설정 → 구독] 환불 (잔여일 비례 — <a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).
+        💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드</b> <s style="opacity:0.55;">또는 <b>Light</b></s>. 깊게 자주 쓰면 Premium.<br>
+        모두 월정액 자동 갱신. 해지: [설정 → 구독] 다음 갱신 해지 / 환불은 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>
     </div>
@@ -181,7 +181,7 @@ async function proceedSubscribe(tierKey) {
     return;
   }
 
-  const isLifetimeTier = tierKey === 'early_lifetime';
+  const isEarlyTier = tierKey === 'early_lifetime';
   // 결제 시도 — paymentId = 매번 unique. 사용자 본인 식별용 customer 정보 + tier 별 amount.
   const paymentId = `payment-${tierKey}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   // 사용자 보고 2026-05-06: 모바일 redirect 흐름에서 verify-pay 호출 시점 user_id 와 결제 시점 user_id 가 다르면 NOT_OWN.
@@ -199,7 +199,7 @@ async function proceedSubscribe(tierKey) {
       storeId,
       channelKey,
       paymentId,
-      orderName: isLifetimeTier ? `소라고동 ${tier.label} 이용권 (평생)` : `소라고동 ${tier.label} 구독 (1개월)`,
+      orderName: `소라고동 ${tier.label} 구독 (1개월)`,
       totalAmount: tier.krw,
       currency: 'KRW',
       payMethod: 'CARD',
@@ -253,8 +253,8 @@ async function proceedSubscribe(tierKey) {
       if (result.duplicate) {
         showToast('💳 이미 활성 구독 — 영수증 보관, 환불 안내 메일 확인');
         alert(result.message || '이미 활성 구독이 있어. 환불 요청은 이메일로.');
-      } else if (isLifetimeTier) {
-        showToast(`✨ 얼리버드 평생 이용권 완료 — 고마워 🫂`);
+      } else if (isEarlyTier) {
+        showToast(`✨ 얼리버드 구독 완료 (${tier.krw.toLocaleString()}원/월) — 고마워 🫂`);
       } else {
         showToast(`📅 ${tier.label} 구독 완료 (${tier.krw.toLocaleString()}원/월)`);
       }

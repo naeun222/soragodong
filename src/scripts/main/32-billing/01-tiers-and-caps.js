@@ -11,9 +11,9 @@ const TIER_PLANS_CLIENT = {
     description: '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.' },
   early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜',       tagline: '체험', emoji: '🐚',
     description: '신규 가입자 자동 활성화 — 충분히 써보고 마음에 들면 구독.', auto_grant_first_month: true },
-  // 앱 출시 전 얼리버드 평생 이용권 — 4,900원 1회 결제, 매달 Light 수준 자동 갱신 (추가 결제 X).
-  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드 평생',   tagline: '출시 전 감사 혜택', emoji: '✨',
-    description: '한 번 결제하면 영원히. 매달 Light 수준으로 자유롭게, 추가 결제 없이.', is_lifetime: true },
+  // V4 (사용자 명시 2026-05-06): 얼리버드 = 정기구독 (4,900원/월 자동 갱신). "평생" = 이 가격이 평생 lock-in (출시 후에도 동일가 유지). 1회 결제 영구 X.
+  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '출시 전 한정 가격 락인', emoji: '✨',
+    description: '4,900원/월 자동 갱신. 출시 전 가입자만 — 이 가격은 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 해지 가능.' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }

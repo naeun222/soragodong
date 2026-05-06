@@ -194,13 +194,25 @@ async function _doRefreshBillingStatus(manual) {
     if (subActive && planMeta) {
       const usedPct = quotaUsd > 0 ? Math.min(100, Math.round((usedUsd / quotaUsd) * 100)) : 0;
       const isNearCap = usedPct >= 80;
-      html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${subExpires}까지</span></div>`;
+      // 사용자 명시 2026-05-06: backend `cancel_at_period_end` true 면 갱신 해지 됨 — '{date}에 종료' 라벨로 대체.
+      const cancelledRenewal = !!billing.cancel_at_period_end;
+      const expiresLabel = cancelledRenewal ? `${subExpires}에 종료` : `${subExpires}까지`;
+      html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${expiresLabel}</span></div>`;
       // early_light: 토큰 양 안 보이게 (체험 플랜은 수치 노출 X)
       if (planKey !== 'early_light') {
         html += `<div style="margin-top:10px; font-size:13px;">${_quotaStateLabel(usedPct)}</div>`;
         html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
         if (isNearCap && planKey !== 'premium') {
           html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">🌊 Premium 으로 늘리기</button>`;
+        }
+      }
+      // 사용자 명시 2026-05-06: 다음 갱신 해지 = 작은 link 톤 (text-soft, 10.5px, 밑줄 X). 보고 싶을 때만 보이게.
+      // early_light 는 자동 결제 X (만료 후 별도 구독) 라 버튼 노출 X.
+      if (planKey !== 'early_light') {
+        if (cancelledRenewal) {
+          html += `<div style="margin-top:10px; font-size:10.5px; color:var(--text-soft); text-align:right;">✓ 다음 갱신 해지됨</div>`;
+        } else {
+          html += `<div style="margin-top:10px; text-align:right;"><a href="javascript:void(0)" onclick="cancelNextRenewal()" style="font-size:10.5px; color:var(--text-soft); text-decoration:none; opacity:0.65;">다음 갱신 해지</a></div>`;
         }
       }
     } else {
@@ -289,6 +301,33 @@ async function loadPayments() {
     }).join('');
   } catch (e) {
     container.textContent = '오류: ' + (e?.message || e);
+  }
+}
+
+// 사용자 명시 2026-05-06: 다음 갱신 해지 — 현 결제 만료까지 사용, 자동 갱신 차단. 환불 X (잔여일 그대로).
+// 백엔드: /api/billing/cancel-renewal (POST, Bearer auth) — billing.cancel_at_period_end=true set.
+async function cancelNextRenewal() {
+  if (!session?.access_token) { alert('로그인 필요'); return; }
+  if (!confirm('다음 갱신을 해지할까?\n\n현 결제 기간 (만료일까지) 은 그대로 사용하고, 다음 자동 결제만 멈춰. 환불 아니야.\n\n다시 갱신하고 싶으면 [구독 시작 / 변경] 으로 재구독.')) return;
+  try {
+    const _origFetch = window._anthropicOrigFetch || window.fetch;
+    const resp = await _origFetch('/api/billing/cancel-renewal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({})
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok && data.ok) {
+      showToast('✓ 다음 갱신 해지됨 — 만료일까지 사용 가능');
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true);
+    } else {
+      alert('해지 실패: ' + (data.error || resp.status));
+    }
+  } catch (e) {
+    alert('통신 오류: ' + (e?.message || e));
   }
 }
 
