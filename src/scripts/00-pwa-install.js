@@ -1,30 +1,40 @@
   // PWA 설치 — Android beforeinstallprompt 캡처 + 1탭 설치 / iOS manual fallback (사용자 명시 2026-04-30 ultrathink)
-  var _deferredPwaPrompt = null;
+  // 사용자 명시 2026-05-06 ultrathink: window._deferredPwaPrompt 로 노출 — 다른 모듈 (renderPwaInstallInlineCard) 가 button 활성화 검사 가능.
+  window._deferredPwaPrompt = null;
   window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
-    _deferredPwaPrompt = e;
+    window._deferredPwaPrompt = e;
     var btn = document.getElementById('pwaInstallBtn');
     if (btn) btn.style.display = '';
   });
   window.addEventListener('appinstalled', function() {
-    _deferredPwaPrompt = null;
-    var card = document.getElementById('loginPwaCard');
+    window._deferredPwaPrompt = null;
+    var card = document.getElementById('loginPwaCard') || document.getElementById('pwaInstallInlineCard');
     if (card) card.style.display = 'none';
+    // 사용자 명시 2026-05-06 ultrathink: 설치 완료 마킹 — 인라인 카드 재노출 차단.
+    try {
+      if (typeof state !== 'undefined' && state) {
+        state.preferences = state.preferences || {};
+        state.preferences.pwaInstallPrompted = state.preferences.pwaInstallPrompted || {};
+        state.preferences.pwaInstallPrompted.installed = true;
+        if (typeof saveState === 'function') saveState();
+      }
+    } catch (_e) {}
     if (typeof showToast === 'function') showToast('🐚 앱 설치 완료');
   });
   async function triggerPwaInstall() {
-    if (!_deferredPwaPrompt) {
+    if (!window._deferredPwaPrompt) {
       if (typeof showToast === 'function') showToast('자동 설치 X — 수동 3 단계 참고');
       return;
     }
-    _deferredPwaPrompt.prompt();
+    window._deferredPwaPrompt.prompt();
     try {
-      var choice = await _deferredPwaPrompt.userChoice;
+      var choice = await window._deferredPwaPrompt.userChoice;
       if (choice && choice.outcome === 'accepted' && typeof showToast === 'function') {
         showToast('🐚 설치 시작');
       }
     } catch (e) { console.warn('[pwa install]', e); }
-    _deferredPwaPrompt = null;
+    window._deferredPwaPrompt = null;
     var btn = document.getElementById('pwaInstallBtn');
     if (btn) btn.style.display = 'none';
   }

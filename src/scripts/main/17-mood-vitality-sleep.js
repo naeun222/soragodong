@@ -234,6 +234,14 @@ async function submitCheckin() {
   if (_autoPearlAdded) {
     setTimeout(() => showToast(`💎 자주 들은 곡이라 진주에 자동 저장 — ${_autoPearlAdded}`), 1200);
   }
+  // 사용자 명시 2026-05-06 ultrathink: 첫 체크인 직후 PWA 설치 인라인 카드 (게스트 출신 X 일반 사용자만 — 게스트 출신은 비밀번호 설정 직후 별도 trigger).
+  try {
+    const _wasGuest = !!(state.preferences && state.preferences._wasGuestPromoted);
+    if (!_wasGuest && Array.isArray(state.entries) && state.entries.length === 1
+        && typeof renderPwaInstallInlineCard === 'function') {
+      setTimeout(() => renderPwaInstallInlineCard({ target: 'home' }), 1500);
+    }
+  } catch (e) { console.warn('[pwa post-checkin]', e); }
 }
 
 function buildCheckinSummary(entry) {

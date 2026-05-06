@@ -33,6 +33,16 @@ async function init() {
   if (typeof _restoreSimTutorialMarkersFromSession === 'function') {
     try { _restoreSimTutorialMarkersFromSession(); } catch (e) { console.warn('[sim restore]', e); }
   }
+  // 사용자 명시 2026-05-06 ultrathink: 게스트 출신 detect — 게스트 진입 시 set 한 sessionStorage 마커가 있고 + 인증 사용자면 = promote 직후.
+  // state.preferences._wasGuestPromoted 영속화 → 비밀번호 설정 직후 PWA 유도 trigger 에서 사용.
+  try {
+    if (sessionStorage.getItem('soragodong_was_guest') && state && !state.isGuest) {
+      state.preferences = state.preferences || {};
+      state.preferences._wasGuestPromoted = true;
+      sessionStorage.removeItem('soragodong_was_guest');
+      saveState();
+    }
+  } catch {}
   // V4 (v8 묶음 7): Core 2 reload 후 깜빡임 점 갱신 — sessionStorage / state._beachJustUnlocked 체크
   setTimeout(() => { if (typeof _checkCore2JustFinished === 'function') _checkCore2JustFinished(); }, 200);
   // 사용자 명시 2026-05-06: Core 1 reload 후 환영 선물 모달 자동 트리거 폐기. 마커도 정리.

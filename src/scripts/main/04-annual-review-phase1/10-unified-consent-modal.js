@@ -165,6 +165,14 @@ async function submitE2EESetup() {
     // shouldRunStartTutorialV8 의 _e2eePending 가드가 init 시 V8 fire 막았으므로 여기서 직접 trigger.
     // 게스트 promote 케이스는 hasAnyData=true 또는 tutorialVersion='v8-start' 라 자동 skip → 게스트 진행도 그대로.
     setTimeout(() => {
+      // 사용자 명시 2026-05-06 ultrathink: 게스트 → 카카오 promote 사용자 = 비밀번호 설정 직후 PWA 설치 유도.
+      // _wasGuestPromoted 마커는 init() 에서 sessionStorage 'soragodong_was_guest' → state 영속화.
+      try {
+        if (state.preferences && state.preferences._wasGuestPromoted
+            && typeof renderPwaInstallInlineCard === 'function') {
+          setTimeout(() => renderPwaInstallInlineCard({ target: 'floating' }), 1200);
+        }
+      } catch (e) { console.warn('[pwa after e2ee]', e); }
       if (typeof shouldRunStartTutorialV8 === 'function' && shouldRunStartTutorialV8()) {
         runStartTutorialV8().catch(e => console.warn('[v8 after e2ee]', e));
         return;

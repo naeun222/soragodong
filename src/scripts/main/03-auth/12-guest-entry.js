@@ -5,6 +5,8 @@
 // 자동 anonymous 폐기 — 사용자가 '둘러보기' 누르면 그제야 anonymous signup.
 
 async function enterGuestMode() {
+  // 사용자 명시 2026-05-06 ultrathink: 게스트 진입 marker — 카카오 promote 후 비밀번호 설정 직후 PWA 유도 detect 용.
+  try { sessionStorage.setItem('soragodong_was_guest', '1'); } catch {}
   const btn = document.getElementById('guestEntryBtn');
   if (btn) {
     btn.disabled = true;

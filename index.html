@@ -2284,6 +2284,65 @@
     margin-top: 8px; font-size: 10px;
     color: var(--text-soft); line-height: 1.5;
   }
+  /* 사용자 명시 2026-05-06 ultrathink: PWA 설치 인라인 카드 — 첫 체크인 후 (홈 inline) 또는 게스트 promote 후 비밀번호 직후 (floating). */
+  .pwa-inline-card {
+    background: linear-gradient(135deg, rgba(212,167,106,0.12), rgba(139,126,196,0.08));
+    border: 1px solid rgba(212,167,106,0.32);
+    border-radius: 14px;
+    padding: 14px 16px 12px;
+    margin: 0 0 12px;
+    position: relative;
+    animation: pwaCardFadeIn 320ms ease-out;
+  }
+  .pwa-inline-card.pwa-inline-card-fadeout {
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 220ms, transform 220ms;
+  }
+  @keyframes pwaCardFadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .pwa-inline-card-floating {
+    position: fixed;
+    left: 16px; right: 16px;
+    bottom: 88px;
+    z-index: 9000;
+    max-width: 380px;
+    margin: 0 auto;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.32);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 280ms, transform 280ms;
+  }
+  .pwa-inline-card-floating.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .pwa-inline-dismiss {
+    position: absolute;
+    top: 6px; right: 8px;
+    background: transparent; border: 0;
+    color: var(--text-soft);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+    font-family: inherit;
+  }
+  .pwa-inline-dismiss:hover { color: var(--text); }
+  .pwa-inline-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .pwa-inline-sub {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
   .login-consent-card label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
   .login-consent-card label + label { margin-top: 9px; padding-top: 9px; border-top: 1px solid rgba(255,255,255,0.04); }
   /* 사용자 명시 2026-05-02: '모두 동의' 위쪽 박스 살짝 강조 (한국 표준 패턴) */
@@ -10736,32 +10795,42 @@
 
 <script>
   // PWA 설치 — Android beforeinstallprompt 캡처 + 1탭 설치 / iOS manual fallback (사용자 명시 2026-04-30 ultrathink)
-  var _deferredPwaPrompt = null;
+  // 사용자 명시 2026-05-06 ultrathink: window._deferredPwaPrompt 로 노출 — 다른 모듈 (renderPwaInstallInlineCard) 가 button 활성화 검사 가능.
+  window._deferredPwaPrompt = null;
   window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
-    _deferredPwaPrompt = e;
+    window._deferredPwaPrompt = e;
     var btn = document.getElementById('pwaInstallBtn');
     if (btn) btn.style.display = '';
   });
   window.addEventListener('appinstalled', function() {
-    _deferredPwaPrompt = null;
-    var card = document.getElementById('loginPwaCard');
+    window._deferredPwaPrompt = null;
+    var card = document.getElementById('loginPwaCard') || document.getElementById('pwaInstallInlineCard');
     if (card) card.style.display = 'none';
+    // 사용자 명시 2026-05-06 ultrathink: 설치 완료 마킹 — 인라인 카드 재노출 차단.
+    try {
+      if (typeof state !== 'undefined' && state) {
+        state.preferences = state.preferences || {};
+        state.preferences.pwaInstallPrompted = state.preferences.pwaInstallPrompted || {};
+        state.preferences.pwaInstallPrompted.installed = true;
+        if (typeof saveState === 'function') saveState();
+      }
+    } catch (_e) {}
     if (typeof showToast === 'function') showToast('🐚 앱 설치 완료');
   });
   async function triggerPwaInstall() {
-    if (!_deferredPwaPrompt) {
+    if (!window._deferredPwaPrompt) {
       if (typeof showToast === 'function') showToast('자동 설치 X — 수동 3 단계 참고');
       return;
     }
-    _deferredPwaPrompt.prompt();
+    window._deferredPwaPrompt.prompt();
     try {
-      var choice = await _deferredPwaPrompt.userChoice;
+      var choice = await window._deferredPwaPrompt.userChoice;
       if (choice && choice.outcome === 'accepted' && typeof showToast === 'function') {
         showToast('🐚 설치 시작');
       }
     } catch (e) { console.warn('[pwa install]', e); }
-    _deferredPwaPrompt = null;
+    window._deferredPwaPrompt = null;
     var btn = document.getElementById('pwaInstallBtn');
     if (btn) btn.style.display = 'none';
   }
@@ -13945,6 +14014,8 @@ async function _guestConvKakaoLink() {
 // 자동 anonymous 폐기 — 사용자가 '둘러보기' 누르면 그제야 anonymous signup.
 
 async function enterGuestMode() {
+  // 사용자 명시 2026-05-06 ultrathink: 게스트 진입 marker — 카카오 promote 후 비밀번호 설정 직후 PWA 유도 detect 용.
+  try { sessionStorage.setItem('soragodong_was_guest', '1'); } catch {}
   const btn = document.getElementById('guestEntryBtn');
   if (btn) {
     btn.disabled = true;
@@ -16199,6 +16270,14 @@ async function submitE2EESetup() {
     // shouldRunStartTutorialV8 의 _e2eePending 가드가 init 시 V8 fire 막았으므로 여기서 직접 trigger.
     // 게스트 promote 케이스는 hasAnyData=true 또는 tutorialVersion='v8-start' 라 자동 skip → 게스트 진행도 그대로.
     setTimeout(() => {
+      // 사용자 명시 2026-05-06 ultrathink: 게스트 → 카카오 promote 사용자 = 비밀번호 설정 직후 PWA 설치 유도.
+      // _wasGuestPromoted 마커는 init() 에서 sessionStorage 'soragodong_was_guest' → state 영속화.
+      try {
+        if (state.preferences && state.preferences._wasGuestPromoted
+            && typeof renderPwaInstallInlineCard === 'function') {
+          setTimeout(() => renderPwaInstallInlineCard({ target: 'floating' }), 1200);
+        }
+      } catch (e) { console.warn('[pwa after e2ee]', e); }
       if (typeof shouldRunStartTutorialV8 === 'function' && shouldRunStartTutorialV8()) {
         runStartTutorialV8().catch(e => console.warn('[v8 after e2ee]', e));
         return;
@@ -17425,6 +17504,16 @@ async function init() {
   if (typeof _restoreSimTutorialMarkersFromSession === 'function') {
     try { _restoreSimTutorialMarkersFromSession(); } catch (e) { console.warn('[sim restore]', e); }
   }
+  // 사용자 명시 2026-05-06 ultrathink: 게스트 출신 detect — 게스트 진입 시 set 한 sessionStorage 마커가 있고 + 인증 사용자면 = promote 직후.
+  // state.preferences._wasGuestPromoted 영속화 → 비밀번호 설정 직후 PWA 유도 trigger 에서 사용.
+  try {
+    if (sessionStorage.getItem('soragodong_was_guest') && state && !state.isGuest) {
+      state.preferences = state.preferences || {};
+      state.preferences._wasGuestPromoted = true;
+      sessionStorage.removeItem('soragodong_was_guest');
+      saveState();
+    }
+  } catch {}
   // V4 (v8 묶음 7): Core 2 reload 후 깜빡임 점 갱신 — sessionStorage / state._beachJustUnlocked 체크
   setTimeout(() => { if (typeof _checkCore2JustFinished === 'function') _checkCore2JustFinished(); }, 200);
   // 사용자 명시 2026-05-06: Core 1 reload 후 환영 선물 모달 자동 트리거 폐기. 마커도 정리.
@@ -30521,6 +30610,14 @@ async function submitCheckin() {
   if (_autoPearlAdded) {
     setTimeout(() => showToast(`💎 자주 들은 곡이라 진주에 자동 저장 — ${_autoPearlAdded}`), 1200);
   }
+  // 사용자 명시 2026-05-06 ultrathink: 첫 체크인 직후 PWA 설치 인라인 카드 (게스트 출신 X 일반 사용자만 — 게스트 출신은 비밀번호 설정 직후 별도 trigger).
+  try {
+    const _wasGuest = !!(state.preferences && state.preferences._wasGuestPromoted);
+    if (!_wasGuest && Array.isArray(state.entries) && state.entries.length === 1
+        && typeof renderPwaInstallInlineCard === 'function') {
+      setTimeout(() => renderPwaInstallInlineCard({ target: 'home' }), 1500);
+    }
+  } catch (e) { console.warn('[pwa post-checkin]', e); }
 }
 
 function buildCheckinSummary(entry) {
@@ -50119,6 +50216,104 @@ function escapeHtml(str) {
 }
 
 init();
+// ═══════════════════════════════════════════════════════════════
+// V4 (사용자 명시 2026-05-06 ultrathink): PWA 설치 인라인 카드.
+// 두 trigger:
+//   1. 첫 체크인 submit 후 — 일반 신규 사용자 (state.entries.length === 1).
+//   2. 게스트 → 카카오 가입 후 비밀번호 설정 직후 — state.preferences._wasGuestPromoted === true.
+// 가드: 1회 fire (state.preferences.pwaInstallPrompted), 7일 cool-down 최대 3회, 모바일+비-standalone, dismissed/installed 시 skip.
+// 옛 PWA 인프라 (00-pwa-install.js / .pwa-install-1tap / .pwa-tabs / .pwa-step-* CSS) 재사용.
+// ═══════════════════════════════════════════════════════════════
+
+function shouldShowPwaInstallPrompt() {
+  if (typeof state === 'undefined' || !state) return false;
+  // standalone (이미 PWA) / desktop / 비-모바일 — skip.
+  try {
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return false;
+    if (window.navigator.standalone === true) return false;
+    const ua = navigator.userAgent;
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    if (!isMobile) return false;
+  } catch {}
+  state.preferences = state.preferences || {};
+  const p = state.preferences.pwaInstallPrompted || {};
+  if (p.installed) return false;
+  if (p.dismissed) return false;
+  if (p.count && p.count >= 3) return false;
+  if (p.lastAt) {
+    try {
+      const last = new Date(p.lastAt).getTime();
+      if (Date.now() - last < 7 * 86400000) return false;
+    } catch {}
+  }
+  return true;
+}
+
+// opts.target = 'home' (mainActionContainer 위 inline) | 'floating' (fixed bottom)
+function renderPwaInstallInlineCard(opts) {
+  if (!shouldShowPwaInstallPrompt()) return;
+  if (document.getElementById('pwaInstallInlineCard')) return;
+  const target = (opts && opts.target) || 'home';
+
+  const ua = navigator.userAgent;
+  const isAndroid = /Android/i.test(ua);
+  // 옛 login-pwa 카드 (git c2bcf0b^) 의 step 카피 압축. 2026-04-30 ultrathink 톤 유지.
+  const stepsHtml = isAndroid
+    ? `<button type="button" id="pwaInstallBtn" onclick="triggerPwaInstall()" class="btn-primary pwa-install-1tap" style="${window._deferredPwaPrompt ? '' : 'display:none;'} width:100%; margin-bottom:10px; padding:11px;">📱 한 번에 설치 ✦</button>
+       <div class="pwa-step-group">
+         <div class="pwa-step-label">📱 삼성 인터넷</div>
+         <div class="pwa-step">≡ → <b>[전체 페이지 추가]</b> → <b>[홈 화면]</b></div>
+       </div>
+       <div class="pwa-step-group">
+         <div class="pwa-step-label">🌐 크롬 / Edge</div>
+         <div class="pwa-step">⋮ → <b>[홈 화면에 추가]</b> 또는 <b>[앱 설치]</b></div>
+       </div>`
+    : `<div class="pwa-step">1. <b>Safari</b> 하단 <b>공유 ↗</b></div>
+       <div class="pwa-step">2. <b>[홈 화면에 추가]</b></div>`;
+
+  const card = document.createElement('div');
+  card.id = 'pwaInstallInlineCard';
+  card.className = 'pwa-inline-card' + (target === 'floating' ? ' pwa-inline-card-floating' : '');
+  card.innerHTML = `
+    <button class="pwa-inline-dismiss" onclick="_dismissPwaInstallCard()" aria-label="닫기">✕</button>
+    <div class="pwa-inline-title">📱 홈 화면에 두면 더 편해</div>
+    <div class="pwa-inline-sub">매일 한 번 — 한 탭으로 바로 ✦</div>
+    ${stepsHtml}
+  `;
+
+  if (target === 'home') {
+    const container = document.getElementById('mainActionContainer');
+    if (container && container.parentNode) {
+      container.parentNode.insertBefore(card, container);
+    } else {
+      document.body.appendChild(card);
+    }
+  } else {
+    document.body.appendChild(card);
+    requestAnimationFrame(() => card.classList.add('show'));
+  }
+
+  // 마킹 — count++ / lastAt
+  state.preferences = state.preferences || {};
+  state.preferences.pwaInstallPrompted = state.preferences.pwaInstallPrompted || { count: 0 };
+  state.preferences.pwaInstallPrompted.count = (state.preferences.pwaInstallPrompted.count || 0) + 1;
+  state.preferences.pwaInstallPrompted.lastAt = new Date().toISOString();
+  try { saveState(); } catch {}
+}
+
+function _dismissPwaInstallCard() {
+  const card = document.getElementById('pwaInstallInlineCard');
+  if (card) {
+    card.classList.add('pwa-inline-card-fadeout');
+    setTimeout(() => { try { card.remove(); } catch {} }, 240);
+  }
+  try {
+    state.preferences = state.preferences || {};
+    state.preferences.pwaInstallPrompted = state.preferences.pwaInstallPrompted || {};
+    state.preferences.pwaInstallPrompted.dismissedAt = new Date().toISOString();
+    saveState();
+  } catch {}
+}
 
 </script>
 </body>
