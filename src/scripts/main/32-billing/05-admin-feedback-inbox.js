@@ -135,9 +135,10 @@ CREATE POLICY "users read own feedback"
         ? `<span style="display:inline-block; padding:1px 7px; background:rgba(232,163,163,0.15); color:#e8a3a3; border-radius:6px; font-size:9.5px; font-weight:700; letter-spacing:0.04em; margin-right:6px;">🐛 자동 오류</span>`
         : '';
       return `
-        <div style="${containerStyle}">
-          <div style="font-size:10px; color:var(--text-soft); margin-bottom:4px;">
-            ${errorTag}${dt} · ${escapeHtml(f.user_email || '익명')} · #${f.id}
+        <div id="adminFeedbackItem_${f.id}" style="${containerStyle}">
+          <div style="font-size:10px; color:var(--text-soft); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+            ${errorTag}<span>${dt} · ${escapeHtml(f.user_email || '익명')} · #${f.id}</span>
+            <button onclick="adminFeedbackDelete(${f.id})" title="삭제" style="margin-left:auto; background:transparent; border:1px solid rgba(255,255,255,0.10); color:var(--text-soft); padding:1px 7px; border-radius:6px; font-size:10px; cursor:pointer;">🗑 삭제</button>
           </div>
           <div style="white-space:pre-wrap; color:var(--text); margin-bottom:6px; ${isErrorReport ? 'font-family:monospace; font-size:11.5px; max-height:240px; overflow-y:auto;' : ''}">${escapeHtml(f.message)}</div>
           ${replyHtml}
@@ -146,6 +147,34 @@ CREATE POLICY "users read own feedback"
     }).join('');
   } catch (e) {
     body.innerHTML = '<span style="color:#e89090;">예외: ' + (e.message || e) + '</span>';
+  }
+}
+
+// 사용자 명시 2026-05-06: 자동 오류 보고 inbox 정리용 — admin 만 삭제 가능 (backend RLS double-check).
+async function adminFeedbackDelete(feedbackId) {
+  if (typeof confirmDelete === 'function') {
+    if (!await confirmDelete(`피드백 #${feedbackId}`)) return;
+  } else if (!confirm(`피드백 #${feedbackId} 삭제할까? 되돌릴 수 없어.`)) {
+    return;
+  }
+  try {
+    const resp = await _authedFetch('/api/admin/feedback-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ feedback_id: feedbackId })
+    });
+    if (resp.ok) {
+      const item = document.getElementById('adminFeedbackItem_' + feedbackId);
+      if (item) item.remove();
+      if (typeof showToast === 'function') showToast('🗑 삭제됨');
+      if (typeof refreshAdminFeedbackButton === 'function') refreshAdminFeedbackButton();
+    } else {
+      let t = '';
+      try { const j = await resp.json(); t = j.error || JSON.stringify(j); } catch { t = await resp.text(); }
+      alert('삭제 실패: ' + String(t).slice(0, 200));
+    }
+  } catch (e) {
+    alert('예외: ' + (e.message || e));
   }
 }
 

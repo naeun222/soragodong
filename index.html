@@ -30022,8 +30022,23 @@ if (typeof window !== 'undefined' && !window._errorListenersInstalled) {
       } catch (_) {}
     };
   }
+  // 사용자 보고 2026-05-06: 'Script error. at ?:?:?' = CORS 차단 3rd party (extension / 광고 차단기 등) — 정보 0.
+  // 보고해도 디버깅 불가 + 매 세션 재발 → noise 필터링.
+  function _isErrorNoise(s) {
+    const t = String(s || '').trim();
+    if (!t) return true;
+    if (t === 'Script error.') return true;                 // CORS-blocked 3rd party
+    if (/^Script error\.?\s*(\n\s*at\s+\?:\?:\?)?$/.test(t)) return true;
+    if (/ResizeObserver loop/.test(t)) return true;         // 브라우저 noise
+    if (/AbortError/.test(t)) return true;                  // 사용자 취소
+    if (/Load failed/.test(t)) return true;                 // 네트워크 일시
+    if (/Failed to fetch/.test(t)) return true;
+    if (/NetworkError/.test(t)) return true;
+    return false;
+  }
   window.addEventListener('error', function(e) {
     if (!e || !e.message) return;
+    if (_isErrorNoise(e.message)) return;
     const msg = e.message + '\n  at ' + (e.filename || '?') + ':' + (e.lineno || '?') + ':' + (e.colno || '?');
     const stack = (e.error && e.error.stack) ? '\n\n' + e.error.stack : '';
     _maybeReportRuntimeError('Runtime Error', msg + stack);
@@ -30034,6 +30049,7 @@ if (typeof window !== 'undefined' && !window._errorListenersInstalled) {
     if (reason instanceof Error) details = reason.message + '\n\n' + (reason.stack || '');
     else if (typeof reason === 'string') details = reason;
     else { try { details = JSON.stringify(reason); } catch (_) { details = String(reason); } }
+    if (_isErrorNoise(details)) return;
     _maybeReportRuntimeError('Unhandled Promise Rejection', details);
   });
 }
@@ -48711,9 +48727,10 @@ CREATE POLICY "users read own feedback"
         ? `<span style="display:inline-block; padding:1px 7px; background:rgba(232,163,163,0.15); color:#e8a3a3; border-radius:6px; font-size:9.5px; font-weight:700; letter-spacing:0.04em; margin-right:6px;">🐛 자동 오류</span>`
         : '';
       return `
-        <div style="${containerStyle}">
-          <div style="font-size:10px; color:var(--text-soft); margin-bottom:4px;">
-            ${errorTag}${dt} · ${escapeHtml(f.user_email || '익명')} · #${f.id}
+        <div id="adminFeedbackItem_${f.id}" style="${containerStyle}">
+          <div style="font-size:10px; color:var(--text-soft); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+            ${errorTag}<span>${dt} · ${escapeHtml(f.user_email || '익명')} · #${f.id}</span>
+            <button onclick="adminFeedbackDelete(${f.id})" title="삭제" style="margin-left:auto; background:transparent; border:1px solid rgba(255,255,255,0.10); color:var(--text-soft); padding:1px 7px; border-radius:6px; font-size:10px; cursor:pointer;">🗑 삭제</button>
           </div>
           <div style="white-space:pre-wrap; color:var(--text); margin-bottom:6px; ${isErrorReport ? 'font-family:monospace; font-size:11.5px; max-height:240px; overflow-y:auto;' : ''}">${escapeHtml(f.message)}</div>
           ${replyHtml}
@@ -48722,6 +48739,34 @@ CREATE POLICY "users read own feedback"
     }).join('');
   } catch (e) {
     body.innerHTML = '<span style="color:#e89090;">예외: ' + (e.message || e) + '</span>';
+  }
+}
+
+// 사용자 명시 2026-05-06: 자동 오류 보고 inbox 정리용 — admin 만 삭제 가능 (backend RLS double-check).
+async function adminFeedbackDelete(feedbackId) {
+  if (typeof confirmDelete === 'function') {
+    if (!await confirmDelete(`피드백 #${feedbackId}`)) return;
+  } else if (!confirm(`피드백 #${feedbackId} 삭제할까? 되돌릴 수 없어.`)) {
+    return;
+  }
+  try {
+    const resp = await _authedFetch('/api/admin/feedback-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ feedback_id: feedbackId })
+    });
+    if (resp.ok) {
+      const item = document.getElementById('adminFeedbackItem_' + feedbackId);
+      if (item) item.remove();
+      if (typeof showToast === 'function') showToast('🗑 삭제됨');
+      if (typeof refreshAdminFeedbackButton === 'function') refreshAdminFeedbackButton();
+    } else {
+      let t = '';
+      try { const j = await resp.json(); t = j.error || JSON.stringify(j); } catch { t = await resp.text(); }
+      alert('삭제 실패: ' + String(t).slice(0, 200));
+    }
+  } catch (e) {
+    alert('예외: ' + (e.message || e));
   }
 }
 
@@ -50282,7 +50327,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.181-intake-tone-lock-noun-analytic';
+const APP_VERSION = 'v4.0.182-error-noise-filter-feedback-delete';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

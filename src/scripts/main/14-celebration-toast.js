@@ -105,8 +105,23 @@ if (typeof window !== 'undefined' && !window._errorListenersInstalled) {
       } catch (_) {}
     };
   }
+  // 사용자 보고 2026-05-06: 'Script error. at ?:?:?' = CORS 차단 3rd party (extension / 광고 차단기 등) — 정보 0.
+  // 보고해도 디버깅 불가 + 매 세션 재발 → noise 필터링.
+  function _isErrorNoise(s) {
+    const t = String(s || '').trim();
+    if (!t) return true;
+    if (t === 'Script error.') return true;                 // CORS-blocked 3rd party
+    if (/^Script error\.?\s*(\n\s*at\s+\?:\?:\?)?$/.test(t)) return true;
+    if (/ResizeObserver loop/.test(t)) return true;         // 브라우저 noise
+    if (/AbortError/.test(t)) return true;                  // 사용자 취소
+    if (/Load failed/.test(t)) return true;                 // 네트워크 일시
+    if (/Failed to fetch/.test(t)) return true;
+    if (/NetworkError/.test(t)) return true;
+    return false;
+  }
   window.addEventListener('error', function(e) {
     if (!e || !e.message) return;
+    if (_isErrorNoise(e.message)) return;
     const msg = e.message + '\n  at ' + (e.filename || '?') + ':' + (e.lineno || '?') + ':' + (e.colno || '?');
     const stack = (e.error && e.error.stack) ? '\n\n' + e.error.stack : '';
     _maybeReportRuntimeError('Runtime Error', msg + stack);
@@ -117,6 +132,7 @@ if (typeof window !== 'undefined' && !window._errorListenersInstalled) {
     if (reason instanceof Error) details = reason.message + '\n\n' + (reason.stack || '');
     else if (typeof reason === 'string') details = reason;
     else { try { details = JSON.stringify(reason); } catch (_) { details = String(reason); } }
+    if (_isErrorNoise(details)) return;
     _maybeReportRuntimeError('Unhandled Promise Rejection', details);
   });
 }
