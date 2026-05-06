@@ -97,22 +97,19 @@ async function openSubscribeModal() {
   `;
   const earlyLifetimePlan = TIER_PLANS_CLIENT.early_lifetime;
   // 사용자 명시 2026-05-06 ultrathink: 얼리버드 = 하늘색~파란색 gradient (Light 대체 분위기).
-  // 사용자 명시 2026-05-06 (정정): 얼리버드 = 첫 한 달 무료 → 다음달부터 4,900원/월 자동결제.
+  // 사용자 명시 2026-05-06 (정정): 옛 "첫 달 무료" 카피 = 거짓 약속 (proceedSubscribe = 즉시 결제). 정직하게 4,900원/월 즉시 결제 표기.
   const earlyLifetimeCard = `
     <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(135,206,235,0.18), rgba(74,144,226,0.10)); border:1.5px solid #5fb4d3; border-radius:14px; margin-bottom:10px;">
       <div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">출시 전 한정</div>
       <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
         <div style="font-size:18px; font-weight:700; color:var(--text);">${earlyLifetimePlan.emoji} ${earlyLifetimePlan.label}</div>
-        <div style="text-align:right;">
-          <div style="font-size:14px; font-weight:700; color:#5fb4d3;">첫 달 무료</div>
-          <div style="font-size:11px; color:var(--text-dim); font-weight:400;">→ ${earlyLifetimePlan.krw.toLocaleString()}원/월 자동결제</div>
-        </div>
+        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/월</span></div>
       </div>
       <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${earlyLifetimePlan.tagline}</div>
       <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
         ${earlyLifetimePlan.description}
       </div>
-      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 첫 달 무료로 시작</button>
+      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 구독 (${earlyLifetimePlan.krw.toLocaleString()}원/월)</button>
     </div>
   `;
   const overlay = document.createElement('div');

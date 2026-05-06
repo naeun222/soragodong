@@ -11825,7 +11825,7 @@
 
           <div class="settings-mini-label" style="margin-top:14px;">👁 미리보기</div>
           <div class="settings-hint" style="margin-bottom:8px;">dismiss flag / backend grant / 일일 cap 안 건드림. 진짜 사용자 화면 그대로.</div>
-          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 '한 달 무료' 안내 모달 미리보기 (backend grant 호출 X — ensureBillingRow 자동 활성화)">🐚 한 달 무료 모달</button>
+          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 모달 미리보기 — 무료 토큰 grant 안내 (양 비공개). backend grant 호출 X.">🎁 환영 모달 미리보기</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="devPreviewWeeklyReview()" title="신규 schema (chart / strengths / cycles / emotions / value_align / risk_signals / 자기 평가 / 공유 카드) 풀 미리보기 — 시드 데이터 사용, AI 호출 X">📅 주간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="(function(){ if(!confirm('실 데이터로 weekly 리뷰 생성 — Opus 호출 (1-2분, 약 $0.02-0.05). 진행할래?')) return; state.tutorialShown=state.tutorialShown||{}; state.tutorialShown.reviews=false; if(typeof runFirstReviewsTutorialReal==='function') runFirstReviewsTutorialReal().catch(e=>console.warn(e)); else if(typeof showToast==='function') showToast('함수 부재'); })()" title="리뷰 모음 첫 자연 진입 튜토 — 실 데이터 weekly 리뷰 생성 + 코치마크. 데이터 부족 시 sim fallback.">📅 첫 리뷰 튜토 (실 데이터)</button>
@@ -28834,9 +28834,9 @@ function _showCore2LockedToast() {
 //  · 토큰 hero: label / amount (대형 그라데이션) / hint — vertical stack
 //  · 신뢰 라인 보존 (전상법 §13 / 표시광고법 §3 — '30일 무료 · 자동 갱신 / 해지: 설정 → 구독')
 //  · 받기 click → backend POST (idempotent) → token block 'received' 색감 변환 → 0.8s 후 닫힘
-// 사용자 명시 2026-05-05: 100만 토큰 환영 선물 정책 폐기 → 처음 한 달 자동 무료 (얼리 플랜) 안내 모달.
-// backend ensureBillingRow 가 신규 가입 시 subscription_active=true + plan='early_light' + 30일 expires 자동 처리.
-// 이 모달은 사용자에게 알림 + 클라이언트 flag set (재출현 방지) 만 — backend grant 호출 X.
+// V4 (사용자 명시 2026-05-06 ultrathink 정정): 옛 "early_light auto-grant 30일 무료" 가정 폐기.
+// 실제 backend = 신규 가입 시 무료 토큰 (credit_balance) grant, plan 자동 활성화 X. 양은 비공개.
+// 이 모달은 환영 인사 + 자유롭게 써보기 안내 + 클라이언트 flag set (재출현 방지) — backend grant 호출 X.
 function _showWelcomeGiftModal() {
   if (window._showingWelcomeGift) return;
   if (document.getElementById('welcomeGiftOverlay')) return;
@@ -28850,16 +28850,16 @@ function _showWelcomeGiftModal() {
       <div class="welcome-gift-celebrate">🎉 첫 한 바퀴 끝!</div>
       <div class="welcome-gift-greeting">잘 따라왔어 🐚</div>
       <div class="welcome-gift-sub">
-        한 달 쓰면 너 자신이<br>
+        쓰다 보면 너 자신이<br>
         다르게 보일지도. 🫂
       </div>
       <div class="welcome-gift-token">
-        <span class="welcome-gift-token-label">처음 한 달 · 무료</span>
-        <span class="welcome-gift-token-amount">🐚 얼리 플랜 자동 적용</span>
-        <span class="welcome-gift-token-hint">30일 동안 자유롭게</span>
+        <span class="welcome-gift-token-label">🎁 환영 선물</span>
+        <span class="welcome-gift-token-amount">자유롭게 써봐</span>
+        <span class="welcome-gift-token-hint">마음에 들면 그때 구독</span>
       </div>
       <button class="welcome-gift-btn" id="welcomeGiftAccept">시작할게</button>
-      <div class="welcome-gift-trust">30일 후 자동 갱신 · 원하지 않으면 [설정 → 구독] 해지</div>
+      <div class="welcome-gift-trust">자동 결제 X · 마음에 들 때만 구독</div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -28893,7 +28893,7 @@ async function _acceptWelcomeGift() {
   if (typeof refreshBillingStatus === 'function') {
     refreshBillingStatus(false).catch(() => {});
   }
-  if (typeof showToast === 'function') showToast('🐚 처음 한 달 무료 시작 ✦');
+  if (typeof showToast === 'function') showToast('🐚 자유롭게 써봐 ✦');
   // Core 2 자동 unlock 권유 (passive 안내) — 기존 흐름 보존.
   setTimeout(() => {
     if (state._core2NotUnlocked && typeof _showCore2EntryModal === 'function') {
@@ -48175,21 +48175,22 @@ async function _doRefreshBillingStatus(manual) {
       }
       // 사용자 명시 2026-05-06 (재배치): '다음 갱신 해지' = 결제 내역/환불 토글 안으로 이동 + 글씨 크기 ↑.
       // 옛 구독 카드 우측 하단 link 톤 = 너무 안 보였음. _renderCancelRenewalBox 가 토글 안 div 채움.
+    } else if (balance > 0) {
+      // 사용자 명시 2026-05-06 ultrathink: 신규 가입 = 무료 토큰 grant (양 비공개), early_light auto-grant X. raw $ 노출 금지.
+      html += `<div><b>🎁 환영 무료 체험 중</b> <span style="color:var(--text-soft); font-size:11px;">— 자유롭게 써봐</span></div>`;
+      html += `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">마음에 들면 구독해줘 — 출시 전 <b>얼리버드 4,900원/월</b> 가격 평생 락인.</div>`;
     } else {
-      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 체험 종료. 계속 쓰려면 구독</span></div>`;
+      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 계속 쓰려면 구독</span></div>`;
     }
-    if (balance > 0) {
-      html += `<div style="margin-top:6px;"><b>잔여 credit</b>: $${balance.toFixed(4)} (~${balanceKrw.toLocaleString()}원)</div>`;
+    // 사용자 명시 2026-05-06 ultrathink: 구독자의 balance = overage pack 추가팩 credit. 신규 무료 토큰과 다른 자리. 추가팩만 raw $ 표시 (사용자가 직접 결제한 자리 = 투명성 ↑).
+    if (subActive && balance > 0) {
+      html += `<div style="margin-top:8px; font-size:12px;"><b>추가팩 credit</b>: $${balance.toFixed(2)} (~${balanceKrw.toLocaleString()}원)</div>`;
     }
-    // 사용자 명시 2026-05-06 (정정): early_light = 30일 무료 후 자동 갱신 정기구독. '자동 결제 X' 폐기.
+    // legacy early_light plan 활성화된 옛 사용자만 표시. 신규는 안 들어옴.
     if (subActive && planKey === 'early_light' && subExpires) {
       const expiresAt = new Date(billing.subscription_expires_at);
       const remainingDays = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / 86400000));
-      const cancelledRenewal = !!billing.cancel_at_period_end;
-      const trialNote = cancelledRenewal
-        ? `${remainingDays}일 후 종료 (다음 갱신 해지됨)`
-        : `${remainingDays}일 후 자동 갱신 시작`;
-      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 30일 무료 — ${trialNote}</div>`;
+      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 레거시 얼리 플랜 — ${remainingDays}일 남음</div>`;
     }
     status.innerHTML = html;
     // 사용자 명시 2026-05-06: 다음 갱신 해지 박스 — 결제 내역 토글 안에 별도 render.
@@ -48367,12 +48368,13 @@ const TIER_PLANS_CLIENT = {
     description: '일반 대화 + 분석 풀로. 매일의 자기관찰에 충분.' },
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '깊게 자주', emoji: '🌊',
     description: '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.' },
-  // V4 (사용자 명시 2026-05-06): early_light = 정기구독 — 30일 무료 후 자동 갱신 (얼리버드 가격 락인). 신규 가입 시 ensureBillingRow 가 자동 활성화. 갱신 원하지 않으면 [설정 → 구독] 다음 갱신 해지.
-  early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜',       tagline: '30일 무료 → 자동 갱신', emoji: '🐚',
-    description: '신규 가입자 자동 활성화 — 30일 무료. 만료 시 자동 갱신 (얼리버드 가격 락인). 원하지 않으면 [설정 → 구독] 다음 갱신 해지.', auto_grant_first_month: true },
-  // V4 (사용자 명시 2026-05-06): 얼리버드 = 첫 한 달 무료, 다음달부터 4,900원/월 자동결제. "평생" = 이 가격이 평생 lock-in (출시 후에도 동일가 유지).
-  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '첫 달 무료 · 출시 전 가격 락인', emoji: '✨',
-    description: '첫 한 달 무료. 다음달부터 4,900원/월 자동결제. 출시 전 가입자만 — 이 가격이 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 해지 가능.' },
+  // V4 (사용자 명시 2026-05-06 ultrathink): legacy tier — 옛 가정 (신규 가입 → early_light auto-grant 30일 무료) 폐기.
+  // 실제 backend = 신규 가입 시 무료 토큰 (credit_balance) grant, plan 자동 활성화 X. 이 tier 는 legacy 호환 보존만 (옛 grant 받은 사용자 케이스).
+  early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜 (legacy)',       tagline: '레거시', emoji: '🐚',
+    description: '레거시 tier. 신규 가입 무료 체험은 별도 토큰 grant (양 비공개) 로 처리 — 이 plan 은 자동 활성화 X.' },
+  // V4 (사용자 명시 2026-05-06 ultrathink 정정): 얼리버드 첫 달 무료 = 구현 X. proceedSubscribe = 즉시 4,900원 결제. 백엔드 빌링키 + 30일 deferred 작업 필요 (TODO).
+  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '출시 전 가격 락인', emoji: '✨',
+    description: '4,900원/월 즉시 결제 + 자동 갱신. 출시 전 가입자만 — 이 가격이 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 해지 가능.' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
@@ -48639,10 +48641,11 @@ function checkFreeTrialExpiry() {
   const remainingDays = (expiresAt - now) / 86400000;
   if (remainingDays > 7 || remainingDays < 0) return;
   const daysDisplay = Math.max(1, Math.ceil(remainingDays));
+  // V4 (사용자 명시 2026-05-06 ultrathink): legacy early_light plan 활성화된 옛 사용자만 fire. 신규는 무료 토큰 (자동 활성화 X) 라 이 분기 진입 X.
   _addNotification({
     type: 'free_trial_expiry_warning',
-    title: '30일 무료 종료 임박',
-    body: `<b>${daysDisplay}일</b> 후 자동 갱신 시작 — <b>얼리버드 4,900원/월</b> (출시 전 가입자만 이 가격 평생 락인).<br>원하지 않으면 [설정 → 구독] 다음 갱신 해지.<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+    title: '레거시 얼리 플랜 만료 임박',
+    body: `<b>${daysDisplay}일</b> 후 만료. 계속 쓰려면 구독 — <b>얼리버드 4,900원/월</b> (출시 전 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
     persistent: true
   });
 }
@@ -49330,22 +49333,19 @@ async function openSubscribeModal() {
   `;
   const earlyLifetimePlan = TIER_PLANS_CLIENT.early_lifetime;
   // 사용자 명시 2026-05-06 ultrathink: 얼리버드 = 하늘색~파란색 gradient (Light 대체 분위기).
-  // 사용자 명시 2026-05-06 (정정): 얼리버드 = 첫 한 달 무료 → 다음달부터 4,900원/월 자동결제.
+  // 사용자 명시 2026-05-06 (정정): 옛 "첫 달 무료" 카피 = 거짓 약속 (proceedSubscribe = 즉시 결제). 정직하게 4,900원/월 즉시 결제 표기.
   const earlyLifetimeCard = `
     <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(135,206,235,0.18), rgba(74,144,226,0.10)); border:1.5px solid #5fb4d3; border-radius:14px; margin-bottom:10px;">
       <div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">출시 전 한정</div>
       <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
         <div style="font-size:18px; font-weight:700; color:var(--text);">${earlyLifetimePlan.emoji} ${earlyLifetimePlan.label}</div>
-        <div style="text-align:right;">
-          <div style="font-size:14px; font-weight:700; color:#5fb4d3;">첫 달 무료</div>
-          <div style="font-size:11px; color:var(--text-dim); font-weight:400;">→ ${earlyLifetimePlan.krw.toLocaleString()}원/월 자동결제</div>
-        </div>
+        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/월</span></div>
       </div>
       <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${earlyLifetimePlan.tagline}</div>
       <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
         ${earlyLifetimePlan.description}
       </div>
-      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 첫 달 무료로 시작</button>
+      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 구독 (${earlyLifetimePlan.krw.toLocaleString()}원/월)</button>
     </div>
   `;
   const overlay = document.createElement('div');

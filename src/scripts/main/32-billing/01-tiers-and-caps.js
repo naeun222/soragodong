@@ -9,12 +9,13 @@ const TIER_PLANS_CLIENT = {
     description: '일반 대화 + 분석 풀로. 매일의 자기관찰에 충분.' },
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '깊게 자주', emoji: '🌊',
     description: '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.' },
-  // V4 (사용자 명시 2026-05-06): early_light = 정기구독 — 30일 무료 후 자동 갱신 (얼리버드 가격 락인). 신규 가입 시 ensureBillingRow 가 자동 활성화. 갱신 원하지 않으면 [설정 → 구독] 다음 갱신 해지.
-  early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜',       tagline: '30일 무료 → 자동 갱신', emoji: '🐚',
-    description: '신규 가입자 자동 활성화 — 30일 무료. 만료 시 자동 갱신 (얼리버드 가격 락인). 원하지 않으면 [설정 → 구독] 다음 갱신 해지.', auto_grant_first_month: true },
-  // V4 (사용자 명시 2026-05-06): 얼리버드 = 첫 한 달 무료, 다음달부터 4,900원/월 자동결제. "평생" = 이 가격이 평생 lock-in (출시 후에도 동일가 유지).
-  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '첫 달 무료 · 출시 전 가격 락인', emoji: '✨',
-    description: '첫 한 달 무료. 다음달부터 4,900원/월 자동결제. 출시 전 가입자만 — 이 가격이 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 해지 가능.' },
+  // V4 (사용자 명시 2026-05-06 ultrathink): legacy tier — 옛 가정 (신규 가입 → early_light auto-grant 30일 무료) 폐기.
+  // 실제 backend = 신규 가입 시 무료 토큰 (credit_balance) grant, plan 자동 활성화 X. 이 tier 는 legacy 호환 보존만 (옛 grant 받은 사용자 케이스).
+  early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜 (legacy)',       tagline: '레거시', emoji: '🐚',
+    description: '레거시 tier. 신규 가입 무료 체험은 별도 토큰 grant (양 비공개) 로 처리 — 이 plan 은 자동 활성화 X.' },
+  // V4 (사용자 명시 2026-05-06 ultrathink 정정): 얼리버드 첫 달 무료 = 구현 X. proceedSubscribe = 즉시 4,900원 결제. 백엔드 빌링키 + 30일 deferred 작업 필요 (TODO).
+  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '출시 전 가격 락인', emoji: '✨',
+    description: '4,900원/월 즉시 결제 + 자동 갱신. 출시 전 가입자만 — 이 가격이 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 해지 가능.' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }

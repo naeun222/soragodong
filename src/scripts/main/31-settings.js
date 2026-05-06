@@ -208,21 +208,22 @@ async function _doRefreshBillingStatus(manual) {
       }
       // 사용자 명시 2026-05-06 (재배치): '다음 갱신 해지' = 결제 내역/환불 토글 안으로 이동 + 글씨 크기 ↑.
       // 옛 구독 카드 우측 하단 link 톤 = 너무 안 보였음. _renderCancelRenewalBox 가 토글 안 div 채움.
+    } else if (balance > 0) {
+      // 사용자 명시 2026-05-06 ultrathink: 신규 가입 = 무료 토큰 grant (양 비공개), early_light auto-grant X. raw $ 노출 금지.
+      html += `<div><b>🎁 환영 무료 체험 중</b> <span style="color:var(--text-soft); font-size:11px;">— 자유롭게 써봐</span></div>`;
+      html += `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">마음에 들면 구독해줘 — 출시 전 <b>얼리버드 4,900원/월</b> 가격 평생 락인.</div>`;
     } else {
-      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 체험 종료. 계속 쓰려면 구독</span></div>`;
+      html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 계속 쓰려면 구독</span></div>`;
     }
-    if (balance > 0) {
-      html += `<div style="margin-top:6px;"><b>잔여 credit</b>: $${balance.toFixed(4)} (~${balanceKrw.toLocaleString()}원)</div>`;
+    // 사용자 명시 2026-05-06 ultrathink: 구독자의 balance = overage pack 추가팩 credit. 신규 무료 토큰과 다른 자리. 추가팩만 raw $ 표시 (사용자가 직접 결제한 자리 = 투명성 ↑).
+    if (subActive && balance > 0) {
+      html += `<div style="margin-top:8px; font-size:12px;"><b>추가팩 credit</b>: $${balance.toFixed(2)} (~${balanceKrw.toLocaleString()}원)</div>`;
     }
-    // 사용자 명시 2026-05-06 (정정): early_light = 30일 무료 후 자동 갱신 정기구독. '자동 결제 X' 폐기.
+    // legacy early_light plan 활성화된 옛 사용자만 표시. 신규는 안 들어옴.
     if (subActive && planKey === 'early_light' && subExpires) {
       const expiresAt = new Date(billing.subscription_expires_at);
       const remainingDays = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / 86400000));
-      const cancelledRenewal = !!billing.cancel_at_period_end;
-      const trialNote = cancelledRenewal
-        ? `${remainingDays}일 후 종료 (다음 갱신 해지됨)`
-        : `${remainingDays}일 후 자동 갱신 시작`;
-      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 30일 무료 — ${trialNote}</div>`;
+      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 레거시 얼리 플랜 — ${remainingDays}일 남음</div>`;
     }
     status.innerHTML = html;
     // 사용자 명시 2026-05-06: 다음 갱신 해지 박스 — 결제 내역 토글 안에 별도 render.

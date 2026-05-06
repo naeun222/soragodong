@@ -114,10 +114,11 @@ function checkFreeTrialExpiry() {
   const remainingDays = (expiresAt - now) / 86400000;
   if (remainingDays > 7 || remainingDays < 0) return;
   const daysDisplay = Math.max(1, Math.ceil(remainingDays));
+  // V4 (사용자 명시 2026-05-06 ultrathink): legacy early_light plan 활성화된 옛 사용자만 fire. 신규는 무료 토큰 (자동 활성화 X) 라 이 분기 진입 X.
   _addNotification({
     type: 'free_trial_expiry_warning',
-    title: '30일 무료 종료 임박',
-    body: `<b>${daysDisplay}일</b> 후 자동 갱신 시작 — <b>얼리버드 4,900원/월</b> (출시 전 가입자만 이 가격 평생 락인).<br>원하지 않으면 [설정 → 구독] 다음 갱신 해지.<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+    title: '레거시 얼리 플랜 만료 임박',
+    body: `<b>${daysDisplay}일</b> 후 만료. 계속 쓰려면 구독 — <b>얼리버드 4,900원/월</b> (출시 전 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
     persistent: true
   });
 }

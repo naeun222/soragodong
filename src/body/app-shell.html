@@ -929,7 +929,7 @@
 
           <div class="settings-mini-label" style="margin-top:14px;">👁 미리보기</div>
           <div class="settings-hint" style="margin-bottom:8px;">dismiss flag / backend grant / 일일 cap 안 건드림. 진짜 사용자 화면 그대로.</div>
-          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 '한 달 무료' 안내 모달 미리보기 (backend grant 호출 X — ensureBillingRow 자동 활성화)">🐚 한 달 무료 모달</button>
+          <button class="btn-secondary" onclick="devPreviewWelcomeBonus()" title="신규 가입 환영 모달 미리보기 — 무료 토큰 grant 안내 (양 비공개). backend grant 호출 X.">🎁 환영 모달 미리보기</button>
           <button class="btn-secondary" onclick="openAnnualReviewPreview()" title="연간 리뷰 카드 시퀀스 (state 우선, 비어 있으면 시드 fallback)">🐚 연간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="devPreviewWeeklyReview()" title="신규 schema (chart / strengths / cycles / emotions / value_align / risk_signals / 자기 평가 / 공유 카드) 풀 미리보기 — 시드 데이터 사용, AI 호출 X">📅 주간 리뷰 미리보기</button>
           <button class="btn-secondary" onclick="(function(){ if(!confirm('실 데이터로 weekly 리뷰 생성 — Opus 호출 (1-2분, 약 $0.02-0.05). 진행할래?')) return; state.tutorialShown=state.tutorialShown||{}; state.tutorialShown.reviews=false; if(typeof runFirstReviewsTutorialReal==='function') runFirstReviewsTutorialReal().catch(e=>console.warn(e)); else if(typeof showToast==='function') showToast('함수 부재'); })()" title="리뷰 모음 첫 자연 진입 튜토 — 실 데이터 weekly 리뷰 생성 + 코치마크. 데이터 부족 시 sim fallback.">📅 첫 리뷰 튜토 (실 데이터)</button>
