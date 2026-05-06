@@ -2168,14 +2168,17 @@
     color: var(--text-soft); line-height: 1.5;
   }
   /* 사용자 명시 2026-05-06 ultrathink: PWA 설치 인라인 카드 — 첫 체크인 후 (홈 inline) 또는 게스트 promote 후 비밀번호 직후 (floating). */
+  /* 사용자 보고 2026-05-06 (재): 너무 투명해서 안 보임 → solid surface + accent border 강화. */
   .pwa-inline-card {
-    background: linear-gradient(135deg, rgba(212,167,106,0.12), rgba(139,126,196,0.08));
-    border: 1px solid rgba(212,167,106,0.32);
+    background: var(--surface, #1a1828);
+    background-image: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(139,126,196,0.10));
+    border: 1px solid rgba(212,167,106,0.55);
     border-radius: 14px;
     padding: 14px 16px 12px;
     margin: 0 0 12px;
     position: relative;
     animation: pwaCardFadeIn 320ms ease-out;
+    color: var(--text);
   }
   .pwa-inline-card.pwa-inline-card-fadeout {
     opacity: 0;
@@ -2193,7 +2196,7 @@
     z-index: 9000;
     max-width: 380px;
     margin: 0 auto;
-    box-shadow: 0 12px 32px rgba(0,0,0,0.32);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(212,167,106,0.25);
     opacity: 0;
     transform: translateY(20px);
     transition: opacity 280ms, transform 280ms;

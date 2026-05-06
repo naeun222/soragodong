@@ -41,19 +41,25 @@ function renderPwaInstallInlineCard(opts) {
 
   const ua = navigator.userAgent;
   const isAndroid = /Android/i.test(ua);
-  // 옛 login-pwa 카드 (git c2bcf0b^) 의 step 카피 압축. 2026-04-30 ultrathink 톤 유지.
+  // 사용자 보고 2026-05-06 (재): 옛 login-pwa 카드 (git c2bcf0b^) 의 step 카피 그대로 — 정확함.
   const stepsHtml = isAndroid
-    ? `<button type="button" id="pwaInstallBtn" onclick="triggerPwaInstall()" class="btn-primary pwa-install-1tap" style="${window._deferredPwaPrompt ? '' : 'display:none;'} width:100%; margin-bottom:10px; padding:11px;">📱 한 번에 설치 ✦</button>
+    ? `<button type="button" id="pwaInstallBtn" onclick="triggerPwaInstall()" class="btn-primary pwa-install-1tap" style="${window._deferredPwaPrompt ? '' : 'display:none;'} width:100%; margin-bottom:12px; padding:14px;">📱 앱 설치 ✦</button>
        <div class="pwa-step-group">
-         <div class="pwa-step-label">📱 삼성 인터넷</div>
-         <div class="pwa-step">≡ → <b>[전체 페이지 추가]</b> → <b>[홈 화면]</b></div>
+         <div class="pwa-step-label">📱 삼성 인터넷 (갤럭시 기본)</div>
+         <div class="pwa-step">1. 우측 하단 <b>더보기 (≡)</b> 누르기</div>
+         <div class="pwa-step">2. <b>[전체 페이지 추가]</b></div>
+         <div class="pwa-step">3. <b>[홈 화면]</b> 누르기</div>
        </div>
        <div class="pwa-step-group">
-         <div class="pwa-step-label">🌐 크롬 / Edge</div>
-         <div class="pwa-step">⋮ → <b>[홈 화면에 추가]</b> 또는 <b>[앱 설치]</b></div>
-       </div>`
-    : `<div class="pwa-step">1. <b>Safari</b> 하단 <b>공유 ↗</b></div>
-       <div class="pwa-step">2. <b>[홈 화면에 추가]</b></div>`;
+         <div class="pwa-step-label">🌐 크롬 / Edge / Brave</div>
+         <div class="pwa-step">1. 우측 상단 <b>메뉴 [⋮]</b> 누르기</div>
+         <div class="pwa-step">2. <b>[홈 화면에 추가]</b> 또는 <b>[앱 설치]</b></div>
+         <div class="pwa-step">3. <b>[설치]</b> → 앱처럼 작동</div>
+       </div>
+       <div class="pwa-step-note">Firefox / 인앱 브라우저는 설치 X — 위 둘 중 하나로 열어줘.</div>`
+    : `<div class="pwa-step">1. <b>사파리(Safari)</b>로 이 사이트 열기</div>
+       <div class="pwa-step">2. 하단 <b>더보기 (⋯)</b> → <b>공유 (⬆)</b> 누르기</div>
+       <div class="pwa-step">3. <b>더보기 (∨)</b> → <b>[홈 화면에 추가]</b></div>`;
 
   const card = document.createElement('div');
   card.id = 'pwaInstallInlineCard';
