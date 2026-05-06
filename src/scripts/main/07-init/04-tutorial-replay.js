@@ -5,34 +5,10 @@ function showTutorialReplayMenu() {
   return startInteractiveOnboarding();
 }
 
-// V4 (사용자 요청 2026-04-29): 설정 → 🔧 개별 코어 튜토리얼
-// 코어 7개 + 풀 한 번에 골라서 진행. 잠금이랑 무관 — replay 도구.
+// V4 (사용자 명시 2026-05-06 ultrathink): 옛 chooser dead — V8 sim 튜토 picker (showSimTutorialPicker) 로 위임.
 async function showCoreReplayPicker() {
-  if (typeof showOptionsModal !== 'function') {
-    return startInteractiveOnboarding();
-  }
-  // 사용자 요청 2026-04-29: 제목 '코어 #N' 제거, 단순 명사 (코어 번호 순서 유지)
-  const opts = [
-    { label: '🐚 시작',             value: 'core1', desc: '체크인 / 대화 한 바퀴 (필수 핵심)' },
-    { label: '⭐ 소라의 부름',      value: 'core2', desc: '미션 / 모래사장 / 양생방 (좀 긺)' },
-    { label: '🚀 실행',             value: 'core3', desc: '고동에게 맡기기 + 몰입' },
-    { label: '✦ 나',                value: 'core4', desc: 'AI가 본 너의 패턴·가치·특성' },
-    { label: '📚 도서관',           value: 'core5', desc: '일기 / 진주 / 깨달음 / 리뷰 (좀 긺)' },
-    { label: '🌊 숙고',             value: 'core6', desc: '마음을 울리는 큰 물음' },
-    { label: '🐚 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
-    { label: '✨ 풀 튜토리얼',       value: 'full',  desc: '처음부터 끝까지 (~30분)' }
-  ];
-  const choice = await showOptionsModal({
-    title: '🔧 개별 코어 튜토리얼',
-    message: '코어 골라서 다시 보기. 잠금 상태 영향 X.',
-    options: opts
-  });
-  if (!choice) return;
-  if (choice === 'full') {
-    window._fullTutorialActive = true;
-    return startInteractiveOnboarding();
-  }
-  if (typeof startCoreTutorial === 'function') return startCoreTutorial(choice);
+  if (typeof showSimTutorialPicker === 'function') return showSimTutorialPicker();
+  if (typeof showToast === 'function') showToast('튜토리얼 picker 준비 중...');
 }
 
 // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 코어 잠금 시각 표시 = 폐기.

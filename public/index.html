@@ -19240,34 +19240,10 @@ function showTutorialReplayMenu() {
   return startInteractiveOnboarding();
 }
 
-// V4 (사용자 요청 2026-04-29): 설정 → 🔧 개별 코어 튜토리얼
-// 코어 7개 + 풀 한 번에 골라서 진행. 잠금이랑 무관 — replay 도구.
+// V4 (사용자 명시 2026-05-06 ultrathink): 옛 chooser dead — V8 sim 튜토 picker (showSimTutorialPicker) 로 위임.
 async function showCoreReplayPicker() {
-  if (typeof showOptionsModal !== 'function') {
-    return startInteractiveOnboarding();
-  }
-  // 사용자 요청 2026-04-29: 제목 '코어 #N' 제거, 단순 명사 (코어 번호 순서 유지)
-  const opts = [
-    { label: '🐚 시작',             value: 'core1', desc: '체크인 / 대화 한 바퀴 (필수 핵심)' },
-    { label: '⭐ 소라의 부름',      value: 'core2', desc: '미션 / 모래사장 / 양생방 (좀 긺)' },
-    { label: '🚀 실행',             value: 'core3', desc: '고동에게 맡기기 + 몰입' },
-    { label: '✦ 나',                value: 'core4', desc: 'AI가 본 너의 패턴·가치·특성' },
-    { label: '📚 도서관',           value: 'core5', desc: '일기 / 진주 / 깨달음 / 리뷰 (좀 긺)' },
-    { label: '🌊 숙고',             value: 'core6', desc: '마음을 울리는 큰 물음' },
-    { label: '🐚 마법의 소라고동', value: 'core8', desc: '큰 결정 14일 숙성' },
-    { label: '✨ 풀 튜토리얼',       value: 'full',  desc: '처음부터 끝까지 (~30분)' }
-  ];
-  const choice = await showOptionsModal({
-    title: '🔧 개별 코어 튜토리얼',
-    message: '코어 골라서 다시 보기. 잠금 상태 영향 X.',
-    options: opts
-  });
-  if (!choice) return;
-  if (choice === 'full') {
-    window._fullTutorialActive = true;
-    return startInteractiveOnboarding();
-  }
-  if (typeof startCoreTutorial === 'function') return startCoreTutorial(choice);
+  if (typeof showSimTutorialPicker === 'function') return showSimTutorialPicker();
+  if (typeof showToast === 'function') showToast('튜토리얼 picker 준비 중...');
 }
 
 // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 코어 잠금 시각 표시 = 폐기.
@@ -21587,13 +21563,15 @@ const SIM_TUTORIAL_MARKERS = {
   insights: 'soragodong_v4_tut_insights_done',
   magic: 'soragodong_v4_tut_magic_done',
   reviews: 'soragodong_v4_tut_reviews_done',
-  reflection: 'soragodong_v4_tut_reflection_done'
+  reflection: 'soragodong_v4_tut_reflection_done',
+  core3: 'soragodong_v4_tut_core3_done'
 };
 
-function _shouldRunSimTutorial(key) {
+function _shouldRunSimTutorial(key, opts = {}) {
   if (typeof state === 'undefined' || !state) return false;
   state.tutorialShown = state.tutorialShown || {};
-  if (state.tutorialShown[key]) return false;
+  // 사용자 명시 2026-05-06 ultrathink: force=true (설정 picker 진입) 면 tutorialShown 가드 우회.
+  if (!opts.force && state.tutorialShown[key]) return false;
   if (window._v8TutorialRunning) return false;
   if (window._c2TutorialRunning) return false;
   if (window._pearlTutorialRunning) return false;
@@ -22051,6 +22029,179 @@ function _reflectionCoachmarkFromChat() {
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 6) Core 3 sim 튜토 — 결과 체크 → 모래사장 → DNA 소라 → 진주 합체 흐름
+//    옛 startCore3A (success_celebrate / click_dna_shell / dna_explanation / core3a_finish) 의 V8 재해석.
+//    사용자 명시: 결과 체크부터. 진짜 모달 띄우면 사용자 액션 막힘 가능 → 안내 코치마크로 시뮬.
+// ═══════════════════════════════════════════════════════════════
+
+function shouldRunCore3Tutorial(opts) { return _shouldRunSimTutorial('core3', opts); }
+
+async function runCore3TutorialV8() {
+  await _runSimTutorial({
+    tutorialKey: 'core3',
+    sessionMarker: SIM_TUTORIAL_MARKERS.core3 || 'soragodong_v4_tut_core3_done',
+    screenAfterSeed: 'home',
+    navAction: () => {
+      if (typeof renderTodayMission === 'function') renderTodayMission();
+      if (typeof renderShellBar === 'function') renderShellBar();
+    },
+    coachmarks: [
+      _core3CoachmarkResultCheck,
+      _core3CoachmarkOpenBeach,
+      _core3CoachmarkDnaShell,
+      _core3CoachmarkPearlMerge,
+      _simCoachmarkClosing
+    ]
+  });
+}
+
+function _core3CoachmarkResultCheck() {
+  // 결과 체크 흐름 안내. 시드에 worked 미션 + 결과 미체크 미션 둘 다 있어 상상하기 쉬움.
+  const body = `
+    <div class="v8-coach-title">📋 결과 체크</div>
+    <div class="v8-coach-text">
+      미션 해낸 다음날, 고동이가 물어봐 —<br>
+      <b>✓ 통했어 / 🤔 별로 / ✗ 안 통했어</b><br>
+      <span class="v8-coach-text-soft">'통했어' 누르면 — 그 전략의 DNA 한 조각이 모래사장에 쌓여 ✦</span>
+    </div>
+  `;
+  return _v8ShowCoachmark({
+    targetSelector: '.mission-card, #missionContainer',
+    body,
+    position: 'bottom',
+    allowNoTarget: true
+  });
+}
+
+function _core3CoachmarkOpenBeach() {
+  // 모래사장 자동 진입.
+  if (typeof showScreen === 'function') showScreen('home');
+  setTimeout(() => { if (typeof openShellCollection === 'function') openShellCollection(); }, 200);
+  return _v8Sleep(500).then(() => {
+    const body = `
+      <div class="v8-coach-title">🏖 모래사장</div>
+      <div class="v8-coach-text">
+        통한 미션마다 — 소라 하나가 쌓여 ✦<br>
+        <span class="v8-coach-text-soft">시드로 시뮬 소라들 미리 깔아뒀어.</span>
+      </div>
+    `;
+    return _v8ShowCoachmark({
+      targetSelector: '.beach-area, .shell-grid, #shellModal.active',
+      body,
+      position: 'bottom',
+      allowNoTarget: true
+    });
+  });
+}
+
+function _core3CoachmarkDnaShell() {
+  // 시드 안 DNA 한 조각 (gradation 안의 shell) — 첫 element highlight.
+  const dnaShell = document.querySelector('.beach-shell.has-dna, .beach-shell.dna, .shell-item[data-dna], .dna-shell');
+  if (dnaShell) {
+    try { dnaShell.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+    dnaShell.classList.add('sim-tutorial-highlight');
+    setTimeout(() => { try { dnaShell.classList.remove('sim-tutorial-highlight'); } catch {} }, 8000);
+  }
+  const body = `
+    <div class="v8-coach-title">🧬 마크 붙은 소라</div>
+    <div class="v8-coach-text">
+      봐 — <b>🧬 마크</b> 붙은 소라.<br>
+      이건 네가 통한 <em>전략의 DNA 한 조각</em>이야 ✨<br>
+      <span class="v8-coach-text-soft">같은 전략 또 통할 때마다 — 또 하나.</span>
+    </div>
+  `;
+  return _v8ShowCoachmark({
+    targetSelector: '.beach-shell.has-dna, .beach-shell.dna, .shell-item[data-dna], .dna-shell, .beach-shell',
+    body,
+    position: 'top',
+    allowNoTarget: true
+  });
+}
+
+function _core3CoachmarkPearlMerge() {
+  const body = `
+    <div class="v8-coach-title">💎 5조각 → DNA 진주</div>
+    <div class="v8-coach-text">
+      DNA 5조각 모이면 — 합쳐져서 <b>💎 DNA 진주</b>가 돼.<br>
+      <span class="v8-coach-text-soft">너만의 힘 ✦ 같은 상황 또 오면, 이미 너의 무기.</span>
+    </div>
+  `;
+  return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 설정 → 코어 / sim 튜토 picker (force fire — tutorialShown 가드 우회).
+// ═══════════════════════════════════════════════════════════════
+async function showSimTutorialPicker() {
+  if (typeof showOptionsModal !== 'function') {
+    if (typeof showToast === 'function') showToast('튜토리얼 picker 부재');
+    return;
+  }
+  const opts = [
+    { label: '🐚 시작 (안녕? → 첫 분석)',         value: 'v8start',  desc: 'V8 시작 튜토 — intake + 4단 분석' },
+    { label: '⭐ 첫 ✦ 해볼게 / 🧬 전략으로',      value: 'firstC2',  desc: '4단 응답 → 미션 → 모래사장 한 사이클' },
+    { label: '🚀 결과 체크 + 모래사장 (Core 3)',  value: 'core3',    desc: '결과 체크 → DNA 소라 → 진주 합체' },
+    { label: '🔮 진주',                            value: 'pearls',   desc: '살아있다 느낀 순간들' },
+    { label: '📔 도서관 일기·대화 (4/15)',          value: 'diaryLib', desc: '캘린더 무드 그리드 + 챕터 자동 분류' },
+    { label: '✨ 깨달음 (AI 인사이트)',            value: 'insights', desc: '엄마 통화 후 mood +0.8 패턴' },
+    { label: '📅 리뷰 모음 (연간)',                value: 'reviews',  desc: '주간 / 월간 / 분기 / 연간 Stories' },
+    { label: '🌊 숙고 질문',                       value: 'reflection', desc: '마음을 울리는 큰 물음' }
+  ];
+  const choice = await showOptionsModal({
+    title: '🔧 코어 튜토리얼',
+    message: '시드 시뮬로 한 번 보기. testerMode 자동 ON → OFF 시 새로고침 (실 데이터 그대로).',
+    options: opts
+  });
+  if (!choice) return;
+  // 기존 마킹 reset (force fire)
+  state.tutorialShown = state.tutorialShown || {};
+  switch (choice) {
+    case 'v8start':
+      state.tutorialVersion = null;
+      try { saveState(); } catch {}
+      if (typeof runStartTutorialV8 === 'function') runStartTutorialV8().catch(e => console.warn(e));
+      return;
+    case 'firstC2':
+      state.tutorialShown.core2 = false;
+      state._core2NotUnlocked = false;
+      try { saveState(); } catch {}
+      if (typeof showToast === 'function') showToast('대화 탭에서 4단 응답에 ✦ 해볼게 / 🧬 전략으로 누르면 fire ✦');
+      if (typeof showScreen === 'function') showScreen('chat');
+      return;
+    case 'core3':
+      state.tutorialShown.core3 = false;
+      try { saveState(); } catch {}
+      if (typeof runCore3TutorialV8 === 'function') runCore3TutorialV8().catch(e => console.warn(e));
+      return;
+    case 'pearls':
+      state.tutorialShown.pearls = false;
+      try { saveState(); } catch {}
+      if (typeof runFirstPearlTutorialV8 === 'function') runFirstPearlTutorialV8().catch(e => console.warn(e));
+      return;
+    case 'diaryLib':
+      state.tutorialShown.diaryLib = false;
+      try { saveState(); } catch {}
+      if (typeof runDiaryLibTutorialV8 === 'function') runDiaryLibTutorialV8().catch(e => console.warn(e));
+      return;
+    case 'insights':
+      state.tutorialShown.insights = false;
+      try { saveState(); } catch {}
+      if (typeof runInsightsTutorialV8 === 'function') runInsightsTutorialV8().catch(e => console.warn(e));
+      return;
+    case 'reviews':
+      state.tutorialShown.reviews = false;
+      try { saveState(); } catch {}
+      if (typeof runReviewsTutorialV8 === 'function') runReviewsTutorialV8().catch(e => console.warn(e));
+      return;
+    case 'reflection':
+      state.tutorialShown.reflection = false;
+      try { saveState(); } catch {}
+      if (typeof runReflectionTutorialV8 === 'function') runReflectionTutorialV8().catch(e => console.warn(e));
+      return;
+  }
 }
 // ═══════════════════════════════════════════════════════════════
 // DECISION ROOM (Phase 3)
