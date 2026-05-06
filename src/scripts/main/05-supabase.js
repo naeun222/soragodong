@@ -459,6 +459,15 @@ async function loadFromCloud() {
       _needsSaveAfterLoad = true;
     }
 
+    // 사용자 명시 2026-05-06: 게스트 → 로그인 자동 이주.
+    // snapshot localStorage 감지 → 신규/기존 사용자 분기 → 머지. 머지 발생 시 cloud sync 1회.
+    if (typeof _maybeMigrateGuestSnapshot === 'function') {
+      try {
+        const _migrated = await _maybeMigrateGuestSnapshot();
+        if (_migrated) _needsSaveAfterLoad = true;
+      } catch (e) { console.warn('[loadFromCloud] guest migrate 실패:', e); }
+    }
+
     // 사용자 보고 2026-05-05 (audit High): load 도중 누적된 변경 사항을 마지막 1회로 cloud sync. 이전엔 5곳 순차 호출 → 누적된 PATCH 가 race risk + Supabase 부하.
     if (_needsSaveAfterLoad) {
       try { await saveToCloudNow(); } catch (e) { console.warn('[loadFromCloud] post-load save 실패:', e); }

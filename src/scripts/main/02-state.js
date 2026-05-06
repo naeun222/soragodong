@@ -221,6 +221,11 @@ const AUTO_BACKUP_KEEP_N = 5;
 const AUTO_BACKUP_INTERVAL_MS = 7 * 86400000;  // 7일
 const V4_LOCAL_STORAGE_KEY = 'soragodong_v4';
 const V4_LAST_USER_KEY = 'soragodong_v4_last_user_id';
+// 사용자 명시 2026-05-06: 게스트 → 로그인 자동 이주. 게스트가 '카카오로 시작' 클릭 시
+// state snapshot 저장 → 새 uid 로 로그인 후 loadFromCloud 끝에서 자동 머지.
+const V4_GUEST_MIGRATE_KEY = 'soragodong_v4_guest_migrate_snapshot';
+const V4_GUEST_MIGRATE_BACKUP_USER_ID = 'me_v4_pre_guest_merge';  // 머지 직전 cloud 백업 (롤백용)
+const V4_GUEST_MIGRATE_TTL_MS = 30 * 86400000;  // 30일
 
 const DEFAULT_STATE = {
   // 사용자 명시 2026-05-05 ultrathink (Phase 1): 게스트 모드 (Supabase anonymous) 사용자 마커.
