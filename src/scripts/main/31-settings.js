@@ -206,13 +206,8 @@ async function _doRefreshBillingStatus(manual) {
           html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">🌊 Premium 으로 늘리기</button>`;
         }
       }
-      // 사용자 명시 2026-05-06: 다음 갱신 해지 = 작은 link 톤 (text-soft, 10.5px, 밑줄 X). 보고 싶을 때만 보이게.
-      // 사용자 명시 2026-05-06 (정정): early_light 도 정기구독 (30일 무료 후 자동 갱신) 이라 버튼 노출 O. 모든 활성 구독 tier 에 표시.
-      if (cancelledRenewal) {
-        html += `<div style="margin-top:10px; font-size:10.5px; color:var(--text-soft); text-align:right;">✓ 다음 갱신 해지됨</div>`;
-      } else {
-        html += `<div style="margin-top:10px; text-align:right;"><a href="javascript:void(0)" onclick="cancelNextRenewal()" style="font-size:10.5px; color:var(--text-soft); text-decoration:none; opacity:0.65;">다음 갱신 해지</a></div>`;
-      }
+      // 사용자 명시 2026-05-06 (재배치): '다음 갱신 해지' = 결제 내역/환불 토글 안으로 이동 + 글씨 크기 ↑.
+      // 옛 구독 카드 우측 하단 link 톤 = 너무 안 보였음. _renderCancelRenewalBox 가 토글 안 div 채움.
     } else {
       html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 체험 종료. 계속 쓰려면 구독</span></div>`;
     }
@@ -230,6 +225,10 @@ async function _doRefreshBillingStatus(manual) {
       html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 30일 무료 — ${trialNote}</div>`;
     }
     status.innerHTML = html;
+    // 사용자 명시 2026-05-06: 다음 갱신 해지 박스 — 결제 내역 토글 안에 별도 render.
+    if (typeof _renderCancelRenewalBox === 'function') {
+      try { _renderCancelRenewalBox(billing); } catch {}
+    }
     // 사용자 명시 2026-05-05: _billingCacheTs stamp — 30s TTL + showBudgetExceededModal 캐시 재사용용.
     window._billingCache = billing;
     window._billingCacheTs = Date.now();
@@ -303,6 +302,29 @@ async function loadPayments() {
     }).join('');
   } catch (e) {
     container.textContent = '오류: ' + (e?.message || e);
+  }
+}
+
+// 사용자 명시 2026-05-06: '다음 갱신 해지' 박스 — 결제 내역/환불 토글 안에 render. 글씨 12.5px (옛 10.5px 너무 안 보였음).
+// 활성 구독 (subscription_active) + 모든 paid tier (early_light 포함) 에 노출. cancel_at_period_end=true 면 '✓ 해지됨' 라벨로 대체.
+function _renderCancelRenewalBox(billing) {
+  const box = document.getElementById('cancelRenewalBox');
+  if (!box) return;
+  const subActive = !!(billing && billing.subscription_active);
+  if (!subActive) {
+    box.innerHTML = '';
+    return;
+  }
+  const cancelled = !!billing.cancel_at_period_end;
+  if (cancelled) {
+    box.innerHTML = `<div style="font-size:12.5px; color:var(--text-soft); padding:10px 0; line-height:1.6;">✓ 다음 갱신 해지됨 — 만료일까지 사용 가능.</div>`;
+  } else {
+    box.innerHTML = `
+      <div style="padding:10px 0; line-height:1.7;">
+        <button class="btn-secondary" onclick="cancelNextRenewal()" style="width:100%; padding:10px; font-size:12.5px; color:var(--text); opacity:0.85;">⏸ 다음 갱신 해지</button>
+        <div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">현 결제 만료까지 사용, 다음 자동 결제만 멈춤. 환불 아님.</div>
+      </div>
+    `;
   }
 }
 

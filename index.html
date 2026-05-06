@@ -11721,10 +11721,12 @@
           <button class="btn-secondary" onclick="refreshBillingStatus(true)" style="flex:1; padding:13px; font-size:13px;">🔄 갱신</button>
         </div>
         <!-- 사용자 명시 2026-05-06: 결제 내역 + 환불 섹션 — 본인 paid 결제만 환불 가능. -->
+        <!-- 사용자 명시 2026-05-06 (재배치): 다음 갱신 해지 = 토글 안 위쪽으로 이동 + 글씨 키움 (옛 10.5px 너무 안 보였음). -->
         <details class="settings-collapse" style="margin-top:14px;">
-          <summary>📜 결제 내역 / 환불</summary>
+          <summary>📜 결제 내역 / 환불 / 해지</summary>
           <div class="settings-collapse-body">
-            <div id="paymentsList" style="font-size:12px; line-height:1.7;">아래 '내역 불러오기' 클릭</div>
+            <div id="cancelRenewalBox"></div>
+            <div id="paymentsList" style="font-size:12px; line-height:1.7; margin-top:10px;">아래 '내역 불러오기' 클릭</div>
             <button class="btn-secondary" onclick="loadPayments()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">내역 불러오기</button>
           </div>
         </details>
@@ -48171,13 +48173,8 @@ async function _doRefreshBillingStatus(manual) {
           html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">🌊 Premium 으로 늘리기</button>`;
         }
       }
-      // 사용자 명시 2026-05-06: 다음 갱신 해지 = 작은 link 톤 (text-soft, 10.5px, 밑줄 X). 보고 싶을 때만 보이게.
-      // 사용자 명시 2026-05-06 (정정): early_light 도 정기구독 (30일 무료 후 자동 갱신) 이라 버튼 노출 O. 모든 활성 구독 tier 에 표시.
-      if (cancelledRenewal) {
-        html += `<div style="margin-top:10px; font-size:10.5px; color:var(--text-soft); text-align:right;">✓ 다음 갱신 해지됨</div>`;
-      } else {
-        html += `<div style="margin-top:10px; text-align:right;"><a href="javascript:void(0)" onclick="cancelNextRenewal()" style="font-size:10.5px; color:var(--text-soft); text-decoration:none; opacity:0.65;">다음 갱신 해지</a></div>`;
-      }
+      // 사용자 명시 2026-05-06 (재배치): '다음 갱신 해지' = 결제 내역/환불 토글 안으로 이동 + 글씨 크기 ↑.
+      // 옛 구독 카드 우측 하단 link 톤 = 너무 안 보였음. _renderCancelRenewalBox 가 토글 안 div 채움.
     } else {
       html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 체험 종료. 계속 쓰려면 구독</span></div>`;
     }
@@ -48195,6 +48192,10 @@ async function _doRefreshBillingStatus(manual) {
       html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 30일 무료 — ${trialNote}</div>`;
     }
     status.innerHTML = html;
+    // 사용자 명시 2026-05-06: 다음 갱신 해지 박스 — 결제 내역 토글 안에 별도 render.
+    if (typeof _renderCancelRenewalBox === 'function') {
+      try { _renderCancelRenewalBox(billing); } catch {}
+    }
     // 사용자 명시 2026-05-05: _billingCacheTs stamp — 30s TTL + showBudgetExceededModal 캐시 재사용용.
     window._billingCache = billing;
     window._billingCacheTs = Date.now();
@@ -48268,6 +48269,29 @@ async function loadPayments() {
     }).join('');
   } catch (e) {
     container.textContent = '오류: ' + (e?.message || e);
+  }
+}
+
+// 사용자 명시 2026-05-06: '다음 갱신 해지' 박스 — 결제 내역/환불 토글 안에 render. 글씨 12.5px (옛 10.5px 너무 안 보였음).
+// 활성 구독 (subscription_active) + 모든 paid tier (early_light 포함) 에 노출. cancel_at_period_end=true 면 '✓ 해지됨' 라벨로 대체.
+function _renderCancelRenewalBox(billing) {
+  const box = document.getElementById('cancelRenewalBox');
+  if (!box) return;
+  const subActive = !!(billing && billing.subscription_active);
+  if (!subActive) {
+    box.innerHTML = '';
+    return;
+  }
+  const cancelled = !!billing.cancel_at_period_end;
+  if (cancelled) {
+    box.innerHTML = `<div style="font-size:12.5px; color:var(--text-soft); padding:10px 0; line-height:1.6;">✓ 다음 갱신 해지됨 — 만료일까지 사용 가능.</div>`;
+  } else {
+    box.innerHTML = `
+      <div style="padding:10px 0; line-height:1.7;">
+        <button class="btn-secondary" onclick="cancelNextRenewal()" style="width:100%; padding:10px; font-size:12.5px; color:var(--text); opacity:0.85;">⏸ 다음 갱신 해지</button>
+        <div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">현 결제 만료까지 사용, 다음 자동 결제만 멈춤. 환불 아님.</div>
+      </div>
+    `;
   }
 }
 
@@ -48346,9 +48370,9 @@ const TIER_PLANS_CLIENT = {
   // V4 (사용자 명시 2026-05-06): early_light = 정기구독 — 30일 무료 후 자동 갱신 (얼리버드 가격 락인). 신규 가입 시 ensureBillingRow 가 자동 활성화. 갱신 원하지 않으면 [설정 → 구독] 다음 갱신 해지.
   early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜',       tagline: '30일 무료 → 자동 갱신', emoji: '🐚',
     description: '신규 가입자 자동 활성화 — 30일 무료. 만료 시 자동 갱신 (얼리버드 가격 락인). 원하지 않으면 [설정 → 구독] 다음 갱신 해지.', auto_grant_first_month: true },
-  // V4 (사용자 명시 2026-05-06): 얼리버드 = 정기구독 (4,900원/월 자동 갱신). "평생" = 이 가격이 평생 lock-in (출시 후에도 동일가 유지). 1회 결제 영구 X.
-  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '출시 전 한정 가격 락인', emoji: '✨',
-    description: '4,900원/월 자동 갱신. 출시 전 가입자만 — 이 가격은 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 해지 가능.' },
+  // V4 (사용자 명시 2026-05-06): 얼리버드 = 첫 한 달 무료, 다음달부터 4,900원/월 자동결제. "평생" = 이 가격이 평생 lock-in (출시 후에도 동일가 유지).
+  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '첫 달 무료 · 출시 전 가격 락인', emoji: '✨',
+    description: '첫 한 달 무료. 다음달부터 4,900원/월 자동결제. 출시 전 가입자만 — 이 가격이 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 해지 가능.' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
@@ -49306,18 +49330,22 @@ async function openSubscribeModal() {
   `;
   const earlyLifetimePlan = TIER_PLANS_CLIENT.early_lifetime;
   // 사용자 명시 2026-05-06 ultrathink: 얼리버드 = 하늘색~파란색 gradient (Light 대체 분위기).
+  // 사용자 명시 2026-05-06 (정정): 얼리버드 = 첫 한 달 무료 → 다음달부터 4,900원/월 자동결제.
   const earlyLifetimeCard = `
     <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(135,206,235,0.18), rgba(74,144,226,0.10)); border:1.5px solid #5fb4d3; border-radius:14px; margin-bottom:10px;">
       <div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">출시 전 한정</div>
       <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
         <div style="font-size:18px; font-weight:700; color:var(--text);">${earlyLifetimePlan.emoji} ${earlyLifetimePlan.label}</div>
-        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/월</span></div>
+        <div style="text-align:right;">
+          <div style="font-size:14px; font-weight:700; color:#5fb4d3;">첫 달 무료</div>
+          <div style="font-size:11px; color:var(--text-dim); font-weight:400;">→ ${earlyLifetimePlan.krw.toLocaleString()}원/월 자동결제</div>
+        </div>
       </div>
       <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${earlyLifetimePlan.tagline}</div>
       <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
         ${earlyLifetimePlan.description}
       </div>
-      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 구독 (${earlyLifetimePlan.krw.toLocaleString()}원/월)</button>
+      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 첫 달 무료로 시작</button>
     </div>
   `;
   const overlay = document.createElement('div');

@@ -12,9 +12,9 @@ const TIER_PLANS_CLIENT = {
   // V4 (사용자 명시 2026-05-06): early_light = 정기구독 — 30일 무료 후 자동 갱신 (얼리버드 가격 락인). 신규 가입 시 ensureBillingRow 가 자동 활성화. 갱신 원하지 않으면 [설정 → 구독] 다음 갱신 해지.
   early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜',       tagline: '30일 무료 → 자동 갱신', emoji: '🐚',
     description: '신규 가입자 자동 활성화 — 30일 무료. 만료 시 자동 갱신 (얼리버드 가격 락인). 원하지 않으면 [설정 → 구독] 다음 갱신 해지.', auto_grant_first_month: true },
-  // V4 (사용자 명시 2026-05-06): 얼리버드 = 정기구독 (4,900원/월 자동 갱신). "평생" = 이 가격이 평생 lock-in (출시 후에도 동일가 유지). 1회 결제 영구 X.
-  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '출시 전 한정 가격 락인', emoji: '✨',
-    description: '4,900원/월 자동 갱신. 출시 전 가입자만 — 이 가격은 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 해지 가능.' },
+  // V4 (사용자 명시 2026-05-06): 얼리버드 = 첫 한 달 무료, 다음달부터 4,900원/월 자동결제. "평생" = 이 가격이 평생 lock-in (출시 후에도 동일가 유지).
+  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '첫 달 무료 · 출시 전 가격 락인', emoji: '✨',
+    description: '첫 한 달 무료. 다음달부터 4,900원/월 자동결제. 출시 전 가입자만 — 이 가격이 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 해지 가능.' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }

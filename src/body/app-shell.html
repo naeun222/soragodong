@@ -825,10 +825,12 @@
           <button class="btn-secondary" onclick="refreshBillingStatus(true)" style="flex:1; padding:13px; font-size:13px;">🔄 갱신</button>
         </div>
         <!-- 사용자 명시 2026-05-06: 결제 내역 + 환불 섹션 — 본인 paid 결제만 환불 가능. -->
+        <!-- 사용자 명시 2026-05-06 (재배치): 다음 갱신 해지 = 토글 안 위쪽으로 이동 + 글씨 키움 (옛 10.5px 너무 안 보였음). -->
         <details class="settings-collapse" style="margin-top:14px;">
-          <summary>📜 결제 내역 / 환불</summary>
+          <summary>📜 결제 내역 / 환불 / 해지</summary>
           <div class="settings-collapse-body">
-            <div id="paymentsList" style="font-size:12px; line-height:1.7;">아래 '내역 불러오기' 클릭</div>
+            <div id="cancelRenewalBox"></div>
+            <div id="paymentsList" style="font-size:12px; line-height:1.7; margin-top:10px;">아래 '내역 불러오기' 클릭</div>
             <button class="btn-secondary" onclick="loadPayments()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">내역 불러오기</button>
           </div>
         </details>
