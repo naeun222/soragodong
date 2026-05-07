@@ -13,6 +13,10 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
 // REST API Key (V2) + Webhook Secret 은 Cloudflare env (PORTONE_API_KEY_V2 / PORTONE_WEBHOOK_SECRET) 에 별도.
 const PORTONE_CHANNEL_KEY = 'channel-key-19a298fa-d855-4e4e-9eae-42d60448848e';
 const PORTONE_STORE_ID = 'store-d59c417a-3e7b-4316-8385-238fe8ff54d0';
+// 사용자 명시 2026-05-06: 얼리버드 첫 달 무료 = 빌링키 결제 채널. KG이니시스는 일반 결제와 빌링(이니빌링) 채널이 별개.
+// PortOne 콘솔 → 결제연동 → 채널관리 → 빌링키 결제 채널 추가 후 발급되는 channel-key 여기 채워.
+// 빈 값 = 단건 결제 채널 (PORTONE_CHANNEL_KEY) 로 fallback (토스페이먼츠 등 단일 채널이 둘 다 지원할 때 OK).
+const PORTONE_BILLING_CHANNEL_KEY = '';
 
 // 사용자 명시 2026-05-01 (100명 대비): Sentry error tracking placeholder.
 // DSN 빈 값 = SDK 로드 X (네트워크 / bundle 영향 0). 사용자가 sentry.io 가입 후 DSN 발급해서 적용하면 자동 활성.

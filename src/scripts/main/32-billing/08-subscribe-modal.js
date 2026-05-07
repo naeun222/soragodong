@@ -287,10 +287,13 @@ async function proceedEarlyBirdTrial() {
     alert('게스트 모드는 결제 X — 먼저 로그인.');
     return;
   }
-  const channelKey = (typeof PORTONE_CHANNEL_KEY !== 'undefined') ? PORTONE_CHANNEL_KEY : '';
+  // 사용자 명시 2026-05-06: 빌링키 채널 우선. 없으면 단건 채널 fallback (단일 채널이 둘 다 지원하는 PG 케이스).
+  const billingChannelKey = (typeof PORTONE_BILLING_CHANNEL_KEY !== 'undefined' && PORTONE_BILLING_CHANNEL_KEY)
+    ? PORTONE_BILLING_CHANNEL_KEY
+    : ((typeof PORTONE_CHANNEL_KEY !== 'undefined') ? PORTONE_CHANNEL_KEY : '');
   const storeId = (typeof PORTONE_STORE_ID !== 'undefined') ? PORTONE_STORE_ID : '';
-  if (!channelKey || !storeId) {
-    alert('결제 설정 오류 (PORTONE_CHANNEL_KEY / PORTONE_STORE_ID 미설정)');
+  if (!billingChannelKey || !storeId) {
+    alert('결제 설정 오류 (PORTONE_BILLING_CHANNEL_KEY / PORTONE_STORE_ID 미설정)');
     return;
   }
 
@@ -325,7 +328,7 @@ async function proceedEarlyBirdTrial() {
   try {
     response = await window.PortOne.requestIssueBillingKey({
       storeId,
-      channelKey,
+      channelKey: billingChannelKey,
       billingKeyMethod: 'CARD',
       issueId,
       issueName: '소라고동 얼리버드 정기 카드 등록',
