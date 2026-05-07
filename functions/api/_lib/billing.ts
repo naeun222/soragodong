@@ -330,7 +330,11 @@ export async function checkBudget(env: Env, userId: string): Promise<BudgetCheck
     }
   }
   // early_lifetime: 30일마다 monthly_token_used 자동 리셋 (결제 없이 계속 갱신).
-  if (billing.subscription_plan === 'early_lifetime' && billing.monthly_period_started_at && env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+  // 사용자 명시 2026-05-06: 新 흐름 = 카드 등록 + cron 매월 자동 결제. 빌링키 있는 사용자는 cron 이 cycle 갱신 담당
+  // (subscription_expires_at + monthly_period_started_at 같이 갱신). 자동 무결제 리셋 X — 결제 누락 시 무료 사용 방지.
+  // 빌링키 없는 legacy 사용자 (옛 4,900원 1회 결제 lifetime) 만 종전대로 무결제 리셋 유지.
+  const hasBillingKey = !!(billing as any).portone_billing_key;
+  if (billing.subscription_plan === 'early_lifetime' && !hasBillingKey && billing.monthly_period_started_at && env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
     const daysSince = (Date.now() - new Date(billing.monthly_period_started_at).getTime()) / 86400_000;
     if (daysSince >= 30) {
       const now = new Date();

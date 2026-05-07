@@ -76,6 +76,23 @@ function _reportErrorForce(errorInfo) {
     if (/AbortError/.test(s)) return true;
     if (/Failed to fetch/.test(s)) return true;
     if (/NetworkError/.test(s)) return true;
+    // 사용자 보고 2026-05-06: 인스티즈 / 카톡 등 inApp browser 가 페이지 line:1 col:9 위치에
+    // 자체 JS 를 inject — `shakehot` 등 자기네 글로벌 참조해서 ReferenceError. 우리 코드 X.
+    // pattern: 변수명 (kakao / shake / webkit_messageHandlers / __naver / instiz / iamfinder ...)
+    if (/Can't find variable: (?:shakehot|kakao|__naver|instiz|iamfinder|webkit_messageHandlers|FB|fbq|gtag|gaplugin|_caplugin|__bizm|__line)/i.test(s)) return true;
+    if (/(?:shakehot|webkit_messageHandlers|window\.kakao) is not defined/i.test(s)) return true;
+    return false;
+  };
+
+  // inApp browser 가 line:1 (HTML doctype) 에 inject 한 ReferenceError = 우리 코드 X.
+  // filename = page URL 이거나 빈 문자열, lineno = 1~3, msg 가 ReferenceError 패턴이면 noise.
+  const _isInjectedThirdParty = (filename, lineno, msg) => {
+    const s = String(msg || '');
+    if (lineno && lineno > 5) return false;
+    if (!/ReferenceError|Can't find variable|is not defined/i.test(s)) return false;
+    const f = String(filename || '');
+    // page URL 자체 (path = '/' 또는 '/start' 같은 우리 HTML route) 또는 빈 문자열.
+    if (!f || f === location.href || /\/(?:start|startlite|info|index)?\/?$/.test(f.replace(location.origin, ''))) return true;
     return false;
   };
 
@@ -84,6 +101,7 @@ function _reportErrorForce(errorInfo) {
     if (_isNoise(msg)) return;
     const file = (e && e.filename) || 'unknown';
     const line = (e && e.lineno) || 0;
+    if (_isInjectedThirdParty(file, line, msg)) return;
     const sig = `js-error|${file.split('/').pop()}:${line}|${msg.slice(0, 80)}`;
     reportError({
       signature: sig,

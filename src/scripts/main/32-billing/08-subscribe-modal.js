@@ -97,19 +97,23 @@ async function openSubscribeModal() {
   `;
   const earlyLifetimePlan = TIER_PLANS_CLIENT.early_lifetime;
   // 사용자 명시 2026-05-06 ultrathink: 얼리버드 = 하늘색~파란색 gradient (Light 대체 분위기).
-  // 사용자 명시 2026-05-06 (정정): 옛 "첫 달 무료" 카피 = 거짓 약속 (proceedSubscribe = 즉시 결제). 정직하게 4,900원/월 즉시 결제 표기.
+  // 사용자 명시 2026-05-06: '첫 달 무료' 실제 구현 = 카드 등록 → 30일 trial → 30일 후 자동 결제.
+  // 버튼 = proceedEarlyBirdTrial (요청 빌링키 등록 흐름) — 즉시 결제 흐름과 분리.
   const earlyLifetimeCard = `
     <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(135,206,235,0.18), rgba(74,144,226,0.10)); border:1.5px solid #5fb4d3; border-radius:14px; margin-bottom:10px;">
-      <div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">출시 전 한정</div>
+      <div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">첫 달 무료 · 출시 전 한정</div>
       <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
         <div style="font-size:18px; font-weight:700; color:var(--text);">${earlyLifetimePlan.emoji} ${earlyLifetimePlan.label}</div>
-        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">${earlyLifetimePlan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/월</span></div>
+        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">
+          <span style="text-decoration:line-through; opacity:0.55; font-size:13px; font-weight:500; margin-right:6px;">${earlyLifetimePlan.krw.toLocaleString()}원</span>
+          0원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/첫 달</span>
+        </div>
       </div>
       <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${earlyLifetimePlan.tagline}</div>
       <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
         ${earlyLifetimePlan.description}
       </div>
-      <button class="btn-primary" onclick="proceedSubscribe('early_lifetime')" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 얼리버드 구독 (${earlyLifetimePlan.krw.toLocaleString()}원/월)</button>
+      <button class="btn-primary" onclick="proceedEarlyBirdTrial()" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 카드 등록하고 첫 달 무료로 시작</button>
     </div>
   `;
   const overlay = document.createElement('div');
@@ -263,6 +267,123 @@ async function proceedSubscribe(tierKey) {
       if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
     } else {
       alert('결제 검증 실패: ' + (result.error || '알 수 없음'));
+    }
+  } catch (e) {
+    alert('백엔드 통신 실패: ' + (e?.message || e));
+  }
+}
+
+// 사용자 명시 2026-05-06: 얼리버드 첫 달 무료 = 빌링키 등록 흐름 (즉시 결제 X).
+// 1) PortOne.requestIssueBillingKey 로 카드 등록 모달 (사용자 카드 정보, 결제 0원)
+// 2) 응답 billingKey 를 /api/billing/portone-register-trial 에 POST → 30일 trial 시작
+// 3) 30일 후 cron-charge-recurring 이 자동 결제 → 매월 자동 갱신
+async function proceedEarlyBirdTrial() {
+  const tier = TIER_PLANS_CLIENT.early_lifetime;
+  if (!session || !session.access_token) {
+    alert('로그인 필요 — 설정 → 로그아웃 후 재로그인.');
+    return;
+  }
+  if (typeof state !== 'undefined' && state && state.isGuest) {
+    alert('게스트 모드는 결제 X — 먼저 로그인.');
+    return;
+  }
+  const channelKey = (typeof PORTONE_CHANNEL_KEY !== 'undefined') ? PORTONE_CHANNEL_KEY : '';
+  const storeId = (typeof PORTONE_STORE_ID !== 'undefined') ? PORTONE_STORE_ID : '';
+  if (!channelKey || !storeId) {
+    alert('결제 설정 오류 (PORTONE_CHANNEL_KEY / PORTONE_STORE_ID 미설정)');
+    return;
+  }
+
+  const info = await _collectPaymentInfoIfNeeded();
+  if (!info) return;
+  const { phoneNumber, fullName } = info;
+
+  // PortOne V2 SDK 동적 로드 (proceedSubscribe 와 동일).
+  if (typeof window.PortOne === 'undefined') {
+    try {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.portone.io/v2/browser-sdk.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    } catch (e) {
+      alert('PortOne SDK 로드 실패 — 네트워크 확인 후 다시');
+      return;
+    }
+  }
+  if (typeof window.PortOne === 'undefined' || typeof window.PortOne.requestIssueBillingKey !== 'function') {
+    alert('PortOne SDK 빌링키 기능 X — 출시 전 준비 중. 잠시 후 다시.');
+    return;
+  }
+
+  // billingKey issueId — 매번 unique. customer.customerId = user.id 로 매칭.
+  const issueId = `bkey-${authUserId || 'anon'}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  // 모바일 redirect 흐름 — 등록 후 같은 페이지로 복귀 (해시 #early-bird-trial-return 으로 후속 처리).
+  let response;
+  try {
+    response = await window.PortOne.requestIssueBillingKey({
+      storeId,
+      channelKey,
+      billingKeyMethod: 'CARD',
+      issueId,
+      issueName: '소라고동 얼리버드 정기 카드 등록',
+      windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
+      redirectUrl: window.location.origin + (window.location.pathname || '/') + '#early-bird-trial-return',
+      customer: {
+        customerId: authUserId || undefined,
+        email: session?.user?.email || undefined,
+        phoneNumber,
+        fullName
+      }
+    });
+  } catch (e) {
+    alert('카드 등록창을 열 수 없어. 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + (e?.message || e));
+    return;
+  }
+
+  if (response && response.code != null) {
+    const code = response.code || '';
+    const msg = response.message || '';
+    let userMsg;
+    if (code === 'USER_CANCEL' || /cancel|취소/i.test(msg)) {
+      userMsg = '카드 등록을 취소했어. 다시 시도하려면 다시 눌러줘.';
+    } else {
+      userMsg = '카드 등록 중 문제가 생겼어 — 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + msg + (code ? ' (' + code + ')' : '');
+    }
+    alert(userMsg);
+    return;
+  }
+
+  const billingKey = response && response.billingKey;
+  if (!billingKey) {
+    alert('빌링키를 못 받았어 — 잠시 후 다시 시도해줘.');
+    return;
+  }
+
+  // 백엔드 등록 — trial 시작.
+  try {
+    const verifyResp = await fetch('/api/billing/portone-register-trial', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({ billingKey })
+    });
+    const result = await verifyResp.json();
+    if (verifyResp.ok && result.ok) {
+      if (result.duplicate) {
+        showToast('💳 이미 얼리버드 구독 활성 — 카드 변경은 [설정] 에서');
+        alert(result.message || '이미 활성 얼리버드 구독이 있어.');
+      } else {
+        showToast(`✨ 얼리버드 첫 달 무료 시작 — 30일 후 ${tier.krw.toLocaleString()}원 자동 결제 🫂`);
+      }
+      closeSubscribeModal();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+    } else {
+      alert('빌링키 등록 실패: ' + (result.error || '알 수 없음'));
     }
   } catch (e) {
     alert('백엔드 통신 실패: ' + (e?.message || e));

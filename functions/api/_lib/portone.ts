@@ -92,6 +92,109 @@ export async function cancelPortOnePayment(
   }
 }
 
+// ─── 빌링키 (정기결제) — 얼리버드 첫 달 무료 + 자동 갱신용 ───
+// 사용자 명시 2026-05-06: 카드 등록만 (즉시 결제 X) → 30일 후 cron 이 이 키로 첫 결제.
+
+export interface PortOneBillingKey {
+  billingKey: string;
+  channels?: any[];
+  customer?: any;
+  status?: 'ISSUED' | 'DELETED';
+  issuedAt?: string;
+  deletedAt?: string;
+  methods?: any[];
+}
+
+// 빌링키 단건 조회 — frontend 가 issue 후 backend 에 billingKey 전달 → 진위 검증.
+export async function fetchPortOneBillingKey(env: Env, billingKey: string): Promise<{ ok: true; data: PortOneBillingKey } | { ok: false; error: string; status?: number }> {
+  if (!env.PORTONE_API_KEY_V2) return { ok: false, error: 'PORTONE_API_KEY_V2 미설정' };
+  try {
+    const resp = await fetch(`${PORTONE_API_BASE}/billing-keys/${encodeURIComponent(billingKey)}`, {
+      headers: {
+        'Authorization': `PortOne ${env.PORTONE_API_KEY_V2}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!resp.ok) {
+      const err = await resp.text().catch(() => '');
+      return { ok: false, error: `billing-key fetch ${resp.status}: ${err.slice(0, 200)}`, status: resp.status };
+    }
+    const data: any = await resp.json();
+    return { ok: true, data };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+}
+
+// 빌링키로 결제 — cron 이 trial_until 도래 시 호출. paymentId = 신규 unique.
+// orderName / customer / amount 모두 전달. PortOne V2 = POST /payments/{paymentId}/billing-key
+export async function chargeWithBillingKey(env: Env, paymentId: string, params: {
+  billingKey: string;
+  orderName: string;
+  amount: number;
+  currency?: string;
+  customer?: { id?: string; email?: string; phoneNumber?: string; name?: { full?: string } };
+  customData?: string;
+}): Promise<{ ok: true; payment: PortOnePayment } | { ok: false; error: string; code?: string; status?: number }> {
+  if (!env.PORTONE_API_KEY_V2) return { ok: false, error: 'PORTONE_API_KEY_V2 미설정' };
+  try {
+    const body: any = {
+      billingKey: params.billingKey,
+      orderName: params.orderName,
+      amount: { total: params.amount },
+      currency: params.currency || 'KRW'
+    };
+    if (params.customer) body.customer = params.customer;
+    if (params.customData) body.customData = params.customData;
+    const resp = await fetch(`${PORTONE_API_BASE}/payments/${encodeURIComponent(paymentId)}/billing-key`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `PortOne ${env.PORTONE_API_KEY_V2}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      const errTxt = await resp.text().catch(() => '');
+      let parsed: any = {};
+      try { parsed = JSON.parse(errTxt); } catch {}
+      return {
+        ok: false,
+        error: parsed?.message || errTxt.slice(0, 300),
+        code: parsed?.type || `HTTP_${resp.status}`,
+        status: resp.status
+      };
+    }
+    const data: any = await resp.json();
+    // 응답에 payment 객체 포함 (PortOne V2 spec).
+    const payment: PortOnePayment = data?.payment || data;
+    return { ok: true, payment };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+}
+
+// 빌링키 삭제 — 사용자가 '구독 즉시 해지 / 카드 등록 취소' 시.
+export async function deletePortOneBillingKey(env: Env, billingKey: string, reason: string): Promise<{ ok: boolean; error?: string }> {
+  if (!env.PORTONE_API_KEY_V2) return { ok: false, error: 'PORTONE_API_KEY_V2 미설정' };
+  try {
+    const resp = await fetch(`${PORTONE_API_BASE}/billing-keys/${encodeURIComponent(billingKey)}?reason=${encodeURIComponent(reason)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `PortOne ${env.PORTONE_API_KEY_V2}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!resp.ok) {
+      const err = await resp.text().catch(() => '');
+      return { ok: false, error: `billing-key delete ${resp.status}: ${err.slice(0, 200)}` };
+    }
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+}
+
 // 사용자 명시 2026-05-06: PortOne V2 webhook (svix 호환) 서명 검증.
 // header webhook-id + webhook-timestamp + webhook-signature 셋 다 필요.
 // signature 형식: "v1,<base64>" — secret 으로 HMAC-SHA256(`${id}.${timestamp}.${body}`) base64 와 일치 확인.

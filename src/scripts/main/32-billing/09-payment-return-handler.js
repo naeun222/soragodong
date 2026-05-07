@@ -9,6 +9,15 @@
 async function _handlePaymentReturn() {
   let params;
   try { params = new URLSearchParams(window.location.search); } catch { return; }
+
+  // 사용자 명시 2026-05-06: 빌링키 발급 redirect 복귀 — 얼리버드 첫 달 무료 카드 등록.
+  // PortOne V2 = redirect 후 query 에 billingKey (또는 code/message) 채워짐. issueId prefix 'bkey-' 로 감지.
+  const billingKey = params.get('billingKey');
+  const issueId = params.get('issueId') || '';
+  if (billingKey || issueId.startsWith('bkey-')) {
+    return _handleBillingKeyReturn(params);
+  }
+
   const paymentId = params.get('paymentId');
   if (!paymentId) return;
 
@@ -126,5 +135,80 @@ async function _handlePaymentReturn() {
     }
   } catch (e) {
     setTimeout(() => alert('결제 검증 중 오류: ' + (e?.message || e) + '\n\npaymentId: ' + paymentId), 300);
+  }
+}
+
+// 사용자 명시 2026-05-06: 얼리버드 빌링키 발급 redirect 복귀 처리.
+// 모바일 흐름: requestIssueBillingKey({ windowType.mobile: 'REDIRECTION' }) → PortOne 결제창 →
+// redirect_url 에 ?billingKey=... (성공) 또는 ?code=...&message=... (실패).
+async function _handleBillingKeyReturn(params) {
+  const billingKey = params.get('billingKey') || '';
+  const code = params.get('code') || '';
+  const message = params.get('message') || '';
+
+  // URL 정리.
+  try {
+    ['billingKey', 'issueId', 'code', 'message', 'transactionType', 'pgCode', 'pgMessage'].forEach(k => params.delete(k));
+    const remaining = params.toString();
+    const cleanUrl = window.location.origin + window.location.pathname + (remaining ? '?' + remaining : '');
+    history.replaceState({}, '', cleanUrl);
+  } catch {}
+
+  if (code) {
+    let userMsg;
+    if (code === 'USER_CANCEL' || /cancel|취소/i.test(message)) {
+      userMsg = '카드 등록을 취소했어. 다시 시도하려면 다시 눌러줘.';
+    } else {
+      userMsg = '카드 등록 중 문제가 생겼어 — 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + message + (code ? ' (' + code + ')' : '');
+    }
+    setTimeout(() => alert(userMsg), 300);
+    return;
+  }
+  if (!billingKey) {
+    setTimeout(() => alert('빌링키 응답을 못 받았어 — 다시 시도해줘.'), 300);
+    return;
+  }
+
+  // 세션 도착 대기 (max 5s).
+  let waited = 0;
+  while (!session?.access_token && waited < 5000) {
+    await new Promise(r => setTimeout(r, 200));
+    waited += 200;
+  }
+  if (!session?.access_token) {
+    setTimeout(() => alert('카드 등록 결과 — 로그인 후 새로고침으로 확인 가능해.'), 300);
+    return;
+  }
+  if (session?.user?.is_anonymous) {
+    setTimeout(() => alert('익명 게스트 상태 — 빌링키 등록 X. 정식 계정으로 로그인 후 다시.'), 300);
+    return;
+  }
+
+  try {
+    if (typeof showToast === 'function') showToast('카드 등록 확인 중…');
+    const resp = await fetch('/api/billing/portone-register-trial', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({ billingKey })
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok && data.ok) {
+      const tier = (typeof TIER_PLANS_CLIENT !== 'undefined' && TIER_PLANS_CLIENT.early_lifetime) || { krw: 4900 };
+      if (data.duplicate) {
+        setTimeout(() => alert(data.message || '이미 활성 얼리버드 구독이 있어.'), 300);
+      } else if (typeof showToast === 'function') {
+        showToast(`✨ 얼리버드 첫 달 무료 시작 — 30일 후 ${tier.krw.toLocaleString()}원 자동 결제`);
+      }
+      if (typeof refreshBillingStatus === 'function') {
+        try { await refreshBillingStatus(true); } catch {}
+      }
+    } else {
+      setTimeout(() => alert('빌링키 등록 실패: ' + (data?.error || '알 수 없음')), 300);
+    }
+  } catch (e) {
+    setTimeout(() => alert('빌링키 등록 중 오류: ' + (e?.message || e)), 300);
   }
 }

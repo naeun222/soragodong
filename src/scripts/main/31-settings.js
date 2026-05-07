@@ -196,7 +196,18 @@ async function _doRefreshBillingStatus(manual) {
       const isNearCap = usedPct >= 80;
       // 사용자 명시 2026-05-06: backend `cancel_at_period_end` true 면 갱신 해지 됨 — '{date}에 종료' 라벨로 대체.
       const cancelledRenewal = !!billing.cancel_at_period_end;
-      const expiresLabel = cancelledRenewal ? `${subExpires}에 종료` : `${subExpires}까지`;
+      // 사용자 명시 2026-05-06: 얼리버드 trial 중 (trial_until > now AND plan='early_lifetime') = '첫 달 무료 — N일 남음 / N일 후 자동 결제'.
+      const trialUntil = billing.trial_until ? new Date(billing.trial_until) : null;
+      const inTrial = (planKey === 'early_lifetime' && trialUntil && trialUntil > new Date());
+      let expiresLabel;
+      if (inTrial) {
+        const remDays = Math.max(0, Math.ceil((trialUntil.getTime() - Date.now()) / 86400000));
+        expiresLabel = cancelledRenewal
+          ? `첫 달 무료 — ${remDays}일 후 종료 (자동 결제 X)`
+          : `첫 달 무료 — ${remDays}일 후 ${planMeta.krw.toLocaleString()}원 자동 결제`;
+      } else {
+        expiresLabel = cancelledRenewal ? `${subExpires}에 종료` : `${subExpires}까지`;
+      }
       html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${expiresLabel}</span></div>`;
       // early_light: 토큰 양 안 보이게 (체험 플랜은 수치 노출 X)
       if (planKey !== 'early_light') {

@@ -320,6 +320,9 @@
   }
 
   /* === Phone mockup (hero & cores) === */
+  /* 사용자 보고 2026-05-06: opacity:0 + fadeUp animation 패턴 — 일부 inApp 브라우저 (인스티즈 등)
+     에서 애니메이션 미실행 시 사진이 끝까지 invisible. startlite 의 .proof-screen 처럼 기본 opacity:1
+     로 변경. 등장 애니메이션은 .reveal 클래스 (section 단위) 가 IntersectionObserver 로 처리해 줌. */
   .phone-mockup {
     margin: 0 auto;
     max-width: 280px;
@@ -330,8 +333,6 @@
       0 30px 60px -20px rgba(0,0,0,0.6),
       0 0 0 6px rgba(20,18,30,0.6);
     background: var(--bg);
-    opacity: 0;
-    animation: fadeUp 0.8s ease 0.85s forwards;
   }
   .phone-mockup img {
     width: 100%;
