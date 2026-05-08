@@ -242,7 +242,7 @@ async function _handleChatRequest(context: {
   // 사용자 명시 2026-04-30: admin 특혜 제거. admin 도 일반 사용자처럼 budget check + 차감.
   // Phase 0: 게스트는 'guest' tier ($0.20 cap) 로 자동 생성. checkBudget 진입 전에 명시적 ensure (isAnonymous flag 전달용).
   // 한도 도달 시 NO_CREDIT → frontend 가 isGuest 분기로 가입 유도 모달.
-  await ensureBillingRow(env, user.id, { isAnonymous: isGuest });
+  await ensureBillingRow(env, user.id, { isAnonymous: isGuest, userEmail: user.email || null });
   // Phase 1c: 게스트 → 가입자 승격 자동 detect — is_anonymous=false 인데 plan='guest' 면 'early_light' 로 promote.
   if (!isGuest) {
     const _curBilling = await getUserBilling(env, user.id);

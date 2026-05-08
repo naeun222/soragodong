@@ -33,6 +33,23 @@ interface BillingRow {
   failure_count?: number;
 }
 
+// 사용자 보고 2026-05-09: migration 0016 적용 후 billing.user_email 우선.
+// fallback = auth.users.email (옛 row / sync 미스 보호).
+async function _fetchUserEmail(env: Env, userId: string): Promise<string | null> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const resp = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
+      }
+    });
+    if (!resp.ok) return null;
+    const data: any = await resp.json().catch(() => null);
+    return data?.email || null;
+  } catch { return null; }
+}
+
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
   // 인증 — CRON_SECRET 헤더.
@@ -54,8 +71,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   // due rows 조회.
   let dueRows: BillingRow[] = [];
   try {
+    // 사용자 보고 2026-05-09: migration 0016 적용 후 user_email 같이 select.
     const url = `${env.SUPABASE_URL}/rest/v1/soragodong_billing?` +
-      `select=user_id,subscription_plan,subscription_expires_at,portone_billing_key,trial_until,next_billing_at,last_billing_attempt_at,last_billing_error&` +
+      `select=user_id,user_email,subscription_plan,subscription_expires_at,portone_billing_key,trial_until,next_billing_at,last_billing_attempt_at,last_billing_error&` +
       `next_billing_at=lte.${encodeURIComponent(nowIso)}&` +
       `subscription_active=eq.true&` +
       `cancel_at_period_end=eq.false&` +
@@ -92,12 +110,14 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     // PortOne 측 paymentId unique 멱등 보호 작동 위해 같은 cycle 안 같은 ID 보장.
     const _cycleDay = (row.next_billing_at ? new Date(row.next_billing_at) : new Date()).toISOString().slice(0, 10);
     const paymentId = `recurring-${row.user_id}-${_cycleDay}`;
+    // 사용자 보고 2026-05-09: billing.user_email 우선 / 없으면 auth.users.email fallback (PortOne customer.email + payments INSERT).
+    const userEmail = row.user_email || await _fetchUserEmail(env, row.user_id) || undefined;
     const result = await chargeWithBillingKey(env, paymentId, {
       billingKey: row.portone_billing_key,
       orderName: `소라고동 얼리버드 정기 (${tier.krw.toLocaleString()}원/월)`,
       amount: tier.krw,
       currency: 'KRW',
-      customer: { id: row.user_id, email: row.user_email || undefined },
+      customer: { id: row.user_id, email: userEmail },
       customData: JSON.stringify({ tier: 'early_lifetime', type: 'subscribe_recurring' })
     });
 
@@ -134,6 +154,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
           },
           body: JSON.stringify({
             user_id: row.user_id,
+            user_email: userEmail || null,
             payment_type: 'subscribe_recurring',
             amount_krw: tier.krw,
             portone_imp_uid: result.payment.txId || paymentId,

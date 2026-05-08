@@ -63,6 +63,8 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 
 **🔴 0015 (2026-05-09 ultrathink 사용자 명시 + audit FAIL #8)**: `0015_cash_receipt.sql` — payments 에 `receipt_url` / `cash_receipt_status` / `cash_receipt_type` 컬럼 추가. **부가가치세법 §32-2 자진발급 의무 + 수정 영수증 자동 발급** (한국 사업자 의무).
 
+**🔴 0016 (2026-05-09 사용자 보고)**: `0016_billing_user_email.sql` — `soragodong_billing` 에 `user_email` 컬럼 추가 + auth.users.email 백필. **cron-renewal-notice / cron-charge-recurring 이 의존**. 미적용 시 cron 측 fallback (auth.users lookup) 으로 작동하지만 매 row 마다 추가 fetch라 성능 ↓.
+
 ### 2-bis. 신규 cron job 등록 (5분)
 
 **위치**: cron-job.org 또는 GitHub Actions schedule.

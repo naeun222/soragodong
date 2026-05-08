@@ -29,14 +29,15 @@ const NOTICE_LEAD_DAYS = 7;
 
 interface BillingRow {
   user_id: string;
+  user_email?: string | null;
   subscription_plan: string;
   subscription_expires_at: string | null;
   next_billing_at: string | null;
   portone_billing_key: string | null;
 }
 
-// 사용자 보고 2026-05-09: soragodong_billing.user_email 컬럼 없음 (auth.users.email 만 존재).
-// → Supabase Auth Admin API 로 별도 lookup. 각 row 처리 시 호출.
+// 사용자 보고 2026-05-09: schema 통일 — migration 0016 으로 billing.user_email 추가됨.
+// 우선: billing.user_email (단일 round trip) / fallback: auth.users.email (옛 row 또는 sync 미스).
 async function _fetchUserEmail(env: Env, userId: string): Promise<string | null> {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
   try {
@@ -87,9 +88,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   // due rows 조회 — 7일 안 갱신 + 미발송.
   let dueRows: BillingRow[] = [];
   try {
-    // 사용자 보고 2026-05-09: user_email 컬럼은 soragodong_billing 에 없음 → auth.users.email 별도 lookup.
+    // 사용자 보고 2026-05-09: migration 0016 적용 후 user_email 같이 select.
     const url = `${env.SUPABASE_URL}/rest/v1/soragodong_billing?` +
-      `select=user_id,subscription_plan,subscription_expires_at,next_billing_at,portone_billing_key&` +
+      `select=user_id,user_email,subscription_plan,subscription_expires_at,next_billing_at,portone_billing_key&` +
       `next_billing_at=gte.${encodeURIComponent(nowIso)}&` +
       `next_billing_at=lte.${encodeURIComponent(sevenDaysLater)}&` +
       `renewal_notice_7d_at=is.null&` +
@@ -129,10 +130,10 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   const errors: Array<{ user_id: string; error: string }> = [];
 
   for (const row of dueRows) {
-    // 사용자 보고 2026-05-09: auth.users 에서 email 별도 lookup.
-    const userEmail = await _fetchUserEmail(env, row.user_id);
+    // 사용자 보고 2026-05-09: billing.user_email 우선 / 없으면 auth.users.email fallback.
+    const userEmail = row.user_email || await _fetchUserEmail(env, row.user_id);
     if (!userEmail) {
-      errors.push({ user_id: row.user_id, error: 'user_email lookup 실패 (auth.users) — 발송 skip' });
+      errors.push({ user_id: row.user_id, error: 'user_email lookup 실패 (billing + auth.users) — 발송 skip' });
       continue;
     }
 

@@ -83,7 +83,7 @@ export async function getUserBilling(env: Env, userId: string): Promise<UserBill
   }
 }
 
-export async function ensureBillingRow(env: Env, userId: string, opts?: { isAnonymous?: boolean }): Promise<UserBilling | null> {
+export async function ensureBillingRow(env: Env, userId: string, opts?: { isAnonymous?: boolean; userEmail?: string | null }): Promise<UserBilling | null> {
   const existing = await getUserBilling(env, userId);
   if (existing) return existing;
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
@@ -99,8 +99,11 @@ export async function ensureBillingRow(env: Env, userId: string, opts?: { isAnon
   const expiresAt = isGuest
     ? new Date(now.getTime() + 365 * 86400_000).toISOString()
     : new Date(now.getTime() + FREE_TRIAL_DAYS * 86400_000).toISOString();
-  const newRow: Partial<UserBilling> = {
+  const newRow: Partial<UserBilling> & { user_email?: string | null } = {
     user_id: userId,
+    // 사용자 보고 2026-05-09 ultrathink: schema 통일 (migration 0016) — user_email 같이 채움.
+    // null OK (caller 가 전달 X 시) — cron 측 auth.users lookup fallback 활용.
+    user_email: opts?.userEmail || null,
     credit_balance_usd: 0,
     subscription_active: true,
     subscription_expires_at: expiresAt,

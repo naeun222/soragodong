@@ -136,7 +136,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
           subscription_plan: plan,
           monthly_quota_usd: tier.cap_usd,
           monthly_token_used: 0,
-          monthly_period_started_at: periodStartedAt
+          monthly_period_started_at: periodStartedAt,
+          // 사용자 보고 2026-05-09 ultrathink: schema 통일 (migration 0016) — billing.user_email sync.
+          user_email: user.email || null
         })
       }
     );

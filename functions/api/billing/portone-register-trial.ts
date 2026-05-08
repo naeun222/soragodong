@@ -89,6 +89,8 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
       },
       body: JSON.stringify({
         user_id: user.id,
+        // 사용자 보고 2026-05-09 ultrathink: schema 통일 (migration 0016) — billing.user_email sync.
+        user_email: user.email || null,
         subscription_active: true,
         subscription_plan: 'early_lifetime',
         subscription_expires_at: trialUntilISO,
