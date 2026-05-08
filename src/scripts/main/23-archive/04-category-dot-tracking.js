@@ -65,3 +65,48 @@ function updateLibraryCatNewDots() {
     chip.classList.toggle('has-new', has);
   });
 }
+
+// V4 (사용자 명시 2026-05-08 ultrathink): batch 결과 도착 시 영향 탭 (홈 / 나) 깜빡이는 dot.
+//   chapter case_analysis → 나 탭 (traits/values/patterns/caseFormulation 갱신).
+//   review 4종 (weekly/monthly/quarterly/annual) → 홈 탭 (review prompt 카드).
+//   chapter topic / diary summary → 도서관 탭 (옛 _libCategoryNewSince 패턴 자동 처리).
+//   사용자가 그 탭 진입 시 dot 자동 클리어 (showScreen hook).
+function _markNavBatchUpdated(tabs) {
+  if (!Array.isArray(tabs) || tabs.length === 0) return;
+  state.preferences = state.preferences || {};
+  state.preferences._navBatchUpdated = state.preferences._navBatchUpdated || {};
+  const now = new Date().toISOString();
+  let changed = false;
+  tabs.forEach(t => {
+    if (!state.preferences._navBatchUpdated[t]) {
+      state.preferences._navBatchUpdated[t] = now;
+      changed = true;
+    }
+  });
+  if (changed) { try { saveState(); } catch {} }
+  updateNavBatchDots();
+}
+function _clearNavBatchUpdate(tab) {
+  const map = state.preferences && state.preferences._navBatchUpdated;
+  if (!map || !map[tab]) return;
+  delete map[tab];
+  try { saveState(); } catch {}
+  updateNavBatchDots();
+}
+function updateNavBatchDots() {
+  try {
+    // 사용자 명시 2026-05-08 ultrathink: home = review fresh 동적 (user_viewed=true 시 자동 off).
+    //   model = flag 기반 (_processExtractChapterAnalysis 안에서 _markNavBatchUpdated(['model']) 호출 후 클리어).
+    const hasFreshReview =
+      (state.weeklyReviews    || []).some(r => r && r.auto && !r.user_viewed) ||
+      (state.monthlyReviews   || []).some(r => r && r.auto && !r.user_viewed) ||
+      (state.quarterlyReviews || []).some(r => r && r.auto && !r.user_viewed) ||
+      (state.annualReviews    || []).some(r => r && r.auto && !r.user_viewed);
+    const map = (state.preferences || {})._navBatchUpdated || {};
+    const hasModelUpdate = !!map.model;
+    const homeItem  = document.querySelector('.bottom-nav .nav-item[data-screen="home"]');
+    const modelItem = document.querySelector('.bottom-nav .nav-item[data-screen="model"]');
+    if (homeItem)  homeItem.classList.toggle('has-new', hasFreshReview);
+    if (modelItem) modelItem.classList.toggle('has-new', hasModelUpdate);
+  } catch (_) {}
+}

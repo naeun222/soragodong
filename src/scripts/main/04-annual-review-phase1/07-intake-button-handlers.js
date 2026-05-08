@@ -24,7 +24,7 @@ window._startIntakeFromTutorial = async function() {
   delete window._lastIntakeAnalysis;
   delete window._lastIntakeWorries;
 
-  if (analysis && (analysis.diagnosis || analysis.strategy)) {
+  if (analysis && analysis.text) {
     state.chatMessages = state.chatMessages || [];
     const nowIso = new Date().toISOString();
     if (worries.length > 0) {
@@ -34,22 +34,22 @@ window._startIntakeFromTutorial = async function() {
         timestamp: nowIso
       });
     }
-    // 사용자 보고 2026-05-06 ultrathink (재 X4): generic 카피 ('X 차원이 작동하는 모습') 제거 — AI 의 diagnosis 자체가 풍부함.
-    const para = (analysis.paraphrase || '').trim();
-    const diag = (analysis.diagnosis || '').trim();
-    const strat = (analysis.strategy || '').trim();
-    const prop = (analysis.proposal || '').trim();
-    const observation = para || '방금 들려준 마음, 정리해봤어.';
-    const concept = diag || '같이 들여다보자.';
-    const guide = strat || '천천히 같이 가보자.';
-    const proposalText = prop || '오늘 한 걸음';
-    const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}\n\n[오늘의 제안]\n${proposalText}`;
+    // 사용자 명시 2026-05-08: AI 가 직접 [상황]/[내가 본 것]/[이게 뭐냐면]/[이럴 땐 이렇게]/[오늘의 제안] raw text 로 응답.
+    //   askDeeper 와 100% 동일 흐름 — fromDeeper: true 로 markdown 렌더 + ⭐ 오늘의 제안 카드.
+    const fourStage = analysis.text;
+    // proposal title 추출 — [오늘의 제안] 섹션 첫 줄.
+    let proposalTitle = '오늘 한 걸음';
+    const propMatch = fourStage.match(/\[오늘의 제안\]\s*([\s\S]+?)(?=\n\s*\[|$)/);
+    if (propMatch) {
+      const firstLine = propMatch[1].trim().split(/\n/)[0].trim();
+      if (firstLine) proposalTitle = firstLine.slice(0, 40);
+    }
     state.chatMessages.push({
       role: 'assistant',
       content: fourStage,
       fromDeeper: true,
       proposal: true,
-      proposalData: { title: proposalText.slice(0, 40) },
+      proposalData: { title: proposalTitle },
       timestamp: nowIso
     });
     // V4 (사용자 명시 2026-05-04 ultrathink): 4단 분석 직후 안내 메시지 inject — '내가 지금은 4단 분석 채워놨다' 톤 (옛 카피 톤)

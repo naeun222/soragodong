@@ -76,14 +76,14 @@ JSON으로 출력:
 - ADHD·직업·가치관 맥락 고려.
 - 수면 시각 규칙성, 활력 변동, 2D affect 패턴, 미션 수락·완료 패턴도 해석.
 - 활성 모드(월경, 마감 등) 컨텍스트로 분석.
-- 각 카테고리 최대 5개씩 (5-10 X — 토큰 제한).
+- 각 카테고리 최대 6개씩 (5-10 X — 토큰 제한).
 - JSON만 출력.
 - 응답 잘리지 않게 짧고 구체적으로.
 
-[필터 — 자동 거름] (사용자 명시 2026-05-03)
-- trivial 일상 (음식·날씨·일정·단순 사건·짧은 잡담) 패턴화 X. 일회성 / 일반론 / 추측 X.
-- 강한 자기상 / 감정 / 관계 / 갈등 / 변곡점 신호만.
-- confidence < 0.6 항목 출력 X (강한 신호 아니면 등록 X).`;
+[필터 — 가벼운 거름] (사용자 명시 2026-05-08 ultrathink: 너무 빡빡 → 완화. "다음날 나에 대해 새로운 소식 보는 재미")
+- 한 마디 잡담 (인사 / "ㅋㅋ" / 의미 X 발화) 만 패턴화 X. 일상의 작은 관찰도 OK — 음식 취향·날씨 반응·작은 습관 신호 환영.
+- 자기상 / 감정 / 관계 / 갈등 / 변곡점 / 취향 / 일상 리듬 신호 다 OK.
+- confidence ≥ 0.4 면 등록 (옛 0.6 너무 짠 — 새 발견 빈도 ↑).`;
 
     const response = await callAnthropic({ _endpoint: 'analyze_4stage', model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] });
     if (!response.ok) {
@@ -167,8 +167,9 @@ JSON으로 출력:
       }
       // user_verified는 그대로 유지 (사용자가 검증한 건 안 건드림)
     };
-    // 사용자 명시 2026-05-03 ultrathink: trivial 노이즈 cut — 신규 등록은 confidence 0.6 이상만 (mergeModelItem 갱신은 그대로).
-    const NEW_THRESHOLD = 0.6;
+    // 사용자 명시 2026-05-08 ultrathink: 0.6 → 0.4 완화. 너무 빡빡해 새 발견 적었음.
+    //   "다음날 나에 대해 새로운 소식 보는 재미" 의도 — 약한 신호도 가설로 등록 후 evidence_count 로 강화.
+    const NEW_THRESHOLD = 0.4;
     if (analysis.traits) {
       analysis.traits.forEach(t => {
         const exist = state.traits.find(e => similarText(e.name, t.name));
@@ -243,21 +244,21 @@ function _lastDaily4amCutoff() {
   return cutoff;
 }
 
-// 사용자 명시 2026-05-02 ultrathink: 리뷰 batch schedule 헬퍼 — 직전 schedule 시점 (월요일 4AM / 매월 1일 4AM / 분기 첫 달 1일 4AM / 1월 1일 4AM).
+// 사용자 명시 2026-05-02 ultrathink: 리뷰 batch schedule 헬퍼 — 직전 schedule 시점.
 // `_shouldRunSchedule(state.lastWeeklyReviewBatchAt, _lastWeekly4amCutoff())` 패턴으로 batch submit 자격 체크.
 
-// 직전 월요일 4AM cutoff. (지난 주 = 그 직전 주 일요일 종료 시점 → 월요일 새벽 batch).
-// 지금이 월요일 4AM 이전이면 = 지지난 월요일 4AM (이번 월요일 batch 아직 안 했음).
-// 지금이 월요일 4AM 이후이면 = 이번 월요일 4AM (batch 자격).
+// 사용자 명시 2026-05-08 ultrathink (재): 직전 일요일 04:00 cutoff. (한국식 "일요일 새벽 4시" — 일요일 시작 후 4시간).
+// 지금이 일요일 4AM 이전이면 = 지지난 일요일 4AM (이번 일요일 batch 아직 안 했음).
+// 지금이 일요일 4AM 이후이면 = 이번 일요일 4AM (batch 자격).
 function _lastWeekly4amCutoff() {
   const now = new Date();
   const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 4, 0, 0, 0);
-  // dayOfWeek: 0=일 1=월 ... 6=토. 월요일 = 1.
+  // dayOfWeek: 0=일 1=월 ... 6=토. 일요일 = 0.
   const dow = cutoff.getDay();
-  // 가장 가까운 과거 월요일까지 거슬러 (오늘이 월요일 4AM 이후면 0일, 화요일이면 1일, ..., 일요일이면 6일)
-  const daysBack = (dow === 1) ? (cutoff <= now ? 0 : 7) : ((dow + 6) % 7);
+  // 가장 가까운 과거 일요일까지 거슬러 (오늘이 일요일 4AM 이후면 0일, 월요일이면 1일, ..., 토요일이면 6일)
+  const daysBack = (dow === 0) ? (cutoff <= now ? 0 : 7) : dow;
   cutoff.setDate(cutoff.getDate() - daysBack);
-  // 만약 cutoff 가 미래면 (월요일 4AM 이전) 1주 더 거슬러
+  // 만약 cutoff 가 미래면 (일요일 4AM 이전) 1주 더 거슬러
   if (cutoff > now) cutoff.setDate(cutoff.getDate() - 7);
   return cutoff;
 }
@@ -525,19 +526,25 @@ function _buildDiaryBatchRequests() {
 
 // Batch submit — pending archive 들 → multi-request batch 으로 제출.
 // 사용자 명시 2026-05-02 ultrathink: chapter + topic + review (4 type) 같은 batch 안 통합 — batch_id 한 개.
+// 사용자 명시 2026-05-08 ultrathink: chapter case_analysis = inline 즉시 (UX — 나 탭 dot 1-2분 안에).
+//   topic / review / diary 는 batch 유지 (50% 할인 + polling 가속 5/15/30분).
+//   추가 비용 ~$0.05~0.1/주/사용자. 자연 종료 챕터만 영향 (사용자 ✓ 챕터는 이미 inline 처리됨).
 async function _submitDailyExtractBatch(pending) {
+  // chapter case_analysis 만 inline fire-and-forget — 사용자 wait X.
+  pending
+    .filter(b => b && b.messages && b.messages.length >= 6)
+    .forEach(b => {
+      extractChapterCaseAnalysis(b.messages)
+        .then(() => {
+          delete b._pendingCaseAnalysis;
+          try { saveState(); } catch {}
+        })
+        .catch(e => console.warn('[chapter case inline]', b.id, e));
+    });
+
   const requests = [];
   for (const batch of pending) {
-    if (batch.messages.length >= 6) {
-      requests.push({
-        custom_id: `case_${batch.id}`,
-        params: {
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1500,
-          messages: [{ role: 'user', content: _buildExtractChapterPrompt(batch.messages) }]
-        }
-      });
-    }
+    // case_analysis = inline 분리 (위). topic 만 batch.
     requests.push({
       custom_id: `topic_${batch.id}`,
       params: {
@@ -562,7 +569,7 @@ async function _submitDailyExtractBatch(pending) {
     return;
   }
 
-  console.log(`[daily extract] ${pending.length} 챕터 + ${reviewBatch.pendingTypes.length} 리뷰 + ${diaryBatch.pendingDates.length} 일기 → ${requests.length} batch requests submit`);
+  console.log(`[daily extract] ${pending.length} 챕터 (case inline) + ${reviewBatch.pendingTypes.length} 리뷰 + ${diaryBatch.pendingDates.length} 일기 → ${requests.length} batch requests submit`);
 
   try {
     const resp = await _authedFetch('/api/chat-batch', {
@@ -584,12 +591,28 @@ async function _submitDailyExtractBatch(pending) {
     };
     pending.forEach(b => { b._batchSubmittedAt = Date.now(); });
     state.lastDailyChapterExtractAt = new Date().toISOString();
-    // schedule cooldown — 동일 cutoff 내 재submit 차단.
-    const nowIso = new Date().toISOString();
-    if (reviewBatch.pendingTypes.includes('weekly'))    state.lastWeeklyReviewBatchAt    = nowIso;
-    if (reviewBatch.pendingTypes.includes('monthly'))   state.lastMonthlyReviewBatchAt   = nowIso;
-    if (reviewBatch.pendingTypes.includes('quarterly')) state.lastQuarterlyReviewBatchAt = nowIso;
-    if (reviewBatch.pendingTypes.includes('annual'))    state.lastAnnualReviewBatchAt    = nowIso;
+    // 사용자 보고 2026-05-08 ultrathink: schedule cooldown stamp = 다음 cycle 시작 - 1ms.
+    //   옛: stamp = now → 사용자가 cycle 가로질러 (예: 1주+ 갭 후 일요일 진입 → 월요일 진입) 시 두 번 trigger.
+    //   fix: 현재 cycle 끝 시점 stamp → 같은 cycle 안 재 trigger 차단 + 다음 cycle 시작 시 정상 trigger.
+    if (reviewBatch.pendingTypes.includes('weekly')) {
+      const _nextWeek = new Date(_lastWeekly4amCutoff().getTime() + 7 * 86400000 - 1);
+      state.lastWeeklyReviewBatchAt = _nextWeek.toISOString();
+    }
+    if (reviewBatch.pendingTypes.includes('monthly')) {
+      const _curMon = _lastMonthly4amCutoff();
+      const _nextMon = new Date(_curMon.getFullYear(), _curMon.getMonth() + 1, 1, 4, 0, 0, -1);
+      state.lastMonthlyReviewBatchAt = _nextMon.toISOString();
+    }
+    if (reviewBatch.pendingTypes.includes('quarterly')) {
+      const _curQ = _lastQuarterly4amCutoff();
+      const _nextQ = new Date(_curQ.getFullYear(), _curQ.getMonth() + 3, 1, 4, 0, 0, -1);
+      state.lastQuarterlyReviewBatchAt = _nextQ.toISOString();
+    }
+    if (reviewBatch.pendingTypes.includes('annual')) {
+      const _curA = _lastAnnual4amCutoff();
+      const _nextA = new Date(_curA.getFullYear() + 1, 0, 1, 4, 0, 0, -1);
+      state.lastAnnualReviewBatchAt = _nextA.toISOString();
+    }
     saveState();
     console.log(`[daily extract] batch submitted: ${data.id} — review_pending: ${reviewBatch.pendingTypes.join(',') || '(none)'}`);
     if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
@@ -710,10 +733,15 @@ async function _resumePendingBatch() {
             const narrative = _robustJsonExtract(text);
             if (narrative) {
               const year = parseInt(reviewKey, 10);
-              const data = _collectAnnualData(year);
-              const annualReview = _processAnnualReviewResult(narrative, year, data, false);
-              // batch path = auto: true (사용자가 click 안 함 — fresh 처리)
-              if (annualReview) annualReview.auto = true;
+              // 사용자 명시 2026-05-08 ultrathink: idempotent — 같은 year 이미 있으면 skip (user_viewed 보존).
+              //   _processAnnualReviewResult 는 filter+unshift 패턴이라 user_viewed 잃을 수 있음. batch 경로에서 별도 가드.
+              const existsAnnual = (state.annualReviews || []).find(r => r.year === year);
+              if (!existsAnnual) {
+                const data = _collectAnnualData(year);
+                const annualReview = _processAnnualReviewResult(narrative, year, data, false);
+                // batch path = auto: true (사용자가 click 안 함 — fresh 처리)
+                if (annualReview) annualReview.auto = true;
+              }
             }
           }
         } catch (e) { console.warn('[batch review] fail:', customId, e); }
@@ -898,6 +926,23 @@ async function maybeRunDailyChapterExtract() {
       const submittedMs = state.pendingBatch.submitted_at || 0;
       if (Date.now() - submittedMs > 12 * 3600 * 1000) {
         await _timeoutPendingBatch();
+      } else {
+        // 사용자 명시 2026-05-08 ultrathink (재): polling 가속 — 5분/15분/30분 retry.
+        //   Anthropic Batch API typical latency = 5분~1시간. 2/4/6분 polling 은 너무 짧음 (대부분 fail).
+        //   5/15/30분 = 평균 도착 시점 cover. 30분 후 미도착 = 사용자 다음 진입 시 처리.
+        //   한 batch_id 당 1번만 schedule (window flag 가드). _resumePendingBatch 가 모든 type
+        //   (chapter case+topic, weekly/monthly/quarterly/annual review, diary) 통합 처리.
+        const _bid = state.pendingBatch.batch_id;
+        if (window._pendingBatchPollingFor !== _bid) {
+          window._pendingBatchPollingFor = _bid;
+          [300000, 900000, 1800000].forEach(ms => {  // 5min / 15min / 30min
+            setTimeout(() => {
+              if (state.pendingBatch && state.pendingBatch.batch_id === _bid) {
+                _resumePendingBatch().catch(e => console.warn('[batch polling retry]', e));
+              }
+            }, ms);
+          });
+        }
       }
       // batch 처리 중이면 새 batch 안 넣음 (중복 방지)
       return;
@@ -907,19 +952,11 @@ async function maybeRunDailyChapterExtract() {
   // 2. 4AM cutoff schedule check
   if (!_shouldRunSchedule(state.lastDailyChapterExtractAt, _lastDaily4amCutoff())) return;
 
-  // V4 (사용자 명시 2026-05-04 — v7 §11 / v8 §11): 돌연변이 깨달음 자동 추출
-  // 4AM cutoff 시점 _mutationChatState 활성 + messages>=5 면 LLM 추출 → state.archive type='mutation' + closeMutationChat (cleanup) + marker stash
+  // V4 (사용자 명시 2026-05-08): 4AM cutoff 자동 추출 폐기 — 사용자가 ✓ 깨달음 버튼 누른 것만 추출.
+  // mutation chat 활성 상태로 잠들었으면 단순 close (skipSave=true). archive 추가 X.
   if (typeof _mutationChatState !== 'undefined' && _mutationChatState
-      && Array.isArray(_mutationChatState.messages) && _mutationChatState.messages.length >= 5) {
-    try {
-      await _extractMutationInsight({ trigger: 'cutoff_auto', mutationChatState: _mutationChatState });
-      state._mutationCutoffExtractedAt = new Date().toISOString();
-      saveState();
-    } catch (e) { console.warn('[mutation cutoff extract]:', e); }
-    // mutation chat 자동 종료 (cleanup) — 사용자가 다음 진입 시 토스트 안내 (init 시점 hook 자리)
-    if (typeof closeMutationChat === 'function') {
-      try { closeMutationChat(true); } catch {}
-    }
+      && typeof closeMutationChat === 'function') {
+    try { closeMutationChat(true); } catch {}
   }
 
   // 4AM 시점 mood 패턴 위기 detect (자살예방법 §15-6)
@@ -966,7 +1003,10 @@ async function maybeRunDailyChapterExtract() {
 
 
 // ═══════════════════════════════════════════════════════════════
-// V4 (사용자 명시 2026-05-06): 미구독/게스트 = 3턴마다 자동 모델 갱신 (forceAnalyze auto).
+// V4 (사용자 명시 2026-05-06): 미구독/게스트 = 3턴마다 자동 모델 갱신.
+// V4 (사용자 명시 2026-05-08 ultrathink — 재): forceAnalyze (전체 데이터) → extractChapterCaseAnalysis (chatMessages 만, Opus 4.7) 으로 변경.
+//   게스트 entries 거의 0 이라 forceAnalyze 의 entries/archive 분석 의미 X. chatMessages 분석이 합리.
+//   모델은 Opus — 게스트/미구독자에게 가장 풍부한 분석 제공 (옛 forceAnalyze 도 Opus 였음).
 // trigger: generateAIResponse 끝 hook.
 // 가드:
 //   - 미구독 (게스트 or 인증 X subscription_active) 만
@@ -997,8 +1037,11 @@ async function _maybeAutoForceAnalyzeFreeTier() {
   }
   state.preferences._autoForceAnalyzeLastAt = new Date().toISOString();
   try { saveState(); } catch {}
-  // forceAnalyze auto — confirm modal X / silent toast / 같은 함수 흐름.
-  if (typeof forceAnalyze === 'function') {
-    try { await forceAnalyze({ auto: true }); } catch (e) { console.warn('[auto force analyze]', e); }
+  // 사용자 명시 2026-05-08 ultrathink: extractChapterCaseAnalysis (Opus 4.7) 호출. 옛 forceAnalyze 폐기.
+  if (typeof extractChapterCaseAnalysis === 'function') {
+    try {
+      const _msgs = (state.chatMessages || []).slice();
+      await extractChapterCaseAnalysis(_msgs, { model: 'claude-opus-4-7' });
+    } catch (e) { console.warn('[auto chapter case opus]', e); }
   }
 }

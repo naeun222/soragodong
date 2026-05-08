@@ -799,7 +799,8 @@
   /* 사용자 보고 2026-04-28: env() 부작용으로 nav 위치 변경 — 원래 76px 복원 */
   /* 사용자 보고 2026-05-02: 입력 시 버벅거림 — 1.6MB DOM 에서 textarea reflow 가 전체 페이지로 propagate. contain: layout style 로 격리 → frame 당 layout cost ↓. */
   /* 사용자 보고 2026-05-03: 옛 76px 로는 nav 살짝 가림 — bottom-nav 실측 = padding 10/26 + nav-item min-height 56 = 92px. 96px = 4px buffer. */
-  .chat-input-bar { position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; contain: layout style; }
+  /* 사용자 보고 2026-05-08: nav padding-bottom 26→15 변경 (5/6) 후 nav 실측 = 10+15+56 = 81px. 입력창이 15px 떠 있던 거 — bottom 81px 로 딱 맞춤. */
+  .chat-input-bar { position: fixed; bottom: 81px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; contain: layout style; }
   .chat-input-wrap { position: relative; display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 10px; contain: layout style; }
   /* iOS auto-zoom 방지 — input font 16px 이상 */
   /* V4 (사용자 명시 2026-05-04 ultrathink V181): 모바일 입력창 렉 근본 해결 — contain (height 변경 외부 layout 전파 차단) + field-sizing (지원 브라우저 native auto-size, JS reflow 0) */
@@ -5229,7 +5230,8 @@
     border-radius: 50%;
     box-shadow: 0 0 4px var(--accent2);
   }
-  /* V4 (사용자 명시): 하단 탭바 새 항목 ● 점 — 도서관 탭 (확장 가능) */
+  /* V4 (사용자 명시): 하단 탭바 새 항목 ● 점 — 도서관 탭 (확장 가능). */
+  /* V4 (사용자 명시 2026-05-08 ultrathink): 깜빡임 (pulse) — batch 결과 도착 신호. */
   .bottom-nav .nav-item .nav-icon { position: relative; display: inline-block; }
   .bottom-nav .nav-item.has-new .nav-icon::after {
     content: '';
@@ -5240,6 +5242,11 @@
     border-radius: 50%;
     box-shadow: 0 0 4px var(--accent2);
     pointer-events: none;
+    animation: navDotPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes navDotPulse {
+    0%, 100% { opacity: 0.45; transform: scale(0.85); box-shadow: 0 0 4px var(--accent2); }
+    50%      { opacity: 1;    transform: scale(1.2);  box-shadow: 0 0 10px var(--accent2); }
   }
 
   /* V4-1l-a + V4-1p: 도서관 5 카테고리 칩 + 그리드/타임라인 토글 */
@@ -6538,7 +6545,7 @@
   /* fixed bottom input bar — .bottom-nav (z-index 100) 위에 그려져야 함 */
   .reflection-input-bar {
     position: fixed;
-    bottom: 96px;  /* 사용자 보고 2026-05-03: bottom-nav 실측 92px (10/26 padding + 56 min-height) — 96px = 4px buffer */
+    bottom: 81px;  /* 사용자 보고 2026-05-08: nav 실측 81px (10/15 padding + 56 min-height) 에 딱 맞춤 — chat-input-bar 와 동일 정책 */
     left: 50%;
     transform: translateX(-50%);
     width: 100%;

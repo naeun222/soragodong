@@ -26,6 +26,22 @@ function _collectAnnualData(year) {
 function _buildAnnualReviewPrompt(year, data) {
   const _data = data || _collectAnnualData(year);
   const { targetYear, entries, pearls, archive, decisions, quarterlies, insights, chatArchive } = _data;
+  // 사용자 명시 2026-05-08 ultrathink: 마지막 annual review 이후 새 데이터 1개라도 있어야 trigger.
+  const lastReview = (state.annualReviews || []).slice().sort((a, b) =>
+    new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)
+  )[0];
+  if (lastReview) {
+    const lastAt = new Date(lastReview.completedAt || lastReview.createdAt || 0);
+    const lastISO = lastAt.toISOString().split('T')[0];
+    const hasNewSinceLast =
+      (state.entries || []).some(e => e.date && e.date > lastISO) ||
+      (state.chatMessages || []).some(m => m && m.role === 'user' && !m.typing && !m.error && m.timestamp && new Date(m.timestamp) > lastAt) ||
+      (state.archive || []).some(a => a && !a._deleted && a.savedAt && new Date(a.savedAt) > lastAt) ||
+      (state.missions || []).some(m => m && m.createdAt && new Date(m.createdAt) > lastAt) ||
+      (state.pearls || []).some(p => p && !p._deleted && p.createdAt && new Date(p.createdAt) > lastAt) ||
+      (state.topicCards || []).some(t => t && !t._deleted && t.createdAt && new Date(t.createdAt) > lastAt);
+    if (!hasNewSinceLast) return null;
+  }
   // 사용자 명시 2026-04-30 ultrathink: entries < 10 = 데이터 부족 → null return → caller skip.
   if (entries.length < 10) return null;
   const ctx = {

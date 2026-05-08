@@ -277,53 +277,22 @@ async function _intakeGenLongExample(userText) {
   return (data?.content?.[0]?.text || '').trim();
 }
 
-// Step6: 전체 intakeWorry chat 받아 차원 분석 + 작은 전략 + traits/values/patterns 가설 생성.
-// 사용자 보고 2026-05-06 ultrathink (재 X4 → 정정): 원래 prompt 복원 (43b1418 형태) — hypotheses 1-3개 자유 분배.
-//   강제 분배 (trait+value+pattern 각 1개) 는 새 동작이라 사용자 의도와 다름.
-//   diagnosis/strategy 길이만 복원 (실제 4단 톤 — 심리학 개념 + 연구자 이름).
+// Step6: 전체 intakeWorry chat 받아 4단 분석 raw text 생성 (askDeeper 와 동일 형식).
+// 사용자 명시 2026-05-08: intake 분석 = 평소 '더 알아보기' 4단 분석과 똑같은 prompt + 출력.
+//   [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] raw text. JSON / hypotheses 폐기.
+//   결과는 formatAIResponse 로 렌더링 (askDeeper 응답과 100% 동일 시각).
 async function _intakeAnalyze(intakeWorry) {
   if (!_canAI()) throw new Error('AI 세션 미준비');
   const chatText = (intakeWorry || []).map(m => `${m.role === 'user' ? '사용자' : '소라고동'}: ${m.content}`).join('\n');
-  // 사용자 명시 2026-05-06 ultrathink (perf): prompt 압축 (1500→800토큰) + max_tokens 2000→1200. 응답 시간 단축.
-  const prompt = `첫 만남 미니 분석. 대화 보고 차원/전략/가설.
+  const prompt = `사용자가 첫 만남에서 고민을 풀었어. 4단계로 더 깊게 분석해줘. [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. [상황]은 사용자가 시도하려는 *원래 문제*를 한 줄로 요약 (50자 내, 미션 결과 체크 모달용 — 화면엔 안 보임). 그 외 4단은 대화에서 관찰한 패턴도 한 줄 자연스럽게 인용해줘.
 
 [대화]
-${chatText}
-
-[필드]
-1. paraphrase: 사용자 핵심 1줄.
-2. dimension: 환경/인지/사회/정체성/가치 중 1개.
-3. diagnosis: 2-4문장. 심리학 개념 + 연구자 이름 자연스럽게 (Gollwitzer / Neff / Barkley / Dweck / Heath 등). Specific > Generic. "어떻게 알았어?" 트리거.
-4. strategy: 2-3문장. 증거 기반 1-2개. 환경 cuing 우선. 원리 + 메커니즘.
-5. proposal: 25자 이내, 오늘 가능한 micro-action (5분-1시간). strategy 원리를 오늘 한 동작으로. 명령조 X.
-6. hypotheses: trait/value/pattern 1-3개. confidence 0.4-0.6, user_verified=false.
-
-[가설]
-- trait: name(10자) + description(명사형) + display_text(친근 ✓ 한 줄)
-- value: name(5자) + description + display_text
-- pattern: name(10자) + trigger + sequence(명사형) + display_text
-
-[톤]
-- description/sequence: **명사형 분석체 LOCK**. 어미 "~ 명시 / ~ 경향 / ~ 함". 추측 어미 ("~ 인 듯", "있을 수 있어") 금지. 3인칭 관찰자.
-- display_text: 친한 친구 반말, judgment X.
-- diagnosis/strategy/proposal: 친한 친구 반말, self-compassion, 첫 만남이라 낮은 confidence.
-
-[출력 JSON 만]
-{
-  "paraphrase": "...",
-  "dimension": "환경/인지/사회/정체성/가치 중 하나",
-  "diagnosis": "...",
-  "strategy": "...",
-  "proposal": "25자 이내",
-  "hypotheses": [
-    { "category": "trait|value|pattern", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." }
-  ]
-}`;
+${chatText}`;
   const resp = await callAnthropic({
     _endpoint: 'intake',
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1200,
-    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
+    // 사용자 명시 2026-05-08: askDeeper 와 동일 모델 (Opus 4.7) — 첫 만남 4단 분석 = 깊이 우선.
+    model: 'claude-opus-4-7',
+    max_tokens: 1500,
     messages: [{ role: 'user', content: prompt }]
   });
   if (!resp.ok) {
@@ -332,9 +301,13 @@ ${chatText}
     throw new Error(`API ${resp.status}${detail ? ': ' + detail : ''}`);
   }
   const data = await resp.json();
-  const text = data?.content?.[0]?.text || '';
+  const text = (data?.content?.[0]?.text || '').trim();
   if (!text) throw new Error('AI 빈 응답');
-  return _robustJsonExtract(text);
+  // 4단 라벨 한 개라도 있어야 분석 성공 — 없으면 retry trigger.
+  if (!/\[내가 본 것\]|\[이게 뭐냐면\]|\[이럴 땐 이렇게\]|\[오늘의 제안\]/.test(text)) {
+    throw new Error('4단 라벨 미감지');
+  }
+  return { text };
 }
 
 // 분석 결과의 hypotheses → state.traits/values/patterns 자동 합류 (user_verified=false).

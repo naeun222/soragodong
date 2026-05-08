@@ -122,25 +122,9 @@ async function sendChat() {
   // 신규유저 빠른 추출 = _archiveCurrentChapter 안 chapterCompletedCount<3 분기로 이동.
   // 즉 챕터 마무리 (✓ 또는 5h+ 자동) 시점에 첫 3챕터만 즉시 API 호출.
 
-  // 사용자 명시 2026-05-05 ultrathink (Phase 1b): 게스트 = 3턴째 AI 답변 직후 자동 추출 (extract) 1회.
-  // 추출 = traits/values/patterns/caseFormulation 자동 채우기 (Sonnet). "4단 응답"(더 알아보기) 과 별개.
-  // 데모 가치 — '나' 탭에서 즉시 결과 확인 → 가입 동기 ↑. state._guestAutoExtracted 마커로 1회만 실행.
-  if (state.isGuest && !state._guestAutoExtracted) {
-    const _aiCount = (state.chatMessages || []).filter(m => m.role === 'assistant').length;
-    if (_aiCount >= 3) {
-      state._guestAutoExtracted = true;
-      saveState();
-      // background — 결과 도착 시 토스트 + renderModel 자동 갱신.
-      if (typeof extractChapterCaseAnalysis === 'function') {
-        const _msgsSnapshot = state.chatMessages.slice();
-        extractChapterCaseAnalysis(_msgsSnapshot).then(() => {
-          if (typeof showToast === 'function') {
-            showToast('✦ 너에 대해 알아낸 거 정리해봤어 — \'나\' 탭');
-          }
-        }).catch((e) => { console.warn('[guest auto-extract] fail:', e); });
-      }
-    }
-  }
+  // 사용자 명시 2026-05-08 ultrathink: 옛 게스트 3턴째 1회 inline 분기 폐기.
+  //   _maybeAutoForceAnalyzeFreeTier (매 3턴마다 extractChapterCaseAnalysis Opus) 가 미구독자/게스트 둘 다 처리.
+  //   중복 + Sonnet/Opus 동시 호출 = 비용 낭비. 단일 흐름으로 통합.
 }
 
 // V3.13.x: 일기 템플릿 — 인지심리학 연구 기반 5종.

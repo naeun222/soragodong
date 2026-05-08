@@ -227,9 +227,10 @@ async function _intakeStep4Analyze() {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       result = await _intakeAnalyze(state.intakeWorry);
-      if (result && (result.diagnosis || result.strategy)) break;
+      // 사용자 명시 2026-05-08: 4단 raw text 응답 — text 필드만 검증.
+      if (result && result.text && result.text.length > 50) break;
       result = null;
-      throw new Error('빈 응답 — JSON 파싱 실패');
+      throw new Error('빈 응답 — 4단 텍스트 부족');
     } catch (e) {
       lastErr = e;
       console.warn('[intake] analyze attempt ' + attempt + ' 실패', e && e.message);
@@ -239,9 +240,10 @@ async function _intakeStep4Analyze() {
   _stopIntakeProgressMessages();
   if (result) {
     _intakeState.analysis = result;
+    // 사용자 명시 2026-05-08: 4단 raw text 그대로 intakeWorry chat 보존 ([상황] 포함 — 결과 체크 모달용 메타).
     state.intakeWorry.push({
       role: 'assistant',
-      content: `[차원: ${result.dimension}]\n${result.diagnosis}\n\n✦ ${result.strategy}`,
+      content: result.text,
       ts: new Date().toISOString(),
       kind: 'analysis'
     });
@@ -307,14 +309,14 @@ function _intakeStep5Html() {
   if (!_intakeState.analysis) {
     return `<div class="intake-ai-msg"><b>🐚</b> <span class="intake-loading">잠깐 들여다보는 중...</span></div>`;
   }
+  // 사용자 명시 2026-05-08: 4단 raw text → formatAIResponse 로 askDeeper 응답과 100% 동일 카드.
   const a = _intakeState.analysis;
+  const fourStageHtml = (typeof formatAIResponse === 'function' && a.text)
+    ? formatAIResponse(a.text)
+    : escapeHtml(a.text || '');
   return `
-    <div class="intake-analysis">
-      ${a.paraphrase ? `<div class="intake-analysis-paraphrase">${escapeHtml(a.paraphrase)}</div>` : ''}
-      <div class="intake-analysis-dim"><b>${escapeHtml(a.dimension || '')} 차원</b> 이 작동하고 있어 보여.</div>
-      <div class="intake-analysis-diag">${escapeHtml(a.diagnosis || '')}</div>
-      <div class="intake-analysis-sep"></div>
-      <div class="intake-analysis-strategy"><b>✦ 이렇게 한 번 해볼래?</b><br>${escapeHtml(a.strategy || '')}</div>
+    <div class="intake-analysis msg assistant">
+      <div class="msg-bubble">${fourStageHtml}</div>
     </div>
     <div class="intake-actions">
       <button class="intake-send-btn" onclick="_intakeStep5Next()">고마워 ✦</button>
@@ -341,11 +343,7 @@ function _intakeSkipAnalysis() {
 }
 
 function _intakeStep5Next() {
-  // hypotheses → traits/values/patterns 자동 합류
-  if (_intakeState.analysis && _intakeState.analysis.hypotheses) {
-    _intakeApplyHypotheses(_intakeState.analysis.hypotheses);
-    saveState();
-  }
+  // 사용자 명시 2026-05-08: hypotheses 합류 폐기 — 순수 4단 분석만. traits/values/patterns 는 챕터 종료 / force analyze 로 채워짐.
   // 사용자 명시 2026-04-30 ultrathink: 튜토리얼 모드일 때 모달 종료 후 대화창에 4단 분석 자동 표시용 stash.
   // _startIntakeFromTutorial 가 modal 종료 시점에 읽어서 처리.
   if (window._onbTutorialMode) {

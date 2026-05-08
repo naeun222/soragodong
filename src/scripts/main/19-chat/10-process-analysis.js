@@ -136,16 +136,19 @@ async function processAnalysis(analysis, messageIdx) {
 
 
 
-// V4 (v8 묶음 4): 더 알아보기 빈도 cap (Plan 별) — Free 1 / Light 2 / Earlybird 3 / Premium 8 / 튜토리얼 무제한 + 쿨다운 30분
+// V4 (v8 묶음 4): 더 알아보기 빈도 cap (Plan 별) — 튜토리얼 무제한 + 쿨다운 30분
+// 사용자 보고 2026-05-08: 옛 `billing.earlybird` boolean 필드는 backend 응답에 없음 (subscription_plan 만 있음).
+//   → 얼리버드 사용자가 fallback 1 로 떨어져 첫 시도에 막혔음. plan 문자열 매핑으로 정정.
+//   동시에 cap 소폭 완화: Free 1→2 / Light 2→3 / Early 3→4 / Premium 8→10.
 function _getDailyDeeperCap() {
   if (window._onbTutorialMode) return Infinity;
   if (state.preferences && state.preferences.testerMode) return Infinity;
   const billing = window._billingCache;
   const plan = billing?.subscription_plan;
-  if (plan === 'premium') return 8;
-  if (plan === 'light') return 2;
-  if (billing?.earlybird) return 3;
-  return 1;
+  if (plan === 'premium') return 10;
+  if (plan === 'light') return 3;
+  if (plan === 'early_light' || plan === 'early_lifetime') return 4;
+  return 2;
 }
 function _getTodayDeeperCount() {
   const todayK = todayKey();

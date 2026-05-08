@@ -421,6 +421,10 @@ function _processExtractChapterAnalysis(analysis) {
       }
     }
 
+  // 사용자 명시 2026-05-08 ultrathink: case_analysis 결과 → 나 탭 dot 마킹 (모든 path 자동).
+  if (touched && typeof _markNavBatchUpdated === 'function') {
+    _markNavBatchUpdated(['model']);
+  }
   return touched;
 }
 

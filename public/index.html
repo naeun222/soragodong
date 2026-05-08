@@ -916,7 +916,8 @@
   /* 사용자 보고 2026-04-28: env() 부작용으로 nav 위치 변경 — 원래 76px 복원 */
   /* 사용자 보고 2026-05-02: 입력 시 버벅거림 — 1.6MB DOM 에서 textarea reflow 가 전체 페이지로 propagate. contain: layout style 로 격리 → frame 당 layout cost ↓. */
   /* 사용자 보고 2026-05-03: 옛 76px 로는 nav 살짝 가림 — bottom-nav 실측 = padding 10/26 + nav-item min-height 56 = 92px. 96px = 4px buffer. */
-  .chat-input-bar { position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; contain: layout style; }
+  /* 사용자 보고 2026-05-08: nav padding-bottom 26→15 변경 (5/6) 후 nav 실측 = 10+15+56 = 81px. 입력창이 15px 떠 있던 거 — bottom 81px 로 딱 맞춤. */
+  .chat-input-bar { position: fixed; bottom: 81px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; contain: layout style; }
   .chat-input-wrap { position: relative; display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 10px; contain: layout style; }
   /* iOS auto-zoom 방지 — input font 16px 이상 */
   /* V4 (사용자 명시 2026-05-04 ultrathink V181): 모바일 입력창 렉 근본 해결 — contain (height 변경 외부 layout 전파 차단) + field-sizing (지원 브라우저 native auto-size, JS reflow 0) */
@@ -5346,7 +5347,8 @@
     border-radius: 50%;
     box-shadow: 0 0 4px var(--accent2);
   }
-  /* V4 (사용자 명시): 하단 탭바 새 항목 ● 점 — 도서관 탭 (확장 가능) */
+  /* V4 (사용자 명시): 하단 탭바 새 항목 ● 점 — 도서관 탭 (확장 가능). */
+  /* V4 (사용자 명시 2026-05-08 ultrathink): 깜빡임 (pulse) — batch 결과 도착 신호. */
   .bottom-nav .nav-item .nav-icon { position: relative; display: inline-block; }
   .bottom-nav .nav-item.has-new .nav-icon::after {
     content: '';
@@ -5357,6 +5359,11 @@
     border-radius: 50%;
     box-shadow: 0 0 4px var(--accent2);
     pointer-events: none;
+    animation: navDotPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes navDotPulse {
+    0%, 100% { opacity: 0.45; transform: scale(0.85); box-shadow: 0 0 4px var(--accent2); }
+    50%      { opacity: 1;    transform: scale(1.2);  box-shadow: 0 0 10px var(--accent2); }
   }
 
   /* V4-1l-a + V4-1p: 도서관 5 카테고리 칩 + 그리드/타임라인 토글 */
@@ -6655,7 +6662,7 @@
   /* fixed bottom input bar — .bottom-nav (z-index 100) 위에 그려져야 함 */
   .reflection-input-bar {
     position: fixed;
-    bottom: 96px;  /* 사용자 보고 2026-05-03: bottom-nav 실측 92px (10/26 padding + 56 min-height) — 96px = 4px buffer */
+    bottom: 81px;  /* 사용자 보고 2026-05-08: nav 실측 81px (10/15 padding + 56 min-height) 에 딱 맞춤 — chat-input-bar 와 동일 정책 */
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
@@ -12587,6 +12594,8 @@ function _flushLocalSave(opts) {
 function saveState(force) {
   // V4 (사용자 명시): 도서관 탭 dot 갱신 — 데이터 변경 매 cycle 마다 자연 갱신
   if (typeof updateLibraryTabNewDot === 'function') updateLibraryTabNewDot();
+  // V4 (사용자 명시 2026-05-08 ultrathink): 홈 / 나 탭 batch dot 갱신
+  if (typeof updateNavBatchDots === 'function') updateNavBatchDots();
   if (!authUserId) return; // Don't save if not logged in
   // 사용자 요청 2026-04-28: 테스터 모드면 force여도 cloud/localStorage 저장 X
   if (state.preferences && state.preferences.testerMode) return;
@@ -14469,6 +14478,22 @@ function _collectAnnualData(year) {
 function _buildAnnualReviewPrompt(year, data) {
   const _data = data || _collectAnnualData(year);
   const { targetYear, entries, pearls, archive, decisions, quarterlies, insights, chatArchive } = _data;
+  // 사용자 명시 2026-05-08 ultrathink: 마지막 annual review 이후 새 데이터 1개라도 있어야 trigger.
+  const lastReview = (state.annualReviews || []).slice().sort((a, b) =>
+    new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)
+  )[0];
+  if (lastReview) {
+    const lastAt = new Date(lastReview.completedAt || lastReview.createdAt || 0);
+    const lastISO = lastAt.toISOString().split('T')[0];
+    const hasNewSinceLast =
+      (state.entries || []).some(e => e.date && e.date > lastISO) ||
+      (state.chatMessages || []).some(m => m && m.role === 'user' && !m.typing && !m.error && m.timestamp && new Date(m.timestamp) > lastAt) ||
+      (state.archive || []).some(a => a && !a._deleted && a.savedAt && new Date(a.savedAt) > lastAt) ||
+      (state.missions || []).some(m => m && m.createdAt && new Date(m.createdAt) > lastAt) ||
+      (state.pearls || []).some(p => p && !p._deleted && p.createdAt && new Date(p.createdAt) > lastAt) ||
+      (state.topicCards || []).some(t => t && !t._deleted && t.createdAt && new Date(t.createdAt) > lastAt);
+    if (!hasNewSinceLast) return null;
+  }
   // 사용자 명시 2026-04-30 ultrathink: entries < 10 = 데이터 부족 → null return → caller skip.
   if (entries.length < 10) return null;
   const ctx = {
@@ -15713,53 +15738,22 @@ async function _intakeGenLongExample(userText) {
   return (data?.content?.[0]?.text || '').trim();
 }
 
-// Step6: 전체 intakeWorry chat 받아 차원 분석 + 작은 전략 + traits/values/patterns 가설 생성.
-// 사용자 보고 2026-05-06 ultrathink (재 X4 → 정정): 원래 prompt 복원 (43b1418 형태) — hypotheses 1-3개 자유 분배.
-//   강제 분배 (trait+value+pattern 각 1개) 는 새 동작이라 사용자 의도와 다름.
-//   diagnosis/strategy 길이만 복원 (실제 4단 톤 — 심리학 개념 + 연구자 이름).
+// Step6: 전체 intakeWorry chat 받아 4단 분석 raw text 생성 (askDeeper 와 동일 형식).
+// 사용자 명시 2026-05-08: intake 분석 = 평소 '더 알아보기' 4단 분석과 똑같은 prompt + 출력.
+//   [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] raw text. JSON / hypotheses 폐기.
+//   결과는 formatAIResponse 로 렌더링 (askDeeper 응답과 100% 동일 시각).
 async function _intakeAnalyze(intakeWorry) {
   if (!_canAI()) throw new Error('AI 세션 미준비');
   const chatText = (intakeWorry || []).map(m => `${m.role === 'user' ? '사용자' : '소라고동'}: ${m.content}`).join('\n');
-  // 사용자 명시 2026-05-06 ultrathink (perf): prompt 압축 (1500→800토큰) + max_tokens 2000→1200. 응답 시간 단축.
-  const prompt = `첫 만남 미니 분석. 대화 보고 차원/전략/가설.
+  const prompt = `사용자가 첫 만남에서 고민을 풀었어. 4단계로 더 깊게 분석해줘. [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. [상황]은 사용자가 시도하려는 *원래 문제*를 한 줄로 요약 (50자 내, 미션 결과 체크 모달용 — 화면엔 안 보임). 그 외 4단은 대화에서 관찰한 패턴도 한 줄 자연스럽게 인용해줘.
 
 [대화]
-${chatText}
-
-[필드]
-1. paraphrase: 사용자 핵심 1줄.
-2. dimension: 환경/인지/사회/정체성/가치 중 1개.
-3. diagnosis: 2-4문장. 심리학 개념 + 연구자 이름 자연스럽게 (Gollwitzer / Neff / Barkley / Dweck / Heath 등). Specific > Generic. "어떻게 알았어?" 트리거.
-4. strategy: 2-3문장. 증거 기반 1-2개. 환경 cuing 우선. 원리 + 메커니즘.
-5. proposal: 25자 이내, 오늘 가능한 micro-action (5분-1시간). strategy 원리를 오늘 한 동작으로. 명령조 X.
-6. hypotheses: trait/value/pattern 1-3개. confidence 0.4-0.6, user_verified=false.
-
-[가설]
-- trait: name(10자) + description(명사형) + display_text(친근 ✓ 한 줄)
-- value: name(5자) + description + display_text
-- pattern: name(10자) + trigger + sequence(명사형) + display_text
-
-[톤]
-- description/sequence: **명사형 분석체 LOCK**. 어미 "~ 명시 / ~ 경향 / ~ 함". 추측 어미 ("~ 인 듯", "있을 수 있어") 금지. 3인칭 관찰자.
-- display_text: 친한 친구 반말, judgment X.
-- diagnosis/strategy/proposal: 친한 친구 반말, self-compassion, 첫 만남이라 낮은 confidence.
-
-[출력 JSON 만]
-{
-  "paraphrase": "...",
-  "dimension": "환경/인지/사회/정체성/가치 중 하나",
-  "diagnosis": "...",
-  "strategy": "...",
-  "proposal": "25자 이내",
-  "hypotheses": [
-    { "category": "trait|value|pattern", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.5, "display_text": "..." }
-  ]
-}`;
+${chatText}`;
   const resp = await callAnthropic({
     _endpoint: 'intake',
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1200,
-    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
+    // 사용자 명시 2026-05-08: askDeeper 와 동일 모델 (Opus 4.7) — 첫 만남 4단 분석 = 깊이 우선.
+    model: 'claude-opus-4-7',
+    max_tokens: 1500,
     messages: [{ role: 'user', content: prompt }]
   });
   if (!resp.ok) {
@@ -15768,9 +15762,13 @@ ${chatText}
     throw new Error(`API ${resp.status}${detail ? ': ' + detail : ''}`);
   }
   const data = await resp.json();
-  const text = data?.content?.[0]?.text || '';
+  const text = (data?.content?.[0]?.text || '').trim();
   if (!text) throw new Error('AI 빈 응답');
-  return _robustJsonExtract(text);
+  // 4단 라벨 한 개라도 있어야 분석 성공 — 없으면 retry trigger.
+  if (!/\[내가 본 것\]|\[이게 뭐냐면\]|\[이럴 땐 이렇게\]|\[오늘의 제안\]/.test(text)) {
+    throw new Error('4단 라벨 미감지');
+  }
+  return { text };
 }
 
 // 분석 결과의 hypotheses → state.traits/values/patterns 자동 합류 (user_verified=false).
@@ -15919,7 +15917,7 @@ window._startIntakeFromTutorial = async function() {
   delete window._lastIntakeAnalysis;
   delete window._lastIntakeWorries;
 
-  if (analysis && (analysis.diagnosis || analysis.strategy)) {
+  if (analysis && analysis.text) {
     state.chatMessages = state.chatMessages || [];
     const nowIso = new Date().toISOString();
     if (worries.length > 0) {
@@ -15929,22 +15927,22 @@ window._startIntakeFromTutorial = async function() {
         timestamp: nowIso
       });
     }
-    // 사용자 보고 2026-05-06 ultrathink (재 X4): generic 카피 ('X 차원이 작동하는 모습') 제거 — AI 의 diagnosis 자체가 풍부함.
-    const para = (analysis.paraphrase || '').trim();
-    const diag = (analysis.diagnosis || '').trim();
-    const strat = (analysis.strategy || '').trim();
-    const prop = (analysis.proposal || '').trim();
-    const observation = para || '방금 들려준 마음, 정리해봤어.';
-    const concept = diag || '같이 들여다보자.';
-    const guide = strat || '천천히 같이 가보자.';
-    const proposalText = prop || '오늘 한 걸음';
-    const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}\n\n[오늘의 제안]\n${proposalText}`;
+    // 사용자 명시 2026-05-08: AI 가 직접 [상황]/[내가 본 것]/[이게 뭐냐면]/[이럴 땐 이렇게]/[오늘의 제안] raw text 로 응답.
+    //   askDeeper 와 100% 동일 흐름 — fromDeeper: true 로 markdown 렌더 + ⭐ 오늘의 제안 카드.
+    const fourStage = analysis.text;
+    // proposal title 추출 — [오늘의 제안] 섹션 첫 줄.
+    let proposalTitle = '오늘 한 걸음';
+    const propMatch = fourStage.match(/\[오늘의 제안\]\s*([\s\S]+?)(?=\n\s*\[|$)/);
+    if (propMatch) {
+      const firstLine = propMatch[1].trim().split(/\n/)[0].trim();
+      if (firstLine) proposalTitle = firstLine.slice(0, 40);
+    }
     state.chatMessages.push({
       role: 'assistant',
       content: fourStage,
       fromDeeper: true,
       proposal: true,
-      proposalData: { title: proposalText.slice(0, 40) },
+      proposalData: { title: proposalTitle },
       timestamp: nowIso
     });
     // V4 (사용자 명시 2026-05-04 ultrathink): 4단 분석 직후 안내 메시지 inject — '내가 지금은 4단 분석 채워놨다' 톤 (옛 카피 톤)
@@ -16221,9 +16219,10 @@ async function _intakeStep4Analyze() {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       result = await _intakeAnalyze(state.intakeWorry);
-      if (result && (result.diagnosis || result.strategy)) break;
+      // 사용자 명시 2026-05-08: 4단 raw text 응답 — text 필드만 검증.
+      if (result && result.text && result.text.length > 50) break;
       result = null;
-      throw new Error('빈 응답 — JSON 파싱 실패');
+      throw new Error('빈 응답 — 4단 텍스트 부족');
     } catch (e) {
       lastErr = e;
       console.warn('[intake] analyze attempt ' + attempt + ' 실패', e && e.message);
@@ -16233,9 +16232,10 @@ async function _intakeStep4Analyze() {
   _stopIntakeProgressMessages();
   if (result) {
     _intakeState.analysis = result;
+    // 사용자 명시 2026-05-08: 4단 raw text 그대로 intakeWorry chat 보존 ([상황] 포함 — 결과 체크 모달용 메타).
     state.intakeWorry.push({
       role: 'assistant',
-      content: `[차원: ${result.dimension}]\n${result.diagnosis}\n\n✦ ${result.strategy}`,
+      content: result.text,
       ts: new Date().toISOString(),
       kind: 'analysis'
     });
@@ -16301,14 +16301,14 @@ function _intakeStep5Html() {
   if (!_intakeState.analysis) {
     return `<div class="intake-ai-msg"><b>🐚</b> <span class="intake-loading">잠깐 들여다보는 중...</span></div>`;
   }
+  // 사용자 명시 2026-05-08: 4단 raw text → formatAIResponse 로 askDeeper 응답과 100% 동일 카드.
   const a = _intakeState.analysis;
+  const fourStageHtml = (typeof formatAIResponse === 'function' && a.text)
+    ? formatAIResponse(a.text)
+    : escapeHtml(a.text || '');
   return `
-    <div class="intake-analysis">
-      ${a.paraphrase ? `<div class="intake-analysis-paraphrase">${escapeHtml(a.paraphrase)}</div>` : ''}
-      <div class="intake-analysis-dim"><b>${escapeHtml(a.dimension || '')} 차원</b> 이 작동하고 있어 보여.</div>
-      <div class="intake-analysis-diag">${escapeHtml(a.diagnosis || '')}</div>
-      <div class="intake-analysis-sep"></div>
-      <div class="intake-analysis-strategy"><b>✦ 이렇게 한 번 해볼래?</b><br>${escapeHtml(a.strategy || '')}</div>
+    <div class="intake-analysis msg assistant">
+      <div class="msg-bubble">${fourStageHtml}</div>
     </div>
     <div class="intake-actions">
       <button class="intake-send-btn" onclick="_intakeStep5Next()">고마워 ✦</button>
@@ -16335,11 +16335,7 @@ function _intakeSkipAnalysis() {
 }
 
 function _intakeStep5Next() {
-  // hypotheses → traits/values/patterns 자동 합류
-  if (_intakeState.analysis && _intakeState.analysis.hypotheses) {
-    _intakeApplyHypotheses(_intakeState.analysis.hypotheses);
-    saveState();
-  }
+  // 사용자 명시 2026-05-08: hypotheses 합류 폐기 — 순수 4단 분석만. traits/values/patterns 는 챕터 종료 / force analyze 로 채워짐.
   // 사용자 명시 2026-04-30 ultrathink: 튜토리얼 모드일 때 모달 종료 후 대화창에 4단 분석 자동 표시용 stash.
   // _startIntakeFromTutorial 가 modal 종료 시점에 읽어서 처리.
   if (window._onbTutorialMode) {
@@ -21500,7 +21496,7 @@ async function _v8RunIntakeAndInject() {
   // chat 탭으로 자동 전환
   if (typeof showScreen === 'function') showScreen('chat');
 
-  if (!analysis || (!analysis.diagnosis && !analysis.strategy)) return;
+  if (!analysis || !analysis.text) return;
 
   state.chatMessages = state.chatMessages || [];
   const nowIso = new Date().toISOString();
@@ -21517,22 +21513,21 @@ async function _v8RunIntakeAndInject() {
     content: '방금 들은 거, 이렇게 봤어 —',
     timestamp: nowIso
   });
-  // 사용자 보고 2026-05-06 ultrathink (재 X4): generic 카피 제거 — AI diagnosis 자체가 풍부함 (실제 4단 톤).
-  const para = (analysis.paraphrase || '').trim();
-  const diag = (analysis.diagnosis || '').trim();
-  const strat = (analysis.strategy || '').trim();
-  const prop = (analysis.proposal || '').trim();
-  const observation = para || '방금 들려준 마음, 정리해봤어.';
-  const concept = diag || '같이 들여다보자.';
-  const guide = strat || '천천히 같이 가보자.';
-  const proposalText = prop || '오늘 한 걸음';
-  const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}\n\n[오늘의 제안]\n${proposalText}`;
+  // 사용자 명시 2026-05-08: AI 4단 raw text 그대로 push — askDeeper 와 100% 동일 시각.
+  const fourStage = analysis.text;
+  // proposal title 추출 — [오늘의 제안] 섹션 첫 줄.
+  let proposalTitle = '오늘 한 걸음';
+  const propMatch = fourStage.match(/\[오늘의 제안\]\s*([\s\S]+?)(?=\n\s*\[|$)/);
+  if (propMatch) {
+    const firstLine = propMatch[1].trim().split(/\n/)[0].trim();
+    if (firstLine) proposalTitle = firstLine.slice(0, 40);
+  }
   state.chatMessages.push({
     role: 'assistant',
     content: fourStage,
     fromDeeper: true,
     proposal: true,
-    proposalData: { title: proposalText.slice(0, 40) },
+    proposalData: { title: proposalTitle },
     timestamp: nowIso
   });
   // 사용자 명시 2026-05-06 ultrathink: 4단 분석 직후 '더 알고 싶어 ▾' 설명만. 마무리는 코치마크가 책임.
@@ -24385,8 +24380,18 @@ function _collectReviewData(type) {
   const today = new Date();
   let cutoff, cutoffEnd;
   if (type === 'weekly') {
-    cutoff = new Date(today.getTime() - 7 * 86400000);
-    cutoffEnd = today;
+    // 사용자 명시 2026-05-08 ultrathink (재): schedule = 직전 일요일 04:00.
+    //   data 범위 = 그 직전 7일 (= 그 직전 일요일 04:00 ~ schedule 일요일 04:00).
+    //   _lastWeekly4amCutoff() 는 항상 가장 최근 지나간 일요일 4AM 반환.
+    const sunCutoff4am = (typeof _lastWeekly4amCutoff === 'function') ? _lastWeekly4amCutoff() : null;
+    if (sunCutoff4am) {
+      cutoff = new Date(sunCutoff4am.getTime() - 7 * 86400000);  // 직전 일요일 04:00
+      cutoffEnd = sunCutoff4am;                                   // schedule 일요일 04:00
+    } else {
+      // fallback (helper 부재) — 옛 동작
+      cutoff = new Date(today.getTime() - 7 * 86400000);
+      cutoffEnd = today;
+    }
   } else {
     cutoff = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     cutoffEnd = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -24453,7 +24458,49 @@ function _collectReviewData(type) {
 //   inline (generateReview) / batch (_buildReviewBatchRequests) 둘 다 같은 spec 사용 → 동시 적용.
 function _buildReviewPrompt(type, data) {
   const { entriesInRange, missionsInRange, chatInRange, decisionsInRange, topicCardsInRange, pearlsInRange, archiveInRange, insightsInRange, chaptersInRange, prevSeeds } = data;
-  if (!entriesInRange || entriesInRange.length === 0) return null;
+
+  // 사용자 명시 2026-05-08 ultrathink (재): weekly 는 마지막 review 이후 새 데이터 1개라도 있어야 trigger.
+  //   "꼭 일주일 안 지나도 일요일 4AM 이후면 review 생성. 단 마지막 review 이후 데이터 X 면 X."
+  //   monthly/quarterly/annual 은 옛 그대로 (entries 0 가드만).
+  if (type === 'weekly') {
+    // 가드 1: 마지막 review 이후 새 데이터 1개라도
+    const lastReview = (state.weeklyReviews || []).slice().sort((a, b) =>
+      new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)
+    )[0];
+    if (lastReview) {
+      const lastAt = new Date(lastReview.completedAt || lastReview.createdAt || 0);
+      const lastISO = lastAt.toISOString().split('T')[0];
+      const hasNewSinceLast =
+        (state.entries || []).some(e => e.date && e.date > lastISO) ||
+        (state.chatMessages || []).some(m => m && m.role === 'user' && !m.typing && !m.error && m.timestamp && new Date(m.timestamp) > lastAt) ||
+        (state.archive || []).some(a => a && !a._deleted && a.savedAt && new Date(a.savedAt) > lastAt) ||
+        (state.missions || []).some(m => m && m.createdAt && new Date(m.createdAt) > lastAt) ||
+        (state.pearls || []).some(p => p && !p._deleted && p.createdAt && new Date(p.createdAt) > lastAt) ||
+        (state.topicCards || []).some(t => t && !t._deleted && t.createdAt && new Date(t.createdAt) > lastAt);
+      if (!hasNewSinceLast) return null;
+    }
+    // 가드 2 (강화 재): entries 1+ 만 OK (사용자 명시 2026-05-08 추가).
+    //   chat 만 있고 entries 0 = 일기 안 쓴 주 = review 차트/cycles 부실. 일기 1+ 가 review 의 핵심 input.
+    if (!entriesInRange || entriesInRange.length === 0) return null;
+  } else {
+    // monthly: 사용자 명시 2026-05-08 — weekly 와 동일 가드 (마지막 monthly review 이후 새 데이터 X 면 X).
+    const lastReview = (state.monthlyReviews || []).slice().sort((a, b) =>
+      new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)
+    )[0];
+    if (lastReview) {
+      const lastAt = new Date(lastReview.completedAt || lastReview.createdAt || 0);
+      const lastISO = lastAt.toISOString().split('T')[0];
+      const hasNewSinceLast =
+        (state.entries || []).some(e => e.date && e.date > lastISO) ||
+        (state.chatMessages || []).some(m => m && m.role === 'user' && !m.typing && !m.error && m.timestamp && new Date(m.timestamp) > lastAt) ||
+        (state.archive || []).some(a => a && !a._deleted && a.savedAt && new Date(a.savedAt) > lastAt) ||
+        (state.missions || []).some(m => m && m.createdAt && new Date(m.createdAt) > lastAt) ||
+        (state.pearls || []).some(p => p && !p._deleted && p.createdAt && new Date(p.createdAt) > lastAt) ||
+        (state.topicCards || []).some(t => t && !t._deleted && t.createdAt && new Date(t.createdAt) > lastAt);
+      if (!hasNewSinceLast) return null;
+    }
+    if (!entriesInRange || entriesInRange.length === 0) return null;
+  }
 
   const periodLabel = type === 'weekly' ? '주' : '달';
 
@@ -26378,21 +26425,28 @@ function _processExtractChapterAnalysis(analysis) {
       }
     }
 
+  // 사용자 명시 2026-05-08 ultrathink: case_analysis 결과 → 나 탭 dot 마킹 (모든 path 자동).
+  if (touched && typeof _markNavBatchUpdated === 'function') {
+    _markNavBatchUpdated(['model']);
+  }
   return touched;
 }
 
 // 일반 path — 5h+ 갭 즉시 (신규유저 첫 3 챕터). 또는 batch fallback timeout 시.
-async function extractChapterCaseAnalysis(messages) {
+async function extractChapterCaseAnalysis(messages, opts) {
   try {
     if (!_canAI()) return;
     if (window._onbTutorialMode) return;
     if (state.preferences && state.preferences.testerMode) return;
     if (!Array.isArray(messages) || messages.length < 3) return;
 
+    // 사용자 명시 2026-05-08 ultrathink: opts.model 파라미터 — 미구독자/게스트 매 3턴 자동 호출 시 Opus 4.7 지정.
+    //   default = Sonnet 4-6 (기존 동작). 명시 시 다른 모델 가능.
+    const _model = (opts && opts.model) || 'claude-sonnet-4-6';
     const prompt = _buildExtractChapterPrompt(messages);
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
-      model: 'claude-sonnet-4-6',
+      model: _model,
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     });
@@ -30577,7 +30631,11 @@ function showScreen(name) {
     // V4-fix v3 (사용자 요청): 체크인 진입 시 가닥 미션 팔로업 자동 prompt
     if (typeof offerStrategyFollowup === 'function') { try { offerStrategyFollowup(); } catch (e) {} }
   }
-  if (name === 'model') { renderModel(); }
+  if (name === 'model') {
+    renderModel();
+    // V4 (사용자 명시 2026-05-08 ultrathink): 나 탭 진입 시 batch dot 클리어.
+    if (typeof _clearNavBatchUpdate === 'function') _clearNavBatchUpdate('model');
+  }
   if (name === 'archive') {
     // V4-fix #5: 도서관 처음 진입 시 모든 카테고리 lastSeen 초기화 (점 폭발 방지)
     if (state.preferences && !state.preferences._libCatLastSeenInit) {
@@ -32588,25 +32646,9 @@ async function sendChat() {
   // 신규유저 빠른 추출 = _archiveCurrentChapter 안 chapterCompletedCount<3 분기로 이동.
   // 즉 챕터 마무리 (✓ 또는 5h+ 자동) 시점에 첫 3챕터만 즉시 API 호출.
 
-  // 사용자 명시 2026-05-05 ultrathink (Phase 1b): 게스트 = 3턴째 AI 답변 직후 자동 추출 (extract) 1회.
-  // 추출 = traits/values/patterns/caseFormulation 자동 채우기 (Sonnet). "4단 응답"(더 알아보기) 과 별개.
-  // 데모 가치 — '나' 탭에서 즉시 결과 확인 → 가입 동기 ↑. state._guestAutoExtracted 마커로 1회만 실행.
-  if (state.isGuest && !state._guestAutoExtracted) {
-    const _aiCount = (state.chatMessages || []).filter(m => m.role === 'assistant').length;
-    if (_aiCount >= 3) {
-      state._guestAutoExtracted = true;
-      saveState();
-      // background — 결과 도착 시 토스트 + renderModel 자동 갱신.
-      if (typeof extractChapterCaseAnalysis === 'function') {
-        const _msgsSnapshot = state.chatMessages.slice();
-        extractChapterCaseAnalysis(_msgsSnapshot).then(() => {
-          if (typeof showToast === 'function') {
-            showToast('✦ 너에 대해 알아낸 거 정리해봤어 — \'나\' 탭');
-          }
-        }).catch((e) => { console.warn('[guest auto-extract] fail:', e); });
-      }
-    }
-  }
+  // 사용자 명시 2026-05-08 ultrathink: 옛 게스트 3턴째 1회 inline 분기 폐기.
+  //   _maybeAutoForceAnalyzeFreeTier (매 3턴마다 extractChapterCaseAnalysis Opus) 가 미구독자/게스트 둘 다 처리.
+  //   중복 + Sonnet/Opus 동시 호출 = 비용 낭비. 단일 흐름으로 통합.
 }
 
 // V3.13.x: 일기 템플릿 — 인지심리학 연구 기반 5종.
@@ -33600,16 +33642,19 @@ async function processAnalysis(analysis, messageIdx) {
 
 
 
-// V4 (v8 묶음 4): 더 알아보기 빈도 cap (Plan 별) — Free 1 / Light 2 / Earlybird 3 / Premium 8 / 튜토리얼 무제한 + 쿨다운 30분
+// V4 (v8 묶음 4): 더 알아보기 빈도 cap (Plan 별) — 튜토리얼 무제한 + 쿨다운 30분
+// 사용자 보고 2026-05-08: 옛 `billing.earlybird` boolean 필드는 backend 응답에 없음 (subscription_plan 만 있음).
+//   → 얼리버드 사용자가 fallback 1 로 떨어져 첫 시도에 막혔음. plan 문자열 매핑으로 정정.
+//   동시에 cap 소폭 완화: Free 1→2 / Light 2→3 / Early 3→4 / Premium 8→10.
 function _getDailyDeeperCap() {
   if (window._onbTutorialMode) return Infinity;
   if (state.preferences && state.preferences.testerMode) return Infinity;
   const billing = window._billingCache;
   const plan = billing?.subscription_plan;
-  if (plan === 'premium') return 8;
-  if (plan === 'light') return 2;
-  if (billing?.earlybird) return 3;
-  return 1;
+  if (plan === 'premium') return 10;
+  if (plan === 'light') return 3;
+  if (plan === 'early_light' || plan === 'early_lifetime') return 4;
+  return 2;
 }
 function _getTodayDeeperCount() {
   const todayK = todayKey();
@@ -36739,6 +36784,51 @@ function updateLibraryCatNewDots() {
     const has = since > 0 ? _libCategoryNewSince(cat, since) : false;
     chip.classList.toggle('has-new', has);
   });
+}
+
+// V4 (사용자 명시 2026-05-08 ultrathink): batch 결과 도착 시 영향 탭 (홈 / 나) 깜빡이는 dot.
+//   chapter case_analysis → 나 탭 (traits/values/patterns/caseFormulation 갱신).
+//   review 4종 (weekly/monthly/quarterly/annual) → 홈 탭 (review prompt 카드).
+//   chapter topic / diary summary → 도서관 탭 (옛 _libCategoryNewSince 패턴 자동 처리).
+//   사용자가 그 탭 진입 시 dot 자동 클리어 (showScreen hook).
+function _markNavBatchUpdated(tabs) {
+  if (!Array.isArray(tabs) || tabs.length === 0) return;
+  state.preferences = state.preferences || {};
+  state.preferences._navBatchUpdated = state.preferences._navBatchUpdated || {};
+  const now = new Date().toISOString();
+  let changed = false;
+  tabs.forEach(t => {
+    if (!state.preferences._navBatchUpdated[t]) {
+      state.preferences._navBatchUpdated[t] = now;
+      changed = true;
+    }
+  });
+  if (changed) { try { saveState(); } catch {} }
+  updateNavBatchDots();
+}
+function _clearNavBatchUpdate(tab) {
+  const map = state.preferences && state.preferences._navBatchUpdated;
+  if (!map || !map[tab]) return;
+  delete map[tab];
+  try { saveState(); } catch {}
+  updateNavBatchDots();
+}
+function updateNavBatchDots() {
+  try {
+    // 사용자 명시 2026-05-08 ultrathink: home = review fresh 동적 (user_viewed=true 시 자동 off).
+    //   model = flag 기반 (_processExtractChapterAnalysis 안에서 _markNavBatchUpdated(['model']) 호출 후 클리어).
+    const hasFreshReview =
+      (state.weeklyReviews    || []).some(r => r && r.auto && !r.user_viewed) ||
+      (state.monthlyReviews   || []).some(r => r && r.auto && !r.user_viewed) ||
+      (state.quarterlyReviews || []).some(r => r && r.auto && !r.user_viewed) ||
+      (state.annualReviews    || []).some(r => r && r.auto && !r.user_viewed);
+    const map = (state.preferences || {})._navBatchUpdated || {};
+    const hasModelUpdate = !!map.model;
+    const homeItem  = document.querySelector('.bottom-nav .nav-item[data-screen="home"]');
+    const modelItem = document.querySelector('.bottom-nav .nav-item[data-screen="model"]');
+    if (homeItem)  homeItem.classList.toggle('has-new', hasFreshReview);
+    if (modelItem) modelItem.classList.toggle('has-new', hasModelUpdate);
+  } catch (_) {}
 }
 
 // V4-1s: 📔 일기·대화 캘린더 무드 그리드 (월 단위)
@@ -43079,6 +43169,22 @@ function _collectQuarterlyData(quarterKey, stats) {
 function _buildQuarterlyReviewPrompt(quarterKey, stats, data) {
   const _data = data || _collectQuarterlyData(quarterKey, stats);
   const { recentEmbodied, prevSeeds, entriesIn, chatIn, topicCardsIn, pearlsIn, archiveIn, insightsIn, chaptersIn } = _data;
+  // 사용자 명시 2026-05-08 ultrathink: 마지막 quarterly review 이후 새 데이터 1개라도 있어야 trigger.
+  const lastReview = (state.quarterlyReviews || []).slice().sort((a, b) =>
+    new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)
+  )[0];
+  if (lastReview) {
+    const lastAt = new Date(lastReview.completedAt || lastReview.createdAt || 0);
+    const lastISO = lastAt.toISOString().split('T')[0];
+    const hasNewSinceLast =
+      (state.entries || []).some(e => e.date && e.date > lastISO) ||
+      (state.chatMessages || []).some(m => m && m.role === 'user' && !m.typing && !m.error && m.timestamp && new Date(m.timestamp) > lastAt) ||
+      (state.archive || []).some(a => a && !a._deleted && a.savedAt && new Date(a.savedAt) > lastAt) ||
+      (state.missions || []).some(m => m && m.createdAt && new Date(m.createdAt) > lastAt) ||
+      (state.pearls || []).some(p => p && !p._deleted && p.createdAt && new Date(p.createdAt) > lastAt) ||
+      (state.topicCards || []).some(t => t && !t._deleted && t.createdAt && new Date(t.createdAt) > lastAt);
+    if (!hasNewSinceLast) return null;
+  }
   // 사용자 명시 2026-05-02 ultrathink (ERROR #9): entries 0개 = null return → caller skip.
   if (!entriesIn || entriesIn.length === 0) return null;
 
@@ -47283,14 +47389,14 @@ JSON으로 출력:
 - ADHD·직업·가치관 맥락 고려.
 - 수면 시각 규칙성, 활력 변동, 2D affect 패턴, 미션 수락·완료 패턴도 해석.
 - 활성 모드(월경, 마감 등) 컨텍스트로 분석.
-- 각 카테고리 최대 5개씩 (5-10 X — 토큰 제한).
+- 각 카테고리 최대 6개씩 (5-10 X — 토큰 제한).
 - JSON만 출력.
 - 응답 잘리지 않게 짧고 구체적으로.
 
-[필터 — 자동 거름] (사용자 명시 2026-05-03)
-- trivial 일상 (음식·날씨·일정·단순 사건·짧은 잡담) 패턴화 X. 일회성 / 일반론 / 추측 X.
-- 강한 자기상 / 감정 / 관계 / 갈등 / 변곡점 신호만.
-- confidence < 0.6 항목 출력 X (강한 신호 아니면 등록 X).`;
+[필터 — 가벼운 거름] (사용자 명시 2026-05-08 ultrathink: 너무 빡빡 → 완화. "다음날 나에 대해 새로운 소식 보는 재미")
+- 한 마디 잡담 (인사 / "ㅋㅋ" / 의미 X 발화) 만 패턴화 X. 일상의 작은 관찰도 OK — 음식 취향·날씨 반응·작은 습관 신호 환영.
+- 자기상 / 감정 / 관계 / 갈등 / 변곡점 / 취향 / 일상 리듬 신호 다 OK.
+- confidence ≥ 0.4 면 등록 (옛 0.6 너무 짠 — 새 발견 빈도 ↑).`;
 
     const response = await callAnthropic({ _endpoint: 'analyze_4stage', model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] });
     if (!response.ok) {
@@ -47374,8 +47480,9 @@ JSON으로 출력:
       }
       // user_verified는 그대로 유지 (사용자가 검증한 건 안 건드림)
     };
-    // 사용자 명시 2026-05-03 ultrathink: trivial 노이즈 cut — 신규 등록은 confidence 0.6 이상만 (mergeModelItem 갱신은 그대로).
-    const NEW_THRESHOLD = 0.6;
+    // 사용자 명시 2026-05-08 ultrathink: 0.6 → 0.4 완화. 너무 빡빡해 새 발견 적었음.
+    //   "다음날 나에 대해 새로운 소식 보는 재미" 의도 — 약한 신호도 가설로 등록 후 evidence_count 로 강화.
+    const NEW_THRESHOLD = 0.4;
     if (analysis.traits) {
       analysis.traits.forEach(t => {
         const exist = state.traits.find(e => similarText(e.name, t.name));
@@ -47450,21 +47557,21 @@ function _lastDaily4amCutoff() {
   return cutoff;
 }
 
-// 사용자 명시 2026-05-02 ultrathink: 리뷰 batch schedule 헬퍼 — 직전 schedule 시점 (월요일 4AM / 매월 1일 4AM / 분기 첫 달 1일 4AM / 1월 1일 4AM).
+// 사용자 명시 2026-05-02 ultrathink: 리뷰 batch schedule 헬퍼 — 직전 schedule 시점.
 // `_shouldRunSchedule(state.lastWeeklyReviewBatchAt, _lastWeekly4amCutoff())` 패턴으로 batch submit 자격 체크.
 
-// 직전 월요일 4AM cutoff. (지난 주 = 그 직전 주 일요일 종료 시점 → 월요일 새벽 batch).
-// 지금이 월요일 4AM 이전이면 = 지지난 월요일 4AM (이번 월요일 batch 아직 안 했음).
-// 지금이 월요일 4AM 이후이면 = 이번 월요일 4AM (batch 자격).
+// 사용자 명시 2026-05-08 ultrathink (재): 직전 일요일 04:00 cutoff. (한국식 "일요일 새벽 4시" — 일요일 시작 후 4시간).
+// 지금이 일요일 4AM 이전이면 = 지지난 일요일 4AM (이번 일요일 batch 아직 안 했음).
+// 지금이 일요일 4AM 이후이면 = 이번 일요일 4AM (batch 자격).
 function _lastWeekly4amCutoff() {
   const now = new Date();
   const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 4, 0, 0, 0);
-  // dayOfWeek: 0=일 1=월 ... 6=토. 월요일 = 1.
+  // dayOfWeek: 0=일 1=월 ... 6=토. 일요일 = 0.
   const dow = cutoff.getDay();
-  // 가장 가까운 과거 월요일까지 거슬러 (오늘이 월요일 4AM 이후면 0일, 화요일이면 1일, ..., 일요일이면 6일)
-  const daysBack = (dow === 1) ? (cutoff <= now ? 0 : 7) : ((dow + 6) % 7);
+  // 가장 가까운 과거 일요일까지 거슬러 (오늘이 일요일 4AM 이후면 0일, 월요일이면 1일, ..., 토요일이면 6일)
+  const daysBack = (dow === 0) ? (cutoff <= now ? 0 : 7) : dow;
   cutoff.setDate(cutoff.getDate() - daysBack);
-  // 만약 cutoff 가 미래면 (월요일 4AM 이전) 1주 더 거슬러
+  // 만약 cutoff 가 미래면 (일요일 4AM 이전) 1주 더 거슬러
   if (cutoff > now) cutoff.setDate(cutoff.getDate() - 7);
   return cutoff;
 }
@@ -47732,19 +47839,25 @@ function _buildDiaryBatchRequests() {
 
 // Batch submit — pending archive 들 → multi-request batch 으로 제출.
 // 사용자 명시 2026-05-02 ultrathink: chapter + topic + review (4 type) 같은 batch 안 통합 — batch_id 한 개.
+// 사용자 명시 2026-05-08 ultrathink: chapter case_analysis = inline 즉시 (UX — 나 탭 dot 1-2분 안에).
+//   topic / review / diary 는 batch 유지 (50% 할인 + polling 가속 5/15/30분).
+//   추가 비용 ~$0.05~0.1/주/사용자. 자연 종료 챕터만 영향 (사용자 ✓ 챕터는 이미 inline 처리됨).
 async function _submitDailyExtractBatch(pending) {
+  // chapter case_analysis 만 inline fire-and-forget — 사용자 wait X.
+  pending
+    .filter(b => b && b.messages && b.messages.length >= 6)
+    .forEach(b => {
+      extractChapterCaseAnalysis(b.messages)
+        .then(() => {
+          delete b._pendingCaseAnalysis;
+          try { saveState(); } catch {}
+        })
+        .catch(e => console.warn('[chapter case inline]', b.id, e));
+    });
+
   const requests = [];
   for (const batch of pending) {
-    if (batch.messages.length >= 6) {
-      requests.push({
-        custom_id: `case_${batch.id}`,
-        params: {
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1500,
-          messages: [{ role: 'user', content: _buildExtractChapterPrompt(batch.messages) }]
-        }
-      });
-    }
+    // case_analysis = inline 분리 (위). topic 만 batch.
     requests.push({
       custom_id: `topic_${batch.id}`,
       params: {
@@ -47769,7 +47882,7 @@ async function _submitDailyExtractBatch(pending) {
     return;
   }
 
-  console.log(`[daily extract] ${pending.length} 챕터 + ${reviewBatch.pendingTypes.length} 리뷰 + ${diaryBatch.pendingDates.length} 일기 → ${requests.length} batch requests submit`);
+  console.log(`[daily extract] ${pending.length} 챕터 (case inline) + ${reviewBatch.pendingTypes.length} 리뷰 + ${diaryBatch.pendingDates.length} 일기 → ${requests.length} batch requests submit`);
 
   try {
     const resp = await _authedFetch('/api/chat-batch', {
@@ -47791,12 +47904,28 @@ async function _submitDailyExtractBatch(pending) {
     };
     pending.forEach(b => { b._batchSubmittedAt = Date.now(); });
     state.lastDailyChapterExtractAt = new Date().toISOString();
-    // schedule cooldown — 동일 cutoff 내 재submit 차단.
-    const nowIso = new Date().toISOString();
-    if (reviewBatch.pendingTypes.includes('weekly'))    state.lastWeeklyReviewBatchAt    = nowIso;
-    if (reviewBatch.pendingTypes.includes('monthly'))   state.lastMonthlyReviewBatchAt   = nowIso;
-    if (reviewBatch.pendingTypes.includes('quarterly')) state.lastQuarterlyReviewBatchAt = nowIso;
-    if (reviewBatch.pendingTypes.includes('annual'))    state.lastAnnualReviewBatchAt    = nowIso;
+    // 사용자 보고 2026-05-08 ultrathink: schedule cooldown stamp = 다음 cycle 시작 - 1ms.
+    //   옛: stamp = now → 사용자가 cycle 가로질러 (예: 1주+ 갭 후 일요일 진입 → 월요일 진입) 시 두 번 trigger.
+    //   fix: 현재 cycle 끝 시점 stamp → 같은 cycle 안 재 trigger 차단 + 다음 cycle 시작 시 정상 trigger.
+    if (reviewBatch.pendingTypes.includes('weekly')) {
+      const _nextWeek = new Date(_lastWeekly4amCutoff().getTime() + 7 * 86400000 - 1);
+      state.lastWeeklyReviewBatchAt = _nextWeek.toISOString();
+    }
+    if (reviewBatch.pendingTypes.includes('monthly')) {
+      const _curMon = _lastMonthly4amCutoff();
+      const _nextMon = new Date(_curMon.getFullYear(), _curMon.getMonth() + 1, 1, 4, 0, 0, -1);
+      state.lastMonthlyReviewBatchAt = _nextMon.toISOString();
+    }
+    if (reviewBatch.pendingTypes.includes('quarterly')) {
+      const _curQ = _lastQuarterly4amCutoff();
+      const _nextQ = new Date(_curQ.getFullYear(), _curQ.getMonth() + 3, 1, 4, 0, 0, -1);
+      state.lastQuarterlyReviewBatchAt = _nextQ.toISOString();
+    }
+    if (reviewBatch.pendingTypes.includes('annual')) {
+      const _curA = _lastAnnual4amCutoff();
+      const _nextA = new Date(_curA.getFullYear() + 1, 0, 1, 4, 0, 0, -1);
+      state.lastAnnualReviewBatchAt = _nextA.toISOString();
+    }
     saveState();
     console.log(`[daily extract] batch submitted: ${data.id} — review_pending: ${reviewBatch.pendingTypes.join(',') || '(none)'}`);
     if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
@@ -47917,10 +48046,15 @@ async function _resumePendingBatch() {
             const narrative = _robustJsonExtract(text);
             if (narrative) {
               const year = parseInt(reviewKey, 10);
-              const data = _collectAnnualData(year);
-              const annualReview = _processAnnualReviewResult(narrative, year, data, false);
-              // batch path = auto: true (사용자가 click 안 함 — fresh 처리)
-              if (annualReview) annualReview.auto = true;
+              // 사용자 명시 2026-05-08 ultrathink: idempotent — 같은 year 이미 있으면 skip (user_viewed 보존).
+              //   _processAnnualReviewResult 는 filter+unshift 패턴이라 user_viewed 잃을 수 있음. batch 경로에서 별도 가드.
+              const existsAnnual = (state.annualReviews || []).find(r => r.year === year);
+              if (!existsAnnual) {
+                const data = _collectAnnualData(year);
+                const annualReview = _processAnnualReviewResult(narrative, year, data, false);
+                // batch path = auto: true (사용자가 click 안 함 — fresh 처리)
+                if (annualReview) annualReview.auto = true;
+              }
             }
           }
         } catch (e) { console.warn('[batch review] fail:', customId, e); }
@@ -48105,6 +48239,23 @@ async function maybeRunDailyChapterExtract() {
       const submittedMs = state.pendingBatch.submitted_at || 0;
       if (Date.now() - submittedMs > 12 * 3600 * 1000) {
         await _timeoutPendingBatch();
+      } else {
+        // 사용자 명시 2026-05-08 ultrathink (재): polling 가속 — 5분/15분/30분 retry.
+        //   Anthropic Batch API typical latency = 5분~1시간. 2/4/6분 polling 은 너무 짧음 (대부분 fail).
+        //   5/15/30분 = 평균 도착 시점 cover. 30분 후 미도착 = 사용자 다음 진입 시 처리.
+        //   한 batch_id 당 1번만 schedule (window flag 가드). _resumePendingBatch 가 모든 type
+        //   (chapter case+topic, weekly/monthly/quarterly/annual review, diary) 통합 처리.
+        const _bid = state.pendingBatch.batch_id;
+        if (window._pendingBatchPollingFor !== _bid) {
+          window._pendingBatchPollingFor = _bid;
+          [300000, 900000, 1800000].forEach(ms => {  // 5min / 15min / 30min
+            setTimeout(() => {
+              if (state.pendingBatch && state.pendingBatch.batch_id === _bid) {
+                _resumePendingBatch().catch(e => console.warn('[batch polling retry]', e));
+              }
+            }, ms);
+          });
+        }
       }
       // batch 처리 중이면 새 batch 안 넣음 (중복 방지)
       return;
@@ -48114,19 +48265,11 @@ async function maybeRunDailyChapterExtract() {
   // 2. 4AM cutoff schedule check
   if (!_shouldRunSchedule(state.lastDailyChapterExtractAt, _lastDaily4amCutoff())) return;
 
-  // V4 (사용자 명시 2026-05-04 — v7 §11 / v8 §11): 돌연변이 깨달음 자동 추출
-  // 4AM cutoff 시점 _mutationChatState 활성 + messages>=5 면 LLM 추출 → state.archive type='mutation' + closeMutationChat (cleanup) + marker stash
+  // V4 (사용자 명시 2026-05-08): 4AM cutoff 자동 추출 폐기 — 사용자가 ✓ 깨달음 버튼 누른 것만 추출.
+  // mutation chat 활성 상태로 잠들었으면 단순 close (skipSave=true). archive 추가 X.
   if (typeof _mutationChatState !== 'undefined' && _mutationChatState
-      && Array.isArray(_mutationChatState.messages) && _mutationChatState.messages.length >= 5) {
-    try {
-      await _extractMutationInsight({ trigger: 'cutoff_auto', mutationChatState: _mutationChatState });
-      state._mutationCutoffExtractedAt = new Date().toISOString();
-      saveState();
-    } catch (e) { console.warn('[mutation cutoff extract]:', e); }
-    // mutation chat 자동 종료 (cleanup) — 사용자가 다음 진입 시 토스트 안내 (init 시점 hook 자리)
-    if (typeof closeMutationChat === 'function') {
-      try { closeMutationChat(true); } catch {}
-    }
+      && typeof closeMutationChat === 'function') {
+    try { closeMutationChat(true); } catch {}
   }
 
   // 4AM 시점 mood 패턴 위기 detect (자살예방법 §15-6)
@@ -48173,7 +48316,10 @@ async function maybeRunDailyChapterExtract() {
 
 
 // ═══════════════════════════════════════════════════════════════
-// V4 (사용자 명시 2026-05-06): 미구독/게스트 = 3턴마다 자동 모델 갱신 (forceAnalyze auto).
+// V4 (사용자 명시 2026-05-06): 미구독/게스트 = 3턴마다 자동 모델 갱신.
+// V4 (사용자 명시 2026-05-08 ultrathink — 재): forceAnalyze (전체 데이터) → extractChapterCaseAnalysis (chatMessages 만, Opus 4.7) 으로 변경.
+//   게스트 entries 거의 0 이라 forceAnalyze 의 entries/archive 분석 의미 X. chatMessages 분석이 합리.
+//   모델은 Opus — 게스트/미구독자에게 가장 풍부한 분석 제공 (옛 forceAnalyze 도 Opus 였음).
 // trigger: generateAIResponse 끝 hook.
 // 가드:
 //   - 미구독 (게스트 or 인증 X subscription_active) 만
@@ -48204,9 +48350,12 @@ async function _maybeAutoForceAnalyzeFreeTier() {
   }
   state.preferences._autoForceAnalyzeLastAt = new Date().toISOString();
   try { saveState(); } catch {}
-  // forceAnalyze auto — confirm modal X / silent toast / 같은 함수 흐름.
-  if (typeof forceAnalyze === 'function') {
-    try { await forceAnalyze({ auto: true }); } catch (e) { console.warn('[auto force analyze]', e); }
+  // 사용자 명시 2026-05-08 ultrathink: extractChapterCaseAnalysis (Opus 4.7) 호출. 옛 forceAnalyze 폐기.
+  if (typeof extractChapterCaseAnalysis === 'function') {
+    try {
+      const _msgs = (state.chatMessages || []).slice();
+      await extractChapterCaseAnalysis(_msgs, { model: 'claude-opus-4-7' });
+    } catch (e) { console.warn('[auto chapter case opus]', e); }
   }
 }
 // ═══════════════════════════════════════════════════════════════

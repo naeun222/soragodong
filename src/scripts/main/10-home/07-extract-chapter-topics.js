@@ -1,14 +1,17 @@
-async function extractChapterCaseAnalysis(messages) {
+async function extractChapterCaseAnalysis(messages, opts) {
   try {
     if (!_canAI()) return;
     if (window._onbTutorialMode) return;
     if (state.preferences && state.preferences.testerMode) return;
     if (!Array.isArray(messages) || messages.length < 3) return;
 
+    // 사용자 명시 2026-05-08 ultrathink: opts.model 파라미터 — 미구독자/게스트 매 3턴 자동 호출 시 Opus 4.7 지정.
+    //   default = Sonnet 4-6 (기존 동작). 명시 시 다른 모델 가능.
+    const _model = (opts && opts.model) || 'claude-sonnet-4-6';
     const prompt = _buildExtractChapterPrompt(messages);
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
-      model: 'claude-sonnet-4-6',
+      model: _model,
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     });

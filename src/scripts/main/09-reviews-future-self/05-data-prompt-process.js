@@ -2,8 +2,18 @@ function _collectReviewData(type) {
   const today = new Date();
   let cutoff, cutoffEnd;
   if (type === 'weekly') {
-    cutoff = new Date(today.getTime() - 7 * 86400000);
-    cutoffEnd = today;
+    // 사용자 명시 2026-05-08 ultrathink (재): schedule = 직전 일요일 04:00.
+    //   data 범위 = 그 직전 7일 (= 그 직전 일요일 04:00 ~ schedule 일요일 04:00).
+    //   _lastWeekly4amCutoff() 는 항상 가장 최근 지나간 일요일 4AM 반환.
+    const sunCutoff4am = (typeof _lastWeekly4amCutoff === 'function') ? _lastWeekly4amCutoff() : null;
+    if (sunCutoff4am) {
+      cutoff = new Date(sunCutoff4am.getTime() - 7 * 86400000);  // 직전 일요일 04:00
+      cutoffEnd = sunCutoff4am;                                   // schedule 일요일 04:00
+    } else {
+      // fallback (helper 부재) — 옛 동작
+      cutoff = new Date(today.getTime() - 7 * 86400000);
+      cutoffEnd = today;
+    }
   } else {
     cutoff = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     cutoffEnd = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -70,7 +80,49 @@ function _collectReviewData(type) {
 //   inline (generateReview) / batch (_buildReviewBatchRequests) 둘 다 같은 spec 사용 → 동시 적용.
 function _buildReviewPrompt(type, data) {
   const { entriesInRange, missionsInRange, chatInRange, decisionsInRange, topicCardsInRange, pearlsInRange, archiveInRange, insightsInRange, chaptersInRange, prevSeeds } = data;
-  if (!entriesInRange || entriesInRange.length === 0) return null;
+
+  // 사용자 명시 2026-05-08 ultrathink (재): weekly 는 마지막 review 이후 새 데이터 1개라도 있어야 trigger.
+  //   "꼭 일주일 안 지나도 일요일 4AM 이후면 review 생성. 단 마지막 review 이후 데이터 X 면 X."
+  //   monthly/quarterly/annual 은 옛 그대로 (entries 0 가드만).
+  if (type === 'weekly') {
+    // 가드 1: 마지막 review 이후 새 데이터 1개라도
+    const lastReview = (state.weeklyReviews || []).slice().sort((a, b) =>
+      new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)
+    )[0];
+    if (lastReview) {
+      const lastAt = new Date(lastReview.completedAt || lastReview.createdAt || 0);
+      const lastISO = lastAt.toISOString().split('T')[0];
+      const hasNewSinceLast =
+        (state.entries || []).some(e => e.date && e.date > lastISO) ||
+        (state.chatMessages || []).some(m => m && m.role === 'user' && !m.typing && !m.error && m.timestamp && new Date(m.timestamp) > lastAt) ||
+        (state.archive || []).some(a => a && !a._deleted && a.savedAt && new Date(a.savedAt) > lastAt) ||
+        (state.missions || []).some(m => m && m.createdAt && new Date(m.createdAt) > lastAt) ||
+        (state.pearls || []).some(p => p && !p._deleted && p.createdAt && new Date(p.createdAt) > lastAt) ||
+        (state.topicCards || []).some(t => t && !t._deleted && t.createdAt && new Date(t.createdAt) > lastAt);
+      if (!hasNewSinceLast) return null;
+    }
+    // 가드 2 (강화 재): entries 1+ 만 OK (사용자 명시 2026-05-08 추가).
+    //   chat 만 있고 entries 0 = 일기 안 쓴 주 = review 차트/cycles 부실. 일기 1+ 가 review 의 핵심 input.
+    if (!entriesInRange || entriesInRange.length === 0) return null;
+  } else {
+    // monthly: 사용자 명시 2026-05-08 — weekly 와 동일 가드 (마지막 monthly review 이후 새 데이터 X 면 X).
+    const lastReview = (state.monthlyReviews || []).slice().sort((a, b) =>
+      new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)
+    )[0];
+    if (lastReview) {
+      const lastAt = new Date(lastReview.completedAt || lastReview.createdAt || 0);
+      const lastISO = lastAt.toISOString().split('T')[0];
+      const hasNewSinceLast =
+        (state.entries || []).some(e => e.date && e.date > lastISO) ||
+        (state.chatMessages || []).some(m => m && m.role === 'user' && !m.typing && !m.error && m.timestamp && new Date(m.timestamp) > lastAt) ||
+        (state.archive || []).some(a => a && !a._deleted && a.savedAt && new Date(a.savedAt) > lastAt) ||
+        (state.missions || []).some(m => m && m.createdAt && new Date(m.createdAt) > lastAt) ||
+        (state.pearls || []).some(p => p && !p._deleted && p.createdAt && new Date(p.createdAt) > lastAt) ||
+        (state.topicCards || []).some(t => t && !t._deleted && t.createdAt && new Date(t.createdAt) > lastAt);
+      if (!hasNewSinceLast) return null;
+    }
+    if (!entriesInRange || entriesInRange.length === 0) return null;
+  }
 
   const periodLabel = type === 'weekly' ? '주' : '달';
 

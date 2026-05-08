@@ -524,6 +524,8 @@ function _flushLocalSave(opts) {
 function saveState(force) {
   // V4 (사용자 명시): 도서관 탭 dot 갱신 — 데이터 변경 매 cycle 마다 자연 갱신
   if (typeof updateLibraryTabNewDot === 'function') updateLibraryTabNewDot();
+  // V4 (사용자 명시 2026-05-08 ultrathink): 홈 / 나 탭 batch dot 갱신
+  if (typeof updateNavBatchDots === 'function') updateNavBatchDots();
   if (!authUserId) return; // Don't save if not logged in
   // 사용자 요청 2026-04-28: 테스터 모드면 force여도 cloud/localStorage 저장 X
   if (state.preferences && state.preferences.testerMode) return;

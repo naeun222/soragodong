@@ -195,7 +195,7 @@ async function _v8RunIntakeAndInject() {
   // chat 탭으로 자동 전환
   if (typeof showScreen === 'function') showScreen('chat');
 
-  if (!analysis || (!analysis.diagnosis && !analysis.strategy)) return;
+  if (!analysis || !analysis.text) return;
 
   state.chatMessages = state.chatMessages || [];
   const nowIso = new Date().toISOString();
@@ -212,22 +212,21 @@ async function _v8RunIntakeAndInject() {
     content: '방금 들은 거, 이렇게 봤어 —',
     timestamp: nowIso
   });
-  // 사용자 보고 2026-05-06 ultrathink (재 X4): generic 카피 제거 — AI diagnosis 자체가 풍부함 (실제 4단 톤).
-  const para = (analysis.paraphrase || '').trim();
-  const diag = (analysis.diagnosis || '').trim();
-  const strat = (analysis.strategy || '').trim();
-  const prop = (analysis.proposal || '').trim();
-  const observation = para || '방금 들려준 마음, 정리해봤어.';
-  const concept = diag || '같이 들여다보자.';
-  const guide = strat || '천천히 같이 가보자.';
-  const proposalText = prop || '오늘 한 걸음';
-  const fourStage = `[내가 본 것]\n${observation}\n\n[이게 뭐냐면]\n${concept}\n\n[이럴 땐 이렇게]\n${guide}\n\n[오늘의 제안]\n${proposalText}`;
+  // 사용자 명시 2026-05-08: AI 4단 raw text 그대로 push — askDeeper 와 100% 동일 시각.
+  const fourStage = analysis.text;
+  // proposal title 추출 — [오늘의 제안] 섹션 첫 줄.
+  let proposalTitle = '오늘 한 걸음';
+  const propMatch = fourStage.match(/\[오늘의 제안\]\s*([\s\S]+?)(?=\n\s*\[|$)/);
+  if (propMatch) {
+    const firstLine = propMatch[1].trim().split(/\n/)[0].trim();
+    if (firstLine) proposalTitle = firstLine.slice(0, 40);
+  }
   state.chatMessages.push({
     role: 'assistant',
     content: fourStage,
     fromDeeper: true,
     proposal: true,
-    proposalData: { title: proposalText.slice(0, 40) },
+    proposalData: { title: proposalTitle },
     timestamp: nowIso
   });
   // 사용자 명시 2026-05-06 ultrathink: 4단 분석 직후 '더 알고 싶어 ▾' 설명만. 마무리는 코치마크가 책임.

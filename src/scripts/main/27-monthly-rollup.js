@@ -159,6 +159,22 @@ function _collectQuarterlyData(quarterKey, stats) {
 function _buildQuarterlyReviewPrompt(quarterKey, stats, data) {
   const _data = data || _collectQuarterlyData(quarterKey, stats);
   const { recentEmbodied, prevSeeds, entriesIn, chatIn, topicCardsIn, pearlsIn, archiveIn, insightsIn, chaptersIn } = _data;
+  // 사용자 명시 2026-05-08 ultrathink: 마지막 quarterly review 이후 새 데이터 1개라도 있어야 trigger.
+  const lastReview = (state.quarterlyReviews || []).slice().sort((a, b) =>
+    new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)
+  )[0];
+  if (lastReview) {
+    const lastAt = new Date(lastReview.completedAt || lastReview.createdAt || 0);
+    const lastISO = lastAt.toISOString().split('T')[0];
+    const hasNewSinceLast =
+      (state.entries || []).some(e => e.date && e.date > lastISO) ||
+      (state.chatMessages || []).some(m => m && m.role === 'user' && !m.typing && !m.error && m.timestamp && new Date(m.timestamp) > lastAt) ||
+      (state.archive || []).some(a => a && !a._deleted && a.savedAt && new Date(a.savedAt) > lastAt) ||
+      (state.missions || []).some(m => m && m.createdAt && new Date(m.createdAt) > lastAt) ||
+      (state.pearls || []).some(p => p && !p._deleted && p.createdAt && new Date(p.createdAt) > lastAt) ||
+      (state.topicCards || []).some(t => t && !t._deleted && t.createdAt && new Date(t.createdAt) > lastAt);
+    if (!hasNewSinceLast) return null;
+  }
   // 사용자 명시 2026-05-02 ultrathink (ERROR #9): entries 0개 = null return → caller skip.
   if (!entriesIn || entriesIn.length === 0) return null;
 
