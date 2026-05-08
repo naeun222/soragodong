@@ -18,30 +18,12 @@ const CORE_TUTORIAL_RANGES = {
   core3b: { startId: 'mutation_intro',   endId: 'try_evolved_card' },
   // V4 (v8 묶음 19) 2026-05-03: Core 4 = 1 step (crystallize_complete) — 결정화 의식 직후 안내. 옛 core4 (model_intro) 와 키 분리.
   core4_pearl: { startId: 'crystallize_complete', endId: 'crystallize_complete' }
-  // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 코어 튜토리얼 entries 모두 dead. 호출 시 V8_ACTIVE_STEPS 화이트리스트가 모두 skip → 즉시 onbFinish.
-  /* DEAD CODE — 옛 core2_legacy (33 step) / core3 (실행 15 step) / core4 (model_intro 1 step) / core5 (도서관 15 step) / core6 (숙고 3 step) / core8 (마법 6 step):
-  core2_legacy: { startId: 'mission_done',      endId: 'dna_pearl_types' },
-  core3: { startId: 'exec_overview',     endId: 'exec_immerse_done' },     // 15 step
-  core4: { startId: 'model_intro',       endId: 'model_intro' },           // 1 step
-  core5: { startId: 'library_categories', endId: 'annual_stories_done' },  // 15 step (skip 포함)
-  core6: { startId: 'reflection_when',   endId: 'reflection_from_chat' },  // 3 step
-  core8: { startId: 'magic_room_intro',  endId: 'magic_unlock_explain' }   // 6 step
-  */
 };
 
 // 사용자 요청 2026-04-29: 제목 단순화 — '코어' 빼고 단순 명사로
-// V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 core3 / core4 / core5 / core6 / core8 라벨 = dead.
 const CORE_LABELS = {
   core1: '시작',
   core2: '소라의 부름'
-  /* DEAD CODE (v8 폐기, legacy reference):
-  ,
-  core3: '실행',
-  core4: '나',
-  core5: '도서관',
-  core6: '숙고',
-  core8: '마법의 소라고동'
-  */
 };
 
 // 코어 #5에서 제외할 step ID (사용자 명시: today_* 3개 / magic_* 6개 / back_to_galpi)
@@ -111,35 +93,7 @@ const CORE_BODY_OVERRIDE = {
       body: '전략 DNA 가 어떻게 자라고 진화하는지 한 바퀴 봤어 ✦<br><br>이제 진짜 너의 전략이 쌓일 거야 —<br>대화하다 <b>\'✦ 해볼게\'</b> 누르면 카드로 자라.<br><br>부담 없이. 안 해도 ㄱㅊ.<br>너의 속도로 천천히 ✦',
       nextLabel: '시작! ✦'
     }
-    /* DEAD CODE (v8 폐기, legacy reference):
-    , core3: { title: '✦ 실행 — 마무리', body: '...', nextLabel: '시작! ✦' }
-    , core4: { title: '✦ 나 — 마무리', body: '...', nextLabel: '시작! ✦' }
-    , core5: { title: '✦ 도서관 — 마무리', body: '...', nextLabel: '시작! ✦' }
-    , core6: { title: '✦ 숙고 — 마무리', body: '...', nextLabel: '시작! ✦' }
-    , core8: { title: '✦ 마법의 소라고동 — 마무리', body: '...', nextLabel: '시작! ✦' }
-    */
   }
-  /* DEAD CODE — 옛 코어 step body override (V8_ACTIVE_STEPS 외라 모든 step 진입 X):
-  ,
-  mission_done: {
-    core2: { body: '이 ⭐ 미션 카드가 ...' }
-  },
-  yangsaeng_explain: {
-    core2: { body: '여기 전략 DNA 카드는 ...' }
-  },
-  exec_immerse_done: {
-    core3: { body: '몰입 결과 묻는 창 떴지? ...' }
-  },
-  model_intro: {
-    core4: { body: '여기는 내가 너를 분석한 결과 ...', nextLabel: '확인했어 ✦' }
-  },
-  galpi_sub_intro: {
-    core5: { body: '여기엔 마법의 소라고동과 리뷰 모음 ...', waitFor: 'next', nextLabel: '다음 →', targetSelector: null, manualAdvance: false }
-  },
-  annual_stories_done: {
-    core5: { body: 'Stories 잘 봤지? ...' }
-  }
-  */
 };
 
 // 활성 코어 추적 (onbFinish가 unlock 적용할 수 있게)
@@ -151,128 +105,38 @@ let _coreNeedsHelpAfterEnd = false;  // 코어 #1 외엔 endId 다 지나서 hel
 // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 잠금 메커니즘 폐기 — 모든 코어 unlock 으로 처리.
 // v8 = "잠금 X / 발견형 학습". Core 2 만 4단 응답 disabled-locked (state._core2NotUnlocked) 으로 별도 처리.
 // 함수는 보존 — legacy 호환 (호출자 30+곳).
-function isCoreLocked(coreId) {
-  return false;  // 옛 잠금 메커니즘 dead — 항상 unlocked
-  /* DEAD CODE (v8 폐기, legacy reference):
-  if (!coreId) return false;
-  if (state && state.preferences && state.preferences.testerMode) return false;
-  if (window._onbTutorialMode) return false;
-  // 사용자 보고 2026-05-03: 진입 초반의 cloud load 끝 전 = state.unlocked default (모두 false) → 잠금 모달 = 버그.
-  // _initialDataLoading flag = cloud load 동안 잠금 우회.
-  if (window._initialDataLoading) return false;
-  // 사용자 보고 2026-04-30 (Phase C 전수 fix): apiKey 비어도 lock 적용 — 로그인 X 일 때만 우회.
-  // 옛 코드는 'apiKey 없음 = 초기 셋업'이었으나 Phase C 후 모든 사용자 apiKey 비어있음.
-  if (!state) return false;
-  if (typeof session === 'undefined' || !session || !session.access_token) return false;
-  if (!state.unlocked) return true;
-  return state.unlocked[coreId] !== true;
-  */
+function isCoreLocked(_coreId) {
+  return false;  // v8 폐기 — 항상 unlocked. legacy 호환 (호출자 30+곳) 위해 함수 보존.
 }
 
-// 코어별 잠금 모달용 메타 (이름 + 길이 힌트)
-// V4 (v8 사용자 명시 2026-05-03 ultrathink): showCoreLockModal noop 라 사용 X. 옛 core3-8 모두 dead.
+// 코어별 잠금 모달용 메타 (이름 + 길이 힌트). v8 폐기지만 legacy 호환 — Core 1/2 만 보존.
 const CORE_LOCK_INFO = {
   core1: { name: '시작',           long: false },
-  core2: { name: '소라의 부름',     long: true }   // 사용자 명시: 좀 긺
-  /* DEAD CODE (v8 폐기, legacy reference):
-  , core3: { name: '실행',           long: false }
-  , core4: { name: '나',             long: false }
-  , core5: { name: '도서관',         long: true }
-  , core6: { name: '숙고',           long: false }
-  , core8: { name: '마법의 소라고동', long: false }
-  */
+  core2: { name: '소라의 부름',     long: true }
 };
 
 // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 잠금 모달 = 폐기 (noop).
 // _coreLockInterceptor 가 dead 라 자동 호출 X. 함수 자체는 보존 (legacy 호환).
 // v8 = "잠금 X / 발견형 학습". 사용자가 잠긴 영역 클릭하면 자유롭게 진입. Core 2 entry modal 만 별도.
-async function showCoreLockModal(coreId) {
-  return;  // 옛 잠금 모달 dead — noop
-  /* DEAD CODE (v8 폐기, legacy reference):
-  if (!coreId || !CORE_TUTORIAL_RANGES[coreId]) return;
-  if (typeof showConfirmModal !== 'function') {
-    if (typeof startCoreTutorial === 'function') startCoreTutorial(coreId);
-    return;
-  }
-  const info = CORE_LOCK_INFO[coreId] || { name: '이 기능', long: false };
-  const lengthHint = info.long ? '\n(좀 길어 — 5~10분 정도)' : '';
-  const yes = await showConfirmModal({
-    title: '🔒 잠겨있어',
-    message: `'${info.name}' 튜토리얼을 완료해야 사용할 수 있어. 해볼래?${lengthHint}`,
-    okLabel: '지금 해볼게 ✦',
-    cancelLabel: '나중에'
-  });
-  if (yes) startCoreTutorial(coreId);
-  */
+async function showCoreLockModal(_coreId) {
+  return;  // v8 폐기 — noop. legacy 호환 위해 함수 보존.
 }
 
 // 코어별 진입 화면 — startInteractiveOnboarding의 showScreen('home') 덮어씌움
 // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 core3 / core4 / core5 / core6 / core8 진입 화면 dead.
 const CORE_INITIAL_SCREEN = {
   core1: 'home',
-  core2: 'home'     // click_strategy 시작 — 채팅 탭 진입은 startCore2 가 별도 처리. home default 보존.
-  /* DEAD CODE (v8 폐기, legacy reference):
-  , core3: 'execute',  // exec_overview는 실행 탭
-  core4: 'model',    // model_intro는 나 탭
-  core5: 'archive',  // library_categories는 도서관 탭
-  core6: 'home',     // reflection은 홈에 있음 (사용자 명시: 추가 버튼)
-  core8: 'decisions' // magic_room_intro는 마법의 소라고동 화면 — showScreen('decisions') + renderDecisionsList
-  */
+  core2: 'home'
 };
 
-// 코어별 진입 후 추가 액션 — 마법의 소라고동 등 특수 진입 처리
-// V4 (v8 사용자 명시 2026-05-03): 옛 core8 액션 dead.
-const CORE_INITIAL_ACTION = {
-  /* DEAD CODE (v8 폐기, legacy reference):
-  core8: () => {
-    if (typeof renderDecisionsList === 'function') renderDecisionsList();
-  }
-  */
-};
+// 코어별 진입 후 추가 액션 — 마법의 소라고동 등 특수 진입 처리. v8 폐기로 현재 빈 객체.
+const CORE_INITIAL_ACTION = {};
 
 // 코어 튜토리얼 시작 — startInteractiveOnboarding 인프라 재사용
 async function startCoreTutorial(coreId) {
-  // V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼로 대체. 옛 코어 진입 = no-op.
+  // 사용자 명시 2026-05-06 ultrathink: V8 시작 튜토리얼로 대체 — 옛 코어 진입 = no-op.
   // 진입점 (Settings → 가이드 / 옛 chooser / 자동 trigger) 모두 작동 안 함.
   console.warn('[legacy] startCoreTutorial(' + coreId + ') — V8 시작 튜토리얼로 대체됨, no-op');
-  return;
-  const range = CORE_TUTORIAL_RANGES[coreId];
-  if (!range) { console.warn('[core] unknown id:', coreId); return; }
-  const startIdx = ONBOARDING_STEPS.findIndex(s => s.id === range.startId);
-  const endIdx = ONBOARDING_STEPS.findIndex(s => s.id === range.endId);
-  if (startIdx < 0 || endIdx < 0) { console.warn('[core] step ID missing:', range); return; }
-
-  // step 필드 override 적용 (cleanup에서 원복)
-  _coreBodyOverridesApplied = [];
-  Object.entries(CORE_BODY_OVERRIDE).forEach(([stepId, perCore]) => {
-    const ov = perCore[coreId];
-    if (!ov) return;
-    const step = ONBOARDING_STEPS.find(s => s.id === stepId);
-    if (!step) return;
-    const snapshot = {};
-    Object.keys(ov).forEach(k => {
-      snapshot[k] = step[k];  // 원본 보존 (없는 필드도 undefined로 적용됨)
-      step[k] = ov[k];
-    });
-    _coreBodyOverridesApplied.push({ step, snapshot });
-  });
-
-  _activeCoreId = coreId;
-  _coreEndIdx = endIdx;
-  // 사용자 요청 2026-04-29: 코어 #1 endId 변경됨 (chat_archive_note) → 모든 코어 동일하게 help_button 점프
-  // V4 (사용자 명시 2026-05-03 ultrathink): Core 1 = core1_finish 가 마지막 step (옛 help_button override 폐기 — '여기까지 잘 따라왔어' 카피 잔재).
-  // 다른 코어는 그대로 help_button 점프 (Core 2 등 마무리 카피 자리).
-  _coreNeedsHelpAfterEnd = (coreId !== 'core1');
-  // 진입 화면 override (startInteractiveOnboarding이 기본 home으로 가는 거 덮어씌움)
-  window._coreInitialScreen = CORE_INITIAL_SCREEN[coreId] || 'home';
-  // 진입 후 추가 액션 (예: 마법의 소라고동 — renderDecisionsList)
-  window._coreInitialAction = CORE_INITIAL_ACTION[coreId] || null;
-
-  // 인프라 재사용 (testerMode ON + 시드 자동)
-  await startInteractiveOnboarding(startIdx);
-
-  // 사용자 요청 2026-04-29: 코어별 시드 후처리 — 그 코어 흐름에 직접 필요한 시드만 유지 (혼란 차단)
-  setTimeout(() => { try { _scrubSeedsForCore(coreId); } catch (e) { console.warn('seed scrub:', e); } }, 50);
 }
 
 // 코어별 시드 정리 — testSeedV4Data가 적용한 거 중 그 코어 흐름에 안 필요한 거 제거

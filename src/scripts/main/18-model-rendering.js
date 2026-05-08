@@ -257,12 +257,6 @@ function renderModel() {
   // 사용자 명시 2026-05-06 ultrathink: 추적 항목 (projectsSection) 실행 탭으로 이동.
   // 사용자 명시 2026-05-06 추가 ultrathink: task 평균 시간 기능 주석 처리 (의미 약함, 가독성 우선).
   html += `<div class="model-meta-divider">— 메타 —</div>`;
-  /* DEAD (사용자 명시 2026-05-06 — task 평균 폐기):
-  html += `<details class="model-meta-collapse">
-    <summary class="model-meta-summary">task 평균 시간 <span style="font-size:10px; color:var(--text-soft); margin-left:6px;">지난 7일</span></summary>
-    <div class="model-meta-body">${timeCardHtml}</div>
-  </details>`;
-  */
 
   // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 입력 UI — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
   html += _renderUserDeepProfileSection();

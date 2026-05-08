@@ -15,39 +15,7 @@ async function showCoreReplayPicker() {
 // .core-locked 클래스 부착 X — DOM 깨끗. 옛 잠금 시각 (🔒 ::after) 안 보임.
 // 함수는 보존 — render 함수들이 호출 (renderHome 등).
 function applyCoreLockMarkers() {
-  return;  // 옛 잠금 메커니즘 dead — noop
-  /* DEAD CODE (v8 폐기, legacy reference):
-  if (typeof document === 'undefined' || !document.querySelectorAll) return;
-  // 매핑: 셀렉터 → coreId
-  const lockMap = [
-    // 탭 nav (3개)
-    { sel: '.nav-item[data-screen="execute"]', core: 'core3' },
-    { sel: '.nav-item[data-screen="model"]',   core: 'core4' },
-    { sel: '.nav-item[data-screen="archive"]', core: 'core5' },
-    // 홈 카드들
-    { sel: '#missionContainer .mission-card',                         core: 'core2' },
-    { sel: '.home-small-card[onclick="openShellCollection()"]',       core: 'core2' },
-    // 도서관 안 양생방 chip — core2 prerequisite (사용자 요청 2026-04-29)
-    { sel: '.lib-cat-chip[data-cat="yangsaeng"]',                     core: 'core2' },
-    // 숙고 질문 — 추가 진입점 + 이미 active 진행 중인 카드도 잠금 (사용자 요청 2026-04-29)
-    { sel: '.reflection-empty-card, .reflection-active-card, [onclick="addReflectionQuestion()"]', core: 'core6' },
-    // 마법의 소라고동 — 도서관 안 진입점 + 홈 mini 카드 + 결정 화면 새 결정 버튼
-    { sel: '[onclick="showArchiveDecisions()"], .decision-mini-card, .magic-card', core: 'core8' }
-  ];
-  lockMap.forEach(({sel, core}) => {
-    const locked = isCoreLocked(core);
-    document.querySelectorAll(sel).forEach(el => {
-      if (locked) {
-        el.classList.add('core-locked');
-        el.setAttribute('data-core', core);
-      } else {
-        // 풀린 거: 클래스 + data 제거 (안전: 다른 data-core 쓰는 element와 충돌 X — 우리 앱엔 그런 예 없음)
-        el.classList.remove('core-locked');
-        if (el.getAttribute('data-core')) el.removeAttribute('data-core');
-      }
-    });
-  });
-  */
+  return;  // v8 폐기 — noop. legacy 호환 위해 함수 보존 (renderHome 등 호출).
 }
 
 // 사용자 요청 2026-04-29: 튜토리얼 phase 시각화 — "지금 어디 있나"

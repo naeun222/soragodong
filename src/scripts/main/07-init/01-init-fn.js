@@ -73,25 +73,6 @@ async function init() {
   // 사용자 명시 2026-05-06 ultrathink: PWA 스티키 button — 모든 진입 경로 공통 노출 (가드는 _ensurePwaStickyBtn 안).
   setTimeout(() => { if (typeof _ensurePwaStickyBtn === 'function') _ensurePwaStickyBtn(); }, 1500);
 
-  // V4 (v8 사용자 명시 2026-05-03 ultrathink): 옛 코어 잠금 글로벌 클릭 인터셉터 = 폐기.
-  // v8 = "잠금 X / 발견형 학습". Core 2 만 4단 응답 disabled-locked (4단 응답 자리에서 처리) 별도.
-  // .core-locked 클래스 자체도 applyCoreLockMarkers noop 으로 부착 X.
-  /* DEAD CODE (v8 폐기, legacy reference):
-  // V4 코어 튜토리얼 잠금 — 글로벌 클릭 인터셉터 (capture phase로 원래 onclick 가로챔)
-  // .core-locked 클래스 + data-core="coreN" 있는 element 클릭 시 잠금 모달 표시.
-  // testerMode ON / 코어 활성 / unlocked=true 면 통과.
-  document.addEventListener('click', function _coreLockInterceptor(e) {
-    const el = e.target && e.target.closest && e.target.closest('.core-locked');
-    if (!el) return;
-    const coreId = el.getAttribute('data-core');
-    if (!coreId) return;
-    if (typeof isCoreLocked === 'function' && !isCoreLocked(coreId)) return; // 풀려있으면 통과
-    e.preventDefault();
-    e.stopPropagation();
-    if (typeof showCoreLockModal === 'function') showCoreLockModal(coreId);
-  }, true);
-  */
-
   // ── AUTH GATE ──
   // 사용자 보고 2026-05-03: 기존 사용자 진입 초반의 nav click → '잠겨있어' 모달 = 버그.
   // root cause = cloud load 끝 전 = state.unlocked default (모두 false) → isCoreLocked = true → 잠금 모달.
