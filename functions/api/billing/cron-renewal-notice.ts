@@ -29,11 +29,27 @@ const NOTICE_LEAD_DAYS = 7;
 
 interface BillingRow {
   user_id: string;
-  user_email?: string | null;
   subscription_plan: string;
   subscription_expires_at: string | null;
   next_billing_at: string | null;
   portone_billing_key: string | null;
+}
+
+// 사용자 보고 2026-05-09: soragodong_billing.user_email 컬럼 없음 (auth.users.email 만 존재).
+// → Supabase Auth Admin API 로 별도 lookup. 각 row 처리 시 호출.
+async function _fetchUserEmail(env: Env, userId: string): Promise<string | null> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const resp = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
+      }
+    });
+    if (!resp.ok) return null;
+    const data: any = await resp.json().catch(() => null);
+    return data?.email || null;
+  } catch { return null; }
 }
 
 function escapeHtml(s: string): string {
@@ -71,8 +87,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   // due rows 조회 — 7일 안 갱신 + 미발송.
   let dueRows: BillingRow[] = [];
   try {
+    // 사용자 보고 2026-05-09: user_email 컬럼은 soragodong_billing 에 없음 → auth.users.email 별도 lookup.
     const url = `${env.SUPABASE_URL}/rest/v1/soragodong_billing?` +
-      `select=user_id,user_email,subscription_plan,subscription_expires_at,next_billing_at,portone_billing_key&` +
+      `select=user_id,subscription_plan,subscription_expires_at,next_billing_at,portone_billing_key&` +
       `next_billing_at=gte.${encodeURIComponent(nowIso)}&` +
       `next_billing_at=lte.${encodeURIComponent(sevenDaysLater)}&` +
       `renewal_notice_7d_at=is.null&` +
@@ -112,8 +129,10 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   const errors: Array<{ user_id: string; error: string }> = [];
 
   for (const row of dueRows) {
-    if (!row.user_email) {
-      errors.push({ user_id: row.user_id, error: 'user_email 없음 — 이메일 발송 skip' });
+    // 사용자 보고 2026-05-09: auth.users 에서 email 별도 lookup.
+    const userEmail = await _fetchUserEmail(env, row.user_id);
+    if (!userEmail) {
+      errors.push({ user_id: row.user_id, error: 'user_email lookup 실패 (auth.users) — 발송 skip' });
       continue;
     }
 
@@ -162,7 +181,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
           'Authorization': `Bearer ${env.RESEND_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ from, to: [row.user_email], subject, html })
+        body: JSON.stringify({ from, to: [userEmail], subject, html })
       });
 
       if (!resp.ok) {
