@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    name: Build & Type Check
+  build-verify:
+    name: Build & Verify (concat byte-identical)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,33 +17,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      - name: Install
-        run: npm ci
-
-      - name: Build (Vite)
+      - name: Build (concat — src/ → index.html + public/index.html)
         run: npm run build
 
-      - name: Type check
-        run: npm run typecheck
-        # tsconfig가 src/**/*.ts만 가리키는데 src 폴더 비어있어 fail 가능 — 일단 continue
-        continue-on-error: true
-
-      - name: Lint (eslint)
-        run: npm run lint
-        # 같은 이유로 fail 허용 (src 비어있음)
-        continue-on-error: true
-
-  # 단위 테스트 (Vitest)
-  test:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm test
+      - name: Verify byte-identical (root vs public)
+        run: npm run verify

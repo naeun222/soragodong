@@ -53,9 +53,11 @@
 | **Supabase, Inc.** | 인증 + 데이터 저장 (PostgreSQL) | 이메일, 사용자 데이터 | 미국 (AWS us-east-1) |
 | **포트원 (PortOne)** | 결제 처리 | 결제 정보 (카드번호 직접 보유 X, 토큰만) | 한국 |
 | **Cloudflare, Inc.** | 백엔드 호스팅 + 정적 자원 + Edge Functions | 사용자 요청 라우팅, 정적 파일 전송 | 미국 본사 (글로벌 edge 분산) |
-| **카카오 (Kakao Corp.)** | OAuth 로그인 인증 (선택) | 이메일 (필수) / 닉네임·프로필사진 (선택 — 카카오 OAuth 표준 scope, 수신 후 *사용·저장·DB 입력 X / 즉시 폐기*) | 한국 |
+| **카카오 (Kakao Corp.)** | OAuth 로그인 인증 (선택) | 이메일 (필수) — 닉네임·프로필사진·출생연도 등 추가 scope 신청 X | 한국 |
+| **Sentry, Inc.** | 오류 추적 (선택, DSN 미설정 시 비활성) | 에러 stack trace + breadcrumb (PII 제거 — sendDefaultPii: false) | 미국 (Functions 미국 region) |
+| **Resend, Inc.** | 이메일 발송 (관리자 → 사용자 피드백 회신 등) | 이메일 주소 + 회신 내용 | 미국 |
 
-**국외이전 동의**: Anthropic / Supabase / Cloudflare은 미국 소재 (Cloudflare는 글로벌 edge 네트워크). 사용자가 별도 동의 시에만 데이터 전송된다 (제2조 2항 참고).
+**국외이전 동의**: Anthropic / Supabase / Cloudflare / Sentry / Resend은 미국 소재 (Cloudflare는 글로벌 edge 네트워크). 사용자가 별도 동의 시에만 데이터 전송된다 (제2조 2항 참고).
 
 회사는 위 수탁자 외 제3자에게 사용자 데이터를 제공하지 않는다. 단 법령상 요구가 있는 경우 (수사 영장 등) 최소 범위에서 협조한다.
 
@@ -160,6 +162,7 @@ CPO는 다음 업무를 수행한다:
 
 ---
 
-**[TBD] 부분**:
-- 시행일 (사업자등록 후)
-- 연락처 / 이메일 / 주소
+**통신판매업 신고번호**: 2026-서울동작-0613
+**시행일**: 2026-04-30
+**대표자 이메일**: soragodongapp@gmail.com
+**사업장 주소**: 서울특별시 동작구 상도로47아길 14

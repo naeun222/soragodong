@@ -357,8 +357,20 @@
         <tr>
           <td><strong>카카오 (Kakao Corp.)</strong></td>
           <td>OAuth 로그인 인증 (선택)</td>
-          <td>이메일 (필수) / 닉네임·프로필사진 (선택 — 카카오 OAuth 표준 scope, 수신 후 <em>사용·저장·DB 보유 X / 즉시 폐기</em>)</td>
+          <td>이메일 (필수) — 닉네임·프로필사진·출생연도 등 추가 scope 신청 X</td>
           <td>한국</td>
+        </tr>
+        <tr>
+          <td><strong>Sentry, Inc.</strong></td>
+          <td>오류 추적 (선택, DSN 미설정 시 비활성)</td>
+          <td>에러 stack trace + breadcrumb (PII 제거 — sendDefaultPii: false)</td>
+          <td>미국</td>
+        </tr>
+        <tr>
+          <td><strong>Resend, Inc.</strong></td>
+          <td>이메일 발송 (관리자 → 사용자 피드백 회신 등)</td>
+          <td>이메일 주소 + 회신 내용</td>
+          <td>미국</td>
         </tr>
       </tbody>
     </table>
