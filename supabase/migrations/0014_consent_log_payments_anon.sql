@@ -59,8 +59,9 @@ COMMENT ON COLUMN soragodong_payments.anonymized_token IS
 
 -- withdraw_user_data RPC 갱신 — user_id UUID 도 익명화.
 -- 사용자 보고 2026-05-09: 옛 함수 (0002_billing_usage.sql) 가 이미 존재 → CREATE OR REPLACE 시 return type 변경 불가 (42P13).
--- DROP 선행 후 재생성.
-DROP FUNCTION IF EXISTS withdraw_user_data(uuid);
+-- DROP 선행 (CASCADE + public schema 명시 — 권한·schema 차이 다 우회).
+DROP FUNCTION IF EXISTS public.withdraw_user_data(UUID) CASCADE;
+DROP FUNCTION IF EXISTS withdraw_user_data(UUID) CASCADE;
 
 CREATE OR REPLACE FUNCTION withdraw_user_data(p_user_id UUID)
 RETURNS void AS $$
