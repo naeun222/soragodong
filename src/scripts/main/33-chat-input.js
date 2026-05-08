@@ -5,6 +5,8 @@
 // 사용자 보고 2026-05-09 ultrathink: bottom-nav 실측 동적 sync — chat-input-bar / reflection-input-bar 가 nav 위 정확히 붙음.
 // 원인: emoji 폰트마다 line-height 변동 (22px → 28-35px 실 ascent/descent) → nav-item content > min-height 56 → nav 실측 82+ N px.
 // CSS calc 만으론 디바이스/폰트마다 다른 N 못 맞춤. JS 동적 측정으로 --chat-input-bottom CSS variable 동기화.
+// 사용자 명시 2026-05-09: nav 위 3px 추가 buffer (시각적 여유).
+const _CHAT_INPUT_NAV_BUFFER_PX = 3;
 function _syncChatInputBottomToNav() {
   const nav = document.querySelector('.bottom-nav');
   if (!nav) {
@@ -13,7 +15,7 @@ function _syncChatInputBottomToNav() {
   }
   const h = nav.getBoundingClientRect().height;
   if (h > 0) {
-    document.documentElement.style.setProperty('--chat-input-bottom', h + 'px');
+    document.documentElement.style.setProperty('--chat-input-bottom', (h + _CHAT_INPUT_NAV_BUFFER_PX) + 'px');
   }
 }
 window.addEventListener('load', _syncChatInputBottomToNav);
