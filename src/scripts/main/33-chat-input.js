@@ -1,6 +1,46 @@
 // ═══════════════════════════════════════════════════════════════
 // CHAT INPUT
 // ═══════════════════════════════════════════════════════════════
+
+// 사용자 보고 2026-05-09 ultrathink: bottom-nav 실측 동적 sync — chat-input-bar / reflection-input-bar 가 nav 위 정확히 붙음.
+// 원인: emoji 폰트마다 line-height 변동 (22px → 28-35px 실 ascent/descent) → nav-item content > min-height 56 → nav 실측 82+ N px.
+// CSS calc 만으론 디바이스/폰트마다 다른 N 못 맞춤. JS 동적 측정으로 --chat-input-bottom CSS variable 동기화.
+function _syncChatInputBottomToNav() {
+  const nav = document.querySelector('.bottom-nav');
+  if (!nav) {
+    document.documentElement.style.removeProperty('--chat-input-bottom');
+    return;
+  }
+  const h = nav.getBoundingClientRect().height;
+  if (h > 0) {
+    document.documentElement.style.setProperty('--chat-input-bottom', h + 'px');
+  }
+}
+window.addEventListener('load', _syncChatInputBottomToNav);
+window.addEventListener('resize', _syncChatInputBottomToNav);
+window.addEventListener('orientationchange', () => setTimeout(_syncChatInputBottomToNav, 200));
+// nav 가 fonts 로드 / 사용자 로그인 후 등장 / orientation 변경 등으로 size 변경 시 자동 재측정.
+if (typeof ResizeObserver !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const nav = document.querySelector('.bottom-nav');
+    if (nav) {
+      try {
+        const _navObs = new ResizeObserver(_syncChatInputBottomToNav);
+        _navObs.observe(nav);
+      } catch (e) { console.warn('[chat-input] nav ResizeObserver 실패:', e); }
+    }
+    // 초기 1회 sync (nav display:none → block 전환 직후)
+    setTimeout(_syncChatInputBottomToNav, 100);
+    setTimeout(_syncChatInputBottomToNav, 500);  // fonts 로드 후 emoji line-height 변동 대비
+  });
+} else {
+  // ResizeObserver 미지원 (구형 브라우저) — DOMContentLoaded + 5초 polling.
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(_syncChatInputBottomToNav, 100);
+    setInterval(_syncChatInputBottomToNav, 5000);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // V4 (사용자 명시 2026-05-04 ultrathink V181 근본 해결): 모바일 입력창 렉 다층 해결
   // 근본 원인 4가지:
