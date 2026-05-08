@@ -58,6 +58,8 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 
 **🔴 0013 (2026-05-08 ultrathink audit FAIL #2)**: `0013_billing_renewal_notice.sql` — `renewal_notice_7d_at` 컬럼 + 인덱스. **콘텐츠산업진흥법 §25 자동 갱신 7일 전 사전고지 의무 충족** — 얼리버드 구독자 첫 결제 (가입 후 30일) 전에 *반드시* 적용. 미적용 시 첫 자동 결제 = 법 위반.
 
+**🔴 0014 (2026-05-08 ultrathink audit WARN #21 #22)**: `0014_consent_log_payments_anon.sql` — `soragodong_consent_log` 신규 테이블 + RLS + payments 익명화 컬럼 (`anonymized_at` / `anonymized_token`) + `withdraw_user_data` RPC 갱신. **PIPA 분쟁 증거 + §36 즉시 익명화 강화**. 출시 전 적용 권장 (미적용 = audit trail 부재).
+
 ### 2-bis. 신규 cron job 등록 (5분)
 
 **위치**: cron-job.org 또는 GitHub Actions schedule.

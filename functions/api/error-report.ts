@@ -21,8 +21,31 @@ function escapeHtml(s: string): string {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }
 
-export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
+// 사용자 명시 2026-05-08 ultrathink (audit WARN #16): IP rate limit — Resend 무료 100/일 스팸 소진 차단.
+// 같은 IP 시간당 5건 cap. KV 미설정 시 silent skip (보고 누락 회피 우선).
+async function _checkErrorReportRate(env: Env & { GUEST_KV?: any }, ip: string): Promise<boolean> {
+  if (!env.GUEST_KV || !ip || ip === 'unknown') return true;
+  try {
+    const hourKey = `errrpt:${ip}:${new Date().toISOString().slice(0, 13)}`;
+    const cur = parseInt((await env.GUEST_KV.get(hourKey)) || '0', 10);
+    if (cur >= 5) return false;
+    await env.GUEST_KV.put(hourKey, String(cur + 1), { expirationTtl: 3700 });
+    return true;
+  } catch { return true; }  // KV throw → 통과
+}
+
+export async function onRequestPost(context: { request: Request; env: Env & { GUEST_KV?: any } }): Promise<Response> {
   const { request, env } = context;
+
+  // 사용자 명시 2026-05-08 ultrathink (audit WARN #16): IP rate limit 추가.
+  const _ip = request.headers.get('CF-Connecting-IP') || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const _rateOk = await _checkErrorReportRate(env, _ip);
+  if (!_rateOk) {
+    return new Response(JSON.stringify({ ok: false, code: 'RATE_LIMITED' }), {
+      status: 200,  // 200 으로 응답 (클라이언트 dedupe 가 sent 으로 mark X)
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   let body: any = {};
   try { body = await request.json(); } catch {}

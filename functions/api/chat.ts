@@ -309,7 +309,22 @@ async function _handleChatRequest(context: {
   // 옛: 위기 키워드 감지 = 클라이언트 (13-crisis-detection.js) 만. API 직접 호출 / 클라이언트 우회 시 무방비.
   // 신: 서버에서 user 메시지 자살·자해 키워드 detect → system prompt 에 안전 가드 강제 inject + 응답 헤더 X-Crisis-Detected.
   // chat endpoint (메인 대화) 한정 — 분석/추출 endpoint 는 X (사용자 직접 발화 X).
-  const _crisisDetected = (body._endpoint === 'chat' || !body._endpoint) && _detectCrisisInRequest(body);
+  const _isMainChat = (body._endpoint === 'chat' || !body._endpoint);
+  const _crisisDetected = _isMainChat && _detectCrisisInRequest(body);
+
+  // 사용자 명시 2026-05-08 ultrathink (audit WARN #20): 의료법 §27 / 표시광고법 §3 서버측 minimum 가드.
+  // 옛: 시스템 프롬프트 §15 가드는 클라이언트 (20-system-prompt.js) 만. body 직접 호출 시 우회 가능.
+  // 신: 모든 chat endpoint 응답에 의료법 가드 강제 suffix inject — 클라이언트가 가드 빼도 서버에서 다시 적용.
+  if (_isMainChat) {
+    const MED_LAW_GUARD = '\n\n[강제 가드 — 의료법 §27 / 표시광고법 §3] 응답에서 "치료·완화·관리·진단" 같은 임상 효능 시사 표현 X (예: "고치자", "낫게 해줄게", "관리될 거야", "치료될 거야"). "도와줄 수 있어 / 같이 봐보자 / 정리하는 데 도움 될 수도" 처럼 보조적 톤 OK. 효과 보장 표현 절대 X. 사용자 깊은 우울/심각한 증상 호소 시 부드럽게 "전문가랑 같이 보면 좋을 것 같아" 한 번 짚기.';
+    if (typeof body.system === 'string') {
+      body.system = body.system + MED_LAW_GUARD;
+    } else if (Array.isArray(body.system)) {
+      body.system.push({ type: 'text', text: MED_LAW_GUARD });
+    } else {
+      body.system = MED_LAW_GUARD;
+    }
+  }
   if (_crisisDetected) {
     const _crisisGuard = '\n\n[안전 가드 — 자살예방법 §15-6 협력 권고 강제 적용]\n사용자 메시지에 자살·자해 신호가 있어. 너의 응답 본문 끝에 반드시 부드럽게 한 줄 추가:\n"이런 무게 혼자 들기 어려워. 1393 (자살예방상담, 24h 무료) / 1577-0199 (정신건강위기상담) — 한 번 통화해보면 좋을 것 같아."\n명령조 X / 강제 X / 진단 톤 X. 친구가 걱정하며 슬쩍 짚는 톤.';
     if (typeof body.system === 'string') {

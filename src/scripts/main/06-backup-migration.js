@@ -226,6 +226,9 @@ async function saveToCloudNow() {
     try {
       // sensitive body — 사용자 데이터 전부 암호화
       // 사용자 명시 2026-05-01 (agent audit): 누락된 11 키 추가 — E2EE save 시 cloud 영구 손실 fix.
+      // ⚠️ 사용자 명시 2026-05-08 ultrathink (audit WARN #24): whitelist 방식 — 신규 state 필드 추가 시 *반드시* 이 list 에 등록.
+      // TODO 베타 후: blocklist 전환 (DEFAULT_STATE 키에서 metaBody 키 제외 — 누락 방지). 단 *비-민감 운영 데이터* 와 분리 필수.
+      // 누락 시: 평문 metaBody 로 cloud 에 흘러가 PIPA §29 + privacy.md §6 약속 ("회사조차 평문 X") 위반.
       const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount'];
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];

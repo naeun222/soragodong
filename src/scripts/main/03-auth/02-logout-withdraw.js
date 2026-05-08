@@ -89,9 +89,34 @@ async function withdrawAccount() {
       backendErr = (e && e.message) || String(e);
     }
     if (!backendOk) {
-      const proceed = confirm('⚠ 백엔드 탈퇴 실패: ' + backendErr + '\n\nSupabase 인증 row + 결제·사용량 데이터가 남아있을 수 있어. 회사가 사후 일괄 정리할 수 있지만 즉시 정리 X.\n\n그래도 로컬 정리 + 로그아웃은 진행할까?');
+      // 사용자 명시 2026-05-08 ultrathink (audit WARN #27): backend 실패 시 PIPA §36 즉시 이행 의무 취약 경로.
+      // "그래도 진행" 옵션은 *마지막 수단*. 사용자에게 명확히 책임/사후 처리 안내 + 본인 이메일 으로 backup 권고.
+      const proceed = confirm(
+        '⚠ 백엔드 탈퇴 실패: ' + backendErr +
+        '\n\nSupabase 인증 row + 결제·사용량 데이터가 남아있을 수 있어. PIPA §36 즉시 삭제 의무에 따라 회사가 7일 안 사후 정리할게 (단 즉시 정리 X).' +
+        '\n\n[확인] = 로컬 정리 + 로그아웃 진행 (cloud 데이터 일부 잔존, 사후 정리). soragodongapp@gmail.com 으로 자동 알림 발송.' +
+        '\n[취소] = 잠시 후 재시도 권장.'
+      );
       if (!proceed) return;
       console.warn('[withdraw] backend 실패 후 사용자 동의로 진행:', backendErr);
+      // 사용자 명시 2026-05-08 ultrathink: 사후 정리 trigger 용 error-report 발송.
+      try {
+        if (typeof BACKEND_BASE !== 'undefined' && BACKEND_BASE) {
+          fetch(`${BACKEND_BASE}/api/error-report`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              signature: '[withdraw-backend-failed] PIPA §36 manual cleanup needed',
+              detail: 'user_id=' + (authUserId || 'unknown') + ' / err=' + backendErr,
+              userId: authUserId || 'unknown',
+              appVersion: (typeof APP_VERSION === 'string' ? APP_VERSION : 'v4'),
+              userAgent: navigator.userAgent,
+              url: location.href,
+              time: new Date().toISOString()
+            })
+          }).catch(() => {});
+        }
+      } catch {}
     }
   }
 

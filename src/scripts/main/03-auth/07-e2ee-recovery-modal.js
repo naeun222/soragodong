@@ -88,16 +88,25 @@ async function submitE2EERecovery() {
     // 사용자 보고 2026-04-30 (race fix): saveState 단순 debounce + reload 즉시 실행 → cloud 저장 X.
     // 복원된 master key + 정리된 state를 cloud에 즉시 넣어야 다음 진입 시 동일 master key로 정상 decrypt.
     console.log('[E2EE recovery] 복호화 성공. cloud 저장 강제 (reload 전)...');
+    // 사용자 명시 2026-05-08 ultrathink (audit WARN #15): cloud 저장 실패 시 *사용자에게 명시적 알림* + reload 보류.
+    // 옛: silent log 후 reload → 다음 진입 시 다시 recovery 모달 (루프).
+    // 신: 실패 알림 → 사용자 결정 (재시도 / 그래도 진행).
+    let _saveOk = false;
     try {
-      saveState({ force: true });  // local 즉시 flush
-      await saveToCloudNow();       // cloud 즉시 저장 (await)
+      saveState({ force: true });
+      await saveToCloudNow();
+      _saveOk = true;
       console.log('[E2EE recovery] cloud 저장 완료. reload.');
     } catch (e) {
-      console.warn('[E2EE recovery] cloud 저장 실패 (그래도 reload 진행):', e);
+      console.warn('[E2EE recovery] cloud 저장 실패:', e);
+    }
+    if (!_saveOk) {
+      const _retry = confirm('🔐 복호화는 성공했어. 그런데 클라우드 저장이 실패해서 — 다른 기기에서 다시 시도해야 할 수 있어.\n\n[확인] = 그래도 진행 (이 기기에서만 사용)\n[취소] = 잠시 후 재시도');
+      if (!_retry) return;  // status 알림 유지, 사용자 직접 재시도
     }
     const overlay = document.getElementById('e2eeRecoveryOverlay');
     if (overlay) overlay.remove();
-    showToast('🔐 복호화 완료 ✦');
+    showToast(_saveOk ? '🔐 복호화 완료 ✦' : '🔐 복호화 완료 (클라우드 동기화는 다음에)');
     location.reload();
   } catch (e) {
     status.textContent = '복호화 실패: ' + (e.message || e);

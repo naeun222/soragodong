@@ -63,6 +63,18 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
           body: JSON.stringify({ subscription_active: false })
         });
         // payment 기록 status update.
+        // 사용자 명시 2026-05-08 ultrathink (audit WARN #11): 환불 기록 보완 — refund_amount_krw / refunded_at 명시.
+        // 옛: status 만 update → 전자상거래법 §6 5년 보존 데이터 결손.
+        // payment 객체에서 환불 금액 추출 (PortOne V2 cancellations 배열 합계).
+        let _refundAmount = 0;
+        try {
+          const cancels = (payment as any)?.cancellations;
+          if (Array.isArray(cancels)) {
+            for (const c of cancels) _refundAmount += Number(c?.totalAmount || c?.amount || 0);
+          } else if ((payment as any)?.amount?.cancelled) {
+            _refundAmount = Number((payment as any).amount.cancelled) || 0;
+          }
+        } catch {}
         await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_payments?portone_merchant_uid=eq.${encodeURIComponent(paymentId)}`, {
           method: 'PATCH',
           headers: {
@@ -71,7 +83,12 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
             'Content-Type': 'application/json',
             'Prefer': 'return=minimal'
           },
-          body: JSON.stringify({ status: payment.status === 'CANCELLED' ? 'cancelled' : 'partial_cancelled' })
+          body: JSON.stringify({
+            status: payment.status === 'CANCELLED' ? 'cancelled' : 'partial_cancelled',
+            refund_amount_krw: _refundAmount > 0 ? _refundAmount : undefined,
+            refunded_at: new Date().toISOString(),
+            refund_reason: 'webhook_external'  // 외부 환불 (대시보드 / CS)
+          })
         });
         console.log('[portone-webhook] cancelled 처리 완료:', paymentId);
       }
