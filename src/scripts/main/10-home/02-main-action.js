@@ -8,13 +8,13 @@ function getCheckinTimeSlot() {
 }
 
 function _checkinCardCopy(slot, isDone) {
-  // 사용자 명시 2026-05-08: 카드 자연 한국어 한 문장 — sub / 어제 emoji 줄 / 이모티콘 prefix 모두 제거.
-  if (isDone) return { icon: '✓', title: '오늘 기록 완료' };
+  // 사용자 명시 2026-05-08 (재): 옛 hero 문구 (이모티콘+단어) 복원 + 평문 한 문장 sub.
+  if (isDone) return { icon: '✓', title: '오늘 기록 완료', sub: '' };
   const map = {
-    morning: { icon: '☀️', title: '오늘 어떻게 시작하는지 한 줄 적어둘래?' },
-    noon:    { icon: '🌤', title: '지금 컨디션 어떤지 한 줄로 짚어둘래?' },
-    evening: { icon: '🌅', title: '오늘 지나간 흐름 메모 한 줄로 적어둘래?' },
-    night:   { icon: '🌙', title: '오늘 어땠는지 한 호흡 닫아볼래?' }
+    morning: { icon: '☀️', title: '오늘 어떻게 시작해?', sub: '오늘 어떻게 시작하는지 한 줄 적어둘래?' },
+    noon:    { icon: '🌤', title: '지금 컨디션 어때?',  sub: '지금 컨디션 어떤지 한 줄로 짚어둘래?' },
+    evening: { icon: '🌅', title: '오늘 지나간 흐름 짚어볼래?', sub: '오늘 지나간 흐름 메모 한 줄로 적어둘래?' },
+    night:   { icon: '🌙', title: '오늘 어땠어?', sub: '오늘 어땠는지 한 호흡 닫아볼래?' }
   };
   return map[slot] || map.night;
 }
@@ -92,11 +92,13 @@ function renderMainAction() {
     // 사용자 명시 2026-05-06 ultrathink: 신규 사용자 (entries 0개) — 카드 우측 상단 깜빡이는 점 (has-pulse).
     const isBrandNew = !Array.isArray(state.entries) || state.entries.length === 0;
     const pulseClass = isBrandNew ? ' has-pulse' : '';
+    const subHtml = copy.sub ? `<div class="action-sub checkin-card-sub">${copy.sub}</div>` : '';
     cardHtml = `
       <div class="action-card checkin-card${pulseClass}" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
         <div class="action-icon">${copy.icon}</div>
         <div class="action-text">
           <div class="action-title">${copy.title}</div>
+          ${subHtml}
         </div>
         <div class="action-arrow">›</div>
       </div>
