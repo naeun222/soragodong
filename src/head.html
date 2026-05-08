@@ -9,11 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="소라고동🐚">
 <meta name="theme-color" content="#0f0e17">
 
-<!-- V3.13.x: cache-busting — iOS PWA 재진입 시 새 HTML 받도록 -->
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-
+<!-- 사용자 명시 2026-05-09 ultrathink (perf): 옛 Cache-Control meta 3개 제거 — meta http-equiv 는 브라우저 캐시 영향 X (HTTP Response 헤더만 영향). 실 캐싱 = Cloudflare Pages + sw.js (stale-while-revalidate v9). 옛 meta 는 의미 X 였고 잠재 혼동만. -->
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
