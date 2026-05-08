@@ -86,7 +86,18 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
         'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
       }
     });
-    if (!resp.ok) return jsonResponse({ error: 'due rows 조회 실패: ' + resp.status }, 500);
+    if (!resp.ok) {
+      const upstreamBody = await resp.text().catch(() => '');
+      return jsonResponse({
+        error: 'due rows 조회 실패: ' + resp.status,
+        upstream_body: upstreamBody.slice(0, 500),
+        hint: /column .* does not exist|renewal_notice_7d_at/i.test(upstreamBody)
+          ? 'supabase migration 0013 (renewal_notice_7d_at 컬럼) 미적용 — SQL Editor 에서 0013 apply 필요'
+          : (/portone_billing_key|cancel_at_period_end/i.test(upstreamBody)
+              ? 'supabase migration 0012 (portone_billing_key / cancel_at_period_end 컬럼) 미적용'
+              : 'env / RLS 정책 확인')
+      }, 500);
+    }
     dueRows = await resp.json();
   } catch (e: any) {
     return jsonResponse({ error: 'due rows throw: ' + (e?.message || e) }, 500);
