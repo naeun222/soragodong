@@ -15,7 +15,7 @@ function _hideBootSplash() {
 }
 
 // 사용자 명시 2026-05-02 ultrathink: 동의 검증 + pending consent 저장 helper (이메일 OTP / SNS 로그인 둘 다 사용).
-// PIPA §22 / §23 / §17 별도 동의 의무 충족 — 4 분리 체크박스 (약관/민감/국외/만19세).
+// PIPA §22 / §23 / §17 별도 동의 의무 충족 — 4 분리 체크박스 (약관/민감/국외/만14세).
 function _checkLoginConsentsAndSavePending(emailOrEmpty, loginMethod) {
   const consentTerms = document.getElementById('loginConsentTerms')?.checked;
   const consentSensitive = document.getElementById('loginConsentSensitive')?.checked;
@@ -26,7 +26,7 @@ function _checkLoginConsentsAndSavePending(emailOrEmpty, loginMethod) {
     if (!consentTerms) missing.push('약관·privacy');
     if (!consentSensitive) missing.push('민감정보 처리 (§23)');
     if (!consentCrossBorder) missing.push('국외이전 (§17)');
-    if (!consentAdult) missing.push('만 19세 이상 자기 선언');
+    if (!consentAdult) missing.push('만 14세 이상 자기 선언');
     alert('필수 동의 항목 모두 체크해야 시작 가능해.\n\n미체크: ' + missing.join(' / ') + '\n\n거부 시 서비스 이용 불가.');
     return false;
   }

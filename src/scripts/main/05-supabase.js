@@ -323,7 +323,7 @@ async function loadFromCloud() {
           const at = pending.at || new Date().toISOString();
           // 이미 같은 버전 동의 들어가 있으면 skip (재로그인 케이스)
           const has = (type, version) => state.preferences.consentLog.some(c => c.type === type && c.version === version && c.confirmed);
-          // 사용자 명시 2026-05-02 ultrathink: 4 분리 체크박스 (PIPA §22 / §23 / §17 + 만 19세 자기 선언). legacy consentAll fallback 도 호환.
+          // 사용자 명시 2026-05-02 ultrathink: 4 분리 체크박스 (PIPA §22 / §23 / §17 + 만 14세 자기 선언). legacy consentAll fallback 도 호환.
           const cTerms = !!(pending.consentTerms || pending.consentAll);
           const cSensitive = !!(pending.consentSensitive || pending.consentAll);
           const cCrossBorder = !!(pending.consentCrossBorder || pending.consentAll);
@@ -334,9 +334,10 @@ async function loadFromCloud() {
           if (cSensitive && !has('sensitive', pending.versions.privacy)) state.preferences.consentLog.push({ type: 'sensitive', version: pending.versions.privacy, confirmed: true, at, basis: 'PIPA §23' });
           // 국외이전 (PIPA §17) 별도 동의
           if (cCrossBorder && !has('crossBorder', pending.versions.crossBorder)) state.preferences.consentLog.push({ type: 'crossBorder', version: pending.versions.crossBorder, confirmed: true, at, basis: 'PIPA §17' });
-          // 만 19세 자기 선언 (별도 체크박스)
-          if (cAdult && !has('age19', '1.1')) state.preferences.consentLog.push({ type: 'age19', version: '1.1', confirmed: true, at, basis: '자기 선언 — 허위 시 사용자 책임' });
-          // 결제 시 법정대리인 동의 필요 여부 — 만 19세 동의 시 X
+          // 만 14세 자기 선언 (별도 체크박스 — PIPA §22-2 미만 차단)
+          if (cAdult && !has('age14', '1.2')) state.preferences.consentLog.push({ type: 'age14', version: '1.2', confirmed: true, at, basis: 'PIPA §22-2 자기 선언 — 허위 시 사용자 책임' });
+          // 사용자 명시 2026-05-08 ultrathink: 만 14세 cap 으로 완화 (옛 만 19세 정책 = 토스/카카오 자동분류기에 성인 컨텐츠 시그널로 오해됨).
+          // 결제 시 법정대리인 동의 필요 여부 — 만 14세 미만 추정 시 ON (현재는 가입 차단이라 도달 X 이지만 안전망 유지).
           state.preferences.requiresLegalGuardianForPayment = !cAdult;
           // 사용자 명시 2026-05-02: 로그인 방식 (이메일 OTP / 카카오 / 네이버) 적용하기 (분쟁 시 증거)
           if (pending.loginMethod) {
@@ -344,7 +345,7 @@ async function loadFromCloud() {
             if (!has('loginMethod', pending.loginMethod)) state.preferences.consentLog.push({ type: 'loginMethod', version: pending.loginMethod, confirmed: true, at });
           }
           localStorage.removeItem('soragodong_pending_consent');
-          console.log('[consent] pending → state 동의 옮김 (분리 동의 §22/§23/§17 + 만 19세 + loginMethod=' + (pending.loginMethod || 'email') + ')');
+          console.log('[consent] pending → state 동의 옮김 (분리 동의 §22/§23/§17 + 만 14세 + loginMethod=' + (pending.loginMethod || 'email') + ')');
         }
       }
     } catch (e) { console.warn('pending consent migrate:', e); }

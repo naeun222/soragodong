@@ -279,15 +279,15 @@
     } else if (age === null) {
       statusEl.textContent = '';
       statusEl.className = 'status-line';
-    } else if (age < 19) {
-      statusEl.innerHTML = `만 ${age}세 — 가입 불가<small>만 19세 이상만 이용 가능</small>`;
+    } else if (age < 14) {
+      statusEl.innerHTML = `만 ${age}세 — 가입 불가<small>만 14세 이상만 이용 가능 (PIPA §22-2)</small>`;
       statusEl.className = 'status-line deny';
     } else {
       statusEl.textContent = `만 ${age}세 ✓ 가입 가능`;
       statusEl.className = 'status-line ok';
     }
 
-    nextBtn.disabled = !(emailOk && age !== null && age >= 19);
+    nextBtn.disabled = !(emailOk && age !== null && age >= 14);
   }
 
   yEl.addEventListener('input', () => {

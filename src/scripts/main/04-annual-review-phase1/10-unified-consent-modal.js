@@ -64,8 +64,8 @@ function showE2EEPasswordSetupModal(opts) {
           '· 이전 항목: 사용자 입력 텍스트 (체크인·일기·대화)<br>· 이전 시기: AI 호출 시점 (실시간 처리, 저장 X)<br>· 수신자: Anthropic (미국) / Supabase (미국) / Cloudflare<br>· <b>AI 학습·재활용 X</b> — Zero Data Retention (처리 후 즉시 폐기)<br>· 30일 후 자동 삭제<br>· <a href="/cross-border" target="_blank">자세히 →</a>'
         )}
         ${_row('setupConsentAdult',
-          '<span style="color:var(--accent); font-weight:600;">(필수)</span> <b>만 19세 이상입니다</b>',
-          '· 청소년보호법 + PIPA §22-2 + 정신건강 정보 민감성<br>· 우리 서비스 = 자기관찰·정서 기록 처리 — 미성년자 보호',
+          '<span style="color:var(--accent); font-weight:600;">(필수)</span> <b>만 14세 이상입니다</b>',
+          '· PIPA §22-2 — 만 14세 미만은 법정대리인 동의 필요 (현재 미지원)<br>· 만 14세 미만 친권자 동의 폼 도입 전까지 가입 X',
           '<div class="setup-consent-warn">⚠ 허위 시 모든 책임은 본인 (및 법정대리인)에게. 회사 즉시 계정 정지 + 데이터 삭제.</div>'
         )}
         <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.04); font-size:10.5px; color:var(--text-soft); line-height:1.6;">
