@@ -917,7 +917,8 @@
   /* 사용자 보고 2026-05-02: 입력 시 버벅거림 — 1.6MB DOM 에서 textarea reflow 가 전체 페이지로 propagate. contain: layout style 로 격리 → frame 당 layout cost ↓. */
   /* 사용자 보고 2026-05-03: 옛 76px 로는 nav 살짝 가림 — bottom-nav 실측 = padding 10/26 + nav-item min-height 56 = 92px. 96px = 4px buffer. */
   /* 사용자 보고 2026-05-08: nav padding-bottom 26→15 변경 (5/6) 후 nav 실측 = 10+15+56 = 81px. 입력창이 15px 떠 있던 거 — bottom 81px 로 딱 맞춤. */
-  .chat-input-bar { position: fixed; bottom: 81px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; contain: layout style; }
+  /* 사용자 보고 2026-05-09: 입력창이 nav 살짝 가림 — nav border-top 1px 미보정 + iOS safe-area-inset-bottom 미반영. 82px (1px 보정) + safe-area 매핑. */
+  .chat-input-bar { position: fixed; bottom: calc(82px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; padding: 10px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; contain: layout style; }
   .chat-input-wrap { position: relative; display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 22px; padding: 6px 6px 6px 10px; contain: layout style; }
   /* iOS auto-zoom 방지 — input font 16px 이상 */
   /* V4 (사용자 명시 2026-05-04 ultrathink V181): 모바일 입력창 렉 근본 해결 — contain (height 변경 외부 layout 전파 차단) + field-sizing (지원 브라우저 native auto-size, JS reflow 0) */
@@ -1057,7 +1058,8 @@
 
   /* V3 main 그대로 복원 — 26px bottom (홈 indicator 보호 + iPhone PWA standalone 자연스러움) */
   /* 사용자 명시 2026-05-06 정정: nav-item padding 8→15 였던 fb2bad3 의도 잘못 해석. 8 로 되돌리고, bottom-nav padding-bottom 26→15 (사용자 진짜 의도). */
-  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 10px 0 15px; z-index: 100; }
+  /* 사용자 보고 2026-05-09: padding-bottom 에 safe-area-inset-bottom 추가 — iOS PWA standalone home indicator 회피. */
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 520px; background: rgba(15, 14, 23, 0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 10px 0 calc(15px + env(safe-area-inset-bottom, 0px)); z-index: 100; }
   .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; opacity: 0.45; transition: opacity 0.2s; padding: 8px 0; min-height: 56px; justify-content: center; }
   .nav-item.active { opacity: 1; }
   .nav-icon { font-size: 22px; }
@@ -6678,7 +6680,7 @@
   /* fixed bottom input bar — .bottom-nav (z-index 100) 위에 그려져야 함 */
   .reflection-input-bar {
     position: fixed;
-    bottom: 81px;  /* 사용자 보고 2026-05-08: nav 실측 81px (10/15 padding + 56 min-height) 에 딱 맞춤 — chat-input-bar 와 동일 정책 */
+    bottom: calc(82px + env(safe-area-inset-bottom, 0px));  /* 사용자 보고 2026-05-09: nav border-top 1px 보정 + iOS safe-area 매핑. chat-input-bar 와 동일 정책. */
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
