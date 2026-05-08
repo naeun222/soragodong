@@ -45,7 +45,7 @@ const TIER_UPGRADE_KRW = TIER_PLANS_CLIENT.premium.krw; // 25,000
 // 옛 차액 변수 호환 (점진 정리 — sub_modal 의 일부 코드가 import)
 const TIER_UPGRADE_DIFF_KRW = TIER_UPGRADE_KRW;
 
-// 카톡 오픈채팅 (피드백·문의 채널, 익명 OK)
+// 카톡 오픈채팅 (피드백·문의 채널)
 const KAKAO_OPEN_CHAT = 'https://open.kakao.com/o/sUP7kIsi';
 
 // 사용자 명시 2026-05-06: 토스 수동 송금 폐기 → PortOne V2 카드 결제. TOSS_ACCOUNT / _generateUserMemoCode 제거.

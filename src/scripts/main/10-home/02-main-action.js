@@ -8,12 +8,13 @@ function getCheckinTimeSlot() {
 }
 
 function _checkinCardCopy(slot, isDone) {
-  if (isDone) return { icon: '✓', title: '오늘 기록 완료', sub: '' };
+  // 사용자 명시 2026-05-08: 카드 자연 한국어 한 문장 — sub / 어제 emoji 줄 / 이모티콘 prefix 모두 제거.
+  if (isDone) return { icon: '✓', title: '오늘 기록 완료' };
   const map = {
-    morning: { icon: '☀️', title: '오늘 어떻게 시작해?', sub: '어젯밤 잠 + 지금 컨디션 한 줄이면 OK' },
-    noon: { icon: '🌤', title: '지금 컨디션 어때?', sub: '30초만. 점심 전후 짚어두자' },
-    evening: { icon: '🌅', title: '오늘 지나간 흐름 짚어볼래?', sub: '메모 한 줄로도 충분해' },
-    night: { icon: '🌙', title: '오늘 어땠어?', sub: '하루 닫고 자기 전 한 호흡' }
+    morning: { icon: '☀️', title: '오늘 어떻게 시작하는지 한 줄 적어둘래?' },
+    noon:    { icon: '🌤', title: '지금 컨디션 어떤지 한 줄로 짚어둘래?' },
+    evening: { icon: '🌅', title: '오늘 지나간 흐름 메모 한 줄로 적어둘래?' },
+    night:   { icon: '🌙', title: '오늘 어땠는지 한 호흡 닫아볼래?' }
   };
   return map[slot] || map.night;
 }
@@ -78,26 +79,16 @@ function renderMainAction() {
 
   let cardHtml;
   if (checkinDoneToday) {
-    const summary = _todayMoodSummaryHtml(todayEntry);
     cardHtml = `
       <div class="action-card checkin-card is-done" onclick="enterCheckin()">
         <div class="action-icon">${copy.icon}</div>
         <div class="action-text">
           <div class="action-title">${copy.title}</div>
-          <div class="action-sub">${summary}</div>
         </div>
         <div class="action-arrow">›</div>
       </div>
     `;
   } else {
-    const ySum = getYesterdayMoodSummary();
-    let yPreview = '';
-    if (ySum) {
-      const parts = [];
-      if (ySum.vitalityEmoji) parts.push(`⚡${ySum.vitalityEmoji}`);
-      if (ySum.moodEmoji) parts.push(`💭${ySum.moodEmoji}`);
-      yPreview = `<div class="yesterday-preview">어제 ${parts.join(' · ')}</div>`;
-    }
     // 사용자 명시 2026-05-06 ultrathink: 신규 사용자 (entries 0개) — 카드 우측 상단 깜빡이는 점 (has-pulse).
     const isBrandNew = !Array.isArray(state.entries) || state.entries.length === 0;
     const pulseClass = isBrandNew ? ' has-pulse' : '';
@@ -106,8 +97,6 @@ function renderMainAction() {
         <div class="action-icon">${copy.icon}</div>
         <div class="action-text">
           <div class="action-title">${copy.title}</div>
-          <div class="action-sub">${copy.sub}</div>
-          ${yPreview}
         </div>
         <div class="action-arrow">›</div>
       </div>

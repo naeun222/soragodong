@@ -24,9 +24,13 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
 
   const url = new URL(request.url);
   const filter = url.searchParams.get('status') || '';  // 'open' | 'replied' | 'all'
-  let query = '?select=*&order=created_at.desc&limit=200';
+  // 사용자 보고 2026-05-08 ultrathink: 옛 query 조립이 '?status=eq.open?select=*...' 이중 ? 만들어 supabase가 'eq.open?select=*&order=...' 까지 status 값으로 해석 → 항상 0건.
+  // open / replied 필터가 안 뜨고 'all' 만 뜬 원인.
+  let query;
   if (filter && filter !== 'all') {
-    query = `?status=eq.${encodeURIComponent(filter)}` + query;
+    query = `?status=eq.${encodeURIComponent(filter)}&select=*&order=created_at.desc&limit=200`;
+  } else {
+    query = '?select=*&order=created_at.desc&limit=200';
   }
 
   try {

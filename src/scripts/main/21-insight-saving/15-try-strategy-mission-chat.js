@@ -57,7 +57,7 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
         model: 'claude-sonnet-4-6', max_tokens: 120,
         messages: [{
           role: 'user',
-          content: `${ctx}\n\n[네 일]\n위 상황·전략에 맞춰 '오늘의 제안' 1개 — 오늘 바로 할 수 있는 구체 행동.\n한 줄 (max 40자). 동사로 시작. 환경 셋업 우선. 의지 부담 ↓.\n\n[출력]\n제안만 한 줄. 다른 거 X. 마크다운 X.`
+          content: `${ctx}\n\n[네 일]\n위 정보 (전략·전략 행동·심리학 개념·사용자 상황) 셋 다 활용해서 '오늘의 제안' 1개 만들어.\n- "전략 행동" 그대로 복사 X — 오늘 사용자 상황에 맞춰 구체화/변형 필수\n- 한 줄 (max 40자). 동사로 시작. 환경 셋업 우선 (의지 부담 ↓).\n\n[출력]\n제안만 한 줄. 다른 거 X. 마크다운 X.`
         }]
       });
       const data = await resp.json();
@@ -66,6 +66,10 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
   }
   if (!proposal) {
     proposal = isMutation ? mutationOpt.action : (card.actionStrategy || card.title);
+  }
+  // 사용자 보고 2026-05-08: AI 응답이 '전략 행동' 그대로 복사한 경우 → title 기반 generic fallback (양생방 카드 = 부름 = 전략 행동 동일 버그 차단).
+  if (!isMutation && card.actionStrategy && proposal.trim() === card.actionStrategy.trim()) {
+    proposal = `오늘 ${card.title} 한 번 시도`.slice(0, 40);
   }
 
   const yes = await showConfirmModal({

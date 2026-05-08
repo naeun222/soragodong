@@ -290,6 +290,8 @@ function saveReview(type) {
   const reviewData = JSON.parse(screen.dataset.reviewData);
   // 사용자 명시 2026-04-30: 자기 평가 form 제거.
   const review = {
+    // 사용자 보고 2026-05-08: id 누락 → AI 핵심 통찰 요약 버튼 안 보임 (review-collection 분기에서 placeholder 만 노출).
+    id: (type === 'weekly' ? 'wr_' : 'mr_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     completedAt: new Date().toISOString(),
     summary: reviewData.summary,
     sections: reviewData.sections,  // 옛 형식 backward compat

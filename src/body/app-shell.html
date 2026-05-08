@@ -369,6 +369,7 @@
         <div class="reflection-screen-q" id="magicHelpScreenQ"></div>
         <div class="reflection-screen-actions">
           <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
+          <button class="reflection-resolve-btn" id="magicHelpDeleteBtn" onclick="deleteMagicHelpChat()" title="이 임시 대화 삭제 — 분석 input에 안 들어감" style="background:transparent; border:1px solid rgba(220,80,80,0.30); color:#e8a3a3; padding:6px 10px;">🗑</button>
           <button class="reflection-resolve-btn" id="magicHelpEndBtn" onclick="endMagicHelpChat()" title="이 대화 마무리 — 도서관에 정리">✓ 마무리</button>
         </div>
       </div>
@@ -873,7 +874,7 @@
           <button class="btn-secondary" onclick="openFeedbackInApp()">✉️ 메시지 보내기</button>
           <button class="btn-secondary" onclick="openMyFeedbackInbox()" id="myFeedbackInboxBtn">📬 받은 답변 <span id="myFeedbackUnreadBadge" style="display:none; margin-left:6px; background:#e89090; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:700;"></span></button>
           <button class="btn-secondary" onclick="openNotifInbox()" id="notifInboxBtn">🔔 알림함 <span id="notifInboxBadge" style="display:none; margin-left:6px; background:#e89090; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:700;"></span></button>
-          <button class="btn-secondary" onclick="openFeedbackKakao()">💬 카톡 오픈채팅 (익명 OK)</button>
+          <button class="btn-secondary" onclick="openFeedbackKakao()">💬 카톡 오픈채팅</button>
           <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtn" style="display:none;">🛠 관리자 — 피드백 답변</button>
         </div>
       </details>

@@ -696,6 +696,14 @@ function completeQuest(taskId) {
   task.status = 'done';
   task.completedAt = new Date().toISOString();
 
+  // 사용자 명시 2026-05-08 ultrathink: 소라 보상 = '오늘의 카드' (now3 slot) 한정.
+  // 옛 동작: 모든 task 완료 시 shell push → 사용자 변경: 오늘의 카드 (3장) 만 shell. 서랍장/나중 task = shell X.
+  if (task.slot !== 'now3' && task.source !== 'ai_mission') {
+    saveState();
+    renderExecute();
+    return;
+  }
+
   // Generate shell reward
   const shell = pickShellForTask(task);
   let _undoShellId = null;

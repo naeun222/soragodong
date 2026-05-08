@@ -340,15 +340,17 @@ async function _runDailyExtractInline(pending) {
     // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
     // sourceArchiveId 박음 (cascade soft delete 추적용).
     const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
+    // 사용자 명시 2026-05-08 ultrathink: _extractFromIndex 적용 — 이어서한 archive 의 옛 부분 input 제외.
+    const _extractMsgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : (batch.messages || []);
     try {
-      if (batch.messages.length >= 6) {
-        await extractChapterCaseAnalysis(batch.messages);
+      if (_extractMsgs.length >= 6) {
+        await extractChapterCaseAnalysis(_extractMsgs);
       }
     } catch (e) { console.warn('[inline] case fail:', e); }
     const _allowChapterTopic = !!batch.endedManually || _isPremium;
     try {
-      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
-        await extractPreviousChapterTopics(batch.messages);
+      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _extractMsgs.length >= 3) {
+        await extractPreviousChapterTopics(_extractMsgs);
       }
     } catch (e) { console.warn('[inline] topic fail:', e); }
     _pushMagicReflectionArchive(batch);
@@ -530,11 +532,17 @@ function _buildDiaryBatchRequests() {
 //   topic / review / diary 는 batch 유지 (50% 할인 + polling 가속 5/15/30분).
 //   추가 비용 ~$0.05~0.1/주/사용자. 자연 종료 챕터만 영향 (사용자 ✓ 챕터는 이미 inline 처리됨).
 async function _submitDailyExtractBatch(pending) {
+  // 사용자 명시 2026-05-08 ultrathink: 이어서한 archive 의 _extractFromIndex 적용 — 옛 부분 input 제외.
   // chapter case_analysis 만 inline fire-and-forget — 사용자 wait X.
   pending
-    .filter(b => b && b.messages && b.messages.length >= 6)
+    .filter(b => {
+      if (!b || !b.messages) return false;
+      const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(b) : b.messages;
+      return _msgs.length >= 6;
+    })
     .forEach(b => {
-      extractChapterCaseAnalysis(b.messages)
+      const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(b) : b.messages;
+      extractChapterCaseAnalysis(_msgs)
         .then(() => {
           delete b._pendingCaseAnalysis;
           try { saveState(); } catch {}
@@ -545,12 +553,14 @@ async function _submitDailyExtractBatch(pending) {
   const requests = [];
   for (const batch of pending) {
     // case_analysis = inline 분리 (위). topic 만 batch.
+    const _topicMsgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : batch.messages;
+    if (_topicMsgs.length < 3) continue;
     requests.push({
       custom_id: `topic_${batch.id}`,
       params: {
         model: 'claude-haiku-4-5',
         max_tokens: 600,
-        messages: [{ role: 'user', content: _buildExtractTopicPrompt(batch.messages) }]
+        messages: [{ role: 'user', content: _buildExtractTopicPrompt(_topicMsgs) }]
       }
     });
   }

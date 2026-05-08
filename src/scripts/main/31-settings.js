@@ -336,7 +336,7 @@ function _renderCancelRenewalBox(billing) {
     box.innerHTML = `
       <div style="padding:10px 0; line-height:1.7;">
         <button class="btn-secondary" onclick="cancelNextRenewal()" style="width:100%; padding:10px; font-size:12.5px; color:var(--text); opacity:0.85;">⏸ 다음 갱신 해지</button>
-        <div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">현 결제 만료까지 사용, 다음 자동 결제만 멈춤. 환불 아님.</div>
+        <div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">현 결제 만료까지 사용.</div>
       </div>
     `;
   }

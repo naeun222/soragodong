@@ -55,6 +55,12 @@ function _findPendingStrategyFollowup() {
     // _followupAsked=true → skip. defer 시점에는 reset (만기일에 한 번 더).
     if (m._followupAsked) return false;
     if (m.scheduledFor && daysBetweenKeys(today, m.scheduledFor) > 0) return false;
+    // 사용자 보고 2026-05-08 ultrathink: 12h 가드를 모든 케이스 공통으로 위로 올림 — scheduledFor 있는 mission이 옛 흐름에선 12h 가드 패스 → 같은 날 미션 해냈어 누른 직후 대화탭/체크인 진입 시 즉시 결과 체크 떠버리는 버그.
+    if (m.completedAt) {
+      const _now = (typeof getServerNowMs === 'function' ? getServerNowMs() : Date.now());
+      const _elapsed = _now - new Date(m.completedAt).getTime();
+      if (_elapsed < 12 * 3600000) return false;
+    }
     // defer된 미션 (scheduledFor 있음)은 7일 룰 무시 — 사용자 명시적 날짜 우선.
     if (m.scheduledFor) return true;
     // 일반 미션 (자동 follow-up) — 완료 후 7일 window
@@ -65,14 +71,6 @@ function _findPendingStrategyFollowup() {
     // V4 (사용자 보고 2026-05-03): 같은 날 (diff=0, cutoff 안 지남) 자동 trigger 차단 → 다음날부터 (diff>=1).
     // 의도: 미션 완료 직후 결과 체크 모달 X. 4시 cutoff 지나야 자동 prompt.
     if (!(diff >= 1 && diff <= 7)) return false;
-    // V4 (사용자 보고 2026-05-04 VB024): cutoff 직후 깨움 edge case 추가 차단.
-    // 예) 23:30 완료 → 다음날 04:30 진입 시 diff=1 통과되지만 실제 5h 만 경과 → "하루 안 지났다" 사용자 체감.
-    // 추가 가드: completedAt 으로부터 최소 12h 경과 (체감상 "하루" 으로 인식 가능 임계).
-    if (m.completedAt) {
-      const _now = (typeof getServerNowMs === 'function' ? getServerNowMs() : Date.now());
-      const _elapsed = _now - new Date(m.completedAt).getTime();
-      if (_elapsed < 12 * 3600000) return false;
-    }
     return true;
   });
 }

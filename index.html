@@ -10737,7 +10737,6 @@
 <!-- 사용자 명시 2026-05-06 ultrathink (perf): boot splash — HTML 진입 직후 즉시 페인트. JS 실행 끝나면 init() / showLoginScreen 가 fade-out + remove. -->
 <div id="bootSplash">
   <img src="godong.webp" alt="" decoding="async" loading="eager">
-  <div class="boot-splash-text">🐚</div>
 </div>
 
 <!-- V3.9: tour-overlay 완전 제거됨 (인터랙티브 온보딩으로 대체) -->
@@ -11272,6 +11271,7 @@
         <div class="reflection-screen-q" id="magicHelpScreenQ"></div>
         <div class="reflection-screen-actions">
           <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
+          <button class="reflection-resolve-btn" id="magicHelpDeleteBtn" onclick="deleteMagicHelpChat()" title="이 임시 대화 삭제 — 분석 input에 안 들어감" style="background:transparent; border:1px solid rgba(220,80,80,0.30); color:#e8a3a3; padding:6px 10px;">🗑</button>
           <button class="reflection-resolve-btn" id="magicHelpEndBtn" onclick="endMagicHelpChat()" title="이 대화 마무리 — 도서관에 정리">✓ 마무리</button>
         </div>
       </div>
@@ -11776,7 +11776,7 @@
           <button class="btn-secondary" onclick="openFeedbackInApp()">✉️ 메시지 보내기</button>
           <button class="btn-secondary" onclick="openMyFeedbackInbox()" id="myFeedbackInboxBtn">📬 받은 답변 <span id="myFeedbackUnreadBadge" style="display:none; margin-left:6px; background:#e89090; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:700;"></span></button>
           <button class="btn-secondary" onclick="openNotifInbox()" id="notifInboxBtn">🔔 알림함 <span id="notifInboxBadge" style="display:none; margin-left:6px; background:#e89090; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:700;"></span></button>
-          <button class="btn-secondary" onclick="openFeedbackKakao()">💬 카톡 오픈채팅 (익명 OK)</button>
+          <button class="btn-secondary" onclick="openFeedbackKakao()">💬 카톡 오픈채팅</button>
           <button class="btn-secondary" onclick="openAdminFeedbackInbox()" id="adminFeedbackBtn" style="display:none;">🛠 관리자 — 피드백 답변</button>
         </div>
       </details>
@@ -23584,6 +23584,29 @@ function closeMagicHelpChat() {
   if (typeof showScreen === 'function') showScreen('decision-detail');
 }
 
+// 사용자 명시 2026-05-08 ultrathink: 마법고동 임시 대화 삭제 — chatArchive 이송 X = case formulation / topic 추출 input 에 안 들어감.
+// helpChat[stepId] 만 비움. 결정 자체는 그대로.
+async function deleteMagicHelpChat() {
+  if (!_magicHelpState) { closeMagicHelpChat(); return; }
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) { closeMagicHelpChat(); return; }
+  const stepId = _magicHelpState.stepId;
+  const messages = (decision.helpChats && decision.helpChats[stepId]) || [];
+  const realMessages = messages.filter(m => !m._starter);
+  if (realMessages.length === 0) {
+    closeMagicHelpChat();
+    return;
+  }
+  const ok = (typeof confirmDelete === 'function')
+    ? await confirmDelete('이 마법고동 임시 대화', '대화 내용도 같이 사라져.\n분석 추출에 안 들어가.')
+    : confirm('이 마법고동 임시 대화 삭제할까? 대화 내용도 같이 사라져.');
+  if (!ok) return;
+  if (decision.helpChats) decision.helpChats[stepId] = [];
+  saveState();
+  showToast('🗑 삭제됨');
+  closeMagicHelpChat();
+}
+
 // 사용자 명시 2026-05-01 ultrathink: 마법 helpChat '이 대화 끝내기' = 숙고 결론과 같은 메커니즘.
 // chatArchive 이송 (_pendingExtract:true) → 4AM 일괄 처리 시 case+topic + archive 마법 타입 자동 push.
 async function endMagicHelpChat() {
@@ -23610,10 +23633,62 @@ async function endMagicHelpChat() {
   const stepTitle = meta ? meta.title : stepId;
   const firstTs = realMessages[0] && realMessages[0].timestamp;
   const dateKey = firstTs ? getDayKey(firstTs) : todayKey();
+
+  // 사용자 명시 2026-05-08 ultrathink: 마무리 시 즉시 AI 3 필드 요약 (Sonnet, ~300 tokens) — 옛 단순 라벨 (`🌀 마법 (step): title`) 대체.
+  // 사용자가 마무리 직후 결과 즉시 봄 (도서관 카드에 conclusion / new_realization / next_action 노출).
+  let _stepSummary = null;
+  if (_canAI()) {
+    try {
+      showToast('🌀 마법 마무리 정리 중...');
+      const chatLog = realMessages.map(m => {
+        const role = m.role === 'user' ? '나' : '소라';
+        let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
+        content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
+        return `${role}: ${content}`;
+      }).join('\n\n');
+      const _prompt = `사용자가 "${decision.title || '결정'}" 결정의 [${stepTitle}] 단계에서 마법고동(임시 대화)으로 도움 받음.
+
+[대화 원문]
+${chatLog.slice(0, 5000)}
+
+[너의 일]
+이 대화에서 사용자가 얻은 것 3 필드로 정리. 한국어, 간결, 친구 톤.
+
+[출력 형식 — JSON만, 마크다운 X]
+{
+  "new_realization": "사용자가 새로 알게 된 것 (한 줄, ~40자)",
+  "next_action": "다음 행동 (한 줄, 동사로 시작, ~30자)",
+  "conclusion": "이 step 핵심 결론 (1-2문장, ~80자)"
+}
+
+빈 필드 X. 셋 다 채울 것. 무리하면 짧게라도.`;
+      const _resp = await callAnthropic({
+        _endpoint: 'magic_summary',
+        model: 'claude-sonnet-4-6',
+        max_tokens: 350,
+        messages: [{ role: 'user', content: _prompt }]
+      });
+      if (_resp.ok) {
+        const _data = await _resp.json();
+        let _raw = (_data?.content?.[0]?.text || '').trim();
+        _raw = _raw.replace(/```json/g, '').replace(/```/g, '').trim();
+        const _m = _raw.match(/\{[\s\S]*\}/);
+        if (_m) {
+          try { _stepSummary = JSON.parse(_m[0]); } catch {}
+        }
+      }
+    } catch (e) { console.warn('[magic 3-field summary]', e); }
+  }
+
   state.chatArchive.unshift({
     id: 'arch_magic_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     date: dateKey,
-    summary: `🌀 마법 (${stepTitle}): ${(decision.title || '결정').slice(0, 24)}`,
+    summary: (_stepSummary && _stepSummary.conclusion)
+      ? String(_stepSummary.conclusion).slice(0, 200)
+      : `🌀 마법 (${stepTitle}): ${(decision.title || '결정').slice(0, 24)}`,
+    new_realization: (_stepSummary && _stepSummary.new_realization) ? String(_stepSummary.new_realization).slice(0, 100) : null,
+    next_action:     (_stepSummary && _stepSummary.next_action)     ? String(_stepSummary.next_action).slice(0, 80)     : null,
+    conclusion:      (_stepSummary && _stepSummary.conclusion)      ? String(_stepSummary.conclusion).slice(0, 200)     : null,
     messageCount: realMessages.length,
     messages: realMessages.slice(),
     generatedAt: new Date().toISOString(),
@@ -24967,6 +25042,8 @@ function saveReview(type) {
   const reviewData = JSON.parse(screen.dataset.reviewData);
   // 사용자 명시 2026-04-30: 자기 평가 form 제거.
   const review = {
+    // 사용자 보고 2026-05-08: id 누락 → AI 핵심 통찰 요약 버튼 안 보임 (review-collection 분기에서 placeholder 만 노출).
+    id: (type === 'weekly' ? 'wr_' : 'mr_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     completedAt: new Date().toISOString(),
     summary: reviewData.summary,
     sections: reviewData.sections,  // 옛 형식 backward compat
@@ -25011,18 +25088,20 @@ function saveReview(type) {
 function _renderReviewMoodChart(entries) {
   if (!Array.isArray(entries) || entries.length < 2) return '';
   // mood: 1-5 / energy: 1-5 둘 다 정규화 후 0-1 비율로 표시
+  // 사용자 보고 2026-05-08 ultrathink: state.entries 의 실제 필드는 'vitality' (체크인 흐름) — 'energy' 만 봐서 항상 빈 path → energy 그래프 안 뜸 버그.
   const w = 320, h = 110, pad = 18;
   const xs = (i) => pad + (i / (entries.length - 1)) * (w - pad * 2);
   const ys = (v) => h - pad - ((Number(v) - 1) / 4) * (h - pad * 2);  // 1-5 → 0-1 → y
+  const _eVal = (e) => e.energy ?? e.vitality;
   const moodValid = entries.filter(e => Number.isFinite(Number(e.mood)) && Number(e.mood) >= 1 && Number(e.mood) <= 5);
-  const energyValid = entries.filter(e => Number.isFinite(Number(e.energy)) && Number(e.energy) >= 1 && Number(e.energy) <= 5);
+  const energyValid = entries.filter(e => { const v = _eVal(e); return Number.isFinite(Number(v)) && Number(v) >= 1 && Number(v) <= 5; });
   if (moodValid.length < 2 && energyValid.length < 2) return '';
   const buildPath = (vals, getter) => vals.map((e, i) => {
     const idx = entries.indexOf(e);
     return `${i === 0 ? 'M' : 'L'}${xs(idx).toFixed(1)},${ys(getter(e)).toFixed(1)}`;
   }).join(' ');
   const moodPath = moodValid.length >= 2 ? buildPath(moodValid, e => e.mood) : '';
-  const energyPath = energyValid.length >= 2 ? buildPath(energyValid, e => e.energy) : '';
+  const energyPath = energyValid.length >= 2 ? buildPath(energyValid, _eVal) : '';
   const dots = (vals, color, getter) => vals.map(e => {
     const idx = entries.indexOf(e);
     return `<circle cx="${xs(idx).toFixed(1)}" cy="${ys(getter(e)).toFixed(1)}" r="3.5" fill="${color}"/>`;
@@ -25048,7 +25127,7 @@ function _renderReviewMoodChart(entries) {
         ${moodPath ? `<path d="${moodPath}" stroke="#e8c890" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
         ${energyPath ? `<path d="${energyPath}" stroke="#7ec8e3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
         ${moodPath ? dots(moodValid, '#e8c890', e => e.mood) : ''}
-        ${energyPath ? dots(energyValid, '#7ec8e3', e => e.energy) : ''}
+        ${energyPath ? dots(energyValid, '#7ec8e3', _eVal) : ''}
         ${labels}
       </svg>
     </div>`;
@@ -25061,15 +25140,17 @@ function _renderReviewMoodChartInline(entries) {
   const w = 320, h = 100, pad = 16;
   const xs = (i) => pad + (i / (entries.length - 1)) * (w - pad * 2);
   const ys = (v) => h - pad - ((Number(v) - 1) / 4) * (h - pad * 2);
+  // 사용자 보고 2026-05-08 ultrathink: e.energy ?? e.vitality fallback (full chart 와 동일 fix).
+  const _eVal = (e) => e.energy ?? e.vitality;
   const moodValid = entries.filter(e => Number.isFinite(Number(e.mood)) && Number(e.mood) >= 1 && Number(e.mood) <= 5);
-  const energyValid = entries.filter(e => Number.isFinite(Number(e.energy)) && Number(e.energy) >= 1 && Number(e.energy) <= 5);
+  const energyValid = entries.filter(e => { const v = _eVal(e); return Number.isFinite(Number(v)) && Number(v) >= 1 && Number(v) <= 5; });
   if (moodValid.length < 2 && energyValid.length < 2) return '';
   const buildPath = (vals, getter) => vals.map((e, i) => {
     const idx = entries.indexOf(e);
     return `${i === 0 ? 'M' : 'L'}${xs(idx).toFixed(1)},${ys(getter(e)).toFixed(1)}`;
   }).join(' ');
   const moodPath = moodValid.length >= 2 ? buildPath(moodValid, e => e.mood) : '';
-  const energyPath = energyValid.length >= 2 ? buildPath(energyValid, e => e.energy) : '';
+  const energyPath = energyValid.length >= 2 ? buildPath(energyValid, _eVal) : '';
   const dots = (vals, color, getter) => vals.map(e => {
     const idx = entries.indexOf(e);
     return `<circle cx="${xs(idx).toFixed(1)}" cy="${ys(getter(e)).toFixed(1)}" r="3" fill="${color}"/>`;
@@ -25090,7 +25171,7 @@ function _renderReviewMoodChartInline(entries) {
         ${moodPath ? `<path d="${moodPath}" stroke="#e8c890" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
         ${energyPath ? `<path d="${energyPath}" stroke="#7ec8e3" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
         ${moodPath ? dots(moodValid, '#e8c890', e => e.mood) : ''}
-        ${energyPath ? dots(energyValid, '#7ec8e3', e => e.energy) : ''}
+        ${energyPath ? dots(energyValid, '#7ec8e3', _eVal) : ''}
         ${labels}
       </svg>
     </div>`;
@@ -25402,12 +25483,13 @@ function getCheckinTimeSlot() {
 }
 
 function _checkinCardCopy(slot, isDone) {
-  if (isDone) return { icon: '✓', title: '오늘 기록 완료', sub: '' };
+  // 사용자 명시 2026-05-08: 카드 자연 한국어 한 문장 — sub / 어제 emoji 줄 / 이모티콘 prefix 모두 제거.
+  if (isDone) return { icon: '✓', title: '오늘 기록 완료' };
   const map = {
-    morning: { icon: '☀️', title: '오늘 어떻게 시작해?', sub: '어젯밤 잠 + 지금 컨디션 한 줄이면 OK' },
-    noon: { icon: '🌤', title: '지금 컨디션 어때?', sub: '30초만. 점심 전후 짚어두자' },
-    evening: { icon: '🌅', title: '오늘 지나간 흐름 짚어볼래?', sub: '메모 한 줄로도 충분해' },
-    night: { icon: '🌙', title: '오늘 어땠어?', sub: '하루 닫고 자기 전 한 호흡' }
+    morning: { icon: '☀️', title: '오늘 어떻게 시작하는지 한 줄 적어둘래?' },
+    noon:    { icon: '🌤', title: '지금 컨디션 어떤지 한 줄로 짚어둘래?' },
+    evening: { icon: '🌅', title: '오늘 지나간 흐름 메모 한 줄로 적어둘래?' },
+    night:   { icon: '🌙', title: '오늘 어땠는지 한 호흡 닫아볼래?' }
   };
   return map[slot] || map.night;
 }
@@ -25472,26 +25554,16 @@ function renderMainAction() {
 
   let cardHtml;
   if (checkinDoneToday) {
-    const summary = _todayMoodSummaryHtml(todayEntry);
     cardHtml = `
       <div class="action-card checkin-card is-done" onclick="enterCheckin()">
         <div class="action-icon">${copy.icon}</div>
         <div class="action-text">
           <div class="action-title">${copy.title}</div>
-          <div class="action-sub">${summary}</div>
         </div>
         <div class="action-arrow">›</div>
       </div>
     `;
   } else {
-    const ySum = getYesterdayMoodSummary();
-    let yPreview = '';
-    if (ySum) {
-      const parts = [];
-      if (ySum.vitalityEmoji) parts.push(`⚡${ySum.vitalityEmoji}`);
-      if (ySum.moodEmoji) parts.push(`💭${ySum.moodEmoji}`);
-      yPreview = `<div class="yesterday-preview">어제 ${parts.join(' · ')}</div>`;
-    }
     // 사용자 명시 2026-05-06 ultrathink: 신규 사용자 (entries 0개) — 카드 우측 상단 깜빡이는 점 (has-pulse).
     const isBrandNew = !Array.isArray(state.entries) || state.entries.length === 0;
     const pulseClass = isBrandNew ? ' has-pulse' : '';
@@ -25500,8 +25572,6 @@ function renderMainAction() {
         <div class="action-icon">${copy.icon}</div>
         <div class="action-text">
           <div class="action-title">${copy.title}</div>
-          <div class="action-sub">${copy.sub}</div>
-          ${yPreview}
         </div>
         <div class="action-arrow">›</div>
       </div>
@@ -26014,11 +26084,15 @@ async function extractAndApplyInsightToModel(insightText, userMsg, source) {
 [사용자 직전 발화]
 ${(userMsg || '').slice(0, 600) || '(없음)'}
 
-[깨달음 메시지]
+[깨달음 메시지 — AI(소라고동) 응답]
 ${cleanInsight.slice(0, 1200)}
 
-이 깨달음에서 사용자가 자기 자신에 대해 새로 발견 / 명확히 한 것이 있으면 JSON으로 뽑아.
-강한 신호 (명시적 자기 인식, 행동·감정 증거 동반) 만. 추측·일반론 X. 근거 약하면 빈 배열.
+이 깨달음에서 사용자(주체) 자신이 새로 발견 / 명확히 한 것 만 JSON으로 뽑아.
+- ⚠️ AI(소라고동)의 가설·해석·"너 X해" 발화는 사용자 trait 후보 X. AI는 외부 관찰자.
+- [사용자 직전 발화] 에 사용자 본인이 직접 표현한 자기 인식만 trait/value/pattern 후보.
+- 깨달음 메시지(AI 응답)는 그 발화를 명명/연결한 lens일 뿐 — AI 가 단정한 명제 ≠ 사용자 자신의 인식.
+- 사용자 직전 발화가 비어있거나 짧으면 → 모두 빈 배열.
+- 추측·일반론 X. 근거 약하면 빈 배열.
 
 {
   "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
@@ -27200,6 +27274,12 @@ function _findPendingStrategyFollowup() {
     // _followupAsked=true → skip. defer 시점에는 reset (만기일에 한 번 더).
     if (m._followupAsked) return false;
     if (m.scheduledFor && daysBetweenKeys(today, m.scheduledFor) > 0) return false;
+    // 사용자 보고 2026-05-08 ultrathink: 12h 가드를 모든 케이스 공통으로 위로 올림 — scheduledFor 있는 mission이 옛 흐름에선 12h 가드 패스 → 같은 날 미션 해냈어 누른 직후 대화탭/체크인 진입 시 즉시 결과 체크 떠버리는 버그.
+    if (m.completedAt) {
+      const _now = (typeof getServerNowMs === 'function' ? getServerNowMs() : Date.now());
+      const _elapsed = _now - new Date(m.completedAt).getTime();
+      if (_elapsed < 12 * 3600000) return false;
+    }
     // defer된 미션 (scheduledFor 있음)은 7일 룰 무시 — 사용자 명시적 날짜 우선.
     if (m.scheduledFor) return true;
     // 일반 미션 (자동 follow-up) — 완료 후 7일 window
@@ -27210,14 +27290,6 @@ function _findPendingStrategyFollowup() {
     // V4 (사용자 보고 2026-05-03): 같은 날 (diff=0, cutoff 안 지남) 자동 trigger 차단 → 다음날부터 (diff>=1).
     // 의도: 미션 완료 직후 결과 체크 모달 X. 4시 cutoff 지나야 자동 prompt.
     if (!(diff >= 1 && diff <= 7)) return false;
-    // V4 (사용자 보고 2026-05-04 VB024): cutoff 직후 깨움 edge case 추가 차단.
-    // 예) 23:30 완료 → 다음날 04:30 진입 시 diff=1 통과되지만 실제 5h 만 경과 → "하루 안 지났다" 사용자 체감.
-    // 추가 가드: completedAt 으로부터 최소 12h 경과 (체감상 "하루" 으로 인식 가능 임계).
-    if (m.completedAt) {
-      const _now = (typeof getServerNowMs === 'function' ? getServerNowMs() : Date.now());
-      const _elapsed = _now - new Date(m.completedAt).getTime();
-      if (_elapsed < 12 * 3600000) return false;
-    }
     return true;
   });
 }
@@ -30733,7 +30805,6 @@ const EMPTY_STATE_EXAMPLES = [
   '😰 내일 발표인데 시작도 못 함 - 도와줄게',
   '👗 이 옷 살까 말까ㅋㅋ',
   '🎉 발표 끝났어! 뿌듯',
-  '📌 또 마감이네...',
   '🌗 기쁘기도 하고 슬프기도 하고...',
   '📅 오늘 3시 회의 잡아줘',
   '📔 "일기:" 오늘 잘 지냄 - 원본으로 저장돼',
@@ -32738,6 +32809,14 @@ document.addEventListener('click', function(e) {
   closeChatPlusMenu();
 });
 
+// 사용자 명시 2026-05-08 ultrathink: 이어서한 archive 의 옛 부분 = 이미 분석됨 → 새 archive 에 boundary 박아 옛 부분 분석 input 에서 제외 (중복 분석 + token 낭비 차단).
+// archiveItem._extractFromIndex 가 있으면 그 인덱스 이후 messages 만 chapter case_analysis / topic 추출 input.
+function _chapterExtractMessages(archiveItem) {
+  if (!archiveItem || !Array.isArray(archiveItem.messages)) return [];
+  const fromIdx = archiveItem._extractFromIndex || 0;
+  return fromIdx > 0 ? archiveItem.messages.slice(fromIdx) : archiveItem.messages;
+}
+
 // V4 사용자 명시 2026-05-01 ultrathink: 챕터 분리 = archive 이송 (단일 흐름).
 // chatMessages 의 현재 챕터를 chatArchive 로 이송 + chatMessages 비움.
 // archive item: date = firstMsg day-key (cross-cutoff 챕터 시작 날), 별도 entry (merge X), _pendingExtract: true.
@@ -32796,6 +32875,16 @@ function _archiveCurrentChapter(opts) {
     endedManually: !!opts.manual,
     _pendingExtract: true   // 4AM 일괄 처리 마커 (case_analysis + topic_extract 둘 다)
   };
+  // 사용자 명시 2026-05-08 ultrathink: 이어서한 후 변경된 케이스 (옛 messages + 새 messages) — 새 archive 에 _extractFromIndex 박기.
+  // unchanged 분기 (line 39-52) 에서는 옛 archive 그대로 복귀 → 이 분기 도달 X. changed 분기에서만 boundary 박음.
+  if (state._resumedFromArchive && state._resumedFromArchive.snapshot
+      && Array.isArray(state._resumedFromArchive.snapshot.messages)) {
+    const _origLen = state._resumedFromArchive.snapshot.messages.length;
+    if (_origLen > 0 && _origLen < validMsgs.length) {
+      archiveItem._extractFromIndex = _origLen;
+    }
+    delete state._resumedFromArchive;
+  }
   state.chatArchive.unshift(archiveItem);
   state.chatMessages = [];
   // 단계 2: chapter 분리 시 _chatWindowStart reset (새 챕터 = 신규 시작).
@@ -32821,12 +32910,14 @@ function _archiveCurrentChapter(opts) {
         // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
         // sourceArchiveId 박음 (cascade soft delete 추적용).
         const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
-        if (typeof extractChapterCaseAnalysis === 'function') {
-          try { await extractChapterCaseAnalysis(archiveItem.messages); }
+        // 사용자 명시 2026-05-08 ultrathink: _extractFromIndex 적용 — 옛 부분 input 제외.
+        const _extractMsgs = _chapterExtractMessages(archiveItem);
+        if (typeof extractChapterCaseAnalysis === 'function' && _extractMsgs.length >= 3) {
+          try { await extractChapterCaseAnalysis(_extractMsgs); }
           catch (e) { console.warn('[new-user extract] case fail:', e); }
         }
-        if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
-          try { await extractPreviousChapterTopics(archiveItem.messages); }
+        if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _extractMsgs.length >= 3) {
+          try { await extractPreviousChapterTopics(_extractMsgs); }
           catch (e) { console.warn('[new-user extract] topic fail:', e); }
         }
         if (_before && typeof _stampSourceArchiveId === 'function') {
@@ -33174,12 +33265,45 @@ async function generateAIResponse(modelOverride) {
     // 사용자 명시 2026-05-02 ultrathink: 챕터 시작 후 cap 25 → 20 (sweet spot 20-30 안 하단).
     // 5h+ 갭이면 archive 이송 후 챕터 비워지므로 단절 위험 낮음. messages 영역 ~15% 토큰 절감.
     const fromChapter = validMsgs.slice(chapterStartIdx);
-    const sliced = fromChapter.length > 20
-      ? fromChapter.slice(-20)
-      : fromChapter.length > 0
-        ? fromChapter
-        : validMsgs.slice(-20);
-    const messages = sliced.map(m => ({ role: m.role, content: m.content }));
+
+    // 사용자 명시 2026-05-08 ultrathink: 25턴+ chapter 압축 — sliding window + Haiku 누적 요약 hybrid.
+    // 옛 부분 한 단락 요약 + 최근 20턴 raw → AI memory 보완. cache hit 안 되면 raw 20턴 (다음 응답에 hit).
+    let messages;
+    const _RECENT_CAP = (typeof _ROLLING_SUMMARY_RECENT_CAP !== 'undefined') ? _ROLLING_SUMMARY_RECENT_CAP : 20;
+    const _COMP_THRESHOLD = (typeof _ROLLING_SUMMARY_THRESHOLD !== 'undefined') ? _ROLLING_SUMMARY_THRESHOLD : 25;
+    const _STALE_TOL = (typeof _ROLLING_SUMMARY_STALE_TOLERANCE !== 'undefined') ? _ROLLING_SUMMARY_STALE_TOLERANCE : 10;
+
+    if (fromChapter.length > _COMP_THRESHOLD) {
+      const _oldPart = fromChapter.slice(0, fromChapter.length - _RECENT_CAP);
+      const _recentPart = fromChapter.slice(-_RECENT_CAP);
+      const _cacheKey = (typeof _rollingSummaryCacheKey === 'function')
+        ? _rollingSummaryCacheKey(fromChapter) : 'chapter';
+      const _cachedSummary = (state.preferences && state.preferences._chatRollingSummary
+        && state.preferences._chatRollingSummary[_cacheKey]) || '';
+      const _cachedCount = (state.preferences && state.preferences._chatRollingSummaryCount
+        && state.preferences._chatRollingSummaryCount[_cacheKey]) || 0;
+
+      // background — 새 oldPart 길이로 update (fire-and-forget, fail silent)
+      if (typeof _maybeBuildRollingSummary === 'function') {
+        _maybeBuildRollingSummary(_oldPart, _cacheKey).catch(() => {});
+      }
+
+      if (_cachedSummary && Math.abs(_cachedCount - _oldPart.length) <= _STALE_TOL) {
+        // cache hit (~10턴 stale OK) — 옛 부분 요약 + 최근 N턴 raw
+        messages = [
+          { role: 'user', content: `[지금까지 대화 요약 — 옛 ${_oldPart.length}턴 분]\n${_cachedSummary}\n\n[이어서 대화 계속 — 최근 ${_recentPart.length}턴]` },
+          { role: 'assistant', content: '계속 듣고 있어 — 이어서 말해줘.' },
+          ..._recentPart.map(m => ({ role: m.role, content: m.content }))
+        ];
+      } else {
+        // cache miss → 최근 N턴만 raw (기존 동작). 다음 응답부터 cache hit.
+        messages = _recentPart.map(m => ({ role: m.role, content: m.content }));
+      }
+    } else {
+      // 25턴 이하 = 압축 X, 그대로
+      const _sliced = fromChapter.length > 0 ? fromChapter : validMsgs.slice(-_RECENT_CAP);
+      messages = _sliced.map(m => ({ role: m.role, content: m.content }));
+    }
 
     // 사용자 명시 2026-05-01 ultrathink: messages prefix cache_control — 마지막 user 메시지 직전 turn 에 ephemeral breakpoint.
     // 같은 챕터 안 연속 호출 (1h TTL) 시 옛 turn 들이 90% 할인 prefix cache hit. 4단 분석 응답 (~1000 토큰) 비싼 turn 도 cached.
@@ -33633,6 +33757,42 @@ async function processAnalysis(analysis, messageIdx) {
       // 진주 화면 / 도서관 hero 즉시 갱신
       if (typeof renderLensPearls === 'function') { try { renderLensPearls(); } catch {} }
       if (typeof renderLibraryHero === 'function') { try { renderLibraryHero(); } catch {} }
+
+      // 사용자 명시 2026-05-08 ultrathink: AI가 "진주에 넣을래?" → 자동 push 직후 사진 첨부 묻기 (음악/기타 제외).
+      // 사용자가 명시적으로 진주 요청한 케이스라 모달 띄움 자연스러움. 첫 candidate 한 장만 prompt.
+      const photoCandidates = analysis.extracted_pearls
+        .map(p => ({
+          content: (p && p.content) ? String(p.content).trim().slice(0, 200) : '',
+          category: validCats.includes(p && p.category) ? p.category : '기타'
+        }))
+        .filter(p => p.content && p.category !== '음악' && p.category !== '기타');
+      if (photoCandidates.length > 0) {
+        setTimeout(async () => {
+          try {
+            const target = state.pearls.slice().reverse().find(x =>
+              x && x.source === 'chat' && x.content === photoCandidates[0].content && !x.photo
+            );
+            if (!target) return;
+            const wantPhoto = await showConfirmModal({
+              title: '📷 사진도 같이?',
+              message: photoCandidates.length === 1
+                ? `"${photoCandidates[0].content}" 진주에 사진 추가할래?\n(갤러리에서 한 장)`
+                : `방금 추가된 진주에 사진 추가할래?\n(첫 진주 한 장만 — 나머지는 도서관에서)`,
+              okLabel: '응 사진 추가',
+              cancelLabel: '아니 텍스트만'
+            });
+            if (!wantPhoto) return;
+            const file = await pickPhotoFile();
+            if (!file) return;
+            const photo = await fileToResizedDataUrl(file, 1024);
+            if (!photo) return;
+            target.photo = photo;
+            saveState();
+            if (typeof renderLensPearls === 'function') { try { renderLensPearls(); } catch {} }
+            showToast('📷 사진 같이 보관됨');
+          } catch (e) { console.warn('진주 사진 자동 첨부:', e); }
+        }, 800);
+      }
     }
   }
   saveState();
@@ -33809,6 +33969,104 @@ function dedupeAllModelExactDuplicates() {
   return changed;
 }
 
+// 사용자 명시 2026-05-08 ultrathink: 25턴+ 대화 압축 — sliding window + 누적 요약 hybrid.
+// 옛 부분(최근 20턴 이전)을 Haiku 한 단락 요약으로 누적 + 최근 20턴 raw messages → AI memory 보완.
+// 5-10턴마다 자동 background update (fire-and-forget). cache hit 안 되면 raw 20턴만 (1턴 latency 후 cache hit).
+
+const _ROLLING_SUMMARY_RECENT_CAP = 20;
+const _ROLLING_SUMMARY_THRESHOLD = 25;        // 이만큼 넘어야 압축 활성화
+const _ROLLING_SUMMARY_STALE_TOLERANCE = 10;  // cache 와 oldPart 차이 N턴까지는 hit 으로 인정
+
+function _rollingSummaryCacheKey(fromChapterMsgs) {
+  const first = fromChapterMsgs && fromChapterMsgs[0];
+  return (first && first.timestamp) ? first.timestamp : 'chapter';
+}
+
+async function _maybeBuildRollingSummary(oldMessages, cacheKey) {
+  if (!oldMessages || oldMessages.length < 5) return;
+  if (typeof _canAI !== 'function' || !_canAI()) return;
+  if (window._onbTutorialMode) return;
+  if (state.preferences && state.preferences.testerMode) return;
+
+  if (!state.preferences) state.preferences = {};
+  if (!state.preferences._chatRollingSummary) state.preferences._chatRollingSummary = {};
+  if (!state.preferences._chatRollingSummaryCount) state.preferences._chatRollingSummaryCount = {};
+
+  const _cachedCount = state.preferences._chatRollingSummaryCount[cacheKey] || 0;
+  if (_cachedCount === oldMessages.length && state.preferences._chatRollingSummary[cacheKey]) return;
+
+  if (window._buildingRollingSummary === cacheKey) return;
+  window._buildingRollingSummary = cacheKey;
+
+  try {
+    const chatLog = oldMessages.map(m => {
+      const role = m.role === 'user' ? '나' : '소라';
+      let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+      return `${role}: ${content}`;
+    }).join('\n\n');
+
+    const _existing = state.preferences._chatRollingSummary[cacheKey] || '';
+    const prompt = _existing
+      ? `사용자(나)와 AI(소라)의 같은 챕터 대화 흐름이 길어져서 누적 요약을 update.
+
+[기존 요약]
+${_existing}
+
+[추가된 대화 + 누적]
+${chatLog.slice(0, 7000)}
+
+[너의 일]
+한 단락 (4-6 문장) 요약. 대화 핵심 흐름 + 사용자가 무엇을 가지고 있었는지 + 어디까지 풀렸는지 + 최근 변화. 한국어, 친구 톤. 마크다운 X. 이 요약은 다음 응답에서 옛 대화 대신 prompt 에 들어감 — 대화 맥락 잃지 않게 핵심 보존.`
+      : `사용자(나)와 AI(소라)의 한 챕터 대화 (옛 부분).
+
+[대화 원문]
+${chatLog.slice(0, 7000)}
+
+[너의 일]
+한 단락 (4-6 문장) 요약. 대화 핵심 흐름 + 사용자가 무엇을 가지고 있었는지 + 어디까지 풀렸는지. 한국어, 친구 톤. 마크다운 X. 이 요약은 다음 응답에서 옛 대화 대신 prompt 에 들어감 — 대화 맥락 잃지 않게 핵심 보존.`;
+
+    const resp = await callAnthropic({
+      _endpoint: 'chat_rolling_summary',
+      model: 'claude-haiku-4-5',
+      max_tokens: 280,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const text = (data?.content?.[0]?.text || '').trim();
+    if (text) {
+      state.preferences._chatRollingSummary[cacheKey] = text.slice(0, 1200);
+      state.preferences._chatRollingSummaryCount[cacheKey] = oldMessages.length;
+      saveState();
+    }
+  } catch (e) {
+    console.warn('[rolling summary]', e);
+  } finally {
+    delete window._buildingRollingSummary;
+  }
+}
+
+// chapter 분리 시 cache 정리 — 옛 chapter cache 제거 (cache key 가 첫 메시지 timestamp 라서 자연스럽게 새 chapter 는 다른 key. 단 메모리 누적 방지).
+function _pruneRollingSummaryCache() {
+  if (!state.preferences || !state.preferences._chatRollingSummary) return;
+  const _validKeys = new Set();
+  // 현재 chatMessages 의 chapter 첫 메시지 timestamp
+  const _validMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
+  let _chapterStart = 0;
+  for (let i = _validMsgs.length - 1; i >= 0; i--) {
+    if (_validMsgs[i].chapterStart) { _chapterStart = i; break; }
+  }
+  const _first = _validMsgs[_chapterStart];
+  if (_first && _first.timestamp) _validKeys.add(_first.timestamp);
+  // 옛 key 모두 제거
+  Object.keys(state.preferences._chatRollingSummary).forEach(k => {
+    if (!_validKeys.has(k) && k !== 'chapter') {
+      delete state.preferences._chatRollingSummary[k];
+      delete state.preferences._chatRollingSummaryCount[k];
+    }
+  });
+}
 // ═══════════════════════════════════════════════════════════════
 // SYSTEM PROMPT
 // ═══════════════════════════════════════════════════════════════
@@ -36274,7 +36532,7 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
         model: 'claude-sonnet-4-6', max_tokens: 120,
         messages: [{
           role: 'user',
-          content: `${ctx}\n\n[네 일]\n위 상황·전략에 맞춰 '오늘의 제안' 1개 — 오늘 바로 할 수 있는 구체 행동.\n한 줄 (max 40자). 동사로 시작. 환경 셋업 우선. 의지 부담 ↓.\n\n[출력]\n제안만 한 줄. 다른 거 X. 마크다운 X.`
+          content: `${ctx}\n\n[네 일]\n위 정보 (전략·전략 행동·심리학 개념·사용자 상황) 셋 다 활용해서 '오늘의 제안' 1개 만들어.\n- "전략 행동" 그대로 복사 X — 오늘 사용자 상황에 맞춰 구체화/변형 필수\n- 한 줄 (max 40자). 동사로 시작. 환경 셋업 우선 (의지 부담 ↓).\n\n[출력]\n제안만 한 줄. 다른 거 X. 마크다운 X.`
         }]
       });
       const data = await resp.json();
@@ -36283,6 +36541,10 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
   }
   if (!proposal) {
     proposal = isMutation ? mutationOpt.action : (card.actionStrategy || card.title);
+  }
+  // 사용자 보고 2026-05-08: AI 응답이 '전략 행동' 그대로 복사한 경우 → title 기반 generic fallback (양생방 카드 = 부름 = 전략 행동 동일 버그 차단).
+  if (!isMutation && card.actionStrategy && proposal.trim() === card.actionStrategy.trim()) {
+    proposal = `오늘 ${card.title} 한 번 시도`.slice(0, 40);
   }
 
   const yes = await showConfirmModal({
@@ -39464,6 +39726,14 @@ function completeQuest(taskId) {
   task.status = 'done';
   task.completedAt = new Date().toISOString();
 
+  // 사용자 명시 2026-05-08 ultrathink: 소라 보상 = '오늘의 카드' (now3 slot) 한정.
+  // 옛 동작: 모든 task 완료 시 shell push → 사용자 변경: 오늘의 카드 (3장) 만 shell. 서랍장/나중 task = shell X.
+  if (task.slot !== 'now3' && task.source !== 'ai_mission') {
+    saveState();
+    renderExecute();
+    return;
+  }
+
   // Generate shell reward
   const shell = pickShellForTask(task);
   let _undoShellId = null;
@@ -39856,6 +40126,16 @@ function renderChatArchiveModal() {
       : '';
     const cardOpacity = isPending ? '0.7' : '1';
 
+    // 사용자 명시 2026-05-08 ultrathink: 마법 type archive 카드에 3 필드 요약 노출 (conclusion / new_realization / next_action).
+    const isMagicHelp = a.source === 'magic_help';
+    const magicSummaryHtml = (isMagicHelp && (a.new_realization || a.next_action || a.conclusion)) ? `
+      <div class="cac-magic-summary" style="background:rgba(155,124,206,0.08); border-left:3px solid rgba(155,124,206,0.40); padding:10px 12px; margin-top:8px; border-radius:6px; font-size:11.5px; line-height:1.7;">
+        ${a.conclusion ? `<div style="color:var(--text); margin-bottom:6px;">"${escapeHtml(a.conclusion)}"</div>` : ''}
+        ${a.new_realization ? `<div style="color:var(--text-dim); margin-bottom:3px;"><span style="color:#c8b3e8;">✦ 새로 알게 됨:</span> ${escapeHtml(a.new_realization)}</div>` : ''}
+        ${a.next_action ? `<div style="color:var(--text-dim);"><span style="color:#c8b3e8;">→ 다음:</span> ${escapeHtml(a.next_action)}</div>` : ''}
+      </div>
+    ` : '';
+
     // V4 사용자 명시 2026-05-04: 휴지통/일반 별 액션 버튼 분기.
     const isTrash = !!a._deleted;
     const headerActionsHtml = isTrash ? `
@@ -39886,6 +40166,7 @@ function renderChatArchiveModal() {
           </div>
         </div>
         ${pendingNote}
+        ${magicSummaryHtml}
         ${isExpanded ? `
           <div class="cac-messages">
             ${messages.map(m => {
@@ -47653,15 +47934,17 @@ async function _runDailyExtractInline(pending) {
     // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
     // sourceArchiveId 박음 (cascade soft delete 추적용).
     const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
+    // 사용자 명시 2026-05-08 ultrathink: _extractFromIndex 적용 — 이어서한 archive 의 옛 부분 input 제외.
+    const _extractMsgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : (batch.messages || []);
     try {
-      if (batch.messages.length >= 6) {
-        await extractChapterCaseAnalysis(batch.messages);
+      if (_extractMsgs.length >= 6) {
+        await extractChapterCaseAnalysis(_extractMsgs);
       }
     } catch (e) { console.warn('[inline] case fail:', e); }
     const _allowChapterTopic = !!batch.endedManually || _isPremium;
     try {
-      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
-        await extractPreviousChapterTopics(batch.messages);
+      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _extractMsgs.length >= 3) {
+        await extractPreviousChapterTopics(_extractMsgs);
       }
     } catch (e) { console.warn('[inline] topic fail:', e); }
     _pushMagicReflectionArchive(batch);
@@ -47843,11 +48126,17 @@ function _buildDiaryBatchRequests() {
 //   topic / review / diary 는 batch 유지 (50% 할인 + polling 가속 5/15/30분).
 //   추가 비용 ~$0.05~0.1/주/사용자. 자연 종료 챕터만 영향 (사용자 ✓ 챕터는 이미 inline 처리됨).
 async function _submitDailyExtractBatch(pending) {
+  // 사용자 명시 2026-05-08 ultrathink: 이어서한 archive 의 _extractFromIndex 적용 — 옛 부분 input 제외.
   // chapter case_analysis 만 inline fire-and-forget — 사용자 wait X.
   pending
-    .filter(b => b && b.messages && b.messages.length >= 6)
+    .filter(b => {
+      if (!b || !b.messages) return false;
+      const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(b) : b.messages;
+      return _msgs.length >= 6;
+    })
     .forEach(b => {
-      extractChapterCaseAnalysis(b.messages)
+      const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(b) : b.messages;
+      extractChapterCaseAnalysis(_msgs)
         .then(() => {
           delete b._pendingCaseAnalysis;
           try { saveState(); } catch {}
@@ -47858,12 +48147,14 @@ async function _submitDailyExtractBatch(pending) {
   const requests = [];
   for (const batch of pending) {
     // case_analysis = inline 분리 (위). topic 만 batch.
+    const _topicMsgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : batch.messages;
+    if (_topicMsgs.length < 3) continue;
     requests.push({
       custom_id: `topic_${batch.id}`,
       params: {
         model: 'claude-haiku-4-5',
         max_tokens: 600,
-        messages: [{ role: 'user', content: _buildExtractTopicPrompt(batch.messages) }]
+        messages: [{ role: 'user', content: _buildExtractTopicPrompt(_topicMsgs) }]
       }
     });
   }
@@ -48696,7 +48987,7 @@ function _renderCancelRenewalBox(billing) {
     box.innerHTML = `
       <div style="padding:10px 0; line-height:1.7;">
         <button class="btn-secondary" onclick="cancelNextRenewal()" style="width:100%; padding:10px; font-size:12.5px; color:var(--text); opacity:0.85;">⏸ 다음 갱신 해지</button>
-        <div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">현 결제 만료까지 사용, 다음 자동 결제만 멈춤. 환불 아님.</div>
+        <div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">현 결제 만료까지 사용.</div>
       </div>
     `;
   }
@@ -48810,7 +49101,7 @@ const TIER_UPGRADE_KRW = TIER_PLANS_CLIENT.premium.krw; // 25,000
 // 옛 차액 변수 호환 (점진 정리 — sub_modal 의 일부 코드가 import)
 const TIER_UPGRADE_DIFF_KRW = TIER_UPGRADE_KRW;
 
-// 카톡 오픈채팅 (피드백·문의 채널, 익명 OK)
+// 카톡 오픈채팅 (피드백·문의 채널)
 const KAKAO_OPEN_CHAT = 'https://open.kakao.com/o/sUP7kIsi';
 
 // 사용자 명시 2026-05-06: 토스 수동 송금 폐기 → PortOne V2 카드 결제. TOSS_ACCOUNT / _generateUserMemoCode 제거.

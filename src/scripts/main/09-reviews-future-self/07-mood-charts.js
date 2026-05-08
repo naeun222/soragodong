@@ -1,18 +1,20 @@
 function _renderReviewMoodChart(entries) {
   if (!Array.isArray(entries) || entries.length < 2) return '';
   // mood: 1-5 / energy: 1-5 둘 다 정규화 후 0-1 비율로 표시
+  // 사용자 보고 2026-05-08 ultrathink: state.entries 의 실제 필드는 'vitality' (체크인 흐름) — 'energy' 만 봐서 항상 빈 path → energy 그래프 안 뜸 버그.
   const w = 320, h = 110, pad = 18;
   const xs = (i) => pad + (i / (entries.length - 1)) * (w - pad * 2);
   const ys = (v) => h - pad - ((Number(v) - 1) / 4) * (h - pad * 2);  // 1-5 → 0-1 → y
+  const _eVal = (e) => e.energy ?? e.vitality;
   const moodValid = entries.filter(e => Number.isFinite(Number(e.mood)) && Number(e.mood) >= 1 && Number(e.mood) <= 5);
-  const energyValid = entries.filter(e => Number.isFinite(Number(e.energy)) && Number(e.energy) >= 1 && Number(e.energy) <= 5);
+  const energyValid = entries.filter(e => { const v = _eVal(e); return Number.isFinite(Number(v)) && Number(v) >= 1 && Number(v) <= 5; });
   if (moodValid.length < 2 && energyValid.length < 2) return '';
   const buildPath = (vals, getter) => vals.map((e, i) => {
     const idx = entries.indexOf(e);
     return `${i === 0 ? 'M' : 'L'}${xs(idx).toFixed(1)},${ys(getter(e)).toFixed(1)}`;
   }).join(' ');
   const moodPath = moodValid.length >= 2 ? buildPath(moodValid, e => e.mood) : '';
-  const energyPath = energyValid.length >= 2 ? buildPath(energyValid, e => e.energy) : '';
+  const energyPath = energyValid.length >= 2 ? buildPath(energyValid, _eVal) : '';
   const dots = (vals, color, getter) => vals.map(e => {
     const idx = entries.indexOf(e);
     return `<circle cx="${xs(idx).toFixed(1)}" cy="${ys(getter(e)).toFixed(1)}" r="3.5" fill="${color}"/>`;
@@ -38,7 +40,7 @@ function _renderReviewMoodChart(entries) {
         ${moodPath ? `<path d="${moodPath}" stroke="#e8c890" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
         ${energyPath ? `<path d="${energyPath}" stroke="#7ec8e3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
         ${moodPath ? dots(moodValid, '#e8c890', e => e.mood) : ''}
-        ${energyPath ? dots(energyValid, '#7ec8e3', e => e.energy) : ''}
+        ${energyPath ? dots(energyValid, '#7ec8e3', _eVal) : ''}
         ${labels}
       </svg>
     </div>`;
@@ -51,15 +53,17 @@ function _renderReviewMoodChartInline(entries) {
   const w = 320, h = 100, pad = 16;
   const xs = (i) => pad + (i / (entries.length - 1)) * (w - pad * 2);
   const ys = (v) => h - pad - ((Number(v) - 1) / 4) * (h - pad * 2);
+  // 사용자 보고 2026-05-08 ultrathink: e.energy ?? e.vitality fallback (full chart 와 동일 fix).
+  const _eVal = (e) => e.energy ?? e.vitality;
   const moodValid = entries.filter(e => Number.isFinite(Number(e.mood)) && Number(e.mood) >= 1 && Number(e.mood) <= 5);
-  const energyValid = entries.filter(e => Number.isFinite(Number(e.energy)) && Number(e.energy) >= 1 && Number(e.energy) <= 5);
+  const energyValid = entries.filter(e => { const v = _eVal(e); return Number.isFinite(Number(v)) && Number(v) >= 1 && Number(v) <= 5; });
   if (moodValid.length < 2 && energyValid.length < 2) return '';
   const buildPath = (vals, getter) => vals.map((e, i) => {
     const idx = entries.indexOf(e);
     return `${i === 0 ? 'M' : 'L'}${xs(idx).toFixed(1)},${ys(getter(e)).toFixed(1)}`;
   }).join(' ');
   const moodPath = moodValid.length >= 2 ? buildPath(moodValid, e => e.mood) : '';
-  const energyPath = energyValid.length >= 2 ? buildPath(energyValid, e => e.energy) : '';
+  const energyPath = energyValid.length >= 2 ? buildPath(energyValid, _eVal) : '';
   const dots = (vals, color, getter) => vals.map(e => {
     const idx = entries.indexOf(e);
     return `<circle cx="${xs(idx).toFixed(1)}" cy="${ys(getter(e)).toFixed(1)}" r="3" fill="${color}"/>`;
@@ -80,7 +84,7 @@ function _renderReviewMoodChartInline(entries) {
         ${moodPath ? `<path d="${moodPath}" stroke="#e8c890" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
         ${energyPath ? `<path d="${energyPath}" stroke="#7ec8e3" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
         ${moodPath ? dots(moodValid, '#e8c890', e => e.mood) : ''}
-        ${energyPath ? dots(energyValid, '#7ec8e3', e => e.energy) : ''}
+        ${energyPath ? dots(energyValid, '#7ec8e3', _eVal) : ''}
         ${labels}
       </svg>
     </div>`;

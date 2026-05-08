@@ -42,12 +42,45 @@ async function generateAIResponse(modelOverride) {
     // 사용자 명시 2026-05-02 ultrathink: 챕터 시작 후 cap 25 → 20 (sweet spot 20-30 안 하단).
     // 5h+ 갭이면 archive 이송 후 챕터 비워지므로 단절 위험 낮음. messages 영역 ~15% 토큰 절감.
     const fromChapter = validMsgs.slice(chapterStartIdx);
-    const sliced = fromChapter.length > 20
-      ? fromChapter.slice(-20)
-      : fromChapter.length > 0
-        ? fromChapter
-        : validMsgs.slice(-20);
-    const messages = sliced.map(m => ({ role: m.role, content: m.content }));
+
+    // 사용자 명시 2026-05-08 ultrathink: 25턴+ chapter 압축 — sliding window + Haiku 누적 요약 hybrid.
+    // 옛 부분 한 단락 요약 + 최근 20턴 raw → AI memory 보완. cache hit 안 되면 raw 20턴 (다음 응답에 hit).
+    let messages;
+    const _RECENT_CAP = (typeof _ROLLING_SUMMARY_RECENT_CAP !== 'undefined') ? _ROLLING_SUMMARY_RECENT_CAP : 20;
+    const _COMP_THRESHOLD = (typeof _ROLLING_SUMMARY_THRESHOLD !== 'undefined') ? _ROLLING_SUMMARY_THRESHOLD : 25;
+    const _STALE_TOL = (typeof _ROLLING_SUMMARY_STALE_TOLERANCE !== 'undefined') ? _ROLLING_SUMMARY_STALE_TOLERANCE : 10;
+
+    if (fromChapter.length > _COMP_THRESHOLD) {
+      const _oldPart = fromChapter.slice(0, fromChapter.length - _RECENT_CAP);
+      const _recentPart = fromChapter.slice(-_RECENT_CAP);
+      const _cacheKey = (typeof _rollingSummaryCacheKey === 'function')
+        ? _rollingSummaryCacheKey(fromChapter) : 'chapter';
+      const _cachedSummary = (state.preferences && state.preferences._chatRollingSummary
+        && state.preferences._chatRollingSummary[_cacheKey]) || '';
+      const _cachedCount = (state.preferences && state.preferences._chatRollingSummaryCount
+        && state.preferences._chatRollingSummaryCount[_cacheKey]) || 0;
+
+      // background — 새 oldPart 길이로 update (fire-and-forget, fail silent)
+      if (typeof _maybeBuildRollingSummary === 'function') {
+        _maybeBuildRollingSummary(_oldPart, _cacheKey).catch(() => {});
+      }
+
+      if (_cachedSummary && Math.abs(_cachedCount - _oldPart.length) <= _STALE_TOL) {
+        // cache hit (~10턴 stale OK) — 옛 부분 요약 + 최근 N턴 raw
+        messages = [
+          { role: 'user', content: `[지금까지 대화 요약 — 옛 ${_oldPart.length}턴 분]\n${_cachedSummary}\n\n[이어서 대화 계속 — 최근 ${_recentPart.length}턴]` },
+          { role: 'assistant', content: '계속 듣고 있어 — 이어서 말해줘.' },
+          ..._recentPart.map(m => ({ role: m.role, content: m.content }))
+        ];
+      } else {
+        // cache miss → 최근 N턴만 raw (기존 동작). 다음 응답부터 cache hit.
+        messages = _recentPart.map(m => ({ role: m.role, content: m.content }));
+      }
+    } else {
+      // 25턴 이하 = 압축 X, 그대로
+      const _sliced = fromChapter.length > 0 ? fromChapter : validMsgs.slice(-_RECENT_CAP);
+      messages = _sliced.map(m => ({ role: m.role, content: m.content }));
+    }
 
     // 사용자 명시 2026-05-01 ultrathink: messages prefix cache_control — 마지막 user 메시지 직전 turn 에 ephemeral breakpoint.
     // 같은 챕터 안 연속 호출 (1h TTL) 시 옛 turn 들이 90% 할인 prefix cache hit. 4단 분석 응답 (~1000 토큰) 비싼 turn 도 cached.

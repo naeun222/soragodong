@@ -667,6 +667,29 @@ function closeMagicHelpChat() {
   if (typeof showScreen === 'function') showScreen('decision-detail');
 }
 
+// 사용자 명시 2026-05-08 ultrathink: 마법고동 임시 대화 삭제 — chatArchive 이송 X = case formulation / topic 추출 input 에 안 들어감.
+// helpChat[stepId] 만 비움. 결정 자체는 그대로.
+async function deleteMagicHelpChat() {
+  if (!_magicHelpState) { closeMagicHelpChat(); return; }
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) { closeMagicHelpChat(); return; }
+  const stepId = _magicHelpState.stepId;
+  const messages = (decision.helpChats && decision.helpChats[stepId]) || [];
+  const realMessages = messages.filter(m => !m._starter);
+  if (realMessages.length === 0) {
+    closeMagicHelpChat();
+    return;
+  }
+  const ok = (typeof confirmDelete === 'function')
+    ? await confirmDelete('이 마법고동 임시 대화', '대화 내용도 같이 사라져.\n분석 추출에 안 들어가.')
+    : confirm('이 마법고동 임시 대화 삭제할까? 대화 내용도 같이 사라져.');
+  if (!ok) return;
+  if (decision.helpChats) decision.helpChats[stepId] = [];
+  saveState();
+  showToast('🗑 삭제됨');
+  closeMagicHelpChat();
+}
+
 // 사용자 명시 2026-05-01 ultrathink: 마법 helpChat '이 대화 끝내기' = 숙고 결론과 같은 메커니즘.
 // chatArchive 이송 (_pendingExtract:true) → 4AM 일괄 처리 시 case+topic + archive 마법 타입 자동 push.
 async function endMagicHelpChat() {
@@ -693,10 +716,62 @@ async function endMagicHelpChat() {
   const stepTitle = meta ? meta.title : stepId;
   const firstTs = realMessages[0] && realMessages[0].timestamp;
   const dateKey = firstTs ? getDayKey(firstTs) : todayKey();
+
+  // 사용자 명시 2026-05-08 ultrathink: 마무리 시 즉시 AI 3 필드 요약 (Sonnet, ~300 tokens) — 옛 단순 라벨 (`🌀 마법 (step): title`) 대체.
+  // 사용자가 마무리 직후 결과 즉시 봄 (도서관 카드에 conclusion / new_realization / next_action 노출).
+  let _stepSummary = null;
+  if (_canAI()) {
+    try {
+      showToast('🌀 마법 마무리 정리 중...');
+      const chatLog = realMessages.map(m => {
+        const role = m.role === 'user' ? '나' : '소라';
+        let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
+        content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
+        return `${role}: ${content}`;
+      }).join('\n\n');
+      const _prompt = `사용자가 "${decision.title || '결정'}" 결정의 [${stepTitle}] 단계에서 마법고동(임시 대화)으로 도움 받음.
+
+[대화 원문]
+${chatLog.slice(0, 5000)}
+
+[너의 일]
+이 대화에서 사용자가 얻은 것 3 필드로 정리. 한국어, 간결, 친구 톤.
+
+[출력 형식 — JSON만, 마크다운 X]
+{
+  "new_realization": "사용자가 새로 알게 된 것 (한 줄, ~40자)",
+  "next_action": "다음 행동 (한 줄, 동사로 시작, ~30자)",
+  "conclusion": "이 step 핵심 결론 (1-2문장, ~80자)"
+}
+
+빈 필드 X. 셋 다 채울 것. 무리하면 짧게라도.`;
+      const _resp = await callAnthropic({
+        _endpoint: 'magic_summary',
+        model: 'claude-sonnet-4-6',
+        max_tokens: 350,
+        messages: [{ role: 'user', content: _prompt }]
+      });
+      if (_resp.ok) {
+        const _data = await _resp.json();
+        let _raw = (_data?.content?.[0]?.text || '').trim();
+        _raw = _raw.replace(/```json/g, '').replace(/```/g, '').trim();
+        const _m = _raw.match(/\{[\s\S]*\}/);
+        if (_m) {
+          try { _stepSummary = JSON.parse(_m[0]); } catch {}
+        }
+      }
+    } catch (e) { console.warn('[magic 3-field summary]', e); }
+  }
+
   state.chatArchive.unshift({
     id: 'arch_magic_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     date: dateKey,
-    summary: `🌀 마법 (${stepTitle}): ${(decision.title || '결정').slice(0, 24)}`,
+    summary: (_stepSummary && _stepSummary.conclusion)
+      ? String(_stepSummary.conclusion).slice(0, 200)
+      : `🌀 마법 (${stepTitle}): ${(decision.title || '결정').slice(0, 24)}`,
+    new_realization: (_stepSummary && _stepSummary.new_realization) ? String(_stepSummary.new_realization).slice(0, 100) : null,
+    next_action:     (_stepSummary && _stepSummary.next_action)     ? String(_stepSummary.next_action).slice(0, 80)     : null,
+    conclusion:      (_stepSummary && _stepSummary.conclusion)      ? String(_stepSummary.conclusion).slice(0, 200)     : null,
     messageCount: realMessages.length,
     messages: realMessages.slice(),
     generatedAt: new Date().toISOString(),

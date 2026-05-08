@@ -103,6 +103,16 @@ function renderChatArchiveModal() {
       : '';
     const cardOpacity = isPending ? '0.7' : '1';
 
+    // 사용자 명시 2026-05-08 ultrathink: 마법 type archive 카드에 3 필드 요약 노출 (conclusion / new_realization / next_action).
+    const isMagicHelp = a.source === 'magic_help';
+    const magicSummaryHtml = (isMagicHelp && (a.new_realization || a.next_action || a.conclusion)) ? `
+      <div class="cac-magic-summary" style="background:rgba(155,124,206,0.08); border-left:3px solid rgba(155,124,206,0.40); padding:10px 12px; margin-top:8px; border-radius:6px; font-size:11.5px; line-height:1.7;">
+        ${a.conclusion ? `<div style="color:var(--text); margin-bottom:6px;">"${escapeHtml(a.conclusion)}"</div>` : ''}
+        ${a.new_realization ? `<div style="color:var(--text-dim); margin-bottom:3px;"><span style="color:#c8b3e8;">✦ 새로 알게 됨:</span> ${escapeHtml(a.new_realization)}</div>` : ''}
+        ${a.next_action ? `<div style="color:var(--text-dim);"><span style="color:#c8b3e8;">→ 다음:</span> ${escapeHtml(a.next_action)}</div>` : ''}
+      </div>
+    ` : '';
+
     // V4 사용자 명시 2026-05-04: 휴지통/일반 별 액션 버튼 분기.
     const isTrash = !!a._deleted;
     const headerActionsHtml = isTrash ? `
@@ -133,6 +143,7 @@ function renderChatArchiveModal() {
           </div>
         </div>
         ${pendingNote}
+        ${magicSummaryHtml}
         ${isExpanded ? `
           <div class="cac-messages">
             ${messages.map(m => {

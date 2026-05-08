@@ -12,6 +12,14 @@ document.addEventListener('click', function(e) {
   closeChatPlusMenu();
 });
 
+// 사용자 명시 2026-05-08 ultrathink: 이어서한 archive 의 옛 부분 = 이미 분석됨 → 새 archive 에 boundary 박아 옛 부분 분석 input 에서 제외 (중복 분석 + token 낭비 차단).
+// archiveItem._extractFromIndex 가 있으면 그 인덱스 이후 messages 만 chapter case_analysis / topic 추출 input.
+function _chapterExtractMessages(archiveItem) {
+  if (!archiveItem || !Array.isArray(archiveItem.messages)) return [];
+  const fromIdx = archiveItem._extractFromIndex || 0;
+  return fromIdx > 0 ? archiveItem.messages.slice(fromIdx) : archiveItem.messages;
+}
+
 // V4 사용자 명시 2026-05-01 ultrathink: 챕터 분리 = archive 이송 (단일 흐름).
 // chatMessages 의 현재 챕터를 chatArchive 로 이송 + chatMessages 비움.
 // archive item: date = firstMsg day-key (cross-cutoff 챕터 시작 날), 별도 entry (merge X), _pendingExtract: true.
@@ -70,6 +78,16 @@ function _archiveCurrentChapter(opts) {
     endedManually: !!opts.manual,
     _pendingExtract: true   // 4AM 일괄 처리 마커 (case_analysis + topic_extract 둘 다)
   };
+  // 사용자 명시 2026-05-08 ultrathink: 이어서한 후 변경된 케이스 (옛 messages + 새 messages) — 새 archive 에 _extractFromIndex 박기.
+  // unchanged 분기 (line 39-52) 에서는 옛 archive 그대로 복귀 → 이 분기 도달 X. changed 분기에서만 boundary 박음.
+  if (state._resumedFromArchive && state._resumedFromArchive.snapshot
+      && Array.isArray(state._resumedFromArchive.snapshot.messages)) {
+    const _origLen = state._resumedFromArchive.snapshot.messages.length;
+    if (_origLen > 0 && _origLen < validMsgs.length) {
+      archiveItem._extractFromIndex = _origLen;
+    }
+    delete state._resumedFromArchive;
+  }
   state.chatArchive.unshift(archiveItem);
   state.chatMessages = [];
   // 단계 2: chapter 분리 시 _chatWindowStart reset (새 챕터 = 신규 시작).
@@ -95,12 +113,14 @@ function _archiveCurrentChapter(opts) {
         // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
         // sourceArchiveId 박음 (cascade soft delete 추적용).
         const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
-        if (typeof extractChapterCaseAnalysis === 'function') {
-          try { await extractChapterCaseAnalysis(archiveItem.messages); }
+        // 사용자 명시 2026-05-08 ultrathink: _extractFromIndex 적용 — 옛 부분 input 제외.
+        const _extractMsgs = _chapterExtractMessages(archiveItem);
+        if (typeof extractChapterCaseAnalysis === 'function' && _extractMsgs.length >= 3) {
+          try { await extractChapterCaseAnalysis(_extractMsgs); }
           catch (e) { console.warn('[new-user extract] case fail:', e); }
         }
-        if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
-          try { await extractPreviousChapterTopics(archiveItem.messages); }
+        if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _extractMsgs.length >= 3) {
+          try { await extractPreviousChapterTopics(_extractMsgs); }
           catch (e) { console.warn('[new-user extract] topic fail:', e); }
         }
         if (_before && typeof _stampSourceArchiveId === 'function') {

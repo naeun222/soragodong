@@ -127,6 +127,42 @@ async function processAnalysis(analysis, messageIdx) {
       // 진주 화면 / 도서관 hero 즉시 갱신
       if (typeof renderLensPearls === 'function') { try { renderLensPearls(); } catch {} }
       if (typeof renderLibraryHero === 'function') { try { renderLibraryHero(); } catch {} }
+
+      // 사용자 명시 2026-05-08 ultrathink: AI가 "진주에 넣을래?" → 자동 push 직후 사진 첨부 묻기 (음악/기타 제외).
+      // 사용자가 명시적으로 진주 요청한 케이스라 모달 띄움 자연스러움. 첫 candidate 한 장만 prompt.
+      const photoCandidates = analysis.extracted_pearls
+        .map(p => ({
+          content: (p && p.content) ? String(p.content).trim().slice(0, 200) : '',
+          category: validCats.includes(p && p.category) ? p.category : '기타'
+        }))
+        .filter(p => p.content && p.category !== '음악' && p.category !== '기타');
+      if (photoCandidates.length > 0) {
+        setTimeout(async () => {
+          try {
+            const target = state.pearls.slice().reverse().find(x =>
+              x && x.source === 'chat' && x.content === photoCandidates[0].content && !x.photo
+            );
+            if (!target) return;
+            const wantPhoto = await showConfirmModal({
+              title: '📷 사진도 같이?',
+              message: photoCandidates.length === 1
+                ? `"${photoCandidates[0].content}" 진주에 사진 추가할래?\n(갤러리에서 한 장)`
+                : `방금 추가된 진주에 사진 추가할래?\n(첫 진주 한 장만 — 나머지는 도서관에서)`,
+              okLabel: '응 사진 추가',
+              cancelLabel: '아니 텍스트만'
+            });
+            if (!wantPhoto) return;
+            const file = await pickPhotoFile();
+            if (!file) return;
+            const photo = await fileToResizedDataUrl(file, 1024);
+            if (!photo) return;
+            target.photo = photo;
+            saveState();
+            if (typeof renderLensPearls === 'function') { try { renderLensPearls(); } catch {} }
+            showToast('📷 사진 같이 보관됨');
+          } catch (e) { console.warn('진주 사진 자동 첨부:', e); }
+        }, 800);
+      }
     }
   }
   saveState();
