@@ -219,6 +219,11 @@ async function proceedSubscribe(tierKey) {
         phoneNumber,
         fullName
       },
+      // 사용자 명시 2026-05-09 ultrathink: 현금영수증 자진발급 자동 (부가세법 §32-2 의무).
+      // 사용자 휴대폰 입력 시 = 본인 소득공제용. 미입력 = 자진발급 (010-000-1234).
+      cashReceipt: phoneNumber && /^01\d{8,9}$/.test(phoneNumber.replace(/[-\s]/g, ''))
+        ? { type: 'PERSONAL', customerIdentityNumber: phoneNumber.replace(/[-\s]/g, '') }
+        : { type: 'PERSONAL', customerIdentityNumber: '01000001234' },
       customData: JSON.stringify({ tier: tierKey, type: 'subscribe' })
     });
   } catch (e) {

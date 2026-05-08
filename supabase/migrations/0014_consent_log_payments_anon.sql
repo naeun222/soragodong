@@ -58,6 +58,10 @@ COMMENT ON COLUMN soragodong_payments.anonymized_token IS
   'PIPA 익명화 후 row 식별용 비식별 토큰 (UUID v4). 본인 매칭 불가.';
 
 -- withdraw_user_data RPC 갱신 — user_id UUID 도 익명화.
+-- 사용자 보고 2026-05-09: 옛 함수 (0002_billing_usage.sql) 가 이미 존재 → CREATE OR REPLACE 시 return type 변경 불가 (42P13).
+-- DROP 선행 후 재생성.
+DROP FUNCTION IF EXISTS withdraw_user_data(uuid);
+
 CREATE OR REPLACE FUNCTION withdraw_user_data(p_user_id UUID)
 RETURNS void AS $$
 DECLARE

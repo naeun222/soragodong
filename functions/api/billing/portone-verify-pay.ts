@@ -105,7 +105,11 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
         portone_imp_uid: payment.txId || paymentId,    // V2 txId (옛 imp_uid 자리)
         portone_merchant_uid: paymentId,                // V2 paymentId (옛 merchant_uid 자리)
         status: 'paid',
-        raw_response: payment
+        raw_response: payment,
+        // 사용자 명시 2026-05-09 ultrathink (audit FAIL #8 + 사용자 명시): 영수증 + 현금영수증 자동 발급 기록.
+        receipt_url: payment.receiptUrl || null,
+        cash_receipt_status: (payment as any).cashReceipt?.status || ((payment as any).cashReceipt ? 'ISSUED' : 'NONE'),
+        cash_receipt_type: (payment as any).cashReceipt?.type || 'SELF_ISSUE'
       })
     });
   } catch (e) { console.warn('[portone-verify-pay] payment 기록 실패:', e); }

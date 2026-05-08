@@ -282,9 +282,39 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   }
 
   // 6. payments 갱신 — 명시적 ok 확인.
+  // 사용자 명시 2026-05-09 ultrathink (audit FAIL #8 + 사용자 명시): 수정 영수증 자동 발급 — PortOne 환불 후 새 receiptUrl 받아 저장.
+  // PortOne V2 = 환불 시 자동으로 cashReceipt cancel 처리 + 새 receipt URL 발급. 다시 fetch 해서 최신 URL 보존.
+  let _newReceiptUrl: string | null = null;
+  let _newCashReceiptStatus: string | null = null;
+  try {
+    const refreshed = await fetchPortOnePayment(env, v2PaymentId);
+    if (refreshed.ok) {
+      _newReceiptUrl = refreshed.payment.receiptUrl || null;
+      _newCashReceiptStatus = (refreshed.payment as any).cashReceipt?.status || 'CANCELLED';
+    }
+  } catch (e) {
+    console.warn('[refund] 환불 후 receiptUrl 조회 실패:', e);
+  }
   try {
     const isFull = refundAmountKrw === paymentRow.amount_krw;
-    const patchResp = await _markRefunded(env, payment_id, refundAmountKrw, isFull, reason || '');
+    // _markRefunded 확장 — receipt_url + cash_receipt_status 같이 update.
+    const patchResp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_payments?id=eq.${payment_id}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        status: isFull ? 'refunded' : 'paid',
+        refund_amount_krw: refundAmountKrw,
+        refunded_at: new Date().toISOString(),
+        refund_reason: reason || '',
+        ...(typeof _newReceiptUrl === 'string' ? { receipt_url: _newReceiptUrl } : {}),
+        ...(typeof _newCashReceiptStatus === 'string' ? { cash_receipt_status: _newCashReceiptStatus } : {})
+      })
+    });
     if (!patchResp.ok) {
       const txt = await patchResp.text().catch(() => '');
       console.error('[refund] payments 갱신 실패 — PortOne 환불 됐는데 DB 미반영:', payment_id, patchResp.status, txt.slice(0, 200));
@@ -303,5 +333,11 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     }
   }
 
-  return jsonResponse({ ok: true, refunded_krw: refundAmountKrw, message: '환불 완료. 카드사 정책상 3-7영업일 내 카드 명세서 반영.' });
+  return jsonResponse({
+    ok: true,
+    refunded_krw: refundAmountKrw,
+    receipt_url: _newReceiptUrl,
+    cash_receipt_cancelled: _newCashReceiptStatus === 'CANCELLED',
+    message: '환불 완료. 카드사 정책상 3-7영업일 내 카드 명세서 반영. 수정 영수증 자동 발급됨.'
+  });
 }

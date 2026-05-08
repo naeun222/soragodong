@@ -139,7 +139,11 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
             portone_imp_uid: result.payment.txId || paymentId,
             portone_merchant_uid: paymentId,
             status: 'paid',
-            raw_response: result.payment
+            raw_response: result.payment,
+            // 사용자 명시 2026-05-09 ultrathink: 영수증 + 현금영수증 자진발급 (chargeWithBillingKey 가 자동 적용).
+            receipt_url: result.payment.receiptUrl || null,
+            cash_receipt_status: (result.payment as any).cashReceipt?.status || 'ISSUED',
+            cash_receipt_type: 'SELF_ISSUE'
           })
         });
         charged++;

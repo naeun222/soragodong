@@ -46,6 +46,10 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
       redirectUrl: window.location.origin + (window.location.pathname || '/'),
       customer: { customerId: authUserId || undefined, email: session?.user?.email || undefined, phoneNumber, fullName },
+      // 사용자 명시 2026-05-09 ultrathink: 현금영수증 자진발급 (부가세법 §32-2 의무).
+      cashReceipt: phoneNumber && /^01\d{8,9}$/.test(phoneNumber.replace(/[-\s]/g, ''))
+        ? { type: 'PERSONAL', customerIdentityNumber: phoneNumber.replace(/[-\s]/g, '') }
+        : { type: 'PERSONAL', customerIdentityNumber: '01000001234' },
       customData: customData ? JSON.stringify(customData) : undefined
     });
     if (response && response.code != null) {

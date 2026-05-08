@@ -126,6 +126,10 @@ export async function fetchPortOneBillingKey(env: Env, billingKey: string): Prom
   }
 }
 
+// 사용자 명시 2026-05-09 ultrathink: 현금영수증 자진발급 — 부가가치세법 §32-2 의무.
+// 자진발급 식별번호 = '010-000-1234' (= 01000001234). 사용자 본인 휴대폰 입력 시 PERSONAL 소득공제용.
+export const CASH_RECEIPT_SELF_ISSUE_NUMBER = '01000001234';
+
 // 빌링키로 결제 — cron 이 trial_until 도래 시 호출. paymentId = 신규 unique.
 // orderName / customer / amount 모두 전달. PortOne V2 = POST /payments/{paymentId}/billing-key
 export async function chargeWithBillingKey(env: Env, paymentId: string, params: {
@@ -135,6 +139,7 @@ export async function chargeWithBillingKey(env: Env, paymentId: string, params: 
   currency?: string;
   customer?: { id?: string; email?: string; phoneNumber?: string; name?: { full?: string } };
   customData?: string;
+  cashReceipt?: { type: 'PERSONAL' | 'CORPORATE'; customerIdentityNumber: string };
 }): Promise<{ ok: true; payment: PortOnePayment } | { ok: false; error: string; code?: string; status?: number }> {
   if (!env.PORTONE_API_KEY_V2) return { ok: false, error: 'PORTONE_API_KEY_V2 미설정' };
   try {
@@ -146,6 +151,9 @@ export async function chargeWithBillingKey(env: Env, paymentId: string, params: 
     };
     if (params.customer) body.customer = params.customer;
     if (params.customData) body.customData = params.customData;
+    // 사용자 명시 2026-05-09 ultrathink: 현금영수증 자진발급 자동 적용 (부가세법 §32-2 의무).
+    // 사용자 명시 휴대폰/사업자번호 없으면 자진발급 (010-000-1234).
+    body.cashReceipt = params.cashReceipt || { type: 'PERSONAL', customerIdentityNumber: CASH_RECEIPT_SELF_ISSUE_NUMBER };
     const resp = await fetch(`${PORTONE_API_BASE}/payments/${encodeURIComponent(paymentId)}/billing-key`, {
       method: 'POST',
       headers: {
