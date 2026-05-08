@@ -85,7 +85,8 @@ function renderExecute() {
   const todayKeyVal = todayKey();
   const todayTasks = (state.tasks || []).filter(t => t.date === todayKeyVal);
   const now3 = todayTasks.filter(t => t.slot === 'now3' && t.status !== 'done');
-  const completed = todayTasks.filter(t => t.status === 'done');
+  // 사용자 보고 2026-05-08: '오늘 클리어' = now3 done 만 (오늘 할 일 done 은 그 섹션 안에서 strike-through 로 유지 — 중복 방지).
+  const completed = todayTasks.filter(t => t.status === 'done' && !t.isToday);
   // V4-fix v3 (사용자 보고): 서랍장 카운트 — 빈 title 제외, renderVault와 동일 기준
   const drawerCount = (state.tasks || []).filter(t =>
     (t.status === 'drawer' || (t.date === todayKeyVal && t.slot === 'drawer')) && (t.title || '').trim()
@@ -173,28 +174,33 @@ function renderExecute() {
     }
 
     // V3.13.x: 오늘 할 일 목록 (now3 밑) — drawer 중 isToday=true. 체크박스 + 수정 + 삭제만
-    const todayList = (state.tasks || [])
-      .filter(t => t.slot === 'drawer' && t.isToday && t.status !== 'done')
+    // 사용자 보고 2026-05-08: 완료 후 카드 사라짐 fix — done 도 같은 섹션에 strike-through 로 유지.
+    // 옛: status !== 'done' 만 → 완료 시 todayList 에서 빠지고 옛 date 면 '오늘 클리어' 에도 안 잡혀 사라짐.
+    // 신: 오늘(date) + isToday + drawer 모두 (status 무관) → done 항목 .completed 로 시각 표시.
+    const todayListAll = (state.tasks || [])
+      .filter(t => t.slot === 'drawer' && t.isToday && t.date === todayKeyVal)
       .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    const todayList = todayListAll.filter(t => t.status !== 'done');
     // V4-fix: 오늘 할 일 헤더에 + 추가 버튼 (todayList 없어도 보이게)
     html += `<div class="exec-now-section">
       <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
         <span>📋 오늘 할 일${todayList.length > 0 ? ` · ${todayList.length}개` : ''}</span>
         <button onclick="addTodayTask()" style="font-size:11px; padding:4px 10px; background:var(--surface2); border:1px solid var(--border); color:var(--accent2); border-radius:8px; cursor:pointer; font-family:inherit; font-weight:500;">+ 추가</button>
       </div>`;
-    if (todayList.length === 0) {
+    if (todayListAll.length === 0) {
       html += `<div style="font-size:11px; color:var(--text-soft); padding:8px 4px 6px;">비어있어. + 추가로 시작.</div></div>`;
     } else {
       html += `<div class="todo-list">`;
-      todayList.forEach(task => {
+      todayListAll.forEach(task => {
+        const isDone = task.status === 'done';
         const schedLabel = task.scheduledStart ? `<span class="todo-sched-label">⏰ ${task.scheduledStart}${task.scheduledEnd ? `–${task.scheduledEnd}` : ''}</span>` : '';
         html += `
-          <div class="todo-item" data-task-id="${task.id}">
-            <button class="todo-check" onclick="toggleQuestComplete('${task.id}')" aria-label="완료"></button>
+          <div class="todo-item${isDone ? ' completed' : ''}" data-task-id="${task.id}">
+            <button class="todo-check${isDone ? ' checked' : ''}" onclick="toggleQuestComplete('${task.id}')" aria-label="${isDone ? '되살리기' : '완료'}" title="${isDone ? '되살리기' : '완료'}">${isDone ? '✓' : ''}</button>
             <span class="todo-title">${escapeHtml(task.title)}${schedLabel}</span>
-            <button class="todo-action" onclick="scheduleTaskToTime('${task.id}')" title="일정 적용하기">⏰</button>
-            <button class="todo-action" onclick="editTaskCard('${task.id}')" title="수정">✎</button>
-            <button class="todo-action" onclick="demoteFromToday('${task.id}')" title="서랍장으로">↩</button>
+            ${isDone ? '' : `<button class="todo-action" onclick="scheduleTaskToTime('${task.id}')" title="일정 적용하기">⏰</button>`}
+            ${isDone ? '' : `<button class="todo-action" onclick="editTaskCard('${task.id}')" title="수정">✎</button>`}
+            ${isDone ? '' : `<button class="todo-action" onclick="demoteFromToday('${task.id}')" title="서랍장으로">↩</button>`}
             <button class="todo-action" onclick="deleteTask('${task.id}')" title="삭제">✕</button>
           </div>
         `;

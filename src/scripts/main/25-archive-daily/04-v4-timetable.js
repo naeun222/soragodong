@@ -77,9 +77,13 @@ function renderV4TimetableHTML() {
 // V4-fix: 시간 grid 빈 시간대 클릭 → 할 일 목록 picker (그 시간에 적용하기)
 async function pickTaskForHour(hour) {
   // 아직 시간 안 적용된 today task 모음 (오늘의 카드 + 오늘 할 일)
+  // 사용자 보고 2026-05-08: date 필터 없어서 어제 isToday=true 가 picker 에 끼는 mismatch (서랍 4 / picker 7).
+  // 서랍 list / 오늘 할 일 list 와 동일한 기준 (오늘 + 미완료 + 미예약) 으로 정합.
+  const todayKeyVal = todayKey();
   const tasks = (state.tasks || []).filter(t =>
     t.status !== 'done' &&
     !t.scheduledStart &&
+    t.date === todayKeyVal &&
     (t.slot === 'now3' || t.isToday)
   );
   const options = tasks.map(t => {
