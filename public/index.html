@@ -50144,8 +50144,10 @@ async function openSubscribeModal() {
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
-        💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드</b> <s style="opacity:0.55;">또는 <b>Light</b></s>. 깊게 자주 쓰면 Premium.<br>
-        모두 월정액 자동 갱신. 해지: [설정 → 구독] 다음 갱신 해지 / 환불은 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).
+        💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드</b>. 깊게 자주 쓰면 Premium.<br>
+        <b>부가가치세 10% 포함</b> · <b>Light / Premium = 단건 결제</b> (매월 수동) · <b>얼리버드 = 자동 갱신</b> (해지 1-click).<br>
+        해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>
+        <span style="color:var(--text-dim);">⚠ 본 서비스는 임상 치료·진단·전문가 상담을 대체하지 않습니다.</span>
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>
     </div>
@@ -50949,7 +50951,14 @@ function showOpusLimitReachedModal() {
   document.body.appendChild(overlay);
 }
 
-function exportData() {
+// 사용자 명시 2026-05-08 ultrathink (audit FAIL #6): 평문 export 경고 — PIPA §29 안전조치 의무.
+// E2EE 활성 사용자도 export 파일은 평문 — 기기 분실 시 위험. 사용자 confirm 후 진행.
+async function exportData() {
+  const _msg = '⚠️ 이 백업 파일은 암호화되지 않습니다.\n\n파일 안에 일기·대화·진주·전략 등 모든 자기관찰 데이터가 평문으로 들어갑니다. 파일을 분실하면 누구든 열람 가능해요.\n\n안전한 곳에만 보관해주세요:\n· 비밀번호로 잠긴 메모/USB\n· 암호화된 클라우드 (1Password / Bitwarden 첨부)\n· 본인만 접근 가능한 외장 디스크\n\n계속 진행할까?';
+  const _ok = (typeof showConfirmModal === 'function')
+    ? await showConfirmModal({ title: '백업 파일 평문 경고', message: _msg, confirmText: '응, 진행', cancelText: '취소' })
+    : confirm(_msg);
+  if (!_ok) return;
   const dataStr = JSON.stringify(state, null, 2);
   const blob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(blob);

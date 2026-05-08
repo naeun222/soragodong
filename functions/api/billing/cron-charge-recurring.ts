@@ -87,7 +87,11 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
 
   for (const row of dueRows) {
     if (!row.portone_billing_key) continue;
-    const paymentId = `recurring-${row.user_id}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    // 사용자 명시 2026-05-08 ultrathink (audit FAIL #3): paymentId 멱등 — billing date 기준 결정적 ID.
+    // 옛: Date.now() + Math.random() → cron 재시도 시 다른 ID 생성 → 중복 결제 위험.
+    // PortOne 측 paymentId unique 멱등 보호 작동 위해 같은 cycle 안 같은 ID 보장.
+    const _cycleDay = (row.next_billing_at ? new Date(row.next_billing_at) : new Date()).toISOString().slice(0, 10);
+    const paymentId = `recurring-${row.user_id}-${_cycleDay}`;
     const result = await chargeWithBillingKey(env, paymentId, {
       billingKey: row.portone_billing_key,
       orderName: `소라고동 얼리버드 정기 (${tier.krw.toLocaleString()}원/월)`,

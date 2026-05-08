@@ -54,7 +54,22 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 | ⏸️ `supabase/migrations/0008_e2ee_escrow.sql` (예정) | E2EE escrow 테이블 (Phase 2 시작 시 작성) | 분실 복구 = 이메일 OTP + 카카오 재인증 + 24h 시간 지연 후 server unwrap |
 | ⏸️ `supabase/migrations/0009_daily_cap.sql` (예정) | **v2 일일 cap (Light /25, Premium /20)** — billing 에 `daily_quota_used_today USD` + `daily_quota_reset_at TIMESTAMPTZ` 컬럼 + `consume_daily_atomic` RPC 신규 + `deduct_credit_atomic` 갱신 (일일 cap 우선 차감 → 도달 시 24h reset 모달 trigger) | 일일 cap 동작 보장. 사용자 명시 2026-05-04 ultrathink. |
 
-⚠️ **0002 + 0003 + 0005 + 0006 + 0007 + 0009 아직 실행 X** — 0002/0003 안 적용되면 `/api/chat` 자체가 NO_BILLING_ROW 로 차단됨. 0005 는 100명 가까이 가면 적용하기 (지금은 무해). 0006/0007 = legacy bonus 배너 (1,000원) 작동 위해 필요. 0008 = E2EE Phase 2 시작 시 작성·실행. 0009 = v2 일일 cap (Light /25, Premium /20) 동작 — frontend 적용 후 작성·실행.
+⚠️ **0002 + 0003 + 0005 + 0006 + 0007 + 0009 + 0013 아직 실행 X** — 0002/0003 안 적용되면 `/api/chat` 자체가 NO_BILLING_ROW 로 차단됨. 0005 는 100명 가까이 가면 적용하기 (지금은 무해). 0006/0007 = legacy bonus 배너 (1,000원) 작동 위해 필요. 0008 = E2EE Phase 2 시작 시 작성·실행. 0009 = v2 일일 cap (Light /25, Premium /20) 동작 — frontend 적용 후 작성·실행.
+
+**🔴 0013 (2026-05-08 ultrathink audit FAIL #2)**: `0013_billing_renewal_notice.sql` — `renewal_notice_7d_at` 컬럼 + 인덱스. **콘텐츠산업진흥법 §25 자동 갱신 7일 전 사전고지 의무 충족** — 얼리버드 구독자 첫 결제 (가입 후 30일) 전에 *반드시* 적용. 미적용 시 첫 자동 결제 = 법 위반.
+
+### 2-bis. 신규 cron job 등록 (5분)
+
+**위치**: cron-job.org 또는 GitHub Actions schedule.
+
+| Cron | 빈도 | endpoint | 헤더 |
+|---|---|---|---|
+| `cron-charge-recurring` | 매시간 | `POST https://soragodong.com/api/billing/cron-charge-recurring` | `X-Cron-Secret: <CRON_SECRET>` |
+| **🔴 `cron-renewal-notice` (2026-05-08 신규)** | **매일 (예: 09:00 KST)** | `POST https://soragodong.com/api/billing/cron-renewal-notice` | `X-Cron-Secret: <CRON_SECRET>` |
+
+**🔴 cron-renewal-notice 미등록 시** = 콘텐츠산업진흥법 §25 위반. 얼리버드 첫 자동 결제 = 가입 후 30일 시점이라 그 전에 등록 필수.
+
+또한 **`RESEND_API_KEY`** Cloudflare env 미설정 시 발송 silent skip → 위반 — Resend 가입 후 키 등록 (USER_TODO P2-X 참고).
 
 ### 3. ✅ 도메인 등록 완료
 

@@ -26,6 +26,31 @@ const GUEST_ALLOWED_MODELS = new Set(['claude-sonnet-4-6', 'claude-haiku-4-5']);
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
+// 사용자 명시 2026-05-08 ultrathink (audit FAIL #5): 서버측 자살예방 가드 — body 안 user 메시지 detect.
+// 보수 list — false positive OK / false negative X. 클라이언트 13-crisis-detection.js 와 동일 키워드.
+const _CRISIS_KEYWORDS_SERVER = [
+  '죽고 싶', '죽어버리', '죽었으면', '사라지고 싶', '사라져버리',
+  '더 이상 못 살', '더 못 살', '끝내고 싶', '끝내버리', '혼자 끝내',
+  '뛰어내리', '없어지고 싶', '없어져버리', '자해', '자살',
+  '살기 싫', '살고 싶지 않', '살아갈 의미'
+];
+
+function _detectCrisisInRequest(body: any): boolean {
+  const messages = body?.messages;
+  if (!Array.isArray(messages)) return false;
+  for (const m of messages) {
+    if (m?.role !== 'user') continue;
+    let text = '';
+    if (typeof m.content === 'string') {
+      text = m.content;
+    } else if (Array.isArray(m.content)) {
+      text = m.content.map((c: any) => (c?.text || c?.content || '')).join(' ');
+    }
+    if (_CRISIS_KEYWORDS_SERVER.some(k => text.includes(k))) return true;
+  }
+  return false;
+}
+
 // 사용자 보고 2026-05-05 ultrathink: 'AI 서버 일시 과부하' 토스트 빈도 ↓ — Anthropic upstream 5xx + network throw 1회 재시도 (2s backoff).
 // 클라이언트 callAnthropic 에도 1회 retry 가 있어 총 최대 4회 시도 (backend 2 + client 2). 일반 케이스는 1-2회 안 회복.
 async function _fetchAnthropicWithRetry(
@@ -280,6 +305,22 @@ async function _handleChatRequest(context: {
   // tutorial_mode body 필드는 upstream 으로 보내지 X (Anthropic API 거부 가능)
   delete body.tutorial_mode;
 
+  // 사용자 명시 2026-05-08 ultrathink (audit FAIL #5): 자살예방법 §15-6 협력 권고 — 서버측 위기 가드.
+  // 옛: 위기 키워드 감지 = 클라이언트 (13-crisis-detection.js) 만. API 직접 호출 / 클라이언트 우회 시 무방비.
+  // 신: 서버에서 user 메시지 자살·자해 키워드 detect → system prompt 에 안전 가드 강제 inject + 응답 헤더 X-Crisis-Detected.
+  // chat endpoint (메인 대화) 한정 — 분석/추출 endpoint 는 X (사용자 직접 발화 X).
+  const _crisisDetected = (body._endpoint === 'chat' || !body._endpoint) && _detectCrisisInRequest(body);
+  if (_crisisDetected) {
+    const _crisisGuard = '\n\n[안전 가드 — 자살예방법 §15-6 협력 권고 강제 적용]\n사용자 메시지에 자살·자해 신호가 있어. 너의 응답 본문 끝에 반드시 부드럽게 한 줄 추가:\n"이런 무게 혼자 들기 어려워. 1393 (자살예방상담, 24h 무료) / 1577-0199 (정신건강위기상담) — 한 번 통화해보면 좋을 것 같아."\n명령조 X / 강제 X / 진단 톤 X. 친구가 걱정하며 슬쩍 짚는 톤.';
+    if (typeof body.system === 'string') {
+      body.system = body.system + _crisisGuard;
+    } else if (Array.isArray(body.system)) {
+      body.system.push({ type: 'text', text: _crisisGuard });
+    } else {
+      body.system = _crisisGuard;
+    }
+  }
+
   const isStream = !!body.stream;
   const endpoint = body._endpoint || 'chat';
   delete body._endpoint;
@@ -365,7 +406,8 @@ async function _handleChatRequest(context: {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
+        'Connection': 'keep-alive',
+        ...(_crisisDetected ? { 'X-Crisis-Detected': 'true' } : {})
       }
     });
   }

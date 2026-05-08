@@ -128,8 +128,10 @@ async function openSubscribeModal() {
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
-        💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드</b> <s style="opacity:0.55;">또는 <b>Light</b></s>. 깊게 자주 쓰면 Premium.<br>
-        모두 월정액 자동 갱신. 해지: [설정 → 구독] 다음 갱신 해지 / 환불은 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).
+        💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드</b>. 깊게 자주 쓰면 Premium.<br>
+        <b>부가가치세 10% 포함</b> · <b>Light / Premium = 단건 결제</b> (매월 수동) · <b>얼리버드 = 자동 갱신</b> (해지 1-click).<br>
+        해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>
+        <span style="color:var(--text-dim);">⚠ 본 서비스는 임상 치료·진단·전문가 상담을 대체하지 않습니다.</span>
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>
     </div>
