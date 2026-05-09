@@ -162,42 +162,69 @@ ${rawEnglish}
 }
 
 // =============================================================================
-// 백그라운드 fetch — stash 후 renderRotatingCard 재호출
+// 사용자 보고 2026-05-09: fetch 실패 시 같은 날 재시도 차단 + 사용자 시각 실패 카드
 // =============================================================================
+let _rcHoroscopeFetchFailedDay = null; // 'YYYY-MM-DD' = 그 날 fetch 실패 (다음 4AM cutoff 까지 차단)
+
 async function _rcStartHoroscopeFetch(zodiac) {
   if (_rcHoroscopeFetchInflight) return;
+  const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : null;
+  // 같은 날 이미 실패 = 재시도 X (다음 cutoff 까지)
+  if (todayK && _rcHoroscopeFetchFailedDay === todayK) return;
   _rcHoroscopeFetchInflight = true;
   try {
     if (typeof _canAI !== 'function' || !_canAI()) return;
     const raw = await _rcFetchHoroscopeApi(zodiac);
-    if (!raw) return;
+    if (!raw) throw new Error('horoscope API 빈 응답');
     const friendly = await _rcCallHoroscopeHaiku(raw, zodiac);
-    if (!friendly) return;
+    if (!friendly) throw new Error('Haiku 변환 빈 응답');
     const r = _ensureRotatingCardState();
-    r.lastHoroscopeFetchDay = _rcQuizCutoffKey();
+    r.lastHoroscopeFetchDay = todayK;
     r.lastHoroscopeContent = friendly;
-    r.lastHoroscopeLucky = null; // API 가 행운 정보 안 주면 null
+    r.lastHoroscopeLucky = null;
     if (typeof saveState === 'function') saveState(true);
-    // 같은 세션 안 운세 카드 위치 update — sessionOrder 안 horoscope source 만 갱신
-    if (Array.isArray(_rcSessionOrder)) {
-      const idx = _rcSessionOrder.findIndex(s => s && s.id === 'horoscope');
-      if (idx >= 0) {
-        const newSrc = _rcSource5Horoscope();
-        if (newSrc) _rcSessionOrder[idx] = newSrc;
-        const container = document.getElementById('rotatingCardContainer');
-        if (container && typeof _rcRenderShell === 'function') {
-          container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
-        }
-        return;
-      }
-    }
-    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    // sessionOrder 안 horoscope source 갱신 (로딩 카드 → 실제 운세 카드)
+    _rcUpdateHoroscopeInSession();
   } catch (e) {
-    console.warn('[horoscope]', e);
-    // silent — source 비활성 (다음 진입 때 다시 시도)
+    console.warn('[horoscope] fetch 실패:', e && e.message);
+    if (todayK) _rcHoroscopeFetchFailedDay = todayK;
+    // sessionOrder 안 horoscope source = 실패 카드로 교체
+    _rcUpdateHoroscopeInSession();
   } finally {
     _rcHoroscopeFetchInflight = false;
   }
+}
+
+function _rcUpdateHoroscopeInSession() {
+  if (!Array.isArray(_rcSessionOrder)) return;
+  const idx = _rcSessionOrder.findIndex(s => s && s.id === 'horoscope');
+  if (idx < 0) return;
+  const newSrc = _rcSource5Horoscope();
+  if (newSrc) _rcSessionOrder[idx] = newSrc;
+  const container = document.getElementById('rotatingCardContainer');
+  if (container && typeof _rcRenderShell === 'function') {
+    container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
+  }
+  if (typeof _rcEqualizeHeights === 'function') _rcEqualizeHeights();
+}
+
+function _rcRenderHoroscopeFailCard(zodiac) {
+  const z = _rcZodiacInfo(zodiac);
+  const zLabel = z ? `${z.symbol} ${escapeHtml(z.label)}` : '';
+  return {
+    id: 'horoscope',
+    available: true,
+    contentHash: 'horoscope_fail_' + (typeof _rcQuizCutoffKey === 'function' ? _rcQuizCutoffKey() : ''),
+    bodyHtml: `
+      <div class="rc-body-horoscope">
+        <div class="rc-body-headline">고동의 운세</div>
+        ${zLabel ? `<div class="rc-horoscope-zodiac">${zLabel}</div>` : ''}
+        <div class="rc-horoscope-text" style="opacity:0.65;">지금 별자리 못 봤어. 내일 다시 ✦</div>
+      </div>
+    `,
+    onTapClick: '',
+    _isHoroscopeFail: true,
+  };
 }
 
 // =============================================================================
@@ -220,9 +247,34 @@ function _rcSource5Horoscope() {
     return _rcRenderHoroscopeCard(z, r.lastHoroscopeContent, r.lastHoroscopeLucky);
   }
 
-  // stash 없음 → 백그라운드 fetch + 이번 render 는 비활성
+  // 사용자 보고 2026-05-09: 같은 날 이미 fetch 실패 = 실패 카드 (재시도 X 비용 절감)
+  if (_rcHoroscopeFetchFailedDay === todayK) {
+    return _rcRenderHoroscopeFailCard(z);
+  }
+
+  // 사용자 보고 2026-05-09: 별자리 선택 후 fetch 진행 중 source 사라짐 → 로딩 카드 표시.
+  // fetch 끝나면 _rcUpdateHoroscopeInSession 안에서 sessionOrder 안 horoscope source 갱신 (실제 운세 또는 실패 카드로 교체).
   _rcStartHoroscopeFetch(z);
-  return { id: 'horoscope', available: false };
+  return _rcRenderHoroscopeLoadingCard(z);
+}
+
+function _rcRenderHoroscopeLoadingCard(zodiac) {
+  const z = _rcZodiacInfo(zodiac);
+  const zLabel = z ? `${z.symbol} ${escapeHtml(z.label)}` : '';
+  return {
+    id: 'horoscope',
+    available: true,
+    contentHash: 'horoscope_loading',
+    bodyHtml: `
+      <div class="rc-body-horoscope">
+        <div class="rc-body-headline">고동의 운세</div>
+        ${zLabel ? `<div class="rc-horoscope-zodiac">${zLabel}</div>` : ''}
+        <div class="rc-horoscope-text" style="opacity:0.65;">고동이 별자리 보러 가는 중... ✦</div>
+      </div>
+    `,
+    onTapClick: '',
+    _isHoroscopeLoading: true,
+  };
 }
 
 function _rcRenderHoroscopeCard(zodiac, content, lucky) {
