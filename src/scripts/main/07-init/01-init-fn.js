@@ -2,6 +2,7 @@
 // INIT
 // ═══════════════════════════════════════════════════════════════
 async function init() {
+  try { performance.mark('initStart'); } catch (e) {}
   const now = new Date();
   // V4 (v8 묶음 9): _core2NotUnlocked 신규 사용자 detect — Core 2 본 적 X 인 사용자만 4단 응답 disabled-locked
   if (typeof state._core2NotUnlocked === 'undefined') {
@@ -79,6 +80,7 @@ async function init() {
   // fix = _initialDataLoading flag = isCoreLocked 우회 (cloud load 끝 후 set false).
   window._initialDataLoading = true;
   const authed = await checkSession();
+  try { performance.mark('sessionEnd'); } catch (e) {}
   if (!authed) {
     // 사용자 명시 2026-05-06 ultrathink: 자동 anonymous 폐기 → 첫 화면에서 사용자가 '로그인' / '둘러보기' 선택.
     // 게스트는 명시 button click 으로 entry — 의도 분명 + UX 친근.
@@ -96,6 +98,7 @@ async function init() {
   syncServerTime();  // fire-and-forget
 
   await loadFromCloud();
+  try { performance.mark('cloudEnd'); } catch (e) {}
   window._initialDataLoading = false;
 
   // 사용자 보고 2026-05-06 ultrathink (재): sim 튜토 sessionStorage 마커 → state.tutorialShown 복원 = loadFromCloud 후로 이동.

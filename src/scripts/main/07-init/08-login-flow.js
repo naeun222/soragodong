@@ -12,6 +12,34 @@ function _hideBootSplash() {
   if (!s) return;
   s.classList.add('fade-out');
   setTimeout(() => { try { s.remove(); } catch {} }, 320);
+  // 사용자 명시 2026-05-09 ultrathink (perf 측정): 첫 진입 timing 한 번만 콘솔 출력 (재진입 시 noop).
+  try {
+    if (window._perfReported) return;
+    window._perfReported = true;
+    const splashHideAt = performance.now();
+    const marks = performance.getEntriesByType('mark').reduce((acc, m) => { acc[m.name] = m.startTime; return acc; }, {});
+    const navEntry = performance.getEntriesByType('navigation')[0] || {};
+    const ttfb = Math.round(navEntry.responseStart || 0);
+    const htmlDownload = Math.round((navEntry.responseEnd || 0) - (navEntry.responseStart || 0));
+    const dcl = Math.round(navEntry.domContentLoadedEventEnd || 0);
+    const fcp = Math.round((performance.getEntriesByType('paint').find(p => p.name === 'first-contentful-paint') || {}).startTime || 0);
+    console.group('🐚 [perf] 첫 진입 timing (모두 ms)');
+    console.log('TTFB (서버 응답):', ttfb);
+    console.log('HTML download:', htmlDownload);
+    console.log('FCP (첫 페인트):', fcp);
+    console.log('DOMContentLoaded:', dcl);
+    if (marks.bootStart) console.log('bootStart (body 시작 inline):', Math.round(marks.bootStart));
+    if (marks.initStart) console.log('initStart (init 첫줄):', Math.round(marks.initStart));
+    if (marks.sessionEnd) console.log('sessionEnd (checkSession 후):', Math.round(marks.sessionEnd));
+    if (marks.cloudEnd) console.log('cloudEnd (loadFromCloud 후):', Math.round(marks.cloudEnd));
+    console.log('splashHide (boot splash 사라짐):', Math.round(splashHideAt));
+    console.log('— 구간별 차이 —');
+    if (marks.bootStart && marks.initStart) console.log('JS parse 끝 → init 진입:', Math.round(marks.initStart - marks.bootStart));
+    if (marks.initStart && marks.sessionEnd) console.log('checkSession RTT:', Math.round(marks.sessionEnd - marks.initStart));
+    if (marks.sessionEnd && marks.cloudEnd) console.log('loadFromCloud RTT:', Math.round(marks.cloudEnd - marks.sessionEnd));
+    if (marks.cloudEnd) console.log('cloudEnd → splashHide:', Math.round(splashHideAt - marks.cloudEnd));
+    console.groupEnd();
+  } catch (e) { /* perf 측정 실패해도 splash hide 는 그대로 */ }
 }
 
 // 사용자 명시 2026-05-02 ultrathink: 동의 검증 + pending consent 저장 helper (이메일 OTP / SNS 로그인 둘 다 사용).
