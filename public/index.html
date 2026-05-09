@@ -27137,7 +27137,7 @@ function _rcSource5Throwback() {
       const bodyHtml = `
         <div class="rc-body-throwback">
           <div class="rc-body-headline">${escapeHtml(c.label)}</div>
-          <div class="rc-body-quote">"${escapeHtml(snippet)}"</div>
+          <div class="rc-body-quote">${escapeHtml(snippet)}</div>
           <div class="rc-body-quote-by">— ${escapeHtml(intro)}</div>
         </div>
       `;
@@ -27159,7 +27159,7 @@ function _rcSource5Throwback() {
       const bodyHtml = `
         <div class="rc-body-throwback">
           <div class="rc-body-headline">${escapeHtml(c.label)}</div>
-          <div class="rc-body-quote">"${escapeHtml(snippet)}"</div>
+          <div class="rc-body-quote">${escapeHtml(snippet)}</div>
           <div class="rc-body-quote-by">— 그날 대화 한 줄</div>
         </div>
       `;
@@ -27173,6 +27173,47 @@ function _rcSource5Throwback() {
       };
     }
   }
+
+  // 사용자 명시 2026-05-09: 시간 매칭 X 시 옛 진주 fallback (가용성 ↑).
+  // ≥ 30일 전 진주 중 note/content 있고 crisis X 인 것. 회상 의미 유지.
+  const _now = Date.now();
+  const _30dAgo = _now - 30 * 86400000;
+  const _oldPearls = (state.pearls || [])
+    .filter(p => {
+      if (!p || p.type === 'dna_pearl') return false;
+      if (!p.createdAt) return false;
+      const t = new Date(p.createdAt).getTime();
+      if (!t || t > _30dAgo) return false;
+      const text = (p.content || '') + ' ' + (p.note || '');
+      if (!text.trim() || text.trim().length < 3) return false;
+      if (_rcHasCrisis(text)) return false;
+      return true;
+    })
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  if (_oldPearls.length > 0) {
+    // 가장 오래된 + (랜덤 변동) — 매번 같은 진주 X 위해 random pick
+    const pick = _oldPearls[Math.floor(Math.random() * Math.min(3, _oldPearls.length))];
+    const days = Math.floor((_now - new Date(pick.createdAt).getTime()) / 86400000);
+    const dayLabel = days >= 365 ? `${Math.floor(days / 365)}년 전` : days >= 30 ? `${Math.floor(days / 30)}달 전` : `${days}일 전`;
+    const text = pick.content || pick.note || '';
+    const snippet = text.length > 80 ? text.slice(0, 80) + '…' : text;
+    const bodyHtml = `
+      <div class="rc-body-throwback">
+        <div class="rc-body-headline">${escapeHtml(dayLabel)} 진주</div>
+        <div class="rc-body-quote">${escapeHtml(snippet)}</div>
+        <div class="rc-body-quote-by">— ${escapeHtml(pick.category || '진주')}</div>
+      </div>
+    `;
+    return {
+      id: 'throwback',
+      available: true,
+      contentHash: 'throwback_pearl_' + pick.id,
+      bodyHtml,
+      onTapClick: `if(typeof openPearl==='function'){openPearl('${pick.id}');}else{showScreen('archive'); if(typeof switchLibraryCat==='function') switchLibraryCat('pearls');}`,
+      placeholder: dayLabel + ' 이 진주...',
+    };
+  }
+
   return { id: 'throwback', available: false };
 }
 
