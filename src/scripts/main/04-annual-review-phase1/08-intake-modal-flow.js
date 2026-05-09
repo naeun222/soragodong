@@ -343,7 +343,27 @@ function _intakeSkipAnalysis() {
 }
 
 function _intakeStep5Next() {
-  // 사용자 명시 2026-05-08: hypotheses 합류 폐기 — 순수 4단 분석만. traits/values/patterns 는 챕터 종료 / force analyze 로 채워짐.
+  // 사용자 명시 2026-05-09 (사용자 보고): 첫 4단 분석 후 나 탭 빈 상태 = 버그. 옛 결정 (2026-05-08 hypotheses 폐기) reverse.
+  // 게스트/미구독자 = 챕터 마무리 시 호출되는 extractChapterCaseAnalysis 를 intake 첫 분석에서 바로 호출 (사용자 명시).
+  // intake → state.traits/values/patterns + caseFormulation 즉시 채움 → 나 탭 즉시 반영.
+  try {
+    if (typeof extractChapterCaseAnalysis === 'function'
+        && Array.isArray(state.intakeWorry) && state.intakeWorry.length >= 3) {
+      // intakeWorry → chatMessages 형태 변환 (timestamp 필드)
+      const _msgs = state.intakeWorry.map(m => ({
+        role: m.role,
+        content: m.content,
+        timestamp: m.ts || new Date().toISOString()
+      }));
+      // bypassTutorialGuard — onboarding 안에서 intake 호출되어도 추출 진행.
+      // model = Haiku (게스트/신규 첫 분석 = 비용 ↓ + 속도 ↑).
+      extractChapterCaseAnalysis(_msgs, {
+        model: 'claude-haiku-4-5-20251001',
+        bypassTutorialGuard: true
+      }).catch(e => console.warn('[intake → chapter case extract] silent:', e && e.message));
+    }
+  } catch (e) { console.warn('[intake step5Next extract trigger]:', e && e.message); }
+
   // 사용자 명시 2026-04-30 ultrathink: 튜토리얼 모드일 때 모달 종료 후 대화창에 4단 분석 자동 표시용 stash.
   // _startIntakeFromTutorial 가 modal 종료 시점에 읽어서 처리.
   if (window._onbTutorialMode) {

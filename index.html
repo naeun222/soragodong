@@ -17194,7 +17194,27 @@ function _intakeSkipAnalysis() {
 }
 
 function _intakeStep5Next() {
-  // 사용자 명시 2026-05-08: hypotheses 합류 폐기 — 순수 4단 분석만. traits/values/patterns 는 챕터 종료 / force analyze 로 채워짐.
+  // 사용자 명시 2026-05-09 (사용자 보고): 첫 4단 분석 후 나 탭 빈 상태 = 버그. 옛 결정 (2026-05-08 hypotheses 폐기) reverse.
+  // 게스트/미구독자 = 챕터 마무리 시 호출되는 extractChapterCaseAnalysis 를 intake 첫 분석에서 바로 호출 (사용자 명시).
+  // intake → state.traits/values/patterns + caseFormulation 즉시 채움 → 나 탭 즉시 반영.
+  try {
+    if (typeof extractChapterCaseAnalysis === 'function'
+        && Array.isArray(state.intakeWorry) && state.intakeWorry.length >= 3) {
+      // intakeWorry → chatMessages 형태 변환 (timestamp 필드)
+      const _msgs = state.intakeWorry.map(m => ({
+        role: m.role,
+        content: m.content,
+        timestamp: m.ts || new Date().toISOString()
+      }));
+      // bypassTutorialGuard — onboarding 안에서 intake 호출되어도 추출 진행.
+      // model = Haiku (게스트/신규 첫 분석 = 비용 ↓ + 속도 ↑).
+      extractChapterCaseAnalysis(_msgs, {
+        model: 'claude-haiku-4-5-20251001',
+        bypassTutorialGuard: true
+      }).catch(e => console.warn('[intake → chapter case extract] silent:', e && e.message));
+    }
+  } catch (e) { console.warn('[intake step5Next extract trigger]:', e && e.message); }
+
   // 사용자 명시 2026-04-30 ultrathink: 튜토리얼 모드일 때 모달 종료 후 대화창에 4단 분석 자동 표시용 stash.
   // _startIntakeFromTutorial 가 modal 종료 시점에 읽어서 처리.
   if (window._onbTutorialMode) {
@@ -29119,6 +29139,13 @@ ${chatLog.slice(0, 8000)}
 
 deep_profile_update는 사용자가 챕터에서 명시적으로 언급한 정보만 (예: "엄마가 늘 비교해" / "그때 진단 받은 후 시야가 달라졌어" / "나는 패턴 인식이 강해"). 추측 X. 빈 부분은 빈 string 또는 null.
 
+[name 필드 톤 — 사용자 명시 2026-05-09]
+- 분석 보고서 톤 절대 X. 소라고동 친구 카톡 톤.
+- 분석 문구 (예: "자기 친절 톤 정착", "환경 차원 도구 사용 늘어남", "거절 후 부채감 처리") X.
+- 사용자 어휘 그대로 또는 짧은 친구 표현 (예: "자기한테 잘해줌", "환경 만지는 거 늘어남", "거절하면 미안함 며칠").
+- 10자 내외, 길어도 15자. 형용사 절제. 진단명 / 분석 용어 X.
+- description 은 길어도 OK (관찰 + 사용자 발화 인용). name 만 친구 톤 짧게.
+
 JSON만, 마크다운 X.`;
 }
 
@@ -29337,9 +29364,11 @@ function _processExtractChapterAnalysis(analysis) {
 
 // 일반 path — 5h+ 갭 즉시 (신규유저 첫 3 챕터). 또는 batch fallback timeout 시.
 async function extractChapterCaseAnalysis(messages, opts) {
+  opts = opts || {};
   try {
     if (!_canAI()) return;
-    if (window._onbTutorialMode) return;
+    // 사용자 명시 2026-05-09: intake 첫 분석 직접 호출 시 튜토리얼 가드 우회 (bypassTutorialGuard).
+    if (window._onbTutorialMode && !opts.bypassTutorialGuard) return;
     if (state.preferences && state.preferences.testerMode) return;
     if (!Array.isArray(messages) || messages.length < 3) return;
 

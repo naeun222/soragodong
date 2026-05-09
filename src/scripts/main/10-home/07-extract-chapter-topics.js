@@ -1,7 +1,9 @@
 async function extractChapterCaseAnalysis(messages, opts) {
+  opts = opts || {};
   try {
     if (!_canAI()) return;
-    if (window._onbTutorialMode) return;
+    // 사용자 명시 2026-05-09: intake 첫 분석 직접 호출 시 튜토리얼 가드 우회 (bypassTutorialGuard).
+    if (window._onbTutorialMode && !opts.bypassTutorialGuard) return;
     if (state.preferences && state.preferences.testerMode) return;
     if (!Array.isArray(messages) || messages.length < 3) return;
 
