@@ -239,16 +239,19 @@ function _rcCollectNewViewPool() {
   const answeredIds = new Set((r.unseenInsightsHistory || []).map(h => h.id));
   const pool = [];
   const dims = ['problems', 'mechanisms', 'strengths', 'goals', 'growth'];
+  // 사용자 명시 2026-05-09: 시드/옛 사용자 = item.text, 새 force-analyze = item.name. 둘 다 인식.
+  const nameOf = (it) => (it && (it.name || it.text)) || '';
   for (const kind of dims) {
     const arr = Array.isArray(cf[kind]) ? cf[kind] : [];
     for (const item of arr) {
-      if (!item || !item.name) continue;
+      const nm = nameOf(item);
+      if (!nm) continue;
       if (item.user_verified === true) continue; // 이미 컨펌
-      const id = `${kind}::${item.name}`;
+      const id = `${kind}::${nm}`;
       if (answeredIds.has(id)) continue;
       pool.push({
         id, kind,
-        name: item.name,
+        name: nm,
         description: item.description || '',
         confidence: typeof item.confidence === 'number' ? item.confidence : 0.5,
         sourcePool: 'verified',
@@ -256,12 +259,13 @@ function _rcCollectNewViewPool() {
     }
     const ua = cf.unverified && Array.isArray(cf.unverified[kind]) ? cf.unverified[kind] : [];
     for (const item of ua) {
-      if (!item || !item.name) continue;
-      const id = `${kind}::${item.name}`;
+      const nm = nameOf(item);
+      if (!nm) continue;
+      const id = `${kind}::${nm}`;
       if (answeredIds.has(id)) continue;
       pool.push({
         id, kind,
-        name: item.name,
+        name: nm,
         description: item.description || '',
         confidence: typeof item.confidence === 'number' ? item.confidence : 0.4,
         sourcePool: 'unverified',
@@ -343,7 +347,7 @@ function _rcConfirmNewView(itemId, verdict) {
   if (!Array.isArray(r.unseenInsightsHistory)) r.unseenInsightsHistory = [];
   r.unseenInsightsHistory.push({ id: itemId, verdict, at: new Date().toISOString() });
 
-  // case formulation 항목 mutation
+  // case formulation 항목 mutation (name || text 둘 다 매칭)
   const sep = itemId.indexOf('::');
   if (sep > 0) {
     const kind = itemId.slice(0, sep);
@@ -354,7 +358,7 @@ function _rcConfirmNewView(itemId, verdict) {
       cf.unverified && Array.isArray(cf.unverified[kind]) ? cf.unverified[kind] : null,
     ].filter(Boolean);
     for (const arr of arrays) {
-      const idx = arr.findIndex(it => it && it.name === name);
+      const idx = arr.findIndex(it => it && (it.name === name || it.text === name));
       if (idx >= 0) {
         const item = arr[idx];
         if (verdict === 'correct') {

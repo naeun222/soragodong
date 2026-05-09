@@ -25,13 +25,14 @@ function _rcQuizCutoffKey() {
 const _RC_QUIZ_CONCRETE_HINTS = /\d|[월화수목금토일]|시간|시\b|새벽|밤|아침|오후|주말|평일|아침|점심|저녁|마감|회의|카페|자주|많|적|짧|긴|이전|이후|뒤|앞|중|첫|마지막|더|덜|매일|매주/;
 
 function _rcQuizIsConcreteEnough(item) {
-  if (!item || !item.name) return false;
-  const name = String(item.name);
+  if (!item) return false;
+  // 사용자 명시 2026-05-09: 시드/옛 사용자 = item.text, 새 force-analyze = item.name. 둘 다 인식.
+  const name = String(item.name || item.text || '');
   if (name.length < 3) return false;
   const desc = String(item.description || '');
-  // 구체 hint 표현 포함 시 OK
+  // V1 휴리스틱: 5자 이상 = OK (시드 호환). 또는 구체 hint / description 길이 ≥ 12.
+  if (name.length >= 5) return true;
   if (_RC_QUIZ_CONCRETE_HINTS.test(name) || _RC_QUIZ_CONCRETE_HINTS.test(desc)) return true;
-  // 또는 description 이 충분히 길면 OK
   if (desc.length >= 12) return true;
   return false;
 }
@@ -44,10 +45,12 @@ function _rcQuizCollectPool() {
   const pool = [];
   // 컨펌 안 된 것 (user_verified !== true) + 추상 제외 + dedupe cooldown 통과
   const visit = (kind, item, sourcePool) => {
-    if (!item || !item.name) return;
+    if (!item) return;
+    const nm = item.name || item.text || '';
+    if (!nm) return;
     if (item.user_verified === true) return;
     if (!_rcQuizIsConcreteEnough(item)) return;
-    const id = `${kind}::${item.name}`;
+    const id = `${kind}::${nm}`;
     // dedupe cooldown
     const denied = r.quizDeniedCooldown || {};
     const skipped = r.quizSkippedCooldown || {};
@@ -55,7 +58,7 @@ function _rcQuizCollectPool() {
     if (skipped[id] && skipped[id] > now) return;
     pool.push({
       id, kind,
-      name: item.name,
+      name: nm,
       description: item.description || '',
       confidence: typeof item.confidence === 'number' ? item.confidence : 0.5,
       sourcePool,
@@ -204,8 +207,11 @@ function _rcQuizFindItem(itemId) {
     cf.unverified && Array.isArray(cf.unverified[kind]) ? cf.unverified[kind] : null,
   ].filter(Boolean);
   for (const arr of arrays) {
-    const found = arr.find(it => it && it.name === name);
-    if (found) return Object.assign({ kind }, found);
+    const found = arr.find(it => it && (it.name === name || it.text === name));
+    if (found) {
+      // name||text 통합 + kind 추가해서 반환 (UI 코드가 item.name 으로 일관 접근)
+      return Object.assign({ kind, name: found.name || found.text }, found);
+    }
   }
   return null;
 }
@@ -223,7 +229,7 @@ function _rcQuizAnswer(verdict) {
   if (!p.answers || typeof p.answers !== 'object') p.answers = {};
   p.answers[itemId] = verdict;
 
-  // case formulation 항목 mutation + dedupe stash
+  // case formulation 항목 mutation + dedupe stash (name || text 둘 다 매칭)
   const sep = itemId.indexOf('::');
   if (sep > 0) {
     const kind = itemId.slice(0, sep);
@@ -234,7 +240,7 @@ function _rcQuizAnswer(verdict) {
       cf.unverified && Array.isArray(cf.unverified[kind]) ? cf.unverified[kind] : null,
     ].filter(Boolean);
     for (const arr of arrays) {
-      const i = arr.findIndex(it => it && it.name === name);
+      const i = arr.findIndex(it => it && (it.name === name || it.text === name));
       if (i >= 0) {
         const item = arr[i];
         if (verdict === 'correct') {
@@ -335,7 +341,9 @@ function _rcQuizComputeAccuracyPct() {
   let verified = 0;
   for (const kind of dims) {
     (Array.isArray(cf[kind]) ? cf[kind] : []).forEach(it => {
-      if (!it || !it.name) return;
+      if (!it) return;
+      const nm = it.name || it.text;
+      if (!nm) return;
       total++;
       if (it.user_verified === true) verified++;
     });
