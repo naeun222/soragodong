@@ -10412,22 +10412,11 @@
     border-color: rgba(255,255,255,0.14);
     color: var(--accent);
   }
-  .rc-top-row {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 11.5px; font-weight: 600; color: var(--text-dim);
-    margin-bottom: 10px;
+  /* 사용자 명시 2026-05-09: 회전 카드 헤더 '🌟 오늘의 너' / sub 라벨 / footer 출처 / testerMode 디버그 모두 제거. 인디케이터는 화살 row 가운데로 이동. */
+  .rc-indicator-mid {
+    display: inline-flex; gap: 4px; align-items: center;
+    flex: 1; justify-content: center;
   }
-  .rc-label-main { color: var(--accent); }
-  /* 사용자 명시 2026-05-09 (P2-7): source 별 sub 라벨 ('· 진주' / '· 어제' / '· 1년 전') */
-  .rc-label-sub { color: var(--text-soft); font-weight: 400; opacity: 0.78; }
-  /* 사용자 명시 2026-05-09 (P2-1): source 별 footer 출처 label (transparent — 신뢰 ↑) */
-  .rc-origin-line {
-    margin-top: 8px;
-    font-size: 10px; color: var(--text-dim); opacity: 0.5;
-    letter-spacing: 0.02em;
-  }
-  .rc-pearl-count { opacity: 0.75; }
-  .rc-indicator { margin-left: auto; display: inline-flex; gap: 3px; align-items: center; }
   .rc-dot-i {
     width: 5px; height: 5px; border-radius: 50%;
     background: rgba(255,255,255,0.18);
@@ -10543,11 +10532,7 @@
   }
   .rc-chat-arrow { font-size: 12px; opacity: 0.85; }
 
-  /* testerMode 디버그 (spec 11-2) */
-  .rc-debug {
-    margin-top: 8px; font-size: 9.5px; color: var(--text-dim);
-    opacity: 0.5; font-family: 'JetBrains Mono', monospace;
-  }
+  /* 사용자 명시 2026-05-09: testerMode 디버그 라인 제거. */
 
   /* 사용자 명시 2026-05-09: 진주 라벨 hide 시도 → revert. 두 라벨 다 표시가 자연스러움. */
 

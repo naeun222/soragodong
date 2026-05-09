@@ -7,13 +7,9 @@ function renderReflectionHome() {
   // V4: render 후 잠금 시각 갱신
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
 
-  // V4-fix: 한 번에 하나씩 — active 1개만 표시. pending/paused/더 깊이 볼 거 링크 제거.
+  // 사용자 명시 2026-05-09 (C): 활성 ≥1 시만 홈 노출. 활성 X 시 = 빈 (마법고동 chooser 로 진입).
   if (!active) {
-    container.innerHTML = `
-      <div class="reflection-empty-card" onclick="addReflectionQuestion()">
-        🌊 숙고해보고 싶은 질문 있어? <span style="color:var(--accent2);">+ 추가</span>
-      </div>
-    `;
+    container.innerHTML = '';
     return;
   }
 

@@ -19,22 +19,19 @@
         <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
       </div>
 
-      <!-- 사용자 명시 2026-05-09 (ultrathink): 회전 카드 '🌟 오늘의 너' (7 source rotating surface). spec home-redesign-2026-05-09.md 4절 + 11절. -->
+      <!-- 사용자 명시 2026-05-09 (ultrathink): 회전 카드 (7 source rotating surface). spec home-redesign-2026-05-09.md 4절 + 11절. -->
       <div id="rotatingCardContainer"></div>
 
-      <!-- 조건부 알림들 (있을 때만 보임 - 작은 카드) — Phase 2-4 에 회전 카드 source 로 흡수 예정 -->
-      <div id="reviewPromptsContainer"></div>
-      <div id="predictionFollowupsContainer"></div>
-      <div id="activeDecisionsContainer"></div>
+      <!-- 사용자 명시 2026-05-09 (A 폐기): reviewPromptsContainer / predictionFollowupsContainer / activeDecisionsContainer zone 폐기 — 회전 카드 source 4/6 + 마법고동 small row 로 흡수 (spec 3-2). 함수 호출은 container null guard 자연 no-op. -->
 
-      <!-- ★★★ MAIN: 시간대별 액션 (밤=체크인). 진주 hero 는 회전 카드 source 1 으로 이동 (사용자 명시 2026-05-09). -->
+      <!-- 사용자 명시 2026-05-09 (C): 활성 숙고 ≥1 시만 노출. 활성 X 시 = 마법고동 chooser 로 진입. -->
+      <div id="reflectionContainer"></div>
+
+      <!-- ★★★ MAIN: 시간대별 액션 (밤=체크인). 진주 hero 는 회전 카드 source 1 으로 이동. -->
       <div id="mainActionContainer"></div>
 
       <!-- ★★★ 소라의 부름 (AI 발급 미션) -->
       <div id="missionContainer"></div>
-
-      <!-- 사용자 명시 2026-05-09 (#7, spec 5-4): reflectionContainer zone 폐기 — 마법고동 small row 에 활성 숙고 카운트 흡수. -->
-      <!-- renderReflectionHome 은 stub 으로 유지 (안전 가드: container null 시 early return). -->
 
       <!-- 여백 (메인과 작은 항목 분리) -->
       <div style="height: 24px;"></div>

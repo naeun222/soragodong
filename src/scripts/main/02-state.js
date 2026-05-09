@@ -394,6 +394,7 @@ const DEFAULT_STATE = {
     windowStartAt: null,    // 4시간 windowing 시작
     windowSourceId: null,   // 그 4시간의 stay source
     windowContentHash: null,// 그 4시간의 stay contentHash (같은 진주/같은 회상 stay)
+    lastPearlShownDate: null, // 사용자 명시 2026-05-09 (B): 진주 매일 1번 노출 보장 — 오늘 진주 X 시 baseWeight +200
     currentIndex: 0
   },
 

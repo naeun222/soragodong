@@ -18,6 +18,7 @@ function _ensureRotatingCardState() {
   if (typeof r.windowStartAt === 'undefined') r.windowStartAt = null;
   if (typeof r.windowSourceId === 'undefined') r.windowSourceId = null;
   if (typeof r.windowContentHash === 'undefined') r.windowContentHash = null;
+  if (typeof r.lastPearlShownDate === 'undefined') r.lastPearlShownDate = null;
   if (typeof r.currentIndex === 'undefined') r.currentIndex = 0;
   return r;
 }
@@ -45,11 +46,10 @@ function _rcRecordSeen(sourceId, contentHash) {
   const r = _ensureRotatingCardState();
   r.history.push({ sourceId, contentHash, seenAt: new Date().toISOString() });
   if (r.history.length > 200) r.history = r.history.slice(-200);
-  // 사용자 명시 2026-05-09 (Phase 2 source 7): surprise 1번 표시 후 영구 dismiss (spec 4-5).
-  if (sourceId === 'surprise' && contentHash && /^surprise_/.test(contentHash)) {
-    const milestoneKey = contentHash.replace(/^surprise_/, '');
-    if (!Array.isArray(r.dismissedSurprises)) r.dismissedSurprises = [];
-    if (!r.dismissedSurprises.includes(milestoneKey)) r.dismissedSurprises.push(milestoneKey);
+  // 사용자 명시 2026-05-09 (B): 진주 노출 시 lastPearlShownDate 갱신 (오늘 = 진주 봤음).
+  if (sourceId === 'pearl') {
+    const todayK = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+    r.lastPearlShownDate = todayK;
   }
 }
 
@@ -105,7 +105,14 @@ function _rcScore(sourceId) {
   const base = _RC_BASE_WEIGHTS[sourceId] || 0;
   const fresh = _rcFreshnessPenalty(sourceId);
   const variety = _rcVarietyBonus(sourceId);
-  return { total: base + fresh + variety, base, fresh, variety };
+  // 사용자 명시 2026-05-09 (B): 오늘 진주 안 본 경우 진주 강제 1순위 (baseWeight +200).
+  let pearlBoost = 0;
+  if (sourceId === 'pearl') {
+    const r = _ensureRotatingCardState();
+    const todayK = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+    if (r.lastPearlShownDate !== todayK) pearlBoost = 200;
+  }
+  return { total: base + fresh + variety + pearlBoost, base, fresh, variety, pearlBoost };
 }
 
 // =============================================================================
@@ -605,37 +612,39 @@ function _rcSource3NewView() {
 }
 
 // =============================================================================
-// Source 4 — 미니 리뷰 (Haiku, Phase 3)
+// Source 4 — 미니 리뷰 (Haiku, Phase 3 + 사용자 명시 2026-05-09)
 // =============================================================================
-// 가용 조건 (spec 4-2):
-//   (마지막 미니 리뷰 ≥3일) AND (체크인 ≥2 OR chat turn ≥8 OR 미션 ≥1)
-//   _canAI() 통과 (apiKey or session)
-// 탭 시 → openMiniReviewModal() — Haiku 1턴 호출 + tone verify (spec 11-7)
+// 사용자 명시 2026-05-09 (H): 수동 trigger — 활동 조건 제거. cooldown 만 검사. 사용자 명시 클릭 시 trigger.
+// 사용자 명시 2026-05-09: cooldown 안 = 마지막 결과 카드 회전 카드에 유지 (사라지지 X).
 function _rcSource4MiniReview() {
   if (typeof _canAI !== 'function' || !_canAI()) return { id: 'miniReview', available: false };
   const r = _ensureRotatingCardState();
   const lastMini = r.lastMiniReviewAt ? new Date(r.lastMiniReviewAt).getTime() : 0;
   const cooldownMs = 3 * 86400000;
-  if (lastMini > 0 && Date.now() - lastMini < cooldownMs) return { id: 'miniReview', available: false };
 
-  // 가용 조건 — 지난 3일 활동
-  const since = Date.now() - cooldownMs;
-  const recentCheckins = (state.entries || []).filter(e => {
-    const t = e.date ? new Date(e.date + 'T00:00:00').getTime() : 0;
-    return t > since;
-  }).length;
-  const recentChats = (state.chatMessages || []).filter(m => {
-    const t = m.timestamp ? new Date(m.timestamp).getTime() : 0;
-    return t > since;
-  }).length;
-  const recentMissions = (state.missions || []).filter(m => {
-    const t = m.completedAt ? new Date(m.completedAt).getTime() : 0;
-    return t > since && m.status === 'completed';
-  }).length;
-
-  if (recentCheckins < 2 && recentChats < 8 && recentMissions < 1) {
-    return { id: 'miniReview', available: false };
+  // cooldown 안 = 마지막 결과 카드 (Haiku 재호출 X / 클릭 시 모달로 결과 다시 보기)
+  if (lastMini > 0 && Date.now() - lastMini < cooldownMs && Array.isArray(state.miniReviews) && state.miniReviews.length > 0) {
+    const mr = state.miniReviews[0];
+    if (mr && mr.content) {
+      const trim = mr.content.length > 100 ? mr.content.slice(0, 100) + '…' : mr.content;
+      return {
+        id: 'miniReview',
+        available: true,
+        contentHash: 'miniReview_result_' + mr.id,
+        bodyHtml: `
+          <div class="rc-body-mini-review">
+            <div class="rc-body-headline">지난 3일 정리</div>
+            <div class="rc-body-copy">${escapeHtml(trim)}</div>
+          </div>
+        `,
+        onTapClick: `openSavedMiniReview('${mr.id}')`,
+        placeholder: '이 3일...',
+      };
+    }
   }
+
+  // cooldown 후 = trigger 카드 (수동 trigger). 활동 조건 제거 (사용자 명시 H).
+  if (lastMini > 0 && Date.now() - lastMini < cooldownMs) return { id: 'miniReview', available: false };
 
   const copy = _rcPickRandom([
     '지난 3일 어땠어? 짧게 한 번 짚어볼까.',
@@ -644,18 +653,17 @@ function _rcSource4MiniReview() {
     '지나간 며칠, 짧게 정리해줄까?',
   ]);
 
-  const bodyHtml = `
-    <div class="rc-body-mini-review">
-      <div class="rc-body-headline">지난 3일</div>
-      <div class="rc-body-copy">${escapeHtml(copy)}</div>
-      <div class="rc-body-mini-cta">탭 → 같이 정리 ✦</div>
-    </div>
-  `;
   return {
     id: 'miniReview',
     available: true,
-    contentHash: 'miniReview_' + Math.floor(Date.now() / cooldownMs),
-    bodyHtml,
+    contentHash: 'miniReview_trigger_' + Math.floor(Date.now() / cooldownMs),
+    bodyHtml: `
+      <div class="rc-body-mini-review">
+        <div class="rc-body-headline">지난 3일</div>
+        <div class="rc-body-copy">${escapeHtml(copy)}</div>
+        <div class="rc-body-mini-cta">탭 → 같이 정리 ✦</div>
+      </div>
+    `,
     onTapClick: `openMiniReviewModal()`,
     placeholder: '이 3일...',
   };
@@ -894,121 +902,11 @@ function _rcSource6Insight() {
 }
 
 // =============================================================================
-// Source 7 — Surprise / 기념 (milestone, Phase 2)
+// Source 7 — Surprise / 기념 (사용자 명시 2026-05-09 E: 제거 — milestone 풀 자체 폐기)
 // =============================================================================
-// streak/연속 milestone 제거 (memory feedback_no_streak_pressure 위반, spec 11-3).
-// 함께한 N일 / 첫 진주 N일 / 분기 셸 / shellCollection N개.
-// dismissedSurprises 가드로 1번 표시 후 영구 X (_rcRecordSeen 안 처리).
+// streak / 연속 / 함께한 N일 / 첫 진주 N일 / 셸 / 진주 카운트 — 모두 제거 (ADHD UX 압박 회피 + 사용자 명시).
 function _rcSource7Surprise() {
-  const r = _ensureRotatingCardState();
-  const dismissed = new Set(r.dismissedSurprises || []);
-  const today = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
-
-  // 첫 사용 시점 = entries / chatMessages / pearls 중 가장 오래된 것
-  let firstDate = null;
-  const _addFirst = (d) => {
-    if (!d) return;
-    const dStr = String(d).slice(0, 10);
-    if (!firstDate || dStr < firstDate) firstDate = dStr;
-  };
-  const earliestEntry = (state.entries || []).reduce((min, e) =>
-    (!min || (e.date && e.date < min)) ? e.date : min, null);
-  _addFirst(earliestEntry);
-  const firstChatMsg = (state.chatMessages || []).find(m => m && m.timestamp);
-  if (firstChatMsg) _addFirst(firstChatMsg.timestamp);
-  let firstPearlIso = null;
-  (state.pearls || []).forEach(p => {
-    if (!p || !p.createdAt) return;
-    if (!firstPearlIso || new Date(p.createdAt).getTime() < new Date(firstPearlIso).getTime()) {
-      firstPearlIso = p.createdAt;
-    }
-  });
-  if (firstPearlIso) _addFirst(firstPearlIso);
-
-  const candidates = [];
-  const _daysBetween = (a, b) => {
-    const da = new Date(a + 'T00:00:00');
-    const db = new Date(b + 'T00:00:00');
-    return Math.floor((db - da) / 86400000);
-  };
-
-  // 함께한 N일
-  if (firstDate) {
-    const days = _daysBetween(firstDate, today);
-    for (const m of [30, 60, 100, 180, 365, 500, 1000]) {
-      if (days === m && !dismissed.has(`together_${m}`)) {
-        candidates.push({
-          key: `together_${m}`,
-          copy: `${m}일 함께야 🐚`,
-          sub: '첫 대화부터 오늘까지.',
-          tap: `showScreen('archive')`,
-        });
-      }
-    }
-  }
-
-  // 첫 진주 N일
-  if (firstPearlIso) {
-    const fpDate = String(firstPearlIso).slice(0, 10);
-    const days = _daysBetween(fpDate, today);
-    for (const m of [30, 90, 180, 365]) {
-      if (days === m && !dismissed.has(`firstPearl_${m}`)) {
-        candidates.push({
-          key: `firstPearl_${m}`,
-          copy: `너의 첫 진주가 ${m}일 됐어`,
-          sub: '그때 그 한 순간.',
-          tap: `showScreen('archive'); if(typeof switchLibraryCat==='function') switchLibraryCat('pearls');`,
-        });
-      }
-    }
-  }
-
-  // 셸 컬렉션 카운트 (모래사장)
-  const shellCount = (state.shellCollection || []).length;
-  for (const m of [30, 50, 100]) {
-    if (shellCount === m && !dismissed.has(`shells_${m}`)) {
-      candidates.push({
-        key: `shells_${m}`,
-        copy: `${m}개 모았어 🐚`,
-        sub: '모래사장에서 보자.',
-        tap: `if(typeof openShellCollection==='function') openShellCollection();`,
-      });
-    }
-  }
-
-  // 진주 카운트 milestone (10/30/50/100)
-  const pearlsCount = (state.pearls || []).filter(p => p && p.type !== 'dna_pearl').length;
-  for (const m of [10, 30, 50, 100]) {
-    if (pearlsCount === m && !dismissed.has(`pearls_${m}`)) {
-      candidates.push({
-        key: `pearls_${m}`,
-        copy: `진주 ${m}개 됐어`,
-        sub: '하나하나 너만의 시간.',
-        tap: `showScreen('archive'); if(typeof switchLibraryCat==='function') switchLibraryCat('pearls');`,
-      });
-    }
-  }
-
-  if (candidates.length === 0) return { id: 'surprise', available: false };
-  // 첫 candidate (보통 1-2개만 동시 trigger)
-  const pick = candidates[0];
-
-  const bodyHtml = `
-    <div class="rc-body-surprise">
-      <div class="rc-body-surprise-icon">✦</div>
-      <div class="rc-body-surprise-main">${escapeHtml(pick.copy)}</div>
-      <div class="rc-body-surprise-sub">${escapeHtml(pick.sub)}</div>
-    </div>
-  `;
-  return {
-    id: 'surprise',
-    available: true,
-    contentHash: 'surprise_' + pick.key,
-    bodyHtml,
-    onTapClick: pick.tap,
-    placeholder: '...',
-    milestoneKey: pick.key,
-  };
+  return { id: 'surprise', available: false };
 }
 
 // =============================================================================
@@ -1121,64 +1019,29 @@ function renderRotatingCard() {
 // =============================================================================
 // Shell HTML — wrapper + indicator + chat 다리 footer
 // =============================================================================
-// 사용자 명시 2026-05-09 (P2-7): source 별 outer 라벨 sub variation.
-const _RC_SOURCE_SUB_LABEL = {
-  pearl: '진주',
-  yesterday: '어제',
-  newView: '새 발견',
-  miniReview: '정리',
-  throwback: '회상',
-  insight: '이번 주',
-  surprise: '기념',
-};
-// 사용자 명시 2026-05-09 (P2-1): source 별 footer 출처 label (transparent — 신뢰 ↑).
-const _RC_SOURCE_ORIGIN = {
-  pearl: '🐚 너의 진주 모음',
-  yesterday: '📊 어제 + 14일 평균',
-  newView: '🤖 새벽 분석 결과',
-  miniReview: '🤖 Haiku · 3일 정리',
-  throwback: '⏳ 옛 너의 흔적',
-  insight: '📊 7일 vs 7일',
-  surprise: '✦ 기념 시점',
-};
-
+// 사용자 명시 2026-05-09: 헤더 '🌟 오늘의 너' / source 별 sub 라벨 / footer 출처 label / testerMode 디버그 — 모두 제거.
+// 인디케이터는 화살 row 사이로 이동 (가용 source ≥ 2 시).
 function _rcRenderShell(orderedSources, currentIdx) {
   if (!orderedSources || orderedSources.length === 0) return '';
   const cur = orderedSources[currentIdx] || orderedSources[0];
   const total = orderedSources.length;
+  const tapHandler = cur.onTapClick ? ` onclick="${cur.onTapClick}"` : '';
   const indicator = orderedSources.map((s, i) =>
     `<span class="rc-dot-i ${i === currentIdx ? 'is-active' : ''}"></span>`
   ).join('');
-  const tapHandler = cur.onTapClick ? ` onclick="${cur.onTapClick}"` : '';
-  const debugLine = (state.preferences && state.preferences.testerMode)
-    ? `<div class="rc-debug">cur: ${escapeHtml(cur.id)} · ${currentIdx + 1}/${total} · avail: ${escapeHtml(orderedSources.map(s => s.id).join(', '))}</div>` : '';
-  const indicatorHtml = total > 1 ? `<span class="rc-indicator">${indicator}</span>` : '';
   const arrowRow = total > 1 ? `
     <div class="rc-arrow-row">
       <button class="rc-arrow-btn rc-arrow-prev" type="button" onclick="event.stopPropagation(); _rcCycle(-1)" aria-label="이전 카드">‹</button>
+      <span class="rc-indicator-mid">${indicator}</span>
       <button class="rc-arrow-btn rc-arrow-next" type="button" onclick="event.stopPropagation(); _rcCycle(1)" aria-label="다음 카드">›</button>
     </div>
   ` : '';
 
-  // P2-7 outer 라벨 sub variation
-  let sub = _RC_SOURCE_SUB_LABEL[cur.id] || '';
-  if (cur.id === 'pearl' && cur.isEmpty) sub = '첫 진주';
-  // P2-1 footer 출처 (transparent)
-  const origin = _RC_SOURCE_ORIGIN[cur.id] || '';
-  const subHtml = sub ? ` <span class="rc-label-sub">· ${escapeHtml(sub)}</span>` : '';
-  const originHtml = origin ? `<div class="rc-origin-line">${escapeHtml(origin)}</div>` : '';
-
   return `
     <div class="rotating-card" id="rotatingCard" data-current-idx="${currentIdx}" data-total="${total}">
-      <div class="rc-top-row">
-        <span class="rc-label-main">🌟 오늘의 너${subHtml}</span>
-        ${indicatorHtml}
-      </div>
       <div class="rc-body-tap"${tapHandler}>
         ${cur.bodyHtml || ''}
       </div>
-      ${originHtml}
-      ${debugLine}
       ${arrowRow}
     </div>
   `;
