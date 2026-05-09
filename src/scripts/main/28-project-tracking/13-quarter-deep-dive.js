@@ -110,19 +110,50 @@ function renderQuarterlyDeepDive(review) {
   </div>${stagnationMsg}`;
 }
 
+// 사용자 명시 2026-05-09: 리뷰 모음에 카테고리 chip — 전체/미니/주/월/계절/연간.
+// 미니 리뷰 (Haiku source 4 결과) state.miniReviews 추가.
+let _archiveReviewCategory = 'all';
+function setArchiveReviewCategory(cat) {
+  _archiveReviewCategory = cat || 'all';
+  renderArchiveReviews();
+}
+
 function renderArchiveReviews() {
   const container = document.getElementById('archiveReviewsList');
   if (!container) return;
 
+  const cat = _archiveReviewCategory || 'all';
   const weekly = (state.weeklyReviews || []).map(r => ({...r, type: 'weekly'}));
   const monthly = (state.monthlyReviews || []).map(r => ({...r, type: 'monthly'}));
-  // V4-1y-3: 분기 리뷰 추가
   const quarterly = (state.quarterlyReviews || []).map(r => ({...r, type: 'quarterly'}));
-  const all = [...weekly, ...monthly, ...quarterly].sort((a, b) =>
+  const annual = (state.annualReviews || []).map(r => ({...r, type: 'annual', completedAt: r.completedAt}));
+  const mini = (state.miniReviews || []).map(r => ({...r, type: 'mini', completedAt: r.generatedAt}));
+  const allCombined = [...mini, ...weekly, ...monthly, ...quarterly, ...annual].sort((a, b) =>
     new Date(b.completedAt) - new Date(a.completedAt)
   );
+  const filtered = (cat === 'all') ? allCombined : allCombined.filter(r => r.type === cat);
 
-  // 사용자 요청 2026-04-28: 한 해 분기 4개 모두 있으면 '🌟 연간 Stories' 카드 맨 위에 노출
+  // 카테고리 chip row — 카테고리 별 카운트 표시
+  const counts = {
+    all: allCombined.length,
+    mini: mini.length,
+    weekly: weekly.length,
+    monthly: monthly.length,
+    quarterly: quarterly.length,
+    annual: annual.length,
+  };
+  const chipHtml = `
+    <div class="archive-review-chips">
+      <button class="arc-chip${cat === 'all' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('all')">전체 <span class="arc-chip-count">${counts.all}</span></button>
+      <button class="arc-chip${cat === 'mini' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('mini')">미니 <span class="arc-chip-count">${counts.mini}</span></button>
+      <button class="arc-chip${cat === 'weekly' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('weekly')">주 <span class="arc-chip-count">${counts.weekly}</span></button>
+      <button class="arc-chip${cat === 'monthly' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('monthly')">월 <span class="arc-chip-count">${counts.monthly}</span></button>
+      <button class="arc-chip${cat === 'quarterly' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('quarterly')">계절 <span class="arc-chip-count">${counts.quarterly}</span></button>
+      <button class="arc-chip${cat === 'annual' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('annual')">연간 <span class="arc-chip-count">${counts.annual}</span></button>
+    </div>
+  `;
+
+  // 한 해 분기 4개 모두 있으면 '🌟 연간 Stories' 카드 (전체/연간 카테고리 시만)
   const yearGroups = {};
   (state.quarterlyReviews || []).forEach(r => {
     const yr = (r.quarterKey || '').split('-')[0];
@@ -132,7 +163,7 @@ function renderArchiveReviews() {
   });
   const fullYears = Object.keys(yearGroups).filter(yr => yearGroups[yr] >= 4).sort().reverse();
   let annualCardHtml = '';
-  if (fullYears.length > 0) {
+  if (fullYears.length > 0 && (cat === 'all' || cat === 'annual')) {
     annualCardHtml = fullYears.map(yr => `
       <div class="timeline-day annual-stories-card" data-year="${yr}" onclick="event.stopPropagation(); openAnnualReview(${yr})" style="cursor:pointer; background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(168,157,200,0.18)); border: 1px solid var(--accent);">
         <div class="timeline-day-date">🌟 ${yr}년 연간 리뷰</div>
@@ -144,33 +175,36 @@ function renderArchiveReviews() {
     `).join('');
   }
 
-  if (all.length === 0) {
-    container.innerHTML = `<div class="timeline-empty">
-      <div class="icon">🌙</div>
-      아직 리뷰가 없어.<br>
-      주말 / 매월 1주차 / 매분기 1주차에<br>
-      자동으로 정리돼.
-    </div>`;
+  if (filtered.length === 0 && !annualCardHtml) {
+    const emptyMsg = cat === 'mini' ? '아직 미니 리뷰 없어.<br>홈 회전 카드에서 ‹지난 3일› 카드 탭 → 정리.'
+      : cat === 'weekly' ? '아직 주간 리뷰 없어.<br>일요일 4AM 자동 또는 홈 카드 직접 탭.'
+      : cat === 'monthly' ? '아직 월간 리뷰 없어.<br>매월 1주차 자동.'
+      : cat === 'quarterly' ? '아직 계절 리뷰 없어.<br>매분기 1주차 자동.'
+      : cat === 'annual' ? '아직 연간 리뷰 없어.<br>한 해 분기 4개 모두 채우면 자동.'
+      : '아직 리뷰가 없어.<br>주말 / 매월 1주차 / 매분기 1주차에<br>자동으로 정리돼.';
+    container.innerHTML = chipHtml + `<div class="timeline-empty"><div class="icon">🌙</div>${emptyMsg}</div>`;
     return;
   }
 
-  container.innerHTML = annualCardHtml + all.map((r, idx) => {
+  container.innerHTML = chipHtml + annualCardHtml + filtered.map((r, idx) => {
     const date = new Date(r.completedAt);
     const dateStr = date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-    // 사용자 요청 2026-04-29: 분기 리뷰 라벨을 봄/여름/가을/겨울 + 연도 + 이모지로
     const seasonLabel = r.type === 'quarterly' && r.quarterKey && typeof seasonLabelOf === 'function'
       ? seasonLabelOf(r.quarterKey, { withEmoji: true })
       : null;
-    const typeLabel = r.type === 'weekly' ? '🌙 주간 리뷰'
+    const typeLabel = r.type === 'mini' ? '🐚 미니 리뷰'
+      : r.type === 'weekly' ? '🌙 주간 리뷰'
       : r.type === 'monthly' ? '📅 월간 리뷰'
+      : r.type === 'annual' ? '🌟 연간 리뷰'
       : (seasonLabel ? `${seasonLabel} 리뷰` : '📊 분기 리뷰');
-    const periodLabel = r.type === 'quarterly' ? '' : (r.weekKey || r.monthKey || '');
+    const periodLabel = (r.type === 'quarterly' || r.type === 'mini' || r.type === 'annual') ? '' : (r.weekKey || r.monthKey || '');
     const autoTag = r.auto ? ' <span style="font-size:9px; color:var(--purple); padding:1px 6px; background:var(--purple-dim); border-radius:6px; margin-left:4px;">🤖 자동</span>' : '';
 
-    // 사용자 명시 2026-05-01: 카드 = 한 줄 요약만, 클릭 → screen-review 풀화면 (readonly).
-    // one_word 우선 + pattern.headline 부제 / 없으면 summary fallback.
     let summaryLine = '';
-    if (r.one_word || r.one_word_weekly) {
+    if (r.type === 'mini' && r.content) {
+      const trim = r.content.length > 60 ? r.content.slice(0, 60) + '…' : r.content;
+      summaryLine = escapeHtml(trim);
+    } else if (r.one_word || r.one_word_weekly) {
       const ow = r.one_word || r.one_word_weekly;
       summaryLine = `<span style="color:var(--accent); font-weight:600;">${escapeHtml(ow)}</span>`;
       if (r.pattern && r.pattern.headline) summaryLine += ` · <span style="opacity:0.85;">${escapeHtml(r.pattern.headline)}</span>`;
@@ -183,9 +217,14 @@ function renderArchiveReviews() {
     }
     const reviewKey = r.weekKey || r.monthKey || r.quarterKey || '';
     const completedAtJs = r.completedAt ? `'${r.completedAt}'` : 'null';
+    const onClickJs = r.type === 'mini'
+      ? `openSavedMiniReview('${r.id}')`
+      : r.type === 'annual'
+        ? `openAnnualReview(${r.year || 'null'})`
+        : `openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})`;
 
     return `
-      <div class="timeline-day" onclick="openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})" style="cursor:pointer;">
+      <div class="timeline-day" onclick="${onClickJs}" style="cursor:pointer;">
         <div class="timeline-day-date">${typeLabel}${periodLabel ? ` · ${periodLabel}` : ''}${autoTag}</div>
         <div class="timeline-day-summary" style="font-family: 'Gowun Batang', serif; font-size: 14px;">
           ${summaryLine}
@@ -194,5 +233,34 @@ function renderArchiveReviews() {
       </div>
     `;
   }).join('');
+}
+
+// 사용자 명시 2026-05-09: 저장된 미니 리뷰 보기 모달 (Haiku 재호출 X — content 만 표시)
+function openSavedMiniReview(id) {
+  const m = (state.miniReviews || []).find(x => x && x.id === id);
+  if (!m) {
+    if (typeof showToast === 'function') showToast('미니 리뷰를 찾을 수 없어');
+    return;
+  }
+  const existing = document.getElementById('rcMiniReviewModal');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'rcMiniReviewModal';
+  overlay.className = 'rc-mini-review-overlay';
+  const dateStr = m.generatedAt ? new Date(m.generatedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  overlay.innerHTML = `
+    <div class="rc-mini-review-card">
+      <div class="rc-mini-review-header">
+        <div class="rc-mini-review-label">🐚 미니 리뷰 · ${escapeHtml(dateStr)}</div>
+        <button class="rc-mini-review-close" type="button" onclick="closeMiniReviewModal()" aria-label="닫기">×</button>
+      </div>
+      <div class="rc-mini-review-body">
+        <div class="rc-mini-review-content">${escapeHtml(m.content || '')}</div>
+        <button class="rc-mini-review-dismiss" type="button" onclick="closeMiniReviewModal()">닫기</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add('show'), 30);
 }
 

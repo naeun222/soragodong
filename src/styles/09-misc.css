@@ -10418,6 +10418,14 @@
     margin-bottom: 10px;
   }
   .rc-label-main { color: var(--accent); }
+  /* 사용자 명시 2026-05-09 (P2-7): source 별 sub 라벨 ('· 진주' / '· 어제' / '· 1년 전') */
+  .rc-label-sub { color: var(--text-soft); font-weight: 400; opacity: 0.78; }
+  /* 사용자 명시 2026-05-09 (P2-1): source 별 footer 출처 label (transparent — 신뢰 ↑) */
+  .rc-origin-line {
+    margin-top: 8px;
+    font-size: 10px; color: var(--text-dim); opacity: 0.5;
+    letter-spacing: 0.02em;
+  }
   .rc-pearl-count { opacity: 0.75; }
   .rc-indicator { margin-left: auto; display: inline-flex; gap: 3px; align-items: center; }
   .rc-dot-i {
@@ -10676,3 +10684,33 @@
     background: rgba(212,167,106,0.18);
     border-color: rgba(212,167,106,0.50);
   }
+
+  /* 사용자 명시 2026-05-09: archive-reviews 카테고리 chip — 전체/미니/주/월/계절/연간 */
+  .archive-review-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 14px;
+    padding: 0 2px;
+  }
+  .arc-chip {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-soft); font-size: 12px; font-weight: 500;
+    padding: 5px 12px; border-radius: 14px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .arc-chip:hover {
+    background: rgba(212,167,106,0.08);
+    border-color: rgba(212,167,106,0.20);
+    color: var(--text);
+  }
+  .arc-chip.is-active {
+    background: rgba(212,167,106,0.15);
+    border-color: rgba(212,167,106,0.42);
+    color: var(--accent); font-weight: 600;
+  }
+  .arc-chip-count {
+    font-size: 10.5px; color: var(--text-dim); opacity: 0.7;
+    margin-left: 1px;
+  }
+  .arc-chip.is-active .arc-chip-count { color: var(--accent); opacity: 0.85; }

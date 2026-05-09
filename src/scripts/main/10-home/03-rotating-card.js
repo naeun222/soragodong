@@ -696,6 +696,14 @@ async function openMiniReviewModal() {
     // lastMiniReviewAt 갱신 (cooldown 시작)
     const r = _ensureRotatingCardState();
     r.lastMiniReviewAt = new Date().toISOString();
+    // 사용자 명시 2026-05-09 (P1-4): 미니 리뷰 결과 archive — state.miniReviews push.
+    if (!Array.isArray(state.miniReviews)) state.miniReviews = [];
+    state.miniReviews.unshift({
+      id: 'mr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      content: text,
+      generatedAt: new Date().toISOString(),
+      source: 'haiku-3day',
+    });
     if (typeof saveState === 'function') saveState();
   } catch (e) {
     console.warn('[mini-review]', e);
@@ -1113,21 +1121,38 @@ function renderRotatingCard() {
 // =============================================================================
 // Shell HTML — wrapper + indicator + chat 다리 footer
 // =============================================================================
+// 사용자 명시 2026-05-09 (P2-7): source 별 outer 라벨 sub variation.
+const _RC_SOURCE_SUB_LABEL = {
+  pearl: '진주',
+  yesterday: '어제',
+  newView: '새 발견',
+  miniReview: '정리',
+  throwback: '회상',
+  insight: '이번 주',
+  surprise: '기념',
+};
+// 사용자 명시 2026-05-09 (P2-1): source 별 footer 출처 label (transparent — 신뢰 ↑).
+const _RC_SOURCE_ORIGIN = {
+  pearl: '🐚 너의 진주 모음',
+  yesterday: '📊 어제 + 14일 평균',
+  newView: '🤖 새벽 분석 결과',
+  miniReview: '🤖 Haiku · 3일 정리',
+  throwback: '⏳ 옛 너의 흔적',
+  insight: '📊 7일 vs 7일',
+  surprise: '✦ 기념 시점',
+};
+
 function _rcRenderShell(orderedSources, currentIdx) {
   if (!orderedSources || orderedSources.length === 0) return '';
   const cur = orderedSources[currentIdx] || orderedSources[0];
   const total = orderedSources.length;
-  // 사용자 명시 2026-05-09: 진주 카운트 '🐚 N' 제거 — 모래사장 small row 와 중복.
   const indicator = orderedSources.map((s, i) =>
     `<span class="rc-dot-i ${i === currentIdx ? 'is-active' : ''}"></span>`
   ).join('');
   const tapHandler = cur.onTapClick ? ` onclick="${cur.onTapClick}"` : '';
-  // testerMode 디버그 — 가용 source list / current source / idx 표시 (swipe 진단용)
   const debugLine = (state.preferences && state.preferences.testerMode)
     ? `<div class="rc-debug">cur: ${escapeHtml(cur.id)} · ${currentIdx + 1}/${total} · avail: ${escapeHtml(orderedSources.map(s => s.id).join(', '))}</div>` : '';
-  // 인디케이터는 가용 source 2개 이상일 때만 표시 (1개면 시각 noise 줄임).
   const indicatorHtml = total > 1 ? `<span class="rc-indicator">${indicator}</span>` : '';
-  // 사용자 명시 2026-05-09: 좌우 화살 버튼 추가 — 가로 swipe 와 함께 source 전환 명시.
   const arrowRow = total > 1 ? `
     <div class="rc-arrow-row">
       <button class="rc-arrow-btn rc-arrow-prev" type="button" onclick="event.stopPropagation(); _rcCycle(-1)" aria-label="이전 카드">‹</button>
@@ -1135,15 +1160,24 @@ function _rcRenderShell(orderedSources, currentIdx) {
     </div>
   ` : '';
 
+  // P2-7 outer 라벨 sub variation
+  let sub = _RC_SOURCE_SUB_LABEL[cur.id] || '';
+  if (cur.id === 'pearl' && cur.isEmpty) sub = '첫 진주';
+  // P2-1 footer 출처 (transparent)
+  const origin = _RC_SOURCE_ORIGIN[cur.id] || '';
+  const subHtml = sub ? ` <span class="rc-label-sub">· ${escapeHtml(sub)}</span>` : '';
+  const originHtml = origin ? `<div class="rc-origin-line">${escapeHtml(origin)}</div>` : '';
+
   return `
     <div class="rotating-card" id="rotatingCard" data-current-idx="${currentIdx}" data-total="${total}">
       <div class="rc-top-row">
-        <span class="rc-label-main">🌟 오늘의 너</span>
+        <span class="rc-label-main">🌟 오늘의 너${subHtml}</span>
         ${indicatorHtml}
       </div>
       <div class="rc-body-tap"${tapHandler}>
         ${cur.bodyHtml || ''}
       </div>
+      ${originHtml}
       ${debugLine}
       ${arrowRow}
     </div>

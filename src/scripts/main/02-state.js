@@ -261,6 +261,9 @@ const DEFAULT_STATE = {
   // Phase 4
   weeklyReviews: [],
   monthlyReviews: [],
+  // 사용자 명시 2026-05-09: 회전 카드 source 4 미니 리뷰 (Haiku 3일 정리) archive.
+  // 도서관 마법·리뷰 → 리뷰 모음 화면의 '미니' 카테고리에서 노출.
+  miniReviews: [],          // [{id, content, generatedAt, source:'haiku-3day'}]
   predictionFollowups: [],
   // Phase 5
   questionHistory: [],
