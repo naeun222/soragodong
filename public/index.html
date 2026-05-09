@@ -10615,17 +10615,17 @@
 
   /* 사용자 명시 2026-05-09: 진주 라벨 hide 시도 → revert. 두 라벨 다 표시가 자연스러움. */
 
-  /* 사용자 명시 2026-05-09: 체크인 완료 시 카드 → 작은 한 줄 텍스트 (#1). */
+  /* 사용자 명시 2026-05-09: 체크인 완료 시 카드 → 작은 한 줄 텍스트 (#1). 사이즈 보강. */
   .checkin-mini-line {
-    display: flex; align-items: center; justify-content: center; gap: 4px;
-    padding: 8px 0 12px;
-    font-size: 11.5px; color: var(--text-dim); opacity: 0.7;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 14px 0 16px;
+    font-size: 13.5px; color: var(--text); opacity: 0.85;
     cursor: pointer; user-select: none;
     transition: opacity 0.15s;
   }
-  .checkin-mini-line:hover { opacity: 0.95; }
+  .checkin-mini-line:hover { opacity: 1; }
   .checkin-mini-text { font-weight: 500; }
-  .checkin-mini-arrow { font-size: 12px; opacity: 0.6; margin-left: 2px; }
+  .checkin-mini-arrow { font-size: 14px; opacity: 0.7; margin-left: 2px; }
 
   /* 사용자 명시 2026-05-09 (Phase 2): source 3 새로 본 너 */
   .rc-body-newview {
@@ -18638,6 +18638,8 @@ async function init() {
   renderPredictionFollowups();
   renderMainAction();
   renderDecisionMiniLink();
+  // 사용자 명시 2026-05-09: init 시 회전 카드 ('🌟 오늘의 너') 호출 누락 → 첫 로드 시 안 보임 fix.
+  if (typeof renderRotatingCard === 'function') renderRotatingCard();
   if (typeof renderReflectionHome === 'function') renderReflectionHome();
   renderModel();
   renderProjects();
@@ -24624,16 +24626,8 @@ function renderReviewPrompts() {
       </div>
     `;
   }
-  // 사용자 명시 2026-05-09 ultrathink: dismiss 후 다시 보기 path — 리뷰 모음 link 항상 노출 (저장된 리뷰 1+ 일 때).
-  const hasAnySaved = (state.weeklyReviews?.length || 0) + (state.monthlyReviews?.length || 0)
-    + (state.quarterlyReviews?.length || 0) + (state.annualReviews?.length || 0) > 0;
-  if (hasAnySaved) {
-    html += `
-      <div style="text-align:right; margin-top:8px; padding:0 4px;">
-        <a onclick="showScreen('archive-reviews')" style="font-size:11px; color:var(--text-soft); cursor:pointer; opacity:0.65; text-decoration:underline;">📚 지난 리뷰 모음 →</a>
-      </div>
-    `;
-  }
+  // 사용자 명시 2026-05-09: '📚 지난 리뷰 모음 →' footer link 제거 — 번잡.
+  // 진입 path 흡수: 도서관 → '🌀 마법·리뷰' 카테고리 → 리뷰 모음 (16-galpi-insights.js archive-quick-row 에서 노출).
   container.innerHTML = html;
 }
 
@@ -27309,14 +27303,18 @@ function _rcSource7Surprise() {
 // 가용 source 수집 + score 정렬 + 14일 dedupe
 // =============================================================================
 function _rcCollectAvailable() {
+  // 사용자 보고 2026-05-09: source 함수 throw 시 회전 카드 자체가 안 보이는 케이스 → 각 source 격리.
+  const safe = (fn, label) => {
+    try { return fn(); } catch (e) { console.warn('[rotating-card source]', label, e); return null; }
+  };
   const all = [
-    _rcSource1Pearl(),
-    _rcSource2Yesterday(),
-    _rcSource3NewView(),
-    _rcSource4MiniReview(),
-    _rcSource5Throwback(),
-    _rcSource6Insight(),
-    _rcSource7Surprise(),
+    safe(_rcSource1Pearl, 'pearl'),
+    safe(_rcSource2Yesterday, 'yesterday'),
+    safe(_rcSource3NewView, 'newView'),
+    safe(_rcSource4MiniReview, 'miniReview'),
+    safe(_rcSource5Throwback, 'throwback'),
+    safe(_rcSource6Insight, 'insight'),
+    safe(_rcSource7Surprise, 'surprise'),
   ];
   return all.filter(s => s && s.available);
 }
@@ -27350,44 +27348,62 @@ function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
 
-  // 튜토리얼 모드 시 진주 source 1 강제 (LNGSHOT - Vanilla Days fixed)
-  if (window._onbTutorialMode) {
-    const s = _rcSource1Pearl();
-    container.innerHTML = _rcRenderShell([s], 0);
+  // 사용자 보고 2026-05-09: 회전 카드 안 보임 fix — 전체 throw 시 fallback 으로 source 1 (진주) 보장.
+  try {
+    // 튜토리얼 모드 시 진주 source 1 강제 (LNGSHOT - Vanilla Days fixed)
+    if (window._onbTutorialMode) {
+      const s = _rcSource1Pearl();
+      container.innerHTML = _rcRenderShell([s], 0);
+      _rcAttachListeners(container);
+      return;
+    }
+
+    const sources = _rcCollectAvailable();
+    if (sources.length === 0) {
+      // empty fallback — 첫 진주 CTA 단독
+      const s = _rcSource1Pearl();
+      if (s) {
+        container.innerHTML = _rcRenderShell([s], 0);
+        _rcAttachListeners(container);
+      }
+      return;
+    }
+
+    const ranked = _rcSortByScore(sources);
+
+    // 4시간 windowing — 같은 4시간 안 같은 source + 같은 contentHash stay (spec 11-2)
+    const windowed = _rcWindowedSource();
+    let pickIdx = 0;
+    if (windowed) {
+      const idx = ranked.findIndex(r => r.src.id === windowed.id);
+      if (idx >= 0) pickIdx = idx;
+    }
+
+    const orderedSources = ranked.map(r => r.src);
+    const firstSrc = orderedSources[pickIdx];
+    if (!windowed || !firstSrc || firstSrc.id !== windowed.id) {
+      if (firstSrc) _rcSetWindow(firstSrc.id, firstSrc.contentHash);
+    }
+    if (firstSrc && firstSrc.contentHash) _rcRecordSeen(firstSrc.id, firstSrc.contentHash);
+    if (typeof saveState === 'function') saveState();
+
+    container.innerHTML = _rcRenderShell(orderedSources, pickIdx);
     _rcAttachListeners(container);
-    return;
+  } catch (e) {
+    console.error('[renderRotatingCard]', e);
+    // 최후 fallback — 진주 source 1
+    try {
+      const s = _rcSource1Pearl();
+      if (s) {
+        container.innerHTML = _rcRenderShell([s], 0);
+      } else {
+        container.innerHTML = '';
+      }
+    } catch (e2) {
+      console.error('[renderRotatingCard fallback]', e2);
+      container.innerHTML = '';
+    }
   }
-
-  const sources = _rcCollectAvailable();
-  if (sources.length === 0) {
-    // empty fallback — 첫 진주 CTA 단독
-    const s = _rcSource1Pearl();
-    container.innerHTML = _rcRenderShell([s], 0);
-    _rcAttachListeners(container);
-    return;
-  }
-
-  const ranked = _rcSortByScore(sources);
-
-  // 4시간 windowing — 같은 4시간 안 같은 source + 같은 contentHash stay (spec 11-2)
-  const windowed = _rcWindowedSource();
-  let pickIdx = 0;
-  if (windowed) {
-    const idx = ranked.findIndex(r => r.src.id === windowed.id);
-    if (idx >= 0) pickIdx = idx;
-  }
-
-  const orderedSources = ranked.map(r => r.src);
-  const firstSrc = orderedSources[pickIdx];
-  if (!windowed || !firstSrc || firstSrc.id !== windowed.id) {
-    // 새 4시간 window 시작 (또는 windowed source 가 더 이상 가용 X 케이스)
-    if (firstSrc) _rcSetWindow(firstSrc.id, firstSrc.contentHash);
-  }
-  if (firstSrc && firstSrc.contentHash) _rcRecordSeen(firstSrc.id, firstSrc.contentHash);
-  if (typeof saveState === 'function') saveState();
-
-  container.innerHTML = _rcRenderShell(orderedSources, pickIdx);
-  _rcAttachListeners(container);
 }
 
 // =============================================================================

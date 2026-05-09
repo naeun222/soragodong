@@ -158,16 +158,8 @@ function renderReviewPrompts() {
       </div>
     `;
   }
-  // 사용자 명시 2026-05-09 ultrathink: dismiss 후 다시 보기 path — 리뷰 모음 link 항상 노출 (저장된 리뷰 1+ 일 때).
-  const hasAnySaved = (state.weeklyReviews?.length || 0) + (state.monthlyReviews?.length || 0)
-    + (state.quarterlyReviews?.length || 0) + (state.annualReviews?.length || 0) > 0;
-  if (hasAnySaved) {
-    html += `
-      <div style="text-align:right; margin-top:8px; padding:0 4px;">
-        <a onclick="showScreen('archive-reviews')" style="font-size:11px; color:var(--text-soft); cursor:pointer; opacity:0.65; text-decoration:underline;">📚 지난 리뷰 모음 →</a>
-      </div>
-    `;
-  }
+  // 사용자 명시 2026-05-09: '📚 지난 리뷰 모음 →' footer link 제거 — 번잡.
+  // 진입 path 흡수: 도서관 → '🌀 마법·리뷰' 카테고리 → 리뷰 모음 (16-galpi-insights.js archive-quick-row 에서 노출).
   container.innerHTML = html;
 }
 

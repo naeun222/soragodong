@@ -193,6 +193,8 @@ async function init() {
   renderPredictionFollowups();
   renderMainAction();
   renderDecisionMiniLink();
+  // 사용자 명시 2026-05-09: init 시 회전 카드 ('🌟 오늘의 너') 호출 누락 → 첫 로드 시 안 보임 fix.
+  if (typeof renderRotatingCard === 'function') renderRotatingCard();
   if (typeof renderReflectionHome === 'function') renderReflectionHome();
   renderModel();
   renderProjects();

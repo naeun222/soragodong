@@ -777,14 +777,18 @@ function _rcSource7Surprise() {
 // 가용 source 수집 + score 정렬 + 14일 dedupe
 // =============================================================================
 function _rcCollectAvailable() {
+  // 사용자 보고 2026-05-09: source 함수 throw 시 회전 카드 자체가 안 보이는 케이스 → 각 source 격리.
+  const safe = (fn, label) => {
+    try { return fn(); } catch (e) { console.warn('[rotating-card source]', label, e); return null; }
+  };
   const all = [
-    _rcSource1Pearl(),
-    _rcSource2Yesterday(),
-    _rcSource3NewView(),
-    _rcSource4MiniReview(),
-    _rcSource5Throwback(),
-    _rcSource6Insight(),
-    _rcSource7Surprise(),
+    safe(_rcSource1Pearl, 'pearl'),
+    safe(_rcSource2Yesterday, 'yesterday'),
+    safe(_rcSource3NewView, 'newView'),
+    safe(_rcSource4MiniReview, 'miniReview'),
+    safe(_rcSource5Throwback, 'throwback'),
+    safe(_rcSource6Insight, 'insight'),
+    safe(_rcSource7Surprise, 'surprise'),
   ];
   return all.filter(s => s && s.available);
 }
@@ -818,44 +822,62 @@ function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
 
-  // 튜토리얼 모드 시 진주 source 1 강제 (LNGSHOT - Vanilla Days fixed)
-  if (window._onbTutorialMode) {
-    const s = _rcSource1Pearl();
-    container.innerHTML = _rcRenderShell([s], 0);
+  // 사용자 보고 2026-05-09: 회전 카드 안 보임 fix — 전체 throw 시 fallback 으로 source 1 (진주) 보장.
+  try {
+    // 튜토리얼 모드 시 진주 source 1 강제 (LNGSHOT - Vanilla Days fixed)
+    if (window._onbTutorialMode) {
+      const s = _rcSource1Pearl();
+      container.innerHTML = _rcRenderShell([s], 0);
+      _rcAttachListeners(container);
+      return;
+    }
+
+    const sources = _rcCollectAvailable();
+    if (sources.length === 0) {
+      // empty fallback — 첫 진주 CTA 단독
+      const s = _rcSource1Pearl();
+      if (s) {
+        container.innerHTML = _rcRenderShell([s], 0);
+        _rcAttachListeners(container);
+      }
+      return;
+    }
+
+    const ranked = _rcSortByScore(sources);
+
+    // 4시간 windowing — 같은 4시간 안 같은 source + 같은 contentHash stay (spec 11-2)
+    const windowed = _rcWindowedSource();
+    let pickIdx = 0;
+    if (windowed) {
+      const idx = ranked.findIndex(r => r.src.id === windowed.id);
+      if (idx >= 0) pickIdx = idx;
+    }
+
+    const orderedSources = ranked.map(r => r.src);
+    const firstSrc = orderedSources[pickIdx];
+    if (!windowed || !firstSrc || firstSrc.id !== windowed.id) {
+      if (firstSrc) _rcSetWindow(firstSrc.id, firstSrc.contentHash);
+    }
+    if (firstSrc && firstSrc.contentHash) _rcRecordSeen(firstSrc.id, firstSrc.contentHash);
+    if (typeof saveState === 'function') saveState();
+
+    container.innerHTML = _rcRenderShell(orderedSources, pickIdx);
     _rcAttachListeners(container);
-    return;
+  } catch (e) {
+    console.error('[renderRotatingCard]', e);
+    // 최후 fallback — 진주 source 1
+    try {
+      const s = _rcSource1Pearl();
+      if (s) {
+        container.innerHTML = _rcRenderShell([s], 0);
+      } else {
+        container.innerHTML = '';
+      }
+    } catch (e2) {
+      console.error('[renderRotatingCard fallback]', e2);
+      container.innerHTML = '';
+    }
   }
-
-  const sources = _rcCollectAvailable();
-  if (sources.length === 0) {
-    // empty fallback — 첫 진주 CTA 단독
-    const s = _rcSource1Pearl();
-    container.innerHTML = _rcRenderShell([s], 0);
-    _rcAttachListeners(container);
-    return;
-  }
-
-  const ranked = _rcSortByScore(sources);
-
-  // 4시간 windowing — 같은 4시간 안 같은 source + 같은 contentHash stay (spec 11-2)
-  const windowed = _rcWindowedSource();
-  let pickIdx = 0;
-  if (windowed) {
-    const idx = ranked.findIndex(r => r.src.id === windowed.id);
-    if (idx >= 0) pickIdx = idx;
-  }
-
-  const orderedSources = ranked.map(r => r.src);
-  const firstSrc = orderedSources[pickIdx];
-  if (!windowed || !firstSrc || firstSrc.id !== windowed.id) {
-    // 새 4시간 window 시작 (또는 windowed source 가 더 이상 가용 X 케이스)
-    if (firstSrc) _rcSetWindow(firstSrc.id, firstSrc.contentHash);
-  }
-  if (firstSrc && firstSrc.contentHash) _rcRecordSeen(firstSrc.id, firstSrc.contentHash);
-  if (typeof saveState === 'function') saveState();
-
-  container.innerHTML = _rcRenderShell(orderedSources, pickIdx);
-  _rcAttachListeners(container);
 }
 
 // =============================================================================
