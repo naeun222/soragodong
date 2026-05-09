@@ -9756,18 +9756,20 @@
     pointer-events: none; /* 항상 패스스루 — children이 클릭 처리 */
   }
   /* V3.12.x: target 있는 step은 mask 자체를 숨김 (spotlight box-shadow가 darkening 담당) */
+  /* 사용자 명시 2026-05-09: 튜토리얼 mask 전면 제거 — 어두워지는 효과 X. spotlight 의 9999px 어둠도 빼고 accent ring 만 */
   .onb-mask {
     position: fixed; inset: 0;
     background: rgba(15,14,23,0.7);
     transition: opacity 0.25s ease;
     pointer-events: auto;
-    display: none; /* 기본 숨김 */
+    display: none !important; /* 영구 숨김 (사용자 명시 2026-05-09) */
   }
-  .onb-mask.show-full { display: block; } /* target 없는 step에서만 표시 */
+  .onb-mask.show-full { display: none !important; } /* 영구 숨김 (사용자 명시 2026-05-09) */
   .onb-spotlight {
     position: fixed;
     border-radius: 16px;
-    box-shadow: 0 0 0 9999px rgba(15,14,23,0.7), 0 0 16px 4px rgba(201,169,110,0.5);
+    /* 사용자 명시 2026-05-09: 9999px 어둠 box-shadow 제거 — accent glow 만 유지 */
+    box-shadow: 0 0 16px 4px rgba(201,169,110,0.5);
     border: 2px solid var(--accent);
     pointer-events: none;
     /* 사용자 보고 2026-04-28: 0.42s → 0.26s 단축 + snappy easing */
@@ -10844,6 +10846,36 @@
     opacity: 0.78; margin-top: 6px;
     padding-top: 6px;
     border-top: 1px dashed rgba(255,255,255,0.06);
+  }
+
+  /* 사용자 요청 2026-05-09: 운세 fetch 실패 카드 — 원인 + 다시시도 버튼 */
+  .rc-horoscope-fail-reason {
+    font-size: 11px; color: var(--text-dim);
+    opacity: 0.75; margin-top: 8px;
+    padding: 6px 8px;
+    background: rgba(255,255,255,0.03);
+    border-left: 2px solid rgba(255,255,255,0.12);
+    border-radius: 4px;
+    word-break: break-word;
+    line-height: 1.45;
+  }
+  .rc-horoscope-retry {
+    margin-top: 10px;
+    background: rgba(168,157,200,0.10);
+    border: 1px solid rgba(168,157,200,0.32);
+    color: var(--accent);
+    font-size: 12px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .rc-horoscope-retry:hover {
+    background: rgba(168,157,200,0.18);
+    border-color: rgba(168,157,200,0.50);
+  }
+  .rc-horoscope-retry:active {
+    transform: scale(0.97);
   }
 
   /* 별자리 onboarding 카드 */

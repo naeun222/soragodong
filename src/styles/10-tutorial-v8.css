@@ -129,12 +129,9 @@
   z-index: 9998;
   pointer-events: none;
 }
+/* 사용자 명시 2026-05-09: 튜토리얼 mask 전면 제거 — 어두워지는 효과 X. ring 어둠 box-shadow 도 같이 제거. */
 .v8-coach-mask {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  pointer-events: auto;
-  animation: v8MaskFadeIn 250ms ease-out both;
+  display: none !important;
 }
 @keyframes v8MaskFadeIn {
   from { opacity: 0; }
@@ -145,14 +142,13 @@
   z-index: 9999;
   border-radius: 14px;
   pointer-events: none;
-  box-shadow:
-    0 0 0 4px rgba(212, 168, 90, 0.55),
-    0 0 0 9999px rgba(0, 0, 0, 0.55);
+  /* 사용자 명시 2026-05-09: 9999px 어둠 제거 — accent ring 만 유지 (pulse 도 어둠 X) */
+  box-shadow: 0 0 0 4px rgba(212, 168, 90, 0.55);
   animation: v8RingPulse 1800ms ease-in-out infinite;
 }
 @keyframes v8RingPulse {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(212, 168, 90, 0.55), 0 0 0 9999px rgba(0, 0, 0, 0.55); }
-  50%      { box-shadow: 0 0 0 7px rgba(212, 168, 90, 0.85), 0 0 0 9999px rgba(0, 0, 0, 0.55); }
+  0%, 100% { box-shadow: 0 0 0 4px rgba(212, 168, 90, 0.55); }
+  50%      { box-shadow: 0 0 0 7px rgba(212, 168, 90, 0.85); }
 }
 .v8-coach-bubble {
   position: fixed;

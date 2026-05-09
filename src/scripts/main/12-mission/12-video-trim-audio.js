@@ -11,7 +11,7 @@ function pickVideoTrimRange(file, maxSec) {
       <div class="vtm-card">
         <div class="vtm-title">영상 자르기 (최대 ${maxSec}초)</div>
         <div class="vtm-sub">손잡이 끌어서 ${maxSec}초 구간 골라</div>
-        <div class="vtm-video-wrap"><video class="vtm-video" muted playsinline></video></div>
+        <div class="vtm-video-wrap"><video class="vtm-video" controls playsinline preload="auto"></video></div>
         <div class="vtm-strip"><div class="vtm-strip-loading">미리보기 만드는 중...</div></div>
         <div class="vtm-track">
           <div class="vtm-selection"></div>
@@ -129,14 +129,28 @@ function pickVideoTrimRange(file, maxSec) {
 
       render();
       // thumbnail strip 생성 (8 frame, async)
+      // 사용자 보고 2026-05-09: trim modal 의 video 미리보기가 첫 frame paint 안 되어 검은 화면.
+      // → thumbnail 첫 컷을 poster 로 stash 해서 video frame 그려지기 전에도 사용자에게 보임.
+      // + video element 에 controls 추가 (위 innerHTML) — 사용자가 직접 재생/일시정지 + 소리 컨트롤.
       try {
         const thumbs = await _generateVideoThumbnails(v, 8);
         strip.innerHTML = thumbs.map(t => t ? `<img src="${t}" />` : '<div></div>').join('');
+        const firstThumb = thumbs.find(t => t);
+        if (firstThumb) {
+          try { v.poster = firstThumb; } catch(_) {}
+        }
       } catch(_) {
         strip.innerHTML = '<div class="vtm-strip-loading">미리보기 없음</div>';
       }
-      // preview seek = start
-      try { v.currentTime = 0; } catch(_) {}
+      // preview seek = start (frame paint 강제 — 일부 브라우저에서 currentTime=0 만 으론 첫 frame 안 그림)
+      try {
+        v.currentTime = 0.05;
+        await new Promise(res => {
+          const onSeeked = () => { v.removeEventListener('seeked', onSeeked); res(); };
+          v.addEventListener('seeked', onSeeked);
+          setTimeout(() => { v.removeEventListener('seeked', onSeeked); res(); }, 600);
+        });
+      } catch(_) {}
 
       overlay.querySelector('.vtm-btn-ok').onclick = () => {
         cleanup({ startTime: _vtmState.start, endTime: _vtmState.end });

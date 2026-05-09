@@ -426,7 +426,8 @@ async function addPearl() {
   if (note === null) return;
 
   // V4-fix: 음식/장소/순간은 사진 첨부 옵션 (음악 앨범아트 풍 — 정사각 600px)
-  // V4: 동영상 옵션 추가 (5초 / 720p / WebCodecs 압축) — 썸네일 사진 패턴 동일.
+  // V4: 동영상 옵션 추가 (3초 / 720p / WebCodecs 압축) — 썸네일 사진 패턴 동일.
+  // 사용자 명시 2026-05-09: 5초 → 3초로 단축 + 라벨 괄호 표기 제거.
   let photo = null;
   let videoData = null;
   let videoThumb = null;
@@ -437,7 +438,7 @@ async function addPearl() {
       message: '사진/동영상 보탤까? 글만도 OK.',
       options: [
         { label: '📷 사진', value: 'photo' },
-        { label: '📹 동영상 (10초)', value: 'video' },
+        { label: '📹 동영상', value: 'video' },
         { label: '글만 보관', value: 'none' }
       ]
     });
@@ -464,7 +465,7 @@ async function addPearl() {
         try {
           const file = await pickVideoFile();
           if (file) {
-            // 입력 가드: 100MB / 60초 이하 (압축 후 5초로 자름)
+            // 입력 가드: 100MB / 60초 이하 (압축 후 3초로 자름)
             if (file.size > 100_000_000) {
               showToast(`동영상 너무 큼 (${(file.size/1e6).toFixed(0)}MB) — 100MB 이하`);
             } else {
@@ -472,14 +473,14 @@ async function addPearl() {
               const dur = await _getVideoDuration(file);
               hideFullscreenLoader();
               // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): dur Infinity (live HLS / 일부 .mov) / NaN / 0 케이스 가드.
-              // 그대로 dur > 5 분기 들어가면 trim modal 안에서 또 cleanup 되어 "자르기 취소됨" 잘못 안내.
+              // 그대로 dur > 3 분기 들어가면 trim modal 안에서 또 cleanup 되어 "자르기 취소됨" 잘못 안내.
               if (dur < 0 || !Number.isFinite(dur) || dur <= 0.05) {
                 showToast('동영상 길이 읽기 실패 — 다른 영상 시도');
               } else {
-                // 사용자 명시 2026-05-03: 5초 초과 = trim modal 띄워서 사용자가 구간 선택. 5초 이하 = modal X.
+                // 사용자 명시 2026-05-09: 3초 초과 = trim modal 띄워서 사용자가 구간 선택. 3초 이하 = modal X.
                 let trimStart = 0;
-                if (dur > 5) {
-                  const range = await pickVideoTrimRange(file, 5);
+                if (dur > 3) {
+                  const range = await pickVideoTrimRange(file, 3);
                   if (!range) {
                     // 사용자 cancel
                     showToast('자르기 취소됨');
@@ -487,10 +488,10 @@ async function addPearl() {
                   }
                   trimStart = range.startTime;
                 }
-                showFullscreenLoader('동영상 압축 중... 📹 (5-10초 걸려)');
+                showFullscreenLoader('동영상 압축 중... 📹');
                 try {
                   const result = await compressVideoWebCodecs(file, {
-                    maxSec: 5, targetHeight: 720, bitrate: 1_500_000, fps: 30,
+                    maxSec: 3, targetHeight: 720, bitrate: 1_500_000, fps: 30,
                     startTime: trimStart
                   });
                   const dataUrl = result.videoUrl;

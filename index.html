@@ -9869,18 +9869,20 @@
     pointer-events: none; /* 항상 패스스루 — children이 클릭 처리 */
   }
   /* V3.12.x: target 있는 step은 mask 자체를 숨김 (spotlight box-shadow가 darkening 담당) */
+  /* 사용자 명시 2026-05-09: 튜토리얼 mask 전면 제거 — 어두워지는 효과 X. spotlight 의 9999px 어둠도 빼고 accent ring 만 */
   .onb-mask {
     position: fixed; inset: 0;
     background: rgba(15,14,23,0.7);
     transition: opacity 0.25s ease;
     pointer-events: auto;
-    display: none; /* 기본 숨김 */
+    display: none !important; /* 영구 숨김 (사용자 명시 2026-05-09) */
   }
-  .onb-mask.show-full { display: block; } /* target 없는 step에서만 표시 */
+  .onb-mask.show-full { display: none !important; } /* 영구 숨김 (사용자 명시 2026-05-09) */
   .onb-spotlight {
     position: fixed;
     border-radius: 16px;
-    box-shadow: 0 0 0 9999px rgba(15,14,23,0.7), 0 0 16px 4px rgba(201,169,110,0.5);
+    /* 사용자 명시 2026-05-09: 9999px 어둠 box-shadow 제거 — accent glow 만 유지 */
+    box-shadow: 0 0 16px 4px rgba(201,169,110,0.5);
     border: 2px solid var(--accent);
     pointer-events: none;
     /* 사용자 보고 2026-04-28: 0.42s → 0.26s 단축 + snappy easing */
@@ -10959,6 +10961,36 @@
     border-top: 1px dashed rgba(255,255,255,0.06);
   }
 
+  /* 사용자 요청 2026-05-09: 운세 fetch 실패 카드 — 원인 + 다시시도 버튼 */
+  .rc-horoscope-fail-reason {
+    font-size: 11px; color: var(--text-dim);
+    opacity: 0.75; margin-top: 8px;
+    padding: 6px 8px;
+    background: rgba(255,255,255,0.03);
+    border-left: 2px solid rgba(255,255,255,0.12);
+    border-radius: 4px;
+    word-break: break-word;
+    line-height: 1.45;
+  }
+  .rc-horoscope-retry {
+    margin-top: 10px;
+    background: rgba(168,157,200,0.10);
+    border: 1px solid rgba(168,157,200,0.32);
+    color: var(--accent);
+    font-size: 12px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .rc-horoscope-retry:hover {
+    background: rgba(168,157,200,0.18);
+    border-color: rgba(168,157,200,0.50);
+  }
+  .rc-horoscope-retry:active {
+    transform: scale(0.97);
+  }
+
   /* 별자리 onboarding 카드 */
   .rc-body-zodiac-onboard {
     padding: 4px 2px 8px; text-align: center;
@@ -11222,12 +11254,9 @@
   z-index: 9998;
   pointer-events: none;
 }
+/* 사용자 명시 2026-05-09: 튜토리얼 mask 전면 제거 — 어두워지는 효과 X. ring 어둠 box-shadow 도 같이 제거. */
 .v8-coach-mask {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  pointer-events: auto;
-  animation: v8MaskFadeIn 250ms ease-out both;
+  display: none !important;
 }
 @keyframes v8MaskFadeIn {
   from { opacity: 0; }
@@ -11238,14 +11267,13 @@
   z-index: 9999;
   border-radius: 14px;
   pointer-events: none;
-  box-shadow:
-    0 0 0 4px rgba(212, 168, 90, 0.55),
-    0 0 0 9999px rgba(0, 0, 0, 0.55);
+  /* 사용자 명시 2026-05-09: 9999px 어둠 제거 — accent ring 만 유지 (pulse 도 어둠 X) */
+  box-shadow: 0 0 0 4px rgba(212, 168, 90, 0.55);
   animation: v8RingPulse 1800ms ease-in-out infinite;
 }
 @keyframes v8RingPulse {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(212, 168, 90, 0.55), 0 0 0 9999px rgba(0, 0, 0, 0.55); }
-  50%      { box-shadow: 0 0 0 7px rgba(212, 168, 90, 0.85), 0 0 0 9999px rgba(0, 0, 0, 0.55); }
+  0%, 100% { box-shadow: 0 0 0 4px rgba(212, 168, 90, 0.55); }
+  50%      { box-shadow: 0 0 0 7px rgba(212, 168, 90, 0.85); }
 }
 .v8-coach-bubble {
   position: fixed;
@@ -28603,17 +28631,21 @@ ${rawEnglish}
 
 // =============================================================================
 // 사용자 보고 2026-05-09: fetch 실패 시 같은 날 재시도 차단 + 사용자 시각 실패 카드
+// 사용자 요청 2026-05-09 (추가): 실패 카드 = 원인 표시 + 다시시도 버튼 (수동 재시도 OK)
 // =============================================================================
 let _rcHoroscopeFetchFailedDay = null; // 'YYYY-MM-DD' = 그 날 fetch 실패 (다음 4AM cutoff 까지 차단)
+let _rcHoroscopeFetchFailedReason = null; // 마지막 실패 이유 (e.message)
 
 async function _rcStartHoroscopeFetch(zodiac) {
   if (_rcHoroscopeFetchInflight) return;
   const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : null;
-  // 같은 날 이미 실패 = 재시도 X (다음 cutoff 까지)
+  // 같은 날 이미 실패 = 재시도 X (다음 cutoff 까지). retryHoroscopeFetch 안에서 명시적 reset 됨.
   if (todayK && _rcHoroscopeFetchFailedDay === todayK) return;
   _rcHoroscopeFetchInflight = true;
   try {
-    if (typeof _canAI !== 'function' || !_canAI()) return;
+    if (typeof _canAI !== 'function' || !_canAI()) {
+      throw new Error('AI 호출 권한 없음 (로그인 필요)');
+    }
     const raw = await _rcFetchHoroscopeApi(zodiac);
     if (!raw) throw new Error('horoscope API 빈 응답');
     const friendly = await _rcCallHoroscopeHaiku(raw, zodiac);
@@ -28626,13 +28658,28 @@ async function _rcStartHoroscopeFetch(zodiac) {
     // sessionOrder 안 horoscope source 갱신 (로딩 카드 → 실제 운세 카드)
     _rcUpdateHoroscopeInSession();
   } catch (e) {
-    console.warn('[horoscope] fetch 실패:', e && e.message);
+    const reason = (e && e.message) || '알 수 없는 오류';
+    console.warn('[horoscope] fetch 실패:', reason);
     if (todayK) _rcHoroscopeFetchFailedDay = todayK;
+    _rcHoroscopeFetchFailedReason = reason;
     // sessionOrder 안 horoscope source = 실패 카드로 교체
     _rcUpdateHoroscopeInSession();
   } finally {
     _rcHoroscopeFetchInflight = false;
   }
+}
+
+// 사용자 요청 2026-05-09: 실패 카드의 다시시도 버튼 핸들러.
+// failedDay flag 리셋 → 로딩 카드로 교체 → fetch 재시작.
+function retryHoroscopeFetch() {
+  const z = state.preferences && state.preferences.userZodiac;
+  if (!z) return;
+  if (_rcHoroscopeFetchInflight) return;
+  _rcHoroscopeFetchFailedDay = null;
+  _rcHoroscopeFetchFailedReason = null;
+  // 즉시 로딩 카드 표시 (sessionOrder 안 source 갱신)
+  _rcUpdateHoroscopeInSession();
+  _rcStartHoroscopeFetch(z);
 }
 
 function _rcUpdateHoroscopeInSession() {
@@ -28651,6 +28698,7 @@ function _rcUpdateHoroscopeInSession() {
 function _rcRenderHoroscopeFailCard(zodiac) {
   const z = _rcZodiacInfo(zodiac);
   const zLabel = z ? `${z.symbol} ${escapeHtml(z.label)}` : '';
+  const reason = _rcHoroscopeFetchFailedReason || '알 수 없는 오류';
   return {
     id: 'horoscope',
     available: true,
@@ -28659,7 +28707,9 @@ function _rcRenderHoroscopeFailCard(zodiac) {
       <div class="rc-body-horoscope">
         <div class="rc-body-headline">고동의 운세</div>
         ${zLabel ? `<div class="rc-horoscope-zodiac">${zLabel}</div>` : ''}
-        <div class="rc-horoscope-text" style="opacity:0.65;">지금 별자리 못 봤어. 내일 다시 ✦</div>
+        <div class="rc-horoscope-text" style="opacity:0.65;">별자리 못 봤어 ✦</div>
+        <div class="rc-horoscope-fail-reason">${escapeHtml(reason)}</div>
+        <button class="rc-horoscope-retry" type="button" onclick="event.stopPropagation(); retryHoroscopeFetch()">다시 시도</button>
       </div>
     `,
     onTapClick: '',
@@ -31391,7 +31441,7 @@ function pickVideoTrimRange(file, maxSec) {
       <div class="vtm-card">
         <div class="vtm-title">영상 자르기 (최대 ${maxSec}초)</div>
         <div class="vtm-sub">손잡이 끌어서 ${maxSec}초 구간 골라</div>
-        <div class="vtm-video-wrap"><video class="vtm-video" muted playsinline></video></div>
+        <div class="vtm-video-wrap"><video class="vtm-video" controls playsinline preload="auto"></video></div>
         <div class="vtm-strip"><div class="vtm-strip-loading">미리보기 만드는 중...</div></div>
         <div class="vtm-track">
           <div class="vtm-selection"></div>
@@ -31509,14 +31559,28 @@ function pickVideoTrimRange(file, maxSec) {
 
       render();
       // thumbnail strip 생성 (8 frame, async)
+      // 사용자 보고 2026-05-09: trim modal 의 video 미리보기가 첫 frame paint 안 되어 검은 화면.
+      // → thumbnail 첫 컷을 poster 로 stash 해서 video frame 그려지기 전에도 사용자에게 보임.
+      // + video element 에 controls 추가 (위 innerHTML) — 사용자가 직접 재생/일시정지 + 소리 컨트롤.
       try {
         const thumbs = await _generateVideoThumbnails(v, 8);
         strip.innerHTML = thumbs.map(t => t ? `<img src="${t}" />` : '<div></div>').join('');
+        const firstThumb = thumbs.find(t => t);
+        if (firstThumb) {
+          try { v.poster = firstThumb; } catch(_) {}
+        }
       } catch(_) {
         strip.innerHTML = '<div class="vtm-strip-loading">미리보기 없음</div>';
       }
-      // preview seek = start
-      try { v.currentTime = 0; } catch(_) {}
+      // preview seek = start (frame paint 강제 — 일부 브라우저에서 currentTime=0 만 으론 첫 frame 안 그림)
+      try {
+        v.currentTime = 0.05;
+        await new Promise(res => {
+          const onSeeked = () => { v.removeEventListener('seeked', onSeeked); res(); };
+          v.addEventListener('seeked', onSeeked);
+          setTimeout(() => { v.removeEventListener('seeked', onSeeked); res(); }, 600);
+        });
+      } catch(_) {}
 
       overlay.querySelector('.vtm-btn-ok').onclick = () => {
         cleanup({ startTime: _vtmState.start, endTime: _vtmState.end });
@@ -37738,12 +37802,80 @@ function detectPearlSignal(text) {
   return PEARL_SIGNAL_REGEX.test(text);
 }
 
+// V4 (사용자 요청 2026-05-09): 진주 한 줄 — AI 정리 선택지 헬퍼.
+// summarizeForArchive (깨달음/지혜 추출) 와 톤 다름 — 진주는 회상의 한 줄.
+// 같은 endpoint 'archive_summary' 재사용 (백엔드 chat-style 가드 통과).
+async function summarizeForPearl(messageContent) {
+  if (!_canAI()) return null;
+  if (!messageContent || typeof messageContent !== 'string') return null;
+  try {
+    const resp = await callAnthropic({
+      _endpoint: 'archive_summary',
+      model: 'claude-haiku-4-5',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: `사용자가 행복했던/좋았던 순간을 진주(보석함)에 보관하려 해. 아래 메시지를 한 줄로 다듬어 — 나중에 다시 봐도 그 기분이 떠오르게.
+
+[규칙]
+- 한 줄, 20-60자
+- 회상 톤 (그때 어떤 일이었고 어떤 느낌이었는지)
+- 마크다운/JSON/따옴표/이모지 X
+- 격언·조언·교훈 X
+- "~좋았다 / ~행복했다 / ~따뜻했다" 같은 자연스러운 문장 OK
+- 명령조 / 일반 서술 ("나는 ~다") X
+
+[좋은 예]
+한강에서 김치찌개 먹은 그날 바람이 살랑했음
+엄마랑 통화하다 웃음이 터져서 30분을 더 떠들었음
+새벽에 비 오는 소리 들으며 마신 따뜻한 차
+
+[메시지]
+${messageContent.slice(0, 1500)}
+
+한 줄만 출력.` }]
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    let raw = (data?.content?.[0]?.text || '').trim();
+    raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+    raw = raw.replace(/\*\*/g, '').replace(/^#+\s*/gm, '');
+    raw = raw.split('\n').map(l => l.trim()).filter(Boolean)[0] || '';
+    raw = raw.replace(/^["']|["']$/g, '').trim();
+    if (!raw) return null;
+    return raw.slice(0, 200);
+  } catch (e) {
+    console.warn('[summarizeForPearl] fail:', e);
+    return null;
+  }
+}
+
 async function saveMsgAsPearl(idx) {
   const msg = state.chatMessages[idx];
   if (!msg || msg.pearlSaved) return;
 
-  // 사용자 메시지 텍스트 prefill로 진주 입력 모달
-  const prefilled = (msg.content || '').slice(0, 200);
+  // V4 (사용자 요청 2026-05-09): 진주 한 줄 정리 방식 선택 — 직접 쓰기 vs AI 정리.
+  // AI 사용 가능 (_canAI) 시에만 분기 노출, 아니면 옛 흐름 (메시지 prefill 직접 다듬기) 그대로.
+  let prefilled = (msg.content || '').slice(0, 200);
+  if (_canAI()) {
+    const mode = await showOptionsModal({
+      title: '🔮 진주 한 줄, 어떻게 다듬을래?',
+      message: '한 줄 정리 방법 골라.',
+      options: [
+        { label: '✏️ 내가 직접 쓸래', value: 'manual' },
+        { label: '✨ AI 가 정리해줘', value: 'ai' }
+      ]
+    });
+    if (!mode) return;
+    if (mode === 'ai') {
+      showToast('✨ 한 줄 정리 중…');
+      const aiSummary = await summarizeForPearl(msg.content);
+      if (aiSummary) {
+        prefilled = aiSummary;
+      } else {
+        showToast('AI 정리 실패 — 직접 다듬어볼까');
+      }
+    }
+  }
+
   const content = await showInputModal({
     title: '🔮 진주에 보관',
     message: '이 기억을 한 줄로 다듬어 — 나중에 봐도 기분 좋아질 수 있게.',
@@ -50564,7 +50696,8 @@ async function addPearl() {
   if (note === null) return;
 
   // V4-fix: 음식/장소/순간은 사진 첨부 옵션 (음악 앨범아트 풍 — 정사각 600px)
-  // V4: 동영상 옵션 추가 (5초 / 720p / WebCodecs 압축) — 썸네일 사진 패턴 동일.
+  // V4: 동영상 옵션 추가 (3초 / 720p / WebCodecs 압축) — 썸네일 사진 패턴 동일.
+  // 사용자 명시 2026-05-09: 5초 → 3초로 단축 + 라벨 괄호 표기 제거.
   let photo = null;
   let videoData = null;
   let videoThumb = null;
@@ -50575,7 +50708,7 @@ async function addPearl() {
       message: '사진/동영상 보탤까? 글만도 OK.',
       options: [
         { label: '📷 사진', value: 'photo' },
-        { label: '📹 동영상 (10초)', value: 'video' },
+        { label: '📹 동영상', value: 'video' },
         { label: '글만 보관', value: 'none' }
       ]
     });
@@ -50602,7 +50735,7 @@ async function addPearl() {
         try {
           const file = await pickVideoFile();
           if (file) {
-            // 입력 가드: 100MB / 60초 이하 (압축 후 5초로 자름)
+            // 입력 가드: 100MB / 60초 이하 (압축 후 3초로 자름)
             if (file.size > 100_000_000) {
               showToast(`동영상 너무 큼 (${(file.size/1e6).toFixed(0)}MB) — 100MB 이하`);
             } else {
@@ -50610,14 +50743,14 @@ async function addPearl() {
               const dur = await _getVideoDuration(file);
               hideFullscreenLoader();
               // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): dur Infinity (live HLS / 일부 .mov) / NaN / 0 케이스 가드.
-              // 그대로 dur > 5 분기 들어가면 trim modal 안에서 또 cleanup 되어 "자르기 취소됨" 잘못 안내.
+              // 그대로 dur > 3 분기 들어가면 trim modal 안에서 또 cleanup 되어 "자르기 취소됨" 잘못 안내.
               if (dur < 0 || !Number.isFinite(dur) || dur <= 0.05) {
                 showToast('동영상 길이 읽기 실패 — 다른 영상 시도');
               } else {
-                // 사용자 명시 2026-05-03: 5초 초과 = trim modal 띄워서 사용자가 구간 선택. 5초 이하 = modal X.
+                // 사용자 명시 2026-05-09: 3초 초과 = trim modal 띄워서 사용자가 구간 선택. 3초 이하 = modal X.
                 let trimStart = 0;
-                if (dur > 5) {
-                  const range = await pickVideoTrimRange(file, 5);
+                if (dur > 3) {
+                  const range = await pickVideoTrimRange(file, 3);
                   if (!range) {
                     // 사용자 cancel
                     showToast('자르기 취소됨');
@@ -50625,10 +50758,10 @@ async function addPearl() {
                   }
                   trimStart = range.startTime;
                 }
-                showFullscreenLoader('동영상 압축 중... 📹 (5-10초 걸려)');
+                showFullscreenLoader('동영상 압축 중... 📹');
                 try {
                   const result = await compressVideoWebCodecs(file, {
-                    maxSec: 5, targetHeight: 720, bitrate: 1_500_000, fps: 30,
+                    maxSec: 3, targetHeight: 720, bitrate: 1_500_000, fps: 30,
                     startTime: trimStart
                   });
                   const dataUrl = result.videoUrl;

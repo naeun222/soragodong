@@ -163,17 +163,21 @@ ${rawEnglish}
 
 // =============================================================================
 // 사용자 보고 2026-05-09: fetch 실패 시 같은 날 재시도 차단 + 사용자 시각 실패 카드
+// 사용자 요청 2026-05-09 (추가): 실패 카드 = 원인 표시 + 다시시도 버튼 (수동 재시도 OK)
 // =============================================================================
 let _rcHoroscopeFetchFailedDay = null; // 'YYYY-MM-DD' = 그 날 fetch 실패 (다음 4AM cutoff 까지 차단)
+let _rcHoroscopeFetchFailedReason = null; // 마지막 실패 이유 (e.message)
 
 async function _rcStartHoroscopeFetch(zodiac) {
   if (_rcHoroscopeFetchInflight) return;
   const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : null;
-  // 같은 날 이미 실패 = 재시도 X (다음 cutoff 까지)
+  // 같은 날 이미 실패 = 재시도 X (다음 cutoff 까지). retryHoroscopeFetch 안에서 명시적 reset 됨.
   if (todayK && _rcHoroscopeFetchFailedDay === todayK) return;
   _rcHoroscopeFetchInflight = true;
   try {
-    if (typeof _canAI !== 'function' || !_canAI()) return;
+    if (typeof _canAI !== 'function' || !_canAI()) {
+      throw new Error('AI 호출 권한 없음 (로그인 필요)');
+    }
     const raw = await _rcFetchHoroscopeApi(zodiac);
     if (!raw) throw new Error('horoscope API 빈 응답');
     const friendly = await _rcCallHoroscopeHaiku(raw, zodiac);
@@ -186,13 +190,28 @@ async function _rcStartHoroscopeFetch(zodiac) {
     // sessionOrder 안 horoscope source 갱신 (로딩 카드 → 실제 운세 카드)
     _rcUpdateHoroscopeInSession();
   } catch (e) {
-    console.warn('[horoscope] fetch 실패:', e && e.message);
+    const reason = (e && e.message) || '알 수 없는 오류';
+    console.warn('[horoscope] fetch 실패:', reason);
     if (todayK) _rcHoroscopeFetchFailedDay = todayK;
+    _rcHoroscopeFetchFailedReason = reason;
     // sessionOrder 안 horoscope source = 실패 카드로 교체
     _rcUpdateHoroscopeInSession();
   } finally {
     _rcHoroscopeFetchInflight = false;
   }
+}
+
+// 사용자 요청 2026-05-09: 실패 카드의 다시시도 버튼 핸들러.
+// failedDay flag 리셋 → 로딩 카드로 교체 → fetch 재시작.
+function retryHoroscopeFetch() {
+  const z = state.preferences && state.preferences.userZodiac;
+  if (!z) return;
+  if (_rcHoroscopeFetchInflight) return;
+  _rcHoroscopeFetchFailedDay = null;
+  _rcHoroscopeFetchFailedReason = null;
+  // 즉시 로딩 카드 표시 (sessionOrder 안 source 갱신)
+  _rcUpdateHoroscopeInSession();
+  _rcStartHoroscopeFetch(z);
 }
 
 function _rcUpdateHoroscopeInSession() {
@@ -211,6 +230,7 @@ function _rcUpdateHoroscopeInSession() {
 function _rcRenderHoroscopeFailCard(zodiac) {
   const z = _rcZodiacInfo(zodiac);
   const zLabel = z ? `${z.symbol} ${escapeHtml(z.label)}` : '';
+  const reason = _rcHoroscopeFetchFailedReason || '알 수 없는 오류';
   return {
     id: 'horoscope',
     available: true,
@@ -219,7 +239,9 @@ function _rcRenderHoroscopeFailCard(zodiac) {
       <div class="rc-body-horoscope">
         <div class="rc-body-headline">고동의 운세</div>
         ${zLabel ? `<div class="rc-horoscope-zodiac">${zLabel}</div>` : ''}
-        <div class="rc-horoscope-text" style="opacity:0.65;">지금 별자리 못 봤어. 내일 다시 ✦</div>
+        <div class="rc-horoscope-text" style="opacity:0.65;">별자리 못 봤어 ✦</div>
+        <div class="rc-horoscope-fail-reason">${escapeHtml(reason)}</div>
+        <button class="rc-horoscope-retry" type="button" onclick="event.stopPropagation(); retryHoroscopeFetch()">다시 시도</button>
       </div>
     `,
     onTapClick: '',
