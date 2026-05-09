@@ -10764,6 +10764,145 @@
   /* ============================================================ */
   /* Source 4 — Quiz */
   /* ============================================================ */
+  /* ============================================================ */
+  /* Source 6 — 상상 시뮬 (사용자 명시 2026-05-09) */
+  /* ============================================================ */
+  .rc-body-simulation { padding: 4px 2px 6px; }
+  .rc-sim-sub {
+    font-size: 11.5px; color: var(--text-soft); opacity: 0.78;
+    margin: 2px 0 10px;
+  }
+  .rc-sim-mode-row {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-top: 8px;
+  }
+  .rc-sim-mode-btn {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 12px 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    color: var(--text);
+    font-family: inherit;
+  }
+  .rc-sim-mode-btn:hover {
+    background: rgba(168,157,200,0.08);
+    border-color: rgba(168,157,200,0.32);
+  }
+  .rc-sim-mode-btn.is-disabled {
+    opacity: 0.45; cursor: not-allowed;
+  }
+  .rc-sim-mode-btn.is-disabled:hover {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.08);
+  }
+  .rc-sim-mode-emoji { font-size: 18px; margin-bottom: 4px; }
+  .rc-sim-mode-title { font-size: 13.5px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .rc-sim-mode-desc { font-size: 11px; color: var(--text-soft); opacity: 0.78; line-height: 1.4; }
+  .rc-sim-loading {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14px; line-height: 1.6;
+    color: var(--text-soft); opacity: 0.78;
+    text-align: center;
+    padding: 28px 12px 32px;
+  }
+  .rc-sim-scenario {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14px; line-height: 1.7;
+    color: var(--text); margin: 6px 0 12px;
+    padding: 10px 12px;
+    background: rgba(168,157,200,0.06);
+    border-left: 2px solid rgba(168,157,200,0.32);
+    border-radius: 6px;
+    white-space: pre-wrap;
+  }
+  .rc-sim-prompt-label {
+    font-size: 12px; color: var(--text-dim); opacity: 0.85;
+    margin: 8px 0 6px;
+  }
+  .rc-sim-textarea {
+    width: 100%; box-sizing: border-box;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 10px 12px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 60px;
+  }
+  .rc-sim-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(255,255,255,0.06);
+  }
+  .rc-sim-block {
+    margin: 8px 0;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.025);
+    border-radius: 6px;
+  }
+  .rc-sim-block-godong {
+    background: rgba(212,167,106,0.06);
+    border-left: 2px solid rgba(212,167,106,0.45);
+  }
+  .rc-sim-block-label {
+    font-size: 10.5px; color: var(--text-dim);
+    opacity: 0.75; letter-spacing: 0.04em;
+    margin-bottom: 4px; text-transform: uppercase;
+  }
+  .rc-sim-block-text {
+    font-size: 13px; color: var(--text);
+    line-height: 1.55; white-space: pre-wrap;
+  }
+  .rc-sim-actions {
+    display: flex; gap: 6px; margin-top: 10px;
+  }
+  .rc-sim-btn {
+    flex: 1; padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12.5px; font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.08s;
+  }
+  .rc-sim-btn:active { transform: scale(0.97); }
+  .rc-sim-btn-primary {
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    color: #fff; font-weight: 600;
+  }
+  .rc-sim-btn-secondary {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text-soft);
+  }
+  .rc-sim-btn-correct {
+    background: rgba(120,180,140,0.15);
+    border: 1px solid rgba(120,180,140,0.45);
+    color: rgba(150,210,170,1);
+    font-weight: 600;
+  }
+  .rc-sim-btn-wrong {
+    background: rgba(200,130,130,0.10);
+    border: 1px solid rgba(200,130,130,0.32);
+    color: rgba(220,160,160,1);
+  }
+  .rc-sim-done-verdict {
+    font-size: 18px; text-align: center;
+    margin: 8px 0; font-weight: 600;
+    color: var(--accent);
+  }
+  .rc-sim-done-text {
+    font-family: 'Gowun Batang', serif;
+    font-size: 13.5px; line-height: 1.6;
+    color: var(--text-soft); text-align: center;
+    margin: 6px 0;
+  }
+
   .rc-body-quiz { padding: 4px 2px 6px; }
   /* 사용자 명시 2026-05-09: Quiz 의문문 polish 진행 중 표시 — Haiku batch fetch 직후 잠깐 노출 */
   .rc-quiz-polishing {
