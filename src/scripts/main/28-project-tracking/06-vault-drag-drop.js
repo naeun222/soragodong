@@ -142,10 +142,14 @@ async function deleteVaultItem(itemId) {
 }
 
 // V3.13.x: 서랍장 → 오늘 할 일 목록으로 (체크박스 작은 항목)
+// 사용자 보고 2026-05-09 ultrathink: 옛 date drawer task (며칠 전 brain_dump) 를 promote 시
+// '오늘 할 일' 필터 (date===todayKey 요구) 와 '서랍장' 필터 (!isToday 요구) 둘 다에서 빠져 사라지는 버그.
+// fix: promote = "오늘로 가져온다" 의미 → date 도 today 로 갱신.
 function promoteToToday(taskId) {
   const task = (state.tasks || []).find(t => t.id === taskId);
   if (!task) return;
   task.isToday = true;
+  task.date = todayKey();
   saveState();
   if (typeof renderExecute === 'function') renderExecute();
   showToast('📋 오늘 할 일로');

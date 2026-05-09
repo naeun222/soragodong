@@ -83,6 +83,22 @@ function renderExecute() {
   liquidFlow();
 
   const todayKeyVal = todayKey();
+
+  // 사용자 보고 2026-05-09 ultrathink: 옛 promoteToToday (date 갱신 안 한 옛 버그) 로 잃어버린 task 자동 복구.
+  // 조건: drawer slot + isToday=true + 옛 date + 미완 → date 를 today 로 갱신.
+  // 옛 promote 한 task = 오늘 할 일 필터 (date===today 요구) 와 서랍장 필터 (!isToday) 양쪽에서 빠져 화면 X.
+  // 저장은 됐으니 한 번 sweep 하면 다음 render 부터 정상 표시. 정상화 후 noop.
+  {
+    let _resaved = false;
+    (state.tasks || []).forEach(t => {
+      if (t.slot === 'drawer' && t.isToday && t.date && t.date !== todayKeyVal && t.status !== 'done') {
+        t.date = todayKeyVal;
+        _resaved = true;
+      }
+    });
+    if (_resaved) { try { saveState(); } catch {} }
+  }
+
   const todayTasks = (state.tasks || []).filter(t => t.date === todayKeyVal);
   const now3 = todayTasks.filter(t => t.slot === 'now3' && t.status !== 'done');
   // 사용자 보고 2026-05-08: '오늘 클리어' = now3 done 만 (오늘 할 일 done 은 그 섹션 안에서 strike-through 로 유지 — 중복 방지).
