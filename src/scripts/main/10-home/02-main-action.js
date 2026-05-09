@@ -79,11 +79,12 @@ function renderMainAction() {
 
   let cardHtml;
   if (checkinDoneToday) {
-    // 사용자 명시 2026-05-09: 카드 X — 작은 한 줄 텍스트만 (예전 형태 복원).
+    // 사용자 명시 2026-05-09: 한 줄 미니 + 보기/수정 명시 카피.
     cardHtml = `
       <div class="checkin-mini-line" onclick="enterCheckin()">
-        <span class="checkin-mini-text">오늘 기록 완료</span>
-        <span class="checkin-mini-arrow">›</span>
+        <span class="checkin-mini-check">✓</span>
+        <span class="checkin-mini-text">오늘 체크인 보기/수정</span>
+        <span class="checkin-mini-arrow">→</span>
       </div>
     `;
   } else {
