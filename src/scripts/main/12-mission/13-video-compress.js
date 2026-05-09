@@ -326,10 +326,14 @@ async function compressVideoWebCodecs(file, opts = {}) {
     if (audioBuffer) {
       try {
         let audioErr = null;
+        // 사용자 보고 2026-05-09: audio 가 chunk 0 emit silent fail (Safari/iOS) 케이스 → 무음 + modal X 였음.
+        // chunk emit count 추적해서 0 이면 명시 throw → catch 분기 진입 → reason set + audioBuffer=null.
+        let audioChunksEmitted = 0;
         // V4 fix v5 (사용자 보고 2026-05-04): Safari AudioEncoder 가 chunk.duration null/0 emit 가능 → addAudioChunkRaw fail.
         // 명시적 duration override (samples / sampleRate * 1e6 microseconds).
         const aenc = new AudioEncoder({
           output: (chunk, meta) => {
+            audioChunksEmitted++;
             try {
               const dur = (chunk && typeof chunk.duration === 'number' && chunk.duration > 0)
                 ? chunk.duration
@@ -384,6 +388,12 @@ async function compressVideoWebCodecs(file, opts = {}) {
         await aenc.flush();
         aenc.close();
         if (audioErr) throw audioErr;
+        // 사용자 보고 2026-05-09: chunk 0 emit silent fail 가드 — 옛 코드는 catch 안 들어가서 무음 + modal X 였음.
+        // throw 하면 아래 catch 진입 → audioBuffer=null + reason set → 29-music.js modal 노출.
+        if (audioChunksEmitted === 0) {
+          throw new Error(`AudioEncoder chunk 0 emit (silent fail). codec=${audioCodec} sr=${audioSampleRate} ch=${audioChannels} totalSamples=${totalSamples}`);
+        }
+        console.log('[video] audio encoded ' + audioChunksEmitted + ' chunks');
       } catch (audioFail) {
         // 사용자 명시 2026-05-03: toast → 오류 모달 + audioFail null 케이스에 의미 있는 메시지.
         console.error('[video compress] audio encode 실패 (무음으로 진행):', audioFail, audioFail?.stack);
@@ -394,10 +404,11 @@ async function compressVideoWebCodecs(file, opts = {}) {
         if (typeof _reportErrorToAdmin === 'function') {
           _reportErrorToAdmin('영상 진주 audio encode 실패', `${_cfgInfo}\n\n${_errInfo}\n\n${audioFail?.stack || '(no stack)'}`).catch(() => {});
         }
-        if (typeof showErrorDetailModal === 'function') {
-          const msg = `[config]\n${_cfgInfo}\n\n[error]\n${_errInfo}\n\n[stack]\n${(audioFail?.stack || '(no stack)').slice(0, 500)}`;
-          showErrorDetailModal('영상 소리 인코딩 실패 — 무음 저장됨', msg);
-        }
+        // 사용자 보고 2026-05-09: showErrorDetailModal 직접 호출 제거 — 29-music.js 가 통합 modal (duplicate 회피).
+        // audioBuffer=null + reason set 으로 result.hasAudio=false → 호출자 modal 노출.
+        audioFailReason = 'audio 인코딩 실패';
+        audioFailDetail = `[config]\n${_cfgInfo}\n\n[error]\n${_errInfo}\n\n[stack]\n${(audioFail?.stack || '(no stack)').slice(0, 500)}`;
+        audioBuffer = null;
       }
     }
 

@@ -28784,7 +28784,7 @@ async function _rcCallHoroscopeHaiku(rawEnglish, zodiac) {
   const z = _rcZodiacInfo(zodiac);
   const zLabel = z ? z.label : '';
 
-  const systemPrompt = `너는 사용자의 친구. 영문 horoscope 한 단락을 받아서 한국어 친구 카톡 톤으로 변환해줘.
+  const systemPrompt = `너는 사용자의 친구. 영문 horoscope 받아서 한국어 친구 카톡 톤으로 짧게 변환해줘.
 
 규칙 (절대):
 - 친구 카톡 톤. 분석 보고서 X.
@@ -28792,7 +28792,7 @@ async function _rcCallHoroscopeHaiku(rawEnglish, zodiac) {
 - 평가성 칭찬 ("잘하고 있어", "대단해") X.
 - 분석명 / 진단명 X.
 - 살짝 신비로운 어휘 OK (운세 특성).
-- 한 단락만 (3-4 문장).
+- 사용자 명시 2026-05-09: 1-2 문장만 (50-90자). 핵심만 짧고 명료. 길게 풀지 X.
 - "결" 단어 X (잔잔한 결, 가벼운 결 등 회피).
 - 사용자에게 직접 말하듯 (너 / 네).
 - 마크다운 / 인용부호 X.`;
@@ -28802,7 +28802,7 @@ async function _rcCallHoroscopeHaiku(rawEnglish, zodiac) {
 영문 horoscope:
 ${rawEnglish}
 
-→ 위 영문을 한국어 친구 카톡 톤으로 변환. 3-4 문장. 단락 본문만.`;
+→ 위 영문 핵심만 한국어 친구 카톡 톤으로 압축. 1-2 문장 (50-90자). 본문만.`;
 
   const sycophancy = /힘내|화이팅|괜찮아질|잘하고 있어|대단해/;
   const diagnosis = /\bADHD\b|우울증|우울장애|불안장애|PTSD|강박장애/i;
@@ -33035,10 +33035,14 @@ async function compressVideoWebCodecs(file, opts = {}) {
     if (audioBuffer) {
       try {
         let audioErr = null;
+        // 사용자 보고 2026-05-09: audio 가 chunk 0 emit silent fail (Safari/iOS) 케이스 → 무음 + modal X 였음.
+        // chunk emit count 추적해서 0 이면 명시 throw → catch 분기 진입 → reason set + audioBuffer=null.
+        let audioChunksEmitted = 0;
         // V4 fix v5 (사용자 보고 2026-05-04): Safari AudioEncoder 가 chunk.duration null/0 emit 가능 → addAudioChunkRaw fail.
         // 명시적 duration override (samples / sampleRate * 1e6 microseconds).
         const aenc = new AudioEncoder({
           output: (chunk, meta) => {
+            audioChunksEmitted++;
             try {
               const dur = (chunk && typeof chunk.duration === 'number' && chunk.duration > 0)
                 ? chunk.duration
@@ -33093,6 +33097,12 @@ async function compressVideoWebCodecs(file, opts = {}) {
         await aenc.flush();
         aenc.close();
         if (audioErr) throw audioErr;
+        // 사용자 보고 2026-05-09: chunk 0 emit silent fail 가드 — 옛 코드는 catch 안 들어가서 무음 + modal X 였음.
+        // throw 하면 아래 catch 진입 → audioBuffer=null + reason set → 29-music.js modal 노출.
+        if (audioChunksEmitted === 0) {
+          throw new Error(`AudioEncoder chunk 0 emit (silent fail). codec=${audioCodec} sr=${audioSampleRate} ch=${audioChannels} totalSamples=${totalSamples}`);
+        }
+        console.log('[video] audio encoded ' + audioChunksEmitted + ' chunks');
       } catch (audioFail) {
         // 사용자 명시 2026-05-03: toast → 오류 모달 + audioFail null 케이스에 의미 있는 메시지.
         console.error('[video compress] audio encode 실패 (무음으로 진행):', audioFail, audioFail?.stack);
@@ -33103,10 +33113,11 @@ async function compressVideoWebCodecs(file, opts = {}) {
         if (typeof _reportErrorToAdmin === 'function') {
           _reportErrorToAdmin('영상 진주 audio encode 실패', `${_cfgInfo}\n\n${_errInfo}\n\n${audioFail?.stack || '(no stack)'}`).catch(() => {});
         }
-        if (typeof showErrorDetailModal === 'function') {
-          const msg = `[config]\n${_cfgInfo}\n\n[error]\n${_errInfo}\n\n[stack]\n${(audioFail?.stack || '(no stack)').slice(0, 500)}`;
-          showErrorDetailModal('영상 소리 인코딩 실패 — 무음 저장됨', msg);
-        }
+        // 사용자 보고 2026-05-09: showErrorDetailModal 직접 호출 제거 — 29-music.js 가 통합 modal (duplicate 회피).
+        // audioBuffer=null + reason set 으로 result.hasAudio=false → 호출자 modal 노출.
+        audioFailReason = 'audio 인코딩 실패';
+        audioFailDetail = `[config]\n${_cfgInfo}\n\n[error]\n${_errInfo}\n\n[stack]\n${(audioFail?.stack || '(no stack)').slice(0, 500)}`;
+        audioBuffer = null;
       }
     }
 
@@ -56279,7 +56290,8 @@ function refreshTesterModeUI() {
 // 원인: emoji 폰트마다 line-height 변동 (22px → 28-35px 실 ascent/descent) → nav-item content > min-height 56 → nav 실측 82+ N px.
 // CSS calc 만으론 디바이스/폰트마다 다른 N 못 맞춤. JS 동적 측정으로 --chat-input-bottom CSS variable 동기화.
 // 사용자 명시 2026-05-09: nav 위 3px 추가 buffer (시각적 여유).
-const _CHAT_INPUT_NAV_BUFFER_PX = 3;
+// 사용자 명시 2026-05-09 (재정정): 입력창 3px 만 아래로 → buffer 0 (옛 3px → 0px = 입력창 nav 에 바로 붙음).
+const _CHAT_INPUT_NAV_BUFFER_PX = 0;
 function _syncChatInputBottomToNav() {
   const nav = document.querySelector('.bottom-nav');
   if (!nav) {

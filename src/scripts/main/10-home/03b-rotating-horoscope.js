@@ -136,7 +136,7 @@ async function _rcCallHoroscopeHaiku(rawEnglish, zodiac) {
   const z = _rcZodiacInfo(zodiac);
   const zLabel = z ? z.label : '';
 
-  const systemPrompt = `너는 사용자의 친구. 영문 horoscope 한 단락을 받아서 한국어 친구 카톡 톤으로 변환해줘.
+  const systemPrompt = `너는 사용자의 친구. 영문 horoscope 받아서 한국어 친구 카톡 톤으로 짧게 변환해줘.
 
 규칙 (절대):
 - 친구 카톡 톤. 분석 보고서 X.
@@ -144,7 +144,7 @@ async function _rcCallHoroscopeHaiku(rawEnglish, zodiac) {
 - 평가성 칭찬 ("잘하고 있어", "대단해") X.
 - 분석명 / 진단명 X.
 - 살짝 신비로운 어휘 OK (운세 특성).
-- 한 단락만 (3-4 문장).
+- 사용자 명시 2026-05-09: 1-2 문장만 (50-90자). 핵심만 짧고 명료. 길게 풀지 X.
 - "결" 단어 X (잔잔한 결, 가벼운 결 등 회피).
 - 사용자에게 직접 말하듯 (너 / 네).
 - 마크다운 / 인용부호 X.`;
@@ -154,7 +154,7 @@ async function _rcCallHoroscopeHaiku(rawEnglish, zodiac) {
 영문 horoscope:
 ${rawEnglish}
 
-→ 위 영문을 한국어 친구 카톡 톤으로 변환. 3-4 문장. 단락 본문만.`;
+→ 위 영문 핵심만 한국어 친구 카톡 톤으로 압축. 1-2 문장 (50-90자). 본문만.`;
 
   const sycophancy = /힘내|화이팅|괜찮아질|잘하고 있어|대단해/;
   const diagnosis = /\bADHD\b|우울증|우울장애|불안장애|PTSD|강박장애/i;
