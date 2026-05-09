@@ -56,7 +56,9 @@ function showScreen(name) {
     if (typeof expireOldMissions === 'function') expireOldMissions();
     applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3();
     renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink();
-    // 사용자 명시 2026-05-09 (ultrathink): 회전 카드 '🌟 오늘의 너' (7 source). spec 4절 + 11절.
+    // 사용자 명시 2026-05-09 (회전 카드 spec final): 5-source 미컨펌 우선 + 세션 lock.
+    // home 진입 = 새 세션 = sessionOrder 재계산 (spec 4-3 새 세션 가용/불가용 재체크).
+    if (typeof _rcResetSession === 'function') _rcResetSession();
     if (typeof renderRotatingCard === 'function') renderRotatingCard();
     if (typeof renderReflectionHome === 'function') renderReflectionHome();
     // V4-1o: 관찰 5종 자동 trigger (24시간 1회 가드, 조용히 등록 — chat 인용용)

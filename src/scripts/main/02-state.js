@@ -384,18 +384,33 @@ const DEFAULT_STATE = {
     }
   },
 
-  // 사용자 명시 2026-05-09 (ultrathink): 홈 회전 카드 ('🌟 오늘의 너', 7 source).
-  // spec 11-6 — preferences namespace 보호. _ensureRotatingCardState() 가 누락 필드 자동 보완.
+  // 사용자 명시 2026-05-09 (회전 카드 spec final): 홈 회전 카드 5-source — 진주/새로 본 너/미니 리뷰/Quiz/운세.
+  // spec final 7절. _ensureRotatingCardState() 가 누락 필드 자동 보완.
   rotatingCardState: {
-    history: [],            // [{sourceId, contentHash, seenAt}] — 14일 dedupe
-    dismissedSurprises: [], // [milestoneKey] — 1번 표시 후 영구 X
-    newAnalysisItems: [],   // [{kind, id, name, description, detectedAt}] — Phase 2 source 3 stash
-    lastMiniReviewAt: null, // ISO timestamp — source 4 cooldown
-    windowStartAt: null,    // 4시간 windowing 시작
-    windowSourceId: null,   // 그 4시간의 stay source
-    windowContentHash: null,// 그 4시간의 stay contentHash (같은 진주/같은 회상 stay)
-    lastPearlShownDate: null, // 사용자 명시 2026-05-09 (B): 진주 매일 1번 노출 보장 — 오늘 진주 X 시 baseWeight +200
-    currentIndex: 0
+    // 진주 — 4시간 stay
+    pearlWindowStart: null,    // ISO — 4시간 stay 시작
+    pearlCurrentId: null,      // 그 4시간 stay 진주 id
+    lastPearlShownDate: null,  // 'YYYY-MM-DD' — 오늘 진주 1번 노출 여부
+    // 새로 본 너 — unseen insights 큐
+    unseenInsights: [],         // [{id, kind, name, copy, contentHash, evidence, addedAt}]
+    unseenInsightsHistory: [],  // [{id, verdict:'correct'|'wrong', at}]
+    // 미니 리뷰 (Haiku 3일 stay) — 사용자 보고 2026-05-09: 재진입 시 손실 X
+    lastMiniReviewAt: null,     // ISO — Haiku 호출 성공 시점
+    miniReviewContentId: null,  // state.miniReviews[].id 매칭 (재진입 stash)
+    // Quiz — case formulation user_verified 기반
+    quizDay: null,              // 'YYYY-MM-DD' 4AM cutoff
+    quizProgress: null,         // {questionIds, currentIdx, answers:{id:'correct'|'wrong'|'skip'}}
+    quizDeniedCooldown: {},     // {itemId: unlockMs} — 14일
+    quizSkippedCooldown: {},    // {itemId: unlockMs} — 1일
+    quizScoreBefore: null,      // % — 끝 화면 변화 표시
+    // 운세 — Horoscope API + Haiku (사용자 보고 2026-05-09: 재진입 시 손실 X)
+    lastHoroscopeFetchDay: null,// 'YYYY-MM-DD' KST — 같은 날 재 fetch X
+    lastHoroscopeContent: null, // Haiku 한국어 친구 톤 변환 결과
+    lastHoroscopeLucky: null,   // (optional)
+    lastHoroscopeShownDate: null, // 'YYYY-MM-DD' — 오늘 운세 1번 노출 여부
+    zodiacOnboardSkippedAt: null,// ISO — onboarding skip 시점 (그 세션 동안만 비활성, spec 6-5-1)
+    // 디버깅 / 호환
+    history: [],                // [{sourceId, contentHash, seenAt}] — 옛 호환
   },
 
   version: 7

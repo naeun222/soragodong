@@ -26,6 +26,8 @@ function loadSettings() {
   }
   // 사용자 명시 2026-05-03 ultrathink: 날씨 자동 인식 status 표시.
   if (typeof refreshWeatherToggleStatus === 'function') refreshWeatherToggleStatus();
+  // 사용자 명시 2026-05-09 (회전 카드 spec final 6-5-1): 별자리 chip selector
+  if (typeof renderZodiacSettingChips === 'function') renderZodiacSettingChips();
   // 사용자 요청 2026-04-30 (Phase C): billing 자동 로드
   if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
   // E2EE 상태 갱신
@@ -45,6 +47,24 @@ function renderBusinessInfo() {
   const body = document.getElementById('businessInfoBody');
   if (!body) return;
   body.innerHTML = _buildBusinessInfoRowsHtml();
+}
+
+// 사용자 명시 2026-05-09 (회전 카드 spec final 6-5-1): 설정 별자리 chip selector — 운세 source 활성용.
+function renderZodiacSettingChips() {
+  const status = document.getElementById('zodiacSettingStatus');
+  const chips = document.getElementById('zodiacSettingChips');
+  if (!status || !chips || typeof _RC_ZODIACS === 'undefined') return;
+  const cur = state.preferences && state.preferences.userZodiac;
+  const curInfo = cur ? _RC_ZODIACS.find(z => z.key === cur) : null;
+  if (curInfo) {
+    status.innerHTML = `현재: <span style="color:var(--accent);">${curInfo.symbol} ${escapeHtml(curInfo.label)}</span> <button onclick="resetUserZodiac(); renderZodiacSettingChips();" style="margin-left:8px; background:transparent; border:1px solid rgba(255,255,255,0.10); color:var(--text-dim); font-size:11px; padding:3px 8px; border-radius:6px; cursor:pointer;">해제</button>`;
+    chips.innerHTML = '';
+  } else {
+    status.innerHTML = '<span style="color:var(--text-dim);">미설정 — 별자리 선택하면 운세 source 활성</span>';
+    chips.innerHTML = _RC_ZODIACS.map(z => `
+      <button class="rc-zodiac-chip" type="button" onclick="setUserZodiac('${z.key}'); renderZodiacSettingChips();">${z.symbol} ${escapeHtml(z.label)}</button>
+    `).join('');
+  }
 }
 
 // 사용자 명시 2026-05-06 ultrathink: 사업자 정보 row HTML — 설정 inline + 로그인 footer 모달 공용.

@@ -10804,6 +10804,179 @@
     background: rgba(212,167,106,0.18);
     border-color: rgba(212,167,106,0.50);
   }
+  .rc-mini-review-retry {
+    width: 100%; margin-top: 6px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text-soft); font-size: 12px;
+    padding: 8px 16px; border-radius: 10px; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .rc-mini-review-retry:hover { border-color: rgba(212,167,106,0.32); color: var(--accent); }
+
+  /* ============================================================ */
+  /* 사용자 명시 2026-05-09 (회전 카드 spec final): 5-source 신규 — Quiz / 운세 / 별자리 / 새로 본 너 actions */
+  /* ============================================================ */
+
+  /* 공통 action button — 맞아 / 아닌데 / 넘기기 / primary */
+  .rc-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text); font-size: 12.5px; font-weight: 500;
+    padding: 7px 14px; border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.08s;
+  }
+  .rc-btn:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.18); }
+  .rc-btn:active { transform: scale(0.97); }
+  .rc-btn--correct {
+    background: rgba(143,200,143,0.10);
+    border-color: rgba(143,200,143,0.32);
+    color: #9bd49b;
+  }
+  .rc-btn--correct:hover { background: rgba(143,200,143,0.18); border-color: rgba(143,200,143,0.50); }
+  .rc-btn--wrong {
+    background: rgba(212,140,140,0.10);
+    border-color: rgba(212,140,140,0.30);
+    color: #d8a4a4;
+  }
+  .rc-btn--wrong:hover { background: rgba(212,140,140,0.18); border-color: rgba(212,140,140,0.46); }
+  .rc-btn--skip {
+    background: transparent;
+    border-color: rgba(255,255,255,0.08);
+    color: var(--text-soft);
+  }
+  .rc-btn--skip:hover { border-color: rgba(255,255,255,0.18); color: var(--text); }
+  .rc-btn--primary {
+    background: rgba(212,167,106,0.14);
+    border-color: rgba(212,167,106,0.40);
+    color: var(--accent); font-weight: 600;
+    padding: 9px 18px;
+  }
+  .rc-btn--primary:hover { background: rgba(212,167,106,0.22); border-color: rgba(212,167,106,0.58); }
+
+  /* 새로 본 너 — 맞아/아닌데 actions row */
+  .rc-newview-actions {
+    display: flex; gap: 8px;
+    margin-top: 10px;
+  }
+
+  /* ============================================================ */
+  /* Source 4 — Quiz */
+  /* ============================================================ */
+  .rc-body-quiz { padding: 4px 2px 6px; }
+  .rc-quiz-progress {
+    font-size: 10.5px; color: var(--text-dim); opacity: 0.7;
+    margin: 2px 0 6px; letter-spacing: 0.04em;
+  }
+  .rc-quiz-question {
+    font-family: 'Gowun Batang', serif;
+    font-size: 16.5px; font-weight: 600;
+    color: var(--text); margin: 4px 0 6px;
+    line-height: 1.45;
+  }
+  .rc-quiz-desc {
+    font-size: 12px; line-height: 1.55; color: var(--text-soft);
+    opacity: 0.8; margin-bottom: 10px;
+  }
+  .rc-quiz-actions {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .rc-quiz-actions .rc-btn { flex: 1; min-width: 0; }
+  .rc-quiz-mini-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin-top: 12px; padding-top: 8px;
+    border-top: 1px dashed rgba(255,255,255,0.06);
+  }
+  .rc-quiz-mini-arrow {
+    background: transparent; border: none;
+    color: var(--text-dim); font-size: 14px;
+    padding: 2px 8px; cursor: pointer; opacity: 0.65;
+    transition: color 0.12s, opacity 0.12s;
+  }
+  .rc-quiz-mini-arrow:hover:not(:disabled) { color: var(--accent); opacity: 1; }
+  .rc-quiz-mini-arrow:disabled { opacity: 0.25; cursor: default; }
+  .rc-quiz-mini-indicator {
+    flex: 1; display: inline-flex; gap: 4px;
+    align-items: center; justify-content: center;
+  }
+  .rc-quiz-dot {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: rgba(255,255,255,0.16);
+    transition: background 0.18s, transform 0.18s;
+  }
+  .rc-quiz-dot.is-active {
+    background: var(--accent); transform: scale(1.3);
+  }
+
+  /* Quiz 끝 화면 */
+  .rc-quiz-end { text-align: center; padding: 8px 4px 4px; }
+  .rc-quiz-summary {
+    font-size: 13.5px; color: var(--text);
+    margin: 8px 0 6px;
+    line-height: 1.55;
+  }
+  .rc-quiz-score-change {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px; font-weight: 600; color: var(--accent);
+    margin: 4px 0 12px;
+    letter-spacing: 0.02em;
+  }
+  .rc-quiz-end-cta { display: flex; justify-content: center; margin-top: 6px; }
+
+  /* ============================================================ */
+  /* Source 5 — 고동의 운세 */
+  /* ============================================================ */
+  .rc-body-horoscope { padding: 4px 2px 6px; }
+  .rc-horoscope-zodiac {
+    font-size: 13px; color: var(--accent); opacity: 0.85;
+    margin: 4px 0 8px;
+    font-weight: 500; letter-spacing: 0.02em;
+  }
+  .rc-horoscope-text {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14.5px; line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 6px;
+    white-space: pre-wrap;
+  }
+  .rc-horoscope-lucky {
+    font-size: 11.5px; color: var(--text-soft);
+    opacity: 0.78; margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(255,255,255,0.06);
+  }
+
+  /* 별자리 onboarding 카드 */
+  .rc-body-zodiac-onboard {
+    padding: 4px 2px 8px; text-align: center;
+  }
+  .rc-zodiac-chips {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 5px; margin: 8px 0 10px;
+  }
+  .rc-zodiac-chip {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text); font-size: 11.5px;
+    padding: 6px 4px; border-radius: 8px;
+    cursor: pointer; line-height: 1.3;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .rc-zodiac-chip:hover {
+    background: rgba(168,157,200,0.10);
+    border-color: rgba(168,157,200,0.32);
+    color: var(--accent);
+  }
+  .rc-zodiac-skip {
+    background: transparent; border: none;
+    color: var(--text-dim); font-size: 11.5px;
+    padding: 6px 12px; cursor: pointer;
+    opacity: 0.65; margin-top: 4px;
+    transition: opacity 0.15s, color 0.15s;
+  }
+  .rc-zodiac-skip:hover { opacity: 1; color: var(--text-soft); }
 
   /* 사용자 명시 2026-05-09: archive-reviews 카테고리 chip — 전체/미니/주/월/계절/연간 */
   .archive-review-chips {
@@ -12145,6 +12318,12 @@
             <button class="btn-secondary" onclick="setWeatherPermission('denied')" style="flex:1; font-size:12px;">✕ 사용 X</button>
           </div>
         </div>
+        <div class="settings-card-divider"></div>
+        <div class="input-group">
+          <div class="input-label">🌗 별자리 <span class="settings-hint">— 홈 회전 카드 운세 source</span></div>
+          <div id="zodiacSettingStatus" class="settings-info-box" style="font-size:12px; padding:8px 10px; margin-bottom:8px;"></div>
+          <div id="zodiacSettingChips" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:5px;"></div>
+        </div>
       </div>
 
       <!-- 결제 / 사용량 — 사용자 명시 2026-04-30 ultrathink: 2-tier 월정액 only (충전 제거) -->
@@ -12888,18 +13067,33 @@ const DEFAULT_STATE = {
     }
   },
 
-  // 사용자 명시 2026-05-09 (ultrathink): 홈 회전 카드 ('🌟 오늘의 너', 7 source).
-  // spec 11-6 — preferences namespace 보호. _ensureRotatingCardState() 가 누락 필드 자동 보완.
+  // 사용자 명시 2026-05-09 (회전 카드 spec final): 홈 회전 카드 5-source — 진주/새로 본 너/미니 리뷰/Quiz/운세.
+  // spec final 7절. _ensureRotatingCardState() 가 누락 필드 자동 보완.
   rotatingCardState: {
-    history: [],            // [{sourceId, contentHash, seenAt}] — 14일 dedupe
-    dismissedSurprises: [], // [milestoneKey] — 1번 표시 후 영구 X
-    newAnalysisItems: [],   // [{kind, id, name, description, detectedAt}] — Phase 2 source 3 stash
-    lastMiniReviewAt: null, // ISO timestamp — source 4 cooldown
-    windowStartAt: null,    // 4시간 windowing 시작
-    windowSourceId: null,   // 그 4시간의 stay source
-    windowContentHash: null,// 그 4시간의 stay contentHash (같은 진주/같은 회상 stay)
-    lastPearlShownDate: null, // 사용자 명시 2026-05-09 (B): 진주 매일 1번 노출 보장 — 오늘 진주 X 시 baseWeight +200
-    currentIndex: 0
+    // 진주 — 4시간 stay
+    pearlWindowStart: null,    // ISO — 4시간 stay 시작
+    pearlCurrentId: null,      // 그 4시간 stay 진주 id
+    lastPearlShownDate: null,  // 'YYYY-MM-DD' — 오늘 진주 1번 노출 여부
+    // 새로 본 너 — unseen insights 큐
+    unseenInsights: [],         // [{id, kind, name, copy, contentHash, evidence, addedAt}]
+    unseenInsightsHistory: [],  // [{id, verdict:'correct'|'wrong', at}]
+    // 미니 리뷰 (Haiku 3일 stay) — 사용자 보고 2026-05-09: 재진입 시 손실 X
+    lastMiniReviewAt: null,     // ISO — Haiku 호출 성공 시점
+    miniReviewContentId: null,  // state.miniReviews[].id 매칭 (재진입 stash)
+    // Quiz — case formulation user_verified 기반
+    quizDay: null,              // 'YYYY-MM-DD' 4AM cutoff
+    quizProgress: null,         // {questionIds, currentIdx, answers:{id:'correct'|'wrong'|'skip'}}
+    quizDeniedCooldown: {},     // {itemId: unlockMs} — 14일
+    quizSkippedCooldown: {},    // {itemId: unlockMs} — 1일
+    quizScoreBefore: null,      // % — 끝 화면 변화 표시
+    // 운세 — Horoscope API + Haiku (사용자 보고 2026-05-09: 재진입 시 손실 X)
+    lastHoroscopeFetchDay: null,// 'YYYY-MM-DD' KST — 같은 날 재 fetch X
+    lastHoroscopeContent: null, // Haiku 한국어 친구 톤 변환 결과
+    lastHoroscopeLucky: null,   // (optional)
+    lastHoroscopeShownDate: null, // 'YYYY-MM-DD' — 오늘 운세 1번 노출 여부
+    zodiacOnboardSkippedAt: null,// ISO — onboarding skip 시점 (그 세션 동안만 비활성, spec 6-5-1)
+    // 디버깅 / 호환
+    history: [],                // [{sourceId, contentHash, seenAt}] — 옛 호환
   },
 
   version: 7
@@ -26877,166 +27071,89 @@ async function triggerSOS() {
 //   숙고 전용 채팅 화면(screen-reflection)은 V4-1j로 분리.
 // ═══════════════════════════════════════════════════════════════
 
-// 사용자 명시 2026-05-09 (ultrathink): 홈 회전 카드 — '🌟 오늘의 너' 7 source rotating surface.
-// spec: home-redesign-2026-05-09.md (본문 4절 + 11절 P0 보완 우선)
-// 페인 = "며칠 쓰니 잘 안 들어감, 입력 ≫ 피드백 비대칭, 일상 털어놓을 다리 부족"
-// 해법 = 기존 분석 자산을 매일 다른 angle 로 작게 보여주는 회전 카드 (zone 8-9 → 4-6) + chat 다리 footer
-// Phase 1 = source 1 (진주) / source 2 (어제 비교) / source 5 (회상). 후속 Phase = 3 / 4 / 6 / 7.
+// 사용자 명시 2026-05-09 (회전 카드 spec final): 5-source 미컨펌 우선 정렬 + 세션 lock.
+// spec: rotating-card-final-2026-05-09.md (이 문서가 최종)
+// 5 source: 진주 / 새로 본 너 / 미니 리뷰 / Quiz / 운세
+// 폐기: 어제 비교 / 회상 / 통찰(→ 새로 본 너 흡수) / Surprise
 
 // =============================================================================
-// STATE 마이그 (spec 11-6 namespace 보호)
+// STATE 마이그 — 누락 필드 자동 보완 (preferences namespace 보호)
 // =============================================================================
 function _ensureRotatingCardState() {
   if (!state.rotatingCardState || typeof state.rotatingCardState !== 'object') {
     state.rotatingCardState = {};
   }
   const r = state.rotatingCardState;
-  if (!Array.isArray(r.history)) r.history = [];                  // [{sourceId, contentHash, seenAt}] 14일 dedupe
-  if (!Array.isArray(r.dismissedSurprises)) r.dismissedSurprises = []; // [milestoneKey] 1번 후 영구 X
-  if (typeof r.lastMiniReviewAt === 'undefined') r.lastMiniReviewAt = null;
-  if (typeof r.windowStartAt === 'undefined') r.windowStartAt = null;
-  if (typeof r.windowSourceId === 'undefined') r.windowSourceId = null;
-  if (typeof r.windowContentHash === 'undefined') r.windowContentHash = null;
+  // 진주
+  if (typeof r.pearlWindowStart === 'undefined') r.pearlWindowStart = null;
+  if (typeof r.pearlCurrentId === 'undefined') r.pearlCurrentId = null;
   if (typeof r.lastPearlShownDate === 'undefined') r.lastPearlShownDate = null;
-  if (typeof r.currentIndex === 'undefined') r.currentIndex = 0;
+  // 새로 본 너
+  if (!Array.isArray(r.unseenInsights)) r.unseenInsights = [];
+  if (!Array.isArray(r.unseenInsightsHistory)) r.unseenInsightsHistory = [];
+  // 미니 리뷰
+  if (typeof r.lastMiniReviewAt === 'undefined') r.lastMiniReviewAt = null;
+  if (typeof r.miniReviewContentId === 'undefined') r.miniReviewContentId = null;
+  // Quiz
+  if (typeof r.quizDay === 'undefined') r.quizDay = null;
+  if (typeof r.quizProgress === 'undefined') r.quizProgress = null;
+  if (!r.quizDeniedCooldown || typeof r.quizDeniedCooldown !== 'object') r.quizDeniedCooldown = {};
+  if (!r.quizSkippedCooldown || typeof r.quizSkippedCooldown !== 'object') r.quizSkippedCooldown = {};
+  if (typeof r.quizScoreBefore === 'undefined') r.quizScoreBefore = null;
+  // 운세
+  if (typeof r.lastHoroscopeFetchDay === 'undefined') r.lastHoroscopeFetchDay = null;
+  if (typeof r.lastHoroscopeContent === 'undefined') r.lastHoroscopeContent = null;
+  if (typeof r.lastHoroscopeLucky === 'undefined') r.lastHoroscopeLucky = null;
+  if (typeof r.lastHoroscopeShownDate === 'undefined') r.lastHoroscopeShownDate = null;
+  if (typeof r.zodiacOnboardSkippedAt === 'undefined') r.zodiacOnboardSkippedAt = null;
+  // 디버깅 / 호환
+  if (!Array.isArray(r.history)) r.history = [];
+  // preferences.userZodiac 자동 마이그
+  if (!state.preferences) state.preferences = {};
+  if (typeof state.preferences.userZodiac === 'undefined') state.preferences.userZodiac = null;
   return r;
 }
 
 // =============================================================================
-// Score / windowing (spec 4-3 + 11-2)
+// 상수 — baseWeight + tie-breaker stable order
 // =============================================================================
-const _RC_WINDOW_MS = 4 * 60 * 60 * 1000;          // 4시간 — 같은 4시간 재진입 시 same source stay
-const _RC_DEDUPE_MS = 14 * 24 * 60 * 60 * 1000;    // 14일 — 같은 contentHash 재노출 X
-
 const _RC_BASE_WEIGHTS = {
-  miniReview: 100,
-  surprise: 90,
-  newView: 80,
-  insight: 60,
-  throwback: 50,
-  yesterday: 40,
-  pearl: 20,
+  pearl:      20,
+  newView:    80,
+  miniReview: 100,  // 일요일 + 정식 주간 리뷰 도착 시 200 격상 (spec 3-2 특수)
+  quiz:       70,
+  horoscope:  50,
 };
+const _RC_SOURCE_ORDER = ['miniReview', 'newView', 'quiz', 'horoscope', 'pearl'];
 
-// tie-breaker stable order (id asc, spec 11-2)
-const _RC_SOURCE_ORDER = ['insight', 'miniReview', 'newView', 'pearl', 'surprise', 'throwback', 'yesterday'];
+const _RC_PEARL_WINDOW_MS = 4 * 60 * 60 * 1000;       // 진주 4시간 stay
+const _RC_MINI_REVIEW_COOLDOWN_MS = 3 * 86400000;     // 미니 리뷰 3일 stay
+const _RC_QUIZ_DENIED_COOLDOWN_MS = 14 * 86400000;    // [아닌데] 14일
+const _RC_QUIZ_SKIPPED_COOLDOWN_MS = 1 * 86400000;    // [넘기기] 1일
 
-function _rcRecordSeen(sourceId, contentHash) {
-  const r = _ensureRotatingCardState();
-  r.history.push({ sourceId, contentHash, seenAt: new Date().toISOString() });
-  if (r.history.length > 200) r.history = r.history.slice(-200);
-  // 사용자 명시 2026-05-09 (B): 진주 노출 시 lastPearlShownDate 갱신 (오늘 = 진주 봤음).
-  if (sourceId === 'pearl') {
-    const todayK = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
-    r.lastPearlShownDate = todayK;
-  }
+// =============================================================================
+// 세션 lock (전역) — sessionOrder 화면 떠날 때까지 stash, 새 진입 시 reset
+// =============================================================================
+let _rcSessionOrder = null;
+let _rcSessionIndex = 0;
+let _rcSessionConfirmed = new Set();
+let _rcZodiacSkippedThisSession = false;
+let _rcHoroscopeFetchInflight = false;
+
+function _rcResetSession() {
+  _rcSessionOrder = null;
+  _rcSessionIndex = 0;
+  _rcSessionConfirmed = new Set();
+  _rcZodiacSkippedThisSession = false;
+  // _rcHoroscopeFetchInflight 은 fetch 진행 중이라 reset X — finally 블록이 정리.
 }
 
-function _rcSeenHashes14d(sourceId) {
-  const r = _ensureRotatingCardState();
-  const cutoff = Date.now() - _RC_DEDUPE_MS;
-  const set = new Set();
-  for (const h of r.history) {
-    if (h.sourceId !== sourceId) continue;
-    const t = h.seenAt ? new Date(h.seenAt).getTime() : 0;
-    if (t > cutoff) set.add(h.contentHash);
-  }
-  return set;
-}
-
-function _rcFreshnessPenalty(sourceId) {
-  const r = _ensureRotatingCardState();
-  const cutoff = Date.now() - _RC_WINDOW_MS;
-  for (const h of r.history) {
-    if (h.sourceId !== sourceId) continue;
-    const t = h.seenAt ? new Date(h.seenAt).getTime() : 0;
-    if (t > cutoff) return -10;
-  }
-  return 0;
-}
-
-function _rcIsoWeekStartMs() {
-  const now = new Date();
-  const dow = (now.getDay() + 6) % 7; // 월=0, 일=6
-  const ws = new Date(now);
-  ws.setDate(ws.getDate() - dow);
-  ws.setHours(4, 0, 0, 0);
-  if (now.getTime() < ws.getTime()) ws.setDate(ws.getDate() - 7);
-  return ws.getTime();
-}
-
-function _rcVarietyBonus(sourceId) {
-  const r = _ensureRotatingCardState();
-  const wkStart = _rcIsoWeekStartMs();
-  const counts = {};
-  for (const h of r.history) {
-    const t = h.seenAt ? new Date(h.seenAt).getTime() : 0;
-    if (t < wkStart) continue;
-    counts[h.sourceId] = (counts[h.sourceId] || 0) + 1;
-  }
-  const cur = counts[sourceId] || 0;
-  const allSeen = Object.values(counts);
-  const minSeen = allSeen.length === 0 ? 0 : Math.min(...allSeen);
-  return cur === minSeen ? 10 : 0;
-}
-
-function _rcScore(sourceId) {
-  const base = _RC_BASE_WEIGHTS[sourceId] || 0;
-  const fresh = _rcFreshnessPenalty(sourceId);
-  const variety = _rcVarietyBonus(sourceId);
-  // 사용자 명시 2026-05-09 (B): 오늘 진주 안 본 경우 진주 강제 1순위 (baseWeight +200).
-  let pearlBoost = 0;
-  if (sourceId === 'pearl') {
-    const r = _ensureRotatingCardState();
-    const todayK = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
-    if (r.lastPearlShownDate !== todayK) pearlBoost = 200;
-  }
-  return { total: base + fresh + variety + pearlBoost, base, fresh, variety, pearlBoost };
+function _rcSessionMarkConfirmed(sourceId) {
+  if (sourceId) _rcSessionConfirmed.add(sourceId);
 }
 
 // =============================================================================
-// 4시간 windowing — 같은 4시간 안 같은 source + 같은 contentHash stay (친구 카톡 비유, spec 11-2)
-// =============================================================================
-function _rcWindowedSource() {
-  const r = _ensureRotatingCardState();
-  if (!r.windowStartAt || !r.windowSourceId) return null;
-  const elapsed = Date.now() - new Date(r.windowStartAt).getTime();
-  if (elapsed > _RC_WINDOW_MS) return null;
-  return { id: r.windowSourceId, contentHash: r.windowContentHash };
-}
-
-function _rcSetWindow(sourceId, contentHash) {
-  const r = _ensureRotatingCardState();
-  r.windowStartAt = new Date().toISOString();
-  r.windowSourceId = sourceId;
-  r.windowContentHash = contentHash || null;
-}
-
-// =============================================================================
-// Helpers — 어제 비교 numeric
-// =============================================================================
-function _rcAvg(arr) {
-  if (!arr || arr.length === 0) return null;
-  const sum = arr.reduce((a, b) => a + b, 0);
-  return sum / arr.length;
-}
-
-function _rcSleepHm(hours) {
-  if (hours == null) return '';
-  const h = Math.floor(hours);
-  const m = Math.round((hours - h) * 60);
-  if (m === 0) return `${h}시간`;
-  if (m === 30) return `${h}시간 반`;
-  return `${h}시간 ${m}분`;
-}
-
-function _rcPickRandom(arr) {
-  if (!arr || arr.length === 0) return '';
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-// =============================================================================
-// crisis keyword filter (spec 11-4 회상 source 5 anti-trigger 가드)
+// crisis keyword filter (anti-trigger 가드)
 // =============================================================================
 const _RC_CRISIS_KEYWORDS = [
   '자살', '자해', '죽고싶', '죽고 싶',
@@ -27047,14 +27164,94 @@ const _RC_CRISIS_KEYWORDS = [
 function _rcHasCrisis(text) {
   if (!text) return false;
   const s = String(text).toLowerCase();
-  for (const kw of _RC_CRISIS_KEYWORDS) {
-    if (s.includes(kw)) return true;
-  }
+  for (const kw of _RC_CRISIS_KEYWORDS) if (s.includes(kw)) return true;
   return false;
 }
 
 // =============================================================================
-// Source 1 — 진주 (default fallback)
+// helpers
+// =============================================================================
+function _rcPickRandom(arr) {
+  if (!arr || arr.length === 0) return '';
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function _rcTodayKey() {
+  return (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+}
+
+// 4AM cutoff key — 사용자 명시 2026-05-09: 미니 리뷰 / Quiz / 운세 모두 새벽 4시 cutoff 일관성.
+function _rcCutoffKeyOf(timestampOrIso) {
+  const d = new Date(timestampOrIso);
+  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function _rcDayDiff(keyA, keyB) {
+  if (!keyA || !keyB) return 0;
+  const a = new Date(keyA + 'T00:00:00').getTime();
+  const b = new Date(keyB + 'T00:00:00').getTime();
+  return Math.round((a - b) / 86400000);
+}
+
+// =============================================================================
+// 컨펌 판정 — historicallyConfirmed (state 기반) + sessionConfirmed (이번 세션)
+// =============================================================================
+function _rcIsHistoricallyConfirmed(sourceId) {
+  const r = _ensureRotatingCardState();
+  const todayK = _rcTodayKey();
+  switch (sourceId) {
+    case 'pearl':      return r.lastPearlShownDate === todayK;
+    case 'newView':    return false; // 새로 본 너는 답하면 그 항목이 큐에서 빠짐 → 가용 자체가 변함
+    case 'miniReview': {
+      // 사용자 명시 2026-05-09: 3일 새벽 4시 cutoff (호출 시점 + 정확히 3일 후 새벽 4시 부터 새 trigger)
+      if (!r.lastMiniReviewAt) return false;
+      const lastDayK = _rcCutoffKeyOf(r.lastMiniReviewAt);
+      const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : _rcTodayKey();
+      return _rcDayDiff(todayK, lastDayK) < 3;
+    }
+    case 'quiz': {
+      // 오늘 5/5 다 답한 상태?
+      const p = r.quizProgress;
+      if (!p || r.quizDay !== todayK) return false;
+      if (!Array.isArray(p.questionIds) || p.questionIds.length === 0) return false;
+      return (p.currentIdx || 0) >= p.questionIds.length;
+    }
+    case 'horoscope':  return r.lastHoroscopeShownDate === todayK;
+  }
+  return false;
+}
+
+function _rcIsConfirmed(sourceId) {
+  return _rcSessionConfirmed.has(sourceId) || _rcIsHistoricallyConfirmed(sourceId);
+}
+
+// =============================================================================
+// 정렬 — 미컨펌 위 / 컨펌 아래 + baseWeight desc + tie-breaker
+// =============================================================================
+function _rcSortByConfirmation(sources) {
+  const unconfirmed = [];
+  const confirmed = [];
+  for (const s of sources) {
+    if (_rcIsConfirmed(s.id)) confirmed.push(s);
+    else unconfirmed.push(s);
+  }
+  const byWeight = (a, b) => {
+    const wa = _RC_BASE_WEIGHTS[a.id] || 0;
+    const wb = _RC_BASE_WEIGHTS[b.id] || 0;
+    if (wb !== wa) return wb - wa;
+    return _RC_SOURCE_ORDER.indexOf(a.id) - _RC_SOURCE_ORDER.indexOf(b.id);
+  };
+  unconfirmed.sort(byWeight);
+  confirmed.sort(byWeight);
+  return [...unconfirmed, ...confirmed];
+}
+
+// =============================================================================
+// Source 1 — 진주 (4시간 stay)
 // =============================================================================
 function _rcSource1Pearl() {
   const pearls = (state.pearls || []).filter(p => p.type !== 'dna_pearl');
@@ -27065,20 +27262,25 @@ function _rcSource1Pearl() {
       isEmpty: true,
       contentHash: 'pearl_empty_cta',
       bodyHtml: typeof _heroEmptyHtml === 'function' ? _heroEmptyHtml() : '',
-      placeholder: '첫 진주에 대해...',
     };
   }
   if (typeof _heroCardHtml !== 'function') return { id: 'pearl', available: false };
 
-  // 4시간 windowing 안 같은 진주 stay — windowContentHash 가 'pearl_<id>' 면 그 진주 lookup
-  const windowed = _rcWindowedSource();
+  const r = _ensureRotatingCardState();
   let pick = null;
-  if (windowed && windowed.id === 'pearl' && windowed.contentHash) {
-    const m = String(windowed.contentHash).match(/^pearl_(.+)$/);
-    if (m) pick = pearls.find(p => p.id === m[1]) || null;
+  // 4시간 windowing
+  if (r.pearlWindowStart && r.pearlCurrentId) {
+    const elapsed = Date.now() - new Date(r.pearlWindowStart).getTime();
+    if (elapsed < _RC_PEARL_WINDOW_MS) {
+      pick = pearls.find(p => p.id === r.pearlCurrentId) || null;
+    }
   }
   if (!pick && typeof _pickHeroPearl === 'function') {
     pick = _pickHeroPearl();
+    if (pick) {
+      r.pearlWindowStart = new Date().toISOString();
+      r.pearlCurrentId = pick.id;
+    }
   }
   if (!pick) return { id: 'pearl', available: false };
   return {
@@ -27086,397 +27288,116 @@ function _rcSource1Pearl() {
     available: true,
     contentHash: 'pearl_' + (pick.id || ''),
     bodyHtml: _heroCardHtml(pick, { linkTo: 'pearls-tab' }),
-    placeholder: '이 진주에 대해...',
     pick,
   };
 }
 
 // =============================================================================
-// Source 2 — 어제 비교
+// Source 2 — 새로 본 너 (case formulation 새 항목 동적 detect, AI 인사이트 기반)
 // =============================================================================
-function _rcSource2Yesterday() {
-  if (typeof todayKey !== 'function' || typeof _shiftDateKey !== 'function') {
-    return { id: 'yesterday', available: false };
-  }
-  const yKey = _shiftDateKey(todayKey(), -1);
-  const entries = state.entries || [];
-  const yEntry = entries.find(e => e.date === yKey);
-  if (!yEntry) return { id: 'yesterday', available: false };
+// 사용자 명시 2026-05-09: 카피 풀 예시는 spec 의 예시일뿐, 실제는 AI 인사이트 기반 동적 카피.
+// pool = state.caseFormulation 의 5 차원 (problems/mechanisms/strengths/goals/growth) 본 + unverified
+// 큐 = 사용자가 아직 답 안 한 항목 (unseenInsightsHistory 에 없음)
+const _RC_NEW_VIEW_KIND_LABEL = {
+  problems: '관찰',
+  mechanisms: '패턴',
+  strengths: '강점',
+  goals: '목표',
+  growth: '성장',
+};
 
-  const cutoff = _shiftDateKey(yKey, -14);
-  const recent = entries.filter(e => e.date < yKey && e.date >= cutoff);
-  if (recent.length < 3) return { id: 'yesterday', available: false };
-
-  const candidates = [];
-
-  // 잠
-  if (yEntry.sleep != null) {
-    const recentSleeps = recent.map(e => e.sleep).filter(v => v != null);
-    if (recentSleeps.length >= 3) {
-      const avg = _rcAvg(recentSleeps);
-      const delta = yEntry.sleep - avg;
-      if (Math.abs(delta) >= 1) {
-        const yh = _rcSleepHm(yEntry.sleep);
-        const ah = _rcSleepHm(avg);
-        const copy = delta < 0
-          ? _rcPickRandom([
-              `어제 ${yh}밖에 못 잤네. 너 보통 ${ah}쯤 자거든.`,
-              `어 너 어제 잠 진짜 짧았더라.`,
-              `${yh}... 어제 좀 무리했어?`,
-              `어제 잠 막대 한 시간쯤 잘렸어.`,
-            ])
-          : _rcPickRandom([
-              `어제 ${yh} 잤네. 평소 ${ah}쯤이거든.`,
-              `어제 좀 더 잤더라.`,
-              `${yh}... 어제 푹 쉬었네.`,
-            ]);
-        candidates.push({ kind: 'sleep', delta, absDelta: Math.abs(delta), copy, y: yEntry.sleep, avg });
-      }
-    }
-  }
-
-  // 활력
-  if (yEntry.vitality != null) {
-    const recentVit = recent.map(e => e.vitality).filter(v => v != null);
-    if (recentVit.length >= 3) {
-      const avg = _rcAvg(recentVit);
-      const delta = yEntry.vitality - avg;
-      if (Math.abs(delta) >= 1) {
-        const copy = delta < 0
-          ? _rcPickRandom([
-              `어제 활력 좀 처졌더라.`,
-              `어 너 어제 살짝 가라앉아 있었어.`,
-              `어제 평소보다 좀 비어 있더라.`,
-            ])
-          : _rcPickRandom([
-              `어제 활력 평소보다 좋았더라.`,
-              `어 너 어제 좀 채워져 있었네.`,
-            ]);
-        candidates.push({ kind: 'vitality', delta, absDelta: Math.abs(delta), copy, y: yEntry.vitality, avg });
-      }
-    }
-  }
-
-  // 기분
-  if (yEntry.mood != null) {
-    const recentMood = recent.map(e => e.mood).filter(v => v != null);
-    if (recentMood.length >= 3) {
-      const avg = _rcAvg(recentMood);
-      const delta = yEntry.mood - avg;
-      if (Math.abs(delta) >= 1) {
-        const copy = delta < 0
-          ? _rcPickRandom([
-              `어제 기분 좀 가라앉았네.`,
-              `어 너 어제 마음 좀 무거웠더라.`,
-            ])
-          : _rcPickRandom([
-              `어제 기분 평소보다 가벼웠더라.`,
-              `어 어제 좀 좋았네.`,
-            ]);
-        candidates.push({ kind: 'mood', delta, absDelta: Math.abs(delta), copy, y: yEntry.mood, avg });
-      }
-    }
-  }
-
-  if (candidates.length === 0) {
-    // 비교 데이터 부족 — note / 단순 어제 회고 fallback (사용자 명시 2026-05-09)
-    return _rcSource2YesterdaySimple();
-  }
-
-  // P1-1 부정 일변도 cooldown — 같은 부정 패턴이 최근 3일 안 노출됐으면 skip 가산점
+function _rcCollectNewViewPool() {
   const r = _ensureRotatingCardState();
-  const negativeRecent = r.history.filter(h => {
-    if (h.sourceId !== 'yesterday') return false;
-    const t = h.seenAt ? new Date(h.seenAt).getTime() : 0;
-    return t > Date.now() - 3 * 86400000 && /__neg$/.test(h.contentHash || '');
-  }).length;
-
-  // sort by abs delta desc, but penalize negative if recently shown
-  candidates.sort((a, b) => {
-    const aPenalty = (a.delta < 0 && negativeRecent >= 2) ? 0.5 : 0;
-    const bPenalty = (b.delta < 0 && negativeRecent >= 2) ? 0.5 : 0;
-    return (b.absDelta - bPenalty) - (a.absDelta - aPenalty);
-  });
-  const top = candidates[0];
-
-  // mini visual — 잠 막대 또는 점 비교
-  let visual = '';
-  if (top.kind === 'sleep') {
-    const yPct = Math.min(100, Math.max(0, (top.y / 9) * 100));
-    const aPct = Math.min(100, Math.max(0, (top.avg / 9) * 100));
-    visual = `
-      <div class="rc-y-bars">
-        <div class="rc-y-row"><span class="rc-y-label">어제</span><div class="rc-y-track"><div class="rc-y-fill" style="width:${yPct.toFixed(0)}%;"></div></div></div>
-        <div class="rc-y-row"><span class="rc-y-label">평소</span><div class="rc-y-track"><div class="rc-y-fill rc-y-fill--avg" style="width:${aPct.toFixed(0)}%;"></div></div></div>
-      </div>
-    `;
-  } else if (top.kind === 'vitality' || top.kind === 'mood') {
-    const max = 5;
-    const dot = (n) => Array.from({ length: max }, (_, i) => `<span class="rc-dot ${i < n ? 'is-on' : ''}"></span>`).join('');
-    visual = `
-      <div class="rc-y-dots-rows">
-        <div class="rc-y-dots-row"><span class="rc-y-label">어제</span><span class="rc-y-dots">${dot(Math.round(top.y))}</span></div>
-        <div class="rc-y-dots-row"><span class="rc-y-label">평소</span><span class="rc-y-dots rc-y-dots--avg">${dot(Math.round(top.avg))}</span></div>
-      </div>
-    `;
+  const cf = state.caseFormulation || {};
+  const answeredIds = new Set((r.unseenInsightsHistory || []).map(h => h.id));
+  const pool = [];
+  const dims = ['problems', 'mechanisms', 'strengths', 'goals', 'growth'];
+  for (const kind of dims) {
+    const arr = Array.isArray(cf[kind]) ? cf[kind] : [];
+    for (const item of arr) {
+      if (!item || !item.name) continue;
+      if (item.user_verified === true) continue; // 이미 컨펌
+      const id = `${kind}::${item.name}`;
+      if (answeredIds.has(id)) continue;
+      pool.push({
+        id, kind,
+        name: item.name,
+        description: item.description || '',
+        confidence: typeof item.confidence === 'number' ? item.confidence : 0.5,
+        sourcePool: 'verified',
+      });
+    }
+    const ua = cf.unverified && Array.isArray(cf.unverified[kind]) ? cf.unverified[kind] : [];
+    for (const item of ua) {
+      if (!item || !item.name) continue;
+      const id = `${kind}::${item.name}`;
+      if (answeredIds.has(id)) continue;
+      pool.push({
+        id, kind,
+        name: item.name,
+        description: item.description || '',
+        confidence: typeof item.confidence === 'number' ? item.confidence : 0.4,
+        sourcePool: 'unverified',
+      });
+    }
   }
-
-  const negTag = top.delta < 0 ? '__neg' : '__pos';
-  const bodyHtml = `
-    <div class="rc-body-yesterday">
-      <div class="rc-body-headline">어제</div>
-      <div class="rc-body-copy">${escapeHtml(top.copy)}</div>
-      ${visual}
-    </div>
-  `;
-  return {
-    id: 'yesterday',
-    available: true,
-    contentHash: 'yesterday_' + yKey + '_' + top.kind + negTag,
-    bodyHtml,
-    onTapClick: `enterCheckin()`,
-    placeholder: '어제...',
-  };
+  return pool;
 }
 
-// Source 2 fallback — numeric 비교 부족 (recent < 3) 또는 metric 비교 candidate 0 케이스.
-// 어제 entry 자체는 있으면 단순 회고 한 줄 + note 인용으로 가용 처리. 사용자 명시 2026-05-09 (회전 안 됨 fix).
-function _rcSource2YesterdaySimple() {
-  if (typeof todayKey !== 'function' || typeof _shiftDateKey !== 'function') {
-    return { id: 'yesterday', available: false };
-  }
-  const yKey = _shiftDateKey(todayKey(), -1);
-  const entries = state.entries || [];
-  const yEntry = entries.find(e => e.date === yKey);
-  if (!yEntry) return { id: 'yesterday', available: false };
-  const noteText = yEntry.note || yEntry.diary || '';
-  const hasNumeric = (yEntry.vitality != null) || (yEntry.mood != null) || (yEntry.sleep != null);
-  if (!noteText && !hasNumeric) return { id: 'yesterday', available: false };
-  // crisis keyword skip — anti-trigger
-  if (_rcHasCrisis(noteText)) return { id: 'yesterday', available: false };
+function _rcSource2NewView() {
+  const pool = _rcCollectNewViewPool();
+  if (pool.length === 0) return { id: 'newView', available: false };
 
-  let copy;
-  if (noteText && noteText.length >= 4) {
-    const snippet = noteText.length > 50 ? noteText.slice(0, 50) + '…' : noteText;
-    copy = _rcPickRandom([
-      `어제 너 — "${snippet}"`,
-      `어제 적어둔 한 줄 — "${snippet}"`,
-      `"${snippet}" — 어제 너 한 줄`,
-    ]);
-  } else {
-    copy = _rcPickRandom([
-      '어제 한 번 들렀더라.',
-      '어 어제 흔적 남겼네.',
-      '어제 짧게라도 기록해뒀어.',
-    ]);
-  }
-  const bodyHtml = `
-    <div class="rc-body-yesterday">
-      <div class="rc-body-headline">어제</div>
-      <div class="rc-body-copy">${escapeHtml(copy)}</div>
-    </div>
-  `;
-  return {
-    id: 'yesterday',
-    available: true,
-    contentHash: 'yesterday_' + yKey + '_fallback',
-    bodyHtml,
-    onTapClick: `enterCheckin()`,
-    placeholder: '어제...',
-  };
-}
+  // 가장 confidence 높은 항목 우선 (사용자 진단대로 가장 확실한 새 발견부터)
+  pool.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+  const pick = pool[0];
 
-// =============================================================================
-// Source 5 — 회상 (1년 / 3개월 / 6개월 / 3주 / 12주)
-// =============================================================================
-function _rcShiftDateKeyMonths(key, deltaMonths) {
-  if (!key) return null;
-  const d = new Date(key + 'T00:00:00');
-  const orig = d.getDate();
-  d.setMonth(d.getMonth() + deltaMonths);
-  // 윤년 / 30일 month fallback (spec 11-4: "월/일 재검증")
-  if (d.getDate() !== orig) d.setDate(0);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function _rcShiftDateKeyYears(key, deltaYears) {
-  if (!key) return null;
-  const d = new Date(key + 'T00:00:00');
-  const origMonth = d.getMonth();
-  const origDate = d.getDate();
-  d.setFullYear(d.getFullYear() + deltaYears);
-  // 2/29 → 2/28 fallback
-  if (d.getMonth() !== origMonth) d.setDate(0);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function _rcThrowbackEntryFor(targetKey) {
-  if (!targetKey) return null;
-  const entries = state.entries || [];
-  const entry = entries.find(e => e.date === targetKey);
-  if (!entry) return null;
-  // mood ≥ 3 우선 (spec 11-4 score -20 — 1 mood 회피)
-  if (entry.mood != null && entry.mood <= 1) return null;
-  // crisis keyword 검사 (spec 11-4)
-  const text = [entry.note, entry.diary].filter(Boolean).join(' ');
-  if (_rcHasCrisis(text)) return null;
-  return entry;
-}
-
-function _rcThrowbackArchiveFor(targetKey) {
-  if (!targetKey) return null;
-  const archive = state.chatArchive || [];
-  const a = archive.find(c => c.date === targetKey);
-  if (!a) return null;
-  const text = (a.summary || '') + ' ' + (a.headline || '');
-  if (_rcHasCrisis(text)) return null;
-  return a;
-}
-
-function _rcSource5Throwback() {
-  if (typeof todayKey !== 'function') return { id: 'throwback', available: false };
-  const tKey = todayKey();
-
-  // 우선순위: 1년 → 3개월 → 6개월 → 3주 → 12주
-  const candidates = [
-    { label: '1년 전 오늘', key: _rcShiftDateKeyYears(tKey, -1) },
-    { label: '3개월 전 오늘', key: _rcShiftDateKeyMonths(tKey, -3) },
-    { label: '6개월 전 오늘', key: _rcShiftDateKeyMonths(tKey, -6) },
-    { label: '3주 전 오늘', key: _shiftDateKey ? _shiftDateKey(tKey, -21) : null },
-    { label: '12주 전 오늘', key: _shiftDateKey ? _shiftDateKey(tKey, -84) : null },
+  // 카피 = 인사이트 별 동적 생성 (사용자 명시 2026-05-09)
+  const kindLabel = _RC_NEW_VIEW_KIND_LABEL[pick.kind] || '소식';
+  const intros = [
+    `있잖아, 너에 대해 새로 본 ${kindLabel} 하나`,
+    `어 너 새 ${kindLabel} 있는 거 알아?`,
+    `잠깐 — 새 ${kindLabel} 하나`,
+    `오 ${kindLabel} 하나 새로 보였어`,
   ];
-
-  for (const c of candidates) {
-    if (!c.key) continue;
-    // entry note / diary 우선
-    const entry = _rcThrowbackEntryFor(c.key);
-    if (entry) {
-      const noteText = entry.note || entry.diary || '';
-      if (!noteText || noteText.length < 2) continue;
-      const snippet = noteText.length > 80 ? noteText.slice(0, 80) + '…' : noteText;
-      const intro = _rcPickRandom([
-        `이거 ${c.label} 너가 쓴 거`,
-        `${c.label} 너 — 한 줄`,
-        `어 이거 ${c.label} 너 한 줄`,
-      ]);
-      const bodyHtml = `
-        <div class="rc-body-throwback">
-          <div class="rc-body-headline">${escapeHtml(c.label)}</div>
-          <div class="rc-body-quote">${escapeHtml(snippet)}</div>
-          <div class="rc-body-quote-by">— ${escapeHtml(intro)}</div>
-        </div>
-      `;
-      return {
-        id: 'throwback',
-        available: true,
-        contentHash: 'throwback_' + c.key + '_entry',
-        bodyHtml,
-        onTapClick: `if(typeof openDayModal==='function'){openDayModal('${c.key}');}else{showScreen('archive');}`,
-        placeholder: c.label + ' 이 한 줄...',
-      };
-    }
-    // chatArchive 다음 후보
-    const archived = _rcThrowbackArchiveFor(c.key);
-    if (archived) {
-      const headline = archived.headline || archived.summary || '';
-      if (!headline || headline.length < 2) continue;
-      const snippet = headline.length > 80 ? headline.slice(0, 80) + '…' : headline;
-      const bodyHtml = `
-        <div class="rc-body-throwback">
-          <div class="rc-body-headline">${escapeHtml(c.label)}</div>
-          <div class="rc-body-quote">${escapeHtml(snippet)}</div>
-          <div class="rc-body-quote-by">— 그날 대화 한 줄</div>
-        </div>
-      `;
-      return {
-        id: 'throwback',
-        available: true,
-        contentHash: 'throwback_' + c.key + '_chat',
-        bodyHtml,
-        onTapClick: `if(typeof openDayModal==='function'){openDayModal('${c.key}');}else{showScreen('archive');}`,
-        placeholder: c.label + ' 대화...',
-      };
-    }
-  }
-
-  // 사용자 명시 2026-05-09: 시간 매칭 X 시 옛 진주 fallback (가용성 ↑).
-  // ≥ 30일 전 진주 중 note/content 있고 crisis X 인 것. 회상 의미 유지.
-  const _now = Date.now();
-  const _30dAgo = _now - 30 * 86400000;
-  const _oldPearls = (state.pearls || [])
-    .filter(p => {
-      if (!p || p.type === 'dna_pearl') return false;
-      if (!p.createdAt) return false;
-      const t = new Date(p.createdAt).getTime();
-      if (!t || t > _30dAgo) return false;
-      const text = (p.content || '') + ' ' + (p.note || '');
-      if (!text.trim() || text.trim().length < 3) return false;
-      if (_rcHasCrisis(text)) return false;
-      return true;
-    })
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  if (_oldPearls.length > 0) {
-    // 가장 오래된 + (랜덤 변동) — 매번 같은 진주 X 위해 random pick
-    const pick = _oldPearls[Math.floor(Math.random() * Math.min(3, _oldPearls.length))];
-    const days = Math.floor((_now - new Date(pick.createdAt).getTime()) / 86400000);
-    const dayLabel = days >= 365 ? `${Math.floor(days / 365)}년 전` : days >= 30 ? `${Math.floor(days / 30)}달 전` : `${days}일 전`;
-    const text = pick.content || pick.note || '';
-    const snippet = text.length > 80 ? text.slice(0, 80) + '…' : text;
-    const bodyHtml = `
-      <div class="rc-body-throwback">
-        <div class="rc-body-headline">${escapeHtml(dayLabel)} 진주</div>
-        <div class="rc-body-quote">${escapeHtml(snippet)}</div>
-        <div class="rc-body-quote-by">— ${escapeHtml(pick.category || '진주')}</div>
-      </div>
-    `;
-    return {
-      id: 'throwback',
-      available: true,
-      contentHash: 'throwback_pearl_' + pick.id,
-      bodyHtml,
-      onTapClick: `if(typeof openPearl==='function'){openPearl('${pick.id}');}else{showScreen('archive'); if(typeof switchLibraryCat==='function') switchLibraryCat('pearls');}`,
-      placeholder: dayLabel + ' 이 진주...',
-    };
-  }
-
-  return { id: 'throwback', available: false };
-}
-
-// =============================================================================
-// Source 3 — 새로 본 너 (분석 결과 새 항목 detect, Phase 2)
-// =============================================================================
-// state.rotatingCardState.newAnalysisItems = 30-force-analyze.js 분석 시 stash.
-// 14일 안 만료, 가장 최근 1개 pick.
-function _rcSource3NewView() {
-  const r = _ensureRotatingCardState();
-  const items = (r.newAnalysisItems || []).slice();
-  if (items.length === 0) return { id: 'newView', available: false };
-  const cutoff = Date.now() - 14 * 86400000;
-  const fresh = items.filter(it => it.detectedAt && new Date(it.detectedAt).getTime() > cutoff);
-  if (fresh.length === 0) return { id: 'newView', available: false };
-  fresh.sort((a, b) => new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime());
-  const pick = fresh[0];
-  if (!pick.name) return { id: 'newView', available: false };
-
-  const kindLabel = { trait: '결', value: '가치', pattern: '패턴' }[pick.kind] || '소식';
-  const intro = _rcPickRandom([
-    `있잖아, 너 ${kindLabel} 하나 새로 발견됐어`,
-    `어 너 새 ${kindLabel} 하나 있는 거 알아?`,
-    `잠깐 — 너 새 ${kindLabel}`,
-  ]);
+  const intro = _rcPickRandom(intros);
   const desc = pick.description || '';
   const descTrim = desc.length > 90 ? desc.slice(0, 90) + '…' : desc;
+
+  // crisis keyword skip (description 안에)
+  if (_rcHasCrisis(desc)) {
+    // 다음 후보 fallback
+    if (pool.length >= 2) {
+      const alt = pool[1];
+      if (_rcHasCrisis(alt.description || '')) return { id: 'newView', available: false };
+      return _rcSource2NewViewWithPick(alt);
+    }
+    return { id: 'newView', available: false };
+  }
+
+  return _rcSource2NewViewWithPick(pick);
+}
+
+function _rcSource2NewViewWithPick(pick) {
+  const kindLabel = _RC_NEW_VIEW_KIND_LABEL[pick.kind] || '소식';
+  const intros = [
+    `있잖아, 너에 대해 새로 본 ${kindLabel} 하나`,
+    `어 너 새 ${kindLabel} 있는 거 알아?`,
+    `잠깐 — 새 ${kindLabel} 하나`,
+  ];
+  const intro = _rcPickRandom(intros);
+  const desc = pick.description || '';
+  const descTrim = desc.length > 90 ? desc.slice(0, 90) + '…' : desc;
+
   const bodyHtml = `
     <div class="rc-body-newview">
       <div class="rc-body-headline">${escapeHtml(intro)}</div>
       <div class="rc-body-newview-name">${escapeHtml(pick.name)}</div>
       ${descTrim ? `<div class="rc-body-newview-desc">${escapeHtml(descTrim)}</div>` : ''}
+      <div class="rc-newview-actions">
+        <button class="rc-btn rc-btn--correct" type="button" onclick="event.stopPropagation(); _rcConfirmNewView('${escapeHtml(pick.id).replace(/'/g, '&#39;')}', 'correct')">맞아 ✓</button>
+        <button class="rc-btn rc-btn--wrong" type="button" onclick="event.stopPropagation(); _rcConfirmNewView('${escapeHtml(pick.id).replace(/'/g, '&#39;')}', 'wrong')">아닌데 ✕</button>
+      </div>
     </div>
   `;
   return {
@@ -27485,25 +27406,69 @@ function _rcSource3NewView() {
     contentHash: 'newView_' + pick.id,
     bodyHtml,
     onTapClick: `showScreen('model')`,
-    placeholder: '이거...',
     pick,
   };
 }
 
+function _rcConfirmNewView(itemId, verdict) {
+  if (!itemId || (verdict !== 'correct' && verdict !== 'wrong')) return;
+  const r = _ensureRotatingCardState();
+  if (!Array.isArray(r.unseenInsightsHistory)) r.unseenInsightsHistory = [];
+  r.unseenInsightsHistory.push({ id: itemId, verdict, at: new Date().toISOString() });
+
+  // case formulation 항목 mutation
+  const sep = itemId.indexOf('::');
+  if (sep > 0) {
+    const kind = itemId.slice(0, sep);
+    const name = itemId.slice(sep + 2);
+    const cf = state.caseFormulation || {};
+    const arrays = [
+      Array.isArray(cf[kind]) ? cf[kind] : null,
+      cf.unverified && Array.isArray(cf.unverified[kind]) ? cf.unverified[kind] : null,
+    ].filter(Boolean);
+    for (const arr of arrays) {
+      const idx = arr.findIndex(it => it && it.name === name);
+      if (idx >= 0) {
+        const item = arr[idx];
+        if (verdict === 'correct') {
+          item.user_verified = true;
+          item.confidence = Math.min(1.0, (item.confidence || 0.5) + 0.2);
+        } else {
+          item.user_verified = false;
+          item.confidence = Math.max(0.1, (item.confidence || 0.5) * 0.5);
+        }
+        break;
+      }
+    }
+  }
+
+  if (typeof saveState === 'function') saveState();
+  _rcSessionMarkConfirmed('newView');
+  if (typeof showToast === 'function') {
+    showToast(verdict === 'correct' ? '고동이가 너 더 잘 알게 됐어' : '오케이 다시 볼게');
+  }
+  // 다음 source 자동 cycle
+  setTimeout(() => _rcCycle(1, { autoFromAction: true }), 280);
+}
+
 // =============================================================================
-// Source 4 — 미니 리뷰 (Haiku, Phase 3 + 사용자 명시 2026-05-09)
+// Source 3 — 미니 리뷰 (Haiku 3일 stay) — stash 견고화
 // =============================================================================
-// 사용자 명시 2026-05-09 (H): 수동 trigger — 활동 조건 제거. cooldown 만 검사. 사용자 명시 클릭 시 trigger.
-// 사용자 명시 2026-05-09: cooldown 안 = 마지막 결과 카드 회전 카드에 유지 (사라지지 X).
-function _rcSource4MiniReview() {
+function _rcSource3MiniReview() {
   if (typeof _canAI !== 'function' || !_canAI()) return { id: 'miniReview', available: false };
   const r = _ensureRotatingCardState();
-  const lastMini = r.lastMiniReviewAt ? new Date(r.lastMiniReviewAt).getTime() : 0;
-  const cooldownMs = 3 * 86400000;
+  // 사용자 명시 2026-05-09: 3일 새벽 4시 cutoff (lastMiniReviewAt 의 4AM cutoff key vs todayK diff < 3)
+  let inCooldown = false;
+  if (r.lastMiniReviewAt) {
+    const lastDayK = _rcCutoffKeyOf(r.lastMiniReviewAt);
+    const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : _rcTodayKey();
+    inCooldown = _rcDayDiff(todayK, lastDayK) < 3;
+  }
 
-  // cooldown 안 = 마지막 결과 카드 (Haiku 재호출 X / 클릭 시 모달로 결과 다시 보기)
-  if (lastMini > 0 && Date.now() - lastMini < cooldownMs && Array.isArray(state.miniReviews) && state.miniReviews.length > 0) {
-    const mr = state.miniReviews[0];
+  if (inCooldown) {
+    // cooldown 안 = 결과 카드 (재진입 시 stash 사용 — Haiku 재호출 X)
+    const mr = _rcFindMiniReviewById(r.miniReviewContentId)
+      || (Array.isArray(state.miniReviews) ? state.miniReviews[0] : null);
     if (mr && mr.content) {
       const trim = mr.content.length > 100 ? mr.content.slice(0, 100) + '…' : mr.content;
       return {
@@ -27517,25 +27482,22 @@ function _rcSource4MiniReview() {
           </div>
         `,
         onTapClick: `openSavedMiniReview('${mr.id}')`,
-        placeholder: '이 3일...',
       };
     }
+    // cooldown 안인데 stashed content 없음 = 비정상 (이전 cooldown 끝) → trigger 카드로 fallback
   }
 
-  // cooldown 후 = trigger 카드 (수동 trigger). 활동 조건 제거 (사용자 명시 H).
-  if (lastMini > 0 && Date.now() - lastMini < cooldownMs) return { id: 'miniReview', available: false };
-
+  // cooldown 후 = trigger 카드
   const copy = _rcPickRandom([
     '지난 3일 어땠어? 짧게 한 번 짚어볼까.',
     '이 3일 — 같이 한 번 보자.',
     '며칠 모아둔 거 한 번 봐볼까?',
     '지나간 며칠, 짧게 정리해줄까?',
   ]);
-
   return {
     id: 'miniReview',
     available: true,
-    contentHash: 'miniReview_trigger_' + Math.floor(Date.now() / cooldownMs),
+    contentHash: 'miniReview_trigger_' + Math.floor(Date.now() / _RC_MINI_REVIEW_COOLDOWN_MS),
     bodyHtml: `
       <div class="rc-body-mini-review">
         <div class="rc-body-headline">지난 3일</div>
@@ -27544,16 +27506,20 @@ function _rcSource4MiniReview() {
       </div>
     `,
     onTapClick: `openMiniReviewModal()`,
-    placeholder: '이 3일...',
   };
 }
 
+function _rcFindMiniReviewById(id) {
+  if (!id || !Array.isArray(state.miniReviews)) return null;
+  return state.miniReviews.find(m => m && m.id === id) || null;
+}
+
 // =============================================================================
-// 미니 리뷰 모달 + Haiku 호출 + tone verify
+// 미니 리뷰 모달 — Haiku 호출 (cooldown 후 trigger 시) + stash 견고화
 // =============================================================================
 async function openMiniReviewModal() {
   const existing = document.getElementById('rcMiniReviewModal');
-  if (existing) return; // 중복 차단
+  if (existing) return;
 
   const overlay = document.createElement('div');
   overlay.id = 'rcMiniReviewModal';
@@ -27580,18 +27546,20 @@ async function openMiniReviewModal() {
       <div class="rc-mini-review-content">${escapeHtml(text)}</div>
       <button class="rc-mini-review-dismiss" type="button" onclick="dismissMiniReview()">정리 끝</button>
     `;
-    // lastMiniReviewAt 갱신 (cooldown 시작)
+    // stash — 재진입 시 손실 X. force=true 로 즉시 cloud sync.
     const r = _ensureRotatingCardState();
     r.lastMiniReviewAt = new Date().toISOString();
-    // 사용자 명시 2026-05-09 (P1-4): 미니 리뷰 결과 archive — state.miniReviews push.
     if (!Array.isArray(state.miniReviews)) state.miniReviews = [];
+    const mrId = 'mr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
     state.miniReviews.unshift({
-      id: 'mr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      id: mrId,
       content: text,
       generatedAt: new Date().toISOString(),
       source: 'haiku-3day',
     });
-    if (typeof saveState === 'function') saveState();
+    r.miniReviewContentId = mrId;
+    if (typeof saveState === 'function') saveState(true);
+    _rcSessionMarkConfirmed('miniReview');
   } catch (e) {
     console.warn('[mini-review]', e);
     const bodyEl = document.getElementById('rcMiniReviewBody');
@@ -27599,6 +27567,7 @@ async function openMiniReviewModal() {
       bodyEl.innerHTML = `
         <div class="rc-mini-review-error">지금은 못 정리하겠어. 다음에 다시 시도.</div>
         <button class="rc-mini-review-dismiss" type="button" onclick="closeMiniReviewModal()">닫기</button>
+        <button class="rc-mini-review-retry" type="button" onclick="closeMiniReviewModal(); setTimeout(openMiniReviewModal, 100)">다시</button>
       `;
     }
   }
@@ -27618,11 +27587,39 @@ function dismissMiniReview() {
   }, 220);
 }
 
+// 사용자 명시 2026-05-09: cooldown 안 카드 탭 시 stashed content 모달 (Haiku 재호출 X).
+function openSavedMiniReview(id) {
+  const mr = _rcFindMiniReviewById(id) || (Array.isArray(state.miniReviews) ? state.miniReviews[0] : null);
+  if (!mr || !mr.content) return;
+  const existing = document.getElementById('rcMiniReviewModal');
+  if (existing) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'rcMiniReviewModal';
+  overlay.className = 'rc-mini-review-overlay';
+  const dateStr = mr.generatedAt
+    ? new Date(mr.generatedAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
+    : '';
+  overlay.innerHTML = `
+    <div class="rc-mini-review-card">
+      <div class="rc-mini-review-header">
+        <div class="rc-mini-review-label">🐚 지난 3일${dateStr ? ` · ${dateStr}` : ''}</div>
+        <button class="rc-mini-review-close" type="button" onclick="closeMiniReviewModal()" aria-label="닫기">×</button>
+      </div>
+      <div class="rc-mini-review-body">
+        <div class="rc-mini-review-content">${escapeHtml(mr.content)}</div>
+        <button class="rc-mini-review-dismiss" type="button" onclick="closeMiniReviewModal()">닫기</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add('show'), 30);
+  _rcSessionMarkConfirmed('miniReview');
+}
+
 async function _callMiniReviewHaiku() {
   if (typeof callAnthropic !== 'function') throw new Error('callAnthropic 미정의');
-  const cooldownMs = 3 * 86400000;
-  const since = Date.now() - cooldownMs;
-
+  const since = Date.now() - _RC_MINI_REVIEW_COOLDOWN_MS;
   const recentEntries = (state.entries || []).filter(e => {
     const t = e.date ? new Date(e.date + 'T00:00:00').getTime() : 0;
     return t > since;
@@ -27651,6 +27648,7 @@ async function _callMiniReviewHaiku() {
 - 사용자 어휘 그대로 인용 OK.
 - 평가 X, 관찰 ○.
 - 한 단락만. 헤더 / 카테고리 / 리스트 X.
+- "결" 단어 X (잔잔한 결, 가벼운 결 등 회피).
 - 부담스러운 칭찬 X.`;
 
   const userPrompt = `지난 3일 데이터:
@@ -27666,9 +27664,9 @@ ${archiveText || '(없음)'}
 
 → 한 단락 (3-4문장) 으로 정리해줘.`;
 
-  // tone verify keyword (spec 11-7)
   const sycophancy = /힘내|화이팅|괜찮아질|잘하고 있어|대단해/;
   const diagnosis = /\bADHD\b|우울증|우울장애|불안장애|PTSD|강박장애/i;
+  const banGyeol = /잔잔한 결|가벼운 결|단단한 결|부드러운 결|결 따라/;
 
   let attempt = 0;
   while (attempt < 2) {
@@ -27682,8 +27680,7 @@ ${archiveText || '(없음)'}
     const data = await resp.json();
     const text = (data.content?.[0]?.text || '').trim();
     if (!text) throw new Error('빈 응답');
-
-    if (sycophancy.test(text) || diagnosis.test(text)) {
+    if (sycophancy.test(text) || diagnosis.test(text) || banGyeol.test(text)) {
       attempt++;
       if (attempt >= 2) throw new Error('tone verify 실패');
       continue;
@@ -27694,200 +27691,131 @@ ${archiveText || '(없음)'}
 }
 
 // =============================================================================
-// Source 6 — 통찰 한 줄 (지난 7일 vs 이전 7일, Phase 2 V1 hardcoded keyword)
-// =============================================================================
-const _RC_INSIGHT_KEYWORDS = ['ㅠ', '안 돼', '안돼', '몰라', '힘들', '괜찮', '진짜', '너무', '좋아'];
-
-function _rcSource6Insight() {
-  if (typeof todayKey !== 'function' || typeof _shiftDateKey !== 'function') {
-    return { id: 'insight', available: false };
-  }
-  const tKey = todayKey();
-  const wkAStart = _shiftDateKey(tKey, -7);   // 지난 7일 시작 (오늘 제외)
-  const wkBStart = _shiftDateKey(tKey, -14);  // 이전 7일 시작
-  const entriesArr = state.entries || [];
-  const wkA = entriesArr.filter(e => e.date && e.date >= wkAStart && e.date < tKey);
-  const wkB = entriesArr.filter(e => e.date && e.date >= wkBStart && e.date < wkAStart);
-  if (wkA.length === 0) return { id: 'insight', available: false };
-
-  const candidates = [];
-
-  // 어휘 빈도
-  const collectText = (week) => week.map(e => (e.note || '') + ' ' + (e.diary || '')).join(' ');
-  const txtA = collectText(wkA);
-  const txtB = collectText(wkB);
-  for (const kw of _RC_INSIGHT_KEYWORDS) {
-    try {
-      const re = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-      const cntA = (txtA.match(re) || []).length;
-      const cntB = (txtB.match(re) || []).length;
-      if (cntA >= 3 && cntA >= cntB * 2 && cntA - cntB >= 3) {
-        const copy = cntB > 0
-          ? `이번 주 '${kw}' ${cntA}번 등장. 지난 주 ${cntB}번이었거든.`
-          : `이번 주 '${kw}' ${cntA}번 등장.`;
-        candidates.push({ kind: 'lexicon_' + kw, delta: cntA - cntB, absDelta: cntA - cntB, copy });
-      }
-    } catch (e) { /* skip bad regex */ }
-  }
-
-  // 잠 평균
-  const sleepA = wkA.map(e => e.sleep).filter(v => v != null);
-  const sleepB = wkB.map(e => e.sleep).filter(v => v != null);
-  if (sleepA.length >= 3 && sleepB.length >= 3) {
-    const avgA = _rcAvg(sleepA);
-    const avgB = _rcAvg(sleepB);
-    const delta = avgA - avgB;
-    if (Math.abs(delta) >= 0.5) {
-      const copy = delta < 0
-        ? `이번 주 잠 ${_rcSleepHm(avgA)}쯤. 지난 주 ${_rcSleepHm(avgB)}이었거든.`
-        : `이번 주 잠 ${_rcSleepHm(avgA)}쯤. 좀 늘었네.`;
-      candidates.push({ kind: 'sleep', delta, absDelta: Math.abs(delta) * 5, copy }); // 잠 변화는 가중치 ↑
-    }
-  }
-
-  // 활력 평균
-  const vitA = wkA.map(e => e.vitality).filter(v => v != null);
-  const vitB = wkB.map(e => e.vitality).filter(v => v != null);
-  if (vitA.length >= 3 && vitB.length >= 3) {
-    const avgA = _rcAvg(vitA);
-    const avgB = _rcAvg(vitB);
-    const delta = avgA - avgB;
-    if (Math.abs(delta) >= 0.7) {
-      const copy = delta < 0
-        ? `이번 주 활력 평소보다 좀 처졌네.`
-        : `이번 주 활력 좀 채워졌어.`;
-      candidates.push({ kind: 'vitality', delta, absDelta: Math.abs(delta) * 4, copy });
-    }
-  }
-
-  if (candidates.length === 0) return { id: 'insight', available: false };
-  candidates.sort((a, b) => b.absDelta - a.absDelta);
-  const top = candidates[0];
-
-  const bodyHtml = `
-    <div class="rc-body-insight">
-      <div class="rc-body-headline">이번 주 너</div>
-      <div class="rc-body-copy">${escapeHtml(top.copy)}</div>
-    </div>
-  `;
-  return {
-    id: 'insight',
-    available: true,
-    contentHash: 'insight_' + top.kind + '_' + tKey,
-    bodyHtml,
-    onTapClick: `showScreen('model')`,
-    placeholder: '이번 주...',
-  };
-}
-
-// =============================================================================
-// Source 7 — Surprise / 기념 (사용자 명시 2026-05-09 E: 제거 — milestone 풀 자체 폐기)
-// =============================================================================
-// streak / 연속 / 함께한 N일 / 첫 진주 N일 / 셸 / 진주 카운트 — 모두 제거 (ADHD UX 압박 회피 + 사용자 명시).
-function _rcSource7Surprise() {
-  return { id: 'surprise', available: false };
-}
-
-// =============================================================================
-// 가용 source 수집 + score 정렬 + 14일 dedupe
+// 가용 source 수집 (5 source) — Quiz / 운세는 03a / 03b 에서 정의됨 (typeof check)
 // =============================================================================
 function _rcCollectAvailable() {
-  // 사용자 보고 2026-05-09: source 함수 throw 시 회전 카드 자체가 안 보이는 케이스 → 각 source 격리.
   const safe = (fn, label) => {
+    if (typeof fn !== 'function') return null;
     try { return fn(); } catch (e) { console.warn('[rotating-card source]', label, e); return null; }
   };
   const all = [
-    safe(_rcSource1Pearl, 'pearl'),
-    safe(_rcSource2Yesterday, 'yesterday'),
-    safe(_rcSource3NewView, 'newView'),
-    safe(_rcSource4MiniReview, 'miniReview'),
-    safe(_rcSource5Throwback, 'throwback'),
-    safe(_rcSource6Insight, 'insight'),
-    safe(_rcSource7Surprise, 'surprise'),
+    safe(_rcSource1Pearl,      'pearl'),
+    safe(_rcSource2NewView,    'newView'),
+    safe(_rcSource3MiniReview, 'miniReview'),
+    safe(typeof _rcSource4Quiz === 'function' ? _rcSource4Quiz : null,           'quiz'),
+    safe(typeof _rcSource5Horoscope === 'function' ? _rcSource5Horoscope : null, 'horoscope'),
   ];
   return all.filter(s => s && s.available);
 }
 
-function _rcSortByScore(sources) {
-  const enriched = sources.map(s => {
-    const seen = _rcSeenHashes14d(s.id);
-    const isDup = s.contentHash && seen.has(s.contentHash);
-    const sc = _rcScore(s.id);
-    return {
-      src: s,
-      score: sc.total - (isDup ? 100 : 0), // 14일 내 같은 hash → 사실상 비활성
-      sc,
-      isDup,
-    };
-  });
-  enriched.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    // tie-breaker: source id asc
-    const ai = _RC_SOURCE_ORDER.indexOf(a.src.id);
-    const bi = _RC_SOURCE_ORDER.indexOf(b.src.id);
-    return ai - bi;
-  });
-  return enriched;
+// =============================================================================
+// godong 표정 SVG (5 source variant)
+// =============================================================================
+function _rcGodongSvg(sourceId) {
+  const expressions = {
+    pearl: {
+      eyes: '<circle cx="22" cy="26" r="1.6" fill="#1a1a2e"/><circle cx="32" cy="26" r="1.6" fill="#1a1a2e"/>',
+      mouth: '<path d="M 22 33 Q 27 36 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
+      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">✨</text>',
+    },
+    newView: {
+      eyes: '<circle cx="22" cy="27" r="2.4" fill="#1a1a2e"/><circle cx="32" cy="27" r="2.4" fill="#1a1a2e"/><circle cx="22.5" cy="26" r="0.8" fill="#fff"/><circle cx="32.5" cy="26" r="0.8" fill="#fff"/>',
+      mouth: '<circle cx="27" cy="34" r="1.6" fill="none" stroke="#1a1a2e" stroke-width="1.3"/>',
+      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">✦</text>',
+    },
+    miniReview: {
+      eyes: '<path d="M 20 27 Q 22 26 24 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 27 Q 32 26 34 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
+      mouth: '<line x1="25" y1="34" x2="29" y2="34" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
+      extra: '',
+    },
+    quiz: {
+      eyes: '<circle cx="22" cy="26" r="1.8" fill="#1a1a2e"/><circle cx="32" cy="26" r="1.8" fill="#1a1a2e"/>',
+      mouth: '<path d="M 22 33 Q 27 35 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
+      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">?</text>',
+    },
+    quizDone: {
+      eyes: '<path d="M 20 27 Q 22 24 24 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 27 Q 32 24 34 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
+      mouth: '<path d="M 22 33 Q 27 37 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round"/>',
+      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">★</text>',
+    },
+    horoscope: {
+      eyes: '<path d="M 20 26 Q 22 24 24 26" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 26 Q 32 24 34 26" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
+      mouth: '<path d="M 23 33 Q 27 35 31 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
+      extra: '<text x="40" y="14" font-size="8" fill="rgba(168,157,200,0.95)">🌗</text>',
+    },
+  };
+  const exp = expressions[sourceId] || expressions.pearl;
+  return `
+    <svg class="rc-godong-svg" viewBox="0 0 56 50" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="godongGrad-${sourceId}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f5d99c"/>
+          <stop offset="100%" stop-color="#d4a76a"/>
+        </linearGradient>
+      </defs>
+      <path d="M 28 5 Q 48 8 47 28 Q 46 47 28 47 Q 10 47 9 28 Q 8 12 28 5 Z" fill="url(#godongGrad-${sourceId})" stroke="rgba(168,157,200,0.4)" stroke-width="0.6"/>
+      <path d="M 28 14 Q 40 18 38 28 Q 36 38 28 38 Q 20 38 20 28" fill="none" stroke="rgba(168,157,200,0.55)" stroke-width="1.2"/>
+      ${exp.eyes}
+      ${exp.mouth}
+      ${exp.extra}
+    </svg>
+  `;
 }
 
 // =============================================================================
-// 렌더 — 메인
+// 렌더 — sessionOrder 기반 (한 화면 안 stable)
 // =============================================================================
 function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
+  _ensureRotatingCardState();
 
-  // 사용자 보고 2026-05-09: 회전 카드 안 보임 fix — 전체 throw 시 fallback 으로 source 1 (진주) 보장.
   try {
-    // 튜토리얼 모드 시 진주 source 1 강제 (LNGSHOT - Vanilla Days fixed)
+    // 튜토리얼 모드 = 진주 fixed
     if (window._onbTutorialMode) {
       const s = _rcSource1Pearl();
+      _rcSessionOrder = [s];
+      _rcSessionIndex = 0;
       container.innerHTML = _rcRenderShell([s], 0);
-      _rcAttachListeners(container);
       return;
     }
 
-    const sources = _rcCollectAvailable();
-    if (sources.length === 0) {
-      // empty fallback — 첫 진주 CTA 단독
-      const s = _rcSource1Pearl();
-      if (s) {
-        container.innerHTML = _rcRenderShell([s], 0);
-        _rcAttachListeners(container);
+    // 별자리 onboarding 카드 = horoscope source 자리에 자체 표시 (03b sub file). 별도 단독 X.
+
+    // 새 세션 (sessionOrder 비어있으면 새 진입) — 가용 source 재계산 + 정렬
+    if (!_rcSessionOrder) {
+      const sources = _rcCollectAvailable();
+      if (sources.length === 0) {
+        // 가용 source 0 = source 1 진주 fallback (빈 진주 CTA 라도 가용)
+        const s = _rcSource1Pearl();
+        _rcSessionOrder = s ? [s] : [];
+        _rcSessionIndex = 0;
+      } else {
+        _rcSessionOrder = _rcSortByConfirmation(sources);
+        _rcSessionIndex = 0;
+        // 첫 카드 진주면 lastPearlShownDate 갱신
+        const first = _rcSessionOrder[0];
+        if (first && first.id === 'pearl') {
+          const r = _ensureRotatingCardState();
+          r.lastPearlShownDate = _rcTodayKey();
+          if (typeof saveState === 'function') saveState();
+        }
       }
+    }
+
+    if (_rcSessionOrder.length === 0) {
+      container.innerHTML = '';
       return;
     }
-
-    const ranked = _rcSortByScore(sources);
-
-    // 4시간 windowing — 같은 4시간 안 같은 source + 같은 contentHash stay (spec 11-2)
-    const windowed = _rcWindowedSource();
-    let pickIdx = 0;
-    if (windowed) {
-      const idx = ranked.findIndex(r => r.src.id === windowed.id);
-      if (idx >= 0) pickIdx = idx;
-    }
-
-    const orderedSources = ranked.map(r => r.src);
-    const firstSrc = orderedSources[pickIdx];
-    if (!windowed || !firstSrc || firstSrc.id !== windowed.id) {
-      if (firstSrc) _rcSetWindow(firstSrc.id, firstSrc.contentHash);
-    }
-    if (firstSrc && firstSrc.contentHash) _rcRecordSeen(firstSrc.id, firstSrc.contentHash);
-    if (typeof saveState === 'function') saveState();
-
-    container.innerHTML = _rcRenderShell(orderedSources, pickIdx);
-    _rcAttachListeners(container);
+    if (_rcSessionIndex >= _rcSessionOrder.length) _rcSessionIndex = 0;
+    container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
   } catch (e) {
     console.error('[renderRotatingCard]', e);
-    // 최후 fallback — 진주 source 1
     try {
       const s = _rcSource1Pearl();
-      if (s) {
-        container.innerHTML = _rcRenderShell([s], 0);
-      } else {
-        container.innerHTML = '';
-      }
+      _rcSessionOrder = [s];
+      _rcSessionIndex = 0;
+      container.innerHTML = _rcRenderShell([s], 0);
     } catch (e2) {
       console.error('[renderRotatingCard fallback]', e2);
       container.innerHTML = '';
@@ -27896,74 +27824,8 @@ function renderRotatingCard() {
 }
 
 // =============================================================================
-// Shell HTML — wrapper + indicator + chat 다리 footer
+// Shell HTML — wrapper + indicator + arrow row
 // =============================================================================
-// 사용자 명시 2026-05-09 (D 일러스트): godong 표정 variant SVG mockup.
-// spec 4-8: 빛나는(진주) / 살짝 걱정(어제) / 발견·눈 반짝(새 발견) / 정리 중(미니 리뷰) / 그리움·살짝 미소(회상) / 진지(통찰).
-// 추후 정식 일러스트 (PNG/WebP) 로 교체 가능 — _rcGodongSvg 만 변경.
-function _rcGodongSvg(sourceId) {
-  // 표정만 변경 — 본체 / 나선 / 색조 통일 (godong 고유 캐릭터 일관성)
-  const expressions = {
-    pearl: {
-      // 빛나는 — 동그란 눈 + 미소
-      eyes: '<circle cx="22" cy="26" r="1.6" fill="#1a1a2e"/><circle cx="32" cy="26" r="1.6" fill="#1a1a2e"/>',
-      mouth: '<path d="M 22 33 Q 27 36 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">✨</text>',
-    },
-    yesterday: {
-      // 살짝 걱정 — 눈썹 ↓ + 입 평선
-      eyes: '<line x1="20" y1="25.5" x2="24" y2="26" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><line x1="30" y1="26" x2="34" y2="25.5" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><circle cx="22" cy="28" r="1.2" fill="#1a1a2e"/><circle cx="32" cy="28" r="1.2" fill="#1a1a2e"/>',
-      mouth: '<path d="M 22 35 Q 27 33 32 35" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '',
-    },
-    newView: {
-      // 발견 / 눈 반짝 — 큰 눈 + ㅇ 입
-      eyes: '<circle cx="22" cy="27" r="2.4" fill="#1a1a2e"/><circle cx="32" cy="27" r="2.4" fill="#1a1a2e"/><circle cx="22.5" cy="26" r="0.8" fill="#fff"/><circle cx="32.5" cy="26" r="0.8" fill="#fff"/>',
-      mouth: '<circle cx="27" cy="34" r="1.6" fill="none" stroke="#1a1a2e" stroke-width="1.3"/>',
-      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">✦</text>',
-    },
-    miniReview: {
-      // 정리 중 — 살짝 감은 눈 + 작은 입
-      eyes: '<path d="M 20 27 Q 22 26 24 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 27 Q 32 26 34 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
-      mouth: '<line x1="25" y1="34" x2="29" y2="34" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '',
-    },
-    throwback: {
-      // 그리움 / 살짝 미소 — 부드러운 눈 + 살짝 위로
-      eyes: '<path d="M 20 27 Q 22 25 24 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 27 Q 32 25 34 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
-      mouth: '<path d="M 22 33 Q 27 36 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '',
-    },
-    insight: {
-      // 진지 — 좁은 슬릿 눈 + 평선 입
-      eyes: '<line x1="20" y1="27" x2="24" y2="27" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round"/><line x1="30" y1="27" x2="34" y2="27" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round"/>',
-      mouth: '<line x1="24" y1="34" x2="30" y2="34" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '',
-    },
-  };
-  const exp = expressions[sourceId] || expressions.pearl;
-  return `
-    <svg class="rc-godong-svg" viewBox="0 0 56 50" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <!-- 소라 본체 (그라디언트 채움) -->
-      <defs>
-        <linearGradient id="godongGrad-${sourceId}" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#f5d99c"/>
-          <stop offset="100%" stop-color="#d4a76a"/>
-        </linearGradient>
-      </defs>
-      <path d="M 28 5 Q 48 8 47 28 Q 46 47 28 47 Q 10 47 9 28 Q 8 12 28 5 Z" fill="url(#godongGrad-${sourceId})" stroke="rgba(168,157,200,0.4)" stroke-width="0.6"/>
-      <!-- 나선 라인 -->
-      <path d="M 28 14 Q 40 18 38 28 Q 36 38 28 38 Q 20 38 20 28" fill="none" stroke="rgba(168,157,200,0.55)" stroke-width="1.2"/>
-      <!-- 표정 -->
-      ${exp.eyes}
-      ${exp.mouth}
-      ${exp.extra}
-    </svg>
-  `;
-}
-
-// 사용자 명시 2026-05-09: 헤더 '🌟 오늘의 너' / source 별 sub 라벨 / footer 출처 label / testerMode 디버그 — 모두 제거.
-// 인디케이터는 화살 row 사이로 이동 (가용 source ≥ 2 시).
 function _rcRenderShell(orderedSources, currentIdx) {
   if (!orderedSources || orderedSources.length === 0) return '';
   const cur = orderedSources[currentIdx] || orderedSources[0];
@@ -27980,10 +27842,10 @@ function _rcRenderShell(orderedSources, currentIdx) {
     </div>
   ` : '';
 
-  // 사용자 명시 2026-05-09: 진주 source (텍스트 / 음악 / 사진 / 영상 / isEmpty CTA) = godong 표정 hide.
-  // 진주 자체가 surface (큐레이션 + '진주 추가하기' CTA) 라 godong 표정 의미 X.
+  // 사용자 명시 2026-05-09: 진주 source = godong 표정 hide (큐레이션 + 추가 CTA 자체가 surface).
   const showGodong = cur.id !== 'pearl';
-  const godongHtml = showGodong ? `<div class="rc-godong" aria-hidden="true">${_rcGodongSvg(cur.id)}</div>` : '';
+  const godongSvgKey = (cur.id === 'quiz' && cur._isQuizDone) ? 'quizDone' : cur.id;
+  const godongHtml = showGodong ? `<div class="rc-godong" aria-hidden="true">${_rcGodongSvg(godongSvgKey)}</div>` : '';
 
   return `
     <div class="rotating-card" id="rotatingCard" data-current-idx="${currentIdx}" data-total="${total}">
@@ -27997,39 +27859,638 @@ function _rcRenderShell(orderedSources, currentIdx) {
 }
 
 // =============================================================================
-// Swipe gesture (spec 11-1 가드 detail — Pointer Events + 30px lock + preventDefault)
+// Cycle — 좌우 화살 navigate (sessionOrder 그대로, 인덱스만 advance)
 // =============================================================================
-// 사용자 명시 2026-05-09: swipe 제거 — 좌우 ‹ › 화살 버튼 만 사용 (단순화).
-// touch-action 은 페이지 세로 스크롤 자연 처리.
-function _rcAttachListeners(container) {
-  return;
+function _rcCycle(dir, opts) {
+  if (!_rcSessionOrder || _rcSessionOrder.length === 0) return;
+  const total = _rcSessionOrder.length;
+  if (total < 2) return;
+  _rcSessionIndex = (_rcSessionIndex + dir + total) % total;
+  // 진주 카드로 navigate 시 lastPearlShownDate 갱신
+  const cur = _rcSessionOrder[_rcSessionIndex];
+  if (cur && cur.id === 'pearl') {
+    const r = _ensureRotatingCardState();
+    r.lastPearlShownDate = _rcTodayKey();
+    if (typeof saveState === 'function') saveState();
+  }
+  const container = document.getElementById('rotatingCardContainer');
+  if (container) container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
 }
 
-function _rcCycle(dir) {
-  const card = document.getElementById('rotatingCard');
-  if (!card) return;
-  const total = parseInt(card.dataset.total || '1', 10);
-  const cur = parseInt(card.dataset.currentIdx || '0', 10);
-  if (total < 2) return;
-  let next = (cur + dir + total) % total;
-  // window source id 갱신 — swipe 로 바뀌면 windowed 도 새로
-  const sources = _rcCollectAvailable();
-  if (sources.length === 0) return;
-  const ranked = _rcSortByScore(sources);
-  const orderedSources = ranked.map(r => r.src);
-  if (next < 0 || next >= orderedSources.length) next = 0;
-  const newSrc = orderedSources[next];
-  if (newSrc && newSrc.contentHash) _rcRecordSeen(newSrc.id, newSrc.contentHash);
-  if (newSrc) _rcSetWindow(newSrc.id, newSrc.contentHash);
+// =============================================================================
+// 외부 hook — saveAt navigation 시 reset (홈 화면 떠나는 시점 = 다음 진입 시 새 세션)
+// =============================================================================
+// showScreen('home') 진입 = 새 세션 = renderRotatingCard 가 sessionOrder null 보고 재계산.
+// 단, navigation 에서 'home' 이 아닌 곳으로 갈 때 reset 호출 → 다음 home 진입 시 자동 새 세션.
+// 사용자 명시 2026-05-09: 새 세션마다 가용/불가용 재체크.
+window.addEventListener('beforeunload', () => { _rcResetSession(); });
+
+// 사용자 명시: chat 다리 footer 폐기 / swipe 폐기 / 자동 fade 폐기 — 좌우 화살만.
+// 사용자 명시 2026-05-09 (회전 카드 spec final 6-4): Quiz source 4 — case formulation user_verified 기반.
+// "고동이가 너 얼마나 맞히고 있을까?" — 5 question 묶음, 4AM cutoff, 진행 stash, dedupe 14d/1d.
+// 의존: 03-rotating-card.js (state, helpers, _rcSessionMarkConfirmed, _rcCycle, renderRotatingCard).
+
+// =============================================================================
+// 4AM cutoff key (앱 일반 cutoff 와 일치)
+// =============================================================================
+function _rcQuizCutoffKey() {
+  const now = new Date();
+  // 4AM 이전이면 어제 날짜 키
+  if (now.getHours() < 4) now.setDate(now.getDate() - 1);
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// =============================================================================
+// Quiz pool — case formulation user_verified=false + 추상 trait 제외 + dedupe
+// =============================================================================
+// 추상 / 구체 분류:
+//  - 구체: name 안에 시간/숫자/관찰 가능 행동 표현 (예: "야행성", "주말 다음 월요일", "ㅠ 자주")
+//  - 추상: 단순 형용사 / 인격 표현 (예: "신중한", "깊이 보는 사람")
+// 자동 휴리스틱: name 길이 ≥ 4 + (description 길이 ≥ 8 또는 숫자/시간 단어 포함) → 구체로 인정
+const _RC_QUIZ_CONCRETE_HINTS = /\d|[월화수목금토일]|시간|시\b|새벽|밤|아침|오후|주말|평일|아침|점심|저녁|마감|회의|카페|자주|많|적|짧|긴|이전|이후|뒤|앞|중|첫|마지막|더|덜|매일|매주/;
+
+function _rcQuizIsConcreteEnough(item) {
+  if (!item || !item.name) return false;
+  const name = String(item.name);
+  if (name.length < 3) return false;
+  const desc = String(item.description || '');
+  // 구체 hint 표현 포함 시 OK
+  if (_RC_QUIZ_CONCRETE_HINTS.test(name) || _RC_QUIZ_CONCRETE_HINTS.test(desc)) return true;
+  // 또는 description 이 충분히 길면 OK
+  if (desc.length >= 12) return true;
+  return false;
+}
+
+function _rcQuizCollectPool() {
+  const r = _ensureRotatingCardState();
+  const cf = state.caseFormulation || {};
+  const now = Date.now();
+  const dims = ['problems', 'mechanisms', 'strengths', 'goals', 'growth'];
+  const pool = [];
+  // 컨펌 안 된 것 (user_verified !== true) + 추상 제외 + dedupe cooldown 통과
+  const visit = (kind, item, sourcePool) => {
+    if (!item || !item.name) return;
+    if (item.user_verified === true) return;
+    if (!_rcQuizIsConcreteEnough(item)) return;
+    const id = `${kind}::${item.name}`;
+    // dedupe cooldown
+    const denied = r.quizDeniedCooldown || {};
+    const skipped = r.quizSkippedCooldown || {};
+    if (denied[id] && denied[id] > now) return;
+    if (skipped[id] && skipped[id] > now) return;
+    pool.push({
+      id, kind,
+      name: item.name,
+      description: item.description || '',
+      confidence: typeof item.confidence === 'number' ? item.confidence : 0.5,
+      sourcePool,
+    });
+  };
+  for (const kind of dims) {
+    (Array.isArray(cf[kind]) ? cf[kind] : []).forEach(it => visit(kind, it, 'verified'));
+    const ua = cf.unverified && Array.isArray(cf.unverified[kind]) ? cf.unverified[kind] : [];
+    ua.forEach(it => visit(kind, it, 'unverified'));
+  }
+  return pool;
+}
+
+// =============================================================================
+// Source 4 — Quiz card (4 가드: 신규 / 추상 / dedupe / 가용 < 5)
+// =============================================================================
+function _rcSource4Quiz() {
+  const r = _ensureRotatingCardState();
+  const todayK = _rcQuizCutoffKey();
+
+  // 4AM cutoff — 새 날 진입 시 quizProgress 리셋 (새 5 pick)
+  if (r.quizDay !== todayK) {
+    r.quizDay = todayK;
+    r.quizProgress = null;
+    r.quizScoreBefore = null;
+  }
+
+  // 진행 stash 있으면 그대로
+  if (r.quizProgress && Array.isArray(r.quizProgress.questionIds) && r.quizProgress.questionIds.length > 0) {
+    return _rcRenderQuizFromProgress();
+  }
+
+  // 신규 — pool 비어있으면 source 비활성 (가드 1: 신규 user / 가드 4: 가용 항목 0)
+  const pool = _rcQuizCollectPool();
+  if (pool.length === 0) return { id: 'quiz', available: false };
+
+  // 5 random pick (있는 만큼만)
+  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
+  const picked = shuffled.slice(0, Math.min(5, shuffled.length));
+  const questionIds = picked.map(p => p.id);
+  // 점수 변화 표시용 — 시작 % stash
+  r.quizScoreBefore = _rcQuizComputeAccuracyPct();
+  r.quizProgress = {
+    questionIds,
+    currentIdx: 0,
+    answers: {},
+  };
   if (typeof saveState === 'function') saveState();
+  return _rcRenderQuizFromProgress();
+}
+
+function _rcRenderQuizFromProgress() {
+  const r = _ensureRotatingCardState();
+  const p = r.quizProgress;
+  if (!p || !Array.isArray(p.questionIds) || p.questionIds.length === 0) {
+    return { id: 'quiz', available: false };
+  }
+  const total = p.questionIds.length;
+  const idx = Math.min(p.currentIdx || 0, total);
+  // 끝 화면
+  if (idx >= total) {
+    return _rcRenderQuizEndCard();
+  }
+  const itemId = p.questionIds[idx];
+  const item = _rcQuizFindItem(itemId);
+  if (!item) {
+    // 항목 사라짐 (caseFormulation 갱신 등) → skip
+    p.currentIdx = idx + 1;
+    if (typeof saveState === 'function') saveState();
+    return _rcRenderQuizFromProgress();
+  }
+  const desc = item.description || '';
+  const descTrim = desc.length > 60 ? desc.slice(0, 60) + '…' : desc;
+  // mini-indicator (카드 안 N 인디케이터)
+  const miniIndicator = p.questionIds.map((_, i) => `<span class="rc-quiz-dot${i === idx ? ' is-active' : ''}"></span>`).join('');
+
+  const bodyHtml = `
+    <div class="rc-body-quiz">
+      <div class="rc-body-headline">고동이가 너 얼마나 맞히고 있을까?</div>
+      <div class="rc-quiz-progress">[${idx + 1}/${total}]</div>
+      <div class="rc-quiz-question">${escapeHtml(item.name)}${item.tail || '?'}</div>
+      ${descTrim ? `<div class="rc-quiz-desc">${escapeHtml(descTrim)}</div>` : ''}
+      <div class="rc-quiz-actions">
+        <button class="rc-btn rc-btn--correct" type="button" onclick="event.stopPropagation(); _rcQuizAnswer('correct')">맞아 ✓</button>
+        <button class="rc-btn rc-btn--wrong" type="button" onclick="event.stopPropagation(); _rcQuizAnswer('wrong')">아닌데 ✕</button>
+        <button class="rc-btn rc-btn--skip" type="button" onclick="event.stopPropagation(); _rcQuizAnswer('skip')">넘기기 →</button>
+      </div>
+      <div class="rc-quiz-mini-row">
+        <button class="rc-quiz-mini-arrow" type="button" onclick="event.stopPropagation(); _rcQuizPrevQuestion()" aria-label="이전 질문" ${idx === 0 ? 'disabled' : ''}>‹</button>
+        <span class="rc-quiz-mini-indicator">${miniIndicator}</span>
+        <button class="rc-quiz-mini-arrow" type="button" onclick="event.stopPropagation(); _rcQuizNextQuestion()" aria-label="다음 질문" ${idx >= total - 1 ? 'disabled' : ''}>›</button>
+      </div>
+    </div>
+  `;
+  return {
+    id: 'quiz',
+    available: true,
+    contentHash: 'quiz_' + r.quizDay + '_' + idx,
+    bodyHtml,
+    onTapClick: '', // 카드 자체 탭 핸들러 X — 답 버튼만
+    _isQuizActive: true,
+  };
+}
+
+function _rcRenderQuizEndCard() {
+  const r = _ensureRotatingCardState();
+  const before = r.quizScoreBefore;
+  const after = _rcQuizComputeAccuracyPct();
+  const correctCount = _rcQuizCountAnswers('correct');
+  const wrongCount = _rcQuizCountAnswers('wrong');
+  const total = ((r.quizProgress && r.quizProgress.questionIds) || []).length;
+  const summary = `오늘 ${correctCount}개 맞히고 ${wrongCount}개 빗나감.`;
+  const scoreLine = (before != null && after != null)
+    ? `${before}% → ${after}%`
+    : (after != null ? `${after}%` : '');
+
+  const bodyHtml = `
+    <div class="rc-body-quiz rc-quiz-end">
+      <div class="rc-body-headline">고동이 점수 ★</div>
+      <div class="rc-quiz-summary">${escapeHtml(summary)}</div>
+      ${scoreLine ? `<div class="rc-quiz-score-change">${escapeHtml(scoreLine)}</div>` : ''}
+      <div class="rc-quiz-end-cta">
+        <button class="rc-btn rc-btn--primary" type="button" onclick="event.stopPropagation(); _rcQuizConfirmEnd()">좋아</button>
+      </div>
+    </div>
+  `;
+  return {
+    id: 'quiz',
+    available: true,
+    contentHash: 'quiz_end_' + r.quizDay,
+    bodyHtml,
+    onTapClick: '',
+    _isQuizDone: true,
+  };
+}
+
+function _rcQuizFindItem(itemId) {
+  if (!itemId) return null;
+  const sep = itemId.indexOf('::');
+  if (sep <= 0) return null;
+  const kind = itemId.slice(0, sep);
+  const name = itemId.slice(sep + 2);
+  const cf = state.caseFormulation || {};
+  const arrays = [
+    Array.isArray(cf[kind]) ? cf[kind] : null,
+    cf.unverified && Array.isArray(cf.unverified[kind]) ? cf.unverified[kind] : null,
+  ].filter(Boolean);
+  for (const arr of arrays) {
+    const found = arr.find(it => it && it.name === name);
+    if (found) return Object.assign({ kind }, found);
+  }
+  return null;
+}
+
+// =============================================================================
+// Quiz 액션 — 답 / 넘기기 / 이전 / 다음 / 끝 컨펌
+// =============================================================================
+function _rcQuizAnswer(verdict) {
+  const r = _ensureRotatingCardState();
+  const p = r.quizProgress;
+  if (!p || !Array.isArray(p.questionIds)) return;
+  const idx = p.currentIdx || 0;
+  const itemId = p.questionIds[idx];
+  if (!itemId) return;
+  if (!p.answers || typeof p.answers !== 'object') p.answers = {};
+  p.answers[itemId] = verdict;
+
+  // case formulation 항목 mutation + dedupe stash
+  const sep = itemId.indexOf('::');
+  if (sep > 0) {
+    const kind = itemId.slice(0, sep);
+    const name = itemId.slice(sep + 2);
+    const cf = state.caseFormulation || {};
+    const arrays = [
+      Array.isArray(cf[kind]) ? cf[kind] : null,
+      cf.unverified && Array.isArray(cf.unverified[kind]) ? cf.unverified[kind] : null,
+    ].filter(Boolean);
+    for (const arr of arrays) {
+      const i = arr.findIndex(it => it && it.name === name);
+      if (i >= 0) {
+        const item = arr[i];
+        if (verdict === 'correct') {
+          item.user_verified = true;
+          item.confidence = Math.min(1.0, (item.confidence || 0.5) + 0.2);
+        } else if (verdict === 'wrong') {
+          item.user_verified = false;
+          item.confidence = Math.max(0.1, (item.confidence || 0.5) * 0.5);
+          // 14일 cooldown
+          if (!r.quizDeniedCooldown) r.quizDeniedCooldown = {};
+          r.quizDeniedCooldown[itemId] = Date.now() + _RC_QUIZ_DENIED_COOLDOWN_MS;
+        } else if (verdict === 'skip') {
+          // 1일 cooldown
+          if (!r.quizSkippedCooldown) r.quizSkippedCooldown = {};
+          r.quizSkippedCooldown[itemId] = Date.now() + _RC_QUIZ_SKIPPED_COOLDOWN_MS;
+        }
+        break;
+      }
+    }
+  }
+
+  if (verdict === 'correct') {
+    if (typeof showToast === 'function') showToast('고동이 +1');
+  } else if (verdict === 'wrong') {
+    if (typeof showToast === 'function') showToast('오케이 다시 볼게');
+  }
+
+  // 다음 질문 자동 advance
+  p.currentIdx = idx + 1;
+  if (typeof saveState === 'function') saveState();
+  // sessionOrder 안 quiz 카드 위치 그대로 — 카드 컨텐츠만 갱신
+  _rcQuizRefreshCard();
+}
+
+function _rcQuizPrevQuestion() {
+  const r = _ensureRotatingCardState();
+  const p = r.quizProgress;
+  if (!p) return;
+  if ((p.currentIdx || 0) <= 0) return;
+  p.currentIdx = (p.currentIdx || 0) - 1;
+  if (typeof saveState === 'function') saveState();
+  _rcQuizRefreshCard();
+}
+
+function _rcQuizNextQuestion() {
+  const r = _ensureRotatingCardState();
+  const p = r.quizProgress;
+  if (!p) return;
+  const total = (p.questionIds || []).length;
+  if ((p.currentIdx || 0) >= total - 1) return;
+  p.currentIdx = (p.currentIdx || 0) + 1;
+  if (typeof saveState === 'function') saveState();
+  _rcQuizRefreshCard();
+}
+
+function _rcQuizConfirmEnd() {
+  _rcSessionMarkConfirmed('quiz');
+  if (typeof showToast === 'function') showToast('🐚 다음에 또 봐');
+  // 다음 source 자동 cycle
+  setTimeout(() => {
+    if (typeof _rcCycle === 'function') _rcCycle(1);
+  }, 200);
+}
+
+// sessionOrder 의 quiz 카드만 컨텐츠 갱신 (sessionOrder 변경 X)
+function _rcQuizRefreshCard() {
+  if (!_rcSessionOrder) {
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    return;
+  }
+  const idx = _rcSessionOrder.findIndex(s => s && s.id === 'quiz');
+  if (idx < 0) {
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    return;
+  }
+  // quiz card 새 source 객체로 교체 (sessionOrder 안 위치 유지)
+  const newSrc = _rcSource4Quiz();
+  if (!newSrc || !newSrc.available) {
+    // quiz 가 갑자기 비활성 (모든 항목 disappear) → 전체 재정렬
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    return;
+  }
+  _rcSessionOrder[idx] = newSrc;
+  // 현재 인덱스가 quiz 가 아니면 그대로, quiz 면 카드 갱신
   const container = document.getElementById('rotatingCardContainer');
-  if (container) {
-    container.innerHTML = _rcRenderShell(orderedSources, next);
-    _rcAttachListeners(container);
+  if (container && typeof _rcRenderShell === 'function') {
+    container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
   }
 }
 
-// 사용자 명시 2026-05-09: chat 다리 footer 제거 — _RC_PLACEHOLDERS / rcOpenChatBridge dead code 청소.
+// =============================================================================
+// 누적 점수 — case formulation user_verified=true 비율
+// =============================================================================
+function _rcQuizComputeAccuracyPct() {
+  const cf = state.caseFormulation || {};
+  const dims = ['problems', 'mechanisms', 'strengths', 'goals', 'growth'];
+  let total = 0;
+  let verified = 0;
+  for (const kind of dims) {
+    (Array.isArray(cf[kind]) ? cf[kind] : []).forEach(it => {
+      if (!it || !it.name) return;
+      total++;
+      if (it.user_verified === true) verified++;
+    });
+  }
+  if (total === 0) return null;
+  return Math.round((verified / total) * 100);
+}
+
+function _rcQuizCountAnswers(verdict) {
+  const r = _ensureRotatingCardState();
+  const p = r.quizProgress;
+  if (!p || !p.answers) return 0;
+  return Object.values(p.answers).filter(v => v === verdict).length;
+}
+// 사용자 명시 2026-05-09 (회전 카드 spec final 6-5): 고동의 운세 source 5 — Horoscope API + Haiku 한국어 변환.
+// 회전 빈도 = 매일 (04:00 KST 이후 첫 진입 시 자동 fetch — 사용자 명시 2026-05-09).
+// API: horoscope-app-api.vercel.app — 무료, key X, 12 별자리.
+// 의존: 03-rotating-card.js (state, helpers, _rcZodiacSkippedThisSession, _rcQuizCutoffKey, _rcSessionMarkConfirmed).
+
+// =============================================================================
+// 별자리 mapping (영문 key ↔ 심볼 ↔ 한국어 라벨)
+// =============================================================================
+const _RC_ZODIACS = [
+  { key: 'aries',       symbol: '♈', label: '양자리' },
+  { key: 'taurus',      symbol: '♉', label: '황소자리' },
+  { key: 'gemini',      symbol: '♊', label: '쌍둥이' },
+  { key: 'cancer',      symbol: '♋', label: '게자리' },
+  { key: 'leo',         symbol: '♌', label: '사자자리' },
+  { key: 'virgo',       symbol: '♍', label: '처녀자리' },
+  { key: 'libra',       symbol: '♎', label: '천칭자리' },
+  { key: 'scorpio',     symbol: '♏', label: '전갈자리' },
+  { key: 'sagittarius', symbol: '♐', label: '사수자리' },
+  { key: 'capricorn',   symbol: '♑', label: '염소자리' },
+  { key: 'aquarius',    symbol: '♒', label: '물병자리' },
+  { key: 'pisces',      symbol: '♓', label: '물고기자리' },
+];
+
+function _rcZodiacInfo(key) {
+  return _RC_ZODIACS.find(z => z.key === key) || null;
+}
+
+// =============================================================================
+// onboarding 카드 — 별자리 미설정 시 source 자리에 표시
+// =============================================================================
+function _rcShouldShowZodiacOnboarding() {
+  // 회전 카드 자체 단독 카드 X — 운세 source 자리에 onboarding 카드 표시.
+  // main file 의 renderRotatingCard 안에서 이 함수 호출 시 false 반환 (단독 카드 X).
+  // 운세 source 자체가 onboarding 카드 카운트 → main file 에서 별도 호출 X.
+  return false;
+}
+
+function _rcRenderZodiacOnboarding() {
+  // (단독 카드 X — _rcSource5Horoscope 가 자체 처리)
+  return '';
+}
+
+function _rcZodiacOnboardingCard() {
+  const chips = _RC_ZODIACS.map(z => `
+    <button class="rc-zodiac-chip" type="button" onclick="event.stopPropagation(); setUserZodiac('${z.key}')">${z.symbol} ${escapeHtml(z.label)}</button>
+  `).join('');
+  return {
+    id: 'horoscope',
+    available: true,
+    contentHash: 'horoscope_zodiac_onboard',
+    bodyHtml: `
+      <div class="rc-body-zodiac-onboard">
+        <div class="rc-body-headline">너의 별자리?</div>
+        <div class="rc-zodiac-chips">${chips}</div>
+        <button class="rc-zodiac-skip" type="button" onclick="event.stopPropagation(); skipZodiacOnboarding()">건너뛰기</button>
+      </div>
+    `,
+    onTapClick: '',
+  };
+}
+
+function setUserZodiac(zodiac) {
+  if (!_rcZodiacInfo(zodiac)) return;
+  if (!state.preferences) state.preferences = {};
+  state.preferences.userZodiac = zodiac;
+  if (typeof saveState === 'function') saveState();
+  if (typeof showToast === 'function') showToast('🌗 별자리 등록');
+  // 별자리 onboarding 카드 → 운세 source 로 변경 + 즉시 fetch 시작
+  _rcSessionOrder = null;
+  if (typeof renderRotatingCard === 'function') renderRotatingCard();
+}
+
+// 사용자 명시 2026-05-09: 설정 화면에서 별자리 해제.
+function resetUserZodiac() {
+  if (state.preferences) state.preferences.userZodiac = null;
+  // stashed content 도 reset (다른 별자리 운세 잔존 X)
+  const r = _ensureRotatingCardState();
+  r.lastHoroscopeFetchDay = null;
+  r.lastHoroscopeContent = null;
+  r.lastHoroscopeShownDate = null;
+  if (typeof saveState === 'function') saveState();
+  if (typeof showToast === 'function') showToast('🌗 별자리 해제');
+  _rcSessionOrder = null;
+  if (typeof renderRotatingCard === 'function') renderRotatingCard();
+}
+
+function skipZodiacOnboarding() {
+  _rcZodiacSkippedThisSession = true;
+  // 그 세션 동안 운세 source 비활성 — sessionOrder 재계산
+  _rcSessionOrder = null;
+  if (typeof renderRotatingCard === 'function') renderRotatingCard();
+}
+
+// =============================================================================
+// API fetch — horoscope-app-api.vercel.app
+// =============================================================================
+async function _rcFetchHoroscopeApi(zodiac) {
+  // sign 파라미터 = 영문 zodiac key
+  const url = `https://horoscope-app-api.vercel.app/api/v1/get-horoscope/daily?sign=${encodeURIComponent(zodiac)}&day=TODAY`;
+  const resp = await fetch(url, { method: 'GET' });
+  if (!resp.ok) throw new Error('horoscope API ' + resp.status);
+  const json = await resp.json();
+  // 응답 형태: { data: { date, horoscope_data }, status, success }
+  const text = (json && json.data && (json.data.horoscope_data || json.data.horoscopeData)) || '';
+  if (!text) throw new Error('horoscope 빈 응답');
+  return text.trim();
+}
+
+// =============================================================================
+// Haiku 한국어 친구 톤 변환
+// =============================================================================
+async function _rcCallHoroscopeHaiku(rawEnglish, zodiac) {
+  if (typeof callAnthropic !== 'function') throw new Error('callAnthropic 미정의');
+  const z = _rcZodiacInfo(zodiac);
+  const zLabel = z ? z.label : '';
+
+  const systemPrompt = `너는 사용자의 친구. 영문 horoscope 한 단락을 받아서 한국어 친구 카톡 톤으로 변환해줘.
+
+규칙 (절대):
+- 친구 카톡 톤. 분석 보고서 X.
+- "힘내", "화이팅", "괜찮아질" 같은 빈 응원 절대 X.
+- 평가성 칭찬 ("잘하고 있어", "대단해") X.
+- 분석명 / 진단명 X.
+- 살짝 신비로운 어휘 OK (운세 특성).
+- 한 단락만 (3-4 문장).
+- "결" 단어 X (잔잔한 결, 가벼운 결 등 회피).
+- 사용자에게 직접 말하듯 (너 / 네).
+- 마크다운 / 인용부호 X.`;
+
+  const userPrompt = `별자리: ${zLabel}
+
+영문 horoscope:
+${rawEnglish}
+
+→ 위 영문을 한국어 친구 카톡 톤으로 변환. 3-4 문장. 단락 본문만.`;
+
+  const sycophancy = /힘내|화이팅|괜찮아질|잘하고 있어|대단해/;
+  const diagnosis = /\bADHD\b|우울증|우울장애|불안장애|PTSD|강박장애/i;
+  const banGyeol = /잔잔한 결|가벼운 결|단단한 결|부드러운 결|결 따라/;
+
+  let attempt = 0;
+  while (attempt < 2) {
+    const resp = await callAnthropic({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 220,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+    if (!resp.ok) throw new Error('Haiku API ' + resp.status);
+    const data = await resp.json();
+    const text = (data.content?.[0]?.text || '').trim();
+    if (!text) throw new Error('빈 응답');
+    if (sycophancy.test(text) || diagnosis.test(text) || banGyeol.test(text)) {
+      attempt++;
+      if (attempt >= 2) throw new Error('tone verify 실패');
+      continue;
+    }
+    return text;
+  }
+  throw new Error('attempts exceeded');
+}
+
+// =============================================================================
+// 백그라운드 fetch — stash 후 renderRotatingCard 재호출
+// =============================================================================
+async function _rcStartHoroscopeFetch(zodiac) {
+  if (_rcHoroscopeFetchInflight) return;
+  _rcHoroscopeFetchInflight = true;
+  try {
+    if (typeof _canAI !== 'function' || !_canAI()) return;
+    const raw = await _rcFetchHoroscopeApi(zodiac);
+    if (!raw) return;
+    const friendly = await _rcCallHoroscopeHaiku(raw, zodiac);
+    if (!friendly) return;
+    const r = _ensureRotatingCardState();
+    r.lastHoroscopeFetchDay = _rcQuizCutoffKey();
+    r.lastHoroscopeContent = friendly;
+    r.lastHoroscopeLucky = null; // API 가 행운 정보 안 주면 null
+    if (typeof saveState === 'function') saveState(true);
+    // 같은 세션 안 운세 카드 위치 update — sessionOrder 안 horoscope source 만 갱신
+    if (Array.isArray(_rcSessionOrder)) {
+      const idx = _rcSessionOrder.findIndex(s => s && s.id === 'horoscope');
+      if (idx >= 0) {
+        const newSrc = _rcSource5Horoscope();
+        if (newSrc) _rcSessionOrder[idx] = newSrc;
+        const container = document.getElementById('rotatingCardContainer');
+        if (container && typeof _rcRenderShell === 'function') {
+          container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
+        }
+        return;
+      }
+    }
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+  } catch (e) {
+    console.warn('[horoscope]', e);
+    // silent — source 비활성 (다음 진입 때 다시 시도)
+  } finally {
+    _rcHoroscopeFetchInflight = false;
+  }
+}
+
+// =============================================================================
+// Source 5 — 고동의 운세 카드 (stash 견고화)
+// =============================================================================
+function _rcSource5Horoscope() {
+  const r = _ensureRotatingCardState();
+  const z = state.preferences && state.preferences.userZodiac;
+
+  // 별자리 미설정
+  if (!z) {
+    if (_rcZodiacSkippedThisSession) return { id: 'horoscope', available: false };
+    return _rcZodiacOnboardingCard();
+  }
+
+  const todayK = _rcQuizCutoffKey();
+
+  // 오늘 stash 있으면 사용 (재진입 시 손실 X — saveState(true) 로 즉시 cloud sync 됨)
+  if (r.lastHoroscopeFetchDay === todayK && r.lastHoroscopeContent) {
+    return _rcRenderHoroscopeCard(z, r.lastHoroscopeContent, r.lastHoroscopeLucky);
+  }
+
+  // stash 없음 → 백그라운드 fetch + 이번 render 는 비활성
+  _rcStartHoroscopeFetch(z);
+  return { id: 'horoscope', available: false };
+}
+
+function _rcRenderHoroscopeCard(zodiac, content, lucky) {
+  const z = _rcZodiacInfo(zodiac);
+  const zLabel = z ? `${z.symbol} ${z.label}` : '';
+  const luckyLine = lucky ? `<div class="rc-horoscope-lucky">행운: ${escapeHtml(lucky)}</div>` : '';
+  const bodyHtml = `
+    <div class="rc-body-horoscope">
+      <div class="rc-body-headline">고동의 운세</div>
+      ${zLabel ? `<div class="rc-horoscope-zodiac">${escapeHtml(zLabel)}</div>` : ''}
+      <div class="rc-horoscope-text">${escapeHtml(content)}</div>
+      ${luckyLine}
+    </div>
+  `;
+  // 카드 1번 봤음 mark — 컨펌 처리
+  const r = _ensureRotatingCardState();
+  const todayK = _rcQuizCutoffKey();
+  if (r.lastHoroscopeShownDate !== todayK) {
+    r.lastHoroscopeShownDate = todayK;
+    if (typeof saveState === 'function') saveState();
+  }
+  return {
+    id: 'horoscope',
+    available: true,
+    contentHash: 'horoscope_' + todayK,
+    bodyHtml,
+    onTapClick: '',
+  };
+}
 function renderReflectionHome() {
   const container = document.getElementById('reflectionContainer');
   if (!container) return;
@@ -33061,7 +33522,9 @@ function showScreen(name) {
     if (typeof expireOldMissions === 'function') expireOldMissions();
     applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3();
     renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink();
-    // 사용자 명시 2026-05-09 (ultrathink): 회전 카드 '🌟 오늘의 너' (7 source). spec 4절 + 11절.
+    // 사용자 명시 2026-05-09 (회전 카드 spec final): 5-source 미컨펌 우선 + 세션 lock.
+    // home 진입 = 새 세션 = sessionOrder 재계산 (spec 4-3 새 세션 가용/불가용 재체크).
+    if (typeof _rcResetSession === 'function') _rcResetSession();
     if (typeof renderRotatingCard === 'function') renderRotatingCard();
     if (typeof renderReflectionHome === 'function') renderReflectionHome();
     // V4-1o: 관찰 5종 자동 trigger (24시간 1회 가드, 조용히 등록 — chat 인용용)
@@ -51276,6 +51739,8 @@ function loadSettings() {
   }
   // 사용자 명시 2026-05-03 ultrathink: 날씨 자동 인식 status 표시.
   if (typeof refreshWeatherToggleStatus === 'function') refreshWeatherToggleStatus();
+  // 사용자 명시 2026-05-09 (회전 카드 spec final 6-5-1): 별자리 chip selector
+  if (typeof renderZodiacSettingChips === 'function') renderZodiacSettingChips();
   // 사용자 요청 2026-04-30 (Phase C): billing 자동 로드
   if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
   // E2EE 상태 갱신
@@ -51295,6 +51760,24 @@ function renderBusinessInfo() {
   const body = document.getElementById('businessInfoBody');
   if (!body) return;
   body.innerHTML = _buildBusinessInfoRowsHtml();
+}
+
+// 사용자 명시 2026-05-09 (회전 카드 spec final 6-5-1): 설정 별자리 chip selector — 운세 source 활성용.
+function renderZodiacSettingChips() {
+  const status = document.getElementById('zodiacSettingStatus');
+  const chips = document.getElementById('zodiacSettingChips');
+  if (!status || !chips || typeof _RC_ZODIACS === 'undefined') return;
+  const cur = state.preferences && state.preferences.userZodiac;
+  const curInfo = cur ? _RC_ZODIACS.find(z => z.key === cur) : null;
+  if (curInfo) {
+    status.innerHTML = `현재: <span style="color:var(--accent);">${curInfo.symbol} ${escapeHtml(curInfo.label)}</span> <button onclick="resetUserZodiac(); renderZodiacSettingChips();" style="margin-left:8px; background:transparent; border:1px solid rgba(255,255,255,0.10); color:var(--text-dim); font-size:11px; padding:3px 8px; border-radius:6px; cursor:pointer;">해제</button>`;
+    chips.innerHTML = '';
+  } else {
+    status.innerHTML = '<span style="color:var(--text-dim);">미설정 — 별자리 선택하면 운세 source 활성</span>';
+    chips.innerHTML = _RC_ZODIACS.map(z => `
+      <button class="rc-zodiac-chip" type="button" onclick="setUserZodiac('${z.key}'); renderZodiacSettingChips();">${z.symbol} ${escapeHtml(z.label)}</button>
+    `).join('');
+  }
 }
 
 // 사용자 명시 2026-05-06 ultrathink: 사업자 정보 row HTML — 설정 inline + 로그인 footer 모달 공용.

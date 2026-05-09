@@ -10691,6 +10691,179 @@
     background: rgba(212,167,106,0.18);
     border-color: rgba(212,167,106,0.50);
   }
+  .rc-mini-review-retry {
+    width: 100%; margin-top: 6px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text-soft); font-size: 12px;
+    padding: 8px 16px; border-radius: 10px; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .rc-mini-review-retry:hover { border-color: rgba(212,167,106,0.32); color: var(--accent); }
+
+  /* ============================================================ */
+  /* 사용자 명시 2026-05-09 (회전 카드 spec final): 5-source 신규 — Quiz / 운세 / 별자리 / 새로 본 너 actions */
+  /* ============================================================ */
+
+  /* 공통 action button — 맞아 / 아닌데 / 넘기기 / primary */
+  .rc-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text); font-size: 12.5px; font-weight: 500;
+    padding: 7px 14px; border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.08s;
+  }
+  .rc-btn:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.18); }
+  .rc-btn:active { transform: scale(0.97); }
+  .rc-btn--correct {
+    background: rgba(143,200,143,0.10);
+    border-color: rgba(143,200,143,0.32);
+    color: #9bd49b;
+  }
+  .rc-btn--correct:hover { background: rgba(143,200,143,0.18); border-color: rgba(143,200,143,0.50); }
+  .rc-btn--wrong {
+    background: rgba(212,140,140,0.10);
+    border-color: rgba(212,140,140,0.30);
+    color: #d8a4a4;
+  }
+  .rc-btn--wrong:hover { background: rgba(212,140,140,0.18); border-color: rgba(212,140,140,0.46); }
+  .rc-btn--skip {
+    background: transparent;
+    border-color: rgba(255,255,255,0.08);
+    color: var(--text-soft);
+  }
+  .rc-btn--skip:hover { border-color: rgba(255,255,255,0.18); color: var(--text); }
+  .rc-btn--primary {
+    background: rgba(212,167,106,0.14);
+    border-color: rgba(212,167,106,0.40);
+    color: var(--accent); font-weight: 600;
+    padding: 9px 18px;
+  }
+  .rc-btn--primary:hover { background: rgba(212,167,106,0.22); border-color: rgba(212,167,106,0.58); }
+
+  /* 새로 본 너 — 맞아/아닌데 actions row */
+  .rc-newview-actions {
+    display: flex; gap: 8px;
+    margin-top: 10px;
+  }
+
+  /* ============================================================ */
+  /* Source 4 — Quiz */
+  /* ============================================================ */
+  .rc-body-quiz { padding: 4px 2px 6px; }
+  .rc-quiz-progress {
+    font-size: 10.5px; color: var(--text-dim); opacity: 0.7;
+    margin: 2px 0 6px; letter-spacing: 0.04em;
+  }
+  .rc-quiz-question {
+    font-family: 'Gowun Batang', serif;
+    font-size: 16.5px; font-weight: 600;
+    color: var(--text); margin: 4px 0 6px;
+    line-height: 1.45;
+  }
+  .rc-quiz-desc {
+    font-size: 12px; line-height: 1.55; color: var(--text-soft);
+    opacity: 0.8; margin-bottom: 10px;
+  }
+  .rc-quiz-actions {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .rc-quiz-actions .rc-btn { flex: 1; min-width: 0; }
+  .rc-quiz-mini-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin-top: 12px; padding-top: 8px;
+    border-top: 1px dashed rgba(255,255,255,0.06);
+  }
+  .rc-quiz-mini-arrow {
+    background: transparent; border: none;
+    color: var(--text-dim); font-size: 14px;
+    padding: 2px 8px; cursor: pointer; opacity: 0.65;
+    transition: color 0.12s, opacity 0.12s;
+  }
+  .rc-quiz-mini-arrow:hover:not(:disabled) { color: var(--accent); opacity: 1; }
+  .rc-quiz-mini-arrow:disabled { opacity: 0.25; cursor: default; }
+  .rc-quiz-mini-indicator {
+    flex: 1; display: inline-flex; gap: 4px;
+    align-items: center; justify-content: center;
+  }
+  .rc-quiz-dot {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: rgba(255,255,255,0.16);
+    transition: background 0.18s, transform 0.18s;
+  }
+  .rc-quiz-dot.is-active {
+    background: var(--accent); transform: scale(1.3);
+  }
+
+  /* Quiz 끝 화면 */
+  .rc-quiz-end { text-align: center; padding: 8px 4px 4px; }
+  .rc-quiz-summary {
+    font-size: 13.5px; color: var(--text);
+    margin: 8px 0 6px;
+    line-height: 1.55;
+  }
+  .rc-quiz-score-change {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px; font-weight: 600; color: var(--accent);
+    margin: 4px 0 12px;
+    letter-spacing: 0.02em;
+  }
+  .rc-quiz-end-cta { display: flex; justify-content: center; margin-top: 6px; }
+
+  /* ============================================================ */
+  /* Source 5 — 고동의 운세 */
+  /* ============================================================ */
+  .rc-body-horoscope { padding: 4px 2px 6px; }
+  .rc-horoscope-zodiac {
+    font-size: 13px; color: var(--accent); opacity: 0.85;
+    margin: 4px 0 8px;
+    font-weight: 500; letter-spacing: 0.02em;
+  }
+  .rc-horoscope-text {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14.5px; line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 6px;
+    white-space: pre-wrap;
+  }
+  .rc-horoscope-lucky {
+    font-size: 11.5px; color: var(--text-soft);
+    opacity: 0.78; margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(255,255,255,0.06);
+  }
+
+  /* 별자리 onboarding 카드 */
+  .rc-body-zodiac-onboard {
+    padding: 4px 2px 8px; text-align: center;
+  }
+  .rc-zodiac-chips {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 5px; margin: 8px 0 10px;
+  }
+  .rc-zodiac-chip {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text); font-size: 11.5px;
+    padding: 6px 4px; border-radius: 8px;
+    cursor: pointer; line-height: 1.3;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .rc-zodiac-chip:hover {
+    background: rgba(168,157,200,0.10);
+    border-color: rgba(168,157,200,0.32);
+    color: var(--accent);
+  }
+  .rc-zodiac-skip {
+    background: transparent; border: none;
+    color: var(--text-dim); font-size: 11.5px;
+    padding: 6px 12px; cursor: pointer;
+    opacity: 0.65; margin-top: 4px;
+    transition: opacity 0.15s, color 0.15s;
+  }
+  .rc-zodiac-skip:hover { opacity: 1; color: var(--text-soft); }
 
   /* 사용자 명시 2026-05-09: archive-reviews 카테고리 chip — 전체/미니/주/월/계절/연간 */
   .archive-review-chips {
