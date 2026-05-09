@@ -1019,6 +1019,70 @@ function renderRotatingCard() {
 // =============================================================================
 // Shell HTML — wrapper + indicator + chat 다리 footer
 // =============================================================================
+// 사용자 명시 2026-05-09 (D 일러스트): godong 표정 variant SVG mockup.
+// spec 4-8: 빛나는(진주) / 살짝 걱정(어제) / 발견·눈 반짝(새 발견) / 정리 중(미니 리뷰) / 그리움·살짝 미소(회상) / 진지(통찰).
+// 추후 정식 일러스트 (PNG/WebP) 로 교체 가능 — _rcGodongSvg 만 변경.
+function _rcGodongSvg(sourceId) {
+  // 표정만 변경 — 본체 / 나선 / 색조 통일 (godong 고유 캐릭터 일관성)
+  const expressions = {
+    pearl: {
+      // 빛나는 — 동그란 눈 + 미소
+      eyes: '<circle cx="22" cy="26" r="1.6" fill="#1a1a2e"/><circle cx="32" cy="26" r="1.6" fill="#1a1a2e"/>',
+      mouth: '<path d="M 22 33 Q 27 36 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
+      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">✨</text>',
+    },
+    yesterday: {
+      // 살짝 걱정 — 눈썹 ↓ + 입 평선
+      eyes: '<line x1="20" y1="25.5" x2="24" y2="26" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><line x1="30" y1="26" x2="34" y2="25.5" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><circle cx="22" cy="28" r="1.2" fill="#1a1a2e"/><circle cx="32" cy="28" r="1.2" fill="#1a1a2e"/>',
+      mouth: '<path d="M 22 35 Q 27 33 32 35" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
+      extra: '',
+    },
+    newView: {
+      // 발견 / 눈 반짝 — 큰 눈 + ㅇ 입
+      eyes: '<circle cx="22" cy="27" r="2.4" fill="#1a1a2e"/><circle cx="32" cy="27" r="2.4" fill="#1a1a2e"/><circle cx="22.5" cy="26" r="0.8" fill="#fff"/><circle cx="32.5" cy="26" r="0.8" fill="#fff"/>',
+      mouth: '<circle cx="27" cy="34" r="1.6" fill="none" stroke="#1a1a2e" stroke-width="1.3"/>',
+      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">✦</text>',
+    },
+    miniReview: {
+      // 정리 중 — 살짝 감은 눈 + 작은 입
+      eyes: '<path d="M 20 27 Q 22 26 24 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 27 Q 32 26 34 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
+      mouth: '<line x1="25" y1="34" x2="29" y2="34" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
+      extra: '',
+    },
+    throwback: {
+      // 그리움 / 살짝 미소 — 부드러운 눈 + 살짝 위로
+      eyes: '<path d="M 20 27 Q 22 25 24 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 27 Q 32 25 34 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
+      mouth: '<path d="M 22 33 Q 27 36 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
+      extra: '',
+    },
+    insight: {
+      // 진지 — 좁은 슬릿 눈 + 평선 입
+      eyes: '<line x1="20" y1="27" x2="24" y2="27" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round"/><line x1="30" y1="27" x2="34" y2="27" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round"/>',
+      mouth: '<line x1="24" y1="34" x2="30" y2="34" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
+      extra: '',
+    },
+  };
+  const exp = expressions[sourceId] || expressions.pearl;
+  return `
+    <svg class="rc-godong-svg" viewBox="0 0 56 50" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <!-- 소라 본체 (그라디언트 채움) -->
+      <defs>
+        <linearGradient id="godongGrad-${sourceId}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f5d99c"/>
+          <stop offset="100%" stop-color="#d4a76a"/>
+        </linearGradient>
+      </defs>
+      <path d="M 28 5 Q 48 8 47 28 Q 46 47 28 47 Q 10 47 9 28 Q 8 12 28 5 Z" fill="url(#godongGrad-${sourceId})" stroke="rgba(168,157,200,0.4)" stroke-width="0.6"/>
+      <!-- 나선 라인 -->
+      <path d="M 28 14 Q 40 18 38 28 Q 36 38 28 38 Q 20 38 20 28" fill="none" stroke="rgba(168,157,200,0.55)" stroke-width="1.2"/>
+      <!-- 표정 -->
+      ${exp.eyes}
+      ${exp.mouth}
+      ${exp.extra}
+    </svg>
+  `;
+}
+
 // 사용자 명시 2026-05-09: 헤더 '🌟 오늘의 너' / source 별 sub 라벨 / footer 출처 label / testerMode 디버그 — 모두 제거.
 // 인디케이터는 화살 row 사이로 이동 (가용 source ≥ 2 시).
 function _rcRenderShell(orderedSources, currentIdx) {
@@ -1037,8 +1101,15 @@ function _rcRenderShell(orderedSources, currentIdx) {
     </div>
   ` : '';
 
+  // godong 일러스트 — 진주 음악/사진/영상 카드 시는 thumbnail 과 충돌 가능 → hide.
+  // 진주 isEmpty (CTA) / 진주 텍스트 / 다른 source 시는 우상단 표시.
+  const isMusicOrMediaPearl = cur.id === 'pearl' && cur.pick && (cur.pick.track || cur.pick.video || cur.pick.photo);
+  const showGodong = !isMusicOrMediaPearl;
+  const godongHtml = showGodong ? `<div class="rc-godong" aria-hidden="true">${_rcGodongSvg(cur.id)}</div>` : '';
+
   return `
     <div class="rotating-card" id="rotatingCard" data-current-idx="${currentIdx}" data-total="${total}">
+      ${godongHtml}
       <div class="rc-body-tap"${tapHandler}>
         ${cur.bodyHtml || ''}
       </div>

@@ -10385,15 +10385,29 @@
   /* spec home-redesign-2026-05-09.md 4절 + 11절. */
   /* ============================================================ */
   .rotating-card {
+    position: relative;
     background: linear-gradient(135deg, rgba(212,167,106,0.10), rgba(168,157,200,0.10));
     border: 1px solid rgba(212,167,106,0.22);
     border-radius: 14px;
     padding: 14px 14px 12px;
     margin-bottom: 14px;
-    /* 사용자 명시 2026-05-09: 가로 swipe 으로 전환 → touch-action: pan-y (페이지 세로 스크롤 OK, 가로만 우리 핸들러) */
     touch-action: pan-y;
     user-select: none;
     transition: opacity 0.15s, transform 0.15s;
+  }
+  /* 사용자 명시 2026-05-09 (D 일러스트): godong 표정 SVG 우상단 absolute */
+  .rc-godong {
+    position: absolute; top: 12px; right: 12px;
+    width: 44px; height: 40px;
+    pointer-events: none;
+    opacity: 0.92;
+    z-index: 2;
+    animation: rc-godong-fade-in 0.5s ease-out;
+  }
+  .rc-godong-svg { width: 100%; height: 100%; display: block; }
+  @keyframes rc-godong-fade-in {
+    from { opacity: 0; transform: scale(0.85) translateY(-2px); }
+    to   { opacity: 0.92; transform: scale(1) translateY(0); }
   }
   /* 사용자 명시 2026-05-09: 회전 카드 좌우 화살 버튼 — 가로 swipe + 명시 버튼 둘 다 지원 */
   .rc-arrow-row {
