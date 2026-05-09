@@ -10441,8 +10441,9 @@
   .rc-body-tap {
     cursor: pointer;
     animation: rc-body-fade-in 0.4s ease-out;
-    /* 사용자 명시 2026-05-09: 다음 source 로 넘어가도 카드 크기 통일 (변동 X) */
-    min-height: 140px;
+    /* 사용자 명시 2026-05-09: 그 세션 가장 큰 source (보통 진주 음악) 크기에 다른 source 맞춤. */
+    /* JS _rcEqualizeHeights 가 동적 측정 후 inline style 로 override (더 큰 값 적용). */
+    min-height: 220px;
     display: flex;
     flex-direction: column;
     justify-content: center;

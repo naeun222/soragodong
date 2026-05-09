@@ -786,6 +786,7 @@ function renderRotatingCard() {
     }
     if (_rcSessionIndex >= _rcSessionOrder.length) _rcSessionIndex = 0;
     container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
+    _rcEqualizeHeights();
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     try {
@@ -836,6 +837,48 @@ function _rcRenderShell(orderedSources, currentIdx) {
 }
 
 // =============================================================================
+// 사용자 명시 2026-05-09: 그 세션 가장 큰 source 크기에 다른 source 카드 맞춤 (보통 진주 음악).
+// 모든 source 카드를 offscreen 임시 렌더 → max height 측정 → 현 카드의 .rc-body-tap min-height inline override.
+// =============================================================================
+function _rcEqualizeHeights() {
+  if (!Array.isArray(_rcSessionOrder) || _rcSessionOrder.length < 2) return;
+  const container = document.getElementById('rotatingCardContainer');
+  if (!container) return;
+  // 다음 frame — DOM 페인트 후 측정 (image 로드 일부 race 허용)
+  setTimeout(() => {
+    try {
+      const cardEl = document.getElementById('rotatingCard');
+      if (!cardEl) return;
+      const bodyTap = cardEl.querySelector('.rc-body-tap');
+      if (!bodyTap) return;
+      const width = container.offsetWidth || 360;
+      const tmp = document.createElement('div');
+      tmp.style.cssText = `position:absolute;left:-9999px;top:0;width:${width}px;visibility:hidden;pointer-events:none;`;
+      document.body.appendChild(tmp);
+      let maxH = 0;
+      for (let i = 0; i < _rcSessionOrder.length; i++) {
+        const s = _rcSessionOrder[i];
+        if (!s) continue;
+        // 같은 shell 구조로 임시 렌더 — .rotating-card > godong + body-tap + arrow row
+        const showGodong = s.id !== 'pearl';
+        const godongHtml = showGodong ? `<div class="rc-godong">${typeof _rcGodongSvg === 'function' ? _rcGodongSvg(s.id) : ''}</div>` : '';
+        tmp.innerHTML = `<div class="rotating-card"><div class="rc-body-tap">${s.bodyHtml || ''}</div></div>`;
+        const tapEl = tmp.querySelector('.rc-body-tap');
+        const h = tapEl ? tapEl.offsetHeight : 0;
+        if (h > maxH) maxH = h;
+      }
+      document.body.removeChild(tmp);
+      // 측정 max 가 default min (220px) 보다 크면 inline 으로 override
+      if (maxH > 220) {
+        bodyTap.style.minHeight = maxH + 'px';
+      } else {
+        bodyTap.style.minHeight = '';
+      }
+    } catch (e) { console.warn('[rc equalize]', e); }
+  }, 60);
+}
+
+// =============================================================================
 // Cycle — 좌우 화살 navigate (sessionOrder 그대로, 인덱스만 advance)
 // =============================================================================
 function _rcCycle(dir, opts) {
@@ -852,6 +895,7 @@ function _rcCycle(dir, opts) {
   }
   const container = document.getElementById('rotatingCardContainer');
   if (container) container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
+  _rcEqualizeHeights();
 }
 
 // =============================================================================
