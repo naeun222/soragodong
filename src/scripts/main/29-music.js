@@ -505,15 +505,9 @@ async function addPearl() {
                     videoThumb = result.thumbnail;
                     videoHasAudio = !!result.hasAudio;
                     videoAudioMeta = result.audioMeta || null;
-                    // 사용자 보고 2026-05-09 (재재정정): audio meta toast 덮임 (Safari PWA) → audio meta 진주에 stash + 진주 추가 toast 에 합침.
-                    if (!videoHasAudio && typeof showErrorDetailModal === 'function') {
-                      const reason = result.audioFailReason || '알 수 없는 원인';
-                      const detail = result.audioFailDetail || '';
-                      const _meta = result.audioMeta || {};
-                      const _metaLine = `chunks=${_meta.chunksEmitted ?? '?'} codec=${_meta.codec || '?'} sr=${_meta.sr || '?'} ch=${_meta.ch || '?'}`;
-                      showErrorDetailModal('🔇 영상 무음으로 저장됨',
-                        `이 영상은 소리 없이 보관돼.\n\n[원인]\n${reason}\n\n[audio meta]\n${_metaLine}\n\n[추가 정보]\n${detail}`);
-                    }
+                    // 사용자 명시 2026-05-09 (재정정): 진단 modal/toast UI 제거 — Safari PWA / 데스크탑 Chrome 둘 다 무음
+                    // = mp4 자체 audio track 호환성 issue (iOS quirk 무관). 임시 진단 코드 제거 후 큰 작업 (Opus / 다른 muxer) 진행 예정.
+                    // videoAudioMeta stash 는 유지 (다음 fix 시 활용 가능).
                   }
                 } catch (compressErr) {
                   hideFullscreenLoader();
@@ -554,13 +548,8 @@ async function addPearl() {
   });
   saveState();
   renderLensPearls();
-  // 사용자 보고 2026-05-09 (재재정정): 진주 추가 toast 에 audio meta 합침 — Safari PWA 에서 옛 hasAudio toast 가 덮였음.
-  // videoAudioMeta 있을 때 (영상 진주) 만 audio info append.
-  let _pearlToast = '진주 추가됨 💎';
-  if (videoAudioMeta) {
-    _pearlToast += ` · 🎵 chunks=${videoAudioMeta.chunksEmitted ?? '?'} codec=${videoAudioMeta.codec || '?'}`;
-  }
-  showToast(_pearlToast);
+  // 사용자 명시 2026-05-09 (재정정): 진단 audio meta toast 합침 제거 — 큰 작업 (Opus / 다른 muxer) 으로 진짜 fix 예정.
+  showToast('진주 추가됨 💎');
 }
 
 // 사용자 요청 2026-04-29: 진주 클릭 = 큰 보기 모달. 수정/삭제 등은 더보기 ⋮ 메뉴.
@@ -608,18 +597,15 @@ function showPearlViewModal(pearl) {
     `;
   } else if (isVideo) {
     // 사용자 명시 2026-05-02 ultrathink: 무음 영상 메타 안내.
-    // pearl.videoHasAudio === false → 새 진주 의 audio encode fail (또는 source audio X) 확정 — 명시.
-    // pearl.videoHasAudio === undefined → 옛 진주 (audio fix 전 encoded) — 무음 가능 안내.
-    // 사용자 보고 2026-05-09: audio meta (chunks/codec/sr/ch) 도 진주 view 에 영구 표시 — PWA console 못 봐도 진단 가능.
+    // 사용자 명시 2026-05-09 (재정정): 진단 audio meta UI 제거. 일반 안내 — '일부 환경 audio 호환성 한계 — 업데이트 예정'.
     let mutedNotice = '';
     if (pearl.videoHasAudio === false) {
       mutedNotice = '<div style="font-size:11px; color:var(--text-soft); margin-top:6px; opacity:0.75;">🔇 무음 영상 — 인코딩 시점 소리 추출 X</div>';
+    } else if (pearl.videoHasAudio === true) {
+      // hasAudio=true 인데 일부 환경 (Safari PWA / 데스크탑 Chrome 등) 디코더 호환성 issue — 알려진 한계 안내.
+      mutedNotice = '<div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; opacity:0.65;">🔊 소리 안 들리면 일부 환경 호환성 한계 — 다음 업데이트 fix 예정</div>';
     } else if (pearl.videoHasAudio === undefined) {
       mutedNotice = '<div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; opacity:0.6;">🔇 소리 안 들리면 옛 진주야 — 새로 만든 진주는 소리 같이 저장돼</div>';
-    }
-    if (pearl.videoAudioMeta) {
-      const m = pearl.videoAudioMeta;
-      mutedNotice += `<div style="font-size:10.5px; color:var(--text-dim); margin-top:4px; opacity:0.6; font-family:monospace;">audio: chunks=${m.chunksEmitted ?? '?'} · codec=${escapeHtml(m.codec || '?')} · sr=${m.sr ?? '?'} · ch=${m.ch ?? '?'}</div>`;
     }
     // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
     const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(pearl.content || '') : (pearl.content || '');
