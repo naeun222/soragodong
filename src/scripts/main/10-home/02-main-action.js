@@ -105,15 +105,9 @@ function renderMainAction() {
     `;
   }
 
-  // V4 (사용자 명시 2026-05-06): '오늘의 너' 큐레이션 = 최상단. 체크인 카드 = 그 아래.
-  let heroHtml = '';
-  if (typeof _pickHeroPearl === 'function' && typeof _heroCardHtml === 'function' && typeof _heroEmptyHtml === 'function') {
-    const pick = _pickHeroPearl();
-    const inner = pick ? _heroCardHtml(pick, { linkTo: 'pearls-tab' }) : _heroEmptyHtml();
-    if (inner) heroHtml = `<div style="margin-bottom: 14px;">${inner}</div>`;
-  }
-
-  container.innerHTML = heroHtml + cardHtml;
+  // 사용자 명시 2026-05-09 (ultrathink): 진주 hero 자리 = 회전 카드 source 1 으로 이동.
+  // mainActionContainer = 체크인 카드 only (완료 시 한 줄 미니 / 미완 시 시간대 카드).
+  container.innerHTML = cardHtml;
 }
 
 // 마법의 소라고동 미니 링크 — 작지만 카드 모양

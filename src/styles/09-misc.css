@@ -10379,3 +10379,123 @@
     line-height: 1.7;
   }
   .pc-graph-empty .ge-icon { font-size: 22px; margin-bottom: 6px; opacity: 0.5; }
+
+  /* ============================================================ */
+  /* 사용자 명시 2026-05-09 (ultrathink): 홈 회전 카드 '🌟 오늘의 너' */
+  /* spec home-redesign-2026-05-09.md 4절 + 11절. */
+  /* ============================================================ */
+  .rotating-card {
+    background: linear-gradient(135deg, rgba(212,167,106,0.10), rgba(168,157,200,0.10));
+    border: 1px solid rgba(212,167,106,0.22);
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+    margin-bottom: 14px;
+    touch-action: pan-x;          /* spec 11-1: 가로만 허용, 세로 swipe 는 우리 핸들러 */
+    user-select: none;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .rc-top-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11.5px; font-weight: 600; color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .rc-label-main { color: var(--accent); }
+  .rc-pearl-count { opacity: 0.75; }
+  .rc-indicator { margin-left: auto; display: inline-flex; gap: 3px; align-items: center; }
+  .rc-dot-i {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+    transition: background 0.18s;
+  }
+  .rc-dot-i.is-active { background: var(--accent); transform: scale(1.25); }
+
+  .rc-body-tap { cursor: pointer; }
+  .rc-body-tap .library-hero { margin: 0; }   /* 회전 카드 안 진주 hero — outer 통합 */
+
+  /* Source 2 어제 비교 */
+  .rc-body-yesterday {
+    padding: 4px 2px 6px;
+  }
+  .rc-body-headline {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--text-dim); margin-bottom: 6px; opacity: 0.75;
+  }
+  .rc-body-copy {
+    font-size: 14px; line-height: 1.6; color: var(--text);
+    font-family: 'Gowun Batang', serif;
+  }
+  .rc-y-bars {
+    margin-top: 10px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .rc-y-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .rc-y-label {
+    font-size: 10.5px; color: var(--text-dim); width: 30px; flex-shrink: 0;
+  }
+  .rc-y-track {
+    flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;
+  }
+  .rc-y-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), rgba(212,167,106,0.6));
+    border-radius: 3px;
+  }
+  .rc-y-fill--avg { background: rgba(168,157,200,0.5); }
+  .rc-y-dots-rows {
+    margin-top: 10px; display: flex; flex-direction: column; gap: 5px;
+  }
+  .rc-y-dots-row { display: flex; align-items: center; gap: 8px; }
+  .rc-y-dots { display: inline-flex; gap: 4px; }
+  .rc-y-dots--avg .rc-dot.is-on { background: rgba(168,157,200,0.7); }
+  .rc-y-dots .rc-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.1);
+  }
+  .rc-y-dots .rc-dot.is-on { background: var(--accent); }
+
+  /* Source 5 회상 */
+  .rc-body-throwback {
+    padding: 4px 2px 6px;
+  }
+  .rc-body-quote {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14.5px; line-height: 1.65;
+    color: var(--text);
+    padding: 6px 0 4px;
+    border-left: 2px solid rgba(212,167,106,0.4);
+    padding-left: 10px;
+    margin: 4px 0 6px;
+  }
+  .rc-body-quote-by {
+    font-size: 10.5px; color: var(--text-dim); opacity: 0.75;
+    margin-top: 4px;
+  }
+
+  /* Footer — 한 마디 chat 다리 (spec 11-5) */
+  .rc-footer {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; justify-content: flex-end;
+  }
+  .rc-chat-bridge {
+    background: transparent;
+    border: 1px solid rgba(212,167,106,0.28);
+    color: var(--accent);
+    font-size: 11.5px; font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 14px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .rc-chat-bridge:hover {
+    background: rgba(212,167,106,0.08);
+    border-color: rgba(212,167,106,0.45);
+  }
+  .rc-chat-arrow { font-size: 12px; opacity: 0.85; }
+
+  /* testerMode 디버그 (spec 11-2) */
+  .rc-debug {
+    margin-top: 8px; font-size: 9.5px; color: var(--text-dim);
+    opacity: 0.5; font-family: 'JetBrains Mono', monospace;
+  }

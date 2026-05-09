@@ -19,15 +19,15 @@
         <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
       </div>
 
-      <!-- 조건부 알림들 (있을 때만 보임 - 작은 카드) -->
+      <!-- 사용자 명시 2026-05-09 (ultrathink): 회전 카드 '🌟 오늘의 너' (7 source rotating surface). spec home-redesign-2026-05-09.md 4절 + 11절. -->
+      <div id="rotatingCardContainer"></div>
+
+      <!-- 조건부 알림들 (있을 때만 보임 - 작은 카드) — Phase 2-4 에 회전 카드 source 로 흡수 예정 -->
       <div id="reviewPromptsContainer"></div>
       <div id="predictionFollowupsContainer"></div>
       <div id="activeDecisionsContainer"></div>
 
-      <!-- 사용자 명시 2026-04-30: 어제 체크인 다음날 1회만 — '어제 한 페이지' 카드 -->
-      <div id="yesterdayCardContainer"></div>
-
-      <!-- ★★★ MAIN: 시간대별 액션 (낮=오늘의 카드, 밤=체크인) -->
+      <!-- ★★★ MAIN: 시간대별 액션 (밤=체크인). 진주 hero 는 회전 카드 source 1 으로 이동 (사용자 명시 2026-05-09). -->
       <div id="mainActionContainer"></div>
 
       <!-- ★★★ 소라의 부름 (AI 발급 미션) -->

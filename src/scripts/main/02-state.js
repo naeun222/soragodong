@@ -381,6 +381,18 @@ const DEFAULT_STATE = {
     }
   },
 
+  // 사용자 명시 2026-05-09 (ultrathink): 홈 회전 카드 ('🌟 오늘의 너', 7 source).
+  // spec 11-6 — preferences namespace 보호. _ensureRotatingCardState() 가 누락 필드 자동 보완.
+  rotatingCardState: {
+    history: [],            // [{sourceId, contentHash, seenAt}] — 14일 dedupe
+    dismissedSurprises: [], // [milestoneKey] — 1번 표시 후 영구 X
+    lastMiniReviewAt: null, // ISO timestamp — source 4 cooldown
+    windowStartAt: null,    // 4시간 windowing 시작
+    windowSourceId: null,   // 그 4시간의 stay source
+    windowContentHash: null,// 그 4시간의 stay contentHash (같은 진주/같은 회상 stay)
+    currentIndex: 0
+  },
+
   version: 7
 };
 
