@@ -346,9 +346,16 @@ function _annualReviewRender() {
       <img class="ann-rv-song-art" src="${escapeHtml(songData.artworkUrl || '')}" alt="${escapeHtml((songData.title || '') + ' — ' + (songData.artist || ''))}" title="${escapeHtml(songData.title || '')} — ${escapeHtml(songData.artist || '')}" onclick="_annTogglePlay(this)">
     </div>
   ` : '';
+  // 사용자 명시 2026-05-09 ultrathink: 마지막 카드 (시구) 도달 시 share 버튼 노출 — viral 잠재력 핵심.
+  const showShareBtn = s.currentIdx === total - 1 && s.data && s.data.year;
+  const shareBtnHtml = showShareBtn
+    ? `<button onclick="exportAnnualShareCard(${s.data.year})" aria-label="공유 카드"
+        style="position:fixed; top:18px; right:78px; z-index:101; background:rgba(212,167,106,0.18); border:1px solid rgba(212,167,106,0.5); color:#e8c890; padding:8px 14px; border-radius:18px; font-size:12px; cursor:pointer; backdrop-filter:blur(4px); font-family:'Noto Sans KR',system-ui;">📤 공유 카드</button>`
+    : '';
   overlay.innerHTML = `
     <div class="ann-rv-progress">${progressDots}</div>
     <button class="ann-rv-close" onclick="_annualReviewClose()" aria-label="닫기">✕</button>
+    ${shareBtnHtml}
     ${total > 1 ? '<button class="ann-rv-tap ann-rv-tap-prev" onclick="_annualReviewPrev()" aria-label="이전"></button>' : ''}
     ${cardHtml}
     ${total > 1 ? '<button class="ann-rv-tap ann-rv-tap-next" onclick="_annualReviewNext()" aria-label="다음"></button>' : ''}

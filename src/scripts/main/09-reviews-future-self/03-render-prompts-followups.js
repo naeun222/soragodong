@@ -1,3 +1,79 @@
+// 사용자 명시 2026-05-09 ultrathink: 리뷰 카드 description hook — generic 워딩 X / specific stat preview ○.
+// "AI가 분석해줄게" 일반 워딩 → "이번 주 4번 체크인 · 진주 2개" specific. 사용자 본인 데이터 미리 보여주는 게 가장 강한 hook.
+function _buildReviewCardHook(type) {
+  try {
+    const today = (typeof _cutoffAdjustedNow === 'function') ? _cutoffAdjustedNow() : new Date();
+    const dayNames = ['일','월','화','수','목','금','토'];
+    let entries = [], pearls = [], archive = [];
+    let startISO = '', endISO = '';
+
+    if (type === 'weekly') {
+      const sunCutoff4am = (typeof _lastWeekly4amCutoff === 'function') ? _lastWeekly4amCutoff() : null;
+      const cutoff = sunCutoff4am ? new Date(sunCutoff4am.getTime() - 7 * 86400000) : new Date(today.getTime() - 7 * 86400000);
+      const cutoffEnd = sunCutoff4am || today;
+      startISO = cutoff.toISOString().split('T')[0];
+      endISO = cutoffEnd.toISOString().split('T')[0];
+    } else if (type === 'monthly') {
+      const cutoff = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const cutoffEnd = new Date(today.getFullYear(), today.getMonth(), 1);
+      startISO = cutoff.toISOString().split('T')[0];
+      endISO = cutoffEnd.toISOString().split('T')[0];
+    } else if (type === 'quarterly') {
+      const prevQDate = new Date(today.getFullYear(), today.getMonth() - 1, 15);
+      const prevQuarterKey = (typeof getQuarterKey === 'function') ? getQuarterKey(prevQDate) : null;
+      const range = (typeof getQuarterRange === 'function' && prevQuarterKey) ? getQuarterRange(prevQuarterKey) : null;
+      if (!range) return null;
+      startISO = range.start.toISOString().split('T')[0];
+      endISO = range.end.toISOString().split('T')[0];
+    } else if (type === 'annual') {
+      const prevYear = today.getFullYear() - 1;
+      startISO = `${prevYear}-01-01`;
+      endISO = `${prevYear}-12-31`;
+    } else {
+      return null;
+    }
+
+    const inRangeIso = (iso) => iso && iso >= startISO && iso <= endISO;
+    entries = (state.entries || []).filter(e => e.date && inRangeIso(e.date));
+    pearls = (state.pearls || []).filter(p => !p._deleted && p.createdAt && inRangeIso(String(p.createdAt).slice(0, 10)));
+    archive = (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI
+      && (a.savedAt || a.createdAt) && inRangeIso(String(a.savedAt || a.createdAt).slice(0, 10)));
+
+    if (entries.length === 0) return null;
+
+    const parts = [];
+    if (type === 'weekly') {
+      parts.push(`${entries.length}번 체크인`);
+      const dayCount = {};
+      entries.forEach(e => { const d = new Date(e.date + 'T12:00:00').getDay(); dayCount[d] = (dayCount[d] || 0) + 1; });
+      const topDay = Object.entries(dayCount).sort((a, b) => b[1] - a[1])[0];
+      if (topDay && Number(topDay[1]) >= 2) parts.push(`${dayNames[topDay[0]]}요일 ${topDay[1]}번`);
+      const moods = entries.map(e => Number(e.mood)).filter(v => Number.isFinite(v) && v >= 1 && v <= 5);
+      if (moods.length > 0) {
+        const avg = moods.reduce((s, v) => s + v, 0) / moods.length;
+        if (avg >= 3.8) parts.push('한결 가벼운 주');
+        else if (avg <= 2.2) parts.push('무거웠던 주');
+      }
+      if (pearls.length > 0) parts.push(`진주 ${pearls.length}개`);
+    } else if (type === 'monthly') {
+      parts.push(`${entries.length}일 체크인`);
+      if (pearls.length > 0) parts.push(`진주 ${pearls.length}개`);
+      if (archive.length > 0) parts.push(`스크랩 ${archive.length}개`);
+    } else if (type === 'quarterly') {
+      parts.push(`3개월 ${entries.length}일`);
+      if (pearls.length > 0) parts.push(`진주 ${pearls.length}개`);
+      if (archive.length > 0) parts.push(`깨달음 ${archive.length}`);
+    } else if (type === 'annual') {
+      parts.push(`${entries.length}일 일기`);
+      if (pearls.length > 0) parts.push(`진주 ${pearls.length}개`);
+      if (archive.length > 0) parts.push(`깨달음 ${archive.length}`);
+    }
+    return parts.length > 0 ? parts.join(' · ') : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function renderReviewPrompts() {
   const container = document.getElementById('reviewPromptsContainer');
   if (!container) return;
@@ -11,46 +87,84 @@ function renderReviewPrompts() {
     return fresh ? '<span style="margin-left:6px; font-size:9.5px; color:var(--accent); letter-spacing:0.1em;">✦ NEW</span>' : '';
   };
 
+  // 사용자 명시 2026-05-09 ultrathink: 1월 첫 일요일 동시 노출 → 큰 사이클 1개씩만 throttle.
+  // 연간 가능하면 분기 hide, 분기 가능하면 월 hide 등 — ritual overload 방지.
+  const annualOk = !_hidden('annual') && typeof isAnnualReviewAvailable === 'function' && isAnnualReviewAvailable();
+  const quarterlyOk = !_hidden('quarterly') && typeof isQuarterlyReviewAvailable === 'function' && isQuarterlyReviewAvailable();
+  const monthlyOk = !_hidden('monthly') && isMonthlyReviewAvailable();
+  const weeklyOk = !_hidden('weekly') && isWeeklyReviewAvailable();
+
+  // throttle 결정: 가장 큰 사이클 1개만 노출 (사용자 명시 2026-05-09 ultrathink).
+  // 단 fresh batch (auto + !user_viewed) 는 우선 — 사용자가 못 본 결과 누락 방지.
+  const annualHasFresh = _hasFreshBatchReview('annualReviews');
+  const quarterlyHasFresh = _hasFreshBatchReview('quarterlyReviews');
+  const monthlyHasFresh = _hasFreshBatchReview('monthlyReviews');
+  const weeklyHasFresh = _hasFreshBatchReview('weeklyReviews');
+
+  let showAnnual = annualOk;
+  let showQuarterly = quarterlyOk && !showAnnual;
+  let showMonthly = monthlyOk && !showAnnual && !showQuarterly;
+  let showWeekly = weeklyOk && !showAnnual && !showQuarterly && !showMonthly;
+  // fresh batch 결과는 throttle 우회 (놓치면 영영 안 봄)
+  if (annualHasFresh) showAnnual = true;
+  if (quarterlyHasFresh) showQuarterly = true;
+  if (monthlyHasFresh) showMonthly = true;
+  if (weeklyHasFresh) showWeekly = true;
+
   // 사용자 명시 2026-05-01: 큰 사이클부터 (연 → 분기 → 월 → 주). 가장 무거운 게 위로.
-  if (!_hidden('annual') && typeof isAnnualReviewAvailable === 'function' && isAnnualReviewAvailable()) {
+  if (showAnnual) {
     const prevYear = _cutoffAdjustedNow().getFullYear() - 1;
+    const hook = _buildReviewCardHook('annual') || `${prevYear}년 한 단어로 너의 한 해`;
     html += `
       <div class="review-card annual" onclick="openAnnualReviewCard()">
         <div class="review-card-label">🐚 연간 리뷰${_freshLabel('annualReviews')}</div>
         <div class="review-card-title">${prevYear}년을 한 번에 돌아볼까?</div>
-        <div class="review-card-desc">1년치 데이터 + 한 단어 + 변곡점 — Opus 4.7 깊은 분석.</div>
+        <div class="review-card-desc">${escapeHtml(hook)}</div>
       </div>
     `;
   }
-  if (!_hidden('quarterly') && typeof isQuarterlyReviewAvailable === 'function' && isQuarterlyReviewAvailable()) {
+  if (showQuarterly) {
     const today = new Date();
     const prevQDate = new Date(today.getFullYear(), today.getMonth() - 1, 15);
     const prevQuarterKey = getQuarterKey(prevQDate);
     const qNum = prevQuarterKey.split('-Q')[1];
     const season = (typeof SEASON_LABELS !== 'undefined' && SEASON_LABELS['Q' + qNum]) || { name: '계절', emoji: '🍂' };
+    const hook = _buildReviewCardHook('quarterly') || `한 계절 변화 + 다음 ${season.name} 한 가지`;
     html += `
       <div class="review-card quarterly" onclick="openQuarterlyReviewCard()">
         <div class="review-card-label">${season.emoji} ${season.name} 리뷰${_freshLabel('quarterlyReviews')}</div>
         <div class="review-card-title">지난 ${season.name} 한 계절을 정리해볼까?</div>
-        <div class="review-card-desc">3개월치 패턴 + 변곡점 + 다음 계절 한 가지 — AI가 분석해줄게.</div>
+        <div class="review-card-desc">${escapeHtml(hook)}</div>
       </div>
     `;
   }
-  if (!_hidden('monthly') && isMonthlyReviewAvailable()) {
+  if (showMonthly) {
+    const hook = _buildReviewCardHook('monthly') || '한 달치 패턴, 의미 있던 순간';
     html += `
       <div class="review-card monthly" onclick="openReview('monthly')">
         <div class="review-card-label">📅 월간 리뷰${_freshLabel('monthlyReviews')}</div>
         <div class="review-card-title">지난 달 네 모습 돌아보기</div>
-        <div class="review-card-desc">한 달치 패턴, 새로 발견된 트레이트, 의미 있던 순간들 — AI가 분석해줄게.</div>
+        <div class="review-card-desc">${escapeHtml(hook)}</div>
       </div>
     `;
   }
-  if (!_hidden('weekly') && isWeeklyReviewAvailable()) {
+  if (showWeekly) {
+    const hook = _buildReviewCardHook('weekly') || '7일 흐름 + 너의 장면들';
     html += `
       <div class="review-card" onclick="openReview('weekly')">
         <div class="review-card-label">🌙 주간 리뷰${_freshLabel('weeklyReviews')}</div>
         <div class="review-card-title">이번 주 어땠는지 같이 돌아볼까?</div>
-        <div class="review-card-desc">7일 데이터 분석 + 패턴 + 다음 주 한 가지 제안.</div>
+        <div class="review-card-desc">${escapeHtml(hook)}</div>
+      </div>
+    `;
+  }
+  // 사용자 명시 2026-05-09 ultrathink: dismiss 후 다시 보기 path — 리뷰 모음 link 항상 노출 (저장된 리뷰 1+ 일 때).
+  const hasAnySaved = (state.weeklyReviews?.length || 0) + (state.monthlyReviews?.length || 0)
+    + (state.quarterlyReviews?.length || 0) + (state.annualReviews?.length || 0) > 0;
+  if (hasAnySaved) {
+    html += `
+      <div style="text-align:right; margin-top:8px; padding:0 4px;">
+        <a onclick="showScreen('archive-reviews')" style="font-size:11px; color:var(--text-soft); cursor:pointer; opacity:0.65; text-decoration:underline;">📚 지난 리뷰 모음 →</a>
       </div>
     `;
   }

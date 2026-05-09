@@ -23,18 +23,18 @@ function renderQuarterlyDeepDive(review) {
     return '<span class="dd-flat" title="이전 분기와 같음">→</span>';
   };
 
-  // 1. 진화율 — 막대 + %
+  // 1. 효과 본 시도 — 막대 + % (사용자 명시 2026-05-09 ultrathink: "진화율" 분석가 어휘 → "효과 본 시도" 일상어)
   const workRate = s.workRate != null ? Math.round(s.workRate * 100) : null;
   const prevWorkRate = prevQ?.workRate != null ? Math.round(prevQ.workRate * 100) : null;
   const workCard = workRate != null
     ? `<div class="dd-card">
-         <div class="dd-card-label">🎯 진화율</div>
+         <div class="dd-card-label">🎯 효과 본 시도</div>
          <div class="dd-card-value">${workRate}<span class="dd-card-unit">%</span> ${trend(workRate, prevWorkRate)}</div>
          <div class="dd-bar-track"><div class="dd-bar-fill" style="width:${workRate}%;"></div></div>
-         <div class="dd-card-sub">${s.worked || 0}/${s.attempts || 0} 시도</div>
+         <div class="dd-card-sub">${s.worked || 0}/${s.attempts || 0} 번 중</div>
        </div>`
     : `<div class="dd-card dd-card-empty">
-         <div class="dd-card-label">🎯 진화율</div>
+         <div class="dd-card-label">🎯 효과 본 시도</div>
          <div class="dd-card-empty-msg">아직 시도 X</div>
        </div>`;
 
@@ -81,13 +81,13 @@ function renderQuarterlyDeepDive(review) {
          <div class="dd-card-empty-msg">기록 X</div>
        </div>`;
 
-  // 6. 8 차원 (problems / strengths / growth)
+  // 6. 너의 결 (problems / strengths / growth) — 사용자 명시 2026-05-09 ultrathink: "8 차원" 추상 어휘 → "너의 결" 일상어
   const dimsCard = `<div class="dd-card">
-    <div class="dd-card-label">🪞 8 차원</div>
+    <div class="dd-card-label">🪞 너의 결</div>
     <div class="dd-card-dim-row">
-      <span title="문제"><span class="dd-dim-icon">💧</span> ${s.problemsTotal || 0}</span>
-      <span title="강점"><span class="dd-dim-icon">✨</span> ${s.strengthsTotal || 0}</span>
-      <span title="성장"><span class="dd-dim-icon">🌱</span> ${s.growthCount || 0}</span>
+      <span title="짚어본 곳"><span class="dd-dim-icon">💧</span> ${s.problemsTotal || 0}</span>
+      <span title="잘 풀린 곳"><span class="dd-dim-icon">✨</span> ${s.strengthsTotal || 0}</span>
+      <span title="자라는 곳"><span class="dd-dim-icon">🌱</span> ${s.growthCount || 0}</span>
     </div>
   </div>`;
 

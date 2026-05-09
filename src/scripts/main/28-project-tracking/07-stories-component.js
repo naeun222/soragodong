@@ -53,6 +53,29 @@ function _openStoriesPlayer(slides, type) {
   _renderStoriesProgress();
   _renderStoriesSlide();
   _startStoriesAutoTimer();
+  // 사용자 명시 2026-05-09 ultrathink: 첫 진입 시 long-press / tap onboarding hint (한 번만, 4초 페이드).
+  _showStoriesHintOnce();
+}
+
+function _showStoriesHintOnce() {
+  if (state.preferences && state.preferences.storiesHintShown) return;
+  const overlay = document.getElementById('storiesOverlay');
+  if (!overlay) return;
+  const existing = document.getElementById('storiesOnboardHint');
+  if (existing) return;
+  const hint = document.createElement('div');
+  hint.id = 'storiesOnboardHint';
+  hint.style.cssText = 'position:fixed; bottom:90px; left:50%; transform:translateX(-50%); z-index:101; background:rgba(0,0,0,0.72); color:rgba(255,255,255,0.92); padding:10px 18px; border-radius:24px; font-size:12.5px; backdrop-filter:blur(8px); pointer-events:none; opacity:0; transition:opacity 0.4s; white-space:nowrap; font-family:"Noto Sans KR",system-ui;';
+  hint.textContent = '👆 길게 누르면 멈춰  ·  좌·우 탭 = 이전·다음';
+  overlay.appendChild(hint);
+  setTimeout(() => { hint.style.opacity = '1'; }, 400);
+  setTimeout(() => {
+    hint.style.opacity = '0';
+    setTimeout(() => { try { hint.remove(); } catch {} }, 500);
+  }, 4500);
+  if (!state.preferences) state.preferences = {};
+  state.preferences.storiesHintShown = true;
+  if (typeof saveState === 'function') saveState();
 }
 
 // V4-fix: Stories 음소거 토글

@@ -33,7 +33,11 @@ function renderReviewScreen(type, reviewData, opts) {
   const completedAtJs = reviewData.completedAt ? `'${reviewData.completedAt}'` : 'null';
   const quarterlyExtras = (readonly && type === 'quarterly' && reviewData.stats && typeof renderQuarterlyDeepDive === 'function')
     ? renderQuarterlyDeepDive(reviewData) +
-      (reviewData.id ? `<button class="btn-primary" style="width:100%; margin-top:14px;" onclick="openQuarterlyStories('${reviewData.id}')">▶ Stories로 보기</button>` : '')
+      (reviewData.id ? `
+        <div style="display:flex; gap:8px; margin-top:14px;">
+          <button class="btn-primary" style="flex:2;" onclick="openQuarterlyStories('${reviewData.id}')">▶ Stories로 보기</button>
+          <button class="btn-secondary" style="flex:1;" onclick="exportQuarterlyShareCard('${reviewData.id}')">📤 공유 카드</button>
+        </div>` : '')
     : '';
   const readonlyButtonsHtml = `
     ${quarterlyExtras}
@@ -71,7 +75,19 @@ function renderReviewScreen(type, reviewData, opts) {
       ? _renderReviewMoodChartInline(_entriesForChart)
       : '';
 
-    const heroBlock = `<div style="background:linear-gradient(135deg, rgba(139,126,196,0.10), rgba(201,169,110,0.06)); border:1px solid rgba(139,126,196,0.20); border-radius:18px; padding:22px 20px 18px; margin-bottom:18px; text-align:center;">
+    // 사용자 명시 2026-05-09 ultrathink: type 별 hero 시각 차별화 (weekly = 하늘 톤 / monthly = 금 톤 / quarterly = 보라 톤).
+    const heroBg = type === 'weekly'
+      ? 'linear-gradient(135deg, rgba(126,200,227,0.12), rgba(168,156,214,0.05))'
+      : type === 'monthly'
+      ? 'linear-gradient(135deg, rgba(201,169,110,0.14), rgba(139,126,196,0.06))'
+      : 'linear-gradient(135deg, rgba(139,126,196,0.10), rgba(201,169,110,0.06))';
+    const heroBorder = type === 'weekly'
+      ? 'rgba(126,200,227,0.22)'
+      : type === 'monthly'
+      ? 'rgba(201,169,110,0.24)'
+      : 'rgba(139,126,196,0.20)';
+    const heroPadding = type === 'weekly' ? '18px 18px 16px' : '22px 20px 18px';
+    const heroBlock = `<div style="background:${heroBg}; border:1px solid ${heroBorder}; border-radius:18px; padding:${heroPadding}; margin-bottom:18px; text-align:center;">
       ${oneWordWeekly}
       ${oneWord}
       ${summaryBlock}
@@ -191,6 +207,24 @@ function renderReviewScreen(type, reviewData, opts) {
       ${statsCells.join('')}
     </div>` : '';
 
+    // 사용자 명시 2026-05-09 ultrathink: quarterly experiment + seeds — 리뷰 → 다음 행동 link.
+    const experimentBlock = (type === 'quarterly' && reviewData.experiment && (reviewData.experiment.what || reviewData.experiment.why)) ? `
+    <div style="background:var(--surface); border:1px solid rgba(212,167,106,0.22); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">🌱 다음 ${periodWord} 작은 실험</div>
+      ${reviewData.experiment.what ? `<div style="font-size:14.5px; font-weight:600; color:var(--text); line-height:1.6; margin-bottom:8px;">${escapeHtml(reviewData.experiment.what)}</div>` : ''}
+      ${reviewData.experiment.why ? `<div style="font-size:12px; color:var(--text-soft); line-height:1.7; margin-bottom:10px;">${escapeHtml(reviewData.experiment.why)}</div>` : ''}
+      ${reviewData.id ? `<button class="btn-secondary" style="font-size:11px; padding:6px 12px;" onclick="importQuarterlyExperimentToMission('${reviewData.id}')">🐚 부름으로 등록</button>` : ''}
+    </div>` : '';
+
+    const seedsArr = (type === 'quarterly' && Array.isArray(reviewData.seeds))
+      ? reviewData.seeds.filter(s => s && String(s).trim()) : [];
+    const seedsBlock = seedsArr.length > 0 ? `
+    <div style="background:var(--surface); border:1px solid rgba(168,156,214,0.18); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
+      <div style="font-size:11px; color:#a89cd6; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">👀 다음 ${periodWord} 지켜볼 것</div>
+      ${seedsArr.slice(0, 4).map(s => `<div style="font-size:13px; color:var(--text); line-height:1.7; padding:5px 0;">· ${escapeHtml(s)}</div>`).join('')}
+      <div style="font-size:10.5px; color:var(--text-soft); margin-top:8px; font-style:italic;">다음 ${periodWord} 리뷰 때 자동으로 짚어줄게.</div>
+    </div>` : '';
+
     // Risk signals — full width (concern 일 때 prominent)
     const risk = reviewData.risk_signals || {};
     const riskLevel = (risk.level || 'none').toLowerCase();
@@ -208,18 +242,29 @@ function renderReviewScreen(type, reviewData, opts) {
 
 
 
+    // 사용자 명시 2026-05-09 ultrathink: concern 톤 분리 — concern 시 hero 위 prominent / watch 시 아래 (현재 위치).
+    const riskBlockTop = (riskShow && riskLevel === 'concern') ? riskBlock : '';
+    const riskBlockBottom = (riskShow && riskLevel !== 'concern') ? riskBlock : '';
+
     const html = `
       <div class="screen-title">${titleText}</div>
       <div class="screen-sub" style="margin-bottom:18px;">${periodLabel}</div>
+      ${riskBlockTop}
       ${heroBlock}
       ${scenesBlock}
       ${strengthsBlock}
       ${patternBlock}
+      ${experimentBlock}
+      ${seedsBlock}
       ${insightsBlock}
       ${quotesBlock}
       ${statsGrid}
-      ${riskBlock}
+      ${riskBlockBottom}
       ${readonly ? readonlyButtonsHtml : `
+        <div class="input-group" style="margin-top:18px; margin-bottom:6px;">
+          <div class="input-label">💬 ${type === 'weekly' ? '이번 주' : (type === 'monthly' ? '이번 달' : '지난 ' + periodWord)} 한 마디 (선택)</div>
+          <textarea id="reviewUserNote" placeholder="네 말로 한 줄 남기고 싶다면 — 다음 ${periodWord} 리뷰 때 자동으로 짚어줄게." rows="3" style="width:100%; box-sizing:border-box;">${escapeHtml(reviewData.userNote || '')}</textarea>
+        </div>
         <div style="display:flex; gap:8px; margin-top:14px;">
           <button class="btn-primary" onclick="saveReview('${type}')" style="flex:2;">저장하고 닫기 ✦</button>
           <button class="btn-secondary" onclick="exportReviewShareCard('${type}')" style="flex:1;">📤 공유 카드</button>
@@ -288,6 +333,9 @@ function renderReviewScreen(type, reviewData, opts) {
 function saveReview(type) {
   const screen = document.getElementById('screen-review');
   const reviewData = JSON.parse(screen.dataset.reviewData);
+  // 사용자 명시 2026-05-09 ultrathink: 사용자 한 마디 input 보존 — 다음 리뷰 prompt 에 inject.
+  const userNoteEl = document.getElementById('reviewUserNote');
+  const userNote = userNoteEl ? String(userNoteEl.value || '').trim() : '';
   // 사용자 명시 2026-04-30: 자기 평가 form 제거.
   const review = {
     // 사용자 보고 2026-05-08: id 누락 → AI 핵심 통찰 요약 버튼 안 보임 (review-collection 분기에서 placeholder 만 노출).
@@ -305,7 +353,8 @@ function saveReview(type) {
     emotions: reviewData.emotions,
     value_align: reviewData.value_align,
     risk_signals: reviewData.risk_signals,
-    scenes: reviewData.scenes
+    scenes: reviewData.scenes,
+    userNote  // 사용자가 직접 남긴 한 마디 (선택, 다음 리뷰 prompt 에 inject)
   };
 
   // 사용자 보고 2026-05-01 ultrathink: 중복 가드 — 같은 weekKey/monthKey 이미 있으면 replace (auto 가 먼저 push 한 후 사용자 manual click 시 중복 방지)

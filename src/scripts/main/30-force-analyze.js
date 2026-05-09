@@ -697,6 +697,13 @@ async function _resumePendingBatch() {
           const reviewKey = firstUnder < 0 ? '' : restAfterReview.slice(firstUnder + 1);
           if (reviewType === 'weekly' || reviewType === 'monthly') {
             const json = _processReviewResult(text);
+            // 사용자 명시 2026-05-09 ultrathink: batch path 도 quotes 환각 방지 (best-effort — cutoff 변동 가능성 있어도 entries 매칭은 보존됨).
+            if (json && Array.isArray(json.quotes) && typeof _filterValidQuotes === 'function' && typeof _collectReviewData === 'function') {
+              try {
+                const _data = _collectReviewData(reviewType);
+                json.quotes = _filterValidQuotes(json.quotes, _collectQuoteSources(_data));
+              } catch {}
+            }
             if (json) {
               const review = {
                 id: (reviewType === 'weekly' ? 'wr_' : 'mr_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -715,6 +722,19 @@ async function _resumePendingBatch() {
             }
           } else if (reviewType === 'quarterly') {
             const json = _processQuarterlyReviewResult(text);
+            // 사용자 명시 2026-05-09 ultrathink: batch path quotes 환각 방지 + transformation 인용 검증.
+            if (json && typeof _filterValidQuotes === 'function' && typeof _collectQuarterlyData === 'function') {
+              try {
+                const _stats = (typeof getQuarterlyStats === 'function' && getQuarterlyStats(reviewKey)) || {};
+                const _data = _collectQuarterlyData(reviewKey, _stats);
+                const _sources = _collectQuoteSources(_data);
+                if (Array.isArray(json.quotes)) json.quotes = _filterValidQuotes(json.quotes, _sources);
+                if (json.transformation && typeof json.transformation === 'object') {
+                  json.transformation.start_quote = _verifySingleQuote(json.transformation.start_quote, _sources);
+                  json.transformation.end_quote = _verifySingleQuote(json.transformation.end_quote, _sources);
+                }
+              } catch {}
+            }
             if (json) {
               const stats = (typeof getQuarterlyStats === 'function' && getQuarterlyStats(reviewKey)) || {};
               const review = {

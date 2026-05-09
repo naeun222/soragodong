@@ -178,23 +178,79 @@ function _buildQuarterlyReviewPrompt(quarterKey, stats, data) {
   // 사용자 명시 2026-05-02 ultrathink (ERROR #9): entries 0개 = null return → caller skip.
   if (!entriesIn || entriesIn.length === 0) return null;
 
-  const prompt = `지난 분기 ${quarterKey} 리뷰 작성.
+  // 사용자 명시 2026-05-09 ultrathink: stable (가이드 / 톤 / 출력 schema) → cache_control ephemeral.
+  // volatile (stats / entries / chat / 지난 씨앗) 만 매번 다름. 90% 비용↓.
+  const stable = `너는 사용자의 분기 리뷰를 작성한다.
 
 [목표]
 - 단순 stats 요약 X. **변곡점 (turning point)** 발견 — 분기 내 큰 변화 / 결정 / 정체성 shift.
-- 사용자 본인의 인용 5개 → 자기친밀감.
+- 사용자 본인의 인용 → 자기친밀감 (실제로 entry/대화에 있는 말만, 합성 X).
 - **분기의 너를 한 단어로 명명** (정체성 hook).
-- 다음 분기 씨앗 적용하기 → 리뷰 간 continuity.
-- **변화 (transformation)** — 분기 시작과 끝의 너를 사용자 자신의 말로 비교. 사용자 명시 2026-05-06 ultrathink.
+- 다음 분기 씨앗 적용 → 리뷰 간 continuity.
+- **변화 (transformation)** — 분기 시작과 끝의 너를 사용자 자신의 말로 비교.
 - **anchor (continuity)** — 변하지 않은 정체성 1줄. 변화만 강조하면 사용자 멀미.
+
+[패턴 발견 — Detective]
+mode + entries + 가닥 outcomes 교차 봐. 구체적 숫자/인용으로 입증.
+
+[일상어 강제]
+- 수치 약어 / 분석가 어휘 절대 X. 일상 한국어 그대로.
+- BAD: "+30%", "std dev", "correlation"
+- GOOD: "더 자주 그랬어", "평균 7시간 잤어 → 7시간 잔 날들이 많았어"
+
+[톤]
+관찰 친화. 외재화 / 균형 노출. 칭찬 inflation X. 사실 관찰 ○. 친구 톤 (반말 OK).
+
+[risk_signals 가드 — 사용자 명시 2026-05-09 ultrathink: 분기도 위기 감지]
+3개월 단위 mood 지속 drop / 수면 심하게 불규칙 / 사람 만남 X 패턴 / 미션 연속 missed 등 = level 'watch' 또는 'concern'.
+concern 시 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 자동 inject.
+
+[출력 — JSON만, 마크다운 X]
+{
+  "one_word": "이번 분기의 너 = 한 단어 (예: \\"탐험가\\", \\"잠수부\\", \\"건축가\\")",
+  "summary": "분기 핵심 한 문장 (40-80자, specific)",
+  "pattern": {
+    "headline": "발견한 패턴 한 문장",
+    "evidence": "구체적 근거 — entry 인용 또는 숫자 (일상어)",
+    "condition": "어떤 조건/모드/시간 (1줄, 일상어)"
+  },
+  "turning_point": "분기 내 변곡점 — 가장 큰 변화 / 결정 / 정체성 shift. 가능하면 entry 인용. 2-4문장.",
+  "transformation": {
+    "start_quote": "분기 첫 2주 entries / 대화에서 실제 사용자 인용 — 그때의 너 (30자 이내, 따옴표 X). 매칭 안 되면 빈 문자열.",
+    "end_quote": "분기 끝 2주 entries / 대화에서 실제 사용자 인용 — 지금의 너 (30자 이내). 매칭 안 되면 빈 문자열.",
+    "shift": "X에서 Y로 한 줄 (15-30자, 자연 한국어). 예: '자책에서 관찰로', '회피에서 마주봄으로', '버티기에서 흐름으로'. 추상 어휘 X 사용자 어휘 ○."
+  },
+  "continuity": "분기 내내 안 변한 너의 한 가지 (정체성 anchor) — 사용자 어휘. 1줄, 따뜻한 톤. 예: '그래도 매일 한 줄 일기는 남겼어', '엄마 챙기는 마음은 그대로'.",
+  "quotes": ["짧은 인용 0-5개 (entries / 대화에서 실제로 있는 것만, 각 30자 이내). 데이터 부족하면 0개 OK — 합성 절대 X.", "..."],
+  "experiment": {
+    "what": "다음 분기 한 가지 작은 실험 (구체적, 환경 setup 우선)",
+    "why": "왜 흥미로울지"
+  },
+  "seeds": ["다음 분기 watch point 1 (구체적, observable)", "...2"],
+  "seed_callbacks": "지난 분기 씨앗이 어떻게 됐는지 (1-3문장). 첫 분기 또는 씨앗 X 면 빈 문자열.",
+  "risk_signals": {
+    "level": "'none' | 'watch' | 'concern' — 분기 단위 패턴 기반.",
+    "signals": ["감지된 신호 (구체, 부드럽게). 'none' 일 때 빈 array.", "..."],
+    "suggestion": "부드러운 제안 1줄. concern 시 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 포함. watch 면 self-care. none 이면 빈 문자열."
+  }
+}
+
+[금지]
+- "잘했다 / 멋지다" 류 칭찬 X
+- 단정 X
+- 마크다운 X
+
+JSON만 출력. 모든 필수 필드 다 채워서 (값 없으면 빈 문자열 또는 빈 array).`;
+
+  const volatile = `지난 분기 ${quarterKey} 리뷰 작성.
 
 [지난 분기 stats]
 - 체크인: ${stats.checkins}일
-- 진화율: ${stats.workRate != null ? Math.round(stats.workRate * 100) + '% (' + stats.worked + '/' + stats.attempts + ')' : '데이터 부족'}
+- 효과 본 시도: ${stats.workRate != null ? Math.round(stats.workRate * 100) + '% (' + stats.worked + '/' + stats.attempts + ')' : '데이터 부족'}
 - 진주: ${stats.pearls}개${stats.dnaPearls ? ` + DNA 진주 ${stats.dnaPearls}개 결정화` : ''}
 - 활성 모드 빈도: ${Object.entries(stats.modeCount).map(([k, v]) => `${k} ${v}일`).join(' / ') || '거의 없음'}
 - 추적 항목 변화: ${stats.trackerStats.map(t => `${t.title} ${t.first}→${t.last}${t.unit || ''}`).join(' / ') || '데이터 부족'}
-- 8 차원: 문제 ${stats.problemsTotal} / 강점 ${stats.strengthsTotal} / growth ${stats.growthCount}
+- 너의 결: 짚어본 곳 ${stats.problemsTotal} / 잘 풀린 곳 ${stats.strengthsTotal} / 자라는 곳 ${stats.growthCount}
 - 체화 완료 가닥 (누적): ${recentEmbodied}개
 
 [분기 entries 발췌]
@@ -218,51 +274,16 @@ ${JSON.stringify(archiveIn.map(a => ({headline: a.headline, body: (a.body || '')
 [분기 인사이트]
 ${JSON.stringify(insightsIn.map(i => ({content: i.content, type: i.type})), null, 0).slice(0, 1000)}
 
-[패턴 발견 — Detective]
-mode + entries + 가닥 outcomes 교차 봐. 구체적 숫자/인용으로 입증.
-
 [지난 분기 씨앗] ${prevSeeds.length > 0 ? '(callback 추천)' : '(첫 분기 또는 씨앗 X)'}
 ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : ''}
 
-[톤]
-관찰 친화. 외재화 / 균형 노출. 칭찬 inflation X. 사실 관찰 ○. 친구 톤 (반말 OK).
-
-[출력 — JSON만, 마크다운 X]
-{
-  "one_word": "이번 분기의 너 = 한 단어 (예: \\"탐험가\\", \\"잠수부\\", \\"건축가\\")",
-  "summary": "분기 핵심 한 문장 (40-80자, specific)",
-  "pattern": {
-    "headline": "발견한 패턴 한 문장",
-    "evidence": "구체적 근거 — entry 인용 또는 숫자",
-    "condition": "어떤 조건/모드/시간"
-  },
-  "turning_point": "분기 내 변곡점 — 가장 큰 변화 / 결정 / 정체성 shift. 가능하면 entry 인용. 2-4문장.",
-  "transformation": {
-    "start_quote": "분기 첫 2주 entries / 대화에서 사용자 인용 — 그때의 너 (30자 이내, 따옴표 X — 본문만)",
-    "end_quote": "분기 끝 2주 entries / 대화에서 사용자 인용 — 지금의 너 (30자 이내, 따옴표 X — 본문만). start 와 대조되는 톤·관점 변화 보이게 골라.",
-    "shift": "X에서 Y로 한 줄 (15-30자, 자연 한국어). 예: '자책에서 관찰로', '회피에서 마주봄으로', '버티기에서 흐름으로'. 추상 어휘 X 사용자 어휘 ○."
-  },
-  "continuity": "분기 내내 안 변한 너의 한 가지 (정체성 anchor) — 사용자 어휘. 1줄, 따뜻한 톤. 예: '그래도 매일 한 줄 일기는 남겼어', '엄마 챙기는 마음은 그대로', '카페 가는 리듬은 변함없음'. 변화 narrative 옆 anchor.",
-  "quotes": ["짧은 인용 5개 (entries / 대화에서, 각 30자 이내)", "...", "...", "...", "..."],
-  "experiment": {
-    "what": "다음 분기 한 가지 작은 실험 (구체적, 환경 setup 우선)",
-    "why": "왜 흥미로울지"
-  },
-  "seeds": ["다음 분기 watch point 1 (구체적, observable)", "...2"]${prevSeeds.length > 0 ? ',\n  "seed_callbacks": "지난 분기 씨앗이 어떻게 됐는지 (1-3문장)"' : ''}
-}
-
-[금지]
-- "잘했다 / 멋지다" 류 칭찬 X
-- 단정 X
-- 마크다운 X
-
-JSON만 출력.`;
+위 데이터로 분기 리뷰 작성. JSON만 출력.`;
 
   return {
-    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
+    system: [{ type: 'text', text: stable, cache_control: { type: 'ephemeral' } }],
     model: 'claude-sonnet-4-6',
     max_tokens: 2500,
-    userMessage: prompt,
+    userMessage: volatile,
     _endpoint: 'review_quarterly'
   };
 }
@@ -287,7 +308,19 @@ async function generateQuarterlyReview(quarterKey, stats) {
   if (!resp.ok) throw new Error('API ' + resp.status);
   const respData = await resp.json();
   const text = respData.content[0].text;
-  return _processQuarterlyReviewResult(text);
+  const result = _processQuarterlyReviewResult(text);
+  // 사용자 명시 2026-05-09 ultrathink: quotes 환각 방지 — quotes / transformation.start_quote / end_quote 검증.
+  if (result && typeof _filterValidQuotes === 'function') {
+    const sources = _collectQuoteSources(data);
+    if (Array.isArray(result.quotes)) {
+      result.quotes = _filterValidQuotes(result.quotes, sources);
+    }
+    if (result.transformation && typeof result.transformation === 'object') {
+      result.transformation.start_quote = _verifySingleQuote(result.transformation.start_quote, sources);
+      result.transformation.end_quote = _verifySingleQuote(result.transformation.end_quote, sources);
+    }
+  }
+  return result;
 }
 
 // 사용자 명시 2026-05-01 ultrathink: 옛 자동 review trigger 함수 3종 (runQuarterly/Monthly/AnnualAutoReviewIfNeeded) 완전 제거.

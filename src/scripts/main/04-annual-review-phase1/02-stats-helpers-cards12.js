@@ -29,8 +29,42 @@ function _computeAnnualTree() {
   };
 }
 
+// 사용자 명시 2026-05-09 ultrathink: moments_card 의미 정렬 — starred / photo+note / 시간 분포 균등.
+// 옛: filter().slice(0, 3) — 처음 3개만, 의미 정렬 X. 매년 같은 분기 3개일 위험.
 function _computeAnnualMoments(pearls) {
-  const memorable = pearls.filter(p => p.note || p.photo || p.video).slice(0, 3);
+  const candidates = (pearls || []).filter(p => p && (p.note || p.photo || p.video));
+  if (candidates.length === 0) return [];
+  // 점수: starred > photo+note > photo > note > video
+  candidates.forEach(p => {
+    let score = 0;
+    if (p.starred) score += 10;
+    if (p.user_marked) score += 5;
+    if (p.photo && p.note) score += 3;
+    else if (p.photo) score += 2;
+    else if (p.note) score += 1;
+    if (p.video) score += 2;
+    if (p.note && String(p.note).length > 30) score += 1;
+    p._score = score;
+  });
+  candidates.sort((a, b) => (b._score || 0) - (a._score || 0));
+  // 시간 분포 균등 — 분기별 1개씩
+  const top = candidates.slice(0, 8);
+  const byQuarter = [[], [], [], []];
+  top.forEach(p => {
+    const m = new Date(p.createdAt || 0).getMonth();
+    const q = Math.floor(m / 3);
+    if (byQuarter[q]) byQuarter[q].push(p);
+  });
+  const selected = [];
+  for (let q = 0; q < 4 && selected.length < 3; q++) {
+    if (byQuarter[q].length > 0) selected.push(byQuarter[q][0]);
+  }
+  // 부족하면 top 에서 추가
+  for (const p of top) {
+    if (selected.length >= 3) break;
+    if (!selected.includes(p)) selected.push(p);
+  }
+  const memorable = selected.slice(0, 3);
   const bgs = [
     'linear-gradient(135deg, rgba(212,167,106,0.45), rgba(139,126,196,0.30))',
     'linear-gradient(135deg, rgba(126,200,180,0.45), rgba(98,165,200,0.30))',
@@ -41,7 +75,8 @@ function _computeAnnualMoments(pearls) {
     date: (p.createdAt || '').slice(0, 10).replace(/-/g, '.'),
     text: p.content || '',
     emoji: emojiMap[p.category] || '🐚',
-    bg: bgs[i] || bgs[0]
+    bg: bgs[i] || bgs[0],
+    photo: p.photo || null
   }));
 }
 
@@ -65,6 +100,99 @@ function _computeAnnualRealizations(archive) {
     count,
     topTags: Object.entries(tagFreq).sort((a,b) => b[1] - a[1]).slice(0, 4).map(t => t[0])
   };
+}
+
+// 사용자 명시 2026-05-09 ultrathink: 365 dot grid 실제 데이터 매핑.
+// 옛 deterministic seed (seed=42, hardcoded 12/7 변곡점) 제거 — 매년 같은 패턴이라 사용자 신뢰 깰 위험.
+// entries (mood/vitality/chatCount/photo) + pearls + archive 활동 → cells.level 0-4.
+// 변곡점 = 14일 chunk mood 평균의 가장 큰 변화 자리 (delta ≥ 0.5 만). caption 자동.
+function _computeAnnualDotmap(targetYear, entries, pearls, archive) {
+  const yearStart = new Date(targetYear, 0, 1);
+  const yearEnd = new Date(targetYear + 1, 0, 1);
+  const totalDays = Math.round((yearEnd - yearStart) / 86400000);
+
+  const cells = [];
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(yearStart);
+    d.setDate(d.getDate() + i);
+    cells.push({
+      date: d.toISOString().split('T')[0],
+      level: 0, mood: null, vitality: null, activity: 0
+    });
+  }
+
+  const cellByDate = {};
+  cells.forEach(c => { cellByDate[c.date] = c; });
+
+  (entries || []).forEach(e => {
+    if (!e || !e.date) return;
+    const c = cellByDate[e.date];
+    if (!c) return;
+    c.activity += 1;
+    if (Number.isFinite(Number(e.mood))) c.mood = Number(e.mood);
+    if (Number.isFinite(Number(e.vitality))) c.vitality = Number(e.vitality);
+    if (e.chatCount) c.activity += Math.min(2, Number(e.chatCount) * 0.3);
+    if (e.photo || e.video) c.activity += 0.5;
+    if (e.note && String(e.note).length > 50) c.activity += 0.3;
+  });
+
+  (pearls || []).forEach(p => {
+    if (!p || !p.createdAt) return;
+    const c = cellByDate[String(p.createdAt).slice(0, 10)];
+    if (c) c.activity += 0.5;
+  });
+  (archive || []).forEach(a => {
+    if (!a || a._deleted) return;
+    const c = cellByDate[String(a.savedAt || a.createdAt || '').slice(0, 10)];
+    if (c) c.activity += 0.3;
+  });
+
+  cells.forEach(c => {
+    if (c.activity === 0) { c.level = 0; return; }
+    let level = 1;
+    const moodVit = [c.mood, c.vitality].filter(v => Number.isFinite(v));
+    if (moodVit.length > 0) {
+      const avg = moodVit.reduce((s, v) => s + v, 0) / moodVit.length;
+      if (avg >= 3.5) level += 1;
+      if (avg >= 4.5) level += 1;
+    }
+    if (c.activity >= 2.5) level += 1;
+    c.level = Math.min(4, level);
+  });
+
+  const chunkSize = 14;
+  const chunks = [];
+  for (let i = 0; i < cells.length; i += chunkSize) {
+    const chunk = cells.slice(i, i + chunkSize);
+    const moods = chunk.map(c => c.mood).filter(v => Number.isFinite(v));
+    chunks.push({ start: i, avgMood: moods.length > 0 ? moods.reduce((s, v) => s + v, 0) / moods.length : null });
+  }
+
+  let maxDelta = 0;
+  let variationStartIdx = -1;
+  for (let i = 1; i < chunks.length; i++) {
+    if (chunks[i].avgMood == null || chunks[i - 1].avgMood == null) continue;
+    const delta = Math.abs(chunks[i].avgMood - chunks[i - 1].avgMood);
+    if (delta > maxDelta && delta >= 0.5) {
+      maxDelta = delta;
+      variationStartIdx = chunks[i].start;
+    }
+  }
+
+  let variationDate = null;
+  let variationCaption = '';
+  if (variationStartIdx >= 0 && cells[variationStartIdx]) {
+    variationDate = cells[variationStartIdx].date;
+    cells[variationStartIdx].isStar = true;
+    cells[variationStartIdx].level = 4;
+    const dt = new Date(variationDate + 'T12:00:00');
+    variationCaption = `★ ${dt.getMonth() + 1}월 ${dt.getDate()}일 무렵이 변곡점이었어`;
+  }
+
+  const totalCells = 53 * 7;
+  while (cells.length < totalCells) cells.push({ level: 0, filler: true });
+
+  return { cells, variationDate, variationCaption };
 }
 
 function _annualReviewBuildCard1(d) {
@@ -94,44 +222,54 @@ function _annualReviewBuildCard1(d) {
 }
 
 // 카드 2: 한 해 흐름 — 사용자 명시 2026-04-30: 숫자 X / 365 dot grid (Github contribution 풍 + 변곡점 ★)
+// 사용자 명시 2026-05-09 ultrathink: dotmap (실데이터) 우선. 옛 review (dotmap X) / 시드 = 옛 deterministic fallback.
 function _annualReviewBuildCard2(d) {
-  // 시드 페르소나 1년 활력 등급 (가짜) — 봄 stuck → 여름 발견 → 가을 시도 → 겨울 변곡
-  const days = [];
-  const total = 53 * 7; // 371 cells (column-major fill)
-  // seed 기반 deterministic — 매번 같은 결과
-  let seed = 42;
-  const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
-  for (let i = 0; i < total; i++) {
-    let level;
-    if (i < 60)        level = Math.floor(rand() * 2);          // 봄 (5-6월) 0-1
-    else if (i < 150)  level = Math.floor(rand() * 3);          // 여름 (7-8월) 0-2
-    else if (i < 220)  level = 1 + Math.floor(rand() * 2);      // 가을 (9-10월) 1-2
-    else if (i < 280)  level = 2 + Math.floor(rand() * 2);      // 초겨울 (11-12월) 2-3
-    else               level = 2 + Math.floor(rand() * 3);      // 겨울 → 봄 (1-4월) 2-4
-    days.push({ level: Math.min(4, level) });
+  let cells, variationCaption;
+  if (d && d.dotmap && Array.isArray(d.dotmap.cells) && d.dotmap.cells.length >= 53 * 7) {
+    cells = d.dotmap.cells.map(c => ({ level: c.level || 0, isStar: !!c.isStar }));
+    variationCaption = d.dotmap.variationCaption || '';
+  } else {
+    // 시드 / 옛 review fallback — deterministic (시각 검증 의도)
+    cells = [];
+    const total = 53 * 7;
+    let seed = 42;
+    const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    for (let i = 0; i < total; i++) {
+      let level;
+      if (i < 60)        level = Math.floor(rand() * 2);
+      else if (i < 150)  level = Math.floor(rand() * 3);
+      else if (i < 220)  level = 1 + Math.floor(rand() * 2);
+      else if (i < 280)  level = 2 + Math.floor(rand() * 2);
+      else               level = 2 + Math.floor(rand() * 3);
+      cells.push({ level: Math.min(4, level) });
+    }
+    if (cells[220]) cells[220] = { level: 4, isStar: true };
+    variationCaption = '★ 12월 7일 무렵이 변곡점이었어';
   }
-  // 변곡점 ★ — 12월 7일 부근 (idx 약 220)
-  if (days[220]) days[220] = { level: 4, star: true };
-  // 사용자 명시 2026-04-30: 컬럼(주 단위)별 활기 → 아래에서 위로 정렬 (low at top, high at bottom)
+  // 컬럼별 sort (low → high) — ★ 는 마지막 (가장 활기 자리) 보존
   const sortedDays = [];
   for (let col = 0; col < 53; col++) {
-    const week = days.slice(col * 7, col * 7 + 7);
-    week.sort((a, b) => (a.level || 0) - (b.level || 0));
-    sortedDays.push(...week);
+    const week = cells.slice(col * 7, col * 7 + 7);
+    if (week.length === 0) continue;
+    const star = week.find(c => c.isStar);
+    const sortable = star ? week.filter(c => !c.isStar) : week.slice();
+    sortable.sort((a, b) => (a.level || 0) - (b.level || 0));
+    if (star) sortable.push(star);
+    sortedDays.push(...sortable);
   }
-  const cells = sortedDays.map(day => {
-    if (day.star) return '<div class="ann-rv-yearmap-day ann-rv-yearmap-day-star" title="12/7 변곡점"></div>';
-    return `<div class="ann-rv-yearmap-day ann-rv-yearmap-day-${day.level}"></div>`;
+  const cellsHtml = sortedDays.map(day => {
+    if (day.isStar) return '<div class="ann-rv-yearmap-day ann-rv-yearmap-day-star" title="변곡점"></div>';
+    return `<div class="ann-rv-yearmap-day ann-rv-yearmap-day-${day.level || 0}"></div>`;
   }).join('');
   return `
     <div class="ann-rv-card ann-rv-card-2">
       <div class="ann-rv-label">한 해의 흐름</div>
       <div class="ann-rv-yearmap-months">
+        <span>1</span><span>2</span><span>3</span><span>4</span>
         <span>5</span><span>6</span><span>7</span><span>8</span>
         <span>9</span><span>10</span><span>11</span><span>12</span>
-        <span>1</span><span>2</span><span>3</span><span>4</span>
       </div>
-      <div class="ann-rv-yearmap">${cells}</div>
+      <div class="ann-rv-yearmap">${cellsHtml}</div>
       <div class="ann-rv-yearmap-legend">
         조용
         <span class="ann-rv-yearmap-legend-dot"></span>
@@ -156,7 +294,7 @@ function _annualReviewBuildCard2(d) {
           </div>
         </div>
       ` : ''}
-      <div class="ann-rv-caption">★ <strong>12월 7일</strong>이 네 변곡점이었어</div>
+      ${variationCaption ? `<div class="ann-rv-caption">${escapeHtml(variationCaption)}</div>` : ''}
     </div>
   `;
 }
