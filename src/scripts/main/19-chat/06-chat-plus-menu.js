@@ -2,6 +2,10 @@ function chatPlusAction(kind) {
   closeChatPlusMenu();
   if (kind === 'diary') showDiaryTemplates();
   else if (kind === 'memo') addMemoArchive();
+  // 사용자 명시 2026-05-09 (spec 5-4): 숙고 진입 — reflectionContainer zone 폐기 보완.
+  else if (kind === 'reflection') {
+    if (typeof addReflectionQuestion === 'function') addReflectionQuestion();
+  }
   // 'end'는 + 메뉴 밖 별도 ✓ 버튼으로 빼냄 (V4-fix)
 }
 document.addEventListener('click', function(e) {

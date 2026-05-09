@@ -10390,9 +10390,27 @@
     border-radius: 14px;
     padding: 14px 14px 12px;
     margin-bottom: 14px;
-    touch-action: pan-x;          /* spec 11-1: 가로만 허용, 세로 swipe 는 우리 핸들러 */
+    /* 사용자 명시 2026-05-09: 가로 swipe 으로 전환 → touch-action: pan-y (페이지 세로 스크롤 OK, 가로만 우리 핸들러) */
+    touch-action: pan-y;
     user-select: none;
     transition: opacity 0.15s, transform 0.15s;
+  }
+  /* 사용자 명시 2026-05-09: 회전 카드 좌우 화살 버튼 — 가로 swipe + 명시 버튼 둘 다 지원 */
+  .rc-arrow-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+  .rc-arrow-btn {
+    background: transparent; border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-soft); font-size: 18px; line-height: 1;
+    padding: 4px 14px; border-radius: 10px; cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .rc-arrow-btn:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.14);
+    color: var(--accent);
   }
   .rc-top-row {
     display: flex; align-items: center; gap: 8px;
@@ -10554,4 +10572,15 @@
   }
   .rc-body-surprise-sub {
     font-size: 12px; color: var(--text-dim); opacity: 0.75;
+  }
+
+  /* 사용자 명시 2026-05-09 (#6, spec 5-2): 미션 완료 카드 좌swipe-dismiss */
+  .mission-card.mission-swipeable {
+    touch-action: pan-y;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .mission-swipe-hint {
+    margin-top: 10px;
+    font-size: 10.5px; color: var(--text-dim); opacity: 0.55;
+    text-align: right;
   }

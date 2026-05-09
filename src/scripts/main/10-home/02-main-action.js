@@ -109,13 +109,16 @@ function renderMainAction() {
 }
 
 // 마법의 소라고동 미니 링크 — 작지만 카드 모양
+// 사용자 명시 2026-05-09 (#7, spec 5-3): 활성 결정 + 활성 숙고 둘 다 카운트. reflectionContainer zone 폐기 흡수.
 function renderDecisionMiniLink() {
   const container = document.getElementById('decisionMiniLinkContainer');
   if (!container) return;
 
-  // 진행 중인 결정 개수
-  const inProgressCount = (state.decisions || []).filter(d => d.status === 'in_progress').length;
-  const subText = inProgressCount > 0 ? `숙성 중 ${inProgressCount}개` : '14일 숙성';
+  const decisionCount = (state.decisions || []).filter(d => d.status === 'in_progress').length;
+  const reflectionCount = (state.reflectionQuestions || []).filter(q => q.status === 'active').length;
+  const totalActive = decisionCount + reflectionCount;
+  // 사용자 명시 2026-05-09: 활성 ≥1 → "N 안고 있어" / 활성 0 → "풀어볼래" (짧게)
+  const subText = totalActive > 0 ? `${totalActive} 안고 있어` : '풀어볼래';
 
   container.innerHTML = `
     <div onclick="showScreen('decisions')" class="decision-mini-card">
@@ -127,7 +130,6 @@ function renderDecisionMiniLink() {
       <div class="dm-arrow">›</div>
     </div>
   `;
-  // V4: 잠금 시각 갱신
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
 }
 

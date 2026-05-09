@@ -9,7 +9,8 @@ function getTodayMissions() {
     pending.sort((a, b) => daysBetweenKeys(a.scheduledFor, today) - daysBetweenKeys(b.scheduledFor, today));
     return pending;
   }
-  const lastCompleted = (state.missions || []).filter(m => m.completedDate === today).slice(-1);
+  // 사용자 명시 2026-05-09 (#6): 완료 후 swipe-dismiss → status='dismissed' 미션 제외.
+  const lastCompleted = (state.missions || []).filter(m => m.completedDate === today && m.status !== 'dismissed').slice(-1);
   return lastCompleted;
 }
 

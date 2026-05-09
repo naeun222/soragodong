@@ -887,28 +887,34 @@ function _rcRenderShell(orderedSources, currentIdx) {
   if (!orderedSources || orderedSources.length === 0) return '';
   const cur = orderedSources[currentIdx] || orderedSources[0];
   const total = orderedSources.length;
-  const pearlCount = (state.pearls || []).filter(p => p && p.type !== 'dna_pearl').length;
+  // 사용자 명시 2026-05-09: 진주 카운트 '🐚 N' 제거 — 모래사장 small row 와 중복.
   const indicator = orderedSources.map((s, i) =>
     `<span class="rc-dot-i ${i === currentIdx ? 'is-active' : ''}"></span>`
   ).join('');
   const tapHandler = cur.onTapClick ? ` onclick="${cur.onTapClick}"` : '';
   const debugLine = (state.preferences && state.preferences.testerMode)
     ? `<div class="rc-debug">${escapeHtml(cur.id)} · idx ${currentIdx + 1}/${total}</div>` : '';
-  // 사용자 명시 2026-05-09: footer chat 다리 ('🐚 한 마디') 제거 — 사용자 reject.
   // 인디케이터는 가용 source 2개 이상일 때만 표시 (1개면 시각 noise 줄임).
   const indicatorHtml = total > 1 ? `<span class="rc-indicator">${indicator}</span>` : '';
+  // 사용자 명시 2026-05-09: 좌우 화살 버튼 추가 — 가로 swipe 와 함께 source 전환 명시.
+  const arrowRow = total > 1 ? `
+    <div class="rc-arrow-row">
+      <button class="rc-arrow-btn rc-arrow-prev" type="button" onclick="event.stopPropagation(); _rcCycle(-1)" aria-label="이전 카드">‹</button>
+      <button class="rc-arrow-btn rc-arrow-next" type="button" onclick="event.stopPropagation(); _rcCycle(1)" aria-label="다음 카드">›</button>
+    </div>
+  ` : '';
 
   return `
     <div class="rotating-card" id="rotatingCard" data-current-idx="${currentIdx}" data-total="${total}">
       <div class="rc-top-row">
         <span class="rc-label-main">🌟 오늘의 너</span>
-        <span class="rc-pearl-count">🐚 ${pearlCount}</span>
         ${indicatorHtml}
       </div>
       <div class="rc-body-tap"${tapHandler}>
         ${cur.bodyHtml || ''}
       </div>
       ${debugLine}
+      ${arrowRow}
     </div>
   `;
 }
@@ -922,8 +928,9 @@ function _rcAttachListeners(container) {
   const total = parseInt(card.dataset.total || '1', 10);
   if (total < 2) return; // 가용 source 1개 시 swipe 비활성
 
+  // 사용자 명시 2026-05-09: 세로 swipe 불편 → 가로 swipe 으로 전환. CSS touch-action: pan-y 가 가로만 우리 핸들러.
   let startX = null, startY = null, locked = null, hostId = null;
-  const SWIPE_THRESHOLD = 50; // 30px lock 후 50px 이상 시 다음 source
+  const SWIPE_THRESHOLD = 50;
 
   const onDown = (e) => {
     startX = e.clientX;
@@ -939,26 +946,24 @@ function _rcAttachListeners(container) {
     const dy = e.clientY - startY;
     if (locked == null) {
       if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return; // dead zone
-      // 가로 우세면 기본 (페이지 가로 X), 세로 우세면 우리가 잡음
-      locked = Math.abs(dy) > Math.abs(dx) ? 'v' : 'h';
+      locked = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
     }
-    if (locked === 'v') {
-      // 세로 swipe — 페이지 스크롤 막고 우리 핸들러
+    if (locked === 'h') {
       try { e.preventDefault(); } catch {}
-      // 카드 살짝 따라옴 (~max 30px)
-      const t = Math.max(-30, Math.min(30, dy));
-      card.style.transform = `translateY(${t}px)`;
-      card.style.opacity = String(Math.max(0.5, 1 - Math.abs(dy) / 200));
+      const t = Math.max(-40, Math.min(40, dx));
+      card.style.transform = `translateX(${t}px)`;
+      card.style.opacity = String(Math.max(0.5, 1 - Math.abs(dx) / 220));
     }
+    // locked === 'v' : 페이지 세로 스크롤은 brower 가 처리 (touch-action: pan-y) — 우리 X
   };
   const onUp = (e) => {
     if (e.pointerId !== hostId) return;
-    if (startY != null && locked === 'v') {
-      const dy = e.clientY - startY;
+    if (startX != null && locked === 'h') {
+      const dx = e.clientX - startX;
       card.style.transform = '';
       card.style.opacity = '';
-      if (Math.abs(dy) >= SWIPE_THRESHOLD) {
-        const dir = dy > 0 ? -1 : 1; // 위로 밀면 다음 (idx+1)
+      if (Math.abs(dx) >= SWIPE_THRESHOLD) {
+        const dir = dx < 0 ? 1 : -1; // 좌측 스와이프 = 다음 (idx+1) / 우측 = 이전
         _rcCycle(dir);
       }
     }
