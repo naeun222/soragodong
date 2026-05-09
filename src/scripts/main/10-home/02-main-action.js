@@ -122,7 +122,7 @@ function renderDecisionMiniLink() {
   const subText = totalActive > 0 ? `${totalActive} 안고 있어` : '풀어볼래';
 
   container.innerHTML = `
-    <div onclick="showScreen('decisions')" class="decision-mini-card">
+    <div onclick="openMagicReflectionChooser()" class="decision-mini-card">
       <div class="dm-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
       <div class="dm-text">
         <div class="dm-title">마법고동</div>
@@ -132,6 +132,66 @@ function renderDecisionMiniLink() {
     </div>
   `;
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
+}
+
+// 사용자 명시 2026-05-09: 마법고동 카드 클릭 → 숙고/마법 chooser 모달.
+// 진입 path 분기: '마법의 방' = decisions screen / '숙고의 방' = active 숙고 → reflection screen / 활성 0 → addReflectionQuestion 입력 모달.
+function openMagicReflectionChooser() {
+  const existing = document.getElementById('magicChooser');
+  if (existing) existing.remove();
+  const decisionCount = (state.decisions || []).filter(d => d.status === 'in_progress').length;
+  const reflectionCount = (state.reflectionQuestions || []).filter(q => q.status === 'active').length;
+  const overlay = document.createElement('div');
+  overlay.id = 'magicChooser';
+  overlay.className = 'magic-chooser-overlay';
+  overlay.innerHTML = `
+    <div class="magic-chooser-card">
+      <div class="magic-chooser-header">
+        <div class="magic-chooser-title">어디로 갈래?</div>
+        <button class="magic-chooser-close" type="button" onclick="closeMagicChooser()" aria-label="닫기">×</button>
+      </div>
+      <div class="magic-chooser-options">
+        <button class="magic-chooser-opt" type="button" onclick="closeMagicChooser(); showScreen('decisions');">
+          <div class="mco-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
+          <div class="mco-text">
+            <div class="mco-title">마법의 방</div>
+            <div class="mco-sub">${decisionCount > 0 ? `${decisionCount}개 숙성 중` : '14일 숙성으로 큰 결정'}</div>
+          </div>
+          <div class="mco-arrow">›</div>
+        </button>
+        <button class="magic-chooser-opt" type="button" onclick="closeMagicChooser(); _enterReflectionRoom();">
+          <div class="mco-icon mco-icon-emoji">🌊</div>
+          <div class="mco-text">
+            <div class="mco-title">숙고의 방</div>
+            <div class="mco-sub">${reflectionCount > 0 ? `${reflectionCount}개 안고 있어` : '질문 풀어보기'}</div>
+          </div>
+          <div class="mco-arrow">›</div>
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add('show'), 30);
+  // overlay 외 영역 클릭 시 닫기
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeMagicChooser();
+  });
+}
+
+function closeMagicChooser() {
+  const m = document.getElementById('magicChooser');
+  if (!m) return;
+  m.classList.remove('show');
+  setTimeout(() => m.remove(), 200);
+}
+
+function _enterReflectionRoom() {
+  const active = (state.reflectionQuestions || []).find(q => q.status === 'active');
+  if (active) {
+    if (typeof showScreen === 'function') showScreen('reflection');
+  } else if (typeof addReflectionQuestion === 'function') {
+    addReflectionQuestion();
+  }
 }
 
 // V3.7: Today's Shell 제거 — 자존감 외부화 / habituation / Anti-sycophancy 충돌 우려.

@@ -24,6 +24,10 @@ function renderLensGalpi() {
   let body = '';
   if (view === 'feed') {
     // 피드: 기존 archive-quick-row 두 버튼 (마법의 소라고동 / 리뷰 모음)
+    // 사용자 명시 2026-05-09: 리뷰 모음 밑에 '🌊 숙고의 방' 카드 추가.
+    const reflectionAll = (state.reflectionQuestions || []);
+    const reflectionActive = reflectionAll.filter(q => q.status === 'active').length;
+    const reflectionConcluded = reflectionAll.filter(q => q.status === 'concluded' || q.status === 'archived').length;
     body = `
       <div class="archive-quick-row" style="grid-template-columns:1fr 1fr;">
         <button class="archive-quick-btn" onclick="showArchiveDecisions()">
@@ -37,9 +41,17 @@ function renderLensGalpi() {
           <span class="aq-count">${allReviews.length}건</span>
         </button>
       </div>
+      <div class="archive-quick-row" style="grid-template-columns:1fr; margin-top:8px;">
+        <button class="archive-quick-btn" onclick="_enterReflectionRoom()">
+          <span class="aq-icon">🌊</span>
+          <span class="aq-label">숙고의 방</span>
+          <span class="aq-count">${reflectionActive > 0 ? reflectionActive + '개 안고 있어' : reflectionAll.length + '건'}</span>
+        </button>
+      </div>
       <div style="margin-top:14px; font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">
         큰 결정은 <img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동에서 14일 숙성.<br>
-        주간·월간 회고는 🌙 리뷰 모음에서 다시 보기.
+        주간·월간 회고는 🌙 리뷰 모음에서 다시 보기.<br>
+        풀고 싶은 질문은 🌊 숙고의 방.
       </div>
     `;
   } else {

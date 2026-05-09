@@ -10548,8 +10548,16 @@
   }
   .rc-dot-i.is-active { background: var(--accent); transform: scale(1.25); }
 
-  .rc-body-tap { cursor: pointer; animation: rc-body-fade-in 0.4s ease-out; }
-  .rc-body-tap .library-hero { margin: 0; }   /* 회전 카드 안 진주 hero — outer 통합 */
+  .rc-body-tap {
+    cursor: pointer;
+    animation: rc-body-fade-in 0.4s ease-out;
+    /* 사용자 명시 2026-05-09: 다음 source 로 넘어가도 카드 크기 통일 (변동 X) */
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .rc-body-tap .library-hero { margin: 0; width: 100%; }   /* 회전 카드 안 진주 hero — outer 통합 */
   /* 사용자 명시 2026-05-09 (Phase 5 spec 4-9): 카드 진입 시 미세 fade-in (0.4s, subtle) */
   @keyframes rc-body-fade-in {
     from { opacity: 0.45; transform: translateY(3px); }
@@ -10827,6 +10835,79 @@
     margin-left: 1px;
   }
   .arc-chip.is-active .arc-chip-count { color: var(--accent); opacity: 0.85; }
+
+  /* 사용자 명시 2026-05-09: 마법고동 카드 클릭 → 마법/숙고 chooser 모달 */
+  .magic-chooser-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 9000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    opacity: 0; transition: opacity 0.18s ease-out;
+  }
+  .magic-chooser-overlay.show { opacity: 1; }
+  .magic-chooser-card {
+    background: linear-gradient(135deg, rgba(40,38,52,0.98), rgba(28,26,38,0.98));
+    border: 1px solid rgba(168,157,200,0.32);
+    border-radius: 16px;
+    padding: 18px 16px 16px;
+    max-width: 360px; width: 100%;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .magic-chooser-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .magic-chooser-title {
+    font-size: 13.5px; color: var(--text-soft); font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .magic-chooser-close {
+    background: transparent; border: none;
+    color: var(--text-dim); font-size: 22px; line-height: 1;
+    cursor: pointer; padding: 4px 8px; opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+  .magic-chooser-close:hover { opacity: 1; }
+  .magic-chooser-options {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .magic-chooser-opt {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text);
+    padding: 14px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  }
+  .magic-chooser-opt:hover {
+    background: rgba(212,167,106,0.08);
+    border-color: rgba(212,167,106,0.32);
+  }
+  .magic-chooser-opt:active { transform: scale(0.985); }
+  .mco-icon {
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .mco-icon img.godong-icon { width: 38px; height: 38px; }
+  .mco-icon-emoji { font-size: 28px; }
+  .mco-text { flex: 1; min-width: 0; }
+  .mco-title {
+    font-size: 14.5px; font-weight: 600; color: var(--text);
+    margin-bottom: 2px;
+  }
+  .mco-sub {
+    font-size: 11.5px; color: var(--text-dim); opacity: 0.85;
+  }
+  .mco-arrow {
+    font-size: 18px; color: var(--text-soft); opacity: 0.55;
+    flex-shrink: 0;
+  }
 /* V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 — cold open hero + 코치마크 */
 
 /* ── HERO (cold open) ──────────────────────────────────────── */
@@ -26567,7 +26648,7 @@ function renderDecisionMiniLink() {
   const subText = totalActive > 0 ? `${totalActive} 안고 있어` : '풀어볼래';
 
   container.innerHTML = `
-    <div onclick="showScreen('decisions')" class="decision-mini-card">
+    <div onclick="openMagicReflectionChooser()" class="decision-mini-card">
       <div class="dm-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
       <div class="dm-text">
         <div class="dm-title">마법고동</div>
@@ -26577,6 +26658,66 @@ function renderDecisionMiniLink() {
     </div>
   `;
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
+}
+
+// 사용자 명시 2026-05-09: 마법고동 카드 클릭 → 숙고/마법 chooser 모달.
+// 진입 path 분기: '마법의 방' = decisions screen / '숙고의 방' = active 숙고 → reflection screen / 활성 0 → addReflectionQuestion 입력 모달.
+function openMagicReflectionChooser() {
+  const existing = document.getElementById('magicChooser');
+  if (existing) existing.remove();
+  const decisionCount = (state.decisions || []).filter(d => d.status === 'in_progress').length;
+  const reflectionCount = (state.reflectionQuestions || []).filter(q => q.status === 'active').length;
+  const overlay = document.createElement('div');
+  overlay.id = 'magicChooser';
+  overlay.className = 'magic-chooser-overlay';
+  overlay.innerHTML = `
+    <div class="magic-chooser-card">
+      <div class="magic-chooser-header">
+        <div class="magic-chooser-title">어디로 갈래?</div>
+        <button class="magic-chooser-close" type="button" onclick="closeMagicChooser()" aria-label="닫기">×</button>
+      </div>
+      <div class="magic-chooser-options">
+        <button class="magic-chooser-opt" type="button" onclick="closeMagicChooser(); showScreen('decisions');">
+          <div class="mco-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
+          <div class="mco-text">
+            <div class="mco-title">마법의 방</div>
+            <div class="mco-sub">${decisionCount > 0 ? `${decisionCount}개 숙성 중` : '14일 숙성으로 큰 결정'}</div>
+          </div>
+          <div class="mco-arrow">›</div>
+        </button>
+        <button class="magic-chooser-opt" type="button" onclick="closeMagicChooser(); _enterReflectionRoom();">
+          <div class="mco-icon mco-icon-emoji">🌊</div>
+          <div class="mco-text">
+            <div class="mco-title">숙고의 방</div>
+            <div class="mco-sub">${reflectionCount > 0 ? `${reflectionCount}개 안고 있어` : '질문 풀어보기'}</div>
+          </div>
+          <div class="mco-arrow">›</div>
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add('show'), 30);
+  // overlay 외 영역 클릭 시 닫기
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeMagicChooser();
+  });
+}
+
+function closeMagicChooser() {
+  const m = document.getElementById('magicChooser');
+  if (!m) return;
+  m.classList.remove('show');
+  setTimeout(() => m.remove(), 200);
+}
+
+function _enterReflectionRoom() {
+  const active = (state.reflectionQuestions || []).find(q => q.status === 'active');
+  if (active) {
+    if (typeof showScreen === 'function') showScreen('reflection');
+  } else if (typeof addReflectionQuestion === 'function') {
+    addReflectionQuestion();
+  }
 }
 
 // V3.7: Today's Shell 제거 — 자존감 외부화 / habituation / Anti-sycophancy 충돌 우려.
@@ -27883,59 +28024,10 @@ function _rcRenderShell(orderedSources, currentIdx) {
 // =============================================================================
 // Swipe gesture (spec 11-1 가드 detail — Pointer Events + 30px lock + preventDefault)
 // =============================================================================
+// 사용자 명시 2026-05-09: swipe 제거 — 좌우 ‹ › 화살 버튼 만 사용 (단순화).
+// touch-action 은 페이지 세로 스크롤 자연 처리.
 function _rcAttachListeners(container) {
-  const card = container.querySelector('.rotating-card');
-  if (!card) return;
-  const total = parseInt(card.dataset.total || '1', 10);
-  if (total < 2) return; // 가용 source 1개 시 swipe 비활성
-
-  // 사용자 명시 2026-05-09: 세로 swipe 불편 → 가로 swipe 으로 전환. CSS touch-action: pan-y 가 가로만 우리 핸들러.
-  let startX = null, startY = null, locked = null, hostId = null;
-  const SWIPE_THRESHOLD = 50;
-
-  const onDown = (e) => {
-    startX = e.clientX;
-    startY = e.clientY;
-    locked = null;
-    hostId = e.pointerId;
-    try { card.setPointerCapture(e.pointerId); } catch {}
-  };
-  const onMove = (e) => {
-    if (startX == null || startY == null) return;
-    if (e.pointerId !== hostId) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    if (locked == null) {
-      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return; // dead zone
-      locked = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-    }
-    if (locked === 'h') {
-      try { e.preventDefault(); } catch {}
-      const t = Math.max(-40, Math.min(40, dx));
-      card.style.transform = `translateX(${t}px)`;
-      card.style.opacity = String(Math.max(0.5, 1 - Math.abs(dx) / 220));
-    }
-    // locked === 'v' : 페이지 세로 스크롤은 brower 가 처리 (touch-action: pan-y) — 우리 X
-  };
-  const onUp = (e) => {
-    if (e.pointerId !== hostId) return;
-    if (startX != null && locked === 'h') {
-      const dx = e.clientX - startX;
-      card.style.transform = '';
-      card.style.opacity = '';
-      if (Math.abs(dx) >= SWIPE_THRESHOLD) {
-        const dir = dx < 0 ? 1 : -1; // 좌측 스와이프 = 다음 (idx+1) / 우측 = 이전
-        _rcCycle(dir);
-      }
-    }
-    startX = startY = null; locked = null; hostId = null;
-    try { card.releasePointerCapture(e.pointerId); } catch {}
-  };
-
-  card.addEventListener('pointerdown', onDown);
-  card.addEventListener('pointermove', onMove, { passive: false });
-  card.addEventListener('pointerup', onUp);
-  card.addEventListener('pointercancel', onUp);
+  return;
 }
 
 function _rcCycle(dir) {
@@ -41173,6 +41265,10 @@ function renderLensGalpi() {
   let body = '';
   if (view === 'feed') {
     // 피드: 기존 archive-quick-row 두 버튼 (마법의 소라고동 / 리뷰 모음)
+    // 사용자 명시 2026-05-09: 리뷰 모음 밑에 '🌊 숙고의 방' 카드 추가.
+    const reflectionAll = (state.reflectionQuestions || []);
+    const reflectionActive = reflectionAll.filter(q => q.status === 'active').length;
+    const reflectionConcluded = reflectionAll.filter(q => q.status === 'concluded' || q.status === 'archived').length;
     body = `
       <div class="archive-quick-row" style="grid-template-columns:1fr 1fr;">
         <button class="archive-quick-btn" onclick="showArchiveDecisions()">
@@ -41186,9 +41282,17 @@ function renderLensGalpi() {
           <span class="aq-count">${allReviews.length}건</span>
         </button>
       </div>
+      <div class="archive-quick-row" style="grid-template-columns:1fr; margin-top:8px;">
+        <button class="archive-quick-btn" onclick="_enterReflectionRoom()">
+          <span class="aq-icon">🌊</span>
+          <span class="aq-label">숙고의 방</span>
+          <span class="aq-count">${reflectionActive > 0 ? reflectionActive + '개 안고 있어' : reflectionAll.length + '건'}</span>
+        </button>
+      </div>
       <div style="margin-top:14px; font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">
         큰 결정은 <img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동에서 14일 숙성.<br>
-        주간·월간 회고는 🌙 리뷰 모음에서 다시 보기.
+        주간·월간 회고는 🌙 리뷰 모음에서 다시 보기.<br>
+        풀고 싶은 질문은 🌊 숙고의 방.
       </div>
     `;
   } else {

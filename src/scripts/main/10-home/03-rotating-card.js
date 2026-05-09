@@ -1187,59 +1187,10 @@ function _rcRenderShell(orderedSources, currentIdx) {
 // =============================================================================
 // Swipe gesture (spec 11-1 가드 detail — Pointer Events + 30px lock + preventDefault)
 // =============================================================================
+// 사용자 명시 2026-05-09: swipe 제거 — 좌우 ‹ › 화살 버튼 만 사용 (단순화).
+// touch-action 은 페이지 세로 스크롤 자연 처리.
 function _rcAttachListeners(container) {
-  const card = container.querySelector('.rotating-card');
-  if (!card) return;
-  const total = parseInt(card.dataset.total || '1', 10);
-  if (total < 2) return; // 가용 source 1개 시 swipe 비활성
-
-  // 사용자 명시 2026-05-09: 세로 swipe 불편 → 가로 swipe 으로 전환. CSS touch-action: pan-y 가 가로만 우리 핸들러.
-  let startX = null, startY = null, locked = null, hostId = null;
-  const SWIPE_THRESHOLD = 50;
-
-  const onDown = (e) => {
-    startX = e.clientX;
-    startY = e.clientY;
-    locked = null;
-    hostId = e.pointerId;
-    try { card.setPointerCapture(e.pointerId); } catch {}
-  };
-  const onMove = (e) => {
-    if (startX == null || startY == null) return;
-    if (e.pointerId !== hostId) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    if (locked == null) {
-      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return; // dead zone
-      locked = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-    }
-    if (locked === 'h') {
-      try { e.preventDefault(); } catch {}
-      const t = Math.max(-40, Math.min(40, dx));
-      card.style.transform = `translateX(${t}px)`;
-      card.style.opacity = String(Math.max(0.5, 1 - Math.abs(dx) / 220));
-    }
-    // locked === 'v' : 페이지 세로 스크롤은 brower 가 처리 (touch-action: pan-y) — 우리 X
-  };
-  const onUp = (e) => {
-    if (e.pointerId !== hostId) return;
-    if (startX != null && locked === 'h') {
-      const dx = e.clientX - startX;
-      card.style.transform = '';
-      card.style.opacity = '';
-      if (Math.abs(dx) >= SWIPE_THRESHOLD) {
-        const dir = dx < 0 ? 1 : -1; // 좌측 스와이프 = 다음 (idx+1) / 우측 = 이전
-        _rcCycle(dir);
-      }
-    }
-    startX = startY = null; locked = null; hostId = null;
-    try { card.releasePointerCapture(e.pointerId); } catch {}
-  };
-
-  card.addEventListener('pointerdown', onDown);
-  card.addEventListener('pointermove', onMove, { passive: false });
-  card.addEventListener('pointerup', onUp);
-  card.addEventListener('pointercancel', onUp);
+  return;
 }
 
 function _rcCycle(dir) {
