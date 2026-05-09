@@ -112,23 +112,30 @@ async function compressVideoWebCodecs(file, opts = {}) {
             audioSampleRate = audioBuffer.sampleRate;
             audioChannels = Math.min(2, audioBuffer.numberOfChannels);
             // 사용자 보고 2026-05-09 ultrathink: 무음 진주 진단 — codec 후보 확장 + 진단 로그 + 빈 audioBuffer 케이스 분리.
-            // mp4a.40.2 (AAC-LC) 외에 mp4a.40.5 (HE-AAC v1), mp4a.40.29 (HE-AAC v2) 도 시도 — 일부 환경에서 LC 미지원 (특히 모바일 환경).
-            const aacCandidates = ['mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29'];
-            for (const c of aacCandidates) {
+            // 사용자 명시 2026-05-10 (재정정 — Opus 시도): mp4-muxer 5.2.2 가 ['aac','opus'] 둘 다 지원.
+            // Opus 우선 시도 (mp4 안 opus track Chrome/Firefox/Safari 17+ 호환성 ↑) — AAC mp4 의 silently muted issue
+            // 회피 시도. Opus 미지원 sr (예: 44100) 또는 isConfigSupported false 시 AAC fallback.
+            // Opus sr 제약: 8/12/16/24/48 kHz 만. 다른 sr 은 AAC.
+            const opusOk = [8000, 12000, 16000, 24000, 48000].includes(audioSampleRate);
+            const candidates = [
+              ...(opusOk ? ['opus'] : []),
+              'mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29',
+            ];
+            for (const c of candidates) {
               try {
                 const sup = await AudioEncoder.isConfigSupported({
                   codec: c, sampleRate: audioSampleRate, numberOfChannels: audioChannels, bitrate: audioBitrate
                 });
-                console.log('[video] AAC isConfigSupported', c, 'sr=' + audioSampleRate, 'ch=' + audioChannels, '→', sup?.supported);
+                console.log('[video] codec isConfigSupported', c, 'sr=' + audioSampleRate, 'ch=' + audioChannels, '→', sup?.supported);
                 if (sup && sup.supported) { audioCodec = c; break; }
               } catch(e) {
-                console.log('[video] AAC isConfigSupported throw', c, e?.message);
+                console.log('[video] codec isConfigSupported throw', c, e?.message);
               }
             }
             if (!audioCodec) {
-              console.warn('[video] AAC codec 모두 미지원 — 무음 저장. sr=' + audioSampleRate + ' ch=' + audioChannels);
-              audioFailReason = 'AAC 인코더 미지원';
-              audioFailDetail = `브라우저가 mp4a.40.2 / mp4a.40.5 / mp4a.40.29 모두 미지원. (sr=${audioSampleRate}, ch=${audioChannels})`;
+              console.warn('[video] audio codec 모두 미지원 — 무음 저장. sr=' + audioSampleRate + ' ch=' + audioChannels);
+              audioFailReason = 'audio 인코더 미지원';
+              audioFailDetail = `브라우저가 opus / mp4a.40.2 / mp4a.40.5 / mp4a.40.29 모두 미지원. (sr=${audioSampleRate}, ch=${audioChannels})`;
               audioBuffer = null;
             }
           } else {
@@ -148,23 +155,27 @@ async function compressVideoWebCodecs(file, opts = {}) {
           audioBuffer = captured;
           audioSampleRate = captured.sampleRate;
           audioChannels = Math.min(2, captured.numberOfChannels);
-          // AAC codec resolve — 사용자 보고 2026-05-09: codec 후보 확장 (mp4a.40.5, mp4a.40.29).
-          const aacCandidates = ['mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29'];
-          for (const c of aacCandidates) {
+          // 사용자 명시 2026-05-10: capture path 도 Opus 우선 + AAC fallback.
+          const capOpusOk = [8000, 12000, 16000, 24000, 48000].includes(audioSampleRate);
+          const capCandidates = [
+            ...(capOpusOk ? ['opus'] : []),
+            'mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29',
+          ];
+          for (const c of capCandidates) {
             try {
               const sup = await AudioEncoder.isConfigSupported({
                 codec: c, sampleRate: audioSampleRate, numberOfChannels: audioChannels, bitrate: audioBitrate
               });
-              console.log('[video] capture AAC isConfigSupported', c, 'sr=' + audioSampleRate, 'ch=' + audioChannels, '→', sup?.supported);
+              console.log('[video] capture codec isConfigSupported', c, 'sr=' + audioSampleRate, 'ch=' + audioChannels, '→', sup?.supported);
               if (sup && sup.supported) { audioCodec = c; break; }
             } catch(e) {
-              console.log('[video] capture AAC isConfigSupported throw', c, e?.message);
+              console.log('[video] capture codec isConfigSupported throw', c, e?.message);
             }
           }
           if (!audioCodec) {
-            console.warn('[video] capture: AAC codec 모두 미지원 — 무음 저장');
-            audioFailReason = 'AAC 인코더 미지원 (capture fallback)';
-            audioFailDetail = `captureStream 으로 audio 잡았지만 AAC encoder 가 mp4a.40.2 / 40.5 / 40.29 모두 미지원. (sr=${audioSampleRate}, ch=${audioChannels})`;
+            console.warn('[video] capture: codec 모두 미지원 — 무음 저장');
+            audioFailReason = 'audio 인코더 미지원 (capture fallback)';
+            audioFailDetail = `captureStream 으로 audio 잡았지만 opus / mp4a.40.2 / 40.5 / 40.29 모두 미지원. (sr=${audioSampleRate}, ch=${audioChannels})`;
             audioBuffer = null;
           }
           // capture path = relative (0 ~ maxSec) → encode startSample = 0
@@ -201,7 +212,11 @@ async function compressVideoWebCodecs(file, opts = {}) {
       firstTimestampBehavior: 'offset'
     };
     if (audioBuffer) {
-      muxerOpts.audio = { codec: 'aac', numberOfChannels: audioChannels, sampleRate: audioSampleRate };
+      // 사용자 명시 2026-05-10: audioCodec 'opus' / 'mp4a.40.x' 에 따라 muxer codec 분기.
+      // mp4-muxer 5.2.2 = SUPPORTED_AUDIO_CODECS = ['aac', 'opus'].
+      const muxerAudioCodec = audioCodec === 'opus' ? 'opus' : 'aac';
+      muxerOpts.audio = { codec: muxerAudioCodec, numberOfChannels: audioChannels, sampleRate: audioSampleRate };
+      console.log('[video] muxer audio codec=' + muxerAudioCodec + ' (encoder=' + audioCodec + ')');
     }
     const muxer = new Muxer(muxerOpts);
 
