@@ -11014,6 +11014,31 @@
     border-top: 1px dashed rgba(255,255,255,0.06);
   }
 
+  /* 사용자 명시 2026-05-09: 운세 전체 보기 모달 (미니 리뷰 모달 패턴 동일 — .rc-mini-review-overlay/card 재사용). */
+  .rc-horoscope-modal-text {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: pre-wrap;
+    margin-bottom: 14px;
+  }
+  .rc-horoscope-modal-lucky {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255,255,255,0.08);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .rc-horoscope-modal-lucky-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px;
+  }
+  .rc-horoscope-modal-lucky-label {
+    color: var(--text-soft); opacity: 0.78;
+  }
+  .rc-horoscope-modal-lucky-value {
+    color: var(--accent); font-weight: 500;
+  }
+
   /* 사용자 명시 2026-05-09 (개발자 테스트, 추후 제거): 정상 운세 카드 ↻ 버튼 (cache 무시 강제 재fetch) */
   .rc-body-horoscope { position: relative; }
   .rc-horoscope-refresh-btn {

@@ -11127,6 +11127,31 @@
     border-top: 1px dashed rgba(255,255,255,0.06);
   }
 
+  /* 사용자 명시 2026-05-09: 운세 전체 보기 모달 (미니 리뷰 모달 패턴 동일 — .rc-mini-review-overlay/card 재사용). */
+  .rc-horoscope-modal-text {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: pre-wrap;
+    margin-bottom: 14px;
+  }
+  .rc-horoscope-modal-lucky {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255,255,255,0.08);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .rc-horoscope-modal-lucky-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px;
+  }
+  .rc-horoscope-modal-lucky-label {
+    color: var(--text-soft); opacity: 0.78;
+  }
+  .rc-horoscope-modal-lucky-value {
+    color: var(--accent); font-weight: 500;
+  }
+
   /* 사용자 명시 2026-05-09 (개발자 테스트, 추후 제거): 정상 운세 카드 ↻ 버튼 (cache 무시 강제 재fetch) */
   .rc-body-horoscope { position: relative; }
   .rc-horoscope-refresh-btn {
@@ -28799,25 +28824,34 @@ async function _rcCallHoroscopeHaiku(rawEnglish, zodiac) {
   const z = _rcZodiacInfo(zodiac);
   const zLabel = z ? z.label : '';
 
-  const systemPrompt = `너는 사용자의 친구. 영문 horoscope 받아서 한국어 친구 카톡 톤으로 짧게 변환해줘.
+  // 사용자 명시 2026-05-09 (재정정): 운세 말투로 + 길게 (3-4 문장) + 행운 아이템/색 같이 추출.
+  const systemPrompt = `너는 별자리 운세를 한국어로 풀어주는 운세사. 영문 horoscope 와 별자리를 받아서 한국어 운세 톤으로 변환 + 행운의 아이템 / 행운의 색 같이 만들어.
 
 규칙 (절대):
-- 친구 카톡 톤. 분석 보고서 X.
-- "힘내", "화이팅", "괜찮아질" 같은 빈 응원 절대 X.
-- 평가성 칭찬 ("잘하고 있어", "대단해") X.
-- 분석명 / 진단명 X.
-- 살짝 신비로운 어휘 OK (운세 특성).
-- 사용자 명시 2026-05-09: 1-2 문장만 (50-90자). 핵심만 짧고 명료. 길게 풀지 X.
+- 운세 말투 — '~할 운입니다', '~한 기운이 흐릅니다', '~을(를) 조심하세요', '~에 좋은 날입니다' 같은 전형 운세 톤.
+- 친근하게, 그래도 신비로운 어휘 ('기운', '운세', '징조', '에너지', '흐름', '오라') OK.
+- 분석명 / 진단명 X. 평가 X. "힘내", "화이팅" 같은 빈 응원 X.
+- 길이 = 3-4 문장 (~150-250자). 옛 horoscope 톤 보존.
+- 사용자에게 직접 말하듯 (너 / 네 / 당신 X — '너의', '네' 사용).
 - "결" 단어 X (잔잔한 결, 가벼운 결 등 회피).
-- 사용자에게 직접 말하듯 (너 / 네).
-- 마크다운 / 인용부호 X.`;
+- 마크다운 / 인용부호 X.
+
+행운의 아이템: 일상에서 가질 수 있는 구체 객체 1개 (예: 텀블러, 만년필, 노란 우산, 가죽 수첩, 라벤더 향초). 추상 X.
+행운의 색: 1개 (예: 진청색, 연두색, 와인색, 살구색, 바닐라색).
+
+출력 = JSON 만 (마크다운 X):
+{
+  "horoscope": "운세 본문 (3-4 문장)",
+  "luckyItem": "행운의 아이템",
+  "luckyColor": "행운의 색"
+}`;
 
   const userPrompt = `별자리: ${zLabel}
 
 영문 horoscope:
 ${rawEnglish}
 
-→ 위 영문 핵심만 한국어 친구 카톡 톤으로 압축. 1-2 문장 (50-90자). 본문만.`;
+→ 위 영문을 한국어 운세 톤으로 변환 + 행운 아이템 / 색 같이 JSON 으로 출력.`;
 
   const sycophancy = /힘내|화이팅|괜찮아질|잘하고 있어|대단해/;
   const diagnosis = /\bADHD\b|우울증|우울장애|불안장애|PTSD|강박장애/i;
@@ -28827,20 +28861,42 @@ ${rawEnglish}
   while (attempt < 2) {
     const resp = await callAnthropic({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 220,
+      max_tokens: 400,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
     if (!resp.ok) throw new Error('Haiku API ' + resp.status);
     const data = await resp.json();
-    const text = (data.content?.[0]?.text || '').trim();
-    if (!text) throw new Error('빈 응답');
+    let raw = (data.content?.[0]?.text || '').trim();
+    if (!raw) throw new Error('빈 응답');
+    raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+    // JSON 추출
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      attempt++;
+      if (attempt >= 2) throw new Error('JSON 추출 실패');
+      continue;
+    }
+    let parsed;
+    try { parsed = JSON.parse(jsonMatch[0]); } catch (e) {
+      attempt++;
+      if (attempt >= 2) throw new Error('JSON parse 실패: ' + e.message);
+      continue;
+    }
+    const text = (parsed.horoscope || '').trim();
+    const luckyItem = (parsed.luckyItem || '').trim();
+    const luckyColor = (parsed.luckyColor || '').trim();
+    if (!text || text.length < 30) {
+      attempt++;
+      if (attempt >= 2) throw new Error('운세 본문 너무 짧음');
+      continue;
+    }
     if (sycophancy.test(text) || diagnosis.test(text) || banGyeol.test(text)) {
       attempt++;
       if (attempt >= 2) throw new Error('tone verify 실패');
       continue;
     }
-    return text;
+    return { text, luckyItem, luckyColor };
   }
   throw new Error('attempts exceeded');
 }
@@ -28865,11 +28921,14 @@ async function _rcStartHoroscopeFetch(zodiac, opts = {}) {
     const raw = await _rcFetchHoroscopeApi(zodiac, { noCache: !!opts.noCache });
     if (!raw) throw new Error('horoscope API 빈 응답');
     const friendly = await _rcCallHoroscopeHaiku(raw, zodiac);
-    if (!friendly) throw new Error('Haiku 변환 빈 응답');
+    if (!friendly || !friendly.text) throw new Error('Haiku 변환 빈 응답');
     const r = _ensureRotatingCardState();
     r.lastHoroscopeFetchDay = todayK;
-    r.lastHoroscopeContent = friendly;
-    r.lastHoroscopeLucky = null;
+    r.lastHoroscopeContent = friendly.text;
+    // 사용자 명시 2026-05-09: 행운 아이템 / 색 같이 stash. 옛 = lucky null. 신 = { item, color }.
+    r.lastHoroscopeLucky = (friendly.luckyItem || friendly.luckyColor)
+      ? { item: friendly.luckyItem || '', color: friendly.luckyColor || '' }
+      : null;
     if (typeof saveState === 'function') saveState(true);
     // sessionOrder 안 horoscope source 갱신 (로딩 카드 → 실제 운세 카드)
     _rcUpdateHoroscopeInSession();
@@ -29006,7 +29065,17 @@ function _rcRenderHoroscopeLoadingCard(zodiac) {
 function _rcRenderHoroscopeCard(zodiac, content, lucky) {
   const z = _rcZodiacInfo(zodiac);
   const zLabel = z ? `${z.symbol} ${z.label}` : '';
-  const luckyLine = lucky ? `<div class="rc-horoscope-lucky">행운: ${escapeHtml(lucky)}</div>` : '';
+  // 사용자 명시 2026-05-09 (재정정): 카드 본문 truncate (큐레이션 size 일관) + 클릭 시 모달 (전체 운세 + 행운).
+  // 미니 리뷰 패턴 동일.
+  const trim = content.length > 80 ? content.slice(0, 80) + '…' : content;
+  // 사용자 명시 2026-05-09: 행운 아이템 + 색 카드에 표시 (있을 때만). lucky 형식: { item, color }.
+  let luckyLine = '';
+  if (lucky && (lucky.item || lucky.color)) {
+    const parts = [];
+    if (lucky.item) parts.push(escapeHtml(lucky.item));
+    if (lucky.color) parts.push(escapeHtml(lucky.color));
+    luckyLine = `<div class="rc-horoscope-lucky">🍀 ${parts.join(' · ')}</div>`;
+  }
   // 사용자 명시 2026-05-09 (개발자 테스트, 추후 제거): ↻ 강제 재fetch 버튼 (cache 무시).
   const refreshBtn = `<button class="rc-horoscope-refresh-btn" type="button" onclick="event.stopPropagation(); forceRefreshHoroscope()" title="강제 재시도 (개발자)" aria-label="다시">↻</button>`;
   const bodyHtml = `
@@ -29014,8 +29083,9 @@ function _rcRenderHoroscopeCard(zodiac, content, lucky) {
       ${refreshBtn}
       <div class="rc-body-headline">고동의 운세</div>
       ${zLabel ? `<div class="rc-horoscope-zodiac">${escapeHtml(zLabel)}</div>` : ''}
-      <div class="rc-horoscope-text">${escapeHtml(content)}</div>
+      <div class="rc-horoscope-text">${escapeHtml(trim)}</div>
       ${luckyLine}
+      ${content.length > 80 ? `<div class="rc-body-mini-cta">탭 → 전체 운세 ✦</div>` : ''}
     </div>
   `;
   // 카드 1번 봤음 mark — 컨펌 처리
@@ -29030,8 +29100,54 @@ function _rcRenderHoroscopeCard(zodiac, content, lucky) {
     available: true,
     contentHash: 'horoscope_' + todayK,
     bodyHtml,
-    onTapClick: '',
+    onTapClick: `openHoroscopeModal()`,
   };
+}
+
+// 사용자 명시 2026-05-09: 운세 전체 보기 모달 — 미니 리뷰 모달 패턴 동일.
+function openHoroscopeModal() {
+  const r = _ensureRotatingCardState();
+  const z = state.preferences && state.preferences.userZodiac;
+  if (!z || !r.lastHoroscopeContent) return;
+  const existing = document.getElementById('rcHoroscopeModal');
+  if (existing) return;
+
+  const zInfo = _rcZodiacInfo(z);
+  const zLabel = zInfo ? `${zInfo.symbol} ${zInfo.label}` : '';
+  const lucky = r.lastHoroscopeLucky;
+  let luckyHtml = '';
+  if (lucky && (lucky.item || lucky.color)) {
+    const lines = [];
+    if (lucky.item) lines.push(`<div class="rc-horoscope-modal-lucky-row"><span class="rc-horoscope-modal-lucky-label">행운의 아이템</span><span class="rc-horoscope-modal-lucky-value">${escapeHtml(lucky.item)}</span></div>`);
+    if (lucky.color) lines.push(`<div class="rc-horoscope-modal-lucky-row"><span class="rc-horoscope-modal-lucky-label">행운의 색</span><span class="rc-horoscope-modal-lucky-value">${escapeHtml(lucky.color)}</span></div>`);
+    luckyHtml = `<div class="rc-horoscope-modal-lucky">${lines.join('')}</div>`;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'rcHoroscopeModal';
+  overlay.className = 'rc-mini-review-overlay';
+  overlay.innerHTML = `
+    <div class="rc-mini-review-card">
+      <div class="rc-mini-review-header">
+        <div class="rc-mini-review-label">${zLabel} · 오늘의 운세</div>
+        <button class="rc-mini-review-close" type="button" onclick="closeHoroscopeModal()" aria-label="닫기">×</button>
+      </div>
+      <div class="rc-mini-review-body">
+        <div class="rc-horoscope-modal-text">${escapeHtml(r.lastHoroscopeContent)}</div>
+        ${luckyHtml}
+      </div>
+    </div>
+  `;
+  overlay.onclick = (e) => { if (e.target === overlay) closeHoroscopeModal(); };
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add('show'), 30);
+}
+
+function closeHoroscopeModal() {
+  const overlay = document.getElementById('rcHoroscopeModal');
+  if (!overlay) return;
+  overlay.classList.remove('show');
+  setTimeout(() => { try { overlay.remove(); } catch(_) {} }, 180);
 }
 // 사용자 명시 2026-05-09 ultrathink: Quiz 카드 의문문 polish — Haiku 로 lazy 다듬기.
 // extract-insight 프롬프트에서 quiz_question 필드 요구 제거 (이전 옛 형식으로 되돌림).
