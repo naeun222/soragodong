@@ -174,6 +174,14 @@ function _rcSortByConfirmation(sources) {
   };
   unconfirmed.sort(byWeight);
   confirmed.sort(byWeight);
+  // 사용자 명시 2026-05-09: 모든 source 컨펌 (unconfirmed 0) 시 진주 = 가장 먼저 (큐레이션 부드러운 surface).
+  if (unconfirmed.length === 0 && confirmed.length > 0) {
+    const pearlIdx = confirmed.findIndex(s => s && s.id === 'pearl');
+    if (pearlIdx > 0) {
+      const [pearl] = confirmed.splice(pearlIdx, 1);
+      confirmed.unshift(pearl);
+    }
+  }
   return [...unconfirmed, ...confirmed];
 }
 

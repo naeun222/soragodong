@@ -63,7 +63,8 @@ function setUserZodiac(zodiac) {
   if (!_rcZodiacInfo(zodiac)) return;
   if (!state.preferences) state.preferences = {};
   state.preferences.userZodiac = zodiac;
-  if (typeof saveState === 'function') saveState();
+  // 사용자 보고 2026-05-09: 별자리 등록 후 다음 세션에서 운세 안 보임 → saveState(true) 강제 cloud sync.
+  if (typeof saveState === 'function') saveState(true);
   if (typeof showToast === 'function') showToast('🌗 별자리 등록');
   // 별자리 onboarding 카드 → 운세 source 로 변경 + 즉시 fetch 시작
   _rcSessionOrder = null;
