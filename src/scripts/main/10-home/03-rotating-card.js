@@ -286,7 +286,10 @@ function _rcSource2Yesterday() {
     }
   }
 
-  if (candidates.length === 0) return { id: 'yesterday', available: false };
+  if (candidates.length === 0) {
+    // 비교 데이터 부족 — note / 단순 어제 회고 fallback (사용자 명시 2026-05-09)
+    return _rcSource2YesterdaySimple();
+  }
 
   // P1-1 부정 일변도 cooldown — 같은 부정 패턴이 최근 3일 안 노출됐으면 skip 가산점
   const r = _ensureRotatingCardState();
@@ -338,6 +341,53 @@ function _rcSource2Yesterday() {
     id: 'yesterday',
     available: true,
     contentHash: 'yesterday_' + yKey + '_' + top.kind + negTag,
+    bodyHtml,
+    onTapClick: `enterCheckin()`,
+    placeholder: '어제...',
+  };
+}
+
+// Source 2 fallback — numeric 비교 부족 (recent < 3) 또는 metric 비교 candidate 0 케이스.
+// 어제 entry 자체는 있으면 단순 회고 한 줄 + note 인용으로 가용 처리. 사용자 명시 2026-05-09 (회전 안 됨 fix).
+function _rcSource2YesterdaySimple() {
+  if (typeof todayKey !== 'function' || typeof _shiftDateKey !== 'function') {
+    return { id: 'yesterday', available: false };
+  }
+  const yKey = _shiftDateKey(todayKey(), -1);
+  const entries = state.entries || [];
+  const yEntry = entries.find(e => e.date === yKey);
+  if (!yEntry) return { id: 'yesterday', available: false };
+  const noteText = yEntry.note || yEntry.diary || '';
+  const hasNumeric = (yEntry.vitality != null) || (yEntry.mood != null) || (yEntry.sleep != null);
+  if (!noteText && !hasNumeric) return { id: 'yesterday', available: false };
+  // crisis keyword skip — anti-trigger
+  if (_rcHasCrisis(noteText)) return { id: 'yesterday', available: false };
+
+  let copy;
+  if (noteText && noteText.length >= 4) {
+    const snippet = noteText.length > 50 ? noteText.slice(0, 50) + '…' : noteText;
+    copy = _rcPickRandom([
+      `어제 너 — "${snippet}"`,
+      `어제 적어둔 한 줄 — "${snippet}"`,
+      `"${snippet}" — 어제 너 한 줄`,
+    ]);
+  } else {
+    copy = _rcPickRandom([
+      '어제 한 번 들렀더라.',
+      '어 어제 흔적 남겼네.',
+      '어제 짧게라도 기록해뒀어.',
+    ]);
+  }
+  const bodyHtml = `
+    <div class="rc-body-yesterday">
+      <div class="rc-body-headline">어제</div>
+      <div class="rc-body-copy">${escapeHtml(copy)}</div>
+    </div>
+  `;
+  return {
+    id: 'yesterday',
+    available: true,
+    contentHash: 'yesterday_' + yKey + '_fallback',
     bodyHtml,
     onTapClick: `enterCheckin()`,
     placeholder: '어제...',
@@ -570,26 +620,23 @@ function _rcRenderShell(orderedSources, currentIdx) {
     `<span class="rc-dot-i ${i === currentIdx ? 'is-active' : ''}"></span>`
   ).join('');
   const tapHandler = cur.onTapClick ? ` onclick="${cur.onTapClick}"` : '';
-  const placeholder = cur.placeholder || '한 마디 적어볼까...';
   const debugLine = (state.preferences && state.preferences.testerMode)
     ? `<div class="rc-debug">${escapeHtml(cur.id)} · idx ${currentIdx + 1}/${total}</div>` : '';
+  // 사용자 명시 2026-05-09: footer chat 다리 ('🐚 한 마디') 제거 — 사용자 reject.
+  // 인디케이터는 가용 source 2개 이상일 때만 표시 (1개면 시각 noise 줄임).
+  const indicatorHtml = total > 1 ? `<span class="rc-indicator">${indicator}</span>` : '';
 
   return `
     <div class="rotating-card" id="rotatingCard" data-current-idx="${currentIdx}" data-total="${total}">
       <div class="rc-top-row">
         <span class="rc-label-main">🌟 오늘의 너</span>
         <span class="rc-pearl-count">🐚 ${pearlCount}</span>
-        <span class="rc-indicator">${indicator}</span>
+        ${indicatorHtml}
       </div>
       <div class="rc-body-tap"${tapHandler}>
         ${cur.bodyHtml || ''}
       </div>
       ${debugLine}
-      <div class="rc-footer">
-        <button class="rc-chat-bridge" type="button" onclick="event.stopPropagation(); rcOpenChatBridge('${escapeHtml(cur.id)}', '${escapeHtml(placeholder)}')">
-          🐚 한 마디 <span class="rc-chat-arrow">↗</span>
-        </button>
-      </div>
     </div>
   `;
 }
@@ -677,27 +724,4 @@ function _rcCycle(dir) {
   }
 }
 
-// =============================================================================
-// Chat 다리 footer (spec 11-5 페인 1번 직접 해결)
-// =============================================================================
-const _RC_PLACEHOLDERS = {
-  pearl: '이 진주에 대해...',
-  yesterday: '어제...',
-  newView: '이게 맞는 거 같아? 아니면...',
-  miniReview: '이 3일...',
-  throwback: '1년 전 이 한 줄...',
-  insight: '이번 주...',
-  surprise: '...',
-};
-
-function rcOpenChatBridge(sourceId, customPlaceholder) {
-  const placeholder = customPlaceholder || _RC_PLACEHOLDERS[sourceId] || '오늘 어땠어...';
-  if (typeof showScreen === 'function') showScreen('chat');
-  setTimeout(() => {
-    const ta = document.getElementById('chatInput');
-    if (ta) {
-      ta.placeholder = placeholder;
-      try { ta.focus({ preventScroll: false }); } catch { ta.focus(); }
-    }
-  }, 80);
-}
+// 사용자 명시 2026-05-09: chat 다리 footer 제거 — _RC_PLACEHOLDERS / rcOpenChatBridge dead code 청소.
