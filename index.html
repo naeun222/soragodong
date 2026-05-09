@@ -41237,9 +41237,9 @@ function renderLensGalpi() {
   if (view === 'feed') {
     // 피드: 기존 archive-quick-row 두 버튼 (마법의 소라고동 / 리뷰 모음)
     // 사용자 명시 2026-05-09: 리뷰 모음 밑에 '🌊 숙고의 방' 카드 추가.
-    const reflectionAll = (state.reflectionQuestions || []);
-    const reflectionActive = reflectionAll.filter(q => q.status === 'active').length;
-    const reflectionConcluded = reflectionAll.filter(q => q.status === 'concluded' || q.status === 'archived').length;
+    // 사용자 보고 2026-05-09 ultrathink: 활성 0 일 때 '1건' 표시 버그 — 옛 resolved/paused 도 reflectionAll 에 카운트되던 거.
+    // 결론 낸 옛 질문은 깨달음 archive 에 별도 surface — 숙고의 방 카드는 '지금 활성' 만 의미.
+    const reflectionActive = (state.reflectionQuestions || []).filter(q => q.status === 'active').length;
     body = `
       <div class="archive-quick-row" style="grid-template-columns:1fr 1fr;">
         <button class="archive-quick-btn" onclick="showArchiveDecisions()">
@@ -41257,7 +41257,7 @@ function renderLensGalpi() {
         <button class="archive-quick-btn" onclick="_enterReflectionRoom()">
           <span class="aq-icon">🌊</span>
           <span class="aq-label">숙고의 방</span>
-          <span class="aq-count">${reflectionActive > 0 ? reflectionActive + '개 안고 있어' : reflectionAll.length + '건'}</span>
+          <span class="aq-count">${reflectionActive > 0 ? reflectionActive + '개 안고 있어' : '풀어볼래'}</span>
         </button>
       </div>
       <div style="margin-top:14px; font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">
