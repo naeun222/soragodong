@@ -892,8 +892,9 @@ function _rcRenderShell(orderedSources, currentIdx) {
     `<span class="rc-dot-i ${i === currentIdx ? 'is-active' : ''}"></span>`
   ).join('');
   const tapHandler = cur.onTapClick ? ` onclick="${cur.onTapClick}"` : '';
+  // testerMode 디버그 — 가용 source list / current source / idx 표시 (swipe 진단용)
   const debugLine = (state.preferences && state.preferences.testerMode)
-    ? `<div class="rc-debug">${escapeHtml(cur.id)} · idx ${currentIdx + 1}/${total}</div>` : '';
+    ? `<div class="rc-debug">cur: ${escapeHtml(cur.id)} · ${currentIdx + 1}/${total} · avail: ${escapeHtml(orderedSources.map(s => s.id).join(', '))}</div>` : '';
   // 인디케이터는 가용 source 2개 이상일 때만 표시 (1개면 시각 noise 줄임).
   const indicatorHtml = total > 1 ? `<span class="rc-indicator">${indicator}</span>` : '';
   // 사용자 명시 2026-05-09: 좌우 화살 버튼 추가 — 가로 swipe 와 함께 source 전환 명시.

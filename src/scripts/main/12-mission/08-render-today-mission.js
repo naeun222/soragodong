@@ -38,7 +38,7 @@ function renderTodayMission() {
         <div class="mission-title">${escapeHtml(mission.title)}</div>
         ${mission.completionNote ? `<div class="mission-completion-msg">${escapeHtml(mission.completionNote)}</div>` : ''}
         ${navHtml}
-        <div class="mission-swipe-hint">← 좌로 밀면 치워둘 수 있어</div>
+        <div class="mission-swipe-hint">← 왼쪽으로 밀면 치워둘 수 있어</div>
       </div>
     `;
     setTimeout(() => _attachMissionSwipeDismiss(mission.id), 0);
@@ -123,26 +123,22 @@ function _attachMissionSwipeDismiss(missionId) {
 function dismissMission(missionId) {
   const m = (state.missions || []).find(x => x.id === missionId);
   if (!m) return;
-  m._prevStatus = m.status;
+  const prevStatus = m.status;
   m.status = 'dismissed';
   m.dismissedAt = new Date().toISOString();
   saveState();
   renderTodayMission();
-  if (typeof showToast === 'function') {
-    showToast('치웠어 🐚 — 5초 안에 ✓ 카드 자리 다시 눌러도 되돌릴 수 있어 (지금은 settings 에서)');
+  // 사용자 명시 2026-05-09: 다른 토스트들과 동일한 undo 토스트 ('되돌리기' 버튼) 사용.
+  if (typeof showUndoToast === 'function') {
+    showUndoToast('치웠어 🐚', () => {
+      m.status = prevStatus;
+      delete m.dismissedAt;
+      saveState();
+      renderTodayMission();
+    });
+  } else if (typeof showToast === 'function') {
+    showToast('치웠어 🐚');
   }
-}
-
-// 사용자 (P1-5 후속): undo 미션 dismiss — 5초 안 settings or path 따로. V1 실제 사용 보고 후 작업.
-function undoDismissMission(missionId) {
-  const m = (state.missions || []).find(x => x.id === missionId);
-  if (!m || m.status !== 'dismissed') return;
-  m.status = m._prevStatus || 'completed';
-  delete m._prevStatus;
-  delete m.dismissedAt;
-  saveState();
-  renderTodayMission();
-  if (typeof showToast === 'function') showToast('미션 되돌렸어 🐚');
 }
 
 function createMission(title, description, options = {}) {
