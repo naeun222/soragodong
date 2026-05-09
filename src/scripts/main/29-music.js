@@ -503,10 +503,12 @@ async function addPearl() {
                     videoData = dataUrl;
                     videoThumb = result.thumbnail;
                     videoHasAudio = !!result.hasAudio;
-                    // 사용자 보고 2026-05-09: hasAudio false 면 사용자가 이유 알게 toast (옛 silent fallback → 진단 ↑).
-                    // showErrorDetailModal 은 decodeAudioData + captureStream 둘 다 fail 시만 (덜 자주). isConfigSupported false 케이스는 silent 였음.
-                    if (!videoHasAudio) {
-                      showToast('🔇 무음 영상으로 저장 — console 에 자세한 원인 (codec 미지원 등)');
+                    // 사용자 보고 2026-05-09: PWA 모바일에서 console 못 봄 → 무음 원인 modal 로 노출 (compress 가 reason / detail 동봉).
+                    if (!videoHasAudio && typeof showErrorDetailModal === 'function') {
+                      const reason = result.audioFailReason || '알 수 없는 원인';
+                      const detail = result.audioFailDetail || '';
+                      showErrorDetailModal('🔇 영상 무음으로 저장됨',
+                        `이 영상은 소리 없이 보관돼.\n\n[원인]\n${reason}\n\n[추가 정보]\n${detail}`);
                     }
                   }
                 } catch (compressErr) {

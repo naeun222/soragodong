@@ -136,17 +136,17 @@ function _rcSimRenderModePick(blockKey) {
     bodyHtml: `
       <div class="rc-body-simulation">
         <div class="rc-body-headline">상상 시뮬</div>
-        <div class="rc-sim-sub">고동이가 너 얼마나 그릴 수 있을까? — 한 번 해볼래?</div>
+        <div class="rc-sim-sub">너 얼마나 그릴 수 있을까?</div>
         <div class="rc-sim-mode-row">
           <button class="rc-sim-mode-btn" type="button" onclick="event.stopPropagation(); rcSimPickMode('godong')">
             <div class="rc-sim-mode-emoji">✨</div>
             <div class="rc-sim-mode-title">고동이 모드</div>
-            <div class="rc-sim-mode-desc">고동이가 시나리오 던지면 너의 답 예측해보기</div>
+            <div class="rc-sim-mode-desc">시나리오 → 너 예측</div>
           </button>
           <button class="rc-sim-mode-btn ${userDisabled ? 'is-disabled' : ''}" type="button" ${userDisabled ? 'disabled' : ''} onclick="event.stopPropagation(); rcSimPickMode('user')">
             <div class="rc-sim-mode-emoji">✏️</div>
             <div class="rc-sim-mode-title">직접 모드</div>
-            <div class="rc-sim-mode-desc">${userDisabled ? '오늘은 끝 — 내일 다시' : '시나리오 적으면 고동이가 예측 (오늘 ' + userCount + '/' + userMax + ')'}</div>
+            <div class="rc-sim-mode-desc">${userDisabled ? '내일 다시' : '시나리오 → 예측 (' + userCount + '/' + userMax + ')'}</div>
           </button>
         </div>
       </div>
@@ -319,13 +319,18 @@ async function _rcSimGenerate(opts) {
     userPrompt = `사용자의 case formulation 데이터:
 ${cfSnapshot}
 
-위 cf 항목 중 하나를 베이스로 가상 시나리오 1개 + 사용자가 그 시나리오에서 어떻게 행동/반응할지 예측을 만들어.
+가벼운 일상 시나리오 1개 + 사용자가 그 상황에서 보일 행동을 짧게 예측해.
 
-[규칙]
-- scenario: 일상 가상 상황 한 단락 (3-5 문장). 친구 카톡 톤. 평가/조언 X. 단순히 상황 묘사 — "저녁 8시, 마감 임박한 작업을 앞두고 있어. 카페는 닫혔고 집은 너무 조용해서 집중 안 돼. 지금 너의 상태는 ___ 인 상태." 같이.
-- godongPrediction: cf 적용해서 사용자가 어떻게 행동/반응할지 예측 (3-5 문장). 사용자 어휘 / cf 의 패턴 / strengths / mechanisms 활용. 평가 X 객관 묘사. "환경 차원 도구 사용 늘어났으니까 카페 옮기는 거 시도할 듯" 같은.
-- 의료 진단 / 진단명 X. 친구 톤.
-- JSON 만 출력 (마크다운 X).
+[규칙 — 사용자 명시 2026-05-09]
+- scenario: 일상의 사소·가볍·재미있는 상황 1문장 (40-80자). 진지한 주제 X (마감 / 가족 / 진단 / 큰 결정 X).
+  좋은 예: "친구가 새벽 2시에 갑자기 떡볶이 먹자고 카톡 옴.", "카페 옆자리 사람이 통화 너무 시끄러움.",
+          "엘리베이터 같이 탄 모르는 사람이 인사함.", "마트 진열대에 익숙한 과자 신상 발견."
+- godongPrediction: 사용자 행동/반응 예측 1-2문장 (40-100자, 짧고 명료). cf 의 traits / patterns / strengths
+  살짝 반영. 친구 카톡 톤. 길게 풀지 X — 핵심만. 평가 X.
+  좋은 예: "야행성이라 일단 호응부터 하고, 운전 못 가니까 배달 시키자고 답할 듯.",
+         "처음엔 자리 옮길까 망설이다 결국 이어폰 끼고 버틸 듯."
+- 의료 진단 / 진단명 X. 마크다운 X.
+- JSON 만.
 
 [출력]
 {
@@ -339,12 +344,12 @@ ${cfSnapshot}
 사용자가 적은 시나리오:
 "${userScenario.slice(0, 1000)}"
 
-위 사용자가 이 시나리오에서 어떻게 행동/반응할지 cf 적용해서 예측 (3-5 문장).
+이 사용자가 위 시나리오에서 어떻게 반응할지 짧게 예측.
 
-[규칙]
-- 사용자 어휘 / cf 의 패턴 / strengths / mechanisms 활용. 평가 X 객관 묘사.
-- 친구 카톡 톤. 의료 진단 X.
-- JSON 만 출력 (마크다운 X).
+[규칙 — 사용자 명시 2026-05-09]
+- 1-2문장 (40-100자, 짧고 명료). 사용자 어휘 / cf 의 traits / patterns / strengths 살짝 반영.
+- 친구 카톡 톤. 길게 풀지 X — 핵심만. 평가 X. 의료 진단 X.
+- JSON 만 (마크다운 X).
 
 [출력]
 {
@@ -355,7 +360,7 @@ ${cfSnapshot}
   const resp = await callAnthropic({
     _endpoint: 'archive_summary',
     model: 'claude-sonnet-4-6',
-    max_tokens: 800,
+    max_tokens: 400,
     messages: [{ role: 'user', content: userPrompt }],
   });
   if (!resp.ok) throw new Error('Sonnet HTTP ' + resp.status);

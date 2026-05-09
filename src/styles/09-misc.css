@@ -10766,22 +10766,24 @@
   /* ============================================================ */
   /* ============================================================ */
   /* Source 6 — 상상 시뮬 (사용자 명시 2026-05-09) */
+  /* 사용자 보고 2026-05-09 (추가): 다른 source 와 비슷한 컴팩트 size — mode-pick row layout 으로 축소 */
   /* ============================================================ */
   .rc-body-simulation { padding: 4px 2px 6px; }
   .rc-sim-sub {
-    font-size: 11.5px; color: var(--text-soft); opacity: 0.78;
-    margin: 2px 0 10px;
+    font-size: 11px; color: var(--text-soft); opacity: 0.75;
+    margin: 2px 0 8px;
   }
   .rc-sim-mode-row {
-    display: flex; flex-direction: column; gap: 8px;
-    margin-top: 8px;
+    display: flex; flex-direction: row; gap: 6px;
+    margin-top: 4px;
   }
   .rc-sim-mode-btn {
+    flex: 1; min-width: 0;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
-    padding: 12px 14px;
-    text-align: left;
+    border-radius: 10px;
+    padding: 9px 8px;
+    text-align: center;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
     color: var(--text);
@@ -10798,9 +10800,12 @@
     background: rgba(255,255,255,0.03);
     border-color: rgba(255,255,255,0.08);
   }
-  .rc-sim-mode-emoji { font-size: 18px; margin-bottom: 4px; }
-  .rc-sim-mode-title { font-size: 13.5px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-  .rc-sim-mode-desc { font-size: 11px; color: var(--text-soft); opacity: 0.78; line-height: 1.4; }
+  .rc-sim-mode-emoji { font-size: 17px; margin-bottom: 2px; }
+  .rc-sim-mode-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 1px; line-height: 1.2; }
+  .rc-sim-mode-desc {
+    font-size: 10.5px; color: var(--text-soft); opacity: 0.78; line-height: 1.35;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .rc-sim-loading {
     font-family: 'Gowun Batang', serif;
     font-size: 14px; line-height: 1.6;

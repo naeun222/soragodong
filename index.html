@@ -10879,22 +10879,24 @@
   /* ============================================================ */
   /* ============================================================ */
   /* Source 6 — 상상 시뮬 (사용자 명시 2026-05-09) */
+  /* 사용자 보고 2026-05-09 (추가): 다른 source 와 비슷한 컴팩트 size — mode-pick row layout 으로 축소 */
   /* ============================================================ */
   .rc-body-simulation { padding: 4px 2px 6px; }
   .rc-sim-sub {
-    font-size: 11.5px; color: var(--text-soft); opacity: 0.78;
-    margin: 2px 0 10px;
+    font-size: 11px; color: var(--text-soft); opacity: 0.75;
+    margin: 2px 0 8px;
   }
   .rc-sim-mode-row {
-    display: flex; flex-direction: column; gap: 8px;
-    margin-top: 8px;
+    display: flex; flex-direction: row; gap: 6px;
+    margin-top: 4px;
   }
   .rc-sim-mode-btn {
+    flex: 1; min-width: 0;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
-    padding: 12px 14px;
-    text-align: left;
+    border-radius: 10px;
+    padding: 9px 8px;
+    text-align: center;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
     color: var(--text);
@@ -10911,9 +10913,12 @@
     background: rgba(255,255,255,0.03);
     border-color: rgba(255,255,255,0.08);
   }
-  .rc-sim-mode-emoji { font-size: 18px; margin-bottom: 4px; }
-  .rc-sim-mode-title { font-size: 13.5px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-  .rc-sim-mode-desc { font-size: 11px; color: var(--text-soft); opacity: 0.78; line-height: 1.4; }
+  .rc-sim-mode-emoji { font-size: 17px; margin-bottom: 2px; }
+  .rc-sim-mode-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 1px; line-height: 1.2; }
+  .rc-sim-mode-desc {
+    font-size: 10.5px; color: var(--text-soft); opacity: 0.78; line-height: 1.35;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .rc-sim-loading {
     font-family: 'Gowun Batang', serif;
     font-size: 14px; line-height: 1.6;
@@ -29291,17 +29296,17 @@ function _rcSimRenderModePick(blockKey) {
     bodyHtml: `
       <div class="rc-body-simulation">
         <div class="rc-body-headline">상상 시뮬</div>
-        <div class="rc-sim-sub">고동이가 너 얼마나 그릴 수 있을까? — 한 번 해볼래?</div>
+        <div class="rc-sim-sub">너 얼마나 그릴 수 있을까?</div>
         <div class="rc-sim-mode-row">
           <button class="rc-sim-mode-btn" type="button" onclick="event.stopPropagation(); rcSimPickMode('godong')">
             <div class="rc-sim-mode-emoji">✨</div>
             <div class="rc-sim-mode-title">고동이 모드</div>
-            <div class="rc-sim-mode-desc">고동이가 시나리오 던지면 너의 답 예측해보기</div>
+            <div class="rc-sim-mode-desc">시나리오 → 너 예측</div>
           </button>
           <button class="rc-sim-mode-btn ${userDisabled ? 'is-disabled' : ''}" type="button" ${userDisabled ? 'disabled' : ''} onclick="event.stopPropagation(); rcSimPickMode('user')">
             <div class="rc-sim-mode-emoji">✏️</div>
             <div class="rc-sim-mode-title">직접 모드</div>
-            <div class="rc-sim-mode-desc">${userDisabled ? '오늘은 끝 — 내일 다시' : '시나리오 적으면 고동이가 예측 (오늘 ' + userCount + '/' + userMax + ')'}</div>
+            <div class="rc-sim-mode-desc">${userDisabled ? '내일 다시' : '시나리오 → 예측 (' + userCount + '/' + userMax + ')'}</div>
           </button>
         </div>
       </div>
@@ -29474,13 +29479,18 @@ async function _rcSimGenerate(opts) {
     userPrompt = `사용자의 case formulation 데이터:
 ${cfSnapshot}
 
-위 cf 항목 중 하나를 베이스로 가상 시나리오 1개 + 사용자가 그 시나리오에서 어떻게 행동/반응할지 예측을 만들어.
+가벼운 일상 시나리오 1개 + 사용자가 그 상황에서 보일 행동을 짧게 예측해.
 
-[규칙]
-- scenario: 일상 가상 상황 한 단락 (3-5 문장). 친구 카톡 톤. 평가/조언 X. 단순히 상황 묘사 — "저녁 8시, 마감 임박한 작업을 앞두고 있어. 카페는 닫혔고 집은 너무 조용해서 집중 안 돼. 지금 너의 상태는 ___ 인 상태." 같이.
-- godongPrediction: cf 적용해서 사용자가 어떻게 행동/반응할지 예측 (3-5 문장). 사용자 어휘 / cf 의 패턴 / strengths / mechanisms 활용. 평가 X 객관 묘사. "환경 차원 도구 사용 늘어났으니까 카페 옮기는 거 시도할 듯" 같은.
-- 의료 진단 / 진단명 X. 친구 톤.
-- JSON 만 출력 (마크다운 X).
+[규칙 — 사용자 명시 2026-05-09]
+- scenario: 일상의 사소·가볍·재미있는 상황 1문장 (40-80자). 진지한 주제 X (마감 / 가족 / 진단 / 큰 결정 X).
+  좋은 예: "친구가 새벽 2시에 갑자기 떡볶이 먹자고 카톡 옴.", "카페 옆자리 사람이 통화 너무 시끄러움.",
+          "엘리베이터 같이 탄 모르는 사람이 인사함.", "마트 진열대에 익숙한 과자 신상 발견."
+- godongPrediction: 사용자 행동/반응 예측 1-2문장 (40-100자, 짧고 명료). cf 의 traits / patterns / strengths
+  살짝 반영. 친구 카톡 톤. 길게 풀지 X — 핵심만. 평가 X.
+  좋은 예: "야행성이라 일단 호응부터 하고, 운전 못 가니까 배달 시키자고 답할 듯.",
+         "처음엔 자리 옮길까 망설이다 결국 이어폰 끼고 버틸 듯."
+- 의료 진단 / 진단명 X. 마크다운 X.
+- JSON 만.
 
 [출력]
 {
@@ -29494,12 +29504,12 @@ ${cfSnapshot}
 사용자가 적은 시나리오:
 "${userScenario.slice(0, 1000)}"
 
-위 사용자가 이 시나리오에서 어떻게 행동/반응할지 cf 적용해서 예측 (3-5 문장).
+이 사용자가 위 시나리오에서 어떻게 반응할지 짧게 예측.
 
-[규칙]
-- 사용자 어휘 / cf 의 패턴 / strengths / mechanisms 활용. 평가 X 객관 묘사.
-- 친구 카톡 톤. 의료 진단 X.
-- JSON 만 출력 (마크다운 X).
+[규칙 — 사용자 명시 2026-05-09]
+- 1-2문장 (40-100자, 짧고 명료). 사용자 어휘 / cf 의 traits / patterns / strengths 살짝 반영.
+- 친구 카톡 톤. 길게 풀지 X — 핵심만. 평가 X. 의료 진단 X.
+- JSON 만 (마크다운 X).
 
 [출력]
 {
@@ -29510,7 +29520,7 @@ ${cfSnapshot}
   const resp = await callAnthropic({
     _endpoint: 'archive_summary',
     model: 'claude-sonnet-4-6',
-    max_tokens: 800,
+    max_tokens: 400,
     messages: [{ role: 'user', content: userPrompt }],
   });
   if (!resp.ok) throw new Error('Sonnet HTTP ' + resp.status);
@@ -32742,17 +32752,26 @@ async function compressVideoWebCodecs(file, opts = {}) {
     if (!chosenCodec) throw new Error('H.264 인코더 미지원');
 
     // V4 fix v4: 오디오 트랙 디코드 시도 (실패해도 무음 fallback). decodeAudioData 는 file 전체 디코드.
+    // 사용자 보고 2026-05-09: 무음 저장 시 사용자가 console 못 봄 (모바일 PWA) → 진단 reason 추적해서 결과에 동봉.
     let audioBuffer = null;
     let audioSampleRate = 0;
     let audioChannels = 0;
     let audioCodec = '';
+    let audioFailReason = null;        // 사용자 노출 메시지
+    let audioFailDetail = null;        // 사용자 노출 추가 정보
     // 사용자 명시 2026-05-03: decode path = full file → audio encode = startTime 부터 trim.
     // captureStream fallback path = relative (0 부터 maxSec 까지만) → encode = 0 부터 trim.
     let _audioStartOffset = startTime;
     try {
-      if (typeof AudioEncoder !== 'undefined' && typeof AudioData !== 'undefined') {
+      if (typeof AudioEncoder === 'undefined' || typeof AudioData === 'undefined') {
+        audioFailReason = 'AudioEncoder API 미지원';
+        audioFailDetail = '이 브라우저는 WebCodecs AudioEncoder 지원 X. Chrome 94+ / Edge / Safari 17+ 필요.';
+      } else {
         const AC = window.AudioContext || window.webkitAudioContext;
-        if (AC) {
+        if (!AC) {
+          audioFailReason = 'AudioContext API 미지원';
+          audioFailDetail = '이 브라우저는 Web Audio API 지원 X.';
+        } else {
           const ab = await file.arrayBuffer();
           const tmpCtx = new AC();
           // Safari 호환 — promise + callback 혼용 가드
@@ -32791,10 +32810,14 @@ async function compressVideoWebCodecs(file, opts = {}) {
             }
             if (!audioCodec) {
               console.warn('[video] AAC codec 모두 미지원 — 무음 저장. sr=' + audioSampleRate + ' ch=' + audioChannels);
+              audioFailReason = 'AAC 인코더 미지원';
+              audioFailDetail = `브라우저가 mp4a.40.2 / mp4a.40.5 / mp4a.40.29 모두 미지원. (sr=${audioSampleRate}, ch=${audioChannels})`;
               audioBuffer = null;
             }
           } else {
             console.warn('[video] decodeAudioData 결과 audioBuffer 비어있음', audioBuffer?.numberOfChannels, audioBuffer?.length);
+            audioFailReason = '영상에 audio track 없음';
+            audioFailDetail = `decodeAudioData 결과 ch=${audioBuffer?.numberOfChannels || 0} length=${audioBuffer?.length || 0}. 원본 영상이 무음일 수 있음.`;
             audioBuffer = null;
           }
         }
@@ -32823,12 +32846,16 @@ async function compressVideoWebCodecs(file, opts = {}) {
           }
           if (!audioCodec) {
             console.warn('[video] capture: AAC codec 모두 미지원 — 무음 저장');
+            audioFailReason = 'AAC 인코더 미지원 (capture fallback)';
+            audioFailDetail = `captureStream 으로 audio 잡았지만 AAC encoder 가 mp4a.40.2 / 40.5 / 40.29 모두 미지원. (sr=${audioSampleRate}, ch=${audioChannels})`;
             audioBuffer = null;
           }
           // capture path = relative (0 ~ maxSec) → encode startSample = 0
           _audioStartOffset = 0;
           console.log('[video] captureStream fallback 성공, sr=' + audioSampleRate + ' ch=' + audioChannels);
         } else {
+          audioFailReason = 'captureStream fallback 빈 audio';
+          audioFailDetail = `captureStream 으로 audio 잡았는데 ch=${captured?.numberOfChannels || 0} length=${captured?.length || 0}.`;
           audioBuffer = null;
         }
       } catch (captureFail) {
@@ -32840,10 +32867,9 @@ async function compressVideoWebCodecs(file, opts = {}) {
         if (typeof _reportErrorToAdmin === 'function') {
           _reportErrorToAdmin('영상 진주 audio 둘 다 fail', `${_fileInfo}\n\n[decodeAudioData]\n${_decodeErr}\n\n[captureStream]\n${_captureErr}\n\n${captureFail?.stack || '(no stack)'}`).catch(() => {});
         }
-        if (typeof showErrorDetailModal === 'function') {
-          const msg = `[file]\n${_fileInfo}\n\n[decodeAudioData]\n${_decodeErr}\n\n[captureStream fallback]\n${_captureErr}`;
-          showErrorDetailModal('영상 소리 추출 실패 — 무음 저장됨', msg);
-        }
+        // 사용자 보고 2026-05-09: 둘 다 fail 케이스 reason 동봉 — 29-music.js 가 modal 노출 (옛: 여기서 직접 modal 호출 → duplicate 회피 위해 제거).
+        audioFailReason = 'audio decode + capture 둘 다 실패';
+        audioFailDetail = `[file]\n${_fileInfo}\n\n[decodeAudioData]\n${_decodeErr}\n\n[captureStream fallback]\n${_captureErr}`;
         audioBuffer = null;
       }
     }
@@ -33079,8 +33105,14 @@ async function compressVideoWebCodecs(file, opts = {}) {
 
     cleanup();
     // 사용자 보고 2026-05-02 ultrathink: hasAudio 메타 넣음 — 옛 진주 (audio fix 전 encoded = audio track X) vs 새 진주 (audio O) 구분.
-    // 사용자 진주 click 시 무음 확정 시 시각 안내 ("이 영상은 무음으로 저장됨").
-    return { videoUrl: dataUrl, thumbnail, hasAudio: !!audioBuffer };
+    // 사용자 보고 2026-05-09: PWA 모바일에서 console 못 봄 → 무음 원인 reason / detail 도 동봉. 호출자가 modal 로 노출.
+    return {
+      videoUrl: dataUrl,
+      thumbnail,
+      hasAudio: !!audioBuffer,
+      audioFailReason: audioBuffer ? null : (audioFailReason || '알 수 없는 원인'),
+      audioFailDetail: audioBuffer ? null : (audioFailDetail || ''),
+    };
   } catch (e) {
     cleanup();
     throw e;
@@ -51692,10 +51724,12 @@ async function addPearl() {
                     videoData = dataUrl;
                     videoThumb = result.thumbnail;
                     videoHasAudio = !!result.hasAudio;
-                    // 사용자 보고 2026-05-09: hasAudio false 면 사용자가 이유 알게 toast (옛 silent fallback → 진단 ↑).
-                    // showErrorDetailModal 은 decodeAudioData + captureStream 둘 다 fail 시만 (덜 자주). isConfigSupported false 케이스는 silent 였음.
-                    if (!videoHasAudio) {
-                      showToast('🔇 무음 영상으로 저장 — console 에 자세한 원인 (codec 미지원 등)');
+                    // 사용자 보고 2026-05-09: PWA 모바일에서 console 못 봄 → 무음 원인 modal 로 노출 (compress 가 reason / detail 동봉).
+                    if (!videoHasAudio && typeof showErrorDetailModal === 'function') {
+                      const reason = result.audioFailReason || '알 수 없는 원인';
+                      const detail = result.audioFailDetail || '';
+                      showErrorDetailModal('🔇 영상 무음으로 저장됨',
+                        `이 영상은 소리 없이 보관돼.\n\n[원인]\n${reason}\n\n[추가 정보]\n${detail}`);
                     }
                   }
                 } catch (compressErr) {

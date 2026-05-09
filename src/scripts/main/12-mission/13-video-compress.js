@@ -69,17 +69,26 @@ async function compressVideoWebCodecs(file, opts = {}) {
     if (!chosenCodec) throw new Error('H.264 인코더 미지원');
 
     // V4 fix v4: 오디오 트랙 디코드 시도 (실패해도 무음 fallback). decodeAudioData 는 file 전체 디코드.
+    // 사용자 보고 2026-05-09: 무음 저장 시 사용자가 console 못 봄 (모바일 PWA) → 진단 reason 추적해서 결과에 동봉.
     let audioBuffer = null;
     let audioSampleRate = 0;
     let audioChannels = 0;
     let audioCodec = '';
+    let audioFailReason = null;        // 사용자 노출 메시지
+    let audioFailDetail = null;        // 사용자 노출 추가 정보
     // 사용자 명시 2026-05-03: decode path = full file → audio encode = startTime 부터 trim.
     // captureStream fallback path = relative (0 부터 maxSec 까지만) → encode = 0 부터 trim.
     let _audioStartOffset = startTime;
     try {
-      if (typeof AudioEncoder !== 'undefined' && typeof AudioData !== 'undefined') {
+      if (typeof AudioEncoder === 'undefined' || typeof AudioData === 'undefined') {
+        audioFailReason = 'AudioEncoder API 미지원';
+        audioFailDetail = '이 브라우저는 WebCodecs AudioEncoder 지원 X. Chrome 94+ / Edge / Safari 17+ 필요.';
+      } else {
         const AC = window.AudioContext || window.webkitAudioContext;
-        if (AC) {
+        if (!AC) {
+          audioFailReason = 'AudioContext API 미지원';
+          audioFailDetail = '이 브라우저는 Web Audio API 지원 X.';
+        } else {
           const ab = await file.arrayBuffer();
           const tmpCtx = new AC();
           // Safari 호환 — promise + callback 혼용 가드
@@ -118,10 +127,14 @@ async function compressVideoWebCodecs(file, opts = {}) {
             }
             if (!audioCodec) {
               console.warn('[video] AAC codec 모두 미지원 — 무음 저장. sr=' + audioSampleRate + ' ch=' + audioChannels);
+              audioFailReason = 'AAC 인코더 미지원';
+              audioFailDetail = `브라우저가 mp4a.40.2 / mp4a.40.5 / mp4a.40.29 모두 미지원. (sr=${audioSampleRate}, ch=${audioChannels})`;
               audioBuffer = null;
             }
           } else {
             console.warn('[video] decodeAudioData 결과 audioBuffer 비어있음', audioBuffer?.numberOfChannels, audioBuffer?.length);
+            audioFailReason = '영상에 audio track 없음';
+            audioFailDetail = `decodeAudioData 결과 ch=${audioBuffer?.numberOfChannels || 0} length=${audioBuffer?.length || 0}. 원본 영상이 무음일 수 있음.`;
             audioBuffer = null;
           }
         }
@@ -150,12 +163,16 @@ async function compressVideoWebCodecs(file, opts = {}) {
           }
           if (!audioCodec) {
             console.warn('[video] capture: AAC codec 모두 미지원 — 무음 저장');
+            audioFailReason = 'AAC 인코더 미지원 (capture fallback)';
+            audioFailDetail = `captureStream 으로 audio 잡았지만 AAC encoder 가 mp4a.40.2 / 40.5 / 40.29 모두 미지원. (sr=${audioSampleRate}, ch=${audioChannels})`;
             audioBuffer = null;
           }
           // capture path = relative (0 ~ maxSec) → encode startSample = 0
           _audioStartOffset = 0;
           console.log('[video] captureStream fallback 성공, sr=' + audioSampleRate + ' ch=' + audioChannels);
         } else {
+          audioFailReason = 'captureStream fallback 빈 audio';
+          audioFailDetail = `captureStream 으로 audio 잡았는데 ch=${captured?.numberOfChannels || 0} length=${captured?.length || 0}.`;
           audioBuffer = null;
         }
       } catch (captureFail) {
@@ -167,10 +184,9 @@ async function compressVideoWebCodecs(file, opts = {}) {
         if (typeof _reportErrorToAdmin === 'function') {
           _reportErrorToAdmin('영상 진주 audio 둘 다 fail', `${_fileInfo}\n\n[decodeAudioData]\n${_decodeErr}\n\n[captureStream]\n${_captureErr}\n\n${captureFail?.stack || '(no stack)'}`).catch(() => {});
         }
-        if (typeof showErrorDetailModal === 'function') {
-          const msg = `[file]\n${_fileInfo}\n\n[decodeAudioData]\n${_decodeErr}\n\n[captureStream fallback]\n${_captureErr}`;
-          showErrorDetailModal('영상 소리 추출 실패 — 무음 저장됨', msg);
-        }
+        // 사용자 보고 2026-05-09: 둘 다 fail 케이스 reason 동봉 — 29-music.js 가 modal 노출 (옛: 여기서 직접 modal 호출 → duplicate 회피 위해 제거).
+        audioFailReason = 'audio decode + capture 둘 다 실패';
+        audioFailDetail = `[file]\n${_fileInfo}\n\n[decodeAudioData]\n${_decodeErr}\n\n[captureStream fallback]\n${_captureErr}`;
         audioBuffer = null;
       }
     }
@@ -406,8 +422,14 @@ async function compressVideoWebCodecs(file, opts = {}) {
 
     cleanup();
     // 사용자 보고 2026-05-02 ultrathink: hasAudio 메타 넣음 — 옛 진주 (audio fix 전 encoded = audio track X) vs 새 진주 (audio O) 구분.
-    // 사용자 진주 click 시 무음 확정 시 시각 안내 ("이 영상은 무음으로 저장됨").
-    return { videoUrl: dataUrl, thumbnail, hasAudio: !!audioBuffer };
+    // 사용자 보고 2026-05-09: PWA 모바일에서 console 못 봄 → 무음 원인 reason / detail 도 동봉. 호출자가 modal 로 노출.
+    return {
+      videoUrl: dataUrl,
+      thumbnail,
+      hasAudio: !!audioBuffer,
+      audioFailReason: audioBuffer ? null : (audioFailReason || '알 수 없는 원인'),
+      audioFailDetail: audioBuffer ? null : (audioFailDetail || ''),
+    };
   } catch (e) {
     cleanup();
     throw e;
