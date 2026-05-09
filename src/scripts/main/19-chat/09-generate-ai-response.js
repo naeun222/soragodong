@@ -94,10 +94,29 @@ async function generateAIResponse(modelOverride) {
       };
     }
 
+    // 사용자 명시 2026-05-09: 마지막 user 메시지에 명시 검색 키워드 있으면 web_search 도구 활성 + Haiku 강제.
+    // 일반 대화엔 검색 X — 사용자가 "검색해줘" / "찾아줘" / "구글링" 명시한 경우만.
+    const SEARCH_TRIGGER = /검색해\s*[줘봐주세요]?|찾아\s*[줘봐주세요]?|구글링|search\s+for/i;
+    const _lastUserMsg = messages[messages.length - 1];
+    let _useWebSearch = false;
+    let _modelForCall = modelOverride || ((state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6');
+    if (_lastUserMsg && _lastUserMsg.role === 'user') {
+      const _txt = (typeof _lastUserMsg.content === 'string')
+        ? _lastUserMsg.content
+        : (Array.isArray(_lastUserMsg.content)
+            ? _lastUserMsg.content.map(c => c?.text || '').join(' ')
+            : '');
+      if (SEARCH_TRIGGER.test(_txt)) {
+        _useWebSearch = true;
+        _modelForCall = 'claude-haiku-4-5';  // 사용자 명시: 검색은 Haiku
+      }
+    }
+
     const response = await callAnthropic({
       _endpoint: 'chat_main',
-      // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet
-      model: modelOverride || ((state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6'),
+      _useWebSearch,
+      // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet (검색 시 Haiku 강제 — 위에서 결정).
+      model: _modelForCall,
       max_tokens: 2000,
       stream: true,
       system: systemBlocks,

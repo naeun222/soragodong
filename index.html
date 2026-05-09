@@ -32775,18 +32775,26 @@ async function compressVideoWebCodecs(file, opts = {}) {
           if (audioBuffer && audioBuffer.numberOfChannels > 0 && audioBuffer.length > 0) {
             audioSampleRate = audioBuffer.sampleRate;
             audioChannels = Math.min(2, audioBuffer.numberOfChannels);
-            // AAC-LC codec string
-            const aacCandidates = ['mp4a.40.2'];
+            // 사용자 보고 2026-05-09 ultrathink: 무음 진주 진단 — codec 후보 확장 + 진단 로그 + 빈 audioBuffer 케이스 분리.
+            // mp4a.40.2 (AAC-LC) 외에 mp4a.40.5 (HE-AAC v1), mp4a.40.29 (HE-AAC v2) 도 시도 — 일부 환경에서 LC 미지원 (특히 모바일 환경).
+            const aacCandidates = ['mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29'];
             for (const c of aacCandidates) {
               try {
                 const sup = await AudioEncoder.isConfigSupported({
                   codec: c, sampleRate: audioSampleRate, numberOfChannels: audioChannels, bitrate: audioBitrate
                 });
+                console.log('[video] AAC isConfigSupported', c, 'sr=' + audioSampleRate, 'ch=' + audioChannels, '→', sup?.supported);
                 if (sup && sup.supported) { audioCodec = c; break; }
-              } catch(_) {}
+              } catch(e) {
+                console.log('[video] AAC isConfigSupported throw', c, e?.message);
+              }
             }
-            if (!audioCodec) audioBuffer = null; // 인코더 미지원 — 무음 fallback
+            if (!audioCodec) {
+              console.warn('[video] AAC codec 모두 미지원 — 무음 저장. sr=' + audioSampleRate + ' ch=' + audioChannels);
+              audioBuffer = null;
+            }
           } else {
+            console.warn('[video] decodeAudioData 결과 audioBuffer 비어있음', audioBuffer?.numberOfChannels, audioBuffer?.length);
             audioBuffer = null;
           }
         }
@@ -32800,17 +32808,23 @@ async function compressVideoWebCodecs(file, opts = {}) {
           audioBuffer = captured;
           audioSampleRate = captured.sampleRate;
           audioChannels = Math.min(2, captured.numberOfChannels);
-          // AAC codec resolve
-          const aacCandidates = ['mp4a.40.2'];
+          // AAC codec resolve — 사용자 보고 2026-05-09: codec 후보 확장 (mp4a.40.5, mp4a.40.29).
+          const aacCandidates = ['mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29'];
           for (const c of aacCandidates) {
             try {
               const sup = await AudioEncoder.isConfigSupported({
                 codec: c, sampleRate: audioSampleRate, numberOfChannels: audioChannels, bitrate: audioBitrate
               });
+              console.log('[video] capture AAC isConfigSupported', c, 'sr=' + audioSampleRate, 'ch=' + audioChannels, '→', sup?.supported);
               if (sup && sup.supported) { audioCodec = c; break; }
-            } catch(_) {}
+            } catch(e) {
+              console.log('[video] capture AAC isConfigSupported throw', c, e?.message);
+            }
           }
-          if (!audioCodec) audioBuffer = null;
+          if (!audioCodec) {
+            console.warn('[video] capture: AAC codec 모두 미지원 — 무음 저장');
+            audioBuffer = null;
+          }
           // capture path = relative (0 ~ maxSec) → encode startSample = 0
           _audioStartOffset = 0;
           console.log('[video] captureStream fallback 성공, sr=' + audioSampleRate + ' ch=' + audioChannels);
@@ -37381,10 +37395,29 @@ async function generateAIResponse(modelOverride) {
       };
     }
 
+    // 사용자 명시 2026-05-09: 마지막 user 메시지에 명시 검색 키워드 있으면 web_search 도구 활성 + Haiku 강제.
+    // 일반 대화엔 검색 X — 사용자가 "검색해줘" / "찾아줘" / "구글링" 명시한 경우만.
+    const SEARCH_TRIGGER = /검색해\s*[줘봐주세요]?|찾아\s*[줘봐주세요]?|구글링|search\s+for/i;
+    const _lastUserMsg = messages[messages.length - 1];
+    let _useWebSearch = false;
+    let _modelForCall = modelOverride || ((state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6');
+    if (_lastUserMsg && _lastUserMsg.role === 'user') {
+      const _txt = (typeof _lastUserMsg.content === 'string')
+        ? _lastUserMsg.content
+        : (Array.isArray(_lastUserMsg.content)
+            ? _lastUserMsg.content.map(c => c?.text || '').join(' ')
+            : '');
+      if (SEARCH_TRIGGER.test(_txt)) {
+        _useWebSearch = true;
+        _modelForCall = 'claude-haiku-4-5';  // 사용자 명시: 검색은 Haiku
+      }
+    }
+
     const response = await callAnthropic({
       _endpoint: 'chat_main',
-      // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet
-      model: modelOverride || ((state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6'),
+      _useWebSearch,
+      // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet (검색 시 Haiku 강제 — 위에서 결정).
+      model: _modelForCall,
       max_tokens: 2000,
       stream: true,
       system: systemBlocks,
@@ -51658,8 +51691,12 @@ async function addPearl() {
                   } else {
                     videoData = dataUrl;
                     videoThumb = result.thumbnail;
-                    // 사용자 명시 2026-05-03: hasAudio false 시 toast 폐기 — audio decode/encode fail 시 이미 showErrorDetailModal 로 노출 끝. duplicate 안내 X.
                     videoHasAudio = !!result.hasAudio;
+                    // 사용자 보고 2026-05-09: hasAudio false 면 사용자가 이유 알게 toast (옛 silent fallback → 진단 ↑).
+                    // showErrorDetailModal 은 decodeAudioData + captureStream 둘 다 fail 시만 (덜 자주). isConfigSupported false 케이스는 silent 였음.
+                    if (!videoHasAudio) {
+                      showToast('🔇 무음 영상으로 저장 — console 에 자세한 원인 (codec 미지원 등)');
+                    }
                   }
                 } catch (compressErr) {
                   hideFullscreenLoader();

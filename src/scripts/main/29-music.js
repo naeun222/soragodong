@@ -502,8 +502,12 @@ async function addPearl() {
                   } else {
                     videoData = dataUrl;
                     videoThumb = result.thumbnail;
-                    // 사용자 명시 2026-05-03: hasAudio false 시 toast 폐기 — audio decode/encode fail 시 이미 showErrorDetailModal 로 노출 끝. duplicate 안내 X.
                     videoHasAudio = !!result.hasAudio;
+                    // 사용자 보고 2026-05-09: hasAudio false 면 사용자가 이유 알게 toast (옛 silent fallback → 진단 ↑).
+                    // showErrorDetailModal 은 decodeAudioData + captureStream 둘 다 fail 시만 (덜 자주). isConfigSupported false 케이스는 silent 였음.
+                    if (!videoHasAudio) {
+                      showToast('🔇 무음 영상으로 저장 — console 에 자세한 원인 (codec 미지원 등)');
+                    }
                   }
                 } catch (compressErr) {
                   hideFullscreenLoader();

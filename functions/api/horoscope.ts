@@ -35,9 +35,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return jsonError(400, 'invalid sign', `expected one of: ${ZODIAC_KEYS.join(', ')}`);
   }
 
-  // KV cache lookup (key = horoscope:{date}:{sign})
+  // 사용자 보고 2026-05-09 ultrathink: API 응답 형식 변경 발견 — 옛 'horoscope_data' → 신 'horoscope'.
+  // KV cache key = v2 (옛 빈 응답 cache 무효화). backend 가 normalize 해서 client 는 변경 X.
   const dateKey = todayKey();
-  const cacheKey = `horoscope:${dateKey}:${sign}`;
+  const cacheKey = `horoscope:v2:${dateKey}:${sign}`;
   if (context.env.GUEST_KV) {
     try {
       const cached = await context.env.GUEST_KV.get(cacheKey);
@@ -47,15 +48,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     } catch {}
   }
 
-  // Upstream fetch — server-side, CORS 영향 X
+  // Upstream fetch — server-side, CORS 영향 X. redirect follow (default).
   const target = `https://horoscope-app-api.vercel.app/api/v1/get-horoscope/daily?sign=${encodeURIComponent(sign)}&day=TODAY`;
   let upstreamResp: Response;
   try {
     upstreamResp = await fetch(target, {
       method: 'GET',
       headers: { 'accept': 'application/json' },
-      // 사용자 보고 2026-05-09: vercel free 의 cold start 가 길 수 있음 → 8s timeout.
-      // 단 fetch 의 timeout 은 AbortController 로 구현 필요.
+      redirect: 'follow',
     });
   } catch (e: any) {
     return jsonError(502, 'upstream fetch failed', e?.message || 'network error');
@@ -73,19 +73,52 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return jsonError(502, 'upstream body read failed', e?.message);
   }
 
-  // 사용자 보고 2026-05-09: 일부 케이스에 빈 응답 → 캐시 X.
   if (!body || body.length < 10) {
     return jsonError(502, 'upstream empty body');
   }
 
+  // 사용자 보고 2026-05-09: 응답 normalize — API 형식 변경 흡수 + 빈 horoscope 검출.
+  let json: any;
+  try {
+    json = JSON.parse(body);
+  } catch (e: any) {
+    return jsonError(502, 'upstream JSON parse failed', e?.message);
+  }
+
+  const horoscopeText =
+    json?.data?.horoscope_data ||  // 옛 필드명
+    json?.data?.horoscope ||        // 신 필드명 (2026-05-09 발견)
+    json?.data?.horoscopeData ||    // 변종
+    json?.data?.text ||
+    json?.data?.message ||
+    '';
+
+  if (!horoscopeText || typeof horoscopeText !== 'string' || horoscopeText.trim().length < 10) {
+    return jsonError(502, 'upstream returned empty horoscope',
+      `data fields: ${Object.keys(json?.data || {}).join(', ') || '(no data field)'}`);
+  }
+
+  // 옛 형식으로 normalize — client 코드 변경 X. data.horoscope_data 항상 채워짐.
+  const normalized = {
+    data: {
+      date: json?.data?.date || dateKey,
+      period: json?.data?.period || 'daily',
+      sign: json?.data?.sign || sign,
+      horoscope_data: horoscopeText.trim(),
+    },
+    status: 200,
+    success: true,
+  };
+  const normalizedBody = JSON.stringify(normalized);
+
   // KV stash (best-effort, fail silent)
   if (context.env.GUEST_KV) {
     try {
-      await context.env.GUEST_KV.put(cacheKey, body, { expirationTtl: 6 * 3600 });
+      await context.env.GUEST_KV.put(cacheKey, normalizedBody, { expirationTtl: 6 * 3600 });
     } catch {}
   }
 
-  return new Response(body, { status: 200, headers: { ...HEADERS, 'x-cache': 'miss' } });
+  return new Response(normalizedBody, { status: 200, headers: { ...HEADERS, 'x-cache': 'miss' } });
 };
 
 export const onRequestOptions: PagesFunction<Env> = async () => {

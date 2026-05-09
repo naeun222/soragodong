@@ -102,18 +102,26 @@ async function compressVideoWebCodecs(file, opts = {}) {
           if (audioBuffer && audioBuffer.numberOfChannels > 0 && audioBuffer.length > 0) {
             audioSampleRate = audioBuffer.sampleRate;
             audioChannels = Math.min(2, audioBuffer.numberOfChannels);
-            // AAC-LC codec string
-            const aacCandidates = ['mp4a.40.2'];
+            // 사용자 보고 2026-05-09 ultrathink: 무음 진주 진단 — codec 후보 확장 + 진단 로그 + 빈 audioBuffer 케이스 분리.
+            // mp4a.40.2 (AAC-LC) 외에 mp4a.40.5 (HE-AAC v1), mp4a.40.29 (HE-AAC v2) 도 시도 — 일부 환경에서 LC 미지원 (특히 모바일 환경).
+            const aacCandidates = ['mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29'];
             for (const c of aacCandidates) {
               try {
                 const sup = await AudioEncoder.isConfigSupported({
                   codec: c, sampleRate: audioSampleRate, numberOfChannels: audioChannels, bitrate: audioBitrate
                 });
+                console.log('[video] AAC isConfigSupported', c, 'sr=' + audioSampleRate, 'ch=' + audioChannels, '→', sup?.supported);
                 if (sup && sup.supported) { audioCodec = c; break; }
-              } catch(_) {}
+              } catch(e) {
+                console.log('[video] AAC isConfigSupported throw', c, e?.message);
+              }
             }
-            if (!audioCodec) audioBuffer = null; // 인코더 미지원 — 무음 fallback
+            if (!audioCodec) {
+              console.warn('[video] AAC codec 모두 미지원 — 무음 저장. sr=' + audioSampleRate + ' ch=' + audioChannels);
+              audioBuffer = null;
+            }
           } else {
+            console.warn('[video] decodeAudioData 결과 audioBuffer 비어있음', audioBuffer?.numberOfChannels, audioBuffer?.length);
             audioBuffer = null;
           }
         }
@@ -127,17 +135,23 @@ async function compressVideoWebCodecs(file, opts = {}) {
           audioBuffer = captured;
           audioSampleRate = captured.sampleRate;
           audioChannels = Math.min(2, captured.numberOfChannels);
-          // AAC codec resolve
-          const aacCandidates = ['mp4a.40.2'];
+          // AAC codec resolve — 사용자 보고 2026-05-09: codec 후보 확장 (mp4a.40.5, mp4a.40.29).
+          const aacCandidates = ['mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29'];
           for (const c of aacCandidates) {
             try {
               const sup = await AudioEncoder.isConfigSupported({
                 codec: c, sampleRate: audioSampleRate, numberOfChannels: audioChannels, bitrate: audioBitrate
               });
+              console.log('[video] capture AAC isConfigSupported', c, 'sr=' + audioSampleRate, 'ch=' + audioChannels, '→', sup?.supported);
               if (sup && sup.supported) { audioCodec = c; break; }
-            } catch(_) {}
+            } catch(e) {
+              console.log('[video] capture AAC isConfigSupported throw', c, e?.message);
+            }
           }
-          if (!audioCodec) audioBuffer = null;
+          if (!audioCodec) {
+            console.warn('[video] capture: AAC codec 모두 미지원 — 무음 저장');
+            audioBuffer = null;
+          }
           // capture path = relative (0 ~ maxSec) → encode startSample = 0
           _audioStartOffset = 0;
           console.log('[video] captureStream fallback 성공, sr=' + audioSampleRate + ' ch=' + audioChannels);

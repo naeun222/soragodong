@@ -362,6 +362,35 @@ async function _handleChatRequest(context: {
   const endpoint = body._endpoint || 'chat';
   delete body._endpoint;
 
+  // 사용자 명시 2026-05-09 ultrathink: 명시 검색 키워드 시만 web_search 도구 활성 + Haiku 강제.
+  // client (19-chat/09-generate-ai-response.js) 가 SEARCH_TRIGGER regex 로 판정해서 _useWebSearch=true 보냄.
+  // 일반 대화엔 검색 X — 학습 지식만 사용. (사용자 명시 비용 절감).
+  const _useWebSearch = body._useWebSearch === true;
+  delete body._useWebSearch;
+  if (_useWebSearch) {
+    // Haiku 강제 (사용자 명시: 검색은 Haiku).
+    if (body.model && !String(body.model).includes('haiku')) {
+      return jsonResponse({
+        error: { type: 'invalid_request_error', message: 'web_search 는 Haiku 모델만 지원 (사용자 명시)' }
+      }, 400);
+    }
+    body.model = body.model || 'claude-haiku-4-5-20251001';
+    body.tools = Array.isArray(body.tools) ? body.tools : [];
+    body.tools.push({
+      type: 'web_search_20250305',
+      name: 'web_search',
+      max_uses: 3,  // 비용 통제 — 한 응답에 최대 3회 검색
+    });
+    const _searchGuard = '\n\n[웹 검색 사용 규칙]\n- 사용자가 "검색해줘" / "찾아줘" / "구글링" 등 명시 검색 요청한 경우에만 web_search 도구 호출.\n- 일반 대화 / 공감 / 조언엔 학습된 지식만 사용 (검색 X).\n- 검색 결과는 친구 카톡 톤으로 간단히 전달 (보고서 X). 평가 X.\n- 출처는 도메인 또는 페이지 제목 짧게 (URL 길게 붙이지 X).';
+    if (Array.isArray(body.system)) {
+      body.system.push({ type: 'text', text: _searchGuard });
+    } else if (typeof body.system === 'string') {
+      body.system = body.system + _searchGuard;
+    } else {
+      body.system = _searchGuard;
+    }
+  }
+
   const upstreamHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-api-key': env.ANTHROPIC_API_KEY,
