@@ -113,16 +113,42 @@ function _rcSource6Simulation() {
 function _rcSimRenderByStage(cur) {
   const stage = cur.stage || 'mode-pick';
   switch (stage) {
-    case 'mode-pick':     return _rcSimRenderModePick(cur.blockKey);
-    case 'generating':    return _rcSimRenderGenerating();
-    case 'godong-input':  return _rcSimRenderGodongInput(cur);
-    case 'godong-result': return _rcSimRenderGodongResult(cur);
-    case 'user-input':    return _rcSimRenderUserInput(cur);
-    case 'user-thinking': return _rcSimRenderGenerating();
-    case 'user-result':   return _rcSimRenderUserResult(cur);
-    case 'done':          return _rcSimRenderDone(cur);
-    default:              return _rcSimRenderModePick(cur.blockKey);
+    case 'mode-pick':         return _rcSimRenderModePick(cur.blockKey);
+    case 'generating':        return _rcSimRenderGenerating();
+    case 'godong-input':      return _rcSimRenderGodongInput(cur);
+    case 'godong-result':     return _rcSimRenderGodongResult(cur);
+    case 'user-input':        return _rcSimRenderUserInput(cur);
+    case 'user-thinking':     return _rcSimRenderGenerating();
+    case 'user-result':       return _rcSimRenderUserResult(cur);
+    case 'verdict-add-note':  return _rcSimRenderVerdictAddNote(cur);
+    case 'done':              return _rcSimRenderDone(cur);
+    default:                  return _rcSimRenderModePick(cur.blockKey);
   }
+}
+
+// 사용자 명시 2026-05-09: verdict 후 추가 입력 stage — '비슷'/'다름' 둘 다 더 적을 수 있게 (비슷해도 좀 다를 수 있음).
+function _rcSimRenderVerdictAddNote(cur) {
+  const verdictMark = cur.userVerdict === '비슷' ? '✓ 비슷' : '✕ 다름';
+  const placeholder = cur.userVerdict === '비슷'
+    ? '비슷한데 살짝 달랐던 거 (옵션) — 적으면 고동이 학습 ↑'
+    : '어떻게 달랐어? (옵션) — 너의 실제 답 적어';
+  return {
+    id: 'simulation',
+    available: true,
+    contentHash: 'sim_addnote_' + cur.id,
+    bodyHtml: `
+      <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
+        <div class="rc-body-headline">상상 시뮬 ${verdictMark}</div>
+        <textarea class="rc-sim-textarea" id="rcSimAddNoteInput" rows="3" placeholder="${escapeHtml(placeholder)}" onclick="event.stopPropagation();" oninput="event.stopPropagation();"></textarea>
+        <div class="rc-sim-actions">
+          <button class="rc-sim-btn rc-sim-btn-secondary" type="button" onclick="event.stopPropagation(); rcSimSkipAddNote()">건너뛰기</button>
+          <button class="rc-sim-btn rc-sim-btn-primary" type="button" onclick="event.stopPropagation(); rcSimSubmitAddNote()">저장 ✦</button>
+        </div>
+      </div>
+    `,
+    onTapClick: '',
+  };
 }
 
 function _rcSimRenderModePick(blockKey) {
@@ -510,9 +536,66 @@ function rcSimVerdict(v) {
   if (!cur) return;
   if (cur.stage !== 'godong-result' && cur.stage !== 'user-result') return;
   cur.userVerdict = v;
+  // 사용자 명시 2026-05-09: '비슷'/'다름' 둘 다 추가 입력 옵션 (비슷해도 좀 다를 수 있음).
+  cur.stage = 'verdict-add-note';
+  if (typeof saveState === 'function') saveState();
+  _rcSimUpdateInSession();
+}
+
+// 사용자 명시 2026-05-09: verdict 후 추가 입력 (옵션) → archive stash + done.
+function rcSimSubmitAddNote() {
+  const r = _ensureRotatingCardState();
+  const cur = r.currentSimulation;
+  if (!cur || cur.stage !== 'verdict-add-note') return;
+  const ta = document.getElementById('rcSimAddNoteInput');
+  const text = (ta?.value || '').trim();
+  if (text) cur.diffNote = text.slice(0, 500);
+  _rcSimSaveToArchive(cur);
   cur.stage = 'done';
   if (typeof saveState === 'function') saveState();
   _rcSimUpdateInSession();
+}
+
+function rcSimSkipAddNote() {
+  const r = _ensureRotatingCardState();
+  const cur = r.currentSimulation;
+  if (!cur || cur.stage !== 'verdict-add-note') return;
+  _rcSimSaveToArchive(cur);
+  cur.stage = 'done';
+  if (typeof saveState === 'function') saveState();
+  _rcSimUpdateInSession();
+}
+
+// 사용자 명시 2026-05-09: 시뮬 결과 → state.simulationArchive 에 stash.
+// 챕터 추출 (06-extract-insight.js) 가 이 array 의 최근 N개 흡수해서 cf 후보 자연 추출.
+// state.archive (일반 깨달음 저장소) 와 분리 — 시뮬은 가상 시나리오라 별도 격리.
+function _rcSimSaveToArchive(cur) {
+  if (!cur || !cur.userVerdict) return;
+  if (!Array.isArray(state.simulationArchive)) state.simulationArchive = [];
+  const lines = [];
+  if (cur.scenario) lines.push(`[시나리오] ${cur.scenario}`);
+  if (cur.userScenario) lines.push(`[내가 적은 시나리오] ${cur.userScenario}`);
+  if (cur.userPrediction) lines.push(`[내 예측] ${cur.userPrediction}`);
+  if (cur.godongPrediction) lines.push(`[고동이 예측] ${cur.godongPrediction}`);
+  lines.push(`[verdict] ${cur.userVerdict}`);
+  if (cur.diffNote) lines.push(`[추가 메모] ${cur.diffNote}`);
+  state.simulationArchive.unshift({
+    id: cur.id,
+    mode: cur.mode,
+    scenario: cur.scenario || null,
+    userScenario: cur.userScenario || null,
+    userPrediction: cur.userPrediction || null,
+    godongPrediction: cur.godongPrediction || null,
+    userVerdict: cur.userVerdict,
+    diffNote: cur.diffNote || null,
+    body: lines.join('\n'),
+    savedAt: new Date().toISOString(),
+    _extracted: false,  // extract-insight 가 흡수 후 true 로 mark — 다음 추출에 중복 X.
+  });
+  // 최근 30개만 유지 (오래된 거 cf 추출에 영향 작음)
+  if (state.simulationArchive.length > 30) {
+    state.simulationArchive = state.simulationArchive.slice(0, 30);
+  }
 }
 
 function rcSimReset() {

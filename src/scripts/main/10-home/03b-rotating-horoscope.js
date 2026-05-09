@@ -138,14 +138,17 @@ async function _rcCallHoroscopeHaiku(rawEnglish, zodiac) {
   const zLabel = z ? z.label : '';
 
   // 사용자 명시 2026-05-09 (재정정): 운세 말투로 + 길게 (3-4 문장) + 행운 아이템/색 같이 추출.
-  const systemPrompt = `너는 별자리 운세를 한국어로 풀어주는 운세사. 영문 horoscope 와 별자리를 받아서 한국어 운세 톤으로 변환 + 행운의 아이템 / 행운의 색 같이 만들어.
+  // 사용자 명시 2026-05-09 (재재정정): 존댓말 X 반말로. 친구가 운세 봐주는 느낌.
+  const systemPrompt = `너는 별자리 운세를 풀어주는 운세사인데, 사용자에게 반말로 말해주는 친한 친구.
+영문 horoscope 와 별자리를 받아서 한국어 운세 톤 (반말) 으로 변환 + 행운의 아이템 / 행운의 색 같이 만들어.
 
 규칙 (절대):
-- 운세 말투 — '~할 운입니다', '~한 기운이 흐릅니다', '~을(를) 조심하세요', '~에 좋은 날입니다' 같은 전형 운세 톤.
-- 친근하게, 그래도 신비로운 어휘 ('기운', '운세', '징조', '에너지', '흐름', '오라') OK.
+- 반말 운세 말투 — '~할 운이야', '~한 기운이 흘러', '~조심해', '~에 좋은 날이야', '~보일 거야' 같은.
+- 존댓말 ('~입니다', '~하세요', '~할 운입니다') 절대 X. 반드시 반말.
+- 신비로운 어휘 ('기운', '운세', '징조', '에너지', '흐름', '오라') OK.
 - 분석명 / 진단명 X. 평가 X. "힘내", "화이팅" 같은 빈 응원 X.
-- 길이 = 3-4 문장 (~150-250자). 옛 horoscope 톤 보존.
-- 사용자에게 직접 말하듯 (너 / 네 / 당신 X — '너의', '네' 사용).
+- 길이 = 3-4 문장 (~150-250자).
+- 사용자에게 직접 말하듯 ('너', '네', '너의'). '당신' X.
 - "결" 단어 X (잔잔한 결, 가벼운 결 등 회피).
 - 마크다운 / 인용부호 X.
 
@@ -169,6 +172,8 @@ ${rawEnglish}
   const sycophancy = /힘내|화이팅|괜찮아질|잘하고 있어|대단해/;
   const diagnosis = /\bADHD\b|우울증|우울장애|불안장애|PTSD|강박장애/i;
   const banGyeol = /잔잔한 결|가벼운 결|단단한 결|부드러운 결|결 따라/;
+  // 사용자 명시 2026-05-09: 반말 강제 — 존댓말 어미 매치 시 retry.
+  const banJondaetmal = /입니다|하세요|하십시오|드립니다|보시기|이세요|있어요|좋아요|드릴게요|할게요\b|돼요\b/;
 
   let attempt = 0;
   while (attempt < 2) {
@@ -204,9 +209,9 @@ ${rawEnglish}
       if (attempt >= 2) throw new Error('운세 본문 너무 짧음');
       continue;
     }
-    if (sycophancy.test(text) || diagnosis.test(text) || banGyeol.test(text)) {
+    if (sycophancy.test(text) || diagnosis.test(text) || banGyeol.test(text) || banJondaetmal.test(text)) {
       attempt++;
-      if (attempt >= 2) throw new Error('tone verify 실패');
+      if (attempt >= 2) throw new Error('tone verify 실패 (존댓말 / sycophancy / 진단명 / 결 어휘)');
       continue;
     }
     return { text, luckyItem, luckyColor };
