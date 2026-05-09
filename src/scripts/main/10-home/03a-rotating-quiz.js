@@ -130,6 +130,9 @@ function _rcSource4Quiz() {
     answers: {},
   };
   if (typeof saveState === 'function') saveState();
+  // 사용자 명시 2026-05-09 ultrathink: pick 직후 quiz_question 없는 항목 batch Haiku polish 시작 (background).
+  // extract-insight 프롬프트는 옛 형식 (quiz_question 안 받음) — polish 가 lazy 로 채움.
+  if (typeof _rcStartQuizPolish === 'function') _rcStartQuizPolish(questionIds);
   return _rcRenderQuizFromProgress();
 }
 
@@ -152,6 +155,10 @@ function _rcRenderQuizFromProgress() {
     p.currentIdx = idx + 1;
     if (typeof saveState === 'function') saveState();
     return _rcRenderQuizFromProgress();
+  }
+  // 사용자 명시 2026-05-09 ultrathink: quiz_question 없고 polish 진행 중 = polishing 카드 (명사형 노출 회피)
+  if (!item.quiz_question && _rcQuizPolishInflight && typeof _rcRenderQuizPolishingCard === 'function') {
+    return _rcRenderQuizPolishingCard();
   }
   const desc = item.description || '';
   const descTrim = desc.length > 60 ? desc.slice(0, 60) + '…' : desc;

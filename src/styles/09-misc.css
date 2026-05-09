@@ -10765,6 +10765,14 @@
   /* Source 4 — Quiz */
   /* ============================================================ */
   .rc-body-quiz { padding: 4px 2px 6px; }
+  /* 사용자 명시 2026-05-09: Quiz 의문문 polish 진행 중 표시 — Haiku batch fetch 직후 잠깐 노출 */
+  .rc-quiz-polishing {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14px; line-height: 1.6;
+    color: var(--text-soft); opacity: 0.78;
+    text-align: center;
+    padding: 28px 12px 32px;
+  }
   .rc-quiz-progress {
     font-size: 10.5px; color: var(--text-dim); opacity: 0.7;
     margin: 2px 0 6px; letter-spacing: 0.04em;

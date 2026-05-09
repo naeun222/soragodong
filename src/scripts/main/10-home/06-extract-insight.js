@@ -193,9 +193,9 @@ ${chatLog.slice(0, 8000)}
 
 [출력 — JSON만]
 {
-  "new_traits": [{"name": "...", "description": "...", "quiz_question": "...", "confidence": 0.0~1.0}],
-  "new_values": [{"name": "...", "description": "...", "quiz_question": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "quiz_question": "...", "confidence": 0.0~1.0}],
+  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
+  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
   "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."},
   "deep_profile_update": {
     "development": {
@@ -215,17 +215,6 @@ ${chatLog.slice(0, 8000)}
 }
 
 deep_profile_update는 사용자가 챕터에서 명시적으로 언급한 정보만 (예: "엄마가 늘 비교해" / "그때 진단 받은 후 시야가 달라졌어" / "나는 패턴 인식이 강해"). 추측 X. 빈 부분은 빈 string 또는 null.
-
-[quiz_question 필드 — 사용자 명시 2026-05-09]
-- 각 new_traits / new_values / new_patterns 항목에 quiz_question 필드 추가.
-- name 은 옛 분석 형식 그대로 (나 탭 표시용 — 짧은 명사형, 사용자 어휘).
-- quiz_question = 같은 항목을 Quiz 카드 (사용자에게 묻는 형태) 로 표현한 한 문장.
-  좋은 예:
-  · "너 야행성이지?" (속성 + 질문)
-  · "스스로한테 잘해주게 됐지?" (변화 + 질문)
-  · "거절하면 미안함 며칠 내내 가지?" (조건 + 질문)
-  · "주말 다음 월요일에 좀 처지지?" (패턴 + 질문)
-- 친구 카톡 톤. 분석 보고서 톤 X. 길이 = 한 문장 (~30자).
 
 JSON만, 마크다운 X.`;
 }
@@ -331,11 +320,21 @@ function _processExtractChapterAnalysis(analysis) {
         const trimmed = txt.trim();
         if (!trimmed) return;
         if (!Array.isArray(cf[bucket])) cf[bucket] = [];
-        if (cf[bucket].some(x => similarText(x, trimmed))) return;
-        cf[bucket].push(trimmed);
-        // 챕터 자동 추출 = unverified 마킹
+        // 사용자 명시 2026-05-09: cf 5차원 = 객체 array (시드와 일관). string 옛 호환만 fallback.
+        if (cf[bucket].some(x => similarText(x?.text || x, trimmed))) return;
+        cf[bucket].push({
+          text: trimmed,
+          confidence: 0.6,
+          evidence_count: 1,
+          user_verified: false,
+          created_at: new Date().toISOString()
+        });
+        // 챕터 자동 추출 = unverified 마킹 (시드 데이터와 동일 형태: { text, addedAt })
         if (!Array.isArray(cf.unverified[bucket])) cf.unverified[bucket] = [];
-        cf.unverified[bucket].push(trimmed);
+        cf.unverified[bucket].push({
+          text: trimmed,
+          addedAt: new Date().toISOString()
+        });
         touched = true;
       });
       if (touched) {
