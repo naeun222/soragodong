@@ -139,7 +139,7 @@ function _rcRenderQuizFromProgress() {
     <div class="rc-body-quiz">
       <div class="rc-body-headline">고동이가 너 얼마나 맞히고 있을까?</div>
       <div class="rc-quiz-progress">[${idx + 1}/${total}]</div>
-      <div class="rc-quiz-question">${escapeHtml(item.name)}${item.tail || '?'}</div>
+      <div class="rc-quiz-question">${escapeHtml(item.name)}</div>
       ${descTrim ? `<div class="rc-quiz-desc">${escapeHtml(descTrim)}</div>` : ''}
       <div class="rc-quiz-actions">
         <button class="rc-btn rc-btn--correct" type="button" onclick="event.stopPropagation(); _rcQuizAnswer('correct')">맞아 ✓</button>

@@ -43,15 +43,16 @@ function _ensureRotatingCardState() {
 
 // =============================================================================
 // 상수 — baseWeight + tie-breaker stable order
+// 사용자 명시 2026-05-09 (재정정): '새로 본 너' source 폐기 → Quiz 로 통합 (둘 다 caseFormulation 미컨펌 풀 사용 — 중복).
+// 4 source: 진주 / 미니 리뷰 / Quiz / 운세
 // =============================================================================
 const _RC_BASE_WEIGHTS = {
   pearl:      20,
-  newView:    80,
   miniReview: 100,  // 일요일 + 정식 주간 리뷰 도착 시 200 격상 (spec 3-2 특수)
-  quiz:       70,
+  quiz:       80,
   horoscope:  50,
 };
-const _RC_SOURCE_ORDER = ['miniReview', 'newView', 'quiz', 'horoscope', 'pearl'];
+const _RC_SOURCE_ORDER = ['miniReview', 'quiz', 'horoscope', 'pearl'];
 
 const _RC_PEARL_WINDOW_MS = 4 * 60 * 60 * 1000;       // 진주 4시간 stay
 const _RC_MINI_REVIEW_COOLDOWN_MS = 3 * 86400000;     // 미니 리뷰 3일 stay
@@ -132,7 +133,6 @@ function _rcIsHistoricallyConfirmed(sourceId) {
   const todayK = _rcTodayKey();
   switch (sourceId) {
     case 'pearl':      return r.lastPearlShownDate === todayK;
-    case 'newView':    return false; // 새로 본 너는 답하면 그 항목이 큐에서 빠짐 → 가용 자체가 변함
     case 'miniReview': {
       // 사용자 명시 2026-05-09: 3일 새벽 4시 cutoff (호출 시점 + 정확히 3일 후 새벽 4시 부터 새 trigger)
       if (!r.lastMiniReviewAt) return false;
@@ -220,18 +220,10 @@ function _rcSource1Pearl() {
 }
 
 // =============================================================================
-// Source 2 — 새로 본 너 (case formulation 새 항목 동적 detect, AI 인사이트 기반)
+// Source 2 (폐기) — 새로 본 너 → Quiz 로 통합 (사용자 명시 2026-05-09 재정정)
+// 옛 함수들 (_rcSource2NewView, _rcCollectNewViewPool, _rcConfirmNewView, _rcNewViewDoneCard, _rcRefreshNewViewSlot)
+// = dead code. 호환 위해 stub 유지 (다른 곳 호출 시 silent return).
 // =============================================================================
-// 사용자 명시 2026-05-09: 카피 풀 예시는 spec 의 예시일뿐, 실제는 AI 인사이트 기반 동적 카피.
-// pool = state.caseFormulation 의 5 차원 (problems/mechanisms/strengths/goals/growth) 본 + unverified
-// 큐 = 사용자가 아직 답 안 한 항목 (unseenInsightsHistory 에 없음)
-const _RC_NEW_VIEW_KIND_LABEL = {
-  problems: '관찰',
-  mechanisms: '패턴',
-  strengths: '강점',
-  goals: '목표',
-  growth: '성장',
-};
 
 function _rcCollectNewViewPool() {
   const r = _ensureRotatingCardState();
@@ -668,7 +660,8 @@ ${archiveText || '(없음)'}
 }
 
 // =============================================================================
-// 가용 source 수집 (5 source) — Quiz / 운세는 03a / 03b 에서 정의됨 (typeof check)
+// 가용 source 수집 (4 source) — 사용자 명시 2026-05-09: '새로 본 너' 폐기 → Quiz 통합.
+// 진주 / 미니 리뷰 / Quiz / 운세
 // =============================================================================
 function _rcCollectAvailable() {
   const safe = (fn, label) => {
@@ -677,7 +670,6 @@ function _rcCollectAvailable() {
   };
   const all = [
     safe(_rcSource1Pearl,      'pearl'),
-    safe(_rcSource2NewView,    'newView'),
     safe(_rcSource3MiniReview, 'miniReview'),
     safe(typeof _rcSource4Quiz === 'function' ? _rcSource4Quiz : null,           'quiz'),
     safe(typeof _rcSource5Horoscope === 'function' ? _rcSource5Horoscope : null, 'horoscope'),
