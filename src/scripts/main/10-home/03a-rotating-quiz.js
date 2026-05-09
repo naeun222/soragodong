@@ -162,7 +162,7 @@ function _rcRenderQuizFromProgress() {
     <div class="rc-body-quiz">
       <div class="rc-body-headline">고동이가 너 얼마나 맞히고 있을까?</div>
       <div class="rc-quiz-progress">[${idx + 1}/${total}]</div>
-      <div class="rc-quiz-question">${escapeHtml(item.name)}</div>
+      <div class="rc-quiz-question">${escapeHtml(item.displayQuestion || item.name)}</div>
       ${descTrim ? `<div class="rc-quiz-desc">${escapeHtml(descTrim)}</div>` : ''}
       <div class="rc-quiz-actions">
         <button class="rc-btn rc-btn--correct" type="button" onclick="event.stopPropagation(); _rcQuizAnswer('correct')">맞아 ✓</button>
@@ -225,15 +225,25 @@ function _rcQuizFindItem(itemId) {
   const kind = itemId.slice(0, sep);
   const name = itemId.slice(sep + 2);
   const cf = state.caseFormulation || {};
+  // 사용자 명시 2026-05-09: caseFormulation 5 차원 (problems/...) + traits/values/patterns 도 lookup.
+  // quiz_question 필드가 traits/values/patterns 항목에 있을 수 있음 (extractChapter 가 stash).
   const arrays = [
     Array.isArray(cf[kind]) ? cf[kind] : null,
     cf.unverified && Array.isArray(cf.unverified[kind]) ? cf.unverified[kind] : null,
+    Array.isArray(state.traits) ? state.traits : null,
+    Array.isArray(state.values) ? state.values : null,
+    Array.isArray(state.patterns) ? state.patterns : null,
   ].filter(Boolean);
   for (const arr of arrays) {
     const found = arr.find(it => it && (it.name === name || it.text === name));
     if (found) {
-      // name||text 통합 + kind 추가해서 반환 (UI 코드가 item.name 으로 일관 접근)
-      return Object.assign({ kind, name: found.name || found.text }, found);
+      // name||text 통합 + kind + quiz_question (있으면) 추가
+      const baseName = found.name || found.text;
+      return Object.assign({ kind }, found, {
+        name: baseName,
+        // displayQuestion = Quiz 카드 question. quiz_question 있으면 우선, 없으면 name 그대로.
+        displayQuestion: found.quiz_question || baseName,
+      });
     }
   }
   return null;

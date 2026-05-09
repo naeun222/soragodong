@@ -283,20 +283,49 @@ async function _intakeGenLongExample(userText) {
 //   결과는 formatAIResponse 로 렌더링 (askDeeper 응답과 100% 동일 시각).
 async function _intakeAnalyze(intakeWorry) {
   if (!_canAI()) throw new Error('AI 세션 미준비');
-  const chatText = (intakeWorry || []).map(m => `${m.role === 'user' ? '사용자' : '소라고동'}: ${m.content}`).join('\n');
-  const prompt = `사용자가 첫 만남에서 고민을 풀었어. 4단계로 더 깊게 분석해줘. [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. [상황]은 사용자가 시도하려는 *원래 문제*를 한 줄로 요약 (50자 내, 미션 결과 체크 모달용 — 화면엔 안 보임). 그 외 4단은 대화에서 관찰한 패턴도 한 줄 자연스럽게 인용해줘.
 
-[대화]
-${chatText}`;
-  // 사용자 보고 2026-05-09: 4단 분석 응답이 존댓말 → askDeeper 와 동일 SYSTEM_PERSONA 명시 (반말 친구 톤).
-  // 옛 = system 누락 → Anthropic default 출력 (존댓말 가능). askDeeper 는 generateAIResponse 가 systemBlocks 자동 inject.
+  // 사용자 명시 2026-05-09: askDeeper 와 메커니즘 완전 동일 — buildSystemPromptParts + systemBlocks 구조 + cache_control breakpoint.
+  // (옛 = system 누락 → Anthropic default → 존댓말 출력. 이번 = generateAIResponse 와 100% 동일 system 구성.)
+  let systemBlocks;
+  if (typeof buildSystemPromptParts === 'function') {
+    const promptParts = buildSystemPromptParts();
+    systemBlocks = [];
+    if (promptParts.stable && promptParts.stable.length > 0) {
+      systemBlocks.push({ type: 'text', text: promptParts.stable, cache_control: { type: 'ephemeral' } });
+    }
+    if (promptParts.volatile && promptParts.volatile.length > 0) {
+      systemBlocks.push({ type: 'text', text: promptParts.volatile });
+    }
+  } else if (typeof SYSTEM_PERSONA === 'string') {
+    systemBlocks = SYSTEM_PERSONA;
+  } else {
+    systemBlocks = '너는 "소라고동". 한국어 반말. 친구 카톡 톤.';
+  }
+
+  // intakeWorry → messages + 마지막 4단 instruction (askDeeper 와 동일 instruction).
+  const messages = (intakeWorry || []).map(m => ({ role: m.role, content: m.content }));
+  messages.push({
+    role: 'user',
+    content: '아까 그 얘기, 4단계로 더 깊게 분석해줘. [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. [상황]은 사용자가 시도하려는 *원래 문제*를 한 줄로 요약 (50자 내, 미션 결과 체크 모달용 — 화면엔 안 보임). 그 외 4단은 네가 관찰한 패턴도 한 줄 자연스럽게 인용해줘.'
+  });
+
+  // cache_control breakpoint — askDeeper 와 동일 패턴 (마지막 user 직전 turn 에 ephemeral).
+  if (messages.length >= 2) {
+    const _cacheIdx = messages.length - 2;
+    const _last = messages[_cacheIdx];
+    messages[_cacheIdx] = {
+      role: _last.role,
+      content: [{ type: 'text', text: _last.content, cache_control: { type: 'ephemeral' } }]
+    };
+  }
+
   const resp = await callAnthropic({
     _endpoint: 'intake',
-    // 사용자 명시 2026-05-08: askDeeper 와 동일 모델 (Opus 4.7) — 첫 만남 4단 분석 = 깊이 우선.
+    // 사용자 명시 2026-05-08: askDeeper 와 동일 모델 (Opus 4.7).
     model: 'claude-opus-4-7',
     max_tokens: 1500,
-    system: (typeof SYSTEM_PERSONA === 'string') ? SYSTEM_PERSONA : '너는 "소라고동". 사용자의 친한 친구. 한국어 반말. 친구 카톡 톤. 존댓말 X. 분석 보고서 톤 X.',
-    messages: [{ role: 'user', content: prompt }]
+    system: systemBlocks,
+    messages
   });
   if (!resp.ok) {
     let detail = '';

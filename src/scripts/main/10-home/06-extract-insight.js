@@ -193,9 +193,9 @@ ${chatLog.slice(0, 8000)}
 
 [출력 — JSON만]
 {
-  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
-  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
+  "new_traits": [{"name": "...", "description": "...", "quiz_question": "...", "confidence": 0.0~1.0}],
+  "new_values": [{"name": "...", "description": "...", "quiz_question": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "quiz_question": "...", "confidence": 0.0~1.0}],
   "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."},
   "deep_profile_update": {
     "development": {
@@ -216,20 +216,16 @@ ${chatLog.slice(0, 8000)}
 
 deep_profile_update는 사용자가 챕터에서 명시적으로 언급한 정보만 (예: "엄마가 늘 비교해" / "그때 진단 받은 후 시야가 달라졌어" / "나는 패턴 인식이 강해"). 추측 X. 빈 부분은 빈 string 또는 null.
 
-[name 필드 톤 — 사용자 명시 2026-05-09 (재정정)]
-- 친구가 사용자에게 직접 말하거나 묻는 한 문장. 질문 또는 관찰 형태.
-- 명사형 / 분석 보고서 톤 절대 X.
-- 좋은 예:
-  · "스스로한테 잘해주게 됐지?" (변화 + 질문)
-  · "환경을 더 잘 이용하게 됐어" (관찰 + 변화)
-  · "거절하면 미안함 며칠 내내 가지?" (조건 + 질문)
+[quiz_question 필드 — 사용자 명시 2026-05-09]
+- 각 new_traits / new_values / new_patterns 항목에 quiz_question 필드 추가.
+- name 은 옛 분석 형식 그대로 (나 탭 표시용 — 짧은 명사형, 사용자 어휘).
+- quiz_question = 같은 항목을 Quiz 카드 (사용자에게 묻는 형태) 로 표현한 한 문장.
+  좋은 예:
   · "너 야행성이지?" (속성 + 질문)
+  · "스스로한테 잘해주게 됐지?" (변화 + 질문)
+  · "거절하면 미안함 며칠 내내 가지?" (조건 + 질문)
   · "주말 다음 월요일에 좀 처지지?" (패턴 + 질문)
-- 나쁜 예 (분석 보고서 / 명사형 — 절대 X):
-  · "자기 친절 톤 정착", "환경 차원 도구 사용", "거절 후 부채감 처리", "야행성 패턴", "주말 회복 부족"
-- 길이 = 한 문장 자연스럽게 (~30자).
-- 사용자 어휘 그대로 인용 OK. 진단명 / 분석 용어 X.
-- description 은 길어도 OK (관찰 + 사용자 발화 인용). name 만 친구 한 문장 톤.
+- 친구 카톡 톤. 분석 보고서 톤 X. 길이 = 한 문장 (~30자).
 
 JSON만, 마크다운 X.`;
 }
@@ -252,6 +248,7 @@ function _processExtractChapterAnalysis(analysis) {
           state.traits.push({
             id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
             name: t.name.trim(), description: (t.description || '').trim(),
+            quiz_question: (t.quiz_question || '').trim() || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: 'chapter',
             created_at: new Date().toISOString()
@@ -260,6 +257,7 @@ function _processExtractChapterAnalysis(analysis) {
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
           exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          if (t.quiz_question && !exists.quiz_question) exists.quiz_question = t.quiz_question.trim();
           touched = true;
         }
       });
@@ -275,6 +273,7 @@ function _processExtractChapterAnalysis(analysis) {
           state.values.push({
             id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
             name: v.name.trim(), description: (v.description || '').trim(),
+            quiz_question: (v.quiz_question || '').trim() || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             sdt_need: v.sdt_need || null,
             extractedFrom: 'chapter',
@@ -284,6 +283,7 @@ function _processExtractChapterAnalysis(analysis) {
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
           exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          if (v.quiz_question && !exists.quiz_question) exists.quiz_question = v.quiz_question.trim();
           touched = true;
         }
       });
@@ -300,6 +300,7 @@ function _processExtractChapterAnalysis(analysis) {
             id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
             name: p.name.trim(), description: (p.description || '').trim(),
             trigger: (p.trigger || '').trim(), sequence: (p.sequence || '').trim(),
+            quiz_question: (p.quiz_question || '').trim() || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: 'chapter',
             created_at: new Date().toISOString()
@@ -308,6 +309,7 @@ function _processExtractChapterAnalysis(analysis) {
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
           exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          if (p.quiz_question && !exists.quiz_question) exists.quiz_question = p.quiz_question.trim();
           touched = true;
         }
       });
