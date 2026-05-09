@@ -511,6 +511,9 @@ async function addPearl() {
                   const msg = (compressErr && (compressErr.message || compressErr.toString())) || '알 수 없는 오류';
                   const stack = (compressErr && compressErr.stack) ? '\n\n[stack]\n' + compressErr.stack.slice(0, 400) : '';
                   showErrorDetailModal('동영상 압축 실패', msg + stack);
+                  // 사용자 보고 2026-05-09: compress fail 시 진주 push 막음 — 옛 흐름은 push 진행해서
+                  // video 필드 X 진주가 남았음 (사용자 = "저장 됐는데 안 나옴"). 명확히 abort.
+                  return;
                 }
               }
             }

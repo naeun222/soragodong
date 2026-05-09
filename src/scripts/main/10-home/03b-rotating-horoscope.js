@@ -93,14 +93,35 @@ function skipZodiacOnboarding() {
 }
 
 // =============================================================================
-// API fetch — horoscope-app-api.vercel.app
+// API fetch — backend proxy (/api/horoscope)
+// 사용자 보고 2026-05-09: client 가 horoscope-app-api.vercel.app 직접 호출 시 'Failed to fetch'
+// (CORS 의심). cloudflare worker proxy 통해 동일 origin 우회 + KV 6h cache.
 // =============================================================================
 async function _rcFetchHoroscopeApi(zodiac) {
-  // sign 파라미터 = 영문 zodiac key
-  const url = `https://horoscope-app-api.vercel.app/api/v1/get-horoscope/daily?sign=${encodeURIComponent(zodiac)}&day=TODAY`;
-  const resp = await fetch(url, { method: 'GET' });
-  if (!resp.ok) throw new Error('horoscope API ' + resp.status);
-  const json = await resp.json();
+  const url = `/api/horoscope?sign=${encodeURIComponent(zodiac)}`;
+  let resp;
+  try {
+    resp = await fetch(url, { method: 'GET' });
+  } catch (fetchErr) {
+    const errType = fetchErr?.name || 'TypeError';
+    const errMsg = fetchErr?.message || 'Failed to fetch';
+    throw new Error(`backend proxy fetch reject [${errType}]: ${errMsg}`);
+  }
+  if (!resp.ok) {
+    // backend 가 upstream 실패 detail 동봉 — 사용자에게 노출
+    let detail = '';
+    try {
+      const errJson = await resp.json();
+      if (errJson?.error) detail = ` (${errJson.error}${errJson.hint ? ' — ' + errJson.hint : ''})`;
+    } catch {}
+    throw new Error('horoscope HTTP ' + resp.status + detail);
+  }
+  let json;
+  try {
+    json = await resp.json();
+  } catch (e) {
+    throw new Error('horoscope 응답 JSON 파싱 실패: ' + (e?.message || ''));
+  }
   // 응답 형태: { data: { date, horoscope_data }, status, success }
   const text = (json && json.data && (json.data.horoscope_data || json.data.horoscopeData)) || '';
   if (!text) throw new Error('horoscope 빈 응답');
