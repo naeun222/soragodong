@@ -288,11 +288,14 @@ async function _intakeAnalyze(intakeWorry) {
 
 [대화]
 ${chatText}`;
+  // 사용자 보고 2026-05-09: 4단 분석 응답이 존댓말 → askDeeper 와 동일 SYSTEM_PERSONA 명시 (반말 친구 톤).
+  // 옛 = system 누락 → Anthropic default 출력 (존댓말 가능). askDeeper 는 generateAIResponse 가 systemBlocks 자동 inject.
   const resp = await callAnthropic({
     _endpoint: 'intake',
     // 사용자 명시 2026-05-08: askDeeper 와 동일 모델 (Opus 4.7) — 첫 만남 4단 분석 = 깊이 우선.
     model: 'claude-opus-4-7',
     max_tokens: 1500,
+    system: (typeof SYSTEM_PERSONA === 'string') ? SYSTEM_PERSONA : '너는 "소라고동". 사용자의 친한 친구. 한국어 반말. 친구 카톡 톤. 존댓말 X. 분석 보고서 톤 X.',
     messages: [{ role: 'user', content: prompt }]
   });
   if (!resp.ok) {
