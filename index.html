@@ -37710,7 +37710,9 @@ async function generateAIResponse(modelOverride) {
     // V3.13.x: 4단 응답 ([오늘의 제안] 또는 다른 4단 라벨 포함) 판정
     // askDeeper로 트리거됐든, 사용자 직접 '어떡하지' 등 도움 요청 → 자동 4단이든 다 해당
     // → fromDeeper(전략으로) + proposal(해볼게) 두 버튼 노출
-    const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]|\[오늘의 제안\]/.test(fullText);
+    // 사용자 보고 2026-05-09: web search 응답에서 검색 결과 안 '[오늘의 제안]' 텍스트 (예: '오늘의 메뉴 제안 ABC')
+    // false positive 로 proposal 트리거됨 → 검색 응답 시 4단 검출 자체 disable.
+    const has4Stage = !_useWebSearch && /\[내가 본 것\]|\[이게 뭐냐면\]|\[오늘의 제안\]/.test(fullText);
     if (has4Stage) {
       state.chatMessages[state.chatMessages.length - 1].fromDeeper = true;
       // V4 (v8 묶음 3): [상황] 추출 → message.situation stash → acceptProposal 시 mission.situation 으로 전달
@@ -37720,8 +37722,8 @@ async function generateAIResponse(modelOverride) {
       }
     }
 
-    // Check for proposal in response
-    if (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal)) {
+    // Check for proposal in response — 사용자 보고 2026-05-09: 검색 응답엔 proposal 검출 X (false positive).
+    if (!_useWebSearch && (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal))) {
       state.chatMessages[state.chatMessages.length - 1].proposal = true;
       if (analysisData && analysisData.proposal) {
         state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;

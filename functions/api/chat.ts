@@ -381,7 +381,7 @@ async function _handleChatRequest(context: {
       name: 'web_search',
       max_uses: 3,  // 비용 통제 — 한 응답에 최대 3회 검색
     });
-    const _searchGuard = '\n\n[웹 검색 사용 규칙]\n- 사용자가 "검색해줘" / "찾아줘" / "구글링" 등 명시 검색 요청한 경우에만 web_search 도구 호출.\n- 일반 대화 / 공감 / 조언엔 학습된 지식만 사용 (검색 X).\n- 검색 결과는 친구 카톡 톤으로 간단히 전달 (보고서 X). 평가 X.\n- 출처는 도메인 또는 페이지 제목 짧게 (URL 길게 붙이지 X).';
+    const _searchGuard = '\n\n[웹 검색 사용 규칙]\n- 사용자가 "검색해줘" / "찾아줘" / "구글링" 등 명시 검색 요청한 경우에만 web_search 도구 호출.\n- 일반 대화 / 공감 / 조언엔 학습된 지식만 사용 (검색 X).\n- 검색 결과는 친구 카톡 톤으로 간단히 전달 (보고서 X). 평가 X.\n- 출처는 도메인 또는 페이지 제목 짧게 (URL 길게 붙이지 X).\n- 4단 분석 라벨 ([상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안]) 절대 사용 X. JSON 분석 출력 X. 자유 텍스트만.\n- "오늘의 제안" / "오늘의 메뉴" 같은 검색 결과 인용 시에도 대괄호 [...] 라벨 형식 X.';
     if (Array.isArray(body.system)) {
       body.system.push({ type: 'text', text: _searchGuard });
     } else if (typeof body.system === 'string') {
