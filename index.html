@@ -1151,6 +1151,8 @@
   .cf-list { padding: 0; }
   .cf-bullet { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 4px 0; }
   .cf-text { flex: 1; line-height: 1.6; }
+  /* 사용자 보고 2026-05-09: Quiz 'verified=true' 시각 표시 — accent 컬러 + 살짝 굵음 */
+  .cf-bullet.cf-verified .cf-text { color: var(--accent); font-weight: 500; }
   .cf-actions { display: inline-flex; gap: 4px; opacity: 0; transition: opacity 0.15s ease; flex-shrink: 0; }
   .model-item:hover .cf-actions, .cf-bullet:active .cf-actions { opacity: 0.85; }
   .cf-actions button {
@@ -10881,7 +10883,19 @@
   /* Source 6 — 상상 시뮬 (사용자 명시 2026-05-09) */
   /* 사용자 보고 2026-05-09 (추가): 다른 source 와 비슷한 컴팩트 size — mode-pick row layout 으로 축소 */
   /* ============================================================ */
-  .rc-body-simulation { padding: 4px 2px 6px; }
+  .rc-body-simulation { padding: 4px 2px 6px; position: relative; }
+  /* 사용자 명시 2026-05-09: 개발자 테스트용 reset 버튼 — 우상단 ↻ */
+  .rc-sim-reset-btn {
+    position: absolute; top: -2px; right: 0;
+    background: transparent; border: none;
+    color: var(--text-dim); opacity: 0.5;
+    font-size: 13px; cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    transition: opacity 0.15s, color 0.15s;
+    z-index: 2;
+  }
+  .rc-sim-reset-btn:hover { opacity: 1; color: var(--accent); }
   .rc-sim-sub {
     font-size: 11px; color: var(--text-soft); opacity: 0.75;
     margin: 2px 0 8px;
@@ -29315,6 +29329,12 @@ function _rcSimRenderModePick(blockKey) {
   };
 }
 
+// 사용자 명시 2026-05-09: 개발자 테스트용 reset 버튼 — 모든 인터랙션 stage 우상단 ↻.
+// 누르면 currentSimulation = null → 다음 진입 시 mode-pick 부터 다시.
+function _rcSimResetBtnHtml() {
+  return `<button class="rc-sim-reset-btn" type="button" onclick="event.stopPropagation(); rcSimReset()" title="다시 시도" aria-label="다시">↻</button>`;
+}
+
 function _rcSimRenderGenerating() {
   return {
     id: 'simulation',
@@ -29322,6 +29342,7 @@ function _rcSimRenderGenerating() {
     contentHash: 'sim_generating',
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬</div>
         <div class="rc-sim-loading">고동이가 생각 중... ✦</div>
       </div>
@@ -29337,6 +29358,7 @@ function _rcSimRenderGodongInput(cur) {
     contentHash: 'sim_godong_input_' + cur.id,
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✨ 고동이 모드</div>
         <div class="rc-sim-scenario">${escapeHtml(cur.scenario || '')}</div>
         <div class="rc-sim-prompt-label">너는 어떻게 할 것 같아?</div>
@@ -29358,6 +29380,7 @@ function _rcSimRenderGodongResult(cur) {
     contentHash: 'sim_godong_result_' + cur.id,
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✨ 고동이 답</div>
         <div class="rc-sim-scenario">${escapeHtml(cur.scenario || '')}</div>
         <div class="rc-sim-block">
@@ -29386,6 +29409,7 @@ function _rcSimRenderUserInput(cur) {
     contentHash: 'sim_user_input_' + (cur.id || 'new'),
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✏️ 직접 모드</div>
         <div class="rc-sim-prompt-label">시나리오 적어 — 고동이가 너의 행동 예측해볼게</div>
         <textarea class="rc-sim-textarea" id="rcSimUserScenarioInput" rows="4" placeholder="예: 친구가 갑자기 약속 취소했어. 너는 어떻게 할 것 같아?" onclick="event.stopPropagation();" oninput="event.stopPropagation();"></textarea>
@@ -29406,6 +29430,7 @@ function _rcSimRenderUserResult(cur) {
     contentHash: 'sim_user_result_' + cur.id,
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✏️ 고동이 답</div>
         <div class="rc-sim-block">
           <div class="rc-sim-block-label">너의 시나리오</div>
@@ -29438,6 +29463,7 @@ function _rcSimRenderDone(cur) {
     contentHash: 'sim_done_' + cur.id,
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✦ 끝</div>
         ${verdictLine}
         <div class="rc-sim-done-text">${cur.userVerdict === '비슷' ? '고동이가 너 잘 알아가고 있네 ✦' : '오케이 — 다음엔 더 가깝게 그려볼게'}</div>
@@ -35706,10 +35732,19 @@ function renderModel() {
   } else {
     html += `<div class="model-section"><div class="model-section-title">통합 분석</div>
       <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">네 데이터 종합. 틀린 건 ✎ 수정 / ✕ 삭제.</div>`;
-    const cfBullet = (text, field, idx) => `<div class="cf-bullet">
-      <span class="cf-text">• ${escapeHtml(text)}</span>
-      <span class="cf-actions"><button onclick="editCFItem('${field}', ${idx})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${idx})" title="삭제">✕</button></span>
-    </div>`;
+    // 사용자 보고 2026-05-09: Quiz 답변 반영 — user_verified=true 시각 표시 + 객체 array 안전 처리.
+    // 옛 cfBullet 는 text 인자 = string 가정 → V4 객체 array ({text, user_verified, ...}) 들어가면 [object Object] 위험.
+    // 새 cfBullet: 객체/string 둘 다 안전 처리 + user_verified 마크.
+    const cfBullet = (it, field, idx) => {
+      const text = (typeof it === 'string') ? it : (it?.text || it?.name || '');
+      const verified = (typeof it === 'object' && it && it.user_verified === true);
+      const cls = 'cf-bullet' + (verified ? ' cf-verified' : '');
+      const mark = verified ? '✓' : '•';
+      return `<div class="${cls}">
+        <span class="cf-text">${mark} ${escapeHtml(text)}</span>
+        <span class="cf-actions"><button onclick="editCFItem('${field}', ${idx})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${idx})" title="삭제">✕</button></span>
+      </div>`;
+    };
     const cfSection = (label, sub, items, field) => {
       if (!items || items.length === 0) return '';
       const top = items.slice(0, 1);

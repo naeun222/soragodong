@@ -155,6 +155,12 @@ function _rcSimRenderModePick(blockKey) {
   };
 }
 
+// 사용자 명시 2026-05-09: 개발자 테스트용 reset 버튼 — 모든 인터랙션 stage 우상단 ↻.
+// 누르면 currentSimulation = null → 다음 진입 시 mode-pick 부터 다시.
+function _rcSimResetBtnHtml() {
+  return `<button class="rc-sim-reset-btn" type="button" onclick="event.stopPropagation(); rcSimReset()" title="다시 시도" aria-label="다시">↻</button>`;
+}
+
 function _rcSimRenderGenerating() {
   return {
     id: 'simulation',
@@ -162,6 +168,7 @@ function _rcSimRenderGenerating() {
     contentHash: 'sim_generating',
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬</div>
         <div class="rc-sim-loading">고동이가 생각 중... ✦</div>
       </div>
@@ -177,6 +184,7 @@ function _rcSimRenderGodongInput(cur) {
     contentHash: 'sim_godong_input_' + cur.id,
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✨ 고동이 모드</div>
         <div class="rc-sim-scenario">${escapeHtml(cur.scenario || '')}</div>
         <div class="rc-sim-prompt-label">너는 어떻게 할 것 같아?</div>
@@ -198,6 +206,7 @@ function _rcSimRenderGodongResult(cur) {
     contentHash: 'sim_godong_result_' + cur.id,
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✨ 고동이 답</div>
         <div class="rc-sim-scenario">${escapeHtml(cur.scenario || '')}</div>
         <div class="rc-sim-block">
@@ -226,6 +235,7 @@ function _rcSimRenderUserInput(cur) {
     contentHash: 'sim_user_input_' + (cur.id || 'new'),
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✏️ 직접 모드</div>
         <div class="rc-sim-prompt-label">시나리오 적어 — 고동이가 너의 행동 예측해볼게</div>
         <textarea class="rc-sim-textarea" id="rcSimUserScenarioInput" rows="4" placeholder="예: 친구가 갑자기 약속 취소했어. 너는 어떻게 할 것 같아?" onclick="event.stopPropagation();" oninput="event.stopPropagation();"></textarea>
@@ -246,6 +256,7 @@ function _rcSimRenderUserResult(cur) {
     contentHash: 'sim_user_result_' + cur.id,
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✏️ 고동이 답</div>
         <div class="rc-sim-block">
           <div class="rc-sim-block-label">너의 시나리오</div>
@@ -278,6 +289,7 @@ function _rcSimRenderDone(cur) {
     contentHash: 'sim_done_' + cur.id,
     bodyHtml: `
       <div class="rc-body-simulation">
+        ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✦ 끝</div>
         ${verdictLine}
         <div class="rc-sim-done-text">${cur.userVerdict === '비슷' ? '고동이가 너 잘 알아가고 있네 ✦' : '오케이 — 다음엔 더 가깝게 그려볼게'}</div>
