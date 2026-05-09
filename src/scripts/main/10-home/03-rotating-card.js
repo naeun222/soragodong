@@ -564,9 +564,198 @@ function _rcSource3NewView() {
 }
 
 // =============================================================================
-// Source 4 — 미니 리뷰 (Haiku) — Phase 3 에서 구현
+// Source 4 — 미니 리뷰 (Haiku, Phase 3)
 // =============================================================================
-function _rcSource4MiniReview() { return { id: 'miniReview', available: false }; }
+// 가용 조건 (spec 4-2):
+//   (마지막 미니 리뷰 ≥3일) AND (체크인 ≥2 OR chat turn ≥8 OR 미션 ≥1)
+//   _canAI() 통과 (apiKey or session)
+// 탭 시 → openMiniReviewModal() — Haiku 1턴 호출 + tone verify (spec 11-7)
+function _rcSource4MiniReview() {
+  if (typeof _canAI !== 'function' || !_canAI()) return { id: 'miniReview', available: false };
+  const r = _ensureRotatingCardState();
+  const lastMini = r.lastMiniReviewAt ? new Date(r.lastMiniReviewAt).getTime() : 0;
+  const cooldownMs = 3 * 86400000;
+  if (lastMini > 0 && Date.now() - lastMini < cooldownMs) return { id: 'miniReview', available: false };
+
+  // 가용 조건 — 지난 3일 활동
+  const since = Date.now() - cooldownMs;
+  const recentCheckins = (state.entries || []).filter(e => {
+    const t = e.date ? new Date(e.date + 'T00:00:00').getTime() : 0;
+    return t > since;
+  }).length;
+  const recentChats = (state.chatMessages || []).filter(m => {
+    const t = m.timestamp ? new Date(m.timestamp).getTime() : 0;
+    return t > since;
+  }).length;
+  const recentMissions = (state.missions || []).filter(m => {
+    const t = m.completedAt ? new Date(m.completedAt).getTime() : 0;
+    return t > since && m.status === 'completed';
+  }).length;
+
+  if (recentCheckins < 2 && recentChats < 8 && recentMissions < 1) {
+    return { id: 'miniReview', available: false };
+  }
+
+  const copy = _rcPickRandom([
+    '지난 3일 어땠어? 짧게 한 번 짚어볼까.',
+    '이 3일 — 같이 한 번 보자.',
+    '며칠 모아둔 거 한 번 봐볼까?',
+    '지나간 며칠, 짧게 정리해줄까?',
+  ]);
+
+  const bodyHtml = `
+    <div class="rc-body-mini-review">
+      <div class="rc-body-headline">지난 3일</div>
+      <div class="rc-body-copy">${escapeHtml(copy)}</div>
+      <div class="rc-body-mini-cta">탭 → 같이 정리 ✦</div>
+    </div>
+  `;
+  return {
+    id: 'miniReview',
+    available: true,
+    contentHash: 'miniReview_' + Math.floor(Date.now() / cooldownMs),
+    bodyHtml,
+    onTapClick: `openMiniReviewModal()`,
+    placeholder: '이 3일...',
+  };
+}
+
+// =============================================================================
+// 미니 리뷰 모달 + Haiku 호출 + tone verify
+// =============================================================================
+async function openMiniReviewModal() {
+  const existing = document.getElementById('rcMiniReviewModal');
+  if (existing) return; // 중복 차단
+
+  const overlay = document.createElement('div');
+  overlay.id = 'rcMiniReviewModal';
+  overlay.className = 'rc-mini-review-overlay';
+  overlay.innerHTML = `
+    <div class="rc-mini-review-card">
+      <div class="rc-mini-review-header">
+        <div class="rc-mini-review-label">🐚 지난 3일</div>
+        <button class="rc-mini-review-close" type="button" onclick="closeMiniReviewModal()" aria-label="닫기">×</button>
+      </div>
+      <div class="rc-mini-review-body" id="rcMiniReviewBody">
+        <div class="rc-mini-review-loading">정리 중... ✦</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add('show'), 30);
+
+  try {
+    const text = await _callMiniReviewHaiku();
+    const bodyEl = document.getElementById('rcMiniReviewBody');
+    if (!bodyEl) return;
+    bodyEl.innerHTML = `
+      <div class="rc-mini-review-content">${escapeHtml(text)}</div>
+      <button class="rc-mini-review-dismiss" type="button" onclick="dismissMiniReview()">정리 끝</button>
+    `;
+    // lastMiniReviewAt 갱신 (cooldown 시작)
+    const r = _ensureRotatingCardState();
+    r.lastMiniReviewAt = new Date().toISOString();
+    if (typeof saveState === 'function') saveState();
+  } catch (e) {
+    console.warn('[mini-review]', e);
+    const bodyEl = document.getElementById('rcMiniReviewBody');
+    if (bodyEl) {
+      bodyEl.innerHTML = `
+        <div class="rc-mini-review-error">지금은 못 정리하겠어. 다음에 다시 시도.</div>
+        <button class="rc-mini-review-dismiss" type="button" onclick="closeMiniReviewModal()">닫기</button>
+      `;
+    }
+  }
+}
+
+function closeMiniReviewModal() {
+  const m = document.getElementById('rcMiniReviewModal');
+  if (!m) return;
+  m.classList.remove('show');
+  setTimeout(() => m.remove(), 200);
+}
+
+function dismissMiniReview() {
+  closeMiniReviewModal();
+  setTimeout(() => {
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+  }, 220);
+}
+
+async function _callMiniReviewHaiku() {
+  if (typeof callAnthropic !== 'function') throw new Error('callAnthropic 미정의');
+  const cooldownMs = 3 * 86400000;
+  const since = Date.now() - cooldownMs;
+
+  const recentEntries = (state.entries || []).filter(e => {
+    const t = e.date ? new Date(e.date + 'T00:00:00').getTime() : 0;
+    return t > since;
+  }).slice(-7);
+  const recentChats = (state.chatMessages || []).filter(m => {
+    const t = m.timestamp ? new Date(m.timestamp).getTime() : 0;
+    return t > since;
+  }).slice(-30);
+  const recentArchive = (state.chatArchive || []).filter(a => {
+    const t = a.date ? new Date(a.date + 'T00:00:00').getTime() : 0;
+    return t > since;
+  }).slice(-3);
+
+  const entriesText = recentEntries.map(e =>
+    `[${e.date}] vit:${e.vitality || '-'} mood:${e.mood || '-'} sleep:${e.sleep || '-'} note:${(e.note || '').slice(0, 100)}`
+  ).join('\n');
+  const chatText = recentChats.map(m => `${m.role}: ${(m.content || '').slice(0, 120)}`).join('\n');
+  const archiveText = recentArchive.map(a => `[${a.date}] ${(a.headline || a.summary || '').slice(0, 80)}`).join('\n');
+
+  const systemPrompt = `너는 사용자의 친구. 지난 3일을 한 단락 (3-4문장) 으로 정리해줘.
+
+규칙 (절대):
+- 친구 카톡 톤. 분석 보고서 X.
+- "힘내", "화이팅", "괜찮아질", "잘하고 있어", "대단해" 같은 빈 응원 절대 X.
+- 진단명 (ADHD / 우울 / 불안 / PTSD / 강박) 직접 언급 X.
+- 사용자 어휘 그대로 인용 OK.
+- 평가 X, 관찰 ○.
+- 한 단락만. 헤더 / 카테고리 / 리스트 X.
+- 부담스러운 칭찬 X.`;
+
+  const userPrompt = `지난 3일 데이터:
+
+[체크인]
+${entriesText || '(없음)'}
+
+[대화 발췌]
+${chatText || '(없음)'}
+
+[아카이브 헤드라인]
+${archiveText || '(없음)'}
+
+→ 한 단락 (3-4문장) 으로 정리해줘.`;
+
+  // tone verify keyword (spec 11-7)
+  const sycophancy = /힘내|화이팅|괜찮아질|잘하고 있어|대단해/;
+  const diagnosis = /\bADHD\b|우울증|우울장애|불안장애|PTSD|강박장애/i;
+
+  let attempt = 0;
+  while (attempt < 2) {
+    const resp = await callAnthropic({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 280,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+    if (!resp.ok) throw new Error('Haiku API ' + resp.status);
+    const data = await resp.json();
+    const text = (data.content?.[0]?.text || '').trim();
+    if (!text) throw new Error('빈 응답');
+
+    if (sycophancy.test(text) || diagnosis.test(text)) {
+      attempt++;
+      if (attempt >= 2) throw new Error('tone verify 실패');
+      continue;
+    }
+    return text;
+  }
+  throw new Error('attempts exceeded');
+}
 
 // =============================================================================
 // Source 6 — 통찰 한 줄 (지난 7일 vs 이전 7일, Phase 2 V1 hardcoded keyword)

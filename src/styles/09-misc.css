@@ -10600,3 +10600,79 @@
     font-size: 10.5px; color: var(--text-dim); opacity: 0.55;
     text-align: right;
   }
+
+  /* 사용자 명시 2026-05-09 (Phase 3): source 4 미니 리뷰 카드 */
+  .rc-body-mini-review { padding: 4px 2px 6px; }
+  .rc-body-mini-cta {
+    margin-top: 8px; font-size: 11px; color: var(--accent);
+    opacity: 0.75; letter-spacing: 0.02em;
+  }
+
+  /* 미니 리뷰 모달 */
+  .rc-mini-review-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 9000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    opacity: 0; transition: opacity 0.18s ease-out;
+  }
+  .rc-mini-review-overlay.show { opacity: 1; }
+  .rc-mini-review-card {
+    background: linear-gradient(135deg, rgba(40,38,52,0.98), rgba(28,26,38,0.98));
+    border: 1px solid rgba(212,167,106,0.28);
+    border-radius: 16px;
+    padding: 18px 18px 16px;
+    max-width: 420px; width: 100%;
+    max-height: 80vh; overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .rc-mini-review-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .rc-mini-review-label {
+    font-size: 12px; color: var(--accent); font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .rc-mini-review-close {
+    background: transparent; border: none;
+    color: var(--text-dim); font-size: 22px; line-height: 1;
+    cursor: pointer; padding: 4px 8px; opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+  .rc-mini-review-close:hover { opacity: 1; }
+  .rc-mini-review-loading {
+    text-align: center; padding: 36px 0;
+    color: var(--text-soft); font-size: 12.5px;
+    animation: rc-mini-loading-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes rc-mini-loading-pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+  .rc-mini-review-content {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14.5px; line-height: 1.75;
+    color: var(--text);
+    padding: 8px 4px 16px;
+    white-space: pre-wrap;
+  }
+  .rc-mini-review-error {
+    text-align: center; padding: 20px 8px 16px;
+    color: var(--text-soft); font-size: 13px;
+  }
+  .rc-mini-review-dismiss {
+    width: 100%; margin-top: 8px;
+    background: rgba(212,167,106,0.10);
+    border: 1px solid rgba(212,167,106,0.32);
+    color: var(--accent); font-size: 13px; font-weight: 600;
+    padding: 10px 16px; border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .rc-mini-review-dismiss:hover {
+    background: rgba(212,167,106,0.18);
+    border-color: rgba(212,167,106,0.50);
+  }
