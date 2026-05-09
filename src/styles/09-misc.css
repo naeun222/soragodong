@@ -10500,9 +10500,7 @@
     opacity: 0.5; font-family: 'JetBrains Mono', monospace;
   }
 
-  /* 사용자 명시 2026-05-09: 회전 카드 안 진주 hero label "🌟 오늘의 너" 중복 제거 (#5). */
-  .rotating-card .library-hero .hero-label { display: none; }
-  .rotating-card .library-hero { padding-top: 0; margin-top: -2px; }
+  /* 사용자 명시 2026-05-09: 진주 라벨 hide 시도 → revert. 두 라벨 다 표시가 자연스러움. */
 
   /* 사용자 명시 2026-05-09: 체크인 완료 시 카드 → 작은 한 줄 텍스트 (#1). */
   .checkin-mini-line {
@@ -10515,3 +10513,45 @@
   .checkin-mini-line:hover { opacity: 0.95; }
   .checkin-mini-text { font-weight: 500; }
   .checkin-mini-arrow { font-size: 12px; opacity: 0.6; margin-left: 2px; }
+
+  /* 사용자 명시 2026-05-09 (Phase 2): source 3 새로 본 너 */
+  .rc-body-newview {
+    padding: 4px 2px 6px;
+  }
+  .rc-body-newview-name {
+    font-family: 'Gowun Batang', serif;
+    font-size: 16px; font-weight: 600; color: var(--accent);
+    margin: 6px 0 4px;
+  }
+  .rc-body-newview-desc {
+    font-size: 13px; line-height: 1.55; color: var(--text);
+    opacity: 0.85;
+  }
+
+  /* Phase 2 source 6 통찰 — yesterday 와 같은 layout */
+  .rc-body-insight { padding: 4px 2px 6px; }
+
+  /* Phase 2 source 7 surprise — 큰 ✦ + halo */
+  .rc-body-surprise {
+    padding: 14px 4px 10px;
+    text-align: center;
+  }
+  .rc-body-surprise-icon {
+    font-size: 32px; color: var(--accent);
+    margin-bottom: 8px;
+    text-shadow: 0 0 12px rgba(212,167,106,0.4);
+    animation: rc-surprise-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes rc-surprise-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+  }
+  .rc-body-surprise-main {
+    font-family: 'Gowun Batang', serif;
+    font-size: 18px; font-weight: 600; color: var(--text);
+    margin-bottom: 4px;
+    letter-spacing: 0.01em;
+  }
+  .rc-body-surprise-sub {
+    font-size: 12px; color: var(--text-dim); opacity: 0.75;
+  }

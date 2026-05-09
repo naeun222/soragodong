@@ -386,6 +386,7 @@ const DEFAULT_STATE = {
   rotatingCardState: {
     history: [],            // [{sourceId, contentHash, seenAt}] — 14일 dedupe
     dismissedSurprises: [], // [milestoneKey] — 1번 표시 후 영구 X
+    newAnalysisItems: [],   // [{kind, id, name, description, detectedAt}] — Phase 2 source 3 stash
     lastMiniReviewAt: null, // ISO timestamp — source 4 cooldown
     windowStartAt: null,    // 4시간 windowing 시작
     windowSourceId: null,   // 그 4시간의 stay source

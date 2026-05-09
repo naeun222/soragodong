@@ -158,6 +158,13 @@ JSON으로 출력:
       }
     }
 
+    // 사용자 명시 2026-05-09 (Phase 2 source 3): 분석 직전 prev id 캡처 — 새 항목 detect 용.
+    const _rcPrevIds = {
+      traits: new Set((state.traits || []).map(x => x.id)),
+      values: new Set((state.values || []).map(x => x.id)),
+      patterns: new Set((state.patterns || []).map(x => x.id)),
+    };
+
     // V3.13.x: 덮어씌움 X. 추가 + 중복은 합치기 (evidence_count↑, confidence/description 더 좋은 거 채택)
     const mergeModelItem = (existing, incoming) => {
       existing.evidence_count = (existing.evidence_count || 1) + 1;
@@ -220,6 +227,33 @@ JSON으로 출력:
       cf.mechanisms = mergeStrings(cf.mechanisms, analysis.case_formulation.mechanisms);
       cf.strengths = mergeStrings(cf.strengths, analysis.case_formulation.strengths);
     }
+    // 사용자 명시 2026-05-09 (Phase 2 source 3): 새 항목 stash → 회전 카드 '새로 본 너' source.
+    try {
+      if (!state.rotatingCardState) state.rotatingCardState = {};
+      if (!Array.isArray(state.rotatingCardState.newAnalysisItems)) state.rotatingCardState.newAnalysisItems = [];
+      const _rcStash = state.rotatingCardState.newAnalysisItems;
+      const _rcExistingIds = new Set(_rcStash.map(x => x.id));
+      const _rcNow = new Date().toISOString();
+      const _rcDescTrim = (s) => (typeof s === 'string') ? s.slice(0, 200) : '';
+      (state.traits || []).forEach(t => {
+        if (!t.id || _rcPrevIds.traits.has(t.id) || _rcExistingIds.has(t.id)) return;
+        _rcStash.push({ kind: 'trait', id: t.id, name: t.name || '', description: _rcDescTrim(t.description || ''), detectedAt: _rcNow });
+      });
+      (state.values || []).forEach(v => {
+        if (!v.id || _rcPrevIds.values.has(v.id) || _rcExistingIds.has(v.id)) return;
+        _rcStash.push({ kind: 'value', id: v.id, name: v.name || '', description: _rcDescTrim(v.description || ''), detectedAt: _rcNow });
+      });
+      (state.patterns || []).forEach(p => {
+        if (!p.id || _rcPrevIds.patterns.has(p.id) || _rcExistingIds.has(p.id)) return;
+        _rcStash.push({ kind: 'pattern', id: p.id, name: p.name || '', description: _rcDescTrim(p.description || ''), detectedAt: _rcNow });
+      });
+      // 14일 지난 stash 자동 만료
+      const _rcCutoff = Date.now() - 14 * 86400000;
+      state.rotatingCardState.newAnalysisItems = _rcStash.filter(it =>
+        it.detectedAt && new Date(it.detectedAt).getTime() > _rcCutoff
+      );
+    } catch (e) { console.warn('[rotating-card source 3 stash]', e); }
+
     state.lastForceAnalyzeAt = new Date().toISOString();
     saveState();
     renderModel(); renderModelPreview();

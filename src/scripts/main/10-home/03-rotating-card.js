@@ -45,6 +45,12 @@ function _rcRecordSeen(sourceId, contentHash) {
   const r = _ensureRotatingCardState();
   r.history.push({ sourceId, contentHash, seenAt: new Date().toISOString() });
   if (r.history.length > 200) r.history = r.history.slice(-200);
+  // 사용자 명시 2026-05-09 (Phase 2 source 7): surprise 1번 표시 후 영구 dismiss (spec 4-5).
+  if (sourceId === 'surprise' && contentHash && /^surprise_/.test(contentHash)) {
+    const milestoneKey = contentHash.replace(/^surprise_/, '');
+    if (!Array.isArray(r.dismissedSurprises)) r.dismissedSurprises = [];
+    if (!r.dismissedSurprises.includes(milestoneKey)) r.dismissedSurprises.push(milestoneKey);
+  }
 }
 
 function _rcSeenHashes14d(sourceId) {
@@ -516,12 +522,256 @@ function _rcSource5Throwback() {
 }
 
 // =============================================================================
-// Source 3, 4, 6, 7 — 후속 phase placeholder
+// Source 3 — 새로 본 너 (분석 결과 새 항목 detect, Phase 2)
 // =============================================================================
-function _rcSource3NewView() { return { id: 'newView', available: false }; }
+// state.rotatingCardState.newAnalysisItems = 30-force-analyze.js 분석 시 stash.
+// 14일 안 만료, 가장 최근 1개 pick.
+function _rcSource3NewView() {
+  const r = _ensureRotatingCardState();
+  const items = (r.newAnalysisItems || []).slice();
+  if (items.length === 0) return { id: 'newView', available: false };
+  const cutoff = Date.now() - 14 * 86400000;
+  const fresh = items.filter(it => it.detectedAt && new Date(it.detectedAt).getTime() > cutoff);
+  if (fresh.length === 0) return { id: 'newView', available: false };
+  fresh.sort((a, b) => new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime());
+  const pick = fresh[0];
+  if (!pick.name) return { id: 'newView', available: false };
+
+  const kindLabel = { trait: '결', value: '가치', pattern: '패턴' }[pick.kind] || '소식';
+  const intro = _rcPickRandom([
+    `있잖아, 너 ${kindLabel} 하나 새로 발견됐어`,
+    `어 너 새 ${kindLabel} 하나 있는 거 알아?`,
+    `잠깐 — 너 새 ${kindLabel}`,
+  ]);
+  const desc = pick.description || '';
+  const descTrim = desc.length > 90 ? desc.slice(0, 90) + '…' : desc;
+  const bodyHtml = `
+    <div class="rc-body-newview">
+      <div class="rc-body-headline">${escapeHtml(intro)}</div>
+      <div class="rc-body-newview-name">${escapeHtml(pick.name)}</div>
+      ${descTrim ? `<div class="rc-body-newview-desc">${escapeHtml(descTrim)}</div>` : ''}
+    </div>
+  `;
+  return {
+    id: 'newView',
+    available: true,
+    contentHash: 'newView_' + pick.id,
+    bodyHtml,
+    onTapClick: `showScreen('model')`,
+    placeholder: '이거...',
+    pick,
+  };
+}
+
+// =============================================================================
+// Source 4 — 미니 리뷰 (Haiku) — Phase 3 에서 구현
+// =============================================================================
 function _rcSource4MiniReview() { return { id: 'miniReview', available: false }; }
-function _rcSource6Insight() { return { id: 'insight', available: false }; }
-function _rcSource7Surprise() { return { id: 'surprise', available: false }; }
+
+// =============================================================================
+// Source 6 — 통찰 한 줄 (지난 7일 vs 이전 7일, Phase 2 V1 hardcoded keyword)
+// =============================================================================
+const _RC_INSIGHT_KEYWORDS = ['ㅠ', '안 돼', '안돼', '몰라', '힘들', '괜찮', '진짜', '너무', '좋아'];
+
+function _rcSource6Insight() {
+  if (typeof todayKey !== 'function' || typeof _shiftDateKey !== 'function') {
+    return { id: 'insight', available: false };
+  }
+  const tKey = todayKey();
+  const wkAStart = _shiftDateKey(tKey, -7);   // 지난 7일 시작 (오늘 제외)
+  const wkBStart = _shiftDateKey(tKey, -14);  // 이전 7일 시작
+  const entriesArr = state.entries || [];
+  const wkA = entriesArr.filter(e => e.date && e.date >= wkAStart && e.date < tKey);
+  const wkB = entriesArr.filter(e => e.date && e.date >= wkBStart && e.date < wkAStart);
+  if (wkA.length === 0) return { id: 'insight', available: false };
+
+  const candidates = [];
+
+  // 어휘 빈도
+  const collectText = (week) => week.map(e => (e.note || '') + ' ' + (e.diary || '')).join(' ');
+  const txtA = collectText(wkA);
+  const txtB = collectText(wkB);
+  for (const kw of _RC_INSIGHT_KEYWORDS) {
+    try {
+      const re = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      const cntA = (txtA.match(re) || []).length;
+      const cntB = (txtB.match(re) || []).length;
+      if (cntA >= 3 && cntA >= cntB * 2 && cntA - cntB >= 3) {
+        const copy = cntB > 0
+          ? `이번 주 '${kw}' ${cntA}번 등장. 지난 주 ${cntB}번이었거든.`
+          : `이번 주 '${kw}' ${cntA}번 등장.`;
+        candidates.push({ kind: 'lexicon_' + kw, delta: cntA - cntB, absDelta: cntA - cntB, copy });
+      }
+    } catch (e) { /* skip bad regex */ }
+  }
+
+  // 잠 평균
+  const sleepA = wkA.map(e => e.sleep).filter(v => v != null);
+  const sleepB = wkB.map(e => e.sleep).filter(v => v != null);
+  if (sleepA.length >= 3 && sleepB.length >= 3) {
+    const avgA = _rcAvg(sleepA);
+    const avgB = _rcAvg(sleepB);
+    const delta = avgA - avgB;
+    if (Math.abs(delta) >= 0.5) {
+      const copy = delta < 0
+        ? `이번 주 잠 ${_rcSleepHm(avgA)}쯤. 지난 주 ${_rcSleepHm(avgB)}이었거든.`
+        : `이번 주 잠 ${_rcSleepHm(avgA)}쯤. 좀 늘었네.`;
+      candidates.push({ kind: 'sleep', delta, absDelta: Math.abs(delta) * 5, copy }); // 잠 변화는 가중치 ↑
+    }
+  }
+
+  // 활력 평균
+  const vitA = wkA.map(e => e.vitality).filter(v => v != null);
+  const vitB = wkB.map(e => e.vitality).filter(v => v != null);
+  if (vitA.length >= 3 && vitB.length >= 3) {
+    const avgA = _rcAvg(vitA);
+    const avgB = _rcAvg(vitB);
+    const delta = avgA - avgB;
+    if (Math.abs(delta) >= 0.7) {
+      const copy = delta < 0
+        ? `이번 주 활력 평소보다 좀 처졌네.`
+        : `이번 주 활력 좀 채워졌어.`;
+      candidates.push({ kind: 'vitality', delta, absDelta: Math.abs(delta) * 4, copy });
+    }
+  }
+
+  if (candidates.length === 0) return { id: 'insight', available: false };
+  candidates.sort((a, b) => b.absDelta - a.absDelta);
+  const top = candidates[0];
+
+  const bodyHtml = `
+    <div class="rc-body-insight">
+      <div class="rc-body-headline">이번 주 너</div>
+      <div class="rc-body-copy">${escapeHtml(top.copy)}</div>
+    </div>
+  `;
+  return {
+    id: 'insight',
+    available: true,
+    contentHash: 'insight_' + top.kind + '_' + tKey,
+    bodyHtml,
+    onTapClick: `showScreen('model')`,
+    placeholder: '이번 주...',
+  };
+}
+
+// =============================================================================
+// Source 7 — Surprise / 기념 (milestone, Phase 2)
+// =============================================================================
+// streak/연속 milestone 제거 (memory feedback_no_streak_pressure 위반, spec 11-3).
+// 함께한 N일 / 첫 진주 N일 / 분기 셸 / shellCollection N개.
+// dismissedSurprises 가드로 1번 표시 후 영구 X (_rcRecordSeen 안 처리).
+function _rcSource7Surprise() {
+  const r = _ensureRotatingCardState();
+  const dismissed = new Set(r.dismissedSurprises || []);
+  const today = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+
+  // 첫 사용 시점 = entries / chatMessages / pearls 중 가장 오래된 것
+  let firstDate = null;
+  const _addFirst = (d) => {
+    if (!d) return;
+    const dStr = String(d).slice(0, 10);
+    if (!firstDate || dStr < firstDate) firstDate = dStr;
+  };
+  const earliestEntry = (state.entries || []).reduce((min, e) =>
+    (!min || (e.date && e.date < min)) ? e.date : min, null);
+  _addFirst(earliestEntry);
+  const firstChatMsg = (state.chatMessages || []).find(m => m && m.timestamp);
+  if (firstChatMsg) _addFirst(firstChatMsg.timestamp);
+  let firstPearlIso = null;
+  (state.pearls || []).forEach(p => {
+    if (!p || !p.createdAt) return;
+    if (!firstPearlIso || new Date(p.createdAt).getTime() < new Date(firstPearlIso).getTime()) {
+      firstPearlIso = p.createdAt;
+    }
+  });
+  if (firstPearlIso) _addFirst(firstPearlIso);
+
+  const candidates = [];
+  const _daysBetween = (a, b) => {
+    const da = new Date(a + 'T00:00:00');
+    const db = new Date(b + 'T00:00:00');
+    return Math.floor((db - da) / 86400000);
+  };
+
+  // 함께한 N일
+  if (firstDate) {
+    const days = _daysBetween(firstDate, today);
+    for (const m of [30, 60, 100, 180, 365, 500, 1000]) {
+      if (days === m && !dismissed.has(`together_${m}`)) {
+        candidates.push({
+          key: `together_${m}`,
+          copy: `${m}일 함께야 🐚`,
+          sub: '첫 대화부터 오늘까지.',
+          tap: `showScreen('archive')`,
+        });
+      }
+    }
+  }
+
+  // 첫 진주 N일
+  if (firstPearlIso) {
+    const fpDate = String(firstPearlIso).slice(0, 10);
+    const days = _daysBetween(fpDate, today);
+    for (const m of [30, 90, 180, 365]) {
+      if (days === m && !dismissed.has(`firstPearl_${m}`)) {
+        candidates.push({
+          key: `firstPearl_${m}`,
+          copy: `너의 첫 진주가 ${m}일 됐어`,
+          sub: '그때 그 한 순간.',
+          tap: `showScreen('archive'); if(typeof switchLibraryCat==='function') switchLibraryCat('pearls');`,
+        });
+      }
+    }
+  }
+
+  // 셸 컬렉션 카운트 (모래사장)
+  const shellCount = (state.shellCollection || []).length;
+  for (const m of [30, 50, 100]) {
+    if (shellCount === m && !dismissed.has(`shells_${m}`)) {
+      candidates.push({
+        key: `shells_${m}`,
+        copy: `${m}개 모았어 🐚`,
+        sub: '모래사장에서 보자.',
+        tap: `if(typeof openShellCollection==='function') openShellCollection();`,
+      });
+    }
+  }
+
+  // 진주 카운트 milestone (10/30/50/100)
+  const pearlsCount = (state.pearls || []).filter(p => p && p.type !== 'dna_pearl').length;
+  for (const m of [10, 30, 50, 100]) {
+    if (pearlsCount === m && !dismissed.has(`pearls_${m}`)) {
+      candidates.push({
+        key: `pearls_${m}`,
+        copy: `진주 ${m}개 됐어`,
+        sub: '하나하나 너만의 시간.',
+        tap: `showScreen('archive'); if(typeof switchLibraryCat==='function') switchLibraryCat('pearls');`,
+      });
+    }
+  }
+
+  if (candidates.length === 0) return { id: 'surprise', available: false };
+  // 첫 candidate (보통 1-2개만 동시 trigger)
+  const pick = candidates[0];
+
+  const bodyHtml = `
+    <div class="rc-body-surprise">
+      <div class="rc-body-surprise-icon">✦</div>
+      <div class="rc-body-surprise-main">${escapeHtml(pick.copy)}</div>
+      <div class="rc-body-surprise-sub">${escapeHtml(pick.sub)}</div>
+    </div>
+  `;
+  return {
+    id: 'surprise',
+    available: true,
+    contentHash: 'surprise_' + pick.key,
+    bodyHtml,
+    onTapClick: pick.tap,
+    placeholder: '...',
+    milestoneKey: pick.key,
+  };
+}
 
 // =============================================================================
 // 가용 source 수집 + score 정렬 + 14일 dedupe
