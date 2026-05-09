@@ -17207,9 +17207,8 @@ function _intakeStep5Next() {
         timestamp: m.ts || new Date().toISOString()
       }));
       // bypassTutorialGuard — onboarding 안에서 intake 호출되어도 추출 진행.
-      // model = Haiku (게스트/신규 첫 분석 = 비용 ↓ + 속도 ↑).
+      // 사용자 명시 2026-05-09: model = sonnet (default). extractChapterCaseAnalysis 자체 default 사용.
       extractChapterCaseAnalysis(_msgs, {
-        model: 'claude-haiku-4-5-20251001',
         bypassTutorialGuard: true
       }).catch(e => console.warn('[intake → chapter case extract] silent:', e && e.message));
     }
