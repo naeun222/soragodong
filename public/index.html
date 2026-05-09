@@ -10554,9 +10554,10 @@
   .rc-body-tap {
     cursor: pointer;
     animation: rc-body-fade-in 0.4s ease-out;
-    /* 사용자 명시 2026-05-09: 그 세션 가장 큰 source (보통 진주 음악) 크기에 다른 source 맞춤. */
-    /* JS _rcEqualizeHeights 가 동적 측정 후 inline style 로 override (더 큰 값 적용). */
-    min-height: 220px;
+    /* 사용자 명시 2026-05-09 (정정): 진주 '오늘의 너' 큐레이션 카드 (일반) 크기에 맞춤. */
+    /* min-height = floor 만. 자연 height 가 더 크면 그대로 (예: hero-empty 진주 추가 카드). */
+    /* JS _rcEqualizeHeights 가 동적 측정 후 inline style 로 override (hero-empty 는 측정 제외). */
+    min-height: 160px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -27973,14 +27974,15 @@ function _rcRenderShell(orderedSources, currentIdx) {
 }
 
 // =============================================================================
-// 사용자 명시 2026-05-09: 그 세션 가장 큰 source 크기에 다른 source 카드 맞춤 (보통 진주 음악).
-// 모든 source 카드를 offscreen 임시 렌더 → max height 측정 → 현 카드의 .rc-body-tap min-height inline override.
+// 사용자 명시 2026-05-09 (정정): 진주 '오늘의 너' 큐레이션 카드 (일반) 크기에 다른 source 맞춤.
+// 진주 추가 (hero-empty) 카드 = 자체 큰 사이즈 — 그 source 만 자연 height 유지, 다른 source 영향 X.
+// 동작: max 측정에서 hero-empty 진주는 제외 → 일반 진주 / 다른 source 카드의 max 만 .rc-body-tap min-height 로 override.
+// hero-empty 카드는 자연 height (min-height floor 보다 커서 자연 그대로 노출).
 // =============================================================================
 function _rcEqualizeHeights() {
   if (!Array.isArray(_rcSessionOrder) || _rcSessionOrder.length < 2) return;
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
-  // 다음 frame — DOM 페인트 후 측정 (image 로드 일부 race 허용)
   setTimeout(() => {
     try {
       const cardEl = document.getElementById('rotatingCard');
@@ -27995,17 +27997,17 @@ function _rcEqualizeHeights() {
       for (let i = 0; i < _rcSessionOrder.length; i++) {
         const s = _rcSessionOrder[i];
         if (!s) continue;
-        // 같은 shell 구조로 임시 렌더 — .rotating-card > godong + body-tap + arrow row
-        const showGodong = s.id !== 'pearl';
-        const godongHtml = showGodong ? `<div class="rc-godong">${typeof _rcGodongSvg === 'function' ? _rcGodongSvg(s.id) : ''}</div>` : '';
+        // 사용자 명시 2026-05-09: 진주 추가 카드 (hero-empty / isEmpty) = 측정에서 제외. 그 source 만 큼.
+        if (s.id === 'pearl' && s.isEmpty) continue;
         tmp.innerHTML = `<div class="rotating-card"><div class="rc-body-tap">${s.bodyHtml || ''}</div></div>`;
         const tapEl = tmp.querySelector('.rc-body-tap');
         const h = tapEl ? tapEl.offsetHeight : 0;
         if (h > maxH) maxH = h;
       }
       document.body.removeChild(tmp);
-      // 측정 max 가 default min (220px) 보다 크면 inline 으로 override
-      if (maxH > 220) {
+      // 측정 max 가 default min (160px) 보다 크면 inline 으로 override.
+      // hero-empty 카드는 자연 height 가 floor 보다 커서 그대로 큼.
+      if (maxH > 160) {
         bodyTap.style.minHeight = maxH + 'px';
       } else {
         bodyTap.style.minHeight = '';

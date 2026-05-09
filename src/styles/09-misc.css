@@ -10441,9 +10441,10 @@
   .rc-body-tap {
     cursor: pointer;
     animation: rc-body-fade-in 0.4s ease-out;
-    /* 사용자 명시 2026-05-09: 그 세션 가장 큰 source (보통 진주 음악) 크기에 다른 source 맞춤. */
-    /* JS _rcEqualizeHeights 가 동적 측정 후 inline style 로 override (더 큰 값 적용). */
-    min-height: 220px;
+    /* 사용자 명시 2026-05-09 (정정): 진주 '오늘의 너' 큐레이션 카드 (일반) 크기에 맞춤. */
+    /* min-height = floor 만. 자연 height 가 더 크면 그대로 (예: hero-empty 진주 추가 카드). */
+    /* JS _rcEqualizeHeights 가 동적 측정 후 inline style 로 override (hero-empty 는 측정 제외). */
+    min-height: 160px;
     display: flex;
     flex-direction: column;
     justify-content: center;
