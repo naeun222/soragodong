@@ -3,23 +3,16 @@
 // → cloudflare worker 에서 server-side fetch 로 우회 + 동일 origin (/api/horoscope) 제공.
 // Cache: same sign 6h 동안 KV cache (vercel free 의 cold start 부담 ↓).
 //
-// 사용자 보고 2026-05-09 (재정정 ultrathink): horoscope-app-api 가 자주 빈 응답 반환 (vercel free 불안정).
-// → upstream 빈 응답 시 Anthropic Haiku fallback 으로 영문 horoscope 생성 (의존성 X).
-// → 빈 응답 fail rate 사실상 0 (Anthropic 안정).
+// 사용자 명시 2026-05-09 (재정정 ultrathink): Anthropic fallback 제거 — 사용자가 진짜 운세 보고 싶음.
+// vercel free 자주 빈 응답 → retry 2회 (cold start 회피) + 그래도 fail 시 502 (사용자가 실패 카드의 ↻ 다시시도).
+// AI 생성 운세는 진정성 ↓ — fallback 안 함.
 
 interface Env {
   GUEST_KV?: KVNamespace;
-  ANTHROPIC_API_KEY?: string;
 }
 
 const ZODIAC_KEYS = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo',
                      'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
-
-const ZODIAC_LABELS: Record<string, string> = {
-  aries: 'Aries', taurus: 'Taurus', gemini: 'Gemini', cancer: 'Cancer',
-  leo: 'Leo', virgo: 'Virgo', libra: 'Libra', scorpio: 'Scorpio',
-  sagittarius: 'Sagittarius', capricorn: 'Capricorn', aquarius: 'Aquarius', pisces: 'Pisces',
-};
 
 const HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -39,42 +32,49 @@ function todayKey() {
   return kstNow.toISOString().slice(0, 10);
 }
 
-// 사용자 보고 2026-05-09: horoscope-app-api 빈 응답 시 fallback. Anthropic Haiku 에 영문 horoscope 한 단락 생성 요청.
-// client 의 _rcCallHoroscopeHaiku 가 이걸 다시 한국어 친구 톤으로 변환 — 흐름 동일.
-async function _generateHoroscopeFromAnthropic(env: Env, sign: string, dateKey: string): Promise<string> {
-  if (!env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY 미설정');
-  const signLabel = ZODIAC_LABELS[sign] || sign;
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 200,
-      messages: [{
-        role: 'user',
-        content: `Generate today's daily horoscope for ${signLabel} (zodiac sign). Date: ${dateKey}.
+// 사용자 보고 2026-05-09: vercel free cold start / 일시 빈 응답 회피 — 1회 attempt + 1회 retry (1.5s backoff).
+// retry 도 빈 응답 시 502 반환.
+async function _fetchHoroscopeWithRetry(target: string): Promise<{ text: string; errInfo: string }> {
+  const _try = async (): Promise<{ text: string; errInfo: string }> => {
+    let resp: Response;
+    try {
+      resp = await fetch(target, {
+        method: 'GET',
+        headers: { 'accept': 'application/json' },
+        redirect: 'follow',
+      });
+    } catch (e: any) {
+      return { text: '', errInfo: `network: ${e?.message || 'unknown'}` };
+    }
+    if (!resp.ok) return { text: '', errInfo: `HTTP ${resp.status}` };
+    let body = '';
+    try { body = await resp.text(); } catch (e: any) { return { text: '', errInfo: `body read: ${e?.message}` }; }
+    if (!body || body.length < 10) return { text: '', errInfo: 'empty body' };
+    let json: any;
+    try { json = JSON.parse(body); } catch (e: any) { return { text: '', errInfo: `JSON parse: ${e?.message}` }; }
+    const horoscope = (
+      json?.data?.horoscope_data ||
+      json?.data?.horoscope ||
+      json?.data?.horoscopeData ||
+      json?.data?.text ||
+      json?.data?.message ||
+      ''
+    ).toString().trim();
+    if (!horoscope || horoscope.length < 10) {
+      return { text: '', errInfo: `empty horoscope (data fields: ${Object.keys(json?.data || {}).join(', ') || '(no data)'})` };
+    }
+    return { text: horoscope, errInfo: '' };
+  };
 
-Rules:
-- One paragraph, English, friendly mystical tone (typical horoscope style).
-- 2-3 sentences total. Concise but evocative.
-- Talk about energy, focus, relationships, opportunity, intuition, etc. (vary topic).
-- Avoid medical / clinical terms. Avoid forced positivity.
-- Just the horoscope text. No preamble, no JSON, no markdown, no quotes.`,
-      }],
-    }),
-  });
-  if (!resp.ok) {
-    const errText = await resp.text();
-    throw new Error(`Anthropic ${resp.status}: ${errText.slice(0, 200)}`);
-  }
-  const data: any = await resp.json();
-  const text = (data?.content?.[0]?.text || '').trim();
-  if (!text || text.length < 30) throw new Error('Anthropic 빈 응답 또는 너무 짧음');
-  return text;
+  // 1차 시도
+  let result = await _try();
+  if (result.text) return result;
+  const firstErr = result.errInfo;
+  // 1.5s backoff 후 1회 retry — vercel cold start 최대 ~2s
+  await new Promise(res => setTimeout(res, 1500));
+  result = await _try();
+  if (result.text) return result;
+  return { text: '', errInfo: `1차: ${firstErr} | 2차: ${result.errInfo}` };
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -99,61 +99,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     } catch {}
   }
 
-  // Upstream fetch — server-side, CORS 영향 X. redirect follow (default).
-  // 사용자 보고 2026-05-09 (재정정): vercel free API 자주 빈 응답 → fallback chain.
-  // 1) horoscope-app-api 시도 → 응답 OK + horoscope text 있으면 사용.
-  // 2) 빈 응답 / non-2xx / network fail → Anthropic Haiku fallback 으로 영문 horoscope 생성.
-  // 3) Anthropic 도 fail → 502 + 자세한 hint.
+  // Upstream fetch — server-side, CORS 영향 X. retry 1회 (vercel cold start 회피).
   const target = `https://horoscope-app-api.vercel.app/api/v1/get-horoscope/daily?sign=${encodeURIComponent(sign)}&day=TODAY`;
-  let horoscopeText = '';
-  let source = 'upstream';
-  let upstreamErrInfo = '';
+  const { text: horoscopeText, errInfo } = await _fetchHoroscopeWithRetry(target);
 
-  try {
-    const upstreamResp = await fetch(target, {
-      method: 'GET',
-      headers: { 'accept': 'application/json' },
-      redirect: 'follow',
-    });
-    if (!upstreamResp.ok) {
-      upstreamErrInfo = `HTTP ${upstreamResp.status}`;
-    } else {
-      const body = await upstreamResp.text();
-      if (!body || body.length < 10) {
-        upstreamErrInfo = 'empty body';
-      } else {
-        try {
-          const json: any = JSON.parse(body);
-          horoscopeText = (
-            json?.data?.horoscope_data ||
-            json?.data?.horoscope ||
-            json?.data?.horoscopeData ||
-            json?.data?.text ||
-            json?.data?.message ||
-            ''
-          ).toString().trim();
-          if (!horoscopeText || horoscopeText.length < 10) {
-            upstreamErrInfo = `empty horoscope (data fields: ${Object.keys(json?.data || {}).join(', ') || '(no data)'})`;
-            horoscopeText = '';
-          }
-        } catch (e: any) {
-          upstreamErrInfo = `JSON parse fail: ${e?.message || 'unknown'}`;
-        }
-      }
-    }
-  } catch (e: any) {
-    upstreamErrInfo = `network fail: ${e?.message || 'unknown'}`;
-  }
-
-  // Fallback — Anthropic Haiku 로 영문 horoscope 생성
   if (!horoscopeText) {
-    try {
-      horoscopeText = await _generateHoroscopeFromAnthropic(context.env, sign, dateKey);
-      source = 'anthropic-fallback';
-    } catch (fallbackErr: any) {
-      return jsonError(502, 'upstream + fallback 둘 다 실패',
-        `upstream: ${upstreamErrInfo}\nfallback: ${fallbackErr?.message || 'unknown'}`);
-    }
+    // 사용자 명시 2026-05-09: AI fallback 제거 — 진짜 운세 우선. 502 → client 실패 카드의 ↻ 다시시도.
+    return jsonError(502, 'horoscope-app-api 빈 응답 / 다운', errInfo);
   }
 
   // 옛 형식으로 normalize — client 코드 변경 X. data.horoscope_data 항상 채워짐.
@@ -162,26 +114,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       date: dateKey,
       period: 'daily',
       sign,
-      horoscope_data: horoscopeText.trim(),
+      horoscope_data: horoscopeText,
     },
     status: 200,
     success: true,
-    source,
   };
   const normalizedBody = JSON.stringify(normalized);
 
   // KV stash (best-effort, fail silent). 사용자 명시 2026-05-09: nocache=1 시 stash skip.
-  // fallback 결과도 stash OK — 어차피 사용자에 노출되는 운세 (외부 API 다시 살아나면 다음 cutoff 때 자동 갱신).
   if (!noCache && context.env.GUEST_KV) {
     try {
       await context.env.GUEST_KV.put(cacheKey, normalizedBody, { expirationTtl: 6 * 3600 });
     } catch {}
   }
 
-  return new Response(normalizedBody, {
-    status: 200,
-    headers: { ...HEADERS, 'x-cache': 'miss', 'x-source': source },
-  });
+  return new Response(normalizedBody, { status: 200, headers: { ...HEADERS, 'x-cache': 'miss' } });
 };
 
 export const onRequestOptions: PagesFunction<Env> = async () => {
