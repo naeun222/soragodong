@@ -323,12 +323,13 @@ async function compressVideoWebCodecs(file, opts = {}) {
     encoder.close();
 
     // V4 fix v4: 오디오 인코딩 (있을 때만). maxSec 만큼만 잘라 인코딩.
+    // 사용자 보고 2026-05-09 (재정정): audioChunksEmitted 를 outer scope 으로 — 결과 audioMeta 동봉용.
+    let audioChunksEmitted = 0;
     if (audioBuffer) {
       try {
         let audioErr = null;
         // 사용자 보고 2026-05-09: audio 가 chunk 0 emit silent fail (Safari/iOS) 케이스 → 무음 + modal X 였음.
         // chunk emit count 추적해서 0 이면 명시 throw → catch 분기 진입 → reason set + audioBuffer=null.
-        let audioChunksEmitted = 0;
         // V4 fix v5 (사용자 보고 2026-05-04): Safari AudioEncoder 가 chunk.duration null/0 emit 가능 → addAudioChunkRaw fail.
         // 명시적 duration override (samples / sampleRate * 1e6 microseconds).
         const aenc = new AudioEncoder({
@@ -434,12 +435,20 @@ async function compressVideoWebCodecs(file, opts = {}) {
     cleanup();
     // 사용자 보고 2026-05-02 ultrathink: hasAudio 메타 넣음 — 옛 진주 (audio fix 전 encoded = audio track X) vs 새 진주 (audio O) 구분.
     // 사용자 보고 2026-05-09: PWA 모바일에서 console 못 봄 → 무음 원인 reason / detail 도 동봉. 호출자가 modal 로 노출.
+    // 사용자 보고 2026-05-09 (재정정): hasAudio=true 인데 무음 들리는 케이스 — chunk 수 / codec / sr / ch 도 동봉 (success 도) → toast 진단.
+    const _audioMeta = {
+      chunksEmitted: audioChunksEmitted,
+      codec: audioCodec || null,
+      sr: audioSampleRate || null,
+      ch: audioChannels || null,
+    };
     return {
       videoUrl: dataUrl,
       thumbnail,
       hasAudio: !!audioBuffer,
       audioFailReason: audioBuffer ? null : (audioFailReason || '알 수 없는 원인'),
       audioFailDetail: audioBuffer ? null : (audioFailDetail || ''),
+      audioMeta: _audioMeta,
     };
   } catch (e) {
     cleanup();

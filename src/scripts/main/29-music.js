@@ -504,11 +504,19 @@ async function addPearl() {
                     videoThumb = result.thumbnail;
                     videoHasAudio = !!result.hasAudio;
                     // 사용자 보고 2026-05-09: PWA 모바일에서 console 못 봄 → 무음 원인 modal 로 노출 (compress 가 reason / detail 동봉).
+                    // 사용자 보고 2026-05-09 (재정정): audioMeta 도 항상 modal 노출 — hasAudio=true 인데 무음 들리는 케이스 진단
+                    // (chunks=0 silent fail / codec 미스매치 / muxer add fail 등 분리).
+                    const _meta = result.audioMeta || {};
+                    const _metaLine = `chunks=${_meta.chunksEmitted ?? '?'} codec=${_meta.codec || '?'} sr=${_meta.sr || '?'} ch=${_meta.ch || '?'}`;
                     if (!videoHasAudio && typeof showErrorDetailModal === 'function') {
                       const reason = result.audioFailReason || '알 수 없는 원인';
                       const detail = result.audioFailDetail || '';
                       showErrorDetailModal('🔇 영상 무음으로 저장됨',
-                        `이 영상은 소리 없이 보관돼.\n\n[원인]\n${reason}\n\n[추가 정보]\n${detail}`);
+                        `이 영상은 소리 없이 보관돼.\n\n[원인]\n${reason}\n\n[audio meta]\n${_metaLine}\n\n[추가 정보]\n${detail}`);
+                    } else if (videoHasAudio && typeof showToast === 'function') {
+                      // 사용자 보고 2026-05-09 (추가 진단): 'hasAudio=true 인데 무음 들림' 케이스 — 진주 추가 직후 toast 로 audio meta 노출.
+                      // 사용자가 PWA console 못 봐도 chunks 수 / codec 즉시 확인 가능. 정상 케이스도 toast 로 확인.
+                      showToast('🎵 audio: ' + _metaLine);
                     }
                   }
                 } catch (compressErr) {

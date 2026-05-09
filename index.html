@@ -33070,12 +33070,13 @@ async function compressVideoWebCodecs(file, opts = {}) {
     encoder.close();
 
     // V4 fix v4: 오디오 인코딩 (있을 때만). maxSec 만큼만 잘라 인코딩.
+    // 사용자 보고 2026-05-09 (재정정): audioChunksEmitted 를 outer scope 으로 — 결과 audioMeta 동봉용.
+    let audioChunksEmitted = 0;
     if (audioBuffer) {
       try {
         let audioErr = null;
         // 사용자 보고 2026-05-09: audio 가 chunk 0 emit silent fail (Safari/iOS) 케이스 → 무음 + modal X 였음.
         // chunk emit count 추적해서 0 이면 명시 throw → catch 분기 진입 → reason set + audioBuffer=null.
-        let audioChunksEmitted = 0;
         // V4 fix v5 (사용자 보고 2026-05-04): Safari AudioEncoder 가 chunk.duration null/0 emit 가능 → addAudioChunkRaw fail.
         // 명시적 duration override (samples / sampleRate * 1e6 microseconds).
         const aenc = new AudioEncoder({
@@ -33181,12 +33182,20 @@ async function compressVideoWebCodecs(file, opts = {}) {
     cleanup();
     // 사용자 보고 2026-05-02 ultrathink: hasAudio 메타 넣음 — 옛 진주 (audio fix 전 encoded = audio track X) vs 새 진주 (audio O) 구분.
     // 사용자 보고 2026-05-09: PWA 모바일에서 console 못 봄 → 무음 원인 reason / detail 도 동봉. 호출자가 modal 로 노출.
+    // 사용자 보고 2026-05-09 (재정정): hasAudio=true 인데 무음 들리는 케이스 — chunk 수 / codec / sr / ch 도 동봉 (success 도) → toast 진단.
+    const _audioMeta = {
+      chunksEmitted: audioChunksEmitted,
+      codec: audioCodec || null,
+      sr: audioSampleRate || null,
+      ch: audioChannels || null,
+    };
     return {
       videoUrl: dataUrl,
       thumbnail,
       hasAudio: !!audioBuffer,
       audioFailReason: audioBuffer ? null : (audioFailReason || '알 수 없는 원인'),
       audioFailDetail: audioBuffer ? null : (audioFailDetail || ''),
+      audioMeta: _audioMeta,
     };
   } catch (e) {
     cleanup();
@@ -51811,11 +51820,19 @@ async function addPearl() {
                     videoThumb = result.thumbnail;
                     videoHasAudio = !!result.hasAudio;
                     // 사용자 보고 2026-05-09: PWA 모바일에서 console 못 봄 → 무음 원인 modal 로 노출 (compress 가 reason / detail 동봉).
+                    // 사용자 보고 2026-05-09 (재정정): audioMeta 도 항상 modal 노출 — hasAudio=true 인데 무음 들리는 케이스 진단
+                    // (chunks=0 silent fail / codec 미스매치 / muxer add fail 등 분리).
+                    const _meta = result.audioMeta || {};
+                    const _metaLine = `chunks=${_meta.chunksEmitted ?? '?'} codec=${_meta.codec || '?'} sr=${_meta.sr || '?'} ch=${_meta.ch || '?'}`;
                     if (!videoHasAudio && typeof showErrorDetailModal === 'function') {
                       const reason = result.audioFailReason || '알 수 없는 원인';
                       const detail = result.audioFailDetail || '';
                       showErrorDetailModal('🔇 영상 무음으로 저장됨',
-                        `이 영상은 소리 없이 보관돼.\n\n[원인]\n${reason}\n\n[추가 정보]\n${detail}`);
+                        `이 영상은 소리 없이 보관돼.\n\n[원인]\n${reason}\n\n[audio meta]\n${_metaLine}\n\n[추가 정보]\n${detail}`);
+                    } else if (videoHasAudio && typeof showToast === 'function') {
+                      // 사용자 보고 2026-05-09 (추가 진단): 'hasAudio=true 인데 무음 들림' 케이스 — 진주 추가 직후 toast 로 audio meta 노출.
+                      // 사용자가 PWA console 못 봐도 chunks 수 / codec 즉시 확인 가능. 정상 케이스도 toast 로 확인.
+                      showToast('🎵 audio: ' + _metaLine);
                     }
                   }
                 } catch (compressErr) {
