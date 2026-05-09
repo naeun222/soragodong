@@ -310,21 +310,21 @@ function _rcSource2NewView() {
 }
 
 function _rcSource2NewViewWithPick(pick) {
-  const kindLabel = _RC_NEW_VIEW_KIND_LABEL[pick.kind] || '소식';
+  // 사용자 명시 2026-05-09: 분석톤 X, 소라고동톤 간단하게. intro + name 만 (description hide).
   const intros = [
-    `있잖아, 너에 대해 새로 본 ${kindLabel} 하나`,
-    `어 너 새 ${kindLabel} 있는 거 알아?`,
-    `잠깐 — 새 ${kindLabel} 하나`,
+    '있잖아',
+    '어 이거',
+    '잠깐',
+    '너 이거',
+    '오',
+    '있잖아, 너',
   ];
   const intro = _rcPickRandom(intros);
-  const desc = pick.description || '';
-  const descTrim = desc.length > 90 ? desc.slice(0, 90) + '…' : desc;
 
   const bodyHtml = `
     <div class="rc-body-newview">
       <div class="rc-body-headline">${escapeHtml(intro)}</div>
       <div class="rc-body-newview-name">${escapeHtml(pick.name)}</div>
-      ${descTrim ? `<div class="rc-body-newview-desc">${escapeHtml(descTrim)}</div>` : ''}
       <div class="rc-newview-actions">
         <button class="rc-btn rc-btn--correct" type="button" onclick="event.stopPropagation(); _rcConfirmNewView('${escapeHtml(pick.id).replace(/'/g, '&#39;')}', 'correct')">맞아 ✓</button>
         <button class="rc-btn rc-btn--wrong" type="button" onclick="event.stopPropagation(); _rcConfirmNewView('${escapeHtml(pick.id).replace(/'/g, '&#39;')}', 'wrong')">아닌데 ✕</button>
@@ -339,6 +339,53 @@ function _rcSource2NewViewWithPick(pick) {
     onTapClick: `showScreen('model')`,
     pick,
   };
+}
+
+// 사용자 명시 2026-05-09: 다 봤어 카드 — newView 큐 비어있을 때 source 자리 유지 (다음 source cycle X).
+function _rcNewViewDoneCard() {
+  const copy = _rcPickRandom([
+    '오늘은 다 봤어 ✓',
+    '확인 끝 — 내일 또',
+    '이정도면 됐어',
+    '다 봤네 — 내일 또',
+    '오늘 너 다 봤어',
+  ]);
+  return {
+    id: 'newView',
+    available: true,
+    contentHash: 'newView_done_' + _rcTodayKey(),
+    bodyHtml: `
+      <div class="rc-body-newview rc-newview-done">
+        <div class="rc-body-headline">새로 본 너</div>
+        <div class="rc-body-copy">${escapeHtml(copy)}</div>
+      </div>
+    `,
+    onTapClick: '',
+    _isNewViewDone: true,
+  };
+}
+
+// 같은 자리 refresh (sessionOrder 변경 X) — 새 인사이트 있으면 그거, 없으면 '다 봤어'
+function _rcRefreshNewViewSlot() {
+  if (!Array.isArray(_rcSessionOrder)) {
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    return;
+  }
+  const idx = _rcSessionOrder.findIndex(s => s && s.id === 'newView');
+  if (idx < 0) {
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    return;
+  }
+  const fresh = _rcSource2NewView();
+  if (fresh && fresh.available) {
+    _rcSessionOrder[idx] = fresh;
+  } else {
+    _rcSessionOrder[idx] = _rcNewViewDoneCard();
+  }
+  const container = document.getElementById('rotatingCardContainer');
+  if (container && typeof _rcRenderShell === 'function') {
+    container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
+  }
 }
 
 function _rcConfirmNewView(itemId, verdict) {
@@ -374,12 +421,11 @@ function _rcConfirmNewView(itemId, verdict) {
   }
 
   if (typeof saveState === 'function') saveState();
-  _rcSessionMarkConfirmed('newView');
   if (typeof showToast === 'function') {
     showToast(verdict === 'correct' ? '고동이가 너 더 잘 알게 됐어' : '오케이 다시 볼게');
   }
-  // 다음 source 자동 cycle
-  setTimeout(() => _rcCycle(1, { autoFromAction: true }), 280);
+  // 사용자 명시 2026-05-09: 같은 자리 refresh (다음 source cycle X). 새 인사이트 있으면 그거, 없으면 '다 봤어'.
+  setTimeout(() => _rcRefreshNewViewSlot(), 280);
 }
 
 // =============================================================================

@@ -21,8 +21,20 @@ import { verifyTurnstileToken } from './_lib/turnstile';
 const GUEST_MAX_TOKENS_CAP = 800;
 const GUEST_ANALYSIS_MAX_TOKENS = 2000;
 const GUEST_ANALYSIS_ENDPOINTS = new Set(['extract_chapter', 'extract_topic', 'intake', 'first_touch']);
-// 게스트는 Sonnet/Haiku 만 허용 — Opus 차단 (Premium 전용).
-const GUEST_ALLOWED_MODELS = new Set(['claude-sonnet-4-6', 'claude-haiku-4-5']);
+// 게스트 = Sonnet/Haiku 기본 허용. Opus 는 chat-style endpoint 에선 차단 (Premium 전용),
+// 분석/추출 endpoint (intake / analyze_4stage / extract_* / review_* 등) 에선 통과.
+// 사용자 보고 2026-05-09: 게스트 첫 진입 intake 4단 분석 (Opus) 차단되던 케이스 — 분기 도입.
+const GUEST_BASE_ALLOWED_MODELS = new Set(['claude-sonnet-4-6', 'claude-haiku-4-5']);
+// chat-style endpoint = 사용자 직접 발화 (메인 대화 / 도움 채팅 / 깊은 분석 채팅 / 돌연변이 채팅).
+// 사용자가 헤더 토글로 useOpus 선택 시 발생 — 게스트는 여기서만 Opus 차단.
+const CHAT_STYLE_ENDPOINTS = new Set([
+  'chat_main',
+  'magic_help',
+  'reflection',
+  'decision_step',
+  'mutation',
+  'archive_summary'
+]);
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
@@ -273,15 +285,21 @@ async function _handleChatRequest(context: {
   }
 
   // 게스트 강제 cap — model 화이트리스트 + endpoint-aware max_tokens.
-  // chat = 800 / extract_chapter / extract_topic = 1500 (JSON 출력 길이 보장).
+  // chat = 800 / extract_chapter / extract_topic / intake / first_touch = 2000 (JSON 출력 길이 보장).
+  // 사용자 명시 2026-05-09: 게스트 + Opus 차단은 chat-style endpoint 한정 — 분석/추출 endpoint 는 Opus 통과.
+  //   chat 헤더 토글 (useOpus) 발 chat_main/reflection/decision_step/mutation 등 = 차단 (Premium 전용 안내).
+  //   intake / analyze_4stage / extract_chapter / review_* 등 = Opus 통과 (4단 분석·인사이트 추출).
   if (isGuest) {
-    if (!GUEST_ALLOWED_MODELS.has(body.model)) {
+    const _ep = body._endpoint || 'chat';
+    const _isChatStyle = CHAT_STYLE_ENDPOINTS.has(_ep) || _ep === 'chat';
+    const _modelOk = GUEST_BASE_ALLOWED_MODELS.has(body.model)
+      || (!_isChatStyle && body.model === 'claude-opus-4-7');
+    if (!_modelOk) {
       return jsonResponse({
-        error: '게스트 모드는 기본 모델만 — 가입하면 Opus 등 풀 활용 가능',
+        error: '게스트 채팅은 기본 모델만 — 가입하면 Opus 등 풀 활용 가능',
         code: 'GUEST_MODEL_BLOCKED'
       }, 403);
     }
-    const _ep = body._endpoint || 'chat';
     const cap = GUEST_ANALYSIS_ENDPOINTS.has(_ep) ? GUEST_ANALYSIS_MAX_TOKENS : GUEST_MAX_TOKENS_CAP;
     const requested = Number(body.max_tokens) || cap;
     body.max_tokens = Math.min(requested, cap);
@@ -289,8 +307,12 @@ async function _handleChatRequest(context: {
 
   // 사용자 명시 2026-05-02 ultrathink: Opus 가드 (Premium 전용 + 일일 30번 한도, 메인 대화 한정).
   // body.tutorial_mode === true (client 가 튜토리얼 동안 명시) = 자유. 일반 사용 = Premium 검증 + atomic increment.
+  // 사용자 명시 2026-05-09: 가드 = chat-style endpoint 한정. 분석/추출 endpoint (intake / analyze_4stage / extract_* / review_* 등) = Opus 자유 통과.
+  //   사용자가 헤더 토글로 직접 useOpus 선택하는 경로 (chat_main / reflection / decision_step / magic_help / mutation / archive_summary) 만 검증.
   const isTutorial = !!body.tutorial_mode;
-  if (body.model === 'claude-opus-4-7') {
+  const _epForOpusGate = body._endpoint || 'chat';
+  const _isChatStyleForOpus = CHAT_STYLE_ENDPOINTS.has(_epForOpusGate) || _epForOpusGate === 'chat';
+  if (body.model === 'claude-opus-4-7' && _isChatStyleForOpus) {
     const opusGate = await checkOpusGate(env, user.id, isTutorial);
     if (!opusGate.ok) {
       return jsonResponse({

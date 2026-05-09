@@ -229,7 +229,9 @@ async function saveToCloudNow() {
       // ⚠️ 사용자 명시 2026-05-08 ultrathink (audit WARN #24): whitelist 방식 — 신규 state 필드 추가 시 *반드시* 이 list 에 등록.
       // TODO 베타 후: blocklist 전환 (DEFAULT_STATE 키에서 metaBody 키 제외 — 누락 방지). 단 *비-민감 운영 데이터* 와 분리 필수.
       // 누락 시: 평문 metaBody 로 cloud 에 흘러가 PIPA §29 + privacy.md §6 약속 ("회사조차 평문 X") 위반.
-      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount'];
+      // 사용자 보고 2026-05-09 ultrathink (root cause): miniReviews + rotatingCardState 누락 → E2EE on 사용자 cloud 저장 X → 재진입 시 reset.
+      // 회전 카드 spec final 추가 (2026-05-09): 미니 리뷰 결과 + 회전 카드 sessionState (진주 4시간 / unseenInsights / quizProgress / lastHoroscope 등) 모두 sensitiveBody 에 포함.
+      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState'];
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
       const encryptedBody = await _e2eeEncrypt(JSON.stringify(sensitiveBody, _serializeReplacer), _e2eeMasterKey);

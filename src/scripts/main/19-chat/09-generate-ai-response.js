@@ -143,6 +143,20 @@ async function generateAIResponse(modelOverride) {
         }
         return;
       }
+      // 사용자 명시 2026-05-09: 게스트 chat 에서 Opus 토글 차단 — Sonnet 자동 fallback + 가입 안내.
+      // backend (chat.ts) 가 chat-style endpoint 한정으로 게스트+Opus 시 GUEST_MODEL_BLOCKED 반환.
+      // 분석/추출 endpoint 에선 게스트도 Opus 통과 (이 분기 도달 X).
+      if (response.status === 403 && parsed.code === 'GUEST_MODEL_BLOCKED') {
+        if (state.chatMessages[state.chatMessages.length - 1]?.typing) state.chatMessages.pop();
+        state.preferences.useOpus = false;
+        if (typeof updateChatModeBtn === 'function') updateChatModeBtn();
+        saveState(); renderChat();
+        showToast('🦉 Opus 깊은 대화는 가입 후 Premium 에서');
+        if (typeof showGuestConversionModal === 'function') {
+          setTimeout(() => showGuestConversionModal({ reason: 'opus' }), 700);
+        }
+        return;
+      }
       if (response.status === 429 && parsed.code === 'OPUS_DAILY_LIMIT') {
         if (state.chatMessages[state.chatMessages.length - 1]?.typing) state.chatMessages.pop();
         // Sonnet 으로 자동 fallback

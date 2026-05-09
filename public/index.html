@@ -10860,6 +10860,15 @@
     display: flex; gap: 8px;
     margin-top: 10px;
   }
+  /* 사용자 명시 2026-05-09: '다 봤어' 카드 — 큐 비어있을 때 source 자리 유지 */
+  .rc-newview-done {
+    text-align: center; padding: 18px 4px 12px;
+  }
+  .rc-newview-done .rc-body-copy {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px; color: var(--text-soft);
+    opacity: 0.85;
+  }
 
   /* ============================================================ */
   /* Source 4 — Quiz */
@@ -18669,7 +18678,9 @@ async function saveToCloudNow() {
       // ⚠️ 사용자 명시 2026-05-08 ultrathink (audit WARN #24): whitelist 방식 — 신규 state 필드 추가 시 *반드시* 이 list 에 등록.
       // TODO 베타 후: blocklist 전환 (DEFAULT_STATE 키에서 metaBody 키 제외 — 누락 방지). 단 *비-민감 운영 데이터* 와 분리 필수.
       // 누락 시: 평문 metaBody 로 cloud 에 흘러가 PIPA §29 + privacy.md §6 약속 ("회사조차 평문 X") 위반.
-      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount'];
+      // 사용자 보고 2026-05-09 ultrathink (root cause): miniReviews + rotatingCardState 누락 → E2EE on 사용자 cloud 저장 X → 재진입 시 reset.
+      // 회전 카드 spec final 추가 (2026-05-09): 미니 리뷰 결과 + 회전 카드 sessionState (진주 4시간 / unseenInsights / quizProgress / lastHoroscope 등) 모두 sensitiveBody 에 포함.
+      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState'];
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
       const encryptedBody = await _e2eeEncrypt(JSON.stringify(sensitiveBody, _serializeReplacer), _e2eeMasterKey);
@@ -27383,21 +27394,21 @@ function _rcSource2NewView() {
 }
 
 function _rcSource2NewViewWithPick(pick) {
-  const kindLabel = _RC_NEW_VIEW_KIND_LABEL[pick.kind] || '소식';
+  // 사용자 명시 2026-05-09: 분석톤 X, 소라고동톤 간단하게. intro + name 만 (description hide).
   const intros = [
-    `있잖아, 너에 대해 새로 본 ${kindLabel} 하나`,
-    `어 너 새 ${kindLabel} 있는 거 알아?`,
-    `잠깐 — 새 ${kindLabel} 하나`,
+    '있잖아',
+    '어 이거',
+    '잠깐',
+    '너 이거',
+    '오',
+    '있잖아, 너',
   ];
   const intro = _rcPickRandom(intros);
-  const desc = pick.description || '';
-  const descTrim = desc.length > 90 ? desc.slice(0, 90) + '…' : desc;
 
   const bodyHtml = `
     <div class="rc-body-newview">
       <div class="rc-body-headline">${escapeHtml(intro)}</div>
       <div class="rc-body-newview-name">${escapeHtml(pick.name)}</div>
-      ${descTrim ? `<div class="rc-body-newview-desc">${escapeHtml(descTrim)}</div>` : ''}
       <div class="rc-newview-actions">
         <button class="rc-btn rc-btn--correct" type="button" onclick="event.stopPropagation(); _rcConfirmNewView('${escapeHtml(pick.id).replace(/'/g, '&#39;')}', 'correct')">맞아 ✓</button>
         <button class="rc-btn rc-btn--wrong" type="button" onclick="event.stopPropagation(); _rcConfirmNewView('${escapeHtml(pick.id).replace(/'/g, '&#39;')}', 'wrong')">아닌데 ✕</button>
@@ -27412,6 +27423,53 @@ function _rcSource2NewViewWithPick(pick) {
     onTapClick: `showScreen('model')`,
     pick,
   };
+}
+
+// 사용자 명시 2026-05-09: 다 봤어 카드 — newView 큐 비어있을 때 source 자리 유지 (다음 source cycle X).
+function _rcNewViewDoneCard() {
+  const copy = _rcPickRandom([
+    '오늘은 다 봤어 ✓',
+    '확인 끝 — 내일 또',
+    '이정도면 됐어',
+    '다 봤네 — 내일 또',
+    '오늘 너 다 봤어',
+  ]);
+  return {
+    id: 'newView',
+    available: true,
+    contentHash: 'newView_done_' + _rcTodayKey(),
+    bodyHtml: `
+      <div class="rc-body-newview rc-newview-done">
+        <div class="rc-body-headline">새로 본 너</div>
+        <div class="rc-body-copy">${escapeHtml(copy)}</div>
+      </div>
+    `,
+    onTapClick: '',
+    _isNewViewDone: true,
+  };
+}
+
+// 같은 자리 refresh (sessionOrder 변경 X) — 새 인사이트 있으면 그거, 없으면 '다 봤어'
+function _rcRefreshNewViewSlot() {
+  if (!Array.isArray(_rcSessionOrder)) {
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    return;
+  }
+  const idx = _rcSessionOrder.findIndex(s => s && s.id === 'newView');
+  if (idx < 0) {
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    return;
+  }
+  const fresh = _rcSource2NewView();
+  if (fresh && fresh.available) {
+    _rcSessionOrder[idx] = fresh;
+  } else {
+    _rcSessionOrder[idx] = _rcNewViewDoneCard();
+  }
+  const container = document.getElementById('rotatingCardContainer');
+  if (container && typeof _rcRenderShell === 'function') {
+    container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
+  }
 }
 
 function _rcConfirmNewView(itemId, verdict) {
@@ -27447,12 +27505,11 @@ function _rcConfirmNewView(itemId, verdict) {
   }
 
   if (typeof saveState === 'function') saveState();
-  _rcSessionMarkConfirmed('newView');
   if (typeof showToast === 'function') {
     showToast(verdict === 'correct' ? '고동이가 너 더 잘 알게 됐어' : '오케이 다시 볼게');
   }
-  // 다음 source 자동 cycle
-  setTimeout(() => _rcCycle(1, { autoFromAction: true }), 280);
+  // 사용자 명시 2026-05-09: 같은 자리 refresh (다음 source cycle X). 새 인사이트 있으면 그거, 없으면 '다 봤어'.
+  setTimeout(() => _rcRefreshNewViewSlot(), 280);
 }
 
 // =============================================================================
@@ -36217,6 +36274,20 @@ async function generateAIResponse(modelOverride) {
         showToast('🦉 Opus 깊은 대화는 Premium 에서만');
         if (typeof openSubscribeModal === 'function') {
           setTimeout(() => openSubscribeModal(), 700);
+        }
+        return;
+      }
+      // 사용자 명시 2026-05-09: 게스트 chat 에서 Opus 토글 차단 — Sonnet 자동 fallback + 가입 안내.
+      // backend (chat.ts) 가 chat-style endpoint 한정으로 게스트+Opus 시 GUEST_MODEL_BLOCKED 반환.
+      // 분석/추출 endpoint 에선 게스트도 Opus 통과 (이 분기 도달 X).
+      if (response.status === 403 && parsed.code === 'GUEST_MODEL_BLOCKED') {
+        if (state.chatMessages[state.chatMessages.length - 1]?.typing) state.chatMessages.pop();
+        state.preferences.useOpus = false;
+        if (typeof updateChatModeBtn === 'function') updateChatModeBtn();
+        saveState(); renderChat();
+        showToast('🦉 Opus 깊은 대화는 가입 후 Premium 에서');
+        if (typeof showGuestConversionModal === 'function') {
+          setTimeout(() => showGuestConversionModal({ reason: 'opus' }), 700);
         }
         return;
       }

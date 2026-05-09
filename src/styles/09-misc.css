@@ -10747,6 +10747,15 @@
     display: flex; gap: 8px;
     margin-top: 10px;
   }
+  /* 사용자 명시 2026-05-09: '다 봤어' 카드 — 큐 비어있을 때 source 자리 유지 */
+  .rc-newview-done {
+    text-align: center; padding: 18px 4px 12px;
+  }
+  .rc-newview-done .rc-body-copy {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px; color: var(--text-soft);
+    opacity: 0.85;
+  }
 
   /* ============================================================ */
   /* Source 4 — Quiz */
