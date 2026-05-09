@@ -11127,6 +11127,20 @@
     border-top: 1px dashed rgba(255,255,255,0.06);
   }
 
+  /* 사용자 명시 2026-05-09 (개발자 테스트, 추후 제거): 정상 운세 카드 ↻ 버튼 (cache 무시 강제 재fetch) */
+  .rc-body-horoscope { position: relative; }
+  .rc-horoscope-refresh-btn {
+    position: absolute; top: -2px; right: 0;
+    background: transparent; border: none;
+    color: var(--text-dim); opacity: 0.5;
+    font-size: 13px; cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    transition: opacity 0.15s, color 0.15s;
+    z-index: 2;
+  }
+  .rc-horoscope-refresh-btn:hover { opacity: 1; color: var(--accent); }
+
   /* 사용자 요청 2026-05-09: 운세 fetch 실패 카드 — 원인 + 다시시도 버튼 */
   .rc-horoscope-fail-reason {
     font-size: 11px; color: var(--text-dim);
@@ -28745,8 +28759,9 @@ function skipZodiacOnboarding() {
 // 사용자 보고 2026-05-09: client 가 horoscope-app-api.vercel.app 직접 호출 시 'Failed to fetch'
 // (CORS 의심). cloudflare worker proxy 통해 동일 origin 우회 + KV 6h cache.
 // =============================================================================
-async function _rcFetchHoroscopeApi(zodiac) {
-  const url = `/api/horoscope?sign=${encodeURIComponent(zodiac)}`;
+async function _rcFetchHoroscopeApi(zodiac, opts = {}) {
+  const noCache = !!opts.noCache;
+  const url = `/api/horoscope?sign=${encodeURIComponent(zodiac)}${noCache ? '&nocache=1' : ''}`;
   let resp;
   try {
     resp = await fetch(url, { method: 'GET' });
@@ -28837,7 +28852,7 @@ ${rawEnglish}
 let _rcHoroscopeFetchFailedDay = null; // 'YYYY-MM-DD' = 그 날 fetch 실패 (다음 4AM cutoff 까지 차단)
 let _rcHoroscopeFetchFailedReason = null; // 마지막 실패 이유 (e.message)
 
-async function _rcStartHoroscopeFetch(zodiac) {
+async function _rcStartHoroscopeFetch(zodiac, opts = {}) {
   if (_rcHoroscopeFetchInflight) return;
   const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : null;
   // 같은 날 이미 실패 = 재시도 X (다음 cutoff 까지). retryHoroscopeFetch 안에서 명시적 reset 됨.
@@ -28847,7 +28862,7 @@ async function _rcStartHoroscopeFetch(zodiac) {
     if (typeof _canAI !== 'function' || !_canAI()) {
       throw new Error('AI 호출 권한 없음 (로그인 필요)');
     }
-    const raw = await _rcFetchHoroscopeApi(zodiac);
+    const raw = await _rcFetchHoroscopeApi(zodiac, { noCache: !!opts.noCache });
     if (!raw) throw new Error('horoscope API 빈 응답');
     const friendly = await _rcCallHoroscopeHaiku(raw, zodiac);
     if (!friendly) throw new Error('Haiku 변환 빈 응답');
@@ -28881,6 +28896,26 @@ function retryHoroscopeFetch() {
   // 즉시 로딩 카드 표시 (sessionOrder 안 source 갱신)
   _rcUpdateHoroscopeInSession();
   _rcStartHoroscopeFetch(z);
+}
+
+// 사용자 명시 2026-05-09 (개발자 테스트, 추후 제거): 정상 운세 카드의 ↻ 버튼 — stash + KV cache 둘 다 무시 강제 재fetch.
+function forceRefreshHoroscope() {
+  const z = state.preferences && state.preferences.userZodiac;
+  if (!z) return;
+  if (_rcHoroscopeFetchInflight) return;
+  _rcHoroscopeFetchFailedDay = null;
+  _rcHoroscopeFetchFailedReason = null;
+  // 클라 stash 무효화
+  const r = _ensureRotatingCardState();
+  r.lastHoroscopeFetchDay = null;
+  r.lastHoroscopeContent = null;
+  r.lastHoroscopeLucky = null;
+  r.lastHoroscopeShownDate = null;
+  if (typeof saveState === 'function') saveState();
+  // 즉시 로딩 카드
+  _rcUpdateHoroscopeInSession();
+  // backend KV cache 도 우회
+  _rcStartHoroscopeFetch(z, { noCache: true });
 }
 
 function _rcUpdateHoroscopeInSession() {
@@ -28972,8 +29007,11 @@ function _rcRenderHoroscopeCard(zodiac, content, lucky) {
   const z = _rcZodiacInfo(zodiac);
   const zLabel = z ? `${z.symbol} ${z.label}` : '';
   const luckyLine = lucky ? `<div class="rc-horoscope-lucky">행운: ${escapeHtml(lucky)}</div>` : '';
+  // 사용자 명시 2026-05-09 (개발자 테스트, 추후 제거): ↻ 강제 재fetch 버튼 (cache 무시).
+  const refreshBtn = `<button class="rc-horoscope-refresh-btn" type="button" onclick="event.stopPropagation(); forceRefreshHoroscope()" title="강제 재시도 (개발자)" aria-label="다시">↻</button>`;
   const bodyHtml = `
     <div class="rc-body-horoscope">
+      ${refreshBtn}
       <div class="rc-body-headline">고동의 운세</div>
       ${zLabel ? `<div class="rc-horoscope-zodiac">${escapeHtml(zLabel)}</div>` : ''}
       <div class="rc-horoscope-text">${escapeHtml(content)}</div>

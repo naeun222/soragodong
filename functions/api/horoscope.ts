@@ -37,9 +37,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // 사용자 보고 2026-05-09 ultrathink: API 응답 형식 변경 발견 — 옛 'horoscope_data' → 신 'horoscope'.
   // KV cache key = v2 (옛 빈 응답 cache 무효화). backend 가 normalize 해서 client 는 변경 X.
+  // 사용자 명시 2026-05-09 (개발자 테스트): nocache=1 파라미터 → KV lookup + put skip (개발자 테스트 후 제거 예정).
+  const noCache = url.searchParams.get('nocache') === '1';
   const dateKey = todayKey();
   const cacheKey = `horoscope:v2:${dateKey}:${sign}`;
-  if (context.env.GUEST_KV) {
+  if (!noCache && context.env.GUEST_KV) {
     try {
       const cached = await context.env.GUEST_KV.get(cacheKey);
       if (cached) {
@@ -111,8 +113,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   };
   const normalizedBody = JSON.stringify(normalized);
 
-  // KV stash (best-effort, fail silent)
-  if (context.env.GUEST_KV) {
+  // KV stash (best-effort, fail silent). 사용자 명시 2026-05-09: nocache=1 시 stash skip.
+  if (!noCache && context.env.GUEST_KV) {
     try {
       await context.env.GUEST_KV.put(cacheKey, normalizedBody, { expirationTtl: 6 * 3600 });
     } catch {}

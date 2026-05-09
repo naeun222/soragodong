@@ -11014,6 +11014,20 @@
     border-top: 1px dashed rgba(255,255,255,0.06);
   }
 
+  /* 사용자 명시 2026-05-09 (개발자 테스트, 추후 제거): 정상 운세 카드 ↻ 버튼 (cache 무시 강제 재fetch) */
+  .rc-body-horoscope { position: relative; }
+  .rc-horoscope-refresh-btn {
+    position: absolute; top: -2px; right: 0;
+    background: transparent; border: none;
+    color: var(--text-dim); opacity: 0.5;
+    font-size: 13px; cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    transition: opacity 0.15s, color 0.15s;
+    z-index: 2;
+  }
+  .rc-horoscope-refresh-btn:hover { opacity: 1; color: var(--accent); }
+
   /* 사용자 요청 2026-05-09: 운세 fetch 실패 카드 — 원인 + 다시시도 버튼 */
   .rc-horoscope-fail-reason {
     font-size: 11px; color: var(--text-dim);
