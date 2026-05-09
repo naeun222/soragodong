@@ -28040,26 +28040,49 @@ function _rcSource4Quiz() {
   const r = _ensureRotatingCardState();
   const todayK = _rcQuizCutoffKey();
 
-  // 4AM cutoff — 새 날 진입 시 quizProgress 리셋 (새 5 pick)
+  // 4AM cutoff — 새 날 진입 시 quizProgress 리셋 (새 5 pick 가능)
   if (r.quizDay !== todayK) {
     r.quizDay = todayK;
     r.quizProgress = null;
     r.quizScoreBefore = null;
   }
 
-  // 진행 stash 있으면 그대로
+  // 사용자 명시 2026-05-09: Quiz 5개 단위로 진행. 한 세션 5개 다 풀면 다음 새 세션 (홈 진입) 에서 새 5개 pick.
+  // 진행 stash 있고 끝났으면 → 새 세션이면 새 pick 으로 교체, 같은 세션이면 끝 화면 그대로.
   if (r.quizProgress && Array.isArray(r.quizProgress.questionIds) && r.quizProgress.questionIds.length > 0) {
+    const p = r.quizProgress;
+    const isDone = (p.currentIdx || 0) >= p.questionIds.length;
+    if (isDone) {
+      // 같은 세션 안 = 끝 화면 그대로 (사용자가 [좋아] 누르기 전)
+      if (_rcSessionConfirmed.has('quiz')) {
+        return _rcRenderQuizFromProgress();
+      }
+      // 새 세션 진입 = 남은 pool ≥ 5 면 새 pick, 아니면 source 비활성 (모아두기)
+      const newPool = _rcQuizCollectPool();
+      if (newPool.length < 5) return { id: 'quiz', available: false };
+      const shuffled = newPool.slice().sort(() => Math.random() - 0.5);
+      const picked = shuffled.slice(0, 5);
+      r.quizProgress = {
+        questionIds: picked.map(it => it.id),
+        currentIdx: 0,
+        answers: {},
+      };
+      r.quizScoreBefore = _rcQuizComputeAccuracyPct();
+      if (typeof saveState === 'function') saveState();
+      return _rcRenderQuizFromProgress();
+    }
+    // 진행 중 (다 답하지 않음) — 그대로 이어서
     return _rcRenderQuizFromProgress();
   }
 
-  // 신규 — pool 비어있으면 source 비활성 (가드 1: 신규 user / 가드 4: 가용 항목 0)
+  // 신규 — 사용자 명시 2026-05-09: 5개 단위. pool 5개 미만이면 source 비활성 (5개 모일 때까지 대기).
   const pool = _rcQuizCollectPool();
-  if (pool.length === 0) return { id: 'quiz', available: false };
+  if (pool.length < 5) return { id: 'quiz', available: false };
 
-  // 5 random pick (있는 만큼만)
+  // 5 random pick
   const shuffled = pool.slice().sort(() => Math.random() - 0.5);
-  const picked = shuffled.slice(0, Math.min(5, shuffled.length));
-  const questionIds = picked.map(p => p.id);
+  const picked = shuffled.slice(0, 5);
+  const questionIds = picked.map(it => it.id);
   // 점수 변화 표시용 — 시작 % stash
   r.quizScoreBefore = _rcQuizComputeAccuracyPct();
   r.quizProgress = {
