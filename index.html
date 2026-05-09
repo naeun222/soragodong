@@ -27980,10 +27980,9 @@ function _rcRenderShell(orderedSources, currentIdx) {
     </div>
   ` : '';
 
-  // godong 일러스트 — 진주 음악/사진/영상 카드 시는 thumbnail 과 충돌 가능 → hide.
-  // 진주 isEmpty (CTA) / 진주 텍스트 / 다른 source 시는 우상단 표시.
-  const isMusicOrMediaPearl = cur.id === 'pearl' && cur.pick && (cur.pick.track || cur.pick.video || cur.pick.photo);
-  const showGodong = !isMusicOrMediaPearl;
+  // 사용자 명시 2026-05-09: 진주 source (텍스트 / 음악 / 사진 / 영상 / isEmpty CTA) = godong 표정 hide.
+  // 진주 자체가 surface (큐레이션 + '진주 추가하기' CTA) 라 godong 표정 의미 X.
+  const showGodong = cur.id !== 'pearl';
   const godongHtml = showGodong ? `<div class="rc-godong" aria-hidden="true">${_rcGodongSvg(cur.id)}</div>` : '';
 
   return `
