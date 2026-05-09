@@ -27,15 +27,8 @@ async function extractChapterCaseAnalysis(messages, opts) {
 
     const touched = _processExtractChapterAnalysis(analysis);
 
-    // 사용자 명시 2026-05-09: 추출 성공 시 흡수된 simulationArchive entries _extracted=true mark — 다음 추출 중복 X.
-    // analysis 실패 (parse fail / API fail) 시는 mark X — 데이터 손실 회피 (다음 시도에 다시 흡수).
-    if (Array.isArray(state.simulationArchive)) {
-      let simTouched = false;
-      state.simulationArchive.forEach(e => {
-        if (!e._extracted) { e._extracted = true; simTouched = true; }
-      });
-      if (simTouched) saveState();
-    }
+    // 사용자 명시 2026-05-09 (재정정): 시뮬 통합 추출 폐기 — 시뮬 _extracted mark 부분 제거.
+    // 시뮬은 분리 path (extractFromSimulationArchive) 만 처리.
 
     if (touched) {
       saveState();

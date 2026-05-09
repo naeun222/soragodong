@@ -566,9 +566,10 @@ function rcSimSkipAddNote() {
   _rcSimUpdateInSession();
 }
 
-// 사용자 명시 2026-05-09: 시뮬 결과 → state.simulationArchive 에 stash.
-// 챕터 추출 (06-extract-insight.js) 가 이 array 의 최근 N개 흡수해서 cf 후보 자연 추출.
-// state.archive (일반 깨달음 저장소) 와 분리 — 시뮬은 가상 시나리오라 별도 격리.
+// 사용자 명시 2026-05-09 (재정정): 시뮬 결과 → state.simulationArchive 에 stash + 분리 추출 path.
+// cf 5차원 (problems / mechanisms 등) 직접 갱신 X — 시뮬은 가상 시나리오라 진지한 자기 모델 침투 회피.
+// traits/values/patterns 만 약하게 추출 (confidence ≥ 0.7, user_verified=false). Quiz 컨펌 거쳐야 main pool.
+// state.archive (일반 깨달음 저장소) 와 분리 — 격리 보존.
 function _rcSimSaveToArchive(cur) {
   if (!cur || !cur.userVerdict) return;
   if (!Array.isArray(state.simulationArchive)) state.simulationArchive = [];
@@ -590,12 +591,179 @@ function _rcSimSaveToArchive(cur) {
     diffNote: cur.diffNote || null,
     body: lines.join('\n'),
     savedAt: new Date().toISOString(),
-    _extracted: false,  // extract-insight 가 흡수 후 true 로 mark — 다음 추출에 중복 X.
+    _extracted: false,
   });
-  // 최근 30개만 유지 (오래된 거 cf 추출에 영향 작음)
+  // 최근 30개만 유지
   if (state.simulationArchive.length > 30) {
     state.simulationArchive = state.simulationArchive.slice(0, 30);
   }
+  // 사용자 명시 2026-05-09: _extracted=false 누적 5+ 면 background 분리 추출 trigger.
+  const pending = state.simulationArchive.filter(e => !e._extracted);
+  if (pending.length >= 5 && typeof extractFromSimulationArchive === 'function') {
+    extractFromSimulationArchive().catch(e => console.warn('[sim extract]', e));
+  }
+}
+
+// 사용자 명시 2026-05-09: 시뮬 전용 분리 추출 — 가상 시나리오 명시 + 보수적 confidence + cf 5차원 X.
+// trigger: _rcSimSaveToArchive 안 누적 5+ 시 background 호출. fail silent.
+async function extractFromSimulationArchive() {
+  if (!_canAI()) return;
+  if (window._onbTutorialMode) return;
+  if (state.preferences && state.preferences.testerMode) return;
+
+  const pending = (state.simulationArchive || []).filter(e => !e._extracted);
+  if (pending.length < 5) return;
+  // 최근 10개까지만 한 호출에
+  const entries = pending.slice(0, 10);
+
+  const prompt = `사용자가 일상 가상 시나리오에 어떻게 반응할지 답한 시뮬 데이터.
+가상 시나리오 — 깊은 자기 인식 데이터 X. 가벼운 행동 패턴 단서로만 활용.
+
+[규칙 — 매우 보수적]
+- 강한 신호 (3+ 시뮬에서 일관된 패턴) 만 추출.
+- confidence < 0.7 항목 빈 배열 (보수적 임계값 — 챕터 추출 0.6 보다 ↑).
+- 가상 시나리오라 절대적 자기 모델 X — 약한 단서로만 활용.
+- 진단명 / 의료 용어 X.
+- description 끝에 사용자 실제 답 1줄 인용 (예: 'description: 야행성 — "야행성이라 일단 호응부터 하고"').
+
+[추출 가능 항목 — 행동 성향 / 가치 / 반응 패턴 만]
+- new_traits: 행동 성향 (예: 야행성, 즉흥성, 회피)
+- new_values: 가치 (예: 자율, 연결)
+- new_patterns: 반응 패턴 (예: 거절 후 부채감)
+
+[추출 X 항목 — cf 5차원 절대 X]
+- problems / mechanisms / strengths / goals / growth 카테고리 출력 X. 시뮬 데이터로 진지한 자기 모델 갱신 X.
+
+[시뮬 데이터 — 최근 ${entries.length}개]
+${entries.map((e, i) => `[시뮬 ${i + 1}] (${e.userVerdict})\n${e.body}`).join('\n\n')}
+
+[출력 — JSON만, 마크다운 X]
+{
+  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
+  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}]
+}`;
+
+  try {
+    const resp = await callAnthropic({
+      _endpoint: 'extract_chapter',
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const raw = data?.content?.[0]?.text || '';
+    const jm = raw.match(/\{[\s\S]*\}/);
+    if (!jm) return;
+    let analysis;
+    try { analysis = JSON.parse(jm[0]); } catch { return; }
+    // cf 5차원 절대 추출 X — case_formulation_update 필드 무시 (LLM 이 실수로 출력해도)
+    delete analysis.case_formulation_update;
+    delete analysis.deep_profile_update;
+
+    const touched = _processSimulationAnalysis(analysis);
+
+    // 추출된 entries _extracted=true mark
+    state.simulationArchive.forEach(e => {
+      const m = entries.find(x => x.id === e.id);
+      if (m) e._extracted = true;
+    });
+
+    if (touched || true) saveState();
+    if (typeof renderModel === 'function') {
+      try { renderModel(); } catch {}
+    }
+  } catch (e) {
+    console.warn('[extractFromSimulationArchive]', e);
+  }
+}
+
+// 시뮬 분리 추출 결과 처리 — traits/values/patterns 만, confidence ≥ 0.7, user_verified=false, extractedFrom='simulation'.
+// cf 5차원 X. 진지한 자기 모델 시뮬 신호 침투 회피.
+function _processSimulationAnalysis(analysis) {
+  if (!analysis || typeof analysis !== 'object') return false;
+  let touched = false;
+  const THRESHOLD = 0.7; // 챕터 추출 0.6 보다 보수적
+
+  if (Array.isArray(analysis.new_traits)) {
+    analysis.new_traits.forEach(t => {
+      if (!t || !t.name) return;
+      const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
+      const exists = (state.traits || []).find(e => similarText(e.name, t.name));
+      if (!exists) {
+        if (conf < THRESHOLD) return;
+        state.traits = state.traits || [];
+        state.traits.push({
+          id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          name: t.name.trim(), description: (t.description || '').trim(),
+          quiz_question: null,
+          confidence: conf, user_verified: false, evidence_count: 1,
+          extractedFrom: 'simulation',
+          created_at: new Date().toISOString(),
+        });
+        touched = true;
+      } else {
+        exists.evidence_count = (exists.evidence_count || 1) + 1;
+        exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.05);
+        touched = true;
+      }
+    });
+  }
+  if (Array.isArray(analysis.new_values)) {
+    analysis.new_values.forEach(v => {
+      if (!v || !v.name) return;
+      const conf = typeof v.confidence === 'number' ? v.confidence : 0.5;
+      const exists = (state.values || []).find(e => similarText(e.name, v.name));
+      if (!exists) {
+        if (conf < THRESHOLD) return;
+        state.values = state.values || [];
+        state.values.push({
+          id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          name: v.name.trim(), description: (v.description || '').trim(),
+          quiz_question: null,
+          confidence: conf, user_verified: false, evidence_count: 1,
+          sdt_need: v.sdt_need || null,
+          extractedFrom: 'simulation',
+          created_at: new Date().toISOString(),
+        });
+        touched = true;
+      } else {
+        exists.evidence_count = (exists.evidence_count || 1) + 1;
+        exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.05);
+        touched = true;
+      }
+    });
+  }
+  if (Array.isArray(analysis.new_patterns)) {
+    analysis.new_patterns.forEach(p => {
+      if (!p || !p.name) return;
+      const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
+      const exists = (state.patterns || []).find(e => similarText(e.name, p.name));
+      if (!exists) {
+        if (conf < THRESHOLD) return;
+        state.patterns = state.patterns || [];
+        state.patterns.push({
+          id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          name: p.name.trim(), description: (p.description || '').trim(),
+          trigger: (p.trigger || '').trim(), sequence: (p.sequence || '').trim(),
+          quiz_question: null,
+          confidence: conf, user_verified: false, evidence_count: 1,
+          extractedFrom: 'simulation',
+          created_at: new Date().toISOString(),
+        });
+        touched = true;
+      } else {
+        exists.evidence_count = (exists.evidence_count || 1) + 1;
+        exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.05);
+        touched = true;
+      }
+    });
+  }
+  if (touched && typeof _markNavBatchUpdated === 'function') {
+    _markNavBatchUpdated(['model']);
+  }
+  return touched;
 }
 
 function rcSimReset() {

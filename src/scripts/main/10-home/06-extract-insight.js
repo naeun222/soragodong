@@ -178,16 +178,9 @@ function _buildExtractChapterPrompt(messages) {
     return `${role}: ${content}`;
   }).join('\n\n');
 
-  // 사용자 명시 2026-05-09: 시뮬 결과 (state.simulationArchive) 도 챕터 추출에 흡수.
-  // 가상 시나리오 + 사용자 답 = 일상적이지만 자기 인식 단서 (행동 패턴 / strengths) 포함 가능.
-  // _extracted=false 인 항목만 사용 — 추출 후 mark 해서 중복 X.
-  const simEntries = (state.simulationArchive || []).filter(e => !e._extracted).slice(0, 10);
-  const simSection = simEntries.length > 0
-    ? '\n\n[추가 — 사용자가 답한 가상 시나리오 시뮬 결과]\n' +
-      '(상상 시뮬 게임에서 사용자가 가상 시나리오에 어떻게 반응할지 답했음. 자기 행동 패턴 단서로 활용 가능.)\n\n' +
-      simEntries.map((e, i) => `[시뮬 ${i + 1}]\n${e.body}`).join('\n\n')
-    : '';
-
+  // 사용자 명시 2026-05-09 (재정정): 시뮬 통합 추출 폐기 — 시뮬 분리 path (extractFromSimulationArchive) 로 이전.
+  // 이유: cf 5차원 (problems / mechanisms 등) = 진지한 자기 모델. 시뮬 가상 시나리오 신호 침투 회피.
+  // 시뮬은 traits/values/patterns 만 약하게 (confidence ≥ 0.7). cf 5차원 직접 갱신 X.
   return `사용자가 AI 친구 "소라고동"과 한 챕터(연속 대화 묶음)에서 나눈 대화 전체.
 챕터 전반에 걸쳐 발견된 사용자 자기 인식 / 패턴 / 가치관 / 문제·강점·목표를 JSON으로 추출.
 강한 신호 (명시적 자기 인식, 행동·감정 증거 동반)만. 추측·일반론 X. 근거 약하면 빈 배열.
@@ -199,7 +192,7 @@ function _buildExtractChapterPrompt(messages) {
 - 각 description 끝에 사용자 실제 발화 1줄 인용 (예: 'description: 거절 후 부채감 — "거절했더니 미안한 마음이 며칠 가더라"').
 
 [대화 원문]
-${chatLog.slice(0, 8000)}${simSection}
+${chatLog.slice(0, 8000)}
 
 [출력 — JSON만]
 {
