@@ -10427,8 +10427,13 @@
   }
   .rc-dot-i.is-active { background: var(--accent); transform: scale(1.25); }
 
-  .rc-body-tap { cursor: pointer; }
+  .rc-body-tap { cursor: pointer; animation: rc-body-fade-in 0.4s ease-out; }
   .rc-body-tap .library-hero { margin: 0; }   /* 회전 카드 안 진주 hero — outer 통합 */
+  /* 사용자 명시 2026-05-09 (Phase 5 spec 4-9): 카드 진입 시 미세 fade-in (0.4s, subtle) */
+  @keyframes rc-body-fade-in {
+    from { opacity: 0.45; transform: translateY(3px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 
   /* Source 2 어제 비교 */
   .rc-body-yesterday {
@@ -10475,13 +10480,23 @@
     padding: 4px 2px 6px;
   }
   .rc-body-quote {
+    position: relative;
     font-family: 'Gowun Batang', serif;
     font-size: 14.5px; line-height: 1.65;
     color: var(--text);
-    padding: 6px 0 4px;
+    padding: 6px 0 4px 14px;
     border-left: 2px solid rgba(212,167,106,0.4);
-    padding-left: 10px;
     margin: 4px 0 6px;
+  }
+  /* 사용자 명시 2026-05-09 (Phase 5 spec 4-7): 회상 인용 큰 따옴표 mark — subtle accent */
+  .rc-body-quote::before {
+    content: '"';
+    position: absolute;
+    left: 6px; top: -8px;
+    font-size: 30px; line-height: 1;
+    color: var(--accent); opacity: 0.28;
+    font-family: serif;
+    pointer-events: none;
   }
   .rc-body-quote-by {
     font-size: 10.5px; color: var(--text-dim); opacity: 0.75;
