@@ -209,6 +209,15 @@ ${rawEnglish}
       if (attempt >= 2) throw new Error('운세 본문 너무 짧음');
       continue;
     }
+    // 사용자 명시 2026-05-09 (재정정): lucky 누락 시 retry — 모달에 표시 의도라 빈 응답 회피.
+    if (!luckyItem || !luckyColor) {
+      attempt++;
+      if (attempt >= 2) {
+        // 2회 retry 후도 lucky 빈 = Haiku 가 일관 누락 — 그래도 horoscope text 는 사용 (lucky 만 없음).
+        return { text, luckyItem: luckyItem || '', luckyColor: luckyColor || '' };
+      }
+      continue;
+    }
     if (sycophancy.test(text) || diagnosis.test(text) || banGyeol.test(text) || banJondaetmal.test(text)) {
       attempt++;
       if (attempt >= 2) throw new Error('tone verify 실패 (존댓말 / sycophancy / 진단명 / 결 어휘)');
@@ -433,11 +442,13 @@ function openHoroscopeModal() {
   const zInfo = _rcZodiacInfo(z);
   const zLabel = zInfo ? `${zInfo.symbol} ${zInfo.label}` : '';
   const lucky = r.lastHoroscopeLucky;
+  // 사용자 명시 2026-05-09 (재정정): 형식 = '행운 아이템: ~~ \n 행운의 색: ~~' 단어 인라인.
+  // 옛 = label/value split (양 끝). 신 = inline label: value 두 줄.
   let luckyHtml = '';
   if (lucky && (lucky.item || lucky.color)) {
     const lines = [];
-    if (lucky.item) lines.push(`<div class="rc-horoscope-modal-lucky-row"><span class="rc-horoscope-modal-lucky-label">행운의 아이템</span><span class="rc-horoscope-modal-lucky-value">${escapeHtml(lucky.item)}</span></div>`);
-    if (lucky.color) lines.push(`<div class="rc-horoscope-modal-lucky-row"><span class="rc-horoscope-modal-lucky-label">행운의 색</span><span class="rc-horoscope-modal-lucky-value">${escapeHtml(lucky.color)}</span></div>`);
+    if (lucky.item) lines.push(`<div class="rc-horoscope-modal-lucky-line">행운 아이템: <span class="rc-horoscope-modal-lucky-value">${escapeHtml(lucky.item)}</span></div>`);
+    if (lucky.color) lines.push(`<div class="rc-horoscope-modal-lucky-line">행운의 색: <span class="rc-horoscope-modal-lucky-value">${escapeHtml(lucky.color)}</span></div>`);
     luckyHtml = `<div class="rc-horoscope-modal-lucky">${lines.join('')}</div>`;
   }
 

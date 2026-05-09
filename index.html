@@ -11145,6 +11145,12 @@
     display: flex; justify-content: space-between; align-items: center;
     font-size: 13px;
   }
+  /* 사용자 명시 2026-05-09 (재정정): inline 형식 — '행운 아이템: ~~' 한 줄. value 만 accent 강조. */
+  .rc-horoscope-modal-lucky-line {
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.7;
+  }
   .rc-horoscope-modal-lucky-label {
     color: var(--text-soft); opacity: 0.78;
   }
@@ -28914,6 +28920,15 @@ ${rawEnglish}
       if (attempt >= 2) throw new Error('운세 본문 너무 짧음');
       continue;
     }
+    // 사용자 명시 2026-05-09 (재정정): lucky 누락 시 retry — 모달에 표시 의도라 빈 응답 회피.
+    if (!luckyItem || !luckyColor) {
+      attempt++;
+      if (attempt >= 2) {
+        // 2회 retry 후도 lucky 빈 = Haiku 가 일관 누락 — 그래도 horoscope text 는 사용 (lucky 만 없음).
+        return { text, luckyItem: luckyItem || '', luckyColor: luckyColor || '' };
+      }
+      continue;
+    }
     if (sycophancy.test(text) || diagnosis.test(text) || banGyeol.test(text) || banJondaetmal.test(text)) {
       attempt++;
       if (attempt >= 2) throw new Error('tone verify 실패 (존댓말 / sycophancy / 진단명 / 결 어휘)');
@@ -29138,11 +29153,13 @@ function openHoroscopeModal() {
   const zInfo = _rcZodiacInfo(z);
   const zLabel = zInfo ? `${zInfo.symbol} ${zInfo.label}` : '';
   const lucky = r.lastHoroscopeLucky;
+  // 사용자 명시 2026-05-09 (재정정): 형식 = '행운 아이템: ~~ \n 행운의 색: ~~' 단어 인라인.
+  // 옛 = label/value split (양 끝). 신 = inline label: value 두 줄.
   let luckyHtml = '';
   if (lucky && (lucky.item || lucky.color)) {
     const lines = [];
-    if (lucky.item) lines.push(`<div class="rc-horoscope-modal-lucky-row"><span class="rc-horoscope-modal-lucky-label">행운의 아이템</span><span class="rc-horoscope-modal-lucky-value">${escapeHtml(lucky.item)}</span></div>`);
-    if (lucky.color) lines.push(`<div class="rc-horoscope-modal-lucky-row"><span class="rc-horoscope-modal-lucky-label">행운의 색</span><span class="rc-horoscope-modal-lucky-value">${escapeHtml(lucky.color)}</span></div>`);
+    if (lucky.item) lines.push(`<div class="rc-horoscope-modal-lucky-line">행운 아이템: <span class="rc-horoscope-modal-lucky-value">${escapeHtml(lucky.item)}</span></div>`);
+    if (lucky.color) lines.push(`<div class="rc-horoscope-modal-lucky-line">행운의 색: <span class="rc-horoscope-modal-lucky-value">${escapeHtml(lucky.color)}</span></div>`);
     luckyHtml = `<div class="rc-horoscope-modal-lucky">${lines.join('')}</div>`;
   }
 
@@ -51991,6 +52008,7 @@ async function addPearl() {
   let videoData = null;
   let videoThumb = null;
   let videoHasAudio = null;  // 사용자 명시 2026-05-02 ultrathink: 무음 영상 시각 안내용 메타.
+  let videoAudioMeta = null;  // 사용자 보고 2026-05-09: audio chunks/codec/sr/ch — 진주 view 모달 + push toast 에 진단 표시.
   if (['음식', '장소', '순간'].includes(category)) {
     const mediaChoice = await showOptionsModal({
       title: '미디어 첨부 (선택)',
@@ -52062,20 +52080,15 @@ async function addPearl() {
                     videoData = dataUrl;
                     videoThumb = result.thumbnail;
                     videoHasAudio = !!result.hasAudio;
-                    // 사용자 보고 2026-05-09: PWA 모바일에서 console 못 봄 → 무음 원인 modal 로 노출 (compress 가 reason / detail 동봉).
-                    // 사용자 보고 2026-05-09 (재정정): audioMeta 도 항상 modal 노출 — hasAudio=true 인데 무음 들리는 케이스 진단
-                    // (chunks=0 silent fail / codec 미스매치 / muxer add fail 등 분리).
-                    const _meta = result.audioMeta || {};
-                    const _metaLine = `chunks=${_meta.chunksEmitted ?? '?'} codec=${_meta.codec || '?'} sr=${_meta.sr || '?'} ch=${_meta.ch || '?'}`;
+                    videoAudioMeta = result.audioMeta || null;
+                    // 사용자 보고 2026-05-09 (재재정정): audio meta toast 덮임 (Safari PWA) → audio meta 진주에 stash + 진주 추가 toast 에 합침.
                     if (!videoHasAudio && typeof showErrorDetailModal === 'function') {
                       const reason = result.audioFailReason || '알 수 없는 원인';
                       const detail = result.audioFailDetail || '';
+                      const _meta = result.audioMeta || {};
+                      const _metaLine = `chunks=${_meta.chunksEmitted ?? '?'} codec=${_meta.codec || '?'} sr=${_meta.sr || '?'} ch=${_meta.ch || '?'}`;
                       showErrorDetailModal('🔇 영상 무음으로 저장됨',
                         `이 영상은 소리 없이 보관돼.\n\n[원인]\n${reason}\n\n[audio meta]\n${_metaLine}\n\n[추가 정보]\n${detail}`);
-                    } else if (videoHasAudio && typeof showToast === 'function') {
-                      // 사용자 보고 2026-05-09 (추가 진단): 'hasAudio=true 인데 무음 들림' 케이스 — 진주 추가 직후 toast 로 audio meta 노출.
-                      // 사용자가 PWA console 못 봐도 chunks 수 / codec 즉시 확인 가능. 정상 케이스도 toast 로 확인.
-                      showToast('🎵 audio: ' + _metaLine);
                     }
                   }
                 } catch (compressErr) {
@@ -52110,12 +52123,20 @@ async function addPearl() {
     ...(videoThumb ? { videoThumbnail: videoThumb } : {}),
     // 사용자 명시 2026-05-02 ultrathink: 무음 영상 메타 (옛 진주 = undefined / 새 진주 = true|false).
     ...(videoHasAudio !== null ? { videoHasAudio } : {}),
+    // 사용자 보고 2026-05-09: audio chunks/codec/sr/ch 진주 stash — view 모달 진단 표시.
+    ...(videoAudioMeta ? { videoAudioMeta } : {}),
     createdAt: new Date().toISOString(),
     type: 'pearl'
   });
   saveState();
   renderLensPearls();
-  showToast('진주 추가됨 💎');
+  // 사용자 보고 2026-05-09 (재재정정): 진주 추가 toast 에 audio meta 합침 — Safari PWA 에서 옛 hasAudio toast 가 덮였음.
+  // videoAudioMeta 있을 때 (영상 진주) 만 audio info append.
+  let _pearlToast = '진주 추가됨 💎';
+  if (videoAudioMeta) {
+    _pearlToast += ` · 🎵 chunks=${videoAudioMeta.chunksEmitted ?? '?'} codec=${videoAudioMeta.codec || '?'}`;
+  }
+  showToast(_pearlToast);
 }
 
 // 사용자 요청 2026-04-29: 진주 클릭 = 큰 보기 모달. 수정/삭제 등은 더보기 ⋮ 메뉴.
@@ -52165,11 +52186,16 @@ function showPearlViewModal(pearl) {
     // 사용자 명시 2026-05-02 ultrathink: 무음 영상 메타 안내.
     // pearl.videoHasAudio === false → 새 진주 의 audio encode fail (또는 source audio X) 확정 — 명시.
     // pearl.videoHasAudio === undefined → 옛 진주 (audio fix 전 encoded) — 무음 가능 안내.
+    // 사용자 보고 2026-05-09: audio meta (chunks/codec/sr/ch) 도 진주 view 에 영구 표시 — PWA console 못 봐도 진단 가능.
     let mutedNotice = '';
     if (pearl.videoHasAudio === false) {
       mutedNotice = '<div style="font-size:11px; color:var(--text-soft); margin-top:6px; opacity:0.75;">🔇 무음 영상 — 인코딩 시점 소리 추출 X</div>';
     } else if (pearl.videoHasAudio === undefined) {
       mutedNotice = '<div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; opacity:0.6;">🔇 소리 안 들리면 옛 진주야 — 새로 만든 진주는 소리 같이 저장돼</div>';
+    }
+    if (pearl.videoAudioMeta) {
+      const m = pearl.videoAudioMeta;
+      mutedNotice += `<div style="font-size:10.5px; color:var(--text-dim); margin-top:4px; opacity:0.6; font-family:monospace;">audio: chunks=${m.chunksEmitted ?? '?'} · codec=${escapeHtml(m.codec || '?')} · sr=${m.sr ?? '?'} · ch=${m.ch ?? '?'}</div>`;
     }
     // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
     const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(pearl.content || '') : (pearl.content || '');

@@ -11032,6 +11032,12 @@
     display: flex; justify-content: space-between; align-items: center;
     font-size: 13px;
   }
+  /* 사용자 명시 2026-05-09 (재정정): inline 형식 — '행운 아이템: ~~' 한 줄. value 만 accent 강조. */
+  .rc-horoscope-modal-lucky-line {
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.7;
+  }
   .rc-horoscope-modal-lucky-label {
     color: var(--text-soft); opacity: 0.78;
   }
