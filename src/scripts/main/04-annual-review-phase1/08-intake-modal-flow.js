@@ -463,7 +463,19 @@ async function maybeShowE2EESetupForNewUser() {
     // 사용자 명시 2026-05-02: dismissed flag 검사 제거 — E2EE 설정 강제 (skip X). 신규/legacy 둘 다.
   } catch {}
   if (document.getElementById('e2eeSetupOverlay')) return;
-  // 사용자 명시 2026-05-02: allowCancel: false — 신규/legacy 강제 모달 (취소 button X).
+  // 사용자 보고 2026-05-09 ultrathink: 기존 카카오 사용자 (다른 device or 브라우저 clear or logout 후 재로그인) +
+  // cloud row 평문 path 에서 setup 모달 잘못 fire 버그 fix. 기존 데이터 detect 시 skip.
+  // 진짜 신규 = 모든 array 0 → setup fire (정상). 옛 강제 권유 의도 (2026-05-02) 부분 변경 — legacy 평문 row 자동 마이그 X.
+  const _hasExistingData = (Array.isArray(state.entries) && state.entries.length > 0)
+    || (Array.isArray(state.chatMessages) && state.chatMessages.length > 0)
+    || (Array.isArray(state.shellCollection) && state.shellCollection.length > 0)
+    || (Array.isArray(state.topicCards) && state.topicCards.length > 0)
+    || (Array.isArray(state.missions) && state.missions.length > 0);
+  if (_hasExistingData) {
+    console.log('[E2EE setup] 기존 사용자 데이터 detect — setup 모달 skip');
+    return;
+  }
+  // 사용자 명시 2026-05-02: allowCancel: false — 신규 강제 모달 (취소 button X).
   showE2EEPasswordSetupModal({ allowCancel: false });
 }
 
