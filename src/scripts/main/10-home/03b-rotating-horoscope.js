@@ -453,6 +453,7 @@ function openHoroscopeModal() {
       <div class="rc-mini-review-body">
         <div class="rc-horoscope-modal-text">${escapeHtml(r.lastHoroscopeContent)}</div>
         ${luckyHtml}
+        <button class="rc-horoscope-modal-retry" type="button" onclick="closeHoroscopeModal(); forceRefreshHoroscope();">↻ 다시 시도</button>
       </div>
     </div>
   `;

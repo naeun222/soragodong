@@ -11151,6 +11151,24 @@
   .rc-horoscope-modal-lucky-value {
     color: var(--accent); font-weight: 500;
   }
+  /* 사용자 명시 2026-05-09: 운세 모달 안 '다시 시도' 버튼 (forceRefresh + 모달 닫음) */
+  .rc-horoscope-modal-retry {
+    margin-top: 18px;
+    width: 100%;
+    background: rgba(168,157,200,0.10);
+    border: 1px solid rgba(168,157,200,0.32);
+    color: var(--accent);
+    font-size: 13px; font-family: inherit;
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .rc-horoscope-modal-retry:hover {
+    background: rgba(168,157,200,0.18);
+    border-color: rgba(168,157,200,0.50);
+  }
+  .rc-horoscope-modal-retry:active { transform: scale(0.98); }
 
   /* 사용자 명시 2026-05-09 (개발자 테스트, 추후 제거): 정상 운세 카드 ↻ 버튼 (cache 무시 강제 재fetch) */
   .rc-body-horoscope { position: relative; }
@@ -29140,6 +29158,7 @@ function openHoroscopeModal() {
       <div class="rc-mini-review-body">
         <div class="rc-horoscope-modal-text">${escapeHtml(r.lastHoroscopeContent)}</div>
         ${luckyHtml}
+        <button class="rc-horoscope-modal-retry" type="button" onclick="closeHoroscopeModal(); forceRefreshHoroscope();">↻ 다시 시도</button>
       </div>
     </div>
   `;
