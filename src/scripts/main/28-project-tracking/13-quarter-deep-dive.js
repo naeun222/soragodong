@@ -240,8 +240,8 @@ function renderArchiveReviews() {
     const _isWeekly = r.type === 'weekly';
     const _ctaText = _isWeekly ? '▾ 펼쳐보기' : '▶ 같이 보자';
     // 사용자 명시 2026-05-11: godong-diary + weekly/monthly/quarterly/annual 리뷰 삭제 허용.
-    //   옛 mini-review (legacy) 는 보존 (분석 substrate 에 안 쓰임).
-    const _isDeletable = r.type === 'godong-diary' || r.type === 'weekly' || r.type === 'monthly' || r.type === 'quarterly' || r.type === 'annual';
+    // 사용자 명시 2026-05-11 (추가): legacy mini (고동의 옛 메모) 도 삭제 허용.
+    const _isDeletable = r.type === 'godong-diary' || r.type === 'mini' || r.type === 'weekly' || r.type === 'monthly' || r.type === 'quarterly' || r.type === 'annual';
     const _deleteBtn = _isDeletable
       ? `<button class="timeline-day-delete" type="button" onclick="event.stopPropagation(); deleteArchiveReview('${r.type}', '${r.id || ''}')" title="삭제" aria-label="삭제">×</button>`
       : '';
@@ -266,6 +266,7 @@ function deleteArchiveReview(type, id) {
   if (!type || !id) return;
   const labelMap = {
     'godong-diary': '일기',
+    'mini':         '옛 메모',  // 사용자 명시 2026-05-11: legacy 고동의 옛 메모.
     'weekly':       '주간 리뷰',
     'monthly':      '월간 리뷰',
     'quarterly':    '계절 리뷰',
@@ -273,6 +274,7 @@ function deleteArchiveReview(type, id) {
   };
   const arrMap = {
     'godong-diary': 'godongDiary',
+    'mini':         'miniReviews',  // 사용자 명시 2026-05-11.
     'weekly':       'weeklyReviews',
     'monthly':      'monthlyReviews',
     'quarterly':    'quarterlyReviews',

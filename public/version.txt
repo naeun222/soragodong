@@ -1,1 +1,1 @@
-v4.0.221-gdiary-fix-plus-toast-guard
+v4.0.222-legacy-mini-deletable
