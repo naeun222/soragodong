@@ -48,7 +48,10 @@
 // v43 (2026-05-10 ultrathink REAL ROOT CAUSE): KST timezone shift fix (toISOString = UTC 변환 → 04:00 KST = 19:00 UTC 전날 → 1일 앞당겨짐) + AI 통찰 요약 버튼 → quote 직접 DOM 교체.
 // v44 (2026-05-10): 회전 카드 weekly source click → showArchiveReviews() 으로 '리뷰 모음' 직진 + 카드 inline 펼침 / _forceWeeklyReview 가 push 후 auto:false (사용자 manual) / monthly cutoff = 이번 달 메커니즘 일관.
 // v45 (2026-05-10 메커니즘 일관 batch 14): 사용자 click 흐름 = quarterly current quarter / annual current year (자동 batch = 끝난 사이클 prev 그대로). _build* prompt 에 quarterKey/year idempotent skip 추가.
-const CACHE_NAME = 'soragodong-v4-cache-v45';
+// v46 (2026-05-11 사용자 보고): 회전 카드 godongDiary source 의 godong-sleepy.svg 가 옛 캐시 stuck.
+//   character/ 폴더 신규 디자인 = public/character/ byte-identical 로 배포됨에도 PWA cache-first 가 옛 SVG 노출.
+//   SVG 자산 변경 시 강제 invalidate.
+const CACHE_NAME = 'soragodong-v4-cache-v46';
 const PRECACHE_URLS = [
   './',
   './index.html',
