@@ -120,7 +120,7 @@ function _revokePearlVideoCache(pearlId) {
   }
 }
 
-// 사용자 명시 2026-05-10 (재정정): 자르기 기능 유지, 미리보기 (video preview / thumbnail strip) 만 제거.
-// trim modal = 손잡이 + 시간 라벨만. video element / image element 일체 X.
+// 사용자 명시 2026-05-10 (재정정): trim modal = video preview (controls) + 손잡이.
+// 썸네일 strip 8장 + "미리보기 만드는 중..." 흐름은 영구 제거.
 let _vtmState = null;
 

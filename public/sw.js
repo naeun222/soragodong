@@ -13,7 +13,8 @@
 // v9 (2026-05-06 사용자 보고): 실행 탭 추적 항목 헤더 버튼 + collapse 변경. PWA 옛 HTML stale-while-revalidate stuck 회피용 강제 invalidate.
 // v10 (2026-05-10 사용자 보고): 영상 자르기 modal 안 옛 미리보기 ("미리보기 만드는 중..." + 썸네일 8장) 가 사용자 PWA 캐시에 stuck.
 //   src 는 이미 trim modal 미리보기 제거됐는데 SW stale-while-revalidate 때문에 옛 index.html 노출. 강제 invalidate.
-const CACHE_NAME = 'soragodong-v4-cache-v10';
+// v11 (2026-05-10 사용자 명시): trim modal 의 video preview (controls) 만 복구 (썸네일 strip 은 영구 제거 유지).
+const CACHE_NAME = 'soragodong-v4-cache-v11';
 const PRECACHE_URLS = [
   './',
   './index.html',

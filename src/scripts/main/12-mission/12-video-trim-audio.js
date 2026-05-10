@@ -1,5 +1,5 @@
-// 사용자 명시 2026-05-10 (재정정): 자르기 기능 유지, 미리보기 (video preview / thumbnail strip) 만 제거.
-// trim modal HTML = 손잡이 bar + 시간 라벨 + 버튼만 (video element / image 일체 X).
+// 사용자 명시 2026-05-10 (재정정): 자르기 modal — 동영상 미리 재생 (video element + controls) 복구.
+// 단 썸네일 strip 8장 + "미리보기 만드는 중..." 흐름은 영구 제거. 손잡이 drag 시 video.currentTime 도 함께 seek.
 async function pickVideoTrimRange(file, maxSec) {
   maxSec = maxSec || 5;
   _vtmState = null;
@@ -11,6 +11,8 @@ async function pickVideoTrimRange(file, maxSec) {
     return null;
   }
 
+  const previewUrl = URL.createObjectURL(file);
+
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.className = 'vtm-overlay';
@@ -18,6 +20,9 @@ async function pickVideoTrimRange(file, maxSec) {
       <div class="vtm-card">
         <div class="vtm-title">영상 자르기 (최대 ${maxSec}초)</div>
         <div class="vtm-sub">손잡이 끌어서 ${maxSec}초 구간 골라</div>
+        <div class="vtm-video-wrap">
+          <video class="vtm-video" controls playsinline preload="metadata"></video>
+        </div>
         <div class="vtm-track">
           <div class="vtm-selection"></div>
           <div class="vtm-handle vtm-handle-start"></div>
@@ -35,9 +40,17 @@ async function pickVideoTrimRange(file, maxSec) {
       </div>`;
     document.body.appendChild(overlay);
 
+    const videoEl = overlay.querySelector('.vtm-video');
+    videoEl.src = previewUrl;
+    videoEl.muted = false;
+    videoEl.volume = 1.0;
+
     let cleaned = false;
     const cleanup = (result) => {
       if (cleaned) return; cleaned = true;
+      try { videoEl.pause(); } catch(_) {}
+      try { videoEl.removeAttribute('src'); videoEl.load(); } catch(_) {}
+      try { URL.revokeObjectURL(previewUrl); } catch(_) {}
       overlay.classList.remove('show');
       setTimeout(() => { try { overlay.remove(); } catch(_) {} _vtmState = null; resolve(result); }, 180);
     };
@@ -65,6 +78,25 @@ async function pickVideoTrimRange(file, maxSec) {
       lblD.textContent = (_vtmState.end - _vtmState.start).toFixed(1) + 's';
     };
 
+    // drag 도중 video 를 seek 해서 자른 구간이 시각적으로 보이게.
+    let _seekBusy = false;
+    let _pendingSeek = null;
+    const seekTo = (t) => {
+      if (_seekBusy) { _pendingSeek = t; return; }
+      _seekBusy = true;
+      try { videoEl.pause(); } catch(_) {}
+      const onSeeked = () => {
+        videoEl.removeEventListener('seeked', onSeeked);
+        _seekBusy = false;
+        if (_pendingSeek != null) {
+          const next = _pendingSeek; _pendingSeek = null;
+          seekTo(next);
+        }
+      };
+      videoEl.addEventListener('seeked', onSeeked);
+      try { videoEl.currentTime = Math.max(0, Math.min(dur - 0.01, t)); } catch(_) { _seekBusy = false; }
+    };
+
     const dragHandle = (handle, isStart) => {
       const onDown = (e) => {
         e.preventDefault();
@@ -77,10 +109,12 @@ async function pickVideoTrimRange(file, maxSec) {
             _vtmState.start = Math.min(t, _vtmState.end - minSel);
             if (_vtmState.start < 0) _vtmState.start = 0;
             if (_vtmState.end - _vtmState.start > maxSec) _vtmState.end = _vtmState.start + maxSec;
+            seekTo(_vtmState.start);
           } else {
             _vtmState.end = Math.max(t, _vtmState.start + minSel);
             if (_vtmState.end > dur) _vtmState.end = dur;
             if (_vtmState.end - _vtmState.start > maxSec) _vtmState.start = _vtmState.end - maxSec;
+            seekTo(_vtmState.end);
           }
           render();
         };
