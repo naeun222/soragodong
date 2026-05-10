@@ -19,7 +19,8 @@
 // v14 (2026-05-10 사용자 보고 audit): '나 탭' 갱신 안 됨 — 짧은 챕터 case_analysis filter `>= 6` → `>= 3` 일관 + 시뮬 한마디 라벨.
 // v15 (2026-05-10 사용자 보고 ultrathink): _processExtractChapterAnalysis THRESHOLD 0.6→0.5 + 디버그 stash + 진주 AI 정리 input skip.
 // v16 (2026-05-10 audit batch 3): pendingBatch stuck 단일 root cause — _runDailyExtractInline `>= 6` → `>= 3` / fail count 3회 timeout / 6h not-ended timeout / fallback 후 홈 카드 갱신.
-const CACHE_NAME = 'soragodong-v4-cache-v16';
+// v17 (2026-05-10 진단): _diagnoseExtract 함수 — 강제 회복 후에도 안 되는 케이스 console 진단.
+const CACHE_NAME = 'soragodong-v4-cache-v17';
 const PRECACHE_URLS = [
   './',
   './index.html',

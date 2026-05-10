@@ -1101,6 +1101,66 @@ async function maybeRunDailyChapterExtract() {
   await _submitDailyExtractBatch(pending);
 }
 
+// 사용자 보고 2026-05-10 (audit batch 3 진단): 강제 회복 후에도 yesterday/주간/나탭 안 뜸 케이스 진단 함수.
+// console 에서 `_diagnoseExtract()` 호출 → 어디서 막히는지 console 에 풍부 로그.
+window._diagnoseExtract = async function() {
+  console.log('=== _diagnoseExtract 시작 ===');
+  console.log('chatMessages count:', state.chatMessages?.length || 0);
+  console.log('chatArchive count:', state.chatArchive?.length || 0);
+  console.log('pendingBatch:', state.pendingBatch);
+  console.log('traits:', state.traits?.length || 0, 'values:', state.values?.length || 0, 'patterns:', state.patterns?.length || 0);
+  console.log('weeklyReviews count:', state.weeklyReviews?.length || 0);
+  console.log('monthlyReviews count:', state.monthlyReviews?.length || 0);
+  console.log('today getDay:', new Date().getDay(), '(0=Sun, 6=Sat)');
+  console.log('_canAI:', typeof _canAI === 'function' ? _canAI() : 'undef');
+  console.log('_onbTutorialMode:', window._onbTutorialMode);
+  console.log('testerMode:', state.preferences?.testerMode);
+  console.log('window._lastChapterAnalysisDebug:', window._lastChapterAnalysisDebug);
+
+  // 1. chatArchive 의 최근 7일 데이터
+  const since = Date.now() - 7 * 86400000;
+  const recent = (state.chatArchive || []).filter(a =>
+    a && !a._deleted && a.date && new Date(a.date + 'T00:00:00').getTime() > since &&
+    Array.isArray(a.messages) && a.messages.length >= 3
+  );
+  console.log('최근 7일 archive (msg>=3):', recent.length);
+  recent.forEach(a => console.log('  -', { id: a.id, date: a.date, msgCount: a.messages.length, _pendingExtract: a._pendingExtract, _pendingCaseAnalysis: a._pendingCaseAnalysis, headline: a.headline }));
+
+  // 2. 각 archive case_analysis 강제 호출
+  for (const t of recent) {
+    try {
+      console.log('[case_analysis] →', t.id, 'msgs:', t.messages.length);
+      await extractChapterCaseAnalysis(t.messages);
+      console.log('[case_analysis] done', t.id, 'lastDebug:', window._lastChapterAnalysisDebug);
+    } catch (e) { console.error('[case_analysis] FAIL', t.id, e); }
+  }
+
+  // 3. 결과 리포트
+  console.log('=== 추출 후 ===');
+  console.log('traits:', state.traits?.length, '최근 3:', state.traits?.slice(-3));
+  console.log('values:', state.values?.length, '최근 3:', state.values?.slice(-3));
+  console.log('patterns:', state.patterns?.length, '최근 3:', state.patterns?.slice(-3));
+
+  // 4. 강제 weekly review (일요일이면)
+  if (new Date().getDay() === 0 && typeof generateWeeklyReview === 'function') {
+    console.log('[weekly review] 일요일 — generate 시도');
+    try {
+      await generateWeeklyReview();
+      console.log('[weekly review] done. weeklyReviews:', state.weeklyReviews?.length);
+    } catch (e) { console.error('[weekly review] FAIL', e); }
+  } else {
+    console.log('[weekly review] skip (today=' + new Date().getDay() + ' or generateWeeklyReview not found)');
+  }
+
+  // 5. render 강제
+  if (typeof renderModel === 'function') { try { renderModel(); console.log('renderModel ok'); } catch(e) { console.error(e); } }
+  if (typeof renderYesterdayCard === 'function') { try { renderYesterdayCard(); console.log('renderYesterdayCard ok'); } catch(e) { console.error(e); } }
+  if (typeof renderReviewPrompts === 'function') { try { renderReviewPrompts(); console.log('renderReviewPrompts ok'); } catch(e) { console.error(e); } }
+
+  if (typeof showToast === 'function') showToast('🔍 진단 끝 — console 확인');
+  console.log('=== _diagnoseExtract 끝 ===');
+};
+
 // 사용자 명시 2026-05-01 ultrathink: 옛 maybeRunWeekly/Monthly/Quarterly/YearlyAnalyze 제거.
 // 자동 trigger 폐기 — 리뷰 카드 click 으로만 생성. last*AnalyzeAt state 필드는 보존 (옛 사용자 데이터 호환).
 
