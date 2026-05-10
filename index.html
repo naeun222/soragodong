@@ -28805,13 +28805,14 @@ async function _callGodongDiaryHaiku() {
    대신 **다른 source 사건 우선 선택** ([D] 진주 / [F] 토픽 / [E] 깨달음 / [B] 일기 발화).
    체크인 단답밖에 없으면 사건이 아닌 *기분 / 컨디션* 으로 표현.
 
-❌ 절대 안 되는 (나열):
-"오늘 ${_userName}이가 한강 갔다 왔다. 김치도 받았고, 회사도 가기 싫다고 했다."
-→ 사건 3개 나열.
+⚠ **사건 = 1개 = 한 행동 / 한 말 / 한 관찰 / 한 패턴**.
+   디테일 (시간 / 횟수 / 표정) 은 *그 사건의 디테일* 만 OK. 다른 행동/장소/사람 X.
+   **장소 명사 (회사/한강/카페...) / 사람 명사 (엄마/친구...) / 사물 명사 (김치/사진...) — 본문에 1개만**.
+   예: "한강" 또는 "엄마" 또는 "김치" — 셋 중 하나만 등장 OK. 둘 이상 = 사건 2개 = reject.
 
-❌ 또 안 되는 (사건 길고 느낌 짧음):
-"오늘 ${_userName}이가 한강 갔다 왔다고 했다. 사진은 안 보냈고, 친구랑 갔다고 했다. 점심엔 김밥 먹었대. 좋았겠다."
-→ 사건 3줄, 느낌 1줄. 비율 X.
+❌ 절대 안 되는 (3개 사건 나열):
+[금지 예시 — 학습용. 본문 출력 X]
+한강 갔다 왔다 + 김치 받았다 + 회사 가기 싫다 → 명사 3개 (한강/김치/회사).
 
 ✅ 좋은 비율 (사건 1줄 / 느낌 2줄):
 "오늘 ${_userName}이가 한강 갔다 왔다고 했다."  ← 사건 1줄 (짧음)
@@ -28940,11 +28941,14 @@ async function _callGodongDiaryHaiku() {
 - 헤더 / 카테고리 / 리스트 / 번호.
 - "결" 단어. 부담스러운 칭찬.
 
-[출력 형식 — JSON 배열 정확히 3개, 마크다운/코드블록 X]
-- 3일 전 / 2일 전 / 어제 — 각각 1편씩 정확히 3개.
+[출력 형식 — JSON 배열 정확히 3개. 마크다운/코드블록/주석/설명 텍스트 X. 첫 글자 = '['.]
+- **반드시 3개 entry**. 누락/축약/2개 X.
+- 각 body **30자 이상 170자 이하** (너무 짧으면 reject. 너무 길면 잘림).
+- 3일 전 / 2일 전 / 어제 — 각각 1편씩. 순서대로.
 - substrate 헤더 iso 그대로 사용. date 는 "M월 D일", weekday 는 "월"-"일" 한 글자.
-- 데이터 있는 날: 그 날 사건 + 고동 느낌. 데이터 없는 날: fallback 톤.
-- iso 는 dayK + "T20:00:00" 형식.
+- 데이터 있는 날 = 그 날 사건 + 고동 느낌 (fallback 톤 절대 X).
+- 데이터 없는 날 = "*** 이 날 데이터 0건 ***" 라인 명시된 dayK 만. 다른 dayK 에 fallback 톤 출력 = reject.
+- iso 는 dayK + "T20:00:00" 형식 (timezone 표기 X — naive). "Z" / "+09:00" 붙이지 마.
 
 [
   {"iso": "${_3daysK}T20:00:00", "date": "...", "weekday": "...", "body": "..."},
@@ -28991,6 +28995,51 @@ ${modesText}
     };
   };
 
+  // 사용자 보고 2026-05-11 ultrathink: dayK 별 데이터 풍부도 미리 계산 — fallback 톤 misuse 검출용.
+  const _dayKHasData = {};
+  _targetDayKs.forEach(dayK => {
+    const src = _bySource(dayK);
+    const empty = !src.checkin && src.diary.length === 0 && src.diarySummary.length === 0
+      && src.pearls.length === 0 && src.insights.length === 0 && src.topicCards.length === 0;
+    _dayKHasData[dayK] = !empty;
+  });
+  console.log('[gdiary diag] dayK substrate:', _targetDayKs.map((k, i) => `${_dayLabel[i]}=${k}(${_dayKHasData[k] ? 'has' : 'empty'})`).join(' | '));
+
+  // 사용자 보고 2026-05-11 ultrathink: 안 쓰는 fallback phrase 패턴 — data-rich day 출력 시 hard reject.
+  const _fallbackPhraseRe = /조용한 하루였(다|네)|별 말 없(는|던) 날|적을 게 없네|옆에 있었다는 건 적어둔다|특별한 일 없|할 말 없어도|보고 싶었던 것 같다/;
+  // 사용자 보고 2026-05-11 ultrathink: 사건 명사 multi-detect — 한 body 안 *event-trigger* 명사 2개+ = 사건 혼재.
+  // 형태소 분석기 없이 휴리스틱. 사건 trigger 가능한 명사만 (사진/메시지 같은 detail-noun 은 제외 — '사건의 디테일' 로 OK).
+  // 장소 + 사람 + 활동/사물 (event-initiating only).
+  const _eventNounsRe = /(?:회사|학교|카페|한강|영화관|병원|공원|식당|마트|약국|회의실|사무실)|(?:엄마|아빠|친구|동생|언니|오빠|누나|선배|후배|남친|여친|남자친구|여자친구|상사|동료|아이|아기)|(?:김치|김밥|커피|밥|술|영화|드라마|운동|산책|시험|점심|저녁|아침|회식|미팅|약속)/g;
+  const _countDistinctEventNouns = (body) => {
+    if (typeof body !== 'string') return 0;
+    const set = new Set();
+    let m;
+    while ((m = _eventNounsRe.exec(body)) !== null) set.add(m[0]);
+    return set.size;
+  };
+
+  // 사용자 보고 2026-05-11 ultrathink: greedy regex 가 LLM 의 prose 안 [...] 까지 흡수하는 케이스 회피.
+  //   bracket 균형 카운팅으로 첫 valid array 만 추출.
+  const _findJsonArray = (text) => {
+    const start = text.indexOf('[');
+    if (start < 0) return null;
+    let depth = 0, inStr = false, esc = false;
+    for (let i = start; i < text.length; i++) {
+      const c = text[i];
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (c === '[') depth++;
+      else if (c === ']') {
+        depth--;
+        if (depth === 0) return text.slice(start, i + 1);
+      }
+    }
+    return null;
+  };
+
   // 사용자 보고 2026-05-11: 첫 호출 자주 실패 → 재시도 횟수 2 → 4.
   let attempt = 0;
   while (attempt < 4) {
@@ -29003,20 +29052,25 @@ ${modesText}
     if (!resp.ok) throw new Error('Haiku API ' + resp.status);
     const data = await resp.json();
     let raw = (data.content?.[0]?.text || '').trim();
+    console.log(`[gdiary diag] attempt#${attempt + 1} raw response (first 800 chars):\n`, raw.slice(0, 800));
     if (!raw) {
       attempt++;
       if (attempt >= 4) throw new Error('빈 응답');
       continue;
     }
-    raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
-    const jsonMatch = raw.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
+    // 사용자 보고 2026-05-11 ultrathink: 마크다운 stripping — 위치 무관 (start/end 만 X, 본문 안 ```도).
+    raw = raw.replace(/```\w*/g, '').replace(/```/g, '').trim();
+    // 사용자 보고 2026-05-11 ultrathink: balanced bracket finder — greedy regex 의 prose 흡수 fix.
+    const jsonText = _findJsonArray(raw);
+    if (!jsonText) {
+      console.warn('[gdiary diag] JSON 배열 미발견. raw:', raw.slice(0, 200));
       attempt++;
       if (attempt >= 4) throw new Error('JSON 배열 미매치');
       continue;
     }
     let parsed;
-    try { parsed = JSON.parse(jsonMatch[0]); } catch (e) {
+    try { parsed = JSON.parse(jsonText); } catch (e) {
+      console.warn('[gdiary diag] JSON.parse fail:', e.message, 'jsonText:', jsonText.slice(0, 200));
       attempt++;
       if (attempt >= 4) throw new Error('JSON parse: ' + e.message);
       continue;
@@ -29026,9 +29080,16 @@ ${modesText}
       if (attempt >= 4) throw new Error('배열 X');
       continue;
     }
+    // diag — parsed 각 entry 의 iso / body 길이.
+    console.log('[gdiary diag] parsed entries:', parsed.map((e, i) =>
+      `[${i}] iso=${e && e.iso ? `"${e.iso}"` : 'X'} bodyLen=${(e && e.body) ? e.body.length : 0}`
+    ).join(' | '));
+
     // 사용자 보고 2026-05-11: parsed 가 3개 미만이면 retry — LLM 이 entry 빠뜨려서 fallback 채워지는 버그.
-    const _validParsedCount = parsed.filter(e => e && typeof e.body === 'string' && e.body.length >= 5).length;
+    // 사용자 보고 2026-05-11 ultrathink: body 최소 길이 5 → 25 (너무 짧은 fallback-스러운 entry 차단).
+    const _validParsedCount = parsed.filter(e => e && typeof e.body === 'string' && e.body.length >= 25).length;
     if (_validParsedCount < 3) {
+      console.warn(`[gdiary diag] valid count=${_validParsedCount} (min 25 chars). retry attempt#${attempt + 1}.`);
       attempt++;
       if (attempt >= 4) {
         console.warn('[godong-diary] parsed 3개 미만, fallback 채움:', _validParsedCount);
@@ -29047,19 +29108,32 @@ ${modesText}
     if (emojiRe.test(allBodies)) hardViolations.push('emoji');
     if (adviceLex.test(allBodies)) hardViolations.push('advice');
     if (youReg.test(allBodies)) hardViolations.push('you-pronoun');
-    // 사용자 보고 2026-05-11: 사건 1개 강제 — 한 entry 가 5문장 초과면 reject (사건 여러 개 의심).
+    // 사용자 보고 2026-05-11: 사건 1개 강제 — 한 entry 가 4문장 초과면 reject (사건 여러 개 의심).
+    // 사용자 보고 2026-05-11 ultrathink: 5 → 4 (HANDOFF.md spec '최대 4-5문장').
     const _tooManySentences = parsed.some(e => {
       if (!e || typeof e.body !== 'string') return false;
       const _sentences = e.body.split(/[.!?…]\s|\.\s|\n\n/).filter(s => s.trim().length >= 3);
-      return _sentences.length > 5;
+      return _sentences.length > 4;
     });
     if (_tooManySentences) hardViolations.push('too-many-sentences');
+    // 사용자 보고 2026-05-11 ultrathink: 사건 명사 multi (location/person/object 2+ in one body) = 사건 혼재 reject.
+    const _multiNounViolation = parsed.some(e => {
+      if (!e || typeof e.body !== 'string') return false;
+      return _countDistinctEventNouns(e.body) >= 2;
+    });
+    if (_multiNounViolation) hardViolations.push('multi-event-nouns');
+    // 사용자 보고 2026-05-11 ultrathink: fallback phrase misuse — data-rich dayK 의 entry 가 fallback 톤 사용.
+    // _used 매칭 전이라 idx 매핑 보수적: 어느 entry 든 fallback phrase 사용 시 ALL dayK has data 면 reject.
+    const _allDaysHaveData = _targetDayKs.every(dayK => _dayKHasData[dayK]);
+    const _hasFallbackInAny = parsed.some(e => e && typeof e.body === 'string' && _fallbackPhraseRe.test(e.body));
+    if (_allDaysHaveData && _hasFallbackInAny) hardViolations.push('fallback-misuse-on-data-day');
     // soft violations (warn, 통과): banGyeol / formal / meta — 사용자 보고 2026-05-11: 첫 호출 실패 원인 가능성.
     const softViolations = [];
     if (banGyeol.test(allBodies)) softViolations.push('gyeol');
     if (formalLex.test(allBodies)) softViolations.push('formal');
     if (metaLex.test(allBodies)) softViolations.push('meta-analysis');
     if (hardViolations.length > 0) {
+      console.warn(`[gdiary diag] hard tone violations (retry): ${hardViolations.join(',')}`);
       attempt++;
       if (attempt >= 4) throw new Error('tone verify 실패 (hard): ' + hardViolations.join(','));
       continue;
@@ -29085,23 +29159,27 @@ ${modesText}
     //   → 매칭 우선순위 변경: 1) 사용 안 된 entry 중 dayK 매칭 → 2) index 기반 보정 → 3) fallback.
     //   사용된 entry 는 _used set 으로 추적해서 중복 매칭 방지.
     const _used = new Set();
+    const _matchTrace = [];  // diag: 각 dayK 가 어느 step 에서 매칭됐는지.
     const finalEntries = _targetDayKs.map((dayK, idx) => {
-      // 1. 사용 안 된 entry 중 dayK 매칭
       let chosen = null;
+      let matchStep = null;
+      // 1. 사용 안 된 entry 중 dayK 매칭
       for (let i = 0; i < parsed.length; i++) {
         if (_used.has(i)) continue;
         const e = parsed[i];
-        if (!e || typeof e.body !== 'string' || e.body.length < 5) continue;
+        if (!e || typeof e.body !== 'string' || e.body.length < 25) continue;
         if (_isoToDayK(e.iso) === dayK) {
           chosen = { e, i };
+          matchStep = '1-dayK';
           break;
         }
       }
       // 2. dayK 매칭 fail — index 기반 (LLM 이 prompt 순서 따라 3일전/2일전/어제 출력 가정).
       if (!chosen) {
         const byIdx = parsed[idx];
-        if (byIdx && typeof byIdx.body === 'string' && byIdx.body.length >= 5 && !_used.has(idx)) {
+        if (byIdx && typeof byIdx.body === 'string' && byIdx.body.length >= 25 && !_used.has(idx)) {
           chosen = { e: byIdx, i: idx };
+          matchStep = '2-byIdx';
         }
       }
       // 3. 그래도 fail — 사용 안 된 *어떤* valid entry 로 채움 (LLM 출력 순서/iso 둘 다 어긋난 케이스).
@@ -29109,8 +29187,9 @@ ${modesText}
         for (let i = 0; i < parsed.length; i++) {
           if (_used.has(i)) continue;
           const e = parsed[i];
-          if (!e || typeof e.body !== 'string' || e.body.length < 5) continue;
+          if (!e || typeof e.body !== 'string' || e.body.length < 25) continue;
           chosen = { e, i };
+          matchStep = '3-anyValid';
           break;
         }
       }
@@ -29118,6 +29197,7 @@ ${modesText}
         _used.add(chosen.i);
         const _truncated = _truncateBody(chosen.e.body);
         if (_truncated) {
+          _matchTrace.push(`${_dayLabel[idx]}=${matchStep}(parsed#${chosen.i},len${chosen.e.body.length})`);
           const d = new Date(dayK + 'T20:00:00');
           return {
             iso: d.toISOString(),  // dayK 강제 — LLM iso 무시
@@ -29128,8 +29208,10 @@ ${modesText}
         }
       }
       // 4. 최후 fallback (parsed 가 정말 비어있는 경우)
+      _matchTrace.push(`${_dayLabel[idx]}=4-FALLBACK`);
       return _fallbackEntry(dayK);
     });
+    console.log('[gdiary diag] match trace:', _matchTrace.join(' | '));
     return finalEntries;
   }
   throw new Error('attempts exceeded');
@@ -59393,7 +59475,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.219-quarterly-annual-thiscycle-mechanism';
+const APP_VERSION = 'v4.0.220-gdiary-diag-jsonparse-singleEvent';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
