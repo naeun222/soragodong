@@ -172,6 +172,11 @@ async function chargeUsage(
   const cacheReadTokens = usageData.cache_read_input_tokens || 0;
   const cacheCreationTokens = usageData.cache_creation_input_tokens || 0;
   const cost = calculateCost(model, inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens);
+  // 사용자 보고 2026-05-10 (audit-backend 노랑): admin 무한 plan 특혜 — deductCost / recordUsage 도 skip.
+  //   옛: admin 도 차감 / 통계 insert → silent fail (credit 0 → atomic 음수 방지) + 통계 오염.
+  //   신: admin 식별 시 chargeUsage 자체 skip. 비용 추적 측면 admin 사용 분리 (별도 admin log 가 필요하면 후속).
+  const _isAdminCharge = !!((env as any).ADMIN_USER_ID && userId === (env as any).ADMIN_USER_ID);
+  if (_isAdminCharge) return;
 
   waitUntil(recordUsage(env, {
     user_id: userId,
@@ -312,12 +317,13 @@ async function _handleChatRequest(context: {
   const isTutorial = !!body.tutorial_mode;
   const _epForOpusGate = body._endpoint || 'chat';
   const _isChatStyleForOpus = CHAT_STYLE_ENDPOINTS.has(_epForOpusGate) || _epForOpusGate === 'chat';
-  // 사용자 명시 2026-05-10 (재정정): is_deeper_analysis = client askDeeper 흐름 hint. 4단 분석은 plan 무관 누구나 Opus → 가드 우회.
-  // 헤더 토글 (useOpus) 발 chat_main 만 Premium 가드. cap 은 client (state._dailyDeeperCount) 가 따로 제한.
-  const _isDeeperAnalysisHint = !!body.is_deeper_analysis;
+  // 사용자 보고 2026-05-10 (audit-backend): 옛 is_deeper_analysis client hint 보안 risk —
+  //   non-Premium 사용자가 body.is_deeper_analysis=true 임의로 보내 Opus 가드 우회 가능.
+  //   fix: hint flag 폐기 → client askDeeper 가 별도 endpoint (`analyze_4stage`, chat-style X) 로 호출.
+  //   _isChatStyleForOpus=false 면 자연 가드 skip — 분석/추출 endpoint 그룹 통합.
   // 사용자 명시 2026-05-10: admin 계정 = Opus 가드 우회 (무한 plan 특혜).
   const _isAdminUser = !!((env as any).ADMIN_USER_ID && user.id === (env as any).ADMIN_USER_ID);
-  if (body.model === 'claude-opus-4-7' && _isChatStyleForOpus && !_isDeeperAnalysisHint && !_isAdminUser) {
+  if (body.model === 'claude-opus-4-7' && _isChatStyleForOpus && !_isAdminUser) {
     const opusGate = await checkOpusGate(env, user.id, isTutorial);
     if (!opusGate.ok) {
       return jsonResponse({
@@ -330,6 +336,7 @@ async function _handleChatRequest(context: {
   }
 
   // tutorial_mode / is_deeper_analysis body 필드는 upstream 으로 보내지 X (Anthropic API 거부 가능)
+  // is_deeper_analysis 는 backend 에서 무시 (위 audit fix) — 옛 client 호환 위해 strip 만 유지.
   delete body.tutorial_mode;
   delete body.is_deeper_analysis;
 

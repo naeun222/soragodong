@@ -1,7 +1,9 @@
 async function generateAIResponse(modelOverride, opts) {
-  // 사용자 명시 2026-05-10 (재정정): opts.isDeeper = true → backend Opus 가드 우회 (4단 분석은 plan 무관 누구나).
+  // 사용자 명시 2026-05-10 (재정정): opts.isDeeper = true → 별도 endpoint (analyze_4stage) 로 호출 → backend chat-style Opus 가드 자연 skip.
   // 헤더 토글 (state.preferences.useOpus) 의 Opus 모드 = chat_main + Premium 가드 (backend) — 별개.
+  // 사용자 보고 2026-05-10 (audit-backend): 옛 is_deeper_analysis hint 폐기 (client 위변조 위험) → endpoint 분리.
   const _isDeeperAnalysis = !!(opts && opts.isDeeper);
+  const _endpointName = _isDeeperAnalysis ? 'analyze_4stage' : 'chat_main';
   state.chatMessages = state.chatMessages.filter(m => !m.typing);
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
   renderChat();
@@ -96,16 +98,14 @@ async function generateAIResponse(modelOverride, opts) {
     }
 
     const response = await callAnthropic({
-      _endpoint: 'chat_main',
+      _endpoint: _endpointName,  // 'chat_main' | 'analyze_4stage' (사용자 보고 2026-05-10 audit-backend)
       _useWebSearch,
       // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet (검색 시 Haiku 강제 — 위에서 결정).
       model: _modelForCall,
       max_tokens: 2000,
       stream: true,
       system: systemBlocks,
-      messages,
-      // 사용자 명시 2026-05-10 (재정정): 4단 분석 (askDeeper) 호출은 backend Premium 가드 우회 — plan 무관 누구나 Opus.
-      ...(_isDeeperAnalysis ? { is_deeper_analysis: true } : {})
+      messages
     });
 
     if (!response.ok) {

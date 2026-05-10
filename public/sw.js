@@ -31,7 +31,8 @@
 // v26 (2026-05-10 batch 10): cutoffEnd ReferenceError fix / autoBackup 옛 snapshots lazy sanitize / extractChapter max_tokens 동적.
 // v27 (2026-05-10 402 진단): extractChapter 의 402 reason 본문 로깅.
 // v28 (2026-05-10 admin 무한 plan): backend checkBudget + Opus 가드 admin (env.ADMIN_USER_ID) 우회.
-const CACHE_NAME = 'soragodong-v4-cache-v28';
+// v29 (2026-05-10 audit-backend fix): is_deeper_analysis client hint 폐기 / askDeeper 별도 endpoint analyze_4stage / admin chargeUsage skip.
+const CACHE_NAME = 'soragodong-v4-cache-v29';
 const PRECACHE_URLS = [
   './',
   './index.html',
