@@ -31385,7 +31385,16 @@ async function _gdiaryAskUserName() {
 // Public — 회전 카드 탭 시 진입.
 // ─────────────────────────────────────────────────────────────────────────────
 async function openGodongDiaryModal() {
-  if (document.getElementById('gdiaryOverlay')) return;
+  console.log('[godong-diary] openGodongDiaryModal called');
+  // 사용자 보고 2026-05-11: 회전 카드 클릭 반응 X 버그 — 옛 모달 stuck 가능성. early return 대신 제거.
+  const _existingOverlay = document.getElementById('gdiaryOverlay');
+  if (_existingOverlay) {
+    console.warn('[godong-diary] 옛 modal stuck — 제거 후 재진입');
+    _existingOverlay.remove();
+    _gdiaryState = null;
+  }
+
+  try {
 
   const r = (typeof _ensureRotatingCardState === 'function') ? _ensureRotatingCardState() : (state.rotatingCardState = state.rotatingCardState || {});
   if (!Array.isArray(state.godongDiary)) state.godongDiary = [];
@@ -31521,6 +31530,16 @@ async function openGodongDiaryModal() {
   _gdiaryRenderShell({ loading: false });
   _gdiaryStartCountdown();
   if (typeof _rcSessionMarkConfirmed === 'function') _rcSessionMarkConfirmed('godongDiary');
+
+  } catch (err) {
+    // 사용자 보고 2026-05-11: 회전 카드 클릭 반응 X 버그 디버그용 — silent throw 가시화.
+    console.error('[godong-diary] openGodongDiaryModal error:', err);
+    if (typeof showToast === 'function') showToast('일기 열기 실패: ' + (err && err.message ? err.message : err));
+    // 부분 렌더된 overlay 정리
+    const _ov = document.getElementById('gdiaryOverlay');
+    if (_ov) _ov.remove();
+    _gdiaryState = null;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
