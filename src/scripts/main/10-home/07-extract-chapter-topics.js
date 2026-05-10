@@ -14,12 +14,14 @@ async function extractChapterCaseAnalysis(messages, opts) {
     const _model = (opts && opts.model) || 'claude-sonnet-4-6';
     const _isSim = !!opts.isSimulation;
     const prompt = _buildExtractChapterPrompt(messages, _isSim);
+    // 사용자 보고 2026-05-10 (batch 10): max_tokens 동적 — 작은 챕터 비용 ↓.
+    //   < 20 msgs = 1500 / 20-60 = 2500 / 60+ = 4000. 큰 챕터만 4000 max_tokens 허용.
+    const _msgCount = messages.length;
+    const _maxTok = _msgCount >= 60 ? 4000 : (_msgCount >= 20 ? 2500 : 1500);
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
       model: _model,
-      // 사용자 보고 2026-05-10 (audit): 큰 챕터 (40+, 108, 128 msg) 응답 truncation → JSON parse fail.
-      //   1500 → 3000 → 4000 으로 ↑. 128 메시지 archive 도 응답 fit. deep_profile_update relationships + self_narrative 풍부.
-      max_tokens: 4000,
+      max_tokens: _maxTok,
       messages: [{ role: 'user', content: prompt }]
     });
     if (!resp.ok) { console.warn('[chapter case extract] resp not ok:', resp.status); return false; }

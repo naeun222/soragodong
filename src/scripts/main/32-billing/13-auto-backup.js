@@ -24,6 +24,33 @@ async function runAutoBackupIfNeeded() {
       snapshots = rows[0].data.snapshots;
       existingId = rows[0].id;
     }
+    // 사용자 보고 2026-05-10 (batch 10 root cause): 옛 snapshots 가 옛 schema (chatArchive messages 통째 포함) → fetch 한 옛 5개 + 새 1개 = row 여전히 큼 → statement_timeout.
+    //   → 옛 snapshots 도 lazy sanitize. _shrunkV2 마커 없으면 처음 한 번 strip. snapshot 시점 핵심 self-model 데이터 보존, 큰 messages / dataURL 만 제거.
+    snapshots = snapshots.map(snap => {
+      if (!snap || snap._shrunkV2) return snap;
+      const _data = snap.data || {};
+      // chatArchive messages 통째 제외 (metadata 만)
+      if (Array.isArray(_data.chatArchive)) {
+        _data.chatArchive = _data.chatArchive.map(a => {
+          if (!a) return a;
+          const { messages, ...rest } = a;
+          return { ...rest, _msgsExcludedFromBackup: true, messageCount: messages?.length || a.messageCount || 0 };
+        });
+      }
+      _data.chatMessages = [];
+      // 큰 진주 dataURL 제외
+      if (Array.isArray(_data.pearls)) {
+        _data.pearls = _data.pearls.map(p => {
+          if (!p) return p;
+          const _trim = { ...p };
+          if (typeof _trim.video === 'string' && _trim.video.length > 1024) { _trim._videoExcluded = true; delete _trim.video; }
+          if (typeof _trim.videoThumbnail === 'string' && _trim.videoThumbnail.length > 4096) { _trim._videoThumbExcluded = true; delete _trim.videoThumbnail; }
+          if (typeof _trim.photo === 'string' && _trim.photo.length > 4096) { _trim._photoExcluded = true; delete _trim.photo; }
+          return _trim;
+        });
+      }
+      return { ...snap, data: _data, _shrunkV2: true };
+    });
     // 사용자 보고 2026-05-01 (profile 날아간 케이스): wipe detection — 직전 snapshot 비해 핵심 데이터 손실 시 skip.
     // crash 후폭풍·partial state·실수 reset 등으로 cloud 빈 데이터 들어가고 옛 snapshot 까지 rotate-out 되던 risk 차단.
     const stateHash = _computeStateHash(state);

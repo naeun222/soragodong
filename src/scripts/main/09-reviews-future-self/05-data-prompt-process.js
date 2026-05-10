@@ -181,7 +181,8 @@ function _buildReviewPrompt(type, data) {
   if (type === 'weekly') {
     // 사용자 보고 2026-05-10: 옛 가드 = lastReview 이후 새 데이터 검사 → 같은 주 (W19) 가 아직 push 안 됐는데도 막힘.
     //   fix: weekKey 비교 — 이번 주 weekKey 가 이미 push 됐으면 skip, 안 됐으면 데이터 가드 우회.
-    const _thisWeekKey = (typeof getWeekKey === 'function') ? getWeekKey(cutoffEnd || cutoff) : null;
+    // 사용자 보고 2026-05-10 (batch 10): 옛 코드 = cutoffEnd / cutoff destructure 안 됐는데 직접 사용 → ReferenceError. data.X 로.
+    const _thisWeekKey = (typeof getWeekKey === 'function') ? getWeekKey(data.cutoffEnd || data.cutoff) : null;
     if (_thisWeekKey && (state.weeklyReviews || []).some(r => r.weekKey === _thisWeekKey)) {
       return null;  // 이미 이번 주 review push — idempotent skip.
     }

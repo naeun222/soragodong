@@ -25905,7 +25905,8 @@ function _buildReviewPrompt(type, data) {
   if (type === 'weekly') {
     // 사용자 보고 2026-05-10: 옛 가드 = lastReview 이후 새 데이터 검사 → 같은 주 (W19) 가 아직 push 안 됐는데도 막힘.
     //   fix: weekKey 비교 — 이번 주 weekKey 가 이미 push 됐으면 skip, 안 됐으면 데이터 가드 우회.
-    const _thisWeekKey = (typeof getWeekKey === 'function') ? getWeekKey(cutoffEnd || cutoff) : null;
+    // 사용자 보고 2026-05-10 (batch 10): 옛 코드 = cutoffEnd / cutoff destructure 안 됐는데 직접 사용 → ReferenceError. data.X 로.
+    const _thisWeekKey = (typeof getWeekKey === 'function') ? getWeekKey(data.cutoffEnd || data.cutoff) : null;
     if (_thisWeekKey && (state.weeklyReviews || []).some(r => r.weekKey === _thisWeekKey)) {
       return null;  // 이미 이번 주 review push — idempotent skip.
     }
@@ -31150,12 +31151,14 @@ async function extractChapterCaseAnalysis(messages, opts) {
     const _model = (opts && opts.model) || 'claude-sonnet-4-6';
     const _isSim = !!opts.isSimulation;
     const prompt = _buildExtractChapterPrompt(messages, _isSim);
+    // 사용자 보고 2026-05-10 (batch 10): max_tokens 동적 — 작은 챕터 비용 ↓.
+    //   < 20 msgs = 1500 / 20-60 = 2500 / 60+ = 4000. 큰 챕터만 4000 max_tokens 허용.
+    const _msgCount = messages.length;
+    const _maxTok = _msgCount >= 60 ? 4000 : (_msgCount >= 20 ? 2500 : 1500);
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
       model: _model,
-      // 사용자 보고 2026-05-10 (audit): 큰 챕터 (40+, 108, 128 msg) 응답 truncation → JSON parse fail.
-      //   1500 → 3000 → 4000 으로 ↑. 128 메시지 archive 도 응답 fit. deep_profile_update relationships + self_narrative 풍부.
-      max_tokens: 4000,
+      max_tokens: _maxTok,
       messages: [{ role: 'user', content: prompt }]
     });
     if (!resp.ok) { console.warn('[chapter case extract] resp not ok:', resp.status); return false; }
@@ -56477,6 +56480,33 @@ async function runAutoBackupIfNeeded() {
       snapshots = rows[0].data.snapshots;
       existingId = rows[0].id;
     }
+    // 사용자 보고 2026-05-10 (batch 10 root cause): 옛 snapshots 가 옛 schema (chatArchive messages 통째 포함) → fetch 한 옛 5개 + 새 1개 = row 여전히 큼 → statement_timeout.
+    //   → 옛 snapshots 도 lazy sanitize. _shrunkV2 마커 없으면 처음 한 번 strip. snapshot 시점 핵심 self-model 데이터 보존, 큰 messages / dataURL 만 제거.
+    snapshots = snapshots.map(snap => {
+      if (!snap || snap._shrunkV2) return snap;
+      const _data = snap.data || {};
+      // chatArchive messages 통째 제외 (metadata 만)
+      if (Array.isArray(_data.chatArchive)) {
+        _data.chatArchive = _data.chatArchive.map(a => {
+          if (!a) return a;
+          const { messages, ...rest } = a;
+          return { ...rest, _msgsExcludedFromBackup: true, messageCount: messages?.length || a.messageCount || 0 };
+        });
+      }
+      _data.chatMessages = [];
+      // 큰 진주 dataURL 제외
+      if (Array.isArray(_data.pearls)) {
+        _data.pearls = _data.pearls.map(p => {
+          if (!p) return p;
+          const _trim = { ...p };
+          if (typeof _trim.video === 'string' && _trim.video.length > 1024) { _trim._videoExcluded = true; delete _trim.video; }
+          if (typeof _trim.videoThumbnail === 'string' && _trim.videoThumbnail.length > 4096) { _trim._videoThumbExcluded = true; delete _trim.videoThumbnail; }
+          if (typeof _trim.photo === 'string' && _trim.photo.length > 4096) { _trim._photoExcluded = true; delete _trim.photo; }
+          return _trim;
+        });
+      }
+      return { ...snap, data: _data, _shrunkV2: true };
+    });
     // 사용자 보고 2026-05-01 (profile 날아간 케이스): wipe detection — 직전 snapshot 비해 핵심 데이터 손실 시 skip.
     // crash 후폭풍·partial state·실수 reset 등으로 cloud 빈 데이터 들어가고 옛 snapshot 까지 rotate-out 되던 risk 차단.
     const stateHash = _computeStateHash(state);
@@ -56962,7 +56992,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.199-mainrow-monitor-weekly-schema-cleanup';
+const APP_VERSION = 'v4.0.200-cutoffend-fix-snapshot-shrink';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
