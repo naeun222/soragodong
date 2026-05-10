@@ -376,10 +376,14 @@ async function _runDailyExtractInline(pending) {
     const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
     // 사용자 명시 2026-05-08 ultrathink: _extractFromIndex 적용 — 이어서한 archive 의 옛 부분 input 제외.
     const _extractMsgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : (batch.messages || []);
+    let _caseOk = false;
     try {
       // 사용자 보고 2026-05-10 (audit batch 3): _runDailyExtractInline 의 `>= 6` 잔존 — _submitDailyExtractBatch 만 fix 됐던 것. 일관 `>= 3` 로.
       if (_extractMsgs.length >= 3) {
-        await extractChapterCaseAnalysis(_extractMsgs);
+        // 사용자 보고 2026-05-10 (audit batch 4): extractChapterCaseAnalysis 가 boolean return — fail 시 _pendingExtract 보존.
+        _caseOk = !!(await extractChapterCaseAnalysis(_extractMsgs));
+      } else {
+        _caseOk = true; // 메시지 부족 = retry 해도 무의미 → flag delete OK
       }
     } catch (e) { console.warn('[inline] case fail:', e); }
     const _allowChapterTopic = !!batch.endedManually || _isPremium;
@@ -392,8 +396,12 @@ async function _runDailyExtractInline(pending) {
     if (_before && typeof _stampSourceArchiveId === 'function') {
       _stampSourceArchiveId(_before, batch.id, batch);
     }
-    delete batch._pendingExtract;
-    delete batch._pendingCaseAnalysis;
+    // 사용자 보고 2026-05-10 (audit batch 4): case_analysis fail 시 _pendingExtract 보존 — 다음 진입 시 재시도 가능.
+    //   옛 흐름: 무조건 delete → silent fail 후 영구 추출 안 됨 (사용자 보고 케이스 root cause).
+    if (_caseOk) {
+      delete batch._pendingExtract;
+      delete batch._pendingCaseAnalysis;
+    }
     delete batch._batchSubmittedAt;
   }
   state.lastDailyChapterExtractAt = new Date().toISOString();
@@ -1141,15 +1149,21 @@ window._diagnoseExtract = async function() {
   console.log('values:', state.values?.length, '최근 3:', state.values?.slice(-3));
   console.log('patterns:', state.patterns?.length, '최근 3:', state.patterns?.slice(-3));
 
-  // 4. 강제 weekly review (일요일이면)
-  if (new Date().getDay() === 0 && typeof generateWeeklyReview === 'function') {
-    console.log('[weekly review] 일요일 — generate 시도');
+  // 4. 강제 weekly review — _runReviewExtractInline 사용 (실제 함수). 일요일/평일 무관.
+  if (typeof _runReviewExtractInline === 'function' && typeof _collectReviewData === 'function' && typeof getWeekKey === 'function') {
     try {
-      await generateWeeklyReview();
-      console.log('[weekly review] done. weeklyReviews:', state.weeklyReviews?.length);
+      const data = _collectReviewData('weekly');
+      if (!data) {
+        console.warn('[weekly review] _collectReviewData null');
+      } else {
+        const weekKey = getWeekKey(data.cutoff);
+        console.log('[weekly review] weekKey:', weekKey, 'before count:', state.weeklyReviews?.length, 'exists:', state.weeklyReviews?.some(r => r.weekKey === weekKey));
+        await _runReviewExtractInline(['weekly'], { weekly: weekKey });
+        console.log('[weekly review] after count:', state.weeklyReviews?.length, 'exists:', state.weeklyReviews?.some(r => r.weekKey === weekKey));
+      }
     } catch (e) { console.error('[weekly review] FAIL', e); }
   } else {
-    console.log('[weekly review] skip (today=' + new Date().getDay() + ' or generateWeeklyReview not found)');
+    console.log('[weekly review] helpers not found');
   }
 
   // 5. render 강제

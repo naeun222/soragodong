@@ -1,11 +1,12 @@
 async function extractChapterCaseAnalysis(messages, opts) {
   opts = opts || {};
+  // 사용자 보고 2026-05-10 (audit): 함수가 boolean return — true=성공 (추출 1+ 항목 등록 또는 응답 OK), false=fail (호출자가 _pendingExtract flag 보존 판단).
   try {
-    if (!_canAI()) return;
+    if (!_canAI()) return false;
     // 사용자 명시 2026-05-09: intake 첫 분석 직접 호출 시 튜토리얼 가드 우회 (bypassTutorialGuard).
-    if (window._onbTutorialMode && !opts.bypassTutorialGuard) return;
-    if (state.preferences && state.preferences.testerMode) return;
-    if (!Array.isArray(messages) || messages.length < 3) return;
+    if (window._onbTutorialMode && !opts.bypassTutorialGuard) return false;
+    if (state.preferences && state.preferences.testerMode) return false;
+    if (!Array.isArray(messages) || messages.length < 3) return false;
 
     // 사용자 명시 2026-05-08 ultrathink: opts.model 파라미터 — 미구독자/게스트 매 3턴 자동 호출 시 Opus 4.7 지정.
     //   default = Sonnet 4-6 (기존 동작). 명시 시 다른 모델 가능.
@@ -17,27 +18,28 @@ async function extractChapterCaseAnalysis(messages, opts) {
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     });
-    if (!resp.ok) return;
+    if (!resp.ok) { console.warn('[chapter case extract] resp not ok:', resp.status); return false; }
     const data = await resp.json();
     const raw = data?.content?.[0]?.text || '';
     const jm = raw.match(/\{[\s\S]*\}/);
-    if (!jm) return;
+    if (!jm) { console.warn('[chapter case extract] JSON 미매치'); return false; }
     let analysis;
-    try { analysis = JSON.parse(jm[0]); } catch { return; }
+    try { analysis = JSON.parse(jm[0]); } catch (e) { console.warn('[chapter case extract] JSON parse fail:', e); return false; }
 
     const touched = _processExtractChapterAnalysis(analysis);
 
     // 사용자 명시 2026-05-09 (재정정): 시뮬 통합 추출 폐기 — 시뮬 _extracted mark 부분 제거.
-    // 시뮬은 분리 path (extractFromSimulationArchive) 만 처리.
 
     if (touched) {
       saveState();
-      if (typeof renderModel === 'function') {
-        try { renderModel(); } catch {}
-      }
+      if (typeof renderModel === 'function') { try { renderModel(); } catch {} }
     }
+    // 사용자 보고 2026-05-10 (audit): touched=false (모두 confidence < THRESHOLD 또는 빈 응답) 도 추출 호출 자체는 success 로 간주 — flag delete OK.
+    //   이유: retry 해도 같은 응답 받을 가능성 큼. 무한 retry loop 회피.
+    return true;
   } catch (e) {
-    console.warn('[chapter case extract] fail:', e);
+    console.warn('[chapter case extract] exception:', e);
+    return false;
   }
 }
 
