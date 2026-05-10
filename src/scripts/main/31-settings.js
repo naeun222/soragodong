@@ -225,7 +225,8 @@ async function _doRefreshBillingStatus(manual) {
     let html = '';
     // 사용자 명시 2026-04-30 ultrathink: tier-aware 표시 — 구독 상태 / 한도 / 사용량 / 잔여 credit (overage pack 등)
     // 사용자 명시 2026-05-05: raw 수치 ($/토큰) 폐기 — 진행 bar + 상태 라벨로 추상화. 80%+ 일 때만 Premium CTA.
-    if (subActive && planMeta) {
+    // 사용자 명시 2026-05-11 ultrathink: early_light (legacy) 는 정상 구독 분기에서 제외 — backend 가 잘못 active 처리해도 frontend 에서 미구독 (또는 환영 체험) 으로 표시. label '얼리 플랜 (legacy)' 노출 차단.
+    if (subActive && planMeta && planKey !== 'early_light') {
       const usedPct = quotaUsd > 0 ? Math.min(100, Math.round((usedUsd / quotaUsd) * 100)) : 0;
       const isNearCap = usedPct >= 80;
       // 사용자 명시 2026-05-06: backend `cancel_at_period_end` true 면 갱신 해지 됨 — '{date}에 종료' 라벨로 대체.
@@ -260,16 +261,19 @@ async function _doRefreshBillingStatus(manual) {
     } else {
       html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 계속 쓰려면 구독</span></div>`;
     }
-    // 사용자 명시 2026-05-06 ultrathink: 구독자의 balance = overage pack 추가팩 credit. 신규 무료 토큰과 다른 자리. 추가팩만 raw $ 표시 (사용자가 직접 결제한 자리 = 투명성 ↑).
-    if (subActive && balance > 0) {
-      html += `<div style="margin-top:8px; font-size:12px;"><b>추가팩 credit</b>: $${balance.toFixed(2)} (~${balanceKrw.toLocaleString()}원)</div>`;
+    // 사용자 명시 2026-05-11 ultrathink: 추가팩 credit 가격 ($/원) 표시 폐기 — 사용량 cap bar 시각화로.
+    //   추가팩 사용량 = max(0, usedUsd - quotaUsd). plan cap 넘긴 사용량부터 추가팩에서 차감.
+    //   cap bar 100% = (사용한 추가팩 + 남은 balance). plan quota bar 와 동일 패턴 (line 248-249).
+    if (subActive && planKey !== 'early_light' && balance > 0) {
+      const overageUsed = Math.max(0, usedUsd - quotaUsd);
+      const overageTotal = overageUsed + balance;
+      const overagePct = overageTotal > 0 ? Math.min(100, Math.round((overageUsed / overageTotal) * 100)) : 0;
+      const remainingPct = 100 - overagePct;
+      const isPackNearEmpty = remainingPct < 20;
+      html += `<div style="margin-top:12px; font-size:13px;"><b>추가팩</b> <span style="color:var(--text-soft); font-size:11px;">— ${remainingPct}% 남음</span></div>`;
+      html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${overagePct}%; background:${isPackNearEmpty ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
     }
-    // legacy early_light plan 활성화된 옛 사용자만 표시. 신규는 안 들어옴.
-    if (subActive && planKey === 'early_light' && subExpires) {
-      const expiresAt = new Date(billing.subscription_expires_at);
-      const remainingDays = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / 86400000));
-      html += `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;">✦ 레거시 얼리 플랜 — ${remainingDays}일 남음</div>`;
-    }
+    // 사용자 명시 2026-05-11 ultrathink: 레거시 early_light 안내 제거 — 위 정상 구독 분기에서 plan 자체를 미구독 처리하므로 일관성 차원에서 잔재 라인 삭제.
     status.innerHTML = html;
     // 사용자 명시 2026-05-06: 다음 갱신 해지 박스 — 결제 내역 토글 안에 별도 render.
     if (typeof _renderCancelRenewalBox === 'function') {
