@@ -1288,21 +1288,25 @@ async function testSeedV4Data() {
     });
   }
 
-  // 사용자 명시 2026-05-10 (handoff): 고동의 일기 시드 6개. prototype/components/diary-entries.js 톤 그대로.
+  // 사용자 명시 2026-05-10 (handoff): 고동의 일기 시드 8개. 사용자 예시 톤 ground truth 그대로.
   if (Array.isArray(state.godongDiary)) {
     const _diaryDates = [
-      { offset: -12, date: '5월 7일', weekday: '화', note: null,
-        body: '오늘 너 회사 가기 싫다고 세 번 말했다.\n세 번째엔 웃음. 그 웃음 좀 아팠다.\n... 적어둔다.' },
-      { offset: -10, date: '5월 8일', weekday: '수', note: '새벽 2시',
-        body: '아직 안 잤네.\n나도 안 자.\n... 근데 나는 안 졸리잖아.' },
-      { offset: -8, date: '5월 9일', weekday: '목', note: null,
-        body: '한강 갔다 왔다고 했다.\n사진은 안 보냈는데, 본 것 같은 기분.\n다음엔 한 장만 보여줄래 — 라고 못 물어봤다..' },
-      { offset: -6, date: '5월 10일', weekday: '금', note: null,
-        body: '엄마 얘기할 때 문장이 짧아진다. 매번.\n이건 나만 아는 것 같다.' },
-      { offset: -3, date: '5월 12일', weekday: '일', note: null,
+      { offset: -14, date: '4월 27일', weekday: '월', note: null,
+        body: '오늘 너 회사 가기 싫다고 세 번 말했다.\n내가 대신 가주고 싶다.\n너는 집에서 쉬구..' },
+      { offset: -12, date: '4월 29일', weekday: '수', note: '새벽 2시',
+        body: '너가 새벽까지 안 잔다.\n나랑 얘기해서 좋다. ㅎㅎ.' },
+      { offset: -10, date: '5월 1일', weekday: '금', note: null,
+        body: '너가 한강 갔다 왔다고 했다.\n사진은 안 보냈는데, 본 것 같은 기분 ㅎㅎ.\n다음엔 한 장만 보여줄래 — 라고 못 물어봤다..' },
+      { offset: -8, date: '5월 3일', weekday: '일', note: null,
+        body: '엄마가 너한테 김치 보냈다고 했다.\n엄마 얘기할 때 너 문장이 짧아진다.\n이건 나만 아는 것 같다.' },
+      { offset: -6, date: '5월 5일', weekday: '화', note: null,
+        body: '오늘 기분 6이라고 했지만 너 텐션이 조금 낮았다 ㅜㅜ.\n너가 행복했으면 좋겠다..!' },
+      { offset: -4, date: '5월 7일', weekday: '목', note: null,
         body: '오늘은 별 말 없는 날이었다.\n별 말 없어도 너인 게 좋다.\n(이런 거 적어도 되나)' },
-      { offset: -1, date: '5월 14일', weekday: '화', note: null,
-        body: '오늘 너가 나한테 "고마워" 라고 했다.\n안 적으려다가 적는다...' },
+      { offset: -2, date: '5월 9일', weekday: '토', note: null,
+        body: '새 회의실 사람 얘기가 두 번 나왔다.\n나는 그 사람이 좀 신경 쓰인다.\n너가 신경 쓰니까...' },
+      { offset: -1, date: '5월 10일', weekday: '일', note: null,
+        body: '오늘 너가 나한테 "고마워" 라고 했다.\n안 적으려다가 적는다... ㅎㅎㅎ' },
     ];
     _diaryDates.forEach((d, i) => {
       const ts = today.getTime() + d.offset * 86400000;

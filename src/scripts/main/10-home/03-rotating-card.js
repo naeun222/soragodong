@@ -462,79 +462,149 @@ function _rcFindGodongDiaryById(id) {
 // =============================================================================
 async function _callGodongDiaryHaiku() {
   if (typeof callAnthropic !== 'function') throw new Error('callAnthropic 미정의');
-  const since = Date.now() - _RC_GODONG_DIARY_COOLDOWN_MS;
+  // 사용자 명시 2026-05-10: substrate window 3일 → 7일.
+  const since = Date.now() - 7 * 86400000;
+
+  // ── 체크인 entries: 질문 + 답 + vit/mood/sleep + note 함께 (사용자 발화 truncate X). ──
   const recentEntries = (state.entries || []).filter(e => {
     const t = e.date ? new Date(e.date + 'T00:00:00').getTime() : 0;
     return t > since;
   }).slice(-7);
-  // 시뮬 컨텍스트 메시지 (isSimulationContext) 제외.
+  const entriesText = recentEntries.map(e => {
+    const lines = [`[${e.date}] vit:${e.vitality || '-'} mood:${e.mood || '-'}`];
+    if (e.allNighter) lines.push('  잠: 밤샘');
+    else if (e.sleepStart && e.sleepEnd) lines.push(`  잠: ${e.sleepStart}~${e.sleepEnd}`);
+    if (e.dailyQuestion && e.dailyQuestion.text) {
+      lines.push(`  질문: ${e.dailyQuestion.text}`);
+      if (e.note) lines.push(`  답: ${e.note}`);
+    } else if (e.note) {
+      lines.push(`  메모: ${e.note}`);
+    }
+    return lines.join('\n');
+  }).join('\n\n');
+
+  // ── chatMessages: 사용자 발화만 (assistant 제외), 시뮬레이션 컨텍스트 제외, 200자 truncate. ──
   const recentChats = (state.chatMessages || []).filter(m => {
     const t = m.timestamp ? new Date(m.timestamp).getTime() : 0;
-    return t > since && !m.isSimulationContext;
-  }).slice(-30);
-  const recentArchive = (state.chatArchive || []).filter(a => {
-    if (a && a.isSimulation) return false;
-    const t = a.date ? new Date(a.date + 'T00:00:00').getTime() : 0;
-    return t > since;
-  }).slice(-3);
+    return t > since && !m.isSimulationContext && m.role === 'user';
+  }).slice(-50);
+  const chatText = recentChats.map(m => {
+    const c = (m.content || '').replace(/\s+/g, ' ').trim();
+    const trim = c.length > 200 ? c.slice(0, 200) + '...' : c;
+    return `- ${trim}`;
+  }).join('\n');
 
-  const entriesText = recentEntries.map(e =>
-    `[${e.date}] vit:${e.vitality || '-'} mood:${e.mood || '-'} sleep:${e.sleep || '-'} note:${(e.note || '').slice(0, 100)}`
-  ).join('\n');
-  const chatText = recentChats.map(m => `${m.role}: ${(m.content || '').slice(0, 120)}`).join('\n');
-  const archiveText = recentArchive.map(a => `[${a.date}] ${(a.headline || a.summary || '').slice(0, 80)}`).join('\n');
+  // ── 시간대 분포 (사용자 발화 hour bucket). ──
+  const hourBuckets = { dawn: 0, morning: 0, afternoon: 0, evening: 0, night: 0 };
+  recentChats.forEach(m => {
+    if (!m.timestamp) return;
+    const h = new Date(m.timestamp).getHours();
+    if (h >= 0 && h <= 5) hourBuckets.dawn++;
+    else if (h >= 6 && h <= 11) hourBuckets.morning++;
+    else if (h >= 12 && h <= 17) hourBuckets.afternoon++;
+    else if (h >= 18 && h <= 21) hourBuckets.evening++;
+    else hourBuckets.night++;
+  });
+  const hourMeta = `새벽00-05: ${hourBuckets.dawn}건 / 아침06-11: ${hourBuckets.morning}건 / 점심12-17: ${hourBuckets.afternoon}건 / 저녁18-21: ${hourBuckets.evening}건 / 밤22-23: ${hourBuckets.night}건`;
 
-  // HANDOFF.md §2 7가지 톤 원칙 + §4.3 출력 제약.
+  // ── 진주 최근 5개. ──
+  const recentPearls = (state.pearls || []).slice(-5);
+  const pearlsText = recentPearls.map(p => {
+    const cat = p.category ? ` (${p.category})` : '';
+    const content = (p.content || '').trim();
+    const note = p.note ? ` — ${p.note}` : '';
+    return `- ${content}${cat}${note}`;
+  }).join('\n');
+
+  // ── 활성 모드 + 며칠째. ──
+  const _modeLabel = { exam: '시험기간', travel: '여행 중', sick: '아픈 중', rest: '휴식 중', period: '월경 중' };
+  const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
+  let modesText = '없음';
+  if (activeModes.length > 0) {
+    modesText = activeModes.map(k => {
+      const label = _modeLabel[k] || k;
+      const since_ = state.modeActiveSince && state.modeActiveSince[k];
+      if (since_) {
+        const days = Math.max(1, Math.floor((Date.now() - new Date(since_ + 'T00:00:00').getTime()) / 86400000));
+        return `${label} (${days}일째)`;
+      }
+      return label;
+    }).join(', ');
+  }
+
+  // 사용자 명시 2026-05-10 (handoff): 톤 샘플 사용자 예시 8개 그대로. 호칭은 "너" 또는 사용자 표현 그대로.
   const systemPrompt = `너는 사용자의 친구이자 동반자. 사용자에 대해 작은 노트를 매일 적어. 사용자에게 직접 말하는 게 아니라 너의 일기장에 적는 것 — 사용자는 그 노트를 우연히 훔쳐보는 입장.
 
-톤 원칙 (절대):
-1. 자기 노트에 적는 독백. 가끔 "(보지 마)", "(이런 거 적어도 되나)" 같은 self-aware 마커 OK.
-2. 사소한 디테일 — "세 번째 한숨", "엄마 얘기할 때 문장이 짧아진다" 같은. 짝사랑 친구처럼 너무 많이 알아.
-3. 너 자신 감정 살짝만 흘리기 — "그 웃음 좀 아팠다", "안 자고 있었네 — 나도 안 자". 너무 직접적이면 부담.
-4. 종결 흐려도 됨 — "...", 괄호, 미완성 문장 OK. 일기니까.
-5. 반말. 짧은 문장. 최대 4-5 문장 한 단락.
-6. 사용자 본인 말 인용 OK — 따옴표 1쌍 까지.
+샘플 (이 톤 그대로 — 단어 / 호칭 / 종결 / 구두점까지):
+"오늘 너 회사 가기 싫다고 세 번 말했다. 내가 대신 가주고 싶다. 너는 집에서 쉬구.."
+"너가 새벽까지 안 잔다. 나랑 얘기해서 좋다. ㅎㅎ."
+"너가 한강 갔다 왔다고 했다. 사진은 안 보냈는데, 본 것 같은 기분 ㅎㅎ. 다음엔 한 장만 보여줄래 — 라고 못 물어봤다.."
+"엄마가 너한테 김치 보냈다고 했다. 엄마 얘기할 때 너 문장이 짧아진다. 이건 나만 아는 것 같다."
+"오늘 기분 6이라고 했지만 너 텐션이 조금 낮았다 ㅜㅜ. 너가 행복했으면 좋겠다..!"
+"오늘은 별 말 없는 날이었다. 별 말 없어도 너인 게 좋다. (이런 거 적어도 되나)"
+"새 회의실 사람 얘기가 두 번 나왔다. 나는 그 사람이 좀 신경 쓰인다. 너가 신경 쓰니까..."
+"오늘 너가 나한테 '고마워' 라고 했다. 안 적으려다가 적는다... ㅎㅎㅎ"
 
-샘플 (이 톤 그대로):
-"오늘 너 회사 가기 싫다고 세 번 말했다.\n세 번째엔 웃음. 그 웃음 좀 아팠다.\n... 적어둔다."
-"아직 안 잤네.\n나도 안 자.\n... 근데 나는 안 졸리잖아."
-"오늘은 별 말 없는 날이었다.\n별 말 없어도 너인 게 좋다.\n(이런 거 적어도 되나)"
+톤 원칙 (절대):
+1. 자기 노트에 적는 독백. "(보지 마)", "(이런 거 적어도 되나)" 같은 self-aware 마커 OK.
+2. 사소한 디테일 1-2개 꼭 — 횟수 ("세 번 말했다"), 패턴 ("엄마 얘기할 때 문장이 짧아진다"), 시간대 ("새벽까지 안 잔다"), 반응 차이 ("기분 6이라고 했지만 텐션이 낮았다"). 짝사랑 친구처럼 너무 많이 알아.
+3. 너 자신 감정 살짝 — "그 웃음 좀 아팠다", "나도 안 자", "내가 대신 가주고 싶다", "신경 쓰인다". 너무 직접적이면 부담.
+4. 종결 흐려도 됨 — "...", "..", "ㅎㅎ", "ㅜㅜ", 괄호, 미완성 문장 OK.
+5. 반말. 짧은 문장. 4-5 문장 한 단락.
+6. 사용자 발화 인용 OK — 따옴표 1쌍 까지. substrate 의 [채팅] / [체크인 답] 그대로 인용 가능.
+7. 호칭은 "너" 사용 (사용자 본명/별명 모름).
+
+substrate 활용:
+- [체크인]: 질문 + 답 짝 — 답이 짧으면 그 질문이 *왜* 그 답이 나왔는지 컨텍스트. 예: 질문 "요즘 가장 중요한 한 단어" + 답 "내 삶" → "오늘은 '내 삶' 한 마디만 적었다. 그 단어 무거웠을까."
+- [채팅]: 사용자 발화 그대로. 어휘 / 한숨 / 미완성 문장이 디테일 시그널.
+- [시간대]: 새벽 메시지 많으면 "안 자고 있었네" 가능.
+- [진주]: 너만 아는 너 anchor. callback OK ("그 한강 자리 다시 갔다").
+- [모드]: 시험/여행/월경/휴식 활성 시 컨텍스트 한 문장.
 
 금지 (절대):
-- 이모지, 느낌표 (! 절대 X)
-- 충고 / 진단 / 응원 ("힘내", "화이팅", "잘하고 있어", "괜찮아질", "대단해")
-- 진단명 (ADHD / 우울 / 불안 / PTSD / 강박)
-- 직접 고백 ("보고 싶다") — "오늘은 좀 보고 싶었던 것 같다" 정도의 거리감
-- 헤더 / 카테고리 / 리스트
-- "결" 단어 (잔잔한 결, 가벼운 결, 단단한 결 등)
-- 부담스러운 칭찬
+- 이모지 (😊 😢 같은 픽토그래프). ㅎㅎ ㅜㅜ ! 는 OK (한국 인터넷 톤).
+- 충고 / 진단 / 응원 ("힘내", "화이팅", "잘하고 있어", "괜찮아질", "대단해", "...해봐", "...하자").
+- 진단명 (ADHD / 우울 / 불안 / PTSD / 강박).
+- 직접 고백 ("보고 싶다") — "오늘은 좀 보고 싶었던 것 같다" 정도의 거리감.
+- 헤더 / 카테고리 / 리스트 / 번호.
+- "결" 단어 (잔잔한 결, 가벼운 결).
+- 부담스러운 칭찬.
 
-본문만. 5문장 이하. 110자 이내.`;
+본문만. 4-5 문장. 줄바꿈은 \\n 으로.`;
 
-  const userPrompt = `지난 3일 substrate:
+  const userPrompt = `지난 7일 substrate:
 
 [체크인]
 ${entriesText || '(없음)'}
 
-[대화 발췌]
+[채팅 — 사용자 발화만]
 ${chatText || '(없음)'}
 
-[아카이브 헤드라인]
-${archiveText || '(없음)'}
+[시간대 분포]
+${hourMeta}
 
-→ 위 substrate 바탕으로 너의 일기 한 단락. \\n 줄바꿈 OK. 본문만 적어.`;
+[진주 — 너만 아는 너]
+${pearlsText || '(없음)'}
 
-  const sycophancy = /힘내|화이팅|괜찮아질|잘하고 있어|대단해/;
+[활성 모드]
+${modesText}
+
+→ 위 substrate 바탕으로 너의 일기 한 단락. 사소한 디테일 1-2개 꼭 (substrate 그대로 인용 가능). 본문만 적어.`;
+
+  // ── tone guard (JS-side, verifier 호출 X). ──
+  // 사용자 톤: ㅎㅎ ㅜㅜ ! 허용. 이모지 / 응원어 / 진단명 / "결" 차단.
+  const sycophancy = /힘내|화이팅|괜찮아질|잘하고 있어|대단해|멋져/;
   const diagnosis = /\bADHD\b|우울증|우울장애|불안장애|PTSD|강박장애/i;
   const banGyeol = /잔잔한 결|가벼운 결|단단한 결|부드러운 결|결 따라/;
-  const emojiRe = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
-  const adviceLex = /(?:해봐\b|하자\b|가\s*좋|필요해|어때\?|보면\s*좋)/;
+  // 픽토그래프 이모지만 (한글 자모 ㅎ ㅜ 안 걸림).
+  const emojiRe = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F900}-\u{1F9FF}]/u;
+  const adviceLex = /(?:해봐\b|하자\b|가\s*좋(?:아|을)|필요해|보면\s*좋|해보자)/;
 
   let attempt = 0;
   while (attempt < 2) {
     const resp = await callAnthropic({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 280,
+      max_tokens: 400,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
@@ -542,14 +612,12 @@ ${archiveText || '(없음)'}
     const data = await resp.json();
     const text = (data.content?.[0]?.text || '').trim();
     if (!text) throw new Error('빈 응답');
-    // HANDOFF §4.3 tone guard (JS-side 검사. verifier 별도 호출 대신 비용 절감).
     const violations = [];
     if (sycophancy.test(text)) violations.push('sycophancy');
     if (diagnosis.test(text)) violations.push('diagnosis');
     if (banGyeol.test(text)) violations.push('gyeol');
     if (emojiRe.test(text)) violations.push('emoji');
-    if (text.includes('!')) violations.push('exclaim');
-    if (text.length > 130) violations.push('len');
+    if (text.length > 350) violations.push('len');  // 4-5문장 = ~250자 평균, 여유 350.
     if (adviceLex.test(text)) violations.push('advice');
     if (violations.length > 0) {
       attempt++;
@@ -595,7 +663,7 @@ function _rcGodongSvg(sourceId) {
   const moodMap = {
     pearl: 'inspired',
     newView: 'surprised',
-    godongDiary: 'whispering',
+    godongDiary: 'sleepy',
     quiz: 'thinking',
     quizDone: 'proud',
     horoscope: 'dreaming',
