@@ -1230,11 +1230,16 @@ async function _maybeAutoForceAnalyzeFreeTier() {
   }
   state.preferences._autoForceAnalyzeLastAt = new Date().toISOString();
   try { saveState(); } catch {}
-  // 사용자 명시 2026-05-08 ultrathink: extractChapterCaseAnalysis (Opus 4.7) 호출. 옛 forceAnalyze 폐기.
+  // 사용자 명시 2026-05-08 ultrathink: extractChapterCaseAnalysis 호출. 옛 forceAnalyze 폐기.
+  // 사용자 보고 2026-05-10 (audit-billing 노랑): 게스트 3턴마다 Opus 4.7 자동 호출 → 게스트 cap $0.30 빠른 소진.
+  //   fix: 게스트 + 미구독자 = Sonnet (default). Premium 만 Opus. Opus 비용 = Sonnet 의 ~5배.
   if (typeof extractChapterCaseAnalysis === 'function') {
     try {
       const _msgs = (state.chatMessages || []).slice();
-      await extractChapterCaseAnalysis(_msgs, { model: 'claude-opus-4-7' });
-    } catch (e) { console.warn('[auto chapter case opus]', e); }
+      const _bill = window._billingCache;
+      const _isPremium = !!(_bill && _bill.subscription_plan === 'premium' && _bill.subscription_active);
+      const _useOpus = _isPremium;
+      await extractChapterCaseAnalysis(_msgs, { model: _useOpus ? 'claude-opus-4-7' : 'claude-sonnet-4-6' });
+    } catch (e) { console.warn('[auto chapter case]', e); }
   }
 }

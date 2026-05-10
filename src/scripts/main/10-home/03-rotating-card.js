@@ -52,13 +52,23 @@ function _ensureRotatingCardState() {
 // 5 source: 진주 / 미니 리뷰 / Quiz / 운세 / 시뮬레이션
 // =============================================================================
 // 사용자 명시 2026-05-10: quiz source 통째 제거 — '별로다'.
+// 사용자 명시 2026-05-10 (batch 11): 5 카드 (어제 / weekly / monthly / quarterly / annual review) 회전 카드 source 흡수. 새 소식 weight 가장 높음.
 const _RC_BASE_WEIGHTS = {
-  pearl:      20,
-  miniReview: 100,  // 일요일 + 정식 주간 리뷰 도착 시 200 격상 (spec 3-2 특수)
-  horoscope:  50,
-  simulation: 70,
+  // news source — 새 소식 우선 (확인 시 자연 unavailable)
+  review_annual:    300,  // 가장 큼 — 연 1회 도착
+  review_quarterly: 250,
+  review_monthly:   200,
+  review_weekly:    180,  // 주간 = 일요일 도착, miniReview 격상 (200) 보다 약간 ↓
+  yesterday:        150,  // 어제 기록 — 매일 한 번
+  miniReview:       100,
+  simulation:        70,
+  horoscope:         50,
+  pearl:             20,
 };
-const _RC_SOURCE_ORDER = ['miniReview', 'simulation', 'horoscope', 'pearl'];
+const _RC_SOURCE_ORDER = [
+  'review_annual', 'review_quarterly', 'review_monthly', 'review_weekly',
+  'yesterday', 'miniReview', 'simulation', 'horoscope', 'pearl'
+];
 
 const _RC_PEARL_WINDOW_MS = 4 * 60 * 60 * 1000;       // 진주 4시간 stay
 const _RC_MINI_REVIEW_COOLDOWN_MS = 3 * 86400000;     // 미니 리뷰 3일 stay
@@ -676,11 +686,17 @@ function _rcCollectAvailable() {
     try { return fn(); } catch (e) { console.warn('[rotating-card source]', label, e); return null; }
   };
   // 사용자 명시 2026-05-10: quiz source 제거 — _rcSource4Quiz 호출 X (함수 자체는 dead 로 잔존).
+  // 사용자 명시 2026-05-10 (batch 11): 5 news source 추가 — 어제 기록 / weekly / monthly / quarterly / annual review.
   const all = [
     safe(_rcSource1Pearl,      'pearl'),
     safe(_rcSource3MiniReview, 'miniReview'),
     safe(typeof _rcSource5Horoscope === 'function' ? _rcSource5Horoscope : null,   'horoscope'),
     safe(typeof _rcSource6Simulation === 'function' ? _rcSource6Simulation : null, 'simulation'),
+    safe(typeof _rcSource7Yesterday === 'function' ? _rcSource7Yesterday : null,           'yesterday'),
+    safe(typeof _rcSource8WeeklyReview === 'function' ? _rcSource8WeeklyReview : null,     'review_weekly'),
+    safe(typeof _rcSource9MonthlyReview === 'function' ? _rcSource9MonthlyReview : null,   'review_monthly'),
+    safe(typeof _rcSource10QuarterlyReview === 'function' ? _rcSource10QuarterlyReview : null, 'review_quarterly'),
+    safe(typeof _rcSource11AnnualReview === 'function' ? _rcSource11AnnualReview : null,   'review_annual'),
   ];
   return all.filter(s => s && s.available);
 }

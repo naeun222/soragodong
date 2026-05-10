@@ -5710,6 +5710,27 @@
   }
   .input-modal-overlay.show .input-modal { transform: translateY(0); }
 
+  /* 사용자 명시 2026-05-10 (batch 11): 5 news source 카드 (어제 기록 / weekly / monthly / quarterly / annual review) 회전 카드 흡수. */
+  .rc-body-news {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 16px 14px;
+    text-align: center;
+  }
+  .rc-body-news .rc-body-headline {
+    font-size: 14px; font-weight: 600; color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+  .rc-body-news .rc-body-copy {
+    font-size: 13px; color: var(--text); line-height: 1.6;
+    font-family: 'Gowun Batang', serif;
+  }
+  .rc-body-news .rc-body-mini-cta {
+    font-size: 11px; color: var(--text-soft);
+    margin-top: 4px;
+  }
+  .rc-body-news-yesterday { background: linear-gradient(135deg, rgba(168,157,200,0.06), rgba(168,157,200,0.02)); border-radius: 12px; }
+  .rc-body-news-review { background: linear-gradient(135deg, rgba(212,167,106,0.08), rgba(143,200,143,0.04)); border-radius: 12px; }
+
   /* === 영상 trim modal — 사용자 명시 2026-05-10 (재정정): video preview 복구, 썸네일 strip 만 영구 제거. === */
   .vtm-overlay {
     position: fixed; inset: 0;

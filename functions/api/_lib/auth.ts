@@ -16,6 +16,8 @@ export type Env = {
   // PortOne V2 (사용자 명시 2026-05-06: V1 폐기 → V2 마이그레이션). Secret keys = Cloudflare env.
   PORTONE_API_KEY_V2?: string;        // V2 REST API Secret (Authorization: PortOne <key>)
   PORTONE_WEBHOOK_SECRET?: string;    // V2 Webhook 서명 검증 (svix 호환)
+  // 사용자 보고 2026-05-10 (audit-billing 노랑): admin 식별 — 무한 plan 특혜 분기. 옛 (env as any).ADMIN_USER_ID 캐스팅 → 정식 타입.
+  ADMIN_USER_ID?: string;             // admin user.id (Supabase UUID). 매칭 시 budget / Opus 가드 / chargeUsage 우회.
 };
 
 export async function verifyAuth(request: Request, env: Env): Promise<AuthedUser | null> {

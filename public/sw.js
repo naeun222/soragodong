@@ -33,7 +33,8 @@
 // v28 (2026-05-10 admin 무한 plan): backend checkBudget + Opus 가드 admin (env.ADMIN_USER_ID) 우회.
 // v29 (2026-05-10 audit-backend fix): is_deeper_analysis client hint 폐기 / askDeeper 별도 endpoint analyze_4stage / admin chargeUsage skip.
 // v30 (2026-05-10 audit-billing fix + 사용자 보고): 시뮬 system prompt 격리 (큐 11 정정) + system prompt traits/values/patterns 의 simulation 항목 hide / sim continue 더블클릭 가드.
-const CACHE_NAME = 'soragodong-v4-cache-v30';
+// v31 (2026-05-10 batch 11): 5 카드 (어제 기록 / weekly / monthly / quarterly / annual review) 회전 카드 source 흡수. ADMIN_USER_ID 정식 타입. 게스트 force-analyze Sonnet fallback.
+const CACHE_NAME = 'soragodong-v4-cache-v31';
 const PRECACHE_URLS = [
   './',
   './index.html',

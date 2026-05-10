@@ -175,7 +175,7 @@ async function chargeUsage(
   // 사용자 보고 2026-05-10 (audit-backend 노랑): admin 무한 plan 특혜 — deductCost / recordUsage 도 skip.
   //   옛: admin 도 차감 / 통계 insert → silent fail (credit 0 → atomic 음수 방지) + 통계 오염.
   //   신: admin 식별 시 chargeUsage 자체 skip. 비용 추적 측면 admin 사용 분리 (별도 admin log 가 필요하면 후속).
-  const _isAdminCharge = !!((env as any).ADMIN_USER_ID && userId === (env as any).ADMIN_USER_ID);
+  const _isAdminCharge = !!(env.ADMIN_USER_ID && userId === env.ADMIN_USER_ID);
   if (_isAdminCharge) return;
 
   waitUntil(recordUsage(env, {
@@ -322,7 +322,7 @@ async function _handleChatRequest(context: {
   //   fix: hint flag 폐기 → client askDeeper 가 별도 endpoint (`analyze_4stage`, chat-style X) 로 호출.
   //   _isChatStyleForOpus=false 면 자연 가드 skip — 분석/추출 endpoint 그룹 통합.
   // 사용자 명시 2026-05-10: admin 계정 = Opus 가드 우회 (무한 plan 특혜).
-  const _isAdminUser = !!((env as any).ADMIN_USER_ID && user.id === (env as any).ADMIN_USER_ID);
+  const _isAdminUser = !!(env.ADMIN_USER_ID && user.id === env.ADMIN_USER_ID);
   if (body.model === 'claude-opus-4-7' && _isChatStyleForOpus && !_isAdminUser) {
     const opusGate = await checkOpusGate(env, user.id, isTutorial);
     if (!opusGate.ok) {
