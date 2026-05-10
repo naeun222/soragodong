@@ -132,10 +132,19 @@ function renderChatArchiveModal() {
         <button class="btn-secondary" onclick="event.stopPropagation(); resumeArchiveChat('${archId}')" style="flex:1; font-size:11.5px; padding:8px;">↩️ 이어서 하기</button>
       </div>
     `;
+    // 사용자 명시 2026-05-10 (batch 12): 시뮬 컨텍스트 포함 챕터 = ✨ 라벨 + "상상 시뮬 포함" badge.
+    //   pure 시뮬 (isSimulation: true) = 더 강조. 혼합 (hasSimulationMessages, isSimulation false) = 약한 라벨.
+    const _isSimChapter = !!a.isSimulation;
+    const _hasSimMixed = !_isSimChapter && !!a.hasSimulationMessages;
+    const _simBadge = _isSimChapter
+      ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.20); color:var(--accent); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">✨ 상상 시뮬</span>`
+      : (_hasSimMixed
+        ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.10); color:var(--text-soft); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">✨ 시뮬 일부</span>`
+        : '');
     return `
-      <div class="chat-archive-card${a.pinned ? ' pinned' : ''}${isTrash ? ' deleted' : ''}" style="opacity:${isTrash ? '0.6' : cardOpacity};">
+      <div class="chat-archive-card${a.pinned ? ' pinned' : ''}${isTrash ? ' deleted' : ''}${_isSimChapter ? ' simulation' : ''}" style="opacity:${isTrash ? '0.6' : cardOpacity};">
         <div class="cac-header" onclick="toggleArchiveDay('${archId}')">
-          <div class="cac-date">${isTrash ? '🗑️ ' : (a.pinned ? '📌 ' : '')}${dateLabel}</div>
+          <div class="cac-date">${isTrash ? '🗑️ ' : (a.pinned ? '📌 ' : '')}${dateLabel}${_simBadge}</div>
           <div class="cac-meta">
             <span>${a.messageCount || 0}개 메시지</span>
             ${headerActionsHtml}

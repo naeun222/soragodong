@@ -378,20 +378,26 @@ async function _runDailyExtractInline(pending) {
     const _extractMsgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : (batch.messages || []);
     let _caseOk = false;
     try {
-      // 사용자 보고 2026-05-10 (audit batch 3): _runDailyExtractInline 의 `>= 6` 잔존 → `>= 3` 일관.
-      // 사용자 명시 2026-05-10 (큐 11 batch 7): isSimulation 챕터 = extractChapterCaseAnalysis(opts={isSimulation:true}) 호출.
-      //   prompt 분기 (cf 5차원 / deep_profile_update 출력 X) + extractedFrom='simulation' 마킹 + threshold 0.7.
-      if (_extractMsgs.length >= 3) {
-        _caseOk = !!(await extractChapterCaseAnalysis(_extractMsgs, batch.isSimulation ? { isSimulation: true } : undefined));
-      } else {
-        _caseOk = true; // 메시지 부족 = retry 무의미 → flag delete OK
+      // 사용자 명시 2026-05-10 (격리 강화 batch 12): 메시지 단위 분리 — 같은 챕터 안 시뮬 / 일반 혼재 시 각각 추출.
+      //   옛: chapter 단위 isSimulation flag → 시뮬 1턴 + 일반 50턴 챕터 가 통째로 격리 → 일반 50턴 추출 누락.
+      //   신: messages 의 isSimulationContext 별로 split → 일반 그룹 = 옛 흐름 / 시뮬 그룹 = isSim opt.
+      const _normalMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
+      const _simMsgs = _extractMsgs.filter(m => m && m.isSimulationContext);
+      let _normalOk = true, _simOk = true;
+      if (_normalMsgs.length >= 3) {
+        _normalOk = !!(await extractChapterCaseAnalysis(_normalMsgs));
       }
+      if (_simMsgs.length >= 3) {
+        _simOk = !!(await extractChapterCaseAnalysis(_simMsgs, { isSimulation: true }));
+      }
+      _caseOk = _normalOk && _simOk;
     } catch (e) { console.warn('[inline] case fail:', e); }
     const _allowChapterTopic = !!batch.endedManually || _isPremium;
     try {
-      // 시뮬 챕터 = topic 추출 skip (일반 topicCards 와 섞이지 X — 시뮬은 시뮬 archive 자체가 표시 path).
-      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _extractMsgs.length >= 3 && !batch.isSimulation) {
-        await extractPreviousChapterTopics(_extractMsgs);
+      // 사용자 명시 2026-05-10 (batch 12): topic 추출도 일반 메시지만 사용 (시뮬 메시지 제외).
+      const _topicMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
+      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _topicMsgs.length >= 3) {
+        await extractPreviousChapterTopics(_topicMsgs);
       }
     } catch (e) { console.warn('[inline] topic fail:', e); }
     _pushMagicReflectionArchive(batch);

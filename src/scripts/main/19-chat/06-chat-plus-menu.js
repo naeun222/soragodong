@@ -73,9 +73,12 @@ function _archiveCurrentChapter(opts) {
 
   // V4 (사용자 명시 2026-05-04 V191): summary 필드 제거 — 히스토리 API 줄거리 요약 기능 폐기.
   // 표시 / system prompt 주입 / review 입력 모두 raw messages + topicCards 기반으로 통일.
-  // 사용자 명시 2026-05-10 (큐 11): 챕터 안 isSimulationContext: true 메시지 1+ 면 isSimulation 챕터로 마킹.
-  //   추출 path 격리 — cf 5차원 X, traits/values/patterns 만 (extractedFrom='simulation', confidence ≥ 0.7).
-  const _isSimChapter = validMsgs.some(m => m && m.isSimulationContext === true);
+  // 사용자 명시 2026-05-10 (큐 11 batch 12): 챕터 안 시뮬 / 일반 혼재 가능 — 메시지 단위 격리.
+  //   isSimulation (boolean): 1+ 시뮬 메시지 (legacy 호환)
+  //   hasSimulationMessages (boolean): 명시 (혼합 가능 시각 마커용 archive UI)
+  //   pure 시뮬 챕터 = 모든 메시지가 isSimulationContext (드문 케이스, 시뮬 inject 후 즉시 마무리)
+  const _hasSimMsg = validMsgs.some(m => m && m.isSimulationContext === true);
+  const _allSimMsgs = _hasSimMsg && validMsgs.every(m => !m || m.isSimulationContext === true);
   const archiveItem = {
     id: 'arch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     date: dateKey,
@@ -83,8 +86,9 @@ function _archiveCurrentChapter(opts) {
     messages: validMsgs.slice(),
     generatedAt: new Date().toISOString(),
     endedManually: !!opts.manual,
-    _pendingExtract: true,   // 4AM 일괄 처리 마커 (case_analysis + topic_extract 둘 다)
-    ...(_isSimChapter ? { isSimulation: true } : {})
+    _pendingExtract: true,
+    ...(_hasSimMsg ? { hasSimulationMessages: true } : {}),
+    ...(_allSimMsgs ? { isSimulation: true } : {})  // legacy 호환 — pure 시뮬 챕터만
   };
   // 사용자 명시 2026-05-08 ultrathink: 이어서한 후 변경된 케이스 (옛 messages + 새 messages) — 새 archive 에 _extractFromIndex 박기.
   // unchanged 분기 (line 39-52) 에서는 옛 archive 그대로 복귀 → 이 분기 도달 X. changed 분기에서만 boundary 박음.

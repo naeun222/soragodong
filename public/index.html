@@ -25827,7 +25827,8 @@ function _collectReviewData(type) {
 
   const entriesInRange = state.entries.filter(e => e.date >= cutoffISO && e.date < cutoffEndISO);
   const missionsInRange = state.missions.filter(m => inRange(m.createdAt));
-  const chatInRange = state.chatMessages.filter(m => m.timestamp && inRange(m.timestamp) && !m.typing && !m.error && m.role === 'user').slice(-40);
+  // 사용자 명시 2026-05-10 (batch 12): 시뮬 컨텍스트 메시지 (isSimulationContext) 는 review 데이터 input 에서 제외 — 가상 시나리오를 실제 사건으로 모델이 오인 회피.
+  const chatInRange = state.chatMessages.filter(m => m.timestamp && inRange(m.timestamp) && !m.typing && !m.error && m.role === 'user' && !m.isSimulationContext).slice(-40);
   const decisionsInRange = state.decisions.filter(d => !d._deleted && (inRange(d.startedAt) || (d.decidedAt && inRange(d.decidedAt))));
   const topicCardsInRange = (state.topicCards || []).filter(t => !t._deleted && t.createdAt && inRange(t.createdAt));
   const pearlsInRange = (state.pearls || []).filter(p => !p._deleted && p.createdAt && inRange(p.createdAt));
@@ -25845,6 +25846,9 @@ function _collectReviewData(type) {
   });
   const chaptersInRange = (state.chatArchive || []).filter(c => {
     if (c._deleted) return false;
+    // 사용자 명시 2026-05-10 (batch 12): pure 시뮬 챕터 (isSimulation: true) 는 review 데이터 제외.
+    //   혼합 챕터 (hasSimulationMessages 만 true, isSimulation 은 false) 는 포함 — 일반 메시지 부분 활용. messages 는 chaptersInRange 본문 inject 시 별도 필터.
+    if (c.isSimulation) return false;
     const dt = c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null);
     return dt && inRange(dt);
   });
@@ -28128,11 +28132,13 @@ async function _callMiniReviewHaiku() {
     const t = e.date ? new Date(e.date + 'T00:00:00').getTime() : 0;
     return t > since;
   }).slice(-7);
+  // 사용자 명시 2026-05-10 (batch 12): 시뮬 컨텍스트 메시지 (isSimulationContext) 제외 — miniReview 가 가상 시나리오 를 "지난 3일" 일기로 오인 회피.
   const recentChats = (state.chatMessages || []).filter(m => {
     const t = m.timestamp ? new Date(m.timestamp).getTime() : 0;
-    return t > since;
+    return t > since && !m.isSimulationContext;
   }).slice(-30);
   const recentArchive = (state.chatArchive || []).filter(a => {
+    if (a && a.isSimulation) return false;  // pure 시뮬 챕터 제외 (batch 12)
     const t = a.date ? new Date(a.date + 'T00:00:00').getTime() : 0;
     return t > since;
   }).slice(-3);
@@ -37936,9 +37942,12 @@ function _archiveCurrentChapter(opts) {
 
   // V4 (사용자 명시 2026-05-04 V191): summary 필드 제거 — 히스토리 API 줄거리 요약 기능 폐기.
   // 표시 / system prompt 주입 / review 입력 모두 raw messages + topicCards 기반으로 통일.
-  // 사용자 명시 2026-05-10 (큐 11): 챕터 안 isSimulationContext: true 메시지 1+ 면 isSimulation 챕터로 마킹.
-  //   추출 path 격리 — cf 5차원 X, traits/values/patterns 만 (extractedFrom='simulation', confidence ≥ 0.7).
-  const _isSimChapter = validMsgs.some(m => m && m.isSimulationContext === true);
+  // 사용자 명시 2026-05-10 (큐 11 batch 12): 챕터 안 시뮬 / 일반 혼재 가능 — 메시지 단위 격리.
+  //   isSimulation (boolean): 1+ 시뮬 메시지 (legacy 호환)
+  //   hasSimulationMessages (boolean): 명시 (혼합 가능 시각 마커용 archive UI)
+  //   pure 시뮬 챕터 = 모든 메시지가 isSimulationContext (드문 케이스, 시뮬 inject 후 즉시 마무리)
+  const _hasSimMsg = validMsgs.some(m => m && m.isSimulationContext === true);
+  const _allSimMsgs = _hasSimMsg && validMsgs.every(m => !m || m.isSimulationContext === true);
   const archiveItem = {
     id: 'arch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     date: dateKey,
@@ -37946,8 +37955,9 @@ function _archiveCurrentChapter(opts) {
     messages: validMsgs.slice(),
     generatedAt: new Date().toISOString(),
     endedManually: !!opts.manual,
-    _pendingExtract: true,   // 4AM 일괄 처리 마커 (case_analysis + topic_extract 둘 다)
-    ...(_isSimChapter ? { isSimulation: true } : {})
+    _pendingExtract: true,
+    ...(_hasSimMsg ? { hasSimulationMessages: true } : {}),
+    ...(_allSimMsgs ? { isSimulation: true } : {})  // legacy 호환 — pure 시뮬 챕터만
   };
   // 사용자 명시 2026-05-08 ultrathink: 이어서한 후 변경된 케이스 (옛 messages + 새 messages) — 새 archive 에 _extractFromIndex 박기.
   // unchanged 분기 (line 39-52) 에서는 옛 archive 그대로 복귀 → 이 분기 도달 X. changed 분기에서만 boundary 박음.
@@ -45389,10 +45399,19 @@ function renderChatArchiveModal() {
         <button class="btn-secondary" onclick="event.stopPropagation(); resumeArchiveChat('${archId}')" style="flex:1; font-size:11.5px; padding:8px;">↩️ 이어서 하기</button>
       </div>
     `;
+    // 사용자 명시 2026-05-10 (batch 12): 시뮬 컨텍스트 포함 챕터 = ✨ 라벨 + "상상 시뮬 포함" badge.
+    //   pure 시뮬 (isSimulation: true) = 더 강조. 혼합 (hasSimulationMessages, isSimulation false) = 약한 라벨.
+    const _isSimChapter = !!a.isSimulation;
+    const _hasSimMixed = !_isSimChapter && !!a.hasSimulationMessages;
+    const _simBadge = _isSimChapter
+      ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.20); color:var(--accent); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">✨ 상상 시뮬</span>`
+      : (_hasSimMixed
+        ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.10); color:var(--text-soft); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">✨ 시뮬 일부</span>`
+        : '');
     return `
-      <div class="chat-archive-card${a.pinned ? ' pinned' : ''}${isTrash ? ' deleted' : ''}" style="opacity:${isTrash ? '0.6' : cardOpacity};">
+      <div class="chat-archive-card${a.pinned ? ' pinned' : ''}${isTrash ? ' deleted' : ''}${_isSimChapter ? ' simulation' : ''}" style="opacity:${isTrash ? '0.6' : cardOpacity};">
         <div class="cac-header" onclick="toggleArchiveDay('${archId}')">
-          <div class="cac-date">${isTrash ? '🗑️ ' : (a.pinned ? '📌 ' : '')}${dateLabel}</div>
+          <div class="cac-date">${isTrash ? '🗑️ ' : (a.pinned ? '📌 ' : '')}${dateLabel}${_simBadge}</div>
           <div class="cac-meta">
             <span>${a.messageCount || 0}개 메시지</span>
             ${headerActionsHtml}
@@ -53464,20 +53483,26 @@ async function _runDailyExtractInline(pending) {
     const _extractMsgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : (batch.messages || []);
     let _caseOk = false;
     try {
-      // 사용자 보고 2026-05-10 (audit batch 3): _runDailyExtractInline 의 `>= 6` 잔존 → `>= 3` 일관.
-      // 사용자 명시 2026-05-10 (큐 11 batch 7): isSimulation 챕터 = extractChapterCaseAnalysis(opts={isSimulation:true}) 호출.
-      //   prompt 분기 (cf 5차원 / deep_profile_update 출력 X) + extractedFrom='simulation' 마킹 + threshold 0.7.
-      if (_extractMsgs.length >= 3) {
-        _caseOk = !!(await extractChapterCaseAnalysis(_extractMsgs, batch.isSimulation ? { isSimulation: true } : undefined));
-      } else {
-        _caseOk = true; // 메시지 부족 = retry 무의미 → flag delete OK
+      // 사용자 명시 2026-05-10 (격리 강화 batch 12): 메시지 단위 분리 — 같은 챕터 안 시뮬 / 일반 혼재 시 각각 추출.
+      //   옛: chapter 단위 isSimulation flag → 시뮬 1턴 + 일반 50턴 챕터 가 통째로 격리 → 일반 50턴 추출 누락.
+      //   신: messages 의 isSimulationContext 별로 split → 일반 그룹 = 옛 흐름 / 시뮬 그룹 = isSim opt.
+      const _normalMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
+      const _simMsgs = _extractMsgs.filter(m => m && m.isSimulationContext);
+      let _normalOk = true, _simOk = true;
+      if (_normalMsgs.length >= 3) {
+        _normalOk = !!(await extractChapterCaseAnalysis(_normalMsgs));
       }
+      if (_simMsgs.length >= 3) {
+        _simOk = !!(await extractChapterCaseAnalysis(_simMsgs, { isSimulation: true }));
+      }
+      _caseOk = _normalOk && _simOk;
     } catch (e) { console.warn('[inline] case fail:', e); }
     const _allowChapterTopic = !!batch.endedManually || _isPremium;
     try {
-      // 시뮬 챕터 = topic 추출 skip (일반 topicCards 와 섞이지 X — 시뮬은 시뮬 archive 자체가 표시 path).
-      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _extractMsgs.length >= 3 && !batch.isSimulation) {
-        await extractPreviousChapterTopics(_extractMsgs);
+      // 사용자 명시 2026-05-10 (batch 12): topic 추출도 일반 메시지만 사용 (시뮬 메시지 제외).
+      const _topicMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
+      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _topicMsgs.length >= 3) {
+        await extractPreviousChapterTopics(_topicMsgs);
       }
     } catch (e) { console.warn('[inline] topic fail:', e); }
     _pushMagicReflectionArchive(batch);
@@ -57219,7 +57244,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.205-batch11-5cards-rotating-source';
+const APP_VERSION = 'v4.0.206-batch12-sim-message-isolation';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

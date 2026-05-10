@@ -82,7 +82,8 @@ function _collectReviewData(type) {
 
   const entriesInRange = state.entries.filter(e => e.date >= cutoffISO && e.date < cutoffEndISO);
   const missionsInRange = state.missions.filter(m => inRange(m.createdAt));
-  const chatInRange = state.chatMessages.filter(m => m.timestamp && inRange(m.timestamp) && !m.typing && !m.error && m.role === 'user').slice(-40);
+  // 사용자 명시 2026-05-10 (batch 12): 시뮬 컨텍스트 메시지 (isSimulationContext) 는 review 데이터 input 에서 제외 — 가상 시나리오를 실제 사건으로 모델이 오인 회피.
+  const chatInRange = state.chatMessages.filter(m => m.timestamp && inRange(m.timestamp) && !m.typing && !m.error && m.role === 'user' && !m.isSimulationContext).slice(-40);
   const decisionsInRange = state.decisions.filter(d => !d._deleted && (inRange(d.startedAt) || (d.decidedAt && inRange(d.decidedAt))));
   const topicCardsInRange = (state.topicCards || []).filter(t => !t._deleted && t.createdAt && inRange(t.createdAt));
   const pearlsInRange = (state.pearls || []).filter(p => !p._deleted && p.createdAt && inRange(p.createdAt));
@@ -100,6 +101,9 @@ function _collectReviewData(type) {
   });
   const chaptersInRange = (state.chatArchive || []).filter(c => {
     if (c._deleted) return false;
+    // 사용자 명시 2026-05-10 (batch 12): pure 시뮬 챕터 (isSimulation: true) 는 review 데이터 제외.
+    //   혼합 챕터 (hasSimulationMessages 만 true, isSimulation 은 false) 는 포함 — 일반 메시지 부분 활용. messages 는 chaptersInRange 본문 inject 시 별도 필터.
+    if (c.isSimulation) return false;
     const dt = c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null);
     return dt && inRange(dt);
   });

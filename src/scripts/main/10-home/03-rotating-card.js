@@ -610,11 +610,13 @@ async function _callMiniReviewHaiku() {
     const t = e.date ? new Date(e.date + 'T00:00:00').getTime() : 0;
     return t > since;
   }).slice(-7);
+  // 사용자 명시 2026-05-10 (batch 12): 시뮬 컨텍스트 메시지 (isSimulationContext) 제외 — miniReview 가 가상 시나리오 를 "지난 3일" 일기로 오인 회피.
   const recentChats = (state.chatMessages || []).filter(m => {
     const t = m.timestamp ? new Date(m.timestamp).getTime() : 0;
-    return t > since;
+    return t > since && !m.isSimulationContext;
   }).slice(-30);
   const recentArchive = (state.chatArchive || []).filter(a => {
+    if (a && a.isSimulation) return false;  // pure 시뮬 챕터 제외 (batch 12)
     const t = a.date ? new Date(a.date + 'T00:00:00').getTime() : 0;
     return t > since;
   }).slice(-3);

@@ -34,7 +34,8 @@
 // v29 (2026-05-10 audit-backend fix): is_deeper_analysis client hint 폐기 / askDeeper 별도 endpoint analyze_4stage / admin chargeUsage skip.
 // v30 (2026-05-10 audit-billing fix + 사용자 보고): 시뮬 system prompt 격리 (큐 11 정정) + system prompt traits/values/patterns 의 simulation 항목 hide / sim continue 더블클릭 가드.
 // v31 (2026-05-10 batch 11): 5 카드 (어제 기록 / weekly / monthly / quarterly / annual review) 회전 카드 source 흡수. ADMIN_USER_ID 정식 타입. 게스트 force-analyze Sonnet fallback.
-const CACHE_NAME = 'soragodong-v4-cache-v31';
+// v32 (2026-05-10 batch 12): 시뮬 격리 메시지 단위 — 챕터 안 시뮬/일반 혼재 분리 추출. review/miniReview/topic isSimulationContext 필터. archive UI ✨ 라벨.
+const CACHE_NAME = 'soragodong-v4-cache-v32';
 const PRECACHE_URLS = [
   './',
   './index.html',

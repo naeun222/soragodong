@@ -1,5 +1,5 @@
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.205-batch11-5cards-rotating-source';
+const APP_VERSION = 'v4.0.206-batch12-sim-message-isolation';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
