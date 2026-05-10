@@ -102,7 +102,8 @@ function _collectReviewData(type) {
   };
 
   const entriesInRange = state.entries.filter(e => e.date >= cutoffISO && e.date < cutoffEndISO);
-  const missionsInRange = state.missions.filter(m => inRange(m.createdAt));
+  // 사용자 명시 2026-05-11: dismissed 미션은 review 데이터에서 제외.
+  const missionsInRange = state.missions.filter(m => m && m.status !== 'dismissed' && inRange(m.createdAt));
   // 사용자 명시 2026-05-10 (batch 12): 시뮬 컨텍스트 메시지 (isSimulationContext) 는 review 데이터 input 에서 제외 — 가상 시나리오를 실제 사건으로 모델이 오인 회피.
   const chatInRange = state.chatMessages.filter(m => m.timestamp && inRange(m.timestamp) && !m.typing && !m.error && m.role === 'user' && !m.isSimulationContext).slice(-40);
   const decisionsInRange = state.decisions.filter(d => !d._deleted && (inRange(d.startedAt) || (d.decidedAt && inRange(d.decidedAt))));

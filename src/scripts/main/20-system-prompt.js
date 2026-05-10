@@ -450,7 +450,8 @@ function buildSystemPromptParts() {
   }
 
   // 사용자 명시 2026-05-02 ultrathink: missions 10 → 5 (volatile slim).
-  const recentMissions = state.missions.slice(-5);
+  // 사용자 명시 2026-05-11: dismissed 미션은 system prompt 에서 제외.
+  const recentMissions = state.missions.filter(m => m && m.status !== 'dismissed').slice(-5);
   if (recentMissions.length > 0) {
     sessionStable.push('[최근 미션 기록]');
     recentMissions.forEach(m => {

@@ -43,7 +43,8 @@ async function forceAnalyze(opts) {
       archive: (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI).slice(0, 15).map(a => ({
         type: a.type, headline: a.headline, body: (a.body || '').slice(0, 100)
       })),
-      missions: (state.missions || []).slice(-15).map(m => ({
+      // 사용자 명시 2026-05-11: dismissed 미션은 AI substrate 에서 제외 (사용자 '치워둠' 의도 = 분석에서도 빼).
+      missions: (state.missions || []).filter(m => m && m.status !== 'dismissed').slice(-15).map(m => ({
         title: m.title, status: m.status, attemptStatus: m.attemptStatus
       })),
       decisions: (state.decisions || []).filter(d => !d._deleted).slice(-5).map(d => ({

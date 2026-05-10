@@ -26337,7 +26337,8 @@ function _collectReviewData(type) {
   };
 
   const entriesInRange = state.entries.filter(e => e.date >= cutoffISO && e.date < cutoffEndISO);
-  const missionsInRange = state.missions.filter(m => inRange(m.createdAt));
+  // 사용자 명시 2026-05-11: dismissed 미션은 review 데이터에서 제외.
+  const missionsInRange = state.missions.filter(m => m && m.status !== 'dismissed' && inRange(m.createdAt));
   // 사용자 명시 2026-05-10 (batch 12): 시뮬 컨텍스트 메시지 (isSimulationContext) 는 review 데이터 input 에서 제외 — 가상 시나리오를 실제 사건으로 모델이 오인 회피.
   const chatInRange = state.chatMessages.filter(m => m.timestamp && inRange(m.timestamp) && !m.typing && !m.error && m.role === 'user' && !m.isSimulationContext).slice(-40);
   const decisionsInRange = state.decisions.filter(d => !d._deleted && (inRange(d.startedAt) || (d.decidedAt && inRange(d.decidedAt))));
@@ -40864,7 +40865,8 @@ function buildSystemPromptParts() {
   }
 
   // 사용자 명시 2026-05-02 ultrathink: missions 10 → 5 (volatile slim).
-  const recentMissions = state.missions.slice(-5);
+  // 사용자 명시 2026-05-11: dismissed 미션은 system prompt 에서 제외.
+  const recentMissions = state.missions.filter(m => m && m.status !== 'dismissed').slice(-5);
   if (recentMissions.length > 0) {
     sessionStable.push('[최근 미션 기록]');
     recentMissions.forEach(m => {
@@ -53099,9 +53101,11 @@ function renderArchiveReviews() {
             : `openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})`;
     const _isWeekly = r.type === 'weekly';
     const _ctaText = _isWeekly ? '▾ 펼쳐보기' : '▶ 같이 보자';
-    // 사용자 명시 2026-05-11: 고동의 일기 (godong-diary) 만 사용자 삭제 허용. 옛 미니 / weekly+ 는 보존.
-    const _deleteBtn = r.type === 'godong-diary'
-      ? `<button class="timeline-day-delete" type="button" onclick="event.stopPropagation(); deleteGodongDiary('${r.id}')" title="이 일기 삭제" aria-label="삭제">×</button>`
+    // 사용자 명시 2026-05-11: godong-diary + weekly/monthly/quarterly/annual 리뷰 삭제 허용.
+    //   옛 mini-review (legacy) 는 보존 (분석 substrate 에 안 쓰임).
+    const _isDeletable = r.type === 'godong-diary' || r.type === 'weekly' || r.type === 'monthly' || r.type === 'quarterly' || r.type === 'annual';
+    const _deleteBtn = _isDeletable
+      ? `<button class="timeline-day-delete" type="button" onclick="event.stopPropagation(); deleteArchiveReview('${r.type}', '${r.id || ''}')" title="삭제" aria-label="삭제">×</button>`
       : '';
 
     return `
@@ -53118,24 +53122,47 @@ function renderArchiveReviews() {
   }).join('');
 }
 
-// 사용자 명시 2026-05-11: 리뷰 모음에서 고동의 일기 삭제.
-function deleteGodongDiary(id) {
-  if (!id) return;
-  const e = (state.godongDiary || []).find(x => x && x.id === id);
-  if (!e) {
-    if (typeof showToast === 'function') showToast('일기를 찾을 수 없어');
+// 사용자 명시 2026-05-11: 리뷰 모음에서 godong-diary + 주/월/분기/연 리뷰 모두 삭제 가능.
+//   삭제 = state array 에서 hard splice → AI substrate 자동 제외.
+function deleteArchiveReview(type, id) {
+  if (!type || !id) return;
+  const labelMap = {
+    'godong-diary': '일기',
+    'weekly':       '주간 리뷰',
+    'monthly':      '월간 리뷰',
+    'quarterly':    '계절 리뷰',
+    'annual':       '연간 리뷰',
+  };
+  const arrMap = {
+    'godong-diary': 'godongDiary',
+    'weekly':       'weeklyReviews',
+    'monthly':      'monthlyReviews',
+    'quarterly':    'quarterlyReviews',
+    'annual':       'annualReviews',
+  };
+  const label = labelMap[type] || '항목';
+  const arrKey = arrMap[type];
+  if (!arrKey) return;
+  const arr = state[arrKey];
+  if (!Array.isArray(arr)) return;
+  const found = arr.find(x => x && x.id === id);
+  if (!found) {
+    if (typeof showToast === 'function') showToast(`${label}을 찾을 수 없어`);
     return;
   }
-  if (!confirm('이 일기 지울까? (되돌릴 수 없음)')) return;
-  state.godongDiary = (state.godongDiary || []).filter(x => x && x.id !== id);
-  // godongDiaryContentId 매칭 시 reset (모달 재진입 stash 무효화).
-  if (state.rotatingCardState && state.rotatingCardState.godongDiaryContentId === id) {
+  if (!confirm(`이 ${label} 지울까? (되돌릴 수 없음)`)) return;
+  state[arrKey] = arr.filter(x => x && x.id !== id);
+  // godong-diary stash 무효화 (모달 재진입 시 일관).
+  if (type === 'godong-diary' && state.rotatingCardState && state.rotatingCardState.godongDiaryContentId === id) {
     state.rotatingCardState.godongDiaryContentId = null;
   }
   if (typeof saveState === 'function') saveState(true);
-  if (typeof showToast === 'function') showToast('지웠어');
+  if (typeof showToast === 'function') showToast(`${label} 지웠어`);
   if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
 }
+
+// Legacy compat — 기존 onclick 호출 (godong-diary 만) 유지.
+function deleteGodongDiary(id) { deleteArchiveReview('godong-diary', id); }
 
 // 사용자 명시 2026-05-10 (큐 8): weekly 카드 inline 펼침 — 화면 전환 X, 카드 안 4 섹션 toggle.
 //   4 섹션: MOMENTUM / 장면 3가지 / 흐름 / 부드러운 알림. 옛 schema (one_word_weekly / scenes / pattern.headline / risk_signals) 매핑.
@@ -54508,7 +54535,8 @@ async function forceAnalyze(opts) {
       archive: (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI).slice(0, 15).map(a => ({
         type: a.type, headline: a.headline, body: (a.body || '').slice(0, 100)
       })),
-      missions: (state.missions || []).slice(-15).map(m => ({
+      // 사용자 명시 2026-05-11: dismissed 미션은 AI substrate 에서 제외 (사용자 '치워둠' 의도 = 분석에서도 빼).
+      missions: (state.missions || []).filter(m => m && m.status !== 'dismissed').slice(-15).map(m => ({
         title: m.title, status: m.status, attemptStatus: m.attemptStatus
       })),
       decisions: (state.decisions || []).filter(d => !d._deleted).slice(-5).map(d => ({
