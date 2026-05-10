@@ -438,8 +438,8 @@ function _buildReviewBatchRequests() {
     const data = _collectReviewData('weekly');
     const spec = _buildReviewPrompt('weekly', data);
     if (spec) {
-      // ERROR #14 fix: weekKey 기준 = cutoff (지난 주 시작) 으로 저장.
-      const weekKey = getWeekKey(data.cutoff);
+      // 사용자 보고 2026-05-10: weekKey = cutoffEnd 기준 (사용자 인식 "이번 주" 일요일 = W19, 옛 cutoff 시작 기준 W18 mismatch fix).
+      const weekKey = getWeekKey(data.cutoffEnd || data.cutoff);
       reviewKeys.weekly = weekKey;
       requests.push({
         custom_id: `review_weekly_${weekKey}`,
@@ -946,7 +946,8 @@ async function _runReviewExtractInline(reviewTypes, reviewKeys) {
         const json = await generateReview(type);
         if (json) {
           const data = _collectReviewData(type);
-          const key = type === 'weekly' ? getWeekKey(data.cutoff) : getMonthKey(data.cutoff);
+          // 사용자 보고 2026-05-10: weekly weekKey = cutoffEnd 기준. monthly 는 cutoff (지난 달 시작) 그대로.
+          const key = type === 'weekly' ? getWeekKey(data.cutoffEnd || data.cutoff) : getMonthKey(data.cutoff);
           const review = {
             id: (type === 'weekly' ? 'wr_' : 'mr_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
             type, completedAt: new Date().toISOString(),
@@ -1156,7 +1157,7 @@ window._diagnoseExtract = async function() {
       if (!data) {
         console.warn('[weekly review] _collectReviewData null');
       } else {
-        const weekKey = getWeekKey(data.cutoff);
+        const weekKey = getWeekKey(data.cutoffEnd || data.cutoff);
         console.log('[weekly review] weekKey:', weekKey, 'before count:', state.weeklyReviews?.length, 'exists:', state.weeklyReviews?.some(r => r.weekKey === weekKey));
         await _runReviewExtractInline(['weekly'], { weekly: weekKey });
         console.log('[weekly review] after count:', state.weeklyReviews?.length, 'exists:', state.weeklyReviews?.some(r => r.weekKey === weekKey));

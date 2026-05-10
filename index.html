@@ -25513,7 +25513,8 @@ async function openReview(type) {
   }
   // existing 체크 (ERROR #2) + batch fresh user_viewed 적용하기
   const data = _collectReviewData(type);
-  const key = type === 'weekly' ? getWeekKey(data.cutoff) : getMonthKey(data.cutoff);
+  // 사용자 보고 2026-05-10: weekly weekKey = cutoffEnd (이번 주 일요일 = W19) 기준. monthly 는 cutoff (지난 달 시작) 그대로.
+  const key = type === 'weekly' ? getWeekKey(data.cutoffEnd || data.cutoff) : getMonthKey(data.cutoff);
   const arrKey = type === 'weekly' ? 'weeklyReviews' : 'monthlyReviews';
   const arr = state[arrKey] || [];
   // batch fresh review (auto + !user_viewed) 우선 — key 무관하게 (사용자가 가장 최근 fresh 보게)
@@ -26375,7 +26376,7 @@ function saveReview(type) {
   // 사용자 명시 2026-05-02 ultrathink (ERROR #14 fix): weekKey/monthKey = cutoff (data 시작 시점) 기준 — 데이터 주 기준 일관 (옛: weekly = 현 주 / monthly = 지난 달 → 미스매치).
   if (type === 'weekly') {
     const _data = (typeof _collectReviewData === 'function') ? _collectReviewData('weekly') : null;
-    review.weekKey = _data ? getWeekKey(_data.cutoff) : getCurrentWeekKey();
+    review.weekKey = _data ? getWeekKey(_data.cutoffEnd || _data.cutoff) : getCurrentWeekKey();
     const _idx = state.weeklyReviews.findIndex(r => r.weekKey === review.weekKey);
     if (_idx >= 0) state.weeklyReviews[_idx] = review;
     else state.weeklyReviews.push(review);
@@ -30967,8 +30968,8 @@ async function extractChapterCaseAnalysis(messages, opts) {
       _endpoint: 'extract_chapter',
       model: _model,
       // 사용자 보고 2026-05-10 (audit): 큰 챕터 (40+, 108, 128 msg) 응답 truncation → JSON parse fail.
-      //   1500 → 3000 으로 ↑. deep_profile_update 의 relationships array + self_narrative 풍부 출력 보장.
-      max_tokens: 3000,
+      //   1500 → 3000 → 4000 으로 ↑. 128 메시지 archive 도 응답 fit. deep_profile_update relationships + self_narrative 풍부.
+      max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }]
     });
     if (!resp.ok) { console.warn('[chapter case extract] resp not ok:', resp.status); return false; }
@@ -53008,8 +53009,8 @@ function _buildReviewBatchRequests() {
     const data = _collectReviewData('weekly');
     const spec = _buildReviewPrompt('weekly', data);
     if (spec) {
-      // ERROR #14 fix: weekKey 기준 = cutoff (지난 주 시작) 으로 저장.
-      const weekKey = getWeekKey(data.cutoff);
+      // 사용자 보고 2026-05-10: weekKey = cutoffEnd 기준 (사용자 인식 "이번 주" 일요일 = W19, 옛 cutoff 시작 기준 W18 mismatch fix).
+      const weekKey = getWeekKey(data.cutoffEnd || data.cutoff);
       reviewKeys.weekly = weekKey;
       requests.push({
         custom_id: `review_weekly_${weekKey}`,
@@ -53516,7 +53517,8 @@ async function _runReviewExtractInline(reviewTypes, reviewKeys) {
         const json = await generateReview(type);
         if (json) {
           const data = _collectReviewData(type);
-          const key = type === 'weekly' ? getWeekKey(data.cutoff) : getMonthKey(data.cutoff);
+          // 사용자 보고 2026-05-10: weekly weekKey = cutoffEnd 기준. monthly 는 cutoff (지난 달 시작) 그대로.
+          const key = type === 'weekly' ? getWeekKey(data.cutoffEnd || data.cutoff) : getMonthKey(data.cutoff);
           const review = {
             id: (type === 'weekly' ? 'wr_' : 'mr_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
             type, completedAt: new Date().toISOString(),
@@ -53726,7 +53728,7 @@ window._diagnoseExtract = async function() {
       if (!data) {
         console.warn('[weekly review] _collectReviewData null');
       } else {
-        const weekKey = getWeekKey(data.cutoff);
+        const weekKey = getWeekKey(data.cutoffEnd || data.cutoff);
         console.log('[weekly review] weekKey:', weekKey, 'before count:', state.weeklyReviews?.length, 'exists:', state.weeklyReviews?.some(r => r.weekKey === weekKey));
         await _runReviewExtractInline(['weekly'], { weekly: weekKey });
         console.log('[weekly review] after count:', state.weeklyReviews?.length, 'exists:', state.weeklyReviews?.some(r => r.weekKey === weekKey));
@@ -56633,7 +56635,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.193-extract-truncation-quiz-remove';
+const APP_VERSION = 'v4.0.194-weekkey-cutoffend-tokens-4000';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

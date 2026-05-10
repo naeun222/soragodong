@@ -16,8 +16,8 @@ async function extractChapterCaseAnalysis(messages, opts) {
       _endpoint: 'extract_chapter',
       model: _model,
       // 사용자 보고 2026-05-10 (audit): 큰 챕터 (40+, 108, 128 msg) 응답 truncation → JSON parse fail.
-      //   1500 → 3000 으로 ↑. deep_profile_update 의 relationships array + self_narrative 풍부 출력 보장.
-      max_tokens: 3000,
+      //   1500 → 3000 → 4000 으로 ↑. 128 메시지 archive 도 응답 fit. deep_profile_update relationships + self_narrative 풍부.
+      max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }]
     });
     if (!resp.ok) { console.warn('[chapter case extract] resp not ok:', resp.status); return false; }

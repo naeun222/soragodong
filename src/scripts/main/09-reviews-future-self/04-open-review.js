@@ -13,7 +13,8 @@ async function openReview(type) {
   }
   // existing 체크 (ERROR #2) + batch fresh user_viewed 적용하기
   const data = _collectReviewData(type);
-  const key = type === 'weekly' ? getWeekKey(data.cutoff) : getMonthKey(data.cutoff);
+  // 사용자 보고 2026-05-10: weekly weekKey = cutoffEnd (이번 주 일요일 = W19) 기준. monthly 는 cutoff (지난 달 시작) 그대로.
+  const key = type === 'weekly' ? getWeekKey(data.cutoffEnd || data.cutoff) : getMonthKey(data.cutoff);
   const arrKey = type === 'weekly' ? 'weeklyReviews' : 'monthlyReviews';
   const arr = state[arrKey] || [];
   // batch fresh review (auto + !user_viewed) 우선 — key 무관하게 (사용자가 가장 최근 fresh 보게)

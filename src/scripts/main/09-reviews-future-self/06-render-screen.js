@@ -361,7 +361,7 @@ function saveReview(type) {
   // 사용자 명시 2026-05-02 ultrathink (ERROR #14 fix): weekKey/monthKey = cutoff (data 시작 시점) 기준 — 데이터 주 기준 일관 (옛: weekly = 현 주 / monthly = 지난 달 → 미스매치).
   if (type === 'weekly') {
     const _data = (typeof _collectReviewData === 'function') ? _collectReviewData('weekly') : null;
-    review.weekKey = _data ? getWeekKey(_data.cutoff) : getCurrentWeekKey();
+    review.weekKey = _data ? getWeekKey(_data.cutoffEnd || _data.cutoff) : getCurrentWeekKey();
     const _idx = state.weeklyReviews.findIndex(r => r.weekKey === review.weekKey);
     if (_idx >= 0) state.weeklyReviews[_idx] = review;
     else state.weeklyReviews.push(review);

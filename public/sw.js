@@ -22,7 +22,8 @@
 // v17 (2026-05-10 진단): _diagnoseExtract 함수 — 강제 회복 후에도 안 되는 케이스 console 진단.
 // v18 (2026-05-10 root cause 확정): extractChapterCaseAnalysis boolean return / fail 시 _pendingExtract 보존 / _runReviewExtractInline 으로 weekly 강제.
 // v19 (2026-05-10 진단 결과 확정): 큰 챕터 응답 truncation fix (max_tokens 1500→3000 + partial JSON repair) / quiz source 통째 제거.
-const CACHE_NAME = 'soragodong-v4-cache-v19';
+// v20 (2026-05-10 weekly weekKey + 128 msgs): weekly weekKey cutoffEnd 기준 (W19 mismatch fix) / max_tokens 3000→4000.
+const CACHE_NAME = 'soragodong-v4-cache-v20';
 const PRECACHE_URLS = [
   './',
   './index.html',
