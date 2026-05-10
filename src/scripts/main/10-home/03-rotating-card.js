@@ -1148,7 +1148,7 @@ function _rcGodongSvg(sourceId) {
   const moodMap = {
     pearl: 'inspired',
     newView: 'surprised',
-    godongDiary: 'sleepy',
+    godongDiary: 'whispering',
     quiz: 'thinking',
     quizDone: 'proud',
     horoscope: 'dreaming',
