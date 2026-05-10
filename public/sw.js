@@ -43,7 +43,8 @@
 // v38 (2026-05-10): 시뮬 topicCard 'source: simulation' 마킹 + 도서관 일기·대화 chip 의 day modal '💭 시나리오' 라벨 표시.
 // v39 (2026-05-10): _forceWeeklyReview() 명령어 + 통합 분석 (cf 5차원) 정렬 — 새 내용 (미컨펌 + 최근) 먼저.
 // v40 (2026-05-10): 주간 리뷰 inline 펼침 안 '🗑 삭제' 버튼. 기존 deleteReview() 재사용.
-const CACHE_NAME = 'soragodong-v4-cache-v40';
+// v41 (2026-05-10): generateReviewArchiveMetaSummary key fallback (옛 id 누락 review 도 weekKey/monthKey/quarterKey 매칭) + button onclick fallback + backfill 후 renderArchiveReviews 호출.
+const CACHE_NAME = 'soragodong-v4-cache-v41';
 const PRECACHE_URLS = [
   './',
   './index.html',

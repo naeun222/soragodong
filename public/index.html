@@ -19526,7 +19526,13 @@ async function init() {
     if (_bf(state.monthlyReviews, 'mr_')) _bfTouched = true;
     if (_bf(state.quarterlyReviews, 'qr_')) _bfTouched = true;
     if (_bf(state.annualReviews, 'ar_')) _bfTouched = true;
-    if (_bfTouched) saveState();
+    if (_bfTouched) {
+      saveState();
+      // 사용자 보고 2026-05-10: backfill 후 renderArchiveReviews 호출 — 옛 button onclick HTML 의 빈 id 갱신.
+      if (typeof renderArchiveReviews === 'function') {
+        try { renderArchiveReviews(); } catch {}
+      }
+    }
   } catch (e) { console.warn('[review id backfill]:', e); }
 
   // 사용자 명시 2026-05-10: 테스트 계정 (soragodongapp@gmail.com) 자동 설정 — testerMode + 튜토리얼 skip + E2EE setup skip flag.
@@ -52469,7 +52475,7 @@ function _buildReviewArchiveSummaryHTML(review, opts) {
   return `<div class="review-archive-summary">
     <div class="ras-title">✨ 이 기간 깨달음 ${total}개</div>
     ${metaSummary ? `<div class="ras-meta">"${escapeHtml(metaSummary)}"</div>` : `
-      <div style="margin-bottom:12px;"><button class="ras-meta-btn" onclick="event.stopPropagation(); generateReviewArchiveMetaSummary('${review.id || ''}')">🤖 AI 핵심 통찰 요약 받기</button></div>
+      <div style="margin-bottom:12px;"><button class="ras-meta-btn" onclick="event.stopPropagation(); generateReviewArchiveMetaSummary('${review.id || review.weekKey || review.monthKey || review.quarterKey || ''}')">🤖 AI 핵심 통찰 요약 받기</button></div>
     `}
     <div class="ras-section">
       <div class="ras-section-label">네 사고 모드</div>
@@ -52518,7 +52524,14 @@ async function generateReviewArchiveMetaSummary(reviewId) {
     showToast('⚠️ API 키 필요');
     return;
   }
-  const review = (state.weeklyReviews || []).concat(state.monthlyReviews || []).concat(state.quarterlyReviews || []).find(r => r.id === reviewId);
+  // 사용자 보고 2026-05-10 (재정정): 옛 review (id 누락) 도 매칭 가능 — id 우선, 그 다음 weekKey/monthKey/quarterKey fallback.
+  let review = (state.weeklyReviews || []).concat(state.monthlyReviews || []).concat(state.quarterlyReviews || []).find(r => r.id && r.id === reviewId);
+  if (!review) {
+    // fallback: key 매칭 (id 누락 옛 review 케이스)
+    review = (state.weeklyReviews || []).find(r => r.weekKey === reviewId)
+      || (state.monthlyReviews || []).find(r => r.monthKey === reviewId)
+      || (state.quarterlyReviews || []).find(r => r.quarterKey === reviewId);
+  }
   if (!review) { showToast('리뷰 못 찾음'); return; }
   showToast('🤖 AI 통찰 요약 진행 중...');
   let startMs = null, endMs = null;
@@ -57745,7 +57758,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.214-weekly-delete-btn';
+const APP_VERSION = 'v4.0.215-review-key-fallback';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

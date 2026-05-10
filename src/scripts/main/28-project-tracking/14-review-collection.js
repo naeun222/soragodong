@@ -143,7 +143,7 @@ function _buildReviewArchiveSummaryHTML(review, opts) {
   return `<div class="review-archive-summary">
     <div class="ras-title">✨ 이 기간 깨달음 ${total}개</div>
     ${metaSummary ? `<div class="ras-meta">"${escapeHtml(metaSummary)}"</div>` : `
-      <div style="margin-bottom:12px;"><button class="ras-meta-btn" onclick="event.stopPropagation(); generateReviewArchiveMetaSummary('${review.id || ''}')">🤖 AI 핵심 통찰 요약 받기</button></div>
+      <div style="margin-bottom:12px;"><button class="ras-meta-btn" onclick="event.stopPropagation(); generateReviewArchiveMetaSummary('${review.id || review.weekKey || review.monthKey || review.quarterKey || ''}')">🤖 AI 핵심 통찰 요약 받기</button></div>
     `}
     <div class="ras-section">
       <div class="ras-section-label">네 사고 모드</div>
@@ -192,7 +192,14 @@ async function generateReviewArchiveMetaSummary(reviewId) {
     showToast('⚠️ API 키 필요');
     return;
   }
-  const review = (state.weeklyReviews || []).concat(state.monthlyReviews || []).concat(state.quarterlyReviews || []).find(r => r.id === reviewId);
+  // 사용자 보고 2026-05-10 (재정정): 옛 review (id 누락) 도 매칭 가능 — id 우선, 그 다음 weekKey/monthKey/quarterKey fallback.
+  let review = (state.weeklyReviews || []).concat(state.monthlyReviews || []).concat(state.quarterlyReviews || []).find(r => r.id && r.id === reviewId);
+  if (!review) {
+    // fallback: key 매칭 (id 누락 옛 review 케이스)
+    review = (state.weeklyReviews || []).find(r => r.weekKey === reviewId)
+      || (state.monthlyReviews || []).find(r => r.monthKey === reviewId)
+      || (state.quarterlyReviews || []).find(r => r.quarterKey === reviewId);
+  }
   if (!review) { showToast('리뷰 못 찾음'); return; }
   showToast('🤖 AI 통찰 요약 진행 중...');
   let startMs = null, endMs = null;

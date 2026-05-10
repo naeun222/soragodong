@@ -158,7 +158,13 @@ async function init() {
     if (_bf(state.monthlyReviews, 'mr_')) _bfTouched = true;
     if (_bf(state.quarterlyReviews, 'qr_')) _bfTouched = true;
     if (_bf(state.annualReviews, 'ar_')) _bfTouched = true;
-    if (_bfTouched) saveState();
+    if (_bfTouched) {
+      saveState();
+      // 사용자 보고 2026-05-10: backfill 후 renderArchiveReviews 호출 — 옛 button onclick HTML 의 빈 id 갱신.
+      if (typeof renderArchiveReviews === 'function') {
+        try { renderArchiveReviews(); } catch {}
+      }
+    }
   } catch (e) { console.warn('[review id backfill]:', e); }
 
   // 사용자 명시 2026-05-10: 테스트 계정 (soragodongapp@gmail.com) 자동 설정 — testerMode + 튜토리얼 skip + E2EE setup skip flag.
