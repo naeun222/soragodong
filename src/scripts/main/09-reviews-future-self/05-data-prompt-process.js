@@ -69,8 +69,9 @@ function _collectReviewData(type) {
     cutoffEnd = _sun4am;
     cutoff = new Date(cutoffEnd.getTime() - 7 * 86400000);
   } else {
-    cutoff = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    cutoffEnd = new Date(today.getFullYear(), today.getMonth(), 1);
+    // 사용자 명시 2026-05-10 (메커니즘 일관): monthly = 이번 달 (1일 ~ 다음 달 1일 04:00). 옛 = 지난 달 → 신 = 이번 달.
+    cutoff = new Date(today.getFullYear(), today.getMonth(), 1, 4, 0, 0, 0);
+    cutoffEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1, 4, 0, 0, 0);
   }
   // 사용자 보고 2026-05-10 ultrathink: KST timezone shift bug fix.
   //   옛: cutoff.toISOString() = UTC 변환 → 04:00 KST = 19:00 UTC 전날 → date 1일 앞당겨짐.
@@ -219,23 +220,19 @@ function _buildReviewPrompt(type, data) {
       (chaptersInRange && chaptersInRange.length > 0);
     if (!_hasAnyData) return null;
   } else {
-    // monthly: 사용자 명시 2026-05-08 — weekly 와 동일 가드 (마지막 monthly review 이후 새 데이터 X 면 X).
-    const lastReview = (state.monthlyReviews || []).slice().sort((a, b) =>
-      new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)
-    )[0];
-    if (lastReview) {
-      const lastAt = new Date(lastReview.completedAt || lastReview.createdAt || 0);
-      const lastISO = lastAt.toISOString().split('T')[0];
-      const hasNewSinceLast =
-        (state.entries || []).some(e => e.date && e.date > lastISO) ||
-        (state.chatMessages || []).some(m => m && m.role === 'user' && !m.typing && !m.error && m.timestamp && new Date(m.timestamp) > lastAt) ||
-        (state.archive || []).some(a => a && !a._deleted && a.savedAt && new Date(a.savedAt) > lastAt) ||
-        (state.missions || []).some(m => m && m.createdAt && new Date(m.createdAt) > lastAt) ||
-        (state.pearls || []).some(p => p && !p._deleted && p.createdAt && new Date(p.createdAt) > lastAt) ||
-        (state.topicCards || []).some(t => t && !t._deleted && t.createdAt && new Date(t.createdAt) > lastAt);
-      if (!hasNewSinceLast) return null;
+    // 사용자 명시 2026-05-10 (메커니즘 일관): monthly = 이번 달 (1일 ~ 다음 달 1일 04:00) data range. weekly 와 동일 idempotent skip + 데이터 1+ 가드.
+    //   monthKey 비교 — 이번 달 review 이미 있으면 skip / 없으면 chat/archive/pearl 1+ 면 review.
+    const _thisMonthKey = (typeof getMonthKey === 'function') ? getMonthKey(data.cutoff) : null;
+    if (_thisMonthKey && (state.monthlyReviews || []).some(r => r.monthKey === _thisMonthKey)) {
+      return null;
     }
-    if (!entriesInRange || entriesInRange.length === 0) return null;
+    const _hasAnyData =
+      (entriesInRange && entriesInRange.length > 0) ||
+      (chatInRange && chatInRange.length > 0) ||
+      (archiveInRange && archiveInRange.length > 0) ||
+      (pearlsInRange && pearlsInRange.length > 0) ||
+      (chaptersInRange && chaptersInRange.length > 0);
+    if (!_hasAnyData) return null;
   }
 
   const periodLabel = type === 'weekly' ? '주' : '달';

@@ -1169,6 +1169,14 @@ window._forceWeeklyReview = async function() {
     const _after = (state.weeklyReviews || []).length;
     const _ok = (state.weeklyReviews || []).some(r => r.weekKey === weekKey);
     console.log('[forceWeeklyReview] after count:', _after, 'success:', _ok);
+    // 사용자 보고 2026-05-10: 사용자 명령 (_forceWeeklyReview) 으로 만든 review = manual. _runReviewExtractInline 가 auto:true 박지만 사용자 trigger 라 정정.
+    if (_ok) {
+      const _just = (state.weeklyReviews || []).find(r => r.weekKey === weekKey);
+      if (_just) {
+        _just.auto = false;
+        if (typeof saveState === 'function') saveState();
+      }
+    }
     if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
     if (typeof showToast === 'function') {
       showToast(_ok ? `✦ ${weekKey} 주간 리뷰 생성 완료` : '주간 리뷰 생성 실패 — console 확인');

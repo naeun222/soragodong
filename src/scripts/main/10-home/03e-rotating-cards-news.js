@@ -126,19 +126,19 @@ function _rcOpenFreshReview(type, reviewId, key, completedAt) {
   }
   // 화면 이동 — type 별 분기
   if (type === 'weekly') {
-    // 큐 8 inline 펼침 — 도서관 리뷰 모음 → 그 카드 자동 펼침 (id 매칭)
-    if (typeof showScreen === 'function') showScreen('archive');
+    // 사용자 보고 2026-05-10: 옛 코드 = 도서관 (`archive`) 까지만 + switchLibraryCat('reviews') = 카테고리 fallback 'diary'.
+    //   fix: '리뷰 모음' = 별도 screen ('archive-reviews'). showArchiveReviews() 함수 우선, 없으면 showScreen.
+    if (typeof showArchiveReviews === 'function') {
+      showArchiveReviews();
+    } else if (typeof showScreen === 'function') {
+      showScreen('archive-reviews');
+    }
+    // 카드 펼침 trigger (renderArchiveReviews 후 wid-X element 생성 확인)
     setTimeout(() => {
-      if (typeof switchLibraryCat === 'function') {
-        try { switchLibraryCat('reviews'); } catch {}
+      if (typeof _toggleWeeklyInlineExpand === 'function' && reviewId) {
+        try { _toggleWeeklyInlineExpand(reviewId); } catch {}
       }
-      // 카드 펼침 trigger (renderArchiveReviews 후 _toggleWeeklyInlineExpand)
-      setTimeout(() => {
-        if (typeof _toggleWeeklyInlineExpand === 'function' && reviewId) {
-          try { _toggleWeeklyInlineExpand(reviewId); } catch {}
-        }
-      }, 250);
-    }, 100);
+    }, 350);
   } else if (type === 'annual') {
     if (typeof openAnnualReview === 'function') {
       const _yr = key && key !== 'null' ? parseInt(key, 10) : (target && target.year);
