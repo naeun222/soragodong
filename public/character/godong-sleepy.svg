@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="bodyGrad" cx="42%" cy="32%" r="78%">
+      <stop offset="0%" stop-color="#fbe5c8"></stop>
+      <stop offset="55%" stop-color="#f1cfa3"></stop>
+      <stop offset="100%" stop-color="#d9a578"></stop>
+    </radialGradient>
+    <radialGradient id="apertureGrad" cx="50%" cy="55%" r="55%">
+      <stop offset="0%" stop-color="#2a0e0a"></stop>
+      <stop offset="80%" stop-color="#4a1f1a"></stop>
+      <stop offset="100%" stop-color="#5a2820"></stop>
+    </radialGradient>
+    <radialGradient id="gleam" cx="32%" cy="22%" r="22%">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.55"></stop>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"></stop>
+    </radialGradient>
+  </defs>
+  <ellipse cx="105" cy="178" rx="62" ry="6" fill="#000" opacity="0.30"></ellipse>
+  <path d="M 36 108 C 22 98, 16 86, 22 78 C 28 70, 42 76, 50 88 Z" fill="url(#bodyGrad)" stroke="#b58455" stroke-width="0.8" opacity="0.92"></path>
+  <path d="M 100 28 C 152 28, 178 70, 176 108 C 174 146, 142 174, 100 174 C 60 174, 30 152, 28 112 C 26 72, 52 28, 100 28 Z" fill="url(#bodyGrad)" stroke="#b58455" stroke-width="1.2"></path>
+  <g fill="none" stroke="#b07e54" stroke-width="0.9" opacity="0.40" stroke-linecap="round">
+    <path d="M 56 76  C 80 42, 130 42, 156 76"></path>
+    <path d="M 60 88  C 82 58, 128 58, 152 88"></path>
+  </g>
+  <ellipse cx="74" cy="54" rx="34" ry="22" fill="url(#gleam)"></ellipse>
+  <ellipse cx="160" cy="150" rx="11" ry="8" fill="url(#apertureGrad)" opacity="0.65"></ellipse>
+
+  <path d="M 62 101 Q 74 112 86 101" fill="none" stroke="#2a1810" stroke-width="3.6" stroke-linecap="round"></path>
+  <path d="M 114 101 Q 126 112 138 101" fill="none" stroke="#2a1810" stroke-width="3.6" stroke-linecap="round"></path>
+  <ellipse cx="100" cy="128" rx="6" ry="3.5" fill="#3a2418" opacity="0.85"></ellipse>
+  <text x="142" y="62" font-family="&#39;Gowun Batang&#39;, serif" font-size="28" font-weight="700" fill="#8b7ec4" opacity="0.95">z</text>
+  <text x="166" y="38" font-family="&#39;Gowun Batang&#39;, serif" font-size="18" font-weight="700" fill="#8b7ec4" opacity="0.75">z</text>
+</svg>

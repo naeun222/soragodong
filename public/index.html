@@ -21,6 +21,10 @@
 
 <!-- 사용자 명시 2026-05-06 ultrathink (perf): boot splash 핵심 이미지 preload + 외부 API DNS resolve. 비용 거의 0 / 첫 페인트 visual 단축. -->
 <link rel="preload" as="image" href="godong.webp">
+<!-- 사용자 명시 2026-05-10: 고동이 표정 SVG 자주 쓰는 3종 preload (default 인라인 / thinking AI 대기 / happy 셀러브레이션). 나머지 18종 lazy. -->
+<link rel="preload" as="image" href="/character/godong-default.svg" type="image/svg+xml">
+<link rel="preload" as="image" href="/character/godong-thinking.svg" type="image/svg+xml">
+<link rel="preload" as="image" href="/character/godong-happy.svg" type="image/svg+xml">
 <link rel="dns-prefetch" href="https://api.anthropic.com">
 <link rel="dns-prefetch" href="https://itunes.apple.com">
 <link rel="dns-prefetch" href="https://browser.sentry-cdn.com">
@@ -11760,7 +11764,7 @@
 
 
 <!-- 사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 화면일 때만 표시되는 fixed chip -->
-<div class="magic-mode-chip" id="magicModeChip"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동</div>
+<div class="magic-mode-chip" id="magicModeChip"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 마법의 소라고동</div>
 <div class="reflection-mode-chip" id="reflectionModeChip">🌊 숙고의 방</div>
 
 
@@ -12131,7 +12135,7 @@
 
     <!-- DECISIONS LIST -->
     <div class="screen" id="screen-decisions">
-      <div class="screen-title">마법의 소라고동 <img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
+      <div class="screen-title">마법의 소라고동 <img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"></div>
       <div class="screen-sub">마법고동은 천천히, 차가운 머리로.<br>충동 차단, 14일 숙성, 구조화된 단계.</div>
 
       <button class="btn-primary decision" onclick="startNewDecision()">+ 새로운 결정 시작</button>
@@ -13076,6 +13080,21 @@ let authUserId = null;    // UUID
 
 // Shell types for collection
 const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮', '🌊', '🐠', '🐡', '🦐', '🪸', '🌺', '🌸', '🌼', '🌻', '🌷', '🍀', '🌱'];
+
+// 사용자 명시 2026-05-10: 고동이 표정 mascot SVG (21종, public/character/godong-{mood}.svg).
+// 기존 godong.webp / godongicon.png 인라인 자리에 점진 적용. ES module X — 인라인 onclick 패턴 유지.
+// 사용 예: innerHTML 에 godongImg('happy', 32) 삽입. mood 미존재면 default 폴백.
+const GODONG_MOODS = [
+  'default','happy','wink','inspired','love','soras-call','thinking','hello',
+  'shy','down','surprised','sleepy','proud','listening','dreaming','focused',
+  'blushing-thanks','growing','storming','calm','whispering'
+];
+function godongImg(mood, size, cls) {
+  const safe = GODONG_MOODS.indexOf(mood) >= 0 ? mood : 'default';
+  const px = (typeof size === 'number' && size > 0) ? size : 24;
+  const klass = cls || 'godong-icon';
+  return `<img src="/character/godong-${safe}.svg" alt="" class="${klass} godong-mood-${safe}" width="${px}" height="${px}" decoding="async">`;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -16363,7 +16382,7 @@ function _annualReviewBuildCard9(d) {
         <!-- godong icon + halo (사용자 명시 2026-05-01: 🐚 emoji → godongicon.png, drop-shadow X 배경 안 보이게) -->
         <div style="position:relative; display:flex; align-items:center; justify-content:center; height:80px;">
           <div style="position:absolute; width:110px; height:110px; background:radial-gradient(circle, rgba(212,167,106,0.32) 0%, transparent 70%); border-radius:50%; animation: ann-rv-final-halo 3s ease-in-out infinite alternate;"></div>
-          <img src="/godongicon.png" alt="소라고동" style="width:64px; height:64px; object-fit:contain; position:relative; display:block;" decoding="async">
+          <img src="/character/godong-inspired.svg" alt="소라고동" class="godong-mood-inspired" style="width:64px; height:64px; object-fit:contain; position:relative; display:block;" decoding="async">
         </div>
 
         <!-- 라벨 + 양쪽 가는 선 -->
@@ -22694,7 +22713,7 @@ function _v8HeroSequence() {
     root.setAttribute('aria-hidden', 'false');
     root.innerHTML = `
       <div id="v8Hero" class="v8-hero">
-        <img class="v8-hero-godong" src="/godongicon.png" alt="소라고동" decoding="async" loading="eager">
+        <img class="v8-hero-godong godong-mood-hello" src="/character/godong-hello.svg" alt="소라고동" decoding="async" loading="eager">
         <div class="v8-hero-text" id="v8HeroText"></div>
         <div class="v8-hero-tap-hint" id="v8HeroTapHint">✦</div>
       </div>
@@ -24376,7 +24395,7 @@ function renderActiveDecisionsHome() {
         <div class="decision-card-row">
           ${_magicTimeRing(daysSince)}
           <div class="decision-card-row-text">
-            <div class="decision-card-label"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 진행 중인 결정 · ${daysSince}일째</div>
+            <div class="decision-card-label"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 진행 중인 결정 · ${daysSince}일째</div>
             <div class="decision-card-title">${escapeHtml(d.title)}</div>
             ${_magicStepDots(d.steps, daysSince)}
           </div>
@@ -24497,8 +24516,8 @@ function renderDecisionDetail(decision) {
     const helpCount = helpMsgs.length;
     // 사용자 명시 2026-04-30: 임시대화창 접근성 높이기 — 보라 톤 + prominent.
     const helpButton = helpCount > 0
-      ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px; box-shadow:0 2px 8px rgba(139,126,196,0.18);"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법고동과 이어서 — ${helpCount}개 메시지</button>`
-      : (decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px;"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법고동한테 도움 받기 ✦</button>` : '');
+      ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px; box-shadow:0 2px 8px rgba(139,126,196,0.18);"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 마법고동과 이어서 — ${helpCount}개 메시지</button>`
+      : (decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px;"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 마법고동한테 도움 받기 ✦</button>` : '');
 
     html += `
       <div class="step-card ${cls}">
@@ -24614,8 +24633,8 @@ function openTextStep(decision, step, meta) {
         ? decision.helpChats[step.id].filter(m => !m._starter && !m.error) : [];
       // 사용자 명시 2026-04-30: 임시대화창 접근성 높이기 — 보라 톤 + prominent.
       return stepHelpMsgs.length > 0
-        ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px; box-shadow:0 2px 10px rgba(139,126,196,0.20);"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법고동과 이어서 — ${stepHelpMsgs.length}개 메시지</button>`
-        : `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px;"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법고동한테 도움 받기 ✦</button>`;
+        ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px; box-shadow:0 2px 10px rgba(139,126,196,0.20);"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 마법고동과 이어서 — ${stepHelpMsgs.length}개 메시지</button>`
+        : `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px;"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 마법고동한테 도움 받기 ✦</button>`;
     })()}
     <button class="btn-secondary" onclick="openDecision('${decision.id}')">돌아가기</button>
   `;
@@ -24809,7 +24828,7 @@ function _renderMagicHelpChat() {
   // 헤더 제목 (단계명 + 결정 주제)
   const qEl = document.getElementById('magicHelpScreenQ');
   if (qEl) {
-    qEl.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--text);"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> ${escapeHtml(meta.title)}</div>
+    qEl.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--text);"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> ${escapeHtml(meta.title)}</div>
       <div style="font-size:11px; color:var(--text-dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">"${escapeHtml(decision.title)}"</div>`;
   }
   // 입력바 표시
@@ -25238,7 +25257,7 @@ function openFinalDecisionStep(decision, step) {
     <div class="screen-sub">결정과 함께 예측을 기록해.<br>미래의 네가 정확도를 확인할 거야 (Wilson & Gilbert, affective forecasting).</div>
 
     <div class="input-group">
-      <div class="input-label"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 최종 결정</div>
+      <div class="input-label"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 최종 결정</div>
       <textarea id="finalDecision" rows="3" placeholder="결정을 한 문장으로...">${escapeHtml(saved.decision || '')}</textarea>
     </div>
 
@@ -27473,7 +27492,7 @@ function renderDecisionMiniLink() {
 
   container.innerHTML = `
     <div onclick="openMagicReflectionChooser()" class="decision-mini-card">
-      <div class="dm-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
+      <div class="dm-icon"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"></div>
       <div class="dm-text">
         <div class="dm-title">마법고동</div>
         <div class="dm-sub">${subText}</div>
@@ -27502,7 +27521,7 @@ function openMagicReflectionChooser() {
       </div>
       <div class="magic-chooser-options">
         <button class="magic-chooser-opt" type="button" onclick="closeMagicChooser(); showScreen('decisions');">
-          <div class="mco-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
+          <div class="mco-icon"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"></div>
           <div class="mco-text">
             <div class="mco-title">마법의 방</div>
             <div class="mco-sub">${decisionCount > 0 ? `${decisionCount}개 숙성 중` : '14일 숙성으로 큰 결정'}</div>
@@ -27602,7 +27621,7 @@ function renderActiveDecisionsHomeV3() {
     const days = Math.floor((Date.now() - new Date(d.startedAt).getTime()) / 86400000);
     return `
       <div class="action-card decision" onclick="openDecision('${d.id}')">
-        <div class="action-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
+        <div class="action-icon"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"></div>
         <div class="action-text">
           <div class="action-title">결정 들여다볼 때야</div>
           <div class="action-sub">"${escapeHtml(d.title?.slice(0, 40) || '')}"</div>
@@ -28351,57 +28370,21 @@ function _rcCollectAvailable() {
 }
 
 // =============================================================================
-// godong 표정 SVG (5 source variant)
+// godong 표정 SVG — 사용자 명시 2026-05-10: 인라인 6 variant → 21종 mood SVG 매핑
+// pearl=inspired(별눈), newView=surprised(큰 눈), miniReview=calm(잔잔), quiz=thinking(?),
+// quizDone=proud(별3개+자부심), horoscope=dreaming(꿈+🌗 분위기)
 // =============================================================================
 function _rcGodongSvg(sourceId) {
-  const expressions = {
-    pearl: {
-      eyes: '<circle cx="22" cy="26" r="1.6" fill="#1a1a2e"/><circle cx="32" cy="26" r="1.6" fill="#1a1a2e"/>',
-      mouth: '<path d="M 22 33 Q 27 36 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">✨</text>',
-    },
-    newView: {
-      eyes: '<circle cx="22" cy="27" r="2.4" fill="#1a1a2e"/><circle cx="32" cy="27" r="2.4" fill="#1a1a2e"/><circle cx="22.5" cy="26" r="0.8" fill="#fff"/><circle cx="32.5" cy="26" r="0.8" fill="#fff"/>',
-      mouth: '<circle cx="27" cy="34" r="1.6" fill="none" stroke="#1a1a2e" stroke-width="1.3"/>',
-      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">✦</text>',
-    },
-    miniReview: {
-      eyes: '<path d="M 20 27 Q 22 26 24 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 27 Q 32 26 34 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
-      mouth: '<line x1="25" y1="34" x2="29" y2="34" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '',
-    },
-    quiz: {
-      eyes: '<circle cx="22" cy="26" r="1.8" fill="#1a1a2e"/><circle cx="32" cy="26" r="1.8" fill="#1a1a2e"/>',
-      mouth: '<path d="M 22 33 Q 27 35 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">?</text>',
-    },
-    quizDone: {
-      eyes: '<path d="M 20 27 Q 22 24 24 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 27 Q 32 24 34 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
-      mouth: '<path d="M 22 33 Q 27 37 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round"/>',
-      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">★</text>',
-    },
-    horoscope: {
-      eyes: '<path d="M 20 26 Q 22 24 24 26" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 26 Q 32 24 34 26" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
-      mouth: '<path d="M 23 33 Q 27 35 31 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '<text x="40" y="14" font-size="8" fill="rgba(168,157,200,0.95)">🌗</text>',
-    },
+  const moodMap = {
+    pearl: 'inspired',
+    newView: 'surprised',
+    miniReview: 'calm',
+    quiz: 'thinking',
+    quizDone: 'proud',
+    horoscope: 'dreaming',
   };
-  const exp = expressions[sourceId] || expressions.pearl;
-  return `
-    <svg class="rc-godong-svg" viewBox="0 0 56 50" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <defs>
-        <linearGradient id="godongGrad-${sourceId}" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#f5d99c"/>
-          <stop offset="100%" stop-color="#d4a76a"/>
-        </linearGradient>
-      </defs>
-      <path d="M 28 5 Q 48 8 47 28 Q 46 47 28 47 Q 10 47 9 28 Q 8 12 28 5 Z" fill="url(#godongGrad-${sourceId})" stroke="rgba(168,157,200,0.4)" stroke-width="0.6"/>
-      <path d="M 28 14 Q 40 18 38 28 Q 36 38 28 38 Q 20 38 20 28" fill="none" stroke="rgba(168,157,200,0.55)" stroke-width="1.2"/>
-      ${exp.eyes}
-      ${exp.mouth}
-      ${exp.extra}
-    </svg>
-  `;
+  const mood = moodMap[sourceId] || 'default';
+  return `<img class="rc-godong-svg godong-mood-${mood}" src="/character/godong-${mood}.svg" alt="" decoding="async" aria-hidden="true">`;
 }
 
 // =============================================================================
@@ -37718,7 +37701,7 @@ function _renderChatMessageHTML(m, i) {
     if (m.role === 'assistant' && m.decisionSuggested && !m.decisionResponse && !m.typing) {
       const ds = m.decisionSuggested;
       decisionCard = `<div class="decision-suggest-card">
-        <div class="dsc-header"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동에서 천천히 보면 어때?</div>
+        <div class="dsc-header"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 마법의 소라고동에서 천천히 보면 어때?</div>
         <div class="dsc-title">${escapeHtml(ds.title)}</div>
         ${ds.reason ? `<div class="dsc-reason">${escapeHtml(ds.reason)}</div>` : ''}
         <div class="dsc-buttons">
@@ -41932,7 +41915,7 @@ function showCrisisCarousel(triggerKind, opts) {
   overlay.addEventListener('click', (e) => { e.stopPropagation(); });
   overlay.innerHTML = `
     <div class="crisis-carousel-modal" onclick="event.stopPropagation()">
-      <img src="/godongicon.png" class="crisis-carousel-godong" alt="">
+      <img src="/character/godong-shy.svg" class="crisis-carousel-godong godong-mood-shy" alt="">
       <div class="crisis-carousel-head">잠깐 — 너 괜찮아?${isPreview ? ' <span style="font-size:11px; opacity:0.55; font-weight:400; letter-spacing:0.04em;">(미리보기)</span>' : ''}</div>
       <div class="crisis-carousel-body">
         요즘 좀 무거워 보여서 한 번 묻고 싶었어.<br>
@@ -43401,7 +43384,7 @@ function openTopicCard(id) {
   // 액션 버튼 — 카테고리에 따라
   const actions = [];
   if (card.category === 'decision') {
-    actions.push(`<button class="topic-modal-btn primary" onclick="topicToDecision('${id}'); closeTopicModal()"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동으로</button>`);
+    actions.push(`<button class="topic-modal-btn primary" onclick="topicToDecision('${id}'); closeTopicModal()"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 마법의 소라고동으로</button>`);
   }
   if (card.category === 'task') {
     actions.push(`<button class="topic-modal-btn primary" onclick="topicToVault('${id}'); closeTopicModal()">📥 서랍장에</button>`);
@@ -44538,7 +44521,7 @@ function renderLensGalpi() {
     body = `
       <div class="archive-quick-row" style="grid-template-columns:1fr 1fr;">
         <button class="archive-quick-btn" onclick="showArchiveDecisions()">
-          <span class="aq-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></span>
+          <span class="aq-icon"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"></span>
           <span class="aq-label">마법의 소라고동</span>
           <span class="aq-count">${decisions.length}건</span>
         </button>
@@ -44556,7 +44539,7 @@ function renderLensGalpi() {
         </button>
       </div>
       <div style="margin-top:14px; font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">
-        큰 결정은 <img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동에서 14일 숙성.<br>
+        큰 결정은 <img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 마법의 소라고동에서 14일 숙성.<br>
         주간·월간 회고는 🌙 리뷰 모음에서 다시 보기.<br>
         풀고 싶은 질문은 🌊 숙고의 방.
       </div>

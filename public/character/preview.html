@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>고동이 표정 미리보기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e17;
+    --bg-soft: #1a1826;
+    --text: #e8d5b7;
+    --text-dim: #b8a890;
+    --accent: #c9a96e;
+    --border: rgba(201,169,110,0.18);
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    padding: 24px 16px 80px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-family: 'Gowun Batang', serif;
+    text-align: center;
+    margin: 0 0 8px;
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 22px;
+    letter-spacing: 0.04em;
+  }
+  .sub {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 28px;
+  }
+
+  /* 사이즈 선택 탭 */
+  .size-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .size-tab {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 18px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .size-tab:hover { color: var(--text); border-color: var(--accent); }
+  .size-tab.active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  /* 갤러리 그리드 */
+  .gallery {
+    max-width: 920px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 12px 14px;
+    text-align: center;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(201,169,110,0.12);
+  }
+  .card .icon-wrap {
+    height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+  .card img { display: block; max-width: 100%; max-height: 100%; }
+  .card .label {
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .card .desc {
+    font-size: 10.5px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    letter-spacing: 0.02em;
+  }
+
+  /* 인라인 컨텍스트 미리보기 */
+  .inline-section {
+    max-width: 720px;
+    margin: 48px auto 0;
+    padding: 24px 20px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .inline-section h2 {
+    font-family: 'Gowun Batang', serif;
+    font-size: 14px;
+    color: var(--accent);
+    margin: 0 0 14px;
+    font-weight: 400;
+  }
+  .inline-row {
+    font-size: 14px;
+    line-height: 1.85;
+    color: var(--text);
+  }
+  .inline-row img {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.15em;
+    display: inline-block;
+  }
+  .inline-row .name {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-left: 6px;
+  }
+
+  /* 큰 hero (96px) 컨텍스트 */
+  .hero-section {
+    max-width: 720px;
+    margin: 28px auto 0;
+    padding: 28px 20px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    text-align: center;
+  }
+  .hero-icon {
+    width: 96px;
+    height: 96px;
+    margin: 0 auto;
+  }
+  .hero-line {
+    margin-top: 14px;
+    font-family: 'Gowun Batang', serif;
+    color: var(--text);
+    font-size: 16px;
+    min-height: 22px;
+  }
+  .hero-controls {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+  .hero-controls button {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .hero-controls button:hover { color: var(--text); border-color: var(--accent); }
+  .hero-controls button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1>고동이 표정 미리보기 — 21종</h1>
+<div class="sub">2026-05-10 · /character/godong-{mood}.svg</div>
+
+<div class="size-tabs">
+  <button class="size-tab" data-size="48">작게 (48)</button>
+  <button class="size-tab active" data-size="96">기본 (96)</button>
+  <button class="size-tab" data-size="160">크게 (160)</button>
+  <button class="size-tab" data-size="200">원본 (200)</button>
+</div>
+
+<div class="gallery" id="gallery"></div>
+
+<!-- 인라인 1em 컨텍스트 (실제 앱에서 글 옆에 박힐 때 어떻게 보이는지) -->
+<div class="inline-section">
+  <h2>인라인 컨텍스트 (1em, 글자 옆)</h2>
+  <div class="inline-row" id="inlineRow"></div>
+</div>
+
+<!-- 96px hero 컨텍스트 (튜토리얼 v8 hero 자리) -->
+<div class="hero-section">
+  <h2 style="font-family:'Gowun Batang',serif; font-size:14px; color:var(--accent); margin:0 0 14px; font-weight:400;">
+    Hero 컨텍스트 (튜토리얼 / 첫 관찰 자리)
+  </h2>
+  <img class="hero-icon" id="heroIcon" src="/character/godong-default.svg" alt="">
+  <div class="hero-line" id="heroLine">— default —</div>
+  <div class="hero-controls" id="heroControls"></div>
+</div>
+
+<script>
+const MOODS = [
+  { name: 'default',          desc: '평온' },
+  { name: 'hello',            desc: '환영' },
+  { name: 'happy',            desc: '기쁨' },
+  { name: 'wink',             desc: '윙크' },
+  { name: 'inspired',         desc: '별눈' },
+  { name: 'love',             desc: '하트눈' },
+  { name: 'proud',            desc: '자부심' },
+  { name: 'soras-call',       desc: '후광' },
+  { name: 'thinking',         desc: '생각중' },
+  { name: 'listening',        desc: '경청' },
+  { name: 'focused',          desc: '집중' },
+  { name: 'whispering',       desc: '비밀' },
+  { name: 'shy',              desc: '부끄럼' },
+  { name: 'blushing-thanks',  desc: '감사' },
+  { name: 'down',             desc: '슬픔' },
+  { name: 'surprised',        desc: '놀람' },
+  { name: 'sleepy',           desc: '졸림' },
+  { name: 'dreaming',         desc: '꿈꿈' },
+  { name: 'storming',         desc: '혼란' },
+  { name: 'calm',             desc: '평화' },
+  { name: 'growing',          desc: '진화' }
+];
+
+let currentSize = 96;
+
+function renderGallery() {
+  const g = document.getElementById('gallery');
+  g.innerHTML = MOODS.map(m => `
+    <div class="card" onclick="setHero('${m.name}')">
+      <div class="icon-wrap" style="height:${currentSize}px">
+        <img src="/character/godong-${m.name}.svg" alt="${m.name}" style="width:${currentSize}px; height:${currentSize}px">
+      </div>
+      <div class="label">${m.name}</div>
+      <div class="desc">${m.desc}</div>
+    </div>
+  `).join('');
+}
+
+function renderInline() {
+  const row = document.getElementById('inlineRow');
+  row.innerHTML = MOODS.map(m =>
+    `<span style="display:inline-block; margin-right:14px; white-space:nowrap;">
+       <img src="/character/godong-${m.name}.svg" alt="">
+       <span class="name">${m.name}</span>
+     </span>`
+  ).join('');
+}
+
+function setHero(mood) {
+  document.getElementById('heroIcon').src = `/character/godong-${mood}.svg`;
+  document.getElementById('heroLine').textContent = `— ${mood} —`;
+  document.querySelectorAll('#heroControls button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mood === mood);
+  });
+}
+
+function renderHeroControls() {
+  document.getElementById('heroControls').innerHTML =
+    MOODS.map(m => `<button data-mood="${m.name}" onclick="setHero('${m.name}')">${m.name}</button>`).join('');
+}
+
+document.querySelectorAll('.size-tab').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.size-tab').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    currentSize = +b.dataset.size;
+    renderGallery();
+  });
+});
+
+renderGallery();
+renderInline();
+renderHeroControls();
+setHero('default');
+</script>
+</body>
+</html>

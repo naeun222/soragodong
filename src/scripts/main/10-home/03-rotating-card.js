@@ -690,57 +690,21 @@ function _rcCollectAvailable() {
 }
 
 // =============================================================================
-// godong 표정 SVG (5 source variant)
+// godong 표정 SVG — 사용자 명시 2026-05-10: 인라인 6 variant → 21종 mood SVG 매핑
+// pearl=inspired(별눈), newView=surprised(큰 눈), miniReview=calm(잔잔), quiz=thinking(?),
+// quizDone=proud(별3개+자부심), horoscope=dreaming(꿈+🌗 분위기)
 // =============================================================================
 function _rcGodongSvg(sourceId) {
-  const expressions = {
-    pearl: {
-      eyes: '<circle cx="22" cy="26" r="1.6" fill="#1a1a2e"/><circle cx="32" cy="26" r="1.6" fill="#1a1a2e"/>',
-      mouth: '<path d="M 22 33 Q 27 36 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">✨</text>',
-    },
-    newView: {
-      eyes: '<circle cx="22" cy="27" r="2.4" fill="#1a1a2e"/><circle cx="32" cy="27" r="2.4" fill="#1a1a2e"/><circle cx="22.5" cy="26" r="0.8" fill="#fff"/><circle cx="32.5" cy="26" r="0.8" fill="#fff"/>',
-      mouth: '<circle cx="27" cy="34" r="1.6" fill="none" stroke="#1a1a2e" stroke-width="1.3"/>',
-      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">✦</text>',
-    },
-    miniReview: {
-      eyes: '<path d="M 20 27 Q 22 26 24 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 27 Q 32 26 34 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
-      mouth: '<line x1="25" y1="34" x2="29" y2="34" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '',
-    },
-    quiz: {
-      eyes: '<circle cx="22" cy="26" r="1.8" fill="#1a1a2e"/><circle cx="32" cy="26" r="1.8" fill="#1a1a2e"/>',
-      mouth: '<path d="M 22 33 Q 27 35 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">?</text>',
-    },
-    quizDone: {
-      eyes: '<path d="M 20 27 Q 22 24 24 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 27 Q 32 24 34 27" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
-      mouth: '<path d="M 22 33 Q 27 37 32 33" fill="none" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round"/>',
-      extra: '<text x="42" y="14" font-size="9" fill="rgba(255,243,196,0.95)">★</text>',
-    },
-    horoscope: {
-      eyes: '<path d="M 20 26 Q 22 24 24 26" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/><path d="M 30 26 Q 32 24 34 26" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>',
-      mouth: '<path d="M 23 33 Q 27 35 31 33" fill="none" stroke="#1a1a2e" stroke-width="1.3" stroke-linecap="round"/>',
-      extra: '<text x="40" y="14" font-size="8" fill="rgba(168,157,200,0.95)">🌗</text>',
-    },
+  const moodMap = {
+    pearl: 'inspired',
+    newView: 'surprised',
+    miniReview: 'calm',
+    quiz: 'thinking',
+    quizDone: 'proud',
+    horoscope: 'dreaming',
   };
-  const exp = expressions[sourceId] || expressions.pearl;
-  return `
-    <svg class="rc-godong-svg" viewBox="0 0 56 50" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <defs>
-        <linearGradient id="godongGrad-${sourceId}" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#f5d99c"/>
-          <stop offset="100%" stop-color="#d4a76a"/>
-        </linearGradient>
-      </defs>
-      <path d="M 28 5 Q 48 8 47 28 Q 46 47 28 47 Q 10 47 9 28 Q 8 12 28 5 Z" fill="url(#godongGrad-${sourceId})" stroke="rgba(168,157,200,0.4)" stroke-width="0.6"/>
-      <path d="M 28 14 Q 40 18 38 28 Q 36 38 28 38 Q 20 38 20 28" fill="none" stroke="rgba(168,157,200,0.55)" stroke-width="1.2"/>
-      ${exp.eyes}
-      ${exp.mouth}
-      ${exp.extra}
-    </svg>
-  `;
+  const mood = moodMap[sourceId] || 'default';
+  return `<img class="rc-godong-svg godong-mood-${mood}" src="/character/godong-${mood}.svg" alt="" decoding="async" aria-hidden="true">`;
 }
 
 // =============================================================================

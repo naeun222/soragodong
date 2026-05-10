@@ -267,7 +267,7 @@ function _annualReviewBuildCard9(d) {
         <!-- godong icon + halo (사용자 명시 2026-05-01: 🐚 emoji → godongicon.png, drop-shadow X 배경 안 보이게) -->
         <div style="position:relative; display:flex; align-items:center; justify-content:center; height:80px;">
           <div style="position:absolute; width:110px; height:110px; background:radial-gradient(circle, rgba(212,167,106,0.32) 0%, transparent 70%); border-radius:50%; animation: ann-rv-final-halo 3s ease-in-out infinite alternate;"></div>
-          <img src="/godongicon.png" alt="소라고동" style="width:64px; height:64px; object-fit:contain; position:relative; display:block;" decoding="async">
+          <img src="/character/godong-inspired.svg" alt="소라고동" class="godong-mood-inspired" style="width:64px; height:64px; object-fit:contain; position:relative; display:block;" decoding="async">
         </div>
 
         <!-- 라벨 + 양쪽 가는 선 -->

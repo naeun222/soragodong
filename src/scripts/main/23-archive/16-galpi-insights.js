@@ -31,7 +31,7 @@ function renderLensGalpi() {
     body = `
       <div class="archive-quick-row" style="grid-template-columns:1fr 1fr;">
         <button class="archive-quick-btn" onclick="showArchiveDecisions()">
-          <span class="aq-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></span>
+          <span class="aq-icon"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"></span>
           <span class="aq-label">마법의 소라고동</span>
           <span class="aq-count">${decisions.length}건</span>
         </button>
@@ -49,7 +49,7 @@ function renderLensGalpi() {
         </button>
       </div>
       <div style="margin-top:14px; font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">
-        큰 결정은 <img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동에서 14일 숙성.<br>
+        큰 결정은 <img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 마법의 소라고동에서 14일 숙성.<br>
         주간·월간 회고는 🌙 리뷰 모음에서 다시 보기.<br>
         풀고 싶은 질문은 🌊 숙고의 방.
       </div>

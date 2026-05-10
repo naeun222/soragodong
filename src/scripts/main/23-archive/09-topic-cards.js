@@ -104,7 +104,7 @@ function openTopicCard(id) {
   // 액션 버튼 — 카테고리에 따라
   const actions = [];
   if (card.category === 'decision') {
-    actions.push(`<button class="topic-modal-btn primary" onclick="topicToDecision('${id}'); closeTopicModal()"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"> 마법의 소라고동으로</button>`);
+    actions.push(`<button class="topic-modal-btn primary" onclick="topicToDecision('${id}'); closeTopicModal()"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"> 마법의 소라고동으로</button>`);
   }
   if (card.category === 'task') {
     actions.push(`<button class="topic-modal-btn primary" onclick="topicToVault('${id}'); closeTopicModal()">📥 서랍장에</button>`);

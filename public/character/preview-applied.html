@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>실제 자리 미리보기 — 고동이 표정 적용</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ── 앱 토큰 (실제 앱 02-app-shell.css 와 동일) ─────────────── */
+  :root {
+    --bg: #0f0e17;
+    --bg-soft: #1a1826;
+    --surface: #1a1826;
+    --surface2: #232133;
+    --text: #e8d5b7;
+    --text-dim: #b8a890;
+    --text-soft: #6e6886;
+    --accent: #c9a96e;
+    --accent-dim: rgba(201,169,110,0.18);
+    --purple: #b28cd4;
+    --border: rgba(201,169,110,0.18);
+    --danger: #d97a6a;
+    --success: #7ab891;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: #06060a;
+    color: var(--text);
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    margin: 0;
+    padding: 32px 16px 80px;
+  }
+  .page-head {
+    max-width: 1100px;
+    margin: 0 auto 32px;
+    text-align: center;
+  }
+  h1 {
+    font-family: 'Gowun Batang', serif;
+    color: var(--accent);
+    font-size: 24px;
+    margin: 0 0 6px;
+    letter-spacing: 0.04em;
+  }
+  .sub {
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .sub b { color: var(--text); }
+
+  /* ── 비교 그리드 ─────────────────────────────────────────── */
+  .station {
+    max-width: 1100px;
+    margin: 0 auto 36px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .station-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .station-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 700;
+  }
+  .station-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.03em;
+  }
+  .station-meta code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    color: var(--accent);
+    background: var(--surface);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 4px;
+  }
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+  }
+  @media (max-width: 720px) {
+    .compare { grid-template-columns: 1fr; }
+  }
+  .pane {
+    background: var(--bg);
+    padding: 24px 20px;
+    min-height: 240px;
+    display: flex;
+    flex-direction: column;
+  }
+  .pane-tag {
+    font-size: 10px;
+    color: var(--text-soft);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .pane.before .pane-tag { color: var(--danger); }
+  .pane.after .pane-tag { color: var(--success); }
+  .pane-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mood-select {
+    margin-top: 14px;
+    padding: 8px 12px;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     실제 앱 클래스 — src/styles/ 에서 그대로 가져옴
+  ═══════════════════════════════════════════════════════════ */
+
+  /* --- 1. 튜토리얼 v8 Hero (10-tutorial-v8.css) --- */
+  .v8-hero-mock {
+    background: #0c0c0e;
+    border-radius: 12px;
+    padding: 40px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    min-height: 280px;
+    justify-content: center;
+  }
+  .v8-hero-godong {
+    display: block;
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    background: transparent;
+    margin-bottom: 32px;
+  }
+  .v8-hero-text {
+    color: #f3f3f5;
+    font-family: 'Gowun Batang', serif;
+    font-size: 28px;
+    text-align: center;
+  }
+
+  /* --- 2. 위기 감지 carousel (09-misc.css:2689) --- */
+  .crisis-carousel-modal {
+    background: linear-gradient(160deg, rgba(45,40,72,0.96), rgba(28,24,52,0.96));
+    border: 1px solid rgba(178,140,212,0.3);
+    border-radius: 18px;
+    padding: 28px 24px 22px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    backdrop-filter: blur(12px);
+  }
+  .crisis-carousel-godong {
+    width: 64px;
+    height: 64px;
+    display: block;
+    margin: 0 auto 16px;
+    object-fit: contain;
+    opacity: 0.92;
+  }
+  .crisis-carousel-head {
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 12px;
+    font-family: 'Gowun Batang', serif;
+  }
+  .crisis-carousel-body {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  .crisis-carousel-close {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+  }
+
+  /* --- 3. 로그인 화면 (09-misc.css:1666) --- */
+  .login-mock {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 36px 24px;
+    text-align: center;
+    width: 100%;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .login-icon {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    margin: 0 auto 12px;
+    display: block;
+    filter: drop-shadow(0 4px 18px rgba(212,167,106,0.30));
+    animation: loginShellFloat 4s ease-in-out infinite;
+  }
+  @keyframes loginShellFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .login-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 22px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .login-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* --- 4. 인라인 1em (02-app-shell.css:9) --- */
+  .godong-icon {
+    display: inline-block;
+    width: 1.25em;
+    height: 1.25em;
+    object-fit: contain;
+    vertical-align: -0.22em;
+  }
+  .inline-mock {
+    width: 100%;
+    font-size: 15px;
+    line-height: 1.9;
+    color: var(--text);
+    padding: 8px 4px;
+  }
+  .inline-mock .row {
+    display: block;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .inline-mock .row:last-child { border-bottom: 0; }
+
+  /* --- 5. 마법 chip / dsc-header / decision card label --- */
+  .magic-mode-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10));
+    border: 1px solid rgba(178,140,212,0.4);
+    color: #d4b8ff;
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .dsc-header {
+    font-size: 11px;
+    color: var(--purple);
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .decision-card-label {
+    font-size: 10px;
+    color: #d4a76a;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .decision-card-mock {
+    background: linear-gradient(135deg, rgba(212,167,106,0.12), rgba(139,126,196,0.1));
+    border: 1px solid rgba(212,167,106,0.25);
+    border-radius: 18px;
+    padding: 16px;
+    width: 100%;
+    max-width: 320px;
+  }
+  .decision-card-title {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  /* --- 6. 4단 분석 마지막 슬라이드 (halo + 64px) --- */
+  .quarterly-card-mock {
+    background: linear-gradient(180deg, #1a1826, #0f0e17);
+    border: 1px solid rgba(201,169,110,0.3);
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: center;
+    width: 100%;
+    max-width: 320px;
+    position: relative;
+  }
+  .quarterly-godong-wrap {
+    width: 96px;
+    height: 96px;
+    margin: 0 auto 14px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .quarterly-godong-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgba(201,169,110,0.3) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .quarterly-godong-wrap img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    position: relative;
+    z-index: 1;
+  }
+  .quarterly-card-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 18px;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .quarterly-card-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* --- 7. 홈 메인 액션 (40px action-icon) --- */
+  .action-card-mock {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 360px;
+  }
+  .action-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(178,140,212,0.25), rgba(201,169,110,0.15));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .action-icon img.godong-icon { width: 26px; height: 26px; }
+  .action-text { flex: 1; }
+  .action-title { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+  .action-sub { font-size: 12px; color: var(--text-dim); }
+  .action-arrow { color: var(--accent); opacity: 0.5; font-size: 18px; }
+
+  /* --- 채팅 모드 토글 (22px) --- */
+  .chat-mode-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .chat-mode-img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>실제 자리 미리보기</h1>
+  <div class="sub">왼쪽: <b>현재 (godong.webp / godongicon.png)</b> / 오른쪽: <b>SVG 적용 후</b><br>오른쪽 표정은 <b>드롭다운으로 바꿔볼 수 있어요</b>.</div>
+</div>
+
+<!-- 1. 튜토리얼 v8 Hero -->
+<section class="station">
+  <div class="station-head">
+    <div class="station-title">1. 튜토리얼 v8 Hero (96px)</div>
+    <div class="station-meta">첫 사용자 진입 화면 ·<code>.v8-hero-godong</code></div>
+  </div>
+  <div class="compare">
+    <div class="pane before">
+      <div class="pane-tag">현재 (godongicon.png)</div>
+      <div class="pane-body">
+        <div class="v8-hero-mock">
+          <img class="v8-hero-godong" src="/godongicon.png" alt="">
+          <div class="v8-hero-text">안녕?</div>
+        </div>
+      </div>
+    </div>
+    <div class="pane after">
+      <div class="pane-tag">SVG 적용 후</div>
+      <div class="pane-body" style="flex-direction:column;">
+        <div class="v8-hero-mock">
+          <img class="v8-hero-godong" src="/character/godong-hello.svg" alt="" data-station="1">
+          <div class="v8-hero-text">안녕?</div>
+        </div>
+      </div>
+      <select class="mood-select" data-station="1"></select>
+    </div>
+  </div>
+</section>
+
+<!-- 2. 로그인 화면 -->
+<section class="station">
+  <div class="station-head">
+    <div class="station-title">2. 로그인 화면 (64px, float animation)</div>
+    <div class="station-meta"><code>.login-icon</code></div>
+  </div>
+  <div class="compare">
+    <div class="pane before">
+      <div class="pane-tag">현재 (godongicon.png)</div>
+      <div class="pane-body">
+        <div class="login-mock">
+          <img class="login-icon" src="/godongicon.png" alt="">
+          <div class="login-title">소라고동</div>
+          <div class="login-sub">안 붙어 있는 친구</div>
+        </div>
+      </div>
+    </div>
+    <div class="pane after">
+      <div class="pane-tag">SVG 적용 후</div>
+      <div class="pane-body" style="flex-direction:column;">
+        <div class="login-mock">
+          <img class="login-icon" src="/character/godong-hello.svg" alt="" data-station="2">
+          <div class="login-title">소라고동</div>
+          <div class="login-sub">안 붙어 있는 친구</div>
+        </div>
+      </div>
+      <select class="mood-select" data-station="2"></select>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 위기 감지 carousel -->
+<section class="station">
+  <div class="station-head">
+    <div class="station-title">3. 위기 감지 carousel (64px)</div>
+    <div class="station-meta">"잠깐 — 너 괜찮아?" 모달 ·<code>.crisis-carousel-godong</code></div>
+  </div>
+  <div class="compare">
+    <div class="pane before">
+      <div class="pane-tag">현재 (godongicon.png)</div>
+      <div class="pane-body">
+        <div class="crisis-carousel-modal">
+          <img src="/godongicon.png" class="crisis-carousel-godong" alt="">
+          <div class="crisis-carousel-head">잠깐 — 너 괜찮아?</div>
+          <div class="crisis-carousel-body">요즘 좀 무거워 보여서 한 번 묻고 싶었어.<br>지금 진짜 힘들면 <b>전문가</b> 만나봐 진심으로.<br>나는 도구일 뿐이야.</div>
+          <button class="crisis-carousel-close">알겠어, 닫기</button>
+        </div>
+      </div>
+    </div>
+    <div class="pane after">
+      <div class="pane-tag">SVG 적용 후</div>
+      <div class="pane-body" style="flex-direction:column;">
+        <div class="crisis-carousel-modal">
+          <img src="/character/godong-shy.svg" class="crisis-carousel-godong" alt="" data-station="3">
+          <div class="crisis-carousel-head">잠깐 — 너 괜찮아?</div>
+          <div class="crisis-carousel-body">요즘 좀 무거워 보여서 한 번 묻고 싶었어.<br>지금 진짜 힘들면 <b>전문가</b> 만나봐 진심으로.<br>나는 도구일 뿐이야.</div>
+          <button class="crisis-carousel-close">알겠어, 닫기</button>
+        </div>
+      </div>
+      <select class="mood-select" data-station="3"></select>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 4단 분석 마지막 슬라이드 -->
+<section class="station">
+  <div class="station-head">
+    <div class="station-title">4. 4단 분석 마지막 슬라이드 (64px halo)</div>
+    <div class="station-meta">04-annual-review-phase1/03-cards3-9-render.js:270</div>
+  </div>
+  <div class="compare">
+    <div class="pane before">
+      <div class="pane-tag">현재 (godongicon.png)</div>
+      <div class="pane-body">
+        <div class="quarterly-card-mock">
+          <div class="quarterly-godong-wrap">
+            <img src="/godongicon.png" alt="">
+          </div>
+          <div class="quarterly-card-title">4단 분석 완료</div>
+          <div class="quarterly-card-sub">진주 1개 · 14일 후 만남</div>
+        </div>
+      </div>
+    </div>
+    <div class="pane after">
+      <div class="pane-tag">SVG 적용 후</div>
+      <div class="pane-body" style="flex-direction:column;">
+        <div class="quarterly-card-mock">
+          <div class="quarterly-godong-wrap">
+            <img src="/character/godong-inspired.svg" alt="" data-station="4">
+          </div>
+          <div class="quarterly-card-title">4단 분석 완료</div>
+          <div class="quarterly-card-sub">진주 1개 · 14일 후 만남</div>
+        </div>
+      </div>
+      <select class="mood-select" data-station="4"></select>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 인라인 1em (글 옆) -->
+<section class="station">
+  <div class="station-head">
+    <div class="station-title">5. 인라인 1em (글 옆에 박힐 때)</div>
+    <div class="station-meta"><code>.godong-icon</code> · 가장 자주 보이는 자리</div>
+  </div>
+  <div class="compare">
+    <div class="pane before">
+      <div class="pane-tag">현재 (godong.webp)</div>
+      <div class="pane-body">
+        <div class="inline-mock">
+          <span class="row"><span class="dsc-header"><img src="/godong.webp" class="godong-icon"> 마법의 소라고동에서 천천히 보면 어때?</span></span>
+          <span class="row"><span class="decision-card-label"><img src="/godong.webp" class="godong-icon"> 진행 중인 결정 · 7일째</span></span>
+          <span class="row"><span class="magic-mode-chip"><img src="/godong.webp" class="godong-icon"> 마법의 소라고동</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="pane after">
+      <div class="pane-tag">SVG 적용 후</div>
+      <div class="pane-body" style="flex-direction:column;">
+        <div class="inline-mock">
+          <span class="row"><span class="dsc-header"><img src="/character/godong-soras-call.svg" class="godong-icon" data-station="5"> 마법의 소라고동에서 천천히 보면 어때?</span></span>
+          <span class="row"><span class="decision-card-label"><img src="/character/godong-soras-call.svg" class="godong-icon" data-station="5"> 진행 중인 결정 · 7일째</span></span>
+          <span class="row"><span class="magic-mode-chip"><img src="/character/godong-soras-call.svg" class="godong-icon" data-station="5"> 마법의 소라고동</span></span>
+        </div>
+      </div>
+      <select class="mood-select" data-station="5"></select>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 홈 메인 액션 카드 -->
+<section class="station">
+  <div class="station-head">
+    <div class="station-title">6. 홈 메인 액션 카드 (40px action-icon)</div>
+    <div class="station-meta"><code>.action-icon</code> · 홈 첫 화면</div>
+  </div>
+  <div class="compare">
+    <div class="pane before">
+      <div class="pane-tag">현재 (godong.webp)</div>
+      <div class="pane-body">
+        <div class="action-card-mock">
+          <div class="action-icon"><img src="/godong.webp" class="godong-icon"></div>
+          <div class="action-text">
+            <div class="action-title">마법의 소라고동</div>
+            <div class="action-sub">큰 결정 · 14일 숙성</div>
+          </div>
+          <div class="action-arrow">›</div>
+        </div>
+      </div>
+    </div>
+    <div class="pane after">
+      <div class="pane-tag">SVG 적용 후</div>
+      <div class="pane-body" style="flex-direction:column;">
+        <div class="action-card-mock">
+          <div class="action-icon"><img src="/character/godong-soras-call.svg" class="godong-icon" data-station="6"></div>
+          <div class="action-text">
+            <div class="action-title">마법의 소라고동</div>
+            <div class="action-sub">큰 결정 · 14일 숙성</div>
+          </div>
+          <div class="action-arrow">›</div>
+        </div>
+      </div>
+      <select class="mood-select" data-station="6"></select>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 채팅 모드 토글 -->
+<section class="station">
+  <div class="station-head">
+    <div class="station-title">7. 채팅 모드 토글 (22px)</div>
+    <div class="station-meta"><code>.chat-mode-img</code> · 헤더 우측 상단</div>
+  </div>
+  <div class="compare">
+    <div class="pane before">
+      <div class="pane-tag">현재 (godongicon.png)</div>
+      <div class="pane-body">
+        <button class="chat-mode-btn"><img src="/godongicon.png" class="chat-mode-img"></button>
+      </div>
+    </div>
+    <div class="pane after">
+      <div class="pane-tag">SVG 적용 후</div>
+      <div class="pane-body" style="flex-direction:column;">
+        <button class="chat-mode-btn"><img src="/character/godong-default.svg" class="chat-mode-img" data-station="7"></button>
+      </div>
+      <select class="mood-select" data-station="7"></select>
+    </div>
+  </div>
+</section>
+
+<script>
+const MOODS = [
+  ['default','평온'],['hello','환영'],['happy','기쁨'],['wink','윙크'],
+  ['inspired','별눈'],['love','하트눈'],['proud','자부심'],['soras-call','후광'],
+  ['thinking','생각중'],['listening','경청'],['focused','집중'],['whispering','비밀'],
+  ['shy','부끄럼'],['blushing-thanks','감사'],['down','슬픔'],['surprised','놀람'],
+  ['sleepy','졸림'],['dreaming','꿈꿈'],['storming','혼란'],['calm','평화'],['growing','진화']
+];
+
+// 자리별 추천 기본 mood
+const DEFAULTS = {
+  '1': 'hello',         // 튜토리얼 hero — "안녕?"
+  '2': 'hello',         // 로그인 — 환영
+  '3': 'shy',           // 위기 감지 — 조심스러운 톤
+  '4': 'inspired',      // 4단 분석 완료 — 별눈
+  '5': 'soras-call',    // 인라인 마법고동 — 후광
+  '6': 'soras-call',    // 홈 메인 액션 마법고동 — 후광
+  '7': 'default'        // 채팅 모드 토글 — 기본
+};
+
+document.querySelectorAll('select.mood-select').forEach(sel => {
+  const station = sel.dataset.station;
+  sel.innerHTML = MOODS.map(([m, k]) =>
+    `<option value="${m}"${m === DEFAULTS[station] ? ' selected' : ''}>${m} — ${k}</option>`
+  ).join('');
+  sel.addEventListener('change', () => {
+    const m = sel.value;
+    document.querySelectorAll(`img[data-station="${station}"]`).forEach(img => {
+      img.src = `/character/godong-${m}.svg`;
+    });
+  });
+});
+</script>
+</body>
+</html>

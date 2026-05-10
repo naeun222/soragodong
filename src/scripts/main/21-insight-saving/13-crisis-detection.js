@@ -62,7 +62,7 @@ function showCrisisCarousel(triggerKind, opts) {
   overlay.addEventListener('click', (e) => { e.stopPropagation(); });
   overlay.innerHTML = `
     <div class="crisis-carousel-modal" onclick="event.stopPropagation()">
-      <img src="/godongicon.png" class="crisis-carousel-godong" alt="">
+      <img src="/character/godong-shy.svg" class="crisis-carousel-godong godong-mood-shy" alt="">
       <div class="crisis-carousel-head">잠깐 — 너 괜찮아?${isPreview ? ' <span style="font-size:11px; opacity:0.55; font-weight:400; letter-spacing:0.04em;">(미리보기)</span>' : ''}</div>
       <div class="crisis-carousel-body">
         요즘 좀 무거워 보여서 한 번 묻고 싶었어.<br>

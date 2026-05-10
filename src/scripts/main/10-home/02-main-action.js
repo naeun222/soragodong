@@ -123,7 +123,7 @@ function renderDecisionMiniLink() {
 
   container.innerHTML = `
     <div onclick="openMagicReflectionChooser()" class="decision-mini-card">
-      <div class="dm-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
+      <div class="dm-icon"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"></div>
       <div class="dm-text">
         <div class="dm-title">마법고동</div>
         <div class="dm-sub">${subText}</div>
@@ -152,7 +152,7 @@ function openMagicReflectionChooser() {
       </div>
       <div class="magic-chooser-options">
         <button class="magic-chooser-opt" type="button" onclick="closeMagicChooser(); showScreen('decisions');">
-          <div class="mco-icon"><img src="/godong.webp" alt="" class="godong-icon" decoding="async"></div>
+          <div class="mco-icon"><img src="/character/godong-soras-call.svg" alt="" class="godong-icon godong-mood-soras-call" decoding="async"></div>
           <div class="mco-text">
             <div class="mco-title">마법의 방</div>
             <div class="mco-sub">${decisionCount > 0 ? `${decisionCount}개 숙성 중` : '14일 숙성으로 큰 결정'}</div>
