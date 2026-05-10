@@ -26,6 +26,10 @@ function _collectAnnualData(year) {
 function _buildAnnualReviewPrompt(year, data) {
   const _data = data || _collectAnnualData(year);
   const { targetYear, entries, pearls, archive, decisions, quarterlies, insights, chatArchive } = _data;
+  // 사용자 명시 2026-05-10 (메커니즘 일관 — weekly/monthly/quarterly 와 동일): year idempotent skip — 같은 해 review 이미 있으면 null. 사용자 click 두 번 방지.
+  if (targetYear && (state.annualReviews || []).some(r => r.year === targetYear)) {
+    return null;
+  }
   // 사용자 명시 2026-05-08 ultrathink: 마지막 annual review 이후 새 데이터 1개라도 있어야 trigger.
   const lastReview = (state.annualReviews || []).slice().sort((a, b) =>
     new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)

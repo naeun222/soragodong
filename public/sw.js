@@ -47,7 +47,8 @@
 // v42 (2026-05-10 ultrathink): _collectReviewData('weekly') cutoffEnd = 이번 일요일 04:00 강제 (4AM 이전/이후 무관). 옛 일요일 4AM 이전 진입 시 저번 주 (W18) 데이터 가져오던 버그 fix.
 // v43 (2026-05-10 ultrathink REAL ROOT CAUSE): KST timezone shift fix (toISOString = UTC 변환 → 04:00 KST = 19:00 UTC 전날 → 1일 앞당겨짐) + AI 통찰 요약 버튼 → quote 직접 DOM 교체.
 // v44 (2026-05-10): 회전 카드 weekly source click → showArchiveReviews() 으로 '리뷰 모음' 직진 + 카드 inline 펼침 / _forceWeeklyReview 가 push 후 auto:false (사용자 manual) / monthly cutoff = 이번 달 메커니즘 일관.
-const CACHE_NAME = 'soragodong-v4-cache-v44';
+// v45 (2026-05-10 메커니즘 일관 batch 14): 사용자 click 흐름 = quarterly current quarter / annual current year (자동 batch = 끝난 사이클 prev 그대로). _build* prompt 에 quarterKey/year idempotent skip 추가.
+const CACHE_NAME = 'soragodong-v4-cache-v45';
 const PRECACHE_URLS = [
   './',
   './index.html',

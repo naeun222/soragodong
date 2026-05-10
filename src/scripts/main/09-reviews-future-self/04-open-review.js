@@ -63,15 +63,14 @@ async function openQuarterlyReviewCard() {
     showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
     return;
   }
-  // 사용자 명시 2026-05-02 ultrathink (ERROR #12 fix): prevQ 명시 — 현재 분기 직전.
+  // 사용자 명시 2026-05-10 (메커니즘 일관): 사용자 click = currentQuarterKey (이번 분기 진행 중 review). 자동 batch = prev (끝난 사이클) 그대로.
   const now = new Date();
   const Q = Math.floor(now.getMonth() / 3) + 1;
-  const prevQuarterKey = Q === 1 ? `${now.getFullYear() - 1}-Q4` : `${now.getFullYear()}-Q${Q - 1}`;
-  // 사용자 명시 2026-05-04: 한 번 진입한 분기 리뷰 카드 다시 안 뜨게.
-  _dismissReview('quarterly', prevQuarterKey);
+  const currentQuarterKey = `${now.getFullYear()}-Q${Q}`;
+  _dismissReview('quarterly', currentQuarterKey);
   // batch fresh 우선 — auto + !user_viewed
   const fresh = (state.quarterlyReviews || []).find(r => r.auto && !r.user_viewed);
-  const existing = fresh || (state.quarterlyReviews || []).find(r => r.quarterKey === prevQuarterKey);
+  const existing = fresh || (state.quarterlyReviews || []).find(r => r.quarterKey === currentQuarterKey);
   if (existing) {
     if (existing.auto && !existing.user_viewed) {
       existing.user_viewed = true;
@@ -80,15 +79,15 @@ async function openQuarterlyReviewCard() {
     }
     return openQuarterlyStories(existing.id);
   }
-  showToast(`${prevQuarterKey} 분기 리뷰 생성 중... (1-2분)`);
-  const stats = (typeof getQuarterlyStats === 'function' && getQuarterlyStats(prevQuarterKey)) || {
+  showToast(`${currentQuarterKey} 분기 리뷰 생성 중... (1-2분)`);
+  const stats = (typeof getQuarterlyStats === 'function' && getQuarterlyStats(currentQuarterKey)) || {
     checkins: 0, attempts: 0, worked: 0, pearls: 0, dnaPearls: 0
   };
   try {
-    const aiReview = await generateQuarterlyReview(prevQuarterKey, stats);
+    const aiReview = await generateQuarterlyReview(currentQuarterKey, stats);
     const newReview = {
       id: 'qr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      quarterKey: prevQuarterKey,
+      quarterKey: currentQuarterKey,
       completedAt: new Date().toISOString(),
       stats,
       summary: aiReview.summary || '',
@@ -122,12 +121,12 @@ async function openAnnualReviewCard() {
     showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
     return;
   }
-  const prevYear = new Date().getFullYear() - 1;
-  // 사용자 명시 2026-05-04: 한 번 진입한 연간 리뷰 카드 다시 안 뜨게.
-  _dismissReview('annual', prevYear);
+  // 사용자 명시 2026-05-10 (메커니즘 일관): 사용자 click = currentYear (올해 진행 중 review). 자동 batch = prev (끝난 사이클) 그대로.
+  const currentYear = new Date().getFullYear();
+  _dismissReview('annual', currentYear);
   // batch fresh 우선
   const fresh = (state.annualReviews || []).find(r => r.auto && !r.user_viewed);
-  const existing = fresh || (state.annualReviews || []).find(r => r.year === prevYear);
+  const existing = fresh || (state.annualReviews || []).find(r => r.year === currentYear);
   if (existing) {
     if (existing.auto && !existing.user_viewed) {
       existing.user_viewed = true;
@@ -136,11 +135,11 @@ async function openAnnualReviewCard() {
     }
     return openAnnualReview(existing);
   }
-  showToast(`${prevYear}년 연간 리뷰 생성 중... (1-2분, Opus 4.7)`);
+  showToast(`${currentYear}년 연간 리뷰 생성 중... (1-2분, Opus 4.7)`);
   try {
-    await generateAnnualReview(prevYear);  // 자체 state.annualReviews push
+    await generateAnnualReview(currentYear);  // 자체 state.annualReviews push
     if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
-    const newReview = (state.annualReviews || []).find(r => r.year === prevYear);
+    const newReview = (state.annualReviews || []).find(r => r.year === currentYear);
     if (newReview) openAnnualReview(newReview);
   } catch (e) {
     showToast('생성 실패: ' + (e.message || e));
