@@ -156,9 +156,13 @@ function _rcSimRenderVerdictAddNote(cur) {
 //   기존 활성 챕터 있으면 마무리 모달 → archive 이송. 새 챕터에 isSimulationContext flag.
 //   챕터 마무리 시 chapterMeta.isSimulation 마킹 → cf 5차원 추출 X, traits/values/patterns 만 (extractedFrom='simulation').
 async function rcSimContinueInChat() {
+  // 사용자 보고 2026-05-10 (audit-billing 노랑): 더블클릭 시 두 번 generateAIResponse 호출 위험 — entry guard.
+  if (window._rcSimContinueInflight) return;
+  window._rcSimContinueInflight = true;
+  try {
   const r = _ensureRotatingCardState();
   const cur = r.currentSimulation;
-  if (!cur) return;
+  if (!cur) { window._rcSimContinueInflight = false; return; }
   const noteEl = document.getElementById('rcSimAddNoteInput');
   if (noteEl) cur.diffNote = String(noteEl.value || '').trim() || cur.diffNote || null;
   // archive 저장 (시뮬 archive 풀에 stash + 분리 추출 path)
@@ -194,6 +198,10 @@ async function rcSimContinueInChat() {
   if (typeof renderChat === 'function') setTimeout(() => renderChat(), 100);
   // AI 응답 자동 trigger (사용자 입력 없이도 시뮬 컨텍스트로 깊은 대화 시작)
   if (typeof generateAIResponse === 'function') setTimeout(() => generateAIResponse(), 200);
+  } finally {
+    // 1초 후 guard 풀기 (다음 시뮬 흐름 위해)
+    setTimeout(() => { window._rcSimContinueInflight = false; }, 1000);
+  }
 }
 
 function _rcSimRenderModePick(blockKey) {

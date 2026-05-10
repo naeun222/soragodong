@@ -208,9 +208,12 @@ function buildSystemPromptParts() {
 
   // 사용자 요청 2026-04-29 (perf #5): 시스템 프롬프트 cap — 매우 많을 때 verified 우선 + 최대 30개 (확신도 높은 순)
   // V4 사용자 명시 2026-05-04 ultrathink: _deleted (히스토리 삭제 cascade) 항목 제외.
+  // 사용자 보고 2026-05-10 (audit-billing 빨강): 시뮬 추출 항목 (extractedFrom='simulation') 도 제외.
+  //   옛: _filterNonSim (모델 탭) 만 hide → buildSystemPromptParts 는 시뮬 항목도 시스템 프롬프트 주입 → AI 가 가상 시나리오 신호를 사용자 자기 모델로 인식.
+  //   신: 시뮬 격리 = 시스템 프롬프트 주입에서도 제외 (큐 11 의 cf 5차원 X 와 일관).
   const _topByConfVerified = (arr, max) => {
     if (!Array.isArray(arr)) return [];
-    return arr.filter(x => !x._deleted).slice().sort((a, b) => {
+    return arr.filter(x => !x._deleted && x.extractedFrom !== 'simulation').slice().sort((a, b) => {
       const av = a.user_verified ? 1 : 0;
       const bv = b.user_verified ? 1 : 0;
       if (av !== bv) return bv - av;
@@ -339,6 +342,20 @@ function buildSystemPromptParts() {
       const completed = d.steps.filter(s => s.completed).length;
       volatile.push(`- "${d.title}" (${days}일째, ${completed}/10 단계)`);
     });
+    volatile.push('');
+  }
+
+  // 사용자 보고 2026-05-10 (큐 11 정정 ultrathink): 시뮬 → 대화 이어가기 시 AI 가 첫 응답엔 시뮬 인식하지만, 사용자 짧은 follow-up 받으면 시뮬 컨텍스트 잊고 실제 일처럼 응답.
+  //   root cause: user message 의 [시뮬레이션] prefix 만 신호. system prompt 에 시뮬 컨텍스트 명시 X.
+  //   fix: 현재 챕터 안 isSimulationContext 메시지 1+ 면 system 에 강제 안내 + scenario 인용.
+  const _simContextMsg = (state.chatMessages || []).find(m => m && m.isSimulationContext === true);
+  if (_simContextMsg) {
+    volatile.push('[현재 챕터 = 상상 시뮬레이션 컨텍스트 — 매우 중요]');
+    volatile.push('- 사용자가 가상 시나리오 (실제로 일어난 일 X) 를 탐색 중. 짧은 follow-up 답변 받아도 시뮬 안 답으로 인식.');
+    volatile.push('- 절대 X: "그날 켠 이유가 뭐야?", "실제로는 어땠어?" 같이 실제 일 인 양 묻기.');
+    volatile.push('- OK: "그 시뮬 답이 흥미롭네 — X 패턴 보여" / "가상으로라도 그렇게 하는 거 보면..."');
+    const _scenarioLine = (_simContextMsg.content || '').split('\n').find(l => l.startsWith('[시뮬레이션]')) || '';
+    if (_scenarioLine) volatile.push(`- 시나리오: ${_scenarioLine.replace(/^\[시뮬레이션\]\s*/, '')}`);
     volatile.push('');
   }
 

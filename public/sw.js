@@ -32,7 +32,8 @@
 // v27 (2026-05-10 402 진단): extractChapter 의 402 reason 본문 로깅.
 // v28 (2026-05-10 admin 무한 plan): backend checkBudget + Opus 가드 admin (env.ADMIN_USER_ID) 우회.
 // v29 (2026-05-10 audit-backend fix): is_deeper_analysis client hint 폐기 / askDeeper 별도 endpoint analyze_4stage / admin chargeUsage skip.
-const CACHE_NAME = 'soragodong-v4-cache-v29';
+// v30 (2026-05-10 audit-billing fix + 사용자 보고): 시뮬 system prompt 격리 (큐 11 정정) + system prompt traits/values/patterns 의 simulation 항목 hide / sim continue 더블클릭 가드.
+const CACHE_NAME = 'soragodong-v4-cache-v30';
 const PRECACHE_URLS = [
   './',
   './index.html',
