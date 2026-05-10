@@ -1037,29 +1037,53 @@ ${modesText}
       if (_lastSentence > _maxLen / 2) return _cut.slice(0, _lastSentence + 1);
       return _cut.replace(/[,\s]+$/, '') + '...';
     };
-    // 정확히 3개 보장 — dayK 매칭 우선, 없으면 index 기반 보정, 최후 fallback.
+    // 사용자 보고 2026-05-11: dayK iso 매칭 fail = LLM 출력 형식 미스매치 (timezone 'Z' / '+09:00' / naive 등).
+    //   → 매칭 우선순위 변경: 1) 사용 안 된 entry 중 dayK 매칭 → 2) index 기반 보정 → 3) fallback.
+    //   사용된 entry 는 _used set 으로 추적해서 중복 매칭 방지.
+    const _used = new Set();
     const finalEntries = _targetDayKs.map((dayK, idx) => {
-      const match = parsed.find(e => {
-        if (!e || typeof e.body !== 'string' || e.body.length < 5) return false;
-        return _isoToDayK(e.iso) === dayK;
-      });
-      if (match) {
-        const _truncated = _truncateBody(match.body);
-        if (_truncated) return { ...match, body: _truncated };
+      // 1. 사용 안 된 entry 중 dayK 매칭
+      let chosen = null;
+      for (let i = 0; i < parsed.length; i++) {
+        if (_used.has(i)) continue;
+        const e = parsed[i];
+        if (!e || typeof e.body !== 'string' || e.body.length < 5) continue;
+        if (_isoToDayK(e.iso) === dayK) {
+          chosen = { e, i };
+          break;
+        }
       }
-      const byIdx = parsed[idx];
-      if (byIdx && typeof byIdx.body === 'string' && byIdx.body.length >= 5) {
-        const _truncated = _truncateBody(byIdx.body);
+      // 2. dayK 매칭 fail — index 기반 (LLM 이 prompt 순서 따라 3일전/2일전/어제 출력 가정).
+      if (!chosen) {
+        const byIdx = parsed[idx];
+        if (byIdx && typeof byIdx.body === 'string' && byIdx.body.length >= 5 && !_used.has(idx)) {
+          chosen = { e: byIdx, i: idx };
+        }
+      }
+      // 3. 그래도 fail — 사용 안 된 *어떤* valid entry 로 채움 (LLM 출력 순서/iso 둘 다 어긋난 케이스).
+      if (!chosen) {
+        for (let i = 0; i < parsed.length; i++) {
+          if (_used.has(i)) continue;
+          const e = parsed[i];
+          if (!e || typeof e.body !== 'string' || e.body.length < 5) continue;
+          chosen = { e, i };
+          break;
+        }
+      }
+      if (chosen) {
+        _used.add(chosen.i);
+        const _truncated = _truncateBody(chosen.e.body);
         if (_truncated) {
           const d = new Date(dayK + 'T20:00:00');
           return {
-            iso: d.toISOString(),
-            date: byIdx.date || `${d.getMonth()+1}월 ${d.getDate()}일`,
-            weekday: byIdx.weekday || ['일','월','화','수','목','금','토'][d.getDay()],
+            iso: d.toISOString(),  // dayK 강제 — LLM iso 무시
+            date: chosen.e.date || `${d.getMonth()+1}월 ${d.getDate()}일`,
+            weekday: chosen.e.weekday || ['일','월','화','수','목','금','토'][d.getDay()],
             body: _truncated,
           };
         }
       }
+      // 4. 최후 fallback (parsed 가 정말 비어있는 경우)
       return _fallbackEntry(dayK);
     });
     return finalEntries;
