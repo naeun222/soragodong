@@ -35,17 +35,28 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   }
 
   // 2. auth.users row 삭제
+  // 사용자 보고 2026-05-10 (audit-backend 초록): 옛 silent fail → response 에 auth_delete_failed hint. client 가 강제 logout 가능.
+  let _authDeleteOk = true;
   try {
-    await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
+    const _authResp = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
       method: 'DELETE',
       headers: {
         'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
         'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
       }
     });
+    if (!_authResp.ok) {
+      console.error('[delete account] auth.users 삭제 실패 status:', _authResp.status);
+      _authDeleteOk = false;
+    }
   } catch (e) {
-    console.warn('[delete account] auth.users 삭제 실패:', e);
+    console.error('[delete account] auth.users 삭제 예외:', e);
+    _authDeleteOk = false;
   }
 
-  return jsonResponse({ ok: true, message: '탈퇴 완료. 자기관찰 데이터 즉시 삭제됨.' });
+  return jsonResponse({
+    ok: true,
+    message: '탈퇴 완료. 자기관찰 데이터 즉시 삭제됨.',
+    auth_delete_failed: !_authDeleteOk  // client = 강제 logout + 재시도 안내
+  });
 }

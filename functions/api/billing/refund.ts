@@ -230,7 +230,8 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   //   - 24시간 이내인데 사용했으면 전액 환불 X → 1일치 차감
   //   - 그 외 = 일별 비례 (사용 했으면 elapsedDays / 안 했으면 elapsedDays 그대로)
   let refundAmountKrw = paymentRow.amount_krw;
-  if (paymentRow.payment_type === 'subscribe') {
+  // 사용자 보고 2026-05-10 (audit-backend 노랑): tier_upgrade 도 30일 구독 — 비례 환불 적용. 옛 'subscribe' 만 비례 → tier_upgrade 항상 전액 환불 버그.
+  if (paymentRow.payment_type === 'subscribe' || paymentRow.payment_type === 'tier_upgrade') {
     const paidAt = new Date(paymentRow.created_at).getTime();
     const elapsedDays = Math.floor((Date.now() - paidAt) / 86400000);
 

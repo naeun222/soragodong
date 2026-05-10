@@ -285,6 +285,22 @@ async function _handleChatRequest(context: {
   if (!body.model || !body.messages) {
     return jsonResponse({ error: 'model + messages 필수' }, 400);
   }
+  // 사용자 보고 2026-05-10 (audit-backend 초록): messages 서버측 크기 상한 — 비용 폭주 방어.
+  //   raw 100/200턴 도 한 호출 ~30K tokens. 그 이상 = 사용자 가공 또는 client bug.
+  //   상한: 메시지 200개 / 본문 합 800KB. 위반 시 400 (client 가 prune).
+  if (Array.isArray(body.messages)) {
+    if (body.messages.length > 200) {
+      return jsonResponse({ error: 'messages 너무 많음 (200+) — 챕터 마무리 후 다시', code: 'MESSAGES_TOO_MANY', count: body.messages.length }, 400);
+    }
+    let _totalLen = 0;
+    for (const m of body.messages) {
+      if (typeof m?.content === 'string') _totalLen += m.content.length;
+      else if (Array.isArray(m?.content)) for (const c of m.content) if (typeof c?.text === 'string') _totalLen += c.text.length;
+    }
+    if (_totalLen > 800_000) {
+      return jsonResponse({ error: 'messages 본문 너무 큼 (800KB+) — 챕터 마무리 후 다시', code: 'MESSAGES_TOO_LARGE', total_chars: _totalLen }, 400);
+    }
+  }
   if (!env.ANTHROPIC_API_KEY) {
     return jsonResponse({ error: 'ANTHROPIC_API_KEY 미설정 (서버)' }, 500);
   }

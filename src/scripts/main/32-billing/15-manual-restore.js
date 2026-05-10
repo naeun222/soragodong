@@ -75,9 +75,19 @@ async function showAutoBackupList() {
     });
     if (!yes) return;
     state = { ...DEFAULT_STATE, ...snap.data };
+    // 사용자 보고 2026-05-10 (audit-billing 노랑): autoBackup snapshot = chatArchive messages 제외 + 큰 진주 dataURL 제외 (size fix).
+    //   복원 후 도서관 일기·대화 chip 의 옛 챕터 클릭 시 messages 빈 화면. 사용자 알림 + main row sync 권장.
+    const _excludedMsgs = (state.chatArchive || []).filter(a => a && a._msgsExcludedFromBackup).length;
+    const _excludedMedia = (state.pearls || []).filter(p => p && (p._videoExcluded || p._photoExcluded)).length;
+    if (_excludedMsgs > 0 || _excludedMedia > 0) {
+      const _parts = [];
+      if (_excludedMsgs > 0) _parts.push(`옛 챕터 messages ${_excludedMsgs}개`);
+      if (_excludedMedia > 0) _parts.push(`진주 미디어 ${_excludedMedia}개`);
+      setTimeout(() => alert(`📦 복원 완료 — 단 ${_parts.join(' / ')} 는 backup 미포함 (size 절약).\n\nmain cloud row 가 옛 데이터 보유 중이면 복원됨. 옛 데이터도 같이 사라졌으면 영구 손실.`), 100);
+    }
     await saveToCloudNow();
     showToast('✦ 복구됨 — 새로고침 중...');
-    setTimeout(() => location.reload(), 800);
+    setTimeout(() => location.reload(), 1500);
   } catch (e) {
     console.error('showAutoBackupList:', e);
     showToast('복구 실패: ' + (e.message || e));
