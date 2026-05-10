@@ -72,12 +72,31 @@ function _collectReviewData(type) {
     cutoff = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     cutoffEnd = new Date(today.getFullYear(), today.getMonth(), 1);
   }
-  const cutoffISO = cutoff.toISOString().split('T')[0];
-  const cutoffEndISO = cutoffEnd.toISOString().split('T')[0];
+  // 사용자 보고 2026-05-10 ultrathink: KST timezone shift bug fix.
+  //   옛: cutoff.toISOString() = UTC 변환 → 04:00 KST = 19:00 UTC 전날 → date 1일 앞당겨짐.
+  //   결과: 5/3 04:00 KST → '2026-05-02' → data range 5/2-5/8 (저번 주 토요일 포함, 어제 미포함).
+  //   fix: local date 직접 추출 (getFullYear / getMonth / getDate). KST 기준 정확.
+  const _toLocalDate = (d) => {
+    if (!d) return '';
+    const dd = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dd.getTime())) return '';
+    const y = dd.getFullYear();
+    const m = String(dd.getMonth() + 1).padStart(2, '0');
+    const day = String(dd.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const cutoffISO = _toLocalDate(cutoff);
+  const cutoffEndISO = _toLocalDate(cutoffEnd);
   // 사용자 명시 2026-05-02 ultrathink (ERROR #11 fix): inRange 도 ISO 문자열 비교로 통일 — Date 객체 vs ISO 문자열 미스매치 방지.
   const inRange = (dt) => {
     if (!dt) return false;
-    const iso = (typeof dt === 'string') ? dt.split('T')[0] : new Date(dt).toISOString().split('T')[0];
+    let iso;
+    if (typeof dt === 'string') {
+      // entries.date = 'YYYY-MM-DD' local 그대로. chat timestamp = UTC ISO 'YYYY-MM-DDTHH:mm:ss.sssZ' → local 변환.
+      iso = dt.includes('T') ? _toLocalDate(new Date(dt)) : dt.split('T')[0];
+    } else {
+      iso = _toLocalDate(new Date(dt));
+    }
     return iso >= cutoffISO && iso < cutoffEndISO;
   };
 

@@ -45,7 +45,8 @@
 // v40 (2026-05-10): 주간 리뷰 inline 펼침 안 '🗑 삭제' 버튼. 기존 deleteReview() 재사용.
 // v41 (2026-05-10): generateReviewArchiveMetaSummary key fallback (옛 id 누락 review 도 weekKey/monthKey/quarterKey 매칭) + button onclick fallback + backfill 후 renderArchiveReviews 호출.
 // v42 (2026-05-10 ultrathink): _collectReviewData('weekly') cutoffEnd = 이번 일요일 04:00 강제 (4AM 이전/이후 무관). 옛 일요일 4AM 이전 진입 시 저번 주 (W18) 데이터 가져오던 버그 fix.
-const CACHE_NAME = 'soragodong-v4-cache-v42';
+// v43 (2026-05-10 ultrathink REAL ROOT CAUSE): KST timezone shift fix (toISOString = UTC 변환 → 04:00 KST = 19:00 UTC 전날 → 1일 앞당겨짐) + AI 통찰 요약 버튼 → quote 직접 DOM 교체.
+const CACHE_NAME = 'soragodong-v4-cache-v43';
 const PRECACHE_URLS = [
   './',
   './index.html',

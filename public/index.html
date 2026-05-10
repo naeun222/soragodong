@@ -25925,12 +25925,31 @@ function _collectReviewData(type) {
     cutoff = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     cutoffEnd = new Date(today.getFullYear(), today.getMonth(), 1);
   }
-  const cutoffISO = cutoff.toISOString().split('T')[0];
-  const cutoffEndISO = cutoffEnd.toISOString().split('T')[0];
+  // 사용자 보고 2026-05-10 ultrathink: KST timezone shift bug fix.
+  //   옛: cutoff.toISOString() = UTC 변환 → 04:00 KST = 19:00 UTC 전날 → date 1일 앞당겨짐.
+  //   결과: 5/3 04:00 KST → '2026-05-02' → data range 5/2-5/8 (저번 주 토요일 포함, 어제 미포함).
+  //   fix: local date 직접 추출 (getFullYear / getMonth / getDate). KST 기준 정확.
+  const _toLocalDate = (d) => {
+    if (!d) return '';
+    const dd = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dd.getTime())) return '';
+    const y = dd.getFullYear();
+    const m = String(dd.getMonth() + 1).padStart(2, '0');
+    const day = String(dd.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const cutoffISO = _toLocalDate(cutoff);
+  const cutoffEndISO = _toLocalDate(cutoffEnd);
   // 사용자 명시 2026-05-02 ultrathink (ERROR #11 fix): inRange 도 ISO 문자열 비교로 통일 — Date 객체 vs ISO 문자열 미스매치 방지.
   const inRange = (dt) => {
     if (!dt) return false;
-    const iso = (typeof dt === 'string') ? dt.split('T')[0] : new Date(dt).toISOString().split('T')[0];
+    let iso;
+    if (typeof dt === 'string') {
+      // entries.date = 'YYYY-MM-DD' local 그대로. chat timestamp = UTC ISO 'YYYY-MM-DDTHH:mm:ss.sssZ' → local 변환.
+      iso = dt.includes('T') ? _toLocalDate(new Date(dt)) : dt.split('T')[0];
+    } else {
+      iso = _toLocalDate(new Date(dt));
+    }
     return iso >= cutoffISO && iso < cutoffEndISO;
   };
 
@@ -52559,6 +52578,14 @@ async function generateReviewArchiveMetaSummary(reviewId) {
       review.archiveMetaSummary = text.slice(0, 400);
       saveState();
       if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
+      // 사용자 보고 2026-05-10: 토스트만 뜨고 버튼 자리에 내용 안 뜸 — review 화면 (screen-review) 깨달음 섹션은 별도 영역이라 renderArchiveReviews 만으론 갱신 X.
+      //   직접 DOM 교체: 옛 button 영역 → 새 quote 영역.
+      try {
+        document.querySelectorAll('.ras-meta-btn').forEach(btn => {
+          const _wrap = btn.parentElement;
+          if (_wrap) _wrap.outerHTML = `<div class="ras-meta">"${escapeHtml(review.archiveMetaSummary)}"</div>`;
+        });
+      } catch {}
       showToast('✓ 핵심 통찰 요약됨');
     } else { showToast('AI 응답 비어있음'); }
   } catch (e) { showToast('실패: ' + (e.message || '')); }
@@ -57759,7 +57786,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.216-weekly-cutoff-thissunday';
+const APP_VERSION = 'v4.0.217-kst-tz-fix-meta-btn-replace';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

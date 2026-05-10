@@ -226,6 +226,14 @@ async function generateReviewArchiveMetaSummary(reviewId) {
       review.archiveMetaSummary = text.slice(0, 400);
       saveState();
       if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
+      // 사용자 보고 2026-05-10: 토스트만 뜨고 버튼 자리에 내용 안 뜸 — review 화면 (screen-review) 깨달음 섹션은 별도 영역이라 renderArchiveReviews 만으론 갱신 X.
+      //   직접 DOM 교체: 옛 button 영역 → 새 quote 영역.
+      try {
+        document.querySelectorAll('.ras-meta-btn').forEach(btn => {
+          const _wrap = btn.parentElement;
+          if (_wrap) _wrap.outerHTML = `<div class="ras-meta">"${escapeHtml(review.archiveMetaSummary)}"</div>`;
+        });
+      } catch {}
       showToast('✓ 핵심 통찰 요약됨');
     } else { showToast('AI 응답 비어있음'); }
   } catch (e) { showToast('실패: ' + (e.message || '')); }
