@@ -23,7 +23,7 @@
     <path d="M 60 88  C 82 58, 128 58, 152 88"></path>
   </g>
   <ellipse cx="74" cy="54" rx="34" ry="22" fill="url(#gleam)"></ellipse>
-  <ellipse cx="160" cy="150" rx="11" ry="8" fill="url(#apertureGrad)" opacity="0.65"></ellipse>
+  <ellipse cx="148" cy="142" rx="16" ry="12" fill="url(#apertureGrad)" opacity="0.7"></ellipse>
 
   <path d="M 74 91 L 77.3 98.7 L 85 102 L 77.3 105.3 L 74 113 L 70.7 105.3 L 63 102 L 70.7 98.7 Z" fill="#c9a96e"></path>
   <path d="M 126 91 L 129.3 98.7 L 137 102 L 129.3 105.3 L 126 113 L 122.7 105.3 L 115 102 L 122.7 98.7 Z" fill="#c9a96e"></path>
