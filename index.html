@@ -39529,15 +39529,15 @@ function buildSystemPromptParts() {
     volatile.push('');
   }
 
-  // 사용자 보고 2026-05-10 (큐 11 정정 ultrathink): 시뮬 → 대화 이어가기 시 AI 가 첫 응답엔 시뮬 인식하지만, 사용자 짧은 follow-up 받으면 시뮬 컨텍스트 잊고 실제 일처럼 응답.
-  //   root cause: user message 의 [시뮬레이션] prefix 만 신호. system prompt 에 시뮬 컨텍스트 명시 X.
-  //   fix: 현재 챕터 안 isSimulationContext 메시지 1+ 면 system 에 강제 안내 + scenario 인용.
+  // 사용자 명시 2026-05-10 (큐 11 재정정): 시뮬 → 대화 이어가기 = '토론 프레임' (가상 시나리오 토론) 톤. 격리 (cf 5차원 X) 는 유지.
+  //   짧은 follow-up 받아도 토론 흐름 유지. 실제 일 인 양 묻기 X — 그 상황 토론으로 자연스럽게 이어감.
   const _simContextMsg = (state.chatMessages || []).find(m => m && m.isSimulationContext === true);
   if (_simContextMsg) {
-    volatile.push('[현재 챕터 = 상상 시뮬레이션 컨텍스트 — 매우 중요]');
-    volatile.push('- 사용자가 가상 시나리오 (실제로 일어난 일 X) 를 탐색 중. 짧은 follow-up 답변 받아도 시뮬 안 답으로 인식.');
-    volatile.push('- 절대 X: "그날 켠 이유가 뭐야?", "실제로는 어땠어?" 같이 실제 일 인 양 묻기.');
-    volatile.push('- OK: "그 시뮬 답이 흥미롭네 — X 패턴 보여" / "가상으로라도 그렇게 하는 거 보면..."');
+    volatile.push('[현재 챕터 = 시나리오 토론 (상상 시뮬에서 시작)]');
+    volatile.push('- 사용자가 가상 시나리오를 제안해서 같이 토론 중. 짧은 follow-up 도 그 시나리오 안 답으로 자연스럽게 이어감.');
+    volatile.push('- 톤: 토론 — "그 상황에선 어떨 거 같아?", "다른 식으로 가면?", "그 답을 보면 X 성향이 보여".');
+    volatile.push('- 피해야 할 톤: "그날 켠 이유가 뭐야?", "실제로는 어땠어?" 같이 실제 일 가정 묻기.');
+    volatile.push('- 추출은 시뮬 표시 (extractedFrom=simulation, 약한 신호) 로 자동 격리됨 — 모델은 자유롭게 토론 이어가면 됨.');
     const _scenarioLine = (_simContextMsg.content || '').split('\n').find(l => l.startsWith('[시뮬레이션]')) || '';
     if (_scenarioLine) volatile.push(`- 시나리오: ${_scenarioLine.replace(/^\[시뮬레이션\]\s*/, '')}`);
     volatile.push('');
@@ -45399,14 +45399,14 @@ function renderChatArchiveModal() {
         <button class="btn-secondary" onclick="event.stopPropagation(); resumeArchiveChat('${archId}')" style="flex:1; font-size:11.5px; padding:8px;">↩️ 이어서 하기</button>
       </div>
     `;
-    // 사용자 명시 2026-05-10 (batch 12): 시뮬 컨텍스트 포함 챕터 = ✨ 라벨 + "상상 시뮬 포함" badge.
-    //   pure 시뮬 (isSimulation: true) = 더 강조. 혼합 (hasSimulationMessages, isSimulation false) = 약한 라벨.
+    // 사용자 명시 2026-05-10 (큐 11 재정정 — 토론 프레임 UX): 시뮬 컨텍스트 = '토론한 시나리오' 라벨. 격리는 유지.
+    //   pure 시뮬 (isSimulation: true) = 더 강조 (토론한 시나리오). 혼합 = 약한 라벨 (시나리오 토론 일부).
     const _isSimChapter = !!a.isSimulation;
     const _hasSimMixed = !_isSimChapter && !!a.hasSimulationMessages;
     const _simBadge = _isSimChapter
-      ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.20); color:var(--accent); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">✨ 상상 시뮬</span>`
+      ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.20); color:var(--accent); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">💭 토론한 시나리오</span>`
       : (_hasSimMixed
-        ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.10); color:var(--text-soft); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">✨ 시뮬 일부</span>`
+        ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.10); color:var(--text-soft); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">💭 시나리오 토론 일부</span>`
         : '');
     return `
       <div class="chat-archive-card${a.pinned ? ' pinned' : ''}${isTrash ? ' deleted' : ''}${_isSimChapter ? ' simulation' : ''}" style="opacity:${isTrash ? '0.6' : cardOpacity};">
@@ -57254,7 +57254,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.207-batch13-audit-leftovers';
+const APP_VERSION = 'v4.0.208-sim-discussion-tone';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

@@ -132,14 +132,14 @@ function renderChatArchiveModal() {
         <button class="btn-secondary" onclick="event.stopPropagation(); resumeArchiveChat('${archId}')" style="flex:1; font-size:11.5px; padding:8px;">↩️ 이어서 하기</button>
       </div>
     `;
-    // 사용자 명시 2026-05-10 (batch 12): 시뮬 컨텍스트 포함 챕터 = ✨ 라벨 + "상상 시뮬 포함" badge.
-    //   pure 시뮬 (isSimulation: true) = 더 강조. 혼합 (hasSimulationMessages, isSimulation false) = 약한 라벨.
+    // 사용자 명시 2026-05-10 (큐 11 재정정 — 토론 프레임 UX): 시뮬 컨텍스트 = '토론한 시나리오' 라벨. 격리는 유지.
+    //   pure 시뮬 (isSimulation: true) = 더 강조 (토론한 시나리오). 혼합 = 약한 라벨 (시나리오 토론 일부).
     const _isSimChapter = !!a.isSimulation;
     const _hasSimMixed = !_isSimChapter && !!a.hasSimulationMessages;
     const _simBadge = _isSimChapter
-      ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.20); color:var(--accent); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">✨ 상상 시뮬</span>`
+      ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.20); color:var(--accent); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">💭 토론한 시나리오</span>`
       : (_hasSimMixed
-        ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.10); color:var(--text-soft); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">✨ 시뮬 일부</span>`
+        ? `<span style="font-size:10px; padding:2px 7px; background:rgba(212,167,106,0.10); color:var(--text-soft); border-radius:8px; margin-left:6px; letter-spacing:0.04em;">💭 시나리오 토론 일부</span>`
         : '');
     return `
       <div class="chat-archive-card${a.pinned ? ' pinned' : ''}${isTrash ? ' deleted' : ''}${_isSimChapter ? ' simulation' : ''}" style="opacity:${isTrash ? '0.6' : cardOpacity};">
