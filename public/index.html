@@ -31239,29 +31239,28 @@ const _GDIARY_FALLBACK_POOL = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 사용자 이름 추출 — 사용자 명시 2026-05-11: state.userName 우선 → supabase user metadata
-//   → email local part (영문) → null (모달 prompt 필요).
-//   placeholder '지우' fallback 폐기 (LLM 이 그대로 출력해서 '지우이가' 버그).
+// 사용자 이름 추출 — 사용자 보고 2026-05-11: email local part / 영문 metadata 자동 hit 시
+//   "jade6679이가" 같이 어색한 출력 + 모달 trigger 안 됨. 한글 포함만 자동 사용.
+//   영문 이름은 사용자가 settings 또는 모달에서 직접 입력하면 keep.
 // ─────────────────────────────────────────────────────────────────────────────
 function _gdiaryGetUserName() {
-  // 1. 사용자 직접 입력 (settings)
+  // 1. 사용자 직접 입력 (settings 또는 모달) — 영문/한글 무관, 이게 우선.
   if (typeof state !== 'undefined' && state.userName && typeof state.userName === 'string') {
     const v = state.userName.trim();
     if (v.length > 0) return v.slice(0, 20);
   }
-  // 2. supabase user metadata (카카오 SNS 로그인 시 user_metadata.name 등)
+  // 2. supabase user metadata — *한글 포함만* 자동 사용. 한국어 일기 톤 일관성.
   if (typeof session !== 'undefined' && session && session.user) {
     const m = session.user.user_metadata || {};
     const candidates = [m.name, m.full_name, m.preferred_username, m.nickname, m.given_name, m.user_name];
     for (const c of candidates) {
-      if (c && typeof c === 'string' && c.trim().length >= 2) return c.trim().slice(0, 20);
-    }
-    // 3. email local part (영문일 가능성 — 마지막 fallback)
-    if (session.user.email && typeof session.user.email === 'string') {
-      const local = session.user.email.split('@')[0];
-      if (local && local.length >= 2) return local.slice(0, 20);
+      if (c && typeof c === 'string') {
+        const v = c.trim();
+        if (v.length >= 2 && /[가-힣]/.test(v)) return v.slice(0, 20);
+      }
     }
   }
+  // 3. email local part fallback 폐기 (사용자 보고: 'jade6679' 자동 추출 → '지우이가' 같은 어색).
   return null;
 }
 
