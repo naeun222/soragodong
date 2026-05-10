@@ -325,6 +325,17 @@ export async function subtractCreditAtomic(
 // 1) subscription 활성 → cap 안 남았으면 OK / cap 도달 시 credit_balance_usd 로 fall-through (overage pack 또는 잔여 free credit)
 // 2) subscription X → credit_balance_usd 로 직접 사용 (overage_pack 잔여)
 export async function checkBudget(env: Env, userId: string): Promise<BudgetCheck> {
+  // 사용자 명시 2026-05-10: admin 계정 무한 plan 특혜 (테스트/디버그 + 본인 사용 — 옛 admin 특혜 제거 후 재도입).
+  //   ADMIN_USER_ID env 매칭 시 budget check 우회 → 잔액/cap 무관 통과. opus 가드도 admin 우회 (chat.ts).
+  if ((env as any).ADMIN_USER_ID && userId === (env as any).ADMIN_USER_ID) {
+    return {
+      ok: true,
+      remaining_credit_usd: Number.POSITIVE_INFINITY,
+      subscription_active: true,
+      subscription_plan: 'admin',
+      monthly_remaining_usd: Number.POSITIVE_INFINITY
+    };
+  }
   let billing = await getUserBilling(env, userId);
   if (!billing) {
     billing = await ensureBillingRow(env, userId);

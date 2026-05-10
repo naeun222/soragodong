@@ -315,7 +315,9 @@ async function _handleChatRequest(context: {
   // 사용자 명시 2026-05-10 (재정정): is_deeper_analysis = client askDeeper 흐름 hint. 4단 분석은 plan 무관 누구나 Opus → 가드 우회.
   // 헤더 토글 (useOpus) 발 chat_main 만 Premium 가드. cap 은 client (state._dailyDeeperCount) 가 따로 제한.
   const _isDeeperAnalysisHint = !!body.is_deeper_analysis;
-  if (body.model === 'claude-opus-4-7' && _isChatStyleForOpus && !_isDeeperAnalysisHint) {
+  // 사용자 명시 2026-05-10: admin 계정 = Opus 가드 우회 (무한 plan 특혜).
+  const _isAdminUser = !!((env as any).ADMIN_USER_ID && user.id === (env as any).ADMIN_USER_ID);
+  if (body.model === 'claude-opus-4-7' && _isChatStyleForOpus && !_isDeeperAnalysisHint && !_isAdminUser) {
     const opusGate = await checkOpusGate(env, user.id, isTutorial);
     if (!opusGate.ok) {
       return jsonResponse({

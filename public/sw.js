@@ -30,7 +30,8 @@
 // v25 (2026-05-10 batch 9): main row size monitoring (4MB+ 알림) / saveReview + batch path weekly 신 schema 4 섹션만 store.
 // v26 (2026-05-10 batch 10): cutoffEnd ReferenceError fix / autoBackup 옛 snapshots lazy sanitize / extractChapter max_tokens 동적.
 // v27 (2026-05-10 402 진단): extractChapter 의 402 reason 본문 로깅.
-const CACHE_NAME = 'soragodong-v4-cache-v27';
+// v28 (2026-05-10 admin 무한 plan): backend checkBudget + Opus 가드 admin (env.ADMIN_USER_ID) 우회.
+const CACHE_NAME = 'soragodong-v4-cache-v28';
 const PRECACHE_URLS = [
   './',
   './index.html',
