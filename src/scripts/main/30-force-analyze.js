@@ -568,11 +568,13 @@ function _buildDiaryBatchRequests() {
 async function _submitDailyExtractBatch(pending) {
   // 사용자 명시 2026-05-08 ultrathink: 이어서한 archive 의 _extractFromIndex 적용 — 옛 부분 input 제외.
   // chapter case_analysis 만 inline fire-and-forget — 사용자 wait X.
+  // 사용자 보고 2026-05-10 (audit): 옛 `>= 6` 가드 = 짧은 챕터 (3-5 메시지) case_analysis 완전 skip → 나 탭 갱신 누락.
+  //   topic 추출은 `>= 3` 인데 case_analysis 만 `>= 6` 이라 mismatch. pending 필터 (`>= 3`) 와 동일하게.
   pending
     .filter(b => {
       if (!b || !b.messages) return false;
       const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(b) : b.messages;
-      return _msgs.length >= 6;
+      return _msgs.length >= 3;
     })
     .forEach(b => {
       const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(b) : b.messages;

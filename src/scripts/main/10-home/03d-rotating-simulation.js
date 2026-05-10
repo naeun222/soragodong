@@ -579,7 +579,7 @@ function _rcSimSaveToArchive(cur) {
   if (cur.userPrediction) lines.push(`[내 예측] ${cur.userPrediction}`);
   if (cur.godongPrediction) lines.push(`[고동이 예측] ${cur.godongPrediction}`);
   lines.push(`[verdict] ${cur.userVerdict}`);
-  if (cur.diffNote) lines.push(`[추가 메모] ${cur.diffNote}`);
+  if (cur.diffNote) lines.push(`[나의 한마디] ${cur.diffNote}`);
   state.simulationArchive.unshift({
     id: cur.id,
     mode: cur.mode,
