@@ -252,6 +252,8 @@ const DEFAULT_STATE = {
   periodStart: null,
   apiKey: '',
   profile: '',
+  // 사용자 명시 2026-05-11: 고동의 일기 호칭용. 비어있으면 prompt 가 fallback ('지우' placeholder).
+  userName: '',
   lastSync: null,
   // Phase 2
   missions: [],

@@ -51,36 +51,50 @@ async function openGodongDiaryModal() {
   // 셸 먼저 (loading) — 사용자가 빈 화면 안 보게.
   _gdiaryRenderShell({ loading: true });
 
-  // Haiku 호출 (cooldown 끝 + entries 비어있거나)
+  // Haiku 호출 — 사용자 명시 2026-05-11: 배열 반환 (1-3개), 데이터 있는 날 별 한 사건 일기.
   if (needsGenerate) {
-    let newEntry = null;
+    let newEntries = [];
     try {
-      const text = await _callGodongDiaryHaiku();
-      newEntry = _gdiaryEntryFromText(text, { fallback: false });
+      const arr = await _callGodongDiaryHaiku();
+      if (Array.isArray(arr) && arr.length > 0) {
+        newEntries = arr.map(p => _gdiaryEntryFromHaiku(p)).filter(Boolean);
+      }
     } catch (e) {
       console.warn('[godong-diary] generate fail, fallback', e && e.message);
+      // fallback — 정형문 1개 (오늘 날짜).
       const text = _GDIARY_FALLBACK_POOL[Math.floor(Math.random() * _GDIARY_FALLBACK_POOL.length)];
-      newEntry = _gdiaryEntryFromText(text, { fallback: true });
+      const fb = _gdiaryEntryFromText(text, { fallback: true });
+      if (fb) newEntries = [fb];
     }
-    if (newEntry) {
-      state.godongDiary.push(newEntry);
+    if (newEntries.length > 0) {
+      newEntries.forEach(e => state.godongDiary.push(e));
       r.lastGodongDiaryAt = new Date().toISOString();
-      r.godongDiaryContentId = newEntry.id;
+      r.godongDiaryContentId = newEntries[newEntries.length - 1].id;
       if (typeof saveState === 'function') saveState(true);
     }
   }
 
-  // entries 0 = 첫 진입인데 Haiku 도 실패 — fallback 1개라도 push.
-  if (state.godongDiary.length === 0) {
+  // 사용자 명시 2026-05-11: 회전 카드 모달 = 지난 3일 (4AM cutoff 기준) 안의 일기만 노출. 4일 전 entry X.
+  const _cutoffMs = Date.now() - 3 * 86400000;
+  let visibleEntries = (state.godongDiary || []).filter(e => {
+    if (!e || !e.iso) return false;
+    return new Date(e.iso).getTime() > _cutoffMs;
+  });
+  // 시간순 오름차순 정렬 (오래된 날짜 → 최신 날짜).
+  visibleEntries.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
+
+  // visible entries 0 = 첫 진입인데 Haiku 도 실패 — fallback 1개 push.
+  if (visibleEntries.length === 0) {
     const text = _GDIARY_FALLBACK_POOL[0];
     const fb = _gdiaryEntryFromText(text, { fallback: true });
     state.godongDiary.push(fb);
+    visibleEntries = [fb];
     if (typeof saveState === 'function') saveState();
   }
 
   _gdiaryState = {
-    entries: state.godongDiary.slice(),  // snapshot (idx 안정)
-    idx: state.godongDiary.length - 1,
+    entries: visibleEntries,
+    idx: visibleEntries.length - 1,  // 마지막 (최신) 페이지부터.
     secs: 28,
     caught: false,
     returned: false,
@@ -428,5 +442,42 @@ function _gdiaryEntryFromText(text, opts) {
     iso: now.toISOString(),
     substrateRefs: [],
     fallback: fallback,
+  };
+}
+
+// 사용자 명시 2026-05-11: Haiku JSON 배열 entry → state.godongDiary entry 변환.
+//   parsed = { iso, date, weekday, body }. iso 가 미래거나 너무 옛날이면 안전하게 보정.
+function _gdiaryEntryFromHaiku(parsed) {
+  if (!parsed || typeof parsed.body !== 'string') return null;
+  const id = 'gd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const now = new Date();
+  const fallbackIso = now.toISOString();
+  let iso = fallbackIso;
+  let dateLabel = `${now.getMonth() + 1}월 ${now.getDate()}일`;
+  let weekday = ['일', '월', '화', '수', '목', '금', '토'][now.getDay()];
+  // iso 검증: 미래는 today 로 잡음 + 너무 옛날 (4일 이전) 도 today 로.
+  if (parsed.iso) {
+    const t = new Date(parsed.iso).getTime();
+    const _3daysAgo = now.getTime() - 3 * 86400000;
+    const _1hourAhead = now.getTime() + 3600000;
+    if (!isNaN(t) && t >= _3daysAgo && t <= _1hourAhead) {
+      iso = new Date(t).toISOString();
+      const d = new Date(t);
+      dateLabel = `${d.getMonth() + 1}월 ${d.getDate()}일`;
+      weekday = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+    }
+  }
+  // LLM 이 직접 적은 date / weekday 우선.
+  if (typeof parsed.date === 'string' && parsed.date.trim()) dateLabel = parsed.date.trim().slice(0, 12);
+  if (typeof parsed.weekday === 'string' && parsed.weekday.trim()) weekday = parsed.weekday.trim().slice(0, 3);
+  return {
+    id: id,
+    date: dateLabel,
+    weekday: weekday,
+    note: null,
+    body: parsed.body,
+    iso: iso,
+    substrateRefs: [],
+    fallback: false,
   };
 }

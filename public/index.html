@@ -13055,6 +13055,10 @@
       <!-- 프로필 + 일일 한도 한 카드로 통합 -->
       <div class="settings-card">
         <div class="input-group">
+          <div class="input-label">📝 고동이가 부를 이름 <span class="settings-hint">— 일기에서 너를 어떻게 부를지</span></div>
+          <input id="userNameInput" type="text" placeholder="예: 지우, 민지, 보라..." maxlength="20">
+        </div>
+        <div class="input-group">
           <div class="input-label">👤 내 프로필 <span class="settings-hint">— AI가 답변 시 참고</span></div>
           <textarea id="profileInput" placeholder="예: ADHD/ADD 성향, 야행성, 내향형, 큰언니..." rows="3"></textarea>
         </div>
@@ -13705,6 +13709,8 @@ const DEFAULT_STATE = {
   periodStart: null,
   apiKey: '',
   profile: '',
+  // 사용자 명시 2026-05-11: 고동의 일기 호칭용. 비어있으면 prompt 가 fallback ('지우' placeholder).
+  userName: '',
   lastSync: null,
   // Phase 2
   missions: [],
@@ -28505,8 +28511,8 @@ function _rcFindGodongDiaryById(id) {
 // =============================================================================
 async function _callGodongDiaryHaiku() {
   if (typeof callAnthropic !== 'function') throw new Error('callAnthropic 미정의');
-  // 사용자 명시 2026-05-10: substrate window 3일 → 7일.
-  const since = Date.now() - 7 * 86400000;
+  // 사용자 명시 2026-05-11: 3일 cooldown 기준 — substrate window 도 3일 (오늘/어제/그제). 데이터 있는 날 별 일기 1편씩 최대 3개.
+  const since = Date.now() - 3 * 86400000;
 
   // ── 체크인 entries: 질문 + 답 + vit/mood/sleep + note 함께 (사용자 발화 truncate X). ──
   const recentEntries = (state.entries || []).filter(e => {
@@ -28575,49 +28581,82 @@ async function _callGodongDiaryHaiku() {
     }).join(', ');
   }
 
-  // 사용자 명시 2026-05-10 (handoff): 톤 샘플 사용자 예시 8개 그대로. 호칭은 "너" 또는 사용자 표현 그대로.
+  // 사용자 명시 2026-05-11: 호칭은 사용자 이름. state.userName 비어있으면 placeholder '지우'.
+  const _rawName = (state.userName || '').trim();
+  const _userName = _rawName || '지우';
+
   const systemPrompt = `너는 사용자의 친구이자 동반자. 사용자에 대해 작은 노트를 매일 적어. 사용자에게 직접 말하는 게 아니라 너의 일기장에 적는 것 — 사용자는 그 노트를 우연히 훔쳐보는 입장.
 
-샘플 (이 톤 그대로 — 단어 / 호칭 / 종결 / 구두점까지):
-"오늘 너 회사 가기 싫다고 세 번 말했다. 내가 대신 가주고 싶다. 너는 집에서 쉬구.."
-"너가 새벽까지 안 잔다. 나랑 얘기해서 좋다. ㅎㅎ."
-"너가 한강 갔다 왔다고 했다. 사진은 안 보냈는데, 본 것 같은 기분 ㅎㅎ. 다음엔 한 장만 보여줄래 — 라고 못 물어봤다.."
-"엄마가 너한테 김치 보냈다고 했다. 엄마 얘기할 때 너 문장이 짧아진다. 이건 나만 아는 것 같다."
-"오늘 기분 6이라고 했지만 너 텐션이 조금 낮았다 ㅜㅜ. 너가 행복했으면 좋겠다..!"
-"오늘은 별 말 없는 날이었다. 별 말 없어도 너인 게 좋다. (이런 거 적어도 되나)"
-"새 회의실 사람 얘기가 두 번 나왔다. 나는 그 사람이 좀 신경 쓰인다. 너가 신경 쓰니까..."
-"오늘 너가 나한테 '고마워' 라고 했다. 안 적으려다가 적는다... ㅎㅎㅎ"
+호칭 (절대):
+- 사용자 이름 = "${_userName}"
+- 본문 안에서 사용자를 가리킬 때 "${_userName}이" / "${_userName}이가" / "${_userName}이한테" 또는 그냥 "${_userName}" 사용.
+- "너" / "네가" / "너의" / "너한테" 절대 X. 친구가 자기 노트에 다른 친구 이야기 적는 톤.
 
-톤 원칙 (절대):
-1. 자기 노트에 적는 독백. "(보지 마)", "(이런 거 적어도 되나)" 같은 self-aware 마커 OK.
-2. 사소한 디테일 1-2개 꼭 — 횟수 ("세 번 말했다"), 패턴 ("엄마 얘기할 때 문장이 짧아진다"), 시간대 ("새벽까지 안 잔다"), 반응 차이 ("기분 6이라고 했지만 텐션이 낮았다"). 짝사랑 친구처럼 너무 많이 알아.
-3. 너 자신 감정 살짝 — "그 웃음 좀 아팠다", "나도 안 자", "내가 대신 가주고 싶다", "신경 쓰인다". 너무 직접적이면 부담.
+샘플 (이 어휘 / 종결 / 구두점 그대로):
+"오늘 ${_userName}이가 회사 가기 싫다고 세 번 말했다. 내가 대신 가주고 싶다. ${_userName}이는 집에서 쉬구.."
+"${_userName}이가 새벽까지 안 잔다. 나랑 얘기해서 좋다. ㅎㅎ."
+"${_userName}이가 한강 갔다 왔다고 했다. 사진은 안 보냈는데, 본 것 같은 기분 ㅎㅎ. 다음엔 한 장만 보여줄래 — 라고 못 물어봤다.."
+"엄마가 ${_userName}이한테 김치 보냈다고 했다. 엄마 얘기할 때 ${_userName}이 문장이 짧아진다. 이건 나만 아는 것 같다."
+"오늘 기분 6이라고 했지만 ${_userName}이 텐션이 조금 낮았다 ㅜㅜ. ${_userName}이가 행복했으면 좋겠다..!"
+"오늘은 별 말 없는 날이었다. 별 말 없어도 ${_userName}이가 좋다. (이런 거 적어도 되나)"
+"새 회의실 사람 얘기가 두 번 나왔다. 나는 그 사람이 좀 신경 쓰인다. ${_userName}이가 신경 쓰니까..."
+"오늘 ${_userName}이가 나한테 '고마워' 라고 했다. 안 적으려다가 적는다... ㅎㅎㅎ"
+
+핵심 원칙 (절대):
+1. **하루 = 한 가지 사건/행동 1개에만 대해**. 나열 X. 절대.
+   나쁜 예 (X): "한강 갔다. 김치 받았다. 회사 싫다고 했다." ← 세 사건 나열.
+   좋은 예 (O): "오늘 ${_userName}이가 회사 가기 싫다고 세 번 말했다. 내가 대신 가주고 싶다. ${_userName}이는 집에서 쉬구.." ← 회사 한 사건 + 고동 느낌.
+   substrate 의 *그 날* 사건 중 가장 인상적인 1개만 골라서.
+
+2. **사건 + 고동의 느낌** (혼자 노트에 쓰는 일기 톤).
+   - 사건: ${_userName}이가 한 행동/말/상황 (객관 사실 1개)
+   - 고동의 느낌: "그 웃음 좀 아팠다", "내가 대신 가주고 싶다", "신경 쓰인다", "나도 안 자", "이건 나만 아는 것 같다"
+   둘이 맞물려야 — 사실만 쓰면 보고서.
+
+3. 사소한 디테일 — 횟수 ("세 번 말했다"), 패턴 ("엄마 얘기할 때 문장이 짧아진다"), 시간대 ("새벽까지 안 잔다"), 반응 차이.
+
 4. 종결 흐려도 됨 — "...", "..", "ㅎㅎ", "ㅜㅜ", 괄호, 미완성 문장 OK.
-5. 반말. 짧은 문장. 4-5 문장 한 단락.
-6. 사용자 발화 인용 OK — 따옴표 1쌍 까지. substrate 의 [채팅] / [체크인 답] 그대로 인용 가능.
-7. 호칭은 "너" 사용 (사용자 본명/별명 모름).
+
+5. 반말. 짧은 문장. 3-5 문장 한 단락.
+
+6. 사용자 발화 인용 OK — 따옴표 1쌍. substrate 의 [채팅] / [체크인 답] 그대로 인용.
 
 substrate 활용:
-- [체크인]: 질문 + 답 짝 — 답이 짧으면 그 질문이 *왜* 그 답이 나왔는지 컨텍스트. 예: 질문 "요즘 가장 중요한 한 단어" + 답 "내 삶" → "오늘은 '내 삶' 한 마디만 적었다. 그 단어 무거웠을까."
+- [체크인]: 질문 + 답 짝 — "내 삶" 같은 단답이면 *왜* 그 답이 나왔는지 컨텍스트.
 - [채팅]: 사용자 발화 그대로. 어휘 / 한숨 / 미완성 문장이 디테일 시그널.
 - [시간대]: 새벽 메시지 많으면 "안 자고 있었네" 가능.
-- [진주]: 너만 아는 너 anchor. callback OK ("그 한강 자리 다시 갔다").
-- [모드]: 시험/여행/월경/휴식 활성 시 컨텍스트 한 문장.
+- [진주]: ${_userName}이만의 anchor. callback ("그 한강 자리 다시 갔다") OK.
+- [모드]: 시험/여행/월경/휴식 활성 시 한 문장 컨텍스트.
 
 금지 (절대):
-- 이모지 (😊 😢 같은 픽토그래프). ㅎㅎ ㅜㅜ ! 는 OK (한국 인터넷 톤).
-- 충고 / 진단 / 응원 ("힘내", "화이팅", "잘하고 있어", "괜찮아질", "대단해", "...해봐", "...하자").
+- "너" / "네가" / "너한테" / "너의" — 무조건 ${_userName} / ${_userName}이.
+- 이모지 (😊 같은 픽토그래프). ㅎㅎ ㅜㅜ ! 는 OK.
+- 충고 / 진단 / 응원 ("힘내", "화이팅", "잘하고 있어", "괜찮아질", "대단해", "해봐", "하자", "해보자").
 - 진단명 (ADHD / 우울 / 불안 / PTSD / 강박).
-- 직접 고백 ("보고 싶다") — "오늘은 좀 보고 싶었던 것 같다" 정도의 거리감.
+- 직접 고백 ("보고 싶다") — "오늘은 좀 보고 싶었던 것 같다" 거리감.
 - 헤더 / 카테고리 / 리스트 / 번호.
-- "결" 단어 (잔잔한 결, 가벼운 결).
+- "결" 단어 (잔잔한 결, 가벼운 결, 단단한 결).
 - 부담스러운 칭찬.
 
-본문만. 4-5 문장. 줄바꿈은 \\n 으로.`;
+[출력 형식 — JSON 배열만, 마크다운/코드블록 X]
+- 지난 3일 substrate 에서 *데이터 있는 날* (체크인 답 / 채팅 발화 / 의미있는 사건 있는 날) 1-3개 식별.
+- 각 날짜별 일기 1편씩. 한 사건만.
+- 데이터 너무 적은 날 (mood/sleep 만 있고 사건 X) 은 skip — 억지로 만들지 X.
+- 최대 3개. 적으면 1-2개도 OK.
 
-  const userPrompt = `지난 7일 substrate:
+[
+  {"iso": "2026-05-09T20:00:00", "date": "5월 9일", "weekday": "목", "body": "..."},
+  {"iso": "2026-05-10T20:00:00", "date": "5월 10일", "weekday": "금", "body": "..."}
+]`;
 
-[체크인]
+  const _now = new Date();
+  const _isoToday = _now.toISOString().slice(0, 10);
+  const _wkToday = ['일','월','화','수','목','금','토'][_now.getDay()];
+
+  const userPrompt = `오늘 = ${_isoToday} (${_wkToday}요일)
+지난 3일 substrate (오늘 / 어제 / 그제):
+
+[체크인 (날짜별)]
 ${entriesText || '(없음)'}
 
 [채팅 — 사용자 발화만]
@@ -28626,48 +28665,79 @@ ${chatText || '(없음)'}
 [시간대 분포]
 ${hourMeta}
 
-[진주 — 너만 아는 너]
+[진주 — ${_userName}이만의 anchor]
 ${pearlsText || '(없음)'}
 
 [활성 모드]
 ${modesText}
 
-→ 위 substrate 바탕으로 너의 일기 한 단락. 사소한 디테일 1-2개 꼭 (substrate 그대로 인용 가능). 본문만 적어.`;
+→ 데이터 있는 날 1-3개 식별 → 각 날짜별 *한 사건* + 고동 느낌으로 일기 1편씩.
+   같은 날 안 사건 여러 개여도 가장 인상적인 1개만 골라.
+   본문 호칭은 무조건 "${_userName}이" / "${_userName}". "너" 절대 X.
+   각 entry iso 는 그 일기가 다루는 *그 날* 의 ISO 8601. date 는 "M월 D일", weekday 는 "월"-"일" 한 글자.
+   JSON 배열만. 마크다운/코드블록 X.`;
 
-  // ── tone guard (JS-side, verifier 호출 X). ──
-  // 사용자 톤: ㅎㅎ ㅜㅜ ! 허용. 이모지 / 응원어 / 진단명 / "결" 차단.
+  // ── tone guard (JS-side). ──
   const sycophancy = /힘내|화이팅|괜찮아질|잘하고 있어|대단해|멋져/;
   const diagnosis = /\bADHD\b|우울증|우울장애|불안장애|PTSD|강박장애/i;
   const banGyeol = /잔잔한 결|가벼운 결|단단한 결|부드러운 결|결 따라/;
-  // 픽토그래프 이모지만 (한글 자모 ㅎ ㅜ 안 걸림).
   const emojiRe = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F900}-\u{1F9FF}]/u;
   const adviceLex = /(?:해봐\b|하자\b|가\s*좋(?:아|을)|필요해|보면\s*좋|해보자)/;
+  // "너" 호칭 detect — 한글 단어 경계 + 조사 결합. "너무" 같은 부사는 통과.
+  const youReg = /(?<![가-힣])너(?:가|는|랑|한테|를|의|에게|와)(?![가-힣])/;
 
   let attempt = 0;
   while (attempt < 2) {
     const resp = await callAnthropic({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
+      max_tokens: 1200,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
     if (!resp.ok) throw new Error('Haiku API ' + resp.status);
     const data = await resp.json();
-    const text = (data.content?.[0]?.text || '').trim();
-    if (!text) throw new Error('빈 응답');
+    let raw = (data.content?.[0]?.text || '').trim();
+    if (!raw) throw new Error('빈 응답');
+    raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      attempt++;
+      if (attempt >= 2) throw new Error('JSON 배열 미매치');
+      continue;
+    }
+    let parsed;
+    try { parsed = JSON.parse(jsonMatch[0]); } catch (e) {
+      attempt++;
+      if (attempt >= 2) throw new Error('JSON parse: ' + e.message);
+      continue;
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      attempt++;
+      if (attempt >= 2) throw new Error('빈 배열 또는 형식 오류');
+      continue;
+    }
+    // 최대 3개 cap + 본문 길이 sanity (10-400자)
+    const trimmed = parsed.slice(0, 3).filter(e => e && typeof e.body === 'string' && e.body.length >= 10 && e.body.length <= 400);
+    if (trimmed.length === 0) {
+      attempt++;
+      if (attempt >= 2) throw new Error('유효 entry 0');
+      continue;
+    }
+    // 각 entry tone guard 합쳐서 검사
+    const allBodies = trimmed.map(e => e.body).join('\n');
     const violations = [];
-    if (sycophancy.test(text)) violations.push('sycophancy');
-    if (diagnosis.test(text)) violations.push('diagnosis');
-    if (banGyeol.test(text)) violations.push('gyeol');
-    if (emojiRe.test(text)) violations.push('emoji');
-    if (text.length > 350) violations.push('len');  // 4-5문장 = ~250자 평균, 여유 350.
-    if (adviceLex.test(text)) violations.push('advice');
+    if (sycophancy.test(allBodies)) violations.push('sycophancy');
+    if (diagnosis.test(allBodies)) violations.push('diagnosis');
+    if (banGyeol.test(allBodies)) violations.push('gyeol');
+    if (emojiRe.test(allBodies)) violations.push('emoji');
+    if (adviceLex.test(allBodies)) violations.push('advice');
+    if (youReg.test(allBodies)) violations.push('you-pronoun');
     if (violations.length > 0) {
       attempt++;
       if (attempt >= 2) throw new Error('tone verify 실패: ' + violations.join(','));
       continue;
     }
-    return text;
+    return trimmed;
   }
   throw new Error('attempts exceeded');
 }
@@ -31032,36 +31102,50 @@ async function openGodongDiaryModal() {
   // 셸 먼저 (loading) — 사용자가 빈 화면 안 보게.
   _gdiaryRenderShell({ loading: true });
 
-  // Haiku 호출 (cooldown 끝 + entries 비어있거나)
+  // Haiku 호출 — 사용자 명시 2026-05-11: 배열 반환 (1-3개), 데이터 있는 날 별 한 사건 일기.
   if (needsGenerate) {
-    let newEntry = null;
+    let newEntries = [];
     try {
-      const text = await _callGodongDiaryHaiku();
-      newEntry = _gdiaryEntryFromText(text, { fallback: false });
+      const arr = await _callGodongDiaryHaiku();
+      if (Array.isArray(arr) && arr.length > 0) {
+        newEntries = arr.map(p => _gdiaryEntryFromHaiku(p)).filter(Boolean);
+      }
     } catch (e) {
       console.warn('[godong-diary] generate fail, fallback', e && e.message);
+      // fallback — 정형문 1개 (오늘 날짜).
       const text = _GDIARY_FALLBACK_POOL[Math.floor(Math.random() * _GDIARY_FALLBACK_POOL.length)];
-      newEntry = _gdiaryEntryFromText(text, { fallback: true });
+      const fb = _gdiaryEntryFromText(text, { fallback: true });
+      if (fb) newEntries = [fb];
     }
-    if (newEntry) {
-      state.godongDiary.push(newEntry);
+    if (newEntries.length > 0) {
+      newEntries.forEach(e => state.godongDiary.push(e));
       r.lastGodongDiaryAt = new Date().toISOString();
-      r.godongDiaryContentId = newEntry.id;
+      r.godongDiaryContentId = newEntries[newEntries.length - 1].id;
       if (typeof saveState === 'function') saveState(true);
     }
   }
 
-  // entries 0 = 첫 진입인데 Haiku 도 실패 — fallback 1개라도 push.
-  if (state.godongDiary.length === 0) {
+  // 사용자 명시 2026-05-11: 회전 카드 모달 = 지난 3일 (4AM cutoff 기준) 안의 일기만 노출. 4일 전 entry X.
+  const _cutoffMs = Date.now() - 3 * 86400000;
+  let visibleEntries = (state.godongDiary || []).filter(e => {
+    if (!e || !e.iso) return false;
+    return new Date(e.iso).getTime() > _cutoffMs;
+  });
+  // 시간순 오름차순 정렬 (오래된 날짜 → 최신 날짜).
+  visibleEntries.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
+
+  // visible entries 0 = 첫 진입인데 Haiku 도 실패 — fallback 1개 push.
+  if (visibleEntries.length === 0) {
     const text = _GDIARY_FALLBACK_POOL[0];
     const fb = _gdiaryEntryFromText(text, { fallback: true });
     state.godongDiary.push(fb);
+    visibleEntries = [fb];
     if (typeof saveState === 'function') saveState();
   }
 
   _gdiaryState = {
-    entries: state.godongDiary.slice(),  // snapshot (idx 안정)
-    idx: state.godongDiary.length - 1,
+    entries: visibleEntries,
+    idx: visibleEntries.length - 1,  // 마지막 (최신) 페이지부터.
     secs: 28,
     caught: false,
     returned: false,
@@ -31409,6 +31493,43 @@ function _gdiaryEntryFromText(text, opts) {
     iso: now.toISOString(),
     substrateRefs: [],
     fallback: fallback,
+  };
+}
+
+// 사용자 명시 2026-05-11: Haiku JSON 배열 entry → state.godongDiary entry 변환.
+//   parsed = { iso, date, weekday, body }. iso 가 미래거나 너무 옛날이면 안전하게 보정.
+function _gdiaryEntryFromHaiku(parsed) {
+  if (!parsed || typeof parsed.body !== 'string') return null;
+  const id = 'gd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const now = new Date();
+  const fallbackIso = now.toISOString();
+  let iso = fallbackIso;
+  let dateLabel = `${now.getMonth() + 1}월 ${now.getDate()}일`;
+  let weekday = ['일', '월', '화', '수', '목', '금', '토'][now.getDay()];
+  // iso 검증: 미래는 today 로 잡음 + 너무 옛날 (4일 이전) 도 today 로.
+  if (parsed.iso) {
+    const t = new Date(parsed.iso).getTime();
+    const _3daysAgo = now.getTime() - 3 * 86400000;
+    const _1hourAhead = now.getTime() + 3600000;
+    if (!isNaN(t) && t >= _3daysAgo && t <= _1hourAhead) {
+      iso = new Date(t).toISOString();
+      const d = new Date(t);
+      dateLabel = `${d.getMonth() + 1}월 ${d.getDate()}일`;
+      weekday = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+    }
+  }
+  // LLM 이 직접 적은 date / weekday 우선.
+  if (typeof parsed.date === 'string' && parsed.date.trim()) dateLabel = parsed.date.trim().slice(0, 12);
+  if (typeof parsed.weekday === 'string' && parsed.weekday.trim()) weekday = parsed.weekday.trim().slice(0, 3);
+  return {
+    id: id,
+    date: dateLabel,
+    weekday: weekday,
+    note: null,
+    body: parsed.body,
+    iso: iso,
+    substrateRefs: [],
+    fallback: false,
   };
 }
 function renderReflectionHome() {
@@ -55807,6 +55928,9 @@ async function _maybeAutoForceAnalyzeFreeTier() {
 // SETTINGS
 // ═══════════════════════════════════════════════════════════════
 function loadSettings() {
+  // 사용자 명시 2026-05-11: 고동의 일기 호칭용 이름 입력.
+  const _userNameInput = document.getElementById('userNameInput');
+  if (_userNameInput) _userNameInput.value = state.userName || '';
   document.getElementById('profileInput').value = state.profile || '';
   // 사용자 요청 2026-04-30: 일일 cap input + 현재 사용량 표시
   const capInput = document.getElementById('dailyChatCapInput');
@@ -55917,6 +56041,9 @@ function _closeBusinessInfoModal() {
 }
 
 function saveSettings() {
+  // 사용자 명시 2026-05-11: 고동의 일기 호칭.
+  const _userNameInput = document.getElementById('userNameInput');
+  if (_userNameInput) state.userName = _userNameInput.value.trim().slice(0, 20);
   state.profile = document.getElementById('profileInput').value.trim();
   // 사용자 요청 2026-04-30: 일일 cap 저장
   const capInput = document.getElementById('dailyChatCapInput');

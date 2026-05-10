@@ -2,6 +2,9 @@
 // SETTINGS
 // ═══════════════════════════════════════════════════════════════
 function loadSettings() {
+  // 사용자 명시 2026-05-11: 고동의 일기 호칭용 이름 입력.
+  const _userNameInput = document.getElementById('userNameInput');
+  if (_userNameInput) _userNameInput.value = state.userName || '';
   document.getElementById('profileInput').value = state.profile || '';
   // 사용자 요청 2026-04-30: 일일 cap input + 현재 사용량 표시
   const capInput = document.getElementById('dailyChatCapInput');
@@ -112,6 +115,9 @@ function _closeBusinessInfoModal() {
 }
 
 function saveSettings() {
+  // 사용자 명시 2026-05-11: 고동의 일기 호칭.
+  const _userNameInput = document.getElementById('userNameInput');
+  if (_userNameInput) state.userName = _userNameInput.value.trim().slice(0, 20);
   state.profile = document.getElementById('profileInput').value.trim();
   // 사용자 요청 2026-04-30: 일일 cap 저장
   const capInput = document.getElementById('dailyChatCapInput');
