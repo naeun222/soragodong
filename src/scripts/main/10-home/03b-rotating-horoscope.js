@@ -152,8 +152,8 @@ async function _rcCallHoroscopeHaiku(rawEnglish, zodiac) {
 - "결" 단어 X (잔잔한 결, 가벼운 결 등 회피).
 - 마크다운 / 인용부호 X.
 
-행운의 아이템: 일상 흔한 구체 객체 1개 (예: 손수건, 머그컵, 책, 우산, 거울, 향수, 운동화, 작은 화분, 동전, 사진, 음악, 카드, 안경, 모자, 시계). 사용자 명시 2026-05-09: 진짜 운세처럼 일상적. 특수 X.
-행운의 색: 1개 (예: 빨강, 주황, 노랑, 초록, 파랑, 보라, 분홍, 흰색, 검정, 갈색, 회색, 하늘색, 베이지). 일반 색 이름.
+행운의 아이템: 일상 흔한 구체 객체 1개. ⚠ 매번 *다양*하게 — 볼펜 / 수첩 / 노트 같은 건 자주 쓰지 마. 다른 일상 아이템도 골고루 (손수건, 머그컵, 책, 우산, 거울, 향수, 운동화, 양말, 모자, 작은 화분, 동전, 사진, 음악 (CD/이어폰), 카드 (편지지/엽서), 안경, 시계, 양초, 인형, 빗, 립밤, 영수증, 식물 잎, 작은 돌, 스카프, 머리끈, 종이학, 부채, 텀블러, 가방 액세서리). 진짜 운세처럼 일상적. 특수 X.
+행운의 색: 1개. ⚠ 매번 *다양*하게 — 금색 / 노랑만 자주 쓰지 마. 빨강, 주황, 초록, 파랑, 보라, 분홍, 흰색, 검정, 갈색, 회색, 하늘색, 베이지, 청록, 자주, 살구, 연두, 민트, 와인, 코랄, 인디고, 라벤더 같이 다양한 색 골고루.
 
 출력 = JSON 만 (마크다운 X):
 {
@@ -180,6 +180,8 @@ ${rawEnglish}
     const resp = await callAnthropic({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 400,
+      // 사용자 보고 2026-05-10: 행운 색/아이템이 금색/볼펜/수첩만 반복 — 다양성 ↑ 위해 temperature 상향.
+      temperature: 1.0,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
@@ -392,17 +394,10 @@ function _rcRenderHoroscopeLoadingCard(zodiac) {
 function _rcRenderHoroscopeCard(zodiac, content, lucky) {
   const z = _rcZodiacInfo(zodiac);
   const zLabel = z ? `${z.symbol} ${z.label}` : '';
-  // 사용자 명시 2026-05-09 (재정정): 카드 본문 truncate (큐레이션 size 일관) + 클릭 시 모달 (전체 운세 + 행운).
-  // 미니 리뷰 패턴 동일.
-  const trim = content.length > 80 ? content.slice(0, 80) + '…' : content;
-  // 사용자 명시 2026-05-09: 행운 아이템 + 색 카드에 표시 (있을 때만). lucky 형식: { item, color }.
-  let luckyLine = '';
-  if (lucky && (lucky.item || lucky.color)) {
-    const parts = [];
-    if (lucky.item) parts.push(escapeHtml(lucky.item));
-    if (lucky.color) parts.push(escapeHtml(lucky.color));
-    luckyLine = `<div class="rc-horoscope-lucky">🍀 ${parts.join(' · ')}</div>`;
-  }
+  // 사용자 명시 2026-05-10 (재정정): 카드 = 한 문장만. lucky / 전체 본문 = 모달 (탭 시).
+  // 첫 문장 추출 ('.', '!', '?', '。', '！', '？' 까지). 없으면 60자 truncate.
+  const _sentMatch = content.match(/^[\s\S]*?[.!?。！？]/);
+  const trim = _sentMatch ? _sentMatch[0].trim() : (content.length > 60 ? content.slice(0, 60) + '…' : content);
   // 사용자 명시 2026-05-09 (개발자 테스트, 추후 제거): ↻ 강제 재fetch 버튼 (cache 무시).
   const refreshBtn = `<button class="rc-horoscope-refresh-btn" type="button" onclick="event.stopPropagation(); forceRefreshHoroscope()" title="강제 재시도 (개발자)" aria-label="다시">↻</button>`;
   const bodyHtml = `
@@ -411,8 +406,7 @@ function _rcRenderHoroscopeCard(zodiac, content, lucky) {
       <div class="rc-body-headline">고동의 운세</div>
       ${zLabel ? `<div class="rc-horoscope-zodiac">${escapeHtml(zLabel)}</div>` : ''}
       <div class="rc-horoscope-text">${escapeHtml(trim)}</div>
-      ${luckyLine}
-      ${content.length > 80 ? `<div class="rc-body-mini-cta">탭 → 전체 운세 ✦</div>` : ''}
+      <div class="rc-body-mini-cta">탭 → 전체 운세 + 행운 ✦</div>
     </div>
   `;
   // 카드 1번 봤음 mark — 컨펌 처리

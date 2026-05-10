@@ -140,11 +140,9 @@ function _buildReviewArchiveSummaryHTML(review, opts) {
 
   return `<div class="review-archive-summary">
     <div class="ras-title">✨ 이 기간 깨달음 ${total}개</div>
-    ${metaSummary ? `<div class="ras-meta">"${escapeHtml(metaSummary)}"</div>` : (review.id ? `
-      <div style="margin-bottom:12px;"><button class="ras-meta-btn" onclick="event.stopPropagation(); generateReviewArchiveMetaSummary('${review.id}')">🤖 AI 핵심 통찰 요약 받기</button></div>
-    ` : `
-      <div style="margin-bottom:12px; font-size:11px; color:var(--text-soft); padding:8px 10px; background:rgba(255,255,255,0.03); border-radius:6px; line-height:1.6;">🤖 리뷰 저장 후 AI 핵심 통찰 요약 받기 가능</div>
-    `)}
+    ${metaSummary ? `<div class="ras-meta">"${escapeHtml(metaSummary)}"</div>` : `
+      <div style="margin-bottom:12px;"><button class="ras-meta-btn" onclick="event.stopPropagation(); generateReviewArchiveMetaSummary('${review.id || ''}')">🤖 AI 핵심 통찰 요약 받기</button></div>
+    `}
     <div class="ras-section">
       <div class="ras-section-label">네 사고 모드</div>
       <div class="ras-mode-bars">

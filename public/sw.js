@@ -15,7 +15,8 @@
 //   src 는 이미 trim modal 미리보기 제거됐는데 SW stale-while-revalidate 때문에 옛 index.html 노출. 강제 invalidate.
 // v11 (2026-05-10 사용자 명시): trim modal 의 video preview (controls) 만 복구 (썸네일 strip 은 영구 제거 유지).
 // v12 (2026-05-10 사용자 보고): 5 큐 fix — deeper 첫 클릭 잠김 / 결제 modal padding 잔존 / chat-prompt 우회 / 4단 아닌데 proposal chip / 미션 완료 카드 description.
-const CACHE_NAME = 'soragodong-v4-cache-v12';
+// v13 (2026-05-10 사용자 보고 ultrathink 13큐): 운세 한 문장 + 다양성 / 내가 텍스트 / 통찰 버튼 / 진주 모달 텍스트.
+const CACHE_NAME = 'soragodong-v4-cache-v13';
 const PRECACHE_URLS = [
   './',
   './index.html',

@@ -65,7 +65,7 @@ async function saveMsgAsPearl(idx) {
       message: '한 줄 정리 방법 골라.',
       options: [
         { label: '✏️ 내가 직접 쓸래', value: 'manual' },
-        { label: '✨ AI 가 정리해줘', value: 'ai' }
+        { label: '✨ 고동이가 정리해줘', value: 'ai' }
       ]
     });
     if (!mode) return;

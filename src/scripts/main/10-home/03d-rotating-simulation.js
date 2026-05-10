@@ -213,8 +213,8 @@ function _rcSimRenderGodongInput(cur) {
         ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✨ 고동이 모드</div>
         <div class="rc-sim-scenario">${escapeHtml(cur.scenario || '')}</div>
-        <div class="rc-sim-prompt-label">너는 어떻게 할 것 같아?</div>
-        <textarea class="rc-sim-textarea" id="rcSimUserPredInput" rows="3" placeholder="너의 행동/반응 예측 적어..." onclick="event.stopPropagation();" oninput="event.stopPropagation();"></textarea>
+        <div class="rc-sim-prompt-label">내가 어떻게 할 것 같아?</div>
+        <textarea class="rc-sim-textarea" id="rcSimUserPredInput" rows="3" placeholder="내 행동/반응 예측 적어..." onclick="event.stopPropagation();" oninput="event.stopPropagation();"></textarea>
         <div class="rc-sim-actions">
           <button class="rc-sim-btn rc-sim-btn-secondary" type="button" onclick="event.stopPropagation(); rcSimReset()">취소</button>
           <button class="rc-sim-btn rc-sim-btn-primary" type="button" onclick="event.stopPropagation(); rcSimSubmitGodongPrediction()">고동이 답 보기 →</button>
@@ -264,7 +264,7 @@ function _rcSimRenderUserInput(cur) {
         ${_rcSimResetBtnHtml()}
         <div class="rc-body-headline">상상 시뮬 ✏️ 직접 모드</div>
         <div class="rc-sim-prompt-label">시나리오 적어 — 고동이가 너의 행동 예측해볼게</div>
-        <textarea class="rc-sim-textarea" id="rcSimUserScenarioInput" rows="4" placeholder="예: 친구가 갑자기 약속 취소했어. 너는 어떻게 할 것 같아?" onclick="event.stopPropagation();" oninput="event.stopPropagation();"></textarea>
+        <textarea class="rc-sim-textarea" id="rcSimUserScenarioInput" rows="4" placeholder="예: 친구가 갑자기 약속 취소했어. 내가 어떻게 할 것 같아?" onclick="event.stopPropagation();" oninput="event.stopPropagation();"></textarea>
         <div class="rc-sim-actions">
           <button class="rc-sim-btn rc-sim-btn-secondary" type="button" onclick="event.stopPropagation(); rcSimReset()">취소</button>
           <button class="rc-sim-btn rc-sim-btn-primary" type="button" onclick="event.stopPropagation(); rcSimSubmitUserScenario()">고동이 예측 받기 →</button>
