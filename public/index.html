@@ -28556,13 +28556,65 @@ async function _callGodongDiaryHaiku() {
   });
   const hourMeta = `새벽00-05: ${hourBuckets.dawn}건 / 아침06-11: ${hourBuckets.morning}건 / 점심12-17: ${hourBuckets.afternoon}건 / 저녁18-21: ${hourBuckets.evening}건 / 밤22-23: ${hourBuckets.night}건`;
 
-  // ── 진주 최근 5개. ──
-  const recentPearls = (state.pearls || []).slice(-5);
+  // ── 사용자 명시 2026-05-11: substrate 확장 — 진주 / 토픽 / 깨달음 / 통찰 모두 시점 기반 (지난 3일 createdAt). ──
+  // 각 entry 에 [M월 D일] prefix 로 LLM 이 날짜별 그루핑 자동.
+  const _dayPrefix = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `[${d.getMonth() + 1}월 ${d.getDate()}일]`;
+  };
+
+  const recentPearls = (state.pearls || []).filter(p => {
+    if (!p || p._deleted) return false;
+    if (!p.createdAt) return false;
+    return new Date(p.createdAt).getTime() > since;
+  }).slice(-10);
   const pearlsText = recentPearls.map(p => {
+    const prefix = _dayPrefix(p.createdAt);
     const cat = p.category ? ` (${p.category})` : '';
     const content = (p.content || '').trim();
     const note = p.note ? ` — ${p.note}` : '';
-    return `- ${content}${cat}${note}`;
+    return `${prefix} ${content}${cat}${note}`;
+  }).join('\n');
+
+  // 토픽 카드 (챕터 토픽) — chapterEndedAt / chapterStartedAt / createdAt 중 최신 사용.
+  const recentTopics = (state.topicCards || []).filter(t => {
+    if (!t || t._deleted) return false;
+    const ts = t.chapterEndedAt || t.chapterStartedAt || t.createdAt;
+    if (!ts) return false;
+    return new Date(ts).getTime() > since;
+  }).slice(-10);
+  const topicsText = recentTopics.map(t => {
+    const prefix = _dayPrefix(t.chapterEndedAt || t.chapterStartedAt || t.createdAt);
+    const title = (t.title || '').slice(0, 50).trim();
+    const summary = (t.summary || '').slice(0, 120).trim();
+    return `${prefix} ${title}${summary ? ` — ${summary}` : ''}`;
+  }).join('\n');
+
+  // 깨달음 (state.archive) — type=memo 제외, _deleted/_excludeFromAI 제외.
+  const recentArchive = (state.archive || []).filter(a => {
+    if (!a || a._deleted) return false;
+    if (a.type === 'memo' || a._excludeFromAI) return false;
+    if (!a.savedAt) return false;
+    return new Date(a.savedAt).getTime() > since;
+  }).slice(-10);
+  const archiveText = recentArchive.map(a => {
+    const prefix = _dayPrefix(a.savedAt);
+    const headline = (a.headline || '').slice(0, 50).trim();
+    const insight = (a.insight || a.body || '').slice(0, 120).trim();
+    return `${prefix} ${headline}${insight ? ` — ${insight}` : ''}`;
+  }).join('\n');
+
+  // 통찰 카드 (state.insights) — _deleted / dismissed 제외.
+  const recentInsights = (state.insights || []).filter(i => {
+    if (!i || i._deleted || i.dismissed) return false;
+    if (!i.discoveredAt) return false;
+    return new Date(i.discoveredAt).getTime() > since;
+  }).slice(-10);
+  const insightsText = recentInsights.map(i => {
+    const prefix = _dayPrefix(i.discoveredAt);
+    const content = (i.content || '').slice(0, 140).trim();
+    return `${prefix} ${content}`;
   }).join('\n');
 
   // ── 활성 모드 + 며칠째. ──
@@ -28621,12 +28673,19 @@ async function _callGodongDiaryHaiku() {
 
 7. 사용자 발화 인용 OK — 따옴표 1쌍. substrate 의 [채팅] / [체크인 답] 그대로 인용.
 
-substrate 활용:
+substrate 활용 (각 entry 의 [M월 D일] prefix 로 날짜 그루핑):
 - [체크인]: 질문 + 답 짝 — "내 삶" 같은 단답이면 *왜* 그 답이 나왔는지 컨텍스트.
 - [채팅]: 사용자 발화 그대로. 어휘 / 한숨 / 미완성 문장이 디테일 시그널.
 - [시간대]: 새벽 메시지 많으면 "안 자고 있었네" 가능.
-- [진주]: ${_userName}이만의 anchor. callback ("그 한강 자리 다시 갔다") OK.
+- [진주]: ${_userName}이가 그 날 저장한 anchor — 그 자체가 사건 ("한강 모서리 자리 새로 발견" 같은).
+- [토픽 카드]: 그 날 챕터 정리된 주제 — 그 주제 자체가 사건 ("새벽 카페 흐름의 날" 같은).
+- [깨달음]: 그 날 ${_userName}이가 저장한 깨달음 — 그 통찰이 사건의 의미.
+- [통찰]: 자동 추출된 패턴 — 그 패턴이 그 날의 시그널.
 - [모드]: 시험/여행/월경/휴식 활성 시 한 문장 컨텍스트.
+
+**중요**: 데이터 있는 날 = 위 어떤 source 라도 해당 날짜에 1개 이상 있으면 OK.
+  - 체크인 X / 채팅 X 라도 그 날 진주 1개 / 토픽 1개 / 깨달음 1개라도 있으면 → 그 날 일기 1편.
+  - 예: 2일 전 체크인 안 했지만 그 날 진주 "한강 모서리 자리" 저장됨 → 2일 전 일기에 그 진주 사건으로.
 
 **잠 시간 해석 (사용자 보고 2026-05-11)**:
 - 6-9시간 = 정상 수면. "오래 잤다" / "하루종일 잤다" / "계속 잤다" 절대 X.
@@ -28666,7 +28725,7 @@ substrate 활용:
   const _wkToday = ['일','월','화','수','목','금','토'][_now.getDay()];
 
   const userPrompt = `오늘 = ${_isoToday} (${_wkToday}요일)
-지난 3일 substrate (오늘 / 어제 / 그제):
+지난 3일 substrate (오늘 / 어제 / 그제) — 각 entry [M월 D일] prefix 로 날짜 표시:
 
 [체크인 (날짜별)]
 ${entriesText || '(없음)'}
@@ -28674,16 +28733,26 @@ ${entriesText || '(없음)'}
 [채팅 — 사용자 발화만]
 ${chatText || '(없음)'}
 
-[시간대 분포]
+[시간대 분포 (전체 3일 합산)]
 ${hourMeta}
 
-[진주 — ${_userName}이만의 anchor]
+[진주 — 그 날 저장된 anchor]
 ${pearlsText || '(없음)'}
+
+[토픽 카드 — 그 날 챕터 정리된 주제]
+${topicsText || '(없음)'}
+
+[깨달음 — 그 날 저장된 통찰]
+${archiveText || '(없음)'}
+
+[자동 추출 통찰 — 그 날 발견된 패턴]
+${insightsText || '(없음)'}
 
 [활성 모드]
 ${modesText}
 
-→ 데이터 있는 날 1-3개 식별 → 각 날짜별 *한 사건* + 고동 느낌으로 일기 1편씩.
+→ 데이터 있는 날 1-3개 식별 (체크인 / 채팅 / 진주 / 토픽 / 깨달음 / 통찰 *어떤 source 라도* 그 날 1개 있으면 OK).
+   각 날짜별 *한 사건* + 고동 느낌으로 일기 1편씩.
    같은 날 안 사건 여러 개여도 가장 인상적인 1개만 골라.
    본문 호칭은 무조건 "${_userName}이" / "${_userName}". "너" 절대 X.
    각 entry iso 는 그 일기가 다루는 *그 날* 의 ISO 8601. date 는 "M월 D일", weekday 는 "월"-"일" 한 글자.
