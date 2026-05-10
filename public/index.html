@@ -31411,22 +31411,6 @@ async function openGodongDiaryModal() {
     }
   }
 
-  // 사용자 명시 2026-05-11: cooldown 룰 단순화 — lastGodongDiaryAt 기반 3일 cooldown 폐기.
-  //   회전 카드 클릭 시 3/2/1일 전 일기가 *모두 있으면* 그대로 띄움. 하나라도 없으면 새로 생성.
-  //   '다시 적어줘' 버튼은 force regenerate (있어도 재호출).
-  const _existingMatchedDayKs = new Set(
-    (state.godongDiary || [])
-      .filter(e => e && _targetSet.has(_entryDayK(e)))
-      .map(e => _entryDayK(e))
-  );
-  const _hasAllThreeDays = _targetDayKs.every(dayK => _existingMatchedDayKs.has(dayK));
-  const _force = _gdiaryForceRegenerate;
-  _gdiaryForceRegenerate = false;
-  const needsGenerate = !_hasAllThreeDays || _force;
-
-  // 셸 먼저 (loading) — 사용자가 빈 화면 안 보게.
-  _gdiaryRenderShell({ loading: true });
-
   // 사용자 명시 2026-05-11: 4AM cutoff 기준 dayKey 3개 (3일 전 / 2일 전 / 어제). 오늘 X.
   const _gdkOff = (off) => {
     if (typeof getDayKey === 'function') return getDayKey(Date.now() - off * 86400000);
@@ -31446,6 +31430,22 @@ async function openGodongDiaryModal() {
     const adj = new Date(d.getTime() - 4 * 3600000);
     return `${adj.getFullYear()}-${String(adj.getMonth()+1).padStart(2,'0')}-${String(adj.getDate()).padStart(2,'0')}`;
   };
+
+  // 사용자 명시 2026-05-11: cooldown 룰 단순화 — lastGodongDiaryAt 기반 3일 cooldown 폐기.
+  //   회전 카드 클릭 시 3/2/1일 전 일기가 *모두 있으면* 그대로 띄움. 하나라도 없으면 새로 생성.
+  //   '다시 적어줘' 버튼은 force regenerate (있어도 재호출).
+  const _existingMatchedDayKs = new Set(
+    (state.godongDiary || [])
+      .filter(e => e && _targetSet.has(_entryDayK(e)))
+      .map(e => _entryDayK(e))
+  );
+  const _hasAllThreeDays = _targetDayKs.every(dayK => _existingMatchedDayKs.has(dayK));
+  const _force = _gdiaryForceRegenerate;
+  _gdiaryForceRegenerate = false;
+  const needsGenerate = !_hasAllThreeDays || _force;
+
+  // 셸 먼저 (loading) — 사용자가 빈 화면 안 보게.
+  _gdiaryRenderShell({ loading: true });
 
   // Haiku 호출 — 사용자 명시 2026-05-11: 정확히 3개 entry (3일전/2일전/어제). 데이터 없는 날도 fallback 톤으로 1편.
   if (needsGenerate) {
