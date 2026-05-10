@@ -140,25 +140,20 @@ function _buildReviewPrompt(type, data) {
   //   "꼭 일주일 안 지나도 일요일 4AM 이후면 review 생성. 단 마지막 review 이후 데이터 X 면 X."
   //   monthly/quarterly/annual 은 옛 그대로 (entries 0 가드만).
   if (type === 'weekly') {
-    // 가드 1: 마지막 review 이후 새 데이터 1개라도
-    const lastReview = (state.weeklyReviews || []).slice().sort((a, b) =>
-      new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)
-    )[0];
-    if (lastReview) {
-      const lastAt = new Date(lastReview.completedAt || lastReview.createdAt || 0);
-      const lastISO = lastAt.toISOString().split('T')[0];
-      const hasNewSinceLast =
-        (state.entries || []).some(e => e.date && e.date > lastISO) ||
-        (state.chatMessages || []).some(m => m && m.role === 'user' && !m.typing && !m.error && m.timestamp && new Date(m.timestamp) > lastAt) ||
-        (state.archive || []).some(a => a && !a._deleted && a.savedAt && new Date(a.savedAt) > lastAt) ||
-        (state.missions || []).some(m => m && m.createdAt && new Date(m.createdAt) > lastAt) ||
-        (state.pearls || []).some(p => p && !p._deleted && p.createdAt && new Date(p.createdAt) > lastAt) ||
-        (state.topicCards || []).some(t => t && !t._deleted && t.createdAt && new Date(t.createdAt) > lastAt);
-      if (!hasNewSinceLast) return null;
+    // 사용자 보고 2026-05-10: 옛 가드 = lastReview 이후 새 데이터 검사 → 같은 주 (W19) 가 아직 push 안 됐는데도 막힘.
+    //   fix: weekKey 비교 — 이번 주 weekKey 가 이미 push 됐으면 skip, 안 됐으면 데이터 가드 우회.
+    const _thisWeekKey = (typeof getWeekKey === 'function') ? getWeekKey(cutoffEnd || cutoff) : null;
+    if (_thisWeekKey && (state.weeklyReviews || []).some(r => r.weekKey === _thisWeekKey)) {
+      return null;  // 이미 이번 주 review push — idempotent skip.
     }
-    // 가드 2 (강화 재): entries 1+ 만 OK (사용자 명시 2026-05-08 추가).
-    //   chat 만 있고 entries 0 = 일기 안 쓴 주 = review 차트/cycles 부실. 일기 1+ 가 review 의 핵심 input.
-    if (!entriesInRange || entriesInRange.length === 0) return null;
+    // 사용자 보고 2026-05-10: entries 0 가드 완화 — chat / archive / pearl 등 데이터 1+ 면 review 가능 (chat-only 사용자도 review).
+    const _hasAnyData =
+      (entriesInRange && entriesInRange.length > 0) ||
+      (chatInRange && chatInRange.length > 0) ||
+      (archiveInRange && archiveInRange.length > 0) ||
+      (pearlsInRange && pearlsInRange.length > 0) ||
+      (chaptersInRange && chaptersInRange.length > 0);
+    if (!_hasAnyData) return null;
   } else {
     // monthly: 사용자 명시 2026-05-08 — weekly 와 동일 가드 (마지막 monthly review 이후 새 데이터 X 면 X).
     const lastReview = (state.monthlyReviews || []).slice().sort((a, b) =>

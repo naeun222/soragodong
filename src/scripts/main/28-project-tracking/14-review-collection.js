@@ -46,6 +46,8 @@ function deleteReview(type, key, completedAt) {
 // 사용자 명시 2026-04-30 ultrathink: opts.archiveOverride 추가 — 주간 리뷰 본 화면 (저장 전 / preview 시드) 통째로 호출 가능.
 function _buildReviewArchiveSummaryHTML(review, opts) {
   opts = opts || {};
+  // 사용자 명시 2026-05-10 (큐 7 a): 깨달음 섹션 (review-archive-summary) = 월간/분기/연간 만. 주간은 hide.
+  if (review && (review.weekKey || review.type === 'weekly')) return '';
   const _archiveSource = Array.isArray(opts.archiveOverride) ? opts.archiveOverride : (state.archive || []);
   let startMs = null, endMs = null;
   if (review.quarterKey && typeof getQuarterRange === 'function') {

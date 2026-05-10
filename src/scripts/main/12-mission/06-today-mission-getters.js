@@ -56,7 +56,11 @@ function renderYesterdayCard() {
   if (!container) return;
   const yesterdayK = _calendarYesterdayKey();
   const yesterdayEntry = (state.entries || []).find(e => e.date === yesterdayK);
-  if (!_hasYesterdayContent(yesterdayEntry)) { container.innerHTML = ''; return; }
+  // 사용자 보고 2026-05-10: chat 만 한 날 (entry 없음) 도 어제 카드 노출 — chatArchive 에 어제 항목 있으면 인정.
+  const _hasArchiveYesterday = (state.chatArchive || []).some(a =>
+    a && !a._deleted && a.date === yesterdayK && Array.isArray(a.messages) && a.messages.length >= 3
+  );
+  if (!_hasYesterdayContent(yesterdayEntry) && !_hasArchiveYesterday) { container.innerHTML = ''; return; }
   // 사용자 명시 2026-05-02 ultrathink: batch API 도입 — 4AM batch 처리 중 (state.pendingBatch != null) 이면 카드 X.
   // 이유: 카드 click → openDayModal → chapter analysis 자리. batch 결과 미완 시 분석 빈 상태 → 의미 없음.
   // batch 끝 (또는 12h timeout fallback) 시 자동 노출. _resumePendingBatch 가 maybeRunDailyChapterExtract 안에서 처리.

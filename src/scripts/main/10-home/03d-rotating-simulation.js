@@ -145,10 +145,55 @@ function _rcSimRenderVerdictAddNote(cur) {
           <button class="rc-sim-btn rc-sim-btn-secondary" type="button" onclick="event.stopPropagation(); rcSimSkipAddNote()">건너뛰기</button>
           <button class="rc-sim-btn rc-sim-btn-primary" type="button" onclick="event.stopPropagation(); rcSimSubmitAddNote()">저장 ✦</button>
         </div>
+        <button class="rc-sim-btn rc-sim-btn-chat" type="button" onclick="event.stopPropagation(); rcSimContinueInChat()" style="margin-top:8px; width:100%;">🐚 고동이랑 이어서 대화</button>
       </div>
     `,
     onTapClick: '',
   };
+}
+
+// 사용자 명시 2026-05-10 (큐 11): 시뮬 verdict 후 → 새 챕터 시작 + 시뮬 컨텍스트 inject + chat 화면 전환.
+//   기존 활성 챕터 있으면 마무리 모달 → archive 이송. 새 챕터에 isSimulationContext flag.
+//   챕터 마무리 시 chapterMeta.isSimulation 마킹 → cf 5차원 추출 X, traits/values/patterns 만 (extractedFrom='simulation').
+async function rcSimContinueInChat() {
+  const r = _ensureRotatingCardState();
+  const cur = r.currentSimulation;
+  if (!cur) return;
+  const noteEl = document.getElementById('rcSimAddNoteInput');
+  if (noteEl) cur.diffNote = String(noteEl.value || '').trim() || cur.diffNote || null;
+  // archive 저장 (시뮬 archive 풀에 stash + 분리 추출 path)
+  try { _rcSimSaveToArchive(cur); } catch {}
+  // 기존 활성 챕터 마무리 모달
+  if (Array.isArray(state.chatMessages) && state.chatMessages.length > 0) {
+    const ok = await (typeof showConfirmModal === 'function' ? showConfirmModal({
+      title: '🐚 기존 대화 마무리할까?',
+      message: '주제 섞이는 거 회피 — 기존 챕터 archive 이송 후 시뮬 컨텍스트 새 챕터 시작.',
+      okLabel: '응 마무리',
+      cancelLabel: '아니'
+    }) : Promise.resolve(true));
+    if (!ok) return;
+    if (typeof _archiveCurrentChapter === 'function') {
+      try { _archiveCurrentChapter({ manual: true }); } catch {}
+    }
+  }
+  // 새 챕터 첫 메시지 — 시뮬 컨텍스트
+  const _scenario = cur.scenario || cur.userScenario || '';
+  const _gPred = cur.godongPrediction || '';
+  const _myAns = cur.diffNote || cur.userPrediction || '';
+  const _content = `[시뮬레이션] ${_scenario}\n[고동이 예측] ${_gPred}${_myAns ? `\n[내 답] ${_myAns}` : ''}`;
+  state.chatMessages.push({
+    role: 'user',
+    content: _content,
+    timestamp: new Date().toISOString(),
+    isSimulationContext: true,
+    chapterStart: true
+  });
+  cur.stage = 'done';
+  if (typeof saveState === 'function') saveState();
+  if (typeof showScreen === 'function') showScreen('chat');
+  if (typeof renderChat === 'function') setTimeout(() => renderChat(), 100);
+  // AI 응답 자동 trigger (사용자 입력 없이도 시뮬 컨텍스트로 깊은 대화 시작)
+  if (typeof generateAIResponse === 'function') setTimeout(() => generateAIResponse(), 200);
 }
 
 function _rcSimRenderModePick(blockKey) {

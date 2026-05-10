@@ -25793,25 +25793,20 @@ function _buildReviewPrompt(type, data) {
   //   "꼭 일주일 안 지나도 일요일 4AM 이후면 review 생성. 단 마지막 review 이후 데이터 X 면 X."
   //   monthly/quarterly/annual 은 옛 그대로 (entries 0 가드만).
   if (type === 'weekly') {
-    // 가드 1: 마지막 review 이후 새 데이터 1개라도
-    const lastReview = (state.weeklyReviews || []).slice().sort((a, b) =>
-      new Date(b.completedAt || b.createdAt || 0) - new Date(a.completedAt || a.createdAt || 0)
-    )[0];
-    if (lastReview) {
-      const lastAt = new Date(lastReview.completedAt || lastReview.createdAt || 0);
-      const lastISO = lastAt.toISOString().split('T')[0];
-      const hasNewSinceLast =
-        (state.entries || []).some(e => e.date && e.date > lastISO) ||
-        (state.chatMessages || []).some(m => m && m.role === 'user' && !m.typing && !m.error && m.timestamp && new Date(m.timestamp) > lastAt) ||
-        (state.archive || []).some(a => a && !a._deleted && a.savedAt && new Date(a.savedAt) > lastAt) ||
-        (state.missions || []).some(m => m && m.createdAt && new Date(m.createdAt) > lastAt) ||
-        (state.pearls || []).some(p => p && !p._deleted && p.createdAt && new Date(p.createdAt) > lastAt) ||
-        (state.topicCards || []).some(t => t && !t._deleted && t.createdAt && new Date(t.createdAt) > lastAt);
-      if (!hasNewSinceLast) return null;
+    // 사용자 보고 2026-05-10: 옛 가드 = lastReview 이후 새 데이터 검사 → 같은 주 (W19) 가 아직 push 안 됐는데도 막힘.
+    //   fix: weekKey 비교 — 이번 주 weekKey 가 이미 push 됐으면 skip, 안 됐으면 데이터 가드 우회.
+    const _thisWeekKey = (typeof getWeekKey === 'function') ? getWeekKey(cutoffEnd || cutoff) : null;
+    if (_thisWeekKey && (state.weeklyReviews || []).some(r => r.weekKey === _thisWeekKey)) {
+      return null;  // 이미 이번 주 review push — idempotent skip.
     }
-    // 가드 2 (강화 재): entries 1+ 만 OK (사용자 명시 2026-05-08 추가).
-    //   chat 만 있고 entries 0 = 일기 안 쓴 주 = review 차트/cycles 부실. 일기 1+ 가 review 의 핵심 input.
-    if (!entriesInRange || entriesInRange.length === 0) return null;
+    // 사용자 보고 2026-05-10: entries 0 가드 완화 — chat / archive / pearl 등 데이터 1+ 면 review 가능 (chat-only 사용자도 review).
+    const _hasAnyData =
+      (entriesInRange && entriesInRange.length > 0) ||
+      (chatInRange && chatInRange.length > 0) ||
+      (archiveInRange && archiveInRange.length > 0) ||
+      (pearlsInRange && pearlsInRange.length > 0) ||
+      (chaptersInRange && chaptersInRange.length > 0);
+    if (!_hasAnyData) return null;
   } else {
     // monthly: 사용자 명시 2026-05-08 — weekly 와 동일 가드 (마지막 monthly review 이후 새 데이터 X 면 X).
     const lastReview = (state.monthlyReviews || []).slice().sort((a, b) =>
@@ -29494,10 +29489,55 @@ function _rcSimRenderVerdictAddNote(cur) {
           <button class="rc-sim-btn rc-sim-btn-secondary" type="button" onclick="event.stopPropagation(); rcSimSkipAddNote()">건너뛰기</button>
           <button class="rc-sim-btn rc-sim-btn-primary" type="button" onclick="event.stopPropagation(); rcSimSubmitAddNote()">저장 ✦</button>
         </div>
+        <button class="rc-sim-btn rc-sim-btn-chat" type="button" onclick="event.stopPropagation(); rcSimContinueInChat()" style="margin-top:8px; width:100%;">🐚 고동이랑 이어서 대화</button>
       </div>
     `,
     onTapClick: '',
   };
+}
+
+// 사용자 명시 2026-05-10 (큐 11): 시뮬 verdict 후 → 새 챕터 시작 + 시뮬 컨텍스트 inject + chat 화면 전환.
+//   기존 활성 챕터 있으면 마무리 모달 → archive 이송. 새 챕터에 isSimulationContext flag.
+//   챕터 마무리 시 chapterMeta.isSimulation 마킹 → cf 5차원 추출 X, traits/values/patterns 만 (extractedFrom='simulation').
+async function rcSimContinueInChat() {
+  const r = _ensureRotatingCardState();
+  const cur = r.currentSimulation;
+  if (!cur) return;
+  const noteEl = document.getElementById('rcSimAddNoteInput');
+  if (noteEl) cur.diffNote = String(noteEl.value || '').trim() || cur.diffNote || null;
+  // archive 저장 (시뮬 archive 풀에 stash + 분리 추출 path)
+  try { _rcSimSaveToArchive(cur); } catch {}
+  // 기존 활성 챕터 마무리 모달
+  if (Array.isArray(state.chatMessages) && state.chatMessages.length > 0) {
+    const ok = await (typeof showConfirmModal === 'function' ? showConfirmModal({
+      title: '🐚 기존 대화 마무리할까?',
+      message: '주제 섞이는 거 회피 — 기존 챕터 archive 이송 후 시뮬 컨텍스트 새 챕터 시작.',
+      okLabel: '응 마무리',
+      cancelLabel: '아니'
+    }) : Promise.resolve(true));
+    if (!ok) return;
+    if (typeof _archiveCurrentChapter === 'function') {
+      try { _archiveCurrentChapter({ manual: true }); } catch {}
+    }
+  }
+  // 새 챕터 첫 메시지 — 시뮬 컨텍스트
+  const _scenario = cur.scenario || cur.userScenario || '';
+  const _gPred = cur.godongPrediction || '';
+  const _myAns = cur.diffNote || cur.userPrediction || '';
+  const _content = `[시뮬레이션] ${_scenario}\n[고동이 예측] ${_gPred}${_myAns ? `\n[내 답] ${_myAns}` : ''}`;
+  state.chatMessages.push({
+    role: 'user',
+    content: _content,
+    timestamp: new Date().toISOString(),
+    isSimulationContext: true,
+    chapterStart: true
+  });
+  cur.stage = 'done';
+  if (typeof saveState === 'function') saveState();
+  if (typeof showScreen === 'function') showScreen('chat');
+  if (typeof renderChat === 'function') setTimeout(() => renderChat(), 100);
+  // AI 응답 자동 trigger (사용자 입력 없이도 시뮬 컨텍스트로 깊은 대화 시작)
+  if (typeof generateAIResponse === 'function') setTimeout(() => generateAIResponse(), 200);
 }
 
 function _rcSimRenderModePick(blockKey) {
@@ -32232,7 +32272,11 @@ function renderYesterdayCard() {
   if (!container) return;
   const yesterdayK = _calendarYesterdayKey();
   const yesterdayEntry = (state.entries || []).find(e => e.date === yesterdayK);
-  if (!_hasYesterdayContent(yesterdayEntry)) { container.innerHTML = ''; return; }
+  // 사용자 보고 2026-05-10: chat 만 한 날 (entry 없음) 도 어제 카드 노출 — chatArchive 에 어제 항목 있으면 인정.
+  const _hasArchiveYesterday = (state.chatArchive || []).some(a =>
+    a && !a._deleted && a.date === yesterdayK && Array.isArray(a.messages) && a.messages.length >= 3
+  );
+  if (!_hasYesterdayContent(yesterdayEntry) && !_hasArchiveYesterday) { container.innerHTML = ''; return; }
   // 사용자 명시 2026-05-02 ultrathink: batch API 도입 — 4AM batch 처리 중 (state.pendingBatch != null) 이면 카드 X.
   // 이유: 카드 click → openDayModal → chapter analysis 자리. batch 결과 미완 시 분석 빈 상태 → 의미 없음.
   // batch 끝 (또는 12h timeout fallback) 시 자동 노출. _resumePendingBatch 가 maybeRunDailyChapterExtract 안에서 처리.
@@ -36148,10 +36192,15 @@ function _dismissGuestNudge() {
 function renderModel() {
   const container = document.getElementById('modelContent');
   if (!container) return;  // FIX BUG-1: null guard
+  // 사용자 명시 2026-05-10 (큐 10): traits/values/patterns 의 extractedFrom='simulation' 항목은 나 탭 표시 X (도서관 시뮬 영역 별도).
+  const _filterNonSim = (arr) => (arr || []).filter(x => x && x.extractedFrom !== 'simulation');
+  const _traitsForRender = _filterNonSim(state.traits);
+  const _valuesForRender = _filterNonSim(state.values);
+  const _patternsForRender = _filterNonSim(state.patterns);
   // 사용자 명시 2026-05-06 ultrathink: task 평균 시간 기능 주석 — empty state / details 둘 다 노출 X.
   const timeCardHtml = '';  // renderTimeUsageCard() 호출 안 함
   const guestNudgeHtml = _renderGuestNudgeBanner();
-  if (!state.traits.length && !state.patterns.length && !state.values.length) {
+  if (!_traitsForRender.length && !_patternsForRender.length && !_valuesForRender.length) {
     // 사용자 요청 2026-04-29 (Q2): 모델 비어있어도 더 깊은 나 입력은 시작 가능 — Q2 섹션 같이 노출.
     container.innerHTML = guestNudgeHtml + timeCardHtml + `<div class="model-empty">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
@@ -36208,9 +36257,10 @@ function renderModel() {
   };
 
   // ── 1. 정체성 — values / traits / patterns (top, 자기친밀 hook 매일) ──
-  html += _renderConfirmableSection('values', '네가 중시하는 것', state.values);
-  html += _renderConfirmableSection('traits', '네 특성', state.traits);
-  html += _renderConfirmableSection('patterns', '보이는 패턴', state.patterns);
+  // 사용자 명시 2026-05-10 (큐 10): 시뮬 추출 항목 (extractedFrom='simulation') 은 hide.
+  html += _renderConfirmableSection('values', '네가 중시하는 것', _valuesForRender);
+  html += _renderConfirmableSection('traits', '네 특성', _traitsForRender);
+  html += _renderConfirmableSection('patterns', '보이는 패턴', _patternsForRender);
 
   // ── 2. 분석 — 통합 분석 + 작동 중인 패턴 (mid, 큰 그림 가끔) ──
   // 사용자 보고 2026-05-05: 신규 사용자 (caseFormulation.version=0) 한테 '통합 분석' 섹션 자체가 안 떠서 존재 모르던 문제 — placeholder 추가.
@@ -37532,6 +37582,9 @@ function _archiveCurrentChapter(opts) {
 
   // V4 (사용자 명시 2026-05-04 V191): summary 필드 제거 — 히스토리 API 줄거리 요약 기능 폐기.
   // 표시 / system prompt 주입 / review 입력 모두 raw messages + topicCards 기반으로 통일.
+  // 사용자 명시 2026-05-10 (큐 11): 챕터 안 isSimulationContext: true 메시지 1+ 면 isSimulation 챕터로 마킹.
+  //   추출 path 격리 — cf 5차원 X, traits/values/patterns 만 (extractedFrom='simulation', confidence ≥ 0.7).
+  const _isSimChapter = validMsgs.some(m => m && m.isSimulationContext === true);
   const archiveItem = {
     id: 'arch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     date: dateKey,
@@ -37539,7 +37592,8 @@ function _archiveCurrentChapter(opts) {
     messages: validMsgs.slice(),
     generatedAt: new Date().toISOString(),
     endedManually: !!opts.manual,
-    _pendingExtract: true   // 4AM 일괄 처리 마커 (case_analysis + topic_extract 둘 다)
+    _pendingExtract: true,   // 4AM 일괄 처리 마커 (case_analysis + topic_extract 둘 다)
+    ...(_isSimChapter ? { isSimulation: true } : {})
   };
   // 사용자 명시 2026-05-08 ultrathink: 이어서한 후 변경된 케이스 (옛 messages + 새 messages) — 새 archive 에 _extractFromIndex 박기.
   // unchanged 분기 (line 39-52) 에서는 옛 archive 그대로 복귀 → 이 분기 도달 X. changed 분기에서만 boundary 박음.
@@ -37935,43 +37989,23 @@ async function generateAIResponse(modelOverride, opts) {
     // 5h+ 갭이면 archive 이송 후 챕터 비워지므로 단절 위험 낮음. messages 영역 ~15% 토큰 절감.
     const fromChapter = validMsgs.slice(chapterStartIdx);
 
-    // 사용자 명시 2026-05-08 ultrathink: 25턴+ chapter 압축 — sliding window + Haiku 누적 요약 hybrid.
-    // 옛 부분 한 단락 요약 + 최근 20턴 raw → AI memory 보완. cache hit 안 되면 raw 20턴 (다음 응답에 hit).
-    let messages;
-    const _RECENT_CAP = (typeof _ROLLING_SUMMARY_RECENT_CAP !== 'undefined') ? _ROLLING_SUMMARY_RECENT_CAP : 20;
-    const _COMP_THRESHOLD = (typeof _ROLLING_SUMMARY_THRESHOLD !== 'undefined') ? _ROLLING_SUMMARY_THRESHOLD : 25;
-    const _STALE_TOL = (typeof _ROLLING_SUMMARY_STALE_TOLERANCE !== 'undefined') ? _ROLLING_SUMMARY_STALE_TOLERANCE : 10;
-
-    if (fromChapter.length > _COMP_THRESHOLD) {
-      const _oldPart = fromChapter.slice(0, fromChapter.length - _RECENT_CAP);
-      const _recentPart = fromChapter.slice(-_RECENT_CAP);
-      const _cacheKey = (typeof _rollingSummaryCacheKey === 'function')
-        ? _rollingSummaryCacheKey(fromChapter) : 'chapter';
-      const _cachedSummary = (state.preferences && state.preferences._chatRollingSummary
-        && state.preferences._chatRollingSummary[_cacheKey]) || '';
-      const _cachedCount = (state.preferences && state.preferences._chatRollingSummaryCount
-        && state.preferences._chatRollingSummaryCount[_cacheKey]) || 0;
-
-      // background — 새 oldPart 길이로 update (fire-and-forget, fail silent)
-      if (typeof _maybeBuildRollingSummary === 'function') {
-        _maybeBuildRollingSummary(_oldPart, _cacheKey).catch(() => {});
-      }
-
-      if (_cachedSummary && Math.abs(_cachedCount - _oldPart.length) <= _STALE_TOL) {
-        // cache hit (~10턴 stale OK) — 옛 부분 요약 + 최근 N턴 raw
-        messages = [
-          { role: 'user', content: `[지금까지 대화 요약 — 옛 ${_oldPart.length}턴 분]\n${_cachedSummary}\n\n[이어서 대화 계속 — 최근 ${_recentPart.length}턴]` },
-          { role: 'assistant', content: '계속 듣고 있어 — 이어서 말해줘.' },
-          ..._recentPart.map(m => ({ role: m.role, content: m.content }))
-        ];
-      } else {
-        // cache miss → 최근 N턴만 raw (기존 동작). 다음 응답부터 cache hit.
-        messages = _recentPart.map(m => ({ role: m.role, content: m.content }));
-      }
-    } else {
-      // 25턴 이하 = 압축 X, 그대로
-      const _sliced = fromChapter.length > 0 ? fromChapter : validMsgs.slice(-_RECENT_CAP);
-      messages = _sliced.map(m => ({ role: m.role, content: m.content }));
+    // 사용자 명시 2026-05-10 (큐 13): 압축 폐기 — Claude.ai 처럼 raw 그대로 + prompt cache 활용.
+    //   25턴 sliding window 요약 → 디테일 손실 컸음 (사용자 보고). 신: 챕터 100턴 까지 raw + cache.
+    //   100턴 도달 시 부드러운 알림 (다음 자연 5h+ 갭 챕터 종료 권유). Premium 200턴.
+    const _bill = window._billingCache;
+    const _isPrem = !!(_bill && (_bill.subscription_plan === 'premium' || _bill.subscription_plan === 'early_lifetime' || _bill.subscription_plan === 'early_light') && _bill.subscription_active);
+    const _RAW_CAP = _isPrem ? 200 : 100;
+    const _sliced = fromChapter.length > 0 ? fromChapter : validMsgs.slice(-_RAW_CAP);
+    // 100/200턴 hard cap — 그 안 raw 그대로 (cache 가 prefix 매칭으로 90% 할인 처리).
+    const _trimmed = _sliced.length > _RAW_CAP ? _sliced.slice(-_RAW_CAP) : _sliced;
+    let messages = _trimmed.map(m => ({ role: m.role, content: m.content }));
+    // 사용자 명시 2026-05-10: 100턴+ 도달 시 한 번만 부드러운 알림 (다음 자연 5h+ 갭 챕터 마무리 권유).
+    if (fromChapter.length >= _RAW_CAP && !state._chatLongCapHinted) {
+      state._chatLongCapHinted = true;
+      try { saveState(); } catch {}
+      try { if (typeof showToast === 'function') showToast(`💭 이번 챕터 길어졌어 (${fromChapter.length}턴) — 마무리하고 새로 시작?`); } catch {}
+    } else if (fromChapter.length < _RAW_CAP && state._chatLongCapHinted) {
+      delete state._chatLongCapHinted;
     }
 
     // 사용자 명시 2026-05-01 ultrathink: messages prefix cache_control — 마지막 user 메시지 직전 turn 에 ephemeral breakpoint.
@@ -51399,6 +51433,8 @@ function deleteReview(type, key, completedAt) {
 // 사용자 명시 2026-04-30 ultrathink: opts.archiveOverride 추가 — 주간 리뷰 본 화면 (저장 전 / preview 시드) 통째로 호출 가능.
 function _buildReviewArchiveSummaryHTML(review, opts) {
   opts = opts || {};
+  // 사용자 명시 2026-05-10 (큐 7 a): 깨달음 섹션 (review-archive-summary) = 월간/분기/연간 만. 주간은 hide.
+  if (review && (review.weekKey || review.type === 'weekly')) return '';
   const _archiveSource = Array.isArray(opts.archiveOverride) ? opts.archiveOverride : (state.archive || []);
   let startMs = null, endMs = null;
   if (review.quarterKey && typeof getQuarterRange === 'function') {
@@ -52950,16 +52986,18 @@ async function _runDailyExtractInline(pending) {
     let _caseOk = false;
     try {
       // 사용자 보고 2026-05-10 (audit batch 3): _runDailyExtractInline 의 `>= 6` 잔존 — _submitDailyExtractBatch 만 fix 됐던 것. 일관 `>= 3` 로.
-      if (_extractMsgs.length >= 3) {
+      // 사용자 명시 2026-05-10 (큐 11): isSimulation 챕터 = case_analysis skip (cf 5차원 / traits 등 추출 X). 별도 시뮬 추출 path (batch 6) 처리.
+      if (_extractMsgs.length >= 3 && !batch.isSimulation) {
         // 사용자 보고 2026-05-10 (audit batch 4): extractChapterCaseAnalysis 가 boolean return — fail 시 _pendingExtract 보존.
         _caseOk = !!(await extractChapterCaseAnalysis(_extractMsgs));
       } else {
-        _caseOk = true; // 메시지 부족 = retry 해도 무의미 → flag delete OK
+        _caseOk = true; // 메시지 부족 또는 시뮬 챕터 = case_analysis skip OK
       }
     } catch (e) { console.warn('[inline] case fail:', e); }
     const _allowChapterTopic = !!batch.endedManually || _isPremium;
     try {
-      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _extractMsgs.length >= 3) {
+      // 시뮬 챕터 = topic 추출도 skip (일반 topicCards 와 섞이지 X).
+      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _extractMsgs.length >= 3 && !batch.isSimulation) {
         await extractPreviousChapterTopics(_extractMsgs);
       }
     } catch (e) { console.warn('[inline] topic fail:', e); }
@@ -56635,7 +56673,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.194-weekkey-cutoffend-tokens-4000';
+const APP_VERSION = 'v4.0.195-batch5-mass';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

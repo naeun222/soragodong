@@ -120,10 +120,15 @@ function _dismissGuestNudge() {
 function renderModel() {
   const container = document.getElementById('modelContent');
   if (!container) return;  // FIX BUG-1: null guard
+  // 사용자 명시 2026-05-10 (큐 10): traits/values/patterns 의 extractedFrom='simulation' 항목은 나 탭 표시 X (도서관 시뮬 영역 별도).
+  const _filterNonSim = (arr) => (arr || []).filter(x => x && x.extractedFrom !== 'simulation');
+  const _traitsForRender = _filterNonSim(state.traits);
+  const _valuesForRender = _filterNonSim(state.values);
+  const _patternsForRender = _filterNonSim(state.patterns);
   // 사용자 명시 2026-05-06 ultrathink: task 평균 시간 기능 주석 — empty state / details 둘 다 노출 X.
   const timeCardHtml = '';  // renderTimeUsageCard() 호출 안 함
   const guestNudgeHtml = _renderGuestNudgeBanner();
-  if (!state.traits.length && !state.patterns.length && !state.values.length) {
+  if (!_traitsForRender.length && !_patternsForRender.length && !_valuesForRender.length) {
     // 사용자 요청 2026-04-29 (Q2): 모델 비어있어도 더 깊은 나 입력은 시작 가능 — Q2 섹션 같이 노출.
     container.innerHTML = guestNudgeHtml + timeCardHtml + `<div class="model-empty">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
@@ -180,9 +185,10 @@ function renderModel() {
   };
 
   // ── 1. 정체성 — values / traits / patterns (top, 자기친밀 hook 매일) ──
-  html += _renderConfirmableSection('values', '네가 중시하는 것', state.values);
-  html += _renderConfirmableSection('traits', '네 특성', state.traits);
-  html += _renderConfirmableSection('patterns', '보이는 패턴', state.patterns);
+  // 사용자 명시 2026-05-10 (큐 10): 시뮬 추출 항목 (extractedFrom='simulation') 은 hide.
+  html += _renderConfirmableSection('values', '네가 중시하는 것', _valuesForRender);
+  html += _renderConfirmableSection('traits', '네 특성', _traitsForRender);
+  html += _renderConfirmableSection('patterns', '보이는 패턴', _patternsForRender);
 
   // ── 2. 분석 — 통합 분석 + 작동 중인 패턴 (mid, 큰 그림 가끔) ──
   // 사용자 보고 2026-05-05: 신규 사용자 (caseFormulation.version=0) 한테 '통합 분석' 섹션 자체가 안 떠서 존재 모르던 문제 — placeholder 추가.
