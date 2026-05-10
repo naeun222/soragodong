@@ -285,7 +285,7 @@ async function _intakeAnalyze(intakeWorry) {
   if (!_canAI()) throw new Error('AI 세션 미준비');
 
   // 사용자 명시 2026-05-09: askDeeper 와 메커니즘 완전 동일 — buildSystemPromptParts + systemBlocks 구조 + cache_control breakpoint.
-  // (옛 = system 누락 → Anthropic default → 존댓말 출력. 이번 = generateAIResponse 와 100% 동일 system 구성.)
+  // 사용자 명시 2026-05-10: 3-tier (stable + sessionStable + perCall) — generateAIResponse 와 100% 동일.
   let systemBlocks;
   if (typeof buildSystemPromptParts === 'function') {
     const promptParts = buildSystemPromptParts();
@@ -293,8 +293,11 @@ async function _intakeAnalyze(intakeWorry) {
     if (promptParts.stable && promptParts.stable.length > 0) {
       systemBlocks.push({ type: 'text', text: promptParts.stable, cache_control: { type: 'ephemeral' } });
     }
-    if (promptParts.volatile && promptParts.volatile.length > 0) {
-      systemBlocks.push({ type: 'text', text: promptParts.volatile });
+    if (promptParts.sessionStable && promptParts.sessionStable.length > 0) {
+      systemBlocks.push({ type: 'text', text: promptParts.sessionStable, cache_control: { type: 'ephemeral' } });
+    }
+    if (promptParts.perCall && promptParts.perCall.length > 0) {
+      systemBlocks.push({ type: 'text', text: promptParts.perCall });
     }
   } else if (typeof SYSTEM_PERSONA === 'string') {
     systemBlocks = SYSTEM_PERSONA;

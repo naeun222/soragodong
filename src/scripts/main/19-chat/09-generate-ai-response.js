@@ -19,7 +19,11 @@ async function generateAIResponse(modelOverride, opts) {
   }
 
   try {
-    // V3.8: 프롬프트 캐싱 — stable 부분 캐시 (90% 비용 절감)
+    // V3.8 + 사용자 명시 2026-05-10: 프롬프트 캐싱 3-tier — stable + sessionStable 캐시, perCall 캐시 X.
+    // 옛: stable (~26KB) 만 cache_control → volatile (~9KB) 매 호출 풀가격.
+    // 신: volatile 의 절반 (활성 모드/결정/미션/시뮬/followup/체크인 history/과거 깨달음/미션 상태) 을 sessionStable 로 분리해 추가 cache 블록.
+    //     세션 내 변경 빈도 낮음 → 변경 시 단발 cache miss 만 발생, 평균 2번 read 이상 시 break-even.
+    //     예상 input cost 15~25% 추가 절감.
     const promptParts = buildSystemPromptParts();
     const systemBlocks = [];
     if (promptParts.stable && promptParts.stable.length > 0) {
@@ -30,10 +34,17 @@ async function generateAIResponse(modelOverride, opts) {
         cache_control: { type: 'ephemeral' }
       });
     }
-    if (promptParts.volatile && promptParts.volatile.length > 0) {
+    if (promptParts.sessionStable && promptParts.sessionStable.length > 0) {
       systemBlocks.push({
         type: 'text',
-        text: promptParts.volatile
+        text: promptParts.sessionStable,
+        cache_control: { type: 'ephemeral' }
+      });
+    }
+    if (promptParts.perCall && promptParts.perCall.length > 0) {
+      systemBlocks.push({
+        type: 'text',
+        text: promptParts.perCall
       });
     }
     
