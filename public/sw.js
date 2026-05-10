@@ -44,7 +44,8 @@
 // v39 (2026-05-10): _forceWeeklyReview() 명령어 + 통합 분석 (cf 5차원) 정렬 — 새 내용 (미컨펌 + 최근) 먼저.
 // v40 (2026-05-10): 주간 리뷰 inline 펼침 안 '🗑 삭제' 버튼. 기존 deleteReview() 재사용.
 // v41 (2026-05-10): generateReviewArchiveMetaSummary key fallback (옛 id 누락 review 도 weekKey/monthKey/quarterKey 매칭) + button onclick fallback + backfill 후 renderArchiveReviews 호출.
-const CACHE_NAME = 'soragodong-v4-cache-v41';
+// v42 (2026-05-10 ultrathink): _collectReviewData('weekly') cutoffEnd = 이번 일요일 04:00 강제 (4AM 이전/이후 무관). 옛 일요일 4AM 이전 진입 시 저번 주 (W18) 데이터 가져오던 버그 fix.
+const CACHE_NAME = 'soragodong-v4-cache-v42';
 const PRECACHE_URLS = [
   './',
   './index.html',

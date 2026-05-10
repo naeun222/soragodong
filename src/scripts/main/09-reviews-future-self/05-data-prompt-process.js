@@ -55,18 +55,19 @@ function _collectReviewData(type) {
   const today = new Date();
   let cutoff, cutoffEnd;
   if (type === 'weekly') {
-    // 사용자 명시 2026-05-08 ultrathink (재): schedule = 직전 일요일 04:00.
-    //   data 범위 = 그 직전 7일 (= 그 직전 일요일 04:00 ~ schedule 일요일 04:00).
-    //   _lastWeekly4amCutoff() 는 항상 가장 최근 지나간 일요일 4AM 반환.
-    const sunCutoff4am = (typeof _lastWeekly4amCutoff === 'function') ? _lastWeekly4amCutoff() : null;
-    if (sunCutoff4am) {
-      cutoff = new Date(sunCutoff4am.getTime() - 7 * 86400000);  // 직전 일요일 04:00
-      cutoffEnd = sunCutoff4am;                                   // schedule 일요일 04:00
-    } else {
-      // fallback (helper 부재) — 옛 동작
-      cutoff = new Date(today.getTime() - 7 * 86400000);
-      cutoffEnd = today;
+    // 사용자 보고 2026-05-10 ultrathink: 일요일 04:00 이전 진입 시 옛 _lastWeekly4amCutoff = 지지난 일요일 4AM → data = 저번 주 (5/2 포함, 어제 5/9 제외) mismatch.
+    //   fix: cutoffEnd 직접 계산 — 일요일 = 오늘 04:00 (4AM 전후 무관) / 그 외 = 다음 일요일 04:00. 항상 "이번 주 일요일" 까지의 7일.
+    const _t = new Date(today);
+    const _dow = _t.getDay();  // 0=일, 1=월, ..., 6=토
+    let _sun4am = new Date(_t.getFullYear(), _t.getMonth(), _t.getDate(), 4, 0, 0, 0);
+    if (_dow !== 0) {
+      // 월~토 — 다음 일요일 04:00 으로
+      const _daysToSun = (7 - _dow) % 7 || 7;
+      _sun4am.setDate(_sun4am.getDate() + _daysToSun);
     }
+    // 일요일 — _sun4am 그대로 (오늘 04:00). 04:00 이전 진입이어도 "이번 주" weekKey 유지.
+    cutoffEnd = _sun4am;
+    cutoff = new Date(cutoffEnd.getTime() - 7 * 86400000);
   } else {
     cutoff = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     cutoffEnd = new Date(today.getFullYear(), today.getMonth(), 1);
