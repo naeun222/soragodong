@@ -476,14 +476,14 @@ async function _callGodongDiaryHaiku() {
   // 사용자 보고 2026-05-11 ultrathink-3: 한국어 받침 (jongseong) detect — 이름 끝에 종성 있/없 따라 조사 형태 다름.
   //   받침 있음 (영준/채린): '영준이가/영준이한테/영준이' (이 infix 콜로키얼).
   //   받침 없음 (지우/보라): '지우가/지우한테/지우' (이 infix X — 문법 위반).
-  //   옛 prompt: '${_nameSubj}' 하드코딩 → 받침 없는 이름 (지우 → '지우이가') 어색.
+  //   옛 prompt: '이름이가' 하드코딩 → 받침 없는 이름 (지우 → '지우이가') 어색.
   const _nameLast = _userName[_userName.length - 1];
   const _nameLastCode = _nameLast ? _nameLast.charCodeAt(0) : 0;
   const _hasJongseong = (_nameLastCode >= 0xAC00 && _nameLastCode <= 0xD7A3)
     ? ((_nameLastCode - 0xAC00) % 28) !== 0
     : false;
-  const _nameSubj = _hasJongseong ? `${_nameSubj}` : `${_userName}가`;       // 주격 (이/가)
-  const _nameTo   = _hasJongseong ? `${_nameTo}` : `${_userName}한테`;   // 여격
+  const _nameSubj = _hasJongseong ? (_userName + '이가') : (_userName + '가');       // 주격 (이/가)
+  const _nameTo   = _hasJongseong ? (_userName + '이한테') : (_userName + '한테');   // 여격
   const _nameAttr = _hasJongseong ? `${_userName}이` : _userName;                // 호칭 ('${name}이 문장이...' 또는 '${name} 문장이...')
   const _nameTopic = _hasJongseong ? `${_userName}이는` : `${_userName}는`;      // 주제 (는/은)
   const _nameBare = _userName;                                                    // bare (우리 ${name})
