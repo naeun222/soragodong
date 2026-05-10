@@ -66,7 +66,7 @@ const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮
 const GODONG_MOODS = [
   'default','happy','wink','inspired','love','soras-call','thinking','hello',
   'shy','down','surprised','sleepy','proud','listening','dreaming','focused',
-  'blushing-thanks','growing','storming','calm','whispering'
+  'blushing-thanks','growing','storming','calm','whispering','wizard'
 ];
 function godongImg(mood, size, cls) {
   const safe = GODONG_MOODS.indexOf(mood) >= 0 ? mood : 'default';

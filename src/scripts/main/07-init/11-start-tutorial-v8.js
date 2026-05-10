@@ -93,7 +93,7 @@ function _v8HeroSequence() {
     root.setAttribute('aria-hidden', 'false');
     root.innerHTML = `
       <div id="v8Hero" class="v8-hero">
-        <img class="v8-hero-godong godong-mood-hello" src="/character/godong-hello.svg" alt="소라고동" decoding="async" loading="eager">
+        <img class="v8-hero-godong" src="/godongicon.png" alt="소라고동" decoding="async" loading="eager">
         <div class="v8-hero-text" id="v8HeroText"></div>
         <div class="v8-hero-tap-hint" id="v8HeroTapHint">✦</div>
       </div>
