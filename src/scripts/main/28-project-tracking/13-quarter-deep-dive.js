@@ -314,6 +314,7 @@ function _toggleWeeklyInlineExpand(reviewId) {
         ${(!_momentum && !_scenesArr.length && !_flow && !_soft && !_hasCycles) ? `<div class="wid-empty">아직 정리된 내용이 없어 — 다음 주에 다시.</div>` : ''}
         <div class="wid-actions">
           <button class="wid-btn-close" type="button" onclick="event.stopPropagation(); _toggleWeeklyInlineExpand('${reviewId}')">접기</button>
+          <button class="wid-btn-delete" type="button" onclick="event.stopPropagation(); deleteReview('weekly', '${escape(r.weekKey || '')}', '${r.completedAt || ''}')">🗑 삭제</button>
         </div>
       </div>
     `;

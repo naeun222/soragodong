@@ -42,7 +42,8 @@
 // v37 (2026-05-10): weekly schema 확장 (momentum_line + cycles + 활력기분 차트 inline) / review id backfill (월간 '리뷰 못 찾음' fix) / 테스트 계정 자동 설정.
 // v38 (2026-05-10): 시뮬 topicCard 'source: simulation' 마킹 + 도서관 일기·대화 chip 의 day modal '💭 시나리오' 라벨 표시.
 // v39 (2026-05-10): _forceWeeklyReview() 명령어 + 통합 분석 (cf 5차원) 정렬 — 새 내용 (미컨펌 + 최근) 먼저.
-const CACHE_NAME = 'soragodong-v4-cache-v39';
+// v40 (2026-05-10): 주간 리뷰 inline 펼침 안 '🗑 삭제' 버튼. 기존 deleteReview() 재사용.
+const CACHE_NAME = 'soragodong-v4-cache-v40';
 const PRECACHE_URLS = [
   './',
   './index.html',
