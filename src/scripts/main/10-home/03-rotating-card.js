@@ -641,41 +641,88 @@ async function _callGodongDiaryHaiku() {
       lines.push('');
       lines.push('  *** 이 날 데이터 0건. fallback 톤 ("조용한 하루였다" 등) 으로 짧게 작성. ***');
     } else {
-      // 사건 후보 — 데이터 형식으로 LLM 에 명확. 사용자 보고: 옛 inline 형식이 LLM 에 무시됨.
+      // 사용자 명시 2026-05-11: 6 source 카테고리 항상 분리 표시. 데이터 있으면 sub-bullet, 없으면 (없음).
       lines.push('');
-      lines.push('  *** 이 날 사건 후보 (반드시 1개 선택, 나머지 본문 언급 X): ***');
-      let _hintIdx = 1;
+      lines.push('  *** 이 날 사건 후보 (6 source — 반드시 1개 선택, 나머지 본문 언급 X): ***');
+
+      // [A] 체크인
+      lines.push('  [A] 체크인:');
       if (src.checkin) {
         const c = src.checkin;
-        if (c.answer && c.question) {
-          lines.push(`    [${_hintIdx++}] 체크인 질문 "${(c.question || '').slice(0, 40)}" 에 ${_userName}이 "${(c.answer || '').slice(0, 50)}" 이라고 답함`);
-        }
-        if (c.allNighter) lines.push(`    [${_hintIdx++}] ${_userName}이 밤샘`);
-        else if (c.sleepStart && c.sleepEnd) lines.push(`    [${_hintIdx++}] ${_userName}이 잠 ${c.sleepStart}~${c.sleepEnd}`);
-        if (c.vit != null && c.mood != null) lines.push(`    [${_hintIdx++}] ${_userName}이 오늘 컨디션 vit:${c.vit}/5 mood:${c.mood}/7`);
+        if (c.answer && c.question) lines.push(`      - 질문 "${(c.question || '').slice(0, 50)}" 에 ${_userName}이 "${(c.answer || '').slice(0, 80)}" 이라고 답함`);
+        if (c.allNighter) lines.push(`      - 잠: 밤샘`);
+        else if (c.sleepStart && c.sleepEnd) lines.push(`      - 잠: ${c.sleepStart}~${c.sleepEnd}`);
+        if (c.vit != null && c.mood != null) lines.push(`      - 컨디션: vit ${c.vit}/5 mood ${c.mood}/7`);
+        if (!c.answer && !c.allNighter && !c.sleepStart && (c.vit == null || c.mood == null)) lines.push('      - (없음)');
+      } else {
+        lines.push('      - (없음)');
       }
+
+      // [B] 일기 (사용자 발화/메모)
+      lines.push('  [B] 일기 (사용자 발화/메모):');
       if (src.diary.length > 0) {
-        const _firstDiary = src.diary[0];
-        lines.push(`    [${_hintIdx++}] ${_userName}이 발화/메모 — "${(_firstDiary.text || '').slice(0, 80)}"${src.diary.length > 1 ? ` 외 ${src.diary.length - 1}건` : ''}`);
+        src.diary.slice(0, 5).forEach(d => {
+          const _hourPrefix = (d.hour != null) ? `[${d.hour}시] ` : '';
+          lines.push(`      - ${_hourPrefix}"${(d.text || '').slice(0, 100)}"`);
+        });
+        if (src.diary.length > 5) lines.push(`      - (외 ${src.diary.length - 5}건)`);
+      } else {
+        lines.push('      - (없음)');
       }
+
+      // [C] 일기 요약 (옛 챕터 자동 정리)
+      lines.push('  [C] 일기 요약 (옛 챕터 자동 정리):');
       if (src.diarySummary.length > 0) {
-        const _s0 = src.diarySummary[0];
-        lines.push(`    [${_hintIdx++}] 옛 대화 챕터 정리 — "${(_s0.headline || '').slice(0, 60)}${_s0.summary ? ' / ' + _s0.summary.slice(0, 80) : ''}"`);
+        src.diarySummary.slice(0, 3).forEach(s => {
+          const h = (s.headline || '').slice(0, 80);
+          const sum = (s.summary || '').slice(0, 120);
+          lines.push(`      - "${h}${sum ? ' / ' + sum : ''}"`);
+        });
+      } else {
+        lines.push('      - (없음)');
       }
+
+      // [D] 진주
+      lines.push('  [D] 진주:');
       if (src.pearls.length > 0) {
-        const _p0 = src.pearls[0];
-        lines.push(`    [${_hintIdx++}] ${_userName}이 진주 저장 — "${(_p0.content || '').slice(0, 60)}${_p0.note ? ' (' + _p0.note.slice(0, 60) + ')' : ''}"`);
+        src.pearls.slice(0, 3).forEach(p => {
+          const cat = p.category ? ` (${p.category})` : '';
+          const note = p.note ? ` — ${(p.note || '').slice(0, 80)}` : '';
+          lines.push(`      - "${(p.content || '').trim()}"${cat}${note}`);
+        });
+      } else {
+        lines.push('      - (없음)');
       }
+
+      // [E] 깨달음
+      lines.push('  [E] 깨달음:');
       if (src.insights.length > 0) {
-        const _i0 = src.insights[0];
-        const _content = _i0.headline || _i0.content || '';
-        lines.push(`    [${_hintIdx++}] ${_userName}이 깨달음 저장 — "${_content.slice(0, 80)}"`);
+        src.insights.slice(0, 3).forEach(i => {
+          if (i.kind === 'archive') {
+            const h = (i.headline || '').slice(0, 60);
+            const ins = (i.insight || i.body || '').slice(0, 100);
+            lines.push(`      - "${h}${ins ? ' — ' + ins : ''}"`);
+          } else {
+            lines.push(`      - "${(i.content || '').slice(0, 120)}"`);
+          }
+        });
+      } else {
+        lines.push('      - (없음)');
       }
+
+      // [F] 대화 토픽
+      lines.push('  [F] 대화 토픽:');
       if (src.topicCards.length > 0) {
-        const _t0 = src.topicCards[0];
-        lines.push(`    [${_hintIdx++}] 대화 토픽 정리 — "${(_t0.title || '').slice(0, 50)}${_t0.summary ? ' / ' + _t0.summary.slice(0, 80) : ''}"`);
+        src.topicCards.slice(0, 3).forEach(t => {
+          const title = (t.title || '').slice(0, 50);
+          const summary = (t.summary || '').slice(0, 100);
+          lines.push(`      - "${title}${summary ? ' / ' + summary : ''}"`);
+        });
+      } else {
+        lines.push('      - (없음)');
       }
-      lines.push('  *** 위 후보 중 1개를 사건으로. 절대 "조용한 하루" / "별 말 없는 날" 사용 X. ***');
+
+      lines.push('  *** 위 6 카테고리 중 *데이터 있는* 카테고리에서 가장 인상적 1개 사건 선택. 절대 "조용한 하루" / "별 말 없는 날" 사용 X. ***');
     }
     return lines.join('\n');
   };
@@ -795,19 +842,28 @@ async function _callGodongDiaryHaiku() {
 - 진주 1개 / 토픽 1개 / 깨달음 1개 어떤 거라도 → 그 자체가 사건.
 
 **처리 우선순위 (절대)**:
-1. substrate 안 "*** 이 날 사건 후보 ***" 라인 + [1] [2] [3] ... 후보 항목들이 있으면 → **반드시 1개 선택**. 그 후보 사건 + 고동의 느낌으로 작성. fallback 톤 절대 X.
+1. substrate 안 "*** 이 날 사건 후보 (6 source) ***" 라인이 있으면 → 6 카테고리 [A] 체크인 / [B] 일기 / [C] 일기 요약 / [D] 진주 / [E] 깨달음 / [F] 대화 토픽 중 *데이터 있는* (= "(없음)" 이 아닌) 카테고리에서 **반드시 1개 사건 선택**. 그 사건 + 고동의 느낌으로 작성. fallback 톤 절대 X.
 2. substrate 안 "*** 이 날 데이터 0건 ***" 라인이 있으면만 → fallback 톤 ("조용한 하루였다" 등) 짧게.
 3. **1번이 default**. 2번은 *진짜 데이터 0* 인 예외 케이스만.
 
 **❌ 절대 금지 — fallback 톤 오용 (사용자 보고 2026-05-11)**:
 "조용한 하루였다" / "별 말 없는 날이었다" / "오늘은 적을 게 없네" / "옆에 있었다는 건 적어둔다" 같은 표현은 **substrate 안 "*** 이 날 데이터 0건 ***" 라인이 명시된 dayK 만** 사용.
-"*** 이 날 사건 후보 ***" 라인 + [1] [2] [3] 항목이 있는 dayK 는 **절대 X**. 사건 후보 1개라도 있으면 무조건 그 후보로 작성.
+"*** 이 날 사건 후보 (6 source) ***" 라인이 있는 dayK 는 **절대 X**. 6 카테고리 중 1개라도 데이터 있으면 무조건 그걸로 작성.
+
+선택 우선순위 (6 source 중):
+[D] 진주 / [F] 대화 토픽 / [E] 깨달음 (의미 있는 행동/통찰) > [B] 일기 발화 / [A] 체크인 답 (사용자 어휘) > [C] 일기 요약 (옛 챕터)
 
 체크 절차:
-- 각 dayK substrate 봐. "*** 이 날 사건 후보 ***" 라인 있어? → [1] [2] [3] ... 중 1개 선택. 사건 1줄 + 느낌 2-3줄 작성.
+- 각 dayK substrate 봐. "*** 이 날 사건 후보 (6 source) ***" 라인 있어?
+- → [A] [B] [C] [D] [E] [F] 6 카테고리 봐. "(없음)" 이 아닌 카테고리에서 1개 선택.
+- → 그 사건 1줄 + 느낌 2-3줄 작성.
 - "*** 이 날 데이터 0건 ***" 라인 있어? → fallback 톤 짧게.
 
-예시: dayK substrate 가 "[1] 체크인 답 '내 삶' / [2] 진주 '한강 모서리' / [3] 깨달음 '환경 cuing'" → 사건 후보 3개. 그 중 1개 (가장 인상적: 진주 추천) 로 일기 작성. 절대 fallback X.
+예시: dayK substrate 가
+  [A] 체크인: 질문 "..." 에 "..." 라고 답함 / 잠 23:00~07:00
+  [D] 진주: "한강 모서리"
+  [F] 대화 토픽: "새벽 카페 흐름의 날"
+→ 데이터 있는 카테고리 3개 ([A][D][F]). 우선순위 [D] 진주 선택. "한강 모서리" 사건 + 느낌 작성. 절대 fallback X.
 
 **잠 시간 해석**:
 - 6-9시간 = 정상 (오래 잤다 절대 X).
