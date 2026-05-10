@@ -17,7 +17,8 @@
 // v12 (2026-05-10 사용자 보고): 5 큐 fix — deeper 첫 클릭 잠김 / 결제 modal padding 잔존 / chat-prompt 우회 / 4단 아닌데 proposal chip / 미션 완료 카드 description.
 // v13 (2026-05-10 사용자 보고 ultrathink 13큐): 운세 한 문장 + 다양성 / 내가 텍스트 / 통찰 버튼 / 진주 모달 텍스트.
 // v14 (2026-05-10 사용자 보고 audit): '나 탭' 갱신 안 됨 — 짧은 챕터 case_analysis filter `>= 6` → `>= 3` 일관 + 시뮬 한마디 라벨.
-const CACHE_NAME = 'soragodong-v4-cache-v14';
+// v15 (2026-05-10 사용자 보고 ultrathink): _processExtractChapterAnalysis THRESHOLD 0.6→0.5 + 디버그 stash + 진주 AI 정리 input skip.
+const CACHE_NAME = 'soragodong-v4-cache-v15';
 const PRECACHE_URLS = [
   './',
   './index.html',

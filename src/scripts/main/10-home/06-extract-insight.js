@@ -225,9 +225,21 @@ JSON만, 마크다운 X.`;
 // analysis JSON 객체 받아 state 갱신. true 반환 시 saveState 권장.
 function _processExtractChapterAnalysis(analysis) {
   if (!analysis || typeof analysis !== 'object') return false;
+  // 사용자 보고 2026-05-10 (audit ultrathink): 진지한 얘기 많이 했는데 나 탭 새 정보 안 뜸 — THRESHOLD 0.6 보수적이라 모델이 confidence 0.55 같은 약한 신호로 추출 시 모두 cut.
+  // 디버그 stash — 개발자 도구로 마지막 추출 결과 확인 가능 (window._lastChapterAnalysisDebug).
+  try {
+    window._lastChapterAnalysisDebug = {
+      at: new Date().toISOString(),
+      raw: JSON.parse(JSON.stringify(analysis)),
+      newTraitsCount: Array.isArray(analysis.new_traits) ? analysis.new_traits.length : 0,
+      newValuesCount: Array.isArray(analysis.new_values) ? analysis.new_values.length : 0,
+      newPatternsCount: Array.isArray(analysis.new_patterns) ? analysis.new_patterns.length : 0,
+      cfUpdate: analysis.case_formulation_update || null,
+    };
+  } catch {}
   let touched = false;
-  // 사용자 명시 2026-05-03 ultrathink: trivial 노이즈 cut — 0.5 → 0.6 (강한 신호만 등록).
-  const THRESHOLD = 0.6;
+  // 사용자 보고 2026-05-10: 0.6 → 0.5 완화. 약한 신호도 unverified pool 에 들어가 Quiz 컨펌 거치게.
+  const THRESHOLD = 0.5;
 
     if (Array.isArray(analysis.new_traits)) {
       analysis.new_traits.forEach(t => {

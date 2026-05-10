@@ -56,9 +56,11 @@ async function saveMsgAsPearl(idx) {
   const msg = state.chatMessages[idx];
   if (!msg || msg.pearlSaved) return;
 
-  // V4 (사용자 요청 2026-05-09): 진주 한 줄 정리 방식 선택 — 직접 쓰기 vs AI 정리.
-  // AI 사용 가능 (_canAI) 시에만 분기 노출, 아니면 옛 흐름 (메시지 prefill 직접 다듬기) 그대로.
+  // V4 (사용자 요청 2026-05-09): 진주 한 줄 정리 방식 선택 — 직접 쓰기 vs 고동이 정리.
+  // 사용자 명시 2026-05-10 (재정정): 고동이 정리 선택 시 = AI 결과 그대로 바로 저장 (input modal skip). 카테고리/사진 단계만 거침.
+  //   직접 쓰기 = 옛 흐름 (input modal 띄워 사용자가 다듬음).
   let prefilled = (msg.content || '').slice(0, 200);
+  let _aiAutoSave = false;
   if (_canAI()) {
     const mode = await showOptionsModal({
       title: '🔮 진주 한 줄, 어떻게 다듬을래?',
@@ -74,21 +76,27 @@ async function saveMsgAsPearl(idx) {
       const aiSummary = await summarizeForPearl(msg.content);
       if (aiSummary) {
         prefilled = aiSummary;
+        _aiAutoSave = true;
       } else {
         showToast('AI 정리 실패 — 직접 다듬어볼까');
       }
     }
   }
 
-  const content = await showInputModal({
-    title: '🔮 진주에 보관',
-    message: '이 기억을 한 줄로 다듬어 — 나중에 봐도 기분 좋아질 수 있게.',
-    defaultValue: prefilled,
-    multiline: true,
-    maxLength: 300,
-    okLabel: '보관'
-  });
-  if (!content || !content.trim()) return;
+  let content;
+  if (_aiAutoSave) {
+    content = prefilled;
+  } else {
+    content = await showInputModal({
+      title: '🔮 진주에 보관',
+      message: '이 기억을 한 줄로 다듬어 — 나중에 봐도 기분 좋아질 수 있게.',
+      defaultValue: prefilled,
+      multiline: true,
+      maxLength: 300,
+      okLabel: '보관'
+    });
+    if (!content || !content.trim()) return;
+  }
 
   // 카테고리 선택 (V3 진주 패턴)
   const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];

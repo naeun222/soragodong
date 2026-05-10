@@ -30717,9 +30717,21 @@ JSON만, 마크다운 X.`;
 // analysis JSON 객체 받아 state 갱신. true 반환 시 saveState 권장.
 function _processExtractChapterAnalysis(analysis) {
   if (!analysis || typeof analysis !== 'object') return false;
+  // 사용자 보고 2026-05-10 (audit ultrathink): 진지한 얘기 많이 했는데 나 탭 새 정보 안 뜸 — THRESHOLD 0.6 보수적이라 모델이 confidence 0.55 같은 약한 신호로 추출 시 모두 cut.
+  // 디버그 stash — 개발자 도구로 마지막 추출 결과 확인 가능 (window._lastChapterAnalysisDebug).
+  try {
+    window._lastChapterAnalysisDebug = {
+      at: new Date().toISOString(),
+      raw: JSON.parse(JSON.stringify(analysis)),
+      newTraitsCount: Array.isArray(analysis.new_traits) ? analysis.new_traits.length : 0,
+      newValuesCount: Array.isArray(analysis.new_values) ? analysis.new_values.length : 0,
+      newPatternsCount: Array.isArray(analysis.new_patterns) ? analysis.new_patterns.length : 0,
+      cfUpdate: analysis.case_formulation_update || null,
+    };
+  } catch {}
   let touched = false;
-  // 사용자 명시 2026-05-03 ultrathink: trivial 노이즈 cut — 0.5 → 0.6 (강한 신호만 등록).
-  const THRESHOLD = 0.6;
+  // 사용자 보고 2026-05-10: 0.6 → 0.5 완화. 약한 신호도 unverified pool 에 들어가 Quiz 컨펌 거치게.
+  const THRESHOLD = 0.5;
 
     if (Array.isArray(analysis.new_traits)) {
       analysis.new_traits.forEach(t => {
@@ -39333,9 +39345,11 @@ async function saveMsgAsPearl(idx) {
   const msg = state.chatMessages[idx];
   if (!msg || msg.pearlSaved) return;
 
-  // V4 (사용자 요청 2026-05-09): 진주 한 줄 정리 방식 선택 — 직접 쓰기 vs AI 정리.
-  // AI 사용 가능 (_canAI) 시에만 분기 노출, 아니면 옛 흐름 (메시지 prefill 직접 다듬기) 그대로.
+  // V4 (사용자 요청 2026-05-09): 진주 한 줄 정리 방식 선택 — 직접 쓰기 vs 고동이 정리.
+  // 사용자 명시 2026-05-10 (재정정): 고동이 정리 선택 시 = AI 결과 그대로 바로 저장 (input modal skip). 카테고리/사진 단계만 거침.
+  //   직접 쓰기 = 옛 흐름 (input modal 띄워 사용자가 다듬음).
   let prefilled = (msg.content || '').slice(0, 200);
+  let _aiAutoSave = false;
   if (_canAI()) {
     const mode = await showOptionsModal({
       title: '🔮 진주 한 줄, 어떻게 다듬을래?',
@@ -39351,21 +39365,27 @@ async function saveMsgAsPearl(idx) {
       const aiSummary = await summarizeForPearl(msg.content);
       if (aiSummary) {
         prefilled = aiSummary;
+        _aiAutoSave = true;
       } else {
         showToast('AI 정리 실패 — 직접 다듬어볼까');
       }
     }
   }
 
-  const content = await showInputModal({
-    title: '🔮 진주에 보관',
-    message: '이 기억을 한 줄로 다듬어 — 나중에 봐도 기분 좋아질 수 있게.',
-    defaultValue: prefilled,
-    multiline: true,
-    maxLength: 300,
-    okLabel: '보관'
-  });
-  if (!content || !content.trim()) return;
+  let content;
+  if (_aiAutoSave) {
+    content = prefilled;
+  } else {
+    content = await showInputModal({
+      title: '🔮 진주에 보관',
+      message: '이 기억을 한 줄로 다듬어 — 나중에 봐도 기분 좋아질 수 있게.',
+      defaultValue: prefilled,
+      multiline: true,
+      maxLength: 300,
+      okLabel: '보관'
+    });
+    if (!content || !content.trim()) return;
+  }
 
   // 카테고리 선택 (V3 진주 패턴)
   const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
@@ -56469,7 +56489,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.188-na-tab-extract-fix';
+const APP_VERSION = 'v4.0.189-threshold-pearl-ai-skip';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
