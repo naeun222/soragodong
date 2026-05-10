@@ -290,6 +290,10 @@
   .screen-settings-btn { background: none; border: none; color: var(--text-dim); font-size: 18px; line-height: 1; padding: 6px 8px; cursor: pointer; flex-shrink: 0; transition: color 0.15s; }
   .screen-settings-btn:hover { color: var(--accent); }
   .screen-settings-btn:active { transform: scale(0.92); }
+  /* 사용자 명시 2026-05-10 (옵션 A): 나 탭 정리 버튼 — 설정 왼쪽, 작게. */
+  .screen-dedup-btn { background: none; border: none; color: var(--text-dim); font-size: 14px; line-height: 1; padding: 6px 7px; cursor: pointer; flex-shrink: 0; transition: color 0.15s; opacity: 0.65; }
+  .screen-dedup-btn:hover { color: var(--accent); opacity: 1; }
+  .screen-dedup-btn:active { transform: scale(0.92); }
 
   .input-group { margin-bottom: 22px; }
   .input-label { font-size: 11px; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }

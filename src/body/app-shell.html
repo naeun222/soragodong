@@ -267,7 +267,11 @@
           <div class="screen-title">너에 대해 ✦</div>
           <div class="screen-sub">내가 시간을 들여 배운 네 모습이야.<br>틀린 게 있으면 언제든 말해줘.</div>
         </div>
-        <button class="screen-settings-btn" onclick="showScreen('settings')" aria-label="설정">⚙</button>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <!-- 사용자 명시 2026-05-10 (옵션 A): 정리 버튼 — 설정 왼쪽, 작게. 사용자 컨펌 dedup. -->
+          <button class="screen-dedup-btn" onclick="openModelDedupModal()" aria-label="중복 정리" title="중복 정리">🧹</button>
+          <button class="screen-settings-btn" onclick="showScreen('settings')" aria-label="설정">⚙</button>
+        </div>
       </div>
       <div id="modelContent"></div>
       <!-- 사용자 명시 2026-05-06 추가 ultrathink: 맨 밑 설정 버튼 부활 — 우상단 아이콘 + 맨 밑 둘 다 노출. -->
