@@ -312,7 +312,10 @@ async function _handleChatRequest(context: {
   const isTutorial = !!body.tutorial_mode;
   const _epForOpusGate = body._endpoint || 'chat';
   const _isChatStyleForOpus = CHAT_STYLE_ENDPOINTS.has(_epForOpusGate) || _epForOpusGate === 'chat';
-  if (body.model === 'claude-opus-4-7' && _isChatStyleForOpus) {
+  // 사용자 명시 2026-05-10 (재정정): is_deeper_analysis = client askDeeper 흐름 hint. 4단 분석은 plan 무관 누구나 Opus → 가드 우회.
+  // 헤더 토글 (useOpus) 발 chat_main 만 Premium 가드. cap 은 client (state._dailyDeeperCount) 가 따로 제한.
+  const _isDeeperAnalysisHint = !!body.is_deeper_analysis;
+  if (body.model === 'claude-opus-4-7' && _isChatStyleForOpus && !_isDeeperAnalysisHint) {
     const opusGate = await checkOpusGate(env, user.id, isTutorial);
     if (!opusGate.ok) {
       return jsonResponse({
@@ -324,8 +327,9 @@ async function _handleChatRequest(context: {
     }
   }
 
-  // tutorial_mode body 필드는 upstream 으로 보내지 X (Anthropic API 거부 가능)
+  // tutorial_mode / is_deeper_analysis body 필드는 upstream 으로 보내지 X (Anthropic API 거부 가능)
   delete body.tutorial_mode;
+  delete body.is_deeper_analysis;
 
   // 사용자 명시 2026-05-08 ultrathink (audit FAIL #5): 자살예방법 §15-6 협력 권고 — 서버측 위기 가드.
   // 옛: 위기 키워드 감지 = 클라이언트 (13-crisis-detection.js) 만. API 직접 호출 / 클라이언트 우회 시 무방비.

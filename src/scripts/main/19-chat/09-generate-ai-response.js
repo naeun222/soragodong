@@ -1,4 +1,7 @@
-async function generateAIResponse(modelOverride) {
+async function generateAIResponse(modelOverride, opts) {
+  // 사용자 명시 2026-05-10 (재정정): opts.isDeeper = true → backend Opus 가드 우회 (4단 분석은 plan 무관 누구나).
+  // 헤더 토글 (state.preferences.useOpus) 의 Opus 모드 = chat_main + Premium 가드 (backend) — 별개.
+  const _isDeeperAnalysis = !!(opts && opts.isDeeper);
   state.chatMessages = state.chatMessages.filter(m => !m.typing);
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
   renderChat();
@@ -120,7 +123,9 @@ async function generateAIResponse(modelOverride) {
       max_tokens: 2000,
       stream: true,
       system: systemBlocks,
-      messages
+      messages,
+      // 사용자 명시 2026-05-10 (재정정): 4단 분석 (askDeeper) 호출은 backend Premium 가드 우회 — plan 무관 누구나 Opus.
+      ...(_isDeeperAnalysis ? { is_deeper_analysis: true } : {})
     });
 
     if (!response.ok) {
@@ -355,7 +360,9 @@ async function generateAIResponse(modelOverride) {
     }
 
     // Check for proposal in response — 사용자 보고 2026-05-09: 검색 응답엔 proposal 검출 X (false positive).
-    if (!_useWebSearch && (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal))) {
+    // 사용자 보고 2026-05-10: 4단 응답 아닌데 모델이 analysisData.proposal 박는 케이스 → chip 만 떠서 어색.
+    //   has4Stage 가드 추가 — 4단 형식 (`[내가 본 것]/[이게 뭐냐면]/[오늘의 제안]`) 갖춘 응답일 때만 proposal chip.
+    if (!_useWebSearch && has4Stage && (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal))) {
       state.chatMessages[state.chatMessages.length - 1].proposal = true;
       if (analysisData && analysisData.proposal) {
         state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;

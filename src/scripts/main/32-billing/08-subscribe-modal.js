@@ -227,9 +227,11 @@ async function proceedSubscribe(tierKey) {
       customData: JSON.stringify({ tier: tierKey, type: 'subscribe' })
     });
   } catch (e) {
+    _resetBodyAfterPortone();
     alert('결제창을 열 수 없어. 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + (e?.message || e));
     return;
   }
+  _resetBodyAfterPortone();
 
   // V2 SDK 응답 — 사용자가 결제창 닫음 / 카드 거절 / 잔액 부족 등 시 code 채워짐.
   if (response && response.code != null) {
@@ -349,9 +351,11 @@ async function proceedEarlyBirdTrial() {
       }
     });
   } catch (e) {
+    _resetBodyAfterPortone();
     alert('카드 등록창을 열 수 없어. 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + (e?.message || e));
     return;
   }
+  _resetBodyAfterPortone();
 
   if (response && response.code != null) {
     const code = response.code || '';

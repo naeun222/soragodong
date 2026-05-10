@@ -61,7 +61,9 @@ async function completeMission(missionId) {
         max_tokens: 150,
         messages: [{
           role: 'user',
-          content: `사용자가 "${mission.title}" 미션을 완료했어. 친구처럼 짧게 (1-2문장) 축하 메시지를 써줘. 과정이나 노력에 초점. 판에 적용된 "잘했어!" 금지. 구체적으로 진심으로. 반말. 이모지 최대 1개.`
+          // 사용자 보고 2026-05-10: AI 가 미션 제목을 다른 말로 paraphrase 해서 컨텍스트 다른 메시지 생성하던 케이스 fix.
+          // 미션 제목 그대로 인용 강제 + 다른 행동 / 다른 미션 인용 금지 명시.
+          content: `사용자가 막 완료한 미션:\n"${mission.title}"${mission.description ? `\n(설명: ${mission.description})` : ''}\n\n친구처럼 짧게 (1-2문장) 축하 메시지를 써줘. 규칙:\n- 미션 제목의 핵심 단어를 *그대로* 인용 (paraphrase / 다른 말로 바꾸기 X — "${mission.title}" 의 단어 그대로).\n- 다른 행동 / 다른 미션 / 일반 충고 X — 이 미션 한정.\n- "잘했어!" 같은 판박이 평가 X. 과정·노력에 초점.\n- 반말. 이모지 최대 1개.`
         }]
       });
       const data = await resp.json();

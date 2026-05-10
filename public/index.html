@@ -32311,10 +32311,13 @@ function renderTodayMission() {
 
   if (mission.status === 'completed') {
     // 사용자 명시 2026-05-09 (#6): 완료 카드 좌측 swipe → dismiss.
+    // 사용자 보고 2026-05-10: 완료 카드 회색 박스에 AI 축하 메시지 (completionNote) 만 보여서 원래 미션 컨텍스트 사라짐 →
+    //   "딴 말 함" 으로 인식. mission.description (원래 설명) 도 같이 노출.
     container.innerHTML = `
       <div class="mission-card completed mission-swipeable" data-mission-id="${mission.id}">
         <div class="mission-label">🐚 소라의 부름 · 완료 ✦</div>
         <div class="mission-title">${escapeHtml(mission.title)}</div>
+        ${mission.description ? `<div class="mission-desc">${escapeHtml(mission.description)}</div>` : ''}
         ${mission.completionNote ? `<div class="mission-completion-msg">${escapeHtml(mission.completionNote)}</div>` : ''}
         ${navHtml}
         <div class="mission-swipe-hint">← 왼쪽으로 밀면 치워둘 수 있어</div>
@@ -32515,7 +32518,9 @@ async function completeMission(missionId) {
         max_tokens: 150,
         messages: [{
           role: 'user',
-          content: `사용자가 "${mission.title}" 미션을 완료했어. 친구처럼 짧게 (1-2문장) 축하 메시지를 써줘. 과정이나 노력에 초점. 판에 적용된 "잘했어!" 금지. 구체적으로 진심으로. 반말. 이모지 최대 1개.`
+          // 사용자 보고 2026-05-10: AI 가 미션 제목을 다른 말로 paraphrase 해서 컨텍스트 다른 메시지 생성하던 케이스 fix.
+          // 미션 제목 그대로 인용 강제 + 다른 행동 / 다른 미션 인용 금지 명시.
+          content: `사용자가 막 완료한 미션:\n"${mission.title}"${mission.description ? `\n(설명: ${mission.description})` : ''}\n\n친구처럼 짧게 (1-2문장) 축하 메시지를 써줘. 규칙:\n- 미션 제목의 핵심 단어를 *그대로* 인용 (paraphrase / 다른 말로 바꾸기 X — "${mission.title}" 의 단어 그대로).\n- 다른 행동 / 다른 미션 / 일반 충고 X — 이 미션 한정.\n- "잘했어!" 같은 판박이 평가 X. 과정·노력에 초점.\n- 반말. 이모지 최대 1개.`
         }]
       });
       const data = await resp.json();
@@ -37199,6 +37204,25 @@ async function sendChat() {
     return;
   }
 
+  // 사용자 보고 2026-05-10: deeper cap 막힌 상태에서 일반 chat 으로 동일/비슷한 prompt 보내면 우회되던 버그 fix.
+  // 명시적 4단 분석 요청 패턴 (라벨 둘 이상 명시 OR "4단" + "분석/깊게") 만 deeper 로 처리. 자연 도움 요청 ("어떡하지", "도와줘") 은 무관.
+  const _looksLikeDeeperReq = (() => {
+    const labelMatches = (text.match(/\[(내가 본 것|이게 뭐냐면|이럴 땐 이렇게|오늘의 제안)\]/g) || []).length;
+    if (labelMatches >= 2) return true;
+    if (/4\s*단(계|으로)?/.test(text) && /(분석|깊게|deeper)/i.test(text)) return true;
+    return false;
+  })();
+  let _isDeeperFromText = false;
+  if (_looksLikeDeeperReq && typeof _checkDeeperEligibility === 'function' &&
+      !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode)) {
+    const elig = _checkDeeperEligibility();
+    if (!elig.ok) {
+      _showDeeperCapToast();
+      return;
+    }
+    _isDeeperFromText = true;
+  }
+
   // V4 사용자 명시 2026-05-01 ultrathink: 5h+ 갭만 (cross-day 조건 폐기 — 5h 자체가 "잠 자고 일어남" 의미).
   // 5h+ 갭 detect 시 직전 챕터 즉시 _archiveCurrentChapter 로 이송 (chapter 분리 = archive 이송 단일 흐름).
   const NEW_CHAPTER_GAP_MS = 5 * 60 * 60 * 1000;
@@ -37257,7 +37281,8 @@ async function sendChat() {
     role: 'user',
     content: text,
     timestamp: new Date().toISOString(),
-    ...(isDiary ? { isDiary: true } : {})
+    ...(isDiary ? { isDiary: true } : {}),
+    ...(_isDeeperFromText ? { isDeeperRequest: true } : {})
   });
   // 사용자 요청 2026-04-30: 일일 cap 카운트 증가 (메시지 push 직후, AI call 전).
   _incrementDailyChatCount();
@@ -37300,6 +37325,17 @@ async function sendChat() {
   }
 
   await generateAIResponse();
+
+  // 사용자 보고 2026-05-10: text-trigger deeper cap 차감 — generate 후 increment + cap toast.
+  if (_isDeeperFromText && !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode)) {
+    if (typeof _incrementDailyDeeperCount === 'function') _incrementDailyDeeperCount();
+    const after = (typeof _checkDeeperEligibility === 'function') ? _checkDeeperEligibility() : { ok: true };
+    if (!after.ok && after.reason === 'cap' && state._dailyDeeperCount && !state._dailyDeeperCount.capToastShown) {
+      state._dailyDeeperCount.capToastShown = true;
+      saveState();
+      showToast(`🔒 오늘 깊은 분석 ${after.cap}회 다 썼어 — 내일 또`);
+    }
+  }
 
   // V4 사용자 명시 2026-05-01 ultrathink: 옛 chatPairsCount 즉시 추출 폐기.
   // 신규유저 빠른 추출 = _archiveCurrentChapter 안 chapterCompletedCount<3 분기로 이동.
@@ -37813,7 +37849,10 @@ function updateChatModeBtn() {
   });
 }
 
-async function generateAIResponse(modelOverride) {
+async function generateAIResponse(modelOverride, opts) {
+  // 사용자 명시 2026-05-10 (재정정): opts.isDeeper = true → backend Opus 가드 우회 (4단 분석은 plan 무관 누구나).
+  // 헤더 토글 (state.preferences.useOpus) 의 Opus 모드 = chat_main + Premium 가드 (backend) — 별개.
+  const _isDeeperAnalysis = !!(opts && opts.isDeeper);
   state.chatMessages = state.chatMessages.filter(m => !m.typing);
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
   renderChat();
@@ -37935,7 +37974,9 @@ async function generateAIResponse(modelOverride) {
       max_tokens: 2000,
       stream: true,
       system: systemBlocks,
-      messages
+      messages,
+      // 사용자 명시 2026-05-10 (재정정): 4단 분석 (askDeeper) 호출은 backend Premium 가드 우회 — plan 무관 누구나 Opus.
+      ...(_isDeeperAnalysis ? { is_deeper_analysis: true } : {})
     });
 
     if (!response.ok) {
@@ -38170,7 +38211,9 @@ async function generateAIResponse(modelOverride) {
     }
 
     // Check for proposal in response — 사용자 보고 2026-05-09: 검색 응답엔 proposal 검출 X (false positive).
-    if (!_useWebSearch && (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal))) {
+    // 사용자 보고 2026-05-10: 4단 응답 아닌데 모델이 analysisData.proposal 박는 케이스 → chip 만 떠서 어색.
+    //   has4Stage 가드 추가 — 4단 형식 (`[내가 본 것]/[이게 뭐냐면]/[오늘의 제안]`) 갖춘 응답일 때만 proposal chip.
+    if (!_useWebSearch && has4Stage && (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal))) {
       state.chatMessages[state.chatMessages.length - 1].proposal = true;
       if (analysisData && analysisData.proposal) {
         state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;
@@ -38497,19 +38540,28 @@ async function askDeeper(messageIdx) {
   const userMsg = state.chatMessages[userMsgIdx];
   
   // V4-fix v3 (사용자 요청): 더 알고 싶어 → 4단 + 진단 인용 강제
-  // V4 (v8 묶음 3): [상황] prefix 추가 — 결과 체크 모달 📌 원래 문제 박스용. 사용자 화면에선 출력 시 제거됨 (formatAIResponse).
+  // 사용자 보고 2026-05-10: 대화탭 deeper prompt = 순수 4단 ([상황] 제거 — [상황]은 intake/미션 결과 체크 전용).
   state.chatMessages.push({
     role: 'user',
-    content: '아까 그 얘기, 4단계로 더 깊게 분석해줘. [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. [상황]은 사용자가 시도하려는 *원래 문제*를 한 줄로 요약 (50자 내, 미션 결과 체크 모달용 — 화면엔 안 보임). 그 외 4단은 네가 관찰한 패턴도 한 줄 자연스럽게 인용해줘.',
+    content: '아까 그 얘기, 4단계로 더 깊게 분석해줘. [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. 네가 관찰한 패턴도 한 줄 자연스럽게 인용해줘.',
     timestamp: new Date().toISOString(),
     isDeeperRequest: true
   });
   saveState();
   renderChat();
   // 사용자 요청 2026-04-30: '더 알아보기' 4단 응답 = 깊은 분석 → opus 4.7. 평소 메인 chat은 sonnet 유지.
-  await generateAIResponse('claude-opus-4-7');
-  // V4 (v8 묶음 4): 사용 후 increment + cap 도달 시 한 번만 토스트
-  if (!window._onbTutorialMode && !(state.preferences && state.preferences.testerMode)) {
+  // 사용자 명시 2026-05-10 (재정정): 4단 분석은 plan 무관 누구나 Opus — cap 으로만 횟수 제한. 헤더 토글의 Opus 모드 (Premium 가드) 와 별개.
+  // opts.isDeeper = true → callAnthropic body 에 is_deeper_analysis: true → backend Premium 가드 우회.
+  let _deeperGenOk = false;
+  try {
+    await generateAIResponse('claude-opus-4-7', { isDeeper: true });
+    // 마지막 assistant 메시지가 error 가 아닐 때만 정상 응답으로 인정.
+    const _lastM = state.chatMessages[state.chatMessages.length - 1];
+    _deeperGenOk = !!(_lastM && _lastM.role === 'assistant' && !_lastM.error && !_lastM.typing);
+  } catch (_) {}
+  // 사용자 보고 2026-05-10: 옛 흐름 = generate 실패해도 무조건 increment → cap 1 차감 + 30분 cooldown 발동 → "한 번만 눌러도 잠김" 버그.
+  // 정상 응답 받았을 때만 cap 차감.
+  if (_deeperGenOk && !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode)) {
     _incrementDailyDeeperCount();
     const after = _checkDeeperEligibility();
     if (!after.ok && after.reason === 'cap' && state._dailyDeeperCount && !state._dailyDeeperCount.capToastShown) {
@@ -55169,9 +55221,11 @@ async function proceedSubscribe(tierKey) {
       customData: JSON.stringify({ tier: tierKey, type: 'subscribe' })
     });
   } catch (e) {
+    _resetBodyAfterPortone();
     alert('결제창을 열 수 없어. 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + (e?.message || e));
     return;
   }
+  _resetBodyAfterPortone();
 
   // V2 SDK 응답 — 사용자가 결제창 닫음 / 카드 거절 / 잔액 부족 등 시 code 채워짐.
   if (response && response.code != null) {
@@ -55291,9 +55345,11 @@ async function proceedEarlyBirdTrial() {
       }
     });
   } catch (e) {
+    _resetBodyAfterPortone();
     alert('카드 등록창을 열 수 없어. 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + (e?.message || e));
     return;
   }
+  _resetBodyAfterPortone();
 
   if (response && response.code != null) {
     const code = response.code || '';
@@ -55348,6 +55404,32 @@ async function proceedEarlyBirdTrial() {
 //   payment-{tier}-...   → /api/billing/portone-verify-pay  (구독)
 //   pack-{packKey}-...   → /api/billing/overage-pack        (충전)
 //   upgrade-...          → /api/billing/upgrade-tier        (Light → Premium)
+
+// 사용자 보고 2026-05-10: PC IFRAME 결제창 cancel 후 body 의 inline style (overflow / padding-bottom) 잔존 →
+// 화면이 위로 올라간 듯 보이고 하단 padding 큼. PortOne V2 SDK 의 cleanup 누락 케이스 workaround.
+// 모든 결제 응답 (성공/취소/에러) 직후 무조건 호출.
+function _resetBodyAfterPortone() {
+  try {
+    document.body.style.overflow = '';
+    document.body.style.paddingTop = '';
+    document.body.style.paddingBottom = '';
+    document.body.style.paddingLeft = '';
+    document.body.style.paddingRight = '';
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.bottom = '';
+    document.body.style.transform = '';
+    document.body.style.height = '';
+    document.body.style.width = '';
+    document.documentElement.style.overflow = '';
+    document.documentElement.style.height = '';
+    document.querySelectorAll('iframe[src*="portone"], iframe[src*="inicis"], div[id^="portone-"], div[class*="portone-v2"]').forEach(el => {
+      try { el.remove(); } catch {}
+    });
+  } catch {}
+}
 
 async function _handlePaymentReturn() {
   let params;
@@ -55609,6 +55691,7 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
         : { type: 'PERSONAL', customerIdentityNumber: '01000001234' },
       customData: customData ? JSON.stringify(customData) : undefined
     });
+    _resetBodyAfterPortone();
     if (response && response.code != null) {
       // 사용자 명시 2026-05-06: 결제 실패 카피 — 사용자 입장 친절.
       const code = response.code || '';
@@ -55628,6 +55711,7 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
     }
     return response;
   } catch (e) {
+    _resetBodyAfterPortone();
     alert('결제창 호출 실패: ' + (e?.message || e));
     return null;
   }
@@ -56391,7 +56475,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.185-video-trim-restore-preview';
+const APP_VERSION = 'v4.0.186-deeper-cap-payment-cleanup';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

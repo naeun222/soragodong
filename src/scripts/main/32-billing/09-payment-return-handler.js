@@ -6,6 +6,32 @@
 //   pack-{packKey}-...   → /api/billing/overage-pack        (충전)
 //   upgrade-...          → /api/billing/upgrade-tier        (Light → Premium)
 
+// 사용자 보고 2026-05-10: PC IFRAME 결제창 cancel 후 body 의 inline style (overflow / padding-bottom) 잔존 →
+// 화면이 위로 올라간 듯 보이고 하단 padding 큼. PortOne V2 SDK 의 cleanup 누락 케이스 workaround.
+// 모든 결제 응답 (성공/취소/에러) 직후 무조건 호출.
+function _resetBodyAfterPortone() {
+  try {
+    document.body.style.overflow = '';
+    document.body.style.paddingTop = '';
+    document.body.style.paddingBottom = '';
+    document.body.style.paddingLeft = '';
+    document.body.style.paddingRight = '';
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.bottom = '';
+    document.body.style.transform = '';
+    document.body.style.height = '';
+    document.body.style.width = '';
+    document.documentElement.style.overflow = '';
+    document.documentElement.style.height = '';
+    document.querySelectorAll('iframe[src*="portone"], iframe[src*="inicis"], div[id^="portone-"], div[class*="portone-v2"]').forEach(el => {
+      try { el.remove(); } catch {}
+    });
+  } catch {}
+}
+
 async function _handlePaymentReturn() {
   let params;
   try { params = new URLSearchParams(window.location.search); } catch { return; }

@@ -52,6 +52,7 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
         : { type: 'PERSONAL', customerIdentityNumber: '01000001234' },
       customData: customData ? JSON.stringify(customData) : undefined
     });
+    _resetBodyAfterPortone();
     if (response && response.code != null) {
       // 사용자 명시 2026-05-06: 결제 실패 카피 — 사용자 입장 친절.
       const code = response.code || '';
@@ -71,6 +72,7 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
     }
     return response;
   } catch (e) {
+    _resetBodyAfterPortone();
     alert('결제창 호출 실패: ' + (e?.message || e));
     return null;
   }

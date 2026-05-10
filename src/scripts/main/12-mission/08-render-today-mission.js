@@ -32,10 +32,13 @@ function renderTodayMission() {
 
   if (mission.status === 'completed') {
     // 사용자 명시 2026-05-09 (#6): 완료 카드 좌측 swipe → dismiss.
+    // 사용자 보고 2026-05-10: 완료 카드 회색 박스에 AI 축하 메시지 (completionNote) 만 보여서 원래 미션 컨텍스트 사라짐 →
+    //   "딴 말 함" 으로 인식. mission.description (원래 설명) 도 같이 노출.
     container.innerHTML = `
       <div class="mission-card completed mission-swipeable" data-mission-id="${mission.id}">
         <div class="mission-label">🐚 소라의 부름 · 완료 ✦</div>
         <div class="mission-title">${escapeHtml(mission.title)}</div>
+        ${mission.description ? `<div class="mission-desc">${escapeHtml(mission.description)}</div>` : ''}
         ${mission.completionNote ? `<div class="mission-completion-msg">${escapeHtml(mission.completionNote)}</div>` : ''}
         ${navHtml}
         <div class="mission-swipe-hint">← 왼쪽으로 밀면 치워둘 수 있어</div>

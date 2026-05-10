@@ -14,7 +14,8 @@
 // v10 (2026-05-10 사용자 보고): 영상 자르기 modal 안 옛 미리보기 ("미리보기 만드는 중..." + 썸네일 8장) 가 사용자 PWA 캐시에 stuck.
 //   src 는 이미 trim modal 미리보기 제거됐는데 SW stale-while-revalidate 때문에 옛 index.html 노출. 강제 invalidate.
 // v11 (2026-05-10 사용자 명시): trim modal 의 video preview (controls) 만 복구 (썸네일 strip 은 영구 제거 유지).
-const CACHE_NAME = 'soragodong-v4-cache-v11';
+// v12 (2026-05-10 사용자 보고): 5 큐 fix — deeper 첫 클릭 잠김 / 결제 modal padding 잔존 / chat-prompt 우회 / 4단 아닌데 proposal chip / 미션 완료 카드 description.
+const CACHE_NAME = 'soragodong-v4-cache-v12';
 const PRECACHE_URLS = [
   './',
   './index.html',

@@ -16,6 +16,25 @@ async function sendChat() {
     return;
   }
 
+  // 사용자 보고 2026-05-10: deeper cap 막힌 상태에서 일반 chat 으로 동일/비슷한 prompt 보내면 우회되던 버그 fix.
+  // 명시적 4단 분석 요청 패턴 (라벨 둘 이상 명시 OR "4단" + "분석/깊게") 만 deeper 로 처리. 자연 도움 요청 ("어떡하지", "도와줘") 은 무관.
+  const _looksLikeDeeperReq = (() => {
+    const labelMatches = (text.match(/\[(내가 본 것|이게 뭐냐면|이럴 땐 이렇게|오늘의 제안)\]/g) || []).length;
+    if (labelMatches >= 2) return true;
+    if (/4\s*단(계|으로)?/.test(text) && /(분석|깊게|deeper)/i.test(text)) return true;
+    return false;
+  })();
+  let _isDeeperFromText = false;
+  if (_looksLikeDeeperReq && typeof _checkDeeperEligibility === 'function' &&
+      !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode)) {
+    const elig = _checkDeeperEligibility();
+    if (!elig.ok) {
+      _showDeeperCapToast();
+      return;
+    }
+    _isDeeperFromText = true;
+  }
+
   // V4 사용자 명시 2026-05-01 ultrathink: 5h+ 갭만 (cross-day 조건 폐기 — 5h 자체가 "잠 자고 일어남" 의미).
   // 5h+ 갭 detect 시 직전 챕터 즉시 _archiveCurrentChapter 로 이송 (chapter 분리 = archive 이송 단일 흐름).
   const NEW_CHAPTER_GAP_MS = 5 * 60 * 60 * 1000;
@@ -74,7 +93,8 @@ async function sendChat() {
     role: 'user',
     content: text,
     timestamp: new Date().toISOString(),
-    ...(isDiary ? { isDiary: true } : {})
+    ...(isDiary ? { isDiary: true } : {}),
+    ...(_isDeeperFromText ? { isDeeperRequest: true } : {})
   });
   // 사용자 요청 2026-04-30: 일일 cap 카운트 증가 (메시지 push 직후, AI call 전).
   _incrementDailyChatCount();
@@ -117,6 +137,17 @@ async function sendChat() {
   }
 
   await generateAIResponse();
+
+  // 사용자 보고 2026-05-10: text-trigger deeper cap 차감 — generate 후 increment + cap toast.
+  if (_isDeeperFromText && !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode)) {
+    if (typeof _incrementDailyDeeperCount === 'function') _incrementDailyDeeperCount();
+    const after = (typeof _checkDeeperEligibility === 'function') ? _checkDeeperEligibility() : { ok: true };
+    if (!after.ok && after.reason === 'cap' && state._dailyDeeperCount && !state._dailyDeeperCount.capToastShown) {
+      state._dailyDeeperCount.capToastShown = true;
+      saveState();
+      showToast(`🔒 오늘 깊은 분석 ${after.cap}회 다 썼어 — 내일 또`);
+    }
+  }
 
   // V4 사용자 명시 2026-05-01 ultrathink: 옛 chatPairsCount 즉시 추출 폐기.
   // 신규유저 빠른 추출 = _archiveCurrentChapter 안 chapterCompletedCount<3 분기로 이동.
