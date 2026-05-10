@@ -25,7 +25,9 @@ function _renderStrategyCardHtml(s) {
   const _gens   = Array.isArray(s.generations) ? s.generations.length : 0;
   const _isEmbodied = _status === 'embodied';
   // 사용자 요청 2026-04-28: 결과 체크 버튼 조건 수정 — '소라의 부름' 해냈어가 되어야 (즉 status === 'completed' && !attemptStatus). pending 상태에선 안 뜸. result check 끝나면 attemptStatus 적용돼서 사라짐
+  // 사용자 명시 2026-05-11 ultrathink (근본): strategyId falsy 단락 — standalone 미션 (strategyId=null) 이 우연히 빈 카드 id 와 매칭되는 위험 차단.
   const _hasUnchecked = (state.missions || []).some(m =>
+    m.strategyId &&
     m.strategyId === s.id &&
     m.status === 'completed' &&
     !m.attemptStatus

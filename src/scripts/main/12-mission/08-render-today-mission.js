@@ -146,10 +146,14 @@ function dismissMission(missionId) {
 
 function createMission(title, description, options = {}) {
   // 사용자 요청 2026-04-30: 같은 strategy 여러 미션 OK. 단 동일 title pending 중복은 차단 (anti-double-click).
+  // 사용자 명시 2026-05-11 ultrathink (근본): dupe 비교에 strategyId 포함 — 다른 카드에서 같은 title 등록 시 매핑 mismatch (사용자가 카드 B 에서 등록한 줄 알지만 실제 미션 strategyId 는 카드 A) 방지.
   const titleNorm = (title || '').trim();
+  const optStrategyId = options.strategyId || null;
   if (titleNorm) {
     const dupe = (state.missions || []).find(m =>
-      m.status === 'pending' && (m.title || '').trim() === titleNorm
+      m.status === 'pending' &&
+      (m.title || '').trim() === titleNorm &&
+      (m.strategyId || null) === optStrategyId
     );
     if (dupe) {
       showToast('이미 같은 부름이 등록되어 있어 🐚');

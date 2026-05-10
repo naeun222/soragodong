@@ -402,9 +402,10 @@ function onbPositionStep(step, retryCount) {
     setTimeout(async () => {
       if (typeof showAttemptResultModal !== 'function') return;
       try {
-        // 방금 해낸 소라의 부름 = 가장 최근 completed mission (completedAt 내림차순)
+        // 사용자 명시 2026-05-11 ultrathink (근본): 결과 체크 대기 중인 (completed + !attemptStatus + strategyId 있음) 미션만 시뮬 대상.
+        // 이전 = 무차별 가장 최근 completed → 이미 worked 처리된 미션 / standalone 미션을 잡아 시뮬 후 양생방 카드 결과 체크 미스매치.
         const recentCompleted = (state.missions || [])
-          .filter(m => m.status === 'completed')
+          .filter(m => m.status === 'completed' && !m.attemptStatus && m.strategyId)
           .sort((a, b) => new Date(b.completedAt || b.completedDate || 0) - new Date(a.completedAt || a.completedDate || 0))[0];
         // fallback: pending strategy mission
         const fallback = !recentCompleted

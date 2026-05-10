@@ -26,13 +26,16 @@ function expireOldMissions() {
       changed = true;
     }
   });
-  // 사용자 명시 2026-05-01 (agent audit): completed + attemptStatus 없음 + scheduledFor 14일+ 지남 → 자동 unknown.
-  // 이전 = scheduledFor 만기 후 영원히 prompt 노출 stale 자리.
+  // 사용자 명시 2026-05-01 (agent audit): completed + attemptStatus 없음 + 일정 시간 경과 → 자동 unknown.
+  // 사용자 명시 2026-05-11 ultrathink (근본): 기준을 scheduledFor → completedAt 으로 변경.
+  // 이전 scheduledFor 기준 = 14일 묵은 미션을 오늘 완료해도 다음날 자동 unknown 적용되어 결과 체크 기회 박탈.
+  // 의도: "완료 후 14일 동안 결과 체크 기회. 그 후 자동 만료".
   (state.missions || []).forEach(m => {
     if (m.status !== 'completed') return;
     if (m.attemptStatus) return;
-    if (!m.scheduledFor) return;
-    const diff = daysBetweenKeys(m.scheduledFor, today);
+    const baseKey = m.completedDate || (m.completedAt && typeof getDayKey === 'function' ? getDayKey(m.completedAt) : null) || m.scheduledFor;
+    if (!baseKey) return;
+    const diff = daysBetweenKeys(baseKey, today);
     if (diff >= 14) {
       m.attemptStatus = 'unknown';
       m.attemptCheckedAt = new Date().toISOString();

@@ -22129,9 +22129,10 @@ function onbPositionStep(step, retryCount) {
     setTimeout(async () => {
       if (typeof showAttemptResultModal !== 'function') return;
       try {
-        // 방금 해낸 소라의 부름 = 가장 최근 completed mission (completedAt 내림차순)
+        // 사용자 명시 2026-05-11 ultrathink (근본): 결과 체크 대기 중인 (completed + !attemptStatus + strategyId 있음) 미션만 시뮬 대상.
+        // 이전 = 무차별 가장 최근 completed → 이미 worked 처리된 미션 / standalone 미션을 잡아 시뮬 후 양생방 카드 결과 체크 미스매치.
         const recentCompleted = (state.missions || [])
-          .filter(m => m.status === 'completed')
+          .filter(m => m.status === 'completed' && !m.attemptStatus && m.strategyId)
           .sort((a, b) => new Date(b.completedAt || b.completedDate || 0) - new Date(a.completedAt || a.completedDate || 0))[0];
         // fallback: pending strategy mission
         const fallback = !recentCompleted
@@ -33766,13 +33767,16 @@ function expireOldMissions() {
       changed = true;
     }
   });
-  // 사용자 명시 2026-05-01 (agent audit): completed + attemptStatus 없음 + scheduledFor 14일+ 지남 → 자동 unknown.
-  // 이전 = scheduledFor 만기 후 영원히 prompt 노출 stale 자리.
+  // 사용자 명시 2026-05-01 (agent audit): completed + attemptStatus 없음 + 일정 시간 경과 → 자동 unknown.
+  // 사용자 명시 2026-05-11 ultrathink (근본): 기준을 scheduledFor → completedAt 으로 변경.
+  // 이전 scheduledFor 기준 = 14일 묵은 미션을 오늘 완료해도 다음날 자동 unknown 적용되어 결과 체크 기회 박탈.
+  // 의도: "완료 후 14일 동안 결과 체크 기회. 그 후 자동 만료".
   (state.missions || []).forEach(m => {
     if (m.status !== 'completed') return;
     if (m.attemptStatus) return;
-    if (!m.scheduledFor) return;
-    const diff = daysBetweenKeys(m.scheduledFor, today);
+    const baseKey = m.completedDate || (m.completedAt && typeof getDayKey === 'function' ? getDayKey(m.completedAt) : null) || m.scheduledFor;
+    if (!baseKey) return;
+    const diff = daysBetweenKeys(baseKey, today);
     if (diff >= 14) {
       m.attemptStatus = 'unknown';
       m.attemptCheckedAt = new Date().toISOString();
@@ -34505,10 +34509,14 @@ function dismissMission(missionId) {
 
 function createMission(title, description, options = {}) {
   // 사용자 요청 2026-04-30: 같은 strategy 여러 미션 OK. 단 동일 title pending 중복은 차단 (anti-double-click).
+  // 사용자 명시 2026-05-11 ultrathink (근본): dupe 비교에 strategyId 포함 — 다른 카드에서 같은 title 등록 시 매핑 mismatch (사용자가 카드 B 에서 등록한 줄 알지만 실제 미션 strategyId 는 카드 A) 방지.
   const titleNorm = (title || '').trim();
+  const optStrategyId = options.strategyId || null;
   if (titleNorm) {
     const dupe = (state.missions || []).find(m =>
-      m.status === 'pending' && (m.title || '').trim() === titleNorm
+      m.status === 'pending' &&
+      (m.title || '').trim() === titleNorm &&
+      (m.strategyId || null) === optStrategyId
     );
     if (dupe) {
       showToast('이미 같은 부름이 등록되어 있어 🐚');
@@ -45307,7 +45315,9 @@ function _renderStrategyCardHtml(s) {
   const _gens   = Array.isArray(s.generations) ? s.generations.length : 0;
   const _isEmbodied = _status === 'embodied';
   // 사용자 요청 2026-04-28: 결과 체크 버튼 조건 수정 — '소라의 부름' 해냈어가 되어야 (즉 status === 'completed' && !attemptStatus). pending 상태에선 안 뜸. result check 끝나면 attemptStatus 적용돼서 사라짐
+  // 사용자 명시 2026-05-11 ultrathink (근본): strategyId falsy 단락 — standalone 미션 (strategyId=null) 이 우연히 빈 카드 id 와 매칭되는 위험 차단.
   const _hasUnchecked = (state.missions || []).some(m =>
+    m.strategyId &&
     m.strategyId === s.id &&
     m.status === 'completed' &&
     !m.attemptStatus
