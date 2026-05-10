@@ -377,7 +377,8 @@ async function _runDailyExtractInline(pending) {
     // 사용자 명시 2026-05-08 ultrathink: _extractFromIndex 적용 — 이어서한 archive 의 옛 부분 input 제외.
     const _extractMsgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : (batch.messages || []);
     try {
-      if (_extractMsgs.length >= 6) {
+      // 사용자 보고 2026-05-10 (audit batch 3): _runDailyExtractInline 의 `>= 6` 잔존 — _submitDailyExtractBatch 만 fix 됐던 것. 일관 `>= 3` 로.
+      if (_extractMsgs.length >= 3) {
         await extractChapterCaseAnalysis(_extractMsgs);
       }
     } catch (e) { console.warn('[inline] case fail:', e); }
@@ -401,6 +402,9 @@ async function _runDailyExtractInline(pending) {
   if (typeof renderArchive === 'function') renderArchive();
   // 사용자 명시 2026-05-02 ultrathink: batch 처리 끝 → 어제 카드 자동 갱신 (사용자 홈 보고 있으면 즉시 노출).
   if (typeof renderYesterdayCard === 'function') renderYesterdayCard();
+  // 사용자 보고 2026-05-10 (audit batch 3): _runDailyExtractInline fallback path 에 renderModel 누락 → 나 탭 갱신 X.
+  if (typeof renderModel === 'function') { try { renderModel(); } catch {} }
+  if (typeof renderModelPreview === 'function') { try { renderModelPreview(); } catch {} }
 }
 
 // 사용자 명시 2026-05-02 ultrathink: 리뷰 batch request 빌더 — schedule 체크 후 weekly/monthly/quarterly/annual 추가.
@@ -690,11 +694,27 @@ async function _resumePendingBatch() {
     });
     if (!statusResp.ok) {
       console.warn('[batch status] fail:', statusResp.status);
+      // 사용자 보고 2026-05-10 (audit batch 3): fail count 누적 → 3회 이상 시 timeout fallback (영구 stuck 회피).
+      state.pendingBatch.statusFailCount = (state.pendingBatch.statusFailCount || 0) + 1;
+      if (state.pendingBatch.statusFailCount >= 3) {
+        console.warn('[batch] status fail 3회 이상 — timeout fallback');
+        await _timeoutPendingBatch();
+        return;
+      }
+      saveState();
       return;
     }
     const status = await statusResp.json();
+    // status ok = fail count reset (부분 회복 케이스)
+    if (state.pendingBatch.statusFailCount) delete state.pendingBatch.statusFailCount;
     if (status.processing_status !== 'ended') {
       console.log(`[batch] still processing — ${JSON.stringify(status.request_counts || {})}`);
+      // 사용자 보고 2026-05-10 (audit batch 3): 6h 이상 not ended = stuck 의심 → timeout fallback (Anthropic Batch typical < 1h).
+      const submittedMs = state.pendingBatch.submitted_at || 0;
+      if (submittedMs > 0 && Date.now() - submittedMs > 6 * 3600 * 1000) {
+        console.warn('[batch] 6h+ not ended — timeout fallback');
+        await _timeoutPendingBatch();
+      }
       return;
     }
 
@@ -706,11 +726,25 @@ async function _resumePendingBatch() {
     });
     if (!resultsResp.ok) {
       console.warn('[batch results] fail:', resultsResp.status);
+      state.pendingBatch.resultsFailCount = (state.pendingBatch.resultsFailCount || 0) + 1;
+      if (state.pendingBatch.resultsFailCount >= 3) {
+        console.warn('[batch] results fail 3회 이상 — timeout fallback');
+        await _timeoutPendingBatch();
+        return;
+      }
+      saveState();
       return;
     }
     const data = await resultsResp.json();
     if (!data.ok || !Array.isArray(data.results)) {
       console.warn('[batch results] invalid:', data);
+      state.pendingBatch.dataInvalidCount = (state.pendingBatch.dataInvalidCount || 0) + 1;
+      if (state.pendingBatch.dataInvalidCount >= 3) {
+        console.warn('[batch] results invalid 3회 이상 — timeout fallback');
+        await _timeoutPendingBatch();
+        return;
+      }
+      saveState();
       return;
     }
 
@@ -973,6 +1007,11 @@ async function _timeoutPendingBatch() {
   if (targets.length === 0 && reviewTypes.length === 0 && diaryDates.length === 0) {
     saveState();
   }
+  // 사용자 보고 2026-05-10 (audit batch 3): timeout fallback 후 홈 카드들 갱신 — pendingBatch null 됐으니 yesterdayCard / 주간 리뷰 카드 hide 가드 풀림.
+  if (typeof renderYesterdayCard === 'function') { try { renderYesterdayCard(); } catch {} }
+  if (typeof renderReviewPrompts === 'function') { try { renderReviewPrompts(); } catch {} }
+  if (typeof renderModel === 'function') { try { renderModel(); } catch {} }
+  if (typeof renderModelPreview === 'function') { try { renderModelPreview(); } catch {} }
 }
 
 // V4 사용자 명시 2026-05-01 ultrathink: 사용자 활동 시 (load / sendChat) trigger.
