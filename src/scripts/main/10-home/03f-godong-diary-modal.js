@@ -107,17 +107,18 @@ async function openGodongDiaryModal() {
     }
   }
 
-  // cooldown 체크 — 3일 (4AM cutoff) 미경과 = 새 entry 생성 X (기존만 노출).
-  let inCooldown = false;
-  if (r.lastGodongDiaryAt && typeof _rcCutoffKeyOf === 'function' && typeof _rcDayDiff === 'function') {
-    const lastDayK = _rcCutoffKeyOf(r.lastGodongDiaryAt);
-    const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : (typeof _rcTodayKey === 'function' ? _rcTodayKey() : null);
-    if (todayK) inCooldown = _rcDayDiff(todayK, lastDayK) < 3;
-  }
-  // 사용자 명시 2026-05-11: '다시 적어줘' 버튼이 force regenerate 신호 — cooldown 무시 + 1회만 적용.
+  // 사용자 명시 2026-05-11: cooldown 룰 단순화 — lastGodongDiaryAt 기반 3일 cooldown 폐기.
+  //   회전 카드 클릭 시 3/2/1일 전 일기가 *모두 있으면* 그대로 띄움. 하나라도 없으면 새로 생성.
+  //   '다시 적어줘' 버튼은 force regenerate (있어도 재호출).
+  const _existingMatchedDayKs = new Set(
+    (state.godongDiary || [])
+      .filter(e => e && _targetSet.has(_entryDayK(e)))
+      .map(e => _entryDayK(e))
+  );
+  const _hasAllThreeDays = _targetDayKs.every(dayK => _existingMatchedDayKs.has(dayK));
   const _force = _gdiaryForceRegenerate;
   _gdiaryForceRegenerate = false;
-  const needsGenerate = !inCooldown || _force;
+  const needsGenerate = !_hasAllThreeDays || _force;
 
   // 셸 먼저 (loading) — 사용자가 빈 화면 안 보게.
   _gdiaryRenderShell({ loading: true });
@@ -175,12 +176,9 @@ async function openGodongDiaryModal() {
     }
     if (newEntries.length > 0) {
       newEntries.forEach(e => state.godongDiary.push(e));
-      // 사용자 보고 2026-05-11: 첫 호출 fallback 시 cooldown 잠그면 다음 진입 시 자동 재호출 X — '다시 적어줘' 만 가능.
-      //   fix: 정상 생성 (_generateOk=true) 시만 lastGodongDiaryAt set. fallback 시는 안 잠가서 다음 진입 시 자동 재시도.
-      if (_generateOk) {
-        r.lastGodongDiaryAt = new Date().toISOString();
-        r.godongDiaryContentId = newEntries[newEntries.length - 1].id;
-      }
+      // 사용자 명시 2026-05-11: lastGodongDiaryAt 기반 cooldown 폐기 — state.godongDiary 안 dayK 매칭 entries 존재 = 진입 가능.
+      //   단 godongDiaryContentId 는 마지막 entry pointer (legacy 호환) 로 keep.
+      r.godongDiaryContentId = newEntries[newEntries.length - 1].id;
       if (typeof saveState === 'function') saveState(true);
     }
   }
