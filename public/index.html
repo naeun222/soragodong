@@ -31161,7 +31161,14 @@ async function extractChapterCaseAnalysis(messages, opts) {
       max_tokens: _maxTok,
       messages: [{ role: 'user', content: prompt }]
     });
-    if (!resp.ok) { console.warn('[chapter case extract] resp not ok:', resp.status); return false; }
+    if (!resp.ok) {
+      // 사용자 보고 2026-05-10 (batch 10): 402 reason 정확 로깅 — credit_balance / quota / plan 진단.
+      const _errText = await resp.text().catch(() => '');
+      let _errParsed = null;
+      try { _errParsed = JSON.parse(_errText); } catch {}
+      console.warn('[chapter case extract] resp not ok:', resp.status, _errParsed || _errText.slice(0, 300));
+      return false;
+    }
     const data = await resp.json();
     const raw = data?.content?.[0]?.text || '';
     const jm = raw.match(/\{[\s\S]*\}/);
@@ -56992,7 +56999,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.200-cutoffend-fix-snapshot-shrink';
+const APP_VERSION = 'v4.0.201-402-reason-log';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

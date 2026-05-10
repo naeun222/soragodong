@@ -24,7 +24,14 @@ async function extractChapterCaseAnalysis(messages, opts) {
       max_tokens: _maxTok,
       messages: [{ role: 'user', content: prompt }]
     });
-    if (!resp.ok) { console.warn('[chapter case extract] resp not ok:', resp.status); return false; }
+    if (!resp.ok) {
+      // 사용자 보고 2026-05-10 (batch 10): 402 reason 정확 로깅 — credit_balance / quota / plan 진단.
+      const _errText = await resp.text().catch(() => '');
+      let _errParsed = null;
+      try { _errParsed = JSON.parse(_errText); } catch {}
+      console.warn('[chapter case extract] resp not ok:', resp.status, _errParsed || _errText.slice(0, 300));
+      return false;
+    }
     const data = await resp.json();
     const raw = data?.content?.[0]?.text || '';
     const jm = raw.match(/\{[\s\S]*\}/);
