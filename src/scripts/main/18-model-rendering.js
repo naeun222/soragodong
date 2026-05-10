@@ -213,13 +213,30 @@ function renderModel() {
         <span class="cf-actions"><button onclick="editCFItem('${field}', ${idx})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${idx})" title="삭제">✕</button></span>
       </div>`;
     };
+    // 사용자 명시 2026-05-10: 통합 분석 (cf 5차원) 항목 정렬 — 새 내용 (미컨펌 + 최근) 먼저.
+    //   1) user_verified === false 우선 (새 / 미컨펌)
+    //   2) created_at 내림차순 (최근 먼저)
+    //   원본 array index 보존 (edit/delete CF item 호출용) — 정렬은 [item, originalIdx] 페어로.
+    const _sortCFItems = (arr) => {
+      const indexed = (arr || []).map((it, i) => ({ it, i }));
+      indexed.sort((a, b) => {
+        const aVer = (a.it && typeof a.it === 'object' && a.it.user_verified === true) ? 1 : 0;
+        const bVer = (b.it && typeof b.it === 'object' && b.it.user_verified === true) ? 1 : 0;
+        if (aVer !== bVer) return aVer - bVer;
+        const aT = (a.it && typeof a.it === 'object' && a.it.created_at) ? new Date(a.it.created_at).getTime() : 0;
+        const bT = (b.it && typeof b.it === 'object' && b.it.created_at) ? new Date(b.it.created_at).getTime() : 0;
+        return bT - aT;
+      });
+      return indexed;
+    };
     const cfSection = (label, sub, items, field) => {
       if (!items || items.length === 0) return '';
-      const top = items.slice(0, 1);
-      const rest = items.slice(1);
-      const topHtml = top.map((p, i) => cfBullet(p, field, i)).join('');
+      const sorted = _sortCFItems(items);
+      const top = sorted.slice(0, 1);
+      const rest = sorted.slice(1);
+      const topHtml = top.map(({ it, i }) => cfBullet(it, field, i)).join('');
       const restHtml = rest.length > 0
-        ? `<details class="cf-more"><summary>+${rest.length}</summary><div class="cf-list">${rest.map((p, i) => cfBullet(p, field, i + 1)).join('')}</div></details>`
+        ? `<details class="cf-more"><summary>+${rest.length}</summary><div class="cf-list">${rest.map(({ it, i }) => cfBullet(it, field, i)).join('')}</div></details>`
         : '';
       return `<div class="model-item"><div class="model-item-name">${label}</div>
         ${sub ? `<div style="font-size:11px; color:var(--text-soft); margin-bottom:8px;">${sub}</div>` : ''}

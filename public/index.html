@@ -36733,13 +36733,30 @@ function renderModel() {
         <span class="cf-actions"><button onclick="editCFItem('${field}', ${idx})" title="수정">✎</button><button onclick="deleteCFItem('${field}', ${idx})" title="삭제">✕</button></span>
       </div>`;
     };
+    // 사용자 명시 2026-05-10: 통합 분석 (cf 5차원) 항목 정렬 — 새 내용 (미컨펌 + 최근) 먼저.
+    //   1) user_verified === false 우선 (새 / 미컨펌)
+    //   2) created_at 내림차순 (최근 먼저)
+    //   원본 array index 보존 (edit/delete CF item 호출용) — 정렬은 [item, originalIdx] 페어로.
+    const _sortCFItems = (arr) => {
+      const indexed = (arr || []).map((it, i) => ({ it, i }));
+      indexed.sort((a, b) => {
+        const aVer = (a.it && typeof a.it === 'object' && a.it.user_verified === true) ? 1 : 0;
+        const bVer = (b.it && typeof b.it === 'object' && b.it.user_verified === true) ? 1 : 0;
+        if (aVer !== bVer) return aVer - bVer;
+        const aT = (a.it && typeof a.it === 'object' && a.it.created_at) ? new Date(a.it.created_at).getTime() : 0;
+        const bT = (b.it && typeof b.it === 'object' && b.it.created_at) ? new Date(b.it.created_at).getTime() : 0;
+        return bT - aT;
+      });
+      return indexed;
+    };
     const cfSection = (label, sub, items, field) => {
       if (!items || items.length === 0) return '';
-      const top = items.slice(0, 1);
-      const rest = items.slice(1);
-      const topHtml = top.map((p, i) => cfBullet(p, field, i)).join('');
+      const sorted = _sortCFItems(items);
+      const top = sorted.slice(0, 1);
+      const rest = sorted.slice(1);
+      const topHtml = top.map(({ it, i }) => cfBullet(it, field, i)).join('');
       const restHtml = rest.length > 0
-        ? `<details class="cf-more"><summary>+${rest.length}</summary><div class="cf-list">${rest.map((p, i) => cfBullet(p, field, i + 1)).join('')}</div></details>`
+        ? `<details class="cf-more"><summary>+${rest.length}</summary><div class="cf-list">${rest.map(({ it, i }) => cfBullet(it, field, i)).join('')}</div></details>`
         : '';
       return `<div class="model-item"><div class="model-item-name">${label}</div>
         ${sub ? `<div style="font-size:11px; color:var(--text-soft); margin-bottom:8px;">${sub}</div>` : ''}
@@ -54662,6 +54679,43 @@ async function maybeRunDailyChapterExtract() {
   await _submitDailyExtractBatch(pending);
 }
 
+// 사용자 명시 2026-05-10: 주간 리뷰만 새로 받는 명령어 — _diagnoseExtract 의 weekly 부분만 추출.
+//   console: `_forceWeeklyReview()` → 이번 주 weekKey 기준 새 review 생성 (이미 있으면 toast 알림 + skip).
+window._forceWeeklyReview = async function() {
+  if (typeof _runReviewExtractInline !== 'function' || typeof _collectReviewData !== 'function' || typeof getWeekKey !== 'function') {
+    console.error('[forceWeeklyReview] helpers 미정의 (PWA reload 필요)');
+    return;
+  }
+  if (!_canAI || !_canAI()) {
+    console.error('[forceWeeklyReview] AI 호출 불가 (로그인 / 잔액 확인)');
+    return;
+  }
+  const data = _collectReviewData('weekly');
+  if (!data) { console.warn('[forceWeeklyReview] _collectReviewData null'); return; }
+  const weekKey = getWeekKey(data.cutoffEnd || data.cutoff);
+  const _before = (state.weeklyReviews || []).length;
+  const _exists = (state.weeklyReviews || []).some(r => r.weekKey === weekKey);
+  console.log('[forceWeeklyReview] weekKey:', weekKey, 'before count:', _before, 'exists:', _exists);
+  if (_exists) {
+    if (typeof showToast === 'function') showToast(`📅 ${weekKey} 리뷰 이미 있어 — 도서관에서 확인`);
+    return;
+  }
+  if (typeof showToast === 'function') showToast(`🌙 ${weekKey} 주간 리뷰 생성 중...`);
+  try {
+    await _runReviewExtractInline(['weekly'], { weekly: weekKey });
+    const _after = (state.weeklyReviews || []).length;
+    const _ok = (state.weeklyReviews || []).some(r => r.weekKey === weekKey);
+    console.log('[forceWeeklyReview] after count:', _after, 'success:', _ok);
+    if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
+    if (typeof showToast === 'function') {
+      showToast(_ok ? `✦ ${weekKey} 주간 리뷰 생성 완료` : '주간 리뷰 생성 실패 — console 확인');
+    }
+  } catch (e) {
+    console.error('[forceWeeklyReview] FAIL', e);
+    if (typeof showToast === 'function') showToast('주간 리뷰 생성 실패: ' + (e?.message || e));
+  }
+};
+
 // 사용자 보고 2026-05-10 (audit batch 3 진단): 강제 회복 후에도 yesterday/주간/나탭 안 뜸 케이스 진단 함수.
 // console 에서 `_diagnoseExtract()` 호출 → 어디서 막히는지 console 에 풍부 로그.
 window._diagnoseExtract = async function() {
@@ -57682,7 +57736,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.212-sim-topic-label';
+const APP_VERSION = 'v4.0.213-force-weekly-cf-sort-new-first';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

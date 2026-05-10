@@ -1142,6 +1142,43 @@ async function maybeRunDailyChapterExtract() {
   await _submitDailyExtractBatch(pending);
 }
 
+// 사용자 명시 2026-05-10: 주간 리뷰만 새로 받는 명령어 — _diagnoseExtract 의 weekly 부분만 추출.
+//   console: `_forceWeeklyReview()` → 이번 주 weekKey 기준 새 review 생성 (이미 있으면 toast 알림 + skip).
+window._forceWeeklyReview = async function() {
+  if (typeof _runReviewExtractInline !== 'function' || typeof _collectReviewData !== 'function' || typeof getWeekKey !== 'function') {
+    console.error('[forceWeeklyReview] helpers 미정의 (PWA reload 필요)');
+    return;
+  }
+  if (!_canAI || !_canAI()) {
+    console.error('[forceWeeklyReview] AI 호출 불가 (로그인 / 잔액 확인)');
+    return;
+  }
+  const data = _collectReviewData('weekly');
+  if (!data) { console.warn('[forceWeeklyReview] _collectReviewData null'); return; }
+  const weekKey = getWeekKey(data.cutoffEnd || data.cutoff);
+  const _before = (state.weeklyReviews || []).length;
+  const _exists = (state.weeklyReviews || []).some(r => r.weekKey === weekKey);
+  console.log('[forceWeeklyReview] weekKey:', weekKey, 'before count:', _before, 'exists:', _exists);
+  if (_exists) {
+    if (typeof showToast === 'function') showToast(`📅 ${weekKey} 리뷰 이미 있어 — 도서관에서 확인`);
+    return;
+  }
+  if (typeof showToast === 'function') showToast(`🌙 ${weekKey} 주간 리뷰 생성 중...`);
+  try {
+    await _runReviewExtractInline(['weekly'], { weekly: weekKey });
+    const _after = (state.weeklyReviews || []).length;
+    const _ok = (state.weeklyReviews || []).some(r => r.weekKey === weekKey);
+    console.log('[forceWeeklyReview] after count:', _after, 'success:', _ok);
+    if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
+    if (typeof showToast === 'function') {
+      showToast(_ok ? `✦ ${weekKey} 주간 리뷰 생성 완료` : '주간 리뷰 생성 실패 — console 확인');
+    }
+  } catch (e) {
+    console.error('[forceWeeklyReview] FAIL', e);
+    if (typeof showToast === 'function') showToast('주간 리뷰 생성 실패: ' + (e?.message || e));
+  }
+};
+
 // 사용자 보고 2026-05-10 (audit batch 3 진단): 강제 회복 후에도 yesterday/주간/나탭 안 뜸 케이스 진단 함수.
 // console 에서 `_diagnoseExtract()` 호출 → 어디서 막히는지 console 에 풍부 로그.
 window._diagnoseExtract = async function() {

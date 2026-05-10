@@ -41,7 +41,8 @@
 // v36 (2026-05-10 검증 결과 fix): 시뮬 가드 강화 (구체 X-list) / 회전 카드 우선순위 재정의 (review 1-4, 그 외 동급) / unconfirmed 우선 폐기 / chat 시나리오 토론 스티커.
 // v37 (2026-05-10): weekly schema 확장 (momentum_line + cycles + 활력기분 차트 inline) / review id backfill (월간 '리뷰 못 찾음' fix) / 테스트 계정 자동 설정.
 // v38 (2026-05-10): 시뮬 topicCard 'source: simulation' 마킹 + 도서관 일기·대화 chip 의 day modal '💭 시나리오' 라벨 표시.
-const CACHE_NAME = 'soragodong-v4-cache-v38';
+// v39 (2026-05-10): _forceWeeklyReview() 명령어 + 통합 분석 (cf 5차원) 정렬 — 새 내용 (미컨펌 + 최근) 먼저.
+const CACHE_NAME = 'soragodong-v4-cache-v39';
 const PRECACHE_URLS = [
   './',
   './index.html',
