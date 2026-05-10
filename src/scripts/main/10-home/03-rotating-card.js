@@ -749,10 +749,17 @@ async function _callGodongDiaryHaiku() {
 
 ==================================================
 [가장 중요한 규칙 — 절대 위반 X]
-**하루 일기 = 사건 1줄 (짧게) + 고동의 느낌 2-3줄 (대부분, 길게)**
+**하루 일기 = 사건 정확히 1개 (1줄 / 짧게) + 고동의 느낌 (2-3줄 / 본체)**
+
+⚠ 사건 1개 = 단 하나의 행동/말/관찰. 절대 2개 이상 X.
+⚠ 본문 4문장 초과 = reject. 170자 초과 = reject.
 
 비율: **사건 약 25% / 느낀 점 약 75%**.
 사건은 *짧게 한 줄* 만. 느낀 점이 일기의 본체.
+
+⚠ 체크인 단답 (5자 이하 — "내 삶", "쉬엄쉬엄", "괜찮음" 등) 직접 인용 X.
+   대신 **다른 source 사건 우선 선택** ([D] 진주 / [F] 토픽 / [E] 깨달음 / [B] 일기 발화).
+   체크인 단답밖에 없으면 사건이 아닌 *기분 / 컨디션* 으로 표현.
 
 ❌ 절대 안 되는 (나열):
 "오늘 ${_userName}이가 한강 갔다 왔다. 김치도 받았고, 회사도 가기 싫다고 했다."
@@ -977,6 +984,13 @@ ${modesText}
     if (emojiRe.test(allBodies)) hardViolations.push('emoji');
     if (adviceLex.test(allBodies)) hardViolations.push('advice');
     if (youReg.test(allBodies)) hardViolations.push('you-pronoun');
+    // 사용자 보고 2026-05-11: 사건 1개 강제 — 한 entry 가 5문장 초과면 reject (사건 여러 개 의심).
+    const _tooManySentences = parsed.some(e => {
+      if (!e || typeof e.body !== 'string') return false;
+      const _sentences = e.body.split(/[.!?…]\s|\.\s|\n\n/).filter(s => s.trim().length >= 3);
+      return _sentences.length > 5;
+    });
+    if (_tooManySentences) hardViolations.push('too-many-sentences');
     // soft violations (warn, 통과): banGyeol / formal / meta — 사용자 보고 2026-05-11: 첫 호출 실패 원인 가능성.
     const softViolations = [];
     if (banGyeol.test(allBodies)) softViolations.push('gyeol');
@@ -991,9 +1005,9 @@ ${modesText}
       console.warn('[godong-diary] soft tone violations (통과):', softViolations.join(','));
     }
 
-    // 사용자 보고 2026-05-11: cap 150 너무 작아서 정상 LLM 출력 (~180자) 도 reject → fallback 채움 버그.
-    //   cap 250 으로 완화. 짧은 분량 강제는 prompt 으로만.
-    const _maxLen = 250;
+    // 사용자 보고 2026-05-11: 본문 길이 cap. 170 = 사건 1줄 + 느낌 2-3줄 (한국어 ~150자) 의 sweet spot.
+    //   너무 길면 사건 여러 개 들어감, 너무 짧으면 정상 출력 reject.
+    const _maxLen = 170;
     // 정확히 3개 보장 — dayK 매칭 우선, 없으면 index 기반 보정, 최후 fallback.
     const finalEntries = _targetDayKs.map((dayK, idx) => {
       const match = parsed.find(e => {
