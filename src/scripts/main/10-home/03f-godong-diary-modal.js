@@ -66,6 +66,11 @@ async function _gdiaryAskUserName() {
   const trimmed = (v || '').trim().slice(0, 20);
   if (trimmed.length < 1) return null;
   state.userName = trimmed;
+  // 사용자 명시 2026-05-11: 프로필 비어있을 때만 이름 자동 prepend (사용자가 직접 적은 내용 보호).
+  //   AI 일반 chat 호출 시 system_prompt 가 state.profile 통째 주입 → 이름 자연 활용.
+  if (!state.profile || !state.profile.trim()) {
+    state.profile = `이름: ${trimmed}`;
+  }
   if (typeof saveState === 'function') saveState(true);
   return trimmed;
 }
