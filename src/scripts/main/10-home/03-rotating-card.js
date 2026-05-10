@@ -634,11 +634,30 @@ async function _callGodongDiaryHaiku() {
         lines.push(`    - ${title}${summary ? ` — ${summary}` : ''}`);
       });
     }
-    // 데이터 없는 날
+    // 데이터 풍부도 마크 — LLM 이 명확히 인식하도록.
     const isEmpty = !src.checkin && src.diary.length === 0 && src.diarySummary.length === 0
       && src.pearls.length === 0 && src.insights.length === 0 && src.topicCards.length === 0;
     if (isEmpty) {
-      lines.push('  (데이터 없는 날 — "조용한 하루였다 / 별 말 없는 날이었다" 같은 fallback 톤으로 짧게 일기 작성. 억지 사건 X.)');
+      lines.push('  >>> 이 날 데이터: 완전히 0 — fallback 톤으로 작성.');
+    } else {
+      // 사건 후보 명시 — LLM 이 "특별한 거 없음" 으로 판단하지 않게 강제 cue.
+      const _eventHints = [];
+      if (src.checkin) {
+        const c = src.checkin;
+        if (c.answer && c.question) _eventHints.push(`질문 "${(c.question || '').slice(0, 30)}" 에 "${(c.answer || '').slice(0, 30)}" 이라고 답함`);
+        if (c.allNighter) _eventHints.push('밤샘');
+        else if (c.sleepStart && c.sleepEnd) _eventHints.push(`잠 ${c.sleepStart}~${c.sleepEnd}`);
+        if (c.vit != null && c.mood != null) _eventHints.push(`컨디션 vit:${c.vit} mood:${c.mood}`);
+      }
+      if (src.diary.length > 0) _eventHints.push(`사용자 발화/메모 ${src.diary.length}건`);
+      if (src.diarySummary.length > 0) _eventHints.push(`옛 챕터 자동 정리 ${src.diarySummary.length}개 — ${src.diarySummary[0].headline || ''}`);
+      if (src.pearls.length > 0) _eventHints.push(`진주 저장 ${src.pearls.length}개 — ${src.pearls[0].content || ''}`);
+      if (src.insights.length > 0) {
+        const i0 = src.insights[0];
+        _eventHints.push(`깨달음 ${src.insights.length}개 — ${i0.headline || i0.content || ''}`);
+      }
+      if (src.topicCards.length > 0) _eventHints.push(`대화 토픽 ${src.topicCards.length}개 — ${src.topicCards[0].title || ''}`);
+      lines.push(`  >>> 이 날 사건 후보: ${_eventHints.slice(0, 5).join(' / ')}. 이 중 가장 인상적인 1개로 일기 작성.`);
     }
     return lines.join('\n');
   };
@@ -684,19 +703,24 @@ async function _callGodongDiaryHaiku() {
 7. 사용자 발화 인용 OK — 따옴표 1쌍. substrate 의 [일기] / [체크인 답] / [일기 요약] 그대로 인용.
 
 **substrate — 6 source (각 dayK 별 그루핑된 정보)**:
-- [체크인]: vit/mood/sleep + dailyQuestion 답.
-- [일기]: ${_userName}이가 직접 적은 메모 (entry.note) + 채팅 발화 (사용자 어휘/한숨/미완성 시그널).
+- [체크인]: vit/mood/sleep + dailyQuestion 답. **수치 자체도 사건**: "오늘 ${_userName}이 mood 6이라네", "잠 5시간밖에 못 잤다", "내 삶 한 마디만 적었다" 등.
+- [일기]: ${_userName}이가 직접 적은 메모 / 채팅 발화. 어휘/한숨/미완성 그대로가 사건.
 - [일기 요약]: 옛 챕터 자동 정리 헤드라인+요약. 그 챕터 자체가 그 날의 사건.
-- [진주]: 그 날 저장된 anchor — 그 자체가 사건 ("한강 모서리 자리 새로 발견" 같은).
-- [깨달음]: 그 날 저장된 통찰 (사용자 직접) + 자동 추출 패턴. 통찰이 그 날 사건의 의미.
+- [진주]: 그 날 저장된 anchor — 그 자체가 사건.
+- [깨달음]: 그 날 저장된 통찰 — 통찰이 그 날 사건의 의미.
 - [대화 토픽]: 그 날 챕터 토픽 카드 — 주제 자체가 사건.
 
-**데이터 없는 날 (해당 dayK substrate 가 비어있다고 표시된 경우)**:
-- skip 절대 X. 무조건 1편 작성.
-- "조용한 하루였다 / 별 말 없는 날이었다 / 오늘은 적을 게 없네 ㅎㅎ" 같은 fallback 톤.
-- 짧게 (2-3 문장). 억지로 사건 만들지 X.
-- "옆에 있었다는 건 적어둔다" / "(이런 거 적어도 되나)" 같은 self-aware 톤.
-- 호칭은 그대로 "${_userName}이" 사용.
+**사건 정의 (중요)**:
+- "사건" = 큰 사건만이 아님. 사용자의 *어떤 행동/말/상태/관찰* 이라도 사건이 됨.
+- 체크인 vit:5 mood:6 만 있어도 사건 → "오늘 ${_userName}이 컨디션 평범. 어제랑 비슷한 mood 6 ㅎㅎ"
+- 잠 시간만 있어도 사건 → "오늘 8시간 잤다. 평소보다 잘 잤네"
+- dailyQuestion 답 한 단어만 있어도 사건 → "'내 삶' 한 마디만 적었네. 그 단어 무거웠을까"
+- 진주 1개 / 토픽 1개 / 깨달음 1개 어떤 거라도 → 그 자체가 사건.
+
+**처리 우선순위 (절대)**:
+1. substrate 헤더에 ">>> 이 날 사건 후보: ..." 라인이 있으면 → **그 후보 중 1개를 사건으로 일기 작성**. fallback 톤 X.
+2. substrate 헤더에 ">>> 이 날 데이터: 완전히 0" 라인이 있으면 → fallback 톤 ("조용한 하루였다" 등) 짧게 (2-3 문장).
+3. 1번이 default. 2번은 진짜 데이터 0 인 예외 케이스만.
 
 **잠 시간 해석**:
 - 6-9시간 = 정상 (오래 잤다 절대 X).
