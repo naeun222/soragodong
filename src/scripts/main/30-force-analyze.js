@@ -378,18 +378,18 @@ async function _runDailyExtractInline(pending) {
     const _extractMsgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : (batch.messages || []);
     let _caseOk = false;
     try {
-      // 사용자 보고 2026-05-10 (audit batch 3): _runDailyExtractInline 의 `>= 6` 잔존 — _submitDailyExtractBatch 만 fix 됐던 것. 일관 `>= 3` 로.
-      // 사용자 명시 2026-05-10 (큐 11): isSimulation 챕터 = case_analysis skip (cf 5차원 / traits 등 추출 X). 별도 시뮬 추출 path (batch 6) 처리.
-      if (_extractMsgs.length >= 3 && !batch.isSimulation) {
-        // 사용자 보고 2026-05-10 (audit batch 4): extractChapterCaseAnalysis 가 boolean return — fail 시 _pendingExtract 보존.
-        _caseOk = !!(await extractChapterCaseAnalysis(_extractMsgs));
+      // 사용자 보고 2026-05-10 (audit batch 3): _runDailyExtractInline 의 `>= 6` 잔존 → `>= 3` 일관.
+      // 사용자 명시 2026-05-10 (큐 11 batch 7): isSimulation 챕터 = extractChapterCaseAnalysis(opts={isSimulation:true}) 호출.
+      //   prompt 분기 (cf 5차원 / deep_profile_update 출력 X) + extractedFrom='simulation' 마킹 + threshold 0.7.
+      if (_extractMsgs.length >= 3) {
+        _caseOk = !!(await extractChapterCaseAnalysis(_extractMsgs, batch.isSimulation ? { isSimulation: true } : undefined));
       } else {
-        _caseOk = true; // 메시지 부족 또는 시뮬 챕터 = case_analysis skip OK
+        _caseOk = true; // 메시지 부족 = retry 무의미 → flag delete OK
       }
     } catch (e) { console.warn('[inline] case fail:', e); }
     const _allowChapterTopic = !!batch.endedManually || _isPremium;
     try {
-      // 시뮬 챕터 = topic 추출도 skip (일반 topicCards 와 섞이지 X).
+      // 시뮬 챕터 = topic 추출 skip (일반 topicCards 와 섞이지 X — 시뮬은 시뮬 archive 자체가 표시 path).
       if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _extractMsgs.length >= 3 && !batch.isSimulation) {
         await extractPreviousChapterTopics(_extractMsgs);
       }

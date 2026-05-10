@@ -1,6 +1,7 @@
 async function extractChapterCaseAnalysis(messages, opts) {
   opts = opts || {};
   // 사용자 보고 2026-05-10 (audit): 함수가 boolean return — true=성공 (추출 1+ 항목 등록 또는 응답 OK), false=fail (호출자가 _pendingExtract flag 보존 판단).
+  // 사용자 명시 2026-05-10 (큐 11): opts.isSimulation = true 면 cf 5차원 X / traits/values/patterns 만 (extractedFrom='simulation', confidence ≥ 0.7).
   try {
     if (!_canAI()) return false;
     // 사용자 명시 2026-05-09: intake 첫 분석 직접 호출 시 튜토리얼 가드 우회 (bypassTutorialGuard).
@@ -11,7 +12,8 @@ async function extractChapterCaseAnalysis(messages, opts) {
     // 사용자 명시 2026-05-08 ultrathink: opts.model 파라미터 — 미구독자/게스트 매 3턴 자동 호출 시 Opus 4.7 지정.
     //   default = Sonnet 4-6 (기존 동작). 명시 시 다른 모델 가능.
     const _model = (opts && opts.model) || 'claude-sonnet-4-6';
-    const prompt = _buildExtractChapterPrompt(messages);
+    const _isSim = !!opts.isSimulation;
+    const prompt = _buildExtractChapterPrompt(messages, _isSim);
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
       model: _model,
@@ -62,7 +64,7 @@ async function extractChapterCaseAnalysis(messages, opts) {
       }
     }
 
-    const touched = _processExtractChapterAnalysis(analysis);
+    const touched = _processExtractChapterAnalysis(analysis, { isSimulation: _isSim });
 
     // 사용자 명시 2026-05-09 (재정정): 시뮬 통합 추출 폐기 — 시뮬 _extracted mark 부분 제거.
 

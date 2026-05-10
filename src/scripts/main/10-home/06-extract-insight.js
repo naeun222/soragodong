@@ -126,7 +126,8 @@ JSON만, 다른 글 X.`;
     }
 
     // case formulation → 메인 풀에 push + unverified 마킹 (사용자 ✓로 컨펌)
-    const u = analysis.case_formulation_update;
+    // 사용자 명시 2026-05-10 (큐 11): 시뮬 챕터 = cf 5차원 갱신 절대 X (가상 시나리오 침투 회피).
+    const u = !_isSim && analysis.case_formulation_update;
     if (u && typeof u === 'object') {
       const cf = state.caseFormulation = state.caseFormulation || { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} };
       if (!cf.unverified) cf.unverified = {};
@@ -170,13 +171,35 @@ JSON만, 다른 글 X.`;
 
 // 사용자 요청 2026-04-30: 매 메시지 자동 추출 → 챕터 마무리 시점만.
 // 사용자 명시 2026-05-02 ultrathink: prompt builder + analysis processor 분리 — Batch API path 가 재사용.
-function _buildExtractChapterPrompt(messages) {
+// 사용자 명시 2026-05-10 (큐 11): isSim=true 면 시뮬 컨텍스트 챕터 — cf 5차원 / deep_profile_update 출력 X.
+function _buildExtractChapterPrompt(messages, isSim) {
   const chatLog = messages.map(m => {
     const role = m.role === 'user' ? '나' : '소라';
     let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
     content = content.replace(/\{[\s\S]*"(?:new_traits|insight|extracted_tasks)[\s\S]*\}\s*$/g, '').trim();
     return `${role}: ${content}`;
   }).join('\n\n');
+
+  if (isSim) {
+    return `사용자가 AI 친구 "소라고동"과 *상상 시뮬레이션* 컨텍스트에서 이어 나눈 대화.
+가상 시나리오 + 사용자 답 → 깊은 대화. 진지한 자기 모델 데이터로 보지 X — 약한 행동 단서로만.
+
+[규칙 — 매우 보수적]
+- 강한 신호 (3+ 일관 evidence) 만 추출. confidence < 0.7 = 빈 배열.
+- 가상 시나리오 시작이라 cf 5차원 (problems/mechanisms/strengths/goals/growth) / deep_profile_update 절대 출력 X.
+- traits/values/patterns 만 — 행동 성향 / 가치 / 반응 패턴 수준.
+- description 끝에 사용자 실제 발화 1줄 인용.
+
+[대화 원문]
+${chatLog.slice(0, 8000)}
+
+[출력 — JSON만, 마크다운 X]
+{
+  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
+  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}]
+}`;
+  }
 
   // 사용자 명시 2026-05-09 (재정정): 시뮬 통합 추출 폐기 — 시뮬 분리 path (extractFromSimulationArchive) 로 이전.
   // 이유: cf 5차원 (problems / mechanisms 등) = 진지한 자기 모델. 시뮬 가상 시나리오 신호 침투 회피.
@@ -223,14 +246,18 @@ JSON만, 마크다운 X.`;
 }
 
 // analysis JSON 객체 받아 state 갱신. true 반환 시 saveState 권장.
-function _processExtractChapterAnalysis(analysis) {
+// 사용자 명시 2026-05-10 (큐 11): opts.isSimulation = true 면 시뮬 챕터 추출 — cf 5차원 X / extractedFrom='simulation' / threshold ↑ (0.7 보수).
+function _processExtractChapterAnalysis(analysis, opts) {
+  opts = opts || {};
   if (!analysis || typeof analysis !== 'object') return false;
+  const _isSim = !!opts.isSimulation;
   // 사용자 보고 2026-05-10 (audit ultrathink): 진지한 얘기 많이 했는데 나 탭 새 정보 안 뜸 — THRESHOLD 0.6 보수적이라 모델이 confidence 0.55 같은 약한 신호로 추출 시 모두 cut.
   // 디버그 stash — 개발자 도구로 마지막 추출 결과 확인 가능 (window._lastChapterAnalysisDebug).
   try {
     window._lastChapterAnalysisDebug = {
       at: new Date().toISOString(),
       raw: JSON.parse(JSON.stringify(analysis)),
+      isSimulation: _isSim,
       newTraitsCount: Array.isArray(analysis.new_traits) ? analysis.new_traits.length : 0,
       newValuesCount: Array.isArray(analysis.new_values) ? analysis.new_values.length : 0,
       newPatternsCount: Array.isArray(analysis.new_patterns) ? analysis.new_patterns.length : 0,
@@ -238,8 +265,9 @@ function _processExtractChapterAnalysis(analysis) {
     };
   } catch {}
   let touched = false;
-  // 사용자 보고 2026-05-10: 0.6 → 0.5 완화. 약한 신호도 unverified pool 에 들어가 Quiz 컨펌 거치게.
-  const THRESHOLD = 0.5;
+  // 사용자 보고 2026-05-10: 0.6 → 0.5 완화. 약한 신호도 unverified pool. 시뮬은 0.7 보수.
+  const THRESHOLD = _isSim ? 0.7 : 0.5;
+  const _extractedFrom = _isSim ? 'simulation' : 'chapter';
 
     if (Array.isArray(analysis.new_traits)) {
       analysis.new_traits.forEach(t => {
@@ -254,7 +282,7 @@ function _processExtractChapterAnalysis(analysis) {
             name: t.name.trim(), description: (t.description || '').trim(),
             quiz_question: (t.quiz_question || '').trim() || null,
             confidence: conf, user_verified: false, evidence_count: 1,
-            extractedFrom: 'chapter',
+            extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
           });
           touched = true;
@@ -280,7 +308,7 @@ function _processExtractChapterAnalysis(analysis) {
             quiz_question: (v.quiz_question || '').trim() || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             sdt_need: v.sdt_need || null,
-            extractedFrom: 'chapter',
+            extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
           });
           touched = true;
@@ -306,7 +334,7 @@ function _processExtractChapterAnalysis(analysis) {
             trigger: (p.trigger || '').trim(), sequence: (p.sequence || '').trim(),
             quiz_question: (p.quiz_question || '').trim() || null,
             confidence: conf, user_verified: false, evidence_count: 1,
-            extractedFrom: 'chapter',
+            extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
           });
           touched = true;
@@ -318,7 +346,8 @@ function _processExtractChapterAnalysis(analysis) {
         }
       });
     }
-    const u = analysis.case_formulation_update;
+    // 사용자 명시 2026-05-10 (큐 11): 시뮬 챕터 = cf 5차원 갱신 절대 X (가상 시나리오 침투 회피).
+    const u = !_isSim && analysis.case_formulation_update;
     if (u && typeof u === 'object') {
       const cf = state.caseFormulation = state.caseFormulation || { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} };
       if (!cf.unverified) cf.unverified = {};
@@ -360,7 +389,8 @@ function _processExtractChapterAnalysis(analysis) {
 
     // 사용자 요청 2026-04-30: deep_profile_update 자동 추출 (Q2 더 깊은 나).
     // 사용자가 챕터에서 명시 언급한 발달·관계·자기서사 정보만. user_verified=false → 사용자 ✓ 컨펌.
-    const dpu = analysis.deep_profile_update;
+    // 사용자 명시 2026-05-10 (큐 11): 시뮬 챕터 = deep_profile_update 도 skip.
+    const dpu = !_isSim && analysis.deep_profile_update;
     if (dpu && typeof dpu === 'object') {
       if (!state.userDeepProfile) state.userDeepProfile = JSON.parse(JSON.stringify(DEFAULT_STATE.userDeepProfile));
       const udp = state.userDeepProfile;
@@ -393,7 +423,7 @@ function _processExtractChapterAnalysis(analysis) {
               title: tp.title.slice(0, 60),
               description: '',
               impact: (tp.impact || '').slice(0, 100),
-              extractedFrom: 'chapter',
+              extractedFrom: _extractedFrom,
               user_verified: false
             });
             dpuTouched = true;
@@ -414,7 +444,7 @@ function _processExtractChapterAnalysis(analysis) {
               tone: (r.tone || '').slice(0, 20),
               influence: (r.influence || '').slice(0, 20),
               notes: (r.notes || '').slice(0, 100),
-              extractedFrom: 'chapter',
+              extractedFrom: _extractedFrom,
               user_verified: false
             });
             dpuTouched = true;

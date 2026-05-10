@@ -25,7 +25,8 @@
 // v20 (2026-05-10 weekly weekKey + 128 msgs): weekly weekKey cutoffEnd 기준 (W19 mismatch fix) / max_tokens 3000→4000.
 // v21 (2026-05-10 batch 5 mass): weekly 가드 + yesterdayCard chatArchive / review-archive weekly hide / model 시뮬 filter / raw 100턴 / 시뮬→대화 + isSimulation 격리.
 // v22 (2026-05-10 batch 6 큐 7+8 main): weekly 카드 inline 펼침 + 4 섹션 (MOMENTUM / 장면 / 흐름 / 부드러운 알림). 옛 schema 매핑.
-const CACHE_NAME = 'soragodong-v4-cache-v22';
+// v23 (2026-05-10 batch 7): weekly schema 4 섹션만 출력 / monthly+ 추적 항목 inject / 시뮬 챕터 별도 추출 path.
+const CACHE_NAME = 'soragodong-v4-cache-v23';
 const PRECACHE_URLS = [
   './',
   './index.html',

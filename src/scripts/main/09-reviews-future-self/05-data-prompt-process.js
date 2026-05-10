@@ -104,6 +104,44 @@ function _collectReviewData(type) {
     return dt && inRange(dt);
   });
 
+  // 사용자 명시 2026-05-10 (큐 6): 월/분기/연 review 시 추적 항목 (state.projects) inject.
+  //   client-side fact 계산 — checked 일 vs unchecked 일 mood 비교, progress, target 도달.
+  //   주간 (type='weekly') 은 가벼움 위주라 inject X. monthly 부터.
+  let trackingFacts = [];
+  if (type !== 'weekly') {
+    const _projects = (state.projects || []).filter(p => p && !p._deleted);
+    const _moodMap = new Map();
+    (state.entries || []).forEach(e => { if (e.date && typeof e.mood === 'number') _moodMap.set(e.date, e.mood); });
+    const _avg = (arr) => arr.length === 0 ? null : arr.reduce((a, b) => a + b, 0) / arr.length;
+    _projects.forEach(p => {
+      // checkin 형 (toggleTrackerCheck → state.entries[date].trackerChecks[id] = true 또는 별도 필드)
+      const _checkins = Array.isArray(p.checkins) ? p.checkins : [];
+      const _checkedDates = new Set(_checkins.filter(c => c && c.date && inRange(c.date + 'T12:00:00')).map(c => c.date));
+      // measurement 형
+      const _measInRange = Array.isArray(p.measurements) ? p.measurements.filter(m => m && m.at && inRange(m.at)) : [];
+      const _hasCheck = _checkedDates.size > 0;
+      const _hasMeas = _measInRange.length > 0;
+      if (!_hasCheck && !_hasMeas) return;
+      const _entryDatesInRange = (entriesInRange || []).map(e => e.date).filter(Boolean);
+      const _moodChecked = _entryDatesInRange.filter(d => _checkedDates.has(d)).map(d => _moodMap.get(d)).filter(v => typeof v === 'number');
+      const _moodUnchecked = _entryDatesInRange.filter(d => !_checkedDates.has(d)).map(d => _moodMap.get(d)).filter(v => typeof v === 'number');
+      const _moodOnAvg = _avg(_moodChecked);
+      const _moodOffAvg = _avg(_moodUnchecked);
+      const _correlation = (_moodOnAvg !== null && _moodOffAvg !== null) ? (_moodOnAvg - _moodOffAvg) : null;
+      const _progressLine = (_hasMeas && p.target != null && p.baseline != null)
+        ? `${_measInRange[_measInRange.length - 1].value} (목표 ${p.target}, 시작 ${p.baseline})`
+        : null;
+      trackingFacts.push({
+        title: p.title || '추적 항목',
+        type: _hasMeas ? 'measurement' : 'check',
+        checkedDays: _checkedDates.size,
+        totalDaysInRange: _entryDatesInRange.length,
+        moodCorrelation: _correlation,
+        progress: _progressLine,
+      });
+    });
+  }
+
   // 이전 리뷰 씨앗 — callback 위해 prompt 주입 (continuity).
   // 사용자 보고 2026-04-30 review (agent P1-4): completedAt 기준 정렬 후 최신.
   const prevList = type === 'weekly' ? (state.weeklyReviews || []) : (state.monthlyReviews || []);
@@ -123,7 +161,8 @@ function _collectReviewData(type) {
     cutoff, cutoffEnd, cutoffISO, cutoffEndISO,
     entriesInRange, missionsInRange, chatInRange, decisionsInRange,
     topicCardsInRange, pearlsInRange, archiveInRange, insightsInRange, chaptersInRange,
-    prevSeeds, prevUserNote
+    prevSeeds, prevUserNote,
+    trackingFacts  // 사용자 명시 2026-05-10 (큐 6): monthly+ 만 채워짐.
   };
 }
 
@@ -177,58 +216,38 @@ function _buildReviewPrompt(type, data) {
   const periodLabel = type === 'weekly' ? '주' : '달';
 
   // ─── STABLE (cache_control ephemeral) ───
-  // 사용자 명시 2026-05-06 ultrathink: 주간/월간 렌즈 분리.
-  //  주간 = 미시 (사건/감정 raw). 월간 = 거시 (Detective 패턴/사이클/나답게).
-  //  주간엔 cycles/value_align 빼고 scenes(이번 주 장면 3개) 추가. pattern 톤 가볍게.
-  const stable = type === 'weekly' ? `너는 사용자의 주간 리뷰를 작성한다.
+  // 사용자 명시 2026-05-10 (큐 7+8): 주간 리뷰 schema 4 섹션만 — MOMENTUM / 장면 3 / 흐름 / 부드러운 알림.
+  //   옛 strengths / quotes / emotions / pattern / risk_signals / cycles / value_align 모두 출력 X (사용자 명시 "잘한 것 / 너의 인용 / 감정 파트 빼야").
+  //   "리뷰 모음에서 inline 으로 가볍게" — 4 섹션만 deep-dive 없이.
+  const stable = type === 'weekly' ? `너는 사용자의 주간 리뷰를 작성한다. 가볍게, 4 섹션만.
 
 [목표]
 이번 주 가까운 거리 일기. 사건과 감정 raw. 분석가 X 친구의 메모 ○.
-사용자 자신의 인용 5개 → 자기친밀감.
 큰 패턴 발견은 월간/분기에서 — 주간은 짧은 관찰만.
 
 [일상어 강제]
 - 수치 약어 / 분석가 어휘 절대 X. 일상 한국어 그대로.
-- BAD: "7h+ → mood +1.5", "수면 평균 7시간", "4/5 일관성", "+1.5점"
-- GOOD: "이번 주 자주 그랬어", "잘 잔 다음날, 한결 가벼웠어"
 - 통계 어휘 (correlation / 평균 / +N% / std dev / 분포) 전면 X.
 - 친구한테 카톡 쓰듯이.
 
 [톤]
 친한 친구. 반말. 상담사 X.
-구체 > 일반. specific > generic.
-판단 X. self-compassion.
-짧게. 각 섹션 ≤ 3줄.
-관찰 친화 — 결과보다 과정·시도·태도.
-주간이라 가벼움. 무겁게 결론 X. "이런 일이 있었네" 톤.
+구체 > 일반. 판단 X. self-compassion.
+짧게. 주간이라 가벼움. 무겁게 결론 X. "이런 일이 있었네" 톤.
 
-[출력 JSON]
+[출력 JSON — 4 섹션만]
 {
-  "one_word_weekly": "이번 주 momentum 한 단어 — 운동·진행 어휘 (예: \\"정착중\\", \\"가속중\\", \\"회복중\\", \\"휘청중\\", \\"재정비\\", \\"몰입\\", \\"숨고르기\\").",
-  "summary": "이번 주 한 줄 요약 (15-30자, 가벼운 톤)",
+  "one_word_weekly": "이번 주 momentum 한 단어 — 운동·진행 어휘 (예: \\"정착중\\", \\"가속중\\", \\"회복중\\", \\"휘청중\\", \\"재정비\\", \\"몰입\\", \\"숨고르기\\"). 한 단어.",
   "scenes": [
-    {
-      "when": "언제 (예: '월요일 저녁', '주말 새벽', '수요일 점심')",
-      "what": "무슨 일이 있었나 (30자 이내, 일기 톤. 예: '엄마 통화 후 30분 멍', '카페에서 갑자기 글 술술', '미팅 끝나고 한강 산책')",
-      "feeling": "그때 너의 한 단어 감정 (예: '울컥', '따뜻', '지침', '풀림', '뻑뻑함')"
-    },
-    "...", "..."
+    "이번 주 장면 1 (30-50자, 일기 톤, when + what + feeling 자연 한 문장. 예: '월요일 저녁 엄마 통화 후 30분 멍 — 울컥')",
+    "이번 주 장면 2",
+    "이번 주 장면 3"
   ],
-  "pattern": {
-    "headline": "이번 주 자주 보인 흐름 한 문장 — 가벼운 관찰. 'X일 때 Y 같음' 톤. (X Detective 톤 'N번 중 N번'). 예: '잘 잔 다음날 가벼움', '저녁 9시 넘으면 글이 잘 써져'",
-    "note": "한 줄 부연 (선택). 예: '월/화 둘 다 그랬어'. 없으면 빈 문자열."
-  },
-  "quotes": ["짧은 인용 0-5개 (entries / 대화에서 실제로 있는 것만, 각 30자 이내). 데이터 부족하면 0개 OK — 합성 절대 X.", "..."],
-  "strengths": ["이번 주 잘한 작은 win 0-5개 (구체, 자기 친밀 톤). 데이터 부족하면 1-2개 OK. 결과 X 시도·태도·관찰 ○.", "..."],
-  "emotions": [{"word": "이번 주 자주 쓴 감정 단어", "count": "빈도 (정수)"}],
-  "risk_signals": {
-    "level": "'none' | 'watch' | 'concern' — mood drop 3일 이상 / 수면 심하게 불규칙 / 사람 만남 X / 미션 연속 missed 등",
-    "signals": ["감지된 신호 (구체, 부드럽게). 'none' 일 때 빈 array.", "..."],
-    "suggestion": "부드러운 제안 1줄. concern 일 때 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 포함. watch 면 self-care 제안. none 이면 빈 문자열."
-  }
+  "flow": "이번 주 흐름 1-2 문장 (가벼운 관찰. 'X일 때 Y 같음' 톤. 예: '잘 잔 다음날 한결 가벼웠어. 카페 가는 날엔 글이 술술.'). 짧게.",
+  "soft_notice": "부드러운 알림 1 문장 (선택, 강요 X. 자기친절 톤. 예: '이번 주 좀 빡셌어 — 다음 주는 살살 가도 OK', '의외로 잘 챙겼네 ✦'). 데이터 부족 / 가벼운 주면 빈 문자열."
 }
 
-scenes 는 정확히 3개. 모든 필수 필드 다 채워서 출력. JSON 객체 하나만. markdown code fence X.` : `너는 사용자의 월간 리뷰를 작성한다.
+scenes 는 정확히 3개. 다른 field (strengths / quotes / emotions / pattern / risk_signals / cycles / value_align) 절대 X. JSON 객체 하나만. markdown code fence X.` : `너는 사용자의 월간 리뷰를 작성한다.
 
 [목표]
 단순 요약 X. **Detective** — 사용자가 못 본 cross-pattern 발견.
@@ -311,6 +330,21 @@ ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 
 
 [지난 리뷰 사용자 한 마디] ${prevUserNote ? '(사용자가 직접 남긴 메모 — 어휘 그대로 짚어주면 자기친밀감 ↑)' : '(없음)'}
 ${prevUserNote ? '· "' + prevUserNote + '"' : '(이번이 첫 리뷰 또는 사용자 메모 X)'}
+${(data.trackingFacts && data.trackingFacts.length > 0) ? `
+[이 기간 추적 항목] (사용자 명시 2026-05-10 — 행동 actual 데이터. 패턴/강점/가치 일관성/위험 신호 추출 시 활용.)
+${data.trackingFacts.map(f => {
+  const _corr = (typeof f.moodCorrelation === 'number')
+    ? (f.moodCorrelation > 0.3 ? ` · 한 날 기분 한결 좋음 (+${f.moodCorrelation.toFixed(1)})` : f.moodCorrelation < -0.3 ? ` · 한 날 기분 살짝 무거움 (${f.moodCorrelation.toFixed(1)})` : '')
+    : '';
+  const _prog = f.progress ? ` · 진척: ${f.progress}` : '';
+  const _check = f.type === 'check' ? `${f.checkedDays}/${f.totalDaysInRange}일 체크${_corr}` : (f.type === 'measurement' ? '측정형' : '');
+  return `- "${f.title}" — ${_check}${_prog}`;
+}).join('\n')}
+
+[활용 가이드]
+- 추적 항목 = 사용자 행동 사실 (추측 X). pattern / strengths / value_align / risk_signals 추출 시 evidence 로 활용.
+- 모델 자체 추측 X — 위 fact 를 그대로 인용 ("X 한 날 기분 더 좋았어" 식).
+- 체크율 급락 = risk 신호 (부드럽게).` : ''}
 
 위 데이터로 [출력 JSON] 스키마에 맞춰 JSON 객체 하나만 반환.`;
 
