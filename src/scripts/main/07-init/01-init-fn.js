@@ -138,6 +138,43 @@ async function init() {
     }
   } catch (e) { console.warn('[VB022 unlock re-eval]:', e); }
 
+  // 사용자 보고 2026-05-10: 월간 리뷰 'AI 핵심 통찰 요약 받기' = '리뷰 못 찾음' 버그.
+  //   root cause: 옛 review 가 id 필드 없이 push 됨 (id 박는 fix 사용자 보고 2026-05-08 이후) → onclick 의 review.id || '' = '' → 매칭 X.
+  //   fix: id 누락 review 자동 backfill (init 1회).
+  try {
+    const _bf = (arr, prefix) => {
+      if (!Array.isArray(arr)) return false;
+      let touched = false;
+      arr.forEach((r, i) => {
+        if (r && (!r.id || r.id === '')) {
+          r.id = prefix + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 6);
+          touched = true;
+        }
+      });
+      return touched;
+    };
+    let _bfTouched = false;
+    if (_bf(state.weeklyReviews, 'wr_')) _bfTouched = true;
+    if (_bf(state.monthlyReviews, 'mr_')) _bfTouched = true;
+    if (_bf(state.quarterlyReviews, 'qr_')) _bfTouched = true;
+    if (_bf(state.annualReviews, 'ar_')) _bfTouched = true;
+    if (_bfTouched) saveState();
+  } catch (e) { console.warn('[review id backfill]:', e); }
+
+  // 사용자 명시 2026-05-10: 테스트 계정 (soragodongapp@gmail.com) 자동 설정 — testerMode + 튜토리얼 skip + E2EE setup skip flag.
+  try {
+    if (session && session.user && session.user.email === 'soragodongapp@gmail.com') {
+      if (!state.preferences) state.preferences = {};
+      let _testTouched = false;
+      if (state.preferences.testerMode !== true) { state.preferences.testerMode = true; _testTouched = true; }
+      if (state.hasSeenWelcomeTutorial !== true) { state.hasSeenWelcomeTutorial = true; _testTouched = true; }
+      if (state.hasSeenV3Tour !== true) { state.hasSeenV3Tour = true; _testTouched = true; }
+      if (state.preferences._tutorialDismissed !== true) { state.preferences._tutorialDismissed = true; _testTouched = true; }
+      if (state.preferences._e2eeOptedOut !== true) { state.preferences._e2eeOptedOut = true; _testTouched = true; }
+      if (_testTouched) saveState();
+    }
+  } catch (e) { console.warn('[test account autoConfig]:', e); }
+
   // 사용자 요청 2026-04-30 (변호사 검수): 동의는 이메일 로그인 화면에 통합 (모달 X). consentLog 적용됨.
 
   // 사용자 요청 2026-04-30 (E2EE Stage 2): 새 device 진입 시 password 복원 모달

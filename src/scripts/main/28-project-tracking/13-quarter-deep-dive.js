@@ -252,15 +252,38 @@ function _toggleWeeklyInlineExpand(reviewId) {
     // expand
     const escape = (s) => (typeof escapeHtml === 'function' ? escapeHtml(String(s || '')) : String(s || ''));
     const _momentum = r.one_word_weekly || r.one_word || '';
+    const _momentumLine = r.momentum_line || '';  // 사용자 명시 2026-05-10
     const _scenesArr = Array.isArray(r.scenes) ? r.scenes.slice(0, 3) : [];
     const _flow = r.flow || (r.pattern && r.pattern.headline) || r.summary || '';
+    const _cycles = r.cycles || {};
+    const _hasCycles = !!(typeof _cycles === 'object' && (_cycles.sleep || _cycles.mode || _cycles.other));
     const _soft = r.soft_notice || (Array.isArray(r.risk_signals) && r.risk_signals[0]) || '';
+    // 사용자 명시 2026-05-10: 활력/기분 7일 차트 — review 시점 기준 직전 7일 entries.
+    let _chartHtml = '';
+    if (typeof _renderReviewMoodChartInline === 'function') {
+      const _refDate = r.completedAt ? new Date(r.completedAt) : new Date();
+      const _cutoff = new Date(_refDate.getTime() - 7 * 86400000);
+      const _entries = (state.entries || []).filter(e => {
+        if (!e.date) return false;
+        const d = new Date(e.date + 'T12:00:00');
+        return d >= _cutoff && d <= _refDate;
+      }).slice(-7);
+      if (_entries.length >= 2) {
+        try { _chartHtml = _renderReviewMoodChartInline(_entries); } catch {}
+      }
+    }
     detail.innerHTML = `
       <div class="wid-inner" onclick="event.stopPropagation();">
         ${_momentum ? `
           <div class="wid-section">
             <div class="wid-label">이번 주 MOMENTUM</div>
             <div class="wid-momentum">${escape(_momentum)}</div>
+            ${_momentumLine ? `<div class="wid-momentum-line">${escape(_momentumLine)}</div>` : ''}
+          </div>` : ''}
+        ${_chartHtml ? `
+          <div class="wid-section">
+            <div class="wid-label">활력 / 기분 — 이번 주</div>
+            <div class="wid-chart">${_chartHtml}</div>
           </div>` : ''}
         ${_scenesArr.length > 0 ? `
           <div class="wid-section">
@@ -274,12 +297,21 @@ function _toggleWeeklyInlineExpand(reviewId) {
             <div class="wid-label">이번 주 흐름</div>
             <div class="wid-text">${escape(_flow)}</div>
           </div>` : ''}
+        ${_hasCycles ? `
+          <div class="wid-section">
+            <div class="wid-label">사이클</div>
+            <div class="wid-cycles">
+              ${_cycles.sleep ? `<div class="wid-cycle-row"><span class="wid-cycle-key">😴 수면</span><span class="wid-cycle-val">${escape(_cycles.sleep)}</span></div>` : ''}
+              ${_cycles.mode ? `<div class="wid-cycle-row"><span class="wid-cycle-key">⚡ 모드</span><span class="wid-cycle-val">${escape(_cycles.mode)}</span></div>` : ''}
+              ${_cycles.other ? `<div class="wid-cycle-row"><span class="wid-cycle-key">🌙 외부</span><span class="wid-cycle-val">${escape(_cycles.other)}</span></div>` : ''}
+            </div>
+          </div>` : ''}
         ${_soft ? `
           <div class="wid-section">
             <div class="wid-label">부드러운 알림</div>
             <div class="wid-text wid-soft">${escape(typeof _soft === 'string' ? _soft : (_soft.text || _soft.message || ''))}</div>
           </div>` : ''}
-        ${(!_momentum && !_scenesArr.length && !_flow && !_soft) ? `<div class="wid-empty">아직 정리된 내용이 없어 — 다음 주에 다시.</div>` : ''}
+        ${(!_momentum && !_scenesArr.length && !_flow && !_soft && !_hasCycles) ? `<div class="wid-empty">아직 정리된 내용이 없어 — 다음 주에 다시.</div>` : ''}
         <div class="wid-actions">
           <button class="wid-btn-close" type="button" onclick="event.stopPropagation(); _toggleWeeklyInlineExpand('${reviewId}')">접기</button>
         </div>

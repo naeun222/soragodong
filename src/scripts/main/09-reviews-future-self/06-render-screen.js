@@ -346,8 +346,10 @@ function saveReview(type) {
   const review = type === 'weekly' ? {
     ..._common,
     one_word_weekly: reviewData.one_word_weekly,
+    momentum_line: reviewData.momentum_line,  // 사용자 명시 2026-05-10: MOMENTUM 한 단어 보충 한 문장
     scenes: reviewData.scenes,
     flow: reviewData.flow,
+    cycles: reviewData.cycles,                // 사용자 명시 2026-05-10: 사이클 (sleep / mode / other)
     soft_notice: reviewData.soft_notice,
     seeds: reviewData.seeds  // 다음 review prompt callback 용 (있으면)
   } : {

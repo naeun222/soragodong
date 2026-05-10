@@ -801,8 +801,10 @@ async function _resumePendingBatch() {
               const review = reviewType === 'weekly' ? {
                 ..._common,
                 one_word_weekly: json.one_word_weekly,
+                momentum_line: json.momentum_line,  // 사용자 명시 2026-05-10: MOMENTUM 보충 한 문장
                 scenes: json.scenes,
                 flow: json.flow,
+                cycles: json.cycles,                // 사용자 명시 2026-05-10: 사이클
                 soft_notice: json.soft_notice,
                 seeds: json.seeds,
               } : {

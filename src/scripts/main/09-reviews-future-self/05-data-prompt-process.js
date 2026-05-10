@@ -240,19 +240,25 @@ function _buildReviewPrompt(type, data) {
 구체 > 일반. 판단 X. self-compassion.
 짧게. 주간이라 가벼움. 무겁게 결론 X. "이런 일이 있었네" 톤.
 
-[출력 JSON — 4 섹션만]
+[출력 JSON — 6 섹션]
 {
   "one_word_weekly": "이번 주 momentum 한 단어 — 운동·진행 어휘 (예: \\"정착중\\", \\"가속중\\", \\"회복중\\", \\"휘청중\\", \\"재정비\\", \\"몰입\\", \\"숨고르기\\"). 한 단어.",
+  "momentum_line": "MOMENTUM 한 단어 보충 한 문장 — 소라고동 톤. 그 한 단어가 어떻게 드러났나 짧게. 예: '활력이 바닥일 때 오히려 제일 많이 만들어냈어' / '자고 일어나면 다시 출발선이라 휘청대도 OK'. 분석가 X 친구 톤.",
   "scenes": [
     "이번 주 장면 1 (30-50자, 일기 톤, when + what + feeling 자연 한 문장. 예: '월요일 저녁 엄마 통화 후 30분 멍 — 울컥')",
     "이번 주 장면 2",
     "이번 주 장면 3"
   ],
   "flow": "이번 주 흐름 1-2 문장 (가벼운 관찰. 'X일 때 Y 같음' 톤. 예: '잘 잔 다음날 한결 가벼웠어. 카페 가는 날엔 글이 술술.'). 짧게.",
+  "cycles": {
+    "sleep": "수면 → 이번 주 영향 (1줄, 일상어). 예: '잘 잔 날 3번, 다음날마다 가벼웠어'. 무관하면 빈 문자열.",
+    "mode": "활성 모드 / 시간대 (1줄, 일상어). 예: '저녁 9시 넘으면 글이 술술'. 무관하면 빈 문자열.",
+    "other": "황체기 / 날씨 / 외부 (1줄, 일상어). 모르면 빈 문자열."
+  },
   "soft_notice": "부드러운 알림 1 문장 (선택, 강요 X. 자기친절 톤. 예: '이번 주 좀 빡셌어 — 다음 주는 살살 가도 OK', '의외로 잘 챙겼네 ✦'). 데이터 부족 / 가벼운 주면 빈 문자열."
 }
 
-scenes 는 정확히 3개. 다른 field (strengths / quotes / emotions / pattern / risk_signals / cycles / value_align) 절대 X. JSON 객체 하나만. markdown code fence X.` : `너는 사용자의 월간 리뷰를 작성한다.
+scenes 는 정확히 3개. 다른 field (strengths / quotes / emotions / pattern / risk_signals / value_align) 절대 X. JSON 객체 하나만. markdown code fence X.` : `너는 사용자의 월간 리뷰를 작성한다.
 
 [목표]
 단순 요약 X. **Detective** — 사용자가 못 본 cross-pattern 발견.

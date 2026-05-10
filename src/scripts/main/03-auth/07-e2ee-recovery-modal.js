@@ -1,5 +1,10 @@
 async function maybeShowE2EERecoveryModal() {
   if (!window._e2eePendingRecovery) return;
+  // 사용자 명시 2026-05-10: 테스트 계정 (preferences._e2eeOptedOut) — E2EE recovery modal 도 skip.
+  if (state.preferences && state.preferences._e2eeOptedOut) {
+    window._e2eePendingRecovery = null;
+    return;
+  }
   // 사용자 보고 2026-04-30 (paranoid): master key 이미 활성이면 modal 띄우지 X.
   // 정상 흐름에선 pending 적용될 때 master key는 null인데, 어떤 race로 둘 다 set되면 modal 잘못 뜸.
   if (_e2eeMasterKey && _e2eeEnabled) {
