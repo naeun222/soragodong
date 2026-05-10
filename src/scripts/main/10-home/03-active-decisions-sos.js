@@ -38,7 +38,7 @@ function renderActiveDecisionsHomeV3() {
     const days = Math.floor((Date.now() - new Date(d.startedAt).getTime()) / 86400000);
     return `
       <div class="action-card decision" onclick="openDecision('${d.id}')">
-        <div class="action-icon"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"></div>
+        <div class="action-icon"><img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"></div>
         <div class="action-text">
           <div class="action-title">결정 들여다볼 때야</div>
           <div class="action-sub">"${escapeHtml(d.title?.slice(0, 40) || '')}"</div>

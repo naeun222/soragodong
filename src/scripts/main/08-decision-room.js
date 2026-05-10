@@ -159,7 +159,7 @@ function renderActiveDecisionsHome() {
         <div class="decision-card-row">
           ${_magicTimeRing(daysSince)}
           <div class="decision-card-row-text">
-            <div class="decision-card-label"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 진행 중인 결정 · ${daysSince}일째</div>
+            <div class="decision-card-label"><img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 진행 중인 결정 · ${daysSince}일째</div>
             <div class="decision-card-title">${escapeHtml(d.title)}</div>
             ${_magicStepDots(d.steps, daysSince)}
           </div>
@@ -280,8 +280,8 @@ function renderDecisionDetail(decision) {
     const helpCount = helpMsgs.length;
     // 사용자 명시 2026-04-30: 임시대화창 접근성 높이기 — 보라 톤 + prominent.
     const helpButton = helpCount > 0
-      ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px; box-shadow:0 2px 8px rgba(139,126,196,0.18);"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동과 이어서 — ${helpCount}개 메시지</button>`
-      : (decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px;"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동한테 도움 받기 ✦</button>` : '');
+      ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px; box-shadow:0 2px 8px rgba(139,126,196,0.18);"><img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동과 이어서 — ${helpCount}개 메시지</button>`
+      : (decision.status === 'in_progress' ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="margin-top:8px; background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:13px; font-weight:600; padding:10px 14px;"><img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동한테 도움 받기 ✦</button>` : '');
 
     html += `
       <div class="step-card ${cls}">
@@ -397,8 +397,8 @@ function openTextStep(decision, step, meta) {
         ? decision.helpChats[step.id].filter(m => !m._starter && !m.error) : [];
       // 사용자 명시 2026-04-30: 임시대화창 접근성 높이기 — 보라 톤 + prominent.
       return stepHelpMsgs.length > 0
-        ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px; box-shadow:0 2px 10px rgba(139,126,196,0.20);"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동과 이어서 — ${stepHelpMsgs.length}개 메시지</button>`
-        : `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px;"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동한테 도움 받기 ✦</button>`;
+        ? `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.22), rgba(139,126,196,0.12)); border-color:rgba(178,140,212,0.45); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px; box-shadow:0 2px 10px rgba(139,126,196,0.20);"><img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동과 이어서 — ${stepHelpMsgs.length}개 메시지</button>`
+        : `<button class="btn-secondary" onclick="askAIForStep('${decision.id}', '${step.id}')" style="background:linear-gradient(135deg, rgba(178,140,212,0.18), rgba(139,126,196,0.10)); border-color:rgba(178,140,212,0.40); color:#d4b8ff; font-size:14px; font-weight:600; padding:12px 16px;"><img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동한테 도움 받기 ✦</button>`;
     })()}
     <button class="btn-secondary" onclick="openDecision('${decision.id}')">돌아가기</button>
   `;
@@ -592,7 +592,7 @@ function _renderMagicHelpChat() {
   // 헤더 제목 (단계명 + 결정 주제)
   const qEl = document.getElementById('magicHelpScreenQ');
   if (qEl) {
-    qEl.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--text);"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"> ${escapeHtml(meta.title)}</div>
+    qEl.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--text);"><img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"> ${escapeHtml(meta.title)}</div>
       <div style="font-size:11px; color:var(--text-dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">"${escapeHtml(decision.title)}"</div>`;
   }
   // 입력바 표시
@@ -1021,7 +1021,7 @@ function openFinalDecisionStep(decision, step) {
     <div class="screen-sub">결정과 함께 예측을 기록해.<br>미래의 네가 정확도를 확인할 거야 (Wilson & Gilbert, affective forecasting).</div>
 
     <div class="input-group">
-      <div class="input-label"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 최종 결정</div>
+      <div class="input-label"><img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 최종 결정</div>
       <textarea id="finalDecision" rows="3" placeholder="결정을 한 문장으로...">${escapeHtml(saved.decision || '')}</textarea>
     </div>
 
