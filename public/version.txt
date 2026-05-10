@@ -1,1 +1,1 @@
-v4.0.226-gdiary-fix-tdz-self-reference
+v4.0.227-gdiary-trim-cost-plus-tone-tweaks

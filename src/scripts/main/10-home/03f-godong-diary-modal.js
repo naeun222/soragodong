@@ -480,7 +480,7 @@ function _gdiaryRenderShell(opts) {
   if (loading) {
     overlay.innerHTML = `
       <div class="gdiary-loading-wrap">
-        <div class="gdiary-loading">정리 중... ✦</div>
+        <div class="gdiary-loading">일기장 열어보는 중... ✦</div>
       </div>
     `;
     return;
