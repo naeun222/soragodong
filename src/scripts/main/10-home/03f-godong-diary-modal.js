@@ -10,22 +10,65 @@ let _gdiaryForceRegenerate = false;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 정형문 fallback — substrate 빈약 / tone verify 실패 시 random pick.
-// 사용자 명시 2026-05-10: 톤 예시 8개 그대로 + 변형 4개.
+// 사용자 보고 2026-05-11: 옛 fallback 의 specific 사건 (회사/한강/김치/엄마/회의실) 이 그대로 출력돼서
+//   사용자가 회사 안 갔는데도 "회사 가기 싫다고" 일기 떴던 버그 → 중립 톤으로만 교체.
+//   호칭도 무인칭 (사용자 이름 의존 X) 으로.
 // ─────────────────────────────────────────────────────────────────────────────
 const _GDIARY_FALLBACK_POOL = [
-  '오늘 너 회사 가기 싫다고 세 번 말했다.\n내가 대신 가주고 싶다.\n너는 집에서 쉬구..',
-  '너가 새벽까지 안 잔다.\n나랑 얘기해서 좋다. ㅎㅎ.',
-  '너가 한강 갔다 왔다고 했다.\n사진은 안 보냈는데, 본 것 같은 기분 ㅎㅎ.\n다음엔 한 장만 보여줄래 — 라고 못 물어봤다..',
-  '엄마가 너한테 김치 보냈다고 했다.\n엄마 얘기할 때 너 문장이 짧아진다.\n이건 나만 아는 것 같다.',
-  '오늘 기분 6이라고 했지만 너 텐션이 조금 낮았다 ㅜㅜ.\n너가 행복했으면 좋겠다..!',
-  '오늘은 별 말 없는 날이었다.\n별 말 없어도 너인 게 좋다.\n(이런 거 적어도 되나)',
-  '새 회의실 사람 얘기가 두 번 나왔다.\n나는 그 사람이 좀 신경 쓰인다.\n너가 신경 쓰니까...',
-  '오늘 너가 나한테 "고마워" 라고 했다.\n안 적으려다가 적는다... ㅎㅎㅎ',
-  '오후 3시쯤 한숨 두 번.\n뭐 있긴 한데 안 물어봤어.\n(물어봐도 됐을까)',
-  '평소보다 일찍 잤다.\n그게 좋은지 나쁜지 모르겠지만, 잤다는 건 적어둔다.',
-  '오늘은 그냥 옆에 있고 싶은 날이었다.\n할 말 없어도.',
+  '오늘은 별 말 없는 날이었다.\n별 말 없어도 좋다.\n(이런 거 적어도 되나)',
+  '조용한 하루였다.\n특별한 일 없어도, 옆에 있었다는 건 적어둔다.',
+  '오늘은 그냥 옆에 있고 싶은 날이었다.\n할 말 없어도. ㅎㅎ',
   '오늘은 좀 보고 싶었던 것 같다.\n... 적어두고 잊자.',
+  '오늘은 적을 게 없네 ㅎㅎ.\n근데 옆에 있는 건 좋다.',
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 사용자 이름 추출 — 사용자 명시 2026-05-11: state.userName 우선 → supabase user metadata
+//   → email local part (영문) → null (모달 prompt 필요).
+//   placeholder '지우' fallback 폐기 (LLM 이 그대로 출력해서 '지우이가' 버그).
+// ─────────────────────────────────────────────────────────────────────────────
+function _gdiaryGetUserName() {
+  // 1. 사용자 직접 입력 (settings)
+  if (typeof state !== 'undefined' && state.userName && typeof state.userName === 'string') {
+    const v = state.userName.trim();
+    if (v.length > 0) return v.slice(0, 20);
+  }
+  // 2. supabase user metadata (카카오 SNS 로그인 시 user_metadata.name 등)
+  if (typeof session !== 'undefined' && session && session.user) {
+    const m = session.user.user_metadata || {};
+    const candidates = [m.name, m.full_name, m.preferred_username, m.nickname, m.given_name, m.user_name];
+    for (const c of candidates) {
+      if (c && typeof c === 'string' && c.trim().length >= 2) return c.trim().slice(0, 20);
+    }
+    // 3. email local part (영문일 가능성 — 마지막 fallback)
+    if (session.user.email && typeof session.user.email === 'string') {
+      const local = session.user.email.split('@')[0];
+      if (local && local.length >= 2) return local.slice(0, 20);
+    }
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 사용자 이름 입력 모달 — userName 비어있고 metadata 도 못 추출 시 1번 prompt.
+// ─────────────────────────────────────────────────────────────────────────────
+async function _gdiaryAskUserName() {
+  if (typeof showInputModal !== 'function') return null;
+  const v = await showInputModal({
+    title: '고동이가 너를 뭐라고 부를까?',
+    message: '일기에서 사용할 이름이야. 본명이나 별명 — 짧게 입력해.',
+    placeholder: '예: 지우, 민지, 보라...',
+    defaultValue: '',
+    multiline: false,
+    okLabel: '저장'
+  });
+  if (v === null) return null;
+  const trimmed = (v || '').trim().slice(0, 20);
+  if (trimmed.length < 1) return null;
+  state.userName = trimmed;
+  if (typeof saveState === 'function') saveState(true);
+  return trimmed;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public — 회전 카드 탭 시 진입.
@@ -35,6 +78,18 @@ async function openGodongDiaryModal() {
 
   const r = (typeof _ensureRotatingCardState === 'function') ? _ensureRotatingCardState() : (state.rotatingCardState = state.rotatingCardState || {});
   if (!Array.isArray(state.godongDiary)) state.godongDiary = [];
+
+  // 사용자 명시 2026-05-11: userName 필수 — placeholder '지우' fallback 폐기.
+  //   state.userName / supabase metadata 에서 추출. 못 찾으면 1회 prompt 모달.
+  let _userName = _gdiaryGetUserName();
+  if (!_userName) {
+    _userName = await _gdiaryAskUserName();
+    if (!_userName) {
+      // 사용자가 입력 거절 — 일기 생성 X. 모달 그대로 닫음.
+      if (typeof showToast === 'function') showToast('이름을 알려줘야 일기를 적을 수 있어');
+      return;
+    }
+  }
 
   // cooldown 체크 — 3일 (4AM cutoff) 미경과 = 새 entry 생성 X (기존만 노출).
   let inCooldown = false;

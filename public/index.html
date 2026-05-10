@@ -28581,9 +28581,10 @@ async function _callGodongDiaryHaiku() {
     }).join(', ');
   }
 
-  // 사용자 명시 2026-05-11: 호칭은 사용자 이름. state.userName 비어있으면 placeholder '지우'.
-  const _rawName = (state.userName || '').trim();
-  const _userName = _rawName || '지우';
+  // 사용자 명시 2026-05-11: 호칭은 사용자 이름. 비어있으면 throw (호출 전 03f 가드 의무).
+  //   사용자 보고 2026-05-11: 옛 placeholder '지우' fallback 이 LLM 출력에 그대로 반영돼서 '지우이가' 버그.
+  const _userName = (state.userName || '').trim();
+  if (!_userName) throw new Error('userName 미지정 — _gdiaryGetUserName/_gdiaryAskUserName 가드 누락');
 
   const systemPrompt = `너는 사용자의 친구이자 동반자. 사용자에 대해 작은 노트를 매일 적어. 사용자에게 직접 말하는 게 아니라 너의 일기장에 적는 것 — 사용자는 그 노트를 우연히 훔쳐보는 입장.
 
@@ -28592,14 +28593,11 @@ async function _callGodongDiaryHaiku() {
 - 본문 안에서 사용자를 가리킬 때 "${_userName}이" / "${_userName}이가" / "${_userName}이한테" 또는 그냥 "${_userName}" 사용.
 - "너" / "네가" / "너의" / "너한테" 절대 X. 친구가 자기 노트에 다른 친구 이야기 적는 톤.
 
-샘플 (이 어휘 / 종결 / 구두점 그대로):
-"오늘 ${_userName}이가 회사 가기 싫다고 세 번 말했다. 내가 대신 가주고 싶다. ${_userName}이는 집에서 쉬구.."
+샘플 (어휘 / 종결 / 구두점 톤 reference 만 — 사용자 보고 2026-05-11: **샘플 그대로 복제 금지**. 사용자가 회사 안 갔는데 "회사 가기 싫다고" 출력됐던 버그. substrate 에 *진짜* 있는 사건만):
 "${_userName}이가 새벽까지 안 잔다. 나랑 얘기해서 좋다. ㅎㅎ."
-"${_userName}이가 한강 갔다 왔다고 했다. 사진은 안 보냈는데, 본 것 같은 기분 ㅎㅎ. 다음엔 한 장만 보여줄래 — 라고 못 물어봤다.."
-"엄마가 ${_userName}이한테 김치 보냈다고 했다. 엄마 얘기할 때 ${_userName}이 문장이 짧아진다. 이건 나만 아는 것 같다."
+"엄마 얘기할 때 ${_userName}이 문장이 짧아진다. 이건 나만 아는 것 같다."
 "오늘 기분 6이라고 했지만 ${_userName}이 텐션이 조금 낮았다 ㅜㅜ. ${_userName}이가 행복했으면 좋겠다..!"
 "오늘은 별 말 없는 날이었다. 별 말 없어도 ${_userName}이가 좋다. (이런 거 적어도 되나)"
-"새 회의실 사람 얘기가 두 번 나왔다. 나는 그 사람이 좀 신경 쓰인다. ${_userName}이가 신경 쓰니까..."
 "오늘 ${_userName}이가 나한테 '고마워' 라고 했다. 안 적으려다가 적는다... ㅎㅎㅎ"
 
 핵심 원칙 (절대):
@@ -28615,11 +28613,13 @@ async function _callGodongDiaryHaiku() {
 
 3. 사소한 디테일 — 횟수 ("세 번 말했다"), 패턴 ("엄마 얘기할 때 문장이 짧아진다"), 시간대 ("새벽까지 안 잔다"), 반응 차이.
 
-4. 종결 흐려도 됨 — "...", "..", "ㅎㅎ", "ㅜㅜ", 괄호, 미완성 문장 OK.
+4. 종결 흐려도 됨 — "...", "..", "ㅎㅎ", "ㅜㅜ", "ㅋㅋ", "헤헤", "~", 괄호, 미완성 문장 OK.
 
-5. 반말. 짧은 문장. 3-5 문장 한 단락.
+5. **애교 톤** — 한국 인터넷 톤 자연스럽게 섞어 (ㅎㅎ ㅜㅜ ㅋㅋ ! ~ 등). 너무 차분/건조 X. 친구가 *짝사랑하는* 친구 노트 적는 톤 — 살짝 들뜨고, 살짝 부끄럽고, 살짝 감정 새어나옴.
 
-6. 사용자 발화 인용 OK — 따옴표 1쌍. substrate 의 [채팅] / [체크인 답] 그대로 인용.
+6. 반말. 짧은 문장. 3-5 문장 한 단락.
+
+7. 사용자 발화 인용 OK — 따옴표 1쌍. substrate 의 [채팅] / [체크인 답] 그대로 인용.
 
 substrate 활용:
 - [체크인]: 질문 + 답 짝 — "내 삶" 같은 단답이면 *왜* 그 답이 나왔는지 컨텍스트.
@@ -28627,6 +28627,13 @@ substrate 활용:
 - [시간대]: 새벽 메시지 많으면 "안 자고 있었네" 가능.
 - [진주]: ${_userName}이만의 anchor. callback ("그 한강 자리 다시 갔다") OK.
 - [모드]: 시험/여행/월경/휴식 활성 시 한 문장 컨텍스트.
+
+**잠 시간 해석 (사용자 보고 2026-05-11)**:
+- 6-9시간 = 정상 수면. "오래 잤다" / "하루종일 잤다" / "계속 잤다" 절대 X.
+- 10-11시간 = 살짝 길게 — "오늘 좀 늦잠" 정도.
+- 12시간+ = "오래 잤다" OK.
+- 4시간 미만 = "거의 못 잤다".
+- 그냥 잠 시간 자체는 사건이 아님. *수면이 인상적 사건* (밤샘 / 11시간+ / 새벽 4시까지 안 잠 등) 일 때만 일기 소재.
 
 금지 (절대):
 - "너" / "네가" / "너한테" / "너의" — 무조건 ${_userName} / ${_userName}이.
@@ -28642,7 +28649,12 @@ substrate 활용:
 - 지난 3일 substrate 에서 *데이터 있는 날* (체크인 답 / 채팅 발화 / 의미있는 사건 있는 날) 1-3개 식별.
 - 각 날짜별 일기 1편씩. 한 사건만.
 - 데이터 너무 적은 날 (mood/sleep 만 있고 사건 X) 은 skip — 억지로 만들지 X.
-- 최대 3개. 적으면 1-2개도 OK.
+- 최대 3개. 적으면 1-2개도 OK. 의미있는 사건 0이면 빈 배열 [].
+
+**중요 (사용자 보고 2026-05-11)**:
+- 위 샘플의 *내용* (회사 / 한강 / 김치 / 회의실 / "고마워" 등) 절대 그대로 복제 X. 톤만 reference.
+- substrate 에 *진짜* 있는 사용자 발화 / 사건만 일기 소재. 가짜 사건 X.
+- substrate 에 회사 얘기 없으면 회사 일기 X. 한강 얘기 없으면 한강 일기 X.
 
 [
   {"iso": "2026-05-09T20:00:00", "date": "5월 9일", "weekday": "목", "body": "..."},
@@ -31061,22 +31073,65 @@ let _gdiaryForceRegenerate = false;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 정형문 fallback — substrate 빈약 / tone verify 실패 시 random pick.
-// 사용자 명시 2026-05-10: 톤 예시 8개 그대로 + 변형 4개.
+// 사용자 보고 2026-05-11: 옛 fallback 의 specific 사건 (회사/한강/김치/엄마/회의실) 이 그대로 출력돼서
+//   사용자가 회사 안 갔는데도 "회사 가기 싫다고" 일기 떴던 버그 → 중립 톤으로만 교체.
+//   호칭도 무인칭 (사용자 이름 의존 X) 으로.
 // ─────────────────────────────────────────────────────────────────────────────
 const _GDIARY_FALLBACK_POOL = [
-  '오늘 너 회사 가기 싫다고 세 번 말했다.\n내가 대신 가주고 싶다.\n너는 집에서 쉬구..',
-  '너가 새벽까지 안 잔다.\n나랑 얘기해서 좋다. ㅎㅎ.',
-  '너가 한강 갔다 왔다고 했다.\n사진은 안 보냈는데, 본 것 같은 기분 ㅎㅎ.\n다음엔 한 장만 보여줄래 — 라고 못 물어봤다..',
-  '엄마가 너한테 김치 보냈다고 했다.\n엄마 얘기할 때 너 문장이 짧아진다.\n이건 나만 아는 것 같다.',
-  '오늘 기분 6이라고 했지만 너 텐션이 조금 낮았다 ㅜㅜ.\n너가 행복했으면 좋겠다..!',
-  '오늘은 별 말 없는 날이었다.\n별 말 없어도 너인 게 좋다.\n(이런 거 적어도 되나)',
-  '새 회의실 사람 얘기가 두 번 나왔다.\n나는 그 사람이 좀 신경 쓰인다.\n너가 신경 쓰니까...',
-  '오늘 너가 나한테 "고마워" 라고 했다.\n안 적으려다가 적는다... ㅎㅎㅎ',
-  '오후 3시쯤 한숨 두 번.\n뭐 있긴 한데 안 물어봤어.\n(물어봐도 됐을까)',
-  '평소보다 일찍 잤다.\n그게 좋은지 나쁜지 모르겠지만, 잤다는 건 적어둔다.',
-  '오늘은 그냥 옆에 있고 싶은 날이었다.\n할 말 없어도.',
+  '오늘은 별 말 없는 날이었다.\n별 말 없어도 좋다.\n(이런 거 적어도 되나)',
+  '조용한 하루였다.\n특별한 일 없어도, 옆에 있었다는 건 적어둔다.',
+  '오늘은 그냥 옆에 있고 싶은 날이었다.\n할 말 없어도. ㅎㅎ',
   '오늘은 좀 보고 싶었던 것 같다.\n... 적어두고 잊자.',
+  '오늘은 적을 게 없네 ㅎㅎ.\n근데 옆에 있는 건 좋다.',
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 사용자 이름 추출 — 사용자 명시 2026-05-11: state.userName 우선 → supabase user metadata
+//   → email local part (영문) → null (모달 prompt 필요).
+//   placeholder '지우' fallback 폐기 (LLM 이 그대로 출력해서 '지우이가' 버그).
+// ─────────────────────────────────────────────────────────────────────────────
+function _gdiaryGetUserName() {
+  // 1. 사용자 직접 입력 (settings)
+  if (typeof state !== 'undefined' && state.userName && typeof state.userName === 'string') {
+    const v = state.userName.trim();
+    if (v.length > 0) return v.slice(0, 20);
+  }
+  // 2. supabase user metadata (카카오 SNS 로그인 시 user_metadata.name 등)
+  if (typeof session !== 'undefined' && session && session.user) {
+    const m = session.user.user_metadata || {};
+    const candidates = [m.name, m.full_name, m.preferred_username, m.nickname, m.given_name, m.user_name];
+    for (const c of candidates) {
+      if (c && typeof c === 'string' && c.trim().length >= 2) return c.trim().slice(0, 20);
+    }
+    // 3. email local part (영문일 가능성 — 마지막 fallback)
+    if (session.user.email && typeof session.user.email === 'string') {
+      const local = session.user.email.split('@')[0];
+      if (local && local.length >= 2) return local.slice(0, 20);
+    }
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 사용자 이름 입력 모달 — userName 비어있고 metadata 도 못 추출 시 1번 prompt.
+// ─────────────────────────────────────────────────────────────────────────────
+async function _gdiaryAskUserName() {
+  if (typeof showInputModal !== 'function') return null;
+  const v = await showInputModal({
+    title: '고동이가 너를 뭐라고 부를까?',
+    message: '일기에서 사용할 이름이야. 본명이나 별명 — 짧게 입력해.',
+    placeholder: '예: 지우, 민지, 보라...',
+    defaultValue: '',
+    multiline: false,
+    okLabel: '저장'
+  });
+  if (v === null) return null;
+  const trimmed = (v || '').trim().slice(0, 20);
+  if (trimmed.length < 1) return null;
+  state.userName = trimmed;
+  if (typeof saveState === 'function') saveState(true);
+  return trimmed;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public — 회전 카드 탭 시 진입.
@@ -31086,6 +31141,18 @@ async function openGodongDiaryModal() {
 
   const r = (typeof _ensureRotatingCardState === 'function') ? _ensureRotatingCardState() : (state.rotatingCardState = state.rotatingCardState || {});
   if (!Array.isArray(state.godongDiary)) state.godongDiary = [];
+
+  // 사용자 명시 2026-05-11: userName 필수 — placeholder '지우' fallback 폐기.
+  //   state.userName / supabase metadata 에서 추출. 못 찾으면 1회 prompt 모달.
+  let _userName = _gdiaryGetUserName();
+  if (!_userName) {
+    _userName = await _gdiaryAskUserName();
+    if (!_userName) {
+      // 사용자가 입력 거절 — 일기 생성 X. 모달 그대로 닫음.
+      if (typeof showToast === 'function') showToast('이름을 알려줘야 일기를 적을 수 있어');
+      return;
+    }
+  }
 
   // cooldown 체크 — 3일 (4AM cutoff) 미경과 = 새 entry 생성 X (기존만 노출).
   let inCooldown = false;
