@@ -2,6 +2,9 @@
 function showE2EEPasswordSetupModal(opts) {
   opts = opts || {};
   const allowCancel = opts.allowCancel !== false;  // default true (Settings 자발적). false = 강제 (가입/legacy)
+  // 사용자 명시 2026-05-11 ultrathink: 테스트 계정 (soragodongapp@gmail.com) 한정 8자. placeholder 도 _e2eeValidatePassword 와 통일된 minLen 표시.
+  const _isTestAcct = (typeof session !== 'undefined') && session && session.user && session.user.email === 'soragodongapp@gmail.com';
+  const _minLen = _isTestAcct ? 8 : 12;
   if (document.getElementById('e2eeSetupOverlay')) return;
   const overlay = document.createElement('div');
   overlay.className = 'input-modal-overlay show';
@@ -103,7 +106,7 @@ function showE2EEPasswordSetupModal(opts) {
       </div>
       ${consentSection}
       <div style="margin-bottom:10px; position:relative;">
-        <input type="password" id="e2eePasswordInput" placeholder="비밀번호 (12자 이상)" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-family:inherit; padding-right:40px;">
+        <input type="password" id="e2eePasswordInput" placeholder="비밀번호 (${_minLen}자 이상)" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-family:inherit; padding-right:40px;">
         <button type="button" onclick="_togglePwView('e2eePasswordInput', this)" title="보기 / 숨기기" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:transparent; border:none; cursor:pointer; padding:6px 8px; color:var(--text-soft); font-size:16px;">👁</button>
       </div>
       <div style="margin-bottom:10px; position:relative;">

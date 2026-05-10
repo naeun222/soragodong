@@ -13,6 +13,9 @@ async function maybeShowE2EERecoveryModal() {
     return;
   }
   if (document.getElementById('e2eeRecoveryOverlay')) return;
+  // 사용자 명시 2026-05-11 ultrathink: 테스트 계정 한정 8자 — placeholder 도 _e2eeValidatePassword / submitE2EERecovery 와 통일.
+  const _isTestAcct = (typeof session !== 'undefined') && session && session.user && session.user.email === 'soragodongapp@gmail.com';
+  const _minLen = _isTestAcct ? 8 : 12;
   const overlay = document.createElement('div');
   overlay.className = 'input-modal-overlay show';
   overlay.style.zIndex = '10001';
@@ -25,7 +28,7 @@ async function maybeShowE2EERecoveryModal() {
         <span style="color:var(--text-soft);">암호화된 데이터를 복호화해서 가져옵니다.</span>
       </div>
       <div style="position:relative;">
-        <input type="password" id="e2eePassphraseInput" placeholder="비밀번호 (12자 이상)" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-size:14px; padding:10px 40px 10px 10px;">
+        <input type="password" id="e2eePassphraseInput" placeholder="비밀번호 (${_minLen}자 이상)" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-size:14px; padding:10px 40px 10px 10px;">
         <button type="button" onclick="_togglePwView('e2eePassphraseInput', this)" title="보기 / 숨기기" aria-label="비밀번호 보기 토글" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:transparent; border:none; cursor:pointer; padding:6px 8px; color:var(--text-soft); font-size:16px;">👁</button>
       </div>
       <div id="e2eeRecoveryStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px;"></div>
