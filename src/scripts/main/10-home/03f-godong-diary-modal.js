@@ -136,6 +136,22 @@ async function openGodongDiaryModal() {
     return `${adj.getFullYear()}-${String(adj.getMonth()+1).padStart(2,'0')}-${String(adj.getDate()).padStart(2,'0')}`;
   };
 
+  // 사용자 보고 2026-05-11: 오늘/미래 dayK entry 가 archive 에 stuck — 4시 cutoff 기준 '오늘' 일기는 절대 X.
+  //   매 진입 시 청소 (cooldown 무관).
+  const _todayK = (typeof getDayKey === 'function') ? getDayKey() : null;
+  if (_todayK) {
+    const _beforeLen = (state.godongDiary || []).length;
+    state.godongDiary = (state.godongDiary || []).filter(e => {
+      const eDayK = _entryDayK(e);
+      if (!eDayK) return true;
+      // 오늘 또는 미래 dayK = 절대 X (4시 cutoff 기준 '내일').
+      return eDayK < _todayK;
+    });
+    if (state.godongDiary.length !== _beforeLen) {
+      console.log('[godong-diary] 오늘/미래 dayK entry splice:', _beforeLen - state.godongDiary.length);
+    }
+  }
+
   // 사용자 명시 2026-05-11: cooldown 룰 단순화 — lastGodongDiaryAt 기반 3일 cooldown 폐기.
   //   회전 카드 클릭 시 3/2/1일 전 일기가 *모두 있으면* 그대로 띄움. 하나라도 없으면 새로 생성.
   //   '다시 적어줘' 버튼은 force regenerate (있어도 재호출).
@@ -163,6 +179,8 @@ async function openGodongDiaryModal() {
       const arr = await _callGodongDiaryHaiku();
       if (Array.isArray(arr) && arr.length > 0) {
         newEntries = arr.map(p => _gdiaryEntryFromHaiku(p)).filter(Boolean);
+        // 사용자 명시 2026-05-11: _targetDayKs (3일전/2일전/어제) 매칭 entry 만 push. 오늘/미래 entry reject.
+        newEntries = newEntries.filter(e => _targetSet.has(_entryDayK(e)));
         if (newEntries.length > 0) _generateOk = true;
       }
     } catch (err) {
