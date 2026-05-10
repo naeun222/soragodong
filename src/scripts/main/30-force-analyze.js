@@ -1112,14 +1112,17 @@ async function maybeRunDailyChapterExtract() {
     }
   }
 
-  // 3. 잠든 상태 (5h+ 갭) 가드
+  // 3. 잠든 상태 가드 — 사용자 명시 2026-05-11: 4AM cutoff 일관. 같은 날 = 분석 cycle skip.
+  //   옛 5h gap 단독 룰 = 22:00 → 03:30 (같은 날, 4시 전) 도 archive 됐던 버그.
   const NEW_CHAPTER_GAP_MS = 5 * 60 * 60 * 1000;
   const lastMsg = (state.chatMessages && state.chatMessages.length > 0)
     ? state.chatMessages[state.chatMessages.length - 1] : null;
-  const _gap = (lastMsg && lastMsg.timestamp)
-    ? (Date.now() - new Date(lastMsg.timestamp).getTime())
-    : Infinity;
-  if (_gap < NEW_CHAPTER_GAP_MS) return;
+  const _lastMs = (lastMsg && lastMsg.timestamp) ? new Date(lastMsg.timestamp).getTime() : null;
+  const _gap = _lastMs == null ? Infinity : (Date.now() - _lastMs);
+  const _msgDayK = (_lastMs && typeof getDayKey === 'function') ? getDayKey(_lastMs) : null;
+  const _todayK = (typeof todayKey === 'function') ? todayKey() : null;
+  const _isDifferentDay = !!(_msgDayK && _todayK && _msgDayK !== _todayK);
+  if (!(_isDifferentDay && _gap >= NEW_CHAPTER_GAP_MS)) return;
 
   // 4. chatMessages 의 현재 챕터도 archive 이송
   if (state.chatMessages && state.chatMessages.length >= 3) {

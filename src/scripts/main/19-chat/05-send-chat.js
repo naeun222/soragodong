@@ -35,17 +35,21 @@ async function sendChat() {
     _isDeeperFromText = true;
   }
 
-  // V4 사용자 명시 2026-05-01 ultrathink: 5h+ 갭만 (cross-day 조건 폐기 — 5h 자체가 "잠 자고 일어남" 의미).
-  // 5h+ 갭 detect 시 직전 챕터 즉시 _archiveCurrentChapter 로 이송 (chapter 분리 = archive 이송 단일 흐름).
+  // V4 사용자 명시 2026-05-01 ultrathink: 5h+ 갭 detect.
+  // 사용자 명시 2026-05-11: 4AM cutoff 일관 — 같은 날 (4시 cutoff 기준) 안에서는 chapter archive X.
+  //   옛 5h gap 단독 룰 = 22:00 → 03:30 (같은 날, 4시 전) 도 archive 됐던 버그.
+  //   다른 날 + 5h gap 둘 다 만족 시 archive 이송.
   const NEW_CHAPTER_GAP_MS = 5 * 60 * 60 * 1000;
   const lastMsg = state.chatMessages[state.chatMessages.length - 1];
   const _nowMs = Date.now();
   const _lastMs = lastMsg && lastMsg.timestamp ? new Date(lastMsg.timestamp).getTime() : null;
   const _gap = _lastMs == null ? Infinity : (_nowMs - _lastMs);
-  let isNewChapter = _gap >= NEW_CHAPTER_GAP_MS;
+  const _msgDayK = (_lastMs && typeof getDayKey === 'function') ? getDayKey(_lastMs) : null;
+  const _todayK = (typeof todayKey === 'function') ? todayKey() : null;
+  const _isDifferentDay = !!(_msgDayK && _todayK && _msgDayK !== _todayK);
+  let isNewChapter = _isDifferentDay && _gap >= NEW_CHAPTER_GAP_MS;
 
   // V4 (사용자 보고 2026-05-04 V199): resumeArchiveChat 직후 첫 sendChat 은 갭 detect 강제 skip.
-  // 옛 fix (resume 시 마지막 timestamp=now) 외 추가 안전장치 — 첫 메시지 보낼 때 새 챕터 분리 방지.
   if (state._chatResumedAt && (_nowMs - state._chatResumedAt) < NEW_CHAPTER_GAP_MS) {
     isNewChapter = false;
   }

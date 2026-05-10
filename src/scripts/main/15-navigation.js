@@ -122,7 +122,12 @@ function showScreen(name) {
       const _lastMs = _lastMsg && _lastMsg.timestamp ? new Date(_lastMsg.timestamp).getTime() : null;
       const _nowMs = Date.now();
       const _gap = _lastMs == null ? Infinity : (_nowMs - _lastMs);
-      let _isNewChapter = _gap >= _NEW_CHAPTER_GAP_MS;
+      // 사용자 명시 2026-05-11: 4AM cutoff 일관 — 같은 날 (4시 cutoff 기준) 안에서는 chapter archive X.
+      //   옛 5h gap 단독 룰 = 22:00 → 03:30 (같은 날, 4시 전) 도 archive 됐던 버그.
+      const _msgDayK = (_lastMs && typeof getDayKey === 'function') ? getDayKey(_lastMs) : null;
+      const _todayK = (typeof todayKey === 'function') ? todayKey() : null;
+      const _isDifferentDay = !!(_msgDayK && _todayK && _msgDayK !== _todayK);
+      let _isNewChapter = _isDifferentDay && _gap >= _NEW_CHAPTER_GAP_MS;
       if (state._chatResumedAt && (_nowMs - state._chatResumedAt) < _NEW_CHAPTER_GAP_MS) {
         _isNewChapter = false;
       }
