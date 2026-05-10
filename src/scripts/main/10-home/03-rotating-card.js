@@ -1005,27 +1005,41 @@ ${modesText}
       console.warn('[godong-diary] soft tone violations (통과):', softViolations.join(','));
     }
 
-    // 사용자 보고 2026-05-11: 본문 길이 cap. 170 = 사건 1줄 + 느낌 2-3줄 (한국어 ~150자) 의 sweet spot.
-    //   너무 길면 사건 여러 개 들어감, 너무 짧으면 정상 출력 reject.
-    const _maxLen = 170;
+    // 사용자 보고 2026-05-11: 옛 cap 검사가 LLM 정상 출력 reject → fallback 채움 → 1-2개만 valid 버그.
+    //   fix: cap 초과 시 reject 대신 truncate (잘라서 keep). 최저 5자 만 검사.
+    const _maxLen = 220;
+    const _truncateBody = (body) => {
+      if (typeof body !== 'string') return null;
+      if (body.length < 5) return null;
+      if (body.length <= _maxLen) return body;
+      // 마침표 또는 공백에서 자르기 (자연 끝맺음)
+      const _cut = body.slice(0, _maxLen);
+      const _lastSentence = Math.max(_cut.lastIndexOf('. '), _cut.lastIndexOf('.\n'), _cut.lastIndexOf('? '), _cut.lastIndexOf('! '));
+      if (_lastSentence > _maxLen / 2) return _cut.slice(0, _lastSentence + 1);
+      return _cut.replace(/[,\s]+$/, '') + '...';
+    };
     // 정확히 3개 보장 — dayK 매칭 우선, 없으면 index 기반 보정, 최후 fallback.
     const finalEntries = _targetDayKs.map((dayK, idx) => {
       const match = parsed.find(e => {
-        if (!e || typeof e.body !== 'string' || e.body.length < 5 || e.body.length > _maxLen) return false;
+        if (!e || typeof e.body !== 'string' || e.body.length < 5) return false;
         return _isoToDayK(e.iso) === dayK;
       });
       if (match) {
-        return match;
+        const _truncated = _truncateBody(match.body);
+        if (_truncated) return { ...match, body: _truncated };
       }
       const byIdx = parsed[idx];
-      if (byIdx && typeof byIdx.body === 'string' && byIdx.body.length >= 5 && byIdx.body.length <= _maxLen) {
-        const d = new Date(dayK + 'T20:00:00');
-        return {
-          iso: d.toISOString(),
-          date: byIdx.date || `${d.getMonth()+1}월 ${d.getDate()}일`,
-          weekday: byIdx.weekday || ['일','월','화','수','목','금','토'][d.getDay()],
-          body: byIdx.body,
-        };
+      if (byIdx && typeof byIdx.body === 'string' && byIdx.body.length >= 5) {
+        const _truncated = _truncateBody(byIdx.body);
+        if (_truncated) {
+          const d = new Date(dayK + 'T20:00:00');
+          return {
+            iso: d.toISOString(),
+            date: byIdx.date || `${d.getMonth()+1}월 ${d.getDate()}일`,
+            weekday: byIdx.weekday || ['일','월','화','수','목','금','토'][d.getDay()],
+            body: _truncated,
+          };
+        }
       }
       return _fallbackEntry(dayK);
     });
