@@ -24,7 +24,8 @@
 // v19 (2026-05-10 진단 결과 확정): 큰 챕터 응답 truncation fix (max_tokens 1500→3000 + partial JSON repair) / quiz source 통째 제거.
 // v20 (2026-05-10 weekly weekKey + 128 msgs): weekly weekKey cutoffEnd 기준 (W19 mismatch fix) / max_tokens 3000→4000.
 // v21 (2026-05-10 batch 5 mass): weekly 가드 + yesterdayCard chatArchive / review-archive weekly hide / model 시뮬 filter / raw 100턴 / 시뮬→대화 + isSimulation 격리.
-const CACHE_NAME = 'soragodong-v4-cache-v21';
+// v22 (2026-05-10 batch 6 큐 7+8 main): weekly 카드 inline 펼침 + 4 섹션 (MOMENTUM / 장면 / 흐름 / 부드러운 알림). 옛 schema 매핑.
+const CACHE_NAME = 'soragodong-v4-cache-v22';
 const PRECACHE_URLS = [
   './',
   './index.html',

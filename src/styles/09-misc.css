@@ -11130,6 +11130,61 @@
   .rc-zodiac-skip:hover { opacity: 1; color: var(--text-soft); }
 
   /* 사용자 명시 2026-05-09: archive-reviews 카테고리 chip — 전체/미니/주/월/계절/연간 */
+  /* 사용자 명시 2026-05-10 (큐 8): weekly inline 펼침 — 카드 안 4 섹션 (MOMENTUM / 장면 / 흐름 / 부드러운 알림). */
+  .weekly-inline-card.is-expanded {
+    background: rgba(212,167,106,0.05);
+    border-color: rgba(212,167,106,0.30);
+  }
+  .weekly-inline-detail { margin-top: 10px; padding: 0; }
+  .weekly-inline-detail .wid-inner {
+    padding: 14px 12px;
+    background: rgba(255,255,255,0.025);
+    border-radius: 10px;
+    border: 1px solid rgba(212,167,106,0.18);
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .weekly-inline-detail .wid-section { display: flex; flex-direction: column; gap: 6px; }
+  .weekly-inline-detail .wid-label {
+    font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600;
+  }
+  .weekly-inline-detail .wid-momentum {
+    font-family: 'Gowun Batang', serif; font-size: 26px;
+    color: #7ec8e3; letter-spacing: 0.04em;
+  }
+  .weekly-inline-detail .wid-scenes { display: flex; flex-direction: column; gap: 6px; }
+  .weekly-inline-detail .wid-scene {
+    font-size: 13px; line-height: 1.6; color: var(--text);
+    padding: 6px 10px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 6px;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .weekly-inline-detail .wid-scene-num {
+    color: var(--accent); font-weight: 600; font-size: 11px;
+    flex-shrink: 0; min-width: 14px;
+  }
+  .weekly-inline-detail .wid-text {
+    font-size: 13px; line-height: 1.7; color: var(--text);
+  }
+  .weekly-inline-detail .wid-soft {
+    font-size: 12px; color: var(--text-soft); font-style: italic;
+    padding: 8px 10px;
+    background: rgba(126,200,227,0.05);
+    border-left: 2px solid rgba(126,200,227,0.30);
+    border-radius: 0 6px 6px 0;
+  }
+  .weekly-inline-detail .wid-empty {
+    font-size: 12px; color: var(--text-dim); text-align: center;
+    padding: 20px 10px;
+  }
+  .weekly-inline-detail .wid-actions { display: flex; justify-content: flex-end; }
+  .weekly-inline-detail .wid-btn-close {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-soft); font-size: 11px;
+    padding: 5px 14px; border-radius: 12px; cursor: pointer;
+  }
+
   .archive-review-chips {
     display: flex; flex-wrap: wrap; gap: 6px;
     margin-bottom: 14px;

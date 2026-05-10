@@ -217,22 +217,83 @@ function renderArchiveReviews() {
     }
     const reviewKey = r.weekKey || r.monthKey || r.quarterKey || '';
     const completedAtJs = r.completedAt ? `'${r.completedAt}'` : 'null';
+    // 사용자 명시 2026-05-10 (큐 8): weekly 만 inline 펼침. 다른 type 은 옛 화면 전환.
     const onClickJs = r.type === 'mini'
       ? `openSavedMiniReview('${r.id}')`
       : r.type === 'annual'
         ? `openAnnualReview(${r.year || 'null'})`
-        : `openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})`;
+        : r.type === 'weekly'
+          ? `_toggleWeeklyInlineExpand('${r.id}')`
+          : `openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})`;
+    const _isWeekly = r.type === 'weekly';
+    const _ctaText = _isWeekly ? '▾ 펼쳐보기' : '▶ 같이 보자';
 
     return `
-      <div class="timeline-day" onclick="${onClickJs}" style="cursor:pointer;">
+      <div class="timeline-day${_isWeekly ? ' weekly-inline-card' : ''}" data-review-id="${r.id}" onclick="${onClickJs}" style="cursor:pointer;">
         <div class="timeline-day-date">${typeLabel}${periodLabel ? ` · ${periodLabel}` : ''}${autoTag}</div>
         <div class="timeline-day-summary" style="font-family: 'Gowun Batang', serif; font-size: 14px;">
           ${summaryLine}
         </div>
-        <div class="timeline-day-meta"><span>${dateStr} · ▶ 같이 보자</span></div>
+        <div class="timeline-day-meta"><span>${dateStr} · ${_ctaText}</span></div>
+        ${_isWeekly ? `<div class="weekly-inline-detail" id="wid-${r.id}" style="display:none;"></div>` : ''}
       </div>
     `;
   }).join('');
+}
+
+// 사용자 명시 2026-05-10 (큐 8): weekly 카드 inline 펼침 — 화면 전환 X, 카드 안 4 섹션 toggle.
+//   4 섹션: MOMENTUM / 장면 3가지 / 흐름 / 부드러운 알림. 옛 schema (one_word_weekly / scenes / pattern.headline / risk_signals) 매핑.
+function _toggleWeeklyInlineExpand(reviewId) {
+  const detail = document.getElementById('wid-' + reviewId);
+  if (!detail) return;
+  const r = (state.weeklyReviews || []).find(x => x && x.id === reviewId);
+  if (!r) return;
+  if (detail.style.display === 'none' || !detail.innerHTML) {
+    // expand
+    const escape = (s) => (typeof escapeHtml === 'function' ? escapeHtml(String(s || '')) : String(s || ''));
+    const _momentum = r.one_word_weekly || r.one_word || '';
+    const _scenesArr = Array.isArray(r.scenes) ? r.scenes.slice(0, 3) : [];
+    const _flow = r.flow || (r.pattern && r.pattern.headline) || r.summary || '';
+    const _soft = r.soft_notice || (Array.isArray(r.risk_signals) && r.risk_signals[0]) || '';
+    detail.innerHTML = `
+      <div class="wid-inner" onclick="event.stopPropagation();">
+        ${_momentum ? `
+          <div class="wid-section">
+            <div class="wid-label">이번 주 MOMENTUM</div>
+            <div class="wid-momentum">${escape(_momentum)}</div>
+          </div>` : ''}
+        ${_scenesArr.length > 0 ? `
+          <div class="wid-section">
+            <div class="wid-label">이번 주 장면 ${_scenesArr.length}가지</div>
+            <div class="wid-scenes">
+              ${_scenesArr.map((s, i) => `<div class="wid-scene"><span class="wid-scene-num">${i + 1}</span>${escape(typeof s === 'string' ? s : (s.text || s.summary || ''))}</div>`).join('')}
+            </div>
+          </div>` : ''}
+        ${_flow ? `
+          <div class="wid-section">
+            <div class="wid-label">이번 주 흐름</div>
+            <div class="wid-text">${escape(_flow)}</div>
+          </div>` : ''}
+        ${_soft ? `
+          <div class="wid-section">
+            <div class="wid-label">부드러운 알림</div>
+            <div class="wid-text wid-soft">${escape(typeof _soft === 'string' ? _soft : (_soft.text || _soft.message || ''))}</div>
+          </div>` : ''}
+        ${(!_momentum && !_scenesArr.length && !_flow && !_soft) ? `<div class="wid-empty">아직 정리된 내용이 없어 — 다음 주에 다시.</div>` : ''}
+        <div class="wid-actions">
+          <button class="wid-btn-close" type="button" onclick="event.stopPropagation(); _toggleWeeklyInlineExpand('${reviewId}')">접기</button>
+        </div>
+      </div>
+    `;
+    detail.style.display = 'block';
+    const card = detail.closest('.weekly-inline-card');
+    if (card) card.classList.add('is-expanded');
+  } else {
+    detail.style.display = 'none';
+    detail.innerHTML = '';
+    const card = detail.closest('.weekly-inline-card');
+    if (card) card.classList.remove('is-expanded');
+  }
 }
 
 // 사용자 명시 2026-05-09: 저장된 미니 리뷰 보기 모달 (Haiku 재호출 X — content 만 표시)
