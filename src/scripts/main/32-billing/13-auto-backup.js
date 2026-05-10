@@ -59,6 +59,30 @@ async function runAutoBackupIfNeeded() {
     // 새 snapshot 추가 (state에서 testerMode flag strip)
     const sanitized = JSON.parse(JSON.stringify(state));
     if (sanitized.preferences) delete sanitized.preferences.testerMode;
+    // 사용자 보고 2026-05-10 (audit): backup row 너무 커서 Supabase statement timeout (500 'canceling statement due to statement timeout').
+    //   chatArchive 의 messages = 가장 큼 (108/128 msgs archive 등). 옛 chat 복원은 main row (saveToCloudNow) 의 chatArchive 가 처리.
+    //   autoBackup snapshot 은 핵심 (profile / entries / traits / values / patterns / cf / projects / pearls / decisions / topicCards / reviews) 만 보존.
+    if (Array.isArray(sanitized.chatArchive)) {
+      sanitized.chatArchive = sanitized.chatArchive.map(a => {
+        if (!a) return a;
+        const { messages, ...rest } = a;
+        return { ...rest, _msgsExcludedFromBackup: true, messageCount: messages?.length || a.messageCount || 0 };
+      });
+    }
+    // chatMessages 도 제외 (현재 활성 챕터, autoBackup 시점에 보통 비어있지만 안전).
+    sanitized.chatMessages = [];
+    // 큰 미디어 dataURL 도 제외 (진주 video / photo 큰 진주 등) — main row 의 sensitive body 가 처리.
+    if (Array.isArray(sanitized.pearls)) {
+      sanitized.pearls = sanitized.pearls.map(p => {
+        if (!p) return p;
+        const _trim = { ...p };
+        // video / photo dataURL 가 1KB+ 면 metadata 만 보존
+        if (typeof _trim.video === 'string' && _trim.video.length > 1024) { _trim._videoExcluded = true; delete _trim.video; }
+        if (typeof _trim.videoThumbnail === 'string' && _trim.videoThumbnail.length > 4096) { _trim._videoThumbExcluded = true; delete _trim.videoThumbnail; }
+        if (typeof _trim.photo === 'string' && _trim.photo.length > 4096) { _trim._photoExcluded = true; delete _trim.photo; }
+        return _trim;
+      });
+    }
     snapshots.push({
       ts: new Date(now).toISOString(),
       reason,

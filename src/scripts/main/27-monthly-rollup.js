@@ -153,7 +153,40 @@ function _collectQuarterlyData(quarterKey, stats) {
     insightsIn = (state.insights || []).filter(i => !i._deleted && inMs(i.discoveredAt || i.createdAt));
     chaptersIn = (state.chatArchive || []).filter(c => !c._deleted && inMs(c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null)));
   }
-  return { quarterKey, stats, recentEmbodied, prevSeeds, entriesIn, chatIn, topicCardsIn, pearlsIn, archiveIn, insightsIn, chaptersIn };
+  // 사용자 명시 2026-05-10 (큐 6 batch 8): 분기 review 에 추적 항목 (state.projects) inject — fact 기반.
+  let trackingFacts = [];
+  if (range) {
+    const startMs = range.start.getTime();
+    const endMs = range.end.getTime();
+    const _projects = (state.projects || []).filter(p => p && !p._deleted);
+    const _moodMap = new Map();
+    (state.entries || []).forEach(e => { if (e.date && typeof e.mood === 'number') _moodMap.set(e.date, e.mood); });
+    const _avg = (arr) => arr.length === 0 ? null : arr.reduce((a, b) => a + b, 0) / arr.length;
+    const _entryDatesIn = entriesIn.map(e => e.date).filter(Boolean);
+    _projects.forEach(p => {
+      const _checkins = Array.isArray(p.checkins) ? p.checkins : [];
+      const _checked = new Set(_checkins.filter(c => c && c.date && new Date(c.date + 'T12:00:00').getTime() >= startMs && new Date(c.date + 'T12:00:00').getTime() <= endMs).map(c => c.date));
+      const _meas = Array.isArray(p.measurements) ? p.measurements.filter(m => m && m.at && new Date(m.at).getTime() >= startMs && new Date(m.at).getTime() <= endMs) : [];
+      if (_checked.size === 0 && _meas.length === 0) return;
+      const _moodOn = _entryDatesIn.filter(d => _checked.has(d)).map(d => _moodMap.get(d)).filter(v => typeof v === 'number');
+      const _moodOff = _entryDatesIn.filter(d => !_checked.has(d)).map(d => _moodMap.get(d)).filter(v => typeof v === 'number');
+      const _onAvg = _avg(_moodOn);
+      const _offAvg = _avg(_moodOff);
+      const _corr = (_onAvg !== null && _offAvg !== null) ? (_onAvg - _offAvg) : null;
+      const _prog = (_meas.length > 0 && p.target != null && p.baseline != null)
+        ? `${_meas[_meas.length - 1].value} (목표 ${p.target}, 시작 ${p.baseline})`
+        : null;
+      trackingFacts.push({
+        title: p.title || '추적 항목',
+        type: _meas.length > 0 ? 'measurement' : 'check',
+        checkedDays: _checked.size,
+        totalDaysInRange: _entryDatesIn.length,
+        moodCorrelation: _corr,
+        progress: _prog,
+      });
+    });
+  }
+  return { quarterKey, stats, recentEmbodied, prevSeeds, entriesIn, chatIn, topicCardsIn, pearlsIn, archiveIn, insightsIn, chaptersIn, trackingFacts };
 }
 
 function _buildQuarterlyReviewPrompt(quarterKey, stats, data) {
@@ -276,6 +309,20 @@ ${JSON.stringify(insightsIn.map(i => ({content: i.content, type: i.type})), null
 
 [지난 분기 씨앗] ${prevSeeds.length > 0 ? '(callback 추천)' : '(첫 분기 또는 씨앗 X)'}
 ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : ''}
+${(_data.trackingFacts && _data.trackingFacts.length > 0) ? `
+[이 분기 추적 항목] (사용자 명시 2026-05-10 — 행동 actual 데이터. 변화·강점·위험 신호 추출 시 활용.)
+${_data.trackingFacts.map(f => {
+  const _corr = (typeof f.moodCorrelation === 'number')
+    ? (f.moodCorrelation > 0.3 ? ` · 한 날 기분 한결 좋음 (+${f.moodCorrelation.toFixed(1)})` : f.moodCorrelation < -0.3 ? ` · 한 날 기분 살짝 무거움 (${f.moodCorrelation.toFixed(1)})` : '')
+    : '';
+  const _prog = f.progress ? ` · 진척: ${f.progress}` : '';
+  const _check = f.type === 'check' ? `${f.checkedDays}/${f.totalDaysInRange}일 체크${_corr}` : (f.type === 'measurement' ? '측정형' : '');
+  return `- "${f.title}" — ${_check}${_prog}`;
+}).join('\n')}
+
+[활용 가이드]
+- 추적 항목 = 사용자 행동 사실. transformation / pattern / strengths / risk_signals 추출 시 evidence.
+- 모델 자체 추측 X — 위 fact 그대로 인용.` : ''}
 
 위 데이터로 분기 리뷰 작성. JSON만 출력.`;
 
