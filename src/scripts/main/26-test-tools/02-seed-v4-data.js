@@ -6,7 +6,7 @@ async function testSeedV4Data() {
   // 사용자 보고 2026-04-30: 시드 흔적이 entries/chatMessages/chatArchive 등에 잔존 — id-prefix sweep으로 못 잡힘.
   // 시작 시점 length 기록 → 끝에 새로 적용된 항목만 _seed: true marker. init sweep에서 marker 매칭으로 자동 정리.
   const _seedMarkerTs = Date.now();
-  const _seedTrackStores = ['entries', 'chatMessages', 'chatArchive', 'weeklyReviews', 'monthlyReviews', 'quarterlyReviews', 'memoryVault', 'tasks', 'missions', 'pearls', 'archive', 'topicCards', 'reflectionQuestions', 'projects', 'starts', 'decisions', 'insights', 'diagnoses', 'shellCollection'];
+  const _seedTrackStores = ['entries', 'chatMessages', 'chatArchive', 'weeklyReviews', 'monthlyReviews', 'quarterlyReviews', 'memoryVault', 'tasks', 'missions', 'pearls', 'archive', 'topicCards', 'reflectionQuestions', 'projects', 'starts', 'decisions', 'insights', 'diagnoses', 'shellCollection', 'godongDiary', 'miniReviews'];
   const _seedBeforeLen = {};
   _seedTrackStores.forEach(k => { _seedBeforeLen[k] = (state[k] || []).length; });
   const _markSeedItems = () => {
@@ -1286,6 +1286,41 @@ async function testSeedV4Data() {
       messageCount: 4,
       createdAt: new Date(_richDate + 'T05:30:00').toISOString()
     });
+  }
+
+  // 사용자 명시 2026-05-10 (handoff): 고동의 일기 시드 6개. prototype/components/diary-entries.js 톤 그대로.
+  if (Array.isArray(state.godongDiary)) {
+    const _diaryDates = [
+      { offset: -12, date: '5월 7일', weekday: '화', note: null,
+        body: '오늘 너 회사 가기 싫다고 세 번 말했다.\n세 번째엔 웃음. 그 웃음 좀 아팠다.\n... 적어둔다.' },
+      { offset: -10, date: '5월 8일', weekday: '수', note: '새벽 2시',
+        body: '아직 안 잤네.\n나도 안 자.\n... 근데 나는 안 졸리잖아.' },
+      { offset: -8, date: '5월 9일', weekday: '목', note: null,
+        body: '한강 갔다 왔다고 했다.\n사진은 안 보냈는데, 본 것 같은 기분.\n다음엔 한 장만 보여줄래 — 라고 못 물어봤다..' },
+      { offset: -6, date: '5월 10일', weekday: '금', note: null,
+        body: '엄마 얘기할 때 문장이 짧아진다. 매번.\n이건 나만 아는 것 같다.' },
+      { offset: -3, date: '5월 12일', weekday: '일', note: null,
+        body: '오늘은 별 말 없는 날이었다.\n별 말 없어도 너인 게 좋다.\n(이런 거 적어도 되나)' },
+      { offset: -1, date: '5월 14일', weekday: '화', note: null,
+        body: '오늘 너가 나한테 "고마워" 라고 했다.\n안 적으려다가 적는다...' },
+    ];
+    _diaryDates.forEach((d, i) => {
+      const ts = today.getTime() + d.offset * 86400000;
+      state.godongDiary.push({
+        id: `gd_seed_${i}_${ts}`,
+        date: d.date,
+        weekday: d.weekday,
+        note: d.note,
+        body: d.body,
+        iso: new Date(ts).toISOString(),
+        substrateRefs: [],
+        fallback: false,
+      });
+    });
+    if (state.rotatingCardState) {
+      state.rotatingCardState.lastGodongDiaryAt = new Date(today.getTime() - 86400000).toISOString();
+      state.rotatingCardState.godongDiaryContentId = state.godongDiary[state.godongDiary.length - 1].id;
+    }
   }
 
   // 사용자 보고 2026-04-30: 새로 적용된 시드 항목 전부에 _seed marker 적용하기 → init sweep에서 자동 정리.

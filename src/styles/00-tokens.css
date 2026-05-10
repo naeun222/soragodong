@@ -16,4 +16,11 @@
     --danger: #e06c75;
     --success: #98c379;
     --gold: #ffd700;
+    /* 사용자 명시 2026-05-10: 고동의 일기 종이 톤 (다이어리 모달 전용) */
+    --paper-1: #f3eadb;
+    --paper-2: #ebe0cb;
+    --paper-text: #3d3528;
+    --paper-text-soft: rgba(110,80,40,0.65);
+    --paper-text-dim: rgba(110,80,40,0.5);
+    --paper-rule: rgba(110,80,40,0.28);
   }

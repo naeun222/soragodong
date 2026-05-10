@@ -1,0 +1,289 @@
+  /* 사용자 명시 2026-05-10: 고동의 일기 모달 — HANDOFF.md prototype/styles/app.css 변환.
+     기존 미니 리뷰 모달 (.rc-mini-review-*) 폐기. 새 .gdiary-* 클래스. */
+
+  /* ── Overlay ─────────────────────────────────────────────── */
+  .gdiary-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 18px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-out;
+  }
+  .gdiary-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .gdiary-modal {
+    width: 100%;
+    max-width: 360px;
+    position: relative;
+  }
+  .gdiary-loading-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+    padding: 36px 24px;
+    text-align: center;
+    color: var(--text-dim);
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+  }
+  .gdiary-loading {
+    color: var(--text-dim);
+    animation: gdiaryLoadingPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes gdiaryLoadingPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  /* ── 상단 인디케이터 (자리 비움 + 타이머) ─────────────────── */
+  .gdiary-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px 10px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 11px;
+    color: var(--text-soft);
+    letter-spacing: 0.04em;
+  }
+  .gdiary-meta-left {
+    color: var(--text-soft);
+  }
+  .gdiary-timer {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-soft);
+    transition: color 0.3s;
+  }
+  .gdiary-timer.is-danger {
+    color: var(--danger);
+  }
+
+  /* ── 노트 페이지 (기울어진 종이) ─────────────────────────── */
+  .gdiary-paper-wrap {
+    touch-action: pan-y;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .gdiary-paper-wrap:active {
+    cursor: grabbing;
+  }
+  .diary-paper {
+    position: relative;
+    background: linear-gradient(135deg, var(--paper-1) 0%, var(--paper-2) 100%);
+    color: var(--paper-text);
+    border-radius: 6px;
+    padding: 28px 26px 30px;
+    font-family: 'Gowun Batang', serif;
+    box-shadow:
+      0 24px 60px -12px rgba(0,0,0,0.55),
+      0 0 0 1px rgba(0,0,0,0.18),
+      inset 0 1px 0 rgba(255,255,255,0.45);
+    overflow: hidden;
+    transform-origin: center;
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .diary-paper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(110,80,40,0.06) 0%, transparent 35%),
+      radial-gradient(circle at 80% 70%, rgba(110,80,40,0.05) 0%, transparent 35%);
+  }
+  .diary-paper .date-stamp {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--paper-text-soft);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--paper-rule);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+  }
+  .diary-paper .entry {
+    font-family: 'Gowun Batang', serif;
+    font-size: 15px;
+    line-height: 1.95;
+    color: var(--paper-text);
+    white-space: pre-wrap;
+    position: relative;
+    z-index: 1;
+  }
+  .diary-paper .signature {
+    margin-top: 18px;
+    font-family: 'Gowun Batang', serif;
+    font-size: 13px;
+    text-align: right;
+    color: var(--paper-text-dim);
+    font-style: italic;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── 페이지 nav ──────────────────────────────────────────── */
+  .gdiary-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    padding: 0 4px;
+  }
+  .gdiary-nav-btn {
+    background: rgba(139,126,196,0.08);
+    border: 1px solid rgba(139,126,196,0.20);
+    color: var(--purple);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  .gdiary-nav-btn:hover:not([disabled]) {
+    background: rgba(139,126,196,0.18);
+  }
+  .gdiary-nav-btn[disabled] {
+    color: rgba(139,126,196,0.25);
+    cursor: default;
+    opacity: 0.6;
+  }
+  .gdiary-dots {
+    display: flex;
+    gap: 6px;
+  }
+  .gdiary-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(139,126,196,0.25);
+    transition: all 0.2s;
+  }
+  .gdiary-dot.is-active {
+    width: 16px;
+    background: var(--purple);
+  }
+
+  /* ── 닫기 버튼 ───────────────────────────────────────────── */
+  .gdiary-close-row {
+    margin-top: 14px;
+    padding: 0 4px;
+  }
+  .gdiary-close {
+    width: 100%;
+    background: rgba(139,126,196,0.10);
+    border: 1px solid rgba(139,126,196,0.32);
+    color: var(--purple);
+    padding: 11px 16px;
+    border-radius: 12px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .gdiary-close:hover {
+    background: rgba(139,126,196,0.18);
+  }
+
+  /* ── 토스트 ("고동이가 돌아왔다!") ───────────────────────── */
+  .gdiary-toast-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15,14,23,0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    animation: gdiaryFadeIn 0.25s ease;
+    z-index: 10;
+    border-radius: 6px;
+  }
+  .gdiary-toast-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 28px;
+    background: var(--surface);
+    border: 1px solid rgba(201,169,110,0.28);
+    border-radius: 18px;
+    box-shadow: 0 30px 60px -25px rgba(0,0,0,0.6);
+    max-width: 280px;
+    animation: gdiaryReturnPop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
+  }
+  .gdiary-shy-svg {
+    width: 72px;
+    height: 64px;
+  }
+  .gdiary-toast-title {
+    font-family: 'Gowun Batang', serif;
+    font-size: 17px;
+    color: var(--accent2);
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+  .gdiary-toast-sub {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 12px;
+    color: var(--text-soft);
+    text-align: center;
+    opacity: 0.85;
+  }
+
+  @keyframes gdiaryFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes gdiaryReturnPop {
+    0%   { opacity: 0; transform: translateY(8px) scale(0.92); }
+    60%  { opacity: 1; transform: translateY(-2px) scale(1.02); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ── 회전 카드 안 godong diary trigger 카드 (peek 변형) ───── */
+  .rc-body-godong-diary {
+    position: relative;
+  }
+  .rc-body-godong-diary .rc-body-headline {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    letter-spacing: 0.01em;
+  }
+  .rc-body-godong-diary .rc-body-copy {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    margin-bottom: 6px;
+  }
+  .rc-body-godong-diary .rc-body-godong-cta {
+    font-size: 11px;
+    color: var(--purple);
+    opacity: 0.85;
+    letter-spacing: 0.02em;
+  }

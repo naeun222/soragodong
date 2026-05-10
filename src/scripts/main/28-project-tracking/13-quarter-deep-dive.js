@@ -110,8 +110,9 @@ function renderQuarterlyDeepDive(review) {
   </div>${stagnationMsg}`;
 }
 
-// 사용자 명시 2026-05-09: 리뷰 모음에 카테고리 chip — 전체/미니/주/월/계절/연간.
-// 미니 리뷰 (Haiku source 4 결과) state.miniReviews 추가.
+// 사용자 명시 2026-05-09: 리뷰 모음에 카테고리 chip — 전체/고동/주/월/계절/연간.
+// 사용자 명시 2026-05-10 (handoff): '미니' → '고동' 으로 라벨 변경.
+//   카테고리 'godong' = state.godongDiary (신규) + state.miniReviews (legacy '고동의 옛 메모') 합본.
 let _archiveReviewCategory = 'all';
 function setArchiveReviewCategory(cat) {
   _archiveReviewCategory = cat || 'all';
@@ -127,16 +128,21 @@ function renderArchiveReviews() {
   const monthly = (state.monthlyReviews || []).map(r => ({...r, type: 'monthly'}));
   const quarterly = (state.quarterlyReviews || []).map(r => ({...r, type: 'quarterly'}));
   const annual = (state.annualReviews || []).map(r => ({...r, type: 'annual', completedAt: r.completedAt}));
-  const mini = (state.miniReviews || []).map(r => ({...r, type: 'mini', completedAt: r.generatedAt}));
-  const allCombined = [...mini, ...weekly, ...monthly, ...quarterly, ...annual].sort((a, b) =>
+  const godongDiary = (state.godongDiary || []).map(r => ({...r, type: 'godong-diary', completedAt: r.iso || r.generatedAt}));
+  const miniLegacy = (state.miniReviews || []).map(r => ({...r, type: 'mini', completedAt: r.generatedAt}));
+  const allCombined = [...godongDiary, ...miniLegacy, ...weekly, ...monthly, ...quarterly, ...annual].sort((a, b) =>
     new Date(b.completedAt) - new Date(a.completedAt)
   );
-  const filtered = (cat === 'all') ? allCombined : allCombined.filter(r => r.type === cat);
+  const filtered = (cat === 'all')
+    ? allCombined
+    : (cat === 'godong')
+      ? allCombined.filter(r => r.type === 'godong-diary' || r.type === 'mini')
+      : allCombined.filter(r => r.type === cat);
 
   // 카테고리 chip row — 카테고리 별 카운트 표시
   const counts = {
     all: allCombined.length,
-    mini: mini.length,
+    godong: godongDiary.length + miniLegacy.length,
     weekly: weekly.length,
     monthly: monthly.length,
     quarterly: quarterly.length,
@@ -145,7 +151,7 @@ function renderArchiveReviews() {
   const chipHtml = `
     <div class="archive-review-chips">
       <button class="arc-chip${cat === 'all' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('all')">전체 <span class="arc-chip-count">${counts.all}</span></button>
-      <button class="arc-chip${cat === 'mini' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('mini')">미니 <span class="arc-chip-count">${counts.mini}</span></button>
+      <button class="arc-chip${cat === 'godong' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('godong')">고동 <span class="arc-chip-count">${counts.godong}</span></button>
       <button class="arc-chip${cat === 'weekly' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('weekly')">주 <span class="arc-chip-count">${counts.weekly}</span></button>
       <button class="arc-chip${cat === 'monthly' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('monthly')">월 <span class="arc-chip-count">${counts.monthly}</span></button>
       <button class="arc-chip${cat === 'quarterly' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('quarterly')">계절 <span class="arc-chip-count">${counts.quarterly}</span></button>
@@ -176,7 +182,7 @@ function renderArchiveReviews() {
   }
 
   if (filtered.length === 0 && !annualCardHtml) {
-    const emptyMsg = cat === 'mini' ? '아직 미니 리뷰 없어.<br>홈 회전 카드에서 ‹지난 3일› 카드 탭 → 정리.'
+    const emptyMsg = cat === 'godong' ? '아직 일기 없어.<br>홈 회전 카드 ‹고동이 잠깐 자리 비움.› 탭 → 살짝 훔쳐보기.'
       : cat === 'weekly' ? '아직 주간 리뷰 없어.<br>일요일 4AM 자동 또는 홈 카드 직접 탭.'
       : cat === 'monthly' ? '아직 월간 리뷰 없어.<br>매월 1주차 자동.'
       : cat === 'quarterly' ? '아직 계절 리뷰 없어.<br>매분기 1주차 자동.'
@@ -192,16 +198,20 @@ function renderArchiveReviews() {
     const seasonLabel = r.type === 'quarterly' && r.quarterKey && typeof seasonLabelOf === 'function'
       ? seasonLabelOf(r.quarterKey, { withEmoji: true })
       : null;
-    const typeLabel = r.type === 'mini' ? '🐚 미니 리뷰'
+    const typeLabel = r.type === 'godong-diary' ? '고동의 일기'
+      : r.type === 'mini' ? '고동의 옛 메모'
       : r.type === 'weekly' ? '🌙 주간 리뷰'
       : r.type === 'monthly' ? '📅 월간 리뷰'
       : r.type === 'annual' ? '🌟 연간 리뷰'
       : (seasonLabel ? `${seasonLabel} 리뷰` : '📊 분기 리뷰');
-    const periodLabel = (r.type === 'quarterly' || r.type === 'mini' || r.type === 'annual') ? '' : (r.weekKey || r.monthKey || '');
+    const periodLabel = (r.type === 'quarterly' || r.type === 'mini' || r.type === 'godong-diary' || r.type === 'annual') ? '' : (r.weekKey || r.monthKey || '');
     const autoTag = r.auto ? ' <span style="font-size:9px; color:var(--purple); padding:1px 6px; background:var(--purple-dim); border-radius:6px; margin-left:4px;">🤖 자동</span>' : '';
 
     let summaryLine = '';
-    if (r.type === 'mini' && r.content) {
+    if (r.type === 'godong-diary' && r.body) {
+      const trim = r.body.length > 60 ? r.body.slice(0, 60) + '…' : r.body;
+      summaryLine = escapeHtml(trim);
+    } else if (r.type === 'mini' && r.content) {
       const trim = r.content.length > 60 ? r.content.slice(0, 60) + '…' : r.content;
       summaryLine = escapeHtml(trim);
     } else if (r.one_word || r.one_word_weekly) {
@@ -218,13 +228,15 @@ function renderArchiveReviews() {
     const reviewKey = r.weekKey || r.monthKey || r.quarterKey || '';
     const completedAtJs = r.completedAt ? `'${r.completedAt}'` : 'null';
     // 사용자 명시 2026-05-10 (큐 8): weekly 만 inline 펼침. 다른 type 은 옛 화면 전환.
-    const onClickJs = r.type === 'mini'
-      ? `openSavedMiniReview('${r.id}')`
-      : r.type === 'annual'
-        ? `openAnnualReview(${r.year || 'null'})`
-        : r.type === 'weekly'
-          ? `_toggleWeeklyInlineExpand('${r.id}')`
-          : `openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})`;
+    const onClickJs = r.type === 'godong-diary'
+      ? `openSavedGodongDiary('${r.id}')`
+      : r.type === 'mini'
+        ? `openSavedMiniReview('${r.id}')`
+        : r.type === 'annual'
+          ? `openAnnualReview(${r.year || 'null'})`
+          : r.type === 'weekly'
+            ? `_toggleWeeklyInlineExpand('${r.id}')`
+            : `openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})`;
     const _isWeekly = r.type === 'weekly';
     const _ctaText = _isWeekly ? '▾ 펼쳐보기' : '▶ 같이 보자';
 
@@ -329,32 +341,6 @@ function _toggleWeeklyInlineExpand(reviewId) {
   }
 }
 
-// 사용자 명시 2026-05-09: 저장된 미니 리뷰 보기 모달 (Haiku 재호출 X — content 만 표시)
-function openSavedMiniReview(id) {
-  const m = (state.miniReviews || []).find(x => x && x.id === id);
-  if (!m) {
-    if (typeof showToast === 'function') showToast('미니 리뷰를 찾을 수 없어');
-    return;
-  }
-  const existing = document.getElementById('rcMiniReviewModal');
-  if (existing) existing.remove();
-  const overlay = document.createElement('div');
-  overlay.id = 'rcMiniReviewModal';
-  overlay.className = 'rc-mini-review-overlay';
-  const dateStr = m.generatedAt ? new Date(m.generatedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
-  overlay.innerHTML = `
-    <div class="rc-mini-review-card">
-      <div class="rc-mini-review-header">
-        <div class="rc-mini-review-label">🐚 미니 리뷰 · ${escapeHtml(dateStr)}</div>
-        <button class="rc-mini-review-close" type="button" onclick="closeMiniReviewModal()" aria-label="닫기">×</button>
-      </div>
-      <div class="rc-mini-review-body">
-        <div class="rc-mini-review-content">${escapeHtml(m.content || '')}</div>
-        <button class="rc-mini-review-dismiss" type="button" onclick="closeMiniReviewModal()">닫기</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  setTimeout(() => overlay.classList.add('show'), 30);
-}
+// 사용자 명시 2026-05-10 (handoff): 옛 openSavedMiniReview (rc-mini-review-overlay 패턴) 함수 제거.
+// legacy 미니 리뷰 row 클릭 시 03f-godong-diary-modal.js 의 신규 openSavedMiniReview 가 동작 (단일 entry readonly 모달).
 

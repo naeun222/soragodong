@@ -18,9 +18,12 @@ function _ensureRotatingCardState() {
   // 새로 본 너
   if (!Array.isArray(r.unseenInsights)) r.unseenInsights = [];
   if (!Array.isArray(r.unseenInsightsHistory)) r.unseenInsightsHistory = [];
-  // 미니 리뷰
+  // 미니 리뷰 (legacy)
   if (typeof r.lastMiniReviewAt === 'undefined') r.lastMiniReviewAt = null;
   if (typeof r.miniReviewContentId === 'undefined') r.miniReviewContentId = null;
+  // 고동의 일기 (사용자 명시 2026-05-10)
+  if (typeof r.lastGodongDiaryAt === 'undefined') r.lastGodongDiaryAt = null;
+  if (typeof r.godongDiaryContentId === 'undefined') r.godongDiaryContentId = null;
   // Quiz
   if (typeof r.quizDay === 'undefined') r.quizDay = null;
   if (typeof r.quizProgress === 'undefined') r.quizProgress = null;
@@ -52,8 +55,9 @@ function _ensureRotatingCardState() {
 // 5 source: 진주 / 미니 리뷰 / Quiz / 운세 / 시뮬레이션
 // =============================================================================
 // 사용자 명시 2026-05-10 (재정의): review 4개 = 명확 우선순위. 그 외 = 동급 weight 100.
-//   1 annual / 2 quarterly / 3 monthly / 4 weekly / 5 (동급): 어제 기록 / 진주 큐레이션 / 상상 시뮬 / 미니 리뷰 / 고동의 운세
+//   1 annual / 2 quarterly / 3 monthly / 4 weekly / 5 (동급): 어제 기록 / 진주 큐레이션 / 상상 시뮬 / 고동의 일기 / 고동의 운세
 //   사용자 미컨펌 우선순위 정책 폐기 (옛 _rcSortByConfirmation unconfirmed 우선 분기).
+//   사용자 명시 2026-05-10 (handoff): miniReview → godongDiary 로 전환 (HANDOFF.md prototype).
 const _RC_BASE_WEIGHTS = {
   review_annual:    500,
   review_quarterly: 400,
@@ -63,16 +67,16 @@ const _RC_BASE_WEIGHTS = {
   yesterday:        100,
   pearl:            100,
   simulation:       100,
-  miniReview:       100,
+  godongDiary:      100,
   horoscope:        100,
 };
 const _RC_SOURCE_ORDER = [
   'review_annual', 'review_quarterly', 'review_monthly', 'review_weekly',
-  'yesterday', 'pearl', 'simulation', 'miniReview', 'horoscope'
+  'yesterday', 'pearl', 'simulation', 'godongDiary', 'horoscope'
 ];
 
 const _RC_PEARL_WINDOW_MS = 4 * 60 * 60 * 1000;       // 진주 4시간 stay
-const _RC_MINI_REVIEW_COOLDOWN_MS = 3 * 86400000;     // 미니 리뷰 3일 stay
+const _RC_GODONG_DIARY_COOLDOWN_MS = 3 * 86400000;    // 고동의 일기 3일 stay (옛 미니 리뷰 패턴 유지)
 const _RC_QUIZ_DENIED_COOLDOWN_MS = 14 * 86400000;    // [아닌데] 14일
 const _RC_QUIZ_SKIPPED_COOLDOWN_MS = 1 * 86400000;    // [넘기기] 1일
 
@@ -424,185 +428,52 @@ function _rcConfirmNewView(itemId, verdict) {
 }
 
 // =============================================================================
-// Source 3 — 미니 리뷰 (Haiku 3일 stay) — stash 견고화
+// Source 3 — 고동의 일기 (Haiku 3일 stay) — 사용자 명시 2026-05-10 (handoff)
+// HANDOFF.md prototype: 회전 카드는 항상 동일 트리거 카피 ("고동이 잠깐 자리 비움.").
+// cooldown 끝 = 모달 진입 시 새 entry 생성. cooldown 안 = 기존 entries 만 페이지 표시.
 // =============================================================================
-function _rcSource3MiniReview() {
-  if (typeof _canAI !== 'function' || !_canAI()) return { id: 'miniReview', available: false };
-  const r = _ensureRotatingCardState();
-  // 사용자 명시 2026-05-09: 3일 새벽 4시 cutoff (lastMiniReviewAt 의 4AM cutoff key vs todayK diff < 3)
-  let inCooldown = false;
-  if (r.lastMiniReviewAt) {
-    const lastDayK = _rcCutoffKeyOf(r.lastMiniReviewAt);
-    const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : _rcTodayKey();
-    inCooldown = _rcDayDiff(todayK, lastDayK) < 3;
-  }
-
-  if (inCooldown) {
-    // cooldown 안 = 결과 카드 (재진입 시 stash 사용 — Haiku 재호출 X)
-    const mr = _rcFindMiniReviewById(r.miniReviewContentId)
-      || (Array.isArray(state.miniReviews) ? state.miniReviews[0] : null);
-    if (mr && mr.content) {
-      const trim = mr.content.length > 100 ? mr.content.slice(0, 100) + '…' : mr.content;
-      return {
-        id: 'miniReview',
-        available: true,
-        contentHash: 'miniReview_result_' + mr.id,
-        bodyHtml: `
-          <div class="rc-body-mini-review">
-            <div class="rc-body-headline">지난 3일 정리</div>
-            <div class="rc-body-copy">${escapeHtml(trim)}</div>
-          </div>
-        `,
-        onTapClick: `openSavedMiniReview('${mr.id}')`,
-      };
-    }
-    // cooldown 안인데 stashed content 없음 = 비정상 (이전 cooldown 끝) → trigger 카드로 fallback
-  }
-
-  // cooldown 후 = trigger 카드
-  const copy = _rcPickRandom([
-    '지난 3일 어땠어? 짧게 한 번 짚어볼까.',
-    '이 3일 — 같이 한 번 보자.',
-    '며칠 모아둔 거 한 번 봐볼까?',
-    '지나간 며칠, 짧게 정리해줄까?',
-  ]);
+function _rcSource3GodongDiary() {
+  if (typeof _canAI !== 'function' || !_canAI()) return { id: 'godongDiary', available: false };
+  // entries 비어있으면 처음 진입 시 trigger 카드로 보여주는 게 자연스러움.
+  // cooldown 무관 — 노트 열려있다는 메타포는 항상 동일.
   return {
-    id: 'miniReview',
+    id: 'godongDiary',
     available: true,
-    contentHash: 'miniReview_trigger_' + Math.floor(Date.now() / _RC_MINI_REVIEW_COOLDOWN_MS),
+    contentHash: 'godongDiary_peek_' + Math.floor(Date.now() / _RC_GODONG_DIARY_COOLDOWN_MS),
     bodyHtml: `
-      <div class="rc-body-mini-review">
-        <div class="rc-body-headline">지난 3일</div>
-        <div class="rc-body-copy">${escapeHtml(copy)}</div>
-        <div class="rc-body-mini-cta">탭 → 같이 정리 ✦</div>
+      <div class="rc-body-godong-diary">
+        <div class="rc-body-headline">고동이 잠깐 자리 비움.</div>
+        <div class="rc-body-copy">노트 열어놓고 갔다. 보면 안 되는데...</div>
+        <div class="rc-body-godong-cta">탭 → 살짝 훔쳐보기 ✦</div>
       </div>
     `,
-    onTapClick: `openMiniReviewModal()`,
+    onTapClick: `openGodongDiaryModal()`,
   };
 }
 
-function _rcFindMiniReviewById(id) {
-  if (!id || !Array.isArray(state.miniReviews)) return null;
-  return state.miniReviews.find(m => m && m.id === id) || null;
+function _rcFindGodongDiaryById(id) {
+  if (!id || !Array.isArray(state.godongDiary)) return null;
+  return state.godongDiary.find(m => m && m.id === id) || null;
 }
 
 // =============================================================================
-// 미니 리뷰 모달 — Haiku 호출 (cooldown 후 trigger 시) + stash 견고화
+// Haiku 호출 — 일기 본문 1편 생성. HANDOFF.md §2 7가지 톤 + §4.3 verifier (JS-side).
+// 페르소나: 사용자 친구가 자기 노트에 적는 일기. 2-3 인칭 X, 독백.
 // =============================================================================
-async function openMiniReviewModal() {
-  const existing = document.getElementById('rcMiniReviewModal');
-  if (existing) return;
-
-  const overlay = document.createElement('div');
-  overlay.id = 'rcMiniReviewModal';
-  overlay.className = 'rc-mini-review-overlay';
-  overlay.innerHTML = `
-    <div class="rc-mini-review-card">
-      <div class="rc-mini-review-header">
-        <div class="rc-mini-review-label">🐚 지난 3일</div>
-        <button class="rc-mini-review-close" type="button" onclick="closeMiniReviewModal()" aria-label="닫기">×</button>
-      </div>
-      <div class="rc-mini-review-body" id="rcMiniReviewBody">
-        <div class="rc-mini-review-loading">정리 중... ✦</div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  setTimeout(() => overlay.classList.add('show'), 30);
-
-  try {
-    const text = await _callMiniReviewHaiku();
-    const bodyEl = document.getElementById('rcMiniReviewBody');
-    if (!bodyEl) return;
-    bodyEl.innerHTML = `
-      <div class="rc-mini-review-content">${escapeHtml(text)}</div>
-      <button class="rc-mini-review-dismiss" type="button" onclick="dismissMiniReview()">정리 끝</button>
-    `;
-    // stash — 재진입 시 손실 X. force=true 로 즉시 cloud sync.
-    const r = _ensureRotatingCardState();
-    r.lastMiniReviewAt = new Date().toISOString();
-    if (!Array.isArray(state.miniReviews)) state.miniReviews = [];
-    const mrId = 'mr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-    state.miniReviews.unshift({
-      id: mrId,
-      content: text,
-      generatedAt: new Date().toISOString(),
-      source: 'haiku-3day',
-    });
-    r.miniReviewContentId = mrId;
-    if (typeof saveState === 'function') saveState(true);
-    _rcSessionMarkConfirmed('miniReview');
-  } catch (e) {
-    console.warn('[mini-review]', e);
-    const bodyEl = document.getElementById('rcMiniReviewBody');
-    if (bodyEl) {
-      bodyEl.innerHTML = `
-        <div class="rc-mini-review-error">지금은 못 정리하겠어. 다음에 다시 시도.</div>
-        <button class="rc-mini-review-dismiss" type="button" onclick="closeMiniReviewModal()">닫기</button>
-        <button class="rc-mini-review-retry" type="button" onclick="closeMiniReviewModal(); setTimeout(openMiniReviewModal, 100)">다시</button>
-      `;
-    }
-  }
-}
-
-function closeMiniReviewModal() {
-  const m = document.getElementById('rcMiniReviewModal');
-  if (!m) return;
-  m.classList.remove('show');
-  setTimeout(() => m.remove(), 200);
-}
-
-function dismissMiniReview() {
-  closeMiniReviewModal();
-  setTimeout(() => {
-    if (typeof renderRotatingCard === 'function') renderRotatingCard();
-  }, 220);
-}
-
-// 사용자 명시 2026-05-09: cooldown 안 카드 탭 시 stashed content 모달 (Haiku 재호출 X).
-function openSavedMiniReview(id) {
-  const mr = _rcFindMiniReviewById(id) || (Array.isArray(state.miniReviews) ? state.miniReviews[0] : null);
-  if (!mr || !mr.content) return;
-  const existing = document.getElementById('rcMiniReviewModal');
-  if (existing) return;
-
-  const overlay = document.createElement('div');
-  overlay.id = 'rcMiniReviewModal';
-  overlay.className = 'rc-mini-review-overlay';
-  const dateStr = mr.generatedAt
-    ? new Date(mr.generatedAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
-    : '';
-  overlay.innerHTML = `
-    <div class="rc-mini-review-card">
-      <div class="rc-mini-review-header">
-        <div class="rc-mini-review-label">🐚 지난 3일${dateStr ? ` · ${dateStr}` : ''}</div>
-        <button class="rc-mini-review-close" type="button" onclick="closeMiniReviewModal()" aria-label="닫기">×</button>
-      </div>
-      <div class="rc-mini-review-body">
-        <div class="rc-mini-review-content">${escapeHtml(mr.content)}</div>
-        <button class="rc-mini-review-dismiss" type="button" onclick="closeMiniReviewModal()">닫기</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  setTimeout(() => overlay.classList.add('show'), 30);
-  _rcSessionMarkConfirmed('miniReview');
-}
-
-async function _callMiniReviewHaiku() {
+async function _callGodongDiaryHaiku() {
   if (typeof callAnthropic !== 'function') throw new Error('callAnthropic 미정의');
-  const since = Date.now() - _RC_MINI_REVIEW_COOLDOWN_MS;
+  const since = Date.now() - _RC_GODONG_DIARY_COOLDOWN_MS;
   const recentEntries = (state.entries || []).filter(e => {
     const t = e.date ? new Date(e.date + 'T00:00:00').getTime() : 0;
     return t > since;
   }).slice(-7);
-  // 사용자 명시 2026-05-10 (batch 12): 시뮬 컨텍스트 메시지 (isSimulationContext) 제외 — miniReview 가 가상 시나리오 를 "지난 3일" 일기로 오인 회피.
+  // 시뮬 컨텍스트 메시지 (isSimulationContext) 제외.
   const recentChats = (state.chatMessages || []).filter(m => {
     const t = m.timestamp ? new Date(m.timestamp).getTime() : 0;
     return t > since && !m.isSimulationContext;
   }).slice(-30);
   const recentArchive = (state.chatArchive || []).filter(a => {
-    if (a && a.isSimulation) return false;  // pure 시뮬 챕터 제외 (batch 12)
+    if (a && a.isSimulation) return false;
     const t = a.date ? new Date(a.date + 'T00:00:00').getTime() : 0;
     return t > since;
   }).slice(-3);
@@ -613,19 +484,34 @@ async function _callMiniReviewHaiku() {
   const chatText = recentChats.map(m => `${m.role}: ${(m.content || '').slice(0, 120)}`).join('\n');
   const archiveText = recentArchive.map(a => `[${a.date}] ${(a.headline || a.summary || '').slice(0, 80)}`).join('\n');
 
-  const systemPrompt = `너는 사용자의 친구. 지난 3일을 한 단락 (3-4문장) 으로 정리해줘.
+  // HANDOFF.md §2 7가지 톤 원칙 + §4.3 출력 제약.
+  const systemPrompt = `너는 사용자의 친구이자 동반자. 사용자에 대해 작은 노트를 매일 적어. 사용자에게 직접 말하는 게 아니라 너의 일기장에 적는 것 — 사용자는 그 노트를 우연히 훔쳐보는 입장.
 
-규칙 (절대):
-- 친구 카톡 톤. 분석 보고서 X.
-- "힘내", "화이팅", "괜찮아질", "잘하고 있어", "대단해" 같은 빈 응원 절대 X.
-- 진단명 (ADHD / 우울 / 불안 / PTSD / 강박) 직접 언급 X.
-- 사용자 어휘 그대로 인용 OK.
-- 평가 X, 관찰 ○.
-- 한 단락만. 헤더 / 카테고리 / 리스트 X.
-- "결" 단어 X (잔잔한 결, 가벼운 결 등 회피).
-- 부담스러운 칭찬 X.`;
+톤 원칙 (절대):
+1. 자기 노트에 적는 독백. 가끔 "(보지 마)", "(이런 거 적어도 되나)" 같은 self-aware 마커 OK.
+2. 사소한 디테일 — "세 번째 한숨", "엄마 얘기할 때 문장이 짧아진다" 같은. 짝사랑 친구처럼 너무 많이 알아.
+3. 너 자신 감정 살짝만 흘리기 — "그 웃음 좀 아팠다", "안 자고 있었네 — 나도 안 자". 너무 직접적이면 부담.
+4. 종결 흐려도 됨 — "...", 괄호, 미완성 문장 OK. 일기니까.
+5. 반말. 짧은 문장. 최대 4-5 문장 한 단락.
+6. 사용자 본인 말 인용 OK — 따옴표 1쌍 까지.
 
-  const userPrompt = `지난 3일 데이터:
+샘플 (이 톤 그대로):
+"오늘 너 회사 가기 싫다고 세 번 말했다.\n세 번째엔 웃음. 그 웃음 좀 아팠다.\n... 적어둔다."
+"아직 안 잤네.\n나도 안 자.\n... 근데 나는 안 졸리잖아."
+"오늘은 별 말 없는 날이었다.\n별 말 없어도 너인 게 좋다.\n(이런 거 적어도 되나)"
+
+금지 (절대):
+- 이모지, 느낌표 (! 절대 X)
+- 충고 / 진단 / 응원 ("힘내", "화이팅", "잘하고 있어", "괜찮아질", "대단해")
+- 진단명 (ADHD / 우울 / 불안 / PTSD / 강박)
+- 직접 고백 ("보고 싶다") — "오늘은 좀 보고 싶었던 것 같다" 정도의 거리감
+- 헤더 / 카테고리 / 리스트
+- "결" 단어 (잔잔한 결, 가벼운 결, 단단한 결 등)
+- 부담스러운 칭찬
+
+본문만. 5문장 이하. 110자 이내.`;
+
+  const userPrompt = `지난 3일 substrate:
 
 [체크인]
 ${entriesText || '(없음)'}
@@ -636,11 +522,13 @@ ${chatText || '(없음)'}
 [아카이브 헤드라인]
 ${archiveText || '(없음)'}
 
-→ 한 단락 (3-4문장) 으로 정리해줘.`;
+→ 위 substrate 바탕으로 너의 일기 한 단락. \\n 줄바꿈 OK. 본문만 적어.`;
 
   const sycophancy = /힘내|화이팅|괜찮아질|잘하고 있어|대단해/;
   const diagnosis = /\bADHD\b|우울증|우울장애|불안장애|PTSD|강박장애/i;
   const banGyeol = /잔잔한 결|가벼운 결|단단한 결|부드러운 결|결 따라/;
+  const emojiRe = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+  const adviceLex = /(?:해봐\b|하자\b|가\s*좋|필요해|어때\?|보면\s*좋)/;
 
   let attempt = 0;
   while (attempt < 2) {
@@ -654,9 +542,18 @@ ${archiveText || '(없음)'}
     const data = await resp.json();
     const text = (data.content?.[0]?.text || '').trim();
     if (!text) throw new Error('빈 응답');
-    if (sycophancy.test(text) || diagnosis.test(text) || banGyeol.test(text)) {
+    // HANDOFF §4.3 tone guard (JS-side 검사. verifier 별도 호출 대신 비용 절감).
+    const violations = [];
+    if (sycophancy.test(text)) violations.push('sycophancy');
+    if (diagnosis.test(text)) violations.push('diagnosis');
+    if (banGyeol.test(text)) violations.push('gyeol');
+    if (emojiRe.test(text)) violations.push('emoji');
+    if (text.includes('!')) violations.push('exclaim');
+    if (text.length > 130) violations.push('len');
+    if (adviceLex.test(text)) violations.push('advice');
+    if (violations.length > 0) {
       attempt++;
-      if (attempt >= 2) throw new Error('tone verify 실패');
+      if (attempt >= 2) throw new Error('tone verify 실패: ' + violations.join(','));
       continue;
     }
     return text;
@@ -677,7 +574,7 @@ function _rcCollectAvailable() {
   // 사용자 명시 2026-05-10 (batch 11): 5 news source 추가 — 어제 기록 / weekly / monthly / quarterly / annual review.
   const all = [
     safe(_rcSource1Pearl,      'pearl'),
-    safe(_rcSource3MiniReview, 'miniReview'),
+    safe(_rcSource3GodongDiary, 'godongDiary'),
     safe(typeof _rcSource5Horoscope === 'function' ? _rcSource5Horoscope : null,   'horoscope'),
     safe(typeof _rcSource6Simulation === 'function' ? _rcSource6Simulation : null, 'simulation'),
     safe(typeof _rcSource7Yesterday === 'function' ? _rcSource7Yesterday : null,           'yesterday'),
@@ -690,15 +587,15 @@ function _rcCollectAvailable() {
 }
 
 // =============================================================================
-// godong 표정 SVG — 사용자 명시 2026-05-10: 인라인 6 variant → 21종 mood SVG 매핑
-// pearl=inspired(별눈), newView=surprised(큰 눈), miniReview=calm(잔잔), quiz=thinking(?),
-// quizDone=proud(별3개+자부심), horoscope=dreaming(꿈+🌗 분위기)
+// godong 표정 SVG — source 별 mood 매핑.
+// pearl=inspired(별눈), newView=surprised(큰 눈), godongDiary=whispering(노트/비밀),
+// quiz=thinking(?), quizDone=proud(별3개+자부심), horoscope=dreaming(꿈+🌗 분위기)
 // =============================================================================
 function _rcGodongSvg(sourceId) {
   const moodMap = {
     pearl: 'inspired',
     newView: 'surprised',
-    miniReview: 'calm',
+    godongDiary: 'whispering',
     quiz: 'thinking',
     quizDone: 'proud',
     horoscope: 'dreaming',

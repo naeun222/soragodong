@@ -262,8 +262,10 @@ const DEFAULT_STATE = {
   weeklyReviews: [],
   monthlyReviews: [],
   // 사용자 명시 2026-05-09: 회전 카드 source 4 미니 리뷰 (Haiku 3일 정리) archive.
-  // 도서관 마법·리뷰 → 리뷰 모음 화면의 '미니' 카테고리에서 노출.
-  miniReviews: [],          // [{id, content, generatedAt, source:'haiku-3day'}]
+  // 사용자 명시 2026-05-10: 미니 리뷰 → 고동의 일기 (godongDiary) 로 전환. miniReviews 는 legacy 보존.
+  // 도서관 리뷰 모음 → '고동' 카테고리에서 둘 다 노출 (legacy 는 '고동의 옛 메모').
+  miniReviews: [],          // legacy. [{id, content, generatedAt, source:'haiku-3day'}]
+  godongDiary: [],          // [{id, date, weekday, note?, body, iso, substrateRefs[]}]
   predictionFollowups: [],
   // Phase 5
   questionHistory: [],
