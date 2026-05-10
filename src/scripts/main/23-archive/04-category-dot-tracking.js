@@ -11,10 +11,12 @@ function _markLibCatSeen(cat) {
 }
 
 // V4 (사용자 명시): 카테고리별 신규 항목 검사 — tab dot / cat dot 공용
+// 사용자 명시 2026-05-11 ultrathink: diary 카테고리 검사에서 state.chatMessages 제거.
+// chatMessages 는 진행 중 대화 (아직 도서관에 저장 X). "도서관 dot = 도서관에 저장된 새 항목 있음" 의미로 정확히 → chatArchive 만 검사.
 function _libCategoryNewSince(cat, since) {
   if (cat === 'diary')
     return (state.entries || []).some(e => e.timestamp && new Date(e.timestamp).getTime() > since)
-        || (state.chatMessages || []).some(m => m.timestamp && new Date(m.timestamp).getTime() > since);
+        || (state.chatArchive || []).some(a => a.generatedAt && new Date(a.generatedAt).getTime() > since);
   if (cat === 'yangsaeng')
     return (state.topicCards || []).some(c => c.category === 'strategy' && c.createdAt && new Date(c.createdAt).getTime() > since);
   if (cat === 'insights')

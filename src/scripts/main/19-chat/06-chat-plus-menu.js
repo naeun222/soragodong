@@ -127,13 +127,32 @@ function _archiveCurrentChapter(opts) {
         const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
         // 사용자 명시 2026-05-08 ultrathink: _extractFromIndex 적용 — 옛 부분 input 제외.
         const _extractMsgs = _chapterExtractMessages(archiveItem);
-        if (typeof extractChapterCaseAnalysis === 'function' && _extractMsgs.length >= 3) {
-          try { await extractChapterCaseAnalysis(_extractMsgs); }
-          catch (e) { console.warn('[new-user extract] case fail:', e); }
+        // 사용자 명시 2026-05-11 ultrathink: 메시지 단위 분리 — 옛 path 는 isSimulation 미전달이라 시뮬 메시지가 cf 5차원 침투 (신규유저 첫 3챕터 즉시 path). _runDailyExtractInline / _submitDailyExtractBatch 와 동일.
+        const _normalMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
+        const _simMsgs = _extractMsgs.filter(m => m && m.isSimulationContext);
+        if (typeof extractChapterCaseAnalysis === 'function') {
+          if (_normalMsgs.length >= 3) {
+            try { await extractChapterCaseAnalysis(_normalMsgs); }
+            catch (e) { console.warn('[new-user extract] case fail:', e); }
+          }
+          if (_simMsgs.length >= 3) {
+            try { await extractChapterCaseAnalysis(_simMsgs, { isSimulation: true }); }
+            catch (e) { console.warn('[new-user extract] case sim fail:', e); }
+          }
         }
-        if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _extractMsgs.length >= 3) {
-          try { await extractPreviousChapterTopics(_extractMsgs); }
-          catch (e) { console.warn('[new-user extract] topic fail:', e); }
+        if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
+          if (_normalMsgs.length >= 3) {
+            try { await extractPreviousChapterTopics(_normalMsgs); }
+            catch (e) { console.warn('[new-user extract] topic fail:', e); }
+          }
+          if (_simMsgs.length >= 3) {
+            const _beforeSim = (state.topicCards || []).length;
+            try {
+              await extractPreviousChapterTopics(_simMsgs);
+              const _added = (state.topicCards || []).slice(_beforeSim);
+              _added.forEach(card => { if (card) card.source = 'simulation'; });
+            } catch (e) { console.warn('[new-user extract] topic sim fail:', e); }
+          }
         }
         if (_before && typeof _stampSourceArchiveId === 'function') {
           _stampSourceArchiveId(_before, archiveItem.id, archiveItem);

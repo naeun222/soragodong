@@ -610,7 +610,12 @@ async function _submitDailyExtractBatch(pending) {
     })
     .forEach(b => {
       const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(b) : b.messages;
-      extractChapterCaseAnalysis(_msgs)
+      // 사용자 명시 2026-05-11 ultrathink: 메시지 단위 분리 — 옛 path 는 isSimulation 미전달이라 시뮬 메시지가 cf 5차원 침투. _runDailyExtractInline (line 384-394) 모범 패턴 동일.
+      const _normalMsgs = _msgs.filter(m => !m || !m.isSimulationContext);
+      const _simMsgs = _msgs.filter(m => m && m.isSimulationContext);
+      const _normalP = _normalMsgs.length >= 3 ? extractChapterCaseAnalysis(_normalMsgs) : Promise.resolve();
+      const _simP = _simMsgs.length >= 3 ? extractChapterCaseAnalysis(_simMsgs, { isSimulation: true }) : Promise.resolve();
+      Promise.all([_normalP, _simP])
         .then(() => {
           delete b._pendingCaseAnalysis;
           try { saveState(); } catch {}

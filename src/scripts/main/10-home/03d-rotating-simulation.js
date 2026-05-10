@@ -691,11 +691,9 @@ function _rcSimSaveToArchive(cur) {
   if (state.simulationArchive.length > 30) {
     state.simulationArchive = state.simulationArchive.slice(0, 30);
   }
-  // 사용자 명시 2026-05-09: _extracted=false 누적 5+ 면 background 분리 추출 trigger.
-  const pending = state.simulationArchive.filter(e => !e._extracted);
-  if (pending.length >= 5 && typeof extractFromSimulationArchive === 'function') {
-    extractFromSimulationArchive().catch(e => console.warn('[sim extract]', e));
-  }
+  // 사용자 명시 2026-05-11 ultrathink: 5회 누적 자동 추출 trigger 제거.
+  // 시뮬 추출은 챕터 마무리 / 5h+ 갭 / 4시 cutoff 의 일반 챕터 흐름에 통합 — 메인 챗 isSimulationContext 메시지가 분리 처리됨 (_runDailyExtractInline / _submitDailyExtractBatch / _archiveCurrentChapter).
+  // simulationArchive stash 자체는 verdict history 보존용으로 유지.
 }
 
 // 사용자 명시 2026-05-09: 시뮬 전용 분리 추출 — 가상 시나리오 명시 + 보수적 confidence + cf 5차원 X.
@@ -854,9 +852,7 @@ function _processSimulationAnalysis(analysis) {
       }
     });
   }
-  if (touched && typeof _markNavBatchUpdated === 'function') {
-    _markNavBatchUpdated(['model']);
-  }
+  // 사용자 명시 2026-05-11 ultrathink: 나 탭 dot 안 켬 — extractedFrom='simulation' 항목은 renderModel 에서 hide 되므로 dot 켜도 사용자에게 보일 게 없음 ("dot 떴지만 나 탭 열어보니 새 게 없네" 경험 차단).
   return touched;
 }
 

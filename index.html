@@ -31145,11 +31145,9 @@ function _rcSimSaveToArchive(cur) {
   if (state.simulationArchive.length > 30) {
     state.simulationArchive = state.simulationArchive.slice(0, 30);
   }
-  // 사용자 명시 2026-05-09: _extracted=false 누적 5+ 면 background 분리 추출 trigger.
-  const pending = state.simulationArchive.filter(e => !e._extracted);
-  if (pending.length >= 5 && typeof extractFromSimulationArchive === 'function') {
-    extractFromSimulationArchive().catch(e => console.warn('[sim extract]', e));
-  }
+  // 사용자 명시 2026-05-11 ultrathink: 5회 누적 자동 추출 trigger 제거.
+  // 시뮬 추출은 챕터 마무리 / 5h+ 갭 / 4시 cutoff 의 일반 챕터 흐름에 통합 — 메인 챗 isSimulationContext 메시지가 분리 처리됨 (_runDailyExtractInline / _submitDailyExtractBatch / _archiveCurrentChapter).
+  // simulationArchive stash 자체는 verdict history 보존용으로 유지.
 }
 
 // 사용자 명시 2026-05-09: 시뮬 전용 분리 추출 — 가상 시나리오 명시 + 보수적 confidence + cf 5차원 X.
@@ -31308,9 +31306,7 @@ function _processSimulationAnalysis(analysis) {
       }
     });
   }
-  if (touched && typeof _markNavBatchUpdated === 'function') {
-    _markNavBatchUpdated(['model']);
-  }
+  // 사용자 명시 2026-05-11 ultrathink: 나 탭 dot 안 켬 — extractedFrom='simulation' 항목은 renderModel 에서 hide 되므로 dot 켜도 사용자에게 보일 게 없음 ("dot 떴지만 나 탭 열어보니 새 게 없네" 경험 차단).
   return touched;
 }
 
@@ -39984,13 +39980,32 @@ function _archiveCurrentChapter(opts) {
         const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
         // 사용자 명시 2026-05-08 ultrathink: _extractFromIndex 적용 — 옛 부분 input 제외.
         const _extractMsgs = _chapterExtractMessages(archiveItem);
-        if (typeof extractChapterCaseAnalysis === 'function' && _extractMsgs.length >= 3) {
-          try { await extractChapterCaseAnalysis(_extractMsgs); }
-          catch (e) { console.warn('[new-user extract] case fail:', e); }
+        // 사용자 명시 2026-05-11 ultrathink: 메시지 단위 분리 — 옛 path 는 isSimulation 미전달이라 시뮬 메시지가 cf 5차원 침투 (신규유저 첫 3챕터 즉시 path). _runDailyExtractInline / _submitDailyExtractBatch 와 동일.
+        const _normalMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
+        const _simMsgs = _extractMsgs.filter(m => m && m.isSimulationContext);
+        if (typeof extractChapterCaseAnalysis === 'function') {
+          if (_normalMsgs.length >= 3) {
+            try { await extractChapterCaseAnalysis(_normalMsgs); }
+            catch (e) { console.warn('[new-user extract] case fail:', e); }
+          }
+          if (_simMsgs.length >= 3) {
+            try { await extractChapterCaseAnalysis(_simMsgs, { isSimulation: true }); }
+            catch (e) { console.warn('[new-user extract] case sim fail:', e); }
+          }
         }
-        if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _extractMsgs.length >= 3) {
-          try { await extractPreviousChapterTopics(_extractMsgs); }
-          catch (e) { console.warn('[new-user extract] topic fail:', e); }
+        if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
+          if (_normalMsgs.length >= 3) {
+            try { await extractPreviousChapterTopics(_normalMsgs); }
+            catch (e) { console.warn('[new-user extract] topic fail:', e); }
+          }
+          if (_simMsgs.length >= 3) {
+            const _beforeSim = (state.topicCards || []).length;
+            try {
+              await extractPreviousChapterTopics(_simMsgs);
+              const _added = (state.topicCards || []).slice(_beforeSim);
+              _added.forEach(card => { if (card) card.source = 'simulation'; });
+            } catch (e) { console.warn('[new-user extract] topic sim fail:', e); }
+          }
         }
         if (_before && typeof _stampSourceArchiveId === 'function') {
           _stampSourceArchiveId(_before, archiveItem.id, archiveItem);
@@ -44227,10 +44242,12 @@ function _markLibCatSeen(cat) {
 }
 
 // V4 (사용자 명시): 카테고리별 신규 항목 검사 — tab dot / cat dot 공용
+// 사용자 명시 2026-05-11 ultrathink: diary 카테고리 검사에서 state.chatMessages 제거.
+// chatMessages 는 진행 중 대화 (아직 도서관에 저장 X). "도서관 dot = 도서관에 저장된 새 항목 있음" 의미로 정확히 → chatArchive 만 검사.
 function _libCategoryNewSince(cat, since) {
   if (cat === 'diary')
     return (state.entries || []).some(e => e.timestamp && new Date(e.timestamp).getTime() > since)
-        || (state.chatMessages || []).some(m => m.timestamp && new Date(m.timestamp).getTime() > since);
+        || (state.chatArchive || []).some(a => a.generatedAt && new Date(a.generatedAt).getTime() > since);
   if (cat === 'yangsaeng')
     return (state.topicCards || []).some(c => c.category === 'strategy' && c.createdAt && new Date(c.createdAt).getTime() > since);
   if (cat === 'insights')
@@ -55874,7 +55891,12 @@ async function _submitDailyExtractBatch(pending) {
     })
     .forEach(b => {
       const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(b) : b.messages;
-      extractChapterCaseAnalysis(_msgs)
+      // 사용자 명시 2026-05-11 ultrathink: 메시지 단위 분리 — 옛 path 는 isSimulation 미전달이라 시뮬 메시지가 cf 5차원 침투. _runDailyExtractInline (line 384-394) 모범 패턴 동일.
+      const _normalMsgs = _msgs.filter(m => !m || !m.isSimulationContext);
+      const _simMsgs = _msgs.filter(m => m && m.isSimulationContext);
+      const _normalP = _normalMsgs.length >= 3 ? extractChapterCaseAnalysis(_normalMsgs) : Promise.resolve();
+      const _simP = _simMsgs.length >= 3 ? extractChapterCaseAnalysis(_simMsgs, { isSimulation: true }) : Promise.resolve();
+      Promise.all([_normalP, _simP])
         .then(() => {
           delete b._pendingCaseAnalysis;
           try { saveState(); } catch {}
