@@ -167,13 +167,13 @@ async function init() {
     }
   } catch (e) { console.warn('[review id backfill]:', e); }
 
-  // 사용자 명시 2026-05-10: 테스트 계정 (soragodongapp@gmail.com) 자동 설정 — 튜토리얼 skip + E2EE setup skip flag.
-  // 사용자 명시 2026-05-11 ultrathink: testerMode 자동 활성화 폐기 — 상시 ON 이라 시드/추출 격리 흐름이 일반과 달라 디버깅 혼란. 자동 OFF (이미 true 면 false 로 reset). settings 에서 명시적으로 토글하는 건 자유.
+  // 사용자 명시 2026-05-10: 테스트 계정 (soragodongapp@gmail.com) 자동 설정 — testerMode + 튜토리얼 skip + E2EE setup skip flag.
+  // 사용자 명시 2026-05-11 ultrathink (재정정): testerMode 상시 ON 부활. 시도해본 OFF fix 는 maybeShowE2EESetupForNewUser / firstTimeIntro 등의 핵심 가드 (testerMode) 가 함께 풀리면서 모달이 떠 우회가 깨졌음. 시드 데이터는 별도 trigger (튜토리얼 시작 시 onb-drag) 라 자동 적용 X.
   try {
     if (session && session.user && session.user.email === 'soragodongapp@gmail.com') {
       if (!state.preferences) state.preferences = {};
       let _testTouched = false;
-      if (state.preferences.testerMode === true) { state.preferences.testerMode = false; _testTouched = true; }
+      if (state.preferences.testerMode !== true) { state.preferences.testerMode = true; _testTouched = true; }
       if (state.hasSeenWelcomeTutorial !== true) { state.hasSeenWelcomeTutorial = true; _testTouched = true; }
       if (state.hasSeenV3Tour !== true) { state.hasSeenV3Tour = true; _testTouched = true; }
       if (state.preferences._tutorialDismissed !== true) { state.preferences._tutorialDismissed = true; _testTouched = true; }
