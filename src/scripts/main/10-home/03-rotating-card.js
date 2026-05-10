@@ -842,8 +842,9 @@ ${modesText}
     };
   };
 
+  // 사용자 보고 2026-05-11: 첫 호출 자주 실패 → 재시도 횟수 2 → 4.
   let attempt = 0;
-  while (attempt < 2) {
+  while (attempt < 4) {
     const resp = await callAnthropic({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1500,
@@ -855,43 +856,49 @@ ${modesText}
     let raw = (data.content?.[0]?.text || '').trim();
     if (!raw) {
       attempt++;
-      if (attempt >= 2) throw new Error('빈 응답');
+      if (attempt >= 4) throw new Error('빈 응답');
       continue;
     }
     raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
     const jsonMatch = raw.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       attempt++;
-      if (attempt >= 2) throw new Error('JSON 배열 미매치');
+      if (attempt >= 4) throw new Error('JSON 배열 미매치');
       continue;
     }
     let parsed;
     try { parsed = JSON.parse(jsonMatch[0]); } catch (e) {
       attempt++;
-      if (attempt >= 2) throw new Error('JSON parse: ' + e.message);
+      if (attempt >= 4) throw new Error('JSON parse: ' + e.message);
       continue;
     }
     if (!Array.isArray(parsed)) {
       attempt++;
-      if (attempt >= 2) throw new Error('배열 X');
+      if (attempt >= 4) throw new Error('배열 X');
       continue;
     }
 
     // tone guard — 모든 body 합쳐 검사
     const allBodies = parsed.map(e => (e && typeof e.body === 'string') ? e.body : '').join('\n');
-    const violations = [];
-    if (sycophancy.test(allBodies)) violations.push('sycophancy');
-    if (diagnosis.test(allBodies)) violations.push('diagnosis');
-    if (banGyeol.test(allBodies)) violations.push('gyeol');
-    if (emojiRe.test(allBodies)) violations.push('emoji');
-    if (adviceLex.test(allBodies)) violations.push('advice');
-    if (youReg.test(allBodies)) violations.push('you-pronoun');
-    if (formalLex.test(allBodies)) violations.push('formal');
-    if (metaLex.test(allBodies)) violations.push('meta-analysis');
-    if (violations.length > 0) {
+    // hard violations (반드시 차단): sycophancy / diagnosis / emoji / advice / you-pronoun
+    const hardViolations = [];
+    if (sycophancy.test(allBodies)) hardViolations.push('sycophancy');
+    if (diagnosis.test(allBodies)) hardViolations.push('diagnosis');
+    if (emojiRe.test(allBodies)) hardViolations.push('emoji');
+    if (adviceLex.test(allBodies)) hardViolations.push('advice');
+    if (youReg.test(allBodies)) hardViolations.push('you-pronoun');
+    // soft violations (warn, 통과): banGyeol / formal / meta — 사용자 보고 2026-05-11: 첫 호출 실패 원인 가능성.
+    const softViolations = [];
+    if (banGyeol.test(allBodies)) softViolations.push('gyeol');
+    if (formalLex.test(allBodies)) softViolations.push('formal');
+    if (metaLex.test(allBodies)) softViolations.push('meta-analysis');
+    if (hardViolations.length > 0) {
       attempt++;
-      if (attempt >= 2) throw new Error('tone verify 실패: ' + violations.join(','));
+      if (attempt >= 4) throw new Error('tone verify 실패 (hard): ' + hardViolations.join(','));
       continue;
+    }
+    if (softViolations.length > 0) {
+      console.warn('[godong-diary] soft tone violations (통과):', softViolations.join(','));
     }
 
     // 사용자 보고 2026-05-11: 본문 길이 cap 280 → 150 (나열 차단 — 한 사건 + 느낌 = 120자 충분).

@@ -148,10 +148,12 @@ async function openGodongDiaryModal() {
     state.godongDiary = (state.godongDiary || []).filter(e => !_targetSet.has(_entryDayK(e)));
 
     let newEntries = [];
+    let _generateOk = false;
     try {
       const arr = await _callGodongDiaryHaiku();
       if (Array.isArray(arr) && arr.length > 0) {
         newEntries = arr.map(p => _gdiaryEntryFromHaiku(p)).filter(Boolean);
+        if (newEntries.length > 0) _generateOk = true;
       }
     } catch (err) {
       console.warn('[godong-diary] generate fail, fallback', err && err.message);
@@ -173,8 +175,12 @@ async function openGodongDiaryModal() {
     }
     if (newEntries.length > 0) {
       newEntries.forEach(e => state.godongDiary.push(e));
-      r.lastGodongDiaryAt = new Date().toISOString();
-      r.godongDiaryContentId = newEntries[newEntries.length - 1].id;
+      // 사용자 보고 2026-05-11: 첫 호출 fallback 시 cooldown 잠그면 다음 진입 시 자동 재호출 X — '다시 적어줘' 만 가능.
+      //   fix: 정상 생성 (_generateOk=true) 시만 lastGodongDiaryAt set. fallback 시는 안 잠가서 다음 진입 시 자동 재시도.
+      if (_generateOk) {
+        r.lastGodongDiaryAt = new Date().toISOString();
+        r.godongDiaryContentId = newEntries[newEntries.length - 1].id;
+      }
       if (typeof saveState === 'function') saveState(true);
     }
   }
