@@ -5,6 +5,8 @@
 
 // Module-local state. 모달 열려있을 때만 객체. 닫힐 때 null.
 let _gdiaryState = null;
+// 사용자 명시 2026-05-11: 다시 만들기 버튼용 force flag — 한 번만 적용.
+let _gdiaryForceRegenerate = false;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 정형문 fallback — substrate 빈약 / tone verify 실패 시 random pick.
@@ -41,7 +43,10 @@ async function openGodongDiaryModal() {
     const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : (typeof _rcTodayKey === 'function' ? _rcTodayKey() : null);
     if (todayK) inCooldown = _rcDayDiff(todayK, lastDayK) < 3;
   }
-  const needsGenerate = !inCooldown;
+  // 사용자 명시 2026-05-11: '다시 적어줘' 버튼이 force regenerate 신호 — cooldown 무시 + 1회만 적용.
+  const _force = _gdiaryForceRegenerate;
+  _gdiaryForceRegenerate = false;
+  const needsGenerate = !inCooldown || _force;
 
   // 셸 먼저 (loading) — 사용자가 빈 화면 안 보게.
   _gdiaryRenderShell({ loading: true });
@@ -178,6 +183,22 @@ function closeGodongDiaryModal() {
     _gdiaryState = null;
     if (typeof renderRotatingCard === 'function') setTimeout(() => renderRotatingCard(), 240);
   }, 650);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 사용자 명시 2026-05-11: 다시 적어줘 — 모달 안 ↻ 버튼. cooldown 무시 + Haiku 재호출.
+// ─────────────────────────────────────────────────────────────────────────────
+function regenerateGodongDiary() {
+  if (!_gdiaryState) return;
+  if (_gdiaryState.readonly) return;
+  if (_gdiaryState.intervalId) { clearInterval(_gdiaryState.intervalId); _gdiaryState.intervalId = null; }
+  if (_gdiaryState.toastTimeoutId) { clearTimeout(_gdiaryState.toastTimeoutId); _gdiaryState.toastTimeoutId = null; }
+  _gdiaryForceRegenerate = true;
+  // 모달 즉시 제거 + 재진입 (loading → Haiku → 새 entry).
+  const overlay = document.getElementById('gdiaryOverlay');
+  if (overlay) overlay.remove();
+  _gdiaryState = null;
+  setTimeout(() => { try { openGodongDiaryModal(); } catch (e) { console.warn('[gdiary regenerate]', e); } }, 200);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -364,7 +385,8 @@ function _gdiaryRenderShell(opts) {
       </div>
       ` : ''}
 
-      <div class="gdiary-close-row">
+      <div class="gdiary-action-row">
+        ${s.readonly ? '' : `<button class="gdiary-regenerate" type="button" onclick="regenerateGodongDiary()" title="고동이한테 다시 적게 하기">↻ 다시 적어줘</button>`}
         <button class="gdiary-close" type="button" onclick="closeGodongDiaryModal()">못 본 척 하기</button>
       </div>
 

@@ -12001,6 +12001,63 @@
     100% { opacity: 1; transform: translateY(0) scale(1); }
   }
 
+  /* ── 사용자 명시 2026-05-11: 리뷰 모음 카드 우측 상단 삭제 버튼 (godong-diary 전용) ── */
+  .timeline-day-delete {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-soft);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.55;
+    transition: opacity 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
+    padding: 0;
+  }
+  .timeline-day-delete:hover {
+    opacity: 1;
+    background: rgba(224,108,117,0.10);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  /* ── 사용자 명시 2026-05-11: 모달 안 "다시 적어줘" 버튼 + 닫기 가로 배치 ── */
+  .gdiary-action-row {
+    margin-top: 14px;
+    padding: 0 4px;
+    display: flex;
+    gap: 8px;
+  }
+  .gdiary-regenerate {
+    flex: 0 0 auto;
+    background: rgba(201,169,110,0.08);
+    border: 1px solid rgba(201,169,110,0.30);
+    color: var(--accent);
+    padding: 11px 14px;
+    border-radius: 12px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .gdiary-regenerate:hover {
+    background: rgba(201,169,110,0.16);
+  }
+  .gdiary-action-row .gdiary-close {
+    flex: 1;
+    margin: 0;
+  }
+
   /* ── 회전 카드 안 godong diary trigger 카드 (peek 변형) ───── */
   .rc-body-godong-diary {
     position: relative;
@@ -28020,6 +28077,8 @@ function _ensureRotatingCardState() {
   if (typeof r.simulationBlockKey === 'undefined') r.simulationBlockKey = null;
   if (typeof r.currentSimulation === 'undefined') r.currentSimulation = null;
   if (!r.userSimulationsToday || typeof r.userSimulationsToday !== 'object') r.userSimulationsToday = {};
+  // 사용자 명시 2026-05-11: 최근 시뮬 시나리오 dedupe (다양성 ↑). 최대 20개.
+  if (!Array.isArray(r.recentSimulations)) r.recentSimulations = [];
   // 디버깅 / 호환
   if (!Array.isArray(r.history)) r.history = [];
   // preferences.userZodiac 자동 마이그
@@ -30284,19 +30343,54 @@ async function _rcSimGenerate(opts) {
 
   let userPrompt;
   if (mode === 'godong') {
+    // 사용자 명시 2026-05-11: 다양성 ↑ — 카테고리 풀 (18) 에서 매번 3개 랜덤 픽 + 최근 10개 시나리오 dedupe.
+    const SCENARIO_CATEGORIES = [
+      '음식 / 배달 / 카페 (메뉴 고민, 신메뉴, 갑작스런 식욕)',
+      '모르는 사람과 우연 마주침 (엘리베이터, 지하철, 길거리, 카페 옆자리)',
+      '친구 카톡 / 갑작스런 연락 (오랜만에, 새벽, 술 먹자, 만나자)',
+      '가족 연락 / 가족 모임 (엄마 전화, 명절, 김치 보냈다)',
+      '직장 동료 / 학교 동기와 일상 (점심, 회의실, 사담)',
+      '쇼핑 (마트 진열대, 온라인 광고, 충동구매 유혹)',
+      'SNS (피드, 좋아요, DM, 알고리즘 추천, 팔로우 알림)',
+      '날씨 변화 (갑자기 비, 폭설, 폭염, 환절기)',
+      '교통 (버스 늦음, 택시, 지하철 만원, 길 막힘)',
+      '작은 우연 (잃어버림, 발견, 길에서 줍기, 우연한 만남)',
+      '음악 / 미디어 (새 곡, 추천 알고리즘, 옛 노래)',
+      '운동 / 산책 / 신체 활동 (헬스장, 한강, 계단, 의지 약함)',
+      '잠 / 새벽 / 늦은 밤 (불면, 알람, 새벽 카페, 야행성)',
+      '청소 / 정리 / 집 안 일 (밀린 빨래, 설거지, 옷장)',
+      '반려동물 / 길고양이 / 동물 (산책, 마주침, 사진)',
+      '사소한 신체 감각 (피곤, 배고픔, 갈증, 더위, 추위)',
+      '취미 / 게임 / 독서 (덕질, 신간, 새 게임, 영상)',
+      '날씨/계절 변화 + 옷차림 (환절기, 갑작스런 추위)',
+    ];
+    const _shuffled = SCENARIO_CATEGORIES.slice().sort(() => Math.random() - 0.5);
+    const _pickedCats = _shuffled.slice(0, 3);
+    const r = _ensureRotatingCardState();
+    const _recentScenarios = (Array.isArray(r.recentSimulations) ? r.recentSimulations : [])
+      .slice(-10).map(s => `- "${(s.scenario || '').slice(0, 80)}"`).join('\n');
+
     userPrompt = `사용자의 case formulation 데이터:
 ${cfSnapshot}
 
+[최근 시나리오 — 이거 피해서 다른 거]
+${_recentScenarios || '(없음)'}
+
+[이번 카테고리 후보 — 이 중 하나에서 만들어. 같은 카테고리라도 sub-scenario 다양하게]
+1. ${_pickedCats[0]}
+2. ${_pickedCats[1]}
+3. ${_pickedCats[2]}
+
 가벼운 일상 시나리오 1개 + 사용자가 그 상황에서 보일 행동을 짧게 예측해.
 
-[규칙 — 사용자 명시 2026-05-09]
-- scenario: 일상의 사소·가볍·재미있는 상황 1문장 (40-80자). 진지한 주제 X (마감 / 가족 / 진단 / 큰 결정 X).
-  좋은 예: "친구가 새벽 2시에 갑자기 떡볶이 먹자고 카톡 옴.", "카페 옆자리 사람이 통화 너무 시끄러움.",
-          "엘리베이터 같이 탄 모르는 사람이 인사함.", "마트 진열대에 익숙한 과자 신상 발견."
-- godongPrediction: 사용자 행동/반응 예측 1-2문장 (40-100자, 짧고 명료). cf 의 traits / patterns / strengths
-  살짝 반영. 친구 카톡 톤. 길게 풀지 X — 핵심만. 평가 X.
-  좋은 예: "야행성이라 일단 호응부터 하고, 운전 못 가니까 배달 시키자고 답할 듯.",
-         "처음엔 자리 옮길까 망설이다 결국 이어폰 끼고 버틸 듯."
+[규칙]
+- scenario: 일상의 사소·가볍·재미있는 상황 1문장 (40-80자). 진지한 주제 X (마감 / 가족 갈등 / 진단 / 큰 결정 X).
+  좋은 예: "친구가 새벽 2시에 떡볶이 먹자고 카톡 옴.", "카페 옆자리 사람 통화가 너무 시끄러움.",
+          "엘리베이터 모르는 사람이 인사함.", "마트에 옛날 과자 신상 발견.",
+          "갑자기 비 와서 우산 없이 나옴.", "지하철 옆 사람 가방에서 좋은 향 남."
+- godongPrediction: 사용자 행동/반응 예측 1-2문장 (40-100자). cf 의 traits / patterns / strengths 살짝 반영.
+  친구 카톡 톤. 길게 풀지 X. 평가 X.
+- 같은 어휘 / 같은 패턴 (예: 카페 옆자리만 반복) 절대 X. 위 [최근 시나리오] 다 봐.
 - 의료 진단 / 진단명 X. 마크다운 X.
 - JSON 만.
 
@@ -30395,9 +30489,16 @@ async function rcSimPickMode(mode) {
   _rcSimGenerateInflight = true;
   try {
     const out = await _rcSimGenerate({ mode: 'godong' });
-    r.currentSimulation.scenario = (out.scenario || '').trim();
+    const _sc = (out.scenario || '').trim();
+    r.currentSimulation.scenario = _sc;
     r.currentSimulation.godongPrediction = (out.godongPrediction || '').trim();
     r.currentSimulation.stage = 'godong-input';
+    // 사용자 명시 2026-05-11: 다양성 — 최근 시나리오 stash (다음 generate 시 dedupe hint).
+    if (_sc) {
+      if (!Array.isArray(r.recentSimulations)) r.recentSimulations = [];
+      r.recentSimulations.push({ scenario: _sc, createdAt: new Date().toISOString() });
+      if (r.recentSimulations.length > 20) r.recentSimulations = r.recentSimulations.slice(-20);
+    }
     if (typeof saveState === 'function') saveState();
   } catch (e) {
     console.warn('[sim generate godong]', e?.message);
@@ -30884,6 +30985,8 @@ function _rcOpenFreshReview(type, reviewId, key, completedAt) {
 
 // Module-local state. 모달 열려있을 때만 객체. 닫힐 때 null.
 let _gdiaryState = null;
+// 사용자 명시 2026-05-11: 다시 만들기 버튼용 force flag — 한 번만 적용.
+let _gdiaryForceRegenerate = false;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 정형문 fallback — substrate 빈약 / tone verify 실패 시 random pick.
@@ -30920,7 +31023,10 @@ async function openGodongDiaryModal() {
     const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : (typeof _rcTodayKey === 'function' ? _rcTodayKey() : null);
     if (todayK) inCooldown = _rcDayDiff(todayK, lastDayK) < 3;
   }
-  const needsGenerate = !inCooldown;
+  // 사용자 명시 2026-05-11: '다시 적어줘' 버튼이 force regenerate 신호 — cooldown 무시 + 1회만 적용.
+  const _force = _gdiaryForceRegenerate;
+  _gdiaryForceRegenerate = false;
+  const needsGenerate = !inCooldown || _force;
 
   // 셸 먼저 (loading) — 사용자가 빈 화면 안 보게.
   _gdiaryRenderShell({ loading: true });
@@ -31057,6 +31163,22 @@ function closeGodongDiaryModal() {
     _gdiaryState = null;
     if (typeof renderRotatingCard === 'function') setTimeout(() => renderRotatingCard(), 240);
   }, 650);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 사용자 명시 2026-05-11: 다시 적어줘 — 모달 안 ↻ 버튼. cooldown 무시 + Haiku 재호출.
+// ─────────────────────────────────────────────────────────────────────────────
+function regenerateGodongDiary() {
+  if (!_gdiaryState) return;
+  if (_gdiaryState.readonly) return;
+  if (_gdiaryState.intervalId) { clearInterval(_gdiaryState.intervalId); _gdiaryState.intervalId = null; }
+  if (_gdiaryState.toastTimeoutId) { clearTimeout(_gdiaryState.toastTimeoutId); _gdiaryState.toastTimeoutId = null; }
+  _gdiaryForceRegenerate = true;
+  // 모달 즉시 제거 + 재진입 (loading → Haiku → 새 entry).
+  const overlay = document.getElementById('gdiaryOverlay');
+  if (overlay) overlay.remove();
+  _gdiaryState = null;
+  setTimeout(() => { try { openGodongDiaryModal(); } catch (e) { console.warn('[gdiary regenerate]', e); } }, 200);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31243,7 +31365,8 @@ function _gdiaryRenderShell(opts) {
       </div>
       ` : ''}
 
-      <div class="gdiary-close-row">
+      <div class="gdiary-action-row">
+        ${s.readonly ? '' : `<button class="gdiary-regenerate" type="button" onclick="regenerateGodongDiary()" title="고동이한테 다시 적게 하기">↻ 다시 적어줘</button>`}
         <button class="gdiary-close" type="button" onclick="closeGodongDiaryModal()">못 본 척 하기</button>
       </div>
 
@@ -52967,9 +53090,14 @@ function renderArchiveReviews() {
             : `openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})`;
     const _isWeekly = r.type === 'weekly';
     const _ctaText = _isWeekly ? '▾ 펼쳐보기' : '▶ 같이 보자';
+    // 사용자 명시 2026-05-11: 고동의 일기 (godong-diary) 만 사용자 삭제 허용. 옛 미니 / weekly+ 는 보존.
+    const _deleteBtn = r.type === 'godong-diary'
+      ? `<button class="timeline-day-delete" type="button" onclick="event.stopPropagation(); deleteGodongDiary('${r.id}')" title="이 일기 삭제" aria-label="삭제">×</button>`
+      : '';
 
     return `
-      <div class="timeline-day${_isWeekly ? ' weekly-inline-card' : ''}" data-review-id="${r.id}" onclick="${onClickJs}" style="cursor:pointer;">
+      <div class="timeline-day${_isWeekly ? ' weekly-inline-card' : ''}" data-review-id="${r.id}" onclick="${onClickJs}" style="cursor:pointer; position:relative;">
+        ${_deleteBtn}
         <div class="timeline-day-date">${typeLabel}${periodLabel ? ` · ${periodLabel}` : ''}${autoTag}</div>
         <div class="timeline-day-summary" style="font-family: 'Gowun Batang', serif; font-size: 14px;">
           ${summaryLine}
@@ -52979,6 +53107,25 @@ function renderArchiveReviews() {
       </div>
     `;
   }).join('');
+}
+
+// 사용자 명시 2026-05-11: 리뷰 모음에서 고동의 일기 삭제.
+function deleteGodongDiary(id) {
+  if (!id) return;
+  const e = (state.godongDiary || []).find(x => x && x.id === id);
+  if (!e) {
+    if (typeof showToast === 'function') showToast('일기를 찾을 수 없어');
+    return;
+  }
+  if (!confirm('이 일기 지울까? (되돌릴 수 없음)')) return;
+  state.godongDiary = (state.godongDiary || []).filter(x => x && x.id !== id);
+  // godongDiaryContentId 매칭 시 reset (모달 재진입 stash 무효화).
+  if (state.rotatingCardState && state.rotatingCardState.godongDiaryContentId === id) {
+    state.rotatingCardState.godongDiaryContentId = null;
+  }
+  if (typeof saveState === 'function') saveState(true);
+  if (typeof showToast === 'function') showToast('지웠어');
+  if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
 }
 
 // 사용자 명시 2026-05-10 (큐 8): weekly 카드 inline 펼침 — 화면 전환 X, 카드 안 4 섹션 toggle.

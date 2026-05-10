@@ -239,9 +239,14 @@ function renderArchiveReviews() {
             : `openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})`;
     const _isWeekly = r.type === 'weekly';
     const _ctaText = _isWeekly ? '▾ 펼쳐보기' : '▶ 같이 보자';
+    // 사용자 명시 2026-05-11: 고동의 일기 (godong-diary) 만 사용자 삭제 허용. 옛 미니 / weekly+ 는 보존.
+    const _deleteBtn = r.type === 'godong-diary'
+      ? `<button class="timeline-day-delete" type="button" onclick="event.stopPropagation(); deleteGodongDiary('${r.id}')" title="이 일기 삭제" aria-label="삭제">×</button>`
+      : '';
 
     return `
-      <div class="timeline-day${_isWeekly ? ' weekly-inline-card' : ''}" data-review-id="${r.id}" onclick="${onClickJs}" style="cursor:pointer;">
+      <div class="timeline-day${_isWeekly ? ' weekly-inline-card' : ''}" data-review-id="${r.id}" onclick="${onClickJs}" style="cursor:pointer; position:relative;">
+        ${_deleteBtn}
         <div class="timeline-day-date">${typeLabel}${periodLabel ? ` · ${periodLabel}` : ''}${autoTag}</div>
         <div class="timeline-day-summary" style="font-family: 'Gowun Batang', serif; font-size: 14px;">
           ${summaryLine}
@@ -251,6 +256,25 @@ function renderArchiveReviews() {
       </div>
     `;
   }).join('');
+}
+
+// 사용자 명시 2026-05-11: 리뷰 모음에서 고동의 일기 삭제.
+function deleteGodongDiary(id) {
+  if (!id) return;
+  const e = (state.godongDiary || []).find(x => x && x.id === id);
+  if (!e) {
+    if (typeof showToast === 'function') showToast('일기를 찾을 수 없어');
+    return;
+  }
+  if (!confirm('이 일기 지울까? (되돌릴 수 없음)')) return;
+  state.godongDiary = (state.godongDiary || []).filter(x => x && x.id !== id);
+  // godongDiaryContentId 매칭 시 reset (모달 재진입 stash 무효화).
+  if (state.rotatingCardState && state.rotatingCardState.godongDiaryContentId === id) {
+    state.rotatingCardState.godongDiaryContentId = null;
+  }
+  if (typeof saveState === 'function') saveState(true);
+  if (typeof showToast === 'function') showToast('지웠어');
+  if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
 }
 
 // 사용자 명시 2026-05-10 (큐 8): weekly 카드 inline 펼침 — 화면 전환 X, 카드 안 4 섹션 toggle.

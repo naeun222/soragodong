@@ -40,6 +40,8 @@ function _ensureRotatingCardState() {
   if (typeof r.simulationBlockKey === 'undefined') r.simulationBlockKey = null;
   if (typeof r.currentSimulation === 'undefined') r.currentSimulation = null;
   if (!r.userSimulationsToday || typeof r.userSimulationsToday !== 'object') r.userSimulationsToday = {};
+  // 사용자 명시 2026-05-11: 최근 시뮬 시나리오 dedupe (다양성 ↑). 최대 20개.
+  if (!Array.isArray(r.recentSimulations)) r.recentSimulations = [];
   // 디버깅 / 호환
   if (!Array.isArray(r.history)) r.history = [];
   // preferences.userZodiac 자동 마이그

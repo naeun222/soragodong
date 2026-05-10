@@ -407,19 +407,54 @@ async function _rcSimGenerate(opts) {
 
   let userPrompt;
   if (mode === 'godong') {
+    // 사용자 명시 2026-05-11: 다양성 ↑ — 카테고리 풀 (18) 에서 매번 3개 랜덤 픽 + 최근 10개 시나리오 dedupe.
+    const SCENARIO_CATEGORIES = [
+      '음식 / 배달 / 카페 (메뉴 고민, 신메뉴, 갑작스런 식욕)',
+      '모르는 사람과 우연 마주침 (엘리베이터, 지하철, 길거리, 카페 옆자리)',
+      '친구 카톡 / 갑작스런 연락 (오랜만에, 새벽, 술 먹자, 만나자)',
+      '가족 연락 / 가족 모임 (엄마 전화, 명절, 김치 보냈다)',
+      '직장 동료 / 학교 동기와 일상 (점심, 회의실, 사담)',
+      '쇼핑 (마트 진열대, 온라인 광고, 충동구매 유혹)',
+      'SNS (피드, 좋아요, DM, 알고리즘 추천, 팔로우 알림)',
+      '날씨 변화 (갑자기 비, 폭설, 폭염, 환절기)',
+      '교통 (버스 늦음, 택시, 지하철 만원, 길 막힘)',
+      '작은 우연 (잃어버림, 발견, 길에서 줍기, 우연한 만남)',
+      '음악 / 미디어 (새 곡, 추천 알고리즘, 옛 노래)',
+      '운동 / 산책 / 신체 활동 (헬스장, 한강, 계단, 의지 약함)',
+      '잠 / 새벽 / 늦은 밤 (불면, 알람, 새벽 카페, 야행성)',
+      '청소 / 정리 / 집 안 일 (밀린 빨래, 설거지, 옷장)',
+      '반려동물 / 길고양이 / 동물 (산책, 마주침, 사진)',
+      '사소한 신체 감각 (피곤, 배고픔, 갈증, 더위, 추위)',
+      '취미 / 게임 / 독서 (덕질, 신간, 새 게임, 영상)',
+      '날씨/계절 변화 + 옷차림 (환절기, 갑작스런 추위)',
+    ];
+    const _shuffled = SCENARIO_CATEGORIES.slice().sort(() => Math.random() - 0.5);
+    const _pickedCats = _shuffled.slice(0, 3);
+    const r = _ensureRotatingCardState();
+    const _recentScenarios = (Array.isArray(r.recentSimulations) ? r.recentSimulations : [])
+      .slice(-10).map(s => `- "${(s.scenario || '').slice(0, 80)}"`).join('\n');
+
     userPrompt = `사용자의 case formulation 데이터:
 ${cfSnapshot}
 
+[최근 시나리오 — 이거 피해서 다른 거]
+${_recentScenarios || '(없음)'}
+
+[이번 카테고리 후보 — 이 중 하나에서 만들어. 같은 카테고리라도 sub-scenario 다양하게]
+1. ${_pickedCats[0]}
+2. ${_pickedCats[1]}
+3. ${_pickedCats[2]}
+
 가벼운 일상 시나리오 1개 + 사용자가 그 상황에서 보일 행동을 짧게 예측해.
 
-[규칙 — 사용자 명시 2026-05-09]
-- scenario: 일상의 사소·가볍·재미있는 상황 1문장 (40-80자). 진지한 주제 X (마감 / 가족 / 진단 / 큰 결정 X).
-  좋은 예: "친구가 새벽 2시에 갑자기 떡볶이 먹자고 카톡 옴.", "카페 옆자리 사람이 통화 너무 시끄러움.",
-          "엘리베이터 같이 탄 모르는 사람이 인사함.", "마트 진열대에 익숙한 과자 신상 발견."
-- godongPrediction: 사용자 행동/반응 예측 1-2문장 (40-100자, 짧고 명료). cf 의 traits / patterns / strengths
-  살짝 반영. 친구 카톡 톤. 길게 풀지 X — 핵심만. 평가 X.
-  좋은 예: "야행성이라 일단 호응부터 하고, 운전 못 가니까 배달 시키자고 답할 듯.",
-         "처음엔 자리 옮길까 망설이다 결국 이어폰 끼고 버틸 듯."
+[규칙]
+- scenario: 일상의 사소·가볍·재미있는 상황 1문장 (40-80자). 진지한 주제 X (마감 / 가족 갈등 / 진단 / 큰 결정 X).
+  좋은 예: "친구가 새벽 2시에 떡볶이 먹자고 카톡 옴.", "카페 옆자리 사람 통화가 너무 시끄러움.",
+          "엘리베이터 모르는 사람이 인사함.", "마트에 옛날 과자 신상 발견.",
+          "갑자기 비 와서 우산 없이 나옴.", "지하철 옆 사람 가방에서 좋은 향 남."
+- godongPrediction: 사용자 행동/반응 예측 1-2문장 (40-100자). cf 의 traits / patterns / strengths 살짝 반영.
+  친구 카톡 톤. 길게 풀지 X. 평가 X.
+- 같은 어휘 / 같은 패턴 (예: 카페 옆자리만 반복) 절대 X. 위 [최근 시나리오] 다 봐.
 - 의료 진단 / 진단명 X. 마크다운 X.
 - JSON 만.
 
@@ -518,9 +553,16 @@ async function rcSimPickMode(mode) {
   _rcSimGenerateInflight = true;
   try {
     const out = await _rcSimGenerate({ mode: 'godong' });
-    r.currentSimulation.scenario = (out.scenario || '').trim();
+    const _sc = (out.scenario || '').trim();
+    r.currentSimulation.scenario = _sc;
     r.currentSimulation.godongPrediction = (out.godongPrediction || '').trim();
     r.currentSimulation.stage = 'godong-input';
+    // 사용자 명시 2026-05-11: 다양성 — 최근 시나리오 stash (다음 generate 시 dedupe hint).
+    if (_sc) {
+      if (!Array.isArray(r.recentSimulations)) r.recentSimulations = [];
+      r.recentSimulations.push({ scenario: _sc, createdAt: new Date().toISOString() });
+      if (r.recentSimulations.length > 20) r.recentSimulations = r.recentSimulations.slice(-20);
+    }
     if (typeof saveState === 'function') saveState();
   } catch (e) {
     console.warn('[sim generate godong]', e?.message);
