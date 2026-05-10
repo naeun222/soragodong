@@ -234,10 +234,9 @@ function _rcSimRenderModePick(blockKey) {
   };
 }
 
-// 사용자 명시 2026-05-09: 개발자 테스트용 reset 버튼 — 모든 인터랙션 stage 우상단 ↻.
-// 누르면 currentSimulation = null → 다음 진입 시 mode-pick 부터 다시.
+// 사용자 명시 2026-05-11: 개발자 테스트용 reset 버튼 (↻ 다시 시도) 제거. rcSimReset 함수는 유지 (legacy 호환).
 function _rcSimResetBtnHtml() {
-  return `<button class="rc-sim-reset-btn" type="button" onclick="event.stopPropagation(); rcSimReset()" title="다시 시도" aria-label="다시">↻</button>`;
+  return '';
 }
 
 function _rcSimRenderGenerating() {

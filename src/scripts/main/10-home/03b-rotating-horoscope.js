@@ -319,6 +319,28 @@ function _rcUpdateHoroscopeInSession() {
   if (typeof _rcEqualizeHeights === 'function') _rcEqualizeHeights();
 }
 
+// 사용자 명시 2026-05-11: 회전 카드 horoscope source 진입 시 4시 cutoff 이후 새 진입이면 refresh.
+//   sessionOrder 가 mid-session 4AM 넘기면 옛 horoscope source 캐시됨 → 4AM 이후 진입 시 stale.
+//   _rcSource5Horoscope 가 본질 staleness check 함 (lastHoroscopeFetchDay !== todayK 면 fetch).
+//   이 helper 는 sessionOrder 의 horoscope source object 를 fresh 로 교체 → fetch 자동 trigger.
+//   호출 지점: _rcCycle (좌우 화살로 horoscope 진입) + renderRotatingCard (초기 진입 — 이미 fresh build 라 무관).
+function _rcEnsureHoroscopeFresh() {
+  if (!Array.isArray(_rcSessionOrder)) return;
+  const idx = _rcSessionOrder.findIndex(s => s && s.id === 'horoscope');
+  if (idx < 0) return;
+  const r = (typeof _ensureRotatingCardState === 'function') ? _ensureRotatingCardState() : null;
+  if (!r) return;
+  const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : null;
+  if (!todayK) return;
+  // 신선 (오늘 cutoff 안 fetch 됨) — 교체 X.
+  if (r.lastHoroscopeFetchDay === todayK && r.lastHoroscopeContent) return;
+  // stale → fresh source 로 교체 (_rcSource5Horoscope 가 fetch 자동 trigger).
+  if (typeof _rcSource5Horoscope === 'function') {
+    const fresh = _rcSource5Horoscope();
+    if (fresh) _rcSessionOrder[idx] = fresh;
+  }
+}
+
 function _rcRenderHoroscopeFailCard(zodiac) {
   const z = _rcZodiacInfo(zodiac);
   const zLabel = z ? `${z.symbol} ${escapeHtml(z.label)}` : '';
@@ -327,13 +349,13 @@ function _rcRenderHoroscopeFailCard(zodiac) {
     id: 'horoscope',
     available: true,
     contentHash: 'horoscope_fail_' + (typeof _rcQuizCutoffKey === 'function' ? _rcQuizCutoffKey() : ''),
+    // 사용자 명시 2026-05-11: 다시 시도 버튼 제거 — 다음 4시 cutoff 자동 refresh 로 대체.
     bodyHtml: `
       <div class="rc-body-horoscope">
         <div class="rc-body-headline">고동의 운세</div>
         ${zLabel ? `<div class="rc-horoscope-zodiac">${zLabel}</div>` : ''}
         <div class="rc-horoscope-text" style="opacity:0.65;">별자리 못 봤어 ✦</div>
         <div class="rc-horoscope-fail-reason">${escapeHtml(reason)}</div>
-        <button class="rc-horoscope-retry" type="button" onclick="event.stopPropagation(); retryHoroscopeFetch()">다시 시도</button>
       </div>
     `,
     onTapClick: '',
@@ -398,11 +420,9 @@ function _rcRenderHoroscopeCard(zodiac, content, lucky) {
   // 첫 문장 추출 ('.', '!', '?', '。', '！', '？' 까지). 없으면 60자 truncate.
   const _sentMatch = content.match(/^[\s\S]*?[.!?。！？]/);
   const trim = _sentMatch ? _sentMatch[0].trim() : (content.length > 60 ? content.slice(0, 60) + '…' : content);
-  // 사용자 명시 2026-05-09 (개발자 테스트, 추후 제거): ↻ 강제 재fetch 버튼 (cache 무시).
-  const refreshBtn = `<button class="rc-horoscope-refresh-btn" type="button" onclick="event.stopPropagation(); forceRefreshHoroscope()" title="강제 재시도 (개발자)" aria-label="다시">↻</button>`;
+  // 사용자 명시 2026-05-11: 정상 카드의 ↻ 강제 재fetch 버튼 제거 — 4시 cutoff 자동 refresh 로 충분.
   const bodyHtml = `
     <div class="rc-body-horoscope">
-      ${refreshBtn}
       <div class="rc-body-headline">고동의 운세</div>
       ${zLabel ? `<div class="rc-horoscope-zodiac">${escapeHtml(zLabel)}</div>` : ''}
       <div class="rc-horoscope-text">${escapeHtml(trim)}</div>
@@ -458,7 +478,6 @@ function openHoroscopeModal() {
       <div class="rc-mini-review-body">
         <div class="rc-horoscope-modal-text">${escapeHtml(r.lastHoroscopeContent)}</div>
         ${luckyHtml}
-        <button class="rc-horoscope-modal-retry" type="button" onclick="closeHoroscopeModal(); forceRefreshHoroscope();">↻ 다시 시도</button>
       </div>
     </div>
   `;

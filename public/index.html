@@ -29187,14 +29187,14 @@ function _rcCollectAvailable() {
 
 // =============================================================================
 // godong 표정 SVG — source 별 mood 매핑.
-// pearl=inspired(별눈), newView=surprised(큰 눈), godongDiary=whispering(노트/비밀),
+// pearl=inspired(별눈), newView=surprised(큰 눈), godongDiary=sleepy(자리 비움 메타포 — 사용자 명시 2026-05-11 확정),
 // quiz=thinking(?), quizDone=proud(별3개+자부심), horoscope=dreaming(꿈+🌗 분위기)
 // =============================================================================
 function _rcGodongSvg(sourceId) {
   const moodMap = {
     pearl: 'inspired',
     newView: 'surprised',
-    godongDiary: 'whispering',
+    godongDiary: 'sleepy',
     quiz: 'thinking',
     quizDone: 'proud',
     horoscope: 'dreaming',
@@ -29249,6 +29249,11 @@ function renderRotatingCard() {
       return;
     }
     if (_rcSessionIndex >= _rcSessionOrder.length) _rcSessionIndex = 0;
+    // 사용자 명시 2026-05-11: render 시점에도 horoscope 가 current 면 4시 cutoff 신선도 체크 (mid-session 4AM 넘긴 후 home 재진입 케이스).
+    const _curEntry = _rcSessionOrder[_rcSessionIndex];
+    if (_curEntry && _curEntry.id === 'horoscope' && typeof _rcEnsureHoroscopeFresh === 'function') {
+      _rcEnsureHoroscopeFresh();
+    }
     container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
     _rcEqualizeHeights();
   } catch (e) {
@@ -29357,6 +29362,10 @@ function _rcCycle(dir, opts) {
     const r = _ensureRotatingCardState();
     r.lastPearlShownDate = _rcTodayKey();
     if (typeof saveState === 'function') saveState();
+  }
+  // 사용자 명시 2026-05-11: horoscope 진입 시 4시 cutoff 이후 새 진입이면 fresh source 로 교체 (자동 재 fetch).
+  if (cur && cur.id === 'horoscope' && typeof _rcEnsureHoroscopeFresh === 'function') {
+    _rcEnsureHoroscopeFresh();
   }
   const container = document.getElementById('rotatingCardContainer');
   if (container) container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
@@ -30092,6 +30101,28 @@ function _rcUpdateHoroscopeInSession() {
   if (typeof _rcEqualizeHeights === 'function') _rcEqualizeHeights();
 }
 
+// 사용자 명시 2026-05-11: 회전 카드 horoscope source 진입 시 4시 cutoff 이후 새 진입이면 refresh.
+//   sessionOrder 가 mid-session 4AM 넘기면 옛 horoscope source 캐시됨 → 4AM 이후 진입 시 stale.
+//   _rcSource5Horoscope 가 본질 staleness check 함 (lastHoroscopeFetchDay !== todayK 면 fetch).
+//   이 helper 는 sessionOrder 의 horoscope source object 를 fresh 로 교체 → fetch 자동 trigger.
+//   호출 지점: _rcCycle (좌우 화살로 horoscope 진입) + renderRotatingCard (초기 진입 — 이미 fresh build 라 무관).
+function _rcEnsureHoroscopeFresh() {
+  if (!Array.isArray(_rcSessionOrder)) return;
+  const idx = _rcSessionOrder.findIndex(s => s && s.id === 'horoscope');
+  if (idx < 0) return;
+  const r = (typeof _ensureRotatingCardState === 'function') ? _ensureRotatingCardState() : null;
+  if (!r) return;
+  const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : null;
+  if (!todayK) return;
+  // 신선 (오늘 cutoff 안 fetch 됨) — 교체 X.
+  if (r.lastHoroscopeFetchDay === todayK && r.lastHoroscopeContent) return;
+  // stale → fresh source 로 교체 (_rcSource5Horoscope 가 fetch 자동 trigger).
+  if (typeof _rcSource5Horoscope === 'function') {
+    const fresh = _rcSource5Horoscope();
+    if (fresh) _rcSessionOrder[idx] = fresh;
+  }
+}
+
 function _rcRenderHoroscopeFailCard(zodiac) {
   const z = _rcZodiacInfo(zodiac);
   const zLabel = z ? `${z.symbol} ${escapeHtml(z.label)}` : '';
@@ -30100,13 +30131,13 @@ function _rcRenderHoroscopeFailCard(zodiac) {
     id: 'horoscope',
     available: true,
     contentHash: 'horoscope_fail_' + (typeof _rcQuizCutoffKey === 'function' ? _rcQuizCutoffKey() : ''),
+    // 사용자 명시 2026-05-11: 다시 시도 버튼 제거 — 다음 4시 cutoff 자동 refresh 로 대체.
     bodyHtml: `
       <div class="rc-body-horoscope">
         <div class="rc-body-headline">고동의 운세</div>
         ${zLabel ? `<div class="rc-horoscope-zodiac">${zLabel}</div>` : ''}
         <div class="rc-horoscope-text" style="opacity:0.65;">별자리 못 봤어 ✦</div>
         <div class="rc-horoscope-fail-reason">${escapeHtml(reason)}</div>
-        <button class="rc-horoscope-retry" type="button" onclick="event.stopPropagation(); retryHoroscopeFetch()">다시 시도</button>
       </div>
     `,
     onTapClick: '',
@@ -30171,11 +30202,9 @@ function _rcRenderHoroscopeCard(zodiac, content, lucky) {
   // 첫 문장 추출 ('.', '!', '?', '。', '！', '？' 까지). 없으면 60자 truncate.
   const _sentMatch = content.match(/^[\s\S]*?[.!?。！？]/);
   const trim = _sentMatch ? _sentMatch[0].trim() : (content.length > 60 ? content.slice(0, 60) + '…' : content);
-  // 사용자 명시 2026-05-09 (개발자 테스트, 추후 제거): ↻ 강제 재fetch 버튼 (cache 무시).
-  const refreshBtn = `<button class="rc-horoscope-refresh-btn" type="button" onclick="event.stopPropagation(); forceRefreshHoroscope()" title="강제 재시도 (개발자)" aria-label="다시">↻</button>`;
+  // 사용자 명시 2026-05-11: 정상 카드의 ↻ 강제 재fetch 버튼 제거 — 4시 cutoff 자동 refresh 로 충분.
   const bodyHtml = `
     <div class="rc-body-horoscope">
-      ${refreshBtn}
       <div class="rc-body-headline">고동의 운세</div>
       ${zLabel ? `<div class="rc-horoscope-zodiac">${escapeHtml(zLabel)}</div>` : ''}
       <div class="rc-horoscope-text">${escapeHtml(trim)}</div>
@@ -30231,7 +30260,6 @@ function openHoroscopeModal() {
       <div class="rc-mini-review-body">
         <div class="rc-horoscope-modal-text">${escapeHtml(r.lastHoroscopeContent)}</div>
         ${luckyHtml}
-        <button class="rc-horoscope-modal-retry" type="button" onclick="closeHoroscopeModal(); forceRefreshHoroscope();">↻ 다시 시도</button>
       </div>
     </div>
   `;
@@ -30659,10 +30687,9 @@ function _rcSimRenderModePick(blockKey) {
   };
 }
 
-// 사용자 명시 2026-05-09: 개발자 테스트용 reset 버튼 — 모든 인터랙션 stage 우상단 ↻.
-// 누르면 currentSimulation = null → 다음 진입 시 mode-pick 부터 다시.
+// 사용자 명시 2026-05-11: 개발자 테스트용 reset 버튼 (↻ 다시 시도) 제거. rcSimReset 함수는 유지 (legacy 호환).
 function _rcSimResetBtnHtml() {
-  return `<button class="rc-sim-reset-btn" type="button" onclick="event.stopPropagation(); rcSimReset()" title="다시 시도" aria-label="다시">↻</button>`;
+  return '';
 }
 
 function _rcSimRenderGenerating() {
@@ -32026,7 +32053,6 @@ function _gdiaryRenderShell(opts) {
       ` : ''}
 
       <div class="gdiary-action-row">
-        ${s.readonly ? '' : `<button class="gdiary-regenerate" type="button" onclick="regenerateGodongDiary()" title="고동이한테 다시 적게 하기">↻ 다시 적어줘</button>`}
         <button class="gdiary-close" type="button" onclick="closeGodongDiaryModal()">못 본 척 하기</button>
       </div>
 
@@ -59462,7 +59488,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.230-gdiary-svg-whispering';
+const APP_VERSION = 'v4.0.231-rc-no-retry-horoscope-cutoff-refresh';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

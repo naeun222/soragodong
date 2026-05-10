@@ -557,7 +557,6 @@ function _gdiaryRenderShell(opts) {
       ` : ''}
 
       <div class="gdiary-action-row">
-        ${s.readonly ? '' : `<button class="gdiary-regenerate" type="button" onclick="regenerateGodongDiary()" title="고동이한테 다시 적게 하기">↻ 다시 적어줘</button>`}
         <button class="gdiary-close" type="button" onclick="closeGodongDiaryModal()">못 본 척 하기</button>
       </div>
 

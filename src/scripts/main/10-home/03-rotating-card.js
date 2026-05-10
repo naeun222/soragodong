@@ -1141,14 +1141,14 @@ function _rcCollectAvailable() {
 
 // =============================================================================
 // godong 표정 SVG — source 별 mood 매핑.
-// pearl=inspired(별눈), newView=surprised(큰 눈), godongDiary=whispering(노트/비밀),
+// pearl=inspired(별눈), newView=surprised(큰 눈), godongDiary=sleepy(자리 비움 메타포 — 사용자 명시 2026-05-11 확정),
 // quiz=thinking(?), quizDone=proud(별3개+자부심), horoscope=dreaming(꿈+🌗 분위기)
 // =============================================================================
 function _rcGodongSvg(sourceId) {
   const moodMap = {
     pearl: 'inspired',
     newView: 'surprised',
-    godongDiary: 'whispering',
+    godongDiary: 'sleepy',
     quiz: 'thinking',
     quizDone: 'proud',
     horoscope: 'dreaming',
@@ -1203,6 +1203,11 @@ function renderRotatingCard() {
       return;
     }
     if (_rcSessionIndex >= _rcSessionOrder.length) _rcSessionIndex = 0;
+    // 사용자 명시 2026-05-11: render 시점에도 horoscope 가 current 면 4시 cutoff 신선도 체크 (mid-session 4AM 넘긴 후 home 재진입 케이스).
+    const _curEntry = _rcSessionOrder[_rcSessionIndex];
+    if (_curEntry && _curEntry.id === 'horoscope' && typeof _rcEnsureHoroscopeFresh === 'function') {
+      _rcEnsureHoroscopeFresh();
+    }
     container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
     _rcEqualizeHeights();
   } catch (e) {
@@ -1311,6 +1316,10 @@ function _rcCycle(dir, opts) {
     const r = _ensureRotatingCardState();
     r.lastPearlShownDate = _rcTodayKey();
     if (typeof saveState === 'function') saveState();
+  }
+  // 사용자 명시 2026-05-11: horoscope 진입 시 4시 cutoff 이후 새 진입이면 fresh source 로 교체 (자동 재 fetch).
+  if (cur && cur.id === 'horoscope' && typeof _rcEnsureHoroscopeFresh === 'function') {
+    _rcEnsureHoroscopeFresh();
   }
   const container = document.getElementById('rotatingCardContainer');
   if (container) container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
