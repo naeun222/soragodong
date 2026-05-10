@@ -179,7 +179,8 @@ async function init() {
       if (state.hasSeenWelcomeTutorial !== true) { state.hasSeenWelcomeTutorial = true; _testTouched = true; }
       if (state.hasSeenV3Tour !== true) { state.hasSeenV3Tour = true; _testTouched = true; }
       if (state.preferences._tutorialDismissed !== true) { state.preferences._tutorialDismissed = true; _testTouched = true; }
-      // E2EE setup 모달은 정상 뜨도록 _e2eeOptedOut 자동 set 폐기. recovery 만 skip 하고 싶으면 사용자가 별도 토글.
+      // 사용자 명시 2026-05-11 ultrathink: recovery 모달은 skip (입력 창 안 뜸). setup 모달 (설정 창) 은 maybeShowE2EESetupForNewUser 안 테스트 계정 가드 우회로 매번 표시 — 필수 동의 항목 매번 확인.
+      if (state.preferences._e2eeOptedOut !== true) { state.preferences._e2eeOptedOut = true; _testTouched = true; }
       if (state.tutorialVersion !== 'v8-start') { state.tutorialVersion = 'v8-start'; _testTouched = true; }
       if (state.preferences._coreTutorialAutoStarted !== true) { state.preferences._coreTutorialAutoStarted = true; _testTouched = true; }
       if (_testTouched) saveState();

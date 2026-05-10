@@ -18143,6 +18143,13 @@ function _intakeMicToggle(stepNum) {
 
 async function maybeShowE2EESetupForNewUser() {
   if (!authUserId) return;
+  // 사용자 명시 2026-05-11 ultrathink: 테스트 계정 (soragodongapp@gmail.com) — 매 진입마다 setup 모달 표시. 필수 동의 항목 매번 확인 + 비밀번호 재설정 디버깅 편의. 기존 가드 (이미 활성 / 데이터 있음 / recovery 활성) 모두 우회. cancel 버튼 허용 (매번 떠도 닫을 수 있게).
+  const _isTestAcct = session && session.user && session.user.email === 'soragodongapp@gmail.com';
+  if (_isTestAcct) {
+    if (document.getElementById('e2eeSetupOverlay')) return;  // 중복 fire 만 차단
+    showE2EEPasswordSetupModal({ allowCancel: true });
+    return;
+  }
   if (state.preferences && state.preferences.testerMode) return;
   // 사용자 보고 2026-05-05 (Phase 1): 게스트 = 비밀번호 설정 모달 X. linkIdentity (가입 모달) 안에서 함께 처리.
   // 게스트는 cloud sync X 라 마스터 키 불필요 — saveToCloudNow 가 isGuest 분기에서 early return.
@@ -19944,7 +19951,8 @@ async function init() {
       if (state.hasSeenWelcomeTutorial !== true) { state.hasSeenWelcomeTutorial = true; _testTouched = true; }
       if (state.hasSeenV3Tour !== true) { state.hasSeenV3Tour = true; _testTouched = true; }
       if (state.preferences._tutorialDismissed !== true) { state.preferences._tutorialDismissed = true; _testTouched = true; }
-      // E2EE setup 모달은 정상 뜨도록 _e2eeOptedOut 자동 set 폐기. recovery 만 skip 하고 싶으면 사용자가 별도 토글.
+      // 사용자 명시 2026-05-11 ultrathink: recovery 모달은 skip (입력 창 안 뜸). setup 모달 (설정 창) 은 maybeShowE2EESetupForNewUser 안 테스트 계정 가드 우회로 매번 표시 — 필수 동의 항목 매번 확인.
+      if (state.preferences._e2eeOptedOut !== true) { state.preferences._e2eeOptedOut = true; _testTouched = true; }
       if (state.tutorialVersion !== 'v8-start') { state.tutorialVersion = 'v8-start'; _testTouched = true; }
       if (state.preferences._coreTutorialAutoStarted !== true) { state.preferences._coreTutorialAutoStarted = true; _testTouched = true; }
       if (_testTouched) saveState();

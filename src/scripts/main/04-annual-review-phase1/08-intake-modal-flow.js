@@ -471,6 +471,13 @@ function _intakeMicToggle(stepNum) {
 
 async function maybeShowE2EESetupForNewUser() {
   if (!authUserId) return;
+  // 사용자 명시 2026-05-11 ultrathink: 테스트 계정 (soragodongapp@gmail.com) — 매 진입마다 setup 모달 표시. 필수 동의 항목 매번 확인 + 비밀번호 재설정 디버깅 편의. 기존 가드 (이미 활성 / 데이터 있음 / recovery 활성) 모두 우회. cancel 버튼 허용 (매번 떠도 닫을 수 있게).
+  const _isTestAcct = session && session.user && session.user.email === 'soragodongapp@gmail.com';
+  if (_isTestAcct) {
+    if (document.getElementById('e2eeSetupOverlay')) return;  // 중복 fire 만 차단
+    showE2EEPasswordSetupModal({ allowCancel: true });
+    return;
+  }
   if (state.preferences && state.preferences.testerMode) return;
   // 사용자 보고 2026-05-05 (Phase 1): 게스트 = 비밀번호 설정 모달 X. linkIdentity (가입 모달) 안에서 함께 처리.
   // 게스트는 cloud sync X 라 마스터 키 불필요 — saveToCloudNow 가 isGuest 분기에서 early return.
