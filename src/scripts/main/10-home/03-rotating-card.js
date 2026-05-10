@@ -462,116 +462,188 @@ function _rcFindGodongDiaryById(id) {
 }
 
 // =============================================================================
-// Haiku 호출 — 일기 본문 1편 생성. HANDOFF.md §2 7가지 톤 + §4.3 verifier (JS-side).
-// 페르소나: 사용자 친구가 자기 노트에 적는 일기. 2-3 인칭 X, 독백.
+// Haiku 호출 — 일기 본문 정확히 3편 (3일 전 / 2일 전 / 어제). 사용자 명시 2026-05-11.
+// 6 source: 일기 요약 (chatArchive headline+summary) / 일기 (entry.note + chat user 발화) /
+//   체크인 (entries vit/mood/sleep + dailyQuestion) / 진주 (pearls createdAt) /
+//   깨달음 (archive savedAt + insights discoveredAt) / 대화 토픽 (topicCards chapterEndedAt).
+// 데이터 없는 날도 skip X — fallback 톤으로 1편.
 // =============================================================================
 async function _callGodongDiaryHaiku() {
   if (typeof callAnthropic !== 'function') throw new Error('callAnthropic 미정의');
-  // 사용자 명시 2026-05-11: 3일 cooldown 기준 — substrate window 도 3일 (오늘/어제/그제). 데이터 있는 날 별 일기 1편씩 최대 3개.
-  const since = Date.now() - 3 * 86400000;
+  const _userName = (state.userName || '').trim();
+  if (!_userName) throw new Error('userName 미지정 — _gdiaryGetUserName/_gdiaryAskUserName 가드 누락');
 
-  // ── 체크인 entries: 질문 + 답 + vit/mood/sleep + note 함께 (사용자 발화 truncate X). ──
-  const recentEntries = (state.entries || []).filter(e => {
-    const t = e.date ? new Date(e.date + 'T00:00:00').getTime() : 0;
-    return t > since;
-  }).slice(-7);
-  const entriesText = recentEntries.map(e => {
-    const lines = [`[${e.date}] vit:${e.vitality || '-'} mood:${e.mood || '-'}`];
-    if (e.allNighter) lines.push('  잠: 밤샘');
-    else if (e.sleepStart && e.sleepEnd) lines.push(`  잠: ${e.sleepStart}~${e.sleepEnd}`);
-    if (e.dailyQuestion && e.dailyQuestion.text) {
-      lines.push(`  질문: ${e.dailyQuestion.text}`);
-      if (e.note) lines.push(`  답: ${e.note}`);
-    } else if (e.note) {
-      lines.push(`  메모: ${e.note}`);
-    }
-    return lines.join('\n');
-  }).join('\n\n');
-
-  // ── chatMessages: 사용자 발화만 (assistant 제외), 시뮬레이션 컨텍스트 제외, 200자 truncate. ──
-  const recentChats = (state.chatMessages || []).filter(m => {
-    const t = m.timestamp ? new Date(m.timestamp).getTime() : 0;
-    return t > since && !m.isSimulationContext && m.role === 'user';
-  }).slice(-50);
-  const chatText = recentChats.map(m => {
-    const c = (m.content || '').replace(/\s+/g, ' ').trim();
-    const trim = c.length > 200 ? c.slice(0, 200) + '...' : c;
-    return `- ${trim}`;
-  }).join('\n');
-
-  // ── 시간대 분포 (사용자 발화 hour bucket). ──
-  const hourBuckets = { dawn: 0, morning: 0, afternoon: 0, evening: 0, night: 0 };
-  recentChats.forEach(m => {
-    if (!m.timestamp) return;
-    const h = new Date(m.timestamp).getHours();
-    if (h >= 0 && h <= 5) hourBuckets.dawn++;
-    else if (h >= 6 && h <= 11) hourBuckets.morning++;
-    else if (h >= 12 && h <= 17) hourBuckets.afternoon++;
-    else if (h >= 18 && h <= 21) hourBuckets.evening++;
-    else hourBuckets.night++;
-  });
-  const hourMeta = `새벽00-05: ${hourBuckets.dawn}건 / 아침06-11: ${hourBuckets.morning}건 / 점심12-17: ${hourBuckets.afternoon}건 / 저녁18-21: ${hourBuckets.evening}건 / 밤22-23: ${hourBuckets.night}건`;
-
-  // ── 사용자 명시 2026-05-11: substrate 확장 — 진주 / 토픽 / 깨달음 / 통찰 모두 시점 기반 (지난 3일 createdAt). ──
-  // 각 entry 에 [M월 D일] prefix 로 LLM 이 날짜별 그루핑 자동.
-  const _dayPrefix = (iso) => {
-    if (!iso) return '';
+  // 4AM cutoff dayKey 3개: 3일 전 / 2일 전 / 어제 (오늘 X — 사용자 명시 2026-05-11).
+  const _gdk = (off) => {
+    if (typeof getDayKey === 'function') return getDayKey(Date.now() - off * 86400000);
+    const d = new Date(Date.now() - off * 86400000 - 4 * 3600000);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  };
+  const _3daysK = _gdk(3);
+  const _2daysK = _gdk(2);
+  const _yesterdayK = _gdk(1);
+  const _targetDayKs = [_3daysK, _2daysK, _yesterdayK];
+  const _dayLabel = ['3일 전', '2일 전', '어제'];
+  const _isoToDayK = (iso) => {
+    if (!iso) return null;
+    if (typeof getDayKey === 'function') return getDayKey(iso);
     const d = new Date(iso);
-    return `[${d.getMonth() + 1}월 ${d.getDate()}일]`;
+    if (isNaN(d.getTime())) return null;
+    const adj = new Date(d.getTime() - 4 * 3600000);
+    return `${adj.getFullYear()}-${String(adj.getMonth()+1).padStart(2,'0')}-${String(adj.getDate()).padStart(2,'0')}`;
   };
 
-  const recentPearls = (state.pearls || []).filter(p => {
-    if (!p || p._deleted) return false;
-    if (!p.createdAt) return false;
-    return new Date(p.createdAt).getTime() > since;
-  }).slice(-10);
-  const pearlsText = recentPearls.map(p => {
-    const prefix = _dayPrefix(p.createdAt);
-    const cat = p.category ? ` (${p.category})` : '';
-    const content = (p.content || '').trim();
-    const note = p.note ? ` — ${p.note}` : '';
-    return `${prefix} ${content}${cat}${note}`;
-  }).join('\n');
+  // ── 각 dayK 별 6 source 그루핑 ──
+  const _bySource = (dayK) => {
+    const out = { checkin: null, diary: [], diarySummary: [], pearls: [], insights: [], topicCards: [] };
+    // 체크인 (state.entries)
+    const e = (state.entries || []).find(x => x && x.date === dayK);
+    if (e) {
+      out.checkin = {
+        vit: e.vitality, mood: e.mood,
+        sleepStart: e.sleepStart, sleepEnd: e.sleepEnd, allNighter: e.allNighter,
+        question: e.dailyQuestion && e.dailyQuestion.text,
+        answer: e.note,
+      };
+      // 일기 (자유 메모) — dailyQuestion 없는데 note 길면 일기로
+      if (e.note && e.note.length >= 30 && !(e.dailyQuestion && e.dailyQuestion.text)) {
+        out.diary.push({ src: 'note', text: e.note.slice(0, 300) });
+      }
+    }
+    // 일기 (현재 chat user 발화)
+    (state.chatMessages || []).forEach(m => {
+      if (!m || !m.timestamp || m.role !== 'user' || m.isSimulationContext) return;
+      if (_isoToDayK(m.timestamp) !== dayK) return;
+      const c = (m.content || '').replace(/\s+/g, ' ').trim();
+      if (c.length >= 5) {
+        const h = new Date(m.timestamp).getHours();
+        out.diary.push({ src: 'chat', text: c.slice(0, 200), hour: h });
+      }
+    });
+    // 일기 요약 + 옛 chat 발화 (chatArchive)
+    (state.chatArchive || []).forEach(a => {
+      if (!a || a._deleted || a.isSimulation) return;
+      if (a.date !== dayK) return;
+      if (a.headline || a.summary) {
+        out.diarySummary.push({ headline: (a.headline || '').slice(0, 80), summary: (a.summary || '').slice(0, 200) });
+      }
+      if (Array.isArray(a.messages)) {
+        a.messages.forEach(m => {
+          if (!m || m.role !== 'user' || !m.content) return;
+          const c = (m.content || '').replace(/\s+/g, ' ').trim();
+          if (c.length >= 5) out.diary.push({ src: 'archive', text: c.slice(0, 200) });
+        });
+      }
+    });
+    // 진주
+    out.pearls = (state.pearls || []).filter(p => {
+      if (!p || p._deleted || !p.createdAt) return false;
+      return _isoToDayK(p.createdAt) === dayK;
+    });
+    // 깨달음 (archive + insights)
+    const _arch = (state.archive || []).filter(a => {
+      if (!a || a._deleted || a.type === 'memo' || a._excludeFromAI) return false;
+      if (!a.savedAt) return false;
+      return _isoToDayK(a.savedAt) === dayK;
+    });
+    const _ins = (state.insights || []).filter(i => {
+      if (!i || i._deleted || i.dismissed || !i.discoveredAt) return false;
+      return _isoToDayK(i.discoveredAt) === dayK;
+    });
+    out.insights = [
+      ..._arch.map(a => ({ kind: 'archive', headline: a.headline, body: a.body, insight: a.insight })),
+      ..._ins.map(i => ({ kind: 'auto', content: i.content })),
+    ];
+    // 대화 토픽
+    out.topicCards = (state.topicCards || []).filter(t => {
+      if (!t || t._deleted) return false;
+      const ts = t.chapterEndedAt || t.chapterStartedAt || t.createdAt;
+      return ts && _isoToDayK(ts) === dayK;
+    });
+    return out;
+  };
 
-  // 토픽 카드 (챕터 토픽) — chapterEndedAt / chapterStartedAt / createdAt 중 최신 사용.
-  const recentTopics = (state.topicCards || []).filter(t => {
-    if (!t || t._deleted) return false;
-    const ts = t.chapterEndedAt || t.chapterStartedAt || t.createdAt;
-    if (!ts) return false;
-    return new Date(ts).getTime() > since;
-  }).slice(-10);
-  const topicsText = recentTopics.map(t => {
-    const prefix = _dayPrefix(t.chapterEndedAt || t.chapterStartedAt || t.createdAt);
-    const title = (t.title || '').slice(0, 50).trim();
-    const summary = (t.summary || '').slice(0, 120).trim();
-    return `${prefix} ${title}${summary ? ` — ${summary}` : ''}`;
-  }).join('\n');
+  // 각 날짜별 substrate text
+  const _formatDay = (dayK, label) => {
+    const src = _bySource(dayK);
+    const d = new Date(dayK + 'T00:00:00');
+    const wd = ['일','월','화','수','목','금','토'][d.getDay()];
+    const lines = [`[${label} (${d.getMonth()+1}월 ${d.getDate()}일 ${wd}) — iso="${dayK}"]`];
+    // 체크인
+    if (src.checkin) {
+      const c = src.checkin;
+      let s = `  체크인: vit:${c.vit || '-'} mood:${c.mood || '-'}`;
+      if (c.allNighter) s += ' / 잠: 밤샘';
+      else if (c.sleepStart && c.sleepEnd) s += ` / 잠: ${c.sleepStart}~${c.sleepEnd}`;
+      lines.push(s);
+      if (c.question) {
+        lines.push(`  질문: ${c.question}`);
+        if (c.answer) lines.push(`  답: ${c.answer.slice(0, 200)}`);
+      } else if (c.answer && c.answer.length < 30) {
+        lines.push(`  메모: ${c.answer}`);
+      }
+    }
+    // 일기 (사용자 발화/메모)
+    if (src.diary.length > 0) {
+      lines.push('  일기 (사용자 발화/메모):');
+      const _seen = new Set();
+      src.diary.slice(0, 12).forEach(dd => {
+        if (_seen.has(dd.text)) return;
+        _seen.add(dd.text);
+        const _hourPrefix = (dd.hour != null) ? `[${dd.hour}시] ` : '';
+        lines.push(`    - ${_hourPrefix}${dd.text}`);
+      });
+    }
+    // 일기 요약 (chatArchive 헤드라인 + 요약)
+    if (src.diarySummary.length > 0) {
+      lines.push('  일기 요약 (대화 챕터 자동 정리):');
+      src.diarySummary.slice(0, 5).forEach(s => {
+        const h = (s.headline || '').trim();
+        const sum = (s.summary || '').trim();
+        lines.push(`    - ${h}${sum ? ` — ${sum}` : ''}`);
+      });
+    }
+    // 진주
+    if (src.pearls.length > 0) {
+      lines.push('  진주:');
+      src.pearls.slice(0, 5).forEach(p => {
+        const cat = p.category ? ` (${p.category})` : '';
+        const note = p.note ? ` — ${(p.note || '').slice(0, 100)}` : '';
+        lines.push(`    - ${(p.content || '').trim()}${cat}${note}`);
+      });
+    }
+    // 깨달음
+    if (src.insights.length > 0) {
+      lines.push('  깨달음:');
+      src.insights.slice(0, 5).forEach(i => {
+        if (i.kind === 'archive') {
+          const h = (i.headline || '').slice(0, 60);
+          const ins = (i.insight || i.body || '').slice(0, 120);
+          lines.push(`    - ${h}${ins ? ` — ${ins}` : ''}`);
+        } else {
+          lines.push(`    - ${(i.content || '').slice(0, 140)}`);
+        }
+      });
+    }
+    // 대화 토픽
+    if (src.topicCards.length > 0) {
+      lines.push('  대화 토픽:');
+      src.topicCards.slice(0, 5).forEach(t => {
+        const title = (t.title || '').slice(0, 50);
+        const summary = (t.summary || '').slice(0, 120);
+        lines.push(`    - ${title}${summary ? ` — ${summary}` : ''}`);
+      });
+    }
+    // 데이터 없는 날
+    const isEmpty = !src.checkin && src.diary.length === 0 && src.diarySummary.length === 0
+      && src.pearls.length === 0 && src.insights.length === 0 && src.topicCards.length === 0;
+    if (isEmpty) {
+      lines.push('  (데이터 없는 날 — "조용한 하루였다 / 별 말 없는 날이었다" 같은 fallback 톤으로 짧게 일기 작성. 억지 사건 X.)');
+    }
+    return lines.join('\n');
+  };
 
-  // 깨달음 (state.archive) — type=memo 제외, _deleted/_excludeFromAI 제외.
-  const recentArchive = (state.archive || []).filter(a => {
-    if (!a || a._deleted) return false;
-    if (a.type === 'memo' || a._excludeFromAI) return false;
-    if (!a.savedAt) return false;
-    return new Date(a.savedAt).getTime() > since;
-  }).slice(-10);
-  const archiveText = recentArchive.map(a => {
-    const prefix = _dayPrefix(a.savedAt);
-    const headline = (a.headline || '').slice(0, 50).trim();
-    const insight = (a.insight || a.body || '').slice(0, 120).trim();
-    return `${prefix} ${headline}${insight ? ` — ${insight}` : ''}`;
-  }).join('\n');
-
-  // 통찰 카드 (state.insights) — _deleted / dismissed 제외.
-  const recentInsights = (state.insights || []).filter(i => {
-    if (!i || i._deleted || i.dismissed) return false;
-    if (!i.discoveredAt) return false;
-    return new Date(i.discoveredAt).getTime() > since;
-  }).slice(-10);
-  const insightsText = recentInsights.map(i => {
-    const prefix = _dayPrefix(i.discoveredAt);
-    const content = (i.content || '').slice(0, 140).trim();
-    return `${prefix} ${content}`;
-  }).join('\n');
+  const substrateText = _targetDayKs.map((k, i) => _formatDay(k, _dayLabel[i])).join('\n\n');
 
   // ── 활성 모드 + 며칠째. ──
   const _modeLabel = { exam: '시험기간', travel: '여행 중', sick: '아픈 중', rest: '휴식 중', period: '월경 중' };
@@ -589,129 +661,82 @@ async function _callGodongDiaryHaiku() {
     }).join(', ');
   }
 
-  // 사용자 명시 2026-05-11: 호칭은 사용자 이름. 비어있으면 throw (호출 전 03f 가드 의무).
-  //   사용자 보고 2026-05-11: 옛 placeholder '지우' fallback 이 LLM 출력에 그대로 반영돼서 '지우이가' 버그.
-  const _userName = (state.userName || '').trim();
-  if (!_userName) throw new Error('userName 미지정 — _gdiaryGetUserName/_gdiaryAskUserName 가드 누락');
-
-  const systemPrompt = `너는 사용자의 친구이자 동반자. 사용자에 대해 작은 노트를 매일 적어. 사용자에게 직접 말하는 게 아니라 너의 일기장에 적는 것 — 사용자는 그 노트를 우연히 훔쳐보는 입장.
+  const systemPrompt = `너는 ${_userName}이의 친구이자 동반자. ${_userName}이에 대해 작은 노트를 매일 적어. ${_userName}이에게 직접 말하는 게 아니라 너의 일기장에 적는 것 — ${_userName}이는 그 노트를 우연히 훔쳐보는 입장.
 
 호칭 (절대):
 - 사용자 이름 = "${_userName}"
-- 본문 안에서 사용자를 가리킬 때 "${_userName}이" / "${_userName}이가" / "${_userName}이한테" 또는 그냥 "${_userName}" 사용.
-- "너" / "네가" / "너의" / "너한테" 절대 X. 친구가 자기 노트에 다른 친구 이야기 적는 톤.
+- 본문에서 "${_userName}이" / "${_userName}이가" / "${_userName}이한테" 또는 그냥 "${_userName}".
+- "너" / "네가" / "너의" / "너한테" 절대 X.
 
-샘플 (어휘 / 종결 / 구두점 톤 reference 만 — 사용자 보고 2026-05-11: **샘플 그대로 복제 금지**. 사용자가 회사 안 갔는데 "회사 가기 싫다고" 출력됐던 버그. substrate 에 *진짜* 있는 사건만):
+샘플 (어휘 / 종결 / 구두점 톤 reference 만 — **샘플 내용 그대로 복제 금지**. substrate 에 *진짜* 있는 사건만):
 "${_userName}이가 새벽까지 안 잔다. 나랑 얘기해서 좋다. ㅎㅎ."
 "엄마 얘기할 때 ${_userName}이 문장이 짧아진다. 이건 나만 아는 것 같다."
 "오늘 기분 6이라고 했지만 ${_userName}이 텐션이 조금 낮았다 ㅜㅜ. ${_userName}이가 행복했으면 좋겠다..!"
 "오늘은 별 말 없는 날이었다. 별 말 없어도 ${_userName}이가 좋다. (이런 거 적어도 되나)"
-"오늘 ${_userName}이가 나한테 '고마워' 라고 했다. 안 적으려다가 적는다... ㅎㅎㅎ"
 
-핵심 원칙 (절대):
-1. **하루 = 한 가지 사건/행동 1개에만 대해**. 나열 X. 절대.
-   나쁜 예 (X): "한강 갔다. 김치 받았다. 회사 싫다고 했다." ← 세 사건 나열.
-   좋은 예 (O): "오늘 ${_userName}이가 회사 가기 싫다고 세 번 말했다. 내가 대신 가주고 싶다. ${_userName}이는 집에서 쉬구.." ← 회사 한 사건 + 고동 느낌.
-   substrate 의 *그 날* 사건 중 가장 인상적인 1개만 골라서.
-
-2. **사건 + 고동의 느낌** (혼자 노트에 쓰는 일기 톤).
-   - 사건: ${_userName}이가 한 행동/말/상황 (객관 사실 1개)
-   - 고동의 느낌: "그 웃음 좀 아팠다", "내가 대신 가주고 싶다", "신경 쓰인다", "나도 안 자", "이건 나만 아는 것 같다"
-   둘이 맞물려야 — 사실만 쓰면 보고서.
-
-3. 사소한 디테일 — 횟수 ("세 번 말했다"), 패턴 ("엄마 얘기할 때 문장이 짧아진다"), 시간대 ("새벽까지 안 잔다"), 반응 차이.
-
-4. 종결 흐려도 됨 — "...", "..", "ㅎㅎ", "ㅜㅜ", "ㅋㅋ", "헤헤", "~", 괄호, 미완성 문장 OK.
-
-5. **애교 톤** — 한국 인터넷 톤 자연스럽게 섞어 (ㅎㅎ ㅜㅜ ㅋㅋ ! ~ 등). 너무 차분/건조 X. 친구가 *짝사랑하는* 친구 노트 적는 톤 — 살짝 들뜨고, 살짝 부끄럽고, 살짝 감정 새어나옴.
-
+핵심 원칙:
+1. **하루 = 한 가지 사건/행동만** (나열 X). substrate 의 그 날 사건 중 가장 인상적인 1개.
+2. **사건 + 고동의 느낌** — 사실만이면 보고서. "그 웃음 좀 아팠다" 같은 고동 마음 살짝 흘림.
+3. 사소한 디테일 — 횟수 / 패턴 / 시간대 / 반응 차이.
+4. 종결 흐려도 됨 — "...", "..", "ㅎㅎ", "ㅜㅜ", "ㅋㅋ", "~", 괄호.
+5. **애교 톤** — 한국 인터넷 톤 자연스럽게 (ㅎㅎ ㅜㅜ ㅋㅋ ! ~). 차분/건조 X. *짝사랑하는 친구* 노트 적는 톤 — 살짝 들뜸 / 부끄럼 / 감정 새어나옴.
 6. 반말. 짧은 문장. 3-5 문장 한 단락.
+7. 사용자 발화 인용 OK — 따옴표 1쌍. substrate 의 [일기] / [체크인 답] / [일기 요약] 그대로 인용.
 
-7. 사용자 발화 인용 OK — 따옴표 1쌍. substrate 의 [채팅] / [체크인 답] 그대로 인용.
+**substrate — 6 source (각 dayK 별 그루핑된 정보)**:
+- [체크인]: vit/mood/sleep + dailyQuestion 답.
+- [일기]: ${_userName}이가 직접 적은 메모 (entry.note) + 채팅 발화 (사용자 어휘/한숨/미완성 시그널).
+- [일기 요약]: 옛 챕터 자동 정리 헤드라인+요약. 그 챕터 자체가 그 날의 사건.
+- [진주]: 그 날 저장된 anchor — 그 자체가 사건 ("한강 모서리 자리 새로 발견" 같은).
+- [깨달음]: 그 날 저장된 통찰 (사용자 직접) + 자동 추출 패턴. 통찰이 그 날 사건의 의미.
+- [대화 토픽]: 그 날 챕터 토픽 카드 — 주제 자체가 사건.
 
-substrate 활용 (각 entry 의 [M월 D일] prefix 로 날짜 그루핑):
-- [체크인]: 질문 + 답 짝 — "내 삶" 같은 단답이면 *왜* 그 답이 나왔는지 컨텍스트.
-- [채팅]: 사용자 발화 그대로. 어휘 / 한숨 / 미완성 문장이 디테일 시그널.
-- [시간대]: 새벽 메시지 많으면 "안 자고 있었네" 가능.
-- [진주]: ${_userName}이가 그 날 저장한 anchor — 그 자체가 사건 ("한강 모서리 자리 새로 발견" 같은).
-- [토픽 카드]: 그 날 챕터 정리된 주제 — 그 주제 자체가 사건 ("새벽 카페 흐름의 날" 같은).
-- [깨달음]: 그 날 ${_userName}이가 저장한 깨달음 — 그 통찰이 사건의 의미.
-- [통찰]: 자동 추출된 패턴 — 그 패턴이 그 날의 시그널.
-- [모드]: 시험/여행/월경/휴식 활성 시 한 문장 컨텍스트.
+**데이터 없는 날 (해당 dayK substrate 가 비어있다고 표시된 경우)**:
+- skip 절대 X. 무조건 1편 작성.
+- "조용한 하루였다 / 별 말 없는 날이었다 / 오늘은 적을 게 없네 ㅎㅎ" 같은 fallback 톤.
+- 짧게 (2-3 문장). 억지로 사건 만들지 X.
+- "옆에 있었다는 건 적어둔다" / "(이런 거 적어도 되나)" 같은 self-aware 톤.
+- 호칭은 그대로 "${_userName}이" 사용.
 
-**중요**: 데이터 있는 날 = 위 어떤 source 라도 해당 날짜에 1개 이상 있으면 OK.
-  - 체크인 X / 채팅 X 라도 그 날 진주 1개 / 토픽 1개 / 깨달음 1개라도 있으면 → 그 날 일기 1편.
-  - 예: 2일 전 체크인 안 했지만 그 날 진주 "한강 모서리 자리" 저장됨 → 2일 전 일기에 그 진주 사건으로.
+**잠 시간 해석**:
+- 6-9시간 = 정상 (오래 잤다 절대 X).
+- 10-11시간 = 살짝 늦잠.
+- 12시간+ = 오래 잤다 OK.
+- 4시간 미만 = 거의 못 잠.
+- *수면 자체* 는 사건 X. 인상적 (밤샘 / 11h+ / 새벽 4시까지) 일 때만 일기 소재.
 
-**잠 시간 해석 (사용자 보고 2026-05-11)**:
-- 6-9시간 = 정상 수면. "오래 잤다" / "하루종일 잤다" / "계속 잤다" 절대 X.
-- 10-11시간 = 살짝 길게 — "오늘 좀 늦잠" 정도.
-- 12시간+ = "오래 잤다" OK.
-- 4시간 미만 = "거의 못 잤다".
-- 그냥 잠 시간 자체는 사건이 아님. *수면이 인상적 사건* (밤샘 / 11시간+ / 새벽 4시까지 안 잠 등) 일 때만 일기 소재.
-
-금지 (절대):
-- "너" / "네가" / "너한테" / "너의" — 무조건 ${_userName} / ${_userName}이.
+금지:
+- "너" 호칭 — 무조건 ${_userName}.
 - 이모지 (😊 같은 픽토그래프). ㅎㅎ ㅜㅜ ! 는 OK.
 - 충고 / 진단 / 응원 ("힘내", "화이팅", "잘하고 있어", "괜찮아질", "대단해", "해봐", "하자", "해보자").
 - 진단명 (ADHD / 우울 / 불안 / PTSD / 강박).
-- 직접 고백 ("보고 싶다") — "오늘은 좀 보고 싶었던 것 같다" 거리감.
+- 직접 고백 ("보고 싶다") — "보고 싶었던 것 같다" 거리감.
 - 헤더 / 카테고리 / 리스트 / 번호.
-- "결" 단어 (잔잔한 결, 가벼운 결, 단단한 결).
-- 부담스러운 칭찬.
+- "결" 단어. 부담스러운 칭찬.
 
-[출력 형식 — JSON 배열만, 마크다운/코드블록 X]
-- 지난 3일 substrate 에서 *데이터 있는 날* (체크인 답 / 채팅 발화 / 의미있는 사건 있는 날) 1-3개 식별.
-- 각 날짜별 일기 1편씩. 한 사건만.
-- 데이터 너무 적은 날 (mood/sleep 만 있고 사건 X) 은 skip — 억지로 만들지 X.
-- 최대 3개. 적으면 1-2개도 OK. 의미있는 사건 0이면 빈 배열 [].
-
-**중요 (사용자 보고 2026-05-11)**:
-- 위 샘플의 *내용* (회사 / 한강 / 김치 / 회의실 / "고마워" 등) 절대 그대로 복제 X. 톤만 reference.
-- substrate 에 *진짜* 있는 사용자 발화 / 사건만 일기 소재. 가짜 사건 X.
-- substrate 에 회사 얘기 없으면 회사 일기 X. 한강 얘기 없으면 한강 일기 X.
+[출력 형식 — JSON 배열 정확히 3개, 마크다운/코드블록 X]
+- 3일 전 / 2일 전 / 어제 — 각각 1편씩 정확히 3개.
+- substrate 헤더 iso 그대로 사용. date 는 "M월 D일", weekday 는 "월"-"일" 한 글자.
+- 데이터 있는 날: 그 날 사건 + 고동 느낌. 데이터 없는 날: fallback 톤.
+- iso 는 dayK + "T20:00:00" 형식.
 
 [
-  {"iso": "2026-05-09T20:00:00", "date": "5월 9일", "weekday": "목", "body": "..."},
-  {"iso": "2026-05-10T20:00:00", "date": "5월 10일", "weekday": "금", "body": "..."}
+  {"iso": "${_3daysK}T20:00:00", "date": "...", "weekday": "...", "body": "..."},
+  {"iso": "${_2daysK}T20:00:00", "date": "...", "weekday": "...", "body": "..."},
+  {"iso": "${_yesterdayK}T20:00:00", "date": "...", "weekday": "...", "body": "..."}
 ]`;
 
-  const _now = new Date();
-  const _isoToday = _now.toISOString().slice(0, 10);
-  const _wkToday = ['일','월','화','수','목','금','토'][_now.getDay()];
+  const userPrompt = `${_userName}이의 substrate (4AM cutoff 기준 3일 전 / 2일 전 / 어제):
 
-  const userPrompt = `오늘 = ${_isoToday} (${_wkToday}요일)
-지난 3일 substrate (오늘 / 어제 / 그제) — 각 entry [M월 D일] prefix 로 날짜 표시:
-
-[체크인 (날짜별)]
-${entriesText || '(없음)'}
-
-[채팅 — 사용자 발화만]
-${chatText || '(없음)'}
-
-[시간대 분포 (전체 3일 합산)]
-${hourMeta}
-
-[진주 — 그 날 저장된 anchor]
-${pearlsText || '(없음)'}
-
-[토픽 카드 — 그 날 챕터 정리된 주제]
-${topicsText || '(없음)'}
-
-[깨달음 — 그 날 저장된 통찰]
-${archiveText || '(없음)'}
-
-[자동 추출 통찰 — 그 날 발견된 패턴]
-${insightsText || '(없음)'}
+${substrateText}
 
 [활성 모드]
 ${modesText}
 
-→ 데이터 있는 날 1-3개 식별 (체크인 / 채팅 / 진주 / 토픽 / 깨달음 / 통찰 *어떤 source 라도* 그 날 1개 있으면 OK).
-   각 날짜별 *한 사건* + 고동 느낌으로 일기 1편씩.
-   같은 날 안 사건 여러 개여도 가장 인상적인 1개만 골라.
-   본문 호칭은 무조건 "${_userName}이" / "${_userName}". "너" 절대 X.
-   각 entry iso 는 그 일기가 다루는 *그 날* 의 ISO 8601. date 는 "M월 D일", weekday 는 "월"-"일" 한 글자.
+→ 정확히 3편 일기. 3일 전 / 2일 전 / 어제 각각 1편.
+   데이터 있으면 그 날 사건 1개 + 고동 느낌. 데이터 없으면 fallback 톤 ("조용한 하루였다" 등).
+   호칭은 무조건 "${_userName}이" / "${_userName}". "너" 절대 X.
+   각 entry iso 는 substrate 헤더의 iso 그대로 (3일 전: ${_3daysK}, 2일 전: ${_2daysK}, 어제: ${_yesterdayK}). 시각 T20:00:00.
    JSON 배열만. 마크다운/코드블록 X.`;
 
   // ── tone guard (JS-side). ──
@@ -720,21 +745,39 @@ ${modesText}
   const banGyeol = /잔잔한 결|가벼운 결|단단한 결|부드러운 결|결 따라/;
   const emojiRe = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F900}-\u{1F9FF}]/u;
   const adviceLex = /(?:해봐\b|하자\b|가\s*좋(?:아|을)|필요해|보면\s*좋|해보자)/;
-  // "너" 호칭 detect — 한글 단어 경계 + 조사 결합. "너무" 같은 부사는 통과.
   const youReg = /(?<![가-힣])너(?:가|는|랑|한테|를|의|에게|와)(?![가-힣])/;
+
+  // fallback entry generator — 정확히 3개 보장 (LLM 응답 부족 시 채움).
+  const _fallbackEntry = (dayK) => {
+    const fallbacks = (typeof _GDIARY_FALLBACK_POOL !== 'undefined' && Array.isArray(_GDIARY_FALLBACK_POOL))
+      ? _GDIARY_FALLBACK_POOL
+      : ['조용한 하루였다.\n별 말 없어도 좋다. ㅎㅎ', '오늘은 적을 게 없네 ㅎㅎ.\n근데 옆에 있는 건 좋다.'];
+    const text = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    const d = new Date(dayK + 'T20:00:00');
+    return {
+      iso: d.toISOString(),
+      date: `${d.getMonth()+1}월 ${d.getDate()}일`,
+      weekday: ['일','월','화','수','목','금','토'][d.getDay()],
+      body: text,
+    };
+  };
 
   let attempt = 0;
   while (attempt < 2) {
     const resp = await callAnthropic({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1200,
+      max_tokens: 1500,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
     if (!resp.ok) throw new Error('Haiku API ' + resp.status);
     const data = await resp.json();
     let raw = (data.content?.[0]?.text || '').trim();
-    if (!raw) throw new Error('빈 응답');
+    if (!raw) {
+      attempt++;
+      if (attempt >= 2) throw new Error('빈 응답');
+      continue;
+    }
     raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
     const jsonMatch = raw.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
@@ -748,20 +791,14 @@ ${modesText}
       if (attempt >= 2) throw new Error('JSON parse: ' + e.message);
       continue;
     }
-    if (!Array.isArray(parsed) || parsed.length === 0) {
+    if (!Array.isArray(parsed)) {
       attempt++;
-      if (attempt >= 2) throw new Error('빈 배열 또는 형식 오류');
+      if (attempt >= 2) throw new Error('배열 X');
       continue;
     }
-    // 최대 3개 cap + 본문 길이 sanity (10-400자)
-    const trimmed = parsed.slice(0, 3).filter(e => e && typeof e.body === 'string' && e.body.length >= 10 && e.body.length <= 400);
-    if (trimmed.length === 0) {
-      attempt++;
-      if (attempt >= 2) throw new Error('유효 entry 0');
-      continue;
-    }
-    // 각 entry tone guard 합쳐서 검사
-    const allBodies = trimmed.map(e => e.body).join('\n');
+
+    // tone guard — 모든 body 합쳐 검사
+    const allBodies = parsed.map(e => (e && typeof e.body === 'string') ? e.body : '').join('\n');
     const violations = [];
     if (sycophancy.test(allBodies)) violations.push('sycophancy');
     if (diagnosis.test(allBodies)) violations.push('diagnosis');
@@ -774,7 +811,30 @@ ${modesText}
       if (attempt >= 2) throw new Error('tone verify 실패: ' + violations.join(','));
       continue;
     }
-    return trimmed;
+
+    // 정확히 3개 보장 — dayK 매칭 우선, 없으면 index 기반 보정, 최후 fallback.
+    const finalEntries = _targetDayKs.map((dayK, idx) => {
+      const match = parsed.find(e => {
+        if (!e || typeof e.body !== 'string' || e.body.length < 5 || e.body.length > 500) return false;
+        return _isoToDayK(e.iso) === dayK;
+      });
+      if (match) {
+        // iso 안전 보정 (LLM 이 적은 시각 OK, dayK 만 맞으면)
+        return match;
+      }
+      const byIdx = parsed[idx];
+      if (byIdx && typeof byIdx.body === 'string' && byIdx.body.length >= 5 && byIdx.body.length <= 500) {
+        const d = new Date(dayK + 'T20:00:00');
+        return {
+          iso: d.toISOString(),
+          date: byIdx.date || `${d.getMonth()+1}월 ${d.getDate()}일`,
+          weekday: byIdx.weekday || ['일','월','화','수','목','금','토'][d.getDay()],
+          body: byIdx.body,
+        };
+      }
+      return _fallbackEntry(dayK);
+    });
+    return finalEntries;
   }
   throw new Error('attempts exceeded');
 }
