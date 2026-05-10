@@ -51,7 +51,8 @@
 // v46 (2026-05-11 사용자 보고): 회전 카드 godongDiary source 의 godong-sleepy.svg 가 옛 캐시 stuck.
 //   character/ 폴더 신규 디자인 = public/character/ byte-identical 로 배포됨에도 PWA cache-first 가 옛 SVG 노출.
 //   SVG 자산 변경 시 강제 invalidate.
-const CACHE_NAME = 'soragodong-v4-cache-v46';
+// v47 (2026-05-11): character/ 21개 SVG 새 디자인 → public/character/ 일괄 교체. 옛 캐시 강제 invalidate.
+const CACHE_NAME = 'soragodong-v4-cache-v47';
 const PRECACHE_URLS = [
   './',
   './index.html',
