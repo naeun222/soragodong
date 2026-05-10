@@ -40,7 +40,8 @@
 // v35 (2026-05-10 옵션 A): 나 탭 '🧹 정리' 버튼 (설정 왼쪽 작게). 사용자 컨펌 dedup — AI 호출 X. similarity 0.7+ 후보 페어 한 개씩 [합치기/놔두기].
 // v36 (2026-05-10 검증 결과 fix): 시뮬 가드 강화 (구체 X-list) / 회전 카드 우선순위 재정의 (review 1-4, 그 외 동급) / unconfirmed 우선 폐기 / chat 시나리오 토론 스티커.
 // v37 (2026-05-10): weekly schema 확장 (momentum_line + cycles + 활력기분 차트 inline) / review id backfill (월간 '리뷰 못 찾음' fix) / 테스트 계정 자동 설정.
-const CACHE_NAME = 'soragodong-v4-cache-v37';
+// v38 (2026-05-10): 시뮬 topicCard 'source: simulation' 마킹 + 도서관 일기·대화 chip 의 day modal '💭 시나리오' 라벨 표시.
+const CACHE_NAME = 'soragodong-v4-cache-v38';
 const PRECACHE_URLS = [
   './',
   './index.html',

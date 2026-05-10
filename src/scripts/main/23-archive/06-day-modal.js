@@ -156,9 +156,13 @@ function switchDayModalTab(tab) {
     // 사용자 보고 2026-04-29: 일기·대화 칩이 step 25에서 말한 8 카테고리(일기/일상/고민/감정/기억/할 일/아이디어/관계)로 분류돼 보이게
     topics.forEach(c => {
       const catInfo = TOPIC_CATEGORY_LABELS[c.category] || { label: '토픽', icon: '✦' };
+      // 사용자 명시 2026-05-10 (큐 6 마무리): 시뮬 → 대화 이어가기 시 추출된 topicCard = source: 'simulation' 마킹.
+      //   '시나리오' 라벨로 일반 토픽과 시각 구분.
+      const _isSim = c.source === 'simulation';
+      const _simTag = _isSim ? `<span style="font-size:9px; padding:2px 6px; background:rgba(212,167,106,0.18); color:var(--accent); border-radius:6px; margin-left:6px; letter-spacing:0.04em;">💭 시나리오</span>` : '';
       html += `
-        <div class="day-card t-topic" onclick="closeDayModal(); openTopicCard('${c.id}')">
-          <div class="day-card-icon-row"><span class="icon">${catInfo.icon}</span><span>${escapeHtml(catInfo.label)}</span></div>
+        <div class="day-card t-topic${_isSim ? ' t-topic-sim' : ''}" onclick="closeDayModal(); openTopicCard('${c.id}')">
+          <div class="day-card-icon-row"><span class="icon">${catInfo.icon}</span><span>${escapeHtml(catInfo.label)}</span>${_simTag}</div>
           <div class="day-card-title">${escapeHtml(c.title || '')}</div>
           ${c.summary ? `<div class="day-card-body">${escapeHtml(c.summary)}</div>` : ''}
         </div>

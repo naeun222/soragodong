@@ -394,10 +394,21 @@ async function _runDailyExtractInline(pending) {
     } catch (e) { console.warn('[inline] case fail:', e); }
     const _allowChapterTopic = !!batch.endedManually || _isPremium;
     try {
-      // 사용자 명시 2026-05-10 (batch 12): topic 추출도 일반 메시지만 사용 (시뮬 메시지 제외).
-      const _topicMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
-      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function' && _topicMsgs.length >= 3) {
-        await extractPreviousChapterTopics(_topicMsgs);
+      // 사용자 명시 2026-05-10 (batch 14): 시뮬 메시지도 topic 추출 진행 — 단 topicCard 에 source: 'simulation' 마킹.
+      //   도서관 일기·대화 chip 표시 시 '시나리오' 라벨로 구분.
+      const _normalMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
+      const _simMsgs = _extractMsgs.filter(m => m && m.isSimulationContext);
+      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
+        if (_normalMsgs.length >= 3) {
+          await extractPreviousChapterTopics(_normalMsgs);
+        }
+        if (_simMsgs.length >= 3) {
+          const _beforeSim = (state.topicCards || []).length;
+          await extractPreviousChapterTopics(_simMsgs);
+          // 새로 push 된 cards 에 source 마킹 (도서관 chip = '시나리오' 라벨)
+          const _added = (state.topicCards || []).slice(_beforeSim);
+          _added.forEach(card => { if (card) card.source = 'simulation'; });
+        }
       }
     } catch (e) { console.warn('[inline] topic fail:', e); }
     _pushMagicReflectionArchive(batch);
