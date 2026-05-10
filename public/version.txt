@@ -1,1 +1,1 @@
-v4.0.223-gdiary-2-3-sentences-100chars
+v4.0.224-gdiary-isoWindow-sonnet-tone

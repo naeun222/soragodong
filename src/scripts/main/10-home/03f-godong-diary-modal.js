@@ -612,12 +612,16 @@ function _gdiaryEntryFromHaiku(parsed) {
   let iso = fallbackIso;
   let dateLabel = `${now.getMonth() + 1}월 ${now.getDate()}일`;
   let weekday = ['일', '월', '화', '수', '목', '금', '토'][now.getDay()];
-  // iso 검증: 미래는 today 로 잡음 + 너무 옛날 (4일 이전) 도 today 로.
+  // iso 검증: 미래는 today 로 잡음 + 너무 옛날도 today 로.
+  // 사용자 보고 2026-05-11 ultrathink-3 (목요일 null 버그 root cause):
+  //   옛 _3daysAgo = now - 72h. 3일전 dayK 의 T20:00 (= 88h~64h 전, 4AM cutoff base) 이 사용자 클릭 시각보다 늦으면
+  //   72h 안 들어옴 → window fail → iso reset → today dayK → _targetSet 필터 fail → 3일전 자리 fallback.
+  //   window 7일로 확장: 3일전 모든 시각 안전 포함.
   if (parsed.iso) {
     const t = new Date(parsed.iso).getTime();
-    const _3daysAgo = now.getTime() - 3 * 86400000;
+    const _windowAgo = now.getTime() - 7 * 86400000;
     const _1hourAhead = now.getTime() + 3600000;
-    if (!isNaN(t) && t >= _3daysAgo && t <= _1hourAhead) {
+    if (!isNaN(t) && t >= _windowAgo && t <= _1hourAhead) {
       iso = new Date(t).toISOString();
       const d = new Date(t);
       dateLabel = `${d.getMonth() + 1}월 ${d.getDate()}일`;

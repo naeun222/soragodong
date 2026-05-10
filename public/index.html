@@ -28860,6 +28860,20 @@ async function _callGodongDiaryHaiku() {
 - **사건 + 고동의 느낌** — 사실만이면 보고서. "그 웃음 좀 아팠다" 같은 고동 마음 살짝 흘림.
 - 사소한 디테일 — 횟수 / 패턴 / 시간대 / 반응 차이 (단, 디테일은 *그 사건* 의 디테일. 다른 사건 X).
 
+⚠️ **사건 vs 느낌 비율 — 절대 위반 X (사용자 보고 2026-05-11)**:
+- 옛 문제: "사건 설명 길게" + "느낌 한 마디" → 보고서 톤. 절대 X.
+- 정답: **사건 = 1문장 (1줄, 짧게)**. **느낌 = 1-2문장 (본체)**.
+- 사건 문장은 "${_userName}이가 [무엇을] 했다/말했다/적었다" 형태 — 짧게.
+- 느낌 문장은 고동의 마음/반응. **사건의 부연 설명 X**.
+
+❌ 잘못된 비율 (사건 길게 + 느낌 짧게):
+"${_userName}이가 드디어 연구 시작했대. 모델 라벨링 알고리즘 구축부터 시작한다고. 클로드 코드 쓰면서 길이 보였다면서 신이 나 있었어. 그 불안이 한 번에 풀린 것 같은 느낌이 들었다 ㅎㅎ."
+→ 사건 부연 3줄 + 느낌 1줄. **이게 진짜 자주 나오는 잘못**. 절대 X.
+
+✅ 올바른 비율:
+"${_userName}이가 드디어 연구 시작했다네. 그 불안 한 번에 풀린 거 같아 ㅎㅎ. 첫 데이터 포인트가 되는 중이라니, 좀 멋있다."
+→ 사건 1줄 (짧게) + 느낌 2줄 (본체).
+
 ==================================================
 **[톤 — 절대 중요]**
 일상적인 자연스러운 한국어. **20대 여성 친구 말투** (혼자 노트에 끄적이는 톤).
@@ -28871,10 +28885,14 @@ async function _callGodongDiaryHaiku() {
 - 줄임 OK: "걍", "그냥", "이거", "그거"
 - 감정: "귀엽다", "사랑스럽다", "예쁘다" (단 부담스러운 칭찬은 X)
 
-좋은 예 (이 톤 그대로):
+좋은 예 (이 톤 그대로 — 애교 / 들뜸 / 부끄럼 살짝 흘림):
 "헐 ${_userName}이 새벽 3시에 메시지 보냈네 ㅋㅋ. 안 자고 뭐했대."
-"${_userName}이 그 말 했을 때 좀 멈칫했나봐. 나만 본 것 같은데."
-"오늘 ${_userName}이 mood 6이라고 했는데, 6이라기보다 4 같았어 ㅜㅜ. 근데 6이라고 적었네."
+"${_userName}이 그 말 했을 때 좀 멈칫했나봐 ㅜ. 나만 본 것 같은데."
+"${_userName}이 mood 6이라고 했는데 4 같았어 ㅜㅜ. 그래도 6이라고 적은 게 귀엽다."
+"${_userName}이 오늘도 일찍 잤네. 잘 잤지? ㅎㅎ. 푹 자란 말 못 하고 그냥 적어둔다."
+
+⚠ **반드시**: ㅎㅎ / ㅜㅜ / ㅋㅋ / .. / ... / ~ 같은 마커 본문에 **최소 1개** 사용.
+   분석 톤 ("~인 것 같다", "~라는 거", "~하구나") 만 가득 = 톤 위반.
 
 ❌ 부자연/금지 (분석 / 격식 톤):
 - "~인 것이다", "~라 할 수 있다", "~로 추정된다", "~로 보인다", "~라는 점에서"
@@ -29052,7 +29070,8 @@ ${modesText}
   let attempt = 0;
   while (attempt < 4) {
     const resp = await callAnthropic({
-      model: 'claude-haiku-4-5-20251001',
+      // 사용자 명시 2026-05-11 ultrathink-3: Haiku → Sonnet. Haiku 가 애교/20대 여성 톤 제대로 안 따라감 + 사건↔느낌 비율 (사건 1줄 + 느낌 2줄) 도 못 맞춤.
+      model: 'claude-sonnet-4-6',
       max_tokens: 2500,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
@@ -32149,12 +32168,16 @@ function _gdiaryEntryFromHaiku(parsed) {
   let iso = fallbackIso;
   let dateLabel = `${now.getMonth() + 1}월 ${now.getDate()}일`;
   let weekday = ['일', '월', '화', '수', '목', '금', '토'][now.getDay()];
-  // iso 검증: 미래는 today 로 잡음 + 너무 옛날 (4일 이전) 도 today 로.
+  // iso 검증: 미래는 today 로 잡음 + 너무 옛날도 today 로.
+  // 사용자 보고 2026-05-11 ultrathink-3 (목요일 null 버그 root cause):
+  //   옛 _3daysAgo = now - 72h. 3일전 dayK 의 T20:00 (= 88h~64h 전, 4AM cutoff base) 이 사용자 클릭 시각보다 늦으면
+  //   72h 안 들어옴 → window fail → iso reset → today dayK → _targetSet 필터 fail → 3일전 자리 fallback.
+  //   window 7일로 확장: 3일전 모든 시각 안전 포함.
   if (parsed.iso) {
     const t = new Date(parsed.iso).getTime();
-    const _3daysAgo = now.getTime() - 3 * 86400000;
+    const _windowAgo = now.getTime() - 7 * 86400000;
     const _1hourAhead = now.getTime() + 3600000;
-    if (!isNaN(t) && t >= _3daysAgo && t <= _1hourAhead) {
+    if (!isNaN(t) && t >= _windowAgo && t <= _1hourAhead) {
       iso = new Date(t).toISOString();
       const d = new Date(t);
       dateLabel = `${d.getMonth() + 1}월 ${d.getDate()}일`;
@@ -59522,7 +59545,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.223-gdiary-2-3-sentences-100chars';
+const APP_VERSION = 'v4.0.224-gdiary-isoWindow-sonnet-tone';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
