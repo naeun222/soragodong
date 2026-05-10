@@ -120,35 +120,7 @@ function _revokePearlVideoCache(pearlId) {
   }
 }
 
-// 사용자 명시 2026-05-03: 영상 5초 limit + trim UI (Twitter/Instagram 스타일).
-// thumbnail = 8 frame strip + start/end handle drag + selected range max maxSec sec.
-// resolve: { startTime, endTime } 또는 null (cancel).
+// 사용자 명시 2026-05-10 (재정정): 자르기 기능 유지, 미리보기 (video preview / thumbnail strip) 만 제거.
+// trim modal = 손잡이 + 시간 라벨만. video element / image element 일체 X.
 let _vtmState = null;
-
-async function _generateVideoThumbnails(video, count) {
-  const thumbs = [];
-  const W = 80, H = 50;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  const dur = video.duration;
-  for (let i = 0; i < count; i++) {
-    const t = (dur / count) * i + (dur / count) * 0.5;  // 중앙 시점
-    await new Promise((res) => {
-      let done = false;
-      const onSeeked = () => {
-        if (done) return; done = true;
-        video.removeEventListener('seeked', onSeeked);
-        res();
-      };
-      video.addEventListener('seeked', onSeeked);
-      try { video.currentTime = Math.min(t, dur - 0.01); } catch(_) { onSeeked(); }
-      setTimeout(() => { if (!done) onSeeked(); }, 1500);
-    });
-    try { ctx.drawImage(video, 0, 0, W, H); thumbs.push(canvas.toDataURL('image/jpeg', 0.5)); }
-    catch(_) { thumbs.push(''); }
-  }
-  try { video.currentTime = 0; } catch(_) {}
-  return thumbs;
-}
 

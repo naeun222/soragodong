@@ -88,13 +88,14 @@ function _heroCardHtml(pick, opts = {}) {
     const visual = thumb
       ? `<img src="${thumb}" alt="" class="hero-photo-thumb">`
       : `<div class="hero-photo-thumb video-thumb-placeholder">📹</div>`;
-    // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+    // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
+    // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
     const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(pick.content || '') : (pick.content || '');
     body = `
       <div class="hero-photo">
         ${visual}
         <div class="hero-photo-meta">
-          <div class="hero-photo-content">${escapeHtml(_vTitle)}</div>
+          <div class="hero-photo-content">${icon} ${escapeHtml(_vTitle)}</div>
           ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}
         </div>
       </div>

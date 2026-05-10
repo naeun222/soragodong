@@ -1,18 +1,23 @@
-function pickVideoTrimRange(file, maxSec) {
+// 사용자 명시 2026-05-10 (재정정): 자르기 기능 유지, 미리보기 (video preview / thumbnail strip) 만 제거.
+// trim modal HTML = 손잡이 bar + 시간 라벨 + 버튼만 (video element / image 일체 X).
+async function pickVideoTrimRange(file, maxSec) {
   maxSec = maxSec || 5;
+  _vtmState = null;
+  document.querySelectorAll('.vtm-overlay').forEach(o => { try { o.remove(); } catch(_) {} });
+
+  const dur = await _getVideoDuration(file);
+  if (!Number.isFinite(dur) || dur <= 0.05) {
+    try { showToast('영상 길이 읽기 실패 — 다른 영상 시도'); } catch(_) {}
+    return null;
+  }
+
   return new Promise((resolve) => {
-    // V4 fix v5 (사용자 보고 2026-05-04): trim modal 안 열리는 케이스 — 기존 _vtmState 잔여 race 방지.
-    _vtmState = null;
-    // 기존 overlay 잔존 시 제거 (재호출 race)
-    document.querySelectorAll('.vtm-overlay').forEach(o => { try { o.remove(); } catch(_) {} });
     const overlay = document.createElement('div');
     overlay.className = 'vtm-overlay';
     overlay.innerHTML = `
       <div class="vtm-card">
         <div class="vtm-title">영상 자르기 (최대 ${maxSec}초)</div>
         <div class="vtm-sub">손잡이 끌어서 ${maxSec}초 구간 골라</div>
-        <div class="vtm-video-wrap"><video class="vtm-video" controls playsinline preload="auto"></video></div>
-        <div class="vtm-strip"><div class="vtm-strip-loading">미리보기 만드는 중...</div></div>
         <div class="vtm-track">
           <div class="vtm-selection"></div>
           <div class="vtm-handle vtm-handle-start"></div>
@@ -29,149 +34,82 @@ function pickVideoTrimRange(file, maxSec) {
         </div>
       </div>`;
     document.body.appendChild(overlay);
-    const url = URL.createObjectURL(file);
-    const v = overlay.querySelector('.vtm-video');
-    v.src = url;
 
     let cleaned = false;
     const cleanup = (result) => {
       if (cleaned) return; cleaned = true;
-      try { v.pause(); } catch(_) {}
-      try { URL.revokeObjectURL(url); } catch(_) {}
       overlay.classList.remove('show');
       setTimeout(() => { try { overlay.remove(); } catch(_) {} _vtmState = null; resolve(result); }, 180);
     };
 
-    v.onloadedmetadata = async () => {
-      const dur = v.duration;
-      // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): dur 이 Infinity (live HLS / 일부 Safari mov) 또는 0 / NaN 케이스 가드.
-      // 그대로 진행하면 handle 위치 NaN% / 0% → 사용자가 trim 못 함 → modal 멈춤 신고.
-      if (!Number.isFinite(dur) || dur <= 0.05) {
-        try { showToast('영상 길이 읽기 실패 — 다른 영상 시도'); } catch(_) {}
-        cleanup(null);
-        return;
-      }
-      _vtmState = { dur, start: 0, end: Math.min(maxSec, dur), maxSec, v, overlay };
-      const minSel = Math.min(0.5, dur);  // 최소 0.5초
+    _vtmState = { dur, start: 0, end: Math.min(maxSec, dur), maxSec, overlay };
+    const minSel = Math.min(0.5, dur);
 
-      const sel = overlay.querySelector('.vtm-selection');
-      const hStart = overlay.querySelector('.vtm-handle-start');
-      const hEnd = overlay.querySelector('.vtm-handle-end');
-      const track = overlay.querySelector('.vtm-track');
-      const lblS = overlay.querySelector('.vtm-meta-start');
-      const lblE = overlay.querySelector('.vtm-meta-end');
-      const lblD = overlay.querySelector('.vtm-meta-dur');
-      const strip = overlay.querySelector('.vtm-strip');
+    const sel = overlay.querySelector('.vtm-selection');
+    const hStart = overlay.querySelector('.vtm-handle-start');
+    const hEnd = overlay.querySelector('.vtm-handle-end');
+    const track = overlay.querySelector('.vtm-track');
+    const lblS = overlay.querySelector('.vtm-meta-start');
+    const lblE = overlay.querySelector('.vtm-meta-end');
+    const lblD = overlay.querySelector('.vtm-meta-dur');
 
-      const render = () => {
-        const sP = (_vtmState.start / dur) * 100;
-        const eP = (_vtmState.end / dur) * 100;
-        sel.style.left = sP + '%';
-        sel.style.width = (eP - sP) + '%';
-        hStart.style.left = sP + '%';
-        hEnd.style.left = eP + '%';
-        lblS.textContent = _vtmState.start.toFixed(1) + 's';
-        lblE.textContent = _vtmState.end.toFixed(1) + 's';
-        lblD.textContent = (_vtmState.end - _vtmState.start).toFixed(1) + 's';
-      };
-
-      const previewSeek = (() => {
-        let pendingTime = null;
-        let seeking = false;
-        const flush = () => {
-          if (pendingTime == null) { seeking = false; return; }
-          const t = pendingTime; pendingTime = null;
-          seeking = true;
-          const onDone = () => { v.removeEventListener('seeked', onDone); flush(); };
-          v.addEventListener('seeked', onDone);
-          try { v.currentTime = t; } catch(_) { v.removeEventListener('seeked', onDone); seeking = false; }
-        };
-        return (t) => { pendingTime = t; if (!seeking) flush(); };
-      })();
-
-      const dragHandle = (handle, isStart) => {
-        const onDown = (e) => {
-          e.preventDefault();
-          const onMove = (ev) => {
-            const rect = track.getBoundingClientRect();
-            const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
-            const pct = Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
-            const t = pct * dur;
-            if (isStart) {
-              _vtmState.start = Math.min(t, _vtmState.end - minSel);
-              if (_vtmState.start < 0) _vtmState.start = 0;
-              if (_vtmState.end - _vtmState.start > maxSec) _vtmState.end = _vtmState.start + maxSec;
-              previewSeek(_vtmState.start);
-            } else {
-              _vtmState.end = Math.max(t, _vtmState.start + minSel);
-              if (_vtmState.end > dur) _vtmState.end = dur;
-              if (_vtmState.end - _vtmState.start > maxSec) _vtmState.start = _vtmState.end - maxSec;
-              previewSeek(_vtmState.end - 0.1);
-            }
-            render();
-          };
-          const onUp = () => {
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
-            document.removeEventListener('touchmove', onMove);
-            document.removeEventListener('touchend', onUp);
-          };
-          document.addEventListener('mousemove', onMove);
-          document.addEventListener('mouseup', onUp);
-          document.addEventListener('touchmove', onMove, { passive: false });
-          document.addEventListener('touchend', onUp);
-        };
-        handle.addEventListener('mousedown', onDown);
-        handle.addEventListener('touchstart', onDown, { passive: false });
-      };
-      dragHandle(hStart, true);
-      dragHandle(hEnd, false);
-
-      render();
-      // thumbnail strip 생성 (8 frame, async)
-      // 사용자 보고 2026-05-09: trim modal 의 video 미리보기가 첫 frame paint 안 되어 검은 화면.
-      // → thumbnail 첫 컷을 poster 로 stash 해서 video frame 그려지기 전에도 사용자에게 보임.
-      // + video element 에 controls 추가 (위 innerHTML) — 사용자가 직접 재생/일시정지 + 소리 컨트롤.
-      try {
-        const thumbs = await _generateVideoThumbnails(v, 8);
-        strip.innerHTML = thumbs.map(t => t ? `<img src="${t}" />` : '<div></div>').join('');
-        const firstThumb = thumbs.find(t => t);
-        if (firstThumb) {
-          try { v.poster = firstThumb; } catch(_) {}
-        }
-      } catch(_) {
-        strip.innerHTML = '<div class="vtm-strip-loading">미리보기 없음</div>';
-      }
-      // preview seek = start (frame paint 강제 — 일부 브라우저에서 currentTime=0 만 으론 첫 frame 안 그림)
-      try {
-        v.currentTime = 0.05;
-        await new Promise(res => {
-          const onSeeked = () => { v.removeEventListener('seeked', onSeeked); res(); };
-          v.addEventListener('seeked', onSeeked);
-          setTimeout(() => { v.removeEventListener('seeked', onSeeked); res(); }, 600);
-        });
-      } catch(_) {}
-
-      overlay.querySelector('.vtm-btn-ok').onclick = () => {
-        cleanup({ startTime: _vtmState.start, endTime: _vtmState.end });
-      };
-      overlay.querySelector('.vtm-btn-cancel').onclick = () => cleanup(null);
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) cleanup(null);
-      });
+    const render = () => {
+      const sP = (_vtmState.start / dur) * 100;
+      const eP = (_vtmState.end / dur) * 100;
+      sel.style.left = sP + '%';
+      sel.style.width = (eP - sP) + '%';
+      hStart.style.left = sP + '%';
+      hEnd.style.left = eP + '%';
+      lblS.textContent = _vtmState.start.toFixed(1) + 's';
+      lblE.textContent = _vtmState.end.toFixed(1) + 's';
+      lblD.textContent = (_vtmState.end - _vtmState.start).toFixed(1) + 's';
     };
-    v.onerror = () => {
-      // V4 fix v5 (사용자 보고 2026-05-04): metadata 로드 실패 (Safari .mov / 미지원 코덱) — 사용자 안내.
-      try { showToast('영상 미리보기 못 만듦 — 다른 영상 시도'); } catch(_) {}
-      cleanup(null);
+
+    const dragHandle = (handle, isStart) => {
+      const onDown = (e) => {
+        e.preventDefault();
+        const onMove = (ev) => {
+          const rect = track.getBoundingClientRect();
+          const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+          const pct = Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
+          const t = pct * dur;
+          if (isStart) {
+            _vtmState.start = Math.min(t, _vtmState.end - minSel);
+            if (_vtmState.start < 0) _vtmState.start = 0;
+            if (_vtmState.end - _vtmState.start > maxSec) _vtmState.end = _vtmState.start + maxSec;
+          } else {
+            _vtmState.end = Math.max(t, _vtmState.start + minSel);
+            if (_vtmState.end > dur) _vtmState.end = dur;
+            if (_vtmState.end - _vtmState.start > maxSec) _vtmState.start = _vtmState.end - maxSec;
+          }
+          render();
+        };
+        const onUp = () => {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          document.removeEventListener('touchmove', onMove);
+          document.removeEventListener('touchend', onUp);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onUp);
+      };
+      handle.addEventListener('mousedown', onDown);
+      handle.addEventListener('touchstart', onDown, { passive: false });
     };
-    // metadata timeout safety — 8초 안에 onloadedmetadata 안 fire 시 cancel.
-    setTimeout(() => {
-      if (!_vtmState && !cleaned) {
-        try { showToast('영상 로드 timeout — 다시 시도'); } catch(_) {}
-        cleanup(null);
-      }
-    }, 8000);
+    dragHandle(hStart, true);
+    dragHandle(hEnd, false);
+    render();
+
+    overlay.querySelector('.vtm-btn-ok').onclick = () => {
+      cleanup({ startTime: _vtmState.start, endTime: _vtmState.end });
+    };
+    overlay.querySelector('.vtm-btn-cancel').onclick = () => cleanup(null);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) cleanup(null);
+    });
+
     setTimeout(() => overlay.classList.add('show'), 10);
   });
 }

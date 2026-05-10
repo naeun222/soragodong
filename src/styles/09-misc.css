@@ -5710,7 +5710,7 @@
   }
   .input-modal-overlay.show .input-modal { transform: translateY(0); }
 
-  /* === 영상 trim modal (사용자 명시 2026-05-03: 5초 자르기, Twitter/Instagram 스타일) === */
+  /* === 영상 trim modal — 사용자 명시 2026-05-10 (재정정): 자르기 유지, 미리보기 (video / strip) 만 제거. === */
   .vtm-overlay {
     position: fixed; inset: 0;
     background: rgba(8,6,18,0.92);
@@ -5735,16 +5735,6 @@
   .vtm-overlay.show .vtm-card { transform: translateY(0); }
   .vtm-title { font-size: 15px; font-weight: 600; color: var(--text); text-align: center; }
   .vtm-sub { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: -6px; }
-  .vtm-video-wrap { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; max-height: 220px; }
-  .vtm-video { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .vtm-strip {
-    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1px;
-    height: 44px; border-radius: 8px; overflow: hidden;
-    background: var(--surface2);
-    position: relative;
-  }
-  .vtm-strip img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
-  .vtm-strip .vtm-strip-loading { grid-column: 1/-1; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted); }
   .vtm-track {
     position: relative; height: 32px;
     background: var(--surface2);

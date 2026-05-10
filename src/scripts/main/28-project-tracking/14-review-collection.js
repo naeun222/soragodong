@@ -349,7 +349,8 @@ function renderLensPearls() {
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         const thumb = p.videoThumbnail;
-        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
+        // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
         const visual = thumb
           ? `<img src="${thumb}" alt="${escapeHtml(_vTitle)}" class="tile-photo-art">`
@@ -358,7 +359,7 @@ function renderLensPearls() {
           <div class="pinterest-tile tile-photo${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
             ${visual}
             <div class="tile-music-meta">
-              <div class="tile-music-title">${escapeHtml(_vTitle)}</div>
+              <div class="tile-music-title">${icon} ${escapeHtml(_vTitle)}</div>
               ${p.note ? `<div class="tile-note">${escapeHtml(p.note.slice(0, 40))}</div>` : ''}
               ${dateStr ? `<div class="tile-date">${dateStr}</div>` : ''}
             </div>
@@ -407,7 +408,8 @@ function renderLensPearls() {
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         const thumb = p.videoThumbnail;
-        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
+        // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
         const visual = thumb
           ? `<img src="${thumb}" alt="" class="pearl-photo-thumb">`
@@ -416,7 +418,7 @@ function renderLensPearls() {
           <div class="pearl-card pearl-photo-card" onclick="openPearl('${p.id}')">
             ${visual}
             <div class="pearl-photo-meta">
-              <div class="pearl-card-content">${escapeHtml(_vTitle)}</div>
+              <div class="pearl-card-content">${icon} ${escapeHtml(_vTitle)}</div>
               ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${escapeHtml(p.note)}</div>` : ''}
             </div>
           </div>

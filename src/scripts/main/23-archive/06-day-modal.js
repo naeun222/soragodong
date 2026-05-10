@@ -201,13 +201,14 @@ function switchDayModalTab(tab) {
         const visual = thumb
           ? `<img src="${thumb}" alt="" class="day-pearl-art">`
           : `<div class="day-pearl-art video-thumb-placeholder">📹</div>`;
-        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
+        // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
         html += `
           <div class="day-card t-pearl t-pearl-music" onclick="closeDayModal(); openPearl('${p.id}')">
             ${visual}
             <div class="day-pearl-music-meta">
-              <div class="day-pearl-music-title">${escapeHtml(_vTitle)}</div>
+              <div class="day-pearl-music-title">${icon} ${escapeHtml(_vTitle)}</div>
               <div class="day-pearl-music-artist">${escapeHtml(p.category || '진주')}</div>
               ${p.note ? `<div class="day-card-note" style="margin-top:6px; padding-top:6px;">${escapeHtml(p.note)}</div>` : ''}
             </div>

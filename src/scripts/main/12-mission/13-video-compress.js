@@ -1,3 +1,31 @@
+// 사용자 명시 2026-05-10 (재정정 ultrathink): 영상 진주 audio universal Opus 경로 — 48 kHz resample 헬퍼.
+// 옛 (2026-05-10 1차): sr ∈ {8/12/16/24/48 kHz} 일 때만 Opus 후보 — 폰 녹화 (44.1 kHz) 자격 X 라
+// AAC fallback → mp4-muxer esds description handshake 호환성 issue 로 silent muted 다시 발생.
+// 신: decodeAudioData / captureStream 직후 무조건 48k resample → Opus 항상 첫 후보.
+// 음질: Opus 내부 sr = 48000 native — resample 손실 없거나 ↑.
+// OfflineAudioContext = iOS Safari 14+ / Chrome / Firefox universal 지원 — 미지원 환경은 옛 경로 유지.
+async function _resampleAudioBufferTo48k(buffer) {
+  if (!buffer) return buffer;
+  if (buffer.sampleRate === 48000) return buffer;
+  const targetSR = 48000;
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!OAC) return buffer;
+  try {
+    const numCh = Math.max(1, buffer.numberOfChannels || 1);
+    const offline = new OAC(numCh, Math.max(1, Math.ceil(buffer.duration * targetSR)), targetSR);
+    const src = offline.createBufferSource();
+    src.buffer = buffer;
+    src.connect(offline.destination);
+    src.start(0);
+    const out = await offline.startRendering();
+    if (out && out.length > 0) return out;
+    return buffer;
+  } catch (e) {
+    console.warn('[video] 48k resample fail — 원본 sr 유지:', e?.message);
+    return buffer;
+  }
+}
+
 async function compressVideoWebCodecs(file, opts = {}) {
   // 사용자 명시 2026-05-03: trim UI = startTime opt 추가. startTime ~ startTime+maxSec 구간만 인코딩.
   const { maxSec = 5, targetHeight = 720, bitrate = 1_500_000, fps = 30, audioBitrate = 96_000, startTime = 0 } = opts;
@@ -109,18 +137,16 @@ async function compressVideoWebCodecs(file, opts = {}) {
           });
           try { tmpCtx.close(); } catch(_) {}
           if (audioBuffer && audioBuffer.numberOfChannels > 0 && audioBuffer.length > 0) {
+            // 사용자 명시 2026-05-10 (재정정 ultrathink): 48k resample → Opus 후보 universal 활성.
+            // 폰 녹화 영상 (보통 44.1 kHz) 도 resample 후 Opus 자격 → AAC esds 호환성 issue 우회.
+            audioBuffer = await _resampleAudioBufferTo48k(audioBuffer);
             audioSampleRate = audioBuffer.sampleRate;
             audioChannels = Math.min(2, audioBuffer.numberOfChannels);
             // 사용자 보고 2026-05-09 ultrathink: 무음 진주 진단 — codec 후보 확장 + 진단 로그 + 빈 audioBuffer 케이스 분리.
-            // 사용자 명시 2026-05-10 (재정정 — Opus 시도): mp4-muxer 5.2.2 가 ['aac','opus'] 둘 다 지원.
-            // Opus 우선 시도 (mp4 안 opus track Chrome/Firefox/Safari 17+ 호환성 ↑) — AAC mp4 의 silently muted issue
-            // 회피 시도. Opus 미지원 sr (예: 44100) 또는 isConfigSupported false 시 AAC fallback.
-            // Opus sr 제약: 8/12/16/24/48 kHz 만. 다른 sr 은 AAC.
-            const opusOk = [8000, 12000, 16000, 24000, 48000].includes(audioSampleRate);
-            const candidates = [
-              ...(opusOk ? ['opus'] : []),
-              'mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29',
-            ];
+            // 사용자 명시 2026-05-10 (재정정 ultrathink): 48k resample 후 sr 가드 제거 — Opus 항상 첫 후보.
+            // mp4-muxer 5.2.2 = SUPPORTED_AUDIO_CODECS = ['aac', 'opus']. Opus = OpusHead atom 자체 구성
+            // (description handshake 의존 X) 라 AAC 의 silent muted issue 우회.
+            const candidates = ['opus', 'mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29'];
             for (const c of candidates) {
               try {
                 const sup = await AudioEncoder.isConfigSupported({
@@ -152,15 +178,13 @@ async function compressVideoWebCodecs(file, opts = {}) {
       try {
         const captured = await _captureAudioFromVideo(file, startTime, startTime + maxSec, 48000);
         if (captured && captured.numberOfChannels > 0 && captured.length > 0) {
-          audioBuffer = captured;
-          audioSampleRate = captured.sampleRate;
-          audioChannels = Math.min(2, captured.numberOfChannels);
-          // 사용자 명시 2026-05-10: capture path 도 Opus 우선 + AAC fallback.
-          const capOpusOk = [8000, 12000, 16000, 24000, 48000].includes(audioSampleRate);
-          const capCandidates = [
-            ...(capOpusOk ? ['opus'] : []),
-            'mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29',
-          ];
+          // 사용자 명시 2026-05-10 (재정정 ultrathink): capture path 도 48k resample → Opus universal.
+          // captureStream 은 보통 48000 으로 잡히지만 iOS 일부 환경 다른 sr 가능 — 안전망.
+          audioBuffer = await _resampleAudioBufferTo48k(captured);
+          audioSampleRate = audioBuffer.sampleRate;
+          audioChannels = Math.min(2, audioBuffer.numberOfChannels);
+          // 사용자 명시 2026-05-10 (재정정 ultrathink): capture path sr 가드 제거 — Opus 첫 후보.
+          const capCandidates = ['opus', 'mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29'];
           for (const c of capCandidates) {
             try {
               const sup = await AudioEncoder.isConfigSupported({

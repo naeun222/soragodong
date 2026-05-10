@@ -5823,7 +5823,7 @@
   }
   .input-modal-overlay.show .input-modal { transform: translateY(0); }
 
-  /* === 영상 trim modal (사용자 명시 2026-05-03: 5초 자르기, Twitter/Instagram 스타일) === */
+  /* === 영상 trim modal — 사용자 명시 2026-05-10 (재정정): 자르기 유지, 미리보기 (video / strip) 만 제거. === */
   .vtm-overlay {
     position: fixed; inset: 0;
     background: rgba(8,6,18,0.92);
@@ -5848,16 +5848,6 @@
   .vtm-overlay.show .vtm-card { transform: translateY(0); }
   .vtm-title { font-size: 15px; font-weight: 600; color: var(--text); text-align: center; }
   .vtm-sub { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: -6px; }
-  .vtm-video-wrap { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; max-height: 220px; }
-  .vtm-video { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .vtm-strip {
-    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1px;
-    height: 44px; border-radius: 8px; overflow: hidden;
-    background: var(--surface2);
-    position: relative;
-  }
-  .vtm-strip img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
-  .vtm-strip .vtm-strip-loading { grid-column: 1/-1; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted); }
   .vtm-track {
     position: relative; height: 32px;
     background: var(--surface2);
@@ -32770,53 +32760,30 @@ function _revokePearlVideoCache(pearlId) {
   }
 }
 
-// 사용자 명시 2026-05-03: 영상 5초 limit + trim UI (Twitter/Instagram 스타일).
-// thumbnail = 8 frame strip + start/end handle drag + selected range max maxSec sec.
-// resolve: { startTime, endTime } 또는 null (cancel).
+// 사용자 명시 2026-05-10 (재정정): 자르기 기능 유지, 미리보기 (video preview / thumbnail strip) 만 제거.
+// trim modal = 손잡이 + 시간 라벨만. video element / image element 일체 X.
 let _vtmState = null;
 
-async function _generateVideoThumbnails(video, count) {
-  const thumbs = [];
-  const W = 80, H = 50;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  const dur = video.duration;
-  for (let i = 0; i < count; i++) {
-    const t = (dur / count) * i + (dur / count) * 0.5;  // 중앙 시점
-    await new Promise((res) => {
-      let done = false;
-      const onSeeked = () => {
-        if (done) return; done = true;
-        video.removeEventListener('seeked', onSeeked);
-        res();
-      };
-      video.addEventListener('seeked', onSeeked);
-      try { video.currentTime = Math.min(t, dur - 0.01); } catch(_) { onSeeked(); }
-      setTimeout(() => { if (!done) onSeeked(); }, 1500);
-    });
-    try { ctx.drawImage(video, 0, 0, W, H); thumbs.push(canvas.toDataURL('image/jpeg', 0.5)); }
-    catch(_) { thumbs.push(''); }
-  }
-  try { video.currentTime = 0; } catch(_) {}
-  return thumbs;
-}
-
-function pickVideoTrimRange(file, maxSec) {
+// 사용자 명시 2026-05-10 (재정정): 자르기 기능 유지, 미리보기 (video preview / thumbnail strip) 만 제거.
+// trim modal HTML = 손잡이 bar + 시간 라벨 + 버튼만 (video element / image 일체 X).
+async function pickVideoTrimRange(file, maxSec) {
   maxSec = maxSec || 5;
+  _vtmState = null;
+  document.querySelectorAll('.vtm-overlay').forEach(o => { try { o.remove(); } catch(_) {} });
+
+  const dur = await _getVideoDuration(file);
+  if (!Number.isFinite(dur) || dur <= 0.05) {
+    try { showToast('영상 길이 읽기 실패 — 다른 영상 시도'); } catch(_) {}
+    return null;
+  }
+
   return new Promise((resolve) => {
-    // V4 fix v5 (사용자 보고 2026-05-04): trim modal 안 열리는 케이스 — 기존 _vtmState 잔여 race 방지.
-    _vtmState = null;
-    // 기존 overlay 잔존 시 제거 (재호출 race)
-    document.querySelectorAll('.vtm-overlay').forEach(o => { try { o.remove(); } catch(_) {} });
     const overlay = document.createElement('div');
     overlay.className = 'vtm-overlay';
     overlay.innerHTML = `
       <div class="vtm-card">
         <div class="vtm-title">영상 자르기 (최대 ${maxSec}초)</div>
         <div class="vtm-sub">손잡이 끌어서 ${maxSec}초 구간 골라</div>
-        <div class="vtm-video-wrap"><video class="vtm-video" controls playsinline preload="auto"></video></div>
-        <div class="vtm-strip"><div class="vtm-strip-loading">미리보기 만드는 중...</div></div>
         <div class="vtm-track">
           <div class="vtm-selection"></div>
           <div class="vtm-handle vtm-handle-start"></div>
@@ -32833,149 +32800,82 @@ function pickVideoTrimRange(file, maxSec) {
         </div>
       </div>`;
     document.body.appendChild(overlay);
-    const url = URL.createObjectURL(file);
-    const v = overlay.querySelector('.vtm-video');
-    v.src = url;
 
     let cleaned = false;
     const cleanup = (result) => {
       if (cleaned) return; cleaned = true;
-      try { v.pause(); } catch(_) {}
-      try { URL.revokeObjectURL(url); } catch(_) {}
       overlay.classList.remove('show');
       setTimeout(() => { try { overlay.remove(); } catch(_) {} _vtmState = null; resolve(result); }, 180);
     };
 
-    v.onloadedmetadata = async () => {
-      const dur = v.duration;
-      // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): dur 이 Infinity (live HLS / 일부 Safari mov) 또는 0 / NaN 케이스 가드.
-      // 그대로 진행하면 handle 위치 NaN% / 0% → 사용자가 trim 못 함 → modal 멈춤 신고.
-      if (!Number.isFinite(dur) || dur <= 0.05) {
-        try { showToast('영상 길이 읽기 실패 — 다른 영상 시도'); } catch(_) {}
-        cleanup(null);
-        return;
-      }
-      _vtmState = { dur, start: 0, end: Math.min(maxSec, dur), maxSec, v, overlay };
-      const minSel = Math.min(0.5, dur);  // 최소 0.5초
+    _vtmState = { dur, start: 0, end: Math.min(maxSec, dur), maxSec, overlay };
+    const minSel = Math.min(0.5, dur);
 
-      const sel = overlay.querySelector('.vtm-selection');
-      const hStart = overlay.querySelector('.vtm-handle-start');
-      const hEnd = overlay.querySelector('.vtm-handle-end');
-      const track = overlay.querySelector('.vtm-track');
-      const lblS = overlay.querySelector('.vtm-meta-start');
-      const lblE = overlay.querySelector('.vtm-meta-end');
-      const lblD = overlay.querySelector('.vtm-meta-dur');
-      const strip = overlay.querySelector('.vtm-strip');
+    const sel = overlay.querySelector('.vtm-selection');
+    const hStart = overlay.querySelector('.vtm-handle-start');
+    const hEnd = overlay.querySelector('.vtm-handle-end');
+    const track = overlay.querySelector('.vtm-track');
+    const lblS = overlay.querySelector('.vtm-meta-start');
+    const lblE = overlay.querySelector('.vtm-meta-end');
+    const lblD = overlay.querySelector('.vtm-meta-dur');
 
-      const render = () => {
-        const sP = (_vtmState.start / dur) * 100;
-        const eP = (_vtmState.end / dur) * 100;
-        sel.style.left = sP + '%';
-        sel.style.width = (eP - sP) + '%';
-        hStart.style.left = sP + '%';
-        hEnd.style.left = eP + '%';
-        lblS.textContent = _vtmState.start.toFixed(1) + 's';
-        lblE.textContent = _vtmState.end.toFixed(1) + 's';
-        lblD.textContent = (_vtmState.end - _vtmState.start).toFixed(1) + 's';
-      };
-
-      const previewSeek = (() => {
-        let pendingTime = null;
-        let seeking = false;
-        const flush = () => {
-          if (pendingTime == null) { seeking = false; return; }
-          const t = pendingTime; pendingTime = null;
-          seeking = true;
-          const onDone = () => { v.removeEventListener('seeked', onDone); flush(); };
-          v.addEventListener('seeked', onDone);
-          try { v.currentTime = t; } catch(_) { v.removeEventListener('seeked', onDone); seeking = false; }
-        };
-        return (t) => { pendingTime = t; if (!seeking) flush(); };
-      })();
-
-      const dragHandle = (handle, isStart) => {
-        const onDown = (e) => {
-          e.preventDefault();
-          const onMove = (ev) => {
-            const rect = track.getBoundingClientRect();
-            const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
-            const pct = Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
-            const t = pct * dur;
-            if (isStart) {
-              _vtmState.start = Math.min(t, _vtmState.end - minSel);
-              if (_vtmState.start < 0) _vtmState.start = 0;
-              if (_vtmState.end - _vtmState.start > maxSec) _vtmState.end = _vtmState.start + maxSec;
-              previewSeek(_vtmState.start);
-            } else {
-              _vtmState.end = Math.max(t, _vtmState.start + minSel);
-              if (_vtmState.end > dur) _vtmState.end = dur;
-              if (_vtmState.end - _vtmState.start > maxSec) _vtmState.start = _vtmState.end - maxSec;
-              previewSeek(_vtmState.end - 0.1);
-            }
-            render();
-          };
-          const onUp = () => {
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
-            document.removeEventListener('touchmove', onMove);
-            document.removeEventListener('touchend', onUp);
-          };
-          document.addEventListener('mousemove', onMove);
-          document.addEventListener('mouseup', onUp);
-          document.addEventListener('touchmove', onMove, { passive: false });
-          document.addEventListener('touchend', onUp);
-        };
-        handle.addEventListener('mousedown', onDown);
-        handle.addEventListener('touchstart', onDown, { passive: false });
-      };
-      dragHandle(hStart, true);
-      dragHandle(hEnd, false);
-
-      render();
-      // thumbnail strip 생성 (8 frame, async)
-      // 사용자 보고 2026-05-09: trim modal 의 video 미리보기가 첫 frame paint 안 되어 검은 화면.
-      // → thumbnail 첫 컷을 poster 로 stash 해서 video frame 그려지기 전에도 사용자에게 보임.
-      // + video element 에 controls 추가 (위 innerHTML) — 사용자가 직접 재생/일시정지 + 소리 컨트롤.
-      try {
-        const thumbs = await _generateVideoThumbnails(v, 8);
-        strip.innerHTML = thumbs.map(t => t ? `<img src="${t}" />` : '<div></div>').join('');
-        const firstThumb = thumbs.find(t => t);
-        if (firstThumb) {
-          try { v.poster = firstThumb; } catch(_) {}
-        }
-      } catch(_) {
-        strip.innerHTML = '<div class="vtm-strip-loading">미리보기 없음</div>';
-      }
-      // preview seek = start (frame paint 강제 — 일부 브라우저에서 currentTime=0 만 으론 첫 frame 안 그림)
-      try {
-        v.currentTime = 0.05;
-        await new Promise(res => {
-          const onSeeked = () => { v.removeEventListener('seeked', onSeeked); res(); };
-          v.addEventListener('seeked', onSeeked);
-          setTimeout(() => { v.removeEventListener('seeked', onSeeked); res(); }, 600);
-        });
-      } catch(_) {}
-
-      overlay.querySelector('.vtm-btn-ok').onclick = () => {
-        cleanup({ startTime: _vtmState.start, endTime: _vtmState.end });
-      };
-      overlay.querySelector('.vtm-btn-cancel').onclick = () => cleanup(null);
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) cleanup(null);
-      });
+    const render = () => {
+      const sP = (_vtmState.start / dur) * 100;
+      const eP = (_vtmState.end / dur) * 100;
+      sel.style.left = sP + '%';
+      sel.style.width = (eP - sP) + '%';
+      hStart.style.left = sP + '%';
+      hEnd.style.left = eP + '%';
+      lblS.textContent = _vtmState.start.toFixed(1) + 's';
+      lblE.textContent = _vtmState.end.toFixed(1) + 's';
+      lblD.textContent = (_vtmState.end - _vtmState.start).toFixed(1) + 's';
     };
-    v.onerror = () => {
-      // V4 fix v5 (사용자 보고 2026-05-04): metadata 로드 실패 (Safari .mov / 미지원 코덱) — 사용자 안내.
-      try { showToast('영상 미리보기 못 만듦 — 다른 영상 시도'); } catch(_) {}
-      cleanup(null);
+
+    const dragHandle = (handle, isStart) => {
+      const onDown = (e) => {
+        e.preventDefault();
+        const onMove = (ev) => {
+          const rect = track.getBoundingClientRect();
+          const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+          const pct = Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
+          const t = pct * dur;
+          if (isStart) {
+            _vtmState.start = Math.min(t, _vtmState.end - minSel);
+            if (_vtmState.start < 0) _vtmState.start = 0;
+            if (_vtmState.end - _vtmState.start > maxSec) _vtmState.end = _vtmState.start + maxSec;
+          } else {
+            _vtmState.end = Math.max(t, _vtmState.start + minSel);
+            if (_vtmState.end > dur) _vtmState.end = dur;
+            if (_vtmState.end - _vtmState.start > maxSec) _vtmState.start = _vtmState.end - maxSec;
+          }
+          render();
+        };
+        const onUp = () => {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          document.removeEventListener('touchmove', onMove);
+          document.removeEventListener('touchend', onUp);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onUp);
+      };
+      handle.addEventListener('mousedown', onDown);
+      handle.addEventListener('touchstart', onDown, { passive: false });
     };
-    // metadata timeout safety — 8초 안에 onloadedmetadata 안 fire 시 cancel.
-    setTimeout(() => {
-      if (!_vtmState && !cleaned) {
-        try { showToast('영상 로드 timeout — 다시 시도'); } catch(_) {}
-        cleanup(null);
-      }
-    }, 8000);
+    dragHandle(hStart, true);
+    dragHandle(hEnd, false);
+    render();
+
+    overlay.querySelector('.vtm-btn-ok').onclick = () => {
+      cleanup({ startTime: _vtmState.start, endTime: _vtmState.end });
+    };
+    overlay.querySelector('.vtm-btn-cancel').onclick = () => cleanup(null);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) cleanup(null);
+    });
+
     setTimeout(() => overlay.classList.add('show'), 10);
   });
 }
@@ -33159,6 +33059,34 @@ async function _captureAudioFromVideo(file, startSec, endSec, sampleRate) {
 // mp4-muxer CDN dynamic import (~30KB, 첫 사용 시만 fetch). iOS 17+ / Chrome 94+ 지원.
 // V4 fix v4 (사용자 보고): 오디오 트랙 추가 — AudioEncoder(AAC) + decodeAudioData. 무음이던 진주 동영상 소리 복구.
 // 직전 MediaRecorder broken 의심 우회.
+// 사용자 명시 2026-05-10 (재정정 ultrathink): 영상 진주 audio universal Opus 경로 — 48 kHz resample 헬퍼.
+// 옛 (2026-05-10 1차): sr ∈ {8/12/16/24/48 kHz} 일 때만 Opus 후보 — 폰 녹화 (44.1 kHz) 자격 X 라
+// AAC fallback → mp4-muxer esds description handshake 호환성 issue 로 silent muted 다시 발생.
+// 신: decodeAudioData / captureStream 직후 무조건 48k resample → Opus 항상 첫 후보.
+// 음질: Opus 내부 sr = 48000 native — resample 손실 없거나 ↑.
+// OfflineAudioContext = iOS Safari 14+ / Chrome / Firefox universal 지원 — 미지원 환경은 옛 경로 유지.
+async function _resampleAudioBufferTo48k(buffer) {
+  if (!buffer) return buffer;
+  if (buffer.sampleRate === 48000) return buffer;
+  const targetSR = 48000;
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!OAC) return buffer;
+  try {
+    const numCh = Math.max(1, buffer.numberOfChannels || 1);
+    const offline = new OAC(numCh, Math.max(1, Math.ceil(buffer.duration * targetSR)), targetSR);
+    const src = offline.createBufferSource();
+    src.buffer = buffer;
+    src.connect(offline.destination);
+    src.start(0);
+    const out = await offline.startRendering();
+    if (out && out.length > 0) return out;
+    return buffer;
+  } catch (e) {
+    console.warn('[video] 48k resample fail — 원본 sr 유지:', e?.message);
+    return buffer;
+  }
+}
+
 async function compressVideoWebCodecs(file, opts = {}) {
   // 사용자 명시 2026-05-03: trim UI = startTime opt 추가. startTime ~ startTime+maxSec 구간만 인코딩.
   const { maxSec = 5, targetHeight = 720, bitrate = 1_500_000, fps = 30, audioBitrate = 96_000, startTime = 0 } = opts;
@@ -33270,18 +33198,16 @@ async function compressVideoWebCodecs(file, opts = {}) {
           });
           try { tmpCtx.close(); } catch(_) {}
           if (audioBuffer && audioBuffer.numberOfChannels > 0 && audioBuffer.length > 0) {
+            // 사용자 명시 2026-05-10 (재정정 ultrathink): 48k resample → Opus 후보 universal 활성.
+            // 폰 녹화 영상 (보통 44.1 kHz) 도 resample 후 Opus 자격 → AAC esds 호환성 issue 우회.
+            audioBuffer = await _resampleAudioBufferTo48k(audioBuffer);
             audioSampleRate = audioBuffer.sampleRate;
             audioChannels = Math.min(2, audioBuffer.numberOfChannels);
             // 사용자 보고 2026-05-09 ultrathink: 무음 진주 진단 — codec 후보 확장 + 진단 로그 + 빈 audioBuffer 케이스 분리.
-            // 사용자 명시 2026-05-10 (재정정 — Opus 시도): mp4-muxer 5.2.2 가 ['aac','opus'] 둘 다 지원.
-            // Opus 우선 시도 (mp4 안 opus track Chrome/Firefox/Safari 17+ 호환성 ↑) — AAC mp4 의 silently muted issue
-            // 회피 시도. Opus 미지원 sr (예: 44100) 또는 isConfigSupported false 시 AAC fallback.
-            // Opus sr 제약: 8/12/16/24/48 kHz 만. 다른 sr 은 AAC.
-            const opusOk = [8000, 12000, 16000, 24000, 48000].includes(audioSampleRate);
-            const candidates = [
-              ...(opusOk ? ['opus'] : []),
-              'mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29',
-            ];
+            // 사용자 명시 2026-05-10 (재정정 ultrathink): 48k resample 후 sr 가드 제거 — Opus 항상 첫 후보.
+            // mp4-muxer 5.2.2 = SUPPORTED_AUDIO_CODECS = ['aac', 'opus']. Opus = OpusHead atom 자체 구성
+            // (description handshake 의존 X) 라 AAC 의 silent muted issue 우회.
+            const candidates = ['opus', 'mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29'];
             for (const c of candidates) {
               try {
                 const sup = await AudioEncoder.isConfigSupported({
@@ -33313,15 +33239,13 @@ async function compressVideoWebCodecs(file, opts = {}) {
       try {
         const captured = await _captureAudioFromVideo(file, startTime, startTime + maxSec, 48000);
         if (captured && captured.numberOfChannels > 0 && captured.length > 0) {
-          audioBuffer = captured;
-          audioSampleRate = captured.sampleRate;
-          audioChannels = Math.min(2, captured.numberOfChannels);
-          // 사용자 명시 2026-05-10: capture path 도 Opus 우선 + AAC fallback.
-          const capOpusOk = [8000, 12000, 16000, 24000, 48000].includes(audioSampleRate);
-          const capCandidates = [
-            ...(capOpusOk ? ['opus'] : []),
-            'mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29',
-          ];
+          // 사용자 명시 2026-05-10 (재정정 ultrathink): capture path 도 48k resample → Opus universal.
+          // captureStream 은 보통 48000 으로 잡히지만 iOS 일부 환경 다른 sr 가능 — 안전망.
+          audioBuffer = await _resampleAudioBufferTo48k(captured);
+          audioSampleRate = audioBuffer.sampleRate;
+          audioChannels = Math.min(2, audioBuffer.numberOfChannels);
+          // 사용자 명시 2026-05-10 (재정정 ultrathink): capture path sr 가드 제거 — Opus 첫 후보.
+          const capCandidates = ['opus', 'mp4a.40.2', 'mp4a.40.5', 'mp4a.40.29'];
           for (const c of capCandidates) {
             try {
               const sup = await AudioEncoder.isConfigSupported({
@@ -41647,13 +41571,14 @@ function _heroCardHtml(pick, opts = {}) {
     const visual = thumb
       ? `<img src="${thumb}" alt="" class="hero-photo-thumb">`
       : `<div class="hero-photo-thumb video-thumb-placeholder">📹</div>`;
-    // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+    // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
+    // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
     const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(pick.content || '') : (pick.content || '');
     body = `
       <div class="hero-photo">
         ${visual}
         <div class="hero-photo-meta">
-          <div class="hero-photo-content">${escapeHtml(_vTitle)}</div>
+          <div class="hero-photo-content">${icon} ${escapeHtml(_vTitle)}</div>
           ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}
         </div>
       </div>
@@ -42070,13 +41995,14 @@ function switchDayModalTab(tab) {
         const visual = thumb
           ? `<img src="${thumb}" alt="" class="day-pearl-art">`
           : `<div class="day-pearl-art video-thumb-placeholder">📹</div>`;
-        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
+        // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
         html += `
           <div class="day-card t-pearl t-pearl-music" onclick="closeDayModal(); openPearl('${p.id}')">
             ${visual}
             <div class="day-pearl-music-meta">
-              <div class="day-pearl-music-title">${escapeHtml(_vTitle)}</div>
+              <div class="day-pearl-music-title">${icon} ${escapeHtml(_vTitle)}</div>
               <div class="day-pearl-music-artist">${escapeHtml(p.category || '진주')}</div>
               ${p.note ? `<div class="day-card-note" style="margin-top:6px; padding-top:6px;">${escapeHtml(p.note)}</div>` : ''}
             </div>
@@ -51642,7 +51568,8 @@ function renderLensPearls() {
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         const thumb = p.videoThumbnail;
-        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
+        // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
         const visual = thumb
           ? `<img src="${thumb}" alt="${escapeHtml(_vTitle)}" class="tile-photo-art">`
@@ -51651,7 +51578,7 @@ function renderLensPearls() {
           <div class="pinterest-tile tile-photo${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
             ${visual}
             <div class="tile-music-meta">
-              <div class="tile-music-title">${escapeHtml(_vTitle)}</div>
+              <div class="tile-music-title">${icon} ${escapeHtml(_vTitle)}</div>
               ${p.note ? `<div class="tile-note">${escapeHtml(p.note.slice(0, 40))}</div>` : ''}
               ${dateStr ? `<div class="tile-date">${dateStr}</div>` : ''}
             </div>
@@ -51700,7 +51627,8 @@ function renderLensPearls() {
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         const thumb = p.videoThumbnail;
-        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
+        // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
         const visual = thumb
           ? `<img src="${thumb}" alt="" class="pearl-photo-thumb">`
@@ -51709,7 +51637,7 @@ function renderLensPearls() {
           <div class="pearl-card pearl-photo-card" onclick="openPearl('${p.id}')">
             ${visual}
             <div class="pearl-photo-meta">
-              <div class="pearl-card-content">${escapeHtml(_vTitle)}</div>
+              <div class="pearl-card-content">${icon} ${escapeHtml(_vTitle)}</div>
               ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${escapeHtml(p.note)}</div>` : ''}
             </div>
           </div>
@@ -52224,6 +52152,7 @@ async function addPearl() {
                 showToast('동영상 길이 읽기 실패 — 다른 영상 시도');
               } else {
                 // 사용자 명시 2026-05-09: 3초 초과 = trim modal 띄워서 사용자가 구간 선택. 3초 이하 = modal X.
+                // 사용자 명시 2026-05-10 (재정정): trim modal 안에는 video preview / thumbnail 미리보기 X (손잡이 + 시간 라벨만).
                 let trimStart = 0;
                 if (dur > 3) {
                   const range = await pickVideoTrimRange(file, 3);
@@ -52342,17 +52271,15 @@ function showPearlViewModal(pearl) {
     `;
   } else if (isVideo) {
     // 사용자 명시 2026-05-02 ultrathink: 무음 영상 메타 안내.
-    // 사용자 명시 2026-05-09 (재정정): 진단 audio meta UI 제거. 일반 안내 — '일부 환경 audio 호환성 한계 — 업데이트 예정'.
+    // 사용자 명시 2026-05-10 (재정정): hasAudio=true 호환성 한계 안내 제거 — 48k resample + Opus universal 로 fix 됨.
     let mutedNotice = '';
     if (pearl.videoHasAudio === false) {
       mutedNotice = '<div style="font-size:11px; color:var(--text-soft); margin-top:6px; opacity:0.75;">🔇 무음 영상 — 인코딩 시점 소리 추출 X</div>';
-    } else if (pearl.videoHasAudio === true) {
-      // hasAudio=true 인데 일부 환경 (Safari PWA / 데스크탑 Chrome 등) 디코더 호환성 issue — 알려진 한계 안내.
-      mutedNotice = '<div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; opacity:0.65;">🔊 소리 안 들리면 일부 환경 호환성 한계 — 다음 업데이트 fix 예정</div>';
     } else if (pearl.videoHasAudio === undefined) {
       mutedNotice = '<div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; opacity:0.6;">🔇 소리 안 들리면 옛 진주야 — 새로 만든 진주는 소리 같이 저장돼</div>';
     }
-    // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+    // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
+    // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일 (`${icon} ${content}`).
     const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(pearl.content || '') : (pearl.content || '');
     // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): video src 가 hydratePearlVideos 비동기로 적용되는 동안 까만 화면 → 사용자가 "썸네일 안 보임 / 재생 X" 로 인식.
     // poster 속성에 videoThumbnail 박아서 hydrate 전 + 첫 ▶ 클릭 전까지 thumbnail 보이게.
@@ -52362,7 +52289,7 @@ function showPearlViewModal(pearl) {
         <video data-pearl-vid="${pearl.id}" class="pearl-view-photo" controls playsinline preload="metadata"${_posterAttr}></video>
       </div>
       <div class="pearl-view-text-meta">
-        <div class="pearl-view-title">${escapeHtml(_vTitle)}</div>
+        <div class="pearl-view-title">${icon} ${escapeHtml(_vTitle)}</div>
         ${mutedNotice}
       </div>
     `;
@@ -52479,9 +52406,13 @@ async function _pearlViewMore(id) {
       placeholder: '비우면 메모 X',
       okLabel: '저장'
     });
-    if (updatedNote === null) return;
-    pearl.note = updatedNote.trim() || null;
-    saveState();
+    // 사용자 보고 2026-05-10: 영상 진주 제목 수정 후 메모 modal cancel 시 제목 변경도 같이 날아감 fix.
+    // 메모 cancel = 메모 변경 X (제목 변경은 위에서 이미 커밋). 제목 cancel 만 전체 abort.
+    if (updatedNote !== null) {
+      pearl.note = updatedNote.trim() || null;
+    }
+    // 사용자 보고 2026-05-10: 영상 진주는 dataURL 큼 → saveState(true) 강제 flush 로 변경 손실 방지.
+    saveState(true);
     renderLensPearls();
     showToast('수정됨 ✦');
     // 모달 다시 열어서 변경 반영
@@ -56424,7 +56355,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.183-early-bird-trial-billing-key';
+const APP_VERSION = 'v4.0.184-video-trim-no-preview';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

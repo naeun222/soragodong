@@ -479,6 +479,7 @@ async function addPearl() {
                 showToast('동영상 길이 읽기 실패 — 다른 영상 시도');
               } else {
                 // 사용자 명시 2026-05-09: 3초 초과 = trim modal 띄워서 사용자가 구간 선택. 3초 이하 = modal X.
+                // 사용자 명시 2026-05-10 (재정정): trim modal 안에는 video preview / thumbnail 미리보기 X (손잡이 + 시간 라벨만).
                 let trimStart = 0;
                 if (dur > 3) {
                   const range = await pickVideoTrimRange(file, 3);
@@ -597,17 +598,15 @@ function showPearlViewModal(pearl) {
     `;
   } else if (isVideo) {
     // 사용자 명시 2026-05-02 ultrathink: 무음 영상 메타 안내.
-    // 사용자 명시 2026-05-09 (재정정): 진단 audio meta UI 제거. 일반 안내 — '일부 환경 audio 호환성 한계 — 업데이트 예정'.
+    // 사용자 명시 2026-05-10 (재정정): hasAudio=true 호환성 한계 안내 제거 — 48k resample + Opus universal 로 fix 됨.
     let mutedNotice = '';
     if (pearl.videoHasAudio === false) {
       mutedNotice = '<div style="font-size:11px; color:var(--text-soft); margin-top:6px; opacity:0.75;">🔇 무음 영상 — 인코딩 시점 소리 추출 X</div>';
-    } else if (pearl.videoHasAudio === true) {
-      // hasAudio=true 인데 일부 환경 (Safari PWA / 데스크탑 Chrome 등) 디코더 호환성 issue — 알려진 한계 안내.
-      mutedNotice = '<div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; opacity:0.65;">🔊 소리 안 들리면 일부 환경 호환성 한계 — 다음 업데이트 fix 예정</div>';
     } else if (pearl.videoHasAudio === undefined) {
       mutedNotice = '<div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; opacity:0.6;">🔇 소리 안 들리면 옛 진주야 — 새로 만든 진주는 소리 같이 저장돼</div>';
     }
-    // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거)
+    // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
+    // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일 (`${icon} ${content}`).
     const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(pearl.content || '') : (pearl.content || '');
     // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): video src 가 hydratePearlVideos 비동기로 적용되는 동안 까만 화면 → 사용자가 "썸네일 안 보임 / 재생 X" 로 인식.
     // poster 속성에 videoThumbnail 박아서 hydrate 전 + 첫 ▶ 클릭 전까지 thumbnail 보이게.
@@ -617,7 +616,7 @@ function showPearlViewModal(pearl) {
         <video data-pearl-vid="${pearl.id}" class="pearl-view-photo" controls playsinline preload="metadata"${_posterAttr}></video>
       </div>
       <div class="pearl-view-text-meta">
-        <div class="pearl-view-title">${escapeHtml(_vTitle)}</div>
+        <div class="pearl-view-title">${icon} ${escapeHtml(_vTitle)}</div>
         ${mutedNotice}
       </div>
     `;
@@ -734,9 +733,13 @@ async function _pearlViewMore(id) {
       placeholder: '비우면 메모 X',
       okLabel: '저장'
     });
-    if (updatedNote === null) return;
-    pearl.note = updatedNote.trim() || null;
-    saveState();
+    // 사용자 보고 2026-05-10: 영상 진주 제목 수정 후 메모 modal cancel 시 제목 변경도 같이 날아감 fix.
+    // 메모 cancel = 메모 변경 X (제목 변경은 위에서 이미 커밋). 제목 cancel 만 전체 abort.
+    if (updatedNote !== null) {
+      pearl.note = updatedNote.trim() || null;
+    }
+    // 사용자 보고 2026-05-10: 영상 진주는 dataURL 큼 → saveState(true) 강제 flush 로 변경 손실 방지.
+    saveState(true);
     renderLensPearls();
     showToast('수정됨 ✦');
     // 모달 다시 열어서 변경 반영
