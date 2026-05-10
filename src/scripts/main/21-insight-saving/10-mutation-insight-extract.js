@@ -39,7 +39,7 @@ async function _extractMutationInsight(opts) {
   }
   // saveMsgAsInsight 와 동일 객체 구조 (28953~) — type 만 'mutation' (시각 구분)
   state.archive = state.archive || [];
-  const _dayKey = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().split('T')[0];
+  const _dayKey = (typeof todayKey === 'function') ? todayKey() : (typeof getDayKey === 'function' ? getDayKey() : new Date(Date.now() - 4 * 3600000).toISOString().split('T')[0]);
   const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
   const insight = headline ? `${headline} — ${body}` : body;
   const ins = {

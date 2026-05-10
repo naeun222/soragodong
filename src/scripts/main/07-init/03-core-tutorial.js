@@ -165,7 +165,7 @@ function _scrubSeedsForCore(coreId) {
           title: '마감 직전 환경 셋업 1번',
           description: '카페 자리 + 폰 다른 방',
           status: 'completed',
-          completedDate: new Date(_todayMs - 86400000).toISOString().split('T')[0],
+          completedDate: (typeof getDayKey === 'function') ? getDayKey(_todayMs - 86400000) : new Date(_todayMs - 86400000).toISOString().split('T')[0],
           completedAt: new Date(_todayMs - 86400000).toISOString(),
           createdAt: new Date(_todayMs - 86400000).toISOString(),
           strategyId: 'strat_seed_0',

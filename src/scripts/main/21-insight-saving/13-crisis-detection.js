@@ -38,7 +38,7 @@ function showCrisisCarousel(triggerKind, opts) {
     if (state.preferences && state.preferences.testerMode) return;
     // 일일 cap (학습 차단)
     if (!state.preferences) state.preferences = {};
-    const today = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+    const today = (typeof todayKey === 'function') ? todayKey() : (typeof getDayKey === 'function' ? getDayKey() : new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10));
     if (state.preferences._lastCrisisCarouselAt === today) return;
     state.preferences._lastCrisisCarouselAt = today;
     // internal log (분쟁 시 안전 의무 충족 증거 — E2EE 라 회사 read X, 사용자 본인이 복호화 가능)

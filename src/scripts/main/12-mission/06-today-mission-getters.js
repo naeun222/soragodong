@@ -28,10 +28,13 @@ function hasActivePendingMission() {
 // 사용자 보고 2026-05-01: 옛 = getDayKey(now-24h) — 4AM cutoff 적용해서 새벽 시간대 / 캘린더 mental 사용자에게 '그저께' 반환 버그.
 // fix = 캘린더 어제 (now 의 calendar 날짜 - 1일). entry.date 는 todayKey() 로 저장되지만 normal 사용자 entries 는 캘린더 어제와 일치.
 function _calendarYesterdayKey() {
+  // 사용자 명시 2026-05-11: 4AM cutoff 일관. todayKey() 의 전날 = getDayKey(now - 24h).
+  // 옛 자정 기준 (getDate() - 1) 은 03~04시 사이 사용자 '오늘' entry 를 어제로 잘못 분류.
   const nowMs = (typeof getServerNowMs === 'function' ? getServerNowMs() : Date.now());
-  const d = new Date(nowMs);
-  const y = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
-  return `${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,'0')}-${String(y.getDate()).padStart(2,'0')}`;
+  if (typeof getDayKey === 'function') return getDayKey(nowMs - 86400000);
+  // fallback (getDayKey 미로드 — dead path)
+  const d = new Date(nowMs - 86400000 - 4 * 3600000);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 // 사용자 명시 2026-05-02: 어제 entry 가 있어도 hollow (체크인/일기/관찰 모두 비었으면) 카드 X.
 // "새로운 데이터" = 의미 있는 field 한 개 이상. 이전엔 entry 자체 존재만으로 카드 표시 → 빈 record 도 카드 노출.

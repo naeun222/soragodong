@@ -126,17 +126,20 @@ function _rcPickRandom(arr) {
 }
 
 function _rcTodayKey() {
-  return (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+  // 사용자 명시 2026-05-11: fallback 도 4AM cutoff (getDayKey).
+  if (typeof todayKey === 'function') return todayKey();
+  if (typeof getDayKey === 'function') return getDayKey();
+  return new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10);
 }
 
-// 4AM cutoff key — 사용자 명시 2026-05-09: 미니 리뷰 / Quiz / 운세 모두 새벽 4시 cutoff 일관성.
+// 4AM cutoff key — 사용자 명시 2026-05-09: 미니 리뷰 / Quiz / 운세 / 고동의 일기 모두 새벽 4시 cutoff 일관성.
+// 사용자 명시 2026-05-11: getDayKey 위임으로 통일 (옛 자체 구현 제거).
 function _rcCutoffKeyOf(timestampOrIso) {
+  if (typeof getDayKey === 'function') return getDayKey(timestampOrIso);
+  // fallback
   const d = new Date(timestampOrIso);
-  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
+  d.setTime(d.getTime() - 4 * 3600000);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function _rcDayDiff(keyA, keyB) {

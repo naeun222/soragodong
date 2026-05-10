@@ -196,7 +196,7 @@ function _mergeGuestSnapshotIntoExisting(guest) {
     const _firstTs = _existingChat[0] && _existingChat[0].timestamp;
     const _dateKey = _firstTs && typeof getDayKey === 'function'
       ? getDayKey(_firstTs)
-      : (typeof todayKey === 'function' ? todayKey() : new Date().toISOString().slice(0, 10));
+      : (typeof todayKey === 'function' ? todayKey() : (typeof getDayKey === 'function' ? getDayKey() : new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10)));
     state.chatArchive.unshift({
       id: 'arch_premerge_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       date: _dateKey,

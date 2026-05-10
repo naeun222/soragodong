@@ -15566,7 +15566,7 @@ function _mergeGuestSnapshotIntoExisting(guest) {
     const _firstTs = _existingChat[0] && _existingChat[0].timestamp;
     const _dateKey = _firstTs && typeof getDayKey === 'function'
       ? getDayKey(_firstTs)
-      : (typeof todayKey === 'function' ? todayKey() : new Date().toISOString().slice(0, 10));
+      : (typeof todayKey === 'function' ? todayKey() : (typeof getDayKey === 'function' ? getDayKey() : new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10)));
     state.chatArchive.unshift({
       id: 'arch_premerge_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       date: _dateKey,
@@ -21378,7 +21378,7 @@ function _scrubSeedsForCore(coreId) {
           title: '마감 직전 환경 셋업 1번',
           description: '카페 자리 + 폰 다른 방',
           status: 'completed',
-          completedDate: new Date(_todayMs - 86400000).toISOString().split('T')[0],
+          completedDate: (typeof getDayKey === 'function') ? getDayKey(_todayMs - 86400000) : new Date(_todayMs - 86400000).toISOString().split('T')[0],
           completedAt: new Date(_todayMs - 86400000).toISOString(),
           createdAt: new Date(_todayMs - 86400000).toISOString(),
           strategyId: 'strat_seed_0',
@@ -28106,17 +28106,20 @@ function _rcPickRandom(arr) {
 }
 
 function _rcTodayKey() {
-  return (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+  // 사용자 명시 2026-05-11: fallback 도 4AM cutoff (getDayKey).
+  if (typeof todayKey === 'function') return todayKey();
+  if (typeof getDayKey === 'function') return getDayKey();
+  return new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10);
 }
 
-// 4AM cutoff key — 사용자 명시 2026-05-09: 미니 리뷰 / Quiz / 운세 모두 새벽 4시 cutoff 일관성.
+// 4AM cutoff key — 사용자 명시 2026-05-09: 미니 리뷰 / Quiz / 운세 / 고동의 일기 모두 새벽 4시 cutoff 일관성.
+// 사용자 명시 2026-05-11: getDayKey 위임으로 통일 (옛 자체 구현 제거).
 function _rcCutoffKeyOf(timestampOrIso) {
+  if (typeof getDayKey === 'function') return getDayKey(timestampOrIso);
+  // fallback
   const d = new Date(timestampOrIso);
-  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
+  d.setTime(d.getTime() - 4 * 3600000);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function _rcDayDiff(keyA, keyB) {
@@ -28829,13 +28832,12 @@ window.addEventListener('beforeunload', () => { _rcResetSession(); });
 // 4AM cutoff key (앱 일반 cutoff 와 일치)
 // =============================================================================
 function _rcQuizCutoffKey() {
-  const now = new Date();
-  // 4AM 이전이면 어제 날짜 키
-  if (now.getHours() < 4) now.setDate(now.getDate() - 1);
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  // 사용자 명시 2026-05-11: getDayKey 위임으로 일관성 (옛 자체 구현 = 결과 동일하나 중복).
+  if (typeof getDayKey === 'function') return getDayKey();
+  if (typeof todayKey === 'function') return todayKey();
+  // fallback
+  const d = new Date(Date.now() - 4 * 3600000);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 // =============================================================================
@@ -33387,10 +33389,13 @@ function hasActivePendingMission() {
 // 사용자 보고 2026-05-01: 옛 = getDayKey(now-24h) — 4AM cutoff 적용해서 새벽 시간대 / 캘린더 mental 사용자에게 '그저께' 반환 버그.
 // fix = 캘린더 어제 (now 의 calendar 날짜 - 1일). entry.date 는 todayKey() 로 저장되지만 normal 사용자 entries 는 캘린더 어제와 일치.
 function _calendarYesterdayKey() {
+  // 사용자 명시 2026-05-11: 4AM cutoff 일관. todayKey() 의 전날 = getDayKey(now - 24h).
+  // 옛 자정 기준 (getDate() - 1) 은 03~04시 사이 사용자 '오늘' entry 를 어제로 잘못 분류.
   const nowMs = (typeof getServerNowMs === 'function' ? getServerNowMs() : Date.now());
-  const d = new Date(nowMs);
-  const y = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
-  return `${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,'0')}-${String(y.getDate()).padStart(2,'0')}`;
+  if (typeof getDayKey === 'function') return getDayKey(nowMs - 86400000);
+  // fallback (getDayKey 미로드 — dead path)
+  const d = new Date(nowMs - 86400000 - 4 * 3600000);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 // 사용자 명시 2026-05-02: 어제 entry 가 있어도 hollow (체크인/일기/관찰 모두 비었으면) 카드 X.
 // "새로운 데이터" = 의미 있는 field 한 개 이상. 이전엔 entry 자체 존재만으로 카드 표시 → 빈 record 도 카드 노출.
@@ -42166,7 +42171,7 @@ async function _extractMutationInsight(opts) {
   }
   // saveMsgAsInsight 와 동일 객체 구조 (28953~) — type 만 'mutation' (시각 구분)
   state.archive = state.archive || [];
-  const _dayKey = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().split('T')[0];
+  const _dayKey = (typeof todayKey === 'function') ? todayKey() : (typeof getDayKey === 'function' ? getDayKey() : new Date(Date.now() - 4 * 3600000).toISOString().split('T')[0]);
   const date = new Date(_dayKey + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
   const insight = headline ? `${headline} — ${body}` : body;
   const ins = {
@@ -42566,7 +42571,7 @@ function showCrisisCarousel(triggerKind, opts) {
     if (state.preferences && state.preferences.testerMode) return;
     // 일일 cap (학습 차단)
     if (!state.preferences) state.preferences = {};
-    const today = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+    const today = (typeof todayKey === 'function') ? todayKey() : (typeof getDayKey === 'function' ? getDayKey() : new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10));
     if (state.preferences._lastCrisisCarouselAt === today) return;
     state.preferences._lastCrisisCarouselAt = today;
     // internal log (분쟁 시 안전 의무 충족 증거 — E2EE 라 회사 read X, 사용자 본인이 복호화 가능)
@@ -57754,7 +57759,7 @@ async function upgradeToPremium() {
 // V4 (사용자 명시 2026-05-04 ultrathink — v2): 3일 연속 일일 cap 도달 detect → Premium 권유 모달
 function _trackDailyCapHit() {
   state.dailyCapHits = Array.isArray(state.dailyCapHits) ? state.dailyCapHits : [];
-  const todayK = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().split('T')[0];
+  const todayK = (typeof todayKey === 'function') ? todayKey() : (typeof getDayKey === 'function' ? getDayKey() : new Date(Date.now() - 4 * 3600000).toISOString().split('T')[0]);
   if (!state.dailyCapHits.includes(todayK)) {
     state.dailyCapHits.push(todayK);
     state.dailyCapHits = state.dailyCapHits.slice(-14);

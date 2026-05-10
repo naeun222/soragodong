@@ -1,7 +1,7 @@
 // V4 (사용자 명시 2026-05-04 ultrathink — v2): 3일 연속 일일 cap 도달 detect → Premium 권유 모달
 function _trackDailyCapHit() {
   state.dailyCapHits = Array.isArray(state.dailyCapHits) ? state.dailyCapHits : [];
-  const todayK = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().split('T')[0];
+  const todayK = (typeof todayKey === 'function') ? todayKey() : (typeof getDayKey === 'function' ? getDayKey() : new Date(Date.now() - 4 * 3600000).toISOString().split('T')[0]);
   if (!state.dailyCapHits.includes(todayK)) {
     state.dailyCapHits.push(todayK);
     state.dailyCapHits = state.dailyCapHits.slice(-14);

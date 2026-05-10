@@ -6,13 +6,12 @@
 // 4AM cutoff key (앱 일반 cutoff 와 일치)
 // =============================================================================
 function _rcQuizCutoffKey() {
-  const now = new Date();
-  // 4AM 이전이면 어제 날짜 키
-  if (now.getHours() < 4) now.setDate(now.getDate() - 1);
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  // 사용자 명시 2026-05-11: getDayKey 위임으로 일관성 (옛 자체 구현 = 결과 동일하나 중복).
+  if (typeof getDayKey === 'function') return getDayKey();
+  if (typeof todayKey === 'function') return todayKey();
+  // fallback
+  const d = new Date(Date.now() - 4 * 3600000);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 // =============================================================================
