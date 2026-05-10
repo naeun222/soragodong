@@ -51,14 +51,14 @@ function _ensureRotatingCardState() {
 // 사용자 명시 2026-05-09 (추가): 시뮬레이션 source 6 추가 — Sonnet, 4h block, on-demand generate.
 // 5 source: 진주 / 미니 리뷰 / Quiz / 운세 / 시뮬레이션
 // =============================================================================
+// 사용자 명시 2026-05-10: quiz source 통째 제거 — '별로다'.
 const _RC_BASE_WEIGHTS = {
   pearl:      20,
   miniReview: 100,  // 일요일 + 정식 주간 리뷰 도착 시 200 격상 (spec 3-2 특수)
-  quiz:       80,
   horoscope:  50,
-  simulation: 70,   // Quiz 와 비슷 (둘 다 cf 기반 게임)
+  simulation: 70,
 };
-const _RC_SOURCE_ORDER = ['miniReview', 'quiz', 'simulation', 'horoscope', 'pearl'];
+const _RC_SOURCE_ORDER = ['miniReview', 'simulation', 'horoscope', 'pearl'];
 
 const _RC_PEARL_WINDOW_MS = 4 * 60 * 60 * 1000;       // 진주 4시간 stay
 const _RC_MINI_REVIEW_COOLDOWN_MS = 3 * 86400000;     // 미니 리뷰 3일 stay
@@ -145,13 +145,6 @@ function _rcIsHistoricallyConfirmed(sourceId) {
       const lastDayK = _rcCutoffKeyOf(r.lastMiniReviewAt);
       const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : _rcTodayKey();
       return _rcDayDiff(todayK, lastDayK) < 3;
-    }
-    case 'quiz': {
-      // 오늘 5/5 다 답한 상태?
-      const p = r.quizProgress;
-      if (!p || r.quizDay !== todayK) return false;
-      if (!Array.isArray(p.questionIds) || p.questionIds.length === 0) return false;
-      return (p.currentIdx || 0) >= p.questionIds.length;
     }
     case 'horoscope':  return r.lastHoroscopeShownDate === todayK;
   }
@@ -682,10 +675,10 @@ function _rcCollectAvailable() {
     if (typeof fn !== 'function') return null;
     try { return fn(); } catch (e) { console.warn('[rotating-card source]', label, e); return null; }
   };
+  // 사용자 명시 2026-05-10: quiz source 제거 — _rcSource4Quiz 호출 X (함수 자체는 dead 로 잔존).
   const all = [
     safe(_rcSource1Pearl,      'pearl'),
     safe(_rcSource3MiniReview, 'miniReview'),
-    safe(typeof _rcSource4Quiz === 'function' ? _rcSource4Quiz : null,             'quiz'),
     safe(typeof _rcSource5Horoscope === 'function' ? _rcSource5Horoscope : null,   'horoscope'),
     safe(typeof _rcSource6Simulation === 'function' ? _rcSource6Simulation : null, 'simulation'),
   ];

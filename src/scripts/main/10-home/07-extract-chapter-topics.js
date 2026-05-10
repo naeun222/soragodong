@@ -15,7 +15,9 @@ async function extractChapterCaseAnalysis(messages, opts) {
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
       model: _model,
-      max_tokens: 1500,
+      // 사용자 보고 2026-05-10 (audit): 큰 챕터 (40+, 108, 128 msg) 응답 truncation → JSON parse fail.
+      //   1500 → 3000 으로 ↑. deep_profile_update 의 relationships array + self_narrative 풍부 출력 보장.
+      max_tokens: 3000,
       messages: [{ role: 'user', content: prompt }]
     });
     if (!resp.ok) { console.warn('[chapter case extract] resp not ok:', resp.status); return false; }
@@ -24,7 +26,41 @@ async function extractChapterCaseAnalysis(messages, opts) {
     const jm = raw.match(/\{[\s\S]*\}/);
     if (!jm) { console.warn('[chapter case extract] JSON 미매치'); return false; }
     let analysis;
-    try { analysis = JSON.parse(jm[0]); } catch (e) { console.warn('[chapter case extract] JSON parse fail:', e); return false; }
+    try { analysis = JSON.parse(jm[0]); } catch (e) {
+      console.warn('[chapter case extract] JSON parse fail:', e);
+      // 사용자 보고 2026-05-10 (audit): 응답 truncation 시 partial JSON repair 시도 — 열린 [ { 카운트 후 close 보강.
+      try {
+        let fixed = jm[0];
+        let braceDepth = 0, bracketDepth = 0, inStr = false, escaped = false;
+        for (let i = 0; i < fixed.length; i++) {
+          const c = fixed[i];
+          if (escaped) { escaped = false; continue; }
+          if (c === '\\') { escaped = true; continue; }
+          if (c === '"') { inStr = !inStr; continue; }
+          if (inStr) continue;
+          if (c === '{') braceDepth++;
+          else if (c === '}') braceDepth--;
+          else if (c === '[') bracketDepth++;
+          else if (c === ']') bracketDepth--;
+        }
+        if (bracketDepth > 0 || braceDepth > 0) {
+          // 마지막 incomplete element 절사 — 마지막 `,` 또는 `[` 또는 `{` 까지 잘라냄.
+          const lastValid = Math.max(fixed.lastIndexOf(','), fixed.lastIndexOf('['), fixed.lastIndexOf('{'));
+          if (lastValid > 0) fixed = fixed.slice(0, lastValid);
+          // close 보강
+          let suffix = '';
+          while (bracketDepth > 0) { suffix += ']'; bracketDepth--; }
+          while (braceDepth > 0) { suffix += '}'; braceDepth--; }
+          analysis = JSON.parse(fixed + suffix);
+          console.log('[chapter case extract] partial repair OK');
+        } else {
+          return false;
+        }
+      } catch (e2) {
+        console.warn('[chapter case extract] partial repair fail:', e2);
+        return false;
+      }
+    }
 
     const touched = _processExtractChapterAnalysis(analysis);
 

@@ -21,7 +21,8 @@
 // v16 (2026-05-10 audit batch 3): pendingBatch stuck 단일 root cause — _runDailyExtractInline `>= 6` → `>= 3` / fail count 3회 timeout / 6h not-ended timeout / fallback 후 홈 카드 갱신.
 // v17 (2026-05-10 진단): _diagnoseExtract 함수 — 강제 회복 후에도 안 되는 케이스 console 진단.
 // v18 (2026-05-10 root cause 확정): extractChapterCaseAnalysis boolean return / fail 시 _pendingExtract 보존 / _runReviewExtractInline 으로 weekly 강제.
-const CACHE_NAME = 'soragodong-v4-cache-v18';
+// v19 (2026-05-10 진단 결과 확정): 큰 챕터 응답 truncation fix (max_tokens 1500→3000 + partial JSON repair) / quiz source 통째 제거.
+const CACHE_NAME = 'soragodong-v4-cache-v19';
 const PRECACHE_URLS = [
   './',
   './index.html',
