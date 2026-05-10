@@ -176,6 +176,14 @@ async function _doRefreshBillingStatus(manual) {
     status.textContent = '로그인 필요';
     return;
   }
+  // 사용자 명시 2026-05-11: admin 계정은 구독 표시 = '어드민', 결제/사용량 노출 X.
+  if (typeof _isAdmin === 'function' && _isAdmin()) {
+    status.innerHTML = `
+      <div><b>구독</b>: 🛡️ 어드민</div>
+      <div style="font-size:11.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">운영 계정 — 제한 없음</div>
+    `;
+    return;
+  }
   // Phase 1e: 게스트 사용자 — 가입 유도 카드 (수치/한도 노출 X, 데이터 안전 + E2EE 톤).
   if (state && state.isGuest) {
     status.innerHTML = `
@@ -290,6 +298,11 @@ async function loadPayments() {
   if (!container) return;
   if (!session?.access_token) {
     container.textContent = '로그인 필요';
+    return;
+  }
+  // 사용자 명시 2026-05-11: admin 계정은 결제 내역 노출 X.
+  if (typeof _isAdmin === 'function' && _isAdmin()) {
+    container.innerHTML = '<div style="color:var(--text-soft); padding:8px 0;">🛡️ 어드민 — 결제 내역 없음</div>';
     return;
   }
   container.textContent = '불러오는 중...';
