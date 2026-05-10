@@ -54,9 +54,12 @@ async function _e2eePassphraseToKey(passphrase, saltB64) {
 }
 
 // password 강도 검증 (12자 이상, 단순 brute-force 회피)
+// 사용자 명시 2026-05-11 ultrathink: 테스트 계정 (soragodongapp@gmail.com) 한정 8자 허용 — 개발자 테스트 편의 (이미 8자로 설정된 케이스 호환). 그 외 12자 유지.
 function _e2eeValidatePassword(pw) {
   if (!pw || typeof pw !== 'string') return { ok: false, reason: '비밀번호를 입력해주세요' };
-  if (pw.length < 12) return { ok: false, reason: '12자 이상 필요해요 (현재 ' + pw.length + '자)' };
+  const _isTestAcct = (typeof session !== 'undefined') && session && session.user && session.user.email === 'soragodongapp@gmail.com';
+  const _minLen = _isTestAcct ? 8 : 12;
+  if (pw.length < _minLen) return { ok: false, reason: _minLen + '자 이상 필요해요 (현재 ' + pw.length + '자)' };
   if (/^\d+$/.test(pw)) return { ok: false, reason: '숫자만으로는 약해요. 단어 + 숫자 섞어주세요' };
   return { ok: true };
 }

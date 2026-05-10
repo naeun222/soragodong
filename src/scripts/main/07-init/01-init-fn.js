@@ -167,17 +167,21 @@ async function init() {
     }
   } catch (e) { console.warn('[review id backfill]:', e); }
 
-  // 사용자 명시 2026-05-10: 테스트 계정 (soragodongapp@gmail.com) 자동 설정 — testerMode + 튜토리얼 skip + E2EE setup skip flag.
-  // 사용자 명시 2026-05-11 ultrathink (재정정): testerMode 상시 ON 부활. 시도해본 OFF fix 는 maybeShowE2EESetupForNewUser / firstTimeIntro 등의 핵심 가드 (testerMode) 가 함께 풀리면서 모달이 떠 우회가 깨졌음. 시드 데이터는 별도 trigger (튜토리얼 시작 시 onb-drag) 라 자동 적용 X.
+  // 사용자 명시 2026-05-10: 테스트 계정 (soragodongapp@gmail.com) 자동 설정.
+  // 사용자 명시 2026-05-11 ultrathink (3차 정정): testerMode 자동 OFF. 우회 효과 (V8 튜토 / 코어 튜토 skip) 는 명시적 flag (tutorialVersion='v8-start' / _coreTutorialAutoStarted=true) 로 보장 — testerMode 가드에 의존 X.
+  //   E2EE setup 모달 (필수 동의 항목 포함) 은 그대로 뜨도록 _e2eeOptedOut 도 set 안 함 (recovery 만 skip 위해 옛 _e2eeOptedOut 유지).
+  //   비밀번호 길이는 _e2eeValidatePassword 가 테스트 계정 한정 8자 허용 (별도 fix).
   try {
     if (session && session.user && session.user.email === 'soragodongapp@gmail.com') {
       if (!state.preferences) state.preferences = {};
       let _testTouched = false;
-      if (state.preferences.testerMode !== true) { state.preferences.testerMode = true; _testTouched = true; }
+      if (state.preferences.testerMode === true) { state.preferences.testerMode = false; _testTouched = true; }
       if (state.hasSeenWelcomeTutorial !== true) { state.hasSeenWelcomeTutorial = true; _testTouched = true; }
       if (state.hasSeenV3Tour !== true) { state.hasSeenV3Tour = true; _testTouched = true; }
       if (state.preferences._tutorialDismissed !== true) { state.preferences._tutorialDismissed = true; _testTouched = true; }
-      if (state.preferences._e2eeOptedOut !== true) { state.preferences._e2eeOptedOut = true; _testTouched = true; }
+      // E2EE setup 모달은 정상 뜨도록 _e2eeOptedOut 자동 set 폐기. recovery 만 skip 하고 싶으면 사용자가 별도 토글.
+      if (state.tutorialVersion !== 'v8-start') { state.tutorialVersion = 'v8-start'; _testTouched = true; }
+      if (state.preferences._coreTutorialAutoStarted !== true) { state.preferences._coreTutorialAutoStarted = true; _testTouched = true; }
       if (_testTouched) saveState();
     }
   } catch (e) { console.warn('[test account autoConfig]:', e); }

@@ -46,8 +46,11 @@ async function submitE2EERecovery() {
   const status = document.getElementById('e2eeRecoveryStatus');
   if (!input || !status) return;
   const password = input.value;
-  if (!password || password.length < 12) {
-    status.textContent = `비밀번호 12자 이상 (현재 ${password.length}자)`;
+  // 사용자 명시 2026-05-11 ultrathink: 테스트 계정 한정 8자 허용 — _e2eeValidatePassword 와 통일.
+  const _isTestAcct = (typeof session !== 'undefined') && session && session.user && session.user.email === 'soragodongapp@gmail.com';
+  const _minLen = _isTestAcct ? 8 : 12;
+  if (!password || password.length < _minLen) {
+    status.textContent = `비밀번호 ${_minLen}자 이상 (현재 ${password.length}자)`;
     status.style.color = '#e89090';
     return;
   }
