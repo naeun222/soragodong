@@ -19110,6 +19110,9 @@ async function saveToCloudNow() {
   const existing = await checkResp.json();
   if (existing.length > 0) {
     const body = JSON.stringify({ data: dataPayload, updated_at: state.lastSync }, _serializeReplacer);
+    // 사용자 보고 2026-05-10 (audit batch 9): main row size 큰 경우 Postgres statement_timeout 위험 (autoBackup 과 동일 root cause).
+    //   4MB 이상 시 사용자 알림 + 자동 prune 권장. window flag 로 한 세션 1회만.
+    _checkCloudRowOversize(body.length);
     const r = await _fetchWithRetry5xx(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
       {
@@ -19121,12 +19124,25 @@ async function saveToCloudNow() {
     _handleCloudSyncResponse(r);
   } else {
     const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload }, _serializeReplacer);
+    _checkCloudRowOversize(body.length);
     const r = await _fetchWithRetry5xx(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body
     });
     _handleCloudSyncResponse(r);
+  }
+}
+
+// 사용자 보고 2026-05-10 (audit batch 9): main row size 모니터링 — 4MB+ 시 사용자 알림 + 옛 챕터 prune 권장.
+//   Postgres statement_timeout 60s 회피. window flag 로 세션당 1회.
+function _checkCloudRowOversize(bytes) {
+  if (typeof bytes !== 'number' || bytes < 4 * 1024 * 1024) return;
+  if (window._cloudOversizeWarned) return;
+  window._cloudOversizeWarned = true;
+  console.warn('[saveToCloudNow] row size large:', bytes, 'bytes (' + (bytes / 1024 / 1024).toFixed(2) + 'MB)');
+  if (typeof showToast === 'function') {
+    showToast(`☁ cloud 데이터 크기 ${(bytes / 1024 / 1024).toFixed(1)}MB — 옛 챕터/진주 정리 권장 (도서관에서 핀 안 박힌 옛 챕터 삭제)`);
   }
 }
 
@@ -26436,15 +26452,24 @@ function saveReview(type) {
   const userNoteEl = document.getElementById('reviewUserNote');
   const userNote = userNoteEl ? String(userNoteEl.value || '').trim() : '';
   // 사용자 명시 2026-04-30: 자기 평가 form 제거.
-  const review = {
-    // 사용자 보고 2026-05-08: id 누락 → AI 핵심 통찰 요약 버튼 안 보임 (review-collection 분기에서 placeholder 만 노출).
+  // 사용자 명시 2026-05-10 (batch 9): weekly 신 schema 4 섹션만 store / monthly+ 옛 schema 그대로.
+  const _common = {
     id: (type === 'weekly' ? 'wr_' : 'mr_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     completedAt: new Date().toISOString(),
-    summary: reviewData.summary,
-    sections: reviewData.sections,  // 옛 형식 backward compat
-    // 사용자 요청 2026-04-30: 새 리뷰 필드 영구 저장 (다음 리뷰 callback 위해)
-    one_word: reviewData.one_word,
+    userNote
+  };
+  const review = type === 'weekly' ? {
+    ..._common,
     one_word_weekly: reviewData.one_word_weekly,
+    scenes: reviewData.scenes,
+    flow: reviewData.flow,
+    soft_notice: reviewData.soft_notice,
+    seeds: reviewData.seeds  // 다음 review prompt callback 용 (있으면)
+  } : {
+    ..._common,
+    summary: reviewData.summary,
+    sections: reviewData.sections,
+    one_word: reviewData.one_word,
     pattern: reviewData.pattern,
     quotes: reviewData.quotes,
     strengths: reviewData.strengths,
@@ -26453,7 +26478,7 @@ function saveReview(type) {
     value_align: reviewData.value_align,
     risk_signals: reviewData.risk_signals,
     scenes: reviewData.scenes,
-    userNote  // 사용자가 직접 남긴 한 마디 (선택, 다음 리뷰 prompt 에 inject)
+    seeds: reviewData.seeds
   };
 
   // 사용자 보고 2026-05-01 ultrathink: 중복 가드 — 같은 weekKey/monthKey 이미 있으면 replace (auto 가 먼저 push 한 후 사용자 manual click 시 중복 방지)
@@ -53621,12 +53646,23 @@ async function _resumePendingBatch() {
               } catch {}
             }
             if (json) {
-              const review = {
+              // 사용자 명시 2026-05-10 (batch 9): weekly 신 schema 4 섹션만 store. 옛 field (pattern/strengths/quotes/emotions/cycles/value_align/risk_signals) 가 prompt 변경 후엔 안 와도 옛 cache 응답 강건.
+              const _common = {
                 id: (reviewType === 'weekly' ? 'wr_' : 'mr_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
                 type: reviewType,
                 completedAt: new Date().toISOString(),
-                ...json,
                 auto: true
+              };
+              const review = reviewType === 'weekly' ? {
+                ..._common,
+                one_word_weekly: json.one_word_weekly,
+                scenes: json.scenes,
+                flow: json.flow,
+                soft_notice: json.soft_notice,
+                seeds: json.seeds,
+              } : {
+                ..._common,
+                ...json,  // monthly = 옛 schema 그대로 (pattern/strengths/cycles/emotions/etc.)
               };
               if (reviewType === 'weekly') review.weekKey = reviewKey;
               else review.monthKey = reviewKey;
@@ -56926,7 +56962,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.198-backup-shrink-quarterly-tracking';
+const APP_VERSION = 'v4.0.199-mainrow-monitor-weekly-schema-cleanup';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

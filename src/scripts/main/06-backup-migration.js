@@ -304,6 +304,9 @@ async function saveToCloudNow() {
   const existing = await checkResp.json();
   if (existing.length > 0) {
     const body = JSON.stringify({ data: dataPayload, updated_at: state.lastSync }, _serializeReplacer);
+    // 사용자 보고 2026-05-10 (audit batch 9): main row size 큰 경우 Postgres statement_timeout 위험 (autoBackup 과 동일 root cause).
+    //   4MB 이상 시 사용자 알림 + 자동 prune 권장. window flag 로 한 세션 1회만.
+    _checkCloudRowOversize(body.length);
     const r = await _fetchWithRetry5xx(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
       {
@@ -315,12 +318,25 @@ async function saveToCloudNow() {
     _handleCloudSyncResponse(r);
   } else {
     const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload }, _serializeReplacer);
+    _checkCloudRowOversize(body.length);
     const r = await _fetchWithRetry5xx(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body
     });
     _handleCloudSyncResponse(r);
+  }
+}
+
+// 사용자 보고 2026-05-10 (audit batch 9): main row size 모니터링 — 4MB+ 시 사용자 알림 + 옛 챕터 prune 권장.
+//   Postgres statement_timeout 60s 회피. window flag 로 세션당 1회.
+function _checkCloudRowOversize(bytes) {
+  if (typeof bytes !== 'number' || bytes < 4 * 1024 * 1024) return;
+  if (window._cloudOversizeWarned) return;
+  window._cloudOversizeWarned = true;
+  console.warn('[saveToCloudNow] row size large:', bytes, 'bytes (' + (bytes / 1024 / 1024).toFixed(2) + 'MB)');
+  if (typeof showToast === 'function') {
+    showToast(`☁ cloud 데이터 크기 ${(bytes / 1024 / 1024).toFixed(1)}MB — 옛 챕터/진주 정리 권장 (도서관에서 핀 안 박힌 옛 챕터 삭제)`);
   }
 }
 

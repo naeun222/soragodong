@@ -337,15 +337,24 @@ function saveReview(type) {
   const userNoteEl = document.getElementById('reviewUserNote');
   const userNote = userNoteEl ? String(userNoteEl.value || '').trim() : '';
   // 사용자 명시 2026-04-30: 자기 평가 form 제거.
-  const review = {
-    // 사용자 보고 2026-05-08: id 누락 → AI 핵심 통찰 요약 버튼 안 보임 (review-collection 분기에서 placeholder 만 노출).
+  // 사용자 명시 2026-05-10 (batch 9): weekly 신 schema 4 섹션만 store / monthly+ 옛 schema 그대로.
+  const _common = {
     id: (type === 'weekly' ? 'wr_' : 'mr_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     completedAt: new Date().toISOString(),
-    summary: reviewData.summary,
-    sections: reviewData.sections,  // 옛 형식 backward compat
-    // 사용자 요청 2026-04-30: 새 리뷰 필드 영구 저장 (다음 리뷰 callback 위해)
-    one_word: reviewData.one_word,
+    userNote
+  };
+  const review = type === 'weekly' ? {
+    ..._common,
     one_word_weekly: reviewData.one_word_weekly,
+    scenes: reviewData.scenes,
+    flow: reviewData.flow,
+    soft_notice: reviewData.soft_notice,
+    seeds: reviewData.seeds  // 다음 review prompt callback 용 (있으면)
+  } : {
+    ..._common,
+    summary: reviewData.summary,
+    sections: reviewData.sections,
+    one_word: reviewData.one_word,
     pattern: reviewData.pattern,
     quotes: reviewData.quotes,
     strengths: reviewData.strengths,
@@ -354,7 +363,7 @@ function saveReview(type) {
     value_align: reviewData.value_align,
     risk_signals: reviewData.risk_signals,
     scenes: reviewData.scenes,
-    userNote  // 사용자가 직접 남긴 한 마디 (선택, 다음 리뷰 prompt 에 inject)
+    seeds: reviewData.seeds
   };
 
   // 사용자 보고 2026-05-01 ultrathink: 중복 가드 — 같은 weekKey/monthKey 이미 있으면 replace (auto 가 먼저 push 한 후 사용자 manual click 시 중복 방지)

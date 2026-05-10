@@ -27,7 +27,8 @@
 // v22 (2026-05-10 batch 6 큐 7+8 main): weekly 카드 inline 펼침 + 4 섹션 (MOMENTUM / 장면 / 흐름 / 부드러운 알림). 옛 schema 매핑.
 // v23 (2026-05-10 batch 7): weekly schema 4 섹션만 출력 / monthly+ 추적 항목 inject / 시뮬 챕터 별도 추출 path.
 // v24 (2026-05-10 batch 8): autoBackup chatArchive messages + 큰 dataURL 제외 (Supabase statement timeout fix) / quarterly 추적 항목 inject.
-const CACHE_NAME = 'soragodong-v4-cache-v24';
+// v25 (2026-05-10 batch 9): main row size monitoring (4MB+ 알림) / saveReview + batch path weekly 신 schema 4 섹션만 store.
+const CACHE_NAME = 'soragodong-v4-cache-v25';
 const PRECACHE_URLS = [
   './',
   './index.html',

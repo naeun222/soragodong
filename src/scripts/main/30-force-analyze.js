@@ -785,12 +785,23 @@ async function _resumePendingBatch() {
               } catch {}
             }
             if (json) {
-              const review = {
+              // 사용자 명시 2026-05-10 (batch 9): weekly 신 schema 4 섹션만 store. 옛 field (pattern/strengths/quotes/emotions/cycles/value_align/risk_signals) 가 prompt 변경 후엔 안 와도 옛 cache 응답 강건.
+              const _common = {
                 id: (reviewType === 'weekly' ? 'wr_' : 'mr_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
                 type: reviewType,
                 completedAt: new Date().toISOString(),
-                ...json,
                 auto: true
+              };
+              const review = reviewType === 'weekly' ? {
+                ..._common,
+                one_word_weekly: json.one_word_weekly,
+                scenes: json.scenes,
+                flow: json.flow,
+                soft_notice: json.soft_notice,
+                seeds: json.seeds,
+              } : {
+                ..._common,
+                ...json,  // monthly = 옛 schema 그대로 (pattern/strengths/cycles/emotions/etc.)
               };
               if (reviewType === 'weekly') review.weekKey = reviewKey;
               else review.monthKey = reviewKey;
