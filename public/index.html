@@ -28795,13 +28795,14 @@ async function _callGodongDiaryHaiku() {
 
 ==================================================
 [가장 중요한 규칙 — 절대 위반 X]
-**하루 일기 = 사건 정확히 1개 (1줄 / 짧게) + 고동의 느낌 (2-3줄 / 본체)**
+**하루 일기 = 사건 정확히 1개 (1문장 / 짧게) + 고동의 느낌 (1-2문장 / 본체)**
+**총 2-3 문장 / 100자 이하. 절대 4문장 작성 X.**
 
 ⚠ 사건 1개 = 단 하나의 행동/말/관찰. 절대 2개 이상 X.
-⚠ 본문 4문장 초과 = reject. 170자 초과 = reject.
+⚠ 본문 100자 초과 X. 4문장 작성 X — 너무 길면 사건이 여러 개 들어감.
 
-비율: **사건 약 25% / 느낀 점 약 75%**.
-사건은 *짧게 한 줄* 만. 느낀 점이 일기의 본체.
+비율: **사건 약 30% / 느낀 점 약 70%**.
+사건은 *짧게 한 문장* 만. 느낀 점도 *짧게 1-2 문장*. 일기는 끄적임 — 길게 X.
 
 ⚠ 체크인 단답 (5자 이하 — "내 삶", "쉬엄쉬엄", "괜찮음" 등) 직접 인용 X.
    대신 **다른 source 사건 우선 선택** ([D] 진주 / [F] 토픽 / [E] 깨달음 / [B] 일기 발화).
@@ -28828,7 +28829,9 @@ async function _callGodongDiaryHaiku() {
 1. substrate 의 ">>> 이 날 사건 후보:" 줄 봐.
 2. 후보들 중 *정확히 1개* 만 골라 (가장 인상적인 것).
 3. 나머지 후보는 본문에 절대 언급 X. ignore.
-4. 사건 1줄 (짧게) + 느낀 점 2-3줄 (길게). 총 2-3문장 / 120자 이하.
+4. **사건 1문장 (짧게) + 느낀 점 1-2문장 = 총 2-3문장 / 100자 이하. 길게 쓰지 마.**
+   - 5문장 작성 = 너무 길음. 4문장 = 가장자리. 2-3문장 = 정확.
+   - 부수 정보 / 추가 디테일 / 다른 사건 비교 X — 한 사건 + 한 마음만.
 
 선택 우선순위 — **일상적·가벼운·사소한 사건 우선**:
 1. [B] 일기 (사용자 발화/메모) — 사용자가 그 날 적은 *일상* 어휘 그대로. 가장 자연스러움.
@@ -28945,7 +28948,7 @@ async function _callGodongDiaryHaiku() {
 
 [출력 형식 — JSON 배열 정확히 3개. 마크다운/코드블록/주석/설명 텍스트 X. 첫 글자 = '['.]
 - **반드시 3개 entry**. 누락/축약/2개 X.
-- 각 body **30자 이상 170자 이하** (너무 짧으면 reject. 너무 길면 잘림).
+- 각 body **30자 이상 100자 이하 / 2-3문장** (너무 짧으면 reject. 너무 길면 잘림. 5문장 = 너무 많음).
 - 3일 전 / 2일 전 / 어제 — 각각 1편씩. 순서대로.
 - substrate 헤더 iso 그대로 사용. date 는 "M월 D일", weekday 는 "월"-"일" 한 글자.
 - 데이터 있는 날 = 그 날 사건 + 고동 느낌 (fallback 톤 절대 X).
@@ -28966,6 +28969,7 @@ ${substrateText}
 ${modesText}
 
 → 정확히 3편 일기. 3일 전 / 2일 전 / 어제 각각 1편.
+   각 일기 = **사건 1문장 + 느낌 1-2문장 = 총 2-3문장 / 100자 이하** (절대 길게 X).
    데이터 있으면 그 날 사건 1개 + 고동 느낌. 데이터 없으면 fallback 톤 ("조용한 하루였다" 등).
    호칭은 무조건 "${_userName}이" / "${_userName}". "너" 절대 X.
    각 entry iso 는 substrate 헤더의 iso 그대로 (3일 전: ${_3daysK}, 2일 전: ${_2daysK}, 어제: ${_yesterdayK}). 시각 T20:00:00.
@@ -28976,7 +28980,9 @@ ${modesText}
   const diagnosis = /\bADHD\b|우울증|우울장애|불안장애|PTSD|강박장애/i;
   const banGyeol = /잔잔한 결|가벼운 결|단단한 결|부드러운 결|결 따라/;
   const emojiRe = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F900}-\u{1F9FF}]/u;
-  const adviceLex = /(?:해봐\b|하자\b|가\s*좋(?:아|을)|필요해|보면\s*좋|해보자)/;
+  // 사용자 보고 2026-05-11 ultrathink: '해보자' substring 이 LLM 의 paraphrase ('기록해보자는') 도 잡아서 false-positive.
+  //   → 좌/우 한글 boundary 강화 (앞뒤 한글 X 인 경우만 = '해보자' 단독).
+  const adviceLex = /(?:해봐\b|하자\b|가\s*좋(?:아|을)|필요해|보면\s*좋|(?<![가-힣])해보자(?![가-힣]))/;
   const youReg = /(?<![가-힣])너(?:가|는|랑|한테|를|의|에게|와)(?![가-힣])/;
   // 사용자 보고 2026-05-11: 20대 여성 자연 한국어 톤 — 분석/격식 톤 차단.
   const formalLex = /(?:인 것이다|라 할 수 있|로 추정|로 보인다|라는 점|것으로 보인|것으로 보아|것이라고)/;
@@ -29110,14 +29116,15 @@ ${modesText}
     if (emojiRe.test(allBodies)) hardViolations.push('emoji');
     if (adviceLex.test(allBodies)) hardViolations.push('advice');
     if (youReg.test(allBodies)) hardViolations.push('you-pronoun');
-    // 사용자 보고 2026-05-11: 사건 1개 강제 — 한 entry 가 4문장 초과면 reject (사건 여러 개 의심).
-    // 사용자 보고 2026-05-11 ultrathink: 5 → 4 (HANDOFF.md spec '최대 4-5문장').
+    // 사용자 보고 2026-05-11: 사건 1개 강제 — 5문장 초과면 사건 여러 개 의심.
+    // 사용자 보고 2026-05-11 ultrathink-2: hard → soft 변경. 사용자 데이터 풍부 시 LLM 4-5문장 자주 출력 →
+    //   매번 reject → 4 retry 다 실패 → throw → ALL fallback (악화). prompt 강화 + char limit 100 으로 조절,
+    //   sentence 카운트는 warn 만.
     const _tooManySentences = parsed.some(e => {
       if (!e || typeof e.body !== 'string') return false;
       const _sentences = e.body.split(/[.!?…]\s|\.\s|\n\n/).filter(s => s.trim().length >= 3);
-      return _sentences.length > 4;
+      return _sentences.length > 5;
     });
-    if (_tooManySentences) hardViolations.push('too-many-sentences');
     // 사용자 보고 2026-05-11 ultrathink: 사건 명사 multi (location/person/object 2+ in one body) = 사건 혼재 reject.
     const _multiNounViolation = parsed.some(e => {
       if (!e || typeof e.body !== 'string') return false;
@@ -29129,11 +29136,12 @@ ${modesText}
     const _allDaysHaveData = _targetDayKs.every(dayK => _dayKHasData[dayK]);
     const _hasFallbackInAny = parsed.some(e => e && typeof e.body === 'string' && _fallbackPhraseRe.test(e.body));
     if (_allDaysHaveData && _hasFallbackInAny) hardViolations.push('fallback-misuse-on-data-day');
-    // soft violations (warn, 통과): banGyeol / formal / meta — 사용자 보고 2026-05-11: 첫 호출 실패 원인 가능성.
+    // soft violations (warn, 통과): banGyeol / formal / meta / too-many-sentences.
     const softViolations = [];
     if (banGyeol.test(allBodies)) softViolations.push('gyeol');
     if (formalLex.test(allBodies)) softViolations.push('formal');
     if (metaLex.test(allBodies)) softViolations.push('meta-analysis');
+    if (_tooManySentences) softViolations.push('too-many-sentences-warn');
     if (hardViolations.length > 0) {
       console.warn(`[gdiary diag] hard tone violations (retry): ${hardViolations.join(',')}`);
       attempt++;
@@ -29146,7 +29154,8 @@ ${modesText}
 
     // 사용자 보고 2026-05-11: 옛 cap 검사가 LLM 정상 출력 reject → fallback 채움 → 1-2개만 valid 버그.
     //   fix: cap 초과 시 reject 대신 truncate (잘라서 keep). 최저 5자 만 검사.
-    const _maxLen = 220;
+    // 사용자 명시 2026-05-11 ultrathink-2: 220 → 100 자. 사건 1문장 + 느낌 1-2문장 = 2-3문장 / 100자 이하 spec 일관.
+    const _maxLen = 100;
     const _truncateBody = (body) => {
       if (typeof body !== 'string') return null;
       if (body.length < 5) return null;
@@ -59513,7 +59522,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.222-legacy-mini-deletable';
+const APP_VERSION = 'v4.0.223-gdiary-2-3-sentences-100chars';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
