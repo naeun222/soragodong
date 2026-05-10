@@ -23,41 +23,47 @@ const _GDIARY_FALLBACK_POOL = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 사용자 이름 추출 — 사용자 보고 2026-05-11: email local part / 영문 metadata 자동 hit 시
-//   "jade6679이가" 같이 어색한 출력 + 모달 trigger 안 됨. 한글 포함만 자동 사용.
-//   영문 이름은 사용자가 settings 또는 모달에서 직접 입력하면 keep.
+// 사용자 이름 추출 — 사용자 보고 2026-05-11: metadata 자동 hit 시 모달 trigger 안 되는 버그.
+//   사용자 명시 = "내가 알려준 이름" 만 사용. metadata 자동 추출 폐기.
+//   state.userName 만 신뢰. 비어있으면 무조건 모달 prompt.
+//   metadata 는 모달의 default value (hint) 로만 활용.
 // ─────────────────────────────────────────────────────────────────────────────
 function _gdiaryGetUserName() {
-  // 1. 사용자 직접 입력 (settings 또는 모달) — 영문/한글 무관, 이게 우선.
   if (typeof state !== 'undefined' && state.userName && typeof state.userName === 'string') {
     const v = state.userName.trim();
     if (v.length > 0) return v.slice(0, 20);
   }
-  // 2. supabase user metadata — *한글 포함만* 자동 사용. 한국어 일기 톤 일관성.
-  if (typeof session !== 'undefined' && session && session.user) {
-    const m = session.user.user_metadata || {};
-    const candidates = [m.name, m.full_name, m.preferred_username, m.nickname, m.given_name, m.user_name];
-    for (const c of candidates) {
-      if (c && typeof c === 'string') {
-        const v = c.trim();
-        if (v.length >= 2 && /[가-힣]/.test(v)) return v.slice(0, 20);
-      }
-    }
-  }
-  // 3. email local part fallback 폐기 (사용자 보고: 'jade6679' 자동 추출 → '지우이가' 같은 어색).
   return null;
 }
 
+// metadata 에서 hint 추출 — 모달 default value 용. 한글 포함만.
+function _gdiaryExtractMetadataNameHint() {
+  if (typeof session === 'undefined' || !session || !session.user) return '';
+  const m = session.user.user_metadata || {};
+  const candidates = [m.name, m.full_name, m.preferred_username, m.nickname, m.given_name, m.user_name];
+  for (const c of candidates) {
+    if (c && typeof c === 'string') {
+      const v = c.trim();
+      if (v.length >= 2 && v.length <= 20 && /[가-힣]/.test(v)) return v;
+    }
+  }
+  return '';
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// 사용자 이름 입력 모달 — userName 비어있고 metadata 도 못 추출 시 1번 prompt.
+// 사용자 이름 입력 모달 — userName 비어있을 때 prompt. metadata hint 를 default 로.
 // ─────────────────────────────────────────────────────────────────────────────
 async function _gdiaryAskUserName() {
-  if (typeof showInputModal !== 'function') return null;
+  if (typeof showInputModal !== 'function') {
+    console.warn('[godong-diary] showInputModal 미정의 — 모달 prompt fail');
+    return null;
+  }
+  const _hint = _gdiaryExtractMetadataNameHint();
   const v = await showInputModal({
     title: '고동이가 너를 뭐라고 부를까?',
     message: '일기에서 사용할 이름이야. 본명이나 별명 — 짧게 입력해.',
     placeholder: '예: 지우, 민지, 보라...',
-    defaultValue: '',
+    defaultValue: _hint || '',
     multiline: false,
     okLabel: '저장'
   });
@@ -65,10 +71,16 @@ async function _gdiaryAskUserName() {
   const trimmed = (v || '').trim().slice(0, 20);
   if (trimmed.length < 1) return null;
   state.userName = trimmed;
-  // 사용자 명시 2026-05-11: 프로필 비어있을 때만 이름 자동 prepend (사용자가 직접 적은 내용 보호).
-  //   AI 일반 chat 호출 시 system_prompt 가 state.profile 통째 주입 → 이름 자연 활용.
+  // 사용자 명시 2026-05-11: 프로필 비어있을 때만 이름 자동 prepend.
   if (!state.profile || !state.profile.trim()) {
     state.profile = `이름: ${trimmed}`;
+  }
+  // 사용자 보고 2026-05-11: 옛 fallback (영문 이름 또는 자동 추출 결과) 로 작성된 entries 청소
+  //   + cooldown reset → 다음 호출에서 새 이름으로 재생성.
+  state.godongDiary = (state.godongDiary || []).filter(e => !(e && e.fallback));
+  if (state.rotatingCardState) {
+    state.rotatingCardState.lastGodongDiaryAt = null;
+    state.rotatingCardState.godongDiaryContentId = null;
   }
   if (typeof saveState === 'function') saveState(true);
   return trimmed;
