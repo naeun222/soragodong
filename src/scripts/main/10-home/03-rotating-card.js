@@ -638,26 +638,44 @@ async function _callGodongDiaryHaiku() {
     const isEmpty = !src.checkin && src.diary.length === 0 && src.diarySummary.length === 0
       && src.pearls.length === 0 && src.insights.length === 0 && src.topicCards.length === 0;
     if (isEmpty) {
-      lines.push('  >>> 이 날 데이터: 완전히 0 — fallback 톤으로 작성.');
+      lines.push('');
+      lines.push('  *** 이 날 데이터 0건. fallback 톤 ("조용한 하루였다" 등) 으로 짧게 작성. ***');
     } else {
-      // 사건 후보 명시 — LLM 이 "특별한 거 없음" 으로 판단하지 않게 강제 cue.
-      const _eventHints = [];
+      // 사건 후보 — 데이터 형식으로 LLM 에 명확. 사용자 보고: 옛 inline 형식이 LLM 에 무시됨.
+      lines.push('');
+      lines.push('  *** 이 날 사건 후보 (반드시 1개 선택, 나머지 본문 언급 X): ***');
+      let _hintIdx = 1;
       if (src.checkin) {
         const c = src.checkin;
-        if (c.answer && c.question) _eventHints.push(`질문 "${(c.question || '').slice(0, 30)}" 에 "${(c.answer || '').slice(0, 30)}" 이라고 답함`);
-        if (c.allNighter) _eventHints.push('밤샘');
-        else if (c.sleepStart && c.sleepEnd) _eventHints.push(`잠 ${c.sleepStart}~${c.sleepEnd}`);
-        if (c.vit != null && c.mood != null) _eventHints.push(`컨디션 vit:${c.vit} mood:${c.mood}`);
+        if (c.answer && c.question) {
+          lines.push(`    [${_hintIdx++}] 체크인 질문 "${(c.question || '').slice(0, 40)}" 에 ${_userName}이 "${(c.answer || '').slice(0, 50)}" 이라고 답함`);
+        }
+        if (c.allNighter) lines.push(`    [${_hintIdx++}] ${_userName}이 밤샘`);
+        else if (c.sleepStart && c.sleepEnd) lines.push(`    [${_hintIdx++}] ${_userName}이 잠 ${c.sleepStart}~${c.sleepEnd}`);
+        if (c.vit != null && c.mood != null) lines.push(`    [${_hintIdx++}] ${_userName}이 오늘 컨디션 vit:${c.vit}/5 mood:${c.mood}/7`);
       }
-      if (src.diary.length > 0) _eventHints.push(`사용자 발화/메모 ${src.diary.length}건`);
-      if (src.diarySummary.length > 0) _eventHints.push(`옛 챕터 자동 정리 ${src.diarySummary.length}개 — ${src.diarySummary[0].headline || ''}`);
-      if (src.pearls.length > 0) _eventHints.push(`진주 저장 ${src.pearls.length}개 — ${src.pearls[0].content || ''}`);
+      if (src.diary.length > 0) {
+        const _firstDiary = src.diary[0];
+        lines.push(`    [${_hintIdx++}] ${_userName}이 발화/메모 — "${(_firstDiary.text || '').slice(0, 80)}"${src.diary.length > 1 ? ` 외 ${src.diary.length - 1}건` : ''}`);
+      }
+      if (src.diarySummary.length > 0) {
+        const _s0 = src.diarySummary[0];
+        lines.push(`    [${_hintIdx++}] 옛 대화 챕터 정리 — "${(_s0.headline || '').slice(0, 60)}${_s0.summary ? ' / ' + _s0.summary.slice(0, 80) : ''}"`);
+      }
+      if (src.pearls.length > 0) {
+        const _p0 = src.pearls[0];
+        lines.push(`    [${_hintIdx++}] ${_userName}이 진주 저장 — "${(_p0.content || '').slice(0, 60)}${_p0.note ? ' (' + _p0.note.slice(0, 60) + ')' : ''}"`);
+      }
       if (src.insights.length > 0) {
-        const i0 = src.insights[0];
-        _eventHints.push(`깨달음 ${src.insights.length}개 — ${i0.headline || i0.content || ''}`);
+        const _i0 = src.insights[0];
+        const _content = _i0.headline || _i0.content || '';
+        lines.push(`    [${_hintIdx++}] ${_userName}이 깨달음 저장 — "${_content.slice(0, 80)}"`);
       }
-      if (src.topicCards.length > 0) _eventHints.push(`대화 토픽 ${src.topicCards.length}개 — ${src.topicCards[0].title || ''}`);
-      lines.push(`  >>> 이 날 사건 후보 (정확히 *1개만* 골라. 나머지는 본문에 절대 언급 X): ${_eventHints.slice(0, 5).join(' / ')}`);
+      if (src.topicCards.length > 0) {
+        const _t0 = src.topicCards[0];
+        lines.push(`    [${_hintIdx++}] 대화 토픽 정리 — "${(_t0.title || '').slice(0, 50)}${_t0.summary ? ' / ' + _t0.summary.slice(0, 80) : ''}"`);
+      }
+      lines.push('  *** 위 후보 중 1개를 사건으로. 절대 "조용한 하루" / "별 말 없는 날" 사용 X. ***');
     }
     return lines.join('\n');
   };
@@ -777,15 +795,19 @@ async function _callGodongDiaryHaiku() {
 - 진주 1개 / 토픽 1개 / 깨달음 1개 어떤 거라도 → 그 자체가 사건.
 
 **처리 우선순위 (절대)**:
-1. substrate 헤더에 ">>> 이 날 사건 후보: ..." 라인이 있으면 → **그 후보 중 1개를 사건으로 일기 작성**. fallback 톤 X.
-2. substrate 헤더에 ">>> 이 날 데이터: 완전히 0" 라인이 있으면만 → fallback 톤 ("조용한 하루였다" 등) 짧게.
-3. 1번이 default. 2번은 진짜 데이터 0 인 *예외 케이스만*.
+1. substrate 안 "*** 이 날 사건 후보 ***" 라인 + [1] [2] [3] ... 후보 항목들이 있으면 → **반드시 1개 선택**. 그 후보 사건 + 고동의 느낌으로 작성. fallback 톤 절대 X.
+2. substrate 안 "*** 이 날 데이터 0건 ***" 라인이 있으면만 → fallback 톤 ("조용한 하루였다" 등) 짧게.
+3. **1번이 default**. 2번은 *진짜 데이터 0* 인 예외 케이스만.
 
 **❌ 절대 금지 — fallback 톤 오용 (사용자 보고 2026-05-11)**:
-"조용한 하루였다" / "별 말 없는 날이었다" / "오늘은 적을 게 없네" / "옆에 있었다는 건 적어둔다" 같은 표현은 **substrate 헤더에 ">>> 이 날 데이터: 완전히 0" 라인이 명시된 날에만** 사용.
-">>> 이 날 사건 후보: ..." 라인이 있는 날에는 절대 X. 사건 후보 1개라도 있으면 그걸로 작성.
+"조용한 하루였다" / "별 말 없는 날이었다" / "오늘은 적을 게 없네" / "옆에 있었다는 건 적어둔다" 같은 표현은 **substrate 안 "*** 이 날 데이터 0건 ***" 라인이 명시된 dayK 만** 사용.
+"*** 이 날 사건 후보 ***" 라인 + [1] [2] [3] 항목이 있는 dayK 는 **절대 X**. 사건 후보 1개라도 있으면 무조건 그 후보로 작성.
 
-예: 일기 요약 1개 + 체크인 + 토픽 5개 + 깨달음 1개 = 데이터 풍부 → "조용한 하루" 절대 X. 사건 후보 중 1개로 작성.
+체크 절차:
+- 각 dayK substrate 봐. "*** 이 날 사건 후보 ***" 라인 있어? → [1] [2] [3] ... 중 1개 선택. 사건 1줄 + 느낌 2-3줄 작성.
+- "*** 이 날 데이터 0건 ***" 라인 있어? → fallback 톤 짧게.
+
+예시: dayK substrate 가 "[1] 체크인 답 '내 삶' / [2] 진주 '한강 모서리' / [3] 깨달음 '환경 cuing'" → 사건 후보 3개. 그 중 1개 (가장 인상적: 진주 추천) 로 일기 작성. 절대 fallback X.
 
 **잠 시간 해석**:
 - 6-9시간 = 정상 (오래 잤다 절대 X).
@@ -913,9 +935,9 @@ ${modesText}
       console.warn('[godong-diary] soft tone violations (통과):', softViolations.join(','));
     }
 
-    // 사용자 보고 2026-05-11: 본문 길이 cap 280 → 150 (나열 차단 — 한 사건 + 느낌 = 120자 충분).
-    //   짧을수록 LLM 이 사건 1개에만 집중.
-    const _maxLen = 150;
+    // 사용자 보고 2026-05-11: cap 150 너무 작아서 정상 LLM 출력 (~180자) 도 reject → fallback 채움 버그.
+    //   cap 250 으로 완화. 짧은 분량 강제는 prompt 으로만.
+    const _maxLen = 250;
     // 정확히 3개 보장 — dayK 매칭 우선, 없으면 index 기반 보정, 최후 fallback.
     const finalEntries = _targetDayKs.map((dayK, idx) => {
       const match = parsed.find(e => {
