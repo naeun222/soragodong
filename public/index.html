@@ -28827,8 +28827,16 @@ async function _callGodongDiaryHaiku() {
 3. 나머지 후보는 본문에 절대 언급 X. ignore.
 4. 사건 1줄 (짧게) + 느낀 점 2-3줄 (길게). 총 2-3문장 / 120자 이하.
 
-선택 우선순위 (사건 후보 여러 개일 때):
-- 진주 / 깨달음 / 토픽 (의미 있는 행동) > 일기 발화 / 답 (사용자 어휘) > 체크인 수치 (vit/mood/sleep)
+선택 우선순위 — **일상적·가벼운·사소한 사건 우선**:
+1. [B] 일기 (사용자 발화/메모) — 사용자가 그 날 적은 *일상* 어휘 그대로. 가장 자연스러움.
+2. [A] 체크인 답 — 사용자 직접 적은 답 (단답 5자 이하는 인용 X).
+3. [D] 진주 / [F] 대화 토픽 — 의미 있지만 *너무 무거우면 X*. 짧고 일상적인 거 OK.
+4. [E] 깨달음 / [C] 일기 요약 — 가장 무거운 톤. 다른 source 다 (없음) 일 때만.
+
+→ '깨달음 / 통찰 / 패턴' 같은 분석 톤 회피.
+→ 예: '한강 갔다 왔다고 했다' (일상 ✅) > '환경 cuing 패턴' (분석 ❌).
+→ 예: '오늘 영상 보다가 잠들었네' (일상 ✅) > '사용자의 회피 패턴' (분석 ❌).
+→ 일상은 가벼움. 큰 사건/통찰 X.
 ==================================================
 
 호칭 (절대):
@@ -28901,8 +28909,8 @@ async function _callGodongDiaryHaiku() {
 "조용한 하루였다" / "별 말 없는 날이었다" / "오늘은 적을 게 없네" / "옆에 있었다는 건 적어둔다" 같은 표현은 **substrate 안 "*** 이 날 데이터 0건 ***" 라인이 명시된 dayK 만** 사용.
 "*** 이 날 사건 후보 (6 source) ***" 라인이 있는 dayK 는 **절대 X**. 6 카테고리 중 1개라도 데이터 있으면 무조건 그걸로 작성.
 
-선택 우선순위 (6 source 중):
-[D] 진주 / [F] 대화 토픽 / [E] 깨달음 (의미 있는 행동/통찰) > [B] 일기 발화 / [A] 체크인 답 (사용자 어휘) > [C] 일기 요약 (옛 챕터)
+선택 우선순위 (6 source 중) — **일상적 / 가벼운 사건 우선**:
+[B] 일기 발화 / [A] 체크인 답 (사용자 일상 어휘) > [D] 진주 / [F] 토픽 (짧고 일상적인 거) > [E] 깨달음 / [C] 옛 요약 (분석 톤 무거움)
 
 체크 절차:
 - 각 dayK substrate 봐. "*** 이 날 사건 후보 (6 source) ***" 라인 있어?
@@ -28988,7 +28996,7 @@ ${modesText}
   while (attempt < 4) {
     const resp = await callAnthropic({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
+      max_tokens: 2500,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
@@ -29017,6 +29025,17 @@ ${modesText}
       attempt++;
       if (attempt >= 4) throw new Error('배열 X');
       continue;
+    }
+    // 사용자 보고 2026-05-11: parsed 가 3개 미만이면 retry — LLM 이 entry 빠뜨려서 fallback 채워지는 버그.
+    const _validParsedCount = parsed.filter(e => e && typeof e.body === 'string' && e.body.length >= 5).length;
+    if (_validParsedCount < 3) {
+      attempt++;
+      if (attempt >= 4) {
+        console.warn('[godong-diary] parsed 3개 미만, fallback 채움:', _validParsedCount);
+        // 4회 retry 후에도 부족하면 그대로 진행 (후처리 fallback).
+      } else {
+        continue;
+      }
     }
 
     // tone guard — 모든 body 합쳐 검사
