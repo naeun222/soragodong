@@ -56507,13 +56507,17 @@ window._diagnoseExtract = async function() {
 async function _maybeAutoForceAnalyzeFreeTier() {
   if (typeof state === 'undefined' || !state) return;
   if (state.preferences && state.preferences.testerMode) return;
+  // 사용자 보고 2026-05-11: admin 계정도 매 3턴 자동 갱신 firing → 시뮬 중 방해. admin = 자동 X.
+  if (typeof _isAdmin === 'function' && _isAdmin()) return;
   // 구독 detect — window._billingCache 가 source of truth (refreshBillingStatus 가 채움).
   const billing = window._billingCache;
   const isPaid = !!(billing && billing.subscription_active && billing.subscription_plan
     && ['light', 'premium', 'early_light', 'early_lifetime'].includes(billing.subscription_plan));
   if (isPaid) return;  // 유료 구독자 = 다른 흐름 (사용자 직접 클릭) — 자동 X
-  // user role 메시지 count
-  const userMsgCount = (state.chatMessages || []).filter(m => m && m.role === 'user' && !m.error && !m.typing).length;
+  // user role 메시지 count — 사용자 보고 2026-05-11: 시뮬 컨텍스트 메시지 제외 (시뮬 토론 중 자동 분석 firing 회피).
+  const userMsgCount = (state.chatMessages || []).filter(m =>
+    m && m.role === 'user' && !m.error && !m.typing && !m.isSimulationContext
+  ).length;
   if (userMsgCount === 0 || userMsgCount % 3 !== 0) return;
   // cooldown — 같은 3턴 안에서 multi-fire 차단 + race 안전
   state.preferences = state.preferences || {};
@@ -59458,7 +59462,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.228-character-svg-21-replace';
+const APP_VERSION = 'v4.0.229-auto-analyze-skip-admin-sim';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
