@@ -26,6 +26,18 @@ function _toastDrain() {
     setTimeout(_toastDrain, 200);  // 다음 표시까지 200ms 간격
   }, 2500);
 }
+// 사용자 보고 2026-05-07: 의도된 사전 가드 toast (테스터 모드 ON / 로그인 필요 등) 가 ⚠️ 키워드로 자동 보고되어 admin inbox 오염.
+// 가드 = 사용자 행동 차단 안내, 코드 오류 X. 진짜 runtime 실패만 보고.
+function _isIntentionalGuardToast(s) {
+  if (!s) return false;
+  if (s.includes('테스터 모드 ON')) return true;          // tester-mode 보호 가드
+  if (s.includes('테스터 모드 ON 후')) return true;
+  if (s.includes('로그인 필요')) return true;             // 비로그인 가드
+  if (s.includes('API 키 필요')) return true;             // AI 키 가드
+  if (s.includes('비밀번호 복원 후')) return true;         // E2EE pending recovery 가드
+  if (s.includes('복구 가능한 백업 없음')) return true;    // 정상 상태 안내
+  return false;
+}
 function showToast(msg) {
   _toastQueue.push(msg);
   if (!_toastShowing) _toastDrain();
@@ -33,6 +45,7 @@ function showToast(msg) {
   try {
     const s = String(msg || '');
     if (s && (s.includes('실패') || s.includes('오류') || s.includes('❌') || s.includes('⚠️') || /error/i.test(s))) {
+      if (_isIntentionalGuardToast(s)) return;
       if (typeof _maybeReportRuntimeError === 'function') {
         _maybeReportRuntimeError('User-facing toast', s);
       }
@@ -98,6 +111,7 @@ if (typeof window !== 'undefined' && !window._errorListenersInstalled) {
       try {
         const s = String(msg || '');
         if (s && (s.includes('실패') || s.includes('오류') || s.includes('❌') || s.includes('⚠️') || /error/i.test(s))) {
+          if (_isIntentionalGuardToast(s)) return;
           if (typeof _maybeReportRuntimeError === 'function') {
             _maybeReportRuntimeError('User-facing alert', s);
           }
@@ -107,6 +121,8 @@ if (typeof window !== 'undefined' && !window._errorListenersInstalled) {
   }
   // 사용자 보고 2026-05-06: 'Script error. at ?:?:?' = CORS 차단 3rd party (extension / 광고 차단기 등) — 정보 0.
   // 보고해도 디버깅 불가 + 매 세션 재발 → noise 필터링.
+  // 사용자 보고 2026-05-07: instiz / kakao / 네이버 inApp browser 가 1:N 위치에 자체 JS inject 해서 'Can't find variable: shakehot|memno|kakao|...' 발생.
+  // 우리 코드 X — 02b-error-reporter.js 의 _isNoise 와 동기화 (변수명 추가 시 양쪽 갱신).
   function _isErrorNoise(s) {
     const t = String(s || '').trim();
     if (!t) return true;
@@ -117,11 +133,29 @@ if (typeof window !== 'undefined' && !window._errorListenersInstalled) {
     if (/Load failed/.test(t)) return true;                 // 네트워크 일시
     if (/Failed to fetch/.test(t)) return true;
     if (/NetworkError/.test(t)) return true;
+    // inApp browser injection — instiz/kakao/네이버 등이 자체 글로벌 참조 → ReferenceError. 우리 코드 X.
+    if (/Can't find variable: (?:shakehot|memno|kakao|__naver|instiz|iamfinder|webkit_messageHandlers|FB|fbq|gtag|gaplugin|_caplugin|__bizm|__line)/i.test(t)) return true;
+    if (/(?:shakehot|memno|webkit_messageHandlers|window\.kakao) is not defined/i.test(t)) return true;
+    // 빈 객체 {} promise rejection — reason 정보 X, 디버깅 불가.
+    if (t === '{}' || t === 'null' || t === 'undefined' || t === '[object Object]') return true;
+    return false;
+  }
+  // inApp browser injection 은 lineno 1~3 + page URL (filename) — 우리 코드 X.
+  function _isInjectedThirdPartyInline(filename, lineno, msg) {
+    const s = String(msg || '');
+    if (lineno && lineno > 5) return false;
+    if (!/ReferenceError|Can't find variable|is not defined/i.test(s)) return false;
+    const f = String(filename || '');
+    if (!f) return true;
+    try {
+      if (typeof location !== 'undefined' && (f === location.href || f.indexOf(location.origin) === 0)) return true;
+    } catch (_) {}
     return false;
   }
   window.addEventListener('error', function(e) {
     if (!e || !e.message) return;
     if (_isErrorNoise(e.message)) return;
+    if (_isInjectedThirdPartyInline(e.filename, e.lineno, e.message)) return;
     const msg = e.message + '\n  at ' + (e.filename || '?') + ':' + (e.lineno || '?') + ':' + (e.colno || '?');
     const stack = (e.error && e.error.stack) ? '\n\n' + e.error.stack : '';
     _maybeReportRuntimeError('Runtime Error', msg + stack);

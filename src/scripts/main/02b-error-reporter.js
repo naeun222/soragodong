@@ -79,8 +79,10 @@ function _reportErrorForce(errorInfo) {
     // 사용자 보고 2026-05-06: 인스티즈 / 카톡 등 inApp browser 가 페이지 line:1 col:9 위치에
     // 자체 JS 를 inject — `shakehot` 등 자기네 글로벌 참조해서 ReferenceError. 우리 코드 X.
     // pattern: 변수명 (kakao / shake / webkit_messageHandlers / __naver / instiz / iamfinder ...)
-    if (/Can't find variable: (?:shakehot|kakao|__naver|instiz|iamfinder|webkit_messageHandlers|FB|fbq|gtag|gaplugin|_caplugin|__bizm|__line)/i.test(s)) return true;
-    if (/(?:shakehot|webkit_messageHandlers|window\.kakao) is not defined/i.test(s)) return true;
+    if (/Can't find variable: (?:shakehot|memno|kakao|__naver|instiz|iamfinder|webkit_messageHandlers|FB|fbq|gtag|gaplugin|_caplugin|__bizm|__line)/i.test(s)) return true;
+    if (/(?:shakehot|memno|webkit_messageHandlers|window\.kakao) is not defined/i.test(s)) return true;
+    // 빈 객체 / null / undefined reason — 디버깅 불가.
+    if (s === '{}' || s === 'null' || s === 'undefined' || s === '[object Object]') return true;
     return false;
   };
 
