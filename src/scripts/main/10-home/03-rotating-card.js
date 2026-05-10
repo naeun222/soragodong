@@ -51,23 +51,24 @@ function _ensureRotatingCardState() {
 // 사용자 명시 2026-05-09 (추가): 시뮬레이션 source 6 추가 — Sonnet, 4h block, on-demand generate.
 // 5 source: 진주 / 미니 리뷰 / Quiz / 운세 / 시뮬레이션
 // =============================================================================
-// 사용자 명시 2026-05-10: quiz source 통째 제거 — '별로다'.
-// 사용자 명시 2026-05-10 (batch 11): 5 카드 (어제 / weekly / monthly / quarterly / annual review) 회전 카드 source 흡수. 새 소식 weight 가장 높음.
+// 사용자 명시 2026-05-10 (재정의): review 4개 = 명확 우선순위. 그 외 = 동급 weight 100.
+//   1 annual / 2 quarterly / 3 monthly / 4 weekly / 5 (동급): 어제 기록 / 진주 큐레이션 / 상상 시뮬 / 미니 리뷰 / 고동의 운세
+//   사용자 미컨펌 우선순위 정책 폐기 (옛 _rcSortByConfirmation unconfirmed 우선 분기).
 const _RC_BASE_WEIGHTS = {
-  // news source — 새 소식 우선 (확인 시 자연 unavailable)
-  review_annual:    300,  // 가장 큼 — 연 1회 도착
-  review_quarterly: 250,
-  review_monthly:   200,
-  review_weekly:    180,  // 주간 = 일요일 도착, miniReview 격상 (200) 보다 약간 ↓
-  yesterday:        150,  // 어제 기록 — 매일 한 번
+  review_annual:    500,
+  review_quarterly: 400,
+  review_monthly:   300,
+  review_weekly:    200,
+  // 동급 100 — _RC_SOURCE_ORDER 의 tie-break 으로 결정.
+  yesterday:        100,
+  pearl:            100,
+  simulation:       100,
   miniReview:       100,
-  simulation:        70,
-  horoscope:         50,
-  pearl:             20,
+  horoscope:        100,
 };
 const _RC_SOURCE_ORDER = [
   'review_annual', 'review_quarterly', 'review_monthly', 'review_weekly',
-  'yesterday', 'miniReview', 'simulation', 'horoscope', 'pearl'
+  'yesterday', 'pearl', 'simulation', 'miniReview', 'horoscope'
 ];
 
 const _RC_PEARL_WINDOW_MS = 4 * 60 * 60 * 1000;       // 진주 4시간 stay
@@ -168,30 +169,15 @@ function _rcIsConfirmed(sourceId) {
 // =============================================================================
 // 정렬 — 미컨펌 위 / 컨펌 아래 + baseWeight desc + tie-breaker
 // =============================================================================
+// 사용자 명시 2026-05-10 (재정의): 옛 unconfirmed 우선 정책 / pearl unshift 분기 폐기. 그냥 weight 순 정렬.
 function _rcSortByConfirmation(sources) {
-  const unconfirmed = [];
-  const confirmed = [];
-  for (const s of sources) {
-    if (_rcIsConfirmed(s.id)) confirmed.push(s);
-    else unconfirmed.push(s);
-  }
   const byWeight = (a, b) => {
     const wa = _RC_BASE_WEIGHTS[a.id] || 0;
     const wb = _RC_BASE_WEIGHTS[b.id] || 0;
     if (wb !== wa) return wb - wa;
     return _RC_SOURCE_ORDER.indexOf(a.id) - _RC_SOURCE_ORDER.indexOf(b.id);
   };
-  unconfirmed.sort(byWeight);
-  confirmed.sort(byWeight);
-  // 사용자 명시 2026-05-09: 모든 source 컨펌 (unconfirmed 0) 시 진주 = 가장 먼저 (큐레이션 부드러운 surface).
-  if (unconfirmed.length === 0 && confirmed.length > 0) {
-    const pearlIdx = confirmed.findIndex(s => s && s.id === 'pearl');
-    if (pearlIdx > 0) {
-      const [pearl] = confirmed.splice(pearlIdx, 1);
-      confirmed.unshift(pearl);
-    }
-  }
-  return [...unconfirmed, ...confirmed];
+  return sources.slice().sort(byWeight);
 }
 
 // =============================================================================

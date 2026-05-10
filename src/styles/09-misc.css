@@ -5714,6 +5714,21 @@
   }
   .input-modal-overlay.show .input-modal { transform: translateY(0); }
 
+  /* 사용자 명시 2026-05-10: 시나리오 토론 스티커 — 시뮬 → 대화 이어가기 시 chat 화면 상단. 챕터 마무리 시 사라짐. */
+  .chat-sim-sticker {
+    position: sticky; top: 0; z-index: 5;
+    align-self: center;
+    margin: 6px auto 10px;
+    padding: 5px 14px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.16), rgba(168,157,200,0.10));
+    border: 1px solid rgba(212,167,106,0.35);
+    border-radius: 999px;
+    font-size: 11px; color: var(--accent);
+    letter-spacing: 0.04em; font-weight: 500;
+    width: fit-content; display: block;
+    backdrop-filter: blur(4px);
+  }
+
   /* 사용자 명시 2026-05-10 (batch 11): 5 news source 카드 (어제 기록 / weekly / monthly / quarterly / annual review) 회전 카드 흡수. */
   .rc-body-news {
     display: flex; flex-direction: column; gap: 8px;

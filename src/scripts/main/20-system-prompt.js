@@ -346,16 +346,25 @@ function buildSystemPromptParts() {
   }
 
   // 사용자 명시 2026-05-10 (큐 11 재정정): 시뮬 → 대화 이어가기 = '토론 프레임' (가상 시나리오 토론) 톤. 격리 (cf 5차원 X) 는 유지.
-  //   짧은 follow-up 받아도 토론 흐름 유지. 실제 일 인 양 묻기 X — 그 상황 토론으로 자연스럽게 이어감.
+  // 사용자 보고 2026-05-10 (검증 결과 fix): 옛 가드 모호 → 8턴쯤 AI 시뮬 망각. 구체 X-list + ✓-list 강화 + N턴 후 동일.
   const _simContextMsg = (state.chatMessages || []).find(m => m && m.isSimulationContext === true);
   if (_simContextMsg) {
-    volatile.push('[현재 챕터 = 시나리오 토론 (상상 시뮬에서 시작)]');
-    volatile.push('- 사용자가 가상 시나리오를 제안해서 같이 토론 중. 짧은 follow-up 도 그 시나리오 안 답으로 자연스럽게 이어감.');
-    volatile.push('- 톤: 토론 — "그 상황에선 어떨 거 같아?", "다른 식으로 가면?", "그 답을 보면 X 성향이 보여".');
-    volatile.push('- 피해야 할 톤: "그날 켠 이유가 뭐야?", "실제로는 어땠어?" 같이 실제 일 가정 묻기.');
-    volatile.push('- 추출은 시뮬 표시 (extractedFrom=simulation, 약한 신호) 로 자동 격리됨 — 모델은 자유롭게 토론 이어가면 됨.');
+    volatile.push('[시나리오 토론 컨텍스트 — 매 응답 유지, 매우 중요]');
+    volatile.push('- 사용자가 가상 시나리오 제안 — 답도 그 시뮬 안 가정. 실제 일 X.');
+    volatile.push('- 시뮬 시작 후 5턴, 10턴 지나도 동일. 사용자가 짧게 "응" / "맞네" 답해도 시뮬 안 답으로 인식.');
+    volatile.push('- 절대 X (실제 일 인 양 묻기 금지) — 시뮬 컨텍스트 망각 방지:');
+    volatile.push('  · "그 다큐 뭐였어?" / "어떤 장르?" / "어떤 영상?"');
+    volatile.push('  · "실제로 본 거였어?" / "정말 그랬어?"');
+    volatile.push('  · "그날 어땠어?" / "결국 어떻게 됐어?"');
+    volatile.push('  · "더 자세히 알려줘" 식 실제 사실 캐묻기');
+    volatile.push('- ✓ OK (토론 톤만):');
+    volatile.push('  · "그 답을 보면 X 성향이 보여"');
+    volatile.push('  · "다른 식으로 가면 어떨까"');
+    volatile.push('  · "그 상황에선 어떻게 반응할 거 같아?"');
+    volatile.push('  · "시뮬 안에서 X 라면?" 가정 분기');
+    volatile.push('- 추출은 자동 격리 (extractedFrom=simulation, 약한 신호) — 모델은 토론 자연스럽게 이어가면 됨.');
     const _scenarioLine = (_simContextMsg.content || '').split('\n').find(l => l.startsWith('[시뮬레이션]')) || '';
-    if (_scenarioLine) volatile.push(`- 시나리오: ${_scenarioLine.replace(/^\[시뮬레이션\]\s*/, '')}`);
+    if (_scenarioLine) volatile.push(`- 시뮬 시나리오: ${_scenarioLine.replace(/^\[시뮬레이션\]\s*/, '')}`);
     volatile.push('');
   }
 

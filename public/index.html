@@ -5827,6 +5827,21 @@
   }
   .input-modal-overlay.show .input-modal { transform: translateY(0); }
 
+  /* 사용자 명시 2026-05-10: 시나리오 토론 스티커 — 시뮬 → 대화 이어가기 시 chat 화면 상단. 챕터 마무리 시 사라짐. */
+  .chat-sim-sticker {
+    position: sticky; top: 0; z-index: 5;
+    align-self: center;
+    margin: 6px auto 10px;
+    padding: 5px 14px;
+    background: linear-gradient(135deg, rgba(212,167,106,0.16), rgba(168,157,200,0.10));
+    border: 1px solid rgba(212,167,106,0.35);
+    border-radius: 999px;
+    font-size: 11px; color: var(--accent);
+    letter-spacing: 0.04em; font-weight: 500;
+    width: fit-content; display: block;
+    backdrop-filter: blur(4px);
+  }
+
   /* 사용자 명시 2026-05-10 (batch 11): 5 news source 카드 (어제 기록 / weekly / monthly / quarterly / annual review) 회전 카드 흡수. */
   .rc-body-news {
     display: flex; flex-direction: column; gap: 8px;
@@ -12072,6 +12087,8 @@
     <div class="screen" id="screen-chat" style="padding-bottom: 180px;">
       <div class="screen-title">고동이에게 <img src="/godongicon.png" alt="" class="godong-icon" decoding="async"></div>
       <div class="screen-sub">뭐든 말해. 일기처럼 길게 써도 돼. 내가 읽고 답할게.</div>
+      <!-- 사용자 명시 2026-05-10: 시뮬 → 대화 이어가기 시 상단 스티커. 챕터 마무리 시 사라짐. -->
+      <div id="chatSimContextSticker" class="chat-sim-sticker" style="display:none;">💭 시나리오 토론 중</div>
       <div class="chat-messages" id="chatMessages"></div>
     </div>
     <!-- 사용자 요청 2026-04-29: '↓ 새 메시지' 플로팅 칩 — 위로 스크롤 후 새 메시지 도착 시 표시 -->
@@ -27581,23 +27598,24 @@ function _ensureRotatingCardState() {
 // 사용자 명시 2026-05-09 (추가): 시뮬레이션 source 6 추가 — Sonnet, 4h block, on-demand generate.
 // 5 source: 진주 / 미니 리뷰 / Quiz / 운세 / 시뮬레이션
 // =============================================================================
-// 사용자 명시 2026-05-10: quiz source 통째 제거 — '별로다'.
-// 사용자 명시 2026-05-10 (batch 11): 5 카드 (어제 / weekly / monthly / quarterly / annual review) 회전 카드 source 흡수. 새 소식 weight 가장 높음.
+// 사용자 명시 2026-05-10 (재정의): review 4개 = 명확 우선순위. 그 외 = 동급 weight 100.
+//   1 annual / 2 quarterly / 3 monthly / 4 weekly / 5 (동급): 어제 기록 / 진주 큐레이션 / 상상 시뮬 / 미니 리뷰 / 고동의 운세
+//   사용자 미컨펌 우선순위 정책 폐기 (옛 _rcSortByConfirmation unconfirmed 우선 분기).
 const _RC_BASE_WEIGHTS = {
-  // news source — 새 소식 우선 (확인 시 자연 unavailable)
-  review_annual:    300,  // 가장 큼 — 연 1회 도착
-  review_quarterly: 250,
-  review_monthly:   200,
-  review_weekly:    180,  // 주간 = 일요일 도착, miniReview 격상 (200) 보다 약간 ↓
-  yesterday:        150,  // 어제 기록 — 매일 한 번
+  review_annual:    500,
+  review_quarterly: 400,
+  review_monthly:   300,
+  review_weekly:    200,
+  // 동급 100 — _RC_SOURCE_ORDER 의 tie-break 으로 결정.
+  yesterday:        100,
+  pearl:            100,
+  simulation:       100,
   miniReview:       100,
-  simulation:        70,
-  horoscope:         50,
-  pearl:             20,
+  horoscope:        100,
 };
 const _RC_SOURCE_ORDER = [
   'review_annual', 'review_quarterly', 'review_monthly', 'review_weekly',
-  'yesterday', 'miniReview', 'simulation', 'horoscope', 'pearl'
+  'yesterday', 'pearl', 'simulation', 'miniReview', 'horoscope'
 ];
 
 const _RC_PEARL_WINDOW_MS = 4 * 60 * 60 * 1000;       // 진주 4시간 stay
@@ -27698,30 +27716,15 @@ function _rcIsConfirmed(sourceId) {
 // =============================================================================
 // 정렬 — 미컨펌 위 / 컨펌 아래 + baseWeight desc + tie-breaker
 // =============================================================================
+// 사용자 명시 2026-05-10 (재정의): 옛 unconfirmed 우선 정책 / pearl unshift 분기 폐기. 그냥 weight 순 정렬.
 function _rcSortByConfirmation(sources) {
-  const unconfirmed = [];
-  const confirmed = [];
-  for (const s of sources) {
-    if (_rcIsConfirmed(s.id)) confirmed.push(s);
-    else unconfirmed.push(s);
-  }
   const byWeight = (a, b) => {
     const wa = _RC_BASE_WEIGHTS[a.id] || 0;
     const wb = _RC_BASE_WEIGHTS[b.id] || 0;
     if (wb !== wa) return wb - wa;
     return _RC_SOURCE_ORDER.indexOf(a.id) - _RC_SOURCE_ORDER.indexOf(b.id);
   };
-  unconfirmed.sort(byWeight);
-  confirmed.sort(byWeight);
-  // 사용자 명시 2026-05-09: 모든 source 컨펌 (unconfirmed 0) 시 진주 = 가장 먼저 (큐레이션 부드러운 surface).
-  if (unconfirmed.length === 0 && confirmed.length > 0) {
-    const pearlIdx = confirmed.findIndex(s => s && s.id === 'pearl');
-    if (pearlIdx > 0) {
-      const [pearl] = confirmed.splice(pearlIdx, 1);
-      confirmed.unshift(pearl);
-    }
-  }
-  return [...unconfirmed, ...confirmed];
+  return sources.slice().sort(byWeight);
 }
 
 // =============================================================================
@@ -37721,6 +37724,13 @@ function renderChat() {
   const container = document.getElementById('chatMessages');
   if (!container) { _measureChatRender(_t0); return; }  // FIX: prevent null.innerHTML error
 
+  // 사용자 명시 2026-05-10: 시뮬 → 대화 이어가기 = 화면 상단 '💭 시나리오 토론 중' 스티커. chatMessages 안 isSimulationContext 1+ 면 표시. 챕터 마무리 (chatMessages 비움) 시 자동 hide.
+  const _simSticker = document.getElementById('chatSimContextSticker');
+  if (_simSticker) {
+    const _hasSim = (state.chatMessages || []).some(m => m && m.isSimulationContext === true);
+    _simSticker.style.display = _hasSim ? 'block' : 'none';
+  }
+
   // 사용자 명시 2026-05-01 ultrathink: ✓ 마무리 hint 배너 — 첫 3 챕터 동안 + dismiss 안 됐을 때만 노출.
   const _endHintBanner = document.getElementById('chatEndHintBanner');
   if (_endHintBanner) {
@@ -39813,16 +39823,25 @@ function buildSystemPromptParts() {
   }
 
   // 사용자 명시 2026-05-10 (큐 11 재정정): 시뮬 → 대화 이어가기 = '토론 프레임' (가상 시나리오 토론) 톤. 격리 (cf 5차원 X) 는 유지.
-  //   짧은 follow-up 받아도 토론 흐름 유지. 실제 일 인 양 묻기 X — 그 상황 토론으로 자연스럽게 이어감.
+  // 사용자 보고 2026-05-10 (검증 결과 fix): 옛 가드 모호 → 8턴쯤 AI 시뮬 망각. 구체 X-list + ✓-list 강화 + N턴 후 동일.
   const _simContextMsg = (state.chatMessages || []).find(m => m && m.isSimulationContext === true);
   if (_simContextMsg) {
-    volatile.push('[현재 챕터 = 시나리오 토론 (상상 시뮬에서 시작)]');
-    volatile.push('- 사용자가 가상 시나리오를 제안해서 같이 토론 중. 짧은 follow-up 도 그 시나리오 안 답으로 자연스럽게 이어감.');
-    volatile.push('- 톤: 토론 — "그 상황에선 어떨 거 같아?", "다른 식으로 가면?", "그 답을 보면 X 성향이 보여".');
-    volatile.push('- 피해야 할 톤: "그날 켠 이유가 뭐야?", "실제로는 어땠어?" 같이 실제 일 가정 묻기.');
-    volatile.push('- 추출은 시뮬 표시 (extractedFrom=simulation, 약한 신호) 로 자동 격리됨 — 모델은 자유롭게 토론 이어가면 됨.');
+    volatile.push('[시나리오 토론 컨텍스트 — 매 응답 유지, 매우 중요]');
+    volatile.push('- 사용자가 가상 시나리오 제안 — 답도 그 시뮬 안 가정. 실제 일 X.');
+    volatile.push('- 시뮬 시작 후 5턴, 10턴 지나도 동일. 사용자가 짧게 "응" / "맞네" 답해도 시뮬 안 답으로 인식.');
+    volatile.push('- 절대 X (실제 일 인 양 묻기 금지) — 시뮬 컨텍스트 망각 방지:');
+    volatile.push('  · "그 다큐 뭐였어?" / "어떤 장르?" / "어떤 영상?"');
+    volatile.push('  · "실제로 본 거였어?" / "정말 그랬어?"');
+    volatile.push('  · "그날 어땠어?" / "결국 어떻게 됐어?"');
+    volatile.push('  · "더 자세히 알려줘" 식 실제 사실 캐묻기');
+    volatile.push('- ✓ OK (토론 톤만):');
+    volatile.push('  · "그 답을 보면 X 성향이 보여"');
+    volatile.push('  · "다른 식으로 가면 어떨까"');
+    volatile.push('  · "그 상황에선 어떻게 반응할 거 같아?"');
+    volatile.push('  · "시뮬 안에서 X 라면?" 가정 분기');
+    volatile.push('- 추출은 자동 격리 (extractedFrom=simulation, 약한 신호) — 모델은 토론 자연스럽게 이어가면 됨.');
     const _scenarioLine = (_simContextMsg.content || '').split('\n').find(l => l.startsWith('[시뮬레이션]')) || '';
-    if (_scenarioLine) volatile.push(`- 시나리오: ${_scenarioLine.replace(/^\[시뮬레이션\]\s*/, '')}`);
+    if (_scenarioLine) volatile.push(`- 시뮬 시나리오: ${_scenarioLine.replace(/^\[시뮬레이션\]\s*/, '')}`);
     volatile.push('');
   }
 
@@ -57537,7 +57556,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.209-model-dedup-option-a';
+const APP_VERSION = 'v4.0.210-sim-guard-priority-sticker';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

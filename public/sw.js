@@ -38,7 +38,8 @@
 // v33 (2026-05-10 batch 13 잔여 audit 4건): autoBackup 복원 알림 / refund tier_upgrade 비례 / chat messages 크기 상한 / account delete auth 명시 응답.
 // v34 (2026-05-10 큐 11 재정정 토론 프레임 UX): system prompt 시뮬 가드 톤 = 토론 톤 + archive UI badge = '💭 토론한 시나리오'. 격리 (cf X) 는 유지.
 // v35 (2026-05-10 옵션 A): 나 탭 '🧹 정리' 버튼 (설정 왼쪽 작게). 사용자 컨펌 dedup — AI 호출 X. similarity 0.7+ 후보 페어 한 개씩 [합치기/놔두기].
-const CACHE_NAME = 'soragodong-v4-cache-v35';
+// v36 (2026-05-10 검증 결과 fix): 시뮬 가드 강화 (구체 X-list) / 회전 카드 우선순위 재정의 (review 1-4, 그 외 동급) / unconfirmed 우선 폐기 / chat 시나리오 토론 스티커.
+const CACHE_NAME = 'soragodong-v4-cache-v36';
 const PRECACHE_URLS = [
   './',
   './index.html',

@@ -75,6 +75,13 @@ function renderChat() {
   const container = document.getElementById('chatMessages');
   if (!container) { _measureChatRender(_t0); return; }  // FIX: prevent null.innerHTML error
 
+  // 사용자 명시 2026-05-10: 시뮬 → 대화 이어가기 = 화면 상단 '💭 시나리오 토론 중' 스티커. chatMessages 안 isSimulationContext 1+ 면 표시. 챕터 마무리 (chatMessages 비움) 시 자동 hide.
+  const _simSticker = document.getElementById('chatSimContextSticker');
+  if (_simSticker) {
+    const _hasSim = (state.chatMessages || []).some(m => m && m.isSimulationContext === true);
+    _simSticker.style.display = _hasSim ? 'block' : 'none';
+  }
+
   // 사용자 명시 2026-05-01 ultrathink: ✓ 마무리 hint 배너 — 첫 3 챕터 동안 + dismiss 안 됐을 때만 노출.
   const _endHintBanner = document.getElementById('chatEndHintBanner');
   if (_endHintBanner) {
