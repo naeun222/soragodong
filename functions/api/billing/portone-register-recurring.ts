@@ -97,8 +97,12 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   });
 
   if (!chargeResult.ok || chargeResult.payment.status !== 'PAID') {
-    const errMsg = (chargeResult as any).error || `status ${(chargeResult as any).payment?.status}`;
+    const errMsg = (chargeResult as any).error || `status=${(chargeResult as any).payment?.status || 'undefined'}`;
     const errCode = (chargeResult as any).code || 'CHARGE_FAILED';
+    console.error('[register-recurring] charge fail:', {
+      paymentId, plan, errMsg, errCode,
+      payment: (chargeResult as any).payment
+    });
     return jsonResponse({
       error: `첫 달 결제 실패: ${errMsg}`,
       code: errCode

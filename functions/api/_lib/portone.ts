@@ -174,8 +174,27 @@ export async function chargeWithBillingKey(env: Env, paymentId: string, params: 
       };
     }
     const data: any = await resp.json();
-    // 응답에 payment 객체 포함 (PortOne V2 spec).
-    const payment: PortOnePayment = data?.payment || data;
+    // PortOne V2 응답 유형 3가지:
+    //   1) 동기 nested:  { payment: { id, status:'PAID', ... } }
+    //   2) 동기 flat:    { type:'InstantBillingKeyPaymentSummary', paymentId, status:'PAID', ... }
+    //   3) 비동기:       { type:'PaymentBillingKeyPaymentInProgress', asyncPaymentInProgress: true }
+    // 사용자 보고 2026-05-11: KG이니시스 빌링키 = 비동기 응답 케이스 → polling 으로 최종 status 조회.
+    let payment: PortOnePayment = data?.payment || data;
+    if (!payment.status) {
+      console.log('[portone] charge response missing status (async?):', JSON.stringify(data).slice(0, 300));
+      // 최대 10초 polling — Cloudflare wall-time 보호.
+      for (let i = 0; i < 5; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const polled = await fetchPortOnePayment(env, paymentId);
+        if (polled.ok && polled.payment.status) {
+          payment = polled.payment;
+          if (payment.status === 'PAID' || payment.status === 'FAILED' || payment.status === 'CANCELLED') break;
+        }
+      }
+      if (!payment.status) {
+        return { ok: false, error: 'PortOne 응답에 status 없음 — polling 도 timeout. raw: ' + JSON.stringify(data).slice(0, 200) };
+      }
+    }
     return { ok: true, payment };
   } catch (e: any) {
     return { ok: false, error: e?.message || String(e) };
