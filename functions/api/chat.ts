@@ -318,13 +318,6 @@ async function _handleChatRequest(context: {
   if (!env.ANTHROPIC_API_KEY) {
     return jsonResponse({ error: 'ANTHROPIC_API_KEY 미설정 (서버)' }, 500);
   }
-  // V4 (사용자 보고 2026-05-11 ultrathink): 진단 임시 log — backend 가 받는 ANTHROPIC_API_KEY 의 last4 + length echo.
-  //   Cloudflare env vs Anthropic Console 의 새 key 마지막 4자 비교 후 즉시 제거. logs 에만 노출 (frontend X).
-  console.log('[chat.ts] DEBUG anthropic-key meta:', {
-    last4: env.ANTHROPIC_API_KEY.slice(-4),
-    len: env.ANTHROPIC_API_KEY.length,
-    has_ws: /\s/.test(env.ANTHROPIC_API_KEY)
-  });
 
   // 게스트 강제 cap — model 화이트리스트 + endpoint-aware max_tokens.
   // chat = 800 / extract_chapter / extract_topic / intake / first_touch = 2000 (JSON 출력 길이 보장).
@@ -486,13 +479,7 @@ async function _handleChatRequest(context: {
     const upstream = await _fetchAnthropicWithRetry(upstreamHeaders, JSON.stringify(body));
     if (!upstream.ok) {
       const errText = await upstream.text();
-      // V4 (사용자 보고 2026-05-11 ultrathink): Anthropic 거부 사유 진단 — request-id + relevant headers logs.
-      const _hdrs: Record<string, string> = {};
-      ['request-id', 'x-request-id', 'cf-ray', 'anthropic-organization-id', 'x-should-retry'].forEach(h => {
-        const v = upstream.headers.get(h);
-        if (v) _hdrs[h] = v;
-      });
-      console.error(`[chat.ts] stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500), 'headers:', _hdrs);
+      console.error(`[chat.ts] stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500));
       return new Response(errText, { status: upstream.status });
     }
     if (!upstream.body) {
@@ -574,13 +561,7 @@ async function _handleChatRequest(context: {
 
   if (!upstream.ok) {
     const errText = await upstream.text();
-    // V4 (사용자 보고 2026-05-11 ultrathink): Anthropic 거부 사유 진단 — request-id + relevant headers logs.
-    const _hdrs: Record<string, string> = {};
-    ['request-id', 'x-request-id', 'cf-ray', 'anthropic-organization-id', 'x-should-retry'].forEach(h => {
-      const v = upstream.headers.get(h);
-      if (v) _hdrs[h] = v;
-    });
-    console.error(`[chat.ts] non-stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500), 'headers:', _hdrs);
+    console.error(`[chat.ts] non-stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500));
     return new Response(errText, { status: upstream.status, headers: { 'Content-Type': 'application/json' } });
   }
 

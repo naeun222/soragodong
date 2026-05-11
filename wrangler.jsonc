@@ -6,12 +6,6 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  // V4 (사용자 보고 2026-05-11 ultrathink): Cloudflare HKG colo 에서 Anthropic 호출 시 forbidden (Anthropic supported countries 에 Hong Kong 미포함).
-  //   placement: smart = Cloudflare 가 latency 최저 colo 에서 실행 → US 가까운 곳으로 routing 가능.
-  //   HKG 우회 시도. 효과 없으면 별도 US Worker proxy 필요.
-  "placement": {
-    "mode": "smart"
-  },
   // 사용자 명시 2026-05-05 ultrathink (Phase 0): 게스트 모드 비용 방어선 binding.
   // 비-secret env: vars (이 파일에 평문 OK).
   // secret env (TURNSTILE_SECRET_KEY 등): `npx wrangler pages secret put TURNSTILE_SECRET_KEY` 또는 Dashboard.
