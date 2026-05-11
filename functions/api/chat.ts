@@ -33,7 +33,9 @@ const GUEST_ANALYSIS_ENDPOINTS = new Set(['extract_chapter', 'extract_topic', 'i
 // 게스트 = Sonnet/Haiku 기본 허용. Opus 는 chat-style endpoint 에선 차단 (Premium 전용),
 // 분석/추출 endpoint (intake / analyze_4stage / extract_* / review_* 등) 에선 통과.
 // 사용자 보고 2026-05-09: 게스트 첫 진입 intake 4단 분석 (Opus) 차단되던 케이스 — 분기 도입.
-const GUEST_BASE_ALLOWED_MODELS = new Set(['claude-sonnet-4-6', 'claude-haiku-4-5']);
+// V4 (사용자 보고 2026-05-11 ultrathink): Anthropic 정확 model ID 는 dated suffix 포함 — 'claude-haiku-4-5-20251001'.
+//   frontend (06-first-observation.js, 03b-rotating-horoscope.js) 가 dated suffix 사용. backend whitelist 도 같이 추가.
+const GUEST_BASE_ALLOWED_MODELS = new Set(['claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-haiku-4-5-20251001']);
 // chat-style endpoint = 사용자 직접 발화 (메인 대화 / 도움 채팅 / 깊은 분석 채팅 / 돌연변이 채팅).
 // 사용자가 헤더 토글로 useOpus 선택 시 발생 — 게스트는 여기서만 Opus 차단.
 const CHAT_STYLE_ENDPOINTS = new Set([

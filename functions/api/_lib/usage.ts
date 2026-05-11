@@ -16,9 +16,12 @@ export type UsageRecord = {
 
 // 사용자 명시 2026-05-02 ultrathink (pricing_redesign.md 부록 A): Opus 4.7 실제 가격 = $5/$25 (Sonnet 의 1.67x).
 // 옛 4 의 $15/$75 stale — 정정. 이전 코드의 "Opus 5x 차감" 가정도 자연스럽게 1.67x 로 보정됨 (실제 가격 비율).
+// V4 (사용자 보고 2026-05-11 ultrathink): Anthropic 정확 model ID 는 dated suffix 포함 — 'claude-haiku-4-5-20251001'.
+//   frontend dated suffix 사용 — PRICING 에도 동일 alias 추가 (가격 동일).
 const PRICING: Record<string, { in: number; out: number; cache_read: number; cache_write: number }> = {
   'claude-sonnet-4-6':  { in: 3,  out: 15,  cache_read: 0.30, cache_write: 3.75 },
   'claude-haiku-4-5':   { in: 1,  out: 5,   cache_read: 0.10, cache_write: 1.25 },
+  'claude-haiku-4-5-20251001': { in: 1, out: 5, cache_read: 0.10, cache_write: 1.25 },
   'claude-opus-4-7':    { in: 5,  out: 25,  cache_read: 0.50, cache_write: 6.25 }
 };
 
