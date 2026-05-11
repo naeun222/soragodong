@@ -15,16 +15,19 @@
 // 서버 _lib/billing.ts 의 TIER_PLANS 와 동기 — 위변조 방지로 결제 검증은 서버에서 재확인.
 // description: 정직 톤 — 정량 KRW 표기 X, 정성적 설명만. cap 자체는 서버 운영 용도.
 // V4 (사용자 명시 2026-05-11 — 가계약 단계): BILLING_RECURRING_ENABLED=false 일 때 일회성 1개월 이용권 — tagline/description 자동 분기.
+// V4 (사용자 명시 2026-05-11 ultrathink — 정정): Plus 첫 달 무료 = 가계약/정기 양쪽 모두 활성. has_free_trial = 항상 true.
+//   - 가계약: 결제 X, 카드 등록 X — backend `claim-free-trial` 흐름. 30일 후 만료 (자동 갱신 X). 1인 1회.
+//   - 정기  : 카드 등록 + 30일 후 자동결제 — backend `portone-register-trial` 흐름. 1인 1회.
 const _RECUR = (typeof BILLING_RECURRING_ENABLED !== 'undefined') ? BILLING_RECURRING_ENABLED : true;
 const TIER_PLANS_CLIENT = {
-  // Plus (9,900) — key 'light'. mid tier. RECUR=true 면 첫 달 무료 trial, false 면 일회성 1개월.
+  // Plus (9,900) — key 'light'. mid tier. 첫 달 무료 — RECUR 에 따라 카피만 분기.
   light:          { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Plus',
-    tagline: _RECUR ? '깊게, 꾸준히 — 첫 달 무료' : '깊게, 꾸준히',
+    tagline: '깊게, 꾸준히 — 첫 달 무료',
     emoji: '🌊',
     description: _RECUR
       ? '일반 대화 + 4단 분석 풀로. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.'
-      : '일반 대화 + 4단 분석 풀로. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).',
-    has_free_trial: _RECUR },
+      : '일반 대화 + 4단 분석 풀로. 첫 달 무료 — 30일 후 만료 (자동 결제 X). 1인 1회 한정.',
+    has_free_trial: true },
   // Premium (25,000) — top tier anchor. 정가 결제. emoji ✨ (🐚🌊✨ 그라데이션 완성).
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '마음껏 깊게', emoji: '✨',
     description: _RECUR

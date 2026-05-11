@@ -182,8 +182,11 @@ async function openSubscribeModal() {
       ? 'background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;'
       : '';
     const _oneTime = (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED);
+    // V4 (사용자 명시 2026-05-11 ultrathink): Plus 첫 달 무료 = 가계약/정기 모두 활성. 가계약은 자동 결제 X 명시.
     const buttonText = isFreeTrial
-      ? `${plan.emoji} 첫 달 무료로 시작하기`
+      ? (_oneTime
+          ? `${plan.emoji} 첫 달 무료 시작 (자동 결제 X)`
+          : `${plan.emoji} 첫 달 무료로 시작하기`)
       : (_oneTime
           ? `${plan.label} 1개월 (${plan.krw.toLocaleString()}원)`
           : `${plan.label} 정기 구독 (월 ${plan.krw.toLocaleString()}원)`);
@@ -229,10 +232,10 @@ async function openSubscribeModal() {
       ${premiumPackCard}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
         ${(typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED)
-          ? `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus</b>. 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
+          ? `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus 첫 달 무료</b> (1인 1회 한정). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
              <b>부가가치세 10% 포함</b> · <b>1개월 이용권 — 자동 갱신 X</b> (만료 7일 전 알림 후 직접 재구매).<br>
              환불: 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`
-          : `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus</b> (첫 달 무료). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
+          : `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus 첫 달 무료</b> (1인 1회 한정). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
              <b>부가가치세 10% 포함</b> · <b>모든 플랜 = 매월 자동 갱신</b> (해지 1-click).<br>
              해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`}
         <span style="color:var(--text-dim);">⚠ 본 서비스는 임상 치료·진단·전문가 상담을 대체하지 않습니다.</span>
@@ -271,9 +274,10 @@ function tryBuyPremiumPack() {
 async function proceedSubscribe(tierKey) {
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 tier'); return; }
-  // 일반결제 모드 (가계약) → 모든 tier 가 일회성 1개월 결제.
+  // V4 (사용자 명시 2026-05-11 ultrathink — 정정): 가계약 모드에서도 Plus 첫 달 무료 활성. 결제 X 흐름.
   if (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED) {
-    return proceedOneTimePurchase(tierKey);
+    if (tier.has_free_trial) return proceedFreeTrial();  // Plus 첫 달 무료 — 결제 X, 카드 등록 X (1인 1회)
+    return proceedOneTimePurchase(tierKey);              // Light/Premium = 일회성 1개월 결제
   }
   if (tier.has_free_trial) return proceedPlusTrial();  // Plus = 첫 달 무료 trial 흐름 (key='light')
   if (!session || !session.access_token) {
@@ -387,6 +391,55 @@ async function proceedSubscribe(tierKey) {
       if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
     } else {
       alert(`${tier.label} 구독 등록 실패: ` + (result.error || '알 수 없음'));
+    }
+  } catch (e) {
+    alert('백엔드 통신 실패: ' + (e?.message || e));
+  }
+}
+
+// V4 (사용자 명시 2026-05-11 ultrathink): 가계약 모드 Plus 첫 달 무료 — 결제 X, 카드 등록 X.
+//   backend `claim-free-trial` endpoint 가 직접 Plus subscription 30일 활성화. 1인 1회 가드.
+//   30일 후 자동 만료 (cron 갱신 X). 사용자가 직접 재구매.
+async function proceedFreeTrial() {
+  if (!session || !session.access_token) {
+    alert('로그인 필요 — 설정 → 로그아웃 후 재로그인.');
+    return;
+  }
+  if (typeof state !== 'undefined' && state && state.isGuest) {
+    alert('게스트 모드는 결제 X — 먼저 로그인.');
+    return;
+  }
+  // 사용자 confirm — 1인 1회임을 명확히 알림.
+  const ok = confirm('Plus 첫 달 무료 — 30일간 무료로 모든 기능 사용 가능.\n\n• 1인 1회 한정 (다음엔 정가 9,900원)\n• 자동 결제 X — 30일 후 만료\n• 만료 7일 전 알림\n\n시작할까?');
+  if (!ok) return;
+  if (typeof showToast === 'function') showToast('Plus 첫 달 무료 신청 중…');
+  try {
+    const resp = await fetch('/api/billing/claim-free-trial', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({})
+    });
+    const result = await resp.json();
+    if (resp.ok && result.ok) {
+      if (result.duplicate) {
+        showToast('💳 이미 Plus 구독 활성');
+        alert(result.message || '이미 활성 Plus 구독이 있어.');
+      } else {
+        showToast('🌊 Plus 첫 달 무료 시작 — 30일 자유롭게 🫂');
+      }
+      closeSubscribeModal();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+    } else {
+      // 1인 1회 가드 hit (TRIAL_ALREADY_CONSUMED) 시 사용자 친절 카피.
+      const code = result?.code || '';
+      if (code === 'TRIAL_ALREADY_CONSUMED') {
+        alert('Plus 첫 달 무료는 1인 1회 한정 — 이미 사용했어.\n\n계속 쓰려면 Plus 1개월 (9,900원) 정가 결제로 진행해줘.');
+      } else {
+        alert('Plus 첫 달 무료 신청 실패: ' + (result?.error || '알 수 없음'));
+      }
     }
   } catch (e) {
     alert('백엔드 통신 실패: ' + (e?.message || e));
