@@ -1,3 +1,9 @@
 # 사용자 보고 2026-05-06: 옛 /start-lite URL (rename 전) 로 들어오는 모바일 — 브라우저 308 캐시 또는 CDN edge cache stale 가능성. 새 /startlite 로 안내.
 /start-lite  /startlite  200
+
+# 사용자 요청 2026-05-11: 영상 마케팅 vanity path. YouTube Shorts 는 클릭 링크 불가 → 영상에서 음성/자막으로 'soragodong.com/yt' 안내.
+# 캠페인명 (utm_campaign) 은 영상 launch 시점에 맞춰 수동 갱신 (2026_05 → 2026_06 등).
+/yt   /?utm_source=youtube&utm_medium=shorts&utm_campaign=2026_05  302
+/ig   /?utm_source=instagram&utm_medium=video&utm_campaign=2026_05  302
+
 /*    /index.html   200
