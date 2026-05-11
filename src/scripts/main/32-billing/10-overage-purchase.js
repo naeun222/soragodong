@@ -83,7 +83,7 @@ async function purchaseOveragePack(packKey) {
   const pack = OVERAGE_PACKS_CLIENT[packKey];
   if (!pack) { alert('잘못된 pack'); return; }
   if (!session?.access_token) { alert('로그인 필요'); return; }
-  const paymentId = `pack-${packKey}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const paymentId = `pk-${packKey.slice(0,8)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
   const result = await _portOneV2RequestPayment({
     paymentId,
     orderName: `소라고동 ${pack.label}`,
@@ -112,7 +112,7 @@ async function purchaseOveragePack(packKey) {
 // ─── Tier 업그레이드 (Light → Premium 정가 결제) ───
 async function upgradeToPremium() {
   if (!session?.access_token) { alert('로그인 필요'); return; }
-  const paymentId = `upgrade-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const paymentId = `up-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
   const result = await _portOneV2RequestPayment({
     paymentId,
     orderName: '소라고동 Premium 구독 (Light → Premium 전환)',

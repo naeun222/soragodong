@@ -237,7 +237,8 @@ async function proceedSubscribe(tierKey) {
 
   const isEarlyTier = tierKey === 'early_lifetime';
   // 결제 시도 — paymentId = 매번 unique. 사용자 본인 식별용 customer 정보 + tier 별 amount.
-  const paymentId = `payment-${tierKey}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  // KG이니시스 oid 최대 40자 — base36 타임스탬프 + 짧은 random으로 26자 이내 유지.
+  const paymentId = `s-${tierKey.slice(0,7)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
   // 사용자 보고 2026-05-06: 모바일 redirect 흐름에서 verify-pay 호출 시점 user_id 와 결제 시점 user_id 가 다르면 NOT_OWN.
   // marker = _handlePaymentReturn 에서 매칭 검증용.
   try {
@@ -384,7 +385,8 @@ async function proceedEarlyBirdTrial() {
   }
 
   // billingKey issueId — 매번 unique. customer.customerId = user.id 로 매칭.
-  const issueId = `bkey-${authUserId || 'anon'}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  // KG이니시스 oid 최대 40자 — UUID 전체 포함 시 64자 초과. base36 ts + userId 앞 8자로 26자 이내.
+  const issueId = `bk-${(authUserId||'anon').slice(0,8)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
   // 모바일 redirect 흐름 — 등록 후 같은 페이지로 복귀 (해시 #early-bird-trial-return 으로 후속 처리).
   let response;
   try {
