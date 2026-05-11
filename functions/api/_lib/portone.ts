@@ -166,6 +166,20 @@ export async function chargeWithBillingKey(env: Env, paymentId: string, params: 
       const errTxt = await resp.text().catch(() => '');
       let parsed: any = {};
       try { parsed = JSON.parse(errTxt); } catch {}
+
+      // 사용자 보고 2026-05-11: ALREADY_PAID = 이전 시도가 비동기로 실제 결제 성공한 케이스 복구.
+      //   원인: 카카오페이 등 비동기 응답 → 클라가 status 못 읽어 에러 처리.
+      //   PortOne 측은 paymentId 멱등 보호로 동일 ID 재시도 시 ALREADY_PAID 반환.
+      //   해결: 기존 결제 fetch 해서 PAID 면 정상 진행.
+      if (parsed?.type === 'ALREADY_PAID') {
+        console.log('[portone] ALREADY_PAID — recovering existing payment:', paymentId);
+        const polled = await fetchPortOnePayment(env, paymentId);
+        if (polled.ok && polled.payment.status === 'PAID') {
+          return { ok: true, payment: polled.payment };
+        }
+        // PAID 아닌 상태 (FAILED 등) — fall through 해서 원래 에러 반환.
+      }
+
       return {
         ok: false,
         error: parsed?.message || errTxt.slice(0, 300),
