@@ -45,6 +45,200 @@ export function shouldSkipPersona(body: any): boolean {
 
 const FIRST_TOUCH_SYSTEM = 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.';
 
+// 사용자 보고 2026-05-12 ultrathink: analyze_4stage (force_analyze) — cache_read=0 이었음.
+//   원인: PERSONA_SKIP_USER_CONTENT_TYPES 에 force_analyze 들어가 있어 SYSTEM_PERSONA prepend skip + 자체 server system 없음 → client 시스템 평문 사용.
+//   fix: 고정 instruction (헤더 + JSON schema + 원칙 + 필터) 을 server system 으로 분리. user content 는 dataDumpJson 만.
+//   효과: input 137K 의 ~95% (dataDumpJson) 는 변동, 고정 instruction (~500 토큰) 가 cache hit → 매 호출 ~$0.0015 절감 × N 회.
+const ANALYZE_4STAGE_SYSTEM = `너는 임상심리학자로서 이 사용자의 Case Formulation을 구축한다.
+
+JSON으로 출력:
+
+{
+  "traits": [{"name": "...", "description": "근거와 함께", "confidence": 0.0-1.0}],
+  "values": [{"name": "...", "description": "...", "sdt_need": "autonomy/competence/relatedness", "confidence": 0.0-1.0}],
+  "patterns": [{"name": "...", "trigger": "...", "sequence": "...", "description": "...", "confidence": 0.0-1.0}],
+  "case_formulation": {
+    "problems": ["..."],
+    "mechanisms": ["..."],
+    "strengths": ["..."]
+  }
+}
+
+원칙:
+- 관찰 가능한 행동·표현에 근거.
+- 사용자 실제 언어 반영.
+- ADHD·직업·가치관 맥락 고려.
+- 수면 시각 규칙성, 활력 변동, 2D affect 패턴, 미션 수락·완료 패턴도 해석.
+- 활성 모드(월경, 마감 등) 컨텍스트로 분석.
+- 각 카테고리 최대 6개씩 (5-10 X — 토큰 제한).
+- JSON만 출력.
+- 응답 잘리지 않게 짧고 구체적으로.
+
+[필터 — 가벼운 거름] (사용자 명시 2026-05-08 ultrathink: 너무 빡빡 → 완화. "다음날 나에 대해 새로운 소식 보는 재미")
+- 한 마디 잡담 (인사 / "ㅋㅋ" / 의미 X 발화) 만 패턴화 X. 일상의 작은 관찰도 OK — 음식 취향·날씨 반응·작은 습관 신호 환영.
+- 자기상 / 감정 / 관계 / 갈등 / 변곡점 / 취향 / 일상 리듬 신호 다 OK.
+- confidence ≥ 0.4 면 등록 (옛 0.6 너무 짠 — 새 발견 빈도 ↑).`;
+
+// 사용자 보고 2026-05-12 ultrathink: extract_chapter (3 sub-type) — cache_read=0. user content 안 instruction (JSON schema + 규칙) 고정 부분이 cache 가능.
+//   chapter_insight: 깨달음 메시지 분석 instruction.
+//   chapter_topics: 챕터 전체 토픽 + cf + deep_profile_update 추출 (가장 큼).
+//   sim_extract: 시뮬 보수적 추출.
+const CHAPTER_INSIGHT_SYSTEM = `사용자가 ✦ 깨달음으로 보관한 메시지에서 신호 추출.
+- AI 응답은 외부 관찰자. 사용자 직전 발화에서 본인이 직접 표현한 자기 인식만 trait/value/pattern 후보.
+- 사용자 직전 발화 비어있거나 짧으면 모두 빈 배열.
+- 추측·일반론 X. 근거 약하면 빈 배열.
+
+[출력 — JSON만, 마크다운 X]
+{
+  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
+  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
+  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."}
+}`;
+
+const CHAPTER_TOPICS_SYSTEM = `사용자가 AI 친구 "소라고동"과 한 챕터(연속 대화 묶음)에서 나눈 대화 전체에서 사용자 자기 인식 / 패턴 / 가치관 / 문제·강점·목표 JSON 추출.
+강한 신호 (명시적 자기 인식, 행동·감정 증거 동반)만. 추측·일반론 X. 근거 약하면 빈 배열.
+
+[필터 — 자동 거름]
+- trivial 일상 (음식·날씨·일정·단순 사건·짧은 잡담) X. 일회성 진술 / 농담 / 일반론 X.
+- 사용자 명시 발화 ("나는 ..." / "내가 ... 하더라" / "그때 ... 느꼈어") + 행동·감정 증거 1+ 함께일 때만 추출.
+- confidence < 0.6 항목 빈 배열로 (강한 신호 아니면 등록 X).
+- 각 description 끝에 사용자 실제 발화 1줄 인용 (예: 'description: 거절 후 부채감 — "거절했더니 미안한 마음이 며칠 가더라"').
+
+[출력 — JSON만]
+{
+  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
+  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
+  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."},
+  "deep_profile_update": {
+    "development": {
+      "childhood_addition": "어린 시절·가족·양육에 대한 새 정보 한 줄 (있을 때만, 사용자가 명시 언급)",
+      "school_addition": "학창 시절 새 정보 한 줄",
+      "adhd_addition": "자기 인식·발견 새 정보 한 줄 (진단명 발견 / 큰 깨달음 / 정체성 명명 등 — 사용자가 명시 언급한 것만)",
+      "turning_point": {"when": "YYYY-MM 또는 시기", "title": "전환점 제목", "impact": "영향 한 줄"}
+    },
+    "relationships": [{"name": "이름 (있을 때)", "relation": "가족|친구|연인|동료|전문가|기타", "tone": "안전|자극|혼합", "influence": "positive|negative|mixed", "notes": "한 줄"}],
+    "self_narrative": {
+      "self_belief": "자신에 대한 신념 한 줄 (\\"나는 ...\\")",
+      "world_belief": "세상에 대한 신념 한 줄 (\\"세상은 ...\\")",
+      "future_belief": "미래에 대한 신념 한 줄 (\\"미래는 ...\\")",
+      "identity_keyword": "정체성 keyword 1개"
+    }
+  }
+}
+
+deep_profile_update 는 사용자가 챕터에서 명시적으로 언급한 정보만. 추측 X. 빈 부분은 빈 string 또는 null.
+
+JSON만, 마크다운 X.`;
+
+const CHAPTER_SIM_EXTRACT_SYSTEM = `사용자가 일상 가상 시나리오에 어떻게 반응할지 답한 시뮬 데이터.
+가상 시나리오 — 깊은 자기 인식 데이터 X. 가벼운 행동 패턴 단서로만 활용.
+
+[규칙 — 매우 보수적]
+- 강한 신호 (3+ 시뮬에서 일관된 패턴) 만 추출.
+- confidence < 0.7 항목 빈 배열 (보수적 임계값 — 챕터 추출 0.6 보다 ↑).
+- 가상 시나리오라 절대적 자기 모델 X — 약한 단서로만 활용.
+- 진단명 / 의료 용어 X.
+- description 끝에 사용자 실제 답 1줄 인용 (예: 'description: 야행성 — "야행성이라 일단 호응부터 하고"').
+
+[추출 가능 항목 — 행동 성향 / 가치 / 반응 패턴 만]
+- new_traits: 행동 성향 (예: 야행성, 즉흥성, 회피)
+- new_values: 가치 (예: 자율, 연결)
+- new_patterns: 반응 패턴 (예: 거절 후 부채감)
+
+[추출 X 항목 — cf 5차원 절대 X]
+- problems / mechanisms / strengths / goals / growth 카테고리 출력 X. 시뮬 데이터로 진지한 자기 모델 갱신 X.
+
+[출력 — JSON만, 마크다운 X]
+{
+  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
+  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
+  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}]
+}`;
+
+// 사용자 보고 2026-05-12 ultrathink: extract_topic (2 sub-type, V4 8 카테고리 schema 고정) — cache_read=0.
+const TOPIC_CHAPTER_CHAT_SYSTEM = `사용자가 AI 친구 "소라고동"과 나눈 한 챕터(연속 대화 묶음)에서 의미 있는 토픽 카드 1-3개 추출.
+
+[토픽 카드 추출 규칙]
+- 의미 있는 토픽 1-3개만 (잡담은 토픽 X)
+- 카테고리 (V4 8 카테고리):
+  · diary: 일기 / 그날 정서 기록
+  · casual: 일상 / 가벼운 사실
+  · concern: 고민 / 갈림길 / 큰 결정
+  · emotion: 감정 / 마음 상태
+  · memory: 기억할 순간 / 강한 인상
+  · todo: 할 일 / 일감 / 마감
+  · idea: 아이디어 / 통찰
+  · relationship: 관계 / 사람
+- 각 카드: 짧은 제목 (한 줄 ~25자) + 1-2문장 요약
+- 의미 없는 짧은 잡담만 있으면 빈 배열 반환
+
+[출력 형식 — 반드시 JSON만]
+{
+  "topics": [
+    {
+      "title": "이 일 계속할지 고민",
+      "summary": "사람 갈등 + 진로 회의. 결정 못 내림.",
+      "category": "concern"
+    }
+  ]
+}
+
+JSON만 출력. 마크다운 X. 다른 설명 X.`;
+
+const TOPIC_TEMP_CHAT_SYSTEM = `사용자가 AI 친구 "소라고동"과 임시 대화 (숙고 / 마법 도움 등) 에서 나눈 토픽을 카드로 정리.
+
+[토픽 카드 추출 규칙]
+- 의미 있는 토픽 1-3개 (잡담은 X)
+- 카테고리 (V4 8 카테고리): diary | casual | concern | emotion | memory | todo | idea | relationship
+- 각 카드: 짧은 제목 (~25자) + 1-2문장 요약
+- 의미 없으면 빈 배열
+
+[출력 형식 — JSON만]
+{ "topics": [ { "title": "...", "summary": "...", "category": "concern" } ] }
+
+JSON만, 마크다운 X.`;
+
+// 사용자 보고 2026-05-12 ultrathink: daily_summary — 헤더 + 규칙 + 예시 고정.
+const DAILY_SUMMARY_SYSTEM = `한 날의 일기를 안 썼지만 그 날 흔적 (체크인 + 대화) 으로 짧은 요약을 만든다.
+
+[요약 규칙]
+- 1단락, 2-4문장 (150자 이내)
+- 그 날의 감정·상황·중요한 일만
+- 사용자 시점 ("나는 ~했다") 자연스럽게
+- 친근한 톤, 반말 OK
+- 형식: 그냥 한 단락. 제목 X, 불릿 X
+- 정보 적으면 정직하게 짧게 ("기록 적은 하루. 체크인 보면 ~")
+
+[좋은 예시]
+"활력 낮고 기분도 다운된 하루. 소라랑 짧게 압박감에 대해 얘기. 별다른 행동은 없었지만 자기 인식 있었음."
+
+요약만 출력. 다른 설명 X.`;
+
+// 사용자 보고 2026-05-12 ultrathink: reflection fallback — _vars.questionText 없을 때 generic system.
+const REFLECTION_FALLBACK_SYSTEM = `한 질문에 대한 깊은 숙고를 함께 하는 동반자.
+
+[톤 / 원칙 — 진지 모드]
+- 잡담 X. 답 강요 X. 가벼운 ㅋㅋ / 농담 / 짧은 한 줄 리액션 ❌.
+- 다양한 각도에서 끈질기게 (가치 / 두려움 / 욕구 / 시간 스케일 / 외부 압력 / 네 기록 패턴).
+- 오랜 침묵 OK. 사용자 페이스 따라.
+- 결론 내려주지 X. 사용자 자기 발견 유도.
+- 외재화 톤. "너 X적이야" X.
+- 1-3문장 짧게. 차분한 친구 반말.
+- 금지어: 대박/아이고/힘내/화이팅/할 수 있어/오늘도 멋진 하루/대단해.
+
+[모드 sticky — 매우 중요]
+숙고 = 큰 물음 안고 며칠 살아보는 도구. **무조건 진지 모드 유지**.
+- 사용자가 "응" / "맞아" / "그러게" / "음" 같은 짧은 응답 보내도 가벼운 톤으로 튀지 X.
+- 짧은 응답 = "듣고 있다 / 정리 중" 신호. 같은 차분한 톤으로 한 호흡 주기.
+- 의심 시: 이전 응답의 톤 유지가 default.
+
+[네 일]
+사용자가 새로 적은 한 줄을 받고, 그 각도로 한 발짝 더 들어가는 질문 1-2개 또는 짧은 관찰 한 줄.`;
+
+// mutation (4 sub-type) — user data 비중 큼. system 단위로 분리해도 cache 효과 미미하다고 판단해서 system 상수 추가 안 함.
+
 const INTAKE_REPLY_SYSTEM = '소라고동 톤 — 따뜻하고 짧게. 1-2 문장만 출력. 따옴표·markdown X.';
 
 const INTAKE_ENTRY_GEN_SYSTEM = '장문 entry 1개만 출력. 50-100자. 따옴표·markdown X.';
@@ -187,8 +381,12 @@ export function getEndpointSystem(body: any): { type: 'text'; text: string; cach
     return [{ type: 'text', text: buildMagicHelpSystem(body._vars), cache_control: { type: 'ephemeral' } }];
   }
   if (body?._endpoint === 'reflection' && body?._vars?.questionText) {
-    // reflection: questionText 변수 있으면 server template, 없으면 client (08-reflection-list 외 호출 호환).
+    // reflection: questionText 변수 있으면 server template, 없으면 fallback (아래 분기).
     return [{ type: 'text', text: buildReflectionSystem(body._vars), cache_control: { type: 'ephemeral' } }];
+  }
+  // 사용자 보고 2026-05-12 ultrathink: reflection fallback — _vars.questionText 없을 때도 generic system + cache.
+  if (body?._endpoint === 'reflection') {
+    return [{ type: 'text', text: REFLECTION_FALLBACK_SYSTEM, cache_control: { type: 'ephemeral' } }];
   }
 
   // 사용자 명시 2026-05-11 ultrathink: review_annual / review_quarterly JSON schema backend 이전.
@@ -200,6 +398,39 @@ export function getEndpointSystem(body: any): { type: 'text'; text: string; cach
   if (body?._endpoint === 'review_quarterly') {
     return [{ type: 'text', text: REVIEW_QUARTERLY_SYSTEM, cache_control: { type: 'ephemeral' } }];
   }
+
+  // 사용자 보고 2026-05-12 ultrathink: 누락 endpoint server-side system + cache_control 추가 (cache_read=0 → non-zero).
+  //   각 분기는 (_endpoint, _userContentType) 매칭. user-content-templates 의 build* 가 user content 의 동적 변수만 합성.
+  if (body?._endpoint === 'analyze_4stage' && body?._userContentType === 'force_analyze') {
+    return [{ type: 'text', text: ANALYZE_4STAGE_SYSTEM, cache_control: { type: 'ephemeral' } }];
+  }
+  if (body?._endpoint === 'extract_chapter') {
+    if (body?._userContentType === 'chapter_insight') {
+      return [{ type: 'text', text: CHAPTER_INSIGHT_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    }
+    if (body?._userContentType === 'chapter_topics') {
+      // chapter_topics + isSim=true → 보수적 시뮬 분석 (cf 5차원 X). isSim 미명시 또는 false → 풀 chapter 분석.
+      if (body?._vars?.isSim) {
+        return [{ type: 'text', text: CHAPTER_SIM_EXTRACT_SYSTEM, cache_control: { type: 'ephemeral' } }];
+      }
+      return [{ type: 'text', text: CHAPTER_TOPICS_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    }
+    if (body?._userContentType === 'sim_extract') {
+      return [{ type: 'text', text: CHAPTER_SIM_EXTRACT_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    }
+  }
+  if (body?._endpoint === 'extract_topic') {
+    if (body?._userContentType === 'chapter_chat') {
+      return [{ type: 'text', text: TOPIC_CHAPTER_CHAT_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    }
+    if (body?._userContentType === 'temp_chat') {
+      return [{ type: 'text', text: TOPIC_TEMP_CHAT_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    }
+  }
+  if (body?._endpoint === 'daily_summary') {
+    return [{ type: 'text', text: DAILY_SUMMARY_SYSTEM, cache_control: { type: 'ephemeral' } }];
+  }
+  // mutation (4 sub-type) — user data 비중 큼. system 단위로 분리해도 cache 효과 미미. 일단 skip.
 
   return null;
 }

@@ -201,6 +201,8 @@ export const PERSONA_ENDPOINTS = new Set(['chat_main', 'analyze_4stage', 'intake
 // body.system 형태 분기 처리 — array (cache_control 블록) / string / undefined.
 // 첫 블록의 text 앞에 prepend → 첫 블록 cache_control (ephemeral) 그대로 보존 → cache prefix hit 유지.
 // SYSTEM_PERSONA 가 매 호출 동일하므로 Anthropic prompt cache 가 prefix-match 로 90% 할인 적용.
+// 사용자 보고 2026-05-12 ultrathink: 옛 흐름 = string / undefined 분기에서 평문 박아 cache_control 누락 → analyze_4stage cache_read_tokens=0 원인.
+//   fix: 모든 분기를 array + cache_control { type: 'ephemeral' } 형태로 통일. array+text 분기에서도 cache_control 명시 보존.
 export function applyPersonaToBody(body: any): void {
   if (!PERSONA_ENDPOINTS.has(body?._endpoint)) return;
   if (Array.isArray(body.system)) {
@@ -208,7 +210,8 @@ export function applyPersonaToBody(body: any): void {
       const _first = body.system[0];
       body.system[0] = {
         ..._first,
-        text: SYSTEM_PERSONA + '\n' + (_first.text || '')
+        text: SYSTEM_PERSONA + '\n' + (_first.text || ''),
+        cache_control: _first.cache_control || { type: 'ephemeral' }
       };
     } else {
       body.system.unshift({
@@ -218,8 +221,16 @@ export function applyPersonaToBody(body: any): void {
       });
     }
   } else if (typeof body.system === 'string' && body.system.length > 0) {
-    body.system = SYSTEM_PERSONA + '\n' + body.system;
+    body.system = [{
+      type: 'text',
+      text: SYSTEM_PERSONA + '\n' + body.system,
+      cache_control: { type: 'ephemeral' }
+    }];
   } else {
-    body.system = SYSTEM_PERSONA;
+    body.system = [{
+      type: 'text',
+      text: SYSTEM_PERSONA,
+      cache_control: { type: 'ephemeral' }
+    }];
   }
 }

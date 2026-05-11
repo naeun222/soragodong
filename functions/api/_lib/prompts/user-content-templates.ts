@@ -143,131 +143,32 @@ ACTION: <전략적 행동, 50-120자, 구체적 무엇을 어떻게>
 // ═══════════════════════════════════════════════════════════════
 
 function buildChapterInsight(v: any): string {
+  // 사용자 보고 2026-05-12 ultrathink: instruction 을 CHAPTER_INSIGHT_SYSTEM 으로 이전. user content 는 출처 + 직전 발화 + 깨달음 메시지만.
   const source = _s(v?.source, 50);
   const userMsg = _s(v?.userMsg, 600);
   const cleanInsight = _s(v?.cleanInsight, 1200);
-  return `다음은 사용자가 "✦ 깨달음으로" 보관한 메시지야 (출처: ${source}).
-사용자가 의도적으로 가치 있다고 판단한 텍스트라서 자기 인식 / 패턴 / 가치관 신호가 있을 수 있어.
+  return `[출처] ${source}
 
 [사용자 직전 발화]
 ${userMsg || '(없음)'}
 
 [깨달음 메시지 — AI(소라고동) 응답]
-${cleanInsight}
-
-이 깨달음에서 사용자(주체) 자신이 새로 발견 / 명확히 한 것 만 JSON으로 뽑아.
-- ⚠️ AI(소라고동)의 가설·해석·"너 X해" 발화는 사용자 trait 후보 X. AI는 외부 관찰자.
-- [사용자 직전 발화] 에 사용자 본인이 직접 표현한 자기 인식만 trait/value/pattern 후보.
-- 깨달음 메시지(AI 응답)는 그 발화를 명명/연결한 lens일 뿐 — AI 가 단정한 명제 ≠ 사용자 자신의 인식.
-- 사용자 직전 발화가 비어있거나 짧으면 → 모두 빈 배열.
-- 추측·일반론 X. 근거 약하면 빈 배열.
-
-{
-  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
-  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
-  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."}
-}
-
-JSON만, 다른 글 X.`;
+${cleanInsight}`;
 }
 
 function buildChapterTopics(v: any): string {
+  // 사용자 보고 2026-05-12 ultrathink: instruction 을 CHAPTER_TOPICS_SYSTEM 또는 CHAPTER_SIM_EXTRACT_SYSTEM 으로 이전.
+  //   isSim true 면 _userContentType='sim_extract' (분기는 호출처에서 설정), false 면 'chapter_topics'.
+  //   user content 는 chatLog 만.
   const chatLog = _s(v?.chatLog, 8000);
-  const isSim = !!v?.isSim;
-
-  if (isSim) {
-    return `사용자가 AI 친구 "소라고동"과 *상상 시뮬레이션* 컨텍스트에서 이어 나눈 대화.
-가상 시나리오 + 사용자 답 → 깊은 대화. 진지한 자기 모델 데이터로 보지 X — 약한 행동 단서로만.
-
-[규칙 — 매우 보수적]
-- 강한 신호 (3+ 일관 evidence) 만 추출. confidence < 0.7 = 빈 배열.
-- 가상 시나리오 시작이라 cf 5차원 (problems/mechanisms/strengths/goals/growth) / deep_profile_update 절대 출력 X.
-- traits/values/patterns 만 — 행동 성향 / 가치 / 반응 패턴 수준.
-- description 끝에 사용자 실제 발화 1줄 인용.
-
-[대화 원문]
-${chatLog}
-
-[출력 — JSON만, 마크다운 X]
-{
-  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
-  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}]
-}`;
-  }
-
-  return `사용자가 AI 친구 "소라고동"과 한 챕터(연속 대화 묶음)에서 나눈 대화 전체.
-챕터 전반에 걸쳐 발견된 사용자 자기 인식 / 패턴 / 가치관 / 문제·강점·목표를 JSON으로 추출.
-강한 신호 (명시적 자기 인식, 행동·감정 증거 동반)만. 추측·일반론 X. 근거 약하면 빈 배열.
-
-[필터 — 자동 거름]
-- trivial 일상 (음식·날씨·일정·단순 사건·짧은 잡담) X. 일회성 진술 / 농담 / 일반론 X.
-- 사용자 명시 발화 ("나는 ..." / "내가 ... 하더라" / "그때 ... 느꼈어") + 행동·감정 증거 1+ 함께일 때만 추출.
-- confidence < 0.6 항목 빈 배열로 (강한 신호 아니면 등록 X).
-- 각 description 끝에 사용자 실제 발화 1줄 인용 (예: 'description: 거절 후 부채감 — "거절했더니 미안한 마음이 며칠 가더라"').
-
-[대화 원문]
-${chatLog}
-
-[출력 — JSON만]
-{
-  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
-  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
-  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."},
-  "deep_profile_update": {
-    "development": {
-      "childhood_addition": "어린 시절·가족·양육에 대한 새 정보 한 줄 (있을 때만, 사용자가 명시 언급)",
-      "school_addition": "학창 시절 새 정보 한 줄",
-      "adhd_addition": "자기 인식·발견 새 정보 한 줄 (진단명 발견 / 큰 깨달음 / 정체성 명명 등 — 사용자가 명시 언급한 것만)",
-      "turning_point": {"when": "YYYY-MM 또는 시기", "title": "전환점 제목", "impact": "영향 한 줄"}
-    },
-    "relationships": [{"name": "이름 (있을 때)", "relation": "가족|친구|연인|동료|전문가|기타", "tone": "안전|자극|혼합", "influence": "positive|negative|mixed", "notes": "한 줄"}],
-    "self_narrative": {
-      "self_belief": "자신에 대한 신념 한 줄 (\"나는 ...\")",
-      "world_belief": "세상에 대한 신념 한 줄 (\"세상은 ...\")",
-      "future_belief": "미래에 대한 신념 한 줄 (\"미래는 ...\")",
-      "identity_keyword": "정체성 keyword 1개"
-    }
-  }
-}
-
-deep_profile_update는 사용자가 챕터에서 명시적으로 언급한 정보만 (예: "엄마가 늘 비교해" / "그때 진단 받은 후 시야가 달라졌어" / "나는 패턴 인식이 강해"). 추측 X. 빈 부분은 빈 string 또는 null.
-
-JSON만, 마크다운 X.`;
+  return `[대화 원문]\n${chatLog}`;
 }
 
 function buildSimExtract(v: any): string {
+  // 사용자 보고 2026-05-12 ultrathink: instruction → CHAPTER_SIM_EXTRACT_SYSTEM 이전.
   const entriesBody = _s(v?.entriesBody, 8000);
   const entriesCount = Number(v?.entriesCount) || 0;
-  return `사용자가 일상 가상 시나리오에 어떻게 반응할지 답한 시뮬 데이터.
-가상 시나리오 — 깊은 자기 인식 데이터 X. 가벼운 행동 패턴 단서로만 활용.
-
-[규칙 — 매우 보수적]
-- 강한 신호 (3+ 시뮬에서 일관된 패턴) 만 추출.
-- confidence < 0.7 항목 빈 배열 (보수적 임계값 — 챕터 추출 0.6 보다 ↑).
-- 가상 시나리오라 절대적 자기 모델 X — 약한 단서로만 활용.
-- 진단명 / 의료 용어 X.
-- description 끝에 사용자 실제 답 1줄 인용 (예: 'description: 야행성 — "야행성이라 일단 호응부터 하고"').
-
-[추출 가능 항목 — 행동 성향 / 가치 / 반응 패턴 만]
-- new_traits: 행동 성향 (예: 야행성, 즉흥성, 회피)
-- new_values: 가치 (예: 자율, 연결)
-- new_patterns: 반응 패턴 (예: 거절 후 부채감)
-
-[추출 X 항목 — cf 5차원 절대 X]
-- problems / mechanisms / strengths / goals / growth 카테고리 출력 X. 시뮬 데이터로 진지한 자기 모델 갱신 X.
-
-[시뮬 데이터 — 최근 ${entriesCount}개]
-${entriesBody}
-
-[출력 — JSON만, 마크다운 X]
-{
-  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
-  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}]
-}`;
+  return `[시뮬 데이터 — 최근 ${entriesCount}개]\n${entriesBody}`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -275,61 +176,17 @@ ${entriesBody}
 // ═══════════════════════════════════════════════════════════════
 
 function buildTopicTempChat(v: any): string {
+  // 사용자 보고 2026-05-12 ultrathink: instruction → TOPIC_TEMP_CHAT_SYSTEM 이전.
   const sourceLabel = _s(v?.sourceLabel, 200);
   const context = _s(v?.context, 500);
   const chatLog = _s(v?.chatLog, 8000);
-  return `사용자가 AI 친구 "소라고동"과 ${sourceLabel} 모드에서 나눈 대화를 토픽 카드로 정리해.
-
-[컨텍스트] ${context || '(없음)'}
-
-[대화 원문]
-${chatLog}
-
-[토픽 카드 추출 규칙]
-- 의미 있는 토픽 1-3개 (잡담은 X)
-- 카테고리 (V4 8 카테고리): diary | casual | concern | emotion | memory | todo | idea | relationship
-- 각 카드: 짧은 제목 (~25자) + 1-2문장 요약
-- 의미 없으면 빈 배열
-
-[출력 형식 — JSON만]
-{ "topics": [ { "title": "...", "summary": "...", "category": "concern" } ] }
-
-JSON만, 마크다운 X.`;
+  return `[모드] ${sourceLabel}\n[컨텍스트] ${context || '(없음)'}\n\n[대화 원문]\n${chatLog}`;
 }
 
 function buildTopicChapterChat(v: any): string {
+  // 사용자 보고 2026-05-12 ultrathink: instruction → TOPIC_CHAPTER_CHAT_SYSTEM 이전.
   const chatLog = _s(v?.chatLog, 8000);
-  return `사용자가 AI 친구 "소라고동"과 나눈 한 챕터(연속된 대화 묶음)를 토픽 카드로 정리해.
-
-[대화 원문]
-${chatLog}
-
-[토픽 카드 추출 규칙]
-- 의미 있는 토픽 1-3개만 (잡담은 토픽 X)
-- 카테고리 중 하나 선택 (V4 8 카테고리):
-  · diary: 일기 / 그날 정서 기록
-  · casual: 일상 / 가벼운 사실
-  · concern: 고민 / 갈림길 / 큰 결정
-  · emotion: 감정 / 마음 상태
-  · memory: 기억할 순간 / 강한 인상
-  · todo: 할 일 / 일감 / 마감
-  · idea: 아이디어 / 통찰
-  · relationship: 관계 / 사람
-- 각 카드: 짧은 제목 (한 줄 ~25자) + 1-2문장 요약
-- 의미 없는 짧은 잡담만 있으면 빈 배열 반환
-
-[출력 형식 — 반드시 JSON만]
-{
-  "topics": [
-    {
-      "title": "이 일 계속할지 고민",
-      "summary": "사람 갈등 + 진로 회의. 결정 못 내림.",
-      "category": "concern"
-    }
-  ]
-}
-
-JSON만 출력. 마크다운 X. 다른 설명 X.`;
+  return `[대화 원문]\n${chatLog}`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -559,40 +416,10 @@ ${list}
 // ═══════════════════════════════════════════════════════════════
 
 function buildForceAnalyze(v: any): string {
+  // 사용자 보고 2026-05-12 ultrathink: instruction (헤더 + JSON schema + 원칙 + 필터) 을 endpoint-systems.ts 의 ANALYZE_4STAGE_SYSTEM 으로 이전.
+  //   user content 는 dataDumpJson 만 남김 → 변동 부분만 / 고정은 cache hit.
   const dataDumpJson = _s(v?.dataDumpJson, 30000);
-  return `너는 임상심리학자로서 이 사용자의 Case Formulation을 구축한다.
-
-아래는 사용자 데이터야:
-
-${dataDumpJson}
-
-JSON으로 출력:
-
-{
-  "traits": [{"name": "...", "description": "근거와 함께", "confidence": 0.0-1.0}],
-  "values": [{"name": "...", "description": "...", "sdt_need": "autonomy/competence/relatedness", "confidence": 0.0-1.0}],
-  "patterns": [{"name": "...", "trigger": "...", "sequence": "...", "description": "...", "confidence": 0.0-1.0}],
-  "case_formulation": {
-    "problems": ["..."],
-    "mechanisms": ["..."],
-    "strengths": ["..."]
-  }
-}
-
-원칙:
-- 관찰 가능한 행동·표현에 근거.
-- 사용자 실제 언어 반영.
-- ADHD·직업·가치관 맥락 고려.
-- 수면 시각 규칙성, 활력 변동, 2D affect 패턴, 미션 수락·완료 패턴도 해석.
-- 활성 모드(월경, 마감 등) 컨텍스트로 분석.
-- 각 카테고리 최대 6개씩 (5-10 X — 토큰 제한).
-- JSON만 출력.
-- 응답 잘리지 않게 짧고 구체적으로.
-
-[필터 — 가벼운 거름] (사용자 명시 2026-05-08 ultrathink: 너무 빡빡 → 완화. "다음날 나에 대해 새로운 소식 보는 재미")
-- 한 마디 잡담 (인사 / "ㅋㅋ" / 의미 X 발화) 만 패턴화 X. 일상의 작은 관찰도 OK — 음식 취향·날씨 반응·작은 습관 신호 환영.
-- 자기상 / 감정 / 관계 / 갈등 / 변곡점 / 취향 / 일상 리듬 신호 다 OK.
-- confidence ≥ 0.4 면 등록 (옛 0.6 너무 짠 — 새 발견 빈도 ↑).`;
+  return `[사용자 데이터]\n${dataDumpJson}\n\n위 데이터로 Case Formulation 작성. JSON만 출력.`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -769,29 +596,11 @@ JSON 출력:
 // ═══════════════════════════════════════════════════════════════
 
 function buildDailySummary(v: any): string {
+  // 사용자 보고 2026-05-12 ultrathink: instruction → DAILY_SUMMARY_SYSTEM 이전.
   const dateLabel = _s(v?.dateLabel, 50);
   const checkinSummary = _s(v?.checkinSummary, 1500);
   const chatLog = _s(v?.chatLog, 6000);
-  return `${dateLabel}의 기록이야. 일기를 안 썼지만 그 날 흔적으로 짧은 요약을 만들어줘.
-
-[체크인]
-${checkinSummary}
-
-[그 날 대화]
-${chatLog}
-
-[요약 규칙]
-- 1단락, 2-4문장 (150자 이내)
-- 그 날의 감정·상황·중요한 일만
-- 사용자 시점 ("나는 ~했다") 자연스럽게
-- 친근한 톤, 반말 OK
-- 형식: 그냥 한 단락. 제목 X, 불릿 X
-- 정보 적으면 정직하게 짧게 ("기록 적은 하루. 체크인 보면 ~")
-
-[좋은 예시]
-"활력 낮고 기분도 다운된 하루. 소라랑 짧게 압박감에 대해 얘기. 별다른 행동은 없었지만 자기 인식 있었음."
-
-요약만 출력. 다른 설명 X.`;
+  return `[날짜] ${dateLabel}\n\n[체크인]\n${checkinSummary}\n\n[그 날 대화]\n${chatLog}`;
 }
 
 // ═══════════════════════════════════════════════════════════════
