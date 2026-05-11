@@ -57243,19 +57243,57 @@ function devPreviewPaymentInfoModal() {
   });
 }
 
-let _subscribePayMethod = 'card';
-function _setPayMethod(method) {
-  _subscribePayMethod = method;
-  ['card', 'kakao', 'toss'].forEach(m => {
-    const btn = document.getElementById('payMethodBtn_' + m);
-    if (!btn) return;
-    const on = m === method;
-    btn.style.border = on ? '1.5px solid var(--accent)' : '1px solid var(--border)';
-    btn.style.background = on ? 'rgba(212,167,106,0.15)' : 'var(--surface)';
-    btn.style.color = on ? 'var(--accent)' : 'var(--text-dim)';
-    btn.style.fontWeight = on ? '700' : '500';
+// 결제 수단 선택 픽커 — 플랜 클릭 후 카드/카카오페이/토스페이 중 선택.
+let __payMethodPickerResolve = null;
+function _pickPayMethodResolve(method) {
+  const ov = document.getElementById('payMethodPickerOverlay');
+  if (ov) ov.remove();
+  if (__payMethodPickerResolve) {
+    const r = __payMethodPickerResolve;
+    __payMethodPickerResolve = null;
+    r(method);
+  }
+}
+function _pickPaymentMethod({ excludeToss = false, title = '결제 수단 선택' } = {}) {
+  return new Promise((resolve) => {
+    __payMethodPickerResolve = resolve;
+    const tossBtn = excludeToss ? '' : `
+        <button onclick="_pickPayMethodResolve('toss')" style="width:100%; padding:14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; text-align:left; background:#0064FF; color:#fff; border:none; border-radius:10px; cursor:pointer; font-family:inherit;">
+          <span style="font-size:14px; font-weight:900; letter-spacing:-0.02em;">toss</span>
+          <div style="flex:1;">
+            <div style="font-weight:700; font-size:13px;">토스페이</div>
+            <div style="font-size:10.5px; opacity:0.85;">토스 앱으로 간편결제</div>
+          </div>
+        </button>`;
+    const overlay = document.createElement('div');
+    overlay.className = 'input-modal-overlay show';
+    overlay.id = 'payMethodPickerOverlay';
+    overlay.style.zIndex = '10002';
+    overlay.innerHTML = `
+      <div class="input-modal" style="max-width:340px; padding:22px;">
+        <div style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:14px;">${escapeHtml(title)}</div>
+        <button onclick="_pickPayMethodResolve('card')" style="width:100%; padding:14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; text-align:left; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:10px; cursor:pointer; font-family:inherit;">
+          <span style="font-size:20px;">💳</span>
+          <div style="flex:1;">
+            <div style="font-weight:700; font-size:13px;">카드</div>
+            <div style="font-size:10.5px; color:var(--text-dim);">국내 신용/체크카드 (KG이니시스)</div>
+          </div>
+        </button>
+        <button onclick="_pickPayMethodResolve('kakao')" style="width:100%; padding:14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; text-align:left; background:#FEE500; color:#3C1E1E; border:none; border-radius:10px; cursor:pointer; font-family:inherit;">
+          <span style="font-size:14px; font-weight:900;">kakao</span>
+          <div style="flex:1;">
+            <div style="font-weight:700; font-size:13px;">카카오페이</div>
+            <div style="font-size:10.5px; opacity:0.75;">카카오 계정으로 간편결제</div>
+          </div>
+        </button>
+        ${tossBtn}
+        <button class="btn-secondary" onclick="_pickPayMethodResolve(null)" style="width:100%; padding:10px; margin-top:6px;">취소</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
   });
 }
+
 function _getPayChannelInfo(method) {
   const storeId = (typeof PORTONE_STORE_ID !== 'undefined') ? PORTONE_STORE_ID : '';
   if (method === 'kakao') return {
@@ -57279,7 +57317,6 @@ function _getPayChannelInfo(method) {
 }
 
 async function openSubscribeModal() {
-  _subscribePayMethod = 'card';
   if (document.getElementById('subscribeModalOverlay')) return;
   if (typeof refreshBillingStatus === 'function') {
     try { await refreshBillingStatus(false); } catch {}
@@ -57330,14 +57367,6 @@ async function openSubscribeModal() {
     <div class="input-modal" style="max-width:420px; max-height:92vh; overflow-y:auto; padding:24px;">
       <div style="font-size:17px; font-weight:700; color:var(--text); margin-bottom:14px;">📅 구독</div>
       ${minorWarning}
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px; color:var(--text-dim); margin-bottom:7px; letter-spacing:0.04em;">결제 수단</div>
-        <div style="display:flex; gap:6px;">
-          <button id="payMethodBtn_card" onclick="_setPayMethod('card')" style="flex:1; padding:8px 4px; font-size:11.5px; font-weight:700; border-radius:8px; border:1.5px solid var(--accent); background:rgba(212,167,106,0.15); color:var(--accent); cursor:pointer;">💳 카드</button>
-          <button id="payMethodBtn_kakao" onclick="_setPayMethod('kakao')" style="flex:1; padding:8px 4px; font-size:11.5px; font-weight:500; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); cursor:pointer;">카카오페이</button>
-          <button id="payMethodBtn_toss" onclick="_setPayMethod('toss')" style="flex:1; padding:8px 4px; font-size:11.5px; font-weight:500; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); cursor:pointer;">토스페이</button>
-        </div>
-      </div>
       ${earlyLifetimeCard}
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
@@ -57371,7 +57400,8 @@ async function proceedSubscribe(tierKey) {
     alert('게스트 모드는 결제 X — 먼저 로그인.');
     return;
   }
-  const _pg = (typeof _subscribePayMethod !== 'undefined') ? _subscribePayMethod : 'card';
+  const _pg = await _pickPaymentMethod({ title: `${tier.label} 결제 수단 선택` });
+  if (!_pg) return;
   const _pgInfo = _getPayChannelInfo(_pg);
   if (!_pgInfo.channelKey || !_pgInfo.storeId) {
     alert('결제 설정 오류 — 채널키 미설정');
@@ -57514,11 +57544,9 @@ async function proceedEarlyBirdTrial() {
     alert('게스트 모드는 결제 X — 먼저 로그인.');
     return;
   }
-  const _pg = (typeof _subscribePayMethod !== 'undefined') ? _subscribePayMethod : 'card';
-  if (_pg === 'toss') {
-    alert('토스페이는 정기 결제를 지원하지 않아. 카드 또는 카카오페이를 선택해줘.');
-    return;
-  }
+  // 얼리버드 = 빌링키 등록 흐름이라 토스페이 제외 (tosstest 채널 = 일반결제만).
+  const _pg = await _pickPaymentMethod({ excludeToss: true, title: '얼리버드 카드 등록 수단' });
+  if (!_pg) return;
   const _pgInfo = _getPayChannelInfo(_pg);
   const billingChannelKey = _pgInfo.billingChannelKey || _pgInfo.channelKey;
   const storeId = _pgInfo.storeId;
