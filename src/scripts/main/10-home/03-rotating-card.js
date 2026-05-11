@@ -433,7 +433,7 @@ function _rcConfirmNewView(itemId, verdict) {
 }
 
 // =============================================================================
-// Source 3 — 고동의 일기 (Haiku 3일 stay) — 사용자 명시 2026-05-10 (handoff)
+// Source 3 — 고동의 일기 (Sonnet 3일 stay) — 사용자 명시 2026-05-10 (handoff). 사용자 명시 2026-05-11: 모델 = claude-sonnet-4-6 (Haiku 아님 — line 940 참조).
 // HANDOFF.md prototype: 회전 카드는 항상 동일 트리거 카피 ("고동이 잠깐 자리 비움.").
 // cooldown 끝 = 모달 진입 시 새 entry 생성. cooldown 안 = 기존 entries 만 페이지 표시.
 // =============================================================================
@@ -462,13 +462,13 @@ function _rcFindGodongDiaryById(id) {
 }
 
 // =============================================================================
-// Haiku 호출 — 일기 본문 정확히 3편 (3일 전 / 2일 전 / 어제). 사용자 명시 2026-05-11.
+// Sonnet 호출 — 일기 본문 정확히 3편 (3일 전 / 2일 전 / 어제). 사용자 명시 2026-05-11 (Haiku → Sonnet, line 940).
 // 6 source: 일기 요약 (chatArchive headline+summary) / 일기 (entry.note + chat user 발화) /
 //   체크인 (entries vit/mood/sleep + dailyQuestion) / 진주 (pearls createdAt) /
 //   깨달음 (archive savedAt + insights discoveredAt) / 대화 토픽 (topicCards chapterEndedAt).
 // 데이터 없는 날도 skip X — fallback 톤으로 1편.
 // =============================================================================
-async function _callGodongDiaryHaiku() {
+async function _callGodongDiarySonnet() {
   if (typeof callAnthropic !== 'function') throw new Error('callAnthropic 미정의');
   const _userName = (state.userName || '').trim();
   if (!_userName) throw new Error('userName 미지정 — _gdiaryGetUserName/_gdiaryAskUserName 가드 누락');
@@ -937,13 +937,13 @@ ${modesText}
   let attempt = 0;
   while (attempt < 4) {
     const resp = await callAnthropic({
-      // 사용자 명시 2026-05-11 ultrathink-3: Haiku → Sonnet. Haiku 가 애교/20대 여성 톤 제대로 안 따라감 + 사건↔느낌 비율 (사건 1줄 + 느낌 2줄) 도 못 맞춤.
+      // 사용자 명시 2026-05-11 ultrathink-3: Sonnet 사용 (옛 Haiku — 애교/20대 여성 톤 제대로 안 따라감 + 사건↔느낌 비율 (사건 1줄 + 느낌 2줄) 도 못 맞춤).
       model: 'claude-sonnet-4-6',
       max_tokens: 2500,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
-    if (!resp.ok) throw new Error('Haiku API ' + resp.status);
+    if (!resp.ok) throw new Error('Sonnet API ' + resp.status);
     const data = await resp.json();
     let raw = (data.content?.[0]?.text || '').trim();
     console.log(`[gdiary diag] attempt#${attempt + 1} raw response (first 800 chars):\n`, raw.slice(0, 800));

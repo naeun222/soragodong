@@ -152,10 +152,10 @@ async function openGodongDiaryModal() {
     }
   }
 
-  // 사용자 명시 2026-05-11 (4차 정정 ultrathink): generate 조건 = 윈도우 (3,2,1일 전) 내 entry 가 *전혀 없을 때* 만.
-  //   - 3/2/1일 전 entry 1개라도 있음 → 새 생성 X.
+  // 사용자 명시 2026-05-11 (최종 정정 ultrathink): generate 조건 = 윈도우 (3,2,1일 전) 내 entry 가 *전혀 없을 때* 만.
+  //   - 3/2/1일 전 entry 1개라도 있음 → 새 generate X.
   //   - 윈도우 밖 (4일+ 전) entries 는 별개로 항상 보존 + 시간순 페이지로 그대로 노출.
-  //   - fallback filler X. Haiku 실패 fallback X.
+  //   - modal 진입 시 dayK 부족 → fallback filler O (Sonnet 실패 case 도 동일 흐름으로 처리).
   //   '다시 적어줘' 버튼은 force regenerate (윈도우 내 있어도 재호출).
   const _hasAnyInWindow = (state.godongDiary || []).some(e => e && _targetSet.has(_entryDayK(e)));
   const _force = _gdiaryForceRegenerate;
@@ -165,8 +165,8 @@ async function openGodongDiaryModal() {
   // 셸 먼저 (loading) — 사용자가 빈 화면 안 보게.
   _gdiaryRenderShell({ loading: true });
 
-  // Haiku 호출 — 사용자 명시 2026-05-11 (3차 정정): needsGenerate 일 때만 (= state.godongDiary 비어있을 때 OR force).
-  //   fallback 폐기 (Haiku 실패해도 fallback 채우기 X — 없으면 모달 = "노트가 없네" + 다시 적어줘 버튼).
+  // Sonnet 호출 — needsGenerate 일 때만 (= 윈도우 내 entry 0개 OR force).
+  //   Sonnet 실패 시 inline fallback push X — 빈 newEntries 로 fall-through 후 modal fallback filler (line 201) 가 dayK 부족분 자동 채움.
   if (needsGenerate) {
     // force regenerate 시 dayK 매칭 옛 entry splice — 윈도우 밖 (4일+ 전) 일기는 보존.
     if (_force) {
@@ -175,14 +175,14 @@ async function openGodongDiaryModal() {
 
     let newEntries = [];
     try {
-      const arr = await _callGodongDiaryHaiku();
+      const arr = await _callGodongDiarySonnet();
       if (Array.isArray(arr) && arr.length > 0) {
-        newEntries = arr.map(p => _gdiaryEntryFromHaiku(p)).filter(Boolean);
+        newEntries = arr.map(p => _gdiaryEntryFromSonnet(p)).filter(Boolean);
         // _targetDayKs (3일전/2일전/어제) 매칭 entry 만 push. 오늘/미래 entry reject.
         newEntries = newEntries.filter(e => _targetSet.has(_entryDayK(e)));
       }
     } catch (err) {
-      console.warn('[godong-diary] generate fail (no fallback per 사용자 명시):', err && err.message);
+      console.warn('[godong-diary] generate fail — modal fallback filler 가 dayK 부족분 채움:', err && err.message);
     }
     if (newEntries.length > 0) {
       newEntries.forEach(e => state.godongDiary.push(e));
@@ -198,8 +198,8 @@ async function openGodongDiaryModal() {
     .slice()
     .sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
 
-  // 사용자 명시 2026-05-11 (5차 정정): modal 진입 시 dayK 윈도우 (3,2,1일전) 매칭 부족 → fallback filler O.
-  //   (Haiku 실패 fallback 만 X — generate 자체 실패한 거라 채움 X. modal 진입 시 부족은 채움.)
+  // 사용자 명시 2026-05-11 (최종 정정): modal 진입 시 dayK 윈도우 (3,2,1일전) 매칭 부족 → fallback filler O (3 페이지 보장).
+  //   Sonnet 실패 case 도 여기로 흘러옴 — Sonnet 실패 → newEntries 0 → 윈도우 비어있음 → 여기서 3개 fallback push.
   const _existingDayKs = new Set(visibleEntries.map(_entryDayK));
   let _filledAny = false;
   _targetDayKs.forEach((dayK) => {
@@ -343,7 +343,7 @@ function closeGodongDiaryModal() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 사용자 명시 2026-05-11: 다시 적어줘 — 모달 안 ↻ 버튼. cooldown 무시 + Haiku 재호출.
+// 사용자 명시 2026-05-11: 다시 적어줘 — 모달 안 ↻ 버튼. cooldown 무시 + Sonnet 재호출.
 // ─────────────────────────────────────────────────────────────────────────────
 function regenerateGodongDiary() {
   if (!_gdiaryState) return;
@@ -351,7 +351,7 @@ function regenerateGodongDiary() {
   if (_gdiaryState.intervalId) { clearInterval(_gdiaryState.intervalId); _gdiaryState.intervalId = null; }
   if (_gdiaryState.toastTimeoutId) { clearTimeout(_gdiaryState.toastTimeoutId); _gdiaryState.toastTimeoutId = null; }
   _gdiaryForceRegenerate = true;
-  // 모달 즉시 제거 + 재진입 (loading → Haiku → 새 entry).
+  // 모달 즉시 제거 + 재진입 (loading → Sonnet → 새 entry).
   const overlay = document.getElementById('gdiaryOverlay');
   if (overlay) overlay.remove();
   _gdiaryState = null;
@@ -587,9 +587,9 @@ function _gdiaryEntryFromText(text, opts) {
   };
 }
 
-// 사용자 명시 2026-05-11: Haiku JSON 배열 entry → state.godongDiary entry 변환.
+// 사용자 명시 2026-05-11: Sonnet JSON 배열 entry → state.godongDiary entry 변환.
 //   parsed = { iso, date, weekday, body }. iso 가 미래거나 너무 옛날이면 안전하게 보정.
-function _gdiaryEntryFromHaiku(parsed) {
+function _gdiaryEntryFromSonnet(parsed) {
   if (!parsed || typeof parsed.body !== 'string') return null;
   const id = 'gd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   const now = new Date();
