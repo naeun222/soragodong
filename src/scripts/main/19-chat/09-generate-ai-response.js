@@ -185,6 +185,22 @@ async function generateAIResponse(modelOverride, opts) {
         }
         return;
       }
+      // 사용자 명시 2026-05-12 ultrathink: 일일 cap 도달 — "내일 또 24h ✨" 톤.
+      //   429 + DAILY_CAP_REACHED + reset_at + (옵션) in_grace + effective_cap / base_cap.
+      //   grace 7일 동안은 cap × 1.5 적용. 사용자 첫인상 충격 완화.
+      if (response.status === 429 && parsed.code === 'DAILY_CAP_REACHED') {
+        if (state.chatMessages[state.chatMessages.length - 1]?.typing) state.chatMessages.pop();
+        saveState(); renderChat();
+        let _remainH = 0;
+        try {
+          const _resetMs = parsed.reset_at ? new Date(parsed.reset_at).getTime() : 0;
+          if (_resetMs > 0) _remainH = Math.max(0, Math.ceil((_resetMs - Date.now()) / 3600000));
+        } catch {}
+        const _graceTag = parsed.in_grace ? ' (이번 주는 보너스 한도)' : '';
+        const _hTag = _remainH > 0 ? ` (${_remainH}h 뒤 reset)` : '';
+        showToast(`🌙 오늘은 여기까지 — 내일 또 24h ✨${_graceTag}${_hTag}`);
+        return;
+      }
       // V3.13.x: 응답 본문에서 message 추출해서 사용자에게 보여주기
       // V4 (사용자 보고 2026-05-05 ultrathink-3): err 가 HTML (Cloudflare 자체 5xx 페이지) 면 <title> 추출.
       // backend Worker 가 응답 못 했을 때 Cloudflare 가 자체 페이지 반환 — 진짜 error code (520/522/524 등) 가 title 안에 있음.

@@ -3,7 +3,7 @@
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from './_lib/auth';
 import { recordUsage, calculateCost } from './_lib/usage';
-import { checkBudget, deductCost, getUserBilling, ensureBillingRow, promoteGuestToEarlyLight, OPUS_DAILY_LIMIT_PREMIUM } from './_lib/billing';
+import { checkBudget, deductCost, getUserBilling, ensureBillingRow, promoteGuestToEarlyLight, OPUS_DAILY_LIMIT_PREMIUM, TIER_PLANS, consumeDailyAtomic } from './_lib/billing';
 import {
   checkAndIncIpRate,
   checkGlobalGuestBudget,
@@ -210,6 +210,21 @@ async function chargeUsage(
       // 사용자 명시 2026-05-06: 화이트리스트 IP 면 글로벌 카운터 제외 — recordGuestCost 내부에서 isAllowlistedGuestIp check.
       waitUntil(recordGuestCost(env as GuestEnv, cost, guestIp).catch(() => {}));
     }
+    // 사용자 명시 2026-05-12 ultrathink: 일일 cap post-charge — fire-and-forget.
+    //   plan 조회 후 consumeDailyAtomic. RPC 가 race-safe (FOR UPDATE) + guest / plan=null skip 자체 처리.
+    //   batch path (chat-batch.ts) 는 별도 — 본 chargeUsage 는 chat.ts (user-trigger) 전용이라 OK.
+    //   grace 7일은 RPC 가 effective_cap = base × 1.5 자동 분기.
+    waitUntil((async () => {
+      try {
+        const _bill = await getUserBilling(env, userId);
+        const _plan = _bill?.subscription_plan as keyof typeof TIER_PLANS | undefined;
+        if (_plan && TIER_PLANS[_plan]?.daily_cap_usd != null) {
+          await consumeDailyAtomic(env, userId, cost, TIER_PLANS[_plan].daily_cap_usd);
+        }
+      } catch (e: any) {
+        console.warn('[chat.ts] consumeDailyAtomic post-charge fail:', e?.message || e);
+      }
+    })());
   }
 }
 
@@ -288,6 +303,33 @@ async function _handleChatRequest(context: {
       code: isGuest ? 'GUEST_LIMIT' : budget.code,
       remaining_credit_usd: budget.remaining_credit_usd
     }, 402);
+  }
+
+  // 사용자 명시 2026-05-12 ultrathink: 일일 cap pre-check.
+  //   - batch path (chat-batch.ts) 는 호출 X — 이 path (chat.ts user-trigger) 만 가드.
+  //   - admin: skip (chargeUsage 안에서도 _isAdminCharge skip 와 일관).
+  //   - guest / plan=null / daily_cap_usd=null: RPC 가 자체 skip.
+  //   - grace 7일: RPC 가 effective_cap = base × 1.5 분기.
+  //   - pre-check 는 amount=0 으로 호출 — 현재 used vs cap 만 확인 (consume 자체는 chargeUsage post-charge 시).
+  const _isAdminUserForDaily = !!(env.ADMIN_USER_ID && user.id === env.ADMIN_USER_ID);
+  if (!_isAdminUserForDaily && budget.subscription_plan) {
+    const _planKey = budget.subscription_plan as keyof typeof TIER_PLANS;
+    const _tier = TIER_PLANS[_planKey];
+    if (_tier && _tier.daily_cap_usd != null) {
+      const _precheck = await consumeDailyAtomic(env, user.id, 0, _tier.daily_cap_usd);
+      if (!_precheck.ok && _precheck.daily_cap_reached) {
+        return jsonResponse({
+          error: '오늘 사용량 한도 도달 — 내일 또 24h ✨',
+          code: 'DAILY_CAP_REACHED',
+          reset_at: _precheck.reset_at,
+          effective_cap: _precheck.effective_cap,
+          base_cap: _precheck.base_cap,
+          used: _precheck.used,
+          in_grace: _precheck.in_grace,
+          plan: budget.subscription_plan
+        }, 429);
+      }
+    }
   }
 
   let body: any;
