@@ -198,12 +198,11 @@ async function selectMutationOption(msgIdx, optIdx) {
     try {
       const resp = await callAnthropic({
           _endpoint: 'mutation',
+          _userContentType: 'mutation_step_action',
+          _vars: { cardTitle: card?.title || '', optLayer: opt.layer, optAction: opt.action, layerName },
           // 사용자 요청 2026-04-30: 고른 후 정리 task → sonnet 4.6 적합.
           model: 'claude-sonnet-4-6', max_tokens: 400,
-          messages: [{
-            role: 'user',
-            content: `사용자 가닥 "${card?.title || ''}" — 새 시도 차원: ${opt.layer} ${layerName}\n행동: "${opt.action}"\n\n[네 일]\n이 행동을 *오늘부터 바로 할 수 있도록* 구체적 step-by-step 3-5단계.\n각 단계: 짧고 명확하게 (한 줄 max 40자). 의지 부담↓ 환경 셋업 우선.\n\n[톤]\n진지 모드 친구. 외재화. "실패" 단어 X. 관찰 친화 (작은 단위).\n\n[출력 — 다른 거 X, 단계만]\n1. (첫 단계 — 가장 작게)\n2. ...\n3. ...\n\n도입 한 줄 + 단계 + 마무리 한 줄 ("시작 전에 더 얘기 X면 ✦ 해볼게로 등록").`
-          }]
+          messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       stepText = data.content?.[0]?.text?.trim() || '';
@@ -270,29 +269,10 @@ function sendMutationMessage() {
 
       const resp = await callAnthropic({
           _endpoint: 'mutation',
+          _userContentType: 'mutation_chat_reply',
+          _vars: { cardTitle: card.title, traitsBlock: traits, patternsBlock: patterns, valuesBlock: values, cfLine, diagLine, allMsgs },
           model: 'claude-sonnet-4-6', max_tokens: 350,
-          messages: [{
-            role: 'user',
-            content: `너는 돌연변이 진화 임시 대화창 안 AI. "${card.title}" 가닥의 다음 시도를 사용자가 진지하게 고민 중.
-
-[톤 — 진지 모드 (가벼운 ㅋㅋ / 농담 X)]
-- 1-4문장. 차분한 친구. 외재화 ("X 패턴이 작동" / "이 도구 안 맞을 수도"). "실패" 단어 X.
-- 사용자 페이스 따라가. 추궁성 질문 X.
-- 사용자 메시지 짧아도 진지 톤 유지 (모드 sticky).
-- 분석/제안 강요 X. 사용자가 자기 발견하도록.
-
-[사용자 본인 데이터 — 우선 인용. generic textbook 단독 회피]
-${traits ? '특성:\n' + traits : ''}
-${patterns ? '\n패턴:\n' + patterns : ''}
-${values ? '\n가치:\n' + values : ''}
-${cfLine ? '\n' + cfLine : ''}
-${diagLine ? '\n' + diagLine : ''}
-
-[지금 대화 전체]
-${allMsgs}
-
-[네 응답만, 마크다운 X]`
-          }]
+          messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       const text = data.content?.[0]?.text?.trim() || '응. 더 얘기해봐.';
@@ -366,29 +346,11 @@ async function _completeMutationToMission(strategyId, opt, chatHistory) {
         const recentMsgs = (chatHistory || []).slice(-6).map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n');
         const aiResp = await callAnthropic({
           _endpoint: 'mutation',
+          _userContentType: 'mutation_4field',
+          _vars: { oldCtx, layerName, optLayer: opt.layer, optAction: opt.action, recentMsgs },
           // 사용자 요청 2026-04-30: 4 필드 정리 task → sonnet 4.6 적합.
           model: 'claude-sonnet-4-6', max_tokens: 500,
-          messages: [{
-            role: 'user',
-            content: `진화한 새 가닥 — 카드 4 필드 정리.
-
-${oldCtx}
-[새 차원] ${layerName} (${opt.layer})
-[새 행동] ${opt.action}
-[돌연변이 대화]
-${recentMsgs}
-
-[네 일]
-새 차원/행동 맞춰 진화한 카드의 4 필드 작성.
-
-[출력 — 정확히 4줄]
-TITLE: <짧은 제목, 5-14자>
-PROBLEM: <문제 상황, 50-90자, 옛 가닥 안 통한 맥락 반영>
-CONCEPT: <심리학 개념 + 1줄 설명, ${layerName} 차원 메커니즘, 30-80자>
-ACTION: <전략적 행동, 50-120자, 구체적 무엇을 어떻게>
-
-[금지] 마크다운, JSON, 따옴표, "실패" 단어, 추상적 다짐.`
-          }]
+          messages: [{ role: 'user', content: '' }]
         });
         const aiData = await aiResp.json();
         const raw = (aiData.content?.[0]?.text || '').trim();

@@ -74,42 +74,19 @@ async function sbSendMessage() {
   _strategyBuilderState.messages.push({ role: 'assistant', content: '...' });
   renderStrategyBuilderChat();
 
-  // 시스템 prompt: 4단 + JSON 같이 출력
+  // 사용자 명시 2026-05-11 ultrathink: system prompt backend 이전 — _promptType='strategy_builder' 매칭.
+  //   backend 가 자체 STRATEGY_BUILDER_SYSTEM 강제 inject (1h cache_control 그대로).
   const recentMsgs = _strategyBuilderState.messages
     .filter(m => m.content !== '...')
     .slice(-8)
     .map(m => ({ role: m.role, content: m.content }));
 
-  const sys = `"전략 DNA" 카드를 같이 만드는 동반자.
-
-[흐름]
-1. 사용자가 막히는 상황 한 줄 적음.
-2. 한두 번 짧게 더 묻고 (예: 빈도/맥락/가치). 너무 많이 묻지 X (1-2턴).
-3. 4단 정리해서 사용자에게 보여줌 — TITLE/PROBLEM/CONCEPT/ACTION
-4. JSON도 같이 출력 (사용자에겐 보이고, 코드가 파싱)
-
-[톤]
-- 친구 반말, 1-3문장, 외재화
-- 칭찬 X, 단정 X, 결론 강요 X
-- 금지어: 대박/힘내/화이팅/할 수 있어/멋져/대단해
-
-[4단 출력 형식 (3-4 turn 후, 사용자가 충분히 적었을 때)]
-응답 본문 + 마지막에 다음 JSON (코드블록 \`\`\`json):
-{
-  "TITLE": "5-14자 명사형 명제",
-  "PROBLEM": "문제 상황 50-90자",
-  "CONCEPT": "심리학 개념 + 1줄 설명 30-80자",
-  "ACTION": "구체 행동 50-120자"
-}
-
-JSON 안 적용하면 4단 정리 X — 더 묻기. 사용자가 충분히 답한 후에만 JSON.`;
-
   try {
     const resp = await callAnthropic({
       _endpoint: 'analyze_4stage',
+      _promptType: 'strategy_builder',
       model: 'claude-sonnet-4-6',
       max_tokens: 800,
-      system: sys,
       messages: recentMsgs
     });
     const data = await resp.json();

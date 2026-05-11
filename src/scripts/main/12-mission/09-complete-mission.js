@@ -55,16 +55,14 @@ async function completeMission(missionId) {
   // Request AI brief encouragement
   if (_canAI()) {
     try {
+      // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildShellMissionComplete 가 합성.
       const resp = await callAnthropic({
         _endpoint: 'shell_story',
+        _userContentType: 'mission_complete',
+        _vars: { missionTitle: mission.title, missionDescription: mission.description || '' },
         model: 'claude-haiku-4-5',
         max_tokens: 150,
-        messages: [{
-          role: 'user',
-          // 사용자 보고 2026-05-10: AI 가 미션 제목을 다른 말로 paraphrase 해서 컨텍스트 다른 메시지 생성하던 케이스 fix.
-          // 미션 제목 그대로 인용 강제 + 다른 행동 / 다른 미션 인용 금지 명시.
-          content: `사용자가 막 완료한 미션:\n"${mission.title}"${mission.description ? `\n(설명: ${mission.description})` : ''}\n\n친구처럼 짧게 (1-2문장) 축하 메시지를 써줘. 규칙:\n- 미션 제목의 핵심 단어를 *그대로* 인용 (paraphrase / 다른 말로 바꾸기 X — "${mission.title}" 의 단어 그대로).\n- 다른 행동 / 다른 미션 / 일반 충고 X — 이 미션 한정.\n- "잘했어!" 같은 판박이 평가 X. 과정·노력에 초점.\n- 반말. 이모지 최대 1개.`
-        }]
+        messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       mission.completionNote = data.content[0].text.trim();

@@ -52,41 +52,16 @@ async function forceAnalyze(opts) {
       })),
       activeModes: Object.keys(state.modes || {}).filter(k => state.modes[k])
     };
-    const prompt = `너는 임상심리학자로서 이 사용자의 Case Formulation을 구축한다.
-
-아래는 사용자 데이터야:
-
-${JSON.stringify(dataDump, null, 2)}
-
-JSON으로 출력:
-
-{
-  "traits": [{"name": "...", "description": "근거와 함께", "confidence": 0.0-1.0}],
-  "values": [{"name": "...", "description": "...", "sdt_need": "autonomy/competence/relatedness", "confidence": 0.0-1.0}],
-  "patterns": [{"name": "...", "trigger": "...", "sequence": "...", "description": "...", "confidence": 0.0-1.0}],
-  "case_formulation": {
-    "problems": ["..."],
-    "mechanisms": ["..."],
-    "strengths": ["..."]
-  }
-}
-
-원칙:
-- 관찰 가능한 행동·표현에 근거.
-- 사용자 실제 언어 반영.
-- ADHD·직업·가치관 맥락 고려.
-- 수면 시각 규칙성, 활력 변동, 2D affect 패턴, 미션 수락·완료 패턴도 해석.
-- 활성 모드(월경, 마감 등) 컨텍스트로 분석.
-- 각 카테고리 최대 6개씩 (5-10 X — 토큰 제한).
-- JSON만 출력.
-- 응답 잘리지 않게 짧고 구체적으로.
-
-[필터 — 가벼운 거름] (사용자 명시 2026-05-08 ultrathink: 너무 빡빡 → 완화. "다음날 나에 대해 새로운 소식 보는 재미")
-- 한 마디 잡담 (인사 / "ㅋㅋ" / 의미 X 발화) 만 패턴화 X. 일상의 작은 관찰도 OK — 음식 취향·날씨 반응·작은 습관 신호 환영.
-- 자기상 / 감정 / 관계 / 갈등 / 변곡점 / 취향 / 일상 리듬 신호 다 OK.
-- confidence ≥ 0.4 면 등록 (옛 0.6 너무 짠 — 새 발견 빈도 ↑).`;
-
-    const response = await callAnthropic({ _endpoint: 'analyze_4stage', model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] });
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildForceAnalyze 가 합성.
+    const _dataDumpJson = JSON.stringify(dataDump, null, 2);
+    const response = await callAnthropic({
+      _endpoint: 'analyze_4stage',
+      _userContentType: 'force_analyze',
+      _vars: { dataDumpJson: _dataDumpJson },
+      model: 'claude-opus-4-7',
+      max_tokens: 2500,
+      messages: [{ role: 'user', content: '' }]
+    });
     if (!response.ok) {
       if (response.status === 429) throw new Error('API 429 — Rate limit. 1-2분 후 다시.');
       if (response.status === 413) throw new Error('데이터 너무 큼. testerMode OFF 후 다시.');

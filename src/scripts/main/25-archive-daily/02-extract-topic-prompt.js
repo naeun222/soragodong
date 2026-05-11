@@ -1,5 +1,6 @@
 // 결과: state.topicCards에 1-3개 토픽 카드 저장
 // 사용자 명시 2026-05-02 ultrathink: prompt builder + result processor 분리 — Batch API path 가 재사용.
+// 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildTopicChapterChat 가 합성. 클라는 chatLog 만 _vars 로.
 function _buildExtractTopicPrompt(prevChapterMsgs) {
   const chatLog = prevChapterMsgs.map(m => {
     const role = m.role === 'user' ? '나' : '소라';
@@ -8,38 +9,7 @@ function _buildExtractTopicPrompt(prevChapterMsgs) {
     content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
     return `${role}: ${content}`;
   }).join('\n\n');
-
-  return `사용자가 AI 친구 "소라고동"과 나눈 한 챕터(연속된 대화 묶음)를 토픽 카드로 정리해.
-
-[대화 원문]
-${chatLog.slice(0, 8000)}
-
-[토픽 카드 추출 규칙]
-- 의미 있는 토픽 1-3개만 (잡담은 토픽 X)
-- 카테고리 중 하나 선택 (V4 8 카테고리):
-  · diary: 일기 / 그날 정서 기록
-  · casual: 일상 / 가벼운 사실
-  · concern: 고민 / 갈림길 / 큰 결정
-  · emotion: 감정 / 마음 상태
-  · memory: 기억할 순간 / 강한 인상
-  · todo: 할 일 / 일감 / 마감
-  · idea: 아이디어 / 통찰
-  · relationship: 관계 / 사람
-- 각 카드: 짧은 제목 (한 줄 ~25자) + 1-2문장 요약
-- 의미 없는 짧은 잡담만 있으면 빈 배열 반환
-
-[출력 형식 — 반드시 JSON만]
-{
-  "topics": [
-    {
-      "title": "이 일 계속할지 고민",
-      "summary": "사람 갈등 + 진로 회의. 결정 못 내림.",
-      "category": "concern"
-    }
-  ]
-}
-
-JSON만 출력. 마크다운 X. 다른 설명 X.`;
+  return { chatLog: chatLog.slice(0, 8000) };
 }
 
 // parsed JSON 받아 topicCards push + chapterMeta 갱신.
@@ -136,9 +106,16 @@ async function extractPreviousChapterTopics(passedMessages) {
   if (!chapterStartedAt) return;
   if ((state.topicCards || []).some(c => c.chapterStartedAt === chapterStartedAt)) return;
 
-  const prompt = _buildExtractTopicPrompt(prevChapterMsgs);
+  const _vars = _buildExtractTopicPrompt(prevChapterMsgs);
   try {
-    const resp = await callAnthropic({ _endpoint: 'extract_topic', model: 'claude-haiku-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] });
+    const resp = await callAnthropic({
+      _endpoint: 'extract_topic',
+      _userContentType: 'chapter_chat',
+      _vars,
+      model: 'claude-haiku-4-5',
+      max_tokens: 600,
+      messages: [{ role: 'user', content: '' }]
+    });
     if (!resp.ok) return;
     const data = await resp.json();
     let text = data.content[0].text.trim();

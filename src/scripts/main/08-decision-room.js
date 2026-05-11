@@ -512,54 +512,30 @@ async function _runMagicHelpAIResponse() {
   const patterns = _topByConf(state.patterns, 5).map(p => `- ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`).join('\n');
   const values = _topByConf(state.values, 3).map(v => `- ${v.name}`).join('\n');
 
+  // 사용자 명시 2026-05-11 ultrathink: system prompt backend 이전 — backend (endpoint-systems.ts) buildMagicHelpSystem 가 _vars 받아 합성.
+  //   1h cache_control 보존. STEP_HELP_GUIDE 항목은 클라가 _vars 로 packed 전달.
   const guide = STEP_HELP_GUIDE[stepId];
-  const guideBlock = guide ? `
-[이 단계가 풀려는 핵심 질문 — 항상 이 질문 쪽으로 끌어와]
-"${guide.q}"
-
-[이 단계 목표 산출물]
-${guide.goal}
-
-[도와주는 방식 — 결정 대신 X, 자기 발견 유도]
-${guide.how.map(h => '- ' + h).join('\n')}
-
-[다른 단계 영역 — 지금 다루지 마 (꺼내려 하면 "그건 다음 단계에서 다루자" 한 줄로 정중히 미루기)]
-${guide.avoid.map(a => '- ' + a).join('\n')}
-` : '';
-
-  const sysPrompt = `너는 마법의 소라고동 — 큰 결정 14일 숙성 도구 안 도우미. 사용자가 "${decision.title}" 결정의 [${meta.title}] 단계에서 막힘.
-
-[너의 역할 — 매우 중요]
-이 단계의 "핵심 질문" 에 대한 사용자 자신의 답을 같이 찾아가 줘. 다른 단계 얘기 X / 결정 자체 X / 일반 조언 X.
-사용자가 답을 적어 [${meta.title}] 칸에 저장할 수 있을 때까지가 이 대화의 목적.
-${guideBlock}
-[톤 — 진지 모드. 매우 중요]
-- 큰 결정 = 가벼운 ㅋㅋ / 농담 / 한 줄 리액션 ❌. 차분한 친구.
-- 1-3문장 짧게. 외재화 톤. 결론 강요 X — 사용자 자기 발견 유도.
-- 사용자 페이스 따라. 추궁 X. 같은 질문 반복 X.
-- 짧은 응답("응", "맞아")에도 톤 유지 (sticky).
-- 사용자 답이 어느 정도 모이면 "이 정도면 [${meta.title}] 칸에 옮겨 적어도 돼" 라고 한 번 가볍게 알려줘 (강요 X).
-
-[사용자 본인 데이터 — 우선 인용. generic 회피]
-${traits ? '특성:\n' + traits : ''}
-${patterns ? '\n패턴:\n' + patterns : ''}
-${values ? '\n가치:\n' + values : ''}
-
-[지금까지 결정 흐름]
-${completedContext || '(아직 시작 X)'}
-
-${currentDraft ? `[이번 단계 ${meta.title}에 현재 적은 거]\n${currentDraft}\n` : ''}
-[네 응답만, 마크다운 X]`;
 
   try {
     const recentMsgs = decision.helpChats[stepId].slice(-15).map(m => ({ role: m.role, content: m.content }));
     const resp = await callAnthropic({
       _endpoint: 'magic_help',
+      _vars: {
+        decisionTitle: decision.title,
+        stepTitle: meta.title,
+        guideQ: guide?.q || '',
+        guideGoal: guide?.goal || '',
+        guideHowList: guide?.how || [],
+        guideAvoidList: guide?.avoid || [],
+        traitsBlock: traits,
+        patternsBlock: patterns,
+        valuesBlock: values,
+        completedContext,
+        currentDraft
+      },
       // 사용자 명시 2026-04-30 (정정): 헤더 모델 토글 = 모든 대화 영향. useOpus 따르기.
       model: (state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
       max_tokens: 400,
-      // 사용자 요청 2026-04-29 비용절감: 1h cache TTL — ADHD burst+break 패턴 (5분 break도 cache 살아남음).
-      system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
       messages: recentMsgs
     });
     const data = await resp.json();
@@ -729,27 +705,13 @@ async function endMagicHelpChat() {
         content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
         return `${role}: ${content}`;
       }).join('\n\n');
-      const _prompt = `사용자가 "${decision.title || '결정'}" 결정의 [${stepTitle}] 단계에서 마법고동(임시 대화)으로 도움 받음.
-
-[대화 원문]
-${chatLog.slice(0, 5000)}
-
-[너의 일]
-이 대화에서 사용자가 얻은 것 3 필드로 정리. 한국어, 간결, 친구 톤.
-
-[출력 형식 — JSON만, 마크다운 X]
-{
-  "new_realization": "사용자가 새로 알게 된 것 (한 줄, ~40자)",
-  "next_action": "다음 행동 (한 줄, 동사로 시작, ~30자)",
-  "conclusion": "이 step 핵심 결론 (1-2문장, ~80자)"
-}
-
-빈 필드 X. 셋 다 채울 것. 무리하면 짧게라도.`;
+      // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildMagicSummary 가 합성.
       const _resp = await callAnthropic({
         _endpoint: 'magic_summary',
+        _vars: { decisionTitle: decision.title || '', stepTitle, chatLog },
         model: 'claude-sonnet-4-6',
         max_tokens: 350,
-        messages: [{ role: 'user', content: _prompt }]
+        messages: [{ role: 'user', content: '' }]
       });
       if (_resp.ok) {
         const _data = await _resp.json();

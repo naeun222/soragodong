@@ -404,89 +404,23 @@ async function _rcSimGenerate(opts) {
   const userScenario = opts.userScenario || '';
   const cfSnapshot = _rcSimCfSnapshot();
 
-  let userPrompt;
-  if (mode === 'godong') {
-    // 사용자 명시 2026-05-11: 다양성 ↑ — 카테고리 풀 (18) 에서 매번 3개 랜덤 픽 + 최근 10개 시나리오 dedupe.
-    const SCENARIO_CATEGORIES = [
-      '음식 / 배달 / 카페 (메뉴 고민, 신메뉴, 갑작스런 식욕)',
-      '모르는 사람과 우연 마주침 (엘리베이터, 지하철, 길거리, 카페 옆자리)',
-      '친구 카톡 / 갑작스런 연락 (오랜만에, 새벽, 술 먹자, 만나자)',
-      '가족 연락 / 가족 모임 (엄마 전화, 명절, 김치 보냈다)',
-      '직장 동료 / 학교 동기와 일상 (점심, 회의실, 사담)',
-      '쇼핑 (마트 진열대, 온라인 광고, 충동구매 유혹)',
-      'SNS (피드, 좋아요, DM, 알고리즘 추천, 팔로우 알림)',
-      '날씨 변화 (갑자기 비, 폭설, 폭염, 환절기)',
-      '교통 (버스 늦음, 택시, 지하철 만원, 길 막힘)',
-      '작은 우연 (잃어버림, 발견, 길에서 줍기, 우연한 만남)',
-      '음악 / 미디어 (새 곡, 추천 알고리즘, 옛 노래)',
-      '운동 / 산책 / 신체 활동 (헬스장, 한강, 계단, 의지 약함)',
-      '잠 / 새벽 / 늦은 밤 (불면, 알람, 새벽 카페, 야행성)',
-      '청소 / 정리 / 집 안 일 (밀린 빨래, 설거지, 옷장)',
-      '반려동물 / 길고양이 / 동물 (산책, 마주침, 사진)',
-      '사소한 신체 감각 (피곤, 배고픔, 갈증, 더위, 추위)',
-      '취미 / 게임 / 독서 (덕질, 신간, 새 게임, 영상)',
-      '날씨/계절 변화 + 옷차림 (환절기, 갑작스런 추위)',
-    ];
-    const _shuffled = SCENARIO_CATEGORIES.slice().sort(() => Math.random() - 0.5);
-    const _pickedCats = _shuffled.slice(0, 3);
-    const r = _ensureRotatingCardState();
-    const _recentScenarios = (Array.isArray(r.recentSimulations) ? r.recentSimulations : [])
-      .slice(-10).map(s => `- "${(s.scenario || '').slice(0, 80)}"`).join('\n');
-
-    userPrompt = `사용자의 case formulation 데이터:
-${cfSnapshot}
-
-[최근 시나리오 — 이거 피해서 다른 거]
-${_recentScenarios || '(없음)'}
-
-[이번 카테고리 후보 — 이 중 하나에서 만들어. 같은 카테고리라도 sub-scenario 다양하게]
-1. ${_pickedCats[0]}
-2. ${_pickedCats[1]}
-3. ${_pickedCats[2]}
-
-가벼운 일상 시나리오 1개 + 사용자가 그 상황에서 보일 행동을 짧게 예측해.
-
-[규칙]
-- scenario: 일상의 사소·가볍·재미있는 상황 1문장 (40-80자). 진지한 주제 X (마감 / 가족 갈등 / 진단 / 큰 결정 X).
-  좋은 예: "친구가 새벽 2시에 떡볶이 먹자고 카톡 옴.", "카페 옆자리 사람 통화가 너무 시끄러움.",
-          "엘리베이터 모르는 사람이 인사함.", "마트에 옛날 과자 신상 발견.",
-          "갑자기 비 와서 우산 없이 나옴.", "지하철 옆 사람 가방에서 좋은 향 남."
-- godongPrediction: 사용자 행동/반응 예측 1-2문장 (40-100자). cf 의 traits / patterns / strengths 살짝 반영.
-  친구 카톡 톤. 길게 풀지 X. 평가 X.
-- 같은 어휘 / 같은 패턴 (예: 카페 옆자리만 반복) 절대 X. 위 [최근 시나리오] 다 봐.
-- 의료 진단 / 진단명 X. 마크다운 X.
-- JSON 만.
-
-[출력]
-{
-  "scenario": "...",
-  "godongPrediction": "..."
-}`;
-  } else {
-    userPrompt = `사용자의 case formulation 데이터:
-${cfSnapshot}
-
-사용자가 적은 시나리오:
-"${userScenario.slice(0, 1000)}"
-
-이 사용자가 위 시나리오에서 어떻게 반응할지 짧게 예측.
-
-[규칙 — 사용자 명시 2026-05-09]
-- 1-2문장 (40-100자, 짧고 명료). 사용자 어휘 / cf 의 traits / patterns / strengths 살짝 반영.
-- 친구 카톡 톤. 길게 풀지 X — 핵심만. 평가 X. 의료 진단 X.
-- JSON 만 (마크다운 X).
-
-[출력]
-{
-  "godongPrediction": "..."
-}`;
-  }
+  // 사용자 명시 2026-05-11 ultrathink: prompt template + SCENARIO_CATEGORIES backend 이전 — buildSimScenario 가 합성 + 카테고리 셔플.
+  const r = _ensureRotatingCardState();
+  const _recentScenarios = (Array.isArray(r.recentSimulations) ? r.recentSimulations : [])
+    .slice(-10).map(s => `- "${(s.scenario || '').slice(0, 80)}"`).join('\n');
 
   const resp = await callAnthropic({
     _endpoint: 'archive_summary',
+    _userContentType: 'sim_scenario',
+    _vars: {
+      mode: mode === 'godong' ? 'ai' : 'user',
+      cfSnapshot,
+      userScenario: userScenario.slice(0, 1000),
+      recentScenarioList: _recentScenarios
+    },
     model: 'claude-sonnet-4-6',
     max_tokens: 400,
-    messages: [{ role: 'user', content: userPrompt }],
+    messages: [{ role: 'user', content: '' }],
   });
   if (!resp.ok) throw new Error('Sonnet HTTP ' + resp.status);
   const data = await resp.json();
@@ -708,40 +642,17 @@ async function extractFromSimulationArchive() {
   // 최근 10개까지만 한 호출에
   const entries = pending.slice(0, 10);
 
-  const prompt = `사용자가 일상 가상 시나리오에 어떻게 반응할지 답한 시뮬 데이터.
-가상 시나리오 — 깊은 자기 인식 데이터 X. 가벼운 행동 패턴 단서로만 활용.
-
-[규칙 — 매우 보수적]
-- 강한 신호 (3+ 시뮬에서 일관된 패턴) 만 추출.
-- confidence < 0.7 항목 빈 배열 (보수적 임계값 — 챕터 추출 0.6 보다 ↑).
-- 가상 시나리오라 절대적 자기 모델 X — 약한 단서로만 활용.
-- 진단명 / 의료 용어 X.
-- description 끝에 사용자 실제 답 1줄 인용 (예: 'description: 야행성 — "야행성이라 일단 호응부터 하고"').
-
-[추출 가능 항목 — 행동 성향 / 가치 / 반응 패턴 만]
-- new_traits: 행동 성향 (예: 야행성, 즉흥성, 회피)
-- new_values: 가치 (예: 자율, 연결)
-- new_patterns: 반응 패턴 (예: 거절 후 부채감)
-
-[추출 X 항목 — cf 5차원 절대 X]
-- problems / mechanisms / strengths / goals / growth 카테고리 출력 X. 시뮬 데이터로 진지한 자기 모델 갱신 X.
-
-[시뮬 데이터 — 최근 ${entries.length}개]
-${entries.map((e, i) => `[시뮬 ${i + 1}] (${e.userVerdict})\n${e.body}`).join('\n\n')}
-
-[출력 — JSON만, 마크다운 X]
-{
-  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
-  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}]
-}`;
+  // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildSimExtract 가 합성.
+  const _entriesBody = entries.map((e, i) => `[시뮬 ${i + 1}] (${e.userVerdict})\n${e.body}`).join('\n\n');
 
   try {
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
+      _userContentType: 'sim_extract',
+      _vars: { entriesBody: _entriesBody, entriesCount: entries.length },
       model: 'claude-sonnet-4-6',
       max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: '' }],
     });
     if (!resp.ok) return;
     const data = await resp.json();

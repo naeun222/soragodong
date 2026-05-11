@@ -63,24 +63,11 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
 
   // 사용자 보고 2026-04-29: 'isRegen' 변수 제거됐는데 reference 남아있던 ReferenceError fix.
   // 항상 임시 대화 전체를 컨텍스트로 (인사 메시지만 있어도 무해, 대화 풀린 상태면 사용자 컨텍스트 반영).
+  // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — _vars 만 보냄, backend buildMutationFirstGen 가 합성.
   const recentMsgs = _mutationChatState.messages
     .filter(m => m.role !== 'options' && !m._placeholder)
     .map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`)
     .join('\n');
-  let sameLayerNote;
-  if (firstGen) {
-    sameLayerNote = `\n[5 가지 모두 — L1, L2, L3, L4, L5 각 1개. 제외 X.]`;
-  } else if (mode === 'same') {
-    sameLayerNote = `\n[지금 차원 보완 모드] 같은 차원 ${prevLayer} ${_LAYER_NAME[prevLayer]||''} 에서만 1-2개. 사용자가 대화에서 짚은 *이유*를 한 구절 그대로 인용 후, 그 이유를 보완한 행동 작성. 옵션 객체마다 "reason" 필드 필수 (사용자 대화 인용, 30-60자). 옛 행동 똑같이 반복 X — 진짜 보완.`;
-  } else {
-    sameLayerNote = `\n이전이 ${prevLayer} 였으니 그 외 4 가지 각 1개.`;
-  }
-  const convoNote = recentMsgs
-    ? `\n\n[지금까지 대화 — 이 사용자 컨텍스트 우선 반영]\n${recentMsgs}\n\n위 대화에서 사용자가 짚은 진짜 어려움을 옵션에 녹여. generic 답 X.`
-    : '';
-  const headerLine = firstGen
-    ? `[주제 (토픽 → 전략 첫 결정화)] "${card.title}"\n[summary] ${card.summary || '(없음)'}\n[원래 카테고리] ${card.sourceTopicCategory || card.category || '?'}`
-    : `[전략 카드] "${card.title}"\n[심리학 개념] ${card.psychConcept || '(없음)'}\n[문제 상황] ${card.problemContext || '(없음)'}\n[이전 가지 ${prevLayer} ${_LAYER_NAME[prevLayer]||''}] "${prevAction}"\n[안 통한 미션] "${missionTitle}"`;
 
   // AI 호출 (있으면) — fallback 즉시 사용 (UI 멈추지 않게)
   let aiOptions = [];
@@ -88,40 +75,24 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
     try {
       const resp = await callAnthropic({
           _endpoint: 'mutation',
+          _userContentType: 'mutation_first_gen',
+          _vars: {
+            firstGen,
+            mode,
+            prevLayer,
+            prevAction,
+            missionTitle,
+            cardTitle: card.title,
+            cardSummary: card.summary,
+            cardSourceCategory: card.sourceTopicCategory,
+            cardCategory: card.category,
+            cardPsychConcept: card.psychConcept,
+            cardProblemContext: card.problemContext,
+            recentMsgs
+          },
           model: 'claude-opus-4-7',
           max_tokens: 900,
-          messages: [{
-            role: 'user',
-            content: `${firstGen ? '토픽 → 전략 결정화: 첫 가지 5 옵션 (L1-L5 각 1개)' : (mode === 'same' ? '돌연변이 같은 차원 보완 옵션 1-2개 (이유 인용 + 보완)' : '돌연변이 진화 다른 차원 4 옵션')} (사용자 요청 2026-04-29: 대화 흐름 반영).
-
-${headerLine}
-
-[5 가지 — 의지 부담 ↓일수록 관찰 친화]
-- L1 인지: 생각의 틀 재구조화 (CBT, 인지 재해석) — 의지 100%
-- L2 행동: 알람·체크리스트·시간 박스 — 의지 90%
-- L3 환경: 물리적 환경/도구 자체 변경, 자동 trigger — 의지 30%
-- L4 사회: 친구·책임 파트너·공개 약속 — 의지 20%
-- L5 메타: 가치 재검토, 마법의 소라고동, 큰 그림 보기 — 의지 10%
-${sameLayerNote}${convoNote}
-
-[옵션 작성 가이드 — 매우 중요]
-1. 추상 X 구체 ○: "환경 바꿔" X, "오늘 저녁 7시까지 폰을 거실 책상 충전기에 꽂아두기" ○
-2. 첫 행동 명확: 동사로 시작 + 5분 안에 시작 가능
-3. 네 사용자 ${card.title} 패턴에 맞게 — 일반론 X
-4. 왜 도움되는지 1구절 포함 (예: "도파민 trigger 외부화", "결정 부담 ↓")
-5. 관찰 친화: 의지 부담 ↓ 가지 (L3/L4) 우선, L1·L5는 신중하게
-6. 한 줄 70-100자
-
-[출력 JSON만 — 마크다운 X 따옴표 안 escape]
-${mode === 'same'
-  ? `{ "options": [{"layer":"${prevLayer}","action":"보완된 행동","reason":"사용자 대화에서 인용한 이유 한 구절"}] }`
-  : `{ "options": [{"layer":"L3","action":"오늘 저녁 7시까지 폰을 거실 충전기에 꽂아두기 — 손에 안 닿으면 자동 차단 (도파민 trigger 외부화)"},...] }`}
-
-[절대 금지]
-- "실패" / "안 됨" / "왜 못 했지" 단어
-- 추상 다짐 ("열심히", "노력")
-- 마크다운 / 줄바꿈 / 따옴표 escape`
-          }]
+          messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       let raw = data.content[0].text.trim();

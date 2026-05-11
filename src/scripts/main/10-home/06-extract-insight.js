@@ -4,38 +4,16 @@
     const cleanInsight = insightText.trim();
     if (cleanInsight.length < 20) return;  // 너무 짧으면 추출 가치 X
 
-    const prompt = `다음은 사용자가 "✦ 깨달음으로" 보관한 메시지야 (출처: ${source}).
-사용자가 의도적으로 가치 있다고 판단한 텍스트라서 자기 인식 / 패턴 / 가치관 신호가 있을 수 있어.
-
-[사용자 직전 발화]
-${(userMsg || '').slice(0, 600) || '(없음)'}
-
-[깨달음 메시지 — AI(소라고동) 응답]
-${cleanInsight.slice(0, 1200)}
-
-이 깨달음에서 사용자(주체) 자신이 새로 발견 / 명확히 한 것 만 JSON으로 뽑아.
-- ⚠️ AI(소라고동)의 가설·해석·"너 X해" 발화는 사용자 trait 후보 X. AI는 외부 관찰자.
-- [사용자 직전 발화] 에 사용자 본인이 직접 표현한 자기 인식만 trait/value/pattern 후보.
-- 깨달음 메시지(AI 응답)는 그 발화를 명명/연결한 lens일 뿐 — AI 가 단정한 명제 ≠ 사용자 자신의 인식.
-- 사용자 직전 발화가 비어있거나 짧으면 → 모두 빈 배열.
-- 추측·일반론 X. 근거 약하면 빈 배열.
-
-{
-  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
-  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
-  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."}
-}
-
-JSON만, 다른 글 X.`;
-
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildChapterInsight 가 합성.
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
+      _userContentType: 'chapter_insight',
+      _vars: { source, userMsg: userMsg || '', cleanInsight },
       // 사용자 요청 2026-04-30 (재조정): 깨달음 버튼 ~10/일 자주 호출 → "자주 안 하는 거 = Opus" 원칙 따라 sonnet 복원.
       // 정확도는 confidence 0.5 threshold + user_verified ✓ 컨펌 흐름으로 보호.
       model: 'claude-sonnet-4-6',
       max_tokens: 700,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return;
     const data = await resp.json();

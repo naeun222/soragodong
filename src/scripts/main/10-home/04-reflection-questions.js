@@ -60,11 +60,14 @@ async function addReflectionQuestion(text) {
   let shortText = trimmed.length <= 30 ? trimmed : '';
   if (!shortText && _canAI()) {
     try {
+      // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildReflectionCardSummary 가 합성.
       const resp = await callAnthropic({
         _endpoint: 'reflection',
+        _userContentType: 'card_summary',
+        _vars: { trimmed },
         model: 'claude-haiku-4-5',
         max_tokens: 60,
-        messages: [{ role: 'user', content: `다음 질문을 카드에 한 줄로 넣을 수 있게 짧게 요약. 10-25자, 명사형 또는 짧은 명제. 따옴표/마크다운 X.\n\n원본:\n${trimmed.slice(0, 300)}\n\n짧은 요약 한 줄만 출력.` }]
+        messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       const raw = (data.content?.[0]?.text || '').trim().replace(/^["'\s]+|["'\s]+$/g, '').replace(/\*\*/g, '');

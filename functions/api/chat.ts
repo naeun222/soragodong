@@ -12,6 +12,15 @@ import {
   type GuestEnv
 } from './_lib/rate-limit';
 import { verifyTurnstileToken } from './_lib/turnstile';
+// 사용자 명시 2026-05-11 ultrathink: SYSTEM_PERSONA backend 이전 — 클라이언트 평문 노출 차단.
+// chat_main / analyze_4stage / intake endpoint 시 첫 system 블록 앞에 prepend (cache_control 보존).
+import { applyPersonaToBody } from './_lib/prompts/system-persona';
+// 사용자 명시 2026-05-11 ultrathink: 자체 system prompt (first_touch / intake_reply / intake_entry_gen / strategy_builder / magic_help / reflection) backend 이전.
+// _promptType 또는 _endpoint 매칭 시 server-side system 강제 override. shouldSkipPersona = SYSTEM_PERSONA prepend 도 skip 판정 (force_analyze 등 자체 톤).
+import { applyEndpointSystem, shouldSkipPersona } from './_lib/prompts/endpoint-systems';
+// 사용자 명시 2026-05-11 ultrathink: user message instruction (mutation / extract_chapter / decision_step / archive_summary / force_analyze / magic_summary / review_insight / chat_rolling_summary / shell_story / brain_dump / mission_verify / reflection card_summary / first_touch / intake) backend 이전.
+// _userContentType 매칭 시 마지막 user message content 강제 합성.
+import { applyUserContentTemplate } from './_lib/prompts/user-content-templates';
 
 // 사용자 명시 2026-05-05: 게스트 (anonymous) 사용자 max_tokens 강제 cap — 비용 폭주 방어.
 // chat = 800 (대화 응답). 분석 endpoint (extract_chapter / extract_topic / intake / first_touch) = 2000 (JSON 출력 길이 보장).
@@ -355,12 +364,41 @@ async function _handleChatRequest(context: {
   // is_deeper_analysis 는 backend 에서 무시 (위 audit fix) — 옛 client 호환 위해 strip 만 유지.
   delete body.tutorial_mode;
   delete body.is_deeper_analysis;
+  // 사용자 명시 2026-05-11 ultrathink: backend prompt 모듈 hint 필드들 strip (Anthropic forward X).
+  delete body._promptType;
+  delete body._userContentType;
+  delete body._vars;
+
+  // 사용자 명시 2026-05-11 ultrathink: 자체 system prompt 들 backend override — 클라이언트 평문 노출 차단.
+  // _promptType (intake_reply / intake_entry_gen / strategy_builder) 또는 _endpoint (first_touch / magic_help / reflection) 매칭 시
+  // body.system 자체를 server-side template 으로 강제 교체. 클라가 보낸 system 무시.
+  applyEndpointSystem(body);
+
+  // 사용자 명시 2026-05-11 ultrathink: user message instruction 들 backend 이전.
+  // _userContentType 매칭 시 마지막 user message content 강제 합성.
+  applyUserContentTemplate(body);
+
+  // 사용자 명시 2026-05-11 ultrathink: SYSTEM_PERSONA backend 이전 — 클라이언트 평문 노출 차단.
+  // chat_main / analyze_4stage / intake endpoint 시 첫 system 블록 앞에 SYSTEM_PERSONA prepend.
+  // cache_control 보존 + Anthropic prompt cache prefix-match 로 90% 할인 그대로.
+  // 의료법/자살 가드 inject (아래) 보다 *먼저* 실행 — 첫 블록 앞 prepend, 의료법 가드는 마지막에 append, 충돌 X.
+  // shouldSkipPersona = PERSONA_SKIP_PROMPT_TYPES (intake_reply / intake_entry_gen / strategy_builder) + PERSONA_SKIP_USER_CONTENT_TYPES (force_analyze 등) 매칭 시 persona prepend skip.
+  if (!shouldSkipPersona(body)) {
+    applyPersonaToBody(body);
+  }
 
   // 사용자 명시 2026-05-08 ultrathink (audit FAIL #5): 자살예방법 §15-6 협력 권고 — 서버측 위기 가드.
   // 옛: 위기 키워드 감지 = 클라이언트 (13-crisis-detection.js) 만. API 직접 호출 / 클라이언트 우회 시 무방비.
   // 신: 서버에서 user 메시지 자살·자해 키워드 detect → system prompt 에 안전 가드 강제 inject + 응답 헤더 X-Crisis-Detected.
-  // chat endpoint (메인 대화) 한정 — 분석/추출 endpoint 는 X (사용자 직접 발화 X).
-  const _isMainChat = (body._endpoint === 'chat' || !body._endpoint);
+  // 사용자 명시 2026-05-11 ultrathink (가드 매칭 fix): V4 endpoint 명 변경 ('chat' → 'chat_main') 후 매칭 누락 — chat-style endpoint 모두 포함.
+  //   chat-style = 사용자 직접 발화 endpoint (chat_main / magic_help / reflection / decision_step / mutation / archive_summary).
+  //   분석 endpoint (analyze_4stage / intake) 도 사용자 발화 컨텍스트라 포함 — SYSTEM_PERSONA §14-16 가드 + backend inject 이중 가드 의도.
+  const _CRISIS_ENDPOINTS = new Set([
+    ...CHAT_STYLE_ENDPOINTS,
+    'analyze_4stage',
+    'intake'
+  ]);
+  const _isMainChat = (body._endpoint === 'chat' || !body._endpoint || _CRISIS_ENDPOINTS.has(body._endpoint));
   const _crisisDetected = _isMainChat && _detectCrisisInRequest(body);
 
   // 사용자 명시 2026-05-08 ultrathink (audit WARN #20): 의료법 §27 / 표시광고법 §3 서버측 minimum 가드.

@@ -35,31 +35,14 @@ async function _maybeBuildRollingSummary(oldMessages, cacheKey) {
       return `${role}: ${content}`;
     }).join('\n\n');
 
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildRollingSummary 가 합성 (existing 유무 분기).
     const _existing = state.preferences._chatRollingSummary[cacheKey] || '';
-    const prompt = _existing
-      ? `사용자(나)와 AI(소라)의 같은 챕터 대화 흐름이 길어져서 누적 요약을 update.
-
-[기존 요약]
-${_existing}
-
-[추가된 대화 + 누적]
-${chatLog.slice(0, 7000)}
-
-[너의 일]
-한 단락 (4-6 문장) 요약. 대화 핵심 흐름 + 사용자가 무엇을 가지고 있었는지 + 어디까지 풀렸는지 + 최근 변화. 한국어, 친구 톤. 마크다운 X. 이 요약은 다음 응답에서 옛 대화 대신 prompt 에 들어감 — 대화 맥락 잃지 않게 핵심 보존.`
-      : `사용자(나)와 AI(소라)의 한 챕터 대화 (옛 부분).
-
-[대화 원문]
-${chatLog.slice(0, 7000)}
-
-[너의 일]
-한 단락 (4-6 문장) 요약. 대화 핵심 흐름 + 사용자가 무엇을 가지고 있었는지 + 어디까지 풀렸는지. 한국어, 친구 톤. 마크다운 X. 이 요약은 다음 응답에서 옛 대화 대신 prompt 에 들어감 — 대화 맥락 잃지 않게 핵심 보존.`;
-
     const resp = await callAnthropic({
       _endpoint: 'chat_rolling_summary',
+      _vars: { existingSummary: _existing, chatLog },
       model: 'claude-haiku-4-5',
       max_tokens: 280,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return;
     const data = await resp.json();

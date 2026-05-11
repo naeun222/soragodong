@@ -49,16 +49,21 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
   // fetch interceptor가 state.apiKey 비어있으면 자동으로 /api/chat 라우팅. 게이트만 풀면 됨.
   if (_canAI()) {
     try {
-      const ctx = isMutation
-        ? `[전략] ${card.title}\n[새 차원] ${layerName}: ${mutationOpt.action}\n[사용자 상황] ${situation}`
-        : `[전략] ${card.title}\n[전략 행동] ${card.actionStrategy || ''}\n[심리학] ${card.psychConcept || ''}\n[사용자 상황] ${situation}`;
+      // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildTodayProposal 가 합성.
       const resp = await callAnthropic({
         _endpoint: 'decision_step',
+        _userContentType: 'today_proposal',
+        _vars: {
+          isMutation,
+          cardTitle: card.title,
+          layerName,
+          mutationAction: mutationOpt ? mutationOpt.action : '',
+          cardActionStrategy: card.actionStrategy || '',
+          cardPsychConcept: card.psychConcept || '',
+          situation
+        },
         model: 'claude-sonnet-4-6', max_tokens: 120,
-        messages: [{
-          role: 'user',
-          content: `${ctx}\n\n[네 일]\n위 정보 (전략·전략 행동·심리학 개념·사용자 상황) 셋 다 활용해서 '오늘의 제안' 1개 만들어.\n- "전략 행동" 그대로 복사 X — 오늘 사용자 상황에 맞춰 구체화/변형 필수\n- 한 줄 (max 40자). 동사로 시작. 환경 셋업 우선 (의지 부담 ↓).\n\n[출력]\n제안만 한 줄. 다른 거 X. 마크다운 X.`
-        }]
+        messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       proposal = (data.content?.[0]?.text || '').trim().replace(/^["「'`]|["」'`]$/g, '').split('\n')[0].trim();

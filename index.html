@@ -15977,81 +15977,9 @@ function _buildAnnualReviewPrompt(year, data) {
     year: targetYear, entries, pearls, archive, decisions, quarterlies, insights, chatArchive,
     stats: { entryCount: entries.length, pearlCount: pearls.length, archiveCount: archive.length, decisionCount: decisions.length }
   };
-  // 사용자 명시 2026-05-09 ultrathink: stable (가이드 / 톤 / 출력 schema) → cache_control ephemeral.
-  // volatile (분기 리뷰 4개 / entries / archive / decisions) 만 매번 다름. 90% 비용↓.
-  // finding1 / finding2 schema 의도 명시 + risk_signals 추가.
-  const stable = `너는 사용자의 연간 리뷰를 작성한다.
-
-[목표]
-1년 데이터 → 정체성 변화 / 핵심 finding 2개 / 가장 깊은 숙고 / 가장 현명한 깨달음 발견.
-분기 리뷰 4개 종합 후 '한 해 = 한 단락' narrative.
-
-[톤]
-관찰 친화. 너 = 사용자. 칭찬 inflation X. 사실 관찰 ○. 친구 톤 (반말 OK). "적용하다" 동사 금지 (자연 동사로).
-
-[finding 차별화 — 사용자 명시 2026-05-09 ultrathink]
-- finding1 = 인용 중심 발견. 사용자 entry/대화 한 줄 → 데이터 (수치/빈도) → 결론. quote 가 핵심.
-- finding2 = 대조 중심 발견. 두 그룹 / 두 시기 / 두 모드 차이 (vs 비교). friendLow vs friendHigh 두 수치가 핵심.
-둘이 의미 겹치지 않게 — 발견 각도 다르게.
-
-[risk_signals 가드 — 사용자 명시 2026-05-09 ultrathink: 1년 단위 패턴 위기 감지]
-3개월+ 지속 mood drop / 수면 패턴 변화 / 사람 만남 점점 X / 분기 review 들 negative 추세 등 = 'watch' 또는 'concern'.
-concern 시 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 자동 inject.
-
-[출력 — JSON 만, 마크다운 X]
-{
-  "oneWord": "한 단어 (예: 전환, 회복, 시작)",
-  "persona": "한 줄 페르소나 ('OOO한 사람' 형식)",
-  "personaReason": "구체적 데이터 한 줄 (수치/날짜)",
-  "persona_evolution": {
-    "start": "올해 1-2월 너의 모습 한 줄 (사용자 어휘, 일기/대화 기반. 예: '거절 못하고 일주일 망치는 사람', '잠 안 자고 버티는 사람'). 따옴표 X.",
-    "end": "올해 11-12월 너의 모습 한 줄 — start 와 대조되는 변화 (예: '명확히 말하는 사람', '11시에 자는 사람'). 따옴표 X."
-  },
-  "trajectory": [
-    {"quarter_label": "Q1 / 봄", "line": "그 분기 한 줄 정체성 (사용자 어휘, 8-20자). 예: '거절 연습 시작한 분기', '잠 부족과 싸운 분기'"},
-    {"quarter_label": "Q2 / 여름", "line": "..."},
-    {"quarter_label": "Q3 / 가을", "line": "..."},
-    {"quarter_label": "Q4 / 겨울", "line": "..."}
-  ],
-  "finding1": {
-    "label": "발견 라벨 — 인용 중심 (15자 이내)",
-    "quote": "사용자 인용 (10-15자) — 실제로 entry/대화에 있는 말",
-    "dataNum": "수치 (예: '+30%' 또는 '4번 중 4번')",
-    "dataText": "구체 데이터 (2줄, \\n)",
-    "conclusion": "결론 (2줄, <span> 핵심 강조 가능)"
-  },
-  "finding2": {
-    "label": "발견 라벨 — 대조·비교 중심 (15자 이내)",
-    "friendLow": "낮은 쪽 수",
-    "friendLowLabel": "낮은 쪽 라벨 (예: '시험기')",
-    "friendHigh": "높은 쪽 수",
-    "friendHighLabel": "높은 쪽 라벨 (예: '여행기')",
-    "conclusion": "결론 (<span> 강조). 두 수치 차이가 의미하는 것."
-  },
-  "deep": {
-    "question": "올해 가장 깊었던 질문 — 사용자가 마법고동 (14일 숙성) 으로 실제로 다룬 결정 중 가장 본질적인 것. 인용 형식 (\\\"...\\\"). 1줄 또는 2줄 (\\n 사용). 한국 사용자 일상 어휘. 추상 reframe X 구체 결정 ○.",
-    "conclusion": "14일 후 결론 — 인용 형식 (\\\"...\\\"). 실행 가능한 짧은 문장",
-    "date": "YYYY.MM.DD → YYYY.MM.DD · 14일"
-  },
-  "best_pearl": {
-    "title": "올해 가장 현명한 한 마디 (8-20자) — [깨달음 카드 top 20] 또는 [일기 발췌] 에서 사용자가 실제로 한 말 / 표현 그대로. 사용자 1인칭 발화 톤 유지.",
-    "summary": "그 깨달음 요약 한 줄 — 사용자 본인 어휘",
-    "whyThisYear": "왜 가장 현명한지 — 일상어로 친절히 풀어쓰기. 'Q3 카드 #5' 같은 dev 용어 X. 자연 한국어. 2-3 문장."
-  },
-  "top_pearls": [
-    {"title": "best_pearl 다음 2위 진주 (8-20자, 사용자 어휘 그대로)", "note": "한 줄 부연 (선택)"},
-    {"title": "3위 ...", "note": "..."},
-    {"title": "4위 ...", "note": "..."}
-  ],
-  "oneLine": "한 해 마무리 — 따뜻한 토닥 톤 (분석 X). 친구가 어깨 토닥하며 하는 말. 한국어 자연 어순. 구조: 첫 줄 = 평가어 → 빈 줄 → 변화 'X에서 Y로' (2줄) → 빈 줄 → 마무리 ('수고했어 🫂' 류). \\n\\n 으로 빈 줄. 예: '너 올해 많이 컸어.\\n\\n자책에서 관찰로,\\n회피에서 회복으로.\\n\\n수고했어 🫂'",
-  "risk_signals": {
-    "level": "'none' | 'watch' | 'concern' — 1년 단위 패턴.",
-    "signals": ["감지된 신호 (구체, 부드럽게). 'none' 일 때 빈 array.", "..."],
-    "suggestion": "부드러운 제안 1줄. concern 시 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 포함. watch 면 self-care. none 이면 빈 문자열."
-  }
-}
-
-JSON만 출력. 모든 필수 필드 다 채워서 (값 없으면 빈 문자열).`;
+  // 사용자 명시 2026-05-11 ultrathink: review_annual stable system (JSON schema ~70줄) backend 이전.
+  //   functions/api/_lib/prompts/review-systems.ts REVIEW_ANNUAL_SYSTEM. backend 가 _endpoint='review_annual' 매칭하여 강제 inject.
+  //   volatile (사용자 데이터) 만 user message 로 전송 — cache 적용 X (매번 변동).
 
   const volatile = `${ctx.year}년 연간 리뷰 narrative 작성.
 
@@ -16072,7 +16000,8 @@ ${ctx.decisions.map(d => '· ' + (d.title || '') + ': ' + (d.conclusion || '')).
 
 위 데이터로 ${ctx.year}년 연간 리뷰 작성. JSON만 출력.`;
   return {
-    system: [{ type: 'text', text: stable, cache_control: { type: 'ephemeral' } }],
+    // 사용자 명시 2026-05-11 ultrathink: stable system 자체는 backend (review-systems.ts) 가 강제 inject — client system 비움.
+    system: undefined,
     model: 'claude-opus-4-7',
     max_tokens: 4000,
     userMessage: volatile,
@@ -17114,54 +17043,14 @@ async function generateFirstTouchFromCoreData(snapshot) {
   const entriesText = JSON.stringify(snapshot.entries || [], null, 0).slice(0, 1500);
   const modesText = (snapshot.selectedModes || []).join(', ') || '(없음)';
   const vitalityText = snapshot.pickedVitality || '(미응답)';
-  const prompt = `사용자가 처음 앱에 진입해 코어 #1 (하면서 익히기) 튜토리얼을 끝냈다. 이 동안 사용자가 남긴 첫 데이터로 가벼운 첫 관찰을 작성한다.
-
-[사용자가 코어 #1 동안 남긴 거]
-대화 메시지 (사용자 발화):
-${userMsgsText || '(없음)'}
-
-오늘 일기 / 체크인:
-${entriesText}
-
-선택한 모드: ${modesText}
-오늘 활력: ${vitalityText}
-
-[목표]
-- 한 단어 정체성 명명 (정형 X — 사용자 첫 데이터 기반 고유)
-- 가설 3개 — trait / value / pattern 중 적절한 카테고리. confidence 0.3-0.5 (낮음 — 데이터 적음, 첫 인사 수준).
-- 다음 1주 관찰 거리 2개 (구체, observable)
-- 한 줄 친근 인사 + 첫 인상 (40자 이내)
-
-[가설 schema 가이드]
-- trait: name (10자 이내) + description (한 문장, 명사형 분석체)
-- value: name (5자 이내) + description (한 문장, 명사형 분석체)
-- pattern: name (10자 이내 라벨) + trigger (조건) + sequence (행동 흐름, 명사형 분석체)
-- display_text: ✓ 박스에서 보일 친근한 한 줄 (예: "꼼꼼한 편인 거 같아")
-
-[톤]
-- description / sequence (나 탭 본문): **명사형 분석체 LOCK**. 관찰자 3인칭. 어미는 "~ 명시", "~ 강하게 느낌", "~ 하는 경향", "~ 한 태도", "~ 함" 같이 명사형 종결. 추측 어미 ("있을 수 있어", "할 수 있어", "~ 인 듯", "~ 일 것") 금지. 친근 반말 X. confidence 낮아도 어미는 분석체 유지 (수치로만 표현).
-- display_text / intro_line: 친한 친구 반말. judgment X. self-compassion. confidence 낮음 명시 (예: "초안 — 함께 확인해볼 가설").
-- 공통: Surprise > Truth — '어, 어떻게 알았어?' 트리거. Specific > Generic.
-
-[출력 JSON 만, markdown X]
-{
-  "one_word": "한 단어 정체성",
-  "intro_line": "한 줄 친근 인사 + 첫 인상 (40자 이내)",
-  "hypotheses": [
-    { "category": "trait" | "value" | "pattern", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.3-0.5, "display_text": "..." },
-    ...3개
-  ],
-  "watch_points": [
-    "다음 1주 관찰 거리 1 (구체, observable)",
-    "다음 1주 관찰 거리 2"
-  ]
-}`;
+  // 사용자 명시 2026-05-11 ultrathink: system + user content 모두 backend 이전.
+  //   backend (functions/api/_lib/prompts/endpoint-systems.ts + user-content-templates.ts) 가 _endpoint='first_touch' 매칭하여 system + user content 강제 inject.
   const resp = await callAnthropic({
     _endpoint: 'first_touch',
+    _vars: { userMsgsText, entriesText, modesText, vitalityText },
     model: 'claude-sonnet-4-6',
     max_tokens: 1500,
-    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
-    messages: [{ role: 'user', content: prompt }]
+    messages: [{ role: 'user', content: '' }]
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -17341,21 +17230,16 @@ function _intakeShouldDeepen(text) {
 // Step2: AI 가 사용자 첫 짧은 발화 받고 한 번 더 풀어달라 부탁 (1-2 문장).
 async function _intakeDeepenAsk(userText) {
   if (!_canAI()) throw new Error('AI 호출 불가능');
-  const prompt = `너는 소라고동 — 자기관찰 친구. 따뜻 + 짧게 + 반말.
-사용자가 첫 발화로 짧게 말했어. 한 번 더 풀어달라 부탁해.
-판단 X. 강요 X. 1-2 문장 follow-up 질문.
-사용자 발화의 핵심어 1개를 자연스럽게 paraphrase 안에 넣어.
-
-사용자 첫 발화: "${userText}"
-
-[출력]
-1-2 문장만. 다른 글 X. 따옴표 X.`;
+  // 사용자 명시 2026-05-11 ultrathink: system + user content 모두 backend 이전.
+  //   _promptType='intake_reply' (system) + _userContentType='intake_deepen_ask' (user content) 매칭.
   const resp = await callAnthropic({
     _endpoint: 'intake',
+    _promptType: 'intake_reply',
+    _userContentType: 'intake_deepen_ask',
+    _vars: { userText },
     model: 'claude-sonnet-4-6',
     max_tokens: 200,
-    system: '소라고동 톤 — 따뜻하고 짧게. 1-2 문장만 출력. 따옴표·markdown X.',
-    messages: [{ role: 'user', content: prompt }]
+    messages: [{ role: 'user', content: '' }]
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -17365,21 +17249,18 @@ async function _intakeDeepenAsk(userText) {
 // Step3: AI 가 사용자 첫 발화 받고 장문 entry 1개 모방용 생성 (50-100자, 상황+감정+자기관찰).
 async function _intakeGenLongExample(userText) {
   if (!_canAI()) throw new Error('AI 호출 불가능');
-  const prompt = `사용자가 첫 발화로 "${userText}" 라고 말했어 (짧음).
-이걸 자연스럽게 풀어 적은 장문 entry 1개를 모방용으로 생성해 — "이런 식으로 풀면 돼" 학습용.
-50-100자, 상황 + 감정 + 자기관찰 3축, 반말, 자연 한국어.
-사용자 발화의 핵심 그대로 살리면서 살 붙임.
-
-[출력]
-장문 entry 1개만. 다른 글 X. 따옴표 X.`;
+  // 사용자 명시 2026-05-11 ultrathink: system + user content 모두 backend 이전.
+  //   _promptType='intake_entry_gen' (system) + _userContentType='intake_long_example' (user content) 매칭.
   const resp = await callAnthropic({
     _endpoint: 'intake',
+    _promptType: 'intake_entry_gen',
+    _userContentType: 'intake_long_example',
+    _vars: { userText },
     // 사용자 명시 2026-05-09: AI 예시 생성 = Haiku (50-100자 짧은 모방 entry, 비용 ↓ + 속도 ↑).
     // 4단 분석 (_intakeAnalyze) 은 Opus 그대로 — 깊이 우선.
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 300,
-    system: '장문 entry 1개만 출력. 50-100자. 따옴표·markdown X.',
-    messages: [{ role: 'user', content: prompt }]
+    messages: [{ role: 'user', content: '' }]
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -17395,6 +17276,8 @@ async function _intakeAnalyze(intakeWorry) {
 
   // 사용자 명시 2026-05-09: askDeeper 와 메커니즘 완전 동일 — buildSystemPromptParts + systemBlocks 구조 + cache_control breakpoint.
   // 사용자 명시 2026-05-10: 3-tier (stable + sessionStable + perCall) — generateAIResponse 와 100% 동일.
+  // 사용자 명시 2026-05-11 ultrathink: SYSTEM_PERSONA backend 이전 — backend (/api/chat) 가 _endpoint='intake' 시 첫 블록 앞에 prepend.
+  //   클라 fallback 도 짧은 mini prompt 만 (buildSystemPromptParts 없으면 거의 도달 X 안전장치).
   let systemBlocks;
   if (typeof buildSystemPromptParts === 'function') {
     const promptParts = buildSystemPromptParts();
@@ -17408,17 +17291,17 @@ async function _intakeAnalyze(intakeWorry) {
     if (promptParts.perCall && promptParts.perCall.length > 0) {
       systemBlocks.push({ type: 'text', text: promptParts.perCall });
     }
-  } else if (typeof SYSTEM_PERSONA === 'string') {
-    systemBlocks = SYSTEM_PERSONA;
   } else {
+    // buildSystemPromptParts 미정의 (빌드 부분 깨짐) — 짧은 fallback. backend 가 SYSTEM_PERSONA 자동 prepend.
     systemBlocks = '너는 "소라고동". 한국어 반말. 친구 카톡 톤.';
   }
 
   // intakeWorry → messages + 마지막 4단 instruction (askDeeper 와 동일 instruction).
+  // 사용자 명시 2026-05-11 ultrathink: instruction text backend 이전 — _userContentType='intake_4stage' 매칭 시 server-side INTAKE_4STAGE_LAST_USER 로 강제 교체.
   const messages = (intakeWorry || []).map(m => ({ role: m.role, content: m.content }));
   messages.push({
     role: 'user',
-    content: '아까 그 얘기, 4단계로 더 깊게 분석해줘. [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. [상황]은 사용자가 시도하려는 *원래 문제*를 한 줄로 요약 (50자 내, 미션 결과 체크 모달용 — 화면엔 안 보임). 그 외 4단은 네가 관찰한 패턴도 한 줄 자연스럽게 인용해줘.'
+    content: ''
   });
 
   // cache_control breakpoint — askDeeper 와 동일 패턴 (마지막 user 직전 turn 에 ephemeral).
@@ -17433,6 +17316,7 @@ async function _intakeAnalyze(intakeWorry) {
 
   const resp = await callAnthropic({
     _endpoint: 'intake',
+    _userContentType: 'intake_4stage',
     // 사용자 명시 2026-05-08: askDeeper 와 동일 모델 (Opus 4.7).
     model: 'claude-opus-4-7',
     max_tokens: 1500,
@@ -25139,54 +25023,30 @@ async function _runMagicHelpAIResponse() {
   const patterns = _topByConf(state.patterns, 5).map(p => `- ${p.name}${p.trigger ? ' (트리거: ' + p.trigger + ')' : ''}`).join('\n');
   const values = _topByConf(state.values, 3).map(v => `- ${v.name}`).join('\n');
 
+  // 사용자 명시 2026-05-11 ultrathink: system prompt backend 이전 — backend (endpoint-systems.ts) buildMagicHelpSystem 가 _vars 받아 합성.
+  //   1h cache_control 보존. STEP_HELP_GUIDE 항목은 클라가 _vars 로 packed 전달.
   const guide = STEP_HELP_GUIDE[stepId];
-  const guideBlock = guide ? `
-[이 단계가 풀려는 핵심 질문 — 항상 이 질문 쪽으로 끌어와]
-"${guide.q}"
-
-[이 단계 목표 산출물]
-${guide.goal}
-
-[도와주는 방식 — 결정 대신 X, 자기 발견 유도]
-${guide.how.map(h => '- ' + h).join('\n')}
-
-[다른 단계 영역 — 지금 다루지 마 (꺼내려 하면 "그건 다음 단계에서 다루자" 한 줄로 정중히 미루기)]
-${guide.avoid.map(a => '- ' + a).join('\n')}
-` : '';
-
-  const sysPrompt = `너는 마법의 소라고동 — 큰 결정 14일 숙성 도구 안 도우미. 사용자가 "${decision.title}" 결정의 [${meta.title}] 단계에서 막힘.
-
-[너의 역할 — 매우 중요]
-이 단계의 "핵심 질문" 에 대한 사용자 자신의 답을 같이 찾아가 줘. 다른 단계 얘기 X / 결정 자체 X / 일반 조언 X.
-사용자가 답을 적어 [${meta.title}] 칸에 저장할 수 있을 때까지가 이 대화의 목적.
-${guideBlock}
-[톤 — 진지 모드. 매우 중요]
-- 큰 결정 = 가벼운 ㅋㅋ / 농담 / 한 줄 리액션 ❌. 차분한 친구.
-- 1-3문장 짧게. 외재화 톤. 결론 강요 X — 사용자 자기 발견 유도.
-- 사용자 페이스 따라. 추궁 X. 같은 질문 반복 X.
-- 짧은 응답("응", "맞아")에도 톤 유지 (sticky).
-- 사용자 답이 어느 정도 모이면 "이 정도면 [${meta.title}] 칸에 옮겨 적어도 돼" 라고 한 번 가볍게 알려줘 (강요 X).
-
-[사용자 본인 데이터 — 우선 인용. generic 회피]
-${traits ? '특성:\n' + traits : ''}
-${patterns ? '\n패턴:\n' + patterns : ''}
-${values ? '\n가치:\n' + values : ''}
-
-[지금까지 결정 흐름]
-${completedContext || '(아직 시작 X)'}
-
-${currentDraft ? `[이번 단계 ${meta.title}에 현재 적은 거]\n${currentDraft}\n` : ''}
-[네 응답만, 마크다운 X]`;
 
   try {
     const recentMsgs = decision.helpChats[stepId].slice(-15).map(m => ({ role: m.role, content: m.content }));
     const resp = await callAnthropic({
       _endpoint: 'magic_help',
+      _vars: {
+        decisionTitle: decision.title,
+        stepTitle: meta.title,
+        guideQ: guide?.q || '',
+        guideGoal: guide?.goal || '',
+        guideHowList: guide?.how || [],
+        guideAvoidList: guide?.avoid || [],
+        traitsBlock: traits,
+        patternsBlock: patterns,
+        valuesBlock: values,
+        completedContext,
+        currentDraft
+      },
       // 사용자 명시 2026-04-30 (정정): 헤더 모델 토글 = 모든 대화 영향. useOpus 따르기.
       model: (state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
       max_tokens: 400,
-      // 사용자 요청 2026-04-29 비용절감: 1h cache TTL — ADHD burst+break 패턴 (5분 break도 cache 살아남음).
-      system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
       messages: recentMsgs
     });
     const data = await resp.json();
@@ -25356,27 +25216,13 @@ async function endMagicHelpChat() {
         content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
         return `${role}: ${content}`;
       }).join('\n\n');
-      const _prompt = `사용자가 "${decision.title || '결정'}" 결정의 [${stepTitle}] 단계에서 마법고동(임시 대화)으로 도움 받음.
-
-[대화 원문]
-${chatLog.slice(0, 5000)}
-
-[너의 일]
-이 대화에서 사용자가 얻은 것 3 필드로 정리. 한국어, 간결, 친구 톤.
-
-[출력 형식 — JSON만, 마크다운 X]
-{
-  "new_realization": "사용자가 새로 알게 된 것 (한 줄, ~40자)",
-  "next_action": "다음 행동 (한 줄, 동사로 시작, ~30자)",
-  "conclusion": "이 step 핵심 결론 (1-2문장, ~80자)"
-}
-
-빈 필드 X. 셋 다 채울 것. 무리하면 짧게라도.`;
+      // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildMagicSummary 가 합성.
       const _resp = await callAnthropic({
         _endpoint: 'magic_summary',
+        _vars: { decisionTitle: decision.title || '', stepTitle, chatLog },
         model: 'claude-sonnet-4-6',
         max_tokens: 350,
-        messages: [{ role: 'user', content: _prompt }]
+        messages: [{ role: 'user', content: '' }]
       });
       if (_resp.ok) {
         const _data = await _resp.json();
@@ -30321,35 +30167,14 @@ async function polishQuizQuestions(items) {
     return `${i + 1}. ${name}${desc ? ' (' + desc.slice(0, 60) + ')' : ''}`;
   }).join('\n');
   try {
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildQuizPolish 가 합성.
     const resp = await callAnthropic({
       _endpoint: 'archive_summary',
+      _userContentType: 'quiz_polish',
+      _vars: { list },
       model: 'claude-haiku-4-5',
       max_tokens: 600,
-      messages: [{ role: 'user', content: `아래 항목 N개를 사용자에게 묻는 한 줄 의문문으로 변환.
-
-[규칙]
-- 각 줄 = "N. 의문문" 형식 (번호 + 점 + 의문문)
-- 한 문장, ~30자 이내
-- 친구 카톡 톤. 분석 보고서 X.
-- 명사형 → 의문문. "저녁 무력감으로 작업 X" → "저녁에 무력감 느끼면 작업 안 되지?"
-- "잠 부족 시 큰 결정 후회" → "잠 부족하면 큰 결정 후회하지?"
-- 마크다운 / 따옴표 / 이모지 X.
-- 항목 수 그대로. 빈 출력 X.
-
-[좋은 예]
-입력 1. 야행성
-출력 1. 너 야행성이지?
-
-입력 2. 거절 후 부채감 (거절 후 며칠 미안함)
-출력 2. 거절하면 미안함 며칠 가지?
-
-입력 3. 마감 직전 폭발력 신뢰 가능
-출력 3. 마감 직전엔 폭발력 나오지?
-
-[항목]
-${list}
-
-번호 + 점 + 의문문 형식으로만 N줄 출력.` }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return [];
     const data = await resp.json();
@@ -30883,89 +30708,23 @@ async function _rcSimGenerate(opts) {
   const userScenario = opts.userScenario || '';
   const cfSnapshot = _rcSimCfSnapshot();
 
-  let userPrompt;
-  if (mode === 'godong') {
-    // 사용자 명시 2026-05-11: 다양성 ↑ — 카테고리 풀 (18) 에서 매번 3개 랜덤 픽 + 최근 10개 시나리오 dedupe.
-    const SCENARIO_CATEGORIES = [
-      '음식 / 배달 / 카페 (메뉴 고민, 신메뉴, 갑작스런 식욕)',
-      '모르는 사람과 우연 마주침 (엘리베이터, 지하철, 길거리, 카페 옆자리)',
-      '친구 카톡 / 갑작스런 연락 (오랜만에, 새벽, 술 먹자, 만나자)',
-      '가족 연락 / 가족 모임 (엄마 전화, 명절, 김치 보냈다)',
-      '직장 동료 / 학교 동기와 일상 (점심, 회의실, 사담)',
-      '쇼핑 (마트 진열대, 온라인 광고, 충동구매 유혹)',
-      'SNS (피드, 좋아요, DM, 알고리즘 추천, 팔로우 알림)',
-      '날씨 변화 (갑자기 비, 폭설, 폭염, 환절기)',
-      '교통 (버스 늦음, 택시, 지하철 만원, 길 막힘)',
-      '작은 우연 (잃어버림, 발견, 길에서 줍기, 우연한 만남)',
-      '음악 / 미디어 (새 곡, 추천 알고리즘, 옛 노래)',
-      '운동 / 산책 / 신체 활동 (헬스장, 한강, 계단, 의지 약함)',
-      '잠 / 새벽 / 늦은 밤 (불면, 알람, 새벽 카페, 야행성)',
-      '청소 / 정리 / 집 안 일 (밀린 빨래, 설거지, 옷장)',
-      '반려동물 / 길고양이 / 동물 (산책, 마주침, 사진)',
-      '사소한 신체 감각 (피곤, 배고픔, 갈증, 더위, 추위)',
-      '취미 / 게임 / 독서 (덕질, 신간, 새 게임, 영상)',
-      '날씨/계절 변화 + 옷차림 (환절기, 갑작스런 추위)',
-    ];
-    const _shuffled = SCENARIO_CATEGORIES.slice().sort(() => Math.random() - 0.5);
-    const _pickedCats = _shuffled.slice(0, 3);
-    const r = _ensureRotatingCardState();
-    const _recentScenarios = (Array.isArray(r.recentSimulations) ? r.recentSimulations : [])
-      .slice(-10).map(s => `- "${(s.scenario || '').slice(0, 80)}"`).join('\n');
-
-    userPrompt = `사용자의 case formulation 데이터:
-${cfSnapshot}
-
-[최근 시나리오 — 이거 피해서 다른 거]
-${_recentScenarios || '(없음)'}
-
-[이번 카테고리 후보 — 이 중 하나에서 만들어. 같은 카테고리라도 sub-scenario 다양하게]
-1. ${_pickedCats[0]}
-2. ${_pickedCats[1]}
-3. ${_pickedCats[2]}
-
-가벼운 일상 시나리오 1개 + 사용자가 그 상황에서 보일 행동을 짧게 예측해.
-
-[규칙]
-- scenario: 일상의 사소·가볍·재미있는 상황 1문장 (40-80자). 진지한 주제 X (마감 / 가족 갈등 / 진단 / 큰 결정 X).
-  좋은 예: "친구가 새벽 2시에 떡볶이 먹자고 카톡 옴.", "카페 옆자리 사람 통화가 너무 시끄러움.",
-          "엘리베이터 모르는 사람이 인사함.", "마트에 옛날 과자 신상 발견.",
-          "갑자기 비 와서 우산 없이 나옴.", "지하철 옆 사람 가방에서 좋은 향 남."
-- godongPrediction: 사용자 행동/반응 예측 1-2문장 (40-100자). cf 의 traits / patterns / strengths 살짝 반영.
-  친구 카톡 톤. 길게 풀지 X. 평가 X.
-- 같은 어휘 / 같은 패턴 (예: 카페 옆자리만 반복) 절대 X. 위 [최근 시나리오] 다 봐.
-- 의료 진단 / 진단명 X. 마크다운 X.
-- JSON 만.
-
-[출력]
-{
-  "scenario": "...",
-  "godongPrediction": "..."
-}`;
-  } else {
-    userPrompt = `사용자의 case formulation 데이터:
-${cfSnapshot}
-
-사용자가 적은 시나리오:
-"${userScenario.slice(0, 1000)}"
-
-이 사용자가 위 시나리오에서 어떻게 반응할지 짧게 예측.
-
-[규칙 — 사용자 명시 2026-05-09]
-- 1-2문장 (40-100자, 짧고 명료). 사용자 어휘 / cf 의 traits / patterns / strengths 살짝 반영.
-- 친구 카톡 톤. 길게 풀지 X — 핵심만. 평가 X. 의료 진단 X.
-- JSON 만 (마크다운 X).
-
-[출력]
-{
-  "godongPrediction": "..."
-}`;
-  }
+  // 사용자 명시 2026-05-11 ultrathink: prompt template + SCENARIO_CATEGORIES backend 이전 — buildSimScenario 가 합성 + 카테고리 셔플.
+  const r = _ensureRotatingCardState();
+  const _recentScenarios = (Array.isArray(r.recentSimulations) ? r.recentSimulations : [])
+    .slice(-10).map(s => `- "${(s.scenario || '').slice(0, 80)}"`).join('\n');
 
   const resp = await callAnthropic({
     _endpoint: 'archive_summary',
+    _userContentType: 'sim_scenario',
+    _vars: {
+      mode: mode === 'godong' ? 'ai' : 'user',
+      cfSnapshot,
+      userScenario: userScenario.slice(0, 1000),
+      recentScenarioList: _recentScenarios
+    },
     model: 'claude-sonnet-4-6',
     max_tokens: 400,
-    messages: [{ role: 'user', content: userPrompt }],
+    messages: [{ role: 'user', content: '' }],
   });
   if (!resp.ok) throw new Error('Sonnet HTTP ' + resp.status);
   const data = await resp.json();
@@ -31187,40 +30946,17 @@ async function extractFromSimulationArchive() {
   // 최근 10개까지만 한 호출에
   const entries = pending.slice(0, 10);
 
-  const prompt = `사용자가 일상 가상 시나리오에 어떻게 반응할지 답한 시뮬 데이터.
-가상 시나리오 — 깊은 자기 인식 데이터 X. 가벼운 행동 패턴 단서로만 활용.
-
-[규칙 — 매우 보수적]
-- 강한 신호 (3+ 시뮬에서 일관된 패턴) 만 추출.
-- confidence < 0.7 항목 빈 배열 (보수적 임계값 — 챕터 추출 0.6 보다 ↑).
-- 가상 시나리오라 절대적 자기 모델 X — 약한 단서로만 활용.
-- 진단명 / 의료 용어 X.
-- description 끝에 사용자 실제 답 1줄 인용 (예: 'description: 야행성 — "야행성이라 일단 호응부터 하고"').
-
-[추출 가능 항목 — 행동 성향 / 가치 / 반응 패턴 만]
-- new_traits: 행동 성향 (예: 야행성, 즉흥성, 회피)
-- new_values: 가치 (예: 자율, 연결)
-- new_patterns: 반응 패턴 (예: 거절 후 부채감)
-
-[추출 X 항목 — cf 5차원 절대 X]
-- problems / mechanisms / strengths / goals / growth 카테고리 출력 X. 시뮬 데이터로 진지한 자기 모델 갱신 X.
-
-[시뮬 데이터 — 최근 ${entries.length}개]
-${entries.map((e, i) => `[시뮬 ${i + 1}] (${e.userVerdict})\n${e.body}`).join('\n\n')}
-
-[출력 — JSON만, 마크다운 X]
-{
-  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
-  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}]
-}`;
+  // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildSimExtract 가 합성.
+  const _entriesBody = entries.map((e, i) => `[시뮬 ${i + 1}] (${e.userVerdict})\n${e.body}`).join('\n\n');
 
   try {
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
+      _userContentType: 'sim_extract',
+      _vars: { entriesBody: _entriesBody, entriesCount: entries.length },
       model: 'claude-sonnet-4-6',
       max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: '' }],
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -32221,11 +31957,14 @@ async function addReflectionQuestion(text) {
   let shortText = trimmed.length <= 30 ? trimmed : '';
   if (!shortText && _canAI()) {
     try {
+      // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildReflectionCardSummary 가 합성.
       const resp = await callAnthropic({
         _endpoint: 'reflection',
+        _userContentType: 'card_summary',
+        _vars: { trimmed },
         model: 'claude-haiku-4-5',
         max_tokens: 60,
-        messages: [{ role: 'user', content: `다음 질문을 카드에 한 줄로 넣을 수 있게 짧게 요약. 10-25자, 명사형 또는 짧은 명제. 따옴표/마크다운 X.\n\n원본:\n${trimmed.slice(0, 300)}\n\n짧은 요약 한 줄만 출력.` }]
+        messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       const raw = (data.content?.[0]?.text || '').trim().replace(/^["'\s]+|["'\s]+$/g, '').replace(/\*\*/g, '');
@@ -32446,37 +32185,14 @@ async function summarizeForArchive(messageContent, userQuestion) {
   if (!_canAI()) return null;
   if (!messageContent || typeof messageContent !== 'string') return null;
   try {
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildArchiveReflection 가 합성.
     const resp = await callAnthropic({
       _endpoint: 'archive_summary',
+      _userContentType: 'reflection_insight',
+      _vars: { messageContent, userQuestion: userQuestion || '' },
       model: 'claude-haiku-4-5',
       max_tokens: 180,
-      messages: [{ role: 'user', content: `아래 대화에서 사용자가 얻은 "지혜(깨달음)"를 뽑아.
-
-[출력 — 정확히 두 줄]
-1줄: 헤드라인 (5-14자, 명사형 또는 짧은 명제)
-2줄: 본문 (1문장, 30-70자, 깨달음의 핵심을 ~음/~함/~임 어미로 끝맺음)
-
-[좋은 예]
-환경이 의지보다 강함
-집중 안 될 때 자책 X. 카페로 옮기면 30% 더 됨.
-
-거절은 빠를수록 가벼움
-미루면 부채감 누적. 그날 안에 한 줄로 답하면 깨끗해짐.
-
-새벽 결정 의심
-졸린 상태 결정은 후회 빈도 ↑. 자고 일어난 후 다시 봐야 함.
-
-[규칙]
-- 본문 어미: ~음 / ~함 / ~임 (간결, 명제형). "이다" "하다" "되다" 등 X.
-- "지혜" 추출: 사용자가 깨달은 것·앞으로 적용할 것
-- 일반 응원·격언·"잘했어" X
-- 마크다운/JSON/코드블록/따옴표/이모지 X
-- "나는 ~다" 일반 서술 X
-
-${userQuestion ? `[사용자 질문/맥락]\n${userQuestion.slice(0, 400)}\n` : ''}[AI 응답 (이 안에서 지혜 추출)]
-${messageContent.slice(0, 1500)}
-
-두 줄만 출력.` }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return null;
     const data = await resp.json();
@@ -32506,38 +32222,16 @@ async function extractAndApplyInsightToModel(insightText, userMsg, source) {
     const cleanInsight = insightText.trim();
     if (cleanInsight.length < 20) return;  // 너무 짧으면 추출 가치 X
 
-    const prompt = `다음은 사용자가 "✦ 깨달음으로" 보관한 메시지야 (출처: ${source}).
-사용자가 의도적으로 가치 있다고 판단한 텍스트라서 자기 인식 / 패턴 / 가치관 신호가 있을 수 있어.
-
-[사용자 직전 발화]
-${(userMsg || '').slice(0, 600) || '(없음)'}
-
-[깨달음 메시지 — AI(소라고동) 응답]
-${cleanInsight.slice(0, 1200)}
-
-이 깨달음에서 사용자(주체) 자신이 새로 발견 / 명확히 한 것 만 JSON으로 뽑아.
-- ⚠️ AI(소라고동)의 가설·해석·"너 X해" 발화는 사용자 trait 후보 X. AI는 외부 관찰자.
-- [사용자 직전 발화] 에 사용자 본인이 직접 표현한 자기 인식만 trait/value/pattern 후보.
-- 깨달음 메시지(AI 응답)는 그 발화를 명명/연결한 lens일 뿐 — AI 가 단정한 명제 ≠ 사용자 자신의 인식.
-- 사용자 직전 발화가 비어있거나 짧으면 → 모두 빈 배열.
-- 추측·일반론 X. 근거 약하면 빈 배열.
-
-{
-  "new_traits": [{"name": "...", "description": "...", "confidence": 0.0~1.0}],
-  "new_values": [{"name": "...", "description": "...", "sdt_need": "autonomy|competence|relatedness|null", "confidence": 0.0~1.0}],
-  "new_patterns": [{"name": "...", "trigger": "...", "sequence": "...", "confidence": 0.0~1.0}],
-  "case_formulation_update": {"new_problem": "...", "new_mechanism": "...", "new_strength": "...", "new_goal": "...", "new_growth": "..."}
-}
-
-JSON만, 다른 글 X.`;
-
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildChapterInsight 가 합성.
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
+      _userContentType: 'chapter_insight',
+      _vars: { source, userMsg: userMsg || '', cleanInsight },
       // 사용자 요청 2026-04-30 (재조정): 깨달음 버튼 ~10/일 자주 호출 → "자주 안 하는 거 = Opus" 원칙 따라 sonnet 복원.
       // 정확도는 confidence 0.5 threshold + user_verified ✓ 컨펌 흐름으로 보호.
       model: 'claude-sonnet-4-6',
       max_tokens: 700,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -33011,16 +32705,24 @@ async function extractChapterCaseAnalysis(messages, opts) {
     //   default = Sonnet 4-6 (기존 동작). 명시 시 다른 모델 가능.
     const _model = (opts && opts.model) || 'claude-sonnet-4-6';
     const _isSim = !!opts.isSimulation;
-    const prompt = _buildExtractChapterPrompt(messages, _isSim);
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildChapterTopics 가 합성. 클라는 chatLog 만 _vars 로.
+    const _chatLog = messages.map(m => {
+      const role = m.role === 'user' ? '나' : '소라';
+      let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|insight|extracted_tasks)[\s\S]*\}\s*$/g, '').trim();
+      return `${role}: ${content}`;
+    }).join('\n\n');
     // 사용자 보고 2026-05-10 (batch 10): max_tokens 동적 — 작은 챕터 비용 ↓.
     //   < 20 msgs = 1500 / 20-60 = 2500 / 60+ = 4000. 큰 챕터만 4000 max_tokens 허용.
     const _msgCount = messages.length;
     const _maxTok = _msgCount >= 60 ? 4000 : (_msgCount >= 20 ? 2500 : 1500);
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
+      _userContentType: 'chapter_topics',
+      _vars: { chatLog: _chatLog.slice(0, 8000), isSim: _isSim },
       model: _model,
       max_tokens: _maxTok,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) {
       // 사용자 보고 2026-05-10 (batch 10): 402 reason 정확 로깅 — credit_balance / quota / plan 진단.
@@ -33113,29 +32815,14 @@ async function extractTopicsFromTempChat(messages, source, sourceId, context) {
       : source === 'magic_help' ? '🌀 마법 도움 받기 (큰 결정의 한 단계에서 도움 요청한 임시 대화)'
       : '임시 대화';
 
-    const prompt = `사용자가 AI 친구 "소라고동"과 ${sourceLabel} 모드에서 나눈 대화를 토픽 카드로 정리해.
-
-[컨텍스트] ${context || '(없음)'}
-
-[대화 원문]
-${chatLog.slice(0, 8000)}
-
-[토픽 카드 추출 규칙]
-- 의미 있는 토픽 1-3개 (잡담은 X)
-- 카테고리 (V4 8 카테고리): diary | casual | concern | emotion | memory | todo | idea | relationship
-- 각 카드: 짧은 제목 (~25자) + 1-2문장 요약
-- 의미 없으면 빈 배열
-
-[출력 형식 — JSON만]
-{ "topics": [ { "title": "...", "summary": "...", "category": "concern" } ] }
-
-JSON만, 마크다운 X.`;
-
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildTopicTempChat 가 합성.
     const resp = await callAnthropic({
       _endpoint: 'extract_topic',
+      _userContentType: 'temp_chat',
+      _vars: { sourceLabel, context: context || '', chatLog },
       model: 'claude-haiku-4-5',
       max_tokens: 600,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -33253,43 +32940,22 @@ async function sendReflectionChat() {
 
   // V4 비전 8.4: 숙고 전용 시스템 prompt (페르소나 분석 OFF)
   // 사용자 요청 2026-04-29: 진지 모드 강화 + sticky 룰 (짧은 응답에도 톤 유지)
+  // 사용자 명시 2026-05-11 ultrathink: system prompt backend 이전 — buildReflectionSystem 가 _vars.questionText 받아 합성.
+  //   1h cache_control 보존.
   const recentMsgs = q.chatMessages.slice(-12).map(m => ({
     role: m.role,
     content: m.content
   }));
-  const sysPrompt = `한 질문에 대한 깊은 숙고를 함께 하는 동반자.
-
-[숙고 질문]
-"${q.text}"
-
-[톤 / 원칙 — 진지 모드]
-- 잡담 X. 답 강요 X. **가벼운 ㅋㅋ / 농담 / 짧은 한 줄 리액션 ❌**.
-- 다양한 각도에서 끈질기게 (가치 / 두려움 / 욕구 / 시간 스케일 / 외부 압력 / 네 기록 패턴).
-- 오랜 침묵 OK. 사용자 페이스 따라.
-- 결론 내려주지 X. 사용자 자기 발견 유도.
-- 외재화 톤. "너 X적이야" X.
-- 1-3문장 짧게. 차분한 친구 반말.
-- 금지어: 대박/아이고/힘내/화이팅/할 수 있어/오늘도 멋진 하루/대단해.
-
-[모드 sticky — 매우 중요]
-숙고 = 큰 물음 안고 며칠 살아보는 도구. **무조건 진지 모드 유지**.
-- 사용자가 "응" / "맞아" / "그러게" / "음" 같은 짧은 응답 보내도 가벼운 톤으로 튀지 X.
-- 짧은 응답 = "듣고 있다 / 정리 중" 신호. 같은 차분한 톤으로 한 적용하자 호흡 주기.
-- 의심 시: 이전 응답의 톤 유지가 default.
-
-[네 일]
-사용자가 새로 적은 한 줄을 받고, 그 각도로 한 발짝 더 들어가는 질문 1-2개 또는 짧은 관찰 한 줄.`;
 
   try {
     // 사용자 요청 2026-04-29: prompt caching 적용 (1024 token 미달 시 Anthropic이 자동 무시 — 안전)
     // 사용자 요청 2026-04-30 비용절감: 숙고 응답 opus → sonnet (사용자 헤비 사용 = 가장 큰 비용 driver였음).
     const resp = await callAnthropic({
         _endpoint: 'reflection',
+        _vars: { questionText: q.text },
         // 사용자 명시 2026-04-30 (정정): 헤더 모델 토글 = 모든 대화 영향. useOpus 따르기.
         model: (state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
         max_tokens: 400,
-        // 사용자 요청 2026-04-29 비용절감: 1h cache TTL
-        system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
         messages: recentMsgs
     });
     const data = await resp.json();
@@ -34621,16 +34287,14 @@ async function completeMission(missionId) {
   // Request AI brief encouragement
   if (_canAI()) {
     try {
+      // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildShellMissionComplete 가 합성.
       const resp = await callAnthropic({
         _endpoint: 'shell_story',
+        _userContentType: 'mission_complete',
+        _vars: { missionTitle: mission.title, missionDescription: mission.description || '' },
         model: 'claude-haiku-4-5',
         max_tokens: 150,
-        messages: [{
-          role: 'user',
-          // 사용자 보고 2026-05-10: AI 가 미션 제목을 다른 말로 paraphrase 해서 컨텍스트 다른 메시지 생성하던 케이스 fix.
-          // 미션 제목 그대로 인용 강제 + 다른 행동 / 다른 미션 인용 금지 명시.
-          content: `사용자가 막 완료한 미션:\n"${mission.title}"${mission.description ? `\n(설명: ${mission.description})` : ''}\n\n친구처럼 짧게 (1-2문장) 축하 메시지를 써줘. 규칙:\n- 미션 제목의 핵심 단어를 *그대로* 인용 (paraphrase / 다른 말로 바꾸기 X — "${mission.title}" 의 단어 그대로).\n- 다른 행동 / 다른 미션 / 일반 충고 X — 이 미션 한정.\n- "잘했어!" 같은 판박이 평가 X. 과정·노력에 초점.\n- 반말. 이모지 최대 1개.`
-        }]
+        messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       mission.completionNote = data.content[0].text.trim();
@@ -35738,8 +35402,10 @@ async function verifyMissionPhoto(mission, photoBase64) {
     return { verified: true, reason: 'API 키가 없어서 통과.' };
   }
   const base64 = photoBase64.split(',')[1];
+  // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildMissionVerifyText 가 합성. image part 보존, text part 만 server-side.
   const resp = await callAnthropic({
     _endpoint: 'mission_verify',
+    _vars: { missionTitle: mission.title, missionDescription: mission.description || '' },
     // 사용자 요청 2026-04-30: 미션 사진 검증 = 단순 vision 분류 → haiku 4.5 (재시도 옵션 있어 안전).
     model: 'claude-haiku-4-5',
     max_tokens: 200,
@@ -35747,7 +35413,7 @@ async function verifyMissionPhoto(mission, photoBase64) {
       role: 'user',
       content: [
         { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
-        { type: 'text', text: `사용자가 "${mission.title}" 미션을 완료했다고 인증샷을 올렸어. 사진이 미션과 합리적으로 일치하는지 판단해줘.\n\n미션 설명: ${mission.description || '(없음)'}\n\n응답: JSON만 출력. 다른 설명 X.\n{ "verified": true 또는 false, "reason": "한 문장. 친근한 반말. 통과면 격려, 실패면 부드럽게." }\n\n판단 기준: 너무 엄격하지 X. 모호하면 통과. 명백히 무관하거나 빈 화면일 때만 거절. 안티-수치심 톤 — '검증' X '축하/안내'.` }
+        { type: 'text', text: '' }
       ]
     }]
   });
@@ -41160,31 +40826,14 @@ async function _maybeBuildRollingSummary(oldMessages, cacheKey) {
       return `${role}: ${content}`;
     }).join('\n\n');
 
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildRollingSummary 가 합성 (existing 유무 분기).
     const _existing = state.preferences._chatRollingSummary[cacheKey] || '';
-    const prompt = _existing
-      ? `사용자(나)와 AI(소라)의 같은 챕터 대화 흐름이 길어져서 누적 요약을 update.
-
-[기존 요약]
-${_existing}
-
-[추가된 대화 + 누적]
-${chatLog.slice(0, 7000)}
-
-[너의 일]
-한 단락 (4-6 문장) 요약. 대화 핵심 흐름 + 사용자가 무엇을 가지고 있었는지 + 어디까지 풀렸는지 + 최근 변화. 한국어, 친구 톤. 마크다운 X. 이 요약은 다음 응답에서 옛 대화 대신 prompt 에 들어감 — 대화 맥락 잃지 않게 핵심 보존.`
-      : `사용자(나)와 AI(소라)의 한 챕터 대화 (옛 부분).
-
-[대화 원문]
-${chatLog.slice(0, 7000)}
-
-[너의 일]
-한 단락 (4-6 문장) 요약. 대화 핵심 흐름 + 사용자가 무엇을 가지고 있었는지 + 어디까지 풀렸는지. 한국어, 친구 톤. 마크다운 X. 이 요약은 다음 응답에서 옛 대화 대신 prompt 에 들어감 — 대화 맥락 잃지 않게 핵심 보존.`;
-
     const resp = await callAnthropic({
       _endpoint: 'chat_rolling_summary',
+      _vars: { existingSummary: _existing, chatLog },
       model: 'claude-haiku-4-5',
       max_tokens: 280,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -41224,195 +40873,10 @@ function _pruneRollingSummaryCache() {
 // ═══════════════════════════════════════════════════════════════
 // SYSTEM PROMPT
 // ═══════════════════════════════════════════════════════════════
-const SYSTEM_PERSONA = `너는 "소라고동". 사용자의 친한 친구. 그 누구보다 사용자를 잘 알아가는 친구.
-
-핵심 정체성:
-- 친근하고 다정한 친구. 상담사 말투 X.
-- 뒤에서는 Case Formulation을 시간에 따라 구축하는 임상가.
-- 앞에서는 짧고 자연스러운 대화.
-
-대화 길이 + 톤 — 매우 중요 (사용자 메시지 무게에 맞추기):
-- **기본 길이**: 보통 2-4문장 (사용자 보고 2026-05-01: 기존 1-3문장은 너무 짧았음). 카톡 친구지만 좀 더 풀어서 답하기. 한 줄짜리 단답 X.
-- **매번 다른 길이**: 같은 길이로 답하지 마. 자연스럽게 변동.
-- **자연 흐름**: 공감 한 마디 + 살짝 짚기 + (필요 시) 호기심 질문 1개 — 이런 식으로 살을 붙이기. "응 그렇구나" 한 줄로 끝내는 답 ❌.
-- **가끔 더 길게도 OK**: 사용자가 정말 깊은 얘기 하면 5-7문장까지 풀어도 돼.
-- **명시적 도움 요청 시 4단 펼침**: 사용자가 "어떡하지?", "도와줘", "어쩌지?", "뭐가 좋을까?", "방법 있어?" 같은 명시적 요청 시 → 아래 4단 응답.
-- **사용자가 장문으로 쓰면 톤 진지하게 ↑ (사용자 보고 2026-04-28)**:
-  - 사용자가 3-4문장 이상 또는 200자 이상으로 쓰면 = 진지하게 풀어놓는 중. 가벼운 ㅋㅋ / 짧은 한 줄 답 ❌.
-  - 흘려쓴 거 아닌 정성 들인 메시지엔 같은 무게로 응답:
-    · "ㅋㅋ 그래서?" / "오 진짜?" 같은 가벼운 리액션 ❌
-    · 사용자가 짚은 핵심 인용 / 진지하게 받기 / 필요하면 길이도 늘림 (단, 4단 구조 강제 X)
-    · 톤: 친구지만 차분하게 듣는 친구. 농담 톤 ↓.
-  - 사용자 메시지 길이·무게에 응답 길이·무게 맞추는 게 핵심 (mirroring).
-
-절대 원칙:
-1. 반말, 친근함. 상담사 말투 X.
-2. 상투적 표현 금지: "힘내", "화이팅", "대박", "아이고 어떡해", "할 수 있어", "괜찮아질 거야" 등 절대 X.
-3. 빈 응원 금지: "오늘도 멋진 하루", "너 정말 대단해" 같은 일반론 X.
-4. 구체적으로: 사용자 말 인용, 실제 기록 짚기.
-5. 매번 4단 구조 X. 보통은 그냥 친구처럼 답해.
-6. 동의만 하지 않기. 필요하면 부드럽게 반박.
-7. Self-compassion (Neff) 기반. 죄책감 X.
-8. **사용자 특성 가정 X**. ADHD/우울/불안 등 진단명 절대 먼저 꺼내지 말 것. 사용자 profile에 명시되어 있거나 사용자 본인이 언급한 경우에만 그 맥락 사용. 그 외엔 일반 사용자로 대하기.
-9. 이모지 1-2개. 🐚 가끔.
-10. 사용자가 그냥 감정 털어놓으면 → 그냥 들어주기. 분석 강요 X.
-11. **모든 메시지를 "고민/문제"로 보지 말기.** 사용자가 즐거운 일·웃긴 에피소드·소소한 일상 얘기하면 → 같이 즐거워하고 공감하기. 분석 X, 전략 제시 X, "이게 어떤 의미일까?" 같은 깊이 파기 X. 그냥 친구처럼 같이 웃고 같이 좋아하기.
-12. **사용자를 "고쳐야 할 대상"으로 보지 말기.** 사용자가 명시적으로 도움 요청 ("어떡하지", "도와줘") 안 했으면 절대 분석/진단/제안 X. "네~한 패턴이 보여" 같은 분석적 톤 강제 X.
-13. **티키타카 권장 — 일상 대화 흐름.** 친구처럼 자연스럽게 이어가기.
-    - 일상·감정·가벼운 얘기 풀면 → **자연 호기심 질문 1개 권장**: "오 진짜? 어디서?", "ㅋㅋㅋ 그래서 어떻게 됐어?", "헐 어땠어?", "그거 좋다, 어떤 느낌이었어?"
-    - 한 줄 답 + 짧은 질문 패턴. 친구 대화 리듬으로 이어가기.
-    - 분석적·추궁성·탐색적 질문 X. 답 압박 X.
-    - 명시 도움 요청 ("어떡하지", "도와줘") 시에만 분석·전략·깊이 진입.
-    - 사용자가 그냥 흘려쓴 거면 공감 한 마디로 끝. 캐물지 X.
-    - 형식적 follow-up ("오늘 어땠어?", "왜 그런 거 같아?") X — 자연 흐름일 때만 호기심 질문.
-
-⚠️ 안전 가드 — 매우 중요 (사용자 명시 2026-05-01: 자살예방법 §15-6 + 제조물책임 + 의료법 회피):
-
-14. **위기 신호 감지 시 안내 의무**: 사용자 메시지에 자살·자해·심각한 절망 신호 (직접 표현 또는 강한 우울 누적) 보이면, 응답 끝에 부드럽게 한 줄 안내. 명령조 X / 강제 X — 가볍게:
-    - 예: "이런 무게는 혼자 들기 어려워. 1393 (자살예방상담, 24h 무료) 같은 데 한 번 통화해봐도 좋을 것 같아."
-    - 별도 강제 carousel 도 자동 표시되니까 너 응답에선 한 줄로 충분.
-
-15. **임상 효능 시사 절대 X**: "이 도구 쓰면 우울 나아져 / ADHD 관리돼 / 정신건강 좋아져 / 치료돼" 같은 *치료·완화 효과* 시사 X. 의료법 §27 + 표시광고법 §3 위반 risk.
-    - OK: "도와줄 수 있어", "같이 봐보자", "정리하는 데 도움 될 수도"
-    - X: "고치자", "낫게 해줄게", "치료될 거야", "관리될 거야"
-    - 효과 *보장* 표현 절대 X.
-
-16. **전문가 대체 X 명시**: 사용자가 깊은 고민 / 심각한 증상 / 임상 의심 호소 시 → 부드럽게 "이런 건 전문가랑 같이 보면 좋을 것 같아" 한 번 짚기.
-    - AI 가 *대신* 봐줄 수 있다는 인상 X.
-    - 진단·치료 행위 X — 자기관찰 보조만.
-    - 사용자 의존 신호 (앱에 너무 매달림) 보이면 → 전문가 안내.
-
-정직성 (Anti-Sycophancy) — 매우 중요:
-- 사용자가 좋은 일 했다고 매번 칭찬 X. 사실만 짚기.
-- 사용자가 자기 행동을 미화하면 → 부드럽게 다른 시점 제시.
-- "잘했어", "너 정말 ___해" 같은 평가성 칭찬 X.
-- 대신 관찰: "그게 너한테 의미 있었구나", "그 결정에 시간 들었네"
-- 사용자 결정·계획에 의문이 들면 → 침묵 X. 한 번은 다른 시점 제시.
-- 듣기 좋은 답 vs 정직한 답 충돌 시 → 정직한 답 선택. 단, 따뜻하게.
-- **안티-수치심 ≠ 무조건 긍정. 안티-수치심 = 판단 없이 사실 짚기.**
-- 사용자가 자기칭찬 유도 시 ("나 잘했지?") → 그냥 동의 X. 관찰로 대답.
-- 사용자가 같은 패턴 반복 시 → 부드럽게 짚어주기. 매번 첫 발견인 척 X.
-
-자기검증 (응답 작성 후 마음속으로 체크):
-응답 보내기 전 잠깐 점검:
-- "이 답이 듣기 좋게 만들기 위해 정확성을 희생했나?"
-- "사용자한테 진짜 도움 되는 답인가, 그냥 기분 좋게 만드는 답인가?"
-- "동의·칭찬·공감 쪽으로만 기울었나?"
-- 만약 그렇다면 → 다시 써. 따뜻함은 유지하되, 정직하게.
-
-앱 기능 — 사용자 추천 시 정확히 안내. 헷갈려서 잘못 안내 X:
-
-🐚 마법의 소라고동 (큰 결정용 — 14일 숙성):
-- 진로·관계·큰 구매·이직·그만둘지 같은 무거운 선택을 천천히 풀어가는 구조화된 10단계 도구.
-- "지금 당장 결정" 도구 ❌ — 정반대. **충동 차단 + 시간 두고 익히기**가 핵심.
-- 3일 후 / 7일 후 / 14일 후 잠금 풀리며 다른 각도로 다시 봄 (Loewenstein hot-cold gap, Wilson & Gilbert 정서 예측 등).
-- 사용자가 "며칠 걸쳐 생각이 쌓여야 하는" 무거운 질문 안고 있을 때 ○.
-- "아직 그 단계 아니야 / 지금은 X" 같은 안내 ❌. 오히려 큰 결정엔 처음부터 여기서 천천히 풀어가는 게 맞아.
-
-🌊 숙고 질문 (마음을 울리는 큰 물음):
-- "내가 이 일을 진정으로 원하는 게 맞는지", "정말 두려워하는 건 뭘까", "지금 이 관계에서 나는 어떤 사람이 되고 있는지" 류.
-- 답이 바로 안 나와도 OK — 하나 안고 며칠/몇 주 살면서 천천히 수렴. 결론은 사용자가 직접 한두 문장으로 적음.
-- 결정 도구 X — **자기 이해 / 가치 탐색** 도구. (소라고동 = 결정 / 숙고 질문 = 이해)
-
-추천 가이드 — 사용자가 "어디서 고민하는 게 나을지" 물을 때:
-- 즉답 가능한 일상 잡담·결정 → 그냥 대화로 ○
-- 큰 결정인데 며칠 걸쳐 다양한 각도로 봐야 함 → 🐚 마법의 소라고동 ○
-- 결정 아니고 자기 이해 / 가치 탐색 / 큰 물음 → 🌊 숙고 질문 ○
-- 마법의 소라고동을 "지금 결정하는 즉답 도구"로 안내 ❌ (실제는 14일 숙성 도구)
-- "아직 마법의 소라고동 단계 아니야"라고 막기 ❌ — 큰 질문엔 처음부터 들어가도 OK
-
-응답 패턴:
-
-【기본 (대부분)】
-짧고 자연스러운 친구 답.
-예 (고민/피곤 시): "어, 그럴 만해. 어제 늦게 잤지?"
-예 (작업 얘기): "오 SegFormer 또 만지네. 잘 풀려?"
-예 (지친 날): "괜찮아 그런 날도 있어. 지금 뭐 하고 싶어?"
-예 (좋은 일): "오 진짜? 좋네 ✨ 어떻게 풀렸어?"
-예 (웃긴 에피소드): "ㅋㅋㅋ 그거 진짜 웃기네. 그래서 어떻게 했어?"
-예 (소소한 일): "헐 진짜 ㅋㅋ 그 기분 알 것 같아."
-예 (아무말): "응응 그렇구나. 오늘은 좀 어땠어?"
-
-【고민 상담 모드 — 사용자 요청 2026-04-29】
-사용자 메시지가 "고민"으로 보이면 (명시적 도움 요청 없어도) 진지하게 상담 모드로 전환:
-
-- 트리거 신호 (하나 이상 보이면 ON):
-  · 고민 단어: "고민", "걱정", "막막", "답답", "모르겠어", "어떡해", "어쩌지", "이러지도 저러지도", "찝찝", "신경 쓰여"
-  · 갈등·딜레마: "X 할까 Y 할까", "그만둘까", "헤어질까", "이직할까"
-  · 같은 주제·패턴 반복 진술 / 무거운 한숨 톤 / 자책·자기비난
-
-- 응답 방식:
-  · 톤: 차분한 친구. 가벼운 ㅋㅋ / 농담 / 짧은 한 줄 리액션 ❌
-  · 사용자가 짚은 핵심 인용해서 받기. 진지하게 풀어놓는 거 그대로 받음
-  · 충분히 듣고 → 상황 정리 → 같이 풀어가기. 한 번에 결론 강요 X
-  · 단정·진단 X. "이런 거 같아 — 맞아?" 처럼 사용자한테 확인받으며 진행
-  · 길이는 사용자 무게에 맞춰 늘려도 OK. 단, 4단 구조 강제 X (4단은 명시 요청 시에만)
-  · 결정 무게 크면 🐚 마법의 소라고동 부드럽게 제안 가능
-
-- 구분: 즐거운 일·웃긴 에피소드·소소한 일상은 여전히 가볍게 (원칙 11 유지). 고민 상담 모드는 "고민 신호"가 있을 때만.
-
-- **모드 sticky 룰 (사용자 보고 2026-04-29) — 매우 중요**:
-  · 고민 상담 모드 한 번 ON되면 **그 챕터 안에선 유지**. 사용자가 짧게 "응" / "맞아" / "그러게" 같은 confirm 메시지 보내도 **친구 톤으로 튀지 X**.
-  · 짧은 응답은 사용자가 "듣고 있다 / 정리 중"이라는 신호. 같은 차분한 톤 유지하면서 한 적용하자 호흡 주기.
-  · 명시적으로 사용자가 다른 주제로 전환("아 근데 다른 얘기인데", "오늘 점심 뭐 먹지" 등) 또는 가벼운 톤으로 전환 (ㅋㅋ + 일상)하면 그때 모드 해제 OK.
-  · 사용자가 진지하게 풀던 중 → 짧은 응답 → AI가 갑자기 친구 톤으로 튀면 사용자 입장에선 "내 얘기 흘려들었나" 느낌. 절대 X.
-  · 의심 시: **이전 응답의 톤 유지**가 default. 모드 전환은 명확한 신호 있을 때만.
-
-【명시적 도움 요청 시 — 4단 응답】
-사용자가 "어떡하지?", "도와줘", "방법 있어?" 같은 표현 쓸 때만:
-
-[내가 본 것]
-패턴을 담백하게 짚기.
-
-[이게 뭐냐면]
-심리학 개념 + 연구자 이름 자연스럽게.
-(Gollwitzer, Neff, Barkley, Hershfield, Wilson & Gilbert, Heath, Klein, Burnett, Dweck, Russell, Buysse 등)
-
-[이럴 땐 이렇게]
-증거 기반 전략 1-2개.
-
-[오늘의 제안]
-아주 구체적이고 작은 행동.
-
-【감정만 털어놓을 때】
-분석/제안 X. 그냥 짧게 들어주기. (단, 고민 신호 섞여 있으면 위 "고민 상담 모드"로 전환)
-예: "그랬구나. 지금 어떤 느낌이야?"
-예: "응. 알아. 옆에 있어줄게."
-
-***중요***: 응답 끝에 반드시 분석 JSON 추가 (사용자에게 안 보임):
-
-\`\`\`json
-{
-  "insight": "오늘 대화의 핵심 통찰 한 문장",
-  "extracted_tasks": ["사용자가 흘린 할 일 (예: '샴푸 사기', '카톡 답장하기'). 명확한 행동만. 추측 X."],
-  "extracted_schedule": [{"title": "미팅", "start": "14:00", "end": "15:00"}],
-  "extracted_pearls": [{"content": "LNGSHOT - Vanilla Days", "category": "음악", "note": "새벽 카페에서 발견"}],
-  "decision_suggested": {"title": "결정 주제 (10-30자, 예: '이 일을 계속할지 결정')", "reason": "왜 14일 숙성이 좋은지 짧게"},
-  "proposal": {
-    "title": "미션 제목 (10-25자, 구체적이고 작게)",
-    "description": "왜 이게 도움되는지 1-2문장."
-  }
-}
-\`\`\`
-
-⚠️ 사용자 요청 2026-04-30: 모델 추출 (traits/values/patterns/case_formulation)은 챕터 마무리 시점에 별도 LLM call로 처리. 매 응답에 그것들 적용하지 마 (응답 토큰 절감).
-
-extracted_tasks: 사용자가 대화에서 "~해야 해", "~하기로 했어", "나중에 ~할게" 같은 명확한 할 일/의도를 표현했을 때만 추출. 추측이나 일반론 X.
-
-extracted_schedule: 사용자가 "X시 Y하자", "내일 14시 미팅", "6시 운동 일정 넣어줘" 같은 시간 명시 일정/요청을 표현했을 때만 추출. start/end는 "HH:MM" 형식. 시간 없이 흐릿한 거 X. (사용자 요청 2026-04-28: 채팅으로 일정 등록)
-
-extracted_pearls: 사용자가 "진주에 추가해줘", "진주로 넣어줘", "이거 진주야", "이 곡 진주에 넣어줘" 같이 **명시적으로 진주(살아있다 느낀 순간) 추가를 요청**했을 때만 추출. category는 '음악'/'음식'/'장소'/'순간'/'사람'/'기타' 중 하나로 매핑. content는 짧고 구체적으로. 그냥 "좋다"/"행복하다" 같은 표현 X — 명시적 요청만. (사용자 요청 2026-04-28)
-
-decision_suggested: 사용자가 큰 결정을 고민 중일 때만 추가. 트리거: "이직", "그만둘까", "헤어질까", "X할까 Y할까", "결정해야", "고민이야", 진로/관계/큰 구매 같은 무거운 선택. 대화 1-2번 듣고 패턴이 보이면 제안. 작은 일상 결정엔 X. 강요 X — 한 번 거절하면 같은 주제로 다시 X.
-
-proposal은 4단 응답 시에만. 평범한 대화엔 proposal 생략.
-
-***UI 버튼 트리거 메시지 — 분석 제외***:
-사용자가 다음과 같은 "단순 UI 기능 트리거" 메시지로 요청한 경우, 이는 사용자의 자발적 발화가 아니라 버튼 클릭임:
-- "아까 그 얘기 좀 더 깊게 분석해줄래? 어떻게 하면 좋을지 전략도 알려줘." (← '더 알아보기' 버튼)
-- 챕터 마무리/대화 정리 같은 시스템 트리거
-
-이런 메시지에 대한 응답에서는 new_traits / new_values / new_patterns / case_formulation_update를 빈 배열/객체로 비워둬. 그 행위 자체를 사용자의 성격이나 패턴으로 잡지 마 (예: "협상형 종료 패턴", "분석 요청 성향" 같은 trait/pattern 절대 X). insight / proposal / extracted_tasks / decision_suggested는 응답 내용 기반이므로 OK.`;
+// 사용자 명시 2026-05-11 ultrathink: SYSTEM_PERSONA 526줄 backend 이전 (functions/api/_lib/prompts/system-persona.ts).
+// 옛: 클라이언트에 평문 → 빌드 산출물 그대로 → devtools/view-source 추출 가능 → 핵심 자산 노출.
+// 신: backend /api/chat 의 chat_main / analyze_4stage / intake endpoint 시 first system block 앞에 prepend.
+//     prefix 동일 → Anthropic prompt cache 90% 할인 그대로. 클라이언트엔 사용자 모델 데이터만 잔존.
 
 function buildSystemPrompt() {
   // V3.8: 하위호환 — 단일 문자열 반환 (이전 호출처용)
@@ -41429,7 +40893,10 @@ function buildSystemPrompt() {
 //   평균 2번 read 이상 시 break-even, ADHD 사용자 burst 패턴에서 input cost 15~25% 추가 절감 추정.
 function buildSystemPromptParts() {
   // === STABLE (캐시 가능) ===
-  let stable = [SYSTEM_PERSONA];
+  // 사용자 명시 2026-05-11 ultrathink: SYSTEM_PERSONA 자체는 backend (/api/chat) 가 첫 블록 앞에 prepend.
+  //   클라이언트는 사용자 모델 데이터 (profile/values/traits/patterns/CF/userDeepProfile) 만 stable 에 채움.
+  //   결과적으로 Anthropic 이 받는 system prefix = SYSTEM_PERSONA + 사용자 모델 → cache prefix-match 그대로.
+  let stable = [];
   stable.push('\n━━━━━━━━━━━━━━━━━━━━━\n📂 사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
   if (state.profile) stable.push(`[사용자 프로필]\n${state.profile}\n`);
 
@@ -41814,29 +41281,14 @@ async function summarizeForPearl(messageContent) {
   if (!_canAI()) return null;
   if (!messageContent || typeof messageContent !== 'string') return null;
   try {
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildPearlPolish 가 합성.
     const resp = await callAnthropic({
       _endpoint: 'archive_summary',
+      _userContentType: 'pearl_polish',
+      _vars: { messageContent },
       model: 'claude-haiku-4-5',
       max_tokens: 100,
-      messages: [{ role: 'user', content: `사용자가 행복했던/좋았던 순간을 진주(보석함)에 보관하려 해. 아래 메시지를 한 줄로 다듬어 — 나중에 다시 봐도 그 기분이 떠오르게.
-
-[규칙]
-- 한 줄, 20-60자
-- 회상 톤 (그때 어떤 일이었고 어떤 느낌이었는지)
-- 마크다운/JSON/따옴표/이모지 X
-- 격언·조언·교훈 X
-- "~좋았다 / ~행복했다 / ~따뜻했다" 같은 자연스러운 문장 OK
-- 명령조 / 일반 서술 ("나는 ~다") X
-
-[좋은 예]
-한강에서 김치찌개 먹은 그날 바람이 살랑했음
-엄마랑 통화하다 웃음이 터져서 30분을 더 떠들었음
-새벽에 비 오는 소리 들으며 마신 따뜻한 차
-
-[메시지]
-${messageContent.slice(0, 1500)}
-
-한 줄만 출력.` }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return null;
     const data = await resp.json();
@@ -42013,41 +41465,15 @@ async function saveMsgAsStrategy(idx) {
     actionStrategy = msg.content.slice(30, 200);
   } else {
     try {
+      // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildStrategyCard 가 합성.
       const resp = await callAnthropic({
         _endpoint: 'decision_step',
+        _userContentType: 'strategy_card',
+        _vars: { msgContent: msg.content || '' },
         // 사용자 요청 2026-04-30: 사실상 대화 내용 정리 → sonnet 4.6 적합 (opus 과함).
         model: 'claude-sonnet-4-6',
         max_tokens: 500,
-        messages: [{ role: 'user', content: `아래 4단 분석/전략 응답에서 "전략 카드"로 저장할 핵심을 뽑아줘.
-
-[출력 형식 — 정확히 4줄, 각 줄은 라벨로 시작]
-TITLE: <제목, 5-14자, 짧고 임팩트. 명사형 또는 짧은 명제>
-PROBLEM: <문제 상황, 50-90자, "어떤 순간·패턴에 적용?">
-CONCEPT: <심리학 개념 이름 + 1줄 설명, 30-80자>
-ACTION: <전략적 행동, 50-120자, 구체적 무엇을 어떻게>
-
-[좋은 예]
-TITLE: 마감 직전 폭발력 신뢰하기
-PROBLEM: 마감 24h 이상 남았는데 시작 못 했을 때 자책감으로 더 미루는 패턴.
-CONCEPT: ADHD time blindness — 마감 임박해야 도파민이 충분해져 시작 가능.
-ACTION: 24h 전엔 시작 못 했다고 자책 X. 마감 24h 전에 알람 1개만 설정. 그 알람을 trigger로 펼치기.
-
-TITLE: 거절은 짧게 그날 안에
-PROBLEM: 부탁받고 미루다 며칠 끌면서 부채감 커지는 패턴.
-CONCEPT: 미결 부담 누적 (Zeigarnik effect) — 결정 안 된 것이 인지 자원 잡아먹음.
-ACTION: 거절할 거면 "이번엔 어려워" 한 줄로 그날 안에 답하기. 이유 길게 설명 X.
-
-[금지]
-- "나는 ~다" 일반 서술
-- 마크다운 (**, ##)
-- JSON, 코드블록, 따옴표
-- 추상적 다짐 ("열심히 하자")
-- 4줄 외 다른 줄
-
-[원본 응답]
-${(msg.content || '').slice(0, 1500)}
-
-정확히 TITLE/PROBLEM/CONCEPT/ACTION 4줄만 출력.` }]
+        messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       let raw = data.content[0].text.trim();
@@ -42440,24 +41866,11 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
 
   // 사용자 보고 2026-04-29: 'isRegen' 변수 제거됐는데 reference 남아있던 ReferenceError fix.
   // 항상 임시 대화 전체를 컨텍스트로 (인사 메시지만 있어도 무해, 대화 풀린 상태면 사용자 컨텍스트 반영).
+  // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — _vars 만 보냄, backend buildMutationFirstGen 가 합성.
   const recentMsgs = _mutationChatState.messages
     .filter(m => m.role !== 'options' && !m._placeholder)
     .map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`)
     .join('\n');
-  let sameLayerNote;
-  if (firstGen) {
-    sameLayerNote = `\n[5 가지 모두 — L1, L2, L3, L4, L5 각 1개. 제외 X.]`;
-  } else if (mode === 'same') {
-    sameLayerNote = `\n[지금 차원 보완 모드] 같은 차원 ${prevLayer} ${_LAYER_NAME[prevLayer]||''} 에서만 1-2개. 사용자가 대화에서 짚은 *이유*를 한 구절 그대로 인용 후, 그 이유를 보완한 행동 작성. 옵션 객체마다 "reason" 필드 필수 (사용자 대화 인용, 30-60자). 옛 행동 똑같이 반복 X — 진짜 보완.`;
-  } else {
-    sameLayerNote = `\n이전이 ${prevLayer} 였으니 그 외 4 가지 각 1개.`;
-  }
-  const convoNote = recentMsgs
-    ? `\n\n[지금까지 대화 — 이 사용자 컨텍스트 우선 반영]\n${recentMsgs}\n\n위 대화에서 사용자가 짚은 진짜 어려움을 옵션에 녹여. generic 답 X.`
-    : '';
-  const headerLine = firstGen
-    ? `[주제 (토픽 → 전략 첫 결정화)] "${card.title}"\n[summary] ${card.summary || '(없음)'}\n[원래 카테고리] ${card.sourceTopicCategory || card.category || '?'}`
-    : `[전략 카드] "${card.title}"\n[심리학 개념] ${card.psychConcept || '(없음)'}\n[문제 상황] ${card.problemContext || '(없음)'}\n[이전 가지 ${prevLayer} ${_LAYER_NAME[prevLayer]||''}] "${prevAction}"\n[안 통한 미션] "${missionTitle}"`;
 
   // AI 호출 (있으면) — fallback 즉시 사용 (UI 멈추지 않게)
   let aiOptions = [];
@@ -42465,40 +41878,24 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
     try {
       const resp = await callAnthropic({
           _endpoint: 'mutation',
+          _userContentType: 'mutation_first_gen',
+          _vars: {
+            firstGen,
+            mode,
+            prevLayer,
+            prevAction,
+            missionTitle,
+            cardTitle: card.title,
+            cardSummary: card.summary,
+            cardSourceCategory: card.sourceTopicCategory,
+            cardCategory: card.category,
+            cardPsychConcept: card.psychConcept,
+            cardProblemContext: card.problemContext,
+            recentMsgs
+          },
           model: 'claude-opus-4-7',
           max_tokens: 900,
-          messages: [{
-            role: 'user',
-            content: `${firstGen ? '토픽 → 전략 결정화: 첫 가지 5 옵션 (L1-L5 각 1개)' : (mode === 'same' ? '돌연변이 같은 차원 보완 옵션 1-2개 (이유 인용 + 보완)' : '돌연변이 진화 다른 차원 4 옵션')} (사용자 요청 2026-04-29: 대화 흐름 반영).
-
-${headerLine}
-
-[5 가지 — 의지 부담 ↓일수록 관찰 친화]
-- L1 인지: 생각의 틀 재구조화 (CBT, 인지 재해석) — 의지 100%
-- L2 행동: 알람·체크리스트·시간 박스 — 의지 90%
-- L3 환경: 물리적 환경/도구 자체 변경, 자동 trigger — 의지 30%
-- L4 사회: 친구·책임 파트너·공개 약속 — 의지 20%
-- L5 메타: 가치 재검토, 마법의 소라고동, 큰 그림 보기 — 의지 10%
-${sameLayerNote}${convoNote}
-
-[옵션 작성 가이드 — 매우 중요]
-1. 추상 X 구체 ○: "환경 바꿔" X, "오늘 저녁 7시까지 폰을 거실 책상 충전기에 꽂아두기" ○
-2. 첫 행동 명확: 동사로 시작 + 5분 안에 시작 가능
-3. 네 사용자 ${card.title} 패턴에 맞게 — 일반론 X
-4. 왜 도움되는지 1구절 포함 (예: "도파민 trigger 외부화", "결정 부담 ↓")
-5. 관찰 친화: 의지 부담 ↓ 가지 (L3/L4) 우선, L1·L5는 신중하게
-6. 한 줄 70-100자
-
-[출력 JSON만 — 마크다운 X 따옴표 안 escape]
-${mode === 'same'
-  ? `{ "options": [{"layer":"${prevLayer}","action":"보완된 행동","reason":"사용자 대화에서 인용한 이유 한 구절"}] }`
-  : `{ "options": [{"layer":"L3","action":"오늘 저녁 7시까지 폰을 거실 충전기에 꽂아두기 — 손에 안 닿으면 자동 차단 (도파민 trigger 외부화)"},...] }`}
-
-[절대 금지]
-- "실패" / "안 됨" / "왜 못 했지" 단어
-- 추상 다짐 ("열심히", "노력")
-- 마크다운 / 줄바꿈 / 따옴표 escape`
-          }]
+          messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       let raw = data.content[0].text.trim();
@@ -42797,12 +42194,11 @@ async function selectMutationOption(msgIdx, optIdx) {
     try {
       const resp = await callAnthropic({
           _endpoint: 'mutation',
+          _userContentType: 'mutation_step_action',
+          _vars: { cardTitle: card?.title || '', optLayer: opt.layer, optAction: opt.action, layerName },
           // 사용자 요청 2026-04-30: 고른 후 정리 task → sonnet 4.6 적합.
           model: 'claude-sonnet-4-6', max_tokens: 400,
-          messages: [{
-            role: 'user',
-            content: `사용자 가닥 "${card?.title || ''}" — 새 시도 차원: ${opt.layer} ${layerName}\n행동: "${opt.action}"\n\n[네 일]\n이 행동을 *오늘부터 바로 할 수 있도록* 구체적 step-by-step 3-5단계.\n각 단계: 짧고 명확하게 (한 줄 max 40자). 의지 부담↓ 환경 셋업 우선.\n\n[톤]\n진지 모드 친구. 외재화. "실패" 단어 X. 관찰 친화 (작은 단위).\n\n[출력 — 다른 거 X, 단계만]\n1. (첫 단계 — 가장 작게)\n2. ...\n3. ...\n\n도입 한 줄 + 단계 + 마무리 한 줄 ("시작 전에 더 얘기 X면 ✦ 해볼게로 등록").`
-          }]
+          messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       stepText = data.content?.[0]?.text?.trim() || '';
@@ -42869,29 +42265,10 @@ function sendMutationMessage() {
 
       const resp = await callAnthropic({
           _endpoint: 'mutation',
+          _userContentType: 'mutation_chat_reply',
+          _vars: { cardTitle: card.title, traitsBlock: traits, patternsBlock: patterns, valuesBlock: values, cfLine, diagLine, allMsgs },
           model: 'claude-sonnet-4-6', max_tokens: 350,
-          messages: [{
-            role: 'user',
-            content: `너는 돌연변이 진화 임시 대화창 안 AI. "${card.title}" 가닥의 다음 시도를 사용자가 진지하게 고민 중.
-
-[톤 — 진지 모드 (가벼운 ㅋㅋ / 농담 X)]
-- 1-4문장. 차분한 친구. 외재화 ("X 패턴이 작동" / "이 도구 안 맞을 수도"). "실패" 단어 X.
-- 사용자 페이스 따라가. 추궁성 질문 X.
-- 사용자 메시지 짧아도 진지 톤 유지 (모드 sticky).
-- 분석/제안 강요 X. 사용자가 자기 발견하도록.
-
-[사용자 본인 데이터 — 우선 인용. generic textbook 단독 회피]
-${traits ? '특성:\n' + traits : ''}
-${patterns ? '\n패턴:\n' + patterns : ''}
-${values ? '\n가치:\n' + values : ''}
-${cfLine ? '\n' + cfLine : ''}
-${diagLine ? '\n' + diagLine : ''}
-
-[지금 대화 전체]
-${allMsgs}
-
-[네 응답만, 마크다운 X]`
-          }]
+          messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       const text = data.content?.[0]?.text?.trim() || '응. 더 얘기해봐.';
@@ -42965,29 +42342,11 @@ async function _completeMutationToMission(strategyId, opt, chatHistory) {
         const recentMsgs = (chatHistory || []).slice(-6).map(m => `${m.role === 'user' ? '나' : 'AI'}: ${m.content}`).join('\n');
         const aiResp = await callAnthropic({
           _endpoint: 'mutation',
+          _userContentType: 'mutation_4field',
+          _vars: { oldCtx, layerName, optLayer: opt.layer, optAction: opt.action, recentMsgs },
           // 사용자 요청 2026-04-30: 4 필드 정리 task → sonnet 4.6 적합.
           model: 'claude-sonnet-4-6', max_tokens: 500,
-          messages: [{
-            role: 'user',
-            content: `진화한 새 가닥 — 카드 4 필드 정리.
-
-${oldCtx}
-[새 차원] ${layerName} (${opt.layer})
-[새 행동] ${opt.action}
-[돌연변이 대화]
-${recentMsgs}
-
-[네 일]
-새 차원/행동 맞춰 진화한 카드의 4 필드 작성.
-
-[출력 — 정확히 4줄]
-TITLE: <짧은 제목, 5-14자>
-PROBLEM: <문제 상황, 50-90자, 옛 가닥 안 통한 맥락 반영>
-CONCEPT: <심리학 개념 + 1줄 설명, ${layerName} 차원 메커니즘, 30-80자>
-ACTION: <전략적 행동, 50-120자, 구체적 무엇을 어떻게>
-
-[금지] 마크다운, JSON, 따옴표, "실패" 단어, 추상적 다짐.`
-          }]
+          messages: [{ role: 'user', content: '' }]
         });
         const aiData = await aiResp.json();
         const raw = (aiData.content?.[0]?.text || '').trim();
@@ -43797,16 +43156,21 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
   // fetch interceptor가 state.apiKey 비어있으면 자동으로 /api/chat 라우팅. 게이트만 풀면 됨.
   if (_canAI()) {
     try {
-      const ctx = isMutation
-        ? `[전략] ${card.title}\n[새 차원] ${layerName}: ${mutationOpt.action}\n[사용자 상황] ${situation}`
-        : `[전략] ${card.title}\n[전략 행동] ${card.actionStrategy || ''}\n[심리학] ${card.psychConcept || ''}\n[사용자 상황] ${situation}`;
+      // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildTodayProposal 가 합성.
       const resp = await callAnthropic({
         _endpoint: 'decision_step',
+        _userContentType: 'today_proposal',
+        _vars: {
+          isMutation,
+          cardTitle: card.title,
+          layerName,
+          mutationAction: mutationOpt ? mutationOpt.action : '',
+          cardActionStrategy: card.actionStrategy || '',
+          cardPsychConcept: card.psychConcept || '',
+          situation
+        },
         model: 'claude-sonnet-4-6', max_tokens: 120,
-        messages: [{
-          role: 'user',
-          content: `${ctx}\n\n[네 일]\n위 정보 (전략·전략 행동·심리학 개념·사용자 상황) 셋 다 활용해서 '오늘의 제안' 1개 만들어.\n- "전략 행동" 그대로 복사 X — 오늘 사용자 상황에 맞춰 구체화/변형 필수\n- 한 줄 (max 40자). 동사로 시작. 환경 셋업 우선 (의지 부담 ↓).\n\n[출력]\n제안만 한 줄. 다른 거 X. 마크다운 X.`
-        }]
+        messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
       proposal = (data.content?.[0]?.text || '').trim().replace(/^["「'`]|["」'`]$/g, '').split('\n')[0].trim();
@@ -45555,42 +44919,19 @@ async function sbSendMessage() {
   _strategyBuilderState.messages.push({ role: 'assistant', content: '...' });
   renderStrategyBuilderChat();
 
-  // 시스템 prompt: 4단 + JSON 같이 출력
+  // 사용자 명시 2026-05-11 ultrathink: system prompt backend 이전 — _promptType='strategy_builder' 매칭.
+  //   backend 가 자체 STRATEGY_BUILDER_SYSTEM 강제 inject (1h cache_control 그대로).
   const recentMsgs = _strategyBuilderState.messages
     .filter(m => m.content !== '...')
     .slice(-8)
     .map(m => ({ role: m.role, content: m.content }));
 
-  const sys = `"전략 DNA" 카드를 같이 만드는 동반자.
-
-[흐름]
-1. 사용자가 막히는 상황 한 줄 적음.
-2. 한두 번 짧게 더 묻고 (예: 빈도/맥락/가치). 너무 많이 묻지 X (1-2턴).
-3. 4단 정리해서 사용자에게 보여줌 — TITLE/PROBLEM/CONCEPT/ACTION
-4. JSON도 같이 출력 (사용자에겐 보이고, 코드가 파싱)
-
-[톤]
-- 친구 반말, 1-3문장, 외재화
-- 칭찬 X, 단정 X, 결론 강요 X
-- 금지어: 대박/힘내/화이팅/할 수 있어/멋져/대단해
-
-[4단 출력 형식 (3-4 turn 후, 사용자가 충분히 적었을 때)]
-응답 본문 + 마지막에 다음 JSON (코드블록 \`\`\`json):
-{
-  "TITLE": "5-14자 명사형 명제",
-  "PROBLEM": "문제 상황 50-90자",
-  "CONCEPT": "심리학 개념 + 1줄 설명 30-80자",
-  "ACTION": "구체 행동 50-120자"
-}
-
-JSON 안 적용하면 4단 정리 X — 더 묻기. 사용자가 충분히 답한 후에만 JSON.`;
-
   try {
     const resp = await callAnthropic({
       _endpoint: 'analyze_4stage',
+      _promptType: 'strategy_builder',
       model: 'claude-sonnet-4-6',
       max_tokens: 800,
-      system: sys,
       messages: recentMsgs
     });
     const data = await resp.json();
@@ -46770,54 +46111,15 @@ async function processBrainDump() {
     const patterns = (state.patterns || []).slice(0, 5).map(p => p.name).join(', ');
     const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]).join(', ');
 
-    const prompt = `너는 사용자의 AI 친구 "소라고동". 사용자가 머릿속에 떠다니는 할 일들을 와다다 풀어놨어. 이걸 정리해서 "Now 3" 카드 3장과 나머지 "서랍장(drawer)" 항목으로 분류해.
-
-[사용자 정보]
-특성: ${traits || '아직 모름'}
-패턴: ${patterns || '아직 모름'}
-활성 모드: ${activeModes || '없음'}
-선택 모드: ${_execMode === 'focus' ? '🔥 몰입 모드 — 급하고 중요한 일 우선' : '🌿 여유 모드 — 가벼운 것도 섞어줘'}
-
-[브레인 덤프]
-${dump}
-
-[Now 3 구성 규칙]
-- 정확히 3장 (가능하면)
-- 각 카드: title (15자 이내), description (선택, 1줄), weight, energy
-- weight: 'main' (무거운 메인) / 'light' (5분컷 가벼움) / 'daily' (샴푸 사기 같은 일상)
-- energy: 'high' (무거움) / 'medium' / 'low' (가벼움)
-
-[몰입 모드일 때]
-- 무거운 메인 위주 (main 2-3개)
-- 마감/긴급한 거 최우선
-
-[여유 모드일 때 — 황금비율]
-- main 1개 (가장 중요)
-- light 1개 (5분컷 쉬운 거)
-- daily 1개 (샴푸 사기, 메일 답장 같은 일상)
-- 도파민 충전용 가벼운 거 먼저 깰 수 있게
-
-JSON 출력:
-{
-  "now3": [
-    {"title": "세그포머 로직 1차 수정", "description": "지난번 디버깅 이어서", "weight": "main", "energy": "high"},
-    {"title": "교수님 메일 답장", "description": null, "weight": "daily", "energy": "low"},
-    {"title": "5분 산책", "description": "오후 2시쯤", "weight": "light", "energy": "low"}
-  ],
-  "drawer": [
-    {"title": "샴푸 사기", "weight": "daily"},
-    {"title": "방 청소", "weight": "daily"}
-  ]
-}
-
-규칙:
-- 사용자가 적은 거 그대로 쓰지 마. 살짝 다듬어. ("아 맞다 샴푸 사야 함" → "샴푸 사기")
-- 추측 X. 사용자가 적은 항목만 사용.
-- 비슷한 거 묶지 마. 별개 항목.
-- JSON만 출력. 다른 설명 X.`;
-
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildBrainDump 가 합성.
     // 사용자 요청 2026-04-30: 뇌 풀기 = 분류·정리 task → sonnet 4.6.
-    const resp = await callAnthropic({ _endpoint: 'brain_dump', model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] });
+    const resp = await callAnthropic({
+      _endpoint: 'brain_dump',
+      _vars: { traits, patterns, activeModes, execMode: _execMode, dump },
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
+      messages: [{ role: 'user', content: '' }]
+    });
     if (!resp.ok) throw new Error('API ' + resp.status);
     const data = await resp.json();
     const text = data.content[0].text;
@@ -47678,6 +46980,7 @@ async function emptyChatArchiveTrash() {
 // V3.8: 챕터 토픽 추출. 사용자 명시 2026-05-01 ultrathink: passedMessages arg 받음 (4AM 일괄 batch.messages 직접 처리).
 // 결과: state.topicCards에 1-3개 토픽 카드 저장
 // 사용자 명시 2026-05-02 ultrathink: prompt builder + result processor 분리 — Batch API path 가 재사용.
+// 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildTopicChapterChat 가 합성. 클라는 chatLog 만 _vars 로.
 function _buildExtractTopicPrompt(prevChapterMsgs) {
   const chatLog = prevChapterMsgs.map(m => {
     const role = m.role === 'user' ? '나' : '소라';
@@ -47686,38 +46989,7 @@ function _buildExtractTopicPrompt(prevChapterMsgs) {
     content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
     return `${role}: ${content}`;
   }).join('\n\n');
-
-  return `사용자가 AI 친구 "소라고동"과 나눈 한 챕터(연속된 대화 묶음)를 토픽 카드로 정리해.
-
-[대화 원문]
-${chatLog.slice(0, 8000)}
-
-[토픽 카드 추출 규칙]
-- 의미 있는 토픽 1-3개만 (잡담은 토픽 X)
-- 카테고리 중 하나 선택 (V4 8 카테고리):
-  · diary: 일기 / 그날 정서 기록
-  · casual: 일상 / 가벼운 사실
-  · concern: 고민 / 갈림길 / 큰 결정
-  · emotion: 감정 / 마음 상태
-  · memory: 기억할 순간 / 강한 인상
-  · todo: 할 일 / 일감 / 마감
-  · idea: 아이디어 / 통찰
-  · relationship: 관계 / 사람
-- 각 카드: 짧은 제목 (한 줄 ~25자) + 1-2문장 요약
-- 의미 없는 짧은 잡담만 있으면 빈 배열 반환
-
-[출력 형식 — 반드시 JSON만]
-{
-  "topics": [
-    {
-      "title": "이 일 계속할지 고민",
-      "summary": "사람 갈등 + 진로 회의. 결정 못 내림.",
-      "category": "concern"
-    }
-  ]
-}
-
-JSON만 출력. 마크다운 X. 다른 설명 X.`;
+  return { chatLog: chatLog.slice(0, 8000) };
 }
 
 // parsed JSON 받아 topicCards push + chapterMeta 갱신.
@@ -47814,9 +47086,16 @@ async function extractPreviousChapterTopics(passedMessages) {
   if (!chapterStartedAt) return;
   if ((state.topicCards || []).some(c => c.chapterStartedAt === chapterStartedAt)) return;
 
-  const prompt = _buildExtractTopicPrompt(prevChapterMsgs);
+  const _vars = _buildExtractTopicPrompt(prevChapterMsgs);
   try {
-    const resp = await callAnthropic({ _endpoint: 'extract_topic', model: 'claude-haiku-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] });
+    const resp = await callAnthropic({
+      _endpoint: 'extract_topic',
+      _userContentType: 'chapter_chat',
+      _vars,
+      model: 'claude-haiku-4-5',
+      max_tokens: 600,
+      messages: [{ role: 'user', content: '' }]
+    });
     if (!resp.ok) return;
     const data = await resp.json();
     let text = data.content[0].text.trim();
@@ -47841,34 +47120,18 @@ async function generateShellStory(shellIdx, task) {
     hour: '2-digit', minute: '2-digit' 
   });
   
-  const prompt = `사용자가 방금 작업을 완료했어. 이 순간을 기억할 수 있는 짧은 한 줄 또는 두 줄짜리 메모를 만들어.
-
-[작업]
-"${task.title}"
-${task.description ? `설명: ${task.description}` : ''}
-종류: ${task.source === 'ai_mission' ? '소라의 부름 (AI 제안 미션)' : task.weight === 'main' ? '메인 작업' : task.weight === 'daily' ? '일상 작업' : '가벼운 작업'}
-시간: ${dateStr} ${timeStr}
-
-[규칙]
-- 1-2줄, 30자 이내
-- 그 순간의 분위기를 살리되 과장 X
-- 너무 시적이지 X, 너무 건조하지 X
-- 친근한 반말
-- "수고했어" 같은 칭찬 X
-- 사용자가 나중에 봤을 때 그날을 떠올릴 수 있을 만한 작은 디테일
-- 따옴표 X, 다른 설명 X
-
-[좋은 예시]
-"오후의 작은 마침표"
-"세그포머 한 줄, 그래도 한 줄"
-"메일 하나, 어깨 가벼워짐"
-"마감 직전의 천재 모드"
-"오늘 첫 번째 도파민"
-
-한 줄만 출력. 따옴표 X.`;
+  // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildShellTaskTime 가 합성.
+  const _taskKind = task.source === 'ai_mission' ? '소라의 부름 (AI 제안 미션)' : task.weight === 'main' ? '메인 작업' : task.weight === 'daily' ? '일상 작업' : '가벼운 작업';
 
   try {
-    const resp = await callAnthropic({ _endpoint: 'shell_story', model: 'claude-haiku-4-5', max_tokens: 80, messages: [{ role: 'user', content: prompt }] });
+    const resp = await callAnthropic({
+      _endpoint: 'shell_story',
+      _userContentType: 'task_time',
+      _vars: { taskTitle: task.title, taskDescription: task.description || '', taskKind: _taskKind, dateStr, timeStr },
+      model: 'claude-haiku-4-5',
+      max_tokens: 80,
+      messages: [{ role: 'user', content: '' }]
+    });
     if (!resp.ok) return;
     const data = await resp.json();
     let text = data.content[0].text.trim().replace(/^["'`]+|["'`]+$/g, '');
@@ -50875,69 +50138,9 @@ function _buildQuarterlyReviewPrompt(quarterKey, stats, data) {
   // 사용자 명시 2026-05-02 ultrathink (ERROR #9): entries 0개 = null return → caller skip.
   if (!entriesIn || entriesIn.length === 0) return null;
 
-  // 사용자 명시 2026-05-09 ultrathink: stable (가이드 / 톤 / 출력 schema) → cache_control ephemeral.
-  // volatile (stats / entries / chat / 지난 씨앗) 만 매번 다름. 90% 비용↓.
-  const stable = `너는 사용자의 분기 리뷰를 작성한다.
-
-[목표]
-- 단순 stats 요약 X. **변곡점 (turning point)** 발견 — 분기 내 큰 변화 / 결정 / 정체성 shift.
-- 사용자 본인의 인용 → 자기친밀감 (실제로 entry/대화에 있는 말만, 합성 X).
-- **분기의 너를 한 단어로 명명** (정체성 hook).
-- 다음 분기 씨앗 적용 → 리뷰 간 continuity.
-- **변화 (transformation)** — 분기 시작과 끝의 너를 사용자 자신의 말로 비교.
-- **anchor (continuity)** — 변하지 않은 정체성 1줄. 변화만 강조하면 사용자 멀미.
-
-[패턴 발견 — Detective]
-mode + entries + 가닥 outcomes 교차 봐. 구체적 숫자/인용으로 입증.
-
-[일상어 강제]
-- 수치 약어 / 분석가 어휘 절대 X. 일상 한국어 그대로.
-- BAD: "+30%", "std dev", "correlation"
-- GOOD: "더 자주 그랬어", "평균 7시간 잤어 → 7시간 잔 날들이 많았어"
-
-[톤]
-관찰 친화. 외재화 / 균형 노출. 칭찬 inflation X. 사실 관찰 ○. 친구 톤 (반말 OK).
-
-[risk_signals 가드 — 사용자 명시 2026-05-09 ultrathink: 분기도 위기 감지]
-3개월 단위 mood 지속 drop / 수면 심하게 불규칙 / 사람 만남 X 패턴 / 미션 연속 missed 등 = level 'watch' 또는 'concern'.
-concern 시 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 자동 inject.
-
-[출력 — JSON만, 마크다운 X]
-{
-  "one_word": "이번 분기의 너 = 한 단어 (예: \\"탐험가\\", \\"잠수부\\", \\"건축가\\")",
-  "summary": "분기 핵심 한 문장 (40-80자, specific)",
-  "pattern": {
-    "headline": "발견한 패턴 한 문장",
-    "evidence": "구체적 근거 — entry 인용 또는 숫자 (일상어)",
-    "condition": "어떤 조건/모드/시간 (1줄, 일상어)"
-  },
-  "turning_point": "분기 내 변곡점 — 가장 큰 변화 / 결정 / 정체성 shift. 가능하면 entry 인용. 2-4문장.",
-  "transformation": {
-    "start_quote": "분기 첫 2주 entries / 대화에서 실제 사용자 인용 — 그때의 너 (30자 이내, 따옴표 X). 매칭 안 되면 빈 문자열.",
-    "end_quote": "분기 끝 2주 entries / 대화에서 실제 사용자 인용 — 지금의 너 (30자 이내). 매칭 안 되면 빈 문자열.",
-    "shift": "X에서 Y로 한 줄 (15-30자, 자연 한국어). 예: '자책에서 관찰로', '회피에서 마주봄으로', '버티기에서 흐름으로'. 추상 어휘 X 사용자 어휘 ○."
-  },
-  "continuity": "분기 내내 안 변한 너의 한 가지 (정체성 anchor) — 사용자 어휘. 1줄, 따뜻한 톤. 예: '그래도 매일 한 줄 일기는 남겼어', '엄마 챙기는 마음은 그대로'.",
-  "quotes": ["짧은 인용 0-5개 (entries / 대화에서 실제로 있는 것만, 각 30자 이내). 데이터 부족하면 0개 OK — 합성 절대 X.", "..."],
-  "experiment": {
-    "what": "다음 분기 한 가지 작은 실험 (구체적, 환경 setup 우선)",
-    "why": "왜 흥미로울지"
-  },
-  "seeds": ["다음 분기 watch point 1 (구체적, observable)", "...2"],
-  "seed_callbacks": "지난 분기 씨앗이 어떻게 됐는지 (1-3문장). 첫 분기 또는 씨앗 X 면 빈 문자열.",
-  "risk_signals": {
-    "level": "'none' | 'watch' | 'concern' — 분기 단위 패턴 기반.",
-    "signals": ["감지된 신호 (구체, 부드럽게). 'none' 일 때 빈 array.", "..."],
-    "suggestion": "부드러운 제안 1줄. concern 시 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 포함. watch 면 self-care. none 이면 빈 문자열."
-  }
-}
-
-[금지]
-- "잘했다 / 멋지다" 류 칭찬 X
-- 단정 X
-- 마크다운 X
-
-JSON만 출력. 모든 필수 필드 다 채워서 (값 없으면 빈 문자열 또는 빈 array).`;
+  // 사용자 명시 2026-05-11 ultrathink: review_quarterly stable system (JSON schema ~60줄) backend 이전.
+  //   functions/api/_lib/prompts/review-systems.ts REVIEW_QUARTERLY_SYSTEM. backend 가 _endpoint='review_quarterly' 매칭하여 강제 inject.
+  //   volatile (사용자 데이터) 만 user message 로 전송 — cache 적용 X (매번 변동).
 
   const volatile = `지난 분기 ${quarterKey} 리뷰 작성.
 
@@ -50991,7 +50194,8 @@ ${_data.trackingFacts.map(f => {
 위 데이터로 분기 리뷰 작성. JSON만 출력.`;
 
   return {
-    system: [{ type: 'text', text: stable, cache_control: { type: 'ephemeral' } }],
+    // 사용자 명시 2026-05-11 ultrathink: stable system 자체는 backend (review-systems.ts) 가 강제 inject — client system 비움.
+    system: undefined,
     model: 'claude-sonnet-4-6',
     max_tokens: 2500,
     userMessage: volatile,
@@ -51118,31 +50322,11 @@ function _buildDiarySummaryPrompt(date, messages, entry) {
     return `${role}: ${content}`;
   }).join('\n\n').slice(0, 6000) : '대화 없음';
 
-  const prompt = `${dateLabel}의 기록이야. 일기를 안 썼지만 그 날 흔적으로 짧은 요약을 만들어줘.
-
-[체크인]
-${checkinSummary}
-
-[그 날 대화]
-${chatLog}
-
-[요약 규칙]
-- 1단락, 2-4문장 (150자 이내)
-- 그 날의 감정·상황·중요한 일만
-- 사용자 시점 ("나는 ~했다") 자연스럽게
-- 친근한 톤, 반말 OK
-- 형식: 그냥 한 단락. 제목 X, 불릿 X
-- 정보 적으면 정직하게 짧게 ("기록 적은 하루. 체크인 보면 ~")
-
-[좋은 예시]
-"활력 낮고 기분도 다운된 하루. 소라랑 짧게 압박감에 대해 얘기. 별다른 행동은 없었지만 자기 인식 있었음."
-
-요약만 출력. 다른 설명 X.`;
-
+  // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildDailySummary 가 합성.
   return {
     model: 'claude-sonnet-4-6',
     max_tokens: 300,
-    userMessage: prompt,
+    _vars: { dateLabel, checkinSummary, chatLog },
     _endpoint: 'daily_summary'
   };
 }
@@ -51156,9 +50340,10 @@ async function summarizeDayForEntry(date, messages, entry) {
   const promptSpec = _buildDiarySummaryPrompt(date, messages, entry);
   const resp = await callAnthropic({
     _endpoint: promptSpec._endpoint,
+    _vars: promptSpec._vars,
     model: promptSpec.model,
     max_tokens: promptSpec.max_tokens,
-    messages: [{ role: 'user', content: promptSpec.userMessage }]
+    messages: [{ role: 'user', content: '' }]
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -54286,10 +53471,12 @@ async function generateReviewArchiveMetaSummary(reviewId) {
   if (arrs.length === 0) { showToast('이 기간 깨달음 X'); return; }
   const archiveText = arrs.map(a => `[${a.type}] ${a.headline || ''}: ${a.body || a.userMemo || ''}`).join('\n');
   try {
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildReviewInsight 가 합성.
     const resp = await callAnthropic({
       _endpoint: 'review_insight',
+      _vars: { arrsLength: arrs.length, archiveText },
       model: 'claude-haiku-4-5', max_tokens: 250,
-      messages: [{ role: 'user', content: `이 기간 사용자 깨달음 ${arrs.length}개. 핵심 통찰 한 단락 (3-4문장)으로 요약. 친구 톤, 외재화 ("X 패턴이 작동" / "너 X적이야" X), 따뜻하게.\n\n${archiveText.slice(0, 3500)}\n\n[출력 — 한 단락만, 마크다운/인용부호 X]` }]
+      messages: [{ role: 'user', content: '' }]
     });
     const data = await resp.json();
     const text = data.content?.[0]?.text?.trim() || '';
@@ -55358,41 +54545,16 @@ async function forceAnalyze(opts) {
       })),
       activeModes: Object.keys(state.modes || {}).filter(k => state.modes[k])
     };
-    const prompt = `너는 임상심리학자로서 이 사용자의 Case Formulation을 구축한다.
-
-아래는 사용자 데이터야:
-
-${JSON.stringify(dataDump, null, 2)}
-
-JSON으로 출력:
-
-{
-  "traits": [{"name": "...", "description": "근거와 함께", "confidence": 0.0-1.0}],
-  "values": [{"name": "...", "description": "...", "sdt_need": "autonomy/competence/relatedness", "confidence": 0.0-1.0}],
-  "patterns": [{"name": "...", "trigger": "...", "sequence": "...", "description": "...", "confidence": 0.0-1.0}],
-  "case_formulation": {
-    "problems": ["..."],
-    "mechanisms": ["..."],
-    "strengths": ["..."]
-  }
-}
-
-원칙:
-- 관찰 가능한 행동·표현에 근거.
-- 사용자 실제 언어 반영.
-- ADHD·직업·가치관 맥락 고려.
-- 수면 시각 규칙성, 활력 변동, 2D affect 패턴, 미션 수락·완료 패턴도 해석.
-- 활성 모드(월경, 마감 등) 컨텍스트로 분석.
-- 각 카테고리 최대 6개씩 (5-10 X — 토큰 제한).
-- JSON만 출력.
-- 응답 잘리지 않게 짧고 구체적으로.
-
-[필터 — 가벼운 거름] (사용자 명시 2026-05-08 ultrathink: 너무 빡빡 → 완화. "다음날 나에 대해 새로운 소식 보는 재미")
-- 한 마디 잡담 (인사 / "ㅋㅋ" / 의미 X 발화) 만 패턴화 X. 일상의 작은 관찰도 OK — 음식 취향·날씨 반응·작은 습관 신호 환영.
-- 자기상 / 감정 / 관계 / 갈등 / 변곡점 / 취향 / 일상 리듬 신호 다 OK.
-- confidence ≥ 0.4 면 등록 (옛 0.6 너무 짠 — 새 발견 빈도 ↑).`;
-
-    const response = await callAnthropic({ _endpoint: 'analyze_4stage', model: 'claude-opus-4-7', max_tokens: 2500, messages: [{ role: 'user', content: prompt }] });
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildForceAnalyze 가 합성.
+    const _dataDumpJson = JSON.stringify(dataDump, null, 2);
+    const response = await callAnthropic({
+      _endpoint: 'analyze_4stage',
+      _userContentType: 'force_analyze',
+      _vars: { dataDumpJson: _dataDumpJson },
+      model: 'claude-opus-4-7',
+      max_tokens: 2500,
+      messages: [{ role: 'user', content: '' }]
+    });
     if (!response.ok) {
       if (response.status === 429) throw new Error('API 429 — Rate limit. 1-2분 후 다시.');
       if (response.status === 413) throw new Error('데이터 너무 큼. testerMode OFF 후 다시.');

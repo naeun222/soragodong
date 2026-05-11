@@ -13,16 +13,24 @@ async function extractChapterCaseAnalysis(messages, opts) {
     //   default = Sonnet 4-6 (기존 동작). 명시 시 다른 모델 가능.
     const _model = (opts && opts.model) || 'claude-sonnet-4-6';
     const _isSim = !!opts.isSimulation;
-    const prompt = _buildExtractChapterPrompt(messages, _isSim);
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildChapterTopics 가 합성. 클라는 chatLog 만 _vars 로.
+    const _chatLog = messages.map(m => {
+      const role = m.role === 'user' ? '나' : '소라';
+      let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|insight|extracted_tasks)[\s\S]*\}\s*$/g, '').trim();
+      return `${role}: ${content}`;
+    }).join('\n\n');
     // 사용자 보고 2026-05-10 (batch 10): max_tokens 동적 — 작은 챕터 비용 ↓.
     //   < 20 msgs = 1500 / 20-60 = 2500 / 60+ = 4000. 큰 챕터만 4000 max_tokens 허용.
     const _msgCount = messages.length;
     const _maxTok = _msgCount >= 60 ? 4000 : (_msgCount >= 20 ? 2500 : 1500);
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
+      _userContentType: 'chapter_topics',
+      _vars: { chatLog: _chatLog.slice(0, 8000), isSim: _isSim },
       model: _model,
       max_tokens: _maxTok,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) {
       // 사용자 보고 2026-05-10 (batch 10): 402 reason 정확 로깅 — credit_balance / quota / plan 진단.
@@ -115,29 +123,14 @@ async function extractTopicsFromTempChat(messages, source, sourceId, context) {
       : source === 'magic_help' ? '🌀 마법 도움 받기 (큰 결정의 한 단계에서 도움 요청한 임시 대화)'
       : '임시 대화';
 
-    const prompt = `사용자가 AI 친구 "소라고동"과 ${sourceLabel} 모드에서 나눈 대화를 토픽 카드로 정리해.
-
-[컨텍스트] ${context || '(없음)'}
-
-[대화 원문]
-${chatLog.slice(0, 8000)}
-
-[토픽 카드 추출 규칙]
-- 의미 있는 토픽 1-3개 (잡담은 X)
-- 카테고리 (V4 8 카테고리): diary | casual | concern | emotion | memory | todo | idea | relationship
-- 각 카드: 짧은 제목 (~25자) + 1-2문장 요약
-- 의미 없으면 빈 배열
-
-[출력 형식 — JSON만]
-{ "topics": [ { "title": "...", "summary": "...", "category": "concern" } ] }
-
-JSON만, 마크다운 X.`;
-
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildTopicTempChat 가 합성.
     const resp = await callAnthropic({
       _endpoint: 'extract_topic',
+      _userContentType: 'temp_chat',
+      _vars: { sourceLabel, context: context || '', chatLog },
       model: 'claude-haiku-4-5',
       max_tokens: 600,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return;
     const data = await resp.json();

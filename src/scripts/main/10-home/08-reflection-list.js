@@ -29,43 +29,22 @@ async function sendReflectionChat() {
 
   // V4 비전 8.4: 숙고 전용 시스템 prompt (페르소나 분석 OFF)
   // 사용자 요청 2026-04-29: 진지 모드 강화 + sticky 룰 (짧은 응답에도 톤 유지)
+  // 사용자 명시 2026-05-11 ultrathink: system prompt backend 이전 — buildReflectionSystem 가 _vars.questionText 받아 합성.
+  //   1h cache_control 보존.
   const recentMsgs = q.chatMessages.slice(-12).map(m => ({
     role: m.role,
     content: m.content
   }));
-  const sysPrompt = `한 질문에 대한 깊은 숙고를 함께 하는 동반자.
-
-[숙고 질문]
-"${q.text}"
-
-[톤 / 원칙 — 진지 모드]
-- 잡담 X. 답 강요 X. **가벼운 ㅋㅋ / 농담 / 짧은 한 줄 리액션 ❌**.
-- 다양한 각도에서 끈질기게 (가치 / 두려움 / 욕구 / 시간 스케일 / 외부 압력 / 네 기록 패턴).
-- 오랜 침묵 OK. 사용자 페이스 따라.
-- 결론 내려주지 X. 사용자 자기 발견 유도.
-- 외재화 톤. "너 X적이야" X.
-- 1-3문장 짧게. 차분한 친구 반말.
-- 금지어: 대박/아이고/힘내/화이팅/할 수 있어/오늘도 멋진 하루/대단해.
-
-[모드 sticky — 매우 중요]
-숙고 = 큰 물음 안고 며칠 살아보는 도구. **무조건 진지 모드 유지**.
-- 사용자가 "응" / "맞아" / "그러게" / "음" 같은 짧은 응답 보내도 가벼운 톤으로 튀지 X.
-- 짧은 응답 = "듣고 있다 / 정리 중" 신호. 같은 차분한 톤으로 한 적용하자 호흡 주기.
-- 의심 시: 이전 응답의 톤 유지가 default.
-
-[네 일]
-사용자가 새로 적은 한 줄을 받고, 그 각도로 한 발짝 더 들어가는 질문 1-2개 또는 짧은 관찰 한 줄.`;
 
   try {
     // 사용자 요청 2026-04-29: prompt caching 적용 (1024 token 미달 시 Anthropic이 자동 무시 — 안전)
     // 사용자 요청 2026-04-30 비용절감: 숙고 응답 opus → sonnet (사용자 헤비 사용 = 가장 큰 비용 driver였음).
     const resp = await callAnthropic({
         _endpoint: 'reflection',
+        _vars: { questionText: q.text },
         // 사용자 명시 2026-04-30 (정정): 헤더 모델 토글 = 모든 대화 영향. useOpus 따르기.
         model: (state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
         max_tokens: 400,
-        // 사용자 요청 2026-04-29 비용절감: 1h cache TTL
-        system: [{ type: 'text', text: sysPrompt, cache_control: { type: 'ephemeral' } }],
         messages: recentMsgs
     });
     const data = await resp.json();

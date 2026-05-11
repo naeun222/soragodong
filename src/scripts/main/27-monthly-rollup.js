@@ -215,69 +215,9 @@ function _buildQuarterlyReviewPrompt(quarterKey, stats, data) {
   // 사용자 명시 2026-05-02 ultrathink (ERROR #9): entries 0개 = null return → caller skip.
   if (!entriesIn || entriesIn.length === 0) return null;
 
-  // 사용자 명시 2026-05-09 ultrathink: stable (가이드 / 톤 / 출력 schema) → cache_control ephemeral.
-  // volatile (stats / entries / chat / 지난 씨앗) 만 매번 다름. 90% 비용↓.
-  const stable = `너는 사용자의 분기 리뷰를 작성한다.
-
-[목표]
-- 단순 stats 요약 X. **변곡점 (turning point)** 발견 — 분기 내 큰 변화 / 결정 / 정체성 shift.
-- 사용자 본인의 인용 → 자기친밀감 (실제로 entry/대화에 있는 말만, 합성 X).
-- **분기의 너를 한 단어로 명명** (정체성 hook).
-- 다음 분기 씨앗 적용 → 리뷰 간 continuity.
-- **변화 (transformation)** — 분기 시작과 끝의 너를 사용자 자신의 말로 비교.
-- **anchor (continuity)** — 변하지 않은 정체성 1줄. 변화만 강조하면 사용자 멀미.
-
-[패턴 발견 — Detective]
-mode + entries + 가닥 outcomes 교차 봐. 구체적 숫자/인용으로 입증.
-
-[일상어 강제]
-- 수치 약어 / 분석가 어휘 절대 X. 일상 한국어 그대로.
-- BAD: "+30%", "std dev", "correlation"
-- GOOD: "더 자주 그랬어", "평균 7시간 잤어 → 7시간 잔 날들이 많았어"
-
-[톤]
-관찰 친화. 외재화 / 균형 노출. 칭찬 inflation X. 사실 관찰 ○. 친구 톤 (반말 OK).
-
-[risk_signals 가드 — 사용자 명시 2026-05-09 ultrathink: 분기도 위기 감지]
-3개월 단위 mood 지속 drop / 수면 심하게 불규칙 / 사람 만남 X 패턴 / 미션 연속 missed 등 = level 'watch' 또는 'concern'.
-concern 시 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 자동 inject.
-
-[출력 — JSON만, 마크다운 X]
-{
-  "one_word": "이번 분기의 너 = 한 단어 (예: \\"탐험가\\", \\"잠수부\\", \\"건축가\\")",
-  "summary": "분기 핵심 한 문장 (40-80자, specific)",
-  "pattern": {
-    "headline": "발견한 패턴 한 문장",
-    "evidence": "구체적 근거 — entry 인용 또는 숫자 (일상어)",
-    "condition": "어떤 조건/모드/시간 (1줄, 일상어)"
-  },
-  "turning_point": "분기 내 변곡점 — 가장 큰 변화 / 결정 / 정체성 shift. 가능하면 entry 인용. 2-4문장.",
-  "transformation": {
-    "start_quote": "분기 첫 2주 entries / 대화에서 실제 사용자 인용 — 그때의 너 (30자 이내, 따옴표 X). 매칭 안 되면 빈 문자열.",
-    "end_quote": "분기 끝 2주 entries / 대화에서 실제 사용자 인용 — 지금의 너 (30자 이내). 매칭 안 되면 빈 문자열.",
-    "shift": "X에서 Y로 한 줄 (15-30자, 자연 한국어). 예: '자책에서 관찰로', '회피에서 마주봄으로', '버티기에서 흐름으로'. 추상 어휘 X 사용자 어휘 ○."
-  },
-  "continuity": "분기 내내 안 변한 너의 한 가지 (정체성 anchor) — 사용자 어휘. 1줄, 따뜻한 톤. 예: '그래도 매일 한 줄 일기는 남겼어', '엄마 챙기는 마음은 그대로'.",
-  "quotes": ["짧은 인용 0-5개 (entries / 대화에서 실제로 있는 것만, 각 30자 이내). 데이터 부족하면 0개 OK — 합성 절대 X.", "..."],
-  "experiment": {
-    "what": "다음 분기 한 가지 작은 실험 (구체적, 환경 setup 우선)",
-    "why": "왜 흥미로울지"
-  },
-  "seeds": ["다음 분기 watch point 1 (구체적, observable)", "...2"],
-  "seed_callbacks": "지난 분기 씨앗이 어떻게 됐는지 (1-3문장). 첫 분기 또는 씨앗 X 면 빈 문자열.",
-  "risk_signals": {
-    "level": "'none' | 'watch' | 'concern' — 분기 단위 패턴 기반.",
-    "signals": ["감지된 신호 (구체, 부드럽게). 'none' 일 때 빈 array.", "..."],
-    "suggestion": "부드러운 제안 1줄. concern 시 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 포함. watch 면 self-care. none 이면 빈 문자열."
-  }
-}
-
-[금지]
-- "잘했다 / 멋지다" 류 칭찬 X
-- 단정 X
-- 마크다운 X
-
-JSON만 출력. 모든 필수 필드 다 채워서 (값 없으면 빈 문자열 또는 빈 array).`;
+  // 사용자 명시 2026-05-11 ultrathink: review_quarterly stable system (JSON schema ~60줄) backend 이전.
+  //   functions/api/_lib/prompts/review-systems.ts REVIEW_QUARTERLY_SYSTEM. backend 가 _endpoint='review_quarterly' 매칭하여 강제 inject.
+  //   volatile (사용자 데이터) 만 user message 로 전송 — cache 적용 X (매번 변동).
 
   const volatile = `지난 분기 ${quarterKey} 리뷰 작성.
 
@@ -331,7 +271,8 @@ ${_data.trackingFacts.map(f => {
 위 데이터로 분기 리뷰 작성. JSON만 출력.`;
 
   return {
-    system: [{ type: 'text', text: stable, cache_control: { type: 'ephemeral' } }],
+    // 사용자 명시 2026-05-11 ultrathink: stable system 자체는 backend (review-systems.ts) 가 강제 inject — client system 비움.
+    system: undefined,
     model: 'claude-sonnet-4-6',
     max_tokens: 2500,
     userMessage: volatile,
@@ -458,31 +399,11 @@ function _buildDiarySummaryPrompt(date, messages, entry) {
     return `${role}: ${content}`;
   }).join('\n\n').slice(0, 6000) : '대화 없음';
 
-  const prompt = `${dateLabel}의 기록이야. 일기를 안 썼지만 그 날 흔적으로 짧은 요약을 만들어줘.
-
-[체크인]
-${checkinSummary}
-
-[그 날 대화]
-${chatLog}
-
-[요약 규칙]
-- 1단락, 2-4문장 (150자 이내)
-- 그 날의 감정·상황·중요한 일만
-- 사용자 시점 ("나는 ~했다") 자연스럽게
-- 친근한 톤, 반말 OK
-- 형식: 그냥 한 단락. 제목 X, 불릿 X
-- 정보 적으면 정직하게 짧게 ("기록 적은 하루. 체크인 보면 ~")
-
-[좋은 예시]
-"활력 낮고 기분도 다운된 하루. 소라랑 짧게 압박감에 대해 얘기. 별다른 행동은 없었지만 자기 인식 있었음."
-
-요약만 출력. 다른 설명 X.`;
-
+  // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildDailySummary 가 합성.
   return {
     model: 'claude-sonnet-4-6',
     max_tokens: 300,
-    userMessage: prompt,
+    _vars: { dateLabel, checkinSummary, chatLog },
     _endpoint: 'daily_summary'
   };
 }
@@ -496,9 +417,10 @@ async function summarizeDayForEntry(date, messages, entry) {
   const promptSpec = _buildDiarySummaryPrompt(date, messages, entry);
   const resp = await callAnthropic({
     _endpoint: promptSpec._endpoint,
+    _vars: promptSpec._vars,
     model: promptSpec.model,
     max_tokens: promptSpec.max_tokens,
-    messages: [{ role: 'user', content: promptSpec.userMessage }]
+    messages: [{ role: 'user', content: '' }]
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();

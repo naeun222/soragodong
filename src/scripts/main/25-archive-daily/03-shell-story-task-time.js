@@ -9,34 +9,18 @@ async function generateShellStory(shellIdx, task) {
     hour: '2-digit', minute: '2-digit' 
   });
   
-  const prompt = `사용자가 방금 작업을 완료했어. 이 순간을 기억할 수 있는 짧은 한 줄 또는 두 줄짜리 메모를 만들어.
-
-[작업]
-"${task.title}"
-${task.description ? `설명: ${task.description}` : ''}
-종류: ${task.source === 'ai_mission' ? '소라의 부름 (AI 제안 미션)' : task.weight === 'main' ? '메인 작업' : task.weight === 'daily' ? '일상 작업' : '가벼운 작업'}
-시간: ${dateStr} ${timeStr}
-
-[규칙]
-- 1-2줄, 30자 이내
-- 그 순간의 분위기를 살리되 과장 X
-- 너무 시적이지 X, 너무 건조하지 X
-- 친근한 반말
-- "수고했어" 같은 칭찬 X
-- 사용자가 나중에 봤을 때 그날을 떠올릴 수 있을 만한 작은 디테일
-- 따옴표 X, 다른 설명 X
-
-[좋은 예시]
-"오후의 작은 마침표"
-"세그포머 한 줄, 그래도 한 줄"
-"메일 하나, 어깨 가벼워짐"
-"마감 직전의 천재 모드"
-"오늘 첫 번째 도파민"
-
-한 줄만 출력. 따옴표 X.`;
+  // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildShellTaskTime 가 합성.
+  const _taskKind = task.source === 'ai_mission' ? '소라의 부름 (AI 제안 미션)' : task.weight === 'main' ? '메인 작업' : task.weight === 'daily' ? '일상 작업' : '가벼운 작업';
 
   try {
-    const resp = await callAnthropic({ _endpoint: 'shell_story', model: 'claude-haiku-4-5', max_tokens: 80, messages: [{ role: 'user', content: prompt }] });
+    const resp = await callAnthropic({
+      _endpoint: 'shell_story',
+      _userContentType: 'task_time',
+      _vars: { taskTitle: task.title, taskDescription: task.description || '', taskKind: _taskKind, dateStr, timeStr },
+      model: 'claude-haiku-4-5',
+      max_tokens: 80,
+      messages: [{ role: 'user', content: '' }]
+    });
     if (!resp.ok) return;
     const data = await resp.json();
     let text = data.content[0].text.trim().replace(/^["'`]+|["'`]+$/g, '');

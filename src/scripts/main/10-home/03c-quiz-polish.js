@@ -19,35 +19,14 @@ async function polishQuizQuestions(items) {
     return `${i + 1}. ${name}${desc ? ' (' + desc.slice(0, 60) + ')' : ''}`;
   }).join('\n');
   try {
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildQuizPolish 가 합성.
     const resp = await callAnthropic({
       _endpoint: 'archive_summary',
+      _userContentType: 'quiz_polish',
+      _vars: { list },
       model: 'claude-haiku-4-5',
       max_tokens: 600,
-      messages: [{ role: 'user', content: `아래 항목 N개를 사용자에게 묻는 한 줄 의문문으로 변환.
-
-[규칙]
-- 각 줄 = "N. 의문문" 형식 (번호 + 점 + 의문문)
-- 한 문장, ~30자 이내
-- 친구 카톡 톤. 분석 보고서 X.
-- 명사형 → 의문문. "저녁 무력감으로 작업 X" → "저녁에 무력감 느끼면 작업 안 되지?"
-- "잠 부족 시 큰 결정 후회" → "잠 부족하면 큰 결정 후회하지?"
-- 마크다운 / 따옴표 / 이모지 X.
-- 항목 수 그대로. 빈 출력 X.
-
-[좋은 예]
-입력 1. 야행성
-출력 1. 너 야행성이지?
-
-입력 2. 거절 후 부채감 (거절 후 며칠 미안함)
-출력 2. 거절하면 미안함 며칠 가지?
-
-입력 3. 마감 직전 폭발력 신뢰 가능
-출력 3. 마감 직전엔 폭발력 나오지?
-
-[항목]
-${list}
-
-번호 + 점 + 의문문 형식으로만 N줄 출력.` }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return [];
     const data = await resp.json();

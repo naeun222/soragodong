@@ -13,29 +13,14 @@ async function summarizeForPearl(messageContent) {
   if (!_canAI()) return null;
   if (!messageContent || typeof messageContent !== 'string') return null;
   try {
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildPearlPolish 가 합성.
     const resp = await callAnthropic({
       _endpoint: 'archive_summary',
+      _userContentType: 'pearl_polish',
+      _vars: { messageContent },
       model: 'claude-haiku-4-5',
       max_tokens: 100,
-      messages: [{ role: 'user', content: `사용자가 행복했던/좋았던 순간을 진주(보석함)에 보관하려 해. 아래 메시지를 한 줄로 다듬어 — 나중에 다시 봐도 그 기분이 떠오르게.
-
-[규칙]
-- 한 줄, 20-60자
-- 회상 톤 (그때 어떤 일이었고 어떤 느낌이었는지)
-- 마크다운/JSON/따옴표/이모지 X
-- 격언·조언·교훈 X
-- "~좋았다 / ~행복했다 / ~따뜻했다" 같은 자연스러운 문장 OK
-- 명령조 / 일반 서술 ("나는 ~다") X
-
-[좋은 예]
-한강에서 김치찌개 먹은 그날 바람이 살랑했음
-엄마랑 통화하다 웃음이 터져서 30분을 더 떠들었음
-새벽에 비 오는 소리 들으며 마신 따뜻한 차
-
-[메시지]
-${messageContent.slice(0, 1500)}
-
-한 줄만 출력.` }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return null;
     const data = await resp.json();

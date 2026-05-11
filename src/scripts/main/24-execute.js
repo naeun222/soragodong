@@ -445,54 +445,15 @@ async function processBrainDump() {
     const patterns = (state.patterns || []).slice(0, 5).map(p => p.name).join(', ');
     const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]).join(', ');
 
-    const prompt = `너는 사용자의 AI 친구 "소라고동". 사용자가 머릿속에 떠다니는 할 일들을 와다다 풀어놨어. 이걸 정리해서 "Now 3" 카드 3장과 나머지 "서랍장(drawer)" 항목으로 분류해.
-
-[사용자 정보]
-특성: ${traits || '아직 모름'}
-패턴: ${patterns || '아직 모름'}
-활성 모드: ${activeModes || '없음'}
-선택 모드: ${_execMode === 'focus' ? '🔥 몰입 모드 — 급하고 중요한 일 우선' : '🌿 여유 모드 — 가벼운 것도 섞어줘'}
-
-[브레인 덤프]
-${dump}
-
-[Now 3 구성 규칙]
-- 정확히 3장 (가능하면)
-- 각 카드: title (15자 이내), description (선택, 1줄), weight, energy
-- weight: 'main' (무거운 메인) / 'light' (5분컷 가벼움) / 'daily' (샴푸 사기 같은 일상)
-- energy: 'high' (무거움) / 'medium' / 'low' (가벼움)
-
-[몰입 모드일 때]
-- 무거운 메인 위주 (main 2-3개)
-- 마감/긴급한 거 최우선
-
-[여유 모드일 때 — 황금비율]
-- main 1개 (가장 중요)
-- light 1개 (5분컷 쉬운 거)
-- daily 1개 (샴푸 사기, 메일 답장 같은 일상)
-- 도파민 충전용 가벼운 거 먼저 깰 수 있게
-
-JSON 출력:
-{
-  "now3": [
-    {"title": "세그포머 로직 1차 수정", "description": "지난번 디버깅 이어서", "weight": "main", "energy": "high"},
-    {"title": "교수님 메일 답장", "description": null, "weight": "daily", "energy": "low"},
-    {"title": "5분 산책", "description": "오후 2시쯤", "weight": "light", "energy": "low"}
-  ],
-  "drawer": [
-    {"title": "샴푸 사기", "weight": "daily"},
-    {"title": "방 청소", "weight": "daily"}
-  ]
-}
-
-규칙:
-- 사용자가 적은 거 그대로 쓰지 마. 살짝 다듬어. ("아 맞다 샴푸 사야 함" → "샴푸 사기")
-- 추측 X. 사용자가 적은 항목만 사용.
-- 비슷한 거 묶지 마. 별개 항목.
-- JSON만 출력. 다른 설명 X.`;
-
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildBrainDump 가 합성.
     // 사용자 요청 2026-04-30: 뇌 풀기 = 분류·정리 task → sonnet 4.6.
-    const resp = await callAnthropic({ _endpoint: 'brain_dump', model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] });
+    const resp = await callAnthropic({
+      _endpoint: 'brain_dump',
+      _vars: { traits, patterns, activeModes, execMode: _execMode, dump },
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
+      messages: [{ role: 'user', content: '' }]
+    });
     if (!resp.ok) throw new Error('API ' + resp.status);
     const data = await resp.json();
     const text = data.content[0].text;

@@ -5,54 +5,14 @@ async function generateFirstTouchFromCoreData(snapshot) {
   const entriesText = JSON.stringify(snapshot.entries || [], null, 0).slice(0, 1500);
   const modesText = (snapshot.selectedModes || []).join(', ') || '(없음)';
   const vitalityText = snapshot.pickedVitality || '(미응답)';
-  const prompt = `사용자가 처음 앱에 진입해 코어 #1 (하면서 익히기) 튜토리얼을 끝냈다. 이 동안 사용자가 남긴 첫 데이터로 가벼운 첫 관찰을 작성한다.
-
-[사용자가 코어 #1 동안 남긴 거]
-대화 메시지 (사용자 발화):
-${userMsgsText || '(없음)'}
-
-오늘 일기 / 체크인:
-${entriesText}
-
-선택한 모드: ${modesText}
-오늘 활력: ${vitalityText}
-
-[목표]
-- 한 단어 정체성 명명 (정형 X — 사용자 첫 데이터 기반 고유)
-- 가설 3개 — trait / value / pattern 중 적절한 카테고리. confidence 0.3-0.5 (낮음 — 데이터 적음, 첫 인사 수준).
-- 다음 1주 관찰 거리 2개 (구체, observable)
-- 한 줄 친근 인사 + 첫 인상 (40자 이내)
-
-[가설 schema 가이드]
-- trait: name (10자 이내) + description (한 문장, 명사형 분석체)
-- value: name (5자 이내) + description (한 문장, 명사형 분석체)
-- pattern: name (10자 이내 라벨) + trigger (조건) + sequence (행동 흐름, 명사형 분석체)
-- display_text: ✓ 박스에서 보일 친근한 한 줄 (예: "꼼꼼한 편인 거 같아")
-
-[톤]
-- description / sequence (나 탭 본문): **명사형 분석체 LOCK**. 관찰자 3인칭. 어미는 "~ 명시", "~ 강하게 느낌", "~ 하는 경향", "~ 한 태도", "~ 함" 같이 명사형 종결. 추측 어미 ("있을 수 있어", "할 수 있어", "~ 인 듯", "~ 일 것") 금지. 친근 반말 X. confidence 낮아도 어미는 분석체 유지 (수치로만 표현).
-- display_text / intro_line: 친한 친구 반말. judgment X. self-compassion. confidence 낮음 명시 (예: "초안 — 함께 확인해볼 가설").
-- 공통: Surprise > Truth — '어, 어떻게 알았어?' 트리거. Specific > Generic.
-
-[출력 JSON 만, markdown X]
-{
-  "one_word": "한 단어 정체성",
-  "intro_line": "한 줄 친근 인사 + 첫 인상 (40자 이내)",
-  "hypotheses": [
-    { "category": "trait" | "value" | "pattern", "name": "...", "description": "...", "trigger": null, "sequence": null, "confidence": 0.3-0.5, "display_text": "..." },
-    ...3개
-  ],
-  "watch_points": [
-    "다음 1주 관찰 거리 1 (구체, observable)",
-    "다음 1주 관찰 거리 2"
-  ]
-}`;
+  // 사용자 명시 2026-05-11 ultrathink: system + user content 모두 backend 이전.
+  //   backend (functions/api/_lib/prompts/endpoint-systems.ts + user-content-templates.ts) 가 _endpoint='first_touch' 매칭하여 system + user content 강제 inject.
   const resp = await callAnthropic({
     _endpoint: 'first_touch',
+    _vars: { userMsgsText, entriesText, modesText, vitalityText },
     model: 'claude-sonnet-4-6',
     max_tokens: 1500,
-    system: 'JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.',
-    messages: [{ role: 'user', content: prompt }]
+    messages: [{ role: 'user', content: '' }]
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -232,21 +192,16 @@ function _intakeShouldDeepen(text) {
 // Step2: AI 가 사용자 첫 짧은 발화 받고 한 번 더 풀어달라 부탁 (1-2 문장).
 async function _intakeDeepenAsk(userText) {
   if (!_canAI()) throw new Error('AI 호출 불가능');
-  const prompt = `너는 소라고동 — 자기관찰 친구. 따뜻 + 짧게 + 반말.
-사용자가 첫 발화로 짧게 말했어. 한 번 더 풀어달라 부탁해.
-판단 X. 강요 X. 1-2 문장 follow-up 질문.
-사용자 발화의 핵심어 1개를 자연스럽게 paraphrase 안에 넣어.
-
-사용자 첫 발화: "${userText}"
-
-[출력]
-1-2 문장만. 다른 글 X. 따옴표 X.`;
+  // 사용자 명시 2026-05-11 ultrathink: system + user content 모두 backend 이전.
+  //   _promptType='intake_reply' (system) + _userContentType='intake_deepen_ask' (user content) 매칭.
   const resp = await callAnthropic({
     _endpoint: 'intake',
+    _promptType: 'intake_reply',
+    _userContentType: 'intake_deepen_ask',
+    _vars: { userText },
     model: 'claude-sonnet-4-6',
     max_tokens: 200,
-    system: '소라고동 톤 — 따뜻하고 짧게. 1-2 문장만 출력. 따옴표·markdown X.',
-    messages: [{ role: 'user', content: prompt }]
+    messages: [{ role: 'user', content: '' }]
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -256,21 +211,18 @@ async function _intakeDeepenAsk(userText) {
 // Step3: AI 가 사용자 첫 발화 받고 장문 entry 1개 모방용 생성 (50-100자, 상황+감정+자기관찰).
 async function _intakeGenLongExample(userText) {
   if (!_canAI()) throw new Error('AI 호출 불가능');
-  const prompt = `사용자가 첫 발화로 "${userText}" 라고 말했어 (짧음).
-이걸 자연스럽게 풀어 적은 장문 entry 1개를 모방용으로 생성해 — "이런 식으로 풀면 돼" 학습용.
-50-100자, 상황 + 감정 + 자기관찰 3축, 반말, 자연 한국어.
-사용자 발화의 핵심 그대로 살리면서 살 붙임.
-
-[출력]
-장문 entry 1개만. 다른 글 X. 따옴표 X.`;
+  // 사용자 명시 2026-05-11 ultrathink: system + user content 모두 backend 이전.
+  //   _promptType='intake_entry_gen' (system) + _userContentType='intake_long_example' (user content) 매칭.
   const resp = await callAnthropic({
     _endpoint: 'intake',
+    _promptType: 'intake_entry_gen',
+    _userContentType: 'intake_long_example',
+    _vars: { userText },
     // 사용자 명시 2026-05-09: AI 예시 생성 = Haiku (50-100자 짧은 모방 entry, 비용 ↓ + 속도 ↑).
     // 4단 분석 (_intakeAnalyze) 은 Opus 그대로 — 깊이 우선.
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 300,
-    system: '장문 entry 1개만 출력. 50-100자. 따옴표·markdown X.',
-    messages: [{ role: 'user', content: prompt }]
+    messages: [{ role: 'user', content: '' }]
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
@@ -286,6 +238,8 @@ async function _intakeAnalyze(intakeWorry) {
 
   // 사용자 명시 2026-05-09: askDeeper 와 메커니즘 완전 동일 — buildSystemPromptParts + systemBlocks 구조 + cache_control breakpoint.
   // 사용자 명시 2026-05-10: 3-tier (stable + sessionStable + perCall) — generateAIResponse 와 100% 동일.
+  // 사용자 명시 2026-05-11 ultrathink: SYSTEM_PERSONA backend 이전 — backend (/api/chat) 가 _endpoint='intake' 시 첫 블록 앞에 prepend.
+  //   클라 fallback 도 짧은 mini prompt 만 (buildSystemPromptParts 없으면 거의 도달 X 안전장치).
   let systemBlocks;
   if (typeof buildSystemPromptParts === 'function') {
     const promptParts = buildSystemPromptParts();
@@ -299,17 +253,17 @@ async function _intakeAnalyze(intakeWorry) {
     if (promptParts.perCall && promptParts.perCall.length > 0) {
       systemBlocks.push({ type: 'text', text: promptParts.perCall });
     }
-  } else if (typeof SYSTEM_PERSONA === 'string') {
-    systemBlocks = SYSTEM_PERSONA;
   } else {
+    // buildSystemPromptParts 미정의 (빌드 부분 깨짐) — 짧은 fallback. backend 가 SYSTEM_PERSONA 자동 prepend.
     systemBlocks = '너는 "소라고동". 한국어 반말. 친구 카톡 톤.';
   }
 
   // intakeWorry → messages + 마지막 4단 instruction (askDeeper 와 동일 instruction).
+  // 사용자 명시 2026-05-11 ultrathink: instruction text backend 이전 — _userContentType='intake_4stage' 매칭 시 server-side INTAKE_4STAGE_LAST_USER 로 강제 교체.
   const messages = (intakeWorry || []).map(m => ({ role: m.role, content: m.content }));
   messages.push({
     role: 'user',
-    content: '아까 그 얘기, 4단계로 더 깊게 분석해줘. [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. [상황]은 사용자가 시도하려는 *원래 문제*를 한 줄로 요약 (50자 내, 미션 결과 체크 모달용 — 화면엔 안 보임). 그 외 4단은 네가 관찰한 패턴도 한 줄 자연스럽게 인용해줘.'
+    content: ''
   });
 
   // cache_control breakpoint — askDeeper 와 동일 패턴 (마지막 user 직전 turn 에 ephemeral).
@@ -324,6 +278,7 @@ async function _intakeAnalyze(intakeWorry) {
 
   const resp = await callAnthropic({
     _endpoint: 'intake',
+    _userContentType: 'intake_4stage',
     // 사용자 명시 2026-05-08: askDeeper 와 동일 모델 (Opus 4.7).
     model: 'claude-opus-4-7',
     max_tokens: 1500,

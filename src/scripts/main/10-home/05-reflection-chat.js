@@ -87,37 +87,14 @@ async function summarizeForArchive(messageContent, userQuestion) {
   if (!_canAI()) return null;
   if (!messageContent || typeof messageContent !== 'string') return null;
   try {
+    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildArchiveReflection 가 합성.
     const resp = await callAnthropic({
       _endpoint: 'archive_summary',
+      _userContentType: 'reflection_insight',
+      _vars: { messageContent, userQuestion: userQuestion || '' },
       model: 'claude-haiku-4-5',
       max_tokens: 180,
-      messages: [{ role: 'user', content: `아래 대화에서 사용자가 얻은 "지혜(깨달음)"를 뽑아.
-
-[출력 — 정확히 두 줄]
-1줄: 헤드라인 (5-14자, 명사형 또는 짧은 명제)
-2줄: 본문 (1문장, 30-70자, 깨달음의 핵심을 ~음/~함/~임 어미로 끝맺음)
-
-[좋은 예]
-환경이 의지보다 강함
-집중 안 될 때 자책 X. 카페로 옮기면 30% 더 됨.
-
-거절은 빠를수록 가벼움
-미루면 부채감 누적. 그날 안에 한 줄로 답하면 깨끗해짐.
-
-새벽 결정 의심
-졸린 상태 결정은 후회 빈도 ↑. 자고 일어난 후 다시 봐야 함.
-
-[규칙]
-- 본문 어미: ~음 / ~함 / ~임 (간결, 명제형). "이다" "하다" "되다" 등 X.
-- "지혜" 추출: 사용자가 깨달은 것·앞으로 적용할 것
-- 일반 응원·격언·"잘했어" X
-- 마크다운/JSON/코드블록/따옴표/이모지 X
-- "나는 ~다" 일반 서술 X
-
-${userQuestion ? `[사용자 질문/맥락]\n${userQuestion.slice(0, 400)}\n` : ''}[AI 응답 (이 안에서 지혜 추출)]
-${messageContent.slice(0, 1500)}
-
-두 줄만 출력.` }]
+      messages: [{ role: 'user', content: '' }]
     });
     if (!resp.ok) return null;
     const data = await resp.json();
