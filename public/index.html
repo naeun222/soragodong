@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
 <!-- 사용자 명시 2026-05-06 ultrathink (perf): boot splash 핵심 이미지 preload + 외부 API DNS resolve. 비용 거의 0 / 첫 페인트 visual 단축. -->
-<link rel="preload" as="image" href="godong-focuses.webp">
+<link rel="preload" as="image" href="godong-serious.svg">
 <!-- 사용자 명시 2026-05-10: 고동이 표정 SVG 자주 쓰는 3종 preload (default 인라인 / thinking AI 대기 / happy 셀러브레이션). 나머지 18종 lazy. -->
 <link rel="preload" as="image" href="/character/godong-default.svg" type="image/svg+xml">
 <link rel="preload" as="image" href="/character/godong-thinking.svg" type="image/svg+xml">
@@ -102,7 +102,7 @@
   .header { flex-shrink: 0; padding: max(10px, env(safe-area-inset-top)) 24px 8px; display: flex; align-items: center; justify-content: flex-end; }
   .logo { font-family: 'Gowun Batang', serif; font-size: 20px; color: var(--accent); letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 10px; }
   .logo-img { width: 32px; height: 32px; object-fit: contain; display: block; border-radius: 7px; }
-  /* godong-focuses.webp 인라인 아이콘 — 마법고동 자리 🧙‍♂️ 대체. em 기준이라 부모 font-size에 자동 비례. */
+  /* godong-serious.svg 인라인 아이콘 — 마법고동 자리 🧙‍♂️ 대체. em 기준이라 부모 font-size에 자동 비례. */
   .godong-icon { display: inline-block; width: 1.25em; height: 1.25em; object-fit: contain; vertical-align: -0.22em; }
   .date-pill { font-size: 11px; color: var(--text-dim); background: var(--surface); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 6px; cursor: pointer; transition: border-color 0.2s, background 0.15s; outline: none; }
   .date-pill:hover { background: var(--bg-soft, var(--surface)); border-color: var(--accent); }
@@ -12086,7 +12086,7 @@
 
 <!-- 사용자 명시 2026-05-06 ultrathink (perf): boot splash — HTML 진입 직후 즉시 페인트. JS 실행 끝나면 init() / showLoginScreen 가 fade-out + remove. -->
 <div id="bootSplash">
-  <img src="godong-focuses.webp" alt="" decoding="async" loading="eager">
+  <img src="godong-serious.svg" alt="" decoding="async" loading="eager">
 </div>
 <!-- 사용자 명시 2026-05-09 ultrathink (perf 측정): 첫 진입 timing 진단 마커. 콘솔에서 _hideBootSplash 시 timeline 출력. -->
 <script>try { performance.mark('bootStart'); } catch(e) {}</script>
@@ -13437,7 +13437,7 @@ let authUserId = null;    // UUID
 const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮', '🌊', '🐠', '🐡', '🦐', '🪸', '🌺', '🌸', '🌼', '🌻', '🌷', '🍀', '🌱'];
 
 // 사용자 명시 2026-05-10: 고동이 표정 mascot SVG (21종, public/character/godong-{mood}.svg).
-// 기존 godong-focuses.webp / godongicon.png 인라인 자리에 점진 적용. ES module X — 인라인 onclick 패턴 유지.
+// 기존 godong-serious.svg / godongicon.png 인라인 자리에 점진 적용. ES module X — 인라인 onclick 패턴 유지.
 // 사용 예: innerHTML 에 godongImg('happy', 32) 삽입. mood 미존재면 default 폴백.
 const GODONG_MOODS = [
   'default','happy','wink','inspired','love','soras-call','thinking','hello',
