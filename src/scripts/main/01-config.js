@@ -9,14 +9,15 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // 사용처: Phase 1 게스트 모드 활성화 시 invisible widget 으로 토큰 발급 → /api/chat 헤더 X-Turnstile-Token.
 const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
 
-// 사용자 명시 2026-05-06: PortOne V2 채널 키 (KG이니시스) + Store ID. 둘 다 공개 OK — frontend 결제창 호출 시 사용.
+// 사용자 명시 2026-05-06: PortOne V2 채널 키 + Store ID. 공개 OK — frontend 결제창 호출 시 사용.
 // REST API Key (V2) + Webhook Secret 은 Cloudflare env (PORTONE_API_KEY_V2 / PORTONE_WEBHOOK_SECRET) 에 별도.
-const PORTONE_CHANNEL_KEY = 'channel-key-19a298fa-d855-4e4e-9eae-42d60448848e';
-const PORTONE_STORE_ID = 'store-d59c417a-3e7b-4316-8385-238fe8ff54d0';
-// 사용자 명시 2026-05-06: 얼리버드 첫 달 무료 = 빌링키 결제 채널. KG이니시스는 일반 결제와 빌링(이니빌링) 채널이 별개.
-// PortOne 콘솔 → 결제연동 → 채널관리 → 빌링키 결제 채널 추가 후 발급되는 channel-key 여기 채워.
-// 빈 값 = 단건 결제 채널 (PORTONE_CHANNEL_KEY) 로 fallback (토스페이먼츠 등 단일 채널이 둘 다 지원할 때 OK).
-const PORTONE_BILLING_CHANNEL_KEY = '';
+// 사용자 명시 2026-05-11: KG이니시스 / 카카오페이 / 토스페이 테스트 채널 5종 추가.
+const PORTONE_STORE_ID                  = 'store-d59c417a-3e7b-4316-8385-238fe8ff54d0';
+const PORTONE_CHANNEL_KEY               = 'channel-key-f323504c-0f76-48c5-95df-0a8b0ab22a3a'; // KG이니시스 일반 (INIpayTest)
+const PORTONE_BILLING_CHANNEL_KEY       = 'channel-key-f5129f79-9380-4f3c-8221-2cf84f52ee18'; // KG이니시스 정기/빌링키 (INIBillTst)
+const PORTONE_KAKAO_CHANNEL_KEY         = 'channel-key-604b3716-b099-4fb2-95f2-826e77b0ce77'; // 카카오페이 일반 (TC0ONETIME)
+const PORTONE_KAKAO_BILLING_CHANNEL_KEY = 'channel-key-4bd55870-5272-45bc-8dae-b1de5e74df31'; // 카카오페이 정기/빌링키 (TCSUBSCRIP)
+const PORTONE_TOSS_CHANNEL_KEY          = 'channel-key-fe52cf1c-bfc1-4809-b814-ecb773206c3c'; // 토스페이 일반 (tosstest)
 
 // 사용자 명시 2026-05-01 (100명 대비): Sentry error tracking placeholder.
 // DSN 빈 값 = SDK 로드 X (네트워크 / bundle 영향 0). 사용자가 sentry.io 가입 후 DSN 발급해서 적용하면 자동 활성.

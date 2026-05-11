@@ -73,7 +73,43 @@ function devPreviewPaymentInfoModal() {
   });
 }
 
+let _subscribePayMethod = 'card';
+function _setPayMethod(method) {
+  _subscribePayMethod = method;
+  ['card', 'kakao', 'toss'].forEach(m => {
+    const btn = document.getElementById('payMethodBtn_' + m);
+    if (!btn) return;
+    const on = m === method;
+    btn.style.border = on ? '1.5px solid var(--accent)' : '1px solid var(--border)';
+    btn.style.background = on ? 'rgba(212,167,106,0.15)' : 'var(--surface)';
+    btn.style.color = on ? 'var(--accent)' : 'var(--text-dim)';
+    btn.style.fontWeight = on ? '700' : '500';
+  });
+}
+function _getPayChannelInfo(method) {
+  const storeId = (typeof PORTONE_STORE_ID !== 'undefined') ? PORTONE_STORE_ID : '';
+  if (method === 'kakao') return {
+    storeId,
+    channelKey: (typeof PORTONE_KAKAO_CHANNEL_KEY !== 'undefined') ? PORTONE_KAKAO_CHANNEL_KEY : '',
+    billingChannelKey: (typeof PORTONE_KAKAO_BILLING_CHANNEL_KEY !== 'undefined') ? PORTONE_KAKAO_BILLING_CHANNEL_KEY : '',
+    payMethod: 'EASY_PAY', easyPay: { easyPayProvider: 'KAKAOPAY' }, needsCustomerInfo: false
+  };
+  if (method === 'toss') return {
+    storeId,
+    channelKey: (typeof PORTONE_TOSS_CHANNEL_KEY !== 'undefined') ? PORTONE_TOSS_CHANNEL_KEY : '',
+    billingChannelKey: '',
+    payMethod: 'EASY_PAY', easyPay: { easyPayProvider: 'TOSSPAY' }, needsCustomerInfo: false
+  };
+  return {
+    storeId,
+    channelKey: (typeof PORTONE_CHANNEL_KEY !== 'undefined') ? PORTONE_CHANNEL_KEY : '',
+    billingChannelKey: (typeof PORTONE_BILLING_CHANNEL_KEY !== 'undefined') ? PORTONE_BILLING_CHANNEL_KEY : '',
+    payMethod: 'CARD', easyPay: null, needsCustomerInfo: true
+  };
+}
+
 async function openSubscribeModal() {
+  _subscribePayMethod = 'card';
   if (document.getElementById('subscribeModalOverlay')) return;
   if (typeof refreshBillingStatus === 'function') {
     try { await refreshBillingStatus(false); } catch {}
@@ -124,6 +160,14 @@ async function openSubscribeModal() {
     <div class="input-modal" style="max-width:420px; max-height:92vh; overflow-y:auto; padding:24px;">
       <div style="font-size:17px; font-weight:700; color:var(--text); margin-bottom:14px;">📅 구독</div>
       ${minorWarning}
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px; color:var(--text-dim); margin-bottom:7px; letter-spacing:0.04em;">결제 수단</div>
+        <div style="display:flex; gap:6px;">
+          <button id="payMethodBtn_card" onclick="_setPayMethod('card')" style="flex:1; padding:8px 4px; font-size:11.5px; font-weight:700; border-radius:8px; border:1.5px solid var(--accent); background:rgba(212,167,106,0.15); color:var(--accent); cursor:pointer;">💳 카드</button>
+          <button id="payMethodBtn_kakao" onclick="_setPayMethod('kakao')" style="flex:1; padding:8px 4px; font-size:11.5px; font-weight:500; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); cursor:pointer;">카카오페이</button>
+          <button id="payMethodBtn_toss" onclick="_setPayMethod('toss')" style="flex:1; padding:8px 4px; font-size:11.5px; font-weight:500; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); cursor:pointer;">토스페이</button>
+        </div>
+      </div>
       ${earlyLifetimeCard}
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
@@ -157,16 +201,19 @@ async function proceedSubscribe(tierKey) {
     alert('게스트 모드는 결제 X — 먼저 로그인.');
     return;
   }
-  const channelKey = (typeof PORTONE_CHANNEL_KEY !== 'undefined') ? PORTONE_CHANNEL_KEY : '';
-  const storeId = (typeof PORTONE_STORE_ID !== 'undefined') ? PORTONE_STORE_ID : '';
-  if (!channelKey || !storeId) {
-    alert('결제 설정 오류 (PORTONE_CHANNEL_KEY / PORTONE_STORE_ID 미설정)');
+  const _pg = (typeof _subscribePayMethod !== 'undefined') ? _subscribePayMethod : 'card';
+  const _pgInfo = _getPayChannelInfo(_pg);
+  if (!_pgInfo.channelKey || !_pgInfo.storeId) {
+    alert('결제 설정 오류 — 채널키 미설정');
     return;
   }
-
-  const info = await _collectPaymentInfoIfNeeded();
-  if (!info) return;
-  const { phoneNumber, fullName } = info;
+  let phoneNumber = '', fullName = '';
+  if (_pgInfo.needsCustomerInfo) {
+    const info = await _collectPaymentInfoIfNeeded();
+    if (!info) return;
+    phoneNumber = info.phoneNumber;
+    fullName = info.fullName;
+  }
 
   // PortOne V2 SDK 동적 로드.
   if (typeof window.PortOne === 'undefined') {
@@ -203,27 +250,27 @@ async function proceedSubscribe(tierKey) {
   let response;
   try {
     response = await window.PortOne.requestPayment({
-      storeId,
-      channelKey,
+      storeId: _pgInfo.storeId,
+      channelKey: _pgInfo.channelKey,
       paymentId,
       orderName: `소라고동 ${tier.label} 구독 (1개월)`,
       totalAmount: tier.krw,
       currency: 'KRW',
-      payMethod: 'CARD',
-      // 사용자 보고 2026-05-06: 모바일 KG이니시스 = "PC 로 결제" 거부 메시지 → REDIRECTION 강제 + redirectUrl.
+      payMethod: _pgInfo.payMethod,
+      ...(_pgInfo.easyPay ? { easyPay: _pgInfo.easyPay } : {}),
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
       redirectUrl: window.location.origin + (window.location.pathname || '/'),
       customer: {
         customerId: authUserId || undefined,
         email: session?.user?.email || undefined,
-        phoneNumber,
-        fullName
+        ...(phoneNumber ? { phoneNumber, fullName } : {})
       },
-      // 사용자 명시 2026-05-09 ultrathink: 현금영수증 자진발급 자동 (부가세법 §32-2 의무).
-      // 사용자 휴대폰 입력 시 = 본인 소득공제용. 미입력 = 자진발급 (010-000-1234).
-      cashReceipt: phoneNumber && /^01\d{8,9}$/.test(phoneNumber.replace(/[-\s]/g, ''))
-        ? { type: 'PERSONAL', customerIdentityNumber: phoneNumber.replace(/[-\s]/g, '') }
-        : { type: 'PERSONAL', customerIdentityNumber: '01000001234' },
+      // 사용자 명시 2026-05-09 ultrathink: 현금영수증 자진발급 (부가세법 §32-2) — KG이니시스 카드 결제 시만.
+      ...(_pg === 'card' ? {
+        cashReceipt: phoneNumber && /^01\d{8,9}$/.test(phoneNumber.replace(/[-\s]/g, ''))
+          ? { type: 'PERSONAL', customerIdentityNumber: phoneNumber.replace(/[-\s]/g, '') }
+          : { type: 'PERSONAL', customerIdentityNumber: '01000001234' }
+      } : {}),
       customData: JSON.stringify({ tier: tierKey, type: 'subscribe' })
     });
   } catch (e) {
@@ -296,19 +343,25 @@ async function proceedEarlyBirdTrial() {
     alert('게스트 모드는 결제 X — 먼저 로그인.');
     return;
   }
-  // 사용자 명시 2026-05-06: 빌링키 채널 우선. 없으면 단건 채널 fallback (단일 채널이 둘 다 지원하는 PG 케이스).
-  const billingChannelKey = (typeof PORTONE_BILLING_CHANNEL_KEY !== 'undefined' && PORTONE_BILLING_CHANNEL_KEY)
-    ? PORTONE_BILLING_CHANNEL_KEY
-    : ((typeof PORTONE_CHANNEL_KEY !== 'undefined') ? PORTONE_CHANNEL_KEY : '');
-  const storeId = (typeof PORTONE_STORE_ID !== 'undefined') ? PORTONE_STORE_ID : '';
-  if (!billingChannelKey || !storeId) {
-    alert('결제 설정 오류 (PORTONE_BILLING_CHANNEL_KEY / PORTONE_STORE_ID 미설정)');
+  const _pg = (typeof _subscribePayMethod !== 'undefined') ? _subscribePayMethod : 'card';
+  if (_pg === 'toss') {
+    alert('토스페이는 정기 결제를 지원하지 않아. 카드 또는 카카오페이를 선택해줘.');
     return;
   }
-
-  const info = await _collectPaymentInfoIfNeeded();
-  if (!info) return;
-  const { phoneNumber, fullName } = info;
+  const _pgInfo = _getPayChannelInfo(_pg);
+  const billingChannelKey = _pgInfo.billingChannelKey || _pgInfo.channelKey;
+  const storeId = _pgInfo.storeId;
+  if (!billingChannelKey || !storeId) {
+    alert('결제 설정 오류 — 빌링키 채널 미설정');
+    return;
+  }
+  let phoneNumber = '', fullName = '';
+  if (_pgInfo.needsCustomerInfo) {
+    const info = await _collectPaymentInfoIfNeeded();
+    if (!info) return;
+    phoneNumber = info.phoneNumber;
+    fullName = info.fullName;
+  }
 
   // PortOne V2 SDK 동적 로드 (proceedSubscribe 와 동일).
   if (typeof window.PortOne === 'undefined') {
@@ -338,7 +391,8 @@ async function proceedEarlyBirdTrial() {
     response = await window.PortOne.requestIssueBillingKey({
       storeId,
       channelKey: billingChannelKey,
-      billingKeyMethod: 'CARD',
+      billingKeyMethod: _pgInfo.payMethod,
+      ...(_pgInfo.easyPay ? { easyPay: _pgInfo.easyPay } : {}),
       issueId,
       issueName: '소라고동 얼리버드 정기 카드 등록',
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
@@ -346,8 +400,7 @@ async function proceedEarlyBirdTrial() {
       customer: {
         customerId: authUserId || undefined,
         email: session?.user?.email || undefined,
-        phoneNumber,
-        fullName
+        ...(phoneNumber ? { phoneNumber, fullName } : {})
       }
     });
   } catch (e) {
