@@ -48,8 +48,10 @@ export type TierKey = keyof typeof TIER_PLANS;
 export const FREE_TRIAL_DAYS = 30;
 
 // 사용자 명시 2026-05-02 ultrathink: light_pack 제거 — Premium 전용 (Light/얼리는 Premium 전환 또는 다음 달 대기).
+// V4 (사용자 명시 2026-05-04 ultrathink — v2): 작은 단위 재설계 — premium_pack 7000/$5 → 2500/$1.5.
+//   frontend `01-tiers-and-caps.js` OVERAGE_PACKS_CLIENT.premium_pack 와 동기 — 옛 amount mismatch 결제 fail 픽스.
 export const OVERAGE_PACKS: Record<'premium_pack', { krw: number; usd: number; for_tier: TierKey }> = {
-  premium_pack: { krw: 7000, usd: 5, for_tier: 'premium' }
+  premium_pack: { krw: 2500, usd: 1.5, for_tier: 'premium' }
 };
 
 // 사용자 명시 2026-05-02 ultrathink: Opus = Premium 전용 + 일일 30번 (메인 대화 한정, 새벽 4시 KST 리셋).
@@ -409,9 +411,15 @@ export async function checkBudget(env: Env, userId: string): Promise<BudgetCheck
       monthly_remaining_usd: 0
     };
   }
+  // V4 (사용자 명시 2026-05-11 — 가계약): BILLING_RECURRING_ENABLED='true' 가 아니면 Plus 첫 달 무료 promo X.
+  //   잘못된 카피 누수 방지 — env 분기로 정확한 안내.
+  const recurOn = (env as any).BILLING_RECURRING_ENABLED === 'true';
+  const planLine = recurOn
+    ? 'Light (4,900원) / Plus (9,900원 첫 달 무료) / Premium (25,000원)'
+    : 'Light (4,900원) / Plus (9,900원) / Premium (25,000원) — 모두 1개월 이용권';
   return {
     ok: false,
-    reason: '잔액이 0원이야. Light (4,900원) / Plus (9,900원 첫 달 무료) / Premium (25,000원) 중 구독해줘.',
+    reason: `잔액이 0원이야. ${planLine} 중 구독해줘.`,
     code: 'NO_CREDIT',
     remaining_credit_usd: 0
   };

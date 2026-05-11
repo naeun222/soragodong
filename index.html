@@ -56512,10 +56512,15 @@ function checkFreeTrialExpiry() {
   if (remainingDays > 7 || remainingDays < 0) return;
   const daysDisplay = Math.max(1, Math.ceil(remainingDays));
   // V4 (사용자 명시 2026-05-06 ultrathink): legacy early_light plan 활성화된 옛 사용자만 fire. 신규는 무료 토큰 (자동 활성화 X) 라 이 분기 진입 X.
+  // V4 (사용자 명시 2026-05-11 — 가계약): BILLING_RECURRING_ENABLED=false 시 Plus 첫 달 무료 promo X — 카피 분기.
+  const _recurOn = (typeof BILLING_RECURRING_ENABLED !== 'undefined') ? BILLING_RECURRING_ENABLED : true;
+  const planBody = _recurOn
+    ? `<b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`
+    : `<b>🐚 Light 4,900원</b> / <b>🌊 Plus 9,900원</b> / <b>✨ Premium 25,000원</b> — 모두 1개월 이용권 (자동 갱신 X).`;
   _addNotification({
     type: 'free_trial_expiry_warning',
     title: '레거시 얼리 플랜 만료 임박',
-    body: `<b>${daysDisplay}일</b> 후 만료. 계속 쓰려면 구독 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`,
+    body: `<b>${daysDisplay}일</b> 후 만료. 계속 쓰려면 구독 — ${planBody}`,
     persistent: true
   });
 }
