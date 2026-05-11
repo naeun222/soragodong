@@ -101,6 +101,11 @@ async function init() {
   try { performance.mark('cloudEnd'); } catch (e) {}
   window._initialDataLoading = false;
 
+  // 사용자 요청 2026-05-11: 영상 마케팅 first-touch attribution upload (fire-and-forget, 이미 업로드된 사용자는 즉시 return).
+  if (typeof maybeUploadAcquisition === 'function') {
+    maybeUploadAcquisition().catch(() => {});
+  }
+
   // 사용자 보고 2026-05-06 ultrathink (재): sim 튜토 sessionStorage 마커 → state.tutorialShown 복원 = loadFromCloud 후로 이동.
   // 옛 위치 (cloud load 전) = cloud 데이터가 우리 set 한 true 를 false 로 덮어씀 → 매번 fire 버그.
   // 인증 사용자: cloud row 가 옛 false 인데 reload 후 마커 살아있으니 우리가 true 강제 set + saveState — 다음 cloud sync 에 반영.
