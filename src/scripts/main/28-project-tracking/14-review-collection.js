@@ -241,7 +241,7 @@ async function generateReviewArchiveMetaSummary(reviewId) {
   } catch (e) { showToast('실패: ' + (e.message || '')); }
 }
 
-// 사용자 요청 2026-04-28: 도서관 마법의 소라고동 = 홈의 마법고동 같은 방. archive 별도 화면 X, decisions 화면으로 통일
+// 사용자 요청 2026-04-28: 도서관 마법고동 = 홈의 마법고동 같은 방. archive 별도 화면 X, decisions 화면으로 통일
 function showArchiveDecisions() {
   showScreen('decisions');
   if (typeof renderDecisionsList === 'function') renderDecisionsList();

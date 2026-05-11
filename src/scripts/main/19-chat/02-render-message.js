@@ -68,7 +68,7 @@ function _renderChatMessageHTML(m, i) {
     if (m.role === 'assistant' && m.decisionSuggested && !m.decisionResponse && !m.typing) {
       const ds = m.decisionSuggested;
       decisionCard = `<div class="decision-suggest-card">
-        <div class="dsc-header"><img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법의 소라고동에서 천천히 보면 어때?</div>
+        <div class="dsc-header"><img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동에서 천천히 보면 어때?</div>
         <div class="dsc-title">${escapeHtml(ds.title)}</div>
         ${ds.reason ? `<div class="dsc-reason">${escapeHtml(ds.reason)}</div>` : ''}
         <div class="dsc-buttons">
@@ -77,7 +77,7 @@ function _renderChatMessageHTML(m, i) {
         </div>
       </div>`;
     } else if (m.decisionResponse) {
-      const icon = m.decisionResponse === 'accept' ? '🐚 마법의 소라고동으로 보냈어' : '괜찮아 — 그냥 듣기만 할게';
+      const icon = m.decisionResponse === 'accept' ? '🐚 마법고동으로 보냈어' : '괜찮아 — 그냥 듣기만 할게';
       decisionCard = `<div style="font-size:11px; color:var(--purple); margin-top:8px; padding: 0 4px;">${icon}</div>`;
     }
 

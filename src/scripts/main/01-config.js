@@ -69,7 +69,7 @@ let authUserId = null;    // UUID
 const SHELL_TYPES = ['🐚', '🌀', '🐌', '✨', '🌟', '💫', '⭐', '🔮', '🌊', '🐠', '🐡', '🦐', '🪸', '🌺', '🌸', '🌼', '🌻', '🌷', '🍀', '🌱'];
 
 // 사용자 명시 2026-05-10: 고동이 표정 mascot SVG (21종, public/character/godong-{mood}.svg).
-// 기존 godong.webp / godongicon.png 인라인 자리에 점진 적용. ES module X — 인라인 onclick 패턴 유지.
+// 기존 godong-focuses.webp / godongicon.png 인라인 자리에 점진 적용. ES module X — 인라인 onclick 패턴 유지.
 // 사용 예: innerHTML 에 godongImg('happy', 32) 삽입. mood 미존재면 default 폴백.
 const GODONG_MOODS = [
   'default','happy','wink','inspired','love','soras-call','thinking','hello',

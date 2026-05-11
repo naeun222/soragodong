@@ -65,17 +65,17 @@ function testForceDrainedMode() {
   showToast('🪫 방전 모드 ON — 홈/응답 톤 변화 확인. 다시 OFF는 체크인에서.');
 }
 
-// 마법의 소라고동 active 결정 진입
+// 마법고동 active 결정 진입
 function testForceDecisionRoom() {
   const active = (state.decisions || []).find(d => d.status === 'active');
   if (active && typeof openDecision === 'function') {
     openDecision(active.id);
-    showToast(`🌀 "${active.topic}" 마법의 소라고동 진입`);
+    showToast(`🌀 "${active.topic}" 마법고동 진입`);
   } else if (typeof startNewDecision === 'function') {
     startNewDecision();
-    showToast('🌀 새 마법의 소라고동 시작');
+    showToast('🌀 새 마법고동 시작');
   } else {
-    showToast('⚠️ 마법의 소라고동 관련 함수 X');
+    showToast('⚠️ 마법고동 관련 함수 X');
   }
 }
 

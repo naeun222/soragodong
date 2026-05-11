@@ -23,7 +23,7 @@ function renderLensGalpi() {
 
   let body = '';
   if (view === 'feed') {
-    // 피드: 기존 archive-quick-row 두 버튼 (마법의 소라고동 / 리뷰 모음)
+    // 피드: 기존 archive-quick-row 두 버튼 (마법고동 / 리뷰 모음)
     // 사용자 명시 2026-05-09: 리뷰 모음 밑에 '🌊 숙고의 방' 카드 추가.
     // 사용자 보고 2026-05-09 ultrathink: 활성 0 일 때 '1건' 표시 버그 — 옛 resolved/paused 도 reflectionAll 에 카운트되던 거.
     // 결론 낸 옛 질문은 깨달음 archive 에 별도 surface — 숙고의 방 카드는 '지금 활성' 만 의미.
@@ -32,7 +32,7 @@ function renderLensGalpi() {
       <div class="archive-quick-row" style="grid-template-columns:1fr 1fr;">
         <button class="archive-quick-btn" onclick="showArchiveDecisions()">
           <span class="aq-icon"><img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"></span>
-          <span class="aq-label">마법의 소라고동</span>
+          <span class="aq-label">마법고동</span>
           <span class="aq-count">${decisions.length}건</span>
         </button>
         <button class="archive-quick-btn" onclick="showArchiveReviews()">
@@ -49,7 +49,7 @@ function renderLensGalpi() {
         </button>
       </div>
       <div style="margin-top:14px; font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">
-        큰 결정은 <img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법의 소라고동에서 14일 숙성.<br>
+        큰 결정은 <img src="/character/godong-wizard.png" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동에서 14일 숙성.<br>
         주간·월간 회고는 🌙 리뷰 모음에서 다시 보기.<br>
         풀고 싶은 질문은 🌊 숙고의 방.
       </div>
@@ -81,7 +81,7 @@ function renderLensGalpi() {
     };
 
     const CATS = [
-      { key: 'decision',  icon: '🐚', label: '마법의 소라고동', items: decisions, count: decisions.length, emptyMsg: '아직 시작한 결정 없어. 큰 결정 있을 때 14일 숙성에 넣어.' },
+      { key: 'decision',  icon: '🐚', label: '마법고동', items: decisions, count: decisions.length, emptyMsg: '아직 시작한 결정 없어. 큰 결정 있을 때 14일 숙성에 넣어.' },
       { key: 'weekly',    icon: '🌙', label: '주간 리뷰',       items: weekly,    count: weekly.length,    emptyMsg: '아직 주간 리뷰 없어. 일주일 데이터 쌓이면 자동 생성.' },
       { key: 'monthly',   icon: '📅', label: '월간 리뷰',       items: monthly,   count: monthly.length,   emptyMsg: '아직 월간 리뷰 없어. 한 달 데이터 쌓이면 자동.' },
       { key: 'quarterly', icon: '🌸', label: '계절 리뷰',       items: quarterly, count: quarterly.length, emptyMsg: '아직 계절 리뷰 없어. 분기 끝날 때 자동.' },

@@ -109,7 +109,7 @@ function renderMainAction() {
   container.innerHTML = cardHtml;
 }
 
-// 마법의 소라고동 미니 링크 — 작지만 카드 모양
+// 마법고동 미니 링크 — 작지만 카드 모양
 // 사용자 명시 2026-05-09 (#7, spec 5-3): 활성 결정 + 활성 숙고 둘 다 카운트. reflectionContainer zone 폐기 흡수.
 function renderDecisionMiniLink() {
   const container = document.getElementById('decisionMiniLinkContainer');

@@ -308,7 +308,7 @@ const DEFAULT_STATE = {
     core4: false,  // 나 탭 — 분석 결과
     core5: false,  // 도서관 탭 5 카테고리 + 리뷰
     core6: false,  // 숙고 질문
-    core8: false   // 마법의 소라고동
+    core8: false   // 마법고동
   },
 
   // 5. 모드 활성 시 표시용

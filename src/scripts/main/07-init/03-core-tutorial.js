@@ -129,7 +129,7 @@ const CORE_INITIAL_SCREEN = {
   core2: 'home'
 };
 
-// 코어별 진입 후 추가 액션 — 마법의 소라고동 등 특수 진입 처리. v8 폐기로 현재 빈 객체.
+// 코어별 진입 후 추가 액션 — 마법고동 등 특수 진입 처리. v8 폐기로 현재 빈 객체.
 const CORE_INITIAL_ACTION = {};
 
 // 코어 튜토리얼 시작 — startInteractiveOnboarding 인프라 재사용

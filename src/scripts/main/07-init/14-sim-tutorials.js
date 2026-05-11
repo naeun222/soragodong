@@ -2,7 +2,7 @@
 // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 시드 시뮬 튜토리얼 5종.
 //   - 도서관 첫 진입 → 일기·대화 칩 튜토 (state.tutorialShown.diaryLib)
 //   - 깨달음 칩 첫 클릭 → 깨달음 튜토 (state.tutorialShown.insights)
-//   - 마법의 소라고동 첫 진입 → 마법 튜토 (state.tutorialShown.magic)
+//   - 마법고동 첫 진입 → 마법 튜토 (state.tutorialShown.magic)
 //   - 리뷰 모음 첫 진입 → 리뷰 튜토 (state.tutorialShown.reviews)
 //   - 숙고 질문 첫 진입 → 숙고 튜토 (state.tutorialShown.reflection)
 // 패턴: testerMode ON (자동 backup) → testSeedV4Data 풀 시드 → 화면 진입 → V8 코치마크 → testerMode OFF (reload).
@@ -331,7 +331,7 @@ function _insightsCoachmarkAiExample() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 3) 마법의 소라고동 첫 진입 → 마법 튜토
+// 3) 마법고동 첫 진입 → 마법 튜토
 // ═══════════════════════════════════════════════════════════════
 
 function shouldRunMagicTutorial() { return _shouldRunSimTutorial('magic'); }
@@ -353,7 +353,7 @@ async function runMagicTutorialV8() {
 function _magicCoachmarkIntro() {
   // 옛 magic_room_intro 카피 (02-tutorial-welcome.js:1060) 그대로.
   const body = `
-    <div class="v8-coach-title">🐚 마법의 소라고동</div>
+    <div class="v8-coach-title">🐚 마법고동</div>
     <div class="v8-coach-text">
       큰 결정 (도전 / 사랑 / 진로) 을 후회하지 않고 할 수 있게 도와주는 방이야.<br>
       <span class="v8-coach-text-soft">14일 숙성 — 머리 식히고 진짜 마음 읽기 ✦</span>

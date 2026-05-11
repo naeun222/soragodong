@@ -21,7 +21,7 @@ function acceptDecisionSuggestion(idx) {
   msg.decisionResponse = 'accept';
   saveState();
   renderChat();
-  showToast('마법의 소라고동으로 보냈어 🐚');
+  showToast('마법고동으로 보냈어 🐚');
   setTimeout(() => openDecision(decision.id), 600);
 }
 

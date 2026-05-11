@@ -2457,7 +2457,7 @@
     letter-spacing: 0.04em;
   }
 
-  /* === Magic Room Visual Mode (사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 vs 일반 chat 분간) === */
+  /* === Magic Room Visual Mode (사용자 보고 2026-04-30 ultrathink-2: 마법고동 vs 일반 chat 분간) === */
   .magic-mode-chip {
     display: none;
     position: fixed;
@@ -8681,7 +8681,7 @@
     color: var(--text-dim);
   }
 
-  /* 사용자 요청 2026-04-29: 마법의 소라고동 도움 받기 — 별도 helpChat 모달 (영구 저장, 며칠 걸쳐 이어가기) */
+  /* 사용자 요청 2026-04-29: 마법고동 도움 받기 — 별도 helpChat 모달 (영구 저장, 며칠 걸쳐 이어가기) */
   .magic-help-overlay {
     position: fixed; inset: 0;
     background: rgba(15,14,23,0.85);

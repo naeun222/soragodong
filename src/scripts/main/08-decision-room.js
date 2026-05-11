@@ -1031,7 +1031,7 @@ async function saveFinalDecision(decisionId) {
   if (daysSince < 14) {
     const yes = await showConfirmModal({
       title: `⚠️ 14일 숙성 권장`,
-      message: `결정을 시작한 지 ${daysSince}일째야.\n\n마법의 소라고동은 14일 동안 시간을 두고 보는 도구야. 지금 결정하면 hot-cold empathy gap (감정 상태 변화) 후회로 이어지기 쉬워.\n\n그래도 지금 결정할래?`,
+      message: `결정을 시작한 지 ${daysSince}일째야.\n\n마법고동은 14일 동안 시간을 두고 보는 도구야. 지금 결정하면 hot-cold empathy gap (감정 상태 변화) 후회로 이어지기 쉬워.\n\n그래도 지금 결정할래?`,
       okLabel: '그래도 결정',
       cancelLabel: '14일 기다릴게'
     });

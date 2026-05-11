@@ -102,7 +102,7 @@ function showScreen(name) {
   if (name === 'archive-reviews') {
     if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
   }
-  // 사용자 보고 2026-04-30 ultrathink-2: 마법의 소라고동 화면(list/detail)에서 일반 chat과 시각 구분
+  // 사용자 보고 2026-04-30 ultrathink-2: 마법고동 화면(list/detail)에서 일반 chat과 시각 구분
   // body.magic-mode → 보라/매직 그라디언트 헤더 chip + 색조 살짝 시프트
   // 사용자 요청 2026-04-30: 마법 helpChat (임시 대화창) 도 magic-mode 넣어 보라 톤. 숙고의 방 = 청록, 마법 영역 = 보라.
   document.body.classList.toggle('magic-mode', name === 'decisions' || name === 'decision-detail' || name === 'magic-help');

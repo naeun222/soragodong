@@ -119,7 +119,7 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
       { layer: 'L4', action: '믿을 친구 1명한테 카톡 한 줄: "나 오늘부터 X 시도 중. 매일 결과 한 줄 공유" — 책임 파트너 효과 + 외부 시선 = 도파민' },
       { layer: 'L2', action: '알람 1개 (실제 가능한 시간) + 5분만 시작하기 룰 — 5분 후 그만둬도 OK. 진입 마찰 ↓' },
       { layer: 'L1', action: '이 행동이 안 됐을 때 머릿속에 뜨는 생각을 적어보기 ("난 못해" 같은 거) → 다른 해석 시도 ("오늘은 못 했을 뿐, 내일 다시")' },
-      { layer: 'L5', action: '마법의 소라고동에 큰 질문 적용하기: "이 행동이 정말 지금 나에게 필요한가?" 일주일 안고 살아보기 — 가치 재검토' }
+      { layer: 'L5', action: '마법고동에 큰 질문 적용하기: "이 행동이 정말 지금 나에게 필요한가?" 일주일 안고 살아보기 — 가치 재검토' }
     ];
     // firstGen: 5개 다 / mode='same': prevLayer 만 1개 (reason 비움 — 대화 부족 fallback) / mode='cross': prevLayer 제외 4개
     if (firstGen) {

@@ -1046,8 +1046,8 @@ const _LEGACY_ONBOARDING_STEPS = [
   {
     id: 'galpi_sub_intro',
     targetSelector: '[onclick="showArchiveDecisions()"]',
-    title: '🌀 마법의 소라고동 + 리뷰',
-    body: '마법의 소라고동과 리뷰 모음이 있어.<br><br>마법의 소라고동을 눌러봐.',
+    title: '🌀 마법고동 + 리뷰',
+    body: '마법고동과 리뷰 모음이 있어.<br><br>마법고동을 눌러봐.',
     waitFor: 'click',
     advanceDelay: 600,
     dimBackground: false,
@@ -1056,7 +1056,7 @@ const _LEGACY_ONBOARDING_STEPS = [
   {
     id: 'magic_room_intro',
     targetSelector: 'button[onclick="startNewDecision()"]',
-    title: '🐚 마법의 소라고동',
+    title: '🐚 마법고동',
     body: '큰 결정(도전, 사랑, 진로)을 후회하지 않고 할 수 있게 도와주는 방이야.<br><br>새로운 결정 시작을 눌러봐.',
     waitFor: 'click',
     advanceDelay: 600,
