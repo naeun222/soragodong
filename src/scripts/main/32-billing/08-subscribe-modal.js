@@ -483,6 +483,8 @@ async function proceedPlusTrial() {
   }
 
   // 백엔드 등록 — trial 시작.
+  // V4 (사용자 명시 2026-05-11 ultrathink): defensive plan='light' 명시 — backend default 안 의존.
+  //   Plus trial 흐름 (key='light'). 옛 default 'early_lifetime' 잔재 시 잘못된 tier 방지.
   try {
     const verifyResp = await fetch('/api/billing/portone-register-trial', {
       method: 'POST',
@@ -490,7 +492,7 @@ async function proceedPlusTrial() {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + session.access_token
       },
-      body: JSON.stringify({ billingKey })
+      body: JSON.stringify({ billingKey, plan: 'light' })
     });
     const result = await verifyResp.json();
     if (verifyResp.ok && result.ok) {

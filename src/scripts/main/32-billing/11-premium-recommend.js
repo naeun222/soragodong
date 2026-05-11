@@ -31,19 +31,13 @@ function _showPremiumPromoModal() {
   overlay.style.zIndex = '10001';
   overlay.innerHTML = `
     <div class="input-modal" style="max-width:380px; padding:24px; text-align:center;">
-      <div style="font-size:36px; margin-bottom:8px;">🌊</div>
+      <div style="font-size:36px; margin-bottom:8px;">✨</div>
       <div style="font-size:17px; font-weight:600; color:var(--text); margin-bottom:8px;">3일 연속 한도 도달 ✦</div>
       <div style="font-size:13px; color:var(--text-dim); line-height:1.7; margin-bottom:18px;">
         활발하게 쓰고 있네!<br>
-        <b>Premium</b> 가면 <b>3.75x 더 자유</b>롭게 — Opus 깊은 대화도 매일 30번까지.<br>
-        <br>
-        <span style="color:var(--text-soft); font-size:11.5px; line-height:1.6;">
-          솔직하게 — 단독 개발자 (1인) 라 Premium = <b>iOS 앱 출시 후원</b>.<br>
-          중고 맥북 사서 iOS 빌드 가능 🫂<br>
-          <span style="font-size:10px; opacity:0.6;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>
-        </span>
+        <b>Premium</b> 가면 <b>3.75x 더 자유</b>롭게 — Opus 깊은 대화도 매일 30번까지.
       </div>
-      <button class="btn-primary" onclick="document.getElementById('premiumPromoOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Premium 으로 후원하기</button>
+      <button class="btn-primary" onclick="document.getElementById('premiumPromoOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ Premium 시작하기</button>
       <button class="btn-secondary" onclick="document.getElementById('premiumPromoOverlay').remove();" style="width:100%;">나중에</button>
     </div>
   `;
@@ -126,11 +120,7 @@ function showBudgetExceededModal(reason, opts) {
       titleText = '🐚 체험 한도 도달';
       bodyText = '체험 한도 다 썼네 — 써줘서 고마워.<br><br>' +
         '계속 쓰려면 구독 — <span style="color:#5fb4d3; font-weight:600;">🌊 Plus 첫 달 무료</span> <b>9,900원/월</b> (30일 후 자동 결제, 언제든 해지).<br>' +
-        '가볍게 시작하려면 <b>🐚 Light 4,900원/월</b>.<br><br>' +
-        '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
-        '솔직하게 — 단독 개발자 (1인) 라 결제 = iOS 앱 출시 후원이야 🫂<br>' +
-        '<span style="font-size:10px; opacity:0.55;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>' +
-        '</span>';
+        '가볍게 시작하려면 <b>🐚 Light 4,900원/월</b>.';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Plus 첫 달 무료 시작 (9,900원/월)</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 다른 월정액 구독 보기</button>
@@ -139,10 +129,7 @@ function showBudgetExceededModal(reason, opts) {
     } else if (subActive && plan === 'early_lifetime') {
       // V4 (사용자 명시 2026-05-11): Light(4,900) 사용자 월 cap 도달 — Plus 업그레이드 권유.
       titleText = '🐚 이번 사이클 한도 도달';
-      bodyText = 'Light 한도 다 썼네.<br>Plus 가면 더 깊게 (약 3x 한도) — <b>첫 달 무료</b>, 30일 후 9,900원 자동 결제.<br><br>' +
-        '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
-        '단독 개발자 (1인) 라 결제 = iOS 앱 출시 후원 🫂' +
-        '</span>';
+      bodyText = 'Light 한도 다 썼네.<br>Plus 가면 더 깊게 (약 3x 한도) — <b>첫 달 무료</b>, 30일 후 9,900원 자동 결제.';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Plus 첫 달 무료 시작 (9,900원/월)</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 사이클 기다릴게</button>
@@ -150,26 +137,18 @@ function showBudgetExceededModal(reason, opts) {
     } else if (subActive && plan === 'light') {
       // Plus(9,900) 월 cap 도달 — 추가팩 OR Premium 권유
       const pack = OVERAGE_PACKS_CLIENT.light_pack;
-      bodyText = '이번 달 한도 도달했네.<br>Premium 가면 더 깊게 (3x 일일 자유) — Opus 깊은 대화 30번/일.<br><br>' +
-        '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
-        '솔직하게 — 단독 개발자 (1인) 라 Premium 결제 = <b>iOS 앱 출시 후원</b>. 중고 맥북 사서 iOS 빌드 가능 🫂<br>' +
-        '<span style="font-size:10px; opacity:0.55;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>' +
-        '</span>';
+      bodyText = '이번 달 한도 도달했네.<br>Premium 가면 더 깊게 (3x 일일 자유) — Opus 깊은 대화 30번/일.';
       optionsHtml = `
-        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ Premium 으로 후원하기 (25,000원/월)</button>
+        <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ Premium 구독하기 (25,000원/월)</button>
         ${pack ? `<button class="btn-secondary" onclick="purchaseOveragePack('light_pack')" style="width:100%; margin-bottom:6px;">🌿 Plus 추가팩 ${pack.krw.toLocaleString()}원 (1일분+α)</button>` : ''}
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 달 기다릴게</button>
       `;
     } else {
-      // 비구독 (체험 만료) — 구독 안내 + 개발자 후원 톤
+      // 비구독 (체험 만료) — 구독 안내.
       titleText = '🐚 체험 종료';
       bodyText = '체험 기간 끝났어 — 깊게 써줘서 고마워.<br><br>' +
         '계속 쓰려면 구독 — <span style="color:#5fb4d3; font-weight:600;">🌊 Plus 첫 달 무료</span> <b>9,900원/월</b> (30일 후 자동 결제, 언제든 해지).<br>' +
-        '가볍게 시작하려면 <b>🐚 Light 4,900원/월</b>.<br><br>' +
-        '<span style="color:var(--text-soft); font-size:11px; line-height:1.6;">' +
-        '단독 개발자 (1인) 가 후원 = iOS 앱 출시 가능 🫂<br>' +
-        '<span style="font-size:10px; opacity:0.55;">개발자가 중고 맥북이 없어서 ios 앱 출시를 못하고 있어욥..</span>' +
-        '</span>';
+        '가볍게 시작하려면 <b>🐚 Light 4,900원/월</b>.';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Plus 첫 달 무료 시작 (9,900원/월)</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">📅 다른 월정액 구독 보기</button>

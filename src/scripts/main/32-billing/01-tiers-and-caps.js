@@ -27,8 +27,9 @@ const TIER_PLANS_CLIENT = {
     description: '레거시 tier. 신규 가입 무료 체험은 별도 토큰 grant (양 비공개) 로 처리 — 이 plan 은 자동 활성화 X.' },
   // Light (4,900) — key 'early_lifetime'. *정가 entry tier*. trial X, 즉시 결제.
   //   ⚠ key 명 'early_lifetime' 은 legacy — backend sync 위해 보존. 실제 정체성은 entry 'Light'.
-  //   옛 "출시 전 가격 평생 락인" promo 폐기. cap_usd 도 sustainable 한 수준 ($3 → $1.8) 으로 조정.
-  early_lifetime: { krw: 4900,  cap_usd: 1.8,  cap_krw: 2520,  label: 'Light',          tagline: '매일의 자기관찰', emoji: '🐚',
+  //   옛 "출시 전 가격 평생 락인" promo 폐기. cap_usd 도 sustainable 한 수준 ($3 → $2.2) 으로 조정.
+  //   V4 (사용자 명시 2026-05-11 — 마진 조정): $1.8 → $2.2 (마진 14% — Plus 와 통일). 일일 cap $0.088.
+  early_lifetime: { krw: 4900,  cap_usd: 2.2,  cap_krw: 3080,  label: 'Light',          tagline: '매일의 자기관찰', emoji: '🐚',
     description: '일반 대화 + 가벼운 분석. 매일 5~10분 자기관찰에 충분.' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
@@ -45,7 +46,7 @@ const OVERAGE_PACKS_CLIENT = {
   premium_pack: { krw: 2500, usd: 1.5, label: 'Premium 추가팩', tier: 'premium' }
 };
 // V4 (사용자 명시 2026-05-04 ultrathink — v2): tier 별 일일 cap 비율 (월 cap × 비율 / 30 = 일일).
-// Light(entry) /25 (마진 보호) — $1.8 × 1.2 / 30 ≈ $0.072/일
+// Light(entry) /25 (마진 보호) — $2.2 × 1.2 / 30 ≈ $0.088/일
 // Plus       /25 (마진 보호) — $5  × 1.2 / 30 = $0.20/일
 // Premium    /20 (여유, '마음껏 깊게' 약속) — $13 × 1.5 / 30 = $0.65/일
 // Early_light(legacy) /25 동일 — $1.1 × 1.2 / 30 ≈ $0.044/일

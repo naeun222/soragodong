@@ -212,13 +212,15 @@ async function _handleBillingKeyReturn(params) {
 
   try {
     if (typeof showToast === 'function') showToast('카드 등록 확인 중…');
+    // V4 (사용자 명시 2026-05-11 ultrathink): defensive plan='light' 명시 — backend default 안 의존.
+    //   trial 흐름 = Plus (key='light'). 옛 default 'early_lifetime' 잔재 시 잘못된 tier trial 방지.
     const resp = await fetch('/api/billing/portone-register-trial', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + session.access_token
       },
-      body: JSON.stringify({ billingKey })
+      body: JSON.stringify({ billingKey, plan: 'light' })
     });
     const data = await resp.json().catch(() => ({}));
     if (resp.ok && data.ok) {
