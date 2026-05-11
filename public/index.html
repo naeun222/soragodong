@@ -56837,12 +56837,8 @@ CREATE POLICY "users read own feedback"
 }
 
 // 사용자 명시 2026-05-06: 자동 오류 보고 inbox 정리용 — admin 만 삭제 가능 (backend RLS double-check).
+// 사용자 명시 2026-05-11: admin 인 본인만 누르는 버튼이라 확인 모달 X — 즉시 삭제.
 async function adminFeedbackDelete(feedbackId) {
-  if (typeof confirmDelete === 'function') {
-    if (!await confirmDelete(`피드백 #${feedbackId}`)) return;
-  } else if (!confirm(`피드백 #${feedbackId} 삭제할까? 되돌릴 수 없어.`)) {
-    return;
-  }
   try {
     const resp = await _authedFetch('/api/admin/feedback-delete', {
       method: 'POST',
