@@ -289,8 +289,11 @@ function _intakeStep5Html() {
   if (_intakeState.analysisFailed) {
     const errMsg = _intakeState.analysisErrMsg || '';
     let userHint = '네트워크가 잠시 흔들렸을 수도 있어.';
+    // V4 (사용자 보고 2026-05-11 ultrathink): /403|turnstile/ 분기가 Anthropic API forbidden 도 함께 잡아 잘못된 hint 출력.
+    //   분리: TURNSTILE_FAIL/turnstile/봇 검증 = 봇 검증 만료. forbidden/Request not allowed/invalid_api_key = AI 서비스 측 문제 (관리자 결제/권한).
     if (/429|rate|GUEST_LIMIT|GLOBAL_BUDGET/i.test(errMsg)) userHint = '오늘 게스트 한도 다 썼어. 20회. 가입하면 풀려.';
-    else if (/403|turnstile/i.test(errMsg)) userHint = '봇 검증이 만료됐어. 페이지 새로고침 한 번 해줘.';
+    else if (/TURNSTILE_FAIL|turnstile|봇 검증/i.test(errMsg)) userHint = '봇 검증이 만료됐어. 페이지 새로고침 한 번 해줘.';
+    else if (/forbidden|"type"\s*:\s*"forbidden"|Request not all|invalid_api_key|authentication_error/i.test(errMsg)) userHint = 'AI 서비스 일시 중단 — 잠시 후 다시. 계속되면 카톡 오픈채팅으로 알려줘.';
     else if (/cap|cost|초과|budget/i.test(errMsg)) userHint = '오늘 무료 사용량 cap 에 도달했어. 가입하면 풀려.';
     else if (/JSON|truncated|닫힘/i.test(errMsg)) userHint = 'AI 응답이 잘렸어. 한 번 더 시도하면 보통 됨.';
     else if (/세션 미준비|불가능/i.test(errMsg)) userHint = '아직 인증이 안 끝났어. 5초 후 다시 해줄래?';
