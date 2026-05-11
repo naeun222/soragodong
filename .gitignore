@@ -20,3 +20,6 @@ fix_list.md
 my_questions/
 _github_main_*.html
 current_index.html
+
+# Claude Code worktrees (local agents)
+.claude/worktrees/
