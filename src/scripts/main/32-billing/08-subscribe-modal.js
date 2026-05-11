@@ -165,7 +165,7 @@ async function openSubscribeModal() {
       <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
         ${plan.description}
       </div>
-      <button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">${plan.label} 구독 (${plan.krw.toLocaleString()}원)</button>
+      <button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">${plan.label} 정기 구독 (월 ${plan.krw.toLocaleString()}원)</button>
     </div>
   `;
   const earlyLifetimePlan = TIER_PLANS_CLIENT.early_lifetime;
@@ -202,7 +202,7 @@ async function openSubscribeModal() {
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
         💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드</b>. 깊게 자주 쓰면 Premium.<br>
-        <b>부가가치세 10% 포함</b> · <b>Light / Premium = 단건 결제</b> (매월 수동) · <b>얼리버드 = 자동 갱신</b> (해지 1-click).<br>
+        <b>부가가치세 10% 포함</b> · <b>모든 플랜 = 매월 자동 갱신</b> (해지 1-click).<br>
         해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>
         <span style="color:var(--text-dim);">⚠ 본 서비스는 임상 치료·진단·전문가 상담을 대체하지 않습니다.</span>
       </div>
@@ -217,11 +217,15 @@ function closeSubscribeModal() {
   if (overlay) overlay.remove();
 }
 
-// 사용자 명시 2026-05-06: PortOne V2 SDK 카드 결제. 옛 V1 (IMP) + 토스 수동 송금 fallback 폐기.
-// channelKey + storeId 미설정 시 alert (env 정정 필요).
+// 사용자 명시 2026-05-11: Light/Premium 도 정기결제 — 빌링키 등록 흐름 (얼리버드와 동일하지만 첫 달 즉시 결제).
+//   1) requestIssueBillingKey (빌링 채널) → billingKey 발급
+//   2) /api/billing/portone-register-recurring → 첫 달 chargeWithBillingKey + next_billing_at=+30d
+//   3) cron-charge-recurring 이 30일 후 자동 결제
+// 토스페이는 tosstest = 일반결제만 → 빌링키 픽커에서 제외.
 async function proceedSubscribe(tierKey) {
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 tier'); return; }
+  if (tierKey === 'early_lifetime') return proceedEarlyBirdTrial();  // 얼리버드는 별도 (trial 흐름)
   if (!session || !session.access_token) {
     alert('로그인 필요 — 설정 → 로그아웃 후 재로그인.');
     return;
@@ -230,11 +234,13 @@ async function proceedSubscribe(tierKey) {
     alert('게스트 모드는 결제 X — 먼저 로그인.');
     return;
   }
-  const _pg = await _pickPaymentMethod({ title: `${tier.label} 결제 수단 선택` });
+  const _pg = await _pickPaymentMethod({ excludeToss: true, title: `${tier.label} 정기 결제 수단 선택` });
   if (!_pg) return;
   const _pgInfo = _getPayChannelInfo(_pg);
-  if (!_pgInfo.channelKey || !_pgInfo.storeId) {
-    alert('결제 설정 오류 — 채널키 미설정');
+  const billingChannelKey = _pgInfo.billingChannelKey || _pgInfo.channelKey;
+  const storeId = _pgInfo.storeId;
+  if (!billingChannelKey || !storeId) {
+    alert('결제 설정 오류 — 빌링키 채널 미설정');
     return;
   }
   let phoneNumber = '', fullName = '';
@@ -245,7 +251,6 @@ async function proceedSubscribe(tierKey) {
     fullName = info.fullName;
   }
 
-  // PortOne V2 SDK 동적 로드.
   if (typeof window.PortOne === 'undefined') {
     try {
       await new Promise((resolve, reject) => {
@@ -260,100 +265,78 @@ async function proceedSubscribe(tierKey) {
       return;
     }
   }
-  if (typeof window.PortOne === 'undefined') {
-    alert('PortOne SDK 객체 X');
+  if (typeof window.PortOne === 'undefined' || typeof window.PortOne.requestIssueBillingKey !== 'function') {
+    alert('PortOne SDK 빌링키 기능 X');
     return;
   }
 
-  const isEarlyTier = tierKey === 'early_lifetime';
-  // 결제 시도 — paymentId = 매번 unique. 사용자 본인 식별용 customer 정보 + tier 별 amount.
-  // KG이니시스 oid 최대 40자 — base36 타임스탬프 + 짧은 random으로 26자 이내 유지.
-  const paymentId = `s-${tierKey.slice(0,7)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
-  // 사용자 보고 2026-05-06: 모바일 redirect 흐름에서 verify-pay 호출 시점 user_id 와 결제 시점 user_id 가 다르면 NOT_OWN.
-  // marker = _handlePaymentReturn 에서 매칭 검증용.
-  try {
-    sessionStorage.setItem('soragodong_pending_payment', JSON.stringify({
-      paymentId,
-      user_id: authUserId || '',
-      ts: Date.now()
-    }));
-  } catch {}
+  // KG이니시스 oid 최대 40자 — userId 앞 8자 + base36 ts + rand4 = 26자.
+  const issueId = `bk-${(authUserId||'anon').slice(0,8)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
   let response;
   try {
-    response = await window.PortOne.requestPayment({
-      storeId: _pgInfo.storeId,
-      channelKey: _pgInfo.channelKey,
-      paymentId,
-      orderName: `소라고동 ${tier.label} 구독 (1개월)`,
-      totalAmount: tier.krw,
-      currency: 'KRW',
-      payMethod: _pgInfo.payMethod,
+    response = await window.PortOne.requestIssueBillingKey({
+      storeId,
+      channelKey: billingChannelKey,
+      billingKeyMethod: _pgInfo.payMethod,
       ...(_pgInfo.easyPay ? { easyPay: _pgInfo.easyPay } : {}),
+      issueId,
+      issueName: `소라고동 ${tier.label} 정기 (월 ${tier.krw.toLocaleString()}원 자동 갱신)`,
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
-      redirectUrl: window.location.origin + (window.location.pathname || '/'),
+      redirectUrl: window.location.origin + (window.location.pathname || '/') + '#recurring-subscribe-return',
       customer: {
         customerId: authUserId || undefined,
         email: session?.user?.email || undefined,
         ...(phoneNumber ? { phoneNumber, fullName } : {})
-      },
-      // 사용자 명시 2026-05-09 ultrathink: 현금영수증 자진발급 (부가세법 §32-2) — KG이니시스 카드 결제 시만.
-      ...(_pg === 'card' ? {
-        cashReceipt: phoneNumber && /^01\d{8,9}$/.test(phoneNumber.replace(/[-\s]/g, ''))
-          ? { type: 'PERSONAL', customerIdentityNumber: phoneNumber.replace(/[-\s]/g, '') }
-          : { type: 'PERSONAL', customerIdentityNumber: '01000001234' }
-      } : {}),
-      customData: JSON.stringify({ tier: tierKey, type: 'subscribe' })
+      }
     });
   } catch (e) {
     _resetBodyAfterPortone();
-    alert('결제창을 열 수 없어. 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + (e?.message || e));
+    alert('카드 등록창을 열 수 없어. 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + (e?.message || e));
     return;
   }
   _resetBodyAfterPortone();
 
-  // V2 SDK 응답 — 사용자가 결제창 닫음 / 카드 거절 / 잔액 부족 등 시 code 채워짐.
   if (response && response.code != null) {
-    // 사용자 명시 2026-05-06: 결제 실패 카피 다듬기 — 사용자 입장 친절하게.
     const code = response.code || '';
     const msg = response.message || '';
     let userMsg;
     if (code === 'USER_CANCEL' || /cancel|취소/i.test(msg)) {
-      userMsg = '결제를 취소했어. 다시 시도하려면 다시 눌러줘.';
-    } else if (/잔액|insufficient|한도|limit/i.test(msg)) {
-      userMsg = '카드 한도 / 잔액이 부족해 보여. 다른 카드로 다시 시도해줘.';
-    } else if (/거절|declin|reject/i.test(msg)) {
-      userMsg = '카드사가 결제를 거절했어. 다른 카드로 시도하거나 카드사에 문의해줘.';
+      userMsg = '카드 등록을 취소했어. 다시 시도하려면 다시 눌러줘.';
     } else {
-      userMsg = '결제 처리 중 문제가 생겼어 — 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + msg + (code ? ' (' + code + ')' : '');
+      userMsg = '카드 등록 중 문제가 생겼어 — 잠시 후 다시.\n\n자세한 사유: ' + msg + (code ? ' (' + code + ')' : '');
     }
     alert(userMsg);
     return;
   }
 
-  // 결제 완료 — backend 검증 호출.
+  const billingKey = response && response.billingKey;
+  if (!billingKey) {
+    alert('빌링키를 못 받았어 — 잠시 후 다시.');
+    return;
+  }
+
+  // 백엔드: 첫 달 즉시 결제 + 정기 등록.
   try {
-    const verifyResp = await fetch('/api/billing/portone-verify-pay', {
+    const verifyResp = await fetch('/api/billing/portone-register-recurring', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + session.access_token
       },
-      body: JSON.stringify({ paymentId, plan: tierKey })
+      body: JSON.stringify({ billingKey, plan: tierKey })
     });
     const result = await verifyResp.json();
     if (verifyResp.ok && result.ok) {
       if (result.duplicate) {
-        showToast('💳 이미 활성 구독 — 영수증 보관, 환불 안내 메일 확인');
-        alert(result.message || '이미 활성 구독이 있어. 환불 요청은 이메일로.');
-      } else if (isEarlyTier) {
-        showToast(`✨ 얼리버드 구독 완료 (${tier.krw.toLocaleString()}원/월) — 고마워 🫂`);
+        showToast(`💳 이미 활성 ${tier.label} 구독`);
+        alert(result.message || `이미 활성 ${tier.label} 구독이 있어.`);
       } else {
-        showToast(`📅 ${tier.label} 구독 완료 (${tier.krw.toLocaleString()}원/월)`);
+        showToast(`📅 ${tier.label} 정기 시작 — 월 ${tier.krw.toLocaleString()}원 자동 갱신`);
       }
       closeSubscribeModal();
       if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
     } else {
-      alert('결제 검증 실패: ' + (result.error || '알 수 없음'));
+      alert(`${tier.label} 구독 등록 실패: ` + (result.error || '알 수 없음'));
     }
   } catch (e) {
     alert('백엔드 통신 실패: ' + (e?.message || e));

@@ -72,13 +72,14 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   let dueRows: BillingRow[] = [];
   try {
     // 사용자 보고 2026-05-09: migration 0016 적용 후 user_email 같이 select.
+    // 사용자 명시 2026-05-11: light/premium 도 정기결제 — cron 대상 확장.
     const url = `${env.SUPABASE_URL}/rest/v1/soragodong_billing?` +
       `select=user_id,user_email,subscription_plan,subscription_expires_at,portone_billing_key,trial_until,next_billing_at,last_billing_attempt_at,last_billing_error&` +
       `next_billing_at=lte.${encodeURIComponent(nowIso)}&` +
       `subscription_active=eq.true&` +
       `cancel_at_period_end=eq.false&` +
       `portone_billing_key=not.is.null&` +
-      `subscription_plan=eq.early_lifetime&` +
+      `subscription_plan=in.(early_lifetime,light,premium)&` +
       `limit=${MAX_BATCH}`;
     const resp = await fetch(url, {
       headers: {
@@ -98,27 +99,34 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return jsonResponse({ ok: true, processed: 0, charged: 0, failed: 0 });
   }
 
-  const tier = TIER_PLANS.early_lifetime;
   let charged = 0;
   let failed = 0;
   const errors: Array<{ user_id: string; error: string }> = [];
 
   for (const row of dueRows) {
     if (!row.portone_billing_key) continue;
+    // 사용자 명시 2026-05-11: plan 별 tier 동적 조회 (light/premium/early_lifetime).
+    const tier = TIER_PLANS[row.subscription_plan as keyof typeof TIER_PLANS];
+    if (!tier || !tier.krw) {
+      errors.push({ user_id: row.user_id, error: `unknown plan: ${row.subscription_plan}` });
+      failed++;
+      continue;
+    }
     // 사용자 명시 2026-05-08 ultrathink (audit FAIL #3): paymentId 멱등 — billing date 기준 결정적 ID.
     // 옛: Date.now() + Math.random() → cron 재시도 시 다른 ID 생성 → 중복 결제 위험.
     // PortOne 측 paymentId unique 멱등 보호 작동 위해 같은 cycle 안 같은 ID 보장.
+    // KG이니시스 oid 최대 40자 — short user prefix + cycleDay 로 30자 이내.
     const _cycleDay = (row.next_billing_at ? new Date(row.next_billing_at) : new Date()).toISOString().slice(0, 10);
-    const paymentId = `recurring-${row.user_id}-${_cycleDay}`;
+    const paymentId = `r-${row.user_id.slice(0,8)}-${_cycleDay}`;
     // 사용자 보고 2026-05-09: billing.user_email 우선 / 없으면 auth.users.email fallback (PortOne customer.email + payments INSERT).
     const userEmail = row.user_email || await _fetchUserEmail(env, row.user_id) || undefined;
     const result = await chargeWithBillingKey(env, paymentId, {
       billingKey: row.portone_billing_key,
-      orderName: `소라고동 얼리버드 정기 (${tier.krw.toLocaleString()}원/월)`,
+      orderName: `소라고동 ${tier.label} 정기 (${tier.krw.toLocaleString()}원/월)`,
       amount: tier.krw,
       currency: 'KRW',
       customer: { id: row.user_id, email: userEmail },
-      customData: JSON.stringify({ tier: 'early_lifetime', type: 'subscribe_recurring' })
+      customData: JSON.stringify({ tier: row.subscription_plan, type: 'subscribe_recurring' })
     });
 
     if (result.ok && result.payment.status === 'PAID') {
