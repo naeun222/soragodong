@@ -364,10 +364,6 @@ async function _handleChatRequest(context: {
   // is_deeper_analysis 는 backend 에서 무시 (위 audit fix) — 옛 client 호환 위해 strip 만 유지.
   delete body.tutorial_mode;
   delete body.is_deeper_analysis;
-  // 사용자 명시 2026-05-11 ultrathink: backend prompt 모듈 hint 필드들 strip (Anthropic forward X).
-  delete body._promptType;
-  delete body._userContentType;
-  delete body._vars;
 
   // 사용자 명시 2026-05-11 ultrathink: 자체 system prompt 들 backend override — 클라이언트 평문 노출 차단.
   // _promptType (intake_reply / intake_entry_gen / strategy_builder) 또는 _endpoint (first_touch / magic_help / reflection) 매칭 시
@@ -386,6 +382,16 @@ async function _handleChatRequest(context: {
   if (!shouldSkipPersona(body)) {
     applyPersonaToBody(body);
   }
+
+  // 사용자 보고 2026-05-11: backend prompt 모듈 hint 필드들 strip (Anthropic forward X).
+  //   옛: applyEndpointSystem / applyUserContentTemplate / applyPersonaToBody 호출 *전에* 삭제 →
+  //       모듈 안 body._promptType / _userContentType / _vars 읽기 모두 undefined → user content 합성 누락
+  //       (시뮬은 messages content '' 빈 string forward → Anthropic 400 'Sonnet HTTP 400' toast).
+  //       다른 _userContentType 호출 22 곳도 silent fail (extract / mutation / decision / brain_dump 등).
+  //   신: 세 모듈 호출 모두 끝난 뒤로 이동 — Anthropic forward 직전 시점에 strip.
+  delete body._promptType;
+  delete body._userContentType;
+  delete body._vars;
 
   // 사용자 명시 2026-05-08 ultrathink (audit FAIL #5): 자살예방법 §15-6 협력 권고 — 서버측 위기 가드.
   // 옛: 위기 키워드 감지 = 클라이언트 (13-crisis-detection.js) 만. API 직접 호출 / 클라이언트 우회 시 무방비.

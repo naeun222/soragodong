@@ -26,6 +26,15 @@ const CYCLE_DAYS = 30;
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
+  // V4 (사용자 명시 2026-05-11 — 가계약): 정기결제 흐름 자체 비활성화 시 빌링키 등록 차단.
+  //   cron-charge-recurring 이 no-op 인 상태에서 등록 시 = 첫 달 결제 후 갱신 X → 무한 무료 사용 (본인 출혈).
+  //   frontend 가계약 모드는 proceedOneTimePurchase 로 분기하므로 이 endpoint 호출 X. 직접 호출 방어용.
+  if ((env as any).BILLING_RECURRING_ENABLED !== 'true') {
+    return jsonResponse({
+      error: '정기결제 흐름 비활성 (가계약 단계) — 1개월 일회성 결제만 가능. /api/billing/portone-verify-pay 사용.',
+      code: 'RECURRING_DISABLED'
+    }, 403);
+  }
   const user = await verifyAuth(request, env);
   if (!user) return unauthorized();
   if (user.is_anonymous) {

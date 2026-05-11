@@ -21,6 +21,15 @@ const TRIAL_PLAN: 'light' = 'light';  // Plus tier — trial 흐름 전용
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
+  // V4 (사용자 명시 2026-05-11 — 가계약): 정기결제 흐름 자체 비활성화 시 trial 등록 차단.
+  //   cron-charge-recurring 이 no-op 인 상태에서 trial 등록 시 = 30일 뒤 자동결제 X → 무한 무료 사용 (본인 출혈).
+  //   frontend 가계약 모드는 proceedOneTimePurchase 로 분기하므로 이 endpoint 호출 X. 직접 호출 방어용.
+  if ((env as any).BILLING_RECURRING_ENABLED !== 'true') {
+    return jsonResponse({
+      error: '정기결제 흐름 비활성 (가계약 단계) — 1개월 일회성 결제만 가능. /api/billing/portone-verify-pay 사용.',
+      code: 'RECURRING_DISABLED'
+    }, 403);
+  }
   const user = await verifyAuth(request, env);
   if (!user) return unauthorized();
   if (user.is_anonymous) {
@@ -56,21 +65,33 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     }, 403);
   }
 
+  // V4 (사용자 명시 2026-05-11 ultrathink): Plus 첫 달 무료 trial = 1인 1회 한정.
+  //   해지 후 재가입 / 동일 사용자 재시도 우회 차단 (migration 0018: plus_trial_consumed_at).
+  //   이미 trial 받은 적 있는 사용자 = 정가 결제만 가능 (portone-register-recurring 사용 안내).
   // 중복 등록 방어 — 이미 active Plus(light) 사용자면 안내.
   let alreadyActive = false;
+  let trialAlreadyConsumed = false;
   try {
     const checkResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&select=subscription_plan,subscription_active,subscription_expires_at,portone_billing_key`,
+      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&select=subscription_plan,subscription_active,subscription_expires_at,portone_billing_key,plus_trial_consumed_at`,
       { headers: { 'apikey': env.SUPABASE_SERVICE_ROLE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } }
     );
     const rows: any = await checkResp.json().catch(() => []);
     if (Array.isArray(rows) && rows[0]) {
       const r = rows[0];
+      if (r.plus_trial_consumed_at) trialAlreadyConsumed = true;
       if (r.subscription_plan === TRIAL_PLAN && r.subscription_active && r.portone_billing_key && r.portone_billing_key !== billingKey) {
         alreadyActive = true;
       }
     }
   } catch {}
+  if (trialAlreadyConsumed) {
+    return jsonResponse({
+      ok: false,
+      error: 'Plus 첫 달 무료는 1회 한정 — 이미 사용한 이력. 정가 9,900원 결제로 진행 (구독 모달 → Plus 정기 구독).',
+      code: 'TRIAL_ALREADY_CONSUMED'
+    }, 403);
+  }
   if (alreadyActive) {
     return jsonResponse({
       ok: true,
@@ -110,7 +131,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
         next_billing_at: trialUntilISO,
         cancel_at_period_end: false,
         cancelled_at: null,
-        last_billing_error: null
+        last_billing_error: null,
+        // V4 (사용자 명시 2026-05-11 ultrathink): 1인 1회 trial 가드 — 향후 재 trial 차단.
+        plus_trial_consumed_at: now.toISOString()
       })
     });
     if (!upsertResp.ok) {
