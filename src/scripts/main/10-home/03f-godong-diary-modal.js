@@ -152,14 +152,15 @@ async function openGodongDiaryModal() {
     }
   }
 
-  // 사용자 명시 2026-05-11 (3차 정정 ultrathink): "기존에 만든 게 1개라도 있으면 새로 생성하지 말고 유지. fall back X".
-  //   state.godongDiary 안에 dayK 매칭 entry 가 *전혀 없을 때* 만 generate.
-  //   2,3,4일 전 (window 밖) entries 가 있어도 그대로 유지 — fallback filler / 강제 새 생성 X.
-  //   '다시 적어줘' 버튼은 force regenerate (있어도 재호출).
-  const _hasAnyEntry = (state.godongDiary || []).some(e => e && _entryDayK(e));
+  // 사용자 명시 2026-05-11 (4차 정정 ultrathink): generate 조건 = 윈도우 (3,2,1일 전) 내 entry 가 *전혀 없을 때* 만.
+  //   - 3/2/1일 전 entry 1개라도 있음 → 새 생성 X.
+  //   - 윈도우 밖 (4일+ 전) entries 는 별개로 항상 보존 + 시간순 페이지로 그대로 노출.
+  //   - fallback filler X. Haiku 실패 fallback X.
+  //   '다시 적어줘' 버튼은 force regenerate (윈도우 내 있어도 재호출).
+  const _hasAnyInWindow = (state.godongDiary || []).some(e => e && _targetSet.has(_entryDayK(e)));
   const _force = _gdiaryForceRegenerate;
   _gdiaryForceRegenerate = false;
-  const needsGenerate = !_hasAnyEntry || _force;
+  const needsGenerate = !_hasAnyInWindow || _force;
 
   // 셸 먼저 (loading) — 사용자가 빈 화면 안 보게.
   _gdiaryRenderShell({ loading: true });
@@ -190,12 +191,39 @@ async function openGodongDiaryModal() {
     }
   }
 
-  // 사용자 명시 2026-05-11 (3차 정정): 기존 entries 그대로 보여줌 (dayK 매칭 filter X / fallback filler X).
+  // 사용자 명시 2026-05-11 (5차 정정): 기존 entries 그대로 보여줌 (dayK 매칭 filter X).
   //   2,3,4일 전 entry 도 그대로 페이지로 노출. 시간순 정렬 (옛 → 최신).
   let visibleEntries = (state.godongDiary || [])
     .filter(e => e && _entryDayK(e))
     .slice()
     .sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
+
+  // 사용자 명시 2026-05-11 (5차 정정): modal 진입 시 dayK 윈도우 (3,2,1일전) 매칭 부족 → fallback filler O.
+  //   (Haiku 실패 fallback 만 X — generate 자체 실패한 거라 채움 X. modal 진입 시 부족은 채움.)
+  const _existingDayKs = new Set(visibleEntries.map(_entryDayK));
+  let _filledAny = false;
+  _targetDayKs.forEach((dayK) => {
+    if (_existingDayKs.has(dayK)) return;
+    const text = _GDIARY_FALLBACK_POOL[Math.floor(Math.random() * _GDIARY_FALLBACK_POOL.length)];
+    const d = new Date(dayK + 'T20:00:00');
+    const fb = {
+      id: 'gd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      date: `${d.getMonth()+1}월 ${d.getDate()}일`,
+      weekday: ['일','월','화','수','목','금','토'][d.getDay()],
+      note: null,
+      body: text,
+      iso: d.toISOString(),
+      substrateRefs: [],
+      fallback: true,
+    };
+    state.godongDiary.push(fb);
+    visibleEntries.push(fb);
+    _filledAny = true;
+  });
+  if (_filledAny) {
+    visibleEntries.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
+    if (typeof saveState === 'function') saveState();
+  }
 
   _gdiaryState = {
     entries: visibleEntries,
