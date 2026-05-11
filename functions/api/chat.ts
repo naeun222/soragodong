@@ -315,6 +315,13 @@ async function _handleChatRequest(context: {
   if (!env.ANTHROPIC_API_KEY) {
     return jsonResponse({ error: 'ANTHROPIC_API_KEY 미설정 (서버)' }, 500);
   }
+  // V4 (사용자 보고 2026-05-11 ultrathink): 진단 임시 log — backend 가 받는 ANTHROPIC_API_KEY 의 last4 + length echo.
+  //   Cloudflare env vs Anthropic Console 의 새 key 마지막 4자 비교 후 즉시 제거. logs 에만 노출 (frontend X).
+  console.log('[chat.ts] DEBUG anthropic-key meta:', {
+    last4: env.ANTHROPIC_API_KEY.slice(-4),
+    len: env.ANTHROPIC_API_KEY.length,
+    has_ws: /\s/.test(env.ANTHROPIC_API_KEY)
+  });
 
   // 게스트 강제 cap — model 화이트리스트 + endpoint-aware max_tokens.
   // chat = 800 / extract_chapter / extract_topic / intake / first_touch = 2000 (JSON 출력 길이 보장).
