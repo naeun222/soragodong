@@ -483,7 +483,13 @@ async function _handleChatRequest(context: {
     const upstream = await _fetchAnthropicWithRetry(upstreamHeaders, JSON.stringify(body));
     if (!upstream.ok) {
       const errText = await upstream.text();
-      console.error(`[chat.ts] stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500));
+      // V4 (사용자 보고 2026-05-11 ultrathink): Anthropic 거부 사유 진단 — request-id + relevant headers logs.
+      const _hdrs: Record<string, string> = {};
+      ['request-id', 'x-request-id', 'cf-ray', 'anthropic-organization-id', 'x-should-retry'].forEach(h => {
+        const v = upstream.headers.get(h);
+        if (v) _hdrs[h] = v;
+      });
+      console.error(`[chat.ts] stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500), 'headers:', _hdrs);
       return new Response(errText, { status: upstream.status });
     }
     if (!upstream.body) {
@@ -565,7 +571,13 @@ async function _handleChatRequest(context: {
 
   if (!upstream.ok) {
     const errText = await upstream.text();
-    console.error(`[chat.ts] non-stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500));
+    // V4 (사용자 보고 2026-05-11 ultrathink): Anthropic 거부 사유 진단 — request-id + relevant headers logs.
+    const _hdrs: Record<string, string> = {};
+    ['request-id', 'x-request-id', 'cf-ray', 'anthropic-organization-id', 'x-should-retry'].forEach(h => {
+      const v = upstream.headers.get(h);
+      if (v) _hdrs[h] = v;
+    });
+    console.error(`[chat.ts] non-stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500), 'headers:', _hdrs);
     return new Response(errText, { status: upstream.status, headers: { 'Content-Type': 'application/json' } });
   }
 
