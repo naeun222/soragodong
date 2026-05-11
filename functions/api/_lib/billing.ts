@@ -47,6 +47,12 @@ export type TierKey = keyof typeof TIER_PLANS;
 // 사용자 명시 2026-05-05: 처음 한 달 free trial 기간 (30일).
 export const FREE_TRIAL_DAYS = 30;
 
+// V4 (사용자 명시 2026-05-11 ultrathink): 신규 가입 환영 토큰 한정량 (양 비공개).
+//   옛 정책 (early_light plan 자동 활성화) 폐기 → credit_balance_usd 로 grant.
+//   사용자가 명시 'Plus trial' 신청 (1인 1회) 까지의 brige funnel.
+//   양 = $1.1 (옛 early_light cap 와 동일 — 본인 출혈 max 보존). 사용자 노출 절대값 X.
+export const WELCOME_TOKEN_USD = 1.1;
+
 // 사용자 명시 2026-05-02 ultrathink: light_pack 제거 — Premium 전용 (Light/얼리는 Premium 전환 또는 다음 달 대기).
 // V4 (사용자 명시 2026-05-04 ultrathink — v2): 작은 단위 재설계 — premium_pack 7000/$5 → 2500/$1.5.
 //   frontend `01-tiers-and-caps.js` OVERAGE_PACKS_CLIENT.premium_pack 와 동기 — 옛 amount mismatch 결제 fail 픽스.
@@ -93,33 +99,40 @@ export async function ensureBillingRow(env: Env, userId: string, opts?: { isAnon
   const existing = await getUserBilling(env, userId);
   if (existing) return existing;
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
-  // 사용자 명시 2026-05-05: 처음 한 달 자동 무료 (얼리 플랜) 활성화. 자동 갱신 X — 만료 후 active=false 자동.
-  // 사용자가 직접 Light / Plus / Premium 구독 결정. 한도 도달 시 → 상위 tier 권유.
-  // Phase 0: anonymous (게스트) = 'guest' tier ($0.20 cap). linkIdentity 시 update-tier 로 'early_light' fresh.
+  // V4 (사용자 명시 2026-05-11 ultrathink): plan 자동 활성화 폐기 → credit_balance_usd 로 환영 토큰 한정량 grant.
+  //   funnel: 가입 → 무료 토큰 (소진까지, 시간 무관) → 사용자 명시 Plus trial (1인 1회, 카드 등록) → 정가 결제.
+  //   본인 출혈 max = 옛 early_light cap ($1.1) 와 동일. 시간 압박 (30일 만료) 제거 → ADHD 사용자 친화.
+  //   anonymous (게스트) = 그대로 'guest' plan ($0.30 cap, 1년) — 별개 정체성 유지.
   const now = new Date();
   const isGuest = !!opts?.isAnonymous;
-  const tierKey: TierKey = isGuest ? 'guest' : 'early_light';
-  const tier = TIER_PLANS[tierKey];
-  // guest = 만료 X (anonymous 계정 자체가 abandoned 시 cron 으로 정리 — Phase 1 후속).
-  // early_light = 30일 만료.
-  const expiresAt = isGuest
-    ? new Date(now.getTime() + 365 * 86400_000).toISOString()
-    : new Date(now.getTime() + FREE_TRIAL_DAYS * 86400_000).toISOString();
-  const newRow: Partial<UserBilling> & { user_email?: string | null } = {
-    user_id: userId,
-    // 사용자 보고 2026-05-09 ultrathink: schema 통일 (migration 0016) — user_email 같이 채움.
-    // null OK (caller 가 전달 X 시) — cron 측 auth.users lookup fallback 활용.
-    user_email: opts?.userEmail || null,
-    credit_balance_usd: 0,
-    subscription_active: true,
-    subscription_expires_at: expiresAt,
-    subscription_plan: tierKey,
-    monthly_token_quota: null,
-    monthly_quota_usd: tier.cap_usd,
-    monthly_token_used: 0,
-    monthly_period_started_at: now.toISOString(),
-    free_trial_granted_at: isGuest ? null : now.toISOString()
-  };
+  const newRow: Partial<UserBilling> & { user_email?: string | null } = isGuest
+    ? {
+        user_id: userId,
+        user_email: opts?.userEmail || null,
+        credit_balance_usd: 0,
+        subscription_active: true,
+        subscription_expires_at: new Date(now.getTime() + 365 * 86400_000).toISOString(),
+        subscription_plan: 'guest',
+        monthly_token_quota: null,
+        monthly_quota_usd: TIER_PLANS.guest.cap_usd,
+        monthly_token_used: 0,
+        monthly_period_started_at: now.toISOString(),
+        free_trial_granted_at: null
+      }
+    : {
+        user_id: userId,
+        // 사용자 보고 2026-05-09 ultrathink: schema 통일 (migration 0016) — user_email 같이 채움.
+        user_email: opts?.userEmail || null,
+        credit_balance_usd: WELCOME_TOKEN_USD,  // 환영 토큰 한정량 (양 비공개)
+        subscription_active: false,             // plan 자동 활성화 X
+        subscription_expires_at: null,
+        subscription_plan: null,
+        monthly_token_quota: null,
+        monthly_quota_usd: 0,
+        monthly_token_used: 0,
+        monthly_period_started_at: null,
+        free_trial_granted_at: now.toISOString() // 환영 토큰 grant 시점 = 멱등 가드
+      };
   try {
     const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing`, {
       method: 'POST',
@@ -141,15 +154,15 @@ export async function ensureBillingRow(env: Env, userId: string, opts?: { isAnon
   }
 }
 
-// 사용자 명시 2026-05-05 ultrathink (Phase 1c): 게스트 → early_light 자동 승격.
+// V4 (사용자 명시 2026-05-11 ultrathink): 게스트 → 환영 토큰 grant 으로 승격 (plan 자동 활성화 X).
 // 흐름: anonymous user 가 linkIdentity 로 이메일 가입 → 다음 /api/chat 또는 /api/usage 호출 시
 //       backend 가 user.is_anonymous=false 인데 billing.subscription_plan='guest' detect → 승격.
-// 효과: monthly_token_used = 0 reset, plan='early_light', cap_usd=$4, 30일 신규 만료.
+// 효과: subscription_active=false, plan=null, credit_balance_usd += $1.1 환영 토큰 grant.
+//   funnel: 게스트 사용 → 가입 후 토큰 추가 → Plus trial 명시 신청 → 정가 결제.
+//   함수명은 호환 유지 (호출처 기존 코드 영향 X) — 동작만 변경.
 export async function promoteGuestToEarlyLight(env: Env, userId: string): Promise<{ ok: boolean; promoted: boolean }> {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { ok: false, promoted: false };
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + FREE_TRIAL_DAYS * 86400_000).toISOString();
-  const earlyTier = TIER_PLANS.early_light;
   try {
     const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${userId}&subscription_plan=eq.guest`, {
       method: 'PATCH',
@@ -160,12 +173,13 @@ export async function promoteGuestToEarlyLight(env: Env, userId: string): Promis
         'Prefer': 'return=minimal'
       },
       body: JSON.stringify({
-        subscription_plan: 'early_light',
-        subscription_active: true,
-        subscription_expires_at: expiresAt,
-        monthly_quota_usd: earlyTier.cap_usd,
+        subscription_plan: null,
+        subscription_active: false,
+        subscription_expires_at: null,
+        credit_balance_usd: WELCOME_TOKEN_USD,
+        monthly_quota_usd: 0,
         monthly_token_used: 0,
-        monthly_period_started_at: now.toISOString(),
+        monthly_period_started_at: null,
         free_trial_granted_at: now.toISOString()
       })
     });
