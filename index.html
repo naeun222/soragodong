@@ -17927,11 +17927,12 @@ function _intakeStep5Html() {
     else if (/cap|cost|초과|budget/i.test(errMsg)) userHint = '오늘 무료 사용량 cap 에 도달했어. 가입하면 풀려.';
     else if (/JSON|truncated|닫힘/i.test(errMsg)) userHint = 'AI 응답이 잘렸어. 한 번 더 시도하면 보통 됨.';
     else if (/세션 미준비|불가능/i.test(errMsg)) userHint = '아직 인증이 안 끝났어. 5초 후 다시 해줄래?';
+    // V4 (사용자 보고 2026-05-11): slice 80 → 250 + word-break — Anthropic forbidden 등 핵심 키워드 잘림 방지.
     return `
       <div class="intake-ai-msg">
         <b>🐚</b> 잠깐, 분석이 잘 안 됐어 ✦<br><br>
         <span class="small">${escapeHtml(userHint)}</span>
-        ${errMsg ? `<div class="small" style="margin-top:8px; opacity:0.55; font-size:10px;">상세: ${escapeHtml(errMsg.slice(0, 80))}</div>` : ''}
+        ${errMsg ? `<div class="small" style="margin-top:8px; opacity:0.55; font-size:10px; word-break:break-all; max-height:120px; overflow-y:auto;">상세: ${escapeHtml(errMsg.slice(0, 250))}</div>` : ''}
       </div>
       <div class="intake-actions" style="display:flex; gap:8px;">
         <button class="intake-send-btn" onclick="_intakeRetryAnalyze()" style="flex:2;">🔄 다시 분석</button>
