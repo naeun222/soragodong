@@ -36,7 +36,7 @@ async function _handlePaymentReturn() {
   let params;
   try { params = new URLSearchParams(window.location.search); } catch { return; }
 
-  // 사용자 명시 2026-05-06: 빌링키 발급 redirect 복귀 — 얼리버드 첫 달 무료 카드 등록.
+  // 사용자 명시 2026-05-06: 빌링키 발급 redirect 복귀 — Plus 첫 달 무료 카드 등록 (옛 얼리버드 trial).
   // PortOne V2 = redirect 후 query 에 billingKey (또는 code/message) 채워짐. issueId prefix 'bkey-' 로 감지.
   const billingKey = params.get('billingKey');
   const issueId = params.get('issueId') || '';
@@ -164,7 +164,7 @@ async function _handlePaymentReturn() {
   }
 }
 
-// 사용자 명시 2026-05-06: 얼리버드 빌링키 발급 redirect 복귀 처리.
+// 사용자 명시 2026-05-06: Plus 빌링키 발급 redirect 복귀 처리 (옛 얼리버드 trial).
 // 모바일 흐름: requestIssueBillingKey({ windowType.mobile: 'REDIRECTION' }) → PortOne 결제창 →
 // redirect_url 에 ?billingKey=... (성공) 또는 ?code=...&message=... (실패).
 async function _handleBillingKeyReturn(params) {
@@ -222,11 +222,11 @@ async function _handleBillingKeyReturn(params) {
     });
     const data = await resp.json().catch(() => ({}));
     if (resp.ok && data.ok) {
-      const tier = (typeof TIER_PLANS_CLIENT !== 'undefined' && TIER_PLANS_CLIENT.early_lifetime) || { krw: 4900 };
+      const tier = (typeof TIER_PLANS_CLIENT !== 'undefined' && TIER_PLANS_CLIENT.light) || { krw: 9900 };
       if (data.duplicate) {
-        setTimeout(() => alert(data.message || '이미 활성 얼리버드 구독이 있어.'), 300);
+        setTimeout(() => alert(data.message || '이미 활성 Plus 구독이 있어.'), 300);
       } else if (typeof showToast === 'function') {
-        showToast(`✨ 얼리버드 첫 달 무료 시작 — 30일 후 ${tier.krw.toLocaleString()}원 자동 결제`);
+        showToast(`🌊 Plus 첫 달 무료 시작 — 30일 후 ${tier.krw.toLocaleString()}원 자동 결제`);
       }
       if (typeof refreshBillingStatus === 'function') {
         try { await refreshBillingStatus(true); } catch {}

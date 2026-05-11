@@ -154,41 +154,52 @@ async function openSubscribeModal() {
   const minorWarning = state.preferences?.requiresLegalGuardianForPayment
     ? `<div style="padding:10px; background:rgba(220,150,80,0.10); border:1px solid rgba(220,150,80,0.40); border-radius:8px; font-size:11px; color:#e8c590; margin-bottom:14px;">⚠️ 만 18세 미만은 결제 시 법정대리인 동의 필요</div>`
     : '';
-  const tierCard = (key, plan, recommended) => `
-    <div class="tier-card ${recommended ? 'tier-recommended' : ''}" style="padding:18px 16px; background:${recommended ? 'linear-gradient(135deg, rgba(212,167,106,0.12), rgba(212,167,106,0.04))' : 'var(--surface)'}; border:${recommended ? '1.5px solid var(--accent)' : '1px solid var(--border)'}; border-radius:14px; margin-bottom:10px;">
-      ${recommended ? '<div style="font-size:9px; letter-spacing:0.18em; text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:6px;">RECOMMENDED</div>' : ''}
-      <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
-        <div style="font-size:18px; font-weight:700; color:var(--text);">${plan.emoji} ${plan.label}</div>
-        <div style="font-size:18px; font-weight:700; color:var(--text);">${plan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/월</span></div>
-      </div>
-      <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${plan.tagline}</div>
-      <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
-        ${plan.description}
-      </div>
-      <button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">${plan.label} 정기 구독 (월 ${plan.krw.toLocaleString()}원)</button>
-    </div>
-  `;
-  const earlyLifetimePlan = TIER_PLANS_CLIENT.early_lifetime;
-  // 사용자 명시 2026-05-06 ultrathink: 얼리버드 = 하늘색~파란색 gradient (Light 대체 분위기).
-  // 사용자 명시 2026-05-06: '첫 달 무료' 실제 구현 = 카드 등록 → 30일 trial → 30일 후 자동 결제.
-  // 버튼 = proceedEarlyBirdTrial (요청 빌링키 등록 흐름) — 즉시 결제 흐름과 분리.
-  const earlyLifetimeCard = `
-    <div style="position:relative; padding:18px 16px; background:linear-gradient(135deg, rgba(135,206,235,0.18), rgba(74,144,226,0.10)); border:1.5px solid #5fb4d3; border-radius:14px; margin-bottom:10px;">
-      <div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">첫 달 무료 · 출시 전 한정</div>
-      <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
-        <div style="font-size:18px; font-weight:700; color:var(--text);">${earlyLifetimePlan.emoji} ${earlyLifetimePlan.label}</div>
-        <div style="font-size:18px; font-weight:700; color:#5fb4d3;">
-          <span style="text-decoration:line-through; opacity:0.55; font-size:13px; font-weight:500; margin-right:6px;">${earlyLifetimePlan.krw.toLocaleString()}원</span>
-          0원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/첫 달</span>
+  // V4 (사용자 명시 2026-05-11 ultrathink): tier 카드 통합 — 옛 earlyLifetimeCard 폐기.
+  //   Plus (key='light', has_free_trial=true) 가 *RECOMMENDED + 첫 달 무료* 자리 차지.
+  //   Light (key='early_lifetime') 는 정가 entry tier — 일반 tierCard 로 렌더.
+  // freeTrial 띠 = plan.has_free_trial truthy 일 때. 버튼 색상도 trial 자리에 맞춰 sky gradient.
+  const tierCard = (key, plan, recommended) => {
+    const isFreeTrial = !!plan.has_free_trial;
+    const trialBadge = isFreeTrial
+      ? '<div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">첫 달 무료</div>'
+      : '';
+    const cardBg = isFreeTrial
+      ? 'linear-gradient(135deg, rgba(135,206,235,0.18), rgba(74,144,226,0.10))'
+      : (recommended ? 'linear-gradient(135deg, rgba(212,167,106,0.12), rgba(212,167,106,0.04))' : 'var(--surface)');
+    const cardBorder = isFreeTrial
+      ? '1.5px solid #5fb4d3'
+      : (recommended ? '1.5px solid var(--accent)' : '1px solid var(--border)');
+    const recommendBadge = (recommended && !isFreeTrial)
+      ? '<div style="font-size:9px; letter-spacing:0.18em; text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:6px;">RECOMMENDED</div>'
+      : '';
+    const priceHtml = isFreeTrial
+      ? `<div style="font-size:18px; font-weight:700; color:#5fb4d3;">
+           <span style="text-decoration:line-through; opacity:0.55; font-size:13px; font-weight:500; margin-right:6px;">${plan.krw.toLocaleString()}원</span>
+           0원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/첫 달</span>
+         </div>`
+      : `<div style="font-size:18px; font-weight:700; color:var(--text);">${plan.krw.toLocaleString()}원<span style="font-size:11px; color:var(--text-dim); font-weight:400;">/월</span></div>`;
+    const buttonStyle = isFreeTrial
+      ? 'background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;'
+      : '';
+    const buttonText = isFreeTrial
+      ? `${plan.emoji} 첫 달 무료로 시작하기`
+      : `${plan.label} 정기 구독 (월 ${plan.krw.toLocaleString()}원)`;
+    return `
+      <div class="tier-card ${recommended ? 'tier-recommended' : ''}" style="position:relative; padding:18px 16px; background:${cardBg}; border:${cardBorder}; border-radius:14px; margin-bottom:10px;">
+        ${trialBadge}
+        ${recommendBadge}
+        <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
+          <div style="font-size:18px; font-weight:700; color:var(--text);">${plan.emoji} ${plan.label}</div>
+          ${priceHtml}
         </div>
+        <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${plan.tagline}</div>
+        <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
+          ${plan.description}
+        </div>
+        <button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px; ${buttonStyle}">${buttonText}</button>
       </div>
-      <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${earlyLifetimePlan.tagline}</div>
-      <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
-        ${earlyLifetimePlan.description}
-      </div>
-      <button class="btn-primary" onclick="proceedEarlyBirdTrial()" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 첫 달 무료로 시작하기</button>
-    </div>
-  `;
+    `;
+  };
   // 사용자 명시 2026-05-11: Premium 추가팩 카드 — Premium 사용자 한정 단건결제. 비-Premium 클릭 시 안내 토스트.
   const premiumPack = OVERAGE_PACKS_CLIENT?.premium_pack;
   const premiumPackCard = premiumPack ? `
@@ -209,12 +220,12 @@ async function openSubscribeModal() {
     <div class="input-modal" style="max-width:420px; max-height:92vh; overflow-y:auto; padding:24px;">
       <div style="font-size:17px; font-weight:700; color:var(--text); margin-bottom:14px;">📅 구독</div>
       ${minorWarning}
-      ${earlyLifetimeCard}
-      ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
-      ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
+      ${tierCard('early_lifetime', TIER_PLANS_CLIENT.early_lifetime, false)}
+      ${tierCard('light', TIER_PLANS_CLIENT.light, true)}
+      ${tierCard('premium', TIER_PLANS_CLIENT.premium, false)}
       ${premiumPackCard}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
-        💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드</b>. 깊게 자주 쓰면 Premium.<br>
+        💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus</b> (첫 달 무료). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
         <b>부가가치세 10% 포함</b> · <b>모든 플랜 = 매월 자동 갱신</b> (해지 1-click).<br>
         해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>
         <span style="color:var(--text-dim);">⚠ 본 서비스는 임상 치료·진단·전문가 상담을 대체하지 않습니다.</span>
@@ -247,10 +258,12 @@ function tryBuyPremiumPack() {
 //   2) /api/billing/portone-register-recurring → 첫 달 chargeWithBillingKey + next_billing_at=+30d
 //   3) cron-charge-recurring 이 30일 후 자동 결제
 // 토스페이는 tosstest = 일반결제만 → 빌링키 픽커에서 제외.
+// V4 (사용자 명시 2026-05-11 ultrathink): trial flow 매핑 변경 — early_lifetime → light (Plus).
+//   Light(4,900, key='early_lifetime') 은 정가 즉시 결제 / Plus(9,900, key='light') 는 첫 달 무료 trial.
 async function proceedSubscribe(tierKey) {
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 tier'); return; }
-  if (tierKey === 'early_lifetime') return proceedEarlyBirdTrial();  // 얼리버드는 별도 (trial 흐름)
+  if (tier.has_free_trial) return proceedPlusTrial();  // Plus = 첫 달 무료 trial 흐름 (key='light')
   if (!session || !session.access_token) {
     alert('로그인 필요 — 설정 → 로그아웃 후 재로그인.');
     return;
@@ -372,8 +385,10 @@ async function proceedSubscribe(tierKey) {
 // 1) PortOne.requestIssueBillingKey 로 카드 등록 모달 (사용자 카드 정보, 결제 0원)
 // 2) 응답 billingKey 를 /api/billing/portone-register-trial 에 POST → 30일 trial 시작
 // 3) 30일 후 cron-charge-recurring 이 자동 결제 → 매월 자동 갱신
-async function proceedEarlyBirdTrial() {
-  const tier = TIER_PLANS_CLIENT.early_lifetime;
+// V4 (사용자 명시 2026-05-11 ultrathink): trial 흐름 = Plus tier (key='light'). 옛 얼리버드 promo 정체성 폐기 — 함수 리네임.
+//   ⚠ backend /api/billing/portone-register-trial 도 plan='light' 로 처리 (또는 plan 파라미터 추가) — 백엔드 sync 필요.
+async function proceedPlusTrial() {
+  const tier = TIER_PLANS_CLIENT.light;  // Plus (9,900) — 첫 달 무료 trial
   if (!session || !session.access_token) {
     alert('로그인 필요 — 설정 → 로그아웃 후 재로그인.');
     return;
@@ -382,8 +397,8 @@ async function proceedEarlyBirdTrial() {
     alert('게스트 모드는 결제 X — 먼저 로그인.');
     return;
   }
-  // 얼리버드 = 빌링키 등록 흐름이라 토스페이 제외 (tosstest 채널 = 일반결제만).
-  const _pg = await _pickPaymentMethod({ excludeToss: true, title: '얼리버드 카드 등록 수단' });
+  // Plus trial = 빌링키 등록 흐름이라 토스페이 제외 (tosstest 채널 = 일반결제만).
+  const _pg = await _pickPaymentMethod({ excludeToss: true, title: 'Plus 첫 달 무료 카드 등록 수단' });
   if (!_pg) return;
   const _pgInfo = _getPayChannelInfo(_pg);
   const billingChannelKey = _pgInfo.billingChannelKey || _pgInfo.channelKey;
@@ -423,7 +438,7 @@ async function proceedEarlyBirdTrial() {
   // billingKey issueId — 매번 unique. customer.customerId = user.id 로 매칭.
   // KG이니시스 oid 최대 40자 — UUID 전체 포함 시 64자 초과. base36 ts + userId 앞 8자로 26자 이내.
   const issueId = `bk-${(authUserId||'anon').slice(0,8)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
-  // 모바일 redirect 흐름 — 등록 후 같은 페이지로 복귀 (해시 #early-bird-trial-return 으로 후속 처리).
+  // 모바일 redirect 흐름 — 등록 후 같은 페이지로 복귀 (해시 #plus-trial-return 으로 후속 처리).
   let response;
   try {
     response = await window.PortOne.requestIssueBillingKey({
@@ -432,9 +447,9 @@ async function proceedEarlyBirdTrial() {
       billingKeyMethod: _pgInfo.payMethod,
       ...(_pgInfo.easyPay ? { easyPay: _pgInfo.easyPay } : {}),
       issueId,
-      issueName: '소라고동 얼리버드 정기 카드 등록',
+      issueName: '소라고동 Plus 정기 카드 등록 (첫 달 무료)',
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
-      redirectUrl: window.location.origin + (window.location.pathname || '/') + '#early-bird-trial-return',
+      redirectUrl: window.location.origin + (window.location.pathname || '/') + '#plus-trial-return',
       customer: {
         customerId: authUserId || undefined,
         email: session?.user?.email || undefined,
@@ -480,10 +495,10 @@ async function proceedEarlyBirdTrial() {
     const result = await verifyResp.json();
     if (verifyResp.ok && result.ok) {
       if (result.duplicate) {
-        showToast('💳 이미 얼리버드 구독 활성 — 카드 변경은 [설정] 에서');
-        alert(result.message || '이미 활성 얼리버드 구독이 있어.');
+        showToast('💳 이미 Plus 구독 활성 — 카드 변경은 [설정] 에서');
+        alert(result.message || '이미 활성 Plus 구독이 있어.');
       } else {
-        showToast(`✨ 얼리버드 첫 달 무료 시작 — 30일 후 ${tier.krw.toLocaleString()}원 자동 결제 🫂`);
+        showToast(`🌊 Plus 첫 달 무료 시작 — 30일 후 ${tier.krw.toLocaleString()}원 자동 결제 🫂`);
       }
       closeSubscribeModal();
       if (typeof refreshBillingStatus === 'function') refreshBillingStatus();

@@ -118,7 +118,7 @@ function checkFreeTrialExpiry() {
   _addNotification({
     type: 'free_trial_expiry_warning',
     title: '레거시 얼리 플랜 만료 임박',
-    body: `<b>${daysDisplay}일</b> 후 만료. 계속 쓰려면 구독 — <b>얼리버드 4,900원/월</b> (출시 전 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+    body: `<b>${daysDisplay}일</b> 후 만료. 계속 쓰려면 구독 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
     persistent: true
   });
 }
@@ -146,7 +146,7 @@ function checkFreeCreditDepletion() {
     _addNotification({
       type: 'free_credit_depleted',
       title: '🐚 환영 무료 체험 끝',
-      body: `깊게 써줘서 고마워.<br>계속 쓰려면 구독 — <b>얼리버드 4,900원/월</b> (출시 전 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+      body: `깊게 써줘서 고마워.<br>계속 쓰려면 구독 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
       persistent: true
     });
     return;
@@ -172,7 +172,7 @@ function checkFreeCreditDepletion() {
     _addNotification({
       type: 'free_credit_low',
       title: '🐚 환영 무료 체험 거의 끝',
-      body: `이제 얼마 안 남았어.<br>계속 쓰려면 — <b>얼리버드 4,900원/월</b> (출시 전 가격 평생 락인).<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
+      body: `이제 얼마 안 남았어.<br>계속 쓰려면 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.<br><br><span style="font-size:11px; color:var(--text-soft);">결제 = 단독 개발자 후원 → iOS 앱 출시 가능 🫂</span>`,
       persistent: true
     });
   }

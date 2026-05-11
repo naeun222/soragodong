@@ -231,9 +231,10 @@ async function _doRefreshBillingStatus(manual) {
       const isNearCap = usedPct >= 80;
       // 사용자 명시 2026-05-06: backend `cancel_at_period_end` true 면 갱신 해지 됨 — '{date}에 종료' 라벨로 대체.
       const cancelledRenewal = !!billing.cancel_at_period_end;
-      // 사용자 명시 2026-05-06: 얼리버드 trial 중 (trial_until > now AND plan='early_lifetime') = '첫 달 무료 — N일 남음 / N일 후 자동 결제'.
+      // V4 (사용자 명시 2026-05-11): trial 흐름 = Plus(key='light'). 옛 'early_lifetime trial' 폐기.
+      // backend trial_until 필드는 이제 plan='light' 사용자에 set — sync 필요.
       const trialUntil = billing.trial_until ? new Date(billing.trial_until) : null;
-      const inTrial = (planKey === 'early_lifetime' && trialUntil && trialUntil > new Date());
+      const inTrial = (planKey === 'light' && trialUntil && trialUntil > new Date());
       let expiresLabel;
       if (inTrial) {
         const remDays = Math.max(0, Math.ceil((trialUntil.getTime() - Date.now()) / 86400000));
@@ -249,7 +250,7 @@ async function _doRefreshBillingStatus(manual) {
         html += `<div style="margin-top:10px; font-size:13px;">${_quotaStateLabel(usedPct)}</div>`;
         html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
         if (isNearCap && planKey !== 'premium') {
-          html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">🌊 Premium 으로 늘리기</button>`;
+          html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">✨ Premium 으로 늘리기</button>`;
         }
       }
       // 사용자 명시 2026-05-06 (재배치): '다음 갱신 해지' = 결제 내역/환불 토글 안으로 이동 + 글씨 크기 ↑.
@@ -257,7 +258,7 @@ async function _doRefreshBillingStatus(manual) {
     } else if (balance > 0) {
       // 사용자 명시 2026-05-06 ultrathink: 신규 가입 = 무료 토큰 grant (양 비공개), early_light auto-grant X. raw $ 노출 금지.
       html += `<div><b>🎁 환영 무료 체험 중</b> <span style="color:var(--text-soft); font-size:11px;">— 자유롭게 써봐</span></div>`;
-      html += `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">마음에 들면 구독해줘 — 출시 전 <b>얼리버드 4,900원/월</b> 가격 평생 락인.</div>`;
+      html += `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">마음에 들면 구독해줘 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.</div>`;
     } else {
       html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 계속 쓰려면 구독</span></div>`;
     }

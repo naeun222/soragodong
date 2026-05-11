@@ -1,40 +1,56 @@
 // ═══════════════════════════════════════════════════════════════
 // 결제 — 사용자 명시 2026-04-30 ultrathink: 충전 plan 폐기 → 2-tier 월정액 only
+// V4 (사용자 명시 2026-05-11 ultrathink): tier 재구성 — 3-tier 정가화 + Plus 첫 달 무료 promo.
+//   결제자 0 시점에서 reposition. 옛 "얼리버드 promo + 평생 락인" 정체성 폐기.
+//   - Light(4,900, key=early_lifetime) — 정가 entry tier. trial X, 즉시 결제. 매일의 자기관찰 입문.
+//   - Plus(9,900, key=light)            — 첫 달 무료 trial, 30일 후 자동 결제. SaaS 통념대로 mid tier 에 trial.
+//   - Premium(25,000, key=premium)      — 정가 top. anchor.
+//   ⚠ key 와 label 매핑 헷갈림 주의:
+//      key 'early_lifetime' = label 'Light' (legacy key 보존 — backend sync 위해)
+//      key 'light'          = label 'Plus'  (trial flow 이쪽으로 이동)
+//      key 'premium'        = label 'Premium' (변경 없음)
+//   backend (`_lib/billing.ts`, `portone-register-trial.ts`, `cron-charge-recurring.ts`) sync 필요.
 // ═══════════════════════════════════════════════════════════════
 
 // 서버 _lib/billing.ts 의 TIER_PLANS 와 동기 — 위변조 방지로 결제 검증은 서버에서 재확인.
 // description: 정직 톤 — 정량 KRW 표기 X, 정성적 설명만. cap 자체는 서버 운영 용도.
 const TIER_PLANS_CLIENT = {
-  light:          { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Light',          tagline: '매일의 자기관찰', emoji: '🐚',
-    description: '일반 대화 + 분석 풀로. 매일의 자기관찰에 충분.' },
-  premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '깊게 자주', emoji: '🌊',
+  // Plus (9,900) — key 'light'. mid tier, *첫 달 무료 trial* flow 가 이쪽으로 이동.
+  light:          { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Plus',           tagline: '깊게, 꾸준히 — 첫 달 무료', emoji: '🌊',
+    description: '일반 대화 + 4단 분석 풀로. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.', has_free_trial: true },
+  // Premium (25,000) — top tier anchor. 정가 즉시 결제. emoji ✨ 로 변경 (🐚🌊✨ 그라데이션 완성).
+  premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '마음껏 깊게', emoji: '✨',
     description: '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.' },
   // V4 (사용자 명시 2026-05-06 ultrathink): legacy tier — 옛 가정 (신규 가입 → early_light auto-grant 30일 무료) 폐기.
   // 실제 backend = 신규 가입 시 무료 토큰 (credit_balance) grant, plan 자동 활성화 X. 이 tier 는 legacy 호환 보존만 (옛 grant 받은 사용자 케이스).
   early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜 (legacy)',       tagline: '레거시', emoji: '🐚',
     description: '레거시 tier. 신규 가입 무료 체험은 별도 토큰 grant (양 비공개) 로 처리 — 이 plan 은 자동 활성화 X.' },
-  // V4 (사용자 명시 2026-05-06): 얼리버드 첫 달 무료 = 카드 등록 → 30일 무료 → 30일 후 첫 자동 결제 → 매월 자동 갱신.
-  // 백엔드: portone-register-trial.ts (빌링키 저장) + cron-charge-recurring.ts (30일 후 자동 결제).
-  // 사용자 명시 2026-05-11: description 축약 — 출시 전 감사만 담기.
-  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '첫 달 무료 + 평생 가격 락인', emoji: '✨',
-    description: '출시 전 가입자에게 드리는 감사 — 이 가격 평생 락인 (출시 후 인상 X).' },
+  // Light (4,900) — key 'early_lifetime'. *정가 entry tier*. trial X, 즉시 결제.
+  //   ⚠ key 명 'early_lifetime' 은 legacy — backend sync 위해 보존. 실제 정체성은 entry 'Light'.
+  //   옛 "출시 전 가격 평생 락인" promo 폐기. cap_usd 도 sustainable 한 수준 ($3 → $1.8) 으로 조정.
+  early_lifetime: { krw: 4900,  cap_usd: 1.8,  cap_krw: 2520,  label: 'Light',          tagline: '매일의 자기관찰', emoji: '🐚',
+    description: '일반 대화 + 가벼운 분석. 매일 5~10분 자기관찰에 충분.' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
 };
 // 사용자 명시 2026-05-02 ultrathink: light_pack 제거 — Premium 전용. Light/얼리는 Premium 전환 또는 다음 달 대기.
 // V4 (사용자 명시 2026-05-04 ultrathink — v2 갱신): 추가팩 재설계 — 작은 단위 + 두 tier 다 가능. *24h 못 기다리는 사용자* trigger.
+// V4 (사용자 명시 2026-05-11 ultrathink): tier 재구성에 따라 label 갱신 — key 'light' = Plus tier.
+//   ⚠ Light (4,900, key='early_lifetime') 는 *추가팩 X* — cap 닿으면 Plus 업그레이드 권유 (upgrade funnel).
 // 옛 5,000원 / +$4 (light) 와 7,000원 / +$5 (premium) 폐기.
 const OVERAGE_PACKS_CLIENT = {
-  light_pack:   { krw: 1500, usd: 1.0, label: 'Light 추가팩',   tier: 'light' },
+  light_pack:   { krw: 1500, usd: 1.0, label: 'Plus 추가팩',    tier: 'light' },
   early_pack:   { krw: 1500, usd: 1.0, label: 'Light 추가팩',   tier: 'early_light' },
   premium_pack: { krw: 2500, usd: 1.5, label: 'Premium 추가팩', tier: 'premium' }
 };
 // V4 (사용자 명시 2026-05-04 ultrathink — v2): tier 별 일일 cap 비율 (월 cap × 비율 / 30 = 일일).
-// Light /25 (마진 보호) — $5 × 1.2 / 30 = $0.20/일
-// Premium /20 (여유, '마음껏 깊게' 약속) — $15 × 1.5 / 30 = $0.75/일
-// Early /25 동일 (Light 와 동일 비율) — $4 × 1.2 / 30 = $0.16/일
-const DAILY_CAP_RATIO = { light: 1.2, early_light: 1.2, premium: 1.5 };
+// Light(entry) /25 (마진 보호) — $1.8 × 1.2 / 30 ≈ $0.072/일
+// Plus       /25 (마진 보호) — $5  × 1.2 / 30 = $0.20/일
+// Premium    /20 (여유, '마음껏 깊게' 약속) — $13 × 1.5 / 30 = $0.65/일
+// Early_light(legacy) /25 동일 — $1.1 × 1.2 / 30 ≈ $0.044/일
+// 일일 cap reset = getDayKey() (4AM KST cutoff). 매일 새로.
+const DAILY_CAP_RATIO = { early_lifetime: 1.2, light: 1.2, early_light: 1.2, premium: 1.5 };
 function _getDailyCapUsd(plan) {
   const tier = TIER_PLANS_CLIENT[plan];
   if (!tier) return 0;
