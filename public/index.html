@@ -56254,8 +56254,9 @@ const TIER_PLANS_CLIENT = {
     description: '레거시 tier. 신규 가입 무료 체험은 별도 토큰 grant (양 비공개) 로 처리 — 이 plan 은 자동 활성화 X.' },
   // V4 (사용자 명시 2026-05-06): 얼리버드 첫 달 무료 = 카드 등록 → 30일 무료 → 30일 후 첫 자동 결제 → 매월 자동 갱신.
   // 백엔드: portone-register-trial.ts (빌링키 저장) + cron-charge-recurring.ts (30일 후 자동 결제).
-  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '첫 달 무료 + 출시 전 가격 락인', emoji: '✨',
-    description: '카드 등록만 (지금은 결제 X) → 30일 무료 체험 → 30일 후 첫 자동 결제 4,900원/월. 출시 전 가입자만 이 가격 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 [설정 → 다음 갱신 해지] 로 멈춰 — 환불 없이 만료일까지 사용.' },
+  // 사용자 명시 2026-05-11: description 축약 — 출시 전 감사만 담기.
+  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '첫 달 무료 + 평생 가격 락인', emoji: '✨',
+    description: '출시 전 가입자에게 드리는 감사 — 이 가격 평생 락인 (출시 후 인상 X).' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
@@ -57356,9 +57357,21 @@ async function openSubscribeModal() {
       <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
         ${earlyLifetimePlan.description}
       </div>
-      <button class="btn-primary" onclick="proceedEarlyBirdTrial()" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 카드 등록하고 첫 달 무료로 시작</button>
+      <button class="btn-primary" onclick="proceedEarlyBirdTrial()" style="width:100%; padding:11px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;">${earlyLifetimePlan.emoji} 첫 달 무료로 시작하기</button>
     </div>
   `;
+  // 사용자 명시 2026-05-11: Premium 추가팩 카드 — Premium 사용자 한정 단건결제. 비-Premium 클릭 시 안내 토스트.
+  const premiumPack = OVERAGE_PACKS_CLIENT?.premium_pack;
+  const premiumPackCard = premiumPack ? `
+    <div style="padding:13px 15px; background:rgba(212,167,106,0.05); border:1px dashed rgba(212,167,106,0.45); border-radius:11px; margin-bottom:10px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:3px;">
+        <div style="font-size:13.5px; font-weight:600; color:var(--text);">🌊 Premium 추가팩</div>
+        <div style="font-size:13.5px; font-weight:600; color:var(--text);">${premiumPack.krw.toLocaleString()}원<span style="font-size:10px; color:var(--text-dim); font-weight:400;"> · 단건</span></div>
+      </div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:9px;">월 한도 도달 시 추가 사용 — Premium 구독자 전용.</div>
+      <button class="btn-secondary" onclick="tryBuyPremiumPack()" style="width:100%; padding:9px; font-size:12px;">추가팩 구매</button>
+    </div>
+  ` : '';
   const overlay = document.createElement('div');
   overlay.className = 'input-modal-overlay show';
   overlay.id = 'subscribeModalOverlay';
@@ -57370,6 +57383,7 @@ async function openSubscribeModal() {
       ${earlyLifetimeCard}
       ${tierCard('light', TIER_PLANS_CLIENT.light, false)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, true)}
+      ${premiumPackCard}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
         💡 잘 모르겠으면 <b style="color:#5fb4d3;">얼리버드</b>. 깊게 자주 쓰면 Premium.<br>
         <b>부가가치세 10% 포함</b> · <b>모든 플랜 = 매월 자동 갱신</b> (해지 1-click).<br>
@@ -57385,6 +57399,18 @@ async function openSubscribeModal() {
 function closeSubscribeModal() {
   const overlay = document.getElementById('subscribeModalOverlay');
   if (overlay) overlay.remove();
+}
+
+// 사용자 명시 2026-05-11: Premium 사용자만 추가팩 구매 가능. 비-Premium 클릭 시 토스트만.
+function tryBuyPremiumPack() {
+  const plan = window._billingCache?.subscription_plan || null;
+  const active = !!window._billingCache?.subscription_active;
+  if (!active || plan !== 'premium') {
+    if (typeof showToast === 'function') showToast('🌊 Premium 구독자만 구매 가능');
+    return;
+  }
+  closeSubscribeModal();
+  if (typeof purchaseOveragePack === 'function') purchaseOveragePack('premium_pack');
 }
 
 // 사용자 명시 2026-05-11: Light/Premium 도 정기결제 — 빌링키 등록 흐름 (얼리버드와 동일하지만 첫 달 즉시 결제).

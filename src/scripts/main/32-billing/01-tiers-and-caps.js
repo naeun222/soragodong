@@ -15,8 +15,9 @@ const TIER_PLANS_CLIENT = {
     description: '레거시 tier. 신규 가입 무료 체험은 별도 토큰 grant (양 비공개) 로 처리 — 이 plan 은 자동 활성화 X.' },
   // V4 (사용자 명시 2026-05-06): 얼리버드 첫 달 무료 = 카드 등록 → 30일 무료 → 30일 후 첫 자동 결제 → 매월 자동 갱신.
   // 백엔드: portone-register-trial.ts (빌링키 저장) + cron-charge-recurring.ts (30일 후 자동 결제).
-  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '첫 달 무료 + 출시 전 가격 락인', emoji: '✨',
-    description: '카드 등록만 (지금은 결제 X) → 30일 무료 체험 → 30일 후 첫 자동 결제 4,900원/월. 출시 전 가입자만 이 가격 평생 락인 (출시 후 인상 X). Light 수준 사용량. 언제든 [설정 → 다음 갱신 해지] 로 멈춰 — 환불 없이 만료일까지 사용.' },
+  // 사용자 명시 2026-05-11: description 축약 — 출시 전 감사만 담기.
+  early_lifetime: { krw: 4900,  cap_usd: 3.0,  cap_krw: 4200,  label: '얼리버드',   tagline: '첫 달 무료 + 평생 가격 락인', emoji: '✨',
+    description: '출시 전 가입자에게 드리는 감사 — 이 가격 평생 락인 (출시 후 인상 X).' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
