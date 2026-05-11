@@ -239,6 +239,13 @@ async function init() {
   if (typeof maybeRunDailyChapterExtract === 'function') {
     setTimeout(() => { maybeRunDailyChapterExtract().catch(e => console.warn('dailyChapterExtract:', e)); }, 4000);
   }
+  // 사용자 보고 2026-05-12 ultrathink: init 시 _billingCache 자동 populating.
+  //   옛: refreshBillingStatus 가 settings 화면 진입 시만 호출 → settings 안 들른 사용자 (예: 새 계정 + 결제 직후 chat 로 진입) 의 _billingCache 영원히 비어있음.
+  //   영향: _maybeAutoForceAnalyzeFreeTier (chat 3턴마다) 가 isPaid=false 로 판정 → paid 구독자도 매 3턴 자동 분석 trigger.
+  //   fix: init 4초 후 refreshBillingStatus() 자동 호출 — status DOM 가드는 31-settings.js 에서 별도 분리됨 (DOM 없어도 _billingCache 갱신).
+  if (typeof refreshBillingStatus === 'function') {
+    setTimeout(() => { refreshBillingStatus().catch(e => console.warn('refreshBillingStatus init:', e)); }, 4000);
+  }
 
   applyNightMode();
   renderModes();

@@ -19967,6 +19967,13 @@ async function init() {
   if (typeof maybeRunDailyChapterExtract === 'function') {
     setTimeout(() => { maybeRunDailyChapterExtract().catch(e => console.warn('dailyChapterExtract:', e)); }, 4000);
   }
+  // 사용자 보고 2026-05-12 ultrathink: init 시 _billingCache 자동 populating.
+  //   옛: refreshBillingStatus 가 settings 화면 진입 시만 호출 → settings 안 들른 사용자 (예: 새 계정 + 결제 직후 chat 로 진입) 의 _billingCache 영원히 비어있음.
+  //   영향: _maybeAutoForceAnalyzeFreeTier (chat 3턴마다) 가 isPaid=false 로 판정 → paid 구독자도 매 3턴 자동 분석 trigger.
+  //   fix: init 4초 후 refreshBillingStatus() 자동 호출 — status DOM 가드는 31-settings.js 에서 별도 분리됨 (DOM 없어도 _billingCache 갱신).
+  if (typeof refreshBillingStatus === 'function') {
+    setTimeout(() => { refreshBillingStatus().catch(e => console.warn('refreshBillingStatus init:', e)); }, 4000);
+  }
 
   applyNightMode();
   renderModes();
@@ -56094,33 +56101,38 @@ async function refreshBillingStatus(manual) {
 }
 async function _doRefreshBillingStatus(manual) {
   // 사용자 명시 2026-04-30: manual=true 일 때만 토스트 (button click). 자동 호출 (settings 진입 등) = 토스트 X.
+  // 사용자 보고 2026-05-12 ultrathink: status DOM 가드 분리 — 옛 흐름 = settings 화면 X 면 early return → _billingCache 갱신 X → _maybeAutoForceAnalyzeFreeTier 가 paid 구독자도 free 로 판정 → 매 3턴 분석 trigger.
+  //   fix: status null 이어도 fetch + _billingCache 갱신 진행. render 만 status 있을 때 수행.
   const status = document.getElementById('billingStatus');
-  if (!status) return;
   if (typeof session === 'undefined' || !session || !session.access_token) {
-    status.textContent = '로그인 필요';
+    if (status) status.textContent = '로그인 필요';
     return;
   }
   // 사용자 명시 2026-05-11: admin 계정은 구독 표시 = '어드민', 결제/사용량 노출 X.
   if (typeof _isAdmin === 'function' && _isAdmin()) {
-    status.innerHTML = `
-      <div><b>구독</b>: 🛡️ 어드민</div>
-      <div style="font-size:11.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">운영 계정 — 제한 없음</div>
-    `;
+    if (status) {
+      status.innerHTML = `
+        <div><b>구독</b>: 🛡️ 어드민</div>
+        <div style="font-size:11.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">운영 계정 — 제한 없음</div>
+      `;
+    }
     return;
   }
   // Phase 1e: 게스트 사용자 — 가입 유도 카드 (수치/한도 노출 X, 데이터 안전 + E2EE 톤).
   if (state && state.isGuest) {
-    status.innerHTML = `
-      <div><b>🌱 게스트 모드</b></div>
-      <div style="font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.7;">지금 데이터는 이 기기에만 있어 — 브라우저 정리되면 사라져.</div>
-      <button class="btn-primary" onclick="showGuestConversionModal({reason:'manual'})" style="margin-top:12px; width:100%; padding:11px; font-size:13px; font-weight:600;">🔒 로그인하고 안전하게 이어가기</button>
-      <div style="font-size:10.5px; color:var(--text-soft); margin-top:8px; line-height:1.6;">종단간 암호화로 영구 보관 — 너만 풀 수 있어 (나도 못 봐).</div>
-    `;
+    if (status) {
+      status.innerHTML = `
+        <div><b>🌱 게스트 모드</b></div>
+        <div style="font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.7;">지금 데이터는 이 기기에만 있어 — 브라우저 정리되면 사라져.</div>
+        <button class="btn-primary" onclick="showGuestConversionModal({reason:'manual'})" style="margin-top:12px; width:100%; padding:11px; font-size:13px; font-weight:600;">🔒 로그인하고 안전하게 이어가기</button>
+        <div style="font-size:10.5px; color:var(--text-soft); margin-top:8px; line-height:1.6;">종단간 암호화로 영구 보관 — 너만 풀 수 있어 (나도 못 봐).</div>
+      `;
+    }
     return;
   }
   // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 월정액 흐름 표시.
   // 사용자 보고 2026-04-30: 🔄 새로고침 작동 X 버그 — JWT 1h 만료 시 401 → 인터셉터는 /api/chat 만 swap 이라 /api/usage 401 그대로. 자동 refresh + retry + 시각 피드백 추가.
-  if (manual) status.textContent = '🔄 갱신 중...';
+  if (manual && status) status.textContent = '🔄 갱신 중...';
   const _origFetch = window._anthropicOrigFetch || window.fetch;
   // 사용자 보고 2026-04-30 ultrathink: cache-bust query — SW 가 옛 버전이라 /api/usage 캐시 잔재 가능 케이스 보호.
   const _doFetch = () => _origFetch('/api/usage?t=' + Date.now(), {
@@ -56133,7 +56145,7 @@ async function _doRefreshBillingStatus(manual) {
       if (refreshed) resp = await _doFetch();
     }
     if (!resp.ok) {
-      status.textContent = `사용량 조회 실패 (${resp.status})`;
+      if (status) status.textContent = `사용량 조회 실패 (${resp.status})`;
       return;
     }
     const data = await resp.json();
@@ -56203,9 +56215,9 @@ async function _doRefreshBillingStatus(manual) {
       html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${overagePct}%; background:${isPackNearEmpty ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
     }
     // 사용자 명시 2026-05-11 ultrathink: 레거시 early_light 안내 제거 — 위 정상 구독 분기에서 plan 자체를 미구독 처리하므로 일관성 차원에서 잔재 라인 삭제.
-    status.innerHTML = html;
+    if (status) status.innerHTML = html;
     // 사용자 명시 2026-05-06: 다음 갱신 해지 박스 — 결제 내역 토글 안에 별도 render.
-    if (typeof _renderCancelRenewalBox === 'function') {
+    if (status && typeof _renderCancelRenewalBox === 'function') {
       try { _renderCancelRenewalBox(billing); } catch {}
     }
     // 사용자 명시 2026-05-05: _billingCacheTs stamp — 30s TTL + showBudgetExceededModal 캐시 재사용용.
@@ -56223,7 +56235,7 @@ async function _doRefreshBillingStatus(manual) {
     // 사용자 명시 2026-04-30: 토스트 = manual button click 시만 (자동 호출 X — 자주 뜨면 부담)
     if (manual && typeof showToast === 'function') showToast('🔄 갱신됐어');
   } catch (e) {
-    status.textContent = '조회 실패: ' + (e.message || e);
+    if (status) status.textContent = '조회 실패: ' + (e.message || e);
   }
 }
 
