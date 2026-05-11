@@ -29806,6 +29806,10 @@ async function _rcCallHoroscopeHaiku(rawEnglish, zodiac) {
 - 사용자에게 직접 말하듯 ('너', '네', '너의'). '당신' X.
 - "결" 단어 X (잔잔한 결, 가벼운 결 등 회피).
 - 마크다운 / 인용부호 X.
+- ⚠ 환각 금지 (사용자 보고 2026-05-11): 영어 horoscope 원문에 없는 특정 천체/별자리/행성 디테일을 추가로 만들지 마.
+  X: '물고기자리 달이 떠 있어서', '수성 역행이라', '○자리 달의 영향으로' (원문에 없으면 절대 X).
+  OK: 원문이 'Pisces moon brings sensitivity' 처럼 명시한 경우만 그대로 번역.
+  원문이 천체 디테일 없으면 → 일반적 기운/감정/행동 톤만 사용.
 
 행운의 아이템: 일상 흔한 구체 객체 1개. ⚠ 매번 *다양*하게 — 볼펜 / 수첩 / 노트 같은 건 자주 쓰지 마. 다른 일상 아이템도 골고루 (손수건, 머그컵, 책, 우산, 거울, 향수, 운동화, 양말, 모자, 작은 화분, 동전, 사진, 음악 (CD/이어폰), 카드 (편지지/엽서), 안경, 시계, 양초, 인형, 빗, 립밤, 영수증, 식물 잎, 작은 돌, 스카프, 머리끈, 종이학, 부채, 텀블러, 가방 액세서리). 진짜 운세처럼 일상적. 특수 X.
 행운의 색: 1개. ⚠ 매번 *다양*하게 — 금색 / 노랑만 자주 쓰지 마. 빨강, 주황, 초록, 파랑, 보라, 분홍, 흰색, 검정, 갈색, 회색, 하늘색, 베이지, 청록, 자주, 살구, 연두, 민트, 와인, 코랄, 인디고, 라벤더 같이 다양한 색 골고루.
@@ -31407,92 +31411,50 @@ async function openGodongDiaryModal() {
     }
   }
 
-  // 사용자 명시 2026-05-11: cooldown 룰 단순화 — lastGodongDiaryAt 기반 3일 cooldown 폐기.
-  //   회전 카드 클릭 시 3/2/1일 전 일기가 *모두 있으면* 그대로 띄움. 하나라도 없으면 새로 생성.
+  // 사용자 명시 2026-05-11 (3차 정정 ultrathink): "기존에 만든 게 1개라도 있으면 새로 생성하지 말고 유지. fall back X".
+  //   state.godongDiary 안에 dayK 매칭 entry 가 *전혀 없을 때* 만 generate.
+  //   2,3,4일 전 (window 밖) entries 가 있어도 그대로 유지 — fallback filler / 강제 새 생성 X.
   //   '다시 적어줘' 버튼은 force regenerate (있어도 재호출).
-  const _existingMatchedDayKs = new Set(
-    (state.godongDiary || [])
-      .filter(e => e && _targetSet.has(_entryDayK(e)))
-      .map(e => _entryDayK(e))
-  );
-  const _hasAllThreeDays = _targetDayKs.every(dayK => _existingMatchedDayKs.has(dayK));
+  const _hasAnyEntry = (state.godongDiary || []).some(e => e && _entryDayK(e));
   const _force = _gdiaryForceRegenerate;
   _gdiaryForceRegenerate = false;
-  const needsGenerate = !_hasAllThreeDays || _force;
+  const needsGenerate = !_hasAnyEntry || _force;
 
   // 셸 먼저 (loading) — 사용자가 빈 화면 안 보게.
   _gdiaryRenderShell({ loading: true });
 
-  // Haiku 호출 — 사용자 명시 2026-05-11: 정확히 3개 entry (3일전/2일전/어제). 데이터 없는 날도 fallback 톤으로 1편.
+  // Haiku 호출 — 사용자 명시 2026-05-11 (3차 정정): needsGenerate 일 때만 (= state.godongDiary 비어있을 때 OR force).
+  //   fallback 폐기 (Haiku 실패해도 fallback 채우기 X — 없으면 모달 = "노트가 없네" + 다시 적어줘 버튼).
   if (needsGenerate) {
-    // regenerate 시 같은 날 중복 방지 — 3개 dayK 와 매칭되는 옛 entry 모두 splice.
-    state.godongDiary = (state.godongDiary || []).filter(e => !_targetSet.has(_entryDayK(e)));
+    // force regenerate 시 dayK 매칭 옛 entry splice — 윈도우 밖 (4일+ 전) 일기는 보존.
+    if (_force) {
+      state.godongDiary = (state.godongDiary || []).filter(e => !_targetSet.has(_entryDayK(e)));
+    }
 
     let newEntries = [];
-    let _generateOk = false;
     try {
       const arr = await _callGodongDiaryHaiku();
       if (Array.isArray(arr) && arr.length > 0) {
         newEntries = arr.map(p => _gdiaryEntryFromHaiku(p)).filter(Boolean);
-        // 사용자 명시 2026-05-11: _targetDayKs (3일전/2일전/어제) 매칭 entry 만 push. 오늘/미래 entry reject.
+        // _targetDayKs (3일전/2일전/어제) 매칭 entry 만 push. 오늘/미래 entry reject.
         newEntries = newEntries.filter(e => _targetSet.has(_entryDayK(e)));
-        if (newEntries.length > 0) _generateOk = true;
       }
     } catch (err) {
-      console.warn('[godong-diary] generate fail, fallback', err && err.message);
-      // fallback — 3개 모두 fallback 톤 (3일전/2일전/어제 각 1편).
-      _targetDayKs.forEach((dayK) => {
-        const text = _GDIARY_FALLBACK_POOL[Math.floor(Math.random() * _GDIARY_FALLBACK_POOL.length)];
-        const d = new Date(dayK + 'T20:00:00');
-        newEntries.push({
-          id: 'gd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-          date: `${d.getMonth()+1}월 ${d.getDate()}일`,
-          weekday: ['일','월','화','수','목','금','토'][d.getDay()],
-          note: null,
-          body: text,
-          iso: d.toISOString(),
-          substrateRefs: [],
-          fallback: true,
-        });
-      });
+      console.warn('[godong-diary] generate fail (no fallback per 사용자 명시):', err && err.message);
     }
     if (newEntries.length > 0) {
       newEntries.forEach(e => state.godongDiary.push(e));
-      // 사용자 명시 2026-05-11: lastGodongDiaryAt 기반 cooldown 폐기 — state.godongDiary 안 dayK 매칭 entries 존재 = 진입 가능.
-      //   단 godongDiaryContentId 는 마지막 entry pointer (legacy 호환) 로 keep.
       r.godongDiaryContentId = newEntries[newEntries.length - 1].id;
       if (typeof saveState === 'function') saveState(true);
     }
   }
 
-  // 사용자 명시 2026-05-11: 회전 카드 모달 = 정확히 3 dayK (3일전/2일전/어제) 매칭 entry 만.
-  let visibleEntries = (state.godongDiary || []).filter(e => _targetSet.has(_entryDayK(e)));
-  // 시간순 오름차순 정렬 (3일 전 → 어제).
-  visibleEntries.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
-
-  // 만약 dayK 매칭 entry 가 부족하면 fallback 채워 정확히 3개.
-  if (visibleEntries.length < 3) {
-    const _existingDayKs = new Set(visibleEntries.map(_entryDayK));
-    _targetDayKs.forEach((dayK) => {
-      if (_existingDayKs.has(dayK)) return;
-      const text = _GDIARY_FALLBACK_POOL[Math.floor(Math.random() * _GDIARY_FALLBACK_POOL.length)];
-      const d = new Date(dayK + 'T20:00:00');
-      const fb = {
-        id: 'gd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        date: `${d.getMonth()+1}월 ${d.getDate()}일`,
-        weekday: ['일','월','화','수','목','금','토'][d.getDay()],
-        note: null,
-        body: text,
-        iso: d.toISOString(),
-        substrateRefs: [],
-        fallback: true,
-      };
-      state.godongDiary.push(fb);
-      visibleEntries.push(fb);
-    });
-    visibleEntries.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
-    if (typeof saveState === 'function') saveState();
-  }
+  // 사용자 명시 2026-05-11 (3차 정정): 기존 entries 그대로 보여줌 (dayK 매칭 filter X / fallback filler X).
+  //   2,3,4일 전 entry 도 그대로 페이지로 노출. 시간순 정렬 (옛 → 최신).
+  let visibleEntries = (state.godongDiary || [])
+    .filter(e => e && _entryDayK(e))
+    .slice()
+    .sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
 
   _gdiaryState = {
     entries: visibleEntries,
@@ -37181,6 +37143,7 @@ function showScreen(name) {
 // V3.10: 대화창 placeholder 회전 (매번 다른 힌트)
 // V3.13.x: 톤 편중 X — 좋은 일·웃긴 에피소드·소소한 일상도 자연스럽게
 // 사용자 명시 2026-05-06: 입력창 placeholder 풀 통합 — 20개 (대화탭 진입 시 1개 회전)
+// 사용자 명시 2026-05-11: 검색 힌트 1개 추가 (총 21개).
 const CHAT_PLACEHOLDERS = [
   '편하게 말해봐...',
   '오늘 어땠어?',
@@ -37201,7 +37164,8 @@ const CHAT_PLACEHOLDERS = [
   '"일기:"로 시작 -> 원본으로 저장',
   '✓ 누르면 이 대화 마무리',
   '+ 메뉴 -> 일기 템플릿 / 메모',
-  '"더 알고 싶어 ▾" 눌러봐. 심리 분석해줄게.'
+  '"더 알고 싶어 ▾" 눌러봐. 심리 분석해줄게.',
+  '"검색해줘" 라고 말하면 인터넷에서 찾아와'
 ];
 
 // 사용자 명시 2026-05-06: 빈 채팅 진입 시 인사 밑 노출 — 10개 (이모티콘 + 한 줄)
@@ -40538,72 +40502,21 @@ async function processAnalysis(analysis, messageIdx) {
       if (typeof dismissPlaceholder === 'function') dismissPlaceholder('schedule');
     }
   }
-  // 사용자 요청 2026-04-28: 채팅에서 진주 추가 요청 추출 → state.pearls에 자동 등록
-  if (analysis.extracted_pearls && Array.isArray(analysis.extracted_pearls)) {
-    if (!Array.isArray(state.pearls)) state.pearls = [];
-    const validCats = ['음악', '음식', '장소', '순간', '사람', '기타'];
-    let addedPearls = 0;
-    analysis.extracted_pearls.forEach(p => {
-      if (!p || !p.content || typeof p.content !== 'string') return;
-      const content = p.content.trim().slice(0, 200);
-      if (!content) return;
-      const category = validCats.includes(p.category) ? p.category : '기타';
-      // 같은 content 중복 방지 (대소문자 무시)
-      const dup = state.pearls.some(x => x && x.content &&
-        x.content.toLowerCase().trim() === content.toLowerCase()
-      );
-      if (dup) return;
-      state.pearls.push({
-        id: 'pearl_chat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        category,
-        content,
-        note: p.note ? String(p.note).trim().slice(0, 200) : null,
-        createdAt: new Date().toISOString(),
-        type: 'pearl',
-        source: 'chat'
-      });
-      addedPearls++;
-    });
-    if (addedPearls > 0) {
-      showToast(`🔮 ${addedPearls}개 진주 추가됨`);
-      // 진주 화면 / 도서관 hero 즉시 갱신
-      if (typeof renderLensPearls === 'function') { try { renderLensPearls(); } catch {} }
-      if (typeof renderLibraryHero === 'function') { try { renderLibraryHero(); } catch {} }
-
-      // 사용자 명시 2026-05-08 ultrathink: AI가 "진주에 넣을래?" → 자동 push 직후 사진 첨부 묻기 (음악/기타 제외).
-      // 사용자가 명시적으로 진주 요청한 케이스라 모달 띄움 자연스러움. 첫 candidate 한 장만 prompt.
-      const photoCandidates = analysis.extracted_pearls
-        .map(p => ({
-          content: (p && p.content) ? String(p.content).trim().slice(0, 200) : '',
-          category: validCats.includes(p && p.category) ? p.category : '기타'
-        }))
-        .filter(p => p.content && p.category !== '음악' && p.category !== '기타');
-      if (photoCandidates.length > 0) {
-        setTimeout(async () => {
-          try {
-            const target = state.pearls.slice().reverse().find(x =>
-              x && x.source === 'chat' && x.content === photoCandidates[0].content && !x.photo
-            );
-            if (!target) return;
-            const wantPhoto = await showConfirmModal({
-              title: '📷 사진도 같이?',
-              message: photoCandidates.length === 1
-                ? `"${photoCandidates[0].content}" 진주에 사진 추가할래?\n(갤러리에서 한 장)`
-                : `방금 추가된 진주에 사진 추가할래?\n(첫 진주 한 장만 — 나머지는 도서관에서)`,
-              okLabel: '응 사진 추가',
-              cancelLabel: '아니 텍스트만'
-            });
-            if (!wantPhoto) return;
-            const file = await pickPhotoFile();
-            if (!file) return;
-            const photo = await fileToResizedDataUrl(file, 1024);
-            if (!photo) return;
-            target.photo = photo;
-            saveState();
-            if (typeof renderLensPearls === 'function') { try { renderLensPearls(); } catch {} }
-            showToast('📷 사진 같이 보관됨');
-          } catch (e) { console.warn('진주 사진 자동 첨부:', e); }
-        }, 800);
+  // 사용자 요청 2026-04-28: 채팅에서 진주 추가 요청 추출.
+  // 사용자 보고 2026-05-11: '진주에 넣어줘' 안 했는데 자동 추가되는 버그 (시뮬 토론 중에 LLM 이 잘못 감지).
+  //   → 자동 push 폐기. extracted_pearls 있으면 직전 user message 의 pearlSuggestion=true 만 마킹.
+  //   chip ("🔮 지금 이 기억 진주에 넣을래?") 노출 → 사용자 click → saveMsgAsPearl 흐름 (카테고리 / 사진 첨부 등).
+  //   같은 날 dedupe 는 sendChat 의 regex path 와 공유 (pearlSaved / pearlSuggestion 이미 있으면 skip).
+  if (analysis.extracted_pearls && Array.isArray(analysis.extracted_pearls) && analysis.extracted_pearls.length > 0) {
+    let lastUserIdx = -1;
+    for (let i = (messageIdx ?? state.chatMessages.length - 1) - 1; i >= 0; i--) {
+      if (state.chatMessages[i] && state.chatMessages[i].role === 'user') { lastUserIdx = i; break; }
+    }
+    if (lastUserIdx >= 0) {
+      const _um = state.chatMessages[lastUserIdx];
+      if (!_um.pearlSaved && !_um.pearlSuggestion) {
+        _um.pearlSuggestion = true;
+        if (typeof renderChat === 'function') { try { renderChat(); } catch {} }
       }
     }
   }

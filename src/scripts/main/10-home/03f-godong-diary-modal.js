@@ -152,92 +152,50 @@ async function openGodongDiaryModal() {
     }
   }
 
-  // 사용자 명시 2026-05-11: cooldown 룰 단순화 — lastGodongDiaryAt 기반 3일 cooldown 폐기.
-  //   회전 카드 클릭 시 3/2/1일 전 일기가 *모두 있으면* 그대로 띄움. 하나라도 없으면 새로 생성.
+  // 사용자 명시 2026-05-11 (3차 정정 ultrathink): "기존에 만든 게 1개라도 있으면 새로 생성하지 말고 유지. fall back X".
+  //   state.godongDiary 안에 dayK 매칭 entry 가 *전혀 없을 때* 만 generate.
+  //   2,3,4일 전 (window 밖) entries 가 있어도 그대로 유지 — fallback filler / 강제 새 생성 X.
   //   '다시 적어줘' 버튼은 force regenerate (있어도 재호출).
-  const _existingMatchedDayKs = new Set(
-    (state.godongDiary || [])
-      .filter(e => e && _targetSet.has(_entryDayK(e)))
-      .map(e => _entryDayK(e))
-  );
-  const _hasAllThreeDays = _targetDayKs.every(dayK => _existingMatchedDayKs.has(dayK));
+  const _hasAnyEntry = (state.godongDiary || []).some(e => e && _entryDayK(e));
   const _force = _gdiaryForceRegenerate;
   _gdiaryForceRegenerate = false;
-  const needsGenerate = !_hasAllThreeDays || _force;
+  const needsGenerate = !_hasAnyEntry || _force;
 
   // 셸 먼저 (loading) — 사용자가 빈 화면 안 보게.
   _gdiaryRenderShell({ loading: true });
 
-  // Haiku 호출 — 사용자 명시 2026-05-11: 정확히 3개 entry (3일전/2일전/어제). 데이터 없는 날도 fallback 톤으로 1편.
+  // Haiku 호출 — 사용자 명시 2026-05-11 (3차 정정): needsGenerate 일 때만 (= state.godongDiary 비어있을 때 OR force).
+  //   fallback 폐기 (Haiku 실패해도 fallback 채우기 X — 없으면 모달 = "노트가 없네" + 다시 적어줘 버튼).
   if (needsGenerate) {
-    // regenerate 시 같은 날 중복 방지 — 3개 dayK 와 매칭되는 옛 entry 모두 splice.
-    state.godongDiary = (state.godongDiary || []).filter(e => !_targetSet.has(_entryDayK(e)));
+    // force regenerate 시 dayK 매칭 옛 entry splice — 윈도우 밖 (4일+ 전) 일기는 보존.
+    if (_force) {
+      state.godongDiary = (state.godongDiary || []).filter(e => !_targetSet.has(_entryDayK(e)));
+    }
 
     let newEntries = [];
-    let _generateOk = false;
     try {
       const arr = await _callGodongDiaryHaiku();
       if (Array.isArray(arr) && arr.length > 0) {
         newEntries = arr.map(p => _gdiaryEntryFromHaiku(p)).filter(Boolean);
-        // 사용자 명시 2026-05-11: _targetDayKs (3일전/2일전/어제) 매칭 entry 만 push. 오늘/미래 entry reject.
+        // _targetDayKs (3일전/2일전/어제) 매칭 entry 만 push. 오늘/미래 entry reject.
         newEntries = newEntries.filter(e => _targetSet.has(_entryDayK(e)));
-        if (newEntries.length > 0) _generateOk = true;
       }
     } catch (err) {
-      console.warn('[godong-diary] generate fail, fallback', err && err.message);
-      // fallback — 3개 모두 fallback 톤 (3일전/2일전/어제 각 1편).
-      _targetDayKs.forEach((dayK) => {
-        const text = _GDIARY_FALLBACK_POOL[Math.floor(Math.random() * _GDIARY_FALLBACK_POOL.length)];
-        const d = new Date(dayK + 'T20:00:00');
-        newEntries.push({
-          id: 'gd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-          date: `${d.getMonth()+1}월 ${d.getDate()}일`,
-          weekday: ['일','월','화','수','목','금','토'][d.getDay()],
-          note: null,
-          body: text,
-          iso: d.toISOString(),
-          substrateRefs: [],
-          fallback: true,
-        });
-      });
+      console.warn('[godong-diary] generate fail (no fallback per 사용자 명시):', err && err.message);
     }
     if (newEntries.length > 0) {
       newEntries.forEach(e => state.godongDiary.push(e));
-      // 사용자 명시 2026-05-11: lastGodongDiaryAt 기반 cooldown 폐기 — state.godongDiary 안 dayK 매칭 entries 존재 = 진입 가능.
-      //   단 godongDiaryContentId 는 마지막 entry pointer (legacy 호환) 로 keep.
       r.godongDiaryContentId = newEntries[newEntries.length - 1].id;
       if (typeof saveState === 'function') saveState(true);
     }
   }
 
-  // 사용자 명시 2026-05-11: 회전 카드 모달 = 정확히 3 dayK (3일전/2일전/어제) 매칭 entry 만.
-  let visibleEntries = (state.godongDiary || []).filter(e => _targetSet.has(_entryDayK(e)));
-  // 시간순 오름차순 정렬 (3일 전 → 어제).
-  visibleEntries.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
-
-  // 만약 dayK 매칭 entry 가 부족하면 fallback 채워 정확히 3개.
-  if (visibleEntries.length < 3) {
-    const _existingDayKs = new Set(visibleEntries.map(_entryDayK));
-    _targetDayKs.forEach((dayK) => {
-      if (_existingDayKs.has(dayK)) return;
-      const text = _GDIARY_FALLBACK_POOL[Math.floor(Math.random() * _GDIARY_FALLBACK_POOL.length)];
-      const d = new Date(dayK + 'T20:00:00');
-      const fb = {
-        id: 'gd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        date: `${d.getMonth()+1}월 ${d.getDate()}일`,
-        weekday: ['일','월','화','수','목','금','토'][d.getDay()],
-        note: null,
-        body: text,
-        iso: d.toISOString(),
-        substrateRefs: [],
-        fallback: true,
-      };
-      state.godongDiary.push(fb);
-      visibleEntries.push(fb);
-    });
-    visibleEntries.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
-    if (typeof saveState === 'function') saveState();
-  }
+  // 사용자 명시 2026-05-11 (3차 정정): 기존 entries 그대로 보여줌 (dayK 매칭 filter X / fallback filler X).
+  //   2,3,4일 전 entry 도 그대로 페이지로 노출. 시간순 정렬 (옛 → 최신).
+  let visibleEntries = (state.godongDiary || [])
+    .filter(e => e && _entryDayK(e))
+    .slice()
+    .sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
 
   _gdiaryState = {
     entries: visibleEntries,

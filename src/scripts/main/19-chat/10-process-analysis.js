@@ -96,72 +96,21 @@ async function processAnalysis(analysis, messageIdx) {
       if (typeof dismissPlaceholder === 'function') dismissPlaceholder('schedule');
     }
   }
-  // 사용자 요청 2026-04-28: 채팅에서 진주 추가 요청 추출 → state.pearls에 자동 등록
-  if (analysis.extracted_pearls && Array.isArray(analysis.extracted_pearls)) {
-    if (!Array.isArray(state.pearls)) state.pearls = [];
-    const validCats = ['음악', '음식', '장소', '순간', '사람', '기타'];
-    let addedPearls = 0;
-    analysis.extracted_pearls.forEach(p => {
-      if (!p || !p.content || typeof p.content !== 'string') return;
-      const content = p.content.trim().slice(0, 200);
-      if (!content) return;
-      const category = validCats.includes(p.category) ? p.category : '기타';
-      // 같은 content 중복 방지 (대소문자 무시)
-      const dup = state.pearls.some(x => x && x.content &&
-        x.content.toLowerCase().trim() === content.toLowerCase()
-      );
-      if (dup) return;
-      state.pearls.push({
-        id: 'pearl_chat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        category,
-        content,
-        note: p.note ? String(p.note).trim().slice(0, 200) : null,
-        createdAt: new Date().toISOString(),
-        type: 'pearl',
-        source: 'chat'
-      });
-      addedPearls++;
-    });
-    if (addedPearls > 0) {
-      showToast(`🔮 ${addedPearls}개 진주 추가됨`);
-      // 진주 화면 / 도서관 hero 즉시 갱신
-      if (typeof renderLensPearls === 'function') { try { renderLensPearls(); } catch {} }
-      if (typeof renderLibraryHero === 'function') { try { renderLibraryHero(); } catch {} }
-
-      // 사용자 명시 2026-05-08 ultrathink: AI가 "진주에 넣을래?" → 자동 push 직후 사진 첨부 묻기 (음악/기타 제외).
-      // 사용자가 명시적으로 진주 요청한 케이스라 모달 띄움 자연스러움. 첫 candidate 한 장만 prompt.
-      const photoCandidates = analysis.extracted_pearls
-        .map(p => ({
-          content: (p && p.content) ? String(p.content).trim().slice(0, 200) : '',
-          category: validCats.includes(p && p.category) ? p.category : '기타'
-        }))
-        .filter(p => p.content && p.category !== '음악' && p.category !== '기타');
-      if (photoCandidates.length > 0) {
-        setTimeout(async () => {
-          try {
-            const target = state.pearls.slice().reverse().find(x =>
-              x && x.source === 'chat' && x.content === photoCandidates[0].content && !x.photo
-            );
-            if (!target) return;
-            const wantPhoto = await showConfirmModal({
-              title: '📷 사진도 같이?',
-              message: photoCandidates.length === 1
-                ? `"${photoCandidates[0].content}" 진주에 사진 추가할래?\n(갤러리에서 한 장)`
-                : `방금 추가된 진주에 사진 추가할래?\n(첫 진주 한 장만 — 나머지는 도서관에서)`,
-              okLabel: '응 사진 추가',
-              cancelLabel: '아니 텍스트만'
-            });
-            if (!wantPhoto) return;
-            const file = await pickPhotoFile();
-            if (!file) return;
-            const photo = await fileToResizedDataUrl(file, 1024);
-            if (!photo) return;
-            target.photo = photo;
-            saveState();
-            if (typeof renderLensPearls === 'function') { try { renderLensPearls(); } catch {} }
-            showToast('📷 사진 같이 보관됨');
-          } catch (e) { console.warn('진주 사진 자동 첨부:', e); }
-        }, 800);
+  // 사용자 요청 2026-04-28: 채팅에서 진주 추가 요청 추출.
+  // 사용자 보고 2026-05-11: '진주에 넣어줘' 안 했는데 자동 추가되는 버그 (시뮬 토론 중에 LLM 이 잘못 감지).
+  //   → 자동 push 폐기. extracted_pearls 있으면 직전 user message 의 pearlSuggestion=true 만 마킹.
+  //   chip ("🔮 지금 이 기억 진주에 넣을래?") 노출 → 사용자 click → saveMsgAsPearl 흐름 (카테고리 / 사진 첨부 등).
+  //   같은 날 dedupe 는 sendChat 의 regex path 와 공유 (pearlSaved / pearlSuggestion 이미 있으면 skip).
+  if (analysis.extracted_pearls && Array.isArray(analysis.extracted_pearls) && analysis.extracted_pearls.length > 0) {
+    let lastUserIdx = -1;
+    for (let i = (messageIdx ?? state.chatMessages.length - 1) - 1; i >= 0; i--) {
+      if (state.chatMessages[i] && state.chatMessages[i].role === 'user') { lastUserIdx = i; break; }
+    }
+    if (lastUserIdx >= 0) {
+      const _um = state.chatMessages[lastUserIdx];
+      if (!_um.pearlSaved && !_um.pearlSuggestion) {
+        _um.pearlSuggestion = true;
+        if (typeof renderChat === 'function') { try { renderChat(); } catch {} }
       }
     }
   }
