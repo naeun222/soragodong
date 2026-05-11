@@ -39,12 +39,13 @@ export type BudgetCheck =
 //   early_light (legacy)          — 신규 가입자 자동 환영 체험 ($1.1 cap ≈ 1,400원, 30일). 만료 후 구독 유도. 결제 X.
 //   early_lifetime (key='early_lifetime') — 'Light' (4,900). 정가 entry tier, 즉시 결제, 자동 갱신. cap $2.2 (옛 promo $3 폐기).
 //   guest                         — anonymous 사용자 $0.30 cap. linkIdentity 시 early_light 로 fresh 갱신.
-// 사용자 명시 2026-05-12 ultrathink:
-//   - daily_cap_usd 추가 (pricing_redesign.md v2): light/early $0.20, premium $0.75, guest null (일일 cap 미적용).
-//   - cap_usd 는 통계용으로 유지 (monthly cap 가드 폐기 — migration 0020 의 record_chat_usage_atomic 갱신).
-//   - 한 달 한도 없음. daily cap 만 강제. 매일 reset → 풀 사용 시 월 max = daily × 30 (light $6, premium $22.5).
+// 사용자 명시 2026-05-12 ultrathink (v3 갱신):
+//   - daily_cap_usd: Plus $0.30 (← 0.20 상향, 사용자 실측 만족도), Premium $0.75, Early/early_light $0.20, guest null.
+//   - Grace 7일 (cap × 1.5) 폐기 — cap 자체 적정화로 충격 완화 대체.
+//   - cap_usd 는 통계용으로 유지 (monthly cap 가드 폐기 — migration 0020).
+//   - 한 달 한도 없음. daily cap 만 강제. 매일 reset → 풀 사용 시 월 max = daily × 30 (Plus $9, Premium $22.5, Early $6).
 export const TIER_PLANS: Record<'light' | 'premium' | 'early_light' | 'early_lifetime' | 'guest', { krw: number; cap_usd: number; daily_cap_usd: number | null; label: string; auto_grant_first_month?: boolean; is_guest?: boolean; has_free_trial?: boolean }> = {
-  light:          { krw: 9900,  cap_usd: 5,    daily_cap_usd: 0.20, label: 'Plus', has_free_trial: true },
+  light:          { krw: 9900,  cap_usd: 5,    daily_cap_usd: 0.30, label: 'Plus', has_free_trial: true },
   premium:        { krw: 25000, cap_usd: 13,   daily_cap_usd: 0.75, label: 'Premium' },
   early_light:    { krw: 0,     cap_usd: 1.1,  daily_cap_usd: 0.20, label: '얼리 플랜 (legacy)', auto_grant_first_month: true },
   early_lifetime: { krw: 4900,  cap_usd: 2.2,  daily_cap_usd: 0.20, label: 'Light' },
@@ -113,9 +114,8 @@ export async function ensureBillingRow(env: Env, userId: string, opts?: { isAnon
   //   anonymous (게스트) = 그대로 'guest' plan ($0.30 cap, 1년) — 별개 정체성 유지.
   const now = new Date();
   const isGuest = !!opts?.isAnonymous;
-  // 사용자 명시 2026-05-12 ultrathink: 신규 가입 시 daily_cap_grace_until = 가입 + 7일. paid 사용자 cap × 1.5 (충격 완화).
-  //   guest 는 daily cap 없음 (TIER_PLANS.guest.daily_cap_usd=null) — grace 무의미하지만 컬럼 일관성 위해 박음.
-  const _graceUntil = new Date(now.getTime() + 7 * 86400_000).toISOString();
+  // 사용자 명시 2026-05-12 ultrathink (v3): grace 7일 폐기 — daily_cap_grace_until 박지 않음.
+  //   cap 자체 적정화 (Plus 0.20 → 0.30) 로 첫인상 충격 완화 대체.
   const newRow: Partial<UserBilling> & { user_email?: string | null } = isGuest
     ? {
         user_id: userId,
@@ -130,8 +130,7 @@ export async function ensureBillingRow(env: Env, userId: string, opts?: { isAnon
         monthly_period_started_at: now.toISOString(),
         free_trial_granted_at: null,
         daily_quota_used: 0,
-        daily_quota_reset_at: new Date(now.getTime() + 86400_000).toISOString(),
-        daily_cap_grace_until: _graceUntil
+        daily_quota_reset_at: new Date(now.getTime() + 86400_000).toISOString()
       }
     : {
         user_id: userId,
@@ -147,8 +146,7 @@ export async function ensureBillingRow(env: Env, userId: string, opts?: { isAnon
         monthly_period_started_at: null,
         free_trial_granted_at: now.toISOString(), // 환영 토큰 grant 시점 = 멱등 가드
         daily_quota_used: 0,
-        daily_quota_reset_at: new Date(now.getTime() + 86400_000).toISOString(),
-        daily_cap_grace_until: _graceUntil
+        daily_quota_reset_at: new Date(now.getTime() + 86400_000).toISOString()
       };
   try {
     const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing`, {

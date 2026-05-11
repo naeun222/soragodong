@@ -170,6 +170,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
         monthly_quota_usd: tier.cap_usd,
         monthly_token_used: 0,
         monthly_period_started_at: cycleStartIso,
+        // 사용자 명시 2026-05-12 ultrathink: 구독 시점부터 daily quota 0 부터 카운트.
+        daily_quota_used: 0,
+        daily_quota_reset_at: new Date(Date.now() + 86400_000).toISOString(),
         portone_billing_key: billingKey,
         portone_billing_key_issued_at: cycleStartIso,
         trial_until: null,

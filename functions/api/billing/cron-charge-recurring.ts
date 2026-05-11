@@ -154,6 +154,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
             next_billing_at: newExpires,
             monthly_token_used: 0,
             monthly_period_started_at: newCycleStart.toISOString(),
+            // 사용자 명시 2026-05-12 ultrathink: 자동 갱신 = 새 cycle 시작 → daily quota 0 부터 카운트.
+            daily_quota_used: 0,
+            daily_quota_reset_at: new Date(newCycleStart.getTime() + 86400_000).toISOString(),
             last_billing_attempt_at: newCycleStart.toISOString(),
             last_billing_error: null
           })

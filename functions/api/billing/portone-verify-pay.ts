@@ -141,6 +141,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
           monthly_quota_usd: tier.cap_usd,
           monthly_token_used: 0,
           monthly_period_started_at: periodStartedAt,
+          // 사용자 명시 2026-05-12 ultrathink: 구독 시점부터 daily quota 0 부터 카운트.
+          daily_quota_used: 0,
+          daily_quota_reset_at: new Date(Date.now() + 86400_000).toISOString(),
           // 사용자 보고 2026-05-09 ultrathink: schema 통일 (migration 0016) — billing.user_email sync.
           user_email: user.email || null
         })
