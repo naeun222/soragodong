@@ -12,6 +12,13 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
 // 사용자 명시 2026-05-06: PortOne V2 채널 키 + Store ID. 공개 OK — frontend 결제창 호출 시 사용.
 // REST API Key (V2) + Webhook Secret 은 Cloudflare env (PORTONE_API_KEY_V2 / PORTONE_WEBHOOK_SECRET) 에 별도.
 // 사용자 명시 2026-05-11: KG이니시스 / 카카오페이 / 토스페이 테스트 채널 5종 추가.
+
+// V4 (사용자 명시 2026-05-11 — 가계약 단계): 정기결제 PG 계약 미승인 상태 → 일반결제 (1개월 이용권) 로 임시 운영.
+//   false: subscribe modal 의 모든 tier (Light/Plus/Premium) 가 *일회성 1개월* 결제 (자동 갱신 X, 만료 7일 전 알림 후 재구매).
+//          빌링키 등록 / cron 자동 결제 / Plus 첫 달 무료 trial 흐름 전부 우회. backend cron 도 가드.
+//   true:  옛 정기결제 흐름 (requestIssueBillingKey + portone-register-recurring + cron 매월 갱신) 으로 복귀. 계약 승인 후 변경.
+const BILLING_RECURRING_ENABLED = false;
+
 const PORTONE_STORE_ID                  = 'store-d59c417a-3e7b-4316-8385-238fe8ff54d0';
 const PORTONE_CHANNEL_KEY               = 'channel-key-f323504c-0f76-48c5-95df-0a8b0ab22a3a'; // KG이니시스 일반 (INIpayTest)
 const PORTONE_BILLING_CHANNEL_KEY       = 'channel-key-f5129f79-9380-4f3c-8221-2cf84f52ee18'; // KG이니시스 정기/빌링키 (INIBillTst)

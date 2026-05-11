@@ -125,6 +125,39 @@ function checkFreeTrialExpiry() {
 // 옛 함수 호환 (외부 호출 잔재 대비) — checkFreeTrialExpiry 로 위임.
 function checkWelcomeBonusExpiry() { return checkFreeTrialExpiry(); }
 
+// V4 (사용자 명시 2026-05-11 — 가계약 단계): paid plan (Light/Plus/Premium) 1개월 만료 7일 전 알림.
+//   BILLING_RECURRING_ENABLED=false 시 = 자동 갱신 X → 사용자가 직접 재구매 해야 함. 7일 전 알림 1회.
+//   정기결제 모드 (RECUR=true) 에선 사용 X — cron-charge-recurring 이 알아서 갱신하므로 skip.
+//   idempotency: state.preferences._subExpiryNotifiedAt = expires_at 으로 한 번만 fire (재구매 시 expires 갱신되면 다시 가능).
+function checkSubscriptionExpiry() {
+  if (typeof BILLING_RECURRING_ENABLED !== 'undefined' && BILLING_RECURRING_ENABLED) return;
+  const billing = window._billingCache;
+  if (!billing) return;
+  if (!billing.subscription_active) return;
+  const planKey = billing.subscription_plan;
+  if (planKey !== 'light' && planKey !== 'early_lifetime' && planKey !== 'premium') return;
+  const expires = billing.subscription_expires_at;
+  if (!expires) return;
+  const expiresAt = new Date(expires).getTime();
+  const remainingDays = (expiresAt - Date.now()) / 86400000;
+  if (remainingDays > 7 || remainingDays < 0) return;
+  if (typeof state === 'undefined' || !state) return;
+  state.preferences = state.preferences || {};
+  if (state.preferences._subExpiryNotifiedAt === expires) return;  // 같은 expires_at 으로 이미 알림 — skip
+  state.preferences._subExpiryNotifiedAt = expires;
+  try { saveState(); } catch {}
+  const planMeta = (typeof TIER_PLANS_CLIENT !== 'undefined' && TIER_PLANS_CLIENT[planKey]) ? TIER_PLANS_CLIENT[planKey] : null;
+  const label = planMeta?.label || planKey;
+  const emoji = planMeta?.emoji || '📅';
+  const daysDisplay = Math.max(1, Math.ceil(remainingDays));
+  _addNotification({
+    type: 'subscription_expiry_warning',
+    title: `${emoji} ${label} 만료 ${daysDisplay}일 전`,
+    body: `자동 갱신 X — 계속 쓰려면 직접 재구매. <b>[설정 → 구독]</b> 또는 이용권 다 쓰면 다시 안내할게.`,
+    persistent: true
+  });
+}
+
 // V4 (사용자 명시 2026-05-06 ultrathink): 신규 가입 무료 토큰 (credit_balance) 소진 임박 / 소진 알림.
 // 양 비공개 — 절대값 노출 X. self-calibrating: 첫 본 balance 를 _initialFreeBalance 로 저장 후 소진율 계산.
 //   80%+ 소진 → '거의 끝' 알림 (한 번만, _creditDepletionWarned flag)

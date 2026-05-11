@@ -235,12 +235,16 @@ async function _doRefreshBillingStatus(manual) {
       // backend trial_until 필드는 이제 plan='light' 사용자에 set — sync 필요.
       const trialUntil = billing.trial_until ? new Date(billing.trial_until) : null;
       const inTrial = (planKey === 'light' && trialUntil && trialUntil > new Date());
+      // V4 (사용자 명시 2026-05-11 — 가계약): 일반결제 모드면 모든 plan 이 1개월 일회성 → '에 만료' 톤.
+      const _oneTimeMode = (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED);
       let expiresLabel;
       if (inTrial) {
         const remDays = Math.max(0, Math.ceil((trialUntil.getTime() - Date.now()) / 86400000));
         expiresLabel = cancelledRenewal
           ? `첫 달 무료 — ${remDays}일 후 종료 (자동 결제 X)`
           : `첫 달 무료 — ${remDays}일 후 ${planMeta.krw.toLocaleString()}원 자동 결제`;
+      } else if (_oneTimeMode) {
+        expiresLabel = `${subExpires}에 만료 (자동 갱신 X)`;
       } else {
         expiresLabel = cancelledRenewal ? `${subExpires}에 종료` : `${subExpires}까지`;
       }
@@ -287,6 +291,8 @@ async function _doRefreshBillingStatus(manual) {
     if (typeof _renderNextBanner === 'function') { try { _renderNextBanner(); } catch {} }
     // 사용자 명시 2026-05-05: 한 달 무료 만료 7일 전 알림 + 인박스 badge 갱신.
     if (typeof checkFreeTrialExpiry === 'function') { try { checkFreeTrialExpiry(); } catch {} }
+    // V4 (사용자 명시 2026-05-11 — 가계약): 일회성 1개월 결제 만료 7일 전 알림 (자동 갱신 X 상태).
+    if (typeof checkSubscriptionExpiry === 'function') { try { checkSubscriptionExpiry(); } catch {} }
     // V4 (사용자 명시 2026-05-06 ultrathink): 신규 무료 토큰 80% 소진 / 0 도달 알림.
     if (typeof checkFreeCreditDepletion === 'function') { try { checkFreeCreditDepletion(); } catch {} }
     if (typeof refreshNotifInboxBadge === 'function') { try { refreshNotifInboxBadge(); } catch {} }
@@ -370,6 +376,11 @@ function _renderCancelRenewalBox(billing) {
   if (!box) return;
   const subActive = !!(billing && billing.subscription_active);
   if (!subActive) {
+    box.innerHTML = '';
+    return;
+  }
+  // V4 (사용자 명시 2026-05-11 — 가계약): 일회성 1개월 모드면 '다음 갱신' 자체가 없음 → 박스 비움.
+  if (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED) {
     box.innerHTML = '';
     return;
   }

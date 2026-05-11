@@ -62,6 +62,13 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
+  // V4 (사용자 명시 2026-05-11 — 가계약): 정기결제 PG 계약 미승인 상태 → cron 자동 결제 비활성.
+  //   Cloudflare env BILLING_RECURRING_ENABLED='true' 일 때만 동작. 미설정 / 'false' = no-op.
+  //   계약 승인 후 env 설정으로 다시 켜기.
+  if ((env as any).BILLING_RECURRING_ENABLED !== 'true') {
+    return jsonResponse({ ok: true, skipped: true, reason: 'BILLING_RECURRING_ENABLED env != "true"' });
+  }
+
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     return jsonResponse({ error: 'supabase env 미설정' }, 500);
   }

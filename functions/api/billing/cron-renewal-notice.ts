@@ -71,6 +71,11 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   const provided = request.headers.get('x-cron-secret') || '';
   if (provided !== cronSecret) return jsonResponse({ error: 'unauthorized' }, 401);
 
+  // V4 (사용자 명시 2026-05-11 — 가계약): 정기결제 사전고지 메일도 동시 비활성. 일회성 만료 알림은 frontend (checkSubscriptionExpiry) 가 담당.
+  if ((env as any).BILLING_RECURRING_ENABLED !== 'true') {
+    return jsonResponse({ ok: true, skipped: true, reason: 'BILLING_RECURRING_ENABLED env != "true"' });
+  }
+
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     return jsonResponse({ error: 'supabase env 미설정' }, 500);
   }

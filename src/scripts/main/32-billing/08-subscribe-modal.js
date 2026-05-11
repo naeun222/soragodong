@@ -181,9 +181,12 @@ async function openSubscribeModal() {
     const buttonStyle = isFreeTrial
       ? 'background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-weight:700;'
       : '';
+    const _oneTime = (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED);
     const buttonText = isFreeTrial
       ? `${plan.emoji} 첫 달 무료로 시작하기`
-      : `${plan.label} 정기 구독 (월 ${plan.krw.toLocaleString()}원)`;
+      : (_oneTime
+          ? `${plan.label} 1개월 (${plan.krw.toLocaleString()}원)`
+          : `${plan.label} 정기 구독 (월 ${plan.krw.toLocaleString()}원)`);
     return `
       <div class="tier-card ${recommended ? 'tier-recommended' : ''}" style="position:relative; padding:18px 16px; background:${cardBg}; border:${cardBorder}; border-radius:14px; margin-bottom:10px;">
         ${trialBadge}
@@ -225,9 +228,13 @@ async function openSubscribeModal() {
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, false)}
       ${premiumPackCard}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
-        💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus</b> (첫 달 무료). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
-        <b>부가가치세 10% 포함</b> · <b>모든 플랜 = 매월 자동 갱신</b> (해지 1-click).<br>
-        해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>
+        ${(typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED)
+          ? `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus</b>. 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
+             <b>부가가치세 10% 포함</b> · <b>1개월 이용권 — 자동 갱신 X</b> (만료 7일 전 알림 후 직접 재구매).<br>
+             환불: 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`
+          : `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus</b> (첫 달 무료). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
+             <b>부가가치세 10% 포함</b> · <b>모든 플랜 = 매월 자동 갱신</b> (해지 1-click).<br>
+             해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`}
         <span style="color:var(--text-dim);">⚠ 본 서비스는 임상 치료·진단·전문가 상담을 대체하지 않습니다.</span>
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>
@@ -260,9 +267,14 @@ function tryBuyPremiumPack() {
 // 토스페이는 tosstest = 일반결제만 → 빌링키 픽커에서 제외.
 // V4 (사용자 명시 2026-05-11 ultrathink): trial flow 매핑 변경 — early_lifetime → light (Plus).
 //   Light(4,900, key='early_lifetime') 은 정가 즉시 결제 / Plus(9,900, key='light') 는 첫 달 무료 trial.
+// V4 (사용자 명시 2026-05-11 — 가계약): BILLING_RECURRING_ENABLED=false 시 1개월 일회성 결제로 분기.
 async function proceedSubscribe(tierKey) {
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 tier'); return; }
+  // 일반결제 모드 (가계약) → 모든 tier 가 일회성 1개월 결제.
+  if (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED) {
+    return proceedOneTimePurchase(tierKey);
+  }
   if (tier.has_free_trial) return proceedPlusTrial();  // Plus = 첫 달 무료 trial 흐름 (key='light')
   if (!session || !session.access_token) {
     alert('로그인 필요 — 설정 → 로그아웃 후 재로그인.');
@@ -509,5 +521,142 @@ async function proceedPlusTrial() {
     }
   } catch (e) {
     alert('백엔드 통신 실패: ' + (e?.message || e));
+  }
+}
+
+// V4 (사용자 명시 2026-05-11 — 가계약 단계): 일회성 1개월 결제 (KG이니시스 일반).
+//   PortOne V2 — requestPayment (paymentId 채번) → server 가 /api/billing/portone-verify-pay 로 amount/status 검증 후
+//   subscription_expires_at = now+30d 갱신. 자동 갱신 X — 만료 7일 전 알림 후 사용자가 직접 재구매.
+//   카드 / 카카오페이 일반 채널 사용. 토스페이는 일반결제만 가능해 OK.
+async function proceedOneTimePurchase(tierKey) {
+  const tier = TIER_PLANS_CLIENT[tierKey];
+  if (!tier) { alert('잘못된 tier'); return; }
+  if (!session || !session.access_token) {
+    alert('로그인 필요 — 설정 → 로그아웃 후 재로그인.');
+    return;
+  }
+  if (typeof state !== 'undefined' && state && state.isGuest) {
+    alert('게스트 모드는 결제 X — 먼저 로그인.');
+    return;
+  }
+  const _pg = await _pickPaymentMethod({ excludeToss: false, title: `${tier.label} 1개월 이용권 결제 수단` });
+  if (!_pg) return;
+  const _pgInfo = _getPayChannelInfo(_pg);
+  if (!_pgInfo.channelKey || !_pgInfo.storeId) {
+    alert('결제 설정 오류 — 채널 미설정');
+    return;
+  }
+  let phoneNumber = '', fullName = '';
+  if (_pgInfo.needsCustomerInfo) {
+    const info = await _collectPaymentInfoIfNeeded();
+    if (!info) return;
+    phoneNumber = info.phoneNumber;
+    fullName = info.fullName;
+  }
+
+  if (typeof window.PortOne === 'undefined') {
+    try {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.portone.io/v2/browser-sdk.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    } catch (e) {
+      alert('PortOne SDK 로드 실패 — 네트워크 확인 후 다시');
+      return;
+    }
+  }
+  if (typeof window.PortOne === 'undefined' || typeof window.PortOne.requestPayment !== 'function') {
+    alert('PortOne SDK 결제 기능 X');
+    return;
+  }
+
+  // paymentId 형식 = `payment-{tierKey}-{userIdShort}-{ts}` — payment-return-handler 의 startsWith('payment-') 분기로 verify-pay 호출.
+  // KG이니시스 oid 40자 제한 — tierKey full 사용 (early_lifetime=14자) 시 28자 이내로 유지.
+  const tierShort = tierKey.replace('early_lifetime', 'early').replace('premium', 'prem');
+  const paymentId = `payment-${tierShort}-${(authUserId||'anon').slice(0,8)}-${Date.now().toString(36)}`;
+
+  // 모바일 redirect 흐름용 marker — return handler 의 user mismatch 검증에 사용.
+  try {
+    sessionStorage.setItem('soragodong_pending_payment', JSON.stringify({
+      paymentId, user_id: authUserId, tier: tierKey, ts: Date.now()
+    }));
+  } catch {}
+
+  let response;
+  try {
+    response = await window.PortOne.requestPayment({
+      storeId: _pgInfo.storeId,
+      channelKey: _pgInfo.channelKey,
+      paymentId,
+      orderName: `소라고동 ${tier.label} 1개월 이용권`,
+      totalAmount: tier.krw,
+      currency: 'KRW',
+      payMethod: _pgInfo.payMethod,
+      ...(_pgInfo.easyPay ? { easyPay: _pgInfo.easyPay } : {}),
+      windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
+      redirectUrl: window.location.origin + (window.location.pathname || '/') + '#subscribe-return',
+      customer: {
+        customerId: authUserId || undefined,
+        email: session?.user?.email || undefined,
+        ...(phoneNumber ? { phoneNumber, fullName } : {})
+      },
+      customData: JSON.stringify({ tier: tierKey, type: 'subscribe_one_month' })
+    });
+  } catch (e) {
+    _resetBodyAfterPortone();
+    try { sessionStorage.removeItem('soragodong_pending_payment'); } catch {}
+    alert('결제창을 열 수 없어. 잠시 후 다시 시도해줘.\n\n자세한 사유: ' + (e?.message || e));
+    return;
+  }
+  _resetBodyAfterPortone();
+
+  if (response && response.code != null) {
+    const code = response.code || '';
+    const msg = response.message || '';
+    try { sessionStorage.removeItem('soragodong_pending_payment'); } catch {}
+    let userMsg;
+    if (code === 'USER_CANCEL' || /cancel|취소/i.test(msg)) {
+      userMsg = '결제를 취소했어. 다시 시도하려면 다시 눌러줘.';
+    } else if (/잔액|insufficient|한도|limit/i.test(msg)) {
+      userMsg = '카드 한도 / 잔액이 부족해 보여. 다른 카드로 다시 시도해줘.';
+    } else if (/거절|declin|reject/i.test(msg)) {
+      userMsg = '카드사가 결제를 거절했어. 다른 카드로 시도하거나 카드사에 문의해줘.';
+    } else {
+      userMsg = '결제 중 문제가 생겼어 — 잠시 후 다시.\n\n자세한 사유: ' + msg + (code ? ' (' + code + ')' : '');
+    }
+    alert(userMsg);
+    return;
+  }
+
+  // PC IFRAME 흐름 = response 에 paymentId 가 즉시 반환됨. 백엔드 검증.
+  try {
+    if (typeof showToast === 'function') showToast('결제 확인 중…');
+    const verifyResp = await fetch('/api/billing/portone-verify-pay', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({ paymentId, plan: tierKey })
+    });
+    const result = await verifyResp.json();
+    if (verifyResp.ok && result.ok) {
+      try { sessionStorage.removeItem('soragodong_pending_payment'); } catch {}
+      if (result.duplicate) {
+        showToast(`💳 이미 활성 ${tier.label} 구독`);
+        alert(result.message || `이미 활성 ${tier.label} 구독이 있어.`);
+      } else {
+        showToast(`📅 ${tier.label} 1개월 시작 — 만료 7일 전 알림`);
+      }
+      closeSubscribeModal();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+    } else {
+      alert(`${tier.label} 결제 검증 실패: ` + (result.error || '알 수 없음') + `\n\npaymentId: ${paymentId}`);
+    }
+  } catch (e) {
+    alert('백엔드 통신 실패: ' + (e?.message || e) + `\n\npaymentId: ${paymentId}`);
   }
 }

@@ -38,9 +38,20 @@ async function _handlePaymentReturn() {
 
   // 사용자 명시 2026-05-06: 빌링키 발급 redirect 복귀 — Plus 첫 달 무료 카드 등록 (옛 얼리버드 trial).
   // PortOne V2 = redirect 후 query 에 billingKey (또는 code/message) 채워짐. issueId prefix 'bkey-' 로 감지.
+  // V4 (사용자 명시 2026-05-11 — 가계약): BILLING_RECURRING_ENABLED=false 시 빌링키 등록 흐름 자체 차단.
   const billingKey = params.get('billingKey');
   const issueId = params.get('issueId') || '';
   if (billingKey || issueId.startsWith('bkey-')) {
+    if (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED) {
+      try {
+        ['billingKey', 'issueId', 'code', 'message', 'transactionType', 'pgCode', 'pgMessage'].forEach(k => params.delete(k));
+        const remaining = params.toString();
+        const cleanUrl = window.location.origin + window.location.pathname + (remaining ? '?' + remaining : '');
+        history.replaceState({}, '', cleanUrl);
+      } catch {}
+      console.warn('[paymentReturn] 정기결제 흐름 비활성 (BILLING_RECURRING_ENABLED=false) — billingKey return skip');
+      return;
+    }
     return _handleBillingKeyReturn(params);
   }
 

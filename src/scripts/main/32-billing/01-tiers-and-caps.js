@@ -14,13 +14,22 @@
 
 // 서버 _lib/billing.ts 의 TIER_PLANS 와 동기 — 위변조 방지로 결제 검증은 서버에서 재확인.
 // description: 정직 톤 — 정량 KRW 표기 X, 정성적 설명만. cap 자체는 서버 운영 용도.
+// V4 (사용자 명시 2026-05-11 — 가계약 단계): BILLING_RECURRING_ENABLED=false 일 때 일회성 1개월 이용권 — tagline/description 자동 분기.
+const _RECUR = (typeof BILLING_RECURRING_ENABLED !== 'undefined') ? BILLING_RECURRING_ENABLED : true;
 const TIER_PLANS_CLIENT = {
-  // Plus (9,900) — key 'light'. mid tier, *첫 달 무료 trial* flow 가 이쪽으로 이동.
-  light:          { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Plus',           tagline: '깊게, 꾸준히 — 첫 달 무료', emoji: '🌊',
-    description: '일반 대화 + 4단 분석 풀로. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.', has_free_trial: true },
-  // Premium (25,000) — top tier anchor. 정가 즉시 결제. emoji ✨ 로 변경 (🐚🌊✨ 그라데이션 완성).
+  // Plus (9,900) — key 'light'. mid tier. RECUR=true 면 첫 달 무료 trial, false 면 일회성 1개월.
+  light:          { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Plus',
+    tagline: _RECUR ? '깊게, 꾸준히 — 첫 달 무료' : '깊게, 꾸준히',
+    emoji: '🌊',
+    description: _RECUR
+      ? '일반 대화 + 4단 분석 풀로. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.'
+      : '일반 대화 + 4단 분석 풀로. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).',
+    has_free_trial: _RECUR },
+  // Premium (25,000) — top tier anchor. 정가 결제. emoji ✨ (🐚🌊✨ 그라데이션 완성).
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '마음껏 깊게', emoji: '✨',
-    description: '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.' },
+    description: _RECUR
+      ? '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.'
+      : '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
   // V4 (사용자 명시 2026-05-06 ultrathink): legacy tier — 옛 가정 (신규 가입 → early_light auto-grant 30일 무료) 폐기.
   // 실제 backend = 신규 가입 시 무료 토큰 (credit_balance) grant, plan 자동 활성화 X. 이 tier 는 legacy 호환 보존만 (옛 grant 받은 사용자 케이스).
   early_light:    { krw: 0,     cap_usd: 1.1,  cap_krw: 1400,  label: '얼리 플랜 (legacy)',       tagline: '레거시', emoji: '🐚',
@@ -30,7 +39,9 @@ const TIER_PLANS_CLIENT = {
   //   옛 "출시 전 가격 평생 락인" promo 폐기. cap_usd 도 sustainable 한 수준 ($3 → $2.2) 으로 조정.
   //   V4 (사용자 명시 2026-05-11 — 마진 조정): $1.8 → $2.2 (마진 14% — Plus 와 통일). 일일 cap $0.088.
   early_lifetime: { krw: 4900,  cap_usd: 2.2,  cap_krw: 3080,  label: 'Light',          tagline: '매일의 자기관찰', emoji: '🐚',
-    description: '일반 대화 + 가벼운 분석. 매일 5~10분 자기관찰에 충분.' },
+    description: _RECUR
+      ? '일반 대화 + 가벼운 분석. 매일 5~10분 자기관찰에 충분.'
+      : '일반 대화 + 가벼운 분석. 매일 5~10분 자기관찰에 충분. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
