@@ -13554,8 +13554,10 @@ async function _fetchWithRetry5xx(url, init) {
   window.fetch = async function(input, init) {
     const url = (typeof input === 'string') ? input : (input && input.url) || '';
     if (url !== ANTHROPIC_API_URL) return _origFetch(input, init);
-    // 사용자 본인 키 있으면 직접 호출 (interceptor는 _canAI() 사용 X — 본인 키 여부만 봐야 함)
-    if (state && state.apiKey) return _origFetch(input, init);
+    // V4 (사용자 보고 2026-05-11 ultrathink): BYOK 모드 영구 비활성.
+    //   옛 분기 = state.apiKey 있으면 직접 anthropic.com 호출. 단 Phase C 이후 'anthropic-dangerous-direct-browser-access' 헤더 제거 →
+    //   직접 호출 시 무조건 CORS block. state.apiKey 가 어떤 이유로든 set 되면 chat 전체 fail.
+    //   → 분기 제거. 항상 backend /api/chat proxy 사용. state.apiKey 잔존해도 무시.
     // session 없으면 그대로 (오류 발생 → 사용자에게 표시)
     if (typeof session === 'undefined' || !session || !session.access_token) {
       return _origFetch(input, init);
