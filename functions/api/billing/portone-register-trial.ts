@@ -1,20 +1,23 @@
 // POST /api/billing/portone-register-trial
-// 사용자 명시 2026-05-06: 얼리버드 첫 달 무료 = 카드 등록만 (즉시 결제 X) + 30일 후 첫 자동 결제.
+// V4 (사용자 명시 2026-05-11 ultrathink): Plus(key='light') 첫 달 무료 trial = 카드 등록만 (즉시 결제 X) + 30일 후 첫 자동 결제.
+//   옛 얼리버드 promo (plan='early_lifetime' trial) 폐기 — 정체성 이전.
 //
 // frontend 흐름:
 //   1) PortOne.requestIssueBillingKey(...) 로 카드 등록 모달 → 사용자 카드 정보 입력 (결제 X)
-//   2) 응답 billingKey 를 이 endpoint 에 POST
+//   2) 응답 billingKey + plan='light' 를 이 endpoint 에 POST
 //   3) 서버: PortOne 진위 검증 → soragodong_billing 에 billing_key 저장 + subscription_active=true,
-//      plan='early_lifetime', trial_until = +30d, next_billing_at = +30d
-//   4) cron-charge-recurring 이 30일 후 자동으로 첫 결제 시도
+//      plan='light', trial_until = +30d, next_billing_at = +30d
+//   4) cron-charge-recurring 이 30일 후 자동으로 첫 결제 시도 (Plus 9,900원)
 //
-// 중복 호출 방어: 이미 활성 구독자 (early_lifetime) 면 빌링키만 갱신 (재등록 케이스).
+// 중복 호출 방어: 이미 활성 동일 plan 사용자면 빌링키만 갱신 (재등록 케이스).
+// plan 파라미터: 'light' 만 허용 (Plus trial 전용 endpoint). 기본값 'light'.
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 import { TIER_PLANS } from '../_lib/billing';
 import { fetchPortOneBillingKey } from '../_lib/portone';
 
 const TRIAL_DAYS = 30;
+const TRIAL_PLAN: 'light' = 'light';  // Plus tier — trial 흐름 전용
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
@@ -26,9 +29,13 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
 
   let body: any;
   try { body = await request.json(); } catch { return jsonResponse({ error: 'invalid JSON' }, 400); }
-  const { billingKey } = body;
+  const { billingKey, plan } = body;
   if (!billingKey || typeof billingKey !== 'string') {
     return jsonResponse({ error: 'billingKey 필수' }, 400);
+  }
+  // plan 파라미터 검증 — 명시되면 'light' 만 허용. 안 보내면 default 'light'.
+  if (plan && plan !== TRIAL_PLAN) {
+    return jsonResponse({ error: `이 endpoint 는 ${TRIAL_PLAN} (Plus) trial 전용 — plan='${plan}' 거부.` }, 400);
   }
 
   // PortOne 진위 검증.
@@ -49,7 +56,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     }, 403);
   }
 
-  // 중복 등록 방어 — 이미 active early_lifetime 사용자면 안내.
+  // 중복 등록 방어 — 이미 active Plus(light) 사용자면 안내.
   let alreadyActive = false;
   try {
     const checkResp = await fetch(
@@ -59,7 +66,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     const rows: any = await checkResp.json().catch(() => []);
     if (Array.isArray(rows) && rows[0]) {
       const r = rows[0];
-      if (r.subscription_plan === 'early_lifetime' && r.subscription_active && r.portone_billing_key && r.portone_billing_key !== billingKey) {
+      if (r.subscription_plan === TRIAL_PLAN && r.subscription_active && r.portone_billing_key && r.portone_billing_key !== billingKey) {
         alreadyActive = true;
       }
     }
@@ -68,13 +75,13 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return jsonResponse({
       ok: true,
       duplicate: true,
-      message: '이미 얼리버드 구독이 활성. 빌링키 변경은 [설정 → 카드 변경] 에서.'
+      message: '이미 Plus 구독이 활성. 빌링키 변경은 [설정 → 카드 변경] 에서.'
     }, 200);
   }
 
   const now = new Date();
   const trialUntilISO = new Date(now.getTime() + TRIAL_DAYS * 86400_000).toISOString();
-  const tier = TIER_PLANS.early_lifetime;
+  const tier = TIER_PLANS[TRIAL_PLAN];
 
   // billing row 갱신 (없으면 INSERT).
   // upsert pattern — Prefer: resolution=merge-duplicates 로 user_id PK 충돌 시 갱신.
@@ -92,7 +99,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
         // 사용자 보고 2026-05-09 ultrathink: schema 통일 (migration 0016) — billing.user_email sync.
         user_email: user.email || null,
         subscription_active: true,
-        subscription_plan: 'early_lifetime',
+        subscription_plan: TRIAL_PLAN,
         subscription_expires_at: trialUntilISO,
         monthly_quota_usd: tier.cap_usd,
         monthly_token_used: 0,
@@ -118,8 +125,8 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     ok: true,
     trial_until: trialUntilISO,
     next_billing_at: trialUntilISO,
-    plan: 'early_lifetime',
+    plan: TRIAL_PLAN,
     cap_usd: tier.cap_usd,
-    message: `얼리버드 첫 달 무료 — ${TRIAL_DAYS}일 뒤 ${tier.krw.toLocaleString()}원 자동 결제 시작.`
+    message: `Plus 첫 달 무료 — ${TRIAL_DAYS}일 뒤 ${tier.krw.toLocaleString()}원 자동 결제 시작.`
   });
 }

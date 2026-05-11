@@ -69,7 +69,11 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     }, 400);
   }
 
-  const isLifetime = plan === 'early_lifetime';
+  // V4 (사용자 명시 2026-05-11 ultrathink): early_lifetime = 정가 entry tier (정기결제) 로 변경 — 옛 'lifetime 1회 결제' 가정 폐기.
+  // 모든 plan 30일 cycle 동일 처리. 아래 isLifetime 분기는 자연히 dead code (변수만 호환 보존).
+  // 새 정기결제 흐름은 portone-register-recurring.ts (즉시 결제) / portone-register-trial.ts (Plus 첫 달 무료) 사용.
+  // 이 endpoint 는 옛 V1 IMP 흐름 legacy — 호출 안 됨.
+  const isLifetime = false;
   const expiresAt = isLifetime ? '2099-12-31T23:59:59.000Z' : new Date(Date.now() + 30 * 86400000).toISOString();
   const periodStartedAt = new Date().toISOString();
 
@@ -82,7 +86,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
       );
       const rows: any = await checkResp.json().catch(() => []);
       if (Array.isArray(rows) && rows[0]?.subscription_plan === 'early_lifetime' && rows[0]?.subscription_active) {
-        return jsonResponse({ ok: true, already_active: true, duplicate: true, message: '이미 얼리버드 평생 이용권이 있어 (중복 결제 감지). 환불 — soragodongapp@gmail.com' }, 200);
+        return jsonResponse({ ok: true, already_active: true, duplicate: true, message: '이미 활성 구독이 있어 (중복 결제 감지). 환불 — soragodongapp@gmail.com' }, 200);
       }
     } catch {}
   }

@@ -92,8 +92,9 @@ export async function cancelPortOnePayment(
   }
 }
 
-// ─── 빌링키 (정기결제) — 얼리버드 첫 달 무료 + 자동 갱신용 ───
-// 사용자 명시 2026-05-06: 카드 등록만 (즉시 결제 X) → 30일 후 cron 이 이 키로 첫 결제.
+// ─── 빌링키 (정기결제) — Plus 첫 달 무료 + Light/Plus/Premium 자동 갱신용 ───
+// 사용자 명시 2026-05-06: 카드 등록만 (즉시 결제 X) → 30일 후 cron 이 이 키로 첫 결제 (trial 흐름).
+// V4 (사용자 명시 2026-05-11 ultrathink): Light/Plus/Premium 정기 — Plus 만 trial, 나머지 즉시 첫 달 결제.
 
 export interface PortOneBillingKey {
   billingKey: string;

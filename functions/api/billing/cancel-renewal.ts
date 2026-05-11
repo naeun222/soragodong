@@ -4,8 +4,8 @@
 // 동작:
 //   - billing.cancel_at_period_end = true
 //   - billing.cancelled_at = now
-//   - early_lifetime + portone_billing_key: 빌링키도 즉시 삭제 (다음 결제 시도 방지 이중 안전).
-//     trial 중 (still in 30-day window) 도 동일 — trial 만료 후 자동 비활성.
+//   - 빌링키 (모든 정기 plan: Light/Plus/Premium) 도 즉시 삭제 (다음 결제 시도 방지 이중 안전).
+//     Plus trial 중 (still in 30-day window) 도 동일 — trial 만료 후 자동 비활성.
 //
 // 멱등 — 이미 cancel 상태면 그대로 OK 응답.
 
@@ -44,7 +44,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return jsonResponse({ ok: true, already_cancelled: true, expires_at: billing.subscription_expires_at });
   }
 
-  // 빌링키 삭제 (early_lifetime 인 경우만 — light/premium 은 단건 결제라 빌링키 X).
+  // 빌링키 삭제 (모든 정기 plan 공통 — Light/Plus/Premium 모두 빌링키 있음).
   if (billing.portone_billing_key) {
     const delResult = await deletePortOneBillingKey(env, billing.portone_billing_key, '사용자 다음 갱신 해지');
     if (!delResult.ok) {

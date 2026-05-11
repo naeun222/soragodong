@@ -1,6 +1,6 @@
 // POST /api/billing/cron-charge-recurring
-// 사용자 명시 2026-05-06: 얼리버드 정기결제 cron — 매시간 외부 cron 서비스 (cron-job.org / GitHub Actions)
-// 가 호출. 헤더 'X-Cron-Secret' 으로 인증.
+// 사용자 명시 2026-05-06: 정기결제 cron — 매시간 외부 cron 서비스 (cron-job.org / GitHub Actions) 가 호출. 헤더 'X-Cron-Secret' 인증.
+// V4 (사용자 명시 2026-05-11 ultrathink): Light(early_lifetime)/Plus(light)/Premium 모두 정기 갱신 (Plus trial 만료 첫 결제 포함).
 //
 // 동작:
 //   1) next_billing_at <= now AND subscription_active=true AND portone_billing_key NOT NULL

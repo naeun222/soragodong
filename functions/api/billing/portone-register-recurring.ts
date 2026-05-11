@@ -1,9 +1,13 @@
 // POST /api/billing/portone-register-recurring
-// 사용자 명시 2026-05-11: Light/Premium 도 정기결제 — 빌링키 등록 + 첫 달 즉시 결제 + 자동 갱신.
+// 사용자 명시 2026-05-11: Light/Plus/Premium 정기결제 — 빌링키 등록 + 첫 달 즉시 결제 + 자동 갱신.
+// V4 (사용자 명시 2026-05-11 ultrathink): Light(early_lifetime, 4,900) 도 정기 결제 허용 (옛 1회 결제 lifetime 폐기).
+//   Plus(light, 9,900) trial 흐름은 별도 — `portone-register-trial.ts` 사용.
 //
 // frontend 흐름:
 //   1) PortOne.requestIssueBillingKey 로 카드 등록 (KG이니시스 빌링 채널 또는 카카오페이 정기)
-//   2) billingKey + plan(light|premium) 을 이 endpoint 에 POST
+//   2) billingKey + plan(early_lifetime|light|premium) 을 이 endpoint 에 POST
+//      ⚠ Plus(light) 가 first-time trial 흐름이면 frontend 가 `portone-register-trial` 호출 (이 endpoint X).
+//        이 endpoint 는 *즉시 첫 달 결제* 흐름.
 //   3) 서버:
 //      a) 빌링키 진위 검증 (status=ISSUED, customer.id 매칭)
 //      b) chargeWithBillingKey 로 첫 달 즉시 결제
@@ -34,8 +38,8 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   if (!billingKey || typeof billingKey !== 'string') {
     return jsonResponse({ error: 'billingKey 필수' }, 400);
   }
-  if (plan !== 'light' && plan !== 'premium') {
-    return jsonResponse({ error: 'plan = light | premium 만 (early_lifetime 은 별도 endpoint)' }, 400);
+  if (plan !== 'early_lifetime' && plan !== 'light' && plan !== 'premium') {
+    return jsonResponse({ error: 'plan = early_lifetime | light | premium 만 허용' }, 400);
   }
 
   const tierCheck = await validateTier(env, user.id, plan);

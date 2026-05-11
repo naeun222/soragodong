@@ -4,7 +4,9 @@ import type { Env } from './auth';
 
 // 사용자 명시 2026-05-05: $2.14 환영 credit / 1,000원 legacy bonus / 100만 토큰 환영 선물 정책 모두 폐기.
 // 신정책: ensureBillingRow 가 신규 row 생성 시 처음 한 달 자동 무료 (얼리 플랜, 자동 결제 X).
-// 만료 후 사용자가 직접 light/premium 구독 결정. 한도 도달 시 → premium 결제 유도 (개발자 후원 메시지).
+// 만료 후 사용자가 직접 light/plus/premium 구독 결정. 한도 도달 시 → 상위 tier 권유.
+// V4 (사용자 명시 2026-05-11 ultrathink): tier 재구성 — Light(early_lifetime, 4,900) / Plus(light, 9,900 첫 달 무료) / Premium(premium, 25,000).
+//   key 와 label 매핑 헷갈림 주의 (frontend `01-tiers-and-caps.js` 와 동기).
 
 export type UserBilling = {
   user_id: string;
@@ -27,15 +29,17 @@ export type BudgetCheck =
   | { ok: true; remaining_credit_usd: number; subscription_active: boolean; subscription_plan?: string | null; monthly_remaining_usd?: number; }
   | { ok: false; reason: string; code: 'NO_CREDIT' | 'NEED_AUTH' | 'NO_BILLING_ROW'; remaining_credit_usd?: number; };
 
-// Light 9,900원 / Premium 25,000원 (월정액). 자동 갱신 X — 사용자 직접 매월 결제.
-// early_light: 신규 가입자 자동 체험 ($1.1 cap ≈ 1,400원 상당, 하루치 정도). 만료 후 구독 유도.
-// early_lifetime: 앱 출시 전 얼리버드 평생 이용권 (4,900원 1회 결제). 매월 $3 cap 자동 갱신 (결제 없이).
-// guest: anonymous 사용자 $0.30 cap. linkIdentity 시 early_light 로 fresh 갱신.
-export const TIER_PLANS: Record<'light' | 'premium' | 'early_light' | 'early_lifetime' | 'guest', { krw: number; cap_usd: number; label: string; auto_grant_first_month?: boolean; is_guest?: boolean; is_lifetime?: boolean }> = {
-  light:          { krw: 9900,  cap_usd: 5,    label: 'Light' },
+// V4 (사용자 명시 2026-05-11 ultrathink): 3-tier 정가화 + Plus 첫 달 무료 promo.
+//   light  (key='light')          — 'Plus' (9,900). 첫 달 무료 trial (portone-register-trial), 30일 후 자동 결제. cap $5.
+//   premium (key='premium')       — 'Premium' (25,000). 정가 즉시 결제. cap $13.
+//   early_light (legacy)          — 신규 가입자 자동 환영 체험 ($1.1 cap ≈ 1,400원, 30일). 만료 후 구독 유도. 결제 X.
+//   early_lifetime (key='early_lifetime') — 'Light' (4,900). 정가 entry tier, 즉시 결제, 자동 갱신. cap $2.2 (옛 promo $3 폐기).
+//   guest                         — anonymous 사용자 $0.30 cap. linkIdentity 시 early_light 로 fresh 갱신.
+export const TIER_PLANS: Record<'light' | 'premium' | 'early_light' | 'early_lifetime' | 'guest', { krw: number; cap_usd: number; label: string; auto_grant_first_month?: boolean; is_guest?: boolean; has_free_trial?: boolean }> = {
+  light:          { krw: 9900,  cap_usd: 5,    label: 'Plus', has_free_trial: true },
   premium:        { krw: 25000, cap_usd: 13,   label: 'Premium' },
-  early_light:    { krw: 0,     cap_usd: 1.1,  label: '얼리 플랜', auto_grant_first_month: true },
-  early_lifetime: { krw: 4900,  cap_usd: 3.0,  label: '얼리버드 평생', is_lifetime: true },
+  early_light:    { krw: 0,     cap_usd: 1.1,  label: '얼리 플랜 (legacy)', auto_grant_first_month: true },
+  early_lifetime: { krw: 4900,  cap_usd: 2.2,  label: 'Light' },
   guest:          { krw: 0,     cap_usd: 0.30, label: '게스트', is_guest: true }
 };
 export type TierKey = keyof typeof TIER_PLANS;
@@ -88,7 +92,7 @@ export async function ensureBillingRow(env: Env, userId: string, opts?: { isAnon
   if (existing) return existing;
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
   // 사용자 명시 2026-05-05: 처음 한 달 자동 무료 (얼리 플랜) 활성화. 자동 갱신 X — 만료 후 active=false 자동.
-  // 사용자가 직접 light / premium 구독 결정. 한도 도달 시 → premium 결제 유도 (개발자 후원 메시지).
+  // 사용자가 직접 Light / Plus / Premium 구독 결정. 한도 도달 시 → 상위 tier 권유.
   // Phase 0: anonymous (게스트) = 'guest' tier ($0.20 cap). linkIdentity 시 update-tier 로 'early_light' fresh.
   const now = new Date();
   const isGuest = !!opts?.isAnonymous;
@@ -407,7 +411,7 @@ export async function checkBudget(env: Env, userId: string): Promise<BudgetCheck
   }
   return {
     ok: false,
-    reason: '잔액이 0원이야. Light (8,900원) 또는 Premium (25,000원) 구독해줘.',
+    reason: '잔액이 0원이야. Light (4,900원) / Plus (9,900원 첫 달 무료) / Premium (25,000원) 중 구독해줘.',
     code: 'NO_CREDIT',
     remaining_credit_usd: 0
   };
