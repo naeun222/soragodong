@@ -9,7 +9,8 @@ import { verifyAuth, unauthorized, jsonResponse, type Env } from './_lib/auth';
 import { recordUsage, calculateCost } from './_lib/usage';
 import { checkBudget, deductCost } from './_lib/billing';
 
-const ANTHROPIC_BASE = 'https://api.anthropic.com/v1';
+// V4 (사용자 보고 2026-05-11 ultrathink): Cloudflare AI Gateway native passthrough — HKG colo region block 우회.
+const ANTHROPIC_BASE = 'https://gateway.ai.cloudflare.com/v1/53e0f1f9111983b0d7a4275cf94b6dc0/soragodong-anthropic/anthropic/v1';
 // batch beta header 필요 (Anthropic 공식 문서)
 const BATCH_BETA_HEADER = 'message-batches-2024-09-24';
 

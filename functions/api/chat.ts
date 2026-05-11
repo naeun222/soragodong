@@ -47,7 +47,10 @@ const CHAT_STYLE_ENDPOINTS = new Set([
   'archive_summary'
 ]);
 
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
+// V4 (사용자 보고 2026-05-11 ultrathink): Cloudflare HKG colo 에서 Anthropic 호출 시 forbidden (Hong Kong supported X).
+//   → Cloudflare AI Gateway native passthrough 사용. AI Gateway 가 region 처리 + observability + cache.
+//   옛: 'https://api.anthropic.com/v1/messages'
+const ANTHROPIC_URL = 'https://gateway.ai.cloudflare.com/v1/53e0f1f9111983b0d7a4275cf94b6dc0/soragodong-anthropic/anthropic/v1/messages';
 
 // 사용자 명시 2026-05-08 ultrathink (audit FAIL #5): 서버측 자살예방 가드 — body 안 user 메시지 detect.
 // 보수 list — false positive OK / false negative X. 클라이언트 13-crisis-detection.js 와 동일 키워드.
