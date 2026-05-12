@@ -352,7 +352,7 @@ async function openSubscribeModal() {
   } else if (_normalRecurring) {
     const curLabel = (TIER_PLANS_CLIENT[_curPlan]?.label) || _curPlan;
     const curEmoji = TIER_PLANS_CLIENT[_curPlan]?.emoji || '📅';
-    currentSubNotice = `<div style="padding:10px 12px; background:rgba(212,167,106,0.06); border:1px solid rgba(212,167,106,0.30); border-radius:8px; font-size:11.5px; color:var(--text); margin-bottom:14px; line-height:1.65;">${curEmoji} <b>${curLabel} 정기 구독 중</b>${_curExpiresStr ? ` — 다음 결제 ${_curExpiresStr}` : ''}.<br><span style="color:var(--text-soft); font-size:10.5px;">결제수단 변경 = 카드 안의 [💳 결제수단 변경] 버튼 / 다른 tier 로 변경 가능 (업/다운 모두 즉시 적용, 잔여 일수 보상 X).</span></div>`;
+    currentSubNotice = `<div style="padding:10px 12px; background:rgba(212,167,106,0.06); border:1px solid rgba(212,167,106,0.30); border-radius:8px; font-size:11.5px; color:var(--text); margin-bottom:14px; line-height:1.65;">${curEmoji} <b>${curLabel} 정기 구독 중</b>${_curExpiresStr ? ` — 다음 결제 ${_curExpiresStr}` : ''}.</div>`;
   }
   // 옛 Plus trial 소진 안내 — 미구독 사용자에게만 의미 있어 (구독 중이면 currentSubNotice 가 우선).
   const trialConsumedNotice = (_trialConsumed && !_isSubscribed)
@@ -522,7 +522,7 @@ function closeSubscribeModal() {
 //   취소: /설정 → 결제 내역 / 환불 / 해지 에 cancelPlanChange() 버튼.
 async function scheduleDowngrade(tierKey) {
   const tier = TIER_PLANS_CLIENT[tierKey];
-  if (!tier) { alert('잘못된 tier'); return; }
+  if (!tier) { alert('잘못된 플랜'); return; }
   const curPlan = window._billingCache?.subscription_plan;
   const curLabel = TIER_PLANS_CLIENT[curPlan]?.label || curPlan || '현재 plan';
   const expiresIso = window._billingCache?.subscription_expires_at || window._billingCache?.next_billing_at;
@@ -610,7 +610,7 @@ function tryBuyPremiumPack() {
 // V4 (사용자 명시 2026-05-11 — 가계약): BILLING_RECURRING_ENABLED=false 시 1개월 일회성 결제로 분기.
 async function proceedSubscribe(tierKey) {
   const tier = TIER_PLANS_CLIENT[tierKey];
-  if (!tier) { alert('잘못된 tier'); return; }
+  if (!tier) { alert('잘못된 플랜'); return; }
   // V4 (사용자 명시 2026-05-13 ultrathink): 업그레이드 confirm — 옛 구독 즉시 종료 + 새 cycle.
   //   다운그레이드는 별도 `scheduleDowngrade()` 가 처리 (cancel-renewal + 만료 후 직접 가입). 여기엔 안 옴.
   //   backend `portone-register-recurring` 이 upsert 라 옛 row 자동 덮어씌움.
@@ -988,7 +988,7 @@ async function proceedPlusTrial() {
 //   카드 / 카카오페이 일반 채널 사용. 토스페이는 일반결제만 가능해 OK.
 async function proceedOneTimePurchase(tierKey) {
   const tier = TIER_PLANS_CLIENT[tierKey];
-  if (!tier) { alert('잘못된 tier'); return; }
+  if (!tier) { alert('잘못된 플랜'); return; }
   if (!session || !session.access_token) {
     alert('로그인 필요 — 설정 → 로그아웃 후 재로그인.');
     return;

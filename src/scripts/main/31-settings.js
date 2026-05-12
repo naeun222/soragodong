@@ -467,8 +467,8 @@ function _renderCancelRenewalBox(billing) {
           • <b style="color:var(--text);">해지</b> = 다음 자동결제만 멈춤. 현 결제 기간 (${nextStr}) 까지 그대로 사용.<br>
           • <b style="color:var(--text);">환불</b> = 잔여일 비례. 위 결제 내역에서 [환불 요청] 버튼.<br>
           • 환불 시 즉시 구독 종료 (잔여일 사용 X) — 카드 명세서 3-7영업일 반영.<br>
-          • <b style="color:var(--text);">다운그레이드</b> = [구독 시작 / 변경] 모달에서 하위 tier 클릭 → 다음 갱신부터 자동 전환.<br>
-          • <b style="color:var(--text);">업그레이드</b> = 같은 모달에서 상위 tier 클릭 → 즉시 결제 + 새 cycle.
+          • <b style="color:var(--text);">다운그레이드</b> = [구독 시작 / 변경] 모달에서 하위 플랜 클릭 → 다음 갱신부터 자동 전환.<br>
+          • <b style="color:var(--text);">업그레이드</b> = 같은 모달에서 상위 플랜 클릭 → 즉시 결제 + 새 cycle.
         </div>
       </details>
     </div>
