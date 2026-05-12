@@ -30,6 +30,7 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 | `PORTONE_API_KEY` | (포트원 가입 후) | PG 결정 후 |
 | `PORTONE_API_SECRET` | (포트원 가입 후) | 동일 |
 | `PORTONE_CHANNEL_KEY` | (포트원 가입 후) | 동일 |
+| ✅ `BILLING_RECURRING_ENABLED` | `true` | 정기결제 5 endpoint 활성 가드 (portone-register-recurring / portone-register-trial / claim-free-trial / cron-charge-recurring / cron-renewal-notice). false (또는 미설정) = 가계약(1개월 일회성) 모드. 사용자 명시 2026-05-13 — 정기결제 테스트 채널 복귀 시 추가, 완료. |
 
 적용한 후 → **Deployments → Retry deployment** (재배포 후 적용).
 
