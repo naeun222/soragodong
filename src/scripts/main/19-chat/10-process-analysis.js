@@ -139,9 +139,37 @@ function _getDailyDeeperCap() {
   if (plan === 'early_light') return 3;     // legacy 환영 (Light 와 동등)
   return 2;
 }
+// V4 (사용자 보고 2026-05-13 ultrathink): _dailyDeeperCount 가 state debounce/cloud race 로 손실되어
+//   대화탭 재진입 / 앱 재시작 시 cooldown 잠금 풀리던 버그. localStorage 별도 key 로 backup — state 와 분리.
+//   state.preferences.testerMode 면 cap=Infinity (위 _getDailyDeeperCap) 라 cooldown 자체 무시 — backup 영향 X.
+const _DEEPER_LS_KEY = '_soragodong_dailyDeeper';
+function _persistDeeperLocally() {
+  try {
+    if (typeof localStorage !== 'undefined' && state._dailyDeeperCount) {
+      localStorage.setItem(_DEEPER_LS_KEY, JSON.stringify(state._dailyDeeperCount));
+    }
+  } catch {}
+}
+function _loadDeeperLocally(todayK) {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(_DEEPER_LS_KEY);
+      if (!raw) return null;
+      const b = JSON.parse(raw);
+      if (b && b.date === todayK && typeof b.count === 'number') return b;
+    }
+  } catch {}
+  return null;
+}
 function _getTodayDeeperCount() {
   const todayK = todayKey();
   if (!state._dailyDeeperCount || state._dailyDeeperCount.date !== todayK) {
+    // localStorage backup 에서 복원 — 같은 todayK 면 사용 (cooldown 잔재 유지).
+    const backup = _loadDeeperLocally(todayK);
+    if (backup) {
+      state._dailyDeeperCount = backup;
+      return state._dailyDeeperCount.count;
+    }
     state._dailyDeeperCount = { date: todayK, count: 0, lastAt: 0, capToastShown: false };
   }
   return state._dailyDeeperCount.count;
@@ -151,14 +179,21 @@ function _incrementDailyDeeperCount() {
   state._dailyDeeperCount.count += 1;
   state._dailyDeeperCount.lastAt = Date.now();
   saveState();
+  _persistDeeperLocally();  // state debounce / cloud race 보호 — 동기 직저장.
 }
 function _checkDeeperEligibility() {
   const cap = _getDailyDeeperCap();
   if (cap === Infinity) return { ok: true, current: 0, cap: Infinity };
   const current = _getTodayDeeperCount();
-  const lastAt = (state._dailyDeeperCount && state._dailyDeeperCount.lastAt) || 0;
-  const cooldownLeft = (lastAt + 30 * 60 * 1000) - Date.now();
-  if (cooldownLeft > 0 && current > 0) return { ok: false, current, cap, cooldown: cooldownLeft, reason: 'cooldown' };
+  // V4 (사용자 명시 2026-05-13 ultrathink): Premium = cooldown 면제. 'Premium = 마음껏 깊게' brand 정합.
+  //   cap 10회/일 은 비용 가드로 유지. cooldown 은 충동 클릭 보호 — paying customer 신뢰.
+  const _plan = window._billingCache?.subscription_plan;
+  const _cooldownExempt = (_plan === 'premium');
+  if (!_cooldownExempt) {
+    const lastAt = (state._dailyDeeperCount && state._dailyDeeperCount.lastAt) || 0;
+    const cooldownLeft = (lastAt + 30 * 60 * 1000) - Date.now();
+    if (cooldownLeft > 0 && current > 0) return { ok: false, current, cap, cooldown: cooldownLeft, reason: 'cooldown' };
+  }
   return { ok: current < cap, current, cap, reason: current < cap ? null : 'cap' };
 }
 function _showDeeperCapToast() {
