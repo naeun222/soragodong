@@ -314,15 +314,25 @@ async function openSubscribeModal() {
   if (typeof refreshBillingStatus === 'function') {
     try { await refreshBillingStatus(false); } catch {}
   }
+  // V4 (사용자 보고 2026-05-13 ultrathink): Plus trial 1인 1회 가드 — 이미 사용한 사용자에게 '첫 달 무료' 카드 노출 X.
+  //   backend (`portone-register-trial.ts` / `claim-free-trial.ts`) 가 `plus_trial_consumed_at` set 검사 후 거부 (TRIAL_ALREADY_CONSUMED).
+  //   frontend 가드 = UX (사용자가 첫 달 무료 보고 결제 시도했다가 마지막 단계에서 거부당하는 함정 차단).
+  //   billing row 의 plus_trial_consumed_at 이 timestamp 면 사용함, null 이면 X.
+  const _trialConsumed = !!window._billingCache?.plus_trial_consumed_at;
   const minorWarning = state.preferences?.requiresLegalGuardianForPayment
     ? `<div style="padding:10px; background:rgba(220,150,80,0.10); border:1px solid rgba(220,150,80,0.40); border-radius:8px; font-size:11px; color:#e8c590; margin-bottom:14px;">⚠️ 만 18세 미만은 결제 시 법정대리인 동의 필요</div>`
+    : '';
+  // 사용자가 trial 소진 시 안내 한 줄 — '왜 첫 달 무료가 안 뜨지?' 헷갈림 방지.
+  const trialConsumedNotice = _trialConsumed
+    ? `<div style="padding:9px 12px; background:rgba(126,200,227,0.06); border-left:3px solid rgba(126,200,227,0.40); border-radius:4px; font-size:11px; color:var(--text-soft); margin-bottom:14px; line-height:1.6;">ℹ️ <b style="color:var(--text);">Plus 첫 달 무료</b>는 1인 1회 — 이미 사용했어. <b style="color:var(--text);">정가 9,900원/월</b> 구독으로 진행 가능.</div>`
     : '';
   // V4 (사용자 명시 2026-05-11 ultrathink): tier 카드 통합 — 옛 earlyLifetimeCard 폐기.
   //   Plus (key='light', has_free_trial=true) 가 *RECOMMENDED + 첫 달 무료* 자리 차지.
   //   Light (key='early_lifetime') 는 정가 entry tier — 일반 tierCard 로 렌더.
   // freeTrial 띠 = plan.has_free_trial truthy 일 때. 버튼 색상도 trial 자리에 맞춰 sky gradient.
+  // V4 (사용자 보고 2026-05-13 ultrathink): _trialConsumed 가드 추가 — trial 소진 사용자는 정가 카드로 자동 fall-through.
   const tierCard = (key, plan, recommended) => {
-    const isFreeTrial = !!plan.has_free_trial;
+    const isFreeTrial = !!plan.has_free_trial && !_trialConsumed;
     const trialBadge = isFreeTrial
       ? '<div style="position:absolute; top:-10px; left:16px; background:linear-gradient(135deg, #87CEEB, #4A90E2); color:#0c1e3a; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 8px; border-radius:4px;">첫 달 무료</div>'
       : '';
@@ -353,6 +363,16 @@ async function openSubscribeModal() {
       : (_oneTime
           ? `${plan.label} 1개월 (${plan.krw.toLocaleString()}원)`
           : `${plan.label} 정기 구독 (월 ${plan.krw.toLocaleString()}원)`);
+    // V4 (사용자 보고 2026-05-13 ultrathink): Plus 카드 + trial 소진 시 description 에서 '첫 달 무료' 카피 strip.
+    //   plan.description 은 static string (TIER_PLANS_CLIENT) 라 dynamic 분기 필요.
+    //   regex 로 '. 첫 달 무료 ...' 잘라내고 정기 구독 카피로 치환.
+    let descHtml = plan.description;
+    if (plan.has_free_trial && _trialConsumed) {
+      const _oneTime2 = (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED);
+      descHtml = (plan.description || '').replace(/\s*첫 달 무료[^.]*\.?$/, '').trim();
+      if (_oneTime2) descHtml += ' 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).';
+      else descHtml += ' 정기 구독 — 매월 9,900원 자동 결제, 언제든 해지.';
+    }
     return `
       <div class="tier-card ${recommended ? 'tier-recommended' : ''}" style="position:relative; padding:18px 16px; background:${cardBg}; border:${cardBorder}; border-radius:14px; margin-bottom:10px;">
         ${trialBadge}
@@ -363,7 +383,7 @@ async function openSubscribeModal() {
         </div>
         <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${plan.tagline}</div>
         <div style="font-size:11.5px; color:var(--text); line-height:1.7; padding:10px; background:rgba(0,0,0,0.18); border-radius:8px; margin-bottom:10px;">
-          ${plan.description}
+          ${descHtml}
         </div>
         <button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px; ${buttonStyle}">${buttonText}</button>
       </div>
@@ -389,18 +409,27 @@ async function openSubscribeModal() {
     <div class="input-modal" style="max-width:420px; max-height:92vh; overflow-y:auto; padding:24px;">
       <div style="font-size:17px; font-weight:700; color:var(--text); margin-bottom:14px;">📅 구독</div>
       ${minorWarning}
+      ${trialConsumedNotice}
       ${tierCard('early_lifetime', TIER_PLANS_CLIENT.early_lifetime, false)}
       ${tierCard('light', TIER_PLANS_CLIENT.light, true)}
       ${tierCard('premium', TIER_PLANS_CLIENT.premium, false)}
       ${premiumPackCard}
       <div style="font-size:10.5px; color:var(--text-soft); line-height:1.7; padding:10px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
         ${(typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED)
-          ? `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus 첫 달 무료</b> (1인 1회 한정). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
-             <b>부가가치세 10% 포함</b> · <b>1개월 이용권 — 자동 갱신 X</b> (만료 7일 전 알림 후 직접 재구매).<br>
-             환불: 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`
-          : `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus 첫 달 무료</b> (1인 1회 한정). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
-             <b>부가가치세 10% 포함</b> · <b>모든 플랜 = 매월 자동 갱신</b> (해지 1-click).<br>
-             해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`}
+          ? (_trialConsumed
+              ? `💡 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
+                 <b>부가가치세 10% 포함</b> · <b>1개월 이용권 — 자동 갱신 X</b> (만료 7일 전 알림 후 직접 재구매).<br>
+                 환불: 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`
+              : `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus 첫 달 무료</b> (1인 1회 한정). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
+                 <b>부가가치세 10% 포함</b> · <b>1개월 이용권 — 자동 갱신 X</b> (만료 7일 전 알림 후 직접 재구매).<br>
+                 환불: 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`)
+          : (_trialConsumed
+              ? `💡 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
+                 <b>부가가치세 10% 포함</b> · <b>모든 플랜 = 매월 자동 갱신</b> (해지 1-click).<br>
+                 해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`
+              : `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus 첫 달 무료</b> (1인 1회 한정). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
+                 <b>부가가치세 10% 포함</b> · <b>모든 플랜 = 매월 자동 갱신</b> (해지 1-click).<br>
+                 해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`)}
         💎 <b>Premium 만</b> 일일 한도 도달 시 추가팩 (+${(OVERAGE_PACKS_CLIENT?.premium_pack?.krw || 2500).toLocaleString()}원) 즉시 구매 가능.<br>
         <span style="color:var(--text-dim);">⚠ 본 서비스는 임상 치료·진단·전문가 상담을 대체하지 않습니다.</span>
       </div>
@@ -438,12 +467,15 @@ function tryBuyPremiumPack() {
 async function proceedSubscribe(tierKey) {
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 tier'); return; }
+  // V4 (사용자 보고 2026-05-13 ultrathink): trial 소진 사용자 safety net — cache 갱신 race / 옛 stale UI 클릭 케이스 보호.
+  //   billing cache 의 plus_trial_consumed_at 이 set 이면 trial 흐름 강제 우회 → 정가 정기 구독 / 일회성 결제 흐름으로.
+  const _trialConsumedGuard = !!window._billingCache?.plus_trial_consumed_at;
   // V4 (사용자 명시 2026-05-11 ultrathink — 정정): 가계약 모드에서도 Plus 첫 달 무료 활성. 결제 X 흐름.
   if (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED) {
-    if (tier.has_free_trial) return proceedFreeTrial();  // Plus 첫 달 무료 — 결제 X, 카드 등록 X (1인 1회)
-    return proceedOneTimePurchase(tierKey);              // Light/Premium = 일회성 1개월 결제
+    if (tier.has_free_trial && !_trialConsumedGuard) return proceedFreeTrial();  // Plus 첫 달 무료 — 결제 X, 카드 등록 X (1인 1회)
+    return proceedOneTimePurchase(tierKey);              // Light/Premium = 일회성 1개월 결제 / trial 소진된 Plus 도 이쪽
   }
-  if (tier.has_free_trial) return proceedPlusTrial();  // Plus = 첫 달 무료 trial 흐름 (key='light')
+  if (tier.has_free_trial && !_trialConsumedGuard) return proceedPlusTrial();  // Plus = 첫 달 무료 trial 흐름 (key='light'). 소진 시 fall-through
   if (!session || !session.access_token) {
     alert('로그인 필요 — 설정 → 로그아웃 후 재로그인.');
     return;
