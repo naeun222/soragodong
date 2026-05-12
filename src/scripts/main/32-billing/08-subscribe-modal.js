@@ -465,7 +465,7 @@ async function openSubscribeModal() {
         <div style="font-size:13.5px; font-weight:600; color:var(--text);">🌊 Premium 추가팩</div>
         <div style="font-size:13.5px; font-weight:600; color:var(--text);">${premiumPack.krw.toLocaleString()}원<span style="font-size:10px; color:var(--text-dim); font-weight:400;"> · 단건</span></div>
       </div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:9px;">월 한도 도달 시 추가 사용 — Premium 구독자 전용.</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:9px;">일일 한도 도달 시 추가 사용 — Premium 구독자 전용.</div>
       <button class="btn-secondary" onclick="tryBuyPremiumPack()" style="width:100%; padding:9px; font-size:12px;">추가팩 구매</button>
     </div>
   ` : '';
