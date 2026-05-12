@@ -73,6 +73,169 @@ function devPreviewPaymentInfoModal() {
   });
 }
 
+// V4 (사용자 명시 2026-05-13 ultrathink): 자동결제 등록 직전 명시적 동의 화면.
+//   한국 전자상거래법 §13 / 여전법 권고 — 카드 자동결제 등록 전 *상품/금액/주기/해지방법* 고지 + 명시적 동의 체크박스.
+//   PG 선택 직후 호출 → 사용자가 동의해야 PortOne.requestIssueBillingKey 진행.
+//   trial 흐름 (proceedPlusTrial) 도 동일 — 첫 달 0원이지만 30일 후 자동 결제이므로 동일 동의 절차.
+//   인자: { tier, pgLabel, isTrial } — tier=TIER_PLANS_CLIENT[k], pgLabel=PG 한글명, isTrial=Plus 첫 달 무료 여부.
+//   반환: Promise<boolean> — 동의(true) / 취소(false).
+function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
+  return new Promise((resolve) => {
+    const krw = tier.krw.toLocaleString();
+    const next30 = new Date(Date.now() + 30 * 86400_000);
+    const nextDateStr = next30.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+    const businessName = (typeof BUSINESS_INFO !== 'undefined' && BUSINESS_INFO?.name) ? BUSINESS_INFO.name : '나은 랩(Lab)';
+    const businessNo   = (typeof BUSINESS_INFO !== 'undefined' && BUSINESS_INFO?.business_no) ? BUSINESS_INFO.business_no : '';
+    const trialBanner = isTrial
+      ? `<div style="padding:11px 12px; background:linear-gradient(135deg, rgba(135,206,235,0.15), rgba(74,144,226,0.08)); border:1px solid rgba(95,180,211,0.40); border-radius:8px; font-size:12px; color:#9fd4e8; line-height:1.6; margin-bottom:12px;">
+           🌊 <b>첫 달 0원</b> — 오늘은 결제 X, 카드만 등록.<br>
+           <span style="color:var(--text-soft);">${nextDateStr} 부터 <b style="color:#5fb4d3;">월 ${krw}원</b> 자동 결제 시작 (1인 1회 trial 한정).</span>
+         </div>`
+      : '';
+    const firstPayLabel = isTrial
+      ? `${nextDateStr} (30일 후 첫 자동 결제)`
+      : `오늘 즉시 ${krw}원 결제, 이후 ${nextDateStr} 부터 매월 자동 결제`;
+    const rows = [
+      ['상품',         `소라고동 ${tier.label} 정기구독`],
+      ['결제금액',     `<b style="color:var(--text);">월 ${krw}원</b> <span style="color:var(--text-soft); font-size:10.5px;">(부가가치세 10% 포함)</span>`],
+      ['결제주기',     `매월 1회 자동 결제 (30일 주기)`],
+      ['첫 결제',      firstPayLabel],
+      ['결제수단',     pgLabel],
+      ['해지방법',     `<b style="color:var(--accent);">[설정 → 구독]</b> 에서 1-click 해지 — 언제든 가능`],
+      ['환불',         `잔여일 비례 환불 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>)`],
+      ['공급자',       `${businessName}${businessNo ? ` (사업자 ${businessNo})` : ''}`],
+    ];
+    const rowsHtml = rows.map(([k, v]) => `
+      <div style="display:flex; gap:10px; padding:7px 0; border-bottom:1px dashed rgba(255,255,255,0.06); font-size:12px; line-height:1.55;">
+        <div style="flex:0 0 70px; color:var(--text-soft);">${k}</div>
+        <div style="flex:1; color:var(--text);">${v}</div>
+      </div>`).join('');
+    const overlay = document.createElement('div');
+    overlay.className = 'input-modal-overlay show';
+    overlay.id = 'recurringConsentOverlay';
+    overlay.style.zIndex = '10003';
+    overlay.innerHTML = `
+      <div class="input-modal" style="max-width:420px; max-height:92vh; overflow-y:auto; padding:22px;">
+        <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:4px;">📅 자동결제 등록 안내</div>
+        <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:14px; line-height:1.6;">
+          아래 내용으로 매월 자동 결제가 진행돼. 동의 후 카드 등록 페이지로 이동.
+        </div>
+        ${trialBanner}
+        <div style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:10px; padding:8px 14px; margin-bottom:14px;">
+          ${rowsHtml}
+        </div>
+        <label style="display:flex; gap:9px; align-items:flex-start; padding:8px 0; cursor:pointer; font-size:12px; color:var(--text); line-height:1.55;">
+          <input type="checkbox" id="recurringConsentCk1" style="margin-top:3px; flex:0 0 auto;">
+          <span><b>(필수)</b> 위 자동결제 내용을 모두 확인했으며, 매월 자동 결제에 동의합니다.</span>
+        </label>
+        <label style="display:flex; gap:9px; align-items:flex-start; padding:8px 0 14px; cursor:pointer; font-size:12px; color:var(--text); line-height:1.55;">
+          <input type="checkbox" id="recurringConsentCk2" style="margin-top:3px; flex:0 0 auto;">
+          <span><b>(필수)</b> <a href="/tos" target="_blank" style="color:var(--accent);">이용약관</a> · <a href="/refund" target="_blank" style="color:var(--accent);">환불정책</a> · <a href="/privacy" target="_blank" style="color:var(--accent);">개인정보 처리방침</a> 에 동의합니다.</span>
+        </label>
+        <button class="btn-primary" id="recurringConsentSubmit" style="width:100%; padding:12px; margin-bottom:8px; opacity:0.45; cursor:not-allowed;" disabled>동의하고 카드 등록 페이지로 이동</button>
+        <button class="btn-secondary" id="recurringConsentCancel" style="width:100%; padding:10px;">취소</button>
+        <div style="margin-top:12px; font-size:10.5px; color:var(--text-soft); line-height:1.65; padding:9px; background:rgba(126,200,227,0.04); border-left:3px solid rgba(126,200,227,0.30); border-radius:4px;">
+          💡 등록된 카드는 <b>[설정 → 구독]</b> 에서 언제든 변경·해지할 수 있어.<br>
+          ⚠ 본 서비스는 임상 치료·진단·전문가 상담을 대체하지 않습니다.
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const ck1 = document.getElementById('recurringConsentCk1');
+    const ck2 = document.getElementById('recurringConsentCk2');
+    const submitBtn = document.getElementById('recurringConsentSubmit');
+    const cancelBtn = document.getElementById('recurringConsentCancel');
+    const sync = () => {
+      const ok = !!(ck1?.checked && ck2?.checked);
+      submitBtn.disabled = !ok;
+      submitBtn.style.opacity = ok ? '1' : '0.45';
+      submitBtn.style.cursor = ok ? 'pointer' : 'not-allowed';
+    };
+    ck1?.addEventListener('change', sync);
+    ck2?.addEventListener('change', sync);
+    const close = (val) => {
+      const ov = document.getElementById('recurringConsentOverlay');
+      if (ov) ov.remove();
+      resolve(val);
+    };
+    submitBtn.addEventListener('click', () => { if (!submitBtn.disabled) close(true); });
+    cancelBtn.addEventListener('click', () => close(false));
+  });
+}
+
+// V4 (사용자 명시 2026-05-13 ultrathink): 등록 성공 후 명시적 안내 모달.
+//   토스트 1줄로는 사용자가 *언제 다음 결제되는지 / 어디서 관리하는지* 가 안 보임 → 명시 화면.
+//   trial 의 경우: "오늘은 결제 X, 30일 후 첫 결제" 톤. 정가의 경우: "오늘 첫 결제 완료, 30일 후 자동 갱신" 톤.
+//   '구독 관리하러 가기' 버튼 → 설정 → 결제 내역 토글 자동 펼침 (settings 의 _expandPaymentsToggle 호출).
+function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) {
+  const krw = tier.krw.toLocaleString();
+  let nextDate;
+  try {
+    nextDate = nextBillingIso ? new Date(nextBillingIso) : new Date(Date.now() + 30 * 86400_000);
+  } catch { nextDate = new Date(Date.now() + 30 * 86400_000); }
+  const nextDateStr = nextDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  const headline = isTrial
+    ? `🌊 ${tier.label} 첫 달 무료 시작`
+    : `📅 ${tier.label} 정기구독 시작`;
+  const subline = isTrial
+    ? `오늘부터 30일 동안 무료로 사용해.`
+    : `오늘 첫 ${krw}원 결제 완료.`;
+  const nextLine = isTrial
+    ? `<div style="font-size:12.5px; color:var(--text); line-height:1.65;"><b style="color:#5fb4d3;">${nextDateStr}</b> 에 첫 ${krw}원 자동 결제가 시작돼.</div>`
+    : `<div style="font-size:12.5px; color:var(--text); line-height:1.65;">다음 결제예정일: <b style="color:var(--accent);">${nextDateStr}</b> · 월 ${krw}원</div>`;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'recurringSuccessOverlay';
+  overlay.style.zIndex = '10004';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:380px; padding:24px;">
+      <div style="font-size:36px; text-align:center; margin-bottom:10px;">✓</div>
+      <div style="font-size:17px; font-weight:700; color:var(--text); text-align:center; margin-bottom:6px;">${escapeHtml(headline)}</div>
+      <div style="font-size:12.5px; color:var(--text-dim); text-align:center; margin-bottom:16px; line-height:1.6;">${escapeHtml(subline)}</div>
+      <div style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:10px; padding:13px 14px; margin-bottom:14px; line-height:1.7;">
+        ${nextLine}
+        <div style="font-size:12px; color:var(--text-soft); margin-top:6px;">결제수단: ${escapeHtml(pgLabel)}</div>
+      </div>
+      <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:11px 13px; background:rgba(126,200,227,0.05); border-left:3px solid rgba(126,200,227,0.40); border-radius:4px; margin-bottom:14px;">
+        💡 <b style="color:var(--text);">관리 위치:</b> [설정 → 구독]<br>
+        - 결제수단 (카드) 변경<br>
+        - 다음 갱신 해지 (1-click)<br>
+        - 환불 요청 (잔여일 비례)
+      </div>
+      <button class="btn-primary" id="recurringSuccessGoSettings" style="width:100%; padding:11px; margin-bottom:8px;">구독 관리하러 가기</button>
+      <button class="btn-secondary" id="recurringSuccessClose" style="width:100%; padding:10px;">닫기</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const close = () => {
+    const ov = document.getElementById('recurringSuccessOverlay');
+    if (ov) ov.remove();
+  };
+  document.getElementById('recurringSuccessClose').addEventListener('click', close);
+  document.getElementById('recurringSuccessGoSettings').addEventListener('click', () => {
+    close();
+    try { if (typeof showScreen === 'function') showScreen('settings'); } catch {}
+    try { if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true); } catch {}
+    setTimeout(() => {
+      // 결제 내역 / 환불 / 해지 details 자동 펼침 — cancelRenewalBox 의 부모 <details> 찾기.
+      const renewalBox = document.getElementById('cancelRenewalBox');
+      const det = renewalBox ? renewalBox.closest('details') : null;
+      if (det && !det.open) det.open = true;
+      if (det && typeof det.scrollIntoView === 'function') {
+        try { det.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+      }
+    }, 250);
+  });
+}
+
+// V4 (사용자 명시 2026-05-13 ultrathink): PG 한글 표시명 (동의 모달 / 성공 모달 / 설정 박스 공용).
+function _pgLabel(method) {
+  if (method === 'kakao') return '🟨 카카오페이 정기결제 (테스트 채널 TCSUBSCRIP)';
+  if (method === 'card')  return '💳 KG이니시스 카드 정기결제 (테스트 채널 INIBillTst)';
+  if (method === 'toss')  return '🔵 토스페이';
+  return method || '결제수단';
+}
+
 // 결제 수단 선택 픽커 — 플랜 클릭 후 카드/카카오페이/토스페이 중 선택.
 let __payMethodPickerResolve = null;
 function _pickPayMethodResolve(method) {
@@ -297,6 +460,9 @@ async function proceedSubscribe(tierKey) {
     alert('결제 설정 오류 — 빌링키 채널 미설정');
     return;
   }
+  // V4 (사용자 명시 2026-05-13 ultrathink): PG 선택 직후 자동결제 동의 모달 — 미동의 시 종료.
+  const _consent = await _showRecurringConsentModal({ tier, pgLabel: _pgLabel(_pg), isTrial: false });
+  if (!_consent) return;
   let phoneNumber = '', fullName = '';
   if (_pgInfo.needsCustomerInfo) {
     const info = await _collectPaymentInfoIfNeeded();
@@ -326,6 +492,8 @@ async function proceedSubscribe(tierKey) {
 
   // KG이니시스 oid 최대 40자 — userId 앞 8자 + base36 ts + rand4 = 26자.
   const issueId = `bk-${(authUserId||'anon').slice(0,8)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
+  // 동의 후 PG 페이지로 이동 안내 토스트.
+  if (typeof showToast === 'function') showToast(`${_pgLabel(_pg)} 결제 페이지로 이동…`);
   let response;
   try {
     response = await window.PortOne.requestIssueBillingKey({
@@ -385,7 +553,20 @@ async function proceedSubscribe(tierKey) {
         showToast(`💳 이미 활성 ${tier.label} 구독`);
         alert(result.message || `이미 활성 ${tier.label} 구독이 있어.`);
       } else {
-        showToast(`📅 ${tier.label} 정기 시작 — 월 ${tier.krw.toLocaleString()}원 자동 갱신`);
+        // V4 (사용자 명시 2026-05-13 ultrathink): 마지막 등록 PG 저장 — 설정 박스 표시용.
+        try {
+          state.preferences = state.preferences || {};
+          state.preferences.lastRegisteredPG = _pg;
+          state.preferences.lastRegisteredAt = Date.now();
+          saveState();
+        } catch {}
+        // V4 (사용자 명시 2026-05-13 ultrathink): 토스트 대체 — 명시 성공 모달.
+        _showRecurringSuccessModal({
+          tier,
+          pgLabel: _pgLabel(_pg),
+          isTrial: false,
+          nextBillingIso: result.next_billing_at || null
+        });
       }
       closeSubscribeModal();
       if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
@@ -472,6 +653,9 @@ async function proceedPlusTrial() {
     alert('결제 설정 오류 — 빌링키 채널 미설정');
     return;
   }
+  // V4 (사용자 명시 2026-05-13 ultrathink): trial 도 30일 후 자동 결제 = 동의 모달 필수.
+  const _consent = await _showRecurringConsentModal({ tier, pgLabel: _pgLabel(_pg), isTrial: true });
+  if (!_consent) return;
   let phoneNumber = '', fullName = '';
   if (_pgInfo.needsCustomerInfo) {
     const info = await _collectPaymentInfoIfNeeded();
@@ -503,6 +687,8 @@ async function proceedPlusTrial() {
   // billingKey issueId — 매번 unique. customer.customerId = user.id 로 매칭.
   // KG이니시스 oid 최대 40자 — UUID 전체 포함 시 64자 초과. base36 ts + userId 앞 8자로 26자 이내.
   const issueId = `bk-${(authUserId||'anon').slice(0,8)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
+  // V4 (사용자 명시 2026-05-13 ultrathink): 동의 후 PG 페이지로 이동 안내 토스트.
+  if (typeof showToast === 'function') showToast(`${_pgLabel(_pg)} 빌링키 발급 페이지로 이동…`);
   // 모바일 redirect 흐름 — 등록 후 같은 페이지로 복귀 (해시 #plus-trial-return 으로 후속 처리).
   let response;
   try {
@@ -565,7 +751,18 @@ async function proceedPlusTrial() {
         showToast('💳 이미 Plus 구독 활성 — 카드 변경은 [설정] 에서');
         alert(result.message || '이미 활성 Plus 구독이 있어.');
       } else {
-        showToast(`🌊 Plus 첫 달 무료 시작 — 30일 후 ${tier.krw.toLocaleString()}원 자동 결제 🫂`);
+        try {
+          state.preferences = state.preferences || {};
+          state.preferences.lastRegisteredPG = _pg;
+          state.preferences.lastRegisteredAt = Date.now();
+          saveState();
+        } catch {}
+        _showRecurringSuccessModal({
+          tier,
+          pgLabel: _pgLabel(_pg),
+          isTrial: true,
+          nextBillingIso: result.trial_until || result.next_billing_at || null
+        });
       }
       closeSubscribeModal();
       if (typeof refreshBillingStatus === 'function') refreshBillingStatus();

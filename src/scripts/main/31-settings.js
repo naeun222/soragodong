@@ -376,6 +376,9 @@ async function loadPayments() {
 
 // 사용자 명시 2026-05-06: '다음 갱신 해지' 박스 — 결제 내역/환불 토글 안에 render. 글씨 12.5px (옛 10.5px 너무 안 보였음).
 // 활성 구독 (subscription_active) + 모든 paid tier (early_light 포함) 에 노출. cancel_at_period_end=true 면 '✓ 해지됨' 라벨로 대체.
+// V4 (사용자 명시 2026-05-13 ultrathink): '등록된 결제수단 + 다음 결제예정일 + 카드 변경 + 해지' 통합 관리 박스로 확장.
+//   billing.portone_billing_key 가 있어야 정기 등록된 상태. 일반결제 (가계약) 는 박스 비움.
+//   카드 변경: 같은 tier 로 재등록 = backend portone-register-recurring 이 새 billingKey 로 옛 거 대체 (upsert).
 function _renderCancelRenewalBox(billing) {
   const box = document.getElementById('cancelRenewalBox');
   if (!box) return;
@@ -389,17 +392,65 @@ function _renderCancelRenewalBox(billing) {
     box.innerHTML = '';
     return;
   }
-  const cancelled = !!billing.cancel_at_period_end;
-  if (cancelled) {
-    box.innerHTML = `<div style="font-size:12.5px; color:var(--text-soft); padding:10px 0; line-height:1.6;">✓ 다음 갱신 해지됨 — 만료일까지 사용 가능.</div>`;
-  } else {
-    box.innerHTML = `
-      <div style="padding:10px 0; line-height:1.7;">
-        <button class="btn-secondary" onclick="cancelNextRenewal()" style="width:100%; padding:10px; font-size:12.5px; color:var(--text); opacity:0.85;">⏸ 다음 갱신 해지</button>
-        <div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">현 결제 만료까지 사용.</div>
-      </div>
-    `;
+  // 빌링키 없으면 (legacy early_light 등) 박스 비움 — 정기 등록된 사용자만.
+  if (!billing.portone_billing_key) {
+    box.innerHTML = '';
+    return;
   }
+  const cancelled = !!billing.cancel_at_period_end;
+  const planKey = billing.subscription_plan;
+  const planMeta = (planKey && typeof TIER_PLANS_CLIENT !== 'undefined' && TIER_PLANS_CLIENT[planKey]) ? TIER_PLANS_CLIENT[planKey] : null;
+  const nextIso = billing.next_billing_at || billing.subscription_expires_at || null;
+  const nextStr = nextIso ? new Date(nextIso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : '미정';
+  const krw = planMeta ? planMeta.krw.toLocaleString() : '';
+  // 등록된 PG — frontend state 에서 (backend 컬럼 미추가). 없으면 일반 라벨.
+  const pgKey = state?.preferences?.lastRegisteredPG;
+  const pgLabelStr = (typeof _pgLabel === 'function' && pgKey) ? _pgLabel(pgKey) : '카드 / 간편결제';
+  const cancelBtnHtml = cancelled
+    ? `<div style="padding:9px 11px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.10); border-radius:8px; font-size:12px; color:var(--text-soft); line-height:1.6;">✓ 다음 갱신 해지됨 — <b style="color:var(--text);">${nextStr}</b> 까지 사용 가능.</div>`
+    : `<button class="btn-secondary" onclick="cancelNextRenewal()" style="width:100%; padding:10px; font-size:12.5px; color:var(--text); opacity:0.85;">⏸ 구독 해지 (다음 갱신부터)</button>
+       <div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">현 결제 만료일 (${nextStr}) 까지 그대로 사용. 환불 X.</div>`;
+  const changeBtnHtml = cancelled
+    ? ''
+    : `<button class="btn-secondary" onclick="changeRegisteredCard()" style="width:100%; padding:10px; font-size:12.5px; margin-top:8px;">💳 결제수단 (카드) 변경</button>
+       <div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">새 카드 등록 = 기존 카드 자동 대체.</div>`;
+  box.innerHTML = `
+    <div style="padding:10px 0;">
+      <div style="font-size:12.5px; color:var(--text); font-weight:600; margin-bottom:8px;">📇 등록된 결제수단</div>
+      <div style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:9px; padding:11px 13px; margin-bottom:10px; line-height:1.7;">
+        <div style="font-size:12px; color:var(--text);">${escapeHtml(pgLabelStr)}</div>
+        <div style="font-size:11.5px; color:var(--text-soft); margin-top:4px;">다음 결제예정일: <b style="color:var(--text);">${nextStr}</b>${krw ? ` · <b style="color:var(--text);">${krw}원</b>` : ''}</div>
+      </div>
+      ${changeBtnHtml}
+      <div style="margin-top:10px;">${cancelBtnHtml}</div>
+      <details style="margin-top:12px; font-size:11px; color:var(--text-soft);">
+        <summary style="cursor:pointer; padding:4px 0; outline:none;">해지하면 어떻게 돼? / 환불은?</summary>
+        <div style="padding:8px 0 4px; line-height:1.75;">
+          • <b style="color:var(--text);">해지</b> = 다음 자동결제만 멈춤. 현 결제 기간 (${nextStr}) 까지 그대로 사용.<br>
+          • <b style="color:var(--text);">환불</b> = 잔여일 비례. 위 결제 내역에서 [환불 요청] 버튼.<br>
+          • 환불 시 즉시 구독 종료 (잔여일 사용 X) — 카드 명세서 3-7영업일 반영.<br>
+          • 다시 가입하려면 [구독 시작 / 변경] 으로 재구독.
+        </div>
+      </details>
+    </div>
+  `;
+}
+
+// V4 (사용자 명시 2026-05-13 ultrathink): 등록된 카드 변경 — 같은 tier 로 재등록 (새 billingKey 가 옛 거 대체).
+//   backend `/api/billing/portone-register-recurring` 이 upsert 라 새 빌링키가 자동 덮어씀.
+//   ⚠ "첫 달 즉시 결제" 는 cycle reset — 만약 환불 회피 목적 재등록을 막으려면 backend 가드 필요.
+//     현재는 신뢰 사용자 가정 (테스트 채널). 운영 시 backend `change-card` endpoint 분리 권장.
+function changeRegisteredCard() {
+  const planKey = window._billingCache?.subscription_plan;
+  if (!planKey || !TIER_PLANS_CLIENT[planKey]) {
+    alert('현재 구독 상태를 확인할 수 없어. 새로고침 후 다시.');
+    return;
+  }
+  const tierLabel = TIER_PLANS_CLIENT[planKey].label;
+  if (!confirm(`💳 ${tierLabel} 결제수단 변경\n\n새 카드 등록 페이지로 이동해. 등록 완료되면 기존 카드는 자동으로 해제되고, 다음 결제일부터 새 카드로 결제돼.\n\n계속할까?`)) return;
+  // 같은 tier 로 proceedSubscribe 재호출. 동의 모달이 다시 떠 — 사용자가 확실히 인지.
+  if (typeof proceedSubscribe === 'function') proceedSubscribe(planKey);
+  else alert('proceedSubscribe 함수 로드 X — 새로고침 후 다시.');
 }
 
 // 사용자 명시 2026-05-06: 다음 갱신 해지 — 현 결제 만료까지 사용, 자동 갱신 차단. 환불 X (잔여일 그대로).
