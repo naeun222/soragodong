@@ -146,7 +146,7 @@ function _quotaStateLabel(pct) {
   if (pct < 50) return '오늘 여유 충분 ✅';
   if (pct < 80) return '오늘 적당히 사용 중';
   if (pct < 95) return '오늘 거의 다 썼어';
-  return '오늘 한도 임박 — 잠깐만';
+  return '오늘 한도 임박';
 }
 
 // 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
@@ -296,7 +296,8 @@ async function _doRefreshBillingStatus(manual) {
     // 사용자 명시 2026-05-11 ultrathink: 추가팩 credit 가격 ($/원) 표시 폐기 — 사용량 cap bar 시각화로.
     //   추가팩 사용량 = max(0, usedUsd - quotaUsd). plan cap 넘긴 사용량부터 추가팩에서 차감.
     //   cap bar 100% = (사용한 추가팩 + 남은 balance). plan quota bar 와 동일 패턴 (line 248-249).
-    if (subActive && planKey !== 'early_light' && balance > 0) {
+    // V4 (사용자 명시 2026-05-13): 추가팩 = Premium 전용 — light/plus/미구독/게스트엔 bar 노출 X.
+    if (subActive && planKey === 'premium' && balance > 0) {
       const overageUsed = Math.max(0, usedUsd - quotaUsd);
       const overageTotal = overageUsed + balance;
       const overagePct = overageTotal > 0 ? Math.min(100, Math.round((overageUsed / overageTotal) * 100)) : 0;

@@ -34,23 +34,18 @@ export function getCurrentKstAnchorDay(): number {
  *   prev=2026-03-31 KST, anchor=31 → next=2026-04-30 KST (clip)
  */
 export function calcNextBillingDate(prevBillingDate: Date, anchorDay: number): Date {
-  // KST 기준으로 변환 (UTC + 9h).
+  // V4 (사용자 명시 2026-05-13): 정각 (KST 00:00:00) 기준 — 가입 시각 (시/분/초) 무관, 매월 anchor day 자정.
+  //   옛: prevKst 시/분/초 보존 (5/13 15:30 가입 → 6/13 15:30 결제) → 표시 일관성 X.
+  //   새: KST 00:00:00 으로 통일 → "매월 13일" 자정 직후 cron 발사 = 사용자 입장 깔끔.
   const prevKst = new Date(prevBillingDate.getTime() + KST_OFFSET_MS);
   const targetYear  = prevKst.getUTCFullYear();
-  const targetMonth = prevKst.getUTCMonth() + 1;  // +1 month (overflow OK — Date 가 자동 처리)
-  // 해당 월의 마지막 날 — JS quirk: setUTCDate(0) 은 이전 달 마지막 날을 반환.
+  const targetMonth = prevKst.getUTCMonth() + 1;
+  // 해당 월의 마지막 날.
   const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
   const clippedDay = Math.min(Math.max(1, anchorDay), lastDayOfTargetMonth);
-  // KST 시각 — 시/분/초 보존 (charge 시각 일관성).
-  const nextKst = new Date(Date.UTC(
-    targetYear,
-    targetMonth,
-    clippedDay,
-    prevKst.getUTCHours(),
-    prevKst.getUTCMinutes(),
-    prevKst.getUTCSeconds()
-  ));
-  // KST → UTC 복귀.
+  // KST 자정.
+  const nextKst = new Date(Date.UTC(targetYear, targetMonth, clippedDay, 0, 0, 0));
+  // KST → UTC.
   return new Date(nextKst.getTime() - KST_OFFSET_MS);
 }
 

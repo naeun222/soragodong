@@ -12360,7 +12360,7 @@
       </button>
 
       <div id="checkinExtraGroup" class="checkin-extra-group" style="display:none;">
-        <div class="checkin-extra-hint">안 채워도 돼. 기록하고 싶은 것만.</div>
+        <div class="checkin-extra-hint">채울수록 고동이가 볼 수 있는 게 많아져. ◆</div>
 
         <!-- Mode (moved into Extra) -->
         <div class="input-group">
@@ -56117,7 +56117,7 @@ function _quotaStateLabel(pct) {
   if (pct < 50) return '오늘 여유 충분 ✅';
   if (pct < 80) return '오늘 적당히 사용 중';
   if (pct < 95) return '오늘 거의 다 썼어';
-  return '오늘 한도 임박 — 잠깐만';
+  return '오늘 한도 임박';
 }
 
 // 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
@@ -56267,7 +56267,8 @@ async function _doRefreshBillingStatus(manual) {
     // 사용자 명시 2026-05-11 ultrathink: 추가팩 credit 가격 ($/원) 표시 폐기 — 사용량 cap bar 시각화로.
     //   추가팩 사용량 = max(0, usedUsd - quotaUsd). plan cap 넘긴 사용량부터 추가팩에서 차감.
     //   cap bar 100% = (사용한 추가팩 + 남은 balance). plan quota bar 와 동일 패턴 (line 248-249).
-    if (subActive && planKey !== 'early_light' && balance > 0) {
+    // V4 (사용자 명시 2026-05-13): 추가팩 = Premium 전용 — light/plus/미구독/게스트엔 bar 노출 X.
+    if (subActive && planKey === 'premium' && balance > 0) {
       const overageUsed = Math.max(0, usedUsd - quotaUsd);
       const overageTotal = overageUsed + balance;
       const overagePct = overageTotal > 0 ? Math.min(100, Math.round((overageUsed / overageTotal) * 100)) : 0;
@@ -56611,15 +56612,13 @@ function _getCurrentKstAnchorDay() {
   return kst.getUTCDate();
 }
 function _calcNextBillingDateKst(prevDate, anchorDay) {
+  // V4 (사용자 명시 2026-05-13): 정각 (KST 00:00:00) 기준 — 가입 시각 무관 매월 anchor day 자정. backend cycle.ts 와 일관.
   const prevKst = new Date((prevDate || new Date()).getTime() + _KST_OFFSET_MS);
   const targetYear  = prevKst.getUTCFullYear();
   const targetMonth = prevKst.getUTCMonth() + 1;
   const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
   const clippedDay = Math.min(Math.max(1, anchorDay), lastDayOfTargetMonth);
-  const nextKst = new Date(Date.UTC(
-    targetYear, targetMonth, clippedDay,
-    prevKst.getUTCHours(), prevKst.getUTCMinutes(), prevKst.getUTCSeconds()
-  ));
+  const nextKst = new Date(Date.UTC(targetYear, targetMonth, clippedDay, 0, 0, 0));
   return new Date(nextKst.getTime() - _KST_OFFSET_MS);
 }
 // Light → Premium 정가 결제 (사용자 명시 2026-05-02: 차액 결제 폐기 — 새 사이클 시작)

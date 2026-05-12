@@ -85,15 +85,13 @@ function _getCurrentKstAnchorDay() {
   return kst.getUTCDate();
 }
 function _calcNextBillingDateKst(prevDate, anchorDay) {
+  // V4 (사용자 명시 2026-05-13): 정각 (KST 00:00:00) 기준 — 가입 시각 무관 매월 anchor day 자정. backend cycle.ts 와 일관.
   const prevKst = new Date((prevDate || new Date()).getTime() + _KST_OFFSET_MS);
   const targetYear  = prevKst.getUTCFullYear();
   const targetMonth = prevKst.getUTCMonth() + 1;
   const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
   const clippedDay = Math.min(Math.max(1, anchorDay), lastDayOfTargetMonth);
-  const nextKst = new Date(Date.UTC(
-    targetYear, targetMonth, clippedDay,
-    prevKst.getUTCHours(), prevKst.getUTCMinutes(), prevKst.getUTCSeconds()
-  ));
+  const nextKst = new Date(Date.UTC(targetYear, targetMonth, clippedDay, 0, 0, 0));
   return new Date(nextKst.getTime() - _KST_OFFSET_MS);
 }
 // Light → Premium 정가 결제 (사용자 명시 2026-05-02: 차액 결제 폐기 — 새 사이클 시작)
