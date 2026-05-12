@@ -412,7 +412,7 @@ async function generateAIResponse(modelOverride, opts) {
       // V4 (사용자 명시 2026-05-13): 카피 톤 정정 — 우리 (소라고동) 문제 아니라 Claude (Anthropic) 측 일시 트래픽 과부하 명시.
       //   사용자가 "내 메시지 / 우리 앱이 문제" 로 오해하지 않게. status.anthropic.com 확인 안내 포함.
       //   raw detail (overloaded_error JSON 등) 은 사용자에게 노출 X — 어드민 자동 보고만 (reportError).
-      userMsg = '⚠️ Claude (Anthropic) 서버가 지금 일시 과부하야.\n\n우리 앱 문제 X — 전 세계 Claude 트래픽이 몰리거나 Claude 측 incident 가 있는 거.\n잠깐 후 다시 보내기 (보통 30분 ~ 2시간 안에 풀려).\n\n자세한 상태: status.anthropic.com';
+      userMsg = '⚠️ AI 서버가 지금 일시 과부하야.\n\n우리 앱 문제 X — 전 세계에서 AI 트래픽이 몰리거나 AI 측 장애가 있는 거.\n잠깐 후 다시 보내기 (보통 30분 ~ 2시간 안에 풀려).';
       const _statusMatch = m.match(/(\b5\d\d\b)/);
       const _detail = m.replace(/^API\s+\d+\s*(—\s*)?/, '').trim().slice(0, 200);
       // 사용자 명시 2026-05-05: 5xx 자동 개발자 보고 (1h dedupe — 같은 signature 1시간 안 1번만).
