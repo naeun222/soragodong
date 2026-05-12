@@ -409,15 +409,12 @@ async function generateAIResponse(modelOverride, opts) {
     } else if (/network|failed to fetch|offline/i.test(m) || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
       userMsg = '📡 인터넷 연결을 확인해봐.\n\n복구되면 "다시 보내기" 눌러줘.';
     } else if (/5\d\d/.test(m) || /overloaded/i.test(m)) {
-      // 사용자 보고 2026-05-05 ultrathink-2: 5xx 토스트가 계속 나와도 진짜 원인 (env 누락 / Anthropic overloaded / 모델 ID 거부 등) 안 보임.
-      // err.message = 'API 500 — <body snippet>' 형태 — 'API XXX —' prefix 제거 후 detail 만 토스트에 노출.
-      // backend (functions/api/chat.ts) 가 Anthropic 응답 본문 그대로 forward 하므로 진단 텍스트 (e.g., 'ANTHROPIC_API_KEY 미설정', 'overloaded_error') 가 detail 에 포함됨.
+      // V4 (사용자 명시 2026-05-13): 카피 톤 정정 — 우리 (소라고동) 문제 아니라 Claude (Anthropic) 측 일시 트래픽 과부하 명시.
+      //   사용자가 "내 메시지 / 우리 앱이 문제" 로 오해하지 않게. status.anthropic.com 확인 안내 포함.
+      //   raw detail (overloaded_error JSON 등) 은 사용자에게 노출 X — 어드민 자동 보고만 (reportError).
+      userMsg = '⚠️ Claude (Anthropic) 서버가 지금 일시 과부하야.\n\n우리 앱 문제 X — 전 세계 Claude 트래픽이 몰리거나 Claude 측 incident 가 있는 거.\n잠깐 후 다시 보내기 (보통 30분 ~ 2시간 안에 풀려).\n\n자세한 상태: status.anthropic.com';
       const _statusMatch = m.match(/(\b5\d\d\b)/);
-      const _status = _statusMatch ? ` (${_statusMatch[1]})` : '';
       const _detail = m.replace(/^API\s+\d+\s*(—\s*)?/, '').trim().slice(0, 200);
-      const _looksLikeBareCode = !_detail || /^\d{3}$/.test(_detail);
-      const _detailLine = _looksLikeBareCode ? '' : `\n\n${_detail}`;
-      userMsg = `⚠️ AI 서버 일시 과부하${_status} — 자동 재시도 후에도 실패. 1-2분 후 다시 보내기.${_detailLine}`;
       // 사용자 명시 2026-05-05: 5xx 자동 개발자 보고 (1h dedupe — 같은 signature 1시간 안 1번만).
       if (typeof reportError === 'function') {
         let _sig = 'chat-5xx';
