@@ -56478,8 +56478,8 @@ const TIER_PLANS_CLIENT = {
     tagline: '깊게, 꾸준히 — 첫 달 무료',
     emoji: '🌊',
     description: _RECUR
-      ? '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일 · Opus 깊은 대화 X. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.'
-      : '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일 · Opus 깊은 대화 X. 첫 달 무료 — 30일 후 만료 (자동 결제 X). 1인 1회 한정.',
+      ? '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.'
+      : '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 30일 후 만료 (자동 결제 X). 1인 1회 한정.',
     has_free_trial: true },
   // Premium (25,000) — top tier anchor. 정가 결제. emoji ✨ (🐚🌊✨ 그라데이션 완성).
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '마음껏 깊게', emoji: '✨',
@@ -56498,8 +56498,8 @@ const TIER_PLANS_CLIENT = {
   //   V4 (사용자 명시 2026-05-11 — 마진 조정): $1.8 → $2.2 (마진 14% — Plus 와 통일). 일일 cap $0.088.
   early_lifetime: { krw: 4900,  cap_usd: 2.2,  cap_krw: 3080,  label: 'Light',          tagline: '매일의 자기관찰', emoji: '🐚',
     description: _RECUR
-      ? '일일 사용 한도 가벼움 · 4단 심리 분석 3회/일 · Opus 깊은 대화 X.'
-      : '일일 사용 한도 가벼움 · 4단 심리 분석 3회/일 · Opus 깊은 대화 X. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
+      ? '일일 사용 한도 가벼움 · 4단 심리 분석 3회/일.'
+      : '일일 사용 한도 가벼움 · 4단 심리 분석 3회/일. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
@@ -57955,6 +57955,9 @@ async function proceedSubscribe(tierKey) {
       issueName: `소라고동 ${tier.label} 정기 (월 ${tier.krw.toLocaleString()}원 자동 갱신)`,
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
       redirectUrl: window.location.origin + (window.location.pathname || '/') + '#recurring-subscribe-return',
+      // V4 (사용자 보고 2026-05-13 ultrathink): KG이니시스 V2 모바일 빌링키 = offerPeriod 필수 ('빌링키 발급 창 호출 실패' 에러).
+      //   매월 자동결제 = ISO 8601 duration 'P1M'. PC IFRAME 흐름엔 optional 이지만 모바일 REDIRECTION 시 누락하면 발급 자체 차단.
+      offerPeriod: { interval: 'P1M' },
       customer: {
         customerId: authUserId || undefined,
         email: session?.user?.email || undefined,
@@ -58151,6 +58154,8 @@ async function proceedPlusTrial() {
       issueName: '소라고동 Plus 정기 카드 등록 (첫 달 무료)',
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
       redirectUrl: window.location.origin + (window.location.pathname || '/') + '#plus-trial-return',
+      // V4 (사용자 보고 2026-05-13 ultrathink): KG이니시스 V2 모바일 빌링키 = offerPeriod 필수 — proceedSubscribe 와 동일.
+      offerPeriod: { interval: 'P1M' },
       customer: {
         customerId: authUserId || undefined,
         email: session?.user?.email || undefined,
