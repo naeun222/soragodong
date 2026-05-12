@@ -232,7 +232,7 @@ function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) 
 function _pgLabel(method) {
   if (method === 'kakao') return '🟨 카카오페이 정기결제 (테스트 채널 TCSUBSCRIP)';
   if (method === 'card')  return '💳 KG이니시스 카드 정기결제 (테스트 채널 INIBillTst)';
-  if (method === 'toss')  return '🔵 토스페이';
+  if (method === 'toss')  return '🔵 토스페이 정기결제';
   return method || '결제수단';
 }
 
@@ -628,18 +628,26 @@ async function proceedSubscribe(tierKey) {
     alert('게스트 모드는 결제 X — 먼저 로그인.');
     return;
   }
-  const _pg = await _pickPaymentMethod({ excludeToss: true, title: `${tier.label} 정기 결제 수단 선택` });
+  // V4 (사용자 명시 2026-05-13 — 토스페이 심사용 임시 mockup): TOSS_PAY_REVIEW_MOCK=true 면 picker 에 토스페이 노출.
+  const _excludeToss = !(typeof TOSS_PAY_REVIEW_MOCK !== 'undefined' && TOSS_PAY_REVIEW_MOCK);
+  const _pg = await _pickPaymentMethod({ excludeToss: _excludeToss, title: `${tier.label} 정기 결제 수단 선택` });
   if (!_pg) return;
   const _pgInfo = _getPayChannelInfo(_pg);
+  // V4 (사용자 명시 2026-05-13 ultrathink): PG 선택 직후 자동결제 동의 모달 — 미동의 시 종료.
+  //   토스페이 심사용 mockup 흐름: picker → 동의 모달 (PG 라벨에 토스페이 표시) → 동의 후 SDK 가드.
+  const _consent = await _showRecurringConsentModal({ tier, pgLabel: _pgLabel(_pg), isTrial: false });
+  if (!_consent) return;
   const billingChannelKey = _pgInfo.billingChannelKey || _pgInfo.channelKey;
   const storeId = _pgInfo.storeId;
   if (!billingChannelKey || !storeId) {
+    // V4 (사용자 명시 2026-05-13 — 토스페이 심사용): 토스 선택 시 친절 안내 (동의 모달까지 본 후). 다른 PG 는 옛 generic 에러.
+    if (_pg === 'toss' && typeof TOSS_PAY_REVIEW_MOCK !== 'undefined' && TOSS_PAY_REVIEW_MOCK) {
+      alert('🔵 토스페이 정기결제\n\n토스페이 빌링키 채널은 현재 발급 심사 중. 채널 발급 완료 후 활성됩니다.\n\n실제 결제 시연은 KG이니시스 또는 카카오페이로 진행해주세요 — 동일한 정기결제 흐름.');
+      return;
+    }
     alert('결제 설정 오류 — 빌링키 채널 미설정');
     return;
   }
-  // V4 (사용자 명시 2026-05-13 ultrathink): PG 선택 직후 자동결제 동의 모달 — 미동의 시 종료.
-  const _consent = await _showRecurringConsentModal({ tier, pgLabel: _pgLabel(_pg), isTrial: false });
-  if (!_consent) return;
   let phoneNumber = '', fullName = '';
   if (_pgInfo.needsCustomerInfo) {
     const info = await _collectPaymentInfoIfNeeded();
@@ -824,18 +832,25 @@ async function proceedPlusTrial() {
     return;
   }
   // Plus trial = 빌링키 등록 흐름이라 토스페이 제외 (tosstest 채널 = 일반결제만).
-  const _pg = await _pickPaymentMethod({ excludeToss: true, title: 'Plus 첫 달 무료 카드 등록 수단' });
+  // V4 (사용자 명시 2026-05-13 — 토스페이 심사용 mockup): TOSS_PAY_REVIEW_MOCK=true 면 picker 에 토스페이 노출.
+  const _excludeToss = !(typeof TOSS_PAY_REVIEW_MOCK !== 'undefined' && TOSS_PAY_REVIEW_MOCK);
+  const _pg = await _pickPaymentMethod({ excludeToss: _excludeToss, title: 'Plus 첫 달 무료 카드 등록 수단' });
   if (!_pg) return;
   const _pgInfo = _getPayChannelInfo(_pg);
+  // V4 (사용자 명시 2026-05-13 ultrathink): trial 도 30일 후 자동 결제 = 동의 모달 필수.
+  //   토스페이 심사용 mockup 흐름: picker → 동의 모달 → 동의 후 SDK 가드.
+  const _consent = await _showRecurringConsentModal({ tier, pgLabel: _pgLabel(_pg), isTrial: true });
+  if (!_consent) return;
   const billingChannelKey = _pgInfo.billingChannelKey || _pgInfo.channelKey;
   const storeId = _pgInfo.storeId;
   if (!billingChannelKey || !storeId) {
+    if (_pg === 'toss' && typeof TOSS_PAY_REVIEW_MOCK !== 'undefined' && TOSS_PAY_REVIEW_MOCK) {
+      alert('🔵 토스페이 정기결제\n\n토스페이 빌링키 채널은 현재 발급 심사 중. 채널 발급 완료 후 활성됩니다.\n\n실제 결제 시연은 KG이니시스 또는 카카오페이로 진행해주세요 — 동일한 정기결제 흐름.');
+      return;
+    }
     alert('결제 설정 오류 — 빌링키 채널 미설정');
     return;
   }
-  // V4 (사용자 명시 2026-05-13 ultrathink): trial 도 30일 후 자동 결제 = 동의 모달 필수.
-  const _consent = await _showRecurringConsentModal({ tier, pgLabel: _pgLabel(_pg), isTrial: true });
-  if (!_consent) return;
   let phoneNumber = '', fullName = '';
   if (_pgInfo.needsCustomerInfo) {
     const info = await _collectPaymentInfoIfNeeded();

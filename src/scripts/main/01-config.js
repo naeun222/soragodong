@@ -19,6 +19,13 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
 //   true:  옛 정기결제 흐름 (requestIssueBillingKey + portone-register-recurring + cron 매월 갱신) 으로 복귀. 계약 승인 후 변경.
 const BILLING_RECURRING_ENABLED = true;
 
+// V4 (사용자 명시 2026-05-13 — 토스페이 심사용 임시 mockup):
+//   토스페이 빌링키 채널이 아직 발급 심사 중 → 정기결제 picker / 동의 모달에 토스페이 노출 X (`excludeToss: true`).
+//   심사관에게 결제 흐름 시연 목적으로 *임시* 노출 — picker / 동의 모달에 토스페이 카드 표시.
+//   사용자가 토스 선택 후 동의해도 SDK 호출 직전 가드에서 "빌링키 채널 = 토스 심사 중" 친절 alert 표시.
+//   ⚠ 빌링키 채널 발급 완료 후 `false` 로 복귀 (또는 진짜 channelKey set 후 flag 자체 폐기).
+const TOSS_PAY_REVIEW_MOCK = true;
+
 const PORTONE_STORE_ID                  = 'store-d59c417a-3e7b-4316-8385-238fe8ff54d0';
 const PORTONE_CHANNEL_KEY               = 'channel-key-f323504c-0f76-48c5-95df-0a8b0ab22a3a'; // KG이니시스 일반 (INIpayTest)
 const PORTONE_BILLING_CHANNEL_KEY       = 'channel-key-f5129f79-9380-4f3c-8221-2cf84f52ee18'; // KG이니시스 정기/빌링키 (INIBillTst)
