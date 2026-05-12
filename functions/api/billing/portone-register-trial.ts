@@ -108,9 +108,9 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   const tier = TIER_PLANS[TRIAL_PLAN];
 
   // billing row 갱신 (없으면 INSERT).
-  // upsert pattern — Prefer: resolution=merge-duplicates 로 user_id PK 충돌 시 갱신.
+  // V4 (사용자 보고 2026-05-13 ultrathink): on_conflict=user_id 명시 — PostgREST 일부 환경 silent fail 방어.
   try {
-    const upsertResp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing`, {
+    const upsertResp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?on_conflict=user_id`, {
       method: 'POST',
       headers: {
         'apikey': env.SUPABASE_SERVICE_ROLE_KEY,

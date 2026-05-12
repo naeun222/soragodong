@@ -156,14 +156,15 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   } catch (e) { console.warn('[register-recurring] payment 기록 실패:', e); }
 
   // billing UPSERT — active, plan, expires_at=+30d, next_billing_at=+30d.
+  // V4 (사용자 보고 2026-05-13 ultrathink): 옛 Prefer 만으론 PostgREST 일부 환경에서 update silent fail 가능성 — on_conflict=user_id 명시 + representation 응답으로 검증.
   try {
-    const upsertResp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing`, {
+    const upsertResp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?on_conflict=user_id`, {
       method: 'POST',
       headers: {
         'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
         'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': 'return=minimal,resolution=merge-duplicates'
+        'Prefer': 'return=representation,resolution=merge-duplicates'
       },
       body: JSON.stringify({
         user_id: user.id,
@@ -192,6 +193,26 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     if (!upsertResp.ok) {
       const errTxt = await upsertResp.text().catch(() => '');
       return jsonResponse({ error: 'billing 저장 실패: ' + upsertResp.status + ' ' + errTxt.slice(0, 200) }, 500);
+    }
+    // V4 (사용자 보고 2026-05-13 ultrathink): UPSERT 결과 plan 검증 — 결제 됐는데 DB 잘못 저장 시 명시 에러.
+    //   PostgREST 의 conflict 처리가 silent fail 케이스 방어. 응답 plan != 보낸 plan = critical mismatch.
+    try {
+      const upsertData: any = await upsertResp.json();
+      const savedRow = Array.isArray(upsertData) ? upsertData[0] : upsertData;
+      const savedPlan = savedRow && savedRow.subscription_plan;
+      if (savedPlan !== plan) {
+        console.error('[register-recurring] UPSERT plan mismatch!', { sent: plan, saved: savedPlan, paymentId, user: user.id });
+        return jsonResponse({
+          error: `billing 저장 mismatch — 결제는 완료됐지만 plan 저장 실패. 관리자 문의 (paymentId: ${paymentId}, sent=${plan}, saved=${savedPlan || 'null'}).`,
+          code: 'UPSERT_MISMATCH',
+          paymentId,
+          sent_plan: plan,
+          saved_plan: savedPlan
+        }, 500);
+      }
+    } catch (verifyErr: any) {
+      // representation 응답 파싱 실패 — 기존 동작 fallback (return=minimal 패턴)
+      console.warn('[register-recurring] UPSERT 응답 검증 실패 (계속 진행):', verifyErr?.message || verifyErr);
     }
   } catch (e: any) {
     return jsonResponse({ error: 'billing 저장 throw: ' + (e?.message || e) }, 500);

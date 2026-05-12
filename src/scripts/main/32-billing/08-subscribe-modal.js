@@ -759,16 +759,25 @@ async function proceedSubscribe(tierKey) {
           state.preferences.lastRegisteredAt = Date.now();
           saveState();
         } catch {}
+        // V4 (사용자 보고 2026-05-13 ultrathink): Premium 결제했는데 plan='light' 저장 버그 진단.
+        //   backend 응답 plan != 보낸 tierKey 면 UPSERT mismatch 가능 — 응답 plan 기반 tier 재계산.
+        const _actualPlanKey = result.plan || tierKey;
+        const _actualTier = (typeof TIER_PLANS_CLIENT !== 'undefined' && TIER_PLANS_CLIENT[_actualPlanKey])
+          ? TIER_PLANS_CLIENT[_actualPlanKey] : tier;
+        if (_actualPlanKey !== tierKey) {
+          console.warn('[subscribe] backend plan mismatch!', { sent: tierKey, received: _actualPlanKey });
+        }
         // V4 (사용자 명시 2026-05-13 ultrathink): 토스트 대체 — 명시 성공 모달.
         _showRecurringSuccessModal({
-          tier,
+          tier: _actualTier,
           pgLabel: _pgLabel(_pg),
           isTrial: false,
           nextBillingIso: result.next_billing_at || null
         });
       }
       closeSubscribeModal();
-      if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
+      // V4 (사용자 보고 2026-05-13): 결제 후 fresh refresh 강제 — cache 잔재 차단.
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true);
     } else {
       alert(`${tier.label} 구독 등록 실패: ` + (result.error || '알 수 없음'));
     }

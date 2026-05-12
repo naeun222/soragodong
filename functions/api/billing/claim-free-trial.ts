@@ -105,7 +105,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   if (!columnMissing) body.plus_trial_consumed_at = now.toISOString();
 
   try {
-    const upsertResp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing`, {
+    const upsertResp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?on_conflict=user_id`, {
       method: 'POST',
       headers: {
         'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
