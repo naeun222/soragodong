@@ -270,7 +270,7 @@ async function _doRefreshBillingStatus(manual) {
       if (planKey !== 'early_light') {
         // V4 (사용자 명시 2026-05-13): 정성 라벨 폐기 — 'N시간 후 reset' 만 13px 표시.
         html += `<div style="margin-top:10px; font-size:13px;">${resetStr}</div>`;
-        html += `<div style="margin-top:6px; height:8px; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:4px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
+        html += `<div style="margin-top:6px; height:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.25); border-radius:4px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
         if (isNearCap && planKey !== 'premium') {
           html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">✨ Premium 으로 늘리기</button>`;
         }
@@ -295,7 +295,7 @@ async function _doRefreshBillingStatus(manual) {
       const remainingPct = 100 - overagePct;
       const isPackNearEmpty = remainingPct < 20;
       html += `<div style="margin-top:12px; font-size:13px;"><b>추가팩</b> <span style="color:var(--text-soft); font-size:11px;">— ${remainingPct}% 남음</span></div>`;
-      html += `<div style="margin-top:6px; height:8px; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:4px; overflow:hidden;"><div style="height:100%; width:${overagePct}%; background:${isPackNearEmpty ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
+      html += `<div style="margin-top:6px; height:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.25); border-radius:4px; overflow:hidden;"><div style="height:100%; width:${overagePct}%; background:${isPackNearEmpty ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
     }
     // 사용자 명시 2026-05-11 ultrathink: 레거시 early_light 안내 제거 — 위 정상 구독 분기에서 plan 자체를 미구독 처리하므로 일관성 차원에서 잔재 라인 삭제.
     if (status) status.innerHTML = html;
