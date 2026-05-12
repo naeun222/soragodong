@@ -401,6 +401,7 @@ async function openSubscribeModal() {
           : `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus 첫 달 무료</b> (1인 1회 한정). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
              <b>부가가치세 10% 포함</b> · <b>모든 플랜 = 매월 자동 갱신</b> (해지 1-click).<br>
              해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`}
+        💎 <b>Premium 만</b> 일일 한도 도달 시 추가팩 (+${(OVERAGE_PACKS_CLIENT?.premium_pack?.krw || 2500).toLocaleString()}원) 즉시 구매 가능.<br>
         <span style="color:var(--text-dim);">⚠ 본 서비스는 임상 치료·진단·전문가 상담을 대체하지 않습니다.</span>
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>

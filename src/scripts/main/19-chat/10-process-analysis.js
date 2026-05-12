@@ -124,15 +124,19 @@ async function processAnalysis(analysis, messageIdx) {
 // V4 (v8 묶음 4): 더 알아보기 빈도 cap (Plan 별) — 튜토리얼 무제한 + 쿨다운 30분
 // 사용자 보고 2026-05-08: 옛 `billing.earlybird` boolean 필드는 backend 응답에 없음 (subscription_plan 만 있음).
 //   → 얼리버드 사용자가 fallback 1 로 떨어져 첫 시도에 막혔음. plan 문자열 매핑으로 정정.
-//   동시에 cap 소폭 완화: Free 1→2 / Light 2→3 / Early 3→4 / Premium 8→10.
+// V4 (사용자 명시 2026-05-13 ultrathink): tier 재매핑 정합성 정정 — Light(early_lifetime)=3 / Plus(light)=5 / Premium=10.
+//   옛 옛 cap (light=3 / early_lifetime=4) 은 V4 label swap *이전* 의미 (옛 light=entry, 옛 early_lifetime=mid).
+//   현 의미 (light=Plus mid, early_lifetime=Light entry) 와 어긋나 가격순 위반 (Plus 9,900 < Light 4,900 한도) 이었음.
+//   early_light (legacy 환영) = Light 와 동등 3 — daily_cap_usd 도 같음 ($0.20).
 function _getDailyDeeperCap() {
   if (window._onbTutorialMode) return Infinity;
   if (state.preferences && state.preferences.testerMode) return Infinity;
   const billing = window._billingCache;
   const plan = billing?.subscription_plan;
   if (plan === 'premium') return 10;
-  if (plan === 'light') return 3;
-  if (plan === 'early_light' || plan === 'early_lifetime') return 4;
+  if (plan === 'light') return 5;           // Plus
+  if (plan === 'early_lifetime') return 3;  // Light
+  if (plan === 'early_light') return 3;     // legacy 환영 (Light 와 동등)
   return 2;
 }
 function _getTodayDeeperCount() {

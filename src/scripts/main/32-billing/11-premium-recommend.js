@@ -93,15 +93,12 @@ function showBudgetExceededModal(reason, opts) {
       }
       titleText = '🌙 오늘은 여기까지';
       bodyText = '내일 또 24h ✨<br><span style="color:var(--text-soft); font-size:11px;">오늘 충분히 깊게 했어 — 내일 다시 만나자.</span>';
-      // 추가팩 (작은 단위) — 24h 못 기다리는 경우.
-      // V4 (사용자 명시 2026-05-11): Light(early_lifetime) 은 추가팩 X — Plus 업그레이드 권유 흐름. 일일 cap 모달엔 추가팩 안내 생략.
-      const packKey = (plan === 'premium') ? 'premium_pack'
-        : (plan === 'early_light' ? 'early_pack'
-        : (plan === 'light' ? 'light_pack' : null));
-      const pack = packKey ? OVERAGE_PACKS_CLIENT[packKey] : null;
+      // V4 (사용자 명시 2026-05-13 ultrathink): 추가팩 = Premium 전용 — light_pack / early_pack dead code 제거.
+      //   Light/Plus 사용자는 추가팩 버튼 X — '내일 만날게' 만 노출. (Premium = premium_pack 즉시 구매 가능.)
+      const pack = (plan === 'premium') ? OVERAGE_PACKS_CLIENT.premium_pack : null;
       if (pack) {
         optionsHtml = `
-          <button class="btn-secondary" onclick="purchaseOveragePack('${packKey}')" style="width:100%; margin-bottom:6px;">🌿 못 기다리겠어 — 추가팩 ${pack.krw.toLocaleString()}원</button>
+          <button class="btn-secondary" onclick="purchaseOveragePack('premium_pack')" style="width:100%; margin-bottom:6px;">🌿 못 기다리겠어 — 추가팩 ${pack.krw.toLocaleString()}원</button>
           <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">내일 만날게 ✨</button>
         `;
       } else {
@@ -135,13 +132,12 @@ function showBudgetExceededModal(reason, opts) {
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 사이클 기다릴게</button>
       `;
     } else if (subActive && plan === 'light') {
-      // Plus(9,900) 월 cap 도달 — 추가팩 OR Premium 권유
-      const pack = OVERAGE_PACKS_CLIENT.light_pack;
-      bodyText = '이번 달 한도 도달했네.<br>Premium 가면 더 깊게 (3x 일일 자유) — Opus 깊은 대화 30번/일.';
+      // V4 (사용자 명시 2026-05-13 ultrathink): Plus 사이클 한도 도달 — 추가팩 X (Premium 전용), Premium 권유만.
+      //   ('이번 달 한도' 카피는 옛 monthly cap 잔재 — 실제 가드는 daily 만. 사이클/다음 날 톤으로 정정.)
+      bodyText = '한도 도달했네.<br>Premium 가면 더 깊게 (2.5x 일일 자유) — Opus 깊은 대화 30번/일.';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ Premium 구독하기 (25,000원/월)</button>
-        ${pack ? `<button class="btn-secondary" onclick="purchaseOveragePack('light_pack')" style="width:100%; margin-bottom:6px;">🌿 Plus 추가팩 ${pack.krw.toLocaleString()}원 (1일분+α)</button>` : ''}
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 달 기다릴게</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 날 기다릴게</button>
       `;
     } else {
       // 비구독 (체험 만료) — 구독 안내.

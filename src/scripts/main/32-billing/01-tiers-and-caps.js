@@ -21,18 +21,20 @@
 const _RECUR = (typeof BILLING_RECURRING_ENABLED !== 'undefined') ? BILLING_RECURRING_ENABLED : true;
 const TIER_PLANS_CLIENT = {
   // Plus (9,900) — key 'light'. mid tier. 첫 달 무료 — RECUR 에 따라 카피만 분기.
+  // V4 (사용자 명시 2026-05-13 ultrathink): description 재작성 — 일일 cap (정성) / 4단 심리 분석 일일 횟수 (정량) / Opus 유무.
+  //   옛 카피 ('마법고동 큰 결정 / 주간·월간 회고 풀 활용') 폐기 — 두 기능 다 전 tier 공통이라 차별점 아님.
   light:          { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Plus',
     tagline: '깊게, 꾸준히 — 첫 달 무료',
     emoji: '🌊',
     description: _RECUR
-      ? '일반 대화 + 4단 분석 풀로. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.'
-      : '일반 대화 + 4단 분석 풀로. 첫 달 무료 — 30일 후 만료 (자동 결제 X). 1인 1회 한정.',
+      ? '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일 · Opus 깊은 대화 X. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.'
+      : '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일 · Opus 깊은 대화 X. 첫 달 무료 — 30일 후 만료 (자동 결제 X). 1인 1회 한정.',
     has_free_trial: true },
   // Premium (25,000) — top tier anchor. 정가 결제. emoji ✨ (🐚🌊✨ 그라데이션 완성).
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '마음껏 깊게', emoji: '✨',
     description: _RECUR
-      ? '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.'
-      : '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
+      ? '일일 사용 한도 풍부 · 4단 심리 분석 10회/일 · Opus 깊은 대화 30턴/일.'
+      : '일일 사용 한도 풍부 · 4단 심리 분석 10회/일 · Opus 깊은 대화 30턴/일. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
   // V4 (사용자 명시 2026-05-11 ultrathink — 정정): early_light plan 자동 활성화 폐기 → credit_balance_usd 환영 토큰 grant 으로 변경.
   //   backend `_lib/billing.ts:ensureBillingRow` = 신규 가입 시 WELCOME_TOKEN_USD ($1.1, 양 비공개) 만 grant. plan/subscription 활성화 X.
   //   funnel: 가입 → 환영 토큰 (소진까지, 시간 무관) → 사용자 명시 'Plus trial' 신청 (1인 1회, 카드 등록) → 정가 결제.
@@ -45,20 +47,17 @@ const TIER_PLANS_CLIENT = {
   //   V4 (사용자 명시 2026-05-11 — 마진 조정): $1.8 → $2.2 (마진 14% — Plus 와 통일). 일일 cap $0.088.
   early_lifetime: { krw: 4900,  cap_usd: 2.2,  cap_krw: 3080,  label: 'Light',          tagline: '매일의 자기관찰', emoji: '🐚',
     description: _RECUR
-      ? '일반 대화 + 가벼운 분석. 매일 5~10분 자기관찰에 충분.'
-      : '일반 대화 + 가벼운 분석. 매일 5~10분 자기관찰에 충분. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
+      ? '일일 사용 한도 가벼움 · 4단 심리 분석 3회/일 · Opus 깊은 대화 X.'
+      : '일일 사용 한도 가벼움 · 4단 심리 분석 3회/일 · Opus 깊은 대화 X. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
 };
-// 사용자 명시 2026-05-02 ultrathink: light_pack 제거 — Premium 전용. Light/얼리는 Premium 전환 또는 다음 달 대기.
-// V4 (사용자 명시 2026-05-04 ultrathink — v2 갱신): 추가팩 재설계 — 작은 단위 + 두 tier 다 가능. *24h 못 기다리는 사용자* trigger.
-// V4 (사용자 명시 2026-05-11 ultrathink): tier 재구성에 따라 label 갱신 — key 'light' = Plus tier.
-//   ⚠ Light (4,900, key='early_lifetime') 는 *추가팩 X* — cap 닿으면 Plus 업그레이드 권유 (upgrade funnel).
-// 옛 5,000원 / +$4 (light) 와 7,000원 / +$5 (premium) 폐기.
+// V4 (사용자 명시 2026-05-13 ultrathink): light_pack / early_pack dead code 제거.
+//   backend `_lib/billing.ts:OVERAGE_PACKS` = premium_pack only + `overage-pack.ts:isPremium` 가드 라
+//   Light/Plus 사용자가 누르면 backend 가 거부함. UI 노출 자체가 dead-end 였어 — 청소.
+//   Light/Plus 사용자는 cap 도달 시 다음 날 (4AM KST) 대기 또는 Premium 업그레이드.
 const OVERAGE_PACKS_CLIENT = {
-  light_pack:   { krw: 1500, usd: 1.0, label: 'Plus 추가팩',    tier: 'light' },
-  early_pack:   { krw: 1500, usd: 1.0, label: 'Light 추가팩',   tier: 'early_light' },
   premium_pack: { krw: 2500, usd: 1.5, label: 'Premium 추가팩', tier: 'premium' }
 };
 // V4 (사용자 명시 2026-05-04 ultrathink — v2): tier 별 일일 cap 비율 (월 cap × 비율 / 30 = 일일).

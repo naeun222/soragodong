@@ -40657,15 +40657,19 @@ async function processAnalysis(analysis, messageIdx) {
 // V4 (v8 묶음 4): 더 알아보기 빈도 cap (Plan 별) — 튜토리얼 무제한 + 쿨다운 30분
 // 사용자 보고 2026-05-08: 옛 `billing.earlybird` boolean 필드는 backend 응답에 없음 (subscription_plan 만 있음).
 //   → 얼리버드 사용자가 fallback 1 로 떨어져 첫 시도에 막혔음. plan 문자열 매핑으로 정정.
-//   동시에 cap 소폭 완화: Free 1→2 / Light 2→3 / Early 3→4 / Premium 8→10.
+// V4 (사용자 명시 2026-05-13 ultrathink): tier 재매핑 정합성 정정 — Light(early_lifetime)=3 / Plus(light)=5 / Premium=10.
+//   옛 옛 cap (light=3 / early_lifetime=4) 은 V4 label swap *이전* 의미 (옛 light=entry, 옛 early_lifetime=mid).
+//   현 의미 (light=Plus mid, early_lifetime=Light entry) 와 어긋나 가격순 위반 (Plus 9,900 < Light 4,900 한도) 이었음.
+//   early_light (legacy 환영) = Light 와 동등 3 — daily_cap_usd 도 같음 ($0.20).
 function _getDailyDeeperCap() {
   if (window._onbTutorialMode) return Infinity;
   if (state.preferences && state.preferences.testerMode) return Infinity;
   const billing = window._billingCache;
   const plan = billing?.subscription_plan;
   if (plan === 'premium') return 10;
-  if (plan === 'light') return 3;
-  if (plan === 'early_light' || plan === 'early_lifetime') return 4;
+  if (plan === 'light') return 5;           // Plus
+  if (plan === 'early_lifetime') return 3;  // Light
+  if (plan === 'early_light') return 3;     // legacy 환영 (Light 와 동등)
   return 2;
 }
 function _getTodayDeeperCount() {
@@ -56468,18 +56472,20 @@ async function requestRefund(paymentId, amountKrw, label) {
 const _RECUR = (typeof BILLING_RECURRING_ENABLED !== 'undefined') ? BILLING_RECURRING_ENABLED : true;
 const TIER_PLANS_CLIENT = {
   // Plus (9,900) — key 'light'. mid tier. 첫 달 무료 — RECUR 에 따라 카피만 분기.
+  // V4 (사용자 명시 2026-05-13 ultrathink): description 재작성 — 일일 cap (정성) / 4단 심리 분석 일일 횟수 (정량) / Opus 유무.
+  //   옛 카피 ('마법고동 큰 결정 / 주간·월간 회고 풀 활용') 폐기 — 두 기능 다 전 tier 공통이라 차별점 아님.
   light:          { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Plus',
     tagline: '깊게, 꾸준히 — 첫 달 무료',
     emoji: '🌊',
     description: _RECUR
-      ? '일반 대화 + 4단 분석 풀로. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.'
-      : '일반 대화 + 4단 분석 풀로. 첫 달 무료 — 30일 후 만료 (자동 결제 X). 1인 1회 한정.',
+      ? '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일 · Opus 깊은 대화 X. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.'
+      : '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일 · Opus 깊은 대화 X. 첫 달 무료 — 30일 후 만료 (자동 결제 X). 1인 1회 한정.',
     has_free_trial: true },
   // Premium (25,000) — top tier anchor. 정가 결제. emoji ✨ (🐚🌊✨ 그라데이션 완성).
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '마음껏 깊게', emoji: '✨',
     description: _RECUR
-      ? '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일.'
-      : '긴 대화 / 4단 분석 / 마법고동 큰 결정 / 주간·월간 회고 풀 활용. Opus 깊은 대화 30번/일. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
+      ? '일일 사용 한도 풍부 · 4단 심리 분석 10회/일 · Opus 깊은 대화 30턴/일.'
+      : '일일 사용 한도 풍부 · 4단 심리 분석 10회/일 · Opus 깊은 대화 30턴/일. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
   // V4 (사용자 명시 2026-05-11 ultrathink — 정정): early_light plan 자동 활성화 폐기 → credit_balance_usd 환영 토큰 grant 으로 변경.
   //   backend `_lib/billing.ts:ensureBillingRow` = 신규 가입 시 WELCOME_TOKEN_USD ($1.1, 양 비공개) 만 grant. plan/subscription 활성화 X.
   //   funnel: 가입 → 환영 토큰 (소진까지, 시간 무관) → 사용자 명시 'Plus trial' 신청 (1인 1회, 카드 등록) → 정가 결제.
@@ -56492,20 +56498,17 @@ const TIER_PLANS_CLIENT = {
   //   V4 (사용자 명시 2026-05-11 — 마진 조정): $1.8 → $2.2 (마진 14% — Plus 와 통일). 일일 cap $0.088.
   early_lifetime: { krw: 4900,  cap_usd: 2.2,  cap_krw: 3080,  label: 'Light',          tagline: '매일의 자기관찰', emoji: '🐚',
     description: _RECUR
-      ? '일반 대화 + 가벼운 분석. 매일 5~10분 자기관찰에 충분.'
-      : '일반 대화 + 가벼운 분석. 매일 5~10분 자기관찰에 충분. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
+      ? '일일 사용 한도 가벼움 · 4단 심리 분석 3회/일 · Opus 깊은 대화 X.'
+      : '일일 사용 한도 가벼움 · 4단 심리 분석 3회/일 · Opus 깊은 대화 X. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
 };
-// 사용자 명시 2026-05-02 ultrathink: light_pack 제거 — Premium 전용. Light/얼리는 Premium 전환 또는 다음 달 대기.
-// V4 (사용자 명시 2026-05-04 ultrathink — v2 갱신): 추가팩 재설계 — 작은 단위 + 두 tier 다 가능. *24h 못 기다리는 사용자* trigger.
-// V4 (사용자 명시 2026-05-11 ultrathink): tier 재구성에 따라 label 갱신 — key 'light' = Plus tier.
-//   ⚠ Light (4,900, key='early_lifetime') 는 *추가팩 X* — cap 닿으면 Plus 업그레이드 권유 (upgrade funnel).
-// 옛 5,000원 / +$4 (light) 와 7,000원 / +$5 (premium) 폐기.
+// V4 (사용자 명시 2026-05-13 ultrathink): light_pack / early_pack dead code 제거.
+//   backend `_lib/billing.ts:OVERAGE_PACKS` = premium_pack only + `overage-pack.ts:isPremium` 가드 라
+//   Light/Plus 사용자가 누르면 backend 가 거부함. UI 노출 자체가 dead-end 였어 — 청소.
+//   Light/Plus 사용자는 cap 도달 시 다음 날 (4AM KST) 대기 또는 Premium 업그레이드.
 const OVERAGE_PACKS_CLIENT = {
-  light_pack:   { krw: 1500, usd: 1.0, label: 'Plus 추가팩',    tier: 'light' },
-  early_pack:   { krw: 1500, usd: 1.0, label: 'Light 추가팩',   tier: 'early_light' },
   premium_pack: { krw: 2500, usd: 1.5, label: 'Premium 추가팩', tier: 'premium' }
 };
 // V4 (사용자 명시 2026-05-04 ultrathink — v2): tier 별 일일 cap 비율 (월 cap × 비율 / 30 = 일일).
@@ -57847,6 +57850,7 @@ async function openSubscribeModal() {
           : `💡 잘 모르겠으면 <b style="color:#5fb4d3;">Plus 첫 달 무료</b> (1인 1회 한정). 가볍게 시작은 Light, 깊게 자주 쓰면 Premium.<br>
              <b>부가가치세 10% 포함</b> · <b>모든 플랜 = 매월 자동 갱신</b> (해지 1-click).<br>
              해지: [설정 → 구독] 다음 갱신 해지 / 환불 잔여일 비례 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>).<br>`}
+        💎 <b>Premium 만</b> 일일 한도 도달 시 추가팩 (+${(OVERAGE_PACKS_CLIENT?.premium_pack?.krw || 2500).toLocaleString()}원) 즉시 구매 가능.<br>
         <span style="color:var(--text-dim);">⚠ 본 서비스는 임상 치료·진단·전문가 상담을 대체하지 않습니다.</span>
       </div>
       <button class="btn-secondary" onclick="closeSubscribeModal()" style="width:100%; margin-top:10px;">닫기</button>
@@ -58843,15 +58847,12 @@ function showBudgetExceededModal(reason, opts) {
       }
       titleText = '🌙 오늘은 여기까지';
       bodyText = '내일 또 24h ✨<br><span style="color:var(--text-soft); font-size:11px;">오늘 충분히 깊게 했어 — 내일 다시 만나자.</span>';
-      // 추가팩 (작은 단위) — 24h 못 기다리는 경우.
-      // V4 (사용자 명시 2026-05-11): Light(early_lifetime) 은 추가팩 X — Plus 업그레이드 권유 흐름. 일일 cap 모달엔 추가팩 안내 생략.
-      const packKey = (plan === 'premium') ? 'premium_pack'
-        : (plan === 'early_light' ? 'early_pack'
-        : (plan === 'light' ? 'light_pack' : null));
-      const pack = packKey ? OVERAGE_PACKS_CLIENT[packKey] : null;
+      // V4 (사용자 명시 2026-05-13 ultrathink): 추가팩 = Premium 전용 — light_pack / early_pack dead code 제거.
+      //   Light/Plus 사용자는 추가팩 버튼 X — '내일 만날게' 만 노출. (Premium = premium_pack 즉시 구매 가능.)
+      const pack = (plan === 'premium') ? OVERAGE_PACKS_CLIENT.premium_pack : null;
       if (pack) {
         optionsHtml = `
-          <button class="btn-secondary" onclick="purchaseOveragePack('${packKey}')" style="width:100%; margin-bottom:6px;">🌿 못 기다리겠어 — 추가팩 ${pack.krw.toLocaleString()}원</button>
+          <button class="btn-secondary" onclick="purchaseOveragePack('premium_pack')" style="width:100%; margin-bottom:6px;">🌿 못 기다리겠어 — 추가팩 ${pack.krw.toLocaleString()}원</button>
           <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">내일 만날게 ✨</button>
         `;
       } else {
@@ -58885,13 +58886,12 @@ function showBudgetExceededModal(reason, opts) {
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 사이클 기다릴게</button>
       `;
     } else if (subActive && plan === 'light') {
-      // Plus(9,900) 월 cap 도달 — 추가팩 OR Premium 권유
-      const pack = OVERAGE_PACKS_CLIENT.light_pack;
-      bodyText = '이번 달 한도 도달했네.<br>Premium 가면 더 깊게 (3x 일일 자유) — Opus 깊은 대화 30번/일.';
+      // V4 (사용자 명시 2026-05-13 ultrathink): Plus 사이클 한도 도달 — 추가팩 X (Premium 전용), Premium 권유만.
+      //   ('이번 달 한도' 카피는 옛 monthly cap 잔재 — 실제 가드는 daily 만. 사이클/다음 날 톤으로 정정.)
+      bodyText = '한도 도달했네.<br>Premium 가면 더 깊게 (2.5x 일일 자유) — Opus 깊은 대화 30번/일.';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">✨ Premium 구독하기 (25,000원/월)</button>
-        ${pack ? `<button class="btn-secondary" onclick="purchaseOveragePack('light_pack')" style="width:100%; margin-bottom:6px;">🌿 Plus 추가팩 ${pack.krw.toLocaleString()}원 (1일분+α)</button>` : ''}
-        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 달 기다릴게</button>
+        <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 날 기다릴게</button>
       `;
     } else {
       // 비구독 (체험 만료) — 구독 안내.
