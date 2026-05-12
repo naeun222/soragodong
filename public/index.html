@@ -56110,15 +56110,8 @@ function saveSettings() {
   if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
 }
 
-// 사용자 명시 2026-05-05: 토큰/달러 raw 수치 폐기 — 구독제 무드에 맞춰 상태 라벨 4단계로 추상화.
-// Why: 4자리 소수점 달러 + token 수 노출은 "정해진 금액으로 마음껏" 이라는 구독제 핵심 감각을 깬다.
-// V4 (사용자 명시 2026-05-13 ultrathink): 일일 cap 기준 (옛 monthly 표현 폐기 — 월 cap 가드 자체 없음).
-function _quotaStateLabel(pct) {
-  if (pct < 50) return '오늘 여유 충분 ✅';
-  if (pct < 80) return '오늘 적당히 사용 중';
-  if (pct < 95) return '오늘 거의 다 썼어';
-  return '오늘 한도 임박';
-}
+// V4 (사용자 명시 2026-05-13): _quotaStateLabel 4단계 정성 라벨 폐기 — 'N시간 후 reset' 으로 통일.
+//   옛 라벨 ('오늘 여유 충분' / '적당히 사용 중' / '거의 다 썼어' / '한도 임박') 모두 제거.
 
 // 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
 // 사용자 명시 2026-05-05: in-flight dedup + 30s TTL cache. manual=true (🔄 button) 만 항상 fresh fetch.
@@ -56246,10 +56239,8 @@ async function _doRefreshBillingStatus(manual) {
       html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${expiresLabel}</span></div>`;
       // early_light: 토큰 양 안 보이게 (체험 플랜은 수치 노출 X)
       if (planKey !== 'early_light') {
-        html += `<div style="margin-top:10px; display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
-          <div style="font-size:13px;">${_quotaStateLabel(usedPct)}</div>
-          <div style="font-size:10.5px; color:var(--text-soft);">${resetStr}</div>
-        </div>`;
+        // V4 (사용자 명시 2026-05-13): 정성 라벨 폐기 — 'N시간 후 reset' 만 13px 표시.
+        html += `<div style="margin-top:10px; font-size:13px;">${resetStr}</div>`;
         html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
         if (isNearCap && planKey !== 'premium') {
           html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">✨ Premium 으로 늘리기</button>`;
