@@ -39,6 +39,18 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 - `/api/admin/*` (피드백 답변 / 토스 송금 처리)
 - `/api/billing/subscribe` / `overage-pack` / `upgrade-tier` (포트원 키 적용된 후)
 
+### 1-bis. 🔴 Cloudflare Workers AI binding (RAG embedding) 활성
+
+**상태**: `wrangler.jsonc` 의 `[ai] binding=AI` 추가 완료 (사용자 명시 2026-05-13). **Cloudflare Pages 재배포 후 적용**.
+
+**위치**: Cloudflare 대시보드 → Workers & Pages → soragodong → Deployments → 최신 production retry (또는 다음 push 자동 trigger).
+
+**역할**: `functions/api/embeddings/bge.ts` 가 `env.AI.run('@cf/baai/bge-m3')` 호출 — RAG retrieval 의 핵심.
+
+**검증**: 재배포 후 Plus/Premium 사용자가 대화탭 RAG 토글 ON → 첫 메시지 보냈을 때 콘솔에 `[rag]` 경고 없으면 OK. 만약 `AI_BINDING_MISSING` 에러 보이면 binding 미적용.
+
+**비용**: 100K req/일 무료. 사용자 ~3000명 까지 free tier 안. 그 이후 P2 재검토 (USER_TODO P2-10-3).
+
 ### 2. Supabase Migration 실행 (5분)
 
 **위치**: Supabase 대시보드 → SQL Editor → New query → 복붙 → Run
