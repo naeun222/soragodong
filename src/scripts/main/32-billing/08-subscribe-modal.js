@@ -399,10 +399,14 @@ async function openSubscribeModal() {
         buttonHtml = `<button class="btn-secondary" onclick="changeRegisteredCard()" style="width:100%; padding:11px;">💳 결제수단 (카드) 변경</button>`;
       }
     } else if (isPlanChange) {
-      // 업그레이드 또는 다운그레이드 (모두 허용 — 사용자 명시 2026-05-13). confirm 은 proceedSubscribe 안에서.
-      const direction = _isUpgrade ? '업그레이드' : '다운그레이드';
-      const arrow = _isUpgrade ? '✨' : '🔽';
-      buttonHtml = `<button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">${arrow} ${plan.label} 으로 ${direction} (월 ${plan.krw.toLocaleString()}원)</button>`;
+      // V4 (사용자 명시 2026-05-13 ultrathink): 업그레이드 = 즉시 변경 (proceedSubscribe) / 다운그레이드 = 다음 갱신부터 (scheduleDowngrade).
+      //   다운그레이드 = 현 cycle 만료까지 그대로 사용, 자동 갱신 차단, 만료 후 직접 새 tier 가입. (Phase A — frontend-only)
+      //   Phase B (자동 전환) = supabase migration `scheduled_plan_change` 컬럼 + cron 분기 추가 시 가능.
+      if (_isUpgrade) {
+        buttonHtml = `<button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">✨ ${plan.label} 으로 업그레이드 (월 ${plan.krw.toLocaleString()}원)</button>`;
+      } else {
+        buttonHtml = `<button class="btn-secondary" onclick="scheduleDowngrade('${key}')" style="width:100%; padding:11px;">🔽 ${plan.label} 으로 다운그레이드 (다음 갱신부터)</button>`;
+      }
     } else {
       // 미구독 신규 가입 흐름 (기존).
       const buttonStyle = isFreeTrial
@@ -498,6 +502,52 @@ function closeSubscribeModal() {
   if (overlay) overlay.remove();
 }
 
+// V4 (사용자 명시 2026-05-13 ultrathink): 다운그레이드 = 다음 갱신부터 (Phase A — frontend-only).
+//   동작:
+//     1) 사용자 confirm — '현 cycle 만료까지 그대로, 만료 후 직접 새 tier 가입' 명시
+//     2) /api/billing/cancel-renewal 호출 — cancel_at_period_end=true set (cron 자동 charge 차단)
+//     3) state.preferences._scheduledDowngradeTo = newTierKey 저장 (만료 시 UI 안내용)
+//     4) 토스트 + 모달 닫음 + billing status 갱신
+//   ⚠ 완전 자동 전환 (만료일 = 새 plan 자동 시작) 은 supabase migration `scheduled_plan_change` 컬럼 + cron-charge-recurring 분기 추가 필요 = Phase B 별도.
+async function scheduleDowngrade(tierKey) {
+  const tier = TIER_PLANS_CLIENT[tierKey];
+  if (!tier) { alert('잘못된 tier'); return; }
+  const curPlan = window._billingCache?.subscription_plan;
+  const curLabel = TIER_PLANS_CLIENT[curPlan]?.label || curPlan || '현재 plan';
+  const expiresIso = window._billingCache?.subscription_expires_at;
+  const expiresStr = expiresIso ? new Date(expiresIso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : '만료일';
+  const ok = confirm(`🔽 ${tier.label} 으로 다운그레이드 (다음 갱신부터)\n\n• 오늘부터 ${expiresStr} 까지 ${curLabel} 그대로 사용\n• ${expiresStr} 에 자동 결제 X (취소됨)\n• 만료 후 ${tier.label} 직접 가입 (구독 모달 → ${tier.label} 카드)\n\n취소하려면 [설정 → 결제 내역 / 환불 / 해지] 에서 해지 취소.\n\n계속할까?`);
+  if (!ok) return;
+  if (!session?.access_token) { alert('로그인 필요'); return; }
+  try {
+    const _origFetch = window._anthropicOrigFetch || window.fetch;
+    const resp = await _origFetch('/api/billing/cancel-renewal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({})
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok && data.ok) {
+      try {
+        state.preferences = state.preferences || {};
+        state.preferences._scheduledDowngradeTo = tierKey;
+        state.preferences._scheduledDowngradeAt = Date.now();
+        saveState();
+      } catch {}
+      showToast(`🔽 ${expiresStr} 만료 후 ${tier.label} 가입 안내`);
+      closeSubscribeModal();
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true);
+    } else {
+      alert('다운그레이드 예약 실패: ' + (data.error || resp.status));
+    }
+  } catch (e) {
+    alert('통신 오류: ' + (e?.message || e));
+  }
+}
+
 // 사용자 명시 2026-05-11: Premium 사용자만 추가팩 구매 가능. 비-Premium 클릭 시 토스트만.
 function tryBuyPremiumPack() {
   const plan = window._billingCache?.subscription_plan || null;
@@ -521,19 +571,15 @@ function tryBuyPremiumPack() {
 async function proceedSubscribe(tierKey) {
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 tier'); return; }
-  // V4 (사용자 명시 2026-05-13 ultrathink): plan 변경 흐름 (업/다운 모두) — 옛 구독 종료 + 새 cycle 시작 confirm.
+  // V4 (사용자 명시 2026-05-13 ultrathink): 업그레이드 confirm — 옛 구독 즉시 종료 + 새 cycle.
+  //   다운그레이드는 별도 `scheduleDowngrade()` 가 처리 (cancel-renewal + 만료 후 직접 가입). 여기엔 안 옴.
   //   backend `portone-register-recurring` 이 upsert 라 옛 row 자동 덮어씌움.
-  //   잔여 trial / cycle 일수 보상 X — upgrade-tier.ts 정책과 일관.
   const _curBillingPlan   = window._billingCache?.subscription_plan || null;
   const _curBillingActive = !!window._billingCache?.subscription_active;
-  const _isPlanChanging   = _curBillingActive && _curBillingPlan && _curBillingPlan !== tierKey;
-  if (_isPlanChanging) {
-    const _rank = { early_lifetime: 1, light: 2, premium: 3 };
-    const _up = (_rank[tierKey] || 0) > (_rank[_curBillingPlan] || 0);
+  const _isUpgrading      = _curBillingActive && _curBillingPlan && _curBillingPlan !== tierKey;
+  if (_isUpgrading) {
     const curLabel = TIER_PLANS_CLIENT[_curBillingPlan]?.label || _curBillingPlan;
-    const dirLabel = _up ? '업그레이드' : '다운그레이드';
-    const dirIcon  = _up ? '✨' : '🔽';
-    const ok = confirm(`${dirIcon} ${tier.label} 으로 ${dirLabel}\n\n현재 ${curLabel} 구독이 즉시 종료되고, 오늘부터 새 ${tier.label} 사이클이 시작돼.\n\n• 오늘 ${tier.krw.toLocaleString()}원 즉시 결제\n• 다음 자동 결제는 30일 후\n• 잔여 ${curLabel} 일수 보상 X (정책상)\n• 결제수단도 새 카드로 등록\n\n계속할까?`);
+    const ok = confirm(`✨ ${tier.label} 으로 업그레이드\n\n현재 ${curLabel} 구독이 즉시 종료되고, 오늘부터 새 ${tier.label} 사이클이 시작돼.\n\n• 오늘 ${tier.krw.toLocaleString()}원 즉시 결제\n• 다음 자동 결제는 30일 후\n• 잔여 ${curLabel} 일수 보상 X (정책상)\n• 결제수단도 새 카드로 등록\n\n계속할까?`);
     if (!ok) return;
   }
   // V4 (사용자 보고 2026-05-13 ultrathink): trial 소진 사용자 safety net — cache 갱신 race / 옛 stale UI 클릭 케이스 보호.

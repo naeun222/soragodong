@@ -209,7 +209,36 @@ const ADMIN_EMAIL = 'jade6679@naver.com';
 const ADMIN_UID = '4ba0a92e-7f79-45ec-8c48-b339d259382e';
 function _isAdmin() {
   if (typeof session === 'undefined' || !session || !session.user) return false;
-  return session.user.id === ADMIN_UID;
+  if (session.user.id !== ADMIN_UID) return false;
+  // V4 (사용자 명시 2026-05-13): 어드민 overlay 잠시 끄기 (Plus 구독 관리 화면 등 *일반 사용자 시각* 으로 보기).
+  //   state.preferences._adminOff=true 면 일반 사용자처럼 동작 — settings 의 admin 분기 / dev tool / 자동 분석 skip 등 모두 off.
+  //   토글: `toggleAdminOverlay()` console 명령 (또는 별도 버튼 추가 가능).
+  if (typeof state !== 'undefined' && state && state.preferences && state.preferences._adminOff) return false;
+  return true;
+}
+
+// V4 (사용자 명시 2026-05-13): 어드민 overlay 토글 — 일반 사용자 시각 디버깅용.
+//   `toggleAdminOverlay()` console 호출 → state.preferences._adminOff 토글 + 화면 갱신.
+//   UID 검증은 진짜 admin 만 토글 가능 (overlay off 상태에서도). _isAdmin() 의 caching 우회 위해 raw UID 비교.
+function toggleAdminOverlay() {
+  if (typeof session === 'undefined' || !session?.user || session.user.id !== ADMIN_UID) {
+    if (typeof showToast === 'function') showToast('어드민 계정만');
+    return;
+  }
+  state.preferences = state.preferences || {};
+  const next = !state.preferences._adminOff;
+  state.preferences._adminOff = next;
+  try { saveState(); } catch {}
+  if (typeof showToast === 'function') {
+    showToast(next ? '🧑 일반 사용자 모드 — 어드민 overlay off' : '🛡️ 어드민 overlay 복귀');
+  }
+  // 즉시 화면 반영 — billing status / dev tool 표시 등 갱신.
+  if (typeof refreshBillingStatus === 'function') {
+    try { refreshBillingStatus(true); } catch {}
+  }
+  // settings 화면이 열려 있으면 dev tool 가시성도 재계산.
+  const devSection = document.getElementById('devToolsSection');
+  if (devSection) devSection.style.display = _isAdmin() ? 'block' : 'none';
 }
 
 const V4_USER_ID = 'me_v4';
