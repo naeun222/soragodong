@@ -29,7 +29,7 @@ function _renderMutationChat() {
             </div>
             <div class="mutation-chat-header-sub" id="mutationChatSubtitle"></div>
           </div>
-          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환" style="margin-right:8px;"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
+          <!-- V4 (사용자 명시 2026-05-13): 돌연변이 = 짧은 일회성 추출. Opus/Sonnet 토글 자체 제거. Sonnet 자동. -->
           <button class="mutation-chat-close" onclick="closeMutationChat(false)" aria-label="닫기">✕</button>
         </div>
         <div class="mutation-chat-area" id="mutationChatArea"></div>
