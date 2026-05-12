@@ -235,8 +235,13 @@ function _rcSimRenderModePick(blockKey) {
 }
 
 // 사용자 명시 2026-05-11: 개발자 테스트용 reset 버튼 (↻ 다시 시도) 제거. rcSimReset 함수는 유지 (legacy 호환).
+// V4 (사용자 명시 2026-05-13): 어드민 계정 + 고동이 모드 한정 으로 ↻ 다시 시도 버튼 복원. 일반 사용자 = 빈 문자열 그대로.
 function _rcSimResetBtnHtml() {
-  return '';
+  if (typeof _isAdmin !== 'function' || !_isAdmin()) return '';
+  const r = (typeof _ensureRotatingCardState === 'function') ? _ensureRotatingCardState() : null;
+  const cur = r && r.currentSimulation;
+  if (!cur || cur.mode !== 'godong') return '';
+  return `<button class="rc-sim-reset-btn" type="button" onclick="event.stopPropagation(); rcSimReset()" title="↻ 다시 시도 (어드민)" style="background:transparent; border:1px dashed rgba(255,255,255,0.25); color:var(--text-soft); font-size:11px; padding:4px 9px; border-radius:6px; cursor:pointer;">↻ 다시 시도</button>`;
 }
 
 function _rcSimRenderGenerating() {
