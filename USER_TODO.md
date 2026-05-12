@@ -66,6 +66,8 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 
 **🔴 0016 (2026-05-09 사용자 보고)**: `0016_billing_user_email.sql` — `soragodong_billing` 에 `user_email` 컬럼 추가 + auth.users.email 백필. **cron-renewal-notice / cron-charge-recurring 이 의존**. 미적용 시 cron 측 fallback (auth.users lookup) 으로 작동하지만 매 row 마다 추가 fetch라 성능 ↓.
 
+**🔴 0022 (2026-05-13 사용자 명시 ultrathink)**: `0022_scheduled_plan_change.sql` — `soragodong_billing` 에 `scheduled_plan_change TEXT NULL` / `scheduled_plan_change_at TIMESTAMPTZ NULL` 컬럼 추가 + CHECK 제약. **다운그레이드 = 다음 갱신부터 자동 전환** (Phase B). 미적용 시 `/api/billing/schedule-plan-change` endpoint 가 `COLUMN_MISSING` 거부 — 다운그레이드 버튼 동작 X. cron-charge-recurring 이 이 값 보고 자동 plan 전환.
+
 ### 2-bis. 신규 cron job 등록 (5분)
 
 **위치**: cron-job.org 또는 GitHub Actions schedule.

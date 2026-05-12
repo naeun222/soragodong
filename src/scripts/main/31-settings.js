@@ -414,6 +414,21 @@ function _renderCancelRenewalBox(billing) {
     ? ''
     : `<button class="btn-secondary" onclick="changeRegisteredCard()" style="width:100%; padding:10px; font-size:12.5px; margin-top:8px;">💳 결제수단 (카드) 변경</button>
        <div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">새 카드 등록 = 기존 카드 자동 대체.</div>`;
+  // V4 (사용자 명시 2026-05-13 ultrathink): 예약된 plan 변경 표시 + 취소 버튼.
+  const schedPlan = billing.scheduled_plan_change || null;
+  const schedAtStr = billing.scheduled_plan_change_at ? new Date(billing.scheduled_plan_change_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : null;
+  const schedBoxHtml = schedPlan
+    ? (() => {
+        const schedLabel = TIER_PLANS_CLIENT[schedPlan]?.label || schedPlan;
+        const schedEmoji = TIER_PLANS_CLIENT[schedPlan]?.emoji || '🔽';
+        const schedKrw = TIER_PLANS_CLIENT[schedPlan]?.krw?.toLocaleString() || '';
+        return `<div style="margin-top:10px; padding:10px 12px; background:rgba(135,206,235,0.08); border:1px solid rgba(95,180,211,0.30); border-radius:8px; font-size:11.5px; color:var(--text); line-height:1.65;">
+          ${schedEmoji} <b>${schedLabel} 으로 전환 예약됨</b><br>
+          <span style="color:var(--text-soft); font-size:10.5px;">${nextStr} 에 자동으로 ${schedKrw}원 결제 + 새 ${schedLabel} cycle 시작.${schedAtStr ? ` <span style="opacity:0.7;">(예약 ${schedAtStr})</span>` : ''}</span>
+          <button class="btn-secondary" onclick="cancelPlanChange()" style="width:100%; padding:8px; font-size:11.5px; margin-top:8px;">예약 취소</button>
+        </div>`;
+      })()
+    : '';
   box.innerHTML = `
     <div style="padding:10px 0;">
       <div style="font-size:12.5px; color:var(--text); font-weight:600; margin-bottom:8px;">📇 등록된 결제수단</div>
@@ -421,15 +436,17 @@ function _renderCancelRenewalBox(billing) {
         <div style="font-size:12px; color:var(--text);">${escapeHtml(pgLabelStr)}</div>
         <div style="font-size:11.5px; color:var(--text-soft); margin-top:4px;">다음 결제예정일: <b style="color:var(--text);">${nextStr}</b>${krw ? ` · <b style="color:var(--text);">${krw}원</b>` : ''}</div>
       </div>
+      ${schedBoxHtml}
       ${changeBtnHtml}
       <div style="margin-top:10px;">${cancelBtnHtml}</div>
       <details style="margin-top:12px; font-size:11px; color:var(--text-soft);">
-        <summary style="cursor:pointer; padding:4px 0; outline:none;">해지하면 어떻게 돼? / 환불은?</summary>
+        <summary style="cursor:pointer; padding:4px 0; outline:none;">해지하면 어떻게 돼? / 환불은? / 다운그레이드는?</summary>
         <div style="padding:8px 0 4px; line-height:1.75;">
           • <b style="color:var(--text);">해지</b> = 다음 자동결제만 멈춤. 현 결제 기간 (${nextStr}) 까지 그대로 사용.<br>
           • <b style="color:var(--text);">환불</b> = 잔여일 비례. 위 결제 내역에서 [환불 요청] 버튼.<br>
           • 환불 시 즉시 구독 종료 (잔여일 사용 X) — 카드 명세서 3-7영업일 반영.<br>
-          • 다시 가입하려면 [구독 시작 / 변경] 으로 재구독.
+          • <b style="color:var(--text);">다운그레이드</b> = [구독 시작 / 변경] 모달에서 하위 tier 클릭 → 다음 갱신부터 자동 전환.<br>
+          • <b style="color:var(--text);">업그레이드</b> = 같은 모달에서 상위 tier 클릭 → 즉시 결제 + 새 cycle.
         </div>
       </details>
     </div>

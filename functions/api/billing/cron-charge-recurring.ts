@@ -31,6 +31,9 @@ interface BillingRow {
   last_billing_attempt_at: string | null;
   last_billing_error: string | null;
   failure_count?: number;
+  // V4 (사용자 명시 2026-05-13 ultrathink): 다운그레이드 예약 — migration 0022.
+  scheduled_plan_change?: string | null;
+  scheduled_plan_change_at?: string | null;
 }
 
 // 사용자 보고 2026-05-09: migration 0016 적용 후 billing.user_email 우선.
@@ -81,7 +84,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     // 사용자 보고 2026-05-09: migration 0016 적용 후 user_email 같이 select.
     // 사용자 명시 2026-05-11: light/premium 도 정기결제 — cron 대상 확장.
     const url = `${env.SUPABASE_URL}/rest/v1/soragodong_billing?` +
-      `select=user_id,user_email,subscription_plan,subscription_expires_at,portone_billing_key,trial_until,next_billing_at,last_billing_attempt_at,last_billing_error&` +
+      `select=user_id,user_email,subscription_plan,subscription_expires_at,portone_billing_key,trial_until,next_billing_at,last_billing_attempt_at,last_billing_error,scheduled_plan_change,scheduled_plan_change_at&` +
       `next_billing_at=lte.${encodeURIComponent(nowIso)}&` +
       `subscription_active=eq.true&` +
       `cancel_at_period_end=eq.false&` +
@@ -112,10 +115,15 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
 
   for (const row of dueRows) {
     if (!row.portone_billing_key) continue;
+    // V4 (사용자 명시 2026-05-13 ultrathink): scheduled_plan_change set 이면 새 plan 으로 charge + 전환.
+    //   다운그레이드 = 사용자가 schedule-plan-change endpoint 로 예약. 만료일 도달 시 cron 이 자동 전환.
+    //   업그레이드 = 이 흐름 X (즉시 결제). schedule-plan-change endpoint 가 업그레이드 거부.
+    const _isScheduledChange = !!(row.scheduled_plan_change && row.scheduled_plan_change !== row.subscription_plan);
+    const _chargePlanKey = _isScheduledChange ? (row.scheduled_plan_change as string) : row.subscription_plan;
     // 사용자 명시 2026-05-11: plan 별 tier 동적 조회 (light/premium/early_lifetime).
-    const tier = TIER_PLANS[row.subscription_plan as keyof typeof TIER_PLANS];
+    const tier = TIER_PLANS[_chargePlanKey as keyof typeof TIER_PLANS];
     if (!tier || !tier.krw) {
-      errors.push({ user_id: row.user_id, error: `unknown plan: ${row.subscription_plan}` });
+      errors.push({ user_id: row.user_id, error: `unknown plan: ${_chargePlanKey}` });
       failed++;
       continue;
     }
@@ -129,11 +137,17 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     const userEmail = row.user_email || await _fetchUserEmail(env, row.user_id) || undefined;
     const result = await chargeWithBillingKey(env, paymentId, {
       billingKey: row.portone_billing_key,
-      orderName: `소라고동 ${tier.label} 정기 (${tier.krw.toLocaleString()}원/월)`,
+      orderName: _isScheduledChange
+        ? `소라고동 ${tier.label} 정기 (${tier.krw.toLocaleString()}원/월) — ${row.subscription_plan} → ${_chargePlanKey} 전환`
+        : `소라고동 ${tier.label} 정기 (${tier.krw.toLocaleString()}원/월)`,
       amount: tier.krw,
       currency: 'KRW',
       customer: { id: row.user_id, email: userEmail },
-      customData: JSON.stringify({ tier: row.subscription_plan, type: 'subscribe_recurring' })
+      customData: JSON.stringify({
+        tier: _chargePlanKey,
+        type: _isScheduledChange ? 'subscribe_plan_change' : 'subscribe_recurring',
+        prev_plan: _isScheduledChange ? row.subscription_plan : undefined
+      })
     });
 
     if (result.ok && result.payment.status === 'PAID') {
@@ -158,7 +172,14 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
             daily_quota_used: 0,
             daily_quota_reset_at: new Date(newCycleStart.getTime() + 86400_000).toISOString(),
             last_billing_attempt_at: newCycleStart.toISOString(),
-            last_billing_error: null
+            last_billing_error: null,
+            // V4 (사용자 명시 2026-05-13 ultrathink): 예약된 plan 전환 적용. monthly_quota_usd 도 새 cap 으로.
+            ...(_isScheduledChange ? {
+              subscription_plan: _chargePlanKey,
+              monthly_quota_usd: tier.cap_usd,
+              scheduled_plan_change: null,
+              scheduled_plan_change_at: null
+            } : {})
           })
         });
         // payments INSERT (재고용).
@@ -173,7 +194,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
           body: JSON.stringify({
             user_id: row.user_id,
             user_email: userEmail || null,
-            payment_type: 'subscribe_recurring',
+            payment_type: _isScheduledChange ? 'subscribe_plan_change' : 'subscribe_recurring',
             amount_krw: tier.krw,
             portone_imp_uid: result.payment.txId || paymentId,
             portone_merchant_uid: paymentId,

@@ -502,46 +502,75 @@ function closeSubscribeModal() {
   if (overlay) overlay.remove();
 }
 
-// V4 (사용자 명시 2026-05-13 ultrathink): 다운그레이드 = 다음 갱신부터 (Phase A — frontend-only).
+// V4 (사용자 명시 2026-05-13 ultrathink): 다운그레이드 = 다음 갱신부터 자동 전환 (Phase B — backend migration 0022).
 //   동작:
-//     1) 사용자 confirm — '현 cycle 만료까지 그대로, 만료 후 직접 새 tier 가입' 명시
-//     2) /api/billing/cancel-renewal 호출 — cancel_at_period_end=true set (cron 자동 charge 차단)
-//     3) state.preferences._scheduledDowngradeTo = newTierKey 저장 (만료 시 UI 안내용)
+//     1) 사용자 confirm — '현 cycle 만료까지 그대로, 만료일에 자동으로 새 tier 시작' 명시
+//     2) /api/billing/schedule-plan-change 호출 — billing.scheduled_plan_change = newTierKey set
+//     3) cron-charge-recurring 이 만료일 도달 시 자동으로 새 plan 의 krw charge + plan 전환
 //     4) 토스트 + 모달 닫음 + billing status 갱신
-//   ⚠ 완전 자동 전환 (만료일 = 새 plan 자동 시작) 은 supabase migration `scheduled_plan_change` 컬럼 + cron-charge-recurring 분기 추가 필요 = Phase B 별도.
+//   취소: /설정 → 결제 내역 / 환불 / 해지 에 cancelPlanChange() 버튼.
 async function scheduleDowngrade(tierKey) {
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 tier'); return; }
   const curPlan = window._billingCache?.subscription_plan;
   const curLabel = TIER_PLANS_CLIENT[curPlan]?.label || curPlan || '현재 plan';
-  const expiresIso = window._billingCache?.subscription_expires_at;
+  const expiresIso = window._billingCache?.subscription_expires_at || window._billingCache?.next_billing_at;
   const expiresStr = expiresIso ? new Date(expiresIso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : '만료일';
-  const ok = confirm(`🔽 ${tier.label} 으로 다운그레이드 (다음 갱신부터)\n\n• 오늘부터 ${expiresStr} 까지 ${curLabel} 그대로 사용\n• ${expiresStr} 에 자동 결제 X (취소됨)\n• 만료 후 ${tier.label} 직접 가입 (구독 모달 → ${tier.label} 카드)\n\n취소하려면 [설정 → 결제 내역 / 환불 / 해지] 에서 해지 취소.\n\n계속할까?`);
+  const ok = confirm(`🔽 ${tier.label} 으로 다운그레이드 (다음 갱신부터)\n\n• 오늘부터 ${expiresStr} 까지 ${curLabel} 그대로 사용\n• ${expiresStr} 에 자동으로 ${tier.label} ${tier.krw.toLocaleString()}원 결제 + 새 cycle 시작\n• 이후 매월 ${tier.label} ${tier.krw.toLocaleString()}원 자동 갱신\n\n언제든 [설정 → 결제 내역 / 환불 / 해지] 에서 예약 취소 가능.\n\n계속할까?`);
   if (!ok) return;
   if (!session?.access_token) { alert('로그인 필요'); return; }
   try {
     const _origFetch = window._anthropicOrigFetch || window.fetch;
-    const resp = await _origFetch('/api/billing/cancel-renewal', {
+    const resp = await _origFetch('/api/billing/schedule-plan-change', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + session.access_token
       },
-      body: JSON.stringify({})
+      body: JSON.stringify({ newPlan: tierKey })
     });
     const data = await resp.json().catch(() => ({}));
     if (resp.ok && data.ok) {
-      try {
-        state.preferences = state.preferences || {};
-        state.preferences._scheduledDowngradeTo = tierKey;
-        state.preferences._scheduledDowngradeAt = Date.now();
-        saveState();
-      } catch {}
-      showToast(`🔽 ${expiresStr} 만료 후 ${tier.label} 가입 안내`);
+      showToast(`🔽 ${expiresStr} 에 ${tier.label} 자동 전환 예약됨`);
       closeSubscribeModal();
       if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true);
     } else {
-      alert('다운그레이드 예약 실패: ' + (data.error || resp.status));
+      // COLUMN_MISSING = supabase migration 0022 미적용. 사용자에게 명시.
+      if (data?.code === 'COLUMN_MISSING') {
+        alert('DB schema 미적용 — supabase migration 0022_scheduled_plan_change.sql 실행 필요.\n(사용자 작업: Supabase SQL Editor)');
+      } else {
+        alert('다운그레이드 예약 실패: ' + (data?.error || resp.status));
+      }
+    }
+  } catch (e) {
+    alert('통신 오류: ' + (e?.message || e));
+  }
+}
+
+// V4 (사용자 명시 2026-05-13 ultrathink): 예약된 plan 변경 취소 — billing.scheduled_plan_change = NULL.
+async function cancelPlanChange() {
+  if (!session?.access_token) { alert('로그인 필요'); return; }
+  const sched = window._billingCache?.scheduled_plan_change;
+  if (!sched) { showToast('예약된 변경 없음'); return; }
+  const schedLabel = TIER_PLANS_CLIENT[sched]?.label || sched;
+  if (!confirm(`예약된 ${schedLabel} 전환을 취소할까?\n\n현재 plan 그대로 자동 갱신 계속.`)) return;
+  try {
+    const _origFetch = window._anthropicOrigFetch || window.fetch;
+    // schedule-plan-change endpoint 가 같은 plan 으로 호출되면 SAME_PLAN 거부 — 별도 cancel-plan-change endpoint 가 깔끔하지만,
+    // 단순화: 현재 plan 으로 schedule 호출은 거부되니까 직접 PATCH 가 안 됨. 별도 endpoint 없이 schedule 을 NULL 로 set 하는 별도 흐름 필요.
+    // 우회: 같은 plan 으로 schedule 시도하면 backend 가 SAME_PLAN 거부 — 거기 분기로 NULL 처리하는 별도 endpoint 권장.
+    // V4 (TODO): /api/billing/cancel-plan-change endpoint 추가. 일단 schedule-plan-change 에 cancel:true flag 로.
+    const resp = await _origFetch('/api/billing/schedule-plan-change', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ cancel: true })
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok && data.ok) {
+      showToast('✓ 예약 취소됨 — 현재 plan 그대로 갱신');
+      if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true);
+    } else {
+      alert('취소 실패: ' + (data?.error || resp.status));
     }
   } catch (e) {
     alert('통신 오류: ' + (e?.message || e));
