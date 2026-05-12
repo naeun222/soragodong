@@ -1,7 +1,8 @@
 <div class="app" style="display:none;">
   <div class="header">
     <div style="display:flex; align-items:center; gap:8px;">
-      <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
+      <!-- V4 (사용자 명시 2026-05-13 ultrathink): 메인 헤더 토글 = 대화탭 진입 시 RAG 토글 (Plus/Premium). 그 외 = godongicon brand only (no-op). -->
+      <button class="chat-mode-btn js-rag-mode-btn" onclick="onMainHeaderToggleClick()" aria-label="옛 챕터 기억" title="옛 챕터 기억 (대화탭 한정)"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
       <div class="date-pill" onclick="quickCheckpointFromHeader()" role="button" tabindex="0" aria-label="클라우드에 백업하기" title="클릭 — 지금 클라우드에 백업(저장)">
         <span class="sync-dot" id="syncDot"></span>
       </div>

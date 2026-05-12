@@ -130,49 +130,151 @@ function canUseOpus() {
   return true;
 }
 
+// V4 (사용자 명시 2026-05-13): 옛 toggleChatModel() = 전역 Opus 토글 폐기.
+//   메인 헤더 = RAG 토글 (대화탭 한정, onMainHeaderToggleClick 별도).
+//   마법·숙고 = per-room (toggleReflectionOpus / toggleMagicHelpOpus).
+//   호환 stub — 옛 호출처 (HTML inline onclick 등) 영향 X.
 function toggleChatModel() {
-  // 게스트가 헤더 토글 누르면 → 결제 유도 X, 로그인 유도.
-  if (typeof state !== 'undefined' && state && state.isGuest) {
-    if (typeof showGuestConversionModal === 'function') {
-      showGuestConversionModal({ reason: 'header_toggle' });
-    }
-    return;
-  }
-  state.preferences = state.preferences || {};
-  const next = !state.preferences.useOpus;
-  if (next && !canUseOpus()) {
-    showToast('🦉 Opus 깊은 대화는 Premium 에서만');
-    if (typeof openSubscribeModal === 'function') {
-      setTimeout(() => openSubscribeModal(), 700);
-    }
-    return;
-  }
-  state.preferences.useOpus = next;
-  saveState();
-  updateChatModeBtn();
-  if (next) {
-    showToast('🦉 Opus 모드 — 깊게 (일일 30번)');
-  } else {
-    showToast('고동이 (Sonnet) 모드 — 기본 (충분히 깊은 대화)');
-  }
-  // V4 (v8 묶음 18): Opus 토글 첫 사용 inline tip
-  if (typeof _showInlineTip === 'function') _showInlineTip('opusToggle');
+  if (typeof onMainHeaderToggleClick === 'function') onMainHeaderToggleClick();
 }
 function updateChatModeBtn() {
-  // V4 (사용자 명시 2026-05-13): 옛 4곳 통일 → per-room 분리.
-  //   메인 헤더 .js-chat-mode-btn = 옛 전역 useOpus (Phase 2B 에서 RAG 토글로 교체 예정).
-  //   숙고의 방 = js-reflection-mode-btn (per-room reflection.useOpus, 별도 함수)
-  //   마법고동 helpChat = js-magic-mode-btn (per-room decision.helpChatUseOpus[stepId], 별도 함수)
-  //   돌연변이 = 토글 자체 제거 (2026-05-13).
-  const useOpus = !!(state.preferences && state.preferences.useOpus);
-  const titleAttr = useOpus
-    ? '🦉 Opus 모드 (잔액 5x 빠르게 차감) — 누르면 Sonnet으로'
-    : '고동이 (Sonnet) 모드 — 누르면 Opus로';
-  document.querySelectorAll('.js-chat-mode-btn').forEach(btn => {
-    btn.classList.toggle('opus', useOpus);
-    btn.innerHTML = useOpus ? '🦉' : '<img src="/godongicon.png" alt="" class="chat-mode-img">';
-    btn.setAttribute('title', titleAttr);
+  if (typeof updateMainHeaderBtnVisual === 'function') updateMainHeaderBtnVisual();
+}
+// V4 (사용자 명시 2026-05-13 ultrathink): 옛 toggleChatModel() / updateChatModeBtn() 폐기.
+//   메인 헤더 = onMainHeaderToggleClick() / updateMainHeaderBtnVisual() 로 교체.
+//   per-room (숙고/마법) = toggleReflectionOpus / toggleMagicHelpOpus 분리 (아래).
+//   돌연변이 = 토글 자체 제거.
+
+// V4 (사용자 명시 2026-05-13 ultrathink): 메인 헤더 토글 핸들러.
+//   대화탭 + Plus/Premium = RAG 토글. Light/미구독/게스트 또는 다른 탭 = no-op (brand only).
+//   Plus 첫 클릭 → 1-step 설명 모달 (첫 클릭은 OFF 유지, 두 번째 클릭부터 toggle).
+function onMainHeaderToggleClick() {
+  // 게스트 = 결제 유도 X, 로그인 유도.
+  if (typeof state !== 'undefined' && state && state.isGuest) {
+    if (typeof showGuestConversionModal === 'function') showGuestConversionModal({ reason: 'rag_toggle' });
+    return;
+  }
+  // 활성 화면 검사 — 대화탭에서만 RAG 토글 동작.
+  const activeScreen = document.querySelector('.screen.active, #screen-chat.active');
+  const isChat = activeScreen && (activeScreen.id === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
+  if (!isChat) return;  // 다른 탭 = brand only no-op
+  // Plan 검사 — Plus/Premium 만 가능.
+  const billing = window._billingCache;
+  const plan = billing?.subscription_plan;
+  const active = !!billing?.subscription_active;
+  const ragEligible = active && (plan === 'light' || plan === 'premium');  // 'light' key = Plus
+  if (!ragEligible) return;  // Light/미구독/Premium 외 = brand only no-op
+  state.preferences = state.preferences || {};
+  // 첫 클릭 = 모달만 (transition X, 사용자 명시).
+  if (!state.preferences._ragToggleSeen) {
+    state.preferences._ragToggleSeen = true;
+    try { saveState(); } catch {}
+    if (typeof showRagFirstClickModal === 'function') showRagFirstClickModal();
+    // 깜빡 halo 종료
+    document.querySelectorAll('.js-rag-mode-btn').forEach(btn => btn.classList.remove('rag-blink'));
+    return;
+  }
+  // 두 번째 클릭부터 toggle.
+  state.preferences.useRag = !state.preferences.useRag;
+  try { saveState(); } catch {}
+  updateMainHeaderBtnVisual();
+  if (typeof showToast === 'function') {
+    showToast(state.preferences.useRag
+      ? '✨ 옛 챕터 기억 ON — 다음 메시지부터 적용'
+      : '🪶 옛 챕터 기억 OFF');
+  }
+  // V4: RAG 처음 ON 시 옛 archive 자동 백필.
+  if (state.preferences.useRag && typeof _ragBackfillAll === 'function') {
+    setTimeout(() => { _ragBackfillAll().catch(e => console.warn('[rag] backfill:', e)); }, 100);
+  }
+}
+
+// V4 (사용자 명시 2026-05-13): 메인 헤더 토글 visual — 화면/Plan/RAG 상태 따라 분기.
+//   대화탭 + Plus/Premium = godong-sonnet (OFF) / godong-rag (ON, gold halo)
+//   다른 탭 또는 Light/미구독/게스트 = godongicon (brand only)
+function updateMainHeaderBtnVisual() {
+  const activeScreen = document.querySelector('.screen.active, #screen-chat.active');
+  const isChat = activeScreen && (activeScreen.id === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
+  const billing = window._billingCache;
+  const plan = billing?.subscription_plan;
+  const active = !!billing?.subscription_active;
+  const ragEligible = active && (plan === 'light' || plan === 'premium');
+  const useRag = !!(state?.preferences?.useRag);
+  const ragSeen = !!(state?.preferences?._ragToggleSeen);
+
+  document.querySelectorAll('.js-rag-mode-btn').forEach(btn => {
+    btn.classList.remove('rag-on', 'rag-off', 'rag-blink', 'brand-only');
+    if (isChat && ragEligible) {
+      if (useRag) {
+        btn.classList.add('rag-on');
+        btn.innerHTML = '<img src="/character/godong-rag.svg" alt="" class="chat-mode-img">';
+        btn.setAttribute('title', '✨ 옛 챕터 기억 ON — 누르면 OFF');
+      } else {
+        btn.classList.add('rag-off');
+        btn.innerHTML = '<img src="/character/godong-sonnet.svg" alt="" class="chat-mode-img">';
+        btn.setAttribute('title', '🪶 옛 챕터 기억 OFF — 누르면 ON');
+        // 깜빡 halo: ragSeen X + 사용자 처음 진입 시
+        if (!ragSeen) btn.classList.add('rag-blink');
+      }
+    } else {
+      btn.classList.add('brand-only');
+      btn.innerHTML = '<img src="/godongicon.png" alt="" class="chat-mode-img">';
+      btn.setAttribute('title', '소라고동');
+    }
   });
+}
+
+// V4 (사용자 명시 2026-05-13): Plus 첫 클릭 RAG 설명 모달.
+//   첫 클릭은 OFF 유지 — 사용자가 [켜기] 클릭 시에만 ON 전환.
+//   문구는 사용자 직접 작성 — 일단 placeholder.
+function showRagFirstClickModal() {
+  if (document.getElementById('ragFirstClickOverlay')) return;
+  const plan = window._billingCache?.subscription_plan;
+  const topN = (plan === 'premium') ? 3 : 1;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'ragFirstClickOverlay';
+  overlay.style.zIndex = '10005';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:380px; padding:24px; text-align:center;">
+      <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-bottom:16px;">
+        <div style="text-align:center;">
+          <img src="/character/godong-sonnet.svg" alt="" style="width:64px; height:64px;">
+          <div style="font-size:10.5px; color:var(--text-soft); margin-top:4px;">평소</div>
+        </div>
+        <div style="color:var(--text-dim); font-size:18px;">→</div>
+        <div style="text-align:center; filter:drop-shadow(0 0 12px rgba(212,167,106,0.55));">
+          <img src="/character/godong-rag.svg" alt="" style="width:64px; height:64px;">
+          <div style="font-size:10.5px; color:var(--accent); margin-top:4px;">옛 챕터 기억 ON</div>
+        </div>
+      </div>
+      <div style="font-size:15px; font-weight:600; color:var(--text); margin-bottom:8px;">✨ 고동이가 옛 챕터를 기억해</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:18px;">
+        켜면 — 지금 대화 주제와 비슷한 옛 챕터 <b>${topN}개</b>를<br>
+        고동이가 자연스럽게 참조해서 답해.<br>
+        매 메시지마다 다른 챕터 — 같은 얘기 반복 X.<br>
+        <span style="color:var(--text-soft); font-size:11px;">지금은 OFF. 켜고 싶으면 [켜기].</span>
+      </div>
+      <button class="btn-primary" onclick="_ragFirstModalAct(true)" style="width:100%; padding:11px; margin-bottom:8px;">✨ 켜기</button>
+      <button class="btn-secondary" onclick="_ragFirstModalAct(false)" style="width:100%; padding:10px;">그대로 둘게</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+function _ragFirstModalAct(turnOn) {
+  const ov = document.getElementById('ragFirstClickOverlay');
+  if (ov) ov.remove();
+  if (turnOn) {
+    state.preferences = state.preferences || {};
+    state.preferences.useRag = true;
+    try { saveState(); } catch {}
+    updateMainHeaderBtnVisual();
+    if (typeof showToast === 'function') showToast('✨ 옛 챕터 기억 ON — 다음 메시지부터 적용');
+    // 자동 백필 trigger
+    if (typeof _ragBackfillAll === 'function') {
+      setTimeout(() => { _ragBackfillAll().catch(e => console.warn('[rag] backfill:', e)); }, 100);
+    }
+  }
 }
 
 // V4 (사용자 명시 2026-05-13): per-room Opus 토글 — 숙고의 방.

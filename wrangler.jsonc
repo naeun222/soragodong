@@ -20,5 +20,11 @@
       "id": "c9838c98c6e74de0b923aa5c576cc303",
       "preview_id": "91a8394475804188ba518efc63814d5e"
     }
-  ]
+  ],
+  // V4 (사용자 명시 2026-05-13 ultrathink): Cloudflare Workers AI binding — RAG embedding (BGE-M3).
+  // 100K req/일 무료. functions/api/embeddings/bge.ts 가 env.AI.run('@cf/baai/bge-m3') 호출.
+  // 사용자 ~3000명 도달 시 paid tier — USER_TODO P2 에 재검토 메모.
+  "ai": {
+    "binding": "AI"
+  }
 }

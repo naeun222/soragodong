@@ -247,6 +247,18 @@ function buildSystemPromptParts() {
   // 옛: 최근 14일 chatArchive 5개의 AI 생성 summary 를 system prompt 에 주입 → AI 가 과거 챕터 인용.
   // 제거 이유: AI 가 자기가 생성한 줄거리 요약을 다시 먹는 피드백 루프 — 정확도 ↓ + 토큰 낭비.
   // chatArchive 자체는 보존 (이전 대화 모달 + resume + topicCards 흐름 정상 작동).
+  //
+  // V4 (사용자 명시 2026-05-13 ultrathink): RAG 도입 — 옛 전역 inject 방식과 다름.
+  //   query (사용자 마지막 message) 와 의미적으로 가까운 옛 챕터 N개 (Plus=1 / Premium=3) 를 MMR retrieve → perCall 영역에 inject.
+  //   매번 다른 챕터 → 피드백 루프 risk ↓ (옛 정책 보호).
+  //   useRag OFF / Light / 게스트 = retrieve X, inject X (자연 noop).
+  if (window._ragLastRetrieved && Array.isArray(window._ragLastRetrieved) && window._ragLastRetrieved.length > 0
+      && typeof _ragFormatInject === 'function') {
+    try {
+      const ragText = _ragFormatInject(window._ragLastRetrieved);
+      if (ragText && ragText.length > 0) perCall.push(ragText);
+    } catch (e) { console.warn('[rag] inject fail:', e?.message || e); }
+  }
 
   // 사용자 요청 2026-04-29: 사용자가 약속한 followup (예: "나중에 체크해줘") — 시간 지났으면 자발적으로 물어보기
   // mission 중 _followupAsked=false + 지난 결과 미체크인 거 추출

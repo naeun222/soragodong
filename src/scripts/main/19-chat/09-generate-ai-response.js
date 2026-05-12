@@ -1,3 +1,8 @@
+// V4 (사용자 명시 2026-05-13 ultrathink): RAG retrieve 결과 — buildSystemPromptParts 가 perCall 영역에 inject.
+//   매 generateAIResponse 호출 시 사용자 마지막 user message 로 retrieve → 이 변수에 저장.
+//   호출 후 reset 해서 다음 chat 도메인 (마법/숙고 등) 에 영향 X.
+window._ragLastRetrieved = null;
+
 async function generateAIResponse(modelOverride, opts) {
   // 사용자 명시 2026-05-10 (재정정): opts.isDeeper = true → 별도 endpoint (analyze_4stage) 로 호출 → backend chat-style Opus 가드 자연 skip.
   // 헤더 토글 (state.preferences.useOpus) 의 Opus 모드 = chat_main + Premium 가드 (backend) — 별개.
@@ -7,6 +12,22 @@ async function generateAIResponse(modelOverride, opts) {
   state.chatMessages = state.chatMessages.filter(m => !m.typing);
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
   renderChat();
+
+  // V4 (사용자 명시 2026-05-13 ultrathink): RAG retrieve — Plus/Premium + useRag ON 일 때만. 4단 분석 (analyze_4stage) 은 skip.
+  //   buildSystemPromptParts 가 perCall 영역에 _ragLastRetrieved 인용 → inject.
+  window._ragLastRetrieved = null;
+  if (!_isDeeperAnalysis && typeof _ragIsEnabled === 'function' && _ragIsEnabled()) {
+    try {
+      const lastUserMsg = [...state.chatMessages].reverse().find(m => m && m.role === 'user' && !m.error && !m.typing);
+      const queryText = lastUserMsg?.content || '';
+      if (queryText && typeof _ragRetrieveTopN === 'function') {
+        window._ragLastRetrieved = await _ragRetrieveTopN(queryText);
+      }
+    } catch (e) {
+      console.warn('[rag] retrieve fail (continuing without):', e?.message || e);
+      window._ragLastRetrieved = null;
+    }
+  }
 
   // 사용자 요청 2026-04-30 (Phase C): apiKey 비어있어도 백엔드 프록시로 동작.
   // session 활성 여부만 체크 (fetch interceptor가 자동으로 /api/chat 라우팅).

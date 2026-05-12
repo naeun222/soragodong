@@ -2,6 +2,10 @@
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 function showScreen(name) {
+  // V4 (사용자 명시 2026-05-13 ultrathink): 화면 전환 시 메인 헤더 토글 visual sync (대화탭 = RAG SVG / 그 외 = godongicon).
+  if (typeof updateMainHeaderBtnVisual === 'function') {
+    setTimeout(() => { try { updateMainHeaderBtnVisual(); } catch {} }, 0);
+  }
   // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 진입 시 sim 튜토리얼 fire.
   // _simTutorialInternalNav 플래그 = 튜토리얼 자기 자신이 호출 — 재진입 차단.
   // 사용자 명시 2026-05-06 (재정정): 마법고동 sim 튜토 폐기 — decisions 분기 제거.

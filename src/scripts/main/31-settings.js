@@ -306,6 +306,10 @@ async function _doRefreshBillingStatus(manual) {
     // 사용자 명시 2026-05-05: _billingCacheTs stamp — 30s TTL + showBudgetExceededModal 캐시 재사용용.
     window._billingCache = billing;
     window._billingCacheTs = Date.now();
+    // V4 (사용자 명시 2026-05-13 ultrathink): Plan 변경 시 메인 헤더 RAG 토글 visual sync (Light → Plus 가입 등).
+    if (typeof updateMainHeaderBtnVisual === 'function') {
+      try { updateMainHeaderBtnVisual(); } catch {}
+    }
     // 캐시 채워졌으니 배너 큐 재시도 (sync tip 등)
     if (typeof _renderNextBanner === 'function') { try { _renderNextBanner(); } catch {} }
     // 사용자 명시 2026-05-05: 한 달 무료 만료 7일 전 알림 + 인박스 badge 갱신.

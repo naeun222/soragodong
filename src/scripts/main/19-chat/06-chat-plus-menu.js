@@ -105,6 +105,11 @@ function _archiveCurrentChapter(opts) {
   // 단계 2: chapter 분리 시 _chatWindowStart reset (새 챕터 = 신규 시작).
   if (typeof _chatWindowStart !== 'undefined') _chatWindowStart = null;
   pruneOldChatArchive();
+  // V4 (사용자 명시 2026-05-13 ultrathink): RAG embed fire-and-forget. Plus/Premium 만 + useRag ON 일 때.
+  //   백엔드 cloudflare AI 호출 = 우리 infra. fail 해도 chat 흐름 영향 X.
+  if (typeof _ragIsEnabled === 'function' && _ragIsEnabled() && typeof _ragEmbedArchive === 'function') {
+    setTimeout(() => { _ragEmbedArchive(archiveItem).catch(e => console.warn('[rag] embed archive fail:', e)); }, 0);
+  }
 
   // 신규유저 빠른 추출 — 첫 3 챕터만 즉시 API 호출 (case + topic 둘 다)
   if (typeof state.chapterCompletedCount !== 'number') state.chapterCompletedCount = 0;
