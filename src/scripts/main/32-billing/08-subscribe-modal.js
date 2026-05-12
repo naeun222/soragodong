@@ -507,8 +507,8 @@ async function proceedSubscribe(tierKey) {
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
       redirectUrl: window.location.origin + (window.location.pathname || '/') + '#recurring-subscribe-return',
       // V4 (사용자 보고 2026-05-13 ultrathink): KG이니시스 V2 모바일 빌링키 = offerPeriod 필수 ('빌링키 발급 창 호출 실패' 에러).
-      //   매월 자동결제 = ISO 8601 duration 'P1M'. PC IFRAME 흐름엔 optional 이지만 모바일 REDIRECTION 시 누락하면 발급 자체 차단.
-      offerPeriod: { interval: 'P1M' },
+      //   주의: PortOne 표준 ISO 8601 duration ('P1M') X — KG이니시스 custom 형식 '<숫자><d|m|y>' (예: '1m'=매월). PC IFRAME 엔 optional, 모바일 REDIRECTION 시 누락하면 발급 자체 차단.
+      offerPeriod: { interval: '1m' },
       customer: {
         customerId: authUserId || undefined,
         email: session?.user?.email || undefined,
@@ -705,8 +705,8 @@ async function proceedPlusTrial() {
       issueName: '소라고동 Plus 정기 카드 등록 (첫 달 무료)',
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
       redirectUrl: window.location.origin + (window.location.pathname || '/') + '#plus-trial-return',
-      // V4 (사용자 보고 2026-05-13 ultrathink): KG이니시스 V2 모바일 빌링키 = offerPeriod 필수 — proceedSubscribe 와 동일.
-      offerPeriod: { interval: 'P1M' },
+      // V4 (사용자 보고 2026-05-13 ultrathink): KG이니시스 V2 모바일 빌링키 = offerPeriod 필수 — proceedSubscribe 와 동일. 형식 '1m' (KG이니시스 custom, ISO 8601 X).
+      offerPeriod: { interval: '1m' },
       customer: {
         customerId: authUserId || undefined,
         email: session?.user?.email || undefined,
