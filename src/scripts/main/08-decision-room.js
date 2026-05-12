@@ -473,9 +473,12 @@ ${currentDraft || '(비어있음 — 도움이 필요해)'}
     _renderMagicHelpChat();
     // AI 자동 응답 트리거
     setTimeout(() => _runMagicHelpAIResponse(), 200);
+    if (typeof updateMagicHelpChatModeBtn === 'function') updateMagicHelpChatModeBtn();
     return;
   }
   _renderMagicHelpChat();
+  // V4 (사용자 명시 2026-05-13): per-room Opus 토글 visual sync.
+  if (typeof updateMagicHelpChatModeBtn === 'function') updateMagicHelpChatModeBtn();
 }
 
 // AI 응답 만 호출 (sendMagicHelpMessage에서 입력 부분만 분리)
@@ -533,8 +536,8 @@ async function _runMagicHelpAIResponse() {
         completedContext,
         currentDraft
       },
-      // 사용자 명시 2026-04-30 (정정): 헤더 모델 토글 = 모든 대화 영향. useOpus 따르기.
-      model: (state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
+      // V4 (사용자 명시 2026-05-13): per-room useOpus — decision.helpChatUseOpus[stepId] (이 단계 한정). Premium 만 활성 가능.
+      model: (decision.helpChatUseOpus && decision.helpChatUseOpus[stepId] && typeof canUseOpus === 'function' && canUseOpus()) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
       max_tokens: 400,
       messages: recentMsgs
     });

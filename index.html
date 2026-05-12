@@ -12599,7 +12599,7 @@
         <button class="reflection-screen-back" onclick="closeReflectionScreen()">←</button>
         <div class="reflection-screen-q" id="reflectionScreenQ"></div>
         <div class="reflection-screen-actions">
-          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
+          <button class="chat-mode-btn js-reflection-mode-btn" onclick="toggleReflectionOpus()" aria-label="Opus/Sonnet 전환 (이 질문 한정)" title="🪶 Sonnet 모드 — 누르면 Opus (Premium 전용)">🪶</button>
           <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론</button>
           <button class="reflection-pause-btn" id="reflectionDeleteBtn" title="삭제">🗑</button>
         </div>
@@ -12621,7 +12621,7 @@
         <button class="reflection-screen-back" onclick="closeMagicHelpChat()">←</button>
         <div class="reflection-screen-q" id="magicHelpScreenQ"></div>
         <div class="reflection-screen-actions">
-          <button class="chat-mode-btn js-chat-mode-btn" onclick="toggleChatModel()" aria-label="대화 모델 전환" title="대화 모델 전환"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
+          <button class="chat-mode-btn js-magic-mode-btn" onclick="toggleMagicHelpOpus()" aria-label="Opus/Sonnet 전환 (이 단계 한정)" title="🪶 Sonnet 모드 — 누르면 Opus (Premium 전용)">🪶</button>
           <button class="reflection-resolve-btn" id="magicHelpDeleteBtn" onclick="deleteMagicHelpChat()" title="이 임시 대화 삭제 — 분석 input에 안 들어감" style="background:transparent; border:1px solid rgba(220,80,80,0.30); color:#e8a3a3; padding:6px 10px;">🗑</button>
           <button class="reflection-resolve-btn" id="magicHelpEndBtn" onclick="endMagicHelpChat()" title="이 대화 마무리 — 도서관에 정리">✓ 마무리</button>
         </div>
@@ -25098,9 +25098,12 @@ ${currentDraft || '(비어있음 — 도움이 필요해)'}
     _renderMagicHelpChat();
     // AI 자동 응답 트리거
     setTimeout(() => _runMagicHelpAIResponse(), 200);
+    if (typeof updateMagicHelpChatModeBtn === 'function') updateMagicHelpChatModeBtn();
     return;
   }
   _renderMagicHelpChat();
+  // V4 (사용자 명시 2026-05-13): per-room Opus 토글 visual sync.
+  if (typeof updateMagicHelpChatModeBtn === 'function') updateMagicHelpChatModeBtn();
 }
 
 // AI 응답 만 호출 (sendMagicHelpMessage에서 입력 부분만 분리)
@@ -25158,8 +25161,8 @@ async function _runMagicHelpAIResponse() {
         completedContext,
         currentDraft
       },
-      // 사용자 명시 2026-04-30 (정정): 헤더 모델 토글 = 모든 대화 영향. useOpus 따르기.
-      model: (state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
+      // V4 (사용자 명시 2026-05-13): per-room useOpus — decision.helpChatUseOpus[stepId] (이 단계 한정). Premium 만 활성 가능.
+      model: (decision.helpChatUseOpus && decision.helpChatUseOpus[stepId] && typeof canUseOpus === 'function' && canUseOpus()) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
       max_tokens: 400,
       messages: recentMsgs
     });
@@ -32233,6 +32236,8 @@ function openReflectionChat(qId) {
   _activeReflectionId = qId;
   showScreen('reflection');
   renderReflectionChat();
+  // V4 (사용자 명시 2026-05-13): per-room Opus 토글 visual sync.
+  if (typeof updateReflectionChatModeBtn === 'function') updateReflectionChatModeBtn();
   // 결론 / 삭제 버튼 wire (V4-fix: 보류 → 삭제로 변경)
   const resolveBtn = document.getElementById('reflectionResolveBtn');
   if (resolveBtn) {
@@ -33063,8 +33068,8 @@ async function sendReflectionChat() {
     const resp = await callAnthropic({
         _endpoint: 'reflection',
         _vars: { questionText: q.text },
-        // 사용자 명시 2026-04-30 (정정): 헤더 모델 토글 = 모든 대화 영향. useOpus 따르기.
-        model: (state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
+        // V4 (사용자 명시 2026-05-13): per-room useOpus — q.useOpus (이 질문 한정). Premium 만 활성 가능 (canUseOpus 가드).
+        model: (q.useOpus && typeof canUseOpus === 'function' && canUseOpus()) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
         max_tokens: 400,
         messages: recentMsgs
     });
@@ -40115,15 +40120,92 @@ function toggleChatModel() {
   if (typeof _showInlineTip === 'function') _showInlineTip('opusToggle');
 }
 function updateChatModeBtn() {
-  // 사용자 요청 2026-04-30: 모델 토글 4곳 통일 (메인 헤더 + 숙고의 방 + 마법 helpChat + 돌연변이 임시대화창). 모든 .js-chat-mode-btn 인스턴스 동기 갱신.
-  // Sonnet 표시 = godongicon.png 이미지, Opus = 🦉 이모지.
+  // V4 (사용자 명시 2026-05-13): 옛 4곳 통일 → per-room 분리.
+  //   메인 헤더 .js-chat-mode-btn = 옛 전역 useOpus (Phase 2B 에서 RAG 토글로 교체 예정).
+  //   숙고의 방 = js-reflection-mode-btn (per-room reflection.useOpus, 별도 함수)
+  //   마법고동 helpChat = js-magic-mode-btn (per-room decision.helpChatUseOpus[stepId], 별도 함수)
+  //   돌연변이 = 토글 자체 제거 (2026-05-13).
   const useOpus = !!(state.preferences && state.preferences.useOpus);
   const titleAttr = useOpus
     ? '🦉 Opus 모드 (잔액 5x 빠르게 차감) — 누르면 Sonnet으로'
-    : '고동이 (Sonnet) 모드 — 누르면 Opus로'; // 사용자 명시 2026-04-30: 고동이 페르소나
+    : '고동이 (Sonnet) 모드 — 누르면 Opus로';
   document.querySelectorAll('.js-chat-mode-btn').forEach(btn => {
     btn.classList.toggle('opus', useOpus);
     btn.innerHTML = useOpus ? '🦉' : '<img src="/godongicon.png" alt="" class="chat-mode-img">';
+    btn.setAttribute('title', titleAttr);
+  });
+}
+
+// V4 (사용자 명시 2026-05-13): per-room Opus 토글 — 숙고의 방.
+//   해당 질문 (state.reflectionQuestions 의 _activeReflectionId) 의 useOpus 만 토글.
+//   비-Premium = 클릭 시 Premium 권유 모달 (옛 패턴).
+//   Premium default OFF — 사용자 명시 ON 시에만 Opus.
+function toggleReflectionOpus() {
+  if (typeof state !== 'undefined' && state && state.isGuest) {
+    if (typeof showGuestConversionModal === 'function') showGuestConversionModal({ reason: 'reflection_opus_toggle' });
+    return;
+  }
+  if (typeof _activeReflectionId === 'undefined' || !_activeReflectionId) return;
+  const q = (state.reflectionQuestions || []).find(x => x.id === _activeReflectionId);
+  if (!q) return;
+  const next = !q.useOpus;
+  if (next && !canUseOpus()) {
+    showToast('🦉 Opus 깊은 사고는 Premium 에서만');
+    if (typeof openSubscribeModal === 'function') setTimeout(() => openSubscribeModal(), 700);
+    return;
+  }
+  q.useOpus = next;
+  saveState();
+  updateReflectionChatModeBtn();
+  showToast(next ? '🦉 Opus 모드 — 이 질문만 깊게' : '🪶 Sonnet 모드 — 가볍게');
+}
+function updateReflectionChatModeBtn() {
+  if (typeof _activeReflectionId === 'undefined' || !_activeReflectionId) return;
+  const q = (state.reflectionQuestions || []).find(x => x.id === _activeReflectionId);
+  const useOpus = !!(q && q.useOpus);
+  const titleAttr = useOpus
+    ? '🦉 Opus 모드 (이 질문만) — 누르면 Sonnet'
+    : '🪶 Sonnet 모드 — 누르면 Opus (Premium 전용)';
+  document.querySelectorAll('.js-reflection-mode-btn').forEach(btn => {
+    btn.classList.toggle('opus', useOpus);
+    btn.innerHTML = useOpus ? '🦉' : '🪶';
+    btn.setAttribute('title', titleAttr);
+  });
+}
+
+// V4 (사용자 명시 2026-05-13): per-room Opus 토글 — 마법고동 helpChat.
+//   해당 decision.helpChatUseOpus[stepId] 만 토글.
+function toggleMagicHelpOpus() {
+  if (typeof state !== 'undefined' && state && state.isGuest) {
+    if (typeof showGuestConversionModal === 'function') showGuestConversionModal({ reason: 'magic_opus_toggle' });
+    return;
+  }
+  if (typeof _magicHelpState === 'undefined' || !_magicHelpState || !_magicHelpState.decisionId || !_magicHelpState.stepId) return;
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  if (!decision) return;
+  if (!decision.helpChatUseOpus) decision.helpChatUseOpus = {};
+  const stepId = _magicHelpState.stepId;
+  const next = !decision.helpChatUseOpus[stepId];
+  if (next && !canUseOpus()) {
+    showToast('🦉 Opus 깊은 사고는 Premium 에서만');
+    if (typeof openSubscribeModal === 'function') setTimeout(() => openSubscribeModal(), 700);
+    return;
+  }
+  decision.helpChatUseOpus[stepId] = next;
+  saveState();
+  updateMagicHelpChatModeBtn();
+  showToast(next ? '🦉 Opus 모드 — 이 단계만 깊게' : '🪶 Sonnet 모드 — 가볍게');
+}
+function updateMagicHelpChatModeBtn() {
+  if (typeof _magicHelpState === 'undefined' || !_magicHelpState) return;
+  const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
+  const useOpus = !!(decision && decision.helpChatUseOpus && decision.helpChatUseOpus[_magicHelpState.stepId]);
+  const titleAttr = useOpus
+    ? '🦉 Opus 모드 (이 단계만) — 누르면 Sonnet'
+    : '🪶 Sonnet 모드 — 누르면 Opus (Premium 전용)';
+  document.querySelectorAll('.js-magic-mode-btn').forEach(btn => {
+    btn.classList.toggle('opus', useOpus);
+    btn.innerHTML = useOpus ? '🦉' : '🪶';
     btn.setAttribute('title', titleAttr);
   });
 }

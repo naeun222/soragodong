@@ -42,8 +42,8 @@ async function sendReflectionChat() {
     const resp = await callAnthropic({
         _endpoint: 'reflection',
         _vars: { questionText: q.text },
-        // 사용자 명시 2026-04-30 (정정): 헤더 모델 토글 = 모든 대화 영향. useOpus 따르기.
-        model: (state.preferences && state.preferences.useOpus) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
+        // V4 (사용자 명시 2026-05-13): per-room useOpus — q.useOpus (이 질문 한정). Premium 만 활성 가능 (canUseOpus 가드).
+        model: (q.useOpus && typeof canUseOpus === 'function' && canUseOpus()) ? 'claude-opus-4-7' : 'claude-sonnet-4-6',
         max_tokens: 400,
         messages: recentMsgs
     });

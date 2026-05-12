@@ -25,6 +25,8 @@ function openReflectionChat(qId) {
   _activeReflectionId = qId;
   showScreen('reflection');
   renderReflectionChat();
+  // V4 (사용자 명시 2026-05-13): per-room Opus 토글 visual sync.
+  if (typeof updateReflectionChatModeBtn === 'function') updateReflectionChatModeBtn();
   // 결론 / 삭제 버튼 wire (V4-fix: 보류 → 삭제로 변경)
   const resolveBtn = document.getElementById('reflectionResolveBtn');
   if (resolveBtn) {
