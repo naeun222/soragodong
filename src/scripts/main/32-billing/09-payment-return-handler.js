@@ -239,7 +239,7 @@ async function _handleBillingKeyReturn(params) {
       if (data.duplicate) {
         setTimeout(() => alert(data.message || '이미 활성 Plus 구독이 있어.'), 300);
       } else if (typeof showToast === 'function') {
-        showToast(`🌊 Plus 첫 달 무료 시작 — 30일 후 ${tier.krw.toLocaleString()}원 자동 결제`);
+        showToast(`🌊 Plus 첫 달 무료 시작 — 한 달 후 ${tier.krw.toLocaleString()}원 자동 결제`);
       }
       if (typeof refreshBillingStatus === 'function') {
         try { await refreshBillingStatus(true); } catch {}

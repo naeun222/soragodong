@@ -68,6 +68,8 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 
 **🔴 0022 (2026-05-13 사용자 명시 ultrathink)**: `0022_scheduled_plan_change.sql` — `soragodong_billing` 에 `scheduled_plan_change TEXT NULL` / `scheduled_plan_change_at TIMESTAMPTZ NULL` 컬럼 추가 + CHECK 제약. **다운그레이드 = 다음 갱신부터 자동 전환** (Phase B). 미적용 시 `/api/billing/schedule-plan-change` endpoint 가 `COLUMN_MISSING` 거부 — 다운그레이드 버튼 동작 X. cron-charge-recurring 이 이 값 보고 자동 plan 전환.
 
+**🔴 0023 (2026-05-13 사용자 명시 ultrathink)**: `0023_cycle_anchor.sql` — `soragodong_billing` 에 `subscription_started_at TIMESTAMPTZ NULL` / `cycle_anchor_day SMALLINT NULL` 컬럼 + CHECK 제약 (1-31). **매월 가입일 anchor cycle** (Netflix/YouTube 표준). 옛 30일 fixed 주기 폐기 — 1년 12회 결제. 옛 row 백필: `cycle_anchor_day = EXTRACT(DAY FROM next_billing_at AT TIME ZONE 'Asia/Seoul')`. 미적용 시 코드는 옛 30일 fallback 으로 동작 (column NULL 이면 calcNext30DayFallback) — 안전. 가입 시 정확한 anchor 저장은 column 적용 후만 가능.
+
 ### 2-bis. 신규 cron job 등록 (5분)
 
 **위치**: cron-job.org 또는 GitHub Actions schedule.

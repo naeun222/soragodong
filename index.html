@@ -56260,7 +56260,7 @@ async function _doRefreshBillingStatus(manual) {
     } else if (balance > 0) {
       // 사용자 명시 2026-05-06 ultrathink: 신규 가입 = 무료 토큰 grant (양 비공개), early_light auto-grant X. raw $ 노출 금지.
       html += `<div><b>🎁 환영 무료 체험 중</b> <span style="color:var(--text-soft); font-size:11px;">— 자유롭게 써봐</span></div>`;
-      html += `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">마음에 들면 구독해줘 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.</div>`;
+      html += `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">마음에 들면 구독해줘 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 한 달 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.</div>`;
     } else {
       html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 계속 쓰려면 구독</span></div>`;
     }
@@ -56553,8 +56553,8 @@ const TIER_PLANS_CLIENT = {
     tagline: '깊게, 꾸준히 — 첫 달 무료',
     emoji: '🌊',
     description: _RECUR
-      ? '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.'
-      : '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 30일 후 만료 (자동 결제 X). 1인 1회 한정.',
+      ? '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 한 달 후 자동 결제, 언제든 해지.'
+      : '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 한 달 후 만료 (자동 결제 X). 1인 1회 한정.',
     has_free_trial: true },
   // Premium (25,000) — top tier anchor. 정가 결제. emoji ✨ (🐚🌊✨ 그라데이션 완성).
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '마음껏 깊게', emoji: '✨',
@@ -56600,6 +56600,27 @@ const DAILY_CAP_USD = {
 function _getDailyCapUsd(plan) {
   const v = DAILY_CAP_USD[plan];
   return typeof v === 'number' ? v : 0;
+}
+
+// V4 (사용자 명시 2026-05-13 ultrathink): 매월 가입일 anchor 기준 cycle 헬퍼 — backend `_lib/cycle.ts` 와 동일 로직.
+//   UI 표시용 (동의 모달의 예상 다음 결제일 / 성공 모달 / confirm 카피). source of truth = backend response.
+//   anchor=31 → 다음 달이 짧으면 해당 월 마지막 날 clip (4월30 / 2월28-29 등). 그 후엔 anchor 그대로 보존.
+const _KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+function _getCurrentKstAnchorDay() {
+  const kst = new Date(Date.now() + _KST_OFFSET_MS);
+  return kst.getUTCDate();
+}
+function _calcNextBillingDateKst(prevDate, anchorDay) {
+  const prevKst = new Date((prevDate || new Date()).getTime() + _KST_OFFSET_MS);
+  const targetYear  = prevKst.getUTCFullYear();
+  const targetMonth = prevKst.getUTCMonth() + 1;
+  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const clippedDay = Math.min(Math.max(1, anchorDay), lastDayOfTargetMonth);
+  const nextKst = new Date(Date.UTC(
+    targetYear, targetMonth, clippedDay,
+    prevKst.getUTCHours(), prevKst.getUTCMinutes(), prevKst.getUTCSeconds()
+  ));
+  return new Date(nextKst.getTime() - _KST_OFFSET_MS);
 }
 // Light → Premium 정가 결제 (사용자 명시 2026-05-02: 차액 결제 폐기 — 새 사이클 시작)
 const TIER_UPGRADE_KRW = TIER_PLANS_CLIENT.premium.krw; // 25,000
@@ -56848,7 +56869,7 @@ function checkFreeTrialExpiry() {
   // V4 (사용자 명시 2026-05-11 — 가계약): BILLING_RECURRING_ENABLED=false 시 Plus 첫 달 무료 promo X — 카피 분기.
   const _recurOn = (typeof BILLING_RECURRING_ENABLED !== 'undefined') ? BILLING_RECURRING_ENABLED : true;
   const planBody = _recurOn
-    ? `<b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`
+    ? `<b>🌊 Plus 첫 달 무료</b> (9,900원/월, 한 달 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`
     : `<b>🐚 Light 4,900원</b> / <b>🌊 Plus 9,900원</b> / <b>✨ Premium 25,000원</b> — 모두 1개월 이용권 (자동 갱신 X).`;
   _addNotification({
     type: 'free_trial_expiry_warning',
@@ -56914,7 +56935,7 @@ function checkFreeCreditDepletion() {
     _addNotification({
       type: 'free_credit_depleted',
       title: '🐚 환영 무료 체험 끝',
-      body: `깊게 써줘서 고마워.<br>계속 쓰려면 구독 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`,
+      body: `깊게 써줘서 고마워.<br>계속 쓰려면 구독 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 한 달 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`,
       persistent: true
     });
     return;
@@ -56940,7 +56961,7 @@ function checkFreeCreditDepletion() {
     _addNotification({
       type: 'free_credit_low',
       title: '🐚 환영 무료 체험 거의 끝',
-      body: `이제 얼마 안 남았어.<br>계속 쓰려면 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`,
+      body: `이제 얼마 안 남았어.<br>계속 쓰려면 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 한 달 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`,
       persistent: true
     });
   }
@@ -57608,8 +57629,13 @@ function devPreviewPaymentInfoModal() {
 function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
   return new Promise((resolve) => {
     const krw = tier.krw.toLocaleString();
-    const next30 = new Date(Date.now() + 30 * 86400_000);
-    const nextDateStr = next30.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+    // V4 (사용자 명시 2026-05-13 ultrathink): 매월 가입일 anchor 기준 다음 결제일 (Netflix / YouTube 표준).
+    //   오늘 KST day = anchor → 다음 달 같은 날 (짧은 달 clip). 30일 fixed 폐기.
+    const _anchorDay = (typeof _getCurrentKstAnchorDay === 'function') ? _getCurrentKstAnchorDay() : new Date().getDate();
+    const nextDate = (typeof _calcNextBillingDateKst === 'function')
+      ? _calcNextBillingDateKst(new Date(), _anchorDay)
+      : new Date(Date.now() + 30 * 86400_000);
+    const nextDateStr = nextDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
     const businessName = (typeof BUSINESS_INFO !== 'undefined' && BUSINESS_INFO?.name) ? BUSINESS_INFO.name : '나은 랩(Lab)';
     const businessNo   = (typeof BUSINESS_INFO !== 'undefined' && BUSINESS_INFO?.business_no) ? BUSINESS_INFO.business_no : '';
     const trialBanner = isTrial
@@ -57619,12 +57645,12 @@ function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
          </div>`
       : '';
     const firstPayLabel = isTrial
-      ? `${nextDateStr} (30일 후 첫 자동 결제)`
-      : `오늘 즉시 ${krw}원 결제, 이후 ${nextDateStr} 부터 매월 자동 결제`;
+      ? `${nextDateStr} (한 달 후 첫 자동 결제)`
+      : `오늘 즉시 ${krw}원 결제, 이후 매월 ${nextDate.getDate()}일 자동 결제 (${nextDateStr} 부터)`;
     const rows = [
       ['상품',         `소라고동 ${tier.label} 정기구독`],
       ['결제금액',     `<b style="color:var(--text);">월 ${krw}원</b> <span style="color:var(--text-soft); font-size:10.5px;">(부가가치세 10% 포함)</span>`],
-      ['결제주기',     `매월 1회 자동 결제 (30일 주기)`],
+      ['결제주기',     `매월 1회 자동 결제 (가입일 기준 같은 날)`],
       ['첫 결제',      firstPayLabel],
       ['결제수단',     pgLabel],
       ['해지방법',     `<b style="color:var(--accent);">[설정 → 구독]</b> 에서 1-click 해지 — 언제든 가능`],
@@ -57695,16 +57721,22 @@ function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
 //   '구독 관리하러 가기' 버튼 → 설정 → 결제 내역 토글 자동 펼침 (settings 의 _expandPaymentsToggle 호출).
 function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) {
   const krw = tier.krw.toLocaleString();
+  // V4 (사용자 명시 2026-05-13 ultrathink): backend response 의 next_billing_at (매월 anchor 적용된 ISO) 그대로 표시.
   let nextDate;
   try {
-    nextDate = nextBillingIso ? new Date(nextBillingIso) : new Date(Date.now() + 30 * 86400_000);
+    if (nextBillingIso) nextDate = new Date(nextBillingIso);
+    else if (typeof _calcNextBillingDateKst === 'function' && typeof _getCurrentKstAnchorDay === 'function') {
+      nextDate = _calcNextBillingDateKst(new Date(), _getCurrentKstAnchorDay());
+    } else {
+      nextDate = new Date(Date.now() + 30 * 86400_000);
+    }
   } catch { nextDate = new Date(Date.now() + 30 * 86400_000); }
   const nextDateStr = nextDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
   const headline = isTrial
     ? `🌊 ${tier.label} 첫 달 무료 시작`
     : `📅 ${tier.label} 정기구독 시작`;
   const subline = isTrial
-    ? `오늘부터 30일 동안 무료로 사용해.`
+    ? `오늘부터 한 달 동안 무료로 사용해.`
     : `오늘 첫 ${krw}원 결제 완료.`;
   const nextLine = isTrial
     ? `<div style="font-size:12.5px; color:var(--text); line-height:1.65;"><b style="color:#5fb4d3;">${nextDateStr}</b> 에 첫 ${krw}원 자동 결제가 시작돼.</div>`
@@ -58134,7 +58166,7 @@ async function proceedSubscribe(tierKey) {
   const _isUpgrading      = _curBillingActive && _curBillingPlan && _curBillingPlan !== tierKey;
   if (_isUpgrading) {
     const curLabel = TIER_PLANS_CLIENT[_curBillingPlan]?.label || _curBillingPlan;
-    const ok = confirm(`✨ ${tier.label} 으로 업그레이드\n\n현재 ${curLabel} 구독이 즉시 종료되고, 오늘부터 새 ${tier.label} 사이클이 시작돼.\n\n• 오늘 ${tier.krw.toLocaleString()}원 즉시 결제\n• 다음 자동 결제는 30일 후\n• 잔여 ${curLabel} 일수 보상 X (정책상)\n• 결제수단도 새 카드로 등록\n\n계속할까?`);
+    const ok = confirm(`✨ ${tier.label} 으로 업그레이드\n\n현재 ${curLabel} 구독이 즉시 종료되고, 오늘부터 새 ${tier.label} 사이클이 시작돼.\n\n• 오늘 ${tier.krw.toLocaleString()}원 즉시 결제\n• 다음 자동 결제는 매월 가입일 기준 (오늘 = 가입일)\n• 잔여 ${curLabel} 일수 보상 X (정책상)\n• 결제수단도 새 카드로 등록\n\n계속할까?`);
     if (!ok) return;
   }
   // V4 (사용자 보고 2026-05-13 ultrathink): trial 소진 사용자 safety net — cache 갱신 race / 옛 stale UI 클릭 케이스 보호.
@@ -58305,7 +58337,7 @@ async function proceedFreeTrial() {
     return;
   }
   // 사용자 confirm — 1인 1회임을 명확히 알림.
-  const ok = confirm('Plus 첫 달 무료 — 30일간 무료로 모든 기능 사용 가능.\n\n• 1인 1회 한정 (다음엔 정가 9,900원)\n• 자동 결제 X — 30일 후 만료\n• 만료 7일 전 알림\n\n시작할까?');
+  const ok = confirm('Plus 첫 달 무료 — 한 달 무료로 모든 기능 사용 가능.\n\n• 1인 1회 한정 (다음엔 정가 9,900원)\n• 자동 결제 X — 한 달 후 만료\n• 만료 7일 전 알림\n\n시작할까?');
   if (!ok) return;
   if (typeof showToast === 'function') showToast('Plus 첫 달 무료 신청 중…');
   try {
@@ -58323,7 +58355,7 @@ async function proceedFreeTrial() {
         showToast('💳 이미 Plus 구독 활성');
         alert(result.message || '이미 활성 Plus 구독이 있어.');
       } else {
-        showToast('🌊 Plus 첫 달 무료 시작 — 30일 자유롭게 🫂');
+        showToast('🌊 Plus 첫 달 무료 시작 — 한 달 자유롭게 🫂');
       }
       closeSubscribeModal();
       if (typeof refreshBillingStatus === 'function') refreshBillingStatus();
@@ -58874,7 +58906,7 @@ async function _handleBillingKeyReturn(params) {
       if (data.duplicate) {
         setTimeout(() => alert(data.message || '이미 활성 Plus 구독이 있어.'), 300);
       } else if (typeof showToast === 'function') {
-        showToast(`🌊 Plus 첫 달 무료 시작 — 30일 후 ${tier.krw.toLocaleString()}원 자동 결제`);
+        showToast(`🌊 Plus 첫 달 무료 시작 — 한 달 후 ${tier.krw.toLocaleString()}원 자동 결제`);
       }
       if (typeof refreshBillingStatus === 'function') {
         try { await refreshBillingStatus(true); } catch {}
@@ -59143,7 +59175,7 @@ function showBudgetExceededModal(reason, opts) {
       // legacy 분기 — early_light tier (grant 받은 옛 사용자) 한도 도달.
       titleText = '🐚 체험 한도 도달';
       bodyText = '체험 한도 다 썼네 — 써줘서 고마워.<br><br>' +
-        '계속 쓰려면 구독 — <span style="color:#5fb4d3; font-weight:600;">🌊 Plus 첫 달 무료</span> <b>9,900원/월</b> (30일 후 자동 결제, 언제든 해지).<br>' +
+        '계속 쓰려면 구독 — <span style="color:#5fb4d3; font-weight:600;">🌊 Plus 첫 달 무료</span> <b>9,900원/월</b> (한 달 후 자동 결제, 언제든 해지).<br>' +
         '가볍게 시작하려면 <b>🐚 Light 4,900원/월</b>.';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Plus 첫 달 무료 시작 (9,900원/월)</button>
@@ -59153,7 +59185,7 @@ function showBudgetExceededModal(reason, opts) {
     } else if (subActive && plan === 'early_lifetime') {
       // V4 (사용자 명시 2026-05-11): Light(4,900) 사용자 월 cap 도달 — Plus 업그레이드 권유.
       titleText = '🐚 이번 사이클 한도 도달';
-      bodyText = 'Light 한도 다 썼네.<br>Plus 가면 더 깊게 (약 3x 한도) — <b>첫 달 무료</b>, 30일 후 9,900원 자동 결제.';
+      bodyText = 'Light 한도 다 썼네.<br>Plus 가면 더 깊게 (약 3x 한도) — <b>첫 달 무료</b>, 한 달 후 9,900원 자동 결제.';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Plus 첫 달 무료 시작 (9,900원/월)</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 사이클 기다릴게</button>
@@ -59170,7 +59202,7 @@ function showBudgetExceededModal(reason, opts) {
       // 비구독 (체험 만료) — 구독 안내.
       titleText = '🐚 체험 종료';
       bodyText = '체험 기간 끝났어 — 깊게 써줘서 고마워.<br><br>' +
-        '계속 쓰려면 구독 — <span style="color:#5fb4d3; font-weight:600;">🌊 Plus 첫 달 무료</span> <b>9,900원/월</b> (30일 후 자동 결제, 언제든 해지).<br>' +
+        '계속 쓰려면 구독 — <span style="color:#5fb4d3; font-weight:600;">🌊 Plus 첫 달 무료</span> <b>9,900원/월</b> (한 달 후 자동 결제, 언제든 해지).<br>' +
         '가볍게 시작하려면 <b>🐚 Light 4,900원/월</b>.';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Plus 첫 달 무료 시작 (9,900원/월)</button>

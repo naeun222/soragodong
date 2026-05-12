@@ -82,8 +82,13 @@ function devPreviewPaymentInfoModal() {
 function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
   return new Promise((resolve) => {
     const krw = tier.krw.toLocaleString();
-    const next30 = new Date(Date.now() + 30 * 86400_000);
-    const nextDateStr = next30.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+    // V4 (사용자 명시 2026-05-13 ultrathink): 매월 가입일 anchor 기준 다음 결제일 (Netflix / YouTube 표준).
+    //   오늘 KST day = anchor → 다음 달 같은 날 (짧은 달 clip). 30일 fixed 폐기.
+    const _anchorDay = (typeof _getCurrentKstAnchorDay === 'function') ? _getCurrentKstAnchorDay() : new Date().getDate();
+    const nextDate = (typeof _calcNextBillingDateKst === 'function')
+      ? _calcNextBillingDateKst(new Date(), _anchorDay)
+      : new Date(Date.now() + 30 * 86400_000);
+    const nextDateStr = nextDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
     const businessName = (typeof BUSINESS_INFO !== 'undefined' && BUSINESS_INFO?.name) ? BUSINESS_INFO.name : '나은 랩(Lab)';
     const businessNo   = (typeof BUSINESS_INFO !== 'undefined' && BUSINESS_INFO?.business_no) ? BUSINESS_INFO.business_no : '';
     const trialBanner = isTrial
@@ -93,12 +98,12 @@ function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
          </div>`
       : '';
     const firstPayLabel = isTrial
-      ? `${nextDateStr} (30일 후 첫 자동 결제)`
-      : `오늘 즉시 ${krw}원 결제, 이후 ${nextDateStr} 부터 매월 자동 결제`;
+      ? `${nextDateStr} (한 달 후 첫 자동 결제)`
+      : `오늘 즉시 ${krw}원 결제, 이후 매월 ${nextDate.getDate()}일 자동 결제 (${nextDateStr} 부터)`;
     const rows = [
       ['상품',         `소라고동 ${tier.label} 정기구독`],
       ['결제금액',     `<b style="color:var(--text);">월 ${krw}원</b> <span style="color:var(--text-soft); font-size:10.5px;">(부가가치세 10% 포함)</span>`],
-      ['결제주기',     `매월 1회 자동 결제 (30일 주기)`],
+      ['결제주기',     `매월 1회 자동 결제 (가입일 기준 같은 날)`],
       ['첫 결제',      firstPayLabel],
       ['결제수단',     pgLabel],
       ['해지방법',     `<b style="color:var(--accent);">[설정 → 구독]</b> 에서 1-click 해지 — 언제든 가능`],
@@ -169,16 +174,22 @@ function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
 //   '구독 관리하러 가기' 버튼 → 설정 → 결제 내역 토글 자동 펼침 (settings 의 _expandPaymentsToggle 호출).
 function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) {
   const krw = tier.krw.toLocaleString();
+  // V4 (사용자 명시 2026-05-13 ultrathink): backend response 의 next_billing_at (매월 anchor 적용된 ISO) 그대로 표시.
   let nextDate;
   try {
-    nextDate = nextBillingIso ? new Date(nextBillingIso) : new Date(Date.now() + 30 * 86400_000);
+    if (nextBillingIso) nextDate = new Date(nextBillingIso);
+    else if (typeof _calcNextBillingDateKst === 'function' && typeof _getCurrentKstAnchorDay === 'function') {
+      nextDate = _calcNextBillingDateKst(new Date(), _getCurrentKstAnchorDay());
+    } else {
+      nextDate = new Date(Date.now() + 30 * 86400_000);
+    }
   } catch { nextDate = new Date(Date.now() + 30 * 86400_000); }
   const nextDateStr = nextDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
   const headline = isTrial
     ? `🌊 ${tier.label} 첫 달 무료 시작`
     : `📅 ${tier.label} 정기구독 시작`;
   const subline = isTrial
-    ? `오늘부터 30일 동안 무료로 사용해.`
+    ? `오늘부터 한 달 동안 무료로 사용해.`
     : `오늘 첫 ${krw}원 결제 완료.`;
   const nextLine = isTrial
     ? `<div style="font-size:12.5px; color:var(--text); line-height:1.65;"><b style="color:#5fb4d3;">${nextDateStr}</b> 에 첫 ${krw}원 자동 결제가 시작돼.</div>`
@@ -608,7 +619,7 @@ async function proceedSubscribe(tierKey) {
   const _isUpgrading      = _curBillingActive && _curBillingPlan && _curBillingPlan !== tierKey;
   if (_isUpgrading) {
     const curLabel = TIER_PLANS_CLIENT[_curBillingPlan]?.label || _curBillingPlan;
-    const ok = confirm(`✨ ${tier.label} 으로 업그레이드\n\n현재 ${curLabel} 구독이 즉시 종료되고, 오늘부터 새 ${tier.label} 사이클이 시작돼.\n\n• 오늘 ${tier.krw.toLocaleString()}원 즉시 결제\n• 다음 자동 결제는 30일 후\n• 잔여 ${curLabel} 일수 보상 X (정책상)\n• 결제수단도 새 카드로 등록\n\n계속할까?`);
+    const ok = confirm(`✨ ${tier.label} 으로 업그레이드\n\n현재 ${curLabel} 구독이 즉시 종료되고, 오늘부터 새 ${tier.label} 사이클이 시작돼.\n\n• 오늘 ${tier.krw.toLocaleString()}원 즉시 결제\n• 다음 자동 결제는 매월 가입일 기준 (오늘 = 가입일)\n• 잔여 ${curLabel} 일수 보상 X (정책상)\n• 결제수단도 새 카드로 등록\n\n계속할까?`);
     if (!ok) return;
   }
   // V4 (사용자 보고 2026-05-13 ultrathink): trial 소진 사용자 safety net — cache 갱신 race / 옛 stale UI 클릭 케이스 보호.
@@ -779,7 +790,7 @@ async function proceedFreeTrial() {
     return;
   }
   // 사용자 confirm — 1인 1회임을 명확히 알림.
-  const ok = confirm('Plus 첫 달 무료 — 30일간 무료로 모든 기능 사용 가능.\n\n• 1인 1회 한정 (다음엔 정가 9,900원)\n• 자동 결제 X — 30일 후 만료\n• 만료 7일 전 알림\n\n시작할까?');
+  const ok = confirm('Plus 첫 달 무료 — 한 달 무료로 모든 기능 사용 가능.\n\n• 1인 1회 한정 (다음엔 정가 9,900원)\n• 자동 결제 X — 한 달 후 만료\n• 만료 7일 전 알림\n\n시작할까?');
   if (!ok) return;
   if (typeof showToast === 'function') showToast('Plus 첫 달 무료 신청 중…');
   try {
@@ -797,7 +808,7 @@ async function proceedFreeTrial() {
         showToast('💳 이미 Plus 구독 활성');
         alert(result.message || '이미 활성 Plus 구독이 있어.');
       } else {
-        showToast('🌊 Plus 첫 달 무료 시작 — 30일 자유롭게 🫂');
+        showToast('🌊 Plus 첫 달 무료 시작 — 한 달 자유롭게 🫂');
       }
       closeSubscribeModal();
       if (typeof refreshBillingStatus === 'function') refreshBillingStatus();

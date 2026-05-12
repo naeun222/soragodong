@@ -10,8 +10,8 @@
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 import { TIER_PLANS } from '../_lib/billing';
+import { calcNextBillingDate, getCurrentKstAnchorDay } from '../_lib/cycle';
 
-const TRIAL_DAYS = 30;
 const TRIAL_PLAN: 'light' = 'light';
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
@@ -69,8 +69,10 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     }, 403);
   }
 
+  // V4 (사용자 명시 2026-05-13 ultrathink): 매월 anchor cycle — '한 달 무료' = anchor 기준 다음 달 같은 날까지.
   const now = new Date();
-  const expiresIso = new Date(now.getTime() + TRIAL_DAYS * 86400_000).toISOString();
+  const anchorDay = getCurrentKstAnchorDay();
+  const expiresIso = calcNextBillingDate(now, anchorDay).toISOString();
   const tier = TIER_PLANS[TRIAL_PLAN];
 
   // billing UPSERT — 결제 X, 카드 등록 X.
@@ -93,7 +95,11 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     next_billing_at: null,
     cancel_at_period_end: false,
     cancelled_at: null,
-    last_billing_error: null
+    last_billing_error: null,
+    // V4 (사용자 명시 2026-05-13 ultrathink): 매월 anchor day 저장 — migration 0023.
+    //   migration 미적용 시 PATCH 가 column ignore (Supabase REST 동작) — 단순 fallback.
+    cycle_anchor_day: anchorDay,
+    subscription_started_at: now.toISOString()
   };
   // migration 0018 실행됐으면 1인 1회 기록.
   if (!columnMissing) body.plus_trial_consumed_at = now.toISOString();
@@ -141,6 +147,6 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     expires_at: expiresIso,
     plan: TRIAL_PLAN,
     cap_usd: tier.cap_usd,
-    message: `Plus 첫 달 무료 시작 — ${TRIAL_DAYS}일 후 만료 (자동 갱신 X). 만료 7일 전 알림.`
+    message: `Plus 첫 달 무료 시작 — 한 달 후 만료 (자동 갱신 X). 만료 7일 전 알림.`
   });
 }

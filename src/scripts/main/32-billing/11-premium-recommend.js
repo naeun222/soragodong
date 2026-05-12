@@ -116,7 +116,7 @@ function showBudgetExceededModal(reason, opts) {
       // legacy 분기 — early_light tier (grant 받은 옛 사용자) 한도 도달.
       titleText = '🐚 체험 한도 도달';
       bodyText = '체험 한도 다 썼네 — 써줘서 고마워.<br><br>' +
-        '계속 쓰려면 구독 — <span style="color:#5fb4d3; font-weight:600;">🌊 Plus 첫 달 무료</span> <b>9,900원/월</b> (30일 후 자동 결제, 언제든 해지).<br>' +
+        '계속 쓰려면 구독 — <span style="color:#5fb4d3; font-weight:600;">🌊 Plus 첫 달 무료</span> <b>9,900원/월</b> (한 달 후 자동 결제, 언제든 해지).<br>' +
         '가볍게 시작하려면 <b>🐚 Light 4,900원/월</b>.';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Plus 첫 달 무료 시작 (9,900원/월)</button>
@@ -126,7 +126,7 @@ function showBudgetExceededModal(reason, opts) {
     } else if (subActive && plan === 'early_lifetime') {
       // V4 (사용자 명시 2026-05-11): Light(4,900) 사용자 월 cap 도달 — Plus 업그레이드 권유.
       titleText = '🐚 이번 사이클 한도 도달';
-      bodyText = 'Light 한도 다 썼네.<br>Plus 가면 더 깊게 (약 3x 한도) — <b>첫 달 무료</b>, 30일 후 9,900원 자동 결제.';
+      bodyText = 'Light 한도 다 썼네.<br>Plus 가면 더 깊게 (약 3x 한도) — <b>첫 달 무료</b>, 한 달 후 9,900원 자동 결제.';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Plus 첫 달 무료 시작 (9,900원/월)</button>
         <button class="btn-secondary" onclick="document.getElementById('budgetExceededOverlay').remove();" style="width:100%;">다음 사이클 기다릴게</button>
@@ -143,7 +143,7 @@ function showBudgetExceededModal(reason, opts) {
       // 비구독 (체험 만료) — 구독 안내.
       titleText = '🐚 체험 종료';
       bodyText = '체험 기간 끝났어 — 깊게 써줘서 고마워.<br><br>' +
-        '계속 쓰려면 구독 — <span style="color:#5fb4d3; font-weight:600;">🌊 Plus 첫 달 무료</span> <b>9,900원/월</b> (30일 후 자동 결제, 언제든 해지).<br>' +
+        '계속 쓰려면 구독 — <span style="color:#5fb4d3; font-weight:600;">🌊 Plus 첫 달 무료</span> <b>9,900원/월</b> (한 달 후 자동 결제, 언제든 해지).<br>' +
         '가볍게 시작하려면 <b>🐚 Light 4,900원/월</b>.';
       optionsHtml = `
         <button class="btn-primary" onclick="document.getElementById('budgetExceededOverlay').remove(); openSubscribeModal();" style="width:100%; margin-bottom:6px;">🌊 Plus 첫 달 무료 시작 (9,900원/월)</button>

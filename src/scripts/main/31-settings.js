@@ -289,7 +289,7 @@ async function _doRefreshBillingStatus(manual) {
     } else if (balance > 0) {
       // 사용자 명시 2026-05-06 ultrathink: 신규 가입 = 무료 토큰 grant (양 비공개), early_light auto-grant X. raw $ 노출 금지.
       html += `<div><b>🎁 환영 무료 체험 중</b> <span style="color:var(--text-soft); font-size:11px;">— 자유롭게 써봐</span></div>`;
-      html += `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">마음에 들면 구독해줘 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.</div>`;
+      html += `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">마음에 들면 구독해줘 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 한 달 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.</div>`;
     } else {
       html += `<div><b>구독</b>: 미가입 <span style="color:var(--text-soft); font-size:11px;">— 계속 쓰려면 구독</span></div>`;
     }

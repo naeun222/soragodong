@@ -118,7 +118,7 @@ function checkFreeTrialExpiry() {
   // V4 (사용자 명시 2026-05-11 — 가계약): BILLING_RECURRING_ENABLED=false 시 Plus 첫 달 무료 promo X — 카피 분기.
   const _recurOn = (typeof BILLING_RECURRING_ENABLED !== 'undefined') ? BILLING_RECURRING_ENABLED : true;
   const planBody = _recurOn
-    ? `<b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`
+    ? `<b>🌊 Plus 첫 달 무료</b> (9,900원/월, 한 달 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`
     : `<b>🐚 Light 4,900원</b> / <b>🌊 Plus 9,900원</b> / <b>✨ Premium 25,000원</b> — 모두 1개월 이용권 (자동 갱신 X).`;
   _addNotification({
     type: 'free_trial_expiry_warning',
@@ -184,7 +184,7 @@ function checkFreeCreditDepletion() {
     _addNotification({
       type: 'free_credit_depleted',
       title: '🐚 환영 무료 체험 끝',
-      body: `깊게 써줘서 고마워.<br>계속 쓰려면 구독 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`,
+      body: `깊게 써줘서 고마워.<br>계속 쓰려면 구독 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 한 달 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`,
       persistent: true
     });
     return;
@@ -210,7 +210,7 @@ function checkFreeCreditDepletion() {
     _addNotification({
       type: 'free_credit_low',
       title: '🐚 환영 무료 체험 거의 끝',
-      body: `이제 얼마 안 남았어.<br>계속 쓰려면 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 30일 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`,
+      body: `이제 얼마 안 남았어.<br>계속 쓰려면 — <b>🌊 Plus 첫 달 무료</b> (9,900원/월, 한 달 후 자동 결제) 또는 <b>🐚 Light 4,900원/월</b>.`,
       persistent: true
     });
   }

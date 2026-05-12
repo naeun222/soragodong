@@ -15,8 +15,7 @@
 import { jsonResponse, type Env } from '../_lib/auth';
 import { TIER_PLANS } from '../_lib/billing';
 import { chargeWithBillingKey } from '../_lib/portone';
-
-const CYCLE_DAYS = 30;
+import { calcNextBillingDate, calcNext30DayFallback, resolveAnchorDay } from '../_lib/cycle';
 const MAX_BATCH = 50;
 const FAILURE_LIMIT = 3;  // 3회 연속 실패 시 자동 비활성
 
@@ -34,6 +33,9 @@ interface BillingRow {
   // V4 (사용자 명시 2026-05-13 ultrathink): 다운그레이드 예약 — migration 0022.
   scheduled_plan_change?: string | null;
   scheduled_plan_change_at?: string | null;
+  // V4 (사용자 명시 2026-05-13 ultrathink): 매월 anchor cycle — migration 0023.
+  cycle_anchor_day?: number | null;
+  subscription_started_at?: string | null;
 }
 
 // 사용자 보고 2026-05-09: migration 0016 적용 후 billing.user_email 우선.
@@ -84,7 +86,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     // 사용자 보고 2026-05-09: migration 0016 적용 후 user_email 같이 select.
     // 사용자 명시 2026-05-11: light/premium 도 정기결제 — cron 대상 확장.
     const url = `${env.SUPABASE_URL}/rest/v1/soragodong_billing?` +
-      `select=user_id,user_email,subscription_plan,subscription_expires_at,portone_billing_key,trial_until,next_billing_at,last_billing_attempt_at,last_billing_error,scheduled_plan_change,scheduled_plan_change_at&` +
+      `select=user_id,user_email,subscription_plan,subscription_expires_at,portone_billing_key,trial_until,next_billing_at,last_billing_attempt_at,last_billing_error,scheduled_plan_change,scheduled_plan_change_at,cycle_anchor_day,subscription_started_at&` +
       `next_billing_at=lte.${encodeURIComponent(nowIso)}&` +
       `subscription_active=eq.true&` +
       `cancel_at_period_end=eq.false&` +
@@ -152,8 +154,13 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
 
     if (result.ok && result.payment.status === 'PAID') {
       // 성공 — 다음 cycle.
+      // V4 (사용자 명시 2026-05-13 ultrathink): 매월 anchor 기준 — anchor=null 이면 옛 30일 fallback.
       const newCycleStart = new Date();
-      const newExpires = new Date(newCycleStart.getTime() + CYCLE_DAYS * 86400_000).toISOString();
+      const anchorDay = resolveAnchorDay(row);
+      const newExpiresDate = anchorDay
+        ? calcNextBillingDate(newCycleStart, anchorDay)
+        : calcNext30DayFallback(newCycleStart);
+      const newExpires = newExpiresDate.toISOString();
       try {
         await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${row.user_id}`, {
           method: 'PATCH',

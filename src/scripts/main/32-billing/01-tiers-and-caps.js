@@ -27,8 +27,8 @@ const TIER_PLANS_CLIENT = {
     tagline: '깊게, 꾸준히 — 첫 달 무료',
     emoji: '🌊',
     description: _RECUR
-      ? '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 30일 후 자동 결제, 언제든 해지.'
-      : '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 30일 후 만료 (자동 결제 X). 1인 1회 한정.',
+      ? '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 한 달 후 자동 결제, 언제든 해지.'
+      : '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 한 달 후 만료 (자동 결제 X). 1인 1회 한정.',
     has_free_trial: true },
   // Premium (25,000) — top tier anchor. 정가 결제. emoji ✨ (🐚🌊✨ 그라데이션 완성).
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '마음껏 깊게', emoji: '✨',
@@ -74,6 +74,27 @@ const DAILY_CAP_USD = {
 function _getDailyCapUsd(plan) {
   const v = DAILY_CAP_USD[plan];
   return typeof v === 'number' ? v : 0;
+}
+
+// V4 (사용자 명시 2026-05-13 ultrathink): 매월 가입일 anchor 기준 cycle 헬퍼 — backend `_lib/cycle.ts` 와 동일 로직.
+//   UI 표시용 (동의 모달의 예상 다음 결제일 / 성공 모달 / confirm 카피). source of truth = backend response.
+//   anchor=31 → 다음 달이 짧으면 해당 월 마지막 날 clip (4월30 / 2월28-29 등). 그 후엔 anchor 그대로 보존.
+const _KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+function _getCurrentKstAnchorDay() {
+  const kst = new Date(Date.now() + _KST_OFFSET_MS);
+  return kst.getUTCDate();
+}
+function _calcNextBillingDateKst(prevDate, anchorDay) {
+  const prevKst = new Date((prevDate || new Date()).getTime() + _KST_OFFSET_MS);
+  const targetYear  = prevKst.getUTCFullYear();
+  const targetMonth = prevKst.getUTCMonth() + 1;
+  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const clippedDay = Math.min(Math.max(1, anchorDay), lastDayOfTargetMonth);
+  const nextKst = new Date(Date.UTC(
+    targetYear, targetMonth, clippedDay,
+    prevKst.getUTCHours(), prevKst.getUTCMinutes(), prevKst.getUTCSeconds()
+  ));
+  return new Date(nextKst.getTime() - _KST_OFFSET_MS);
 }
 // Light → Premium 정가 결제 (사용자 명시 2026-05-02: 차액 결제 폐기 — 새 사이클 시작)
 const TIER_UPGRADE_KRW = TIER_PLANS_CLIENT.premium.krw; // 25,000

@@ -21,8 +21,7 @@
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 import { TIER_PLANS, type TierKey, validateTier } from '../_lib/billing';
 import { fetchPortOneBillingKey, chargeWithBillingKey } from '../_lib/portone';
-
-const CYCLE_DAYS = 30;
+import { calcNextBillingDate, getCurrentKstAnchorDay } from '../_lib/cycle';
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
@@ -93,9 +92,14 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     }
   } catch {}
 
+  // V4 (사용자 명시 2026-05-13 ultrathink): 매월 가입일 anchor 기준 cycle (Netflix / YouTube 표준).
+  //   anchor_day = KST 기준 가입 시점 day. 다음 결제 = anchor 기반 매월 같은 날 (짧은 달 clip).
+  //   migration 0023 적용 후 cycle_anchor_day 컬럼에 저장.
   const now = new Date();
   const cycleStartIso = now.toISOString();
-  const nextCycleIso = new Date(now.getTime() + CYCLE_DAYS * 86400_000).toISOString();
+  const anchorDay = getCurrentKstAnchorDay();
+  const nextBillingDate = calcNextBillingDate(now, anchorDay);
+  const nextCycleIso = nextBillingDate.toISOString();
   const cycleDay = cycleStartIso.slice(0, 10);
 
   // 첫 달 즉시 결제 — paymentId 멱등 (같은 cycleDay 내 retry 시 unique 보호).
@@ -179,7 +183,10 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
         next_billing_at: nextCycleIso,
         cancel_at_period_end: false,
         cancelled_at: null,
-        last_billing_error: null
+        last_billing_error: null,
+        // V4 (사용자 명시 2026-05-13 ultrathink): 매월 anchor day 저장. migration 0023 미적용 시 PATCH 가 column ignore.
+        cycle_anchor_day: anchorDay,
+        subscription_started_at: cycleStartIso
       })
     });
     if (!upsertResp.ok) {

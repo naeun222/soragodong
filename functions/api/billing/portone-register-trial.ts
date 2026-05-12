@@ -15,8 +15,8 @@
 import { verifyAuth, unauthorized, jsonResponse, type Env } from '../_lib/auth';
 import { TIER_PLANS } from '../_lib/billing';
 import { fetchPortOneBillingKey } from '../_lib/portone';
+import { calcNextBillingDate, getCurrentKstAnchorDay } from '../_lib/cycle';
 
-const TRIAL_DAYS = 30;
 const TRIAL_PLAN: 'light' = 'light';  // Plus tier — trial 흐름 전용
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
@@ -100,8 +100,11 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     }, 200);
   }
 
+  // V4 (사용자 명시 2026-05-13 ultrathink): 매월 anchor cycle — '한 달 무료' = anchor 기준 다음 달 같은 날까지.
   const now = new Date();
-  const trialUntilISO = new Date(now.getTime() + TRIAL_DAYS * 86400_000).toISOString();
+  const anchorDay = getCurrentKstAnchorDay();
+  const trialUntil = calcNextBillingDate(now, anchorDay);
+  const trialUntilISO = trialUntil.toISOString();
   const tier = TIER_PLANS[TRIAL_PLAN];
 
   // billing row 갱신 (없으면 INSERT).
@@ -136,7 +139,10 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
         cancelled_at: null,
         last_billing_error: null,
         // V4 (사용자 명시 2026-05-11 ultrathink): 1인 1회 trial 가드 — 향후 재 trial 차단.
-        plus_trial_consumed_at: now.toISOString()
+        plus_trial_consumed_at: now.toISOString(),
+        // V4 (사용자 명시 2026-05-13 ultrathink): 매월 anchor day 저장. migration 0023.
+        cycle_anchor_day: anchorDay,
+        subscription_started_at: now.toISOString()
       })
     });
     if (!upsertResp.ok) {
@@ -153,6 +159,6 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     next_billing_at: trialUntilISO,
     plan: TRIAL_PLAN,
     cap_usd: tier.cap_usd,
-    message: `Plus 첫 달 무료 — ${TRIAL_DAYS}일 뒤 ${tier.krw.toLocaleString()}원 자동 결제 시작.`
+    message: `Plus 첫 달 무료 — 한 달 뒤 ${tier.krw.toLocaleString()}원 자동 결제 시작.`
   });
 }
