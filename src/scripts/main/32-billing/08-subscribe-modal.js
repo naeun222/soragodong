@@ -403,7 +403,7 @@ async function openSubscribeModal() {
       //   다운그레이드 = 현 cycle 만료까지 그대로 사용, 자동 갱신 차단, 만료 후 직접 새 tier 가입. (Phase A — frontend-only)
       //   Phase B (자동 전환) = supabase migration `scheduled_plan_change` 컬럼 + cron 분기 추가 시 가능.
       if (_isUpgrade) {
-        buttonHtml = `<button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">✨ ${plan.label} 으로 업그레이드 (월 ${plan.krw.toLocaleString()}원)</button>`;
+        buttonHtml = `<button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">✨ ${plan.label} 으로 업그레이드</button>`;
       } else {
         buttonHtml = `<button class="btn-secondary" onclick="scheduleDowngrade('${key}')" style="width:100%; padding:11px;">🔽 ${plan.label} 으로 다운그레이드 (다음 갱신부터)</button>`;
       }
@@ -417,8 +417,8 @@ async function openSubscribeModal() {
             ? `${plan.emoji} 첫 달 무료 시작 (자동 결제 X)`
             : `${plan.emoji} 첫 달 무료로 시작하기`)
         : (_oneTime
-            ? `${plan.label} 1개월 (${plan.krw.toLocaleString()}원)`
-            : `${plan.label} 정기 구독 (월 ${plan.krw.toLocaleString()}원)`);
+            ? `${plan.label} 1개월`
+            : `${plan.label} 정기 구독`);
       buttonHtml = `<button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px; ${buttonStyle}">${buttonText}</button>`;
     }
     // V4 (사용자 보고 2026-05-13 ultrathink): Plus 카드 + trial 소진 시 description 에서 '첫 달 무료' 카피 strip.

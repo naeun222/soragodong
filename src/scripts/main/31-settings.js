@@ -141,11 +141,12 @@ function saveSettings() {
 
 // 사용자 명시 2026-05-05: 토큰/달러 raw 수치 폐기 — 구독제 무드에 맞춰 상태 라벨 4단계로 추상화.
 // Why: 4자리 소수점 달러 + token 수 노출은 "정해진 금액으로 마음껏" 이라는 구독제 핵심 감각을 깬다.
+// V4 (사용자 명시 2026-05-13 ultrathink): 일일 cap 기준 (옛 monthly 표현 폐기 — 월 cap 가드 자체 없음).
 function _quotaStateLabel(pct) {
-  if (pct < 50) return '이번 달 여유 충분 ✅';
-  if (pct < 80) return '이번 달 적당히 사용 중';
-  if (pct < 95) return '이번 달 거의 다 썼어';
-  return '이번 달 한도 임박 — 잠깐만';
+  if (pct < 50) return '오늘 여유 충분 ✅';
+  if (pct < 80) return '오늘 적당히 사용 중';
+  if (pct < 95) return '오늘 거의 다 썼어';
+  return '오늘 한도 임박 — 잠깐만';
 }
 
 // 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
@@ -232,8 +233,26 @@ async function _doRefreshBillingStatus(manual) {
     // 사용자 명시 2026-05-05: raw 수치 ($/토큰) 폐기 — 진행 bar + 상태 라벨로 추상화. 80%+ 일 때만 Premium CTA.
     // 사용자 명시 2026-05-11 ultrathink: early_light (legacy) 는 정상 구독 분기에서 제외 — backend 가 잘못 active 처리해도 frontend 에서 미구독 (또는 환영 체험) 으로 표시. label '얼리 플랜 (legacy)' 노출 차단.
     if (subActive && planMeta && planKey !== 'early_light') {
-      const usedPct = quotaUsd > 0 ? Math.min(100, Math.round((usedUsd / quotaUsd) * 100)) : 0;
+      // V4 (사용자 명시 2026-05-13 ultrathink): 사용량 bar = 일일 cap 기준 (server gating 도 daily only — monthly 가드 폐기 migration 0020).
+      //   daily_cap_usd = _getDailyCapUsd(planKey) (server _lib/billing.ts TIER_PLANS[plan].daily_cap_usd 와 동기).
+      //   daily_quota_used = billing row 의 누적 사용액 (consume_daily_atomic RPC 가 갱신).
+      //   daily_quota_reset_at = 다음 4AM KST. 표시: 'N시간 뒤 reset' 또는 '내일 reset'.
+      const dailyCapUsd = (typeof _getDailyCapUsd === 'function') ? _getDailyCapUsd(planKey) : 0;
+      const dailyUsedUsd = Number(billing.daily_quota_used || 0);
+      const usedPct = dailyCapUsd > 0 ? Math.min(100, Math.round((dailyUsedUsd / dailyCapUsd) * 100)) : 0;
       const isNearCap = usedPct >= 80;
+      // reset 시각 — 다음 4AM KST 까지 남은 시간 표시.
+      const resetIso = billing.daily_quota_reset_at;
+      let resetStr = '';
+      if (resetIso) {
+        const resetDate = new Date(resetIso);
+        const hoursLeft = Math.ceil((resetDate.getTime() - Date.now()) / 3600000);
+        if (hoursLeft <= 0) resetStr = '곧 reset';
+        else if (hoursLeft <= 24) resetStr = `${hoursLeft}시간 뒤 reset`;
+        else resetStr = '내일 4시 reset';
+      } else {
+        resetStr = '매일 새벽 4시 reset';
+      }
       // 사용자 명시 2026-05-06: backend `cancel_at_period_end` true 면 갱신 해지 됨 — '{date}에 종료' 라벨로 대체.
       const cancelledRenewal = !!billing.cancel_at_period_end;
       // V4 (사용자 명시 2026-05-11): trial 흐름 = Plus(key='light'). 옛 'early_lifetime trial' 폐기.
@@ -256,7 +275,10 @@ async function _doRefreshBillingStatus(manual) {
       html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${expiresLabel}</span></div>`;
       // early_light: 토큰 양 안 보이게 (체험 플랜은 수치 노출 X)
       if (planKey !== 'early_light') {
-        html += `<div style="margin-top:10px; font-size:13px;">${_quotaStateLabel(usedPct)}</div>`;
+        html += `<div style="margin-top:10px; display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
+          <div style="font-size:13px;">${_quotaStateLabel(usedPct)}</div>
+          <div style="font-size:10.5px; color:var(--text-soft);">${resetStr}</div>
+        </div>`;
         html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
         if (isNearCap && planKey !== 'premium') {
           html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">✨ Premium 으로 늘리기</button>`;

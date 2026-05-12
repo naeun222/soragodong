@@ -60,18 +60,20 @@ const TIER_PLANS_CLIENT = {
 const OVERAGE_PACKS_CLIENT = {
   premium_pack: { krw: 2500, usd: 1.5, label: 'Premium 추가팩', tier: 'premium' }
 };
-// V4 (사용자 명시 2026-05-04 ultrathink — v2): tier 별 일일 cap 비율 (월 cap × 비율 / 30 = 일일).
-// Light(entry) /25 (마진 보호) — $2.2 × 1.2 / 30 ≈ $0.088/일
-// Plus       /25 (마진 보호) — $5  × 1.2 / 30 = $0.20/일
-// Premium    /20 (여유, '마음껏 깊게' 약속) — $13 × 1.5 / 30 = $0.65/일
-// Early_light(legacy) /25 동일 — $1.1 × 1.2 / 30 ≈ $0.044/일
-// 일일 cap reset = getDayKey() (4AM KST cutoff). 매일 새로.
-const DAILY_CAP_RATIO = { early_lifetime: 1.2, light: 1.2, early_light: 1.2, premium: 1.5 };
+// V4 (사용자 명시 2026-05-13 ultrathink): 일일 cap = backend `_lib/billing.ts:TIER_PLANS[plan].daily_cap_usd` 와 동기.
+//   옛 공식 (월 cap × 비율 / 30) 폐기 — server 와 mismatch (예: light = 0.20 vs server 0.30).
+//   source of truth = backend. 여기는 UI 표시용 mirror.
+// 매일 새벽 4시 KST reset (consume_daily_atomic RPC).
+const DAILY_CAP_USD = {
+  light:          0.30,  // Plus
+  premium:        0.75,
+  early_lifetime: 0.20,  // Light
+  early_light:    0.20,  // legacy 환영
+  guest:          null   // guest = daily cap X (별도 monthly cap $0.30 만)
+};
 function _getDailyCapUsd(plan) {
-  const tier = TIER_PLANS_CLIENT[plan];
-  if (!tier) return 0;
-  const ratio = DAILY_CAP_RATIO[plan] || 1.2;
-  return (tier.cap_usd || 0) * ratio / 30;
+  const v = DAILY_CAP_USD[plan];
+  return typeof v === 'number' ? v : 0;
 }
 // Light → Premium 정가 결제 (사용자 명시 2026-05-02: 차액 결제 폐기 — 새 사이클 시작)
 const TIER_UPGRADE_KRW = TIER_PLANS_CLIENT.premium.krw; // 25,000

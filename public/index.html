@@ -56105,11 +56105,12 @@ function saveSettings() {
 
 // 사용자 명시 2026-05-05: 토큰/달러 raw 수치 폐기 — 구독제 무드에 맞춰 상태 라벨 4단계로 추상화.
 // Why: 4자리 소수점 달러 + token 수 노출은 "정해진 금액으로 마음껏" 이라는 구독제 핵심 감각을 깬다.
+// V4 (사용자 명시 2026-05-13 ultrathink): 일일 cap 기준 (옛 monthly 표현 폐기 — 월 cap 가드 자체 없음).
 function _quotaStateLabel(pct) {
-  if (pct < 50) return '이번 달 여유 충분 ✅';
-  if (pct < 80) return '이번 달 적당히 사용 중';
-  if (pct < 95) return '이번 달 거의 다 썼어';
-  return '이번 달 한도 임박 — 잠깐만';
+  if (pct < 50) return '오늘 여유 충분 ✅';
+  if (pct < 80) return '오늘 적당히 사용 중';
+  if (pct < 95) return '오늘 거의 다 썼어';
+  return '오늘 한도 임박 — 잠깐만';
 }
 
 // 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
@@ -56196,8 +56197,26 @@ async function _doRefreshBillingStatus(manual) {
     // 사용자 명시 2026-05-05: raw 수치 ($/토큰) 폐기 — 진행 bar + 상태 라벨로 추상화. 80%+ 일 때만 Premium CTA.
     // 사용자 명시 2026-05-11 ultrathink: early_light (legacy) 는 정상 구독 분기에서 제외 — backend 가 잘못 active 처리해도 frontend 에서 미구독 (또는 환영 체험) 으로 표시. label '얼리 플랜 (legacy)' 노출 차단.
     if (subActive && planMeta && planKey !== 'early_light') {
-      const usedPct = quotaUsd > 0 ? Math.min(100, Math.round((usedUsd / quotaUsd) * 100)) : 0;
+      // V4 (사용자 명시 2026-05-13 ultrathink): 사용량 bar = 일일 cap 기준 (server gating 도 daily only — monthly 가드 폐기 migration 0020).
+      //   daily_cap_usd = _getDailyCapUsd(planKey) (server _lib/billing.ts TIER_PLANS[plan].daily_cap_usd 와 동기).
+      //   daily_quota_used = billing row 의 누적 사용액 (consume_daily_atomic RPC 가 갱신).
+      //   daily_quota_reset_at = 다음 4AM KST. 표시: 'N시간 뒤 reset' 또는 '내일 reset'.
+      const dailyCapUsd = (typeof _getDailyCapUsd === 'function') ? _getDailyCapUsd(planKey) : 0;
+      const dailyUsedUsd = Number(billing.daily_quota_used || 0);
+      const usedPct = dailyCapUsd > 0 ? Math.min(100, Math.round((dailyUsedUsd / dailyCapUsd) * 100)) : 0;
       const isNearCap = usedPct >= 80;
+      // reset 시각 — 다음 4AM KST 까지 남은 시간 표시.
+      const resetIso = billing.daily_quota_reset_at;
+      let resetStr = '';
+      if (resetIso) {
+        const resetDate = new Date(resetIso);
+        const hoursLeft = Math.ceil((resetDate.getTime() - Date.now()) / 3600000);
+        if (hoursLeft <= 0) resetStr = '곧 reset';
+        else if (hoursLeft <= 24) resetStr = `${hoursLeft}시간 뒤 reset`;
+        else resetStr = '내일 4시 reset';
+      } else {
+        resetStr = '매일 새벽 4시 reset';
+      }
       // 사용자 명시 2026-05-06: backend `cancel_at_period_end` true 면 갱신 해지 됨 — '{date}에 종료' 라벨로 대체.
       const cancelledRenewal = !!billing.cancel_at_period_end;
       // V4 (사용자 명시 2026-05-11): trial 흐름 = Plus(key='light'). 옛 'early_lifetime trial' 폐기.
@@ -56220,7 +56239,10 @@ async function _doRefreshBillingStatus(manual) {
       html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${expiresLabel}</span></div>`;
       // early_light: 토큰 양 안 보이게 (체험 플랜은 수치 노출 X)
       if (planKey !== 'early_light') {
-        html += `<div style="margin-top:10px; font-size:13px;">${_quotaStateLabel(usedPct)}</div>`;
+        html += `<div style="margin-top:10px; display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
+          <div style="font-size:13px;">${_quotaStateLabel(usedPct)}</div>
+          <div style="font-size:10.5px; color:var(--text-soft);">${resetStr}</div>
+        </div>`;
         html += `<div style="margin-top:6px; height:6px; background:var(--surface); border-radius:3px; overflow:hidden;"><div style="height:100%; width:${usedPct}%; background:${isNearCap ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
         if (isNearCap && planKey !== 'premium') {
           html += `<button class="btn-secondary" onclick="openSubscribeModal()" style="margin-top:10px; width:100%; padding:9px; font-size:12px;">✨ Premium 으로 늘리기</button>`;
@@ -56557,18 +56579,20 @@ const TIER_PLANS_CLIENT = {
 const OVERAGE_PACKS_CLIENT = {
   premium_pack: { krw: 2500, usd: 1.5, label: 'Premium 추가팩', tier: 'premium' }
 };
-// V4 (사용자 명시 2026-05-04 ultrathink — v2): tier 별 일일 cap 비율 (월 cap × 비율 / 30 = 일일).
-// Light(entry) /25 (마진 보호) — $2.2 × 1.2 / 30 ≈ $0.088/일
-// Plus       /25 (마진 보호) — $5  × 1.2 / 30 = $0.20/일
-// Premium    /20 (여유, '마음껏 깊게' 약속) — $13 × 1.5 / 30 = $0.65/일
-// Early_light(legacy) /25 동일 — $1.1 × 1.2 / 30 ≈ $0.044/일
-// 일일 cap reset = getDayKey() (4AM KST cutoff). 매일 새로.
-const DAILY_CAP_RATIO = { early_lifetime: 1.2, light: 1.2, early_light: 1.2, premium: 1.5 };
+// V4 (사용자 명시 2026-05-13 ultrathink): 일일 cap = backend `_lib/billing.ts:TIER_PLANS[plan].daily_cap_usd` 와 동기.
+//   옛 공식 (월 cap × 비율 / 30) 폐기 — server 와 mismatch (예: light = 0.20 vs server 0.30).
+//   source of truth = backend. 여기는 UI 표시용 mirror.
+// 매일 새벽 4시 KST reset (consume_daily_atomic RPC).
+const DAILY_CAP_USD = {
+  light:          0.30,  // Plus
+  premium:        0.75,
+  early_lifetime: 0.20,  // Light
+  early_light:    0.20,  // legacy 환영
+  guest:          null   // guest = daily cap X (별도 monthly cap $0.30 만)
+};
 function _getDailyCapUsd(plan) {
-  const tier = TIER_PLANS_CLIENT[plan];
-  if (!tier) return 0;
-  const ratio = DAILY_CAP_RATIO[plan] || 1.2;
-  return (tier.cap_usd || 0) * ratio / 30;
+  const v = DAILY_CAP_USD[plan];
+  return typeof v === 'number' ? v : 0;
 }
 // Light → Premium 정가 결제 (사용자 명시 2026-05-02: 차액 결제 폐기 — 새 사이클 시작)
 const TIER_UPGRADE_KRW = TIER_PLANS_CLIENT.premium.krw; // 25,000
@@ -57898,7 +57922,7 @@ async function openSubscribeModal() {
       //   다운그레이드 = 현 cycle 만료까지 그대로 사용, 자동 갱신 차단, 만료 후 직접 새 tier 가입. (Phase A — frontend-only)
       //   Phase B (자동 전환) = supabase migration `scheduled_plan_change` 컬럼 + cron 분기 추가 시 가능.
       if (_isUpgrade) {
-        buttonHtml = `<button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">✨ ${plan.label} 으로 업그레이드 (월 ${plan.krw.toLocaleString()}원)</button>`;
+        buttonHtml = `<button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px;">✨ ${plan.label} 으로 업그레이드</button>`;
       } else {
         buttonHtml = `<button class="btn-secondary" onclick="scheduleDowngrade('${key}')" style="width:100%; padding:11px;">🔽 ${plan.label} 으로 다운그레이드 (다음 갱신부터)</button>`;
       }
@@ -57912,8 +57936,8 @@ async function openSubscribeModal() {
             ? `${plan.emoji} 첫 달 무료 시작 (자동 결제 X)`
             : `${plan.emoji} 첫 달 무료로 시작하기`)
         : (_oneTime
-            ? `${plan.label} 1개월 (${plan.krw.toLocaleString()}원)`
-            : `${plan.label} 정기 구독 (월 ${plan.krw.toLocaleString()}원)`);
+            ? `${plan.label} 1개월`
+            : `${plan.label} 정기 구독`);
       buttonHtml = `<button class="btn-primary" onclick="proceedSubscribe('${key}')" style="width:100%; padding:11px; ${buttonStyle}">${buttonText}</button>`;
     }
     // V4 (사용자 보고 2026-05-13 ultrathink): Plus 카드 + trial 소진 시 description 에서 '첫 달 무료' 카피 strip.
