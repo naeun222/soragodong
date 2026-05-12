@@ -298,15 +298,15 @@ function toggleReflectionOpus() {
   q.useOpus = next;
   saveState();
   updateReflectionChatModeBtn();
-  showToast(next ? '🦉 Opus 모드 — 이 질문만 깊게' : '🪶 Sonnet 모드 — 가볍게');
+  showToast(next ? '🦉 Opus 모드 — 깊게' : '🪶 Sonnet 모드 — 가볍게');
 }
 function updateReflectionChatModeBtn() {
   if (typeof _activeReflectionId === 'undefined' || !_activeReflectionId) return;
   const q = (state.reflectionQuestions || []).find(x => x.id === _activeReflectionId);
   const useOpus = !!(q && q.useOpus);
   const titleAttr = useOpus
-    ? '🦉 Opus 모드 (이 질문만) — 누르면 Sonnet'
-    : '🪶 Sonnet 모드 — 누르면 Opus (Premium 전용)';
+    ? '🦉 Opus — 누르면 Sonnet'
+    : '🪶 Sonnet — 누르면 Opus (Premium 전용)';
   document.querySelectorAll('.js-reflection-mode-btn').forEach(btn => {
     btn.classList.toggle('opus', useOpus);
     btn.innerHTML = useOpus ? '🦉' : '🪶';
@@ -335,15 +335,15 @@ function toggleMagicHelpOpus() {
   decision.helpChatUseOpus[stepId] = next;
   saveState();
   updateMagicHelpChatModeBtn();
-  showToast(next ? '🦉 Opus 모드 — 이 단계만 깊게' : '🪶 Sonnet 모드 — 가볍게');
+  showToast(next ? '🦉 Opus 모드 — 깊게' : '🪶 Sonnet 모드 — 가볍게');
 }
 function updateMagicHelpChatModeBtn() {
   if (typeof _magicHelpState === 'undefined' || !_magicHelpState) return;
   const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
   const useOpus = !!(decision && decision.helpChatUseOpus && decision.helpChatUseOpus[_magicHelpState.stepId]);
   const titleAttr = useOpus
-    ? '🦉 Opus 모드 (이 단계만) — 누르면 Sonnet'
-    : '🪶 Sonnet 모드 — 누르면 Opus (Premium 전용)';
+    ? '🦉 Opus — 누르면 Sonnet'
+    : '🪶 Sonnet — 누르면 Opus (Premium 전용)';
   document.querySelectorAll('.js-magic-mode-btn').forEach(btn => {
     btn.classList.toggle('opus', useOpus);
     btn.innerHTML = useOpus ? '🦉' : '🪶';

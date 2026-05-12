@@ -890,7 +890,16 @@
     box-shadow: 0 0 14px rgba(212,167,106,0.45), inset 0 0 8px rgba(212,167,106,0.10);
   }
   .chat-mode-btn.rag-off { background: var(--surface2); border-color: var(--border); }
-  .chat-mode-btn.brand-only { background: transparent; border-color: transparent; }
+  /* V4 (사용자 명시 2026-05-13): 대화탭 토글 svg 더 크게 꽉 채우게. png (brand-only) 는 기본 22 유지. */
+  .chat-mode-btn.rag-on .chat-mode-img,
+  .chat-mode-btn.rag-off .chat-mode-img { width: 30px; height: 30px; }
+  /* V4 (사용자 명시 2026-05-13): 대화탭 외 = brand only no-op. 클릭 자체 차단 + 시각 자연 (cursor default + opacity 자연). */
+  .chat-mode-btn.brand-only {
+    background: transparent;
+    border-color: transparent;
+    pointer-events: none;
+    cursor: default;
+  }
   /* Plus 첫 진입 깜빡 halo — _ragToggleSeen 가드 falsy 시 2초 cycle pulse. 클릭 또는 모달 OK 시 해제. */
   @keyframes ragBlinkPulse {
     0%, 100% { box-shadow: 0 0 6px rgba(212,167,106,0.30); }

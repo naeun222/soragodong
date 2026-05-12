@@ -121,17 +121,11 @@ async function _ragBackfillAll(opts) {
       return { embedded: 0, skipped: true };
     }
     const batch = targets.slice(0, _RAG_MAX_BACKFILL_BATCH);
-    if (!silent && typeof showToast === 'function') showToast(`📚 옛 챕터 학습 중... 0/${batch.length}`);
+    // V4 (사용자 명시 2026-05-13): 백필 진행률 토스트 제거 — 백그라운드 silent 동작.
     let done = 0, fail = 0;
     for (const a of batch) {
       const ok = await _ragEmbedArchive(a);
       if (ok) done++; else fail++;
-      if (!silent && (done + fail) % 5 === 0 && typeof showToast === 'function') {
-        showToast(`📚 옛 챕터 학습 중... ${done + fail}/${batch.length}`);
-      }
-    }
-    if (!silent && typeof showToast === 'function') {
-      showToast(`📚 옛 챕터 ${done}개 학습 완료${fail > 0 ? ` (${fail}개 실패)` : ''}`);
     }
     _ragBackfillInProgress = false;
     return { embedded: done, failed: fail, total: batch.length };

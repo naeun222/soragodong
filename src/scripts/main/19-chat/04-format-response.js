@@ -25,7 +25,8 @@ function formatAIResponse(text) {
 // 사용자 요청 2026-04-30: 메인 chat 일일 cap 헬퍼. 4시 cutoff 기준. cap=0 = 무제한.
 function _checkDailyChatCap() {
   if (!state.preferences) state.preferences = {};
-  // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 cap 적용.
+  // V4 (사용자 명시 2026-05-13): 어드민 overlay 활성 시 모든 cap X. 옛 '특혜 제거' 정책 폐기.
+  if (typeof _isAdmin === 'function' && _isAdmin()) return { ok: true };
   const cap = state.preferences.dailyChatCap;
   if (cap === 0 || cap == null) return { ok: true };
   const todayK = todayKey();

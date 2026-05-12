@@ -172,14 +172,14 @@ async function _doRefreshBillingStatus(manual) {
     return;
   }
   // 사용자 명시 2026-05-11: admin 계정은 구독 표시 = '어드민', 결제/사용량 노출 X.
-  if (typeof _isAdmin === 'function' && _isAdmin()) {
-    if (status) {
-      status.innerHTML = `
-        <div><b>구독</b>: 🛡️ 어드민</div>
-        <div style="font-size:11.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">운영 계정 — 제한 없음</div>
-      `;
-    }
-    return;
+  // V4 (사용자 보고 2026-05-13): admin 도 _billingCache 갱신 + updateMainHeaderBtnVisual 호출. status UI 만 admin 라벨로 즉시 덮어쓰기.
+  const _adminOverlayActive = typeof _isAdmin === 'function' && _isAdmin();
+  if (_adminOverlayActive && status) {
+    status.innerHTML = `
+      <div><b>구독</b>: 🛡️ 어드민</div>
+      <div style="font-size:11.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">운영 계정 — 제한 없음</div>
+    `;
+    // return X — fetch 계속 진행 (cache 갱신 위해)
   }
   // Phase 1e: 게스트 사용자 — 가입 유도 카드 (수치/한도 노출 X, 데이터 안전 + E2EE 톤).
   if (state && state.isGuest) {
@@ -298,8 +298,9 @@ async function _doRefreshBillingStatus(manual) {
       html += `<div style="margin-top:6px; height:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.25); border-radius:4px; overflow:hidden;"><div style="height:100%; width:${overagePct}%; background:${isPackNearEmpty ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
     }
     // 사용자 명시 2026-05-11 ultrathink: 레거시 early_light 안내 제거 — 위 정상 구독 분기에서 plan 자체를 미구독 처리하므로 일관성 차원에서 잔재 라인 삭제.
-    if (status) status.innerHTML = html;
-    // 사용자 명시 2026-05-06: 다음 갱신 해지 박스 — 결제 내역 토글 안에 별도 render.
+    // V4 (사용자 보고 2026-05-13): admin overlay 활성 시 status 안 덮어쓰기 (이미 위에서 admin 라벨 표시함).
+    if (status && !_adminOverlayActive) status.innerHTML = html;
+    // 사용자 명시 2026-05-06: 다음 갱신 해지 박스 — 결제 내역 토글 안에 별도 render. admin 도 정상 갱신 (해지 X / 비구독 빈 box).
     if (status && typeof _renderCancelRenewalBox === 'function') {
       try { _renderCancelRenewalBox(billing); } catch {}
     }

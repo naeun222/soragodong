@@ -126,6 +126,8 @@ async function checkOpusGate(env: Env, userId: string, isTutorial: boolean): Pro
   limit?: number;
 }> {
   if (isTutorial) return { ok: true };
+  // V4 (사용자 명시 2026-05-13): 어드민 = 모든 제한 X. Premium 가드도 우회.
+  if (env.ADMIN_USER_ID && userId === env.ADMIN_USER_ID) return { ok: true };
   const billing = await getUserBilling(env, userId);
   const isPremium = billing?.subscription_active && billing.subscription_plan === 'premium';
   if (!isPremium) {

@@ -1013,7 +1013,16 @@
     box-shadow: 0 0 14px rgba(212,167,106,0.45), inset 0 0 8px rgba(212,167,106,0.10);
   }
   .chat-mode-btn.rag-off { background: var(--surface2); border-color: var(--border); }
-  .chat-mode-btn.brand-only { background: transparent; border-color: transparent; }
+  /* V4 (사용자 명시 2026-05-13): 대화탭 토글 svg 더 크게 꽉 채우게. png (brand-only) 는 기본 22 유지. */
+  .chat-mode-btn.rag-on .chat-mode-img,
+  .chat-mode-btn.rag-off .chat-mode-img { width: 30px; height: 30px; }
+  /* V4 (사용자 명시 2026-05-13): 대화탭 외 = brand only no-op. 클릭 자체 차단 + 시각 자연 (cursor default + opacity 자연). */
+  .chat-mode-btn.brand-only {
+    background: transparent;
+    border-color: transparent;
+    pointer-events: none;
+    cursor: default;
+  }
   /* Plus 첫 진입 깜빡 halo — _ragToggleSeen 가드 falsy 시 2초 cycle pulse. 클릭 또는 모달 OK 시 해제. */
   @keyframes ragBlinkPulse {
     0%, 100% { box-shadow: 0 0 6px rgba(212,167,106,0.30); }
@@ -12616,9 +12625,10 @@
     <div class="screen" id="screen-reflection">
       <div class="reflection-screen-header">
         <button class="reflection-screen-back" onclick="closeReflectionScreen()">←</button>
+        <!-- V4 (사용자 명시 2026-05-13): 토글을 godongicon 자리 (back 옆 좌측) 으로 이동. 휴지통 옆 X. -->
+        <button class="chat-mode-btn js-reflection-mode-btn" onclick="toggleReflectionOpus()" aria-label="Opus/Sonnet 전환" title="🪶 Sonnet — 누르면 Opus (Premium 전용)">🪶</button>
         <div class="reflection-screen-q" id="reflectionScreenQ"></div>
         <div class="reflection-screen-actions">
-          <button class="chat-mode-btn js-reflection-mode-btn" onclick="toggleReflectionOpus()" aria-label="Opus/Sonnet 전환 (이 질문 한정)" title="🪶 Sonnet 모드 — 누르면 Opus (Premium 전용)">🪶</button>
           <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론</button>
           <button class="reflection-pause-btn" id="reflectionDeleteBtn" title="삭제">🗑</button>
         </div>
@@ -12638,9 +12648,10 @@
     <div class="screen" id="screen-magic-help">
       <div class="reflection-screen-header">
         <button class="reflection-screen-back" onclick="closeMagicHelpChat()">←</button>
+        <!-- V4 (사용자 명시 2026-05-13): 토글을 godongicon 자리 (back 옆 좌측) 으로 이동. 휴지통 옆 X. -->
+        <button class="chat-mode-btn js-magic-mode-btn" onclick="toggleMagicHelpOpus()" aria-label="Opus/Sonnet 전환" title="🪶 Sonnet — 누르면 Opus (Premium 전용)">🪶</button>
         <div class="reflection-screen-q" id="magicHelpScreenQ"></div>
         <div class="reflection-screen-actions">
-          <button class="chat-mode-btn js-magic-mode-btn" onclick="toggleMagicHelpOpus()" aria-label="Opus/Sonnet 전환 (이 단계 한정)" title="🪶 Sonnet 모드 — 누르면 Opus (Premium 전용)">🪶</button>
           <button class="reflection-resolve-btn" id="magicHelpDeleteBtn" onclick="deleteMagicHelpChat()" title="이 임시 대화 삭제 — 분석 input에 안 들어감" style="background:transparent; border:1px solid rgba(220,80,80,0.30); color:#e8a3a3; padding:6px 10px;">🗑</button>
           <button class="reflection-resolve-btn" id="magicHelpEndBtn" onclick="endMagicHelpChat()" title="이 대화 마무리 — 도서관에 정리">✓ 마무리</button>
         </div>
@@ -39433,7 +39444,8 @@ function formatAIResponse(text) {
 // 사용자 요청 2026-04-30: 메인 chat 일일 cap 헬퍼. 4시 cutoff 기준. cap=0 = 무제한.
 function _checkDailyChatCap() {
   if (!state.preferences) state.preferences = {};
-  // 사용자 명시 2026-04-30 (정정): admin 특혜 제거 — admin 도 일반 사용자처럼 cap 적용.
+  // V4 (사용자 명시 2026-05-13): 어드민 overlay 활성 시 모든 cap X. 옛 '특혜 제거' 정책 폐기.
+  if (typeof _isAdmin === 'function' && _isAdmin()) return { ok: true };
   const cap = state.preferences.dailyChatCap;
   if (cap === 0 || cap == null) return { ok: true };
   const todayK = todayKey();
@@ -40292,15 +40304,15 @@ function toggleReflectionOpus() {
   q.useOpus = next;
   saveState();
   updateReflectionChatModeBtn();
-  showToast(next ? '🦉 Opus 모드 — 이 질문만 깊게' : '🪶 Sonnet 모드 — 가볍게');
+  showToast(next ? '🦉 Opus 모드 — 깊게' : '🪶 Sonnet 모드 — 가볍게');
 }
 function updateReflectionChatModeBtn() {
   if (typeof _activeReflectionId === 'undefined' || !_activeReflectionId) return;
   const q = (state.reflectionQuestions || []).find(x => x.id === _activeReflectionId);
   const useOpus = !!(q && q.useOpus);
   const titleAttr = useOpus
-    ? '🦉 Opus 모드 (이 질문만) — 누르면 Sonnet'
-    : '🪶 Sonnet 모드 — 누르면 Opus (Premium 전용)';
+    ? '🦉 Opus — 누르면 Sonnet'
+    : '🪶 Sonnet — 누르면 Opus (Premium 전용)';
   document.querySelectorAll('.js-reflection-mode-btn').forEach(btn => {
     btn.classList.toggle('opus', useOpus);
     btn.innerHTML = useOpus ? '🦉' : '🪶';
@@ -40329,15 +40341,15 @@ function toggleMagicHelpOpus() {
   decision.helpChatUseOpus[stepId] = next;
   saveState();
   updateMagicHelpChatModeBtn();
-  showToast(next ? '🦉 Opus 모드 — 이 단계만 깊게' : '🪶 Sonnet 모드 — 가볍게');
+  showToast(next ? '🦉 Opus 모드 — 깊게' : '🪶 Sonnet 모드 — 가볍게');
 }
 function updateMagicHelpChatModeBtn() {
   if (typeof _magicHelpState === 'undefined' || !_magicHelpState) return;
   const decision = (state.decisions || []).find(d => d.id === _magicHelpState.decisionId);
   const useOpus = !!(decision && decision.helpChatUseOpus && decision.helpChatUseOpus[_magicHelpState.stepId]);
   const titleAttr = useOpus
-    ? '🦉 Opus 모드 (이 단계만) — 누르면 Sonnet'
-    : '🪶 Sonnet 모드 — 누르면 Opus (Premium 전용)';
+    ? '🦉 Opus — 누르면 Sonnet'
+    : '🪶 Sonnet — 누르면 Opus (Premium 전용)';
   document.querySelectorAll('.js-magic-mode-btn').forEach(btn => {
     btn.classList.toggle('opus', useOpus);
     btn.innerHTML = useOpus ? '🦉' : '🪶';
@@ -40952,6 +40964,8 @@ async function processAnalysis(analysis, messageIdx) {
 function _getDailyDeeperCap() {
   if (window._onbTutorialMode) return Infinity;
   if (state.preferences && state.preferences.testerMode) return Infinity;
+  // V4 (사용자 명시 2026-05-13): 어드민 overlay 활성 시 모든 cap/cooldown 제한 X.
+  if (typeof _isAdmin === 'function' && _isAdmin()) return Infinity;
   const billing = window._billingCache;
   const plan = billing?.subscription_plan;
   if (plan === 'premium') return 10;
@@ -41361,17 +41375,11 @@ async function _ragBackfillAll(opts) {
       return { embedded: 0, skipped: true };
     }
     const batch = targets.slice(0, _RAG_MAX_BACKFILL_BATCH);
-    if (!silent && typeof showToast === 'function') showToast(`📚 옛 챕터 학습 중... 0/${batch.length}`);
+    // V4 (사용자 명시 2026-05-13): 백필 진행률 토스트 제거 — 백그라운드 silent 동작.
     let done = 0, fail = 0;
     for (const a of batch) {
       const ok = await _ragEmbedArchive(a);
       if (ok) done++; else fail++;
-      if (!silent && (done + fail) % 5 === 0 && typeof showToast === 'function') {
-        showToast(`📚 옛 챕터 학습 중... ${done + fail}/${batch.length}`);
-      }
-    }
-    if (!silent && typeof showToast === 'function') {
-      showToast(`📚 옛 챕터 ${done}개 학습 완료${fail > 0 ? ` (${fail}개 실패)` : ''}`);
     }
     _ragBackfillInProgress = false;
     return { embedded: done, failed: fail, total: batch.length };
@@ -56697,14 +56705,14 @@ async function _doRefreshBillingStatus(manual) {
     return;
   }
   // 사용자 명시 2026-05-11: admin 계정은 구독 표시 = '어드민', 결제/사용량 노출 X.
-  if (typeof _isAdmin === 'function' && _isAdmin()) {
-    if (status) {
-      status.innerHTML = `
-        <div><b>구독</b>: 🛡️ 어드민</div>
-        <div style="font-size:11.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">운영 계정 — 제한 없음</div>
-      `;
-    }
-    return;
+  // V4 (사용자 보고 2026-05-13): admin 도 _billingCache 갱신 + updateMainHeaderBtnVisual 호출. status UI 만 admin 라벨로 즉시 덮어쓰기.
+  const _adminOverlayActive = typeof _isAdmin === 'function' && _isAdmin();
+  if (_adminOverlayActive && status) {
+    status.innerHTML = `
+      <div><b>구독</b>: 🛡️ 어드민</div>
+      <div style="font-size:11.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">운영 계정 — 제한 없음</div>
+    `;
+    // return X — fetch 계속 진행 (cache 갱신 위해)
   }
   // Phase 1e: 게스트 사용자 — 가입 유도 카드 (수치/한도 노출 X, 데이터 안전 + E2EE 톤).
   if (state && state.isGuest) {
@@ -56823,8 +56831,9 @@ async function _doRefreshBillingStatus(manual) {
       html += `<div style="margin-top:6px; height:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.25); border-radius:4px; overflow:hidden;"><div style="height:100%; width:${overagePct}%; background:${isPackNearEmpty ? '#e89090' : 'var(--accent)'}; transition:width 0.3s;"></div></div>`;
     }
     // 사용자 명시 2026-05-11 ultrathink: 레거시 early_light 안내 제거 — 위 정상 구독 분기에서 plan 자체를 미구독 처리하므로 일관성 차원에서 잔재 라인 삭제.
-    if (status) status.innerHTML = html;
-    // 사용자 명시 2026-05-06: 다음 갱신 해지 박스 — 결제 내역 토글 안에 별도 render.
+    // V4 (사용자 보고 2026-05-13): admin overlay 활성 시 status 안 덮어쓰기 (이미 위에서 admin 라벨 표시함).
+    if (status && !_adminOverlayActive) status.innerHTML = html;
+    // 사용자 명시 2026-05-06: 다음 갱신 해지 박스 — 결제 내역 토글 안에 별도 render. admin 도 정상 갱신 (해지 X / 비구독 빈 box).
     if (status && typeof _renderCancelRenewalBox === 'function') {
       try { _renderCancelRenewalBox(billing); } catch {}
     }

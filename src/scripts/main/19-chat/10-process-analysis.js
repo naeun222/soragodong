@@ -131,6 +131,8 @@ async function processAnalysis(analysis, messageIdx) {
 function _getDailyDeeperCap() {
   if (window._onbTutorialMode) return Infinity;
   if (state.preferences && state.preferences.testerMode) return Infinity;
+  // V4 (사용자 명시 2026-05-13): 어드민 overlay 활성 시 모든 cap/cooldown 제한 X.
+  if (typeof _isAdmin === 'function' && _isAdmin()) return Infinity;
   const billing = window._billingCache;
   const plan = billing?.subscription_plan;
   if (plan === 'premium') return 10;
