@@ -69,8 +69,9 @@ export const OVERAGE_PACKS: Record<'premium_pack', { krw: number; usd: number; f
   premium_pack: { krw: 2500, usd: 1.5, for_tier: 'premium' }
 };
 
-// 사용자 명시 2026-05-02 ultrathink: Opus = Premium 전용 + 일일 30번 (메인 대화 한정, 새벽 4시 KST 리셋).
-export const OPUS_DAILY_LIMIT_PREMIUM = 30;
+// V4 (사용자 명시 2026-05-13): Opus 일일 30턴 cap 폐기 — cap $0.75/일 자연 가드. 'Premium = 마음껏 깊게' 정합.
+//   상수 보존 (옛 import 호환). 실제 사용처 X.
+export const OPUS_DAILY_LIMIT_PREMIUM = Number.POSITIVE_INFINITY;
 
 // tier 검증 헬퍼. early_light / guest = 자동 부여라 결제 X. early_lifetime / light / premium = 결제 가능.
 export async function validateTier(_env: Env, _userId: string, tierKey: TierKey | string): Promise<{ ok: boolean; error?: string; tier?: typeof TIER_PLANS[TierKey] }> {

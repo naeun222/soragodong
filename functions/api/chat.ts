@@ -1,9 +1,9 @@
 // Cloudflare Pages Functions — Anthropic API 프록시.
-// POST /api/chat — 인증 + budget check + Opus 가드 (Premium 전용 + 일일 30번) + Anthropic 호출 + 사용량 logging + 차감 (welcome bonus 우선 소진).
+// POST /api/chat — 인증 + budget check + Opus 가드 (Premium 전용, 옛 일일 30턴 cap 폐기 2026-05-13) + Anthropic 호출 + 사용량 logging + 차감 (welcome bonus 우선 소진).
 
 import { verifyAuth, unauthorized, jsonResponse, type Env } from './_lib/auth';
 import { recordUsage, calculateCost } from './_lib/usage';
-import { checkBudget, deductCost, getUserBilling, ensureBillingRow, promoteGuestToEarlyLight, OPUS_DAILY_LIMIT_PREMIUM, TIER_PLANS, consumeDailyAtomic } from './_lib/billing';
+import { checkBudget, deductCost, getUserBilling, ensureBillingRow, promoteGuestToEarlyLight, TIER_PLANS, consumeDailyAtomic } from './_lib/billing';
 import {
   checkAndIncIpRate,
   checkGlobalGuestBudget,
@@ -131,41 +131,10 @@ async function checkOpusGate(env: Env, userId: string, isTutorial: boolean): Pro
   if (!isPremium) {
     return { ok: false, code: 'OPUS_PREMIUM_ONLY', error: 'Opus 는 Premium 전용', status: 403 };
   }
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    return { ok: false, code: 'ENV_MISSING', error: 'env missing', status: 500 };
-  }
-  try {
-    const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/consume_opus_daily_atomic`, {
-      method: 'POST',
-      headers: {
-        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ p_user_id: userId, p_limit: OPUS_DAILY_LIMIT_PREMIUM })
-    });
-    const data: any = await resp.json().catch(() => ({}));
-    if (!data?.ok) {
-      return {
-        ok: false,
-        code: 'OPUS_DAILY_LIMIT',
-        error: 'Opus 일일 한도 도달',
-        status: 429,
-        used: data?.used,
-        limit: data?.limit ?? OPUS_DAILY_LIMIT_PREMIUM
-      };
-    }
-    return {
-      ok: true,
-      used: data?.used,
-      remaining: data?.remaining,
-      limit: data?.limit ?? OPUS_DAILY_LIMIT_PREMIUM
-    };
-  } catch (e: any) {
-    console.warn('[opus-gate] RPC 실패:', e);
-    // RPC 실패 시 fail-open (Premium 검증은 통과했으므로 일일 한도만 누락) — 보수적으로 통과.
-    return { ok: true };
-  }
+  // V4 (사용자 명시 2026-05-13): OPUS_DAILY_LIMIT_PREMIUM = 30 cap 폐기 — cap $0.75/일 자연 가드.
+  //   사용자 입장 'Premium = 마음껏 깊게' 정합. cost 상한은 daily_cap_usd 가 통제.
+  //   consume_opus_daily_atomic RPC 호출 skip (RPC 자체는 별도 migration 으로 폐기 가능).
+  return { ok: true };
 }
 
 // 사용자 명시 2026-05-05: 100만 토큰 환영 선물 정책 폐기 → chargeUsage 단순화.

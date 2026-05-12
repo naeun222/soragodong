@@ -233,6 +233,23 @@ V4 사용자 명시 2026-05-02 — 카카오 SNS 로그인 도입 (네이버는 
 
 ## 🟢 P2 — 베타 시작 후 (선택)
 
+### 10-3. 🟡 RAG 비용 재검토 (사용자 3000명 도달 시)
+
+**상태**: 현재 Cloudflare Workers AI BGE-M3 (100K req/일 무료) 채택.
+
+- 사용자 ~3000명 이하 = Cloudflare 무료 한도 안 = 사실상 무료.
+- 사용자 3000명+ = Cloudflare paid tier 진입. Voyage AI voyage-3 와 비교 재검토.
+
+**검토 항목**:
+- Voyage 한국어 정확도 +5-10% (MIRACL Korean nDCG)
+- 가격: Voyage $0.06/1M tokens vs Cloudflare ~$0.011/1K neurons
+- Privacy: Voyage 외부 server vs Cloudflare 우리 infra 안 (E2EE 정책 정합)
+
+**가능 옵션**:
+- 그대로 Cloudflare 유지 (privacy 우위)
+- Voyage 로 마이그레이션 (정확도 우위)
+- Tier 별 분리 (예: Premium = Voyage 정확도, Plus = Cloudflare 경제)
+
 ### 11. ⏸️ Sentry 가입 + DSN 적용하기 (5분, 무료)
 
 **상태**: 코드 자리는 적용됨 (`index.html` 의 `SENTRY_DSN` 빈 상수). DSN 빈 상태 = SDK 로드 X (영향 0).

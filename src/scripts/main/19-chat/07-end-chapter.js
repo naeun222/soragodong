@@ -26,20 +26,37 @@ async function endChapter() {
 
 // V4-fix: chatArchive 7일 cap (잠깐 보관용)
 // 사용자 요청 2026-04-29: pinned=true 항목은 영구 보관 (7일 cap 무시)
-// V4 사용자 명시 2026-05-04: _deleted (휴지통) 항목도 7일 cap 면제 — 사용자 명시 영구 삭제 전까지 보관.
+// V4 (사용자 명시 2026-05-13): 휴지통 (_deleted=true) 도 _deletedAt+7일 후 자동 hard delete + cascade.
+//   옛 동작: 휴지통 = 영구 보관 (사용자 명시 영구 삭제까지). 누적 부담 ↑.
+//   새 동작: _deletedAt+7일 cutoff. 7일 안엔 복구 가능. 7일 후 _purgeArchive 로 hard remove + cascade
+//           (traits/values/patterns/state.archive/pearls/insights/topicCards/udp.turningPoints/udp.relationships).
 function pruneOldChatArchive() {
   if (!Array.isArray(state.chatArchive)) return;
   const cutoff = Date.now() - 7 * 86400000;
   const before = state.chatArchive.length;
+  // 1단계: 휴지통 _deletedAt+7일 경과 항목 = hard delete + cascade (_purgeArchive 가 chatArchive 에서도 제거).
+  const trashIdsToPurge = [];
+  state.chatArchive.forEach(a => {
+    if (!a || !a._deleted) return;
+    const deletedAt = a._deletedAt ? new Date(a._deletedAt).getTime() : 0;
+    // _deletedAt 없으면 (옛 휴지통) = a.date+7일 fallback (보수적 = 보관 유지)
+    if (deletedAt > 0 && deletedAt < cutoff) {
+      trashIdsToPurge.push(a.id || a.date);
+    }
+  });
+  if (trashIdsToPurge.length && typeof _purgeArchive === 'function') {
+    trashIdsToPurge.forEach(id => { try { _purgeArchive(id); } catch (e) { console.warn('[pruneTrash] purge fail:', e); } });
+  }
+  // 2단계: 일반 archive (! _deleted) 의 7일 cap.
   state.chatArchive = state.chatArchive.filter(a => {
     if (!a) return false;
-    if (a.pinned) return true;  // 핀 꽂힌 거 영구 보관
-    if (a._deleted) return true;  // 휴지통 항목 영구 보관 (사용자가 영구 삭제 전까지)
+    if (a.pinned) return true;
+    if (a._deleted) return true;  // 위 1단계에서 cutoff 도달 않은 휴지통만 남음 — 그대로 보관
     if (!a.date) return false;
     const t = new Date(a.date + 'T12:00:00').getTime();
     return t >= cutoff;
   });
-  if (state.chatArchive.length < before) saveState();
+  if (state.chatArchive.length < before || trashIdsToPurge.length > 0) saveState();
 }
 
 // 사용자 요청 2026-04-29: chatArchive 항목 핀 토글 — 영구 보관 / 7일 cap 복귀
