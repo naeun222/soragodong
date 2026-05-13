@@ -247,6 +247,7 @@ async function init() {
     setTimeout(() => { refreshBillingStatus().catch(e => console.warn('refreshBillingStatus init:', e)); }, 4000);
   }
 
+  // 사용자 명시 2026-05-14 ultrathink (perf B): home 진입 즉시 보이는 영역 (필수 render) 만 동기. 안 보이는 영역 (나 / 실행 / 도서관 / 대화 / 설정) 은 deferred — splash 시간 -100~150ms 단축.
   applyNightMode();
   renderModes();
   if (typeof renderYesterdayCard === 'function') renderYesterdayCard();
@@ -260,13 +261,7 @@ async function init() {
   // 사용자 명시 2026-05-09: init 시 회전 카드 ('🌟 오늘의 너') 호출 누락 → 첫 로드 시 안 보임 fix.
   if (typeof renderRotatingCard === 'function') renderRotatingCard();
   if (typeof renderReflectionHome === 'function') renderReflectionHome();
-  renderModel();
-  renderProjects();
-  renderArchive();
-  renderChat();
-  loadSettings();
   updateCheckinSub();
-  updateSleepDuration();
 
   // Restore active ritual bar if user was in middle of one
   restoreActiveRitualOnLoad();
@@ -274,6 +269,20 @@ async function init() {
   // 사용자 보고 2026-05-13 ultrathink (perf): boot splash hide — render 다 끝난 후 (위 위치 이동).
   // 의도: 사용자가 splash 사라진 후 home 카드 (회전 / 체크인) 가 즉시 완성 상태로 보임. 옛 위치는 home 비어있을 때 노출 → jank.
   if (typeof _hideBootSplash === 'function') _hideBootSplash();
+
+  // 사용자 명시 2026-05-14 ultrathink (perf B): home 안 보이는 영역 render 는 deferred — splash hide 직후 다음 macrotask 에 fire.
+  // 각 화면 진입 시 showScreen 가 자체 render 다시 호출하므로 안전 (15-navigation.js:78-103).
+  // nav dot 갱신 같은 사이드 effect 는 ~5-10ms 만 늦어짐 (사용자 인지 X).
+  setTimeout(() => {
+    try {
+      if (typeof renderModel === 'function') renderModel();
+      if (typeof renderProjects === 'function') renderProjects();
+      if (typeof renderArchive === 'function') renderArchive();
+      if (typeof renderChat === 'function') renderChat();
+      if (typeof loadSettings === 'function') loadSettings();
+      if (typeof updateSleepDuration === 'function') updateSleepDuration();
+    } catch (e) { console.warn('[init deferred render]', e); }
+  }, 0);
 
   // V3.13.x: 일기 자동 요약 (어제부터 거꾸로 보강 안 된 첫 날 1개)
   setTimeout(() => {
