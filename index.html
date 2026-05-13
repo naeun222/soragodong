@@ -43146,20 +43146,9 @@ async function _extractMutationInsight(opts) {
 }
 
 function closeMutationChat(skipSave) {
-  if (!skipSave && _mutationChatState) {
-    // 사용자 명시 2026-05-01: first-gen + 옵션 선택 X 취소 = 토픽 그대로 (category 변경 X). evolutionChats 저장도 skip — 토픽 카드 깨끗하게.
-    const isFirstGenCancel = _mutationChatState.firstGen && !_mutationChatState.selectedRef;
-    // 저장 X로 닫음 — chatRecord에 messages 비움 (선택 X 케이스)
-    const card = getStrategyCard(_mutationChatState.strategyId);
-    if (!isFirstGenCancel && card && _mutationChatState.chatRecord && !_mutationChatState.selectedRef) {
-      // 사용자 요청 2026-04-29: 가지 선택 X여도 대화 messages 보존 (깊이 있는 내용 가능). kept=false 마킹만.
-      _mutationChatState.chatRecord.kept = false;
-      _mutationChatState.chatRecord.messages = (_mutationChatState.messages || [])
-        .map(m => ({ role: m.role, content: m.content }));
-      card.evolutionChats.push(_mutationChatState.chatRecord);
-      saveState();
-    }
-  }
+  // V4 (사용자 명시 2026-05-13): 돌연변이 임시대화창 닫으면 자동 요약/저장 X.
+  //   옛: 사용자가 선택 X 일 때도 messages 보존 (evolutionChats.push, kept=false).
+  //   새: 사용자가 ✓ 명시 클릭 시에만 _extractMutationInsight 진행. 닫기 = 그냥 닫기.
   _mutationChatState = null;
   const overlay = document.getElementById('mutationChatOverlay');
   if (overlay) overlay.remove();
