@@ -91,8 +91,27 @@ async function init() {
   // Authenticated OR Guest — .app 노출
   document.getElementById('loginScreen').style.display = 'none';
   document.querySelector('.app').style.display = 'flex';
+
+  // 사용자 보고 2026-05-14 ultrathink: 회전 카드 너무 늦게 나타남 jank — cloud RTT (~200-800ms) 전 localStorage cache 로 state 우선 채움 + home 영역 render. cloud 도착 후 line 250- 의 render 흐름이 다시 호출 → 최신 갱신. localStorage 가 평문 JSON 이라 E2EE 무관.
+  try {
+    const _localRaw = localStorage.getItem(V4_LOCAL_STORAGE_KEY);
+    if (_localRaw) {
+      const _parsed = JSON.parse(_localRaw);
+      if (_parsed && typeof _parsed === 'object') {
+        state = { ...DEFAULT_STATE, ...state, ..._parsed };
+      }
+    }
+  } catch (e) { console.warn('[init eager localStorage cache]', e); }
+
   // 사용자 명시 2026-05-06 ultrathink (perf): 인증 통과 → splash hide.
   if (typeof _hideBootSplash === 'function') _hideBootSplash();
+
+  // 사용자 보고 2026-05-14 ultrathink: home 영역 critical render (회전 카드 / 체크인 카드 / 오늘 미션) — localStorage cache 로 즉시 표시. cloud 도착 후 line 250- 의 render 흐름이 다시 호출 → 최신 갱신 (flicker 작음, 같은 카드 type 의 content 갱신).
+  try {
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    if (typeof renderMainAction === 'function') renderMainAction();
+    if (typeof renderTodayMission === 'function') renderTodayMission();
+  } catch (e) { console.warn('[init eager home render]', e); }
 
   // 사용자 요청 2026-04-28: 서버 시간 동기화 (디바이스 시계 잘못돼도 보정)
   syncServerTime();  // fire-and-forget
