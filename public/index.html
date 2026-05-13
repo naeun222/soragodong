@@ -28217,14 +28217,17 @@ function _rcIsConfirmed(sourceId) {
 // 정렬 — 미컨펌 위 / 컨펌 아래 + baseWeight desc + tie-breaker
 // =============================================================================
 // 사용자 명시 2026-05-10 (재정의): 옛 unconfirmed 우선 정책 / pearl unshift 분기 폐기. 그냥 weight 순 정렬.
+// V4 (사용자 명시 2026-05-13): 리뷰 link source (weight 200+) = 우선. 그 외 동급 (weight 100) = 매 호출 *랜덤* 셔플 (옛 _RC_SOURCE_ORDER fixed tie-break 폐기).
 function _rcSortByConfirmation(sources) {
-  const byWeight = (a, b) => {
-    const wa = _RC_BASE_WEIGHTS[a.id] || 0;
-    const wb = _RC_BASE_WEIGHTS[b.id] || 0;
-    if (wb !== wa) return wb - wa;
-    return _RC_SOURCE_ORDER.indexOf(a.id) - _RC_SOURCE_ORDER.indexOf(b.id);
-  };
-  return sources.slice().sort(byWeight);
+  const highW = sources.filter(s => (_RC_BASE_WEIGHTS[s.id] || 0) > 100);
+  const tieW  = sources.filter(s => (_RC_BASE_WEIGHTS[s.id] || 0) <= 100);
+  highW.sort((a, b) => (_RC_BASE_WEIGHTS[b.id] || 0) - (_RC_BASE_WEIGHTS[a.id] || 0));
+  // Fisher-Yates shuffle — 동급 source 무작위 첫 자리.
+  for (let i = tieW.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [tieW[i], tieW[j]] = [tieW[j], tieW[i]];
+  }
+  return [...highW, ...tieW];
 }
 
 // =============================================================================
