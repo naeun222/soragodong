@@ -11,7 +11,8 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
 
 // 사용자 명시 2026-05-06: PortOne V2 채널 키 + Store ID. 공개 OK — frontend 결제창 호출 시 사용.
 // REST API Key (V2) + Webhook Secret 은 Cloudflare env (PORTONE_API_KEY_V2 / PORTONE_WEBHOOK_SECRET) 에 별도.
-// 사용자 명시 2026-05-11: KG이니시스 / 카카오페이 / 토스페이 테스트 채널 5종 추가.
+// 사용자 명시 2026-05-11: KG이니시스 / 카카오페이 / 토스페이 결제 채널 5종 추가.
+// 사용자 명시 2026-05-14: 가계약 모드 KG이니시스 단건 채널 (PORTONE_CHANNEL_KEY) = PortOne 콘솔에서 실제 운영 모드. 카드명 'INIpayTest' 는 PortOne 콘솔 channel name 이며 운영/테스트 모드 자체는 콘솔 설정 기준.
 
 // V4 (사용자 명시 2026-05-11 — 가계약 단계): 정기결제 PG 계약 미승인 상태 → 일반결제 (1개월 이용권) 로 임시 운영.
 //   false: subscribe modal 의 모든 tier (Light/Plus/Premium) 가 *일회성 1개월* 결제 (자동 갱신 X, 만료 7일 전 알림 후 재구매).

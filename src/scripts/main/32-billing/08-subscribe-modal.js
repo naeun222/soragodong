@@ -302,6 +302,11 @@ function _pickPayMethodResolve(method) {
 function _pickPaymentMethod({ excludeToss = false, title = '결제 수단 선택' } = {}) {
   return new Promise((resolve) => {
     __payMethodPickerResolve = resolve;
+    // 사용자 보고 2026-05-14: 가계약 모드 (BILLING_RECURRING_ENABLED=false) = KG이니시스 외 PG 의 일반결제 빌링키 X → picker UI skip + 'card' (KG이니시스 일회성) 강제. 정기 모드 토글 시 picker 자동 복귀.
+    if (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED) {
+      _pickPayMethodResolve('card');
+      return;
+    }
     const tossBtn = excludeToss ? '' : `
         <button onclick="_pickPayMethodResolve('toss')" style="width:100%; padding:14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; text-align:left; background:#0064FF; color:#fff; border:none; border-radius:10px; cursor:pointer; font-family:inherit;">
           <span style="font-size:14px; font-weight:900; letter-spacing:-0.02em;">toss</span>

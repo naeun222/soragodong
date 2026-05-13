@@ -321,6 +321,16 @@ async function _doRefreshBillingStatus(manual) {
     }
     // 사용자 명시 2026-05-05: _billingCacheTs stamp — 30s TTL + showBudgetExceededModal 캐시 재사용용.
     window._billingCache = billing;
+    // 사용자 명시 2026-05-14 ultrathink: admin = Premium 강제 (제한 다 풀기). canUseOpus / _isPremium / canUseRAG / 추가팩 등 모든 client 가드 자동 우회.
+    //   backend 가드는 ADMIN_USER_ID env 별도 검증 (admin endpoints).
+    //   _adminOff 토글 시 _isAdmin 가 false → 일반 사용자 cache 그대로 (디버깅용 시각 분리).
+    if (typeof _isAdmin === 'function' && _isAdmin()) {
+      window._billingCache = {
+        ...billing,
+        subscription_plan: 'premium',
+        subscription_active: true
+      };
+    }
     window._billingCacheTs = Date.now();
     // V4 (사용자 명시 2026-05-13 ultrathink): Plan 변경 시 메인 헤더 RAG 토글 visual sync (Light → Plus 가입 등).
     if (typeof updateMainHeaderBtnVisual === 'function') {
@@ -490,7 +500,7 @@ function _renderCancelRenewalBox(billing) {
 // V4 (사용자 명시 2026-05-13 ultrathink): 등록된 카드 변경 — 같은 tier 로 재등록 (새 billingKey 가 옛 거 대체).
 //   backend `/api/billing/portone-register-recurring` 이 upsert 라 새 빌링키가 자동 덮어씀.
 //   ⚠ "첫 달 즉시 결제" 는 cycle reset — 만약 환불 회피 목적 재등록을 막으려면 backend 가드 필요.
-//     현재는 신뢰 사용자 가정 (테스트 채널). 운영 시 backend `change-card` endpoint 분리 권장.
+//     현재는 신뢰 사용자 가정 (가계약 단건 모드). 정기결제 정식 승인 후 backend `change-card` endpoint 분리 권장.
 function changeRegisteredCard() {
   const planKey = window._billingCache?.subscription_plan;
   if (!planKey || !TIER_PLANS_CLIENT[planKey]) {
