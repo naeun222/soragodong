@@ -1123,22 +1123,13 @@
     to { opacity: 1; }
   }
 
-  /* Scroll-reveal for below-fold
-     V4 (사용자 보고 2026-05-13): 모바일 (iOS Safari) 에서 IntersectionObserver 가 rootMargin:'-8%' + threshold:0.12
-     조합으로 firing 안 해서 사진들 안 보이는 버그 fix. 해결: 기본 visible, JS 가 .js-reveal 클래스 붙였을 때만
-     invisible. IO 실패 / JS 에러 / prefers-reduced-motion 모든 케이스에 fallback. */
-  .reveal {
+  /* V4 (사용자 보고 2026-05-13 — 재발): startlite 패턴 따라 reveal 애니메이션 자체 폐기.
+     옛 IntersectionObserver 기반 opacity:0 → .in 트릭이 모바일 (iOS Safari) 에서 firing 안 해서 사진들 안 보임.
+     startlite 의 .proof-screens / .proof-screen 은 opacity 트릭 X — 그냥 렌더. 같은 패턴 적용 = 안정성 우선.
+     .reveal / .reveal.in 클래스는 HTML 에 남겨두되 (마크업 변경 X) CSS rule 만 no-op 으로 만듦. */
+  .reveal, .reveal.in {
     opacity: 1;
-    transform: translateY(0);
-    transition: opacity 0.7s ease, transform 0.7s ease;
-  }
-  .js-reveal .reveal:not(.in) {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  .reveal.in {
-    opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 
   /* === Mobile === */
@@ -1725,29 +1716,8 @@
 </div>
 
 <script>
-  // Subtle scroll-reveal
-  // V4 (사용자 보고 2026-05-13): 모바일 IO 미작동 fallback — JS + IO 둘 다 지원될 때만 hide-then-reveal,
-  //   그 외 (no-JS / IO bug / 빠른 scroll) 는 기본 visible 유지.
-  // 안전 가드: IO 미지원 브라우저 = .js-reveal 안 붙임 = 기본 visible.
-  if ('IntersectionObserver' in window) {
-    document.documentElement.classList.add('js-reveal');
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.classList.add('in');
-          io.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.05, rootMargin: '0px 0px 0px 0px' });
-    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
-    // 2차 안전망: 2.5초 후에도 .in 안 붙은 reveal 강제 표시 (iOS Safari IO bug 회피).
-    setTimeout(() => {
-      document.querySelectorAll('.reveal:not(.in)').forEach(el => {
-        const r = el.getBoundingClientRect();
-        if (r.top < window.innerHeight + 200) el.classList.add('in');
-      });
-    }, 2500);
-  }
+  // V4 (사용자 보고 2026-05-13 — 재발): IntersectionObserver 기반 reveal 폐기 (모바일 iOS Safari firing 안 함).
+  //   startlite 처럼 그냥 visible — CSS rule 이 opacity 트릭 자체 무력화. JS 도 무력화.
 
   // === Sticky bottom CTA — hero 지난 후 등장, final CTA 보일 때 사라짐 ===
   (function () {
