@@ -389,6 +389,30 @@ bubblewrap build
 - 분실 위험 ↓ (Upload Key 잃어도 Play Console 에서 reset 가능. App Signing Key 는 Google 이 갖고 있음).
 - **단**: Upload Key 분실 = Play Console support 에 reset 요청 (수일 소요). 안전 보관 권장.
 
+#### F. 결제 정책 — 하이브리드 (옵션 C) ✅ 구현 완료 (2026-05-13)
+
+**구현 요약** (commit `98a9544`):
+- `_isTWAEnv()` 헬퍼 — `document.referrer` 가 `android-app://com.soragodong.twa` 로 시작하는지 검사 + sessionStorage 캐시.
+- 결제 진입점 4곳 가드 — `openSubscribeModal`, `proceedSubscribe`, `proceedOneTimePurchase`, `purchaseOveragePack`. TWA 면 결제 모달 차단하고 `_showTwaPaymentNoticeModal()` 호출.
+- 안내 모달 — 🌐 "구독은 웹사이트에서" + "웹사이트 열기" 버튼 → `window.open('https://soragodong.com/?from=twa', '_blank')` (Chrome Custom Tabs).
+- 일반 브라우저 / PWA install 영향 X — `_isTWAEnv()` 가 `false` 면 옛 흐름 그대로.
+
+**Play 정책 안전성**:
+- ✅ 앱 안에서 결제 UI / 가격 / "구독" CTA 자체가 안 보임 (모달 차단 후 안내만).
+- ✅ "외부 결제 강제" 톤 X — "웹사이트에서 가입" 의 자연 톤.
+- ✅ Chrome Custom Tabs = TWA 표준 패턴. Spotify / Netflix 등 다수 TWA 앱이 같은 방식.
+- ⚠️ Play 가 review 시 거부 가능성 = 낮지만 0 X. 거부 시 메시지 톤 더 부드럽게 ("Premium 기능 안내" 등) 재제출.
+
+**테스트 방법** (Bubblewrap install 후):
+1. 폰에 APK install → 앱 실행.
+2. 설정 → "🌊 Plus 구독" 또는 "Premium 으로 늘리기" 클릭.
+3. 결제 모달 자체 안 뜨고 안내 모달 ("구독은 웹사이트에서") 뜸 → OK.
+4. "웹사이트 열기" 클릭 → Chrome Custom Tabs 로 soragodong.com 열림.
+5. 결제 완료 후 앱 복귀 → `/api/usage` refresh → plan 자동 반영.
+
+**롤백 방법** (정책 검토 결과 변경 필요 시):
+- `01-config.js` 의 `_isTWAEnv` 가 항상 `false` 리턴하도록 한 줄 변경 + rebuild → 결제 가드 무효화 (모든 환경에서 결제 UI 표시).
+
 **D. Play Console 앱 생성 + AAB 업로드** (2-3일, 너 + 나)
 - New App:
   - 앱 이름: **소라고동** (Soragodong)

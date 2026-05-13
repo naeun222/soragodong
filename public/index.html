@@ -53,6 +53,18 @@
 <!-- V4 (사용자 명시 2026-05-13): Google Play TWA 위해 data URI manifest → file path 변환. Bubblewrap 이 URL 기반 manifest 요구. -->
 <link rel="manifest" href="/manifest.webmanifest">
 
+<!-- V4 (사용자 명시 2026-05-13): 트위터/카톡 미리보기 = startlite 와 동일 이미지 (og-chat-snippet.png). 멘트는 추가 X — title 태그가 자동 fallback. -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://soragodong.com/">
+<meta property="og:image" content="https://soragodong.com/og-chat-snippet.png?v=20260506">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="고동: 오늘 또 회사 가기 싫어서 인스타 2시간 봤어 → 너 이러는 날, 거의 다 밤 11시 넘게까지 일한 다음날이더라.">
+<meta property="og:site_name" content="소라고동">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://soragodong.com/og-chat-snippet.png?v=20260506">
+
 <!-- 사용자 보고 2026-05-05 (perf): Google Fonts CSS 가 render-blocking 이라 첫 페인트 전에 흰→검 플래시. preload 후 swap 으로 non-blocking. -->
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet"></noscript>
