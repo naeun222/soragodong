@@ -44,9 +44,24 @@
   #bootSplash.fade-out { opacity: 0; pointer-events: none; }
   #bootSplash img { width: 56px; height: 56px; opacity: 0.92; animation: bootSplashPulse 1.4s ease-in-out infinite; }
   #bootSplash .boot-splash-text { font-size: 13px; margin-top: 14px; letter-spacing: 0.04em; }
+  /* V4 Phase 1 sub-task 1.3 (사용자 명시 2026-05-13 ultrathink, 보수적 변형): godong 펄스 유지 + 화면 중앙 skeleton card 1개.
+   * plan: ~/.claude/plans/precious-purring-dream.md §sub-task 1.3
+   * 절충 — plan 원안 (grey skeleton 전면) 회피: 캐릭터 정체성 + home layout mismatch jump risk 회피.
+   * skeleton 은 absolute 위치 (godong 아래), home content 와 무관 → fade-out 시 jump 없음. */
+  #bootSplash .boot-splash-skeleton {
+    width: 240px; height: 80px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+    margin-top: 18px;
+    animation: bootSplashSkeletonShimmer 1.4s ease-in-out infinite;
+  }
   @keyframes bootSplashPulse {
     0%, 100% { transform: scale(1); opacity: 0.78; }
     50%      { transform: scale(1.06); opacity: 1; }
+  }
+  @keyframes bootSplashSkeletonShimmer {
+    0%, 100% { opacity: 0.3; }
+    50%      { opacity: 0.6; }
   }
 </style>
 
@@ -12156,8 +12171,11 @@
 <body>
 
 <!-- 사용자 명시 2026-05-06 ultrathink (perf): boot splash — HTML 진입 직후 즉시 페인트. JS 실행 끝나면 init() / showLoginScreen 가 fade-out + remove. -->
+<!-- V4 Phase 1 sub-task 1.3 (사용자 명시 2026-05-13 ultrathink, 보수적 변형): godong 펄스 + '잠깐...' 텍스트 + 작은 skeleton card. plan 원안 (전면 grey skeleton) 회피 — 캐릭터 정체성 유지 + jump risk 회피. -->
 <div id="bootSplash">
   <img src="/character/godong-serious.svg" alt="" decoding="async" loading="eager">
+  <div class="boot-splash-text">잠깐...</div>
+  <div class="boot-splash-skeleton"></div>
 </div>
 <!-- 사용자 명시 2026-05-09 ultrathink (perf 측정): 첫 진입 timing 진단 마커. 콘솔에서 _hideBootSplash 시 timeline 출력. -->
 <script>try { performance.mark('bootStart'); } catch(e) {}</script>
