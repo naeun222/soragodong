@@ -19934,8 +19934,8 @@ async function init() {
   // Authenticated OR Guest — .app 노출
   document.getElementById('loginScreen').style.display = 'none';
   document.querySelector('.app').style.display = 'flex';
-  // 사용자 명시 2026-05-06 ultrathink (perf): 인증 통과 → splash hide.
-  if (typeof _hideBootSplash === 'function') _hideBootSplash();
+  // 사용자 보고 2026-05-13 ultrathink (perf): 옛 위치 = 인증 통과 직후 (loadFromCloud / render 전) splash hide → home 비어있을 때 사용자에게 노출 = 회전 카드 / 체크인 카드 로딩 지연 jank.
+  // fix = splash hide 를 render 다 끝난 후 (아래 restoreActiveRitualOnLoad 직후) 로 이동. 인증 fail 경로 (showLoginScreen 안 hide) 는 그대로.
 
   // 사용자 요청 2026-04-28: 서버 시간 동기화 (디바이스 시계 잘못돼도 보정)
   syncServerTime();  // fire-and-forget
@@ -20113,6 +20113,10 @@ async function init() {
 
   // Restore active ritual bar if user was in middle of one
   restoreActiveRitualOnLoad();
+
+  // 사용자 보고 2026-05-13 ultrathink (perf): boot splash hide — render 다 끝난 후 (위 위치 이동).
+  // 의도: 사용자가 splash 사라진 후 home 카드 (회전 / 체크인) 가 즉시 완성 상태로 보임. 옛 위치는 home 비어있을 때 노출 → jank.
+  if (typeof _hideBootSplash === 'function') _hideBootSplash();
 
   // V3.13.x: 일기 자동 요약 (어제부터 거꾸로 보강 안 된 첫 날 1개)
   setTimeout(() => {
