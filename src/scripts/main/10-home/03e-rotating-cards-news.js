@@ -19,10 +19,19 @@ function _rcSource7Yesterday() {
   }
   // 어제 entry 또는 chatArchive 있어야 노출 (chat-only 도 인정)
   const yesterdayEntry = (state.entries || []).find(e => e.date === yesterdayK);
-  const _hasArchiveYesterday = (state.chatArchive || []).some(a =>
+  // V4 (사용자 명시 2026-05-13): batch 결과 도착 후만 노출 — archive 의 _pendingExtract=true 거나 entry 의 aiSummary X 면 hide.
+  //   batch submit 미진행 케이스 (pendingBatch null but 결과 X) 보호.
+  const _yesterdayArchives = (state.chatArchive || []).filter(a =>
     a && !a._deleted && a.date === yesterdayK && Array.isArray(a.messages) && a.messages.length >= 3
   );
-  if (typeof _hasYesterdayContent === 'function' && !_hasYesterdayContent(yesterdayEntry) && !_hasArchiveYesterday) {
+  const _anyArchivePending = _yesterdayArchives.some(a => a._pendingExtract);
+  const _hasArchiveYesterdayDone = _yesterdayArchives.length > 0 && !_anyArchivePending;
+  const _hasAiSummaryYesterday = !!(yesterdayEntry && yesterdayEntry.aiSummary);
+  if (!_hasAiSummaryYesterday && !_hasArchiveYesterdayDone) {
+    return { id: 'yesterday', available: false };
+  }
+  // 옛 _hasYesterdayContent 가드 (mood/diary/vitality 등) — entry 있을 때만 추가 검사. archive-only 사용자도 OK.
+  if (typeof _hasYesterdayContent === 'function' && !_hasYesterdayContent(yesterdayEntry) && !_hasArchiveYesterdayDone) {
     return { id: 'yesterday', available: false };
   }
   return {
