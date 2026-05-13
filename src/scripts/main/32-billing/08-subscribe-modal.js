@@ -1,6 +1,41 @@
 // ─── 구독 모달 (사용자 명시 2026-05-06: PortOne V2 카드 결제, 토스 수동 송금 폐기) ───
 // Light 9,900 + Premium 25,000. 자동 갱신 X — 다음 달 명시 결제.
 
+// V4 (사용자 명시 2026-05-13): Google Play TWA 환경 = 결제 UI 숨김 + 웹사이트 안내 (옵션 C 하이브리드).
+//   _isTWAEnv() = config.js 의 헬퍼 (document.referrer android-app:// 감지).
+//   openSubscribeModal / proceedSubscribe / proceedOneTimePurchase 진입 시 가드 → 이 모달.
+//   Custom Tabs 로 soragodong.com 열기 (Play Billing 30% 회피 + 외부 결제 노골 안내 회피 — Play 정책 회색지대 안전).
+function _showTwaPaymentNoticeModal() {
+  if (document.getElementById('twaPaymentNoticeOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'twaPaymentNoticeOverlay';
+  overlay.style.zIndex = '10002';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:340px; padding:24px; text-align:center;">
+      <div style="font-size:36px; margin-bottom:10px;">🌐</div>
+      <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:10px;">구독은 웹사이트에서</div>
+      <div style="font-size:12.5px; color:var(--text-dim); line-height:1.7; margin-bottom:20px;">
+        앱에서는 구독 가입 / 변경이 안 돼.<br>
+        <b style="color:var(--text);">soragodong.com</b> 으로 가서 진행해줘.<br>
+        <span style="color:var(--text-soft); font-size:11px;">결제 후 이 앱으로 돌아오면 자동 반영.</span>
+      </div>
+      <button class="btn-primary" onclick="_openSoragodongInBrowser()" style="width:100%; padding:11px; font-size:13px; font-weight:600; margin-bottom:8px;">웹사이트 열기</button>
+      <button class="btn-secondary" onclick="document.getElementById('twaPaymentNoticeOverlay')?.remove()" style="width:100%; padding:9px; font-size:12px;">닫기</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+function _openSoragodongInBrowser() {
+  try {
+    // Custom Tabs 안에서 새 탭 열기 — TWA 환경에서는 Chrome Custom Tabs 가 외부 결제 처리.
+    window.open('https://soragodong.com/?from=twa', '_blank');
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('브라우저 열기 실패 — Chrome 에서 soragodong.com 직접 방문');
+  }
+  document.getElementById('twaPaymentNoticeOverlay')?.remove();
+}
+
 // 사용자 명시 2026-05-06: KG이니시스 V2 일반 결제 = customer.phoneNumber + fullName 필수.
 // 한 번 입력받으면 state.preferences.paymentPhone / paymentFullName 에 보관해서 재사용.
 // 단일 모달에 두 input 같이 — prompt 두 번 X.
@@ -326,6 +361,11 @@ function _getPayChannelInfo(method) {
 
 async function openSubscribeModal() {
   if (document.getElementById('subscribeModalOverlay')) return;
+  // V4 (사용자 명시 2026-05-13): TWA 환경 = 결제 UI 차단 + 웹사이트 안내.
+  if (typeof _isTWAEnv === 'function' && _isTWAEnv()) {
+    _showTwaPaymentNoticeModal();
+    return;
+  }
   if (typeof refreshBillingStatus === 'function') {
     try { await refreshBillingStatus(false); } catch {}
   }
@@ -613,6 +653,11 @@ function tryBuyPremiumPack() {
 //   Light(4,900, key='early_lifetime') 은 정가 즉시 결제 / Plus(9,900, key='light') 는 첫 달 무료 trial.
 // V4 (사용자 명시 2026-05-11 — 가계약): BILLING_RECURRING_ENABLED=false 시 1개월 일회성 결제로 분기.
 async function proceedSubscribe(tierKey) {
+  // V4 (사용자 명시 2026-05-13): TWA 환경 = 결제 UI 차단 + 웹사이트 안내 (방어 가드 — openSubscribeModal 가 이미 차단하지만 직접 호출 대비).
+  if (typeof _isTWAEnv === 'function' && _isTWAEnv()) {
+    _showTwaPaymentNoticeModal();
+    return;
+  }
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 플랜'); return; }
   // V4 (사용자 명시 2026-05-13 ultrathink): 업그레이드 confirm — 옛 구독 즉시 종료 + 새 cycle.
@@ -1000,6 +1045,11 @@ async function proceedPlusTrial() {
 //   subscription_expires_at = now+30d 갱신. 자동 갱신 X — 만료 7일 전 알림 후 사용자가 직접 재구매.
 //   카드 / 카카오페이 일반 채널 사용. 토스페이는 일반결제만 가능해 OK.
 async function proceedOneTimePurchase(tierKey) {
+  // V4 (사용자 명시 2026-05-13): TWA 환경 = 결제 UI 차단 + 웹사이트 안내 (방어 가드).
+  if (typeof _isTWAEnv === 'function' && _isTWAEnv()) {
+    _showTwaPaymentNoticeModal();
+    return;
+  }
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 플랜'); return; }
   if (!session || !session.access_token) {

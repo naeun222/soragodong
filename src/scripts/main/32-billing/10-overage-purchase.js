@@ -80,6 +80,11 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
 
 // ─── 추가팩 결제 (cap 도달 시) ───
 async function purchaseOveragePack(packKey) {
+  // V4 (사용자 명시 2026-05-13): TWA 환경 = 결제 UI 차단 + 웹사이트 안내.
+  if (typeof _isTWAEnv === 'function' && _isTWAEnv()) {
+    if (typeof _showTwaPaymentNoticeModal === 'function') _showTwaPaymentNoticeModal();
+    return;
+  }
   const pack = OVERAGE_PACKS_CLIENT[packKey];
   if (!pack) { alert('잘못된 pack'); return; }
   if (!session?.access_token) { alert('로그인 필요'); return; }

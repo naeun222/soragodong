@@ -19,6 +19,23 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
 //   true:  옛 정기결제 흐름 (requestIssueBillingKey + portone-register-recurring + cron 매월 갱신) 으로 복귀. 계약 승인 후 변경.
 const BILLING_RECURRING_ENABLED = false;
 
+// V4 (사용자 명시 2026-05-13): Google Play TWA 환경 감지 + 결제 진입점 가드 (하이브리드 옵션 C).
+//   document.referrer 가 `android-app://<package>` 로 시작 = TWA 가 launch 한 신호 (Chrome Custom Tabs / TWA spec).
+//   첫 진입 시점 cache (sessionStorage) — SPA navigation 으로 referrer 잃어도 유지.
+//   결제 CTA 마다 _isTWAEnv() 가드 → showTwaPaymentNoticeModal() 로 안내 + 외부 브라우저 redirect.
+//   목적: Google Play Billing 30% 회피 + 외부 결제 노골 안내 회피 (Play 정책 risk ↓).
+function _isTWAEnv() {
+  try {
+    // sessionStorage 캐시 — 한 세션 내내 유지 (SPA 라 페이지 이동 X 이지만 안전 차원).
+    if (sessionStorage.getItem('_isTWA') === '1') return true;
+    if (sessionStorage.getItem('_isTWA') === '0') return false;
+    const ref = (document.referrer || '').toLowerCase();
+    const isTwa = ref.startsWith('android-app://com.soragodong.twa');
+    sessionStorage.setItem('_isTWA', isTwa ? '1' : '0');
+    return isTwa;
+  } catch { return false; }
+}
+
 // V4 (사용자 명시 2026-05-13 — 토스페이 심사용 임시 mockup):
 //   토스페이 빌링키 채널이 아직 발급 심사 중 → 정기결제 picker / 동의 모달에 토스페이 노출 X (`excludeToss: true`).
 //   심사관에게 결제 흐름 시연 목적으로 *임시* 노출 — picker / 동의 모달에 토스페이 카드 표시.
