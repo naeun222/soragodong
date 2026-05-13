@@ -1,0 +1,32 @@
+  /* V4 Phase 1 sub-task 1.1 (사용자 명시 2026-05-13) — long-list scroll perf
+   * plan: ~/.claude/plans/precious-purring-dream.md §sub-task 1.1
+   * 정책:
+   *  - content-visibility: auto + contain-intrinsic-size → 매우 긴 list 의 read-only 카드 (화면 밖 paint skip)
+   *  - contain: layout style → 동적 element (펼침 / hover scale / scatter absolute) — paint contain X (효과 잘림 회피) */
+
+  /* 도서관 — 사용자 저장 깨달음 카드 (archive list, 매일 누적) */
+  .archive-item-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 180px;
+  }
+
+  /* 도서관 — 대화 archive 카드 (chat archive list) */
+  .chat-archive-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 160px;
+  }
+
+  /* 타임라인 — 인스타 스타일 day 카드. .timeline-day-original.show 펼침 가능 → content-visibility 회피 (cached intrinsic size mismatch 회피) */
+  .timeline-day {
+    contain: layout style;
+  }
+
+  /* 실행 탭 — task 카드. .exec-card-shell-preview scale 1.1 hover 효과 보호 → paint contain X */
+  .exec-card {
+    contain: layout style;
+  }
+
+  /* 모래사장 — 개별 shell (44x44). scatter 케이스 (.beach-tier-grid.scatter) 의 absolute child 영향 → paint contain X */
+  .beach-shell {
+    contain: layout style;
+  }
