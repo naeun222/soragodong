@@ -107,8 +107,16 @@ async function _e2eeChangePassword(oldPassword, newPassword) {
   } catch (e) { console.warn('[e2ee] localStorage 갱신 실패:', e); }
 
   // 6. 즉시 cloud sync
+  // 사용자 보고 2026-05-14 ultrathink (audit-auth P1): 옛 fire-and-forget → cloud sync 실패 시 cloud 의 _e2eeRecovery 가 옛 KEK 그대로 남음.
+  //   영향: localStorage wipe 후 새 device 진입 시 옛 KEK 로 복원 시도 → unwrap 실패 → 영구 데이터 lock-out.
+  //   fix: await + 실패 시 throw (caller 의 try/catch 가 status text 표시 + 사용자가 재시도/새로고침 트리거).
   if (typeof saveToCloudNow === 'function') {
-    saveToCloudNow().catch(e => console.warn('[e2ee] cloud sync 실패:', e));
+    try {
+      await saveToCloudNow();
+    } catch (e) {
+      console.warn('[e2ee] cloud sync 실패:', e);
+      throw new Error('localStorage 갱신됐지만 cloud sync 실패. 네트워크 확인 후 페이지 새로고침해줘.');
+    }
   }
 
   console.log('[e2ee] 비밀번호 변경 완료 (DEK 보존, KEK 갱신, round-trip OK)');
