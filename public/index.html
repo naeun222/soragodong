@@ -44283,6 +44283,32 @@ function _markLibCatSeen(cat) {
 // V4 (사용자 명시): 카테고리별 신규 항목 검사 — tab dot / cat dot 공용
 // 사용자 명시 2026-05-11 ultrathink: diary 카테고리 검사에서 state.chatMessages 제거.
 // chatMessages 는 진행 중 대화 (아직 도서관에 저장 X). "도서관 dot = 도서관에 저장된 새 항목 있음" 의미로 정확히 → chatArchive 만 검사.
+// V4 (사용자 명시 2026-05-13): 도서관 탭 안에서 카테고리 콘텐츠 element 아무거나 클릭 시 dot dismiss.
+//   옛: chip 자체 클릭 시만 dismiss. 사용자가 *카테고리 chip 안 들어간 채* element 클릭 = dot 그대로.
+//   새: delegation — 도서관 영역 안 어떤 클릭이든 *현재 카테고리* dot dismiss (이미 hide 상태면 skip 부담 ↓).
+let _libDotDelegationInstalled = false;
+function _installLibDotDelegation() {
+  if (_libDotDelegationInstalled) return;
+  _libDotDelegationInstalled = true;
+  document.addEventListener('click', (e) => {
+    if (!e.target || !e.target.closest) return;
+    if (!e.target.closest('#screen-archive')) return;
+    if (typeof _currentLens === 'undefined' || !_currentLens) return;
+    // 이미 dot hide 상태면 skip (성능 + saveState 부담 ↓).
+    const since = (typeof _libCatLastSeen === 'function') ? _libCatLastSeen(_currentLens) : 0;
+    const hasNew = (typeof _libCategoryNewSince === 'function') ? _libCategoryNewSince(_currentLens, since) : false;
+    if (!hasNew) return;
+    _markLibCatSeen(_currentLens);
+    try { saveState(); } catch {}
+    if (typeof updateLibraryCatNewDots === 'function') { try { updateLibraryCatNewDots(); } catch {} }
+  }, true);
+}
+// 자동 install — 첫 module load 후.
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _installLibDotDelegation);
+  else _installLibDotDelegation();
+}
+
 function _libCategoryNewSince(cat, since) {
   // V4 (사용자 명시 2026-05-13): batch 결과 도착 전엔 dot X — chatArchive 의 _pendingExtract=true 인 항목 제외.
   //   사용자 시각: 결과 도착 = 보여지는 변화 — 그 시점에만 dot.
