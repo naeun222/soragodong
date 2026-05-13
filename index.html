@@ -38216,6 +38216,10 @@ function renderModel() {
         <div class="model-item" style="border-left: 3px solid var(--purple); padding-left: 12px;">
           <div class="model-item-name">${diagLabels[d.type] || d.type}</div>
           <div class="model-item-desc" style="font-size:12px; line-height:1.6;">${escapeHtml(d.evidence || '')}</div>
+          <div class="model-item-meta">
+            <span class="conf">신뢰도 ${Math.round((d.confidence || 0.5) * 100)}%</span>
+            ${d.status === 'shown' ? '<span style="color:var(--text-soft);">대화에서 한 번 인용됨</span>' : '<span style="color:#8fc88f;">발견됨</span>'}
+          </div>
         </div>
       `).join('')}
       <div style="font-size:10px; color:var(--text-soft); margin-top:10px; line-height:1.55; opacity:0.7;">의료 조언 아님 — 마음이 힘들면 전문가 상담 권장.</div>
@@ -38505,6 +38509,9 @@ function renderMoreSection(category, more, draft) {
 }
 
 function renderModelItem(item, category, idx) {
+  // V4 (사용자 보고 2026-05-13): 옛 e750781 dead code 청소에서 잘못 삭제된 confLabel + model-item-meta 복원.
+  //   각 model item 아래 "확신/관찰 중/가설 N%" 칩 + "근거 N개" 표시.
+  const confLabel = item.confidence >= 0.7 ? '확신' : item.confidence >= 0.4 ? '관찰 중' : '가설';
   // V4-1l-mini + 사용자 fix: values/patterns/traits 모두 '맞아' / '아니야' / '확인됨' 토글
   const isVerifiable = (category === 'values' || category === 'patterns' || category === 'traits');
   const isVerified = isVerifiable && item.user_verified === true;
@@ -38547,6 +38554,10 @@ function renderModelItem(item, category, idx) {
     <div class="model-item-name">${newBadge}${escapeHtml(item.name)}</div>
     <div class="model-item-desc">${escapeHtml(item.description || '')}</div>
     ${subMeta}
+    <div class="model-item-meta">
+      <span class="conf">${confLabel}${item.confidence != null ? ` ${Math.round((item.confidence || 0) * 100)}%` : ''}</span>
+      ${item.evidence_count ? `<span>근거 ${item.evidence_count}개</span>` : ''}
+    </div>
     <div class="model-item-actions">
       ${actionsHtml}
     </div>
