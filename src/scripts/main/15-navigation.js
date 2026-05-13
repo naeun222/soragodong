@@ -1,7 +1,23 @@
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
+// V4 Phase 1 sub-task 1.2 (사용자 명시 2026-05-13 ultrathink): View Transitions API wrap.
+// plan: ~/.claude/plans/precious-purring-dream.md §sub-task 1.2
+// Chrome 111+ / Safari 18.2+ native slide. Firefox + Safari < 18.2 = fallback (옛 .screen opacity 0.25s cross-fade).
+// 본체는 _showScreenImmediate 로 rename. try/catch 안전망 — startViewTransition 실패 시 fallback 호출.
 function showScreen(name) {
+  try {
+    if (!document.startViewTransition) {
+      _showScreenImmediate(name);
+      return;
+    }
+    document.startViewTransition(() => _showScreenImmediate(name));
+  } catch (e) {
+    console.warn('[view-transition]', e);
+    _showScreenImmediate(name);
+  }
+}
+function _showScreenImmediate(name) {
   // V4 (사용자 명시 2026-05-13 ultrathink): 화면 전환 시 메인 헤더 토글 visual sync (대화탭 = RAG SVG / 그 외 = godongicon).
   if (typeof updateMainHeaderBtnVisual === 'function') {
     setTimeout(() => { try { updateMainHeaderBtnVisual(); } catch {} }, 0);
