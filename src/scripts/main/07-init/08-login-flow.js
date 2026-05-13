@@ -11,8 +11,7 @@ function _hideBootSplash() {
   const s = document.getElementById('bootSplash');
   if (!s) return;
   s.classList.add('fade-out');
-  // 사용자 명시 2026-05-14 ultrathink (perf A): fade-out 280→120ms 단축. transition 끝(120ms)+safety(40ms)=160ms 후 remove.
-  setTimeout(() => { try { s.remove(); } catch {} }, 160);
+  setTimeout(() => { try { s.remove(); } catch {} }, 320);
   // 사용자 명시 2026-05-09 ultrathink (perf 측정): 첫 진입 timing 한 번만 콘솔 출력 (재진입 시 noop).
   try {
     if (window._perfReported) return;
