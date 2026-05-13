@@ -160,9 +160,9 @@ function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
     overlay.style.zIndex = '10003';
     overlay.innerHTML = `
       <div class="input-modal" style="max-width:420px; max-height:92vh; overflow-y:auto; padding:22px;">
-        <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:4px;">📅 자동결제 등록 안내</div>
+        <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:4px;">${_oneTimeMode ? '💳 1회 결제 안내' : '📅 자동결제 등록 안내'}</div>
         <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:14px; line-height:1.6;">
-          아래 내용으로 매월 자동 결제가 진행돼. 동의 후 카드 등록 페이지로 이동.
+          ${_oneTimeMode ? '아래 내용으로 1회 결제가 진행돼. 동의 후 결제 페이지로 이동.' : '아래 내용으로 매월 자동 결제가 진행돼. 동의 후 카드 등록 페이지로 이동.'}
         </div>
         ${trialBanner}
         <div style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:10px; padding:8px 14px; margin-bottom:14px;">
@@ -170,7 +170,7 @@ function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
         </div>
         <label style="display:flex; gap:9px; align-items:flex-start; padding:8px 0; cursor:pointer; font-size:12px; color:var(--text); line-height:1.55;">
           <input type="checkbox" id="recurringConsentCk1" style="margin-top:3px; flex:0 0 auto;">
-          <span><b>(필수)</b> 위 자동결제 내용을 모두 확인했으며, 매월 자동 결제에 동의합니다.</span>
+          <span><b>(필수)</b> ${_oneTimeMode ? '위 결제 내용을 모두 확인했으며, 1회 결제 진행에 동의합니다.' : '위 자동결제 내용을 모두 확인했으며, 매월 자동 결제에 동의합니다.'}</span>
         </label>
         <label style="display:flex; gap:9px; align-items:flex-start; padding:8px 0 14px; cursor:pointer; font-size:12px; color:var(--text); line-height:1.55;">
           <input type="checkbox" id="recurringConsentCk2" style="margin-top:3px; flex:0 0 auto;">
@@ -279,10 +279,12 @@ function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) 
 }
 
 // V4 (사용자 명시 2026-05-13 ultrathink): PG 한글 표시명 (동의 모달 / 성공 모달 / 설정 박스 공용).
+// 사용자 보고 2026-05-14: 가계약 모드 (BILLING_RECURRING_ENABLED=false) 카피 분기 추가. 정기결제 정식 승인 후 플래그 토글 시 자동 복귀.
 function _pgLabel(method) {
-  if (method === 'kakao') return '🟨 카카오페이 정기결제 (테스트 채널 TCSUBSCRIP)';
-  if (method === 'card')  return '💳 KG이니시스 카드 정기결제 (테스트 채널 INIBillTst)';
-  if (method === 'toss')  return '🔵 토스페이 정기결제';
+  const _oneTime = (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED);
+  if (method === 'kakao') return _oneTime ? '🟨 카카오페이' : '🟨 카카오페이 정기결제 (테스트 채널 TCSUBSCRIP)';
+  if (method === 'card')  return _oneTime ? '💳 KG이니시스 카드' : '💳 KG이니시스 카드 정기결제 (테스트 채널 INIBillTst)';
+  if (method === 'toss')  return _oneTime ? '🔵 토스페이' : '🔵 토스페이 정기결제';
   return method || '결제수단';
 }
 
