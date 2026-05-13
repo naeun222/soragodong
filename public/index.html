@@ -12151,39 +12151,6 @@
   .beach-shell {
     contain: layout style;
   }
-  /* V4 Phase 1 sub-task 1.2 (사용자 명시 2026-05-13 ultrathink) — View Transitions API
-   * plan: ~/.claude/plans/precious-purring-dream.md §sub-task 1.2
-   * Chrome 111+ / Safari 18.2+ native slide. Firefox + Safari < 18.2 = fallback (02-app-shell.css 의 .screen opacity transition).
-   * direction = forward only (back direction 은 추후 별도 작업). 250ms 짧고 자연. */
-
-  /* .screen.active 만 view-transition-name 부여 — callback 동기 토글로 snapshot1/snapshot2 분리 보장 */
-  .screen.active {
-    view-transition-name: screen;
-  }
-
-  ::view-transition-old(screen) {
-    animation: sgViewSlideOutLeft 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-  ::view-transition-new(screen) {
-    animation: sgViewSlideInRight 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  @keyframes sgViewSlideOutLeft {
-    from { transform: translateX(0); opacity: 1; }
-    to   { transform: translateX(-15%); opacity: 0; }
-  }
-  @keyframes sgViewSlideInRight {
-    from { transform: translateX(15%); opacity: 0; }
-    to   { transform: translateX(0); opacity: 1; }
-  }
-
-  /* 접근성 + ADHD 사용자 motion 부담 회피 */
-  @media (prefers-reduced-motion: reduce) {
-    ::view-transition-old(screen),
-    ::view-transition-new(screen) {
-      animation: none;
-    }
-  }
 </style>
 </head>
 <body>
@@ -37207,23 +37174,7 @@ function showUndoToast(msg, undoFn, durationMs = 5000) {
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
-// V4 Phase 1 sub-task 1.2 (사용자 명시 2026-05-13 ultrathink): View Transitions API wrap.
-// plan: ~/.claude/plans/precious-purring-dream.md §sub-task 1.2
-// Chrome 111+ / Safari 18.2+ native slide. Firefox + Safari < 18.2 = fallback (옛 .screen opacity 0.25s cross-fade).
-// 본체는 _showScreenImmediate 로 rename. try/catch 안전망 — startViewTransition 실패 시 fallback 호출.
 function showScreen(name) {
-  try {
-    if (!document.startViewTransition) {
-      _showScreenImmediate(name);
-      return;
-    }
-    document.startViewTransition(() => _showScreenImmediate(name));
-  } catch (e) {
-    console.warn('[view-transition]', e);
-    _showScreenImmediate(name);
-  }
-}
-function _showScreenImmediate(name) {
   // V4 (사용자 명시 2026-05-13 ultrathink): 화면 전환 시 메인 헤더 토글 visual sync (대화탭 = RAG SVG / 그 외 = godongicon).
   if (typeof updateMainHeaderBtnVisual === 'function') {
     setTimeout(() => { try { updateMainHeaderBtnVisual(); } catch {} }, 0);
