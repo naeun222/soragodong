@@ -82,46 +82,42 @@ async function _intakeStep1Send() {
   if (!text) { showToast('한 줄이라도 적어줘 ✦'); return; }
   state.intakeWorry.push({ role: 'user', content: text, ts: new Date().toISOString(), kind: 'first' });
   saveState();
-  // 사용자 명시 2026-05-06 ultrathink (재 X3): AI 동적 long example 부활 — 1단계 발화로 살 붙인 예시 = 사용자 학습 가치 ↑.
-  //   stuck 방지: 5초 timeout + pending/timedOut 분리 → 라벨에 "기다리는 중" 영구 표시 X.
-  //   AI 도착 X 면 INTAKE_EXAMPLES 페어 long 만 조용히 표시.
-  if (_intakeShouldDeepen(text)) {
-    _intakeState.step = 3;
-    _intakeState.aiLong = null;
-    _intakeState.aiLongPending = true;
-    _intakeState.aiLongTimedOut = false;
-    _renderIntakeStep();
-    const timeoutId = setTimeout(() => {
-      if (!_intakeState || _intakeState.aiLong) return;
+  // 사용자 보고 2026-05-13 ultrathink: 첫 발화에서 두 번째 발화 단계 (Step3) 가 진행되어야 하는데
+  // _intakeShouldDeepen(text) 길이 분기 때문에 한국어로 좀 길게 적으면 Step3 건너뛰고 Step4 (더 알아보기) 로 점프하는 버그.
+  // 4672eee (Step2 폐기) 의도 = "1발화 → 3장문발화 직진" — 길이 무관 항상 Step3 진행.
+  // AI long example 백그라운드 fetch 는 stuck 방지 위해 5초 timeout + pending/timedOut 분리 유지.
+  _intakeState.step = 3;
+  _intakeState.aiLong = null;
+  _intakeState.aiLongPending = true;
+  _intakeState.aiLongTimedOut = false;
+  _renderIntakeStep();
+  const timeoutId = setTimeout(() => {
+    if (!_intakeState || _intakeState.aiLong) return;
+    _intakeState.aiLongPending = false;
+    _intakeState.aiLongTimedOut = true;
+    if (_intakeState.step === 3) _renderIntakeStep();
+  }, 5000);
+  _intakeGenLongExample(text)
+    .then(longText => {
+      clearTimeout(timeoutId);
+      if (!_intakeState) return;
+      _intakeState.aiLongPending = false;
+      if (longText && longText.length > 10) {
+        _intakeState.aiLong = longText;
+        _intakeState.aiLongTimedOut = false;
+      } else {
+        _intakeState.aiLongTimedOut = true;
+      }
+      if (_intakeState.step === 3) _renderIntakeStep();
+    })
+    .catch(e => {
+      clearTimeout(timeoutId);
+      if (!_intakeState) return;
       _intakeState.aiLongPending = false;
       _intakeState.aiLongTimedOut = true;
       if (_intakeState.step === 3) _renderIntakeStep();
-    }, 5000);
-    _intakeGenLongExample(text)
-      .then(longText => {
-        clearTimeout(timeoutId);
-        if (!_intakeState) return;
-        _intakeState.aiLongPending = false;
-        if (longText && longText.length > 10) {
-          _intakeState.aiLong = longText;
-          _intakeState.aiLongTimedOut = false;
-        } else {
-          _intakeState.aiLongTimedOut = true;
-        }
-        if (_intakeState.step === 3) _renderIntakeStep();
-      })
-      .catch(e => {
-        clearTimeout(timeoutId);
-        if (!_intakeState) return;
-        _intakeState.aiLongPending = false;
-        _intakeState.aiLongTimedOut = true;
-        if (_intakeState.step === 3) _renderIntakeStep();
-        console.warn('[intake] long example 실패 — INTAKE_EXAMPLES 페어 사용', e);
-      });
-  } else {
-    _intakeState.step = 4;
-    _renderIntakeStep();
-  }
+      console.warn('[intake] long example 실패 — INTAKE_EXAMPLES 페어 사용', e);
+    });
 }
 
 function _intakeStep2Html() {
