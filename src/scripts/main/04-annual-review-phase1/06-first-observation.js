@@ -183,31 +183,6 @@ function _intakePickRandomExample(excludeId) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-// 짧음 detect — 15자 미만 = deepening 필요
-function _intakeShouldDeepen(text) {
-  if (!text) return true;
-  return text.trim().replace(/\s+/g, '').length < 15;
-}
-
-// Step2: AI 가 사용자 첫 짧은 발화 받고 한 번 더 풀어달라 부탁 (1-2 문장).
-async function _intakeDeepenAsk(userText) {
-  if (!_canAI()) throw new Error('AI 호출 불가능');
-  // 사용자 명시 2026-05-11 ultrathink: system + user content 모두 backend 이전.
-  //   _promptType='intake_reply' (system) + _userContentType='intake_deepen_ask' (user content) 매칭.
-  const resp = await callAnthropic({
-    _endpoint: 'intake',
-    _promptType: 'intake_reply',
-    _userContentType: 'intake_deepen_ask',
-    _vars: { userText },
-    model: 'claude-sonnet-4-6',
-    max_tokens: 200,
-    messages: [{ role: 'user', content: '' }]
-  });
-  if (!resp.ok) throw new Error('API ' + resp.status);
-  const data = await resp.json();
-  return (data?.content?.[0]?.text || '').trim();
-}
-
 // Step3: AI 가 사용자 첫 발화 받고 장문 entry 1개 모방용 생성 (50-100자, 상황+감정+자기관찰).
 async function _intakeGenLongExample(userText) {
   if (!_canAI()) throw new Error('AI 호출 불가능');

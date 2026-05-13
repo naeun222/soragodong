@@ -24,7 +24,6 @@ function _renderIntakeStep() {
   if (!c || !_intakeState) return;
   const dots = _intakeProgressDots(_intakeState.step);
   if (_intakeState.step === 1)      c.innerHTML = dots + _intakeStep1Html();
-  else if (_intakeState.step === 2) c.innerHTML = dots + _intakeStep2Html();
   else if (_intakeState.step === 3) c.innerHTML = dots + _intakeStep3Html();
   else if (_intakeState.step === 4) c.innerHTML = dots + _intakeStep4Html();
   else if (_intakeState.step === 5) c.innerHTML = dots + _intakeStep5Html();
@@ -118,36 +117,6 @@ async function _intakeStep1Send() {
       if (_intakeState.step === 3) _renderIntakeStep();
       console.warn('[intake] long example 실패 — INTAKE_EXAMPLES 페어 사용', e);
     });
-}
-
-function _intakeStep2Html() {
-  return `
-    <div class="intake-ai-msg" id="intakeAIAsk"><b>🐚</b> <span class="intake-loading">잠깐...</span></div>
-    <div class="intake-prompt-secondary">한 번 더 풀어줘.<br><span class="small">고민을 구체적으로 다 털어놔도 OK. 상황 → 무슨 마음 → 어떻게 됐는지.</span></div>
-    <div class="intake-actions">
-      <button class="intake-send-btn" onclick="_intakeStep2Next()">✦ 다음</button>
-    </div>
-  `;
-}
-
-async function _intakeStep2Next() {
-  _intakeState.step = 3;
-  _renderIntakeStep();
-  // 사용자 명시 2026-04-30: AI 동적 long example 보장 — 백그라운드 fetch 미완료 시 다시 시도 + await
-  if (!_intakeState.aiLong) {
-    try {
-      const userFirst = state.intakeWorry.find(m => m.role === 'user');
-      if (userFirst && userFirst.content) {
-        const longText = await _intakeGenLongExample(userFirst.content);
-        if (_intakeState && longText) {
-          _intakeState.aiLong = longText;
-          _renderIntakeStep();
-        }
-      }
-    } catch (e) {
-      console.warn('[intake] step3 long example retry failed:', e);
-    }
-  }
 }
 
 function _intakeStep3Html() {
