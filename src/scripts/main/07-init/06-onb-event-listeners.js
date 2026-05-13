@@ -23,15 +23,8 @@ function onbRenderStep() {
     try { step.onShow(step); } catch (e) { console.warn('[onbRenderStep onShow]:', e); }
   }
 
-  // 사용자 명시 2026-04-30 ultrathink: chat_opus_intro step 진입 시 useOpus 자동 활성화 + flag 적용하기 (onbFinish 에서 자동 복원).
-  if (step.id === 'chat_opus_intro') {
-    state.preferences = state.preferences || {};
-    if (!state.preferences.useOpus) {
-      state.preferences.useOpus = true;
-      state.preferences._opusActivatedByTutorial = true;
-      if (typeof updateChatModeBtn === 'function') updateChatModeBtn();
-    }
-  }
+  // V4 (사용자 명시 2026-05-13): 옛 chat_opus_intro step 폐기 → 자동 useOpus 활성 hook 도 제거.
+  //   새: Plus 가입 후 첫 클릭 모달 (showRagFirstClickModal) + 마법/숙고 첫 진입 모달 (showPerRoomOpusFirstClickModal).
   // 사용자 보고 2026-05-01: 캘린더 step 진입 시 자동으로 해당 월로 슬라이드 (4/15 시드 = 옛 달 → 자동 -N offset).
   if (typeof _calMonthOffset !== 'undefined' && typeof renderLensCalendarGrid === 'function') {
     if (step.calNavToDate) {
@@ -936,13 +929,7 @@ function onbFinish() {
   // 사용자 명시 2026-04-30 ultrathink (위치 이동): intake 모달 = 코어 #1 chat_intake_entry step 자리에서 trigger (대화탭 시작 시점). onbFinish 자리는 X.
   // 단 _resumePendingIntake 안전망 (이전 _pendingIntake flag 남아있는 사용자 처리) 는 init 시점에서 호출.
 
-  // 사용자 명시 2026-04-30 ultrathink: 튜토리얼이 chat_opus_intro 에서 활성화한 Opus = 끝 시점에 자동 sonnet 복원 (testerMode OFF 경로). testerMode ON 경로는 backup restore 가 자동 복원.
-  if (state.preferences && state.preferences._opusActivatedByTutorial) {
-    state.preferences.useOpus = false;
-    state.preferences._opusActivatedByTutorial = false;
-    if (typeof updateChatModeBtn === 'function') updateChatModeBtn();
-    saveState();
-  }
+  // V4 (사용자 명시 2026-05-13): 옛 chat_opus_intro 자동 Opus 활성 hook 폐기 → 복원 hook 도 제거.
 
   // 사용자 명시 2026-05-05: 100만 토큰 환영 선물 정책 폐기 → 처음 한 달 무료 (얼리 플랜) 자동 활성화 (ensureBillingRow). 튜토리얼 완주 시 별도 grant 호출 불필요.
 }

@@ -479,6 +479,8 @@ ${currentDraft || '(비어있음 — 도움이 필요해)'}
   _renderMagicHelpChat();
   // V4 (사용자 명시 2026-05-13): per-room Opus 토글 visual sync.
   if (typeof updateMagicHelpChatModeBtn === 'function') updateMagicHelpChatModeBtn();
+  // V4 (사용자 명시 2026-05-13): 첫 진입 1-step 튜토리얼 모달 (1회만).
+  if (typeof showPerRoomOpusFirstClickModal === 'function') setTimeout(() => showPerRoomOpusFirstClickModal(), 400);
 }
 
 // AI 응답 만 호출 (sendMagicHelpMessage에서 입력 부분만 분리)

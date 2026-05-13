@@ -314,6 +314,44 @@ function updateReflectionChatModeBtn() {
   });
 }
 
+// V4 (사용자 명시 2026-05-13): 마법고동/숙고 첫 진입 1-step 튜토리얼 모달.
+//   Plan 무관 (모든 사용자에게 토글 visible — Premium 만 작동, 그 외 클릭 시 Premium 권유).
+//   1회만 — state.preferences._perRoomOpusToggleSeen flag.
+//   사용자 카피 = 직접 작성 예정 (placeholder).
+function showPerRoomOpusFirstClickModal() {
+  if (document.getElementById('perRoomOpusFirstClickOverlay')) return;
+  if (state?.preferences?._perRoomOpusToggleSeen) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'perRoomOpusFirstClickOverlay';
+  overlay.style.zIndex = '10006';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:380px; padding:24px; text-align:center;">
+      <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-bottom:16px; font-size:32px;">
+        <span>🪶</span>
+        <span style="color:var(--text-dim); font-size:18px;">→</span>
+        <span style="filter:drop-shadow(0 0 12px rgba(212,167,106,0.55));">🦉</span>
+      </div>
+      <div style="font-size:15px; font-weight:600; color:var(--text); margin-bottom:8px;">🦉 Opus 깊은 사고 모드</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:18px;">
+        헤더 왼쪽 위 🪶 토글 누르면<br>
+        <b>이 임시 대화창만</b> Opus 모델로 답해 (Premium 전용).<br>
+        각 대화창마다 따로 켜고 끌 수 있어.<br>
+        <span style="color:var(--text-soft); font-size:11px;">(다른 대화창엔 영향 X)</span>
+      </div>
+      <button class="btn-primary" onclick="_perRoomOpusFirstModalClose()" style="width:100%; padding:11px;">알겠어 ✦</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+function _perRoomOpusFirstModalClose() {
+  const ov = document.getElementById('perRoomOpusFirstClickOverlay');
+  if (ov) ov.remove();
+  state.preferences = state.preferences || {};
+  state.preferences._perRoomOpusToggleSeen = true;
+  try { saveState(); } catch {}
+}
+
 // V4 (사용자 명시 2026-05-13): per-room Opus 토글 — 마법고동 helpChat.
 //   해당 decision.helpChatUseOpus[stepId] 만 토글.
 function toggleMagicHelpOpus() {

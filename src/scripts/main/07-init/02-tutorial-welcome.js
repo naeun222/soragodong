@@ -146,18 +146,9 @@ const _LEGACY_ONBOARDING_STEPS = [
     body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진해.<br>분위기에 맞게 답해줄게.<br><br>☕ <b>일상 공유</b> — "오늘 점심 마라탕 먹었어"<br>😆 <b>웃긴 에피소드</b> — "오늘 진짜 웃긴 일 있었어..."<br>🔍 <b>가벼운 호기심</b> — "오리너구리는 조상이 오리야 너구리야?"<br>🌟 <b>자랑·뿌듯</b> — "발표 끝났어! 잘 마무리함 ㅎㅎ"<br><br>🌀 <b>와다다 풀기</b> — "기쁘기도 하고 슬프기도 하고..."<br>🤔 <b>의견 듣기</b> — "이 옷 살까 말까ㅋㅋ"<br><br>🚧 <b>막혔을 때</b> — "내일 발표인데 자료 하나도 없어. 시작도 못 하겠어"<br>💧 <b>자책 흐를 때</b> — "방금 회의에서 말 더듬었어. 다들 별로라고 생각할 듯"<br>🔁 <b>패턴 의심</b> — "또 마감 임박해서야 시작이네. 왜?"<br><br>📅 <b>일정 추가</b> — "내일 3시 회의 잡아줘" / "8시 운동 가자"<br>📔 <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장',
     waitFor: 'next'
   },
-  // 사용자 명시 2026-04-30 ultrathink: 대화 시작 전 헤더 sonnet/opus 토글 안내 + Opus 자동 활성화 (튜토리얼 한정). onbFinish 에서 sonnet 복원.
-  {
-    id: 'chat_opus_intro',
-    targetSelector: '.js-chat-mode-btn',
-    title: '🦉 더 깊은 대화 모델',
-    body: '헤더 오른쪽 위 <b><img src="/godongicon.png" alt="" class="godong-icon" decoding="async">/🦉 토글</b> 보여?<br>누르면 더 깊게 답해주는 <b>Opus 모델</b>로 바뀌어.<br><br><b>지금은 튜토리얼이니까 Opus 써볼 수 있게 해줄게</b> ✦<br><br><span class="small">튜토리얼 끝나면 자동으로 sonnet 으로 돌아와. (Opus 깊은 대화는 Premium 에서 일일 30번)</span>',
-    waitFor: 'next',
-    nextLabel: '✦ 응 좋아',
-    dimBackground: false,
-    coachmarkPosition: 'corner',
-    coachmarkTop: '72px'
-  },
+  // V4 (사용자 명시 2026-05-13): 옛 chat_opus_intro step 폐기 — 헤더 토글이 RAG 토글 (대화탭 한정)로 정정됨.
+  //   신규 사용자 = 미구독 = RAG 토글 brand only (안 보임) → 튜토리얼 step 의미 X.
+  //   Plus 가입 후 첫 클릭 모달 (showRagFirstClickModal) + 마법/숙고 첫 진입 모달 (showPerRoomOpusFirstClickModal) 으로 분리.
   // 사용자 명시 2026-04-30 ultrathink: 대화탭 시작 시점에 첫 관찰 흐름. 코어 #1 안. body 안 button 으로 모달 trigger + 끝나면 onbNext. 사용자가 nextBtn 으로 skip 가능 (선택권 보존).
   {
     id: 'chat_intake_entry',

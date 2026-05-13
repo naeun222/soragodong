@@ -20241,18 +20241,9 @@ const _LEGACY_ONBOARDING_STEPS = [
     body: '여기서는 나한테 <b>무슨 말이든 해도 돼!</b> 자유도가 무궁무진해.<br>분위기에 맞게 답해줄게.<br><br>☕ <b>일상 공유</b> — "오늘 점심 마라탕 먹었어"<br>😆 <b>웃긴 에피소드</b> — "오늘 진짜 웃긴 일 있었어..."<br>🔍 <b>가벼운 호기심</b> — "오리너구리는 조상이 오리야 너구리야?"<br>🌟 <b>자랑·뿌듯</b> — "발표 끝났어! 잘 마무리함 ㅎㅎ"<br><br>🌀 <b>와다다 풀기</b> — "기쁘기도 하고 슬프기도 하고..."<br>🤔 <b>의견 듣기</b> — "이 옷 살까 말까ㅋㅋ"<br><br>🚧 <b>막혔을 때</b> — "내일 발표인데 자료 하나도 없어. 시작도 못 하겠어"<br>💧 <b>자책 흐를 때</b> — "방금 회의에서 말 더듬었어. 다들 별로라고 생각할 듯"<br>🔁 <b>패턴 의심</b> — "또 마감 임박해서야 시작이네. 왜?"<br><br>📅 <b>일정 추가</b> — "내일 3시 회의 잡아줘" / "8시 운동 가자"<br>📔 <b>일기로 남기기</b> — <b>"일기:"</b>로 시작하면 그날 entry에 원본 저장',
     waitFor: 'next'
   },
-  // 사용자 명시 2026-04-30 ultrathink: 대화 시작 전 헤더 sonnet/opus 토글 안내 + Opus 자동 활성화 (튜토리얼 한정). onbFinish 에서 sonnet 복원.
-  {
-    id: 'chat_opus_intro',
-    targetSelector: '.js-chat-mode-btn',
-    title: '🦉 더 깊은 대화 모델',
-    body: '헤더 오른쪽 위 <b><img src="/godongicon.png" alt="" class="godong-icon" decoding="async">/🦉 토글</b> 보여?<br>누르면 더 깊게 답해주는 <b>Opus 모델</b>로 바뀌어.<br><br><b>지금은 튜토리얼이니까 Opus 써볼 수 있게 해줄게</b> ✦<br><br><span class="small">튜토리얼 끝나면 자동으로 sonnet 으로 돌아와. (Opus 깊은 대화는 Premium 에서 일일 30번)</span>',
-    waitFor: 'next',
-    nextLabel: '✦ 응 좋아',
-    dimBackground: false,
-    coachmarkPosition: 'corner',
-    coachmarkTop: '72px'
-  },
+  // V4 (사용자 명시 2026-05-13): 옛 chat_opus_intro step 폐기 — 헤더 토글이 RAG 토글 (대화탭 한정)로 정정됨.
+  //   신규 사용자 = 미구독 = RAG 토글 brand only (안 보임) → 튜토리얼 step 의미 X.
+  //   Plus 가입 후 첫 클릭 모달 (showRagFirstClickModal) + 마법/숙고 첫 진입 모달 (showPerRoomOpusFirstClickModal) 으로 분리.
   // 사용자 명시 2026-04-30 ultrathink: 대화탭 시작 시점에 첫 관찰 흐름. 코어 #1 안. body 안 button 으로 모달 trigger + 끝나면 onbNext. 사용자가 nextBtn 으로 skip 가능 (선택권 보존).
   {
     id: 'chat_intake_entry',
@@ -21803,15 +21794,8 @@ function onbRenderStep() {
     try { step.onShow(step); } catch (e) { console.warn('[onbRenderStep onShow]:', e); }
   }
 
-  // 사용자 명시 2026-04-30 ultrathink: chat_opus_intro step 진입 시 useOpus 자동 활성화 + flag 적용하기 (onbFinish 에서 자동 복원).
-  if (step.id === 'chat_opus_intro') {
-    state.preferences = state.preferences || {};
-    if (!state.preferences.useOpus) {
-      state.preferences.useOpus = true;
-      state.preferences._opusActivatedByTutorial = true;
-      if (typeof updateChatModeBtn === 'function') updateChatModeBtn();
-    }
-  }
+  // V4 (사용자 명시 2026-05-13): 옛 chat_opus_intro step 폐기 → 자동 useOpus 활성 hook 도 제거.
+  //   새: Plus 가입 후 첫 클릭 모달 (showRagFirstClickModal) + 마법/숙고 첫 진입 모달 (showPerRoomOpusFirstClickModal).
   // 사용자 보고 2026-05-01: 캘린더 step 진입 시 자동으로 해당 월로 슬라이드 (4/15 시드 = 옛 달 → 자동 -N offset).
   if (typeof _calMonthOffset !== 'undefined' && typeof renderLensCalendarGrid === 'function') {
     if (step.calNavToDate) {
@@ -22716,13 +22700,7 @@ function onbFinish() {
   // 사용자 명시 2026-04-30 ultrathink (위치 이동): intake 모달 = 코어 #1 chat_intake_entry step 자리에서 trigger (대화탭 시작 시점). onbFinish 자리는 X.
   // 단 _resumePendingIntake 안전망 (이전 _pendingIntake flag 남아있는 사용자 처리) 는 init 시점에서 호출.
 
-  // 사용자 명시 2026-04-30 ultrathink: 튜토리얼이 chat_opus_intro 에서 활성화한 Opus = 끝 시점에 자동 sonnet 복원 (testerMode OFF 경로). testerMode ON 경로는 backup restore 가 자동 복원.
-  if (state.preferences && state.preferences._opusActivatedByTutorial) {
-    state.preferences.useOpus = false;
-    state.preferences._opusActivatedByTutorial = false;
-    if (typeof updateChatModeBtn === 'function') updateChatModeBtn();
-    saveState();
-  }
+  // V4 (사용자 명시 2026-05-13): 옛 chat_opus_intro 자동 Opus 활성 hook 폐기 → 복원 hook 도 제거.
 
   // 사용자 명시 2026-05-05: 100만 토큰 환영 선물 정책 폐기 → 처음 한 달 무료 (얼리 플랜) 자동 활성화 (ensureBillingRow). 튜토리얼 완주 시 별도 grant 호출 불필요.
 }
@@ -23102,8 +23080,9 @@ async function runStartTutorialV8() {
     await _v8Sleep(200);
     await _v8CoachmarkEndChapter(branch);
     await _v8Sleep(250);
-    await _v8CoachmarkModelToggle();   // 헤더 모델 토글 코치마크
-    await _v8Sleep(250);
+    // V4 (사용자 명시 2026-05-13): _v8CoachmarkModelToggle 폐기 — 옛 헤더 토글 = Opus/Sonnet → 새 RAG (Plus/Premium 한정).
+    //   신규 사용자 = 미구독 = brand only 안 보임. 코치마크 의미 X.
+    //   Plus 가입 후 첫 클릭 모달 (showRagFirstClickModal) 으로 분리.
     // 사용자 명시 2026-05-06 (추가): 마무리 멘트 step — 친절한 톤.
     await _v8CoachmarkClosing();
   } catch (e) {
@@ -23514,18 +23493,10 @@ function _v8CoachmarkEndChapter(branch) {
   });
 }
 
-function _v8CoachmarkModelToggle() {
-  // 헤더 첫 번째 godongicon button (메인 헤더 안)
-  const target = '.header .js-chat-mode-btn';
-  const body = `
-    <div class="v8-coach-title">모델 깊이</div>
-    <div class="v8-coach-text">
-      여기 누르면 모델 바뀌어.<br>
-      평소엔 가볍게, 깊게 가고 싶을 땐 깊게.
-    </div>
-  `;
-  return _v8ShowCoachmark({ targetSelector: target, body, position: 'bottom' });
-}
+// V4 (사용자 명시 2026-05-13): _v8CoachmarkModelToggle 폐기 — 헤더 토글이 RAG (Plus/Premium 한정) 으로 변경됨.
+//   신규 미구독 사용자 = brand only 안 보임. 가입 후 첫 클릭 모달로 분리.
+//   stub 보존 — 옛 호출처 X 보장 후 다음 PR 에서 삭제.
+function _v8CoachmarkModelToggle() { return Promise.resolve(); }
 
 // 사용자 명시 2026-05-06 (추가): 마무리 멘트 step — 친절한 톤.
 function _v8CoachmarkClosing() {
@@ -25134,6 +25105,8 @@ ${currentDraft || '(비어있음 — 도움이 필요해)'}
   _renderMagicHelpChat();
   // V4 (사용자 명시 2026-05-13): per-room Opus 토글 visual sync.
   if (typeof updateMagicHelpChatModeBtn === 'function') updateMagicHelpChatModeBtn();
+  // V4 (사용자 명시 2026-05-13): 첫 진입 1-step 튜토리얼 모달 (1회만).
+  if (typeof showPerRoomOpusFirstClickModal === 'function') setTimeout(() => showPerRoomOpusFirstClickModal(), 400);
 }
 
 // AI 응답 만 호출 (sendMagicHelpMessage에서 입력 부분만 분리)
@@ -32273,6 +32246,8 @@ function openReflectionChat(qId) {
   renderReflectionChat();
   // V4 (사용자 명시 2026-05-13): per-room Opus 토글 visual sync.
   if (typeof updateReflectionChatModeBtn === 'function') updateReflectionChatModeBtn();
+  // V4 (사용자 명시 2026-05-13): 첫 진입 1-step 튜토리얼 모달 (1회만).
+  if (typeof showPerRoomOpusFirstClickModal === 'function') setTimeout(() => showPerRoomOpusFirstClickModal(), 400);
   // 결론 / 삭제 버튼 wire (V4-fix: 보류 → 삭제로 변경)
   const resolveBtn = document.getElementById('reflectionResolveBtn');
   if (resolveBtn) {
@@ -40318,6 +40293,44 @@ function updateReflectionChatModeBtn() {
     btn.innerHTML = useOpus ? '🦉' : '🪶';
     btn.setAttribute('title', titleAttr);
   });
+}
+
+// V4 (사용자 명시 2026-05-13): 마법고동/숙고 첫 진입 1-step 튜토리얼 모달.
+//   Plan 무관 (모든 사용자에게 토글 visible — Premium 만 작동, 그 외 클릭 시 Premium 권유).
+//   1회만 — state.preferences._perRoomOpusToggleSeen flag.
+//   사용자 카피 = 직접 작성 예정 (placeholder).
+function showPerRoomOpusFirstClickModal() {
+  if (document.getElementById('perRoomOpusFirstClickOverlay')) return;
+  if (state?.preferences?._perRoomOpusToggleSeen) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay show';
+  overlay.id = 'perRoomOpusFirstClickOverlay';
+  overlay.style.zIndex = '10006';
+  overlay.innerHTML = `
+    <div class="input-modal" style="max-width:380px; padding:24px; text-align:center;">
+      <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-bottom:16px; font-size:32px;">
+        <span>🪶</span>
+        <span style="color:var(--text-dim); font-size:18px;">→</span>
+        <span style="filter:drop-shadow(0 0 12px rgba(212,167,106,0.55));">🦉</span>
+      </div>
+      <div style="font-size:15px; font-weight:600; color:var(--text); margin-bottom:8px;">🦉 Opus 깊은 사고 모드</div>
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:18px;">
+        헤더 왼쪽 위 🪶 토글 누르면<br>
+        <b>이 임시 대화창만</b> Opus 모델로 답해 (Premium 전용).<br>
+        각 대화창마다 따로 켜고 끌 수 있어.<br>
+        <span style="color:var(--text-soft); font-size:11px;">(다른 대화창엔 영향 X)</span>
+      </div>
+      <button class="btn-primary" onclick="_perRoomOpusFirstModalClose()" style="width:100%; padding:11px;">알겠어 ✦</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+function _perRoomOpusFirstModalClose() {
+  const ov = document.getElementById('perRoomOpusFirstClickOverlay');
+  if (ov) ov.remove();
+  state.preferences = state.preferences || {};
+  state.preferences._perRoomOpusToggleSeen = true;
+  try { saveState(); } catch {}
 }
 
 // V4 (사용자 명시 2026-05-13): per-room Opus 토글 — 마법고동 helpChat.
