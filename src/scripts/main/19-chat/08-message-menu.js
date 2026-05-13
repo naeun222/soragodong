@@ -237,7 +237,8 @@ function showRagFirstClickModal() {
   overlay.style.zIndex = '10005';
   overlay.innerHTML = `
     <div class="input-modal" style="max-width:380px; padding:24px; text-align:center;">
-      <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-bottom:16px;">
+      <div style="font-size:16px; font-weight:600; color:var(--text); margin-bottom:16px;">✨ 고동이 기억력이 좋아져</div>
+      <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-bottom:18px;">
         <div style="text-align:center;">
           <img src="/character/godong-sonnet.svg" alt="" style="width:64px; height:64px;">
           <div style="font-size:10.5px; color:var(--text-soft); margin-top:4px;">평소</div>
@@ -248,12 +249,9 @@ function showRagFirstClickModal() {
           <div style="font-size:10.5px; color:var(--accent); margin-top:4px;">옛 챕터 기억 ON</div>
         </div>
       </div>
-      <div style="font-size:15px; font-weight:600; color:var(--text); margin-bottom:8px;">✨ 고동이가 옛 챕터를 기억해</div>
-      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:18px;">
-        켜면 — 지금 대화 주제와 비슷한 옛 챕터 <b>${topN}개</b>를<br>
-        고동이가 자연스럽게 참조해서 답해.<br>
-        매 메시지마다 다른 챕터 — 같은 얘기 반복 X.<br>
-        <span style="color:var(--text-soft); font-size:11px;">지금은 OFF. 켜고 싶으면 [켜기].</span>
+      <div style="font-size:12.5px; color:var(--text-dim); line-height:1.75; margin-bottom:18px;">
+        대화를 더 자연스럽게 할 수 있고, 너를 더 깊이 이해해.<br>
+        <span style="color:var(--text-soft); font-size:11.5px;">대신 토큰이 조금 더 빨리 닳아.</span>
       </div>
       <button class="btn-primary" onclick="_ragFirstModalAct(true)" style="width:100%; padding:11px; margin-bottom:8px;">✨ 켜기</button>
       <button class="btn-secondary" onclick="_ragFirstModalAct(false)" style="width:100%; padding:10px;">그대로 둘게</button>
@@ -327,17 +325,15 @@ function showPerRoomOpusFirstClickModal() {
   overlay.style.zIndex = '10006';
   overlay.innerHTML = `
     <div class="input-modal" style="max-width:380px; padding:24px; text-align:center;">
-      <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-bottom:16px; font-size:32px;">
+      <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-bottom:16px; font-size:36px;">
         <span>🪶</span>
-        <span style="color:var(--text-dim); font-size:18px;">→</span>
+        <span style="color:var(--text-dim); font-size:20px;">→</span>
         <span style="filter:drop-shadow(0 0 12px rgba(212,167,106,0.55));">🦉</span>
       </div>
-      <div style="font-size:15px; font-weight:600; color:var(--text); margin-bottom:8px;">🦉 Opus 깊은 사고 모드</div>
-      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:18px;">
-        헤더 왼쪽 위 🪶 토글 누르면<br>
-        <b>이 임시 대화창만</b> Opus 모델로 답해 (Premium 전용).<br>
-        각 대화창마다 따로 켜고 끌 수 있어.<br>
-        <span style="color:var(--text-soft); font-size:11px;">(다른 대화창엔 영향 X)</span>
+      <div style="font-size:15px; font-weight:600; color:var(--text); margin-bottom:14px;">🦉 Opus 깊은 사고 모드</div>
+      <div style="font-size:12.5px; color:var(--text-dim); line-height:1.75; margin-bottom:18px;">
+        여기 이 🪶 토글 누르면 여기선 <b>Opus(상위 모델)</b>로 답해 (Premium 전용).<br>
+        <span style="color:var(--text-soft); font-size:11.5px;">대신 토큰이 5배 더 쓰이니까, 중요한 질문 하나 할 때 키는 거 추천.</span>
       </div>
       <button class="btn-primary" onclick="_perRoomOpusFirstModalClose()" style="width:100%; padding:11px;">알겠어 ✦</button>
     </div>
