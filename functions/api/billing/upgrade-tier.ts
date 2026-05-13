@@ -108,8 +108,11 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   const newExpiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
   const newPeriodStartedAt = new Date().toISOString();
   try {
+    // 사용자 보고 2026-05-14 ultrathink (audit-billing P1): 중복 paymentId 제출 시 billing PATCH 두 번 적용 차단.
+    //   옛 filter (user_id=eq.${user.id} 단독) → paymentId INSERT 는 ignore-duplicates 로 차단되지만 billing PATCH 는 두 번 실행 → expires_at NOW+30d 갱신 두 번 / monthly_token_used 0 리셋 두 번.
+    //   fix: filter 에 subscription_plan=in.(light,early_light) 추가 — 이미 premium 으로 upgrade 됐으면 PATCH 매칭 X. portone-verify-pay.ts 패턴 따름.
     const patchResp = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}`,
+      `${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${user.id}&subscription_plan=in.(light,early_light)`,
       {
         method: 'PATCH',
         headers: {

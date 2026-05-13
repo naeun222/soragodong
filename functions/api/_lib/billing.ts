@@ -180,7 +180,11 @@ export async function promoteGuestToEarlyLight(env: Env, userId: string): Promis
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { ok: false, promoted: false };
   const now = new Date();
   try {
-    const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${userId}&subscription_plan=eq.guest`, {
+    // 사용자 보고 2026-05-14 ultrathink (audit-billing P0): race / 중복 호출 시 두 번 SET 차단.
+    //   옛 filter (subscription_plan=eq.guest 만) → 동시 chat + usage 호출 시 둘 다 PATCH 통과 가능.
+    //   fix: filter 에 free_trial_granted_at=is.null 추가 — 이미 promote 됐으면 PATCH 매칭 X (첫 호출만 적용).
+    //   note: comment line 위 '+= $1.1' (atomic add) 의도 vs 실 코드 SET ($1.1) — product 의도 미정. SET 그대로, race 만 차단.
+    const resp = await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${userId}&subscription_plan=eq.guest&free_trial_granted_at=is.null`, {
       method: 'PATCH',
       headers: {
         'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
