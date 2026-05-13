@@ -13,3 +13,11 @@
 # 사용자 보고 2026-05-06: SW 업데이트가 모바일에서 stuck 하는 원인 — sw.js HTTP 캐시 차단
 /sw.js
   Cache-Control: no-cache, no-store, must-revalidate
+# V4 (사용자 명시 2026-05-13): Google Play TWA Digital Asset Links — Android verifier 가 정확한 Content-Type 요구.
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600
+# V4 (사용자 명시 2026-05-13): manifest.webmanifest — TWA Bubblewrap fetch.
+/manifest.webmanifest
+  Content-Type: application/manifest+json
+  Cache-Control: public, max-age=3600

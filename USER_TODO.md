@@ -279,35 +279,115 @@ V4 사용자 명시 2026-05-02 — 카카오 SNS 로그인 도입 (네이버는 
 ### 12. ⏸️ 홈택스 사업용 신용카드 등록
 매입세액 자동 정리.
 
-### 13. 🟢 Google Play Console — PWA 출시 (사용자 명시 2026-05-13: 상세 계획)
+### 13. 🟡 Google Play Console — TWA 출시 (사용자 명시 2026-05-13 진행 중)
 
 **출시 방향**:
 - ✅ **PWA + Google Play (TWA)** 우선 출시 — Mac 불필요 / signing cloud / 리뷰 3-7일.
 - ⏸️ Apple iOS = 6-12개월 후 (Apple IAP 30% + cloud Mac).
 
-#### 단계별 상세 plan (총 ~1개월, 집중 시)
+**현재 상태**:
+- ✅ Google Play Console 가입 완료 (Individual, $25 결제됨).
+- ✅ manifest.webmanifest TWA-friendly 변환 완료 (id/display_override/prefer_related_applications 등 + Bubblewrap 호환).
+- ✅ `public/.well-known/assetlinks.json` 템플릿 생성 (SHA-256 placeholder — 너가 keystore 생성 후 교체).
+- ✅ Cloudflare Pages `_headers` 에 Content-Type 추가 (assetlinks.json = application/json, manifest = application/manifest+json).
+- 🔴 **다음 → A: JDK + Bubblewrap 설치 + init**.
 
-**A. Google Play Console 가입** (1일, 너 작업)
-- play.google.com/console → Create developer account.
-- 비용: **$25 일회성** (해외결제 신용카드).
-- 계정 유형: Individual 또는 Organization.
-  - 추천: **Organization** — '나은 랩(Lab)' 사업자등록증 (261-21-02592) 명의. 단 *D-U-N-S 번호* 필요 가능 — 무료 발급 ~ 1-2주 (Dun & Bradstreet). Individual 으로 가입 후 추후 변경도 OK.
-- 약관 동의 → 결제 → 가입 완료.
+#### A. JDK 17 + Bubblewrap 설치 (30분, 너 작업) 🔴
 
-**B. PWA → TWA 변환 (Bubblewrap CLI)** (1-2일, 내가 가능)
-- Bubblewrap 설치: `npm install -g @bubblewrap/cli`
-- 초기화: `bubblewrap init --manifest=https://soragodong.com/manifest.webmanifest`
-- Asset Links 설정 — `public/.well-known/assetlinks.json` 추가 (Play 의 SHA-256 fingerprint 사용. Play Console 가입 후 발급).
-- 빌드: `bubblewrap build` → AAB (Android App Bundle).
-- 단계별 검증:
-  - manifest.webmanifest 의 name / short_name / theme_color / icons (이미 있음).
-  - splash screen / status bar 톤.
-  - asset links 검증 ([googletest](https://digitalassetlinks.googleapis.com)).
+Bubblewrap = 너의 PC 에서 돌리는 Node CLI. Android Studio 필요 X (Bubblewrap 가 Android SDK 자동 다운로드).
 
-**C. Signing Key** (자동)
-- Play App Signing 자동 처리.
-- Bubblewrap 이 *Upload Key* 자동 생성. keystore 파일 (.jks) + 비밀번호 **반드시 안전 보관** (분실 시 앱 업데이트 불가).
-- 추천: 1Password / Bitwarden 등 비밀번호 매니저에 keystore + 비번 보관.
+**1) JDK 17 (필수)**:
+```powershell
+# winget 으로 가장 간단:
+winget install Microsoft.OpenJDK.17
+# 또는 직접: https://learn.microsoft.com/en-us/java/openjdk/download
+```
+설치 후 `java -version` → `openjdk version "17..."` 확인.
+
+**2) Bubblewrap CLI**:
+```powershell
+npm install -g @bubblewrap/cli
+bubblewrap --version
+```
+
+**3) 첫 실행 — Doctor 점검**:
+```powershell
+bubblewrap doctor
+```
+Android SDK / JDK 경로 자동 감지. 없으면 자동 다운로드 (~500MB, 5-10분).
+
+#### B. TWA 프로젝트 init (10분, 너 작업) 🔴
+
+너 PC 어딘가에 별도 폴더 만들어. (이 repo 안 X — Android 빌드 산출물이라 git 분리)
+
+```powershell
+# 예: C:\Users\user\Desktop\soragodong-twa
+mkdir C:\Users\user\Desktop\soragodong-twa
+cd C:\Users\user\Desktop\soragodong-twa
+bubblewrap init --manifest=https://soragodong.com/manifest.webmanifest
+```
+
+대화형 질문 답변 가이드:
+- **Domain**: `soragodong.com`
+- **URL path**: `/`
+- **App name**: `소라고동`
+- **Short name**: `소라고동` (최대 12자)
+- **Application ID** (package name): `com.soragodong.twa`
+  - ⚠️ **중요**: 이 값이 `assetlinks.json` 의 package_name 과 **반드시 일치**.
+  - 한 번 출시하면 변경 X — 신중히.
+- **Starting version**: `1` (codeVersion), `1.0.0` (versionName)
+- **Display mode**: `standalone`
+- **Status bar color**: `#0f0e17`
+- **Splash screen color**: `#0f0e17`
+- **Icon URL**: `https://soragodong.com/icon-512.png`
+- **Maskable icon**: 없음 (Enter pass)
+- **Monochrome icon**: 없음
+- **Shortcuts**: 없음 (Enter pass)
+- **Signing key**:
+  - **New (생성)** 추천.
+  - 경로: `./android.keystore`
+  - 별칭(alias): `android`
+  - 비밀번호: **반드시** 1Password/Bitwarden 에 저장. **분실 시 앱 업데이트 영구 불가**.
+  - Common Name (CN): 너 이름 또는 `Soragodong`
+  - Organization (O): `나은 랩` (선택)
+  - Country (C): `KR`
+
+init 끝나면 `twa-manifest.json` + `android.keystore` 생성.
+
+#### C. SHA-256 추출 + assetlinks.json 업데이트 (5분, 너 + 나) 🔴
+
+```powershell
+bubblewrap fingerprint
+```
+출력 예시:
+```
+sha256: AB:CD:12:34:...:EF (64 자, 콜론 구분)
+```
+
+이 값 나한테 알려주면 내가 즉시 `public/.well-known/assetlinks.json` 의 `REPLACE_WITH_SHA256_FINGERPRINT_FROM_BUBBLEWRAP` 자리에 박고 commit + push. Cloudflare Pages 가 자동 배포.
+
+배포 확인:
+```powershell
+curl https://soragodong.com/.well-known/assetlinks.json
+```
+교체된 값으로 응답 오는지 확인.
+
+#### D. AAB 빌드 (20분, 너 작업) 🔴
+
+```powershell
+bubblewrap build
+```
+산출물: `app-release-bundle.aab` (Play Console 업로드용) + `app-release-signed.apk` (직접 설치 테스트용).
+
+테스트 install (선택):
+- USB 로 Android 폰 연결 + 개발자 모드 / USB 디버깅 ON.
+- `adb install app-release-signed.apk` (adb 가 PATH 에 있어야).
+
+#### E. Play App Signing (자동) ✅
+
+- Play Console 이 *App Signing Key* (출시용) 자동 생성·보관. 너가 만든 keystore = *Upload Key* (Bubblewrap 가 만든 것 → Play 에 업로드).
+- 분실 위험 ↓ (Upload Key 잃어도 Play Console 에서 reset 가능. App Signing Key 는 Google 이 갖고 있음).
+- **단**: Upload Key 분실 = Play Console support 에 reset 요청 (수일 소요). 안전 보관 권장.
 
 **D. Play Console 앱 생성 + AAB 업로드** (2-3일, 너 + 나)
 - New App:
