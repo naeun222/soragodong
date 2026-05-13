@@ -423,7 +423,7 @@ function _v8CoachmarkReadFourStage() {
 //   fresh    → _v8CoachmarkEndChapter('fresh') 가 사용자 직접 ✓ 클릭 강제 (interactive)
 function _v8CoachmarkContinueOrFresh() {
   const body = `
-    <div class="v8-coach-title">심리 분석 해줬어 ✦</div>
+    <div class="v8-coach-title">분석 해줬어 ✦</div>
     <div class="v8-coach-text">
       이 대화 <b>더 이어가도</b> 되고,<br>
       처음부터 <b>새로 시작</b>해도 돼.

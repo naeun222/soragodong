@@ -21,20 +21,20 @@
 const _RECUR = (typeof BILLING_RECURRING_ENABLED !== 'undefined') ? BILLING_RECURRING_ENABLED : true;
 const TIER_PLANS_CLIENT = {
   // Plus (9,900) — key 'light'. mid tier. 첫 달 무료 — RECUR 에 따라 카피만 분기.
-  // V4 (사용자 명시 2026-05-13 ultrathink): description 재작성 — 일일 cap (정성) / 4단 심리 분석 일일 횟수 (정량) / Opus 유무.
+  // V4 (사용자 명시 2026-05-13 ultrathink): description 재작성 — 일일 cap (정성) / 4단 분석 일일 횟수 (정량) / Opus 유무.
   //   옛 카피 ('마법고동 큰 결정 / 주간·월간 회고 풀 활용') 폐기 — 두 기능 다 전 tier 공통이라 차별점 아님.
   light:          { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Plus',
     tagline: '깊게, 꾸준히 — 첫 달 무료',
     emoji: '🌊',
     description: _RECUR
-      ? '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 한 달 후 자동 결제, 언제든 해지.'
-      : '일일 사용 한도 넉넉 · 4단 심리 분석 5회/일. 첫 달 무료 — 한 달 후 만료 (자동 결제 X). 1인 1회 한정.',
+      ? '일일 사용 한도 넉넉 · 4단 분석 5회/일. 첫 달 무료 — 한 달 후 자동 결제, 언제든 해지.'
+      : '일일 사용 한도 넉넉 · 4단 분석 5회/일. 첫 달 무료 — 한 달 후 만료 (자동 결제 X). 1인 1회 한정.',
     has_free_trial: true },
   // Premium (25,000) — top tier anchor. 정가 결제. emoji ✨ (🐚🌊✨ 그라데이션 완성).
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '마음껏 깊게', emoji: '✨',
     description: _RECUR
-      ? '일일 사용 한도 풍부 · 4단 심리 분석 10회/일 · Opus 깊은 대화 30턴/일.'
-      : '일일 사용 한도 풍부 · 4단 심리 분석 10회/일 · Opus 깊은 대화 30턴/일. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
+      ? '일일 사용 한도 풍부 · 4단 분석 10회/일 · Opus 깊은 대화 30턴/일.'
+      : '일일 사용 한도 풍부 · 4단 분석 10회/일 · Opus 깊은 대화 30턴/일. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
   // V4 (사용자 명시 2026-05-11 ultrathink — 정정): early_light plan 자동 활성화 폐기 → credit_balance_usd 환영 토큰 grant 으로 변경.
   //   backend `_lib/billing.ts:ensureBillingRow` = 신규 가입 시 WELCOME_TOKEN_USD ($1.1, 양 비공개) 만 grant. plan/subscription 활성화 X.
   //   funnel: 가입 → 환영 토큰 (소진까지, 시간 무관) → 사용자 명시 'Plus trial' 신청 (1인 1회, 카드 등록) → 정가 결제.
@@ -47,8 +47,8 @@ const TIER_PLANS_CLIENT = {
   //   V4 (사용자 명시 2026-05-11 — 마진 조정): $1.8 → $2.2 (마진 14% — Plus 와 통일). 일일 cap $0.088.
   early_lifetime: { krw: 4900,  cap_usd: 2.2,  cap_krw: 3080,  label: 'Light',          tagline: '매일의 자기관찰', emoji: '🐚',
     description: _RECUR
-      ? '일일 사용 한도 가벼움 · 4단 심리 분석 3회/일.'
-      : '일일 사용 한도 가벼움 · 4단 심리 분석 3회/일. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
+      ? '일일 사용 한도 가벼움 · 4단 분석 3회/일.'
+      : '일일 사용 한도 가벼움 · 4단 분석 3회/일. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).' },
   // 게스트 = anonymous 사용자 자동 부여. 가입 시 early_light 로 fresh 갱신.
   guest:          { krw: 0,     cap_usd: 0.30, cap_krw: 420,   label: '게스트',          tagline: '한 번 써보기', emoji: '🌱',
     description: '계정 없이 ~15턴. 데이터는 이 기기에만. 로그인하면 종단간 암호화로 영구 보관.', is_guest: true }
