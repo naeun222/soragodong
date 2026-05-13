@@ -37187,16 +37187,7 @@ function showScreen(name) {
       runDiaryLibTutorialV8().catch(e => console.warn('[diaryLib]', e));
       return;
     }
-    if (name === 'archive-reviews' && typeof shouldRunReviewsTutorial === 'function' && shouldRunReviewsTutorial()) {
-      // 사용자 명시 2026-05-06: 첫 자연 진입 = 실 데이터로 weekly 리뷰 직접 생성 (비용 회사 부담).
-      // 데이터 부족 / AI 호출 불가 → 함수 안에서 runReviewsTutorialV8() (sim) fallback.
-      if (typeof runFirstReviewsTutorialReal === 'function') {
-        runFirstReviewsTutorialReal().catch(e => console.warn('[reviews]', e));
-      } else {
-        runReviewsTutorialV8().catch(e => console.warn('[reviews]', e));
-      }
-      return;
-    }
+    // V4 (사용자 명시 2026-05-13): 리뷰 튜토리얼 자연 첫 진입 trigger 폐기. 설정 picker manual trigger 는 유지 (14-sim-tutorials.js).
   }
   // V4 코어 잠금 — 잠긴 탭/화면 진입 시 잠금 모달 (testerMode/코어활성/unlocked면 통과)
   // (글로벌 클릭 인터셉터가 잡지만, 다른 곳에서 showScreen 직접 호출하는 케이스도 가드)
