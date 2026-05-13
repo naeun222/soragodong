@@ -17,7 +17,7 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
 //   false: subscribe modal 의 모든 tier (Light/Plus/Premium) 가 *일회성 1개월* 결제 (자동 갱신 X, 만료 7일 전 알림 후 재구매).
 //          빌링키 등록 / cron 자동 결제 / Plus 첫 달 무료 trial 흐름 전부 우회. backend cron 도 가드.
 //   true:  옛 정기결제 흐름 (requestIssueBillingKey + portone-register-recurring + cron 매월 갱신) 으로 복귀. 계약 승인 후 변경.
-const BILLING_RECURRING_ENABLED = true;
+const BILLING_RECURRING_ENABLED = false;
 
 // V4 (사용자 명시 2026-05-13 — 토스페이 심사용 임시 mockup):
 //   토스페이 빌링키 채널이 아직 발급 심사 중 → 정기결제 picker / 동의 모달에 토스페이 노출 X (`excludeToss: true`).

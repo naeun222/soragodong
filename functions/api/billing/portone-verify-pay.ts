@@ -159,6 +159,18 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
         message: '이미 활성 구독이 있어 (중복 결제 감지). 영수증 보관 후 환불 요청 — soragodongapp@gmail.com 으로 문의 (잔여일 비례 환불).'
       }, 200);
     }
+    // V4 (사용자 보고 2026-05-13 ultrathink): saved_plan 검증 — portone-register-recurring 의 mismatch fix 와 동일 패턴.
+    const savedRow = patched[0];
+    if (savedRow && savedRow.subscription_plan !== plan) {
+      console.error('[verify-pay] plan mismatch!', { sent: plan, saved: savedRow.subscription_plan, paymentId, user: user.id });
+      return jsonResponse({
+        error: `결제는 완료됐지만 plan 저장 실패. 관리자 문의 (paymentId: ${paymentId}, sent=${plan}, saved=${savedRow.subscription_plan}).`,
+        code: 'UPSERT_MISMATCH',
+        paymentId,
+        sent_plan: plan,
+        saved_plan: savedRow.subscription_plan
+      }, 500);
+    }
     return jsonResponse({ ok: true, expires_at: expiresAt, plan, cap_usd: tier.cap_usd });
   } catch (e: any) {
     return jsonResponse({ error: 'billing 갱신 실패: ' + (e?.message || e) }, 500);

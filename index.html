@@ -13415,7 +13415,7 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
 //   false: subscribe modal 의 모든 tier (Light/Plus/Premium) 가 *일회성 1개월* 결제 (자동 갱신 X, 만료 7일 전 알림 후 재구매).
 //          빌링키 등록 / cron 자동 결제 / Plus 첫 달 무료 trial 흐름 전부 우회. backend cron 도 가드.
 //   true:  옛 정기결제 흐름 (requestIssueBillingKey + portone-register-recurring + cron 매월 갱신) 으로 복귀. 계약 승인 후 변경.
-const BILLING_RECURRING_ENABLED = true;
+const BILLING_RECURRING_ENABLED = false;
 
 // V4 (사용자 명시 2026-05-13 — 토스페이 심사용 임시 mockup):
 //   토스페이 빌링키 채널이 아직 발급 심사 중 → 정기결제 picker / 동의 모달에 토스페이 노출 X (`excludeToss: true`).
@@ -58239,16 +58239,20 @@ function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
            <span style="color:var(--text-soft);">${nextDateStr} 부터 <b style="color:#5fb4d3;">월 ${krw}원</b> 자동 결제 시작 (1인 1회 trial 한정).</span>
          </div>`
       : '';
+    // V4 (사용자 명시 2026-05-13): 일반결제 (가계약) 모드 카피 분기 — 자동 갱신 X 명시.
+    const _oneTimeMode = (typeof BILLING_RECURRING_ENABLED !== 'undefined' && !BILLING_RECURRING_ENABLED);
     const firstPayLabel = isTrial
       ? `${nextDateStr} (한 달 후 첫 자동 결제)`
-      : `오늘 즉시 ${krw}원 결제, 이후 매월 ${nextDate.getDate()}일 자동 결제 (${nextDateStr} 부터)`;
+      : (_oneTimeMode
+          ? `오늘 즉시 ${krw}원 결제 (1개월 이용권, 자동 갱신 X)`
+          : `오늘 즉시 ${krw}원 결제, 이후 매월 ${nextDate.getDate()}일 자동 결제 (${nextDateStr} 부터)`);
     const rows = [
-      ['상품',         `소라고동 ${tier.label} 정기구독`],
-      ['결제금액',     `<b style="color:var(--text);">월 ${krw}원</b> <span style="color:var(--text-soft); font-size:10.5px;">(부가가치세 10% 포함)</span>`],
-      ['결제주기',     `매월 1회 자동 결제 (가입일 기준 같은 날)`],
+      ['상품',         _oneTimeMode ? `소라고동 ${tier.label} 1개월 이용권` : `소라고동 ${tier.label} 정기구독`],
+      ['결제금액',     `<b style="color:var(--text);">${_oneTimeMode ? '' : '월 '}${krw}원</b> <span style="color:var(--text-soft); font-size:10.5px;">(부가가치세 10% 포함)</span>`],
+      ['결제주기',     _oneTimeMode ? '1회 결제 (자동 갱신 X — 만료 7일 전 알림 후 직접 재구매)' : '매월 1회 자동 결제 (가입일 기준 같은 날)'],
       ['첫 결제',      firstPayLabel],
       ['결제수단',     pgLabel],
-      ['해지방법',     `<b style="color:var(--accent);">[설정 → 구독]</b> 에서 1-click 해지 — 언제든 가능`],
+      ['해지방법',     _oneTimeMode ? '해지 X — 1개월 이용권은 만료 시 자동 종료' : `<b style="color:var(--accent);">[설정 → 구독]</b> 에서 1-click 해지 — 언제든 가능`],
       ['환불',         `잔여일 비례 환불 (<a href="/refund" target="_blank" style="color:var(--accent);">정책</a>)`],
       ['공급자',       `${businessName}${businessNo ? ` (사업자 ${businessNo})` : ''}`],
     ];
@@ -59155,6 +59159,10 @@ async function proceedOneTimePurchase(tierKey) {
     alert('결제 설정 오류 — 채널 미설정');
     return;
   }
+  // V4 (사용자 명시 2026-05-13): 일반결제 (1개월 일회성) 도 동의 모달 통과 — 한국 전자상거래법 §13 정합.
+  //   _showRecurringConsentModal 의 isTrial=false 카피 흐름 재사용 (가계약/정기 모두 같은 카피 base 안 가계약 분기 자동 — 동의 모달 안 첫 결제 카피).
+  const _consent = await _showRecurringConsentModal({ tier, pgLabel: _pgLabel(_pg), isTrial: false });
+  if (!_consent) return;
   let phoneNumber = '', fullName = '';
   if (_pgInfo.needsCustomerInfo) {
     const info = await _collectPaymentInfoIfNeeded();
