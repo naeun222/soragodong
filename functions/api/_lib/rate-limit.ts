@@ -111,8 +111,49 @@ export async function recordGuestCost(env: GuestEnv, costUsd: number, ip?: strin
   try {
     const cur = parseInt((await env.GUEST_KV.get(key)) || '0', 10);
     const microUsd = Math.round(costUsd * 1_000_000);
-    await env.GUEST_KV.put(key, String(cur + microUsd), { expirationTtl: KV_TTL_SECONDS });
+    const newTotal = cur + microUsd;
+    await env.GUEST_KV.put(key, String(newTotal), { expirationTtl: KV_TTL_SECONDS });
+    // V4 (사용자 명시 2026-05-13): 한도 도달 시 어드민 알림 — 한 번만 (KV alertedKey gate).
+    const limit = parseFloat(env.GUEST_DAILY_BUDGET_USD || String(DEFAULT_GLOBAL_BUDGET_USD));
+    const limitMicro = Math.round(limit * 1_000_000);
+    if (cur < limitMicro && newTotal >= limitMicro) {
+      // 도달 시점 = 옛 < limit + 새 >= limit. 한 번만 trigger.
+      try { await _notifyAdminGuestBudgetReached(env, newTotal / 1_000_000, limit); } catch (e: any) {
+        console.warn('[rate-limit] admin notify throw:', e?.message || e);
+      }
+    }
   } catch (e: any) {
     console.warn('[rate-limit] global record throw:', e?.message || e);
+  }
+}
+
+// V4 (사용자 명시 2026-05-13): 게스트 한도 도달 알림 — 어드민 인앱 banner + Resend email (env 있을 때).
+async function _notifyAdminGuestBudgetReached(env: any, usedUsd: number, limitUsd: number): Promise<void> {
+  const dateK = _todayKey();
+  // 1) KV flag set — /api/usage 에서 admin 응답에 포함.
+  try {
+    await env.GUEST_KV.put(`alert:guest_budget:${dateK}`, JSON.stringify({
+      used_usd: usedUsd, limit_usd: limitUsd, reached_at: new Date().toISOString()
+    }), { expirationTtl: KV_TTL_SECONDS });
+  } catch (e: any) { console.warn('[notify] KV flag throw:', e?.message || e); }
+  // 2) Resend email (env.RESEND_API_KEY 있을 때만 trigger. 없으면 silent skip).
+  if (!env.RESEND_API_KEY) return;
+  const adminEmail = env.ADMIN_EMAIL || 'bsya21@gmail.com';
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'soragodong <noreply@soragodong.com>',
+        to: [adminEmail],
+        subject: '⚠️ 소라고동 — 게스트 일일 한도 도달',
+        text: `${dateK} (KST) 게스트 모드 일일 한도 도달.\n\n사용액: $${usedUsd.toFixed(4)}\n한도: $${limitUsd.toFixed(2)}\nKV reset: 내일 자동.\n\n게스트 모드 자동 차단 중. 신규 게스트 = '오늘 게스트 모드가 너무 붐벼' 안내 표시.`
+      })
+    });
+  } catch (e: any) {
+    console.warn('[notify] Resend send throw:', e?.message || e);
   }
 }

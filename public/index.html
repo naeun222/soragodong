@@ -56796,6 +56796,22 @@ async function _doRefreshBillingStatus(manual) {
     }
     const data = await resp.json();
     const billing = data.billing || {};
+    // V4 (사용자 명시 2026-05-13): 게스트 일일 한도 도달 — admin 한정 banner. /api/usage 가 admin 응답에 guest_budget_alert 포함.
+    if (_adminOverlayActive && status && data.guest_budget_alert) {
+      const ga = data.guest_budget_alert;
+      const usedStr = (typeof ga.used_usd === 'number') ? ('$' + ga.used_usd.toFixed(4)) : '?';
+      const limitStr = (typeof ga.limit_usd === 'number') ? ('$' + ga.limit_usd.toFixed(2)) : '?';
+      const reachedStr = ga.reached_at ? new Date(ga.reached_at).toLocaleTimeString('ko-KR') : '';
+      status.innerHTML = `
+        <div><b>구독</b>: 🛡️ 어드민</div>
+        <div style="font-size:11.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">운영 계정 — 제한 없음</div>
+        <div style="margin-top:12px; padding:10px 12px; background:rgba(232,144,144,0.12); border:1px solid rgba(232,144,144,0.4); border-radius:8px; font-size:12px; line-height:1.6;">
+          <b>⚠️ 게스트 일일 한도 도달</b><br>
+          사용액: ${usedStr} / ${limitStr}${reachedStr ? ' · ' + reachedStr : ''}<br>
+          <span style="color:var(--text-soft); font-size:11px;">게스트 신규 = '오늘 게스트 모드가 너무 붐벼' 안내 중. 내일 4시 reset.</span>
+        </div>
+      `;
+    }
     const subActive = !!billing.subscription_active;
     const planKey = billing.subscription_plan;
     const planMeta = (planKey && typeof TIER_PLANS_CLIENT !== 'undefined' && TIER_PLANS_CLIENT[planKey]) ? TIER_PLANS_CLIENT[planKey] : null;

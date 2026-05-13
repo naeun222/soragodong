@@ -22,8 +22,25 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
   }
   const usage = await getMonthlyUsage(env, user.id);
 
+  // V4 (사용자 명시 2026-05-13): 어드민이면 게스트 한도 도달 alert flag 같이 반환 (인앱 banner 표시용).
+  let guestBudgetAlert: any = null;
+  if (env.ADMIN_USER_ID && user.id === env.ADMIN_USER_ID) {
+    try {
+      const guestEnv = env as any;
+      if (guestEnv.GUEST_KV) {
+        const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        const dateK = kstNow.toISOString().slice(0, 10);
+        const raw = await guestEnv.GUEST_KV.get(`alert:guest_budget:${dateK}`);
+        if (raw) {
+          try { guestBudgetAlert = JSON.parse(raw); } catch { guestBudgetAlert = { raw }; }
+        }
+      }
+    } catch (e: any) { console.warn('[usage] guest alert read throw:', e?.message || e); }
+  }
+
   return jsonResponse({
     monthly: usage,
-    billing: billing || null
+    billing: billing || null,
+    ...(guestBudgetAlert ? { guest_budget_alert: guestBudgetAlert } : {})
   });
 }
