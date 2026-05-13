@@ -144,7 +144,6 @@ function saveSettings() {
 
 // 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
 // 사용자 명시 2026-05-05: in-flight dedup + 30s TTL cache. manual=true (🔄 button) 만 항상 fresh fetch.
-// burst 호출 (init 시점 _acceptWelcomeGift / silent welcome / banner trigger 동시) 한 번에 묶음.
 let _billingFetchInflight = null;
 const _BILLING_CACHE_TTL_MS = 30 * 1000;
 async function refreshBillingStatus(manual) {

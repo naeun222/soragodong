@@ -1,5 +1,3 @@
-// V4 (사용자 명시 2026-05-04 ultrathink V193): 옛 showWelcomeBonusModal 함수 삭제. 신규 환영 모달 = _showWelcomeGiftModal (Core 1 끝 trigger).
-
 // 개발자 도구 — 주간 리뷰 신규 schema 풀 미리보기 (시드 데이터, AI 호출 X).
 // 사용자 명시 2026-04-30 ultrathink: chart / strengths / cycles / emotions / value_align / risk_signals 모두 demo. 위기 신호 'watch' 케이스 + 가치 align bar + 7일 차트 다 한 화면에.
 function devPreviewWeeklyReview() {
@@ -119,12 +117,6 @@ function devPreviewWeeklyReview() {
       showToast('📅 주간 리뷰 미리보기 (시드)');
     }
   }, 100);
-}
-
-// V4 (사용자 명시 2026-05-06 ultrathink): welcome-gift-modal 통째 폐기 → devPreviewWelcomeBonus 도 dead.
-// 옛 dev tool 진입 stub 보존 — 호출 시 안내 토스트만.
-function devPreviewWelcomeBonus() {
-  if (typeof showToast === 'function') showToast('환영 모달 폐기됨 — 신규 무료 체험은 설정 카드 표시');
 }
 
 // 사용자 보고 2026-04-30 review (agent): AI 응답 JSON 견고 추출.

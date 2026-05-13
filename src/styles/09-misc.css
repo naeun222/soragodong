@@ -3478,7 +3478,6 @@
 
   /* === V3 HOME === */
   /* V3.7: todays-shell CSS 제거됨 (Today's Shell 기능 자체 제거) */
-  /* V3.7: mode-display CSS 제거됨 (renderModeDisplay dead code, mode-chip만 사용) */
 
   /* V3.7: 홈 작은 가로 줄 (★ 부수적 항목들) */
   .home-small-row {

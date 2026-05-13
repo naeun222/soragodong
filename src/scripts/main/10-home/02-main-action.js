@@ -194,21 +194,4 @@ function _enterReflectionRoom() {
   }
 }
 
-// V3.7: Today's Shell 제거 — 자존감 외부화 / habituation / Anti-sycophancy 충돌 우려.
-// 함수는 stub으로 남김 (호출처가 어딘가 남아있을 경우 안전).
-async function renderTodaysShell() { return; }
-async function generateTodaysShellContent() { return ''; }
-function refreshTodaysShell() { return; }
-
-// V3.7: renderModeDisplay / expandModeRow — modeDisplay element가 HTML에 없음 (dead code).
-// 안전을 위해 stub으로 유지. 실제 사용되는 함수는 renderModes.
-function renderModeDisplay() {
-  // mode-chip 상태 동기화는 renderModes가 처리함
-  document.querySelectorAll('.mode-chip').forEach(c => {
-    const m = c.dataset.mode;
-    c.classList.toggle('active', !!state.modes[m]);
-  });
-}
-function expandModeRow() { return; }
-
 // Conditional decision card - only on action days (3/5/7/10/14)

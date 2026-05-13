@@ -3614,7 +3614,6 @@
 
   /* === V3 HOME === */
   /* V3.7: todays-shell CSS 제거됨 (Today's Shell 기능 자체 제거) */
-  /* V3.7: mode-display CSS 제거됨 (renderModeDisplay dead code, mode-chip만 사용) */
 
   /* V3.7: 홈 작은 가로 줄 (★ 부수적 항목들) */
   .home-small-row {
@@ -17038,8 +17037,6 @@ async function maybeShowFirstTimeIntro() {
   if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
 }
 
-// V4 (사용자 명시 2026-05-04 ultrathink V193): 옛 showWelcomeBonusModal 함수 삭제. 신규 환영 모달 = _showWelcomeGiftModal (Core 1 끝 trigger).
-
 // 개발자 도구 — 주간 리뷰 신규 schema 풀 미리보기 (시드 데이터, AI 호출 X).
 // 사용자 명시 2026-04-30 ultrathink: chart / strengths / cycles / emotions / value_align / risk_signals 모두 demo. 위기 신호 'watch' 케이스 + 가치 align bar + 7일 차트 다 한 화면에.
 function devPreviewWeeklyReview() {
@@ -17159,12 +17156,6 @@ function devPreviewWeeklyReview() {
       showToast('📅 주간 리뷰 미리보기 (시드)');
     }
   }, 100);
-}
-
-// V4 (사용자 명시 2026-05-06 ultrathink): welcome-gift-modal 통째 폐기 → devPreviewWelcomeBonus 도 dead.
-// 옛 dev tool 진입 stub 보존 — 호출 시 안내 토스트만.
-function devPreviewWelcomeBonus() {
-  if (typeof showToast === 'function') showToast('환영 모달 폐기됨 — 신규 무료 체험은 설정 카드 표시');
 }
 
 // 사용자 보고 2026-04-30 review (agent): AI 응답 JSON 견고 추출.
@@ -22694,9 +22685,6 @@ function onbFinish() {
     state.unlocked = state.unlocked || {};
     state.unlocked[_completedCoreId] = true;
   }
-  // 사용자 명시 2026-05-06: Core 1 끝 환영 선물 모달 자동 트리거 폐기 — '얼리 플랜 자동 적용' 안내가
-  // 가입 전환 모달 done step + 설정 카드에서 이미 노출. Tutorial 끝났을 때 별도 모달 X.
-  // (devPreviewWelcomeBonus 만 dev 도구로 유지.)
   // V4 풀 튜토리얼 완주 시 모든 코어 unlock (no-backup 경로도 동일)
   if (window._fullTutorialActive) {
     state.unlocked = state.unlocked || {};
@@ -23110,9 +23098,6 @@ async function runStartTutorialV8() {
     await _v8Sleep(200);
     await _v8CoachmarkEndChapter(branch);
     await _v8Sleep(250);
-    // V4 (사용자 명시 2026-05-13): _v8CoachmarkModelToggle 폐기 — 옛 헤더 토글 = Opus/Sonnet → 새 RAG (Plus/Premium 한정).
-    //   신규 사용자 = 미구독 = brand only 안 보임. 코치마크 의미 X.
-    //   Plus 가입 후 첫 클릭 모달 (showRagFirstClickModal) 으로 분리.
     // 사용자 명시 2026-05-06 (추가): 마무리 멘트 step — 친절한 톤.
     await _v8CoachmarkClosing();
   } catch (e) {
@@ -23522,11 +23507,6 @@ function _v8CoachmarkEndChapter(branch) {
     waitFor: () => Array.isArray(state.chatMessages) && state.chatMessages.length === 0
   });
 }
-
-// V4 (사용자 명시 2026-05-13): _v8CoachmarkModelToggle 폐기 — 헤더 토글이 RAG (Plus/Premium 한정) 으로 변경됨.
-//   신규 미구독 사용자 = brand only 안 보임. 가입 후 첫 클릭 모달로 분리.
-//   stub 보존 — 옛 호출처 X 보장 후 다음 PR 에서 삭제.
-function _v8CoachmarkModelToggle() { return Promise.resolve(); }
 
 // 사용자 명시 2026-05-06 (추가): 마무리 멘트 step — 친절한 톤.
 function _v8CoachmarkClosing() {
@@ -27950,23 +27930,6 @@ function _enterReflectionRoom() {
     addReflectionQuestion();
   }
 }
-
-// V3.7: Today's Shell 제거 — 자존감 외부화 / habituation / Anti-sycophancy 충돌 우려.
-// 함수는 stub으로 남김 (호출처가 어딘가 남아있을 경우 안전).
-async function renderTodaysShell() { return; }
-async function generateTodaysShellContent() { return ''; }
-function refreshTodaysShell() { return; }
-
-// V3.7: renderModeDisplay / expandModeRow — modeDisplay element가 HTML에 없음 (dead code).
-// 안전을 위해 stub으로 유지. 실제 사용되는 함수는 renderModes.
-function renderModeDisplay() {
-  // mode-chip 상태 동기화는 renderModes가 처리함
-  document.querySelectorAll('.mode-chip').forEach(c => {
-    const m = c.dataset.mode;
-    c.classList.toggle('active', !!state.modes[m]);
-  });
-}
-function expandModeRow() { return; }
 
 // Conditional decision card - only on action days (3/5/7/10/14)
 function renderActiveDecisionsHomeV3() {
@@ -35687,12 +35650,6 @@ function _showCore2LockedToast() {
 //  · 토큰 hero: label / amount (대형 그라데이션) / hint — vertical stack
 //  · 신뢰 라인 보존 (전상법 §13 / 표시광고법 §3 — '30일 무료 · 자동 갱신 / 해지: 설정 → 구독')
 //  · 받기 click → backend POST (idempotent) → token block 'received' 색감 변환 → 0.8s 후 닫힘
-// V4 (사용자 명시 2026-05-06 ultrathink — 폐기): welcome-gift-modal 통째 제거.
-// Core 1 끝 자동 트리거는 이미 폐기 (06-onb-event-listeners.js 참조). 신규 가입 무료 토큰은
-// backend grant + 설정 카드 안 표시 ('🎁 환영 무료 체험 중') 로 충분. 별도 모달 X.
-// 함수 stub 보존 — 외부 stale 호출 (devPreviewWelcomeBonus 등) 안전 fallback.
-function _showWelcomeGiftModal() { /* dead — 폐기 */ }
-async function _acceptWelcomeGift() { /* dead — 폐기 */ }
 function _showStrategyCardModal(card) {
   if (!card) return;
   if (document.querySelector('.strategy-card-preview-overlay')) return;
@@ -56756,7 +56713,6 @@ function saveSettings() {
 
 // 사용자 요청 2026-04-30 (Phase C): billing 동적 로드 — Settings 진입 시 호출.
 // 사용자 명시 2026-05-05: in-flight dedup + 30s TTL cache. manual=true (🔄 button) 만 항상 fresh fetch.
-// burst 호출 (init 시점 _acceptWelcomeGift / silent welcome / banner trigger 동시) 한 번에 묶음.
 let _billingFetchInflight = null;
 const _BILLING_CACHE_TTL_MS = 30 * 1000;
 async function refreshBillingStatus(manual) {

@@ -63,9 +63,6 @@ async function runStartTutorialV8() {
     await _v8Sleep(200);
     await _v8CoachmarkEndChapter(branch);
     await _v8Sleep(250);
-    // V4 (사용자 명시 2026-05-13): _v8CoachmarkModelToggle 폐기 — 옛 헤더 토글 = Opus/Sonnet → 새 RAG (Plus/Premium 한정).
-    //   신규 사용자 = 미구독 = brand only 안 보임. 코치마크 의미 X.
-    //   Plus 가입 후 첫 클릭 모달 (showRagFirstClickModal) 으로 분리.
     // 사용자 명시 2026-05-06 (추가): 마무리 멘트 step — 친절한 톤.
     await _v8CoachmarkClosing();
   } catch (e) {
@@ -475,11 +472,6 @@ function _v8CoachmarkEndChapter(branch) {
     waitFor: () => Array.isArray(state.chatMessages) && state.chatMessages.length === 0
   });
 }
-
-// V4 (사용자 명시 2026-05-13): _v8CoachmarkModelToggle 폐기 — 헤더 토글이 RAG (Plus/Premium 한정) 으로 변경됨.
-//   신규 미구독 사용자 = brand only 안 보임. 가입 후 첫 클릭 모달로 분리.
-//   stub 보존 — 옛 호출처 X 보장 후 다음 PR 에서 삭제.
-function _v8CoachmarkModelToggle() { return Promise.resolve(); }
 
 // 사용자 명시 2026-05-06 (추가): 마무리 멘트 step — 친절한 톤.
 function _v8CoachmarkClosing() {
