@@ -279,19 +279,113 @@ V4 사용자 명시 2026-05-02 — 카카오 SNS 로그인 도입 (네이버는 
 ### 12. ⏸️ 홈택스 사업용 신용카드 등록
 매입세액 자동 정리.
 
-### 13. 🟢 Google Play Console — PWA 출시 (사용자 결정 2026-04-30)
+### 13. 🟢 Google Play Console — PWA 출시 (사용자 명시 2026-05-13: 상세 계획)
 
-**출시 방향 확정 (사용자 명시 ultrathink 2026-04-30)**:
-- ✅ **PWA + Google Play** 우선 출시 (Mac 불필요 / signing cloud / 리뷰 빠름)
-- ⏸️ Apple iOS = 6-12개월 후 (Apple IAP 30% 마진 + cloud Mac 필요)
+**출시 방향**:
+- ✅ **PWA + Google Play (TWA)** 우선 출시 — Mac 불필요 / signing cloud / 리뷰 3-7일.
+- ⏸️ Apple iOS = 6-12개월 후 (Apple IAP 30% + cloud Mac).
 
-**Google Play 출시 단계**:
-1. Google Play Console 가입 ($25 일회성)
-2. PWA → TWA (Trusted Web Activity) 변환 — Bubblewrap CLI (Claude code 가능)
-3. signing key 생성 (cloud 가능)
-4. AAB 업로드 + 메타데이터 작성
-5. 심사 ~3-7일 → 출시
-6. 비용: $25 일회성 + 기타 0원
+#### 단계별 상세 plan (총 ~1개월, 집중 시)
+
+**A. Google Play Console 가입** (1일, 너 작업)
+- play.google.com/console → Create developer account.
+- 비용: **$25 일회성** (해외결제 신용카드).
+- 계정 유형: Individual 또는 Organization.
+  - 추천: **Organization** — '나은 랩(Lab)' 사업자등록증 (261-21-02592) 명의. 단 *D-U-N-S 번호* 필요 가능 — 무료 발급 ~ 1-2주 (Dun & Bradstreet). Individual 으로 가입 후 추후 변경도 OK.
+- 약관 동의 → 결제 → 가입 완료.
+
+**B. PWA → TWA 변환 (Bubblewrap CLI)** (1-2일, 내가 가능)
+- Bubblewrap 설치: `npm install -g @bubblewrap/cli`
+- 초기화: `bubblewrap init --manifest=https://soragodong.com/manifest.webmanifest`
+- Asset Links 설정 — `public/.well-known/assetlinks.json` 추가 (Play 의 SHA-256 fingerprint 사용. Play Console 가입 후 발급).
+- 빌드: `bubblewrap build` → AAB (Android App Bundle).
+- 단계별 검증:
+  - manifest.webmanifest 의 name / short_name / theme_color / icons (이미 있음).
+  - splash screen / status bar 톤.
+  - asset links 검증 ([googletest](https://digitalassetlinks.googleapis.com)).
+
+**C. Signing Key** (자동)
+- Play App Signing 자동 처리.
+- Bubblewrap 이 *Upload Key* 자동 생성. keystore 파일 (.jks) + 비밀번호 **반드시 안전 보관** (분실 시 앱 업데이트 불가).
+- 추천: 1Password / Bitwarden 등 비밀번호 매니저에 keystore + 비번 보관.
+
+**D. Play Console 앱 생성 + AAB 업로드** (2-3일, 너 + 나)
+- New App:
+  - 앱 이름: **소라고동** (Soragodong)
+  - Default language: 한국어
+  - 앱/게임: 앱
+  - 무료/유료: 무료 (구독 별도)
+- AAB 업로드 → 내부 테스트 트랙 먼저.
+- 출시 트랙 단계: 내부 테스트 → 비공개 베타 → 공개 베타 → 프로덕션.
+
+**E. 메타데이터 + 그래픽 자산** (2-3일, 너 작업 가능 / 디자이너 의뢰 가능)
+- 짧은 설명 (80자 한국어): 예) "ADHD 자기관찰 — 매일 5-10분으로 너를 더 깊이 이해해 🐚"
+- 자세한 설명 (4000자): 핵심 가치 + 기능 + 데이터 처리 / E2EE 안내.
+- **그래픽 자산**:
+  - 앱 아이콘 512×512 PNG (이미 있음 — godongicon)
+  - Feature graphic 1024×500 PNG (새로 작업 필요)
+  - 스크린샷 (휴대폰 9:16) 2-8장. 예: 메인 대화 / 진주 카드 / 마법고동 / 미션 / 나 탭 / 도서관 (실 사용자 데이터 X — 시뮬 데이터 또는 직접 디자인)
+- 카테고리: **Lifestyle** 또는 **Health & Fitness**.
+- 콘텐츠 등급 — *Mental Health / Self Improvement*.
+
+**F. Data Safety 섹션 (Privacy)** (1-2일)
+- 데이터 처리 명시:
+  - 이메일 (회원 식별) — 수집, 암호화 in transit, 사용자 삭제 가능.
+  - 위치 X / 카메라 (미션 사진) — device only, 우리 서버 전송 X.
+  - 음성 X / 마이크 (입력 도움) — Browser API, 외부 서버 X.
+  - **AI 처리**: Anthropic Claude (US) — ZDR (Zero Data Retention) 정합.
+  - 암호화: in transit (HTTPS), at rest (E2EE).
+  - 데이터 삭제 요청: 가능 (`/api/account/delete` endpoint).
+  - 어린이 X (13세 미만 대상 X).
+- 개인정보 처리방침 URL: https://soragodong.com/privacy (이미 있음).
+
+**G. 결제 정책 — Google Play Billing vs Web Billing** ⚠️ (Phase 결정)
+- Google Play 정책: 디지털 콘텐츠 = Play Billing **필수** (30% 수수료).
+- 2026 정책 일부 완화 — 일부 카테고리 외부 결제 허용 (구독 일부).
+- 옵션:
+  - **(a) Play Billing 통합** — 30% 수수료. 코드 작업 필요 (PaymentRequest 또는 Play Billing API).
+  - **(b) Web Billing 유지** — 정책 위반 위험. *앱 안 결제 UI* 자체 제거 + 웹 결제 안내.
+  - **(c) 하이브리드** — 앱 무료. 결제 자리에 *"브라우저에서 진행"* 안내 + 웹 redirect.
+- **추천 Phase 1**: **(c) 하이브리드** — 30% 수수료 회피 + 정책 위반 risk ↓.
+  - 단점: 사용자 친화 ↓ (앱 안에서 직접 결제 X).
+- 추후 사용자 100명+ 도달 시 (a) 통합 재검토.
+
+**H. 심사 + 출시**
+- 내부 테스트: 너 본인 휴대폰 1대 — 1-2일 동작 확인.
+- 비공개 베타: 5-10명 가까운 사람 — 1주 운영.
+- 공개 베타 또는 프로덕션 제출 → 심사 3-7일.
+- 첫 심사 거부 가능성: 정책 위반 / Data Safety 누락 / 메타데이터 부족 등. 재제출 가능.
+
+**I. 출시 후**
+- ASO (앱 검색 최적화): 키워드 (ADHD / 자기관찰 / 일기 / 한국).
+- 초기 사용자 리뷰 부탁 (5점 받으면 ASO 부스트).
+- 업데이트 = web 만 vs Play AAB 재업로드 차이.
+  - **web 만 업데이트** = 즉시 (TWA 가 라이브 URL 로딩).
+  - **AAB 재업로드** = manifest/icon 변경 시만 필요 (드물).
+
+#### 비용 총합
+- Play Console: **$25 일회성**
+- 그래픽 자산 (디자이너): 0 (직접) ~ 30-50만원 (외주)
+- 첫 1년 운영: ~$25
+
+#### 일정 추정 (집중 시)
+- 1주차: Bubblewrap 학습 + TWA 생성 + Play Console 가입
+- 2주차: 메타데이터 + 그래픽 자산 + 내부 테스트
+- 3주차: 비공개 베타 (5-10명) → 공개 베타 또는 정식 제출
+- 4주차: 심사 → 출시
+
+#### 위험 / 함정 (PR 전 점검)
+1. **결제 정책** — Google Play Billing 강제 위험. 모니터링 필수.
+2. **앱 거부** — 첫 심사 거부 케이스 대비. 메타데이터 / Data Safety 꼼꼼히.
+3. **PWA 한계** — TWA = Chrome 의존. iOS 와 cross-platform = 별도 작업.
+4. **부정 리뷰** — 초기 사용자 careful. 베타 단계에서 충분히 검증.
+5. **개인정보 / 의료법** — '🔍 의료법 회피' 카피 + Data Safety 정확 명시.
+
+#### 다음 액션 (사용자 결정 후 진행)
+1. Google Play Console 가입 ($25) — 너 직접.
+2. Bubblewrap 설치 + TWA 생성 — 내가 작업 (사용자 명시 후).
+3. 그래픽 자산 (feature graphic + 스크린샷) — 너 또는 디자이너.
+4. 결제 정책 Phase 결정 — (c) 하이브리드 추천.
 
 ### 14. ⏸️ Apple Developer (iOS 출시 시)
 - Apple Developer Program: $99/년
