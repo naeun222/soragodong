@@ -323,15 +323,18 @@
   /* 사용자 보고 2026-05-06: opacity:0 + fadeUp animation 패턴 — 일부 inApp 브라우저 (인스티즈 등)
      에서 애니메이션 미실행 시 사진이 끝까지 invisible. startlite 의 .proof-screen 처럼 기본 opacity:1
      로 변경. 등장 애니메이션은 .reveal 클래스 (section 단위) 가 IntersectionObserver 로 처리해 줌. */
+  /* V4 (사용자 명시 2026-05-13 — 두 번째 재발): startlite 의 .proof-screen 패턴 그대로 적용.
+     vh 기반 sizing → 모바일 viewport 거의 채움 (풀스크린 느낌). 옛 280px 고정 → clamp(vh) 동적. */
   .phone-mockup {
     margin: 0 auto;
-    max-width: 280px;
-    border-radius: 36px;
+    max-width: none;
+    width: clamp(260px, 38vh, 360px);
+    border-radius: 26px;
     overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.10);
     box-shadow:
-      0 30px 60px -20px rgba(0,0,0,0.6),
-      0 0 0 6px rgba(20,18,30,0.6);
+      0 28px 56px -20px rgba(0,0,0,0.6),
+      0 0 0 5px rgba(20,18,30,0.55);
     background: var(--bg);
   }
   .phone-mockup img {
@@ -339,6 +342,13 @@
     display: block;
     /* iPhone 시간/배터리 status bar 가리기 (위 ~7% crop) */
     margin-top: -13%;
+  }
+  /* 작은 키 모바일 — 카드 살짝 축소 (startlite 와 동일) */
+  @media (max-height: 700px) {
+    .phone-mockup { width: clamp(230px, 34vh, 300px); }
+  }
+  @media (max-height: 620px) {
+    .phone-mockup { width: clamp(200px, 30vh, 260px); }
   }
 
 
@@ -533,13 +543,21 @@
     scrollbar-width: none;
   }
   .pearl-carousel::-webkit-scrollbar { display: none; }
+  /* V4 (사용자 명시 2026-05-13): pearl-carousel 안 phone-mockup 도 vh 기반 sizing — startlite 동일 패턴. */
   .pearl-carousel .phone-mockup {
-    flex: 0 0 240px;
+    flex: 0 0 clamp(260px, 38vh, 360px);
     margin: 0;
     scroll-snap-align: center;
     animation: none;
     opacity: 1;
-    max-width: 240px;
+    width: clamp(260px, 38vh, 360px);
+    max-width: none;
+  }
+  @media (max-height: 700px) {
+    .pearl-carousel .phone-mockup { flex: 0 0 clamp(230px, 34vh, 300px); width: clamp(230px, 34vh, 300px); }
+  }
+  @media (max-height: 620px) {
+    .pearl-carousel .phone-mockup { flex: 0 0 clamp(200px, 30vh, 260px); width: clamp(200px, 30vh, 260px); }
   }
   .carousel-hint {
     text-align: center;
@@ -1133,13 +1151,13 @@
   }
 
   /* === Mobile === */
+  /* V4 (사용자 명시 2026-05-13): .phone-mockup / pearl-carousel sizing 은 위 max-height 미디어 쿼리에서 vh 기반으로
+     이미 조정됨. 옛 width 기반 max-width override 폐기 — 충돌. */
   @media (max-width: 480px) {
     .container { padding: 0 18px; }
     .hero { padding: 28px 0 22px; }
     .headline { font-size: 27px; }
     .section-title { font-size: 23px; }
-    .phone-mockup { max-width: 240px; }
-    .pearl-carousel .phone-mockup { flex: 0 0 200px; max-width: 200px; }
     .founder-quote { font-size: 15px; padding: 20px 18px; }
     .compare-card { padding: 16px 16px 14px; }
     .compare-row { gap: 10px; }
@@ -1157,8 +1175,6 @@
   @media (max-width: 360px) {
     .headline { font-size: 24px; }
     .hero-shell { font-size: 44px; }
-    .phone-mockup { max-width: 220px; }
-    .pearl-carousel .phone-mockup { flex: 0 0 180px; max-width: 180px; }
   }
 
   /* === comparison: 모든 화면 세로 1열 (텍스트 줄바꿈 방지, 카드별 가독성 우선) === */
@@ -1398,7 +1414,7 @@
     <!-- Chat snippet (Hero V4) — 회사 + 14번째 + 11시 넘게 + 게으른 거 아냐 (identity reframe hook) -->
     <div class="chat-snippet">
       <div class="chat-header">
-        <img class="ch-avatar" src="/godongicon.png?v=20260506" alt="" loading="lazy">
+        <img class="ch-avatar" src="/godongicon.png?v=20260506" alt="">
         <span class="ch-name">고동</span>
         <span class="ch-dot"></span>
       </div>
@@ -1460,12 +1476,12 @@
       <div class="pearl-carousel">
         <!-- 0. 실제 대화 화면 (한국사 족보 chat 등) -->
         <div class="phone-mockup">
-          <img src="/drive-real-samples/chat.jpg?v=20260506b" alt="고동이와의 실제 대화 — 친구처럼 ㅋㅋㅋ 톤" loading="lazy">
+          <img src="/drive-real-samples/chat.jpg?v=20260506b" alt="고동이와의 실제 대화 — 친구처럼 ㅋㅋㅋ 톤">
         </div>
 
         <!-- 1. '너에 대해' real screenshot — 풍요로운 삶 + 과몰입 스위치 -->
         <div class="phone-mockup">
-          <img src="/drive-me-tap/about.jpg?v=20260506" alt="너에 대해 — 풍요로운 삶 (가치관) + 과몰입 스위치 (특성)" loading="lazy">
+          <img src="/drive-me-tap/about.jpg?v=20260506" alt="너에 대해 — 풍요로운 삶 (가치관) + 과몰입 스위치 (특성)">
         </div>
       </div>
       <p class="carousel-hint">← 옆으로 스와이프 (대화 → '나' 탭) →</p>
@@ -1502,19 +1518,19 @@
     </p>
 
     <div class="phone-mockup">
-      <img src="/drive-real-samples/KakaoTalk_20260505_153551019_04.jpg?v=20260506b" alt="일기 화면 — 5월 1일, 활력/기분/수면 + Q&A + 음악" loading="lazy">
+      <img src="/drive-real-samples/KakaoTalk_20260505_153551019_04.jpg?v=20260506b" alt="일기 화면 — 5월 1일, 활력/기분/수면 + Q&A + 음악">
     </div>
     <p class="friend-evidence" style="margin-top:14px;">↑ 일기 — 활력·기분·수면 + Q&A + 그날의 음악</p>
 
     <div class="pearl-carousel">
       <div class="phone-mockup">
-        <img src="/drive-real-samples/KakaoTalk_20260505_153551019.jpg?v=20260506b" alt="인생 도서관 — 다섯 칸" loading="lazy">
+        <img src="/drive-real-samples/KakaoTalk_20260505_153551019.jpg?v=20260506b" alt="인생 도서관 — 다섯 칸">
       </div>
       <div class="phone-mockup">
-        <img src="/drive-real-samples/KakaoTalk_20260505_153551019_01.png?v=20260506" alt="진주 그리드 — 음악·맛·장소·사람" loading="lazy">
+        <img src="/drive-real-samples/KakaoTalk_20260505_153551019_01.png?v=20260506" alt="진주 그리드 — 음악·맛·장소·사람">
       </div>
       <div class="phone-mockup">
-        <img src="/drive-real-samples/KakaoTalk_20260505_153551019_03.png?v=20260506" alt="진주 — 추억의 한 컷" loading="lazy">
+        <img src="/drive-real-samples/KakaoTalk_20260505_153551019_03.png?v=20260506" alt="진주 — 추억의 한 컷">
       </div>
     </div>
 
@@ -1537,13 +1553,13 @@
 
     <div class="pearl-carousel">
       <div class="phone-mockup">
-        <img src="/drive-real-samples/KakaoTalk_20260505_153438574.jpg?v=20260506b" alt="월간 리뷰 — 이달의 너는 '창업자'" loading="lazy">
+        <img src="/drive-real-samples/KakaoTalk_20260505_153438574.jpg?v=20260506b" alt="월간 리뷰 — 이달의 너는 '창업자'">
       </div>
       <div class="phone-mockup">
-        <img src="/drive-real-samples/KakaoTalk_20260505_153438574_03.png?v=20260506" alt="월간 리뷰 — 사이클 (수면·모드) + 감정 + 나답게" loading="lazy">
+        <img src="/drive-real-samples/KakaoTalk_20260505_153438574_03.png?v=20260506" alt="월간 리뷰 — 사이클 (수면·모드) + 감정 + 나답게">
       </div>
       <div class="phone-mockup">
-        <img src="/drive-real-samples/KakaoTalk_20260505_153438574_04.png?v=20260506" alt="월간 리뷰 — 살짝 멀어진 + 부드러운 알림" loading="lazy">
+        <img src="/drive-real-samples/KakaoTalk_20260505_153438574_04.png?v=20260506" alt="월간 리뷰 — 살짝 멀어진 + 부드러운 알림">
       </div>
     </div>
     <p class="carousel-hint">← 옆으로 스와이프 (페르소나 → 사이클·감정 → 부드러운 알림) →</p>
@@ -1704,7 +1720,7 @@
 
 <!-- ===== FOOTER ===== -->
 <footer class="page-footer">
-  <div class="footer-brand"><img class="footer-icon" src="/godongicon.png?v=20260506" alt="" loading="lazy"> 소라고동</div>
+  <div class="footer-brand"><img class="footer-icon" src="/godongicon.png?v=20260506" alt=""> 소라고동</div>
   <div class="footer-meta">
     의료·심리상담 대체 앱이 아니야. 정신건강 위기 시 — <b>1393</b> 자살예방 · <b>1577-0199</b> 정신건강.
   </div>
