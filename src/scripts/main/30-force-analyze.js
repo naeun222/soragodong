@@ -342,10 +342,8 @@ function _pushMagicReflectionArchive(batch) {
 
 // inline (일반 API) 처리 — submit 실패 시 fallback / 12h timeout fallback.
 async function _runDailyExtractInline(pending) {
-  // V4 (사용자 명시 2026-05-06 ultrathink): 비구독자는 도서관 챕터 토픽 자동 정리 X.
-  // 4AM batch 도 manual ✓ (endedManually=true) 또는 premium 만 topic 추출. case_analysis 는 그대로.
-  const _bill = window._billingCache;
-  const _isPremium = !!(_bill && _bill.subscription_plan === 'premium' && _bill.subscription_active);
+  // V4 (사용자 명시 2026-05-14 ultrathink): 옛 2026-05-06 정책 (비프리미엄 + 자동 분리 = topic 추출 skip) 폐기.
+  //   모든 사용자 / 모든 분리 방식 (manual ✓ / 5h+ gap) 에 대해 chapter topic 추출 — 도서관 자연 누적.
   for (const batch of pending) {
     // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
     // sourceArchiveId 박음 (cascade soft delete 추적용).
@@ -368,13 +366,12 @@ async function _runDailyExtractInline(pending) {
       }
       _caseOk = _normalOk && _simOk;
     } catch (e) { console.warn('[inline] case fail:', e); }
-    const _allowChapterTopic = !!batch.endedManually || _isPremium;
     try {
       // 사용자 명시 2026-05-10 (batch 14): 시뮬 메시지도 topic 추출 진행 — 단 topicCard 에 source: 'simulation' 마킹.
       //   도서관 일기·대화 chip 표시 시 '시나리오' 라벨로 구분.
       const _normalMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
       const _simMsgs = _extractMsgs.filter(m => m && m.isSimulationContext);
-      if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
+      if (typeof extractPreviousChapterTopics === 'function') {
         if (_normalMsgs.length >= 3) {
           await extractPreviousChapterTopics(_normalMsgs);
         }

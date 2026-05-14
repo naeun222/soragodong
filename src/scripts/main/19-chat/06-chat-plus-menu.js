@@ -120,11 +120,9 @@ function _archiveCurrentChapter(opts) {
       && !window._onbTutorialMode
       && !(state.preferences && state.preferences.testerMode)
       && archiveItem.messages.length >= 6) {
-    // V4 (사용자 명시 2026-05-06 ultrathink): 비구독자는 도서관 챕터 토픽 자동 정리 X.
-    // 도서관은 ✓ (manual) 누를 때만 chapter topic 생성. case_analysis (나 탭 fill) 는 그대로.
-    const _bill = window._billingCache;
-    const _isPremium = !!(_bill && _bill.subscription_plan === 'premium' && _bill.subscription_active);
-    const _allowChapterTopic = !!opts.manual || _isPremium;
+    // V4 (사용자 명시 2026-05-14 ultrathink): 옛 2026-05-06 정책 (비프리미엄 + 자동 분리 챕터 topic skip) 폐기.
+    //   비프리미엄도 자동 분리 (5h+ gap) 챕터 topic 을 도서관에 정리. plan / manual 무관.
+    //   비용 차이 (Haiku 추출 ~$0.0001/챕터) 흡수 — 사용자 가치 (도서관 자연 누적) 우선.
     setTimeout(async () => {
       try {
         // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
@@ -145,7 +143,7 @@ function _archiveCurrentChapter(opts) {
             catch (e) { console.warn('[new-user extract] case sim fail:', e); }
           }
         }
-        if (_allowChapterTopic && typeof extractPreviousChapterTopics === 'function') {
+        if (typeof extractPreviousChapterTopics === 'function') {
           if (_normalMsgs.length >= 3) {
             try { await extractPreviousChapterTopics(_normalMsgs); }
             catch (e) { console.warn('[new-user extract] topic fail:', e); }
