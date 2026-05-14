@@ -94,6 +94,13 @@
     --paper-text-soft: rgba(110,80,40,0.65);
     --paper-text-dim: rgba(110,80,40,0.5);
     --paper-rule: rgba(110,80,40,0.28);
+    /* 사용자 명시 2026-05-14: plan-color 시스템 — Light=베이지/모래, Plus=차분한 딥블루, Premium=황금. 결제 모달/카드/설정/onboarding 전반 적용. */
+    --tier-light: #c2a878;
+    --tier-light-dim: rgba(194, 168, 120, 0.18);
+    --tier-plus: #4a7cb5;
+    --tier-plus-dim: rgba(74, 124, 181, 0.18);
+    --tier-premium: #ffd700;
+    --tier-premium-dim: rgba(255, 215, 0, 0.16);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   /* 사용자 보고 2026-05-05: <html> 에 bg-color 없으면 첫 페인트 직전 흰색 디폴트 잠깐 보여서 번쩍 → 다크 톤 매치 (#0f0e17 = --bg) */
@@ -56881,7 +56888,9 @@ async function _doRefreshBillingStatus(manual) {
       } else {
         expiresLabel = cancelledRenewal ? `${subExpires}에 종료` : `${subExpires}까지`;
       }
-      html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${expiresLabel}</span></div>`;
+      // V4 (사용자 명시 2026-05-14): plan-color 적용 — Light=베이지/모래, Plus=딥블루, Premium=황금.
+      const _planColor = (typeof _planColorVar === 'function') ? _planColorVar(planKey) : 'var(--accent)';
+      html += `<div><b>구독</b>: <span style="color:${_planColor}; font-weight:600;">${planMeta.emoji} ${planMeta.label}</span> <span style="color:var(--text-soft); font-size:11px;">— ${expiresLabel}</span></div>`;
       // early_light: 토큰 양 안 보이게 (체험 플랜은 수치 노출 X)
       if (planKey !== 'early_light') {
         // V4 (사용자 명시 2026-05-13): 정성 라벨 폐기 — 'N시간 후 reset' 만 13px 표시.
@@ -56936,6 +56945,11 @@ async function _doRefreshBillingStatus(manual) {
     // V4 (사용자 명시 2026-05-13 ultrathink): Plan 변경 시 메인 헤더 RAG 토글 visual sync (Light → Plus 가입 등).
     if (typeof updateMainHeaderBtnVisual === 'function') {
       try { updateMainHeaderBtnVisual(); } catch {}
+    }
+    // V4 (사용자 명시 2026-05-14 ultrathink): plan 결제 직후 onboarding chain auto-trigger (가계약 토스트만 / SDK 콜백 경로).
+    //   결제 성공 모달이 떠있으면 그 모달의 [닫기] callback 이 직접 trigger 하므로 race 차단됨.
+    if (typeof _maybeTriggerPlanOnboarding === 'function') {
+      try { _maybeTriggerPlanOnboarding(); } catch {}
     }
     // 캐시 채워졌으니 배너 큐 재시도 (sync tip 등)
     if (typeof _renderNextBanner === 'function') { try { _renderNextBanner(); } catch {} }
@@ -58408,8 +58422,11 @@ function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
 //   토스트 1줄로는 사용자가 *언제 다음 결제되는지 / 어디서 관리하는지* 가 안 보임 → 명시 화면.
 //   trial 의 경우: "오늘은 결제 X, 30일 후 첫 결제" 톤. 정가의 경우: "오늘 첫 결제 완료, 30일 후 자동 갱신" 톤.
 //   '구독 관리하러 가기' 버튼 → 설정 → 결제 내역 토글 자동 펼침 (settings 의 _expandPaymentsToggle 호출).
-function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) {
+function _showRecurringSuccessModal({ tier, plan, pgLabel, isTrial, nextBillingIso }) {
   const krw = tier.krw.toLocaleString();
+  // V4 (사용자 명시 2026-05-14 ultrathink): plan-color + step 1 흡수 ("내일 아침 갱신") + [닫기] → _planOnboardingFlow(plan, skipStep1).
+  const tierColor = (typeof _planColorVar === 'function') ? _planColorVar(plan) : 'var(--accent)';
+  const tierEmoji = (tier && tier.emoji) ? tier.emoji : '✦';
   // V4 (사용자 명시 2026-05-13 ultrathink): backend response 의 next_billing_at (매월 anchor 적용된 ISO) 그대로 표시.
   let nextDate;
   try {
@@ -58422,26 +58439,29 @@ function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) 
   } catch { nextDate = new Date(Date.now() + 30 * 86400_000); }
   const nextDateStr = nextDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
   const headline = isTrial
-    ? `🌊 ${tier.label} 첫 달 무료 시작`
-    : `📅 ${tier.label} 정기구독 시작`;
+    ? `${tierEmoji} ${tier.label} 첫 달 무료 시작`
+    : `${tierEmoji} ${tier.label} 정기구독 시작`;
   const subline = isTrial
-    ? `오늘부터 한 달 동안 무료로 사용해.`
-    : `오늘 첫 ${krw}원 결제 완료.`;
+    ? `오늘부터 한 달 동안 무료로 사용하실 수 있습니다.`
+    : `오늘 첫 ${krw}원 결제가 완료되었습니다.`;
   const nextLine = isTrial
-    ? `<div style="font-size:12.5px; color:var(--text); line-height:1.65;"><b style="color:#5fb4d3;">${nextDateStr}</b> 에 첫 ${krw}원 자동 결제가 시작돼.</div>`
-    : `<div style="font-size:12.5px; color:var(--text); line-height:1.65;">다음 결제예정일: <b style="color:var(--accent);">${nextDateStr}</b> · 월 ${krw}원</div>`;
+    ? `<div style="font-size:12.5px; color:var(--text); line-height:1.65;"><b style="color:${tierColor};">${nextDateStr}</b> 에 첫 ${krw}원 자동 결제가 시작됩니다.</div>`
+    : `<div style="font-size:12.5px; color:var(--text); line-height:1.65;">다음 결제예정일: <b style="color:${tierColor};">${nextDateStr}</b> · 월 ${krw}원</div>`;
   const overlay = document.createElement('div');
   overlay.className = 'input-modal-overlay show';
   overlay.id = 'recurringSuccessOverlay';
   overlay.style.zIndex = '10004';
   overlay.innerHTML = `
-    <div class="input-modal" style="max-width:380px; padding:24px;">
-      <div style="font-size:36px; text-align:center; margin-bottom:10px;">✓</div>
+    <div class="input-modal" style="max-width:380px; padding:24px; border-top:3px solid ${tierColor};">
+      <div style="font-size:36px; text-align:center; margin-bottom:10px;">${tierEmoji}</div>
       <div style="font-size:17px; font-weight:700; color:var(--text); text-align:center; margin-bottom:6px;">${escapeHtml(headline)}</div>
       <div style="font-size:12.5px; color:var(--text-dim); text-align:center; margin-bottom:16px; line-height:1.6;">${escapeHtml(subline)}</div>
       <div style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:10px; padding:13px 14px; margin-bottom:14px; line-height:1.7;">
         ${nextLine}
         <div style="font-size:12px; color:var(--text-soft); margin-top:6px;">결제수단: ${escapeHtml(pgLabel)}</div>
+      </div>
+      <div style="font-size:12.5px; color:var(--text); line-height:1.75; padding:12px 14px; background:rgba(255,255,255,0.025); border-left:3px solid ${tierColor}; border-radius:4px; margin-bottom:14px;">
+        ${tierEmoji} <b>나 탭 · 도서관 챕터</b>는 다음날 아침에 한 번에 갱신됩니다. 내일 확인해보세요!
       </div>
       <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:11px 13px; background:rgba(126,200,227,0.05); border-left:3px solid rgba(126,200,227,0.40); border-radius:4px; margin-bottom:14px;">
         💡 <b style="color:var(--text);">관리 위치:</b> [설정 → 구독]<br>
@@ -58449,7 +58469,7 @@ function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) 
         - 다음 갱신 해지 (1-click)<br>
         - 환불 요청 (잔여일 비례)
       </div>
-      <button class="btn-primary" id="recurringSuccessGoSettings" style="width:100%; padding:11px; margin-bottom:8px;">구독 관리하러 가기</button>
+      <button class="btn-primary" id="recurringSuccessGoSettings" style="width:100%; padding:11px; margin-bottom:8px; background:${tierColor}; border:none; color:#fff; font-weight:600;">구독 관리하러 가기</button>
       <button class="btn-secondary" id="recurringSuccessClose" style="width:100%; padding:10px;">닫기</button>
     </div>
   `;
@@ -58458,9 +58478,24 @@ function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) 
     const ov = document.getElementById('recurringSuccessOverlay');
     if (ov) ov.remove();
   };
-  document.getElementById('recurringSuccessClose').addEventListener('click', close);
+  document.getElementById('recurringSuccessClose').addEventListener('click', () => {
+    close();
+    // V4 (사용자 명시 2026-05-14): [닫기] = step 1 흡수 완료 → step 2 부터 chain start.
+    if (typeof _planOnboardingFlow === 'function' && plan) {
+      setTimeout(() => _planOnboardingFlow(plan, { skipStep1: true }), 100);
+    }
+  });
   document.getElementById('recurringSuccessGoSettings').addEventListener('click', () => {
     close();
+    // [구독 관리하러 가기] = chain skip + flag set (사용자가 직접 설정으로 가는 선택)
+    try {
+      if (typeof state !== 'undefined' && state) {
+        state.preferences = state.preferences || {};
+        state.preferences._planOnboardingShown = state.preferences._planOnboardingShown || {};
+        if (plan) state.preferences._planOnboardingShown[plan] = true;
+        saveState();
+      }
+    } catch {}
     try { if (typeof showScreen === 'function') showScreen('settings'); } catch {}
     try { if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true); } catch {}
     setTimeout(() => {
@@ -58688,13 +58723,15 @@ async function openSubscribeModal() {
       if (_oneTime2) descHtml += ' 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).';
       else descHtml += ' 정기 구독 — 매월 9,900원 자동 결제, 언제든 해지.';
     }
+    // V4 (사용자 명시 2026-05-14): plan-color 강조 — Light=베이지, Plus=딥블루, Premium=황금. label 글자색 적용.
+    const _tierColor = (typeof _planColorVar === 'function') ? _planColorVar(key) : 'var(--accent)';
     return `
       <div class="tier-card ${recommended ? 'tier-recommended' : ''}" style="position:relative; padding:18px 16px; background:${cardBg}; border:${cardBorder}; border-radius:14px; margin-bottom:10px; ${cardOpacity}">
         ${trialBadge}
         ${currentBadge}
         ${recommendBadge}
         <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
-          <div style="font-size:18px; font-weight:700; color:var(--text);">${plan.emoji} ${plan.label}</div>
+          <div style="font-size:18px; font-weight:700; color:${_tierColor};">${plan.emoji} ${plan.label}</div>
           ${priceHtml}
         </div>
         <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${plan.tagline}</div>
@@ -59023,6 +59060,7 @@ async function proceedSubscribe(tierKey) {
         // V4 (사용자 명시 2026-05-13 ultrathink): 토스트 대체 — 명시 성공 모달.
         _showRecurringSuccessModal({
           tier: _actualTier,
+          plan: _actualPlanKey,
           pgLabel: _pgLabel(_pg),
           isTrial: false,
           nextBillingIso: result.next_billing_at || null
@@ -59229,6 +59267,7 @@ async function proceedPlusTrial() {
         } catch {}
         _showRecurringSuccessModal({
           tier,
+          plan: 'light',
           pgLabel: _pgLabel(_pg),
           isTrial: true,
           nextBillingIso: result.trial_until || result.next_billing_at || null
@@ -59641,6 +59680,184 @@ async function _handleBillingKeyReturn(params) {
   } catch (e) {
     setTimeout(() => alert('빌링키 등록 중 오류: ' + (e?.message || e)), 300);
   }
+}
+// V4 (사용자 명시 2026-05-14 ultrathink): plan 결제 직후 onboarding chain.
+//   step 1 (환영 + 내일 아침 갱신) = 결제 성공 모달이 흡수 → opts.skipStep1=true 시 step 2 부터.
+//   step 2 = plan 별 4단 분석 횟수 안내.
+//   step 3 = (Plus/Premium 만) 옛 챕터 기억 (RAG) 안내 — showRagFirstClickModal 카피 재활용.
+//   step 4 = (Premium 만) 마법/숙고 Opus 깊은 사고 잠금 해제 안내.
+//   flag: state.preferences._planOnboardingShown[plan]=true — plan-key 별 1회.
+//   trigger:
+//     ① 결제 성공 모달 (_showRecurringSuccessModal) [닫기] → _planOnboardingFlow(plan, {skipStep1:true})
+//     ② refreshBillingStatus 후 plan 변화 detect → _maybeTriggerPlanOnboarding() (가계약 토스트만 / SDK 콜백 경로)
+//   tone: 정중체 (~합니다 / ~해요).
+
+// plan-key → tier color CSS var
+function _planColorVar(plan) {
+  if (plan === 'premium') return 'var(--tier-premium)';
+  if (plan === 'light')   return 'var(--tier-plus)';      // key 'light' = Plus = 블루
+  if (plan === 'early_lifetime') return 'var(--tier-light)'; // key 'early_lifetime' = Light = 베이지
+  return 'var(--accent)';
+}
+// plan-key → tier dim (transparent) CSS var
+function _planColorDimVar(plan) {
+  if (plan === 'premium') return 'var(--tier-premium-dim)';
+  if (plan === 'light')   return 'var(--tier-plus-dim)';
+  if (plan === 'early_lifetime') return 'var(--tier-light-dim)';
+  return 'var(--accent-dim)';
+}
+
+function _planOnboardingFlow(plan, opts) {
+  opts = opts || {};
+  if (!plan) return;
+  const VALID = ['early_lifetime', 'light', 'premium'];
+  if (!VALID.includes(plan)) return;
+  // 게스트 / 튜토리얼 도중 = skip (race 차단)
+  if (typeof state !== 'undefined' && state && state.isGuest) return;
+  if (window._onbTutorialMode) return;
+
+  try {
+    state.preferences = state.preferences || {};
+    state.preferences._planOnboardingShown = state.preferences._planOnboardingShown || {};
+    if (state.preferences._planOnboardingShown[plan]) return;
+  } catch { return; }
+
+  const tier = (typeof TIER_PLANS_CLIENT !== 'undefined') ? TIER_PLANS_CLIENT[plan] : null;
+  if (!tier) return;
+  const tierColor = _planColorVar(plan);
+  const tierEmoji = tier.emoji || '✦';
+
+  const _markDone = () => {
+    try {
+      state.preferences._planOnboardingShown[plan] = true;
+      saveState();
+    } catch {}
+  };
+  const _replaceOverlay = (innerHtml) => {
+    const existing = document.getElementById('planOnboardingOverlay');
+    if (existing) existing.remove();
+    const ov = document.createElement('div');
+    ov.className = 'input-modal-overlay show';
+    ov.id = 'planOnboardingOverlay';
+    ov.style.zIndex = '10006';
+    ov.innerHTML = innerHtml;
+    document.body.appendChild(ov);
+    return ov;
+  };
+
+  const _step1 = () => {
+    const ov = _replaceOverlay(`
+      <div class="input-modal plan-onb-modal" style="max-width:380px; padding:24px; border-top:3px solid ${tierColor};">
+        <div style="font-size:36px; text-align:center; margin-bottom:12px;">${tierEmoji}</div>
+        <div style="font-size:17px; font-weight:700; color:var(--text); text-align:center; margin-bottom:14px;">환영합니다</div>
+        <div style="font-size:13px; color:var(--text); line-height:1.75; text-align:center; margin-bottom:22px;">
+          이제부터 <b style="color:${tierColor};">나 탭 · 도서관 챕터</b>는 다음날 아침에 한 번에 갱신됩니다.<br>내일 확인해보세요! ${tierEmoji}
+        </div>
+        <button class="btn-primary plan-onb-btn" id="planOnbStep1Ok" style="width:100%; padding:11px; background:${tierColor}; border:none; color:#fff; font-weight:600;">알겠어</button>
+      </div>
+    `);
+    document.getElementById('planOnbStep1Ok').addEventListener('click', () => { ov.remove(); _step2(); });
+  };
+
+  const _step2 = () => {
+    let copy;
+    if (plan === 'early_lifetime') copy = '이제부터 하루에 <b style="color:'+tierColor+';">4단 분석을 세 번</b> 쓸 수 있습니다.';
+    else if (plan === 'light')      copy = '이제부터 하루에 <b style="color:'+tierColor+';">4단 분석을 다섯 번</b> 쓸 수 있습니다.';
+    else                            copy = '이제부터 <b style="color:'+tierColor+';">4단 분석을 하루에 열 번, 시간 제한 없이</b> 쓸 수 있습니다.';
+    const ov = _replaceOverlay(`
+      <div class="input-modal plan-onb-modal" style="max-width:380px; padding:24px; border-top:3px solid ${tierColor};">
+        <div style="font-size:32px; text-align:center; margin-bottom:12px;">${tierEmoji}</div>
+        <div style="font-size:13.5px; color:var(--text); line-height:1.8; text-align:center; margin-bottom:22px;">${copy}</div>
+        <button class="btn-primary plan-onb-btn" id="planOnbStep2Ok" style="width:100%; padding:11px; background:${tierColor}; border:none; color:#fff; font-weight:600;">알겠어</button>
+      </div>
+    `);
+    document.getElementById('planOnbStep2Ok').addEventListener('click', () => {
+      ov.remove();
+      if (plan === 'early_lifetime') { _markDone(); return; }
+      // Plus/Premium = 대화탭 자동 이동 후 step 3.
+      try { if (typeof showScreen === 'function') showScreen('chat'); } catch {}
+      setTimeout(_step3, 300);
+    });
+  };
+
+  const _step3 = () => {
+    const isPremium = (plan === 'premium');
+    const title = isPremium ? '✨ 업그레이드된 옛 챕터 기억' : '✨ 고동이 기억력이 좋아져';
+    const subCopy = isPremium
+      ? `이전 챕터를 <b style="color:${tierColor};">최대 3개</b>까지 더 깊이 찾아와서 이어갑니다.`
+      : '대신 토큰이 조금 더 빨리 닳아요.';
+    const ov = _replaceOverlay(`
+      <div class="input-modal plan-onb-modal" style="max-width:380px; padding:24px; border-top:3px solid ${tierColor}; text-align:center;">
+        <div style="font-size:16px; font-weight:600; color:var(--text); margin-bottom:16px;">${title}</div>
+        <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-bottom:18px;">
+          <div style="text-align:center;">
+            <img src="/character/godong-sonnet.svg" alt="" style="width:64px; height:64px;">
+            <div style="font-size:10.5px; color:var(--text-soft); margin-top:4px;">평소</div>
+          </div>
+          <div style="color:var(--text-dim); font-size:18px;">→</div>
+          <div style="text-align:center; filter:drop-shadow(0 0 12px ${_planColorDimVar(plan)});">
+            <img src="/character/godong-rag.svg" alt="" style="width:64px; height:64px;">
+            <div style="font-size:10.5px; color:${tierColor}; margin-top:4px;">옛 챕터 기억 ON</div>
+          </div>
+        </div>
+        <div style="font-size:12.5px; color:var(--text-dim); line-height:1.75; margin-bottom:18px;">
+          대화를 더 자연스럽게 할 수 있고, 너를 더 깊이 이해해요.<br>
+          <span style="color:var(--text-soft); font-size:11.5px;">${subCopy}</span>
+        </div>
+        <div style="font-size:11.5px; color:var(--text-soft); line-height:1.6; margin-bottom:18px; padding:9px 12px; background:rgba(255,255,255,0.03); border-radius:8px;">
+          상단 헤더의 🐚 아이콘을 누르면 ON 됩니다.
+        </div>
+        <button class="btn-primary plan-onb-btn" id="planOnbStep3Ok" style="width:100%; padding:11px; background:${tierColor}; border:none; color:#fff; font-weight:600;">알겠어</button>
+      </div>
+    `);
+    document.getElementById('planOnbStep3Ok').addEventListener('click', () => {
+      ov.remove();
+      if (!isPremium) { _markDone(); return; }
+      setTimeout(_step4, 200);
+    });
+  };
+
+  const _step4 = () => {
+    const ov = _replaceOverlay(`
+      <div class="input-modal plan-onb-modal" style="max-width:380px; padding:24px; border-top:3px solid ${tierColor};">
+        <div style="display:flex; gap:14px; align-items:center; justify-content:center; margin-bottom:14px; font-size:36px;">
+          <span>🪶</span>
+          <span style="color:var(--text-dim); font-size:20px;">→</span>
+          <span style="filter:drop-shadow(0 0 12px ${_planColorDimVar(plan)});">🦉</span>
+        </div>
+        <div style="font-size:16px; font-weight:600; color:var(--text); text-align:center; margin-bottom:14px;">🦉 Opus 깊은 사고 잠금 해제</div>
+        <div style="font-size:12.5px; color:var(--text-dim); line-height:1.75; text-align:center; margin-bottom:18px;">
+          마법고동 · 숙고의 방 헤더의 <b>🪶</b> 를 누르면 <b style="color:${tierColor};">Opus(상위 모델)</b> 로 더 깊게 생각해줍니다.<br>
+          <span style="color:var(--text-soft); font-size:11.5px;">중요한 한 번 쓸 때 추천 — 같은 잔량에서 토큰이 5배 빠르게 차감되니까요.</span>
+        </div>
+        <button class="btn-primary plan-onb-btn" id="planOnbStep4Ok" style="width:100%; padding:11px; background:${tierColor}; border:none; color:#fff; font-weight:600;">알겠어</button>
+      </div>
+    `);
+    document.getElementById('planOnbStep4Ok').addEventListener('click', () => { ov.remove(); _markDone(); });
+  };
+
+  if (opts.skipStep1) _step2();
+  else _step1();
+}
+
+// refreshBillingStatus 후 plan 변화 detect 시 자동 chain trigger.
+//   결제 성공 모달 [닫기] callback 외 다른 경로 (가계약 토스트만 / SDK 콜백) 도 cover.
+function _maybeTriggerPlanOnboarding() {
+  try {
+    const billing = window._billingCache;
+    if (!billing) return;
+    if (!billing.subscription_active) return;
+    const plan = billing.subscription_plan;
+    if (!plan) return;
+    if (typeof state === 'undefined' || !state) return;
+    if (state.isGuest) return;
+    state.preferences = state.preferences || {};
+    state.preferences._planOnboardingShown = state.preferences._planOnboardingShown || {};
+    if (state.preferences._planOnboardingShown[plan]) return;
+    // 다른 모달 떠있으면 skip — 결제 성공 모달 dismiss callback 이 직접 trigger 한다.
+    if (document.querySelector('.input-modal-overlay.show')) return;
+    if (typeof _planOnboardingFlow === 'function') _planOnboardingFlow(plan, { skipStep1: false });
+  } catch (e) { console.warn('[planOnboarding] trigger', e); }
 }
 // ─── 추가팩 결제 + Tier 업그레이드 (PortOne V2) ───
 // 사용자 명시 2026-05-06: V1 (IMP/iamport.js) → V2 (PortOne SDK) 마이그레이션.

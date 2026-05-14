@@ -211,8 +211,11 @@ function _showRecurringConsentModal({ tier, pgLabel, isTrial }) {
 //   토스트 1줄로는 사용자가 *언제 다음 결제되는지 / 어디서 관리하는지* 가 안 보임 → 명시 화면.
 //   trial 의 경우: "오늘은 결제 X, 30일 후 첫 결제" 톤. 정가의 경우: "오늘 첫 결제 완료, 30일 후 자동 갱신" 톤.
 //   '구독 관리하러 가기' 버튼 → 설정 → 결제 내역 토글 자동 펼침 (settings 의 _expandPaymentsToggle 호출).
-function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) {
+function _showRecurringSuccessModal({ tier, plan, pgLabel, isTrial, nextBillingIso }) {
   const krw = tier.krw.toLocaleString();
+  // V4 (사용자 명시 2026-05-14 ultrathink): plan-color + step 1 흡수 ("내일 아침 갱신") + [닫기] → _planOnboardingFlow(plan, skipStep1).
+  const tierColor = (typeof _planColorVar === 'function') ? _planColorVar(plan) : 'var(--accent)';
+  const tierEmoji = (tier && tier.emoji) ? tier.emoji : '✦';
   // V4 (사용자 명시 2026-05-13 ultrathink): backend response 의 next_billing_at (매월 anchor 적용된 ISO) 그대로 표시.
   let nextDate;
   try {
@@ -225,26 +228,29 @@ function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) 
   } catch { nextDate = new Date(Date.now() + 30 * 86400_000); }
   const nextDateStr = nextDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
   const headline = isTrial
-    ? `🌊 ${tier.label} 첫 달 무료 시작`
-    : `📅 ${tier.label} 정기구독 시작`;
+    ? `${tierEmoji} ${tier.label} 첫 달 무료 시작`
+    : `${tierEmoji} ${tier.label} 정기구독 시작`;
   const subline = isTrial
-    ? `오늘부터 한 달 동안 무료로 사용해.`
-    : `오늘 첫 ${krw}원 결제 완료.`;
+    ? `오늘부터 한 달 동안 무료로 사용하실 수 있습니다.`
+    : `오늘 첫 ${krw}원 결제가 완료되었습니다.`;
   const nextLine = isTrial
-    ? `<div style="font-size:12.5px; color:var(--text); line-height:1.65;"><b style="color:#5fb4d3;">${nextDateStr}</b> 에 첫 ${krw}원 자동 결제가 시작돼.</div>`
-    : `<div style="font-size:12.5px; color:var(--text); line-height:1.65;">다음 결제예정일: <b style="color:var(--accent);">${nextDateStr}</b> · 월 ${krw}원</div>`;
+    ? `<div style="font-size:12.5px; color:var(--text); line-height:1.65;"><b style="color:${tierColor};">${nextDateStr}</b> 에 첫 ${krw}원 자동 결제가 시작됩니다.</div>`
+    : `<div style="font-size:12.5px; color:var(--text); line-height:1.65;">다음 결제예정일: <b style="color:${tierColor};">${nextDateStr}</b> · 월 ${krw}원</div>`;
   const overlay = document.createElement('div');
   overlay.className = 'input-modal-overlay show';
   overlay.id = 'recurringSuccessOverlay';
   overlay.style.zIndex = '10004';
   overlay.innerHTML = `
-    <div class="input-modal" style="max-width:380px; padding:24px;">
-      <div style="font-size:36px; text-align:center; margin-bottom:10px;">✓</div>
+    <div class="input-modal" style="max-width:380px; padding:24px; border-top:3px solid ${tierColor};">
+      <div style="font-size:36px; text-align:center; margin-bottom:10px;">${tierEmoji}</div>
       <div style="font-size:17px; font-weight:700; color:var(--text); text-align:center; margin-bottom:6px;">${escapeHtml(headline)}</div>
       <div style="font-size:12.5px; color:var(--text-dim); text-align:center; margin-bottom:16px; line-height:1.6;">${escapeHtml(subline)}</div>
       <div style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:10px; padding:13px 14px; margin-bottom:14px; line-height:1.7;">
         ${nextLine}
         <div style="font-size:12px; color:var(--text-soft); margin-top:6px;">결제수단: ${escapeHtml(pgLabel)}</div>
+      </div>
+      <div style="font-size:12.5px; color:var(--text); line-height:1.75; padding:12px 14px; background:rgba(255,255,255,0.025); border-left:3px solid ${tierColor}; border-radius:4px; margin-bottom:14px;">
+        ${tierEmoji} <b>나 탭 · 도서관 챕터</b>는 다음날 아침에 한 번에 갱신됩니다. 내일 확인해보세요!
       </div>
       <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:11px 13px; background:rgba(126,200,227,0.05); border-left:3px solid rgba(126,200,227,0.40); border-radius:4px; margin-bottom:14px;">
         💡 <b style="color:var(--text);">관리 위치:</b> [설정 → 구독]<br>
@@ -252,7 +258,7 @@ function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) 
         - 다음 갱신 해지 (1-click)<br>
         - 환불 요청 (잔여일 비례)
       </div>
-      <button class="btn-primary" id="recurringSuccessGoSettings" style="width:100%; padding:11px; margin-bottom:8px;">구독 관리하러 가기</button>
+      <button class="btn-primary" id="recurringSuccessGoSettings" style="width:100%; padding:11px; margin-bottom:8px; background:${tierColor}; border:none; color:#fff; font-weight:600;">구독 관리하러 가기</button>
       <button class="btn-secondary" id="recurringSuccessClose" style="width:100%; padding:10px;">닫기</button>
     </div>
   `;
@@ -261,9 +267,24 @@ function _showRecurringSuccessModal({ tier, pgLabel, isTrial, nextBillingIso }) 
     const ov = document.getElementById('recurringSuccessOverlay');
     if (ov) ov.remove();
   };
-  document.getElementById('recurringSuccessClose').addEventListener('click', close);
+  document.getElementById('recurringSuccessClose').addEventListener('click', () => {
+    close();
+    // V4 (사용자 명시 2026-05-14): [닫기] = step 1 흡수 완료 → step 2 부터 chain start.
+    if (typeof _planOnboardingFlow === 'function' && plan) {
+      setTimeout(() => _planOnboardingFlow(plan, { skipStep1: true }), 100);
+    }
+  });
   document.getElementById('recurringSuccessGoSettings').addEventListener('click', () => {
     close();
+    // [구독 관리하러 가기] = chain skip + flag set (사용자가 직접 설정으로 가는 선택)
+    try {
+      if (typeof state !== 'undefined' && state) {
+        state.preferences = state.preferences || {};
+        state.preferences._planOnboardingShown = state.preferences._planOnboardingShown || {};
+        if (plan) state.preferences._planOnboardingShown[plan] = true;
+        saveState();
+      }
+    } catch {}
     try { if (typeof showScreen === 'function') showScreen('settings'); } catch {}
     try { if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true); } catch {}
     setTimeout(() => {
@@ -491,13 +512,15 @@ async function openSubscribeModal() {
       if (_oneTime2) descHtml += ' 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).';
       else descHtml += ' 정기 구독 — 매월 9,900원 자동 결제, 언제든 해지.';
     }
+    // V4 (사용자 명시 2026-05-14): plan-color 강조 — Light=베이지, Plus=딥블루, Premium=황금. label 글자색 적용.
+    const _tierColor = (typeof _planColorVar === 'function') ? _planColorVar(key) : 'var(--accent)';
     return `
       <div class="tier-card ${recommended ? 'tier-recommended' : ''}" style="position:relative; padding:18px 16px; background:${cardBg}; border:${cardBorder}; border-radius:14px; margin-bottom:10px; ${cardOpacity}">
         ${trialBadge}
         ${currentBadge}
         ${recommendBadge}
         <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;">
-          <div style="font-size:18px; font-weight:700; color:var(--text);">${plan.emoji} ${plan.label}</div>
+          <div style="font-size:18px; font-weight:700; color:${_tierColor};">${plan.emoji} ${plan.label}</div>
           ${priceHtml}
         </div>
         <div style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">${plan.tagline}</div>
@@ -826,6 +849,7 @@ async function proceedSubscribe(tierKey) {
         // V4 (사용자 명시 2026-05-13 ultrathink): 토스트 대체 — 명시 성공 모달.
         _showRecurringSuccessModal({
           tier: _actualTier,
+          plan: _actualPlanKey,
           pgLabel: _pgLabel(_pg),
           isTrial: false,
           nextBillingIso: result.next_billing_at || null
@@ -1032,6 +1056,7 @@ async function proceedPlusTrial() {
         } catch {}
         _showRecurringSuccessModal({
           tier,
+          plan: 'light',
           pgLabel: _pgLabel(_pg),
           isTrial: true,
           nextBillingIso: result.trial_until || result.next_billing_at || null

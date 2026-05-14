@@ -280,7 +280,9 @@ async function _doRefreshBillingStatus(manual) {
       } else {
         expiresLabel = cancelledRenewal ? `${subExpires}에 종료` : `${subExpires}까지`;
       }
-      html += `<div><b>구독</b>: ${planMeta.emoji} ${planMeta.label} <span style="color:var(--text-soft); font-size:11px;">— ${expiresLabel}</span></div>`;
+      // V4 (사용자 명시 2026-05-14): plan-color 적용 — Light=베이지/모래, Plus=딥블루, Premium=황금.
+      const _planColor = (typeof _planColorVar === 'function') ? _planColorVar(planKey) : 'var(--accent)';
+      html += `<div><b>구독</b>: <span style="color:${_planColor}; font-weight:600;">${planMeta.emoji} ${planMeta.label}</span> <span style="color:var(--text-soft); font-size:11px;">— ${expiresLabel}</span></div>`;
       // early_light: 토큰 양 안 보이게 (체험 플랜은 수치 노출 X)
       if (planKey !== 'early_light') {
         // V4 (사용자 명시 2026-05-13): 정성 라벨 폐기 — 'N시간 후 reset' 만 13px 표시.
@@ -335,6 +337,11 @@ async function _doRefreshBillingStatus(manual) {
     // V4 (사용자 명시 2026-05-13 ultrathink): Plan 변경 시 메인 헤더 RAG 토글 visual sync (Light → Plus 가입 등).
     if (typeof updateMainHeaderBtnVisual === 'function') {
       try { updateMainHeaderBtnVisual(); } catch {}
+    }
+    // V4 (사용자 명시 2026-05-14 ultrathink): plan 결제 직후 onboarding chain auto-trigger (가계약 토스트만 / SDK 콜백 경로).
+    //   결제 성공 모달이 떠있으면 그 모달의 [닫기] callback 이 직접 trigger 하므로 race 차단됨.
+    if (typeof _maybeTriggerPlanOnboarding === 'function') {
+      try { _maybeTriggerPlanOnboarding(); } catch {}
     }
     // 캐시 채워졌으니 배너 큐 재시도 (sync tip 등)
     if (typeof _renderNextBanner === 'function') { try { _renderNextBanner(); } catch {} }

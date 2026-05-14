@@ -23,4 +23,11 @@
     --paper-text-soft: rgba(110,80,40,0.65);
     --paper-text-dim: rgba(110,80,40,0.5);
     --paper-rule: rgba(110,80,40,0.28);
+    /* 사용자 명시 2026-05-14: plan-color 시스템 — Light=베이지/모래, Plus=차분한 딥블루, Premium=황금. 결제 모달/카드/설정/onboarding 전반 적용. */
+    --tier-light: #c2a878;
+    --tier-light-dim: rgba(194, 168, 120, 0.18);
+    --tier-plus: #4a7cb5;
+    --tier-plus-dim: rgba(74, 124, 181, 0.18);
+    --tier-premium: #ffd700;
+    --tier-premium-dim: rgba(255, 215, 0, 0.16);
   }
