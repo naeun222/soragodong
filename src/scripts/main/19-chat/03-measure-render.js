@@ -82,10 +82,11 @@ function renderChat() {
     _simSticker.style.display = _hasSim ? 'block' : 'none';
   }
 
-  // 사용자 명시 2026-05-01 ultrathink: ✓ 마무리 hint 배너 — 첫 3 챕터 동안 + dismiss 안 됐을 때만 노출.
+  // V4 (사용자 명시 2026-05-15): ✓ 마무리 hint 배너 — 첫 ✓ 누를 때까지만 (chapterCompletedCount === 0) + x dismiss 도 유지.
+  //   첫 챕터 마무리 (endChapter 가 chapterCompletedCount 1 로 만듦) 자체가 자연 dismiss trigger.
   const _endHintBanner = document.getElementById('chatEndHintBanner');
   if (_endHintBanner) {
-    const _showHint = ((state.chapterCompletedCount || 0) < 3) && !state._chatEndHintDismissed;
+    const _showHint = ((state.chapterCompletedCount || 0) === 0) && !state._chatEndHintDismissed;
     _endHintBanner.style.display = _showHint ? 'inline-flex' : 'none';
   }
 

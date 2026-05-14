@@ -12182,6 +12182,122 @@
   50%  { box-shadow: 0 0 0 12px rgba(212, 168, 90, 0); }
   100% { box-shadow: 0 0 0 0 rgba(212, 168, 90, 0); }
 }
+
+/* V4 (사용자 명시 2026-05-15 ultrathink): V9 warm start modal — hero 끝 후 띄움.
+   intake 폼 / 4단 분석 카드 / 코치마크 sequence 다 폐기 → 이 modal 한 화면이 onboarding 전부.
+   양자택일 강제 (esc / 바깥 click dismiss X) — 사용자가 "보내기" 또는 "없어" 둘 중 하나로 진입. */
+.v9-warm-overlay {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg, #0c0c0e);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-top: max(24px, env(safe-area-inset-top, 24px));
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+  animation: v9WarmFadeIn 380ms ease-out both;
+}
+@keyframes v9WarmFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.v9-warm-card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  animation: v9WarmCardRise 520ms 80ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes v9WarmCardRise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.v9-warm-godong {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: transparent;
+  margin-bottom: 4px;
+}
+.v9-warm-greeting {
+  color: var(--text-soft, #b8b8bd);
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+.v9-warm-question {
+  color: var(--text, #f3f3f5);
+  font-family: 'Gowun Batang', serif;
+  font-size: 22px;
+  line-height: 1.45;
+  text-align: center;
+  letter-spacing: 0.01em;
+  margin-bottom: 8px;
+}
+.v9-warm-input {
+  width: 100%;
+  min-height: 84px;
+  padding: 14px 16px;
+  font-size: 16px;
+  line-height: 1.5;
+  font-family: inherit;
+  color: var(--text, #f3f3f5);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  resize: none;
+  outline: none;
+  transition: border-color 180ms ease, background 180ms ease;
+  /* iOS 16px+ = zoom-in 회피 */
+}
+.v9-warm-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+.v9-warm-input:focus {
+  border-color: rgba(212, 168, 90, 0.6);
+  background: rgba(255, 255, 255, 0.08);
+}
+.v9-warm-buttons {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.v9-warm-btn {
+  flex: 1;
+  padding: 13px 14px;
+  font-size: 14.5px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 160ms ease, transform 120ms ease, filter 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.v9-warm-btn:active { transform: scale(0.97); }
+.v9-warm-btn.ghost {
+  flex: 0.7;
+  background: transparent;
+  color: var(--text-soft, #b8b8bd);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.v9-warm-btn.ghost:hover { background: rgba(255, 255, 255, 0.05); color: var(--text, #f3f3f5); }
+.v9-warm-btn.primary {
+  flex: 1.3;
+  background: var(--accent, #d4a85a);
+  color: #fff;
+  border: none;
+}
+.v9-warm-btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+.v9-warm-btn.primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
   /* 사용자 명시 2026-05-10: 고동의 일기 모달 — HANDOFF.md prototype/styles/app.css 변환.
      기존 미니 리뷰 모달 (.rc-mini-review-*) 폐기. 새 .gdiary-* 클래스. */
 
@@ -23488,17 +23604,30 @@ function todayKey() { return getDayKey(); }
 
 
 // ═══════════════════════════════════════════════════════════════
-// V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼
+// V4 (사용자 명시 2026-05-15 ultrathink): V9 시작 튜토리얼 (V8 → V9 reflow).
 // 게스트 첫 진입 / 카카오 신규 (게스트 이력 X) → 자동 fire.
-// 흐름: cold open hero (안녕? → differentiator) → intake 모달 →
-//       chat 탭 자동 + 4단 분석 메시지 inject → 마무리 코치마크 →
-//       헤더 모델 토글 코치마크 → 종료 (tutorialVersion='v8-start' 마킹).
+//
+// V8 흐름 (intake 폼 + 4단 분석 inject + 이어/새로 코치마크 + 마무리 학습) 전체 폐기.
+//   = 84% 가입 → 첫 chat drop 의 주범. 사용자 가설 "paradox of choice + clinical 첫인상" 데이터로 confirm.
+//   사용자 hook 가설 = empathy ("공감이 되면 알아서 이어 대화"). Replika style 최소화로 정중앙 배치.
+//
+// V9 흐름:
+//   1) cold open hero (V8 유지 — "안녕?" → differentiator 차별화 강함)
+//   2) warm start modal — "요즘 머릿속에 제일 큰 거 하나만 풀어볼래?" + textarea + [없어][보내기]
+//   3) 분기:
+//      (A) 텍스트 입력 → chat 탭 + sendChat (사용자 텍스트가 첫 user message → normal AI 응답)
+//      (B) "없어" → "좋아." 토스트 + chat 탭 + ice-breaker assistant inject (pool 2개 random)
+//
+// 함수 명명: runStartTutorialV8 / shouldRunStartTutorialV8 이름 보존 (호출처 다수). 마킹은 'v9-start' 신규.
+// 기존 'v8-start' 마킹 사용자도 동일 가드 — 재진입 X (기존 진행 보존).
+// _v8ShowCoachmark / _v8HeroSequence / _v8Sleep / _v8CleanupAll = 다른 튜토리얼 (12/13/14) 공유 → 유지.
 // 시드 / 테스터 무관 — testerMode 면 skip.
 // ═══════════════════════════════════════════════════════════════
 
 function shouldRunStartTutorialV8() {
   if (!state) return false;
-  if (state.tutorialVersion === 'v8-start') return false;
+  // V4 (사용자 명시 2026-05-15): v8-start / v9-start 둘 다 가드 — 기존 V8 사용자 재진입 X.
+  if (state.tutorialVersion === 'v8-start' || state.tutorialVersion === 'v9-start') return false;
   if (state.preferences && state.preferences.testerMode) return false;
   // 게스트 첫 진입 — intakeWorry 비어있고 chatMessages 비어있으면 첫 진입
   if (state.isGuest) {
@@ -23537,25 +23666,18 @@ async function runStartTutorialV8() {
   // tutorialVersion 마킹 = 시작 시점 — 중간 reload 시 재진입 차단 (사용자 신뢰 우선, 같은 화면 반복 회피).
   state.preferences = state.preferences || {};
   state.preferences._coreTutorialAutoStarted = true;
-  state.tutorialVersion = 'v8-start';
+  state.tutorialVersion = 'v9-start';
   try { saveState(); } catch {}
   try {
-    await _v8HeroSequence();           // 화면 1·2
-    await _v8RunIntakeAndInject();     // 모달 + chat inject
-    await _v8Sleep(900);               // chat 메시지 / 스크롤 settle
-    // 사용자 명시 2026-05-06: 중간 단계 — 4단 분석 카드 읽기 안내 (마무리 직전 압박감 X).
-    await _v8CoachmarkReadFourStage();
-    await _v8Sleep(250);
-    // 사용자 명시 2026-05-06 (추가): 분기 step — 이 대화 더 이어갈래 / 새로 할래.
-    //   continue → 마무리는 설명만 하고 자동 advance / fresh → 사용자가 ✓ 직접 클릭.
-    const branch = await _v8CoachmarkContinueOrFresh();
-    await _v8Sleep(200);
-    await _v8CoachmarkEndChapter(branch);
-    await _v8Sleep(250);
-    // 사용자 명시 2026-05-06 (추가): 마무리 멘트 step — 친절한 톤.
-    await _v8CoachmarkClosing();
+    await _v8HeroSequence();                  // 화면 1·2 (V8 hero 유지 — 차별화 강함)
+    const result = await _v9ShowWarmStartModal();
+    if (result && result.type === 'answer') {
+      await _v9HandleAnswer(result.answer);
+    } else {
+      await _v9HandleNone();
+    }
   } catch (e) {
-    console.warn('[v8 tutorial]', e);
+    console.warn('[v9 tutorial]', e);
   } finally {
     window._v8TutorialRunning = false;
     _v8CleanupAll();
@@ -23653,79 +23775,120 @@ function _v8HeroSequence() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// INTAKE 모달 + chat 탭 자동 + 4단 분석 메시지 inject
+// V9 WARM START MODAL — Replika style 최소화 (intake / 4단 분석 inject 폐기)
 // ─────────────────────────────────────────────────────────────
 
-async function _v8RunIntakeAndInject() {
-  // _canAI 가드 — 세션 확보 못 하면 토스트 후 종료
-  if (typeof _canAI === 'function' && !_canAI()) {
-    if (typeof showToast === 'function') showToast('🔑 잠시 후 다시 시도해줘');
-    return;
-  }
-  if (typeof runIntakeFlow !== 'function') {
-    console.warn('[v8] runIntakeFlow 부재');
-    return;
-  }
-  // intake 단계 5 stash 가 _onbTutorialMode 플래그 의존 → 우회 위해 v8 전용 플래그 set
-  window._v8TutorialMode = true;
-  window._onbTutorialMode = true;  // step5 의 stash 분기 reuse — _startIntakeFromTutorial 가 쓰는 그 플래그
-  try {
-    await runIntakeFlow();
-  } catch (e) { console.warn('[v8 intake]', e); }
-  window._onbTutorialMode = false;
-  window._v8TutorialMode = false;
+// V4 (사용자 명시 2026-05-15 ultrathink): "없어" 분기 ice-breaker pool.
+//   1) 친구 reciprocity ("내가 먼저") — friend framework 정중앙
+//   2) bar 가장 낮음 ("별거 아닌 거")
+//   pool 보존 + random pick = variability (매번 똑같으면 친구다움 즉시 깨짐).
+const _V9_ICEBREAKERS = [
+  '음, 그럼 내가 먼저 — 나는 너에 대해 아직 아무것도 모르는데, 한 가지만 알려줄래? 좋아하는 거든 싫어하는 거든. 별거 아니어도 돼.',
+  '그럼 오늘 한 일 중에 제일 별거 아닌 거 하나 얘기해볼래? 진짜 별거 아닌 거 — 아침에 뭐 먹었다, 본 광고가 웃겼다, 그런 거.'
+];
 
-  const analysis = window._lastIntakeAnalysis;
-  const worries = Array.isArray(window._lastIntakeWorries) ? window._lastIntakeWorries : [];
-  delete window._lastIntakeAnalysis;
-  delete window._lastIntakeWorries;
+function _v9PickIcebreaker() {
+  return _V9_ICEBREAKERS[Math.floor(Math.random() * _V9_ICEBREAKERS.length)];
+}
 
-  // chat 탭으로 자동 전환
+function _v9ShowWarmStartModal() {
+  return new Promise((resolve) => {
+    const root = document.getElementById('v8TutorialRoot');
+    if (!root) { resolve({ type: 'none' }); return; }
+    root.setAttribute('aria-hidden', 'false');
+    root.innerHTML = `
+      <div class="v9-warm-overlay">
+        <div class="v9-warm-card">
+          <img class="v9-warm-godong" src="/godongicon.png" alt="고동이" decoding="async">
+          <div class="v9-warm-greeting">안녕 🐚 나 고동이야.</div>
+          <div class="v9-warm-question">요즘 머릿속에 제일 큰 거<br>하나만 풀어볼래?</div>
+          <textarea class="v9-warm-input" id="v9WarmInput" placeholder="한 줄도 좋아" rows="3"></textarea>
+          <div class="v9-warm-buttons">
+            <button class="v9-warm-btn ghost" id="v9WarmNone" type="button">없어</button>
+            <button class="v9-warm-btn primary" id="v9WarmSend" type="button" disabled>보내기 →</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const input = document.getElementById('v9WarmInput');
+    const sendBtn = document.getElementById('v9WarmSend');
+    const noneBtn = document.getElementById('v9WarmNone');
+    let resolved = false;
+    const cleanup = () => {
+      root.innerHTML = '';
+      root.setAttribute('aria-hidden', 'true');
+    };
+    if (input) {
+      setTimeout(() => { try { input.focus(); } catch {} }, 80);
+      input.addEventListener('input', () => {
+        if (sendBtn) sendBtn.disabled = !input.value.trim();
+      });
+      // Cmd/Ctrl+Enter = submit. Enter 단독 = newline.
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          if (sendBtn && !sendBtn.disabled) sendBtn.click();
+        }
+      });
+    }
+    if (sendBtn) sendBtn.addEventListener('click', () => {
+      if (resolved) return;
+      const txt = ((input && input.value) || '').trim();
+      if (!txt) return;
+      resolved = true;
+      cleanup();
+      resolve({ type: 'answer', answer: txt });
+    });
+    if (noneBtn) noneBtn.addEventListener('click', () => {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      resolve({ type: 'none' });
+    });
+  });
+}
+
+async function _v9HandleAnswer(text) {
   if (typeof showScreen === 'function') showScreen('chat');
-
-  if (!analysis || !analysis.text) return;
-
-  state.chatMessages = state.chatMessages || [];
-  const nowIso = new Date().toISOString();
-  if (worries.length > 0) {
+  await _v8Sleep(120);  // chat 탭 진입 settle
+  const chatInput = document.getElementById('chatInput');
+  if (chatInput && typeof sendChat === 'function') {
+    // sendChat 의 위기 신호 detect / daily cap / 4AM cutoff 분기 등 normal flow 그대로 통과.
+    chatInput.value = text;
+    try { chatInput.dispatchEvent(new Event('input')); } catch {}
+    try { await sendChat(); } catch (e) { console.warn('[v9] sendChat', e); }
+  } else {
+    // fallback — input / sendChat 미가용 시 직접 push + AI 호출
+    state.chatMessages = state.chatMessages || [];
     state.chatMessages.push({
       role: 'user',
-      content: worries.join('\n\n'),
-      timestamp: nowIso
+      content: text,
+      timestamp: new Date().toISOString()
     });
+    try { saveState(); } catch {}
+    if (typeof renderChat === 'function') renderChat();
+    if (typeof generateAIResponse === 'function') {
+      try { await generateAIResponse(); } catch (e) { console.warn('[v9] generateAIResponse', e); }
+    }
   }
-  // godong intro line — 사용자 명시 카피
+}
+
+async function _v9HandleNone() {
+  if (typeof showToast === 'function') showToast('좋아.');
+  if (typeof showScreen === 'function') showScreen('chat');
+  await _v8Sleep(220);
+  const icebreaker = _v9PickIcebreaker();
+  state.chatMessages = state.chatMessages || [];
   state.chatMessages.push({
     role: 'assistant',
-    content: '방금 들은 거, 이렇게 봤어 —',
-    timestamp: nowIso
+    content: icebreaker,
+    timestamp: new Date().toISOString()
   });
-  // 사용자 명시 2026-05-08: AI 4단 raw text 그대로 push — askDeeper 와 100% 동일 시각.
-  const fourStage = analysis.text;
-  // proposal title 추출 — [오늘의 제안] 섹션 첫 줄.
-  let proposalTitle = '오늘 한 걸음';
-  const propMatch = fourStage.match(/\[오늘의 제안\]\s*([\s\S]+?)(?=\n\s*\[|$)/);
-  if (propMatch) {
-    const firstLine = propMatch[1].trim().split(/\n/)[0].trim();
-    if (firstLine) proposalTitle = firstLine.slice(0, 40);
-  }
-  state.chatMessages.push({
-    role: 'assistant',
-    content: fourStage,
-    fromDeeper: true,
-    proposal: true,
-    proposalData: { title: proposalTitle },
-    timestamp: nowIso
-  });
-  // 사용자 명시 2026-05-06 ultrathink: 4단 분석 직후 '더 알고 싶어 ▾' 설명만. 마무리는 코치마크가 책임.
-  state.chatMessages.push({
-    role: 'assistant',
-    content: '처음이라 위 4단으로 정리해줬어 ✦\n평소엔 답 아래 "더 알고 싶어 ▾" 누르면 이렇게 깊게 풀어줄게.',
-    timestamp: nowIso
-  });
-  saveState();
+  try { saveState(); } catch {}
   if (typeof renderChat === 'function') renderChat();
-  setTimeout(() => { if (typeof scrollChatToBottom === 'function') scrollChatToBottom(true); }, 80);
+  setTimeout(() => {
+    if (typeof scrollChatToBottom === 'function') scrollChatToBottom(true);
+  }, 80);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -23883,101 +24046,10 @@ function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', in
   });
 }
 
-// 사용자 명시 2026-05-06: intake → 마무리 사이 중간 단계 — 4단 분석 카드 읽기 안내.
-// chat 메시지 중 [내가 본 것] 포함하는 assistant 메시지 (= 4단 분석) 의 DOM 찾아 가리킴.
-function _v8CoachmarkReadFourStage() {
-  const allMsgs = document.querySelectorAll('#chatMessages .msg.assistant');
-  const fourStageMsg = Array.from(allMsgs).find(m => /\[내가 본 것\]/.test(m.textContent || ''));
-  if (!fourStageMsg) return Promise.resolve();
-  // 사용자가 분석 살펴볼 시간 — 메시지 살짝 보이게 스크롤 후 코치마크.
-  try { fourStageMsg.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
-  const body = `
-    <div class="v8-coach-title">내가 본 거야</div>
-    <div class="v8-coach-text">
-      방금 들려준 거 — 이렇게 정리했어.<br>
-      <span class="v8-coach-text-soft">천천히 읽어봐 ✦</span>
-    </div>
-  `;
-  return _v8ShowCoachmark({
-    targetEl: fourStageMsg,
-    body,
-    position: 'bottom'
-  });
-}
-
-// 사용자 명시 2026-05-06 (추가): 분기 step — 4단 분석 본 후 "이 대화 더 이어갈래 / 새로 할래".
-//   continue → _v8CoachmarkEndChapter('continue') 가 설명만 (자동 advance 가능한 OK)
-//   fresh    → _v8CoachmarkEndChapter('fresh') 가 사용자 직접 ✓ 클릭 강제 (interactive)
-function _v8CoachmarkContinueOrFresh() {
-  const body = `
-    <div class="v8-coach-title">분석 해줬어 ✦</div>
-    <div class="v8-coach-text">
-      이 대화 <b>더 이어가도</b> 되고,<br>
-      처음부터 <b>새로 시작</b>해도 돼.
-    </div>
-  `;
-  return _v8ShowCoachmark({
-    body,
-    allowNoTarget: true,
-    branchButtons: [
-      { label: '✦ 더 이어갈래', value: 'continue' },
-      { label: '새로 할래', value: 'fresh' }
-    ]
-  });
-}
-
-function _v8CoachmarkEndChapter(branch) {
-  const target = '.chat-end-btn';
-  // 사용자 명시 2026-05-06 (추가): branch 별 분기.
-  //   'continue' → 마무리는 설명만 (사용자 직접 클릭 강요 X). OK 버튼으로 advance.
-  //   'fresh'    → 사용자가 ✓ 직접 눌러야 advance (chatMessages.empty 감지).
-  if (branch === 'continue') {
-    const body = `
-      <div class="v8-coach-title">대화 마무리</div>
-      <div class="v8-coach-text">
-        나중에 입력창 옆 <b>✓</b> 누르면 챕터로 묶어 도서관에 넣어줄게.<br>
-        <span class="v8-coach-text-soft">지금은 이대로 이어가자 🐚</span>
-      </div>
-    `;
-    return _v8ShowCoachmark({
-      targetSelector: target,
-      body,
-      position: 'top'
-    });
-  }
-  // fresh — 직접 클릭
-  const body = `
-    <div class="v8-coach-title">대화 마무리</div>
-    <div class="v8-coach-text">
-      한 번 직접 눌러볼래? ✓<br>
-      내가 정리해서 도서관에 넣어둘게.<br>
-      <span class="v8-coach-text-soft">나 탭에서도 보여.</span>
-    </div>
-  `;
-  return _v8ShowCoachmark({
-    targetSelector: target,
-    body,
-    position: 'top',
-    interactive: true,
-    waitFor: () => Array.isArray(state.chatMessages) && state.chatMessages.length === 0
-  });
-}
-
-// 사용자 명시 2026-05-06 (추가): 마무리 멘트 step — 친절한 톤.
-function _v8CoachmarkClosing() {
-  const body = `
-    <div class="v8-coach-title">자, 한 바퀴 돌았어 🐚</div>
-    <div class="v8-coach-text">
-      궁금한 거 있으면 언제든 말해줘.<br>
-      <span class="v8-coach-text-soft">매일 한 번 체크인하면 — 더 깊게 너를 이해해갈게 ✦</span>
-    </div>
-  `;
-  return _v8ShowCoachmark({
-    body,
-    allowNoTarget: true,
-    position: 'bottom'
-  });
-}
+// V4 (사용자 명시 2026-05-15): V8 의 _v8CoachmarkReadFourStage / ContinueOrFresh / EndChapter / Closing 폐기.
+//   intake + 4단 분석 inject 자체가 V9 에서 빠져 코치마크들도 타깃 메시지 X.
+//   ✓ 마무리 학습은 chat-input-bar 의 chatEndHintBanner (첫 ✓ 까지 자연 노출) 가 대체.
+//   _v8ShowCoachmark infra 는 12/13/14 (sim / pearl / strategy 튜토리얼) 가 공유 → 유지.
 
 function _v8Sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -39813,10 +39885,11 @@ function renderChat() {
     _simSticker.style.display = _hasSim ? 'block' : 'none';
   }
 
-  // 사용자 명시 2026-05-01 ultrathink: ✓ 마무리 hint 배너 — 첫 3 챕터 동안 + dismiss 안 됐을 때만 노출.
+  // V4 (사용자 명시 2026-05-15): ✓ 마무리 hint 배너 — 첫 ✓ 누를 때까지만 (chapterCompletedCount === 0) + x dismiss 도 유지.
+  //   첫 챕터 마무리 (endChapter 가 chapterCompletedCount 1 로 만듦) 자체가 자연 dismiss trigger.
   const _endHintBanner = document.getElementById('chatEndHintBanner');
   if (_endHintBanner) {
-    const _showHint = ((state.chapterCompletedCount || 0) < 3) && !state._chatEndHintDismissed;
+    const _showHint = ((state.chapterCompletedCount || 0) === 0) && !state._chatEndHintDismissed;
     _endHintBanner.style.display = _showHint ? 'inline-flex' : 'none';
   }
 

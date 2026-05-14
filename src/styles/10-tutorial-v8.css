@@ -246,3 +246,119 @@
   50%  { box-shadow: 0 0 0 12px rgba(212, 168, 90, 0); }
   100% { box-shadow: 0 0 0 0 rgba(212, 168, 90, 0); }
 }
+
+/* V4 (사용자 명시 2026-05-15 ultrathink): V9 warm start modal — hero 끝 후 띄움.
+   intake 폼 / 4단 분석 카드 / 코치마크 sequence 다 폐기 → 이 modal 한 화면이 onboarding 전부.
+   양자택일 강제 (esc / 바깥 click dismiss X) — 사용자가 "보내기" 또는 "없어" 둘 중 하나로 진입. */
+.v9-warm-overlay {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg, #0c0c0e);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-top: max(24px, env(safe-area-inset-top, 24px));
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+  animation: v9WarmFadeIn 380ms ease-out both;
+}
+@keyframes v9WarmFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.v9-warm-card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  animation: v9WarmCardRise 520ms 80ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes v9WarmCardRise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.v9-warm-godong {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: transparent;
+  margin-bottom: 4px;
+}
+.v9-warm-greeting {
+  color: var(--text-soft, #b8b8bd);
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+.v9-warm-question {
+  color: var(--text, #f3f3f5);
+  font-family: 'Gowun Batang', serif;
+  font-size: 22px;
+  line-height: 1.45;
+  text-align: center;
+  letter-spacing: 0.01em;
+  margin-bottom: 8px;
+}
+.v9-warm-input {
+  width: 100%;
+  min-height: 84px;
+  padding: 14px 16px;
+  font-size: 16px;
+  line-height: 1.5;
+  font-family: inherit;
+  color: var(--text, #f3f3f5);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  resize: none;
+  outline: none;
+  transition: border-color 180ms ease, background 180ms ease;
+  /* iOS 16px+ = zoom-in 회피 */
+}
+.v9-warm-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+.v9-warm-input:focus {
+  border-color: rgba(212, 168, 90, 0.6);
+  background: rgba(255, 255, 255, 0.08);
+}
+.v9-warm-buttons {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.v9-warm-btn {
+  flex: 1;
+  padding: 13px 14px;
+  font-size: 14.5px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 160ms ease, transform 120ms ease, filter 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.v9-warm-btn:active { transform: scale(0.97); }
+.v9-warm-btn.ghost {
+  flex: 0.7;
+  background: transparent;
+  color: var(--text-soft, #b8b8bd);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.v9-warm-btn.ghost:hover { background: rgba(255, 255, 255, 0.05); color: var(--text, #f3f3f5); }
+.v9-warm-btn.primary {
+  flex: 1.3;
+  background: var(--accent, #d4a85a);
+  color: #fff;
+  border: none;
+}
+.v9-warm-btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+.v9-warm-btn.primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
