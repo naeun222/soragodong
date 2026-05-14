@@ -195,7 +195,6 @@ function _v9ShowWarmStartModal() {
       <div class="v9-warm-overlay">
         <div class="v9-warm-card">
           <img class="v9-warm-godong" src="/godongicon.png" alt="고동이" decoding="async">
-          <div class="v9-warm-greeting">안녕 🐚 나 고동이야.</div>
           <div class="v9-warm-question">요즘 머릿속에 제일 큰 거<br>하나만 풀어볼래?</div>
           <textarea class="v9-warm-input" id="v9WarmInput" placeholder="한 줄도 좋아" rows="3"></textarea>
           <div class="v9-warm-buttons">

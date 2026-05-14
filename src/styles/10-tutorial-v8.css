@@ -289,11 +289,6 @@
   background: transparent;
   margin-bottom: 4px;
 }
-.v9-warm-greeting {
-  color: var(--text-soft, #b8b8bd);
-  font-size: 14px;
-  letter-spacing: 0.01em;
-}
 .v9-warm-question {
   color: var(--text, #f3f3f5);
   font-family: 'Gowun Batang', serif;
