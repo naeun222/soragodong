@@ -397,6 +397,71 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
     created_at: f.created_at
   }));
 
+  // ───── F: 사용자별 활동 표 (E2EE 본문 X, 메타데이터만) ─────
+  // user_id / email / 가입일 / 마지막 활동 / chat 메시지 수 / 총 호출 / 누적 비용 / plan / source / open feedback 수.
+  const feedbackOpenByUser = new Map<string, number>();
+  for (const f of feedbackAll) {
+    if (f.status !== 'open') continue;
+    // feedbackAll 가 user_id 필드 안 가져옴 — feedbackOpen (limit 3) 만 user_email 있음. 일단 user_id 매칭 X (집계는 정확, 사용자별 매칭은 skip).
+  }
+  const usersTable = authUsers.map((au: any) => {
+    const usage = usageByUserId.get(au.id);
+    const bill = billingByUserId.get(au.id);
+    const acq = acqByUserId.get(au.id);
+    const subActive = !!bill?.subscription_active
+      && bill?.subscription_expires_at
+      && new Date(bill.subscription_expires_at).getTime() > now;
+    return {
+      id: au.id,
+      email: au.email || null,
+      isGuest: !!au.is_anonymous,
+      createdAt: au.created_at || null,
+      lastSignInAt: au.last_sign_in_at || null,
+      lastActivityAt: usage?.firstAt || null,  // first/last 명칭 혼동: usage.firstAt 은 30d 안 가장 오래된 row. last 은 별도 계산 필요 — order desc 였으니 첫 push 가 last.
+      chatCount: usage?.chatCount || 0,
+      totalCalls: usage?.count || 0,
+      totalCostUsd: +(usage?.cost || 0).toFixed(4),
+      plan: bill?.subscription_plan || null,
+      subscriptionActive: subActive,
+      creditBalanceUsd: bill?.credit_balance_usd ?? null,
+      source: acq ? classifySource(acq) : null
+    };
+  });
+  // last activity desc 로 정렬 — null 은 끝.
+  usersTable.sort((a: any, b: any) => {
+    const ta = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
+    const tb = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
+    return tb - ta;
+  });
+
+  // 한 가지 fix — usageByUserId.firstAt 은 사실 last (order desc 라 첫 push 가 최신).
+  // 그러나 코드 가독성 위해 별도 lastActivity map 빌드 (정확성).
+  const lastActivityMap = new Map<string, string>();
+  for (const u of usage30d) {
+    const prev = lastActivityMap.get(u.user_id);
+    if (!prev || (u.recorded_at && u.recorded_at > prev)) {
+      lastActivityMap.set(u.user_id, u.recorded_at);
+    }
+  }
+  for (const row of usersTable) {
+    row.lastActivityAt = lastActivityMap.get(row.id) || null;
+  }
+  usersTable.sort((a: any, b: any) => {
+    const ta = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
+    const tb = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
+    return tb - ta;
+  });
+
+  // endpoint 사용 분포 — 호출 수 기준 (cost 카드와 별도, 본문은 안 보이지만 어떤 기능 많이 썼는지).
+  const callsByEndpoint: Record<string, number> = {};
+  for (const u of usage30d) {
+    if (u.endpoint) callsByEndpoint[u.endpoint] = (callsByEndpoint[u.endpoint] || 0) + 1;
+  }
+  const endpoint_usage = Object.entries(callsByEndpoint)
+    .map(([endpoint, count]) => ({ endpoint, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
   return jsonResponse({
     ok: true,
     acquisition: {
@@ -434,6 +499,11 @@ export async function onRequestGet(context: { request: Request; env: AdminEnv })
       replied_count,
       recent_open
     },
+    users: {
+      total: usersTable.length,
+      rows: usersTable.slice(0, 50)
+    },
+    endpoint_usage,
     generated_at: new Date().toISOString()
   });
 }

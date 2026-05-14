@@ -62676,6 +62676,8 @@ function _renderAdminAnalyticsBody(data) {
     ${_renderAdminCardRevenue(data.revenue)}
     ${_renderAdminCardCost(data.cost)}
     ${_renderAdminCardFeedback(data.feedback)}
+    ${_renderAdminCardEndpoints(data.endpoint_usage)}
+    ${_renderAdminCardUsers(data.users)}
   `;
 }
 
@@ -62932,6 +62934,122 @@ function _renderAdminCardFeedback(f) {
           </div>`
         : '<div style="color:var(--text-soft); font-size:11px; margin-top:8px;">open 0</div>'}
       <button class="btn-secondary" style="width:100%; margin-top:10px; padding:6px; font-size:11px;" onclick="closeAdminAnalyticsDashboard(); openAdminFeedbackInbox();">전체 보기</button>
+    </div>
+  `;
+}
+
+// ─── 📚 endpoint 사용 분포 (호출 수 기준, 본문 X) ───
+function _renderAdminCardEndpoints(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return `<div class="admin-card"><div class="admin-card-title">📚 endpoint 사용 (30d)</div><div style="color:var(--text-soft); font-size:11px;">데이터 X</div></div>`;
+  }
+  const max = Math.max(1, ...rows.map(r => r.count));
+  const total = rows.reduce((s, r) => s + r.count, 0);
+  // endpoint label 매핑 (한국어)
+  const labelMap = {
+    chat: '💬 chat (메인 대화)',
+    decision_step: '🧬 strategy (4단 분석)',
+    archive_summary: '📔 archive 요약',
+    pearl_polish: '🔮 진주 정리',
+    topic_extract: '✦ topic 추출',
+    weekly: '📅 주간 리뷰',
+    monthly: '📅 월간 리뷰',
+    quarterly: '📅 분기 리뷰',
+    annual: '📅 연간 리뷰',
+    deeper: '▾ 더 깊이',
+    proposal: '🌿 제안',
+    force_analyze: '⚡ 강제 분석',
+    rag: '🔍 RAG 검색'
+  };
+  const html = rows.map(r => {
+    const pct = Math.round((r.count / max) * 100);
+    const label = labelMap[r.endpoint] || r.endpoint;
+    return `<div style="margin-bottom:6px;">
+      <div style="display:flex; justify-content:space-between; font-size:10.5px; margin-bottom:2px;">
+        <span>${escapeHtml(label)}</span>
+        <span style="color:var(--text-soft);">${r.count.toLocaleString()}</span>
+      </div>
+      <div style="background:var(--card-bg); height:4px; border-radius:2px; overflow:hidden;">
+        <div style="background:var(--accent); height:100%; width:${pct}%;"></div>
+      </div>
+    </div>`;
+  }).join('');
+  return `
+    <div class="admin-card" style="grid-column:span 2;">
+      <div class="admin-card-title">📚 endpoint 사용 분포 (30d, 총 ${total.toLocaleString()} 호출)</div>
+      ${html}
+    </div>
+  `;
+}
+
+// ─── 👤 사용자 활동 표 (E2EE 본문 X, 메타데이터만) ───
+function _renderAdminCardUsers(u) {
+  if (!u || !Array.isArray(u.rows)) {
+    return `<div class="admin-card" style="grid-column:1/-1;"><div class="admin-card-title">👤 사용자 활동</div><div style="color:var(--text-soft); font-size:11px;">데이터 X</div></div>`;
+  }
+  const rows = u.rows;
+  if (rows.length === 0) {
+    return `<div class="admin-card" style="grid-column:1/-1;"><div class="admin-card-title">👤 사용자 활동 (0명)</div></div>`;
+  }
+  const planEmojiMap = { early_lifetime: '🐚', light: '🌊', premium: '✨' };
+  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' }) : '—';
+  const fmtTime = (iso) => {
+    if (!iso) return '—';
+    const ms = Date.now() - new Date(iso).getTime();
+    const days = Math.floor(ms / 86400000);
+    if (days < 1) {
+      const hrs = Math.floor(ms / 3600000);
+      if (hrs < 1) return '방금';
+      return `${hrs}h 전`;
+    }
+    if (days < 30) return `${days}d 전`;
+    return new Date(iso).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' });
+  };
+  const fmtUsd = (n) => '$' + (Number(n) || 0).toFixed(3);
+  const tableRows = rows.map(r => {
+    const planBadge = r.subscriptionActive && r.plan
+      ? `<span style="font-size:10px; color:var(--accent); background:var(--accent-dim); padding:1px 6px; border-radius:8px;">${planEmojiMap[r.plan] || '💎'} ${escapeHtml(r.plan)}</span>`
+      : r.isGuest
+        ? `<span style="font-size:10px; color:var(--text-dim);">👤 guest</span>`
+        : `<span style="font-size:10px; color:var(--text-dim);">🆓 free</span>`;
+    const email = r.email ? escapeHtml(r.email) : (r.isGuest ? '(게스트)' : '—');
+    const idShort = r.id ? r.id.slice(0, 8) + '…' : '—';
+    const sourceBadge = r.source ? `<span style="font-size:9.5px; color:var(--text-soft);">${escapeHtml(r.source)}</span>` : '';
+    return `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:6px 8px; font-size:11px;">${planBadge}</td>
+      <td style="padding:6px 8px; font-size:11px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.id || '')}">${email}<br><span style="font-size:9px; color:var(--text-dim);">${escapeHtml(idShort)}</span></td>
+      <td style="padding:6px 8px; font-size:10.5px; color:var(--text-soft);">${fmtDate(r.createdAt)}</td>
+      <td style="padding:6px 8px; font-size:10.5px; color:${r.lastActivityAt ? 'var(--text)' : 'var(--text-dim)'};">${fmtTime(r.lastActivityAt)}</td>
+      <td style="padding:6px 8px; font-size:11px; text-align:right; color:#7ec8e3;">${r.chatCount || 0}</td>
+      <td style="padding:6px 8px; font-size:11px; text-align:right;">${r.totalCalls || 0}</td>
+      <td style="padding:6px 8px; font-size:10.5px; text-align:right; color:${r.totalCostUsd > 0.5 ? '#d97a7a' : 'var(--text-soft)'};">${fmtUsd(r.totalCostUsd)}</td>
+      <td style="padding:6px 8px; text-align:center;">${sourceBadge}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="admin-card" style="grid-column:1/-1;">
+      <div class="admin-card-title">👤 사용자 활동 (${u.total}명, 최근 활동순 ${rows.length} 표시)</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:11px;">
+          <thead>
+            <tr style="color:var(--text-soft); text-align:left; border-bottom:1px solid var(--border);">
+              <th style="padding:6px 8px; font-weight:600; font-size:10px;">plan</th>
+              <th style="padding:6px 8px; font-weight:600; font-size:10px;">email / id</th>
+              <th style="padding:6px 8px; font-weight:600; font-size:10px;">가입</th>
+              <th style="padding:6px 8px; font-weight:600; font-size:10px;">마지막</th>
+              <th style="padding:6px 8px; font-weight:600; font-size:10px; text-align:right;">chat</th>
+              <th style="padding:6px 8px; font-weight:600; font-size:10px; text-align:right;">호출</th>
+              <th style="padding:6px 8px; font-weight:600; font-size:10px; text-align:right;">비용</th>
+              <th style="padding:6px 8px; font-weight:600; font-size:10px; text-align:center;">source</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px; font-size:10px; color:var(--text-dim); line-height:1.6;">
+        🔒 E2EE 보존 — 진주·메시지·미션 내용은 서버 비공개. 메타데이터 (호출 수·endpoint·비용) 만 추적.<br>
+        '호출' = 30일 안 backend api 총 호출 수 / 'chat' = 그 중 메인 대화 메시지 수.
+      </div>
     </div>
   `;
 }
