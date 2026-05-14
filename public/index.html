@@ -23147,19 +23147,20 @@ function _v8HeroSequence() {
     let acceptingTap = false;
 
     // 화면 1: "안녕?" 타이핑
+    // V4 (사용자 명시 2026-05-14): 첫 진입 hero tap 대기 미세 축소 — 600/130/1100 → 400/110/700.
     const screen1 = '안녕?';
     const typeOne = (i) => {
       if (i > screen1.length) {
         setTimeout(() => {
           if (hint) hint.classList.add('v8-pulse');
           acceptingTap = true;
-        }, 1100);
+        }, 700);
         return;
       }
       textEl.textContent = screen1.slice(0, i);
-      setTimeout(() => typeOne(i + 1), 130);
+      setTimeout(() => typeOne(i + 1), 110);
     };
-    setTimeout(() => typeOne(1), 600);
+    setTimeout(() => typeOne(1), 400);
 
     // 화면 2: cascade fade
     const renderScreen2 = () => {
@@ -23173,11 +23174,11 @@ function _v8HeroSequence() {
           <div class="v8-hero-line v8-hero-line-2">너를 기억해.</div>
           <div class="v8-hero-line v8-hero-line-3">그리고 시간이 지나면 —<br>너를 이해해.</div>
         `;
-        // 1500ms 정적 후 hint 호흡
+        // V4 (사용자 명시 2026-05-14): hero 화면 2 cascade 끝 (CSS line-3 = 1500ms) 직후 잠깐 dwell 후 tap — 3000 → 1800.
         setTimeout(() => {
           if (hint) hint.classList.add('v8-pulse');
           acceptingTap = true;
-        }, 3000);
+        }, 1800);
       }, 350);
     };
 
