@@ -8,15 +8,22 @@ function _renderTicketCardHTML(pearl, opts) {
   const emoji = sub?.emoji || '🎫';
   const label = sub?.label || '티켓';
   const title = pearl.content || pearl.bookTitle || label;
+  const venue = (pearl.venue || '').trim();
   const dateStr = pearl.eventDate
     ? new Date(pearl.eventDate + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
     : (pearl.createdAt ? new Date(pearl.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '');
   const sizeClass = opts.large ? ' tile-large' : '';
+  // V4 fix (사용자 보고 2026-05-14): venue 안 보임 + 제목 길면 카드 깨짐 → tc-title-text line-clamp + venue 줄 추가.
+  const titleBlock = `<div class="tc-title">
+    <div class="tc-title-text">${escapeHtml(title)}</div>
+    ${venue ? `<div class="tc-venue">📍 ${escapeHtml(venue)}</div>` : ''}
+    ${dateStr ? `<div class="tc-date">${dateStr}</div>` : ''}
+  </div>`;
   if (pearl.photo) {
     return `
       <div class="ticket-card${sizeClass}" onclick="openPearl('${pearl.id}')" style="background-image:url('${pearl.photo}');">
         <div class="tc-subtype">${emoji} ${escapeHtml(label)}</div>
-        <div class="tc-title">${escapeHtml(title)}<div class="tc-date">${dateStr}</div></div>
+        ${titleBlock}
       </div>
     `;
   }
@@ -24,7 +31,7 @@ function _renderTicketCardHTML(pearl, opts) {
     <div class="ticket-card ticket-card-empty${sizeClass}" onclick="openPearl('${pearl.id}')">
       <div class="tc-emoji-big">${emoji}</div>
       <div class="tc-subtype">${escapeHtml(label)}</div>
-      <div class="tc-title">${escapeHtml(title)}<div class="tc-date">${dateStr}</div></div>
+      ${titleBlock}
     </div>
   `;
 }
@@ -99,9 +106,16 @@ function _renderTicketSubTypeManager() {
 
   const subs = state.preferences.ticketSubTypes;
   let listHtml = '';
+  // V4 (사용자 명시 2026-05-14 ultrathink): ↑↓ 순서 변경 버튼 — 위/아래 끝에서 disabled.
   subs.forEach((s, i) => {
+    const upDis = i === 0 ? 'disabled' : '';
+    const downDis = i === subs.length - 1 ? 'disabled' : '';
     listHtml += `
       <div class="tsm-row">
+        <div class="tsm-reorder">
+          <button class="tsm-reorder-btn" onclick="_moveTicketSubType(${i}, -1)" ${upDis} aria-label="위로">▲</button>
+          <button class="tsm-reorder-btn" onclick="_moveTicketSubType(${i}, 1)" ${downDis} aria-label="아래로">▼</button>
+        </div>
         <span class="tsm-emoji">${s.emoji}</span>
         <span class="tsm-label">${escapeHtml(s.label)}</span>
         <label class="tsm-toggle">
@@ -154,6 +168,17 @@ function _deleteTicketSubType(idx) {
   _renderTicketSubTypeManager();
   if (typeof renderLensPearls === 'function') renderLensPearls();
   showToast('종류 삭제됨 (기존 티켓은 그대로 남아 있어)');
+}
+
+function _moveTicketSubType(idx, dir) {
+  const arr = state.preferences.ticketSubTypes;
+  if (!arr) return;
+  const j = idx + dir;
+  if (j < 0 || j >= arr.length) return;
+  const tmp = arr[idx]; arr[idx] = arr[j]; arr[j] = tmp;
+  saveState();
+  _renderTicketSubTypeManager();
+  if (typeof renderLensPearls === 'function') renderLensPearls();
 }
 
 function _addTicketSubType() {
