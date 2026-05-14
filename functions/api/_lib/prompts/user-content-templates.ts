@@ -195,36 +195,41 @@ function buildTopicChapterChat(v: any): string {
 
 function buildStrategyCard(v: any): string {
   const msgContent = _s(v?.msgContent, 1500);
+  // 사용자 명시 2026-05-14 ultrathink: KEYWORDS 5번째 줄 추가 — 챗 도중 자동 resurface 매칭 trigger 용.
+  //   한국어 명사 / 짧은 동사구 5-7개, 쉼표 구분. 사용자가 비슷한 상황을 다시 말할 때 substring 으로 잡힘.
   return `아래 4단 분석/전략 응답에서 "전략 카드"로 저장할 핵심을 뽑아줘.
 
-[출력 형식 — 정확히 4줄, 각 줄은 라벨로 시작]
+[출력 형식 — 정확히 5줄, 각 줄은 라벨로 시작]
 TITLE: <제목, 5-14자, 짧고 임팩트. 명사형 또는 짧은 명제>
 PROBLEM: <문제 상황, 50-90자, "어떤 순간·패턴에 적용?">
 CONCEPT: <심리학 개념 이름 + 1줄 설명, 30-80자>
 ACTION: <전략적 행동, 50-120자, 구체적 무엇을 어떻게>
+KEYWORDS: <키워드 5-7개, 쉼표 구분. 한국어 명사/짧은 동사구. 사용자가 비슷한 상황을 다시 말할 때 trigger 가 될 단어들. 조사/어미 X.>
 
 [좋은 예]
 TITLE: 마감 직전 폭발력 신뢰하기
 PROBLEM: 마감 24h 이상 남았는데 시작 못 했을 때 자책감으로 더 미루는 패턴.
 CONCEPT: ADHD time blindness — 마감 임박해야 도파민이 충분해져 시작 가능.
 ACTION: 24h 전엔 시작 못 했다고 자책 X. 마감 24h 전에 알람 1개만 설정. 그 알람을 trigger로 펼치기.
+KEYWORDS: 마감, 시작 못 함, 자책, 미루기, 24시간, 알람
 
 TITLE: 거절은 짧게 그날 안에
 PROBLEM: 부탁받고 미루다 며칠 끌면서 부채감 커지는 패턴.
 CONCEPT: 미결 부담 누적 (Zeigarnik effect) — 결정 안 된 것이 인지 자원 잡아먹음.
 ACTION: 거절할 거면 "이번엔 어려워" 한 줄로 그날 안에 답하기. 이유 길게 설명 X.
+KEYWORDS: 거절, 부탁, 미루기, 부채감, 카톡, 답장
 
 [금지]
 - "나는 ~다" 일반 서술
 - 마크다운 (**, ##)
 - JSON, 코드블록, 따옴표
 - 추상적 다짐 ("열심히 하자")
-- 4줄 외 다른 줄
+- 5줄 외 다른 줄
 
 [원본 응답]
 ${msgContent}
 
-정확히 TITLE/PROBLEM/CONCEPT/ACTION 4줄만 출력.`;
+정확히 TITLE/PROBLEM/CONCEPT/ACTION/KEYWORDS 5줄만 출력.`;
 }
 
 function buildTodayProposal(v: any): string {

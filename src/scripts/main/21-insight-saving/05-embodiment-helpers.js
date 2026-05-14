@@ -40,7 +40,8 @@ function countTotalAttempts(card) {
 }
 
 // status: 'worked' | 'meh' | 'didnt' | 'skipped'
-function recordStrategyAttempt(strategyId, status, missionId) {
+// V4 (사용자 명시 2026-05-14): source 인자 추가 (backward-compat 4번째 arg). resurface chip 클릭 시 'chat-resurface' 전달.
+function recordStrategyAttempt(strategyId, status, missionId, source) {
   const card = getStrategyCard(strategyId);
   if (!card) return null;
   const gen = getCurrentGeneration(card);
@@ -56,7 +57,8 @@ function recordStrategyAttempt(strategyId, status, missionId) {
     missionId: missionId || null,
     shellId,
     status,
-    at: new Date().toISOString()
+    at: new Date().toISOString(),
+    ...(source ? { source } : {})
   });
   if (!Array.isArray(gen.shells)) gen.shells = [];
   if (shellId && !gen.shells.includes(shellId)) gen.shells.push(shellId);

@@ -23,8 +23,9 @@ async function saveMsgAsStrategy(idx) {
         _userContentType: 'strategy_card',
         _vars: { msgContent: msg.content || '' },
         // 사용자 요청 2026-04-30: 사실상 대화 내용 정리 → sonnet 4.6 적합 (opus 과함).
+        // V4 (사용자 명시 2026-05-14): KEYWORDS 줄 추가분 — max_tokens 500 → 700.
         model: 'claude-sonnet-4-6',
-        max_tokens: 500,
+        max_tokens: 700,
         messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
@@ -36,10 +37,18 @@ async function saveMsgAsStrategy(idx) {
         const m = raw.match(re);
         return m ? m[1].trim().replace(/^["']|["']$/g, '') : '';
       };
+      // V4 (사용자 명시 2026-05-14): KEYWORDS 5-7개 한국어 명사/짧은 동사구. resurface 매칭 trigger 용.
+      const grabList = (label) => {
+        const re = new RegExp(`^${label}:\\s*(.+)$`, 'mi');
+        const m = raw.match(re);
+        if (!m) return [];
+        return m[1].split(/[,，]/).map(s => s.trim().replace(/^["']|["']$/g, '')).filter(s => s.length >= 2).slice(0, 7);
+      };
       title = grab('TITLE').slice(0, 30);
       problemContext = grab('PROBLEM').slice(0, 200);
       psychConcept = grab('CONCEPT').slice(0, 200);
       actionStrategy = grab('ACTION').slice(0, 240);
+      var _kws = grabList('KEYWORDS');
     } catch (e) {
       title = msg.content.slice(0, 30);
       actionStrategy = msg.content.slice(30, 200);
@@ -76,11 +85,23 @@ async function saveMsgAsStrategy(idx) {
     }],
     embodimentStatus: 'seedling',
     embodimentPath: null,
-    evolutionChats: []
+    evolutionChats: [],
+    // V4 (사용자 명시 2026-05-14 ultrathink): resurface 시스템 필드 5종.
+    keywords: (typeof _kws !== 'undefined' && Array.isArray(_kws) && _kws.length >= 3) ? _kws : null,
+    embedding: null,
+    lastResurfacedAt: null,
+    resurfaceDismissedAt: null,
+    resurfaceCount: 0
   });
   msg.savedStrategy = true;
   msg.strategyId = stratId;  // 사용자 요청 2026-04-28: msg에 strategyId 적용하기 → acceptProposal에서 mission 만들 때 자동 link
   saveState();
+  // V4 (사용자 명시 2026-05-14): fire-and-forget embedding — useRag ON / Plus·Premium 만 실제 호출.
+  setTimeout(() => {
+    if (typeof _strategyEmbed === 'function') {
+      _strategyEmbed(state.topicCards[state.topicCards.length - 1]).catch(()=>{});
+    }
+  }, 0);
   renderChat();
   // V4 (v8 묶음 13): Core 2 튜토리얼 시점 — 카드 시각화 모달 자동 (사용자가 카드 미리보기)
   if (window._onbTutorialMode && _activeCoreId === 'core2' && typeof _showStrategyCardModal === 'function') {

@@ -107,7 +107,19 @@ function _renderChatMessageHTML(m, i) {
       pearlSuggestChip = `<div class="pearl-suggest-chip saved">🔮 진주에 보관됨 ✦</div>`;
     }
 
-    return chapterDivider + `<div class="msg ${msgClass}">${bubble}${pearlSuggestChip}${proposalBtns}${decisionCard}${vaultCard}${actions}</div>`;
+    // V4 (사용자 명시 2026-05-14 ultrathink): 전략 resurface chip — assistant bubble 끝 inline.
+    //   응답 완료 후 _maybeResurfaceStrategyAfterAIResponse 가 m.resurfacedStrategyId stash → 여기서 렌더.
+    let resurfaceChip = '';
+    if (m.role === 'assistant' && !m.typing && !m.error && m.resurfacedStrategyId) {
+      const card = (typeof getStrategyCard === 'function') ? getStrategyCard(m.resurfacedStrategyId) : null;
+      if (card && card.embodimentStatus !== 'embodied' && !card._deleted) {
+        if (typeof _renderStrategyResurfaceChipHTML === 'function') {
+          resurfaceChip = _renderStrategyResurfaceChipHTML(card, i);
+        }
+      }
+    }
+
+    return chapterDivider + `<div class="msg ${msgClass}">${bubble}${pearlSuggestChip}${proposalBtns}${decisionCard}${vaultCard}${actions}${resurfaceChip}</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════

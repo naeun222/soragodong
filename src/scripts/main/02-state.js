@@ -467,7 +467,8 @@ const _SERIALIZE_TRANSIENT_KEYS = new Set([
   '_crystallizePromptShown', // topicCard 결정화 prompt 한 번만
   '_followupAsked',        // mission UI flag
   'typing',                // chatMessages AI 응답 진행 중 placeholder
-  'testerMode'             // preferences flag (방어적 — 이미 별도 strip 있지만 race 대비)
+  'testerMode',            // preferences flag (방어적 — 이미 별도 strip 있지만 race 대비)
+  '_strategyChapterSurfacedIds'  // 전략 resurface 챕터 1장 가드 — 5h+ gap archive 시 reset, cloud strip
 ]);
 function _serializeReplacer(key, value) {
   if (_SERIALIZE_TRANSIENT_KEYS.has(key)) return undefined;

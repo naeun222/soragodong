@@ -201,6 +201,8 @@ async function _ragRetrieveTopN(queryText, topN) {
   if (candidates.length === 0) return [];
   // Query embed.
   const qEmb = await _ragEmbedText(queryText.slice(0, 500));
+  // V4 (사용자 명시 2026-05-14): 전략 resurface 매칭이 같은 query 임베딩 재사용 — 매 turn 추가 embed 호출 절약.
+  if (qEmb) window._ragLastQueryEmbedding = qEmb;
   if (!qEmb) return [];
   // MMR retrieve.
   const picked = _ragMMR(candidates, qEmb, topN, _RAG_MMR_LAMBDA);

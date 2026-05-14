@@ -406,6 +406,12 @@ async function generateAIResponse(modelOverride, opts) {
       _maybeAutoForceAnalyzeFreeTier().catch(e => console.warn('[auto force]', e));
     }
 
+    // V4 (사용자 명시 2026-05-14 ultrathink): 전략 resurface — 사용자 메시지 ↔ 전략 problemContext 매칭 → chip surface.
+    //   Deeper(4단) 응답엔 skip (hook 안 가드). useRag OFF / Light 도 keyword 매칭은 동작.
+    if (typeof _maybeResurfaceStrategyAfterAIResponse === 'function') {
+      _maybeResurfaceStrategyAfterAIResponse().catch(e => console.warn('[strat-resurface]', e));
+    }
+
   } catch (err) {
     // 사용자 보고 2026-05-05 ultrathink: 정확한 진단 위해 console.error — 사용자가 console 열어 진짜 원인 (status / message) 확인 가능.
     console.error('[generateAIResponse] error:', err);

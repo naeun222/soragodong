@@ -11531,6 +11531,45 @@
     font-size: 18px; color: var(--text-soft); opacity: 0.55;
     flex-shrink: 0;
   }
+
+  /* 사용자 명시 2026-05-14 ultrathink: 전략 resurface chip — AI bubble 끝 inline. */
+  .strategy-resurface-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; color: var(--text-soft);
+    background: var(--accent-dim);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 6px 10px;
+    margin-top: 8px;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s, opacity 0.2s;
+    max-width: 100%;
+  }
+  .strategy-resurface-chip:hover { color: var(--text); }
+  .strategy-resurface-chip .srf-icon { font-size: 13px; }
+  .strategy-resurface-chip .srf-title {
+    font-weight: 600; color: var(--accent);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 160px;
+  }
+  .strategy-resurface-chip .srf-cta { opacity: 0.85; }
+  .strategy-resurface-chip .srf-dismiss {
+    background: none; border: none; color: var(--text-soft);
+    font-size: 14px; line-height: 1; padding: 0 2px;
+    cursor: pointer; margin-left: 2px;
+  }
+  .strategy-resurface-chip .srf-dismiss:hover { color: var(--text); }
+  .strategy-resurface-chip.dismissed { opacity: 0; pointer-events: none; }
+
+  /* resurface 모달 ghost 버튼 — 사용자 결정 6: '다음에' = 단순 닫기 */
+  .scp-btn-ghost {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); font-size: 12.5px;
+    margin-top: 6px; padding: 9px 14px;
+    border-radius: 10px; cursor: pointer;
+    width: 100%;
+  }
+  .scp-btn-ghost:hover { color: var(--text); border-color: var(--border-strong); }
 /* V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 — cold open hero + 코치마크 */
 
 /* ── HERO (cold open) ──────────────────────────────────────── */
@@ -14029,7 +14068,8 @@ const _SERIALIZE_TRANSIENT_KEYS = new Set([
   '_crystallizePromptShown', // topicCard 결정화 prompt 한 번만
   '_followupAsked',        // mission UI flag
   'typing',                // chatMessages AI 응답 진행 중 placeholder
-  'testerMode'             // preferences flag (방어적 — 이미 별도 strip 있지만 race 대비)
+  'testerMode',            // preferences flag (방어적 — 이미 별도 strip 있지만 race 대비)
+  '_strategyChapterSurfacedIds'  // 전략 resurface 챕터 1장 가드 — 5h+ gap archive 시 reset, cloud strip
 ]);
 function _serializeReplacer(key, value) {
   if (_SERIALIZE_TRANSIENT_KEYS.has(key)) return undefined;
@@ -35670,27 +35710,133 @@ function _showCore2LockedToast() {
 //  · 토큰 hero: label / amount (대형 그라데이션) / hint — vertical stack
 //  · 신뢰 라인 보존 (전상법 §13 / 표시광고법 §3 — '30일 무료 · 자동 갱신 / 해지: 설정 → 구독')
 //  · 받기 click → backend POST (idempotent) → token block 'received' 색감 변환 → 0.8s 후 닫힘
-function _showStrategyCardModal(card) {
+// V4 (사용자 명시 2026-05-14 ultrathink): opts.mode='resurface' 분기 — 챗 도중 자동 surface 된 카드 클릭 시.
+//   서브 카피 + primary "✦ 다시 해볼게" → _resurfaceStrategyAsMission (acceptProposal 흐름 재활용: createMission + recordStrategyAttempt + showCelebration + AI 확인 메시지).
+//   ghost "다음에" — 단순 닫기 (cooldown X — chip X dismiss 만 7일 cooldown, 사용자 결정 6).
+function _showStrategyCardModal(card, opts) {
   if (!card) return;
   if (document.querySelector('.strategy-card-preview-overlay')) return;
+  opts = opts || {};
+  const isResurface = opts.mode === 'resurface';
+  const msgIdx = (typeof opts.msgIdx === 'number') ? opts.msgIdx : null;
+  const subCopy = isResurface
+    ? '같은 결 다시 마주쳤네 — 다시 꺼내볼래?'
+    : '전략 카드로 양생방에 저장됐어 ✦';
+  const primaryLabel = isResurface ? '✦ 다시 해볼게' : '계속 ✦';
+  const ghostBtn = isResurface
+    ? `<button class="scp-btn scp-btn-ghost" id="scpGhost">다음에</button>`
+    : '';
   const overlay = document.createElement('div');
   overlay.className = 'strategy-card-preview-overlay';
   overlay.innerHTML = `
     <div class="strategy-card-preview">
       <div class="scp-icon">🧬</div>
       <div class="scp-title">${escapeHtml(card.title || '새 전략')}</div>
-      <div class="scp-sub">전략 카드로 양생방에 저장됐어 ✦</div>
+      <div class="scp-sub">${escapeHtml(subCopy)}</div>
       <div class="scp-body">
         ${card.problemContext ? `<div class="scp-row"><span class="scp-row-icon">🔍</span> ${escapeHtml((card.problemContext || '').slice(0, 80))}</div>` : ''}
         ${card.psychConcept ? `<div class="scp-row"><span class="scp-row-icon">💡</span> ${escapeHtml((card.psychConcept || '').slice(0, 80))}</div>` : ''}
         ${card.actionStrategy ? `<div class="scp-row"><span class="scp-row-icon">🌿</span> ${escapeHtml((card.actionStrategy || '').slice(0, 80))}</div>` : ''}
       </div>
-      <button class="scp-btn" id="scpClose">계속 ✦</button>
+      <button class="scp-btn" id="scpClose">${primaryLabel}</button>
+      ${ghostBtn}
     </div>
   `;
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
-  overlay.querySelector('#scpClose').addEventListener('click', _closeStrategyCardModal);
+  const closeBtn = overlay.querySelector('#scpClose');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      if (isResurface) {
+        _closeStrategyCardModal();
+        try { _resurfaceStrategyAsMission(card, msgIdx); }
+        catch (e) { console.warn('[resurface as mission]', e); }
+      } else {
+        _closeStrategyCardModal();
+      }
+    });
+  }
+  const ghost = overlay.querySelector('#scpGhost');
+  if (ghost) {
+    // 사용자 결정 6: 모달 "다음에" 는 단순 닫기 (cooldown X — chip X dismiss 만 7일 cooldown).
+    ghost.addEventListener('click', _closeStrategyCardModal);
+  }
+}
+
+// V4 (사용자 명시 2026-05-14 ultrathink): resurface chip → 카드 모달 → "✦ 다시 해볼게" 클릭 시
+//   acceptProposal 흐름 재활용 — createMission(title=card.title, strategyId, situation=마지막 user 메시지 발췌)
+//   + recordStrategyAttempt(missionId, 'trying', 'chat-resurface')
+//   + showCelebration + renderTodayMission + AI 확인 메시지 push + chip dismiss.
+function _resurfaceStrategyAsMission(card, msgIdx) {
+  if (!card || !card.id) return;
+  const title = (card.title || '').trim() || '전략 다시 해보기';
+  // 상황 pre-fill: 마지막 user 메시지 발췌 (50자 이내). msgIdx 이전 가장 가까운 user 메시지.
+  let situation = '';
+  try {
+    if (Array.isArray(state.chatMessages) && state.chatMessages.length) {
+      const startIdx = (typeof msgIdx === 'number' && msgIdx >= 0)
+        ? Math.min(msgIdx, state.chatMessages.length - 1)
+        : state.chatMessages.length - 1;
+      for (let i = startIdx; i >= 0; i--) {
+        const m = state.chatMessages[i];
+        if (m && m.role === 'user' && !m.error && m.content) {
+          situation = (m.content || '').trim().slice(0, 50);
+          break;
+        }
+      }
+    }
+  } catch {}
+  // 미션 생성 (acceptProposal 패턴: createMission + strategyId/generationIdx/situation link).
+  const opts = {
+    strategyId: card.id,
+    linkedStrategy: card.title || ''
+  };
+  if (Array.isArray(card.generations) && card.generations.length) {
+    opts.generationIdx = card.generations.length - 1;
+  }
+  if (situation) {
+    opts.situation = situation;
+    opts._situationSource = 'llm_extracted';
+  }
+  const description = card.actionStrategy || card.psychConcept || '';
+  let mission = null;
+  try {
+    if (typeof createMission === 'function') {
+      mission = createMission(title, description, opts);
+    }
+  } catch (e) { console.warn('[resurface createMission]', e); }
+  // attempts 누적 — missionId link, source='chat-resurface'.
+  try {
+    if (mission && mission.id && typeof recordStrategyAttempt === 'function') {
+      recordStrategyAttempt(card.id, 'trying', mission.id, 'chat-resurface');
+    }
+  } catch (e) { console.warn('[resurface recordAttempt]', e); }
+  // chip dismiss (해당 메시지 stash 비우고 DOM 제거) — 같은 chip 재렌더 방지.
+  try {
+    if (typeof msgIdx === 'number' && Array.isArray(state.chatMessages) && state.chatMessages[msgIdx]) {
+      state.chatMessages[msgIdx].resurfacedStrategyId = null;
+    }
+  } catch {}
+  try {
+    const chip = document.querySelector(`.strategy-resurface-chip[data-stratid="${card.id}"]`);
+    if (chip) {
+      chip.classList.add('dismissed');
+      setTimeout(() => { try { chip.remove(); } catch {} }, 200);
+    }
+  } catch {}
+  // 셀러브레이션 + 미션 카드 active 화 + AI 확인 메시지 (acceptProposal 패턴 그대로).
+  try { if (typeof showCelebration === 'function') showCelebration('🧬', '다시 한 번 — 미션으로 시작!', '✦'); } catch {}
+  try { saveState(); } catch {}
+  try { if (typeof renderTodayMission === 'function') renderTodayMission(); } catch {}
+  try {
+    state.chatMessages.push({
+      role: 'assistant',
+      content: `좋아, "${title}" 다시 한번 해보자. 홈에 오늘의 미션으로 등록됐어 🧬\n\n결과는 미션 끝나고 체크하면 돼 ✦`,
+      timestamp: new Date().toISOString()
+    });
+    saveState();
+    if (typeof renderChat === 'function') renderChat();
+  } catch (e) { console.warn('[resurface AI msg]', e); }
 }
 function _closeStrategyCardModal() {
   const overlay = document.querySelector('.strategy-card-preview-overlay');
@@ -39155,7 +39301,19 @@ function _renderChatMessageHTML(m, i) {
       pearlSuggestChip = `<div class="pearl-suggest-chip saved">🔮 진주에 보관됨 ✦</div>`;
     }
 
-    return chapterDivider + `<div class="msg ${msgClass}">${bubble}${pearlSuggestChip}${proposalBtns}${decisionCard}${vaultCard}${actions}</div>`;
+    // V4 (사용자 명시 2026-05-14 ultrathink): 전략 resurface chip — assistant bubble 끝 inline.
+    //   응답 완료 후 _maybeResurfaceStrategyAfterAIResponse 가 m.resurfacedStrategyId stash → 여기서 렌더.
+    let resurfaceChip = '';
+    if (m.role === 'assistant' && !m.typing && !m.error && m.resurfacedStrategyId) {
+      const card = (typeof getStrategyCard === 'function') ? getStrategyCard(m.resurfacedStrategyId) : null;
+      if (card && card.embodimentStatus !== 'embodied' && !card._deleted) {
+        if (typeof _renderStrategyResurfaceChipHTML === 'function') {
+          resurfaceChip = _renderStrategyResurfaceChipHTML(card, i);
+        }
+      }
+    }
+
+    return chapterDivider + `<div class="msg ${msgClass}">${bubble}${pearlSuggestChip}${proposalBtns}${decisionCard}${vaultCard}${actions}${resurfaceChip}</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -39517,6 +39675,8 @@ async function sendChat() {
   // 5h+ 갭 detect → 직전 챕터 즉시 archive 이송 (chatMessages 비움)
   // (resume 후 무변경 + 5h+ 면 _archiveCurrentChapter 가 원본 snapshot 으로 복귀하고 chatMessages 비움 → 새 메시지는 새 챕터 시작.)
   if (isNewChapter && state.chatMessages.length > 0) {
+    // V4 (사용자 명시 2026-05-14): 새 챕터 시작 — 전략 resurface 챕터 1장 가드 reset.
+    if (typeof _strategyClearChapterFlag === 'function') _strategyClearChapterFlag();
     _archiveCurrentChapter({ manual: false });
   }
   // V4 사용자 명시 2026-05-04: 새 메시지 push 직전 — resume snapshot 무효화.
@@ -40831,6 +40991,12 @@ async function generateAIResponse(modelOverride, opts) {
       _maybeAutoForceAnalyzeFreeTier().catch(e => console.warn('[auto force]', e));
     }
 
+    // V4 (사용자 명시 2026-05-14 ultrathink): 전략 resurface — 사용자 메시지 ↔ 전략 problemContext 매칭 → chip surface.
+    //   Deeper(4단) 응답엔 skip (hook 안 가드). useRag OFF / Light 도 keyword 매칭은 동작.
+    if (typeof _maybeResurfaceStrategyAfterAIResponse === 'function') {
+      _maybeResurfaceStrategyAfterAIResponse().catch(e => console.warn('[strat-resurface]', e));
+    }
+
   } catch (err) {
     // 사용자 보고 2026-05-05 ultrathink: 정확한 진단 위해 console.error — 사용자가 console 열어 진짜 원인 (status / message) 확인 가능.
     console.error('[generateAIResponse] error:', err);
@@ -41521,6 +41687,8 @@ async function _ragRetrieveTopN(queryText, topN) {
   if (candidates.length === 0) return [];
   // Query embed.
   const qEmb = await _ragEmbedText(queryText.slice(0, 500));
+  // V4 (사용자 명시 2026-05-14): 전략 resurface 매칭이 같은 query 임베딩 재사용 — 매 turn 추가 embed 호출 절약.
+  if (qEmb) window._ragLastQueryEmbedding = qEmb;
   if (!qEmb) return [];
   // MMR retrieve.
   const picked = _ragMMR(candidates, qEmb, topN, _RAG_MMR_LAMBDA);
@@ -42180,8 +42348,9 @@ async function saveMsgAsStrategy(idx) {
         _userContentType: 'strategy_card',
         _vars: { msgContent: msg.content || '' },
         // 사용자 요청 2026-04-30: 사실상 대화 내용 정리 → sonnet 4.6 적합 (opus 과함).
+        // V4 (사용자 명시 2026-05-14): KEYWORDS 줄 추가분 — max_tokens 500 → 700.
         model: 'claude-sonnet-4-6',
-        max_tokens: 500,
+        max_tokens: 700,
         messages: [{ role: 'user', content: '' }]
       });
       const data = await resp.json();
@@ -42193,10 +42362,18 @@ async function saveMsgAsStrategy(idx) {
         const m = raw.match(re);
         return m ? m[1].trim().replace(/^["']|["']$/g, '') : '';
       };
+      // V4 (사용자 명시 2026-05-14): KEYWORDS 5-7개 한국어 명사/짧은 동사구. resurface 매칭 trigger 용.
+      const grabList = (label) => {
+        const re = new RegExp(`^${label}:\\s*(.+)$`, 'mi');
+        const m = raw.match(re);
+        if (!m) return [];
+        return m[1].split(/[,，]/).map(s => s.trim().replace(/^["']|["']$/g, '')).filter(s => s.length >= 2).slice(0, 7);
+      };
       title = grab('TITLE').slice(0, 30);
       problemContext = grab('PROBLEM').slice(0, 200);
       psychConcept = grab('CONCEPT').slice(0, 200);
       actionStrategy = grab('ACTION').slice(0, 240);
+      var _kws = grabList('KEYWORDS');
     } catch (e) {
       title = msg.content.slice(0, 30);
       actionStrategy = msg.content.slice(30, 200);
@@ -42233,11 +42410,23 @@ async function saveMsgAsStrategy(idx) {
     }],
     embodimentStatus: 'seedling',
     embodimentPath: null,
-    evolutionChats: []
+    evolutionChats: [],
+    // V4 (사용자 명시 2026-05-14 ultrathink): resurface 시스템 필드 5종.
+    keywords: (typeof _kws !== 'undefined' && Array.isArray(_kws) && _kws.length >= 3) ? _kws : null,
+    embedding: null,
+    lastResurfacedAt: null,
+    resurfaceDismissedAt: null,
+    resurfaceCount: 0
   });
   msg.savedStrategy = true;
   msg.strategyId = stratId;  // 사용자 요청 2026-04-28: msg에 strategyId 적용하기 → acceptProposal에서 mission 만들 때 자동 link
   saveState();
+  // V4 (사용자 명시 2026-05-14): fire-and-forget embedding — useRag ON / Plus·Premium 만 실제 호출.
+  setTimeout(() => {
+    if (typeof _strategyEmbed === 'function') {
+      _strategyEmbed(state.topicCards[state.topicCards.length - 1]).catch(()=>{});
+    }
+  }, 0);
   renderChat();
   // V4 (v8 묶음 13): Core 2 튜토리얼 시점 — 카드 시각화 모달 자동 (사용자가 카드 미리보기)
   if (window._onbTutorialMode && _activeCoreId === 'core2' && typeof _showStrategyCardModal === 'function') {
@@ -42296,7 +42485,8 @@ function countTotalAttempts(card) {
 }
 
 // status: 'worked' | 'meh' | 'didnt' | 'skipped'
-function recordStrategyAttempt(strategyId, status, missionId) {
+// V4 (사용자 명시 2026-05-14): source 인자 추가 (backward-compat 4번째 arg). resurface chip 클릭 시 'chat-resurface' 전달.
+function recordStrategyAttempt(strategyId, status, missionId, source) {
   const card = getStrategyCard(strategyId);
   if (!card) return null;
   const gen = getCurrentGeneration(card);
@@ -42312,7 +42502,8 @@ function recordStrategyAttempt(strategyId, status, missionId) {
     missionId: missionId || null,
     shellId,
     status,
-    at: new Date().toISOString()
+    at: new Date().toISOString(),
+    ...(source ? { source } : {})
   });
   if (!Array.isArray(gen.shells)) gen.shells = [];
   if (shellId && !gen.shells.includes(shellId)) gen.shells.push(shellId);
@@ -43921,6 +44112,298 @@ async function openStrategyMissionChat(strategyId, mutationOpt) {
   if (typeof showScreen === 'function') showScreen('home');
 }
 
+// V4 (사용자 명시 2026-05-14 ultrathink): 전략 카드 resurface 시스템 — keyword + embedding 추출 helper.
+//   keyword: saveMsgAsStrategy 의 같은 AI 호출에 KEYWORDS 1줄 추가 (cost 0). backfill 만 Haiku 별도 호출.
+//   embedding: _ragEmbedText 재활용 (BGE-M3 1024 dim). useRag OFF / Light 면 skip.
+//   plan 별 차등: Light=keyword only, Plus=+embed top-1, Premium=+embed top-3.
+
+// 전략 카드 1장의 검색용 text — 4 필드 결합 (≤ 600자).
+function _strategyEmbedText(card) {
+  if (!card) return '';
+  const parts = [card.title, card.problemContext, card.psychConcept, card.actionStrategy]
+    .filter(s => s && typeof s === 'string')
+    .map(s => s.trim());
+  return parts.join('\n').slice(0, 600);
+}
+
+// useRag 토글 + plan 차등 게이트 (Light/게스트 false).
+//   _ragIsEnabled 가 이미 plan ∈ {light, premium} + useRag ON 둘 다 검사 → wrapper.
+function _strategyResurfaceUseRagEnabled() {
+  if (typeof _ragIsEnabled !== 'function') return false;
+  return _ragIsEnabled();
+}
+
+// 전략 카드 1장의 embedding 추출 → card.embedding 박음. fire-and-forget.
+//   useRag OFF / Light 면 첫 줄에서 return.
+async function _strategyEmbed(card) {
+  if (!card || !card.id) return false;
+  if (Array.isArray(card.embedding) && card.embedding.length > 0) return false;
+  if (!_strategyResurfaceUseRagEnabled()) return false;
+  const text = _strategyEmbedText(card);
+  if (!text || text.length < 5) return false;
+  if (typeof _ragEmbedText !== 'function') return false;
+  try {
+    const vec = await _ragEmbedText(text);
+    if (!Array.isArray(vec) || vec.length === 0) return false;
+    card.embedding = vec;
+    try { saveState(); } catch {}
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// backfill 용 — keywords null 카드의 keyword 만 AI 로 별도 추출 (Haiku).
+//   buildStrategyCard prompt 재호출. 4 필드 결합한 reconstructed 본문 입력.
+async function _strategyExtractKeywordsViaAI(card) {
+  if (!card || typeof _canAI !== 'function' || !_canAI()) return [];
+  const reconstructed = [
+    card.title ? `[제목] ${card.title}` : '',
+    card.problemContext ? `[상황] ${card.problemContext}` : '',
+    card.psychConcept ? `[개념] ${card.psychConcept}` : '',
+    card.actionStrategy ? `[행동] ${card.actionStrategy}` : ''
+  ].filter(Boolean).join('\n');
+  if (!reconstructed) return [];
+  try {
+    const resp = await callAnthropic({
+      _endpoint: 'decision_step',
+      _userContentType: 'strategy_card',
+      _vars: { msgContent: reconstructed },
+      model: 'claude-haiku-4-5',
+      max_tokens: 250,
+      messages: [{ role: 'user', content: '' }]
+    });
+    const data = await resp.json();
+    let raw = (data?.content?.[0]?.text || '').trim();
+    raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
+    raw = raw.replace(/\*\*/g, '').replace(/^#+\s*/gm, '');
+    const m = raw.match(/^KEYWORDS:\s*(.+)$/mi);
+    if (!m) return [];
+    return m[1].split(/[,，]/).map(s => s.trim().replace(/^["']|["']$/g, '')).filter(s => s.length >= 2).slice(0, 7);
+  } catch {
+    return [];
+  }
+}
+
+// keywords/embedding null 인 카드 1개 lazy backfill — 일일 max 5, testerMode skip.
+//   _findResurfaceCandidate 안에서 매칭 시도 도중 keywords null 카드 만나면 fire-and-forget.
+async function _strategyLazyEnrich(card) {
+  if (!card) return;
+  const hasKw = Array.isArray(card.keywords) && card.keywords.length >= 3;
+  const hasEmb = Array.isArray(card.embedding) && card.embedding.length > 0;
+  if (hasKw && hasEmb) return;
+  if (state?.preferences?.testerMode) return;
+  if (typeof todayKey !== 'function') return;
+  const today = todayKey();
+  state.preferences = state.preferences || {};
+  const log = state.preferences._strategyBackfillLog = state.preferences._strategyBackfillLog || {};
+  if (log.date !== today) { log.date = today; log.count = 0; }
+  if ((log.count || 0) >= 5) return;
+  log.count = (log.count || 0) + 1;
+  if (!hasKw) {
+    try {
+      const kws = await _strategyExtractKeywordsViaAI(card);
+      if (kws.length >= 3) {
+        card.keywords = kws;
+        try { saveState(); } catch {}
+      }
+    } catch {}
+  }
+  if (!hasEmb && _strategyResurfaceUseRagEnabled()) {
+    _strategyEmbed(card).catch(()=>{});
+  }
+}
+// V4 (사용자 명시 2026-05-14 ultrathink): 전략 resurface 매칭 — keyword + embedding rerank.
+//   사용자 메시지 ↔ 전략 problemContext 매칭. 가드 5종 (embodied X / 24h / 7일 / 챕터 1장 / _deleted X).
+//   threshold: keyword score ≥ 4 (2 keyword 이상 match), Plus/Premium 은 embedding cosine ≥ 0.40 보강.
+
+// keyword 매칭 score — 단순 substring (한국어 조사 자동 cover).
+//   각 keyword 가 사용자 메시지에 포함되면 +2.
+function _scoreStrategyKeywordOverlap(userMsgText, cardKeywords) {
+  if (!Array.isArray(cardKeywords) || cardKeywords.length === 0) return 0;
+  const lower = (userMsgText || '').toLowerCase();
+  if (!lower) return 0;
+  let score = 0;
+  for (const kw of cardKeywords) {
+    if (!kw || kw.length < 2) continue;
+    if (lower.includes(kw.toLowerCase())) score += 2;
+  }
+  return score;
+}
+
+// embedding 기반 rerank (Plus/Premium + useRag ON 일 때만).
+//   사용자 메시지 임베딩은 RAG 의 _ragLastQueryEmbedding cache 재사용 (14-rag.js:203 직후 박음).
+//   cache miss 면 새로 1회 embed (그래도 같은 turn 1회 호출).
+async function _embeddingRerankCandidates(userMsgText, candidates, topN) {
+  if (!Array.isArray(candidates) || candidates.length === 0) return [];
+  if (topN <= 0) return [];
+  let userEmb = window._ragLastQueryEmbedding;
+  if (!userEmb && typeof _ragEmbedText === 'function') {
+    try { userEmb = await _ragEmbedText((userMsgText || '').slice(0, 500)); } catch {}
+  }
+  if (!Array.isArray(userEmb)) return candidates.slice(0, topN);
+  if (typeof _ragCosine !== 'function') return candidates.slice(0, topN);
+  const withSim = candidates
+    .filter(c => Array.isArray(c.embedding) && c.embedding.length === userEmb.length)
+    .map(c => ({ card: c, sim: _ragCosine(userEmb, c.embedding) }));
+  if (withSim.length === 0) return candidates.slice(0, topN);
+  withSim.sort((a, b) => b.sim - a.sim);
+  return withSim.filter(x => x.sim >= 0.40).slice(0, topN).map(x => x.card);
+}
+
+// surface 자격 검사 — 가드 5종.
+function _isResurfaceEligible(card, surfacedSet, nowMs) {
+  if (!card || card.category !== 'strategy') return false;
+  if (card.embodimentStatus === 'embodied') return false;
+  if (card._deleted) return false;
+  if (surfacedSet && typeof surfacedSet.has === 'function' && surfacedSet.has(card.id)) return false;
+  if (card.lastResurfacedAt) {
+    const since = nowMs - new Date(card.lastResurfacedAt).getTime();
+    if (since < 24 * 3600 * 1000) return false;
+  }
+  if (card.resurfaceDismissedAt) {
+    const since = nowMs - new Date(card.resurfaceDismissedAt).getTime();
+    if (since < 7 * 86400 * 1000) return false;
+  }
+  return true;
+}
+
+// 메인 entry — 사용자 마지막 user message text 받아 매치 1장 또는 null.
+//   flow: eligible filter → keyword score → (Plus/Premium + useRag ON) embedding rerank → 1장 또는 null.
+//   keywords null 카드는 lazy enrich 큐 push (이번 turn 미반영, 다음 turn 부터 후보 진입).
+async function _findResurfaceCandidate(userMsgText) {
+  if (!userMsgText || typeof userMsgText !== 'string') return null;
+  if (userMsgText.length < 5) return null;
+  if (!Array.isArray(state.topicCards) || state.topicCards.length === 0) return null;
+  const nowMs = Date.now();
+  const surfacedSet = new Set(Array.isArray(state._strategyChapterSurfacedIds) ? state._strategyChapterSurfacedIds : []);
+  const eligible = state.topicCards.filter(c => _isResurfaceEligible(c, surfacedSet, nowMs));
+  if (eligible.length === 0) return null;
+  let lazyTarget = null;
+  const scored = [];
+  for (const card of eligible) {
+    if (!Array.isArray(card.keywords) || card.keywords.length < 3) {
+      if (!lazyTarget) lazyTarget = card;
+      continue;
+    }
+    const score = _scoreStrategyKeywordOverlap(userMsgText, card.keywords);
+    if (score >= 4) scored.push({ card, score });
+  }
+  if (lazyTarget && typeof _strategyLazyEnrich === 'function') {
+    _strategyLazyEnrich(lazyTarget).catch(()=>{});
+  }
+  if (scored.length === 0) return null;
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return (a.card.resurfaceCount || 0) - (b.card.resurfaceCount || 0);
+  });
+  if (typeof _strategyResurfaceUseRagEnabled === 'function' && _strategyResurfaceUseRagEnabled()) {
+    const plan = window._billingCache?.subscription_plan;
+    let topN = 1;
+    let keywordPoolSize = 3;
+    if (plan === 'premium') { topN = 3; keywordPoolSize = 5; }
+    const candidates = scored.slice(0, keywordPoolSize).map(s => s.card);
+    const reranked = await _embeddingRerankCandidates(userMsgText, candidates, topN);
+    if (reranked.length > 0) return reranked[0];
+    return scored[0].card;
+  }
+  return scored[0].card;
+}
+// V4 (사용자 명시 2026-05-14 ultrathink): 전략 resurface chip — AI bubble 끝 inline.
+//   _maybeResurfaceStrategyAfterAIResponse: generateAIResponse 응답 완료 시 fire-and-forget hook.
+//   chip click → _showStrategyCardModal(card, {mode:'resurface'}) → "✦ 다시 해볼게" → attempt push.
+//   chip X dismiss → 7일 cooldown (resurfaceDismissedAt 박음).
+//   모달 "다음에" 는 단순 닫기 (cooldown X — 사용자 결정 6).
+//   Deeper 분석 (4단) 응답에는 skip (사용자가 능동 분석 요청 — chip 잡음 회피).
+
+// chip HTML — 02-render-message.js 가 inline 으로 호출.
+function _renderStrategyResurfaceChipHTML(card, msgIdx) {
+  if (!card || !card.id) return '';
+  const title = (typeof escapeHtml === 'function') ? escapeHtml(card.title || '전략') : (card.title || '전략');
+  return `<div class="strategy-resurface-chip" data-stratid="${card.id}" onclick="_onStrategyResurfaceChipClick(${msgIdx}, '${card.id}')">` +
+    `<span class="srf-icon">🧬</span>` +
+    `<span class="srf-title">${title}</span>` +
+    `<span class="srf-cta">— 다시 꺼내볼래?</span>` +
+    `<button class="srf-dismiss" onclick="_onStrategyResurfaceChipDismiss(${msgIdx}, '${card.id}', event)" aria-label="이번엔 됐어">×</button>` +
+    `</div>`;
+}
+
+// surface 마킹 — card.lastResurfacedAt + resurfaceCount + state._strategyChapterSurfacedIds.
+function _strategyMarkSurfacedNow(card) {
+  if (!card || !card.id) return;
+  card.lastResurfacedAt = new Date().toISOString();
+  card.resurfaceCount = (card.resurfaceCount || 0) + 1;
+  state._strategyChapterSurfacedIds = Array.isArray(state._strategyChapterSurfacedIds)
+    ? state._strategyChapterSurfacedIds : [];
+  if (!state._strategyChapterSurfacedIds.includes(card.id)) {
+    state._strategyChapterSurfacedIds.push(card.id);
+  }
+}
+
+// generateAIResponse 응답 완료 직후 호출 — fire-and-forget.
+async function _maybeResurfaceStrategyAfterAIResponse() {
+  try {
+    if (!Array.isArray(state.chatMessages) || state.chatMessages.length === 0) return;
+    let asstIdx = -1;
+    for (let i = state.chatMessages.length - 1; i >= 0; i--) {
+      const m = state.chatMessages[i];
+      if (m && m.role === 'assistant' && !m.typing && !m.error) { asstIdx = i; break; }
+    }
+    if (asstIdx === -1) return;
+    const lastAsst = state.chatMessages[asstIdx];
+    if (lastAsst.resurfacedStrategyId) return;
+    // Deeper(4단) 응답엔 surface skip — 사용자 능동 분석 요청, 추가 chip 잡음.
+    if (lastAsst.fromDeeper) return;
+    let userText = '';
+    for (let i = asstIdx - 1; i >= 0; i--) {
+      const m = state.chatMessages[i];
+      if (m && m.role === 'user' && !m.error) { userText = m.content || ''; break; }
+    }
+    if (!userText) return;
+    if (typeof _findResurfaceCandidate !== 'function') return;
+    const card = await _findResurfaceCandidate(userText);
+    if (!card) return;
+    lastAsst.resurfacedStrategyId = card.id;
+    _strategyMarkSurfacedNow(card);
+    try { saveState(); } catch {}
+    if (typeof renderChat === 'function') renderChat();
+  } catch (e) {
+    console.warn('[strat-resurface]', e?.message || e);
+  } finally {
+    // 다음 호출에 stale cache 안 남게 — RAG cache reset.
+    try { window._ragLastQueryEmbedding = null; } catch {}
+  }
+}
+
+// chip click → 카드 모달 (resurface mode).
+function _onStrategyResurfaceChipClick(msgIdx, stratId) {
+  const card = (typeof getStrategyCard === 'function') ? getStrategyCard(stratId) : null;
+  if (!card) return;
+  if (typeof _showStrategyCardModal === 'function') {
+    _showStrategyCardModal(card, { mode: 'resurface', msgIdx });
+  }
+}
+
+// chip X dismiss → 7일 cooldown + chip fade-out.
+function _onStrategyResurfaceChipDismiss(msgIdx, stratId, ev) {
+  if (ev) { try { ev.stopPropagation(); } catch {} try { ev.preventDefault(); } catch {} }
+  const card = (typeof getStrategyCard === 'function') ? getStrategyCard(stratId) : null;
+  if (!card) return;
+  card.resurfaceDismissedAt = new Date().toISOString();
+  try { saveState(); } catch {}
+  const chip = document.querySelector(`.strategy-resurface-chip[data-stratid="${stratId}"]`);
+  if (chip) {
+    chip.classList.add('dismissed');
+    setTimeout(() => { try { chip.remove(); } catch {} }, 200);
+  }
+}
+// V4 (사용자 명시 2026-05-14 ultrathink): 챕터 단위 surface 가드 — 5h+ gap archive 시 호출.
+//   state._strategyChapterSurfacedIds 는 transient (02-state.js _SERIALIZE_TRANSIENT_KEYS 등록) 라 cloud 페이로드 strip.
+function _strategyClearChapterFlag() {
+  if (typeof state !== 'undefined' && state) {
+    state._strategyChapterSurfacedIds = [];
+  }
+}
 // ═══════════════════════════════════════════════════════════════
 // PROPOSAL HANDLING (Phase 2 upgrade)
 // ═══════════════════════════════════════════════════════════════

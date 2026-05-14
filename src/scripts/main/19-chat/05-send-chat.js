@@ -58,6 +58,8 @@ async function sendChat() {
   // 5h+ 갭 detect → 직전 챕터 즉시 archive 이송 (chatMessages 비움)
   // (resume 후 무변경 + 5h+ 면 _archiveCurrentChapter 가 원본 snapshot 으로 복귀하고 chatMessages 비움 → 새 메시지는 새 챕터 시작.)
   if (isNewChapter && state.chatMessages.length > 0) {
+    // V4 (사용자 명시 2026-05-14): 새 챕터 시작 — 전략 resurface 챕터 1장 가드 reset.
+    if (typeof _strategyClearChapterFlag === 'function') _strategyClearChapterFlag();
     _archiveCurrentChapter({ manual: false });
   }
   // V4 사용자 명시 2026-05-04: 새 메시지 push 직전 — resume snapshot 무효화.
