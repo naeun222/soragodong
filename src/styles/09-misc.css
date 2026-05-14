@@ -11431,15 +11431,27 @@
      V4 (사용자 명시 2026-05-14 ultrathink) 진주 컬렉션 — 티켓 & 책
      ═════════════════════════════════════════════════ */
   .ticket-card {
-    /* V4 (2026-05-14): pinterest column break 방지 + 카드 자체 height aspect-ratio 고정 */
+    /* V4 (2026-05-14): pinterest column break 방지 + 카드 자체 height aspect-ratio 고정
+       사용자 보고 2026-05-14: 기존 진주 (.pinterest-tile) 와 시각·간격 일관 — border/shadow/isolation 통일. */
     break-inside: avoid; margin-bottom: 10px;
     display: block;
     position: relative; aspect-ratio: 3/4;
-    background-size: cover; background-position: center; background-color: var(--card-bg);
-    border-radius: 12px; overflow: hidden; cursor: pointer;
-    transition: transform 0.18s;
+    background-size: cover; background-position: center; background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    overflow: hidden; cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.15s, box-shadow 0.2s;
+    isolation: isolate;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
   }
-  .ticket-card:hover { transform: translateY(-2px); }
+  .ticket-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+    border-color: rgba(212,167,106,0.35);
+  }
+  .ticket-card:active { transform: scale(0.98); }
   .ticket-card .tc-subtype {
     position: absolute; top: 8px; left: 8px;
     background: rgba(0,0,0,0.62); padding: 4px 8px; border-radius: 12px;
@@ -11474,17 +11486,27 @@
   }
 
   .book-card {
-    /* V4 (2026-05-14): pinterest column break 방지 */
+    /* V4 (2026-05-14): pinterest column break 방지 + 시각·간격 .pinterest-tile 통일.
+       단 책 등 inset 음영 / 책 그림자 box-shadow 는 책 metaphor 위해 유지. */
     break-inside: avoid; margin-bottom: 10px;
     display: block;
     position: relative; aspect-ratio: 2/3;
-    background-size: cover; background-position: center; background-color: var(--card-bg);
+    background-size: cover; background-position: center; background-color: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 6px 8px 8px 6px;
     overflow: hidden; cursor: pointer;
     box-shadow: 2px 3px 8px rgba(0,0,0,0.18), inset 2px 0 4px rgba(0,0,0,0.18);
-    transition: transform 0.18s;
+    transition: transform 0.2s ease, border-color 0.15s, box-shadow 0.2s;
+    isolation: isolate;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
   }
-  .book-card:hover { transform: translateY(-3px) scale(1.02); }
+  .book-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 4px 7px 18px rgba(0,0,0,0.24), inset 2px 0 4px rgba(0,0,0,0.18);
+    border-color: rgba(212,167,106,0.35);
+  }
+  .book-card:active { transform: scale(0.98); }
   .book-card .bc-overlay {
     position: absolute; bottom: 0; left: 0; right: 0;
     padding: 12px 10px 8px;
@@ -11517,12 +11539,19 @@
     background: var(--bg);
     border-bottom: 1px solid var(--border);
     z-index: 2;
+    display: flex; align-items: center; justify-content: space-between;
   }
   .book-review-fullscreen .brf-back-btn {
     background: none; border: none; font-size: 22px;
     color: var(--text); cursor: pointer; padding: 4px 8px;
     line-height: 1;
   }
+  .book-review-fullscreen .brf-del-btn {
+    background: none; border: none; font-size: 17px;
+    color: var(--text-dim); cursor: pointer; padding: 4px 8px;
+    line-height: 1; border-radius: 6px;
+  }
+  .book-review-fullscreen .brf-del-btn:hover { color: var(--accent); background: var(--card-bg); }
   .book-review-fullscreen .brf-cover {
     width: 55%; max-width: 220px; margin: 20px auto 0;
     aspect-ratio: 2/3;

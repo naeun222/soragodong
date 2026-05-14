@@ -50,6 +50,7 @@ function _renderBookReviewFullscreen(pearl, editMode) {
   overlay.innerHTML = `
     <div class="brf-back">
       <button class="brf-back-btn" onclick="closeBookReviewFullscreen()">←</button>
+      <button class="brf-del-btn" onclick="_deleteBookPearl('${pearl.id}')" aria-label="이 책 진주 삭제">🗑</button>
     </div>
     <div class="brf-cover" ${coverStyle}>${pearl.photo ? '' : '<div class="brf-cover-placeholder">📚</div>'}</div>
     <div class="brf-title">${escapeHtml(title)}</div>
@@ -66,6 +67,30 @@ function _renderBookReviewFullscreen(pearl, editMode) {
       setTimeout(() => ta.focus(), 30);
     }
   }
+}
+
+// V4 (사용자 명시 2026-05-14): 책 진주 삭제 — 풀스크린 view 에서 🗑.
+//   confirm modal 한 번 → state.pearls.splice → 풀스크린 닫고 renderLensPearls.
+async function _deleteBookPearl(pearlId) {
+  const idx = (state.pearls || []).findIndex(p => p.id === pearlId);
+  if (idx < 0) return;
+  const pearl = state.pearls[idx];
+  const title = pearl.bookTitle || pearl.content || '책';
+  const ok = await showConfirmModal({
+    title: '📚 이 책 진주 삭제할래?',
+    message: `"${title}"\n\n독후감까지 같이 사라져 — 되돌릴 수 X.`,
+    okLabel: '삭제',
+    cancelLabel: '취소',
+    danger: true
+  });
+  if (!ok) return;
+  state.pearls.splice(idx, 1);
+  saveState();
+  closeBookReviewFullscreen();
+  if (typeof renderLensPearls === 'function') renderLensPearls();
+  if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
+  if (typeof renderLibraryHero === 'function') renderLibraryHero();
+  showToast('책 진주 삭제됨');
 }
 
 function _saveBookReview(pearlId) {
