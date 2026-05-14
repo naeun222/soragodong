@@ -13283,6 +13283,10 @@
           <button class="btn-secondary" onclick="devPreviewCrisisCarousel()" title="자살예방법 §15-6 + 제조물책임 안전 의무 모달. 자살/자해 신호 감지 시 표시 (1393/1577/119). 일일 cap / log / 가드 무시 — 시각만.">🆘 위기 carousel</button>
           <button class="btn-secondary" onclick="devPreviewPaymentInfoModal()" title="결제 사전 정보 입력 모달 (이름 + 휴대폰). 호출 즉시 paymentPhone / paymentFullName 캐시 클리어 → 모달 띄움. 결제는 호출 X.">💳 결제 사전 정보 모달</button>
           <button class="btn-secondary" onclick="window.open('/preview/signup/', '_blank')" title="카카오 디벨로퍼 비즈앱 검수 신청용 — 회원가입 Step 1·2 + 환영 모달 한눈에.">📸 회원가입 화면 (검수용)</button>
+          <!-- V4 (사용자 명시 2026-05-14 ultrathink): 결제 직후 plan onboarding chain 미리보기 — 각 plan 별 버튼. 결제 성공 모달 → [닫기] → step 2~4 chain. flag 미저장 (reload 시 복원). -->
+          <button class="btn-secondary" onclick="devPreviewPlanOnboarding('early_lifetime')" title="Light(🐚 베이지) — 결제 성공 모달 → step 2 (4단 분석 3회). RAG/Opus step 없음.">🐚 Light onboarding 미리보기</button>
+          <button class="btn-secondary" onclick="devPreviewPlanOnboarding('light')" title="Plus(🌊 딥블루) — 결제 성공 모달 (첫 달 무료 톤) → step 2 (4단 분석 5회) → 대화탭 이동 → step 3 (RAG top-1).">🌊 Plus onboarding 미리보기</button>
+          <button class="btn-secondary" onclick="devPreviewPlanOnboarding('premium')" title="Premium(✨ 황금) — 결제 성공 모달 → step 2 (열 번/시간 제한 없음) → 대화탭 → step 3 (RAG top-3) → step 4 (🦉 Opus 잠금 해제).">✨ Premium onboarding 미리보기</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">🛠 Admin 전용</div>
           <button class="btn-secondary" onclick="adminResetBalance()" title="이전 누적 잔액 정정. 0~$100 범위.">💰 잔액 정정</button>
@@ -50718,6 +50722,41 @@ async function recentGuests(opts) {
 
 async function recentSignups(opts) {
   return recentUsers(Object.assign({ limit: 100 }, opts || {}, { filter: 'signups' }));
+}
+// V4 (사용자 명시 2026-05-14 ultrathink): 개발자도구 — plan 결제 onboarding chain 미리보기.
+//   각 plan (Light / Plus / Premium) 별 버튼 1개. 클릭 시:
+//     1) state.preferences._planOnboardingShown[plan] flag delete (재진입 가능)
+//     2) _showRecurringSuccessModal 호출 — 결제 성공 모달부터 시작 (실 결제 흐름과 동일)
+//     3) [닫기] → _planOnboardingFlow(plan, skipStep1=true) chain (step 2 → 3 → 4)
+//   실제 결제 X / billing cache 안 건드림 / DB 동기 안 함 — UI 시각 확인만.
+function devPreviewPlanOnboarding(planKey) {
+  if (typeof TIER_PLANS_CLIENT === 'undefined' || !TIER_PLANS_CLIENT[planKey]) {
+    if (typeof showToast === 'function') showToast('잘못된 plan key: ' + planKey);
+    return;
+  }
+  // flag reset — 매 미리보기마다 chain 풀로 노출.
+  try {
+    state.preferences = state.preferences || {};
+    state.preferences._planOnboardingShown = state.preferences._planOnboardingShown || {};
+    delete state.preferences._planOnboardingShown[planKey];
+    // 미리보기는 saveState() 생략 — flag 영구 박지 않음 (다음 페이지 reload 시 flag 복원).
+  } catch {}
+  const tier = TIER_PLANS_CLIENT[planKey];
+  // Plus (key='light') 만 isTrial=true (첫 달 무료 카피 분기 확인용). 다른 plan 은 정가 결제 카피.
+  const isTrial = (planKey === 'light');
+  // 가짜 next_billing — 30일 후.
+  const fakeNext = new Date(Date.now() + 30 * 86400_000).toISOString();
+  if (typeof _showRecurringSuccessModal === 'function') {
+    _showRecurringSuccessModal({
+      tier,
+      plan: planKey,
+      pgLabel: '🧪 테스트 (개발자 미리보기)',
+      isTrial,
+      nextBillingIso: fakeNext
+    });
+  } else {
+    if (typeof showToast === 'function') showToast('_showRecurringSuccessModal 미정의');
+  }
 }
 // ═══════════════════════════════════════════════════════════════
 // V3.12: 월간 자동 통합 — 매월 1-7일, 지난 달 데이터 있으면 AI가 자동 정리
