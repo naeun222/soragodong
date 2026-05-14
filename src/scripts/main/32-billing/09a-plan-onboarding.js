@@ -118,11 +118,11 @@ function _planOnboardingFlow(plan, opts) {
           </div>
         </div>
         <div style="font-size:12.5px; color:var(--text-dim); line-height:1.75; margin-bottom:18px;">
-          대화를 더 자연스럽게 할 수 있고, 너를 더 깊이 이해해요.<br>
+          대화를 더 자연스럽게 할 수 있고, 당신을 더 깊이 이해해요.<br>
           <span style="color:var(--text-soft); font-size:11.5px;">${subCopy}</span>
         </div>
         <div style="font-size:11.5px; color:var(--text-soft); line-height:1.6; margin-bottom:18px; padding:9px 12px; background:rgba(255,255,255,0.03); border-radius:8px;">
-          상단 헤더의 🐚 아이콘을 누르면 ON 됩니다.
+          상단 헤더의 <img src="/character/godong-serious.svg" alt="" style="height:15px; vertical-align:middle; margin:0 1px;"> 아이콘을 누르시면 ON 됩니다.
         </div>
         <button class="btn-primary plan-onb-btn" id="planOnbStep3Ok" style="width:100%; padding:11px; background:${tierColor}; border:none; color:#fff; font-weight:600;">알겠어</button>
       </div>
