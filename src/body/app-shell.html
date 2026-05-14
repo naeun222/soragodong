@@ -348,8 +348,7 @@
     <div class="screen" id="screen-reflection">
       <div class="reflection-screen-header">
         <button class="reflection-screen-back" onclick="closeReflectionScreen()">←</button>
-        <!-- V4 (사용자 명시 2026-05-13): 토글을 godongicon 자리 (back 옆 좌측) 으로 이동. 휴지통 옆 X. -->
-        <button class="chat-mode-btn js-reflection-mode-btn" onclick="toggleReflectionOpus()" aria-label="Opus/Sonnet 전환" title="🪶 Sonnet — 누르면 Opus (Premium 전용)">🪶</button>
+        <!-- V4 (사용자 명시 2026-05-14): Opus 토글은 메인 헤더 godongicon 자리 (대화탭 RAG 와 동일 위치) 로 이동. screen-header 자체 토글 제거. -->
         <div class="reflection-screen-q" id="reflectionScreenQ"></div>
         <div class="reflection-screen-actions">
           <button class="reflection-resolve-btn" id="reflectionResolveBtn">✓ 결론</button>
@@ -371,8 +370,7 @@
     <div class="screen" id="screen-magic-help">
       <div class="reflection-screen-header">
         <button class="reflection-screen-back" onclick="closeMagicHelpChat()">←</button>
-        <!-- V4 (사용자 명시 2026-05-13): 토글을 godongicon 자리 (back 옆 좌측) 으로 이동. 휴지통 옆 X. -->
-        <button class="chat-mode-btn js-magic-mode-btn" onclick="toggleMagicHelpOpus()" aria-label="Opus/Sonnet 전환" title="🪶 Sonnet — 누르면 Opus (Premium 전용)">🪶</button>
+        <!-- V4 (사용자 명시 2026-05-14): Opus 토글은 메인 헤더 godongicon 자리 (대화탭 RAG 와 동일 위치) 로 이동. screen-header 자체 토글 제거. -->
         <div class="reflection-screen-q" id="magicHelpScreenQ"></div>
         <div class="reflection-screen-actions">
           <button class="reflection-resolve-btn" id="magicHelpDeleteBtn" onclick="deleteMagicHelpChat()" title="이 임시 대화 삭제 — 분석 input에 안 들어감" style="background:transparent; border:1px solid rgba(220,80,80,0.30); color:#e8a3a3; padding:6px 10px;">🗑</button>

@@ -148,14 +148,26 @@ function updateChatModeBtn() {
 // V4 (사용자 명시 2026-05-13 ultrathink): 메인 헤더 토글 핸들러.
 //   대화탭 + Plus/Premium = RAG 토글. Light/미구독/게스트 또는 다른 탭 = no-op (brand only).
 //   Plus 첫 클릭 → 1-step 설명 모달 (첫 클릭은 OFF 유지, 두 번째 클릭부터 toggle).
+// V4 (사용자 명시 2026-05-14): 숙고의 방 / 마법고동 screen 도 메인 헤더 토글 자리 = Opus/Sonnet 토글 (대화탭과 동일 위치).
 function onMainHeaderToggleClick() {
   // 게스트 = 결제 유도 X, 로그인 유도.
   if (typeof state !== 'undefined' && state && state.isGuest) {
     if (typeof showGuestConversionModal === 'function') showGuestConversionModal({ reason: 'rag_toggle' });
     return;
   }
-  // 활성 화면 검사 — 대화탭에서만 RAG 토글 동작.
+  // 활성 화면 검사.
   const activeScreen = document.querySelector('.screen.active, #screen-chat.active');
+  const screenId = activeScreen && activeScreen.id;
+  // 숙고의 방 = per-room Opus 토글로 dispatch.
+  if (screenId === 'screen-reflection') {
+    if (typeof toggleReflectionOpus === 'function') toggleReflectionOpus();
+    return;
+  }
+  // 마법고동 = per-room Opus 토글로 dispatch.
+  if (screenId === 'screen-magic-help') {
+    if (typeof toggleMagicHelpOpus === 'function') toggleMagicHelpOpus();
+    return;
+  }
   const isChat = activeScreen && (activeScreen.id === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
   if (!isChat) return;  // 다른 탭 = brand only no-op
   // Plan 검사 — Plus/Premium 만 가능.
@@ -192,9 +204,13 @@ function onMainHeaderToggleClick() {
 // V4 (사용자 명시 2026-05-13): 메인 헤더 토글 visual — 화면/Plan/RAG 상태 따라 분기.
 //   대화탭 + Plus/Premium = godong-sonnet (OFF) / godong-rag (ON, gold halo)
 //   다른 탭 또는 Light/미구독/게스트 = godongicon (brand only)
+// V4 (사용자 명시 2026-05-14): 숙고의 방 / 마법고동 = 🪶/🦉 Opus 토글 (per-room useOpus 반영).
 function updateMainHeaderBtnVisual() {
   const activeScreen = document.querySelector('.screen.active, #screen-chat.active');
-  const isChat = activeScreen && (activeScreen.id === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
+  const screenId = activeScreen && activeScreen.id;
+  const isChat = activeScreen && (screenId === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
+  const isReflection = screenId === 'screen-reflection';
+  const isMagicHelp = screenId === 'screen-magic-help';
   const billing = window._billingCache;
   const plan = billing?.subscription_plan;
   const active = !!billing?.subscription_active;
@@ -202,9 +218,27 @@ function updateMainHeaderBtnVisual() {
   const useRag = !!(state?.preferences?.useRag);
   const ragSeen = !!(state?.preferences?._ragToggleSeen);
 
+  // 숙고/마법 = per-room useOpus 조회
+  let perRoomUseOpus = false;
+  if (isReflection && typeof _activeReflectionId !== 'undefined' && _activeReflectionId) {
+    const q = (state.reflectionQuestions || []).find(x => x.id === _activeReflectionId);
+    perRoomUseOpus = !!(q && q.useOpus);
+  } else if (isMagicHelp && typeof _magicHelpState !== 'undefined' && _magicHelpState && _magicHelpState.decisionId && _magicHelpState.stepId) {
+    const d = (state.decisions || []).find(x => x.id === _magicHelpState.decisionId);
+    perRoomUseOpus = !!(d && d.helpChatUseOpus && d.helpChatUseOpus[_magicHelpState.stepId]);
+  }
+
   document.querySelectorAll('.js-rag-mode-btn').forEach(btn => {
-    btn.classList.remove('rag-on', 'rag-off', 'rag-blink', 'brand-only');
-    if (isChat && ragEligible) {
+    btn.classList.remove('rag-on', 'rag-off', 'rag-blink', 'brand-only', 'opus');
+    if (isReflection || isMagicHelp) {
+      // 숙고의 방 / 마법고동 = 🪶 Sonnet / 🦉 Opus 토글.
+      btn.classList.toggle('opus', perRoomUseOpus);
+      btn.innerHTML = perRoomUseOpus ? '🦉' : '🪶';
+      btn.setAttribute('aria-label', 'Opus/Sonnet 전환');
+      btn.setAttribute('title', perRoomUseOpus
+        ? '🦉 Opus — 누르면 Sonnet'
+        : '🪶 Sonnet — 누르면 Opus (Premium 전용)');
+    } else if (isChat && ragEligible) {
       if (useRag) {
         btn.classList.add('rag-on');
         btn.innerHTML = '<img src="/character/godong-rag.svg" alt="" class="chat-mode-img">';
@@ -305,11 +339,14 @@ function updateReflectionChatModeBtn() {
   const titleAttr = useOpus
     ? '🦉 Opus — 누르면 Sonnet'
     : '🪶 Sonnet — 누르면 Opus (Premium 전용)';
+  // V4 (사용자 명시 2026-05-14): screen-header 자체 토글 제거 — 메인 헤더 godongicon 자리로 이동.
+  //   js-reflection-mode-btn 잔존 노드 (옛 placement) 도 호환 — querySelector 결과 0개라도 무해.
   document.querySelectorAll('.js-reflection-mode-btn').forEach(btn => {
     btn.classList.toggle('opus', useOpus);
     btn.innerHTML = useOpus ? '🦉' : '🪶';
     btn.setAttribute('title', titleAttr);
   });
+  if (typeof updateMainHeaderBtnVisual === 'function') updateMainHeaderBtnVisual();
 }
 
 // V4 (사용자 명시 2026-05-13): 마법고동/숙고 첫 진입 1-step 튜토리얼 모달.
@@ -333,7 +370,7 @@ function showPerRoomOpusFirstClickModal() {
       <div style="font-size:15px; font-weight:600; color:var(--text); margin-bottom:14px;">🦉 Opus 깊은 사고 모드</div>
       <div style="font-size:12.5px; color:var(--text-dim); line-height:1.75; margin-bottom:18px;">
         여기 이 🪶 토글 누르면 여기선 <b>Opus(상위 모델)</b>로 답해 (Premium 전용).<br>
-        <span style="color:var(--text-soft); font-size:11.5px;">대신 토큰이 5배 더 쓰이니까, 중요한 질문 하나 할 때 키는 거 추천.</span>
+        <span style="color:var(--text-soft); font-size:11.5px;">대신 같은 잔량에서 토큰이 5배 빠르게 차감되니까, 중요한 질문 하나 할 때 키는 거 추천.</span>
       </div>
       <button class="btn-primary" onclick="_perRoomOpusFirstModalClose()" style="width:100%; padding:11px;">알겠어 ✦</button>
     </div>
@@ -378,10 +415,12 @@ function updateMagicHelpChatModeBtn() {
   const titleAttr = useOpus
     ? '🦉 Opus — 누르면 Sonnet'
     : '🪶 Sonnet — 누르면 Opus (Premium 전용)';
+  // V4 (사용자 명시 2026-05-14): screen-header 자체 토글 제거 — 메인 헤더 godongicon 자리로 이동.
   document.querySelectorAll('.js-magic-mode-btn').forEach(btn => {
     btn.classList.toggle('opus', useOpus);
     btn.innerHTML = useOpus ? '🦉' : '🪶';
     btn.setAttribute('title', titleAttr);
   });
+  if (typeof updateMainHeaderBtnVisual === 'function') updateMainHeaderBtnVisual();
 }
 
