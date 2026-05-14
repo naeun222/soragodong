@@ -50,7 +50,7 @@ function _renderBookReviewFullscreen(pearl, editMode) {
   overlay.innerHTML = `
     <div class="brf-back">
       <button class="brf-back-btn" onclick="closeBookReviewFullscreen()">←</button>
-      <button class="brf-del-btn" onclick="_deleteBookPearl('${pearl.id}')" aria-label="이 책 진주 삭제">🗑</button>
+      <button class="brf-more-btn" onclick="_bookViewMore('${pearl.id}')" aria-label="더보기">⋮</button>
     </div>
     <div class="brf-cover" ${coverStyle}>${pearl.photo ? '' : '<div class="brf-cover-placeholder">📚</div>'}</div>
     <div class="brf-title">${escapeHtml(title)}</div>
@@ -69,8 +69,111 @@ function _renderBookReviewFullscreen(pearl, editMode) {
   }
 }
 
-// V4 (사용자 명시 2026-05-14): 책 진주 삭제 — 풀스크린 view 에서 🗑.
-//   confirm modal 한 번 → state.pearls.splice → 풀스크린 닫고 renderLensPearls.
+// V4 (사용자 명시 2026-05-14): 책 진주 ⋮ 더보기 — 다른 진주 패턴 일관 (수정/표지/날짜/삭제).
+async function _bookViewMore(pearlId) {
+  const pearl = state.pearls.find(p => p.id === pearlId);
+  if (!pearl) return;
+  const action = await showOptionsModal({
+    title: `📚 ${pearl.bookTitle || pearl.content || '책'}`,
+    message: '뭐 바꿀까?',
+    options: [
+      { label: '✏️ 책 정보 수정 (제목·저자·한 줄)', value: 'edit_info' },
+      { label: '📷 표지 바꾸기', value: 'change_cover' },
+      { label: '📅 완독 날짜 수정',          value: 'edit_date' },
+      { label: '🗑 삭제',                  value: 'delete' }
+    ]
+  });
+  if (!action) return;
+
+  if (action === 'edit_info') {
+    const newTitle = await showInputModal({
+      title: '📚 책 제목 수정',
+      defaultValue: pearl.bookTitle || '',
+      placeholder: '예: 데미안',
+      okLabel: '다음 →'
+    });
+    if (newTitle === null) return;
+    if (newTitle.trim()) pearl.bookTitle = newTitle.trim().slice(0, 100);
+    const newAuthor = await showInputModal({
+      title: '✍️ 저자 수정 (선택)',
+      defaultValue: pearl.bookAuthor || '',
+      placeholder: '비우면 저자 X',
+      okLabel: '다음 →'
+    });
+    if (newAuthor !== null) {
+      pearl.bookAuthor = newAuthor.trim().slice(0, 60) || null;
+    }
+    const newOneLine = await showInputModal({
+      title: '📚 한 줄 감상평 수정',
+      defaultValue: pearl.content || '',
+      placeholder: '예: 새는 알을 깨고 나온다 ...',
+      multiline: true,
+      maxLength: 300,
+      okLabel: '저장'
+    });
+    if (newOneLine !== null && newOneLine.trim()) pearl.content = newOneLine.trim().slice(0, 300);
+    saveState();
+    _renderBookReviewFullscreen(pearl, false);
+    if (typeof renderLensPearls === 'function') renderLensPearls();
+    showToast('수정됨 ✦');
+    return;
+  }
+
+  if (action === 'change_cover') {
+    try {
+      const file = await pickPhotoFile();
+      if (file) {
+        showFullscreenLoader('표지 처리 중... 📸');
+        const newPhoto = await fileToResizedDataUrl(file, 1024);
+        hideFullscreenLoader();
+        pearl.photo = newPhoto;
+        saveState();
+        _renderBookReviewFullscreen(pearl, false);
+        if (typeof renderLensPearls === 'function') renderLensPearls();
+        if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
+        showToast('표지 바뀜 📷');
+      }
+    } catch (e) {
+      hideFullscreenLoader();
+      console.warn('[book cover change]', e);
+      showToast('표지 처리 실패');
+    }
+    return;
+  }
+
+  if (action === 'edit_date') {
+    const today = todayKey();
+    const current = pearl.finishedAt || pearl.eventDate || today;
+    const newDate = await showInputModal({
+      title: '📅 완독 날짜 수정',
+      message: 'YYYY-MM-DD 형식.',
+      defaultValue: current,
+      placeholder: today,
+      okLabel: '저장'
+    });
+    if (newDate === null) return;
+    const trimmed = (newDate || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      showToast('날짜 형식 — YYYY-MM-DD');
+      return;
+    }
+    pearl.eventDate = trimmed;
+    pearl.finishedAt = trimmed;
+    saveState();
+    _renderBookReviewFullscreen(pearl, false);
+    if (typeof renderLensPearls === 'function') renderLensPearls();
+    if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
+    showToast('날짜 바뀜 📅');
+    return;
+  }
+
+  if (action === 'delete') {
+    await _deleteBookPearl(pearlId);
+    return;
+  }
+}
+
+// V4 (사용자 명시 2026-05-14): 책 진주 삭제 — _bookViewMore 의 'delete' 분기로 위임 (직접 호출도 호환).
 async function _deleteBookPearl(pearlId) {
   const idx = (state.pearls || []).findIndex(p => p.id === pearlId);
   if (idx < 0) return;

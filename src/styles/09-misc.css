@@ -11430,100 +11430,34 @@
   /* ═════════════════════════════════════════════════
      V4 (사용자 명시 2026-05-14 ultrathink) 진주 컬렉션 — 티켓 & 책
      ═════════════════════════════════════════════════ */
-  .ticket-card {
-    /* V4 (2026-05-14): pinterest column break 방지 + 카드 자체 height aspect-ratio 고정
-       사용자 보고 2026-05-14: 기존 진주 (.pinterest-tile) 와 시각·간격 일관 — border/shadow/isolation 통일. */
-    break-inside: avoid; margin-bottom: 10px;
-    display: block;
-    position: relative; aspect-ratio: 3/4;
-    background-size: cover; background-position: center; background-color: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    overflow: hidden; cursor: pointer;
-    transition: transform 0.2s ease, border-color 0.15s, box-shadow 0.2s;
-    isolation: isolate;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-  }
-  .ticket-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
-    border-color: rgba(212,167,106,0.35);
-  }
-  .ticket-card:active { transform: scale(0.98); }
-  .ticket-card .tc-subtype {
+  /* V4 (사용자 명시 2026-05-14): ticket/book 카드 = .pinterest-tile.tile-photo 패턴 통일.
+     사진은 위 (.tile-photo-art) + 글은 사진 밑 (.tile-music-meta) 분리. 다른 진주 UI 와 시각 동일. */
+  .ticket-tile .ticket-art-wrap, .book-tile .book-art-wrap { position: relative; }
+  .ticket-tile .tc-subtype {
     position: absolute; top: 8px; left: 8px;
     background: rgba(0,0,0,0.62); padding: 4px 8px; border-radius: 12px;
     font-size: 10.5px; color: #fff; letter-spacing: 0.02em;
     backdrop-filter: blur(4px);
     max-width: calc(100% - 16px);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    z-index: 2;
   }
-  .ticket-card .tc-title {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    padding: 14px 12px 10px;
-    background: linear-gradient(to top, rgba(0,0,0,0.88), rgba(0,0,0,0.25) 70%, transparent);
-    color: #fff; font-size: 13px; font-weight: 600; line-height: 1.35;
-  }
-  .ticket-card .tc-title-text {
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .ticket-card .tc-venue { font-size: 10.5px; opacity: 0.85; margin-top: 4px; font-weight: 400;
+  .ticket-tile .tc-venue { font-size: 10.5px; color: var(--text-soft); margin-top: 4px; font-weight: 400;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ticket-card .tc-date { font-size: 10px; opacity: 0.78; margin-top: 3px; font-weight: 400; }
-  .ticket-card-empty {
+  .ticket-tile .ticket-art-empty,
+  .book-tile .book-cover-empty {
+    display: flex; align-items: center; justify-content: center;
     background: linear-gradient(135deg, var(--accent-dim), rgba(212,167,106,0.12));
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
-    color: var(--text);
+    font-size: 44px; opacity: 0.7;
   }
-  .ticket-card-empty .tc-emoji-big { font-size: 40px; margin-bottom: 8px; opacity: 0.7; }
-  .ticket-card-empty .tc-subtype { position: static; background: transparent; padding: 0; font-size: 11px; color: var(--accent); }
-  .ticket-card-empty .tc-title {
-    position: static; background: none; padding: 8px 12px 12px;
-    color: var(--text); text-align: center;
-  }
-
-  .book-card {
-    /* V4 (2026-05-14): pinterest column break 방지 + 시각·간격 .pinterest-tile 통일.
-       단 책 등 inset 음영 / 책 그림자 box-shadow 는 책 metaphor 위해 유지. */
-    break-inside: avoid; margin-bottom: 10px;
-    display: block;
-    position: relative; aspect-ratio: 2/3;
-    background-size: cover; background-position: center; background-color: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px 8px 8px 6px;
-    overflow: hidden; cursor: pointer;
-    box-shadow: 2px 3px 8px rgba(0,0,0,0.18), inset 2px 0 4px rgba(0,0,0,0.18);
-    transition: transform 0.2s ease, border-color 0.15s, box-shadow 0.2s;
-    isolation: isolate;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-  }
-  .book-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 4px 7px 18px rgba(0,0,0,0.24), inset 2px 0 4px rgba(0,0,0,0.18);
-    border-color: rgba(212,167,106,0.35);
-  }
-  .book-card:active { transform: scale(0.98); }
-  .book-card .bc-overlay {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    padding: 12px 10px 8px;
-    background: linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.3) 75%, transparent);
-    color: #fff;
-  }
-  .book-card .bc-title { font-size: 12.5px; font-weight: 700; line-height: 1.3;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .book-card .bc-one-liner {
-    font-size: 10px; opacity: 0.86; margin-top: 4px; font-style: italic; line-height: 1.4;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  }
-  .book-card-empty {
+  .book-tile .book-cover-art { aspect-ratio: 2/3; }  /* 책 표지 비율 */
+  .book-tile .book-cover-empty {
+    aspect-ratio: 2/3;
     background: linear-gradient(135deg, #6b5e4f, #4a3f33);
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    color: #fff; opacity: 0.78;
   }
-  .book-card-empty .bc-emoji-big { font-size: 44px; opacity: 0.65; margin-bottom: 4px; }
+  .book-tile .bc-author { font-size: 10.5px; color: var(--text-soft); margin-top: 2px; }
+  .book-tile .bc-one-liner { font-style: italic; }
 
   /* 책 카드 클릭 → 풀스크린 독후감 화면 */
   .book-review-fullscreen {
@@ -11546,11 +11480,13 @@
     color: var(--text); cursor: pointer; padding: 4px 8px;
     line-height: 1;
   }
+  .book-review-fullscreen .brf-more-btn,
   .book-review-fullscreen .brf-del-btn {
-    background: none; border: none; font-size: 17px;
-    color: var(--text-dim); cursor: pointer; padding: 4px 8px;
+    background: none; border: none; font-size: 19px;
+    color: var(--text-soft); cursor: pointer; padding: 4px 8px;
     line-height: 1; border-radius: 6px;
   }
+  .book-review-fullscreen .brf-more-btn:hover,
   .book-review-fullscreen .brf-del-btn:hover { color: var(--accent); background: var(--card-bg); }
   .book-review-fullscreen .brf-cover {
     width: 55%; max-width: 220px; margin: 20px auto 0;
@@ -11752,14 +11688,19 @@
     padding: 8px 14px; background: var(--accent); color: #fff;
     border: none; border-radius: 8px; font-size: 12.5px; cursor: pointer; font-weight: 600;
   }
-  /* V4 (2026-05-14): 티켓 종류 ↑↓ 순서 변경 버튼 */
-  .tsm-reorder { display: flex; flex-direction: column; gap: 1px; margin-right: 2px; }
-  .tsm-reorder-btn {
-    background: none; border: none; color: var(--text-dim);
-    font-size: 11px; line-height: 1; padding: 1px 4px; cursor: pointer; border-radius: 4px;
+  /* V4 (2026-05-14): 티켓 종류 drag handle (≡) — pointer events (mouse + touch). */
+  .tsm-drag {
+    color: var(--text-dim); font-size: 18px; line-height: 1;
+    padding: 4px 6px; cursor: grab; user-select: none;
+    touch-action: none; /* touch 드래그 시 스크롤 가로채기 방지 */
   }
-  .tsm-reorder-btn:hover:not(:disabled) { color: var(--accent); background: var(--card-bg); }
-  .tsm-reorder-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .tsm-drag:active { cursor: grabbing; }
+  .tsm-row { transition: transform 0.15s, opacity 0.15s, background 0.15s; }
+  .tsm-row.tsm-dragging {
+    opacity: 0.7; transform: scale(0.98);
+    background: var(--accent-dim);
+    border-color: var(--accent);
+  }
   .tsm-hint {
     margin-top: 10px; font-size: 11px; color: var(--text-dim);
     line-height: 1.5; text-align: center;

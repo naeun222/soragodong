@@ -2,6 +2,8 @@
 //   renderLensPearls 가 호출. 사진 dominant + sub-type emoji overlay + 제목 + 날짜.
 //   책: 표지 dominant + 제목 + 한 줄 감상평. 클릭 → openBookReviewFullscreen.
 
+// V4 (사용자 명시 2026-05-14): ticket/book 카드 = .pinterest-tile.tile-photo 패턴 (사진 위 + 메타 아래 분리).
+//   기존 진주 UI 일관 — 사진은 위, 글은 사진 밑에. ticket sub-type 만 사진 위 chip overlay.
 function _renderTicketCardHTML(pearl, opts) {
   opts = opts || {};
   const sub = (typeof _findTicketSubType === 'function') ? _findTicketSubType(pearl.subType) : null;
@@ -9,29 +11,24 @@ function _renderTicketCardHTML(pearl, opts) {
   const label = sub?.label || '티켓';
   const title = pearl.content || pearl.bookTitle || label;
   const venue = (pearl.venue || '').trim();
+  const note = (pearl.note || '').trim();
   const dateStr = pearl.eventDate
     ? new Date(pearl.eventDate + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
     : (pearl.createdAt ? new Date(pearl.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '');
   const sizeClass = opts.large ? ' tile-large' : '';
-  // V4 fix (사용자 보고 2026-05-14): venue 안 보임 + 제목 길면 카드 깨짐 → tc-title-text line-clamp + venue 줄 추가.
-  const titleBlock = `<div class="tc-title">
-    <div class="tc-title-text">${escapeHtml(title)}</div>
-    ${venue ? `<div class="tc-venue">📍 ${escapeHtml(venue)}</div>` : ''}
-    ${dateStr ? `<div class="tc-date">${dateStr}</div>` : ''}
-  </div>`;
-  if (pearl.photo) {
-    return `
-      <div class="ticket-card${sizeClass}" onclick="openPearl('${pearl.id}')" style="background-image:url('${pearl.photo}');">
-        <div class="tc-subtype">${emoji} ${escapeHtml(label)}</div>
-        ${titleBlock}
-      </div>
-    `;
-  }
+  const subChip = `<div class="tc-subtype">${emoji} ${escapeHtml(label)}</div>`;
+  const artBlock = pearl.photo
+    ? `<div class="tile-music-art-wrap ticket-art-wrap"><img src="${pearl.photo}" alt="" class="tile-photo-art">${subChip}</div>`
+    : `<div class="tile-music-art-wrap ticket-art-wrap"><div class="tile-photo-art ticket-art-empty">${emoji}</div>${subChip}</div>`;
   return `
-    <div class="ticket-card ticket-card-empty${sizeClass}" onclick="openPearl('${pearl.id}')">
-      <div class="tc-emoji-big">${emoji}</div>
-      <div class="tc-subtype">${escapeHtml(label)}</div>
-      ${titleBlock}
+    <div class="pinterest-tile tile-photo ticket-tile${sizeClass}" onclick="openPearl('${pearl.id}')">
+      ${artBlock}
+      <div class="tile-music-meta">
+        <div class="tile-music-title">${escapeHtml(title)}</div>
+        ${venue ? `<div class="tc-venue">📍 ${escapeHtml(venue)}</div>` : ''}
+        ${note ? `<div class="tile-note">${escapeHtml(note.slice(0, 60))}</div>` : ''}
+        ${dateStr ? `<div class="tile-date">${dateStr}</div>` : ''}
+      </div>
     </div>
   `;
 }
@@ -39,24 +36,19 @@ function _renderTicketCardHTML(pearl, opts) {
 function _renderBookCardHTML(pearl, opts) {
   opts = opts || {};
   const title = pearl.bookTitle || pearl.content || '책';
+  const author = (pearl.bookAuthor || '').trim();
   const oneLiner = pearl.content || '';
   const sizeClass = opts.large ? ' tile-large' : '';
-  if (pearl.photo) {
-    return `
-      <div class="book-card${sizeClass}" onclick="openBookReviewFullscreen('${pearl.id}')" style="background-image:url('${pearl.photo}');">
-        <div class="bc-overlay">
-          <div class="bc-title">${escapeHtml(title)}</div>
-          ${oneLiner ? `<div class="bc-one-liner">${escapeHtml(oneLiner)}</div>` : ''}
-        </div>
-      </div>
-    `;
-  }
+  const artBlock = pearl.photo
+    ? `<div class="tile-music-art-wrap book-art-wrap"><img src="${pearl.photo}" alt="" class="tile-photo-art book-cover-art"></div>`
+    : `<div class="tile-music-art-wrap book-art-wrap"><div class="tile-photo-art book-cover-art book-cover-empty">📚</div></div>`;
   return `
-    <div class="book-card book-card-empty${sizeClass}" onclick="openBookReviewFullscreen('${pearl.id}')">
-      <div class="bc-emoji-big">📚</div>
-      <div class="bc-overlay">
-        <div class="bc-title">${escapeHtml(title)}</div>
-        ${oneLiner ? `<div class="bc-one-liner">${escapeHtml(oneLiner)}</div>` : ''}
+    <div class="pinterest-tile tile-photo book-tile${sizeClass}" onclick="openBookReviewFullscreen('${pearl.id}')">
+      ${artBlock}
+      <div class="tile-music-meta">
+        <div class="tile-music-title">${escapeHtml(title)}</div>
+        ${author ? `<div class="bc-author">${escapeHtml(author)}</div>` : ''}
+        ${oneLiner ? `<div class="tile-note bc-one-liner">${escapeHtml(oneLiner)}</div>` : ''}
       </div>
     </div>
   `;
@@ -106,16 +98,11 @@ function _renderTicketSubTypeManager() {
 
   const subs = state.preferences.ticketSubTypes;
   let listHtml = '';
-  // V4 (사용자 명시 2026-05-14 ultrathink): ↑↓ 순서 변경 버튼 — 위/아래 끝에서 disabled.
+  // V4 (사용자 명시 2026-05-14): drag handle (≡) 으로 순서 변경 — pointer events (mouse + touch 통합).
   subs.forEach((s, i) => {
-    const upDis = i === 0 ? 'disabled' : '';
-    const downDis = i === subs.length - 1 ? 'disabled' : '';
     listHtml += `
-      <div class="tsm-row">
-        <div class="tsm-reorder">
-          <button class="tsm-reorder-btn" onclick="_moveTicketSubType(${i}, -1)" ${upDis} aria-label="위로">▲</button>
-          <button class="tsm-reorder-btn" onclick="_moveTicketSubType(${i}, 1)" ${downDis} aria-label="아래로">▼</button>
-        </div>
+      <div class="tsm-row" data-tsm-idx="${i}" draggable="true">
+        <span class="tsm-drag" aria-label="끌어서 순서 변경" title="끌어서 순서 변경">≡</span>
         <span class="tsm-emoji">${s.emoji}</span>
         <span class="tsm-label">${escapeHtml(s.label)}</span>
         <label class="tsm-toggle">
@@ -143,6 +130,58 @@ function _renderTicketSubTypeManager() {
     </div>
   `;
   document.body.appendChild(overlay);
+  // V4 (사용자 명시 2026-05-14): drag-and-drop bind (pointer events — mouse + touch 통합).
+  _bindTsmDragHandlers();
+}
+
+// drag state — array 직접 swap, 매 hover row 마다 재렌더.
+let _tsmDrag = null;
+function _bindTsmDragHandlers() {
+  const list = document.querySelector('#ticketSubTypeManager .tsm-list');
+  if (!list) return;
+  list.querySelectorAll('.tsm-drag').forEach(handle => {
+    handle.addEventListener('pointerdown', _onTsmPointerDown);
+  });
+}
+function _onTsmPointerDown(e) {
+  e.preventDefault();
+  const handle = e.currentTarget;
+  const row = handle.closest('.tsm-row');
+  if (!row) return;
+  const idx = +row.dataset.tsmIdx;
+  _tsmDrag = { idx };
+  row.classList.add('tsm-dragging');
+  try { handle.setPointerCapture(e.pointerId); } catch {}
+  document.addEventListener('pointermove', _onTsmPointerMove);
+  document.addEventListener('pointerup', _onTsmPointerUp, { once: true });
+  document.addEventListener('pointercancel', _onTsmPointerUp, { once: true });
+}
+function _onTsmPointerMove(e) {
+  if (!_tsmDrag) return;
+  e.preventDefault();
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  const overRow = target?.closest?.('.tsm-row');
+  if (!overRow) return;
+  const overIdx = +overRow.dataset.tsmIdx;
+  if (!Number.isFinite(overIdx) || overIdx === _tsmDrag.idx) return;
+  const arr = state.preferences.ticketSubTypes;
+  if (!Array.isArray(arr) || !arr[_tsmDrag.idx]) return;
+  const moved = arr.splice(_tsmDrag.idx, 1)[0];
+  arr.splice(overIdx, 0, moved);
+  _tsmDrag.idx = overIdx;
+  _renderTicketSubTypeManager();
+  // 새 row 찾아서 dragging class 유지
+  const newRow = document.querySelector(`#ticketSubTypeManager .tsm-row[data-tsm-idx="${overIdx}"]`);
+  if (newRow) newRow.classList.add('tsm-dragging');
+}
+function _onTsmPointerUp() {
+  document.removeEventListener('pointermove', _onTsmPointerMove);
+  if (_tsmDrag) {
+    document.querySelectorAll('#ticketSubTypeManager .tsm-dragging').forEach(r => r.classList.remove('tsm-dragging'));
+    _tsmDrag = null;
+    saveState();
+    if (typeof renderLensPearls === 'function') renderLensPearls();
+  }
 }
 
 function closeTicketSubTypeManager() {
@@ -168,17 +207,6 @@ function _deleteTicketSubType(idx) {
   _renderTicketSubTypeManager();
   if (typeof renderLensPearls === 'function') renderLensPearls();
   showToast('종류 삭제됨 (기존 티켓은 그대로 남아 있어)');
-}
-
-function _moveTicketSubType(idx, dir) {
-  const arr = state.preferences.ticketSubTypes;
-  if (!arr) return;
-  const j = idx + dir;
-  if (j < 0 || j >= arr.length) return;
-  const tmp = arr[idx]; arr[idx] = arr[j]; arr[j] = tmp;
-  saveState();
-  _renderTicketSubTypeManager();
-  if (typeof renderLensPearls === 'function') renderLensPearls();
 }
 
 function _addTicketSubType() {
