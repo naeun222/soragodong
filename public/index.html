@@ -38106,7 +38106,10 @@ function renderModel() {
     const split = splitItems(arr, 1, 0.4, true);
     let inner = `<div class="model-section"><div class="model-section-title">${label}</div>`;
     split.top.forEach(item => {
-      const idx = arr.indexOf(item);
+      // V4 fix (사용자 보고 2026-05-14 ultrathink): idx 는 state[category] (full array) 기준이어야 confirmModelItem 이 정확한 item 을 찾는다.
+      //   옛 `arr.indexOf(item)` = _filterNonSim 한 filtered idx → state.values 에 시뮬 항목이 있으면 mismatch → 엉뚱한 (시뮬) 항목이 user_verified=true.
+      //   자세히 보기 안의 renderMoreSection 은 처음부터 state[category].indexOf 였음 — 그래서 거기선 정상 동작.
+      const idx = state[category].indexOf(item);
       inner += renderModelItem(item, category, idx);
     });
     if (split.more.length > 0 || split.draft.length > 0) {
