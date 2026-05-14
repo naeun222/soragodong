@@ -21,6 +21,11 @@ const TRIAL_PLAN: 'light' = 'light';  // Plus tier — trial 흐름 전용
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
+  // V4 (사용자 명시 2026-05-14): 무료 체험 정책 종료 — 안전망 410 Gone. 기존 trial 사용자 (plus_trial_consumed_at) 보존.
+  return jsonResponse({
+    error: '무료 체험 정책 종료 — 정가 구독 (portone-register-recurring) 으로 진행해줘.',
+    code: 'TRIAL_DISCONTINUED'
+  }, 410);
   // V4 (사용자 명시 2026-05-11 — 가계약): 정기결제 흐름 자체 비활성화 시 trial 등록 차단.
   //   cron-charge-recurring 이 no-op 인 상태에서 trial 등록 시 = 30일 뒤 자동결제 X → 무한 무료 사용 (본인 출혈).
   //   frontend 가계약 모드는 proceedOneTimePurchase 로 분기하므로 이 endpoint 호출 X. 직접 호출 방어용.

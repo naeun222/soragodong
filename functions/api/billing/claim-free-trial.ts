@@ -16,6 +16,11 @@ const TRIAL_PLAN: 'light' = 'light';
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
+  // V4 (사용자 명시 2026-05-14): 무료 체험 정책 종료 — 안전망 410 Gone. 기존 trial 사용자 보존 (cron 정상).
+  return jsonResponse({
+    error: '무료 체험 정책 종료 — 정가 구독으로 진행해줘.',
+    code: 'TRIAL_DISCONTINUED'
+  }, 410);
   // 정기결제 모드면 register-trial 사용해야 함 (카드 등록 + 자동결제). 이 endpoint 차단.
   if ((env as any).BILLING_RECURRING_ENABLED === 'true') {
     return jsonResponse({

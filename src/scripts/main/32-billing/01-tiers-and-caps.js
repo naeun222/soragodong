@@ -20,16 +20,16 @@
 //   - 정기  : 카드 등록 + 30일 후 자동결제 — backend `portone-register-trial` 흐름. 1인 1회.
 const _RECUR = (typeof BILLING_RECURRING_ENABLED !== 'undefined') ? BILLING_RECURRING_ENABLED : true;
 const TIER_PLANS_CLIENT = {
-  // Plus (9,900) — key 'light'. mid tier. 첫 달 무료 — RECUR 에 따라 카피만 분기.
-  // V4 (사용자 명시 2026-05-13 ultrathink): description 재작성 — 일일 cap (정성) / 4단 분석 일일 횟수 (정량) / Opus 유무.
-  //   옛 카피 ('마법고동 큰 결정 / 주간·월간 회고 풀 활용') 폐기 — 두 기능 다 전 tier 공통이라 차별점 아님.
+  // Plus (9,900) — key 'light'. mid tier.
+  // V4 (사용자 명시 2026-05-14): 첫 달 무료 trial 폐기 — 정가 즉시 결제. has_free_trial=false.
+  //   사유: 운영 비용 절감 / trial → churn 비율 불확실. 기존 trial 사용자 (plus_trial_consumed_at) 보존 — cron 정상.
   light:          { krw: 9900,  cap_usd: 5,    cap_krw: 7000,  label: 'Plus',
-    tagline: '깊게, 꾸준히 — 첫 달 무료',
+    tagline: '깊게, 꾸준히',
     emoji: '🌊',
     description: _RECUR
-      ? '일일 사용 한도 넉넉 · 4단 분석 5회/일. 첫 달 무료 — 한 달 후 자동 결제, 언제든 해지.'
-      : '일일 사용 한도 넉넉 · 4단 분석 5회/일. 첫 달 무료 — 한 달 후 만료 (자동 결제 X). 1인 1회 한정.',
-    has_free_trial: true },
+      ? '일일 사용 한도 넉넉 · 4단 분석 5회/일. 매월 자동 결제, 언제든 해지.'
+      : '일일 사용 한도 넉넉 · 4단 분석 5회/일. 1개월 이용권 — 만료 후 재구매 (자동 갱신 X).',
+    has_free_trial: false },
   // Premium (25,000) — top tier anchor. 정가 결제. emoji ✨ (🐚🌊✨ 그라데이션 완성).
   premium:        { krw: 25000, cap_usd: 13,   cap_krw: 18000, label: 'Premium',        tagline: '마음껏 깊게', emoji: '✨',
     description: _RECUR
