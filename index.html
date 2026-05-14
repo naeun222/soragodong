@@ -12230,10 +12230,15 @@
   letter-spacing: 0.01em;
   margin-bottom: 8px;
 }
+.v9-warm-textarea-wrap {
+  position: relative;
+  width: 100%;
+}
 .v9-warm-input {
   width: 100%;
   min-height: 84px;
   padding: 14px 16px;
+  padding-right: 48px;  /* 🎤 자리 */
   font-size: 16px;
   line-height: 1.5;
   font-family: inherit;
@@ -12245,6 +12250,46 @@
   outline: none;
   transition: border-color 180ms ease, background 180ms ease;
   /* iOS 16px+ = zoom-in 회피 */
+}
+/* V4 (사용자 명시 2026-05-15): textarea 우측 corner 🎤 — paradox of choice 회피 위해 inline 통합. */
+.v9-warm-mic-btn {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-soft, #b8b8bd);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 160ms ease, color 160ms ease, transform 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.v9-warm-mic-btn svg { width: 17px; height: 17px; display: block; }
+.v9-warm-mic-btn:hover { background: rgba(255, 255, 255, 0.14); color: var(--text, #f3f3f5); }
+.v9-warm-mic-btn:active { transform: scale(0.92); }
+.v9-warm-mic-btn.speech-active {
+  background: rgba(212, 168, 90, 0.30);
+  color: var(--accent, #d4a85a);
+  border-color: rgba(212, 168, 90, 0.55);
+  animation: v9MicPulse 1.4s ease-in-out infinite;
+}
+@keyframes v9MicPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 168, 90, 0.45); }
+  50%      { box-shadow: 0 0 0 6px rgba(212, 168, 90, 0); }
+}
+.v9-warm-mic-hint {
+  font-size: 12px;
+  color: var(--text-soft, #b8b8bd);
+  text-align: center;
+  margin-top: -4px;
+  opacity: 0.85;
+  letter-spacing: 0.01em;
 }
 .v9-warm-input::placeholder {
   color: rgba(255, 255, 255, 0.35);
@@ -20357,6 +20402,18 @@ async function init() {
       } catch {}
     }
   } catch {}
+  // V4 (사용자 명시 2026-05-15): _firstAppDayKey — 첫 진입 KST day key 기록.
+  //   회전 카드 godongDiary 첫날 차단 (신규 미구독자) 등 first-day cohort 가드 용.
+  //   기존 사용자 (key 없음) = 한 번 init 시 today key set → 그 이후 부터 정상.
+  try {
+    if (state && typeof todayKey === 'function') {
+      state.preferences = state.preferences || {};
+      if (!state.preferences._firstAppDayKey) {
+        state.preferences._firstAppDayKey = todayKey();
+        try { saveState(); } catch {}
+      }
+    }
+  } catch {}
   const now = new Date();
   // V4 (v8 묶음 9): _core2NotUnlocked 신규 사용자 detect — Core 2 본 적 X 인 사용자만 4단 응답 disabled-locked
   if (typeof state._core2NotUnlocked === 'undefined') {
@@ -23790,7 +23847,11 @@ function _v9ShowWarmStartModal() {
         <div class="v9-warm-card">
           <img class="v9-warm-godong" src="/godongicon.png" alt="고동이" decoding="async">
           <div class="v9-warm-question">요즘 머릿속에 제일 큰 거<br>하나만 풀어볼래?</div>
-          <textarea class="v9-warm-input" id="v9WarmInput" placeholder="한 줄도 좋아" rows="3"></textarea>
+          <div class="v9-warm-textarea-wrap">
+            <textarea class="v9-warm-input" id="v9WarmInput" placeholder="한 줄도 좋아" rows="3"></textarea>
+            <button class="v9-warm-mic-btn" id="v9WarmMicBtn" onclick="if(typeof _toggleInputSpeech==='function')_toggleInputSpeech('v9WarmInput','v9WarmMicBtn')" type="button" aria-label="음성"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
+          </div>
+          <div class="v9-warm-mic-hint">🎤 말로 해도 돼</div>
           <div class="v9-warm-buttons">
             <button class="v9-warm-btn ghost" id="v9WarmNone" type="button">없어</button>
             <button class="v9-warm-btn primary" id="v9WarmSend" type="button" disabled>보내기 →</button>
@@ -28988,6 +29049,20 @@ function _rcConfirmNewView(itemId, verdict) {
 // =============================================================================
 function _rcSource3GodongDiary() {
   if (typeof _canAI !== 'function' || !_canAI()) return { id: 'godongDiary', available: false };
+  // V4 (사용자 명시 2026-05-15): 게스트 제외 + 신규 미구독자 가입 첫날 제외.
+  //   게스트 = 정착 X (저장 X / 결제 X) 라 godongDiary 보일 가치 적음 + Sonnet 비용 부담.
+  //   신규 미구독자 첫날 = onboarding 첫인상 단순화 (paradox of choice 회피). 다음날부터 노출.
+  //   구독자 = 항상 OK (가입 첫날도).
+  if (state.isGuest) return { id: 'godongDiary', available: false };
+  const _bill = window._billingCache || {};
+  const _subActive = !!_bill.subscription_active && _bill.subscription_plan && _bill.subscription_plan !== 'guest';
+  if (!_subActive) {
+    const _firstDayKey = state.preferences && state.preferences._firstAppDayKey;
+    const _todayK = (typeof todayKey === 'function') ? todayKey() : null;
+    if (_firstDayKey && _todayK && _firstDayKey === _todayK) {
+      return { id: 'godongDiary', available: false };
+    }
+  }
   // entries 비어있으면 처음 진입 시 trigger 카드로 보여주는 게 자연스러움.
   // cooldown 무관 — 노트 열려있다는 메타포는 항상 동일.
   return {
@@ -50375,6 +50450,16 @@ function _quickStart({ taskId, taskTitle }) {
   triggerShortcut();
   showRitualActiveBar();
   showToast(taskTitle ? `🌧 시작 — "${taskTitle}"` : '🌧 시작 — 갔다 와');
+  // V4 (사용자 명시 2026-05-15): 첫 시작 시 iOS 단축어 안내 토스트 (1회). modal 대신 toast = 시작 행동 흐름 안 깸.
+  if (state.preferences && !state.preferences._immerseShortcutHintShown) {
+    state.preferences._immerseShortcutHintShown = true;
+    try { saveState(); } catch {}
+    setTimeout(() => {
+      if (typeof showToast === 'function') {
+        showToast('💡 iOS 단축어 만들어두면 시작 즉시 trigger — 설정 → 단축어');
+      }
+    }, 2600);
+  }
 }
 
 // V3.13: 서랍장 task 우선순위 다음 번호 계산 (가장 높은 priority + 1)

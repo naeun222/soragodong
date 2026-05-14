@@ -196,7 +196,11 @@ function _v9ShowWarmStartModal() {
         <div class="v9-warm-card">
           <img class="v9-warm-godong" src="/godongicon.png" alt="고동이" decoding="async">
           <div class="v9-warm-question">요즘 머릿속에 제일 큰 거<br>하나만 풀어볼래?</div>
-          <textarea class="v9-warm-input" id="v9WarmInput" placeholder="한 줄도 좋아" rows="3"></textarea>
+          <div class="v9-warm-textarea-wrap">
+            <textarea class="v9-warm-input" id="v9WarmInput" placeholder="한 줄도 좋아" rows="3"></textarea>
+            <button class="v9-warm-mic-btn" id="v9WarmMicBtn" onclick="if(typeof _toggleInputSpeech==='function')_toggleInputSpeech('v9WarmInput','v9WarmMicBtn')" type="button" aria-label="음성"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
+          </div>
+          <div class="v9-warm-mic-hint">🎤 말로 해도 돼</div>
           <div class="v9-warm-buttons">
             <button class="v9-warm-btn ghost" id="v9WarmNone" type="button">없어</button>
             <button class="v9-warm-btn primary" id="v9WarmSend" type="button" disabled>보내기 →</button>

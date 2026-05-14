@@ -35,6 +35,16 @@ function _quickStart({ taskId, taskTitle }) {
   triggerShortcut();
   showRitualActiveBar();
   showToast(taskTitle ? `🌧 시작 — "${taskTitle}"` : '🌧 시작 — 갔다 와');
+  // V4 (사용자 명시 2026-05-15): 첫 시작 시 iOS 단축어 안내 토스트 (1회). modal 대신 toast = 시작 행동 흐름 안 깸.
+  if (state.preferences && !state.preferences._immerseShortcutHintShown) {
+    state.preferences._immerseShortcutHintShown = true;
+    try { saveState(); } catch {}
+    setTimeout(() => {
+      if (typeof showToast === 'function') {
+        showToast('💡 iOS 단축어 만들어두면 시작 즉시 trigger — 설정 → 단축어');
+      }
+    }, 2600);
+  }
 }
 
 // V3.13: 서랍장 task 우선순위 다음 번호 계산 (가장 높은 priority + 1)

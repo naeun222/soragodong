@@ -442,6 +442,20 @@ function _rcConfirmNewView(itemId, verdict) {
 // =============================================================================
 function _rcSource3GodongDiary() {
   if (typeof _canAI !== 'function' || !_canAI()) return { id: 'godongDiary', available: false };
+  // V4 (사용자 명시 2026-05-15): 게스트 제외 + 신규 미구독자 가입 첫날 제외.
+  //   게스트 = 정착 X (저장 X / 결제 X) 라 godongDiary 보일 가치 적음 + Sonnet 비용 부담.
+  //   신규 미구독자 첫날 = onboarding 첫인상 단순화 (paradox of choice 회피). 다음날부터 노출.
+  //   구독자 = 항상 OK (가입 첫날도).
+  if (state.isGuest) return { id: 'godongDiary', available: false };
+  const _bill = window._billingCache || {};
+  const _subActive = !!_bill.subscription_active && _bill.subscription_plan && _bill.subscription_plan !== 'guest';
+  if (!_subActive) {
+    const _firstDayKey = state.preferences && state.preferences._firstAppDayKey;
+    const _todayK = (typeof todayKey === 'function') ? todayKey() : null;
+    if (_firstDayKey && _todayK && _firstDayKey === _todayK) {
+      return { id: 'godongDiary', available: false };
+    }
+  }
   // entries 비어있으면 처음 진입 시 trigger 카드로 보여주는 게 자연스러움.
   // cooldown 무관 — 노트 열려있다는 메타포는 항상 동일.
   return {

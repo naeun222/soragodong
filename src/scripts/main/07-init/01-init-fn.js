@@ -23,6 +23,18 @@ async function init() {
       } catch {}
     }
   } catch {}
+  // V4 (사용자 명시 2026-05-15): _firstAppDayKey — 첫 진입 KST day key 기록.
+  //   회전 카드 godongDiary 첫날 차단 (신규 미구독자) 등 first-day cohort 가드 용.
+  //   기존 사용자 (key 없음) = 한 번 init 시 today key set → 그 이후 부터 정상.
+  try {
+    if (state && typeof todayKey === 'function') {
+      state.preferences = state.preferences || {};
+      if (!state.preferences._firstAppDayKey) {
+        state.preferences._firstAppDayKey = todayKey();
+        try { saveState(); } catch {}
+      }
+    }
+  } catch {}
   const now = new Date();
   // V4 (v8 묶음 9): _core2NotUnlocked 신규 사용자 detect — Core 2 본 적 X 인 사용자만 4단 응답 disabled-locked
   if (typeof state._core2NotUnlocked === 'undefined') {
