@@ -3,38 +3,9 @@
 // 기존 사용자 = 배너 큐만 (chooser 모달 X).
 // 설정 → 투어 다시 보기 = startCoreTutorial 직접 호출.
 // 설정 → 풀 튜토리얼 = startInteractiveOnboarding 직접 호출.
-// 사용자 요청 2026-04-30: 헤더 배너 '고동MOM에게 한 마디' — 인앱 피드백 직진.
-// dismiss 시 v4 기간 동안 안 뜸 (V5 시 다시 등장).
-function renderFeedbackBanner() {
-  const banner = document.getElementById('feedbackBanner');
-  if (!banner) return;
-  if (typeof authUserId === 'undefined' || !authUserId) { banner.style.display = 'none'; return; }
-  if (typeof session === 'undefined' || !session || !session.access_token) { banner.style.display = 'none'; return; }
-  if (window._onbTutorialMode) { banner.style.display = 'none'; return; }
-  if (state && state.preferences && state.preferences.testerMode) { banner.style.display = 'none'; return; }
-  const major = _currentMajor();
-  const dismissed = state && state.preferences && state.preferences.dismissedFeedbackBannerMajor;
-  if (dismissed === major) { banner.style.display = 'none'; return; }
-  banner.style.display = 'flex';
-  banner.innerHTML = `
-    <div class="update-banner-text">💌 고동MOM에게 한 마디:</div>
-    <div class="update-banner-actions">
-      <button class="update-banner-btn-go" onclick="openFeedbackInApp(); dismissFeedbackBanner();">메시지 보내기</button>
-      <button class="update-banner-btn-dismiss" onclick="dismissFeedbackBanner()" aria-label="닫기">×</button>
-    </div>
-  `;
-}
-
-function dismissFeedbackBanner() {
-  if (!state) return;
-  state.preferences = state.preferences || {};
-  state.preferences.dismissedFeedbackBannerMajor = _currentMajor();
-  saveState();
-  const banner = document.getElementById('feedbackBanner');
-  if (banner) banner.style.display = 'none';
-  // 사용자 보고 2026-05-02: 고동MOM dismiss 후 다음 배너 큐 (legacy / syncTip) 자동 trigger.
-  if (typeof _renderNextBanner === 'function') _renderNextBanner();
-}
+// V4 (사용자 명시 2026-05-15): 고동MOM 헤더 배너 폐기 — render/dismiss 함수 + element + dev preview 전부 제거.
+//   기존 dismiss flag (state.preferences.dismissedFeedbackBannerMajor) 는 자연 사장 (읽는 곳 X).
+//   인앱 피드백 진입은 settings → 피드백 메뉴 가 그대로 담당.
 // V3.13.x: iOS PWA 슬라이드 종료 후 재진입 (또는 탭 복귀) 시 새 버전 체크
 // (visibility hidden → visible. iOS에선 cold start 안 해도 발생.)
 let _lastAutoTourCheck = 0;

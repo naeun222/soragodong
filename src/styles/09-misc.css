@@ -220,10 +220,6 @@
     cursor: pointer; font-family: inherit;
   }
   .update-banner-btn-dismiss:active { background: var(--surface2); }
-  .feedback-banner {
-    background: linear-gradient(135deg, rgba(126,200,227,0.14), rgba(143,200,143,0.10));
-    border-bottom: 1px solid rgba(126,200,227,0.30);
-  }
 
   /* 사용자 요청 2026-04-29: 양생방·깨달음·마법리뷰 timeline 카테고리 = 펼침/접힘 큰 카드 */
   .lib-cat-accordion { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }

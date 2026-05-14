@@ -7,7 +7,7 @@ try { window.APP_VERSION = APP_VERSION; } catch {}
 // lastSeen 자동 갱신 로직 제거. 모든 사용자 (신규 포함)에게 표시.
 function autoTourOnUpdate() {
   if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
-  if (typeof renderFeedbackBanner === 'function') renderFeedbackBanner();
+  // V4 (사용자 명시 2026-05-15): 고동MOM 배너 폐기 — renderFeedbackBanner 호출 제거.
 }
 // V4 (사용자 요청 2026-04-29): 배너 → 3 버튼 모달
 // dismiss 단위는 메이저 버전 (V4/V5/...). 같은 메이저면 한 번 dismiss로 끝까지 안 떠.
@@ -115,22 +115,10 @@ function devPreviewBanner(type) {
     if (dismissBtn) dismissBtn.setAttribute('onclick', 'devClosePreviewBanner()');
     banner.style.display = 'flex';
     if (typeof showToast === 'function') showToast('🔍 미리보기 — 실제 사용자 view');
-  } else if (type === 'feedback') {
-    if (!fb) return;
-    fb.innerHTML = `
-      <div class="update-banner-text">💌 고동MOM에게 한 마디:</div>
-      <div class="update-banner-actions">
-        <button class="update-banner-btn-go" onclick="if (typeof showToast===&quot;function&quot;) showToast(&quot;🔍 미리보기 — 피드백 모달 X&quot;); devClosePreviewBanner();">메시지 보내기</button>
-        <button class="update-banner-btn-dismiss" onclick="devClosePreviewBanner()" aria-label="닫기">×</button>
-      </div>
-    `;
-    fb.style.display = 'flex';
-    if (typeof showToast === 'function') showToast('🔍 미리보기 — 실제 사용자 view');
   }
+  // V4 (사용자 명시 2026-05-15): 'feedback' 분기 폐기 — 배너 자체 제거.
 }
 function devClosePreviewBanner() {
   const banner = document.getElementById('updateBanner');
-  const fb = document.getElementById('feedbackBanner');
   if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
-  if (fb) { fb.style.display = 'none'; fb.innerHTML = ''; }
 }

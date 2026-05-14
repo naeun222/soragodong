@@ -10,7 +10,6 @@
   </div>
 
   <div id="updateBanner" class="update-banner" style="display:none;"></div>
-  <div id="feedbackBanner" class="update-banner feedback-banner" style="display:none;"></div>
 
   <div class="screens">
     <!-- HOME -->
@@ -949,7 +948,6 @@
           <button class="btn-secondary" onclick="(function(){ if(!confirm('실 데이터로 weekly 리뷰 생성 — Opus 호출 (1-2분, 약 $0.02-0.05). 진행할래?')) return; state.tutorialShown=state.tutorialShown||{}; state.tutorialShown.reviews=false; if(typeof runFirstReviewsTutorialReal==='function') runFirstReviewsTutorialReal().catch(e=>console.warn(e)); else if(typeof showToast==='function') showToast('함수 부재'); })()" title="리뷰 모음 첫 자연 진입 튜토 — 실 데이터 weekly 리뷰 생성 + 코치마크. 데이터 부족 시 sim fallback.">📅 첫 리뷰 튜토 (실 데이터)</button>
           <button class="btn-secondary" onclick="devForceYesterdayCard()" title="홈 화면의 '어제의 기록 볼래?' 카드 강제 표시 (seen flag reset). 어제 entry 없어도 표시.">🌙 어제 카드 표시</button>
           <button class="btn-secondary" onclick="devPreviewAttemptResult()" title="결과 체크 모달 — 미션 완료 후 attemptStatus 묻는 5 옵션 (해결됐어 / 그저 그래 / 안 통했어 / 못 시도 / 아직).">🔍 결과 체크 모달</button>
-          <button class="btn-secondary" onclick="devPreviewBanner('feedback')" title="모든 사용자 — '고동MOM에게 한 마디'">💌 고동MOM 배너</button>
           <button class="btn-secondary" onclick="devPreviewBanner('syncTip')" title="기존 사용자 — 클라우드 백업 헤더 알약 안내. 코어 끝낸 + entries > 3 한정">☁️ 클라우드 백업 안내 배너</button>
           <button class="btn-secondary" onclick="devClosePreviewBanner()" title="미리보기 닫기 (모든 배너)">✕ 미리보기 닫기</button>
           <button class="btn-secondary" onclick="devPreviewCrisisCarousel()" title="자살예방법 §15-6 + 제조물책임 안전 의무 모달. 자살/자해 신호 감지 시 표시 (1393/1577/119). 일일 cap / log / 가드 무시 — 시각만.">🆘 위기 carousel</button>
