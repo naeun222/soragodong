@@ -3,6 +3,26 @@
 // ═══════════════════════════════════════════════════════════════
 async function init() {
   try { performance.mark('initStart'); } catch (e) {}
+  // V4 (사용자 명시 2026-05-14): landing page attribution — ?ref=start / ?ref=startlite query param.
+  //   첫 진입 시 state.preferences._acquisitionSource + _acquisitionAt 저장. 이후 진입은 무시 (첫 source 보존).
+  //   landing page CTA (start.html / startlite.html) 가 href 에 ref 자동 박음.
+  try {
+    const _refParam = new URLSearchParams(window.location.search).get('ref');
+    if (_refParam && ['start', 'startlite', 'introduce'].includes(_refParam)) {
+      state.preferences = state.preferences || {};
+      if (!state.preferences._acquisitionSource) {
+        state.preferences._acquisitionSource = _refParam;
+        state.preferences._acquisitionAt = new Date().toISOString();
+        try { saveState(); } catch {}
+      }
+      // URL 깔끔 처리 — ref param 1회 capture 후 history 에서 제거 (PWA 재진입 시 leak X).
+      try {
+        const _u = new URL(window.location.href);
+        _u.searchParams.delete('ref');
+        window.history.replaceState({}, document.title, _u.pathname + _u.search + _u.hash);
+      } catch {}
+    }
+  } catch {}
   const now = new Date();
   // V4 (v8 묶음 9): _core2NotUnlocked 신규 사용자 detect — Core 2 본 적 X 인 사용자만 4단 응답 disabled-locked
   if (typeof state._core2NotUnlocked === 'undefined') {

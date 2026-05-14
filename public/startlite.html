@@ -1087,8 +1087,15 @@
       window.requestAnimationFrame(function () { checkScroll(); ticking = false; });
     }, { passive: true });
 
-    // CTA click tracking — soragodong.com 으로 가는 모든 링크
+    // V4 (사용자 명시 2026-05-14): attribution ref param 자동 — 메인 앱이 첫 진입 시 _acquisitionSource 박음.
     document.querySelectorAll('a[href*="soragodong.com"]').forEach(function (el) {
+      try {
+        var u = new URL(el.href);
+        if (!u.searchParams.has('ref')) {
+          u.searchParams.set('ref', 'startlite');
+          el.href = u.toString();
+        }
+      } catch (e) {}
       el.addEventListener('click', function () {
         gtag('event', 'cta_click', {
           cta_text: (el.textContent || '').trim().substring(0, 40),
