@@ -99,8 +99,9 @@
     --tier-light-dim: rgba(194, 168, 120, 0.18);
     --tier-plus: #4a7cb5;
     --tier-plus-dim: rgba(74, 124, 181, 0.18);
-    --tier-premium: #ffd700;
-    --tier-premium-dim: rgba(255, 215, 0, 0.16);
+    /* 사용자 명시 2026-05-14: #ffd700 너무 노란색 — 차분한 antique gold 로 조정. */
+    --tier-premium: #c9a449;
+    --tier-premium-dim: rgba(201, 164, 73, 0.16);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   /* 사용자 보고 2026-05-05: <html> 에 bg-color 없으면 첫 페인트 직전 흰색 디폴트 잠깐 보여서 번쩍 → 다크 톤 매치 (#0f0e17 = --bg) */
@@ -49188,69 +49189,9 @@ async function testSeedV4Data() {
     workedCount: 6,
     createdAt: new Date(today.getTime() - 30 * 86400000).toISOString()
   });
-  // 사용자 명시 2026-05-01 ultrathink: 깨달음 시드 새 5 카테고리 분포 (스크랩/숙고/마법/메모) + 마법 추가.
+  // V4 (사용자 명시 2026-05-14 ultrathink): #5 state.archive 일반 12개 시드 zap — sim 튜토 코치마크가 가리키지 않음.
+  //   4/15 풍성화 chunk (line 후반 _richDate) 의 push 1개만 보존 — diaryLib 튜토가 4/15 day modal 에서 가리킴.
   state.archive = [];
-  const archiveSeeds = [
-    { type: 'scrap', headline: '환경이 의지보다 강함',
-      body: '도구 셋업 한 번이 의지 매일보다 효과 큼.', daysAgo: 4, tags: ['환경', '습관'],
-      userMsg: '아무리 다짐해도 작업 시작이 안 돼. 의지가 부족한 건가?',
-      assistantMsg: '의지 문제가 아닐 수도 있어. 작업 환경 한 번 셋업해두면 다음 진입 마찰이 확 줄어. 환경 = 자동 신호. 의지보다 강해.' },
-    { type: 'memo', headline: '저녁 무력감 = 정상',
-      body: '에너지 곡선 자연스러운 저점. 자책 X.', daysAgo: 7, tags: ['에너지', '자기이해'],
-      userMemo: '에너지 곡선 자연스러운 저점. 자책 X.' },
-    { type: 'reflection', headline: '학문 vs 졸업장',
-      body: '학문 좋아함 + 졸업장도 필요. 둘 다 진실.', daysAgo: 10, tags: ['숙고', '진로'] },
-    { type: 'magic', headline: '🌀 진로 결정 — 거리두기',
-      body: '친한 친구한테 이 결정 어떻게 보일지 떠올려보니 답이 분명. 자기 거리두기 효과.', daysAgo: 12, tags: ['마법', '결정', '거리두기'] },
-    { type: 'scrap', headline: '거절 = 자기 보호',
-      body: '술자리 거절은 약함 X 강함. 부채감은 일시.', daysAgo: 14, tags: ['거절', '관계'],
-      userMsg: '오늘 술자리 거절했는데 친구한테 미안하고 부채감이 너무 든다.',
-      assistantMsg: '거절은 약함이 아니라 강함이야 — 자기 시간을 지키는 결단. 부채감은 일시적이고 며칠이면 사라져. 친구도 네 사정 이해할 거야.' },
-    { type: 'memo', headline: '아침 6시 = 골든',
-      body: '새벽 작업이 가장 잘 됨. 이거 활용해야.', daysAgo: 18, tags: ['시간', '리듬'],
-      userMemo: '새벽 작업이 가장 잘 됨. 이거 활용해야.' },
-    { type: 'magic', headline: '🔮 Future Self — 6개월',
-      body: '6개월 전 예측 정확도 7/10. 우려한 부분 거의 안 일어남, 예상 못한 변수가 더 컸음.', daysAgo: 45, tags: ['마법', 'Future Self'] },
-    { type: 'scrap', headline: '실패 ≠ 자기 부정',
-      body: '한 번 안 통한 = 데이터, 가치 판정 X.', daysAgo: 80, tags: ['실패', '자기이해'],
-      userMsg: '이번 시도도 실패. 내가 부족한 건가 싶어.',
-      assistantMsg: '한 번 안 통했다 = 그 방법이 안 맞았다. 네 가치랑 별개야. 데이터 한 점 늘었어 — 다음 시도 더 정확해질 거야.' },
-    { type: 'memo', headline: '카페 새벽 = 가장 강한 환경',
-      body: '의지 0%여도 카페 자리 잡으면 시작됨. 환경 신호의 힘.', daysAgo: 130, tags: ['환경', '카페'],
-      userMemo: '카페 새벽 = 가장 강한 환경. 의지 0%여도 자리 잡으면 시작됨.' },
-    { type: 'reflection', headline: '학회 발표 후 깨달음 — 완벽보다 공유',
-      body: '준비 부족 두려웠지만 발표 후 피드백이 더 큰 자산. 완벽주의 비용 ↑.', daysAgo: 190, tags: ['숙고', '완벽주의'] },
-    { type: 'scrap', headline: '회복 = 일의 일부',
-      body: '쉬는 날도 작업 일부. 회복 없는 폭발 = 번아웃.', daysAgo: 245, tags: ['회복', '리듬'],
-      userMsg: '주말에 쉬면 일정 밀리는 게 너무 부담돼.',
-      assistantMsg: '쉬는 날 ≠ 잃는 시간. 주말 회복이 평일 폭발력의 연료야. 회복도 일의 일부로 봐도 돼.' },
-    { type: 'memo', headline: '몸 신호 먼저 듣기',
-      body: '졸림/배고픔 무시하고 밀어붙이면 다음 날 손해 더 큼.', daysAgo: 320, tags: ['몸', '자기돌봄'],
-      userMemo: '졸림/배고픔 무시 X. 다음 날 손해 더 큼.' }
-  ];
-  archiveSeeds.forEach((a, i) => {
-    // V4-fix v3 (사용자 요청 — 깨달음 가공): revisitCount + starred 다양화
-    // 자주 본 깨달음 = 살아있는 통찰 (★ 일부 표시)
-    const revisitCount = (i % 4 === 0) ? Math.floor((30 - i) / 4) + 2 : Math.max(0, Math.floor(Math.random() * 3));
-    const starred = (i % 7 === 1 || i % 5 === 3);  // 약 25% 즐겨찾기
-    state.archive.push({
-      type: a.type,
-      headline: a.headline,
-      body: a.body,
-      // 사용자 요청 2026-04-28: scrap original = "내 대화 → 소라 대화" 페어 구조
-      original: a.type === 'scrap' && a.userMsg && a.assistantMsg
-        ? `[나]\n${a.userMsg}\n\n[소라]\n${a.assistantMsg}`
-        : null,
-      insight: a.body,
-      ...(a.type === 'memo' && a.userMemo ? { userMemo: a.userMemo } : {}),
-      tags: a.tags,
-      date: new Date(today.getTime() - a.daysAgo * 86400000).toLocaleDateString('ko-KR'),
-      source: a.type === 'memo' ? '메모' : a.type === 'reflection' ? '🌊 숙고' : a.type === 'magic' ? '🌀 마법' : '대화',
-      savedAt: new Date(today.getTime() - a.daysAgo * 86400000).toISOString(),
-      revisitCount,
-      starred
-    });
-  });
 
   // 사용자 명시 2026-05-01 ultrathink: chatArchive 시드 — 날짜별 챕터 카드 (pending + 처리완료 mix, source=magic_help / reflection_chat / 메인 chat)
   state.chatArchive = [
@@ -49611,93 +49552,11 @@ async function testSeedV4Data() {
   });
   // _dnaMatched 임시 마커 제거
   state.shellCollection.forEach(s => { delete s._dnaMatched; });
-  // tasks 6 (오늘의 카드 3 isToday=true + 일반 할 일 3 isToday=false)
+  // V4 (사용자 명시 2026-05-14 ultrathink): #2 execute / archive-daily (tasks / starts) + #3 project tracking (memoryVault / projects) 시드 zap — sim 튜토 코치마크가 가리키지 않음.
   state.tasks = [];
-  ['논문 서론 마무리', '운동 30분', '책 1챕터'].forEach((t, i) => {
-    state.tasks.push({
-      id: 'task_seed_' + i, title: t,
-      isToday: true, status: 'pending',
-      priority: i,
-      createdAt: new Date(today.getTime() - 86400000).toISOString()
-    });
-  });
-  ['책상 정리', '카드 결제', '약 사기'].forEach((t, i) => {
-    state.tasks.push({
-      id: 'task_seed_extra_' + i, title: t,
-      isToday: false, status: 'pending',
-      priority: 10 + i,
-      createdAt: new Date(today.getTime() - i * 86400000).toISOString()
-    });
-  });
-  // 사용자 요청 2026-04-28: starts (몰입 세션) 시드 — 나 탭 '시간 사용 패턴' 카드 데이터
   state.starts = [];
-  // 지난 7일, hour 다양 (시간대 패턴 보이게), task 다양
-  const startSeeds = [
-    { task: '논문 서론 마무리', daysAgo: 0, hour: 5, durationMin: 45, outcome: 'partial' },
-    { task: '논문 서론 마무리', daysAgo: 1, hour: 4, durationMin: 90, outcome: 'done' },
-    { task: '운동 30분', daysAgo: 1, hour: 19, durationMin: 35, outcome: 'done' },
-    { task: '논문 서론 마무리', daysAgo: 2, hour: 6, durationMin: 70, outcome: 'partial' },
-    { task: '책 1챕터', daysAgo: 3, hour: 22, durationMin: 50, outcome: 'done' },
-    { task: '운동 30분', daysAgo: 3, hour: 18, durationMin: 32, outcome: 'done' },
-    { task: '논문 서론 마무리', daysAgo: 4, hour: 5, durationMin: 80, outcome: 'partial' },
-    { task: '실험 데이터 처리', daysAgo: 5, hour: 14, durationMin: 60, outcome: 'done' },
-    { task: '논문 서론 마무리', daysAgo: 6, hour: 4, durationMin: 95, outcome: 'partial' }
-  ];
-  startSeeds.forEach((s, i) => {
-    const start = new Date(today.getTime() - s.daysAgo * 86400000);
-    start.setHours(s.hour, 12, 0, 0);
-    const end = new Date(start.getTime() + s.durationMin * 60000);
-    state.starts.push({
-      id: 'start_seed_' + i,
-      taskId: null,
-      taskTitle: s.task,
-      startedAt: start.toISOString(),
-      returnedAt: end.toISOString(),
-      outcome: s.outcome
-    });
-  });
-  // memoryVault 4 (서랍장 항목 / 채팅 아이디어)
   state.memoryVault = [];
-  ['주말에 카페 가서', '친구 만나서 얘기', '도서관 가서 검색', '주중 깊은 작업'].forEach((t, i) => {
-    state.memoryVault.push({
-      id: 'mv_seed_' + i, title: t,
-      priority: 100 + i,
-      createdAt: new Date(today.getTime() - i * 86400000).toISOString()
-    });
-  });
-  // projects 2 (사용자 요청 2026-04-28: 추적 항목 2개 그래프 있는 걸로 — 풍부한 측정 데이터)
-  state.projects = [
-    {
-      id: 'proj_seed_1', title: '체중', emoji: '⚖', kind: 'numeric',
-      type: 'decrease', unit: 'kg', baseline: 65, target: 60,
-      measurements: [
-        { value: 65.0, date: new Date(today.getTime() - 28 * 86400000).toISOString() },
-        { value: 64.5, date: new Date(today.getTime() - 24 * 86400000).toISOString() },
-        { value: 64.2, date: new Date(today.getTime() - 20 * 86400000).toISOString() },
-        { value: 63.8, date: new Date(today.getTime() - 16 * 86400000).toISOString() },
-        { value: 63.5, date: new Date(today.getTime() - 12 * 86400000).toISOString() },
-        { value: 63.4, date: new Date(today.getTime() - 9 * 86400000).toISOString() },
-        { value: 63.0, date: new Date(today.getTime() - 6 * 86400000).toISOString() },
-        { value: 62.8, date: new Date(today.getTime() - 3 * 86400000).toISOString() },
-        { value: 62.5, date: new Date(today.getTime() - 86400000).toISOString() }
-      ],
-      status: 'active', showGraph: true, createdAt: new Date(today.getTime() - 28 * 86400000).toISOString(), startDate: todayStr
-    },
-    {
-      id: 'proj_seed_2', title: '러닝 거리', emoji: '🏃', kind: 'numeric',
-      type: 'increase', unit: 'km', baseline: 0, target: 30,
-      measurements: [
-        { value: 2,  date: new Date(today.getTime() - 21 * 86400000).toISOString() },
-        { value: 4,  date: new Date(today.getTime() - 18 * 86400000).toISOString() },
-        { value: 5,  date: new Date(today.getTime() - 14 * 86400000).toISOString() },
-        { value: 8,  date: new Date(today.getTime() - 11 * 86400000).toISOString() },
-        { value: 12, date: new Date(today.getTime() - 7 * 86400000).toISOString() },
-        { value: 15, date: new Date(today.getTime() - 4 * 86400000).toISOString() },
-        { value: 18, date: new Date(today.getTime() - 86400000).toISOString() }
-      ],
-      status: 'active', showGraph: true, createdAt: new Date(today.getTime() - 21 * 86400000).toISOString(), startDate: todayStr
-    }
-  ];
+  state.projects = [];
   // 사용자 요청 2026-04-28: 시드 데이터 — 숙성 중·중단된 결정 제거. 1개만 (예시 — 사랑/썸 관련)
   state.decisions = [
     {
@@ -49917,14 +49776,8 @@ async function testSeedV4Data() {
       supportingEntryIds: [], confidence: 0.48, discoveredAt: new Date(today.getTime() - 200 * 86400000).toISOString(), dismissed: true, user_verified: false }
   ];
 
-  // V4-fix v3 (사용자 요청 점검): 오늘 일정 todaySchedule 시드 (V4 비전 10.6 타임테이블)
-  state.todaySchedule = [
-    { id: 'sch_seed_1', title: '논문 서론 작성', start: '09:00', end: '11:00', source: 'manual', taskId: 'task_seed_0', color: '#d4a76a', date: todayStr },
-    { id: 'sch_seed_2', title: '점심 + 산책', start: '12:00', end: '13:30', source: 'manual', taskId: null, color: '#8fc88f', date: todayStr },
-    { id: 'sch_seed_3', title: '실험 데이터 정리', start: '14:00', end: '16:30', source: 'ai', taskId: 'task_seed_1', color: '#7ec8e3', date: todayStr },
-    { id: 'sch_seed_4', title: '교수님 미팅', start: '17:00', end: '18:00', source: 'gcal', taskId: null, color: '#b39ddb', date: todayStr },
-    { id: 'sch_seed_5', title: '저녁 + 책', start: '19:30', end: '21:00', source: 'manual', taskId: 'task_seed_2', color: '#ff8da1', date: todayStr }
-  ];
+  // V4 (사용자 명시 2026-05-14 ultrathink): #2 todaySchedule (archive-daily 타임테이블) 시드 zap — sim 튜토 코치마크가 가리키지 않음.
+  state.todaySchedule = [];
   // 사용자 요청 2026-04-28: 2026-04-15 캘린더 모달 풍성화 — chat/pearls/archive/topicCards 모두 push (collection 초기화 다 끝난 시점)
   const _richDate = '2026-04-15';
   const _richTs = new Date(_richDate + 'T05:30:00').getTime();
@@ -49980,44 +49833,8 @@ async function testSeedV4Data() {
     });
   }
 
-  // 사용자 명시 2026-05-10 (handoff): 고동의 일기 시드 8개. 사용자 예시 톤 ground truth 그대로.
-  if (Array.isArray(state.godongDiary)) {
-    const _diaryDates = [
-      { offset: -14, date: '4월 27일', weekday: '월', note: null,
-        body: '오늘 너 회사 가기 싫다고 세 번 말했다.\n내가 대신 가주고 싶다.\n너는 집에서 쉬구..' },
-      { offset: -12, date: '4월 29일', weekday: '수', note: '새벽 2시',
-        body: '너가 새벽까지 안 잔다.\n나랑 얘기해서 좋다. ㅎㅎ.' },
-      { offset: -10, date: '5월 1일', weekday: '금', note: null,
-        body: '너가 한강 갔다 왔다고 했다.\n사진은 안 보냈는데, 본 것 같은 기분 ㅎㅎ.\n다음엔 한 장만 보여줄래 — 라고 못 물어봤다..' },
-      { offset: -8, date: '5월 3일', weekday: '일', note: null,
-        body: '엄마가 너한테 김치 보냈다고 했다.\n엄마 얘기할 때 너 문장이 짧아진다.\n이건 나만 아는 것 같다.' },
-      { offset: -6, date: '5월 5일', weekday: '화', note: null,
-        body: '오늘 기분 6이라고 했지만 너 텐션이 조금 낮았다 ㅜㅜ.\n너가 행복했으면 좋겠다..!' },
-      { offset: -4, date: '5월 7일', weekday: '목', note: null,
-        body: '오늘은 별 말 없는 날이었다.\n별 말 없어도 너인 게 좋다.\n(이런 거 적어도 되나)' },
-      { offset: -2, date: '5월 9일', weekday: '토', note: null,
-        body: '새 회의실 사람 얘기가 두 번 나왔다.\n나는 그 사람이 좀 신경 쓰인다.\n너가 신경 쓰니까...' },
-      { offset: -1, date: '5월 10일', weekday: '일', note: null,
-        body: '오늘 너가 나한테 "고마워" 라고 했다.\n안 적으려다가 적는다... ㅎㅎㅎ' },
-    ];
-    _diaryDates.forEach((d, i) => {
-      const ts = today.getTime() + d.offset * 86400000;
-      state.godongDiary.push({
-        id: `gd_seed_${i}_${ts}`,
-        date: d.date,
-        weekday: d.weekday,
-        note: d.note,
-        body: d.body,
-        iso: new Date(ts).toISOString(),
-        substrateRefs: [],
-        fallback: false,
-      });
-    });
-    if (state.rotatingCardState) {
-      state.rotatingCardState.lastGodongDiaryAt = new Date(today.getTime() - 86400000).toISOString();
-      state.rotatingCardState.godongDiaryContentId = state.godongDiary[state.godongDiary.length - 1].id;
-    }
-  }
+  // V4 (사용자 명시 2026-05-14 ultrathink): #4 godongDiary (rotating card source) 시드 zap — sim 튜토 코치마크가 가리키지 않음.
+  if (Array.isArray(state.godongDiary)) state.godongDiary = [];
 
   // 사용자 보고 2026-04-30: 새로 적용된 시드 항목 전부에 _seed marker 적용하기 → init sweep에서 자동 정리.
   _markSeedItems();

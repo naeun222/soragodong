@@ -28,6 +28,7 @@
     --tier-light-dim: rgba(194, 168, 120, 0.18);
     --tier-plus: #4a7cb5;
     --tier-plus-dim: rgba(74, 124, 181, 0.18);
-    --tier-premium: #ffd700;
-    --tier-premium-dim: rgba(255, 215, 0, 0.16);
+    /* 사용자 명시 2026-05-14: #ffd700 너무 노란색 — 차분한 antique gold 로 조정. */
+    --tier-premium: #c9a449;
+    --tier-premium-dim: rgba(201, 164, 73, 0.16);
   }
