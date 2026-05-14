@@ -52,7 +52,13 @@ async function _showTicketSubTypePicker() {
 
 async function saveTicketPearl(opts) {
   opts = opts || {};
-  const subTypeId = await _showTicketSubTypePicker();
+  // V4 (사용자 명시 2026-05-14): sub-filter prefill — '영화' chip 활성 + 버튼 → sub-type picker 도 skip.
+  let subTypeId;
+  if (opts.prefillSubTypeId && _findTicketSubType(opts.prefillSubTypeId)) {
+    subTypeId = opts.prefillSubTypeId;
+  } else {
+    subTypeId = await _showTicketSubTypePicker();
+  }
   if (!subTypeId) return null;
   const sub = _findTicketSubType(subTypeId);
   const ph = _ticketFormPlaceholders(subTypeId);

@@ -362,22 +362,31 @@ async function addPearl() {
   const baseCategories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
   const categories = baseCategories.concat(['티켓', '책']);
   const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 티켓: '🎫', 책: '📚' };
-  const options = categories.map(c => ({
-    label: `${iconMap[c] || '💎'} ${c}`,
-    value: c
-  }));
 
-  let category = await showOptionsModal({
-    title: '어떤 진주? 💎',
-    message: '카테고리 골라.',
-    options
-  });
-  if (!category) return;
-  category = category.trim();
+  // V4 (사용자 명시 2026-05-14): 카테고리 필터된 상태에서 + 버튼 클릭 → 카테고리 모달 skip 하고 바로 그 카테고리.
+  //   '전체' (null) 일 때만 카테고리 선택 모달 노출.
+  let category = null;
+  if (typeof _pearlCatFilter !== 'undefined' && _pearlCatFilter && categories.includes(_pearlCatFilter)) {
+    category = _pearlCatFilter;
+  } else {
+    const options = categories.map(c => ({
+      label: `${iconMap[c] || '💎'} ${c}`,
+      value: c
+    }));
+    const picked = await showOptionsModal({
+      title: '어떤 진주? 💎',
+      message: '카테고리 골라.',
+      options
+    });
+    if (!picked) return;
+    category = picked.trim();
+  }
 
   // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 분기 (도서관 + 버튼 진입).
+  //   sub-filter 도 누른 상태면 sub-type 도 prefill (영화 chip 활성 → 바로 영화 form).
   if (category === '티켓' && typeof saveTicketPearl === 'function') {
-    await saveTicketPearl({ source: 'tab' });
+    const prefSub = (typeof _ticketSubFilter !== 'undefined' && _ticketSubFilter) ? _ticketSubFilter : null;
+    await saveTicketPearl({ source: 'tab', prefillSubTypeId: prefSub });
     return;
   }
   if (category === '책' && typeof saveBookPearl === 'function') {
