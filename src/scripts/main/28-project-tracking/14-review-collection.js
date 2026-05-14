@@ -287,6 +287,7 @@ function renderLensPearls() {
   const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
 
   // V3.12.x: 진주 비언어적 인트로
+  // V4 (사용자 명시 2026-05-14 ultrathink): 카테고리 chip 5 → 7개 (티켓/책 추가). '티켓' 선택 시 sub-filter row.
   let html = `
     <div class="pearls-intro">
       <div class="pearls-intro-header">
@@ -299,14 +300,21 @@ function renderLensPearls() {
         <div class="pi-cat${_pearlCatFilter === '장소' ? ' active' : ''}" onclick="setPearlCatFilter('장소')" role="button" tabindex="0">📍<span>장소</span></div>
         <div class="pi-cat${_pearlCatFilter === '순간' ? ' active' : ''}" onclick="setPearlCatFilter('순간')" role="button" tabindex="0">✨<span>순간</span></div>
         <div class="pi-cat${_pearlCatFilter === '사람' ? ' active' : ''}" onclick="setPearlCatFilter('사람')" role="button" tabindex="0">👥<span>사람</span></div>
+        <div class="pi-cat${_pearlCatFilter === '티켓' ? ' active' : ''}" onclick="setPearlCatFilter('티켓')" role="button" tabindex="0">🎫<span>티켓</span></div>
+        <div class="pi-cat${_pearlCatFilter === '책' ? ' active' : ''}" onclick="setPearlCatFilter('책')" role="button" tabindex="0">📚<span>책</span></div>
       </div>
     </div>
+    ${(typeof _renderTicketSubFilterRow === 'function') ? _renderTicketSubFilterRow() : ''}
     <button class="pearls-add-btn" onclick="addPearl()">+ 진주 하나 더하기</button>
   `;
 
   // 사용자 요청 2026-04-29: 진주 grid 뷰의 별도 카테고리 칩 제거 — 위 '살아있다 느낀 순간들' 인트로의 pi-cat이 같은 역할
   if (_pearlCatFilter) {
     pearls = pearls.filter(p => (p.category || '기타') === _pearlCatFilter);
+    // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 sub-filter — sub-type 단일 선택
+    if (_pearlCatFilter === '티켓' && typeof _ticketSubFilter !== 'undefined' && _ticketSubFilter) {
+      pearls = pearls.filter(p => p.subType === _ticketSubFilter);
+    }
   }
 
   if (pearls.length === 0) {
@@ -333,7 +341,12 @@ function renderLensPearls() {
       const dateStr = p.createdAt
         ? new Date(p.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
         : '';
-      if (p.category === '음악' && p.track) {
+      // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 카드 분기 (사진 dominant).
+      if (p.category === '티켓' && typeof _renderTicketCardHTML === 'function') {
+        html += _renderTicketCardHTML(p, { large: isLarge });
+      } else if (p.category === '책' && typeof _renderBookCardHTML === 'function') {
+        html += _renderBookCardHTML(p, { large: isLarge });
+      } else if (p.category === '음악' && p.track) {
         // 사용자 보고 2026-04-29: artwork onerror replaceWith가 DOM 변경 → masonry layout 재계산 → 첫 카드 깜빡임.
         // onerror=null로 무한 retry 차단 + decoding/loading 힌트로 안정적 로드.
         const artHtml = p.track.artworkUrl
@@ -413,7 +426,12 @@ function renderLensPearls() {
     // timeline (시간순 평면 — 카테고리 그룹 X)
     html += `<div class="pearls-timeline">`;
     pearls.forEach(p => {
-      if (p.category === '음악' && p.track) {
+      // V4 (사용자 명시 2026-05-14 ultrathink): timeline 도 티켓 / 책 카드 분기 (그리드 카드 그대로 — 가로 layout 자연 fallback).
+      if (p.category === '티켓' && typeof _renderTicketCardHTML === 'function') {
+        html += `<div class="pearl-card pearl-ticket-row">${_renderTicketCardHTML(p, {})}</div>`;
+      } else if (p.category === '책' && typeof _renderBookCardHTML === 'function') {
+        html += `<div class="pearl-card pearl-book-row">${_renderBookCardHTML(p, {})}</div>`;
+      } else if (p.category === '음악' && p.track) {
         html += `
           <div class="pearl-music-row pearl-card pearl-music-card" onclick="openPearl('${p.id}')">
             ${renderMusicCardHTML(p.track)}

@@ -358,13 +358,15 @@ async function addPearl() {
     runFirstPearlTutorialV8().catch(e => console.warn('[pearl tutorial]', e));
     return;
   }
-  const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
-  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
+  // V4 (사용자 명시 2026-05-14 ultrathink): 카테고리 5 → 7개 (티켓/책).
+  const baseCategories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
+  const categories = baseCategories.concat(['티켓', '책']);
+  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 티켓: '🎫', 책: '📚' };
   const options = categories.map(c => ({
     label: `${iconMap[c] || '💎'} ${c}`,
     value: c
   }));
-  
+
   let category = await showOptionsModal({
     title: '어떤 진주? 💎',
     message: '카테고리 골라.',
@@ -372,6 +374,16 @@ async function addPearl() {
   });
   if (!category) return;
   category = category.trim();
+
+  // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 분기 (도서관 + 버튼 진입).
+  if (category === '티켓' && typeof saveTicketPearl === 'function') {
+    await saveTicketPearl({ source: 'tab' });
+    return;
+  }
+  if (category === '책' && typeof saveBookPearl === 'function') {
+    await saveBookPearl({ source: 'tab' });
+    return;
+  }
 
   // V3.13.x: 음악 카테고리 → iTunes 검색 모달로 곡 선택
   if (category === '음악') {

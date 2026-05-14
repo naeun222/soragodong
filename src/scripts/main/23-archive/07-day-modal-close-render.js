@@ -59,6 +59,20 @@ function renderLensCalendarGrid() {
     chaptersByDate[a.date] = (chaptersByDate[a.date] || 0) + 1;
   });
 
+  // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 진주 day cell mini icon — eventDate 기준.
+  const ticketsByDate = {};
+  const booksByDate = {};
+  (state.pearls || []).forEach(p => {
+    if (!p) return;
+    if (p.category === '티켓') {
+      const dk = p.eventDate || (p.createdAt ? getDayKey(p.createdAt) : null);
+      if (dk) (ticketsByDate[dk] = ticketsByDate[dk] || []).push(p);
+    } else if (p.category === '책') {
+      const dk = p.eventDate || p.finishedAt || (p.createdAt ? getDayKey(p.createdAt) : null);
+      if (dk) (booksByDate[dk] = booksByDate[dk] || []).push(p);
+    }
+  });
+
   let html = `
     <div class="cal-grid-wrap">
       <div class="cal-nav">
@@ -84,10 +98,33 @@ function renderLensCalendarGrid() {
     const mood = entry?.mood;
     const bg = mood ? moodColor[mood] || 'transparent' : 'transparent';
     const hasChapter = !!chaptersByDate[dateKey];
+    const dayTickets = ticketsByDate[dateKey] || [];
+    const dayBooks = booksByDate[dateKey] || [];
     const isToday = dateKey === todayKey();
     // V4-fix: 오늘은 클릭 가능 — dateKey 문자열 비교 (YYYY-MM-DD)
     const isFuture = dateKey > todayKey();
-    const empty = !entry && !hasChapter;
+    const empty = !entry && !hasChapter && dayTickets.length === 0 && dayBooks.length === 0;
+
+    // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 mini dot — 첫 1개씩 + 누적 +N.
+    let miniIcons = '';
+    if (dayTickets.length > 0) {
+      const first = dayTickets[0];
+      const sub = (typeof _findTicketSubType === 'function') ? _findTicketSubType(first.subType) : null;
+      const emoji = sub?.emoji || '🎫';
+      miniIcons += `<span class="day-cell-mini-dot">${emoji}</span>`;
+    }
+    if (dayBooks.length > 0) {
+      const first = dayBooks[0];
+      if (first.photo) {
+        miniIcons += `<img class="day-cell-mini-cover" src="${first.photo}" alt="">`;
+      } else {
+        miniIcons += `<span class="day-cell-mini-dot">📚</span>`;
+      }
+    }
+    const moreCount = dayTickets.length + dayBooks.length - (dayTickets.length > 0 ? 1 : 0) - (dayBooks.length > 0 ? 1 : 0);
+    if (moreCount > 0) miniIcons += `<span class="day-cell-mini-more">+${moreCount}</span>`;
+    const miniWrap = miniIcons ? `<span class="day-cell-mini-row">${miniIcons}</span>` : '';
+
     html += `
       <div class="cal-day${isToday ? ' today' : ''}${empty ? ' empty' : ''}${isFuture ? ' future' : ''}"
            data-date="${dateKey}"
@@ -96,6 +133,7 @@ function renderLensCalendarGrid() {
            title="${dateKey}${mood ? ` · 기분 ${mood}/5` : ''}">
         <span class="cal-day-num">${d}</span>
         ${hasChapter ? `<span class="cal-chapter-dot"></span>` : ''}
+        ${miniWrap}
       </div>
     `;
   }

@@ -13,25 +13,41 @@ function openDayModal(dateStr) {
   const archives = (state.archive || []).filter(a =>
     a.savedAt && getDayKey(a.savedAt) === dateStr
   );
-  const pearls = (state.pearls || []).filter(p =>
-    p.type !== 'dna_pearl' && p.createdAt && getDayKey(p.createdAt) === dateStr
+  // V4 (사용자 명시 2026-05-14 ultrathink): pearls 분기 — 일반 진주 / 티켓 / 책 따로.
+  //   티켓/책 은 eventDate 기준 (사후 등록 가능), 일반 진주 는 createdAt 기준 (기존 동작).
+  const _allPearls = (state.pearls || []).filter(p => p.type !== 'dna_pearl');
+  const pearls = _allPearls.filter(p =>
+    p.category !== '티켓' && p.category !== '책' &&
+    p.createdAt && getDayKey(p.createdAt) === dateStr
   );
+  const tickets = _allPearls.filter(p => {
+    if (p.category !== '티켓') return false;
+    const dk = p.eventDate || (p.createdAt ? getDayKey(p.createdAt) : null);
+    return dk === dateStr;
+  });
+  const books = _allPearls.filter(p => {
+    if (p.category !== '책') return false;
+    const dk = p.eventDate || p.finishedAt || (p.createdAt ? getDayKey(p.createdAt) : null);
+    return dk === dateStr;
+  });
 
   const counts = {
     diary: (entry ? 1 : 0),
     topics: topics.length,
     archives: archives.length,
-    pearls: pearls.length
+    pearls: pearls.length,
+    tickets: tickets.length,
+    books: books.length
   };
-  const total = counts.diary + counts.topics + counts.archives + counts.pearls;
+  const total = counts.diary + counts.topics + counts.archives + counts.pearls + counts.tickets + counts.books;
   if (total === 0) {
     showToast(`${dateStr} 기록 없음`);
     return;
   }
 
   // 활성 첫 탭: 데이터 있는 첫 카테고리
-  const tabOrder = ['diary', 'topics', 'archives', 'pearls'];
-  _dayModalActiveTab = tabOrder.find(t => counts[t === 'diary' ? 'diary' : t === 'topics' ? 'topics' : t === 'archives' ? 'archives' : 'pearls'] > 0) || 'diary';
+  const tabOrder = ['diary', 'topics', 'archives', 'pearls', 'tickets', 'books'];
+  _dayModalActiveTab = tabOrder.find(t => counts[t] > 0) || 'diary';
 
   const dateLabel = new Date(dateStr + 'T12:00:00').toLocaleDateString('ko-KR', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
@@ -68,12 +84,14 @@ function openDayModal(dateStr) {
         ${counts.topics   ? `<button class="day-tab" data-tab="topics"   onclick="switchDayModalTab('topics')"><span>✦</span> 토픽 <b>${counts.topics}</b></button>` : ''}
         ${counts.archives ? `<button class="day-tab" data-tab="archives" onclick="switchDayModalTab('archives')"><span>✨</span> 깨달음 <b>${counts.archives}</b></button>` : ''}
         ${counts.pearls   ? `<button class="day-tab" data-tab="pearls"   onclick="switchDayModalTab('pearls')"><span>🔮</span> 진주 <b>${counts.pearls}</b></button>` : ''}
+        ${counts.tickets  ? `<button class="day-tab" data-tab="tickets"  onclick="switchDayModalTab('tickets')"><span>🎫</span> 티켓 <b>${counts.tickets}</b></button>` : ''}
+        ${counts.books    ? `<button class="day-tab" data-tab="books"    onclick="switchDayModalTab('books')"><span>📚</span> 책 <b>${counts.books}</b></button>` : ''}
       </div>
       <div class="day-modal-body" id="dayModalBody"></div>
     </div>
   `;
   document.body.appendChild(overlay);
-  overlay._dayData = { entry, topics, archives, pearls, dateStr };
+  overlay._dayData = { entry, topics, archives, pearls, tickets, books, dateStr };
   switchDayModalTab(_dayModalActiveTab);
 }
 
@@ -85,7 +103,7 @@ function switchDayModalTab(tab) {
   const body = document.getElementById('dayModalBody');
   const overlay = document.getElementById('dayModal');
   if (!body || !overlay || !overlay._dayData) return;
-  const { entry, topics, archives, pearls, dateStr } = overlay._dayData;
+  const { entry, topics, archives, pearls, tickets, books, dateStr } = overlay._dayData;
 
   let html = '';
   if (tab === 'diary' && entry) {
@@ -241,10 +259,32 @@ function switchDayModalTab(tab) {
       }
     });
   }
+  // V4 (사용자 명시 2026-05-14 ultrathink): 'tickets' / 'books' 서브탭 본문.
+  if (tab === 'tickets' && Array.isArray(tickets)) {
+    tickets.forEach(p => {
+      if (typeof _renderTicketCardHTML === 'function') {
+        html += `<div class="day-card t-pearl day-ticket-wrap">${_renderTicketCardHTML(p, {})}</div>`;
+      }
+    });
+  } else if (tab === 'books' && Array.isArray(books)) {
+    books.forEach(p => {
+      if (typeof _renderBookCardHTML === 'function') {
+        html += `<div class="day-card t-pearl day-book-wrap">${_renderBookCardHTML(p, {})}</div>`;
+      }
+    });
+  }
+
   if (!html) {
-    const emptyEmoji = tab === 'diary' ? '📔' : tab === 'topics' ? '✦' : tab === 'archives' ? '✨' : '🔮';
-    const emptyLabel = tab === 'diary' ? '일기' : tab === 'topics' ? '토픽' : tab === 'archives' ? '깨달음' : '진주';
-    html = `<div class="day-empty"><span class="day-empty-icon">${emptyEmoji}</span>이 날 ${emptyLabel} 기록 없음.</div>`;
+    const emptyMap = {
+      diary:    { emoji: '📔', label: '일기' },
+      topics:   { emoji: '✦', label: '토픽' },
+      archives: { emoji: '✨', label: '깨달음' },
+      pearls:   { emoji: '🔮', label: '진주' },
+      tickets:  { emoji: '🎫', label: '티켓' },
+      books:    { emoji: '📚', label: '책' }
+    };
+    const e = emptyMap[tab] || { emoji: '🔮', label: '기록' };
+    html = `<div class="day-empty"><span class="day-empty-icon">${e.emoji}</span>이 날 ${e.label} 기록 없음.</div>`;
   }
   body.innerHTML = html;
   if (typeof hydratePearlVideos === 'function') hydratePearlVideos();

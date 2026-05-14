@@ -347,6 +347,16 @@ const DEFAULT_STATE = {
   preferences: {
     nightModeManual: null,  // null = auto, 'on' | 'off' = manual override
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
+    // V4 (사용자 명시 2026-05-14 ultrathink): 진주 '티켓' 카테고리 sub-type — 사용자 customizable.
+    //   default 6개. settings 에서 ON/OFF + 추가/제거 가능.
+    ticketSubTypes: [
+      { id: 'movie',      label: '영화',   emoji: '🎬', enabled: true },
+      { id: 'baseball',   label: '야구',   emoji: '⚾', enabled: true },
+      { id: 'concert',    label: '콘서트', emoji: '🎤', enabled: true },
+      { id: 'musical',    label: '뮤지컬', emoji: '🎭', enabled: true },
+      { id: 'exhibition', label: '전시',   emoji: '🎨', enabled: true },
+      { id: 'travel',     label: '여행',   emoji: '✈️', enabled: true }
+    ],
     starRitualSettings: { useShortcut: true, shortcutName: 'SoraRitual' },
     // V4 신규
     tutorialVersion: null,        // 'full' | 'update' | 'core' | null (어떤 튜토리얼 버전 봤나)

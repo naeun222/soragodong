@@ -11570,6 +11570,287 @@
     width: 100%;
   }
   .scp-btn-ghost:hover { color: var(--text); border-color: var(--border-strong); }
+
+  /* ═════════════════════════════════════════════════
+     V4 (사용자 명시 2026-05-14 ultrathink) 진주 컬렉션 — 티켓 & 책
+     ═════════════════════════════════════════════════ */
+  .ticket-card {
+    position: relative; aspect-ratio: 3/4;
+    background-size: cover; background-position: center; background-color: var(--card-bg);
+    border-radius: 12px; overflow: hidden; cursor: pointer;
+    transition: transform 0.18s;
+  }
+  .ticket-card:hover { transform: translateY(-2px); }
+  .ticket-card .tc-subtype {
+    position: absolute; top: 8px; left: 8px;
+    background: rgba(0,0,0,0.62); padding: 4px 8px; border-radius: 12px;
+    font-size: 10.5px; color: #fff; letter-spacing: 0.02em;
+    backdrop-filter: blur(4px);
+  }
+  .ticket-card .tc-title {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 14px 12px 10px;
+    background: linear-gradient(to top, rgba(0,0,0,0.88), rgba(0,0,0,0.25) 70%, transparent);
+    color: #fff; font-size: 13px; font-weight: 600; line-height: 1.35;
+  }
+  .ticket-card .tc-date { font-size: 10px; opacity: 0.78; margin-top: 3px; font-weight: 400; }
+  .ticket-card-empty {
+    background: linear-gradient(135deg, var(--accent-dim), rgba(212,167,106,0.12));
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    color: var(--text);
+  }
+  .ticket-card-empty .tc-emoji-big { font-size: 40px; margin-bottom: 8px; opacity: 0.7; }
+  .ticket-card-empty .tc-subtype { position: static; background: transparent; padding: 0; font-size: 11px; color: var(--accent); }
+  .ticket-card-empty .tc-title {
+    position: static; background: none; padding: 8px 12px 12px;
+    color: var(--text); text-align: center;
+  }
+
+  .book-card {
+    position: relative; aspect-ratio: 2/3;
+    background-size: cover; background-position: center; background-color: var(--card-bg);
+    border-radius: 6px 8px 8px 6px;
+    overflow: hidden; cursor: pointer;
+    box-shadow: 2px 3px 8px rgba(0,0,0,0.18), inset 2px 0 4px rgba(0,0,0,0.18);
+    transition: transform 0.18s;
+  }
+  .book-card:hover { transform: translateY(-3px) scale(1.02); }
+  .book-card .bc-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 12px 10px 8px;
+    background: linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.3) 75%, transparent);
+    color: #fff;
+  }
+  .book-card .bc-title { font-size: 12.5px; font-weight: 700; line-height: 1.3; }
+  .book-card .bc-one-liner {
+    font-size: 10px; opacity: 0.86; margin-top: 4px; font-style: italic; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .book-card-empty {
+    background: linear-gradient(135deg, #6b5e4f, #4a3f33);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+  }
+  .book-card-empty .bc-emoji-big { font-size: 44px; opacity: 0.65; margin-bottom: 4px; }
+
+  /* 책 카드 클릭 → 풀스크린 독후감 화면 */
+  .book-review-fullscreen {
+    position: fixed; inset: 0; z-index: 90;
+    background: var(--bg);
+    overflow-y: auto;
+    display: flex; flex-direction: column;
+    -webkit-overflow-scrolling: touch;
+  }
+  .book-review-fullscreen .brf-back {
+    position: sticky; top: 0;
+    padding: 12px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    z-index: 2;
+  }
+  .book-review-fullscreen .brf-back-btn {
+    background: none; border: none; font-size: 22px;
+    color: var(--text); cursor: pointer; padding: 4px 8px;
+    line-height: 1;
+  }
+  .book-review-fullscreen .brf-cover {
+    width: 55%; max-width: 220px; margin: 20px auto 0;
+    aspect-ratio: 2/3;
+    background-size: cover; background-position: center; background-color: var(--card-bg);
+    border-radius: 6px 8px 8px 6px;
+    box-shadow: 4px 6px 18px rgba(0,0,0,0.25), inset 3px 0 5px rgba(0,0,0,0.18);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .book-review-fullscreen .brf-cover-placeholder { font-size: 64px; opacity: 0.5; }
+  .book-review-fullscreen .brf-title {
+    font-size: 19px; font-weight: 700; text-align: center;
+    padding: 18px 24px 0; color: var(--text); line-height: 1.35;
+  }
+  .book-review-fullscreen .brf-author {
+    font-size: 13px; color: var(--text-soft); text-align: center;
+    margin-top: 6px;
+  }
+  .book-review-fullscreen .brf-finished {
+    font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 4px;
+  }
+  .book-review-fullscreen .brf-oneliner {
+    padding: 18px 24px 4px;
+    font-size: 14px; color: var(--accent);
+    font-style: italic; text-align: center; line-height: 1.55;
+  }
+  .book-review-fullscreen .brf-body { padding: 12px 22px 40px; flex: 1; }
+  .book-review-fullscreen .brf-review {
+    line-height: 1.85; white-space: pre-wrap; font-size: 14px;
+    color: var(--text);
+    padding: 8px 0 18px;
+  }
+  .book-review-fullscreen .brf-review-empty {
+    padding: 36px 8px;
+    text-align: center;
+    color: var(--text-dim); font-size: 13px;
+    line-height: 1.6;
+  }
+  .book-review-fullscreen .brf-edit-btn {
+    display: block; margin: 8px auto 0;
+    background: var(--accent); color: #fff; border: none;
+    padding: 11px 22px; border-radius: 10px;
+    font-size: 13px; cursor: pointer; font-weight: 600;
+  }
+  .book-review-fullscreen .brf-edit-btn:hover { filter: brightness(1.08); }
+  .book-review-fullscreen .brf-textarea {
+    width: 100%; min-height: 320px;
+    padding: 14px;
+    background: var(--card-bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 10px;
+    font-size: 14px; line-height: 1.7;
+    font-family: inherit;
+    resize: vertical;
+    box-sizing: border-box;
+  }
+  .book-review-fullscreen .brf-actions {
+    display: flex; gap: 10px; margin-top: 12px;
+    justify-content: flex-end;
+  }
+  .book-review-fullscreen .brf-btn-cancel,
+  .book-review-fullscreen .brf-btn-save {
+    padding: 10px 20px; border-radius: 10px;
+    font-size: 13px; cursor: pointer; font-weight: 600;
+    border: none;
+  }
+  .book-review-fullscreen .brf-btn-cancel {
+    background: transparent; color: var(--text-soft);
+    border: 1px solid var(--border);
+  }
+  .book-review-fullscreen .brf-btn-save {
+    background: var(--accent); color: #fff;
+  }
+
+  /* 티켓 sub-type 필터 chip row */
+  .subtype-filter-row {
+    display: flex; gap: 6px; overflow-x: auto;
+    padding: 4px 12px 10px;
+    scrollbar-width: none;
+  }
+  .subtype-filter-row::-webkit-scrollbar { display: none; }
+  .subtype-filter-row .stf-chip {
+    flex-shrink: 0; padding: 6px 11px;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 16px; font-size: 12px;
+    color: var(--text-soft); cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .subtype-filter-row .stf-chip:hover { color: var(--text); }
+  .subtype-filter-row .stf-chip.active {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+
+  /* 캘린더 day cell mini icons (티켓 / 책) */
+  .day-cell-mini-row {
+    position: absolute; bottom: 2px; right: 3px;
+    display: flex; gap: 2px; align-items: center;
+    pointer-events: none;
+  }
+  .day-cell-mini-dot { font-size: 10px; line-height: 1; }
+  .day-cell-mini-cover {
+    width: 11px; height: 15px;
+    object-fit: cover; border-radius: 1px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
+  .day-cell-mini-more {
+    font-size: 8.5px; color: var(--text-dim);
+    background: rgba(0,0,0,0.15); padding: 1px 3px; border-radius: 4px;
+  }
+  /* day cell 은 position: relative 가 이미 박혀있다고 가정 — 안 박혀있으면 강제 */
+  .cal-day { position: relative; }
+
+  /* day modal 안 티켓 / 책 wrap (renderTicketCardHTML / renderBookCardHTML 가로 fallback) */
+  .day-ticket-wrap, .day-book-wrap { padding: 0; background: transparent; border: none; }
+  .day-ticket-wrap .ticket-card, .day-book-wrap .book-card { max-width: 220px; margin: 0 auto; }
+
+  /* timeline 안 티켓 / 책 (가로 카드) */
+  .pearl-ticket-row, .pearl-book-row { padding: 8px; }
+  .pearl-ticket-row .ticket-card { max-width: 200px; margin: 0 auto; }
+  .pearl-book-row .book-card { max-width: 140px; margin: 0 auto; }
+
+  /* 티켓 sub-type 관리 modal */
+  .stf-chip.stf-manage { opacity: 0.7; padding: 6px 9px; }
+  .stf-chip.stf-manage:hover { opacity: 1; }
+
+  .tsm-overlay {
+    position: fixed; inset: 0; z-index: 95;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .tsm-modal {
+    background: var(--bg); color: var(--text);
+    border-radius: 14px; max-width: 380px; width: 100%;
+    max-height: 80vh; overflow-y: auto;
+    padding: 18px 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .tsm-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .tsm-title { font-size: 15px; font-weight: 700; }
+  .tsm-close {
+    background: none; border: none; color: var(--text-soft);
+    font-size: 22px; cursor: pointer; line-height: 1; padding: 0 4px;
+  }
+  .tsm-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .tsm-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .tsm-emoji { font-size: 18px; min-width: 24px; }
+  .tsm-label { flex: 1; font-size: 13.5px; }
+  .tsm-toggle { position: relative; display: inline-block; width: 36px; height: 20px; cursor: pointer; }
+  .tsm-toggle input { opacity: 0; width: 0; height: 0; }
+  .tsm-toggle-track {
+    position: absolute; inset: 0;
+    background: var(--border); border-radius: 12px;
+    transition: background 0.18s;
+  }
+  .tsm-toggle-track::before {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    background: #fff; border-radius: 50%;
+    transition: transform 0.18s;
+  }
+  .tsm-toggle input:checked + .tsm-toggle-track { background: var(--accent); }
+  .tsm-toggle input:checked + .tsm-toggle-track::before { transform: translateX(16px); }
+  .tsm-del {
+    background: none; border: none;
+    color: var(--text-dim); font-size: 14px;
+    padding: 4px 6px; cursor: pointer; border-radius: 6px;
+  }
+  .tsm-del:hover { color: var(--accent); background: var(--card-bg); }
+
+  .tsm-add-row {
+    display: flex; gap: 6px; padding: 10px 0 0;
+    border-top: 1px solid var(--border);
+  }
+  .tsm-add-emoji {
+    width: 50px; padding: 8px;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; text-align: center;
+    color: var(--text); font-size: 16px;
+  }
+  .tsm-add-label {
+    flex: 1; padding: 8px 10px;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 13px;
+  }
+  .tsm-add-btn {
+    padding: 8px 14px; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; font-size: 12.5px; cursor: pointer; font-weight: 600;
+  }
+  .tsm-hint {
+    margin-top: 10px; font-size: 11px; color: var(--text-dim);
+    line-height: 1.5; text-align: center;
+  }
 /* V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 — cold open hero + 코치마크 */
 
 /* ── HERO (cold open) ──────────────────────────────────────── */
@@ -13948,6 +14229,16 @@ const DEFAULT_STATE = {
   preferences: {
     nightModeManual: null,  // null = auto, 'on' | 'off' = manual override
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
+    // V4 (사용자 명시 2026-05-14 ultrathink): 진주 '티켓' 카테고리 sub-type — 사용자 customizable.
+    //   default 6개. settings 에서 ON/OFF + 추가/제거 가능.
+    ticketSubTypes: [
+      { id: 'movie',      label: '영화',   emoji: '🎬', enabled: true },
+      { id: 'baseball',   label: '야구',   emoji: '⚾', enabled: true },
+      { id: 'concert',    label: '콘서트', emoji: '🎤', enabled: true },
+      { id: 'musical',    label: '뮤지컬', emoji: '🎭', enabled: true },
+      { id: 'exhibition', label: '전시',   emoji: '🎨', enabled: true },
+      { id: 'travel',     label: '여행',   emoji: '✈️', enabled: true }
+    ],
     starRitualSettings: { useShortcut: true, shortcutName: 'SoraRitual' },
     // V4 신규
     tutorialVersion: null,        // 'full' | 'update' | 'core' | null (어떤 튜토리얼 버전 봤나)
@@ -42229,8 +42520,11 @@ async function saveMsgAsPearl(idx) {
   }
 
   // 카테고리 선택 (V3 진주 패턴)
-  const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
-  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
+  // V4 (사용자 명시 2026-05-14 ultrathink): 카테고리 5 → 7개 (티켓/책 추가).
+  //   '티켓' 선택 시 saveTicketPearl flow / '책' 선택 시 saveBookPearl flow.
+  const baseCategories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
+  const categories = baseCategories.concat(['티켓', '책']);
+  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 티켓: '🎫', 책: '📚' };
   const options = categories.map(c => ({
     label: `${iconMap[c] || '💎'} ${c}`,
     value: c
@@ -42242,6 +42536,28 @@ async function saveMsgAsPearl(idx) {
   });
   if (!category) return;
   category = category.trim();
+
+  // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 분기 — chat 한 줄 (content) 을 prefill 로 넘김.
+  if (category === '티켓' && typeof saveTicketPearl === 'function') {
+    const saved = await saveTicketPearl({ content: content.trim(), sourceMsgIdx: idx });
+    if (saved) {
+      msg.pearlSaved = true;
+      saveState();
+      renderChat();
+      if (typeof renderArchive === 'function') renderArchive();
+    }
+    return;
+  }
+  if (category === '책' && typeof saveBookPearl === 'function') {
+    const saved = await saveBookPearl({ content: content.trim(), sourceMsgIdx: idx });
+    if (saved) {
+      msg.pearlSaved = true;
+      saveState();
+      renderChat();
+      if (typeof renderArchive === 'function') renderArchive();
+    }
+    return;
+  }
 
   // V4-fix (사용자 요청): 사진 첨부 묻기 (음악 카테고리 제외 — 음악은 별도 흐름)
   let photo = null;
@@ -44404,6 +44720,503 @@ function _strategyClearChapterFlag() {
     state._strategyChapterSurfacedIds = [];
   }
 }
+// V4 (사용자 명시 2026-05-14 ultrathink): 진주 '티켓' 카테고리 저장 flow.
+//   sub-type 선택 (영화/야구/콘서트/뮤지컬/전시/여행 — 사용자 customizable) → form 모달 → push state.pearls.
+//   opts.content (chat 진주 chip 진입 시 한 줄 prefill), opts.sourceMsgIdx (chat msg link), opts.source='tab' (도서관 진주 탭 + 버튼 직접 진입).
+//   외부 검색 X (v1 free-text). v2 영화 TMDB / 책 OpenLibrary 신호 보고.
+
+const _TICKET_DEFAULT_SUB_TYPES = [
+  { id: 'movie',      label: '영화',   emoji: '🎬', enabled: true },
+  { id: 'baseball',   label: '야구',   emoji: '⚾', enabled: true },
+  { id: 'concert',    label: '콘서트', emoji: '🎤', enabled: true },
+  { id: 'musical',    label: '뮤지컬', emoji: '🎭', enabled: true },
+  { id: 'exhibition', label: '전시',   emoji: '🎨', enabled: true },
+  { id: 'travel',     label: '여행',   emoji: '✈️', enabled: true }
+];
+
+function _getTicketSubTypes() {
+  const arr = state.preferences?.ticketSubTypes;
+  if (!Array.isArray(arr) || arr.length === 0) return _TICKET_DEFAULT_SUB_TYPES.slice();
+  return arr;
+}
+
+function _findTicketSubType(id) {
+  return _getTicketSubTypes().find(s => s.id === id);
+}
+
+// sub-type 별 form placeholder. 공통 form 1개 + placeholder 만 다르게.
+function _ticketFormPlaceholders(subTypeId) {
+  const map = {
+    movie:      { title: '예: 그랜드 부다페스트 호텔',    venue: '예: CGV 용산',         memo: '예: 감독 / 출연 / 같이 본 사람' },
+    baseball:   { title: '예: 두산 vs LG',              venue: '예: 잠실구장',          memo: '예: 결과 5:3, 같이 간 사람' },
+    concert:    { title: '예: 아이유 콘서트',            venue: '예: 올림픽홀',          memo: '예: 같이 간 사람, 굿즈 산 거' },
+    musical:    { title: '예: 레미제라블',              venue: '예: 블루스퀘어',        memo: '예: 같이 간 사람, 캐스팅' },
+    exhibition: { title: '예: 모네 빛의 향연',          venue: '예: 예술의전당',        memo: '예: 같이 간 사람, 인상 깊었던 작품' },
+    travel:     { title: '예: 도쿄 3박 4일',            venue: '예: 신주쿠',            memo: '예: 같이 간 사람, 좋았던 기억' }
+  };
+  return map[subTypeId] || { title: '제목', venue: '장소', memo: '한 줄로' };
+}
+
+async function _showTicketSubTypePicker() {
+  const enabled = _getTicketSubTypes().filter(s => s.enabled);
+  if (enabled.length === 0) {
+    showToast('티켓 종류가 비어 있어 — 설정에서 추가해줘');
+    return null;
+  }
+  const options = enabled.map(s => ({ label: `${s.emoji} ${s.label}`, value: s.id }));
+  const pick = await showOptionsModal({
+    title: '어떤 티켓이야? 🎫',
+    message: '종류 골라.',
+    options
+  });
+  return pick || null;
+}
+
+async function saveTicketPearl(opts) {
+  opts = opts || {};
+  const subTypeId = await _showTicketSubTypePicker();
+  if (!subTypeId) return null;
+  const sub = _findTicketSubType(subTypeId);
+  const ph = _ticketFormPlaceholders(subTypeId);
+
+  // 제목 (필수)
+  const title = await showInputModal({
+    title: `${sub.emoji} ${sub.label} — 제목`,
+    message: '뭘 봤어? 한 줄로.',
+    placeholder: ph.title,
+    defaultValue: (opts.content || '').slice(0, 80),
+    okLabel: '다음 →'
+  });
+  if (!title || !title.trim()) return null;
+
+  // 본 날짜 (필수 — 캘린더 dot 기준)
+  const today = todayKey();
+  const eventDate = await showInputModal({
+    title: `📅 언제 ${sub.label} 했어?`,
+    message: 'YYYY-MM-DD 형식 (오늘 = 그대로 OK).',
+    placeholder: today,
+    defaultValue: today,
+    okLabel: '다음 →'
+  });
+  if (eventDate === null) return null;
+  let _eventDate = (eventDate || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(_eventDate)) _eventDate = today;
+
+  // 장소 (선택)
+  const venue = await showInputModal({
+    title: `📍 장소 (선택)`,
+    message: `어디였어? 비우고 OK 가능.`,
+    placeholder: ph.venue,
+    okLabel: '다음 →'
+  });
+  if (venue === null) return null;
+
+  // 같이 (선택) + 한 줄 메모
+  const memo = await showInputModal({
+    title: `${sub.emoji} 한 줄로 (선택)`,
+    message: '같이 간 사람 / 평점 / 짧은 감상. 비우고 OK 가능.',
+    placeholder: ph.memo,
+    okLabel: '다음 →'
+  });
+  if (memo === null) return null;
+
+  // 사진 첨부 (선택)
+  let photo = null;
+  const wantPhoto = await showConfirmModal({
+    title: '📷 사진도 같이?',
+    message: '티켓 / 포스터 / 현장 사진 보탤래?',
+    okLabel: '응 사진 추가',
+    cancelLabel: '아니 글만'
+  });
+  if (wantPhoto) {
+    try {
+      const file = await pickPhotoFile();
+      if (file) {
+        showFullscreenLoader('사진 처리 중... 📸');
+        photo = await fileToResizedDataUrl(file, 1024);
+        hideFullscreenLoader();
+      }
+    } catch (e) {
+      hideFullscreenLoader();
+      console.warn('[ticket photo]', e);
+      showToast('사진 처리 실패 — 글만 저장');
+    }
+  }
+
+  const finalTitle = title.trim().slice(0, 80);
+  const finalMemo = (memo || '').trim();
+  const pearl = {
+    id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    category: '티켓',
+    subType: subTypeId,
+    content: finalTitle,
+    eventDate: _eventDate,
+    createdAt: new Date().toISOString(),
+    type: 'pearl'
+  };
+  if ((venue || '').trim()) pearl.venue = venue.trim().slice(0, 80);
+  if (finalMemo) pearl.note = finalMemo.slice(0, 300);
+  if (photo) pearl.photo = photo;
+  if (typeof opts.sourceMsgIdx === 'number') pearl.sourceMsgIdx = opts.sourceMsgIdx;
+
+  state.pearls = state.pearls || [];
+  state.pearls.push(pearl);
+  saveState();
+  if (typeof renderLensPearls === 'function') renderLensPearls();
+  if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
+  if (typeof renderLibraryHero === 'function') renderLibraryHero();
+  showToast(`${sub.emoji} ${sub.label} 저장됨`);
+  return pearl;
+}
+// V4 (사용자 명시 2026-05-14 ultrathink): 진주 '책' 카테고리 저장 flow.
+//   책 form 모달 (제목·저자·한 줄 감상평·표지·완독 날짜·별점) → push state.pearls.
+//   content 필드 = 한 줄 감상평 (그리드/타임라인 표시), review 필드 = 풀 독후감 (후일 풀스크린 작성).
+
+async function saveBookPearl(opts) {
+  opts = opts || {};
+
+  // 책 제목 (필수)
+  const bookTitle = await showInputModal({
+    title: '📚 어떤 책?',
+    message: '책 제목 — 한 줄로.',
+    placeholder: '예: 데미안',
+    okLabel: '다음 →'
+  });
+  if (!bookTitle || !bookTitle.trim()) return null;
+
+  // 저자 (선택)
+  const bookAuthor = await showInputModal({
+    title: '✍️ 저자 (선택)',
+    message: '비우고 OK 가능.',
+    placeholder: '예: 헤르만 헤세',
+    okLabel: '다음 →'
+  });
+  if (bookAuthor === null) return null;
+
+  // 한 줄 감상평 (필수 — content 필드, 그리드/타임라인 표시용)
+  const oneLine = await showInputModal({
+    title: `📚 ${bookTitle.trim()} — 한 줄 감상평`,
+    message: '한 줄로 — 이 책이 너에게 뭐였는지.',
+    defaultValue: (opts.content || '').slice(0, 120),
+    placeholder: '예: 새는 알을 깨고 나온다 — 결국 나의 ㅁㅁ을 깬다는 것',
+    okLabel: '다음 →'
+  });
+  if (!oneLine || !oneLine.trim()) return null;
+
+  // 완독 날짜 (필수 — 캘린더 dot 기준)
+  const today = todayKey();
+  const finishedAt = await showInputModal({
+    title: '📅 완독 (또는 읽은) 날짜',
+    message: 'YYYY-MM-DD 형식 (오늘 = 그대로 OK).',
+    placeholder: today,
+    defaultValue: today,
+    okLabel: '다음 →'
+  });
+  if (finishedAt === null) return null;
+  let _finishedAt = (finishedAt || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(_finishedAt)) _finishedAt = today;
+
+  // 책 표지 사진 (선택)
+  let photo = null;
+  const wantCover = await showConfirmModal({
+    title: '📷 책 표지도 같이?',
+    message: '표지 사진 (책장 그림이 돼).',
+    okLabel: '응 표지 추가',
+    cancelLabel: '아니 글만'
+  });
+  if (wantCover) {
+    try {
+      const file = await pickPhotoFile();
+      if (file) {
+        showFullscreenLoader('표지 처리 중... 📸');
+        photo = await fileToResizedDataUrl(file, 1024);
+        hideFullscreenLoader();
+      }
+    } catch (e) {
+      hideFullscreenLoader();
+      console.warn('[book cover]', e);
+      showToast('표지 처리 실패 — 글만 저장');
+    }
+  }
+
+  const pearl = {
+    id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    category: '책',
+    bookTitle: bookTitle.trim().slice(0, 100),
+    content: oneLine.trim().slice(0, 300),
+    eventDate: _finishedAt,
+    finishedAt: _finishedAt,
+    createdAt: new Date().toISOString(),
+    type: 'pearl'
+  };
+  if ((bookAuthor || '').trim()) pearl.bookAuthor = bookAuthor.trim().slice(0, 60);
+  if (photo) pearl.photo = photo;
+  if (typeof opts.sourceMsgIdx === 'number') pearl.sourceMsgIdx = opts.sourceMsgIdx;
+
+  state.pearls = state.pearls || [];
+  state.pearls.push(pearl);
+  saveState();
+  if (typeof renderLensPearls === 'function') renderLensPearls();
+  if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
+  if (typeof renderLibraryHero === 'function') renderLibraryHero();
+  showToast('📚 책 저장됨 — 카드 누르면 독후감 쓸 수 있어');
+  return pearl;
+}
+// V4 (사용자 명시 2026-05-14 ultrathink): 진주 탭 안 '티켓' / '책' 카드 렌더 헬퍼.
+//   renderLensPearls 가 호출. 사진 dominant + sub-type emoji overlay + 제목 + 날짜.
+//   책: 표지 dominant + 제목 + 한 줄 감상평. 클릭 → openBookReviewFullscreen.
+
+function _renderTicketCardHTML(pearl, opts) {
+  opts = opts || {};
+  const sub = (typeof _findTicketSubType === 'function') ? _findTicketSubType(pearl.subType) : null;
+  const emoji = sub?.emoji || '🎫';
+  const label = sub?.label || '티켓';
+  const title = pearl.content || pearl.bookTitle || label;
+  const dateStr = pearl.eventDate
+    ? new Date(pearl.eventDate + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
+    : (pearl.createdAt ? new Date(pearl.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '');
+  const sizeClass = opts.large ? ' tile-large' : '';
+  if (pearl.photo) {
+    return `
+      <div class="ticket-card${sizeClass}" onclick="openPearl('${pearl.id}')" style="background-image:url('${pearl.photo}');">
+        <div class="tc-subtype">${emoji} ${escapeHtml(label)}</div>
+        <div class="tc-title">${escapeHtml(title)}<div class="tc-date">${dateStr}</div></div>
+      </div>
+    `;
+  }
+  return `
+    <div class="ticket-card ticket-card-empty${sizeClass}" onclick="openPearl('${pearl.id}')">
+      <div class="tc-emoji-big">${emoji}</div>
+      <div class="tc-subtype">${escapeHtml(label)}</div>
+      <div class="tc-title">${escapeHtml(title)}<div class="tc-date">${dateStr}</div></div>
+    </div>
+  `;
+}
+
+function _renderBookCardHTML(pearl, opts) {
+  opts = opts || {};
+  const title = pearl.bookTitle || pearl.content || '책';
+  const oneLiner = pearl.content || '';
+  const sizeClass = opts.large ? ' tile-large' : '';
+  if (pearl.photo) {
+    return `
+      <div class="book-card${sizeClass}" onclick="openBookReviewFullscreen('${pearl.id}')" style="background-image:url('${pearl.photo}');">
+        <div class="bc-overlay">
+          <div class="bc-title">${escapeHtml(title)}</div>
+          ${oneLiner ? `<div class="bc-one-liner">${escapeHtml(oneLiner)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="book-card book-card-empty${sizeClass}" onclick="openBookReviewFullscreen('${pearl.id}')">
+      <div class="bc-emoji-big">📚</div>
+      <div class="bc-overlay">
+        <div class="bc-title">${escapeHtml(title)}</div>
+        ${oneLiner ? `<div class="bc-one-liner">${escapeHtml(oneLiner)}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// V4 (사용자 명시 2026-05-14 ultrathink): 진주 탭 카테고리 chip 분기 — 7개 (음악/음식/장소/순간/사람/티켓/책).
+//   '티켓' 선택 시 sub-filter chip row (enabled ticketSubTypes) 노출.
+let _ticketSubFilter = null;
+function setTicketSubFilter(id) {
+  _ticketSubFilter = (_ticketSubFilter === id) ? null : id;
+  if (typeof renderLensPearls === 'function') renderLensPearls();
+}
+
+function _renderTicketSubFilterRow() {
+  if (typeof _pearlCatFilter !== 'undefined' && _pearlCatFilter !== '티켓') return '';
+  if (typeof _getTicketSubTypes !== 'function') return '';
+  const subs = _getTicketSubTypes().filter(s => s.enabled);
+  let html = `<div class="subtype-filter-row">`;
+  html += `<div class="stf-chip${!_ticketSubFilter ? ' active' : ''}" onclick="setTicketSubFilter(null)">전체</div>`;
+  subs.forEach(s => {
+    const active = _ticketSubFilter === s.id ? ' active' : '';
+    html += `<div class="stf-chip${active}" onclick="setTicketSubFilter('${s.id}')">${s.emoji} ${escapeHtml(s.label)}</div>`;
+  });
+  html += `<div class="stf-chip stf-manage" onclick="openTicketSubTypeManager()" title="티켓 종류 관리">⚙️</div>`;
+  html += `</div>`;
+  return html;
+}
+
+// V4 (사용자 명시 2026-05-14 ultrathink): 티켓 sub-type 관리 modal — ON/OFF 토글 + 신규 추가.
+function openTicketSubTypeManager() {
+  if (document.getElementById('ticketSubTypeManager')) return;
+  // 사용자 데이터 ticketSubTypes 가 없으면 default 6개 강제 초기화.
+  if (!Array.isArray(state.preferences.ticketSubTypes) || state.preferences.ticketSubTypes.length === 0) {
+    state.preferences.ticketSubTypes = _TICKET_DEFAULT_SUB_TYPES.slice();
+    saveState();
+  }
+  _renderTicketSubTypeManager();
+}
+
+function _renderTicketSubTypeManager() {
+  const existing = document.getElementById('ticketSubTypeManager');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'ticketSubTypeManager';
+  overlay.className = 'tsm-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) closeTicketSubTypeManager(); };
+
+  const subs = state.preferences.ticketSubTypes;
+  let listHtml = '';
+  subs.forEach((s, i) => {
+    listHtml += `
+      <div class="tsm-row">
+        <span class="tsm-emoji">${s.emoji}</span>
+        <span class="tsm-label">${escapeHtml(s.label)}</span>
+        <label class="tsm-toggle">
+          <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="_toggleTicketSubType(${i})">
+          <span class="tsm-toggle-track"></span>
+        </label>
+        <button class="tsm-del" onclick="_deleteTicketSubType(${i})" aria-label="삭제">🗑</button>
+      </div>
+    `;
+  });
+
+  overlay.innerHTML = `
+    <div class="tsm-modal" onclick="event.stopPropagation()">
+      <div class="tsm-header">
+        <div class="tsm-title">🎫 티켓 종류 관리</div>
+        <button class="tsm-close" onclick="closeTicketSubTypeManager()">×</button>
+      </div>
+      <div class="tsm-list">${listHtml}</div>
+      <div class="tsm-add-row">
+        <input type="text" id="tsmAddEmoji" maxlength="3" placeholder="🎯" class="tsm-add-emoji">
+        <input type="text" id="tsmAddLabel" maxlength="20" placeholder="예: PT 경기" class="tsm-add-label">
+        <button class="tsm-add-btn" onclick="_addTicketSubType()">+ 추가</button>
+      </div>
+      <div class="tsm-hint">OFF 한 종류 — 새 저장 모달에서 안 보임. 기존 진주는 그대로 남음.</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeTicketSubTypeManager() {
+  const el = document.getElementById('ticketSubTypeManager');
+  if (el) el.remove();
+}
+
+function _toggleTicketSubType(idx) {
+  const arr = state.preferences.ticketSubTypes;
+  if (!arr || !arr[idx]) return;
+  arr[idx].enabled = !arr[idx].enabled;
+  saveState();
+  if (typeof renderLensPearls === 'function') renderLensPearls();
+}
+
+function _deleteTicketSubType(idx) {
+  const arr = state.preferences.ticketSubTypes;
+  if (!arr || !arr[idx]) return;
+  // 사용 중인 sub-type 인지 검사 — 데이터 보호 (필터에서만 빠짐, 진주는 그대로).
+  const id = arr[idx].id;
+  arr.splice(idx, 1);
+  saveState();
+  _renderTicketSubTypeManager();
+  if (typeof renderLensPearls === 'function') renderLensPearls();
+  showToast('종류 삭제됨 (기존 티켓은 그대로 남아 있어)');
+}
+
+function _addTicketSubType() {
+  const emojiEl = document.getElementById('tsmAddEmoji');
+  const labelEl = document.getElementById('tsmAddLabel');
+  const emoji = (emojiEl?.value || '').trim() || '🎯';
+  const label = (labelEl?.value || '').trim();
+  if (!label) { showToast('이름을 적어줘'); return; }
+  if (label.length > 20) { showToast('이름이 너무 길어'); return; }
+  const id = 'custom_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 5);
+  state.preferences.ticketSubTypes = state.preferences.ticketSubTypes || [];
+  state.preferences.ticketSubTypes.push({ id, label, emoji, enabled: true });
+  saveState();
+  _renderTicketSubTypeManager();
+  if (typeof renderLensPearls === 'function') renderLensPearls();
+}
+
+// V4 (사용자 명시 2026-05-14 ultrathink): 책 진주 클릭 → 풀스크린 독후감 화면.
+//   view mode (표지 + 제목 + 저자 + 한 줄 + 풀 독후감) + 편집 모드 (textarea).
+//   pearl.content = 한 줄 감상평, pearl.review = 풀 독후감 본문.
+
+function openBookReviewFullscreen(pearlId) {
+  const pearl = state.pearls.find(p => p.id === pearlId);
+  if (!pearl) return;
+  if (document.getElementById('bookReviewFullscreen')) return;
+  _renderBookReviewFullscreen(pearl, false);
+}
+
+function closeBookReviewFullscreen() {
+  const el = document.getElementById('bookReviewFullscreen');
+  if (el) el.remove();
+}
+
+function _renderBookReviewFullscreen(pearl, editMode) {
+  closeBookReviewFullscreen();
+  const overlay = document.createElement('div');
+  overlay.id = 'bookReviewFullscreen';
+  overlay.className = 'book-review-fullscreen';
+  const title = pearl.bookTitle || pearl.content || '책';
+  const author = pearl.bookAuthor || '';
+  const oneLiner = pearl.content || '';
+  const review = pearl.review || '';
+  const coverStyle = pearl.photo ? `style="background-image:url('${pearl.photo}');"` : '';
+  const finishedAt = pearl.finishedAt || pearl.eventDate
+    ? new Date((pearl.finishedAt || pearl.eventDate) + 'T12:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
+
+  let bodyHtml;
+  if (editMode) {
+    bodyHtml = `
+      <textarea id="brfReviewTextarea" class="brf-textarea" placeholder="천천히 적어봐 — 이 책이 너에게 뭐였는지, 어떤 장면이 남았는지, 다 읽고 어땠는지."></textarea>
+      <div class="brf-actions">
+        <button class="brf-btn-cancel" onclick="_renderBookReviewFullscreen(state.pearls.find(p=>p.id==='${pearl.id}'), false)">취소</button>
+        <button class="brf-btn-save" onclick="_saveBookReview('${pearl.id}')">저장</button>
+      </div>
+    `;
+  } else {
+    const reviewHtml = review
+      ? `<div class="brf-review">${escapeHtml(review)}</div>`
+      : `<div class="brf-review-empty">독후감 비어 있어 — ✏️ 눌러서 천천히 적어볼래?</div>`;
+    bodyHtml = `
+      ${reviewHtml}
+      <button class="brf-edit-btn" onclick="_renderBookReviewFullscreen(state.pearls.find(p=>p.id==='${pearl.id}'), true)">✏️ 독후감 ${review ? '편집' : '쓰기'}</button>
+    `;
+  }
+
+  overlay.innerHTML = `
+    <div class="brf-back">
+      <button class="brf-back-btn" onclick="closeBookReviewFullscreen()">←</button>
+    </div>
+    <div class="brf-cover" ${coverStyle}>${pearl.photo ? '' : '<div class="brf-cover-placeholder">📚</div>'}</div>
+    <div class="brf-title">${escapeHtml(title)}</div>
+    ${author ? `<div class="brf-author">${escapeHtml(author)}</div>` : ''}
+    ${finishedAt ? `<div class="brf-finished">${escapeHtml(finishedAt)} 완독</div>` : ''}
+    ${oneLiner ? `<div class="brf-oneliner">"${escapeHtml(oneLiner)}"</div>` : ''}
+    <div class="brf-body">${bodyHtml}</div>
+  `;
+  document.body.appendChild(overlay);
+  if (editMode) {
+    const ta = document.getElementById('brfReviewTextarea');
+    if (ta) {
+      ta.value = pearl.review || '';
+      setTimeout(() => ta.focus(), 30);
+    }
+  }
+}
+
+function _saveBookReview(pearlId) {
+  const pearl = state.pearls.find(p => p.id === pearlId);
+  if (!pearl) return;
+  const ta = document.getElementById('brfReviewTextarea');
+  if (!ta) return;
+  const val = (ta.value || '').trim();
+  pearl.review = val.slice(0, 10000);
+  saveState();
+  _renderBookReviewFullscreen(pearl, false);
+  showToast('독후감 저장됨 📚');
+  if (typeof renderLensPearls === 'function') renderLensPearls();
+}
 // ═══════════════════════════════════════════════════════════════
 // PROPOSAL HANDLING (Phase 2 upgrade)
 // ═══════════════════════════════════════════════════════════════
@@ -44996,25 +45809,41 @@ function openDayModal(dateStr) {
   const archives = (state.archive || []).filter(a =>
     a.savedAt && getDayKey(a.savedAt) === dateStr
   );
-  const pearls = (state.pearls || []).filter(p =>
-    p.type !== 'dna_pearl' && p.createdAt && getDayKey(p.createdAt) === dateStr
+  // V4 (사용자 명시 2026-05-14 ultrathink): pearls 분기 — 일반 진주 / 티켓 / 책 따로.
+  //   티켓/책 은 eventDate 기준 (사후 등록 가능), 일반 진주 는 createdAt 기준 (기존 동작).
+  const _allPearls = (state.pearls || []).filter(p => p.type !== 'dna_pearl');
+  const pearls = _allPearls.filter(p =>
+    p.category !== '티켓' && p.category !== '책' &&
+    p.createdAt && getDayKey(p.createdAt) === dateStr
   );
+  const tickets = _allPearls.filter(p => {
+    if (p.category !== '티켓') return false;
+    const dk = p.eventDate || (p.createdAt ? getDayKey(p.createdAt) : null);
+    return dk === dateStr;
+  });
+  const books = _allPearls.filter(p => {
+    if (p.category !== '책') return false;
+    const dk = p.eventDate || p.finishedAt || (p.createdAt ? getDayKey(p.createdAt) : null);
+    return dk === dateStr;
+  });
 
   const counts = {
     diary: (entry ? 1 : 0),
     topics: topics.length,
     archives: archives.length,
-    pearls: pearls.length
+    pearls: pearls.length,
+    tickets: tickets.length,
+    books: books.length
   };
-  const total = counts.diary + counts.topics + counts.archives + counts.pearls;
+  const total = counts.diary + counts.topics + counts.archives + counts.pearls + counts.tickets + counts.books;
   if (total === 0) {
     showToast(`${dateStr} 기록 없음`);
     return;
   }
 
   // 활성 첫 탭: 데이터 있는 첫 카테고리
-  const tabOrder = ['diary', 'topics', 'archives', 'pearls'];
-  _dayModalActiveTab = tabOrder.find(t => counts[t === 'diary' ? 'diary' : t === 'topics' ? 'topics' : t === 'archives' ? 'archives' : 'pearls'] > 0) || 'diary';
+  const tabOrder = ['diary', 'topics', 'archives', 'pearls', 'tickets', 'books'];
+  _dayModalActiveTab = tabOrder.find(t => counts[t] > 0) || 'diary';
 
   const dateLabel = new Date(dateStr + 'T12:00:00').toLocaleDateString('ko-KR', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
@@ -45051,12 +45880,14 @@ function openDayModal(dateStr) {
         ${counts.topics   ? `<button class="day-tab" data-tab="topics"   onclick="switchDayModalTab('topics')"><span>✦</span> 토픽 <b>${counts.topics}</b></button>` : ''}
         ${counts.archives ? `<button class="day-tab" data-tab="archives" onclick="switchDayModalTab('archives')"><span>✨</span> 깨달음 <b>${counts.archives}</b></button>` : ''}
         ${counts.pearls   ? `<button class="day-tab" data-tab="pearls"   onclick="switchDayModalTab('pearls')"><span>🔮</span> 진주 <b>${counts.pearls}</b></button>` : ''}
+        ${counts.tickets  ? `<button class="day-tab" data-tab="tickets"  onclick="switchDayModalTab('tickets')"><span>🎫</span> 티켓 <b>${counts.tickets}</b></button>` : ''}
+        ${counts.books    ? `<button class="day-tab" data-tab="books"    onclick="switchDayModalTab('books')"><span>📚</span> 책 <b>${counts.books}</b></button>` : ''}
       </div>
       <div class="day-modal-body" id="dayModalBody"></div>
     </div>
   `;
   document.body.appendChild(overlay);
-  overlay._dayData = { entry, topics, archives, pearls, dateStr };
+  overlay._dayData = { entry, topics, archives, pearls, tickets, books, dateStr };
   switchDayModalTab(_dayModalActiveTab);
 }
 
@@ -45068,7 +45899,7 @@ function switchDayModalTab(tab) {
   const body = document.getElementById('dayModalBody');
   const overlay = document.getElementById('dayModal');
   if (!body || !overlay || !overlay._dayData) return;
-  const { entry, topics, archives, pearls, dateStr } = overlay._dayData;
+  const { entry, topics, archives, pearls, tickets, books, dateStr } = overlay._dayData;
 
   let html = '';
   if (tab === 'diary' && entry) {
@@ -45224,10 +46055,32 @@ function switchDayModalTab(tab) {
       }
     });
   }
+  // V4 (사용자 명시 2026-05-14 ultrathink): 'tickets' / 'books' 서브탭 본문.
+  if (tab === 'tickets' && Array.isArray(tickets)) {
+    tickets.forEach(p => {
+      if (typeof _renderTicketCardHTML === 'function') {
+        html += `<div class="day-card t-pearl day-ticket-wrap">${_renderTicketCardHTML(p, {})}</div>`;
+      }
+    });
+  } else if (tab === 'books' && Array.isArray(books)) {
+    books.forEach(p => {
+      if (typeof _renderBookCardHTML === 'function') {
+        html += `<div class="day-card t-pearl day-book-wrap">${_renderBookCardHTML(p, {})}</div>`;
+      }
+    });
+  }
+
   if (!html) {
-    const emptyEmoji = tab === 'diary' ? '📔' : tab === 'topics' ? '✦' : tab === 'archives' ? '✨' : '🔮';
-    const emptyLabel = tab === 'diary' ? '일기' : tab === 'topics' ? '토픽' : tab === 'archives' ? '깨달음' : '진주';
-    html = `<div class="day-empty"><span class="day-empty-icon">${emptyEmoji}</span>이 날 ${emptyLabel} 기록 없음.</div>`;
+    const emptyMap = {
+      diary:    { emoji: '📔', label: '일기' },
+      topics:   { emoji: '✦', label: '토픽' },
+      archives: { emoji: '✨', label: '깨달음' },
+      pearls:   { emoji: '🔮', label: '진주' },
+      tickets:  { emoji: '🎫', label: '티켓' },
+      books:    { emoji: '📚', label: '책' }
+    };
+    const e = emptyMap[tab] || { emoji: '🔮', label: '기록' };
+    html = `<div class="day-empty"><span class="day-empty-icon">${e.emoji}</span>이 날 ${e.label} 기록 없음.</div>`;
   }
   body.innerHTML = html;
   if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
@@ -45294,6 +46147,20 @@ function renderLensCalendarGrid() {
     chaptersByDate[a.date] = (chaptersByDate[a.date] || 0) + 1;
   });
 
+  // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 진주 day cell mini icon — eventDate 기준.
+  const ticketsByDate = {};
+  const booksByDate = {};
+  (state.pearls || []).forEach(p => {
+    if (!p) return;
+    if (p.category === '티켓') {
+      const dk = p.eventDate || (p.createdAt ? getDayKey(p.createdAt) : null);
+      if (dk) (ticketsByDate[dk] = ticketsByDate[dk] || []).push(p);
+    } else if (p.category === '책') {
+      const dk = p.eventDate || p.finishedAt || (p.createdAt ? getDayKey(p.createdAt) : null);
+      if (dk) (booksByDate[dk] = booksByDate[dk] || []).push(p);
+    }
+  });
+
   let html = `
     <div class="cal-grid-wrap">
       <div class="cal-nav">
@@ -45319,10 +46186,33 @@ function renderLensCalendarGrid() {
     const mood = entry?.mood;
     const bg = mood ? moodColor[mood] || 'transparent' : 'transparent';
     const hasChapter = !!chaptersByDate[dateKey];
+    const dayTickets = ticketsByDate[dateKey] || [];
+    const dayBooks = booksByDate[dateKey] || [];
     const isToday = dateKey === todayKey();
     // V4-fix: 오늘은 클릭 가능 — dateKey 문자열 비교 (YYYY-MM-DD)
     const isFuture = dateKey > todayKey();
-    const empty = !entry && !hasChapter;
+    const empty = !entry && !hasChapter && dayTickets.length === 0 && dayBooks.length === 0;
+
+    // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 mini dot — 첫 1개씩 + 누적 +N.
+    let miniIcons = '';
+    if (dayTickets.length > 0) {
+      const first = dayTickets[0];
+      const sub = (typeof _findTicketSubType === 'function') ? _findTicketSubType(first.subType) : null;
+      const emoji = sub?.emoji || '🎫';
+      miniIcons += `<span class="day-cell-mini-dot">${emoji}</span>`;
+    }
+    if (dayBooks.length > 0) {
+      const first = dayBooks[0];
+      if (first.photo) {
+        miniIcons += `<img class="day-cell-mini-cover" src="${first.photo}" alt="">`;
+      } else {
+        miniIcons += `<span class="day-cell-mini-dot">📚</span>`;
+      }
+    }
+    const moreCount = dayTickets.length + dayBooks.length - (dayTickets.length > 0 ? 1 : 0) - (dayBooks.length > 0 ? 1 : 0);
+    if (moreCount > 0) miniIcons += `<span class="day-cell-mini-more">+${moreCount}</span>`;
+    const miniWrap = miniIcons ? `<span class="day-cell-mini-row">${miniIcons}</span>` : '';
+
     html += `
       <div class="cal-day${isToday ? ' today' : ''}${empty ? ' empty' : ''}${isFuture ? ' future' : ''}"
            data-date="${dateKey}"
@@ -45331,6 +46221,7 @@ function renderLensCalendarGrid() {
            title="${dateKey}${mood ? ` · 기분 ${mood}/5` : ''}">
         <span class="cal-day-num">${d}</span>
         ${hasChapter ? `<span class="cal-chapter-dot"></span>` : ''}
+        ${miniWrap}
       </div>
     `;
   }
@@ -54680,6 +55571,7 @@ function renderLensPearls() {
   const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
 
   // V3.12.x: 진주 비언어적 인트로
+  // V4 (사용자 명시 2026-05-14 ultrathink): 카테고리 chip 5 → 7개 (티켓/책 추가). '티켓' 선택 시 sub-filter row.
   let html = `
     <div class="pearls-intro">
       <div class="pearls-intro-header">
@@ -54692,14 +55584,21 @@ function renderLensPearls() {
         <div class="pi-cat${_pearlCatFilter === '장소' ? ' active' : ''}" onclick="setPearlCatFilter('장소')" role="button" tabindex="0">📍<span>장소</span></div>
         <div class="pi-cat${_pearlCatFilter === '순간' ? ' active' : ''}" onclick="setPearlCatFilter('순간')" role="button" tabindex="0">✨<span>순간</span></div>
         <div class="pi-cat${_pearlCatFilter === '사람' ? ' active' : ''}" onclick="setPearlCatFilter('사람')" role="button" tabindex="0">👥<span>사람</span></div>
+        <div class="pi-cat${_pearlCatFilter === '티켓' ? ' active' : ''}" onclick="setPearlCatFilter('티켓')" role="button" tabindex="0">🎫<span>티켓</span></div>
+        <div class="pi-cat${_pearlCatFilter === '책' ? ' active' : ''}" onclick="setPearlCatFilter('책')" role="button" tabindex="0">📚<span>책</span></div>
       </div>
     </div>
+    ${(typeof _renderTicketSubFilterRow === 'function') ? _renderTicketSubFilterRow() : ''}
     <button class="pearls-add-btn" onclick="addPearl()">+ 진주 하나 더하기</button>
   `;
 
   // 사용자 요청 2026-04-29: 진주 grid 뷰의 별도 카테고리 칩 제거 — 위 '살아있다 느낀 순간들' 인트로의 pi-cat이 같은 역할
   if (_pearlCatFilter) {
     pearls = pearls.filter(p => (p.category || '기타') === _pearlCatFilter);
+    // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 sub-filter — sub-type 단일 선택
+    if (_pearlCatFilter === '티켓' && typeof _ticketSubFilter !== 'undefined' && _ticketSubFilter) {
+      pearls = pearls.filter(p => p.subType === _ticketSubFilter);
+    }
   }
 
   if (pearls.length === 0) {
@@ -54726,7 +55625,12 @@ function renderLensPearls() {
       const dateStr = p.createdAt
         ? new Date(p.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
         : '';
-      if (p.category === '음악' && p.track) {
+      // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 카드 분기 (사진 dominant).
+      if (p.category === '티켓' && typeof _renderTicketCardHTML === 'function') {
+        html += _renderTicketCardHTML(p, { large: isLarge });
+      } else if (p.category === '책' && typeof _renderBookCardHTML === 'function') {
+        html += _renderBookCardHTML(p, { large: isLarge });
+      } else if (p.category === '음악' && p.track) {
         // 사용자 보고 2026-04-29: artwork onerror replaceWith가 DOM 변경 → masonry layout 재계산 → 첫 카드 깜빡임.
         // onerror=null로 무한 retry 차단 + decoding/loading 힌트로 안정적 로드.
         const artHtml = p.track.artworkUrl
@@ -54806,7 +55710,12 @@ function renderLensPearls() {
     // timeline (시간순 평면 — 카테고리 그룹 X)
     html += `<div class="pearls-timeline">`;
     pearls.forEach(p => {
-      if (p.category === '음악' && p.track) {
+      // V4 (사용자 명시 2026-05-14 ultrathink): timeline 도 티켓 / 책 카드 분기 (그리드 카드 그대로 — 가로 layout 자연 fallback).
+      if (p.category === '티켓' && typeof _renderTicketCardHTML === 'function') {
+        html += `<div class="pearl-card pearl-ticket-row">${_renderTicketCardHTML(p, {})}</div>`;
+      } else if (p.category === '책' && typeof _renderBookCardHTML === 'function') {
+        html += `<div class="pearl-card pearl-book-row">${_renderBookCardHTML(p, {})}</div>`;
+      } else if (p.category === '음악' && p.track) {
         html += `
           <div class="pearl-music-row pearl-card pearl-music-card" onclick="openPearl('${p.id}')">
             ${renderMusicCardHTML(p.track)}
@@ -55222,13 +56131,15 @@ async function addPearl() {
     runFirstPearlTutorialV8().catch(e => console.warn('[pearl tutorial]', e));
     return;
   }
-  const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
-  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
+  // V4 (사용자 명시 2026-05-14 ultrathink): 카테고리 5 → 7개 (티켓/책).
+  const baseCategories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
+  const categories = baseCategories.concat(['티켓', '책']);
+  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 티켓: '🎫', 책: '📚' };
   const options = categories.map(c => ({
     label: `${iconMap[c] || '💎'} ${c}`,
     value: c
   }));
-  
+
   let category = await showOptionsModal({
     title: '어떤 진주? 💎',
     message: '카테고리 골라.',
@@ -55236,6 +56147,16 @@ async function addPearl() {
   });
   if (!category) return;
   category = category.trim();
+
+  // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 분기 (도서관 + 버튼 진입).
+  if (category === '티켓' && typeof saveTicketPearl === 'function') {
+    await saveTicketPearl({ source: 'tab' });
+    return;
+  }
+  if (category === '책' && typeof saveBookPearl === 'function') {
+    await saveBookPearl({ source: 'tab' });
+    return;
+  }
 
   // V3.13.x: 음악 카테고리 → iTunes 검색 모달로 곡 선택
   if (category === '음악') {

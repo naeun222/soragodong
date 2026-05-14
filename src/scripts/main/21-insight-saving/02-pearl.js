@@ -84,8 +84,11 @@ async function saveMsgAsPearl(idx) {
   }
 
   // 카테고리 선택 (V3 진주 패턴)
-  const categories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
-  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
+  // V4 (사용자 명시 2026-05-14 ultrathink): 카테고리 5 → 7개 (티켓/책 추가).
+  //   '티켓' 선택 시 saveTicketPearl flow / '책' 선택 시 saveBookPearl flow.
+  const baseCategories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
+  const categories = baseCategories.concat(['티켓', '책']);
+  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 티켓: '🎫', 책: '📚' };
   const options = categories.map(c => ({
     label: `${iconMap[c] || '💎'} ${c}`,
     value: c
@@ -97,6 +100,28 @@ async function saveMsgAsPearl(idx) {
   });
   if (!category) return;
   category = category.trim();
+
+  // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 분기 — chat 한 줄 (content) 을 prefill 로 넘김.
+  if (category === '티켓' && typeof saveTicketPearl === 'function') {
+    const saved = await saveTicketPearl({ content: content.trim(), sourceMsgIdx: idx });
+    if (saved) {
+      msg.pearlSaved = true;
+      saveState();
+      renderChat();
+      if (typeof renderArchive === 'function') renderArchive();
+    }
+    return;
+  }
+  if (category === '책' && typeof saveBookPearl === 'function') {
+    const saved = await saveBookPearl({ content: content.trim(), sourceMsgIdx: idx });
+    if (saved) {
+      msg.pearlSaved = true;
+      saveState();
+      renderChat();
+      if (typeof renderArchive === 'function') renderArchive();
+    }
+    return;
+  }
 
   // V4-fix (사용자 요청): 사진 첨부 묻기 (음악 카테고리 제외 — 음악은 별도 흐름)
   let photo = null;
