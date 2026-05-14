@@ -408,7 +408,7 @@ function _renderAdminCardUsers(u) {
     const email = r.email ? escapeHtml(r.email) : (r.isGuest ? '(게스트)' : '—');
     const idShort = r.id ? r.id.slice(0, 8) + '…' : '—';
     const sourceBadge = r.source ? `<span style="font-size:9.5px; color:var(--text-soft);">${escapeHtml(r.source)}</span>` : '';
-    return `<tr style="border-bottom:1px solid var(--border);">
+    return `<tr style="border-bottom:1px solid var(--border); cursor:pointer;" onclick="openAdminUserDetail('${escapeHtml(r.id || '')}')" title="클릭 → 상세 드릴다운">
       <td style="padding:6px 8px; font-size:11px;">${planBadge}</td>
       <td style="padding:6px 8px; font-size:11px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.id || '')}">${email}<br><span style="font-size:9px; color:var(--text-dim);">${escapeHtml(idShort)}</span></td>
       <td style="padding:6px 8px; font-size:10.5px; color:var(--text-soft);">${fmtDate(r.createdAt)}</td>
@@ -443,6 +443,230 @@ function _renderAdminCardUsers(u) {
         🔒 E2EE 보존 — 진주·메시지·미션 내용은 서버 비공개. 메타데이터 (호출 수·endpoint·비용) 만 추적.<br>
         '호출' = 30일 안 backend api 총 호출 수 / 'chat' = 그 중 메인 대화 메시지 수.
       </div>
+    </div>
+  `;
+}
+
+// ─── 👤 사용자 detail 드릴다운 modal ───
+// row click → 그 user 의 endpoint 분포 / 일별 활동 / billing / acquisition / payments / feedback.
+async function openAdminUserDetail(userId) {
+  if (!_isAdmin() || !userId) return;
+  if (document.getElementById('adminUserDetailOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'adminUserDetailOverlay';
+  overlay.className = 'admin-analytics-overlay';
+  overlay.style.zIndex = '97';  // dashboard overlay (96) 위
+  overlay.onclick = (e) => { if (e.target === overlay) closeAdminUserDetail(); };
+  overlay.innerHTML = `
+    <div class="admin-analytics-modal" style="max-width:900px;" onclick="event.stopPropagation()">
+      <div class="admin-analytics-header">
+        <div style="font-size:15px; font-weight:700;">👤 사용자 detail</div>
+        <button class="admin-close-btn" onclick="closeAdminUserDetail()">✕</button>
+      </div>
+      <div id="adminUserDetailBody" style="font-size:12px;">불러오는 중...</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  try {
+    const resp = await _authedFetch('/api/admin/user-detail?user_id=' + encodeURIComponent(userId), {
+      headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
+    });
+    if (!resp.ok) {
+      const r = await resp.json().catch(() => ({}));
+      _renderUserDetailError(`실패 (${resp.status}) ${r.error || ''}`);
+      return;
+    }
+    const data = await resp.json();
+    if (!data.ok) { _renderUserDetailError(data.error || '응답 오류'); return; }
+    _renderUserDetailBody(data);
+  } catch (e) {
+    _renderUserDetailError('네트워크 실패: ' + (e?.message || e));
+  }
+}
+
+function closeAdminUserDetail() {
+  const el = document.getElementById('adminUserDetailOverlay');
+  if (el) el.remove();
+}
+
+function _renderUserDetailError(msg) {
+  const body = document.getElementById('adminUserDetailBody');
+  if (body) body.innerHTML = `<div style="color:#d97a7a; padding:20px; text-align:center;">${escapeHtml(msg)}</div>`;
+}
+
+function _renderUserDetailBody(d) {
+  const body = document.getElementById('adminUserDetailBody');
+  if (!body) return;
+  const u = d.user || {};
+  const b = d.billing;
+  const a = d.acquisition;
+  const usage = d.usage || {};
+  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '—';
+  const fmtTime = (iso) => iso ? new Date(iso).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+  const fmtUsd = (n) => '$' + (Number(n) || 0).toFixed(4);
+  const fmtKrw = (n) => (Number(n) || 0).toLocaleString();
+  const planBadge = b?.subscriptionActive && b?.plan
+    ? `<span style="color:var(--accent); background:var(--accent-dim); padding:2px 8px; border-radius:8px; font-size:11px;">${escapeHtml(b.plan)}</span>`
+    : u.isGuest
+      ? `<span style="color:var(--text-dim);">👤 게스트</span>`
+      : `<span style="color:var(--text-dim);">🆓 free</span>`;
+
+  // by_endpoint horizontal bar
+  const ep = usage.by_endpoint || [];
+  const epMax = Math.max(1, ...ep.map(e => e.count));
+  const labelMap = {
+    chat: '💬 chat (메인 대화)', decision_step: '🧬 strategy', archive_summary: '📔 archive 요약',
+    pearl_polish: '🔮 진주 정리', topic_extract: '✦ topic 추출',
+    weekly: '📅 주간', monthly: '📅 월간', quarterly: '📅 분기', annual: '📅 연간',
+    deeper: '▾ 더 깊이', proposal: '🌿 제안', force_analyze: '⚡ 강제 분석', rag: '🔍 RAG'
+  };
+  const epHtml = ep.map(e => {
+    const pct = Math.round((e.count / epMax) * 100);
+    const label = labelMap[e.endpoint] || e.endpoint;
+    return `<div style="margin-bottom:5px;">
+      <div style="display:flex; justify-content:space-between; font-size:10.5px;">
+        <span>${escapeHtml(label)}</span>
+        <span style="color:var(--text-soft);">${e.count.toLocaleString()} · ${fmtUsd(e.cost_usd)}</span>
+      </div>
+      <div style="background:var(--card-bg); height:5px; border-radius:3px; overflow:hidden;">
+        <div style="background:var(--accent); height:100%; width:${pct}%;"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // by_model
+  const modelHtml = (usage.by_model || []).slice(0, 5).map(m =>
+    `<div style="display:flex; justify-content:space-between; padding:2px 0;"><span style="color:var(--text-soft);">${escapeHtml(m.model)}</span><span>${m.count}</span></div>`
+  ).join('');
+
+  // 30일 daily timeline sparkline
+  const timeline = usage.by_day_timeline || [];
+  const timelineValues = timeline.map(d => d.count);
+  const sparklineSvg = _renderSvgSparkline(timelineValues, 600, 60, '#7ec8e3');
+
+  // 최근 raw activity 30개
+  const recent = usage.recent || [];
+  const recentHtml = recent.length > 0
+    ? `<table style="width:100%; font-size:10.5px; border-collapse:collapse;">
+        <thead><tr style="color:var(--text-soft); border-bottom:1px solid var(--border);">
+          <th style="text-align:left; padding:3px 6px; font-weight:600;">시각</th>
+          <th style="text-align:left; padding:3px 6px; font-weight:600;">endpoint</th>
+          <th style="text-align:left; padding:3px 6px; font-weight:600;">model</th>
+          <th style="text-align:right; padding:3px 6px; font-weight:600;">in/out</th>
+          <th style="text-align:right; padding:3px 6px; font-weight:600;">cost</th>
+        </tr></thead>
+        <tbody>
+          ${recent.map(r => `<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:3px 6px; color:var(--text-soft);">${fmtTime(r.recorded_at)}</td>
+            <td style="padding:3px 6px;">${escapeHtml(r.endpoint || '')}</td>
+            <td style="padding:3px 6px; color:var(--text-soft); font-size:10px;">${escapeHtml((r.model || '').replace(/^claude-/, ''))}</td>
+            <td style="padding:3px 6px; text-align:right; color:var(--text-soft);">${(r.input_tokens || 0).toLocaleString()}/${(r.output_tokens || 0).toLocaleString()}</td>
+            <td style="padding:3px 6px; text-align:right;">${fmtUsd(r.cost_usd)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`
+    : '<div style="color:var(--text-soft); padding:12px 0;">활동 X</div>';
+
+  // payments
+  const paymentsHtml = (d.payments || []).length > 0
+    ? `<table style="width:100%; font-size:10.5px; border-collapse:collapse;">
+        <thead><tr style="color:var(--text-soft); border-bottom:1px solid var(--border);">
+          <th style="text-align:left; padding:3px 6px;">날짜</th>
+          <th style="text-align:left; padding:3px 6px;">type</th>
+          <th style="text-align:right; padding:3px 6px;">금액</th>
+          <th style="text-align:center; padding:3px 6px;">status</th>
+        </tr></thead>
+        <tbody>
+          ${(d.payments || []).map(p => `<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:3px 6px;">${fmtDate(p.created_at)}</td>
+            <td style="padding:3px 6px;">${escapeHtml(p.payment_type || '')}</td>
+            <td style="padding:3px 6px; text-align:right; color:${p.status === 'refunded' ? '#d97a7a' : 'var(--text)'};">${fmtKrw(p.amount_krw)}원${p.refund_amount_krw ? ` (-${fmtKrw(p.refund_amount_krw)}원)` : ''}</td>
+            <td style="padding:3px 6px; text-align:center;"><span style="font-size:9px; padding:1px 5px; background:${p.status === 'paid' ? 'rgba(106,191,105,0.2)' : p.status === 'refunded' ? 'rgba(217,122,122,0.2)' : 'rgba(120,120,120,0.2)'}; border-radius:4px;">${escapeHtml(p.status || '')}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`
+    : '<div style="color:var(--text-soft); padding:8px 0; font-size:11px;">결제 내역 X</div>';
+
+  // feedback
+  const feedbackHtml = (d.feedback || []).length > 0
+    ? (d.feedback || []).map(f => `<div style="padding:8px 0; border-bottom:1px dashed var(--border);">
+        <div style="font-size:9.5px; color:var(--text-soft); margin-bottom:2px;">${fmtDate(f.created_at)} · <span style="padding:1px 5px; background:${f.status === 'replied' ? 'rgba(106,191,105,0.2)' : 'rgba(217,167,106,0.2)'}; border-radius:4px;">${escapeHtml(f.status || '')}</span></div>
+        <div style="font-size:11px;">${escapeHtml(f.message || '')}</div>
+        ${f.admin_reply ? `<div style="font-size:10.5px; color:var(--accent); margin-top:4px; padding-left:8px; border-left:2px solid var(--accent);">↪ ${escapeHtml(f.admin_reply)}</div>` : ''}
+      </div>`).join('')
+    : '<div style="color:var(--text-soft); padding:8px 0; font-size:11px;">피드백 X</div>';
+
+  body.innerHTML = `
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:14px;">
+      <div class="admin-card">
+        <div class="admin-card-title">👤 정보</div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:4px;">${escapeHtml(u.email || '(이메일 X)')}</div>
+        <div style="font-size:10px; color:var(--text-dim); margin-bottom:6px; word-break:break-all;">${escapeHtml(u.id || '')}</div>
+        <div style="font-size:11px; color:var(--text-soft); line-height:1.7;">
+          가입: ${fmtDate(u.createdAt)}<br>
+          마지막 로그인: ${fmtTime(u.lastSignInAt)}<br>
+          provider: ${escapeHtml(u.provider || '')}<br>
+          ${u.isGuest ? '<span style="color:var(--text-dim);">👤 게스트</span>' : (u.emailConfirmedAt ? '<span style="color:#6abf69;">✓ email 확인</span>' : '<span style="color:#d97a7a;">⚠ email 미확인</span>')}
+        </div>
+      </div>
+      <div class="admin-card">
+        <div class="admin-card-title">💎 billing</div>
+        <div style="margin-bottom:6px;">${planBadge}</div>
+        ${b ? `<div style="font-size:11px; color:var(--text-soft); line-height:1.7;">
+          만료: ${fmtDate(b.subscriptionExpiresAt)}<br>
+          잔액: ${fmtUsd(b.creditBalanceUsd)}<br>
+          오늘 사용: ${fmtUsd(b.dailyQuotaUsed)}<br>
+          ${b.freeCreditGranted ? '<span style="color:#d4a76a;">🎁 trial 받음</span>' : ''}
+          ${b.scheduledPlanChange ? `<br><span style="color:#7ec8e3;">예약 변경: ${escapeHtml(b.scheduledPlanChange)}</span>` : ''}
+        </div>` : '<div style="color:var(--text-soft); font-size:11px;">billing row X</div>'}
+      </div>
+      <div class="admin-card">
+        <div class="admin-card-title">🎯 acquisition</div>
+        ${a ? `<div style="font-size:11px; color:var(--text-soft); line-height:1.7;">
+          source: <b style="color:var(--text);">${escapeHtml(a.utmSource || '—')}</b><br>
+          medium: ${escapeHtml(a.utmMedium || '—')}<br>
+          campaign: ${escapeHtml(a.utmCampaign || '—')}<br>
+          referer: <span style="font-size:10px;">${escapeHtml((a.referer || '').slice(0, 50)) || '—'}</span><br>
+          잡힘: ${fmtDate(a.capturedAt)}
+        </div>` : '<div style="color:var(--text-soft); font-size:11px;">acquisition row X (직접 접속)</div>'}
+      </div>
+    </div>
+
+    <div class="admin-card" style="margin-bottom:12px;">
+      <div class="admin-card-title">📊 30일 활동 timeline (${(usage.total_calls || 0).toLocaleString()} 호출 · ${fmtUsd(usage.total_cost_usd)} · in/out ${(usage.total_input_tokens||0).toLocaleString()}/${(usage.total_output_tokens||0).toLocaleString()})</div>
+      ${sparklineSvg}
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+      <div class="admin-card">
+        <div class="admin-card-title">📚 endpoint 분포</div>
+        ${epHtml || '<div style="color:var(--text-soft); font-size:11px;">데이터 X</div>'}
+      </div>
+      <div class="admin-card">
+        <div class="admin-card-title">🤖 model 사용</div>
+        ${modelHtml || '<div style="color:var(--text-soft); font-size:11px;">데이터 X</div>'}
+      </div>
+    </div>
+
+    <div class="admin-card" style="margin-bottom:12px;">
+      <div class="admin-card-title">⏰ 최근 raw activity (30 개 · 시각순)</div>
+      <div style="max-height:240px; overflow-y:auto; margin-top:4px;">${recentHtml}</div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div class="admin-card">
+        <div class="admin-card-title">💳 결제 내역</div>
+        ${paymentsHtml}
+      </div>
+      <div class="admin-card">
+        <div class="admin-card-title">📬 피드백</div>
+        ${feedbackHtml}
+      </div>
+    </div>
+
+    <div style="margin-top:12px; font-size:10px; color:var(--text-dim); line-height:1.6;">
+      🔒 E2EE — 본문 (메시지·진주·미션) 서버 비공개. 메타데이터·결제·피드백 본문은 사용자 동의 영역.
     </div>
   `;
 }
