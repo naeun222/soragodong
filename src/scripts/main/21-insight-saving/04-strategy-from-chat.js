@@ -2,7 +2,13 @@
 // 4-필드 구조: title / problemContext / psychConcept / actionStrategy
 async function saveMsgAsStrategy(idx) {
   const msg = state.chatMessages[idx];
-  if (!msg || msg.savedStrategy) return;
+  if (!msg || msg.savedStrategy || msg._strategyInProgress) return;
+  // V4 (사용자 명시 2026-05-16 cowork): race condition fix.
+  //   원인: 🧬 전략으로 클릭 → callAnthropic 진행 중 (수초 소요) → 사용자가 ✦ 해볼게 클릭 → acceptProposal 의 auto-save 가
+  //   savedStrategy=false / strategyId 미정 상태에서 saveMsgAsStrategy 재호출 → 양쪽 다 push → 같은 카드 중복.
+  //   fix: _strategyInProgress 플래그 즉시 set → 진행 중 재진입 차단. finally 에서 정리.
+  msg._strategyInProgress = true;
+  try {
   // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 🧬 전략으로 → 옛 Core 2 튜토리얼 (V8 UI) 1회 fire.
   // 마킹 즉시 — acceptProposal 가 자동 호출 한 saveMsgAsStrategy 는 이미 acceptProposal 가 마킹.
   const _firstC2Tutorial = (typeof shouldRunFirstStrategyTutorial === 'function') && shouldRunFirstStrategyTutorial();
@@ -115,6 +121,9 @@ async function saveMsgAsStrategy(idx) {
   // runFirstStrategyTutorialV8 가 카드 미리보기 + ✦ 해볼게 안내 + 홈 + 미션 + 마무리 처리.
   if (_firstC2Tutorial && typeof runFirstStrategyTutorialV8 === 'function') {
     setTimeout(() => { runFirstStrategyTutorialV8('strategy', idx).catch(e => console.warn('[c2 first]', e)); }, 700);
+  }
+  } finally {
+    if (msg) delete msg._strategyInProgress;
   }
 }
 

@@ -23,7 +23,12 @@ function _renderChatMessageHTML(m, i) {
       const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]/.test(m.content || '');
       // V4 (v8 묶음 4): show / disabled / hide 분기 — Plan 별 cap + 쿨다운
       const _deeperElig = (typeof _checkDeeperEligibility === 'function') ? _checkDeeperEligibility() : { ok: true };
-      const deeperBtn = has4Stage
+      // V4 (사용자 명시 2026-05-16 cowork): 3턴 이전 hide. 첫 응답 옆에 깊이 버튼 = "이 앱 = 분석 도구" frame 즉시 박힘.
+      //   결정: 챕터당 user 메시지 3회 누적 후 노출. testerMode / 튜토리얼 모드는 우회.
+      const _chapterUserMsgs = (state.chatMessages || []).filter(mm => mm && mm.role === 'user').length;
+      const _bypassTurnGate = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
+      const _deeperTurnsOk = _bypassTurnGate || _chapterUserMsgs >= 3;
+      const deeperBtn = (has4Stage || !_deeperTurnsOk)
         ? ''
         : (_deeperElig.ok
             ? `<button class="msg-action" onclick="askDeeper(${i})">더 알고 싶어 ▾</button>`

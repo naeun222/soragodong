@@ -299,6 +299,63 @@ async function init() {
     setTimeout(() => { refreshBillingStatus().catch(e => console.warn('refreshBillingStatus init:', e)); }, 4000);
   }
 
+  // V4 (사용자 명시 2026-05-16 cowork 디버그): _pendingExtract 안전망.
+  //   원인: _archiveCurrentChapter 의 setTimeout(extract, 1500ms) 가 페이지 reload 로 죽으면
+  //   (testerMode 토글 / 로그인 promote / 사용자 새로고침 / 탭 닫기 등) archiveItem._pendingExtract: true 마킹만 남고 traits 안 들어옴.
+  //   fix: 다음 init 시 stuck archive 순회해서 extract 재시도.
+  setTimeout(() => {
+    try {
+      if (!Array.isArray(state.chatArchive) || state.chatArchive.length === 0) return;
+      if (typeof _canAI !== 'function' || !_canAI()) return;
+      if (window._onbTutorialMode) return;
+      if (state.preferences && state.preferences.testerMode) return;
+      const stuckArchives = state.chatArchive.filter(a =>
+        a && !a._deleted && a._pendingExtract && Array.isArray(a.messages) && a.messages.length >= 6
+      );
+      if (stuckArchives.length === 0) return;
+      console.log('[pending extract recovery] stuck archives:', stuckArchives.length);
+      (async () => {
+        for (const arch of stuckArchives) {
+          try {
+            const _extractMsgs = (typeof _chapterExtractMessages === 'function')
+              ? _chapterExtractMessages(arch)
+              : (arch.messages || []).filter(m => m && !m.typing && !m.error);
+            const _normalMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
+            const _simMsgs = _extractMsgs.filter(m => m && m.isSimulationContext);
+            if (typeof extractChapterCaseAnalysis === 'function') {
+              if (_normalMsgs.length >= 3) {
+                try { await extractChapterCaseAnalysis(_normalMsgs); }
+                catch (e) { console.warn('[pending recovery] case fail:', arch.id, e); }
+              }
+              if (_simMsgs.length >= 3) {
+                try { await extractChapterCaseAnalysis(_simMsgs, { isSimulation: true }); }
+                catch (e) { console.warn('[pending recovery] case sim fail:', arch.id, e); }
+              }
+            }
+            if (typeof extractPreviousChapterTopics === 'function') {
+              if (_normalMsgs.length >= 3) {
+                try { await extractPreviousChapterTopics(_normalMsgs); }
+                catch (e) { console.warn('[pending recovery] topic fail:', arch.id, e); }
+              }
+              if (_simMsgs.length >= 3) {
+                const _beforeSim = (state.topicCards || []).length;
+                try {
+                  await extractPreviousChapterTopics(_simMsgs);
+                  const _added = (state.topicCards || []).slice(_beforeSim);
+                  _added.forEach(card => { if (card) card.source = 'simulation'; });
+                } catch (e) { console.warn('[pending recovery] topic sim fail:', arch.id, e); }
+              }
+            }
+            delete arch._pendingExtract;
+            delete arch._pendingCaseAnalysis;
+            saveState();
+            if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
+          } catch (e) { console.warn('[pending recovery] guard:', arch.id, e); }
+        }
+      })();
+    } catch (e) { console.warn('[pending recovery] outer:', e); }
+  }, 5000);
+
   applyNightMode();
   renderModes();
   if (typeof renderYesterdayCard === 'function') renderYesterdayCard();

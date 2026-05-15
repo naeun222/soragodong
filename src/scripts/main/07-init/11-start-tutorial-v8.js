@@ -64,7 +64,8 @@ async function runStartTutorialV8() {
   state.tutorialVersion = 'v9-start';
   try { saveState(); } catch {}
   try {
-    await _v8HeroSequence();                  // 화면 1·2 (V8 hero 유지 — 차별화 강함)
+    // V4 (사용자 명시 2026-05-16 cowork): hero 시퀀스 제거 — "안녕?" + 3줄 cascade fade 가 신규 진입에 3-4초 강제 대기.
+    //   warm modal 바로 진입. _v8HeroSequence 함수 본체는 보존 (legacy / 향후 별도 진입 시 재사용 가능).
     const result = await _v9ShowWarmStartModal();
     if (result && result.type === 'answer') {
       await _v9HandleAnswer(result.answer);
@@ -195,9 +196,9 @@ function _v9ShowWarmStartModal() {
       <div class="v9-warm-overlay">
         <div class="v9-warm-card">
           <img class="v9-warm-godong" src="/godongicon.png" alt="고동이" decoding="async">
-          <div class="v9-warm-question">요즘 머릿속에 제일 큰 거<br>하나만 풀어볼래?</div>
+          <div class="v9-warm-question">오늘 어땠어?</div>
           <div class="v9-warm-textarea-wrap">
-            <textarea class="v9-warm-input" id="v9WarmInput" placeholder="한 줄도 좋아" rows="3"></textarea>
+            <textarea class="v9-warm-input" id="v9WarmInput" placeholder="" rows="3"></textarea>
             <button class="v9-warm-mic-btn" id="v9WarmMicBtn" onclick="if(typeof _toggleInputSpeech==='function')_toggleInputSpeech('v9WarmInput','v9WarmMicBtn')" type="button" aria-label="음성"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
           </div>
           <div class="v9-warm-mic-hint">🎤 말로 해도 돼</div>

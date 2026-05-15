@@ -26,6 +26,15 @@ async function logout() {
     localStorage.removeItem('soragodong_v4_e2ee_recovery');
     localStorage.removeItem('soragodong_v4_e2ee_setup_dismissed');
   } catch {}
+  // V4 (사용자 명시 2026-05-16 cowork 디버그): testerMode defensive cleanup.
+  //   원인: 로그아웃 직전에 testerMode 가 ON 이었으면 메모리 state 에 잔존. localStorage 는 위에서 지웠지만,
+  //   reload 후 cloud row 에 testerMode=true 가 박혀있으면 새로 들어온 사용자가 seed 데이터를 자기 데이터로 오인할 위험.
+  //   fix: reload 전에 메모리에서도 명시 정리. 다음 init 의 cloud sync 가 false 로 덮어쓰기.
+  try {
+    if (state && state.preferences) {
+      state.preferences.testerMode = false;
+    }
+  } catch {}
   session = null;
   authUserId = null;
   location.reload();

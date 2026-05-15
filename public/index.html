@@ -12758,7 +12758,7 @@
   <div class="login-content">
     <img class="login-icon" src="/godongicon.png" alt="소라고동" decoding="async">
     <div class="login-title">소라고동</div>
-    <div class="login-sub"><span style="font-size:17px; color:var(--text); font-weight:500; letter-spacing:0.01em;">나를 아는 AI 길라잡이 <span class="accent">✦</span></span></div>
+    <div class="login-sub"><span style="font-size:17px; color:var(--text); font-weight:500; letter-spacing:0.01em;">차근차근 너를 알아가는 친구 <span class="accent">✦</span></span></div>
 
     <!-- 사용자 명시 2026-05-06: 모바일 브라우저 takeover 시 escape — iOS 인앱 / 빠른 로그인 사용자용. -->
     <!-- PWA 설치 카드 = 후속 (가입 완료 시점 노출 — 처음 진입자 강요 X). -->
@@ -15030,6 +15030,15 @@ async function logout() {
     sessionStorage.removeItem('soragodong_v4_e2ee_mk');
     localStorage.removeItem('soragodong_v4_e2ee_recovery');
     localStorage.removeItem('soragodong_v4_e2ee_setup_dismissed');
+  } catch {}
+  // V4 (사용자 명시 2026-05-16 cowork 디버그): testerMode defensive cleanup.
+  //   원인: 로그아웃 직전에 testerMode 가 ON 이었으면 메모리 state 에 잔존. localStorage 는 위에서 지웠지만,
+  //   reload 후 cloud row 에 testerMode=true 가 박혀있으면 새로 들어온 사용자가 seed 데이터를 자기 데이터로 오인할 위험.
+  //   fix: reload 전에 메모리에서도 명시 정리. 다음 init 의 cloud sync 가 false 로 덮어쓰기.
+  try {
+    if (state && state.preferences) {
+      state.preferences.testerMode = false;
+    }
   } catch {}
   session = null;
   authUserId = null;
@@ -20678,6 +20687,63 @@ async function init() {
     setTimeout(() => { refreshBillingStatus().catch(e => console.warn('refreshBillingStatus init:', e)); }, 4000);
   }
 
+  // V4 (사용자 명시 2026-05-16 cowork 디버그): _pendingExtract 안전망.
+  //   원인: _archiveCurrentChapter 의 setTimeout(extract, 1500ms) 가 페이지 reload 로 죽으면
+  //   (testerMode 토글 / 로그인 promote / 사용자 새로고침 / 탭 닫기 등) archiveItem._pendingExtract: true 마킹만 남고 traits 안 들어옴.
+  //   fix: 다음 init 시 stuck archive 순회해서 extract 재시도.
+  setTimeout(() => {
+    try {
+      if (!Array.isArray(state.chatArchive) || state.chatArchive.length === 0) return;
+      if (typeof _canAI !== 'function' || !_canAI()) return;
+      if (window._onbTutorialMode) return;
+      if (state.preferences && state.preferences.testerMode) return;
+      const stuckArchives = state.chatArchive.filter(a =>
+        a && !a._deleted && a._pendingExtract && Array.isArray(a.messages) && a.messages.length >= 6
+      );
+      if (stuckArchives.length === 0) return;
+      console.log('[pending extract recovery] stuck archives:', stuckArchives.length);
+      (async () => {
+        for (const arch of stuckArchives) {
+          try {
+            const _extractMsgs = (typeof _chapterExtractMessages === 'function')
+              ? _chapterExtractMessages(arch)
+              : (arch.messages || []).filter(m => m && !m.typing && !m.error);
+            const _normalMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
+            const _simMsgs = _extractMsgs.filter(m => m && m.isSimulationContext);
+            if (typeof extractChapterCaseAnalysis === 'function') {
+              if (_normalMsgs.length >= 3) {
+                try { await extractChapterCaseAnalysis(_normalMsgs); }
+                catch (e) { console.warn('[pending recovery] case fail:', arch.id, e); }
+              }
+              if (_simMsgs.length >= 3) {
+                try { await extractChapterCaseAnalysis(_simMsgs, { isSimulation: true }); }
+                catch (e) { console.warn('[pending recovery] case sim fail:', arch.id, e); }
+              }
+            }
+            if (typeof extractPreviousChapterTopics === 'function') {
+              if (_normalMsgs.length >= 3) {
+                try { await extractPreviousChapterTopics(_normalMsgs); }
+                catch (e) { console.warn('[pending recovery] topic fail:', arch.id, e); }
+              }
+              if (_simMsgs.length >= 3) {
+                const _beforeSim = (state.topicCards || []).length;
+                try {
+                  await extractPreviousChapterTopics(_simMsgs);
+                  const _added = (state.topicCards || []).slice(_beforeSim);
+                  _added.forEach(card => { if (card) card.source = 'simulation'; });
+                } catch (e) { console.warn('[pending recovery] topic sim fail:', arch.id, e); }
+              }
+            }
+            delete arch._pendingExtract;
+            delete arch._pendingCaseAnalysis;
+            saveState();
+            if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
+          } catch (e) { console.warn('[pending recovery] guard:', arch.id, e); }
+        }
+      })();
+    } catch (e) { console.warn('[pending recovery] outer:', e); }
+  }, 5000);
+
   applyNightMode();
   renderModes();
   if (typeof renderYesterdayCard === 'function') renderYesterdayCard();
@@ -23715,7 +23781,8 @@ async function runStartTutorialV8() {
   state.tutorialVersion = 'v9-start';
   try { saveState(); } catch {}
   try {
-    await _v8HeroSequence();                  // 화면 1·2 (V8 hero 유지 — 차별화 강함)
+    // V4 (사용자 명시 2026-05-16 cowork): hero 시퀀스 제거 — "안녕?" + 3줄 cascade fade 가 신규 진입에 3-4초 강제 대기.
+    //   warm modal 바로 진입. _v8HeroSequence 함수 본체는 보존 (legacy / 향후 별도 진입 시 재사용 가능).
     const result = await _v9ShowWarmStartModal();
     if (result && result.type === 'answer') {
       await _v9HandleAnswer(result.answer);
@@ -23846,9 +23913,9 @@ function _v9ShowWarmStartModal() {
       <div class="v9-warm-overlay">
         <div class="v9-warm-card">
           <img class="v9-warm-godong" src="/godongicon.png" alt="고동이" decoding="async">
-          <div class="v9-warm-question">요즘 머릿속에 제일 큰 거<br>하나만 풀어볼래?</div>
+          <div class="v9-warm-question">오늘 어땠어?</div>
           <div class="v9-warm-textarea-wrap">
-            <textarea class="v9-warm-input" id="v9WarmInput" placeholder="한 줄도 좋아" rows="3"></textarea>
+            <textarea class="v9-warm-input" id="v9WarmInput" placeholder="" rows="3"></textarea>
             <button class="v9-warm-mic-btn" id="v9WarmMicBtn" onclick="if(typeof _toggleInputSpeech==='function')_toggleInputSpeech('v9WarmInput','v9WarmMicBtn')" type="button" aria-label="음성"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11Z"/></svg></button>
           </div>
           <div class="v9-warm-mic-hint">🎤 말로 해도 돼</div>
@@ -39747,7 +39814,12 @@ function _renderChatMessageHTML(m, i) {
       const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]/.test(m.content || '');
       // V4 (v8 묶음 4): show / disabled / hide 분기 — Plan 별 cap + 쿨다운
       const _deeperElig = (typeof _checkDeeperEligibility === 'function') ? _checkDeeperEligibility() : { ok: true };
-      const deeperBtn = has4Stage
+      // V4 (사용자 명시 2026-05-16 cowork): 3턴 이전 hide. 첫 응답 옆에 깊이 버튼 = "이 앱 = 분석 도구" frame 즉시 박힘.
+      //   결정: 챕터당 user 메시지 3회 누적 후 노출. testerMode / 튜토리얼 모드는 우회.
+      const _chapterUserMsgs = (state.chatMessages || []).filter(mm => mm && mm.role === 'user').length;
+      const _bypassTurnGate = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
+      const _deeperTurnsOk = _bypassTurnGate || _chapterUserMsgs >= 3;
+      const deeperBtn = (has4Stage || !_deeperTurnsOk)
         ? ''
         : (_deeperElig.ok
             ? `<button class="msg-action" onclick="askDeeper(${i})">더 알고 싶어 ▾</button>`
@@ -42883,7 +42955,13 @@ async function addMemoArchive() {
 // 4-필드 구조: title / problemContext / psychConcept / actionStrategy
 async function saveMsgAsStrategy(idx) {
   const msg = state.chatMessages[idx];
-  if (!msg || msg.savedStrategy) return;
+  if (!msg || msg.savedStrategy || msg._strategyInProgress) return;
+  // V4 (사용자 명시 2026-05-16 cowork): race condition fix.
+  //   원인: 🧬 전략으로 클릭 → callAnthropic 진행 중 (수초 소요) → 사용자가 ✦ 해볼게 클릭 → acceptProposal 의 auto-save 가
+  //   savedStrategy=false / strategyId 미정 상태에서 saveMsgAsStrategy 재호출 → 양쪽 다 push → 같은 카드 중복.
+  //   fix: _strategyInProgress 플래그 즉시 set → 진행 중 재진입 차단. finally 에서 정리.
+  msg._strategyInProgress = true;
+  try {
   // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 🧬 전략으로 → 옛 Core 2 튜토리얼 (V8 UI) 1회 fire.
   // 마킹 즉시 — acceptProposal 가 자동 호출 한 saveMsgAsStrategy 는 이미 acceptProposal 가 마킹.
   const _firstC2Tutorial = (typeof shouldRunFirstStrategyTutorial === 'function') && shouldRunFirstStrategyTutorial();
@@ -42996,6 +43074,9 @@ async function saveMsgAsStrategy(idx) {
   // runFirstStrategyTutorialV8 가 카드 미리보기 + ✦ 해볼게 안내 + 홈 + 미션 + 마무리 처리.
   if (_firstC2Tutorial && typeof runFirstStrategyTutorialV8 === 'function') {
     setTimeout(() => { runFirstStrategyTutorialV8('strategy', idx).catch(e => console.warn('[c2 first]', e)); }, 700);
+  }
+  } finally {
+    if (msg) delete msg._strategyInProgress;
   }
 }
 
