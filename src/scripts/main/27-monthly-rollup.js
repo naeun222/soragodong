@@ -340,6 +340,15 @@ async function runDiaryAutoSummaryIfNeeded() {
     if (entry.diary) continue;
     if (entry.aiSummary) continue;
     if (entry._pendingDiarySummary) continue;  // batch 가 처리 중 — race 차단
+    // V4 (사용자 명시 2026-05-16 cowork): persistent retry guard.
+    //   원인: _pendingDiarySummary 는 in-memory transient — reload 마다 reset (joh752307 5번 fire root cause).
+    //   fix: saveState 통해 cloud sync 되는 _aiSummaryAttempts / _aiSummaryLastAttemptAt / _aiSummaryFailed 로 idempotent guard.
+    if (entry._aiSummaryFailed) continue;  // 영구 실패 (empty response sentinel) — 다시 시도 X
+    if (entry._aiSummaryLastAttemptAt) {
+      const _hoursSince = (Date.now() - new Date(entry._aiSummaryLastAttemptAt).getTime()) / 3600000;
+      if (_hoursSince < 24) continue;  // 24h cooldown
+    }
+    if ((entry._aiSummaryAttempts || 0) >= 3) continue;  // 3회 cap
     // 사용자 보고 2026-05-04 (B16): testerMode 아닐 때 시드 entry 제외 — '엄마 김치찌개' 등 더미 데이터 요약 노출 차단.
     const _isTesterDS = !!(state.preferences && state.preferences.testerMode);
     if (!_isTesterDS && entry._seed) continue;
@@ -358,11 +367,31 @@ async function runDiaryAutoSummaryIfNeeded() {
     const hasContext = messages.length >= 2 || entry.vitality != null || entry.mood != null || (entry.note && entry.note.trim());
     if (!hasContext) continue;
 
+    // V4 (사용자 명시 2026-05-16 cowork): 호출 직전 attempt 마킹 — saveState → cloud sync → 재진입 시 보존.
+    //   실패 / network glitch / catch 시에도 마킹이 살아남아 다음 진입의 cooldown / cap 가드 trigger.
+    entry._aiSummaryLastAttemptAt = new Date().toISOString();
+    entry._aiSummaryAttempts = (entry._aiSummaryAttempts || 0) + 1;
+    saveState();
+
     try {
-      const summary = await summarizeDayForEntry(dateKey, messages, entry);
-      if (summary) {
-        entry.aiSummary = summary;
+      const result = await summarizeDayForEntry(dateKey, messages, entry);
+      // V4 (사용자 명시 2026-05-16 cowork): empty response sentinel — backend chat.ts 가 _emptyResponse 박은 케이스.
+      //   영구 skip 마킹 (다음 진입 시 무한 재시도 차단). 사용자 비용 X (backend 가 chargeUsage skip).
+      if (result && typeof result === 'object' && result.__empty) {
+        entry._aiSummaryFailed = true;
+        entry._aiSummaryFailReason = result.reason || 'empty_response';
+        saveState();
+        console.warn(`[diary auto summary] empty response — 영구 skip ${dateKey}`);
+        return;
+      }
+      if (result && typeof result === 'string' && result.length > 0) {
+        entry.aiSummary = result;
         entry.dailySource = 'auto';
+        // 성공 — guard markers 정리 (다음 entry 처리 / 재호출 시 깨끗)
+        delete entry._aiSummaryAttempts;
+        delete entry._aiSummaryLastAttemptAt;
+        delete entry._aiSummaryFailed;
+        delete entry._aiSummaryFailReason;
         saveState();
         console.log(`✦ 자동 요약 ${dateKey} 생성됨`);
       }
@@ -424,6 +453,12 @@ async function summarizeDayForEntry(date, messages, entry) {
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const data = await resp.json();
-  return _processDiarySummaryResult(data.content[0].text);
+  // V4 (사용자 명시 2026-05-16 cowork): backend empty response sentinel 인식.
+  //   chat.ts 가 200 + content[0].text="" 시 _emptyResponse:true flag 박음 (chargeUsage skip 됨).
+  //   sentinel object 반환 → runDiaryAutoSummaryIfNeeded 가 entry._aiSummaryFailed 영구 마킹.
+  if (data && data._emptyResponse) {
+    return { __empty: true, reason: data._emptyReason || 'empty' };
+  }
+  return _processDiarySummaryResult(data && data.content && data.content[0] && data.content[0].text);
 }
 

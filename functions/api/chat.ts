@@ -579,6 +579,21 @@ async function _handleChatRequest(context: {
   }
 
   const data: any = await upstream.json();
+
+  // V4 (사용자 명시 2026-05-16 cowork): empty response guard.
+  //   원인: Anthropic 이 200 + content[0].text="" 응답 시 chargeUsage 가 1건 카운트하고 frontend 가 무한 재시도 (joh752307 5건 확인).
+  //   fix: empty 감지 시 _emptyResponse flag 추가 + chargeUsage skip → 사용자 무료 처리. frontend 가 sentinel 인식 후 영구 skip 마킹.
+  //   streaming path 는 _outputTokens > 1 가드 (line 547) 가 이미 chargeUsage skip — 별도 fix 불필요.
+  const _firstText = data?.content?.[0]?.text;
+  if (typeof _firstText === 'string' && _firstText.trim().length === 0) {
+    console.warn('[chat.ts] empty Anthropic response — chargeUsage skip', { endpoint, model: body.model, usage: data?.usage });
+    return jsonResponse({
+      ...data,
+      _emptyResponse: true,
+      _emptyReason: 'insufficient_content',
+    });
+  }
+
   const usage = data.usage || {};
   // 사용자 명시 2026-05-02 ultrathink: chargeUsage 헬퍼 — welcome bonus 우선 소진 + overflow USD 차감.
   await chargeUsage(env, user.id, endpoint, body.model, usage, waitUntil, isGuest, guestIp);
