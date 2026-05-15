@@ -58309,6 +58309,13 @@ async function _maybeAutoForceAnalyzeFreeTier() {
       const _isPremium = !!(_bill && _bill.subscription_plan === 'premium' && _bill.subscription_active);
       const _useOpus = _isPremium;
       await extractChapterCaseAnalysis(_msgs, { model: _useOpus ? 'claude-opus-4-7' : 'claude-sonnet-4-6' });
+      // 사용자 명시 2026-05-15 ultrathink: 게스트 첫 자동 추출 직후 '나' 탭 가입 유도 배너 트리거 — 18-model-rendering.js 의 _renderGuestNudgeBanner 가 이 플래그 감시. 2026-05-08 통합(13e267f) 시 같이 사라졌던 회귀 복원. 첫 1회만 (가드 + dismiss 후 영구).
+      if (state.isGuest && !state._guestAutoExtracted) {
+        state._guestAutoExtracted = true;
+        try { saveState(); } catch {}
+        if (typeof showToast === 'function') showToast('✦ 너에 대해 알아낸 거 정리해봤어 — \'나\' 탭');
+        if (typeof renderModel === 'function') renderModel();
+      }
     } catch (e) { console.warn('[auto chapter case]', e); }
   }
 }
