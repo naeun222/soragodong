@@ -14716,6 +14716,16 @@ function _flushLocalSave(opts) {
   }
 }
 function saveState(force) {
+  // V4 (사용자 명시 2026-05-16 cowork ultrathink): _e2eePendingRecovery 가드 — 데이터 손실 root cause fix.
+  //   원인: cloud E2EE decrypt 실패 시 loadFromCloud (05-supabase.js:111/121/137) 가 state = DEFAULT (빈) 처리 + window._e2eePendingRecovery 에 옛 cloudData 보관.
+  //   recovery modal (init 1500ms 후 fire) 이전에 init 의 자동 saveState 들 (_firstAppDayKey:30-36 / 사용자 미션·진주·mood 입력 등) 이 fire 하면
+  //   _e2eeMasterKey=null 상태에서 saveToCloud 가 *평문 빈 state* 를 cloud 에 push → 옛 encrypted state 영구 손실 (어드민 jade6679 실제 사고).
+  //   이미 13-auto-backup.js / 14-manual-backup.js / 09-e2ee-password.js / 11-guest-conversion.js 패턴 — saveState 자체에도 동일 가드.
+  //   recovery 모달 통한 복호화 성공 후 07-e2ee-recovery-modal.js:227 가 _e2eePendingRecovery=null clear → 정상 saveState 재개.
+  if (typeof window !== 'undefined' && window._e2eePendingRecovery) {
+    console.warn('[saveState] _e2eePendingRecovery active — saveState 차단. recovery 후 재시도.');
+    return;
+  }
   // V4 (사용자 명시): 도서관 탭 dot 갱신 — 데이터 변경 매 cycle 마다 자연 갱신
   if (typeof updateLibraryTabNewDot === 'function') updateLibraryTabNewDot();
   // V4 (사용자 명시 2026-05-08 ultrathink): 홈 / 나 탭 batch dot 갱신
@@ -61500,6 +61510,13 @@ function _planOnboardingFlow(plan, opts) {
     state.preferences = state.preferences || {};
     state.preferences._planOnboardingShown = state.preferences._planOnboardingShown || {};
     if (state.preferences._planOnboardingShown[plan]) return;
+    // V4 (사용자 명시 2026-05-16 cowork ultrathink): fire 시작 시 즉시 flag 마킹 + 즉시 cloud sync.
+    //   원인: _markDone (chain 끝) 만 flag set + saveState. cloud sync 가 queued — 사용자가 step 중간 dismiss / logout / 페이지 close / 다른 device 진입 시 cloud 에 flag 안 박힘 → 매 진입마다 modal 또 fire (사용자 보고: 프리미엄 plan 사용자 매 진입 환영 모달).
+    //   fix: fire 시작 시 즉시 마킹 + saveToCloudNow 명시. 1회 노출 = 의도 충족. _markDone 의 flag set 은 noop (이미 true).
+    //   재 fire 원할 때는 dev tool (26-test-tools/13-plan-onboarding-preview.js) 에서 flag delete.
+    state.preferences._planOnboardingShown[plan] = true;
+    saveState();
+    if (typeof saveToCloudNow === 'function') saveToCloudNow().catch(function(){});
   } catch { return; }
 
   const tier = (typeof TIER_PLANS_CLIENT !== 'undefined') ? TIER_PLANS_CLIENT[plan] : null;
@@ -61511,6 +61528,8 @@ function _planOnboardingFlow(plan, opts) {
     try {
       state.preferences._planOnboardingShown[plan] = true;
       saveState();
+      // V4 (사용자 명시 2026-05-16 cowork): chain 끝 시점 cloud sync 한 번 더 (defensive — fire 시작 시 이미 mark + push 했지만 race 안전망).
+      if (typeof saveToCloudNow === 'function') saveToCloudNow().catch(function(){});
     } catch {}
   };
   const _replaceOverlay = (innerHtml) => {

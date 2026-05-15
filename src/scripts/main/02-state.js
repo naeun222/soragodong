@@ -600,6 +600,16 @@ function _flushLocalSave(opts) {
   }
 }
 function saveState(force) {
+  // V4 (사용자 명시 2026-05-16 cowork ultrathink): _e2eePendingRecovery 가드 — 데이터 손실 root cause fix.
+  //   원인: cloud E2EE decrypt 실패 시 loadFromCloud (05-supabase.js:111/121/137) 가 state = DEFAULT (빈) 처리 + window._e2eePendingRecovery 에 옛 cloudData 보관.
+  //   recovery modal (init 1500ms 후 fire) 이전에 init 의 자동 saveState 들 (_firstAppDayKey:30-36 / 사용자 미션·진주·mood 입력 등) 이 fire 하면
+  //   _e2eeMasterKey=null 상태에서 saveToCloud 가 *평문 빈 state* 를 cloud 에 push → 옛 encrypted state 영구 손실 (어드민 jade6679 실제 사고).
+  //   이미 13-auto-backup.js / 14-manual-backup.js / 09-e2ee-password.js / 11-guest-conversion.js 패턴 — saveState 자체에도 동일 가드.
+  //   recovery 모달 통한 복호화 성공 후 07-e2ee-recovery-modal.js:227 가 _e2eePendingRecovery=null clear → 정상 saveState 재개.
+  if (typeof window !== 'undefined' && window._e2eePendingRecovery) {
+    console.warn('[saveState] _e2eePendingRecovery active — saveState 차단. recovery 후 재시도.');
+    return;
+  }
   // V4 (사용자 명시): 도서관 탭 dot 갱신 — 데이터 변경 매 cycle 마다 자연 갱신
   if (typeof updateLibraryTabNewDot === 'function') updateLibraryTabNewDot();
   // V4 (사용자 명시 2026-05-08 ultrathink): 홈 / 나 탭 batch dot 갱신

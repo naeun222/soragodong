@@ -37,6 +37,13 @@ function _planOnboardingFlow(plan, opts) {
     state.preferences = state.preferences || {};
     state.preferences._planOnboardingShown = state.preferences._planOnboardingShown || {};
     if (state.preferences._planOnboardingShown[plan]) return;
+    // V4 (사용자 명시 2026-05-16 cowork ultrathink): fire 시작 시 즉시 flag 마킹 + 즉시 cloud sync.
+    //   원인: _markDone (chain 끝) 만 flag set + saveState. cloud sync 가 queued — 사용자가 step 중간 dismiss / logout / 페이지 close / 다른 device 진입 시 cloud 에 flag 안 박힘 → 매 진입마다 modal 또 fire (사용자 보고: 프리미엄 plan 사용자 매 진입 환영 모달).
+    //   fix: fire 시작 시 즉시 마킹 + saveToCloudNow 명시. 1회 노출 = 의도 충족. _markDone 의 flag set 은 noop (이미 true).
+    //   재 fire 원할 때는 dev tool (26-test-tools/13-plan-onboarding-preview.js) 에서 flag delete.
+    state.preferences._planOnboardingShown[plan] = true;
+    saveState();
+    if (typeof saveToCloudNow === 'function') saveToCloudNow().catch(function(){});
   } catch { return; }
 
   const tier = (typeof TIER_PLANS_CLIENT !== 'undefined') ? TIER_PLANS_CLIENT[plan] : null;
@@ -48,6 +55,8 @@ function _planOnboardingFlow(plan, opts) {
     try {
       state.preferences._planOnboardingShown[plan] = true;
       saveState();
+      // V4 (사용자 명시 2026-05-16 cowork): chain 끝 시점 cloud sync 한 번 더 (defensive — fire 시작 시 이미 mark + push 했지만 race 안전망).
+      if (typeof saveToCloudNow === 'function') saveToCloudNow().catch(function(){});
     } catch {}
   };
   const _replaceOverlay = (innerHtml) => {
