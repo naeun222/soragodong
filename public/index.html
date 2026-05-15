@@ -27451,15 +27451,19 @@ function renderReviewScreen(type, reviewData, opts) {
 
     // 사용자 명시 2026-04-30 ultrathink: 이전 시드의 풍부한 '이 기간 깨달음 N개' 카드 통째로 호출.
     // _buildReviewArchiveSummaryHTML — 사고 모드 / 화두 무게중심 / 시간 분포 / 살아있는 통찰 / 테마 갈래 / 전체 헤드라인 / AI 통찰
-    // 저장 전이라 review.id X — AI 통찰 button 자리에 '저장 후 가능' placeholder
-    const _tempReviewForSummary = type === 'weekly'
-      ? { weekKey: (typeof getCurrentWeekKey === 'function' ? getCurrentWeekKey() : ''), completedAt: new Date().toISOString(), id: '' }
-      : { monthKey: (typeof getMonthKey === 'function' ? getMonthKey(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15)) : ''), completedAt: new Date().toISOString(), id: '' };
+    // 사용자 보고 2026-05-16 ultrathink: AI 핵심 통찰 요약 매 진입 리셋 버그 — 옛 코드는 매번 비어있는 temp 객체 만들어서 reviewData.archiveMetaSummary 무시.
+    //   readonly 진입 (저장된 reviewData) 면 그대로 사용 → archiveMetaSummary 보존. 저장 전 fresh 만 temp fallback.
+    const _hasSavedKey = !!(reviewData && (reviewData.monthKey || reviewData.weekKey || reviewData.quarterKey));
+    const _reviewForSummary = _hasSavedKey
+      ? reviewData
+      : (type === 'weekly'
+        ? { weekKey: (typeof getCurrentWeekKey === 'function' ? getCurrentWeekKey() : ''), completedAt: new Date().toISOString(), id: '' }
+        : { monthKey: (typeof getMonthKey === 'function' ? getMonthKey(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15)) : ''), completedAt: new Date().toISOString(), id: '' });
     const _archiveOverride = Array.isArray(reviewData._seed_archive_for_preview) && reviewData._seed_archive_for_preview.length > 0
       ? reviewData._seed_archive_for_preview
       : null;
     const _insightsHtml = (typeof _buildReviewArchiveSummaryHTML === 'function')
-      ? _buildReviewArchiveSummaryHTML(_tempReviewForSummary, _archiveOverride ? { archiveOverride: _archiveOverride } : {})
+      ? _buildReviewArchiveSummaryHTML(_reviewForSummary, _archiveOverride ? { archiveOverride: _archiveOverride } : {})
       : '';
     const insightsBlock = _insightsHtml ? `<div style="margin-bottom:14px;">${_insightsHtml}</div>` : '';
 
