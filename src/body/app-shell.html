@@ -383,34 +383,7 @@
       </div>
     </div>
 
-    <!-- EXECUTE (실행 탭 - 다음 메시지에서 빌드) -->
-    <div class="screen" id="screen-execute">
-      <div id="executeContent"></div>
-    </div>
-
-    <!-- BRAIN DUMP MODAL -->
-    <div class="exec-modal-overlay" id="brainDumpOverlay" style="display:none;" onclick="if(event.target===this) closeBrainDump()">
-      <div class="exec-modal">
-        <div class="exec-modal-title">🧠 머릿속 짐 풀기</div>
-        <div class="exec-modal-sub">생각나는 대로 다 적어. 우선순위·시간·형식 X.<br>그냥 와다다.</div>
-        <textarea id="brainDumpInput" rows="10" placeholder="예:&#10;카톡 답장&#10;보고서 한 단락 쓰기&#10;아 맞다 샴푸 사야 함&#10;운동 가야 하는데&#10;..." style="width:100%; padding:14px; background:var(--bg); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:14px; font-family:inherit; resize:vertical; line-height:1.7;"></textarea>
-        <div style="margin-top:14px; font-size:12px; color:var(--text-dim);">오늘은 어떤 모드?</div>
-        <div class="exec-mode-row">
-          <button class="exec-mode-btn focus" onclick="selectExecMode('focus')" id="execModeFocus">
-            🔥 몰입 모드
-            <div class="mode-desc">급하고 중요한 일 위주</div>
-          </button>
-          <button class="exec-mode-btn balance" onclick="selectExecMode('balance')" id="execModeBalance">
-            🌿 여유 모드
-            <div class="mode-desc">가벼운 것도 섞어줘</div>
-          </button>
-        </div>
-        <div style="display:flex; gap:8px; margin-top:14px;">
-          <button class="btn-secondary" onclick="closeBrainDump()" style="flex:1;">취소</button>
-          <button class="btn-primary" onclick="processBrainDump()" id="brainDumpSubmit" style="flex:2;">고동에게 맡기기 ✦</button>
-        </div>
-      </div>
-    </div>
+    <!-- 사용자 명시 2026-05-16 ultrathink: 실행 탭 (screen-execute) + BRAIN DUMP MODAL 폐기. share helper 는 24-execute.js 에 thin core 로 보존. -->
 
     <!-- 사용자 명시 2026-05-03: 서랍장 MODAL 제거 — 메인 section drawer-row list 와 중복. -->
 
@@ -733,8 +706,6 @@
       <div style="background: var(--surface2); padding: 14px; border-radius: 12px; font-size: 12px; color: var(--text-dim); line-height: 1.7;">
         💡 안 만들어도 앱은 정상 작동해. 단축어 없으면 그냥 ritual 모달만 뜨고 끝.
       </div>
-
-      <button class="btn-secondary" onclick="showScreen('execute')" style="margin-top:20px;">실행 탭으로</button>
     </div>
 
     <!-- BLOCK PICKER MODAL -->
@@ -1021,7 +992,6 @@
   <div class="bottom-nav">
     <div class="nav-item active" data-screen="home" onclick="showScreen('home')"><div class="nav-icon">🏠</div><div class="nav-label">홈</div></div>
     <div class="nav-item" data-screen="chat" onclick="showScreen('chat')"><div class="nav-icon">🐚</div><div class="nav-label">대화</div></div>
-    <div class="nav-item" data-screen="execute" onclick="showScreen('execute')"><div class="nav-icon">🚀</div><div class="nav-label">실행</div></div>
     <div class="nav-item" data-screen="model" onclick="showScreen('model')"><div class="nav-icon">🔮</div><div class="nav-label">나</div></div>
     <div class="nav-item" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">📚</div><div class="nav-label">도서관</div></div>
   </div>

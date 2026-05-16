@@ -66,7 +66,6 @@ function showScreen(name) {
   if (name === 'settings') { setTimeout(refreshTesterModeUI, 30); }
   // V4: 화면 전환 후 잠금 시각 갱신 (모든 화면 공통)
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 50);
-  if (name === 'execute') renderExecute();
   if (name === 'checkin') {
     renderDailyQuestion(); renderModes(); renderCheckinTrackers(); prefillCheckinFromEntry();
     // V4-fix v3 (사용자 요청): 체크인 진입 시 가닥 미션 팔로업 자동 prompt
