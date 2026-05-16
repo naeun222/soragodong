@@ -520,11 +520,25 @@ function _buildDiaryBatchRequests() {
   const requests = [];
   const pendingDates = [];
 
+  // 사용자 보고 2026-05-17 ultrathink: inline path 와 동일 bug — calendar 기준 시작점이라 새벽 4시 전 today entry 가 batch 에 끼어듦.
+  //   fix: 앵커 = todayKey() (cutoff-aware), setDate(-i) on 그 앵커의 noon. dateKey === todayKey() 가드 추가.
+  const _todayDk = (typeof todayKey === 'function') ? todayKey() : null;
   for (let i = 1; i <= 7; i++) {
-    const noon = new Date();
-    noon.setHours(12, 0, 0, 0);
-    noon.setDate(noon.getDate() - i);
-    const dateKey = (typeof getDayKey === 'function') ? getDayKey(noon) : noon.toISOString().split('T')[0];
+    let dateKey;
+    if (_todayDk) {
+      const _anchor = new Date(_todayDk + 'T12:00:00');
+      _anchor.setDate(_anchor.getDate() - i);
+      const _y = _anchor.getFullYear();
+      const _m = String(_anchor.getMonth() + 1).padStart(2, '0');
+      const _d = String(_anchor.getDate()).padStart(2, '0');
+      dateKey = `${_y}-${_m}-${_d}`;
+    } else {
+      const noon = new Date();
+      noon.setHours(12, 0, 0, 0);
+      noon.setDate(noon.getDate() - i);
+      dateKey = (typeof getDayKey === 'function') ? getDayKey(noon) : noon.toISOString().split('T')[0];
+    }
+    if (_todayDk && dateKey === _todayDk) continue;  // 오늘 entry 절대 batch 안 포함
 
     const entry = (state.entries || []).find(e => e.date === dateKey);
     if (!entry) continue;

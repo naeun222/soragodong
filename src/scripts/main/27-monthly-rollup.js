@@ -329,11 +329,27 @@ async function runDiaryAutoSummaryIfNeeded() {
   }
 
   // V3.13.x: 04:00 cutoff 기준 어제부터 거꾸로
+  // 사용자 보고 2026-05-17 ultrathink: 옛 path = `new Date()` + setDate(-i) = calendar 기준이라 새벽 4시 전 (calendar 어제 == 오늘 per cutoff) today entry 가 prematurely summarize.
+  //   fix: 앵커 = todayKey() (cutoff-aware), setDate(-i) on 그 앵커의 noon. i=1 ↔ "어제 per cutoff" invariant.
+  //   추가 방어: dateKey === todayKey() 가드 (이중 안전망).
+  const _todayDk = (typeof todayKey === 'function') ? todayKey() : null;
   for (let i = 1; i <= 7; i++) {
-    const noon = new Date();
-    noon.setHours(12, 0, 0, 0);
-    noon.setDate(noon.getDate() - i);
-    const dateKey = getDayKey(noon);
+    let dateKey;
+    if (_todayDk) {
+      const _anchor = new Date(_todayDk + 'T12:00:00');
+      _anchor.setDate(_anchor.getDate() - i);
+      const _y = _anchor.getFullYear();
+      const _m = String(_anchor.getMonth() + 1).padStart(2, '0');
+      const _d = String(_anchor.getDate()).padStart(2, '0');
+      dateKey = `${_y}-${_m}-${_d}`;
+    } else {
+      // todayKey 부재 fallback — calendar 기준 (옛 path 유지)
+      const noon = new Date();
+      noon.setHours(12, 0, 0, 0);
+      noon.setDate(noon.getDate() - i);
+      dateKey = getDayKey(noon);
+    }
+    if (_todayDk && dateKey === _todayDk) continue;  // 오늘 entry 절대 처리 X
 
     const entry = (state.entries || []).find(e => e.date === dateKey);
     if (!entry) continue;
