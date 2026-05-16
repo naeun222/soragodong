@@ -168,7 +168,7 @@ function _pearlCoachmarkAddBtn() {
 
 function _pearlCoachmarkClosing() {
   const body = `
-    <div class="v8-coach-title">시뮬 끝</div>
+    <div class="v8-coach-title">튜토리얼이 끝났습니다!</div>
   `;
   return _v8ShowCoachmark({
     body,
