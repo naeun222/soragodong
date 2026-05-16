@@ -147,8 +147,7 @@ function renderLensInsights() {
     html += `<div class="insights-empty">
       <div class="icon">🔮</div>
       <div style="font-size:14px; color:var(--text); margin-bottom:8px;">아직 모이는 중 ✦</div>
-      체크인이 7일쯤 쌓이면<br>자동으로 인사이트 찾아줄게.<br><br>
-      <div style="font-size:11px; color:var(--text-soft);">너만의 패턴이 천천히 드러나.</div>
+      체크인이 7일쯤 쌓이면<br>자동으로 인사이트 찾아줄게.
     </div>`;
   } else {
     html += insights.map(insight => {
