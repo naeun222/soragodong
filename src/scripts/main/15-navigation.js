@@ -2,6 +2,8 @@
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 function showScreen(name) {
+  // 사용자 명시 2026-05-17: 홈 탭 제거 — 'home' 요청은 'archive' 로 alias (모든 "돌아가기" 버튼 호환 유지).
+  if (name === 'home') name = 'archive';
   // V4 (사용자 명시 2026-05-13 ultrathink): 화면 전환 시 메인 헤더 토글 visual sync (대화탭 = RAG SVG / 그 외 = godongicon).
   if (typeof updateMainHeaderBtnVisual === 'function') {
     setTimeout(() => { try { updateMainHeaderBtnVisual(); } catch {} }, 0);
@@ -22,7 +24,8 @@ function showScreen(name) {
   // root cause = cloud load 끝 전 = state.unlocked default (모두 false) → 옛 isCoreLocked = true → 잠금 모달.
   // v8 dead-code 였지만 stale cached JS / 회귀 대비 _initialDataLoading flag 우회 + 화면 전환 진행 보장.
   if (!window._initialDataLoading) {
-    const _navLockMap = { execute: 'core3', model: 'core4', archive: 'core5', decisions: 'core8' };
+    // 사용자 명시 2026-05-17: archive = 새 홈 (안 C) — core5 잠금 제거. 홈은 모두에게 열려있어야.
+    const _navLockMap = { execute: 'core3', model: 'core4', decisions: 'core8' };
     const _lockCoreId = _navLockMap[name];
     if (_lockCoreId && typeof isCoreLocked === 'function' && isCoreLocked(_lockCoreId)) {
       if (typeof showCoreLockModal === 'function') showCoreLockModal(_lockCoreId);
@@ -43,26 +46,11 @@ function showScreen(name) {
   // 사용자 요청 2026-04-29: 마법 도움 받기 화면도 입력바 토글
   const magicInputBar = document.getElementById('magicHelpInputBar');
   if (magicInputBar) magicInputBar.classList.toggle('active', name === 'magic-help');
-  // V3.13.x: 헤더는 항상 표시 (튜토리얼 sync_dot step 등 의존). 배너만 홈에 한정.
+  // V3.13.x: 헤더는 항상 표시. 배너만 새 홈(archive)에 한정.
   const bannerEl = document.getElementById('updateBanner');
-  if (bannerEl && name !== 'home') bannerEl.style.display = 'none';
+  if (bannerEl && name !== 'archive') bannerEl.style.display = 'none';
 
-  if (name === 'home') {
-    if (typeof expireOldMissions === 'function') expireOldMissions();
-    applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3();
-    renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink();
-    // 사용자 명시 2026-05-09 (회전 카드 spec final): 5-source 미컨펌 우선 + 세션 lock.
-    // home 진입 = 새 세션 = sessionOrder 재계산 (spec 4-3 새 세션 가용/불가용 재체크).
-    if (typeof _rcResetSession === 'function') _rcResetSession();
-    if (typeof renderRotatingCard === 'function') renderRotatingCard();
-    if (typeof renderReflectionHome === 'function') renderReflectionHome();
-    // V4-1o: 관찰 5종 자동 trigger (24시간 1회 가드, 조용히 등록 — chat 인용용)
-    if (typeof runDiagnosesIfNeeded === 'function') {
-      try { runDiagnosesIfNeeded(); } catch (e) { console.warn('runDiagnoses:', e); }
-    }
-    // V3.13.x: 배너는 홈에만 (헤더와 함께)
-    if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
-  }
+  // (옛 'home' 분기 폐기 — alias 처리로 'archive' 진입 시 통합 렌더. 아래 'archive' 분기 참조.)
   if (name === 'settings') { setTimeout(refreshTesterModeUI, 30); }
   // V4: 화면 전환 후 잠금 시각 갱신 (모든 화면 공통)
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 50);
@@ -77,6 +65,26 @@ function showScreen(name) {
     if (typeof _clearNavBatchUpdate === 'function') _clearNavBatchUpdate('model');
   }
   if (name === 'archive') {
+    // 사용자 명시 2026-05-17: 도서관 = 새 홈 (안 C). 옛 home 렌더 모두 archive 진입 시 실행.
+    if (typeof expireOldMissions === 'function') expireOldMissions();
+    applyNightMode();
+    if (typeof renderTodayMission === 'function') renderTodayMission();
+    if (typeof renderShellBar === 'function') renderShellBar();
+    if (typeof renderActiveDecisionsHomeV3 === 'function') renderActiveDecisionsHomeV3();
+    if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
+    if (typeof renderPredictionFollowups === 'function') renderPredictionFollowups();
+    if (typeof renderMainAction === 'function') renderMainAction();
+    if (typeof renderDecisionMiniLink === 'function') renderDecisionMiniLink();
+    if (typeof _rcResetSession === 'function') _rcResetSession();
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    if (typeof renderReflectionHome === 'function') renderReflectionHome();
+    if (typeof renderReviewPreview === 'function') renderReviewPreview();
+    if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
+    if (typeof runDiagnosesIfNeeded === 'function') {
+      try { runDiagnosesIfNeeded(); } catch (e) { console.warn('runDiagnoses:', e); }
+    }
+    if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
+
     // V4-fix #5: 도서관 처음 진입 시 모든 카테고리 lastSeen 초기화 (점 폭발 방지)
     if (state.preferences && !state.preferences._libCatLastSeenInit) {
       const nowIso = new Date().toISOString();
@@ -86,7 +94,6 @@ function showScreen(name) {
       state.preferences._libCatLastSeenInit = true;
       saveState();
     }
-    // V4 (사용자 명시): 도서관 탭 진입 → tab dot 즉시 클리어 (카테고리별 dot 은 chip 클릭 시 따로 클리어)
     _markLibTabSeen();
     if (typeof updateLibraryTabNewDot === 'function') updateLibraryTabNewDot();
     renderArchive();

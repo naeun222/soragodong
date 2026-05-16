@@ -1161,84 +1161,36 @@ function _rcGodongSvg(sourceId) {
 // =============================================================================
 // 렌더 — sessionOrder 기반 (한 화면 안 stable)
 // =============================================================================
-// 사용자 명시 2026-05-17: 홈 메인 슬롯 = Hook 카드 OR "오늘의 너" (다중 source 회전).
-//   고동 일기 (_rcSource3GodongDiary) 제외 — _rcCollectAvailable 에서도 빠짐.
-//   진주 / 시뮬 / 어제 / weekly~annual review 4종 회전.
+// 사용자 명시 2026-05-17 (안 C): 홈 = 도서관 통합. 메인 슬롯 = Hook 카드 OR 체크인 카드.
+//   다중 source 회전 (진주/시뮬/어제/리뷰) 폐기 — 체크인이 fallback 으로 단순화.
+//   옛 source 함수 (_rcSource1~11) 본체 보존 (legacy).
 function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
   _ensureRotatingCardState();
 
   try {
-    // cold start = opener fallback (자산 부족 — 회전할 source 도 부재)
-    if (typeof _isColdStart === 'function' && _isColdStart()) {
-      if (typeof renderColdStartOpener === 'function') {
-        container.innerHTML = renderColdStartOpener();
-      } else {
-        container.innerHTML = '';
-      }
-      _rcSessionOrder = null;
-      _rcSessionIndex = 0;
-      return;
-    }
-
-    // Phase 1: 활성 Hook → Hook 카드 우선.
+    // 활성 Hook → Hook 카드 우선.
     if (typeof pickHomeMainHook === 'function') {
       const activeHook = pickHomeMainHook();
-      if (activeHook) {
-        container.innerHTML = typeof renderHookCard === 'function' ? renderHookCard(activeHook) : '';
+      if (activeHook && typeof renderHookCard === 'function') {
+        container.innerHTML = renderHookCard(activeHook);
         _rcSessionOrder = null;
         _rcSessionIndex = 0;
         return;
       }
     }
-
-    // 튜토리얼 모드 = 진주 fixed
-    if (window._onbTutorialMode) {
-      const s = _rcSource1Pearl();
-      _rcSessionOrder = [s];
+    // Hook 없음 → 체크인 카드 (옛 '오늘의 너' 자리).
+    if (typeof buildCheckinCardHtml === 'function') {
+      container.innerHTML = buildCheckinCardHtml();
+      _rcSessionOrder = null;
       _rcSessionIndex = 0;
-      container.innerHTML = _rcRenderShell([s], 0);
       return;
     }
-
-    // 새 세션 — 가용 source 재계산 + 정렬
-    if (!_rcSessionOrder) {
-      const sources = _rcCollectAvailable();
-      if (sources.length === 0) {
-        const s = _rcSource1Pearl();
-        _rcSessionOrder = s ? [s] : [];
-        _rcSessionIndex = 0;
-      } else {
-        _rcSessionOrder = _rcSortByConfirmation(sources);
-        _rcSessionIndex = 0;
-        const first = _rcSessionOrder[0];
-        if (first && first.id === 'pearl') {
-          const r = _ensureRotatingCardState();
-          r.lastPearlShownDate = _rcTodayKey();
-          if (typeof saveState === 'function') saveState();
-        }
-      }
-    }
-
-    if (_rcSessionOrder.length === 0) {
-      container.innerHTML = '';
-      return;
-    }
-    if (_rcSessionIndex >= _rcSessionOrder.length) _rcSessionIndex = 0;
-    container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
-    _rcEqualizeHeights();
+    container.innerHTML = '';
   } catch (e) {
     console.error('[renderRotatingCard]', e);
-    try {
-      const s = _rcSource1Pearl();
-      _rcSessionOrder = [s];
-      _rcSessionIndex = 0;
-      container.innerHTML = _rcRenderShell([s], 0);
-    } catch (e2) {
-      console.error('[renderRotatingCard fallback]', e2);
-      container.innerHTML = '';
-    }
+    container.innerHTML = '';
   }
 }
 

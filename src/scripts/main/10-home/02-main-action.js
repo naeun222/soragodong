@@ -52,13 +52,10 @@ function _todayMoodSummaryHtml(entry) {
   return parts.join(' · ');
 }
 
-function renderMainAction() {
-  const container = document.getElementById('mainActionContainer');
-  if (!container) return;
-
-  // V3.13.x: 튜토리얼 모드면 시간대/체크인 여부 무관하게 체크인 카드 강제
+// 체크인 카드 HTML 빌더 — renderRotatingCard 가 fallback 으로 사용 (사용자 명시 2026-05-17: 옛 오늘의 너 자리 = 체크인).
+function buildCheckinCardHtml() {
   if (window._onbTutorialMode) {
-    container.innerHTML = `
+    return `
       <div class="action-card checkin-card" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
         <div class="action-icon">✓</div>
         <div class="action-text">
@@ -68,47 +65,42 @@ function renderMainAction() {
         <div class="action-arrow">›</div>
       </div>
     `;
-    return;
   }
-
   const todayKeyVal = todayKey();
-  const todayEntry = state.entries.find(e => e.date === todayKeyVal);
+  const todayEntry = (state.entries || []).find(e => e.date === todayKeyVal);
   const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  // 사용자 명시 2026-05-17 ultrathink (revert): 체크인 카드 = 항상 노출 (옛 UI 복원).
-  //   완료 시 한 줄 미니 / 미완 시 시간대 카드 (has-pulse on brand new users).
   const slot = getCheckinTimeSlot();
   const copy = _checkinCardCopy(slot, checkinDoneToday);
-
-  let cardHtml;
   if (checkinDoneToday) {
-    // 사용자 명시 2026-05-09: 한 줄 미니 + 보기/수정 명시 카피.
-    cardHtml = `
+    return `
       <div class="checkin-mini-line" onclick="enterCheckin()">
         <span class="checkin-mini-check">✓</span>
         <span class="checkin-mini-text">오늘 체크인 보기/수정</span>
         <span class="checkin-mini-arrow">→</span>
       </div>
     `;
-  } else {
-    // 사용자 명시 2026-05-06 ultrathink: 신규 사용자 (entries 0개) — 카드 우측 상단 깜빡이는 점 (has-pulse).
-    const isBrandNew = !Array.isArray(state.entries) || state.entries.length === 0;
-    const pulseClass = isBrandNew ? ' has-pulse' : '';
-    const subHtml = copy.sub ? `<div class="action-sub checkin-card-sub">${copy.sub}</div>` : '';
-    cardHtml = `
-      <div class="action-card checkin-card${pulseClass}" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
-        <div class="action-icon">${copy.icon}</div>
-        <div class="action-text">
-          <div class="action-title">${copy.title}</div>
-          ${subHtml}
-        </div>
-        <div class="action-arrow">›</div>
-      </div>
-    `;
   }
+  const isBrandNew = !Array.isArray(state.entries) || state.entries.length === 0;
+  const pulseClass = isBrandNew ? ' has-pulse' : '';
+  const subHtml = copy.sub ? `<div class="action-sub checkin-card-sub">${copy.sub}</div>` : '';
+  return `
+    <div class="action-card checkin-card${pulseClass}" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
+      <div class="action-icon">${copy.icon}</div>
+      <div class="action-text">
+        <div class="action-title">${copy.title}</div>
+        ${subHtml}
+      </div>
+      <div class="action-arrow">›</div>
+    </div>
+  `;
+}
 
-  // 사용자 명시 2026-05-09 (ultrathink): 진주 hero 자리 = 회전 카드 source 1 으로 이동.
-  // mainActionContainer = 체크인 카드 only (완료 시 한 줄 미니 / 미완 시 시간대 카드).
-  container.innerHTML = cardHtml;
+// 사용자 명시 2026-05-17: 체크인이 rotatingCardContainer 메인 슬롯으로 이동.
+//   mainActionContainer 는 비움 (HTML 컨테이너 자체는 compat 보존).
+function renderMainAction() {
+  const container = document.getElementById('mainActionContainer');
+  if (!container) return;
+  container.innerHTML = '';
 }
 
 // 사용자 명시 2026-05-17 ultrathink: 마법고동 mini 카드 홈에서 제거 — renderDecisionMiniLink noop.

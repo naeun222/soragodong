@@ -12984,47 +12984,6 @@
   <div id="updateBanner" class="update-banner" style="display:none;"></div>
 
   <div class="screens">
-    <!-- HOME -->
-    <div class="screen active" id="screen-home">
-      <div class="greeting">
-        <div class="greeting-sub" id="greetingSub"></div>
-        <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
-      </div>
-
-      <!-- V4 (사용자 명시 2026-05-17 ultrathink): 홈 재설계 — 회전 8 → 메인 1 (godongDiary) + 소형 3. -->
-      <!-- 메인 카드 = rotatingCardContainer (godongDiary 단일 고정). -->
-      <div id="rotatingCardContainer"></div>
-
-      <!-- 활성 미션 (소라의 부름) — 사용자 합의: 활성 시 그대로 보존, 현 위치/weight 유지. -->
-      <div id="missionContainer"></div>
-
-      <!-- 카드 (c) 체크인 — 21시 이후 + 오늘 미체크인일 때만 노출. -->
-      <div id="mainActionContainer"></div>
-
-      <!-- 소형 카드 row (a/b + 활성 숙고). weight ↓ — 메인 카드 시각 압도. -->
-      <div class="home-small-cards" id="homeSmallCards">
-        <!-- 카드 (a) 리뷰 미리보기 -->
-        <div id="homeReviewPreviewContainer"></div>
-        <!-- 카드 (b) 어제 대비 자산 변화 hint (🐚 +N, ✨ +N 등) -->
-        <div id="homeChangeHintContainer"></div>
-        <!-- 활성 숙고 (사용자 합의: 소형 카드 row 안 weight ↓) -->
-        <div id="reflectionContainer"></div>
-      </div>
-
-      <!-- 사용자 명시 2026-05-17 ultrathink (revert): 옛 모래사장 작은 카드 복원. 깜빡이는 점 (beachPulseDot) + "N개 모았어". -->
-      <!-- 사용자 명시 2026-05-17 ultrathink: 마법고동 mini 카드 홈에서 제거 (decisionMiniLinkContainer 삭제). -->
-      <div class="home-small-row">
-        <div class="home-small-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
-          <span class="pulse-dot" id="beachPulseDot" hidden></span>
-          <div class="hsc-icon">🐚</div>
-          <div class="hsc-text">
-            <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
-            <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
 
     <!-- SOS removed from float — moved to settings -->
 
@@ -13251,9 +13210,41 @@
       <button class="btn-secondary" onclick="showScreen('settings')" style="margin-top:24px; width:100%; padding:12px; font-size:13px;">⚙ 설정</button>
     </div>
 
-    <!-- LIBRARY (V4-1l-a: 인생 도서관 5 카테고리) -->
-    <div class="screen" id="screen-archive">
-      <div class="screen-title">📚 인생 도서관</div>
+    <!-- LIBRARY (안 C: 도서관 = 새 홈. 홈 탭 흡수. 사용자 명시 2026-05-17) -->
+    <div class="screen active" id="screen-archive">
+      <!-- 사용자 명시 2026-05-17: "인생 도서관" 워딩 제거. 옛 홈 인사 + 날짜로 교체. -->
+      <div class="greeting">
+        <div class="greeting-sub" id="greetingSub"></div>
+        <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
+      </div>
+
+      <!-- 메인 카드 = rotatingCardContainer. Hook OR 체크인 (사용자 명시: 체크인 = 옛 오늘의 너 자리). -->
+      <div id="rotatingCardContainer"></div>
+
+      <!-- 활성 미션 (소라의 부름) -->
+      <div id="missionContainer"></div>
+
+      <!-- mainActionContainer (옛 체크인 자리) — 체크인이 rotatingCardContainer 로 이동, noop 보존 (compat). -->
+      <div id="mainActionContainer"></div>
+
+      <!-- 소형 카드 row (a/b + 활성 숙고). -->
+      <div class="home-small-cards" id="homeSmallCards">
+        <div id="homeReviewPreviewContainer"></div>
+        <div id="homeChangeHintContainer"></div>
+        <div id="reflectionContainer"></div>
+      </div>
+
+      <!-- 모래사장 mini -->
+      <div class="home-small-row">
+        <div class="home-small-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
+          <span class="pulse-dot" id="beachPulseDot" hidden></span>
+          <div class="hsc-icon">🐚</div>
+          <div class="hsc-text">
+            <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
+            <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
+          </div>
+        </div>
+      </div>
 
       <!-- V4-1t: 🌟 오늘의 너 (진주 회전 카드) -->
       <div id="libraryHero"></div>
@@ -13959,11 +13950,11 @@
     </div>
   </div>
 
+  <!-- 사용자 명시 2026-05-17: 홈 탭 제거. 도서관 = default landing. 3 탭 (대화/나/도서관). -->
   <div class="bottom-nav">
-    <div class="nav-item active" data-screen="home" onclick="showScreen('home')"><div class="nav-icon">🏠</div><div class="nav-label">홈</div></div>
     <div class="nav-item" data-screen="chat" onclick="showScreen('chat')"><div class="nav-icon">🐚</div><div class="nav-label">대화</div></div>
     <div class="nav-item" data-screen="model" onclick="showScreen('model')"><div class="nav-icon">🔮</div><div class="nav-label">나</div></div>
-    <div class="nav-item" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">📚</div><div class="nav-label">도서관</div></div>
+    <div class="nav-item active" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">📚</div><div class="nav-label">도서관</div></div>
   </div>
 </div>
 
@@ -27128,13 +27119,10 @@ function _todayMoodSummaryHtml(entry) {
   return parts.join(' · ');
 }
 
-function renderMainAction() {
-  const container = document.getElementById('mainActionContainer');
-  if (!container) return;
-
-  // V3.13.x: 튜토리얼 모드면 시간대/체크인 여부 무관하게 체크인 카드 강제
+// 체크인 카드 HTML 빌더 — renderRotatingCard 가 fallback 으로 사용 (사용자 명시 2026-05-17: 옛 오늘의 너 자리 = 체크인).
+function buildCheckinCardHtml() {
   if (window._onbTutorialMode) {
-    container.innerHTML = `
+    return `
       <div class="action-card checkin-card" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
         <div class="action-icon">✓</div>
         <div class="action-text">
@@ -27144,47 +27132,42 @@ function renderMainAction() {
         <div class="action-arrow">›</div>
       </div>
     `;
-    return;
   }
-
   const todayKeyVal = todayKey();
-  const todayEntry = state.entries.find(e => e.date === todayKeyVal);
+  const todayEntry = (state.entries || []).find(e => e.date === todayKeyVal);
   const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  // 사용자 명시 2026-05-17 ultrathink (revert): 체크인 카드 = 항상 노출 (옛 UI 복원).
-  //   완료 시 한 줄 미니 / 미완 시 시간대 카드 (has-pulse on brand new users).
   const slot = getCheckinTimeSlot();
   const copy = _checkinCardCopy(slot, checkinDoneToday);
-
-  let cardHtml;
   if (checkinDoneToday) {
-    // 사용자 명시 2026-05-09: 한 줄 미니 + 보기/수정 명시 카피.
-    cardHtml = `
+    return `
       <div class="checkin-mini-line" onclick="enterCheckin()">
         <span class="checkin-mini-check">✓</span>
         <span class="checkin-mini-text">오늘 체크인 보기/수정</span>
         <span class="checkin-mini-arrow">→</span>
       </div>
     `;
-  } else {
-    // 사용자 명시 2026-05-06 ultrathink: 신규 사용자 (entries 0개) — 카드 우측 상단 깜빡이는 점 (has-pulse).
-    const isBrandNew = !Array.isArray(state.entries) || state.entries.length === 0;
-    const pulseClass = isBrandNew ? ' has-pulse' : '';
-    const subHtml = copy.sub ? `<div class="action-sub checkin-card-sub">${copy.sub}</div>` : '';
-    cardHtml = `
-      <div class="action-card checkin-card${pulseClass}" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
-        <div class="action-icon">${copy.icon}</div>
-        <div class="action-text">
-          <div class="action-title">${copy.title}</div>
-          ${subHtml}
-        </div>
-        <div class="action-arrow">›</div>
-      </div>
-    `;
   }
+  const isBrandNew = !Array.isArray(state.entries) || state.entries.length === 0;
+  const pulseClass = isBrandNew ? ' has-pulse' : '';
+  const subHtml = copy.sub ? `<div class="action-sub checkin-card-sub">${copy.sub}</div>` : '';
+  return `
+    <div class="action-card checkin-card${pulseClass}" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
+      <div class="action-icon">${copy.icon}</div>
+      <div class="action-text">
+        <div class="action-title">${copy.title}</div>
+        ${subHtml}
+      </div>
+      <div class="action-arrow">›</div>
+    </div>
+  `;
+}
 
-  // 사용자 명시 2026-05-09 (ultrathink): 진주 hero 자리 = 회전 카드 source 1 으로 이동.
-  // mainActionContainer = 체크인 카드 only (완료 시 한 줄 미니 / 미완 시 시간대 카드).
-  container.innerHTML = cardHtml;
+// 사용자 명시 2026-05-17: 체크인이 rotatingCardContainer 메인 슬롯으로 이동.
+//   mainActionContainer 는 비움 (HTML 컨테이너 자체는 compat 보존).
+function renderMainAction() {
+  const container = document.getElementById('mainActionContainer');
+  if (!container) return;
+  container.innerHTML = '';
 }
 
 // 사용자 명시 2026-05-17 ultrathink: 마법고동 mini 카드 홈에서 제거 — renderDecisionMiniLink noop.
@@ -28512,84 +28495,36 @@ function _rcGodongSvg(sourceId) {
 // =============================================================================
 // 렌더 — sessionOrder 기반 (한 화면 안 stable)
 // =============================================================================
-// 사용자 명시 2026-05-17: 홈 메인 슬롯 = Hook 카드 OR "오늘의 너" (다중 source 회전).
-//   고동 일기 (_rcSource3GodongDiary) 제외 — _rcCollectAvailable 에서도 빠짐.
-//   진주 / 시뮬 / 어제 / weekly~annual review 4종 회전.
+// 사용자 명시 2026-05-17 (안 C): 홈 = 도서관 통합. 메인 슬롯 = Hook 카드 OR 체크인 카드.
+//   다중 source 회전 (진주/시뮬/어제/리뷰) 폐기 — 체크인이 fallback 으로 단순화.
+//   옛 source 함수 (_rcSource1~11) 본체 보존 (legacy).
 function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
   _ensureRotatingCardState();
 
   try {
-    // cold start = opener fallback (자산 부족 — 회전할 source 도 부재)
-    if (typeof _isColdStart === 'function' && _isColdStart()) {
-      if (typeof renderColdStartOpener === 'function') {
-        container.innerHTML = renderColdStartOpener();
-      } else {
-        container.innerHTML = '';
-      }
-      _rcSessionOrder = null;
-      _rcSessionIndex = 0;
-      return;
-    }
-
-    // Phase 1: 활성 Hook → Hook 카드 우선.
+    // 활성 Hook → Hook 카드 우선.
     if (typeof pickHomeMainHook === 'function') {
       const activeHook = pickHomeMainHook();
-      if (activeHook) {
-        container.innerHTML = typeof renderHookCard === 'function' ? renderHookCard(activeHook) : '';
+      if (activeHook && typeof renderHookCard === 'function') {
+        container.innerHTML = renderHookCard(activeHook);
         _rcSessionOrder = null;
         _rcSessionIndex = 0;
         return;
       }
     }
-
-    // 튜토리얼 모드 = 진주 fixed
-    if (window._onbTutorialMode) {
-      const s = _rcSource1Pearl();
-      _rcSessionOrder = [s];
+    // Hook 없음 → 체크인 카드 (옛 '오늘의 너' 자리).
+    if (typeof buildCheckinCardHtml === 'function') {
+      container.innerHTML = buildCheckinCardHtml();
+      _rcSessionOrder = null;
       _rcSessionIndex = 0;
-      container.innerHTML = _rcRenderShell([s], 0);
       return;
     }
-
-    // 새 세션 — 가용 source 재계산 + 정렬
-    if (!_rcSessionOrder) {
-      const sources = _rcCollectAvailable();
-      if (sources.length === 0) {
-        const s = _rcSource1Pearl();
-        _rcSessionOrder = s ? [s] : [];
-        _rcSessionIndex = 0;
-      } else {
-        _rcSessionOrder = _rcSortByConfirmation(sources);
-        _rcSessionIndex = 0;
-        const first = _rcSessionOrder[0];
-        if (first && first.id === 'pearl') {
-          const r = _ensureRotatingCardState();
-          r.lastPearlShownDate = _rcTodayKey();
-          if (typeof saveState === 'function') saveState();
-        }
-      }
-    }
-
-    if (_rcSessionOrder.length === 0) {
-      container.innerHTML = '';
-      return;
-    }
-    if (_rcSessionIndex >= _rcSessionOrder.length) _rcSessionIndex = 0;
-    container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
-    _rcEqualizeHeights();
+    container.innerHTML = '';
   } catch (e) {
     console.error('[renderRotatingCard]', e);
-    try {
-      const s = _rcSource1Pearl();
-      _rcSessionOrder = [s];
-      _rcSessionIndex = 0;
-      container.innerHTML = _rcRenderShell([s], 0);
-    } catch (e2) {
-      console.error('[renderRotatingCard fallback]', e2);
-      container.innerHTML = '';
-    }
+    container.innerHTML = '';
   }
 }
 
@@ -36320,6 +36255,8 @@ function showUndoToast(msg, undoFn, durationMs = 5000) {
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 function showScreen(name) {
+  // 사용자 명시 2026-05-17: 홈 탭 제거 — 'home' 요청은 'archive' 로 alias (모든 "돌아가기" 버튼 호환 유지).
+  if (name === 'home') name = 'archive';
   // V4 (사용자 명시 2026-05-13 ultrathink): 화면 전환 시 메인 헤더 토글 visual sync (대화탭 = RAG SVG / 그 외 = godongicon).
   if (typeof updateMainHeaderBtnVisual === 'function') {
     setTimeout(() => { try { updateMainHeaderBtnVisual(); } catch {} }, 0);
@@ -36340,7 +36277,8 @@ function showScreen(name) {
   // root cause = cloud load 끝 전 = state.unlocked default (모두 false) → 옛 isCoreLocked = true → 잠금 모달.
   // v8 dead-code 였지만 stale cached JS / 회귀 대비 _initialDataLoading flag 우회 + 화면 전환 진행 보장.
   if (!window._initialDataLoading) {
-    const _navLockMap = { execute: 'core3', model: 'core4', archive: 'core5', decisions: 'core8' };
+    // 사용자 명시 2026-05-17: archive = 새 홈 (안 C) — core5 잠금 제거. 홈은 모두에게 열려있어야.
+    const _navLockMap = { execute: 'core3', model: 'core4', decisions: 'core8' };
     const _lockCoreId = _navLockMap[name];
     if (_lockCoreId && typeof isCoreLocked === 'function' && isCoreLocked(_lockCoreId)) {
       if (typeof showCoreLockModal === 'function') showCoreLockModal(_lockCoreId);
@@ -36361,26 +36299,11 @@ function showScreen(name) {
   // 사용자 요청 2026-04-29: 마법 도움 받기 화면도 입력바 토글
   const magicInputBar = document.getElementById('magicHelpInputBar');
   if (magicInputBar) magicInputBar.classList.toggle('active', name === 'magic-help');
-  // V3.13.x: 헤더는 항상 표시 (튜토리얼 sync_dot step 등 의존). 배너만 홈에 한정.
+  // V3.13.x: 헤더는 항상 표시. 배너만 새 홈(archive)에 한정.
   const bannerEl = document.getElementById('updateBanner');
-  if (bannerEl && name !== 'home') bannerEl.style.display = 'none';
+  if (bannerEl && name !== 'archive') bannerEl.style.display = 'none';
 
-  if (name === 'home') {
-    if (typeof expireOldMissions === 'function') expireOldMissions();
-    applyNightMode(); renderTodayMission(); renderShellBar(); renderActiveDecisionsHomeV3();
-    renderReviewPrompts(); renderPredictionFollowups(); renderMainAction(); renderDecisionMiniLink();
-    // 사용자 명시 2026-05-09 (회전 카드 spec final): 5-source 미컨펌 우선 + 세션 lock.
-    // home 진입 = 새 세션 = sessionOrder 재계산 (spec 4-3 새 세션 가용/불가용 재체크).
-    if (typeof _rcResetSession === 'function') _rcResetSession();
-    if (typeof renderRotatingCard === 'function') renderRotatingCard();
-    if (typeof renderReflectionHome === 'function') renderReflectionHome();
-    // V4-1o: 관찰 5종 자동 trigger (24시간 1회 가드, 조용히 등록 — chat 인용용)
-    if (typeof runDiagnosesIfNeeded === 'function') {
-      try { runDiagnosesIfNeeded(); } catch (e) { console.warn('runDiagnoses:', e); }
-    }
-    // V3.13.x: 배너는 홈에만 (헤더와 함께)
-    if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
-  }
+  // (옛 'home' 분기 폐기 — alias 처리로 'archive' 진입 시 통합 렌더. 아래 'archive' 분기 참조.)
   if (name === 'settings') { setTimeout(refreshTesterModeUI, 30); }
   // V4: 화면 전환 후 잠금 시각 갱신 (모든 화면 공통)
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 50);
@@ -36395,6 +36318,26 @@ function showScreen(name) {
     if (typeof _clearNavBatchUpdate === 'function') _clearNavBatchUpdate('model');
   }
   if (name === 'archive') {
+    // 사용자 명시 2026-05-17: 도서관 = 새 홈 (안 C). 옛 home 렌더 모두 archive 진입 시 실행.
+    if (typeof expireOldMissions === 'function') expireOldMissions();
+    applyNightMode();
+    if (typeof renderTodayMission === 'function') renderTodayMission();
+    if (typeof renderShellBar === 'function') renderShellBar();
+    if (typeof renderActiveDecisionsHomeV3 === 'function') renderActiveDecisionsHomeV3();
+    if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
+    if (typeof renderPredictionFollowups === 'function') renderPredictionFollowups();
+    if (typeof renderMainAction === 'function') renderMainAction();
+    if (typeof renderDecisionMiniLink === 'function') renderDecisionMiniLink();
+    if (typeof _rcResetSession === 'function') _rcResetSession();
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    if (typeof renderReflectionHome === 'function') renderReflectionHome();
+    if (typeof renderReviewPreview === 'function') renderReviewPreview();
+    if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
+    if (typeof runDiagnosesIfNeeded === 'function') {
+      try { runDiagnosesIfNeeded(); } catch (e) { console.warn('runDiagnoses:', e); }
+    }
+    if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
+
     // V4-fix #5: 도서관 처음 진입 시 모든 카테고리 lastSeen 초기화 (점 폭발 방지)
     if (state.preferences && !state.preferences._libCatLastSeenInit) {
       const nowIso = new Date().toISOString();
@@ -36404,7 +36347,6 @@ function showScreen(name) {
       state.preferences._libCatLastSeenInit = true;
       saveState();
     }
-    // V4 (사용자 명시): 도서관 탭 진입 → tab dot 즉시 클리어 (카테고리별 dot 은 chip 클릭 시 따로 클리어)
     _markLibTabSeen();
     if (typeof updateLibraryTabNewDot === 'function') updateLibraryTabNewDot();
     renderArchive();
@@ -60650,8 +60592,10 @@ async function resetEntries() {
   const c = (state.entries || []).length;
   await _confirmAndReset('체크인 entries', c, () => { state.entries = []; }, () => {
     const cur = document.querySelector('.screen.active');
-    if (cur && cur.id === 'screen-archive' && typeof renderArchive === 'function') renderArchive();
-    if (cur && cur.id === 'screen-home' && typeof renderTodayMission === 'function') renderTodayMission();
+    if (cur && cur.id === 'screen-archive') {
+      if (typeof renderArchive === 'function') renderArchive();
+      if (typeof renderTodayMission === 'function') renderTodayMission();
+    }
   });
 }
 async function resetTopicCards() {

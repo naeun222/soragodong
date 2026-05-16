@@ -22,8 +22,10 @@ async function resetEntries() {
   const c = (state.entries || []).length;
   await _confirmAndReset('체크인 entries', c, () => { state.entries = []; }, () => {
     const cur = document.querySelector('.screen.active');
-    if (cur && cur.id === 'screen-archive' && typeof renderArchive === 'function') renderArchive();
-    if (cur && cur.id === 'screen-home' && typeof renderTodayMission === 'function') renderTodayMission();
+    if (cur && cur.id === 'screen-archive') {
+      if (typeof renderArchive === 'function') renderArchive();
+      if (typeof renderTodayMission === 'function') renderTodayMission();
+    }
   });
 }
 async function resetTopicCards() {
