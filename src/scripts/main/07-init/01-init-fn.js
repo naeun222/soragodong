@@ -412,5 +412,13 @@ async function init() {
       if (typeof showToast === 'function') showToast('🎉 모든 튜토리얼 끝났어! 🐚');
     }, 1800);
   }
+
+  // Hook 온보딩 (Section 19.1) — session 2회째 시간 prompt.
+  //   1) init count 증가 (cloud load 후라서 누적 cloud 값 기준).
+  //   2) 조건 통과 시 모달 (살짝 delay — 화면 안정 후).
+  if (typeof _hookOnbBumpInitCount === 'function') _hookOnbBumpInitCount();
+  if (typeof maybeShowHookOnboarding === 'function') {
+    setTimeout(() => { try { maybeShowHookOnboarding(); } catch (e) { console.warn('[hookOnb]', e); } }, 2200);
+  }
 }
 

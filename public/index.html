@@ -11802,6 +11802,125 @@
     font-size: 16px;
     line-height: 1.7;
   }
+
+  /* Hook 카드 — 홈 메인 슬롯 Phase 1 (_home-archive-redesign.md) */
+  #rotatingCardContainer .hook-main-card {
+    min-height: 44vh;
+    padding: 28px 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card, 20px);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+    animation: rc-body-fade-in 0.4s ease-out;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #rotatingCardContainer .hook-main-card:active { background: var(--surface2); }
+  .hook-main-header {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    opacity: 0.85;
+  }
+  .hook-main-body {
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    font-family: 'Gowun Batang', serif;
+    flex: 1;
+    white-space: pre-wrap;
+  }
+  .hook-main-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: right;
+    opacity: 0.55;
+  }
+
+  /* Hook 온보딩 모달 — Section 19.1 */
+  .hook-onb-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10000;
+    opacity: 0; transition: opacity 0.22s;
+    padding: 24px;
+  }
+  .hook-onb-overlay.show { opacity: 1; }
+  .hook-onb-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    max-width: 420px; width: 100%;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .hook-onb-header {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+    color: var(--accent); opacity: 0.85;
+  }
+  .hook-onb-q {
+    font-size: 17px; font-weight: 500;
+    color: var(--text); line-height: 1.6;
+  }
+  .hook-onb-q-sub {
+    font-size: 14px; color: var(--text-soft);
+    margin-top: -8px;
+  }
+  .hook-onb-times {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-top: 4px;
+  }
+  .hook-onb-time-btn {
+    flex: 1 1 calc(50% - 4px);
+    padding: 12px 10px;
+    background: var(--surface2, rgba(255,255,255,0.04));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .hook-onb-time-btn:active { background: var(--surface); }
+  .hook-onb-time-btn.is-default {
+    border-color: var(--accent);
+    background: rgba(139, 126, 196, 0.14);
+    color: var(--accent);
+  }
+  .hook-onb-actions {
+    display: flex; gap: 10px;
+    margin-top: 8px;
+  }
+  .hook-onb-confirm {
+    flex: 1;
+    padding: 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  .hook-onb-confirm:active { opacity: 0.85; }
+  .hook-onb-decline {
+    flex: 0 0 auto;
+    padding: 14px 16px;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .hook-onb-decline:active { background: var(--surface2); }
+
   /* 소형 카드 row — 세로 stacked + weight ↓ */
   .home-small-cards {
     display: flex;
@@ -12904,6 +13023,7 @@
           </div>
         </div>
       </div>
+
     </div>
 
     <!-- SOS removed from float — moved to settings -->
@@ -14337,6 +14457,7 @@ const DEFAULT_STATE = {
   // 도서관 리뷰 모음 → '고동' 카테고리에서 둘 다 노출 (legacy 는 '고동의 옛 메모').
   miniReviews: [],          // legacy. [{id, content, generatedAt, source:'haiku-3day'}]
   godongDiary: [],          // [{id, date, weekday, note?, body, iso, substrateRefs[]}]
+  askedHooks: [],           // [{id, body, source, trigger_dayK, hook_type, askedAt, answered, answeredAt, delivered}] — max 50
   predictionFollowups: [],
   // Phase 5
   questionHistory: [],
@@ -14384,6 +14505,8 @@ const DEFAULT_STATE = {
   // 6. 커스텀 설정
   preferences: {
     nightModeManual: null,  // null = auto, 'on' | 'off' = manual override
+    hookFrequency: 'daily',       // 'daily'|'every-other-day'|'thrice-week'|'off'
+    hookNotificationTime: 21,     // 시 (0-23), default 21시
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
     // V4 (사용자 명시 2026-05-14 ultrathink): 진주 '티켓' 카테고리 sub-type — 사용자 customizable.
     //   default 6개. settings 에서 ON/OFF + 추가/제거 가능.
@@ -20655,6 +20778,14 @@ async function init() {
       if (typeof showToast === 'function') showToast('🎉 모든 튜토리얼 끝났어! 🐚');
     }, 1800);
   }
+
+  // Hook 온보딩 (Section 19.1) — session 2회째 시간 prompt.
+  //   1) init count 증가 (cloud load 후라서 누적 cloud 값 기준).
+  //   2) 조건 통과 시 모달 (살짝 delay — 화면 안정 후).
+  if (typeof _hookOnbBumpInitCount === 'function') _hookOnbBumpInitCount();
+  if (typeof maybeShowHookOnboarding === 'function') {
+    setTimeout(() => { try { maybeShowHookOnboarding(); } catch (e) { console.warn('[hookOnb]', e); } }, 2200);
+  }
 }
 
 // V4 (사용자 명시 2026-05-16 ultrathink): 옛 풀 튜토리얼 인프라 폐기. V8/V9 시작 튜토 + sim 튜토 picker 만 활성.
@@ -23696,6 +23827,147 @@ async function showSimTutorialPicker() {
       if (typeof runReflectionTutorialV8 === 'function') runReflectionTutorialV8().catch(e => console.warn(e));
       return;
   }
+}
+// Hook 온보딩 시간 prompt — _hook-system-spec.md Section 19.1
+// 트리거: app session 2회째 (가입 후 앱 껐다 다시 켤 때).
+//   state.preferences._hookInitCount 증가 (init 호출마다). 2회째에 모달 1회 노출.
+//   _hookOnboardingShown=true 박힘 → 다시 안 뜸.
+// "응, 그 시간에 줘" → hookNotificationTime + hookFrequency='daily' 저장.
+// "필요 없어" → hookFrequency='off' 영구. 사용자가 마음 바뀌면 설정에서 다시 켜야 함.
+
+function _hookOnbBumpInitCount() {
+  if (!state) return;
+  state.preferences = state.preferences || {};
+  const cur = state.preferences._hookInitCount || 0;
+  if (cur < 10) {
+    state.preferences._hookInitCount = cur + 1;
+    try { saveState(); } catch {}
+  }
+}
+
+function _hookOnbShouldShow() {
+  if (!state || !state.preferences) return false;
+  if (state.preferences._hookOnboardingShown) return false;
+  // hookFrequency 가 명시 set 됐으면 (사용자가 이미 선택) skip.
+  // default 'daily' 인데 _hookOnboardingShown 이 false 면 첫 노출 후보.
+  if (state.preferences.hookFrequency === 'off') return false;  // 이미 끔
+  if ((state.preferences._hookInitCount || 0) < 2) return false;
+  // 게스트 / 튜토리얼 모드 / cold start 진행 중 = skip
+  if (state.isGuest) return false;
+  if (window._onbTutorialMode) return false;
+  if (window._initialDataLoading) return false;
+  // userName 없으면 호명 불가 — skip (호명 prompt 가 별도로 잡음)
+  if (!state.userName || !state.userName.trim()) return false;
+  return true;
+}
+
+function _hookOnbNameCall(userName) {
+  if (!userName) return '';
+  const last = userName[userName.length - 1];
+  const code = last ? last.charCodeAt(0) : 0;
+  const hasJongseong = (code >= 0xAC00 && code <= 0xD7A3)
+    ? ((code - 0xAC00) % 28) !== 0
+    : false;
+  return hasJongseong ? `${userName}아` : `${userName}야`;
+}
+
+function maybeShowHookOnboarding() {
+  if (!_hookOnbShouldShow()) return;
+  showHookOnboardingModal();
+}
+
+function showHookOnboardingModal() {
+  // 중복 방지
+  if (document.getElementById('hookOnbOverlay')) return;
+  const userName = (state.userName || '').trim();
+  const nameCall = _hookOnbNameCall(userName);
+  const header = userName ? `있잖아 ${nameCall} ✦` : '있잖아 ✦';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'hookOnbOverlay';
+  overlay.className = 'hook-onb-overlay';
+  overlay.innerHTML = `
+    <div class="hook-onb-card" onclick="event.stopPropagation()">
+      <div class="hook-onb-header">${escapeHtml(header)}</div>
+      <div class="hook-onb-q">매일 한 번씩 뭐 물어봐도 돼?</div>
+      <div class="hook-onb-q-sub">몇 시쯤이 좋아?</div>
+      <div class="hook-onb-times" id="hookOnbTimes">
+        <button class="hook-onb-time-btn" type="button" data-hour="8"  onclick="_hookOnbPickTime(8)">아침 (8시)</button>
+        <button class="hook-onb-time-btn" type="button" data-hour="12" onclick="_hookOnbPickTime(12)">점심 (12시)</button>
+        <button class="hook-onb-time-btn is-default" type="button" data-hour="21" onclick="_hookOnbPickTime(21)">저녁 (21시)</button>
+        <button class="hook-onb-time-btn" type="button" data-hour="23" onclick="_hookOnbPickTime(23)">자기 전 (23시)</button>
+        <button class="hook-onb-time-btn" type="button" onclick="_hookOnbPickCustom()">직접 정하기</button>
+      </div>
+      <div class="hook-onb-actions">
+        <button class="hook-onb-confirm" type="button" onclick="_hookOnbConfirm()">응, 그 시간에 줘</button>
+        <button class="hook-onb-decline" type="button" onclick="_hookOnbDecline()">필요 없어</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  // default 21시 선택 시각화
+  window._hookOnbPickedHour = 21;
+  setTimeout(() => overlay.classList.add('show'), 30);
+}
+
+function _hookOnbPickTime(hour) {
+  window._hookOnbPickedHour = hour;
+  const btns = document.querySelectorAll('#hookOnbTimes .hook-onb-time-btn');
+  btns.forEach(b => {
+    const h = b.getAttribute('data-hour');
+    b.classList.toggle('is-default', h !== null && Number(h) === hour);
+  });
+}
+
+async function _hookOnbPickCustom() {
+  if (typeof showInputModal !== 'function') return;
+  const v = await showInputModal({
+    title: '몇 시?',
+    message: '0~23 사이 숫자로.',
+    placeholder: '예: 19',
+    defaultValue: String(window._hookOnbPickedHour || 21),
+    okLabel: '저장'
+  });
+  if (v === null || v === undefined) return;
+  const n = parseInt(String(v).trim(), 10);
+  if (isNaN(n) || n < 0 || n > 23) {
+    if (typeof showToast === 'function') showToast('0~23 사이 숫자로 적어줘');
+    return;
+  }
+  window._hookOnbPickedHour = n;
+  // preset 4개 active 해제, 마지막 (직접 정하기) 만 active
+  document.querySelectorAll('#hookOnbTimes .hook-onb-time-btn').forEach(b => b.classList.remove('is-default'));
+  const customBtn = document.querySelector('#hookOnbTimes .hook-onb-time-btn:last-child');
+  if (customBtn) {
+    customBtn.classList.add('is-default');
+    customBtn.textContent = `직접 정하기 (${n}시)`;
+  }
+}
+
+function _hookOnbConfirm() {
+  const hour = window._hookOnbPickedHour || 21;
+  state.preferences = state.preferences || {};
+  state.preferences.hookNotificationTime = hour;
+  state.preferences.hookFrequency = 'daily';
+  state.preferences._hookOnboardingShown = true;
+  try { saveState(); } catch {}
+  _hookOnbClose();
+}
+
+function _hookOnbDecline() {
+  state.preferences = state.preferences || {};
+  state.preferences.hookFrequency = 'off';
+  state.preferences._hookOnboardingShown = true;
+  try { saveState(); } catch {}
+  _hookOnbClose();
+}
+
+function _hookOnbClose() {
+  const overlay = document.getElementById('hookOnbOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('show');
+  setTimeout(() => overlay.remove(), 200);
+  delete window._hookOnbPickedHour;
 }
 // ═══════════════════════════════════════════════════════════════
 // DECISION ROOM (Phase 3)
@@ -28207,9 +28479,9 @@ function _rcCollectAvailable() {
   };
   // 사용자 명시 2026-05-10: quiz source 제거 — _rcSource4Quiz 호출 X (함수 자체는 dead 로 잔존).
   // 사용자 명시 2026-05-10 (batch 11): 5 news source 추가 — 어제 기록 / weekly / monthly / quarterly / annual review.
+  // 사용자 명시 2026-05-17: 고동 일기 source 제거 — _rcSource3GodongDiary 미호출 (함수 body 는 legacy 보존).
   const all = [
     safe(_rcSource1Pearl,      'pearl'),
-    safe(_rcSource3GodongDiary, 'godongDiary'),
     safe(typeof _rcSource6Simulation === 'function' ? _rcSource6Simulation : null, 'simulation'),
     safe(typeof _rcSource7Yesterday === 'function' ? _rcSource7Yesterday : null,           'yesterday'),
     safe(typeof _rcSource8WeeklyReview === 'function' ? _rcSource8WeeklyReview : null,     'review_weekly'),
@@ -28240,17 +28512,16 @@ function _rcGodongSvg(sourceId) {
 // =============================================================================
 // 렌더 — sessionOrder 기반 (한 화면 안 stable)
 // =============================================================================
-// V4 (사용자 명시 2026-05-17 ultrathink): 홈 재설계 — 회전 8 → 메인 1 (godongDiary 단일 고정).
-//   회전 X. swipe X. 화살표 / 점 indicator X (단일 카드라 무의미).
-//   cold start 사용자 (가입 7일 미만 / chatArchive<2 / pearls+entries<3) = "오늘은 한 줄만" cold opener.
-//   옛 source 함수 (_rcSource1Pearl / _rcSource2NewView / _rcSource6Simulation / _rcSource7Yesterday / review 4종) 본체 보존 — 호출만 차단 (legacy / 향후 hook 진입 시 재사용).
+// 사용자 명시 2026-05-17: 홈 메인 슬롯 = Hook 카드 OR "오늘의 너" (다중 source 회전).
+//   고동 일기 (_rcSource3GodongDiary) 제외 — _rcCollectAvailable 에서도 빠짐.
+//   진주 / 시뮬 / 어제 / weekly~annual review 4종 회전.
 function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
   _ensureRotatingCardState();
 
   try {
-    // cold start = "오늘은 한 줄만" opener fallback (godongDiary substrate 부재)
+    // cold start = opener fallback (자산 부족 — 회전할 source 도 부재)
     if (typeof _isColdStart === 'function' && _isColdStart()) {
       if (typeof renderColdStartOpener === 'function') {
         container.innerHTML = renderColdStartOpener();
@@ -28262,39 +28533,59 @@ function renderRotatingCard() {
       return;
     }
 
-    // 튜토리얼 모드 = godongDiary 도 substrate 없으니 cold opener 와 동일하게 표시
-    if (window._onbTutorialMode) {
-      if (typeof renderColdStartOpener === 'function') {
-        container.innerHTML = renderColdStartOpener();
-      } else {
-        container.innerHTML = '';
+    // Phase 1: 활성 Hook → Hook 카드 우선.
+    if (typeof pickHomeMainHook === 'function') {
+      const activeHook = pickHomeMainHook();
+      if (activeHook) {
+        container.innerHTML = typeof renderHookCard === 'function' ? renderHookCard(activeHook) : '';
+        _rcSessionOrder = null;
+        _rcSessionIndex = 0;
+        return;
       }
+    }
+
+    // 튜토리얼 모드 = 진주 fixed
+    if (window._onbTutorialMode) {
+      const s = _rcSource1Pearl();
+      _rcSessionOrder = [s];
+      _rcSessionIndex = 0;
+      container.innerHTML = _rcRenderShell([s], 0);
       return;
     }
 
-    // 메인 카드 = godongDiary 단일.
-    const s = (typeof _rcSource3GodongDiary === 'function') ? _rcSource3GodongDiary() : null;
-    if (!s) {
-      // godongDiary 미가용 → cold opener fallback (substrate 부족)
-      if (typeof renderColdStartOpener === 'function') {
-        container.innerHTML = renderColdStartOpener();
+    // 새 세션 — 가용 source 재계산 + 정렬
+    if (!_rcSessionOrder) {
+      const sources = _rcCollectAvailable();
+      if (sources.length === 0) {
+        const s = _rcSource1Pearl();
+        _rcSessionOrder = s ? [s] : [];
+        _rcSessionIndex = 0;
       } else {
-        container.innerHTML = '';
+        _rcSessionOrder = _rcSortByConfirmation(sources);
+        _rcSessionIndex = 0;
+        const first = _rcSessionOrder[0];
+        if (first && first.id === 'pearl') {
+          const r = _ensureRotatingCardState();
+          r.lastPearlShownDate = _rcTodayKey();
+          if (typeof saveState === 'function') saveState();
+        }
       }
+    }
+
+    if (_rcSessionOrder.length === 0) {
+      container.innerHTML = '';
       return;
     }
-    _rcSessionOrder = [s];
-    _rcSessionIndex = 0;
-    container.innerHTML = _rcRenderShell([s], 0);
+    if (_rcSessionIndex >= _rcSessionOrder.length) _rcSessionIndex = 0;
+    container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
     _rcEqualizeHeights();
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     try {
-      if (typeof renderColdStartOpener === 'function') {
-        container.innerHTML = renderColdStartOpener();
-      } else {
-        container.innerHTML = '';
-      }
+      const s = _rcSource1Pearl();
+      _rcSessionOrder = [s];
+      _rcSessionIndex = 0;
+      container.innerHTML = _rcRenderShell([s], 0);
     } catch (e2) {
       console.error('[renderRotatingCard fallback]', e2);
       container.innerHTML = '';
@@ -31816,6 +32107,75 @@ async function showReflectionItemActions(id) {
   }
 }
 
+// Hook 카드 — 홈 메인 슬롯 Phase 1 (_home-archive-redesign.md)
+// pickHomeMainHook() → unanswered hook within 48h or null
+// renderHookCard(hook) → HTML string (rotatingCardContainer 직접 삽입용)
+// hookCardTap(hookId) → hook message inject + chat 탭 진입
+
+function pickHomeMainHook() {
+  const now = Date.now();
+  return ((state.askedHooks || [])
+    .filter(h => h && !h.answered)
+    .filter(h => (now - new Date(h.askedAt).getTime()) < 48 * 3600000)
+    .sort((a, b) => new Date(b.askedAt) - new Date(a.askedAt))
+  )[0] || null;
+}
+
+function _hookNameCall(userName) {
+  if (!userName) return '';
+  const last = userName[userName.length - 1];
+  const code = last ? last.charCodeAt(0) : 0;
+  const hasJongseong = (code >= 0xAC00 && code <= 0xD7A3)
+    ? ((code - 0xAC00) % 28) !== 0
+    : false;
+  return hasJongseong ? `${userName}아` : `${userName}야`;
+}
+
+function renderHookCard(hook) {
+  if (!hook) return '';
+  const userName = (state.userName || '').trim();
+  const nameCall = _hookNameCall(userName);
+  const header = userName ? `있잖아 ${nameCall} ✦` : '있잖아 ✦';
+  return `
+    <div class="hook-main-card"
+         data-hook-id="${escapeHtml(hook.id || '')}"
+         onclick="hookCardTap(this.dataset.hookId)"
+         role="button" tabindex="0"
+         aria-label="${escapeHtml(header)}">
+      <div class="hook-main-header">${escapeHtml(header)}</div>
+      <div class="hook-main-body">${escapeHtml(hook.body || '')}</div>
+      <div class="hook-main-hint">탭해서 답하기</div>
+    </div>
+  `;
+}
+
+function hookCardTap(hookId) {
+  if (!hookId) return;
+  const hook = (state.askedHooks || []).find(h => h && h.id === hookId);
+  if (!hook) {
+    if (typeof showScreen === 'function') showScreen('chat');
+    return;
+  }
+  // hook message 를 chatMessages 앞에 inject — 중복 방지
+  const alreadyInjected = (state.chatMessages || []).some(
+    m => m && m.isHookMessage && m.hookId === hookId
+  );
+  if (!alreadyInjected && hook.body) {
+    const hookMsg = {
+      role: 'assistant',
+      content: hook.body,
+      timestamp: hook.askedAt || new Date().toISOString(),
+      isHookMessage: true,
+      hookId: hookId,
+      hookSource: hook.source,
+      hookTriggerDayK: hook.trigger_dayK,
+    };
+    state.chatMessages = [hookMsg, ...(state.chatMessages || [])];
+    if (typeof saveState === 'function') saveState(true);
+  }
+  if (typeof showScreen === 'function') showScreen('chat');
+  if (typeof renderChat === 'function') setTimeout(() => renderChat(), 80);
+}
 // V4 (사용자 명시 2026-05-17 ultrathink): 카드 (b) 어제 대비 자산 변화 hint.
 //   옛 "N개 모았어" 카운터 (매일 동일 = 죽은 정보) 폐기 → 어제 대비 +N 변화만 표시.
 //   변화 0건 = 카드 자체 숨김.
@@ -38464,6 +38824,27 @@ async function sendChat() {
       state.chatMessages[state.chatMessages.length - 1].pearlSuggestion = true;
     }
   }
+  // Hook 답변 처리 — 마지막 unanswered hook (홈에서 카드 탭으로 inject 된 것) 이 있으면
+  //   이 user 메시지가 답변으로 간주, hook answered = true + msg.replyToHookId 박음.
+  if (Array.isArray(state.askedHooks) && state.askedHooks.length > 0) {
+    const unanswered = state.askedHooks
+      .filter(h => h && !h.answered)
+      .sort((a, b) => new Date(b.askedAt) - new Date(a.askedAt))[0];
+    if (unanswered) {
+      const hookInjected = (state.chatMessages || []).some(m =>
+        m && m.isHookMessage && m.hookId === unanswered.id
+      );
+      if (hookInjected) {
+        unanswered.answered = true;
+        unanswered.answeredAt = new Date().toISOString();
+        const lastMsg = state.chatMessages[state.chatMessages.length - 1];
+        if (lastMsg && lastMsg.role === 'user') {
+          lastMsg.replyToHookId = unanswered.id;
+        }
+      }
+    }
+  }
+
   input.value = ''; input.style.height = 'auto';
   renderChat();
   saveState();

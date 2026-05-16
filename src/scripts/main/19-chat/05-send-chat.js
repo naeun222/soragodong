@@ -114,6 +114,27 @@ async function sendChat() {
       state.chatMessages[state.chatMessages.length - 1].pearlSuggestion = true;
     }
   }
+  // Hook 답변 처리 — 마지막 unanswered hook (홈에서 카드 탭으로 inject 된 것) 이 있으면
+  //   이 user 메시지가 답변으로 간주, hook answered = true + msg.replyToHookId 박음.
+  if (Array.isArray(state.askedHooks) && state.askedHooks.length > 0) {
+    const unanswered = state.askedHooks
+      .filter(h => h && !h.answered)
+      .sort((a, b) => new Date(b.askedAt) - new Date(a.askedAt))[0];
+    if (unanswered) {
+      const hookInjected = (state.chatMessages || []).some(m =>
+        m && m.isHookMessage && m.hookId === unanswered.id
+      );
+      if (hookInjected) {
+        unanswered.answered = true;
+        unanswered.answeredAt = new Date().toISOString();
+        const lastMsg = state.chatMessages[state.chatMessages.length - 1];
+        if (lastMsg && lastMsg.role === 'user') {
+          lastMsg.replyToHookId = unanswered.id;
+        }
+      }
+    }
+  }
+
   input.value = ''; input.style.height = 'auto';
   renderChat();
   saveState();

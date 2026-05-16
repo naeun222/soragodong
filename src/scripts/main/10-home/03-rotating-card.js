@@ -1128,9 +1128,9 @@ function _rcCollectAvailable() {
   };
   // 사용자 명시 2026-05-10: quiz source 제거 — _rcSource4Quiz 호출 X (함수 자체는 dead 로 잔존).
   // 사용자 명시 2026-05-10 (batch 11): 5 news source 추가 — 어제 기록 / weekly / monthly / quarterly / annual review.
+  // 사용자 명시 2026-05-17: 고동 일기 source 제거 — _rcSource3GodongDiary 미호출 (함수 body 는 legacy 보존).
   const all = [
     safe(_rcSource1Pearl,      'pearl'),
-    safe(_rcSource3GodongDiary, 'godongDiary'),
     safe(typeof _rcSource6Simulation === 'function' ? _rcSource6Simulation : null, 'simulation'),
     safe(typeof _rcSource7Yesterday === 'function' ? _rcSource7Yesterday : null,           'yesterday'),
     safe(typeof _rcSource8WeeklyReview === 'function' ? _rcSource8WeeklyReview : null,     'review_weekly'),
@@ -1161,17 +1161,16 @@ function _rcGodongSvg(sourceId) {
 // =============================================================================
 // 렌더 — sessionOrder 기반 (한 화면 안 stable)
 // =============================================================================
-// V4 (사용자 명시 2026-05-17 ultrathink): 홈 재설계 — 회전 8 → 메인 1 (godongDiary 단일 고정).
-//   회전 X. swipe X. 화살표 / 점 indicator X (단일 카드라 무의미).
-//   cold start 사용자 (가입 7일 미만 / chatArchive<2 / pearls+entries<3) = "오늘은 한 줄만" cold opener.
-//   옛 source 함수 (_rcSource1Pearl / _rcSource2NewView / _rcSource6Simulation / _rcSource7Yesterday / review 4종) 본체 보존 — 호출만 차단 (legacy / 향후 hook 진입 시 재사용).
+// 사용자 명시 2026-05-17: 홈 메인 슬롯 = Hook 카드 OR "오늘의 너" (다중 source 회전).
+//   고동 일기 (_rcSource3GodongDiary) 제외 — _rcCollectAvailable 에서도 빠짐.
+//   진주 / 시뮬 / 어제 / weekly~annual review 4종 회전.
 function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
   _ensureRotatingCardState();
 
   try {
-    // cold start = "오늘은 한 줄만" opener fallback (godongDiary substrate 부재)
+    // cold start = opener fallback (자산 부족 — 회전할 source 도 부재)
     if (typeof _isColdStart === 'function' && _isColdStart()) {
       if (typeof renderColdStartOpener === 'function') {
         container.innerHTML = renderColdStartOpener();
@@ -1183,39 +1182,59 @@ function renderRotatingCard() {
       return;
     }
 
-    // 튜토리얼 모드 = godongDiary 도 substrate 없으니 cold opener 와 동일하게 표시
-    if (window._onbTutorialMode) {
-      if (typeof renderColdStartOpener === 'function') {
-        container.innerHTML = renderColdStartOpener();
-      } else {
-        container.innerHTML = '';
+    // Phase 1: 활성 Hook → Hook 카드 우선.
+    if (typeof pickHomeMainHook === 'function') {
+      const activeHook = pickHomeMainHook();
+      if (activeHook) {
+        container.innerHTML = typeof renderHookCard === 'function' ? renderHookCard(activeHook) : '';
+        _rcSessionOrder = null;
+        _rcSessionIndex = 0;
+        return;
       }
+    }
+
+    // 튜토리얼 모드 = 진주 fixed
+    if (window._onbTutorialMode) {
+      const s = _rcSource1Pearl();
+      _rcSessionOrder = [s];
+      _rcSessionIndex = 0;
+      container.innerHTML = _rcRenderShell([s], 0);
       return;
     }
 
-    // 메인 카드 = godongDiary 단일.
-    const s = (typeof _rcSource3GodongDiary === 'function') ? _rcSource3GodongDiary() : null;
-    if (!s) {
-      // godongDiary 미가용 → cold opener fallback (substrate 부족)
-      if (typeof renderColdStartOpener === 'function') {
-        container.innerHTML = renderColdStartOpener();
+    // 새 세션 — 가용 source 재계산 + 정렬
+    if (!_rcSessionOrder) {
+      const sources = _rcCollectAvailable();
+      if (sources.length === 0) {
+        const s = _rcSource1Pearl();
+        _rcSessionOrder = s ? [s] : [];
+        _rcSessionIndex = 0;
       } else {
-        container.innerHTML = '';
+        _rcSessionOrder = _rcSortByConfirmation(sources);
+        _rcSessionIndex = 0;
+        const first = _rcSessionOrder[0];
+        if (first && first.id === 'pearl') {
+          const r = _ensureRotatingCardState();
+          r.lastPearlShownDate = _rcTodayKey();
+          if (typeof saveState === 'function') saveState();
+        }
       }
+    }
+
+    if (_rcSessionOrder.length === 0) {
+      container.innerHTML = '';
       return;
     }
-    _rcSessionOrder = [s];
-    _rcSessionIndex = 0;
-    container.innerHTML = _rcRenderShell([s], 0);
+    if (_rcSessionIndex >= _rcSessionOrder.length) _rcSessionIndex = 0;
+    container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
     _rcEqualizeHeights();
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     try {
-      if (typeof renderColdStartOpener === 'function') {
-        container.innerHTML = renderColdStartOpener();
-      } else {
-        container.innerHTML = '';
-      }
+      const s = _rcSource1Pearl();
+      _rcSessionOrder = [s];
+      _rcSessionIndex = 0;
+      container.innerHTML = _rcRenderShell([s], 0);
     } catch (e2) {
       console.error('[renderRotatingCard fallback]', e2);
       container.innerHTML = '';

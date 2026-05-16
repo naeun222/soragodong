@@ -299,6 +299,7 @@ const DEFAULT_STATE = {
   // 도서관 리뷰 모음 → '고동' 카테고리에서 둘 다 노출 (legacy 는 '고동의 옛 메모').
   miniReviews: [],          // legacy. [{id, content, generatedAt, source:'haiku-3day'}]
   godongDiary: [],          // [{id, date, weekday, note?, body, iso, substrateRefs[]}]
+  askedHooks: [],           // [{id, body, source, trigger_dayK, hook_type, askedAt, answered, answeredAt, delivered}] — max 50
   predictionFollowups: [],
   // Phase 5
   questionHistory: [],
@@ -346,6 +347,8 @@ const DEFAULT_STATE = {
   // 6. 커스텀 설정
   preferences: {
     nightModeManual: null,  // null = auto, 'on' | 'off' = manual override
+    hookFrequency: 'daily',       // 'daily'|'every-other-day'|'thrice-week'|'off'
+    hookNotificationTime: 21,     // 시 (0-23), default 21시
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
     // V4 (사용자 명시 2026-05-14 ultrathink): 진주 '티켓' 카테고리 sub-type — 사용자 customizable.
     //   default 6개. settings 에서 ON/OFF + 추가/제거 가능.
