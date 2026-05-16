@@ -1217,9 +1217,10 @@ function renderRotatingCard() {
         sources.push({
           id: 'review',
           available: true,
-          contentHash: 'review_' + r._kind,
+          contentHash: 'review_' + r._kind + '_' + (r.id || ''),
           bodyHtml: _rcBuildReviewBodyHtml(r),
-          onTapClick: `_openReviewPreviewLink('${r._kind}')`,
+          // 사용자 보고 2026-05-17: id 같이 넘김 — batch 결과 review 직접 open (옛 동작 복원).
+          onTapClick: `_openReviewPreviewLink('${r._kind}','${r.id || ''}')`,
         });
       }
     }

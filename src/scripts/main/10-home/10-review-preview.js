@@ -55,8 +55,31 @@ function renderReviewPreview() {
   `;
 }
 
-function _openReviewPreviewLink(kind) {
-  // 도서관 → 마법·리뷰 chip 진입.
+// 사용자 보고 2026-05-17: 회전카드 리뷰 링크 = batch 결과 review 직접 open (옛 동작). 칩으로만 보내던 버그 fix.
+//   kind + id 받아서 state[weeklyReviews|monthlyReviews|quarterlyReviews] 에서 lookup.
+//   weekly/monthly → openSavedReview(type, key, completedAt) — readonly screen 진입.
+//   quarterly → openQuarterlyStories(id) — story 시퀀스 진입.
+//   review 못 찾으면 칩 fallback.
+function _openReviewPreviewLink(kind, id) {
+  const arrKey = kind === 'weekly' ? 'weeklyReviews'
+               : kind === 'monthly' ? 'monthlyReviews'
+               : kind === 'quarterly' ? 'quarterlyReviews'
+               : null;
+  if (arrKey && id) {
+    const review = (state[arrKey] || []).find(r => r && r.id === id);
+    if (review) {
+      if (kind === 'quarterly') {
+        if (typeof openQuarterlyStories === 'function') { openQuarterlyStories(review.id); return; }
+      } else {
+        const key = kind === 'weekly' ? review.weekKey : review.monthKey;
+        if (typeof openSavedReview === 'function') {
+          openSavedReview(kind, key || '', review.completedAt || '');
+          return;
+        }
+      }
+    }
+  }
+  // fallback — 도서관 마법·리뷰 chip 진입
   if (typeof showScreen === 'function') showScreen('archive');
   setTimeout(() => {
     if (typeof switchLibraryCat === 'function') switchLibraryCat('galpi');
