@@ -111,28 +111,9 @@ function renderMainAction() {
   container.innerHTML = cardHtml;
 }
 
-// 마법고동 미니 링크 — 작지만 카드 모양
-// 사용자 명시 2026-05-17 ultrathink (revert): 옛 UI 복원 — "N 안고 있어" 카운터 + chooser 진입.
-// (활성 결정 + 활성 숙고 둘 다 카운트. 활성 ≥1 → "N 안고 있어" / 활성 0 → "풀어볼래")
-function renderDecisionMiniLink() {
-  const container = document.getElementById('decisionMiniLinkContainer');
-  if (!container) return;
-  const decisionCount = (state.decisions || []).filter(d => d.status === 'in_progress').length;
-  const reflectionCount = (state.reflectionQuestions || []).filter(q => q.status === 'active').length;
-  const totalActive = decisionCount + reflectionCount;
-  const subText = totalActive > 0 ? `${totalActive} 안고 있어` : '풀어볼래';
-  container.innerHTML = `
-    <div onclick="openMagicReflectionChooser()" class="decision-mini-card">
-      <div class="dm-icon"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"></div>
-      <div class="dm-text">
-        <div class="dm-title">마법고동</div>
-        <div class="dm-sub">${subText}</div>
-      </div>
-      <div class="dm-arrow">›</div>
-    </div>
-  `;
-  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
-}
+// 사용자 명시 2026-05-17 ultrathink: 마법고동 mini 카드 홈에서 제거 — renderDecisionMiniLink noop.
+//   호출처 (init-fn / navigation) 의 container null guard 가 자연 no-op. openMagicReflectionChooser 본체 보존 (다른 진입점 가능성).
+function renderDecisionMiniLink() { /* noop — 2026-05-17 홈에서 마법고동 카드 제거 */ }
 
 // 사용자 명시 2026-05-09: 마법고동 카드 클릭 → 숙고/마법 chooser 모달.
 // 진입 path 분기: '마법의 방' = decisions screen / '숙고의 방' = active 숙고 → reflection screen / 활성 0 → addReflectionQuestion 입력 모달.
