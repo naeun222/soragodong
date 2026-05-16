@@ -244,7 +244,7 @@ function renderModel() {
     // 사용자 요청 2026-04-30: 강점 → 작동 → 다루어야 할 특성 순서 (긍정 먼저)
     html += cfSection('네 강점', '', state.caseFormulation.strengths, 'strengths');
     html += cfSection('어떻게 작동하는지', '네 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
-    html += cfSection('다루어야 할 특성', '고쳐야 할 결점이 아니라, 알고 잘 다뤄야 할 네 결', state.caseFormulation.problems, 'problems');
+    html += cfSection('다루어야 할 특성', '', state.caseFormulation.problems, 'problems');
     html += '</div>';
   }
 
