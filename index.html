@@ -23136,7 +23136,7 @@ async function runDiaryLibTutorialV8() {
     screenAfterSeed: 'archive',
     navAction: () => { if (typeof switchLibraryCat === 'function') switchLibraryCat('diary'); },
     coachmarks: [
-      _diaryCoachmarkChip,
+      _diaryCoachmarkLibIntro,
       _diaryCoachmarkCalendar415,
       _diaryCoachmark415Read,
       _diaryCoachmarkChapterAuto,
@@ -23145,20 +23145,13 @@ async function runDiaryLibTutorialV8() {
   });
 }
 
-function _diaryCoachmarkChip() {
+function _diaryCoachmarkLibIntro() {
   const body = `
-    <div class="v8-coach-title">📔 일기·대화</div>
     <div class="v8-coach-text">
-      대화탭에서 <b>"일기:"</b>라고 쓴 것도 저장되고,<br>
-      고동이랑 한 대화를 고동이가 알아서 정리해줍니다.
+      안녕하세요! 이곳은 도서관입니다.
     </div>
   `;
-  return _v8ShowCoachmark({
-    targetSelector: '.lib-cat-chip[data-cat="diary"]',
-    body,
-    position: 'bottom',
-    allowNoTarget: true
-  });
+  return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
 }
 
 // 사용자 명시 2026-05-06 ultrathink: 4/15 자동 슬라이드 + 강조 + interactive (직접 클릭으로 day modal 진입).
