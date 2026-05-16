@@ -100,6 +100,15 @@ async function init() {
     setTimeout(() => {
       navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW register:', e));
     }, 200);
+    // Phase B (사용자 명시 2026-05-17): SW push → 이미 열린 client 면 hookCardTap 직접 호출.
+    try {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        const msg = event.data || {};
+        if (msg.type === 'hook-trigger' && msg.hookId && typeof hookCardTap === 'function') {
+          try { hookCardTap(msg.hookId); } catch (e) { console.warn('[hookTrigger msg]', e); }
+        }
+      });
+    } catch (e) { console.warn('[SW message listener]', e); }
   }
   // 사용자 명시 2026-05-06 ultrathink (perf): boot splash 안전망 — init() 어떤 경로 fail 이라도 7초 후 자동 hide.
   setTimeout(() => { if (typeof _hideBootSplash === 'function') _hideBootSplash(); }, 7000);
@@ -424,5 +433,22 @@ async function init() {
   if (typeof maybeGenerateHook === 'function') {
     setTimeout(() => { maybeGenerateHook().catch(e => console.warn('[hook]', e)); }, 5000);
   }
+
+  // Phase B: Push 클릭 → /?hookTrigger=<id> deep link 자동 진입.
+  //   init 끝에서 URL 파싱 → cloud load 완료 후 hookCardTap 호출.
+  //   URL clean — replaceState 로 query param 제거 (재진입 시 leak X).
+  try {
+    const _hookTriggerId = new URLSearchParams(window.location.search).get('hookTrigger');
+    if (_hookTriggerId && typeof hookCardTap === 'function') {
+      setTimeout(() => {
+        try { hookCardTap(_hookTriggerId); } catch (e) { console.warn('[hookTrigger]', e); }
+      }, 3000);  // cloud load 끝나고 chatMessages 안정화 후
+      try {
+        const _u = new URL(window.location.href);
+        _u.searchParams.delete('hookTrigger');
+        window.history.replaceState({}, document.title, _u.pathname + _u.search + _u.hash);
+      } catch {}
+    }
+  } catch (e) { console.warn('[hookTrigger parse]', e); }
 }
 

@@ -356,6 +356,9 @@ async function maybeGenerateHook(opts) {
     if (typeof saveState === 'function') saveState(true);
     if (typeof renderRotatingCard === 'function') renderRotatingCard();
     console.log('[hook] generated:', entry.id, entry.body.slice(0, 60));
+    // Phase B: 다음 push 시간에 발사할 수 있게 backend queue 에도 등록 (fire-and-forget).
+    //   사용자가 push subscription 안 했으면 backend 에서 silent drop.
+    _hookQueueForPush(entry).catch(e => console.warn('[hook queue]', e));
     return { ok: true, hook: entry };
   } catch (e) {
     console.error('[hook] generate exception:', e);
@@ -368,4 +371,35 @@ async function maybeGenerateHook(opts) {
 // 수동 trigger — testerMode / 개발자 콘솔용. cooldown / cold-start gate 우회.
 async function forceGenerateHook() {
   return maybeGenerateHook({ force: true });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase B: backend push queue 등록 — 다음 사용자 명시 시간에 push 발사용.
+//   subscription 없으면 backend 가 silent drop (단순히 prefs row 미존재 → cron 무시).
+//   같은 user_id row 가 있으면 upsert (가장 최근 hook 1개만 pending).
+// ─────────────────────────────────────────────────────────────────────────────
+async function _hookQueueForPush(entry) {
+  if (!entry || !entry.body) return;
+  const accessToken = (typeof session !== 'undefined' && session && session.access_token) || null;
+  if (!accessToken) return;
+  // 다음 push 시간 = 사용자 prefs.hookNotificationTime (오늘 그 시간 이미 지났으면 내일).
+  const hour = (state.preferences && typeof state.preferences.hookNotificationTime === 'number')
+    ? state.preferences.hookNotificationTime : 21;
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
+  if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
+  try {
+    await fetch('/api/hook/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({
+        hook_id: entry.id,
+        body: entry.body,
+        scheduled_at: target.toISOString(),
+        user_name: (state.userName || '').slice(0, 20),
+      })
+    });
+  } catch (e) {
+    console.warn('[hook queue] fetch fail:', e && e.message || e);
+  }
 }

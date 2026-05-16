@@ -122,6 +122,24 @@ function _hookOnbConfirm() {
   state.preferences._hookOnboardingShown = true;
   try { saveState(); } catch {}
   _hookOnbClose();
+  // Phase B: push 권한 prompt + subscription 등록 (모달 닫힌 직후 살짝 delay — 같은 모달 row 안 prompt 겹침 회피).
+  if (typeof ensurePushSubscription === 'function') {
+    setTimeout(() => {
+      ensurePushSubscription({ frequency: 'daily', notificationTime: hour })
+        .then(r => {
+          if (r && r.ok) {
+            if (typeof showToast === 'function') showToast('🔔 알림 켜졌어 — 매일 ' + hour + '시쯤 뭐 하나 물어볼게');
+          } else if (r && r.reason === 'permission-denied') {
+            // 권한 거부 = silent — 사용자가 명시적으로 거부했으니 압박 X.
+          } else if (r && r.reason === 'no-vapid-key') {
+            console.warn('[hookOnb] push skip — VAPID 미설정');
+          } else {
+            console.warn('[hookOnb] push subscribe fail:', r && r.reason);
+          }
+        })
+        .catch(e => console.warn('[hookOnb push]', e));
+    }, 600);
+  }
 }
 
 function _hookOnbDecline() {

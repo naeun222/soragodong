@@ -9,6 +9,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // 사용처: Phase 1 게스트 모드 활성화 시 invisible widget 으로 토큰 발급 → /api/chat 헤더 X-Turnstile-Token.
 const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
 
+// V4 (사용자 명시 2026-05-17): Hook 시스템 Phase B — Web Push VAPID public key.
+//   USER_TODO 참조: `npx web-push generate-vapid-keys` 로 생성. PRIVATE 는 Cloudflare env (VAPID_PRIVATE_KEY) 에.
+//   PUBLIC 만 frontend 에 박힘 (PushManager.subscribe applicationServerKey 형식).
+//   미설정 시 빈 문자열 — push subscription 시도 silent skip (frontend dead code OK).
+window._VAPID_PUBLIC_KEY = '';
+
 // 사용자 명시 2026-05-06: PortOne V2 채널 키 + Store ID. 공개 OK — frontend 결제창 호출 시 사용.
 // REST API Key (V2) + Webhook Secret 은 Cloudflare env (PORTONE_API_KEY_V2 / PORTONE_WEBHOOK_SECRET) 에 별도.
 // 사용자 명시 2026-05-11: KG이니시스 / 카카오페이 / 토스페이 결제 채널 5종 추가.

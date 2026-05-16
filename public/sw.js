@@ -52,7 +52,10 @@
 //   character/ 폴더 신규 디자인 = public/character/ byte-identical 로 배포됨에도 PWA cache-first 가 옛 SVG 노출.
 //   SVG 자산 변경 시 강제 invalidate.
 // v47 (2026-05-11): character/ 21개 SVG 새 디자인 → public/character/ 일괄 교체. 옛 캐시 강제 invalidate.
-const CACHE_NAME = 'soragodong-v4-cache-v47';
+// v48 (2026-05-17 사용자 명시): Hook 시스템 Phase B — push event + notificationclick handler 활성.
+//   payload = { hookId, body, ...meta }. notification 클릭 → /?hookTrigger=<hookId> 로 openWindow.
+//   기존 cache 강제 invalidate (push 인프라 활성 + index.html 갱신).
+const CACHE_NAME = 'soragodong-v4-cache-v48';
 const PRECACHE_URLS = [
   './',
   './index.html',
@@ -151,6 +154,63 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 사용자 요청 2026-04-29: Phase C 시점에 push event handler 활성 예정.
-// self.addEventListener('push', (event) => { ... });
-// self.addEventListener('notificationclick', (event) => { ... });
+// ─────────────────────────────────────────────────────────────────────────────
+// Hook 시스템 push handler — 사용자 명시 2026-05-17 Phase B.
+// payload spec (cron-push 가 보내는 JSON):
+//   { hookId, body, source, trigger_dayK, hook_type, userName? }
+// notification:
+//   title = "있잖아 ${nameCall} ✦" (userName 있으면 호명, 없으면 "있잖아 ✦")
+//   body = hook.body
+//   data = { hookId } → click 시 /?hookTrigger=<hookId> openWindow.
+// ─────────────────────────────────────────────────────────────────────────────
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    if (event.data) data = event.data.json();
+  } catch (e) {
+    try { data = { body: event.data && event.data.text() || '' }; } catch {}
+  }
+  const hookId = data.hookId || '';
+  const body = data.body || '한 마디 있어';
+  const userName = (data.userName || '').trim();
+  // 호명 — 받침 detect
+  let title = '있잖아 ✦';
+  if (userName) {
+    const last = userName[userName.length - 1];
+    const code = last ? last.charCodeAt(0) : 0;
+    const hasJongseong = (code >= 0xAC00 && code <= 0xD7A3) ? ((code - 0xAC00) % 28) !== 0 : false;
+    const nameCall = hasJongseong ? `${userName}아` : `${userName}야`;
+    title = `있잖아 ${nameCall} ✦`;
+  }
+  const opts = {
+    body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: hookId ? `hook-${hookId}` : 'hook',
+    data: { hookId, ts: Date.now() },
+    requireInteraction: false,
+  };
+  event.waitUntil(self.registration.showNotification(title, opts));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const hookId = (event.notification.data && event.notification.data.hookId) || '';
+  const url = hookId ? `/?hookTrigger=${encodeURIComponent(hookId)}` : '/';
+  event.waitUntil((async () => {
+    const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    // 이미 열린 client 있으면 focus + 메시지 보내서 hook trigger
+    for (const c of clientsList) {
+      if (c.url && c.url.includes(self.location.origin)) {
+        try {
+          c.postMessage({ type: 'hook-trigger', hookId });
+        } catch {}
+        if ('focus' in c) return c.focus();
+      }
+    }
+    // 없으면 새 window
+    if (self.clients.openWindow) {
+      return self.clients.openWindow(url);
+    }
+  })());
+});

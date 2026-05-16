@@ -499,6 +499,111 @@ bubblewrap build
 
 ---
 
+### 15. 🔴 Hook 시스템 Phase B — Web Push 셋업 (2026-05-17 ultrathink)
+
+**필요한 이유**: hook 카드가 회전카드에 뜨려면 (Phase A) frontend trigger 만으로 충분. 그런데 **사용자가 앱 안 열면 hook 발사 X** → 본질적 가치 (돌아오게 만들기) 절반 손실. Phase B = 매일 정해진 시간 (default 21시) 에 push notification 발사 → 사용자가 누르면 chat 탭으로 직진 + hook 메시지 깔린 채로.
+
+#### 15-1. VAPID 키 생성 (5분)
+
+로컬에서 한 번만:
+
+```bash
+npm install -g web-push
+web-push generate-vapid-keys
+```
+
+출력 예:
+```
+Public Key:
+BL12...long base64url string... (88 chars)
+
+Private Key:
+xyz...43 chars base64url...
+```
+
+#### 15-2. Cloudflare Pages env 등록 (3분)
+
+Cloudflare Dashboard → Pages → soragodong → Settings → Environment variables (Production):
+
+```
+VAPID_PRIVATE_KEY    = <위 Private Key>
+VAPID_PUBLIC_KEY     = <위 Public Key>
+VAPID_CONTACT_EMAIL  = mailto:bsya21@gmail.com
+HOOK_CRON_SECRET     = <random 32+ 자 문자열, openssl rand -hex 32>
+```
+
+#### 15-3. Frontend 에 PUBLIC KEY 박기 (1분)
+
+`src/scripts/main/01-config.js` 마지막 줄:
+
+```js
+window._VAPID_PUBLIC_KEY = '<위 Public Key 그대로>';
+```
+
+→ `npm run build` 후 push (다음 배포 시 반영).
+
+#### 15-4. Supabase migration 적용 (2분)
+
+```bash
+# Supabase dashboard SQL editor 또는 CLI
+psql $DATABASE_URL -f supabase/migrations/0030_hook_system.sql
+```
+
+또는 Supabase dashboard → SQL Editor → 파일 내용 paste → Run.
+
+확인:
+```sql
+SELECT * FROM soragodong_hook_preferences LIMIT 1;
+SELECT * FROM soragodong_hook_push_queue LIMIT 1;
+```
+
+#### 15-5. Cron 서비스 설정 (5분)
+
+매 분 `POST https://soragodong.com/api/hook/cron-push` 호출 + 헤더 `X-Cron-Secret: <위 HOOK_CRON_SECRET>`.
+
+옵션 A — **cron-job.org** (무료):
+1. https://console.cron-job.org → New cronjob
+2. URL: `https://soragodong.com/api/hook/cron-push`
+3. Schedule: `* * * * *` (매 분)
+4. Method: POST
+5. Headers: `X-Cron-Secret: <secret>`
+6. Save
+
+옵션 B — **GitHub Actions** (기존 repo 활용):
+`.github/workflows/hook-cron.yml`:
+```yaml
+on:
+  schedule:
+    - cron: '* * * * *'
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -X POST -H "X-Cron-Secret: ${{ secrets.HOOK_CRON_SECRET }}" \
+            https://soragodong.com/api/hook/cron-push
+```
+→ repo Settings → Secrets → `HOOK_CRON_SECRET` 등록.
+
+#### 15-6. 테스트
+
+1. PWA 설치 (Android Chrome / desktop Chrome — iOS Safari 는 16.4+ 홈 추가).
+2. 앱 진입 → 온보딩 모달 "응 그 시간에 줘" 클릭 → 권한 prompt OK → "알림 켜졌어 ✦" 토스트.
+3. 회전카드에 hook 카드 뜨는지 확인 (= Phase A 동작).
+4. 23시 이전이면 21시까지 기다림 OR test: Supabase SQL editor 에서
+   ```sql
+   UPDATE soragodong_hook_push_queue SET scheduled_at = NOW() WHERE user_id = '<your_uuid>';
+   ```
+   → 1분 안에 push 도착.
+
+#### 15-7. 향후 (P2)
+
+- **iOS 16.4+ PWA**: 사용자가 홈 추가 후에만 권한 prompt 노출 (현재 ensurePushSubscription 가드).
+- **Android 네이티브 앱** (USER_TODO P1): FCM 직접 + Web Push 호환 layer 폐기 가능.
+- **Notification time picker UI**: 설정 화면에 빈도 + 시간 변경 UI (현재 온보딩 모달 1회만).
+
+---
+
 ## 📞 무료 상담 채널
 
 | 기관 | 번호 / URL | 다루는 거 |
