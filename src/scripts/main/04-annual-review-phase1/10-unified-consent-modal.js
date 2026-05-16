@@ -71,17 +71,8 @@ function showE2EEPasswordSetupModal(opts) {
           '· PIPA §22-2 — 만 14세 미만은 법정대리인 동의 필요 (현재 미지원)<br>· 만 14세 미만 친권자 동의 폼 도입 전까지 가입 X',
           '<div class="setup-consent-warn">⚠ 허위 시 모든 책임은 본인 (및 법정대리인)에게. 회사 즉시 계정 정지 + 데이터 삭제.</div>'
         )}
-        <div style="margin-top:10px; padding:9px 12px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(212,167,106,0.30); border-radius:0 6px 6px 0;">
-          <label for="setupBirthYear" style="display:block; font-size:11.5px; color:var(--text-dim); margin-bottom:6px; line-height:1.55;">
-            <span style="color:var(--accent); font-weight:600;">(필수)</span> <b style="color:var(--text);">출생년도</b> <span style="color:var(--text-soft); font-size:10.5px;">— PIPA §22-2 만 14세 검증</span>
-          </label>
-          <input type="number" id="setupBirthYear" placeholder="예: 1995" min="1900" max="${new Date().getFullYear()}" maxlength="4" inputmode="numeric"
-                 style="width:100%; font-family:inherit; padding:7px 10px; font-size:13px; background:rgba(0,0,0,0.20); border:1px solid var(--border); border-radius:6px; color:var(--text);"
-                 oninput="_setupBirthYearValidate()">
-          <div id="setupBirthYearStatus" style="margin-top:5px; font-size:10.5px; color:var(--text-soft); min-height:13px; line-height:1.4;"></div>
-        </div>
         <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.04); font-size:10.5px; color:var(--text-soft); line-height:1.6;">
-          ※ 4개 동의 + 출생년도 입력 모두 완료해야 시작 가능. 거부 시 정신건강 자기관찰 + AI 기능 이용 X (인프라 특성상 어쩔 수 없어).
+          ※ 4개 동의 모두 완료해야 시작 가능. 거부 시 정신건강 자기관찰 + AI 기능 이용 X (인프라 특성상 어쩔 수 없어).
         </div>
       </div>
   `;
@@ -128,30 +119,6 @@ function showE2EEPasswordSetupModal(opts) {
   setTimeout(() => document.getElementById('e2eePasswordInput')?.focus(), 100);
 }
 
-// 사용자 명시 2026-05-08 ultrathink (audit WARN #5 strengthen): 출생년도 실시간 검증 — 만 14세 미만 가입 차단.
-function _setupBirthYearValidate() {
-  const el = document.getElementById('setupBirthYear');
-  const status = document.getElementById('setupBirthYearStatus');
-  if (!el || !status) return;
-  const y = parseInt(el.value, 10);
-  if (!Number.isFinite(y) || y < 1900 || y > new Date().getFullYear()) {
-    status.textContent = '';
-    status.style.color = 'var(--text-soft)';
-    return;
-  }
-  const age = new Date().getFullYear() - y;
-  if (age < 14) {
-    status.innerHTML = `만 ${age}세 — <b style="color:#e89090;">가입 불가</b> (PIPA §22-2 만 14세 미만 차단)`;
-    status.style.color = '#e89090';
-  } else if (age >= 100) {
-    status.textContent = `(만 ${age}세 — 입력 다시 확인)`;
-    status.style.color = '#e89090';
-  } else {
-    status.innerHTML = `만 ${age}세 ✓ 가입 가능`;
-    status.style.color = '#7ec88e';
-  }
-}
-
 async function submitE2EESetup() {
   const pw1 = document.getElementById('e2eePasswordInput')?.value || '';
   const pw2 = document.getElementById('e2eePasswordConfirmInput')?.value || '';
@@ -164,25 +131,6 @@ async function submitE2EESetup() {
   const consentAdult = document.getElementById('setupConsentAdult')?.checked;
   if (!consentTerms || !consentSensitive || !consentCrossBorder || !consentAdult) {
     status.textContent = '필수 동의 4개를 모두 체크해줘';
-    status.style.color = '#e89090';
-    return;
-  }
-  // 사용자 명시 2026-05-08 ultrathink (PIPA §22-2 강화): 출생년도 입력 + 만 14세 검증.
-  const birthYearStr = document.getElementById('setupBirthYear')?.value || '';
-  const birthYear = parseInt(birthYearStr, 10);
-  if (!Number.isFinite(birthYear) || birthYear < 1900 || birthYear > new Date().getFullYear()) {
-    status.textContent = '출생년도를 입력해줘 (4자리 숫자)';
-    status.style.color = '#e89090';
-    return;
-  }
-  const age = new Date().getFullYear() - birthYear;
-  if (age < 14) {
-    status.textContent = `만 ${age}세 — 가입 불가 (PIPA §22-2 만 14세 미만 차단)`;
-    status.style.color = '#e89090';
-    return;
-  }
-  if (age >= 100) {
-    status.textContent = '출생년도를 다시 확인해줘';
     status.style.color = '#e89090';
     return;
   }
@@ -210,12 +158,7 @@ async function submitE2EESetup() {
     state.preferences.consentAdult = true;
     state.preferences.consentAt = new Date().toISOString();
     state.preferences.consentVersion = '2.0';
-    // 사용자 명시 2026-05-08 ultrathink (audit WARN #5 + PIPA §22-2 강화): 출생년도 + 만 14세 검증 결과 기록.
-    state.preferences.birthYear = birthYear;
-    state.preferences.ageAtConsent = age;
-    // 사용자 명시 2026-05-08 ultrathink (audit WARN #13 fix): 카카오 신규 가입자 consentLog 미기록 — 4종 type 별 entry push.
-    // 옛: consentAt + consentVersion 만 있어 분쟁 시 *어떤 항목*에 동의했는지 증거 X.
-    // 신: terms / sensitive / crossBorder / age14 4종 + birthYear 기록.
+    // 사용자 명시 2026-05-16 ultrathink: 출생년도 입력 제거 — 만 14세 이상 체크박스 자기 선언만 기록.
     if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
     const _at = state.preferences.consentAt;
     const _hasLog = (t, v) => state.preferences.consentLog.some(c => c.type === t && c.version === v && c.confirmed);
@@ -223,9 +166,9 @@ async function submitE2EESetup() {
     if (!_hasLog('privacy', '1.4')) state.preferences.consentLog.push({ type: 'privacy', version: '1.4', confirmed: true, at: _at, basis: '약관 동의 모달' });
     if (!_hasLog('sensitive', '1.4')) state.preferences.consentLog.push({ type: 'sensitive', version: '1.4', confirmed: true, at: _at, basis: 'PIPA §23' });
     if (!_hasLog('crossBorder', '2.3')) state.preferences.consentLog.push({ type: 'crossBorder', version: '2.3', confirmed: true, at: _at, basis: 'PIPA §17' });
-    if (!_hasLog('age14', '1.2')) state.preferences.consentLog.push({ type: 'age14', version: '1.2', confirmed: true, at: _at, basis: `PIPA §22-2 자기 선언 — 출생년도 ${birthYear} (만 ${age}세)` });
-    // 결제 시 법정대리인 동의 필요 여부 — 만 14세 이상이면 X.
-    state.preferences.requiresLegalGuardianForPayment = age < 14;
+    if (!_hasLog('age14', '1.3')) state.preferences.consentLog.push({ type: 'age14', version: '1.3', confirmed: true, at: _at, basis: 'PIPA §22-2 자기 선언 — 만 14세 이상 체크박스' });
+    // 만 14세 이상 자기 선언했으므로 결제 시 법정대리인 동의 필요 X.
+    state.preferences.requiresLegalGuardianForPayment = false;
     await saveToCloudNow();
     refreshE2EEStatus();
     const overlay = document.getElementById('e2eeSetupOverlay');
