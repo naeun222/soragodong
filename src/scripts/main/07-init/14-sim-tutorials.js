@@ -227,9 +227,9 @@ function _diaryCoachmark415Read() {
     </div>
   `;
   return _v8ShowCoachmark({
-    targetSelector: '.day-modal-body, .day-entry, .day-modal .modal-body, .day-tab-content',
+    targetSelector: '.day-modal-header, .day-modal-date',
     body,
-    position: 'top',
+    position: 'bottom',
     allowNoTarget: true
   });
 }
