@@ -126,8 +126,8 @@ function renderLensArchive() {
     } else {
       html += `<div class="archive-empty">
         <div class="icon">✦</div>
-        <div style="font-size:14px; color:var(--text); margin-bottom:8px;">아직 저장된 깨달음 없어</div>
-        대화 응답 아래 <b>"✦ 깨달음으로"</b> 또는 + 메뉴의 <b>✎ 메모</b>로 모아.
+        <div style="font-size:14px; color:var(--text); margin-bottom:8px;">아직은 저장된 깨달음이 없어요</div>
+        대화 응답 아래 <b>"✦ 깨달음으로"</b> 또는 + 메뉴의 <b>✎ 메모</b>로 모을 수 있습니다.
       </div>`;
     }
   } else {

@@ -9180,6 +9180,9 @@
   .pearl-music-card { padding: 0; background: transparent; border: none; }
   /* V4-fix v3 (사용자 버그 보고): 체크인 사진 슬롯 — 고정 크기 정사각 (음악 stretch에 휘둘리지 않게) */
   .checkin-mp-row #checkinPhotoSlot { display: flex; }
+  /* V4 (사용자 명시 2026-05-16): 체크인 음악 placeholder 세로 길이 = 사진 칸 90px 동일. */
+  .checkin-mp-row #checkinMusicSlot { display: flex; }
+  .checkin-mp-row #checkinMusicSlot .music-add-btn { height: 90px; padding: 0 14px; }
   .checkin-photo-card {
     position: relative;
     width: 90px;

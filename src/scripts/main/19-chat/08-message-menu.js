@@ -356,6 +356,8 @@ function updateReflectionChatModeBtn() {
 function showPerRoomOpusFirstClickModal() {
   if (document.getElementById('perRoomOpusFirstClickOverlay')) return;
   if (state?.preferences?._perRoomOpusToggleSeen) return;
+  // V4 (사용자 명시 2026-05-16 ultrathink): Premium 만 안내. 다른 플랜은 Opus 사용 불가 → 안내 무의미.
+  if (typeof canUseOpus === 'function' && !canUseOpus()) return;
   const overlay = document.createElement('div');
   overlay.className = 'input-modal-overlay show';
   overlay.id = 'perRoomOpusFirstClickOverlay';

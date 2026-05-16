@@ -17,13 +17,13 @@ function renderProjects() {
   // 사용자 명시 2026-05-06 (추가): + 추가 버튼 제거 — 추적 항목 추가는 체크인 화면 (.checkin-tracker-add) 만.
   let html = `<details class="project-section">
     <summary class="project-section-header">
-      <span class="project-section-title">추적 항목${visible.length > 0 ? ` <span style="font-size:11px; color:var(--text-soft); font-weight:500; margin-left:4px;">(${visible.length})</span>` : ''}</span>
+      <span class="project-section-title">트래커${visible.length > 0 ? ` <span style="font-size:11px; color:var(--text-soft); font-weight:500; margin-left:4px;">(${visible.length})</span>` : ''}</span>
     </summary>
     <div class="project-section-body">`;
   if (visible.length === 0) {
     html += `<div style="font-size:12px; color:var(--text-dim); padding:10px 0 4px; line-height:1.7;">
-      추적 중인 항목 없어.<br>
-      체크인 화면 "📊 추적 항목"에서 추가하면 매일 기록 + 그래프.
+      추적 중인 트래커 없어요.<br>
+      체크인 화면 "📊 트래커"에서 추가하면 매일 기록 + 그래프.
     </div>`;
   } else {
     visible.forEach(p => { html += renderProjectCard(p); });

@@ -168,11 +168,7 @@ function _pearlCoachmarkAddBtn() {
 
 function _pearlCoachmarkClosing() {
   const body = `
-    <div class="v8-coach-title">시뮬 끝 — 본 데이터로 돌아갈게 🐚</div>
-    <div class="v8-coach-text">
-      잠깐 화면 깜빡 — testerMode OFF 라 새로고침.<br>
-      <span class="v8-coach-text-soft">너의 진짜 진주는 그대로 ✦</span>
-    </div>
+    <div class="v8-coach-title">시뮬 끝</div>
   `;
   return _v8ShowCoachmark({
     body,

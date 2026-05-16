@@ -318,12 +318,7 @@ function renderLensPearls() {
   }
 
   if (pearls.length === 0) {
-    html += `<div class="pearls-empty">
-      <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-top:8px;">
-        "좋다" 떠올린 거 → 진주.<br>
-        <span style="opacity:0.7;">대화에서 흘린 취향도 나중에 자동으로 ✦</span>
-      </div>
-    </div>`;
+    html += `<div class="pearls-empty"></div>`;
   } else if (_libView === 'grid') {
     // V4-fix v2 (사용자 보고): Pinterest masonry — 다양 사이즈 + 미세 회전 + 날짜 + 음악 placeholder
     html += `<div class="pearls-pinterest">`;

@@ -242,7 +242,7 @@ function renderPoolQuestion() {
   const labelEl = document.getElementById('dailyQuestionLabel');
   const textEl = document.getElementById('dailyQuestionText');
   if (iconEl) iconEl.textContent = CATEGORY_ICONS[q.cat] || '💬';
-  if (labelEl) labelEl.textContent = `오늘의 질문 · ${CATEGORY_LABELS[q.cat] || ''}`;
+  if (labelEl) labelEl.textContent = '오늘의 질문';
   if (textEl) textEl.textContent = q.text;
   recordQuestionShown(q.id);
 }
@@ -258,7 +258,7 @@ function rerollDailyQuestion() {
   const labelEl = document.getElementById('dailyQuestionLabel');
   const textEl = document.getElementById('dailyQuestionText');
   if (iconEl) iconEl.textContent = CATEGORY_ICONS[q.cat] || '💬';
-  if (labelEl) labelEl.textContent = `오늘의 질문 · ${CATEGORY_LABELS[q.cat] || ''}`;
+  if (labelEl) labelEl.textContent = '오늘의 질문';
   if (textEl) textEl.textContent = q.text;
   recordQuestionShown(q.id);
   showToast('다른 질문 ✦');

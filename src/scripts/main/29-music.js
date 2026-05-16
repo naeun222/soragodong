@@ -375,7 +375,7 @@ async function addPearl() {
     }));
     const picked = await showOptionsModal({
       title: '어떤 진주? 💎',
-      message: '카테고리 골라.',
+      message: '',
       options
     });
     if (!picked) return;

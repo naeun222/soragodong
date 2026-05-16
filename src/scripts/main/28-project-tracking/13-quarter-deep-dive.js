@@ -72,12 +72,12 @@ function renderQuarterlyDeepDive(review) {
   const trackerTop = (s.trackerStats || [])[0];
   const trackerCard = trackerTop
     ? `<div class="dd-card">
-         <div class="dd-card-label">📊 추적 항목</div>
+         <div class="dd-card-label">📊 트래커</div>
          <div class="dd-card-value-text">${escapeHtml(trackerTop.title)}</div>
          <div class="dd-card-sub">${trackerTop.first ?? '?'} → ${trackerTop.last ?? '?'}${trackerTop.unit || ''} (${trackerTop.count}회)</div>
        </div>`
     : `<div class="dd-card dd-card-empty">
-         <div class="dd-card-label">📊 추적 항목</div>
+         <div class="dd-card-label">📊 트래커</div>
          <div class="dd-card-empty-msg">기록 X</div>
        </div>`;
 
@@ -187,7 +187,7 @@ function renderArchiveReviews() {
       : cat === 'monthly' ? '아직 월간 리뷰 없어.<br>매월 1주차 자동.'
       : cat === 'quarterly' ? '아직 계절 리뷰 없어.<br>매분기 1주차 자동.'
       : cat === 'annual' ? '아직 연간 리뷰 없어.<br>한 해 분기 4개 모두 채우면 자동.'
-      : '아직 리뷰가 없어.<br>주말 / 매월 1주차 / 매분기 1주차에<br>자동으로 정리돼.';
+      : '아직 리뷰가 없어요.<br>매주 일요일 / 매월 첫 날 / 매년 첫 날에<br>자동으로 정리됩니다.';
     container.innerHTML = chipHtml + `<div class="timeline-empty"><div class="icon">🌙</div>${emptyMsg}</div>`;
     return;
   }

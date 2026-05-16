@@ -132,12 +132,7 @@ function renderModel() {
     // 사용자 요청 2026-04-29 (Q2): 모델 비어있어도 더 깊은 나 입력은 시작 가능 — Q2 섹션 같이 노출.
     container.innerHTML = guestNudgeHtml + timeCardHtml + `<div class="model-empty">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
-      <div style="font-size:14px; color:var(--text); margin-bottom:10px;">아직은 백지야.</div>
-      <div style="margin-bottom:14px;">그게 맞는 시작이야.<br>며칠 같이 지내자 ✦</div>
-      <div style="font-size:11px; color:var(--text-soft); margin-top:18px; line-height:1.7;">
-        대화 한 줄, 체크인 하나씩 쌓일 때마다<br>
-        네 모습이 천천히 보이기 시작해.
-      </div>
+      <div style="font-size:14px; color:var(--text); margin-bottom:10px;">아직은 백지입니다.</div>
     </div>` + _renderUserDeepProfileSection();
     return;
   }
@@ -388,7 +383,7 @@ async function editDeepDevField(field, title) {
   const current = state.userDeepProfile.development[field] || '';
   const newText = await showInputModal({
     title,
-    message: '천천히 떠올리는 만큼, 자유롭게.',
+    message: '',
     defaultValue: current, multiline: true, maxLength: 800, okLabel: '저장'
   });
   if (newText === null) return;

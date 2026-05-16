@@ -121,7 +121,7 @@ function renderCheckinTrackers() {
       }
     });
   }
-  html += `<button class="checkin-tracker-add" onclick="addNewTracker()">✦ 추적 항목 추가</button>`;
+  html += `<button class="checkin-tracker-add" onclick="addNewTracker()">✦ 트래커 추가</button>`;
   container.innerHTML = html;
 }
 

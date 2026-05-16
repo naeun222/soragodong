@@ -106,7 +106,6 @@ async function testSeedV4Data() {
     };
     if (isPeriodDay && cycleDay <= 2) e.modes.period = true;
     if (isExamWeek && i % 4 === 0) e.modes.exam = true;
-    if (vit <= 2 && i % 5 === 0) e.modes.drained = true;
     // V4-fix: 추가 모드 다양화 (5 모드 시뮬 — travel/sick/rest)
     if (i % 60 === 5) e.modes.travel = true;       // 2달에 한 번 여행
     if (i % 45 === 12) e.modes.sick = true;        // 1.5달에 한 번 아픔

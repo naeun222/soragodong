@@ -95,7 +95,7 @@ async function saveMsgAsPearl(idx) {
   }));
   let category = await showOptionsModal({
     title: '어떤 진주? 💎',
-    message: '카테고리 골라.',
+    message: '',
     options
   });
   if (!category) return;

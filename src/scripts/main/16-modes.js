@@ -10,14 +10,6 @@ function toggleMode(mode) {
   } else if (mode === 'period' && !state.modes.period) {
     state.periodStart = null;
   }
-  // 방전 모드는 SOS 트리거 전용 — 활성 상태로 저장하지 않음
-  if (mode === 'drained' && state.modes.drained) {
-    state.modes.drained = false;
-    saveState();
-    renderModes();
-    triggerSOS();
-    return;
-  }
   saveState();
   renderModes();
 }
@@ -55,7 +47,7 @@ function prefillCheckinFromEntry() {
   if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart || entry.music || entry.photo)) {
     // 오늘 체크인 안 함 — 새로 작성 모드
     if (submitBtn) submitBtn.textContent = '기록 완료 ✦';
-    if (subtitle) subtitle.textContent = '오늘 네 컨디션 한 번 살펴보자.';
+    if (subtitle) subtitle.textContent = '';
     renderCheckinMusicSlot();
     if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
     // 사용자 명시 2026-05-06: Extra 접힘 + submit 상태 reset (신규 작성)

@@ -94,7 +94,6 @@
         <div class="input-label">
           <span id="dailyQuestionIcon">💬</span>
           <span id="dailyQuestionLabel">오늘의 질문</span>
-          <span class="optional">(빈칸 OK · 한 줄도 OK)</span>
         </div>
         <div id="dailyQuestionText" style="font-size:14px; line-height:1.7; color:var(--text); padding:14px; background:linear-gradient(135deg, rgba(139,126,196,0.08), rgba(201,169,110,0.05)); border:1px solid rgba(139,126,196,0.2); border-radius:14px; margin-bottom:10px; min-height:50px;"></div>
         <textarea id="checkinNote" placeholder="떠오르는 대로. 한 단어도 좋고, 한 문장도 좋아." rows="3"></textarea>
@@ -110,7 +109,6 @@
       </button>
 
       <div id="checkinExtraGroup" class="checkin-extra-group" style="display:none;">
-        <div class="checkin-extra-hint">채울수록 고동이가 볼 수 있는 게 많아져. ◆</div>
 
         <!-- Mode (moved into Extra) -->
         <div class="input-group">
@@ -121,7 +119,6 @@
             <div class="mode-chip" data-mode="sick" onclick="toggleMode('sick')">🤒 아픔</div>
             <div class="mode-chip" data-mode="rest" onclick="toggleMode('rest')">🏖 휴식</div>
             <div class="mode-chip" data-mode="period" onclick="toggleMode('period')">🩸 월경</div>
-            <div class="mode-chip mode-sos" data-mode="drained" onclick="toggleMode('drained')">🪫 방전</div>
           </div>
         </div>
 
@@ -205,7 +202,7 @@
         <!-- 사용자 명시 2026-05-06 ultrathink: 추적 항목 default 접힘 (details). 펼침 시 trackers + 추가 버튼. -->
         <details class="module-row checkin-trackers-collapse">
           <summary class="module-label" style="cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
-            <span>📊 추적 항목 (선택)</span>
+            <span>📊 트래커 (선택)</span>
             <span class="ctc-chevron" style="font-size:11px; color:var(--text-dim);">▸</span>
           </summary>
           <div id="checkinTrackersContainer"></div>

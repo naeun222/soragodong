@@ -34,17 +34,6 @@ async function testForceMonthlyReview() {
   showToast('✅ 월간 리뷰 생성됨 (도서관 → 마법·리뷰 → 🌙 리뷰 모음)');
 }
 
-// drained 모드 active 강제
-function testForceDrainedMode() {
-  if (!state.modes) state.modes = {};
-  state.modes.drained = true;
-  state.modeActiveSince = new Date().toISOString();
-  saveState({ force: true });
-  if (typeof renderHome === 'function') renderHome();
-  if (typeof renderShellBar === 'function') renderShellBar();
-  showToast('🪫 방전 모드 ON — 홈/응답 톤 변화 확인. 다시 OFF는 체크인에서.');
-}
-
 // 마법고동 active 결정 진입
 function testForceDecisionRoom() {
   const active = (state.decisions || []).find(d => d.status === 'active');

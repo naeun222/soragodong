@@ -145,11 +145,7 @@ function _restoreSimTutorialMarkersFromSession() {
 // 마무리 멘트 — 모든 sim 튜토 공통.
 function _simCoachmarkClosing() {
   const body = `
-    <div class="v8-coach-title">시뮬 끝 — 본 데이터로 돌아갈게 🐚</div>
-    <div class="v8-coach-text">
-      잠깐 화면 깜빡 — testerMode OFF 라 새로고침.<br>
-      <span class="v8-coach-text-soft">너의 진짜 데이터는 그대로 ✦</span>
-    </div>
+    <div class="v8-coach-title">시뮬 끝</div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
 }
@@ -295,9 +291,8 @@ function _insightsCoachmarkIntro() {
   const body = `
     <div class="v8-coach-title">✨ 네 안에서 떠오른 통찰</div>
     <div class="v8-coach-text">
-      대화에서 스크랩한 깨달음 / 직접 적은 메모 / 숙고한 결론 — 세 개가 여기에 모여.<br><br>
-      <b>🔮 AI 인사이트 발견</b>: 체크인이 7일 이상 쌓이면 네가 어떤 패턴을 가지고 있는지 고동이가 파악해줘.<br>
-      <span class="v8-coach-text-soft">탭해서 한 번 구경해봐 ✦</span>
+      대화에서 스크랩한 내용들이 이곳에 모입니다.<br><br>
+      <b>🔮 AI 인사이트 발견</b>: 체크인이 7일 이상 쌓이면 인사이트가 발견됩니다.
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
@@ -317,9 +312,8 @@ function _insightsCoachmarkAiExample() {
   const body = `
     <div class="v8-coach-title">🔮 AI 인사이트 예시</div>
     <div class="v8-coach-text">
-      이런 걸 고동이가 발견해줘 ✦<br>
-      <b>"엄마 통화 후 이튿날 mood 평균 +0.8"</b><br>
-      <span class="v8-coach-text-soft">— 너가 못 봤던 너의 패턴.</span>
+      이런 걸 고동이가 발견합니다.<br>
+      <b>"엄마 통화 후 이튿날 mood 평균 +0.8"</b>
     </div>
   `;
   return _v8ShowCoachmark({
@@ -531,7 +525,7 @@ function _reflectionCoachmarkWhen() {
       · "내가 이 일을 진정으로 원하는 게 맞는지"<br>
       · "지금 이 관계에서 나는 어떤 사람이 되고 있는지"<br>
       · "정말 두려워하는 건 뭘까"<br>
-      <span class="v8-coach-text-soft">하나만 안고 며칠/몇 주 살아봐. 결론은 네가 직접 적어 ✦</span>
+      <span class="v8-coach-text-soft">결론을 내릴 수 있게 도와줍니다.</span>
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
@@ -540,9 +534,9 @@ function _reflectionCoachmarkWhen() {
 function _reflectionCoachmarkTry() {
   // 옛 reflection_try — 카드 가리킴.
   const body = `
-    <div class="v8-coach-title">예시 미리 깔아뒀어</div>
+    <div class="v8-coach-title">카드를 한 번 눌러보세요.</div>
     <div class="v8-coach-text">
-      카드 한 번 눌러봐 — 그 질문 안에서 같이 깊이 들여다보자.
+      예시를 함께 봅시다.
     </div>
   `;
   return _v8ShowCoachmark({
@@ -558,7 +552,7 @@ function _reflectionCoachmarkFromChat() {
   const body = `
     <div class="v8-coach-title">🌊 대화에서 스크랩</div>
     <div class="v8-coach-text">
-      대화 탭에서 <b>소라고동 메시지를 스크랩</b>해서 생각해볼 만한 내용은 <b>숙고 질문으로 보낼 수 있어</b>.<br>
+      대화 탭에서 <b>소라고동 메시지를 스크랩</b>해서 생각해볼 만한 내용은 <b>숙고 질문으로 보낼 수 있습니다</b>.<br>
       <span class="v8-coach-text-soft">메시지 우상단 ⋮ → "🌊 숙고 질문으로 보내기"</span>
     </div>
   `;

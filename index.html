@@ -9324,6 +9324,9 @@
   .pearl-music-card { padding: 0; background: transparent; border: none; }
   /* V4-fix v3 (사용자 버그 보고): 체크인 사진 슬롯 — 고정 크기 정사각 (음악 stretch에 휘둘리지 않게) */
   .checkin-mp-row #checkinPhotoSlot { display: flex; }
+  /* V4 (사용자 명시 2026-05-16): 체크인 음악 placeholder 세로 길이 = 사진 칸 90px 동일. */
+  .checkin-mp-row #checkinMusicSlot { display: flex; }
+  .checkin-mp-row #checkinMusicSlot .music-add-btn { height: 90px; padding: 0 14px; }
   .checkin-photo-card {
     position: relative;
     width: 90px;
@@ -12832,7 +12835,6 @@
         <div class="input-label">
           <span id="dailyQuestionIcon">💬</span>
           <span id="dailyQuestionLabel">오늘의 질문</span>
-          <span class="optional">(빈칸 OK · 한 줄도 OK)</span>
         </div>
         <div id="dailyQuestionText" style="font-size:14px; line-height:1.7; color:var(--text); padding:14px; background:linear-gradient(135deg, rgba(139,126,196,0.08), rgba(201,169,110,0.05)); border:1px solid rgba(139,126,196,0.2); border-radius:14px; margin-bottom:10px; min-height:50px;"></div>
         <textarea id="checkinNote" placeholder="떠오르는 대로. 한 단어도 좋고, 한 문장도 좋아." rows="3"></textarea>
@@ -12848,7 +12850,6 @@
       </button>
 
       <div id="checkinExtraGroup" class="checkin-extra-group" style="display:none;">
-        <div class="checkin-extra-hint">채울수록 고동이가 볼 수 있는 게 많아져. ◆</div>
 
         <!-- Mode (moved into Extra) -->
         <div class="input-group">
@@ -12859,7 +12860,6 @@
             <div class="mode-chip" data-mode="sick" onclick="toggleMode('sick')">🤒 아픔</div>
             <div class="mode-chip" data-mode="rest" onclick="toggleMode('rest')">🏖 휴식</div>
             <div class="mode-chip" data-mode="period" onclick="toggleMode('period')">🩸 월경</div>
-            <div class="mode-chip mode-sos" data-mode="drained" onclick="toggleMode('drained')">🪫 방전</div>
           </div>
         </div>
 
@@ -12943,7 +12943,7 @@
         <!-- 사용자 명시 2026-05-06 ultrathink: 추적 항목 default 접힘 (details). 펼침 시 trackers + 추가 버튼. -->
         <details class="module-row checkin-trackers-collapse">
           <summary class="module-label" style="cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
-            <span>📊 추적 항목 (선택)</span>
+            <span>📊 트래커 (선택)</span>
             <span class="ctc-chevron" style="font-size:11px; color:var(--text-dim);">▸</span>
           </summary>
           <div id="checkinTrackersContainer"></div>
@@ -22879,11 +22879,7 @@ function _pearlCoachmarkAddBtn() {
 
 function _pearlCoachmarkClosing() {
   const body = `
-    <div class="v8-coach-title">시뮬 끝 — 본 데이터로 돌아갈게 🐚</div>
-    <div class="v8-coach-text">
-      잠깐 화면 깜빡 — testerMode OFF 라 새로고침.<br>
-      <span class="v8-coach-text-soft">너의 진짜 진주는 그대로 ✦</span>
-    </div>
+    <div class="v8-coach-title">시뮬 끝</div>
   `;
   return _v8ShowCoachmark({
     body,
@@ -23038,11 +23034,7 @@ function _restoreSimTutorialMarkersFromSession() {
 // 마무리 멘트 — 모든 sim 튜토 공통.
 function _simCoachmarkClosing() {
   const body = `
-    <div class="v8-coach-title">시뮬 끝 — 본 데이터로 돌아갈게 🐚</div>
-    <div class="v8-coach-text">
-      잠깐 화면 깜빡 — testerMode OFF 라 새로고침.<br>
-      <span class="v8-coach-text-soft">너의 진짜 데이터는 그대로 ✦</span>
-    </div>
+    <div class="v8-coach-title">시뮬 끝</div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
 }
@@ -23188,9 +23180,8 @@ function _insightsCoachmarkIntro() {
   const body = `
     <div class="v8-coach-title">✨ 네 안에서 떠오른 통찰</div>
     <div class="v8-coach-text">
-      대화에서 스크랩한 깨달음 / 직접 적은 메모 / 숙고한 결론 — 세 개가 여기에 모여.<br><br>
-      <b>🔮 AI 인사이트 발견</b>: 체크인이 7일 이상 쌓이면 네가 어떤 패턴을 가지고 있는지 고동이가 파악해줘.<br>
-      <span class="v8-coach-text-soft">탭해서 한 번 구경해봐 ✦</span>
+      대화에서 스크랩한 내용들이 이곳에 모입니다.<br><br>
+      <b>🔮 AI 인사이트 발견</b>: 체크인이 7일 이상 쌓이면 인사이트가 발견됩니다.
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
@@ -23210,9 +23201,8 @@ function _insightsCoachmarkAiExample() {
   const body = `
     <div class="v8-coach-title">🔮 AI 인사이트 예시</div>
     <div class="v8-coach-text">
-      이런 걸 고동이가 발견해줘 ✦<br>
-      <b>"엄마 통화 후 이튿날 mood 평균 +0.8"</b><br>
-      <span class="v8-coach-text-soft">— 너가 못 봤던 너의 패턴.</span>
+      이런 걸 고동이가 발견합니다.<br>
+      <b>"엄마 통화 후 이튿날 mood 평균 +0.8"</b>
     </div>
   `;
   return _v8ShowCoachmark({
@@ -23424,7 +23414,7 @@ function _reflectionCoachmarkWhen() {
       · "내가 이 일을 진정으로 원하는 게 맞는지"<br>
       · "지금 이 관계에서 나는 어떤 사람이 되고 있는지"<br>
       · "정말 두려워하는 건 뭘까"<br>
-      <span class="v8-coach-text-soft">하나만 안고 며칠/몇 주 살아봐. 결론은 네가 직접 적어 ✦</span>
+      <span class="v8-coach-text-soft">결론을 내릴 수 있게 도와줍니다.</span>
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
@@ -23433,9 +23423,9 @@ function _reflectionCoachmarkWhen() {
 function _reflectionCoachmarkTry() {
   // 옛 reflection_try — 카드 가리킴.
   const body = `
-    <div class="v8-coach-title">예시 미리 깔아뒀어</div>
+    <div class="v8-coach-title">카드를 한 번 눌러보세요.</div>
     <div class="v8-coach-text">
-      카드 한 번 눌러봐 — 그 질문 안에서 같이 깊이 들여다보자.
+      예시를 함께 봅시다.
     </div>
   `;
   return _v8ShowCoachmark({
@@ -23451,7 +23441,7 @@ function _reflectionCoachmarkFromChat() {
   const body = `
     <div class="v8-coach-title">🌊 대화에서 스크랩</div>
     <div class="v8-coach-text">
-      대화 탭에서 <b>소라고동 메시지를 스크랩</b>해서 생각해볼 만한 내용은 <b>숙고 질문으로 보낼 수 있어</b>.<br>
+      대화 탭에서 <b>소라고동 메시지를 스크랩</b>해서 생각해볼 만한 내용은 <b>숙고 질문으로 보낼 수 있습니다</b>.<br>
       <span class="v8-coach-text-soft">메시지 우상단 ⋮ → "🌊 숙고 질문으로 보내기"</span>
     </div>
   `;
@@ -32006,7 +31996,7 @@ function renderPoolQuestion() {
   const labelEl = document.getElementById('dailyQuestionLabel');
   const textEl = document.getElementById('dailyQuestionText');
   if (iconEl) iconEl.textContent = CATEGORY_ICONS[q.cat] || '💬';
-  if (labelEl) labelEl.textContent = `오늘의 질문 · ${CATEGORY_LABELS[q.cat] || ''}`;
+  if (labelEl) labelEl.textContent = '오늘의 질문';
   if (textEl) textEl.textContent = q.text;
   recordQuestionShown(q.id);
 }
@@ -32022,7 +32012,7 @@ function rerollDailyQuestion() {
   const labelEl = document.getElementById('dailyQuestionLabel');
   const textEl = document.getElementById('dailyQuestionText');
   if (iconEl) iconEl.textContent = CATEGORY_ICONS[q.cat] || '💬';
-  if (labelEl) labelEl.textContent = `오늘의 질문 · ${CATEGORY_LABELS[q.cat] || ''}`;
+  if (labelEl) labelEl.textContent = '오늘의 질문';
   if (textEl) textEl.textContent = q.text;
   recordQuestionShown(q.id);
   showToast('다른 질문 ✦');
@@ -36005,14 +35995,6 @@ function toggleMode(mode) {
   } else if (mode === 'period' && !state.modes.period) {
     state.periodStart = null;
   }
-  // 방전 모드는 SOS 트리거 전용 — 활성 상태로 저장하지 않음
-  if (mode === 'drained' && state.modes.drained) {
-    state.modes.drained = false;
-    saveState();
-    renderModes();
-    triggerSOS();
-    return;
-  }
   saveState();
   renderModes();
 }
@@ -36050,7 +36032,7 @@ function prefillCheckinFromEntry() {
   if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart || entry.music || entry.photo)) {
     // 오늘 체크인 안 함 — 새로 작성 모드
     if (submitBtn) submitBtn.textContent = '기록 완료 ✦';
-    if (subtitle) subtitle.textContent = '오늘 네 컨디션 한 번 살펴보자.';
+    if (subtitle) subtitle.textContent = '';
     renderCheckinMusicSlot();
     if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
     // 사용자 명시 2026-05-06: Extra 접힘 + submit 상태 reset (신규 작성)
@@ -36651,12 +36633,7 @@ function renderModel() {
     // 사용자 요청 2026-04-29 (Q2): 모델 비어있어도 더 깊은 나 입력은 시작 가능 — Q2 섹션 같이 노출.
     container.innerHTML = guestNudgeHtml + timeCardHtml + `<div class="model-empty">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
-      <div style="font-size:14px; color:var(--text); margin-bottom:10px;">아직은 백지야.</div>
-      <div style="margin-bottom:14px;">그게 맞는 시작이야.<br>며칠 같이 지내자 ✦</div>
-      <div style="font-size:11px; color:var(--text-soft); margin-top:18px; line-height:1.7;">
-        대화 한 줄, 체크인 하나씩 쌓일 때마다<br>
-        네 모습이 천천히 보이기 시작해.
-      </div>
+      <div style="font-size:14px; color:var(--text); margin-bottom:10px;">아직은 백지입니다.</div>
     </div>` + _renderUserDeepProfileSection();
     return;
   }
@@ -36907,7 +36884,7 @@ async function editDeepDevField(field, title) {
   const current = state.userDeepProfile.development[field] || '';
   const newText = await showInputModal({
     title,
-    message: '천천히 떠올리는 만큼, 자유롭게.',
+    message: '',
     defaultValue: current, multiline: true, maxLength: 800, okLabel: '저장'
   });
   if (newText === null) return;
@@ -39051,6 +39028,8 @@ function updateReflectionChatModeBtn() {
 function showPerRoomOpusFirstClickModal() {
   if (document.getElementById('perRoomOpusFirstClickOverlay')) return;
   if (state?.preferences?._perRoomOpusToggleSeen) return;
+  // V4 (사용자 명시 2026-05-16 ultrathink): Premium 만 안내. 다른 플랜은 Opus 사용 불가 → 안내 무의미.
+  if (typeof canUseOpus === 'function' && !canUseOpus()) return;
   const overlay = document.createElement('div');
   overlay.className = 'input-modal-overlay show';
   overlay.id = 'perRoomOpusFirstClickOverlay';
@@ -40776,7 +40755,7 @@ async function saveMsgAsPearl(idx) {
   }));
   let category = await showOptionsModal({
     title: '어떤 진주? 💎',
-    message: '카테고리 골라.',
+    message: '',
     options
   });
   if (!category) return;
@@ -44038,7 +44017,7 @@ function _heroEmptyHtml() {
     <div class="library-hero hero-empty" onclick="addPearl()">
       <div class="hero-label">💎 첫 진주</div>
       <div class="hero-empty-body">
-        <div class="hero-empty-title">살아있다 느낀 순간을 모아봐</div>
+        <div class="hero-empty-title">살아있다 느낀 순간을 모아봐요</div>
         <div class="hero-empty-sub">좋았던 곡 · 한 끼 · 풍경 · 사람 — 한 줄로</div>
         <div class="hero-empty-cta">+ 첫 진주 추가</div>
       </div>
@@ -45083,8 +45062,8 @@ function renderLensStrategies() {
     html += `
       <div class="ys-empty-card">
         <div class="ys-empty-icon">🌿</div>
-        <div class="ys-empty-title">양생방 — 아직 비어있어</div>
-        <div class="ys-empty-body">여기는 네 전략들이 자라는 곳.<br>첫 전략은 대화에서 4단 분석을 받고 <em>✦ 해볼게</em> 누르면 자라.</div>
+        <div class="ys-empty-title">양생방 - 아직 비어있어요.</div>
+        <div class="ys-empty-body">여기는 전략들이 자라는 곳.</div>
         <button class="ys-empty-cta" onclick="showYangsaengGrowthDiagram()">어떻게 자라는지 궁금해</button>
       </div>
     `;
@@ -45892,8 +45871,8 @@ function renderLensArchive() {
     } else {
       html += `<div class="archive-empty">
         <div class="icon">✦</div>
-        <div style="font-size:14px; color:var(--text); margin-bottom:8px;">아직 저장된 깨달음 없어</div>
-        대화 응답 아래 <b>"✦ 깨달음으로"</b> 또는 + 메뉴의 <b>✎ 메모</b>로 모아.
+        <div style="font-size:14px; color:var(--text); margin-bottom:8px;">아직은 저장된 깨달음이 없어요</div>
+        대화 응답 아래 <b>"✦ 깨달음으로"</b> 또는 + 메뉴의 <b>✎ 메모</b>로 모을 수 있습니다.
       </div>`;
     }
   } else {
@@ -46145,7 +46124,7 @@ function renderLensInsights() {
     html += `<div class="insights-empty">
       <div class="icon">🔮</div>
       <div style="font-size:14px; color:var(--text); margin-bottom:8px;">아직 모이는 중 ✦</div>
-      체크인이 7일쯤 쌓이면<br>자동으로 인사이트 찾아줄게.
+      체크인이 7일쯤 쌓이면<br>자동으로 인사이트 찾아드릴게요.
     </div>`;
   } else {
     html += insights.map(insight => {
@@ -48049,7 +48028,6 @@ async function testSeedV4Data() {
     };
     if (isPeriodDay && cycleDay <= 2) e.modes.period = true;
     if (isExamWeek && i % 4 === 0) e.modes.exam = true;
-    if (vit <= 2 && i % 5 === 0) e.modes.drained = true;
     // V4-fix: 추가 모드 다양화 (5 모드 시뮬 — travel/sick/rest)
     if (i % 60 === 5) e.modes.travel = true;       // 2달에 한 번 여행
     if (i % 45 === 12) e.modes.sick = true;        // 1.5달에 한 번 아픔
@@ -49551,17 +49529,6 @@ async function testForceMonthlyReview() {
   showToast('✅ 월간 리뷰 생성됨 (도서관 → 마법·리뷰 → 🌙 리뷰 모음)');
 }
 
-// drained 모드 active 강제
-function testForceDrainedMode() {
-  if (!state.modes) state.modes = {};
-  state.modes.drained = true;
-  state.modeActiveSince = new Date().toISOString();
-  saveState({ force: true });
-  if (typeof renderHome === 'function') renderHome();
-  if (typeof renderShellBar === 'function') renderShellBar();
-  showToast('🪫 방전 모드 ON — 홈/응답 톤 변화 확인. 다시 OFF는 체크인에서.');
-}
-
 // 마법고동 active 결정 진입
 function testForceDecisionRoom() {
   const active = (state.decisions || []).find(d => d.status === 'active');
@@ -50254,13 +50221,13 @@ function renderProjects() {
   // 사용자 명시 2026-05-06 (추가): + 추가 버튼 제거 — 추적 항목 추가는 체크인 화면 (.checkin-tracker-add) 만.
   let html = `<details class="project-section">
     <summary class="project-section-header">
-      <span class="project-section-title">추적 항목${visible.length > 0 ? ` <span style="font-size:11px; color:var(--text-soft); font-weight:500; margin-left:4px;">(${visible.length})</span>` : ''}</span>
+      <span class="project-section-title">트래커${visible.length > 0 ? ` <span style="font-size:11px; color:var(--text-soft); font-weight:500; margin-left:4px;">(${visible.length})</span>` : ''}</span>
     </summary>
     <div class="project-section-body">`;
   if (visible.length === 0) {
     html += `<div style="font-size:12px; color:var(--text-dim); padding:10px 0 4px; line-height:1.7;">
-      추적 중인 항목 없어.<br>
-      체크인 화면 "📊 추적 항목"에서 추가하면 매일 기록 + 그래프.
+      추적 중인 트래커 없어요.<br>
+      체크인 화면 "📊 트래커"에서 추가하면 매일 기록 + 그래프.
     </div>`;
   } else {
     visible.forEach(p => { html += renderProjectCard(p); });
@@ -50724,7 +50691,7 @@ function renderCheckinTrackers() {
       }
     });
   }
-  html += `<button class="checkin-tracker-add" onclick="addNewTracker()">✦ 추적 항목 추가</button>`;
+  html += `<button class="checkin-tracker-add" onclick="addNewTracker()">✦ 트래커 추가</button>`;
   container.innerHTML = html;
 }
 
@@ -52816,12 +52783,12 @@ function renderQuarterlyDeepDive(review) {
   const trackerTop = (s.trackerStats || [])[0];
   const trackerCard = trackerTop
     ? `<div class="dd-card">
-         <div class="dd-card-label">📊 추적 항목</div>
+         <div class="dd-card-label">📊 트래커</div>
          <div class="dd-card-value-text">${escapeHtml(trackerTop.title)}</div>
          <div class="dd-card-sub">${trackerTop.first ?? '?'} → ${trackerTop.last ?? '?'}${trackerTop.unit || ''} (${trackerTop.count}회)</div>
        </div>`
     : `<div class="dd-card dd-card-empty">
-         <div class="dd-card-label">📊 추적 항목</div>
+         <div class="dd-card-label">📊 트래커</div>
          <div class="dd-card-empty-msg">기록 X</div>
        </div>`;
 
@@ -52931,7 +52898,7 @@ function renderArchiveReviews() {
       : cat === 'monthly' ? '아직 월간 리뷰 없어.<br>매월 1주차 자동.'
       : cat === 'quarterly' ? '아직 계절 리뷰 없어.<br>매분기 1주차 자동.'
       : cat === 'annual' ? '아직 연간 리뷰 없어.<br>한 해 분기 4개 모두 채우면 자동.'
-      : '아직 리뷰가 없어.<br>주말 / 매월 1주차 / 매분기 1주차에<br>자동으로 정리돼.';
+      : '아직 리뷰가 없어요.<br>매주 일요일 / 매월 첫 날 / 매년 첫 날에<br>자동으로 정리됩니다.';
     container.innerHTML = chipHtml + `<div class="timeline-empty"><div class="icon">🌙</div>${emptyMsg}</div>`;
     return;
   }
@@ -53459,12 +53426,7 @@ function renderLensPearls() {
   }
 
   if (pearls.length === 0) {
-    html += `<div class="pearls-empty">
-      <div style="font-size:11px; color:var(--text-dim); line-height:1.7; margin-top:8px;">
-        "좋다" 떠올린 거 → 진주.<br>
-        <span style="opacity:0.7;">대화에서 흘린 취향도 나중에 자동으로 ✦</span>
-      </div>
-    </div>`;
+    html += `<div class="pearls-empty"></div>`;
   } else if (_libView === 'grid') {
     // V4-fix v2 (사용자 보고): Pinterest masonry — 다양 사이즈 + 미세 회전 + 날짜 + 음악 placeholder
     html += `<div class="pearls-pinterest">`;
@@ -54005,7 +53967,7 @@ async function addPearl() {
     }));
     const picked = await showOptionsModal({
       title: '어떤 진주? 💎',
-      message: '카테고리 골라.',
+      message: '',
       options
     });
     if (!picked) return;
