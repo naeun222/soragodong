@@ -23241,9 +23241,8 @@ function _diaryCoachmarkChapterAuto() {
   const body = `
     <div class="v8-coach-title">✦ 토픽 자동 분류</div>
     <div class="v8-coach-text">
-      ✓ 마무리 누르거나 5시간 뒤엔 (한 번 자고 일어남)<br>
-      <b>8 카테고리</b> (일기/일상/고민/감정/기억/할 일/아이디어/관계) 중 하나로 자동 분류.<br>
-      <span class="v8-coach-text-soft">새벽 4시 일괄 정리 (신규는 즉시) ✦</span>
+      ✓ 마무리 누르거나 마지막 대화 후 5시간이 지나면,<br>
+      대화 내용을 정리해서 '토픽'으로 정리됩니다. ✦
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'top' });
