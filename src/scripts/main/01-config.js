@@ -10,10 +10,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const TURNSTILE_SITE_KEY = '0x4AAAAAADJh3vgSfSXeGNkj';
 
 // V4 (사용자 명시 2026-05-17): Hook 시스템 Phase B — Web Push VAPID public key.
-//   USER_TODO 참조: `npx web-push generate-vapid-keys` 로 생성. PRIVATE 는 Cloudflare env (VAPID_PRIVATE_KEY) 에.
+//   USER_TODO #15-1/15-2 참조. PRIVATE 는 Cloudflare env (VAPID_PRIVATE_KEY).
 //   PUBLIC 만 frontend 에 박힘 (PushManager.subscribe applicationServerKey 형식).
-//   미설정 시 빈 문자열 — push subscription 시도 silent skip (frontend dead code OK).
-window._VAPID_PUBLIC_KEY = '';
+window._VAPID_PUBLIC_KEY = 'BFOY9MMRWPhPQBfm1GTj-pWCo8VIaulXPIVrqiufvZDdIv2T0K1g5PA4tPyNO7a8N27CCm0VUEsWgyihCj-r09k';
 
 // 사용자 명시 2026-05-06: PortOne V2 채널 키 + Store ID. 공개 OK — frontend 결제창 호출 시 사용.
 // REST API Key (V2) + Webhook Secret 은 Cloudflare env (PORTONE_API_KEY_V2 / PORTONE_WEBHOOK_SECRET) 에 별도.
