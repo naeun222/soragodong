@@ -106,7 +106,7 @@ function _renderGuestNudgeBanner() {
     <button class="guest-nudge-close" onclick="_dismissGuestNudge()" aria-label="닫기">✕</button>
     <div class="guest-nudge-icon">🌊</div>
     <div class="guest-nudge-title">여기까지 모은 거, 안전하게 챙기자</div>
-    <div class="guest-nudge-sub">지금 데이터는 이 기기에만 있어 — 정리되면 사라져. 로그인하면 종단간 암호화로 영구 보관.</div>
+    <div class="guest-nudge-sub">지금 데이터는 이 기기에만 있어요. — 브라우저 정리되면 사라집니다. 로그인하면 종단간 암호화로 영구 보관.</div>
     <button class="guest-nudge-cta" onclick="showGuestConversionModal({reason:'manual'})">로그인하기 →</button>
   </div>`;
 }
