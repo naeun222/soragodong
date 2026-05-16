@@ -354,7 +354,7 @@ function _renderUserDeepProfileSection() {
       ${arrayRow('자신에 대한 신념', cb.aboutSelf, (s) => s, "editDeepCoreBeliefs('aboutSelf')", '\"나는 …\" 형태')}
       ${arrayRow('세상에 대한 신념', cb.aboutWorld, (s) => s, "editDeepCoreBeliefs('aboutWorld')", '\"세상은 …\" 형태')}
       ${arrayRow('미래에 대한 신념', cb.aboutFuture, (s) => s, "editDeepCoreBeliefs('aboutFuture')", '\"미래는 …\" 형태')}
-      ${arrayRow('정체성 keyword', sn.identityKeywords, (s) => s, "editDeepIdentityKeywords()", '예: 연구자, queer, 큰언니')}
+      ${arrayRow('정체성 keyword', sn.identityKeywords, (s) => s, "editDeepIdentityKeywords()", '예: 연구자, queer')}
     </div>
   </details>`;
 }
@@ -430,7 +430,7 @@ async function editDeepIdentityKeywords() {
   const current = (state.userDeepProfile.selfNarrative.identityKeywords || []).join(', ');
   const newText = await showInputModal({
     title: '정체성 keyword',
-    message: '콤마로 분리. 예: 연구자, queer, 큰언니, ADHD, 작가',
+    message: '콤마로 분리. 예: 연구자, queer, ADHD, 작가',
     defaultValue: current, maxLength: 500, okLabel: '저장'
   });
   if (newText === null) return;

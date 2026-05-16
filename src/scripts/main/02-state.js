@@ -425,7 +425,7 @@ const DEFAULT_STATE = {
         aboutFuture: []        // ["미래는 ..." 형태]
       },
       howWantToBeSeen: '',    // 어떻게 보이고 싶은지
-      identityKeywords: []     // 정체성 키워드 (예: queer, 연구자, 큰언니)
+      identityKeywords: []     // 정체성 키워드 (예: queer, 연구자)
     }
   },
 

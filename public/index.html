@@ -13612,7 +13612,7 @@
         </div>
         <div class="input-group">
           <div class="input-label">👤 내 프로필 <span class="settings-hint">— AI가 답변 시 참고</span></div>
-          <textarea id="profileInput" placeholder="예: ADHD/ADD 성향, 야행성, 내향형, 큰언니..." rows="3"></textarea>
+          <textarea id="profileInput" placeholder="예: ADHD/ADD 성향, 야행성, 내향형..." rows="3"></textarea>
         </div>
         <div class="settings-card-divider"></div>
         <div class="input-group">
@@ -14453,7 +14453,7 @@ const DEFAULT_STATE = {
         aboutFuture: []        // ["미래는 ..." 형태]
       },
       howWantToBeSeen: '',    // 어떻게 보이고 싶은지
-      identityKeywords: []     // 정체성 키워드 (예: queer, 연구자, 큰언니)
+      identityKeywords: []     // 정체성 키워드 (예: queer, 연구자)
     }
   },
 
@@ -37091,7 +37091,7 @@ function _renderUserDeepProfileSection() {
       ${arrayRow('자신에 대한 신념', cb.aboutSelf, (s) => s, "editDeepCoreBeliefs('aboutSelf')", '\"나는 …\" 형태')}
       ${arrayRow('세상에 대한 신념', cb.aboutWorld, (s) => s, "editDeepCoreBeliefs('aboutWorld')", '\"세상은 …\" 형태')}
       ${arrayRow('미래에 대한 신념', cb.aboutFuture, (s) => s, "editDeepCoreBeliefs('aboutFuture')", '\"미래는 …\" 형태')}
-      ${arrayRow('정체성 keyword', sn.identityKeywords, (s) => s, "editDeepIdentityKeywords()", '예: 연구자, queer, 큰언니')}
+      ${arrayRow('정체성 keyword', sn.identityKeywords, (s) => s, "editDeepIdentityKeywords()", '예: 연구자, queer')}
     </div>
   </details>`;
 }
@@ -37167,7 +37167,7 @@ async function editDeepIdentityKeywords() {
   const current = (state.userDeepProfile.selfNarrative.identityKeywords || []).join(', ');
   const newText = await showInputModal({
     title: '정체성 keyword',
-    message: '콤마로 분리. 예: 연구자, queer, 큰언니, ADHD, 작가',
+    message: '콤마로 분리. 예: 연구자, queer, ADHD, 작가',
     defaultValue: current, maxLength: 500, okLabel: '저장'
   });
   if (newText === null) return;
