@@ -417,5 +417,12 @@ async function init() {
   if (typeof maybeShowHookOnboarding === 'function') {
     setTimeout(() => { try { maybeShowHookOnboarding(); } catch (e) { console.warn('[hookOnb]', e); } }, 2200);
   }
+
+  // Hook 생성 — cooldown / cold-start gate / 풍부도 / askedHooks cooldown 다 통과 시 1회 fire.
+  //   (E2EE 호환: backend cron 대신 client 가 substrate 모아서 POST.)
+  //   온보딩 모달 보다 살짝 더 지연 — 사용자 시간 prompt 진행 중일 때 race 회피.
+  if (typeof maybeGenerateHook === 'function') {
+    setTimeout(() => { maybeGenerateHook().catch(e => console.warn('[hook]', e)); }, 5000);
+  }
 }
 
