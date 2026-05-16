@@ -246,36 +246,17 @@
         <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
       </div>
 
-      <!-- 메인 카드 = rotatingCardContainer. Hook OR 체크인 (사용자 명시: 체크인 = 옛 오늘의 너 자리). -->
+      <!-- 사용자 명시 2026-05-17: 회전카드 4-source — Hook / 체크인 / 오늘의 너 / 리뷰 링크. -->
       <div id="rotatingCardContainer"></div>
 
       <!-- 활성 미션 (소라의 부름) -->
       <div id="missionContainer"></div>
 
-      <!-- mainActionContainer (옛 체크인 자리) — 체크인이 rotatingCardContainer 로 이동, noop 보존 (compat). -->
-      <div id="mainActionContainer"></div>
+      <!-- 활성 숙고 (homeSmallCards / 리뷰 preview / change hint 카드 다 폐기 — 회전카드로 흡수). -->
+      <div id="reflectionContainer"></div>
 
-      <!-- 소형 카드 row (a/b + 활성 숙고). -->
-      <div class="home-small-cards" id="homeSmallCards">
-        <div id="homeReviewPreviewContainer"></div>
-        <div id="homeChangeHintContainer"></div>
-        <div id="reflectionContainer"></div>
-      </div>
-
-      <!-- 모래사장 mini -->
-      <div class="home-small-row">
-        <div class="home-small-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
-          <span class="pulse-dot" id="beachPulseDot" hidden></span>
-          <div class="hsc-icon">🐚</div>
-          <div class="hsc-text">
-            <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
-            <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- V4-1t: 🌟 오늘의 너 (진주 회전 카드) -->
-      <div id="libraryHero"></div>
+      <!-- noop containers (compat) -->
+      <div id="mainActionContainer" style="display:none"></div>
 
       <!-- 사용자 요청 2026-04-29: 5 카테고리 chip B 형식 (활성만 라벨 펼침), 토글은 검색바 우측 -->
       <div class="library-top-row">
@@ -307,6 +288,17 @@
       </div>
       <!-- 🧬 양생방 -->
       <div id="libYangsaeng" class="library-cat-view" style="display:none;">
+        <!-- 사용자 명시 2026-05-17: 모래사장 카드 양생방 top 으로 이동. -->
+        <div class="home-small-row yangsaeng-shell-row">
+          <div class="home-small-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
+            <span class="pulse-dot" id="beachPulseDot" hidden></span>
+            <div class="hsc-icon">🐚</div>
+            <div class="hsc-text">
+              <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
+              <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
+            </div>
+          </div>
+        </div>
         <div id="lensStrategies"></div>
       </div>
       <!-- ✨ 깨달음 -->
@@ -978,9 +970,9 @@
     </div>
   </div>
 
-  <!-- 사용자 명시 2026-05-17: 도서관 = default landing + 맨 왼쪽. 3 탭 (도서관/대화/나). -->
+  <!-- 사용자 명시 2026-05-17: archive 탭 라벨 = 홈 (data-screen 은 그대로 archive). 3 탭. -->
   <div class="bottom-nav">
-    <div class="nav-item active" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">📚</div><div class="nav-label">도서관</div></div>
+    <div class="nav-item active" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">🏠</div><div class="nav-label">홈</div></div>
     <div class="nav-item" data-screen="chat" onclick="showScreen('chat')"><div class="nav-icon">🐚</div><div class="nav-label">대화</div></div>
     <div class="nav-item" data-screen="model" onclick="showScreen('model')"><div class="nav-icon">🔮</div><div class="nav-label">나</div></div>
   </div>

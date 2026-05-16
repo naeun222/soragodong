@@ -141,11 +141,8 @@ async function init() {
   // 사용자 보고 2026-05-14 ultrathink: home 영역 critical render (회전 카드 / 체크인 카드 / 오늘 미션 / 마법고동) — localStorage cache 로 즉시 표시. cloud 도착 후 line 250- 의 render 흐름이 다시 호출 → 최신 갱신 (flicker 작음, 같은 카드 type 의 content 갱신).
   try {
     if (typeof renderRotatingCard === 'function') renderRotatingCard();
-    if (typeof renderMainAction === 'function') renderMainAction();
     if (typeof renderTodayMission === 'function') renderTodayMission();
-    // V4 (사용자 명시 2026-05-17 ultrathink): 신규 소형 카드 (a) 리뷰 미리보기 + (b) 자산 변화 hint.
-    if (typeof renderReviewPreview === 'function') renderReviewPreview();
-    if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
+    // (renderMainAction/renderReviewPreview/renderYesterdayChangeHint 폐기 — 회전카드 안 4-source 로 흡수)
   } catch (e) { console.warn('[init eager home render]', e); }
 
   // 사용자 요청 2026-04-28: 서버 시간 동기화 (디바이스 시계 잘못돼도 보정)

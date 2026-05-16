@@ -11698,6 +11698,62 @@
     opacity: 0.55;
   }
 
+  /* 사용자 명시 2026-05-17: 회전카드 4-source — 체크인/오늘의 너/리뷰 link 모두 동일 visual weight (44vh, 28/24 padding). */
+  #rotatingCardContainer > .action-card,
+  #rotatingCardContainer > .checkin-mini-line {
+    min-height: 44vh;
+    padding: 28px 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+  }
+  #rotatingCardContainer > .checkin-mini-line {
+    justify-content: center;
+    gap: 12px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  #rotatingCardContainer .oneul-card,
+  #rotatingCardContainer .review-link-card {
+    min-height: 44vh;
+    padding: 28px 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #rotatingCardContainer .oneul-card:active,
+  #rotatingCardContainer .review-link-card:active { background: var(--surface2); }
+  .rc-source-header {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    opacity: 0.85;
+  }
+  .oneul-cat {
+    font-size: 12px;
+    color: var(--text-dim);
+    opacity: 0.85;
+  }
+  .oneul-body {
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    font-family: 'Gowun Batang', serif;
+    flex: 1;
+    white-space: pre-wrap;
+  }
+  /* 양생방 top 모래사장 row — small-row CSS 재사용. 위쪽 마진만 살짝. */
+  .yangsaeng-shell-row { margin-bottom: 12px; }
+
   /* Hook 온보딩 모달 — Section 19.1 */
   .hook-onb-overlay {
     position: fixed; inset: 0;

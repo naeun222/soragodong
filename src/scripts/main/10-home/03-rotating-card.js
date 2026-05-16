@@ -1161,37 +1161,127 @@ function _rcGodongSvg(sourceId) {
 // =============================================================================
 // 렌더 — sessionOrder 기반 (한 화면 안 stable)
 // =============================================================================
-// 사용자 명시 2026-05-17 (안 C): 홈 = 도서관 통합. 메인 슬롯 = Hook 카드 OR 체크인 카드.
-//   다중 source 회전 (진주/시뮬/어제/리뷰) 폐기 — 체크인이 fallback 으로 단순화.
+// 사용자 명시 2026-05-17: 회전카드 4-source 통합 — Hook / 체크인 / 오늘의 너 / 리뷰 링크.
+//   체크인/리뷰 링크/오늘의 너 standalone 카드 폐기 — 모두 회전카드 안에서 swipe/arrow 로 전환.
 //   옛 source 함수 (_rcSource1~11) 본체 보존 (legacy).
+let _rcMultiSources = [];
+let _rcMultiIdx = 0;
+
 function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
-  _ensureRotatingCardState();
 
   try {
-    // 활성 Hook → Hook 카드 우선.
+    const sources = [];
+
+    // 1) Hook (active 시만, 첫 자리 priority)
     if (typeof pickHomeMainHook === 'function') {
-      const activeHook = pickHomeMainHook();
-      if (activeHook && typeof renderHookCard === 'function') {
-        container.innerHTML = renderHookCard(activeHook);
-        _rcSessionOrder = null;
-        _rcSessionIndex = 0;
-        return;
+      const h = pickHomeMainHook();
+      if (h && typeof renderHookCard === 'function') {
+        sources.push({ id: 'hook', html: renderHookCard(h) });
       }
     }
-    // Hook 없음 → 체크인 카드 (옛 '오늘의 너' 자리).
+    // 2) 체크인 (항상)
     if (typeof buildCheckinCardHtml === 'function') {
-      container.innerHTML = buildCheckinCardHtml();
-      _rcSessionOrder = null;
-      _rcSessionIndex = 0;
-      return;
+      sources.push({ id: 'checkin', html: buildCheckinCardHtml() });
     }
-    container.innerHTML = '';
+    // 3) 오늘의 너 (진주 큐레이션) — 진주 있을 때만
+    if (typeof buildOneulNeoCardHtml === 'function') {
+      const html = buildOneulNeoCardHtml();
+      if (html) sources.push({ id: 'oneul', html });
+    }
+    // 4) 리뷰 링크 — 최근 리뷰 있을 때만
+    if (typeof buildReviewLinkCardHtml === 'function') {
+      const html = buildReviewLinkCardHtml();
+      if (html) sources.push({ id: 'review', html });
+    }
+
+    _rcMultiSources = sources;
+    if (_rcMultiIdx >= sources.length) _rcMultiIdx = 0;
+    _renderMultiRotating();
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     container.innerHTML = '';
   }
+}
+
+function _renderMultiRotating() {
+  const container = document.getElementById('rotatingCardContainer');
+  if (!container) return;
+  if (!_rcMultiSources.length) { container.innerHTML = ''; return; }
+  const total = _rcMultiSources.length;
+  const cur = _rcMultiSources[_rcMultiIdx];
+  const dots = _rcMultiSources.map((s, i) =>
+    `<span class="rc-dot-i ${i === _rcMultiIdx ? 'is-active' : ''}"></span>`
+  ).join('');
+  const nav = total > 1 ? `
+    <div class="rc-arrow-row">
+      <button class="rc-arrow-btn rc-arrow-prev" type="button" onclick="event.stopPropagation(); _rcMultiCycle(-1)" aria-label="이전 카드">‹</button>
+      <span class="rc-indicator-mid">${dots}</span>
+      <button class="rc-arrow-btn rc-arrow-next" type="button" onclick="event.stopPropagation(); _rcMultiCycle(1)" aria-label="다음 카드">›</button>
+    </div>
+  ` : '';
+  container.innerHTML = cur.html + nav;
+}
+
+function _rcMultiCycle(delta) {
+  if (!_rcMultiSources.length) return;
+  const total = _rcMultiSources.length;
+  _rcMultiIdx = (_rcMultiIdx + delta + total) % total;
+  _renderMultiRotating();
+}
+
+// 오늘의 너 = 진주 큐레이션 카드 (4-source 회전 안 1개 source).
+function buildOneulNeoCardHtml() {
+  const pearls = (state.pearls || []).filter(p => p && !p._deleted && p.type !== 'dna_pearl' && p.content);
+  if (pearls.length === 0) return '';
+  const sorted = pearls.slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  const pearl = sorted[0];
+  const cat = pearl.category || '';
+  const content = (pearl.content || '').trim();
+  const preview = content.length > 120 ? content.slice(0, 120) + '…' : content;
+  const catLine = cat ? `<div class="oneul-cat">🔮 ${escapeHtml(cat)}</div>` : `<div class="oneul-cat">🔮</div>`;
+  return `
+    <div class="rotating-card oneul-card" onclick="enterLibraryPearlsFromRotating()">
+      <div class="rc-source-header">🌟 오늘의 너</div>
+      <div class="rc-body-tap">
+        ${catLine}
+        <div class="oneul-body">${escapeHtml(preview)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function enterLibraryPearlsFromRotating() {
+  if (typeof showScreen === 'function') showScreen('archive');
+  if (typeof switchLibraryCat === 'function') {
+    setTimeout(() => { try { switchLibraryCat('pearls'); } catch {} }, 30);
+  }
+}
+
+// 리뷰 링크 카드 (4-source 회전 안 1개 source).
+function buildReviewLinkCardHtml() {
+  if (typeof _reviewPreviewPickLatest !== 'function') return '';
+  const r = _reviewPreviewPickLatest();
+  if (!r) return '';
+  const labelMap = {
+    weekly:    '🌙 이번 주 너',
+    monthly:   '🌙 지난 달 너',
+    quarterly: '🌙 지난 분기 너'
+  };
+  const label = labelMap[r._kind] || '🌙 최근 리뷰';
+  let caption = (r.summary || '').trim();
+  if (!caption && r.sections && typeof r.sections === 'object') {
+    caption = (r.sections.flow || r.sections.pattern || r.sections.good_moments || '').trim();
+  }
+  if (!caption) caption = '리뷰 보러 가기';
+  const preview = caption.length > 120 ? caption.slice(0, 120) + '…' : caption;
+  return `
+    <div class="rotating-card review-link-card" onclick="_openReviewPreviewLink('${r._kind}')">
+      <div class="rc-source-header">${label}</div>
+      <div class="rc-body-tap">${escapeHtml(preview)}</div>
+    </div>
+  `;
 }
 
 // =============================================================================

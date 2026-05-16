@@ -65,21 +65,14 @@ function showScreen(name) {
     if (typeof _clearNavBatchUpdate === 'function') _clearNavBatchUpdate('model');
   }
   if (name === 'archive') {
-    // 사용자 명시 2026-05-17: 도서관 = 새 홈 (안 C). 옛 home 렌더 모두 archive 진입 시 실행.
+    // 사용자 명시 2026-05-17: 도서관 = 새 홈. 옛 home 렌더 통합.
+    //   회전카드 4-source (Hook/체크인/오늘의 너/리뷰) 으로 흡수 — renderReviewPreview / renderYesterdayChangeHint 호출 폐기.
     if (typeof expireOldMissions === 'function') expireOldMissions();
     applyNightMode();
     if (typeof renderTodayMission === 'function') renderTodayMission();
-    if (typeof renderShellBar === 'function') renderShellBar();
-    if (typeof renderActiveDecisionsHomeV3 === 'function') renderActiveDecisionsHomeV3();
-    if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
-    if (typeof renderPredictionFollowups === 'function') renderPredictionFollowups();
-    if (typeof renderMainAction === 'function') renderMainAction();
-    if (typeof renderDecisionMiniLink === 'function') renderDecisionMiniLink();
-    if (typeof _rcResetSession === 'function') _rcResetSession();
-    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    if (typeof renderShellBar === 'function') renderShellBar();  // 양생방 안 shellCount 갱신
     if (typeof renderReflectionHome === 'function') renderReflectionHome();
-    if (typeof renderReviewPreview === 'function') renderReviewPreview();
-    if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
     if (typeof runDiagnosesIfNeeded === 'function') {
       try { runDiagnosesIfNeeded(); } catch (e) { console.warn('runDiagnoses:', e); }
     }

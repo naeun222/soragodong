@@ -11842,6 +11842,62 @@
     opacity: 0.55;
   }
 
+  /* 사용자 명시 2026-05-17: 회전카드 4-source — 체크인/오늘의 너/리뷰 link 모두 동일 visual weight (44vh, 28/24 padding). */
+  #rotatingCardContainer > .action-card,
+  #rotatingCardContainer > .checkin-mini-line {
+    min-height: 44vh;
+    padding: 28px 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+  }
+  #rotatingCardContainer > .checkin-mini-line {
+    justify-content: center;
+    gap: 12px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  #rotatingCardContainer .oneul-card,
+  #rotatingCardContainer .review-link-card {
+    min-height: 44vh;
+    padding: 28px 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #rotatingCardContainer .oneul-card:active,
+  #rotatingCardContainer .review-link-card:active { background: var(--surface2); }
+  .rc-source-header {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    opacity: 0.85;
+  }
+  .oneul-cat {
+    font-size: 12px;
+    color: var(--text-dim);
+    opacity: 0.85;
+  }
+  .oneul-body {
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text);
+    font-family: 'Gowun Batang', serif;
+    flex: 1;
+    white-space: pre-wrap;
+  }
+  /* 양생방 top 모래사장 row — small-row CSS 재사용. 위쪽 마진만 살짝. */
+  .yangsaeng-shell-row { margin-bottom: 12px; }
+
   /* Hook 온보딩 모달 — Section 19.1 */
   .hook-onb-overlay {
     position: fixed; inset: 0;
@@ -13218,36 +13274,17 @@
         <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
       </div>
 
-      <!-- 메인 카드 = rotatingCardContainer. Hook OR 체크인 (사용자 명시: 체크인 = 옛 오늘의 너 자리). -->
+      <!-- 사용자 명시 2026-05-17: 회전카드 4-source — Hook / 체크인 / 오늘의 너 / 리뷰 링크. -->
       <div id="rotatingCardContainer"></div>
 
       <!-- 활성 미션 (소라의 부름) -->
       <div id="missionContainer"></div>
 
-      <!-- mainActionContainer (옛 체크인 자리) — 체크인이 rotatingCardContainer 로 이동, noop 보존 (compat). -->
-      <div id="mainActionContainer"></div>
+      <!-- 활성 숙고 (homeSmallCards / 리뷰 preview / change hint 카드 다 폐기 — 회전카드로 흡수). -->
+      <div id="reflectionContainer"></div>
 
-      <!-- 소형 카드 row (a/b + 활성 숙고). -->
-      <div class="home-small-cards" id="homeSmallCards">
-        <div id="homeReviewPreviewContainer"></div>
-        <div id="homeChangeHintContainer"></div>
-        <div id="reflectionContainer"></div>
-      </div>
-
-      <!-- 모래사장 mini -->
-      <div class="home-small-row">
-        <div class="home-small-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
-          <span class="pulse-dot" id="beachPulseDot" hidden></span>
-          <div class="hsc-icon">🐚</div>
-          <div class="hsc-text">
-            <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
-            <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- V4-1t: 🌟 오늘의 너 (진주 회전 카드) -->
-      <div id="libraryHero"></div>
+      <!-- noop containers (compat) -->
+      <div id="mainActionContainer" style="display:none"></div>
 
       <!-- 사용자 요청 2026-04-29: 5 카테고리 chip B 형식 (활성만 라벨 펼침), 토글은 검색바 우측 -->
       <div class="library-top-row">
@@ -13279,6 +13316,17 @@
       </div>
       <!-- 🧬 양생방 -->
       <div id="libYangsaeng" class="library-cat-view" style="display:none;">
+        <!-- 사용자 명시 2026-05-17: 모래사장 카드 양생방 top 으로 이동. -->
+        <div class="home-small-row yangsaeng-shell-row">
+          <div class="home-small-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
+            <span class="pulse-dot" id="beachPulseDot" hidden></span>
+            <div class="hsc-icon">🐚</div>
+            <div class="hsc-text">
+              <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
+              <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
+            </div>
+          </div>
+        </div>
         <div id="lensStrategies"></div>
       </div>
       <!-- ✨ 깨달음 -->
@@ -13950,9 +13998,9 @@
     </div>
   </div>
 
-  <!-- 사용자 명시 2026-05-17: 도서관 = default landing + 맨 왼쪽. 3 탭 (도서관/대화/나). -->
+  <!-- 사용자 명시 2026-05-17: archive 탭 라벨 = 홈 (data-screen 은 그대로 archive). 3 탭. -->
   <div class="bottom-nav">
-    <div class="nav-item active" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">📚</div><div class="nav-label">도서관</div></div>
+    <div class="nav-item active" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">🏠</div><div class="nav-label">홈</div></div>
     <div class="nav-item" data-screen="chat" onclick="showScreen('chat')"><div class="nav-icon">🐚</div><div class="nav-label">대화</div></div>
     <div class="nav-item" data-screen="model" onclick="showScreen('model')"><div class="nav-icon">🔮</div><div class="nav-label">나</div></div>
   </div>
@@ -20498,11 +20546,8 @@ async function init() {
   // 사용자 보고 2026-05-14 ultrathink: home 영역 critical render (회전 카드 / 체크인 카드 / 오늘 미션 / 마법고동) — localStorage cache 로 즉시 표시. cloud 도착 후 line 250- 의 render 흐름이 다시 호출 → 최신 갱신 (flicker 작음, 같은 카드 type 의 content 갱신).
   try {
     if (typeof renderRotatingCard === 'function') renderRotatingCard();
-    if (typeof renderMainAction === 'function') renderMainAction();
     if (typeof renderTodayMission === 'function') renderTodayMission();
-    // V4 (사용자 명시 2026-05-17 ultrathink): 신규 소형 카드 (a) 리뷰 미리보기 + (b) 자산 변화 hint.
-    if (typeof renderReviewPreview === 'function') renderReviewPreview();
-    if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
+    // (renderMainAction/renderReviewPreview/renderYesterdayChangeHint 폐기 — 회전카드 안 4-source 로 흡수)
   } catch (e) { console.warn('[init eager home render]', e); }
 
   // 사용자 요청 2026-04-28: 서버 시간 동기화 (디바이스 시계 잘못돼도 보정)
@@ -28495,37 +28540,127 @@ function _rcGodongSvg(sourceId) {
 // =============================================================================
 // 렌더 — sessionOrder 기반 (한 화면 안 stable)
 // =============================================================================
-// 사용자 명시 2026-05-17 (안 C): 홈 = 도서관 통합. 메인 슬롯 = Hook 카드 OR 체크인 카드.
-//   다중 source 회전 (진주/시뮬/어제/리뷰) 폐기 — 체크인이 fallback 으로 단순화.
+// 사용자 명시 2026-05-17: 회전카드 4-source 통합 — Hook / 체크인 / 오늘의 너 / 리뷰 링크.
+//   체크인/리뷰 링크/오늘의 너 standalone 카드 폐기 — 모두 회전카드 안에서 swipe/arrow 로 전환.
 //   옛 source 함수 (_rcSource1~11) 본체 보존 (legacy).
+let _rcMultiSources = [];
+let _rcMultiIdx = 0;
+
 function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
-  _ensureRotatingCardState();
 
   try {
-    // 활성 Hook → Hook 카드 우선.
+    const sources = [];
+
+    // 1) Hook (active 시만, 첫 자리 priority)
     if (typeof pickHomeMainHook === 'function') {
-      const activeHook = pickHomeMainHook();
-      if (activeHook && typeof renderHookCard === 'function') {
-        container.innerHTML = renderHookCard(activeHook);
-        _rcSessionOrder = null;
-        _rcSessionIndex = 0;
-        return;
+      const h = pickHomeMainHook();
+      if (h && typeof renderHookCard === 'function') {
+        sources.push({ id: 'hook', html: renderHookCard(h) });
       }
     }
-    // Hook 없음 → 체크인 카드 (옛 '오늘의 너' 자리).
+    // 2) 체크인 (항상)
     if (typeof buildCheckinCardHtml === 'function') {
-      container.innerHTML = buildCheckinCardHtml();
-      _rcSessionOrder = null;
-      _rcSessionIndex = 0;
-      return;
+      sources.push({ id: 'checkin', html: buildCheckinCardHtml() });
     }
-    container.innerHTML = '';
+    // 3) 오늘의 너 (진주 큐레이션) — 진주 있을 때만
+    if (typeof buildOneulNeoCardHtml === 'function') {
+      const html = buildOneulNeoCardHtml();
+      if (html) sources.push({ id: 'oneul', html });
+    }
+    // 4) 리뷰 링크 — 최근 리뷰 있을 때만
+    if (typeof buildReviewLinkCardHtml === 'function') {
+      const html = buildReviewLinkCardHtml();
+      if (html) sources.push({ id: 'review', html });
+    }
+
+    _rcMultiSources = sources;
+    if (_rcMultiIdx >= sources.length) _rcMultiIdx = 0;
+    _renderMultiRotating();
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     container.innerHTML = '';
   }
+}
+
+function _renderMultiRotating() {
+  const container = document.getElementById('rotatingCardContainer');
+  if (!container) return;
+  if (!_rcMultiSources.length) { container.innerHTML = ''; return; }
+  const total = _rcMultiSources.length;
+  const cur = _rcMultiSources[_rcMultiIdx];
+  const dots = _rcMultiSources.map((s, i) =>
+    `<span class="rc-dot-i ${i === _rcMultiIdx ? 'is-active' : ''}"></span>`
+  ).join('');
+  const nav = total > 1 ? `
+    <div class="rc-arrow-row">
+      <button class="rc-arrow-btn rc-arrow-prev" type="button" onclick="event.stopPropagation(); _rcMultiCycle(-1)" aria-label="이전 카드">‹</button>
+      <span class="rc-indicator-mid">${dots}</span>
+      <button class="rc-arrow-btn rc-arrow-next" type="button" onclick="event.stopPropagation(); _rcMultiCycle(1)" aria-label="다음 카드">›</button>
+    </div>
+  ` : '';
+  container.innerHTML = cur.html + nav;
+}
+
+function _rcMultiCycle(delta) {
+  if (!_rcMultiSources.length) return;
+  const total = _rcMultiSources.length;
+  _rcMultiIdx = (_rcMultiIdx + delta + total) % total;
+  _renderMultiRotating();
+}
+
+// 오늘의 너 = 진주 큐레이션 카드 (4-source 회전 안 1개 source).
+function buildOneulNeoCardHtml() {
+  const pearls = (state.pearls || []).filter(p => p && !p._deleted && p.type !== 'dna_pearl' && p.content);
+  if (pearls.length === 0) return '';
+  const sorted = pearls.slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  const pearl = sorted[0];
+  const cat = pearl.category || '';
+  const content = (pearl.content || '').trim();
+  const preview = content.length > 120 ? content.slice(0, 120) + '…' : content;
+  const catLine = cat ? `<div class="oneul-cat">🔮 ${escapeHtml(cat)}</div>` : `<div class="oneul-cat">🔮</div>`;
+  return `
+    <div class="rotating-card oneul-card" onclick="enterLibraryPearlsFromRotating()">
+      <div class="rc-source-header">🌟 오늘의 너</div>
+      <div class="rc-body-tap">
+        ${catLine}
+        <div class="oneul-body">${escapeHtml(preview)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function enterLibraryPearlsFromRotating() {
+  if (typeof showScreen === 'function') showScreen('archive');
+  if (typeof switchLibraryCat === 'function') {
+    setTimeout(() => { try { switchLibraryCat('pearls'); } catch {} }, 30);
+  }
+}
+
+// 리뷰 링크 카드 (4-source 회전 안 1개 source).
+function buildReviewLinkCardHtml() {
+  if (typeof _reviewPreviewPickLatest !== 'function') return '';
+  const r = _reviewPreviewPickLatest();
+  if (!r) return '';
+  const labelMap = {
+    weekly:    '🌙 이번 주 너',
+    monthly:   '🌙 지난 달 너',
+    quarterly: '🌙 지난 분기 너'
+  };
+  const label = labelMap[r._kind] || '🌙 최근 리뷰';
+  let caption = (r.summary || '').trim();
+  if (!caption && r.sections && typeof r.sections === 'object') {
+    caption = (r.sections.flow || r.sections.pattern || r.sections.good_moments || '').trim();
+  }
+  if (!caption) caption = '리뷰 보러 가기';
+  const preview = caption.length > 120 ? caption.slice(0, 120) + '…' : caption;
+  return `
+    <div class="rotating-card review-link-card" onclick="_openReviewPreviewLink('${r._kind}')">
+      <div class="rc-source-header">${label}</div>
+      <div class="rc-body-tap">${escapeHtml(preview)}</div>
+    </div>
+  `;
 }
 
 // =============================================================================
@@ -36318,21 +36453,14 @@ function showScreen(name) {
     if (typeof _clearNavBatchUpdate === 'function') _clearNavBatchUpdate('model');
   }
   if (name === 'archive') {
-    // 사용자 명시 2026-05-17: 도서관 = 새 홈 (안 C). 옛 home 렌더 모두 archive 진입 시 실행.
+    // 사용자 명시 2026-05-17: 도서관 = 새 홈. 옛 home 렌더 통합.
+    //   회전카드 4-source (Hook/체크인/오늘의 너/리뷰) 으로 흡수 — renderReviewPreview / renderYesterdayChangeHint 호출 폐기.
     if (typeof expireOldMissions === 'function') expireOldMissions();
     applyNightMode();
     if (typeof renderTodayMission === 'function') renderTodayMission();
-    if (typeof renderShellBar === 'function') renderShellBar();
-    if (typeof renderActiveDecisionsHomeV3 === 'function') renderActiveDecisionsHomeV3();
-    if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
-    if (typeof renderPredictionFollowups === 'function') renderPredictionFollowups();
-    if (typeof renderMainAction === 'function') renderMainAction();
-    if (typeof renderDecisionMiniLink === 'function') renderDecisionMiniLink();
-    if (typeof _rcResetSession === 'function') _rcResetSession();
-    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    if (typeof renderShellBar === 'function') renderShellBar();  // 양생방 안 shellCount 갱신
     if (typeof renderReflectionHome === 'function') renderReflectionHome();
-    if (typeof renderReviewPreview === 'function') renderReviewPreview();
-    if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
     if (typeof runDiagnosesIfNeeded === 'function') {
       try { runDiagnosesIfNeeded(); } catch (e) { console.warn('runDiagnoses:', e); }
     }
