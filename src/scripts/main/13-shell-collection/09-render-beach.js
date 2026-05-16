@@ -24,7 +24,7 @@ function renderBeach() {
   const yearStart = new Date(new Date().getFullYear(), 0, 1).getTime();
   const thisYear = all.filter(s => new Date(s.date).getTime() >= yearStart);
   
-  if (sub) sub.textContent = all.length === 0 ? '아직 비어있어. 첫 소라 모아보자.' : '하나하나가 네 작은 흔적';
+  if (sub) sub.textContent = all.length === 0 ? '아직 비어있어. 첫 소라 모아보자.' : '';
   if (countEl) countEl.textContent = thisYear.length;
   
   // Tier counts (visual hierarchy: 가벼움 → 특별)

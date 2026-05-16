@@ -13769,7 +13769,7 @@
 <!-- Shell collection modal -->
 <div class="modal-overlay" id="shellModal" onclick="if(event.target===this)closeModal('shellModal')">
   <div class="modal beach-screen" style="max-height:88vh; overflow-y:auto;">
-    <div class="modal-title">🏖 네 모래사장</div>
+    <div class="modal-title">🏖 모래사장</div>
     <div class="modal-sub" id="shellSubtext"></div>
     
     <div class="beach-stats">
@@ -13793,11 +13793,6 @@
     <!-- V3.13.x: 지난 부름 (3일 지나 만료된 거 — 다시 받기 가능) -->
     <div id="lostCallsSection"></div>
 
-    <div style="background: var(--surface2); padding: 12px; border-radius: 10px; font-size: 11px; color: var(--text-dim); line-height: 1.7; margin-top:14px;">
-      소라 하나하나가 네 작은 흔적이야.<br>
-      탭하면 그날의 이야기가 보여.<br>
-      페널티 없어. 못 해도 괜찮고, 쉬어도 괜찮아 🌊
-    </div>
     <button class="btn-secondary" onclick="closeModal('shellModal')" style="margin-top:16px;">닫기</button>
   </div>
 </div>
@@ -35800,7 +35795,7 @@ function renderBeach() {
   const yearStart = new Date(new Date().getFullYear(), 0, 1).getTime();
   const thisYear = all.filter(s => new Date(s.date).getTime() >= yearStart);
   
-  if (sub) sub.textContent = all.length === 0 ? '아직 비어있어. 첫 소라 모아보자.' : '하나하나가 네 작은 흔적';
+  if (sub) sub.textContent = all.length === 0 ? '아직 비어있어. 첫 소라 모아보자.' : '';
   if (countEl) countEl.textContent = thisYear.length;
   
   // Tier counts (visual hierarchy: 가벼움 → 특별)
