@@ -13108,7 +13108,6 @@
     <!-- CHAT -->
     <div class="screen" id="screen-chat" style="padding-bottom: 180px;">
       <div class="screen-title">고동이에게 <img src="/character/godong-default.svg" alt="" class="godong-icon godong-mood-default" decoding="async"></div>
-      <div class="screen-sub">뭐든 말해. 일기처럼 길게 써도 돼. 내가 읽고 답할게.</div>
       <!-- 사용자 명시 2026-05-10: 시뮬 → 대화 이어가기 시 상단 스티커. 챕터 마무리 시 사라짐. -->
       <div id="chatSimContextSticker" class="chat-sim-sticker" style="display:none;">💭 시나리오 토론 중</div>
       <div class="chat-messages" id="chatMessages"></div>
@@ -38979,10 +38978,6 @@ function _renderUserDeepProfileSection() {
   // 사용자 명시 2026-05-02: 더 깊은 나 = 항상 닫힘 default. 사용자 click 해야 펼침 (긴 폼 방어).
   return `<details class="model-section" style="margin-top:18px;">
     <summary style="font-size:13px;font-weight:600;color:var(--text);padding:10px 0;cursor:pointer;">더 깊은 나</summary>
-    <div style="font-size:11px;color:var(--text-dim);margin:6px 0 14px;line-height:1.7;">
-      채워질수록 고동이가 더 깊이 분석해줘.<br>
-      대화에서 알아서 채워줄게 — 직접 적어도 돼.
-    </div>
 
     <div style="margin-bottom:16px;">
       <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">발달·역사 맥락</div>
@@ -39432,14 +39427,19 @@ function _modelSimilarity(a, b) {
 function _collectModelDedupCandidates() {
   const SIM_THRESHOLD = 0.7;  // 0.7+ = 후보 (사용자 컨펌). 1.0 = 코드 dedup 이미 처리.
   const candidates = [];  // { category, a, b, similarity }
+  // 사용자 명시 2026-05-16 ultrathink: 더 깊은 나 의 string array (coreBeliefs / identityKeywords) 도 dedup 대상 → string item 자동 처리.
   const _findPairs = (arr, category, nameField) => {
     if (!Array.isArray(arr) || arr.length < 2) return;
     for (let i = 0; i < arr.length; i++) {
       for (let j = i + 1; j < arr.length; j++) {
         const a = arr[i], b = arr[j];
-        if (!a || !b || a._deleted || b._deleted) continue;
-        const aName = a[nameField] || a.text || a.name;
-        const bName = b[nameField] || b.text || b.name;
+        if (a == null || b == null) continue;
+        const aIsStr = typeof a === 'string';
+        const bIsStr = typeof b === 'string';
+        if (!aIsStr && a._deleted) continue;
+        if (!bIsStr && b._deleted) continue;
+        const aName = aIsStr ? a : (a[nameField] || a.text || a.name);
+        const bName = bIsStr ? b : (b[nameField] || b.text || b.name);
         if (!aName || !bName) continue;
         const sim = _modelSimilarity(aName, bName);
         if (sim >= SIM_THRESHOLD && sim < 1.0) {
@@ -39456,6 +39456,24 @@ function _collectModelDedupCandidates() {
     ['problems', 'mechanisms', 'strengths', 'goals', 'growth'].forEach(dim => {
       _findPairs(state.caseFormulation[dim], 'cf_' + dim, 'text');
     });
+  }
+  // 사용자 명시 2026-05-16 ultrathink: 더 깊은 나 (userDeepProfile) 6 영역 dedup.
+  //   - 객체 array: turningPoints (title 매칭) / relationships (name 매칭)
+  //   - string array: coreBeliefs.aboutSelf/aboutWorld/aboutFuture / identityKeywords
+  if (state.userDeepProfile) {
+    const dev = state.userDeepProfile.development;
+    if (dev) _findPairs(dev.turningPoints, 'deep_turningPoints', 'title');
+    _findPairs(state.userDeepProfile.relationships, 'deep_relationships', 'name');
+    const sn = state.userDeepProfile.selfNarrative;
+    if (sn) {
+      const cb = sn.coreBeliefs;
+      if (cb) {
+        _findPairs(cb.aboutSelf, 'deep_aboutSelf', null);
+        _findPairs(cb.aboutWorld, 'deep_aboutWorld', null);
+        _findPairs(cb.aboutFuture, 'deep_aboutFuture', null);
+      }
+      _findPairs(sn.identityKeywords, 'deep_identityKeywords', null);
+    }
   }
   // similarity 높은 순 정렬 (가장 명백한 중복부터)
   candidates.sort((a, b) => b.similarity - a.similarity);
@@ -39523,11 +39541,30 @@ function _renderModelDedupStep() {
 
   const cur = candidates[idx];
   const { category, a, b, similarity } = cur;
-  const nameField = category.startsWith('cf_') ? 'text' : 'name';
-  const aName = a[nameField] || a.name;
-  const bName = b[nameField] || b.name;
-  const aDesc = a.description || '';
-  const bDesc = b.description || '';
+
+  // 사용자 명시 2026-05-16 ultrathink: 카테고리 별 name/desc 추출 — string array (deep_aboutSelf 등) / 객체 array (deep_turningPoints, deep_relationships) / 기존 cf/특성 모두 분기.
+  const isStringItem = typeof a === 'string';
+  let aName, bName, aDesc = '', bDesc = '';
+  if (isStringItem) {
+    aName = a;
+    bName = b;
+  } else if (category === 'deep_turningPoints') {
+    aName = a.title || '?';
+    bName = b.title || '?';
+    aDesc = [a.when, a.impact].filter(Boolean).join(' — ');
+    bDesc = [b.when, b.impact].filter(Boolean).join(' — ');
+  } else if (category === 'deep_relationships') {
+    aName = a.name || '?';
+    bName = b.name || '?';
+    aDesc = [a.relation, a.tone, a.notes].filter(Boolean).join(' / ');
+    bDesc = [b.relation, b.tone, b.notes].filter(Boolean).join(' / ');
+  } else {
+    const nameField = category.startsWith('cf_') ? 'text' : 'name';
+    aName = a[nameField] || a.name;
+    bName = b[nameField] || b.name;
+    aDesc = a.description || '';
+    bDesc = b.description || '';
+  }
 
   const _categoryLabel = ({
     traits: '🌿 특성',
@@ -39538,15 +39575,27 @@ function _renderModelDedupStep() {
     cf_strengths: '💪 잘 풀린 곳',
     cf_goals: '🎯 가고 싶은 곳',
     cf_growth: '🌱 자라는 곳',
+    deep_turningPoints: '🔀 전환점',
+    deep_relationships: '👥 핵심 인물',
+    deep_aboutSelf: '💭 자신에 대한 신념',
+    deep_aboutWorld: '🌍 세상에 대한 신념',
+    deep_aboutFuture: '🌅 미래에 대한 신념',
+    deep_identityKeywords: '🏷️ 정체성 keyword',
   })[category] || category;
 
+  // deep_* 항목은 verified/confidence/evidence/extractedFrom metadata 가 없음 → badge skip.
+  const _showBadge = !isStringItem && !category.startsWith('deep_');
   const _metaBadge = (item) => {
+    if (!_showBadge) return '';
     const verified = item.user_verified === true ? '<span style="color:#8fc88f; font-size:10px;">✓ 컨펌</span>' : '<span style="color:var(--text-soft); font-size:10px;">? 미컨펌</span>';
     const conf = typeof item.confidence === 'number' ? `<span style="font-size:10px; color:var(--text-dim);">conf ${item.confidence.toFixed(2)}</span>` : '';
     const evi = item.evidence_count ? `<span style="font-size:10px; color:var(--text-dim);">evi ×${item.evidence_count}</span>` : '';
     const src = item.extractedFrom === 'simulation' ? '<span style="font-size:10px; color:var(--accent);">💭 시뮬</span>' : '';
     return `<div style="display:flex; gap:8px; margin-top:4px; flex-wrap:wrap;">${verified}${conf ? ' · ' + conf : ''}${evi ? ' · ' + evi : ''}${src ? ' · ' + src : ''}</div>`;
   };
+  const _mergeHint = category.startsWith('deep_')
+    ? '합치면: 더 자세한 쪽 남김.'
+    : '합치면: 컨펌 ✓ 우선 / evidence 합산 / confidence 큰 쪽 / 시뮬 출처 → 일반 출처 우선.';
 
   modal.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
@@ -39568,7 +39617,7 @@ function _renderModelDedupStep() {
       </div>
     </div>
     <div style="font-size:10.5px; color:var(--text-soft); margin-bottom:14px; padding:8px 10px; background:rgba(126,200,227,0.04); border-left:2px solid rgba(126,200,227,0.3); border-radius:0 6px 6px 0; line-height:1.7;">
-      합치면: 컨펌 ✓ 우선 / evidence 합산 / confidence 큰 쪽 / 시뮬 출처 → 일반 출처 우선.
+      ${_mergeHint}
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn-secondary" onclick="_modelDedupSkip()" style="flex:1;">놔두기</button>
@@ -39590,6 +39639,60 @@ function _modelDedupMerge() {
   const cur = _modelDedupState.candidates[_modelDedupState.idx];
   if (!cur) return;
   const { category, a, b } = cur;
+
+  // 사용자 명시 2026-05-16 ultrathink: 더 깊은 나 dedup — string array (coreBeliefs/identityKeywords) + 객체 array (turningPoints/relationships) 별도 처리.
+  const deepArrGetter = {
+    deep_turningPoints: () => state.userDeepProfile && state.userDeepProfile.development && state.userDeepProfile.development.turningPoints,
+    deep_relationships: () => state.userDeepProfile && state.userDeepProfile.relationships,
+    deep_aboutSelf: () => state.userDeepProfile && state.userDeepProfile.selfNarrative && state.userDeepProfile.selfNarrative.coreBeliefs && state.userDeepProfile.selfNarrative.coreBeliefs.aboutSelf,
+    deep_aboutWorld: () => state.userDeepProfile && state.userDeepProfile.selfNarrative && state.userDeepProfile.selfNarrative.coreBeliefs && state.userDeepProfile.selfNarrative.coreBeliefs.aboutWorld,
+    deep_aboutFuture: () => state.userDeepProfile && state.userDeepProfile.selfNarrative && state.userDeepProfile.selfNarrative.coreBeliefs && state.userDeepProfile.selfNarrative.coreBeliefs.aboutFuture,
+    deep_identityKeywords: () => state.userDeepProfile && state.userDeepProfile.selfNarrative && state.userDeepProfile.selfNarrative.identityKeywords,
+  };
+  if (deepArrGetter[category]) {
+    const arr = deepArrGetter[category]();
+    if (Array.isArray(arr)) {
+      const idxA = arr.indexOf(a);
+      const idxB = arr.indexOf(b);
+      if (idxA >= 0 && idxB >= 0) {
+        const _longer = (x, y) => (String(x || '').length >= String(y || '').length) ? x : y;
+        if (category === 'deep_turningPoints') {
+          arr[idxA] = {
+            when: a.when || b.when || '',
+            title: _longer(a.title, b.title) || '',
+            impact: _longer(a.impact, b.impact) || '',
+            merged_at: new Date().toISOString(),
+          };
+        } else if (category === 'deep_relationships') {
+          arr[idxA] = {
+            name: _longer(a.name, b.name) || '',
+            relation: a.relation || b.relation || '',
+            tone: a.tone || b.tone || '',
+            notes: _longer(a.notes, b.notes) || '',
+            merged_at: new Date().toISOString(),
+          };
+        } else {
+          // string array (coreBeliefs / identityKeywords) — 긴 쪽 남김
+          arr[idxA] = (String(a).length >= String(b).length) ? a : b;
+        }
+        arr.splice(idxB, 1);
+        if (typeof _bumpUserDeepProfile === 'function') {
+          try { _bumpUserDeepProfile(); } catch {}
+        }
+      }
+    }
+    if (typeof saveState === 'function') saveState();
+    _modelDedupState.merged++;
+    _modelDedupState.idx++;
+    while (_modelDedupState.idx < _modelDedupState.candidates.length) {
+      const next = _modelDedupState.candidates[_modelDedupState.idx];
+      if (next && next.a !== b && next.b !== b && next.a !== a && next.b !== a) break;
+      _modelDedupState.idx++;
+    }
+    _renderModelDedupStep();
+    return;
+  }
+
   // 메타데이터 명시 처리
   const _verifiedKept = (a.user_verified === true) || (b.user_verified === true);
   const _confKept = Math.max(a.confidence || 0, b.confidence || 0);

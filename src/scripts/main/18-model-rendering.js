@@ -338,10 +338,6 @@ function _renderUserDeepProfileSection() {
   // 사용자 명시 2026-05-02: 더 깊은 나 = 항상 닫힘 default. 사용자 click 해야 펼침 (긴 폼 방어).
   return `<details class="model-section" style="margin-top:18px;">
     <summary style="font-size:13px;font-weight:600;color:var(--text);padding:10px 0;cursor:pointer;">더 깊은 나</summary>
-    <div style="font-size:11px;color:var(--text-dim);margin:6px 0 14px;line-height:1.7;">
-      채워질수록 고동이가 더 깊이 분석해줘.<br>
-      대화에서 알아서 채워줄게 — 직접 적어도 돼.
-    </div>
 
     <div style="margin-bottom:16px;">
       <div style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:500;">발달·역사 맥락</div>
