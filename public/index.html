@@ -23203,7 +23203,7 @@ function _diaryCoachmarkCalendar415() {
     <div class="v8-coach-title">📔 캘린더 무드 그리드</div>
     <div class="v8-coach-text">
       한 달 한눈에 — 칸 색 = 그날 기분.<br>
-      <b>4월 15일</b> 칸 한 번 눌러봐 ✦
+      <b>4월 15일</b> 칸 한 번 눌러보세요 ✦
     </div>
   `;
   return _v8ShowCoachmark({
@@ -49529,6 +49529,33 @@ async function testSeedV4Data() {
 
   // V4 (사용자 명시 2026-05-14 ultrathink): #4 godongDiary (rotating card source) 시드 zap — sim 튜토 코치마크가 가리키지 않음.
   if (Array.isArray(state.godongDiary)) state.godongDiary = [];
+
+  // 사용자 명시 2026-05-17: 캘린더 그리드는 4/15 만 노출. 시드가 만든 캘린더 영향 데이터 (entries / chatArchive / 비-strategy topicCards 챕터 / 티켓·책 진주) 를 4/15 외엔 다 제거.
+  // 4/15 챕터 + 풍성 entry + 4/15 진주들 (위 _richDate chunk 에서 push) 은 보존.
+  const _calKeep = '2026-04-15';
+  if (Array.isArray(state.entries)) {
+    state.entries = state.entries.filter(e => e && e.date === _calKeep);
+  }
+  if (Array.isArray(state.chatArchive)) {
+    state.chatArchive = state.chatArchive.filter(a => a && a.date === _calKeep);
+  }
+  if (Array.isArray(state.topicCards)) {
+    state.topicCards = state.topicCards.filter(c => {
+      if (!c) return false;
+      if (c.category === 'strategy') return true; // 양생방 DNA — 캘린더에 dot X
+      const endedAt = c.chapterEndedAt || c.chapterStartedAt || c.createdAt;
+      if (!endedAt) return true;
+      return (typeof getDayKey === 'function' ? getDayKey(endedAt) : new Date(endedAt).toISOString().split('T')[0]) === _calKeep;
+    });
+  }
+  if (Array.isArray(state.pearls)) {
+    state.pearls = state.pearls.filter(p => {
+      if (!p) return false;
+      if (p.category !== '티켓' && p.category !== '책') return true; // 캘린더 dot 안 그리는 카테고리는 보존
+      const dk = p.eventDate || p.finishedAt || (p.createdAt ? (typeof getDayKey === 'function' ? getDayKey(p.createdAt) : new Date(p.createdAt).toISOString().split('T')[0]) : null);
+      return dk === _calKeep;
+    });
+  }
 
   // 사용자 보고 2026-04-30: 새로 적용된 시드 항목 전부에 _seed marker 적용하기 → init sweep에서 자동 정리.
   _markSeedItems();

@@ -207,7 +207,7 @@ function _diaryCoachmarkCalendar415() {
     <div class="v8-coach-title">📔 캘린더 무드 그리드</div>
     <div class="v8-coach-text">
       한 달 한눈에 — 칸 색 = 그날 기분.<br>
-      <b>4월 15일</b> 칸 한 번 눌러봐 ✦
+      <b>4월 15일</b> 칸 한 번 눌러보세요 ✦
     </div>
   `;
   return _v8ShowCoachmark({
