@@ -1,10 +1,3 @@
-// V4 (사용자 요청 2026-04-29): 설정 → 🐚 투어 다시 보기
-// V4 사용자 명시 (V203): chooser 폐기 — 코어 #1 직접 진입 (사용자가 명시 click 한 거라 명확).
-function showTutorialReplayMenu() {
-  if (typeof startCoreTutorial === 'function') return startCoreTutorial('core1');
-  return startInteractiveOnboarding();
-}
-
 // V4 (사용자 명시 2026-05-06 ultrathink): 옛 chooser dead — V8 sim 튜토 picker (showSimTutorialPicker) 로 위임.
 async function showCoreReplayPicker() {
   if (typeof showSimTutorialPicker === 'function') return showSimTutorialPicker();

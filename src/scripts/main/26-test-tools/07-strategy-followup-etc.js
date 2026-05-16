@@ -218,14 +218,4 @@ async function testForceMusicAutoPearl() {
   showToast(`🎵 "${track.title}" 5번 등장 → 자동 진주 적용됨. 도서관 → 진주에서 확인.`);
 }
 
-// 튜토리얼 강제 시작 (full)
-function testForceTutorial() {
-  if (typeof startInteractiveOnboarding !== 'function') {
-    showToast('⚠️ startInteractiveOnboarding 함수 X');
-    return;
-  }
-  if (state.preferences) state.preferences.tutorialVersion = 'full';
-  startInteractiveOnboarding();
-  showToast('🎓 풀 튜토리얼 시작');
-}
 

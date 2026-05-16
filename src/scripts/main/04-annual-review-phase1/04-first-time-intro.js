@@ -17,24 +17,9 @@ async function maybeShowFirstTimeIntro() {
   if (document.getElementById('e2eeRecoveryOverlay')) return;
   if (document.getElementById('e2eeSetupOverlay')) return;
   if (document.getElementById('onbOverlay') && document.getElementById('onbOverlay').classList.contains('active')) return;
-  // 사용자 명시 2026-05-05: 100만 토큰 silent welcome grant 폐기 → 처음 한 달 무료 (얼리 플랜) 자동 활성화.
-  // backend ensureBillingRow 가 첫 /api/chat 또는 /api/usage 호출 시 자동 활성화. 클라이언트 silent grant 호출 불필요.
-  const entriesCountSilent = Array.isArray(state.entries) ? state.entries.length : Object.keys(state.entries || {}).length;
-
-  // V4 사용자 명시 (V203): chooser 폐기. 신규 가입자 = 비밀번호 설정 후 시작 튜토리얼 자동 직진.
-  // 한 번만 (preferences._coreTutorialAutoStarted) — reload 시 재트리거 X.
-  const isFreshUser = entriesCountSilent <= 3 && !(state.preferences && state.preferences._coreTutorialAutoStarted);
-  if (isFreshUser && typeof startCoreTutorial === 'function') {
-    state.preferences = state.preferences || {};
-    state.preferences._coreTutorialAutoStarted = true;
-    state.preferences.dismissedMajor = (typeof _currentMajor === 'function') ? _currentMajor() : (typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'V4');
-    try { saveState({ force: true }); } catch {}
-    if (typeof saveToCloudNow === 'function') { saveToCloudNow().catch(() => {}); }
-    setTimeout(() => { try { startCoreTutorial('core1'); } catch (e) { console.warn('[auto core tutorial]:', e); } }, 600);
-    return;
-  }
-
-  // 기존 사용자 = 배너 큐만 (legacy / sync tip / feedback). chooser 모달 X.
+  // V4 (사용자 명시 2026-05-16 ultrathink): 옛 isFreshUser → startCoreTutorial('core1') 자동 진입 폐기.
+  //   V9 시작 튜토 (runStartTutorialV8 → _v9ShowWarmStartModal) 가 신규 가입자 진입 책임.
+  //   여기서는 배너 큐 (sync tip / feedback) 만 trigger — 기존 사용자에게도 동일.
   if (typeof autoTourOnUpdate === 'function') autoTourOnUpdate();
 }
 

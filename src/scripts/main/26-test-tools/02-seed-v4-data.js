@@ -311,8 +311,8 @@ async function testSeedV4Data() {
   // modeActiveSince.rest 시뮬을 위해 넣어두기 (연관 데이터)
   if (!state.modeActiveSince) state.modeActiveSince = {};
   state.modeActiveSince.rest = new Date(today.getTime() - 35 * 86400000).toISOString();
-  // 토픽 카드 5
-  for (let i = 0; i < 5; i++) {
+  // 토픽 카드 2 (V4 사용자 명시 2026-05-16 ultrathink: 5→2 축소 — 메모리 탭 채우기만 했던 잉여 시드)
+  for (let i = 0; i < 2; i++) {
     state.topicCards.push({
       id: 'tc_seed_' + i,
       category: 'memory',
@@ -671,12 +671,6 @@ async function testSeedV4Data() {
       targetCardId: 'strat_seed_3',
       detectedAt: new Date(today.getTime() - 80 * 86400000).toISOString(),
       lastUpdate: new Date(today.getTime() - 50 * 86400000).toISOString() },
-    // Q-3 — dismissed (사용자가 "아니야" 했거나 confidence 떨어짐)
-    { id: 'diag_seed_3', type: 'weak_tool', confidence: 0.30, status: 'dismissed',
-      evidence: '"알람 무한 반복" — L2 행동 4회 안 통함',
-      targetCardId: 'strat_diag_seed_5',
-      detectedAt: new Date(today.getTime() - 160 * 86400000).toISOString(),
-      lastUpdate: new Date(today.getTime() - 140 * 86400000).toISOString() },
     // Q-3 - shown
     { id: 'diag_seed_4', type: 'value_clash', confidence: 0.62, status: 'shown',
       evidence: '여러 가닥 모든 layer X — values 충돌 가능성',
@@ -725,25 +719,8 @@ async function testSeedV4Data() {
         { role: 'user', content: '박사 끝까지 가되, 산업/공공 출구 옵션 열어두기. 학위 자체가 정체성 X.', timestamp: new Date(today.getTime() - 70 * 86400000).toISOString() }
       ]
     },
-    // 두 번째 resolved (다른 시기)
-    {
-      id: 'rq_seed_resolved_2',
-      text: '이 관계, 계속해야 할지',
-      shortText: '이 관계 계속',
-      createdAt: new Date(today.getTime() - 220 * 86400000).toISOString(),
-      source: 'scrap',
-      status: 'resolved',
-      conclusion: '솔직한 대화 1번 시도. 그래도 막히면 시간 두기. 결정 강요 X.',
-      resolvedAt: new Date(today.getTime() - 200 * 86400000).toISOString(),
-      chatMessages: [
-        { role: 'assistant', content: '이 관계, 어떤 부분이 가장 무거워?', timestamp: new Date(today.getTime() - 220 * 86400000).toISOString() },
-        { role: 'user', content: '같이 있으면 편한데, 깊은 얘기 안 됨.', timestamp: new Date(today.getTime() - 218 * 86400000).toISOString() },
-        { role: 'assistant', content: '편함 + 거리 — 가능성? 시도 안 해봐서 X일 수도.', timestamp: new Date(today.getTime() - 218 * 86400000).toISOString() },
-        { role: 'user', content: '한 번도 깊은 얘기 시도 안 한 듯. 두려운 게 있어서.', timestamp: new Date(today.getTime() - 210 * 86400000).toISOString() }
-      ]
-    }
   ];
-  // missions 5 (오늘 pending / 어제 carryover pending / 그제 carryover pending / completed / expired)
+  // missions 3 (오늘 pending / 어제 결과 체크 대기 / 오늘 completed worked) — V4 2026-05-16: mis_seed_3 expired 제거
   const yesterdayKey = new Date(today.getTime() - 86400000).toISOString().split('T')[0];
   const dayBeforeKey = new Date(today.getTime() - 2 * 86400000).toISOString().split('T')[0];
   // 사용자 요청 2026-04-28: 결과 체크 트리거 — 미션 'completed' + attemptStatus 없음 (양생방 카드에 '🔍 결과 체크' 버튼 뜨도록)
@@ -754,8 +731,7 @@ async function testSeedV4Data() {
     // 사용자 명시 2026-05-01 (agent audit): _followupAsked: true 제거 — 시드 일관성. 양생방 button 자리에서 결과 체크 자연 trigger 보장.
     // 코어 #2 외 코어 (#5 / #8 등) 진입 시 testSeedV4Data 다시 호출돼도 fragile X.
     { id: 'mis_seed_strat0_done_unchecked', title: '마감 직전 환경 셋업 1번', description: '카페 자리 + 폰 다른 방', status: 'completed', completedDate: new Date(today.getTime() - 86400000).toISOString().split('T')[0], completedAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 86400000).toISOString(), strategyId: 'strat_seed_0', generationIdx: 0 },
-    { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' },
-    { id: 'mis_seed_3', title: '메일 정리', status: 'expired', scheduledFor: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0], expiredAt: new Date(today.getTime() - 86400000).toISOString(), createdAt: new Date(today.getTime() - 5 * 86400000).toISOString() }
+    { id: 'mis_seed_2', title: '논문 1단락', description: '서론 첫 단락', status: 'completed', completedDate: todayStr, completedAt: new Date(today.getTime() - 4 * 3600000).toISOString(), photoThumb: '', strategyId: 'strat_seed_4', generationIdx: 2, attemptStatus: 'worked' }
   ];
   // V4-fix v3 (사용자 요청): shells 180개 + SHELL_POOLS 다양 emoji 활용 (이쁜 아이콘 풍부)
   state.shellCollection = [];

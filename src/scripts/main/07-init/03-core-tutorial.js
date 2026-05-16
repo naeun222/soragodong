@@ -132,13 +132,6 @@ const CORE_INITIAL_SCREEN = {
 // 코어별 진입 후 추가 액션 — 마법고동 등 특수 진입 처리. v8 폐기로 현재 빈 객체.
 const CORE_INITIAL_ACTION = {};
 
-// 코어 튜토리얼 시작 — startInteractiveOnboarding 인프라 재사용
-async function startCoreTutorial(coreId) {
-  // 사용자 명시 2026-05-06 ultrathink: V8 시작 튜토리얼로 대체 — 옛 코어 진입 = no-op.
-  // 진입점 (Settings → 가이드 / 옛 chooser / 자동 trigger) 모두 작동 안 함.
-  console.warn('[legacy] startCoreTutorial(' + coreId + ') — V8 시작 튜토리얼로 대체됨, no-op');
-}
-
 // 코어별 시드 정리 — testSeedV4Data가 적용한 거 중 그 코어 흐름에 안 필요한 거 제거
 function _scrubSeedsForCore(coreId) {
   if (!state || !state.preferences || !state.preferences.testerMode) return;

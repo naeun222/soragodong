@@ -1,23 +1,3 @@
-async function testStartTutorialFromStep() {
-  if (typeof startInteractiveOnboarding !== 'function') {
-    showToast('⚠️ startInteractiveOnboarding 함수 X');
-    return;
-  }
-  const total = (typeof ONBOARDING_STEPS !== 'undefined') ? ONBOARDING_STEPS.length : 0;
-  const input = await showInputModal({
-    title: '🎯 튜토리얼 step 번호',
-    message: `1 ~ ${total} 사이 (1 = 처음부터 / 41 = yangsaeng_explain).\n현재 ONBOARDING_STEPS 총 ${total}개.`,
-    placeholder: '예: 41',
-    okLabel: '시작'
-  });
-  if (!input) return;
-  const n = parseInt(input.trim(), 10);
-  if (isNaN(n) || n < 1 || n > total) { showToast('잘못된 번호'); return; }
-  if (state.preferences) state.preferences.tutorialVersion = 'full';
-  startInteractiveOnboarding(n - 1);  // 1-indexed → 0-indexed
-  showToast(`🎯 step ${n}부터 시작`);
-}
-
 // 월간 리뷰 강제 생성 (V3.12) — 가드 우회 (dayOfMonth>7 무시)
 async function testForceMonthlyReview() {
   showToast('🌙 월간 리뷰 강제 생성 중...');
