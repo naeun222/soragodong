@@ -14,7 +14,7 @@ function _checkinCardCopy(slot, isDone) {
     morning: { icon: '☀️', title: '오늘 어떻게 시작해?', sub: '오늘 어떻게 시작하는지 한 줄 적어둘래?' },
     noon:    { icon: '🌤', title: '지금 컨디션 어때?',  sub: '지금 컨디션 어떤지 한 줄로 짚어둘래?' },
     evening: { icon: '🌅', title: '오늘 지나간 흐름 짚어볼래?', sub: '오늘 지나간 흐름 메모 한 줄로 적어둘래?' },
-    night:   { icon: '🌙', title: '오늘 어땠어?', sub: '' }
+    night:   { icon: '🌙', title: '오늘 하루 닫아보기', sub: '' }
   };
   return map[slot] || map.night;
 }
