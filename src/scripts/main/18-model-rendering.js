@@ -201,8 +201,7 @@ function renderModel() {
       <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">며칠 같이 지내면 너의 데이터에서 큰 그림 (강점 · 어떻게 작동하는지 · 다루어야 할 특성) 을 종합해줄게 ✦</div>
     </div>`;
   } else {
-    html += `<div class="model-section"><div class="model-section-title">통합 분석</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">네 데이터 종합. 틀린 건 ✎ 수정 / ✕ 삭제.</div>`;
+    html += `<div class="model-section"><div class="model-section-title">통합 분석</div>`;
     // 사용자 보고 2026-05-09: Quiz 답변 반영 — user_verified=true 시각 표시 + 객체 array 안전 처리.
     // 옛 cfBullet 는 text 인자 = string 가정 → V4 객체 array ({text, user_verified, ...}) 들어가면 [object Object] 위험.
     // 새 cfBullet: 객체/string 둘 다 안전 처리 + user_verified 마크.
