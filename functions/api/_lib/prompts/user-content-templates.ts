@@ -427,6 +427,13 @@ function buildForceAnalyze(v: any): string {
   return `[사용자 데이터]\n${dataDumpJson}\n\n위 데이터로 Case Formulation 작성. JSON만 출력.`;
 }
 
+// 사용자 명시 2026-05-16 ultrathink: 자동 인사이트 발견 — 14일 행동 데이터 + 기존 인사이트 (dedup 용).
+function buildDiscoverInsights(v: any): string {
+  const dataJson = _s(v?.dataJson, 20000);
+  const existingInsights = _s(v?.existingInsights, 3000);
+  return `[최근 14일 사용자 데이터]\n${dataJson}\n\n[이미 발견된 인사이트 — 중복 출력 X]\n${existingInsights || '(없음)'}\n\n위 데이터에서 행동 간 인과/패턴 link 1-3개 발견. JSON만 출력.`;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // 7. MAGIC_SUMMARY
 // ═══════════════════════════════════════════════════════════════
@@ -765,6 +772,11 @@ export function applyUserContentTemplate(body: any): boolean {
   // analyze_4stage (force_analyze)
   else if (_ep === 'analyze_4stage' && _ct === 'force_analyze') {
     built = buildForceAnalyze(_v);
+  }
+
+  // discover_insights (사용자 명시 2026-05-16 ultrathink)
+  else if (_ep === 'discover_insights' && _ct === 'discover_insights') {
+    built = buildDiscoverInsights(_v);
   }
 
   // magic_summary (default)

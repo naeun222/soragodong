@@ -200,6 +200,51 @@ const TOPIC_TEMP_CHAT_SYSTEM = `사용자가 AI 친구 "소라고동"과 임시 
 
 JSON만, 마크다운 X.`;
 
+// 사용자 명시 2026-05-16 ultrathink: 자동 인사이트 발견 — 7일+ 체크인 사용자의 행동 데이터에서
+// 본인이 못 봤던 인과/패턴 link 1-3개 발견. caseFormulation (traits/values/patterns) 과 다른 path —
+// "엄마 통화 후 이튿날 mood +0.8" 같은 행동 간 동적 link.
+const DISCOVER_INSIGHTS_SYSTEM = `당신은 ADHD 사용자의 자기관찰 데이터를 분석하는 데이터 분석가다.
+사용자의 최근 14일 행동·상태 데이터에서 본인이 못 봤던 인과/패턴 link 를 1-3개 발견해 출력한다.
+
+[발견할 인사이트 2종]
+1. type: "causal" — 한 행동/상태가 다른 결과를 부르는 인과 link
+   예시:
+   - "잠 6시간 미만 → 다음날 vitality -1.2"
+   - "엄마 통화 후 이튿날 mood 평균 +0.8"
+   - "저녁 9시+ 작업 → 다음날 무력감"
+   - "카페 30분+ → 일기 긍정톤 (9/11)"
+   조건: 동일 trigger 3회 이상 + 결과 magnitude 측정 가능
+
+2. type: "pattern" — 특정 조건/시기에 반복되는 자기 행동 경향
+   예시:
+   - "월경 1-2일 휴식 시 안정 (78% vit≤2)"
+   - "주말 늦잠 후 논문 진척"
+   - "거절 후 산책 → 부채감 해제"
+   조건: 4회 이상 반복 + frequency 표기 가능
+
+[원칙 — 매우 중요]
+- 구체적이어야 한다. 추상 일반론 ("스트레스 받으면 잘 못 잠") 출력 X.
+  반드시 사람/시간대/환경/숫자 1개 이상 포함.
+- 측정 가능 결과 — mood/vitality 수치 변화, 행동 완료율, 감정 톤 변화.
+- 사용자가 이미 알고 있는 인사이트 (입력 데이터의 existingInsights 와 핵심 명사 겹침) 출력 X.
+- traits/values/patterns (성격/가치/일반 패턴) X — 행동 간 link 만.
+- 한국어 짧은 문장 (content 40자 이내).
+- evidence 필드 — 횟수/평균/비율 포함 (60자 이내).
+- confidence < 0.55 항목 출력 X — 충분한 evidence 없으면 빈 배열 반환.
+- 최대 3개. 발견 없으면 빈 배열.
+
+[출력 — JSON만, 마크다운 X]
+{
+  "discovered": [
+    {
+      "type": "causal" | "pattern",
+      "content": "한국어 한 문장 (40자 이내)",
+      "evidence": "근거 텍스트 (60자 이내, 횟수/평균 포함)",
+      "confidence": 0.55 ~ 0.95
+    }
+  ]
+}`;
+
 // 사용자 보고 2026-05-12 ultrathink: daily_summary — 헤더 + 규칙 + 예시 고정.
 const DAILY_SUMMARY_SYSTEM = `한 날의 일기를 안 썼지만 그 날 흔적 (체크인 + 대화) 으로 짧은 요약을 만든다.
 
@@ -429,6 +474,10 @@ export function getEndpointSystem(body: any): { type: 'text'; text: string; cach
   }
   if (body?._endpoint === 'daily_summary') {
     return [{ type: 'text', text: DAILY_SUMMARY_SYSTEM, cache_control: { type: 'ephemeral' } }];
+  }
+  // 사용자 명시 2026-05-16 ultrathink: 자동 인사이트 발견 endpoint.
+  if (body?._endpoint === 'discover_insights') {
+    return [{ type: 'text', text: DISCOVER_INSIGHTS_SYSTEM, cache_control: { type: 'ephemeral' } }];
   }
   // mutation (4 sub-type) — user data 비중 큼. system 단위로 분리해도 cache 효과 미미. 일단 skip.
 

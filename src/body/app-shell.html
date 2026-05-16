@@ -891,6 +891,7 @@
           <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">🎯 강제 트리거</div>
+          <button class="btn-secondary" onclick="testForceInsightDiscover()" title="Haiku 4.5 사용. 7일 cooldown 우회 — 실 데이터에서 새 인사이트 1-3개 발견.">🔮 인사이트 발견 강제 (실데이터)</button>
           <button class="btn-secondary" onclick="forceAnalyze()" title="Opus 4.7 사용 — 비쌈. 현재 데이터 즉시 통합 분석.">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="testForceFullAnalysis()" title="forceAnalyze() 래퍼 — 흐름 검증용. 비용 동일.">📊 통합 분석 강제 (래퍼)</button>
           <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>

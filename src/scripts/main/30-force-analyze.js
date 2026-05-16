@@ -1144,6 +1144,11 @@ async function maybeRunDailyChapterExtract() {
 
   // 6. batch submit (50% 할인)
   await _submitDailyExtractBatch(pending);
+
+  // 7. 자동 인사이트 발견 (사용자 명시 2026-05-16 ultrathink) — 7일 cooldown + entries>=7 가드 내부.
+  if (typeof maybeRunDailyInsightDiscover === 'function') {
+    try { await maybeRunDailyInsightDiscover(); } catch (e) { console.warn('[auto-insight]', e); }
+  }
 }
 
 // 사용자 명시 2026-05-10: 주간 리뷰만 새로 받는 명령어 — _diagnoseExtract 의 weekly 부분만 추출.

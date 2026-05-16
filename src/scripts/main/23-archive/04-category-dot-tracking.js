@@ -48,7 +48,9 @@ function _libCategoryNewSince(cat, since) {
   if (cat === 'yangsaeng')
     return (state.topicCards || []).some(c => c.category === 'strategy' && c.createdAt && new Date(c.createdAt).getTime() > since);
   if (cat === 'insights')
-    return (state.archive || []).some(a => a.savedAt && new Date(a.savedAt).getTime() > since);
+    // V4 (사용자 명시 2026-05-16 ultrathink): AI 자동 발견 인사이트도 NEW 배지 신호.
+    return (state.archive || []).some(a => a.savedAt && new Date(a.savedAt).getTime() > since)
+        || (state.insights || []).some(i => i && !i.dismissed && i.discoveredAt && new Date(i.discoveredAt).getTime() > since);
   if (cat === 'pearls')
     return (state.pearls || []).some(p => p.type !== 'dna_pearl' && p.createdAt && new Date(p.createdAt).getTime() > since);
   if (cat === 'galpi')

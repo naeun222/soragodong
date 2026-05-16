@@ -1,20 +1,11 @@
-// V4-fix v3 (사용자 요청): AI 인사이트 발견 강제 — 5개 entry 가드 우회 + AI 호출
+// V4 (사용자 명시 2026-05-16 ultrathink): testerMode fallback 시드 추가 도구.
+// 실 데이터 인사이트 발견은 testForceInsightDiscover() (24-auto-insight-discover.js) — 테스터모드 OFF 필요.
+// 이 함수는 testerMode 안에서 fallback 시드 3개 push (UI 검증용).
 async function testForceDiscoverInsights() {
   if (!state.preferences || !state.preferences.testerMode) {
-    showToast('⚠️ 테스터 모드 ON 후 사용');
+    showToast('⚠️ 테스터 모드 ON 후 사용 (실 데이터 발견은 testForceInsightDiscover)');
     return;
   }
-  if (typeof discoverInsights === 'function' && _canAI()) {
-    showToast('🔮 AI 인사이트 발견 진행 중...');
-    try {
-      await discoverInsights();
-    } catch (e) {
-      showToast('실패 — fallback으로 시드 인사이트 추가');
-      _addFallbackInsights();
-    }
-    return;
-  }
-  // API 키 없으면 fallback 시드 추가
   _addFallbackInsights();
 }
 
