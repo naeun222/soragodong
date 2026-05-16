@@ -44,7 +44,6 @@ async function _showTicketSubTypePicker() {
   const options = enabled.map(s => ({ label: `${s.emoji} ${s.label}`, value: s.id }));
   const pick = await showOptionsModal({
     title: '어떤 티켓이야? 🎫',
-    message: '종류 골라.',
     options
   });
   return pick || null;
