@@ -229,8 +229,8 @@ function _diaryCoachmark415Read() {
   const body = `
     <div class="v8-coach-title">📔 그날의 기록</div>
     <div class="v8-coach-text">
-      이 날의 일기 한 번 읽어봐 ✦<br>
-      <span class="v8-coach-text-soft">다 봤으면 알겠어 — 다음으로.</span>
+      이렇게 일기를 쓸 수 있어요.<br>
+      <span class="v8-coach-text-soft">체크인 + 대화탭에서 일기: 쓰면 원본으로 저장되고, 없으면 고동이가 정리해줍니다.</span>
     </div>
   `;
   return _v8ShowCoachmark({
