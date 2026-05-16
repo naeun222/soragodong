@@ -11831,8 +11831,9 @@
     opacity: 0.55;
     margin-top: 8px;
   }
-  /* 양생방 top 모래사장 row */
-  .yangsaeng-shell-row { margin-bottom: 12px; }
+  /* 양생방 top 모래사장 row — V4 fix (사용자 명시 2026-05-17): chip column 폭 전체 차지 */
+  .yangsaeng-shell-row { margin-bottom: 12px; width: 100%; }
+  .yangsaeng-shell-row .home-small-card { width: 100%; box-sizing: border-box; }
 
   /* Hook 온보딩 모달 — Section 19.1 */
   .hook-onb-overlay {
@@ -13989,9 +13990,8 @@
     <div id="beachSpotlight"></div>
     
     <div class="beach-tabs">
+      <!-- V4 fix (사용자 명시 2026-05-17): 카테고리 chip 단순화 — '전체' + '등급별로' 두 개만. -->
       <button class="beach-tab active" data-beach-tab="all" onclick="switchBeachTab('all')">전체</button>
-      <button class="beach-tab" data-beach-tab="card" onclick="switchBeachTab('card')">오늘의 카드</button>
-      <button class="beach-tab" data-beach-tab="call" onclick="switchBeachTab('call')">소라의 부름</button>
       <button class="beach-tab" data-beach-tab="tier" onclick="switchBeachTab('tier')">등급별로</button>
     </div>
     

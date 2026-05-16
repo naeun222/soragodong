@@ -11687,8 +11687,9 @@
     opacity: 0.55;
     margin-top: 8px;
   }
-  /* 양생방 top 모래사장 row */
-  .yangsaeng-shell-row { margin-bottom: 12px; }
+  /* 양생방 top 모래사장 row — V4 fix (사용자 명시 2026-05-17): chip column 폭 전체 차지 */
+  .yangsaeng-shell-row { margin-bottom: 12px; width: 100%; }
+  .yangsaeng-shell-row .home-small-card { width: 100%; box-sizing: border-box; }
 
   /* Hook 온보딩 모달 — Section 19.1 */
   .hook-onb-overlay {
