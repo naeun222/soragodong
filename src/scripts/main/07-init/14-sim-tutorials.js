@@ -163,7 +163,6 @@ async function runDiaryLibTutorialV8() {
     screenAfterSeed: 'archive',
     navAction: () => { if (typeof switchLibraryCat === 'function') switchLibraryCat('diary'); },
     coachmarks: [
-      _diaryCoachmarkLibIntro,
       _diaryCoachmarkChip,
       _diaryCoachmarkCalendar415,
       _diaryCoachmark415Read,
@@ -173,24 +172,12 @@ async function runDiaryLibTutorialV8() {
   });
 }
 
-function _diaryCoachmarkLibIntro() {
-  const body = `
-    <div class="v8-coach-title">📚 5 카테고리</div>
-    <div class="v8-coach-text">
-      도서관에는 <b>5가지 카테고리</b>가 있어:<br>
-      📔 일기·대화 / 🔮 진주 / 🧬 양생방 / ✨ 깨달음 / 🌀 마법·리뷰<br>
-      <span class="v8-coach-text-soft">각 카테고리별로 자동 정리 ✦</span>
-    </div>
-  `;
-  return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
-}
-
 function _diaryCoachmarkChip() {
   const body = `
     <div class="v8-coach-title">📔 일기·대화</div>
     <div class="v8-coach-text">
       대화탭에서 <b>"일기:"</b>라고 쓴 것도 저장되고,<br>
-      고동이랑 한 대화를 고동이가 알아서 정리해줘.
+      고동이랑 한 대화를 고동이가 알아서 정리해줍니다.
     </div>
   `;
   return _v8ShowCoachmark({
