@@ -1,6 +1,7 @@
 // =============================================================================
 // 고동의 일기 모달 — HANDOFF.md prototype/components/VariantC.jsx (훔쳐보기) vanilla 변환.
-// 사용자 명시 2026-05-10: 회전 카드 source 3 → 모달 페이지화. 28s 카운트다운 + 토스트 자동 종료.
+// 사용자 명시 2026-05-10: 회전 카드 source 3 → 모달 페이지화. 60s 카운트다운 + 토스트 자동 종료.
+//   (사용자 명시 2026-05-17: 28→60s — 시뮬 시 이전 일기 ← 누르는 동안 dismiss 마찰 해소.)
 // =============================================================================
 
 // Module-local state. 모달 열려있을 때만 객체. 닫힐 때 null.
@@ -234,7 +235,7 @@ async function openGodongDiaryModal() {
   _gdiaryState = {
     entries: visibleEntries,
     idx: visibleEntries.length - 1,  // 마지막 (최신) 페이지부터.
-    secs: 28,
+    secs: 60,
     caught: false,
     returned: false,
     drag: { x: 0, active: false, startX: 0 },
@@ -269,7 +270,7 @@ function openSavedGodongDiary(id) {
   _gdiaryState = {
     entries: [e],
     idx: 0,
-    secs: 28,
+    secs: 60,
     caught: false,
     returned: false,
     drag: { x: 0, active: false, startX: 0 },
@@ -298,7 +299,7 @@ function openSavedMiniReview(id) {
   _gdiaryState = {
     entries: [fakeEntry],
     idx: 0,
-    secs: 28,
+    secs: 60,
     caught: false,
     returned: false,
     drag: { x: 0, active: false, startX: 0 },

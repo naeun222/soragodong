@@ -102,17 +102,9 @@ function renderChat() {
   const archiveLen = (state.chatArchive || []).length;
 
   if (!msgs.length) {
-    // 사용자 명시 2026-05-06: empty bubble — 예시 리스트는 토글 뒤로 숨김 (기본 접힘, 토글 클릭 시 펼침).
-    const examples = (typeof EMPTY_STATE_EXAMPLES !== 'undefined' && Array.isArray(EMPTY_STATE_EXAMPLES)) ? EMPTY_STATE_EXAMPLES : [];
-    const examplesBlock = examples.length
-      ? `<button class="chat-empty-toggle" id="chatEmptyExamplesToggle" onclick="toggleChatEmptyExamples()">무슨 말 할까? ▾</button><ul class="chat-empty-list" id="chatEmptyExamplesList" style="display:none;">${examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>`
-      : '';
-    container.innerHTML = archiveHeader + `<div class="msg assistant">
-      <div class="msg-bubble">안녕 🐚 왔구나.
-
-오늘 어땠어? 아무 말이나 편하게 해도 돼.
-일기처럼 길게 써도 되고, "졸려" 한 마디도 OK.${examplesBlock}</div>
-    </div>`;
+    // V4 (사용자 명시 2026-05-16 ultrathink): empty state opener / examples 토글 완전 제거.
+    // 사용자가 들어오면 입력창만. 첫 줄 안내 X.
+    container.innerHTML = archiveHeader;
     _chatRenderSig = null;
     _measureChatRender(_t0);
     return;

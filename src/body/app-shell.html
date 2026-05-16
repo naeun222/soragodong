@@ -19,34 +19,24 @@
         <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
       </div>
 
-      <!-- 사용자 명시 2026-05-09 (ultrathink): 회전 카드 (7 source rotating surface). spec home-redesign-2026-05-09.md 4절 + 11절. -->
+      <!-- V4 (사용자 명시 2026-05-17 ultrathink): 홈 재설계 — 회전 8 → 메인 1 (godongDiary) + 소형 3. -->
+      <!-- 메인 카드 = rotatingCardContainer (godongDiary 단일 고정). -->
       <div id="rotatingCardContainer"></div>
 
-      <!-- 사용자 명시 2026-05-09 (A 폐기): reviewPromptsContainer / predictionFollowupsContainer / activeDecisionsContainer zone 폐기 — 회전 카드 source 4/6 + 마법고동 small row 로 흡수 (spec 3-2). 함수 호출은 container null guard 자연 no-op. -->
-
-      <!-- 사용자 명시 2026-05-09 (C): 활성 숙고 ≥1 시만 노출. 활성 X 시 = 마법고동 chooser 로 진입. -->
-      <div id="reflectionContainer"></div>
-
-      <!-- ★★★ MAIN: 시간대별 액션 (밤=체크인). 진주 hero 는 회전 카드 source 1 으로 이동. -->
-      <div id="mainActionContainer"></div>
-
-      <!-- ★★★ 소라의 부름 (AI 발급 미션) -->
+      <!-- 활성 미션 (소라의 부름) — 사용자 합의: 활성 시 그대로 보존, 현 위치/weight 유지. -->
       <div id="missionContainer"></div>
 
-      <!-- 여백 (메인과 작은 항목 분리) -->
-      <div style="height: 24px;"></div>
+      <!-- 카드 (c) 체크인 — 21시 이후 + 오늘 미체크인일 때만 노출. -->
+      <div id="mainActionContainer"></div>
 
-      <!-- ★ 작은 항목들 (가로 한 줄) -->
-      <div class="home-small-row">
-        <div class="home-small-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
-          <span class="pulse-dot" id="beachPulseDot" hidden></span>
-          <div class="hsc-icon">🐚</div>
-          <div class="hsc-text">
-            <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
-            <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
-          </div>
-        </div>
-        <div id="decisionMiniLinkContainer"></div>
+      <!-- 소형 카드 row (a/b + 활성 숙고). weight ↓ — 메인 카드 시각 압도. -->
+      <div class="home-small-cards" id="homeSmallCards">
+        <!-- 카드 (a) 리뷰 미리보기 -->
+        <div id="homeReviewPreviewContainer"></div>
+        <!-- 카드 (b) 어제 대비 자산 변화 hint (🐚 +N, ✨ +N 등) -->
+        <div id="homeChangeHintContainer"></div>
+        <!-- 활성 숙고 (사용자 합의: 소형 카드 row 안 weight ↓) -->
+        <div id="reflectionContainer"></div>
       </div>
     </div>
 

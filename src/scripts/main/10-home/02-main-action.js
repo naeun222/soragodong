@@ -74,6 +74,13 @@ function renderMainAction() {
   const todayKeyVal = todayKey();
   const todayEntry = state.entries.find(e => e.date === todayKeyVal);
   const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
+  // V4 (사용자 명시 2026-05-17 ultrathink): 체크인 카드 = 21시 이후만 노출.
+  //   그 외 시간 / 오늘 이미 체크인 = 카드 숨김 (메인 카드 시각 압도 우선).
+  const _hourNow = new Date().getHours();
+  if (_hourNow < 21 || checkinDoneToday) {
+    container.innerHTML = '';
+    return;
+  }
   const slot = getCheckinTimeSlot();
   const copy = _checkinCardCopy(slot, checkinDoneToday);
 
@@ -109,30 +116,10 @@ function renderMainAction() {
   container.innerHTML = cardHtml;
 }
 
-// 마법고동 미니 링크 — 작지만 카드 모양
-// 사용자 명시 2026-05-09 (#7, spec 5-3): 활성 결정 + 활성 숙고 둘 다 카운트. reflectionContainer zone 폐기 흡수.
-function renderDecisionMiniLink() {
-  const container = document.getElementById('decisionMiniLinkContainer');
-  if (!container) return;
-
-  const decisionCount = (state.decisions || []).filter(d => d.status === 'in_progress').length;
-  const reflectionCount = (state.reflectionQuestions || []).filter(q => q.status === 'active').length;
-  const totalActive = decisionCount + reflectionCount;
-  // 사용자 명시 2026-05-09: 활성 ≥1 → "N 안고 있어" / 활성 0 → "풀어볼래" (짧게)
-  const subText = totalActive > 0 ? `${totalActive} 안고 있어` : '풀어볼래';
-
-  container.innerHTML = `
-    <div onclick="openMagicReflectionChooser()" class="decision-mini-card">
-      <div class="dm-icon"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"></div>
-      <div class="dm-text">
-        <div class="dm-title">마법고동</div>
-        <div class="dm-sub">${subText}</div>
-      </div>
-      <div class="dm-arrow">›</div>
-    </div>
-  `;
-  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
-}
+// V4 (사용자 명시 2026-05-17 ultrathink): renderDecisionMiniLink 폐기 — 마법고동 mini 카드 홈에서 제거.
+//   "N 안고 있어" 카운터 = 죽은 정보. 진행 중인 결정 hint 는 카드 (b) 자산 변화 hint 에 흡수.
+//   호출처는 container null guard 자연 no-op (decisionMiniLinkContainer 도 markup 에서 제거됨).
+function renderDecisionMiniLink() { /* noop — V4 2026-05-17 폐기 */ }
 
 // 사용자 명시 2026-05-09: 마법고동 카드 클릭 → 숙고/마법 chooser 모달.
 // 진입 path 분기: '마법의 방' = decisions screen / '숙고의 방' = active 숙고 → reflection screen / 활성 0 → addReflectionQuestion 입력 모달.

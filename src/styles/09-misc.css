@@ -11643,3 +11643,116 @@
     color: var(--text-soft); font-size: 10px;
     margin-bottom: 2px;
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+     V4 (사용자 명시 2026-05-17 ultrathink) — 홈 재설계 시각 위계.
+     메인 카드 (rotatingCardContainer) weight ↑, 소형 카드 row weight ↓.
+     ═══════════════════════════════════════════════════════════════ */
+  /* 메인 카드 — 시각 압도 (화면 절반 ↑) */
+  #rotatingCardContainer .rotating-card {
+    min-height: 44vh;
+    padding: 28px 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  }
+  #rotatingCardContainer .rotating-card .rc-body-tap {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  /* 소형 카드 row — 세로 stacked + weight ↓ */
+  .home-small-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+    opacity: 0.92;
+  }
+  .home-small-cards:empty { display: none; }
+  /* 신규 소형 카드 공통 */
+  .home-change-hint,
+  .home-review-preview {
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-soft);
+    cursor: default;
+    transition: background 0.15s;
+  }
+  .home-review-preview { cursor: pointer; }
+  .home-review-preview:active { background: var(--surface2); }
+  .hrp-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+  }
+  .hrp-caption {
+    font-size: 12.5px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hch-changes {
+    color: var(--text);
+    font-size: 12.5px;
+  }
+  .hch-since {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .hch-decision {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border);
+    color: var(--accent2);
+    font-size: 11.5px;
+    cursor: pointer;
+  }
+  .hch-decision:active { opacity: 0.7; }
+  /* cold start opener — 메인 카드 자리 fallback */
+  .home-cold-opener {
+    min-height: 44vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 28px 24px;
+    background: linear-gradient(135deg, rgba(139,126,196,0.10), rgba(45,40,80,0.05));
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .home-cold-opener:active { transform: scale(0.98); }
+  .home-cold-opener .hco-icon { font-size: 40px; }
+  .home-cold-opener .hco-title {
+    font-size: 18px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .home-cold-opener .hco-sub {
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+  .home-cold-opener .hco-cta {
+    margin-top: 8px;
+    padding: 8px 18px;
+    background: rgba(139,126,196,0.18);
+    border-radius: 10px;
+    color: var(--accent2);
+    font-size: 13px;
+  }
+  /* 활성 숙고 — 소형 카드 row 안에 들어가면 weight ↓ */
+  #homeSmallCards #reflectionContainer .reflection-active-card,
+  #homeSmallCards #reflectionContainer .reflection-card {
+    padding: 10px 14px;
+    font-size: 12.5px;
+    box-shadow: none;
+    opacity: 0.92;
+  }

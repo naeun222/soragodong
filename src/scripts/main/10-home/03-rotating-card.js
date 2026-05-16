@@ -1161,56 +1161,61 @@ function _rcGodongSvg(sourceId) {
 // =============================================================================
 // 렌더 — sessionOrder 기반 (한 화면 안 stable)
 // =============================================================================
+// V4 (사용자 명시 2026-05-17 ultrathink): 홈 재설계 — 회전 8 → 메인 1 (godongDiary 단일 고정).
+//   회전 X. swipe X. 화살표 / 점 indicator X (단일 카드라 무의미).
+//   cold start 사용자 (가입 7일 미만 / chatArchive<2 / pearls+entries<3) = "오늘은 한 줄만" cold opener.
+//   옛 source 함수 (_rcSource1Pearl / _rcSource2NewView / _rcSource6Simulation / _rcSource7Yesterday / review 4종) 본체 보존 — 호출만 차단 (legacy / 향후 hook 진입 시 재사용).
 function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
   _ensureRotatingCardState();
 
   try {
-    // 튜토리얼 모드 = 진주 fixed
-    if (window._onbTutorialMode) {
-      const s = _rcSource1Pearl();
-      _rcSessionOrder = [s];
-      _rcSessionIndex = 0;
-      container.innerHTML = _rcRenderShell([s], 0);
-      return;
-    }
-
-    // 새 세션 (sessionOrder 비어있으면 새 진입) — 가용 source 재계산 + 정렬
-    if (!_rcSessionOrder) {
-      const sources = _rcCollectAvailable();
-      if (sources.length === 0) {
-        // 가용 source 0 = source 1 진주 fallback (빈 진주 CTA 라도 가용)
-        const s = _rcSource1Pearl();
-        _rcSessionOrder = s ? [s] : [];
-        _rcSessionIndex = 0;
+    // cold start = "오늘은 한 줄만" opener fallback (godongDiary substrate 부재)
+    if (typeof _isColdStart === 'function' && _isColdStart()) {
+      if (typeof renderColdStartOpener === 'function') {
+        container.innerHTML = renderColdStartOpener();
       } else {
-        _rcSessionOrder = _rcSortByConfirmation(sources);
-        _rcSessionIndex = 0;
-        // 첫 카드 진주면 lastPearlShownDate 갱신
-        const first = _rcSessionOrder[0];
-        if (first && first.id === 'pearl') {
-          const r = _ensureRotatingCardState();
-          r.lastPearlShownDate = _rcTodayKey();
-          if (typeof saveState === 'function') saveState();
-        }
+        container.innerHTML = '';
       }
-    }
-
-    if (_rcSessionOrder.length === 0) {
-      container.innerHTML = '';
+      _rcSessionOrder = null;
+      _rcSessionIndex = 0;
       return;
     }
-    if (_rcSessionIndex >= _rcSessionOrder.length) _rcSessionIndex = 0;
-    container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
+
+    // 튜토리얼 모드 = godongDiary 도 substrate 없으니 cold opener 와 동일하게 표시
+    if (window._onbTutorialMode) {
+      if (typeof renderColdStartOpener === 'function') {
+        container.innerHTML = renderColdStartOpener();
+      } else {
+        container.innerHTML = '';
+      }
+      return;
+    }
+
+    // 메인 카드 = godongDiary 단일.
+    const s = (typeof _rcSource3GodongDiary === 'function') ? _rcSource3GodongDiary() : null;
+    if (!s) {
+      // godongDiary 미가용 → cold opener fallback (substrate 부족)
+      if (typeof renderColdStartOpener === 'function') {
+        container.innerHTML = renderColdStartOpener();
+      } else {
+        container.innerHTML = '';
+      }
+      return;
+    }
+    _rcSessionOrder = [s];
+    _rcSessionIndex = 0;
+    container.innerHTML = _rcRenderShell([s], 0);
     _rcEqualizeHeights();
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     try {
-      const s = _rcSource1Pearl();
-      _rcSessionOrder = [s];
-      _rcSessionIndex = 0;
-      container.innerHTML = _rcRenderShell([s], 0);
+      if (typeof renderColdStartOpener === 'function') {
+        container.innerHTML = renderColdStartOpener();
+      } else {
+        container.innerHTML = '';
+      }
     } catch (e2) {
       console.error('[renderRotatingCard fallback]', e2);
       container.innerHTML = '';

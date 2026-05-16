@@ -11787,6 +11787,119 @@
     color: var(--text-soft); font-size: 10px;
     margin-bottom: 2px;
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+     V4 (사용자 명시 2026-05-17 ultrathink) — 홈 재설계 시각 위계.
+     메인 카드 (rotatingCardContainer) weight ↑, 소형 카드 row weight ↓.
+     ═══════════════════════════════════════════════════════════════ */
+  /* 메인 카드 — 시각 압도 (화면 절반 ↑) */
+  #rotatingCardContainer .rotating-card {
+    min-height: 44vh;
+    padding: 28px 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  }
+  #rotatingCardContainer .rotating-card .rc-body-tap {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  /* 소형 카드 row — 세로 stacked + weight ↓ */
+  .home-small-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+    opacity: 0.92;
+  }
+  .home-small-cards:empty { display: none; }
+  /* 신규 소형 카드 공통 */
+  .home-change-hint,
+  .home-review-preview {
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-soft);
+    cursor: default;
+    transition: background 0.15s;
+  }
+  .home-review-preview { cursor: pointer; }
+  .home-review-preview:active { background: var(--surface2); }
+  .hrp-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+  }
+  .hrp-caption {
+    font-size: 12.5px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hch-changes {
+    color: var(--text);
+    font-size: 12.5px;
+  }
+  .hch-since {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .hch-decision {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border);
+    color: var(--accent2);
+    font-size: 11.5px;
+    cursor: pointer;
+  }
+  .hch-decision:active { opacity: 0.7; }
+  /* cold start opener — 메인 카드 자리 fallback */
+  .home-cold-opener {
+    min-height: 44vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 28px 24px;
+    background: linear-gradient(135deg, rgba(139,126,196,0.10), rgba(45,40,80,0.05));
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .home-cold-opener:active { transform: scale(0.98); }
+  .home-cold-opener .hco-icon { font-size: 40px; }
+  .home-cold-opener .hco-title {
+    font-size: 18px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .home-cold-opener .hco-sub {
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+  .home-cold-opener .hco-cta {
+    margin-top: 8px;
+    padding: 8px 18px;
+    background: rgba(139,126,196,0.18);
+    border-radius: 10px;
+    color: var(--accent2);
+    font-size: 13px;
+  }
+  /* 활성 숙고 — 소형 카드 row 안에 들어가면 weight ↓ */
+  #homeSmallCards #reflectionContainer .reflection-active-card,
+  #homeSmallCards #reflectionContainer .reflection-card {
+    padding: 10px 14px;
+    font-size: 12.5px;
+    box-shadow: none;
+    opacity: 0.92;
+  }
 /* V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 — cold open hero + 코치마크 */
 
 /* ── HERO (cold open) ──────────────────────────────────────── */
@@ -12760,34 +12873,24 @@
         <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
       </div>
 
-      <!-- 사용자 명시 2026-05-09 (ultrathink): 회전 카드 (7 source rotating surface). spec home-redesign-2026-05-09.md 4절 + 11절. -->
+      <!-- V4 (사용자 명시 2026-05-17 ultrathink): 홈 재설계 — 회전 8 → 메인 1 (godongDiary) + 소형 3. -->
+      <!-- 메인 카드 = rotatingCardContainer (godongDiary 단일 고정). -->
       <div id="rotatingCardContainer"></div>
 
-      <!-- 사용자 명시 2026-05-09 (A 폐기): reviewPromptsContainer / predictionFollowupsContainer / activeDecisionsContainer zone 폐기 — 회전 카드 source 4/6 + 마법고동 small row 로 흡수 (spec 3-2). 함수 호출은 container null guard 자연 no-op. -->
-
-      <!-- 사용자 명시 2026-05-09 (C): 활성 숙고 ≥1 시만 노출. 활성 X 시 = 마법고동 chooser 로 진입. -->
-      <div id="reflectionContainer"></div>
-
-      <!-- ★★★ MAIN: 시간대별 액션 (밤=체크인). 진주 hero 는 회전 카드 source 1 으로 이동. -->
-      <div id="mainActionContainer"></div>
-
-      <!-- ★★★ 소라의 부름 (AI 발급 미션) -->
+      <!-- 활성 미션 (소라의 부름) — 사용자 합의: 활성 시 그대로 보존, 현 위치/weight 유지. -->
       <div id="missionContainer"></div>
 
-      <!-- 여백 (메인과 작은 항목 분리) -->
-      <div style="height: 24px;"></div>
+      <!-- 카드 (c) 체크인 — 21시 이후 + 오늘 미체크인일 때만 노출. -->
+      <div id="mainActionContainer"></div>
 
-      <!-- ★ 작은 항목들 (가로 한 줄) -->
-      <div class="home-small-row">
-        <div class="home-small-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
-          <span class="pulse-dot" id="beachPulseDot" hidden></span>
-          <div class="hsc-icon">🐚</div>
-          <div class="hsc-text">
-            <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
-            <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
-          </div>
-        </div>
-        <div id="decisionMiniLinkContainer"></div>
+      <!-- 소형 카드 row (a/b + 활성 숙고). weight ↓ — 메인 카드 시각 압도. -->
+      <div class="home-small-cards" id="homeSmallCards">
+        <!-- 카드 (a) 리뷰 미리보기 -->
+        <div id="homeReviewPreviewContainer"></div>
+        <!-- 카드 (b) 어제 대비 자산 변화 hint (🐚 +N, ✨ +N 등) -->
+        <div id="homeChangeHintContainer"></div>
+        <!-- 활성 숙고 (사용자 합의: 소형 카드 row 안 weight ↓) -->
+        <div id="reflectionContainer"></div>
       </div>
     </div>
 
@@ -20274,7 +20377,9 @@ async function init() {
     if (typeof renderRotatingCard === 'function') renderRotatingCard();
     if (typeof renderMainAction === 'function') renderMainAction();
     if (typeof renderTodayMission === 'function') renderTodayMission();
-    if (typeof renderDecisionMiniLink === 'function') renderDecisionMiniLink();
+    // V4 (사용자 명시 2026-05-17 ultrathink): 신규 소형 카드 (a) 리뷰 미리보기 + (b) 자산 변화 hint.
+    if (typeof renderReviewPreview === 'function') renderReviewPreview();
+    if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
   } catch (e) { console.warn('[init eager home render]', e); }
 
   // 사용자 요청 2026-04-28: 서버 시간 동기화 (디바이스 시계 잘못돼도 보정)
@@ -20496,7 +20601,10 @@ async function init() {
   renderReviewPrompts();
   renderPredictionFollowups();
   renderMainAction();
-  renderDecisionMiniLink();
+  // V4 (사용자 명시 2026-05-17 ultrathink): renderDecisionMiniLink 폐기 — 마법고동 mini 카드 홈에서 제거.
+  // 신규 소형 카드 (a) 리뷰 미리보기 + (b) 자산 변화 hint.
+  if (typeof renderReviewPreview === 'function') renderReviewPreview();
+  if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
   // 사용자 명시 2026-05-09: init 시 회전 카드 ('🌟 오늘의 너') 호출 누락 → 첫 로드 시 안 보임 fix.
   if (typeof renderRotatingCard === 'function') renderRotatingCard();
   if (typeof renderReflectionHome === 'function') renderReflectionHome();
@@ -26802,6 +26910,13 @@ function renderMainAction() {
   const todayKeyVal = todayKey();
   const todayEntry = state.entries.find(e => e.date === todayKeyVal);
   const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
+  // V4 (사용자 명시 2026-05-17 ultrathink): 체크인 카드 = 21시 이후만 노출.
+  //   그 외 시간 / 오늘 이미 체크인 = 카드 숨김 (메인 카드 시각 압도 우선).
+  const _hourNow = new Date().getHours();
+  if (_hourNow < 21 || checkinDoneToday) {
+    container.innerHTML = '';
+    return;
+  }
   const slot = getCheckinTimeSlot();
   const copy = _checkinCardCopy(slot, checkinDoneToday);
 
@@ -26837,30 +26952,10 @@ function renderMainAction() {
   container.innerHTML = cardHtml;
 }
 
-// 마법고동 미니 링크 — 작지만 카드 모양
-// 사용자 명시 2026-05-09 (#7, spec 5-3): 활성 결정 + 활성 숙고 둘 다 카운트. reflectionContainer zone 폐기 흡수.
-function renderDecisionMiniLink() {
-  const container = document.getElementById('decisionMiniLinkContainer');
-  if (!container) return;
-
-  const decisionCount = (state.decisions || []).filter(d => d.status === 'in_progress').length;
-  const reflectionCount = (state.reflectionQuestions || []).filter(q => q.status === 'active').length;
-  const totalActive = decisionCount + reflectionCount;
-  // 사용자 명시 2026-05-09: 활성 ≥1 → "N 안고 있어" / 활성 0 → "풀어볼래" (짧게)
-  const subText = totalActive > 0 ? `${totalActive} 안고 있어` : '풀어볼래';
-
-  container.innerHTML = `
-    <div onclick="openMagicReflectionChooser()" class="decision-mini-card">
-      <div class="dm-icon"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"></div>
-      <div class="dm-text">
-        <div class="dm-title">마법고동</div>
-        <div class="dm-sub">${subText}</div>
-      </div>
-      <div class="dm-arrow">›</div>
-    </div>
-  `;
-  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
-}
+// V4 (사용자 명시 2026-05-17 ultrathink): renderDecisionMiniLink 폐기 — 마법고동 mini 카드 홈에서 제거.
+//   "N 안고 있어" 카운터 = 죽은 정보. 진행 중인 결정 hint 는 카드 (b) 자산 변화 hint 에 흡수.
+//   호출처는 container null guard 자연 no-op (decisionMiniLinkContainer 도 markup 에서 제거됨).
+function renderDecisionMiniLink() { /* noop — V4 2026-05-17 폐기 */ }
 
 // 사용자 명시 2026-05-09: 마법고동 카드 클릭 → 숙고/마법 chooser 모달.
 // 진입 path 분기: '마법의 방' = decisions screen / '숙고의 방' = active 숙고 → reflection screen / 활성 0 → addReflectionQuestion 입력 모달.
@@ -28183,56 +28278,61 @@ function _rcGodongSvg(sourceId) {
 // =============================================================================
 // 렌더 — sessionOrder 기반 (한 화면 안 stable)
 // =============================================================================
+// V4 (사용자 명시 2026-05-17 ultrathink): 홈 재설계 — 회전 8 → 메인 1 (godongDiary 단일 고정).
+//   회전 X. swipe X. 화살표 / 점 indicator X (단일 카드라 무의미).
+//   cold start 사용자 (가입 7일 미만 / chatArchive<2 / pearls+entries<3) = "오늘은 한 줄만" cold opener.
+//   옛 source 함수 (_rcSource1Pearl / _rcSource2NewView / _rcSource6Simulation / _rcSource7Yesterday / review 4종) 본체 보존 — 호출만 차단 (legacy / 향후 hook 진입 시 재사용).
 function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
   _ensureRotatingCardState();
 
   try {
-    // 튜토리얼 모드 = 진주 fixed
-    if (window._onbTutorialMode) {
-      const s = _rcSource1Pearl();
-      _rcSessionOrder = [s];
-      _rcSessionIndex = 0;
-      container.innerHTML = _rcRenderShell([s], 0);
-      return;
-    }
-
-    // 새 세션 (sessionOrder 비어있으면 새 진입) — 가용 source 재계산 + 정렬
-    if (!_rcSessionOrder) {
-      const sources = _rcCollectAvailable();
-      if (sources.length === 0) {
-        // 가용 source 0 = source 1 진주 fallback (빈 진주 CTA 라도 가용)
-        const s = _rcSource1Pearl();
-        _rcSessionOrder = s ? [s] : [];
-        _rcSessionIndex = 0;
+    // cold start = "오늘은 한 줄만" opener fallback (godongDiary substrate 부재)
+    if (typeof _isColdStart === 'function' && _isColdStart()) {
+      if (typeof renderColdStartOpener === 'function') {
+        container.innerHTML = renderColdStartOpener();
       } else {
-        _rcSessionOrder = _rcSortByConfirmation(sources);
-        _rcSessionIndex = 0;
-        // 첫 카드 진주면 lastPearlShownDate 갱신
-        const first = _rcSessionOrder[0];
-        if (first && first.id === 'pearl') {
-          const r = _ensureRotatingCardState();
-          r.lastPearlShownDate = _rcTodayKey();
-          if (typeof saveState === 'function') saveState();
-        }
+        container.innerHTML = '';
       }
-    }
-
-    if (_rcSessionOrder.length === 0) {
-      container.innerHTML = '';
+      _rcSessionOrder = null;
+      _rcSessionIndex = 0;
       return;
     }
-    if (_rcSessionIndex >= _rcSessionOrder.length) _rcSessionIndex = 0;
-    container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
+
+    // 튜토리얼 모드 = godongDiary 도 substrate 없으니 cold opener 와 동일하게 표시
+    if (window._onbTutorialMode) {
+      if (typeof renderColdStartOpener === 'function') {
+        container.innerHTML = renderColdStartOpener();
+      } else {
+        container.innerHTML = '';
+      }
+      return;
+    }
+
+    // 메인 카드 = godongDiary 단일.
+    const s = (typeof _rcSource3GodongDiary === 'function') ? _rcSource3GodongDiary() : null;
+    if (!s) {
+      // godongDiary 미가용 → cold opener fallback (substrate 부족)
+      if (typeof renderColdStartOpener === 'function') {
+        container.innerHTML = renderColdStartOpener();
+      } else {
+        container.innerHTML = '';
+      }
+      return;
+    }
+    _rcSessionOrder = [s];
+    _rcSessionIndex = 0;
+    container.innerHTML = _rcRenderShell([s], 0);
     _rcEqualizeHeights();
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     try {
-      const s = _rcSource1Pearl();
-      _rcSessionOrder = [s];
-      _rcSessionIndex = 0;
-      container.innerHTML = _rcRenderShell([s], 0);
+      if (typeof renderColdStartOpener === 'function') {
+        container.innerHTML = renderColdStartOpener();
+      } else {
+        container.innerHTML = '';
+      }
     } catch (e2) {
       console.error('[renderRotatingCard fallback]', e2);
       container.innerHTML = '';
@@ -29868,7 +29968,8 @@ function _rcOpenFreshReview(type, reviewId, key, completedAt) {
 }
 // =============================================================================
 // 고동의 일기 모달 — HANDOFF.md prototype/components/VariantC.jsx (훔쳐보기) vanilla 변환.
-// 사용자 명시 2026-05-10: 회전 카드 source 3 → 모달 페이지화. 28s 카운트다운 + 토스트 자동 종료.
+// 사용자 명시 2026-05-10: 회전 카드 source 3 → 모달 페이지화. 60s 카운트다운 + 토스트 자동 종료.
+//   (사용자 명시 2026-05-17: 28→60s — 시뮬 시 이전 일기 ← 누르는 동안 dismiss 마찰 해소.)
 // =============================================================================
 
 // Module-local state. 모달 열려있을 때만 객체. 닫힐 때 null.
@@ -30102,7 +30203,7 @@ async function openGodongDiaryModal() {
   _gdiaryState = {
     entries: visibleEntries,
     idx: visibleEntries.length - 1,  // 마지막 (최신) 페이지부터.
-    secs: 28,
+    secs: 60,
     caught: false,
     returned: false,
     drag: { x: 0, active: false, startX: 0 },
@@ -30137,7 +30238,7 @@ function openSavedGodongDiary(id) {
   _gdiaryState = {
     entries: [e],
     idx: 0,
-    secs: 28,
+    secs: 60,
     caught: false,
     returned: false,
     drag: { x: 0, active: false, startX: 0 },
@@ -30166,7 +30267,7 @@ function openSavedMiniReview(id) {
   _gdiaryState = {
     entries: [fakeEntry],
     idx: 0,
-    secs: 28,
+    secs: 60,
     caught: false,
     returned: false,
     drag: { x: 0, active: false, startX: 0 },
@@ -31753,6 +31854,176 @@ async function showReflectionItemActions(id) {
   }
 }
 
+// V4 (사용자 명시 2026-05-17 ultrathink): 카드 (b) 어제 대비 자산 변화 hint.
+//   옛 "N개 모았어" 카운터 (매일 동일 = 죽은 정보) 폐기 → 어제 대비 +N 변화만 표시.
+//   변화 0건 = 카드 자체 숨김.
+//   진행 중 결정/숙고는 짧은 hint 한 줄 같이 표시.
+
+function _changeHintCount24h(items, tsKey) {
+  if (!Array.isArray(items)) return 0;
+  const cutoff = Date.now() - 86400000;
+  let n = 0;
+  for (const it of items) {
+    if (!it) continue;
+    const raw = it[tsKey];
+    if (!raw) continue;
+    const t = new Date(raw).getTime();
+    if (!isNaN(t) && t >= cutoff) n++;
+  }
+  return n;
+}
+
+function renderYesterdayChangeHint() {
+  const container = document.getElementById('homeChangeHintContainer');
+  if (!container) return;
+
+  // testerMode 또는 cold start 면 카드 자체 숨김 (변화 비교 무의미)
+  if (state && state.preferences && state.preferences.testerMode) {
+    container.innerHTML = '';
+    return;
+  }
+  if (typeof _isColdStart === 'function' && _isColdStart()) {
+    container.innerHTML = '';
+    return;
+  }
+
+  // 24h 이내 추가된 자산
+  const newShells   = _changeHintCount24h(state.shellCollection, 'collectedAt');
+  const newPearls   = _changeHintCount24h((state.pearls || []).filter(p => p && p.type !== 'dna_pearl'), 'createdAt');
+  const newArchive  = _changeHintCount24h((state.archive || []).filter(a => a && !a._deleted), 'savedAt');
+  const newInsights = _changeHintCount24h((state.insights || []).filter(i => i && !i.dismissed), 'discoveredAt');
+
+  // 진행 중 마법고동 — 활성 결정 1개 + 가장 가까운 unlock 시점
+  const activeDecisions = (state.decisions || []).filter(d => d && d.status === 'in_progress');
+  let decisionHint = null;
+  if (activeDecisions.length > 0) {
+    // 가장 최근 시작 결정의 unlock 시점
+    const sorted = activeDecisions.slice().sort((a, b) => new Date(b.startedAt || 0) - new Date(a.startedAt || 0));
+    const d0 = sorted[0];
+    if (d0 && d0.startedAt) {
+      const startedMs = new Date(d0.startedAt).getTime();
+      const elapsedDays = Math.floor((Date.now() - startedMs) / 86400000);
+      const remainDays = Math.max(0, 14 - elapsedDays);
+      if (remainDays > 0) decisionHint = `🪄 마법고동 ${remainDays}일 남음`;
+      else decisionHint = `🪄 마법고동 unlock 됨`;
+    }
+  }
+
+  // 변화 0건 + 결정 hint 도 없으면 카드 자체 숨김
+  const parts = [];
+  if (newShells > 0)   parts.push(`🐚 +${newShells}`);
+  if (newPearls > 0)   parts.push(`🔮 +${newPearls}`);
+  if (newArchive > 0)  parts.push(`✨ +${newArchive}`);
+  if (newInsights > 0) parts.push(`🔍 +${newInsights}`);
+
+  if (parts.length === 0 && !decisionHint) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const partsLine = parts.length > 0
+    ? `<div class="hch-changes">${parts.join(' · ')}<span class="hch-since"> 어제</span></div>`
+    : '';
+  const decisionLine = decisionHint
+    ? `<div class="hch-decision" onclick="event.stopPropagation(); showScreen('decisions');">${decisionHint} ›</div>`
+    : '';
+
+  container.innerHTML = `<div class="home-change-hint">${partsLine}${decisionLine}</div>`;
+}
+// V4 (사용자 명시 2026-05-17 ultrathink): 카드 (a) 리뷰 미리보기.
+//   가장 최근 weekly/monthly/quarterly review 1개 picker. 한 줄 캡션.
+//   클릭 → 도서관 마법·리뷰 chip 진입.
+//   review 없으면 null return (카드 숨김).
+
+function _reviewPreviewPickLatest() {
+  // monthly / quarterly / weekly 중 가장 최근 1개 (completedAt 기준)
+  const all = [];
+  (state.weeklyReviews    || []).forEach(r => r && r.completedAt && all.push({ ...r, _kind: 'weekly',    _ts: new Date(r.completedAt).getTime() }));
+  (state.monthlyReviews   || []).forEach(r => r && r.completedAt && all.push({ ...r, _kind: 'monthly',   _ts: new Date(r.completedAt).getTime() }));
+  (state.quarterlyReviews || []).forEach(r => r && r.completedAt && all.push({ ...r, _kind: 'quarterly', _ts: new Date(r.completedAt).getTime() }));
+  if (all.length === 0) return null;
+  all.sort((a, b) => b._ts - a._ts);
+  return all[0];
+}
+
+function renderReviewPreview() {
+  const container = document.getElementById('homeReviewPreviewContainer');
+  if (!container) return;
+
+  // testerMode 면 시드 리뷰만 잡힘 — 그래도 표시 OK (디버그 가치)
+  // cold start (≤7일) 면 리뷰 substrate 부재 → 숨김
+  if (typeof _isColdStart === 'function' && _isColdStart()) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const r = _reviewPreviewPickLatest();
+  if (!r) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const labelMap = {
+    weekly:    '🌙 이번 주 너',
+    monthly:   '🌙 지난 달 너',
+    quarterly: '🌙 지난 분기 너'
+  };
+  const label = labelMap[r._kind] || '🌙 최근 리뷰';
+
+  // summary 50자 fallback — sections.flow / pattern 사용
+  let caption = (r.summary || '').trim();
+  if (!caption && r.sections && typeof r.sections === 'object') {
+    caption = (r.sections.flow || r.sections.pattern || r.sections.good_moments || '').trim();
+  }
+  if (!caption) caption = '리뷰 보러 가기';
+  caption = caption.slice(0, 60);
+
+  const kindAttr = r._kind;
+  container.innerHTML = `
+    <div class="home-review-preview" onclick="_openReviewPreviewLink('${kindAttr}')">
+      <div class="hrp-label">${label}</div>
+      <div class="hrp-caption">${escapeHtml(caption)}</div>
+    </div>
+  `;
+}
+
+function _openReviewPreviewLink(kind) {
+  // 도서관 → 마법·리뷰 chip 진입.
+  if (typeof showScreen === 'function') showScreen('archive');
+  setTimeout(() => {
+    if (typeof switchLibraryCat === 'function') switchLibraryCat('galpi');
+  }, 100);
+}
+// V4 (사용자 명시 2026-05-17 ultrathink): cold start 분기.
+//   가입 7일 미만 OR chatArchive < 2 OR pearls+entries < 3 = cold start.
+//   메인 카드 = "오늘은 한 줄만" + chat link (substrate 부족 시 godongDiary 생성 X).
+
+function _isColdStart() {
+  if (!state) return true;
+  // 가입 7일 미만 — state.createdAt 부재 시 daysSinceJoin 가드 skip
+  if (state.createdAt) {
+    const days = (Date.now() - new Date(state.createdAt).getTime()) / 86400000;
+    if (!isNaN(days) && days < 7) return true;
+  }
+  const archiveLen = Array.isArray(state.chatArchive) ? state.chatArchive.length : 0;
+  if (archiveLen < 2) return true;
+  const pearlsLen = Array.isArray(state.pearls) ? state.pearls.length : 0;
+  const entriesLen = Array.isArray(state.entries) ? state.entries.length : 0;
+  if (pearlsLen + entriesLen < 3) return true;
+  return false;
+}
+
+function renderColdStartOpener() {
+  // rotatingCardContainer 안에 cold opener HTML 주입.
+  return `
+    <div class="home-cold-opener" onclick="showScreen('chat')">
+      <div class="hco-icon">🐚</div>
+      <div class="hco-title">오늘은 한 줄만</div>
+      <div class="hco-sub">아무 말이나 편하게.</div>
+      <div class="hco-cta">→ 챗으로</div>
+    </div>
+  `;
+}
 // ═══════════════════════════════════════════════════════════════
 // PHASE 5: DAILY QUESTION POOL & ROTATION
 // ═══════════════════════════════════════════════════════════════
@@ -37951,17 +38222,9 @@ function renderChat() {
   const archiveLen = (state.chatArchive || []).length;
 
   if (!msgs.length) {
-    // 사용자 명시 2026-05-06: empty bubble — 예시 리스트는 토글 뒤로 숨김 (기본 접힘, 토글 클릭 시 펼침).
-    const examples = (typeof EMPTY_STATE_EXAMPLES !== 'undefined' && Array.isArray(EMPTY_STATE_EXAMPLES)) ? EMPTY_STATE_EXAMPLES : [];
-    const examplesBlock = examples.length
-      ? `<button class="chat-empty-toggle" id="chatEmptyExamplesToggle" onclick="toggleChatEmptyExamples()">무슨 말 할까? ▾</button><ul class="chat-empty-list" id="chatEmptyExamplesList" style="display:none;">${examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>`
-      : '';
-    container.innerHTML = archiveHeader + `<div class="msg assistant">
-      <div class="msg-bubble">안녕 🐚 왔구나.
-
-오늘 어땠어? 아무 말이나 편하게 해도 돼.
-일기처럼 길게 써도 되고, "졸려" 한 마디도 OK.${examplesBlock}</div>
-    </div>`;
+    // V4 (사용자 명시 2026-05-16 ultrathink): empty state opener / examples 토글 완전 제거.
+    // 사용자가 들어오면 입력창만. 첫 줄 안내 X.
+    container.innerHTML = archiveHeader;
     _chatRenderSig = null;
     _measureChatRender(_t0);
     return;

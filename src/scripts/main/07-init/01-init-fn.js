@@ -143,7 +143,9 @@ async function init() {
     if (typeof renderRotatingCard === 'function') renderRotatingCard();
     if (typeof renderMainAction === 'function') renderMainAction();
     if (typeof renderTodayMission === 'function') renderTodayMission();
-    if (typeof renderDecisionMiniLink === 'function') renderDecisionMiniLink();
+    // V4 (사용자 명시 2026-05-17 ultrathink): 신규 소형 카드 (a) 리뷰 미리보기 + (b) 자산 변화 hint.
+    if (typeof renderReviewPreview === 'function') renderReviewPreview();
+    if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
   } catch (e) { console.warn('[init eager home render]', e); }
 
   // 사용자 요청 2026-04-28: 서버 시간 동기화 (디바이스 시계 잘못돼도 보정)
@@ -365,7 +367,10 @@ async function init() {
   renderReviewPrompts();
   renderPredictionFollowups();
   renderMainAction();
-  renderDecisionMiniLink();
+  // V4 (사용자 명시 2026-05-17 ultrathink): renderDecisionMiniLink 폐기 — 마법고동 mini 카드 홈에서 제거.
+  // 신규 소형 카드 (a) 리뷰 미리보기 + (b) 자산 변화 hint.
+  if (typeof renderReviewPreview === 'function') renderReviewPreview();
+  if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
   // 사용자 명시 2026-05-09: init 시 회전 카드 ('🌟 오늘의 너') 호출 누락 → 첫 로드 시 안 보임 fix.
   if (typeof renderRotatingCard === 'function') renderRotatingCard();
   if (typeof renderReflectionHome === 'function') renderReflectionHome();
