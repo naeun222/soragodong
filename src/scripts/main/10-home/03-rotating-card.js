@@ -1288,6 +1288,7 @@ function _rcBuildCheckinBodyHtml() {
 }
 
 // 리뷰 링크 source bodyHtml.
+// 사용자 보고 2026-05-17: weekly 신 schema (momentum_line / flow / scenes) 도 caption 후보로 인식.
 function _rcBuildReviewBodyHtml(r) {
   const labelMap = {
     weekly:    '🌙 이번 주 너',
@@ -1295,9 +1296,22 @@ function _rcBuildReviewBodyHtml(r) {
     quarterly: '🌙 지난 분기 너'
   };
   const label = labelMap[r._kind] || '🌙 최근 리뷰';
-  let caption = (r.summary || '').trim();
-  if (!caption && r.sections && typeof r.sections === 'object') {
-    caption = (r.sections.flow || r.sections.pattern || r.sections.good_moments || '').trim();
+  let caption = '';
+  if (r._kind === 'weekly') {
+    // weekly 신 schema 우선
+    caption = (r.momentum_line || r.flow || '').trim();
+    if (!caption && Array.isArray(r.scenes) && r.scenes.length > 0) {
+      const s = r.scenes[0];
+      caption = (typeof s === 'string' ? s : (s && (s.what || s.when || s.feeling) || '')).trim();
+    }
+    if (!caption && r.one_word_weekly) caption = String(r.one_word_weekly);
+    if (!caption) caption = (r.summary || '').trim();
+  } else {
+    caption = (r.summary || '').trim();
+    if (!caption && r.sections && typeof r.sections === 'object') {
+      caption = (r.sections.flow || r.sections.pattern || r.sections.good_moments || '').trim();
+    }
+    if (!caption && r.pattern && r.pattern.headline) caption = String(r.pattern.headline);
   }
   if (!caption) caption = '리뷰 보러 가기';
   const preview = caption.length > 120 ? caption.slice(0, 120) + '…' : caption;

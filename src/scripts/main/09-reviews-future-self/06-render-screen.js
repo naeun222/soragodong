@@ -48,13 +48,22 @@ function renderReviewScreen(type, reviewData, opts) {
   `;
 
   // 사용자 요청 2026-04-30: 새 형식 (pattern/quotes/experiment/seeds) — 옛 형식 (sections.patterns 등) backward compat
-  const isNewFormat = !!(reviewData.pattern || reviewData.quotes || reviewData.seeds);
+  // 사용자 보고 2026-05-17: weekly 신 schema (batch 9, 2026-05-10) 는 pattern/quotes/seeds 안 줌 (프롬프트 명시 금지).
+  //   weekly 전용 필드 (one_word_weekly / momentum_line / scenes / cycles) 도 isNewFormat 으로 인식 → 옛 format 의 빈 sections 렌더 방지.
+  const isNewFormat = !!(
+    reviewData.pattern || reviewData.quotes || reviewData.seeds
+    || reviewData.one_word_weekly || reviewData.momentum_line
+    || (Array.isArray(reviewData.scenes) && reviewData.scenes.length > 0)
+    || reviewData.cycles
+  );
 
   if (isNewFormat) {
     // ═══ 새 리뷰 layout (사용자 명시 2026-04-30 ultrathink: 정보량 ↓ + 시각 위계 — Hero / 핵심 카드 2 / 인용 horizontal / Stats grid 2-3 / 자기 평가 / 버튼 / footer seeds) ═══
 
     // Hero — one_word + summary + chart 통합
     const oneWordWeekly = reviewData.one_word_weekly ? `<div style="font-size:10.5px; color:var(--text-soft); letter-spacing:0.18em; text-transform:uppercase; margin-bottom:4px;">이번 주 momentum</div><div style="font-family:'Gowun Batang',serif; font-size:34px; color:#7ec8e3; letter-spacing:0.04em; margin-bottom:10px;">${escapeHtml(reviewData.one_word_weekly)}</div>` : '';
+    // 사용자 보고 2026-05-17: weekly momentum_line — one_word 보충 문장. heroBlock 안 oneWordWeekly 아래.
+    const momentumLine = reviewData.momentum_line ? `<div style="font-family:'Gowun Batang',serif; font-size:14.5px; color:var(--text); line-height:1.7; margin-bottom:12px; opacity:0.9;">${escapeHtml(reviewData.momentum_line)}</div>` : '';
     const oneWord = reviewData.one_word ? `<div style="font-size:10.5px; color:var(--text-soft); letter-spacing:0.18em; text-transform:uppercase; margin-bottom:4px;">이번 달의 너</div><div style="font-family:'Gowun Batang',serif; font-size:36px; color:var(--accent); letter-spacing:0.04em; margin-bottom:10px;">${escapeHtml(reviewData.one_word)}</div>` : '';
     const summaryBlock = reviewData.summary ? `<div style="font-family:'Gowun Batang',serif; font-size:15px; color:var(--text); line-height:1.7; margin-bottom:14px; opacity:0.92;">${escapeHtml(reviewData.summary)}</div>` : '';
 
@@ -89,10 +98,22 @@ function renderReviewScreen(type, reviewData, opts) {
     const heroPadding = type === 'weekly' ? '18px 18px 16px' : '22px 20px 18px';
     const heroBlock = `<div style="background:${heroBg}; border:1px solid ${heroBorder}; border-radius:18px; padding:${heroPadding}; margin-bottom:18px; text-align:center;">
       ${oneWordWeekly}
+      ${momentumLine}
       ${oneWord}
       ${summaryBlock}
       ${chartInner}
     </div>`;
+
+    // 사용자 보고 2026-05-17: weekly flow + soft_notice 블록 (신 schema 전용 필드, 옛 렌더에서 안 보이던 거).
+    const flowBlock = (type === 'weekly' && reviewData.flow) ? `
+    <div style="background:var(--surface); border:1px solid rgba(126,200,227,0.18); border-radius:14px; padding:14px 16px; margin-bottom:14px;">
+      <div style="font-size:11px; color:#7ec8e3; letter-spacing:0.13em; text-transform:uppercase; margin-bottom:8px;">🌙 이번 주 흐름</div>
+      <div style="font-size:13.5px; color:var(--text); line-height:1.7; font-family:'Gowun Batang',serif;">${escapeHtml(reviewData.flow)}</div>
+    </div>` : '';
+    const softNoticeBlock = reviewData.soft_notice ? `
+    <div style="background:rgba(232,200,144,0.07); border:1px solid rgba(232,200,144,0.22); border-radius:12px; padding:12px 14px; margin-bottom:14px;">
+      <div style="font-size:13px; color:var(--text); line-height:1.6;">✦ ${escapeHtml(reviewData.soft_notice)}</div>
+    </div>` : '';
 
     // Strengths — 핵심 카드 1
     const strengths = Array.isArray(reviewData.strengths) ? reviewData.strengths.filter(s => s && s.trim()).slice(0, 5) : [];
@@ -256,6 +277,7 @@ function renderReviewScreen(type, reviewData, opts) {
       ${riskBlockTop}
       ${heroBlock}
       ${scenesBlock}
+      ${flowBlock}
       ${strengthsBlock}
       ${patternBlock}
       ${experimentBlock}
@@ -263,6 +285,7 @@ function renderReviewScreen(type, reviewData, opts) {
       ${insightsBlock}
       ${quotesBlock}
       ${statsGrid}
+      ${softNoticeBlock}
       ${riskBlockBottom}
       ${readonly ? readonlyButtonsHtml : `
         <div class="input-group" style="margin-top:18px; margin-bottom:6px;">
