@@ -230,7 +230,7 @@ async function saveToCloudNow() {
       // TODO 베타 후: blocklist 전환 (DEFAULT_STATE 키에서 metaBody 키 제외 — 누락 방지). 단 *비-민감 운영 데이터* 와 분리 필수.
       // 누락 시: 평문 metaBody 로 cloud 에 흘러가 PIPA §29 + privacy.md §6 약속 ("회사조차 평문 X") 위반.
       // 사용자 보고 2026-05-09 ultrathink (root cause): miniReviews + rotatingCardState 누락 → E2EE on 사용자 cloud 저장 X → 재진입 시 reset.
-      // 회전 카드 spec final 추가 (2026-05-09): 미니 리뷰 결과 + 회전 카드 sessionState (진주 4시간 / unseenInsights / quizProgress / lastHoroscope 등) 모두 sensitiveBody 에 포함.
+      // 회전 카드 spec final 추가 (2026-05-09): 미니 리뷰 결과 + 회전 카드 sessionState (진주 4시간 / unseenInsights / quizProgress 등) 모두 sensitiveBody 에 포함.
       // 사용자 보고 2026-05-12 ultrathink (root cause 동일 패턴): tutorialShown / tutorialVersion / _core2NotUnlocked / userName / godongDiary / activeStrategies 누락 → 신규 가입자 sim 튜토리얼 (도서관 / 진주 / 깨달음 / 마법 / 리뷰 / 숙고) 마커 reload 마다 손실 → 같은 튜토리얼 반복 fire. 같이 추가.
       const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','godongDiary','activeStrategies'];
       const sensitiveBody = {};

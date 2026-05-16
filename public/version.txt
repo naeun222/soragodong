@@ -1,1 +1,1 @@
-v4.0.231-rc-no-retry-horoscope-cutoff-refresh
+v4.0.232-rc-horoscope-removed

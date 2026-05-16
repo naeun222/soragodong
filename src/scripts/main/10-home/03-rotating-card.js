@@ -1,7 +1,7 @@
-// 사용자 명시 2026-05-09 (회전 카드 spec final): 5-source 미컨펌 우선 정렬 + 세션 lock.
+// 사용자 명시 2026-05-09 (회전 카드 spec final): 미컨펌 우선 정렬 + 세션 lock.
 // spec: rotating-card-final-2026-05-09.md (이 문서가 최종)
-// 5 source: 진주 / 새로 본 너 / 미니 리뷰 / Quiz / 운세
-// 폐기: 어제 비교 / 회상 / 통찰(→ 새로 본 너 흡수) / Surprise
+// 사용자 명시 2026-05-16: 별자리 운세 source 폐기. 4 source 남음: 진주 / 고동의 일기 / 시뮬레이션 / 어제 + weekly~annual review.
+// 폐기: 어제 비교 / 회상 / 통찰(→ 새로 본 너 흡수) / Surprise / 별자리 운세
 
 // =============================================================================
 // STATE 마이그 — 누락 필드 자동 보완 (preferences namespace 보호)
@@ -30,12 +30,6 @@ function _ensureRotatingCardState() {
   if (!r.quizDeniedCooldown || typeof r.quizDeniedCooldown !== 'object') r.quizDeniedCooldown = {};
   if (!r.quizSkippedCooldown || typeof r.quizSkippedCooldown !== 'object') r.quizSkippedCooldown = {};
   if (typeof r.quizScoreBefore === 'undefined') r.quizScoreBefore = null;
-  // 운세
-  if (typeof r.lastHoroscopeFetchDay === 'undefined') r.lastHoroscopeFetchDay = null;
-  if (typeof r.lastHoroscopeContent === 'undefined') r.lastHoroscopeContent = null;
-  if (typeof r.lastHoroscopeLucky === 'undefined') r.lastHoroscopeLucky = null;
-  if (typeof r.lastHoroscopeShownDate === 'undefined') r.lastHoroscopeShownDate = null;
-  if (typeof r.zodiacOnboardSkippedAt === 'undefined') r.zodiacOnboardSkippedAt = null;
   // 시뮬레이션 (사용자 명시 2026-05-09)
   if (typeof r.simulationBlockKey === 'undefined') r.simulationBlockKey = null;
   if (typeof r.currentSimulation === 'undefined') r.currentSimulation = null;
@@ -44,9 +38,6 @@ function _ensureRotatingCardState() {
   if (!Array.isArray(r.recentSimulations)) r.recentSimulations = [];
   // 디버깅 / 호환
   if (!Array.isArray(r.history)) r.history = [];
-  // preferences.userZodiac 자동 마이그
-  if (!state.preferences) state.preferences = {};
-  if (typeof state.preferences.userZodiac === 'undefined') state.preferences.userZodiac = null;
   return r;
 }
 
@@ -54,10 +45,11 @@ function _ensureRotatingCardState() {
 // 상수 — baseWeight + tie-breaker stable order
 // 사용자 명시 2026-05-09 (재정정): '새로 본 너' source 폐기 → Quiz 로 통합 (둘 다 caseFormulation 미컨펌 풀 사용 — 중복).
 // 사용자 명시 2026-05-09 (추가): 시뮬레이션 source 6 추가 — Sonnet, 4h block, on-demand generate.
-// 5 source: 진주 / 미니 리뷰 / Quiz / 운세 / 시뮬레이션
+// 사용자 명시 2026-05-16: 별자리 운세 source 폐기.
+// 4 source: 진주 / 미니 리뷰 / Quiz / 시뮬레이션
 // =============================================================================
 // 사용자 명시 2026-05-10 (재정의): review 4개 = 명확 우선순위. 그 외 = 동급 weight 100.
-//   1 annual / 2 quarterly / 3 monthly / 4 weekly / 5 (동급): 어제 기록 / 진주 큐레이션 / 상상 시뮬 / 고동의 일기 / 고동의 운세
+//   1 annual / 2 quarterly / 3 monthly / 4 weekly / 5 (동급): 어제 기록 / 진주 큐레이션 / 상상 시뮬 / 고동의 일기
 //   사용자 미컨펌 우선순위 정책 폐기 (옛 _rcSortByConfirmation unconfirmed 우선 분기).
 //   사용자 명시 2026-05-10 (handoff): miniReview → godongDiary 로 전환 (HANDOFF.md prototype).
 const _RC_BASE_WEIGHTS = {
@@ -70,11 +62,10 @@ const _RC_BASE_WEIGHTS = {
   pearl:            100,
   simulation:       100,
   godongDiary:      100,
-  horoscope:        100,
 };
 const _RC_SOURCE_ORDER = [
   'review_annual', 'review_quarterly', 'review_monthly', 'review_weekly',
-  'yesterday', 'pearl', 'simulation', 'godongDiary', 'horoscope'
+  'yesterday', 'pearl', 'simulation', 'godongDiary'
 ];
 
 const _RC_PEARL_WINDOW_MS = 4 * 60 * 60 * 1000;       // 진주 4시간 stay
@@ -88,15 +79,11 @@ const _RC_QUIZ_SKIPPED_COOLDOWN_MS = 1 * 86400000;    // [넘기기] 1일
 let _rcSessionOrder = null;
 let _rcSessionIndex = 0;
 let _rcSessionConfirmed = new Set();
-let _rcZodiacSkippedThisSession = false;
-let _rcHoroscopeFetchInflight = false;
 
 function _rcResetSession() {
   _rcSessionOrder = null;
   _rcSessionIndex = 0;
   _rcSessionConfirmed = new Set();
-  _rcZodiacSkippedThisSession = false;
-  // _rcHoroscopeFetchInflight 은 fetch 진행 중이라 reset X — finally 블록이 정리.
 }
 
 function _rcSessionMarkConfirmed(sourceId) {
@@ -134,7 +121,7 @@ function _rcTodayKey() {
   return new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10);
 }
 
-// 4AM cutoff key — 사용자 명시 2026-05-09: 미니 리뷰 / Quiz / 운세 / 고동의 일기 모두 새벽 4시 cutoff 일관성.
+// 4AM cutoff key — 사용자 명시 2026-05-09: 미니 리뷰 / Quiz / 고동의 일기 모두 새벽 4시 cutoff 일관성.
 // 사용자 명시 2026-05-11: getDayKey 위임으로 통일 (옛 자체 구현 제거).
 function _rcCutoffKeyOf(timestampOrIso) {
   if (typeof getDayKey === 'function') return getDayKey(timestampOrIso);
@@ -166,7 +153,6 @@ function _rcIsHistoricallyConfirmed(sourceId) {
       const todayK = (typeof _rcQuizCutoffKey === 'function') ? _rcQuizCutoffKey() : _rcTodayKey();
       return _rcDayDiff(todayK, lastDayK) < 3;
     }
-    case 'horoscope':  return r.lastHoroscopeShownDate === todayK;
   }
   return false;
 }
@@ -1132,8 +1118,8 @@ ${modesText}
 }
 
 // =============================================================================
-// 가용 source 수집 (4 source) — 사용자 명시 2026-05-09: '새로 본 너' 폐기 → Quiz 통합.
-// 진주 / 미니 리뷰 / Quiz / 운세
+// 가용 source 수집 — 사용자 명시 2026-05-09: '새로 본 너' 폐기 → Quiz 통합. 사용자 명시 2026-05-16: 운세 폐기.
+// 진주 / 고동의 일기 / 시뮬레이션 / 어제 / weekly~annual review
 // =============================================================================
 function _rcCollectAvailable() {
   const safe = (fn, label) => {
@@ -1145,7 +1131,6 @@ function _rcCollectAvailable() {
   const all = [
     safe(_rcSource1Pearl,      'pearl'),
     safe(_rcSource3GodongDiary, 'godongDiary'),
-    safe(typeof _rcSource5Horoscope === 'function' ? _rcSource5Horoscope : null,   'horoscope'),
     safe(typeof _rcSource6Simulation === 'function' ? _rcSource6Simulation : null, 'simulation'),
     safe(typeof _rcSource7Yesterday === 'function' ? _rcSource7Yesterday : null,           'yesterday'),
     safe(typeof _rcSource8WeeklyReview === 'function' ? _rcSource8WeeklyReview : null,     'review_weekly'),
@@ -1159,7 +1144,7 @@ function _rcCollectAvailable() {
 // =============================================================================
 // godong 표정 SVG — source 별 mood 매핑.
 // pearl=inspired(별눈), newView=surprised(큰 눈), godongDiary=sleepy(자리 비움 메타포 — 사용자 명시 2026-05-11 확정),
-// quiz=thinking(?), quizDone=proud(별3개+자부심), horoscope=dreaming(꿈+🌗 분위기)
+// quiz=thinking(?), quizDone=proud(별3개+자부심)
 // =============================================================================
 function _rcGodongSvg(sourceId) {
   const moodMap = {
@@ -1168,7 +1153,6 @@ function _rcGodongSvg(sourceId) {
     godongDiary: 'sleepy',
     quiz: 'thinking',
     quizDone: 'proud',
-    horoscope: 'dreaming',
   };
   const mood = moodMap[sourceId] || 'default';
   return `<img class="rc-godong-svg godong-mood-${mood}" src="/character/godong-${mood}.svg" alt="" decoding="async" aria-hidden="true">`;
@@ -1191,8 +1175,6 @@ function renderRotatingCard() {
       container.innerHTML = _rcRenderShell([s], 0);
       return;
     }
-
-    // 별자리 onboarding 카드 = horoscope source 자리에 자체 표시 (03b sub file). 별도 단독 X.
 
     // 새 세션 (sessionOrder 비어있으면 새 진입) — 가용 source 재계산 + 정렬
     if (!_rcSessionOrder) {
@@ -1220,11 +1202,6 @@ function renderRotatingCard() {
       return;
     }
     if (_rcSessionIndex >= _rcSessionOrder.length) _rcSessionIndex = 0;
-    // 사용자 명시 2026-05-11: render 시점에도 horoscope 가 current 면 4시 cutoff 신선도 체크 (mid-session 4AM 넘긴 후 home 재진입 케이스).
-    const _curEntry = _rcSessionOrder[_rcSessionIndex];
-    if (_curEntry && _curEntry.id === 'horoscope' && typeof _rcEnsureHoroscopeFresh === 'function') {
-      _rcEnsureHoroscopeFresh();
-    }
     container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);
     _rcEqualizeHeights();
   } catch (e) {
@@ -1333,10 +1310,6 @@ function _rcCycle(dir, opts) {
     const r = _ensureRotatingCardState();
     r.lastPearlShownDate = _rcTodayKey();
     if (typeof saveState === 'function') saveState();
-  }
-  // 사용자 명시 2026-05-11: horoscope 진입 시 4시 cutoff 이후 새 진입이면 fresh source 로 교체 (자동 재 fetch).
-  if (cur && cur.id === 'horoscope' && typeof _rcEnsureHoroscopeFresh === 'function') {
-    _rcEnsureHoroscopeFresh();
   }
   const container = document.getElementById('rotatingCardContainer');
   if (container) container.innerHTML = _rcRenderShell(_rcSessionOrder, _rcSessionIndex);

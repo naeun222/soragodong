@@ -429,8 +429,9 @@ const DEFAULT_STATE = {
     }
   },
 
-  // 사용자 명시 2026-05-09 (회전 카드 spec final): 홈 회전 카드 5-source — 진주/새로 본 너/미니 리뷰/Quiz/운세.
-  // spec final 7절. _ensureRotatingCardState() 가 누락 필드 자동 보완.
+  // 사용자 명시 2026-05-09 (회전 카드 spec final): 홈 회전 카드 source — 진주 / 고동의 일기 / Quiz / 시뮬레이션 / 어제 / weekly~annual review.
+  // 사용자 명시 2026-05-16: 별자리 운세 source 폐기.
+  // _ensureRotatingCardState() 가 누락 필드 자동 보완.
   rotatingCardState: {
     // 진주 — 4시간 stay
     pearlWindowStart: null,    // ISO — 4시간 stay 시작
@@ -448,12 +449,6 @@ const DEFAULT_STATE = {
     quizDeniedCooldown: {},     // {itemId: unlockMs} — 14일
     quizSkippedCooldown: {},    // {itemId: unlockMs} — 1일
     quizScoreBefore: null,      // % — 끝 화면 변화 표시
-    // 운세 — Horoscope API + Haiku (사용자 보고 2026-05-09: 재진입 시 손실 X)
-    lastHoroscopeFetchDay: null,// 'YYYY-MM-DD' KST — 같은 날 재 fetch X
-    lastHoroscopeContent: null, // Haiku 한국어 친구 톤 변환 결과
-    lastHoroscopeLucky: null,   // (optional)
-    lastHoroscopeShownDate: null, // 'YYYY-MM-DD' — 오늘 운세 1번 노출 여부
-    zodiacOnboardSkippedAt: null,// ISO — onboarding skip 시점 (그 세션 동안만 비활성, spec 6-5-1)
     // 디버깅 / 호환
     history: [],                // [{sourceId, contentHash, seenAt}] — 옛 호환
   },
