@@ -11645,113 +11645,49 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════
-     V4 (사용자 명시 2026-05-17 ultrathink) — 홈 재설계 시각 위계.
-     메인 카드 (rotatingCardContainer) weight ↑, 소형 카드 row weight ↓.
+     사용자 명시 2026-05-17 ultrathink (revert) — 회전카드 옛 (5-15 이전) 디자인 복원.
+     .rotating-card (line ~10448) = gradient + 14px padding + 14px radius.
+     .rc-body-tap (line ~10502) = min-height 160px.
+     아래는 신규 source inner content 톤 만 (shell 자체 override 폐기).
      ═══════════════════════════════════════════════════════════════ */
-  /* 메인 카드 — 시각 압도 (화면 절반 ↑) */
-  #rotatingCardContainer .rotating-card {
-    min-height: 44vh;
-    padding: 28px 24px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-  }
-  #rotatingCardContainer .rotating-card .rc-body-tap {
-    font-size: 16px;
-    line-height: 1.7;
-  }
-
-  /* Hook 카드 — 홈 메인 슬롯 Phase 1 (_home-archive-redesign.md) */
-  #rotatingCardContainer .hook-main-card {
-    min-height: 44vh;
-    padding: 28px 24px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-card, 20px);
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 18px;
-    animation: rc-body-fade-in 0.4s ease-out;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #rotatingCardContainer .hook-main-card:active { background: var(--surface2); }
-  .hook-main-header {
+  .rc-hook-header,
+  .rc-checkin-label,
+  .rc-review-label {
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
     color: var(--accent);
     opacity: 0.85;
+    margin-bottom: 8px;
   }
-  .hook-main-body {
-    font-size: 16px;
-    line-height: 1.75;
+  .rc-hook-body,
+  .rc-review-body {
+    font-size: 14px;
+    line-height: 1.6;
     color: var(--text);
     font-family: 'Gowun Batang', serif;
-    flex: 1;
     white-space: pre-wrap;
   }
-  .hook-main-hint {
+  .rc-checkin-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .rc-checkin-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    opacity: 0.85;
+  }
+  .rc-hook-hint {
     font-size: 11px;
     color: var(--text-dim);
     text-align: right;
     opacity: 0.55;
+    margin-top: 8px;
   }
-
-  /* 사용자 명시 2026-05-17: 회전카드 4-source — 체크인/오늘의 너/리뷰 link 모두 동일 visual weight (44vh, 28/24 padding). */
-  #rotatingCardContainer > .action-card,
-  #rotatingCardContainer > .checkin-mini-line {
-    min-height: 44vh;
-    padding: 28px 24px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
-  }
-  #rotatingCardContainer > .checkin-mini-line {
-    justify-content: center;
-    gap: 12px;
-    border-radius: 20px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-  }
-  #rotatingCardContainer .oneul-card,
-  #rotatingCardContainer .review-link-card {
-    min-height: 44vh;
-    padding: 28px 24px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #rotatingCardContainer .oneul-card:active,
-  #rotatingCardContainer .review-link-card:active { background: var(--surface2); }
-  .rc-source-header {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: var(--accent);
-    opacity: 0.85;
-  }
-  .oneul-cat {
-    font-size: 12px;
-    color: var(--text-dim);
-    opacity: 0.85;
-  }
-  .oneul-body {
-    font-size: 16px;
-    line-height: 1.75;
-    color: var(--text);
-    font-family: 'Gowun Batang', serif;
-    flex: 1;
-    white-space: pre-wrap;
-  }
-  /* 양생방 top 모래사장 row — small-row CSS 재사용. 위쪽 마진만 살짝. */
+  /* 양생방 top 모래사장 row */
   .yangsaeng-shell-row { margin-bottom: 12px; }
 
   /* Hook 온보딩 모달 — Section 19.1 */

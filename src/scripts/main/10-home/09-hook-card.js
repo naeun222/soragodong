@@ -22,23 +22,7 @@ function _hookNameCall(userName) {
   return hasJongseong ? `${userName}아` : `${userName}야`;
 }
 
-function renderHookCard(hook) {
-  if (!hook) return '';
-  const userName = (state.userName || '').trim();
-  const nameCall = _hookNameCall(userName);
-  const header = userName ? `있잖아 ${nameCall} ✦` : '있잖아 ✦';
-  return `
-    <div class="hook-main-card"
-         data-hook-id="${escapeHtml(hook.id || '')}"
-         onclick="hookCardTap(this.dataset.hookId)"
-         role="button" tabindex="0"
-         aria-label="${escapeHtml(header)}">
-      <div class="hook-main-header">${escapeHtml(header)}</div>
-      <div class="hook-main-body">${escapeHtml(hook.body || '')}</div>
-      <div class="hook-main-hint">탭해서 답하기</div>
-    </div>
-  `;
-}
+// renderHookCard 폐기 (사용자 명시 2026-05-17 ultrathink revert) — 회전카드 _rcBuildHookBodyHtml 이 대체.
 
 function hookCardTap(hookId) {
   if (!hookId) return;

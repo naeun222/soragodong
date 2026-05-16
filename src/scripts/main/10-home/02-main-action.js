@@ -52,51 +52,8 @@ function _todayMoodSummaryHtml(entry) {
   return parts.join(' · ');
 }
 
-// 체크인 카드 HTML 빌더 — renderRotatingCard 가 fallback 으로 사용 (사용자 명시 2026-05-17: 옛 오늘의 너 자리 = 체크인).
-function buildCheckinCardHtml() {
-  if (window._onbTutorialMode) {
-    return `
-      <div class="action-card checkin-card" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
-        <div class="action-icon">✓</div>
-        <div class="action-text">
-          <div class="action-title">체크인</div>
-          <div class="action-sub">매일 짧게 기록하는 곳</div>
-        </div>
-        <div class="action-arrow">›</div>
-      </div>
-    `;
-  }
-  const todayKeyVal = todayKey();
-  const todayEntry = (state.entries || []).find(e => e.date === todayKeyVal);
-  const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  const slot = getCheckinTimeSlot();
-  const copy = _checkinCardCopy(slot, checkinDoneToday);
-  if (checkinDoneToday) {
-    return `
-      <div class="checkin-mini-line" onclick="enterCheckin()">
-        <span class="checkin-mini-check">✓</span>
-        <span class="checkin-mini-text">오늘 체크인 보기/수정</span>
-        <span class="checkin-mini-arrow">→</span>
-      </div>
-    `;
-  }
-  const isBrandNew = !Array.isArray(state.entries) || state.entries.length === 0;
-  const pulseClass = isBrandNew ? ' has-pulse' : '';
-  const subHtml = copy.sub ? `<div class="action-sub checkin-card-sub">${copy.sub}</div>` : '';
-  return `
-    <div class="action-card checkin-card${pulseClass}" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
-      <div class="action-icon">${copy.icon}</div>
-      <div class="action-text">
-        <div class="action-title">${copy.title}</div>
-        ${subHtml}
-      </div>
-      <div class="action-arrow">›</div>
-    </div>
-  `;
-}
-
-// 사용자 명시 2026-05-17: 체크인이 rotatingCardContainer 메인 슬롯으로 이동.
-//   mainActionContainer 는 비움 (HTML 컨테이너 자체는 compat 보존).
+// buildCheckinCardHtml 폐기 (사용자 명시 2026-05-17 ultrathink revert) — 회전카드 _rcBuildCheckinBodyHtml 가 _checkinCardCopy/getCheckinTimeSlot 를 직접 호출.
+// renderMainAction noop — mainActionContainer HTML 컨테이너만 compat 보존.
 function renderMainAction() {
   const container = document.getElementById('mainActionContainer');
   if (!container) return;
