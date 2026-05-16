@@ -121,8 +121,7 @@ function _pearlCoachmarkTodayYou() {
   const body = `
     <div class="v8-coach-title">🌟 오늘의 너</div>
     <div class="v8-coach-text">
-      매일 진주 하나를 고동이가 꺼내서 보여줄게.<br>
-      <span class="v8-coach-text-soft">음악 진주면 — 30초 미리듣기 ✦</span>
+      매일 진주 하나를 '오늘의 너'에서 꺼내서 보여줘요.
     </div>
   `;
   return _v8ShowCoachmark({
