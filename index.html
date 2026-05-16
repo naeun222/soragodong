@@ -12891,6 +12891,19 @@
         <!-- 활성 숙고 (사용자 합의: 소형 카드 row 안 weight ↓) -->
         <div id="reflectionContainer"></div>
       </div>
+
+      <!-- 사용자 명시 2026-05-17 ultrathink (revert): 옛 모래사장 + 마법고동 작은 row 복원. 깜빡이는 점 (beachPulseDot) + "N개 모았어" / "N 안고 있어" 카운터. -->
+      <div class="home-small-row">
+        <div class="home-small-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
+          <span class="pulse-dot" id="beachPulseDot" hidden></span>
+          <div class="hsc-icon">🐚</div>
+          <div class="hsc-text">
+            <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
+            <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
+          </div>
+        </div>
+        <div id="decisionMiniLinkContainer"></div>
+      </div>
     </div>
 
     <!-- SOS removed from float — moved to settings -->
@@ -20597,8 +20610,9 @@ async function init() {
   renderReviewPrompts();
   renderPredictionFollowups();
   renderMainAction();
-  // V4 (사용자 명시 2026-05-17 ultrathink): renderDecisionMiniLink 폐기 — 마법고동 mini 카드 홈에서 제거.
-  // 신규 소형 카드 (a) 리뷰 미리보기 + (b) 자산 변화 hint.
+  // 사용자 명시 2026-05-17 ultrathink (revert): 마법고동 미니 카드 복원.
+  renderDecisionMiniLink();
+  // 신규 소형 카드 (a) 리뷰 미리보기 + (b) 자산 변화 hint — 공존.
   if (typeof renderReviewPreview === 'function') renderReviewPreview();
   if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
   // 사용자 명시 2026-05-09: init 시 회전 카드 ('🌟 오늘의 너') 호출 누락 → 첫 로드 시 안 보임 fix.
@@ -26864,13 +26878,8 @@ function renderMainAction() {
   const todayKeyVal = todayKey();
   const todayEntry = state.entries.find(e => e.date === todayKeyVal);
   const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  // V4 (사용자 명시 2026-05-17 ultrathink): 체크인 카드 = 21시 이후만 노출.
-  //   그 외 시간 / 오늘 이미 체크인 = 카드 숨김 (메인 카드 시각 압도 우선).
-  const _hourNow = new Date().getHours();
-  if (_hourNow < 21 || checkinDoneToday) {
-    container.innerHTML = '';
-    return;
-  }
+  // 사용자 명시 2026-05-17 ultrathink (revert): 체크인 카드 = 항상 노출 (옛 UI 복원).
+  //   완료 시 한 줄 미니 / 미완 시 시간대 카드 (has-pulse on brand new users).
   const slot = getCheckinTimeSlot();
   const copy = _checkinCardCopy(slot, checkinDoneToday);
 
@@ -26906,10 +26915,28 @@ function renderMainAction() {
   container.innerHTML = cardHtml;
 }
 
-// V4 (사용자 명시 2026-05-17 ultrathink): renderDecisionMiniLink 폐기 — 마법고동 mini 카드 홈에서 제거.
-//   "N 안고 있어" 카운터 = 죽은 정보. 진행 중인 결정 hint 는 카드 (b) 자산 변화 hint 에 흡수.
-//   호출처는 container null guard 자연 no-op (decisionMiniLinkContainer 도 markup 에서 제거됨).
-function renderDecisionMiniLink() { /* noop — V4 2026-05-17 폐기 */ }
+// 마법고동 미니 링크 — 작지만 카드 모양
+// 사용자 명시 2026-05-17 ultrathink (revert): 옛 UI 복원 — "N 안고 있어" 카운터 + chooser 진입.
+// (활성 결정 + 활성 숙고 둘 다 카운트. 활성 ≥1 → "N 안고 있어" / 활성 0 → "풀어볼래")
+function renderDecisionMiniLink() {
+  const container = document.getElementById('decisionMiniLinkContainer');
+  if (!container) return;
+  const decisionCount = (state.decisions || []).filter(d => d.status === 'in_progress').length;
+  const reflectionCount = (state.reflectionQuestions || []).filter(q => q.status === 'active').length;
+  const totalActive = decisionCount + reflectionCount;
+  const subText = totalActive > 0 ? `${totalActive} 안고 있어` : '풀어볼래';
+  container.innerHTML = `
+    <div onclick="openMagicReflectionChooser()" class="decision-mini-card">
+      <div class="dm-icon"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"></div>
+      <div class="dm-text">
+        <div class="dm-title">마법고동</div>
+        <div class="dm-sub">${subText}</div>
+      </div>
+      <div class="dm-arrow">›</div>
+    </div>
+  `;
+  setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 0);
+}
 
 // 사용자 명시 2026-05-09: 마법고동 카드 클릭 → 숙고/마법 chooser 모달.
 // 진입 path 분기: '마법의 방' = decisions screen / '숙고의 방' = active 숙고 → reflection screen / 활성 0 → addReflectionQuestion 입력 모달.
@@ -31968,36 +31995,9 @@ function _isColdStart() {
 }
 
 function renderColdStartOpener() {
-  // 사용자 명시 2026-05-17 ultrathink: cold start = 옛 홈 구조 (체크인 / 모래사장 / 마법고동) 3 카드 stack.
-  //   "오늘은 한 줄만" 단일 opener 폐기 — 신규 사용자에게 진입점 셋 모두 노출이 더 친절 (액션 선택지 가시화).
-  return `
-    <div class="home-cold-actions">
-      <div class="action-card checkin-card" onclick="enterCheckin()" style="background: linear-gradient(135deg, rgba(139,126,196,0.18), rgba(45,40,80,0.15)); border-color: rgba(139,126,196,0.35);">
-        <div class="action-icon">✓</div>
-        <div class="action-text">
-          <div class="action-title">체크인</div>
-          <div class="action-sub">오늘 한 줄 적어두기</div>
-        </div>
-        <div class="action-arrow">›</div>
-      </div>
-      <div class="action-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
-        <div class="action-icon">🐚</div>
-        <div class="action-text">
-          <div class="action-title">모래사장</div>
-          <div class="action-sub">진주 모으는 곳</div>
-        </div>
-        <div class="action-arrow">›</div>
-      </div>
-      <div class="action-card" onclick="openMagicReflectionChooser()">
-        <div class="action-icon" style="background:transparent; padding:0;"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async" style="width:40px; height:40px;"></div>
-        <div class="action-text">
-          <div class="action-title">마법고동</div>
-          <div class="action-sub">큰 결정 · 깊은 질문</div>
-        </div>
-        <div class="action-arrow">›</div>
-      </div>
-    </div>
-  `;
+  // 사용자 명시 2026-05-17 ultrathink (revert): 옛 모래사장/마법고동/체크인 UI 복원 후 cold opener 별도 노출 X.
+  //   cold-start 사용자는 home 본체의 체크인 + 🐚 모래사장 + 마법고동 카드로 진입 (중복 opener 불필요).
+  return '';
 }
 // ═══════════════════════════════════════════════════════════════
 // PHASE 5: DAILY QUESTION POOL & ROTATION

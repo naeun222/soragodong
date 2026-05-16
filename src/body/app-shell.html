@@ -38,6 +38,19 @@
         <!-- 활성 숙고 (사용자 합의: 소형 카드 row 안 weight ↓) -->
         <div id="reflectionContainer"></div>
       </div>
+
+      <!-- 사용자 명시 2026-05-17 ultrathink (revert): 옛 모래사장 + 마법고동 작은 row 복원. 깜빡이는 점 (beachPulseDot) + "N개 모았어" / "N 안고 있어" 카운터. -->
+      <div class="home-small-row">
+        <div class="home-small-card" onclick="openShellCollection(); if(typeof _dismissBeachPulse==='function') _dismissBeachPulse();">
+          <span class="pulse-dot" id="beachPulseDot" hidden></span>
+          <div class="hsc-icon">🐚</div>
+          <div class="hsc-text">
+            <div class="hsc-title"><span id="shellCount">0</span>개 모았어</div>
+            <div class="hsc-sub" id="streakInfo">탭해서 보기 →</div>
+          </div>
+        </div>
+        <div id="decisionMiniLinkContainer"></div>
+      </div>
     </div>
 
     <!-- SOS removed from float — moved to settings -->

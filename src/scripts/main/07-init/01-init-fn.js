@@ -367,8 +367,9 @@ async function init() {
   renderReviewPrompts();
   renderPredictionFollowups();
   renderMainAction();
-  // V4 (사용자 명시 2026-05-17 ultrathink): renderDecisionMiniLink 폐기 — 마법고동 mini 카드 홈에서 제거.
-  // 신규 소형 카드 (a) 리뷰 미리보기 + (b) 자산 변화 hint.
+  // 사용자 명시 2026-05-17 ultrathink (revert): 마법고동 미니 카드 복원.
+  renderDecisionMiniLink();
+  // 신규 소형 카드 (a) 리뷰 미리보기 + (b) 자산 변화 hint — 공존.
   if (typeof renderReviewPreview === 'function') renderReviewPreview();
   if (typeof renderYesterdayChangeHint === 'function') renderYesterdayChangeHint();
   // 사용자 명시 2026-05-09: init 시 회전 카드 ('🌟 오늘의 너') 호출 누락 → 첫 로드 시 안 보임 fix.
