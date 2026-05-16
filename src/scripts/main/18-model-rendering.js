@@ -281,7 +281,7 @@ function renderModel() {
     const stratCount = (state.topicCards || []).filter(c => c.category === 'strategy').length;
     const placeholderText = stratCount === 0
       ? '아직 살펴볼 만큼 데이터 X — 미션 시도 + 결과 체크 쌓이면 자동 보여줄게 ✦'
-      : '지금은 막히는 결 X — 잘 흘러가는 중 ✨';
+      : '지금은 잘 흘러가는 중';
     html += `<div class="model-section">
       <div class="model-section-title">잘 안 풀릴 때</div>
       <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">${placeholderText}</div>
