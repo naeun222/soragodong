@@ -115,8 +115,7 @@ function _renderModelDedupStep() {
     modal.innerHTML = `
       <div style="text-align:center; padding:20px 10px;">
         <div style="font-size:32px; margin-bottom:12px;">✨</div>
-        <div style="font-size:14px; color:var(--text); margin-bottom:8px;">정리할 중복 후보 X.</div>
-        <div style="font-size:11.5px; color:var(--text-soft); margin-bottom:20px; line-height:1.7;">자기 모델이 이미 깔끔해.</div>
+        <div style="font-size:14px; color:var(--text); margin-bottom:20px;">정리할 중복 후보 X.</div>
         <button class="btn-primary" onclick="closeModelDedupModal()" style="width:100%;">닫기</button>
       </div>
     `;
