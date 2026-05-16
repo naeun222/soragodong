@@ -280,7 +280,7 @@ function renderModel() {
     // visibleDiags 없을 때 — strategy 유무 따라 분기 placeholder. 둘 다 항상 노출.
     const stratCount = (state.topicCards || []).filter(c => c.category === 'strategy').length;
     const placeholderText = stratCount === 0
-      ? '아직 살펴볼 만큼 데이터 X — 미션 시도 + 결과 체크 쌓이면 자동 보여줄게 ✦'
+      ? '데이터가 쌓이면 보여줄게.'
       : '지금은 잘 흘러가는 중';
     html += `<div class="model-section">
       <div class="model-section-title">잘 안 풀릴 때</div>
