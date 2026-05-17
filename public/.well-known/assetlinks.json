@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.soragodong.app",
       "sha256_cert_fingerprints": [
-        "53:F2:1C:18:BC:F4:AB:46:D8:07:F0:59:12:64:2B:48:5A:B2:57:C4:5D:AA:71:0C:20:4D:FF:E9:F2:38:FF:89"
+        "53:F2:1C:18:BC:F4:AB:46:D8:07:F0:59:12:64:2B:48:5A:B2:57:C4:5D:AA:71:0C:20:4D:FF:E9:F2:38:FF:89",
+        "99:5B:A6:B3:45:2E:62:53:CE:65:B2:4C:5E:AB:19:B7:DD:66:A3:8D:53:7A:E3:C8:C2:98:2A:0B:24:44:88:F8"
       ]
     }
   }
