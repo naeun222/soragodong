@@ -33,6 +33,15 @@ function _renderChatMessageHTML(m, i) {
         : (_deeperElig.ok
             ? `<button class="msg-action" onclick="askDeeper(${i})">더 알고 싶어 ▾</button>`
             : `<button class="msg-action disabled-locked" onclick="_showDeeperCapToast()">더 알고 싶어 ▾</button>`);
+      // V4 (사용자 명시 2026-05-17 ultrathink): 게스트 첫 '더 알아보기' 노출 시 튜토 모달 2page chain.
+      //   _shownInlineTips 'firstDeeperBtn' 영구 가드 + queued flag 로 같은 render cycle 중복 timer 회피.
+      if (deeperBtn && state.isGuest
+          && !(state._shownInlineTips || []).includes('firstDeeperBtn')
+          && !window._firstDeeperTutoQueued
+          && typeof _showFirstDeeperTutoIfGuest === 'function') {
+        window._firstDeeperTutoQueued = true;
+        setTimeout(() => _showFirstDeeperTutoIfGuest(), 250);
+      }
       // V4 (v8 묶음 9): Core 2 미잠금 시 4단 응답의 🧬 전략으로 disabled-locked
       // V4 (v2 §6 명시): 클릭 시 단순 토스트 — entry modal 자동 권유는 환영 선물 후
       const _c2Locked = !!state._core2NotUnlocked && !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode);
@@ -144,4 +153,18 @@ const CHAT_HEIGHT_PLACEHOLDER = 80;
 
 window.__chatRenderTimes = window.__chatRenderTimes || [];
 window.__chatBackupForSeed = window.__chatBackupForSeed || null;
+
+// V4 (사용자 명시 2026-05-17 ultrathink): 게스트 첫 '더 알아보기' 노출 시 2page 모달 chain.
+//   page 1 = hook 사용법, page 2 = E2EE / AI 학습 0 / 비번 잠금 안내.
+function _showFirstDeeperTutoIfGuest() {
+  if (!state || !state.isGuest) return;
+  if (typeof _showSimpleTutoModal !== 'function') return;
+  _showSimpleTutoModal({
+    key: 'firstDeeperBtn',
+    pages: [
+      { html: `고민이 있을 때, 어찌해야 할지 모르겠을 때,<br>고동이에게 털어놓고 <b>'더 알아보기'</b>를 눌러보세요.<br><br>마법의 소라고동이 이름값을 할 거예요. 🐚` },
+      { html: `이 앱의 모든 정보는 <b>AI 학습에 전혀 쓰이지 않고</b>,<br>종단간 암호화로 보호됩니다.<br><br>로그인 후 비밀번호로 잠그면, <b>회사도 개발자도 아무도</b> 당신의 데이터에 접근할 수 없습니다. 🔒` }
+    ]
+  });
+}
 

@@ -1335,7 +1335,8 @@ async function _maybeAutoForceAnalyzeFreeTier() {
       if (state.isGuest && !state._guestAutoExtracted) {
         state._guestAutoExtracted = true;
         try { saveState(); } catch {}
-        if (typeof showToast === 'function') showToast('✦ 너에 대해 알아낸 거 정리해봤어 — \'나\' 탭');
+        // V4 fix (사용자 보고 2026-05-17): 게스트 첫 추출 후 '나 탭 정리' 토스트 제거.
+        //   사용자 보고 — 3턴 만에 토스트 뜨는데 나 탭 실제 갱신 안 돼 misleading. flag + renderModel 만 유지 (nudge banner trigger 보존).
         if (typeof renderModel === 'function') renderModel();
       }
     } catch (e) { console.warn('[auto chapter case]', e); }

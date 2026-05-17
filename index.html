@@ -11828,10 +11828,62 @@
   .yangsaeng-shell-row { margin-bottom: 12px; width: 100%; }
   .yangsaeng-shell-row .home-small-card { width: 100%; box-sizing: border-box; }
 
+  /* V4 (사용자 명시 2026-05-17 ultrathink): simple tuto modal — 1 page or multi-page chain (모래사장 / 더 알아보기 등). */
+  .simple-tuto-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10000;
+    opacity: 0; transition: opacity 0.22s;
+    padding: 24px;
+  }
+  .simple-tuto-overlay.show { opacity: 1; }
+  .simple-tuto-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    max-width: 380px; width: 100%;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .simple-tuto-body {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--text);
+  }
+  .simple-tuto-dots {
+    display: flex; gap: 6px; justify-content: center;
+  }
+  .simple-tuto-dots .std-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    transition: background 0.15s;
+  }
+  .simple-tuto-dots .std-dot.is-active {
+    background: var(--accent);
+  }
+  .simple-tuto-actions {
+    display: flex; justify-content: flex-end;
+  }
+  .simple-tuto-btn {
+    padding: 10px 22px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .simple-tuto-btn:active { opacity: 0.8; }
+
   /* V4 (사용자 명시 2026-05-17 ultrathink): priority stack 작은 체크인 링크 — 회전카드 밑, 낮 mode 한정. */
+  /* V4 fix (사용자 명시 2026-05-17): 위치 살짝 위로 (margin-top + padding-top 축소). */
   .rc-checkin-mini-link {
-    margin-top: 10px;
-    padding: 10px 14px;
+    margin-top: 2px;
+    padding: 6px 14px;
     font-size: 13px;
     color: var(--text-dim);
     text-align: center;
@@ -24047,6 +24099,72 @@ function _hookOnbClose() {
   setTimeout(() => overlay.remove(), 200);
   delete window._hookOnbPickedHour;
 }
+// V4 (사용자 명시 2026-05-17 ultrathink): 간단 튜토 모달 — single page or multi-page chain.
+//   opts: { key (optional persistence — _shownInlineTips guard), pages: [{html}], onClose }
+//   key 있으면 _shownInlineTips 에 push 후 영구 dismiss. 다시 안 뜸. key 없으면 매번 노출 (직접 호출 dev / preview 용).
+//
+// 사용처:
+//   - 모래사장 첫 진입 (key='firstShell', 1 page)
+//   - 게스트 첫 '더 알아보기' 나타남 (key='firstDeeperBtn', 2 pages chain)
+//
+// 토스트 (_showInlineTip) 보다 강조 + 메시지 길이 자유. 사용자 명시적 dismiss 필요.
+
+function _showSimpleTutoModal(opts) {
+  if (!opts || !Array.isArray(opts.pages) || opts.pages.length === 0) return;
+  // 영구 dismiss 가드
+  if (opts.key) {
+    if (!Array.isArray(state._shownInlineTips)) state._shownInlineTips = [];
+    if (state._shownInlineTips.includes(opts.key)) return;
+    state._shownInlineTips.push(opts.key);
+    try { saveState(); } catch {}
+  }
+  // 중복 노출 방지
+  const existing = document.getElementById('simpleTutoOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'simpleTutoOverlay';
+  overlay.className = 'simple-tuto-overlay';
+  document.body.appendChild(overlay);
+
+  let idx = 0;
+  const total = opts.pages.length;
+
+  function _renderPage() {
+    const p = opts.pages[idx] || {};
+    const isLast = idx === total - 1;
+    const btnLabel = isLast ? '알겠어' : '다음 →';
+    const dots = total > 1
+      ? `<div class="simple-tuto-dots">${opts.pages.map((_, i) => `<span class="std-dot ${i === idx ? 'is-active' : ''}"></span>`).join('')}</div>`
+      : '';
+    overlay.innerHTML = `
+      <div class="simple-tuto-card">
+        <div class="simple-tuto-body">${p.html || ''}</div>
+        ${dots}
+        <div class="simple-tuto-actions">
+          <button class="simple-tuto-btn" type="button" onclick="_simpleTutoNextOrClose()">${btnLabel}</button>
+        </div>
+      </div>
+    `;
+  }
+  _renderPage();
+
+  window._simpleTutoNextOrClose = function() {
+    idx++;
+    if (idx >= total) {
+      overlay.classList.remove('show');
+      setTimeout(() => {
+        overlay.remove();
+        delete window._simpleTutoNextOrClose;
+        if (typeof opts.onClose === 'function') { try { opts.onClose(); } catch {} }
+      }, 200);
+      return;
+    }
+    _renderPage();
+  };
+
+  setTimeout(() => overlay.classList.add('show'), 30);
+}
 // ═══════════════════════════════════════════════════════════════
 // DECISION ROOM (Phase 3)
 // ═══════════════════════════════════════════════════════════════
@@ -35809,8 +35927,15 @@ function openShellCollection() {
   document.querySelectorAll('.beach-tab').forEach(t => t.classList.toggle('active', t.dataset.beachTab === 'all'));
   renderBeach();
   modal.classList.add('active');
-  // V4 (v8 묶음 18): 모래사장 첫 진입 inline tip
-  if (typeof _showInlineTip === 'function') _showInlineTip('firstShell');
+  // V4 (사용자 명시 2026-05-17): 모래사장 첫 진입 → simple tuto modal (옛 inline tip 토스트 교체, 강조 ↑).
+  if (typeof _showSimpleTutoModal === 'function') {
+    _showSimpleTutoModal({
+      key: 'firstShell',
+      pages: [{
+        html: `<div style="font-size:18px; font-weight:600; margin-bottom:10px;">🏖 모래사장</div>이곳은 모래사장입니다.<br>소라들을 어떻게 모으는지 궁금하다면,<br>대화탭에서 <b>'더 알아보기'</b> → <b>'해볼게'</b>를 눌러보세요!`
+      }]
+    });
+  }
 }
 
 function switchBeachTab(tab) {
@@ -37971,7 +38096,7 @@ function _renderGuestNudgeBanner() {
     <button class="guest-nudge-close" onclick="_dismissGuestNudge()" aria-label="닫기">✕</button>
     <div class="guest-nudge-icon">🌊</div>
     <div class="guest-nudge-title">여기까지 모은 거, 안전하게 챙기자</div>
-    <div class="guest-nudge-sub">지금 데이터는 이 기기에만 있어요. — 브라우저 정리되면 사라집니다. 로그인하면 종단간 암호화로 영구 보관.</div>
+    <div class="guest-nudge-sub">지금 데이터는 이 기기에만 있어요. - 브라우저 정리되면 사라집니다. 로그인해서 안전하게 이어가기.</div>
     <button class="guest-nudge-cta" onclick="showGuestConversionModal({reason:'manual'})">로그인하기 →</button>
   </div>`;
 }
@@ -39098,6 +39223,15 @@ function _renderChatMessageHTML(m, i) {
         : (_deeperElig.ok
             ? `<button class="msg-action" onclick="askDeeper(${i})">더 알고 싶어 ▾</button>`
             : `<button class="msg-action disabled-locked" onclick="_showDeeperCapToast()">더 알고 싶어 ▾</button>`);
+      // V4 (사용자 명시 2026-05-17 ultrathink): 게스트 첫 '더 알아보기' 노출 시 튜토 모달 2page chain.
+      //   _shownInlineTips 'firstDeeperBtn' 영구 가드 + queued flag 로 같은 render cycle 중복 timer 회피.
+      if (deeperBtn && state.isGuest
+          && !(state._shownInlineTips || []).includes('firstDeeperBtn')
+          && !window._firstDeeperTutoQueued
+          && typeof _showFirstDeeperTutoIfGuest === 'function') {
+        window._firstDeeperTutoQueued = true;
+        setTimeout(() => _showFirstDeeperTutoIfGuest(), 250);
+      }
       // V4 (v8 묶음 9): Core 2 미잠금 시 4단 응답의 🧬 전략으로 disabled-locked
       // V4 (v2 §6 명시): 클릭 시 단순 토스트 — entry modal 자동 권유는 환영 선물 후
       const _c2Locked = !!state._core2NotUnlocked && !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode);
@@ -39209,6 +39343,20 @@ const CHAT_HEIGHT_PLACEHOLDER = 80;
 
 window.__chatRenderTimes = window.__chatRenderTimes || [];
 window.__chatBackupForSeed = window.__chatBackupForSeed || null;
+
+// V4 (사용자 명시 2026-05-17 ultrathink): 게스트 첫 '더 알아보기' 노출 시 2page 모달 chain.
+//   page 1 = hook 사용법, page 2 = E2EE / AI 학습 0 / 비번 잠금 안내.
+function _showFirstDeeperTutoIfGuest() {
+  if (!state || !state.isGuest) return;
+  if (typeof _showSimpleTutoModal !== 'function') return;
+  _showSimpleTutoModal({
+    key: 'firstDeeperBtn',
+    pages: [
+      { html: `고민이 있을 때, 어찌해야 할지 모르겠을 때,<br>고동이에게 털어놓고 <b>'더 알아보기'</b>를 눌러보세요.<br><br>마법의 소라고동이 이름값을 할 거예요. 🐚` },
+      { html: `이 앱의 모든 정보는 <b>AI 학습에 전혀 쓰이지 않고</b>,<br>종단간 암호화로 보호됩니다.<br><br>로그인 후 비밀번호로 잠그면, <b>회사도 개발자도 아무도</b> 당신의 데이터에 접근할 수 없습니다. 🔒` }
+    ]
+  });
+}
 
 function _measureChatRender(_t0) {
   if (!_t0 || !window.__chatRenderTimes) return;
@@ -39462,11 +39610,20 @@ function _chatIsEveningMode() {
 }
 
 // 저녁 체크인 floating 카드 (옛 _chatEmptyCheckinCardHtml 재명명).
+// 사용자 명시 2026-05-17 (재): 체크인 done 인 저녁 시간대엔 '편하게 말해 보소 + 오늘 하루 어땠는지 궁금하오' 어시 버블.
 function _chatEmptyEveningCheckinHtml() {
   const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
   const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
   const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  if (checkinDone) return '';
+  // 체크인 완료 → 어시 버블로 어떻게 지났는지 가볍게 question (godong 자동 메시지 X — chat send 안 발사, static placeholder).
+  if (checkinDone) {
+    return `
+      <div class="msg assistant">
+        <div class="msg-bubble">편하게 말해 보소. 오늘 하루 어땠는지 궁금하오.</div>
+      </div>
+    `;
+  }
+  // 미체크인 + dismiss 안 함 → floating 체크인 카드.
   if (state._chatEmptyCheckinDismissedDayK === todayKVal) return '';
   const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
   const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '🌙', title: '오늘 하루 닫아보기', sub: '' };
@@ -57475,7 +57632,8 @@ async function _maybeAutoForceAnalyzeFreeTier() {
       if (state.isGuest && !state._guestAutoExtracted) {
         state._guestAutoExtracted = true;
         try { saveState(); } catch {}
-        if (typeof showToast === 'function') showToast('✦ 너에 대해 알아낸 거 정리해봤어 — \'나\' 탭');
+        // V4 fix (사용자 보고 2026-05-17): 게스트 첫 추출 후 '나 탭 정리' 토스트 제거.
+        //   사용자 보고 — 3턴 만에 토스트 뜨는데 나 탭 실제 갱신 안 돼 misleading. flag + renderModel 만 유지 (nudge banner trigger 보존).
         if (typeof renderModel === 'function') renderModel();
       }
     } catch (e) { console.warn('[auto chapter case]', e); }
@@ -57651,7 +57809,7 @@ async function _doRefreshBillingStatus(manual) {
     if (status) {
       status.innerHTML = `
         <div><b>🌱 게스트 모드</b></div>
-        <div style="font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.7;">지금 데이터는 이 기기에만 있어요. — 브라우저 정리되면 사라집니다.</div>
+        <div style="font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.7;">지금 데이터는 이 기기에만 있어요. - 브라우저 정리되면 사라집니다. 로그인해서 안전하게 이어가기.</div>
         <button class="btn-primary" onclick="showGuestConversionModal({reason:'manual'})" style="margin-top:12px; width:100%; padding:11px; font-size:13px; font-weight:600;">🔒 로그인하고 안전하게 이어가기</button>
         <div style="font-size:10.5px; color:var(--text-soft); margin-top:8px; line-height:1.6;">종단간 암호화로 영구 보관.</div>
       `;

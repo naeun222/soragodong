@@ -168,7 +168,7 @@ async function _doRefreshBillingStatus(manual) {
     if (status) {
       status.innerHTML = `
         <div><b>🌱 게스트 모드</b></div>
-        <div style="font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.7;">지금 데이터는 이 기기에만 있어요. — 브라우저 정리되면 사라집니다.</div>
+        <div style="font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.7;">지금 데이터는 이 기기에만 있어요. - 브라우저 정리되면 사라집니다. 로그인해서 안전하게 이어가기.</div>
         <button class="btn-primary" onclick="showGuestConversionModal({reason:'manual'})" style="margin-top:12px; width:100%; padding:11px; font-size:13px; font-weight:600;">🔒 로그인하고 안전하게 이어가기</button>
         <div style="font-size:10.5px; color:var(--text-soft); margin-top:8px; line-height:1.6;">종단간 암호화로 영구 보관.</div>
       `;

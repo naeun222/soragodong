@@ -250,11 +250,20 @@ function _chatIsEveningMode() {
 }
 
 // 저녁 체크인 floating 카드 (옛 _chatEmptyCheckinCardHtml 재명명).
+// 사용자 명시 2026-05-17 (재): 체크인 done 인 저녁 시간대엔 '편하게 말해 보소 + 오늘 하루 어땠는지 궁금하오' 어시 버블.
 function _chatEmptyEveningCheckinHtml() {
   const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
   const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
   const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  if (checkinDone) return '';
+  // 체크인 완료 → 어시 버블로 어떻게 지났는지 가볍게 question (godong 자동 메시지 X — chat send 안 발사, static placeholder).
+  if (checkinDone) {
+    return `
+      <div class="msg assistant">
+        <div class="msg-bubble">편하게 말해 보소. 오늘 하루 어땠는지 궁금하오.</div>
+      </div>
+    `;
+  }
+  // 미체크인 + dismiss 안 함 → floating 체크인 카드.
   if (state._chatEmptyCheckinDismissedDayK === todayKVal) return '';
   const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
   const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '🌙', title: '오늘 하루 닫아보기', sub: '' };
