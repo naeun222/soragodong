@@ -241,9 +241,13 @@
     <!-- LIBRARY (안 C: 도서관 = 새 홈. 홈 탭 흡수. 사용자 명시 2026-05-17) -->
     <div class="screen active" id="screen-archive">
       <!-- 사용자 명시 2026-05-17: "인생 도서관" 워딩 제거. 옛 홈 인사 + 날짜로 교체. -->
+      <!-- 사용자 명시 2026-05-18 ultrathink: 체크인 완료 mini-link 를 인사 영역 오른쪽으로 이동. flex row. -->
       <div class="greeting">
-        <div class="greeting-sub" id="greetingSub"></div>
-        <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
+        <div class="greeting-text">
+          <div class="greeting-sub" id="greetingSub"></div>
+          <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
+        </div>
+        <div id="checkinDoneMiniLinkSlot" class="checkin-done-mini-slot"></div>
       </div>
 
       <!-- 사용자 명시 2026-05-17: 회전카드 4-source — Hook / 체크인 / 오늘의 너 / 리뷰 링크. -->

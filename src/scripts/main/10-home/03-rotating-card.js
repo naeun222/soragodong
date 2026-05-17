@@ -582,16 +582,22 @@ function renderRotatingCard() {
     // 카드 + 작은 체크인 링크.
     // V4 fix (사용자 명시 2026-05-18 ultrathink): mini-link 는 완료 시에만 노출.
     //   checkin 카드가 priority slot 에 있을 때 skip (중복 회피) — 단 미완료 mini-link 도 폐기되어 결과적으로 done 만.
+    // V4 fix (사용자 명시 2026-05-18 ultrathink 재): mini-link 위치 분리 — 회전카드 container 에서 빼고
+    //   별도 #checkinDoneMiniLinkSlot (인사 영역 오른쪽) 에 inject.
     const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
     const miniLink = (picked && picked.sourceType === 'checkin')
       ? ''  // checkin 카드가 priority slot 에 = 중복 회피
       : _rcCheckinMiniLink(checkinDone);  // 완료 시에만 ✓ 링크 노출
 
-    if (!cardHtml && !miniLink) {
+    // mini-link slot 별도 inject (인사 영역 오른쪽).
+    const miniSlot = document.getElementById('checkinDoneMiniLinkSlot');
+    if (miniSlot) miniSlot.innerHTML = miniLink;
+
+    if (!cardHtml) {
       container.innerHTML = '';
       return;
     }
-    container.innerHTML = cardHtml + miniLink;
+    container.innerHTML = cardHtml;
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     container.innerHTML = '';
@@ -610,10 +616,12 @@ function _rcOnSourceTap(sourceId) {
 // 작은 체크인 링크 — 완료 시에만 노출.
 // V4 fix (사용자 명시 2026-05-18 ultrathink): isDone=false 분기 폐기 — 미완료 mini-link X.
 //   미완료는 priority slot 의 큰 체크인 카드로만 표시. 완료 시 (큰 카드 X) 작은 ✓ 링크만 노출.
+// V4 fix (사용자 명시 2026-05-18 ultrathink 재): 문구 축소 '✓ 오늘 체크인 — 보기 / 수정' → '✓ 오늘 체크인'.
+//   위치도 회전카드 밑 → 인사 영역 오른쪽 (#checkinDoneMiniLinkSlot) 으로 이동.
 function _rcCheckinMiniLink(isDone) {
   if (window._onbTutorialMode) return '';
   if (!isDone) return '';
-  return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인 — 보기 / 수정</div>`;
+  return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인</div>`;
 }
 
 // Hook source bodyHtml — 친구 톤 질문 + hint.

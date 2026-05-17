@@ -20,7 +20,11 @@
   .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 24px 160px; opacity: 0; pointer-events: none; transition: opacity 0.25s; -webkit-overflow-scrolling: touch; }
   .screen.active { opacity: 1; pointer-events: auto; }
 
-  .greeting { margin-bottom: 18px; }
+  /* V4 fix (사용자 명시 2026-05-18 ultrathink): flex row — 체크인 완료 mini-link 슬롯이 오른쪽 차지. */
+  .greeting { margin-bottom: 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .greeting-text { flex: 1 1 auto; min-width: 0; }
   .greeting-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.05em; }
   .greeting-main { font-family: 'Gowun Batang', serif; font-size: 24px; line-height: 1.4; }
   .greeting-main .accent { color: var(--accent); }
+  .checkin-done-mini-slot { flex: 0 0 auto; align-self: flex-end; }
+  .checkin-done-mini-slot:empty { display: none; }

@@ -11765,14 +11765,15 @@
   /* V4 (사용자 명시 2026-05-17 ultrathink): priority stack 작은 체크인 링크 — 회전카드 밑, 낮 mode 한정. */
   /* V4 fix (사용자 명시 2026-05-17): 위치 살짝 위로 (margin-top + padding-top 축소). */
   /* V4 fix (사용자 명시 2026-05-18 재): 반대로 — margin-top -4px → 8px, padding 4px → 8px (위로 이동 실패 → 반대 방향 적용). */
+  /* V4 fix (사용자 명시 2026-05-18 ultrathink 재): 위치 인사 영역 오른쪽 slot 으로 이동 — margin 제거, padding 축소, 작게. */
   .rc-checkin-mini-link {
-    margin-top: 8px;
-    padding: 8px 14px;
-    font-size: 13px;
+    padding: 4px 8px;
+    font-size: 12px;
     color: var(--text-dim);
-    text-align: center;
+    text-align: right;
     cursor: pointer;
-    border-radius: 10px;
+    border-radius: 8px;
+    white-space: nowrap;
     transition: background 0.15s, color 0.15s;
   }
   .rc-checkin-mini-link:active {

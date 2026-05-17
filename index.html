@@ -138,10 +138,14 @@
   .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 24px 160px; opacity: 0; pointer-events: none; transition: opacity 0.25s; -webkit-overflow-scrolling: touch; }
   .screen.active { opacity: 1; pointer-events: auto; }
 
-  .greeting { margin-bottom: 18px; }
+  /* V4 fix (사용자 명시 2026-05-18 ultrathink): flex row — 체크인 완료 mini-link 슬롯이 오른쪽 차지. */
+  .greeting { margin-bottom: 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .greeting-text { flex: 1 1 auto; min-width: 0; }
   .greeting-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.05em; }
   .greeting-main { font-family: 'Gowun Batang', serif; font-size: 24px; line-height: 1.4; }
   .greeting-main .accent { color: var(--accent); }
+  .checkin-done-mini-slot { flex: 0 0 auto; align-self: flex-end; }
+  .checkin-done-mini-slot:empty { display: none; }
 
   /* V3.7: shell-bar CSS 제거됨 (home-small-card로 대체) */
 
@@ -11909,14 +11913,15 @@
   /* V4 (사용자 명시 2026-05-17 ultrathink): priority stack 작은 체크인 링크 — 회전카드 밑, 낮 mode 한정. */
   /* V4 fix (사용자 명시 2026-05-17): 위치 살짝 위로 (margin-top + padding-top 축소). */
   /* V4 fix (사용자 명시 2026-05-18 재): 반대로 — margin-top -4px → 8px, padding 4px → 8px (위로 이동 실패 → 반대 방향 적용). */
+  /* V4 fix (사용자 명시 2026-05-18 ultrathink 재): 위치 인사 영역 오른쪽 slot 으로 이동 — margin 제거, padding 축소, 작게. */
   .rc-checkin-mini-link {
-    margin-top: 8px;
-    padding: 8px 14px;
-    font-size: 13px;
+    padding: 4px 8px;
+    font-size: 12px;
     color: var(--text-dim);
-    text-align: center;
+    text-align: right;
     cursor: pointer;
-    border-radius: 10px;
+    border-radius: 8px;
+    white-space: nowrap;
     transition: background 0.15s, color 0.15s;
   }
   .rc-checkin-mini-link:active {
@@ -12998,9 +13003,13 @@
     <!-- LIBRARY (안 C: 도서관 = 새 홈. 홈 탭 흡수. 사용자 명시 2026-05-17) -->
     <div class="screen active" id="screen-archive">
       <!-- 사용자 명시 2026-05-17: "인생 도서관" 워딩 제거. 옛 홈 인사 + 날짜로 교체. -->
+      <!-- 사용자 명시 2026-05-18 ultrathink: 체크인 완료 mini-link 를 인사 영역 오른쪽으로 이동. flex row. -->
       <div class="greeting">
-        <div class="greeting-sub" id="greetingSub"></div>
-        <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
+        <div class="greeting-text">
+          <div class="greeting-sub" id="greetingSub"></div>
+          <div class="greeting-main" id="greetingMain">안녕 <span class="accent">✦</span></div>
+        </div>
+        <div id="checkinDoneMiniLinkSlot" class="checkin-done-mini-slot"></div>
       </div>
 
       <!-- 사용자 명시 2026-05-17: 회전카드 4-source — Hook / 체크인 / 오늘의 너 / 리뷰 링크. -->
@@ -28375,16 +28384,22 @@ function renderRotatingCard() {
     // 카드 + 작은 체크인 링크.
     // V4 fix (사용자 명시 2026-05-18 ultrathink): mini-link 는 완료 시에만 노출.
     //   checkin 카드가 priority slot 에 있을 때 skip (중복 회피) — 단 미완료 mini-link 도 폐기되어 결과적으로 done 만.
+    // V4 fix (사용자 명시 2026-05-18 ultrathink 재): mini-link 위치 분리 — 회전카드 container 에서 빼고
+    //   별도 #checkinDoneMiniLinkSlot (인사 영역 오른쪽) 에 inject.
     const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
     const miniLink = (picked && picked.sourceType === 'checkin')
       ? ''  // checkin 카드가 priority slot 에 = 중복 회피
       : _rcCheckinMiniLink(checkinDone);  // 완료 시에만 ✓ 링크 노출
 
-    if (!cardHtml && !miniLink) {
+    // mini-link slot 별도 inject (인사 영역 오른쪽).
+    const miniSlot = document.getElementById('checkinDoneMiniLinkSlot');
+    if (miniSlot) miniSlot.innerHTML = miniLink;
+
+    if (!cardHtml) {
       container.innerHTML = '';
       return;
     }
-    container.innerHTML = cardHtml + miniLink;
+    container.innerHTML = cardHtml;
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     container.innerHTML = '';
@@ -28403,10 +28418,12 @@ function _rcOnSourceTap(sourceId) {
 // 작은 체크인 링크 — 완료 시에만 노출.
 // V4 fix (사용자 명시 2026-05-18 ultrathink): isDone=false 분기 폐기 — 미완료 mini-link X.
 //   미완료는 priority slot 의 큰 체크인 카드로만 표시. 완료 시 (큰 카드 X) 작은 ✓ 링크만 노출.
+// V4 fix (사용자 명시 2026-05-18 ultrathink 재): 문구 축소 '✓ 오늘 체크인 — 보기 / 수정' → '✓ 오늘 체크인'.
+//   위치도 회전카드 밑 → 인사 영역 오른쪽 (#checkinDoneMiniLinkSlot) 으로 이동.
 function _rcCheckinMiniLink(isDone) {
   if (window._onbTutorialMode) return '';
   if (!isDone) return '';
-  return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인 — 보기 / 수정</div>`;
+  return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인</div>`;
 }
 
 // Hook source bodyHtml — 친구 톤 질문 + hint.
