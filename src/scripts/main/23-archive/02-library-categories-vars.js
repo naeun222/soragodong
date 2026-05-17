@@ -59,5 +59,9 @@ function _applyDiaryGridHide() {
   const calOnly = (_libView === 'grid' && _currentLens === 'diary') && !hasSearchQuery;
   if (tc) tc.style.display = calOnly ? 'none' : '';
   if (tl) tl.style.display = calOnly ? 'none' : '';
+  // 사용자 명시 2026-05-18 ultrathink: timeline 뷰에서 lensTopicCards 의 '🐚 대화에서 정리됨' 별도 섹션 숨김.
+  //   timeline 자체가 일기 + 대화 정리 통합 feed (renderLensTimeline 에서 topicCards 합쳐 inline 표시) → 중복 방지.
+  //   grid + diary + 검색 케이스만 topicCards 살림 (기존 동작 유지).
+  if (tc && _libView === 'timeline' && _currentLens === 'diary') tc.style.display = 'none';
 }
 

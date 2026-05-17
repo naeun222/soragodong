@@ -1,50 +1,66 @@
+// 사용자 명시 2026-05-18 ultrathink: 일기·대화 timeline 재구성.
+//   1) 최신순. 같은 날 안에서 일기 (entry) 먼저, 대화에서 정리된 토픽카드 (topicCards) 뒤.
+//   2) 일기에 사진 첨부 (entry.photo) 있으면 카드 안에 inline 표시.
+//   3) 대화 정리 라벨 = '🐚 대화에서 정리됨' (renderLensTopicCards 와 동일 phrase 통일).
+//      일기 entry 와 시각 구분 — 별도 .ig-card-topic 카드 + .ig-topic-label.
+//   `state.archive` (사용자 저장 깨달음) merge 는 제거 — 깨달음 탭이 그 역할 담당.
 function renderLensTimeline() {
   const container = document.getElementById('lensTimeline');
   if (!container) return;
 
-  // Build unified timeline entries by date
-  const dateMap = new Map();
+  // 일기 entries + 대화 정리 (topicCards) 합쳐 단일 timeline item array 구성.
+  //   kind: 'diary' (entry) | 'topic' (topicCard)
+  //   sortKey: ISO timestamp string (desc sort 후 같은 dayKey 안에서 'diary' 우선)
+  const items = [];
 
-  // Add check-in entries
   (state.entries || []).forEach(e => {
     if (!e.date) return;
-    if (!dateMap.has(e.date)) {
-      dateMap.set(e.date, { date: e.date, checkin: null, chatSummary: null, archives: [], hidden: false, edited: null });
-    }
-    dateMap.get(e.date).checkin = e;
+    // dayKey = entry.date (YYYY-MM-DD 형식). intra-day 시각은 entry.timestamp (있으면) 또는 date+T23:59
+    //   → 같은 날 다른 항목보다 위로 가도록 ts 를 23:59 로 잡고, 추가로 sortRank=0 (diary 우선) 부여.
+    const ts = e.timestamp || (e.date + 'T23:59:59');
+    items.push({ kind: 'diary', dayKey: e.date, ts, sortRank: 0, entry: e });
   });
 
-  // Add archive insights (legacy + new) — V3.13.x: 4시 cutoff 적용
-  (state.archive || []).forEach(a => {
-    const date = a.savedAt ? getDayKey(a.savedAt) : (a.date && a.date.match(/\d{4}-\d{2}-\d{2}/)?.[0]);
-    if (!date) return;
-    if (!dateMap.has(date)) {
-      dateMap.set(date, { date, checkin: null, chatSummary: null, archives: [], hidden: false });
-    }
-    dateMap.get(date).archives.push(a);
+  (state.topicCards || []).forEach(c => {
+    // strategy 카테고리는 양생방 탭이 담당. timeline 에서는 일기·대화 chip 컨텍스트라 제외.
+    if (c.category === 'strategy') return;
+    const startedAt = c.chapterStartedAt || c.createdAt;
+    if (!startedAt) return;
+    const dayKey = getDayKey(startedAt);
+    items.push({ kind: 'topic', dayKey, ts: startedAt, sortRank: 1, card: c });
   });
 
-  // Sort by date desc
-  const sortedDays = [...dateMap.values()].sort((a, b) => b.date.localeCompare(a.date));
+  // 최신순 — ts desc. 같은 ts (사실상 거의 없음) 또는 같은 dayKey 안에서 sortRank asc (diary=0 먼저).
+  items.sort((a, b) => {
+    if (a.dayKey !== b.dayKey) return b.dayKey.localeCompare(a.dayKey);
+    if (a.sortRank !== b.sortRank) return a.sortRank - b.sortRank;
+    return (b.ts || '').localeCompare(a.ts || '');
+  });
 
-  // Apply search filter
-  let filtered = sortedDays;
+  // 검색 필터
+  let filtered = items;
   if (_archiveSearchQuery) {
-    filtered = sortedDays.filter(d => {
-      const haystack = [
-        d.date,
-        d.checkin?.note || '',
-        d.checkin?.dailyQuestion?.text || '',
-        d.archives.map(a => a.insight).join(' '),
-        Object.keys(d.checkin?.modes || {}).filter(k => d.checkin?.modes[k]).join(' '),
-        d.edited?.userNote || ''
-      ].join(' ').toLowerCase();
-      return haystack.includes(_archiveSearchQuery);
+    filtered = items.filter(it => {
+      if (it.kind === 'diary') {
+        const e = it.entry;
+        const haystack = [
+          e.date,
+          e.note || '',
+          e.diary || '',
+          e.userEdit || '',
+          e.dailyQuestion?.text || '',
+          e.dailyQuestionAnswer || '',
+          e.aiSummary || '',
+          Object.keys(e.modes || {}).filter(k => e.modes[k]).join(' ')
+        ].join(' ').toLowerCase();
+        return haystack.includes(_archiveSearchQuery);
+      } else {
+        const c = it.card;
+        const haystack = [c.title || '', c.summary || '', c.category || ''].join(' ').toLowerCase();
+        return haystack.includes(_archiveSearchQuery);
+      }
     });
   }
-
-  // Filter hidden entries (visible toggle)
-  const hiddenIds = new Set((state.entries || []).filter(e => e.hidden).map(e => e.date));
 
   if (filtered.length === 0) {
     container.innerHTML = `<div class="timeline-empty">
@@ -54,83 +70,106 @@ function renderLensTimeline() {
     return;
   }
 
-  // V3.13.x: 인스타 게시물 스타일 카드. 헤더(날짜+칩) + 본문 + ⋮ 메뉴
-  container.innerHTML = filtered.map(day => {
-    const entry = day.checkin;
-    const isHidden = entry?.hidden;
-    const dateStr = formatDateKorean(day.date);
-
-    // 헤더 칩들 — 체크인 정보를 작은 chip으로
-    const chips = [];
-    if (entry) {
-      if (entry.sleepStart && entry.sleepEnd) {
-        const dur = computeSleepDuration(entry.sleepStart, entry.sleepEnd);
-        chips.push(`<span class="ig-chip">😴 ${dur}</span>`);
-      }
-      if (entry.vitality) chips.push(`<span class="ig-chip">⚡ ${entry.vitality}</span>`);
-      if (entry.mood) chips.push(`<span class="ig-chip">💭 ${entry.mood}</span>`);
-      if (entry.modes) {
-        const activeModes = Object.keys(entry.modes).filter(k => entry.modes[k]);
-        const labels = { exam: '시험', travel: '여행', sick: '아픔', rest: '휴식', period: '월경' };
-        activeModes.forEach(m => chips.push(`<span class="ig-chip ig-chip-mode">${labels[m] || m}</span>`));
-      }
-      if (entry.sosSkipped) chips.push(`<span class="ig-chip ig-chip-mode">🪫 방전</span>`);
-    }
-
-    // 본문 블록들
-    const blocks = [];
-    // V3.13.x + V4-fix v3 (사용자 요청): 일일질문 — 답 있을 때만 Q+A 표시. 답 X면 그냥 없앰.
-    if (entry?.dailyQuestion?.text && (entry?.note || entry?.dailyQuestionAnswer)) {
-      const ans = entry.dailyQuestionAnswer || entry.note || '';
-      blocks.push(`<div class="ig-qa-set">
-        <div class="ig-question">Q. ${escapeHtml(entry.dailyQuestion.text)}</div>
-        <div class="ig-answer">${escapeHtml(ans)}</div>
-      </div>`);
-    }
-    if (entry?.userEdit) {
-      blocks.push(`<div class="ig-block ig-block-edit">📝 ${escapeHtml(entry.userEdit)}</div>`);
-    }
-    if (entry?.diary) {
-      blocks.push(`<div class="ig-block ig-block-diary"><div class="ig-block-icon">📔</div><div class="ig-block-content">${escapeHtml(entry.diary)}</div></div>`);
-    }
-    if (entry?.aiSummary && !entry?.diary) {
-      blocks.push(`<div class="ig-block ig-block-auto"><div class="ig-block-label">🤖 자동 요약</div><div class="ig-block-content">${escapeHtml(entry.aiSummary)}</div></div>`);
-    }
-    // 일일질문 없이 note만 있는 케이스 — 단독 메모로
-    if (!entry?.dailyQuestion?.text && entry?.note) {
-      blocks.push(`<div class="ig-block ig-block-note">${escapeHtml(entry.note)}</div>`);
-    }
-    // V3.13.x: 그 날 음악
-    if (entry?.music) {
-      blocks.push(`<div style="margin-top:8px;">${renderMusicCardHTML(entry.music)}</div>`);
-    }
-    // 깨달음 카드들 (headline + body 강조)
-    if (day.archives.length > 0) {
-      const archHtml = day.archives.map(a => {
-        if (a.headline) {
-          return `<div class="ig-insight"><div class="ig-insight-headline">✦ ${escapeHtml(a.headline)}</div><div class="ig-insight-body">${escapeHtml(a.body || '')}</div></div>`;
-        }
-        return `<div class="ig-insight"><div class="ig-insight-body">✦ ${escapeHtml(a.insight || '')}</div></div>`;
-      }).join('');
-      blocks.push(`<div class="ig-insights">${archHtml}</div>`);
-    }
-    if (blocks.length === 0) {
-      blocks.push(`<div class="ig-empty">기록만 남긴 날이야.</div>`);
-    }
-
-    return `
-      <article class="ig-card${isHidden ? ' hidden-entry' : ''}" data-date="${day.date}">
-        <header class="ig-header">
-          <div class="ig-header-left">
-            <div class="ig-date">${dateStr}</div>
-            ${chips.length ? `<div class="ig-chips">${chips.join('')}</div>` : ''}
-          </div>
-          <button class="ig-menu-btn" onclick="showTimelineDayMenu('${day.date}')" aria-label="메뉴">⋮</button>
-        </header>
-        <div class="ig-body">${blocks.join('')}</div>
-      </article>
-    `;
+  container.innerHTML = filtered.map(it => {
+    if (it.kind === 'diary') return _renderDiaryCardHTML(it.entry);
+    return _renderTopicCardHTML(it.card);
   }).join('');
+}
+
+// 일기 (entry) 카드 — 인스타 게시물 스타일. 사진 첨부 있으면 inline.
+function _renderDiaryCardHTML(entry) {
+  const isHidden = !!entry.hidden;
+  const dateStr = formatDateKorean(entry.date);
+
+  // 헤더 칩들 — 체크인 정보
+  const chips = [];
+  if (entry.sleepStart && entry.sleepEnd) {
+    const dur = computeSleepDuration(entry.sleepStart, entry.sleepEnd);
+    chips.push(`<span class="ig-chip">😴 ${dur}</span>`);
+  }
+  if (entry.vitality) chips.push(`<span class="ig-chip">⚡ ${entry.vitality}</span>`);
+  if (entry.mood) chips.push(`<span class="ig-chip">💭 ${entry.mood}</span>`);
+  if (entry.modes) {
+    const activeModes = Object.keys(entry.modes).filter(k => entry.modes[k]);
+    const labels = { exam: '시험', travel: '여행', sick: '아픔', rest: '휴식', period: '월경' };
+    activeModes.forEach(m => chips.push(`<span class="ig-chip ig-chip-mode">${labels[m] || m}</span>`));
+  }
+  if (entry.sosSkipped) chips.push(`<span class="ig-chip ig-chip-mode">🪫 방전</span>`);
+
+  // 본문 블록들
+  const blocks = [];
+  if (entry.dailyQuestion?.text && (entry.note || entry.dailyQuestionAnswer)) {
+    const ans = entry.dailyQuestionAnswer || entry.note || '';
+    blocks.push(`<div class="ig-qa-set">
+      <div class="ig-question">Q. ${escapeHtml(entry.dailyQuestion.text)}</div>
+      <div class="ig-answer">${escapeHtml(ans)}</div>
+    </div>`);
+  }
+  if (entry.userEdit) {
+    blocks.push(`<div class="ig-block ig-block-edit">📝 ${escapeHtml(entry.userEdit)}</div>`);
+  }
+  if (entry.diary) {
+    blocks.push(`<div class="ig-block ig-block-diary"><div class="ig-block-icon">📔</div><div class="ig-block-content">${escapeHtml(entry.diary)}</div></div>`);
+  }
+  if (entry.aiSummary && !entry.diary) {
+    blocks.push(`<div class="ig-block ig-block-auto"><div class="ig-block-label">🤖 자동 요약</div><div class="ig-block-content">${escapeHtml(entry.aiSummary)}</div></div>`);
+  }
+  // 일일질문 없이 note만 있는 케이스 — 단독 메모로
+  if (!entry.dailyQuestion?.text && entry.note) {
+    blocks.push(`<div class="ig-block ig-block-note">${escapeHtml(entry.note)}</div>`);
+  }
+  // 사용자 명시 2026-05-18: 일기 사진 inline. data URL / 외부 URL 모두 지원.
+  if (entry.photo) {
+    blocks.push(`<div class="ig-photo-wrap"><img src="${escapeHtml(entry.photo)}" alt="" class="ig-photo" loading="lazy"></div>`);
+  }
+  if (entry.music) {
+    blocks.push(`<div style="margin-top:8px;">${renderMusicCardHTML(entry.music)}</div>`);
+  }
+  if (blocks.length === 0) {
+    blocks.push(`<div class="ig-empty">기록만 남긴 날이야.</div>`);
+  }
+
+  return `
+    <article class="ig-card${isHidden ? ' hidden-entry' : ''}" data-date="${entry.date}">
+      <header class="ig-header">
+        <div class="ig-header-left">
+          <div class="ig-date">${dateStr}</div>
+          ${chips.length ? `<div class="ig-chips">${chips.join('')}</div>` : ''}
+        </div>
+        <button class="ig-menu-btn" onclick="showTimelineDayMenu('${entry.date}')" aria-label="메뉴">⋮</button>
+      </header>
+      <div class="ig-body">${blocks.join('')}</div>
+    </article>
+  `;
+}
+
+// 대화 정리 (topicCard) 카드 — '🐚 대화에서 정리됨' 라벨 + 카테고리 + 요약. 일기와 시각 구분.
+function _renderTopicCardHTML(card) {
+  const startedAt = card.chapterStartedAt || card.createdAt;
+  const dayKey = getDayKey(startedAt);
+  const dateStr = formatDateKorean(dayKey);
+  const catInfo = (typeof TOPIC_CATEGORY_LABELS !== 'undefined' && TOPIC_CATEGORY_LABELS[card.category])
+    ? TOPIC_CATEGORY_LABELS[card.category]
+    : { label: '토픽', icon: '✦' };
+  const catClass = card.category ? `cat-${escapeHtml(card.category)}` : '';
+  return `
+    <article class="ig-card ig-card-topic ${catClass}" data-topic-id="${escapeHtml(card.id || '')}" onclick="openTopicCard('${escapeHtml(card.id || '')}')">
+      <header class="ig-header">
+        <div class="ig-header-left">
+          <div class="ig-date">${dateStr}</div>
+          <div class="ig-topic-label">🐚 대화에서 정리됨</div>
+        </div>
+      </header>
+      <div class="ig-body">
+        <div class="ig-topic-row">
+          <span class="ig-topic-cat">${catInfo.icon} ${escapeHtml(catInfo.label)}</span>
+          <span class="ig-topic-title">${escapeHtml(card.title || '')}</span>
+        </div>
+        ${card.summary ? `<div class="ig-topic-summary">${escapeHtml(card.summary)}</div>` : ''}
+        <div class="ig-topic-meta">${card.messageCount || 0}개 메시지</div>
+      </div>
+    </article>
+  `;
 }
 
 // V3.13.x: timeline 카드 ⋮ 메뉴 — 메모 추가/숨기기/삭제 정리
