@@ -88,7 +88,8 @@ async function saveBookPearl(opts) {
   saveState();
   if (typeof renderLensPearls === 'function') renderLensPearls();
   if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
-  if (typeof renderLibraryHero === 'function') renderLibraryHero();
+  // V4 fix (사용자 보고 2026-05-17): renderLibraryHero → renderRotatingCard (oneul source 가 '오늘의 너' 책임).
+  if (typeof renderRotatingCard === 'function') renderRotatingCard();
   showToast('📚 책 저장됨 — 카드 누르면 독후감 쓸 수 있어');
   return pearl;
 }

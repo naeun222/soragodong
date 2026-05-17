@@ -192,7 +192,8 @@ async function _deleteBookPearl(pearlId) {
   closeBookReviewFullscreen();
   if (typeof renderLensPearls === 'function') renderLensPearls();
   if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
-  if (typeof renderLibraryHero === 'function') renderLibraryHero();
+  // V4 fix (사용자 보고 2026-05-17): renderLibraryHero → renderRotatingCard.
+  if (typeof renderRotatingCard === 'function') renderRotatingCard();
   showToast('책 진주 삭제됨');
 }
 

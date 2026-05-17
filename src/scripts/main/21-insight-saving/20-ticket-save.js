@@ -147,7 +147,8 @@ async function saveTicketPearl(opts) {
   saveState();
   if (typeof renderLensPearls === 'function') renderLensPearls();
   if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
-  if (typeof renderLibraryHero === 'function') renderLibraryHero();
+  // V4 fix (사용자 보고 2026-05-17): renderLibraryHero 호출 제거 — 회전카드 oneul source 가 '오늘의 너' 책임. libraryHero 는 진주 튜토 전용.
+  if (typeof renderRotatingCard === 'function') renderRotatingCard();
   showToast(`${sub.emoji} ${sub.label} 저장됨`);
   return pearl;
 }

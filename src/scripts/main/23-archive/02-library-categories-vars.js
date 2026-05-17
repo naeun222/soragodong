@@ -35,7 +35,8 @@ function renderArchive() {
   renderLensStrategies();
   renderLensPearls();
   if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
-  if (typeof renderLibraryHero === 'function') renderLibraryHero();
+  // V4 fix (사용자 보고 2026-05-17 ultrathink): renderLibraryHero 자동 호출 제거 — '오늘의 너' 큐레이션이 회전카드 oneul source + libraryHero 두 곳에 중복 노출되던 버그 fix.
+  //   회전카드 (renderRotatingCard) 의 oneul source 가 '오늘의 너' 책임. libraryHero 는 진주 튜토 전용 (13-first-pearl-tutorial.js 가 명시 호출).
   if (typeof updateLibraryCatNewDots === 'function') updateLibraryCatNewDots();
   if (typeof updateLibraryTabNewDot === 'function') updateLibraryTabNewDot();
   if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
