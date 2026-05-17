@@ -16,3 +16,50 @@ function devToggleForceEvening() {
   if (typeof renderRotatingCard === 'function') { try { renderRotatingCard(); } catch {} }
   if (typeof renderChat === 'function') { try { renderChat(); } catch {} }
 }
+
+// V4 (사용자 보고 2026-05-17): chatArchive 진단 — messages 빈 archive 통계 + console 덤프.
+//   "이전 대화 → 이어서 → 불러올 수 없어" 토스트 root cause 추적.
+function devDiagChatArchive() {
+  const arr = Array.isArray(state.chatArchive) ? state.chatArchive : [];
+  const total = arr.length;
+  const empties = arr.filter(a => !a || !Array.isArray(a.messages) || a.messages.length === 0);
+  const emptyCount = empties.length;
+  const hasMessagesCount = total - emptyCount;
+  const trashCount = arr.filter(a => a && a._deleted).length;
+  const pinnedCount = arr.filter(a => a && a.pinned).length;
+  const pendingCount = arr.filter(a => a && (a._pendingExtract || a._pendingCaseAnalysis)).length;
+
+  const emptySample = empties.slice(0, 5).map(a => ({
+    id: a?.id,
+    date: a?.date,
+    messageCount: a?.messageCount,
+    hasMessagesField: 'messages' in (a || {}),
+    messagesType: typeof a?.messages,
+    isArray: Array.isArray(a?.messages),
+    len: a?.messages?.length,
+    pending: !!a?._pendingExtract,
+    deleted: !!a?._deleted,
+    pinned: !!a?.pinned,
+    source: a?.source,
+    extractFromIndex: a?._extractFromIndex,
+    generatedAt: a?.generatedAt
+  }));
+
+  console.group('[chatArchive 진단]');
+  console.log('총 archive:', total);
+  console.log('messages 채워진 것:', hasMessagesCount);
+  console.log('messages 빈 것 ⚠️:', emptyCount);
+  console.log('휴지통:', trashCount);
+  console.log('핀:', pinnedCount);
+  console.log('처리 대기 (_pendingExtract):', pendingCount);
+  if (emptySample.length > 0) {
+    console.log('빈 archive 샘플 (최대 5개):');
+    console.table(emptySample);
+  }
+  console.log('전체 chatArchive:', arr);
+  console.groupEnd();
+
+  if (typeof showToast === 'function') {
+    showToast(`📋 chatArchive 진단 — 총 ${total} / 빈 메시지 ⚠️ ${emptyCount} (console 확인)`);
+  }
+}

@@ -13952,6 +13952,7 @@
           <div class="settings-mini-label" style="margin-top:14px;">⏰ 시간 / 푸시 시뮬</div>
           <button class="btn-secondary" id="devForceEveningToggleBtn" onclick="devToggleForceEvening()" title="저녁 6시+ 모드 강제 ON — 회전카드 priority 에 체크인 진입 + 챗 empty 에 체크인 floating 카드. 낮 시간에 저녁 UI 검수용. reload 시 OFF (휘발).">⏰ 저녁 6시+ 시뮬: OFF</button>
           <button class="btn-secondary" onclick="showHookOnboardingModal()" title="hook 알림 시각 picker 모달 (옛 session 2회째 트리거) — 아침/점심/저녁/자기전/직접. 응 → push 권한 prompt + Sub 등록. 필요 없어 → hookFrequency=off.">🔔 푸시 알림 시각 설정</button>
+          <button class="btn-secondary" onclick="devDiagChatArchive()" title="chatArchive 상태 통계 — 총 개수, messages 빈 archive 개수, 휴지통/핀/pending 분포, 빈 archive 샘플 5개 console 덤프. '이전 대화 이어서 불러올 수 없어' bug 추적용.">📋 chatArchive 진단</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">👁 미리보기</div>
           <div class="settings-hint" style="margin-bottom:8px;">dismiss flag / backend grant / 일일 cap 안 건드림. 진짜 사용자 화면 그대로.</div>
@@ -48633,6 +48634,10 @@ function renderChatArchiveModal() {
     // fix: archId 으로 통일.
     const isExpanded = _expandedArchiveDates.has(archId);
     const messages = isExpanded ? (a.messages || []) : [];
+    // V4 fix (사용자 보고 2026-05-17 ultrathink): messages 비어있는 archive 진단 — UI 에 명확히 표시.
+    //   root cause 후보 — (a) 옛 형식 archive (messages 필드 X), (b) E2EE restore 누락, (c) 클라우드 sync race.
+    //   사용자에게 "복원 가능 X" 명시하면 silent fail 회피.
+    const _isEmptyMessages = isExpanded && messages.length === 0;
     const pinIcon = a.pinned ? '📌' : '📍';
     const pinTitle = a.pinned ? '핀 풀기 (7일 cap 다시)' : '핀 꽂기 (영구 보관)';
     // 사용자 명시 2026-05-01 ultrathink: 4AM 처리 전 (pending) = 소프트 placeholder. legacy flag 도 호환.
@@ -48698,7 +48703,14 @@ function renderChatArchiveModal() {
         ${magicSummaryHtml}
         ${isExpanded ? `
           <div class="cac-messages">
-            ${messages.map(m => {
+            ${_isEmptyMessages ? `
+              <div style="padding:20px 14px; text-align:center; color:var(--text-dim); font-size:12px; line-height:1.7;">
+                <div style="font-size:24px; margin-bottom:8px; opacity:0.5;">📭</div>
+                <div>이 대화는 메시지가 비어있어 — 이어서 불가.</div>
+                <div style="font-size:11px; color:var(--text-soft); margin-top:6px;">메타데이터만 남고 messages 가 누락된 archive (옛 형식 또는 E2EE restore 누락 가능). 삭제 후 새 대화 권장.</div>
+                <div style="font-size:10px; color:var(--text-soft); margin-top:8px; opacity:0.6;">archId: ${escapeHtml(archId)}</div>
+              </div>
+            ` : messages.map(m => {
               const cls = m.role === 'user' ? 'user' : 'assistant';
               let content = m.content || '';
               content = content.replace(/```json[\s\S]*?```/g, '').trim();
@@ -48709,7 +48721,7 @@ function renderChatArchiveModal() {
                 <div class="cac-msg-content">${escapeHtml(content.slice(0, 500))}${content.length > 500 ? '...' : ''}</div>
               </div>`;
             }).join('')}
-            ${expandedActions}
+            ${_isEmptyMessages ? '' : expandedActions}
           </div>
         ` : ''}
       </div>
@@ -48721,8 +48733,15 @@ function renderChatArchiveModal() {
 // 마무리 안 된 현재 대화 있으면 = 덮어쓰기 confirm 모달 (확인 시 _archiveCurrentChapter 강제 후 복원).
 async function resumeArchiveChat(archId) {
   const archive = (state.chatArchive || []).find(a => (a.id || a.date) === archId);
-  if (!archive || !Array.isArray(archive.messages) || archive.messages.length === 0) {
-    showToast('대화를 불러올 수 없어');
+  // V4 fix (사용자 보고 2026-05-17 ultrathink): 진단 — root cause 분기 명확히 + console 로그.
+  if (!archive) {
+    console.warn('[resumeArchiveChat] archive not found:', archId, 'archive count:', (state.chatArchive || []).length);
+    showToast('이 대화를 찾을 수 없어 (archId mismatch — 새로고침 후 재시도)');
+    return;
+  }
+  if (!Array.isArray(archive.messages) || archive.messages.length === 0) {
+    console.warn('[resumeArchiveChat] messages empty:', { archId, messageCount: archive.messageCount, hasMessages: !!archive.messages, isArray: Array.isArray(archive.messages), len: archive.messages?.length, date: archive.date });
+    showToast('이 대화는 메시지가 비어있어 — 이어서 불가 (옛 형식 / restore 누락)');
     return;
   }
   const currentMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
@@ -51729,6 +51748,53 @@ function devToggleForceEvening() {
   // 즉시 rerender — 홈/챗 보고 있으면 바로 반영.
   if (typeof renderRotatingCard === 'function') { try { renderRotatingCard(); } catch {} }
   if (typeof renderChat === 'function') { try { renderChat(); } catch {} }
+}
+
+// V4 (사용자 보고 2026-05-17): chatArchive 진단 — messages 빈 archive 통계 + console 덤프.
+//   "이전 대화 → 이어서 → 불러올 수 없어" 토스트 root cause 추적.
+function devDiagChatArchive() {
+  const arr = Array.isArray(state.chatArchive) ? state.chatArchive : [];
+  const total = arr.length;
+  const empties = arr.filter(a => !a || !Array.isArray(a.messages) || a.messages.length === 0);
+  const emptyCount = empties.length;
+  const hasMessagesCount = total - emptyCount;
+  const trashCount = arr.filter(a => a && a._deleted).length;
+  const pinnedCount = arr.filter(a => a && a.pinned).length;
+  const pendingCount = arr.filter(a => a && (a._pendingExtract || a._pendingCaseAnalysis)).length;
+
+  const emptySample = empties.slice(0, 5).map(a => ({
+    id: a?.id,
+    date: a?.date,
+    messageCount: a?.messageCount,
+    hasMessagesField: 'messages' in (a || {}),
+    messagesType: typeof a?.messages,
+    isArray: Array.isArray(a?.messages),
+    len: a?.messages?.length,
+    pending: !!a?._pendingExtract,
+    deleted: !!a?._deleted,
+    pinned: !!a?.pinned,
+    source: a?.source,
+    extractFromIndex: a?._extractFromIndex,
+    generatedAt: a?.generatedAt
+  }));
+
+  console.group('[chatArchive 진단]');
+  console.log('총 archive:', total);
+  console.log('messages 채워진 것:', hasMessagesCount);
+  console.log('messages 빈 것 ⚠️:', emptyCount);
+  console.log('휴지통:', trashCount);
+  console.log('핀:', pinnedCount);
+  console.log('처리 대기 (_pendingExtract):', pendingCount);
+  if (emptySample.length > 0) {
+    console.log('빈 archive 샘플 (최대 5개):');
+    console.table(emptySample);
+  }
+  console.log('전체 chatArchive:', arr);
+  console.groupEnd();
+
+  if (typeof showToast === 'function') {
+    showToast(`📋 chatArchive 진단 — 총 ${total} / 빈 메시지 ⚠️ ${emptyCount} (console 확인)`);
+  }
 }
 // ═══════════════════════════════════════════════════════════════
 // V3.12: 월간 자동 통합 — 매월 1-7일, 지난 달 데이터 있으면 AI가 자동 정리

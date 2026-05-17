@@ -90,6 +90,10 @@ function renderChatArchiveModal() {
     // fix: archId 으로 통일.
     const isExpanded = _expandedArchiveDates.has(archId);
     const messages = isExpanded ? (a.messages || []) : [];
+    // V4 fix (사용자 보고 2026-05-17 ultrathink): messages 비어있는 archive 진단 — UI 에 명확히 표시.
+    //   root cause 후보 — (a) 옛 형식 archive (messages 필드 X), (b) E2EE restore 누락, (c) 클라우드 sync race.
+    //   사용자에게 "복원 가능 X" 명시하면 silent fail 회피.
+    const _isEmptyMessages = isExpanded && messages.length === 0;
     const pinIcon = a.pinned ? '📌' : '📍';
     const pinTitle = a.pinned ? '핀 풀기 (7일 cap 다시)' : '핀 꽂기 (영구 보관)';
     // 사용자 명시 2026-05-01 ultrathink: 4AM 처리 전 (pending) = 소프트 placeholder. legacy flag 도 호환.
@@ -155,7 +159,14 @@ function renderChatArchiveModal() {
         ${magicSummaryHtml}
         ${isExpanded ? `
           <div class="cac-messages">
-            ${messages.map(m => {
+            ${_isEmptyMessages ? `
+              <div style="padding:20px 14px; text-align:center; color:var(--text-dim); font-size:12px; line-height:1.7;">
+                <div style="font-size:24px; margin-bottom:8px; opacity:0.5;">📭</div>
+                <div>이 대화는 메시지가 비어있어 — 이어서 불가.</div>
+                <div style="font-size:11px; color:var(--text-soft); margin-top:6px;">메타데이터만 남고 messages 가 누락된 archive (옛 형식 또는 E2EE restore 누락 가능). 삭제 후 새 대화 권장.</div>
+                <div style="font-size:10px; color:var(--text-soft); margin-top:8px; opacity:0.6;">archId: ${escapeHtml(archId)}</div>
+              </div>
+            ` : messages.map(m => {
               const cls = m.role === 'user' ? 'user' : 'assistant';
               let content = m.content || '';
               content = content.replace(/```json[\s\S]*?```/g, '').trim();
@@ -166,7 +177,7 @@ function renderChatArchiveModal() {
                 <div class="cac-msg-content">${escapeHtml(content.slice(0, 500))}${content.length > 500 ? '...' : ''}</div>
               </div>`;
             }).join('')}
-            ${expandedActions}
+            ${_isEmptyMessages ? '' : expandedActions}
           </div>
         ` : ''}
       </div>
@@ -178,8 +189,15 @@ function renderChatArchiveModal() {
 // 마무리 안 된 현재 대화 있으면 = 덮어쓰기 confirm 모달 (확인 시 _archiveCurrentChapter 강제 후 복원).
 async function resumeArchiveChat(archId) {
   const archive = (state.chatArchive || []).find(a => (a.id || a.date) === archId);
-  if (!archive || !Array.isArray(archive.messages) || archive.messages.length === 0) {
-    showToast('대화를 불러올 수 없어');
+  // V4 fix (사용자 보고 2026-05-17 ultrathink): 진단 — root cause 분기 명확히 + console 로그.
+  if (!archive) {
+    console.warn('[resumeArchiveChat] archive not found:', archId, 'archive count:', (state.chatArchive || []).length);
+    showToast('이 대화를 찾을 수 없어 (archId mismatch — 새로고침 후 재시도)');
+    return;
+  }
+  if (!Array.isArray(archive.messages) || archive.messages.length === 0) {
+    console.warn('[resumeArchiveChat] messages empty:', { archId, messageCount: archive.messageCount, hasMessages: !!archive.messages, isArray: Array.isArray(archive.messages), len: archive.messages?.length, date: archive.date });
+    showToast('이 대화는 메시지가 비어있어 — 이어서 불가 (옛 형식 / restore 누락)');
     return;
   }
   const currentMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
