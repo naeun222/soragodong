@@ -28,20 +28,34 @@ current_index.html
 #   android.keystore = signing key — 절대 commit X (노출 시 위조 update 가능).
 #   app/ + gradle 산출물 = bubblewrap init 으로 언제든 재생성 가능.
 #   twa-manifest.json 은 절대 path (C:\...\android.keystore) 박혀있어서 ignore.
+#   루트 prefix `/` 로 한정 → Capacitor 의 android/* 는 추적 (signingConfigs 보존).
 android.keystore
 *.keystore
 *.jks
-twa-manifest.json
-app/
-build.gradle
-settings.gradle
-gradle.properties
-gradle/
-gradlew
-gradlew.bat
+/twa-manifest.json
+/app/
+/build.gradle
+/settings.gradle
+/gradle.properties
+/gradle/
+/gradlew
+/gradlew.bat
 *.apk
 *.aab
 *.aar
 local.properties
 manifest-checksum.txt
 store_icon.png
+
+# Capacitor (사용자 명시 2026-05-17 ultrathink — Android Phase 1)
+#   android/* 는 git 추적 (signingConfigs, Manifest 등 사용자 정의 보존).
+#   다만 빌드 산출물 / IDE 로컬 / 자동 생성 캐시는 ignore.
+android/build/
+android/.gradle/
+android/.idea/
+android/captures/
+android/app/build/
+android/app/release/
+android/local.properties
+capacitor.config.local.ts
+.capacitor/

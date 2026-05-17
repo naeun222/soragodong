@@ -6,6 +6,19 @@
   "scripts": {
     "build": "node build.mjs",
     "watch": "node watch.mjs",
-    "verify": "node build.mjs --verify"
+    "verify": "node build.mjs --verify",
+    "build:android": "npm run build && npx cap sync android",
+    "cap:sync": "npx cap sync android",
+    "cap:open:android": "npx cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4"
+  },
+  "dependencies": {
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/splash-screen": "^8.0.1"
   }
 }

@@ -14201,6 +14201,27 @@ function _isTWAEnv() {
   } catch { return false; }
 }
 
+// V4 (사용자 명시 2026-05-17 ultrathink) — Capacitor native shell 감지.
+//   window.Capacitor 는 Capacitor Android/iOS 가 WebView 에 inject 하는 글로벌.
+//   getPlatform() 반환: 'android' | 'ios' | 'web'.
+//   _isTWAEnv() (referrer 기반 휴리스틱) 와 달리 결정론적 — false 0건 보장.
+//   사용처 (Phase 1 = 정의만, Phase 2 검증 후 가드 부착):
+//     - 결제 가드 (32-billing/08, 10) — iOS 빌드 strict, Android 는 P1-01 reject 사유 따라 결정.
+//     - Web Push 분기 (10-home/14-push-subscription) — Capacitor Android 에서 VAPID 작동 안 하면 APNs/FCM 분기.
+//     - 카메라 / 영상 캡처 (12-mission/10, 11) — <input type="file" capture> 가 작동하면 분기 X.
+function getRuntimePlatform() {
+  try {
+    if (typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.getPlatform === 'function') {
+      return window.Capacitor.getPlatform();
+    }
+  } catch {}
+  return 'web';
+}
+function isCapacitorNative() {
+  const p = getRuntimePlatform();
+  return p === 'android' || p === 'ios';
+}
+
 // V4 (사용자 명시 2026-05-13 — 토스페이 심사용 임시 mockup):
 //   토스페이 빌링키 채널이 아직 발급 심사 중 → 정기결제 picker / 동의 모달에 토스페이 노출 X (`excludeToss: true`).
 //   심사관에게 결제 흐름 시연 목적으로 *임시* 노출 — picker / 동의 모달에 토스페이 카드 표시.
