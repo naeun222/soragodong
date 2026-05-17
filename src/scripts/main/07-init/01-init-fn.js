@@ -125,6 +125,22 @@ async function init() {
   if (!authed) {
     // 사용자 명시 2026-05-06 ultrathink: 자동 anonymous 폐기 → 첫 화면에서 사용자가 '로그인' / '둘러보기' 선택.
     // 게스트는 명시 button click 으로 entry — 의도 분명 + UX 친근.
+    // V4 (사용자 명시 2026-05-17 ultrathink): TWA (Play Store 앱) 진입 시 chooser 우회 → 자동 게스트 진입.
+    //   웹 (브라우저) 은 기존 chooser 유지. 로그인 진입은 게스트 모드 안에서 가능 (나 탭 nudge / 설정).
+    //   anonymous signup 실패 시 chooser fallback (alert dead-end 회피).
+    if (typeof _isTWAEnv === 'function' && _isTWAEnv() && typeof signInAnonymouslyForGuest === 'function') {
+      try {
+        const r = await signInAnonymouslyForGuest();
+        if (r && r.ok) {
+          try { sessionStorage.setItem('soragodong_was_guest', '1'); } catch {}
+          window.location.reload();
+          return;
+        }
+        console.warn('[twa guest auto] sign-in fail — fallback to chooser:', r);
+      } catch (e) {
+        console.warn('[twa guest auto] throw — fallback to chooser:', e);
+      }
+    }
     showLoginScreen();
     window._initialDataLoading = false;
     return;

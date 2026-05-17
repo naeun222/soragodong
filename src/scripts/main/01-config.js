@@ -36,7 +36,11 @@ function _isTWAEnv() {
     if (sessionStorage.getItem('_isTWA') === '1') return true;
     if (sessionStorage.getItem('_isTWA') === '0') return false;
     const ref = (document.referrer || '').toLowerCase();
-    const isTwa = ref.startsWith('android-app://com.soragodong.twa');
+    // V4 fix (사용자 명시 2026-05-17 ultrathink): packageId 'com.soragodong.twa' → 'com.soragodong.app' 동기화.
+    //   2026-05-17 keystore 재발급 후 packageId 변경됐는데 detection prefix 안 따라와 _isTWAEnv() 항상 false → TWA 가드 무력화 되던 버그.
+    //   옛 'com.soragodong.twa' 도 OR 로 보존 (구버전 설치 사용자 호환).
+    const isTwa = ref.startsWith('android-app://com.soragodong.app') ||
+                  ref.startsWith('android-app://com.soragodong.twa');
     sessionStorage.setItem('_isTWA', isTwa ? '1' : '0');
     return isTwa;
   } catch { return false; }
