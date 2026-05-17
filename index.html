@@ -11866,6 +11866,17 @@
   .simple-tuto-actions {
     display: flex; justify-content: flex-end;
   }
+  /* ═══════════════════════════════════════════════════════════════
+     V4 (사용자 명시 2026-05-17 ultrathink): 튜토 UI 일관성 token —
+     모든 튜토 modal (simple-tuto / hook-onb / v8-coach / v9-warm) 의 button 패턴.
+     앞으로 신규 튜토 modal 작성 시 simple-tuto-btn 클래스 (또는 같은 metric) 사용.
+       - padding: 10px 22px
+       - background: var(--accent) (primary) | transparent (ghost)
+       - color: #fff (primary) | var(--text-dim) (ghost)
+       - border: none (primary) | 1px solid var(--border) (ghost)
+       - border-radius: 10px
+       - font-size: 14px / font-weight: 600
+     ═══════════════════════════════════════════════════════════════ */
   .simple-tuto-btn {
     padding: 10px 22px;
     background: var(--accent);
@@ -11878,6 +11889,12 @@
     transition: opacity 0.15s;
   }
   .simple-tuto-btn:active { opacity: 0.8; }
+  .simple-tuto-btn.ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .simple-tuto-btn.ghost:active { background: var(--surface2, rgba(255,255,255,0.04)); }
 
   /* V4 (사용자 명시 2026-05-17 ultrathink): priority stack 작은 체크인 링크 — 회전카드 밑, 낮 mode 한정. */
   /* V4 fix (사용자 명시 2026-05-17): 위치 살짝 위로 (margin-top + padding-top 축소). */
@@ -11943,14 +11960,16 @@
     padding: 24px;
   }
   .hook-onb-overlay.show { opacity: 1; }
+  /* V4 fix (사용자 명시 2026-05-17 ultrathink): 튜토 UI 일관성 — simple-tuto-* 기준 통일.
+     max-width 420 → 380, gap 16 → 18 (simple-tuto-card 와 동일). */
   .hook-onb-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 20px;
     padding: 28px 24px;
-    max-width: 420px; width: 100%;
+    max-width: 380px; width: 100%;
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
-    display: flex; flex-direction: column; gap: 16px;
+    display: flex; flex-direction: column; gap: 18px;
   }
   .hook-onb-header {
     font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
@@ -11973,7 +11992,7 @@
     padding: 12px 10px;
     background: var(--surface2, rgba(255,255,255,0.04));
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 10px;
     font-size: 13px;
     color: var(--text);
     cursor: pointer;
@@ -11989,25 +12008,27 @@
     display: flex; gap: 10px;
     margin-top: 8px;
   }
+  /* V4 fix (사용자 명시 2026-05-17 ultrathink): simple-tuto-btn 패턴 통일 — radius 12 → 10, padding 14 → 10/22. */
   .hook-onb-confirm {
     flex: 1;
-    padding: 14px;
+    padding: 10px 22px;
     background: var(--accent);
     color: #fff;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     font-size: 14px; font-weight: 600;
     cursor: pointer;
   }
   .hook-onb-confirm:active { opacity: 0.85; }
+  /* V4 fix (사용자 명시 2026-05-17 ultrathink): ghost btn 패턴 통일 — radius 12 → 10, padding 14/16 → 10/22, font 13 → 14 weight 600. */
   .hook-onb-decline {
     flex: 0 0 auto;
-    padding: 14px 16px;
+    padding: 10px 22px;
     background: transparent;
     color: var(--text-dim);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    font-size: 13px;
+    border-radius: 10px;
+    font-size: 14px; font-weight: 600;
     cursor: pointer;
   }
   .hook-onb-decline:active { background: var(--surface2); }
@@ -12296,19 +12317,20 @@
   color: #6b6b6b;
   font-size: 13px;
 }
+/* V4 fix (사용자 명시 2026-05-17 ultrathink): 튜토 UI 일관성 — simple-tuto-btn 패턴 통일 (font 500 → 600, padding 22). */
 .v8-coach-ok {
   margin-top: 12px;
   width: 100%;
   border: none;
   background: var(--accent, #d4a85a);
   color: #fff;
-  padding: 10px 14px;
+  padding: 10px 22px;
   border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   letter-spacing: 0.01em;
-  transition: filter 120ms ease-out;
+  transition: filter 120ms ease-out, opacity 0.15s;
 }
 .v8-coach-ok:hover { filter: brightness(1.05); }
 .v8-coach-ok:active { filter: brightness(0.95); }
@@ -12318,13 +12340,14 @@
   gap: 8px;
   margin-top: 14px;
 }
+/* V4 fix (사용자 명시 2026-05-17 ultrathink): font 13 weight 500 → 14 600 (simple-tuto-btn 통일). */
 .v8-coach-branch-btn {
   flex: 1;
-  padding: 10px 12px;
+  padding: 10px 22px;
   border-radius: 10px;
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   letter-spacing: 0.01em;
   transition: filter 120ms ease-out, background 120ms ease-out, transform 80ms ease-out;
@@ -12484,10 +12507,11 @@
   gap: 10px;
   margin-top: 4px;
 }
+/* V4 fix (사용자 명시 2026-05-17 ultrathink): 튜토 UI 일관성 — padding 13/14 → 10/22, font 14.5 → 14 (simple-tuto-btn 통일). */
 .v9-warm-btn {
   flex: 1;
-  padding: 13px 14px;
-  font-size: 14.5px;
+  padding: 10px 22px;
+  font-size: 14px;
   font-weight: 600;
   font-family: inherit;
   border-radius: 10px;
