@@ -68,8 +68,9 @@ export async function onRequestPut(context: { request: Request; env: Env }): Pro
   catch { return jsonResponse({ ok: false, error: 'invalid JSON' }, 400); }
 
   // platform whitelist
+  // V4 (사용자 명시 2026-05-18 ultrathink): Capacitor native push (FCM) — capacitor-android / capacitor-ios 추가.
   if (typeof body.platform === 'string') {
-    const valid = ['ios-pwa', 'android-pwa', 'web-mobile', 'web-desktop'];
+    const valid = ['ios-pwa', 'android-pwa', 'web-mobile', 'web-desktop', 'capacitor-android', 'capacitor-ios'];
     if (!valid.includes(body.platform)) body.platform = null;
   }
 
