@@ -51,13 +51,14 @@ function _pickHeroPearl() {
 
 function _heroCardHtml(pick, opts = {}) {
   if (!pick) return '';
-  // V4 (사용자 명시 2026-05-05): 홈 hero 클릭 → 도서관 진주 칩으로 이동.
+  // V4 (사용자 명시 2026-05-05): 홈 hero 클릭 → 진주 탭으로 이동.
   //   도서관 hero 클릭 → 기존대로 진주 모달.
   // V4 (사용자 명시 2026-05-17 ultrathink): opts.dismissCall = priority stack dismiss 주입 (회전카드 source 일 때만).
   //   onclick 문자열 prefix 로 박혀서 play button stopPropagation 도 자연 회피 (play 시 카드 dismiss X).
+  // 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 탭 분리 — showScreen('pearls') 직접 이동 (옛 archive + switchLibraryCat('pearls') 폐기).
   const dismissCallStr = opts.dismissCall || '';
   const cardOnClick = opts.linkTo === 'pearls-tab'
-    ? `${dismissCallStr}showScreen('archive'); switchLibraryCat('pearls');`
+    ? `${dismissCallStr}showScreen('pearls');`
     : `openPearl('${pick.id}')`;
   const dateStr = pick.createdAt
     ? new Date(pick.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })

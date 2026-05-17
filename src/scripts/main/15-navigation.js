@@ -71,6 +71,13 @@ function showScreen(name) {
     if (_pInput && typeof _pearlsTabSearchQuery === 'string') _pInput.value = _pearlsTabSearchQuery;
     if (typeof renderLensPearls === 'function') renderLensPearls();
     if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
+    // 사용자 명시 2026-05-18 ultrathink Phase 3: 옛 도서관 진주 chip 트리거 → 진주 탭 첫 진입으로 이전.
+    //   internalNav 가드 — 튜토 내부에서 showScreen('pearls') 호출 시 재진입 회피.
+    if (!window._pearlTutorialInternalNav && !window._simTutorialInternalNav) {
+      if (typeof shouldRunFirstPearlTutorial === 'function' && shouldRunFirstPearlTutorial()) {
+        runFirstPearlTutorialV8().catch(e => console.warn('[pearl tutorial]', e));
+      }
+    }
   }
   if (name === 'archive') {
     // 사용자 명시 2026-05-17: 도서관 = 새 홈. 옛 home 렌더 통합.

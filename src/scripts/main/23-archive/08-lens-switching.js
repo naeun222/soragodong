@@ -6,14 +6,21 @@ function switchLens(lens) {
 
 // V4-1p: 그리드 ↔ 타임라인 토글
 // V4-fix (audit HIGH #2): active cat의 lens만 재렌더 (전체 7 lens X)
+// 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 탭에도 동일 토글 — _libView 공유 (archive ↔ 진주 자연 동기화).
+//   screen-pearls active 시엔 _renderActiveLens 대신 renderLensPearls 직접 호출 (archive 의 _currentLens 무관).
 function switchLibraryView(view) {
   if (view !== 'grid' && view !== 'timeline') view = 'grid';
   _libView = view;
   document.querySelectorAll('.lib-view-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.view === view);
   });
-  _renderActiveLens();
-  if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
+  const _pearlsTabActive = !!(document.getElementById('screen-pearls') && document.getElementById('screen-pearls').classList.contains('active'));
+  if (_pearlsTabActive) {
+    if (typeof renderLensPearls === 'function') renderLensPearls();
+  } else {
+    _renderActiveLens();
+    if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
+  }
 }
 
 // V4-fix (audit HIGH #2): 카테고리별 active lens만 재렌더 (전체 7 lens 호출 X — 비효율 fix)

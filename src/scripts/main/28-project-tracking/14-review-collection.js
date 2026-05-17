@@ -269,8 +269,8 @@ function setPearlCatFilter(cat) {
 }
 
 function renderLensPearls() {
-  // 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 진주 전용 탭 + 도서관 진주 칩 둘 다 동일 HTML render.
-  //   #lensPearls (library libPearls — Phase 3 에서 제거 예정) + #pearlsContent (신규 screen-pearls).
+  // 사용자 명시 2026-05-18 ultrathink Phase 3: 도서관 진주 chip + libPearls view 제거 — 진주는 별도 탭 (#screen-pearls / #pearlsContent) 만.
+  //   containerLib (#lensPearls) 는 DOM 에 더 이상 존재 X — defensive guard 만 남김 (옛 캐시된 인덱스 케이스 안전망).
   //   active query 는 screen-pearls.active 시 _pearlsTabSearchQuery, 그 외 _archiveSearchQuery.
   const containerLib = document.getElementById('lensPearls');
   const containerTab = document.getElementById('pearlsContent');
@@ -299,7 +299,7 @@ function renderLensPearls() {
   let html = `
     <div class="pearls-intro">
       <div class="pearls-intro-header">
-        <span class="pearls-intro-emoji">💎</span>
+        <span class="pearls-intro-emoji">💠</span>
         <div class="pearls-intro-text">살아있다 느낀 순간들</div>
       </div>
       <div class="pearls-intro-grid">

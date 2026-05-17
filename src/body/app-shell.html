@@ -263,10 +263,10 @@
       <div id="libraryHero"></div>
 
       <!-- 사용자 요청 2026-04-29: 5 카테고리 chip B 형식 (활성만 라벨 펼침), 토글은 검색바 우측 -->
+      <!-- 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 chip 제거 — 진주는 별도 탭 (#screen-pearls) 으로 이전. 4 chip 남음. -->
       <div class="library-top-row">
         <div class="library-cats">
           <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')"><span class="cat-icon">📔</span><span class="cat-label">일기·대화</span></button>
-          <button class="lib-cat-chip"        data-cat="pearls"    onclick="switchLibraryCat('pearls')"><span class="cat-icon">🔮</span><span class="cat-label">진주</span></button>
           <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')"><span class="cat-icon">🌱</span><span class="cat-label">양생방</span></button>
           <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')"><span class="cat-icon">✨</span><span class="cat-label">깨달음</span></button>
           <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')"><span class="cat-icon">🌀</span><span class="cat-label">마법·리뷰</span></button>
@@ -310,24 +310,26 @@
         <div id="lensArchive"></div>
         <div id="lensInsights"></div>
       </div>
-      <!-- 🔮 진주 -->
-      <div id="libPearls" class="library-cat-view" style="display:none;">
-        <div id="lensPearls"></div>
-      </div>
+      <!-- 사용자 명시 2026-05-18 ultrathink Phase 3: libPearls view 제거 — 진주는 별도 탭 (#screen-pearls / #pearlsContent) 으로 이전. -->
       <!-- 🌀 마법·리뷰 -->
       <div id="libGalpi" class="library-cat-view" style="display:none;">
         <!-- 사용자 요청 2026-04-29: 피드/목록 토글 통일 — JS에서 동적 렌더 -->
       </div>
     </div>
 
-    <!-- PEARLS: 진주 전용 탭 (사용자 명시 2026-05-18 ultrathink Phase 1+2) — 도서관 진주 칩 layout 이전. library libPearls 는 Phase 3 에서 제거. -->
+    <!-- PEARLS: 진주 전용 탭 (사용자 명시 2026-05-18 ultrathink Phase 1+2+3) — 도서관 진주 칩 layout 이전. library libPearls 제거됨. -->
     <div class="screen" id="screen-pearls">
       <div class="screen-title">💎 진주</div>
-      <!-- 진주 전용 검색 (archiveSearch 와 별개 — _pearlsTabSearchQuery 만 driver). -->
+      <!-- 진주 전용 검색 + 그리드/타임라인 토글 (archiveSearch 와 별개 — _pearlsTabSearchQuery 만 driver). -->
+      <!-- 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 탭에도 그리드/타임라인 토글 — archive 와 동일 .lib-view-btn + switchLibraryView (_libView 공유 — archive ↔ 진주 자연 동기화). -->
       <div id="pearlsSearchBar" style="margin:14px 0 16px; display:flex; gap:8px; align-items:center;">
         <input type="text" id="pearlsSearch" placeholder="🔎 키워드, 날짜로 검색..."
                oninput="searchPearls()"
                style="flex:1; min-width:0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; font-family:inherit;">
+        <div class="library-view-toggle" style="margin:0; flex-shrink:0;">
+          <button class="lib-view-btn active" data-view="grid"     onclick="switchLibraryView('grid')"     aria-label="그리드"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
+          <button class="lib-view-btn"        data-view="timeline" onclick="switchLibraryView('timeline')" aria-label="타임라인"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
+        </div>
       </div>
       <!-- '살아있다 느낀 순간들' 카테고리 + grid — renderLensPearls() 가 pearlsContent 에도 동일 HTML inject. -->
       <div id="pearlsContent"></div>

@@ -75,11 +75,12 @@ function updateLibraryTabNewDot() {
   try {
     const since = _libTabLastSeenTs();
     // 처음 진입 안 한 사용자: 점 X (카테고리 dot 동일 정책)
+    // 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 탭 분리 — archive tab dot 에서 pearls 신호 제외.
+    //   _libCategoryNewSince('pearls', ...) 자체는 유지 (옛 사용자 data 의 _libCatLastSeen.pearls 보존).
     const has = since > 0 && (
       _libCategoryNewSince('diary', since) ||
       _libCategoryNewSince('yangsaeng', since) ||
       _libCategoryNewSince('insights', since) ||
-      _libCategoryNewSince('pearls', since) ||
       _libCategoryNewSince('galpi', since)
     );
     const item = document.querySelector('.bottom-nav .nav-item[data-screen="archive"]');

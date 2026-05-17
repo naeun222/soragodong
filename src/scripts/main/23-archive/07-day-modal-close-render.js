@@ -152,11 +152,8 @@ function renderLensCalendarGrid() {
 
 function switchLibraryCat(cat) {
   // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 칩 클릭 → V8 sim 튜토리얼 fire.
+  // 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 chip 제거 — pearls 트리거 폐기 (진주 탭 진입 / addPearl 진입 두 곳에서만 fire).
   if (!window._pearlTutorialInternalNav && !window._simTutorialInternalNav) {
-    if (cat === 'pearls' && typeof shouldRunFirstPearlTutorial === 'function' && shouldRunFirstPearlTutorial()) {
-      runFirstPearlTutorialV8().catch(e => console.warn('[pearl tutorial]', e));
-      return;
-    }
     if (cat === 'insights' && typeof shouldRunInsightsTutorial === 'function' && shouldRunInsightsTutorial()) {
       runInsightsTutorialV8().catch(e => console.warn('[insights]', e));
       return;

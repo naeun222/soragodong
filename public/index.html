@@ -13020,10 +13020,10 @@
       <div id="libraryHero"></div>
 
       <!-- 사용자 요청 2026-04-29: 5 카테고리 chip B 형식 (활성만 라벨 펼침), 토글은 검색바 우측 -->
+      <!-- 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 chip 제거 — 진주는 별도 탭 (#screen-pearls) 으로 이전. 4 chip 남음. -->
       <div class="library-top-row">
         <div class="library-cats">
           <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')"><span class="cat-icon">📔</span><span class="cat-label">일기·대화</span></button>
-          <button class="lib-cat-chip"        data-cat="pearls"    onclick="switchLibraryCat('pearls')"><span class="cat-icon">🔮</span><span class="cat-label">진주</span></button>
           <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')"><span class="cat-icon">🌱</span><span class="cat-label">양생방</span></button>
           <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')"><span class="cat-icon">✨</span><span class="cat-label">깨달음</span></button>
           <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')"><span class="cat-icon">🌀</span><span class="cat-label">마법·리뷰</span></button>
@@ -13067,24 +13067,26 @@
         <div id="lensArchive"></div>
         <div id="lensInsights"></div>
       </div>
-      <!-- 🔮 진주 -->
-      <div id="libPearls" class="library-cat-view" style="display:none;">
-        <div id="lensPearls"></div>
-      </div>
+      <!-- 사용자 명시 2026-05-18 ultrathink Phase 3: libPearls view 제거 — 진주는 별도 탭 (#screen-pearls / #pearlsContent) 으로 이전. -->
       <!-- 🌀 마법·리뷰 -->
       <div id="libGalpi" class="library-cat-view" style="display:none;">
         <!-- 사용자 요청 2026-04-29: 피드/목록 토글 통일 — JS에서 동적 렌더 -->
       </div>
     </div>
 
-    <!-- PEARLS: 진주 전용 탭 (사용자 명시 2026-05-18 ultrathink Phase 1+2) — 도서관 진주 칩 layout 이전. library libPearls 는 Phase 3 에서 제거. -->
+    <!-- PEARLS: 진주 전용 탭 (사용자 명시 2026-05-18 ultrathink Phase 1+2+3) — 도서관 진주 칩 layout 이전. library libPearls 제거됨. -->
     <div class="screen" id="screen-pearls">
       <div class="screen-title">💎 진주</div>
-      <!-- 진주 전용 검색 (archiveSearch 와 별개 — _pearlsTabSearchQuery 만 driver). -->
+      <!-- 진주 전용 검색 + 그리드/타임라인 토글 (archiveSearch 와 별개 — _pearlsTabSearchQuery 만 driver). -->
+      <!-- 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 탭에도 그리드/타임라인 토글 — archive 와 동일 .lib-view-btn + switchLibraryView (_libView 공유 — archive ↔ 진주 자연 동기화). -->
       <div id="pearlsSearchBar" style="margin:14px 0 16px; display:flex; gap:8px; align-items:center;">
         <input type="text" id="pearlsSearch" placeholder="🔎 키워드, 날짜로 검색..."
                oninput="searchPearls()"
                style="flex:1; min-width:0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; font-family:inherit;">
+        <div class="library-view-toggle" style="margin:0; flex-shrink:0;">
+          <button class="lib-view-btn active" data-view="grid"     onclick="switchLibraryView('grid')"     aria-label="그리드"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
+          <button class="lib-view-btn"        data-view="timeline" onclick="switchLibraryView('timeline')" aria-label="타임라인"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
+        </div>
       </div>
       <!-- '살아있다 느낀 순간들' 카테고리 + grid — renderLensPearls() 가 pearlsContent 에도 동일 HTML inject. -->
       <div id="pearlsContent"></div>
@@ -22948,8 +22950,8 @@ function _v8WaitForOverlayGone(selector, maxMs = 30000) {
 // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 진주 진입 트리거.
 // 트리거:
 //   - 홈/도서관 hero '+ 첫 진주 추가' 버튼 (addPearl 진입)
-//   - 도서관 진주 칩 첫 클릭 (switchLibraryCat('pearls'))
-// 흐름: testerMode ON → testSeedV4Data 풀 시드 → 도서관 진주 칩 → V8 코치마크 시퀀스 → testerMode OFF (reload)
+//   - 진주 탭 첫 진입 (사용자 명시 2026-05-18 Phase 3 — 옛 도서관 진주 칩 트리거 폐기)
+// 흐름: testerMode ON → testSeedV4Data 풀 시드 → 진주 탭 진입 → V8 코치마크 시퀀스 → testerMode OFF (reload)
 // 마킹: state.tutorialShown.pearls + sessionStorage 마커 (reload 후 backup 복원돼도 마킹 유지).
 // ═══════════════════════════════════════════════════════════════
 
@@ -23010,13 +23012,13 @@ async function runFirstPearlTutorialV8() {
     }
     if (typeof showToast === 'function') showToast('🎭 시뮬 모드 — 본 데이터 안전');
 
-    // 3. 도서관 진입 + 진주 칩.
-    if (typeof showScreen === 'function') showScreen('archive');
-    await _v8Sleep(350);
-    if (typeof switchLibraryCat === 'function') {
-      // _internalCallSkipTutorial 플래그 — 인터셉트가 우리 자신 호출에서 또 fire 하지 않도록.
-      window._pearlTutorialInternalNav = true;
-      try { switchLibraryCat('pearls'); } finally { window._pearlTutorialInternalNav = false; }
+    // 3. 진주 탭 진입 (사용자 명시 2026-05-18 Phase 3: 옛 도서관 진주 칩 → 별도 탭 #screen-pearls).
+    window._pearlTutorialInternalNav = true;
+    try {
+      if (typeof showScreen === 'function') showScreen('pearls');
+    } finally {
+      // 인터셉트 가드는 즉시 풀어도 안전 — showScreen 동기 호출이라 후속 fire X.
+      window._pearlTutorialInternalNav = false;
     }
     await _v8Sleep(500);
 
@@ -23058,6 +23060,7 @@ async function runFirstPearlTutorialV8() {
 
 function _pearlCoachmarkIntro() {
   // 사용자 명시 2026-05-06 ultrathink: 옛 'pearls_intro' 카피 ('정말정말') 그대로 가져옴.
+  // 사용자 명시 2026-05-18 Phase 3: target = bottom-nav 진주 탭 (옛 lib-cat-chip 폐기).
   const body = `
     <div class="v8-coach-title">🔮 살아있다 느낀 순간들</div>
     <div class="v8-coach-text">
@@ -23067,9 +23070,9 @@ function _pearlCoachmarkIntro() {
     </div>
   `;
   return _v8ShowCoachmark({
-    targetSelector: '.lib-cat-chip[data-cat="pearls"]',
+    targetSelector: '.bottom-nav .nav-item[data-screen="pearls"]',
     body,
-    position: 'bottom',
+    position: 'top',
     allowNoTarget: true
   });
 }
@@ -36386,6 +36389,13 @@ function showScreen(name) {
     if (_pInput && typeof _pearlsTabSearchQuery === 'string') _pInput.value = _pearlsTabSearchQuery;
     if (typeof renderLensPearls === 'function') renderLensPearls();
     if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
+    // 사용자 명시 2026-05-18 ultrathink Phase 3: 옛 도서관 진주 chip 트리거 → 진주 탭 첫 진입으로 이전.
+    //   internalNav 가드 — 튜토 내부에서 showScreen('pearls') 호출 시 재진입 회피.
+    if (!window._pearlTutorialInternalNav && !window._simTutorialInternalNav) {
+      if (typeof shouldRunFirstPearlTutorial === 'function' && shouldRunFirstPearlTutorial()) {
+        runFirstPearlTutorialV8().catch(e => console.warn('[pearl tutorial]', e));
+      }
+    }
   }
   if (name === 'archive') {
     // 사용자 명시 2026-05-17: 도서관 = 새 홈. 옛 home 렌더 통합.
@@ -44811,13 +44821,14 @@ function declineVaultProposal(msgIdx, proposalId) {
 // ═══════════════════════════════════════════════════════════════
 // V4-1l-a LIBRARY — 5 카테고리 (📔 일기·대화 / 🧬 양생방 / ✨ 깨달음 / 🔮 진주 / 🌀 마법·리뷰)
 // V3 lens-tabs (conversations/wisdom)에서 5 카테고리 칩으로 확장.
+// 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 chip + libPearls view 제거 — 진주는 별도 탭 (#screen-pearls).
+//   _LIB_CAT_TO_VIEW 에서 pearls 매핑 제거. 4 카테고리 (diary/yangsaeng/insights/galpi) 만 남음.
 // ═══════════════════════════════════════════════════════════════
 
 const _LIB_CAT_TO_VIEW = {
   diary:     'libDiary',
   yangsaeng: 'libYangsaeng',
   insights:  'libInsights',
-  pearls:    'libPearls',
   galpi:     'libGalpi'
 };
 
@@ -44923,13 +44934,14 @@ function _pickHeroPearl() {
 
 function _heroCardHtml(pick, opts = {}) {
   if (!pick) return '';
-  // V4 (사용자 명시 2026-05-05): 홈 hero 클릭 → 도서관 진주 칩으로 이동.
+  // V4 (사용자 명시 2026-05-05): 홈 hero 클릭 → 진주 탭으로 이동.
   //   도서관 hero 클릭 → 기존대로 진주 모달.
   // V4 (사용자 명시 2026-05-17 ultrathink): opts.dismissCall = priority stack dismiss 주입 (회전카드 source 일 때만).
   //   onclick 문자열 prefix 로 박혀서 play button stopPropagation 도 자연 회피 (play 시 카드 dismiss X).
+  // 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 탭 분리 — showScreen('pearls') 직접 이동 (옛 archive + switchLibraryCat('pearls') 폐기).
   const dismissCallStr = opts.dismissCall || '';
   const cardOnClick = opts.linkTo === 'pearls-tab'
-    ? `${dismissCallStr}showScreen('archive'); switchLibraryCat('pearls');`
+    ? `${dismissCallStr}showScreen('pearls');`
     : `openPearl('${pick.id}')`;
   const dateStr = pick.createdAt
     ? new Date(pick.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
@@ -45109,11 +45121,12 @@ function updateLibraryTabNewDot() {
   try {
     const since = _libTabLastSeenTs();
     // 처음 진입 안 한 사용자: 점 X (카테고리 dot 동일 정책)
+    // 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 탭 분리 — archive tab dot 에서 pearls 신호 제외.
+    //   _libCategoryNewSince('pearls', ...) 자체는 유지 (옛 사용자 data 의 _libCatLastSeen.pearls 보존).
     const has = since > 0 && (
       _libCategoryNewSince('diary', since) ||
       _libCategoryNewSince('yangsaeng', since) ||
       _libCategoryNewSince('insights', since) ||
-      _libCategoryNewSince('pearls', since) ||
       _libCategoryNewSince('galpi', since)
     );
     const item = document.querySelector('.bottom-nav .nav-item[data-screen="archive"]');
@@ -45662,11 +45675,8 @@ function renderLensCalendarGrid() {
 
 function switchLibraryCat(cat) {
   // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 칩 클릭 → V8 sim 튜토리얼 fire.
+  // 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 chip 제거 — pearls 트리거 폐기 (진주 탭 진입 / addPearl 진입 두 곳에서만 fire).
   if (!window._pearlTutorialInternalNav && !window._simTutorialInternalNav) {
-    if (cat === 'pearls' && typeof shouldRunFirstPearlTutorial === 'function' && shouldRunFirstPearlTutorial()) {
-      runFirstPearlTutorialV8().catch(e => console.warn('[pearl tutorial]', e));
-      return;
-    }
     if (cat === 'insights' && typeof shouldRunInsightsTutorial === 'function' && shouldRunInsightsTutorial()) {
       runInsightsTutorialV8().catch(e => console.warn('[insights]', e));
       return;
@@ -45715,14 +45725,21 @@ function switchLens(lens) {
 
 // V4-1p: 그리드 ↔ 타임라인 토글
 // V4-fix (audit HIGH #2): active cat의 lens만 재렌더 (전체 7 lens X)
+// 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 탭에도 동일 토글 — _libView 공유 (archive ↔ 진주 자연 동기화).
+//   screen-pearls active 시엔 _renderActiveLens 대신 renderLensPearls 직접 호출 (archive 의 _currentLens 무관).
 function switchLibraryView(view) {
   if (view !== 'grid' && view !== 'timeline') view = 'grid';
   _libView = view;
   document.querySelectorAll('.lib-view-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.view === view);
   });
-  _renderActiveLens();
-  if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
+  const _pearlsTabActive = !!(document.getElementById('screen-pearls') && document.getElementById('screen-pearls').classList.contains('active'));
+  if (_pearlsTabActive) {
+    if (typeof renderLensPearls === 'function') renderLensPearls();
+  } else {
+    _renderActiveLens();
+    if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
+  }
 }
 
 // V4-fix (audit HIGH #2): 카테고리별 active lens만 재렌더 (전체 7 lens 호출 X — 비효율 fix)
@@ -54524,8 +54541,8 @@ function setPearlCatFilter(cat) {
 }
 
 function renderLensPearls() {
-  // 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 진주 전용 탭 + 도서관 진주 칩 둘 다 동일 HTML render.
-  //   #lensPearls (library libPearls — Phase 3 에서 제거 예정) + #pearlsContent (신규 screen-pearls).
+  // 사용자 명시 2026-05-18 ultrathink Phase 3: 도서관 진주 chip + libPearls view 제거 — 진주는 별도 탭 (#screen-pearls / #pearlsContent) 만.
+  //   containerLib (#lensPearls) 는 DOM 에 더 이상 존재 X — defensive guard 만 남김 (옛 캐시된 인덱스 케이스 안전망).
   //   active query 는 screen-pearls.active 시 _pearlsTabSearchQuery, 그 외 _archiveSearchQuery.
   const containerLib = document.getElementById('lensPearls');
   const containerTab = document.getElementById('pearlsContent');
@@ -54554,7 +54571,7 @@ function renderLensPearls() {
   let html = `
     <div class="pearls-intro">
       <div class="pearls-intro-header">
-        <span class="pearls-intro-emoji">💎</span>
+        <span class="pearls-intro-emoji">💠</span>
         <div class="pearls-intro-text">살아있다 느낀 순간들</div>
       </div>
       <div class="pearls-intro-grid">

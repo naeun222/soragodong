@@ -1,13 +1,14 @@
 // ═══════════════════════════════════════════════════════════════
 // V4-1l-a LIBRARY — 5 카테고리 (📔 일기·대화 / 🧬 양생방 / ✨ 깨달음 / 🔮 진주 / 🌀 마법·리뷰)
 // V3 lens-tabs (conversations/wisdom)에서 5 카테고리 칩으로 확장.
+// 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 chip + libPearls view 제거 — 진주는 별도 탭 (#screen-pearls).
+//   _LIB_CAT_TO_VIEW 에서 pearls 매핑 제거. 4 카테고리 (diary/yangsaeng/insights/galpi) 만 남음.
 // ═══════════════════════════════════════════════════════════════
 
 const _LIB_CAT_TO_VIEW = {
   diary:     'libDiary',
   yangsaeng: 'libYangsaeng',
   insights:  'libInsights',
-  pearls:    'libPearls',
   galpi:     'libGalpi'
 };
 

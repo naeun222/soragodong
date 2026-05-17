@@ -2,8 +2,8 @@
 // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 진주 진입 트리거.
 // 트리거:
 //   - 홈/도서관 hero '+ 첫 진주 추가' 버튼 (addPearl 진입)
-//   - 도서관 진주 칩 첫 클릭 (switchLibraryCat('pearls'))
-// 흐름: testerMode ON → testSeedV4Data 풀 시드 → 도서관 진주 칩 → V8 코치마크 시퀀스 → testerMode OFF (reload)
+//   - 진주 탭 첫 진입 (사용자 명시 2026-05-18 Phase 3 — 옛 도서관 진주 칩 트리거 폐기)
+// 흐름: testerMode ON → testSeedV4Data 풀 시드 → 진주 탭 진입 → V8 코치마크 시퀀스 → testerMode OFF (reload)
 // 마킹: state.tutorialShown.pearls + sessionStorage 마커 (reload 후 backup 복원돼도 마킹 유지).
 // ═══════════════════════════════════════════════════════════════
 
@@ -64,13 +64,13 @@ async function runFirstPearlTutorialV8() {
     }
     if (typeof showToast === 'function') showToast('🎭 시뮬 모드 — 본 데이터 안전');
 
-    // 3. 도서관 진입 + 진주 칩.
-    if (typeof showScreen === 'function') showScreen('archive');
-    await _v8Sleep(350);
-    if (typeof switchLibraryCat === 'function') {
-      // _internalCallSkipTutorial 플래그 — 인터셉트가 우리 자신 호출에서 또 fire 하지 않도록.
-      window._pearlTutorialInternalNav = true;
-      try { switchLibraryCat('pearls'); } finally { window._pearlTutorialInternalNav = false; }
+    // 3. 진주 탭 진입 (사용자 명시 2026-05-18 Phase 3: 옛 도서관 진주 칩 → 별도 탭 #screen-pearls).
+    window._pearlTutorialInternalNav = true;
+    try {
+      if (typeof showScreen === 'function') showScreen('pearls');
+    } finally {
+      // 인터셉트 가드는 즉시 풀어도 안전 — showScreen 동기 호출이라 후속 fire X.
+      window._pearlTutorialInternalNav = false;
     }
     await _v8Sleep(500);
 
@@ -112,6 +112,7 @@ async function runFirstPearlTutorialV8() {
 
 function _pearlCoachmarkIntro() {
   // 사용자 명시 2026-05-06 ultrathink: 옛 'pearls_intro' 카피 ('정말정말') 그대로 가져옴.
+  // 사용자 명시 2026-05-18 Phase 3: target = bottom-nav 진주 탭 (옛 lib-cat-chip 폐기).
   const body = `
     <div class="v8-coach-title">🔮 살아있다 느낀 순간들</div>
     <div class="v8-coach-text">
@@ -121,9 +122,9 @@ function _pearlCoachmarkIntro() {
     </div>
   `;
   return _v8ShowCoachmark({
-    targetSelector: '.lib-cat-chip[data-cat="pearls"]',
+    targetSelector: '.bottom-nav .nav-item[data-screen="pearls"]',
     body,
-    position: 'bottom',
+    position: 'top',
     allowNoTarget: true
   });
 }
