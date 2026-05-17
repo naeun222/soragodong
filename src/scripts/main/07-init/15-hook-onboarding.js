@@ -26,8 +26,9 @@ function _hookOnbShouldShow() {
   if (state.isGuest) return false;
   if (window._onbTutorialMode) return false;
   if (window._initialDataLoading) return false;
-  // userName 없으면 호명 불가 — skip (호명 prompt 가 별도로 잡음)
-  if (!state.userName || !state.userName.trim()) return false;
+  // V4 fix (사용자 보고 2026-05-18 ultrathink): userName 가드 완화 — 모달 line 55 fallback ('있잖아 ✦') 이미 존재.
+  //   옛 의도: userName 채우는 별도 prompt 가 잡음. 그러나 카카오 OAuth 는 onboarding 모달 우회 → state.userName='' 영구 → 푸시 prompt 영구 skip.
+  //   매핑 fix (14-deeplink) 는 best-effort 호명 시도. 매핑 fail 케이스도 푸시 prompt 자체는 떠야 정상.
   return true;
 }
 
