@@ -29,6 +29,17 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="soragodong.com" />
             </intent-filter>
+
+            <!-- V4 fix (사용자 보고 2026-05-18 ultrathink) — Capacitor OAuth callback deep link.
+                 @capacitor/browser 로 Chrome Custom Tabs 띄워 카카오 OAuth (카카오톡 SSO 가능) 처리.
+                 Supabase redirect_to = com.soragodong.app://oauth-callback#access_token=...&refresh_token=...
+                 → 이 intent-filter 가 캡처 → 앱이 받아 03-auth/10-capacitor-oauth-deeplink.js 의 listener 가 처리. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.soragodong.app" android:host="oauth-callback" />
+            </intent-filter>
         </activity>
 
         <provider

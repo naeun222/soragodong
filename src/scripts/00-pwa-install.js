@@ -56,6 +56,13 @@
   (function initLoginPwa() {
     var card = document.getElementById('loginPwaCard');
     if (!card) return;
+    // V4 fix (사용자 보고 2026-05-18 ultrathink): Capacitor native — PWA takeover 모드 비활성, 카드 숨김.
+    try {
+      if (typeof isCapacitorNative === 'function' && isCapacitorNative()) {
+        card.style.display = 'none';
+        return;
+      }
+    } catch {}
     var isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
       || window.navigator.standalone === true;
     var ua = navigator.userAgent;

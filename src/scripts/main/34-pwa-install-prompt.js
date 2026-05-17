@@ -9,6 +9,8 @@
 
 function shouldShowPwaInstallPrompt() {
   if (typeof state === 'undefined' || !state) return false;
+  // V4 fix (사용자 보고 2026-05-18 ultrathink): Capacitor native (Android/iOS app) — 이미 native 라 PWA 설치 권유 X.
+  try { if (typeof isCapacitorNative === 'function' && isCapacitorNative()) return false; } catch {}
   // standalone (이미 PWA) / desktop / 비-모바일 — skip.
   try {
     if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return false;
@@ -104,6 +106,8 @@ function renderPwaInstallInlineCard(opts) {
 // 노출 조건: 모바일 + 비-standalone + 미설치. 모든 화면 (홈 / 도서관 / 챗 등) 공통.
 function _ensurePwaStickyBtn() {
   if (document.getElementById('pwaStickyBtn')) return;
+  // V4 fix (사용자 보고 2026-05-18 ultrathink): Capacitor native — sticky button 노출 X.
+  try { if (typeof isCapacitorNative === 'function' && isCapacitorNative()) return; } catch {}
   try {
     if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return;
     if (window.navigator.standalone === true) return;

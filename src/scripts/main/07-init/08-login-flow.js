@@ -90,11 +90,25 @@ async function loginWithProvider(provider) {
   } catch {}
   // Supabase OAuth redirect — /auth/v1/authorize?provider=X&redirect_to=Y
   // 사용자 명시 2026-05-02: 카카오 = 이메일만 (PIPA 데이터 최소 수집). Supabase default scope (profile_nickname/profile_image) 제외 — scopes=account_email 명시.
-  const redirectTo = window.location.origin;
+  // V4 fix (사용자 보고 2026-05-18 ultrathink): Capacitor native 환경 분기.
+  //   web = 기존 동일 (window.location.href).
+  //   Capacitor = redirect_to 를 custom scheme 으로 + @capacitor/browser 외부 Chrome Custom Tabs 호출.
+  //   Custom Tabs 안에서 카카오 OAuth → 카카오톡 앱 SSO deep link OK → 인증 완료 → custom scheme redirect → AndroidManifest intent-filter 캡처 → 03-auth/10-capacitor-oauth-deeplink.js 의 appUrlOpen listener 가 token 처리.
+  //   USER ACTION 필요: Supabase Dashboard > Authentication > URL Configuration > Redirect URLs 에 'com.soragodong.app://oauth-callback' 추가.
+  const isNative = (typeof isCapacitorNative === 'function' && isCapacitorNative());
+  const redirectTo = isNative ? 'com.soragodong.app://oauth-callback' : window.location.origin;
   const scopeMap = { kakao: 'account_email' };
   const scopes = scopeMap[provider] || '';
   const scopeParam = scopes ? `&scopes=${encodeURIComponent(scopes)}` : '';
   const url = `${SUPABASE_URL}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(redirectTo)}${scopeParam}`;
+  if (isNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+    try {
+      await window.Capacitor.Plugins.Browser.open({ url, presentationStyle: 'popover' });
+      return;
+    } catch (e) {
+      console.warn('[oauth native] Browser.open fail, fallback:', e);
+    }
+  }
   // 사용자가 SNS 로그인 페이지로 이동 — redirect 후 Supabase callback → app session listener 자동 처리
   window.location.href = url;
 }
