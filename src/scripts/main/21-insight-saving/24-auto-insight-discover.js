@@ -11,36 +11,45 @@
 //       → parse JSON / dedup / state.insights.push
 //       → _lastInsightDiscoverAt = nowISO
 //
-// 비용: Haiku 4.5 ~$0.005/call, 7일 cooldown 시 사용자당 월 ~$0.02
-// 모델: 사용자 명시 2026-05-16 결정 — Haiku 4.5 (시드 grain 매칭 충분).
+// 비용: Sonnet 4.6 ~$0.02/call, 7일 cooldown 시 사용자당 월 ~$0.08
+// 모델: 사용자 명시 2026-05-17 ultrathink — Haiku 4.5 → Sonnet 4.6 (force 호출 무반응 fix, JSON 추출 안정성 ↑).
 // ═══════════════════════════════════════════════════════════════
 
 const _INSIGHT_DISCOVER_COOLDOWN_MS = 7 * 86400000;   // 7일
 const _INSIGHT_DISCOVER_MIN_ENTRIES = 7;              // 체크인 최소 7일
 const _INSIGHT_DISCOVER_CONFIDENCE_MIN = 0.55;
 
+// V4 (사용자 명시 2026-05-17 ultrathink): silent fail 진단 surface.
+//   각 silent return 마다 _setInsightDiag('reason') 으로 마킹 → testForceInsightDiscover 가 toast.
+function _setInsightDiag(reason) {
+  try { window._lastInsightDiscoverDiag = { reason, at: Date.now() }; } catch {}
+}
+
 async function maybeRunDailyInsightDiscover(opts) {
   opts = opts || {};
   const force = !!opts.force;
   try {
-    if (!state || !state.preferences) return;
-    if (typeof _canAI !== 'function' || !_canAI()) return;
-    if (state.isGuest) return;
-    if (state.preferences.testerMode) return;
-    if (!Array.isArray(state.entries) || state.entries.length < _INSIGHT_DISCOVER_MIN_ENTRIES) return;
+    if (!state || !state.preferences) { _setInsightDiag('no-state'); return; }
+    if (typeof _canAI !== 'function' || !_canAI()) { _setInsightDiag('canAI-false'); return; }
+    if (state.isGuest) { _setInsightDiag('guest-mode'); return; }
+    if (state.preferences.testerMode) { _setInsightDiag('tester-mode-on'); return; }
+    if (!Array.isArray(state.entries) || state.entries.length < _INSIGHT_DISCOVER_MIN_ENTRIES) {
+      _setInsightDiag('entries-total-lt-7:' + (state.entries?.length || 0));
+      return;
+    }
     // 7일 cooldown
     const last = state.preferences._lastInsightDiscoverAt;
     if (!force && last) {
       const lastMs = new Date(last).getTime();
-      if (!isNaN(lastMs) && (Date.now() - lastMs) < _INSIGHT_DISCOVER_COOLDOWN_MS) return;
+      if (!isNaN(lastMs) && (Date.now() - lastMs) < _INSIGHT_DISCOVER_COOLDOWN_MS) { _setInsightDiag('cooldown-7d'); return; }
     }
     // race 방지
-    if (window._insightDiscoverRunning) return;
+    if (window._insightDiscoverRunning) { _setInsightDiag('race-running'); return; }
     window._insightDiscoverRunning = true;
 
     try {
       const ctx = _buildInsightDiscoverContext();
-      if (!ctx) return;
+      if (!ctx) { _setInsightDiag('ctx-null-recent14-lt-7'); return; }
 
       const resp = await callAnthropic({
         _endpoint: 'discover_insights',
@@ -49,20 +58,26 @@ async function maybeRunDailyInsightDiscover(opts) {
           dataJson: ctx.dataJson,
           existingInsights: ctx.existingInsights
         },
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         max_tokens: 800,
         messages: [{ role: 'user', content: '' }]
       });
       if (!resp.ok) {
-        console.warn('[auto-insight] API', resp.status);
+        const _txt = await resp.text().catch(() => '');
+        console.warn('[auto-insight] API', resp.status, _txt);
+        _setInsightDiag('api-status-' + resp.status);
         return;
       }
       const data = await resp.json();
       const raw = data?.content?.[0]?.text || '';
-      const jm = raw.match(/\{[\s\S]*\}/);
-      if (!jm) return;
+      // V4 (사용자 명시 2026-05-17 ultrathink): JSON 추출 robustness — markdown code fence / 앞뒤 텍스트 제거.
+      let jsonStr = raw;
+      const fenceM = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (fenceM) jsonStr = fenceM[1];
+      const jm = jsonStr.match(/\{[\s\S]*\}/);
+      if (!jm) { console.warn('[auto-insight] no JSON in:', raw.slice(0, 200)); _setInsightDiag('no-json-match'); return; }
       let parsed;
-      try { parsed = JSON.parse(jm[0]); } catch { return; }
+      try { parsed = JSON.parse(jm[0]); } catch (e) { console.warn('[auto-insight] parse fail:', e.message, jm[0].slice(0, 200)); _setInsightDiag('json-parse-fail'); return; }
       const discovered = Array.isArray(parsed && parsed.discovered) ? parsed.discovered : [];
 
       const existingContents = (Array.isArray(state.insights) ? state.insights : [])
@@ -113,6 +128,7 @@ async function maybeRunDailyInsightDiscover(opts) {
     }
   } catch (e) {
     console.warn('[auto-insight] fail:', e);
+    _setInsightDiag('exception:' + (e?.message || 'unknown').slice(0, 60));
     window._insightDiscoverRunning = false;
   }
 }
@@ -231,9 +247,21 @@ async function testForceInsightDiscover() {
     showToast(`⚠️ 체크인 ${_INSIGHT_DISCOVER_MIN_ENTRIES}일+ 필요 (현재 ${state.entries?.length || 0}일)`);
     return;
   }
-  showToast('🔮 AI 인사이트 발견 진행 중...');
-  const n = await maybeRunDailyInsightDiscover({ force: true });
-  if (typeof n === 'number') {
-    showToast(n > 0 ? `🔮 ${n}개 발견됨 — 홈 → 깨달음 확인` : '🔮 새 인사이트 없음 (충분한 데이터 아니거나 dedup)');
+  showToast('🔮 AI 인사이트 발견 진행 중... (Sonnet, ~10-30초)');
+  // V4 (사용자 명시 2026-05-17 ultrathink): undefined 반환 (silent fail) 시 진단 toast.
+  window._lastInsightDiscoverDiag = null;
+  try {
+    const n = await maybeRunDailyInsightDiscover({ force: true });
+    if (typeof n === 'number') {
+      showToast(n > 0 ? `🔮 ${n}개 발견됨 — 홈 → 깨달음 확인` : '🔮 새 인사이트 없음 (충분한 데이터 아니거나 dedup)');
+    } else {
+      const diag = window._lastInsightDiscoverDiag;
+      const reason = diag?.reason || 'unknown-undefined';
+      showToast(`⚠️ 인사이트 발견 무반응 — ${reason} (console 확인)`);
+      console.warn('[testForceInsightDiscover] silent fail diag:', diag);
+    }
+  } catch (e) {
+    showToast('⚠️ 에러: ' + (e?.message || 'unknown'));
+    console.error('[testForceInsightDiscover]', e);
   }
 }

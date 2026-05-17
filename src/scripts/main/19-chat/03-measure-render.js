@@ -107,7 +107,7 @@ function renderChat() {
     // V4 (사용자 명시 2026-05-17 ultrathink): 저녁 6시+ + 미체크인 + dayK 내 미dismiss → 체크인 floating 카드 1개.
     //   메시지 send 시 dismiss (sendChat 의 set flag 후 자연 진입). push 진입 (hookTrigger) 시 chatMessages 가
     //   이미 채워져 있어 empty branch 진입 X → 자동 suppress.
-    container.innerHTML = archiveHeader + _chatEmptyCheckinCardHtml();
+    container.innerHTML = archiveHeader + _chatEmptyAreaHtml();
     _chatRenderSig = null;
     _measureChatRender(_t0);
     return;
@@ -230,31 +230,54 @@ function renderChat() {
   _measureChatRender(_t0);
 }
 
-// V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty floating 체크인 카드.
-//   저녁 6시+ (18:00 또는 새벽 4시 전) + 미체크인 + 오늘 dayK 내 미dismiss + 튜토리얼 OFF + onbMode OFF.
-//   탭 → enterCheckin. 메시지 send → sendChat 에서 dismiss flag set + 자연 사라짐 (다음 renderChat 시 msgs > 0).
-//   push 진입은 chatMessages 가 이미 채워져 있어 empty branch 진입 X — 자동 suppress.
-function _chatEmptyCheckinCardHtml() {
+// V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty 영역 dispatcher.
+//   저녁 (h >= 18 OR h < 4, dev flag 우선) + 미체크인 + 미dismiss → 체크인 floating 카드.
+//   낮 → '안녕?' 어시 버블 + '무슨 말 할까?' 토글 (예시 10개 펼침).
+//   튜토리얼 / onbMode → '' (방해 X).
+//   push 진입은 chatMessages 가 차서 empty branch 진입 X → 자동 suppress.
+function _chatEmptyAreaHtml() {
   try {
     if (window._onbTutorialMode) return '';
-    const h = new Date().getHours();
-    const isEvening = (h >= 18 || h < 4);
-    if (!isEvening) return '';
-    const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
-    const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
-    const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-    if (checkinDone) return '';
-    if (state._chatEmptyCheckinDismissedDayK === todayKVal) return '';
-    const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
-    const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '🌙', title: '오늘 하루 닫아보기', sub: '' };
-    const subHtml = copy.sub ? `<div class="cec-sub">${escapeHtml(copy.sub)}</div>` : '';
-    return `
-      <div class="chat-empty-checkin-card" onclick="enterCheckin()">
-        <div class="cec-label">${copy.icon} 체크인</div>
-        <div class="cec-title">${escapeHtml(copy.title)}</div>
-        ${subHtml}
-      </div>
-    `;
+    const isEvening = _chatIsEveningMode();
+    return isEvening ? _chatEmptyEveningCheckinHtml() : _chatEmptyDaytimeHelloHtml();
   } catch (e) { return ''; }
+}
+
+function _chatIsEveningMode() {
+  if (window._devForceEvening) return true;
+  const h = new Date().getHours();
+  return (h >= 18 || h < 4);
+}
+
+// 저녁 체크인 floating 카드 (옛 _chatEmptyCheckinCardHtml 재명명).
+function _chatEmptyEveningCheckinHtml() {
+  const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
+  const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
+  const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
+  if (checkinDone) return '';
+  if (state._chatEmptyCheckinDismissedDayK === todayKVal) return '';
+  const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
+  const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '🌙', title: '오늘 하루 닫아보기', sub: '' };
+  const subHtml = copy.sub ? `<div class="cec-sub">${escapeHtml(copy.sub)}</div>` : '';
+  return `
+    <div class="chat-empty-checkin-card" onclick="enterCheckin()">
+      <div class="cec-label">${copy.icon} 체크인</div>
+      <div class="cec-title">${escapeHtml(copy.title)}</div>
+      ${subHtml}
+    </div>
+  `;
+}
+
+// 낮 어시 버블 — '안녕?' + '무슨 말 할까?' 토글 (사용자 명시 2026-05-17 ultrathink, 옛 5-06 패턴 재진입).
+function _chatEmptyDaytimeHelloHtml() {
+  const examples = (typeof EMPTY_STATE_EXAMPLES !== 'undefined' && Array.isArray(EMPTY_STATE_EXAMPLES)) ? EMPTY_STATE_EXAMPLES : [];
+  const examplesBlock = examples.length
+    ? `<button class="chat-empty-toggle" id="chatEmptyExamplesToggle" onclick="toggleChatEmptyExamples()">무슨 말 할까? ▾</button><ul class="chat-empty-list" id="chatEmptyExamplesList" style="display:none;">${examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>`
+    : '';
+  return `
+    <div class="msg assistant">
+      <div class="msg-bubble">안녕?${examplesBlock}</div>
+    </div>
+  `;
 }
 

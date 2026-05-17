@@ -875,7 +875,7 @@
           <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">🎯 강제 트리거</div>
-          <button class="btn-secondary" onclick="testForceInsightDiscover()" title="Haiku 4.5 사용. 7일 cooldown 우회 — 실 데이터에서 새 인사이트 1-3개 발견.">🔮 인사이트 발견 강제 (실데이터)</button>
+          <button class="btn-secondary" onclick="testForceInsightDiscover()" title="Sonnet 4.6 사용 (2026-05-17 Haiku→Sonnet 교체). 7일 cooldown 우회 — 실 데이터에서 새 인사이트 1-3개 발견. silent fail 시 진단 toast.">🔮 인사이트 발견 강제 (실데이터)</button>
           <button class="btn-secondary" onclick="forceAnalyze()" title="Opus 4.7 사용 — 비쌈. 현재 데이터 즉시 통합 분석.">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="testForceFullAnalysis()" title="forceAnalyze() 래퍼 — 흐름 검증용. 비용 동일.">📊 통합 분석 강제 (래퍼)</button>
           <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>
@@ -883,6 +883,10 @@
           <button class="btn-secondary" onclick="testForceDiagnoses()" title="detectDiagnoses 가드 우회 → 진주 / 소라 / 숙고 / 돌연변이 / case 한 번에.">🔬 관찰 5종 즉시 detect</button>
           <button class="btn-secondary" onclick="testForceDiscoverInsights()" title="5 entry 가드 우회 — 시드 fallback 도 함께 시도.">💡 인사이트 발견 강제</button>
           <button class="btn-secondary" onclick="testForceStrategyFollowup()" title="전략 팔로업 풀 흐름 (잘됨 / 그저 그래 / 안 됨 / 포기 4 옵션).">🌱 전략 팔로업 강제</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">⏰ 시간 / 푸시 시뮬</div>
+          <button class="btn-secondary" id="devForceEveningToggleBtn" onclick="devToggleForceEvening()" title="저녁 6시+ 모드 강제 ON — 회전카드 priority 에 체크인 진입 + 챗 empty 에 체크인 floating 카드. 낮 시간에 저녁 UI 검수용. reload 시 OFF (휘발).">⏰ 저녁 6시+ 시뮬: OFF</button>
+          <button class="btn-secondary" onclick="showHookOnboardingModal()" title="hook 알림 시각 picker 모달 (옛 session 2회째 트리거) — 아침/점심/저녁/자기전/직접. 응 → push 권한 prompt + Sub 등록. 필요 없어 → hookFrequency=off.">🔔 푸시 알림 시각 설정</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">👁 미리보기</div>
           <div class="settings-hint" style="margin-bottom:8px;">dismiss flag / backend grant / 일일 cap 안 건드림. 진짜 사용자 화면 그대로.</div>

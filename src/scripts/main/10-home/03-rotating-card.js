@@ -71,7 +71,9 @@ function _rcMarkDismissedToday(sourceId) {
 }
 
 // V4 (사용자 명시 2026-05-17): 저녁 mode = 18:00 이후 ~ 04:00 (dayK reset 까지). 우선순위에 체크인 진입.
+// V4 (사용자 명시 2026-05-17 ultrathink): dev toggle (window._devForceEvening) 우선 — 낮 시간에 저녁 UI 미리보기.
 function _rcIsEveningMode() {
+  if (window._devForceEvening) return true;
   const h = new Date().getHours();
   return h >= 18 || h < 4;
 }

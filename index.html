@@ -13886,7 +13886,7 @@
           <button class="btn-secondary" onclick="showNavPaddingSlider()" title="하단 nav padding 슬라이더">📏 nav padding 조절</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">🎯 강제 트리거</div>
-          <button class="btn-secondary" onclick="testForceInsightDiscover()" title="Haiku 4.5 사용. 7일 cooldown 우회 — 실 데이터에서 새 인사이트 1-3개 발견.">🔮 인사이트 발견 강제 (실데이터)</button>
+          <button class="btn-secondary" onclick="testForceInsightDiscover()" title="Sonnet 4.6 사용 (2026-05-17 Haiku→Sonnet 교체). 7일 cooldown 우회 — 실 데이터에서 새 인사이트 1-3개 발견. silent fail 시 진단 toast.">🔮 인사이트 발견 강제 (실데이터)</button>
           <button class="btn-secondary" onclick="forceAnalyze()" title="Opus 4.7 사용 — 비쌈. 현재 데이터 즉시 통합 분석.">📊 강제 모델 분석 (비쌈)</button>
           <button class="btn-secondary" onclick="testForceFullAnalysis()" title="forceAnalyze() 래퍼 — 흐름 검증용. 비용 동일.">📊 통합 분석 강제 (래퍼)</button>
           <button class="btn-secondary" onclick="(async()=>{ const y=parseInt(prompt('연도? (예: '+(new Date().getFullYear()-1)+')', new Date().getFullYear()-1)); if(y) await generateAnnualReview(y); })()" title="실제 데이터로 Opus 4.7 분석 — 1-2분 소요. 약 $0.10-0.20.">🐚 연간 리뷰 생성 (Opus 4.7)</button>
@@ -13894,6 +13894,10 @@
           <button class="btn-secondary" onclick="testForceDiagnoses()" title="detectDiagnoses 가드 우회 → 진주 / 소라 / 숙고 / 돌연변이 / case 한 번에.">🔬 관찰 5종 즉시 detect</button>
           <button class="btn-secondary" onclick="testForceDiscoverInsights()" title="5 entry 가드 우회 — 시드 fallback 도 함께 시도.">💡 인사이트 발견 강제</button>
           <button class="btn-secondary" onclick="testForceStrategyFollowup()" title="전략 팔로업 풀 흐름 (잘됨 / 그저 그래 / 안 됨 / 포기 4 옵션).">🌱 전략 팔로업 강제</button>
+
+          <div class="settings-mini-label" style="margin-top:14px;">⏰ 시간 / 푸시 시뮬</div>
+          <button class="btn-secondary" id="devForceEveningToggleBtn" onclick="devToggleForceEvening()" title="저녁 6시+ 모드 강제 ON — 회전카드 priority 에 체크인 진입 + 챗 empty 에 체크인 floating 카드. 낮 시간에 저녁 UI 검수용. reload 시 OFF (휘발).">⏰ 저녁 6시+ 시뮬: OFF</button>
+          <button class="btn-secondary" onclick="showHookOnboardingModal()" title="hook 알림 시각 picker 모달 (옛 session 2회째 트리거) — 아침/점심/저녁/자기전/직접. 응 → push 권한 prompt + Sub 등록. 필요 없어 → hookFrequency=off.">🔔 푸시 알림 시각 설정</button>
 
           <div class="settings-mini-label" style="margin-top:14px;">👁 미리보기</div>
           <div class="settings-hint" style="margin-bottom:8px;">dismiss flag / backend grant / 일일 cap 안 건드림. 진짜 사용자 화면 그대로.</div>
@@ -27468,7 +27472,9 @@ function _rcMarkDismissedToday(sourceId) {
 }
 
 // V4 (사용자 명시 2026-05-17): 저녁 mode = 18:00 이후 ~ 04:00 (dayK reset 까지). 우선순위에 체크인 진입.
+// V4 (사용자 명시 2026-05-17 ultrathink): dev toggle (window._devForceEvening) 우선 — 낮 시간에 저녁 UI 미리보기.
 function _rcIsEveningMode() {
+  if (window._devForceEvening) return true;
   const h = new Date().getHours();
   return h >= 18 || h < 4;
 }
@@ -39313,7 +39319,7 @@ function renderChat() {
     // V4 (사용자 명시 2026-05-17 ultrathink): 저녁 6시+ + 미체크인 + dayK 내 미dismiss → 체크인 floating 카드 1개.
     //   메시지 send 시 dismiss (sendChat 의 set flag 후 자연 진입). push 진입 (hookTrigger) 시 chatMessages 가
     //   이미 채워져 있어 empty branch 진입 X → 자동 suppress.
-    container.innerHTML = archiveHeader + _chatEmptyCheckinCardHtml();
+    container.innerHTML = archiveHeader + _chatEmptyAreaHtml();
     _chatRenderSig = null;
     _measureChatRender(_t0);
     return;
@@ -39436,32 +39442,55 @@ function renderChat() {
   _measureChatRender(_t0);
 }
 
-// V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty floating 체크인 카드.
-//   저녁 6시+ (18:00 또는 새벽 4시 전) + 미체크인 + 오늘 dayK 내 미dismiss + 튜토리얼 OFF + onbMode OFF.
-//   탭 → enterCheckin. 메시지 send → sendChat 에서 dismiss flag set + 자연 사라짐 (다음 renderChat 시 msgs > 0).
-//   push 진입은 chatMessages 가 이미 채워져 있어 empty branch 진입 X — 자동 suppress.
-function _chatEmptyCheckinCardHtml() {
+// V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty 영역 dispatcher.
+//   저녁 (h >= 18 OR h < 4, dev flag 우선) + 미체크인 + 미dismiss → 체크인 floating 카드.
+//   낮 → '안녕?' 어시 버블 + '무슨 말 할까?' 토글 (예시 10개 펼침).
+//   튜토리얼 / onbMode → '' (방해 X).
+//   push 진입은 chatMessages 가 차서 empty branch 진입 X → 자동 suppress.
+function _chatEmptyAreaHtml() {
   try {
     if (window._onbTutorialMode) return '';
-    const h = new Date().getHours();
-    const isEvening = (h >= 18 || h < 4);
-    if (!isEvening) return '';
-    const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
-    const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
-    const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-    if (checkinDone) return '';
-    if (state._chatEmptyCheckinDismissedDayK === todayKVal) return '';
-    const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
-    const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '🌙', title: '오늘 하루 닫아보기', sub: '' };
-    const subHtml = copy.sub ? `<div class="cec-sub">${escapeHtml(copy.sub)}</div>` : '';
-    return `
-      <div class="chat-empty-checkin-card" onclick="enterCheckin()">
-        <div class="cec-label">${copy.icon} 체크인</div>
-        <div class="cec-title">${escapeHtml(copy.title)}</div>
-        ${subHtml}
-      </div>
-    `;
+    const isEvening = _chatIsEveningMode();
+    return isEvening ? _chatEmptyEveningCheckinHtml() : _chatEmptyDaytimeHelloHtml();
   } catch (e) { return ''; }
+}
+
+function _chatIsEveningMode() {
+  if (window._devForceEvening) return true;
+  const h = new Date().getHours();
+  return (h >= 18 || h < 4);
+}
+
+// 저녁 체크인 floating 카드 (옛 _chatEmptyCheckinCardHtml 재명명).
+function _chatEmptyEveningCheckinHtml() {
+  const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
+  const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
+  const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
+  if (checkinDone) return '';
+  if (state._chatEmptyCheckinDismissedDayK === todayKVal) return '';
+  const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
+  const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '🌙', title: '오늘 하루 닫아보기', sub: '' };
+  const subHtml = copy.sub ? `<div class="cec-sub">${escapeHtml(copy.sub)}</div>` : '';
+  return `
+    <div class="chat-empty-checkin-card" onclick="enterCheckin()">
+      <div class="cec-label">${copy.icon} 체크인</div>
+      <div class="cec-title">${escapeHtml(copy.title)}</div>
+      ${subHtml}
+    </div>
+  `;
+}
+
+// 낮 어시 버블 — '안녕?' + '무슨 말 할까?' 토글 (사용자 명시 2026-05-17 ultrathink, 옛 5-06 패턴 재진입).
+function _chatEmptyDaytimeHelloHtml() {
+  const examples = (typeof EMPTY_STATE_EXAMPLES !== 'undefined' && Array.isArray(EMPTY_STATE_EXAMPLES)) ? EMPTY_STATE_EXAMPLES : [];
+  const examplesBlock = examples.length
+    ? `<button class="chat-empty-toggle" id="chatEmptyExamplesToggle" onclick="toggleChatEmptyExamples()">무슨 말 할까? ▾</button><ul class="chat-empty-list" id="chatEmptyExamplesList" style="display:none;">${examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>`
+    : '';
+  return `
+    <div class="msg assistant">
+      <div class="msg-bubble">안녕?${examplesBlock}</div>
+    </div>
+  `;
 }
 
 function formatAIResponse(text) {
@@ -45058,36 +45087,45 @@ function _saveBookReview(pearlId) {
 //       → parse JSON / dedup / state.insights.push
 //       → _lastInsightDiscoverAt = nowISO
 //
-// 비용: Haiku 4.5 ~$0.005/call, 7일 cooldown 시 사용자당 월 ~$0.02
-// 모델: 사용자 명시 2026-05-16 결정 — Haiku 4.5 (시드 grain 매칭 충분).
+// 비용: Sonnet 4.6 ~$0.02/call, 7일 cooldown 시 사용자당 월 ~$0.08
+// 모델: 사용자 명시 2026-05-17 ultrathink — Haiku 4.5 → Sonnet 4.6 (force 호출 무반응 fix, JSON 추출 안정성 ↑).
 // ═══════════════════════════════════════════════════════════════
 
 const _INSIGHT_DISCOVER_COOLDOWN_MS = 7 * 86400000;   // 7일
 const _INSIGHT_DISCOVER_MIN_ENTRIES = 7;              // 체크인 최소 7일
 const _INSIGHT_DISCOVER_CONFIDENCE_MIN = 0.55;
 
+// V4 (사용자 명시 2026-05-17 ultrathink): silent fail 진단 surface.
+//   각 silent return 마다 _setInsightDiag('reason') 으로 마킹 → testForceInsightDiscover 가 toast.
+function _setInsightDiag(reason) {
+  try { window._lastInsightDiscoverDiag = { reason, at: Date.now() }; } catch {}
+}
+
 async function maybeRunDailyInsightDiscover(opts) {
   opts = opts || {};
   const force = !!opts.force;
   try {
-    if (!state || !state.preferences) return;
-    if (typeof _canAI !== 'function' || !_canAI()) return;
-    if (state.isGuest) return;
-    if (state.preferences.testerMode) return;
-    if (!Array.isArray(state.entries) || state.entries.length < _INSIGHT_DISCOVER_MIN_ENTRIES) return;
+    if (!state || !state.preferences) { _setInsightDiag('no-state'); return; }
+    if (typeof _canAI !== 'function' || !_canAI()) { _setInsightDiag('canAI-false'); return; }
+    if (state.isGuest) { _setInsightDiag('guest-mode'); return; }
+    if (state.preferences.testerMode) { _setInsightDiag('tester-mode-on'); return; }
+    if (!Array.isArray(state.entries) || state.entries.length < _INSIGHT_DISCOVER_MIN_ENTRIES) {
+      _setInsightDiag('entries-total-lt-7:' + (state.entries?.length || 0));
+      return;
+    }
     // 7일 cooldown
     const last = state.preferences._lastInsightDiscoverAt;
     if (!force && last) {
       const lastMs = new Date(last).getTime();
-      if (!isNaN(lastMs) && (Date.now() - lastMs) < _INSIGHT_DISCOVER_COOLDOWN_MS) return;
+      if (!isNaN(lastMs) && (Date.now() - lastMs) < _INSIGHT_DISCOVER_COOLDOWN_MS) { _setInsightDiag('cooldown-7d'); return; }
     }
     // race 방지
-    if (window._insightDiscoverRunning) return;
+    if (window._insightDiscoverRunning) { _setInsightDiag('race-running'); return; }
     window._insightDiscoverRunning = true;
 
     try {
       const ctx = _buildInsightDiscoverContext();
-      if (!ctx) return;
+      if (!ctx) { _setInsightDiag('ctx-null-recent14-lt-7'); return; }
 
       const resp = await callAnthropic({
         _endpoint: 'discover_insights',
@@ -45096,20 +45134,26 @@ async function maybeRunDailyInsightDiscover(opts) {
           dataJson: ctx.dataJson,
           existingInsights: ctx.existingInsights
         },
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         max_tokens: 800,
         messages: [{ role: 'user', content: '' }]
       });
       if (!resp.ok) {
-        console.warn('[auto-insight] API', resp.status);
+        const _txt = await resp.text().catch(() => '');
+        console.warn('[auto-insight] API', resp.status, _txt);
+        _setInsightDiag('api-status-' + resp.status);
         return;
       }
       const data = await resp.json();
       const raw = data?.content?.[0]?.text || '';
-      const jm = raw.match(/\{[\s\S]*\}/);
-      if (!jm) return;
+      // V4 (사용자 명시 2026-05-17 ultrathink): JSON 추출 robustness — markdown code fence / 앞뒤 텍스트 제거.
+      let jsonStr = raw;
+      const fenceM = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (fenceM) jsonStr = fenceM[1];
+      const jm = jsonStr.match(/\{[\s\S]*\}/);
+      if (!jm) { console.warn('[auto-insight] no JSON in:', raw.slice(0, 200)); _setInsightDiag('no-json-match'); return; }
       let parsed;
-      try { parsed = JSON.parse(jm[0]); } catch { return; }
+      try { parsed = JSON.parse(jm[0]); } catch (e) { console.warn('[auto-insight] parse fail:', e.message, jm[0].slice(0, 200)); _setInsightDiag('json-parse-fail'); return; }
       const discovered = Array.isArray(parsed && parsed.discovered) ? parsed.discovered : [];
 
       const existingContents = (Array.isArray(state.insights) ? state.insights : [])
@@ -45160,6 +45204,7 @@ async function maybeRunDailyInsightDiscover(opts) {
     }
   } catch (e) {
     console.warn('[auto-insight] fail:', e);
+    _setInsightDiag('exception:' + (e?.message || 'unknown').slice(0, 60));
     window._insightDiscoverRunning = false;
   }
 }
@@ -45278,10 +45323,22 @@ async function testForceInsightDiscover() {
     showToast(`⚠️ 체크인 ${_INSIGHT_DISCOVER_MIN_ENTRIES}일+ 필요 (현재 ${state.entries?.length || 0}일)`);
     return;
   }
-  showToast('🔮 AI 인사이트 발견 진행 중...');
-  const n = await maybeRunDailyInsightDiscover({ force: true });
-  if (typeof n === 'number') {
-    showToast(n > 0 ? `🔮 ${n}개 발견됨 — 홈 → 깨달음 확인` : '🔮 새 인사이트 없음 (충분한 데이터 아니거나 dedup)');
+  showToast('🔮 AI 인사이트 발견 진행 중... (Sonnet, ~10-30초)');
+  // V4 (사용자 명시 2026-05-17 ultrathink): undefined 반환 (silent fail) 시 진단 toast.
+  window._lastInsightDiscoverDiag = null;
+  try {
+    const n = await maybeRunDailyInsightDiscover({ force: true });
+    if (typeof n === 'number') {
+      showToast(n > 0 ? `🔮 ${n}개 발견됨 — 홈 → 깨달음 확인` : '🔮 새 인사이트 없음 (충분한 데이터 아니거나 dedup)');
+    } else {
+      const diag = window._lastInsightDiscoverDiag;
+      const reason = diag?.reason || 'unknown-undefined';
+      showToast(`⚠️ 인사이트 발견 무반응 — ${reason} (console 확인)`);
+      console.warn('[testForceInsightDiscover] silent fail diag:', diag);
+    }
+  } catch (e) {
+    showToast('⚠️ 에러: ' + (e?.message || 'unknown'));
+    console.error('[testForceInsightDiscover]', e);
   }
 }
 // ═══════════════════════════════════════════════════════════════
@@ -51408,6 +51465,24 @@ function devPreviewPlanOnboarding(planKey) {
     if (typeof showToast === 'function') showToast('_showRecurringSuccessModal 미정의');
   }
 }
+// V4 (사용자 명시 2026-05-17 ultrathink): 시간대 시뮬 dev toggle.
+//   저녁 6시 ~ 새벽 4시 모드 UI (회전카드 priority, 챗 empty 체크인 카드) 를 낮 시간에도 미리볼 수 있음.
+//   _rcIsEveningMode (10-home/03-rotating-card.js) + _chatEmptyAreaHtml (19-chat/03-measure-render.js) 둘 다 flag 우선 체크.
+//   flag = window._devForceEvening. localStorage 안 박힘 (휘발성 — reload 시 OFF).
+
+function devToggleForceEvening() {
+  window._devForceEvening = !window._devForceEvening;
+  const btn = document.getElementById('devForceEveningToggleBtn');
+  if (btn) btn.textContent = '⏰ 저녁 6시+ 시뮬: ' + (window._devForceEvening ? 'ON' : 'OFF');
+  if (typeof showToast === 'function') {
+    showToast(window._devForceEvening
+      ? '⏰ 저녁 6시+ 시뮬 ON — 홈 priority stack 에 체크인 진입 / 챗 empty 에 체크인 카드'
+      : '⏰ 저녁 6시+ 시뮬 OFF — 실제 시간대로 복귀');
+  }
+  // 즉시 rerender — 홈/챗 보고 있으면 바로 반영.
+  if (typeof renderRotatingCard === 'function') { try { renderRotatingCard(); } catch {} }
+  if (typeof renderChat === 'function') { try { renderChat(); } catch {} }
+}
 // ═══════════════════════════════════════════════════════════════
 // V3.12: 월간 자동 통합 — 매월 1-7일, 지난 달 데이터 있으면 AI가 자동 정리
 // ═══════════════════════════════════════════════════════════════
@@ -57447,6 +57522,9 @@ function loadSettings() {
   // 사용자 요청 2026-04-30: 개발자 도구 admin only (jade6679@naver.com만 보임)
   const devSection = document.getElementById('devToolsSection');
   if (devSection) devSection.style.display = _isAdmin() ? 'block' : 'none';
+  // V4 (사용자 명시 2026-05-17 ultrathink): 저녁 시뮬 toggle 라벨 sync (window flag 휘발성, settings 열 때마다 현재 상태 반영).
+  const evBtn = document.getElementById('devForceEveningToggleBtn');
+  if (evBtn) evBtn.textContent = '⏰ 저녁 6시+ 시뮬: ' + (window._devForceEvening ? 'ON' : 'OFF');
 
   // 사용자 요청 2026-04-30: 사업자 정보 표시 — 발급 후 BUSINESS_INFO 채우면 자동
   if (typeof renderBusinessInfo === 'function') renderBusinessInfo();
