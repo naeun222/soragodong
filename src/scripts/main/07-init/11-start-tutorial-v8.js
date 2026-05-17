@@ -208,7 +208,7 @@ async function _v9HandleNone() {
 // 코치마크 — 가벼운 자체 인프라 (ONBOARDING_STEPS 분리)
 // ─────────────────────────────────────────────────────────────
 
-function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', interactive = false, waitFor, onAdvance, branchButtons, allowNoTarget = false, noMask = true }) {
+function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', interactive = false, waitFor, onAdvance, branchButtons, allowNoTarget = false, noMask = true, okLabel }) {
   // 사용자 명시 2026-05-06 ultrathink: 모든 코치마크 default mask off — 다른 모달 / 화면 가독성 보존.
   // mask 가 진짜 필요한 곳만 noMask: false 로 명시.
   return new Promise((resolve) => {
@@ -227,7 +227,8 @@ function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', in
         <button class="v8-coach-branch-btn ghost" data-branch="${branchButtons[1].value}">${branchButtons[1].label}</button>
       </div>`;
     } else if (!interactive) {
-      buttonsHtml = '<button class="v8-coach-ok" id="v8CoachOk">알겠어 ✦</button>';
+      // V4 (사용자 명시 2026-05-17 ultrathink): okLabel opt — 페이지별 버튼 라벨 ('아하', '다음', '그렇구나', '오케이' 등).
+      buttonsHtml = `<button class="v8-coach-ok" id="v8CoachOk">${okLabel || '알겠어 ✦'}</button>`;
     }
     // 사용자 명시 2026-05-06 ultrathink: 어두운 mask 전면 폐기 — 항상 false. (noMask 옵션 보존, 호환만 위해.)
     const showMask = false;
