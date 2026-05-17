@@ -1245,13 +1245,11 @@ function renderRotatingCard() {
       if (pearls.length === 0 || typeof _heroCardHtml !== 'function') return null;
       const sorted = pearls.slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       const pick = sorted[0];
-      const id = 'oneul_' + (pick.id || '');
-      if (dismissed[id]) return null;
-      // _heroCardHtml 자체 onclick → opts.dismissCall 로 dismiss 주입 (음악 play button stopPropagation 도 자연 회피).
+      // V4 (사용자 명시 2026-05-17 재): 오늘의 너 = 영구 surface (마지막 fallback). click 해도 dismiss X — dismissed 체크 / dismissCall 둘 다 X.
+      //   다른 source (hook/checkin/review) 다 dismiss 되면 오늘의 너만 남아 stay. _heroCardHtml 기본 onclick (진주 탭 진입) 만.
       return {
-        id, sourceType: 'oneul',
-        bodyHtml: _heroCardHtml(pick, { linkTo: 'pearls-tab', dismissCall: `_rcOnSourceTap('${id}');` }),
-        // onTapClick 없음 — dismiss 는 _heroCardHtml 의 onclick 안에 prefix 로 들어감.
+        id: 'oneul_' + (pick.id || ''), sourceType: 'oneul',
+        bodyHtml: _heroCardHtml(pick, { linkTo: 'pearls-tab' }),
       };
     };
     const buildReview = () => {
