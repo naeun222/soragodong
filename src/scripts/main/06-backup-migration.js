@@ -468,6 +468,12 @@ function setSyncStatus(status) {
   syncStatus = status;
   const dot = document.getElementById('syncDot');
   if (dot) dot.className = 'sync-dot ' + status;
+  // V4 (사용자 명시 2026-05-18 ultrathink): silent 모드 — 정상 (idle/online/syncing) 시 .date-pill 숨김, 문제 (offline/error) 시 표시.
+  const pill = dot && dot.closest('.date-pill');
+  if (pill) {
+    const isProblem = (status === 'offline' || status === 'error');
+    pill.classList.toggle('silent', !isProblem);
+  }
   // V4 (v8 묶음 18): 동기화 빨강 (offline / error) 첫 발생 inline tip
   if ((status === 'offline' || status === 'error') && typeof _showInlineTip === 'function') {
     _showInlineTip('syncDotRed');

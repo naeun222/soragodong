@@ -283,9 +283,7 @@
   .screen-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   .screen-header-row .screen-title { margin-bottom: 6px; }
   .screen-header-row .screen-sub { margin-bottom: 24px; }
-  .screen-settings-btn { background: none; border: none; color: var(--text-dim); font-size: 18px; line-height: 1; padding: 6px 8px; cursor: pointer; flex-shrink: 0; transition: color 0.15s; }
-  .screen-settings-btn:hover { color: var(--accent); }
-  .screen-settings-btn:active { transform: scale(0.92); }
+  /* V4 (사용자 명시 2026-05-18 ultrathink): .screen-settings-btn 폐기 — 메인 헤더 cog 로 통일. 스타일 제거. */
   /* 사용자 명시 2026-05-10 (옵션 A): 나 탭 정리 버튼 — 설정 왼쪽, 작게. */
   .screen-dedup-btn { background: none; border: none; color: var(--text-dim); font-size: 14px; line-height: 1; padding: 6px 7px; cursor: pointer; flex-shrink: 0; transition: color 0.15s; opacity: 0.65; }
   .screen-dedup-btn:hover { color: var(--accent); opacity: 1; }

@@ -11,10 +11,18 @@
   .date-pill:hover { background: var(--bg-soft, var(--surface)); border-color: var(--accent); }
   .date-pill:active { transform: scale(0.96); }
   .date-pill.checkpointing { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(201,169,110,0.18); animation: pulse 1.4s ease-in-out infinite; }
+  /* V4 (사용자 명시 2026-05-18 ultrathink): silent 모드 — 정상 sync (idle/online/syncing) 시 hide. 강제 백업 중 (.checkpointing) override 로 visible 유지. */
+  .date-pill.silent { display: none; }
+  .date-pill.silent.checkpointing { display: flex; }
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-soft); }
   .sync-dot.online { background: var(--success); }
   .sync-dot.syncing { background: var(--accent); animation: pulse 1.5s infinite; }
   .sync-dot.error { background: var(--danger); }
+  /* V4 (사용자 명시 2026-05-18 ultrathink): 헤더 우상단 설정 SVG cog — 항상 visible. */
+  .header-settings-btn { background: none; border: none; color: var(--text-dim); padding: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; transition: color 0.15s, background 0.15s; outline: none; }
+  .header-settings-btn:hover { color: var(--accent); background: var(--surface); }
+  .header-settings-btn:active { transform: scale(0.92); }
+  .header-settings-btn svg { display: block; }
 
   .screens { flex: 1; overflow: hidden; position: relative; }
   .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 24px 160px; opacity: 0; pointer-events: none; transition: opacity 0.25s; -webkit-overflow-scrolling: touch; }

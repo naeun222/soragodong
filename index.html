@@ -129,10 +129,18 @@
   .date-pill:hover { background: var(--bg-soft, var(--surface)); border-color: var(--accent); }
   .date-pill:active { transform: scale(0.96); }
   .date-pill.checkpointing { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(201,169,110,0.18); animation: pulse 1.4s ease-in-out infinite; }
+  /* V4 (사용자 명시 2026-05-18 ultrathink): silent 모드 — 정상 sync (idle/online/syncing) 시 hide. 강제 백업 중 (.checkpointing) override 로 visible 유지. */
+  .date-pill.silent { display: none; }
+  .date-pill.silent.checkpointing { display: flex; }
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-soft); }
   .sync-dot.online { background: var(--success); }
   .sync-dot.syncing { background: var(--accent); animation: pulse 1.5s infinite; }
   .sync-dot.error { background: var(--danger); }
+  /* V4 (사용자 명시 2026-05-18 ultrathink): 헤더 우상단 설정 SVG cog — 항상 visible. */
+  .header-settings-btn { background: none; border: none; color: var(--text-dim); padding: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; transition: color 0.15s, background 0.15s; outline: none; }
+  .header-settings-btn:hover { color: var(--accent); background: var(--surface); }
+  .header-settings-btn:active { transform: scale(0.92); }
+  .header-settings-btn svg { display: block; }
 
   .screens { flex: 1; overflow: hidden; position: relative; }
   .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 24px 160px; opacity: 0; pointer-events: none; transition: opacity 0.25s; -webkit-overflow-scrolling: touch; }
@@ -431,9 +439,7 @@
   .screen-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   .screen-header-row .screen-title { margin-bottom: 6px; }
   .screen-header-row .screen-sub { margin-bottom: 24px; }
-  .screen-settings-btn { background: none; border: none; color: var(--text-dim); font-size: 18px; line-height: 1; padding: 6px 8px; cursor: pointer; flex-shrink: 0; transition: color 0.15s; }
-  .screen-settings-btn:hover { color: var(--accent); }
-  .screen-settings-btn:active { transform: scale(0.92); }
+  /* V4 (사용자 명시 2026-05-18 ultrathink): .screen-settings-btn 폐기 — 메인 헤더 cog 로 통일. 스타일 제거. */
   /* 사용자 명시 2026-05-10 (옵션 A): 나 탭 정리 버튼 — 설정 왼쪽, 작게. */
   .screen-dedup-btn { background: none; border: none; color: var(--text-dim); font-size: 14px; line-height: 1; padding: 6px 7px; cursor: pointer; flex-shrink: 0; transition: color 0.15s; opacity: 0.65; }
   .screen-dedup-btn:hover { color: var(--accent); opacity: 1; }
@@ -12829,9 +12835,12 @@
     <div style="display:flex; align-items:center; gap:8px;">
       <!-- V4 (사용자 명시 2026-05-13 ultrathink): 메인 헤더 토글 = 대화탭 진입 시 RAG 토글 (Plus/Premium). 그 외 = godongicon brand only (no-op). -->
       <button class="chat-mode-btn js-rag-mode-btn" onclick="onMainHeaderToggleClick()" aria-label="옛 챕터 기억" title="옛 챕터 기억 (대화탭 한정)"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
-      <div class="date-pill" onclick="quickCheckpointFromHeader()" role="button" tabindex="0" aria-label="클라우드에 백업하기" title="클릭 — 지금 클라우드에 백업(저장)">
+      <!-- V4 (사용자 명시 2026-05-18 ultrathink): silent 모드 — 정상 (idle/online/syncing) 시 .silent hide. 문제 (offline/error) 시 표시. -->
+      <div class="date-pill silent" onclick="quickCheckpointFromHeader()" role="button" tabindex="0" aria-label="클라우드에 백업하기" title="클릭 — 지금 클라우드에 백업(저장)">
         <span class="sync-dot" id="syncDot"></span>
       </div>
+      <!-- V4 (사용자 명시 2026-05-18 ultrathink): 헤더 우상단 설정 진입 — 항상 visible. SVG (이모지 ⚙ Twemoji 일관성 회피). -->
+      <button class="header-settings-btn" onclick="showScreen('settings')" aria-label="설정" title="설정"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </div>
   </div>
 
@@ -13049,6 +13058,7 @@
     <!-- MODEL -->
     <div class="screen" id="screen-model">
       <!-- 사용자 명시 2026-05-06 ultrathink: 가독성 정리 — ⚙ top-right 아이콘, 돌아가기 제거, 추적 항목 (projectsSection) 실행 탭으로 이동. -->
+      <!-- 사용자 명시 2026-05-18 ultrathink: 설정 진입 헤더 통일 — '나' 탭 ⚙ 2개 (top-right + bottom) 제거. 메인 헤더 cog 가 canonical. -->
       <div class="screen-header-row">
         <div>
           <div class="screen-title">너에 대해 ✦</div>
@@ -13056,12 +13066,9 @@
         <div style="display:flex; gap:6px; align-items:center;">
           <!-- 사용자 명시 2026-05-10 (옵션 A): 정리 버튼 — 설정 왼쪽, 작게. 사용자 컨펌 dedup. -->
           <button class="screen-dedup-btn" onclick="openModelDedupModal()" aria-label="중복 정리" title="중복 정리">🧹</button>
-          <button class="screen-settings-btn" onclick="showScreen('settings')" aria-label="설정">⚙</button>
         </div>
       </div>
       <div id="modelContent"></div>
-      <!-- 사용자 명시 2026-05-06 추가 ultrathink: 맨 밑 설정 버튼 부활 — 우상단 아이콘 + 맨 밑 둘 다 노출. -->
-      <button class="btn-secondary" onclick="showScreen('settings')" style="margin-top:24px; width:100%; padding:12px; font-size:13px;">⚙ 설정</button>
     </div>
 
     <!-- LIBRARY (안 C: 도서관 = 새 홈. 홈 탭 흡수. 사용자 명시 2026-05-17) -->
@@ -20391,6 +20398,12 @@ function setSyncStatus(status) {
   syncStatus = status;
   const dot = document.getElementById('syncDot');
   if (dot) dot.className = 'sync-dot ' + status;
+  // V4 (사용자 명시 2026-05-18 ultrathink): silent 모드 — 정상 (idle/online/syncing) 시 .date-pill 숨김, 문제 (offline/error) 시 표시.
+  const pill = dot && dot.closest('.date-pill');
+  if (pill) {
+    const isProblem = (status === 'offline' || status === 'error');
+    pill.classList.toggle('silent', !isProblem);
+  }
   // V4 (v8 묶음 18): 동기화 빨강 (offline / error) 첫 발생 inline tip
   if ((status === 'offline' || status === 'error') && typeof _showInlineTip === 'function') {
     _showInlineTip('syncDotRed');
