@@ -13084,8 +13084,10 @@
     </div>
 
     <!-- PEARLS: 진주 전용 탭 (사용자 명시 2026-05-18 ultrathink Phase 1+2+3) — 도서관 진주 칩 layout 이전. library libPearls 제거됨. -->
+    <!-- 사용자 명시 2026-05-18 ultrathink: screen-title 에 💠 추가 + screen-sub `살아있다 느낀 순간들` — pearls-intro-header 중복 제거 (renderLensPearls). -->
     <div class="screen" id="screen-pearls">
-      <div class="screen-title">진주</div>
+      <div class="screen-title">💠 진주</div>
+      <div class="screen-sub">살아있다 느낀 순간들</div>
       <!-- 진주 전용 검색 + 그리드/타임라인 토글 (archiveSearch 와 별개 — _pearlsTabSearchQuery 만 driver). -->
       <!-- 사용자 명시 2026-05-18 ultrathink Phase 3: 진주 탭에도 그리드/타임라인 토글 — archive 와 동일 .lib-view-btn + switchLibraryView (_libView 공유 — archive ↔ 진주 자연 동기화). -->
       <div id="pearlsSearchBar" style="margin:14px 0 16px; display:flex; gap:8px; align-items:center;">
@@ -54585,12 +54587,9 @@ function renderLensPearls() {
 
   // V3.12.x: 진주 비언어적 인트로
   // V4 (사용자 명시 2026-05-14 ultrathink): 카테고리 chip 5 → 7개 (티켓/책 추가). '티켓' 선택 시 sub-filter row.
+  // V4 (사용자 명시 2026-05-18 ultrathink): pearls-intro-header (💠 살아있다 느낀 순간들) 제거 — screen-pearls.screen-title + screen-sub 가 대체. 카테고리 grid 만 남김.
   let html = `
     <div class="pearls-intro">
-      <div class="pearls-intro-header">
-        <span class="pearls-intro-emoji">💠</span>
-        <div class="pearls-intro-text">살아있다 느낀 순간들</div>
-      </div>
       <div class="pearls-intro-grid">
         <div class="pi-cat${_pearlCatFilter === '음악' ? ' active' : ''}" onclick="setPearlCatFilter('음악')" role="button" tabindex="0">🎵<span>음악</span></div>
         <div class="pi-cat${_pearlCatFilter === '음식' ? ' active' : ''}" onclick="setPearlCatFilter('음식')" role="button" tabindex="0">🍴<span>맛</span></div>

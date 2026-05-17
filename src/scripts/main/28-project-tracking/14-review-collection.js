@@ -296,12 +296,9 @@ function renderLensPearls() {
 
   // V3.12.x: 진주 비언어적 인트로
   // V4 (사용자 명시 2026-05-14 ultrathink): 카테고리 chip 5 → 7개 (티켓/책 추가). '티켓' 선택 시 sub-filter row.
+  // V4 (사용자 명시 2026-05-18 ultrathink): pearls-intro-header (💠 살아있다 느낀 순간들) 제거 — screen-pearls.screen-title + screen-sub 가 대체. 카테고리 grid 만 남김.
   let html = `
     <div class="pearls-intro">
-      <div class="pearls-intro-header">
-        <span class="pearls-intro-emoji">💠</span>
-        <div class="pearls-intro-text">살아있다 느낀 순간들</div>
-      </div>
       <div class="pearls-intro-grid">
         <div class="pi-cat${_pearlCatFilter === '음악' ? ' active' : ''}" onclick="setPearlCatFilter('음악')" role="button" tabindex="0">🎵<span>음악</span></div>
         <div class="pi-cat${_pearlCatFilter === '음식' ? ' active' : ''}" onclick="setPearlCatFilter('음식')" role="button" tabindex="0">🍴<span>맛</span></div>
