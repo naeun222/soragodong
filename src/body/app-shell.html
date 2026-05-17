@@ -258,6 +258,10 @@
       <!-- noop containers (compat) -->
       <div id="mainActionContainer" style="display:none"></div>
 
+      <!-- V4 fix (사용자 명시 2026-05-17 재): 옛 위치 (chip 5개 위, 도서관 전체 상단) 복구 — 진주 튜토 _pearlCoachmarkTodayYou target.
+           일반 view 영구 hide (innerHTML 비움). 진주 튜토 진행 중에만 renderLibraryHero 동적 inject + 종료 시 cleanup. -->
+      <div id="libraryHero"></div>
+
       <!-- 사용자 요청 2026-04-29: 5 카테고리 chip B 형식 (활성만 라벨 펼침), 토글은 검색바 우측 -->
       <div class="library-top-row">
         <div class="library-cats">
@@ -308,8 +312,6 @@
       </div>
       <!-- 🔮 진주 -->
       <div id="libPearls" class="library-cat-view" style="display:none;">
-        <!-- V4 fix (사용자 보고 2026-05-17 ultrathink): 진주 튜토 '오늘의 너' coachmark target. IA 개편 시 누락된 hero 복구. -->
-        <div id="libraryHero"></div>
         <div id="lensPearls"></div>
       </div>
       <!-- 🌀 마법·리뷰 -->

@@ -99,6 +99,8 @@ async function runFirstPearlTutorialV8() {
       try { await toggleTesterMode(); } catch (e) { console.warn('[pearl OFF]', e); }
     }
     window._pearlTutorialRunning = false;
+    // V4 (사용자 명시 2026-05-17 재): 튜토 종료 후 미션 가드 해제 → renderTodayMission 재호출 (testerMode 이미 OFF 였던 케이스 = reload X — 명시 rerender 필요).
+    if (typeof renderTodayMission === 'function') { try { renderTodayMission(); } catch {} }
   }
 }
 

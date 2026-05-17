@@ -13321,6 +13321,10 @@
       <!-- noop containers (compat) -->
       <div id="mainActionContainer" style="display:none"></div>
 
+      <!-- V4 fix (사용자 명시 2026-05-17 재): 옛 위치 (chip 5개 위, 도서관 전체 상단) 복구 — 진주 튜토 _pearlCoachmarkTodayYou target.
+           일반 view 영구 hide (innerHTML 비움). 진주 튜토 진행 중에만 renderLibraryHero 동적 inject + 종료 시 cleanup. -->
+      <div id="libraryHero"></div>
+
       <!-- 사용자 요청 2026-04-29: 5 카테고리 chip B 형식 (활성만 라벨 펼침), 토글은 검색바 우측 -->
       <div class="library-top-row">
         <div class="library-cats">
@@ -13371,8 +13375,6 @@
       </div>
       <!-- 🔮 진주 -->
       <div id="libPearls" class="library-cat-view" style="display:none;">
-        <!-- V4 fix (사용자 보고 2026-05-17 ultrathink): 진주 튜토 '오늘의 너' coachmark target. IA 개편 시 누락된 hero 복구. -->
-        <div id="libraryHero"></div>
         <div id="lensPearls"></div>
       </div>
       <!-- 🌀 마법·리뷰 -->
@@ -23195,6 +23197,8 @@ async function runFirstPearlTutorialV8() {
       try { await toggleTesterMode(); } catch (e) { console.warn('[pearl OFF]', e); }
     }
     window._pearlTutorialRunning = false;
+    // V4 (사용자 명시 2026-05-17 재): 튜토 종료 후 미션 가드 해제 → renderTodayMission 재호출 (testerMode 이미 OFF 였던 케이스 = reload X — 명시 rerender 필요).
+    if (typeof renderTodayMission === 'function') { try { renderTodayMission(); } catch {} }
   }
 }
 
@@ -34231,8 +34235,8 @@ async function devPreviewAttemptResult() {
 function renderTodayMission() {
   const container = document.getElementById('missionContainer');
   if (!container) return;
-  // V4 (사용자 명시 2026-05-17 ultrathink): 홈 첫 진입 튜토 진행 중엔 미션 카드 (소라의 부름 시드 포함) 숨김 — 튜토 집중 ↑.
-  if (window._firstHomeTutorialActive) { container.innerHTML = ''; return; }
+  // V4 (사용자 명시 2026-05-17 ultrathink): 홈 첫 진입 튜토 + 진주 튜토 진행 중엔 미션 카드 (소라의 부름 시드 포함) 숨김 — 튜토 집중 ↑.
+  if (window._firstHomeTutorialActive || window._pearlTutorialRunning) { container.innerHTML = ''; return; }
   const list = getTodayMissions();
 
   // V4: render 후 잠금 시각 갱신
@@ -46641,12 +46645,10 @@ function switchLibraryCat(cat) {
   });
   // 사용자 보고 2026-04-29: 칩 전환 시 active lens 재렌더 — 토글 상태(_libView)와 보이는 view 동기화
   if (typeof _renderActiveLens === 'function') _renderActiveLens();
-  // V4 fix (사용자 명시 2026-05-17 재): 진주 chip 일반 view 에서 hero 큐레이션 hide — 튜토리얼 진행 중에만 inject (13-first-pearl-tutorial.js).
-  //   ealier auto-render 가 검색칸 바로 밑에 hero 영구 노출 → user 의 의도 (튜토리얼 전용 데모 위치) 와 mismatch. switchLibraryCat fire 제거 + libraryHero 빈 컨테이너만 유지.
-  if (cat === 'pearls') {
-    const _heroEl = document.getElementById('libraryHero');
-    if (_heroEl) _heroEl.innerHTML = '';
-  }
+  // V4 fix (사용자 명시 2026-05-17 재): libraryHero 일반 view 영구 hide — 옛 위치 (chip row 위, 도서관 전체 상단) 보존하되 일반 view 에선 빈 컨테이너.
+  //   진주 튜토 진행 중에만 renderLibraryHero 동적 inject (13-first-pearl-tutorial.js). 모든 chip 진입 시 비우는 게 안전망 (튜토 종료 후 잔재 X).
+  const _heroEl = document.getElementById('libraryHero');
+  if (_heroEl) _heroEl.innerHTML = '';
   // V4: 카테고리 전환 후 잠금 시각 갱신 (마법고동 등)
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 30);
   // 검색바는 모든 카테고리에서 노출 (사용자 보고 2026-04-29: 'block' 으로 덮으면 flex 깨져 토글이 검색창 밑으로 wrap — 'flex' 유지)

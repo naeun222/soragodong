@@ -173,12 +173,10 @@ function switchLibraryCat(cat) {
   });
   // 사용자 보고 2026-04-29: 칩 전환 시 active lens 재렌더 — 토글 상태(_libView)와 보이는 view 동기화
   if (typeof _renderActiveLens === 'function') _renderActiveLens();
-  // V4 fix (사용자 명시 2026-05-17 재): 진주 chip 일반 view 에서 hero 큐레이션 hide — 튜토리얼 진행 중에만 inject (13-first-pearl-tutorial.js).
-  //   ealier auto-render 가 검색칸 바로 밑에 hero 영구 노출 → user 의 의도 (튜토리얼 전용 데모 위치) 와 mismatch. switchLibraryCat fire 제거 + libraryHero 빈 컨테이너만 유지.
-  if (cat === 'pearls') {
-    const _heroEl = document.getElementById('libraryHero');
-    if (_heroEl) _heroEl.innerHTML = '';
-  }
+  // V4 fix (사용자 명시 2026-05-17 재): libraryHero 일반 view 영구 hide — 옛 위치 (chip row 위, 도서관 전체 상단) 보존하되 일반 view 에선 빈 컨테이너.
+  //   진주 튜토 진행 중에만 renderLibraryHero 동적 inject (13-first-pearl-tutorial.js). 모든 chip 진입 시 비우는 게 안전망 (튜토 종료 후 잔재 X).
+  const _heroEl = document.getElementById('libraryHero');
+  if (_heroEl) _heroEl.innerHTML = '';
   // V4: 카테고리 전환 후 잠금 시각 갱신 (마법고동 등)
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 30);
   // 검색바는 모든 카테고리에서 노출 (사용자 보고 2026-04-29: 'block' 으로 덮으면 flex 깨져 토글이 검색창 밑으로 wrap — 'flex' 유지)
