@@ -6,7 +6,6 @@ async function endChapter() {
   }
   const yes = await showConfirmModal({
     title: '이 대화 마무리할까?',
-    message: '원본은 7일 뒤 자동으로 사라져.',
     okLabel: '마무리 ✦',
     cancelLabel: '취소'
   });
