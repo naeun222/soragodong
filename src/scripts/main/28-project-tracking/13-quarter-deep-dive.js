@@ -110,9 +110,9 @@ function renderQuarterlyDeepDive(review) {
   </div>${stagnationMsg}`;
 }
 
-// 사용자 명시 2026-05-09: 리뷰 모음에 카테고리 chip — 전체/고동/주/월/계절/연간.
-// 사용자 명시 2026-05-10 (handoff): '미니' → '고동' 으로 라벨 변경.
-//   카테고리 'godong' = state.godongDiary (신규) + state.miniReviews (legacy '고동의 옛 메모') 합본.
+// 사용자 명시 2026-05-09: 리뷰 모음에 카테고리 chip — 전체/주/월/계절/연간.
+// 사용자 명시 2026-05-18: 고동 일기 폐기 — '고동' 카테고리 + godongDiary / miniReviews 표시 제거.
+//   array 자체는 옛 사용자 데이터 손실 회피 위해 보존 (읽기/쓰기 코드 없음).
 let _archiveReviewCategory = 'all';
 function setArchiveReviewCategory(cat) {
   _archiveReviewCategory = cat || 'all';
@@ -128,21 +128,16 @@ function renderArchiveReviews() {
   const monthly = (state.monthlyReviews || []).map(r => ({...r, type: 'monthly'}));
   const quarterly = (state.quarterlyReviews || []).map(r => ({...r, type: 'quarterly'}));
   const annual = (state.annualReviews || []).map(r => ({...r, type: 'annual', completedAt: r.completedAt}));
-  const godongDiary = (state.godongDiary || []).map(r => ({...r, type: 'godong-diary', completedAt: r.iso || r.generatedAt}));
-  const miniLegacy = (state.miniReviews || []).map(r => ({...r, type: 'mini', completedAt: r.generatedAt}));
-  const allCombined = [...godongDiary, ...miniLegacy, ...weekly, ...monthly, ...quarterly, ...annual].sort((a, b) =>
+  const allCombined = [...weekly, ...monthly, ...quarterly, ...annual].sort((a, b) =>
     new Date(b.completedAt) - new Date(a.completedAt)
   );
   const filtered = (cat === 'all')
     ? allCombined
-    : (cat === 'godong')
-      ? allCombined.filter(r => r.type === 'godong-diary' || r.type === 'mini')
-      : allCombined.filter(r => r.type === cat);
+    : allCombined.filter(r => r.type === cat);
 
   // 카테고리 chip row — 카테고리 별 카운트 표시
   const counts = {
     all: allCombined.length,
-    godong: godongDiary.length + miniLegacy.length,
     weekly: weekly.length,
     monthly: monthly.length,
     quarterly: quarterly.length,
@@ -151,7 +146,6 @@ function renderArchiveReviews() {
   const chipHtml = `
     <div class="archive-review-chips">
       <button class="arc-chip${cat === 'all' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('all')">전체 <span class="arc-chip-count">${counts.all}</span></button>
-      <button class="arc-chip${cat === 'godong' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('godong')">고동 <span class="arc-chip-count">${counts.godong}</span></button>
       <button class="arc-chip${cat === 'weekly' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('weekly')">주 <span class="arc-chip-count">${counts.weekly}</span></button>
       <button class="arc-chip${cat === 'monthly' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('monthly')">월 <span class="arc-chip-count">${counts.monthly}</span></button>
       <button class="arc-chip${cat === 'quarterly' ? ' is-active' : ''}" onclick="setArchiveReviewCategory('quarterly')">계절 <span class="arc-chip-count">${counts.quarterly}</span></button>
@@ -182,8 +176,7 @@ function renderArchiveReviews() {
   }
 
   if (filtered.length === 0 && !annualCardHtml) {
-    const emptyMsg = cat === 'godong' ? '아직 일기 없어.<br>홈 회전 카드 ‹고동이 잠깐 자리 비움.› 탭 → 살짝 훔쳐보기.'
-      : cat === 'weekly' ? '아직 주간 리뷰 없어.<br>일요일 4AM 자동 또는 홈 카드 직접 탭.'
+    const emptyMsg = cat === 'weekly' ? '아직 주간 리뷰 없어.<br>일요일 4AM 자동 또는 홈 카드 직접 탭.'
       : cat === 'monthly' ? '아직 월간 리뷰 없어.<br>매월 1주차 자동.'
       : cat === 'quarterly' ? '아직 계절 리뷰 없어.<br>매분기 1주차 자동.'
       : cat === 'annual' ? '아직 연간 리뷰 없어.<br>한 해 분기 4개 모두 채우면 자동.'
@@ -198,23 +191,16 @@ function renderArchiveReviews() {
     const seasonLabel = r.type === 'quarterly' && r.quarterKey && typeof seasonLabelOf === 'function'
       ? seasonLabelOf(r.quarterKey, { withEmoji: true })
       : null;
-    const typeLabel = r.type === 'godong-diary' ? '고동의 일기'
-      : r.type === 'mini' ? '고동의 옛 메모'
-      : r.type === 'weekly' ? '🌙 주간 리뷰'
+    // 사용자 명시 2026-05-18: godong-diary / mini 타입 폐기 (archive 표시 안 함).
+    const typeLabel = r.type === 'weekly' ? '🌙 주간 리뷰'
       : r.type === 'monthly' ? '📅 월간 리뷰'
       : r.type === 'annual' ? '🌟 연간 리뷰'
       : (seasonLabel ? `${seasonLabel} 리뷰` : '📊 분기 리뷰');
-    const periodLabel = (r.type === 'quarterly' || r.type === 'mini' || r.type === 'godong-diary' || r.type === 'annual') ? '' : (r.weekKey || r.monthKey || '');
+    const periodLabel = (r.type === 'quarterly' || r.type === 'annual') ? '' : (r.weekKey || r.monthKey || '');
     const autoTag = r.auto ? ' <span style="font-size:9px; color:var(--purple); padding:1px 6px; background:var(--purple-dim); border-radius:6px; margin-left:4px;">🤖 자동</span>' : '';
 
     let summaryLine = '';
-    if (r.type === 'godong-diary' && r.body) {
-      const trim = r.body.length > 60 ? r.body.slice(0, 60) + '…' : r.body;
-      summaryLine = escapeHtml(trim);
-    } else if (r.type === 'mini' && r.content) {
-      const trim = r.content.length > 60 ? r.content.slice(0, 60) + '…' : r.content;
-      summaryLine = escapeHtml(trim);
-    } else if (r.one_word || r.one_word_weekly) {
+    if (r.one_word || r.one_word_weekly) {
       const ow = r.one_word || r.one_word_weekly;
       summaryLine = `<span style="color:var(--accent); font-weight:600;">${escapeHtml(ow)}</span>`;
       if (r.pattern && r.pattern.headline) summaryLine += ` · <span style="opacity:0.85;">${escapeHtml(r.pattern.headline)}</span>`;
@@ -228,20 +214,16 @@ function renderArchiveReviews() {
     const reviewKey = r.weekKey || r.monthKey || r.quarterKey || '';
     const completedAtJs = r.completedAt ? `'${r.completedAt}'` : 'null';
     // 사용자 명시 2026-05-10 (큐 8): weekly 만 inline 펼침. 다른 type 은 옛 화면 전환.
-    const onClickJs = r.type === 'godong-diary'
-      ? `openSavedGodongDiary('${r.id}')`
-      : r.type === 'mini'
-        ? `openSavedMiniReview('${r.id}')`
-        : r.type === 'annual'
-          ? `openAnnualReview(${r.year || 'null'})`
-          : r.type === 'weekly'
-            ? `_toggleWeeklyInlineExpand('${r.id}')`
-            : `openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})`;
+    // 사용자 명시 2026-05-18: godong-diary / mini 분기 폐기.
+    const onClickJs = r.type === 'annual'
+      ? `openAnnualReview(${r.year || 'null'})`
+      : r.type === 'weekly'
+        ? `_toggleWeeklyInlineExpand('${r.id}')`
+        : `openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})`;
     const _isWeekly = r.type === 'weekly';
     const _ctaText = _isWeekly ? '▾ 펼쳐보기' : '▶ 같이 보자';
-    // 사용자 명시 2026-05-11: godong-diary + weekly/monthly/quarterly/annual 리뷰 삭제 허용.
-    // 사용자 명시 2026-05-11 (추가): legacy mini (고동의 옛 메모) 도 삭제 허용.
-    const _isDeletable = r.type === 'godong-diary' || r.type === 'mini' || r.type === 'weekly' || r.type === 'monthly' || r.type === 'quarterly' || r.type === 'annual';
+    // 사용자 명시 2026-05-11: weekly/monthly/quarterly/annual 리뷰 삭제 허용.
+    const _isDeletable = r.type === 'weekly' || r.type === 'monthly' || r.type === 'quarterly' || r.type === 'annual';
     const _deleteBtn = _isDeletable
       ? `<button class="timeline-day-delete" type="button" onclick="event.stopPropagation(); deleteArchiveReview('${r.type}', '${r.id || ''}')" title="삭제" aria-label="삭제">×</button>`
       : '';
@@ -260,21 +242,18 @@ function renderArchiveReviews() {
   }).join('');
 }
 
-// 사용자 명시 2026-05-11: 리뷰 모음에서 godong-diary + 주/월/분기/연 리뷰 모두 삭제 가능.
+// 사용자 명시 2026-05-11: 리뷰 모음에서 주/월/분기/연 리뷰 모두 삭제 가능.
 //   삭제 = state array 에서 hard splice → AI substrate 자동 제외.
+// 사용자 명시 2026-05-18: godong-diary / mini 분기 폐기 (archive 표시 안 함).
 function deleteArchiveReview(type, id) {
   if (!type || !id) return;
   const labelMap = {
-    'godong-diary': '일기',
-    'mini':         '옛 메모',  // 사용자 명시 2026-05-11: legacy 고동의 옛 메모.
     'weekly':       '주간 리뷰',
     'monthly':      '월간 리뷰',
     'quarterly':    '계절 리뷰',
     'annual':       '연간 리뷰',
   };
   const arrMap = {
-    'godong-diary': 'godongDiary',
-    'mini':         'miniReviews',  // 사용자 명시 2026-05-11.
     'weekly':       'weeklyReviews',
     'monthly':      'monthlyReviews',
     'quarterly':    'quarterlyReviews',
@@ -292,17 +271,13 @@ function deleteArchiveReview(type, id) {
   }
   if (!confirm(`이 ${label} 지울까? (되돌릴 수 없음)`)) return;
   state[arrKey] = arr.filter(x => x && x.id !== id);
-  // godong-diary stash 무효화 (모달 재진입 시 일관).
-  if (type === 'godong-diary' && state.rotatingCardState && state.rotatingCardState.godongDiaryContentId === id) {
-    state.rotatingCardState.godongDiaryContentId = null;
-  }
   if (typeof saveState === 'function') saveState(true);
   if (typeof showToast === 'function') showToast(`${label} 지웠어`);
   if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
 }
 
-// Legacy compat — 기존 onclick 호출 (godong-diary 만) 유지.
-function deleteGodongDiary(id) { deleteArchiveReview('godong-diary', id); }
+// Legacy compat — 옛 onclick 핸들러 호환 noop. 사용자 명시 2026-05-18: godong-diary 폐기.
+function deleteGodongDiary(_id) { /* noop — 고동 일기 폐기 (사용자 명시 2026-05-18) */ }
 
 // 사용자 명시 2026-05-10 (큐 8): weekly 카드 inline 펼침 — 화면 전환 X, 카드 안 4 섹션 toggle.
 //   4 섹션: MOMENTUM / 장면 3가지 / 흐름 / 부드러운 알림. 옛 schema (one_word_weekly / scenes / pattern.headline / risk_signals) 매핑.
