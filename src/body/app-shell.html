@@ -752,7 +752,7 @@
       <!-- ━━━━━━ 자주 보는 거 ━━━━━━ -->
       <div class="settings-section-divider">자주 보는 거</div>
 
-      <!-- 프로필 + 일일 한도 한 카드로 통합 -->
+      <!-- 프로필 카드 — V4 (사용자 명시 2026-05-18): 일일 대화 한도 입력 제거 (설정 단순화) -->
       <div class="settings-card">
         <div class="input-group">
           <div class="input-label">📝 고동이가 부를 이름 <span class="settings-hint">— 일기에서 너를 어떻게 부를지</span></div>
@@ -761,12 +761,6 @@
         <div class="input-group">
           <div class="input-label">👤 내 프로필 <span class="settings-hint">— AI가 답변 시 참고</span></div>
           <textarea id="profileInput" placeholder="예: ADHD/ADD 성향, 야행성, 내향형..." rows="3"></textarea>
-        </div>
-        <div class="settings-card-divider"></div>
-        <div class="input-group">
-          <div class="input-label">📋 일일 대화 한도 <span class="settings-hint">— 0 = 무제한, 새벽 4시 reset</span></div>
-          <input type="number" id="dailyChatCapInput" min="0" max="9999" placeholder="100" style="width:100%;">
-          <div id="dailyChatCountStatus" class="settings-hint" style="margin-top:6px;"></div>
         </div>
         <div class="settings-card-divider"></div>
         <div class="input-group">
@@ -809,6 +803,47 @@
         <div class="settings-collapse-body">
           <button class="btn-secondary" onclick="showCoreReplayPicker()">🐚 튜토리얼 다시 보기</button>
           <button class="btn-secondary" onclick="showShortcutGuide()">🌧 몰입 단축어 만들기</button>
+        </div>
+      </details>
+
+      <!-- 🔔 알림 설정 — V4 사용자 명시 2026-05-18 ultrathink -->
+      <!-- hookFrequency / hookNotificationTime 사용자 변경 + 권한 상태 + ensurePushSubscription 재등록 버튼. -->
+      <details class="settings-collapse">
+        <summary>🔔 알림 설정</summary>
+        <div class="settings-collapse-body">
+          <div class="settings-hint" style="margin-bottom:10px;">
+            매일 한 번 고동이가 안부 물어보는 푸시 알림.<br>
+            <span style="color:var(--text-soft);">필요 없으면 [받지 않기] — 언제든 다시 켜기 가능.</span>
+          </div>
+
+          <div id="notificationPermStatus" class="settings-info-box" style="font-size:12px; padding:10px 12px;">상태 확인 중...</div>
+
+          <div class="settings-mini-label" style="margin-top:14px;">📅 받는 빈도</div>
+          <div class="settings-btn-row" id="hookFrequencyRow" style="margin-bottom:6px;">
+            <button class="btn-secondary" data-freq="daily" onclick="setHookFrequency('daily')">매일</button>
+            <button class="btn-secondary" data-freq="every-other-day" onclick="setHookFrequency('every-other-day')">격일</button>
+            <button class="btn-secondary" data-freq="thrice-week" onclick="setHookFrequency('thrice-week')">주 3회</button>
+            <button class="btn-secondary" data-freq="off" onclick="setHookFrequency('off')">받지 않기</button>
+          </div>
+          <div class="settings-hint" id="hookFrequencyHint" style="margin-bottom:10px;"></div>
+
+          <div class="settings-mini-label" style="margin-top:14px;">⏰ 받는 시각</div>
+          <div class="settings-btn-row" id="hookTimeRow" style="margin-bottom:6px;">
+            <button class="btn-secondary" data-hour="8" onclick="setHookNotificationTime(8)">아침 (8시)</button>
+            <button class="btn-secondary" data-hour="12" onclick="setHookNotificationTime(12)">점심 (12시)</button>
+            <button class="btn-secondary" data-hour="21" onclick="setHookNotificationTime(21)">저녁 (21시)</button>
+            <button class="btn-secondary" data-hour="23" onclick="setHookNotificationTime(23)">자기 전 (23시)</button>
+          </div>
+          <div class="settings-btn-row" style="margin-bottom:6px;">
+            <button class="btn-secondary" onclick="setHookNotificationTimeCustom()">직접 정하기</button>
+          </div>
+          <div class="settings-hint" id="hookTimeHint" style="margin-bottom:10px;"></div>
+
+          <div class="settings-mini-label" style="margin-top:14px;">🔄 재등록</div>
+          <div class="settings-hint" style="margin-bottom:6px;">
+            알림 안 와? — 권한이 거부됐거나 옛 token 만료일 수 있어. 한 번 더 등록.
+          </div>
+          <button class="btn-secondary" onclick="reRegisterPushSubscription()">🔄 다시 등록</button>
         </div>
       </details>
 

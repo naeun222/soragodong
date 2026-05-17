@@ -6,23 +6,7 @@ function loadSettings() {
   const _userNameInput = document.getElementById('userNameInput');
   if (_userNameInput) _userNameInput.value = state.userName || '';
   document.getElementById('profileInput').value = state.profile || '';
-  // 사용자 요청 2026-04-30: 일일 cap input + 현재 사용량 표시
-  const capInput = document.getElementById('dailyChatCapInput');
-  if (capInput) {
-    const cap = (state.preferences && state.preferences.dailyChatCap != null) ? state.preferences.dailyChatCap : 100;
-    capInput.value = cap;
-  }
-  const status = document.getElementById('dailyChatCountStatus');
-  if (status) {
-    const todayK = todayKey();
-    const cur = (state.dailyChatCount && state.dailyChatCount.date === todayK) ? state.dailyChatCount.count : 0;
-    const cap = (state.preferences && state.preferences.dailyChatCap) || 100;
-    if (cap === 0) {
-      status.textContent = `오늘 ${cur}회 사용 (무제한)`;
-    } else {
-      status.textContent = `오늘 ${cur}/${cap}회 사용`;
-    }
-  }
+  // V4 (사용자 명시 2026-05-18 ultrathink): 일일 대화 한도 input UI 제거 (설정 단순화). state.preferences.dailyChatCap schema 자체는 옛 사용자 호환 위해 보존.
   const accountInfo = document.getElementById('accountInfo');
   if (accountInfo && session?.user) {
     accountInfo.innerHTML = `로그인된 계정: <strong style="color:var(--text)">${escapeHtml(session.user.email || '')}</strong>`;
@@ -102,15 +86,7 @@ function saveSettings() {
   const _userNameInput = document.getElementById('userNameInput');
   if (_userNameInput) state.userName = _userNameInput.value.trim().slice(0, 20);
   state.profile = document.getElementById('profileInput').value.trim();
-  // 사용자 요청 2026-04-30: 일일 cap 저장
-  const capInput = document.getElementById('dailyChatCapInput');
-  if (capInput) {
-    const v = parseInt(capInput.value, 10);
-    if (!isNaN(v) && v >= 0 && v <= 9999) {
-      if (!state.preferences) state.preferences = {};
-      state.preferences.dailyChatCap = v;
-    }
-  }
+  // V4 (사용자 명시 2026-05-18 ultrathink): 일일 대화 한도 저장 코드 제거 (UI 칸 삭제). state.preferences.dailyChatCap 기존 값은 그대로 보존.
   // 사용자 보고 2026-05-01 (profile 날아간 케이스): force=true 로 local 즉시 + saveToCloudNow 즉시 await.
   // 기존 saveState() = cloud 1초 debounce → 입력 후 reload/crash 시 cloud 미동기 → 다음 visit 옛 cloud 가 덮음.
   saveState(true);
