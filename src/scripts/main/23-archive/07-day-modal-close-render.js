@@ -173,6 +173,10 @@ function switchLibraryCat(cat) {
   });
   // 사용자 보고 2026-04-29: 칩 전환 시 active lens 재렌더 — 토글 상태(_libView)와 보이는 view 동기화
   if (typeof _renderActiveLens === 'function') _renderActiveLens();
+  // V4 fix (사용자 보고 2026-05-17): 진주 chip 진입 시 '오늘의 너' library hero 렌더 — 진주 튜토 coachmark target 보장.
+  if (cat === 'pearls' && typeof renderLibraryHero === 'function') {
+    try { renderLibraryHero(); } catch (e) { console.warn('[libraryHero]', e); }
+  }
   // V4: 카테고리 전환 후 잠금 시각 갱신 (마법고동 등)
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 30);
   // 검색바는 모든 카테고리에서 노출 (사용자 보고 2026-04-29: 'block' 으로 덮으면 flex 깨져 토글이 검색창 밑으로 wrap — 'flex' 유지)
