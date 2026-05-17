@@ -29,6 +29,8 @@ function loadSettings() {
 
   // 사용자 요청 2026-04-30: 사업자 정보 표시 — 발급 후 BUSINESS_INFO 채우면 자동
   if (typeof renderBusinessInfo === 'function') renderBusinessInfo();
+  // V4 (사용자 명시 2026-05-18 ultrathink): 알림 설정 UI sync — 권한 상태 + 빈도/시각 chip 활성 표시.
+  if (typeof refreshNotificationSettings === 'function') refreshNotificationSettings();
 }
 
 function renderBusinessInfo() {
@@ -539,5 +541,225 @@ async function requestRefund(paymentId, amountKrw, label) {
   } catch (e) {
     alert('통신 오류: ' + (e?.message || e));
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🔔 알림 설정 — V4 사용자 명시 2026-05-18 ultrathink
+// hookFrequency (daily / every-other-day / thrice-week / off) + hookNotificationTime (0-23) +
+//   권한 상태 표시 + ensurePushSubscription 재등록.
+// 변경 시 자동 ensurePushSubscription 호출 (옛 token 갱신 + 권한 prompt 흐름 자연 통합).
+// ═══════════════════════════════════════════════════════════════
+
+const HOOK_FREQ_LABELS = {
+  'daily': '매일',
+  'every-other-day': '격일',
+  'thrice-week': '주 3회',
+  'off': '받지 않기'
+};
+
+function _formatHookHour(hour) {
+  if (typeof hour !== 'number' || isNaN(hour)) return '21시';
+  if (hour < 6) return `새벽 ${hour}시`;
+  if (hour < 12) return `아침 ${hour}시`;
+  if (hour === 12) return '낮 12시';
+  if (hour < 18) return `오후 ${hour - 12}시`;
+  if (hour < 22) return `저녁 ${hour}시`;
+  return `밤 ${hour}시`;
+}
+
+// 권한 상태 — Capacitor native 면 PushNotifications.checkPermissions, 그 외 Notification.permission.
+async function _getNotificationPermissionState() {
+  try {
+    if (typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.getPlatform === 'function') {
+      const p = window.Capacitor.getPlatform();
+      if (p === 'android' || p === 'ios') {
+        const Push = window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications;
+        if (Push && typeof Push.checkPermissions === 'function') {
+          const r = await Push.checkPermissions();
+          if (r && r.receive === 'granted') return 'granted';
+          if (r && r.receive === 'denied') return 'denied';
+          return 'default';
+        }
+        return 'unsupported';
+      }
+    }
+    if (typeof Notification === 'undefined') return 'unsupported';
+    return Notification.permission || 'default';
+  } catch (e) {
+    return 'default';
+  }
+}
+
+async function refreshNotificationSettings() {
+  const prefs = (state && state.preferences) || {};
+  const freq = prefs.hookFrequency || 'daily';
+  const hour = (typeof prefs.hookNotificationTime === 'number') ? prefs.hookNotificationTime : 21;
+  // 빈도 chip 활성
+  document.querySelectorAll('#hookFrequencyRow .btn-secondary').forEach(b => {
+    const f = b.getAttribute('data-freq');
+    if (f === freq) b.classList.add('is-active');
+    else b.classList.remove('is-active');
+  });
+  // 시각 chip 활성 (custom 시각이면 preset off)
+  let presetHit = false;
+  document.querySelectorAll('#hookTimeRow .btn-secondary').forEach(b => {
+    const h = parseInt(b.getAttribute('data-hour'), 10);
+    if (h === hour) { b.classList.add('is-active'); presetHit = true; }
+    else b.classList.remove('is-active');
+  });
+  // 빈도 / 시각 hint
+  const freqHint = document.getElementById('hookFrequencyHint');
+  if (freqHint) {
+    if (freq === 'off') freqHint.textContent = '알림 안 받아.';
+    else freqHint.textContent = `현재: ${HOOK_FREQ_LABELS[freq] || freq}`;
+  }
+  const timeHint = document.getElementById('hookTimeHint');
+  if (timeHint) {
+    if (freq === 'off') {
+      timeHint.textContent = '빈도가 [받지 않기] 라 시각 무관.';
+    } else {
+      const customStr = presetHit ? '' : ` (직접 설정)`;
+      timeHint.textContent = `현재: ${_formatHookHour(hour)}${customStr}`;
+    }
+  }
+  // 권한 상태 박스
+  const statusBox = document.getElementById('notificationPermStatus');
+  if (statusBox) {
+    const perm = await _getNotificationPermissionState();
+    const isCap = !!(window.Capacitor && typeof window.Capacitor.getPlatform === 'function' && (window.Capacitor.getPlatform() === 'android' || window.Capacitor.getPlatform() === 'ios'));
+    let html = '';
+    if (perm === 'granted') {
+      const platLabel = isCap ? ((window.Capacitor.getPlatform() === 'android') ? 'Android 앱' : 'iOS 앱') : '브라우저';
+      html = `<div><span style="color:#8fc88f;">✓ 알림 허용됨</span> <span style="color:var(--text-soft); font-size:11px;">— ${platLabel}</span></div>`;
+      if (freq !== 'off') {
+        html += `<div style="margin-top:4px; color:var(--text-soft); font-size:11.5px;">${HOOK_FREQ_LABELS[freq]} · ${_formatHookHour(hour)}쯤 한 번</div>`;
+      }
+    } else if (perm === 'denied') {
+      html = `<div><span style="color:#e89090;">✗ 알림 거부됨</span></div>`;
+      if (isCap) {
+        html += `<div style="margin-top:6px; color:var(--text-soft); font-size:11px; line-height:1.7;">시스템 설정 → 앱 → 소라고동 → 알림 에서 허용 후 [🔄 다시 등록].</div>`;
+      } else {
+        html += `<div style="margin-top:6px; color:var(--text-soft); font-size:11px; line-height:1.7;">브라우저 주소창 자물쇠 (또는 ⓘ) → 알림 허용 → [🔄 다시 등록].</div>`;
+      }
+    } else if (perm === 'default') {
+      html = `<div><span style="color:#e8c590;">⏳ 알림 미설정</span></div>`;
+      html += `<div style="margin-top:6px; color:var(--text-soft); font-size:11px; line-height:1.7;">아래 빈도 / 시각 선택 후 [🔄 다시 등록] = 권한 요청.</div>`;
+    } else if (perm === 'unsupported') {
+      html = `<div><span style="color:var(--text-soft);">- 이 환경은 푸시 미지원</span></div>`;
+      html += `<div style="margin-top:4px; color:var(--text-soft); font-size:11px; line-height:1.6;">iOS Safari 일반 / 데스크탑 일부 제한.</div>`;
+    }
+    statusBox.innerHTML = html;
+  }
+}
+
+async function setHookFrequency(freq) {
+  if (!state) return;
+  state.preferences = state.preferences || {};
+  state.preferences.hookFrequency = freq;
+  try { saveState(); } catch {}
+  refreshNotificationSettings();
+  if (freq === 'off') {
+    if (typeof showToast === 'function') showToast('🔕 알림 받지 않기 — 언제든 다시 켤 수 있어');
+    return;
+  }
+  // freq 변경 시 옛 token 갱신 — silent (이미 granted 면 prompt X).
+  if (typeof ensurePushSubscription === 'function') {
+    const hour = (typeof state.preferences.hookNotificationTime === 'number') ? state.preferences.hookNotificationTime : 21;
+    try {
+      const r = await ensurePushSubscription({ frequency: freq, notificationTime: hour, silent: true });
+      if (r && r.ok) {
+        if (typeof showToast === 'function') showToast('✓ ' + (HOOK_FREQ_LABELS[freq] || freq) + ' 로 업데이트됐어');
+      } else if (r && r.reason === 'permission-denied') {
+        if (typeof showToast === 'function') showToast('알림 권한 거부됨 — 시스템 설정에서 허용해줘');
+      }
+    } catch (e) {
+      console.warn('[setHookFrequency]', e);
+    }
+    refreshNotificationSettings();
+  }
+}
+
+async function setHookNotificationTime(hour) {
+  if (!state) return;
+  if (typeof hour !== 'number' || isNaN(hour) || hour < 0 || hour > 23) return;
+  state.preferences = state.preferences || {};
+  state.preferences.hookNotificationTime = hour;
+  try { saveState(); } catch {}
+  refreshNotificationSettings();
+  if (state.preferences.hookFrequency === 'off') return;
+  if (typeof ensurePushSubscription === 'function') {
+    const freq = state.preferences.hookFrequency || 'daily';
+    try {
+      const r = await ensurePushSubscription({ frequency: freq, notificationTime: hour, silent: true });
+      if (r && r.ok) {
+        if (typeof showToast === 'function') showToast('✓ ' + _formatHookHour(hour) + ' 로 업데이트됐어');
+      }
+    } catch (e) {
+      console.warn('[setHookNotificationTime]', e);
+    }
+    refreshNotificationSettings();
+  }
+}
+
+async function setHookNotificationTimeCustom() {
+  if (typeof showInputModal !== 'function') {
+    const v = prompt('몇 시? (0~23 사이 숫자)', String((state.preferences && state.preferences.hookNotificationTime) || 21));
+    if (v === null) return;
+    const n = parseInt(v, 10);
+    if (isNaN(n) || n < 0 || n > 23) { alert('0~23 사이 숫자로 적어줘'); return; }
+    return setHookNotificationTime(n);
+  }
+  const v = await showInputModal({
+    title: '몇 시?',
+    message: '0~23 사이 숫자로.',
+    placeholder: '예: 19',
+    defaultValue: String((state.preferences && state.preferences.hookNotificationTime) || 21),
+    okLabel: '저장'
+  });
+  if (v === null || v === undefined) return;
+  const n = parseInt(String(v).trim(), 10);
+  if (isNaN(n) || n < 0 || n > 23) {
+    if (typeof showToast === 'function') showToast('0~23 사이 숫자로 적어줘');
+    return;
+  }
+  return setHookNotificationTime(n);
+}
+
+async function reRegisterPushSubscription() {
+  if (typeof ensurePushSubscription !== 'function') {
+    if (typeof showToast === 'function') showToast('알림 모듈 부재 — 새로고침 후 다시');
+    return;
+  }
+  const prefs = (state && state.preferences) || {};
+  if (prefs.hookFrequency === 'off') {
+    if (typeof showToast === 'function') showToast('빈도가 [받지 않기] 라 등록 X — 위에서 다른 빈도 선택 후 다시');
+    return;
+  }
+  const freq = prefs.hookFrequency || 'daily';
+  const hour = (typeof prefs.hookNotificationTime === 'number') ? prefs.hookNotificationTime : 21;
+  try {
+    if (typeof showToast === 'function') showToast('🔄 알림 등록 중...');
+    const r = await ensurePushSubscription({ frequency: freq, notificationTime: hour });
+    if (r && r.ok) {
+      if (typeof showToast === 'function') showToast('🔔 알림 켜졌어 — ' + (HOOK_FREQ_LABELS[freq] || freq) + ' · ' + _formatHookHour(hour) + '쯤');
+    } else if (r && r.reason === 'permission-denied') {
+      alert('알림 권한이 거부됐어.\n\n시스템 설정 → 앱 → 소라고동 → 알림 (또는 브라우저 주소창 자물쇠 → 알림) 에서 허용 후 다시 시도.');
+    } else if (r && r.reason === 'no-vapid-key') {
+      if (typeof showToast === 'function') showToast('서버 키 미설정 — 관리자에게 문의');
+    } else if (r && r.reason === 'unsupported-platform') {
+      if (typeof showToast === 'function') showToast('이 환경은 푸시 미지원 (iOS Safari 일반 / 데스크탑 일부)');
+    } else if (r && r.reason === 'no-capacitor-plugin') {
+      if (typeof showToast === 'function') showToast('네이티브 플러그인 미설치 — 앱 재설치 필요');
+    } else if (r && r.reason === 'no-auth') {
+      if (typeof showToast === 'function') showToast('로그인 필요');
+    } else {
+      const reason = (r && r.reason) || 'unknown';
+      if (typeof showToast === 'function') showToast('알림 등록 실패: ' + reason);
+    }
+  } catch (e) {
+    console.warn('[reRegisterPushSubscription]', e);
+    if (typeof showToast === 'function') showToast('오류: ' + (e?.message || e));
+  }
+  refreshNotificationSettings();
 }
 
