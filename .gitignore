@@ -23,3 +23,25 @@ current_index.html
 
 # Claude Code worktrees (local agents)
 .claude/worktrees/
+
+# TWA / Bubblewrap (사용자 명시 2026-05-17 — Android 앱)
+#   android.keystore = signing key — 절대 commit X (노출 시 위조 update 가능).
+#   app/ + gradle 산출물 = bubblewrap init 으로 언제든 재생성 가능.
+#   twa-manifest.json 은 절대 path (C:\...\android.keystore) 박혀있어서 ignore.
+android.keystore
+*.keystore
+*.jks
+twa-manifest.json
+app/
+build.gradle
+settings.gradle
+gradle.properties
+gradle/
+gradlew
+gradlew.bat
+*.apk
+*.aab
+*.aar
+local.properties
+manifest-checksum.txt
+store_icon.png
