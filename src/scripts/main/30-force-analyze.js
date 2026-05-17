@@ -1183,7 +1183,7 @@ window._forceWeeklyReview = async function() {
   const _exists = (state.weeklyReviews || []).some(r => r.weekKey === weekKey);
   console.log('[forceWeeklyReview] weekKey:', weekKey, 'before count:', _before, 'exists:', _exists);
   if (_exists) {
-    if (typeof showToast === 'function') showToast(`📅 ${weekKey} 리뷰 이미 있어 — 도서관에서 확인`);
+    if (typeof showToast === 'function') showToast(`📅 ${weekKey} 리뷰 이미 있어 — 홈에서 확인`);
     return;
   }
   if (typeof showToast === 'function') showToast(`🌙 ${weekKey} 주간 리뷰 생성 중...`);

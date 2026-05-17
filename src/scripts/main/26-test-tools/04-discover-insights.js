@@ -28,6 +28,6 @@ function _addFallbackInsights() {
   });
   saveState({ force: true });
   if (typeof renderArchive === 'function') renderArchive();
-  showToast('🔮 fallback 인사이트 3개 추가됨 — 도서관 → 깨달음에서 확인');
+  showToast('🔮 fallback 인사이트 3개 추가됨 — 홈 → 깨달음에서 확인');
 }
 

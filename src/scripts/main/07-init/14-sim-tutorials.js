@@ -175,7 +175,7 @@ async function runDiaryLibTutorialV8() {
 function _diaryCoachmarkLibIntro() {
   const body = `
     <div class="v8-coach-text">
-      안녕하세요! 이곳은 도서관입니다.
+      안녕하세요! 이곳은 홈입니다.
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
@@ -467,7 +467,7 @@ function _firstReviewsRealCoachmarkClosing() {
     <div class="v8-coach-title">✦ 천천히 한 번 봐</div>
     <div class="v8-coach-text">
       앞으로 매주 / 매달 / 분기 / 연 마다 자동으로 만들어져.<br>
-      <span class="v8-coach-text-soft">[도서관 → 리뷰 모음] 에서 모아 봐.</span>
+      <span class="v8-coach-text-soft">[홈 → 리뷰 모음] 에서 모아 봐.</span>
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
@@ -652,7 +652,7 @@ async function showSimTutorialPicker() {
     { label: '⭐ 첫 ✦ 해볼게 / 🧬 전략으로',      value: 'firstC2',  desc: '4단 응답 → 미션 → 모래사장 한 사이클' },
     { label: '🚀 결과 체크 + 모래사장 (Core 3)',  value: 'core3',    desc: '결과 체크 → DNA 소라 → 진주 합체' },
     { label: '🔮 진주',                            value: 'pearls',   desc: '살아있다 느낀 순간들' },
-    { label: '📔 도서관 일기·대화 (4/15)',          value: 'diaryLib', desc: '캘린더 무드 그리드 + 챕터 자동 분류' },
+    { label: '📔 홈 일기·대화 (4/15)',              value: 'diaryLib', desc: '캘린더 무드 그리드 + 챕터 자동 분류' },
     { label: '✨ 깨달음 (AI 인사이트)',            value: 'insights', desc: '엄마 통화 후 mood +0.8 패턴' },
     { label: '📅 리뷰 모음 (연간)',                value: 'reviews',  desc: '주간 / 월간 / 분기 / 연간 Stories' },
     { label: '🌊 숙고 질문',                       value: 'reflection', desc: '마음을 울리는 큰 물음' }

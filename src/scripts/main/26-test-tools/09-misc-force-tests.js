@@ -31,7 +31,7 @@ async function testForceMonthlyReview() {
     monthKey: lastMonthKey, auto: true
   });
   saveState({ force: true });
-  showToast('✅ 월간 리뷰 생성됨 (도서관 → 마법·리뷰 → 🌙 리뷰 모음)');
+  showToast('✅ 월간 리뷰 생성됨 (홈 → 마법·리뷰 → 🌙 리뷰 모음)');
 }
 
 // 마법고동 active 결정 진입

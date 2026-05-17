@@ -234,6 +234,6 @@ async function testForceInsightDiscover() {
   showToast('🔮 AI 인사이트 발견 진행 중...');
   const n = await maybeRunDailyInsightDiscover({ force: true });
   if (typeof n === 'number') {
-    showToast(n > 0 ? `🔮 ${n}개 발견됨 — 도서관 → 깨달음 확인` : '🔮 새 인사이트 없음 (충분한 데이터 아니거나 dedup)');
+    showToast(n > 0 ? `🔮 ${n}개 발견됨 — 홈 → 깨달음 확인` : '🔮 새 인사이트 없음 (충분한 데이터 아니거나 dedup)');
   }
 }

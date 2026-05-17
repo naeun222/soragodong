@@ -171,7 +171,7 @@ function renderLensArchive() {
 }
 
 async function deleteArchiveItem(idx) {
-  if (!await confirmDelete('이 깨달음', '도서관에서 영구 삭제됩니다.')) return;
+  if (!await confirmDelete('이 깨달음', '홈에서 영구 삭제됩니다.')) return;
   if (!state.archive || idx < 0 || idx >= state.archive.length) return;
   state.archive.splice(idx, 1);
   saveState();

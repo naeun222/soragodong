@@ -1148,7 +1148,7 @@ async function testSeedV4Data() {
   // 사용자 보고 2026-04-30: 새로 적용된 시드 항목 전부에 _seed marker 적용하기 → init sweep에서 자동 정리.
   _markSeedItems();
   saveState({ force: true });
-  showToast('🌱 V4 전체 시드 데이터 적용됨. 도서관/모래사장/실행/나/홈 둘러보기.');
+  showToast('🌱 V4 전체 시드 데이터 적용됨. 홈/모래사장/실행/나 둘러보기.');
   if (typeof renderTodayMission === 'function') renderTodayMission();
   if (typeof renderShellBar === 'function') renderShellBar();
   if (typeof renderReflectionHome === 'function') renderReflectionHome();

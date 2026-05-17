@@ -42,7 +42,7 @@ async function resetMissions() {
 }
 async function resetArchive() {
   const c = (state.archive || []).length;
-  await _confirmAndReset('도서관 깨달음', c, () => { state.archive = []; }, () => {
+  await _confirmAndReset('홈 깨달음', c, () => { state.archive = []; }, () => {
     if (typeof renderArchive === 'function') renderArchive();
   });
 }

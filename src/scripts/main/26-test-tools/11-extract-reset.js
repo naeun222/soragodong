@@ -18,7 +18,7 @@ async function testForceExtract() {
     const after = (state.topicCards || []).length;
     const diff = after - before;
     if (diff > 0) {
-      showToast(`✦ 토픽 ${diff}개 추출됨. 도서관 → 📜 대화 렌즈에서 확인.`);
+      showToast(`✦ 토픽 ${diff}개 추출됨. 홈 → 📜 대화 렌즈에서 확인.`);
     } else {
       showToast('⚠ AI가 추출할 만한 토픽 못 찾음. 더 의미 있는 대화 후 시도.');
     }

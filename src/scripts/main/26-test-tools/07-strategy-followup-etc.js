@@ -215,7 +215,7 @@ async function testForceMusicAutoPearl() {
     createdAt: new Date().toISOString()
   });
   saveState({ force: true });
-  showToast(`🎵 "${track.title}" 5번 등장 → 자동 진주 적용됨. 도서관 → 진주에서 확인.`);
+  showToast(`🎵 "${track.title}" 5번 등장 → 자동 진주 적용됨. 홈 → 진주에서 확인.`);
 }
 
 

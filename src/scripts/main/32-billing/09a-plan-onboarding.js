@@ -77,7 +77,7 @@ function _planOnboardingFlow(plan, opts) {
         <div style="font-size:36px; text-align:center; margin-bottom:12px;">${tierEmoji}</div>
         <div style="font-size:17px; font-weight:700; color:var(--text); text-align:center; margin-bottom:14px;">환영합니다</div>
         <div style="font-size:13px; color:var(--text); line-height:1.75; text-align:center; margin-bottom:22px;">
-          이제부터 <b style="color:${tierColor};">나 탭 · 도서관 챕터</b>는 다음날 아침에 한 번에 갱신됩니다.<br>내일 확인해보세요! ${tierEmoji}
+          이제부터 <b style="color:${tierColor};">나 탭 · 홈 챕터</b>는 다음날 아침에 한 번에 갱신됩니다.<br>내일 확인해보세요! ${tierEmoji}
         </div>
         <button class="btn-primary plan-onb-btn" id="planOnbStep1Ok" style="width:100%; padding:11px; background:${tierColor}; border:none; color:#fff; font-weight:600;">알겠어</button>
       </div>

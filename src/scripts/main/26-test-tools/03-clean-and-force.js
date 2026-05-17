@@ -85,7 +85,7 @@ async function testForceQuarterlyReview() {
     stats, summary, sections, transformation, continuity, auto: true
   });
   saveState({ force: true });
-  showToast('✅ 분기 리뷰 생성됨 (도서관 → 마법·리뷰 → 🌙 리뷰 모음)');
+  showToast('✅ 분기 리뷰 생성됨 (홈 → 마법·리뷰 → 🌙 리뷰 모음)');
 }
 
 function testForceDiagnoses() {

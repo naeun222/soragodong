@@ -579,7 +579,7 @@ function _flushLocalSave(opts) {
         if (!window._localStorageQuotaWarned) {
           window._localStorageQuotaWarned = true;
           if (typeof showToast === 'function') {
-            showToast('⚠️ 로컬 저장 공간 가득 — 도서관 → 이전 대화 정리하면 공간 확보 (cloud는 정상)');
+            showToast('⚠️ 로컬 저장 공간 가득 — 홈 → 이전 대화 정리하면 공간 확보 (cloud는 정상)');
           }
         }
       }

@@ -99,7 +99,7 @@ function renderChatArchiveModal() {
     const pendingNote = isPending
       ? (isBatchProcessing
           ? `<div class="cac-pending-note" style="font-size:11px; color:var(--text-soft); opacity:0.7; margin-top:4px; line-height:1.6;">🌙 정리 중 ⏳ — 보통 5분~2시간 후 자리잡아.</div>`
-          : `<div class="cac-pending-note" style="font-size:11px; color:var(--text-soft); opacity:0.65; margin-top:4px; line-height:1.6;">🌙 새벽 4시에 자동 정리될 예정 — 그때 나 탭 / 도서관에 깔끔히 자리잡아.</div>`)
+          : `<div class="cac-pending-note" style="font-size:11px; color:var(--text-soft); opacity:0.65; margin-top:4px; line-height:1.6;">🌙 새벽 4시에 자동 정리될 예정 — 그때 나 탭 / 홈에 깔끔히 자리잡아.</div>`)
       : '';
     const cardOpacity = isPending ? '0.7' : '1';
 
@@ -186,7 +186,7 @@ async function resumeArchiveChat(archId) {
   if (currentMsgs.length > 0) {
     const yes = await showConfirmModal({
       title: '⚠️ 잠깐, 현재 대화는?',
-      message: '지금 대화 마무리 안 했는데 — 이대로 이어서 불러오면 현재 대화는 자동으로 도서관에 보관돼.\n\n그래도 진행할까?',
+      message: '지금 대화 마무리 안 했는데 — 이대로 이어서 불러오면 현재 대화는 자동으로 홈에 보관돼.\n\n그래도 진행할까?',
       okLabel: '응, 보관하고 이어서',
       cancelLabel: '아니, 그만'
     });

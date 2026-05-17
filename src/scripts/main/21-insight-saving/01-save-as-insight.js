@@ -47,6 +47,6 @@ async function saveMsgAsInsight(idx) {
   msg.saved = true;
   saveState();
   renderChat();
-  showToast('깨달음 도서관에 저장됐어 ✦');
+  showToast('깨달음 홈에 저장됐어 ✦');
 }
 

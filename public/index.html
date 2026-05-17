@@ -13286,7 +13286,7 @@
       <div class="screen-title">🌙 리뷰 모음</div>
       <div class="screen-sub">지금까지의 주간·월간 회고들.</div>
       <div id="archiveReviewsList"></div>
-      <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">도서관으로 돌아가기</button>
+      <button class="btn-secondary" onclick="showScreen('archive')" style="margin-top:20px;">홈으로 돌아가기</button>
     </div>
 
     <!-- V4-1j-b: 숙고 채팅 별도 화면 (screen-reflection) -->
@@ -13319,7 +13319,7 @@
         <div class="reflection-screen-q" id="magicHelpScreenQ"></div>
         <div class="reflection-screen-actions">
           <button class="reflection-resolve-btn" id="magicHelpDeleteBtn" onclick="deleteMagicHelpChat()" title="이 임시 대화 삭제 — 분석 input에 안 들어감" style="background:transparent; border:1px solid rgba(220,80,80,0.30); color:#e8a3a3; padding:6px 10px;">🗑</button>
-          <button class="reflection-resolve-btn" id="magicHelpEndBtn" onclick="endMagicHelpChat()" title="이 대화 마무리 — 도서관에 정리">✓ 마무리</button>
+          <button class="reflection-resolve-btn" id="magicHelpEndBtn" onclick="endMagicHelpChat()" title="이 대화 마무리 — 홈에 정리">✓ 마무리</button>
         </div>
       </div>
       <div class="reflection-chat-area" id="magicHelpArea"></div>
@@ -13960,7 +13960,7 @@
     </button>
   </div>
   <div class="chat-end-hint-banner" id="chatEndHintBanner" style="display:none;">
-    <span class="cehb-text">✓ 눌러서 나 탭 &amp; 도서관에서 확인해봐</span>
+    <span class="cehb-text">✓ 눌러서 나 탭 &amp; 홈에서 확인해봐</span>
     <button class="cehb-close" onclick="dismissChatEndHint()" aria-label="닫기" title="닫기">×</button>
   </div>
   <div class="chat-input-wrap">
@@ -14717,7 +14717,7 @@ function _flushLocalSave(opts) {
         if (!window._localStorageQuotaWarned) {
           window._localStorageQuotaWarned = true;
           if (typeof showToast === 'function') {
-            showToast('⚠️ 로컬 저장 공간 가득 — 도서관 → 이전 대화 정리하면 공간 확보 (cloud는 정상)');
+            showToast('⚠️ 로컬 저장 공간 가득 — 홈 → 이전 대화 정리하면 공간 확보 (cloud는 정상)');
           }
         }
       }
@@ -20206,7 +20206,7 @@ function _checkCloudRowOversize(bytes) {
   window._cloudOversizeWarned = true;
   console.warn('[saveToCloudNow] row size large:', bytes, 'bytes (' + (bytes / 1024 / 1024).toFixed(2) + 'MB)');
   if (typeof showToast === 'function') {
-    showToast(`☁ cloud 데이터 크기 ${(bytes / 1024 / 1024).toFixed(1)}MB — 옛 챕터/진주 정리 권장 (도서관에서 핀 안 박힌 옛 챕터 삭제)`);
+    showToast(`☁ cloud 데이터 크기 ${(bytes / 1024 / 1024).toFixed(1)}MB — 옛 챕터/진주 정리 권장 (홈에서 핀 안 박힌 옛 챕터 삭제)`);
   }
 }
 
@@ -20419,7 +20419,7 @@ async function init() {
   if (state._mutationCutoffExtractedAt) {
     const _atMs = new Date(state._mutationCutoffExtractedAt).getTime();
     if (Date.now() - _atMs < 24 * 3600 * 1000) {
-      setTimeout(() => { if (typeof showToast === 'function') showToast('🧬 어제 돌연변이 대화 깨달음 — 도서관 ✨'); }, 1500);
+      setTimeout(() => { if (typeof showToast === 'function') showToast('🧬 어제 돌연변이 대화 깨달음 — 홈 ✨'); }, 1500);
     }
     delete state._mutationCutoffExtractedAt;
     try { saveState(); } catch {}
@@ -21067,7 +21067,7 @@ const ONBOARDING_PHASES = [
   { startId: 'go_home_for_mission',    name: '미션 + 모래사장',       desc: '소라의 부름과 결과 체크' },
   { startId: 'go_archive',             name: '🧬 양생방',             desc: '전략이 자라는 곳 — 핵심' },
   { startId: 'go_execute',             name: '실행 + 나',             desc: '몰입 + 자기 모델' },
-  { startId: 'go_archive_lib',         name: '도서관 둘러보기',       desc: '5 카테고리 + 숙고' },
+  { startId: 'go_archive_lib',         name: '홈 둘러보기',       desc: '5 카테고리 + 숙고' },
   { startId: 'finish',                 name: '마무리',                desc: '준비 끝!' }
 ];
 
@@ -23303,7 +23303,7 @@ async function runDiaryLibTutorialV8() {
 function _diaryCoachmarkLibIntro() {
   const body = `
     <div class="v8-coach-text">
-      안녕하세요! 이곳은 도서관입니다.
+      안녕하세요! 이곳은 홈입니다.
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
@@ -23595,7 +23595,7 @@ function _firstReviewsRealCoachmarkClosing() {
     <div class="v8-coach-title">✦ 천천히 한 번 봐</div>
     <div class="v8-coach-text">
       앞으로 매주 / 매달 / 분기 / 연 마다 자동으로 만들어져.<br>
-      <span class="v8-coach-text-soft">[도서관 → 리뷰 모음] 에서 모아 봐.</span>
+      <span class="v8-coach-text-soft">[홈 → 리뷰 모음] 에서 모아 봐.</span>
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
@@ -23780,7 +23780,7 @@ async function showSimTutorialPicker() {
     { label: '⭐ 첫 ✦ 해볼게 / 🧬 전략으로',      value: 'firstC2',  desc: '4단 응답 → 미션 → 모래사장 한 사이클' },
     { label: '🚀 결과 체크 + 모래사장 (Core 3)',  value: 'core3',    desc: '결과 체크 → DNA 소라 → 진주 합체' },
     { label: '🔮 진주',                            value: 'pearls',   desc: '살아있다 느낀 순간들' },
-    { label: '📔 도서관 일기·대화 (4/15)',          value: 'diaryLib', desc: '캘린더 무드 그리드 + 챕터 자동 분류' },
+    { label: '📔 홈 일기·대화 (4/15)',              value: 'diaryLib', desc: '캘린더 무드 그리드 + 챕터 자동 분류' },
     { label: '✨ 깨달음 (AI 인사이트)',            value: 'insights', desc: '엄마 통화 후 mood +0.8 패턴' },
     { label: '📅 리뷰 모음 (연간)',                value: 'reviews',  desc: '주간 / 월간 / 분기 / 연간 Stories' },
     { label: '🌊 숙고 질문',                       value: 'reflection', desc: '마음을 울리는 큰 물음' }
@@ -41918,7 +41918,7 @@ async function saveMsgAsInsight(idx) {
   msg.saved = true;
   saveState();
   renderChat();
-  showToast('깨달음 도서관에 저장됐어 ✦');
+  showToast('깨달음 홈에 저장됐어 ✦');
 }
 
 // V4-1m: 진주 능동 제안 — 사용자 메시지에서 행복/소중함 신호 감지.
@@ -43199,7 +43199,7 @@ async function _extractMutationInsight(opts) {
   state.archive.unshift(ins);
   saveState();
   if (trigger === 'manual' && typeof showToast === 'function') {
-    showToast('깨달음 도서관에 저장됐어 ✦');
+    showToast('깨달음 홈에 저장됐어 ✦');
   }
   if (typeof renderLensArchive === 'function') { try { renderLensArchive(); } catch {} }
   return ins;
@@ -45134,7 +45134,7 @@ async function testForceInsightDiscover() {
   showToast('🔮 AI 인사이트 발견 진행 중...');
   const n = await maybeRunDailyInsightDiscover({ force: true });
   if (typeof n === 'number') {
-    showToast(n > 0 ? `🔮 ${n}개 발견됨 — 도서관 → 깨달음 확인` : '🔮 새 인사이트 없음 (충분한 데이터 아니거나 dedup)');
+    showToast(n > 0 ? `🔮 ${n}개 발견됨 — 홈 → 깨달음 확인` : '🔮 새 인사이트 없음 (충분한 데이터 아니거나 dedup)');
   }
 }
 // ═══════════════════════════════════════════════════════════════
@@ -47418,7 +47418,7 @@ function renderLensArchive() {
 }
 
 async function deleteArchiveItem(idx) {
-  if (!await confirmDelete('이 깨달음', '도서관에서 영구 삭제됩니다.')) return;
+  if (!await confirmDelete('이 깨달음', '홈에서 영구 삭제됩니다.')) return;
   if (!state.archive || idx < 0 || idx >= state.archive.length) return;
   state.archive.splice(idx, 1);
   saveState();
@@ -48188,7 +48188,7 @@ function renderChatArchiveModal() {
     const pendingNote = isPending
       ? (isBatchProcessing
           ? `<div class="cac-pending-note" style="font-size:11px; color:var(--text-soft); opacity:0.7; margin-top:4px; line-height:1.6;">🌙 정리 중 ⏳ — 보통 5분~2시간 후 자리잡아.</div>`
-          : `<div class="cac-pending-note" style="font-size:11px; color:var(--text-soft); opacity:0.65; margin-top:4px; line-height:1.6;">🌙 새벽 4시에 자동 정리될 예정 — 그때 나 탭 / 도서관에 깔끔히 자리잡아.</div>`)
+          : `<div class="cac-pending-note" style="font-size:11px; color:var(--text-soft); opacity:0.65; margin-top:4px; line-height:1.6;">🌙 새벽 4시에 자동 정리될 예정 — 그때 나 탭 / 홈에 깔끔히 자리잡아.</div>`)
       : '';
     const cardOpacity = isPending ? '0.7' : '1';
 
@@ -48275,7 +48275,7 @@ async function resumeArchiveChat(archId) {
   if (currentMsgs.length > 0) {
     const yes = await showConfirmModal({
       title: '⚠️ 잠깐, 현재 대화는?',
-      message: '지금 대화 마무리 안 했는데 — 이대로 이어서 불러오면 현재 대화는 자동으로 도서관에 보관돼.\n\n그래도 진행할까?',
+      message: '지금 대화 마무리 안 했는데 — 이대로 이어서 불러오면 현재 대화는 자동으로 홈에 보관돼.\n\n그래도 진행할까?',
       okLabel: '응, 보관하고 이어서',
       cancelLabel: '아니, 그만'
     });
@@ -50572,7 +50572,7 @@ async function testSeedV4Data() {
   // 사용자 보고 2026-04-30: 새로 적용된 시드 항목 전부에 _seed marker 적용하기 → init sweep에서 자동 정리.
   _markSeedItems();
   saveState({ force: true });
-  showToast('🌱 V4 전체 시드 데이터 적용됨. 도서관/모래사장/실행/나/홈 둘러보기.');
+  showToast('🌱 V4 전체 시드 데이터 적용됨. 홈/모래사장/실행/나 둘러보기.');
   if (typeof renderTodayMission === 'function') renderTodayMission();
   if (typeof renderShellBar === 'function') renderShellBar();
   if (typeof renderReflectionHome === 'function') renderReflectionHome();
@@ -50666,7 +50666,7 @@ async function testForceQuarterlyReview() {
     stats, summary, sections, transformation, continuity, auto: true
   });
   saveState({ force: true });
-  showToast('✅ 분기 리뷰 생성됨 (도서관 → 마법·리뷰 → 🌙 리뷰 모음)');
+  showToast('✅ 분기 리뷰 생성됨 (홈 → 마법·리뷰 → 🌙 리뷰 모음)');
 }
 
 function testForceDiagnoses() {
@@ -50717,7 +50717,7 @@ function _addFallbackInsights() {
   });
   saveState({ force: true });
   if (typeof renderArchive === 'function') renderArchive();
-  showToast('🔮 fallback 인사이트 3개 추가됨 — 도서관 → 깨달음에서 확인');
+  showToast('🔮 fallback 인사이트 3개 추가됨 — 홈 → 깨달음에서 확인');
 }
 
 // V4-fix v3 (사용자 요청): 시드 데이터로 통합 분석 강제 (forceAnalyze wrapper)
@@ -50987,7 +50987,7 @@ async function testForceMusicAutoPearl() {
     createdAt: new Date().toISOString()
   });
   saveState({ force: true });
-  showToast(`🎵 "${track.title}" 5번 등장 → 자동 진주 적용됨. 도서관 → 진주에서 확인.`);
+  showToast(`🎵 "${track.title}" 5번 등장 → 자동 진주 적용됨. 홈 → 진주에서 확인.`);
 }
 
 
@@ -51046,7 +51046,7 @@ async function testForceMonthlyReview() {
     monthKey: lastMonthKey, auto: true
   });
   saveState({ force: true });
-  showToast('✅ 월간 리뷰 생성됨 (도서관 → 마법·리뷰 → 🌙 리뷰 모음)');
+  showToast('✅ 월간 리뷰 생성됨 (홈 → 마법·리뷰 → 🌙 리뷰 모음)');
 }
 
 // 마법고동 active 결정 진입
@@ -51121,7 +51121,7 @@ async function testForceExtract() {
     const after = (state.topicCards || []).length;
     const diff = after - before;
     if (diff > 0) {
-      showToast(`✦ 토픽 ${diff}개 추출됨. 도서관 → 📜 대화 렌즈에서 확인.`);
+      showToast(`✦ 토픽 ${diff}개 추출됨. 홈 → 📜 대화 렌즈에서 확인.`);
     } else {
       showToast('⚠ AI가 추출할 만한 토픽 못 찾음. 더 의미 있는 대화 후 시도.');
     }
@@ -57098,7 +57098,7 @@ window._forceWeeklyReview = async function() {
   const _exists = (state.weeklyReviews || []).some(r => r.weekKey === weekKey);
   console.log('[forceWeeklyReview] weekKey:', weekKey, 'before count:', _before, 'exists:', _exists);
   if (_exists) {
-    if (typeof showToast === 'function') showToast(`📅 ${weekKey} 리뷰 이미 있어 — 도서관에서 확인`);
+    if (typeof showToast === 'function') showToast(`📅 ${weekKey} 리뷰 이미 있어 — 홈에서 확인`);
     return;
   }
   if (typeof showToast === 'function') showToast(`🌙 ${weekKey} 주간 리뷰 생성 중...`);
@@ -60343,7 +60343,7 @@ function _planOnboardingFlow(plan, opts) {
         <div style="font-size:36px; text-align:center; margin-bottom:12px;">${tierEmoji}</div>
         <div style="font-size:17px; font-weight:700; color:var(--text); text-align:center; margin-bottom:14px;">환영합니다</div>
         <div style="font-size:13px; color:var(--text); line-height:1.75; text-align:center; margin-bottom:22px;">
-          이제부터 <b style="color:${tierColor};">나 탭 · 도서관 챕터</b>는 다음날 아침에 한 번에 갱신됩니다.<br>내일 확인해보세요! ${tierEmoji}
+          이제부터 <b style="color:${tierColor};">나 탭 · 홈 챕터</b>는 다음날 아침에 한 번에 갱신됩니다.<br>내일 확인해보세요! ${tierEmoji}
         </div>
         <button class="btn-primary plan-onb-btn" id="planOnbStep1Ok" style="width:100%; padding:11px; background:${tierColor}; border:none; color:#fff; font-weight:600;">알겠어</button>
       </div>
@@ -61331,7 +61331,7 @@ async function resetMissions() {
 }
 async function resetArchive() {
   const c = (state.archive || []).length;
-  await _confirmAndReset('도서관 깨달음', c, () => { state.archive = []; }, () => {
+  await _confirmAndReset('홈 깨달음', c, () => { state.archive = []; }, () => {
     if (typeof renderArchive === 'function') renderArchive();
   });
 }

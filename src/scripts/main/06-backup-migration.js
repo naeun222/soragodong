@@ -345,7 +345,7 @@ function _checkCloudRowOversize(bytes) {
   window._cloudOversizeWarned = true;
   console.warn('[saveToCloudNow] row size large:', bytes, 'bytes (' + (bytes / 1024 / 1024).toFixed(2) + 'MB)');
   if (typeof showToast === 'function') {
-    showToast(`☁ cloud 데이터 크기 ${(bytes / 1024 / 1024).toFixed(1)}MB — 옛 챕터/진주 정리 권장 (도서관에서 핀 안 박힌 옛 챕터 삭제)`);
+    showToast(`☁ cloud 데이터 크기 ${(bytes / 1024 / 1024).toFixed(1)}MB — 옛 챕터/진주 정리 권장 (홈에서 핀 안 박힌 옛 챕터 삭제)`);
   }
 }
 

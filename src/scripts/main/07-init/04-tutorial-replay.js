@@ -20,7 +20,7 @@ const ONBOARDING_PHASES = [
   { startId: 'go_home_for_mission',    name: '미션 + 모래사장',       desc: '소라의 부름과 결과 체크' },
   { startId: 'go_archive',             name: '🧬 양생방',             desc: '전략이 자라는 곳 — 핵심' },
   { startId: 'go_execute',             name: '실행 + 나',             desc: '몰입 + 자기 모델' },
-  { startId: 'go_archive_lib',         name: '도서관 둘러보기',       desc: '5 카테고리 + 숙고' },
+  { startId: 'go_archive_lib',         name: '홈 둘러보기',       desc: '5 카테고리 + 숙고' },
   { startId: 'finish',                 name: '마무리',                desc: '준비 끝!' }
 ];
 

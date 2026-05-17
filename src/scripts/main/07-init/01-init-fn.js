@@ -73,7 +73,7 @@ async function init() {
   if (state._mutationCutoffExtractedAt) {
     const _atMs = new Date(state._mutationCutoffExtractedAt).getTime();
     if (Date.now() - _atMs < 24 * 3600 * 1000) {
-      setTimeout(() => { if (typeof showToast === 'function') showToast('🧬 어제 돌연변이 대화 깨달음 — 도서관 ✨'); }, 1500);
+      setTimeout(() => { if (typeof showToast === 'function') showToast('🧬 어제 돌연변이 대화 깨달음 — 홈 ✨'); }, 1500);
     }
     delete state._mutationCutoffExtractedAt;
     try { saveState(); } catch {}
