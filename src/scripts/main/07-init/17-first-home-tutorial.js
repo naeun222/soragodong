@@ -31,10 +31,16 @@ async function runFirstHomeTutorial() {
   if (!shouldRunFirstHomeTutorial()) return;
   window._firstHomeTutorialActive = true;
   // dismiss marker — testerMode backup 직전 set → backup 에 포함 → 종료 후 restore 해도 유지.
+  // V4 fix (사용자 보고 2026-05-18 ultrathink): saveState(true) force + await saveToCloudNow().
+  //   옛 saveState() debounce 400ms → 곧바로 toggleTesterMode (line 43-45) 가 testerMode=true 박음
+  //   → _flushLocalSave/saveToCloud 의 testerMode 가드 (02-state.js:564) 가 차단 → marker 영구 lost.
+  //   사용자가 튜토 도중 종료 시 finally 의 backup restore 도 fire 안 함 → 다음 reload _shownInlineTips=undefined → 튜토 매번 재실행.
+  //   force + await 로 testerMode 박히기 전 cloud/localStorage 양쪽 완료 보장.
   if (!Array.isArray(state._shownInlineTips)) state._shownInlineTips = [];
   if (!state._shownInlineTips.includes(FIRST_HOME_TUTORIAL_DONE_KEY)) {
     state._shownInlineTips.push(FIRST_HOME_TUTORIAL_DONE_KEY);
-    try { saveState(); } catch {}
+    try { saveState(true); } catch {}
+    try { if (typeof saveToCloudNow === 'function') await saveToCloudNow(); } catch (e) { console.warn('[firstHome marker cloud]', e); }
   }
 
   let _autoTesterToggled = false;
