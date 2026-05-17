@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "699383075424",
+    "project_id": "soragodong-c3fc0",
+    "storage_bucket": "soragodong-c3fc0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:699383075424:android:a77cebe91866dd3f542905",
+        "android_client_info": {
+          "package_name": "com.soragodong.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwiCu8q4XHfqinel_DBBzOGdiWH1uRq9w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
