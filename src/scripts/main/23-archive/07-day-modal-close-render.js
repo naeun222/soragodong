@@ -173,9 +173,11 @@ function switchLibraryCat(cat) {
   });
   // 사용자 보고 2026-04-29: 칩 전환 시 active lens 재렌더 — 토글 상태(_libView)와 보이는 view 동기화
   if (typeof _renderActiveLens === 'function') _renderActiveLens();
-  // V4 fix (사용자 보고 2026-05-17): 진주 chip 진입 시 '오늘의 너' library hero 렌더 — 진주 튜토 coachmark target 보장.
-  if (cat === 'pearls' && typeof renderLibraryHero === 'function') {
-    try { renderLibraryHero(); } catch (e) { console.warn('[libraryHero]', e); }
+  // V4 fix (사용자 명시 2026-05-17 재): 진주 chip 일반 view 에서 hero 큐레이션 hide — 튜토리얼 진행 중에만 inject (13-first-pearl-tutorial.js).
+  //   ealier auto-render 가 검색칸 바로 밑에 hero 영구 노출 → user 의 의도 (튜토리얼 전용 데모 위치) 와 mismatch. switchLibraryCat fire 제거 + libraryHero 빈 컨테이너만 유지.
+  if (cat === 'pearls') {
+    const _heroEl = document.getElementById('libraryHero');
+    if (_heroEl) _heroEl.innerHTML = '';
   }
   // V4: 카테고리 전환 후 잠금 시각 갱신 (마법고동 등)
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 30);

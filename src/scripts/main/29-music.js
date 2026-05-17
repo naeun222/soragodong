@@ -713,6 +713,20 @@ async function _pearlViewMore(id) {
   const opts = [];
   if (isMusic) opts.push({ label: '🎵 곡 바꾸기', value: 'change_music' });
   opts.push({ label: '✏️ 제목 / 메모 수정', value: 'edit' });
+  // V4 (사용자 명시 2026-05-17 ultrathink): 진주 edit 시 사진/영상 추가·변경·제거 옵션.
+  //   음악 진주 제외 (음악은 별도 흐름). 사진/영상 mutually exclusive (한 진주에 하나만 — _heroCardHtml 분기 일관).
+  if (!isMusic) {
+    if (pearl.video) {
+      opts.push({ label: '🎬 영상 변경', value: 'change_video' });
+      opts.push({ label: '🎬 영상 제거', value: 'remove_video' });
+    } else if (pearl.photo) {
+      opts.push({ label: '📷 사진 변경', value: 'change_photo' });
+      opts.push({ label: '📷 사진 제거', value: 'remove_photo' });
+    } else {
+      opts.push({ label: '📷 사진 추가', value: 'add_photo' });
+      opts.push({ label: '🎬 영상 추가', value: 'add_video' });
+    }
+  }
   opts.push({ label: '🗑 삭제', value: 'delete' });
 
   const action = await showOptionsModal({
@@ -782,6 +796,106 @@ async function _pearlViewMore(id) {
     } else {
       showToast('음악 검색 기능 X');
     }
+  } else if (action === 'add_photo' || action === 'change_photo') {
+    // V4 (사용자 명시 2026-05-17 ultrathink): 사진 추가/변경 — addPearl 의 photo flow 재진입.
+    try {
+      const file = await pickPhotoFile();
+      if (!file) return;
+      const dataUrl = await fileToResizedDataUrl(file, 1024);
+      pearl.photo = dataUrl;
+      // 영상이 있었으면 mutually exclusive 정책 — 영상 제거 (사용자 선택은 사진).
+      if (pearl.video) {
+        delete pearl.video;
+        delete pearl.videoThumbnail;
+        delete pearl.videoHasAudio;
+        delete pearl.videoAudioMeta;
+      }
+      saveState(true);
+      renderLensPearls();
+      showToast(action === 'add_photo' ? '📷 사진 추가됨' : '📷 사진 변경됨');
+      showPearlViewModal(pearl);
+    } catch (e) { console.warn('[pearl photo edit]', e); showToast('사진 처리 실패'); }
+  } else if (action === 'remove_photo') {
+    const yes = await showConfirmModal({
+      title: '사진 제거할까?',
+      message: '진주의 텍스트는 그대로 유지돼.',
+      okLabel: '제거', cancelLabel: '취소'
+    });
+    if (!yes) return;
+    delete pearl.photo;
+    saveState(true);
+    renderLensPearls();
+    showToast('사진 제거됨');
+    showPearlViewModal(pearl);
+  } else if (action === 'add_video' || action === 'change_video') {
+    // V4 (사용자 명시 2026-05-17 ultrathink): 영상 추가/변경 — addPearl 의 video flow 재진입 (trim/compress).
+    if (typeof pickVideoFile !== 'function' || typeof compressVideoWebCodecs !== 'function') {
+      showToast('영상 기능 미가용 — 브라우저 확인'); return;
+    }
+    try {
+      const file = await pickVideoFile();
+      if (!file) return;
+      if (file.size > 100_000_000) {
+        showToast(`동영상 너무 큼 (${(file.size/1e6).toFixed(0)}MB) — 100MB 이하`); return;
+      }
+      if (typeof showFullscreenLoader === 'function') showFullscreenLoader('동영상 길이 확인 중... 📹');
+      const dur = (typeof _getVideoDuration === 'function') ? await _getVideoDuration(file) : 0;
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+      if (dur < 0 || !Number.isFinite(dur) || dur <= 0.05) {
+        showToast('동영상 길이 읽기 실패 — 다른 영상 시도'); return;
+      }
+      let trimStart = 0;
+      if (dur > 3 && typeof pickVideoTrimRange === 'function') {
+        const range = await pickVideoTrimRange(file, 3);
+        if (!range) { showToast('자르기 취소됨'); return; }
+        trimStart = range.startTime;
+      }
+      if (typeof showFullscreenLoader === 'function') showFullscreenLoader('동영상 압축 중... 📹');
+      let result;
+      try {
+        result = await compressVideoWebCodecs(file, { maxSec: 3, targetHeight: 720, bitrate: 1_500_000, fps: 30, startTime: trimStart });
+      } catch (compressErr) {
+        if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+        const msg = (compressErr && (compressErr.message || compressErr.toString())) || '알 수 없는 오류';
+        if (typeof showErrorDetailModal === 'function') showErrorDetailModal('동영상 압축 실패', msg);
+        else showToast('동영상 압축 실패: ' + msg);
+        return;
+      }
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+      const dataUrl = result.videoUrl;
+      const approxBytes = Math.round((dataUrl.length - (dataUrl.indexOf(',') + 1)) * 0.75);
+      if (approxBytes > 5_000_000) {
+        showToast(`압축 후도 큼 (${(approxBytes/1e6).toFixed(1)}MB) — 짧은 영상 시도`); return;
+      }
+      pearl.video = dataUrl;
+      pearl.videoThumbnail = result.thumbnail;
+      pearl.videoHasAudio = !!result.hasAudio;
+      if (result.audioMeta) pearl.videoAudioMeta = result.audioMeta;
+      // 사진이 있었으면 mutually exclusive — 사진 제거 (사용자 선택은 영상).
+      if (pearl.photo) delete pearl.photo;
+      saveState(true);
+      renderLensPearls();
+      showToast(action === 'add_video' ? '🎬 영상 추가됨' : '🎬 영상 변경됨');
+      showPearlViewModal(pearl);
+    } catch (e) {
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+      console.warn('[pearl video edit]', e); showToast('영상 처리 실패');
+    }
+  } else if (action === 'remove_video') {
+    const yes = await showConfirmModal({
+      title: '영상 제거할까?',
+      message: '진주의 텍스트는 그대로 유지돼.',
+      okLabel: '제거', cancelLabel: '취소'
+    });
+    if (!yes) return;
+    delete pearl.video;
+    delete pearl.videoThumbnail;
+    delete pearl.videoHasAudio;
+    delete pearl.videoAudioMeta;
+    saveState(true);
+    renderLensPearls();
+    showToast('영상 제거됨');
+    showPearlViewModal(pearl);
   }
 }
 

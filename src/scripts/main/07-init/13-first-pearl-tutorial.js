@@ -76,6 +76,10 @@ async function runFirstPearlTutorialV8() {
     // 사용자 명시 2026-05-06 ultrathink: '+ 진주 추가' step 폐기 — 인트로 / 오늘의너 / 카테고리 / 마무리 4 step.
     await _pearlCoachmarkIntro();
     await _v8Sleep(220);
+    // V4 fix (사용자 명시 2026-05-17 재): 인사 문구 (_pearlCoachmarkIntro) 직후 hero 큐레이션 동적 inject — _pearlCoachmarkTodayYou target 보장.
+    //   일반 view 영구 노출 X, 튜토리얼 한정. finally cleanup 에서 hero 비움.
+    if (typeof renderLibraryHero === 'function') { try { renderLibraryHero(); } catch (e) { console.warn('[hero inject]', e); } }
+    await _v8Sleep(120);
     await _pearlCoachmarkTodayYou();
     await _v8Sleep(220);
     await _pearlCoachmarkClosing();
@@ -85,6 +89,11 @@ async function runFirstPearlTutorialV8() {
   } finally {
     try { if (typeof _v8CleanupAll === 'function') _v8CleanupAll(); } catch {}
     try { if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader(); } catch {}
+    // V4 fix (사용자 명시 2026-05-17 재): 튜토리얼 종료 시 hero 큐레이션 cleanup — 일반 view 노출 X.
+    try {
+      const _heroEl = document.getElementById('libraryHero');
+      if (_heroEl) _heroEl.innerHTML = '';
+    } catch {}
     // testerMode OFF (자동 toggle 한 경우만) — 내부에서 reload 발생.
     if (_autoTesterToggled && state.preferences && state.preferences.testerMode) {
       try { await toggleTesterMode(); } catch (e) { console.warn('[pearl OFF]', e); }
