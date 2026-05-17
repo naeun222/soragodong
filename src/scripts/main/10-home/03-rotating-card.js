@@ -1315,26 +1315,36 @@ function _rcCheckinMiniLink(isDone) {
 }
 
 // Hook source bodyHtml — 친구 톤 질문 + hint.
+// V4 fix (사용자 명시 2026-05-18 ultrathink): 옛 V3.13.x .action-card 디자인 적용 (체크인/리뷰/hook 통일).
 function _rcBuildHookBodyHtml(hook) {
   const userName = (state.userName || '').trim();
   const nameCall = (typeof _hookNameCall === 'function') ? _hookNameCall(userName) : userName;
   const header = userName ? `있잖아 ${nameCall} ✦` : '있잖아 ✦';
+  const body = hook && hook.body ? hook.body : '탭해서 답하기';
   return `
-    <div class="rc-hook">
-      <div class="rc-hook-header">${escapeHtml(header)}</div>
-      <div class="rc-hook-body">${escapeHtml(hook.body || '')}</div>
-      <div class="rc-hook-hint">탭해서 답하기</div>
+    <div class="action-card action-card-hook">
+      <div class="action-icon">💭</div>
+      <div class="action-text">
+        <div class="action-title">${escapeHtml(header)}</div>
+        <div class="action-sub">${escapeHtml(body)}</div>
+      </div>
+      <div class="action-arrow">›</div>
     </div>
   `;
 }
 
 // 체크인 source bodyHtml — 시간대 카피 + 완료 시 보기/수정.
+// V4 fix (사용자 명시 2026-05-18 ultrathink): 옛 V3.13.x .action-card 디자인 적용.
 function _rcBuildCheckinBodyHtml() {
   if (window._onbTutorialMode) {
     return `
-      <div class="rc-checkin">
-        <div class="rc-checkin-label">✓ 체크인</div>
-        <div class="rc-checkin-title">매일 짧게 기록하는 곳</div>
+      <div class="action-card action-card-checkin">
+        <div class="action-icon">✓</div>
+        <div class="action-text">
+          <div class="action-title">체크인</div>
+          <div class="action-sub">매일 짧게 기록하는 곳</div>
+        </div>
+        <div class="action-arrow">›</div>
       </div>
     `;
   }
@@ -1343,56 +1353,60 @@ function _rcBuildCheckinBodyHtml() {
   const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
   if (checkinDoneToday) {
     return `
-      <div class="rc-checkin rc-checkin-done">
-        <div class="rc-checkin-label">✓ 오늘 체크인</div>
-        <div class="rc-checkin-title">보기/수정</div>
+      <div class="action-card action-card-checkin">
+        <div class="action-icon">✓</div>
+        <div class="action-text">
+          <div class="action-title">오늘 체크인 완료</div>
+          <div class="action-sub">보기 · 수정</div>
+        </div>
+        <div class="action-arrow">›</div>
       </div>
     `;
   }
   const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
   const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '✓', title: '체크인', sub: '' };
-  const subHtml = copy.sub ? `<div class="rc-checkin-sub">${escapeHtml(copy.sub)}</div>` : '';
+  const subHtml = copy.sub ? `<div class="action-sub">${escapeHtml(copy.sub)}</div>` : '';
   return `
-    <div class="rc-checkin">
-      <div class="rc-checkin-label">${copy.icon} 체크인</div>
-      <div class="rc-checkin-title">${escapeHtml(copy.title)}</div>
-      ${subHtml}
+    <div class="action-card action-card-checkin">
+      <div class="action-icon">${copy.icon}</div>
+      <div class="action-text">
+        <div class="action-title">${escapeHtml(copy.title)}</div>
+        ${subHtml}
+      </div>
+      <div class="action-arrow">›</div>
     </div>
   `;
 }
 
 // 리뷰 링크 source bodyHtml.
-// 사용자 보고 2026-05-17: weekly 신 schema (momentum_line / flow / scenes) 도 caption 후보로 인식.
+// V4 fix (사용자 명시 2026-05-18 ultrathink): 옛 V3.13.x .action-card 디자인 + 옛 review-card 문구 적용.
+//   옛 문구: 주간 "이번 주 어땠는지 같이 돌아볼까?" / 월간 "지난 달 너의 모습 돌아보기".
+//   review caption (momentum/flow/summary) 는 안 보여줌 — 옛 V3.13.x 처럼 단순 진입 링크.
 function _rcBuildReviewBodyHtml(r) {
-  const labelMap = {
-    weekly:    '🌙 이번 주 너',
-    monthly:   '🌙 지난 달 너',
-    quarterly: '🌙 지난 분기 너'
-  };
-  const label = labelMap[r._kind] || '🌙 최근 리뷰';
-  let caption = '';
-  if (r._kind === 'weekly') {
-    // weekly 신 schema 우선
-    caption = (r.momentum_line || r.flow || '').trim();
-    if (!caption && Array.isArray(r.scenes) && r.scenes.length > 0) {
-      const s = r.scenes[0];
-      caption = (typeof s === 'string' ? s : (s && (s.what || s.when || s.feeling) || '')).trim();
-    }
-    if (!caption && r.one_word_weekly) caption = String(r.one_word_weekly);
-    if (!caption) caption = (r.summary || '').trim();
+  const kind = r && r._kind;
+  let icon, title, sub;
+  if (kind === 'monthly') {
+    icon = '📅';
+    title = '지난 달 너의 모습 돌아보기';
+    sub = '한 달치 패턴, 새로 발견된 트레이트, 의미 있던 순간들';
+  } else if (kind === 'quarterly') {
+    icon = '📅';
+    title = '지난 분기 너의 모습 돌아보기';
+    sub = '3개월치 패턴 · 변화 · 의미 있던 흐름';
   } else {
-    caption = (r.summary || '').trim();
-    if (!caption && r.sections && typeof r.sections === 'object') {
-      caption = (r.sections.flow || r.sections.pattern || r.sections.good_moments || '').trim();
-    }
-    if (!caption && r.pattern && r.pattern.headline) caption = String(r.pattern.headline);
+    // weekly + fallback
+    icon = '🌙';
+    title = '이번 주 어땠는지 같이 돌아볼까?';
+    sub = '7일 데이터 분석 + 패턴 + 다음 주 한 가지 제안';
   }
-  if (!caption) caption = '리뷰 보러 가기';
-  const preview = caption.length > 120 ? caption.slice(0, 120) + '…' : caption;
   return `
-    <div class="rc-review">
-      <div class="rc-review-label">${label}</div>
-      <div class="rc-review-body">${escapeHtml(preview)}</div>
+    <div class="action-card action-card-review">
+      <div class="action-icon">${icon}</div>
+      <div class="action-text">
+        <div class="action-title">${escapeHtml(title)}</div>
+        <div class="action-sub">${escapeHtml(sub)}</div>
+      </div>
+      <div class="action-arrow">›</div>
     </div>
   `;
 }
