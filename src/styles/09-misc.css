@@ -11685,12 +11685,12 @@
   .yangsaeng-shell-row { margin-bottom: 12px; width: 100%; grid-template-columns: 1fr; }
   .yangsaeng-shell-row .home-small-card { width: 100%; box-sizing: border-box; }
 
-  /* V4 fix (사용자 명시 2026-05-18 ultrathink): Twemoji img 크기 갤럭시 native 와 동일 (1em). */
-  /*   34-twemoji.js 가 갤럭시에서 emoji 를 img.emoji 로 swap. 기본 img native size (~128px) 로 너무 크게 보임 → 1em 고정. */
+  /* V4 fix (사용자 명시 2026-05-18 ultrathink): Twemoji img 크기 갤럭시 native 와 동일 (0.9em). */
+  /*   34-twemoji.js 가 갤럭시에서 emoji 를 img.emoji 로 swap. 1em 은 갤럭시 native 보다 살짝 큼 → 0.9em 으로 축소. */
   img.emoji {
-    height: 1em; width: 1em;
-    margin: 0 .05em 0 .1em;
-    vertical-align: -0.1em;
+    height: 0.9em; width: 0.9em;
+    margin: 0 .03em 0 .05em;
+    vertical-align: -0.15em;
     display: inline-block;
   }
 
