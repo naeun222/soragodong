@@ -276,7 +276,7 @@ function _chatEmptyDaytimeHelloHtml() {
     : '';
   return `
     <div class="msg assistant">
-      <div class="msg-bubble">안녕?${examplesBlock}</div>
+      <div class="msg-bubble">편하게 말해 보소${examplesBlock}</div>
     </div>
   `;
 }
