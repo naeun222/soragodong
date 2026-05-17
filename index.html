@@ -11825,7 +11825,8 @@
     margin-top: 8px;
   }
   /* 양생방 top 모래사장 row — V4 fix (사용자 명시 2026-05-17): chip column 폭 전체 차지 */
-  .yangsaeng-shell-row { margin-bottom: 12px; width: 100%; }
+  /* V4 fix (사용자 명시 2026-05-18 ultrathink): .home-small-row 의 grid-template-columns: 1fr 1fr 가 카드를 반 칸으로 좁힘 → 1fr override 로 row 전체 차지 (양생방 chip 너비와 동일). */
+  .yangsaeng-shell-row { margin-bottom: 12px; width: 100%; grid-template-columns: 1fr; }
   .yangsaeng-shell-row .home-small-card { width: 100%; box-sizing: border-box; }
 
   /* V4 (사용자 명시 2026-05-17 ultrathink): simple tuto modal — 1 page or multi-page chain (모래사장 / 더 알아보기 등). */
@@ -39832,8 +39833,12 @@ function _renderChatMessageHTML(m, i) {
       const _deeperElig = (typeof _checkDeeperEligibility === 'function') ? _checkDeeperEligibility() : { ok: true };
       // V4 (사용자 명시 2026-05-16 cowork): 3턴 이전 hide. 첫 응답 옆에 깊이 버튼 = "이 앱 = 분석 도구" frame 즉시 박힘.
       //   결정: 챕터당 user 메시지 3회 누적 후 노출. testerMode / 튜토리얼 모드는 우회.
+      // V4 fix (사용자 명시 2026-05-18 ultrathink): 기존 사용자 (chatPairsCount ≥ 3 누적 OR 구독자) 도 우회 — ✓ 마무리 후 새 이야기 시작 시 매번 3턴 락은 불필요.
+      //   '첫 채팅' 3턴 락의 의도 = 게스트/미구독 신규에게 frame 박지 않기. 이미 사용법 인지한 사용자는 즉시 노출.
       const _chapterUserMsgs = (state.chatMessages || []).filter(mm => mm && mm.role === 'user').length;
-      const _bypassTurnGate = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
+      const _isExistingChatUser = (state.chatPairsCount || 0) >= 3
+        || (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser());
+      const _bypassTurnGate = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode) || _isExistingChatUser);
       const _deeperTurnsOk = _bypassTurnGate || _chapterUserMsgs >= 3;
       const deeperBtn = (has4Stage || !_deeperTurnsOk)
         ? ''
@@ -64002,6 +64007,43 @@ function _dismissPwaInstallCard() {
     saveState();
   } catch {}
 }
+// V4 (사용자 명시 2026-05-18 ultrathink): non-Apple 디바이스 (갤럭시 Android 등) 에 Twemoji 적용.
+//   사용자 보고: 갤럭시 native emoji 디자인 별로. iPhone 디자인 통일 요청.
+//   Apple Color Emoji 폰트 self-host = 라이센스 회색 영역 → Twemoji (Twitter, Apache 2.0) 선택.
+//   iOS / macOS / iPadOS 는 native Apple Color Emoji 유지 (skip — perf + 자연 보존).
+//   동적 컨텐츠 (chat 메시지 추가 / render 함수 호출) 자동 대응 — debounced MutationObserver.
+//   CDN fail 시 fallback = native emoji (silent).
+(function _initTwemoji() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const _ua = (navigator && navigator.userAgent) || '';
+  // Apple = native Apple Color Emoji 우수 → skip.
+  if (/iPad|iPhone|iPod|Macintosh/.test(_ua)) return;
+  const _sc = document.createElement('script');
+  _sc.src = 'https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js';
+  _sc.async = true;
+  _sc.onload = () => {
+    try {
+      if (!window.twemoji || !document.body) return;
+      // 초기 parse — 이미 render 된 emoji 들 swap.
+      try { window.twemoji.parse(document.body); } catch (_e) {}
+      // 동적 컨텐츠 — debounced MutationObserver. requestAnimationFrame 으로 frame 당 1회 cap.
+      let _pending = false;
+      const _debounced = () => {
+        if (_pending) return;
+        _pending = true;
+        requestAnimationFrame(() => {
+          _pending = false;
+          try { window.twemoji.parse(document.body); } catch (_e) {}
+        });
+      };
+      new MutationObserver(_debounced).observe(document.body, { childList: true, subtree: true });
+    } catch (e) {
+      console.warn('[twemoji] init:', e);
+    }
+  };
+  _sc.onerror = () => console.warn('[twemoji] CDN 로드 실패 — fallback native emoji');
+  document.head.appendChild(_sc);
+})();
 </script>
 </body>
 </html>

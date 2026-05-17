@@ -11681,7 +11681,8 @@
     margin-top: 8px;
   }
   /* 양생방 top 모래사장 row — V4 fix (사용자 명시 2026-05-17): chip column 폭 전체 차지 */
-  .yangsaeng-shell-row { margin-bottom: 12px; width: 100%; }
+  /* V4 fix (사용자 명시 2026-05-18 ultrathink): .home-small-row 의 grid-template-columns: 1fr 1fr 가 카드를 반 칸으로 좁힘 → 1fr override 로 row 전체 차지 (양생방 chip 너비와 동일). */
+  .yangsaeng-shell-row { margin-bottom: 12px; width: 100%; grid-template-columns: 1fr; }
   .yangsaeng-shell-row .home-small-card { width: 100%; box-sizing: border-box; }
 
   /* V4 (사용자 명시 2026-05-17 ultrathink): simple tuto modal — 1 page or multi-page chain (모래사장 / 더 알아보기 등). */

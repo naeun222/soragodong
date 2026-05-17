@@ -25,8 +25,12 @@ function _renderChatMessageHTML(m, i) {
       const _deeperElig = (typeof _checkDeeperEligibility === 'function') ? _checkDeeperEligibility() : { ok: true };
       // V4 (사용자 명시 2026-05-16 cowork): 3턴 이전 hide. 첫 응답 옆에 깊이 버튼 = "이 앱 = 분석 도구" frame 즉시 박힘.
       //   결정: 챕터당 user 메시지 3회 누적 후 노출. testerMode / 튜토리얼 모드는 우회.
+      // V4 fix (사용자 명시 2026-05-18 ultrathink): 기존 사용자 (chatPairsCount ≥ 3 누적 OR 구독자) 도 우회 — ✓ 마무리 후 새 이야기 시작 시 매번 3턴 락은 불필요.
+      //   '첫 채팅' 3턴 락의 의도 = 게스트/미구독 신규에게 frame 박지 않기. 이미 사용법 인지한 사용자는 즉시 노출.
       const _chapterUserMsgs = (state.chatMessages || []).filter(mm => mm && mm.role === 'user').length;
-      const _bypassTurnGate = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode));
+      const _isExistingChatUser = (state.chatPairsCount || 0) >= 3
+        || (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser());
+      const _bypassTurnGate = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode) || _isExistingChatUser);
       const _deeperTurnsOk = _bypassTurnGate || _chapterUserMsgs >= 3;
       const deeperBtn = (has4Stage || !_deeperTurnsOk)
         ? ''
