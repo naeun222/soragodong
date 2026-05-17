@@ -11908,9 +11908,10 @@
 
   /* V4 (사용자 명시 2026-05-17 ultrathink): priority stack 작은 체크인 링크 — 회전카드 밑, 낮 mode 한정. */
   /* V4 fix (사용자 명시 2026-05-17): 위치 살짝 위로 (margin-top + padding-top 축소). */
+  /* V4 fix (사용자 명시 2026-05-18): 추가로 살짝 위 — margin-top 2px → -4px, padding 6px → 4px. */
   .rc-checkin-mini-link {
-    margin-top: 2px;
-    padding: 6px 14px;
+    margin-top: -4px;
+    padding: 4px 14px;
     font-size: 13px;
     color: var(--text-dim);
     text-align: center;
@@ -13076,6 +13077,19 @@
       </div>
     </div>
 
+    <!-- PEARLS: 진주 전용 탭 (사용자 명시 2026-05-18 ultrathink Phase 1+2) — 도서관 진주 칩 layout 이전. library libPearls 는 Phase 3 에서 제거. -->
+    <div class="screen" id="screen-pearls">
+      <div class="screen-title">💎 진주</div>
+      <!-- 진주 전용 검색 (archiveSearch 와 별개 — _pearlsTabSearchQuery 만 driver). -->
+      <div id="pearlsSearchBar" style="margin:14px 0 16px; display:flex; gap:8px; align-items:center;">
+        <input type="text" id="pearlsSearch" placeholder="🔎 키워드, 날짜로 검색..."
+               oninput="searchPearls()"
+               style="flex:1; min-width:0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; font-family:inherit;">
+      </div>
+      <!-- '살아있다 느낀 순간들' 카테고리 + grid — renderLensPearls() 가 pearlsContent 에도 동일 HTML inject. -->
+      <div id="pearlsContent"></div>
+    </div>
+
     <!-- ARCHIVE-REVIEWS: 모든 주간/월간 리뷰 모음 -->
     <div class="screen" id="screen-archive-reviews">
       <div class="screen-title">🌙 리뷰 모음</div>
@@ -13771,11 +13785,12 @@
     </div>
   </div>
 
-  <!-- 사용자 명시 2026-05-17: archive 탭 라벨 = 홈 (data-screen 은 그대로 archive). 3 탭. -->
+  <!-- 사용자 명시 2026-05-17: archive 탭 라벨 = 홈 (data-screen 은 그대로 archive). 사용자 명시 2026-05-18 ultrathink: 진주 탭 추가 (4 탭, 가장 오른쪽). -->
   <div class="bottom-nav">
     <div class="nav-item active" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">🏠</div><div class="nav-label">홈</div></div>
     <div class="nav-item" data-screen="chat" onclick="showScreen('chat')"><div class="nav-icon">🐚</div><div class="nav-label">대화</div></div>
     <div class="nav-item" data-screen="model" onclick="showScreen('model')"><div class="nav-icon">🔮</div><div class="nav-label">나</div></div>
+    <div class="nav-item" data-screen="pearls" onclick="showScreen('pearls')"><div class="nav-icon">💎</div><div class="nav-label">진주</div></div>
   </div>
 </div>
 
