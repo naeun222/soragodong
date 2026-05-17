@@ -36379,6 +36379,14 @@ function showScreen(name) {
     // V4 (사용자 명시 2026-05-08 ultrathink): 나 탭 진입 시 batch dot 클리어.
     if (typeof _clearNavBatchUpdate === 'function') _clearNavBatchUpdate('model');
   }
+  if (name === 'pearls') {
+    // 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 진주 탭 진입 — pearlsContent 에 renderLensPearls inject.
+    //   pearlsSearch input 의 visible value 와 _pearlsTabSearchQuery 양방향 sync.
+    const _pInput = document.getElementById('pearlsSearch');
+    if (_pInput && typeof _pearlsTabSearchQuery === 'string') _pInput.value = _pearlsTabSearchQuery;
+    if (typeof renderLensPearls === 'function') renderLensPearls();
+    if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
+  }
   if (name === 'archive') {
     // 사용자 명시 2026-05-17: 도서관 = 새 홈. 옛 home 렌더 통합.
     //   회전카드 4-source (Hook/체크인/오늘의 너/리뷰) 으로 흡수 — renderReviewPreview / renderYesterdayChangeHint 호출 폐기.
@@ -44815,6 +44823,9 @@ const _LIB_CAT_TO_VIEW = {
 
 let _currentLens = 'diary';
 let _archiveSearchQuery = '';
+// 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 진주 전용 탭 검색 query — archive 검색 query 와 분리 (탭 전환 시 cross-contamination 방지).
+//   renderLensPearls 가 screen-pearls.active 시 _pearlsTabSearchQuery, 그 외 _archiveSearchQuery 사용.
+let _pearlsTabSearchQuery = '';
 let _libView = 'grid';  // V4-1p: 그리드 ↔ 타임라인 토글
 let _archiveTagFilter = null;  // V4-1q: 깨달음 태그 칩 필터 (단일 선택)
 // 사용자 요청 2026-04-29: 카테고리별 피드/목록 토글 + 목록 모드 카테고리 필터
@@ -45760,6 +45771,20 @@ function searchArchive() {
     if (typeof renderLensGalpi === 'function') renderLensGalpi();
     // 사용자 보고 2026-05-04 (VB019): grid+diary 일 때 검색 결과 보이게 lensTopicCards/Timeline 노출 동기화.
     if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
+  }, 200);
+}
+
+// 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 진주 전용 탭 검색 — archiveSearch 와 별개.
+//   _pearlsTabSearchQuery 만 driver. renderLensPearls 는 screen-pearls.active 시 이 값을 read.
+let _pearlsSearchDebounce = 0;
+function searchPearls() {
+  const input = document.getElementById('pearlsSearch');
+  if (!input) return;
+  if (_pearlsSearchDebounce) clearTimeout(_pearlsSearchDebounce);
+  _pearlsSearchDebounce = setTimeout(() => {
+    _pearlsSearchDebounce = 0;
+    _pearlsTabSearchQuery = input.value.toLowerCase().trim();
+    if (typeof renderLensPearls === 'function') renderLensPearls();
   }, 200);
 }
 
@@ -54499,14 +54524,22 @@ function setPearlCatFilter(cat) {
 }
 
 function renderLensPearls() {
-  const container = document.getElementById('lensPearls');
-  if (!container) return;
+  // 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 진주 전용 탭 + 도서관 진주 칩 둘 다 동일 HTML render.
+  //   #lensPearls (library libPearls — Phase 3 에서 제거 예정) + #pearlsContent (신규 screen-pearls).
+  //   active query 는 screen-pearls.active 시 _pearlsTabSearchQuery, 그 외 _archiveSearchQuery.
+  const containerLib = document.getElementById('lensPearls');
+  const containerTab = document.getElementById('pearlsContent');
+  if (!containerLib && !containerTab) return;
+  const _pearlsTabActive = !!(document.getElementById('screen-pearls') && document.getElementById('screen-pearls').classList.contains('active'));
+  const _activeQuery = _pearlsTabActive
+    ? (typeof _pearlsTabSearchQuery === 'string' ? _pearlsTabSearchQuery : '')
+    : (typeof _archiveSearchQuery === 'string' ? _archiveSearchQuery : '');
 
   let pearls = (state.pearls || [])
     .filter(p => p.type !== 'dna_pearl')  // DNA 진주는 모래사장 — 도서관 진주 갤러리 X (V4 비전 7.2)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   // 사용자 보고 2026-04-29: 검색 미적용 버그 fix
-  const _qPearls = _archiveSearchQuery;
+  const _qPearls = _activeQuery;
   if (_qPearls) {
     pearls = pearls.filter(p => {
       const fields = [p.content, p.note, p.category];
@@ -54708,7 +54741,9 @@ function renderLensPearls() {
     html += `</div>`;
   }
 
-  container.innerHTML = html;
+  // 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 두 컨테이너 (도서관 칩 + 신규 탭) 동일 HTML inject.
+  if (containerLib) containerLib.innerHTML = html;
+  if (containerTab) containerTab.innerHTML = html;
   if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
 }
 

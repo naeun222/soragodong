@@ -269,14 +269,22 @@ function setPearlCatFilter(cat) {
 }
 
 function renderLensPearls() {
-  const container = document.getElementById('lensPearls');
-  if (!container) return;
+  // 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 진주 전용 탭 + 도서관 진주 칩 둘 다 동일 HTML render.
+  //   #lensPearls (library libPearls — Phase 3 에서 제거 예정) + #pearlsContent (신규 screen-pearls).
+  //   active query 는 screen-pearls.active 시 _pearlsTabSearchQuery, 그 외 _archiveSearchQuery.
+  const containerLib = document.getElementById('lensPearls');
+  const containerTab = document.getElementById('pearlsContent');
+  if (!containerLib && !containerTab) return;
+  const _pearlsTabActive = !!(document.getElementById('screen-pearls') && document.getElementById('screen-pearls').classList.contains('active'));
+  const _activeQuery = _pearlsTabActive
+    ? (typeof _pearlsTabSearchQuery === 'string' ? _pearlsTabSearchQuery : '')
+    : (typeof _archiveSearchQuery === 'string' ? _archiveSearchQuery : '');
 
   let pearls = (state.pearls || [])
     .filter(p => p.type !== 'dna_pearl')  // DNA 진주는 모래사장 — 도서관 진주 갤러리 X (V4 비전 7.2)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   // 사용자 보고 2026-04-29: 검색 미적용 버그 fix
-  const _qPearls = _archiveSearchQuery;
+  const _qPearls = _activeQuery;
   if (_qPearls) {
     pearls = pearls.filter(p => {
       const fields = [p.content, p.note, p.category];
@@ -478,7 +486,9 @@ function renderLensPearls() {
     html += `</div>`;
   }
 
-  container.innerHTML = html;
+  // 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 두 컨테이너 (도서관 칩 + 신규 탭) 동일 HTML inject.
+  if (containerLib) containerLib.innerHTML = html;
+  if (containerTab) containerTab.innerHTML = html;
   if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
 }
 

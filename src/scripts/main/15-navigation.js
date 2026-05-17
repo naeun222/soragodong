@@ -64,6 +64,14 @@ function showScreen(name) {
     // V4 (사용자 명시 2026-05-08 ultrathink): 나 탭 진입 시 batch dot 클리어.
     if (typeof _clearNavBatchUpdate === 'function') _clearNavBatchUpdate('model');
   }
+  if (name === 'pearls') {
+    // 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 진주 탭 진입 — pearlsContent 에 renderLensPearls inject.
+    //   pearlsSearch input 의 visible value 와 _pearlsTabSearchQuery 양방향 sync.
+    const _pInput = document.getElementById('pearlsSearch');
+    if (_pInput && typeof _pearlsTabSearchQuery === 'string') _pInput.value = _pearlsTabSearchQuery;
+    if (typeof renderLensPearls === 'function') renderLensPearls();
+    if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
+  }
   if (name === 'archive') {
     // 사용자 명시 2026-05-17: 도서관 = 새 홈. 옛 home 렌더 통합.
     //   회전카드 4-source (Hook/체크인/오늘의 너/리뷰) 으로 흡수 — renderReviewPreview / renderYesterdayChangeHint 호출 폐기.

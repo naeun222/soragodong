@@ -65,6 +65,20 @@ function searchArchive() {
   }, 200);
 }
 
+// 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 진주 전용 탭 검색 — archiveSearch 와 별개.
+//   _pearlsTabSearchQuery 만 driver. renderLensPearls 는 screen-pearls.active 시 이 값을 read.
+let _pearlsSearchDebounce = 0;
+function searchPearls() {
+  const input = document.getElementById('pearlsSearch');
+  if (!input) return;
+  if (_pearlsSearchDebounce) clearTimeout(_pearlsSearchDebounce);
+  _pearlsSearchDebounce = setTimeout(() => {
+    _pearlsSearchDebounce = 0;
+    _pearlsTabSearchQuery = input.value.toLowerCase().trim();
+    if (typeof renderLensPearls === 'function') renderLensPearls();
+  }, 200);
+}
+
 // === V3.8 LENS: TOPIC CARDS — 챕터별 토픽 정리 (대화 렌즈 상단) ===
 const TOPIC_CATEGORY_LABELS = {
   // V4 8 카테고리 (step 25 챕터 자동 분류 기준)

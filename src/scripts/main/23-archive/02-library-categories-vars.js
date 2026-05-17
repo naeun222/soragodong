@@ -13,6 +13,9 @@ const _LIB_CAT_TO_VIEW = {
 
 let _currentLens = 'diary';
 let _archiveSearchQuery = '';
+// 사용자 명시 2026-05-18 ultrathink (Phase 1+2): 진주 전용 탭 검색 query — archive 검색 query 와 분리 (탭 전환 시 cross-contamination 방지).
+//   renderLensPearls 가 screen-pearls.active 시 _pearlsTabSearchQuery, 그 외 _archiveSearchQuery 사용.
+let _pearlsTabSearchQuery = '';
 let _libView = 'grid';  // V4-1p: 그리드 ↔ 타임라인 토글
 let _archiveTagFilter = null;  // V4-1q: 깨달음 태그 칩 필터 (단일 선택)
 // 사용자 요청 2026-04-29: 카테고리별 피드/목록 토글 + 목록 모드 카테고리 필터
