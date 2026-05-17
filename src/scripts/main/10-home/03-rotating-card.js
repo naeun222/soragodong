@@ -1201,9 +1201,9 @@ function _rcGodongSvg(sourceId) {
 // V4 (사용자 명시 2026-05-17 ultrathink): priority stack 으로 재설계 — 회전 X, 한 번에 한 카드만 노출.
 //   사용자가 카드 click = "본 것" → dismiss → 다음 priority source 가 그 자리에 등장.
 //   새벽 4시 dayK reset 시 자연 부활.
-//   우선순위:
-//     - 낮 (h < 18): 리뷰 → hook → 오늘의 너 (그 밑에 작게 "오늘 체크인하기 →" 링크)
-//     - 저녁 (h >= 18 OR h < 4): 리뷰 → 체크인 → hook → 오늘의 너 (체크인 priority 진입, 작은 링크 X)
+// V4 fix (사용자 명시 2026-05-18 ultrathink): 시간대 분기 폐기 — 낮/저녁 무관 동일 priority.
+//   priority: 리뷰 → 체크인(미완료시) → hook → 오늘의 너.
+//   완료 시 buildCheckin null → 다음 source 가 메인 + 작은 ✓ mini-link.
 //   크기: 오늘의 너 (진주 큐레이션) 통일. 다른 source 는 inline min-height 로 매칭.
 function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
@@ -1211,7 +1211,6 @@ function renderRotatingCard() {
   _ensureRotatingCardState();
 
   try {
-    const isEvening = _rcIsEveningMode();
     const dismissed = _rcGetDismissedToday();
     const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
 
@@ -1268,9 +1267,8 @@ function renderRotatingCard() {
     };
 
     // 우선순위 순회 — 첫 통과한 1개 채택.
-    const priority = isEvening
-      ? [buildReview, buildCheckin, buildHook, buildOneul]
-      : [buildReview, buildHook, buildOneul];
+    // V4 fix (사용자 명시 2026-05-18 ultrathink): 시간대 무관 통일 priority.
+    const priority = [buildReview, buildCheckin, buildHook, buildOneul];
     let picked = null;
     for (const fn of priority) {
       const s = fn();
@@ -1278,12 +1276,12 @@ function renderRotatingCard() {
     }
 
     // 카드 + 작은 체크인 링크.
-    // V4 fix (사용자 명시 2026-05-17 재): mini-link 시간대 무관 표시. checkin 카드가 priority slot 에 있을 때만 skip (중복 회피).
-    //   특히 done 상태 "✓ 오늘 체크인 — 보기 / 수정" 이 저녁 모드에서도 보여야 함 (옛 위치 복구).
+    // V4 fix (사용자 명시 2026-05-18 ultrathink): mini-link 는 완료 시에만 노출.
+    //   checkin 카드가 priority slot 에 있을 때 skip (중복 회피) — 단 미완료 mini-link 도 폐기되어 결과적으로 done 만.
     const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
     const miniLink = (picked && picked.sourceType === 'checkin')
       ? ''  // checkin 카드가 priority slot 에 = 중복 회피
-      : _rcCheckinMiniLink(checkinDone);  // 그 외 — done/not-done 둘 다 표시
+      : _rcCheckinMiniLink(checkinDone);  // 완료 시에만 ✓ 링크 노출
 
     if (!cardHtml && !miniLink) {
       container.innerHTML = '';
@@ -1305,13 +1303,13 @@ function _rcOnSourceTap(sourceId) {
   } catch (e) { console.warn('[rcOnSourceTap]', e); }
 }
 
-// 낮 mode 작은 체크인 링크 — 카드 밑. done 상태 / not-done 상태 둘 다 표현.
+// 작은 체크인 링크 — 완료 시에만 노출.
+// V4 fix (사용자 명시 2026-05-18 ultrathink): isDone=false 분기 폐기 — 미완료 mini-link X.
+//   미완료는 priority slot 의 큰 체크인 카드로만 표시. 완료 시 (큰 카드 X) 작은 ✓ 링크만 노출.
 function _rcCheckinMiniLink(isDone) {
   if (window._onbTutorialMode) return '';
-  const text = isDone ? '✓ 오늘 체크인 — 보기 / 수정' : '오늘 체크인하기 →';
-  return `
-    <div class="rc-checkin-mini-link" onclick="enterCheckin()">${escapeHtml(text)}</div>
-  `;
+  if (!isDone) return '';
+  return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인 — 보기 / 수정</div>`;
 }
 
 // Hook source bodyHtml — 친구 톤 질문 + hint.
@@ -1333,8 +1331,10 @@ function _rcBuildHookBodyHtml(hook) {
   `;
 }
 
-// 체크인 source bodyHtml — 시간대 카피 + 완료 시 보기/수정.
+// 체크인 source bodyHtml — 시간대 카피 (미완료) + 튜토.
 // V4 fix (사용자 명시 2026-05-18 ultrathink): 옛 V3.13.x .action-card 디자인 적용.
+// V4 fix (사용자 명시 2026-05-18 ultrathink): dead code 폐기 — buildCheckin() 가 완료 시 null 반환하므로
+//   checkinDoneToday 분기는 절대 호출되지 않음. 미완료 + 튜토 분기만 보존.
 function _rcBuildCheckinBodyHtml() {
   if (window._onbTutorialMode) {
     return `
@@ -1346,14 +1346,6 @@ function _rcBuildCheckinBodyHtml() {
         <div class="action-arrow">›</div>
       </div>
     `;
-  }
-  const todayKeyVal = (typeof todayKey === 'function') ? todayKey() : '';
-  const todayEntry = (state.entries || []).find(e => e.date === todayKeyVal);
-  const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  // V4 fix (사용자 명시 2026-05-18 ultrathink): 옛 mini-link 디자인 (commit 56dc33e) 복구 — 완료 시 작은 텍스트만.
-  //   .action-card 큰 카드 분기 폐기 → '✓ 오늘 체크인 — 보기 / 수정' 작은 텍스트로 회귀.
-  if (checkinDoneToday) {
-    return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인 — 보기 / 수정</div>`;
   }
   const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
   const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '✓', title: '체크인', sub: '' };
