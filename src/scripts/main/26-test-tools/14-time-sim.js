@@ -63,3 +63,38 @@ function devDiagChatArchive() {
     showToast(`📋 chatArchive 진단 — 총 ${total} / 빈 메시지 ⚠️ ${emptyCount} (console 확인)`);
   }
 }
+
+// V4 (사용자 보고 2026-05-17 ultrathink): 옛 형식 archive (messages 필드 없거나 빈 거) 일괄 휴지통 이동.
+//   복원 불가능한 잔재 archive 정리 — 휴지통 (_deleted=true) 으로 이동 + _pending* 마커 제거.
+//   휴지통 7일 후 자동 hard delete + cascade. 잘못 정리한 경우 7일 안 복구 가능.
+async function devCleanupEmptyArchives() {
+  if (!Array.isArray(state.chatArchive)) {
+    if (typeof showToast === 'function') showToast('chatArchive 없음');
+    return;
+  }
+  const empties = state.chatArchive.filter(a => a && !a._deleted && (!Array.isArray(a.messages) || a.messages.length === 0));
+  if (empties.length === 0) {
+    if (typeof showToast === 'function') showToast('✓ 옛 형식 archive 없음 — 정리 X');
+    return;
+  }
+  const yes = (typeof showConfirmModal === 'function')
+    ? await showConfirmModal({
+        title: '옛 형식 archive 정리할까?',
+        message: `messages 누락된 archive ${empties.length}개를 휴지통으로 이동.\n\n· 복원 불가 (옛 코드 path 부재 — cloud 에도 messages 없음)\n· 휴지통 7일 후 자동 영구 삭제\n· 잘못 정리해도 7일 안 복구 가능`,
+        okLabel: '휴지통 이동',
+        cancelLabel: '취소'
+      })
+    : true;
+  if (!yes) return;
+  const nowIso = new Date().toISOString();
+  empties.forEach(a => {
+    a._deleted = true;
+    a._deletedAt = nowIso;
+    delete a._pendingExtract;
+    delete a._pendingCaseAnalysis;
+    delete a._batchSubmittedAt;
+  });
+  try { saveState(true); } catch {}
+  if (typeof renderChatArchiveModal === 'function') { try { renderChatArchiveModal(); } catch {} }
+  if (typeof showToast === 'function') showToast(`✦ ${empties.length}개 휴지통 이동 완료`);
+}

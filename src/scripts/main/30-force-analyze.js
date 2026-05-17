@@ -1131,14 +1131,21 @@ async function maybeRunDailyChapterExtract() {
   //   batch path filter (아래 line) + _submitDailyExtractBatch / _runDailyExtractInline 모두 `messages.length >= 3` 필수.
   //   _archiveCurrentChapter 의 minLen=3 가드로 정상 path 엔 안 들어가지만 마이그레이션 / 옛 코드 / race 잔재 케이스 = 영원히 stuck → "🌙 4시 자동 정리 예정" 무한 노출.
   //   처리할 방법이 없는 archive 의 _pending* 마커만 정리. archive 자체 (history) 는 보존 — 사용자가 도서관에서 직접 삭제 가능.
+  // V4 fix (사용자 보고 2026-05-17 ultrathink): 가드 확장 — messages 필드 자체 없거나 array 아닌 케이스도 cover.
+  //   옛 root cause: Array.isArray(a.messages) && a.messages.length < 3 = messages 필드 없는 archive (옛 2026-05-10 이전 형식) 는 SKIP → 영원히 stuck.
+  //   확장: messages 없거나 array 아니거나 <3 → 다 cleanup.
   let _sweptDeadMarker = false;
   (state.chatArchive || []).forEach(a => {
     if (!a || a._deleted) return;
-    if ((a._pendingExtract || a._pendingCaseAnalysis) && Array.isArray(a.messages) && a.messages.length < 3) {
-      delete a._pendingExtract;
-      delete a._pendingCaseAnalysis;
-      delete a._batchSubmittedAt;
-      _sweptDeadMarker = true;
+    if (a._pendingExtract || a._pendingCaseAnalysis) {
+      const _msgs = a.messages;
+      const _invalid = !Array.isArray(_msgs) || _msgs.length < 3;
+      if (_invalid) {
+        delete a._pendingExtract;
+        delete a._pendingCaseAnalysis;
+        delete a._batchSubmittedAt;
+        _sweptDeadMarker = true;
+      }
     }
   });
   if (_sweptDeadMarker) {
