@@ -87,7 +87,7 @@
     --danger: #e06c75;
     --success: #98c379;
     --gold: #ffd700;
-    /* 사용자 명시 2026-05-10: 고동의 일기 종이 톤 (다이어리 모달 전용) */
+    /* 사용자 명시 2026-05-10: 종이 톤 (일기 inline 카드용 — hook-system spec) */
     --paper-1: #f3eadb;
     --paper-2: #ebe0cb;
     --paper-text: #3d3528;
@@ -14381,7 +14381,7 @@ const DEFAULT_STATE = {
   periodStart: null,
   apiKey: '',
   profile: '',
-  // 사용자 명시 2026-05-11: 고동의 일기 호칭용. 비어있으면 prompt 가 fallback ('지우' placeholder).
+  // 사용자 명시 2026-05-11: AI 호칭용. 비어있으면 prompt 가 fallback ('지우' placeholder).
   userName: '',
   lastSync: null,
   // Phase 2
@@ -14392,12 +14392,13 @@ const DEFAULT_STATE = {
   // Phase 4
   weeklyReviews: [],
   monthlyReviews: [],
-  // 사용자 명시 2026-05-09: 회전 카드 source 4 미니 리뷰 (Haiku 3일 정리) archive.
-  // 사용자 명시 2026-05-10: 미니 리뷰 → 고동의 일기 (godongDiary) 로 전환. miniReviews 는 legacy 보존.
-  // 도서관 리뷰 모음 → '고동' 카테고리에서 둘 다 노출 (legacy 는 '고동의 옛 메모').
-  miniReviews: [],          // legacy. [{id, content, generatedAt, source:'haiku-3day'}]
-  godongDiary: [],          // [{id, date, weekday, note?, body, iso, substrateRefs[]}]
+  // legacy — 옛 회전 카드 source (사용자 명시 2026-05-18 폐기). data preserve 위해 array 만 보존.
+  miniReviews: [],          // [{id, content, generatedAt, source:'haiku-3day'}]
+  godongDiary: [],          // [{id, date, weekday, note?, body, iso, substrateRefs[]}] — 옛 schema
+  // hook-system spec (2026-05-18) — backend cron + 챗 탭 inline 큐. 메커니즘/프롬프트는 옛 godongDiary 동일.
+  godongDiaryQueue: [],     // [{id, body, generatedAt, triggerDayK, readAt, dismissedAt}] — max 30, FIFO prune
   askedHooks: [],           // [{id, body, source, trigger_dayK, hook_type, askedAt, answered, answeredAt, delivered}] — max 50
+  lastAbsenceAcknowledgedAt: null,  // 부재 후속 placeholder 5일 cooldown
   predictionFollowups: [],
   // Phase 5
   questionHistory: [],
@@ -14447,6 +14448,7 @@ const DEFAULT_STATE = {
     nightModeManual: null,  // null = auto, 'on' | 'off' = manual override
     hookFrequency: 'daily',       // 'daily'|'every-other-day'|'thrice-week'|'off'
     hookNotificationTime: 21,     // 시 (0-23), default 21시
+    lastChatTabEntryAt: null,     // 부재 계산 + 챕터 마무리 5분 가드 (hook-system spec)
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
     // V4 (사용자 명시 2026-05-14 ultrathink): 진주 '티켓' 카테고리 sub-type — 사용자 customizable.
     //   default 6개. settings 에서 ON/OFF + 추가/제거 가능.
@@ -14530,8 +14532,7 @@ const DEFAULT_STATE = {
     }
   },
 
-  // 사용자 명시 2026-05-09 (회전 카드 spec final): 홈 회전 카드 source — 진주 / 고동의 일기 / Quiz / 시뮬레이션 / 어제 / weekly~annual review.
-  // 사용자 명시 2026-05-16: 별자리 운세 source 폐기.
+  // 사용자 명시 2026-05-09 (회전 카드 spec final): 홈 회전 카드 source — 진주 / 시뮬레이션 / 어제 / weekly~annual review.
   // _ensureRotatingCardState() 가 누락 필드 자동 보완.
   rotatingCardState: {
     // 진주 — 4시간 stay
@@ -20163,7 +20164,7 @@ async function saveToCloudNow() {
       // 회전 카드 spec final 추가 (2026-05-09): 미니 리뷰 결과 + 회전 카드 sessionState (진주 4시간 / unseenInsights / quizProgress 등) 모두 sensitiveBody 에 포함.
       // 사용자 보고 2026-05-12 ultrathink (root cause 동일 패턴): tutorialShown / tutorialVersion / _core2NotUnlocked / userName / godongDiary / activeStrategies 누락 → 신규 가입자 sim 튜토리얼 (도서관 / 진주 / 깨달음 / 마법 / 리뷰 / 숙고) 마커 reload 마다 손실 → 같은 튜토리얼 반복 fire. 같이 추가.
       // 사용자 보고 2026-05-18 ultrathink (root cause 동일 패턴 재발): _shownInlineTips 누락 → E2EE 사용자의 firstHomeTutorial 마커 ('firstHomeIntro') / inline tip 8개 / simple-tuto modal key 모두 reload 마다 wipe → 홈 진입 시마다 firstHomeTutorial 무한 fire. 같이 추가.
-      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','godongDiary','activeStrategies','_shownInlineTips'];
+      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','godongDiary','godongDiaryQueue','lastAbsenceAcknowledgedAt','activeStrategies','_shownInlineTips'];
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
       const encryptedBody = await _e2eeEncrypt(JSON.stringify(sensitiveBody, _serializeReplacer), _e2eeMasterKey);
@@ -27877,9 +27878,7 @@ async function triggerSOS() {
 
 // 사용자 명시 2026-05-09 (회전 카드 spec final): 미컨펌 우선 정렬 + 세션 lock.
 // spec: rotating-card-final-2026-05-09.md (이 문서가 최종)
-// 사용자 명시 2026-05-16: 별자리 운세 source 폐기. 4 source 남음: 진주 / 고동의 일기 / 시뮬레이션 / 어제 + weekly~annual review.
-// 사용자 명시 2026-05-18: 고동 일기 source 폐기. 3 source 남음: 진주 / 시뮬레이션 / 어제 + weekly~annual review.
-// 폐기: 어제 비교 / 회상 / 통찰(→ 새로 본 너 흡수) / Surprise / 별자리 운세 / 고동 일기
+// source: 진주 / 시뮬레이션 / 어제 + weekly~annual review
 
 // =============================================================================
 // STATE 마이그 — 누락 필드 자동 보완 (preferences namespace 보호)
@@ -27899,9 +27898,6 @@ function _ensureRotatingCardState() {
   // 미니 리뷰 (legacy)
   if (typeof r.lastMiniReviewAt === 'undefined') r.lastMiniReviewAt = null;
   if (typeof r.miniReviewContentId === 'undefined') r.miniReviewContentId = null;
-  // 고동의 일기 — 사용자 명시 2026-05-18 폐기. state 마이그 호환 위해 필드는 보존 (옛 사용자 데이터 손실 회피).
-  if (typeof r.lastGodongDiaryAt === 'undefined') r.lastGodongDiaryAt = null;
-  if (typeof r.godongDiaryContentId === 'undefined') r.godongDiaryContentId = null;
   // Quiz
   if (typeof r.quizDay === 'undefined') r.quizDay = null;
   if (typeof r.quizProgress === 'undefined') r.quizProgress = null;
@@ -27958,15 +27954,9 @@ function _rcIsEveningMode() {
 
 // =============================================================================
 // 상수 — baseWeight + tie-breaker stable order
-// 사용자 명시 2026-05-09 (재정정): '새로 본 너' source 폐기 → Quiz 로 통합 (둘 다 caseFormulation 미컨펌 풀 사용 — 중복).
-// 사용자 명시 2026-05-09 (추가): 시뮬레이션 source 6 추가 — Sonnet, 4h block, on-demand generate.
-// 사용자 명시 2026-05-16: 별자리 운세 source 폐기.
-// 4 source: 진주 / 미니 리뷰 / Quiz / 시뮬레이션
 // =============================================================================
-// 사용자 명시 2026-05-10 (재정의): review 4개 = 명확 우선순위. 그 외 = 동급 weight 100.
-//   1 annual / 2 quarterly / 3 monthly / 4 weekly / 5 (동급): 어제 기록 / 진주 큐레이션 / 상상 시뮬
-//   사용자 미컨펌 우선순위 정책 폐기 (옛 _rcSortByConfirmation unconfirmed 우선 분기).
-// 사용자 명시 2026-05-18: 고동 일기 source 폐기 — godongDiary weight + order entry 제거.
+// review 4개 = 명확 우선순위 (annual > quarterly > monthly > weekly).
+// 그 외 = 동급 weight 100, _RC_SOURCE_ORDER tie-break 으로 결정 (어제 / 진주 / 시뮬).
 const _RC_BASE_WEIGHTS = {
   review_annual:    500,
   review_quarterly: 400,
@@ -28034,8 +28024,7 @@ function _rcTodayKey() {
   return new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10);
 }
 
-// 4AM cutoff key — 사용자 명시 2026-05-09: 미니 리뷰 / Quiz / 고동의 일기 모두 새벽 4시 cutoff 일관성.
-// 사용자 명시 2026-05-11: getDayKey 위임으로 통일 (옛 자체 구현 제거).
+// 4AM cutoff key — getDayKey 위임으로 통일.
 function _rcCutoffKeyOf(timestampOrIso) {
   if (typeof getDayKey === 'function') return getDayKey(timestampOrIso);
   // fallback
@@ -28335,18 +28324,13 @@ function _rcConfirmNewView(itemId, verdict) {
 }
 
 // =============================================================================
-// 가용 source 수집 — 사용자 명시 2026-05-09: '새로 본 너' 폐기 → Quiz 통합. 사용자 명시 2026-05-16: 운세 폐기.
-// 사용자 명시 2026-05-18: 고동 일기 source 폐기 (모달/source/sonnet 전체 폐기).
-// 진주 / 시뮬레이션 / 어제 / weekly~annual review
+// 가용 source 수집 — 진주 / 시뮬레이션 / 어제 / weekly~annual review
 // =============================================================================
 function _rcCollectAvailable() {
   const safe = (fn, label) => {
     if (typeof fn !== 'function') return null;
     try { return fn(); } catch (e) { console.warn('[rotating-card source]', label, e); return null; }
   };
-  // 사용자 명시 2026-05-10: quiz source 제거 — _rcSource4Quiz 호출 X (함수 자체는 dead 로 잔존).
-  // 사용자 명시 2026-05-10 (batch 11): 5 news source 추가 — 어제 기록 / weekly / monthly / quarterly / annual review.
-  // 사용자 명시 2026-05-18: 고동 일기 source 전체 폐기 (_rcSource3GodongDiary / _callGodongDiarySonnet / 03f-godong-diary-modal.js 삭제).
   const all = [
     safe(_rcSource1Pearl,      'pearl'),
     safe(typeof _rcSource6Simulation === 'function' ? _rcSource6Simulation : null, 'simulation'),
@@ -28363,7 +28347,6 @@ function _rcCollectAvailable() {
 // godong 표정 SVG — source 별 mood 매핑.
 // pearl=inspired(별눈), newView=surprised(큰 눈),
 // quiz=thinking(?), quizDone=proud(별3개+자부심)
-// 사용자 명시 2026-05-18: 고동 일기 source 폐기 — godongDiary mood 매핑 제거.
 // =============================================================================
 function _rcGodongSvg(sourceId) {
   const moodMap = {
@@ -31798,7 +31781,7 @@ function _hookFrequencyCooldownOk() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Substrate — dayK 별 6 source 그루핑 (godong-diary modal `_bySource` 와 동일 로직).
+// Substrate — dayK 별 6 source 그루핑 (옛 godong-diary 모달 `_bySource` 와 동일 로직 — backend 이동 예정).
 // ─────────────────────────────────────────────────────────────────────────────
 function _hookIsoToDayK(iso) {
   if (!iso) return null;
@@ -54146,8 +54129,6 @@ function renderQuarterlyDeepDive(review) {
 }
 
 // 사용자 명시 2026-05-09: 리뷰 모음에 카테고리 chip — 전체/주/월/계절/연간.
-// 사용자 명시 2026-05-18: 고동 일기 폐기 — '고동' 카테고리 + godongDiary / miniReviews 표시 제거.
-//   array 자체는 옛 사용자 데이터 손실 회피 위해 보존 (읽기/쓰기 코드 없음).
 let _archiveReviewCategory = 'all';
 function setArchiveReviewCategory(cat) {
   _archiveReviewCategory = cat || 'all';
@@ -54226,7 +54207,6 @@ function renderArchiveReviews() {
     const seasonLabel = r.type === 'quarterly' && r.quarterKey && typeof seasonLabelOf === 'function'
       ? seasonLabelOf(r.quarterKey, { withEmoji: true })
       : null;
-    // 사용자 명시 2026-05-18: godong-diary / mini 타입 폐기 (archive 표시 안 함).
     const typeLabel = r.type === 'weekly' ? '🌙 주간 리뷰'
       : r.type === 'monthly' ? '📅 월간 리뷰'
       : r.type === 'annual' ? '🌟 연간 리뷰'
@@ -54249,7 +54229,6 @@ function renderArchiveReviews() {
     const reviewKey = r.weekKey || r.monthKey || r.quarterKey || '';
     const completedAtJs = r.completedAt ? `'${r.completedAt}'` : 'null';
     // 사용자 명시 2026-05-10 (큐 8): weekly 만 inline 펼침. 다른 type 은 옛 화면 전환.
-    // 사용자 명시 2026-05-18: godong-diary / mini 분기 폐기.
     const onClickJs = r.type === 'annual'
       ? `openAnnualReview(${r.year || 'null'})`
       : r.type === 'weekly'
@@ -54279,7 +54258,6 @@ function renderArchiveReviews() {
 
 // 사용자 명시 2026-05-11: 리뷰 모음에서 주/월/분기/연 리뷰 모두 삭제 가능.
 //   삭제 = state array 에서 hard splice → AI substrate 자동 제외.
-// 사용자 명시 2026-05-18: godong-diary / mini 분기 폐기 (archive 표시 안 함).
 function deleteArchiveReview(type, id) {
   if (!type || !id) return;
   const labelMap = {
@@ -54310,9 +54288,6 @@ function deleteArchiveReview(type, id) {
   if (typeof showToast === 'function') showToast(`${label} 지웠어`);
   if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
 }
-
-// Legacy compat — 옛 onclick 핸들러 호환 noop. 사용자 명시 2026-05-18: godong-diary 폐기.
-function deleteGodongDiary(_id) { /* noop — 고동 일기 폐기 (사용자 명시 2026-05-18) */ }
 
 // 사용자 명시 2026-05-10 (큐 8): weekly 카드 inline 펼침 — 화면 전환 X, 카드 안 4 섹션 toggle.
 //   4 섹션: MOMENTUM / 장면 3가지 / 흐름 / 부드러운 알림. 옛 schema (one_word_weekly / scenes / pattern.headline / risk_signals) 매핑.
@@ -54402,8 +54377,6 @@ function _toggleWeeklyInlineExpand(reviewId) {
   }
 }
 
-// 사용자 명시 2026-05-10 (handoff): 옛 openSavedMiniReview (rc-mini-review-overlay 패턴) 함수 제거.
-// legacy 미니 리뷰 row 클릭 시 03f-godong-diary-modal.js 의 신규 openSavedMiniReview 가 동작 (단일 entry readonly 모달).
 
 // 사용자 명시 2026-05-01: 리뷰 모음 카드 클릭 → 풀화면 readonly view (주간 리뷰 미리보기와 동일 흐름).
 function openSavedReview(type, key, completedAt) {
@@ -57152,7 +57125,7 @@ async function _maybeAutoForceAnalyzeFreeTier() {
 // SETTINGS
 // ═══════════════════════════════════════════════════════════════
 function loadSettings() {
-  // 사용자 명시 2026-05-11: 고동의 일기 호칭용 이름 입력.
+  // 사용자 명시 2026-05-11: AI 호칭용 이름 입력.
   const _userNameInput = document.getElementById('userNameInput');
   if (_userNameInput) _userNameInput.value = state.userName || '';
   document.getElementById('profileInput').value = state.profile || '';
@@ -57234,7 +57207,7 @@ function _closeBusinessInfoModal() {
 }
 
 function saveSettings() {
-  // 사용자 명시 2026-05-11: 고동의 일기 호칭.
+  // 사용자 명시 2026-05-11: AI 호칭.
   const _userNameInput = document.getElementById('userNameInput');
   if (_userNameInput) state.userName = _userNameInput.value.trim().slice(0, 20);
   state.profile = document.getElementById('profileInput').value.trim();

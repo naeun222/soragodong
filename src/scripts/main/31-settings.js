@@ -2,7 +2,7 @@
 // SETTINGS
 // ═══════════════════════════════════════════════════════════════
 function loadSettings() {
-  // 사용자 명시 2026-05-11: 고동의 일기 호칭용 이름 입력.
+  // 사용자 명시 2026-05-11: AI 호칭용 이름 입력.
   const _userNameInput = document.getElementById('userNameInput');
   if (_userNameInput) _userNameInput.value = state.userName || '';
   document.getElementById('profileInput').value = state.profile || '';
@@ -84,7 +84,7 @@ function _closeBusinessInfoModal() {
 }
 
 function saveSettings() {
-  // 사용자 명시 2026-05-11: 고동의 일기 호칭.
+  // 사용자 명시 2026-05-11: AI 호칭.
   const _userNameInput = document.getElementById('userNameInput');
   if (_userNameInput) state.userName = _userNameInput.value.trim().slice(0, 20);
   state.profile = document.getElementById('profileInput').value.trim();

@@ -283,7 +283,7 @@ const DEFAULT_STATE = {
   periodStart: null,
   apiKey: '',
   profile: '',
-  // 사용자 명시 2026-05-11: 고동의 일기 호칭용. 비어있으면 prompt 가 fallback ('지우' placeholder).
+  // 사용자 명시 2026-05-11: AI 호칭용. 비어있으면 prompt 가 fallback ('지우' placeholder).
   userName: '',
   lastSync: null,
   // Phase 2
@@ -294,12 +294,13 @@ const DEFAULT_STATE = {
   // Phase 4
   weeklyReviews: [],
   monthlyReviews: [],
-  // 사용자 명시 2026-05-09: 회전 카드 source 4 미니 리뷰 (Haiku 3일 정리) archive.
-  // 사용자 명시 2026-05-10: 미니 리뷰 → 고동의 일기 (godongDiary) 로 전환. miniReviews 는 legacy 보존.
-  // 도서관 리뷰 모음 → '고동' 카테고리에서 둘 다 노출 (legacy 는 '고동의 옛 메모').
-  miniReviews: [],          // legacy. [{id, content, generatedAt, source:'haiku-3day'}]
-  godongDiary: [],          // [{id, date, weekday, note?, body, iso, substrateRefs[]}]
+  // legacy — 옛 회전 카드 source (사용자 명시 2026-05-18 폐기). data preserve 위해 array 만 보존.
+  miniReviews: [],          // [{id, content, generatedAt, source:'haiku-3day'}]
+  godongDiary: [],          // [{id, date, weekday, note?, body, iso, substrateRefs[]}] — 옛 schema
+  // hook-system spec (2026-05-18) — backend cron + 챗 탭 inline 큐. 메커니즘/프롬프트는 옛 godongDiary 동일.
+  godongDiaryQueue: [],     // [{id, body, generatedAt, triggerDayK, readAt, dismissedAt}] — max 30, FIFO prune
   askedHooks: [],           // [{id, body, source, trigger_dayK, hook_type, askedAt, answered, answeredAt, delivered}] — max 50
+  lastAbsenceAcknowledgedAt: null,  // 부재 후속 placeholder 5일 cooldown
   predictionFollowups: [],
   // Phase 5
   questionHistory: [],
@@ -349,6 +350,7 @@ const DEFAULT_STATE = {
     nightModeManual: null,  // null = auto, 'on' | 'off' = manual override
     hookFrequency: 'daily',       // 'daily'|'every-other-day'|'thrice-week'|'off'
     hookNotificationTime: 21,     // 시 (0-23), default 21시
+    lastChatTabEntryAt: null,     // 부재 계산 + 챕터 마무리 5분 가드 (hook-system spec)
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
     // V4 (사용자 명시 2026-05-14 ultrathink): 진주 '티켓' 카테고리 sub-type — 사용자 customizable.
     //   default 6개. settings 에서 ON/OFF + 추가/제거 가능.
@@ -432,8 +434,7 @@ const DEFAULT_STATE = {
     }
   },
 
-  // 사용자 명시 2026-05-09 (회전 카드 spec final): 홈 회전 카드 source — 진주 / 고동의 일기 / Quiz / 시뮬레이션 / 어제 / weekly~annual review.
-  // 사용자 명시 2026-05-16: 별자리 운세 source 폐기.
+  // 사용자 명시 2026-05-09 (회전 카드 spec final): 홈 회전 카드 source — 진주 / 시뮬레이션 / 어제 / weekly~annual review.
   // _ensureRotatingCardState() 가 누락 필드 자동 보완.
   rotatingCardState: {
     // 진주 — 4시간 stay

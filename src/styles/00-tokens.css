@@ -16,7 +16,7 @@
     --danger: #e06c75;
     --success: #98c379;
     --gold: #ffd700;
-    /* 사용자 명시 2026-05-10: 고동의 일기 종이 톤 (다이어리 모달 전용) */
+    /* 사용자 명시 2026-05-10: 종이 톤 (일기 inline 카드용 — hook-system spec) */
     --paper-1: #f3eadb;
     --paper-2: #ebe0cb;
     --paper-text: #3d3528;

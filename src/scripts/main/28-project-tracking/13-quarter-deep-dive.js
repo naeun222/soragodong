@@ -111,8 +111,6 @@ function renderQuarterlyDeepDive(review) {
 }
 
 // 사용자 명시 2026-05-09: 리뷰 모음에 카테고리 chip — 전체/주/월/계절/연간.
-// 사용자 명시 2026-05-18: 고동 일기 폐기 — '고동' 카테고리 + godongDiary / miniReviews 표시 제거.
-//   array 자체는 옛 사용자 데이터 손실 회피 위해 보존 (읽기/쓰기 코드 없음).
 let _archiveReviewCategory = 'all';
 function setArchiveReviewCategory(cat) {
   _archiveReviewCategory = cat || 'all';
@@ -191,7 +189,6 @@ function renderArchiveReviews() {
     const seasonLabel = r.type === 'quarterly' && r.quarterKey && typeof seasonLabelOf === 'function'
       ? seasonLabelOf(r.quarterKey, { withEmoji: true })
       : null;
-    // 사용자 명시 2026-05-18: godong-diary / mini 타입 폐기 (archive 표시 안 함).
     const typeLabel = r.type === 'weekly' ? '🌙 주간 리뷰'
       : r.type === 'monthly' ? '📅 월간 리뷰'
       : r.type === 'annual' ? '🌟 연간 리뷰'
@@ -214,7 +211,6 @@ function renderArchiveReviews() {
     const reviewKey = r.weekKey || r.monthKey || r.quarterKey || '';
     const completedAtJs = r.completedAt ? `'${r.completedAt}'` : 'null';
     // 사용자 명시 2026-05-10 (큐 8): weekly 만 inline 펼침. 다른 type 은 옛 화면 전환.
-    // 사용자 명시 2026-05-18: godong-diary / mini 분기 폐기.
     const onClickJs = r.type === 'annual'
       ? `openAnnualReview(${r.year || 'null'})`
       : r.type === 'weekly'
@@ -244,7 +240,6 @@ function renderArchiveReviews() {
 
 // 사용자 명시 2026-05-11: 리뷰 모음에서 주/월/분기/연 리뷰 모두 삭제 가능.
 //   삭제 = state array 에서 hard splice → AI substrate 자동 제외.
-// 사용자 명시 2026-05-18: godong-diary / mini 분기 폐기 (archive 표시 안 함).
 function deleteArchiveReview(type, id) {
   if (!type || !id) return;
   const labelMap = {
@@ -275,9 +270,6 @@ function deleteArchiveReview(type, id) {
   if (typeof showToast === 'function') showToast(`${label} 지웠어`);
   if (typeof renderArchiveReviews === 'function') renderArchiveReviews();
 }
-
-// Legacy compat — 옛 onclick 핸들러 호환 noop. 사용자 명시 2026-05-18: godong-diary 폐기.
-function deleteGodongDiary(_id) { /* noop — 고동 일기 폐기 (사용자 명시 2026-05-18) */ }
 
 // 사용자 명시 2026-05-10 (큐 8): weekly 카드 inline 펼침 — 화면 전환 X, 카드 안 4 섹션 toggle.
 //   4 섹션: MOMENTUM / 장면 3가지 / 흐름 / 부드러운 알림. 옛 schema (one_word_weekly / scenes / pattern.headline / risk_signals) 매핑.
@@ -367,6 +359,4 @@ function _toggleWeeklyInlineExpand(reviewId) {
   }
 }
 
-// 사용자 명시 2026-05-10 (handoff): 옛 openSavedMiniReview (rc-mini-review-overlay 패턴) 함수 제거.
-// legacy 미니 리뷰 row 클릭 시 03f-godong-diary-modal.js 의 신규 openSavedMiniReview 가 동작 (단일 entry readonly 모달).
 

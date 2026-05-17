@@ -1,8 +1,6 @@
 // 사용자 명시 2026-05-09 (회전 카드 spec final): 미컨펌 우선 정렬 + 세션 lock.
 // spec: rotating-card-final-2026-05-09.md (이 문서가 최종)
-// 사용자 명시 2026-05-16: 별자리 운세 source 폐기. 4 source 남음: 진주 / 고동의 일기 / 시뮬레이션 / 어제 + weekly~annual review.
-// 사용자 명시 2026-05-18: 고동 일기 source 폐기. 3 source 남음: 진주 / 시뮬레이션 / 어제 + weekly~annual review.
-// 폐기: 어제 비교 / 회상 / 통찰(→ 새로 본 너 흡수) / Surprise / 별자리 운세 / 고동 일기
+// source: 진주 / 시뮬레이션 / 어제 + weekly~annual review
 
 // =============================================================================
 // STATE 마이그 — 누락 필드 자동 보완 (preferences namespace 보호)
@@ -22,9 +20,6 @@ function _ensureRotatingCardState() {
   // 미니 리뷰 (legacy)
   if (typeof r.lastMiniReviewAt === 'undefined') r.lastMiniReviewAt = null;
   if (typeof r.miniReviewContentId === 'undefined') r.miniReviewContentId = null;
-  // 고동의 일기 — 사용자 명시 2026-05-18 폐기. state 마이그 호환 위해 필드는 보존 (옛 사용자 데이터 손실 회피).
-  if (typeof r.lastGodongDiaryAt === 'undefined') r.lastGodongDiaryAt = null;
-  if (typeof r.godongDiaryContentId === 'undefined') r.godongDiaryContentId = null;
   // Quiz
   if (typeof r.quizDay === 'undefined') r.quizDay = null;
   if (typeof r.quizProgress === 'undefined') r.quizProgress = null;
@@ -81,15 +76,9 @@ function _rcIsEveningMode() {
 
 // =============================================================================
 // 상수 — baseWeight + tie-breaker stable order
-// 사용자 명시 2026-05-09 (재정정): '새로 본 너' source 폐기 → Quiz 로 통합 (둘 다 caseFormulation 미컨펌 풀 사용 — 중복).
-// 사용자 명시 2026-05-09 (추가): 시뮬레이션 source 6 추가 — Sonnet, 4h block, on-demand generate.
-// 사용자 명시 2026-05-16: 별자리 운세 source 폐기.
-// 4 source: 진주 / 미니 리뷰 / Quiz / 시뮬레이션
 // =============================================================================
-// 사용자 명시 2026-05-10 (재정의): review 4개 = 명확 우선순위. 그 외 = 동급 weight 100.
-//   1 annual / 2 quarterly / 3 monthly / 4 weekly / 5 (동급): 어제 기록 / 진주 큐레이션 / 상상 시뮬
-//   사용자 미컨펌 우선순위 정책 폐기 (옛 _rcSortByConfirmation unconfirmed 우선 분기).
-// 사용자 명시 2026-05-18: 고동 일기 source 폐기 — godongDiary weight + order entry 제거.
+// review 4개 = 명확 우선순위 (annual > quarterly > monthly > weekly).
+// 그 외 = 동급 weight 100, _RC_SOURCE_ORDER tie-break 으로 결정 (어제 / 진주 / 시뮬).
 const _RC_BASE_WEIGHTS = {
   review_annual:    500,
   review_quarterly: 400,
@@ -157,8 +146,7 @@ function _rcTodayKey() {
   return new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 10);
 }
 
-// 4AM cutoff key — 사용자 명시 2026-05-09: 미니 리뷰 / Quiz / 고동의 일기 모두 새벽 4시 cutoff 일관성.
-// 사용자 명시 2026-05-11: getDayKey 위임으로 통일 (옛 자체 구현 제거).
+// 4AM cutoff key — getDayKey 위임으로 통일.
 function _rcCutoffKeyOf(timestampOrIso) {
   if (typeof getDayKey === 'function') return getDayKey(timestampOrIso);
   // fallback
@@ -458,18 +446,13 @@ function _rcConfirmNewView(itemId, verdict) {
 }
 
 // =============================================================================
-// 가용 source 수집 — 사용자 명시 2026-05-09: '새로 본 너' 폐기 → Quiz 통합. 사용자 명시 2026-05-16: 운세 폐기.
-// 사용자 명시 2026-05-18: 고동 일기 source 폐기 (모달/source/sonnet 전체 폐기).
-// 진주 / 시뮬레이션 / 어제 / weekly~annual review
+// 가용 source 수집 — 진주 / 시뮬레이션 / 어제 / weekly~annual review
 // =============================================================================
 function _rcCollectAvailable() {
   const safe = (fn, label) => {
     if (typeof fn !== 'function') return null;
     try { return fn(); } catch (e) { console.warn('[rotating-card source]', label, e); return null; }
   };
-  // 사용자 명시 2026-05-10: quiz source 제거 — _rcSource4Quiz 호출 X (함수 자체는 dead 로 잔존).
-  // 사용자 명시 2026-05-10 (batch 11): 5 news source 추가 — 어제 기록 / weekly / monthly / quarterly / annual review.
-  // 사용자 명시 2026-05-18: 고동 일기 source 전체 폐기 (_rcSource3GodongDiary / _callGodongDiarySonnet / 03f-godong-diary-modal.js 삭제).
   const all = [
     safe(_rcSource1Pearl,      'pearl'),
     safe(typeof _rcSource6Simulation === 'function' ? _rcSource6Simulation : null, 'simulation'),
@@ -486,7 +469,6 @@ function _rcCollectAvailable() {
 // godong 표정 SVG — source 별 mood 매핑.
 // pearl=inspired(별눈), newView=surprised(큰 눈),
 // quiz=thinking(?), quizDone=proud(별3개+자부심)
-// 사용자 명시 2026-05-18: 고동 일기 source 폐기 — godongDiary mood 매핑 제거.
 // =============================================================================
 function _rcGodongSvg(sourceId) {
   const moodMap = {
