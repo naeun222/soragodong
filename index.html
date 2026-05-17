@@ -23101,12 +23101,8 @@ async function runFirstPearlTutorialV8() {
     // 사용자 명시 2026-05-06 ultrathink: '+ 진주 추가' step 폐기 — 인트로 / 오늘의너 / 카테고리 / 마무리 4 step.
     await _pearlCoachmarkIntro();
     await _v8Sleep(220);
-    // V4 fix (사용자 명시 2026-05-17 재): 인사 문구 (_pearlCoachmarkIntro) 직후 hero 큐레이션 동적 inject — _pearlCoachmarkTodayYou target 보장.
-    //   일반 view 영구 노출 X, 튜토리얼 한정. finally cleanup 에서 hero 비움.
-    if (typeof renderLibraryHero === 'function') { try { renderLibraryHero(); } catch (e) { console.warn('[hero inject]', e); } }
-    await _v8Sleep(120);
-    await _pearlCoachmarkTodayYou();
-    await _v8Sleep(220);
+    // V4 fix (사용자 명시 2026-05-18): '오늘의 너' 스탭 (_pearlCoachmarkTodayYou) 생략 — 인트로 직후 마무리.
+    //   hero 동적 inject 도 같이 제거 (오늘의너 target 보장 필요 X). 함수 본체는 dead code 보존.
     await _pearlCoachmarkClosing();
     await _v8Sleep(280);
   } catch (e) {
