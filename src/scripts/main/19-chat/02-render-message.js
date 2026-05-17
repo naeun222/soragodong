@@ -163,7 +163,8 @@ function _showFirstDeeperTutoIfGuest() {
     key: 'firstDeeperBtn',
     pages: [
       { html: `고민이 있을 때, 어찌해야 할지 모르겠을 때,<br>고동이에게 털어놓고 <b>'더 알아보기'</b>를 눌러보세요.<br><br>마법의 소라고동이 이름값을 할 거예요. 🐚` },
-      { html: `이 앱의 모든 정보는 <b>AI 학습에 전혀 쓰이지 않고</b>,<br>종단간 암호화로 보호됩니다.<br><br>로그인 후 비밀번호로 잠그면, <b>회사도 개발자도 아무도</b> 당신의 데이터에 접근할 수 없습니다. 🔒` }
+      // V4 (사용자 명시 2026-05-17 ultrathink): page 2 카피 단순화 + okLabel='오호라'.
+      { html: `이 앱의 모든 정보는<br><b>AI 학습에 전혀 쓰이지 않고</b>,<br>종단간 암호화로 보호됩니다.<br><br><span style="color:var(--text-dim); font-size:13px;">(로그인 후)</span>`, okLabel: '오호라' }
     ]
   });
 }

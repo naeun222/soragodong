@@ -32,7 +32,8 @@ function _showSimpleTutoModal(opts) {
   function _renderPage() {
     const p = opts.pages[idx] || {};
     const isLast = idx === total - 1;
-    const btnLabel = isLast ? '알겠어' : '다음 →';
+    // V4 (사용자 명시 2026-05-17 ultrathink): page-level okLabel override 지원 — 페이지별 버튼 라벨.
+    const btnLabel = p.okLabel || (isLast ? '알겠어' : '다음 →');
     const dots = total > 1
       ? `<div class="simple-tuto-dots">${opts.pages.map((_, i) => `<span class="std-dot ${i === idx ? 'is-active' : ''}"></span>`).join('')}</div>`
       : '';

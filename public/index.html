@@ -20950,6 +20950,17 @@ async function init() {
   } catch (e) { console.warn('[hookTrigger parse]', e); }
 }
 
+// V4 (사용자 명시 2026-05-17 ultrathink): 모든 튜토 대상 = 게스트 OR 미구독 사용자.
+//   구독 활성 (Light/Plus/Premium) 사용자는 튜토 X — 이미 commit 된 사용자.
+//   각 튜토 shouldRunXxx 가 이 helper 호출 (게이트).
+function _isTutorialEligibleUser() {
+  if (typeof state === 'undefined' || !state) return false;
+  if (state.isGuest) return true;
+  const _bill = (typeof window !== 'undefined') ? window._billingCache : null;
+  const _isSubscriber = !!(_bill && _bill.subscription_plan && _bill.subscription_plan !== 'free' && _bill.subscription_active);
+  return !_isSubscriber;
+}
+
 // V4 (사용자 명시 2026-05-16 ultrathink): 옛 풀 튜토리얼 인프라 폐기. V8/V9 시작 튜토 + sim 튜토 picker 만 활성.
 // ONBOARDING_STEPS = [] 빈 배열은 다른 파일에서 .length / findIndex 참조 — 빈 배열 유지로 모든 옛 경로 자연 종료.
 // 활성 step (참고): Core 1 welcome / intake_intro / chapter_close_intro / core1_finish, Core 2 click_strategy ~ shell_obtained,
@@ -22944,12 +22955,11 @@ function _v8CleanupAll() {
   }
   document.querySelectorAll('.v8-coach-ring').forEach(el => el.remove());
 }
-// ═══════════════════════════════════════════════════════════════
-// V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 '✦ 해볼게' / '🧬 전략으로' 클릭 트리거.
-// 옛 Core 2 튜토리얼 흐름 (전략 카드 미리보기 → 미션 등록 → 홈 → 미션 카드 → 첫 소라) 을
-// V8 코치마크 UI 로 재현. 시뮬 (testerMode) X — 사용자 실제 액션을 그대로 보존.
-// 트리거: state.tutorialShown.core2 !== true 일 때 1회. V8 코치마크 인프라 (_v8ShowCoachmark / _v8Sleep / _v8CleanupAll) 재사용.
-// ═══════════════════════════════════════════════════════════════
+// V4 (사용자 명시 2026-05-17 ultrathink): firstStrategyTutorialV8 재설계 — 3 page 안내만.
+//   옛: 5 step interactive (전략 카드 미리보기 → ✦ 해볼게 클릭 → 🏠 홈으로 이동 → 미션 카드 → 마무리).
+//   새: 3 page 안내. testerMode X / 시드 X — 사용자 실제 액션 보존. interactive 없음 (OK 클릭만).
+// trigger: 사용자가 첫 '✦ 해볼게' 누른 시점. trigger='accept' 케이스만 fire (trigger='strategy' 도 호환).
+// 대상: 게스트 OR 미구독 (_isTutorialEligibleUser).
 
 function shouldRunFirstStrategyTutorial() {
   if (typeof state === 'undefined' || !state) return false;
@@ -22960,10 +22970,10 @@ function shouldRunFirstStrategyTutorial() {
   if (window._c2TutorialRunning) return false;
   if (window._onbTutorialMode) return false;
   if (typeof _v8ShowCoachmark !== 'function') return false;
+  if (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser()) return false;
   return true;
 }
 
-// trigger: 'strategy' (🧬 전략으로 첫 클릭) | 'accept' (✦ 해볼게 첫 클릭, 전략 자동 저장 포함)
 async function runFirstStrategyTutorialV8(trigger, msgIdx) {
   if (window._c2TutorialRunning) return;
   window._c2TutorialRunning = true;
@@ -22971,36 +22981,27 @@ async function runFirstStrategyTutorialV8(trigger, msgIdx) {
   state.tutorialShown.core2 = true;
   try { saveState(); } catch {}
   try {
-    // ── Step 1: 방금 저장된 전략 카드 미리보기 — '계속 ✦' 사용자 클릭 까지 대기 ──
-    // 사용자 보고 2026-05-06: 자동 2.4s dismiss = 사용자 읽는 중 끊김. 페이스 보장.
+    // Page 1a: 코치마크 title 안내
+    await _c2P1Title();
+    await _v8Sleep(200);
+    // Page 1b: 전략 카드 미리보기 모달 (옛 _showStrategyCardModal — 사용자 '계속' 클릭 후 닫힘)
     const lastCard = (Array.isArray(state.topicCards) && state.topicCards.length > 0)
       ? state.topicCards[state.topicCards.length - 1]
       : null;
     const cardOk = lastCard && lastCard.category === 'strategy';
     if (cardOk && typeof _showStrategyCardModal === 'function' && !document.querySelector('.strategy-card-preview-overlay')) {
       _showStrategyCardModal(lastCard);
-      // 사용자 명시 2026-05-06 ultrathink: 카드 '계속' 누르면 직후 홈 코치마크 fire — sleep 220→0, 추가 가드 polling 즉시 1회 check.
       await _v8WaitForOverlayGone('.strategy-card-preview-overlay');
     }
-
-    // ── Step 2: trigger='strategy' 한정 — ✦ 해볼게 클릭 안내 (interactive) ──
-    if (trigger === 'strategy') {
-      const proceeded = await _c2CoachmarkAccept(msgIdx);
-      if (!proceeded) return;
-      await _v8Sleep(700);  // 미션 생성 + 셀러브 settle
-    }
-
-    // ── Step 3: 홈 이동 (직후 fire) ──
-    await _c2CoachmarkGoHome();
-    try { if (typeof renderTodayMission === 'function') renderTodayMission(); } catch {}
-    await _v8Sleep(150);
-
-    // ── Step 4: 미션 카드 안내 ──
-    await _c2CoachmarkMissionCard();
-    await _v8Sleep(180);
-
-    // ── Step 5: 마무리 ──
-    await _c2CoachmarkClosing();
+    // Page 2: 홈 자동 이동 + 소라의 부름 안내
+    if (typeof showScreen === 'function') showScreen('home');
+    await _v8Sleep(350);
+    if (typeof renderTodayMission === 'function') renderTodayMission();
+    await _v8Sleep(220);
+    await _c2P2();
+    await _v8Sleep(220);
+    // Page 3: 양생방 안내
+    await _c2P3();
   } catch (e) {
     console.warn('[c2 first tutorial]', e);
   } finally {
@@ -23010,100 +23011,48 @@ async function runFirstStrategyTutorialV8(trigger, msgIdx) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 코치마크 — 옛 Core 2 step 의 V8 재해석
-// ─────────────────────────────────────────────────────────────
-
-function _c2CoachmarkAccept(msgIdx) {
-  // 옛 click_accept step — '✦ 해볼게' 직접 누르도록.
-  const target = '.proposal-btn.accept';
+function _c2P1Title() {
   const body = `
-    <div class="v8-coach-title">✦ 해볼게</div>
+    <div class="v8-coach-title">홈의 '양생방'에 전략 카드가 생겼어요.</div>
     <div class="v8-coach-text">
-      이 전략을 — 오늘의 미션으로 받아볼래?<br>
-      <span class="v8-coach-text-soft">한 번 직접 눌러봐 ✦</span>
-    </div>
-  `;
-  return _v8ShowCoachmark({
-    targetSelector: target,
-    body,
-    position: 'top',
-    interactive: true,
-    waitFor: () => {
-      // msgIdx 의 proposalResponse='accept' 또는 strategyId 의 mission 등록 확인.
-      try {
-        const m = state.chatMessages && state.chatMessages[msgIdx];
-        if (m && m.proposalResponse === 'accept') return true;
-      } catch {}
-      return false;
-    }
-  });
-}
-
-function _c2CoachmarkGoHome() {
-  // 옛 go_home_for_mission step — 홈 nav 한 번 눌러서 진입.
-  const target = '.nav-item[data-screen="home"]';
-  const body = `
-    <div class="v8-coach-title">🏠 홈으로</div>
-    <div class="v8-coach-text">
-      방금 등록된 미션 보러 가자.<br>
-      <span class="v8-coach-text-soft">아래 🏠 한 번 눌러볼래?</span>
-    </div>
-  `;
-  return _v8ShowCoachmark({
-    targetSelector: target,
-    body,
-    position: 'top',
-    interactive: true,
-    waitFor: () => {
-      try {
-        const homeScreen = document.querySelector('#home.screen.active, #home.screen.show');
-        if (homeScreen) return true;
-        // active class 못 찾으면 currentScreen 변수 fallback
-        if (typeof currentScreen !== 'undefined' && currentScreen === 'home') return true;
-      } catch {}
-      return false;
-    }
-  });
-}
-
-function _c2CoachmarkMissionCard() {
-  // 옛 mission_card_intro step — 미션 카드 가리키며 설명만 (클릭 강요 X).
-  // 사용자 명시 2026-05-06: 시뮬 X — 진짜 미션이라 인증 흐름 강요는 부담. 안내만.
-  // 사용자 보고 2026-05-06: noMask — 다른 모달이 같이 떠도 어두워지지 않게 + 화면 가독성 보존.
-  const target = '.mission-card.sora-call, .mission-btn.complete';
-  const body = `
-    <div class="v8-coach-title">⭐ 소라의 부름</div>
-    <div class="v8-coach-text">
-      여기가 너의 첫 미션 ✦<br>
-      실제로 한 번 해보고 — <b>해냈어</b> 누르면<br>
-      <b>🐚 소라</b> 하나가 모래사장에 쌓여.<br>
-      <span class="v8-coach-text-soft">지금 안 눌러도 OK. 너의 속도로.</span>
-    </div>
-  `;
-  return _v8ShowCoachmark({
-    targetSelector: target,
-    body,
-    position: 'top',
-    noMask: true
-  });
-}
-
-function _c2CoachmarkClosing() {
-  // 옛 shell_obtained step — 한 사이클 마무리 멘트.
-  const body = `
-    <div class="v8-coach-title">전략 DNA 가 자라기 시작했어 🐚</div>
-    <div class="v8-coach-text">
-      대화 → 전략 → 미션 → 소라.<br>
-      이게 한 사이클이야 ✦<br>
-      <span class="v8-coach-text-soft">같은 전략 또 통할 때마다 — 또 하나 ✨<br>너의 속도로 천천히. 부담 없이.</span>
+      <span class="v8-coach-text-soft">전략 카드 미리보기를 확인해보세요.</span>
     </div>
   `;
   return _v8ShowCoachmark({
     body,
     allowNoTarget: true,
     position: 'bottom',
-    noMask: true
+    okLabel: '알겠어'
+  });
+}
+
+function _c2P2() {
+  const body = `
+    <div class="v8-coach-title">소라의 부름</div>
+    <div class="v8-coach-text">
+      고동이가 제안한 오늘의 미션을<br>수락하셨군요!<br><br>
+      인증샷을 보내면 고동이가 안전하게 확인한 뒤<br><b>'소라' 아이템</b>을 줍니다.
+    </div>
+  `;
+  return _v8ShowCoachmark({
+    body,
+    allowNoTarget: true,
+    position: 'bottom',
+    okLabel: '알겠어'
+  });
+}
+
+function _c2P3() {
+  const body = `
+    <div class="v8-coach-text">
+      자세한 건 <b>'양생방'</b>을 들어가서<br>확인해보세요. 👍
+    </div>
+  `;
+  return _v8ShowCoachmark({
+    body,
+    allowNoTarget: true,
+    position: 'bottom',
+    okLabel: '오케이'
   });
 }
 
@@ -23156,6 +23105,8 @@ function shouldRunFirstPearlTutorial() {
   if (typeof _v8ShowCoachmark !== 'function') return false;
   if (typeof toggleTesterMode !== 'function') return false;
   if (typeof testSeedV4Data !== 'function') return false;
+  // V4 (사용자 명시 2026-05-17 ultrathink): 게스트 OR 미구독 사용자 한정.
+  if (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser()) return false;
   return true;
 }
 
@@ -23281,13 +23232,17 @@ function _pearlCoachmarkAddBtn() {
 }
 
 function _pearlCoachmarkClosing() {
+  // V4 (사용자 명시 2026-05-17 ultrathink): 카피 + okLabel 변경.
   const body = `
-    <div class="v8-coach-title">튜토리얼이 끝났습니다!</div>
+    <div class="v8-coach-text">
+      소중한 기억들을 한 번 넣어보아요. 👍
+    </div>
   `;
   return _v8ShowCoachmark({
     body,
     allowNoTarget: true,
-    position: 'bottom'
+    position: 'bottom',
+    okLabel: '그래 알았다'
   });
 }
 // ═══════════════════════════════════════════════════════════════
@@ -23446,7 +23401,8 @@ function _simCoachmarkClosing() {
 // 1) 도서관 첫 진입 → 일기·대화 칩 튜토
 // ═══════════════════════════════════════════════════════════════
 
-function shouldRunDiaryLibTutorial() { return _shouldRunSimTutorial('diaryLib'); }
+// V4 (사용자 명시 2026-05-17 ultrathink): runDiaryLibTutorialV8 폐기 — 항상 false.
+function shouldRunDiaryLibTutorial() { return false; }
 
 async function runDiaryLibTutorialV8() {
   await _runSimTutorial({
@@ -23541,7 +23497,10 @@ function _diaryCoachmarkChapterAuto() {
 // 2) 깨달음 칩 첫 클릭 → 깨달음 튜토
 // ═══════════════════════════════════════════════════════════════
 
-function shouldRunInsightsTutorial() { return _shouldRunSimTutorial('insights'); }
+function shouldRunInsightsTutorial() {
+  if (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser()) return false;
+  return _shouldRunSimTutorial('insights');
+}
 
 async function runInsightsTutorialV8() {
   await _runSimTutorial({
@@ -23647,7 +23606,8 @@ function _magicCoachmarkSteps() {
 // 4) 리뷰 모음 첫 진입 → 리뷰 튜토
 // ═══════════════════════════════════════════════════════════════
 
-function shouldRunReviewsTutorial() { return _shouldRunSimTutorial('reviews'); }
+// V4 (사용자 명시 2026-05-17 ultrathink): runReviewsTutorialV8 폐기 — 항상 false.
+function shouldRunReviewsTutorial() { return false; }
 
 async function runReviewsTutorialV8() {
   await _runSimTutorial({
@@ -23769,7 +23729,10 @@ function _firstReviewsRealCoachmarkClosing() {
 // 5) 숙고 질문 첫 진입 → 숙고 튜토
 // ═══════════════════════════════════════════════════════════════
 
-function shouldRunReflectionTutorial() { return _shouldRunSimTutorial('reflection'); }
+function shouldRunReflectionTutorial() {
+  if (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser()) return false;
+  return _shouldRunSimTutorial('reflection');
+}
 
 async function runReflectionTutorialV8() {
   await _runSimTutorial({
@@ -23836,7 +23799,10 @@ function _reflectionCoachmarkFromChat() {
 //    사용자 명시: 결과 체크부터. 진짜 모달 띄우면 사용자 액션 막힘 가능 → 안내 코치마크로 시뮬.
 // ═══════════════════════════════════════════════════════════════
 
-function shouldRunCore3Tutorial(opts) { return _shouldRunSimTutorial('core3', opts); }
+function shouldRunCore3Tutorial(opts) {
+  if (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser()) return false;
+  return _shouldRunSimTutorial('core3', opts);
+}
 
 async function runCore3TutorialV8() {
   await _runSimTutorial({
@@ -23858,13 +23824,13 @@ async function runCore3TutorialV8() {
 }
 
 function _core3CoachmarkResultCheck() {
-  // 결과 체크 흐름 안내. 시드에 worked 미션 + 결과 미체크 미션 둘 다 있어 상상하기 쉬움.
+  // V4 (사용자 명시 2026-05-17 ultrathink): 카피 존댓말로.
   const body = `
     <div class="v8-coach-title">📋 결과 체크</div>
     <div class="v8-coach-text">
-      미션 해낸 다음날, 고동이가 물어봐 —<br>
-      <b>✓ 통했어 / 🤔 별로 / ✗ 안 통했어</b><br>
-      <span class="v8-coach-text-soft">'통했어' 누르면 — 그 전략의 DNA 한 조각이 모래사장에 쌓여 ✦</span>
+      미션 해낸 다음날, 고동이가 물어봐요 —<br>
+      <b>✓ 통했어요 / 🤔 별로 / ✗ 안 통했어요</b><br>
+      <span class="v8-coach-text-soft">'통했어요' 누르면 — 그 전략의 DNA 한 조각이 모래사장에 쌓입니다 ✦</span>
     </div>
   `;
   return _v8ShowCoachmark({
@@ -23883,8 +23849,8 @@ function _core3CoachmarkOpenBeach() {
     const body = `
       <div class="v8-coach-title">🏖 모래사장</div>
       <div class="v8-coach-text">
-        통한 미션마다 — 소라 하나가 쌓여 ✦<br>
-        <span class="v8-coach-text-soft">시드로 시뮬 소라들 미리 깔아뒀어.</span>
+        통한 미션마다 — 소라 하나가 쌓입니다 ✦<br>
+        <span class="v8-coach-text-soft">시드로 시뮬 소라들 미리 깔아뒀어요.</span>
       </div>
     `;
     return _v8ShowCoachmark({
@@ -23907,8 +23873,8 @@ function _core3CoachmarkDnaShell() {
   const body = `
     <div class="v8-coach-title">🧬 마크 붙은 소라</div>
     <div class="v8-coach-text">
-      봐 — <b>🧬 마크</b> 붙은 소라.<br>
-      이건 네가 통한 <em>전략의 DNA 한 조각</em>이야 ✨<br>
+      보세요 — <b>🧬 마크</b> 붙은 소라.<br>
+      이건 통하신 <em>전략의 DNA 한 조각</em>입니다 ✨<br>
       <span class="v8-coach-text-soft">같은 전략 또 통할 때마다 — 또 하나.</span>
     </div>
   `;
@@ -23924,8 +23890,8 @@ function _core3CoachmarkPearlMerge() {
   const body = `
     <div class="v8-coach-title">💎 5조각 → DNA 진주</div>
     <div class="v8-coach-text">
-      DNA 5조각 모이면 — 합쳐져서 <b>💎 DNA 진주</b>가 돼.<br>
-      <span class="v8-coach-text-soft">너만의 힘 ✦ 같은 상황 또 오면, 이미 너의 무기.</span>
+      DNA 5조각 모이면 — 합쳐져서 <b>💎 DNA 진주</b>가 됩니다.<br>
+      <span class="v8-coach-text-soft">당신만의 힘 ✦ 같은 상황 또 오면, 이미 당신의 무기.</span>
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });
@@ -24195,7 +24161,8 @@ function _showSimpleTutoModal(opts) {
   function _renderPage() {
     const p = opts.pages[idx] || {};
     const isLast = idx === total - 1;
-    const btnLabel = isLast ? '알겠어' : '다음 →';
+    // V4 (사용자 명시 2026-05-17 ultrathink): page-level okLabel override 지원 — 페이지별 버튼 라벨.
+    const btnLabel = p.okLabel || (isLast ? '알겠어' : '다음 →');
     const dots = total > 1
       ? `<div class="simple-tuto-dots">${opts.pages.map((_, i) => `<span class="std-dot ${i === idx ? 'is-active' : ''}"></span>`).join('')}</div>`
       : '';
@@ -24251,6 +24218,8 @@ function shouldRunFirstHomeTutorial() {
   if (window._firstHomeTutorialActive) return false;
   if (typeof _v8ShowCoachmark !== 'function') return false;
   if (typeof toggleTesterMode !== 'function') return false;
+  // V4 (사용자 명시 2026-05-17 ultrathink): 게스트 OR 미구독 사용자 한정.
+  if (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser()) return false;
   return true;
 }
 
@@ -29194,9 +29163,13 @@ function renderRotatingCard() {
       if (s) { picked = s; break; }
     }
 
-    // 카드 + (낮 mode 일 때) 작은 체크인 링크.
+    // 카드 + 작은 체크인 링크.
+    // V4 fix (사용자 명시 2026-05-17 재): mini-link 시간대 무관 표시. checkin 카드가 priority slot 에 있을 때만 skip (중복 회피).
+    //   특히 done 상태 "✓ 오늘 체크인 — 보기 / 수정" 이 저녁 모드에서도 보여야 함 (옛 위치 복구).
     const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
-    const miniLink = (!isEvening) ? _rcCheckinMiniLink(checkinDone) : '';
+    const miniLink = (picked && picked.sourceType === 'checkin')
+      ? ''  // checkin 카드가 priority slot 에 = 중복 회피
+      : _rcCheckinMiniLink(checkinDone);  // 그 외 — done/not-done 둘 다 표시
 
     if (!cardHtml && !miniLink) {
       container.innerHTML = '';
@@ -37836,14 +37809,15 @@ function dismissPlaceholder(key) {
 }
 
 // V4 (v8 묶음 18) 2026-05-03: Inline tip 8 trigger — 각 1회만 (state._shownInlineTips 가드)
-// V4 fix (사용자 명시 2026-05-17 ultrathink): checkinFirstEntry 폐기 — firstHomeTutorial 의 page 1 (👍 체크인부터) 로 흡수.
-//   하나의 진입점만 (firstHomeTutorial), 중복 안내 회피.
+// V4 fix (사용자 명시 2026-05-17 ultrathink):
+//   - checkinFirstEntry 폐기 (firstHomeTutorial 의 page 1 흡수).
+//   - firstShell 폐기 (모래사장 simple-tuto modal 과 중복 — 모달이 책임. inline tip 토스트 X).
+//   - cutoffWarning 존댓말로 갱신.
 const INLINE_TIPS = {
-  firstShell: '🐚 미션 해낸 모든 소라가 여기 모여 — 대화탭에서 ✦ 해볼게 눌러봐',
   specialShell: '✨ 특별한 소라 — 가챠 5% 확률',
   syncDotRed: '🔴 동기화 대기 — 클릭하면 강제 저장',
   syncDotClick: '✓ 강제 저장 완료',
-  cutoffWarning: '🌙 새벽 4시 이전 체크인 = 전날로 기록돼',
+  cutoffWarning: '🌙 새벽 4시 이전 체크인은 전날로 기록됩니다.',
   opusToggle: '🦉 Opus = 5x 빠르게 차감 (Premium 만)',
   modeFirstClick: '🌙 모드 전환 — 분위기에 맞게'
 };
@@ -39766,7 +39740,8 @@ function _showFirstDeeperTutoIfGuest() {
     key: 'firstDeeperBtn',
     pages: [
       { html: `고민이 있을 때, 어찌해야 할지 모르겠을 때,<br>고동이에게 털어놓고 <b>'더 알아보기'</b>를 눌러보세요.<br><br>마법의 소라고동이 이름값을 할 거예요. 🐚` },
-      { html: `이 앱의 모든 정보는 <b>AI 학습에 전혀 쓰이지 않고</b>,<br>종단간 암호화로 보호됩니다.<br><br>로그인 후 비밀번호로 잠그면, <b>회사도 개발자도 아무도</b> 당신의 데이터에 접근할 수 없습니다. 🔒` }
+      // V4 (사용자 명시 2026-05-17 ultrathink): page 2 카피 단순화 + okLabel='오호라'.
+      { html: `이 앱의 모든 정보는<br><b>AI 학습에 전혀 쓰이지 않고</b>,<br>종단간 암호화로 보호됩니다.<br><br><span style="color:var(--text-dim); font-size:13px;">(로그인 후)</span>`, okLabel: '오호라' }
     ]
   });
 }

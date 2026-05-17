@@ -207,14 +207,15 @@ function dismissPlaceholder(key) {
 }
 
 // V4 (v8 묶음 18) 2026-05-03: Inline tip 8 trigger — 각 1회만 (state._shownInlineTips 가드)
-// V4 fix (사용자 명시 2026-05-17 ultrathink): checkinFirstEntry 폐기 — firstHomeTutorial 의 page 1 (👍 체크인부터) 로 흡수.
-//   하나의 진입점만 (firstHomeTutorial), 중복 안내 회피.
+// V4 fix (사용자 명시 2026-05-17 ultrathink):
+//   - checkinFirstEntry 폐기 (firstHomeTutorial 의 page 1 흡수).
+//   - firstShell 폐기 (모래사장 simple-tuto modal 과 중복 — 모달이 책임. inline tip 토스트 X).
+//   - cutoffWarning 존댓말로 갱신.
 const INLINE_TIPS = {
-  firstShell: '🐚 미션 해낸 모든 소라가 여기 모여 — 대화탭에서 ✦ 해볼게 눌러봐',
   specialShell: '✨ 특별한 소라 — 가챠 5% 확률',
   syncDotRed: '🔴 동기화 대기 — 클릭하면 강제 저장',
   syncDotClick: '✓ 강제 저장 완료',
-  cutoffWarning: '🌙 새벽 4시 이전 체크인 = 전날로 기록돼',
+  cutoffWarning: '🌙 새벽 4시 이전 체크인은 전날로 기록됩니다.',
   opusToggle: '🦉 Opus = 5x 빠르게 차감 (Premium 만)',
   modeFirstClick: '🌙 모드 전환 — 분위기에 맞게'
 };

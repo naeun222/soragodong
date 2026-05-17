@@ -22,6 +22,8 @@ function shouldRunFirstHomeTutorial() {
   if (window._firstHomeTutorialActive) return false;
   if (typeof _v8ShowCoachmark !== 'function') return false;
   if (typeof toggleTesterMode !== 'function') return false;
+  // V4 (사용자 명시 2026-05-17 ultrathink): 게스트 OR 미구독 사용자 한정.
+  if (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser()) return false;
   return true;
 }
 

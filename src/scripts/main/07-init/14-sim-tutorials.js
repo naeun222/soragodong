@@ -154,7 +154,8 @@ function _simCoachmarkClosing() {
 // 1) 도서관 첫 진입 → 일기·대화 칩 튜토
 // ═══════════════════════════════════════════════════════════════
 
-function shouldRunDiaryLibTutorial() { return _shouldRunSimTutorial('diaryLib'); }
+// V4 (사용자 명시 2026-05-17 ultrathink): runDiaryLibTutorialV8 폐기 — 항상 false.
+function shouldRunDiaryLibTutorial() { return false; }
 
 async function runDiaryLibTutorialV8() {
   await _runSimTutorial({
@@ -249,7 +250,10 @@ function _diaryCoachmarkChapterAuto() {
 // 2) 깨달음 칩 첫 클릭 → 깨달음 튜토
 // ═══════════════════════════════════════════════════════════════
 
-function shouldRunInsightsTutorial() { return _shouldRunSimTutorial('insights'); }
+function shouldRunInsightsTutorial() {
+  if (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser()) return false;
+  return _shouldRunSimTutorial('insights');
+}
 
 async function runInsightsTutorialV8() {
   await _runSimTutorial({
@@ -355,7 +359,8 @@ function _magicCoachmarkSteps() {
 // 4) 리뷰 모음 첫 진입 → 리뷰 튜토
 // ═══════════════════════════════════════════════════════════════
 
-function shouldRunReviewsTutorial() { return _shouldRunSimTutorial('reviews'); }
+// V4 (사용자 명시 2026-05-17 ultrathink): runReviewsTutorialV8 폐기 — 항상 false.
+function shouldRunReviewsTutorial() { return false; }
 
 async function runReviewsTutorialV8() {
   await _runSimTutorial({
@@ -477,7 +482,10 @@ function _firstReviewsRealCoachmarkClosing() {
 // 5) 숙고 질문 첫 진입 → 숙고 튜토
 // ═══════════════════════════════════════════════════════════════
 
-function shouldRunReflectionTutorial() { return _shouldRunSimTutorial('reflection'); }
+function shouldRunReflectionTutorial() {
+  if (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser()) return false;
+  return _shouldRunSimTutorial('reflection');
+}
 
 async function runReflectionTutorialV8() {
   await _runSimTutorial({
@@ -544,7 +552,10 @@ function _reflectionCoachmarkFromChat() {
 //    사용자 명시: 결과 체크부터. 진짜 모달 띄우면 사용자 액션 막힘 가능 → 안내 코치마크로 시뮬.
 // ═══════════════════════════════════════════════════════════════
 
-function shouldRunCore3Tutorial(opts) { return _shouldRunSimTutorial('core3', opts); }
+function shouldRunCore3Tutorial(opts) {
+  if (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser()) return false;
+  return _shouldRunSimTutorial('core3', opts);
+}
 
 async function runCore3TutorialV8() {
   await _runSimTutorial({
@@ -566,13 +577,13 @@ async function runCore3TutorialV8() {
 }
 
 function _core3CoachmarkResultCheck() {
-  // 결과 체크 흐름 안내. 시드에 worked 미션 + 결과 미체크 미션 둘 다 있어 상상하기 쉬움.
+  // V4 (사용자 명시 2026-05-17 ultrathink): 카피 존댓말로.
   const body = `
     <div class="v8-coach-title">📋 결과 체크</div>
     <div class="v8-coach-text">
-      미션 해낸 다음날, 고동이가 물어봐 —<br>
-      <b>✓ 통했어 / 🤔 별로 / ✗ 안 통했어</b><br>
-      <span class="v8-coach-text-soft">'통했어' 누르면 — 그 전략의 DNA 한 조각이 모래사장에 쌓여 ✦</span>
+      미션 해낸 다음날, 고동이가 물어봐요 —<br>
+      <b>✓ 통했어요 / 🤔 별로 / ✗ 안 통했어요</b><br>
+      <span class="v8-coach-text-soft">'통했어요' 누르면 — 그 전략의 DNA 한 조각이 모래사장에 쌓입니다 ✦</span>
     </div>
   `;
   return _v8ShowCoachmark({
@@ -591,8 +602,8 @@ function _core3CoachmarkOpenBeach() {
     const body = `
       <div class="v8-coach-title">🏖 모래사장</div>
       <div class="v8-coach-text">
-        통한 미션마다 — 소라 하나가 쌓여 ✦<br>
-        <span class="v8-coach-text-soft">시드로 시뮬 소라들 미리 깔아뒀어.</span>
+        통한 미션마다 — 소라 하나가 쌓입니다 ✦<br>
+        <span class="v8-coach-text-soft">시드로 시뮬 소라들 미리 깔아뒀어요.</span>
       </div>
     `;
     return _v8ShowCoachmark({
@@ -615,8 +626,8 @@ function _core3CoachmarkDnaShell() {
   const body = `
     <div class="v8-coach-title">🧬 마크 붙은 소라</div>
     <div class="v8-coach-text">
-      봐 — <b>🧬 마크</b> 붙은 소라.<br>
-      이건 네가 통한 <em>전략의 DNA 한 조각</em>이야 ✨<br>
+      보세요 — <b>🧬 마크</b> 붙은 소라.<br>
+      이건 통하신 <em>전략의 DNA 한 조각</em>입니다 ✨<br>
       <span class="v8-coach-text-soft">같은 전략 또 통할 때마다 — 또 하나.</span>
     </div>
   `;
@@ -632,8 +643,8 @@ function _core3CoachmarkPearlMerge() {
   const body = `
     <div class="v8-coach-title">💎 5조각 → DNA 진주</div>
     <div class="v8-coach-text">
-      DNA 5조각 모이면 — 합쳐져서 <b>💎 DNA 진주</b>가 돼.<br>
-      <span class="v8-coach-text-soft">너만의 힘 ✦ 같은 상황 또 오면, 이미 너의 무기.</span>
+      DNA 5조각 모이면 — 합쳐져서 <b>💎 DNA 진주</b>가 됩니다.<br>
+      <span class="v8-coach-text-soft">당신만의 힘 ✦ 같은 상황 또 오면, 이미 당신의 무기.</span>
     </div>
   `;
   return _v8ShowCoachmark({ body, allowNoTarget: true, position: 'bottom' });

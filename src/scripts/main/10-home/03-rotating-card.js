@@ -1277,9 +1277,13 @@ function renderRotatingCard() {
       if (s) { picked = s; break; }
     }
 
-    // 카드 + (낮 mode 일 때) 작은 체크인 링크.
+    // 카드 + 작은 체크인 링크.
+    // V4 fix (사용자 명시 2026-05-17 재): mini-link 시간대 무관 표시. checkin 카드가 priority slot 에 있을 때만 skip (중복 회피).
+    //   특히 done 상태 "✓ 오늘 체크인 — 보기 / 수정" 이 저녁 모드에서도 보여야 함 (옛 위치 복구).
     const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
-    const miniLink = (!isEvening) ? _rcCheckinMiniLink(checkinDone) : '';
+    const miniLink = (picked && picked.sourceType === 'checkin')
+      ? ''  // checkin 카드가 priority slot 에 = 중복 회피
+      : _rcCheckinMiniLink(checkinDone);  // 그 외 — done/not-done 둘 다 표시
 
     if (!cardHtml && !miniLink) {
       container.innerHTML = '';

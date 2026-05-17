@@ -33,6 +33,8 @@ function shouldRunFirstPearlTutorial() {
   if (typeof _v8ShowCoachmark !== 'function') return false;
   if (typeof toggleTesterMode !== 'function') return false;
   if (typeof testSeedV4Data !== 'function') return false;
+  // V4 (사용자 명시 2026-05-17 ultrathink): 게스트 OR 미구독 사용자 한정.
+  if (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser()) return false;
   return true;
 }
 
@@ -158,12 +160,16 @@ function _pearlCoachmarkAddBtn() {
 }
 
 function _pearlCoachmarkClosing() {
+  // V4 (사용자 명시 2026-05-17 ultrathink): 카피 + okLabel 변경.
   const body = `
-    <div class="v8-coach-title">튜토리얼이 끝났습니다!</div>
+    <div class="v8-coach-text">
+      소중한 기억들을 한 번 넣어보아요. 👍
+    </div>
   `;
   return _v8ShowCoachmark({
     body,
     allowNoTarget: true,
-    position: 'bottom'
+    position: 'bottom',
+    okLabel: '그래 알았다'
   });
 }
