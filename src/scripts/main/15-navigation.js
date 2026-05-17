@@ -89,6 +89,10 @@ function showScreen(name) {
     }
     _markLibTabSeen();
     if (typeof updateLibraryTabNewDot === 'function') updateLibraryTabNewDot();
+    // V4 (사용자 명시 2026-05-17 ultrathink): 홈 (옛 도서관) 첫 진입 튜토 — 체크인 + 토픽 안내 2 page chain. 시드 미션 hide.
+    if (typeof runFirstHomeTutorial === 'function') {
+      setTimeout(() => { try { runFirstHomeTutorial(); } catch (e) { console.warn('[firstHomeTuto]', e); } }, 350);
+    }
     renderArchive();
   }
   if (name === 'decisions') renderDecisionsList();

@@ -1,6 +1,8 @@
 function renderTodayMission() {
   const container = document.getElementById('missionContainer');
   if (!container) return;
+  // V4 (사용자 명시 2026-05-17 ultrathink): 홈 첫 진입 튜토 진행 중엔 미션 카드 (소라의 부름 시드 포함) 숨김 — 튜토 집중 ↑.
+  if (window._firstHomeTutorialActive) { container.innerHTML = ''; return; }
   const list = getTodayMissions();
 
   // V4: render 후 잠금 시각 갱신
