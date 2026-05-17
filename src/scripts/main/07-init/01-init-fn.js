@@ -327,12 +327,17 @@ async function init() {
   //   원인: _archiveCurrentChapter 의 setTimeout(extract, 1500ms) 가 페이지 reload 로 죽으면
   //   (testerMode 토글 / 로그인 promote / 사용자 새로고침 / 탭 닫기 등) archiveItem._pendingExtract: true 마킹만 남고 traits 안 들어옴.
   //   fix: 다음 init 시 stuck archive 순회해서 extract 재시도.
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): 게스트/미구독자 only. 구독자는 maybeRunDailyChapterExtract (init 4s 후, 4AM cutoff 통과 시) 가 처리.
+  //   옛: reload 마다 무조건 stuck 처리 → 구독자도 4AM 우회.
+  //   새: 즉시 path 와 동일 분기 — _isTutorialEligibleUser() true 일 때만 stuck 즉시 재처리.
   setTimeout(() => {
     try {
       if (!Array.isArray(state.chatArchive) || state.chatArchive.length === 0) return;
       if (typeof _canAI !== 'function' || !_canAI()) return;
       if (window._onbTutorialMode) return;
       if (state.preferences && state.preferences.testerMode) return;
+      const _isFreeOrGuest = (typeof _isTutorialEligibleUser === 'function') && _isTutorialEligibleUser();
+      if (!_isFreeOrGuest) return;  // 구독자는 4AM cutoff 기반 maybeRunDailyChapterExtract 가 처리.
       const stuckArchives = state.chatArchive.filter(a =>
         a && !a._deleted && a._pendingExtract && Array.isArray(a.messages) && a.messages.length >= 6
       );

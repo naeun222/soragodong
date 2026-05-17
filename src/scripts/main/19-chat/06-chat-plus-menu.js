@@ -116,7 +116,12 @@ function _archiveCurrentChapter(opts) {
   state.chapterCompletedCount += 1;
   saveState();
 
-  if (state.chapterCompletedCount <= 3 && typeof _canAI === 'function' && _canAI()
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): chapterCompletedCount <= 3 → _isTutorialEligibleUser() 로 변경.
+  //   옛: 신규유저 첫 3챕터만 즉시. 그 후 4AM batch deferred.
+  //   새: 게스트 OR 미구독자 = 매 챕터 마무리마다 즉시 (사용성 우선). 구독자 = 4AM batch deferred (비용 절감 / 자연 누적).
+  //   `_isTutorialEligibleUser` (02-tutorial-welcome.js:4) = 게스트 또는 미구독 helper.
+  const _isFreeOrGuest = (typeof _isTutorialEligibleUser === 'function') && _isTutorialEligibleUser();
+  if (_isFreeOrGuest && typeof _canAI === 'function' && _canAI()
       && !window._onbTutorialMode
       && !(state.preferences && state.preferences.testerMode)
       && archiveItem.messages.length >= 6) {
