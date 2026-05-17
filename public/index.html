@@ -28680,7 +28680,13 @@ function renderRotatingCard() {
     }
 
     // 카드 + (낮 mode 일 때) 작은 체크인 링크.
-    const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
+    // V4 (사용자 명시 2026-05-17 재): 오늘의 너 (oneul) = shell wrapper 우회. _heroCardHtml 자체가 완성 카드 — 뒤에 gradient 큰 카드 X.
+    let cardHtml = '';
+    if (picked) {
+      cardHtml = (picked.sourceType === 'oneul')
+        ? (picked.bodyHtml || '')
+        : _rcRenderShell([picked], 0);
+    }
     const miniLink = (!isEvening) ? _rcCheckinMiniLink(checkinDone) : '';
 
     if (!cardHtml && !miniLink) {
