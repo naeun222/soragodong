@@ -53,8 +53,11 @@ function _heroCardHtml(pick, opts = {}) {
   if (!pick) return '';
   // V4 (사용자 명시 2026-05-05): 홈 hero 클릭 → 도서관 진주 칩으로 이동.
   //   도서관 hero 클릭 → 기존대로 진주 모달.
+  // V4 (사용자 명시 2026-05-17 ultrathink): opts.dismissCall = priority stack dismiss 주입 (회전카드 source 일 때만).
+  //   onclick 문자열 prefix 로 박혀서 play button stopPropagation 도 자연 회피 (play 시 카드 dismiss X).
+  const dismissCallStr = opts.dismissCall || '';
   const cardOnClick = opts.linkTo === 'pearls-tab'
-    ? `showScreen('archive'); switchLibraryCat('pearls');`
+    ? `${dismissCallStr}showScreen('archive'); switchLibraryCat('pearls');`
     : `openPearl('${pick.id}')`;
   const dateStr = pick.createdAt
     ? new Date(pick.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })

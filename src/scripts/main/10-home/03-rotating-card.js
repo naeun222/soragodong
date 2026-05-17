@@ -1247,12 +1247,11 @@ function renderRotatingCard() {
       const pick = sorted[0];
       const id = 'oneul_' + (pick.id || '');
       if (dismissed[id]) return null;
-      // _heroCardHtml 자체 onclick → wrap span 으로 dismiss 마킹 후 진입.
+      // _heroCardHtml 자체 onclick → opts.dismissCall 로 dismiss 주입 (음악 play button stopPropagation 도 자연 회피).
       return {
         id, sourceType: 'oneul',
-        bodyHtml: _heroCardHtml(pick, { linkTo: 'pearls-tab' }),
-        // onTapClick 없음 (_heroCardHtml 내부 onclick) — dismiss 는 'oneul-tap-marker' 핸들러로 attach.
-        oneulId: id,
+        bodyHtml: _heroCardHtml(pick, { linkTo: 'pearls-tab', dismissCall: `_rcOnSourceTap('${id}');` }),
+        // onTapClick 없음 — dismiss 는 _heroCardHtml 의 onclick 안에 prefix 로 들어감.
       };
     };
     const buildReview = () => {
@@ -1287,14 +1286,6 @@ function renderRotatingCard() {
       return;
     }
     container.innerHTML = cardHtml + miniLink;
-
-    // oneul source 는 _heroCardHtml 내부 onclick 사용 → 추가 dismiss 핸들러 attach.
-    if (picked && picked.sourceType === 'oneul' && picked.oneulId) {
-      const cardEl = container.querySelector('.rotating-card');
-      if (cardEl) {
-        cardEl.addEventListener('click', () => { _rcOnSourceTap(picked.oneulId); }, { once: true, capture: true });
-      }
-    }
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     container.innerHTML = '';
