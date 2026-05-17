@@ -11691,6 +11691,59 @@
   .yangsaeng-shell-row { margin-bottom: 12px; width: 100%; }
   .yangsaeng-shell-row .home-small-card { width: 100%; box-sizing: border-box; }
 
+  /* V4 (사용자 명시 2026-05-17 ultrathink): priority stack 작은 체크인 링크 — 회전카드 밑, 낮 mode 한정. */
+  .rc-checkin-mini-link {
+    margin-top: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text-dim);
+    text-align: center;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .rc-checkin-mini-link:active {
+    background: rgba(139, 126, 196, 0.10);
+    color: var(--accent);
+  }
+
+  /* V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty 영역 체크인 floating 카드 — 저녁 6시+ 미체크인 한정. */
+  .chat-empty-checkin-card {
+    margin: 80px auto 20px;
+    max-width: 320px;
+    padding: 22px 20px;
+    background: linear-gradient(135deg, rgba(139, 126, 196, 0.10), rgba(139, 126, 196, 0.04));
+    border: 1px solid rgba(139, 126, 196, 0.25);
+    border-radius: 16px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.15s, background 0.15s;
+  }
+  .chat-empty-checkin-card:active {
+    transform: scale(0.985);
+    background: linear-gradient(135deg, rgba(139, 126, 196, 0.18), rgba(139, 126, 196, 0.06));
+  }
+  .chat-empty-checkin-card .cec-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    opacity: 0.85;
+    margin-bottom: 10px;
+  }
+  .chat-empty-checkin-card .cec-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .chat-empty-checkin-card .cec-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    opacity: 0.85;
+  }
+
   /* Hook 온보딩 모달 — Section 19.1 */
   .hook-onb-overlay {
     position: fixed; inset: 0;

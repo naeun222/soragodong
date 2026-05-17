@@ -36,9 +36,44 @@ function _ensureRotatingCardState() {
   if (!r.userSimulationsToday || typeof r.userSimulationsToday !== 'object') r.userSimulationsToday = {};
   // 사용자 명시 2026-05-11: 최근 시뮬 시나리오 dedupe (다양성 ↑). 최대 20개.
   if (!Array.isArray(r.recentSimulations)) r.recentSimulations = [];
+  // V4 (사용자 명시 2026-05-17): priority stack 도입 — 회전 X, single card swap.
+  //   사용자가 카드 본 (= 한 번 click) source 는 dayK 동안 dismiss. 다음 priority source 가 그 자리에.
+  //   새벽 4시 dayK reset 시 자연 부활.
+  if (typeof r.dismissedDayK === 'undefined') r.dismissedDayK = null;
+  if (!r.dismissedSources || typeof r.dismissedSources !== 'object') r.dismissedSources = {};
   // 디버깅 / 호환
   if (!Array.isArray(r.history)) r.history = [];
   return r;
+}
+
+// V4 (사용자 명시 2026-05-17): dayK 바뀌면 dismissedSources 자동 reset.
+function _rcGetDismissedToday() {
+  const r = _ensureRotatingCardState();
+  const tk = (typeof todayKey === 'function') ? todayKey() : null;
+  if (r.dismissedDayK !== tk) {
+    r.dismissedDayK = tk;
+    r.dismissedSources = {};
+    if (typeof saveState === 'function') { try { saveState(); } catch {} }
+  }
+  return r.dismissedSources || {};
+}
+
+function _rcMarkDismissedToday(sourceId) {
+  if (!sourceId) return;
+  const r = _ensureRotatingCardState();
+  const tk = (typeof todayKey === 'function') ? todayKey() : null;
+  if (r.dismissedDayK !== tk) {
+    r.dismissedDayK = tk;
+    r.dismissedSources = {};
+  }
+  r.dismissedSources[sourceId] = true;
+  if (typeof saveState === 'function') { try { saveState(); } catch {} }
+}
+
+// V4 (사용자 명시 2026-05-17): 저녁 mode = 18:00 이후 ~ 04:00 (dayK reset 까지). 우선순위에 체크인 진입.
+function _rcIsEveningMode() {
+  const h = new Date().getHours();
+  return h >= 18 || h < 4;
 }
 
 // =============================================================================
@@ -1161,83 +1196,127 @@ function _rcGodongSvg(sourceId) {
 // =============================================================================
 // 렌더 — sessionOrder 기반 (한 화면 안 stable)
 // =============================================================================
-// 사용자 명시 2026-05-17 ultrathink (revert): 회전카드 옛 (5-15 이전) 디자인 복원.
-//   .rotating-card 단일 wrapper (gradient + 14px padding + 160px min-height) + .rc-godong + .rc-body-tap + .rc-arrow-row.
-//   4 source: Hook / 체크인 / 오늘의 너 (진주 큐레이션 — _heroCardHtml 재사용) / 리뷰 링크.
-//   각 source 는 inner bodyHtml + onTapClick 만 반환. _rcRenderShell 가 shell 로 wrap.
+// V4 (사용자 명시 2026-05-17 ultrathink): priority stack 으로 재설계 — 회전 X, 한 번에 한 카드만 노출.
+//   사용자가 카드 click = "본 것" → dismiss → 다음 priority source 가 그 자리에 등장.
+//   새벽 4시 dayK reset 시 자연 부활.
+//   우선순위:
+//     - 낮 (h < 18): 리뷰 → hook → 오늘의 너 (그 밑에 작게 "오늘 체크인하기 →" 링크)
+//     - 저녁 (h >= 18 OR h < 4): 리뷰 → 체크인 → hook → 오늘의 너 (체크인 priority 진입, 작은 링크 X)
+//   크기: 오늘의 너 (진주 큐레이션) 통일. 다른 source 는 inline min-height 로 매칭.
 function renderRotatingCard() {
   const container = document.getElementById('rotatingCardContainer');
   if (!container) return;
   _ensureRotatingCardState();
 
   try {
-    const sources = [];
+    const isEvening = _rcIsEveningMode();
+    const dismissed = _rcGetDismissedToday();
+    const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
 
-    // 1) Hook (active 시만)
-    if (typeof pickHomeMainHook === 'function') {
+    // 체크인 완료 여부 — 우선순위에서 제외 + 작은 링크 done 상태로.
+    const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
+    const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
+
+    // 각 source 빌더 — 가용성 + dismissed 체크 후 첫 통과한 것 1개만 채택.
+    const buildHook = () => {
+      if (typeof pickHomeMainHook !== 'function') return null;
       const h = pickHomeMainHook();
-      if (h) {
-        sources.push({
-          id: 'hook',
-          available: true,
-          contentHash: 'hook_' + (h.id || ''),
-          bodyHtml: _rcBuildHookBodyHtml(h),
-          onTapClick: `hookCardTap('${h.id}')`,
-        });
-      }
-    }
-
-    // 2) 체크인 (항상)
-    sources.push({
-      id: 'checkin',
-      available: true,
-      contentHash: 'checkin_' + ((typeof todayKey === 'function') ? todayKey() : ''),
-      bodyHtml: _rcBuildCheckinBodyHtml(),
-      onTapClick: 'enterCheckin()',
-    });
-
-    // 3) 오늘의 너 (진주 큐레이션) — pearls 있을 때만. _heroCardHtml 재사용.
-    const pearls = (state.pearls || []).filter(p => p && !p._deleted && p.type !== 'dna_pearl');
-    if (pearls.length > 0 && typeof _heroCardHtml === 'function') {
+      if (!h) return null;
+      const id = 'hook_' + (h.id || '');
+      if (dismissed[id]) return null;
+      return {
+        id, sourceType: 'hook',
+        bodyHtml: _rcBuildHookBodyHtml(h),
+        onTapClick: `_rcOnSourceTap('${id}'); hookCardTap('${h.id}')`,
+      };
+    };
+    const buildCheckin = () => {
+      if (checkinDone) return null;  // 완료 → priority 에서 제외
+      const id = 'checkin_' + todayKVal;
+      if (dismissed[id]) return null;
+      return {
+        id, sourceType: 'checkin',
+        bodyHtml: _rcBuildCheckinBodyHtml(),
+        onTapClick: `_rcOnSourceTap('${id}'); enterCheckin()`,
+      };
+    };
+    const buildOneul = () => {
+      const pearls = (state.pearls || []).filter(p => p && !p._deleted && p.type !== 'dna_pearl');
+      if (pearls.length === 0 || typeof _heroCardHtml !== 'function') return null;
       const sorted = pearls.slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       const pick = sorted[0];
-      sources.push({
-        id: 'oneul',
-        available: true,
-        contentHash: 'oneul_' + (pick.id || ''),
+      const id = 'oneul_' + (pick.id || '');
+      if (dismissed[id]) return null;
+      // _heroCardHtml 자체 onclick → wrap span 으로 dismiss 마킹 후 진입.
+      return {
+        id, sourceType: 'oneul',
         bodyHtml: _heroCardHtml(pick, { linkTo: 'pearls-tab' }),
-        // _heroCardHtml 자체 onclick 있음 — onTapClick 생략 (이중 onclick 방지)
-      });
-    }
-
-    // 4) 리뷰 링크 — 최근 weekly/monthly/quarterly 1개 있을 때만.
-    if (typeof _reviewPreviewPickLatest === 'function') {
+        // onTapClick 없음 (_heroCardHtml 내부 onclick) — dismiss 는 'oneul-tap-marker' 핸들러로 attach.
+        oneulId: id,
+      };
+    };
+    const buildReview = () => {
+      if (typeof _reviewPreviewPickLatest !== 'function') return null;
       const r = _reviewPreviewPickLatest();
-      if (r) {
-        sources.push({
-          id: 'review',
-          available: true,
-          contentHash: 'review_' + r._kind + '_' + (r.id || ''),
-          bodyHtml: _rcBuildReviewBodyHtml(r),
-          // 사용자 보고 2026-05-17: id 같이 넘김 — batch 결과 review 직접 open (옛 동작 복원).
-          onTapClick: `_openReviewPreviewLink('${r._kind}','${r.id || ''}')`,
-        });
-      }
+      if (!r) return null;
+      const id = 'review_' + r._kind + '_' + (r.id || '');
+      if (dismissed[id]) return null;
+      return {
+        id, sourceType: 'review',
+        bodyHtml: _rcBuildReviewBodyHtml(r),
+        onTapClick: `_rcOnSourceTap('${id}'); _openReviewPreviewLink('${r._kind}','${r.id || ''}')`,
+      };
+    };
+
+    // 우선순위 순회 — 첫 통과한 1개 채택.
+    const priority = isEvening
+      ? [buildReview, buildCheckin, buildHook, buildOneul]
+      : [buildReview, buildHook, buildOneul];
+    let picked = null;
+    for (const fn of priority) {
+      const s = fn();
+      if (s) { picked = s; break; }
     }
 
-    if (sources.length === 0) {
+    // 카드 + (낮 mode 일 때) 작은 체크인 링크.
+    const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
+    const miniLink = (!isEvening) ? _rcCheckinMiniLink(checkinDone) : '';
+
+    if (!cardHtml && !miniLink) {
       container.innerHTML = '';
       return;
     }
+    container.innerHTML = cardHtml + miniLink;
 
-    _rcSessionOrder = sources;
-    if (_rcSessionIndex == null || _rcSessionIndex >= sources.length) _rcSessionIndex = 0;
-    container.innerHTML = _rcRenderShell(sources, _rcSessionIndex);
-    _rcEqualizeHeights();
+    // oneul source 는 _heroCardHtml 내부 onclick 사용 → 추가 dismiss 핸들러 attach.
+    if (picked && picked.sourceType === 'oneul' && picked.oneulId) {
+      const cardEl = container.querySelector('.rotating-card');
+      if (cardEl) {
+        cardEl.addEventListener('click', () => { _rcOnSourceTap(picked.oneulId); }, { once: true, capture: true });
+      }
+    }
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     container.innerHTML = '';
   }
+}
+
+// V4 (사용자 명시 2026-05-17): source dismiss + 즉시 rerender → 다음 priority 가 그 자리에 등장.
+function _rcOnSourceTap(sourceId) {
+  try {
+    _rcMarkDismissedToday(sourceId);
+    // setTimeout 0 — onclick 핸들러 (enterCheckin / hookCardTap / openReview) 가 먼저 실행되고 rerender.
+    setTimeout(() => { try { renderRotatingCard(); } catch {} }, 0);
+  } catch (e) { console.warn('[rcOnSourceTap]', e); }
+}
+
+// 낮 mode 작은 체크인 링크 — 카드 밑. done 상태 / not-done 상태 둘 다 표현.
+function _rcCheckinMiniLink(isDone) {
+  if (window._onbTutorialMode) return '';
+  const text = isDone ? '✓ 오늘 체크인 — 보기 / 수정' : '오늘 체크인하기 →';
+  return `
+    <div class="rc-checkin-mini-link" onclick="enterCheckin()">${escapeHtml(text)}</div>
+  `;
 }
 
 // Hook source bodyHtml — 친구 톤 질문 + hint.

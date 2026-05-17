@@ -3,6 +3,14 @@ async function sendChat() {
   const text = input.value.trim();
   if (!text) return;
 
+  // V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty + 저녁 6시+ 체크인 카드는 사용자가 '대화 시작' 하는 순간 사라짐.
+  //   첫 메시지 send 트리거 — dayK 내 영구 dismiss (새벽 4시 reset 후 내일 저녁 6시 부활).
+  //   체크인 done 상태든 아니든 무관 set — done 이면 카드 자체가 안 보였으니 no-op.
+  if ((state.chatMessages || []).length === 0) {
+    const _tk = (typeof todayKey === 'function') ? todayKey() : '';
+    if (_tk) state._chatEmptyCheckinDismissedDayK = _tk;
+  }
+
   // 사용자 명시 2026-05-01: 위기 신호 detect — 자살예방법 §15-6 + 제조물책임 안전 의무.
   // chat 본문 + '일기:' prefix 본문 모두 covered (text 전체 검사).
   if (typeof _detectCrisisSignal === 'function' && _detectCrisisSignal(text)) {
