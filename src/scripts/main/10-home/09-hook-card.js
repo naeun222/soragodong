@@ -24,6 +24,51 @@ function _hookNameCall(userName) {
 
 // renderHookCard 폐기 (사용자 명시 2026-05-17 ultrathink revert) — 회전카드 _rcBuildHookBodyHtml 이 대체.
 
+// V4 (사용자 명시 2026-05-17 ultrathink): 옵션 A — pull 패턴.
+//   iOS PWA push 못 받아도 backend 의 hook_push_queue 에 row 가 있음 → frontend 가 fetch 해서 카드 표시.
+//   호출 시점: init 후 5s + showScreen('archive') 진입. dedup by id.
+async function _syncPendingHookFromBackend() {
+  try {
+    if (typeof session === 'undefined' || !session?.access_token) return;
+    if (typeof BACKEND_BASE === 'undefined') return;
+    const r = await fetch(`${BACKEND_BASE}/api/hook/pending`, {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    });
+    if (!r.ok) return;
+    const j = await r.json().catch(() => null);
+    if (!j || !j.ok || !j.hook) return;
+    state.askedHooks = state.askedHooks || [];
+    if (state.askedHooks.some(h => h && h.id === j.hook.id)) return;  // dedup
+    state.askedHooks.push({
+      id: j.hook.id,
+      body: j.hook.body,
+      userName: j.hook.userName,
+      askedAt: j.hook.sentAt || j.hook.scheduledAt || new Date().toISOString(),
+      answered: false,
+      source: 'backend-pull'
+    });
+    try { saveState(); } catch {}
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+  } catch (e) { console.warn('[hook pending fetch]', e); }
+}
+
+// 답변 mark — sendChat 의 unanswered.answered=true 직후 fire-and-forget.
+function _markHookAnsweredBackend(hookId) {
+  try {
+    if (!hookId) return;
+    if (typeof session === 'undefined' || !session?.access_token) return;
+    if (typeof BACKEND_BASE === 'undefined') return;
+    fetch(`${BACKEND_BASE}/api/hook/answered`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ hook_id: hookId })
+    }).catch(() => {});
+  } catch {}
+}
+
 function hookCardTap(hookId) {
   if (!hookId) return;
   const hook = (state.askedHooks || []).find(h => h && h.id === hookId);

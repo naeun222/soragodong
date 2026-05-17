@@ -449,6 +449,11 @@ async function init() {
   if (typeof maybeGenerateHook === 'function') {
     setTimeout(() => { maybeGenerateHook().catch(e => console.warn('[hook]', e)); }, 5000);
   }
+  // V4 (사용자 명시 2026-05-17 ultrathink) 옵션 A: backend pending hook fetch — iOS PWA push 못 받아도 카드 표시.
+  //   push + fetch 둘 다 trigger, id dedup. backend 가 sent_at 박힌 미답변 row 반환.
+  if (typeof _syncPendingHookFromBackend === 'function') {
+    setTimeout(() => { _syncPendingHookFromBackend(); }, 4500);
+  }
 
   // Phase B: Push 클릭 → /?hookTrigger=<id> deep link 자동 진입.
   //   init 끝에서 URL 파싱 → cloud load 완료 후 hookCardTap 호출.

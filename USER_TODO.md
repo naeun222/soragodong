@@ -547,6 +547,7 @@ window._VAPID_PUBLIC_KEY = '<위 Public Key 그대로>';
 ```bash
 # Supabase dashboard SQL editor 또는 CLI
 psql $DATABASE_URL -f supabase/migrations/0030_hook_system.sql
+psql $DATABASE_URL -f supabase/migrations/0031_hook_answered.sql   # V4 2026-05-17: pull 패턴 옵션 A
 ```
 
 또는 Supabase dashboard → SQL Editor → 파일 내용 paste → Run.

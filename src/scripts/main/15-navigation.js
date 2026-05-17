@@ -93,6 +93,10 @@ function showScreen(name) {
     if (typeof runFirstHomeTutorial === 'function') {
       setTimeout(() => { try { runFirstHomeTutorial(); } catch (e) { console.warn('[firstHomeTuto]', e); } }, 350);
     }
+    // V4 (사용자 명시 2026-05-17 ultrathink) 옵션 A: 홈 진입 시 backend pending hook fetch — iOS PWA push 못 받아도 카드 표시.
+    if (typeof _syncPendingHookFromBackend === 'function') {
+      setTimeout(() => { _syncPendingHookFromBackend(); }, 200);
+    }
     renderArchive();
   }
   if (name === 'decisions') renderDecisionsList();

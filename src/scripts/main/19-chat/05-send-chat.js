@@ -135,6 +135,8 @@ async function sendChat() {
       if (hookInjected) {
         unanswered.answered = true;
         unanswered.answeredAt = new Date().toISOString();
+        // V4 (사용자 명시 2026-05-17 ultrathink) 옵션 A: backend hook_push_queue 도 answered_at mark (iOS PWA pull 패턴 dedup).
+        if (typeof _markHookAnsweredBackend === 'function') _markHookAnsweredBackend(unanswered.id);
         const lastMsg = state.chatMessages[state.chatMessages.length - 1];
         if (lastMsg && lastMsg.role === 'user') {
           lastMsg.replyToHookId = unanswered.id;
