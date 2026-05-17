@@ -1350,16 +1350,10 @@ function _rcBuildCheckinBodyHtml() {
   const todayKeyVal = (typeof todayKey === 'function') ? todayKey() : '';
   const todayEntry = (state.entries || []).find(e => e.date === todayKeyVal);
   const checkinDoneToday = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): 옛 mini-link 디자인 (commit 56dc33e) 복구 — 완료 시 작은 텍스트만.
+  //   .action-card 큰 카드 분기 폐기 → '✓ 오늘 체크인 — 보기 / 수정' 작은 텍스트로 회귀.
   if (checkinDoneToday) {
-    return `
-      <div class="action-card action-card-checkin">
-        <div class="action-icon">✓</div>
-        <div class="action-text">
-          <div class="action-title">오늘 체크인 완료</div>
-        </div>
-        <div class="action-arrow">›</div>
-      </div>
-    `;
+    return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인 — 보기 / 수정</div>`;
   }
   const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
   const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '✓', title: '체크인', sub: '' };
