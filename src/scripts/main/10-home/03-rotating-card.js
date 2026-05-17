@@ -1276,13 +1276,7 @@ function renderRotatingCard() {
     }
 
     // 카드 + (낮 mode 일 때) 작은 체크인 링크.
-    // V4 (사용자 명시 2026-05-17 재): 오늘의 너 (oneul) = shell wrapper 우회. _heroCardHtml 자체가 완성 카드 — 뒤에 gradient 큰 카드 X.
-    let cardHtml = '';
-    if (picked) {
-      cardHtml = (picked.sourceType === 'oneul')
-        ? (picked.bodyHtml || '')
-        : _rcRenderShell([picked], 0);
-    }
+    const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
     const miniLink = (!isEvening) ? _rcCheckinMiniLink(checkinDone) : '';
 
     if (!cardHtml && !miniLink) {
@@ -1416,15 +1410,9 @@ function _rcRenderShell(orderedSources, currentIdx) {
     </div>
   ` : '';
 
-  // 사용자 명시 2026-05-09: 진주 source = godong 표정 hide (큐레이션 + 추가 CTA 자체가 surface).
-  // 사용자 명시 2026-05-17: 신규 source (hook/checkin/oneul/review) 도 godong SVG 숨김 (mood 미정의).
-  const showGodong = !['pearl', 'hook', 'checkin', 'oneul', 'review'].includes(cur.id);
-  const godongSvgKey = (cur.id === 'quiz' && cur._isQuizDone) ? 'quizDone' : cur.id;
-  const godongHtml = showGodong ? `<div class="rc-godong" aria-hidden="true">${_rcGodongSvg(godongSvgKey)}</div>` : '';
-
+  // V4 (사용자 명시 2026-05-17 재): godong SVG + 회전카드 배경 전부 제거. 단순 click 컨테이너만.
   return `
     <div class="rotating-card" id="rotatingCard" data-current-idx="${currentIdx}" data-total="${total}">
-      ${godongHtml}
       <div class="rc-body-tap"${tapHandler}>
         ${cur.bodyHtml || ''}
       </div>

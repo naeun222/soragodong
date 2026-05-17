@@ -10445,16 +10445,16 @@
   /* 사용자 명시 2026-05-09 (ultrathink): 홈 회전 카드 '🌟 오늘의 너' */
   /* spec home-redesign-2026-05-09.md 4절 + 11절. */
   /* ============================================================ */
+  /* V4 (사용자 명시 2026-05-17 재): 회전카드 배경 / border / padding / godong svg 전부 제거.
+     단순 click 컨테이너만. 안의 source body 가 자체 디자인 갖춤. */
   .rotating-card {
     position: relative;
-    background: linear-gradient(135deg, rgba(212,167,106,0.10), rgba(168,157,200,0.10));
-    border: 1px solid rgba(212,167,106,0.22);
-    border-radius: 14px;
-    padding: 14px 14px 12px;
+    background: transparent;
+    border: none;
+    padding: 0;
     margin-bottom: 14px;
     touch-action: pan-y;
     user-select: none;
-    transition: opacity 0.15s, transform 0.15s;
   }
   /* 사용자 명시 2026-05-09 (D 일러스트): godong 표정 SVG 우상단 absolute */
   .rc-godong {
@@ -10501,14 +10501,7 @@
 
   .rc-body-tap {
     cursor: pointer;
-    animation: rc-body-fade-in 0.4s ease-out;
-    /* 사용자 명시 2026-05-09 (정정): 진주 '오늘의 너' 큐레이션 카드 (일반) 크기에 맞춤. */
-    /* min-height = floor 만. 자연 height 가 더 크면 그대로 (예: hero-empty 진주 추가 카드). */
-    /* JS _rcEqualizeHeights 가 동적 측정 후 inline style 로 override (hero-empty 는 측정 제외). */
-    min-height: 160px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    /* V4 (사용자 명시 2026-05-17 재): 회전카드 배경 제거 — min-height / fade-in / flex 정리. source 자체 자연 height. */
   }
   .rc-body-tap .library-hero { margin: 0; width: 100%; }   /* 회전 카드 안 진주 hero — outer 통합 */
   /* 사용자 명시 2026-05-09 (Phase 5 spec 4-9): 카드 진입 시 미세 fade-in (0.4s, subtle) */
