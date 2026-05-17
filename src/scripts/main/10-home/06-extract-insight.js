@@ -468,6 +468,16 @@ function _processExtractChapterAnalysis(analysis, opts) {
   if (touched && typeof _markNavBatchUpdated === 'function') {
     _markNavBatchUpdated(['model']);
   }
+  // V4 (사용자 명시 2026-05-17): 첫 갱신 1회만 토스트 — 게스트 + 신규 가입자 둘 다.
+  //   _markNavBatchUpdated 로 이미 깜빡이는 dot 표시됨. 그 위에 toast 한 번 fire 해서 '나 탭에서 확인해봐' 안내.
+  //   영구 flag (_modelTabFirstUpdateNotified) — 한 번 fire 후 다시 안 뜸.
+  if (touched && !state._modelTabFirstUpdateNotified && typeof showToast === 'function') {
+    state._modelTabFirstUpdateNotified = true;
+    try { saveState(); } catch {}
+    setTimeout(() => {
+      try { showToast('✦ 너에 대한 정보를 알아봤어 — \'나\' 탭에서 확인해봐'); } catch {}
+    }, 600);
+  }
   return touched;
 }
 
