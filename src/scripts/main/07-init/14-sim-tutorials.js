@@ -658,14 +658,18 @@ async function showSimTutorialPicker() {
     if (typeof showToast === 'function') showToast('튜토리얼 picker 부재');
     return;
   }
+  // V4 (사용자 명시 2026-05-18 ultrathink): picker entries 정리.
+  //   폐기 (shouldRun=false 라 trigger 해도 안 뜸): 'diaryLib' (runDiaryLibTutorialV8) / 'reviews' (runReviewsTutorialV8).
+  //   추가: 'firstHome' (runFirstHomeTutorial — 홈 진입 7 page interactive flow). force 옵션으로 가드 우회.
+  //   추가: 'magic' (runMagicTutorialV8 — 마법고동 큰 결정 14일 숙성).
   const opts = [
-    { label: '🐚 시작 (안녕? → 첫 분석)',         value: 'v8start',  desc: 'V8 시작 튜토 — intake + 4단 분석' },
-    { label: '⭐ 첫 ✦ 해볼게 / 🧬 전략으로',      value: 'firstC2',  desc: '4단 응답 → 미션 → 모래사장 한 사이클' },
-    { label: '🚀 결과 체크 + 모래사장 (Core 3)',  value: 'core3',    desc: '결과 체크 → DNA 소라 → 진주 합체' },
-    { label: '🔮 진주',                            value: 'pearls',   desc: '살아있다 느낀 순간들' },
-    { label: '📔 홈 일기·대화 (4/15)',              value: 'diaryLib', desc: '캘린더 무드 그리드 + 챕터 자동 분류' },
-    { label: '✨ 깨달음 (AI 인사이트)',            value: 'insights', desc: '엄마 통화 후 mood +0.8 패턴' },
-    { label: '📅 리뷰 모음 (연간)',                value: 'reviews',  desc: '주간 / 월간 / 분기 / 연간 Stories' },
+    { label: '🐚 시작 (안녕? → 첫 분석)',         value: 'v8start',    desc: 'V9 시작 튜토 — 게스트/카카오 신규 진입 흐름' },
+    { label: '🏠 홈 첫 진입 (체크인 + 일기)',     value: 'firstHome',  desc: '백지 시드 → 체크인 → 일기 → 챗 prefill → 마무리' },
+    { label: '⭐ 첫 ✦ 해볼게 / 🧬 전략으로',      value: 'firstC2',    desc: '4단 응답 → 미션 → 모래사장 한 사이클' },
+    { label: '🚀 결과 체크 + 모래사장 (Core 3)',  value: 'core3',      desc: '결과 체크 → DNA 소라 → 진주 합체' },
+    { label: '🔮 진주',                            value: 'pearls',     desc: '살아있다 느낀 순간들' },
+    { label: '🐚 마법고동 (큰 결정)',              value: 'magic',      desc: '14일 숙성 — 도전 / 사랑 / 진로 결정' },
+    { label: '✨ 깨달음 (AI 인사이트)',            value: 'insights',   desc: '엄마 통화 후 mood +0.8 패턴' },
     { label: '🌊 숙고 질문',                       value: 'reflection', desc: '마음을 울리는 큰 물음' }
   ];
   const choice = await showOptionsModal({
@@ -681,6 +685,14 @@ async function showSimTutorialPicker() {
       state.tutorialVersion = null;
       try { saveState(); } catch {}
       if (typeof runStartTutorialV8 === 'function') runStartTutorialV8().catch(e => console.warn(e));
+      return;
+    case 'firstHome':
+      // V4 (사용자 명시 2026-05-18 ultrathink): _shownInlineTips 안의 firstHomeIntro 마커 제거 + force 호출.
+      if (Array.isArray(state._shownInlineTips)) {
+        state._shownInlineTips = state._shownInlineTips.filter(k => k !== 'firstHomeIntro');
+      }
+      try { saveState(); } catch {}
+      if (typeof runFirstHomeTutorial === 'function') runFirstHomeTutorial({ force: true }).catch(e => console.warn(e));
       return;
     case 'firstC2':
       state.tutorialShown.core2 = false;
@@ -699,20 +711,15 @@ async function showSimTutorialPicker() {
       try { saveState(); } catch {}
       if (typeof runFirstPearlTutorialV8 === 'function') runFirstPearlTutorialV8().catch(e => console.warn(e));
       return;
-    case 'diaryLib':
-      state.tutorialShown.diaryLib = false;
+    case 'magic':
+      state.tutorialShown.magic = false;
       try { saveState(); } catch {}
-      if (typeof runDiaryLibTutorialV8 === 'function') runDiaryLibTutorialV8().catch(e => console.warn(e));
+      if (typeof runMagicTutorialV8 === 'function') runMagicTutorialV8().catch(e => console.warn(e));
       return;
     case 'insights':
       state.tutorialShown.insights = false;
       try { saveState(); } catch {}
       if (typeof runInsightsTutorialV8 === 'function') runInsightsTutorialV8().catch(e => console.warn(e));
-      return;
-    case 'reviews':
-      state.tutorialShown.reviews = false;
-      try { saveState(); } catch {}
-      if (typeof runReviewsTutorialV8 === 'function') runReviewsTutorialV8().catch(e => console.warn(e));
       return;
     case 'reflection':
       state.tutorialShown.reflection = false;

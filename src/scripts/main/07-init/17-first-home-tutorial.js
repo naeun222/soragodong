@@ -27,8 +27,11 @@ function shouldRunFirstHomeTutorial() {
   return true;
 }
 
-async function runFirstHomeTutorial() {
-  if (!shouldRunFirstHomeTutorial()) return;
+async function runFirstHomeTutorial(opts) {
+  // V4 (사용자 명시 2026-05-18 ultrathink): opts.force=true (설정 picker 진입) 면 shouldRun 가드 우회.
+  //   _firstHomeTutorialActive 중복 실행 가드만 유지 (이미 도는 중이면 skip).
+  if (window._firstHomeTutorialActive) return;
+  if (!(opts && opts.force) && !shouldRunFirstHomeTutorial()) return;
   window._firstHomeTutorialActive = true;
   // dismiss marker — testerMode backup 직전 set → backup 에 포함 → 종료 후 restore 해도 유지.
   // V4 fix (사용자 보고 2026-05-18 ultrathink): saveState(true) force + await saveToCloudNow().
