@@ -1,6 +1,9 @@
 async function endChapter() {
   const validMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
-  if (validMsgs.length < 2) {
+  // V4 fix (사용자 보고 2026-05-17 ultrathink): 튜토리얼 안전망 — firstHomeTutorial 진행 중엔 minMessages=1 (가드 우회).
+  //   옛: validMsgs.length < 2 → '너무 짧다' 토스트. 튜토에서 시드 챗 + 일기 1개 = OK 인 케이스가 race 로 fail.
+  const _minLen = window._firstHomeTutorialActive ? 1 : 2;
+  if (validMsgs.length < _minLen) {
     showToast('대화가 너무 짧아 마무리할 게 없어');
     return;
   }
@@ -10,7 +13,7 @@ async function endChapter() {
     cancelLabel: '취소'
   });
   if (!yes) return;
-  const archived = _archiveCurrentChapter({ manual: true, minMessages: 2 });
+  const archived = _archiveCurrentChapter({ manual: true, minMessages: _minLen });
   // V4 (v8 묶음 5): chapter_close_intro 시점 archive 핀 영구 + intakeArchiveId stash → 7일 cap 우회 (pruneOldChatArchive pinned=true 분기)
   if (archived && _isOnboardingStep('chapter_close_intro')) {
     archived.pinned = true;

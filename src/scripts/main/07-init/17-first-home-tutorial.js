@@ -46,6 +46,8 @@ async function runFirstHomeTutorial() {
     }
     // 2. 백지 시드 — 모든 사용자 data 비움 (체크인 가능 상태만).
     _firstHomeEmptySeed();
+    // V4 fix (사용자 보고 2026-05-17 ultrathink): _lastEnterCheckinTs flag reset — P1 waitFor 의 reliable signal.
+    try { delete window._lastEnterCheckinTs; } catch {}
     // 3. 홈 (archive) 진입 — 회전카드 체크인 source 노출.
     if (typeof showScreen === 'function') showScreen('archive');
     await _v8Sleep(350);
@@ -108,13 +110,24 @@ async function runFirstHomeTutorial() {
   }
 }
 
-// 백지 시드 — testerMode 안에서 모든 사용자 data 비움.
+// 백지 시드 — testerMode 안에서 모든 사용자 data 비움 + chat 시드 메시지 3개 추가 (자연 대화 흐름, ✓ 마무리 가능).
+// V4 fix (사용자 보고 2026-05-17 ultrathink): '대화가 너무 짧아 마무리할 게 없어' 토스트 회피 — endChapter minMessages=2 가드 통과.
 function _firstHomeEmptySeed() {
-  const _emptyArrays = ['chatMessages', 'chatArchive', 'entries', 'pearls', 'archive', 'missions',
+  const _emptyArrays = ['chatArchive', 'entries', 'pearls', 'archive', 'missions',
     'topicCards', 'shellCollection', 'decisions', 'reflectionQuestions', 'insights', 'tasks',
     'dayPlan', 'starts', 'diagnoses', 'weeklyReviews', 'monthlyReviews', 'quarterlyReviews',
     'annualReviews', 'memoryVault', 'activeStrategies', 'projects', 'traits', 'values', 'patterns'];
   _emptyArrays.forEach(k => { state[k] = []; });
+  // chat 시드 — 자연 대화 흐름 (P4 보내기 + P5b ✓ 마무리 가능하게).
+  const _now = Date.now();
+  state.chatMessages = [
+    { role: 'user',      content: '오늘 좀 피곤하네.',                                                 timestamp: new Date(_now - 4 * 60000).toISOString() },
+    { role: 'assistant', content: '오늘 어떤 일이 있었어요? 무엇이 가장 피곤하게 했어요?',           timestamp: new Date(_now - 3.5 * 60000).toISOString() },
+    { role: 'user',      content: '회의가 많아서 머리가 좀 멍해.',                                    timestamp: new Date(_now - 3 * 60000).toISOString() },
+    { role: 'assistant', content: '회의 사이에 잠깐이라도 숨 돌릴 틈이 있었어요?',                    timestamp: new Date(_now - 2.5 * 60000).toISOString() },
+    { role: 'user',      content: '커피 한 잔 마실 정도?',                                            timestamp: new Date(_now - 2 * 60000).toISOString() },
+    { role: 'assistant', content: '그게 그래도 한 호흡이 됐겠네요. 잠시라도 환기되는 게 중요하죠.',  timestamp: new Date(_now - 1.5 * 60000).toISOString() }
+  ];
   state.caseFormulation = {};
   // 체크인 dismiss / rotating card dismiss flags reset
   state._chatEmptyCheckinDismissedDayK = null;
@@ -177,12 +190,11 @@ function _firstHomeP1() {
     body,
     position: 'bottom',
     interactive: true,
+    // V4 fix (사용자 보고 2026-05-17 ultrathink): enterCheckin 호출 flag (window._lastEnterCheckinTs) 우선 체크 — race / CSS 변동에 robust.
+    //   옛 waitFor (screen-checkin active class / checkinSubmitBtn offsetParent) 가 즉시 true 반환되던 케이스 회피.
     waitFor: () => {
       try {
-        const ck = document.getElementById('screen-checkin');
-        if (ck && (ck.classList.contains('active') || ck.classList.contains('show'))) return true;
-        const sb = document.getElementById('checkinSubmitBtn');
-        if (sb && sb.offsetParent !== null) return true;
+        if (window._lastEnterCheckinTs && (Date.now() - window._lastEnterCheckinTs) < 60000) return true;
       } catch {}
       return false;
     },
@@ -258,10 +270,11 @@ function _firstHomeP4() {
 }
 
 function _firstHomeP5a() {
+  // V4 fix (사용자 보고 2026-05-17 ultrathink): '좋아요. 일기·대화 카테고리에 원본으로 저장됐어요.' 줄바꿈 제거 — 한 문장 자연 wrap.
   const body = `
     <div class="v8-coach-title">고동이랑 대화 마무리</div>
     <div class="v8-coach-text">
-      좋아요. 일기·대화 카테고리에 원본으로<br>저장됐어요.<br>
+      좋아요. 일기·대화 카테고리에 원본으로 저장됐어요.<br>
       조금 이따가 확인해보죠.
     </div>
   `;

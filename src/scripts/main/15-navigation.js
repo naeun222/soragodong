@@ -233,7 +233,11 @@ function _showInlineTip(key) {
 }
 
 // V4 (v8 묶음 18): enterCheckin — 체크인 카드 onclick 진입 hook (cutoffWarning + checkinFirstEntry trigger)
+// V4 fix (사용자 보고 2026-05-17 ultrathink): firstHomeTutorial P1 waitFor 의 reliable signal — _lastEnterCheckinTs flag.
+//   옛: P1 waitFor 가 screen-checkin.classList.contains('active') 또는 #checkinSubmitBtn.offsetParent 체크 — race / CSS 변동에 취약.
+//   새: enterCheckin 호출 시점 stash. P1 waitFor 가 최근 60s 내 호출 detect → advance.
 function enterCheckin() {
+  window._lastEnterCheckinTs = Date.now();
   // 체크인 화면 진입 — 옛 onclick 동작 보존 (showScreen 또는 직접 진입)
   if (typeof _showInlineTip === 'function') {
     // 4시 cutoff 안내 — 새벽 시간대 (0~4시) 일 때만 cutoffWarning
