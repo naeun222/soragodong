@@ -207,14 +207,14 @@ function dismissPlaceholder(key) {
 }
 
 // V4 (v8 묶음 18) 2026-05-03: Inline tip 8 trigger — 각 1회만 (state._shownInlineTips 가드)
+// V4 fix (사용자 명시 2026-05-17 ultrathink): checkinFirstEntry 폐기 — firstHomeTutorial 의 page 1 (👍 체크인부터) 로 흡수.
+//   하나의 진입점만 (firstHomeTutorial), 중복 안내 회피.
 const INLINE_TIPS = {
   firstShell: '🐚 미션 해낸 모든 소라가 여기 모여 — 대화탭에서 ✦ 해볼게 눌러봐',
   specialShell: '✨ 특별한 소라 — 가챠 5% 확률',
   syncDotRed: '🔴 동기화 대기 — 클릭하면 강제 저장',
   syncDotClick: '✓ 강제 저장 완료',
   cutoffWarning: '🌙 새벽 4시 이전 체크인 = 전날로 기록돼',
-  // 사용자 명시 2026-05-06 ultrathink: 체크인 = 너에 대한 정보 모으는 핵심 → 강조 톤.
-  checkinFirstEntry: '✦ 매일 한 번 체크인 — 너에 대한 정보가 쌓일수록 고동이가 더 깊게 이해해줘 🐚',
   opusToggle: '🦉 Opus = 5x 빠르게 차감 (Premium 만)',
   modeFirstClick: '🌙 모드 전환 — 분위기에 맞게'
 };
@@ -234,8 +234,7 @@ function enterCheckin() {
     // 4시 cutoff 안내 — 새벽 시간대 (0~4시) 일 때만 cutoffWarning
     const hr = new Date().getHours();
     if (hr >= 0 && hr < 4) _showInlineTip('cutoffWarning');
-    // 체크인 첫 entry 안내 (state.entries 비어있으면)
-    if (!Array.isArray(state.entries) || state.entries.length === 0) _showInlineTip('checkinFirstEntry');
+    // V4 fix (사용자 명시 2026-05-17 ultrathink): checkinFirstEntry inline tip 폐기 — firstHomeTutorial page 1 (👍 체크인부터) 으로 흡수.
   }
   // 옛 진입 흐름 — showScreen('checkin') / 또는 chatPlusAction('checkin') 등
   if (typeof showScreen === 'function') showScreen('checkin');
