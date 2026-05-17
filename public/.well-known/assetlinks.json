@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.soragodong.twa",
+      "package_name": "com.soragodong.app",
       "sha256_cert_fingerprints": [
-        "23:F1:F5:82:25:00:F1:F5:0F:6C:CA:EF:39:83:1F:69:48:2B:F5:F3:22:76:6E:FB:5A:86:17:DC:FC:91:8B:C7"
+        "53:F2:1C:18:BC:F4:AB:46:D8:07:F0:59:12:64:2B:48:5A:B2:57:C4:5D:AA:71:0C:20:4D:FF:E9:F2:38:FF:89"
       ]
     }
   }
