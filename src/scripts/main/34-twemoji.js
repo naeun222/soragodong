@@ -7,8 +7,11 @@
 (function _initTwemoji() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   const _ua = (navigator && navigator.userAgent) || '';
-  // Apple = native Apple Color Emoji 우수 → skip.
-  if (/iPad|iPhone|iPod|Macintosh/.test(_ua)) return;
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): Samsung 갤럭시 (Android + SM- 모델 또는 Samsung UA) 만 적용.
+  //   Apple native = OK. Windows / Pixel / 일반 Android 도 Twemoji 별로 = native 유지.
+  //   Capacitor WebView UA 예: 'Mozilla/5.0 (Linux; Android 13; SM-F916N) AppleWebKit/...'.
+  const _isSamsung = /Android/.test(_ua) && (/SM-/.test(_ua) || /Samsung/i.test(_ua));
+  if (!_isSamsung) return;
   const _sc = document.createElement('script');
   _sc.src = 'https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js';
   _sc.async = true;
