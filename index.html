@@ -29406,7 +29406,6 @@ function _rcBuildCheckinBodyHtml() {
         <div class="action-icon">✓</div>
         <div class="action-text">
           <div class="action-title">체크인</div>
-          <div class="action-sub">매일 짧게 기록하는 곳</div>
         </div>
         <div class="action-arrow">›</div>
       </div>
@@ -29421,7 +29420,6 @@ function _rcBuildCheckinBodyHtml() {
         <div class="action-icon">✓</div>
         <div class="action-text">
           <div class="action-title">오늘 체크인 완료</div>
-          <div class="action-sub">보기 · 수정</div>
         </div>
         <div class="action-arrow">›</div>
       </div>
@@ -29429,13 +29427,12 @@ function _rcBuildCheckinBodyHtml() {
   }
   const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
   const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '✓', title: '체크인', sub: '' };
-  const subHtml = copy.sub ? `<div class="action-sub">${escapeHtml(copy.sub)}</div>` : '';
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): sub 제거 — 체크인 / 리뷰만 (hook 은 sub 유지).
   return `
     <div class="action-card action-card-checkin">
       <div class="action-icon">${copy.icon}</div>
       <div class="action-text">
         <div class="action-title">${escapeHtml(copy.title)}</div>
-        ${subHtml}
       </div>
       <div class="action-arrow">›</div>
     </div>
@@ -29448,27 +29445,24 @@ function _rcBuildCheckinBodyHtml() {
 //   review caption (momentum/flow/summary) 는 안 보여줌 — 옛 V3.13.x 처럼 단순 진입 링크.
 function _rcBuildReviewBodyHtml(r) {
   const kind = r && r._kind;
-  let icon, title, sub;
+  let icon, title;
   if (kind === 'monthly') {
     icon = '📅';
     title = '지난 달 너의 모습 돌아보기';
-    sub = '한 달치 패턴, 새로 발견된 트레이트, 의미 있던 순간들';
   } else if (kind === 'quarterly') {
     icon = '📅';
     title = '지난 분기 너의 모습 돌아보기';
-    sub = '3개월치 패턴 · 변화 · 의미 있던 흐름';
   } else {
     // weekly + fallback
     icon = '🌙';
     title = '이번 주 어땠는지 같이 돌아볼까?';
-    sub = '7일 데이터 분석 + 패턴 + 다음 주 한 가지 제안';
   }
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): sub 제거 — 체크인 / 리뷰만 (hook 은 sub 유지).
   return `
     <div class="action-card action-card-review">
       <div class="action-icon">${icon}</div>
       <div class="action-text">
         <div class="action-title">${escapeHtml(title)}</div>
-        <div class="action-sub">${escapeHtml(sub)}</div>
       </div>
       <div class="action-arrow">›</div>
     </div>
