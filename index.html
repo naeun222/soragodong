@@ -16978,6 +16978,23 @@ async function maybeUploadAcquisition() {
           if (typeof state !== 'undefined' && state && state.isGuest) {
             state.isGuest = false;
           }
+          // V4 fix (사용자 보고 2026-05-18 ultrathink): 카카오 user_metadata.name → state.userName 매핑.
+          //   _hookOnbShouldShow (07-init/15-hook-onboarding.js:30) 가 userName 비어있으면 푸시 prompt 영구 skip.
+          //   OTP 흐름은 onboarding 모달이 userName 채우지만, 카카오 OAuth 는 onboarding 우회 → 영구 ''.
+          //   beforeunload listener 가 reload() 직후 _flushLocalSave({sync:true}) 호출 → localStorage 안전 박힘.
+          if (typeof state !== 'undefined' && state && (!state.userName || !state.userName.trim())) {
+            const _md = (user && user.user_metadata) || {};
+            const _cands = [_md.name, _md.full_name, _md.preferred_username, _md.nickname, _md.given_name, _md.user_name];
+            for (const c of _cands) {
+              if (c && typeof c === 'string') {
+                const v = c.trim();
+                if (v.length >= 1 && v.length <= 20) { state.userName = v.slice(0, 20); break; }
+              }
+            }
+            if (state.userName && typeof saveState === 'function') {
+              try { saveState(true); } catch (e) { console.warn('[capacitor oauth] saveState:', e); }
+            }
+          }
         } catch {}
         // location.reload() — 게스트 모드로 떠있는 UI 전체 → 로그인 사용자 흐름으로 재초기화.
         try { window.location.reload(); } catch {}
