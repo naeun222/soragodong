@@ -35756,6 +35756,55 @@ function _pearlMigCloseProgressModal(overlay) {
   if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
 }
 
+// V4 (사용자 명시 2026-05-18 ultrathink): 자동 백그라운드 마이그.
+//   master key 확보 대기 (5초 polling, 5분 한도) → eligible > 0 면 silent 시작.
+//   시작 + 완료 toast 한 번씩. 부분 실패 시 Settings 안내. lock flag 로 중복 X.
+//   매 세션 1회 호출 — idempotent (이미 마이그된 진주 dry-run 에서 자동 skip).
+async function _pearlMigAutoStart() {
+  // master key + 가드 polling — init / E2EE 복원 끝나기 기다림.
+  for (let i = 0; i < 60; i++) {
+    if (_canUsePearlStorage()) break;
+    await new Promise(r => setTimeout(r, 5000));
+  }
+  if (!_canUsePearlStorage()) return;  // 5분 지나도 master key 없음 → 사용자 액션 필요 (Settings button).
+  if (window._pearlMigrationInProgress) return;
+
+  // dry-run.
+  const dry = _pearlMigDryRun();
+  if (!dry.eligible || dry.eligible.length === 0) return;  // 이미 다 마이그됨 — silent skip.
+
+  const mbStr = (dry.totalBytes / 1e6).toFixed(1);
+  if (typeof showToast === 'function') {
+    showToast(`🐚 옛 진주 ${dry.eligible.length}개 (~${mbStr}MB) 안전한 곳으로 옮기는 중...`);
+  }
+
+  window._pearlMigrationInProgress = true;
+  try {
+    const result = await _pearlMigApply(dry.eligible, null);  // silent (progress modal X).
+    if (typeof showToast === 'function') {
+      if (result.failed.length === 0) {
+        showToast(`✦ 진주 ${result.migrated.length}개 안전한 곳으로 이동 완료`);
+      } else {
+        showToast(`진주 ${result.migrated.length}개 완료 · ${result.failed.length}개 실패 — Settings → 🐚 에서 재시도`);
+      }
+    }
+    if (typeof renderLensPearls === 'function') renderLensPearls();
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
+  } catch (e) {
+    console.warn('[pearlMigAutoStart] fatal:', e);
+  } finally {
+    window._pearlMigrationInProgress = false;
+  }
+}
+
+// 앱 init 후 자동 시작 — load 이벤트 + 5초 idle 후 (master key 대기 polling 내장).
+//   load 이벤트는 PWA 환경에서도 fire (페이지 onload). 한 세션 1회.
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    _pearlMigAutoStart().catch(e => console.warn('[pearlMigAutoStart] async:', e));
+  }, 5000);
+});
+
 // Settings 상태 box 갱신 — Settings 열 때 호출.
 function refreshPearlMigrationStatus() {
   const el = document.getElementById('pearlMigrationStatus');
