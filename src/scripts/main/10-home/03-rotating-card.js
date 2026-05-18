@@ -529,10 +529,26 @@ function renderRotatingCard() {
     };
     const buildOneul = () => {
       if (typeof _pickHeroPearl !== 'function' || typeof _heroCardHtml !== 'function') return null;
-      // V4 (사용자 명시 2026-05-18 ultrathink): 홈 진입 시마다 다른 진주 — _pickHeroPearl() random rotation.
-      //   _pickHeroPearl = 안 본 우선(_libHeroSeen) + 다 보면 reset → 매 진입마다 다른 진주 보장.
-      //   진주 0개 → null (fallback 없음, priority 다음 source 도 없으면 카드 없음 — 기존 동작 유지).
-      const pick = _pickHeroPearl();
+      // V4 (사용자 명시 2026-05-19 ultrathink): 4시간 단위 rotation — 매 진입 X.
+      //   같은 4시간 bucket 안 = 캐시된 진주 그대로 (홈 자주 들어가도 안 바뀜).
+      //   bucket 바뀌면 _pickHeroPearl() 로 새로 pick + 캐시 갱신.
+      //   진주 0개 / cache lookup 실패 → fresh pick. cache 진주가 삭제됐어도 안전.
+      const _bucket = Math.floor(Date.now() / (4 * 3600000));
+      let pick = null;
+      const _prefs = state.preferences || {};
+      if (_prefs._oneulBucket === _bucket && _prefs._oneulPearlId) {
+        const _cached = (state.pearls || []).find(p => p && !p._deleted && p.id === _prefs._oneulPearlId);
+        if (_cached) pick = _cached;
+      }
+      if (!pick) {
+        pick = _pickHeroPearl();
+        if (pick && pick.id) {
+          state.preferences = state.preferences || {};
+          state.preferences._oneulBucket = _bucket;
+          state.preferences._oneulPearlId = pick.id;
+          try { saveState(); } catch {}
+        }
+      }
       if (!pick) return null;
       // V4 (사용자 명시 2026-05-17 재): 오늘의 너 = 영구 surface (마지막 fallback). click 해도 dismiss X — dismissed 체크 / dismissCall 둘 다 X.
       //   다른 source (hook/checkin/review) 다 dismiss 되면 오늘의 너만 남아 stay. _heroCardHtml 기본 onclick (진주 탭 진입) 만.
