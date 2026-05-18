@@ -53,7 +53,7 @@ const DAILY_QUESTIONS = [
 
   // === LIGHT — 관계 (Relational well-being, gratitude) ===
   { id: 'q31', cat: 'R', ctx: ['N','E'], depth: 'L', text: '오늘 누구한테 연락 받았어?' },
-  { id: 'q32', cat: 'R', ctx: ['N','E'], depth: 'L', text: '오늘 누구 얼굴 봤어? 안 봤으면 안 봤다고.' },
+  { id: 'q32', cat: 'R', ctx: ['N','E'], depth: 'L', text: '오늘 누구 봤어? 안 봤으면 안 봤다고 해도 돼.' },
   { id: 'q33', cat: 'R', ctx: ['N','E'], depth: 'L', text: '오늘 누구 생각났어?' },
   { id: 'q34', cat: 'R', ctx: ['W'], depth: 'L', text: '최근 연락하고 싶은데 못 한 사람 있어?' },
 

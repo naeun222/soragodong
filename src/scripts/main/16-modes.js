@@ -60,7 +60,8 @@ function prefillCheckinFromEntry() {
   }
   // 오늘 entry 있음 — 수정 모드
   if (submitBtn) submitBtn.textContent = '수정 완료 ✦';
-  if (subtitle) subtitle.textContent = '오늘 이미 기록한 거. 바꿀 거 있으면 고쳐.';
+  // V4 fix (사용자 명시 2026-05-18) — subtitle 문구 삭제. 옛: '오늘 이미 기록한 거. 바꿀 거 있으면 고쳐.'
+  if (subtitle) subtitle.textContent = '';
 
   // mood
   if (entry.mood != null) {
