@@ -1,1 +1,6 @@
 * text=auto eol=crlf
+
+# V4 fix (사용자 보고 2026-05-18) — gradlew / .sh 류는 LF 강제.
+# 옛 `* eol=crlf` 단독 = Linux runner checkout 시 gradlew 도 CRLF → shebang `#!/usr/bin/env sh\r` → exit 127 "required file not found".
+android/gradlew text eol=lf
+*.sh text eol=lf
