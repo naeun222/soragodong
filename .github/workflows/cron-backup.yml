@@ -1,0 +1,53 @@
+# V4 (사용자 명시 2026-05-18) — 새벽 4시 자동 백업 cron.
+#
+# 매일 UTC 19:00 = Korea 04:00 fire → backend `/api/backup/cron-snapshot` POST trigger.
+# Backend 가 50명 batch 처리. 사용자 더 많으면 offset paging 으로 추가 호출.
+#
+# 사용자 1회 셋업 (1개 secret 만 추가):
+#   GitHub repo Settings > Secrets > Actions > New repository secret
+#   - Name: CRON_SECRET
+#   - Secret: Cloudflare Pages dashboard 의 env CRON_SECRET 값 (billing crons 와 동일 값 재사용).
+#     Cloudflare 에 CRON_SECRET 미설정이면 `npx wrangler pages secret put CRON_SECRET` 으로 먼저 등록 후 같은 값을 GitHub 에도.
+#
+# 동작 확인:
+#   Actions tab > Cron Backup > Run workflow 수동 trigger.
+#   응답 JSON 의 processed / skipped / hasMore 확인.
+#   hasMore=true 면 batch 50 초과 — 다음 cron 이 자동 처리 (offset 0 부터 다시 시작하지만 idempotent 라 OK).
+
+name: Cron Backup
+
+on:
+  schedule:
+    # 매일 UTC 19:00 = Korea 04:00. cron-job.org / external 대신 GitHub Actions 사용.
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger-backup:
+    name: Trigger backend cron snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: POST /api/backup/cron-snapshot
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET secret 미등록"
+            exit 1
+          fi
+          # 첫 batch (offset 0). hasMore=true 면 다음 cron 까지 기다림 (오늘 안 다 처리 X 케이스 = 사용자 50+ 명일 때).
+          # 향후 페이지네이션 필요하면 loop 으로 확장.
+          response=$(curl -sS -X POST 'https://soragodong.com/api/backup/cron-snapshot' \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H 'Content-Type: application/json' \
+            -d '{"offset":0}' \
+            --fail-with-body \
+            --max-time 60)
+          echo "Response: $response"
+          # JSON 응답 안 ok=false 면 fail.
+          ok=$(echo "$response" | grep -o '"ok":true' || true)
+          if [ -z "$ok" ]; then
+            echo "::error::Backend returned non-ok response"
+            exit 1
+          fi

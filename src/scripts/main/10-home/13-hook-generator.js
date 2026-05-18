@@ -61,11 +61,11 @@ function _hookIsoToDayK(iso) {
 }
 
 function _hookSubstrateBySource(dayK) {
-  // V4 fix (사용자 명시 2026-05-18) — Phase 1A: 대화 토픽 (topicCards) 제거.
-  //   사용자 의도: "토픽은 이미 고동이랑 대화한 내용이라 다시 주제 언급하면 별로". 진주 only 로 hook 집중.
-  //   체크인/일기/일기요약/깨달음 = personalization context 차원에서 유지 (Phase 1B 에서 진주-only 로 축소 후보).
-  //   Phase 2: backend prompt 의 [F] reference 도 같이 제거 — 별도 repo 작업.
-  const out = { checkin: null, diary: [], diarySummary: [], pearls: [], insights: [] };
+  // V4 fix (사용자 명시 2026-05-18) — Phase 1B: 일기 ([B] chatMessages) + 일기요약 ([C] chatArchive headlines/summary) 도 제거.
+  //   Phase 1A 에서 [F] topicCards 제거 + 이번 Phase 1B 에서 [B][C] 제거 → 진주 + 체크인 + 깨달음 만 남음.
+  //   사용자 의도: 진주 위주로 hook 묻기. 일기 / 토픽 = 이미 고동이랑 대화한 내용이라 재언급 부담.
+  //   Phase 2: backend prompt 의 일기/토픽 reference 도 같이 제거.
+  const out = { checkin: null, pearls: [], insights: [] };
   // [A] 체크인
   const e = (state.entries || []).find(x => x && x.date === dayK);
   if (e) {
@@ -75,35 +75,9 @@ function _hookSubstrateBySource(dayK) {
       question: e.dailyQuestion && e.dailyQuestion.text,
       answer: e.note,
     };
-    if (e.note && e.note.length >= 30 && !(e.dailyQuestion && e.dailyQuestion.text)) {
-      out.diary.push({ src: 'note', text: e.note.slice(0, 300) });
-    }
   }
-  // [B] 일기 — 현재 chat user 발화
-  (state.chatMessages || []).forEach(m => {
-    if (!m || !m.timestamp || m.role !== 'user' || m.isSimulationContext) return;
-    if (_hookIsoToDayK(m.timestamp) !== dayK) return;
-    const c = (m.content || '').replace(/\s+/g, ' ').trim();
-    if (c.length >= 5) out.diary.push({ src: 'chat', text: c.slice(0, 200) });
-  });
-  // [C] 일기 요약 + 옛 chat 발화 (chatArchive)
-  (state.chatArchive || []).forEach(a => {
-    if (!a || a._deleted || a.isSimulation) return;
-    if (a.date !== dayK) return;
-    if (a.headline || a.summary) {
-      out.diarySummary.push({
-        headline: (a.headline || '').slice(0, 80),
-        summary: (a.summary || '').slice(0, 200)
-      });
-    }
-    if (Array.isArray(a.messages)) {
-      a.messages.forEach(m => {
-        if (!m || m.role !== 'user' || !m.content) return;
-        const c = (m.content || '').replace(/\s+/g, ' ').trim();
-        if (c.length >= 5) out.diary.push({ src: 'archive', text: c.slice(0, 200) });
-      });
-    }
-  });
+  // [B] 일기 — Phase 1B 제거
+  // [C] 일기 요약 — Phase 1B 제거
   // [D] 진주
   out.pearls = (state.pearls || []).filter(p => {
     if (!p || p._deleted || !p.createdAt) return false;
@@ -130,9 +104,9 @@ function _hookSubstrateBySource(dayK) {
 function _hookScoreRichness(src) {
   let score = 0;
   if (src.checkin && src.checkin.answer && src.checkin.answer.length > 5) score += 20;
-  score += (src.diary || []).length * 15;
-  score += (src.diarySummary || []).length * 10;
-  score += (src.pearls || []).length * 20;
+  // V4 fix (사용자 명시 2026-05-18) Phase 1B: diary / diarySummary 제거 — score 항목도 빠짐.
+  // 진주 가중치 ↑ — 사용자 의도 (진주 위주 hook). 20 → 30 으로 상향.
+  score += (src.pearls || []).length * 30;
   score += (src.insights || []).length * 15;
   // V4 fix (사용자 명시 2026-05-18) Phase 1A: topicCards 제거 — score 항목도 빠짐.
   return Math.min(100, score);
@@ -201,24 +175,8 @@ function _hookFormatSubstrate(src, dayK) {
     if (!c.answer && !c.allNighter && !c.sleepStart && (c.vit == null || c.mood == null)) lines.push('  - (없음)');
   } else lines.push('  - (없음)');
 
-  // [B] 일기
-  lines.push('[B] 일기 (사용자 발화/메모):');
-  if ((src.diary || []).length > 0) {
-    src.diary.slice(0, 6).forEach(d => {
-      lines.push(`  - "${(d.text || '').slice(0, 120)}"`);
-    });
-    if (src.diary.length > 6) lines.push(`  - (외 ${src.diary.length - 6}건)`);
-  } else lines.push('  - (없음)');
-
-  // [C] 일기 요약
-  lines.push('[C] 일기 요약 (옛 챕터 자동 정리):');
-  if ((src.diarySummary || []).length > 0) {
-    src.diarySummary.slice(0, 3).forEach(s => {
-      const h = (s.headline || '').slice(0, 80);
-      const sum = (s.summary || '').slice(0, 120);
-      lines.push(`  - "${h}${sum ? ' / ' + sum : ''}"`);
-    });
-  } else lines.push('  - (없음)');
+  // [B] 일기 — V4 fix (사용자 명시 2026-05-18) Phase 1B: 제거.
+  // [C] 일기 요약 — V4 fix (사용자 명시 2026-05-18) Phase 1B: 제거.
 
   // [D] 진주
   lines.push('[D] 진주:');

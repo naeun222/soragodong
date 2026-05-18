@@ -214,8 +214,11 @@ function _normalizeHook(raw: any, triggerDayK: string): {
   const body = String(raw.body || '').trim();
   if (!body || body.length < 5 || body.length > 200) return null;
   const sourceRaw = String(raw.source || '').trim();
-  const validSources = ['pearl', 'diary', 'topic', 'insight', 'checkin'];
-  const source = validSources.includes(sourceRaw) ? sourceRaw : 'diary';
+  // V4 fix (사용자 명시 2026-05-18) — Phase 2: source enum 정리.
+  //   substrate Phase 1B 후 frontend 는 pearl / checkin / insight 만 보냄.
+  //   AI 가 옛 prompt 메모리로 'diary'/'topic' 반환할 수 있음 → 옛 값은 accept 하되 fallback 'pearl' 로 (옛 'diary' 였음).
+  const validSources = ['pearl', 'checkin', 'insight', 'diary', 'topic'];
+  const source = validSources.includes(sourceRaw) ? sourceRaw : 'pearl';
   const hookTypeRaw = parseInt(String(raw.hook_type || '1'), 10);
   const hook_type = (hookTypeRaw >= 1 && hookTypeRaw <= 6) ? hookTypeRaw : 1;
   return { body, source, trigger_dayK: triggerDayK, hook_type };
