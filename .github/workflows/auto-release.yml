@@ -42,7 +42,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # V4 fix (사용자 보고 2026-05-18) — Capacitor CLI 가 Node 22+ 강제. 옛 '20' 으로는 npx cap sync 에서 [fatal] The Capacitor CLI requires NodeJS >=22.0.0.
+          node-version: '22'
 
       - name: Setup Java (Gradle 8.x 호환 — Capacitor 8.3.4 / android Gradle plugin)
         uses: actions/setup-java@v4
