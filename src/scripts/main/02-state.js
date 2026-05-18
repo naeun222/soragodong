@@ -405,6 +405,8 @@ const DEFAULT_STATE = {
   newUserExtractTriggers: 0,
   // 사용자 명시 2026-05-01 ultrathink: 챕터 마무리 카운터 — ✓ + 자동 5h+ 둘 다 카운트. 첫 3챕터만 즉시 case_analysis.
   chapterCompletedCount: 0,
+  // hook-system spec (2026-05-18): 챕터 마무리 시점 ISO. 5분 안 = empty placeholder default 만 (일기/부재 후속 X). 새 메시지 입력 시 null clear.
+  _chatChapterEndedAt: null,
 
   // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
   // 시스템 프롬프트 stable 부분에 적용돼서 cache_control 적용 → cache_read만 (사실상 무료).

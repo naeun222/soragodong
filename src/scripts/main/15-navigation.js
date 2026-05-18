@@ -152,6 +152,12 @@ function showScreen(name) {
         _archiveCurrentChapter({ manual: false });
       }
     } catch (e) { console.warn('[chat-entry chapter-gap]', e); }
+    // hook-system spec (2026-05-18): chat tab entry 평가 — *이전* lastChatTabEntryAt 기준 부재 평가 후 갱신.
+    try {
+      if (typeof _evaluateChatEntryInjects === 'function') _evaluateChatEntryInjects();
+      if (state.preferences) state.preferences.lastChatTabEntryAt = new Date().toISOString();
+      if (typeof saveState === 'function') saveState();
+    } catch (e) { console.warn('[chat-entry hook-system]', e); }
     renderChat();
     setTimeout(() => { const s = document.getElementById('screen-chat'); if (s) s.scrollTop = s.scrollHeight; }, 50);
     // V4-fix v3 (사용자 요청): 대화 진입 시 가닥 미션 팔로업 자동 prompt

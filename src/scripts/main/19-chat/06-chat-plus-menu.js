@@ -30,7 +30,8 @@ function _chapterExtractMessages(archiveItem) {
 // 신규유저 (chapterCompletedCount < 3) 만 즉시 API 호출 (case + topic). 그 외 = 4AM 일괄.
 function _archiveCurrentChapter(opts) {
   opts = opts || {};
-  const validMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
+  // hook-system spec (2026-05-18): inline 카드 (일기 / 부재 후속) 는 archive 에 포함 X.
+  const validMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error && !m.isDiaryInlineCard && !m.isAbsenceFollowup);
 
   // V4 사용자 명시 2026-05-04: 이어서 후 변경 X 마무리/보관 = 원본 archive 그대로 복귀.
   // 4AM cutoff 재처리 X / 새 _pendingExtract X / chapterCompletedCount 증가 X — 불필요 API 차단.
@@ -59,6 +60,8 @@ function _archiveCurrentChapter(opts) {
       if (typeof _chatWindowStart !== 'undefined') _chatWindowStart = null;
       delete state._resumedFromArchive;
       pruneOldChatArchive();
+      // hook-system spec — 챕터 마무리 시점 마킹 (5분 grace 용).
+      state._chatChapterEndedAt = new Date().toISOString();
       saveState();
       return snap;
     }
@@ -114,6 +117,8 @@ function _archiveCurrentChapter(opts) {
   // 신규유저 빠른 추출 — 첫 3 챕터만 즉시 API 호출 (case + topic 둘 다)
   if (typeof state.chapterCompletedCount !== 'number') state.chapterCompletedCount = 0;
   state.chapterCompletedCount += 1;
+  // hook-system spec — 챕터 마무리 시점 마킹 (5분 grace 용).
+  state._chatChapterEndedAt = new Date().toISOString();
   saveState();
 
   // V4 fix (사용자 명시 2026-05-18 ultrathink): chapterCompletedCount <= 3 → _isTutorialEligibleUser() 로 변경.
