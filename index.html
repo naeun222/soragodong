@@ -26467,11 +26467,12 @@ function _buildReviewPrompt(type, data) {
 친한 친구. 반말. 상담사 X.
 구체 > 일반. 판단 X. self-compassion.
 짧게. 주간이라 가벼움. 무겁게 결론 X. "이런 일이 있었네" 톤.
+살짝 토닥토닥 — 자연스럽게 잘한 거 / 버텨낸 거 짚어줘. 과장 X. 예: '이만큼 해냈네 ✦' / '의외로 잘 챙겼어' / '버텨낸 한 주야'.
 
 [출력 JSON — 6 섹션]
 {
   "one_word_weekly": "이번 주 momentum 한 단어 — 운동·진행 어휘 (예: \\"정착중\\", \\"가속중\\", \\"회복중\\", \\"휘청중\\", \\"재정비\\", \\"몰입\\", \\"숨고르기\\"). 한 단어.",
-  "momentum_line": "MOMENTUM 한 단어 보충 한 문장 — 소라고동 톤. 그 한 단어가 어떻게 드러났나 짧게. 예: '활력이 바닥일 때 오히려 제일 많이 만들어냈어' / '자고 일어나면 다시 출발선이라 휘청대도 OK'. 분석가 X 친구 톤.",
+  "momentum_line": "MOMENTUM 한 단어 보충 한 문장 — 소라고동 톤. 그 한 단어가 어떻게 드러났나 짧게. 살짝 격려 톤 OK. 예: '활력이 바닥일 때 오히려 제일 많이 만들어냈어 — 그 자체로 대단해' / '자고 일어나면 다시 출발선이라 휘청대도 OK, 일주일 끌고 왔어'. 분석가 X 친구 톤.",
   "scenes": [
     "이번 주 장면 1 (30-50자, 일기 톤, when + what + feeling 자연 한 문장. 예: '월요일 저녁 엄마 통화 후 30분 멍 — 울컥')",
     "이번 주 장면 2",
@@ -26483,7 +26484,7 @@ function _buildReviewPrompt(type, data) {
     "mode": "활성 모드 / 시간대 (1줄, 일상어). 예: '저녁 9시 넘으면 글이 술술'. 무관하면 빈 문자열.",
     "other": "황체기 / 날씨 / 외부 (1줄, 일상어). 모르면 빈 문자열."
   },
-  "soft_notice": "부드러운 알림 1 문장 (선택, 강요 X. 자기친절 톤. 예: '이번 주 좀 빡셌어 — 다음 주는 살살 가도 OK', '의외로 잘 챙겼네 ✦'). 데이터 부족 / 가벼운 주면 빈 문자열."
+  "soft_notice": "부드러운 알림 1 문장 (선택, 강요 X. 자기친절 + 살짝 격려 톤. 예: '이번 주 좀 빡셌어 — 다음 주는 살살 가도 OK', '의외로 잘 챙겼네 ✦', '버텨낸 것만으로 잘했어', '잘 해온 거 짚어주고 싶었어'). 데이터 부족 / 가벼운 주면 빈 문자열."
 }
 
 scenes 는 정확히 3개. 다른 field (strengths / quotes / emotions / pattern / risk_signals / value_align) 절대 X. JSON 객체 하나만. markdown code fence X.` : `너는 사용자의 월간 리뷰를 작성한다.
@@ -31872,7 +31873,11 @@ function _hookIsoToDayK(iso) {
 }
 
 function _hookSubstrateBySource(dayK) {
-  const out = { checkin: null, diary: [], diarySummary: [], pearls: [], insights: [], topicCards: [] };
+  // V4 fix (사용자 명시 2026-05-18) — Phase 1A: 대화 토픽 (topicCards) 제거.
+  //   사용자 의도: "토픽은 이미 고동이랑 대화한 내용이라 다시 주제 언급하면 별로". 진주 only 로 hook 집중.
+  //   체크인/일기/일기요약/깨달음 = personalization context 차원에서 유지 (Phase 1B 에서 진주-only 로 축소 후보).
+  //   Phase 2: backend prompt 의 [F] reference 도 같이 제거 — 별도 repo 작업.
+  const out = { checkin: null, diary: [], diarySummary: [], pearls: [], insights: [] };
   // [A] 체크인
   const e = (state.entries || []).find(x => x && x.date === dayK);
   if (e) {
@@ -31930,12 +31935,7 @@ function _hookSubstrateBySource(dayK) {
     ..._arch.map(a => ({ kind: 'archive', headline: a.headline, body: a.body, insight: a.insight })),
     ..._ins.map(i => ({ kind: 'auto', content: i.content })),
   ];
-  // [F] 대화 토픽
-  out.topicCards = (state.topicCards || []).filter(t => {
-    if (!t || t._deleted) return false;
-    const ts = t.chapterEndedAt || t.chapterStartedAt || t.createdAt;
-    return ts && _hookIsoToDayK(ts) === dayK;
-  });
+  // [F] 대화 토픽 — V4 fix (사용자 명시 2026-05-18) Phase 1A: 제거. 위 out default 주석 참조.
   return out;
 }
 
@@ -31946,7 +31946,7 @@ function _hookScoreRichness(src) {
   score += (src.diarySummary || []).length * 10;
   score += (src.pearls || []).length * 20;
   score += (src.insights || []).length * 15;
-  score += (src.topicCards || []).length * 12;
+  // V4 fix (사용자 명시 2026-05-18) Phase 1A: topicCards 제거 — score 항목도 빠짐.
   return Math.min(100, score);
 }
 
@@ -32056,16 +32056,7 @@ function _hookFormatSubstrate(src, dayK) {
     });
   } else lines.push('  - (없음)');
 
-  // [F] 대화 토픽
-  lines.push('[F] 대화 토픽:');
-  if ((src.topicCards || []).length > 0) {
-    src.topicCards.slice(0, 3).forEach(t => {
-      const title = (t.title || '').slice(0, 60);
-      const summary = (t.summary || '').slice(0, 120);
-      lines.push(`  - "${title}${summary ? ' / ' + summary : ''}"`);
-    });
-  } else lines.push('  - (없음)');
-
+  // [F] 대화 토픽 — V4 fix (사용자 명시 2026-05-18) Phase 1A: 제거. backend prompt 에도 [F] reference 빼야 (Phase 2 별도).
   return lines.join('\n');
 }
 

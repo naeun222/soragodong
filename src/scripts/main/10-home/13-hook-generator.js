@@ -61,7 +61,11 @@ function _hookIsoToDayK(iso) {
 }
 
 function _hookSubstrateBySource(dayK) {
-  const out = { checkin: null, diary: [], diarySummary: [], pearls: [], insights: [], topicCards: [] };
+  // V4 fix (사용자 명시 2026-05-18) — Phase 1A: 대화 토픽 (topicCards) 제거.
+  //   사용자 의도: "토픽은 이미 고동이랑 대화한 내용이라 다시 주제 언급하면 별로". 진주 only 로 hook 집중.
+  //   체크인/일기/일기요약/깨달음 = personalization context 차원에서 유지 (Phase 1B 에서 진주-only 로 축소 후보).
+  //   Phase 2: backend prompt 의 [F] reference 도 같이 제거 — 별도 repo 작업.
+  const out = { checkin: null, diary: [], diarySummary: [], pearls: [], insights: [] };
   // [A] 체크인
   const e = (state.entries || []).find(x => x && x.date === dayK);
   if (e) {
@@ -119,12 +123,7 @@ function _hookSubstrateBySource(dayK) {
     ..._arch.map(a => ({ kind: 'archive', headline: a.headline, body: a.body, insight: a.insight })),
     ..._ins.map(i => ({ kind: 'auto', content: i.content })),
   ];
-  // [F] 대화 토픽
-  out.topicCards = (state.topicCards || []).filter(t => {
-    if (!t || t._deleted) return false;
-    const ts = t.chapterEndedAt || t.chapterStartedAt || t.createdAt;
-    return ts && _hookIsoToDayK(ts) === dayK;
-  });
+  // [F] 대화 토픽 — V4 fix (사용자 명시 2026-05-18) Phase 1A: 제거. 위 out default 주석 참조.
   return out;
 }
 
@@ -135,7 +134,7 @@ function _hookScoreRichness(src) {
   score += (src.diarySummary || []).length * 10;
   score += (src.pearls || []).length * 20;
   score += (src.insights || []).length * 15;
-  score += (src.topicCards || []).length * 12;
+  // V4 fix (사용자 명시 2026-05-18) Phase 1A: topicCards 제거 — score 항목도 빠짐.
   return Math.min(100, score);
 }
 
@@ -245,16 +244,7 @@ function _hookFormatSubstrate(src, dayK) {
     });
   } else lines.push('  - (없음)');
 
-  // [F] 대화 토픽
-  lines.push('[F] 대화 토픽:');
-  if ((src.topicCards || []).length > 0) {
-    src.topicCards.slice(0, 3).forEach(t => {
-      const title = (t.title || '').slice(0, 60);
-      const summary = (t.summary || '').slice(0, 120);
-      lines.push(`  - "${title}${summary ? ' / ' + summary : ''}"`);
-    });
-  } else lines.push('  - (없음)');
-
+  // [F] 대화 토픽 — V4 fix (사용자 명시 2026-05-18) Phase 1A: 제거. backend prompt 에도 [F] reference 빼야 (Phase 2 별도).
   return lines.join('\n');
 }
 
