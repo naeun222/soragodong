@@ -60,4 +60,11 @@
          fix: @capacitor/geolocation 플러그인 + ACCESS_COARSE_LOCATION (FINE 불필요 — 날씨 lat/lon 0.01° 반올림).
          16-modes.js 의 _fetchCurrentWeather 가 Capacitor.Plugins.Geolocation 우선 사용. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- V4 fix (사용자 보고 2026-05-18) — Play Console "1,993 기기 미지원" 경고 일부 복구.
+         ACCESS_COARSE_LOCATION 권한이 자동으로 android.hardware.location required=true 주입 → GPS 없는 기기 (Chromebook / 일부 태블릿) 배제.
+         날씨 fetch 는 IP-based fallback 도 가능하므로 GPS 강제 X 명시. 권한 거부 시 _fetchCurrentWeather 가 정상 fail-safe. -->
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.network" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 </manifest>
