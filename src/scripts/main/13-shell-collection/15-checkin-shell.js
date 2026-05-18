@@ -101,7 +101,6 @@ function showCheckinShellReward(result) {
     <div class="checkin-shell-emerge-inner tier-${shell.tier}">
       <div class="checkin-shell-emerge-emoji">${shell.type}</div>
       <div class="checkin-shell-emerge-label">${tierLabel}</div>
-      <div class="checkin-shell-emerge-message">소라가 널 부르고 있어</div>
     </div>
   `;
   document.body.appendChild(overlay);
