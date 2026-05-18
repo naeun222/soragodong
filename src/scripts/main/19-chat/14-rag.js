@@ -31,7 +31,10 @@ function _ragGetTopN() {
 }
 
 function _ragIsEnabled() {
-  if (!state.preferences || !state.preferences.useRag) return false;
+  if (!state.preferences) return false;
+  // V4 (사용자 명시 2026-05-18): default ON — useRag === false (사용자 명시적 OFF) 만 OFF.
+  //   undefined (옛 사용자) / true (신규 default) → ON 간주. plan 게이트 (_ragGetTopN) 가 Light/게스트 차단.
+  if (state.preferences.useRag === false) return false;
   return _ragGetTopN() > 0;
 }
 
@@ -249,3 +252,21 @@ function _ragFormatInject(retrieved) {
     ''
   ].join('\n');
 }
+
+// V4 (사용자 명시 2026-05-18): default RAG ON 후 — 옛 archive embedding 누락 자동 보완.
+//   window load + 7초 → _ragIsEnabled() polling (Plan/master key 확보 대기) → _ragBackfillAll (idempotent, silent).
+//   매 세션 1회 자동. 이미 embed 된 archive 는 `have` Set 으로 skip → cost 발생 X.
+async function _ragAutoBackfillOnLoad() {
+  // _ragIsEnabled polling — 5초 간격, 5분 한도. init / E2EE 복원 / Plan 확보 대기.
+  for (let i = 0; i < 60; i++) {
+    if (typeof _ragIsEnabled === 'function' && _ragIsEnabled()) break;
+    await new Promise(r => setTimeout(r, 5000));
+  }
+  if (typeof _ragIsEnabled !== 'function' || !_ragIsEnabled()) return;  // Plus/Premium X or master key X
+  if (typeof _ragBackfillAll !== 'function') return;
+  // silent — 토스트 없음 (이미 14-rag.js 안 backfill 자체 silent).
+  _ragBackfillAll({ silent: true }).catch(e => console.warn('[ragAutoBackfill]', e?.message || e));
+}
+window.addEventListener('load', () => {
+  setTimeout(() => _ragAutoBackfillOnLoad(), 7000);
+});

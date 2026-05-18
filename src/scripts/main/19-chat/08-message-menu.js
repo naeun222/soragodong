@@ -177,17 +177,17 @@ function onMainHeaderToggleClick() {
   const ragEligible = active && (plan === 'light' || plan === 'premium');  // 'light' key = Plus
   if (!ragEligible) return;  // Light/미구독/Premium 외 = brand only no-op
   state.preferences = state.preferences || {};
-  // 첫 클릭 = 모달만 (transition X, 사용자 명시).
+  // V4 (사용자 명시 2026-05-18): default ON — 옛 "켜기 권유" 모달 skip. _ragToggleSeen 마킹만 + toggle 진행.
+  //   옛 사용자 (_ragToggleSeen undefined) 도 마이그 한 번. 모달 없이 바로 toggle.
   if (!state.preferences._ragToggleSeen) {
     state.preferences._ragToggleSeen = true;
-    try { saveState(); } catch {}
-    if (typeof showRagFirstClickModal === 'function') showRagFirstClickModal();
     // 깜빡 halo 종료
     document.querySelectorAll('.js-rag-mode-btn').forEach(btn => btn.classList.remove('rag-blink'));
-    return;
   }
   // 두 번째 클릭부터 toggle.
-  state.preferences.useRag = !state.preferences.useRag;
+  // V4 (사용자 명시 2026-05-18): default ON — undefined / true 둘 다 currently-on 으로 간주. 첫 클릭 OFF, 그 다음 ON.
+  const currentlyOn = state.preferences.useRag !== false;
+  state.preferences.useRag = !currentlyOn;
   try { saveState(); } catch {}
   updateMainHeaderBtnVisual();
   if (typeof showToast === 'function') {
@@ -215,7 +215,8 @@ function updateMainHeaderBtnVisual() {
   const plan = billing?.subscription_plan;
   const active = !!billing?.subscription_active;
   const ragEligible = active && (plan === 'light' || plan === 'premium');
-  const useRag = !!(state?.preferences?.useRag);
+  // V4 (사용자 명시 2026-05-18): default ON — undefined / true 둘 다 ON visual.
+  const useRag = state?.preferences?.useRag !== false;
   const ragSeen = !!(state?.preferences?._ragToggleSeen);
 
   // 숙고/마법 = per-room useOpus 조회

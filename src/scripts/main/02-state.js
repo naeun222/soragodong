@@ -425,7 +425,12 @@ const DEFAULT_STATE = {
     // 첫 진입 시 적용됨. 정책 버전 변경 시 재동의.
     consentLog: [],
     // 자동 갱신 default OFF (다크 패턴 회피, terms 4.4)
-    autoRenew: false
+    autoRenew: false,
+    // V4 (사용자 명시 2026-05-18): RAG default ON. Plus/Premium 결제 시 자동 작동 — 사용자가 button 안 눌러도 옛 챕터 기억 켜짐.
+    //   plan 게이트는 _ragGetTopN (light/premium 만 active). Light/게스트 = effective OFF.
+    //   _ragToggleSeen default true — default ON 시점 = 첫 클릭 설명 모달 skip. button 누르면 즉시 OFF/ON 토글.
+    useRag: true,
+    _ragToggleSeen: true
   },
 
   // 7. V3.3: 대화 일별 아카이브

@@ -14580,7 +14580,12 @@ const DEFAULT_STATE = {
     // 첫 진입 시 적용됨. 정책 버전 변경 시 재동의.
     consentLog: [],
     // 자동 갱신 default OFF (다크 패턴 회피, terms 4.4)
-    autoRenew: false
+    autoRenew: false,
+    // V4 (사용자 명시 2026-05-18): RAG default ON. Plus/Premium 결제 시 자동 작동 — 사용자가 button 안 눌러도 옛 챕터 기억 켜짐.
+    //   plan 게이트는 _ragGetTopN (light/premium 만 active). Light/게스트 = effective OFF.
+    //   _ragToggleSeen default true — default ON 시점 = 첫 클릭 설명 모달 skip. button 누르면 즉시 OFF/ON 토글.
+    useRag: true,
+    _ragToggleSeen: true
   },
 
   // 7. V3.3: 대화 일별 아카이브
@@ -40735,17 +40740,17 @@ function onMainHeaderToggleClick() {
   const ragEligible = active && (plan === 'light' || plan === 'premium');  // 'light' key = Plus
   if (!ragEligible) return;  // Light/미구독/Premium 외 = brand only no-op
   state.preferences = state.preferences || {};
-  // 첫 클릭 = 모달만 (transition X, 사용자 명시).
+  // V4 (사용자 명시 2026-05-18): default ON — 옛 "켜기 권유" 모달 skip. _ragToggleSeen 마킹만 + toggle 진행.
+  //   옛 사용자 (_ragToggleSeen undefined) 도 마이그 한 번. 모달 없이 바로 toggle.
   if (!state.preferences._ragToggleSeen) {
     state.preferences._ragToggleSeen = true;
-    try { saveState(); } catch {}
-    if (typeof showRagFirstClickModal === 'function') showRagFirstClickModal();
     // 깜빡 halo 종료
     document.querySelectorAll('.js-rag-mode-btn').forEach(btn => btn.classList.remove('rag-blink'));
-    return;
   }
   // 두 번째 클릭부터 toggle.
-  state.preferences.useRag = !state.preferences.useRag;
+  // V4 (사용자 명시 2026-05-18): default ON — undefined / true 둘 다 currently-on 으로 간주. 첫 클릭 OFF, 그 다음 ON.
+  const currentlyOn = state.preferences.useRag !== false;
+  state.preferences.useRag = !currentlyOn;
   try { saveState(); } catch {}
   updateMainHeaderBtnVisual();
   if (typeof showToast === 'function') {
@@ -40773,7 +40778,8 @@ function updateMainHeaderBtnVisual() {
   const plan = billing?.subscription_plan;
   const active = !!billing?.subscription_active;
   const ragEligible = active && (plan === 'light' || plan === 'premium');
-  const useRag = !!(state?.preferences?.useRag);
+  // V4 (사용자 명시 2026-05-18): default ON — undefined / true 둘 다 ON visual.
+  const useRag = state?.preferences?.useRag !== false;
   const ragSeen = !!(state?.preferences?._ragToggleSeen);
 
   // 숙고/마법 = per-room useOpus 조회
@@ -41918,7 +41924,10 @@ function _ragGetTopN() {
 }
 
 function _ragIsEnabled() {
-  if (!state.preferences || !state.preferences.useRag) return false;
+  if (!state.preferences) return false;
+  // V4 (사용자 명시 2026-05-18): default ON — useRag === false (사용자 명시적 OFF) 만 OFF.
+  //   undefined (옛 사용자) / true (신규 default) → ON 간주. plan 게이트 (_ragGetTopN) 가 Light/게스트 차단.
+  if (state.preferences.useRag === false) return false;
   return _ragGetTopN() > 0;
 }
 
@@ -42136,6 +42145,24 @@ function _ragFormatInject(retrieved) {
     ''
   ].join('\n');
 }
+
+// V4 (사용자 명시 2026-05-18): default RAG ON 후 — 옛 archive embedding 누락 자동 보완.
+//   window load + 7초 → _ragIsEnabled() polling (Plan/master key 확보 대기) → _ragBackfillAll (idempotent, silent).
+//   매 세션 1회 자동. 이미 embed 된 archive 는 `have` Set 으로 skip → cost 발생 X.
+async function _ragAutoBackfillOnLoad() {
+  // _ragIsEnabled polling — 5초 간격, 5분 한도. init / E2EE 복원 / Plan 확보 대기.
+  for (let i = 0; i < 60; i++) {
+    if (typeof _ragIsEnabled === 'function' && _ragIsEnabled()) break;
+    await new Promise(r => setTimeout(r, 5000));
+  }
+  if (typeof _ragIsEnabled !== 'function' || !_ragIsEnabled()) return;  // Plus/Premium X or master key X
+  if (typeof _ragBackfillAll !== 'function') return;
+  // silent — 토스트 없음 (이미 14-rag.js 안 backfill 자체 silent).
+  _ragBackfillAll({ silent: true }).catch(e => console.warn('[ragAutoBackfill]', e?.message || e));
+}
+window.addEventListener('load', () => {
+  setTimeout(() => _ragAutoBackfillOnLoad(), 7000);
+});
 // hook-system spec (2026-05-18) — 챗 탭 empty placeholder 우선순위 라우터 + 일기 inline 카드 + 부재 후속 placeholder
 // spec: _hook-system-spec.md §5-7
 //
