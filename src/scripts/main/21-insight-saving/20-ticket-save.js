@@ -139,8 +139,20 @@ async function saveTicketPearl(opts) {
   };
   if ((venue || '').trim()) pearl.venue = venue.trim().slice(0, 80);
   if (finalMemo) pearl.note = finalMemo.slice(0, 300);
-  if (photo) pearl.photo = photo;
   if (typeof opts.sourceMsgIdx === 'number') pearl.sourceMsgIdx = opts.sourceMsgIdx;
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1C — photo Storage 직접 업로드. 실패 시 진주 안 만듦.
+  if (photo) {
+    try {
+      if (typeof showFullscreenLoader === 'function') showFullscreenLoader('사진 업로드 중... 📸');
+      await _attachPearlPhoto(pearl, photo);
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+    } catch (e) {
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+      console.warn('[saveTicketPearl] photo attach fail:', e);
+      showToast('사진 업로드 실패 — 다시 시도');
+      return null;
+    }
+  }
 
   state.pearls = state.pearls || [];
   state.pearls.push(pearl);

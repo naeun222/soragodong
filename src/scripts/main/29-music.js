@@ -747,6 +747,8 @@ async function _pearlViewMore(id) {
       cancelLabel: '취소'
     });
     if (yes) {
+      // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1C — 진주 삭제 시 Storage 안 미디어 같이 cleanup (orphan 방지).
+      try { await _deleteAllPearlMedia(pearl); } catch (e) { console.warn('[pearl delete] storage cleanup:', e); }
       state.pearls = state.pearls.filter(p => p.id !== id);
       saveState();
       renderLensPearls();
@@ -801,23 +803,23 @@ async function _pearlViewMore(id) {
     }
   } else if (action === 'add_photo' || action === 'change_photo') {
     // V4 (사용자 명시 2026-05-17 ultrathink): 사진 추가/변경 — addPearl 의 photo flow 재진입.
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1C — _attachPearlPhoto 가 Storage 신/옛 path + mutually exclusive 자동.
     try {
       const file = await pickPhotoFile();
       if (!file) return;
       const dataUrl = await fileToResizedDataUrl(file, 1024);
-      pearl.photo = dataUrl;
-      // 영상이 있었으면 mutually exclusive 정책 — 영상 제거 (사용자 선택은 사진).
-      if (pearl.video) {
-        delete pearl.video;
-        delete pearl.videoThumbnail;
-        delete pearl.videoHasAudio;
-        delete pearl.videoAudioMeta;
-      }
+      if (typeof showFullscreenLoader === 'function') showFullscreenLoader('사진 업로드 중... 📸');
+      await _attachPearlPhoto(pearl, dataUrl);
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
       saveState(true);
       renderLensPearls();
       showToast(action === 'add_photo' ? '📷 사진 추가됨' : '📷 사진 변경됨');
       showPearlViewModal(pearl);
-    } catch (e) { console.warn('[pearl photo edit]', e); showToast('사진 처리 실패'); }
+    } catch (e) {
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+      console.warn('[pearl photo edit]', e);
+      showToast('사진 처리 실패: ' + ((e && e.message) || ''));
+    }
   } else if (action === 'remove_photo') {
     const yes = await showConfirmModal({
       title: '사진 제거할까?',
@@ -825,7 +827,8 @@ async function _pearlViewMore(id) {
       okLabel: '제거', cancelLabel: '취소'
     });
     if (!yes) return;
-    delete pearl.photo;
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1C — _removePearlPhoto 가 Storage 안 파일 + cache 정리.
+    try { await _removePearlPhoto(pearl); } catch (e) { console.warn('[remove_photo]', e); }
     saveState(true);
     renderLensPearls();
     showToast('사진 제거됨');
@@ -870,19 +873,17 @@ async function _pearlViewMore(id) {
       if (approxBytes > 5_000_000) {
         showToast(`압축 후도 큼 (${(approxBytes/1e6).toFixed(1)}MB) — 짧은 영상 시도`); return;
       }
-      pearl.video = dataUrl;
-      pearl.videoThumbnail = result.thumbnail;
-      pearl.videoHasAudio = !!result.hasAudio;
-      if (result.audioMeta) pearl.videoAudioMeta = result.audioMeta;
-      // 사진이 있었으면 mutually exclusive — 사진 제거 (사용자 선택은 영상).
-      if (pearl.photo) delete pearl.photo;
+      // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1C — _attachPearlVideo 가 Storage 신/옛 path + 썸네일 같이 처리 + 사진 mutually exclusive 자동.
+      if (typeof showFullscreenLoader === 'function') showFullscreenLoader('영상 업로드 중... 📹');
+      await _attachPearlVideo(pearl, dataUrl, result.thumbnail, !!result.hasAudio, result.audioMeta);
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
       saveState(true);
       renderLensPearls();
       showToast(action === 'add_video' ? '🎬 영상 추가됨' : '🎬 영상 변경됨');
       showPearlViewModal(pearl);
     } catch (e) {
       if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
-      console.warn('[pearl video edit]', e); showToast('영상 처리 실패');
+      console.warn('[pearl video edit]', e); showToast('영상 처리 실패: ' + ((e && e.message) || ''));
     }
   } else if (action === 'remove_video') {
     const yes = await showConfirmModal({
@@ -891,10 +892,8 @@ async function _pearlViewMore(id) {
       okLabel: '제거', cancelLabel: '취소'
     });
     if (!yes) return;
-    delete pearl.video;
-    delete pearl.videoThumbnail;
-    delete pearl.videoHasAudio;
-    delete pearl.videoAudioMeta;
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1C — _removePearlVideo 가 Storage 안 파일 + 썸네일 + cache 정리.
+    try { await _removePearlVideo(pearl); } catch (e) { console.warn('[remove_video]', e); }
     saveState(true);
     renderLensPearls();
     showToast('영상 제거됨');

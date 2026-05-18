@@ -129,8 +129,9 @@ async function _bookViewMore(pearlId) {
       if (file) {
         showFullscreenLoader('표지 처리 중... 📸');
         const newPhoto = await fileToResizedDataUrl(file, 1024);
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1C — _attachPearlPhoto 가 Storage 신/옛 path 자동 분기.
+        await _attachPearlPhoto(pearl, newPhoto);
         hideFullscreenLoader();
-        pearl.photo = newPhoto;
         saveState();
         _renderBookReviewFullscreen(pearl, false);
         if (typeof renderLensPearls === 'function') renderLensPearls();
@@ -140,7 +141,7 @@ async function _bookViewMore(pearlId) {
     } catch (e) {
       hideFullscreenLoader();
       console.warn('[book cover change]', e);
-      showToast('표지 처리 실패');
+      showToast('표지 처리 실패: ' + ((e && e.message) || ''));
     }
     return;
   }
@@ -191,6 +192,8 @@ async function _deleteBookPearl(pearlId) {
     danger: true
   });
   if (!ok) return;
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1C — 진주 삭제 시 Storage 안 미디어 같이 cleanup (orphan 방지).
+  try { await _deleteAllPearlMedia(pearl); } catch (e) { console.warn('[_deleteBookPearl] storage cleanup:', e); }
   state.pearls.splice(idx, 1);
   saveState();
   closeBookReviewFullscreen();

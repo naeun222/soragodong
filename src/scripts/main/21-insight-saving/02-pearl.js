@@ -148,7 +148,19 @@ async function saveMsgAsPearl(idx) {
     type: 'pearl',
     sourceMsgIdx: idx
   };
-  if (photo) pearl.photo = photo;
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1C — photo Storage 직접 업로드. 실패 시 진주 자체 안 만듦.
+  if (photo) {
+    try {
+      if (typeof showFullscreenLoader === 'function') showFullscreenLoader('사진 업로드 중... 📸');
+      await _attachPearlPhoto(pearl, photo);
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+    } catch (e) {
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+      console.warn('[saveMsgAsPearl] photo attach fail:', e);
+      showToast('사진 업로드 실패 — 다시 시도해줘');
+      return;
+    }
+  }
   state.pearls.push(pearl);
   msg.pearlSaved = true;
   saveState();

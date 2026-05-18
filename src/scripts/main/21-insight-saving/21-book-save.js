@@ -80,8 +80,20 @@ async function saveBookPearl(opts) {
     type: 'pearl'
   };
   if ((bookAuthor || '').trim()) pearl.bookAuthor = bookAuthor.trim().slice(0, 60);
-  if (photo) pearl.photo = photo;
   if (typeof opts.sourceMsgIdx === 'number') pearl.sourceMsgIdx = opts.sourceMsgIdx;
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1C — 표지 Storage 직접 업로드. 실패 시 진주 안 만듦.
+  if (photo) {
+    try {
+      if (typeof showFullscreenLoader === 'function') showFullscreenLoader('표지 업로드 중... 📚');
+      await _attachPearlPhoto(pearl, photo);
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+    } catch (e) {
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+      console.warn('[saveBookPearl] photo attach fail:', e);
+      showToast('표지 업로드 실패 — 다시 시도');
+      return null;
+    }
+  }
 
   state.pearls = state.pearls || [];
   state.pearls.push(pearl);
