@@ -146,6 +146,14 @@ async function sendChat() {
         if (lastMsg && lastMsg.role === 'user') {
           lastMsg.replyToHookId = unanswered.id;
         }
+        // V4 (사용자 명시 2026-05-18 ultrathink): 첫 backend-pull hook 답변 직후 push 알림 설정 모달 trigger.
+        //   이유: 사용자가 pull 패턴으로 hook 받음 = push 권한 없이도 hook 작동 = 가치 체험 후 자연 권유.
+        //   옛 trigger (init 후 _hookInitCount >= 2) = 사용자 가치 인지 X 상태에 권한 요청 → 거부율 ↑.
+        if (unanswered.source === 'backend-pull'
+            && !state.preferences?._hookOnboardingShown
+            && typeof maybeShowHookOnboarding === 'function') {
+          setTimeout(() => { try { maybeShowHookOnboarding(); } catch (e) { console.warn('[hookOnb after-pull-reply]', e); } }, 1500);
+        }
       }
     }
   }

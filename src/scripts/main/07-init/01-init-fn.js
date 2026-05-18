@@ -449,13 +449,9 @@ async function init() {
     }, 1800);
   }
 
-  // Hook 온보딩 (Section 19.1) — session 2회째 시간 prompt.
-  //   1) init count 증가 (cloud load 후라서 누적 cloud 값 기준).
-  //   2) 조건 통과 시 모달 (살짝 delay — 화면 안정 후).
-  if (typeof _hookOnbBumpInitCount === 'function') _hookOnbBumpInitCount();
-  if (typeof maybeShowHookOnboarding === 'function') {
-    setTimeout(() => { try { maybeShowHookOnboarding(); } catch (e) { console.warn('[hookOnb]', e); } }, 2200);
-  }
+  // V4 (사용자 명시 2026-05-18 ultrathink): 옛 init-time trigger 제거 — 사용자가 hook 가치 인지 X 상태에 권한 요청 → 거부율 ↑.
+  //   새 trigger = 첫 backend-pull hook 답변 직후 (05-send-chat.js). 가치 체험 후 자연 권유.
+  //   _hookOnbBumpInitCount 도 dead — _hookInitCount 카운터 사용 X.
 
   // Hook 생성 — cooldown / cold-start gate / 풍부도 / askedHooks cooldown 다 통과 시 1회 fire.
   //   (E2EE 호환: backend cron 대신 client 가 substrate 모아서 POST.)

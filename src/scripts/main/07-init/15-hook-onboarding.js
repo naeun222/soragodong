@@ -19,16 +19,13 @@ function _hookOnbShouldShow() {
   if (!state || !state.preferences) return false;
   if (state.preferences._hookOnboardingShown) return false;
   // hookFrequency 가 명시 set 됐으면 (사용자가 이미 선택) skip.
-  // default 'daily' 인데 _hookOnboardingShown 이 false 면 첫 노출 후보.
   if (state.preferences.hookFrequency === 'off') return false;  // 이미 끔
-  if ((state.preferences._hookInitCount || 0) < 2) return false;
+  // V4 (사용자 명시 2026-05-18 ultrathink): _hookInitCount >= 2 조건 제거. 새 trigger = 첫 pull hook 답변 직후 (05-send-chat.js).
+  //   즉 이 함수는 caller (maybeShowHookOnboarding) 가 적절한 시점에서만 호출 — 가드는 _hookOnboardingShown 만.
   // 게스트 / 튜토리얼 모드 / cold start 진행 중 = skip
   if (state.isGuest) return false;
   if (window._onbTutorialMode) return false;
   if (window._initialDataLoading) return false;
-  // V4 fix (사용자 보고 2026-05-18 ultrathink): userName 가드 완화 — 모달 line 55 fallback ('있잖아 ✦') 이미 존재.
-  //   옛 의도: userName 채우는 별도 prompt 가 잡음. 그러나 카카오 OAuth 는 onboarding 모달 우회 → state.userName='' 영구 → 푸시 prompt 영구 skip.
-  //   매핑 fix (14-deeplink) 는 best-effort 호명 시도. 매핑 fail 케이스도 푸시 prompt 자체는 떠야 정상.
   return true;
 }
 
@@ -60,7 +57,7 @@ function showHookOnboardingModal() {
   overlay.innerHTML = `
     <div class="hook-onb-card" onclick="event.stopPropagation()">
       <div class="hook-onb-header">${escapeHtml(header)}</div>
-      <div class="hook-onb-q">매일 한 번씩 뭐 물어봐도 돼?</div>
+      <div class="hook-onb-q">방금처럼 가끔 알림으로 한 마디 보내도 돼?</div>
       <div class="hook-onb-q-sub">몇 시쯤이 좋아?</div>
       <div class="hook-onb-times" id="hookOnbTimes">
         <button class="hook-onb-time-btn" type="button" data-hour="8"  onclick="_hookOnbPickTime(8)">아침 (8시)</button>
@@ -71,7 +68,7 @@ function showHookOnboardingModal() {
       </div>
       <div class="hook-onb-actions">
         <button class="hook-onb-confirm" type="button" onclick="_hookOnbConfirm()">응, 그 시간에 줘</button>
-        <button class="hook-onb-decline" type="button" onclick="_hookOnbDecline()">필요 없어</button>
+        <button class="hook-onb-decline" type="button" onclick="_hookOnbDecline()">지금은 됐어</button>
       </div>
     </div>
   `;

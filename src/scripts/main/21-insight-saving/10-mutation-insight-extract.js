@@ -54,7 +54,7 @@ async function _extractMutationInsight(opts) {
   state.archive.unshift(ins);
   saveState();
   if (trigger === 'manual' && typeof showToast === 'function') {
-    showToast('깨달음 홈에 저장됐어 ✦');
+    showToast('깨달음✨에 저장됐어');
   }
   if (typeof renderLensArchive === 'function') { try { renderLensArchive(); } catch {} }
   return ins;
