@@ -57,7 +57,11 @@
 //   기존 cache 강제 invalidate (push 인프라 활성 + index.html 갱신).
 // v49 (2026-05-18 사용자 보고 ultrathink): PWA 무한 로딩 fix — init() throw fallback (login screen 강제) + 옛 캐시 강제 invalidate.
 //   배경: 그 사이 hook substrate Phase 1A/1B + cloud toast TTL + 401 retry + 부재 일기 등 변경 누적. SW stale-while-revalidate 가 옛 broken 버전 서빙 가능성.
-const CACHE_NAME = 'soragodong-v4-cache-v49';
+// v50 (2026-05-18 사용자 보고 ultrathink Phase 2): 카카오 로그인 후 빈 화면 stuck root cause fix —
+//   모든 supabase fetch (_authedFetch / _fetchWithRetry5xx / checkSession / loadFromCloud / saveToCloudNow / capacitor OAuth deeplink) 에
+//   AbortController 12s timeout 강제. ec3cc79 의 init().catch 는 reject 만 잡지 await hang 은 X. 이 fix 로 hang 이 12s 안 reject → showLoginScreen.
+//   추가로 init 30s 이중 안전망. 옛 캐시 강제 invalidate.
+const CACHE_NAME = 'soragodong-v4-cache-v50';
 const PRECACHE_URLS = [
   './',
   './index.html',

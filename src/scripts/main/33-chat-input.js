@@ -134,8 +134,12 @@ function escapeHtml(str) {
 // V4 fix (사용자 보고 2026-05-18) — PWA 무한 로딩 (splash 사라진 후 빈 화면) fallback.
 //   원인: init() 가 await 안에서 uncaught throw → .app / login-screen 둘 다 display:none 유지 → blank.
 //   fix: init() catch 안 login-screen 명시 노출 + splash 강제 hide. 진짜 원인 (network / corrupt localStorage / fetch throw 등) 별도 진단 가능 — fallback 으로 dead-end 회피.
-init().catch(e => {
-  console.error('[init] fatal — login screen fallback:', e);
+// V4 fix (사용자 보고 2026-05-18 ultrathink Phase 2) — hang 도 잡는 30s 안전망 추가.
+//   ec3cc79 catch 는 reject 만 잡지 await hang 은 X. supabase 정지/지연 시 어떤 fetch 가 timeout wrapper 안 거치고 hang 하면 init 영구 대기 → 빈 화면.
+//   _fetchWithTimeout 으로 critical path (checkSession / loadFromCloud / saveToCloudNow) 는 12s 안 reject 되지만 — 이중 안전망으로 30s 후 init 안 끝났으면 강제 showLoginScreen.
+let _initSettled = false;
+const _initShowLoginFallback = (e) => {
+  if (e) console.error('[init] fatal/timeout — login screen fallback:', e);
   try { if (typeof _hideBootSplash === 'function') _hideBootSplash(); } catch {}
   try { if (typeof showLoginScreen === 'function') showLoginScreen(); } catch {
     // showLoginScreen 도 throw 면 마지막 안전망 — 직접 DOM 조작.
@@ -144,4 +148,13 @@ init().catch(e => {
       if (ls) ls.style.display = 'flex';
     } catch {}
   }
-});
+};
+init()
+  .then(() => { _initSettled = true; })
+  .catch(e => { _initSettled = true; _initShowLoginFallback(e); });
+setTimeout(() => {
+  if (_initSettled) return;
+  console.warn('[init] 30s 안전망 — hang 감지, login screen 강제 fallback');
+  _initSettled = true;  // 이후 catch 가 또 호출돼도 idempotent.
+  _initShowLoginFallback(new Error('init 30s 안전망 trigger'));
+}, 30000);

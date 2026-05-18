@@ -303,7 +303,8 @@ async function _saveToCloudNowInner() {
       //   신규 사용자 (localStorage 에 recovery 정상) 는 이 분기 진입 X — 영향 X.
       if (!recoveryInfo) {
         try {
-          const r = await fetch(
+          // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout 박힌 wrapper. saveToCloudNow 는 loadFromCloud 안에서 호출 가능 (post-load save) → hang 시 init() 영구 대기.
+          const r = await _fetchWithTimeout(
             `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=data&limit=1`,
             { headers: authHeaders() }
           );

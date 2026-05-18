@@ -15,6 +15,27 @@
 // 모든 28개 LLM call 위치 자동 redirect — 코드 변경 X.
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
+// V4 fix (사용자 보고 2026-05-18 ultrathink) — 카카오 로그인 후 빈 화면 stuck root cause 방어.
+//   모든 supabase fetch 가 timeout 없이 hang 가능 → init() 가 await 에서 영구 대기 →
+//   _hideBootSplash 7s 안전망만 splash 사라지고 .app / loginScreen 둘 다 display:none 유지 → blank.
+//   ec3cc79 의 init().catch 는 reject 만 잡지 hang 은 X. 이 wrapper 가 12s 후 강제 abort → reject → catch fallback.
+// 사용 패턴: supabase / 인증 / cloud sync 같은 짧은 RTT REST 호출만. 챗 streaming 같은 long fetch 에는 X.
+async function _fetchWithTimeout(url, init, timeoutMs) {
+  const ms = (typeof timeoutMs === 'number' && timeoutMs > 0) ? timeoutMs : 12000;
+  const ac = new AbortController();
+  const orig = init && init.signal;
+  if (orig) {
+    if (orig.aborted) ac.abort();
+    else { try { orig.addEventListener('abort', () => ac.abort(), { once: true }); } catch {} }
+  }
+  const t = setTimeout(() => ac.abort(), ms);
+  try {
+    return await fetch(url, { ...(init || {}), signal: ac.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 // 사용자 보고 2026-04-30 ultrathink-2: 401 시 session 자동 refresh + retry helper.
 // JWT 만료 (1h) 도중 AI call 시 401 발생 → 자동 refresh + 한 번 retry → 사용자에게 안 보이게.
 let _sessionRefreshInflight = null;
@@ -22,12 +43,17 @@ async function _refreshSessionForApi() {
   if (!session || !session.refresh_token) return false;
   if (_sessionRefreshInflight) return _sessionRefreshInflight;
   _sessionRefreshInflight = (async () => {
+    // V4 fix (사용자 보고 2026-05-18 ultrathink) — refresh token fetch 도 timeout. interceptor 우회 위해 _anthropicOrigFetch 유지 + inline AbortController.
+    const _ac = new AbortController();
+    const _t = setTimeout(() => _ac.abort(), 10000);
     try {
       const r = await window._anthropicOrigFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: session.refresh_token })
+        body: JSON.stringify({ refresh_token: session.refresh_token }),
+        signal: _ac.signal
       });
+      clearTimeout(_t);
       if (!r.ok) return false;
       const ns = await r.json();
       if (!ns || !ns.access_token) return false;
@@ -37,6 +63,7 @@ async function _refreshSessionForApi() {
       return true;
     } catch { return false; }
     finally {
+      clearTimeout(_t);
       // 사용자 명시 2026-05-01 (agent audit): setTimeout 100ms race window 제거 — try/finally 즉시 nullify.
       _sessionRefreshInflight = null;
     }
@@ -52,12 +79,13 @@ async function _authedFetch(url, init) {
   if (typeof session !== 'undefined' && session && session.access_token && !init.headers['Authorization']) {
     init.headers['Authorization'] = `Bearer ${session.access_token}`;
   }
-  let resp = await fetch(url, init);
+  // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout wrapper. supabase 정지 시 fetch hang → 빈 화면 stuck root cause.
+  let resp = await _fetchWithTimeout(url, init);
   if (resp.status === 401 && typeof _refreshSessionForApi === 'function') {
     const refreshed = await _refreshSessionForApi();
     if (refreshed && session && session.access_token) {
       init.headers['Authorization'] = `Bearer ${session.access_token}`;
-      resp = await fetch(url, init);
+      resp = await _fetchWithTimeout(url, init);
     }
   }
   return resp;
@@ -71,11 +99,12 @@ async function _authedFetch(url, init) {
 //   refresh 후에도 401 = 진짜 stale refresh_token → 토스트 정상 (그땐 사용자가 새로고침해야 맞음).
 async function _fetchWithRetry5xx(url, init) {
   let resp;
+  // V4 fix (사용자 보고 2026-05-18 ultrathink) — fetch 4곳 모두 _fetchWithTimeout 으로. timeout abort 도 catch 가 잡아 1.5s 후 retry.
   try {
-    resp = await fetch(url, init);
+    resp = await _fetchWithTimeout(url, init);
   } catch (e) {
     await new Promise(r => setTimeout(r, 1500));
-    try { resp = await fetch(url, init); } catch { throw e; }
+    try { resp = await _fetchWithTimeout(url, init); } catch { throw e; }
   }
   if (resp.status === 401 && typeof _refreshSessionForApi === 'function') {
     const refreshed = await _refreshSessionForApi();
@@ -92,12 +121,12 @@ async function _fetchWithRetry5xx(url, init) {
           init.headers = { ...init.headers, 'Authorization': `Bearer ${session.access_token}` };
         }
       } catch (e) { console.warn('[fetchWithRetry5xx] header rewrite', e); }
-      try { return await fetch(url, init); } catch { return resp; }
+      try { return await _fetchWithTimeout(url, init); } catch { return resp; }
     }
   }
   if (resp.status >= 500 && resp.status < 600) {
     await new Promise(r => setTimeout(r, 1500));
-    try { return await fetch(url, init); } catch { return resp; }
+    try { return await _fetchWithTimeout(url, init); } catch { return resp; }
   }
   return resp;
 }

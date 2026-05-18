@@ -14155,6 +14155,27 @@ function godongImg(mood, size, cls) {
 // 모든 28개 LLM call 위치 자동 redirect — 코드 변경 X.
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
+// V4 fix (사용자 보고 2026-05-18 ultrathink) — 카카오 로그인 후 빈 화면 stuck root cause 방어.
+//   모든 supabase fetch 가 timeout 없이 hang 가능 → init() 가 await 에서 영구 대기 →
+//   _hideBootSplash 7s 안전망만 splash 사라지고 .app / loginScreen 둘 다 display:none 유지 → blank.
+//   ec3cc79 의 init().catch 는 reject 만 잡지 hang 은 X. 이 wrapper 가 12s 후 강제 abort → reject → catch fallback.
+// 사용 패턴: supabase / 인증 / cloud sync 같은 짧은 RTT REST 호출만. 챗 streaming 같은 long fetch 에는 X.
+async function _fetchWithTimeout(url, init, timeoutMs) {
+  const ms = (typeof timeoutMs === 'number' && timeoutMs > 0) ? timeoutMs : 12000;
+  const ac = new AbortController();
+  const orig = init && init.signal;
+  if (orig) {
+    if (orig.aborted) ac.abort();
+    else { try { orig.addEventListener('abort', () => ac.abort(), { once: true }); } catch {} }
+  }
+  const t = setTimeout(() => ac.abort(), ms);
+  try {
+    return await fetch(url, { ...(init || {}), signal: ac.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 // 사용자 보고 2026-04-30 ultrathink-2: 401 시 session 자동 refresh + retry helper.
 // JWT 만료 (1h) 도중 AI call 시 401 발생 → 자동 refresh + 한 번 retry → 사용자에게 안 보이게.
 let _sessionRefreshInflight = null;
@@ -14162,12 +14183,17 @@ async function _refreshSessionForApi() {
   if (!session || !session.refresh_token) return false;
   if (_sessionRefreshInflight) return _sessionRefreshInflight;
   _sessionRefreshInflight = (async () => {
+    // V4 fix (사용자 보고 2026-05-18 ultrathink) — refresh token fetch 도 timeout. interceptor 우회 위해 _anthropicOrigFetch 유지 + inline AbortController.
+    const _ac = new AbortController();
+    const _t = setTimeout(() => _ac.abort(), 10000);
     try {
       const r = await window._anthropicOrigFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: session.refresh_token })
+        body: JSON.stringify({ refresh_token: session.refresh_token }),
+        signal: _ac.signal
       });
+      clearTimeout(_t);
       if (!r.ok) return false;
       const ns = await r.json();
       if (!ns || !ns.access_token) return false;
@@ -14177,6 +14203,7 @@ async function _refreshSessionForApi() {
       return true;
     } catch { return false; }
     finally {
+      clearTimeout(_t);
       // 사용자 명시 2026-05-01 (agent audit): setTimeout 100ms race window 제거 — try/finally 즉시 nullify.
       _sessionRefreshInflight = null;
     }
@@ -14192,12 +14219,13 @@ async function _authedFetch(url, init) {
   if (typeof session !== 'undefined' && session && session.access_token && !init.headers['Authorization']) {
     init.headers['Authorization'] = `Bearer ${session.access_token}`;
   }
-  let resp = await fetch(url, init);
+  // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout wrapper. supabase 정지 시 fetch hang → 빈 화면 stuck root cause.
+  let resp = await _fetchWithTimeout(url, init);
   if (resp.status === 401 && typeof _refreshSessionForApi === 'function') {
     const refreshed = await _refreshSessionForApi();
     if (refreshed && session && session.access_token) {
       init.headers['Authorization'] = `Bearer ${session.access_token}`;
-      resp = await fetch(url, init);
+      resp = await _fetchWithTimeout(url, init);
     }
   }
   return resp;
@@ -14211,11 +14239,12 @@ async function _authedFetch(url, init) {
 //   refresh 후에도 401 = 진짜 stale refresh_token → 토스트 정상 (그땐 사용자가 새로고침해야 맞음).
 async function _fetchWithRetry5xx(url, init) {
   let resp;
+  // V4 fix (사용자 보고 2026-05-18 ultrathink) — fetch 4곳 모두 _fetchWithTimeout 으로. timeout abort 도 catch 가 잡아 1.5s 후 retry.
   try {
-    resp = await fetch(url, init);
+    resp = await _fetchWithTimeout(url, init);
   } catch (e) {
     await new Promise(r => setTimeout(r, 1500));
-    try { resp = await fetch(url, init); } catch { throw e; }
+    try { resp = await _fetchWithTimeout(url, init); } catch { throw e; }
   }
   if (resp.status === 401 && typeof _refreshSessionForApi === 'function') {
     const refreshed = await _refreshSessionForApi();
@@ -14232,12 +14261,12 @@ async function _fetchWithRetry5xx(url, init) {
           init.headers = { ...init.headers, 'Authorization': `Bearer ${session.access_token}` };
         }
       } catch (e) { console.warn('[fetchWithRetry5xx] header rewrite', e); }
-      try { return await fetch(url, init); } catch { return resp; }
+      try { return await _fetchWithTimeout(url, init); } catch { return resp; }
     }
   }
   if (resp.status >= 500 && resp.status < 600) {
     await new Promise(r => setTimeout(r, 1500));
-    try { return await fetch(url, init); } catch { return resp; }
+    try { return await _fetchWithTimeout(url, init); } catch { return resp; }
   }
   return resp;
 }
@@ -14956,17 +14985,25 @@ async function checkSession() {
     if (access_token) {
       session = { access_token, refresh_token };
       // Get user info
-      const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${access_token}` }
-      });
-      if (userResp.ok) {
-        const user = await userResp.json();
-        session.user = user;
-        authUserId = user.id;
-        localStorage.setItem('soragodong_session', JSON.stringify(session));
-        // Clean URL
-        history.replaceState({}, document.title, window.location.pathname);
-        return true;
+      // V4 fix (사용자 보고 2026-05-18 ultrathink) — supabase 정지 시 hang 차단. timeout → throw → init().catch → showLoginScreen.
+      try {
+        const userResp = await _fetchWithTimeout(`${SUPABASE_URL}/auth/v1/user`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${access_token}` }
+        });
+        if (userResp.ok) {
+          const user = await userResp.json();
+          session.user = user;
+          authUserId = user.id;
+          localStorage.setItem('soragodong_session', JSON.stringify(session));
+          // Clean URL
+          history.replaceState({}, document.title, window.location.pathname);
+          return true;
+        }
+      } catch (e) {
+        // timeout / network throw — 그대로 fall through 하여 stored session 또는 로그인 화면.
+        console.warn('[checkSession hash] fetch fail/timeout:', e && e.message || e);
+        // 옛 session 잔재 정리 — 같은 hash 로 무한 retry 회피.
+        session = null;
       }
     }
   }
@@ -14995,7 +15032,8 @@ async function checkSession() {
         }
       } catch (_jwtE) { /* JWT 디코드 실패 시 fallback fetch */ }
       // Verify token still valid
-      const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout 박힌 wrapper. supabase 정지 시 hang 차단.
+      const userResp = await _fetchWithTimeout(`${SUPABASE_URL}/auth/v1/user`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${session.access_token}` }
       });
       if (userResp.ok) {
@@ -15015,7 +15053,8 @@ async function checkSession() {
           if (refreshed) return true;
         } else if (session.refresh_token) {
           // _refreshSessionForApi 미정의 (init 순서 race) — fallback 기존 직접 fetch
-          const refreshResp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+          // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout 박힌 wrapper.
+          const refreshResp = await _fetchWithTimeout(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
             method: 'POST',
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
             body: JSON.stringify({ refresh_token: session.refresh_token })
@@ -16842,7 +16881,8 @@ async function maybeUploadAcquisition() {
           if (Browser && Browser.close) await Browser.close();
         } catch (e) { console.warn('[capacitor oauth] Browser.close:', e); }
         // user 조회 — 01-session-otp.js 와 같은 방식
-        const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout 박힌 wrapper. supabase 정지 시 deeplink handler 영구 hang → 사용자 카카오 인증 직후 reload 안 됨.
+        const userResp = await _fetchWithTimeout(`${SUPABASE_URL}/auth/v1/user`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${access_token}` }
         });
         if (!userResp.ok) {
@@ -19659,7 +19699,8 @@ async function loadFromCloud() {
   // 각 위치는 _needsSaveAfterLoad = true 만 set 하고, 끝에서 1회만 호출.
   let _needsSaveAfterLoad = false;
   try {
-    const resp = await fetch(
+    // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout 박힌 wrapper. supabase 정지 시 fetch hang → init() 영구 대기 → 빈 화면.
+    const resp = await _fetchWithTimeout(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&order=updated_at.desc&limit=1`,
       { headers: authHeaders() }
     );
@@ -20051,8 +20092,11 @@ async function loadFromCloud() {
     }
 
     // 사용자 보고 2026-05-05 (audit High): load 도중 누적된 변경 사항을 마지막 1회로 cloud sync. 이전엔 5곳 순차 호출 → 누적된 PATCH 가 race risk + Supabase 부하.
+    // V4 fix (사용자 보고 2026-05-18 ultrathink Phase 2) — fire-and-forget. 옛 await 는 saveToCloudNow 가 supabase cascade/지연 시
+    //   init() 영구 hang 위험 (PATCH timeout + retry 합 30s 가능). cleanup 의도 (시드 sweep / dedupe / V6→V7) 는
+    //   다음 saveToCloud (1s debounce) 가 자동 재시도 — idempotent. 빈 화면 stuck 방어 우선.
     if (_needsSaveAfterLoad) {
-      try { await saveToCloudNow(); } catch (e) { console.warn('[loadFromCloud] post-load save 실패:', e); }
+      saveToCloudNow().catch(e => console.warn('[loadFromCloud] post-load save 실패:', e));
     }
 
     setSyncStatus('online');
@@ -20489,7 +20533,8 @@ async function _saveToCloudNowInner() {
       //   신규 사용자 (localStorage 에 recovery 정상) 는 이 분기 진입 X — 영향 X.
       if (!recoveryInfo) {
         try {
-          const r = await fetch(
+          // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout 박힌 wrapper. saveToCloudNow 는 loadFromCloud 안에서 호출 가능 (post-load save) → hang 시 init() 영구 대기.
+          const r = await _fetchWithTimeout(
             `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=data&limit=1`,
             { headers: authHeaders() }
           );
@@ -63258,8 +63303,12 @@ function escapeHtml(str) {
 // V4 fix (사용자 보고 2026-05-18) — PWA 무한 로딩 (splash 사라진 후 빈 화면) fallback.
 //   원인: init() 가 await 안에서 uncaught throw → .app / login-screen 둘 다 display:none 유지 → blank.
 //   fix: init() catch 안 login-screen 명시 노출 + splash 강제 hide. 진짜 원인 (network / corrupt localStorage / fetch throw 등) 별도 진단 가능 — fallback 으로 dead-end 회피.
-init().catch(e => {
-  console.error('[init] fatal — login screen fallback:', e);
+// V4 fix (사용자 보고 2026-05-18 ultrathink Phase 2) — hang 도 잡는 30s 안전망 추가.
+//   ec3cc79 catch 는 reject 만 잡지 await hang 은 X. supabase 정지/지연 시 어떤 fetch 가 timeout wrapper 안 거치고 hang 하면 init 영구 대기 → 빈 화면.
+//   _fetchWithTimeout 으로 critical path (checkSession / loadFromCloud / saveToCloudNow) 는 12s 안 reject 되지만 — 이중 안전망으로 30s 후 init 안 끝났으면 강제 showLoginScreen.
+let _initSettled = false;
+const _initShowLoginFallback = (e) => {
+  if (e) console.error('[init] fatal/timeout — login screen fallback:', e);
   try { if (typeof _hideBootSplash === 'function') _hideBootSplash(); } catch {}
   try { if (typeof showLoginScreen === 'function') showLoginScreen(); } catch {
     // showLoginScreen 도 throw 면 마지막 안전망 — 직접 DOM 조작.
@@ -63268,7 +63317,16 @@ init().catch(e => {
       if (ls) ls.style.display = 'flex';
     } catch {}
   }
-});
+};
+init()
+  .then(() => { _initSettled = true; })
+  .catch(e => { _initSettled = true; _initShowLoginFallback(e); });
+setTimeout(() => {
+  if (_initSettled) return;
+  console.warn('[init] 30s 안전망 — hang 감지, login screen 강제 fallback');
+  _initSettled = true;  // 이후 catch 가 또 호출돼도 idempotent.
+  _initShowLoginFallback(new Error('init 30s 안전망 trigger'));
+}, 30000);
 // ═══════════════════════════════════════════════════════════════
 // V4 (사용자 명시 2026-05-06 ultrathink): PWA 설치 인라인 카드.
 // 두 trigger:

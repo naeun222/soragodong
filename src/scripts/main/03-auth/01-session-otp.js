@@ -35,17 +35,25 @@ async function checkSession() {
     if (access_token) {
       session = { access_token, refresh_token };
       // Get user info
-      const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${access_token}` }
-      });
-      if (userResp.ok) {
-        const user = await userResp.json();
-        session.user = user;
-        authUserId = user.id;
-        localStorage.setItem('soragodong_session', JSON.stringify(session));
-        // Clean URL
-        history.replaceState({}, document.title, window.location.pathname);
-        return true;
+      // V4 fix (사용자 보고 2026-05-18 ultrathink) — supabase 정지 시 hang 차단. timeout → throw → init().catch → showLoginScreen.
+      try {
+        const userResp = await _fetchWithTimeout(`${SUPABASE_URL}/auth/v1/user`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${access_token}` }
+        });
+        if (userResp.ok) {
+          const user = await userResp.json();
+          session.user = user;
+          authUserId = user.id;
+          localStorage.setItem('soragodong_session', JSON.stringify(session));
+          // Clean URL
+          history.replaceState({}, document.title, window.location.pathname);
+          return true;
+        }
+      } catch (e) {
+        // timeout / network throw — 그대로 fall through 하여 stored session 또는 로그인 화면.
+        console.warn('[checkSession hash] fetch fail/timeout:', e && e.message || e);
+        // 옛 session 잔재 정리 — 같은 hash 로 무한 retry 회피.
+        session = null;
       }
     }
   }
@@ -74,7 +82,8 @@ async function checkSession() {
         }
       } catch (_jwtE) { /* JWT 디코드 실패 시 fallback fetch */ }
       // Verify token still valid
-      const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout 박힌 wrapper. supabase 정지 시 hang 차단.
+      const userResp = await _fetchWithTimeout(`${SUPABASE_URL}/auth/v1/user`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${session.access_token}` }
       });
       if (userResp.ok) {
@@ -94,7 +103,8 @@ async function checkSession() {
           if (refreshed) return true;
         } else if (session.refresh_token) {
           // _refreshSessionForApi 미정의 (init 순서 race) — fallback 기존 직접 fetch
-          const refreshResp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+          // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout 박힌 wrapper.
+          const refreshResp = await _fetchWithTimeout(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
             method: 'POST',
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
             body: JSON.stringify({ refresh_token: session.refresh_token })

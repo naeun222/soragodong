@@ -54,7 +54,8 @@
           if (Browser && Browser.close) await Browser.close();
         } catch (e) { console.warn('[capacitor oauth] Browser.close:', e); }
         // user 조회 — 01-session-otp.js 와 같은 방식
-        const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout 박힌 wrapper. supabase 정지 시 deeplink handler 영구 hang → 사용자 카카오 인증 직후 reload 안 됨.
+        const userResp = await _fetchWithTimeout(`${SUPABASE_URL}/auth/v1/user`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${access_token}` }
         });
         if (!userResp.ok) {

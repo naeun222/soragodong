@@ -78,7 +78,8 @@ async function loadFromCloud() {
   // 각 위치는 _needsSaveAfterLoad = true 만 set 하고, 끝에서 1회만 호출.
   let _needsSaveAfterLoad = false;
   try {
-    const resp = await fetch(
+    // V4 fix (사용자 보고 2026-05-18 ultrathink) — timeout 박힌 wrapper. supabase 정지 시 fetch hang → init() 영구 대기 → 빈 화면.
+    const resp = await _fetchWithTimeout(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&order=updated_at.desc&limit=1`,
       { headers: authHeaders() }
     );
@@ -470,8 +471,11 @@ async function loadFromCloud() {
     }
 
     // 사용자 보고 2026-05-05 (audit High): load 도중 누적된 변경 사항을 마지막 1회로 cloud sync. 이전엔 5곳 순차 호출 → 누적된 PATCH 가 race risk + Supabase 부하.
+    // V4 fix (사용자 보고 2026-05-18 ultrathink Phase 2) — fire-and-forget. 옛 await 는 saveToCloudNow 가 supabase cascade/지연 시
+    //   init() 영구 hang 위험 (PATCH timeout + retry 합 30s 가능). cleanup 의도 (시드 sweep / dedupe / V6→V7) 는
+    //   다음 saveToCloud (1s debounce) 가 자동 재시도 — idempotent. 빈 화면 stuck 방어 우선.
     if (_needsSaveAfterLoad) {
-      try { await saveToCloudNow(); } catch (e) { console.warn('[loadFromCloud] post-load save 실패:', e); }
+      saveToCloudNow().catch(e => console.warn('[loadFromCloud] post-load save 실패:', e));
     }
 
     setSyncStatus('online');
