@@ -15,10 +15,7 @@ function loadSettings() {
   if (typeof refreshWeatherToggleStatus === 'function') refreshWeatherToggleStatus();
   // 사용자 요청 2026-04-30 (Phase C): billing 자동 로드
   if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
-  // E2EE 상태 갱신
-  if (typeof refreshE2EEStatus === 'function') refreshE2EEStatus();
-  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1B — 진주 미디어 Storage 마이그 상태 갱신.
-  if (typeof refreshPearlMigrationStatus === 'function') refreshPearlMigrationStatus();
+  // V4 (사용자 명시 2026-05-18 ultrathink): E2EE / 진주 미디어 Settings 섹션 제거. 자동 흐름이 cover (가입 시 + 새 브라우저 시 강제, 진주 자동 마이그). refreshE2EEStatus / refreshPearlMigrationStatus 호출 자리 X.
   // 사용자 요청 2026-04-30: 피드백 inbox — 미읽음 답변 badge + admin 버튼 (jade6679@naver.com만 보임)
   if (typeof refreshFeedbackUnreadBadge === 'function') refreshFeedbackUnreadBadge().catch(() => {});
   if (typeof refreshAdminFeedbackButton === 'function') refreshAdminFeedbackButton().catch(() => {});

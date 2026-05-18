@@ -13798,33 +13798,10 @@ img.pearl-load-fail {
       <!-- ━━━━━━ 보안 + 계정 ━━━━━━ -->
       <div class="settings-section-divider">보안 + 계정</div>
 
-      <!-- E2EE -->
-      <details class="settings-collapse settings-collapse-emphasis">
-        <summary>🔐 종단간 암호화 (E2EE) — 권장</summary>
-        <div class="settings-collapse-body">
-          <div class="settings-hint" style="margin-bottom:10px;">
-            활성 시 <strong>회사조차 본인 데이터를 볼 수 없음</strong>.<br>
-            본인이 정한 비밀번호를 안전한 곳에 보관 (분실 시 복구 X).
-          </div>
-          <div id="e2eeStatus" class="settings-info-box">상태 확인 중...</div>
-          <button class="btn-secondary" onclick="setupE2EE()">🔐 활성화</button>
-          <button class="btn-secondary" onclick="setupChangePassword()">🔒 비밀번호 변경</button>
-          <button class="btn-secondary" onclick="showE2EERecoveryInfo()">📋 비밀번호 안내</button>
-        </div>
-      </details>
-
-      <!-- V4 (사용자 명시 2026-05-18 ultrathink): Phase 1B — 진주 미디어 일괄 Storage 마이그 tool. -->
-      <details class="settings-collapse">
-        <summary>🐚 진주 미디어 저장소</summary>
-        <div class="settings-collapse-body">
-          <div class="settings-hint" style="margin-bottom:10px;">
-            진주 사진/영상을 본인 전용 클라우드 저장소로 옮겨 동기화 안정성을 높일 수 있어.<br>
-            🔐 모든 미디어는 E2EE 비밀번호로 암호화돼서 저장돼 (회사도 못 봐).
-          </div>
-          <div id="pearlMigrationStatus" class="settings-info-box">상태 확인 중...</div>
-          <button id="pearlMigBtn" class="btn-secondary" onclick="openPearlMediaMigrationModal()">🐚 진주 미디어 이동</button>
-        </div>
-      </details>
+      <!-- V4 (사용자 명시 2026-05-18 ultrathink): E2EE / 진주 미디어 저장소 섹션 제거.
+           이유: E2EE 활성화 = 가입 시 강제 + 새 브라우저 진입 시 비번 입력 강제 (자동 흐름 cover).
+                 진주 미디어 마이그 = window load 시 자동 백그라운드 + 매 세션 idempotent 재시도 (자동 흐름 cover).
+           함수 (setupE2EE / setupChangePassword / showE2EERecoveryInfo / openPearlMediaMigrationModal) 는 코드 안 그대로 — 다른 자리 호출 가능. -->
 
       <!-- 계정 -->
       <div class="settings-card">
@@ -58548,10 +58525,7 @@ function loadSettings() {
   if (typeof refreshWeatherToggleStatus === 'function') refreshWeatherToggleStatus();
   // 사용자 요청 2026-04-30 (Phase C): billing 자동 로드
   if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
-  // E2EE 상태 갱신
-  if (typeof refreshE2EEStatus === 'function') refreshE2EEStatus();
-  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1B — 진주 미디어 Storage 마이그 상태 갱신.
-  if (typeof refreshPearlMigrationStatus === 'function') refreshPearlMigrationStatus();
+  // V4 (사용자 명시 2026-05-18 ultrathink): E2EE / 진주 미디어 Settings 섹션 제거. 자동 흐름이 cover (가입 시 + 새 브라우저 시 강제, 진주 자동 마이그). refreshE2EEStatus / refreshPearlMigrationStatus 호출 자리 X.
   // 사용자 요청 2026-04-30: 피드백 inbox — 미읽음 답변 badge + admin 버튼 (jade6679@naver.com만 보임)
   if (typeof refreshFeedbackUnreadBadge === 'function') refreshFeedbackUnreadBadge().catch(() => {});
   if (typeof refreshAdminFeedbackButton === 'function') refreshAdminFeedbackButton().catch(() => {});
