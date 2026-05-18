@@ -92,7 +92,8 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.soragodong.app
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
-          track: internal
+          # V4 fix (사용자 보고 2026-05-18) — 옛 `track` deprecated 경고. `tracks` (복수) 로 migrate.
+          tracks: internal
           status: completed
           whatsNewDirectory: .github/whatsnew
 
