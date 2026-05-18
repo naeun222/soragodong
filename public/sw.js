@@ -55,7 +55,9 @@
 // v48 (2026-05-17 사용자 명시): Hook 시스템 Phase B — push event + notificationclick handler 활성.
 //   payload = { hookId, body, ...meta }. notification 클릭 → /?hookTrigger=<hookId> 로 openWindow.
 //   기존 cache 강제 invalidate (push 인프라 활성 + index.html 갱신).
-const CACHE_NAME = 'soragodong-v4-cache-v48';
+// v49 (2026-05-18 사용자 보고 ultrathink): PWA 무한 로딩 fix — init() throw fallback (login screen 강제) + 옛 캐시 강제 invalidate.
+//   배경: 그 사이 hook substrate Phase 1A/1B + cloud toast TTL + 401 retry + 부재 일기 등 변경 누적. SW stale-while-revalidate 가 옛 broken 버전 서빙 가능성.
+const CACHE_NAME = 'soragodong-v4-cache-v49';
 const PRECACHE_URLS = [
   './',
   './index.html',

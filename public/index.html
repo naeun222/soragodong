@@ -63030,7 +63030,20 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-init();
+// V4 fix (사용자 보고 2026-05-18) — PWA 무한 로딩 (splash 사라진 후 빈 화면) fallback.
+//   원인: init() 가 await 안에서 uncaught throw → .app / login-screen 둘 다 display:none 유지 → blank.
+//   fix: init() catch 안 login-screen 명시 노출 + splash 강제 hide. 진짜 원인 (network / corrupt localStorage / fetch throw 등) 별도 진단 가능 — fallback 으로 dead-end 회피.
+init().catch(e => {
+  console.error('[init] fatal — login screen fallback:', e);
+  try { if (typeof _hideBootSplash === 'function') _hideBootSplash(); } catch {}
+  try { if (typeof showLoginScreen === 'function') showLoginScreen(); } catch {
+    // showLoginScreen 도 throw 면 마지막 안전망 — 직접 DOM 조작.
+    try {
+      const ls = document.getElementById('loginScreen');
+      if (ls) ls.style.display = 'flex';
+    } catch {}
+  }
+});
 // ═══════════════════════════════════════════════════════════════
 // V4 (사용자 명시 2026-05-06 ultrathink): PWA 설치 인라인 카드.
 // 두 trigger:
