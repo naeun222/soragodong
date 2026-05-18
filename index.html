@@ -28813,10 +28813,12 @@ function renderRotatingCard() {
       };
     };
     const buildOneul = () => {
-      const pearls = (state.pearls || []).filter(p => p && !p._deleted && p.type !== 'dna_pearl');
-      if (pearls.length === 0 || typeof _heroCardHtml !== 'function') return null;
-      const sorted = pearls.slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-      const pick = sorted[0];
+      if (typeof _pickHeroPearl !== 'function' || typeof _heroCardHtml !== 'function') return null;
+      // V4 (사용자 명시 2026-05-18 ultrathink): 홈 진입 시마다 다른 진주 — _pickHeroPearl() random rotation.
+      //   _pickHeroPearl = 안 본 우선(_libHeroSeen) + 다 보면 reset → 매 진입마다 다른 진주 보장.
+      //   진주 0개 → null (fallback 없음, priority 다음 source 도 없으면 카드 없음 — 기존 동작 유지).
+      const pick = _pickHeroPearl();
+      if (!pick) return null;
       // V4 (사용자 명시 2026-05-17 재): 오늘의 너 = 영구 surface (마지막 fallback). click 해도 dismiss X — dismissed 체크 / dismissCall 둘 다 X.
       //   다른 source (hook/checkin/review) 다 dismiss 되면 오늘의 너만 남아 stay. _heroCardHtml 기본 onclick (진주 탭 진입) 만.
       return {
