@@ -17,6 +17,8 @@ function loadSettings() {
   if (typeof refreshBillingStatus === 'function') refreshBillingStatus().catch(() => {});
   // E2EE 상태 갱신
   if (typeof refreshE2EEStatus === 'function') refreshE2EEStatus();
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1B — 진주 미디어 Storage 마이그 상태 갱신.
+  if (typeof refreshPearlMigrationStatus === 'function') refreshPearlMigrationStatus();
   // 사용자 요청 2026-04-30: 피드백 inbox — 미읽음 답변 badge + admin 버튼 (jade6679@naver.com만 보임)
   if (typeof refreshFeedbackUnreadBadge === 'function') refreshFeedbackUnreadBadge().catch(() => {});
   if (typeof refreshAdminFeedbackButton === 'function') refreshAdminFeedbackButton().catch(() => {});

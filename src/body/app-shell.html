@@ -914,6 +914,19 @@
         </div>
       </details>
 
+      <!-- V4 (사용자 명시 2026-05-18 ultrathink): Phase 1B — 진주 미디어 일괄 Storage 마이그 tool. -->
+      <details class="settings-collapse">
+        <summary>🐚 진주 미디어 저장소</summary>
+        <div class="settings-collapse-body">
+          <div class="settings-hint" style="margin-bottom:10px;">
+            진주 사진/영상을 본인 전용 클라우드 저장소로 옮겨 동기화 안정성을 높일 수 있어.<br>
+            🔐 모든 미디어는 E2EE 비밀번호로 암호화돼서 저장돼 (회사도 못 봐).
+          </div>
+          <div id="pearlMigrationStatus" class="settings-info-box">상태 확인 중...</div>
+          <button id="pearlMigBtn" class="btn-secondary" onclick="openPearlMediaMigrationModal()">🐚 진주 미디어 이동</button>
+        </div>
+      </details>
+
       <!-- 계정 -->
       <div class="settings-card">
         <div class="input-label" style="margin-bottom:8px;">👤 계정</div>
