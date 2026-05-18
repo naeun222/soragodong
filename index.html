@@ -20214,6 +20214,20 @@ function migrateToV7() {
   console.log('✅ Migration to V7 complete');
 }
 
+// V4 fix (사용자 보고 2026-05-18 ultrathink) — cascade 방어 3겹.
+// 진단: 사용자 본인 (4ba0a92e-...) 의 main row JSONB 가 너무 크고 + PWA/Android/PC 동시 PATCH 가 같은 tuple 락 경합 →
+//   PostgreSQL statement_timeout (60s) 초과 → 500 → client 재시도 → 무한 cascade → Supabase 의 connection pool 마름 → 다른 endpoint 도 522.
+//   로그 증거: 'canceling statement due to statement timeout' (57014) + 'still waiting for ExclusiveLock on tuple' + 'Warp server error: Thread killed'.
+// fix:
+//   1. inflight 가드 — 같은 시점 PATCH 1개만. 두 번째 saveToCloudNow 는 첫 결과 await + skip (debounce 가 1초인데 PATCH 자체가 60s+ 걸리면 큐 쌓임).
+//   2. 연속 실패 backoff — 3회 연속 timeout/500 면 10분 동안 saveToCloudNow no-op (cascade 완전 차단).
+//   3. row size hard cap — `_encryptedBody` 길이 8MB 초과 시 PATCH 자체 X + 사용자 알림 (옛 챕터 정리 권장).
+let _saveCloudInflight = null;
+const _saveCloudFailState = { consecutive: 0, lastFailAt: 0 };
+const _SAVE_BACKOFF_THRESHOLD = 3;
+const _SAVE_BACKOFF_MS = 10 * 60 * 1000;  // 10분
+const _SAVE_HARD_CAP_BYTES = 8 * 1024 * 1024;  // 8MB body. main row 한도 안전 마진.
+
 async function saveToCloudNow() {
   if (!authUserId) return;
   // 사용자 명시 2026-05-05 ultrathink (Phase 1): 게스트 = cloud sync X (localStorage 만 — saveState 가 처리).
@@ -20221,6 +20235,30 @@ async function saveToCloudNow() {
   if (state && state.isGuest) {
     return;
   }
+  // V4 fix (2026-05-18) — backoff: 연속 실패 누적 시 10분 동안 skip. cascade 차단.
+  if (_saveCloudFailState.consecutive >= _SAVE_BACKOFF_THRESHOLD) {
+    const _since = Date.now() - _saveCloudFailState.lastFailAt;
+    if (_since < _SAVE_BACKOFF_MS) {
+      console.warn(`[saveToCloudNow] backoff 활성 — ${Math.round((_SAVE_BACKOFF_MS - _since) / 60000)}분 후 재개`);
+      return;
+    }
+    // backoff 만료 — reset 후 시도.
+    _saveCloudFailState.consecutive = 0;
+  }
+  // V4 fix (2026-05-18) — inflight 가드: 같은 시점 PATCH 1개만. 두 번째 호출은 첫 결과 기다리고 skip.
+  if (_saveCloudInflight) {
+    try { await _saveCloudInflight; } catch {}
+    return;  // 두 번째 호출은 첫 결과로 끝. 다음 saveToCloud (debounce 1s) 에서 또 시도.
+  }
+  _saveCloudInflight = _saveToCloudNowInner();
+  try {
+    await _saveCloudInflight;
+  } finally {
+    _saveCloudInflight = null;
+  }
+}
+
+async function _saveToCloudNowInner() {
   // 사용자 보고 2026-05-05 (Phase 1d): Kakao linkIdentity redirect 후 E2EE 셋업 모달 뜨기 전 saveToCloudNow 트리거되면
   // localStorage 의 게스트 데이터가 평문으로 cloud 업로드됨 → 데이터 노출 위험.
   // _e2eeSetupNewUser 가 끝까지 성공해서 플래그 제거해야 첫 cloud save 가능.
@@ -20258,7 +20296,20 @@ async function saveToCloudNow() {
       const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','godongDiary','godongDiaryQueue','lastAbsenceAcknowledgedAt','_chatChapterEndedAt','activeStrategies','_shownInlineTips'];
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
-      const encryptedBody = await _e2eeEncrypt(JSON.stringify(sensitiveBody, _serializeReplacer), _e2eeMasterKey);
+      const _sensitiveJson = JSON.stringify(sensitiveBody, _serializeReplacer);
+      // V4 fix (사용자 보고 2026-05-18) — hard cap: payload 8MB 초과 시 PATCH 자체 X.
+      //   원인: 큰 chatArchive (옛 챕터 messages 통째) → JSONB UPDATE 60s+ timeout → cascade.
+      //   사용자 액션 필요: 도서관에서 옛 챕터 삭제 (핀 안 박힌 거) / 큰 진주 (영상) 정리.
+      if (_sensitiveJson.length > _SAVE_HARD_CAP_BYTES) {
+        const _mb = (_sensitiveJson.length / 1024 / 1024).toFixed(1);
+        console.warn(`[saveToCloudNow] payload ${_mb}MB > 8MB hard cap — PATCH 차단 (cascade 회피)`);
+        if (typeof showToast === 'function' && !window._cloudHardCapWarned) {
+          window._cloudHardCapWarned = true;
+          showToast(`⚠ 데이터 ${_mb}MB — cloud 저장 보류. 도서관에서 옛 챕터/큰 진주 정리해줘.`);
+        }
+        return;
+      }
+      const encryptedBody = await _e2eeEncrypt(_sensitiveJson, _e2eeMasterKey);
       // 사용자 보고 2026-04-30 데이터 손실 fix (새 device 복원): encryptedMasterKey + salt도 cloud에 저장.
       // password로 이미 암호화된 상태라 cloud에 두어도 안전 (회사도 password 모르면 못 풀음).
       // 없으면 새 device에서 복원 불가능.
@@ -20381,7 +20432,17 @@ function _checkCloudRowOversize(bytes) {
 function _handleCloudSyncResponse(r) {
   if (!r || r.ok) {
     window._cloudSyncWarned = false;  // 회복되면 reset
+    // V4 fix (2026-05-18) — 성공 시 fail counter reset.
+    if (typeof _saveCloudFailState !== 'undefined') {
+      _saveCloudFailState.consecutive = 0;
+      _saveCloudFailState.lastFailAt = 0;
+    }
     return;
+  }
+  // V4 fix (2026-05-18) — 실패 (5xx / timeout / 4xx 일부) 시 consecutive++, backoff 트리거 직전 마지막 토스트.
+  if (typeof _saveCloudFailState !== 'undefined') {
+    _saveCloudFailState.consecutive++;
+    _saveCloudFailState.lastFailAt = Date.now();
   }
   if (window._cloudSyncWarned) return;
   // localStorage TTL 가드 — 같은 status bucket (401/403, 5xx, 4xx) 의 토스트가 4h 안에 떴으면 silent.
