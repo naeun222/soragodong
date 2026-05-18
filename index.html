@@ -41272,6 +41272,11 @@ function _evaluateChatEntryInjects() {
   // 챕터 마무리 5분 안 → default 만 (inject 안 함)
   if (_isWithinChapterEndGrace()) return;
 
+  // V4 (사용자 명시 2026-05-18) — 부재 ≥ 1일 자동 detect → "부재 일기" 1개 client-side 큐에 적재.
+  //   서버 cron 으로 일기 생성 = E2EE 복호화 불가능 (회사 평문 접근 X spec) → 일기 생성은 영구 client-side.
+  //   적재 후 아래 _pickUnreadDiaryEntry 가 자연 집어서 diaryInlineCard 로 inject — generic 부재 후속 카드 우회.
+  _maybeQueueAbsenceDiary();
+
   // 1. 일기 큐 unread
   const diaryEntry = _pickUnreadDiaryEntry();
   if (diaryEntry) {
@@ -41312,6 +41317,8 @@ function _injectDiaryInlineCard(entry) {
 
 function _injectAbsenceFollowup() {
   // 잠정 카피 — spec 15번 #1 본인 결정 자리. 사용자 후속 교체.
+  // V4 (사용자 명시 2026-05-18) — 일반적으로 도달 X (위 _maybeQueueAbsenceDiary 가 큐 적재 → diaryInlineCard 로 우회됨).
+  //   안전망: lastChatTabEntryAt missing / queue prune 등 엣지에서 fallback.
   const body = '며칠 만이네 ㅎㅎ 어디 갔다 왔어?';
   const card = {
     role: 'assistant',
@@ -41320,6 +41327,47 @@ function _injectAbsenceFollowup() {
     timestamp: new Date().toISOString(),
   };
   state.chatMessages.unshift(card);
+}
+
+// V4 (사용자 명시 2026-05-18) — 부재 ≥ 1일 자동 detect → "부재 일기" 1개 큐에 적재 (client-side, E2EE 호환).
+//   id = 'absence_<lastEntryIso>' — 한 부재 구간 = 한 일기. 다음 부재 = 다른 id (lastChatTabEntryAt 갱신됨).
+//   day-gap 별 톤 차등 (1일 / 2~3일 / 4~7일 / 8일+) — generic 보다 따뜻.
+function _maybeQueueAbsenceDiary() {
+  if (!state) return false;
+  const pref = state.preferences || {};
+  const lastEntryIso = pref.lastChatTabEntryAt;
+  if (!lastEntryIso) return false;  // 첫 진입 자체 = 부재 X
+  const lastEntryMs = new Date(lastEntryIso).getTime();
+  if (!Number.isFinite(lastEntryMs)) return false;
+  const now = Date.now();
+  const gapMs = now - lastEntryMs;
+  if (gapMs < _HSP_ABSENCE_THRESHOLD_MS) return false;
+  const queue = (state.godongDiaryQueue = Array.isArray(state.godongDiaryQueue) ? state.godongDiaryQueue : []);
+  const absenceId = 'absence_' + lastEntryIso;
+  if (queue.some(e => e && e.id === absenceId)) return false;  // 이미 적재
+  const daysGap = Math.floor(gapMs / (24 * 60 * 60 * 1000));
+  const userName = (state.userName || '').trim();
+  const nameCall = userName ? userName + '아' : '';
+  let body;
+  if (daysGap === 1) {
+    body = nameCall ? `${nameCall}, 하루 만이네. 어떻게 지냈어?` : '하루 만이네. 어떻게 지냈어?';
+  } else if (daysGap <= 3) {
+    body = `${daysGap}일 안 보였네. 그동안 어땠어?`;
+  } else if (daysGap <= 7) {
+    body = `${daysGap}일 만이야. 별 일 없었어?`;
+  } else {
+    body = `오랜만이야. ${daysGap}일 만이네. 그동안 어떻게 지냈어?`;
+  }
+  queue.push({
+    id: absenceId,
+    body,
+    kind: 'absence',
+    generatedAt: new Date().toISOString(),
+    absenceFromAt: lastEntryIso,
+    absenceDays: daysGap,
+  });
+  pruneGodongDiaryQueue();
+  return true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
