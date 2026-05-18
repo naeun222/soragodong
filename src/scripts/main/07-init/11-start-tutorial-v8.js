@@ -90,11 +90,11 @@ async function runStartTutorialV8() {
 
 // V4 (사용자 명시 2026-05-15 ultrathink): "없어" 분기 ice-breaker pool.
 //   1) 친구 reciprocity ("내가 먼저") + identity/상황 ("뭐 하고 지내?") — 한국 culture 첫 만남 표준 + ADHD 친화 (사실 답 >> 추상 답)
-//   2) bar 가장 낮음 ("별거 아닌 거")
+//   2) bar 가장 낮음 ("오늘 어땠는지" 톤) — 사용자 명시 2026-05-18 ultrathink
 //   pool 보존 + random pick = variability (매번 똑같으면 친구다움 즉시 깨짐).
 const _V9_ICEBREAKERS = [
   '음, 그럼 내가 먼저 — 요즘 뭐 하고 지내? 학생이든 직장인이든 그냥 쉬고 있든.',
-  '그럼 오늘 한 일 중에 제일 별거 아닌 거 하나 얘기해볼래? 진짜 별거 아닌 거 — 아침에 뭐 먹었다, 본 광고가 웃겼다, 그런 거.'
+  '그럼 오늘 어땠는지 알려주라. 궁금해'
 ];
 
 function _v9PickIcebreaker() {
@@ -109,12 +109,12 @@ function _v9ShowWarmStartModal() {
     root.innerHTML = `
       <div class="v9-warm-overlay">
         <div class="v9-warm-card">
-          <div class="v9-warm-question">안녕! 오늘 어땠어?</div>
+          <div class="v9-warm-question">안녕? 혹시...<br>요즘 고민 같은 거 있어?</div>
           <div class="v9-warm-textarea-wrap">
             <textarea class="v9-warm-input" id="v9WarmInput" placeholder="" rows="3"></textarea>
           </div>
           <div class="v9-warm-buttons">
-            <button class="v9-warm-btn ghost" id="v9WarmNone" type="button">별 일 없었어</button>
+            <button class="v9-warm-btn ghost" id="v9WarmNone" type="button">그런 거 없어</button>
             <button class="v9-warm-btn primary" id="v9WarmSend" type="button" disabled>보내기 →</button>
           </div>
         </div>

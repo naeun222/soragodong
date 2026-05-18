@@ -67,13 +67,14 @@ function _hookSubstrateBySource(dayK) {
   //   Phase 2: backend prompt 의 일기/토픽 reference 도 같이 제거.
   const out = { checkin: null, pearls: [], insights: [] };
   // [A] 체크인
+  // V4 (사용자 명시 2026-05-18 ultrathink): 체크인 한 줄 대답 (e.note) 빼기 — hook 정보 수집에서 제외.
+  // 사용자가 체크인 note 에 적은 사적 한 줄을 hook 이 다시 묻거나 reference 하지 않도록.
   const e = (state.entries || []).find(x => x && x.date === dayK);
   if (e) {
     out.checkin = {
       vit: e.vitality, mood: e.mood,
       sleepStart: e.sleepStart, sleepEnd: e.sleepEnd, allNighter: e.allNighter,
       question: e.dailyQuestion && e.dailyQuestion.text,
-      answer: e.note,
     };
   }
   // [B] 일기 — Phase 1B 제거
@@ -103,12 +104,10 @@ function _hookSubstrateBySource(dayK) {
 
 function _hookScoreRichness(src) {
   let score = 0;
-  if (src.checkin && src.checkin.answer && src.checkin.answer.length > 5) score += 20;
-  // V4 fix (사용자 명시 2026-05-18) Phase 1B: diary / diarySummary 제거 — score 항목도 빠짐.
-  // 진주 가중치 ↑ — 사용자 의도 (진주 위주 hook). 20 → 30 으로 상향.
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): 체크인 한 줄 대답 (answer) 빼기 — score 영향 X.
+  // 진주 / 깨달음 위주로 richness 판정.
   score += (src.pearls || []).length * 30;
   score += (src.insights || []).length * 15;
-  // V4 fix (사용자 명시 2026-05-18) Phase 1A: topicCards 제거 — score 항목도 빠짐.
   return Math.min(100, score);
 }
 
@@ -165,14 +164,14 @@ function _hookFormatSubstrate(src, dayK) {
   lines.push('');
 
   // [A] 체크인
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): 체크인 한 줄 대답 (answer) line 제거. question 도 의미 없어 같이 제외.
   lines.push('[A] 체크인:');
   if (src.checkin) {
     const c = src.checkin;
-    if (c.answer && c.question) lines.push(`  - 질문 "${(c.question || '').slice(0, 60)}" 에 "${(c.answer || '').slice(0, 100)}"`);
     if (c.allNighter) lines.push('  - 잠: 밤샘');
     else if (c.sleepStart && c.sleepEnd) lines.push(`  - 잠: ${c.sleepStart}~${c.sleepEnd}`);
     if (c.vit != null && c.mood != null) lines.push(`  - vit ${c.vit}/5 mood ${c.mood}/7`);
-    if (!c.answer && !c.allNighter && !c.sleepStart && (c.vit == null || c.mood == null)) lines.push('  - (없음)');
+    if (!c.allNighter && !c.sleepStart && (c.vit == null || c.mood == null)) lines.push('  - (없음)');
   } else lines.push('  - (없음)');
 
   // [B] 일기 — V4 fix (사용자 명시 2026-05-18) Phase 1B: 제거.
@@ -284,6 +283,14 @@ async function maybeGenerateHook(opts) {
       return { failed: data && data.reason || 'backend-fail' };
     }
     const h = data.hook;
+    // V4 fix (사용자 명시 2026-05-18 ultrathink): hook 은 push 알림 시각에만 노출.
+    //   delivered=false + scheduledFor=다음 push 시각 (default 21시). pickHomeMainHook 가 시각 도달 후만 표시.
+    //   사용자가 push 시각 전 진입해도 홈에 그날 hook 노출 X (큐에 쌓아둔 채 대기).
+    const _hour = (state.preferences && typeof state.preferences.hookNotificationTime === 'number')
+      ? state.preferences.hookNotificationTime : 21;
+    const _now = new Date();
+    const _scheduled = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate(), _hour, 0, 0, 0);
+    if (_scheduled.getTime() <= _now.getTime()) _scheduled.setDate(_scheduled.getDate() + 1);
     const entry = {
       id: 'hook_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       body: h.body,
@@ -291,9 +298,11 @@ async function maybeGenerateHook(opts) {
       trigger_dayK: h.trigger_dayK,
       hook_type: h.hook_type,
       askedAt: new Date().toISOString(),
+      scheduledFor: _scheduled.toISOString(),
       answered: false,
       answeredAt: null,
-      delivered: true,
+      delivered: false,
+      dismissedFromHome: false,
     };
     if (!Array.isArray(state.askedHooks)) state.askedHooks = [];
     state.askedHooks.push(entry);

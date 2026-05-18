@@ -23166,11 +23166,11 @@ async function runStartTutorialV8() {
 
 // V4 (사용자 명시 2026-05-15 ultrathink): "없어" 분기 ice-breaker pool.
 //   1) 친구 reciprocity ("내가 먼저") + identity/상황 ("뭐 하고 지내?") — 한국 culture 첫 만남 표준 + ADHD 친화 (사실 답 >> 추상 답)
-//   2) bar 가장 낮음 ("별거 아닌 거")
+//   2) bar 가장 낮음 ("오늘 어땠는지" 톤) — 사용자 명시 2026-05-18 ultrathink
 //   pool 보존 + random pick = variability (매번 똑같으면 친구다움 즉시 깨짐).
 const _V9_ICEBREAKERS = [
   '음, 그럼 내가 먼저 — 요즘 뭐 하고 지내? 학생이든 직장인이든 그냥 쉬고 있든.',
-  '그럼 오늘 한 일 중에 제일 별거 아닌 거 하나 얘기해볼래? 진짜 별거 아닌 거 — 아침에 뭐 먹었다, 본 광고가 웃겼다, 그런 거.'
+  '그럼 오늘 어땠는지 알려주라. 궁금해'
 ];
 
 function _v9PickIcebreaker() {
@@ -23185,12 +23185,12 @@ function _v9ShowWarmStartModal() {
     root.innerHTML = `
       <div class="v9-warm-overlay">
         <div class="v9-warm-card">
-          <div class="v9-warm-question">안녕! 오늘 어땠어?</div>
+          <div class="v9-warm-question">안녕? 혹시...<br>요즘 고민 같은 거 있어?</div>
           <div class="v9-warm-textarea-wrap">
             <textarea class="v9-warm-input" id="v9WarmInput" placeholder="" rows="3"></textarea>
           </div>
           <div class="v9-warm-buttons">
-            <button class="v9-warm-btn ghost" id="v9WarmNone" type="button">별 일 없었어</button>
+            <button class="v9-warm-btn ghost" id="v9WarmNone" type="button">그런 거 없어</button>
             <button class="v9-warm-btn primary" id="v9WarmSend" type="button" disabled>보내기 →</button>
           </div>
         </div>
@@ -31989,8 +31989,15 @@ async function showReflectionItemActions(id) {
 
 function pickHomeMainHook() {
   const now = Date.now();
+  // V4 (사용자 명시 2026-05-18 ultrathink): hook 은 push 알림 시각에만 노출 (default 21시).
+  //   scheduledFor 시각 도달 전 = 큐에 쌓인 상태, 홈 표시 X.
+  //   dismissedFromHome = true (push 또는 홈 카드 tap 으로 진입한 후 자동 dismiss) 면 다시 안 보임.
   return ((state.askedHooks || [])
-    .filter(h => h && !h.answered)
+    .filter(h => h && !h.answered && !h.dismissedFromHome)
+    .filter(h => {
+      const sched = h.scheduledFor ? new Date(h.scheduledFor).getTime() : new Date(h.askedAt).getTime();
+      return now >= sched;
+    })
     .filter(h => (now - new Date(h.askedAt).getTime()) < 48 * 3600000)
     .sort((a, b) => new Date(b.askedAt) - new Date(a.askedAt))
   )[0] || null;
@@ -32090,8 +32097,12 @@ function hookCardTap(hookId) {
       hookTriggerDayK: hook.trigger_dayK,
     };
     state.chatMessages = [hookMsg];
-    if (typeof saveState === 'function') saveState(true);
   }
+  // V4 (사용자 명시 2026-05-18 ultrathink): hook tap (push or 홈 카드) = 홈 hook dismiss.
+  //   사용자가 이미 hook 봤음 → 홈에 다시 표시할 필요 X. 답변 안 해도 홈에선 사라짐.
+  //   chat 안 hook 메시지는 그대로 유지 (사용자가 답변하면 answered=true → backend mark).
+  hook.dismissedFromHome = true;
+  if (typeof saveState === 'function') saveState(true);
   if (typeof showScreen === 'function') showScreen('chat');
   if (typeof renderChat === 'function') setTimeout(() => renderChat(), 80);
 }
@@ -32351,13 +32362,14 @@ function _hookSubstrateBySource(dayK) {
   //   Phase 2: backend prompt 의 일기/토픽 reference 도 같이 제거.
   const out = { checkin: null, pearls: [], insights: [] };
   // [A] 체크인
+  // V4 (사용자 명시 2026-05-18 ultrathink): 체크인 한 줄 대답 (e.note) 빼기 — hook 정보 수집에서 제외.
+  // 사용자가 체크인 note 에 적은 사적 한 줄을 hook 이 다시 묻거나 reference 하지 않도록.
   const e = (state.entries || []).find(x => x && x.date === dayK);
   if (e) {
     out.checkin = {
       vit: e.vitality, mood: e.mood,
       sleepStart: e.sleepStart, sleepEnd: e.sleepEnd, allNighter: e.allNighter,
       question: e.dailyQuestion && e.dailyQuestion.text,
-      answer: e.note,
     };
   }
   // [B] 일기 — Phase 1B 제거
@@ -32387,12 +32399,10 @@ function _hookSubstrateBySource(dayK) {
 
 function _hookScoreRichness(src) {
   let score = 0;
-  if (src.checkin && src.checkin.answer && src.checkin.answer.length > 5) score += 20;
-  // V4 fix (사용자 명시 2026-05-18) Phase 1B: diary / diarySummary 제거 — score 항목도 빠짐.
-  // 진주 가중치 ↑ — 사용자 의도 (진주 위주 hook). 20 → 30 으로 상향.
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): 체크인 한 줄 대답 (answer) 빼기 — score 영향 X.
+  // 진주 / 깨달음 위주로 richness 판정.
   score += (src.pearls || []).length * 30;
   score += (src.insights || []).length * 15;
-  // V4 fix (사용자 명시 2026-05-18) Phase 1A: topicCards 제거 — score 항목도 빠짐.
   return Math.min(100, score);
 }
 
@@ -32449,14 +32459,14 @@ function _hookFormatSubstrate(src, dayK) {
   lines.push('');
 
   // [A] 체크인
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): 체크인 한 줄 대답 (answer) line 제거. question 도 의미 없어 같이 제외.
   lines.push('[A] 체크인:');
   if (src.checkin) {
     const c = src.checkin;
-    if (c.answer && c.question) lines.push(`  - 질문 "${(c.question || '').slice(0, 60)}" 에 "${(c.answer || '').slice(0, 100)}"`);
     if (c.allNighter) lines.push('  - 잠: 밤샘');
     else if (c.sleepStart && c.sleepEnd) lines.push(`  - 잠: ${c.sleepStart}~${c.sleepEnd}`);
     if (c.vit != null && c.mood != null) lines.push(`  - vit ${c.vit}/5 mood ${c.mood}/7`);
-    if (!c.answer && !c.allNighter && !c.sleepStart && (c.vit == null || c.mood == null)) lines.push('  - (없음)');
+    if (!c.allNighter && !c.sleepStart && (c.vit == null || c.mood == null)) lines.push('  - (없음)');
   } else lines.push('  - (없음)');
 
   // [B] 일기 — V4 fix (사용자 명시 2026-05-18) Phase 1B: 제거.
@@ -32568,6 +32578,14 @@ async function maybeGenerateHook(opts) {
       return { failed: data && data.reason || 'backend-fail' };
     }
     const h = data.hook;
+    // V4 fix (사용자 명시 2026-05-18 ultrathink): hook 은 push 알림 시각에만 노출.
+    //   delivered=false + scheduledFor=다음 push 시각 (default 21시). pickHomeMainHook 가 시각 도달 후만 표시.
+    //   사용자가 push 시각 전 진입해도 홈에 그날 hook 노출 X (큐에 쌓아둔 채 대기).
+    const _hour = (state.preferences && typeof state.preferences.hookNotificationTime === 'number')
+      ? state.preferences.hookNotificationTime : 21;
+    const _now = new Date();
+    const _scheduled = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate(), _hour, 0, 0, 0);
+    if (_scheduled.getTime() <= _now.getTime()) _scheduled.setDate(_scheduled.getDate() + 1);
     const entry = {
       id: 'hook_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       body: h.body,
@@ -32575,9 +32593,11 @@ async function maybeGenerateHook(opts) {
       trigger_dayK: h.trigger_dayK,
       hook_type: h.hook_type,
       askedAt: new Date().toISOString(),
+      scheduledFor: _scheduled.toISOString(),
       answered: false,
       answeredAt: null,
-      delivered: true,
+      delivered: false,
+      dismissedFromHome: false,
     };
     if (!Array.isArray(state.askedHooks)) state.askedHooks = [];
     state.askedHooks.push(entry);

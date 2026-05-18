@@ -5,8 +5,15 @@
 
 function pickHomeMainHook() {
   const now = Date.now();
+  // V4 (사용자 명시 2026-05-18 ultrathink): hook 은 push 알림 시각에만 노출 (default 21시).
+  //   scheduledFor 시각 도달 전 = 큐에 쌓인 상태, 홈 표시 X.
+  //   dismissedFromHome = true (push 또는 홈 카드 tap 으로 진입한 후 자동 dismiss) 면 다시 안 보임.
   return ((state.askedHooks || [])
-    .filter(h => h && !h.answered)
+    .filter(h => h && !h.answered && !h.dismissedFromHome)
+    .filter(h => {
+      const sched = h.scheduledFor ? new Date(h.scheduledFor).getTime() : new Date(h.askedAt).getTime();
+      return now >= sched;
+    })
     .filter(h => (now - new Date(h.askedAt).getTime()) < 48 * 3600000)
     .sort((a, b) => new Date(b.askedAt) - new Date(a.askedAt))
   )[0] || null;
@@ -106,8 +113,12 @@ function hookCardTap(hookId) {
       hookTriggerDayK: hook.trigger_dayK,
     };
     state.chatMessages = [hookMsg];
-    if (typeof saveState === 'function') saveState(true);
   }
+  // V4 (사용자 명시 2026-05-18 ultrathink): hook tap (push or 홈 카드) = 홈 hook dismiss.
+  //   사용자가 이미 hook 봤음 → 홈에 다시 표시할 필요 X. 답변 안 해도 홈에선 사라짐.
+  //   chat 안 hook 메시지는 그대로 유지 (사용자가 답변하면 answered=true → backend mark).
+  hook.dismissedFromHome = true;
+  if (typeof saveState === 'function') saveState(true);
   if (typeof showScreen === 'function') showScreen('chat');
   if (typeof renderChat === 'function') setTimeout(() => renderChat(), 80);
 }
