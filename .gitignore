@@ -59,3 +59,8 @@ android/app/release/
 android/local.properties
 capacitor.config.local.ts
 .capacitor/
+
+# 사용자 명시 2026-05-18 — 계정 복구 one-off 도구. emails 파일 = PII.
+scripts/recover-emails.local.txt
+scripts/recover-*.local.txt
+scripts/recover-*.local.json
