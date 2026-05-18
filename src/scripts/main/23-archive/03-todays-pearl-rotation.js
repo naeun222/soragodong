@@ -84,13 +84,14 @@ function _heroCardHtml(pick, opts = {}) {
         ${playBtn}
       </div>
     `;
-  } else if (pick.video) {
+  } else if (pearlHasMedia(pick, 'video')) {
     // V4 (사용자 명시): 동영상 진주 — 썸네일만 (사진과 동일 layout). 클릭 시 모달에서 재생.
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
     const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 기타: '💎' };
     const icon = iconMap[pick.category || '기타'] || '💎';
-    const thumb = pick.videoThumbnail;
-    const visual = thumb
-      ? `<img src="${thumb}" alt="" class="hero-photo-thumb">`
+    const thumbImg = pearlImgHtml(pick, 'videoThumbnail', { cls: 'hero-photo-thumb', alt: '' });
+    const visual = thumbImg
+      ? thumbImg
       : `<div class="hero-photo-thumb video-thumb-placeholder">📹</div>`;
     // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
     // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
@@ -104,13 +105,14 @@ function _heroCardHtml(pick, opts = {}) {
         </div>
       </div>
     `;
-  } else if (pick.photo) {
+  } else if (pearlHasMedia(pick, 'photo')) {
     // V4-fix: 사진 진주 — 정방형 작은 thumbnail (hero 카드 세로 길이 안 늘림)
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
     const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 기타: '💎' };
     const icon = iconMap[pick.category || '기타'] || '💎';
     body = `
       <div class="hero-photo">
-        <img src="${pick.photo}" alt="" class="hero-photo-thumb">
+        ${pearlImgHtml(pick, 'photo', { cls: 'hero-photo-thumb', alt: '' })}
         <div class="hero-photo-meta">
           <div class="hero-photo-content">${icon} ${escapeHtml(pick.content || '')}</div>
           ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}

@@ -585,8 +585,9 @@ function showPearlViewModal(pearl) {
   // 기존 모달 제거
   document.querySelectorAll('.pearl-view-overlay').forEach(o => o.remove());
   const isMusic = pearl.category === '음악' && pearl.track;
-  const isVideo = !!pearl.video;
-  const isPhoto = !isVideo && !!pearl.photo;
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlHasMedia 가 옛 dataURL / 신 storageKey 양쪽 인식.
+  const isVideo = pearlHasMedia(pearl, 'video');
+  const isPhoto = !isVideo && pearlHasMedia(pearl, 'photo');
   const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
   const icon = iconMap[pearl.category] || '💎';
   const dateStr = pearl.createdAt
@@ -631,7 +632,8 @@ function showPearlViewModal(pearl) {
     const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(pearl.content || '') : (pearl.content || '');
     // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): video src 가 hydratePearlVideos 비동기로 적용되는 동안 까만 화면 → 사용자가 "썸네일 안 보임 / 재생 X" 로 인식.
     // poster 속성에 videoThumbnail 박아서 hydrate 전 + 첫 ▶ 클릭 전까지 thumbnail 보이게.
-    const _posterAttr = pearl.videoThumbnail ? ` poster="${escapeHtml(pearl.videoThumbnail)}"` : '';
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlVideoPosterAttr 이 옛 dataURL / 신 storageKey 자동 분기.
+    const _posterAttr = pearlVideoPosterAttr(pearl);
     mediaHtml = `
       <div class="pearl-view-media">
         <video data-pearl-vid="${pearl.id}" class="pearl-view-photo" controls playsinline preload="metadata"${_posterAttr}></video>
@@ -642,9 +644,10 @@ function showPearlViewModal(pearl) {
       </div>
     `;
   } else if (isPhoto) {
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
     mediaHtml = `
       <div class="pearl-view-media">
-        <img src="${pearl.photo}" alt="" class="pearl-view-photo">
+        ${pearlImgHtml(pearl, 'photo', { cls: 'pearl-view-photo', alt: '' })}
       </div>
       <div class="pearl-view-text-meta">
         <div class="pearl-view-title">${icon} ${escapeHtml(pearl.content || '')}</div>

@@ -17,8 +17,10 @@ function _renderTicketCardHTML(pearl, opts) {
     : (pearl.createdAt ? new Date(pearl.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '');
   const sizeClass = opts.large ? ' tile-large' : '';
   const subChip = `<div class="tc-subtype">${emoji} ${escapeHtml(label)}</div>`;
-  const artBlock = pearl.photo
-    ? `<div class="tile-music-art-wrap ticket-art-wrap"><img src="${pearl.photo}" alt="" class="tile-photo-art">${subChip}</div>`
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
+  const photoImg = pearlImgHtml(pearl, 'photo', { cls: 'tile-photo-art', alt: '' });
+  const artBlock = photoImg
+    ? `<div class="tile-music-art-wrap ticket-art-wrap">${photoImg}${subChip}</div>`
     : `<div class="tile-music-art-wrap ticket-art-wrap"><div class="tile-photo-art ticket-art-empty">${emoji}</div>${subChip}</div>`;
   return `
     <div class="pinterest-tile tile-photo ticket-tile${sizeClass}" onclick="openPearl('${pearl.id}')">
@@ -39,8 +41,10 @@ function _renderBookCardHTML(pearl, opts) {
   const author = (pearl.bookAuthor || '').trim();
   const oneLiner = pearl.content || '';
   const sizeClass = opts.large ? ' tile-large' : '';
-  const artBlock = pearl.photo
-    ? `<div class="tile-music-art-wrap book-art-wrap"><img src="${pearl.photo}" alt="" class="tile-photo-art book-cover-art"></div>`
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
+  const photoImg = pearlImgHtml(pearl, 'photo', { cls: 'tile-photo-art book-cover-art', alt: '' });
+  const artBlock = photoImg
+    ? `<div class="tile-music-art-wrap book-art-wrap">${photoImg}</div>`
     : `<div class="tile-music-art-wrap book-art-wrap"><div class="tile-photo-art book-cover-art book-cover-empty">📚</div></div>`;
   return `
     <div class="pinterest-tile tile-photo book-tile${sizeClass}" onclick="openBookReviewFullscreen('${pearl.id}')">

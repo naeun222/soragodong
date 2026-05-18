@@ -23,7 +23,9 @@ function _renderBookReviewFullscreen(pearl, editMode) {
   const author = pearl.bookAuthor || '';
   const oneLiner = pearl.content || '';
   const review = pearl.review || '';
-  const coverStyle = pearl.photo ? `style="background-image:url('${pearl.photo}');"` : '';
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlBgPhotoStyle 이 옛 dataURL / 신 storageKey 자동 분기.
+  const coverAttr = pearlBgPhotoStyle(pearl);
+  const hasCover = pearlHasMedia(pearl, 'photo');
   const finishedAt = pearl.finishedAt || pearl.eventDate
     ? new Date((pearl.finishedAt || pearl.eventDate) + 'T12:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
@@ -52,7 +54,7 @@ function _renderBookReviewFullscreen(pearl, editMode) {
       <button class="brf-back-btn" onclick="closeBookReviewFullscreen()">←</button>
       <button class="brf-more-btn" onclick="_bookViewMore('${pearl.id}')" aria-label="더보기">⋮</button>
     </div>
-    <div class="brf-cover" ${coverStyle}>${pearl.photo ? '' : '<div class="brf-cover-placeholder">📚</div>'}</div>
+    <div class="brf-cover" ${coverAttr}>${hasCover ? '' : '<div class="brf-cover-placeholder">📚</div>'}</div>
     <div class="brf-title">${escapeHtml(title)}</div>
     ${author ? `<div class="brf-author">${escapeHtml(author)}</div>` : ''}
     ${finishedAt ? `<div class="brf-finished">${escapeHtml(finishedAt)} 완독</div>` : ''}
@@ -60,6 +62,8 @@ function _renderBookReviewFullscreen(pearl, editMode) {
     <div class="brf-body">${bodyHtml}</div>
   `;
   document.body.appendChild(overlay);
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — 신 path 표지 (storageKey.photo) 가 있으면 hydrate.
+  if (typeof hydratePearlMedia === 'function') hydratePearlMedia(overlay);
   if (editMode) {
     const ta = document.getElementById('brfReviewTextarea');
     if (ta) {

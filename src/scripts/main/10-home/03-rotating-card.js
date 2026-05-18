@@ -580,6 +580,9 @@ function renderRotatingCard() {
       return;
     }
     container.innerHTML = cardHtml;
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — 신 path 진주 미디어 (storageKey) 가 카드에 있으면 hydrate. hydratePearlVideos 도 같이 (옛 path 영상 진주 호환).
+    if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
+    else if (typeof hydratePearlMedia === 'function') hydratePearlMedia(container);
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     container.innerHTML = '';

@@ -12103,3 +12103,28 @@
   color: var(--paper-text-soft);
   outline: none;
 }
+
+/* V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearl 미디어 storage hydrate placeholder. */
+img.pearl-loading {
+  background: var(--surface-soft, rgba(255,255,255,0.04));
+  min-height: 48px;
+  border-radius: 6px;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+img.pearl-loading[data-pearl-hydrated="1"] {
+  opacity: 1;
+  background: transparent;
+}
+img.pearl-load-fail {
+  background: var(--surface-soft, rgba(255,255,255,0.04));
+  border-radius: 6px;
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+[data-pearl-bg-photo]:not([data-pearl-hydrated="1"]) {
+  background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)) !important;
+}
+[data-pearl-bg-photo][data-pearl-hydrated="fail"] {
+  background: linear-gradient(135deg, rgba(180,160,140,0.08), rgba(120,100,80,0.04)) !important;
+}

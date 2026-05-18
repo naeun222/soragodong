@@ -217,11 +217,12 @@ function switchDayModalTab(tab) {
             </div>
           </div>
         `;
-      } else if (p.video) {
+      } else if (pearlHasMedia(p, 'video')) {
         // V4 (사용자 명시): 동영상 진주 — 썸네일만 (사진 패턴 동일). 클릭 시 모달에서 재생.
-        const thumb = p.videoThumbnail;
-        const visual = thumb
-          ? `<img src="${thumb}" alt="" class="day-pearl-art">`
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
+        const thumbImg = pearlImgHtml(p, 'videoThumbnail', { cls: 'day-pearl-art', alt: '' });
+        const visual = thumbImg
+          ? thumbImg
           : `<div class="day-pearl-art video-thumb-placeholder">📹</div>`;
         // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
         // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
@@ -236,11 +237,12 @@ function switchDayModalTab(tab) {
             </div>
           </div>
         `;
-      } else if (p.photo) {
+      } else if (pearlHasMedia(p, 'photo')) {
         // V4-fix: 사진 진주 (음악 풍 layout)
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
         html += `
           <div class="day-card t-pearl t-pearl-music" onclick="closeDayModal(); openPearl('${p.id}')">
-            <img src="${p.photo}" alt="" class="day-pearl-art">
+            ${pearlImgHtml(p, 'photo', { cls: 'day-pearl-art', alt: '' })}
             <div class="day-pearl-music-meta">
               <div class="day-pearl-music-title">${icon} ${escapeHtml(p.content || '')}</div>
               <div class="day-pearl-music-artist">${escapeHtml(p.category || '진주')}</div>

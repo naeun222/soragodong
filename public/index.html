@@ -12259,6 +12259,31 @@
   color: var(--paper-text-soft);
   outline: none;
 }
+
+/* V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearl 미디어 storage hydrate placeholder. */
+img.pearl-loading {
+  background: var(--surface-soft, rgba(255,255,255,0.04));
+  min-height: 48px;
+  border-radius: 6px;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+img.pearl-loading[data-pearl-hydrated="1"] {
+  opacity: 1;
+  background: transparent;
+}
+img.pearl-load-fail {
+  background: var(--surface-soft, rgba(255,255,255,0.04));
+  border-radius: 6px;
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+[data-pearl-bg-photo]:not([data-pearl-hydrated="1"]) {
+  background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)) !important;
+}
+[data-pearl-bg-photo][data-pearl-hydrated="fail"] {
+  background: linear-gradient(135deg, rgba(180,160,140,0.08), rgba(120,100,80,0.04)) !important;
+}
 /* V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 — cold open hero + 코치마크 */
 
 /* ── HERO (cold open) ──────────────────────────────────────── */
@@ -28845,6 +28870,9 @@ function renderRotatingCard() {
       return;
     }
     container.innerHTML = cardHtml;
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — 신 path 진주 미디어 (storageKey) 가 카드에 있으면 hydrate. hydratePearlVideos 도 같이 (옛 path 영상 진주 호환).
+    if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
+    else if (typeof hydratePearlMedia === 'function') hydratePearlMedia(container);
   } catch (e) {
     console.error('[renderRotatingCard]', e);
     container.innerHTML = '';
@@ -34116,7 +34144,9 @@ function hydratePearlVideos() {
         return;
       }
       const pearl = (state.pearls || []).find(p => p.id === id);
-      if (!pearl || !pearl.video) return;
+      // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — 신 path (storageKey.video) 는 hydratePearlMedia 가 처리. 옛 path 만 여기.
+      if (!pearl) return;
+      if (!pearl.video) return;
       // V4 fix v5 (사용자 보고 2026-05-04): blob 변환 실패 시 data URL 직접 세팅 fallback (재생 불가 회피).
       fetch(pearl.video).then(r => r.blob()).then(b => {
         const url = URL.createObjectURL(b);
@@ -34132,6 +34162,8 @@ function hydratePearlVideos() {
       });
     });
   } catch(_) {}
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — 신 path (storage) 진주 미디어도 같이 hydrate.
+  if (typeof hydratePearlMedia === 'function') hydratePearlMedia();
 }
 
 // 진주 삭제 시 cache cleanup
@@ -35066,6 +35098,228 @@ function skipMission(missionId) {
   });
 }
 
+// V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — Pearl 미디어 hydrate.
+//   옛 path: pearl.photo / pearl.video / pearl.videoThumbnail = dataURL → 그대로 src 박힘.
+//   신 path: pearl.storageKey.{photo,video,videoThumbnail} = Storage 경로 → download + decrypt + blob URL.
+//
+//   render fn 들이 옛/신 path 둘 다 지원하려면:
+//     1) HTML 생성 — 옛 dataURL 면 src 박힘 즉시 표시, 신 storageKey 면 data attr 만.
+//     2) render 직후 hydratePearlMedia() 호출 → DOM scan → storage 진주만 download.
+//   blob URL cache (Map<'pearlId:kind', url>) 로 같은 진주 반복 render 시 재사용.
+//
+//   master key 없으면 (E2EE 미설정 또는 복원 실패) hydrate skip + fail UI.
+//   testerMode 면 Storage 시도 X (옛 dataURL 만 작동).
+
+const _pearlMediaBlobCache = new Map();  // 'pearlId:kind' → blobUrl
+const _pearlMediaLoading = new Map();    // 'pearlId:kind' → Promise<blobUrl>
+
+function _pearlMediaCacheKey(pearlId, kind) {
+  return pearlId + ':' + kind;
+}
+
+// 진주가 미디어 가졌는지 (옛 dataURL or 신 storageKey).
+//   kind = 'photo' | 'video' | 'videoThumbnail'
+function pearlHasMedia(pearl, kind) {
+  if (!pearl) return false;
+  if (kind === 'photo' && typeof pearl.photo === 'string' && pearl.photo) return true;
+  if (kind === 'video' && typeof pearl.video === 'string' && pearl.video) return true;
+  if (kind === 'videoThumbnail' && typeof pearl.videoThumbnail === 'string' && pearl.videoThumbnail) return true;
+  return !!(pearl.storageKey && pearl.storageKey[kind]);
+}
+
+// photo / videoThumbnail <img> HTML 생성 — 옛/신 path 자동 분기.
+//   opts.cls = class string, opts.alt = alt text (escapeHtml 적용), opts.extra = extra attrs string.
+//   미디어 없으면 '' 반환.
+function pearlImgHtml(pearl, kind, opts) {
+  opts = opts || {};
+  const cls = opts.cls || '';
+  const alt = opts.alt || '';
+  const extra = opts.extra || '';
+  if (!pearl) return '';
+  const dataUrl = (kind === 'photo')
+    ? pearl.photo
+    : (kind === 'videoThumbnail' ? pearl.videoThumbnail : null);
+  if (typeof dataUrl === 'string' && dataUrl) {
+    // dataURL = 'data:image/jpeg;base64,...' — '<>"&' 안 들어감. escape 불필요.
+    return `<img src="${dataUrl}" alt="${escapeHtml(alt)}" class="${cls}" ${extra}>`;
+  }
+  if (pearl.storageKey && pearl.storageKey[kind]) {
+    return `<img data-pearl-photo="${pearl.id}" data-pearl-kind="${kind}" alt="${escapeHtml(alt)}" class="${cls} pearl-loading" ${extra}>`;
+  }
+  return '';
+}
+
+// background-image inline style or data attr — <div> 등에 박는 패턴.
+//   옛 dataURL → style="background-image:url(...)" / 신 storageKey → data-pearl-bg-photo.
+function pearlBgPhotoStyle(pearl) {
+  if (!pearl) return '';
+  if (typeof pearl.photo === 'string' && pearl.photo) {
+    return `style="background-image:url('${pearl.photo}');"`;
+  }
+  if (pearl.storageKey && pearl.storageKey.photo) {
+    return `data-pearl-bg-photo="${pearl.id}"`;
+  }
+  return '';
+}
+
+// video poster attribute — 옛 dataURL / 신 storageKey 분기.
+//   리턴값은 ' poster="..."' 또는 ' data-pearl-poster="pid"' (공백 prefix 포함). render 시 그대로 박음.
+function pearlVideoPosterAttr(pearl) {
+  if (!pearl) return '';
+  if (typeof pearl.videoThumbnail === 'string' && pearl.videoThumbnail) {
+    return ` poster="${pearl.videoThumbnail}"`;
+  }
+  if (pearl.storageKey && pearl.storageKey.videoThumbnail) {
+    return ` data-pearl-poster="${pearl.id}"`;
+  }
+  return '';
+}
+
+// 단일 진주 미디어 download + decrypt + blob URL. cache hit / in-flight dedup.
+//   실패 시 throw.
+async function _hydratePearlMediaOne(pearl, kind) {
+  if (!pearl || !pearl.id) throw new Error('hydratePearlMediaOne: pearl id 없음');
+  const cacheKey = _pearlMediaCacheKey(pearl.id, kind);
+  // cache hit
+  const cached = _pearlMediaBlobCache.get(cacheKey);
+  if (cached) return cached;
+  // in-flight dedup
+  const inflight = _pearlMediaLoading.get(cacheKey);
+  if (inflight) return inflight;
+  // master key
+  if (!_e2eeMasterKey) {
+    throw new Error('master key 없음 — E2EE 미설정 또는 복원 필요');
+  }
+  // storage path
+  const storagePath = pearl.storageKey && pearl.storageKey[kind];
+  if (!storagePath) throw new Error(`storageKey.${kind} 없음`);
+  // testerMode 가드
+  if (typeof state !== 'undefined' && state && state.preferences && state.preferences.testerMode) {
+    throw new Error('testerMode — Storage 차단');
+  }
+  // mime (caller 가 줄 수도 있지만 단순화 — photo / thumbnail = jpeg, video = mp4).
+  const mime = (kind === 'video') ? 'video/mp4' : 'image/jpeg';
+  const p = (async () => {
+    try {
+      const bytes = await _downloadPearlMedia(storagePath, _e2eeMasterKey);
+      const url = _bytesToBlobUrl(bytes, mime);
+      _pearlMediaBlobCache.set(cacheKey, url);
+      return url;
+    } finally {
+      _pearlMediaLoading.delete(cacheKey);
+    }
+  })();
+  _pearlMediaLoading.set(cacheKey, p);
+  return p;
+}
+
+// 화면 안 신 path 진주 미디어 모두 hydrate.
+//   data-pearl-photo (img) / data-pearl-bg-photo (any el bg) / data-pearl-poster (video) / data-pearl-vid (video src 신 path).
+//   이미 hydrate 된 element 는 skip. testerMode / master key 없으면 fallback UI.
+function hydratePearlMedia(rootEl) {
+  if (typeof state === 'undefined' || !state) return;
+  // testerMode 면 storage 시도 X (옛 dataURL 만 작동).
+  if (state.preferences && state.preferences.testerMode) return;
+  const hasKey = !!_e2eeMasterKey;
+  const root = rootEl || document;
+  const _setFailImg = (el) => {
+    el.classList.remove('pearl-loading');
+    el.classList.add('pearl-load-fail');
+    if (el.tagName === 'IMG') el.alt = '미디어 못 불러옴';
+    el.dataset.pearlHydrated = 'fail';
+  };
+
+  // img[data-pearl-photo]
+  root.querySelectorAll && root.querySelectorAll('img[data-pearl-photo]').forEach(img => {
+    if (img.dataset.pearlHydrated === '1') return;
+    if (img.dataset.pearlHydrated === 'pending') return;
+    const pid = img.dataset.pearlPhoto;
+    const kind = img.dataset.pearlKind || 'photo';
+    const pearl = (state.pearls || []).find(p => p.id === pid);
+    if (!pearl || !pearl.storageKey || !pearl.storageKey[kind]) return;
+    if (!hasKey) { _setFailImg(img); return; }
+    img.dataset.pearlHydrated = 'pending';
+    _hydratePearlMediaOne(pearl, kind).then(url => {
+      img.src = url;
+      img.classList.remove('pearl-loading');
+      img.dataset.pearlHydrated = '1';
+    }).catch(e => {
+      console.warn('[pearl img hydrate fail]', pid, kind, e && e.message);
+      _setFailImg(img);
+    });
+  });
+
+  // [data-pearl-bg-photo]
+  root.querySelectorAll && root.querySelectorAll('[data-pearl-bg-photo]').forEach(el => {
+    if (el.dataset.pearlHydrated === '1') return;
+    if (el.dataset.pearlHydrated === 'pending') return;
+    const pid = el.dataset.pearlBgPhoto;
+    const pearl = (state.pearls || []).find(p => p.id === pid);
+    if (!pearl || !pearl.storageKey || !pearl.storageKey.photo) return;
+    if (!hasKey) { el.dataset.pearlHydrated = 'fail'; return; }
+    el.dataset.pearlHydrated = 'pending';
+    _hydratePearlMediaOne(pearl, 'photo').then(url => {
+      el.style.backgroundImage = `url('${url}')`;
+      el.dataset.pearlHydrated = '1';
+    }).catch(e => {
+      console.warn('[pearl bg-photo hydrate fail]', pid, e && e.message);
+      el.dataset.pearlHydrated = 'fail';
+    });
+  });
+
+  // video[data-pearl-vid] — 옛 path 는 hydratePearlVideos 가 처리, 신 path (storageKey.video) 만.
+  root.querySelectorAll && root.querySelectorAll('video[data-pearl-vid]').forEach(v => {
+    if (v.dataset.pearlStorageHydrated === '1') return;
+    if (v.dataset.pearlStorageHydrated === 'pending') return;
+    const pid = v.dataset.pearlVid;
+    const pearl = (state.pearls || []).find(p => p.id === pid);
+    if (!pearl) return;
+    if (!pearl.storageKey || !pearl.storageKey.video) return;  // 옛 path → hydratePearlVideos 가 처리
+    if (!hasKey) { v.dataset.pearlStorageHydrated = 'fail'; return; }
+    v.dataset.pearlStorageHydrated = 'pending';
+    _hydratePearlMediaOne(pearl, 'video').then(url => {
+      v.src = url;
+      v.dataset.hydrated = '1';
+      v.dataset.pearlStorageHydrated = '1';
+    }).catch(e => {
+      console.warn('[pearl video hydrate fail]', pid, e && e.message);
+      v.dataset.pearlStorageHydrated = 'fail';
+    });
+  });
+
+  // video[data-pearl-poster] — poster 신 path.
+  root.querySelectorAll && root.querySelectorAll('video[data-pearl-poster]').forEach(v => {
+    if (v.dataset.pearlPosterHydrated === '1') return;
+    if (v.dataset.pearlPosterHydrated === 'pending') return;
+    const pid = v.dataset.pearlPoster;
+    const pearl = (state.pearls || []).find(p => p.id === pid);
+    if (!pearl || !pearl.storageKey || !pearl.storageKey.videoThumbnail) return;
+    if (!hasKey) { v.dataset.pearlPosterHydrated = 'fail'; return; }
+    v.dataset.pearlPosterHydrated = 'pending';
+    _hydratePearlMediaOne(pearl, 'videoThumbnail').then(url => {
+      v.poster = url;
+      v.dataset.pearlPosterHydrated = '1';
+    }).catch(e => {
+      console.warn('[pearl poster hydrate fail]', pid, e && e.message);
+      v.dataset.pearlPosterHydrated = 'fail';
+    });
+  });
+}
+
+// 진주 삭제 / 미디어 변경 시 blob URL cache 해제.
+//   kind 지정 안 하면 photo/video/videoThumbnail 셋 다 제거.
+function _revokePearlMediaCache(pearlId, kind) {
+  if (!pearlId) return;
+  const kinds = kind ? [kind] : ['photo', 'video', 'videoThumbnail'];
+  for (const k of kinds) {
+    const cacheKey = _pearlMediaCacheKey(pearlId, k);
+    const url = _pearlMediaBlobCache.get(cacheKey);
+    if (url) {
+      try { URL.revokeObjectURL(url); } catch(_) {}
+      _pearlMediaBlobCache.delete(cacheKey);
+    }
+  }
+}
 // ═══════════════════════════════════════════════════════════════
 // SHELL COLLECTION
 // ═══════════════════════════════════════════════════════════════
@@ -44676,8 +44930,10 @@ function _renderTicketCardHTML(pearl, opts) {
     : (pearl.createdAt ? new Date(pearl.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '');
   const sizeClass = opts.large ? ' tile-large' : '';
   const subChip = `<div class="tc-subtype">${emoji} ${escapeHtml(label)}</div>`;
-  const artBlock = pearl.photo
-    ? `<div class="tile-music-art-wrap ticket-art-wrap"><img src="${pearl.photo}" alt="" class="tile-photo-art">${subChip}</div>`
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
+  const photoImg = pearlImgHtml(pearl, 'photo', { cls: 'tile-photo-art', alt: '' });
+  const artBlock = photoImg
+    ? `<div class="tile-music-art-wrap ticket-art-wrap">${photoImg}${subChip}</div>`
     : `<div class="tile-music-art-wrap ticket-art-wrap"><div class="tile-photo-art ticket-art-empty">${emoji}</div>${subChip}</div>`;
   return `
     <div class="pinterest-tile tile-photo ticket-tile${sizeClass}" onclick="openPearl('${pearl.id}')">
@@ -44698,8 +44954,10 @@ function _renderBookCardHTML(pearl, opts) {
   const author = (pearl.bookAuthor || '').trim();
   const oneLiner = pearl.content || '';
   const sizeClass = opts.large ? ' tile-large' : '';
-  const artBlock = pearl.photo
-    ? `<div class="tile-music-art-wrap book-art-wrap"><img src="${pearl.photo}" alt="" class="tile-photo-art book-cover-art"></div>`
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
+  const photoImg = pearlImgHtml(pearl, 'photo', { cls: 'tile-photo-art book-cover-art', alt: '' });
+  const artBlock = photoImg
+    ? `<div class="tile-music-art-wrap book-art-wrap">${photoImg}</div>`
     : `<div class="tile-music-art-wrap book-art-wrap"><div class="tile-photo-art book-cover-art book-cover-empty">📚</div></div>`;
   return `
     <div class="pinterest-tile tile-photo book-tile${sizeClass}" onclick="openBookReviewFullscreen('${pearl.id}')">
@@ -44907,7 +45165,9 @@ function _renderBookReviewFullscreen(pearl, editMode) {
   const author = pearl.bookAuthor || '';
   const oneLiner = pearl.content || '';
   const review = pearl.review || '';
-  const coverStyle = pearl.photo ? `style="background-image:url('${pearl.photo}');"` : '';
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlBgPhotoStyle 이 옛 dataURL / 신 storageKey 자동 분기.
+  const coverAttr = pearlBgPhotoStyle(pearl);
+  const hasCover = pearlHasMedia(pearl, 'photo');
   const finishedAt = pearl.finishedAt || pearl.eventDate
     ? new Date((pearl.finishedAt || pearl.eventDate) + 'T12:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
@@ -44936,7 +45196,7 @@ function _renderBookReviewFullscreen(pearl, editMode) {
       <button class="brf-back-btn" onclick="closeBookReviewFullscreen()">←</button>
       <button class="brf-more-btn" onclick="_bookViewMore('${pearl.id}')" aria-label="더보기">⋮</button>
     </div>
-    <div class="brf-cover" ${coverStyle}>${pearl.photo ? '' : '<div class="brf-cover-placeholder">📚</div>'}</div>
+    <div class="brf-cover" ${coverAttr}>${hasCover ? '' : '<div class="brf-cover-placeholder">📚</div>'}</div>
     <div class="brf-title">${escapeHtml(title)}</div>
     ${author ? `<div class="brf-author">${escapeHtml(author)}</div>` : ''}
     ${finishedAt ? `<div class="brf-finished">${escapeHtml(finishedAt)} 완독</div>` : ''}
@@ -44944,6 +45204,8 @@ function _renderBookReviewFullscreen(pearl, editMode) {
     <div class="brf-body">${bodyHtml}</div>
   `;
   document.body.appendChild(overlay);
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — 신 path 표지 (storageKey.photo) 가 있으면 hydrate.
+  if (typeof hydratePearlMedia === 'function') hydratePearlMedia(overlay);
   if (editMode) {
     const ta = document.getElementById('brfReviewTextarea');
     if (ta) {
@@ -45691,13 +45953,14 @@ function _heroCardHtml(pick, opts = {}) {
         ${playBtn}
       </div>
     `;
-  } else if (pick.video) {
+  } else if (pearlHasMedia(pick, 'video')) {
     // V4 (사용자 명시): 동영상 진주 — 썸네일만 (사진과 동일 layout). 클릭 시 모달에서 재생.
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
     const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 기타: '💎' };
     const icon = iconMap[pick.category || '기타'] || '💎';
-    const thumb = pick.videoThumbnail;
-    const visual = thumb
-      ? `<img src="${thumb}" alt="" class="hero-photo-thumb">`
+    const thumbImg = pearlImgHtml(pick, 'videoThumbnail', { cls: 'hero-photo-thumb', alt: '' });
+    const visual = thumbImg
+      ? thumbImg
       : `<div class="hero-photo-thumb video-thumb-placeholder">📹</div>`;
     // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
     // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
@@ -45711,13 +45974,14 @@ function _heroCardHtml(pick, opts = {}) {
         </div>
       </div>
     `;
-  } else if (pick.photo) {
+  } else if (pearlHasMedia(pick, 'photo')) {
     // V4-fix: 사진 진주 — 정방형 작은 thumbnail (hero 카드 세로 길이 안 늘림)
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
     const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 기타: '💎' };
     const icon = iconMap[pick.category || '기타'] || '💎';
     body = `
       <div class="hero-photo">
-        <img src="${pick.photo}" alt="" class="hero-photo-thumb">
+        ${pearlImgHtml(pick, 'photo', { cls: 'hero-photo-thumb', alt: '' })}
         <div class="hero-photo-meta">
           <div class="hero-photo-content">${icon} ${escapeHtml(pick.content || '')}</div>
           ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}
@@ -46172,11 +46436,12 @@ function switchDayModalTab(tab) {
             </div>
           </div>
         `;
-      } else if (p.video) {
+      } else if (pearlHasMedia(p, 'video')) {
         // V4 (사용자 명시): 동영상 진주 — 썸네일만 (사진 패턴 동일). 클릭 시 모달에서 재생.
-        const thumb = p.videoThumbnail;
-        const visual = thumb
-          ? `<img src="${thumb}" alt="" class="day-pearl-art">`
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
+        const thumbImg = pearlImgHtml(p, 'videoThumbnail', { cls: 'day-pearl-art', alt: '' });
+        const visual = thumbImg
+          ? thumbImg
           : `<div class="day-pearl-art video-thumb-placeholder">📹</div>`;
         // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
         // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
@@ -46191,11 +46456,12 @@ function switchDayModalTab(tab) {
             </div>
           </div>
         `;
-      } else if (p.photo) {
+      } else if (pearlHasMedia(p, 'photo')) {
         // V4-fix: 사진 진주 (음악 풍 layout)
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
         html += `
           <div class="day-card t-pearl t-pearl-music" onclick="closeDayModal(); openPearl('${p.id}')">
-            <img src="${p.photo}" alt="" class="day-pearl-art">
+            ${pearlImgHtml(p, 'photo', { cls: 'day-pearl-art', alt: '' })}
             <div class="day-pearl-music-meta">
               <div class="day-pearl-music-title">${icon} ${escapeHtml(p.content || '')}</div>
               <div class="day-pearl-music-artist">${escapeHtml(p.category || '진주')}</div>
@@ -55399,16 +55665,17 @@ function renderLensPearls() {
             </div>
           </div>
         `;
-      } else if (p.video) {
+      } else if (pearlHasMedia(p, 'video')) {
         // V4 (사용자 명시): 동영상 진주 pinterest-tile — 썸네일만 (사진과 동일). 클릭 시 모달에서 재생.
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
-        const thumb = p.videoThumbnail;
         // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
         // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
-        const visual = thumb
-          ? `<img src="${thumb}" alt="${escapeHtml(_vTitle)}" class="tile-photo-art">`
+        const thumbImg = pearlImgHtml(p, 'videoThumbnail', { cls: 'tile-photo-art', alt: _vTitle });
+        const visual = thumbImg
+          ? thumbImg
           : `<div class="tile-photo-art video-thumb-placeholder">📹</div>`;
         html += `
           <div class="pinterest-tile tile-photo${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
@@ -55420,12 +55687,13 @@ function renderLensPearls() {
             </div>
           </div>
         `;
-      } else if (p.photo) {
+      } else if (pearlHasMedia(p, 'photo')) {
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         html += `
           <div class="pinterest-tile tile-photo${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
-            <img src="${p.photo}" alt="${escapeHtml(p.content || '')}" class="tile-photo-art">
+            ${pearlImgHtml(p, 'photo', { cls: 'tile-photo-art', alt: p.content || '' })}
             <div class="tile-music-meta">
               <div class="tile-music-title">${icon} ${escapeHtml(p.content || '')}</div>
               ${p.note ? `<div class="tile-note">${escapeHtml(p.note.slice(0, 40))}</div>` : ''}
@@ -55463,16 +55731,17 @@ function renderLensPearls() {
             ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:6px; padding:0 4px;">${escapeHtml(p.note)}</div>` : ''}
           </div>
         `;
-      } else if (p.video) {
+      } else if (pearlHasMedia(p, 'video')) {
         // V4 (사용자 명시): 동영상 진주 timeline — 썸네일만 (사진 패턴). 클릭 시 모달에서 재생.
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
-        const thumb = p.videoThumbnail;
         // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
         // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
-        const visual = thumb
-          ? `<img src="${thumb}" alt="" class="pearl-photo-thumb">`
+        const thumbImg = pearlImgHtml(p, 'videoThumbnail', { cls: 'pearl-photo-thumb', alt: '' });
+        const visual = thumbImg
+          ? thumbImg
           : `<div class="pearl-photo-thumb video-thumb-placeholder">📹</div>`;
         html += `
           <div class="pearl-card pearl-photo-card" onclick="openPearl('${p.id}')">
@@ -55483,13 +55752,14 @@ function renderLensPearls() {
             </div>
           </div>
         `;
-      } else if (p.photo) {
+      } else if (pearlHasMedia(p, 'photo')) {
         // V4-fix: 사진 진주 timeline (작은 thumbnail + 메타)
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         html += `
           <div class="pearl-card pearl-photo-card" onclick="openPearl('${p.id}')">
-            <img src="${p.photo}" alt="" class="pearl-photo-thumb">
+            ${pearlImgHtml(p, 'photo', { cls: 'pearl-photo-thumb', alt: '' })}
             <div class="pearl-photo-meta">
               <div class="pearl-card-content">${icon} ${escapeHtml(p.content || '')}</div>
               ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${escapeHtml(p.note)}</div>` : ''}
@@ -56101,8 +56371,9 @@ function showPearlViewModal(pearl) {
   // 기존 모달 제거
   document.querySelectorAll('.pearl-view-overlay').forEach(o => o.remove());
   const isMusic = pearl.category === '음악' && pearl.track;
-  const isVideo = !!pearl.video;
-  const isPhoto = !isVideo && !!pearl.photo;
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlHasMedia 가 옛 dataURL / 신 storageKey 양쪽 인식.
+  const isVideo = pearlHasMedia(pearl, 'video');
+  const isPhoto = !isVideo && pearlHasMedia(pearl, 'photo');
   const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
   const icon = iconMap[pearl.category] || '💎';
   const dateStr = pearl.createdAt
@@ -56147,7 +56418,8 @@ function showPearlViewModal(pearl) {
     const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(pearl.content || '') : (pearl.content || '');
     // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): video src 가 hydratePearlVideos 비동기로 적용되는 동안 까만 화면 → 사용자가 "썸네일 안 보임 / 재생 X" 로 인식.
     // poster 속성에 videoThumbnail 박아서 hydrate 전 + 첫 ▶ 클릭 전까지 thumbnail 보이게.
-    const _posterAttr = pearl.videoThumbnail ? ` poster="${escapeHtml(pearl.videoThumbnail)}"` : '';
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlVideoPosterAttr 이 옛 dataURL / 신 storageKey 자동 분기.
+    const _posterAttr = pearlVideoPosterAttr(pearl);
     mediaHtml = `
       <div class="pearl-view-media">
         <video data-pearl-vid="${pearl.id}" class="pearl-view-photo" controls playsinline preload="metadata"${_posterAttr}></video>
@@ -56158,9 +56430,10 @@ function showPearlViewModal(pearl) {
       </div>
     `;
   } else if (isPhoto) {
+    // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
     mediaHtml = `
       <div class="pearl-view-media">
-        <img src="${pearl.photo}" alt="" class="pearl-view-photo">
+        ${pearlImgHtml(pearl, 'photo', { cls: 'pearl-view-photo', alt: '' })}
       </div>
       <div class="pearl-view-text-meta">
         <div class="pearl-view-title">${icon} ${escapeHtml(pearl.content || '')}</div>

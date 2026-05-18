@@ -374,16 +374,17 @@ function renderLensPearls() {
             </div>
           </div>
         `;
-      } else if (p.video) {
+      } else if (pearlHasMedia(p, 'video')) {
         // V4 (사용자 명시): 동영상 진주 pinterest-tile — 썸네일만 (사진과 동일). 클릭 시 모달에서 재생.
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
-        const thumb = p.videoThumbnail;
         // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
         // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
-        const visual = thumb
-          ? `<img src="${thumb}" alt="${escapeHtml(_vTitle)}" class="tile-photo-art">`
+        const thumbImg = pearlImgHtml(p, 'videoThumbnail', { cls: 'tile-photo-art', alt: _vTitle });
+        const visual = thumbImg
+          ? thumbImg
           : `<div class="tile-photo-art video-thumb-placeholder">📹</div>`;
         html += `
           <div class="pinterest-tile tile-photo${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
@@ -395,12 +396,13 @@ function renderLensPearls() {
             </div>
           </div>
         `;
-      } else if (p.photo) {
+      } else if (pearlHasMedia(p, 'photo')) {
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         html += `
           <div class="pinterest-tile tile-photo${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
-            <img src="${p.photo}" alt="${escapeHtml(p.content || '')}" class="tile-photo-art">
+            ${pearlImgHtml(p, 'photo', { cls: 'tile-photo-art', alt: p.content || '' })}
             <div class="tile-music-meta">
               <div class="tile-music-title">${icon} ${escapeHtml(p.content || '')}</div>
               ${p.note ? `<div class="tile-note">${escapeHtml(p.note.slice(0, 40))}</div>` : ''}
@@ -438,16 +440,17 @@ function renderLensPearls() {
             ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:6px; padding:0 4px;">${escapeHtml(p.note)}</div>` : ''}
           </div>
         `;
-      } else if (p.video) {
+      } else if (pearlHasMedia(p, 'video')) {
         // V4 (사용자 명시): 동영상 진주 timeline — 썸네일만 (사진 패턴). 클릭 시 모달에서 재생.
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
-        const thumb = p.videoThumbnail;
         // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
         // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
-        const visual = thumb
-          ? `<img src="${thumb}" alt="" class="pearl-photo-thumb">`
+        const thumbImg = pearlImgHtml(p, 'videoThumbnail', { cls: 'pearl-photo-thumb', alt: '' });
+        const visual = thumbImg
+          ? thumbImg
           : `<div class="pearl-photo-thumb video-thumb-placeholder">📹</div>`;
         html += `
           <div class="pearl-card pearl-photo-card" onclick="openPearl('${p.id}')">
@@ -458,13 +461,14 @@ function renderLensPearls() {
             </div>
           </div>
         `;
-      } else if (p.photo) {
+      } else if (pearlHasMedia(p, 'photo')) {
         // V4-fix: 사진 진주 timeline (작은 thumbnail + 메타)
+        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         html += `
           <div class="pearl-card pearl-photo-card" onclick="openPearl('${p.id}')">
-            <img src="${p.photo}" alt="" class="pearl-photo-thumb">
+            ${pearlImgHtml(p, 'photo', { cls: 'pearl-photo-thumb', alt: '' })}
             <div class="pearl-photo-meta">
               <div class="pearl-card-content">${icon} ${escapeHtml(p.content || '')}</div>
               ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${escapeHtml(p.note)}</div>` : ''}

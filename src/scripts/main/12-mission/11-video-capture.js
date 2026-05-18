@@ -93,7 +93,9 @@ function hydratePearlVideos() {
         return;
       }
       const pearl = (state.pearls || []).find(p => p.id === id);
-      if (!pearl || !pearl.video) return;
+      // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — 신 path (storageKey.video) 는 hydratePearlMedia 가 처리. 옛 path 만 여기.
+      if (!pearl) return;
+      if (!pearl.video) return;
       // V4 fix v5 (사용자 보고 2026-05-04): blob 변환 실패 시 data URL 직접 세팅 fallback (재생 불가 회피).
       fetch(pearl.video).then(r => r.blob()).then(b => {
         const url = URL.createObjectURL(b);
@@ -109,6 +111,8 @@ function hydratePearlVideos() {
       });
     });
   } catch(_) {}
+  // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — 신 path (storage) 진주 미디어도 같이 hydrate.
+  if (typeof hydratePearlMedia === 'function') hydratePearlMedia();
 }
 
 // 진주 삭제 시 cache cleanup
