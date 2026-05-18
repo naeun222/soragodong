@@ -20,6 +20,7 @@
   "dependencies": {
     "@capacitor/app": "^8.1.0",
     "@capacitor/browser": "^8.0.3",
+    "@capacitor/geolocation": "^8.2.0",
     "@capacitor/push-notifications": "^8.1.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@transistorsoft/capacitor-background-fetch": "^8.1.3"

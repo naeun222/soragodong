@@ -1,6 +1,31 @@
 // ═══════════════════════════════════════════════════════════════
 // AUTH (Supabase magic link)
 // ═══════════════════════════════════════════════════════════════
+
+// V4 fix (사용자 명시 2026-05-18 ultrathink): 카카오 OAuth deeplink 흐름 (14-capacitor-oauth-deeplink.js) 의 user_metadata.name → state.userName 매핑이 stored session 흐름엔 fire 안 함.
+//   영향: 카카오 reload 후 checkSession() 가 stored session 으로 빠지면 state.userName='' 영구 → _hookOnbShouldShow 옛 가드 등에 잡힘 + 호명 fallback ('있잖아 ✦') 만 사용.
+//   fix: checkSession 의 두 success branch (JWT 빠른 path / 풀 fetch path / refresh path) 모두 통과 후 호출.
+function _mapUserMetadataNameToState(user) {
+  try {
+    if (typeof state === 'undefined' || !state) return;
+    if (state.userName && String(state.userName).trim()) return;
+    const _md = (user && user.user_metadata) || {};
+    const _cands = [_md.name, _md.full_name, _md.preferred_username, _md.nickname, _md.given_name, _md.user_name];
+    for (const c of _cands) {
+      if (c && typeof c === 'string') {
+        const v = c.trim();
+        if (v.length >= 1 && v.length <= 20) {
+          state.userName = v.slice(0, 20);
+          if (typeof saveState === 'function') {
+            try { saveState(true); } catch {}
+          }
+          break;
+        }
+      }
+    }
+  } catch {}
+}
+
 async function checkSession() {
   // Check if returning from magic link (URL hash contains tokens)
   if (window.location.hash.includes('access_token')) {

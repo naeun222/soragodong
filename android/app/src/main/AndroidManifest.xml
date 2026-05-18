@@ -54,4 +54,10 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- V4 fix (사용자 보고 2026-05-18 ultrathink) — 갤럭시 위치 동의 모달 안 뜨던 버그.
+         root cause: Capacitor WebView 의 navigator.geolocation 은 OS 권한 없으면 silent fail → _fetchCurrentWeather 가 _weatherPermission='denied' 영구 set → 다음 체크인부터 동의 prompt 자체 skip.
+         fix: @capacitor/geolocation 플러그인 + ACCESS_COARSE_LOCATION (FINE 불필요 — 날씨 lat/lon 0.01° 반올림).
+         16-modes.js 의 _fetchCurrentWeather 가 Capacitor.Plugins.Geolocation 우선 사용. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 </manifest>

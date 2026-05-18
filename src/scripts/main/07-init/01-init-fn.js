@@ -177,6 +177,15 @@ async function init() {
   try { performance.mark('cloudEnd'); } catch (e) {}
   window._initialDataLoading = false;
 
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): stored session 흐름 userName 매핑.
+  //   카카오 OAuth deeplink (14-capacitor-oauth-deeplink.js) 직후엔 token 받자마자 매핑하지만 reload 후 stored session path 진입자엔 fire 안 함.
+  //   cloud 의 userName 이 ''(공란) 이라 cloud merge 직후 보완 시도 — _hookOnbShouldShow 가 호명 fallback 만 쓰지 않게.
+  try {
+    if (typeof _mapUserMetadataNameToState === 'function' && session && session.user) {
+      _mapUserMetadataNameToState(session.user);
+    }
+  } catch (e) { console.warn('[userName map post-cloud]', e); }
+
   // 사용자 요청 2026-05-11: 영상 마케팅 first-touch attribution upload (fire-and-forget, 이미 업로드된 사용자는 즉시 return).
   if (typeof maybeUploadAcquisition === 'function') {
     maybeUploadAcquisition().catch(() => {});

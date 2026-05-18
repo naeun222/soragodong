@@ -222,11 +222,40 @@ async function _fetchCurrentWeather() {
     const consent = await _showWeatherConsentModal();
     if (!consent) return null;
   }
-  // Geolocation API
-  const pos = await new Promise((res, rej) => {
-    if (!navigator.geolocation) return rej(new Error('Geolocation X'));
-    navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000, maximumAge: 30 * 60 * 1000 });
-  }).catch(() => null);
+  // V4 fix (사용자 보고 2026-05-18 ultrathink): Capacitor native 환경 (갤럭시 등) = @capacitor/geolocation 우선.
+  //   옛 navigator.geolocation 는 Capacitor WebView 에서 OS permission 안 잡혀 silent fail → _weatherPermission='denied' 영구 set 버그.
+  //   web (브라우저) = 기존 navigator.geolocation 그대로 (PWA 흐름 변경 X).
+  const _isNative = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+  let pos = null;
+  if (_isNative) {
+    try {
+      const Geo = window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation;
+      if (Geo) {
+        // requestPermissions 는 처음 호출 시 OS 권한 모달 (갤럭시 위치 prompt) 트리거. denied 면 throw.
+        try {
+          const perm = await Geo.checkPermissions();
+          if (perm && perm.location !== 'granted') {
+            const req = await Geo.requestPermissions({ permissions: ['location'] });
+            if (!req || req.location !== 'granted') {
+              state.preferences._weatherPermission = 'denied';
+              saveState();
+              return null;
+            }
+          }
+        } catch (permE) { console.warn('[weather native perm]', permE); }
+        const p = await Geo.getCurrentPosition({ enableHighAccuracy: false, timeout: 8000, maximumAge: 30 * 60 * 1000 });
+        if (p && p.coords) pos = p;
+      }
+    } catch (e) {
+      console.warn('[weather native geo]', e);
+    }
+  }
+  if (!pos) {
+    pos = await new Promise((res, rej) => {
+      if (!navigator.geolocation) return rej(new Error('Geolocation X'));
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000, maximumAge: 30 * 60 * 1000 });
+    }).catch(() => null);
+  }
   if (!pos) {
     state.preferences._weatherPermission = 'denied';
     saveState();

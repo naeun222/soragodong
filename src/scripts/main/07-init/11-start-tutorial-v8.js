@@ -41,14 +41,11 @@ function shouldRunStartTutorialV8() {
   // 사용자 명시 2026-05-06 ultrathink: 카카오 신규 (게스트 이력 X) = E2EE 비밀번호 모달 강제. V8 hero 가 모달 위로 떠 가독성 X / 사용자가 모달 처리 중 hero step 진행됨 → 보류.
   // E2EE 활성화 끝나는 hook (_e2eeSetupNewUser 후 setTimeout — 10-unified-consent-modal.js) 에서 직접 runStartTutorialV8 fire.
   // 게스트 → 카카오 promote (linkIdentity, 같은 uid) 의 경우 = state.tutorialVersion 이 이미 'v8-start' 거나 hasAnyData=true 라 위 가드에 걸려 fire X — 게스트 진행도 그대로 보존.
+  // V4 fix (사용자 명시 2026-05-18 ultrathink): E2EE recovery 진입자 (cloud 에 _encryptedBody, 새 device) 도 defer — 옛 path 는 localStorage recovery 키만 보고 true 반환했는데 _e2eePendingRecovery 흐름엔 그 키 비어있어 V9 가 먼저 뜨고 recovery 모달이 덮어쓰는 stacking 발생. 재진입 후 hasAnyData 가드로 자연 skip.
+  if (window._e2eePendingRecovery) return false;
+  if (document.getElementById('e2eeSetupOverlay') || document.getElementById('e2eeRecoveryOverlay')) return false;
   const _e2eePending = !_e2eeEnabled && !_e2eeMasterKey;
-  if (_e2eePending) {
-    // 단, recovery (다른 device 진입) 등으로 이미 활성화 흐름 진행 중이면 fire (모달 안 뜸).
-    try {
-      if (localStorage.getItem('soragodong_v4_e2ee_recovery')) return true;
-    } catch {}
-    return false;
-  }
+  if (_e2eePending) return false;
   return true;
 }
 
