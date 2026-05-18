@@ -76,11 +76,26 @@ function hookCardTap(hookId) {
     if (typeof showScreen === 'function') showScreen('chat');
     return;
   }
-  // hook message 를 chatMessages 앞에 inject — 중복 방지
+  // V4 (사용자 명시 2026-05-18 ultrathink): 옵션 B — hook tap = 새 챕터 시작.
+  //   옛 흐름: hook 메시지를 진행중 챕터 앞에 inject → 옛 대화 + hook 섞임 → 사용자 의도 흐림.
+  //   신 흐름: 옛 챕터 자동 archive 로 close → 새 챕터 첫 메시지 = hook. 명확함, 사용자 의도 존중.
+  //
+  //   중복 방지: 이미 챗에 같은 hook 박혀있으면 (예: hook tap 직후 사용자가 답변 안 한 채 다시 tap) skip — 메시지 중복 X.
   const alreadyInjected = (state.chatMessages || []).some(
     m => m && m.isHookMessage && m.hookId === hookId
   );
   if (!alreadyInjected && hook.body) {
+    // 진행중 챕터 (chatMessages 가 비어있지 X) 면 archive 로 close. minMessages: 1 = 짧아도 자동 닫음.
+    const hasActiveChat = Array.isArray(state.chatMessages) && state.chatMessages.length > 0;
+    if (hasActiveChat) {
+      if (typeof _archiveCurrentChapter === 'function') {
+        try { _archiveCurrentChapter({ minMessages: 1, manual: false }); }
+        catch (e) { console.warn('[hookCardTap] archive fail:', e); state.chatMessages = []; }
+      } else {
+        state.chatMessages = [];
+      }
+    }
+    // 새 챕터 첫 메시지 = hook.
     const hookMsg = {
       role: 'assistant',
       content: hook.body,
@@ -90,7 +105,7 @@ function hookCardTap(hookId) {
       hookSource: hook.source,
       hookTriggerDayK: hook.trigger_dayK,
     };
-    state.chatMessages = [hookMsg, ...(state.chatMessages || [])];
+    state.chatMessages = [hookMsg];
     if (typeof saveState === 'function') saveState(true);
   }
   if (typeof showScreen === 'function') showScreen('chat');
