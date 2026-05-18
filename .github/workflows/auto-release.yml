@@ -75,6 +75,10 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
           ls -la android.keystore
 
+      - name: Make gradlew executable (Windows commit 시 +x flag 안 박힘)
+        working-directory: android
+        run: chmod +x gradlew
+
       - name: Build signed AAB (gradlew bundleRelease)
         working-directory: android
         env:
