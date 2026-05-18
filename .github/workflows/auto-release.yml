@@ -1,0 +1,100 @@
+# V4 (사용자 명시 2026-05-18) — 2일마다 자동 Play Store Internal Testing 업로드.
+#
+# 사용자 1회 셋업 필요 (아래 4 secret 등록):
+#   1. ANDROID_KEYSTORE_BASE64
+#      로컬에서 PowerShell: [Convert]::ToBase64String([IO.File]::ReadAllBytes('android.keystore'))
+#      출력 전체 (개행 X) 복사 → GitHub repo Settings > Secrets and variables > Actions > New
+#   2. ANDROID_KEYSTORE_PASSWORD = 로컬 $env:ANDROID_KEYSTORE_PASSWORD 값
+#   3. ANDROID_KEY_PASSWORD       = 로컬 $env:ANDROID_KEY_PASSWORD 값
+#   4. GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+#      Google Cloud Console > IAM > Service Accounts > Create > JSON 키 다운로드
+#      Play Console > Setup > API access > 그 서비스 계정 invite (Releases / Internal app sharing 권한)
+#      JSON 파일 내용 전체 (중괄호 포함) 그대로 paste
+#
+# Play Console 정책:
+#   - 자동화 가능하지만 첫 업로드는 수동 (Play Console 의 manual review).
+#   - 이미 versionCode 5 manual 업로드 완료 → 자동화는 100+ 부터 시작 (충돌 X).
+#   - track: internal = Internal Testing (회사 내부 테스터만). production 으로 바꾸려면 검수 통과 사용자 그룹 검증 후.
+#
+# Trigger:
+#   - cron `0 18 */2 * *` = 2일마다 UTC 18시 = Korea 03시 (다음날 새벽)
+#   - workflow_dispatch = 수동 실행 button (Actions tab 에서)
+#
+# 안 짚는 것:
+#   - "최근 commit 없으면 skip" 안 함. 매 cron 빌드. 깔끔 + Play 가 versionCode 만 다르면 받음.
+#   - 사용자가 빌드 중단하려면 GitHub Actions tab 에서 이 workflow disable.
+
+name: Auto Release AAB
+
+on:
+  schedule:
+    - cron: '0 18 */2 * *'
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    name: Build signed AAB + upload to Play Console Internal track
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java (Gradle 8.x 호환 — Capacitor 8.3.4 / android Gradle plugin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: npm install
+        run: npm ci
+
+      - name: Concat build (src/ → index.html + public/index.html)
+        run: npm run build
+
+      - name: Verify byte-identical
+        run: npm run verify
+
+      - name: Capacitor sync (web assets + plugins → android/)
+        run: npx cap sync android
+
+      - name: Bump versionCode for this run (100 + GITHUB_RUN_NUMBER)
+        run: |
+          NEW_VC=$((100 + ${{ github.run_number }}))
+          sed -i "s/versionCode [0-9]\+/versionCode $NEW_VC/" android/app/build.gradle
+          echo "→ versionCode = $NEW_VC"
+          grep "versionCode" android/app/build.gradle
+
+      - name: Decode keystore from secret
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
+          ls -la android.keystore
+
+      - name: Build signed AAB (gradlew bundleRelease)
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: Upload AAB to Play Console (Internal track)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.soragodong.app
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+          whatsNewDirectory: .github/whatsnew
+
+      - name: Upload AAB as workflow artifact (백업 — Play 업로드 실패해도 다운로드 가능)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-${{ github.run_number }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 14
