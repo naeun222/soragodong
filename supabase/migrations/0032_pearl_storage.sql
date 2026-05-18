@@ -24,44 +24,43 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 2. RLS policy — auth_user_id 매칭 파일만.
---    경로 첫 segment = auth.uid()::text 강제. 다른 사용자 파일 read/write X.
-DROP POLICY IF EXISTS "pearls_owner_select" ON storage.objects;
-DROP POLICY IF EXISTS "pearls_owner_insert" ON storage.objects;
-DROP POLICY IF EXISTS "pearls_owner_update" ON storage.objects;
-DROP POLICY IF EXISTS "pearls_owner_delete" ON storage.objects;
-
-CREATE POLICY "pearls_owner_select"
-  ON storage.objects FOR SELECT
-  TO authenticated
-  USING (
-    bucket_id = 'pearls'
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-CREATE POLICY "pearls_owner_insert"
-  ON storage.objects FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    bucket_id = 'pearls'
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-CREATE POLICY "pearls_owner_update"
-  ON storage.objects FOR UPDATE
-  TO authenticated
-  USING (
-    bucket_id = 'pearls'
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-CREATE POLICY "pearls_owner_delete"
-  ON storage.objects FOR DELETE
-  TO authenticated
-  USING (
-    bucket_id = 'pearls'
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-COMMENT ON POLICY "pearls_owner_select" ON storage.objects IS
-  'V4 Phase 1: 사용자 자기 폴더 (auth.uid()/...) 만 read.';
+-- 2. RLS policy — Dashboard UI 에서 작성 (SQL Editor 권한 부족).
+--
+--   사용자 보고 2026-05-18: SQL Editor 에서 CREATE POLICY ON storage.objects 실행 시
+--     ERROR: 42501: must be owner of relation objects
+--   원인: storage.objects 의 owner 가 supabase_storage_admin role 인데
+--     SQL Editor 의 default role (postgres) 이 owner 가 아니라 권한 부족.
+--   해결: Supabase Dashboard → Storage → pearls bucket → Policies tab → New policy.
+--     템플릿 "Give users access to a folder named as their UID" 가 이 use case 와 일치.
+--     또는 4개 (SELECT/INSERT/UPDATE/DELETE) 수동 작성:
+--
+--     [SELECT / UPDATE / DELETE USING]
+--       bucket_id = 'pearls' AND (storage.foldername(name))[1] = auth.uid()::text
+--
+--     [INSERT / UPDATE WITH CHECK]
+--       bucket_id = 'pearls' AND (storage.foldername(name))[1] = auth.uid()::text
+--
+--     Target roles: authenticated.
+--
+--   효과: 파일 경로 첫 segment = auth.uid()::text 강제. 다른 사용자 폴더 접근 X.
+--   Storage 운영자도 client master key 없이는 파일 내용 (encrypted blob) 복호화 불가 (E2EE 유지).
+--
+--   ▼ 옛 SQL (Dashboard UI 적용 후 참고용 — SQL Editor 에서 실행 X) ▼
+--
+--   DROP POLICY IF EXISTS "pearls_owner_select" ON storage.objects;
+--   DROP POLICY IF EXISTS "pearls_owner_insert" ON storage.objects;
+--   DROP POLICY IF EXISTS "pearls_owner_update" ON storage.objects;
+--   DROP POLICY IF EXISTS "pearls_owner_delete" ON storage.objects;
+--
+--   CREATE POLICY "pearls_owner_select"
+--     ON storage.objects FOR SELECT TO authenticated
+--     USING (bucket_id = 'pearls' AND (storage.foldername(name))[1] = auth.uid()::text);
+--   CREATE POLICY "pearls_owner_insert"
+--     ON storage.objects FOR INSERT TO authenticated
+--     WITH CHECK (bucket_id = 'pearls' AND (storage.foldername(name))[1] = auth.uid()::text);
+--   CREATE POLICY "pearls_owner_update"
+--     ON storage.objects FOR UPDATE TO authenticated
+--     USING (bucket_id = 'pearls' AND (storage.foldername(name))[1] = auth.uid()::text);
+--   CREATE POLICY "pearls_owner_delete"
+--     ON storage.objects FOR DELETE TO authenticated
+--     USING (bucket_id = 'pearls' AND (storage.foldername(name))[1] = auth.uid()::text);
