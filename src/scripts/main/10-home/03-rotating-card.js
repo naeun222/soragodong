@@ -607,80 +607,83 @@ function _rcCheckinMiniLink(isDone) {
 }
 
 // Hook source bodyHtml — 친구 톤 질문 + hint.
-// V4 fix (사용자 명시 2026-05-18 ultrathink): 옛 V3.13.x .action-card 디자인 적용 (체크인/리뷰/hook 통일).
+// V4 fix (사용자 명시 2026-05-18) — 카드 크기 통일: 오늘의 너 (.library-hero) 큐레이션 기본 크기로 unify.
+//   옛 .action-card (작은 size, flex row) → .library-hero (gradient bg, label + body + meta divider).
+//   _rcRenderShell 의 outer .rc-body-tap 가 onTapClick 처리하므로 inner .library-hero 자체 onclick X.
 function _rcBuildHookBodyHtml(hook) {
   const userName = (state.userName || '').trim();
   const nameCall = (typeof _hookNameCall === 'function') ? _hookNameCall(userName) : userName;
   const header = userName ? `있잖아 ${nameCall} ✦` : '있잖아 ✦';
   const body = hook && hook.body ? hook.body : '탭해서 답하기';
   return `
-    <div class="action-card action-card-hook">
-      <div class="action-icon">💭</div>
-      <div class="action-text">
-        <div class="action-title">${escapeHtml(header)}</div>
-        <div class="action-sub">${escapeHtml(body)}</div>
+    <div class="library-hero">
+      <div class="hero-label">💭 ${escapeHtml(header)}</div>
+      <div class="hero-text">
+        <div class="hero-text-col">
+          <div class="hero-content">${escapeHtml(body)}</div>
+        </div>
       </div>
-      <div class="action-arrow">›</div>
+      <div class="hero-meta">탭해서 답해줘</div>
     </div>
   `;
 }
 
 // 체크인 source bodyHtml — 시간대 카피 (미완료) + 튜토.
-// V4 fix (사용자 명시 2026-05-18 ultrathink): 옛 V3.13.x .action-card 디자인 적용.
-// V4 fix (사용자 명시 2026-05-18 ultrathink): dead code 폐기 — buildCheckin() 가 완료 시 null 반환하므로
-//   checkinDoneToday 분기는 절대 호출되지 않음. 미완료 + 튜토 분기만 보존.
+// V4 fix (사용자 명시 2026-05-18) — 카드 크기 통일: 오늘의 너 (.library-hero) 큐레이션 기본 크기.
+//   같은 priority slot 안 다른 source 들과 visual consistency — 통일 안 하면 day 별로 크기 다른 카드 노출됨.
 function _rcBuildCheckinBodyHtml() {
   if (window._onbTutorialMode) {
     return `
-      <div class="action-card action-card-checkin">
-        <div class="action-icon">✓</div>
-        <div class="action-text">
-          <div class="action-title">체크인</div>
+      <div class="library-hero">
+        <div class="hero-label">✓ 체크인</div>
+        <div class="hero-text">
+          <div class="hero-text-col">
+            <div class="hero-content">오늘 너 어땠어?</div>
+          </div>
         </div>
-        <div class="action-arrow">›</div>
+        <div class="hero-meta">탭해서 시작</div>
       </div>
     `;
   }
   const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
   const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '✓', title: '체크인', sub: '' };
-  // V4 fix (사용자 명시 2026-05-18 ultrathink): sub 제거 — 체크인 / 리뷰만 (hook 은 sub 유지).
   return `
-    <div class="action-card action-card-checkin">
-      <div class="action-icon">${copy.icon}</div>
-      <div class="action-text">
-        <div class="action-title">${escapeHtml(copy.title)}</div>
+    <div class="library-hero">
+      <div class="hero-label">${copy.icon} 체크인</div>
+      <div class="hero-text">
+        <div class="hero-text-col">
+          <div class="hero-content">${escapeHtml(copy.title)}</div>
+        </div>
       </div>
-      <div class="action-arrow">›</div>
+      <div class="hero-meta">탭해서 시작</div>
     </div>
   `;
 }
 
 // 리뷰 링크 source bodyHtml.
-// V4 fix (사용자 명시 2026-05-18 ultrathink): 옛 V3.13.x .action-card 디자인 + 옛 review-card 문구 적용.
-//   옛 문구: 주간 "이번 주 어땠는지 같이 돌아볼까?" / 월간 "지난 달 너의 모습 돌아보기".
-//   review caption (momentum/flow/summary) 는 안 보여줌 — 옛 V3.13.x 처럼 단순 진입 링크.
+// V4 fix (사용자 명시 2026-05-18) — 카드 크기 통일: 오늘의 너 (.library-hero) 큐레이션 기본 크기.
 function _rcBuildReviewBodyHtml(r) {
   const kind = r && r._kind;
-  let icon, title;
+  let icon, title, kindLabel;
   if (kind === 'monthly') {
-    icon = '📅';
-    title = '지난 달 너의 모습 돌아보기';
+    icon = '📅'; title = '지난 달 너의 모습 돌아보기'; kindLabel = '월간 리뷰';
   } else if (kind === 'quarterly') {
-    icon = '📅';
-    title = '지난 분기 너의 모습 돌아보기';
+    icon = '📅'; title = '지난 분기 너의 모습 돌아보기'; kindLabel = '분기 리뷰';
+  } else if (kind === 'annual') {
+    icon = '🎆'; title = '지난 한 해 너의 모습 돌아보기'; kindLabel = '연간 리뷰';
   } else {
     // weekly + fallback
-    icon = '🌙';
-    title = '이번 주 어땠는지 같이 돌아볼까?';
+    icon = '🌙'; title = '이번 주 어땠는지 같이 돌아볼까?'; kindLabel = '주간 리뷰';
   }
-  // V4 fix (사용자 명시 2026-05-18 ultrathink): sub 제거 — 체크인 / 리뷰만 (hook 은 sub 유지).
   return `
-    <div class="action-card action-card-review">
-      <div class="action-icon">${icon}</div>
-      <div class="action-text">
-        <div class="action-title">${escapeHtml(title)}</div>
+    <div class="library-hero">
+      <div class="hero-label">${icon} ${kindLabel}</div>
+      <div class="hero-text">
+        <div class="hero-text-col">
+          <div class="hero-content">${escapeHtml(title)}</div>
+        </div>
       </div>
-      <div class="action-arrow">›</div>
+      <div class="hero-meta">탭해서 보기</div>
     </div>
   `;
 }
