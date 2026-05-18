@@ -221,6 +221,15 @@ async function submitCheckin() {
     inputEl.value = '';
   });
 
+  // V4 (사용자 명시 2026-05-18 ultrathink): 체크인 완료 = 소라 1개 (티어는 입력 양 따라).
+  // 트래커 measurement push 후 호출 — _todayTrackerSuccesses 가 그날 데이터 검출.
+  let _checkinShellResult = null;
+  try {
+    if (typeof addOrUpdateCheckinShell === 'function') {
+      _checkinShellResult = addOrUpdateCheckinShell(entry);
+    }
+  } catch (e) { console.warn('[checkin-shell]', e); }
+
   saveState();
 
   // V3.13.x: 체크인은 순수 기록. AI 자동 응답 X. note + dailyQuestion 답변은
@@ -230,16 +239,21 @@ async function submitCheckin() {
   _currentDailyQuestion = null;
   updateCheckinSub();
   showScreen('home');
-  showToast(note.trim() ? '✦ 기록됐어' : '기록 고마워 🐚');
+  // V4 (사용자 명시 2026-05-18 ultrathink): 소라 emerge + tier toast (단순 토스트 대체).
+  if (_checkinShellResult && typeof showCheckinShellReward === 'function') {
+    showCheckinShellReward(_checkinShellResult);
+  } else {
+    showToast(note.trim() ? '✦ 기록됐어' : '기록 고마워 🐚');
+  }
   if (_autoPearlAdded) {
-    setTimeout(() => showToast(`💎 자주 들은 곡이라 진주에 자동 저장 — ${_autoPearlAdded}`), 1200);
+    setTimeout(() => showToast(`💎 자주 들은 곡이라 진주에 자동 저장 — ${_autoPearlAdded}`), 2700);
   }
   // 사용자 명시 2026-05-06 ultrathink: 첫 체크인 직후 PWA 설치 인라인 카드 (게스트 출신 X 일반 사용자만 — 게스트 출신은 비밀번호 설정 직후 별도 trigger).
   try {
     const _wasGuest = !!(state.preferences && state.preferences._wasGuestPromoted);
     if (!_wasGuest && Array.isArray(state.entries) && state.entries.length === 1
         && typeof renderPwaInstallInlineCard === 'function') {
-      setTimeout(() => renderPwaInstallInlineCard({ target: 'home' }), 1500);
+      setTimeout(() => renderPwaInstallInlineCard({ target: 'home' }), 3000);
     }
   } catch (e) { console.warn('[pwa post-checkin]', e); }
 }

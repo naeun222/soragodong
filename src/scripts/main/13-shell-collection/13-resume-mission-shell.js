@@ -15,6 +15,11 @@ function openShellStory(shellIdx) {
   const shell = state.shellCollection[shellIdx];
   if (!shell) return;
 
+  // V4 (사용자 명시 2026-05-18 ultrathink): 체크인 소라 = 별도 layout (사진/음악 메인 + 데이터 chip).
+  if (shell.source === 'checkin' && typeof _openCheckinShellStory === 'function') {
+    return _openCheckinShellStory(shell);
+  }
+
   const dateStr = new Date(shell.date).toLocaleDateString('ko-KR', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
   });
