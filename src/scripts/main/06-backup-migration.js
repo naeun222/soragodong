@@ -352,12 +352,31 @@ function _checkCloudRowOversize(bytes) {
 
 // 사용자 요청 2026-04-28: cloud sync 응답 status별 사용자 알림 (한 세션 1회)
 // 사용자 보고 2026-05-05: 5xx 는 _fetchWithRetry5xx 가 이미 1회 재시도 후라서 메시지 정확화 — "다음 변경 시 재시도".
+// V4 fix (사용자 보고 2026-05-18) — 토스트 매 cold start 마다 fire 했던 spam 완화:
+//   1. window._cloudSyncWarned (in-memory) = reload 마다 reset → 첫 실패 시 매번 토스트.
+//   2. fix: localStorage 4h TTL 가드 추가 — 마지막 토스트 시점 박아두고 4h 내 같은 status 면 silent.
+//   3. 401 자동 refresh 는 _fetchWithRetry5xx 에서 처리 → 여기 도달은 진짜 refresh 도 실패한 stale token 일 때만.
 function _handleCloudSyncResponse(r) {
   if (!r || r.ok) {
     window._cloudSyncWarned = false;  // 회복되면 reset
     return;
   }
   if (window._cloudSyncWarned) return;
+  // localStorage TTL 가드 — 같은 status bucket (401/403, 5xx, 4xx) 의 토스트가 4h 안에 떴으면 silent.
+  const _bucket = (r.status === 401 || r.status === 403) ? 'auth' : (r.status >= 500 ? '5xx' : '4xx');
+  try {
+    const _key = 'soragodong_v4_cloud_toast_last';
+    const _lastRaw = localStorage.getItem(_key);
+    const _last = _lastRaw ? JSON.parse(_lastRaw) : null;
+    if (_last && _last.bucket === _bucket && _last.at) {
+      const _ageMs = Date.now() - new Date(_last.at).getTime();
+      if (_ageMs < 4 * 3600 * 1000) {
+        window._cloudSyncWarned = true;  // 이 세션도 silent 처리.
+        return;
+      }
+    }
+    localStorage.setItem(_key, JSON.stringify({ bucket: _bucket, at: new Date().toISOString() }));
+  } catch {}
   window._cloudSyncWarned = true;
   if (r.status === 401 || r.status === 403) {
     if (typeof showToast === 'function') showToast('☁ 클라우드 인증 만료 — 새로고침 후 다시 로그인 필요');

@@ -65,13 +65,35 @@ async function _authedFetch(url, init) {
 
 // 사용자 보고 2026-05-05: 5xx + network 1회 자동 재시도 (1.5s backoff). saveToCloudNow / 다른 idempotent fetch 에서 사용.
 // 이전 = "자동 재시도" 토스트 띄우면서 실제 재시도 코드 X (거짓 메시지) → 진짜 재시도로 회복.
+// V4 fix (사용자 보고 2026-05-18) — 401 자동 refresh 누락 → "인증 만료" 토스트 매 cold start 마다 fire 했던 버그 fix.
+//   saveToCloudNow 가 이 헬퍼 쓰는데 옛 path 는 5xx + network 만 처리, 401 은 _handleCloudSyncResponse 가 토스트로 던짐.
+//   fix: 401 받으면 _refreshSessionForApi 한 번 시도 → 성공 시 Authorization 헤더 갱신 + retry.
+//   refresh 후에도 401 = 진짜 stale refresh_token → 토스트 정상 (그땐 사용자가 새로고침해야 맞음).
 async function _fetchWithRetry5xx(url, init) {
   let resp;
   try {
     resp = await fetch(url, init);
   } catch (e) {
     await new Promise(r => setTimeout(r, 1500));
-    return fetch(url, init);
+    try { resp = await fetch(url, init); } catch { throw e; }
+  }
+  if (resp.status === 401 && typeof _refreshSessionForApi === 'function') {
+    const refreshed = await _refreshSessionForApi();
+    if (refreshed && typeof session !== 'undefined' && session && session.access_token && init && init.headers) {
+      // 헤더 객체 / Headers 인스턴스 / array 셋 다 대응 — Authorization 만 새 토큰으로 교체.
+      try {
+        if (init.headers instanceof Headers) {
+          init.headers.set('Authorization', `Bearer ${session.access_token}`);
+          init.headers.set('apikey', SUPABASE_ANON_KEY);
+        } else if (Array.isArray(init.headers)) {
+          init.headers = init.headers.filter(([k]) => k.toLowerCase() !== 'authorization');
+          init.headers.push(['Authorization', `Bearer ${session.access_token}`]);
+        } else {
+          init.headers = { ...init.headers, 'Authorization': `Bearer ${session.access_token}` };
+        }
+      } catch (e) { console.warn('[fetchWithRetry5xx] header rewrite', e); }
+      try { return await fetch(url, init); } catch { return resp; }
+    }
   }
   if (resp.status >= 500 && resp.status < 600) {
     await new Promise(r => setTimeout(r, 1500));
