@@ -462,6 +462,8 @@ async function addPearl() {
     runFirstPearlTutorialV8().catch(e => console.warn('[pearl tutorial]', e));
     return;
   }
+  // V4 (사용자 명시 2026-05-20 ultrathink): 진주 하루 50장 hard cap.
+  if (typeof _canAddPearlToday === 'function' && !_canAddPearlToday()) return;
   // V4 (사용자 명시 2026-05-14 ultrathink): 카테고리 5 → 7개 (티켓/책).
   const baseCategories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
   const categories = baseCategories.concat(['티켓', '책']);

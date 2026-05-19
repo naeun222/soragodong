@@ -51,6 +51,8 @@ async function _showTicketSubTypePicker() {
 
 async function saveTicketPearl(opts) {
   opts = opts || {};
+  // V4 (사용자 명시 2026-05-20 ultrathink): 진주 하루 50장 hard cap.
+  if (typeof _canAddPearlToday === 'function' && !_canAddPearlToday()) return null;
   // V4 (사용자 명시 2026-05-14): sub-filter prefill — '영화' chip 활성 + 버튼 → sub-type picker 도 skip.
   let subTypeId;
   if (opts.prefillSubTypeId && _findTicketSubType(opts.prefillSubTypeId)) {

@@ -1,6 +1,28 @@
 // V4-1m: 진주 능동 제안 — 사용자 메시지에서 행복/소중함 신호 감지.
 // V4 비전 7.7 (a)+(c) 결합: 강한 감정 신호 + 키워드 트리거. 같은 날 1회.
 const PEARL_SIGNAL_REGEX = /진짜\s*(좋|행복|기뻐|감동|뭉클|짜릿)|너무\s*(좋|행복|기뻐|감동|뭉클)|행복(하|해|함|했|해서)|사랑(스|해|받|했)|소중(해|함|했|한)|뭉클|벅차|벅찼|황홀|짜릿|끝내(주|준|줘)|기적|감동(이|적|해|받|했)|마음이?\s*(따뜻|뭉클|벅차)|기쁘다|기쁨에|좋아\s*죽|반짝|살\s*것\s*같/;
+
+// V4 (사용자 명시 2026-05-20 ultrathink): 진주 하루 50장 hard cap (anti-abuse).
+//   카테고리 무관 — 일반/음악/티켓/책 합산. dna_pearl (시스템 자동) 은 cap 제외.
+//   사용자 명시 add path 4곳 (addPearl / saveMsgAsPearl / saveTicketPearl / saveBookPearl) 에서 호출.
+//   자동 promotion (체크인 3+ 같은 음악 → 음악 진주, chat-saved music auto, topic → pearl 등) 은 우회.
+const PEARL_DAILY_HARD_CAP = 50;
+function _canAddPearlToday() {
+  try {
+    const todayK = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+    const count = (state.pearls || []).filter(p => {
+      if (!p || p.type === 'dna_pearl') return false;
+      if (!p.createdAt) return false;
+      const dk = (typeof getDayKey === 'function') ? getDayKey(p.createdAt) : p.createdAt.slice(0, 10);
+      return dk === todayK;
+    }).length;
+    if (count >= PEARL_DAILY_HARD_CAP) {
+      if (typeof showToast === 'function') showToast(`진주는 하루에 ${PEARL_DAILY_HARD_CAP}개까지 저장할 수 있습니다.`);
+      return false;
+    }
+    return true;
+  } catch (e) { console.warn('[pearl cap check]', e); return true; }
+}
 function detectPearlSignal(text) {
   if (!text || text.length < 8) return false;
   return PEARL_SIGNAL_REGEX.test(text);
@@ -40,6 +62,8 @@ async function summarizeForPearl(messageContent) {
 async function saveMsgAsPearl(idx) {
   const msg = state.chatMessages[idx];
   if (!msg || msg.pearlSaved) return;
+  // V4 (사용자 명시 2026-05-20 ultrathink): 진주 하루 50장 hard cap.
+  if (!_canAddPearlToday()) return;
 
   // V4 (사용자 요청 2026-05-09): 진주 한 줄 정리 방식 선택 — 직접 쓰기 vs 고동이 정리.
   // 사용자 명시 2026-05-10 (재정정): 고동이 정리 선택 시 = AI 결과 그대로 바로 저장 (input modal skip). 카테고리/사진 단계만 거침.

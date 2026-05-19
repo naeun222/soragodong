@@ -4,6 +4,8 @@
 
 async function saveBookPearl(opts) {
   opts = opts || {};
+  // V4 (사용자 명시 2026-05-20 ultrathink): 진주 하루 50장 hard cap.
+  if (typeof _canAddPearlToday === 'function' && !_canAddPearlToday()) return null;
 
   // 책 제목 (필수)
   const bookTitle = await showInputModal({
