@@ -198,9 +198,16 @@ async function submitCheckin() {
   if (_ciPhotos.length > 0) {
     entry.photos = _ciPhotos;
     entry.photo = _ciPhotos[0];  // legacy 단일 reader 호환
+    // V4 (Phase 1E Step 4): Storage path mirror — currentCheckin.photoStorageKeys 정렬은 photos 와 동일 idx 보장.
+    if (Array.isArray(currentCheckin.photoStorageKeys) && currentCheckin.photoStorageKeys.some(Boolean)) {
+      entry.photoStorageKeys = currentCheckin.photoStorageKeys.slice(0, 3);
+    } else {
+      delete entry.photoStorageKeys;
+    }
   } else {
     delete entry.photos;
     delete entry.photo;
+    delete entry.photoStorageKeys;
   }
   entry.timestamp = new Date().toISOString();
 

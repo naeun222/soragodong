@@ -113,6 +113,10 @@ function prefillCheckinFromEntry() {
     currentCheckin.photos = [entry.photo];
     currentCheckin.photo = entry.photo;
   }
+  // V4 (Phase 1E Step 4): Storage path 도 prefill (있으면) — 미수정 사진은 storageKey 보존.
+  if (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.length > 0) {
+    currentCheckin.photoStorageKeys = entry.photoStorageKeys.slice(0, 3);
+  }
   if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
   // sleep duration 다시 계산
   if (typeof updateSleepDuration === 'function') updateSleepDuration();

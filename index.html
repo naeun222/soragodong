@@ -38590,6 +38590,10 @@ function prefillCheckinFromEntry() {
     currentCheckin.photos = [entry.photo];
     currentCheckin.photo = entry.photo;
   }
+  // V4 (Phase 1E Step 4): Storage path 도 prefill (있으면) — 미수정 사진은 storageKey 보존.
+  if (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.length > 0) {
+    currentCheckin.photoStorageKeys = entry.photoStorageKeys.slice(0, 3);
+  }
   if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
   // sleep duration 다시 계산
   if (typeof updateSleepDuration === 'function') updateSleepDuration();
@@ -38965,9 +38969,16 @@ async function submitCheckin() {
   if (_ciPhotos.length > 0) {
     entry.photos = _ciPhotos;
     entry.photo = _ciPhotos[0];  // legacy 단일 reader 호환
+    // V4 (Phase 1E Step 4): Storage path mirror — currentCheckin.photoStorageKeys 정렬은 photos 와 동일 idx 보장.
+    if (Array.isArray(currentCheckin.photoStorageKeys) && currentCheckin.photoStorageKeys.some(Boolean)) {
+      entry.photoStorageKeys = currentCheckin.photoStorageKeys.slice(0, 3);
+    } else {
+      delete entry.photoStorageKeys;
+    }
   } else {
     delete entry.photos;
     delete entry.photo;
+    delete entry.photoStorageKeys;
   }
   entry.timestamp = new Date().toISOString();
 
@@ -58205,6 +58216,40 @@ function renderCheckinPhotoSlot() {
   _bindCheckinPhotoReorder(slot);
 }
 
+// V4 (Phase 1E Step 4): 체크인 사진 dual write — Storage upload + currentCheckin.photoStorageKeys[idx].
+//   submitCheckin 이 currentCheckin.photoStorageKeys 를 entry.photoStorageKeys 로 옮김.
+async function _checkinWritePhotoAt(idx, dataUrl) {
+  if (!currentCheckin) currentCheckin = {};
+  if (!Array.isArray(currentCheckin.photos)) currentCheckin.photos = [];
+  if (idx < 0 || idx >= CHECKIN_PHOTOS_MAX) return;
+  const oldPath = Array.isArray(currentCheckin.photoStorageKeys) ? currentCheckin.photoStorageKeys[idx] : null;
+  let newPath = null;
+  if (typeof _canUseDiaryStorage === 'function' && _canUseDiaryStorage()) {
+    const conv = (typeof _dataUrlToBytes === 'function') ? _dataUrlToBytes(dataUrl) : null;
+    if (conv && conv.bytes) {
+      try {
+        const dateK = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+        // unique seq — Date.now() 가 ms 단위, 같은 ms 안 2 장 회피 위해 random suffix.
+        const seq = (Date.now() % 1e9) * 1000 + Math.floor(Math.random() * 1000);
+        const result = await _uploadDiaryPhoto(dateK, seq, conv.bytes, _e2eeMasterKey);
+        newPath = result.path;
+      } catch (e) {
+        console.warn('[checkin photo storage upload fail]', e && e.message);
+      }
+    }
+  }
+  if (newPath || oldPath || (Array.isArray(currentCheckin.photoStorageKeys) && currentCheckin.photoStorageKeys.length > 0)) {
+    if (!Array.isArray(currentCheckin.photoStorageKeys)) currentCheckin.photoStorageKeys = [];
+    currentCheckin.photoStorageKeys[idx] = newPath;
+    if (currentCheckin.photoStorageKeys.length > CHECKIN_PHOTOS_MAX) currentCheckin.photoStorageKeys.length = CHECKIN_PHOTOS_MAX;
+  }
+  currentCheckin.photos[idx] = dataUrl;
+  if (idx === 0) currentCheckin.photo = dataUrl;
+  if (oldPath && oldPath !== newPath && typeof _deleteDiaryPhoto === 'function') {
+    _deleteDiaryPhoto(oldPath).catch(()=>{});
+  }
+}
+
 async function addCheckinPhoto() {
   try {
     const cur = _getCheckinPhotos();
@@ -58218,9 +58263,7 @@ async function addCheckinPhoto() {
     const resized = await fileToResizedDataUrl(file, 800);
     const square = await makeSquareThumb(resized, 600);
     hideFullscreenLoader();
-    const next = _getCheckinPhotos();
-    next.push(square);
-    _setCheckinPhotos(next);
+    await _checkinWritePhotoAt(cur.length, square);
     renderCheckinPhotoSlot();
   } catch (e) {
     hideFullscreenLoader();
@@ -58235,14 +58278,28 @@ function removeCheckinPhoto(idx) {
   const i = (typeof idx === 'number') ? idx : 0;
   if (i < 0 || i >= cur.length) return;
   const removed = cur[i];
+  const removedPath = Array.isArray(currentCheckin && currentCheckin.photoStorageKeys) ? currentCheckin.photoStorageKeys[i] : null;
   cur.splice(i, 1);
   _setCheckinPhotos(cur);
+  if (currentCheckin && Array.isArray(currentCheckin.photoStorageKeys)) {
+    currentCheckin.photoStorageKeys.splice(i, 1);
+    while (currentCheckin.photoStorageKeys.length > 0 && !currentCheckin.photoStorageKeys[currentCheckin.photoStorageKeys.length - 1]) {
+      currentCheckin.photoStorageKeys.pop();
+    }
+    if (currentCheckin.photoStorageKeys.length === 0) delete currentCheckin.photoStorageKeys;
+  }
+  if (removedPath && typeof _deleteDiaryPhoto === 'function') _deleteDiaryPhoto(removedPath).catch(()=>{});
   renderCheckinPhotoSlot();
   if (typeof showUndoToast === 'function' && removed) {
     showUndoToast('사진 삭제됨', () => {
       const back = _getCheckinPhotos();
       back.splice(i, 0, removed);
       _setCheckinPhotos(back);
+      // storageKey 는 undo 후 hole — 다음 edit / 마이그 가 채움.
+      if (currentCheckin) {
+        if (!Array.isArray(currentCheckin.photoStorageKeys)) currentCheckin.photoStorageKeys = [];
+        currentCheckin.photoStorageKeys.splice(i, 0, null);
+      }
       renderCheckinPhotoSlot();
     });
   }
@@ -58293,6 +58350,11 @@ function _bindCheckinPhotoReorder(slot) {
         const [moved] = arr.splice(originIdx, 1);
         arr.splice(lastOverIdx, 0, moved);
         _setCheckinPhotos(arr);
+        // V4 (Phase 1E Step 4): storageKeys 도 동일 reorder.
+        if (currentCheckin && Array.isArray(currentCheckin.photoStorageKeys) && originIdx < currentCheckin.photoStorageKeys.length) {
+          const [movedKey] = currentCheckin.photoStorageKeys.splice(originIdx, 1);
+          currentCheckin.photoStorageKeys.splice(lastOverIdx, 0, movedKey);
+        }
         renderCheckinPhotoSlot();
       }
     };
