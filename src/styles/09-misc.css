@@ -4298,6 +4298,10 @@
     border-radius: 20px;
     padding: 32px 24px;
     text-align: center;
+    /* V4 fix (사용자 보고 2026-05-20): 내용 길면 모달 vp 넘쳤음 → max-height 안 inner scroll. */
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .shell-story-card.tier-golden {
     background: linear-gradient(180deg, rgba(255,215,0,0.18), rgba(201,169,110,0.15));
@@ -9243,7 +9247,11 @@
   /* V4-fix v3 (사용자 버그 보고): 체크인 사진 슬롯 — 고정 크기 정사각 (음악 stretch에 휘둘리지 않게) */
   .checkin-mp-row #checkinPhotoSlot { display: flex; }
   /* V4 (사용자 명시 2026-05-16): 체크인 음악 placeholder 세로 길이 = 사진 칸 90px 동일. */
-  .checkin-mp-row #checkinMusicSlot { display: flex; }
+  .checkin-mp-row #checkinMusicSlot { display: flex; min-width: 0; }
+  /* V4 fix (사용자 보고 2026-05-20): slot 이 display:flex 라 .music-card-wrap 이 flex item.
+     min-width:0 X → 제목 nowrap content size 가 wrap 최소폭 → 오른쪽 overflow.
+     wrap 에 flex:1 min-width:0 박아 슬롯 폭 안에서 shrink + ellipsis 작동. */
+  .checkin-mp-row #checkinMusicSlot .music-card-wrap { flex: 1; min-width: 0; }
   .checkin-mp-row #checkinMusicSlot .music-add-btn { height: 90px; padding: 0 14px; }
   .checkin-photo-card {
     position: relative;
