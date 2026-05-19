@@ -402,7 +402,7 @@ async function addCheckinPhoto() {
     const file = await pickPhotoFile();
     if (!file) return;
     showFullscreenLoader('사진 처리 중... 📸');
-    const resized = await fileToResizedDataUrl(file, 800);
+    const resized = await fileToResizedDataUrl(file, 1024, 0.85);
     const square = await makeSquareThumb(resized, 600);
     hideFullscreenLoader();
     await _checkinWritePhotoAt(cur.length, square);

@@ -210,7 +210,7 @@ async function _diaryReplacePhoto(dateStr, idx) {
     const file = await pickPhotoFile();
     if (!file) return;
     if (typeof showFullscreenLoader === 'function') showFullscreenLoader('사진 처리 중... 📸');
-    const resized = await fileToResizedDataUrl(file, 800);
+    const resized = await fileToResizedDataUrl(file, 1024, 0.85);
     const square = await makeSquareThumb(resized, 600);
     if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
     const entry = _diaryGetEntry(dateStr);
@@ -279,7 +279,7 @@ async function _diaryAddPhoto(dateStr) {
     const file = await pickPhotoFile();
     if (!file) return;
     if (typeof showFullscreenLoader === 'function') showFullscreenLoader('사진 처리 중... 📸');
-    const resized = await fileToResizedDataUrl(file, 800);
+    const resized = await fileToResizedDataUrl(file, 1024, 0.85);
     const square = await makeSquareThumb(resized, 600);
     if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
     await _diaryWritePhotoAt(entry, cur.length, square);
