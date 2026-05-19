@@ -11611,7 +11611,13 @@
   /* V4 (사용자 명시 2026-05-20 ultrathink): 티켓 진주 사진 — 정사각 자동 자르기 폐기.
      너비 100% 고정 + 세로 = 실제 입력 사진 비율 그대로. 그리드 (Pinterest column masonry) / 타임라인 둘 다 적용.
      오늘의 너 큐레이션 (_pickHeroPearl → _heroCardHtml) 는 영향 X — 거기는 .hero-photo-thumb 별도 클래스.
-     tile-large 의 4/5 override 도 ticket 만 자연 비율. book / music / 일반 사진 진주 = 정사각 그대로. */
+     tile-large 의 4/5 override 도 ticket 만 자연 비율. book / music / 일반 사진 진주 = 정사각 그대로.
+     실제 culprit: 부모 wrapper .tile-music-art-wrap 이 aspect-ratio:1 + overflow:hidden 으로 강제 cropping 했음.
+     wrapper 부터 풀어줘야 img 의 height:auto 가 실제 비율로 expand 됨. */
+  .ticket-tile .tile-music-art-wrap,
+  .ticket-tile .ticket-art-wrap {
+    aspect-ratio: auto;
+  }
   .ticket-tile .tile-photo-art,
   .pinterest-tile.tile-large.ticket-tile .tile-photo-art {
     aspect-ratio: auto;
