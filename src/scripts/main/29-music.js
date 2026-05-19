@@ -747,6 +747,28 @@ function showPearlViewModal(pearl) {
         ${mutedNotice}
       </div>
     `;
+  } else if (pearl.category === '티켓') {
+    // V4 (사용자 명시 2026-05-20 ultrathink): 티켓 모달 = 사진 자연 비율 + subtype/title/venue/날짜 표시.
+    //   그리드는 사진만, 모달에서 모든 텍스트.
+    const sub = (typeof _findTicketSubType === 'function') ? _findTicketSubType(pearl.subType) : null;
+    const subEmoji = sub?.emoji || '🎫';
+    const subLabel = sub?.label || '티켓';
+    const title = pearl.content || subLabel;
+    const venue = (pearl.venue || '').trim();
+    const eventDateStr = pearl.eventDate
+      ? new Date(pearl.eventDate + 'T12:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
+      : '';
+    mediaHtml = `
+      <div class="pearl-view-media pearl-view-media-ticket">
+        ${pearlImgHtml(pearl, 'photo', { cls: 'pearl-view-photo pearl-view-photo-ticket', alt: '' })}
+      </div>
+      <div class="pearl-view-text-meta">
+        <div style="font-size:11px; color:var(--text-dim); letter-spacing:0.04em; margin-bottom:6px;">${subEmoji} ${escapeHtml(subLabel)}</div>
+        <div class="pearl-view-title">${escapeHtml(title)}</div>
+        ${venue ? `<div class="pearl-view-sub">📍 ${escapeHtml(venue)}</div>` : ''}
+        ${eventDateStr ? `<div class="pearl-view-sub">${escapeHtml(eventDateStr)}</div>` : ''}
+      </div>
+    `;
   } else if (isPhoto) {
     // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
     mediaHtml = `

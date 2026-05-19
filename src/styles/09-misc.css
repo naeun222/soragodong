@@ -11624,6 +11624,26 @@
     height: auto;
     object-fit: contain;
   }
+  /* V4 (사용자 명시 2026-05-20 ultrathink): 티켓 grid = 사진만. subtype chip + 하단 meta (title/venue/date) hide.
+     클릭 시 모달에서 모든 텍스트 표시. */
+  .ticket-tile .tc-subtype,
+  .ticket-tile .tile-music-meta {
+    display: none;
+  }
+  /* V4 (사용자 명시 2026-05-20 ultrathink): 티켓 모달 사진 = 자연 비율. 옛 .pearl-view-media 의 aspect-ratio:1 + max-width:320px override.
+     scroll 은 .pearl-view-modal { max-height:90vh; overflow-y:auto } 가 책임 (이미). */
+  .pearl-view-media.pearl-view-media-ticket {
+    aspect-ratio: auto;
+    max-width: 100%;
+    overflow: visible;
+    border-radius: 14px;
+    background: transparent;
+  }
+  .pearl-view-photo.pearl-view-photo-ticket {
+    height: auto;
+    object-fit: contain;
+    border-radius: 14px;
+  }
   .book-tile .book-cover-empty {
     aspect-ratio: 2/3;
     background: linear-gradient(135deg, #6b5e4f, #4a3f33);
