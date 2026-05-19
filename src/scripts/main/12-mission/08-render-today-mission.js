@@ -125,18 +125,20 @@ function _attachMissionSwipeDismiss(missionId) {
   card.addEventListener('pointercancel', onUp);
 }
 
+// V4 (사용자 명시 2026-05-20 ultrathink): "카드 치우기" = 순수 시각 hide. 결과 체크 / 진주 / 분석 / mood-vitality 등
+//   underlying process 는 그대로 진행. 이전 구현은 m.status='dismissed' 로 박아서 completed 가드 통과 못 해 후속 흐름 abort.
+//   fix: m.status 보존 + _cardHidden 플래그만 켬. getter 도 _cardHidden 으로 거름. legacy 'dismissed' 데이터는 그대로 호환.
 function dismissMission(missionId) {
   const m = (state.missions || []).find(x => x.id === missionId);
   if (!m) return;
-  const prevStatus = m.status;
-  m.status = 'dismissed';
+  m._cardHidden = true;
   m.dismissedAt = new Date().toISOString();
   saveState();
   renderTodayMission();
   // 사용자 명시 2026-05-09: 다른 토스트들과 동일한 undo 토스트 ('되돌리기' 버튼) 사용.
   if (typeof showUndoToast === 'function') {
     showUndoToast('치웠어 🐚', () => {
-      m.status = prevStatus;
+      delete m._cardHidden;
       delete m.dismissedAt;
       saveState();
       renderTodayMission();

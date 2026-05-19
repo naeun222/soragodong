@@ -2,6 +2,7 @@ function getTodayMissions() {
   const today = todayKey();
   const pending = (state.missions || []).filter(m => {
     if (m.status !== 'pending' || !m.scheduledFor) return false;
+    if (m._cardHidden) return false;  // V4 (2026-05-20 ultrathink): 카드 치우기 = 순수 시각 hide.
     const diff = daysBetweenKeys(m.scheduledFor, today);
     return diff >= 0 && diff <= 2;
   });
@@ -9,8 +10,13 @@ function getTodayMissions() {
     pending.sort((a, b) => daysBetweenKeys(a.scheduledFor, today) - daysBetweenKeys(b.scheduledFor, today));
     return pending;
   }
-  // 사용자 명시 2026-05-09 (#6): 완료 후 swipe-dismiss → status='dismissed' 미션 제외.
-  const lastCompleted = (state.missions || []).filter(m => m.completedDate === today && m.status !== 'dismissed').slice(-1);
+  // 사용자 명시 2026-05-09 (#6): 완료 후 swipe-dismiss → 홈 카드에서 안 보이게.
+  // V4 (사용자 명시 2026-05-20 ultrathink): 'dismissed' status 박는 옛 구현 폐기 → _cardHidden 플래그로 분리.
+  //   underlying status (completed) 는 그대로 보존되어 결과 체크 / 진주 / 분석 흐름은 계속 진행.
+  //   legacy status==='dismissed' 데이터는 그대로 제외 (호환).
+  const lastCompleted = (state.missions || []).filter(m =>
+    m.completedDate === today && m.status !== 'dismissed' && !m._cardHidden
+  ).slice(-1);
   return lastCompleted;
 }
 
