@@ -15,16 +15,33 @@ function _diaryGetPhotos(entry) {
   if (entry.photo) return [entry.photo];
   return [];
 }
+// V4 (사용자 명시 2026-05-20 ultrathink): Phase 1E Step 6 — null-safe slot.
+//   _diarySetPhotos 가 옛엔 filter(Boolean) 으로 null 제거 → entry.photoStorageKeys 와
+//   slot 정렬이 깨짐. 이제 null 보존 (storageKeys 와 같은 idx 유지).
 function _diarySetPhotos(entry, arr) {
   if (!entry) return;
-  const clean = (arr || []).filter(Boolean).slice(0, DIARY_PHOTOS_MAX);
-  if (clean.length > 0) {
-    entry.photos = clean;
-    entry.photo = clean[0];  // legacy mirror — single-reader 호환
+  const limited = (arr || []).slice(0, DIARY_PHOTOS_MAX);
+  const anyReal = limited.some(p => typeof p === 'string' && p);
+  if (limited.length > 0 && anyReal) {
+    entry.photos = limited;
+    const first = limited.find(p => typeof p === 'string' && p);
+    if (first) entry.photo = first;
+    else delete entry.photo;
   } else {
     delete entry.photos;
     delete entry.photo;
   }
+}
+
+// V4 (Phase 1E Step 6): 사진 slot 개수 = storageKeys / photos / legacy single 중 max.
+//   마이그로 entry.photos 가 사라진 뒤에도 storageKeys 만으로 정확한 count 반환.
+function _diaryPhotoCount(entry) {
+  if (!entry) return 0;
+  return Math.min(DIARY_PHOTOS_MAX, Math.max(
+    Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.length : 0,
+    Array.isArray(entry.photos) ? entry.photos.length : 0,
+    entry.photo ? 1 : 0
+  ));
 }
 
 // V4 (사용자 명시 2026-05-20 ultrathink): Phase 1E Step 2 — Storage 사진 path forward write.
@@ -47,6 +64,8 @@ function _diaryNextPhotoSeq(entry) {
 async function _diaryWritePhotoAt(entry, idx, dataUrl) {
   if (!entry || idx < 0 || idx >= DIARY_PHOTOS_MAX) return;
   if (!Array.isArray(entry.photos)) entry.photos = [];
+  // V4 (Phase 1E Step 6): null pad — 마이그된 idx 뒤에 새로 add 할 때 sparse hole 회피.
+  while (entry.photos.length <= idx) entry.photos.push(null);
 
   const oldPath = Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys[idx] : null;
 
@@ -65,9 +84,10 @@ async function _diaryWritePhotoAt(entry, idx, dataUrl) {
     }
   }
 
-  // storageKeys 배열 동기.
+  // storageKeys 배열 동기 — entry.photos 와 같은 length 까지 pad.
   if (newPath || oldPath || (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.length > 0)) {
     if (!Array.isArray(entry.photoStorageKeys)) entry.photoStorageKeys = [];
+    while (entry.photoStorageKeys.length <= idx) entry.photoStorageKeys.push(null);
     entry.photoStorageKeys[idx] = newPath;  // null = fallback to dataURL.
     if (entry.photoStorageKeys.length > DIARY_PHOTOS_MAX) entry.photoStorageKeys.length = DIARY_PHOTOS_MAX;
   }
@@ -138,12 +158,8 @@ function _diaryRenderEditSheetBody(dateStr) {
   if (!body) return;
   const entry = _diaryGetEntry(dateStr);
   if (!entry) return;
-  // V4 (Phase 1E Step 3): photoCount 는 storageKeys / photos / 단일 photo 중 max.
-  const _photoCount = Math.min(DIARY_PHOTOS_MAX, Math.max(
-    Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.length : 0,
-    Array.isArray(entry.photos) ? entry.photos.length : 0,
-    entry.photo ? 1 : 0
-  ));
+  // V4 (Phase 1E Step 3+6): photoCount = _diaryPhotoCount helper (slot count).
+  const _photoCount = _diaryPhotoCount(entry);
   const hasMusic = !!(entry.music && entry.music.title);
 
   let html = '';
@@ -215,8 +231,8 @@ async function _diaryReplacePhoto(dateStr, idx) {
     if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
     const entry = _diaryGetEntry(dateStr);
     if (!entry) return;
-    const photos = _diaryGetPhotos(entry);
-    if (idx < 0 || idx >= photos.length) return;
+    // V4 (Phase 1E Step 6): slot count 기준 — 마이그 후 entry.photos 가 사라져도 storageKeys 로 validation.
+    if (idx < 0 || idx >= _diaryPhotoCount(entry)) return;
     await _diaryWritePhotoAt(entry, idx, square);
     _diaryPersistAndRerender(dateStr);
   } catch (e) {
@@ -229,35 +245,50 @@ async function _diaryReplacePhoto(dateStr, idx) {
 function _diaryDeletePhoto(dateStr, idx) {
   const entry = _diaryGetEntry(dateStr);
   if (!entry) return;
-  const photos = _diaryGetPhotos(entry);
-  if (idx < 0 || idx >= photos.length) return;
-  const removed = photos[idx];
+  const count = _diaryPhotoCount(entry);
+  if (idx < 0 || idx >= count) return;
+  // V4 (Phase 1E Step 6): removed dataURL — entry.photos[idx] 우선, idx===0 면 entry.photo 도.
+  const removedDataUrl = (Array.isArray(entry.photos) && typeof entry.photos[idx] === 'string')
+    ? entry.photos[idx]
+    : (idx === 0 && typeof entry.photo === 'string' ? entry.photo : null);
   const removedPath = Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys[idx] : null;
-  photos.splice(idx, 1);
-  _diarySetPhotos(entry, photos);
-  // storageKeys 배열 sync.
+
+  // entry.photos splice — 있으면.
+  if (Array.isArray(entry.photos)) {
+    entry.photos.splice(idx, 1);
+    const anyReal = entry.photos.some(p => typeof p === 'string' && p);
+    if (!anyReal) {
+      delete entry.photos;
+      delete entry.photo;
+    } else {
+      entry.photo = entry.photos.find(p => typeof p === 'string' && p) || entry.photo;
+      if (!entry.photo) delete entry.photo;
+    }
+  } else if (idx === 0 && entry.photo) {
+    delete entry.photo;
+  }
+
+  // photoStorageKeys splice — null 보존 (trailing 도 keep 해서 entry.photos 와 길이 정렬).
   if (Array.isArray(entry.photoStorageKeys)) {
     entry.photoStorageKeys.splice(idx, 1);
-    // 끝 null 정리.
-    while (entry.photoStorageKeys.length > 0 && !entry.photoStorageKeys[entry.photoStorageKeys.length - 1]) {
-      entry.photoStorageKeys.pop();
-    }
-    if (entry.photoStorageKeys.length === 0) delete entry.photoStorageKeys;
+    const anyPath = entry.photoStorageKeys.some(Boolean);
+    if (!anyPath) delete entry.photoStorageKeys;
   }
+
   // Storage 파일 삭제 + blob cache revoke (fire & forget).
   if (removedPath) {
     if (typeof _revokeDiaryMediaCache === 'function') _revokeDiaryMediaCache(dateStr, idx);
     if (typeof _deleteDiaryPhoto === 'function') _deleteDiaryPhoto(removedPath).catch(()=>{});
   }
   _diaryPersistAndRerender(dateStr);
-  if (typeof showUndoToast === 'function' && removed) {
+  if (typeof showUndoToast === 'function' && removedDataUrl) {
     showUndoToast('사진 삭제됨', () => {
-      // Undo — dataURL 만 복원. storageKey 는 다음 마이그/edit 가 채움 (orphan 회피 위해 null 자리만 둠).
+      // Undo — dataURL 만 복원. Storage path 손실 (다음 edit/마이그 가 채움).
       const e2 = _diaryGetEntry(dateStr);
       if (!e2) return;
-      const back = _diaryGetPhotos(e2);
-      back.splice(idx, 0, removed);
-      _diarySetPhotos(e2, back);
+      if (!Array.isArray(e2.photos)) e2.photos = [];
+      e2.photos.splice(idx, 0, removedDataUrl);
+      _diarySetPhotos(e2, e2.photos);
       if (Array.isArray(e2.photoStorageKeys)) {
         e2.photoStorageKeys.splice(idx, 0, null);
       }
@@ -270,8 +301,9 @@ async function _diaryAddPhoto(dateStr) {
   try {
     const entry = _diaryGetEntry(dateStr);
     if (!entry) return;
-    const cur = _diaryGetPhotos(entry);
-    if (cur.length >= DIARY_PHOTOS_MAX) {
+    // V4 (Phase 1E Step 6): slot count 기준 — 마이그된 entry 도 정확한 cur 잡힘.
+    const cur = _diaryPhotoCount(entry);
+    if (cur >= DIARY_PHOTOS_MAX) {
       if (typeof showToast === 'function') showToast(`사진은 ${DIARY_PHOTOS_MAX}장까지`);
       return;
     }
@@ -282,7 +314,7 @@ async function _diaryAddPhoto(dateStr) {
     const resized = await fileToResizedDataUrl(file, 1024, 0.85);
     const square = await makeSquareThumb(resized, 600);
     if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
-    await _diaryWritePhotoAt(entry, cur.length, square);
+    await _diaryWritePhotoAt(entry, cur, square);
     _diaryPersistAndRerender(dateStr);
   } catch (e) {
     if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
@@ -362,12 +394,18 @@ function _diaryBindPhotoReorder(strip, dateStr) {
       if (lastOverIdx >= 0 && lastOverIdx !== originIdx) {
         const entry = _diaryGetEntry(dateStr);
         if (!entry) return;
-        const arr = _diaryGetPhotos(entry);
-        const [moved] = arr.splice(originIdx, 1);
-        arr.splice(lastOverIdx, 0, moved);
-        _diarySetPhotos(entry, arr);
-        // storageKeys 배열 도 동일 순서 reorder.
-        if (Array.isArray(entry.photoStorageKeys) && originIdx < entry.photoStorageKeys.length) {
+        // V4 (Phase 1E Step 6): slot count 기준 — entry.photos / photoStorageKeys 둘 다 정렬 보존.
+        const count = _diaryPhotoCount(entry);
+        if (originIdx < 0 || originIdx >= count || lastOverIdx < 0 || lastOverIdx >= count) return;
+        if (Array.isArray(entry.photos)) {
+          // pad to count.
+          while (entry.photos.length < count) entry.photos.push(null);
+          const [moved] = entry.photos.splice(originIdx, 1);
+          entry.photos.splice(lastOverIdx, 0, moved);
+          _diarySetPhotos(entry, entry.photos);
+        }
+        if (Array.isArray(entry.photoStorageKeys)) {
+          while (entry.photoStorageKeys.length < count) entry.photoStorageKeys.push(null);
           const [movedKey] = entry.photoStorageKeys.splice(originIdx, 1);
           entry.photoStorageKeys.splice(lastOverIdx, 0, movedKey);
         }

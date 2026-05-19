@@ -47886,16 +47886,33 @@ function _diaryGetPhotos(entry) {
   if (entry.photo) return [entry.photo];
   return [];
 }
+// V4 (사용자 명시 2026-05-20 ultrathink): Phase 1E Step 6 — null-safe slot.
+//   _diarySetPhotos 가 옛엔 filter(Boolean) 으로 null 제거 → entry.photoStorageKeys 와
+//   slot 정렬이 깨짐. 이제 null 보존 (storageKeys 와 같은 idx 유지).
 function _diarySetPhotos(entry, arr) {
   if (!entry) return;
-  const clean = (arr || []).filter(Boolean).slice(0, DIARY_PHOTOS_MAX);
-  if (clean.length > 0) {
-    entry.photos = clean;
-    entry.photo = clean[0];  // legacy mirror — single-reader 호환
+  const limited = (arr || []).slice(0, DIARY_PHOTOS_MAX);
+  const anyReal = limited.some(p => typeof p === 'string' && p);
+  if (limited.length > 0 && anyReal) {
+    entry.photos = limited;
+    const first = limited.find(p => typeof p === 'string' && p);
+    if (first) entry.photo = first;
+    else delete entry.photo;
   } else {
     delete entry.photos;
     delete entry.photo;
   }
+}
+
+// V4 (Phase 1E Step 6): 사진 slot 개수 = storageKeys / photos / legacy single 중 max.
+//   마이그로 entry.photos 가 사라진 뒤에도 storageKeys 만으로 정확한 count 반환.
+function _diaryPhotoCount(entry) {
+  if (!entry) return 0;
+  return Math.min(DIARY_PHOTOS_MAX, Math.max(
+    Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.length : 0,
+    Array.isArray(entry.photos) ? entry.photos.length : 0,
+    entry.photo ? 1 : 0
+  ));
 }
 
 // V4 (사용자 명시 2026-05-20 ultrathink): Phase 1E Step 2 — Storage 사진 path forward write.
@@ -47918,6 +47935,8 @@ function _diaryNextPhotoSeq(entry) {
 async function _diaryWritePhotoAt(entry, idx, dataUrl) {
   if (!entry || idx < 0 || idx >= DIARY_PHOTOS_MAX) return;
   if (!Array.isArray(entry.photos)) entry.photos = [];
+  // V4 (Phase 1E Step 6): null pad — 마이그된 idx 뒤에 새로 add 할 때 sparse hole 회피.
+  while (entry.photos.length <= idx) entry.photos.push(null);
 
   const oldPath = Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys[idx] : null;
 
@@ -47936,9 +47955,10 @@ async function _diaryWritePhotoAt(entry, idx, dataUrl) {
     }
   }
 
-  // storageKeys 배열 동기.
+  // storageKeys 배열 동기 — entry.photos 와 같은 length 까지 pad.
   if (newPath || oldPath || (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.length > 0)) {
     if (!Array.isArray(entry.photoStorageKeys)) entry.photoStorageKeys = [];
+    while (entry.photoStorageKeys.length <= idx) entry.photoStorageKeys.push(null);
     entry.photoStorageKeys[idx] = newPath;  // null = fallback to dataURL.
     if (entry.photoStorageKeys.length > DIARY_PHOTOS_MAX) entry.photoStorageKeys.length = DIARY_PHOTOS_MAX;
   }
@@ -48009,12 +48029,8 @@ function _diaryRenderEditSheetBody(dateStr) {
   if (!body) return;
   const entry = _diaryGetEntry(dateStr);
   if (!entry) return;
-  // V4 (Phase 1E Step 3): photoCount 는 storageKeys / photos / 단일 photo 중 max.
-  const _photoCount = Math.min(DIARY_PHOTOS_MAX, Math.max(
-    Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.length : 0,
-    Array.isArray(entry.photos) ? entry.photos.length : 0,
-    entry.photo ? 1 : 0
-  ));
+  // V4 (Phase 1E Step 3+6): photoCount = _diaryPhotoCount helper (slot count).
+  const _photoCount = _diaryPhotoCount(entry);
   const hasMusic = !!(entry.music && entry.music.title);
 
   let html = '';
@@ -48086,8 +48102,8 @@ async function _diaryReplacePhoto(dateStr, idx) {
     if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
     const entry = _diaryGetEntry(dateStr);
     if (!entry) return;
-    const photos = _diaryGetPhotos(entry);
-    if (idx < 0 || idx >= photos.length) return;
+    // V4 (Phase 1E Step 6): slot count 기준 — 마이그 후 entry.photos 가 사라져도 storageKeys 로 validation.
+    if (idx < 0 || idx >= _diaryPhotoCount(entry)) return;
     await _diaryWritePhotoAt(entry, idx, square);
     _diaryPersistAndRerender(dateStr);
   } catch (e) {
@@ -48100,35 +48116,50 @@ async function _diaryReplacePhoto(dateStr, idx) {
 function _diaryDeletePhoto(dateStr, idx) {
   const entry = _diaryGetEntry(dateStr);
   if (!entry) return;
-  const photos = _diaryGetPhotos(entry);
-  if (idx < 0 || idx >= photos.length) return;
-  const removed = photos[idx];
+  const count = _diaryPhotoCount(entry);
+  if (idx < 0 || idx >= count) return;
+  // V4 (Phase 1E Step 6): removed dataURL — entry.photos[idx] 우선, idx===0 면 entry.photo 도.
+  const removedDataUrl = (Array.isArray(entry.photos) && typeof entry.photos[idx] === 'string')
+    ? entry.photos[idx]
+    : (idx === 0 && typeof entry.photo === 'string' ? entry.photo : null);
   const removedPath = Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys[idx] : null;
-  photos.splice(idx, 1);
-  _diarySetPhotos(entry, photos);
-  // storageKeys 배열 sync.
+
+  // entry.photos splice — 있으면.
+  if (Array.isArray(entry.photos)) {
+    entry.photos.splice(idx, 1);
+    const anyReal = entry.photos.some(p => typeof p === 'string' && p);
+    if (!anyReal) {
+      delete entry.photos;
+      delete entry.photo;
+    } else {
+      entry.photo = entry.photos.find(p => typeof p === 'string' && p) || entry.photo;
+      if (!entry.photo) delete entry.photo;
+    }
+  } else if (idx === 0 && entry.photo) {
+    delete entry.photo;
+  }
+
+  // photoStorageKeys splice — null 보존 (trailing 도 keep 해서 entry.photos 와 길이 정렬).
   if (Array.isArray(entry.photoStorageKeys)) {
     entry.photoStorageKeys.splice(idx, 1);
-    // 끝 null 정리.
-    while (entry.photoStorageKeys.length > 0 && !entry.photoStorageKeys[entry.photoStorageKeys.length - 1]) {
-      entry.photoStorageKeys.pop();
-    }
-    if (entry.photoStorageKeys.length === 0) delete entry.photoStorageKeys;
+    const anyPath = entry.photoStorageKeys.some(Boolean);
+    if (!anyPath) delete entry.photoStorageKeys;
   }
+
   // Storage 파일 삭제 + blob cache revoke (fire & forget).
   if (removedPath) {
     if (typeof _revokeDiaryMediaCache === 'function') _revokeDiaryMediaCache(dateStr, idx);
     if (typeof _deleteDiaryPhoto === 'function') _deleteDiaryPhoto(removedPath).catch(()=>{});
   }
   _diaryPersistAndRerender(dateStr);
-  if (typeof showUndoToast === 'function' && removed) {
+  if (typeof showUndoToast === 'function' && removedDataUrl) {
     showUndoToast('사진 삭제됨', () => {
-      // Undo — dataURL 만 복원. storageKey 는 다음 마이그/edit 가 채움 (orphan 회피 위해 null 자리만 둠).
+      // Undo — dataURL 만 복원. Storage path 손실 (다음 edit/마이그 가 채움).
       const e2 = _diaryGetEntry(dateStr);
       if (!e2) return;
-      const back = _diaryGetPhotos(e2);
-      back.splice(idx, 0, removed);
-      _diarySetPhotos(e2, back);
+      if (!Array.isArray(e2.photos)) e2.photos = [];
+      e2.photos.splice(idx, 0, removedDataUrl);
+      _diarySetPhotos(e2, e2.photos);
       if (Array.isArray(e2.photoStorageKeys)) {
         e2.photoStorageKeys.splice(idx, 0, null);
       }
@@ -48141,8 +48172,9 @@ async function _diaryAddPhoto(dateStr) {
   try {
     const entry = _diaryGetEntry(dateStr);
     if (!entry) return;
-    const cur = _diaryGetPhotos(entry);
-    if (cur.length >= DIARY_PHOTOS_MAX) {
+    // V4 (Phase 1E Step 6): slot count 기준 — 마이그된 entry 도 정확한 cur 잡힘.
+    const cur = _diaryPhotoCount(entry);
+    if (cur >= DIARY_PHOTOS_MAX) {
       if (typeof showToast === 'function') showToast(`사진은 ${DIARY_PHOTOS_MAX}장까지`);
       return;
     }
@@ -48153,7 +48185,7 @@ async function _diaryAddPhoto(dateStr) {
     const resized = await fileToResizedDataUrl(file, 1024, 0.85);
     const square = await makeSquareThumb(resized, 600);
     if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
-    await _diaryWritePhotoAt(entry, cur.length, square);
+    await _diaryWritePhotoAt(entry, cur, square);
     _diaryPersistAndRerender(dateStr);
   } catch (e) {
     if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
@@ -48233,12 +48265,18 @@ function _diaryBindPhotoReorder(strip, dateStr) {
       if (lastOverIdx >= 0 && lastOverIdx !== originIdx) {
         const entry = _diaryGetEntry(dateStr);
         if (!entry) return;
-        const arr = _diaryGetPhotos(entry);
-        const [moved] = arr.splice(originIdx, 1);
-        arr.splice(lastOverIdx, 0, moved);
-        _diarySetPhotos(entry, arr);
-        // storageKeys 배열 도 동일 순서 reorder.
-        if (Array.isArray(entry.photoStorageKeys) && originIdx < entry.photoStorageKeys.length) {
+        // V4 (Phase 1E Step 6): slot count 기준 — entry.photos / photoStorageKeys 둘 다 정렬 보존.
+        const count = _diaryPhotoCount(entry);
+        if (originIdx < 0 || originIdx >= count || lastOverIdx < 0 || lastOverIdx >= count) return;
+        if (Array.isArray(entry.photos)) {
+          // pad to count.
+          while (entry.photos.length < count) entry.photos.push(null);
+          const [moved] = entry.photos.splice(originIdx, 1);
+          entry.photos.splice(lastOverIdx, 0, moved);
+          _diarySetPhotos(entry, entry.photos);
+        }
+        if (Array.isArray(entry.photoStorageKeys)) {
+          while (entry.photoStorageKeys.length < count) entry.photoStorageKeys.push(null);
           const [movedKey] = entry.photoStorageKeys.splice(originIdx, 1);
           entry.photoStorageKeys.splice(lastOverIdx, 0, movedKey);
         }
@@ -48488,6 +48526,196 @@ function _revokeDiaryMediaCache(dateK, idx) {
     }
   }
 }
+// V4 (사용자 명시 2026-05-20 ultrathink): Phase 1E Step 6 — 옛 일기 사진 dataURL → Storage 일괄 마이그.
+//
+//   배경: state.entries[*].photos[] (dataURL) + .photo (legacy single) 가 row JSONB 안 박힘.
+//     누적 → 50-150MB row → 8MB hard cap. Phase 1E §1 의 비용/안정 모델.
+//   flow:
+//     1) dry-run — entries 순회 → dataURL 가진 slot count + bytes 추정.
+//     2) apply — 한 entry 씩 upload + storageKey 추가 + dataURL slot 삭제 (null 자리 보존).
+//        매 5 entry 마다 saveToCloud — 부분 손실 회피.
+//     3) 모든 slot 이 migrated 면 entry.photos / entry.photo 자체 delete.
+//
+//   가드:
+//     - _canUseDiaryStorage() false (master key 없음 / testerMode / guest) → 마이그 차단.
+//     - window._diaryMigrationInProgress lock (중복 트리거 X).
+//     - 이미 storageKey 있는 slot 은 skip (idempotent).
+//
+//   pearl Phase 1B 의 02-pearl-migration.js 패턴 그대로 — 일기 slot index 가 array 라 차이.
+
+window._diaryMigrationInProgress = false;
+
+function _diaryMigDryRun() {
+  const eligible = [];  // { date, slots: [idx, ...], bytes }
+  let totalBytes = 0;
+  const entries = (state.entries || []);
+  let touched = 0;
+  for (const entry of entries) {
+    if (!entry || !entry.date) continue;
+    const slots = [];
+    let entryBytes = 0;
+    // entry.photos[] dataURL.
+    if (Array.isArray(entry.photos)) {
+      for (let i = 0; i < entry.photos.length && i < 3; i++) {
+        const p = entry.photos[i];
+        if (typeof p !== 'string' || !p.startsWith('data:')) continue;
+        // 이미 같은 idx 에 storageKey 있으면 skip (idempotent).
+        if (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys[i]) continue;
+        slots.push(i);
+        entryBytes += Math.round((p.length - (p.indexOf(',') + 1)) * 0.75);
+      }
+    } else if (typeof entry.photo === 'string' && entry.photo.startsWith('data:')) {
+      // legacy single — treat as slot 0.
+      if (!(Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys[0])) {
+        slots.push(0);
+        entryBytes += Math.round((entry.photo.length - (entry.photo.indexOf(',') + 1)) * 0.75);
+      }
+    }
+    if (slots.length > 0) {
+      eligible.push({ date: entry.date, slots, bytes: entryBytes });
+      totalBytes += entryBytes;
+    }
+    touched++;
+  }
+  return { totalEntries: touched, eligible, totalBytes };
+}
+
+// 단일 entry 의 명시된 slots 마이그 — upload + storageKey 추가 + dataURL slot 삭제.
+//   부분 실패 시 fail kind 만 failed 에 push. 나머지 slot 은 계속 진행.
+async function _migrateOneDiaryEntry(entry, slotsToMig) {
+  const failed = [];
+  if (!Array.isArray(entry.photoStorageKeys)) entry.photoStorageKeys = [];
+  for (const idx of slotsToMig) {
+    let dataUrl;
+    if (Array.isArray(entry.photos) && typeof entry.photos[idx] === 'string' && entry.photos[idx].startsWith('data:')) {
+      dataUrl = entry.photos[idx];
+    } else if (idx === 0 && typeof entry.photo === 'string' && entry.photo.startsWith('data:')) {
+      dataUrl = entry.photo;
+    }
+    if (!dataUrl) continue;
+    try {
+      const conv = _dataUrlToBytes(dataUrl);
+      if (!conv) throw new Error('dataURL 파싱 실패');
+      const seq = _diaryNextPhotoSeq(entry);
+      const result = await _uploadDiaryPhoto(entry.date, seq, conv.bytes, _e2eeMasterKey);
+      // photoStorageKeys 슬롯 — idx 까지 pad 후 set.
+      while (entry.photoStorageKeys.length <= idx) entry.photoStorageKeys.push(null);
+      entry.photoStorageKeys[idx] = result.path;
+      // dataURL slot 삭제 — null 자리 보존 (entry.photos 정렬은 storageKeys 와 같이 유지).
+      if (Array.isArray(entry.photos) && typeof entry.photos[idx] === 'string') {
+        entry.photos[idx] = null;
+      }
+      if (idx === 0 && typeof entry.photo === 'string' && entry.photo.startsWith('data:')) {
+        delete entry.photo;
+      }
+    } catch (e) {
+      failed.push({ idx, reason: (e && e.message) || String(e) });
+    }
+  }
+  // entry.photos 가 모두 null/non-data 면 정리. 한 개라도 살아있으면 array 유지.
+  if (Array.isArray(entry.photos)) {
+    const anyReal = entry.photos.some(p => typeof p === 'string' && p);
+    if (!anyReal) {
+      delete entry.photos;
+    } else {
+      // first 비-null 을 entry.photo (legacy mirror) 로.
+      const first = entry.photos.find(p => typeof p === 'string' && p);
+      if (first) entry.photo = first;
+      else if (entry.photo) delete entry.photo;
+    }
+  }
+  return failed;
+}
+
+// 일괄 apply.
+async function _diaryMigApply(eligible, progressFn) {
+  const migrated = [];
+  const failed = [];
+  const skipped = [];
+  if (!eligible || !eligible.length) return { migrated, failed, skipped };
+  const total = eligible.length;
+  for (let i = 0; i < total; i++) {
+    const item = eligible[i];
+    const entry = (state.entries || []).find(e => e.date === item.date);
+    if (!entry) { skipped.push(item.date); continue; }
+    if (typeof progressFn === 'function') progressFn(i, total, entry.date);
+    const failsForThis = await _migrateOneDiaryEntry(entry, item.slots);
+    if (failsForThis.length === 0) {
+      migrated.push(entry.date);
+    } else {
+      for (const f of failsForThis) failed.push({ date: entry.date, idx: f.idx, reason: f.reason });
+      if (failsForThis.length < item.slots.length) migrated.push(entry.date);  // 일부 성공도 migrated.
+    }
+    // 매 5 entry 마다 saveToCloud — 부분 손실 회피.
+    if ((i + 1) % 5 === 0) {
+      try {
+        if (typeof saveState === 'function') saveState();
+        if (typeof saveToCloudNow === 'function') await saveToCloudNow();
+      } catch (e) { console.warn('[diaryMigApply] partial save fail:', e); }
+    }
+  }
+  try {
+    if (typeof saveState === 'function') saveState();
+    if (typeof saveToCloudNow === 'function') await saveToCloudNow();
+  } catch (e) { console.warn('[diaryMigApply] final save fail:', e); }
+  if (typeof progressFn === 'function') progressFn(total, total, null);
+  return { migrated, failed, skipped };
+}
+
+// V4 (Phase 1E Step 6): 자동 백그라운드 마이그 — load 5초 후 silent.
+//   master key 확보 polling (5초 x 60회 = 5분 한도) → eligible > 0 면 silent 시작.
+//   시작 + 완료 toast 한 번씩. 부분 실패 시 다음 세션 재시도 (auto-start 매 세션 1회).
+async function _diaryMigAutoStart() {
+  // master key + 가드 polling.
+  for (let i = 0; i < 60; i++) {
+    if (typeof _canUseDiaryStorage === 'function' && _canUseDiaryStorage()) break;
+    await new Promise(r => setTimeout(r, 5000));
+  }
+  if (typeof _canUseDiaryStorage !== 'function' || !_canUseDiaryStorage()) return;
+  if (window._diaryMigrationInProgress) return;
+  // pearl 마이그 진행 중이면 양보 — 같은 시간 동시 run 피함 (둘 다 Storage POST 라 throttle 회피).
+  if (window._pearlMigrationInProgress) {
+    // 5분 후 재시도.
+    await new Promise(r => setTimeout(r, 5 * 60 * 1000));
+    if (window._pearlMigrationInProgress) return;
+  }
+
+  const dry = _diaryMigDryRun();
+  if (!dry.eligible || dry.eligible.length === 0) return;  // 이미 다 마이그됨 — silent skip.
+
+  const mbStr = (dry.totalBytes / 1e6).toFixed(1);
+  if (typeof showToast === 'function') {
+    showToast(`📔 옛 일기 사진 ${dry.eligible.length}일치 (~${mbStr}MB) 안전한 곳으로 옮기는 중...`);
+  }
+
+  window._diaryMigrationInProgress = true;
+  try {
+    const result = await _diaryMigApply(dry.eligible, null);
+    if (typeof showToast === 'function') {
+      if (result.failed.length === 0) {
+        showToast(`✦ 일기 사진 ${result.migrated.length}일치 이동 완료`);
+      } else {
+        showToast(`일기 사진 ${result.migrated.length}일 완료 · ${result.failed.length} 실패 — 다음 세션 재시도`);
+      }
+    }
+    // refresh — 도서관/타임라인 etc.
+    if (typeof renderLensTimeline === 'function') renderLensTimeline();
+    if (typeof renderCalendarGrid === 'function') renderCalendarGrid();
+    if (typeof renderBeach === 'function') renderBeach();
+  } catch (e) {
+    console.warn('[diaryMigAutoStart] fatal:', e);
+  } finally {
+    window._diaryMigrationInProgress = false;
+  }
+}
+
+// 앱 init 후 자동 시작 — load 이벤트 + 5초 idle 후.
+//   pearl 마이그 와 같은 패턴 — 한 세션 1회 호출. dry-run 으로 이미 끝난 사용자 silent skip.
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    _diaryMigAutoStart().catch(e => console.warn('[diaryMigAutoStart] async:', e));
+  }, 7000);  // pearl (5초) 이후 ~2초 늦게 — Storage POST 동시 분산.
+});
 function closeDayModal() {
   const el = document.getElementById('dayModal');
   if (el) el.remove();
