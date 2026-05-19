@@ -41,10 +41,10 @@ function pearlImgHtml(pearl, kind, opts) {
     : (kind === 'videoThumbnail' ? pearl.videoThumbnail : null);
   if (typeof dataUrl === 'string' && dataUrl) {
     // dataURL = 'data:image/jpeg;base64,...' — '<>"&' 안 들어감. escape 불필요.
-    return `<img src="${dataUrl}" alt="${escapeHtml(alt)}" class="${cls}" ${extra}>`;
+    return `<img src="${dataUrl}" alt="${escapeHtml(alt)}" class="${cls}" loading="lazy" decoding="async" ${extra}>`;
   }
   if (pearl.storageKey && pearl.storageKey[kind]) {
-    return `<img data-pearl-photo="${pearl.id}" data-pearl-kind="${kind}" alt="${escapeHtml(alt)}" class="${cls} pearl-loading" ${extra}>`;
+    return `<img data-pearl-photo="${pearl.id}" data-pearl-kind="${kind}" alt="${escapeHtml(alt)}" class="${cls} pearl-loading" loading="lazy" decoding="async" ${extra}>`;
   }
   return '';
 }

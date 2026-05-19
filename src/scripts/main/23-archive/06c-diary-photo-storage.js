@@ -142,13 +142,13 @@ function diaryImgHtml(entry, idx, opts) {
   if (!entry) return '';
   if (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys[idx]) {
     const dateK = entry.date || '';
-    return `<img data-diary-photo="${escapeHtml(dateK)}" data-diary-photo-idx="${idx}" alt="${escapeHtml(alt)}" class="${cls} diary-loading" ${extra}>`;
+    return `<img data-diary-photo="${escapeHtml(dateK)}" data-diary-photo-idx="${idx}" alt="${escapeHtml(alt)}" class="${cls} diary-loading" loading="lazy" decoding="async" ${extra}>`;
   }
   let dataUrl = null;
   if (Array.isArray(entry.photos) && entry.photos[idx]) dataUrl = entry.photos[idx];
   else if (idx === 0 && entry.photo) dataUrl = entry.photo;
   if (dataUrl) {
-    return `<img src="${dataUrl}" alt="${escapeHtml(alt)}" class="${cls}" ${extra}>`;
+    return `<img src="${dataUrl}" alt="${escapeHtml(alt)}" class="${cls}" loading="lazy" decoding="async" ${extra}>`;
   }
   return '';
 }
