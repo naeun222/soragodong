@@ -47850,6 +47850,62 @@ function _diarySetPhotos(entry, arr) {
   }
 }
 
+// V4 (사용자 명시 2026-05-20 ultrathink): Phase 1E Step 2 — Storage 사진 path forward write.
+//   per-entry monotonic seq → '<authUid>/diary_<dateK>_<seq>_photo.bin'.
+//   reorder / delete 후에도 seq 충돌 X (영영 증가).
+function _diaryNextPhotoSeq(entry) {
+  if (!entry) return 0;
+  if (typeof entry.photoStorageSeq !== 'number' || !isFinite(entry.photoStorageSeq)) {
+    entry.photoStorageSeq = 0;
+  }
+  const seq = entry.photoStorageSeq;
+  entry.photoStorageSeq = seq + 1;
+  return seq;
+}
+
+// 사진 idx 슬롯 dual write — Storage upload + entry.photos dataURL (back-compat).
+//   Storage 가용 (`_canUseDiaryStorage`) 면 upload 후 entry.photoStorageKeys[idx] = path.
+//   가용 X 또는 upload 실패 면 path null (reader 가 entry.photos dataURL fallback).
+//   교체 시 옛 path 가 있으면 fire&forget 으로 Storage DELETE + blob cache revoke.
+async function _diaryWritePhotoAt(entry, idx, dataUrl) {
+  if (!entry || idx < 0 || idx >= DIARY_PHOTOS_MAX) return;
+  if (!Array.isArray(entry.photos)) entry.photos = [];
+
+  const oldPath = Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys[idx] : null;
+
+  // Storage upload 시도.
+  let newPath = null;
+  if (typeof _canUseDiaryStorage === 'function' && _canUseDiaryStorage()) {
+    const conv = (typeof _dataUrlToBytes === 'function') ? _dataUrlToBytes(dataUrl) : null;
+    if (conv && conv.bytes) {
+      try {
+        const seq = _diaryNextPhotoSeq(entry);
+        const result = await _uploadDiaryPhoto(entry.date, seq, conv.bytes, _e2eeMasterKey);
+        newPath = result.path;
+      } catch (e) {
+        console.warn('[diary photo storage upload fail]', e && e.message);
+      }
+    }
+  }
+
+  // storageKeys 배열 동기.
+  if (newPath || oldPath || (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.length > 0)) {
+    if (!Array.isArray(entry.photoStorageKeys)) entry.photoStorageKeys = [];
+    entry.photoStorageKeys[idx] = newPath;  // null = fallback to dataURL.
+    if (entry.photoStorageKeys.length > DIARY_PHOTOS_MAX) entry.photoStorageKeys.length = DIARY_PHOTOS_MAX;
+  }
+
+  // dataURL back-compat write.
+  entry.photos[idx] = dataUrl;
+  if (idx === 0) entry.photo = dataUrl;
+
+  // 옛 path orphan cleanup (path 변경 시).
+  if (oldPath && oldPath !== newPath) {
+    if (typeof _revokeDiaryMediaCache === 'function') _revokeDiaryMediaCache(entry.date, idx);
+    if (typeof _deleteDiaryPhoto === 'function') _deleteDiaryPhoto(oldPath).catch(()=>{});
+  }
+}
+
 // V4 (사용자 명시 2026-05-20 ultrathink): 일기 사진/음악 변경 시 그날 소라 (shell_ci_<dateStr>) 동기.
 //   addOrUpdateCheckinShell 이 tier 재계산 + photo/music 갱신. 사진 여러장이면 photoThumb=photos[0] 만 (addOrUpdateCheckinShell 내부에서 entry.photo mirror 사용).
 function _diarySyncShell(entry) {
@@ -47974,8 +48030,7 @@ async function _diaryReplacePhoto(dateStr, idx) {
     if (!entry) return;
     const photos = _diaryGetPhotos(entry);
     if (idx < 0 || idx >= photos.length) return;
-    photos[idx] = square;
-    _diarySetPhotos(entry, photos);
+    await _diaryWritePhotoAt(entry, idx, square);
     _diaryPersistAndRerender(dateStr);
   } catch (e) {
     if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
@@ -47990,14 +48045,35 @@ function _diaryDeletePhoto(dateStr, idx) {
   const photos = _diaryGetPhotos(entry);
   if (idx < 0 || idx >= photos.length) return;
   const removed = photos[idx];
+  const removedPath = Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys[idx] : null;
   photos.splice(idx, 1);
   _diarySetPhotos(entry, photos);
+  // storageKeys 배열 sync.
+  if (Array.isArray(entry.photoStorageKeys)) {
+    entry.photoStorageKeys.splice(idx, 1);
+    // 끝 null 정리.
+    while (entry.photoStorageKeys.length > 0 && !entry.photoStorageKeys[entry.photoStorageKeys.length - 1]) {
+      entry.photoStorageKeys.pop();
+    }
+    if (entry.photoStorageKeys.length === 0) delete entry.photoStorageKeys;
+  }
+  // Storage 파일 삭제 + blob cache revoke (fire & forget).
+  if (removedPath) {
+    if (typeof _revokeDiaryMediaCache === 'function') _revokeDiaryMediaCache(dateStr, idx);
+    if (typeof _deleteDiaryPhoto === 'function') _deleteDiaryPhoto(removedPath).catch(()=>{});
+  }
   _diaryPersistAndRerender(dateStr);
   if (typeof showUndoToast === 'function' && removed) {
     showUndoToast('사진 삭제됨', () => {
-      const back = _diaryGetPhotos(_diaryGetEntry(dateStr));
+      // Undo — dataURL 만 복원. storageKey 는 다음 마이그/edit 가 채움 (orphan 회피 위해 null 자리만 둠).
+      const e2 = _diaryGetEntry(dateStr);
+      if (!e2) return;
+      const back = _diaryGetPhotos(e2);
       back.splice(idx, 0, removed);
-      _diarySetPhotos(_diaryGetEntry(dateStr), back);
+      _diarySetPhotos(e2, back);
+      if (Array.isArray(e2.photoStorageKeys)) {
+        e2.photoStorageKeys.splice(idx, 0, null);
+      }
       _diaryPersistAndRerender(dateStr);
     });
   }
@@ -48019,8 +48095,7 @@ async function _diaryAddPhoto(dateStr) {
     const resized = await fileToResizedDataUrl(file, 800);
     const square = await makeSquareThumb(resized, 600);
     if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
-    cur.push(square);
-    _diarySetPhotos(entry, cur);
+    await _diaryWritePhotoAt(entry, cur.length, square);
     _diaryPersistAndRerender(dateStr);
   } catch (e) {
     if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
@@ -48104,6 +48179,11 @@ function _diaryBindPhotoReorder(strip, dateStr) {
         const [moved] = arr.splice(originIdx, 1);
         arr.splice(lastOverIdx, 0, moved);
         _diarySetPhotos(entry, arr);
+        // storageKeys 배열 도 동일 순서 reorder.
+        if (Array.isArray(entry.photoStorageKeys) && originIdx < entry.photoStorageKeys.length) {
+          const [movedKey] = entry.photoStorageKeys.splice(originIdx, 1);
+          entry.photoStorageKeys.splice(lastOverIdx, 0, movedKey);
+        }
         _diaryPersistAndRerender(dateStr);
       }
     };
