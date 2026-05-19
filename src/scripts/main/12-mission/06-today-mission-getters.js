@@ -49,7 +49,7 @@ function _hasYesterdayContent(entry) {
     entry.mood != null ||
     entry.sleepStart ||
     entry.music ||
-    entry.photo ||
+    entry.photo || (Array.isArray(entry.photos) && entry.photos.length > 0) ||
     (entry.dailyQuestionAnswer && entry.dailyQuestionAnswer.trim())
   );
 }

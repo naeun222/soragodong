@@ -118,9 +118,13 @@ function _renderDiaryCardHTML(entry) {
   if (!entry.dailyQuestion?.text && entry.note) {
     blocks.push(`<div class="ig-block ig-block-note">${escapeHtml(entry.note)}</div>`);
   }
-  // 사용자 명시 2026-05-18: 일기 사진 inline. data URL / 외부 URL 모두 지원.
-  if (entry.photo) {
-    blocks.push(`<div class="ig-photo-wrap"><img src="${escapeHtml(entry.photo)}" alt="" class="ig-photo" loading="lazy"></div>`);
+  // V4 (사용자 명시 2026-05-20 ultrathink): photos[] multi 렌더 (max 3), legacy entry.photo fallback.
+  const _tlPhotos = (Array.isArray(entry.photos) && entry.photos.length > 0)
+    ? entry.photos.slice(0, 3)
+    : (entry.photo ? [entry.photo] : []);
+  if (_tlPhotos.length > 0) {
+    const _imgs = _tlPhotos.map(p => `<img src="${escapeHtml(p)}" alt="" class="ig-photo" loading="lazy">`).join('');
+    blocks.push(`<div class="ig-photo-wrap${_tlPhotos.length > 1 ? ' ig-photo-multi' : ''}">${_imgs}</div>`);
   }
   if (entry.music) {
     blocks.push(`<div style="margin-top:8px;">${renderMusicCardHTML(entry.music)}</div>`);

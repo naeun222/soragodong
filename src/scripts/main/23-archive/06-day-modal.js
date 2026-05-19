@@ -132,9 +132,12 @@ function switchDayModalTab(tab) {
         html += `<div class="day-mode-chips">${ms.map(m => `<span class="day-mode-chip">${modeMap[m] || m}</span>`).join('')}</div>`;
       }
     }
-    // V4-fix: 일기 사진 (음악 카드 풍 — 큰 사진)
-    if (entry.photo) {
-      html += `<div class="day-photo-wrap"><img src="${entry.photo}" alt="" class="day-photo"></div>`;
+    // V4-fix: 일기 사진 — multi (최대 3) (legacy entry.photo fallback).
+    const _entryPhotos = (Array.isArray(entry.photos) && entry.photos.length > 0)
+      ? entry.photos.slice(0, 3)
+      : (entry.photo ? [entry.photo] : []);
+    if (_entryPhotos.length > 0) {
+      html += `<div class="day-photo-wrap${_entryPhotos.length > 1 ? ' day-photo-multi' : ''}">${_entryPhotos.map(p => `<img src="${escapeHtml(p)}" alt="" class="day-photo">`).join('')}</div>`;
     }
     // V4-fix: 음악 카드 (entry.music 있으면)
     if (entry.music && entry.music.title) {

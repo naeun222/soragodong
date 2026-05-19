@@ -44,7 +44,8 @@ function prefillCheckinFromEntry() {
     if (typeof toggleAllNighter === 'function') toggleAllNighter(false);
   }
 
-  if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart || entry.music || entry.photo)) {
+  const _entryHasPhoto = !!(entry && (entry.photo || (Array.isArray(entry.photos) && entry.photos.length > 0)));
+  if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart || entry.music || _entryHasPhoto)) {
     // 오늘 체크인 안 함 — 새로 작성 모드
     if (submitBtn) submitBtn.textContent = '기록 완료 ✦';
     if (subtitle) subtitle.textContent = '';
@@ -104,14 +105,20 @@ function prefillCheckinFromEntry() {
   // V3.13.x: 음악 prefill
   if (entry.music) currentCheckin.music = entry.music;
   renderCheckinMusicSlot();
-  // V4-fix: 사진 prefill
-  if (entry.photo) currentCheckin.photo = entry.photo;
+  // V4-fix: 사진 prefill — photos[] 우선, legacy photo fallback.
+  if (Array.isArray(entry.photos) && entry.photos.length > 0) {
+    currentCheckin.photos = entry.photos.slice(0, 3);
+    currentCheckin.photo = entry.photos[0];
+  } else if (entry.photo) {
+    currentCheckin.photos = [entry.photo];
+    currentCheckin.photo = entry.photo;
+  }
   if (typeof renderCheckinPhotoSlot === 'function') renderCheckinPhotoSlot();
   // sleep duration 다시 계산
   if (typeof updateSleepDuration === 'function') updateSleepDuration();
   // 사용자 명시 2026-05-06: Extra 값 있으면 자동 펼침 (수정 모드)
   const _hasExtraVal = !!(entry.meals || entry.movement || entry.focus ||
-    entry.social || entry.overwhelm || entry.music || entry.photo ||
+    entry.social || entry.overwhelm || entry.music || _entryHasPhoto ||
     entry.sleepStart || entry.allNighter ||
     (entry.modes && Object.values(entry.modes).some(Boolean)));
   const _extraG2 = document.getElementById('checkinExtraGroup');

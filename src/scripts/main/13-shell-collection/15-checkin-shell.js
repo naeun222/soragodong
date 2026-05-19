@@ -9,7 +9,8 @@
 //   🐚 가벼움 = vitality + mood 만
 function calcCheckinTier(entry, todayHasTrackerSuccess) {
   if (todayHasTrackerSuccess) return { tier: 'golden', type: '🦞' };
-  const hasMedia = !!(entry.music || entry.photo);
+  const _hasAnyPhoto = !!(entry.photo || (Array.isArray(entry.photos) && entry.photos.length > 0));
+  const hasMedia = !!(entry.music || _hasAnyPhoto);
   if (hasMedia) return { tier: 'main', type: '🐢' };
   const hasSleep = !!(entry.allNighter || (entry.sleepStart && entry.sleepEnd));
   const hasOptional = !!(entry.meals || entry.movement || entry.focus || entry.social || entry.overwhelm);
@@ -76,6 +77,8 @@ function addOrUpdateCheckinShell(entry) {
     dailyQuestion: entry.dailyQuestion || null,
     music: entry.music || null,
     photoThumb: entry.photo || '',
+    // V4 (사용자 명시 2026-05-20 ultrathink): photos[] multi (최대 3). legacy photoThumb 도 photos[0] 미러.
+    photos: Array.isArray(entry.photos) ? entry.photos.slice(0, 3) : (entry.photo ? [entry.photo] : []),
     trackerSuccesses
   };
 
@@ -137,9 +140,15 @@ function _openCheckinShellStory(shell) {
   };
   overlay.onclick = (e) => { if (e.target === overlay) _close(); };
 
-  const photoHtml = shell.photoThumb
-    ? `<img src="${shell.photoThumb}" alt="" class="ci-shell-photo">`
-    : '';
+  // V4 (사용자 명시 2026-05-20 ultrathink): multi photos 렌더 (legacy single photoThumb fallback).
+  const _shellPhotos = (Array.isArray(shell.photos) && shell.photos.length > 0)
+    ? shell.photos.slice(0, 3)
+    : (shell.photoThumb ? [shell.photoThumb] : []);
+  const photoHtml = _shellPhotos.length === 0
+    ? ''
+    : _shellPhotos.length === 1
+      ? `<img src="${escapeHtml(_shellPhotos[0])}" alt="" class="ci-shell-photo">`
+      : `<div class="ci-shell-photos">${_shellPhotos.map(p => `<img src="${escapeHtml(p)}" alt="" class="ci-shell-photo ci-shell-photo-multi">`).join('')}</div>`;
   const musicHtml = shell.music && typeof renderMusicCardHTML === 'function'
     ? `<div class="ci-shell-music">${renderMusicCardHTML(shell.music)}</div>`
     : '';

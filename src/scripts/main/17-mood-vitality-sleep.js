@@ -191,10 +191,15 @@ async function submitCheckin() {
   } else {
     delete entry.music;
   }
-  // V4-fix: 사진 저장 / 제거
-  if (currentCheckin.photo) {
-    entry.photo = currentCheckin.photo;
+  // V4 (사용자 명시 2026-05-20 ultrathink): 사진 multi 저장 — photos[] (max 3) + legacy entry.photo 미러.
+  const _ciPhotos = Array.isArray(currentCheckin.photos)
+    ? currentCheckin.photos.filter(Boolean).slice(0, 3)
+    : (currentCheckin.photo ? [currentCheckin.photo] : []);
+  if (_ciPhotos.length > 0) {
+    entry.photos = _ciPhotos;
+    entry.photo = _ciPhotos[0];  // legacy 단일 reader 호환
   } else {
+    delete entry.photos;
     delete entry.photo;
   }
   entry.timestamp = new Date().toISOString();

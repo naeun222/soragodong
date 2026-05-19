@@ -9244,10 +9244,15 @@
   /* 진주 음악 카드는 grid에서 한 줄 다 차지 */
   .pearl-music-row { grid-column: 1 / -1; }
   .pearl-music-card { padding: 0; background: transparent; border: none; }
+  /* V4 (사용자 명시 2026-05-20 ultrathink): 체크인 사진/음악 row layout — inline style → CSS 이전 (multi class override 위해). */
+  .checkin-mp-row {
+    display: flex; gap: 8px; align-items: stretch;
+    flex-wrap: wrap;
+  }
   /* V4-fix v3 (사용자 버그 보고): 체크인 사진 슬롯 — 고정 크기 정사각 (음악 stretch에 휘둘리지 않게) */
-  .checkin-mp-row #checkinPhotoSlot { display: flex; }
+  .checkin-mp-row #checkinPhotoSlot { display: flex; flex: 0 0 auto; }
   /* V4 (사용자 명시 2026-05-16): 체크인 음악 placeholder 세로 길이 = 사진 칸 90px 동일. */
-  .checkin-mp-row #checkinMusicSlot { display: flex; min-width: 0; }
+  .checkin-mp-row #checkinMusicSlot { display: flex; flex: 1; min-width: 0; }
   /* V4 fix (사용자 보고 2026-05-20): slot 이 display:flex 라 .music-card-wrap 이 flex item.
      min-width:0 X → 제목 nowrap content size 가 wrap 최소폭 → 오른쪽 overflow.
      wrap 에 flex:1 min-width:0 박아 슬롯 폭 안에서 shrink + ellipsis 작동. */
@@ -9300,6 +9305,72 @@
   .checkin-photo-add-btn:active { background: var(--surface2); }
   .cpa-icon { font-size: 18px; }
   .cpa-label { font-size: 10px; letter-spacing: 0.05em; }
+  /* V4 (사용자 명시 2026-05-20 ultrathink): 사진 multi strip — 90×90 thumbs + + 버튼, drag reorder. */
+  .checkin-photos-strip {
+    display: flex; gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .checkin-photo-tile {
+    position: relative;
+    width: 90px; height: 90px;
+    flex: 0 0 90px;
+    border-radius: 10px; overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    touch-action: none;  /* drag reorder 시 scroll 가로채기 방지 */
+    transition: transform 0.12s, opacity 0.12s, border-color 0.12s;
+  }
+  .checkin-photo-tile .checkin-photo-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .checkin-photo-tile.is-dragging { opacity: 0.55; transform: scale(0.95); }
+  .checkin-photo-tile.is-drop-target {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(212,167,106,0.45);
+  }
+  .checkin-photo-add-tile {
+    width: 90px; height: 90px; flex: 0 0 90px;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--text-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    font-family: inherit;
+  }
+  .checkin-photo-add-tile:active { background: var(--surface2); }
+  /* multi 모드: 사진 strip 이 한 줄 다 차지, 음악 카드는 다음 줄. */
+  .checkin-mp-row.checkin-mp-multi #checkinPhotoSlot { flex: 1 1 100%; }
+  .checkin-mp-row.checkin-mp-multi #checkinMusicSlot { flex: 1 1 100%; }
+  /* 일기 모달 / 타임라인 multi photo wrap (legacy single 유지 + multi grid). */
+  .day-photo-wrap.day-photo-multi,
+  .ig-photo-wrap.ig-photo-multi {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .day-photo-wrap.day-photo-multi .day-photo,
+  .ig-photo-wrap.ig-photo-multi .ig-photo {
+    width: 100%; aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  /* 소라 상세 모달 multi photo */
+  .ci-shell-photos {
+    display: flex; gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 10px 0;
+  }
+  .ci-shell-photos .ci-shell-photo-multi {
+    /* 12266 의 width:100% / max-width:280px 를 multi 시 override. */
+    width: calc(50% - 3px);
+    max-width: 200px;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    border: none;
+  }
   /* V4-fix: 일기 모달 음악 카드 */
   .day-music-card {
     display: flex; align-items: center; gap: 10px;

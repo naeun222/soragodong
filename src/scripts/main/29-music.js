@@ -310,36 +310,70 @@ function removeCheckinMusic() {
   renderCheckinMusicSlot();
 }
 
-// V4-fix: 체크인 사진 슬롯 (음악 왼쪽 작은 정사각)
+// V4 (사용자 명시 2026-05-20 ultrathink): 체크인 사진 multi (최대 3장) — strip layout + ✕ 즉시 삭제 + undo + drag reorder.
+//   legacy entry.photo (단일 string) 와 양립 — _getCheckinPhotos / _setCheckinPhotos 로 통합.
+//   reader 측 (shell-story / day-modal / timeline-lens) 은 entry.photos 우선, fallback entry.photo.
+const CHECKIN_PHOTOS_MAX = 3;
+
+function _getCheckinPhotos() {
+  if (!currentCheckin) return [];
+  if (Array.isArray(currentCheckin.photos)) return currentCheckin.photos.slice(0, CHECKIN_PHOTOS_MAX);
+  if (currentCheckin.photo) return [currentCheckin.photo];
+  return [];
+}
+function _setCheckinPhotos(arr) {
+  if (!currentCheckin) currentCheckin = {};
+  const clean = (arr || []).filter(Boolean).slice(0, CHECKIN_PHOTOS_MAX);
+  currentCheckin.photos = clean;
+  if (clean.length > 0) currentCheckin.photo = clean[0];  // legacy mirror
+  else delete currentCheckin.photo;
+}
+
 function renderCheckinPhotoSlot() {
   const slot = document.getElementById('checkinPhotoSlot');
   if (!slot) return;
-  if (currentCheckin && currentCheckin.photo) {
-    slot.innerHTML = `
-      <div class="checkin-photo-card">
-        <img src="${currentCheckin.photo}" alt="" class="checkin-photo-img">
-        <button class="checkin-photo-remove" onclick="removeCheckinPhoto()" aria-label="제거">✕</button>
-      </div>
-    `;
-  } else {
+  const photos = _getCheckinPhotos();
+  const row = document.querySelector('.checkin-mp-row');
+  if (row) row.classList.toggle('checkin-mp-multi', photos.length >= 2);
+
+  if (photos.length === 0) {
     slot.innerHTML = `
       <button class="checkin-photo-add-btn" onclick="addCheckinPhoto()">
         <span class="cpa-icon">📷</span>
         <span class="cpa-label">사진</span>
       </button>
     `;
+    return;
   }
+  const tiles = photos.map((p, i) => `
+    <div class="checkin-photo-tile" data-photo-idx="${i}" draggable="false">
+      <img src="${p}" alt="" class="checkin-photo-img">
+      <button class="checkin-photo-remove" onclick="removeCheckinPhoto(${i})" aria-label="제거">✕</button>
+    </div>
+  `).join('');
+  const addBtn = photos.length < CHECKIN_PHOTOS_MAX
+    ? `<button class="checkin-photo-add-tile" onclick="addCheckinPhoto()" aria-label="사진 추가"><span class="cpa-icon">＋</span></button>`
+    : '';
+  slot.innerHTML = `<div class="checkin-photos-strip">${tiles}${addBtn}</div>`;
+  _bindCheckinPhotoReorder(slot);
 }
+
 async function addCheckinPhoto() {
   try {
+    const cur = _getCheckinPhotos();
+    if (cur.length >= CHECKIN_PHOTOS_MAX) {
+      showToast(`사진은 ${CHECKIN_PHOTOS_MAX}장까지`);
+      return;
+    }
     const file = await pickPhotoFile();
     if (!file) return;
     showFullscreenLoader('사진 처리 중... 📸');
     const resized = await fileToResizedDataUrl(file, 800);
     const square = await makeSquareThumb(resized, 600);
     hideFullscreenLoader();
-    if (!currentCheckin) currentCheckin = {};
-    currentCheckin.photo = square;
+    const next = _getCheckinPhotos();
+    next.push(square);
+    _setCheckinPhotos(next);
     renderCheckinPhotoSlot();
   } catch (e) {
     hideFullscreenLoader();
@@ -347,9 +381,79 @@ async function addCheckinPhoto() {
     showToast('사진 처리 실패');
   }
 }
-function removeCheckinPhoto() {
-  if (currentCheckin) delete currentCheckin.photo;
+
+function removeCheckinPhoto(idx) {
+  const cur = _getCheckinPhotos();
+  // legacy 호출 (인자 X) = 첫 사진 제거 — 기존 onRemove path 호환.
+  const i = (typeof idx === 'number') ? idx : 0;
+  if (i < 0 || i >= cur.length) return;
+  const removed = cur[i];
+  cur.splice(i, 1);
+  _setCheckinPhotos(cur);
   renderCheckinPhotoSlot();
+  if (typeof showUndoToast === 'function' && removed) {
+    showUndoToast('사진 삭제됨', () => {
+      const back = _getCheckinPhotos();
+      back.splice(i, 0, removed);
+      _setCheckinPhotos(back);
+      renderCheckinPhotoSlot();
+    });
+  }
+}
+
+// 드래그 reorder — pointer events 기반 (touch + mouse 통합). 300ms long-press 후 drag mode 진입.
+function _bindCheckinPhotoReorder(slot) {
+  const tiles = slot.querySelectorAll('.checkin-photo-tile');
+  if (tiles.length < 2) return;
+  tiles.forEach((tile) => {
+    let pressTimer = null;
+    let dragging = false;
+    let originIdx = -1;
+    let lastOverIdx = -1;
+    const onDown = (e) => {
+      // ✕ 버튼 위 pointerdown 은 reorder 무시.
+      if (e.target && e.target.closest('.checkin-photo-remove')) return;
+      originIdx = parseInt(tile.getAttribute('data-photo-idx'), 10);
+      pressTimer = setTimeout(() => {
+        dragging = true;
+        tile.classList.add('is-dragging');
+        try { tile.setPointerCapture(e.pointerId); } catch {}
+      }, 280);
+    };
+    const onMove = (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+      // pointer 위치 아래 tile 찾기.
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const overTile = el && el.closest && el.closest('.checkin-photo-tile');
+      slot.querySelectorAll('.checkin-photo-tile.is-drop-target').forEach(t => t.classList.remove('is-drop-target'));
+      if (overTile && overTile !== tile) {
+        overTile.classList.add('is-drop-target');
+        lastOverIdx = parseInt(overTile.getAttribute('data-photo-idx'), 10);
+      } else {
+        lastOverIdx = -1;
+      }
+    };
+    const onUp = (e) => {
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+      if (!dragging) return;
+      dragging = false;
+      tile.classList.remove('is-dragging');
+      slot.querySelectorAll('.checkin-photo-tile.is-drop-target').forEach(t => t.classList.remove('is-drop-target'));
+      try { tile.releasePointerCapture(e.pointerId); } catch {}
+      if (lastOverIdx >= 0 && lastOverIdx !== originIdx) {
+        const arr = _getCheckinPhotos();
+        const [moved] = arr.splice(originIdx, 1);
+        arr.splice(lastOverIdx, 0, moved);
+        _setCheckinPhotos(arr);
+        renderCheckinPhotoSlot();
+      }
+    };
+    tile.addEventListener('pointerdown', onDown);
+    tile.addEventListener('pointermove', onMove, { passive: false });
+    tile.addEventListener('pointerup', onUp);
+    tile.addEventListener('pointercancel', onUp);
+  });
 }
 
 async function addPearl() {

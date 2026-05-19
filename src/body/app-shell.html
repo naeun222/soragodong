@@ -111,10 +111,10 @@
           <div style="font-size:11px; color:var(--text-dim); margin-top:6px;" id="sleepDuration"></div>
         </div>
 
-        <!-- V3.13.x: 음악 슬롯 + V4: 사진 슬롯 -->
-        <div class="input-group checkin-mp-row" style="display:flex; gap:8px; align-items:stretch;">
-          <div id="checkinPhotoSlot" style="flex:0 0 auto;"></div>
-          <div id="checkinMusicSlot" style="flex:1; min-width:0;"></div>
+        <!-- V3.13.x: 음악 슬롯 + V4: 사진 슬롯 (V4 2026-05-20: multi 시 wrap layout 위해 inline flex → CSS 이전) -->
+        <div class="input-group checkin-mp-row">
+          <div id="checkinPhotoSlot"></div>
+          <div id="checkinMusicSlot"></div>
         </div>
 
         <div class="module-row">
