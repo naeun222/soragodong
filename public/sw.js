@@ -67,11 +67,18 @@
 //   별도 캐시 이름 sora-photo-v1 + LRU (14d expiry + 200 entries 한도).
 //   보안: URL 첫 segment = authUid 라 cross-user 충돌 0. payload = ciphertext 라 master key 없이 복호화 X.
 //   기존 캐시 정책은 그대로 (CACHE_NAME 유지) — 별도 cache name 으로 동작 격리.
+// v52 (2026-05-20 사용자 명시): Google Fonts CSS + woff2 도 SW Cache First — 두 번째 방문/오프라인 안정.
+//   match: fonts.googleapis.com (CSS) + fonts.gstatic.com (woff2). 별도 캐시 sora-font-v1 + 30d/40 entries.
+//   _handlePhotoFetch → generic _handleCacheFirst 로 리팩토 (photo + font 공유). 행동 변경 0.
 const CACHE_NAME = 'soragodong-v4-cache-v50';
 const PHOTO_CACHE_NAME = 'sora-photo-v1';
 const PHOTO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const PHOTO_MAX_ENTRIES = 200;
 const PHOTO_URL_PATTERN = /\.supabase\.co\/storage\/v1\/object\/(?:authenticated\/)?pearls\//;
+const FONT_CACHE_NAME = 'sora-font-v1';
+const FONT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const FONT_MAX_ENTRIES = 40;
+const FONT_URL_PATTERN = /fonts\.(?:googleapis|gstatic)\.com\//;
 const PRECACHE_URLS = [
   './',
   './index.html',
@@ -89,29 +96,30 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// activate — 옛 캐시 정리. CACHE_NAME (HTML/asset) + PHOTO_CACHE_NAME (사진) 만 유지.
+// activate — 옛 캐시 정리. CACHE_NAME (HTML/asset) + PHOTO_CACHE_NAME (사진) + FONT_CACHE_NAME (폰트) 만 유지.
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((names) =>
       Promise.all(
         names
-          .filter((n) => n !== CACHE_NAME && n !== PHOTO_CACHE_NAME)
+          .filter((n) => n !== CACHE_NAME && n !== PHOTO_CACHE_NAME && n !== FONT_CACHE_NAME)
           .map((n) => caches.delete(n))
       )
     ).then(() => self.clients.claim())
   );
 });
 
-// Supabase Storage 사진 — Cache First + LRU 14d/200 entries.
-//   요청 헤더 Authorization 는 캐시 키에 영향 X — URL 만 키. URL 안에 authUid prefix 박혀있어 cross-user 충돌 0.
-//   응답 헤더에 x-sora-cached-at (Date.now()) 주입 → 14d 만료 판정.
+// Cross-origin static asset (사진 / 폰트 등) — generic Cache First + LRU.
+//   요청 헤더 (e.g. Authorization) 는 캐시 키에 영향 X — URL 만 키.
+//   응답 헤더에 x-sora-cached-at (Date.now()) 주입 → maxAgeMs 만료 판정.
 //   network 실패 시 stale 캐시라도 반환 (오프라인 fallback).
-async function _handlePhotoFetch(req) {
-  const cache = await caches.open(PHOTO_CACHE_NAME);
+//   v51 photo + v52 font 공유 (cacheName / maxAge / maxEntries 만 다름).
+async function _handleCacheFirst(req, cacheName, maxAgeMs, maxEntries) {
+  const cache = await caches.open(cacheName);
   const cached = await cache.match(req);
   if (cached) {
     const cachedAt = parseInt(cached.headers.get('x-sora-cached-at') || '0', 10);
-    if (cachedAt && (Date.now() - cachedAt) < PHOTO_MAX_AGE_MS) {
+    if (cachedAt && (Date.now() - cachedAt) < maxAgeMs) {
       return cached;
     }
   }
@@ -119,7 +127,7 @@ async function _handlePhotoFetch(req) {
   try {
     resp = await fetch(req);
   } catch (e) {
-    return cached || new Response('', { status: 504, statusText: 'Offline + photo cache miss' });
+    return cached || new Response('', { status: 504, statusText: 'Offline + cache miss' });
   }
   if (resp && resp.ok) {
     try {
@@ -132,16 +140,16 @@ async function _handlePhotoFetch(req) {
         headers
       });
       await cache.put(req, respForCache);
-      _trimPhotoCache(cache).catch(() => {});
+      _trimCache(cache, maxEntries).catch(() => {});
     } catch (_) { /* clone/put 실패는 응답 자체에 영향 X */ }
   }
   return resp;
 }
 
-async function _trimPhotoCache(cache) {
+async function _trimCache(cache, maxEntries) {
   const keys = await cache.keys();
-  if (keys.length <= PHOTO_MAX_ENTRIES) return;
-  const overflow = keys.length - PHOTO_MAX_ENTRIES;
+  if (keys.length <= maxEntries) return;
+  const overflow = keys.length - maxEntries;
   await Promise.all(keys.slice(0, overflow).map((k) => cache.delete(k)));
 }
 
@@ -151,10 +159,14 @@ self.addEventListener('fetch', (event) => {
   // GET만 다룸 (POST 등은 통과)
   if (req.method !== 'GET') return;
 
-  // v51 — Supabase Storage 사진 (pearls bucket) 는 origin gate 이전에 별도 처리.
-  //   _handlePhotoFetch 안에서 Cache First + LRU 14d.
+  // v51 — Supabase Storage 사진 (pearls bucket) — Cache First + LRU 14d.
   if (PHOTO_URL_PATTERN.test(req.url)) {
-    event.respondWith(_handlePhotoFetch(req));
+    event.respondWith(_handleCacheFirst(req, PHOTO_CACHE_NAME, PHOTO_MAX_AGE_MS, PHOTO_MAX_ENTRIES));
+    return;
+  }
+  // v52 — Google Fonts (CSS + woff2) — Cache First + 30d.
+  if (FONT_URL_PATTERN.test(req.url)) {
+    event.respondWith(_handleCacheFirst(req, FONT_CACHE_NAME, FONT_MAX_AGE_MS, FONT_MAX_ENTRIES));
     return;
   }
 
