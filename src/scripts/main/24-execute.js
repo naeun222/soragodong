@@ -26,13 +26,19 @@ function _scheduleDateKey() {
 
 // === SHELL REWARD SYSTEM (V3.1) ===
 // 사용자 요청 2026-04-27: 특별/탑티어 소라 아이콘 다양화 — DNA 조각 후보가 더 예쁘게
+// V4 (사용자 명시 2026-05-20 ultrathink): pool 간 emoji 중복 제거 — 각 emoji 한 tier 에만 속함.
+//   옛 중복: 🪻(main/call/legendary), 🫧(daily/call/legendary), 🪷(daily/legendary), 🌺(golden/legendary),
+//           🦚(golden/legendary), 🌸(golden/legendary), 🪐(golden/legendary), 🌷(main/legendary).
+//   결정: 자연/꽃 톤 → 하위 tier 유지. 천체 톤 (🪐) → legendary. 빈 자리 새 unique 추가
+//        (golden 🦈 / call 🧚 🪅 / legendary 🏆 🎊 🌅 💝 🩷).
+//   tier 변별력 ↑ — emoji 보면 어느 tier 인지 즉시 식별.
 const SHELL_POOLS = {
-  light:    { emojis: ['🐚','🐌','🪸','🌱','🍃','🌾','🪺'],                                  tier: 'light',   points: 1,  label: '가벼움' },
-  daily:    { emojis: ['🌀','🐠','🪼','🐟','🪷','🫧','🐡','🐳'],                              tier: 'daily',   points: 2,  label: '일상' },
-  main:     { emojis: ['🐢','🐬','🦀','🦭','🦦','🪻','🦩','🌷'],                              tier: 'main',    points: 5,  label: '메인' },
-  golden:   { emojis: ['🦑','🐙','🦞','🐉','🦚','🌸','🌺','🪐'],                              tier: 'golden',  points: 10, label: '황금' },
-  call:     { emojis: ['⭐','🌟','💫','🌙','🪄','💎','🌠','🔮','💠','🎐','🪬','🫧','🪻','🌹'],   tier: 'call',    points: 20, label: '부름' },
-  legendary:{ emojis: ['✨','🌈','🎆','🎇','🪩','🦄','🌌','🦋','🌺','🦚','🌸','💖','🎀','🪷','🩵','🪐','🌷','🦢'], tier: 'legend',  points: 50, label: '특별' }
+  light:    { emojis: ['🐚','🐌','🪸','🌱','🍃','🌾','🪺'],                                                 tier: 'light',   points: 1,  label: '가벼움' },
+  daily:    { emojis: ['🌀','🐠','🪼','🐟','🪷','🫧','🐡','🐳'],                                            tier: 'daily',   points: 2,  label: '일상' },
+  main:     { emojis: ['🐢','🐬','🦀','🦭','🦦','🪻','🦩','🌷'],                                            tier: 'main',    points: 5,  label: '메인' },
+  golden:   { emojis: ['🦑','🐙','🦞','🐉','🦚','🌸','🌺','🦈'],                                            tier: 'golden',  points: 10, label: '황금' },
+  call:     { emojis: ['⭐','🌟','💫','🌙','🪄','💎','🌠','🔮','💠','🎐','🪬','🌹','🧚','🪅'],                tier: 'call',    points: 20, label: '부름' },
+  legendary:{ emojis: ['✨','🌈','🎆','🎇','🪩','🦄','🌌','🦋','💖','🎀','🩵','🪐','🦢','🏆','🎊','🌅','💝','🩷'], tier: 'legend',  points: 50, label: '특별' }
 };
 
 // V4 (사용자 명시 2026-05-20 ultrathink): anti-recency weighted pick — 최근 N 안 같은 tier 에서

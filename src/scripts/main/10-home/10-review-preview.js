@@ -5,10 +5,13 @@
 
 function _reviewPreviewPickLatest() {
   // monthly / quarterly / weekly 중 가장 최근 1개 (completedAt 기준)
+  // V4 fix (사용자 명시 2026-05-20 ultrathink): !user_viewed 필터 추가. 한 번 열어본 리뷰는 회전카드 picker 결과에서 제외.
+  //   짝꿍: openSavedReview 가 진입 시 user_viewed=true 박음 (28-project-tracking/14-review-collection.js).
+  //   효과: click 한 번 = 그 review 회전카드에서 영구 dismiss. 다음 fresh batch (다음 주 일요일 새 weekly) 까지 그 자리 priority 차순위 (체크인/hook/오늘의 너) 가.
   const all = [];
-  (state.weeklyReviews    || []).forEach(r => r && r.completedAt && all.push({ ...r, _kind: 'weekly',    _ts: new Date(r.completedAt).getTime() }));
-  (state.monthlyReviews   || []).forEach(r => r && r.completedAt && all.push({ ...r, _kind: 'monthly',   _ts: new Date(r.completedAt).getTime() }));
-  (state.quarterlyReviews || []).forEach(r => r && r.completedAt && all.push({ ...r, _kind: 'quarterly', _ts: new Date(r.completedAt).getTime() }));
+  (state.weeklyReviews    || []).forEach(r => r && r.completedAt && !r.user_viewed && all.push({ ...r, _kind: 'weekly',    _ts: new Date(r.completedAt).getTime() }));
+  (state.monthlyReviews   || []).forEach(r => r && r.completedAt && !r.user_viewed && all.push({ ...r, _kind: 'monthly',   _ts: new Date(r.completedAt).getTime() }));
+  (state.quarterlyReviews || []).forEach(r => r && r.completedAt && !r.user_viewed && all.push({ ...r, _kind: 'quarterly', _ts: new Date(r.completedAt).getTime() }));
   if (all.length === 0) return null;
   all.sort((a, b) => b._ts - a._ts);
   return all[0];

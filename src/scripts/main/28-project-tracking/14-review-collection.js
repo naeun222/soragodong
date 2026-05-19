@@ -10,6 +10,15 @@ function openSavedReview(type, key, completedAt) {
   const review = arr.find(r => r[keyField] === key && (!completedAt || r.completedAt === completedAt));
   if (!review) { showToast('리뷰 못 찾음 (이미 삭제됐을 수 있어)'); return; }
 
+  // V4 fix (사용자 명시 2026-05-20 ultrathink): user_viewed 마킹 — 옛 누락. 회전카드 '주간 리뷰 링크' 가
+  //   _openReviewPreviewLink → openSavedReview 경로로 진입하는데 여기서 user_viewed 안 박혀 매일 같은 review
+  //   카드 무한 재노출되던 버그 (4AM cutoff 마다 dismissedSources reset + _reviewPreviewPickLatest 가 user_viewed 무시).
+  //   fix 짝꿍: _reviewPreviewPickLatest 가 !user_viewed 필터 (10-home/10-review-preview.js).
+  if (!review.user_viewed) {
+    review.user_viewed = true;
+    if (typeof saveState === 'function') saveState();
+  }
+
   showScreen('review');
   renderReviewScreen(type, review, { readonly: true });
   // 위로 스크롤
