@@ -6,7 +6,7 @@ async function testSeedV4Data() {
   // 사용자 보고 2026-04-30: 시드 흔적이 entries/chatMessages/chatArchive 등에 잔존 — id-prefix sweep으로 못 잡힘.
   // 시작 시점 length 기록 → 끝에 새로 적용된 항목만 _seed: true marker. init sweep에서 marker 매칭으로 자동 정리.
   const _seedMarkerTs = Date.now();
-  const _seedTrackStores = ['entries', 'chatMessages', 'chatArchive', 'weeklyReviews', 'monthlyReviews', 'quarterlyReviews', 'memoryVault', 'tasks', 'missions', 'pearls', 'archive', 'topicCards', 'reflectionQuestions', 'projects', 'starts', 'decisions', 'insights', 'diagnoses', 'shellCollection', 'godongDiary', 'miniReviews'];
+  const _seedTrackStores = ['entries', 'chatMessages', 'chatArchive', 'weeklyReviews', 'monthlyReviews', 'quarterlyReviews', 'memoryVault', 'tasks', 'missions', 'pearls', 'archive', 'topicCards', 'reflectionQuestions', 'projects', 'starts', 'decisions', 'insights', 'diagnoses', 'shellCollection', 'miniReviews'];
   const _seedBeforeLen = {};
   _seedTrackStores.forEach(k => { _seedBeforeLen[k] = (state[k] || []).length; });
   const _markSeedItems = () => {
@@ -1114,9 +1114,6 @@ async function testSeedV4Data() {
       createdAt: new Date(_richDate + 'T05:30:00').toISOString()
     });
   }
-
-  // V4 (사용자 명시 2026-05-14 ultrathink): #4 godongDiary (rotating card source) 시드 zap — sim 튜토 코치마크가 가리키지 않음.
-  if (Array.isArray(state.godongDiary)) state.godongDiary = [];
 
   // 사용자 명시 2026-05-17: 캘린더 그리드는 4/15 만 노출. 시드가 만든 캘린더 영향 데이터 (entries / chatArchive / 비-strategy topicCards 챕터 / 티켓·책 진주) 를 4/15 외엔 다 제거.
   // 4/15 챕터 + 풍성 entry + 4/15 진주들 (위 _richDate chunk 에서 push) 은 보존.

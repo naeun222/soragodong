@@ -48,7 +48,7 @@ function _hookFrequencyCooldownOk() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Substrate — dayK 별 6 source 그루핑 (옛 godong-diary 모달 `_bySource` 와 동일 로직 — backend 이동 예정).
+// Substrate — dayK 별 source 그루핑 (backend 이동 예정).
 // ─────────────────────────────────────────────────────────────────────────────
 function _hookIsoToDayK(iso) {
   if (!iso) return null;

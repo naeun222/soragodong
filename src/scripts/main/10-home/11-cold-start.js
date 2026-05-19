@@ -1,6 +1,6 @@
 // V4 (사용자 명시 2026-05-17 ultrathink): cold start 분기.
 //   가입 7일 미만 OR chatArchive < 2 OR pearls+entries < 3 = cold start.
-//   메인 카드 = "오늘은 한 줄만" + chat link (substrate 부족 시 godongDiary 생성 X).
+//   메인 카드 = "오늘은 한 줄만" + chat link.
 
 function _isColdStart() {
   if (!state) return true;

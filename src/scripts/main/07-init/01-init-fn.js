@@ -24,7 +24,7 @@ async function init() {
     }
   } catch {}
   // V4 (사용자 명시 2026-05-15): _firstAppDayKey — 첫 진입 KST day key 기록.
-  //   회전 카드 godongDiary 첫날 차단 (신규 미구독자) 등 first-day cohort 가드 용.
+  //   first-day cohort 가드 용 (회전 카드 신규 미구독자 차단 등).
   //   기존 사용자 (key 없음) = 한 번 init 시 today key set → 그 이후 부터 정상.
   try {
     if (state && typeof todayKey === 'function') {

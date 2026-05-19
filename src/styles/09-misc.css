@@ -12348,48 +12348,6 @@
     opacity: 0.92;
   }
 
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* hook-system spec (2026-05-18) — 챗 탭 inline 카드: 일기 큐 + 부재 후속        */
-/* spec: _hook-system-spec.md §5-7. paper-* 토큰 = 다이어리 종이 톤.            */
-/* ─────────────────────────────────────────────────────────────────────────── */
-.diary-inline-card,
-.absence-followup-card {
-  background: var(--paper-1);
-  color: var(--paper-text);
-  border: 1px solid var(--paper-rule);
-  border-radius: 14px;
-  padding: 14px 16px 10px;
-  margin: 10px 12px 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  font-family: 'Gowun Batang', serif;
-  font-size: 14px;
-  line-height: 1.75;
-  white-space: pre-wrap;
-}
-.diary-inline-card .dic-body,
-.absence-followup-card .afc-body {
-  padding-bottom: 6px;
-}
-.diary-inline-card .dic-dismiss {
-  display: block;
-  margin: 6px 0 0 auto;
-  padding: 5px 12px;
-  background: transparent;
-  border: 1px solid var(--paper-rule);
-  border-radius: 8px;
-  color: var(--paper-text-dim);
-  font-family: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.diary-inline-card .dic-dismiss:hover,
-.diary-inline-card .dic-dismiss:focus-visible {
-  background: rgba(110, 80, 40, 0.08);
-  color: var(--paper-text-soft);
-  outline: none;
-}
-
 /* V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearl 미디어 storage hydrate placeholder. */
 img.pearl-loading {
   background: var(--surface-soft, rgba(255,255,255,0.04));

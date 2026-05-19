@@ -3,11 +3,6 @@ async function sendChat() {
   const text = input.value.trim();
   if (!text) return;
 
-  // hook-system spec (2026-05-18): 새 메시지 입력 = 챕터 grace 해제 + 부재 후속 카드 dismiss (1회성).
-  //   일기 inline 카드 는 보존 (spec L131 "메시지 입력 시 일기 카드 그대로 위에 보존").
-  if (state._chatChapterEndedAt) state._chatChapterEndedAt = null;
-  if (typeof _dismissAbsenceFollowupFromChat === 'function') _dismissAbsenceFollowupFromChat();
-
   // V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty + 저녁 6시+ 체크인 카드는 사용자가 '대화 시작' 하는 순간 사라짐.
   //   첫 메시지 send 트리거 — dayK 내 영구 dismiss (새벽 4시 reset 후 내일 저녁 6시 부활).
   //   체크인 done 상태든 아니든 무관 set — done 이면 카드 자체가 안 보였으니 no-op.

@@ -347,11 +347,8 @@ const DEFAULT_STATE = {
   monthlyReviews: [],
   // legacy — 옛 회전 카드 source (사용자 명시 2026-05-18 폐기). data preserve 위해 array 만 보존.
   miniReviews: [],          // [{id, content, generatedAt, source:'haiku-3day'}]
-  godongDiary: [],          // [{id, date, weekday, note?, body, iso, substrateRefs[]}] — 옛 schema
-  // hook-system spec (2026-05-18) — backend cron + 챗 탭 inline 큐. 메커니즘/프롬프트는 옛 godongDiary 동일.
-  godongDiaryQueue: [],     // [{id, body, generatedAt, triggerDayK, readAt, dismissedAt}] — max 30, FIFO prune
+  // hook-system spec (2026-05-18): backend cron 으로 hook 생성. 챗 탭 inline 일기 / 부재 후속 카드 = 사용자 명시 2026-05-20 폐기 (godongDiary / godongDiaryQueue / lastAbsenceAcknowledgedAt / _chatChapterEndedAt / lastChatTabEntryAt 모두 같이 제거).
   askedHooks: [],           // [{id, body, source, trigger_dayK, hook_type, askedAt, answered, answeredAt, delivered}] — max 50
-  lastAbsenceAcknowledgedAt: null,  // 부재 후속 placeholder 5일 cooldown
   predictionFollowups: [],
   // Phase 5
   questionHistory: [],
@@ -401,7 +398,6 @@ const DEFAULT_STATE = {
     nightModeManual: null,  // null = auto, 'on' | 'off' = manual override
     hookFrequency: 'daily',       // 'daily'|'every-other-day'|'thrice-week'|'off'
     hookNotificationTime: 21,     // 시 (0-23), default 21시
-    lastChatTabEntryAt: null,     // 부재 계산 + 챕터 마무리 5분 가드 (hook-system spec)
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
     // V4 (사용자 명시 2026-05-14 ultrathink): 진주 '티켓' 카테고리 sub-type — 사용자 customizable.
     //   default 6개. settings 에서 ON/OFF + 추가/제거 가능.
@@ -461,8 +457,6 @@ const DEFAULT_STATE = {
   newUserExtractTriggers: 0,
   // 사용자 명시 2026-05-01 ultrathink: 챕터 마무리 카운터 — ✓ + 자동 5h+ 둘 다 카운트. 첫 3챕터만 즉시 case_analysis.
   chapterCompletedCount: 0,
-  // hook-system spec (2026-05-18): 챕터 마무리 시점 ISO. 5분 안 = empty placeholder default 만 (일기/부재 후속 X). 새 메시지 입력 시 null clear.
-  _chatChapterEndedAt: null,
 
   // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
   // 시스템 프롬프트 stable 부분에 적용돼서 cache_control 적용 → cache_read만 (사실상 무료).

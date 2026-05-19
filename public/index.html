@@ -12504,48 +12504,6 @@
     opacity: 0.92;
   }
 
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* hook-system spec (2026-05-18) — 챗 탭 inline 카드: 일기 큐 + 부재 후속        */
-/* spec: _hook-system-spec.md §5-7. paper-* 토큰 = 다이어리 종이 톤.            */
-/* ─────────────────────────────────────────────────────────────────────────── */
-.diary-inline-card,
-.absence-followup-card {
-  background: var(--paper-1);
-  color: var(--paper-text);
-  border: 1px solid var(--paper-rule);
-  border-radius: 14px;
-  padding: 14px 16px 10px;
-  margin: 10px 12px 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  font-family: 'Gowun Batang', serif;
-  font-size: 14px;
-  line-height: 1.75;
-  white-space: pre-wrap;
-}
-.diary-inline-card .dic-body,
-.absence-followup-card .afc-body {
-  padding-bottom: 6px;
-}
-.diary-inline-card .dic-dismiss {
-  display: block;
-  margin: 6px 0 0 auto;
-  padding: 5px 12px;
-  background: transparent;
-  border: 1px solid var(--paper-rule);
-  border-radius: 8px;
-  color: var(--paper-text-dim);
-  font-family: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.diary-inline-card .dic-dismiss:hover,
-.diary-inline-card .dic-dismiss:focus-visible {
-  background: rgba(110, 80, 40, 0.08);
-  color: var(--paper-text-soft);
-  outline: none;
-}
-
 /* V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearl 미디어 storage hydrate placeholder. */
 img.pearl-loading {
   background: var(--surface-soft, rgba(255,255,255,0.04));
@@ -14916,11 +14874,8 @@ const DEFAULT_STATE = {
   monthlyReviews: [],
   // legacy — 옛 회전 카드 source (사용자 명시 2026-05-18 폐기). data preserve 위해 array 만 보존.
   miniReviews: [],          // [{id, content, generatedAt, source:'haiku-3day'}]
-  godongDiary: [],          // [{id, date, weekday, note?, body, iso, substrateRefs[]}] — 옛 schema
-  // hook-system spec (2026-05-18) — backend cron + 챗 탭 inline 큐. 메커니즘/프롬프트는 옛 godongDiary 동일.
-  godongDiaryQueue: [],     // [{id, body, generatedAt, triggerDayK, readAt, dismissedAt}] — max 30, FIFO prune
+  // hook-system spec (2026-05-18): backend cron 으로 hook 생성. 챗 탭 inline 일기 / 부재 후속 카드 = 사용자 명시 2026-05-20 폐기 (godongDiary / godongDiaryQueue / lastAbsenceAcknowledgedAt / _chatChapterEndedAt / lastChatTabEntryAt 모두 같이 제거).
   askedHooks: [],           // [{id, body, source, trigger_dayK, hook_type, askedAt, answered, answeredAt, delivered}] — max 50
-  lastAbsenceAcknowledgedAt: null,  // 부재 후속 placeholder 5일 cooldown
   predictionFollowups: [],
   // Phase 5
   questionHistory: [],
@@ -14970,7 +14925,6 @@ const DEFAULT_STATE = {
     nightModeManual: null,  // null = auto, 'on' | 'off' = manual override
     hookFrequency: 'daily',       // 'daily'|'every-other-day'|'thrice-week'|'off'
     hookNotificationTime: 21,     // 시 (0-23), default 21시
-    lastChatTabEntryAt: null,     // 부재 계산 + 챕터 마무리 5분 가드 (hook-system spec)
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
     // V4 (사용자 명시 2026-05-14 ultrathink): 진주 '티켓' 카테고리 sub-type — 사용자 customizable.
     //   default 6개. settings 에서 ON/OFF + 추가/제거 가능.
@@ -15030,8 +14984,6 @@ const DEFAULT_STATE = {
   newUserExtractTriggers: 0,
   // 사용자 명시 2026-05-01 ultrathink: 챕터 마무리 카운터 — ✓ + 자동 5h+ 둘 다 카운트. 첫 3챕터만 즉시 case_analysis.
   chapterCompletedCount: 0,
-  // hook-system spec (2026-05-18): 챕터 마무리 시점 ISO. 5분 안 = empty placeholder default 만 (일기/부재 후속 X). 새 메시지 입력 시 null clear.
-  _chatChapterEndedAt: null,
 
   // 사용자 요청 2026-04-29 (Q2): 더 깊은 사용자 모델 — 발달 맥락 / 관계 맵 / 자기서사·핵심 신념.
   // 시스템 프롬프트 stable 부분에 적용돼서 cache_control 적용 → cache_read만 (사실상 무료).
@@ -20933,9 +20885,9 @@ async function _saveToCloudNowInner() {
       // 누락 시: 평문 metaBody 로 cloud 에 흘러가 PIPA §29 + privacy.md §6 약속 ("회사조차 평문 X") 위반.
       // 사용자 보고 2026-05-09 ultrathink (root cause): miniReviews + rotatingCardState 누락 → E2EE on 사용자 cloud 저장 X → 재진입 시 reset.
       // 회전 카드 spec final 추가 (2026-05-09): 미니 리뷰 결과 + 회전 카드 sessionState (진주 4시간 / unseenInsights / quizProgress 등) 모두 sensitiveBody 에 포함.
-      // 사용자 보고 2026-05-12 ultrathink (root cause 동일 패턴): tutorialShown / tutorialVersion / _core2NotUnlocked / userName / godongDiary / activeStrategies 누락 → 신규 가입자 sim 튜토리얼 (도서관 / 진주 / 깨달음 / 마법 / 리뷰 / 숙고) 마커 reload 마다 손실 → 같은 튜토리얼 반복 fire. 같이 추가.
+      // 사용자 보고 2026-05-12 ultrathink (root cause 동일 패턴): tutorialShown / tutorialVersion / _core2NotUnlocked / userName / activeStrategies 누락 → 신규 가입자 sim 튜토리얼 (도서관 / 진주 / 깨달음 / 마법 / 리뷰 / 숙고) 마커 reload 마다 손실 → 같은 튜토리얼 반복 fire. 같이 추가.
       // 사용자 보고 2026-05-18 ultrathink (root cause 동일 패턴 재발): _shownInlineTips 누락 → E2EE 사용자의 firstHomeTutorial 마커 ('firstHomeIntro') / inline tip 8개 / simple-tuto modal key 모두 reload 마다 wipe → 홈 진입 시마다 firstHomeTutorial 무한 fire. 같이 추가.
-      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','godongDiary','godongDiaryQueue','lastAbsenceAcknowledgedAt','_chatChapterEndedAt','activeStrategies','_shownInlineTips'];
+      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','activeStrategies','_shownInlineTips'];
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
       const _sensitiveJson = JSON.stringify(sensitiveBody, _serializeReplacer);
@@ -21261,7 +21213,7 @@ async function init() {
     }
   } catch {}
   // V4 (사용자 명시 2026-05-15): _firstAppDayKey — 첫 진입 KST day key 기록.
-  //   회전 카드 godongDiary 첫날 차단 (신규 미구독자) 등 first-day cohort 가드 용.
+  //   first-day cohort 가드 용 (회전 카드 신규 미구독자 차단 등).
   //   기존 사용자 (key 없음) = 한 번 init 시 today key set → 그 이후 부터 정상.
   try {
     if (state && typeof todayKey === 'function') {
@@ -32614,7 +32566,7 @@ function _openReviewPreviewLink(kind, id) {
 }
 // V4 (사용자 명시 2026-05-17 ultrathink): cold start 분기.
 //   가입 7일 미만 OR chatArchive < 2 OR pearls+entries < 3 = cold start.
-//   메인 카드 = "오늘은 한 줄만" + chat link (substrate 부족 시 godongDiary 생성 X).
+//   메인 카드 = "오늘은 한 줄만" + chat link.
 
 function _isColdStart() {
   if (!state) return true;
@@ -32686,7 +32638,7 @@ function _hookFrequencyCooldownOk() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Substrate — dayK 별 6 source 그루핑 (옛 godong-diary 모달 `_bySource` 와 동일 로직 — backend 이동 예정).
+// Substrate — dayK 별 source 그루핑 (backend 이동 예정).
 // ─────────────────────────────────────────────────────────────────────────────
 function _hookIsoToDayK(iso) {
   if (!iso) return null;
@@ -38477,12 +38429,6 @@ function showScreen(name) {
         _archiveCurrentChapter({ manual: false });
       }
     } catch (e) { console.warn('[chat-entry chapter-cutoff]', e); }
-    // hook-system spec (2026-05-18): chat tab entry 평가 — *이전* lastChatTabEntryAt 기준 부재 평가 후 갱신.
-    try {
-      if (typeof _evaluateChatEntryInjects === 'function') _evaluateChatEntryInjects();
-      if (state.preferences) state.preferences.lastChatTabEntryAt = new Date().toISOString();
-      if (typeof saveState === 'function') saveState();
-    } catch (e) { console.warn('[chat-entry hook-system]', e); }
     renderChat();
     setTimeout(() => { const s = document.getElementById('screen-chat'); if (s) s.scrollTop = s.scrollHeight; }, 50);
     // V4-fix v3 (사용자 요청): 대화 진입 시 가닥 미션 팔로업 자동 prompt
@@ -40388,13 +40334,6 @@ function scrollChatToBottom(force) {
 }
 
 function _renderChatMessageHTML(m, i) {
-    // hook-system spec (2026-05-18) — inline 카드 분기 (일기 큐 / 부재 후속)
-    if (m && m.isDiaryInlineCard && typeof _renderDiaryInlineCardHtml === 'function') {
-      return _renderDiaryInlineCardHtml(m);
-    }
-    if (m && m.isAbsenceFollowup && typeof _renderAbsenceFollowupHtml === 'function') {
-      return _renderAbsenceFollowupHtml(m);
-    }
     let bubbleContent;
     if (m.role === 'assistant' && !m.typing) {
       bubbleContent = formatAIResponse(m.content);
@@ -40911,11 +40850,6 @@ async function sendChat() {
   const text = input.value.trim();
   if (!text) return;
 
-  // hook-system spec (2026-05-18): 새 메시지 입력 = 챕터 grace 해제 + 부재 후속 카드 dismiss (1회성).
-  //   일기 inline 카드 는 보존 (spec L131 "메시지 입력 시 일기 카드 그대로 위에 보존").
-  if (state._chatChapterEndedAt) state._chatChapterEndedAt = null;
-  if (typeof _dismissAbsenceFollowupFromChat === 'function') _dismissAbsenceFollowupFromChat();
-
   // V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty + 저녁 6시+ 체크인 카드는 사용자가 '대화 시작' 하는 순간 사라짐.
   //   첫 메시지 send 트리거 — dayK 내 영구 dismiss (새벽 4시 reset 후 내일 저녁 6시 부활).
   //   체크인 done 상태든 아니든 무관 set — done 이면 카드 자체가 안 보였으니 no-op.
@@ -41220,8 +41154,7 @@ function _chapterExtractMessages(archiveItem) {
 // 신규유저 (chapterCompletedCount < 3) 만 즉시 API 호출 (case + topic). 그 외 = 4AM 일괄.
 function _archiveCurrentChapter(opts) {
   opts = opts || {};
-  // hook-system spec (2026-05-18): inline 카드 (일기 / 부재 후속) 는 archive 에 포함 X.
-  const validMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error && !m.isDiaryInlineCard && !m.isAbsenceFollowup);
+  const validMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
 
   // V4 사용자 명시 2026-05-04: 이어서 후 변경 X 마무리/보관 = 원본 archive 그대로 복귀.
   // 4AM cutoff 재처리 X / 새 _pendingExtract X / chapterCompletedCount 증가 X — 불필요 API 차단.
@@ -41250,8 +41183,6 @@ function _archiveCurrentChapter(opts) {
       if (typeof _chatWindowStart !== 'undefined') _chatWindowStart = null;
       delete state._resumedFromArchive;
       pruneOldChatArchive();
-      // hook-system spec — 챕터 마무리 시점 마킹 (5분 grace 용).
-      state._chatChapterEndedAt = new Date().toISOString();
       saveState();
       return snap;
     }
@@ -41307,8 +41238,6 @@ function _archiveCurrentChapter(opts) {
   // 신규유저 빠른 추출 — 첫 3 챕터만 즉시 API 호출 (case + topic 둘 다)
   if (typeof state.chapterCompletedCount !== 'number') state.chapterCompletedCount = 0;
   state.chapterCompletedCount += 1;
-  // hook-system spec — 챕터 마무리 시점 마킹 (5분 grace 용).
-  state._chatChapterEndedAt = new Date().toISOString();
   saveState();
 
   // V4 fix (사용자 명시 2026-05-18 ultrathink): chapterCompletedCount <= 3 → _isTutorialEligibleUser() 로 변경.
@@ -43105,260 +43034,6 @@ async function _ragAutoBackfillOnLoad() {
 window.addEventListener('load', () => {
   setTimeout(() => _ragAutoBackfillOnLoad(), 7000);
 });
-// hook-system spec (2026-05-18) — 챗 탭 empty placeholder 우선순위 라우터 + 일기 inline 카드 + 부재 후속 placeholder
-// spec: _hook-system-spec.md §5-7
-//
-// 흐름:
-//   1. showScreen('chat') 진입 시 → _evaluateChatEntryInjects() 호출
-//   2. 챕터 마무리 5분 안 → inject 안 함 (default 만)
-//   3. 일기 큐 unread 1개 → chatMessages 첫 자리 inject (isDiaryInlineCard)
-//   4. 일기 큐 빈 + 1일+ 부재 + 5일 cooldown 통과 → chatMessages 첫 자리 inject (isAbsenceFollowup)
-//   5. 02-render-message.js 가 inject 된 entry 의 isDiaryInlineCard / isAbsenceFollowup flag 보고 별도 카드 마크업 render
-//   6. 일기 entry: 3초 자동 readAt + "못 본 척 하기" 버튼 (1일 cooldown)
-//   7. 부재 후속: 메시지 첫 입력 시 splice (1회성). 렌더 시 lastAbsenceAcknowledgedAt set 으로 5일 cooldown 시작.
-//   8. 챕터 archive 시 isDiaryInlineCard / isAbsenceFollowup 항목 자동 splice (archive 에 포함 X)
-
-const _HSP_ABSENCE_THRESHOLD_MS = 24 * 60 * 60 * 1000;   // 1일+ 부재
-const _HSP_ABSENCE_COOLDOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5일 cooldown
-const _HSP_DIARY_DISMISS_COOLDOWN_MS = 24 * 60 * 60 * 1000; // dismiss 1일 cooldown
-const _HSP_CHAPTER_END_GRACE_MS = 5 * 60 * 1000;         // 챕터 마무리 5분 grace
-const _HSP_DIARY_READ_DELAY_MS = 3 * 1000;               // 3초 머묾 = 자동 read
-const _HSP_DIARY_QUEUE_CAP = 30;                          // 큐 30개 cap
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers — 평가 / 추출
-// ─────────────────────────────────────────────────────────────────────────────
-
-function _isWithinChapterEndGrace() {
-  const t = state._chatChapterEndedAt;
-  if (!t) return false;
-  const ts = new Date(t).getTime();
-  if (!Number.isFinite(ts)) return false;
-  return (Date.now() - ts) < _HSP_CHAPTER_END_GRACE_MS;
-}
-
-function _pickUnreadDiaryEntry() {
-  const queue = Array.isArray(state.godongDiaryQueue) ? state.godongDiaryQueue : [];
-  if (queue.length === 0) return null;
-  const now = Date.now();
-  // unread = !readAt AND (!dismissedAt OR dismiss cooldown 통과)
-  const candidates = queue.filter(e => {
-    if (!e || e.readAt) return false;
-    if (e.dismissedAt) {
-      const dt = new Date(e.dismissedAt).getTime();
-      if (!Number.isFinite(dt)) return true;
-      return (now - dt) >= _HSP_DIARY_DISMISS_COOLDOWN_MS;
-    }
-    return true;
-  });
-  if (candidates.length === 0) return null;
-  // oldest first (generatedAt ASC)
-  candidates.sort((a, b) => {
-    const at = new Date(a.generatedAt || 0).getTime();
-    const bt = new Date(b.generatedAt || 0).getTime();
-    return at - bt;
-  });
-  return candidates[0];
-}
-
-function _shouldShowAbsenceFollowup() {
-  // 일기 큐 unread 있으면 X (spec L166-167)
-  if (_pickUnreadDiaryEntry()) return false;
-  const pref = state.preferences || {};
-  const lastEntry = pref.lastChatTabEntryAt;
-  if (!lastEntry) return false;  // 첫 진입 자체엔 부재 후속 X
-  const lastEntryMs = new Date(lastEntry).getTime();
-  if (!Number.isFinite(lastEntryMs)) return false;
-  // 마지막 진입이 *이번 진입의 직전 진입* 이라 — 갱신 *전* 평가 보장: showScreen('chat') 안 lastChatTabEntryAt 갱신은 이 함수 호출 *전* 이므로,
-  // 정확한 부재 계산 = 갱신 *전* lastChatTabEntryAt 와 now 비교 필요. showScreen 에서 evaluate → save → render 순서 따라야 함.
-  // (현 navigation 코드: lastChatTabEntryAt = now → _evaluateChatEntryInjects() → saveState. 즉 이 함수가 호출될 땐 이미 now 로 갱신됨.)
-  // → showScreen 에서 evaluate 를 *갱신 전* 으로 옮기는 게 정확. 단순화 위해 navigation 에서 갱신 전 evaluate 하도록 보장됨 (아래 patch 노트 참고).
-  const now = Date.now();
-  if ((now - lastEntryMs) < _HSP_ABSENCE_THRESHOLD_MS) return false;
-  // 5일 cooldown
-  const lastAck = state.lastAbsenceAcknowledgedAt;
-  if (lastAck) {
-    const ackMs = new Date(lastAck).getTime();
-    if (Number.isFinite(ackMs) && (now - ackMs) < _HSP_ABSENCE_COOLDOWN_MS) return false;
-  }
-  return true;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Inject — chat tab entry 시점에 evaluate + chatMessages 첫 자리에 카드 entry inject
-// ─────────────────────────────────────────────────────────────────────────────
-
-function _evaluateChatEntryInjects() {
-  if (!state || !Array.isArray(state.chatMessages)) return;
-  // 기존 카드 항목 정리 — 중복 inject 방지 (같은 diaryId / 부재 후속)
-  _cleanupChatCardInjects();
-
-  // 챕터 마무리 5분 안 → default 만 (inject 안 함)
-  if (_isWithinChapterEndGrace()) return;
-
-  // V4 (사용자 명시 2026-05-18) — 부재 ≥ 1일 자동 detect → "부재 일기" 1개 client-side 큐에 적재.
-  //   서버 cron 으로 일기 생성 = E2EE 복호화 불가능 (회사 평문 접근 X spec) → 일기 생성은 영구 client-side.
-  //   적재 후 아래 _pickUnreadDiaryEntry 가 자연 집어서 diaryInlineCard 로 inject — generic 부재 후속 카드 우회.
-  _maybeQueueAbsenceDiary();
-
-  // 1. 일기 큐 unread
-  const diaryEntry = _pickUnreadDiaryEntry();
-  if (diaryEntry) {
-    _injectDiaryInlineCard(diaryEntry);
-    // 3초 자동 read — setTimeout 으로 silent set
-    setTimeout(() => _markDiaryEntryRead(diaryEntry.id), _HSP_DIARY_READ_DELAY_MS);
-    return;
-  }
-
-  // 2. 부재 후속 (일기 큐 빈 시만)
-  if (_shouldShowAbsenceFollowup()) {
-    _injectAbsenceFollowup();
-    // 렌더 시점 = ack 시점 (5일 cooldown 시작)
-    state.lastAbsenceAcknowledgedAt = new Date().toISOString();
-    return;
-  }
-}
-
-function _cleanupChatCardInjects() {
-  if (!Array.isArray(state.chatMessages)) return;
-  state.chatMessages = state.chatMessages.filter(m => m && !m.isDiaryInlineCard && !m.isAbsenceFollowup);
-}
-
-function _injectDiaryInlineCard(entry) {
-  if (!entry || !entry.id) return;
-  // 중복 가드
-  const has = (state.chatMessages || []).some(m => m && m.isDiaryInlineCard && m.diaryId === entry.id);
-  if (has) return;
-  const card = {
-    role: 'assistant',
-    isDiaryInlineCard: true,
-    diaryId: entry.id,
-    content: entry.body || '',
-    timestamp: new Date().toISOString(),
-  };
-  state.chatMessages.unshift(card);
-}
-
-function _injectAbsenceFollowup() {
-  // 잠정 카피 — spec 15번 #1 본인 결정 자리. 사용자 후속 교체.
-  // V4 (사용자 명시 2026-05-18) — 일반적으로 도달 X (위 _maybeQueueAbsenceDiary 가 큐 적재 → diaryInlineCard 로 우회됨).
-  //   안전망: lastChatTabEntryAt missing / queue prune 등 엣지에서 fallback.
-  const body = '며칠 만이네 ㅎㅎ 어디 갔다 왔어?';
-  const card = {
-    role: 'assistant',
-    isAbsenceFollowup: true,
-    content: body,
-    timestamp: new Date().toISOString(),
-  };
-  state.chatMessages.unshift(card);
-}
-
-// V4 (사용자 명시 2026-05-18) — 부재 ≥ 1일 자동 detect → "부재 일기" 1개 큐에 적재 (client-side, E2EE 호환).
-//   id = 'absence_<lastEntryIso>' — 한 부재 구간 = 한 일기. 다음 부재 = 다른 id (lastChatTabEntryAt 갱신됨).
-//   day-gap 별 톤 차등 (1일 / 2~3일 / 4~7일 / 8일+) — generic 보다 따뜻.
-function _maybeQueueAbsenceDiary() {
-  if (!state) return false;
-  const pref = state.preferences || {};
-  const lastEntryIso = pref.lastChatTabEntryAt;
-  if (!lastEntryIso) return false;  // 첫 진입 자체 = 부재 X
-  const lastEntryMs = new Date(lastEntryIso).getTime();
-  if (!Number.isFinite(lastEntryMs)) return false;
-  const now = Date.now();
-  const gapMs = now - lastEntryMs;
-  if (gapMs < _HSP_ABSENCE_THRESHOLD_MS) return false;
-  const queue = (state.godongDiaryQueue = Array.isArray(state.godongDiaryQueue) ? state.godongDiaryQueue : []);
-  const absenceId = 'absence_' + lastEntryIso;
-  if (queue.some(e => e && e.id === absenceId)) return false;  // 이미 적재
-  const daysGap = Math.floor(gapMs / (24 * 60 * 60 * 1000));
-  const userName = (state.userName || '').trim();
-  const nameCall = userName ? userName + '아' : '';
-  let body;
-  if (daysGap === 1) {
-    body = nameCall ? `${nameCall}, 하루 만이네. 어떻게 지냈어?` : '하루 만이네. 어떻게 지냈어?';
-  } else if (daysGap <= 3) {
-    body = `${daysGap}일 안 보였네. 그동안 어땠어?`;
-  } else if (daysGap <= 7) {
-    body = `${daysGap}일 만이야. 별 일 없었어?`;
-  } else {
-    body = `오랜만이야. ${daysGap}일 만이네. 그동안 어떻게 지냈어?`;
-  }
-  queue.push({
-    id: absenceId,
-    body,
-    kind: 'absence',
-    generatedAt: new Date().toISOString(),
-    absenceFromAt: lastEntryIso,
-    absenceDays: daysGap,
-  });
-  pruneGodongDiaryQueue();
-  return true;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Read / Dismiss / Cleanup
-// ─────────────────────────────────────────────────────────────────────────────
-
-function _markDiaryEntryRead(id) {
-  if (!id) return;
-  const queue = Array.isArray(state.godongDiaryQueue) ? state.godongDiaryQueue : [];
-  const entry = queue.find(e => e && e.id === id);
-  if (!entry || entry.readAt) return;
-  entry.readAt = new Date().toISOString();
-  if (typeof saveState === 'function') { try { saveState(); } catch {} }
-}
-
-function dismissDiaryEntry(id) {
-  if (!id) return;
-  const queue = Array.isArray(state.godongDiaryQueue) ? state.godongDiaryQueue : [];
-  const entry = queue.find(e => e && e.id === id);
-  if (entry) entry.dismissedAt = new Date().toISOString();
-  // chatMessages 에서 해당 카드 splice
-  if (Array.isArray(state.chatMessages)) {
-    state.chatMessages = state.chatMessages.filter(m => !(m && m.isDiaryInlineCard && m.diaryId === id));
-  }
-  if (typeof saveState === 'function') { try { saveState(); } catch {} }
-  if (typeof renderChat === 'function') { try { renderChat(); } catch {} }
-}
-
-function _dismissAbsenceFollowupFromChat() {
-  if (!Array.isArray(state.chatMessages)) return false;
-  const before = state.chatMessages.length;
-  state.chatMessages = state.chatMessages.filter(m => !(m && m.isAbsenceFollowup));
-  return state.chatMessages.length !== before;
-}
-
-function pruneGodongDiaryQueue() {
-  if (!Array.isArray(state.godongDiaryQueue)) return;
-  if (state.godongDiaryQueue.length <= _HSP_DIARY_QUEUE_CAP) return;
-  // generatedAt ASC 정렬 후 oldest prune (단, unread 우선 보존? — spec 단순: FIFO)
-  state.godongDiaryQueue.sort((a, b) => new Date(a.generatedAt || 0).getTime() - new Date(b.generatedAt || 0).getTime());
-  state.godongDiaryQueue = state.godongDiaryQueue.slice(-_HSP_DIARY_QUEUE_CAP);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 카드 마크업 — 02-render-message.js 가 isDiaryInlineCard / isAbsenceFollowup 분기에서 호출
-// ─────────────────────────────────────────────────────────────────────────────
-
-function _renderDiaryInlineCardHtml(m) {
-  const body = (typeof escapeHtml === 'function') ? escapeHtml(m.content || '') : String(m.content || '');
-  const id = m.diaryId || '';
-  // spec 14번 #4: 헤더 없음 옵션. 본인 결정 자리.
-  return `
-    <div class="diary-inline-card" data-diary-id="${id}">
-      <div class="dic-body">${body}</div>
-      <button class="dic-dismiss" type="button" onclick="dismissDiaryEntry('${id}')">못 본 척 하기</button>
-    </div>
-  `;
-}
-
-function _renderAbsenceFollowupHtml(m) {
-  const body = (typeof escapeHtml === 'function') ? escapeHtml(m.content || '') : String(m.content || '');
-  return `
-    <div class="absence-followup-card">
-      <div class="afc-body">${body}</div>
-    </div>
-  `;
-}
 // ═══════════════════════════════════════════════════════════════
 // SYSTEM PROMPT
 // ═══════════════════════════════════════════════════════════════
@@ -52439,7 +52114,7 @@ async function testSeedV4Data() {
   // 사용자 보고 2026-04-30: 시드 흔적이 entries/chatMessages/chatArchive 등에 잔존 — id-prefix sweep으로 못 잡힘.
   // 시작 시점 length 기록 → 끝에 새로 적용된 항목만 _seed: true marker. init sweep에서 marker 매칭으로 자동 정리.
   const _seedMarkerTs = Date.now();
-  const _seedTrackStores = ['entries', 'chatMessages', 'chatArchive', 'weeklyReviews', 'monthlyReviews', 'quarterlyReviews', 'memoryVault', 'tasks', 'missions', 'pearls', 'archive', 'topicCards', 'reflectionQuestions', 'projects', 'starts', 'decisions', 'insights', 'diagnoses', 'shellCollection', 'godongDiary', 'miniReviews'];
+  const _seedTrackStores = ['entries', 'chatMessages', 'chatArchive', 'weeklyReviews', 'monthlyReviews', 'quarterlyReviews', 'memoryVault', 'tasks', 'missions', 'pearls', 'archive', 'topicCards', 'reflectionQuestions', 'projects', 'starts', 'decisions', 'insights', 'diagnoses', 'shellCollection', 'miniReviews'];
   const _seedBeforeLen = {};
   _seedTrackStores.forEach(k => { _seedBeforeLen[k] = (state[k] || []).length; });
   const _markSeedItems = () => {
@@ -53547,9 +53222,6 @@ async function testSeedV4Data() {
       createdAt: new Date(_richDate + 'T05:30:00').toISOString()
     });
   }
-
-  // V4 (사용자 명시 2026-05-14 ultrathink): #4 godongDiary (rotating card source) 시드 zap — sim 튜토 코치마크가 가리키지 않음.
-  if (Array.isArray(state.godongDiary)) state.godongDiary = [];
 
   // 사용자 명시 2026-05-17: 캘린더 그리드는 4/15 만 노출. 시드가 만든 캘린더 영향 데이터 (entries / chatArchive / 비-strategy topicCards 챕터 / 티켓·책 진주) 를 4/15 외엔 다 제거.
   // 4/15 챕터 + 풍성 entry + 4/15 진주들 (위 _richDate chunk 에서 push) 은 보존.

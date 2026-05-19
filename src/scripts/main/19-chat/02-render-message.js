@@ -1,11 +1,4 @@
 function _renderChatMessageHTML(m, i) {
-    // hook-system spec (2026-05-18) — inline 카드 분기 (일기 큐 / 부재 후속)
-    if (m && m.isDiaryInlineCard && typeof _renderDiaryInlineCardHtml === 'function') {
-      return _renderDiaryInlineCardHtml(m);
-    }
-    if (m && m.isAbsenceFollowup && typeof _renderAbsenceFollowupHtml === 'function') {
-      return _renderAbsenceFollowupHtml(m);
-    }
     let bubbleContent;
     if (m.role === 'assistant' && !m.typing) {
       bubbleContent = formatAIResponse(m.content);
