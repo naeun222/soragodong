@@ -61,7 +61,17 @@
 //   모든 supabase fetch (_authedFetch / _fetchWithRetry5xx / checkSession / loadFromCloud / saveToCloudNow / capacitor OAuth deeplink) 에
 //   AbortController 12s timeout 강제. ec3cc79 의 init().catch 는 reject 만 잡지 await hang 은 X. 이 fix 로 hang 이 12s 안 reject → showLoginScreen.
 //   추가로 init 30s 이중 안전망. 옛 캐시 강제 invalidate.
+// v51 (2026-05-20 사용자 명시 ultrathink Phase 1F): Supabase Storage 사진 warm-load 캐시 —
+//   진주 + 일기 + 체크인 사진 (pearls bucket, AES-GCM 암호화 ciphertext) 가 매 앱 재진입마다 네트워크 fetch 되던 체감 → SW Cache First.
+//   match: ${SUPABASE_URL}/storage/v1/object/(authenticated/)?pearls/* GET 만.
+//   별도 캐시 이름 sora-photo-v1 + LRU (14d expiry + 200 entries 한도).
+//   보안: URL 첫 segment = authUid 라 cross-user 충돌 0. payload = ciphertext 라 master key 없이 복호화 X.
+//   기존 캐시 정책은 그대로 (CACHE_NAME 유지) — 별도 cache name 으로 동작 격리.
 const CACHE_NAME = 'soragodong-v4-cache-v50';
+const PHOTO_CACHE_NAME = 'sora-photo-v1';
+const PHOTO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+const PHOTO_MAX_ENTRIES = 200;
+const PHOTO_URL_PATTERN = /\.supabase\.co\/storage\/v1\/object\/(?:authenticated\/)?pearls\//;
 const PRECACHE_URLS = [
   './',
   './index.html',
@@ -79,14 +89,61 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// activate — 옛 캐시 정리
+// activate — 옛 캐시 정리. CACHE_NAME (HTML/asset) + PHOTO_CACHE_NAME (사진) 만 유지.
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((names) =>
-      Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
+      Promise.all(
+        names
+          .filter((n) => n !== CACHE_NAME && n !== PHOTO_CACHE_NAME)
+          .map((n) => caches.delete(n))
+      )
     ).then(() => self.clients.claim())
   );
 });
+
+// Supabase Storage 사진 — Cache First + LRU 14d/200 entries.
+//   요청 헤더 Authorization 는 캐시 키에 영향 X — URL 만 키. URL 안에 authUid prefix 박혀있어 cross-user 충돌 0.
+//   응답 헤더에 x-sora-cached-at (Date.now()) 주입 → 14d 만료 판정.
+//   network 실패 시 stale 캐시라도 반환 (오프라인 fallback).
+async function _handlePhotoFetch(req) {
+  const cache = await caches.open(PHOTO_CACHE_NAME);
+  const cached = await cache.match(req);
+  if (cached) {
+    const cachedAt = parseInt(cached.headers.get('x-sora-cached-at') || '0', 10);
+    if (cachedAt && (Date.now() - cachedAt) < PHOTO_MAX_AGE_MS) {
+      return cached;
+    }
+  }
+  let resp;
+  try {
+    resp = await fetch(req);
+  } catch (e) {
+    return cached || new Response('', { status: 504, statusText: 'Offline + photo cache miss' });
+  }
+  if (resp && resp.ok) {
+    try {
+      const buffer = await resp.clone().arrayBuffer();
+      const headers = new Headers(resp.headers);
+      headers.set('x-sora-cached-at', Date.now().toString());
+      const respForCache = new Response(buffer, {
+        status: resp.status,
+        statusText: resp.statusText,
+        headers
+      });
+      await cache.put(req, respForCache);
+      _trimPhotoCache(cache).catch(() => {});
+    } catch (_) { /* clone/put 실패는 응답 자체에 영향 X */ }
+  }
+  return resp;
+}
+
+async function _trimPhotoCache(cache) {
+  const keys = await cache.keys();
+  if (keys.length <= PHOTO_MAX_ENTRIES) return;
+  const overflow = keys.length - PHOTO_MAX_ENTRIES;
+  await Promise.all(keys.slice(0, overflow).map((k) => cache.delete(k)));
+}
 
 // fetch — network-first for HTML (always fresh), cache-first for assets
 self.addEventListener('fetch', (event) => {
@@ -94,9 +151,16 @@ self.addEventListener('fetch', (event) => {
   // GET만 다룸 (POST 등은 통과)
   if (req.method !== 'GET') return;
 
+  // v51 — Supabase Storage 사진 (pearls bucket) 는 origin gate 이전에 별도 처리.
+  //   _handlePhotoFetch 안에서 Cache First + LRU 14d.
+  if (PHOTO_URL_PATTERN.test(req.url)) {
+    event.respondWith(_handlePhotoFetch(req));
+    return;
+  }
+
   const url = new URL(req.url);
 
-  // Anthropic / Supabase / iTunes / 기타 외부 API는 캐시 X — pass-through
+  // Anthropic / Supabase API / iTunes / 기타 외부 origin 은 캐시 X — pass-through
   if (url.origin !== self.location.origin) return;
 
   // version.txt는 항상 fresh (배포 감지)
