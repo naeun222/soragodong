@@ -78,7 +78,7 @@ function openDayModal(dateStr) {
     (Array.isArray(entry.photos) && entry.photos.length > 0)
   ));
   const moreBtnHtml = _hasEntryMedia
-    ? `<button class="day-modal-more" onclick="openDiaryMediaEditSheet('${dateStr}')" aria-label="수정">⋮</button>`
+    ? `<button class="day-modal-more" onclick="closeDayModal(); openDiaryMediaEditSheet('${dateStr}')" aria-label="수정">⋮</button>`
     : '';
 
   overlay.innerHTML = `
