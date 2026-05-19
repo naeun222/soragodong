@@ -37524,7 +37524,11 @@ function closeModal(id) {
 //   옛 fixed emoji (🦞/🐢/🌀/🐚) 매번 같았던 자리 → 풀 random 으로 다양성 ↑.
 function calcCheckinTier(entry, todayHasTrackerSuccess) {
   if (todayHasTrackerSuccess) return { tier: 'golden' };
-  const _hasAnyPhoto = !!(entry.photo || (Array.isArray(entry.photos) && entry.photos.length > 0));
+  const _hasAnyPhoto = !!(
+    entry.photo ||
+    (Array.isArray(entry.photos) && entry.photos.length > 0) ||
+    (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.some(Boolean))
+  );
   const hasMedia = !!(entry.music || _hasAnyPhoto);
   if (hasMedia) return { tier: 'main' };
   const hasSleep = !!(entry.allNighter || (entry.sleepStart && entry.sleepEnd));
@@ -37611,6 +37615,8 @@ function addOrUpdateCheckinShell(entry) {
     photoThumb: entry.photo || '',
     // V4 (사용자 명시 2026-05-20 ultrathink): photos[] multi (최대 3). legacy photoThumb 도 photos[0] 미러.
     photos: Array.isArray(entry.photos) ? entry.photos.slice(0, 3) : (entry.photo ? [entry.photo] : []),
+    // V4 (Phase 1E Step 3): Storage path mirror — shell story 가 diaryImgHtml hydrate 동일 사용.
+    photoStorageKeys: Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.slice(0, 3) : [],
     trackerSuccesses
   };
 
@@ -37671,15 +37677,32 @@ function _openCheckinShellStory(shell) {
   };
   overlay.onclick = (e) => { if (e.target === overlay) _close(); };
 
-  // V4 (사용자 명시 2026-05-20 ultrathink): multi photos 렌더 (legacy single photoThumb fallback).
-  const _shellPhotos = (Array.isArray(shell.photos) && shell.photos.length > 0)
-    ? shell.photos.slice(0, 3)
-    : (shell.photoThumb ? [shell.photoThumb] : []);
-  const photoHtml = _shellPhotos.length === 0
+  // V4 (Phase 1E Step 3): diaryImgHtml — storageKey / dataURL / legacy photoThumb 자동 분기.
+  //   synthetic entry-like 객체 사용 (shell.dayKey ↔ entry.date, shell.photoThumb ↔ entry.photo).
+  const _shellEntryLike = {
+    date: shell.dayKey,
+    photoStorageKeys: Array.isArray(shell.photoStorageKeys) ? shell.photoStorageKeys : [],
+    photos: Array.isArray(shell.photos) ? shell.photos : [],
+    photo: shell.photoThumb || ''
+  };
+  const _shellPhotoCount = Math.min(3, Math.max(
+    _shellEntryLike.photoStorageKeys.length,
+    _shellEntryLike.photos.length,
+    _shellEntryLike.photo ? 1 : 0
+  ));
+  const _shellImgs = [];
+  for (let _i = 0; _i < _shellPhotoCount; _i++) {
+    if (typeof diaryEntryHasPhoto === 'function' && !diaryEntryHasPhoto(_shellEntryLike, _i)) continue;
+    const _cls = _shellPhotoCount === 1 ? 'ci-shell-photo' : 'ci-shell-photo ci-shell-photo-multi';
+    _shellImgs.push((typeof diaryImgHtml === 'function')
+      ? diaryImgHtml(_shellEntryLike, _i, { cls: _cls })
+      : `<img src="${escapeHtml(_shellEntryLike.photos[_i] || (_i === 0 ? _shellEntryLike.photo : ''))}" alt="" class="${_cls}">`);
+  }
+  const photoHtml = _shellImgs.length === 0
     ? ''
-    : _shellPhotos.length === 1
-      ? `<img src="${escapeHtml(_shellPhotos[0])}" alt="" class="ci-shell-photo">`
-      : `<div class="ci-shell-photos">${_shellPhotos.map(p => `<img src="${escapeHtml(p)}" alt="" class="ci-shell-photo ci-shell-photo-multi">`).join('')}</div>`;
+    : _shellImgs.length === 1
+      ? _shellImgs[0]
+      : `<div class="ci-shell-photos">${_shellImgs.join('')}</div>`;
   const musicHtml = shell.music && typeof renderMusicCardHTML === 'function'
     ? `<div class="ci-shell-music">${renderMusicCardHTML(shell.music)}</div>`
     : '';
@@ -37745,6 +37768,7 @@ function _openCheckinShellStory(shell) {
     </div>
   `;
   document.body.appendChild(overlay);
+  if (typeof hydrateDiaryPhotos === 'function') hydrateDiaryPhotos(overlay);
   const _btn = overlay.querySelector('#shellStoryCloseBtn');
   if (_btn) _btn.addEventListener('click', _close);
   _shellEscDetach = _registerModalEsc(overlay, _close);
@@ -47587,7 +47611,8 @@ function openDayModal(dateStr) {
   const _hasEntryMedia = !!(entry && (
     entry.music ||
     entry.photo ||
-    (Array.isArray(entry.photos) && entry.photos.length > 0)
+    (Array.isArray(entry.photos) && entry.photos.length > 0) ||
+    (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.some(Boolean))
   ));
   const moreBtnHtml = _hasEntryMedia
     ? `<button class="day-modal-more" onclick="closeDayModal(); openDiaryMediaEditSheet('${dateStr}')" aria-label="수정">⋮</button>`
@@ -47658,12 +47683,23 @@ function switchDayModalTab(tab) {
         html += `<div class="day-mode-chips">${ms.map(m => `<span class="day-mode-chip">${modeMap[m] || m}</span>`).join('')}</div>`;
       }
     }
-    // V4-fix: 일기 사진 — multi (최대 3) (legacy entry.photo fallback).
-    const _entryPhotos = (Array.isArray(entry.photos) && entry.photos.length > 0)
-      ? entry.photos.slice(0, 3)
-      : (entry.photo ? [entry.photo] : []);
-    if (_entryPhotos.length > 0) {
-      html += `<div class="day-photo-wrap${_entryPhotos.length > 1 ? ' day-photo-multi' : ''}">${_entryPhotos.map(p => `<img src="${escapeHtml(p)}" alt="" class="day-photo">`).join('')}</div>`;
+    // V4 (Phase 1E Step 3): 일기 사진 — diaryImgHtml 가 storageKey / dataURL / legacy entry.photo 자동 분기.
+    const _photoCount = Math.min(3, Math.max(
+      Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.length : 0,
+      Array.isArray(entry.photos) ? entry.photos.length : 0,
+      entry.photo ? 1 : 0
+    ));
+    if (_photoCount > 0) {
+      const _imgs = [];
+      for (let _i = 0; _i < _photoCount; _i++) {
+        if (typeof diaryEntryHasPhoto === 'function' && !diaryEntryHasPhoto(entry, _i)) continue;
+        _imgs.push((typeof diaryImgHtml === 'function')
+          ? diaryImgHtml(entry, _i, { cls: 'day-photo' })
+          : `<img src="${escapeHtml((entry.photos && entry.photos[_i]) || (_i === 0 ? entry.photo : ''))}" alt="" class="day-photo">`);
+      }
+      if (_imgs.length > 0) {
+        html += `<div class="day-photo-wrap${_imgs.length > 1 ? ' day-photo-multi' : ''}">${_imgs.join('')}</div>`;
+      }
     }
     // V4-fix: 음악 카드 (entry.music 있으면)
     if (entry.music && entry.music.title) {
@@ -47819,6 +47855,7 @@ function switchDayModalTab(tab) {
   }
   body.innerHTML = html;
   if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
+  if (typeof hydrateDiaryPhotos === 'function') hydrateDiaryPhotos(body);
 }
 
 // V4 (사용자 명시 2026-05-20 ultrathink): 일기 미디어 (사진 + 음악) 수정 sheet.
@@ -47961,33 +47998,42 @@ function _diaryRenderEditSheetBody(dateStr) {
   if (!body) return;
   const entry = _diaryGetEntry(dateStr);
   if (!entry) return;
-  const photos = _diaryGetPhotos(entry);
+  // V4 (Phase 1E Step 3): photoCount 는 storageKeys / photos / 단일 photo 중 max.
+  const _photoCount = Math.min(DIARY_PHOTOS_MAX, Math.max(
+    Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.length : 0,
+    Array.isArray(entry.photos) ? entry.photos.length : 0,
+    entry.photo ? 1 : 0
+  ));
   const hasMusic = !!(entry.music && entry.music.title);
 
   let html = '';
   // 사진 섹션
   html += `<div class="diary-edit-section">
-    <div class="diary-edit-section-label">📷 사진 (${photos.length}/${DIARY_PHOTOS_MAX})</div>`;
-  if (photos.length === 0) {
+    <div class="diary-edit-section-label">📷 사진 (${_photoCount}/${DIARY_PHOTOS_MAX})</div>`;
+  if (_photoCount === 0) {
     html += `<button class="diary-edit-photo-add" onclick="_diaryAddPhoto('${dateStr}')" aria-label="사진 추가">＋</button>`;
   } else {
     html += `<div class="diary-edit-photos-strip" id="diaryEditPhotosStrip">`;
-    photos.forEach((p, i) => {
+    for (let i = 0; i < _photoCount; i++) {
+      if (typeof diaryEntryHasPhoto === 'function' && !diaryEntryHasPhoto(entry, i)) continue;
+      const _imgHtml = (typeof diaryImgHtml === 'function')
+        ? diaryImgHtml(entry, i, { cls: '' })
+        : `<img src="${escapeHtml((entry.photos && entry.photos[i]) || (i === 0 ? entry.photo : ''))}" alt="">`;
       html += `
         <div class="diary-edit-photo-tile" data-diary-photo-idx="${i}" draggable="false">
-          <img src="${escapeHtml(p)}" alt="">
+          ${_imgHtml}
           <div class="diary-edit-photo-actions">
             <button onclick="_diaryReplacePhoto('${dateStr}', ${i})" aria-label="교체">✎</button>
             <button onclick="_diaryDeletePhoto('${dateStr}', ${i})" aria-label="삭제">✕</button>
           </div>
         </div>
       `;
-    });
-    if (photos.length < DIARY_PHOTOS_MAX) {
+    }
+    if (_photoCount < DIARY_PHOTOS_MAX) {
       html += `<button class="diary-edit-photo-add" onclick="_diaryAddPhoto('${dateStr}')" aria-label="사진 추가">＋</button>`;
     }
     html += `</div>`;
-    if (photos.length >= 2) {
+    if (_photoCount >= 2) {
       html += `<div style="font-size:10px; color:var(--text-soft); margin-top:6px;">길게 누른 후 드래그 = 순서 변경</div>`;
     }
   }
@@ -48011,6 +48057,7 @@ function _diaryRenderEditSheetBody(dateStr) {
   html += `</div>`;
 
   body.innerHTML = html;
+  if (typeof hydrateDiaryPhotos === 'function') hydrateDiaryPhotos(body);
 
   // 사진 reorder drag binding (체크인과 동일 패턴).
   const strip = document.getElementById('diaryEditPhotosStrip');
@@ -49568,6 +49615,7 @@ function renderLensTimeline() {
   }
 
   container.innerHTML = html;
+  if (typeof hydrateDiaryPhotos === 'function') hydrateDiaryPhotos(container);
 }
 
 // 일기 (entry) 카드 — 인스타 게시물 스타일. 사진 첨부 있으면 inline.
@@ -49612,13 +49660,23 @@ function _renderDiaryCardHTML(entry) {
   if (!entry.dailyQuestion?.text && entry.note) {
     blocks.push(`<div class="ig-block ig-block-note">${escapeHtml(entry.note)}</div>`);
   }
-  // V4 (사용자 명시 2026-05-20 ultrathink): photos[] multi 렌더 (max 3), legacy entry.photo fallback.
-  const _tlPhotos = (Array.isArray(entry.photos) && entry.photos.length > 0)
-    ? entry.photos.slice(0, 3)
-    : (entry.photo ? [entry.photo] : []);
-  if (_tlPhotos.length > 0) {
-    const _imgs = _tlPhotos.map(p => `<img src="${escapeHtml(p)}" alt="" class="ig-photo" loading="lazy">`).join('');
-    blocks.push(`<div class="ig-photo-wrap${_tlPhotos.length > 1 ? ' ig-photo-multi' : ''}">${_imgs}</div>`);
+  // V4 (Phase 1E Step 3): diaryImgHtml 가 storageKey / dataURL / legacy entry.photo 자동 분기.
+  const _tlPhotoCount = Math.min(3, Math.max(
+    Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.length : 0,
+    Array.isArray(entry.photos) ? entry.photos.length : 0,
+    entry.photo ? 1 : 0
+  ));
+  if (_tlPhotoCount > 0) {
+    const _imgs = [];
+    for (let _i = 0; _i < _tlPhotoCount; _i++) {
+      if (typeof diaryEntryHasPhoto === 'function' && !diaryEntryHasPhoto(entry, _i)) continue;
+      _imgs.push((typeof diaryImgHtml === 'function')
+        ? diaryImgHtml(entry, _i, { cls: 'ig-photo', extra: 'loading="lazy"' })
+        : `<img src="${escapeHtml((entry.photos && entry.photos[_i]) || (_i === 0 ? entry.photo : ''))}" alt="" class="ig-photo" loading="lazy">`);
+    }
+    if (_imgs.length > 0) {
+      blocks.push(`<div class="ig-photo-wrap${_imgs.length > 1 ? ' ig-photo-multi' : ''}">${_imgs.join('')}</div>`);
+    }
   }
   if (entry.music) {
     blocks.push(`<div style="margin-top:8px;">${renderMusicCardHTML(entry.music)}</div>`);
@@ -49679,7 +49737,8 @@ async function showTimelineDayMenu(date) {
   const _hasMedia = !!(entry && (
     entry.music ||
     entry.photo ||
-    (Array.isArray(entry.photos) && entry.photos.length > 0)
+    (Array.isArray(entry.photos) && entry.photos.length > 0) ||
+    (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.some(Boolean))
   ));
   const options = [
     { label: '✎ 메모 추가/수정', value: 'edit' }

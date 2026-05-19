@@ -138,33 +138,42 @@ function _diaryRenderEditSheetBody(dateStr) {
   if (!body) return;
   const entry = _diaryGetEntry(dateStr);
   if (!entry) return;
-  const photos = _diaryGetPhotos(entry);
+  // V4 (Phase 1E Step 3): photoCount 는 storageKeys / photos / 단일 photo 중 max.
+  const _photoCount = Math.min(DIARY_PHOTOS_MAX, Math.max(
+    Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.length : 0,
+    Array.isArray(entry.photos) ? entry.photos.length : 0,
+    entry.photo ? 1 : 0
+  ));
   const hasMusic = !!(entry.music && entry.music.title);
 
   let html = '';
   // 사진 섹션
   html += `<div class="diary-edit-section">
-    <div class="diary-edit-section-label">📷 사진 (${photos.length}/${DIARY_PHOTOS_MAX})</div>`;
-  if (photos.length === 0) {
+    <div class="diary-edit-section-label">📷 사진 (${_photoCount}/${DIARY_PHOTOS_MAX})</div>`;
+  if (_photoCount === 0) {
     html += `<button class="diary-edit-photo-add" onclick="_diaryAddPhoto('${dateStr}')" aria-label="사진 추가">＋</button>`;
   } else {
     html += `<div class="diary-edit-photos-strip" id="diaryEditPhotosStrip">`;
-    photos.forEach((p, i) => {
+    for (let i = 0; i < _photoCount; i++) {
+      if (typeof diaryEntryHasPhoto === 'function' && !diaryEntryHasPhoto(entry, i)) continue;
+      const _imgHtml = (typeof diaryImgHtml === 'function')
+        ? diaryImgHtml(entry, i, { cls: '' })
+        : `<img src="${escapeHtml((entry.photos && entry.photos[i]) || (i === 0 ? entry.photo : ''))}" alt="">`;
       html += `
         <div class="diary-edit-photo-tile" data-diary-photo-idx="${i}" draggable="false">
-          <img src="${escapeHtml(p)}" alt="">
+          ${_imgHtml}
           <div class="diary-edit-photo-actions">
             <button onclick="_diaryReplacePhoto('${dateStr}', ${i})" aria-label="교체">✎</button>
             <button onclick="_diaryDeletePhoto('${dateStr}', ${i})" aria-label="삭제">✕</button>
           </div>
         </div>
       `;
-    });
-    if (photos.length < DIARY_PHOTOS_MAX) {
+    }
+    if (_photoCount < DIARY_PHOTOS_MAX) {
       html += `<button class="diary-edit-photo-add" onclick="_diaryAddPhoto('${dateStr}')" aria-label="사진 추가">＋</button>`;
     }
     html += `</div>`;
-    if (photos.length >= 2) {
+    if (_photoCount >= 2) {
       html += `<div style="font-size:10px; color:var(--text-soft); margin-top:6px;">길게 누른 후 드래그 = 순서 변경</div>`;
     }
   }
@@ -188,6 +197,7 @@ function _diaryRenderEditSheetBody(dateStr) {
   html += `</div>`;
 
   body.innerHTML = html;
+  if (typeof hydrateDiaryPhotos === 'function') hydrateDiaryPhotos(body);
 
   // 사진 reorder drag binding (체크인과 동일 패턴).
   const strip = document.getElementById('diaryEditPhotosStrip');

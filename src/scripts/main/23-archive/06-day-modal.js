@@ -75,7 +75,8 @@ function openDayModal(dateStr) {
   const _hasEntryMedia = !!(entry && (
     entry.music ||
     entry.photo ||
-    (Array.isArray(entry.photos) && entry.photos.length > 0)
+    (Array.isArray(entry.photos) && entry.photos.length > 0) ||
+    (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.some(Boolean))
   ));
   const moreBtnHtml = _hasEntryMedia
     ? `<button class="day-modal-more" onclick="closeDayModal(); openDiaryMediaEditSheet('${dateStr}')" aria-label="수정">⋮</button>`
@@ -146,12 +147,23 @@ function switchDayModalTab(tab) {
         html += `<div class="day-mode-chips">${ms.map(m => `<span class="day-mode-chip">${modeMap[m] || m}</span>`).join('')}</div>`;
       }
     }
-    // V4-fix: 일기 사진 — multi (최대 3) (legacy entry.photo fallback).
-    const _entryPhotos = (Array.isArray(entry.photos) && entry.photos.length > 0)
-      ? entry.photos.slice(0, 3)
-      : (entry.photo ? [entry.photo] : []);
-    if (_entryPhotos.length > 0) {
-      html += `<div class="day-photo-wrap${_entryPhotos.length > 1 ? ' day-photo-multi' : ''}">${_entryPhotos.map(p => `<img src="${escapeHtml(p)}" alt="" class="day-photo">`).join('')}</div>`;
+    // V4 (Phase 1E Step 3): 일기 사진 — diaryImgHtml 가 storageKey / dataURL / legacy entry.photo 자동 분기.
+    const _photoCount = Math.min(3, Math.max(
+      Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.length : 0,
+      Array.isArray(entry.photos) ? entry.photos.length : 0,
+      entry.photo ? 1 : 0
+    ));
+    if (_photoCount > 0) {
+      const _imgs = [];
+      for (let _i = 0; _i < _photoCount; _i++) {
+        if (typeof diaryEntryHasPhoto === 'function' && !diaryEntryHasPhoto(entry, _i)) continue;
+        _imgs.push((typeof diaryImgHtml === 'function')
+          ? diaryImgHtml(entry, _i, { cls: 'day-photo' })
+          : `<img src="${escapeHtml((entry.photos && entry.photos[_i]) || (_i === 0 ? entry.photo : ''))}" alt="" class="day-photo">`);
+      }
+      if (_imgs.length > 0) {
+        html += `<div class="day-photo-wrap${_imgs.length > 1 ? ' day-photo-multi' : ''}">${_imgs.join('')}</div>`;
+      }
     }
     // V4-fix: 음악 카드 (entry.music 있으면)
     if (entry.music && entry.music.title) {
@@ -307,5 +319,6 @@ function switchDayModalTab(tab) {
   }
   body.innerHTML = html;
   if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
+  if (typeof hydrateDiaryPhotos === 'function') hydrateDiaryPhotos(body);
 }
 

@@ -94,6 +94,7 @@ function renderLensTimeline() {
   }
 
   container.innerHTML = html;
+  if (typeof hydrateDiaryPhotos === 'function') hydrateDiaryPhotos(container);
 }
 
 // 일기 (entry) 카드 — 인스타 게시물 스타일. 사진 첨부 있으면 inline.
@@ -138,13 +139,23 @@ function _renderDiaryCardHTML(entry) {
   if (!entry.dailyQuestion?.text && entry.note) {
     blocks.push(`<div class="ig-block ig-block-note">${escapeHtml(entry.note)}</div>`);
   }
-  // V4 (사용자 명시 2026-05-20 ultrathink): photos[] multi 렌더 (max 3), legacy entry.photo fallback.
-  const _tlPhotos = (Array.isArray(entry.photos) && entry.photos.length > 0)
-    ? entry.photos.slice(0, 3)
-    : (entry.photo ? [entry.photo] : []);
-  if (_tlPhotos.length > 0) {
-    const _imgs = _tlPhotos.map(p => `<img src="${escapeHtml(p)}" alt="" class="ig-photo" loading="lazy">`).join('');
-    blocks.push(`<div class="ig-photo-wrap${_tlPhotos.length > 1 ? ' ig-photo-multi' : ''}">${_imgs}</div>`);
+  // V4 (Phase 1E Step 3): diaryImgHtml 가 storageKey / dataURL / legacy entry.photo 자동 분기.
+  const _tlPhotoCount = Math.min(3, Math.max(
+    Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.length : 0,
+    Array.isArray(entry.photos) ? entry.photos.length : 0,
+    entry.photo ? 1 : 0
+  ));
+  if (_tlPhotoCount > 0) {
+    const _imgs = [];
+    for (let _i = 0; _i < _tlPhotoCount; _i++) {
+      if (typeof diaryEntryHasPhoto === 'function' && !diaryEntryHasPhoto(entry, _i)) continue;
+      _imgs.push((typeof diaryImgHtml === 'function')
+        ? diaryImgHtml(entry, _i, { cls: 'ig-photo', extra: 'loading="lazy"' })
+        : `<img src="${escapeHtml((entry.photos && entry.photos[_i]) || (_i === 0 ? entry.photo : ''))}" alt="" class="ig-photo" loading="lazy">`);
+    }
+    if (_imgs.length > 0) {
+      blocks.push(`<div class="ig-photo-wrap${_imgs.length > 1 ? ' ig-photo-multi' : ''}">${_imgs.join('')}</div>`);
+    }
   }
   if (entry.music) {
     blocks.push(`<div style="margin-top:8px;">${renderMusicCardHTML(entry.music)}</div>`);
@@ -205,7 +216,8 @@ async function showTimelineDayMenu(date) {
   const _hasMedia = !!(entry && (
     entry.music ||
     entry.photo ||
-    (Array.isArray(entry.photos) && entry.photos.length > 0)
+    (Array.isArray(entry.photos) && entry.photos.length > 0) ||
+    (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.some(Boolean))
   ));
   const options = [
     { label: '✎ 메모 추가/수정', value: 'edit' }

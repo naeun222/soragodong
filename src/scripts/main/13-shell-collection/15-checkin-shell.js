@@ -11,7 +11,11 @@
 //   옛 fixed emoji (🦞/🐢/🌀/🐚) 매번 같았던 자리 → 풀 random 으로 다양성 ↑.
 function calcCheckinTier(entry, todayHasTrackerSuccess) {
   if (todayHasTrackerSuccess) return { tier: 'golden' };
-  const _hasAnyPhoto = !!(entry.photo || (Array.isArray(entry.photos) && entry.photos.length > 0));
+  const _hasAnyPhoto = !!(
+    entry.photo ||
+    (Array.isArray(entry.photos) && entry.photos.length > 0) ||
+    (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.some(Boolean))
+  );
   const hasMedia = !!(entry.music || _hasAnyPhoto);
   if (hasMedia) return { tier: 'main' };
   const hasSleep = !!(entry.allNighter || (entry.sleepStart && entry.sleepEnd));
@@ -98,6 +102,8 @@ function addOrUpdateCheckinShell(entry) {
     photoThumb: entry.photo || '',
     // V4 (사용자 명시 2026-05-20 ultrathink): photos[] multi (최대 3). legacy photoThumb 도 photos[0] 미러.
     photos: Array.isArray(entry.photos) ? entry.photos.slice(0, 3) : (entry.photo ? [entry.photo] : []),
+    // V4 (Phase 1E Step 3): Storage path mirror — shell story 가 diaryImgHtml hydrate 동일 사용.
+    photoStorageKeys: Array.isArray(entry.photoStorageKeys) ? entry.photoStorageKeys.slice(0, 3) : [],
     trackerSuccesses
   };
 
@@ -158,15 +164,32 @@ function _openCheckinShellStory(shell) {
   };
   overlay.onclick = (e) => { if (e.target === overlay) _close(); };
 
-  // V4 (사용자 명시 2026-05-20 ultrathink): multi photos 렌더 (legacy single photoThumb fallback).
-  const _shellPhotos = (Array.isArray(shell.photos) && shell.photos.length > 0)
-    ? shell.photos.slice(0, 3)
-    : (shell.photoThumb ? [shell.photoThumb] : []);
-  const photoHtml = _shellPhotos.length === 0
+  // V4 (Phase 1E Step 3): diaryImgHtml — storageKey / dataURL / legacy photoThumb 자동 분기.
+  //   synthetic entry-like 객체 사용 (shell.dayKey ↔ entry.date, shell.photoThumb ↔ entry.photo).
+  const _shellEntryLike = {
+    date: shell.dayKey,
+    photoStorageKeys: Array.isArray(shell.photoStorageKeys) ? shell.photoStorageKeys : [],
+    photos: Array.isArray(shell.photos) ? shell.photos : [],
+    photo: shell.photoThumb || ''
+  };
+  const _shellPhotoCount = Math.min(3, Math.max(
+    _shellEntryLike.photoStorageKeys.length,
+    _shellEntryLike.photos.length,
+    _shellEntryLike.photo ? 1 : 0
+  ));
+  const _shellImgs = [];
+  for (let _i = 0; _i < _shellPhotoCount; _i++) {
+    if (typeof diaryEntryHasPhoto === 'function' && !diaryEntryHasPhoto(_shellEntryLike, _i)) continue;
+    const _cls = _shellPhotoCount === 1 ? 'ci-shell-photo' : 'ci-shell-photo ci-shell-photo-multi';
+    _shellImgs.push((typeof diaryImgHtml === 'function')
+      ? diaryImgHtml(_shellEntryLike, _i, { cls: _cls })
+      : `<img src="${escapeHtml(_shellEntryLike.photos[_i] || (_i === 0 ? _shellEntryLike.photo : ''))}" alt="" class="${_cls}">`);
+  }
+  const photoHtml = _shellImgs.length === 0
     ? ''
-    : _shellPhotos.length === 1
-      ? `<img src="${escapeHtml(_shellPhotos[0])}" alt="" class="ci-shell-photo">`
-      : `<div class="ci-shell-photos">${_shellPhotos.map(p => `<img src="${escapeHtml(p)}" alt="" class="ci-shell-photo ci-shell-photo-multi">`).join('')}</div>`;
+    : _shellImgs.length === 1
+      ? _shellImgs[0]
+      : `<div class="ci-shell-photos">${_shellImgs.join('')}</div>`;
   const musicHtml = shell.music && typeof renderMusicCardHTML === 'function'
     ? `<div class="ci-shell-music">${renderMusicCardHTML(shell.music)}</div>`
     : '';
@@ -232,6 +255,7 @@ function _openCheckinShellStory(shell) {
     </div>
   `;
   document.body.appendChild(overlay);
+  if (typeof hydrateDiaryPhotos === 'function') hydrateDiaryPhotos(overlay);
   const _btn = overlay.querySelector('#shellStoryCloseBtn');
   if (_btn) _btn.addEventListener('click', _close);
   _shellEscDetach = _registerModalEsc(overlay, _close);
