@@ -8,9 +8,27 @@
 // 부수: window._firstHomeTutorialActive flag → renderTodayMission 미션 카드 hide (12-mission/08).
 
 const FIRST_HOME_TUTORIAL_DONE_KEY = 'firstHomeIntro';
+// V4 fix (사용자 보고 2026-05-20 ultrathink): 옛 .rc-checkin selector 버그 (2026-05-18~05-20) 으로
+//   marker 가 박혔지만 튜토는 진행 X 였던 사용자들 일회성 복구. sweep flag 가 없으면 marker 제거 + flag set →
+//   다음 홈 진입에서 튜토 정상 재실행. 1회만 동작.
+const FIRST_HOME_TUTORIAL_SWEEP_KEY = 'firstHomeIntroSweep_2026_05_20';
+
+function _firstHomeMaybeSweepStaleMarker() {
+  try {
+    if (!state || typeof state !== 'object') return;
+    if (!Array.isArray(state._shownInlineTips)) state._shownInlineTips = [];
+    state._sweeps = state._sweeps || {};
+    if (state._sweeps[FIRST_HOME_TUTORIAL_SWEEP_KEY]) return;
+    const idx = state._shownInlineTips.indexOf(FIRST_HOME_TUTORIAL_DONE_KEY);
+    if (idx >= 0) state._shownInlineTips.splice(idx, 1);
+    state._sweeps[FIRST_HOME_TUTORIAL_SWEEP_KEY] = true;
+    try { saveState(true); } catch {}
+  } catch (e) { console.warn('[firstHome sweep]', e); }
+}
 
 function shouldRunFirstHomeTutorial() {
   if (typeof state === 'undefined' || !state) return false;
+  _firstHomeMaybeSweepStaleMarker();
   if (!Array.isArray(state._shownInlineTips)) state._shownInlineTips = [];
   if (state._shownInlineTips.includes(FIRST_HOME_TUTORIAL_DONE_KEY)) return false;
   if (state.preferences && state.preferences.testerMode) return false;
@@ -194,13 +212,18 @@ function _firstHomeP1() {
       <span class="v8-coach-text-soft">(깊이 이해할 수 있게 돼요)</span>
     </div>
   `;
+  // V4 fix (사용자 보고 2026-05-20 ultrathink): 회전카드 redesign (2026-05-18, commit 8f02dd3) 으로
+  //   .rc-checkin / .rc-checkin-mini-link 클래스 폐기 → .library-hero + .rc-body-tap (안에 #rotatingCard) 로 통합.
+  //   옛 selector 가 null → _v8ShowCoachmark interactive 분기에서 target.addEventListener 가 TypeError →
+  //   outer catch → finally 가 testerMode OFF 호출 → location.reload() → 사용자 시야엔 '잠깐 떠 사라짐'.
+  //   marker (firstHomeIntro) 는 이미 박혀서 다음 진입에 튜토 영구 skip.
+  //   fix: 회전카드 wrapper 자체를 target 으로. empty seed 상태에서 priority 가 체크인 source 를 채택 →
+  //   클릭 시 inner .rc-body-tap onclick 이 enterCheckin() 발사 → _lastEnterCheckinTs set → waitFor 만족.
   return _v8ShowCoachmark({
-    targetSelector: '.rc-checkin, .rc-checkin-mini-link',
+    targetSelector: '#rotatingCard',
     body,
     position: 'bottom',
     interactive: true,
-    // V4 fix (사용자 보고 2026-05-17 ultrathink): enterCheckin 호출 flag (window._lastEnterCheckinTs) 우선 체크 — race / CSS 변동에 robust.
-    //   옛 waitFor (screen-checkin active class / checkinSubmitBtn offsetParent) 가 즉시 true 반환되던 케이스 회피.
     waitFor: () => {
       try {
         if (window._lastEnterCheckinTs && (Date.now() - window._lastEnterCheckinTs) < 60000) return true;

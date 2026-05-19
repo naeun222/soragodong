@@ -342,12 +342,15 @@ function _v8ShowCoachmark({ targetSelector, targetEl, body, position = 'top', in
         setTimeout(() => { if (!_quickCheck()) {} }, 120);
         bubbleHiddenTimeout = setTimeout(() => { if (!resolved) advance(); }, 6000);
       };
-      target.addEventListener('click', onTargetClick);
+      // V4 fix (사용자 보고 2026-05-20 ultrathink): target null + allowNoTarget=true + interactive=true 가드.
+      //   옛 path: target.addEventListener 가 null TypeError → outer Promise reject → finally race.
+      //   새 path: target 없으면 click 리스너 등록 skip, watcher 도 target.offsetParent 체크 skip (waitFor 만 따름).
+      if (target) target.addEventListener('click', onTargetClick);
       // 사용자 명시 2026-05-06 ultrathink: watcher tick 250→80ms — 코치마크 사라짐 latency 단축.
       watcher = setInterval(() => {
         try {
           if (waitFor && waitFor()) { advance(); return; }
-          if (!target || target.offsetParent === null) { advance(); return; }
+          if (target && target.offsetParent === null) { advance(); return; }
           if (!bubbleHidden) place();
         } catch {}
       }, 80);
