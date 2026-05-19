@@ -32604,6 +32604,7 @@ const _HOOK_FREQ_COOLDOWN_HOURS = {
   'off':              Infinity,
 };
 const _HOOK_ASKED_COOLDOWN_DAYS = 7;        // 같은 dayK 7일 cooldown
+const _HOOK_SUBSTRATE_EXCLUSION_DAYS = 7;   // V4 (사용자 명시 2026-05-20): substrate item 재생성 가드 — 최근 7일 안 hook 의 진주/깨달음 ID + 체크인 dayK 다음 substrate 에서 제외.
 const _HOOK_RICHNESS_MIN = 30;
 const _HOOK_MAX_ASKED_HOOKS = 50;
 
@@ -32655,41 +32656,71 @@ function _hookSubstrateBySource(dayK) {
   //   Phase 1A 에서 [F] topicCards 제거 + 이번 Phase 1B 에서 [B][C] 제거 → 진주 + 체크인 + 깨달음 만 남음.
   //   사용자 의도: 진주 위주로 hook 묻기. 일기 / 토픽 = 이미 고동이랑 대화한 내용이라 재언급 부담.
   //   Phase 2: backend prompt 의 일기/토픽 reference 도 같이 제거.
+  //
+  // V4 (사용자 명시 2026-05-20): 재생성 가드 — 최근 7일 안 hook 의 substrateItems 안 진주/깨달음 ID + 체크인 dayK 는 이번 substrate 에서 제외.
+  //   askedHooks[].substrateItems 에 markup 되어 있음. 옛 entry (substrateItems 없음) = exclusion 영향 X (backward compatible).
+  const exclusion = _hookCollectRecentExclusions();
   const out = { checkin: null, pearls: [], insights: [] };
   // [A] 체크인
   // V4 (사용자 명시 2026-05-18 ultrathink): 체크인 한 줄 대답 (e.note) 빼기 — hook 정보 수집에서 제외.
   // 사용자가 체크인 note 에 적은 사적 한 줄을 hook 이 다시 묻거나 reference 하지 않도록.
-  const e = (state.entries || []).find(x => x && x.date === dayK);
-  if (e) {
-    out.checkin = {
-      vit: e.vitality, mood: e.mood,
-      sleepStart: e.sleepStart, sleepEnd: e.sleepEnd, allNighter: e.allNighter,
-      question: e.dailyQuestion && e.dailyQuestion.text,
-    };
+  if (!exclusion.checkinDayKs.has(dayK)) {
+    const e = (state.entries || []).find(x => x && x.date === dayK);
+    if (e) {
+      out.checkin = {
+        vit: e.vitality, mood: e.mood,
+        sleepStart: e.sleepStart, sleepEnd: e.sleepEnd, allNighter: e.allNighter,
+        question: e.dailyQuestion && e.dailyQuestion.text,
+      };
+    }
   }
   // [B] 일기 — Phase 1B 제거
   // [C] 일기 요약 — Phase 1B 제거
   // [D] 진주
   out.pearls = (state.pearls || []).filter(p => {
     if (!p || p._deleted || !p.createdAt) return false;
+    if (exclusion.pearlIds.has(p.id)) return false;
     return _hookIsoToDayK(p.createdAt) === dayK;
   });
   // [E] 깨달음 (archive + insights)
   const _arch = (state.archive || []).filter(a => {
     if (!a || a._deleted || a.type === 'memo' || a._excludeFromAI) return false;
     if (!a.savedAt) return false;
+    if (a.id && exclusion.insightKeys.has('archive:' + a.id)) return false;
     return _hookIsoToDayK(a.savedAt) === dayK;
   });
   const _ins = (state.insights || []).filter(i => {
     if (!i || i._deleted || i.dismissed || !i.discoveredAt) return false;
+    if (i.id && exclusion.insightKeys.has('auto:' + i.id)) return false;
     return _hookIsoToDayK(i.discoveredAt) === dayK;
   });
   out.insights = [
-    ..._arch.map(a => ({ kind: 'archive', headline: a.headline, body: a.body, insight: a.insight })),
-    ..._ins.map(i => ({ kind: 'auto', content: i.content })),
+    ..._arch.map(a => ({ kind: 'archive', id: a.id, headline: a.headline, body: a.body, insight: a.insight })),
+    ..._ins.map(i => ({ kind: 'auto', id: i.id, content: i.content })),
   ];
   // [F] 대화 토픽 — V4 fix (사용자 명시 2026-05-18) Phase 1A: 제거. 위 out default 주석 참조.
   return out;
+}
+
+// V4 (사용자 명시 2026-05-20): substrate item 재생성 가드 helper — 최근 _HOOK_SUBSTRATE_EXCLUSION_DAYS (7일) hook 의 substrateItems 합집합.
+//   진주 ID / 깨달음 'kind:id' / 체크인 dayK 3 종 추적. 옛 entry (substrateItems 없음) = silently skip.
+//   _hookSubstrateBySource 가 매 호출마다 invoke (cost: 50 entry 순회 ≈ negligible).
+function _hookCollectRecentExclusions() {
+  const now = Date.now();
+  const cooldownMs = _HOOK_SUBSTRATE_EXCLUSION_DAYS * 86400000;
+  const pearlIds = new Set();
+  const insightKeys = new Set();  // 'kind:id' format (archive | auto)
+  const checkinDayKs = new Set();
+  (state.askedHooks || []).forEach(h => {
+    if (!h || !h.askedAt) return;
+    if ((now - new Date(h.askedAt).getTime()) >= cooldownMs) return;
+    const si = h.substrateItems;
+    if (!si) return;
+    (si.pearlIds || []).forEach(id => { if (id) pearlIds.add(id); });
+    (si.insightItems || []).forEach(o => { if (o && o.id && o.kind) insightKeys.add(o.kind + ':' + o.id); });
+    if (si.checkinDayK) checkinDayKs.add(si.checkinDayK);
+  });
+  return { pearlIds, insightKeys, checkinDayKs };
 }
 
 function _hookScoreRichness(src) {
@@ -32881,6 +32912,13 @@ async function maybeGenerateHook(opts) {
     const _now = new Date();
     const _scheduled = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate(), _hour, 0, 0, 0);
     if (_scheduled.getTime() <= _now.getTime()) _scheduled.setDate(_scheduled.getDate() + 1);
+    // V4 (사용자 명시 2026-05-20): substrate 안 진주/깨달음/체크인 ID markup — 다음 _hookSubstrateBySource 가 _HOOK_SUBSTRATE_EXCLUSION_DAYS (7일) 동안 제외 (재생성 가드).
+    //   진주 ID / 깨달음 'kind:id' / 체크인 dayK 3 종. backend source enum 만으론 trigger ID 추정 불가 → substrate 전체 markup (보수적).
+    const _substrateItems = {
+      pearlIds: (pick.src.pearls || []).map(p => p.id).filter(Boolean),
+      insightItems: (pick.src.insights || []).map(i => ({ kind: i.kind, id: i.id })).filter(o => o.id),
+      checkinDayK: pick.src.checkin ? pick.dayK : null,
+    };
     const entry = {
       id: 'hook_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       body: h.body,
@@ -32893,6 +32931,7 @@ async function maybeGenerateHook(opts) {
       answeredAt: null,
       delivered: false,
       dismissedFromHome: false,
+      substrateItems: _substrateItems,
     };
     if (!Array.isArray(state.askedHooks)) state.askedHooks = [];
     state.askedHooks.push(entry);
