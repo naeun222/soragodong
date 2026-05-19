@@ -110,19 +110,18 @@ function addOrUpdateCheckinShell(entry) {
   return { shell, isFirst, isUpgrade, prevTier, prevType };
 }
 
-// 화면 중앙 emerge ('소라가 널 부르고 있어' 느낌) + tier toast.
-// 모래사장 무관 — 체크인 '기록 완료' 순간만.
+// 화면 중앙 emerge — 체크인 '기록 완료' 순간만.
+// V4 (사용자 명시 2026-05-20): tier 이름 (가벼움/일상/메인/황금) 라벨 제거. 이모티콘 만 노출.
+//   후속 토스트도 tier 이름 빼고 emoji + 단순 카피.
 function showCheckinShellReward(result) {
   if (!result || !result.shell) return;
   const { shell, isFirst, isUpgrade } = result;
-  const tierLabel = ({ light: '가벼움', daily: '일상', main: '메인', golden: '황금' })[shell.tier] || '소라';
 
   const overlay = document.createElement('div');
   overlay.className = 'checkin-shell-emerge';
   overlay.innerHTML = `
     <div class="checkin-shell-emerge-inner tier-${shell.tier}">
       <div class="checkin-shell-emerge-emoji">${shell.type}</div>
-      <div class="checkin-shell-emerge-label">${tierLabel}</div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -132,9 +131,9 @@ function showCheckinShellReward(result) {
 
   setTimeout(() => {
     if (isUpgrade) {
-      showToast(`✨ ${tierLabel} 티어로 진화`);
+      showToast(`✨ ${shell.type} 진화`);
     } else if (isFirst) {
-      showToast(`${shell.type} ${tierLabel} 소라 얻었어`);
+      showToast(`${shell.type} 소라 얻었어`);
     } else {
       showToast(`✦ 기록 갱신`);
     }

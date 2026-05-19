@@ -329,6 +329,10 @@ function renderLensPearls() {
     if (_pearlCatFilter === '티켓' && typeof _ticketSubFilter !== 'undefined' && _ticketSubFilter) {
       pearls = pearls.filter(p => p.subType === _ticketSubFilter);
     }
+  } else {
+    // V4 (사용자 명시 2026-05-20 ultrathink): '전체' (filter null) 일 때 티켓 / 책 hide.
+    //   사용자 mental model — 티켓 / 책 은 별도 카테고리 선택 시만 노출. 오늘의 너 큐레이션 (_pickHeroPearl) 은 영향 X.
+    pearls = pearls.filter(p => p.category !== '티켓' && p.category !== '책');
   }
 
   if (pearls.length === 0) {
