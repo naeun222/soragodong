@@ -166,3 +166,4 @@ INCLUDE_DIR 가 의존하는 사실: 같은 디렉터리 안에서 파일명 pre
    - `08-decision-room.js` (948줄)
    - `30-force-analyze.js` (943줄)
 3. **dead code 청소** — 주석으로 표시된 dead 코드 (`V3 호환`, `V203 폐기`, `chooser 폐기` 등) 별도 PR 로 제거.
+4. **⏰ Phase 1E Step 7 — 2026-07-01 이후 자동 트리거** — 일기/체크인 사진 dual-write fallback path 제거. Step 6 마이그 (commit `dbc9be7`, ship 2026-05-20) 후 4-6 주 운영 + production 데이터 100% 마이그 확인되면 cleanup. 자세한 사항은 memory `phase1e_step7_pending.md` + `PHASE-1E-HANDOFF.md` §4 Step 7. **Claude 가 트리거 날짜 이후 첫 세션에서 자동 확인** — 사용자에게 마이그 status 검증 후 진행.
