@@ -80,7 +80,12 @@ function _heroCardHtml(pick, opts = {}) {
     // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
     const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 기타: '💎' };
     const icon = iconMap[pick.category || '기타'] || '💎';
-    const thumbImg = pearlImgHtml(pick, 'videoThumbnail', { cls: 'hero-photo-thumb', alt: '' });
+    // V4 (사용자 명시 2026-05-20 ultrathink Phase C): hero thumb localStorage cache hit → <img src=dataURL> 즉시 (data-pearl-photo 없음, hydrate skip).
+    //   miss → pearlImgHtml + data-pearl-hero="1" marker → normal hydrate path → cache write.
+    const _cachedHeroThumb = (typeof getHeroThumbCache === 'function') ? getHeroThumbCache(pick.id, 'videoThumbnail') : null;
+    const thumbImg = (_cachedHeroThumb && _cachedHeroThumb.dataURL)
+      ? `<img src="${_cachedHeroThumb.dataURL}" alt="" class="hero-photo-thumb" loading="eager" decoding="async">`
+      : pearlImgHtml(pick, 'videoThumbnail', { cls: 'hero-photo-thumb', alt: '', extra: 'data-pearl-hero="1"' });
     const visual = thumbImg
       ? thumbImg
       : `<div class="hero-photo-thumb video-thumb-placeholder">📹</div>`;
@@ -101,9 +106,15 @@ function _heroCardHtml(pick, opts = {}) {
     // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
     const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 기타: '💎' };
     const icon = iconMap[pick.category || '기타'] || '💎';
+    // V4 (사용자 명시 2026-05-20 ultrathink Phase C): hero thumb localStorage cache hit → <img src=dataURL> 즉시.
+    //   miss → pearlImgHtml + data-pearl-hero="1" marker → normal hydrate path → cache write.
+    const _cachedHeroThumb = (typeof getHeroThumbCache === 'function') ? getHeroThumbCache(pick.id, 'photo') : null;
+    const _heroPhotoImg = (_cachedHeroThumb && _cachedHeroThumb.dataURL)
+      ? `<img src="${_cachedHeroThumb.dataURL}" alt="" class="hero-photo-thumb" loading="eager" decoding="async">`
+      : pearlImgHtml(pick, 'photo', { cls: 'hero-photo-thumb', alt: '', extra: 'data-pearl-hero="1"' });
     body = `
       <div class="hero-photo">
-        ${pearlImgHtml(pick, 'photo', { cls: 'hero-photo-thumb', alt: '' })}
+        ${_heroPhotoImg}
         <div class="hero-photo-meta">
           <div class="hero-photo-content">${icon} ${escapeHtml(pick.content || '')}</div>
           ${pick.note ? `<div class="hero-note">${escapeHtml(pick.note)}</div>` : ''}

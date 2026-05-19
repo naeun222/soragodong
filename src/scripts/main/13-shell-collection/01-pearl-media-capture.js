@@ -40,6 +40,8 @@ async function _attachPearlPhoto(pearl, dataUrl) {
   }
   // mutually exclusive — 이전 video 정리.
   await _removePearlVideo(pearl);
+  // V4 (사용자 명시 2026-05-20 ultrathink Phase C): 새 사진 박혔으니 옛 hero thumb cache evict — 다음 hydrate 시 새 사진으로 갱신.
+  if (typeof _revokeHeroThumbCache === 'function') _revokeHeroThumbCache(pearl.id, 'photo');
 }
 
 // 진주에 video 첨부 (썸네일 + has_audio 같이).
@@ -81,6 +83,8 @@ async function _attachPearlVideo(pearl, videoDataUrl, thumbnailDataUrl, hasAudio
   if (audioMeta) pearl.videoAudioMeta = audioMeta;
   // mutually exclusive — 이전 photo 정리.
   await _removePearlPhoto(pearl);
+  // V4 (사용자 명시 2026-05-20 ultrathink Phase C): 새 videoThumbnail 박혔으니 옛 hero thumb cache evict.
+  if (typeof _revokeHeroThumbCache === 'function') _revokeHeroThumbCache(pearl.id, 'videoThumbnail');
 }
 
 // 진주의 photo 제거 — Storage 파일 + 옛 dataURL field 둘 다.
@@ -93,6 +97,8 @@ async function _removePearlPhoto(pearl) {
   }
   delete pearl.photo;
   if (typeof _revokePearlMediaCache === 'function') _revokePearlMediaCache(pearl.id, 'photo');
+  // V4 (사용자 명시 2026-05-20 ultrathink Phase C): hero thumb localStorage cache 도 evict.
+  if (typeof _revokeHeroThumbCache === 'function') _revokeHeroThumbCache(pearl.id, 'photo');
 }
 
 // 진주의 video 제거 — Storage 파일 (video + videoThumbnail) + 옛 dataURL field + 메타.
@@ -114,6 +120,8 @@ async function _removePearlVideo(pearl) {
     _revokePearlMediaCache(pearl.id, 'video');
     _revokePearlMediaCache(pearl.id, 'videoThumbnail');
   }
+  // V4 (사용자 명시 2026-05-20 ultrathink Phase C): hero thumb localStorage cache 도 evict (videoThumbnail).
+  if (typeof _revokeHeroThumbCache === 'function') _revokeHeroThumbCache(pearl.id, 'videoThumbnail');
   // 옛 path 의 video blob cache 도 (12-mission/11-video-capture.js).
   if (typeof _revokePearlVideoCache === 'function') _revokePearlVideoCache(pearl.id);
 }

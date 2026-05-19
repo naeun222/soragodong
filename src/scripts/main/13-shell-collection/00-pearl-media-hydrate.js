@@ -143,6 +143,10 @@ function hydratePearlMedia(rootEl) {
       img.src = url;
       img.classList.remove('pearl-loading');
       img.dataset.pearlHydrated = '1';
+      // V4 (사용자 명시 2026-05-20 ultrathink Phase C): hero marker 시 thumb cache write.
+      if (img.dataset.pearlHero === '1' && (kind === 'photo' || kind === 'videoThumbnail')) {
+        if (typeof _maybeCacheHeroThumb === 'function') _maybeCacheHeroThumb(pid, kind, url);
+      }
     }).catch(e => {
       console.warn('[pearl img hydrate fail]', pid, kind, e && e.message);
       _setFailImg(img);
@@ -218,5 +222,122 @@ function _revokePearlMediaCache(pearlId, kind) {
       try { URL.revokeObjectURL(url); } catch(_) {}
       _pearlMediaBlobCache.delete(cacheKey);
     }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// V4 (사용자 명시 2026-05-20 ultrathink Phase C): hero 카드 thumb localStorage 캐시.
+//   목적: 두 번째 방문부터 첫 페인트와 동시 사진 표시 — SW Cache First 만으로는 decrypt chain 한 박자 남음.
+//   key   = 'sora-thumb-' + pearlId + ':' + kind   (kind = 'photo' | 'videoThumbnail')
+//   value = JSON { dataURL, savedAt }   (~10KB per entry, 200px JPEG q=0.7)
+//   max   = 10 entries (LRU savedAt 기준).
+//   quota = setItem 실패 시 oldest evict + retry (3회까지).
+//
+//   trade-off (E2EE 모델 약화): localStorage 에 평문 dataURL 200px 영구 저장 →
+//     디바이스 도난 시 master key 없이도 thumb 평문 노출 (작은 사진).
+//     진주 content/note 가 이미 평문 (state) 이므로 risk level 동일 수준.
+//
+//   cache write flow: hero 카드 (_heroCardHtml) 가 img 에 data-pearl-hero="1" marker 박음 →
+//     hydratePearlMedia 의 img[data-pearl-photo] handler .then 에서 marker 보고 _maybeCacheHeroThumb 호출.
+//   cache read flow: _heroCardHtml 가 getHeroThumbCache hit 면 <img src=dataURL> 즉시 박음 (data-pearl-photo 없음, hydrate skip).
+//   cache invalidate: _attachPearl* / _removePearl* 가 _revokeHeroThumbCache 호출.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const _HERO_THUMB_PREFIX = 'sora-thumb-';
+const _HERO_THUMB_MAX = 10;
+const _HERO_THUMB_WIDTH = 200;
+const _HERO_THUMB_REFRESH_MS = 24 * 60 * 60 * 1000;  // 24h — 재캐싱 회피 윈도우
+
+function _heroThumbKey(pearlId, kind) {
+  return _HERO_THUMB_PREFIX + pearlId + ':' + kind;
+}
+
+function getHeroThumbCache(pearlId, kind) {
+  if (!pearlId || !kind) return null;
+  try {
+    const raw = localStorage.getItem(_heroThumbKey(pearlId, kind));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.dataURL !== 'string' || !parsed.dataURL) return null;
+    return parsed;
+  } catch (_) { return null; }
+}
+
+function _heroThumbCollectAll() {
+  const items = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || k.indexOf(_HERO_THUMB_PREFIX) !== 0) continue;
+      let savedAt = 0;
+      try {
+        const v = JSON.parse(localStorage.getItem(k) || 'null');
+        if (v && typeof v.savedAt === 'number') savedAt = v.savedAt;
+      } catch (_) {}
+      items.push({ key: k, savedAt });
+    }
+  } catch (_) {}
+  return items;
+}
+
+function _heroThumbEvictOldest() {
+  const items = _heroThumbCollectAll();
+  if (items.length === 0) return false;
+  items.sort((a, b) => a.savedAt - b.savedAt);
+  try { localStorage.removeItem(items[0].key); return true; } catch (_) { return false; }
+}
+
+function setHeroThumbCache(pearlId, kind, dataURL) {
+  if (!pearlId || !kind || typeof dataURL !== 'string' || !dataURL) return;
+  const key = _heroThumbKey(pearlId, kind);
+  const items = _heroThumbCollectAll();
+  const alreadyHas = items.some(it => it.key === key);
+  if (!alreadyHas && items.length >= _HERO_THUMB_MAX) {
+    _heroThumbEvictOldest();
+  }
+  const value = JSON.stringify({ dataURL, savedAt: Date.now() });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { localStorage.setItem(key, value); return; }
+    catch (_) {
+      if (!_heroThumbEvictOldest()) return;
+    }
+  }
+}
+
+// blob URL → Image → canvas 200px → toDataURL → localStorage. silent fail.
+async function _maybeCacheHeroThumb(pearlId, kind, blobUrl) {
+  if (!pearlId || !kind || !blobUrl) return;
+  try {
+    const existing = getHeroThumbCache(pearlId, kind);
+    if (existing && existing.savedAt && (Date.now() - existing.savedAt < _HERO_THUMB_REFRESH_MS)) return;
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('img load fail'));
+      img.src = blobUrl;
+    });
+    const naturalW = img.naturalWidth || _HERO_THUMB_WIDTH;
+    const naturalH = img.naturalHeight || _HERO_THUMB_WIDTH;
+    const ratio = Math.min(1, _HERO_THUMB_WIDTH / naturalW);
+    const w = Math.max(1, Math.round(naturalW * ratio));
+    const h = Math.max(1, Math.round(naturalH * ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(img, 0, 0, w, h);
+    const dataURL = canvas.toDataURL('image/jpeg', 0.7);
+    if (typeof dataURL === 'string' && dataURL.length > 0) {
+      setHeroThumbCache(pearlId, kind, dataURL);
+    }
+  } catch (_) { /* silent — cache 는 best-effort */ }
+}
+
+function _revokeHeroThumbCache(pearlId, kind) {
+  if (!pearlId) return;
+  const kinds = kind ? [kind] : ['photo', 'videoThumbnail'];
+  for (const k of kinds) {
+    try { localStorage.removeItem(_heroThumbKey(pearlId, k)); } catch (_) {}
   }
 }
