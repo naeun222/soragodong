@@ -58047,6 +58047,17 @@ function renderLensPearls() {
     if (_pearlCatFilter === '티켓' && typeof _ticketSubFilter !== 'undefined' && _ticketSubFilter) {
       pearls = pearls.filter(p => p.subType === _ticketSubFilter);
     }
+    // V4 (사용자 명시 2026-05-20): 티켓 + timeline 토글 → eventDate 기준 최신순 (카드에 보이는 '날짜' 와 일치).
+    //   카드 dateStr = pearl.eventDate (없으면 createdAt). 옛 정렬은 createdAt 기준이라 옛 이벤트를 늦게 등록 시 순서 어긋남.
+    //   grid 토글은 createdAt 정렬 유지 (Pinterest masonry 시각 흐름 영향 X).
+    if (_pearlCatFilter === '티켓' && _libView === 'timeline') {
+      pearls = pearls.slice().sort((a, b) => {
+        const ad = a.eventDate || (a.createdAt ? a.createdAt.slice(0, 10) : '');
+        const bd = b.eventDate || (b.createdAt ? b.createdAt.slice(0, 10) : '');
+        if (ad !== bd) return bd.localeCompare(ad);
+        return (b.createdAt || '').localeCompare(a.createdAt || '');
+      });
+    }
   } else {
     // V4 (사용자 명시 2026-05-20 ultrathink): '전체' (filter null) 일 때 티켓 / 책 hide.
     //   사용자 mental model — 티켓 / 책 은 별도 카테고리 선택 시만 노출. 오늘의 너 큐레이션 (_pickHeroPearl) 은 영향 X.
