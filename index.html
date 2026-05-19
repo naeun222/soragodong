@@ -29015,27 +29015,28 @@ function renderRotatingCard() {
     const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
     const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
 
-    // 각 source 빌더 — 가용성 + dismissed 체크 후 첫 통과한 것 1개만 채택.
+    // 각 source 빌더 — 가용성 만 체크. tap 만으로는 dismiss X (peek 후 미완 = 다시 surface).
+    // V4 (사용자 명시 2026-05-20 ultrathink): tap dismiss path 폐기. 각 source 의 *완료 / 만료* 조건만 책임.
+    //   - hook: answered / dismissedFromHome / firstSurfacedAt+20h (pickHomeMainHook 가 책임)
+    //   - checkin: checkinDone (submitCheckin 시 자동)
+    //   - review: !user_viewed (openSavedReview 가 책임 — _reviewPreviewPickLatest 가 필터)
+    //   - oneul: 영구 surface (fallback)
     const buildHook = () => {
       if (typeof pickHomeMainHook !== 'function') return null;
       const h = pickHomeMainHook();
       if (!h) return null;
-      const id = 'hook_' + (h.id || '');
-      if (dismissed[id]) return null;
       return {
-        id, sourceType: 'hook',
+        id: 'hook_' + (h.id || ''), sourceType: 'hook',
         bodyHtml: _rcBuildHookBodyHtml(h),
-        onTapClick: `_rcOnSourceTap('${id}'); hookCardTap('${h.id}')`,
+        onTapClick: `hookCardTap('${h.id}')`,
       };
     };
     const buildCheckin = () => {
-      if (checkinDone) return null;  // 완료 → priority 에서 제외
-      const id = 'checkin_' + todayKVal;
-      if (dismissed[id]) return null;
+      if (checkinDone) return null;  // 완료 → priority 에서 제외 (자동 dismiss)
       return {
-        id, sourceType: 'checkin',
+        id: 'checkin_' + todayKVal, sourceType: 'checkin',
         bodyHtml: _rcBuildCheckinBodyHtml(),
-        onTapClick: `_rcOnSourceTap('${id}'); enterCheckin()`,
+        onTapClick: `enterCheckin()`,
       };
     };
     const buildOneul = () => {
@@ -29072,12 +29073,10 @@ function renderRotatingCard() {
       if (typeof _reviewPreviewPickLatest !== 'function') return null;
       const r = _reviewPreviewPickLatest();
       if (!r) return null;
-      const id = 'review_' + r._kind + '_' + (r.id || '');
-      if (dismissed[id]) return null;
       return {
-        id, sourceType: 'review',
+        id: 'review_' + r._kind + '_' + (r.id || ''), sourceType: 'review',
         bodyHtml: _rcBuildReviewBodyHtml(r),
-        onTapClick: `_rcOnSourceTap('${id}'); _openReviewPreviewLink('${r._kind}','${r.id || ''}')`,
+        onTapClick: `_openReviewPreviewLink('${r._kind}','${r.id || ''}')`,
       };
     };
 
@@ -32113,15 +32112,28 @@ function pickHomeMainHook() {
   // V4 (사용자 명시 2026-05-18 ultrathink): hook 은 push 알림 시각에만 노출 (default 21시).
   //   scheduledFor 시각 도달 전 = 큐에 쌓인 상태, 홈 표시 X.
   //   dismissedFromHome = true (push 또는 홈 카드 tap 으로 진입한 후 자동 dismiss) 면 다시 안 보임.
-  return ((state.askedHooks || [])
+  // V4 (사용자 명시 2026-05-20 ultrathink): 처음 홈에 surface 한 후 20h 지나면 자동 만료.
+  //   tap 으로 dismiss X — 답하거나 명시적 ✕ 또는 20h 자동.
+  //   firstSurfacedAt 은 picker 가 surface 결정 시 idempotent 마킹 (saveState 1회).
+  const picked = ((state.askedHooks || [])
     .filter(h => h && !h.answered && !h.dismissedFromHome)
     .filter(h => {
       const sched = h.scheduledFor ? new Date(h.scheduledFor).getTime() : new Date(h.askedAt).getTime();
       return now >= sched;
     })
     .filter(h => (now - new Date(h.askedAt).getTime()) < 48 * 3600000)
+    .filter(h => {
+      if (!h.firstSurfacedAt) return true;  // 아직 surface 전 — 통과
+      return (now - new Date(h.firstSurfacedAt).getTime()) < 20 * 3600000;
+    })
     .sort((a, b) => new Date(b.askedAt) - new Date(a.askedAt))
   )[0] || null;
+  // 첫 surface 시점 idempotent 박기 (다음 호출부터 20h timer 시작).
+  if (picked && !picked.firstSurfacedAt) {
+    picked.firstSurfacedAt = new Date(now).toISOString();
+    try { if (typeof saveState === 'function') saveState(); } catch {}
+  }
+  return picked;
 }
 
 function _hookNameCall(userName) {
@@ -46956,21 +46968,12 @@ function _pickHeroPearl() {
       };
     }
   }
-  // 안 본 우선: state.preferences._libHeroSeen[]
+  // V4 (사용자 명시 2026-05-20 ultrathink): unseen 우선 random 폐기 → 순수 random.
+  //   옛 _libHeroSeen 추적 + unseen 풀 우선 → 다 본 후 reset 의 cycle 폐기.
+  //   새: 매번 전체 풀 random — 같은 진주 연속 surface OK. 4h bucket cache 와 결합되어 4h 단위 random 유지.
+  //   _libHeroSeen state 잔재는 cleanup 안 함 (저장 공간 minimal, 향후 별도 sweep 가능).
   if (!state.preferences) state.preferences = {};
-  if (!Array.isArray(state.preferences._libHeroSeen)) state.preferences._libHeroSeen = [];
-  let seen = state.preferences._libHeroSeen;
-  // 모든 진주 다 봤으면 reset
-  const unseen = pearls.filter(p => !seen.includes(p.id));
-  const pool = unseen.length > 0 ? unseen : pearls;
-  // 가장 오래된 unseen 또는 random — 시드 음악 고정 시 우선
-  const pick = seedMusicPin || pool[Math.floor(Math.random() * pool.length)];
-  if (!seen.includes(pick.id)) {
-    seen.push(pick.id);
-    if (seen.length > pearls.length) seen = seen.slice(-pearls.length);
-    state.preferences._libHeroSeen = seen;
-    saveState();
-  }
+  const pick = seedMusicPin || pearls[Math.floor(Math.random() * pearls.length)];
   return pick;
 }
 

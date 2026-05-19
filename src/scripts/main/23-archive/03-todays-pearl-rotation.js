@@ -31,21 +31,12 @@ function _pickHeroPearl() {
       };
     }
   }
-  // 안 본 우선: state.preferences._libHeroSeen[]
+  // V4 (사용자 명시 2026-05-20 ultrathink): unseen 우선 random 폐기 → 순수 random.
+  //   옛 _libHeroSeen 추적 + unseen 풀 우선 → 다 본 후 reset 의 cycle 폐기.
+  //   새: 매번 전체 풀 random — 같은 진주 연속 surface OK. 4h bucket cache 와 결합되어 4h 단위 random 유지.
+  //   _libHeroSeen state 잔재는 cleanup 안 함 (저장 공간 minimal, 향후 별도 sweep 가능).
   if (!state.preferences) state.preferences = {};
-  if (!Array.isArray(state.preferences._libHeroSeen)) state.preferences._libHeroSeen = [];
-  let seen = state.preferences._libHeroSeen;
-  // 모든 진주 다 봤으면 reset
-  const unseen = pearls.filter(p => !seen.includes(p.id));
-  const pool = unseen.length > 0 ? unseen : pearls;
-  // 가장 오래된 unseen 또는 random — 시드 음악 고정 시 우선
-  const pick = seedMusicPin || pool[Math.floor(Math.random() * pool.length)];
-  if (!seen.includes(pick.id)) {
-    seen.push(pick.id);
-    if (seen.length > pearls.length) seen = seen.slice(-pearls.length);
-    state.preferences._libHeroSeen = seen;
-    saveState();
-  }
+  const pick = seedMusicPin || pearls[Math.floor(Math.random() * pearls.length)];
   return pick;
 }
 

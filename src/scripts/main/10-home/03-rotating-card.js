@@ -504,27 +504,28 @@ function renderRotatingCard() {
     const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
     const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
 
-    // 각 source 빌더 — 가용성 + dismissed 체크 후 첫 통과한 것 1개만 채택.
+    // 각 source 빌더 — 가용성 만 체크. tap 만으로는 dismiss X (peek 후 미완 = 다시 surface).
+    // V4 (사용자 명시 2026-05-20 ultrathink): tap dismiss path 폐기. 각 source 의 *완료 / 만료* 조건만 책임.
+    //   - hook: answered / dismissedFromHome / firstSurfacedAt+20h (pickHomeMainHook 가 책임)
+    //   - checkin: checkinDone (submitCheckin 시 자동)
+    //   - review: !user_viewed (openSavedReview 가 책임 — _reviewPreviewPickLatest 가 필터)
+    //   - oneul: 영구 surface (fallback)
     const buildHook = () => {
       if (typeof pickHomeMainHook !== 'function') return null;
       const h = pickHomeMainHook();
       if (!h) return null;
-      const id = 'hook_' + (h.id || '');
-      if (dismissed[id]) return null;
       return {
-        id, sourceType: 'hook',
+        id: 'hook_' + (h.id || ''), sourceType: 'hook',
         bodyHtml: _rcBuildHookBodyHtml(h),
-        onTapClick: `_rcOnSourceTap('${id}'); hookCardTap('${h.id}')`,
+        onTapClick: `hookCardTap('${h.id}')`,
       };
     };
     const buildCheckin = () => {
-      if (checkinDone) return null;  // 완료 → priority 에서 제외
-      const id = 'checkin_' + todayKVal;
-      if (dismissed[id]) return null;
+      if (checkinDone) return null;  // 완료 → priority 에서 제외 (자동 dismiss)
       return {
-        id, sourceType: 'checkin',
+        id: 'checkin_' + todayKVal, sourceType: 'checkin',
         bodyHtml: _rcBuildCheckinBodyHtml(),
-        onTapClick: `_rcOnSourceTap('${id}'); enterCheckin()`,
+        onTapClick: `enterCheckin()`,
       };
     };
     const buildOneul = () => {
@@ -561,12 +562,10 @@ function renderRotatingCard() {
       if (typeof _reviewPreviewPickLatest !== 'function') return null;
       const r = _reviewPreviewPickLatest();
       if (!r) return null;
-      const id = 'review_' + r._kind + '_' + (r.id || '');
-      if (dismissed[id]) return null;
       return {
-        id, sourceType: 'review',
+        id: 'review_' + r._kind + '_' + (r.id || ''), sourceType: 'review',
         bodyHtml: _rcBuildReviewBodyHtml(r),
-        onTapClick: `_rcOnSourceTap('${id}'); _openReviewPreviewLink('${r._kind}','${r.id || ''}')`,
+        onTapClick: `_openReviewPreviewLink('${r._kind}','${r.id || ''}')`,
       };
     };
 

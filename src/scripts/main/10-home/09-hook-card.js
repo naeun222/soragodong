@@ -8,15 +8,28 @@ function pickHomeMainHook() {
   // V4 (사용자 명시 2026-05-18 ultrathink): hook 은 push 알림 시각에만 노출 (default 21시).
   //   scheduledFor 시각 도달 전 = 큐에 쌓인 상태, 홈 표시 X.
   //   dismissedFromHome = true (push 또는 홈 카드 tap 으로 진입한 후 자동 dismiss) 면 다시 안 보임.
-  return ((state.askedHooks || [])
+  // V4 (사용자 명시 2026-05-20 ultrathink): 처음 홈에 surface 한 후 20h 지나면 자동 만료.
+  //   tap 으로 dismiss X — 답하거나 명시적 ✕ 또는 20h 자동.
+  //   firstSurfacedAt 은 picker 가 surface 결정 시 idempotent 마킹 (saveState 1회).
+  const picked = ((state.askedHooks || [])
     .filter(h => h && !h.answered && !h.dismissedFromHome)
     .filter(h => {
       const sched = h.scheduledFor ? new Date(h.scheduledFor).getTime() : new Date(h.askedAt).getTime();
       return now >= sched;
     })
     .filter(h => (now - new Date(h.askedAt).getTime()) < 48 * 3600000)
+    .filter(h => {
+      if (!h.firstSurfacedAt) return true;  // 아직 surface 전 — 통과
+      return (now - new Date(h.firstSurfacedAt).getTime()) < 20 * 3600000;
+    })
     .sort((a, b) => new Date(b.askedAt) - new Date(a.askedAt))
   )[0] || null;
+  // 첫 surface 시점 idempotent 박기 (다음 호출부터 20h timer 시작).
+  if (picked && !picked.firstSurfacedAt) {
+    picked.firstSurfacedAt = new Date(now).toISOString();
+    try { if (typeof saveState === 'function') saveState(); } catch {}
+  }
+  return picked;
 }
 
 function _hookNameCall(userName) {
