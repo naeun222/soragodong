@@ -11780,10 +11780,11 @@
     height: auto;
     object-fit: contain;
   }
-  /* V4 (사용자 명시 2026-05-20 ultrathink): 티켓 grid = 사진만. subtype chip + 하단 meta (title/venue/date) hide.
-     클릭 시 모달에서 모든 텍스트 표시. */
-  .ticket-tile .tc-subtype,
-  .ticket-tile .tile-music-meta {
+  /* V4 (사용자 명시 2026-05-20 ultrathink): 티켓 grid (Pinterest masonry 만) = 사진만. subtype chip + 하단 meta (title/venue/date) hide.
+     클릭 시 모달에서 모든 텍스트 표시. 타임라인 / day modal 은 텍스트 그대로 노출.
+     scope: .pearls-pinterest .ticket-tile 한정. */
+  .pearls-pinterest .ticket-tile .tc-subtype,
+  .pearls-pinterest .ticket-tile .tile-music-meta {
     display: none;
   }
   /* V4 (사용자 명시 2026-05-20 ultrathink): 티켓 모달 사진 = 자연 비율. 옛 .pearl-view-media 의 aspect-ratio:1 + max-width:320px override.
