@@ -98,6 +98,12 @@ function _archiveCurrentChapter(opts) {
     if (_origLen > 0 && _origLen < validMsgs.length) {
       archiveItem._extractFromIndex = _origLen;
     }
+    // V4 (사용자 명시 2026-05-20 ultrathink): changed 분기 = 옛 archive id 의 별도 테이블 row 정리.
+    //   옛 코드 path 에선 옛 archive 자체가 chatArchive 에서 빠지고 새 archive 로 대체 → 옛 chapter 의 chat_messages row 가 leak.
+    const _oldId = state._resumedFromArchive.snapshot.id;
+    if (_oldId && typeof _deleteChapterMessages === 'function') {
+      _deleteChapterMessages(_oldId).catch(e => console.warn('[_archiveCurrentChapter] old chapter delete fail:', e));
+    }
     delete state._resumedFromArchive;
   }
   state.chatArchive.unshift(archiveItem);
@@ -105,6 +111,26 @@ function _archiveCurrentChapter(opts) {
   // 단계 2: chapter 분리 시 _chatWindowStart reset (새 챕터 = 신규 시작).
   if (typeof _chatWindowStart !== 'undefined') _chatWindowStart = null;
   pruneOldChatArchive();
+
+  // V4 (사용자 명시 2026-05-20 ultrathink): Step 3 — chat_messages 별도 테이블 dual-write.
+  //   write amplification 방어 — main row JSONB 안 챕터 messages 통째 PATCH 회피.
+  //   in-memory messages 그대로 유지 (read 경로 무변경 안전망). 성공 시 _hasMessages=true 박음 →
+  //     Step 4 cloud save 가 _hasMessages 박힌 archive 의 messages 키 strip + read dual-mode (lazy load).
+  //   실패 시 _hasMessages 안 박음 → 다음 cloud sync 가 main row 에 messages fallback 저장.
+  if (typeof _saveChapterMessages === 'function' && archiveItem.id) {
+    (async () => {
+      try {
+        const _r = await _saveChapterMessages(archiveItem.id, validMsgs);
+        if (_r && _r.ok) {
+          archiveItem._hasMessages = true;
+          try { saveState(); } catch {}
+        } else {
+          console.warn('[_archiveCurrentChapter] chat_messages save fail — keep inline:', _r && _r.reason);
+        }
+      } catch (e) { console.warn('[_archiveCurrentChapter] chat_messages save throw:', e); }
+    })();
+  }
+
   // V4 (사용자 명시 2026-05-13 ultrathink): RAG embed fire-and-forget. Plus/Premium 만 + useRag ON 일 때.
   //   백엔드 cloudflare AI 호출 = 우리 infra. fail 해도 chat 흐름 영향 X.
   if (typeof _ragIsEnabled === 'function' && _ragIsEnabled() && typeof _ragEmbedArchive === 'function') {
