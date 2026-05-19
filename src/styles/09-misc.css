@@ -7408,6 +7408,43 @@
   }
   .insights-empty .icon, .pearls-empty .icon, .timeline-empty .icon, .archive-empty .icon { font-size: 32px; margin-bottom: 12px; }
 
+  /* V4 (사용자 명시 2026-05-20 ultrathink): 일기·대화 timeline 두 섹션 분리 + '더보기' 토글. */
+  .timeline-section { margin-bottom: 24px; }
+  .timeline-section-header {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 4px 0 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .timeline-section-count {
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 8px;
+    letter-spacing: 0;
+  }
+  .timeline-section-more {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    margin-top: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .timeline-section-more:active {
+    background: var(--surface);
+    color: var(--text);
+  }
+
   /* V3.13.x: 사용자 저장 깨달음 카드 (state.archive) */
   .archive-section-label {
     font-size: 11px; color: var(--text-soft); letter-spacing: 0.1em;

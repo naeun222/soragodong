@@ -7564,6 +7564,43 @@
   }
   .insights-empty .icon, .pearls-empty .icon, .timeline-empty .icon, .archive-empty .icon { font-size: 32px; margin-bottom: 12px; }
 
+  /* V4 (사용자 명시 2026-05-20 ultrathink): 일기·대화 timeline 두 섹션 분리 + '더보기' 토글. */
+  .timeline-section { margin-bottom: 24px; }
+  .timeline-section-header {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 4px 0 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .timeline-section-count {
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 8px;
+    letter-spacing: 0;
+  }
+  .timeline-section-more {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    margin-top: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .timeline-section-more:active {
+    background: var(--surface);
+    color: var(--text);
+  }
+
   /* V3.13.x: 사용자 저장 깨달음 카드 (state.archive) */
   .archive-section-label {
     font-size: 11px; color: var(--text-soft); letter-spacing: 0.1em;
@@ -49054,82 +49091,102 @@ function saveStrategyFromBuilder() {
 }
 
 // === LENS 1: TIMELINE — 일기 통합 (체크인 + 대화 + 아카이브 깨달음) ===
-// 사용자 명시 2026-05-18 ultrathink: 일기·대화 timeline 재구성.
-//   1) 최신순. 같은 날 안에서 일기 (entry) 먼저, 대화에서 정리된 토픽카드 (topicCards) 뒤.
-//   2) 일기에 사진 첨부 (entry.photo) 있으면 카드 안에 inline 표시.
-//   3) 대화 정리 라벨 = '🐚 대화에서 정리됨' (renderLensTopicCards 와 동일 phrase 통일).
-//      일기 entry 와 시각 구분 — 별도 .ig-card-topic 카드 + .ig-topic-label.
-//   `state.archive` (사용자 저장 깨달음) merge 는 제거 — 깨달음 탭이 그 역할 담당.
+// V4 (사용자 명시 2026-05-20 ultrathink): 일기·대화 timeline 두 섹션 분리.
+//   섹션 1 — 📔 일기 (entries) 최신순, 10개 이상 시 '더보기' 토글로 확장.
+//   섹션 2 — 🐚 대화에서 정리됨 (topicCards) 최신순, 10개 이상 시 '더보기' 토글로 확장.
+//   옛 단일 통합 timeline (intra-day diary 먼저 / topic 뒤) 폐기 — 사용자 mental model "일기 vs 대화 분리" 우선.
+const TIMELINE_SECTION_INITIAL = 10;
+let _timelineDiaryExpanded = false;
+let _timelineTopicExpanded = false;
+
+function _toggleTimelineSection(kind) {
+  if (kind === 'diary') _timelineDiaryExpanded = !_timelineDiaryExpanded;
+  else _timelineTopicExpanded = !_timelineTopicExpanded;
+  if (typeof renderLensTimeline === 'function') renderLensTimeline();
+}
+
 function renderLensTimeline() {
   const container = document.getElementById('lensTimeline');
   if (!container) return;
 
-  // 일기 entries + 대화 정리 (topicCards) 합쳐 단일 timeline item array 구성.
-  //   kind: 'diary' (entry) | 'topic' (topicCard)
-  //   sortKey: ISO timestamp string (desc sort 후 같은 dayKey 안에서 'diary' 우선)
-  const items = [];
+  // 일기 entries 수집 — 최신순 sort.
+  const diaryItems = (state.entries || [])
+    .filter(e => e && e.date)
+    .map(e => ({
+      entry: e,
+      ts: e.timestamp || (e.date + 'T23:59:59')
+    }))
+    .sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
 
-  (state.entries || []).forEach(e => {
-    if (!e.date) return;
-    // dayKey = entry.date (YYYY-MM-DD 형식). intra-day 시각은 entry.timestamp (있으면) 또는 date+T23:59
-    //   → 같은 날 다른 항목보다 위로 가도록 ts 를 23:59 로 잡고, 추가로 sortRank=0 (diary 우선) 부여.
-    const ts = e.timestamp || (e.date + 'T23:59:59');
-    items.push({ kind: 'diary', dayKey: e.date, ts, sortRank: 0, entry: e });
-  });
+  // 대화 정리 (topicCards) 수집 — strategy 제외, 최신순 sort.
+  const topicItems = (state.topicCards || [])
+    .filter(c => c && c.category !== 'strategy')
+    .map(c => {
+      const startedAt = c.chapterStartedAt || c.createdAt;
+      return startedAt ? { card: c, ts: startedAt } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => (b.ts || '').localeCompare(a.ts || ''));
 
-  (state.topicCards || []).forEach(c => {
-    // strategy 카테고리는 양생방 탭이 담당. timeline 에서는 일기·대화 chip 컨텍스트라 제외.
-    if (c.category === 'strategy') return;
-    const startedAt = c.chapterStartedAt || c.createdAt;
-    if (!startedAt) return;
-    const dayKey = getDayKey(startedAt);
-    items.push({ kind: 'topic', dayKey, ts: startedAt, sortRank: 1, card: c });
-  });
+  // 검색 필터 — 각 섹션 별 적용.
+  const q = _archiveSearchQuery;
+  const filteredDiary = q ? diaryItems.filter(it => {
+    const e = it.entry;
+    const haystack = [
+      e.date,
+      e.note || '',
+      e.diary || '',
+      e.userEdit || '',
+      e.dailyQuestion?.text || '',
+      e.dailyQuestionAnswer || '',
+      e.aiSummary || '',
+      Object.keys(e.modes || {}).filter(k => e.modes[k]).join(' ')
+    ].join(' ').toLowerCase();
+    return haystack.includes(q);
+  }) : diaryItems;
+  const filteredTopic = q ? topicItems.filter(it => {
+    const c = it.card;
+    const haystack = [c.title || '', c.summary || '', c.category || ''].join(' ').toLowerCase();
+    return haystack.includes(q);
+  }) : topicItems;
 
-  // 최신순 — ts desc. 같은 ts (사실상 거의 없음) 또는 같은 dayKey 안에서 sortRank asc (diary=0 먼저).
-  items.sort((a, b) => {
-    if (a.dayKey !== b.dayKey) return b.dayKey.localeCompare(a.dayKey);
-    if (a.sortRank !== b.sortRank) return a.sortRank - b.sortRank;
-    return (b.ts || '').localeCompare(a.ts || '');
-  });
-
-  // 검색 필터
-  let filtered = items;
-  if (_archiveSearchQuery) {
-    filtered = items.filter(it => {
-      if (it.kind === 'diary') {
-        const e = it.entry;
-        const haystack = [
-          e.date,
-          e.note || '',
-          e.diary || '',
-          e.userEdit || '',
-          e.dailyQuestion?.text || '',
-          e.dailyQuestionAnswer || '',
-          e.aiSummary || '',
-          Object.keys(e.modes || {}).filter(k => e.modes[k]).join(' ')
-        ].join(' ').toLowerCase();
-        return haystack.includes(_archiveSearchQuery);
-      } else {
-        const c = it.card;
-        const haystack = [c.title || '', c.summary || '', c.category || ''].join(' ').toLowerCase();
-        return haystack.includes(_archiveSearchQuery);
-      }
-    });
-  }
-
-  if (filtered.length === 0) {
+  if (filteredDiary.length === 0 && filteredTopic.length === 0) {
     container.innerHTML = `<div class="timeline-empty">
       <div class="icon">📅</div>
-      ${_archiveSearchQuery ? '검색 결과 없음' : '아직 기록이 없어.<br>오늘 한 줄부터 천천히 ✦'}
+      ${q ? '검색 결과 없음' : '아직 기록이 없어.<br>오늘 한 줄부터 천천히 ✦'}
     </div>`;
     return;
   }
 
-  container.innerHTML = filtered.map(it => {
-    if (it.kind === 'diary') return _renderDiaryCardHTML(it.entry);
-    return _renderTopicCardHTML(it.card);
-  }).join('');
+  let html = '';
+
+  // 섹션 1: 📔 일기
+  if (filteredDiary.length > 0) {
+    const diaryShown = _timelineDiaryExpanded ? filteredDiary : filteredDiary.slice(0, TIMELINE_SECTION_INITIAL);
+    const diaryHasMore = filteredDiary.length > TIMELINE_SECTION_INITIAL;
+    html += `<section class="timeline-section">
+      <div class="timeline-section-header">📔 일기 <span class="timeline-section-count">${filteredDiary.length}</span></div>
+      ${diaryShown.map(it => _renderDiaryCardHTML(it.entry)).join('')}
+      ${diaryHasMore
+        ? `<button class="timeline-section-more" onclick="_toggleTimelineSection('diary')">${_timelineDiaryExpanded ? '접기 ▴' : `더보기 (${filteredDiary.length - TIMELINE_SECTION_INITIAL}) ▾`}</button>`
+        : ''}
+    </section>`;
+  }
+
+  // 섹션 2: 🐚 대화에서 정리됨
+  if (filteredTopic.length > 0) {
+    const topicShown = _timelineTopicExpanded ? filteredTopic : filteredTopic.slice(0, TIMELINE_SECTION_INITIAL);
+    const topicHasMore = filteredTopic.length > TIMELINE_SECTION_INITIAL;
+    html += `<section class="timeline-section">
+      <div class="timeline-section-header">🐚 대화에서 정리됨 <span class="timeline-section-count">${filteredTopic.length}</span></div>
+      ${topicShown.map(it => _renderTopicCardHTML(it.card)).join('')}
+      ${topicHasMore
+        ? `<button class="timeline-section-more" onclick="_toggleTimelineSection('topic')">${_timelineTopicExpanded ? '접기 ▴' : `더보기 (${filteredTopic.length - TIMELINE_SECTION_INITIAL}) ▾`}</button>`
+        : ''}
+    </section>`;
+  }
+
+  container.innerHTML = html;
 }
 
 // 일기 (entry) 카드 — 인스타 게시물 스타일. 사진 첨부 있으면 inline.
