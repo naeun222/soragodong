@@ -1105,23 +1105,22 @@ async function maybeRunDailyChapterExtract() {
   }
 
   // 3. 잠든 상태 가드 — step 4 (chatMessages → archive 이송) 만 막는 의도.
-  //   사용자 명시 2026-05-11: 4AM cutoff 일관. 같은 날 = 챕터 분리 skip.
-  //   옛 5h gap 단독 룰 = 22:00 → 03:30 (같은 날, 4시 전) 도 archive 됐던 버그.
-  //   사용자 보고 2026-05-12 ultrathink: 옛 흐름 = `if (...) return;` 한 줄로 step 5/6 (이미 archive 된 pending 의 batch submit) 까지 차단.
-  //     chatMessages 비어있는 상태 (✓ 로 챕터 끝낸 후 새 chat 안 함) 에서 reload 마다 가드 차단 → batch 영원히 0회.
-  //     stuck archive 들 "🌙 4시 자동 정리 예정" 으로 누적 (콘솔 진단: 5/10 stamp 후 7개 _batchSubmittedAt 없음).
-  //   fix = 가드 4 를 step 4 의 if 조건으로 흡수. step 5/6 은 chatMessages 상태와 무관하게 항상 실행.
-  const NEW_CHAPTER_GAP_MS = 5 * 60 * 60 * 1000;
+  //   V4 (사용자 명시 2026-05-20 ultrathink): 4AM cutoff 단순 룰 — last msg < (직전 4AM cutoff - 5분) 이면 archive.
+  //   옛 (_isDifferentDay && _gap >= 5h) 룰 폐기. 새 룰은 자정~새벽 단발 chat 도 매일 batch 에 묶이게.
+  //   mid-session 보호: last msg 가 cutoff 직전 5분 또는 cutoff 이후 = defer (다음 4AM batch).
+  //   archive date = first msg dayK (4AM 기준) — _archiveCurrentChapter 가 이미 그렇게 처리.
+  //   사용자 보고 2026-05-12 ultrathink (보존): 가드 4 는 step 4 의 if 조건만 막음. step 5/6 (이미 archive 된 pending 의 batch submit) 은 항상 실행.
   const lastMsg = (state.chatMessages && state.chatMessages.length > 0)
     ? state.chatMessages[state.chatMessages.length - 1] : null;
   const _lastMs = (lastMsg && lastMsg.timestamp) ? new Date(lastMsg.timestamp).getTime() : null;
-  const _gap = _lastMs == null ? Infinity : (Date.now() - _lastMs);
-  const _msgDayK = (_lastMs && typeof getDayKey === 'function') ? getDayKey(_lastMs) : null;
-  const _todayK = (typeof todayKey === 'function') ? todayKey() : null;
-  const _isDifferentDay = !!(_msgDayK && _todayK && _msgDayK !== _todayK);
+  let _shouldArchive = false;
+  if (_lastMs != null) {
+    const _cutoffMs = _lastDaily4amCutoff().getTime();
+    _shouldArchive = _lastMs < (_cutoffMs - 5 * 60 * 1000);
+  }
 
-  // 4. chatMessages 의 현재 챕터도 archive 이송 — 잠든 상태 (다른 날 + 5h+) 일 때만.
-  if (_isDifferentDay && _gap >= NEW_CHAPTER_GAP_MS
+  // 4. chatMessages 의 현재 챕터도 archive 이송 — cutoff 통과 시.
+  if (_shouldArchive
       && state.chatMessages && state.chatMessages.length >= 3
       && typeof _archiveCurrentChapter === 'function') {
     _archiveCurrentChapter({ manual: false });

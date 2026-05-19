@@ -48,28 +48,27 @@ async function sendChat() {
     _isDeeperFromText = true;
   }
 
-  // V4 사용자 명시 2026-05-01 ultrathink: 5h+ 갭 detect.
-  // 사용자 명시 2026-05-11: 4AM cutoff 일관 — 같은 날 (4시 cutoff 기준) 안에서는 chapter archive X.
-  //   옛 5h gap 단독 룰 = 22:00 → 03:30 (같은 날, 4시 전) 도 archive 됐던 버그.
-  //   다른 날 + 5h gap 둘 다 만족 시 archive 이송.
-  const NEW_CHAPTER_GAP_MS = 5 * 60 * 60 * 1000;
+  // V4 (사용자 명시 2026-05-20 ultrathink): 4AM cutoff 단순 룰 — last msg < (직전 4AM cutoff - 5분) 이면 archive.
+  //   옛 (_isDifferentDay && _gap >= 5h) 룰 폐기. 새 룰은 자정~새벽 단발 chat 도 다음 4AM batch 에 묶이게.
+  //   mid-session 보호: last msg 가 cutoff 직전 5분 또는 cutoff 이후 = defer.
+  //   archive date = first msg dayK (4AM 기준) — _archiveCurrentChapter 가 이미 그렇게 처리.
   const lastMsg = state.chatMessages[state.chatMessages.length - 1];
   const _nowMs = Date.now();
   const _lastMs = lastMsg && lastMsg.timestamp ? new Date(lastMsg.timestamp).getTime() : null;
-  const _gap = _lastMs == null ? Infinity : (_nowMs - _lastMs);
-  const _msgDayK = (_lastMs && typeof getDayKey === 'function') ? getDayKey(_lastMs) : null;
-  const _todayK = (typeof todayKey === 'function') ? todayKey() : null;
-  const _isDifferentDay = !!(_msgDayK && _todayK && _msgDayK !== _todayK);
-  let isNewChapter = _isDifferentDay && _gap >= NEW_CHAPTER_GAP_MS;
+  let isNewChapter = false;
+  if (_lastMs != null && typeof _lastDaily4amCutoff === 'function') {
+    const _cutoffMs = _lastDaily4amCutoff().getTime();
+    isNewChapter = _lastMs < (_cutoffMs - 5 * 60 * 1000);
+  }
 
-  // V4 (사용자 보고 2026-05-04 V199): resumeArchiveChat 직후 첫 sendChat 은 갭 detect 강제 skip.
-  if (state._chatResumedAt && (_nowMs - state._chatResumedAt) < NEW_CHAPTER_GAP_MS) {
+  // V4 (사용자 보고 2026-05-04 V199): resumeArchiveChat 직후 첫 sendChat 은 archive 강제 skip (mid-session 보호).
+  if (state._chatResumedAt && (_nowMs - state._chatResumedAt) < (5 * 60 * 60 * 1000)) {
     isNewChapter = false;
   }
   delete state._chatResumedAt;
 
-  // 5h+ 갭 detect → 직전 챕터 즉시 archive 이송 (chatMessages 비움)
-  // (resume 후 무변경 + 5h+ 면 _archiveCurrentChapter 가 원본 snapshot 으로 복귀하고 chatMessages 비움 → 새 메시지는 새 챕터 시작.)
+  // archive 대상 → 직전 챕터 즉시 archive 이송 (chatMessages 비움)
+  // (resume 후 무변경 + cutoff 통과 = _archiveCurrentChapter 가 원본 snapshot 으로 복귀하고 chatMessages 비움 → 새 메시지는 새 챕터 시작.)
   if (isNewChapter && state.chatMessages.length > 0) {
     // V4 (사용자 명시 2026-05-14): 새 챕터 시작 — 전략 resurface 챕터 1장 가드 reset.
     if (typeof _strategyClearChapterFlag === 'function') _strategyClearChapterFlag();
