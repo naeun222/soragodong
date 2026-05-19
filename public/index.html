@@ -34210,6 +34210,13 @@ async function completeMission(missionId) {
   setTimeout(() => {
     renderTodayMission();
     renderShellBar();
+    // V4 fix (사용자 보고 2026-05-20 ultrathink): 홈/도서관 통합 후 (2026-05-17) 전략 카드와 미션 카드가
+    //   같은 archive screen 안 공존. 미션 완료해도 양생방 전략 카드가 stale ('해볼게' 그대로) →
+    //   _hasUnchecked 가 true 인데도 re-render 안 돼 '🔍 결과 체크' 미전환.
+    //   fix: renderArchive() 호출 — renderLensStrategies + 회전카드 + 카운트 등 같이 갱신.
+    if (typeof renderArchive === 'function') {
+      try { renderArchive(); } catch (e) { console.warn('[completeMission renderArchive]', e); }
+    }
   }, 1500);
 }
 
