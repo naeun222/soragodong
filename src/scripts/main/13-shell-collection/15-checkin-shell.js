@@ -7,16 +7,18 @@
 //   🐢 메인 = 사진 or 음악 (소중한 자산)
 //   🌀 일상 = 오늘의 질문 답변 / 수면 / 옵션 체크 1개+
 //   🐚 가벼움 = vitality + mood 만
+// V4 (사용자 명시 2026-05-20 ultrathink): tier 만 반환. emoji 는 addOrUpdateCheckinShell 에서 SHELL_POOLS 풀에서 anti-recency pick.
+//   옛 fixed emoji (🦞/🐢/🌀/🐚) 매번 같았던 자리 → 풀 random 으로 다양성 ↑.
 function calcCheckinTier(entry, todayHasTrackerSuccess) {
-  if (todayHasTrackerSuccess) return { tier: 'golden', type: '🦞' };
+  if (todayHasTrackerSuccess) return { tier: 'golden' };
   const _hasAnyPhoto = !!(entry.photo || (Array.isArray(entry.photos) && entry.photos.length > 0));
   const hasMedia = !!(entry.music || _hasAnyPhoto);
-  if (hasMedia) return { tier: 'main', type: '🐢' };
+  if (hasMedia) return { tier: 'main' };
   const hasSleep = !!(entry.allNighter || (entry.sleepStart && entry.sleepEnd));
   const hasOptional = !!(entry.meals || entry.movement || entry.focus || entry.social || entry.overwhelm);
   const hasQuestion = !!(entry.dailyQuestion && entry.dailyQuestion.answered);
-  if (hasSleep || hasOptional || hasQuestion) return { tier: 'daily', type: '🌀' };
-  return { tier: 'light', type: '🐚' };
+  if (hasSleep || hasOptional || hasQuestion) return { tier: 'daily' };
+  return { tier: 'light' };
 }
 
 // 그날 트래커 데이터 입력 1개+ 검출. numeric = measurements.at 이 today / check = measurements.dayKey 이 today.
@@ -44,7 +46,24 @@ function addOrUpdateCheckinShell(entry) {
 
   const trackerSuccesses = _todayTrackerSuccesses(todayK);
   const todayHasTracker = trackerSuccesses.length > 0;
-  const { tier, type } = calcCheckinTier(entry, todayHasTracker);
+  const { tier } = calcCheckinTier(entry, todayHasTracker);
+
+  // V4 (사용자 명시 2026-05-20 ultrathink): emoji pool 화. same-day 재진입 + tier 동일 시 prev.type 유지 (안정성),
+  //   tier 바뀌면 SHELL_POOLS[tier] 에서 anti-recency pick. 풀 없으면 옛 hardcode fallback.
+  let type;
+  if (prevTier === tier && prevType) {
+    type = prevType;
+  } else {
+    const _fallbackEmoji = { golden: '🦞', main: '🐢', daily: '🌀', light: '🐚' };
+    const _pool = (typeof SHELL_POOLS !== 'undefined' && SHELL_POOLS[tier]) ? SHELL_POOLS[tier].emojis : null;
+    if (_pool && _pool.length > 0 && typeof _pickEmojiAntiRecency === 'function') {
+      type = _pickEmojiAntiRecency(_pool, tier);
+    } else if (_pool && _pool.length > 0) {
+      type = _pool[Math.floor(Math.random() * _pool.length)];
+    } else {
+      type = _fallbackEmoji[tier] || '🐚';
+    }
+  }
 
   const tierLabel = ({ light: '가벼움', daily: '일상', main: '메인', golden: '황금' })[tier] || '소라';
   const dateLabel = (function() {

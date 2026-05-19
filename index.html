@@ -37298,16 +37298,18 @@ function closeModal(id) {
 //   🐢 메인 = 사진 or 음악 (소중한 자산)
 //   🌀 일상 = 오늘의 질문 답변 / 수면 / 옵션 체크 1개+
 //   🐚 가벼움 = vitality + mood 만
+// V4 (사용자 명시 2026-05-20 ultrathink): tier 만 반환. emoji 는 addOrUpdateCheckinShell 에서 SHELL_POOLS 풀에서 anti-recency pick.
+//   옛 fixed emoji (🦞/🐢/🌀/🐚) 매번 같았던 자리 → 풀 random 으로 다양성 ↑.
 function calcCheckinTier(entry, todayHasTrackerSuccess) {
-  if (todayHasTrackerSuccess) return { tier: 'golden', type: '🦞' };
+  if (todayHasTrackerSuccess) return { tier: 'golden' };
   const _hasAnyPhoto = !!(entry.photo || (Array.isArray(entry.photos) && entry.photos.length > 0));
   const hasMedia = !!(entry.music || _hasAnyPhoto);
-  if (hasMedia) return { tier: 'main', type: '🐢' };
+  if (hasMedia) return { tier: 'main' };
   const hasSleep = !!(entry.allNighter || (entry.sleepStart && entry.sleepEnd));
   const hasOptional = !!(entry.meals || entry.movement || entry.focus || entry.social || entry.overwhelm);
   const hasQuestion = !!(entry.dailyQuestion && entry.dailyQuestion.answered);
-  if (hasSleep || hasOptional || hasQuestion) return { tier: 'daily', type: '🌀' };
-  return { tier: 'light', type: '🐚' };
+  if (hasSleep || hasOptional || hasQuestion) return { tier: 'daily' };
+  return { tier: 'light' };
 }
 
 // 그날 트래커 데이터 입력 1개+ 검출. numeric = measurements.at 이 today / check = measurements.dayKey 이 today.
@@ -37335,7 +37337,24 @@ function addOrUpdateCheckinShell(entry) {
 
   const trackerSuccesses = _todayTrackerSuccesses(todayK);
   const todayHasTracker = trackerSuccesses.length > 0;
-  const { tier, type } = calcCheckinTier(entry, todayHasTracker);
+  const { tier } = calcCheckinTier(entry, todayHasTracker);
+
+  // V4 (사용자 명시 2026-05-20 ultrathink): emoji pool 화. same-day 재진입 + tier 동일 시 prev.type 유지 (안정성),
+  //   tier 바뀌면 SHELL_POOLS[tier] 에서 anti-recency pick. 풀 없으면 옛 hardcode fallback.
+  let type;
+  if (prevTier === tier && prevType) {
+    type = prevType;
+  } else {
+    const _fallbackEmoji = { golden: '🦞', main: '🐢', daily: '🌀', light: '🐚' };
+    const _pool = (typeof SHELL_POOLS !== 'undefined' && SHELL_POOLS[tier]) ? SHELL_POOLS[tier].emojis : null;
+    if (_pool && _pool.length > 0 && typeof _pickEmojiAntiRecency === 'function') {
+      type = _pickEmojiAntiRecency(_pool, tier);
+    } else if (_pool && _pool.length > 0) {
+      type = _pool[Math.floor(Math.random() * _pool.length)];
+    } else {
+      type = _fallbackEmoji[tier] || '🐚';
+    }
+  }
 
   const tierLabel = ({ light: '가벼움', daily: '일상', main: '메인', golden: '황금' })[tier] || '소라';
   const dateLabel = (function() {
@@ -49330,17 +49349,42 @@ const SHELL_POOLS = {
   legendary:{ emojis: ['✨','🌈','🎆','🎇','🪩','🦄','🌌','🦋','🌺','🦚','🌸','💖','🎀','🪷','🩵','🪐','🌷','🦢'], tier: 'legend',  points: 50, label: '특별' }
 };
 
+// V4 (사용자 명시 2026-05-20 ultrathink): anti-recency weighted pick — 최근 N 안 같은 tier 에서
+//   등장한 emoji 가중치 0.3 으로 ↓. 작은 N small-sample 우연 편향 ('또 ⭐?' 체감) 해소.
+//   recent window = state.shellCollection 의 마지막 12개 중 같은 tier 만 추출.
+//   pool 1개 / recent 0개 면 uniform 그대로.
+function _pickEmojiAntiRecency(emojis, tier) {
+  if (!Array.isArray(emojis) || emojis.length === 0) return '';
+  if (emojis.length === 1) return emojis[0];
+  const recent = ((state && state.shellCollection) || [])
+    .slice(-12)
+    .filter(s => s && s.tier === tier)
+    .map(s => s.type);
+  if (recent.length === 0) {
+    return emojis[Math.floor(Math.random() * emojis.length)];
+  }
+  const weights = emojis.map(e => recent.includes(e) ? 0.3 : 1.0);
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (total <= 0) return emojis[Math.floor(Math.random() * emojis.length)];
+  let r = Math.random() * total;
+  for (let i = 0; i < emojis.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return emojis[i];
+  }
+  return emojis[emojis.length - 1];
+}
+
 function pickShellForTask(task) {
   if (!task) return null;
   // 사용자 요청 2026-04-27: 특별 소라 어디서든 5% 등장 (오늘 카드/부름 모두)
   if (Math.random() < 0.05) {
     const pool = SHELL_POOLS.legendary;
-    const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
+    const emoji = _pickEmojiAntiRecency(pool.emojis, pool.tier);
     return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity: 'legendary' };
   }
   if (task.source === 'ai_mission') {
     const pool = SHELL_POOLS.call;
-    const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
+    const emoji = _pickEmojiAntiRecency(pool.emojis, pool.tier);
     return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity: 'rare' };
   }
   let pool;
@@ -49348,7 +49392,7 @@ function pickShellForTask(task) {
   else if (task.weight === 'main') pool = SHELL_POOLS.main;
   else if (task.weight === 'daily') pool = SHELL_POOLS.daily;
   else pool = SHELL_POOLS.light;
-  const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
+  const emoji = _pickEmojiAntiRecency(pool.emojis, pool.tier);
   const rarity = pool.tier === 'golden' ? 'rare' : 'common';
   return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity };
 }

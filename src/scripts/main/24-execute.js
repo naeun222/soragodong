@@ -35,17 +35,42 @@ const SHELL_POOLS = {
   legendary:{ emojis: ['✨','🌈','🎆','🎇','🪩','🦄','🌌','🦋','🌺','🦚','🌸','💖','🎀','🪷','🩵','🪐','🌷','🦢'], tier: 'legend',  points: 50, label: '특별' }
 };
 
+// V4 (사용자 명시 2026-05-20 ultrathink): anti-recency weighted pick — 최근 N 안 같은 tier 에서
+//   등장한 emoji 가중치 0.3 으로 ↓. 작은 N small-sample 우연 편향 ('또 ⭐?' 체감) 해소.
+//   recent window = state.shellCollection 의 마지막 12개 중 같은 tier 만 추출.
+//   pool 1개 / recent 0개 면 uniform 그대로.
+function _pickEmojiAntiRecency(emojis, tier) {
+  if (!Array.isArray(emojis) || emojis.length === 0) return '';
+  if (emojis.length === 1) return emojis[0];
+  const recent = ((state && state.shellCollection) || [])
+    .slice(-12)
+    .filter(s => s && s.tier === tier)
+    .map(s => s.type);
+  if (recent.length === 0) {
+    return emojis[Math.floor(Math.random() * emojis.length)];
+  }
+  const weights = emojis.map(e => recent.includes(e) ? 0.3 : 1.0);
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (total <= 0) return emojis[Math.floor(Math.random() * emojis.length)];
+  let r = Math.random() * total;
+  for (let i = 0; i < emojis.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return emojis[i];
+  }
+  return emojis[emojis.length - 1];
+}
+
 function pickShellForTask(task) {
   if (!task) return null;
   // 사용자 요청 2026-04-27: 특별 소라 어디서든 5% 등장 (오늘 카드/부름 모두)
   if (Math.random() < 0.05) {
     const pool = SHELL_POOLS.legendary;
-    const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
+    const emoji = _pickEmojiAntiRecency(pool.emojis, pool.tier);
     return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity: 'legendary' };
   }
   if (task.source === 'ai_mission') {
     const pool = SHELL_POOLS.call;
-    const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
+    const emoji = _pickEmojiAntiRecency(pool.emojis, pool.tier);
     return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity: 'rare' };
   }
   let pool;
@@ -53,7 +78,7 @@ function pickShellForTask(task) {
   else if (task.weight === 'main') pool = SHELL_POOLS.main;
   else if (task.weight === 'daily') pool = SHELL_POOLS.daily;
   else pool = SHELL_POOLS.light;
-  const emoji = pool.emojis[Math.floor(Math.random() * pool.emojis.length)];
+  const emoji = _pickEmojiAntiRecency(pool.emojis, pool.tier);
   const rarity = pool.tier === 'golden' ? 'rare' : 'common';
   return { emoji, tier: pool.tier, points: pool.points, label: pool.label, rarity };
 }
