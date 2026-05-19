@@ -607,3 +607,138 @@ async function _backupRowDelete(userIdKey) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// V4 (사용자 명시 2026-05-20 ultrathink): 챗 메시지 별도 테이블 helper.
+// migration: supabase/migrations/0033_chat_messages.sql.
+// ───────────────────────────────────────────────────────────────
+// 동기: state.chatArchive[].messages 가 main row JSONB 안 박혀 모든 saveToCloud 마다 통째 PATCH
+//   → write amplification + 100+ 사용자 시 cascade. pearl_storage 와 동일 철학으로 분리.
+// 저장 형식:
+//   - 평문 사용자 = content jsonb 컬럼 ({role, content, timestamp, ...} 그대로).
+//   - E2EE 사용자 = encrypted_body text 컬럼 (_e2eeEncrypt wrapper {_e2ee,iv,data} 통째 JSON.stringify).
+//   - 한 챕터 = 한 chapter_id (archive item.id). 메시지 = idx asc 정렬.
+// 호출처 (별도 step — 지금은 정의만):
+//   Step 3: _saveChapterMessages → _archiveCurrentChapter 가 호출
+//   Step 4: _loadChapterMessages → archive 열 때 lazy load
+//   Step 5: backfill 1회 (06-backup-migration.js)
+//   Step 6: _deleteChapterMessages → _purgeArchive 가 휴지통 hard delete cascade 로 호출
+// ═══════════════════════════════════════════════════════════════
+const _CHAT_MESSAGES_TABLE = 'soragodong_chat_messages';
+
+// chapterId 의 메시지 array 반환. 실패 시 [] (null 안 던짐 — caller 가 archive.messages fallback 가능).
+// RLS = user_id 매칭 강제. authHeaders() 의 Authorization Bearer access_token + apikey 둘 다 필요.
+async function _loadChapterMessages(chapterId) {
+  if (!chapterId || !authUserId) return [];
+  const url = `${SUPABASE_URL}/rest/v1/${_CHAT_MESSAGES_TABLE}`
+    + `?user_id=eq.${authUserId}`
+    + `&chapter_id=eq.${encodeURIComponent(chapterId)}`
+    + `&select=content,encrypted_body,idx`
+    + `&order=idx.asc`;
+  let resp;
+  try {
+    resp = await _fetchWithTimeout(url, { headers: authHeaders() });
+  } catch (e) {
+    console.warn('[loadChapterMessages] fetch fail:', e);
+    return [];
+  }
+  if (!resp.ok) {
+    console.warn('[loadChapterMessages]', resp.status, (await resp.text().catch(() => '')).slice(0, 200));
+    return [];
+  }
+  const rows = await resp.json();
+  const out = [];
+  for (const r of rows) {
+    if (r.encrypted_body) {
+      // E2EE 사용자 — 마스터 키 없으면 skip (recovery 모달 흐름이 잡음).
+      if (!_e2eeMasterKey) continue;
+      try {
+        const wrap = JSON.parse(r.encrypted_body);
+        const plain = await _e2eeDecrypt(wrap, _e2eeMasterKey);
+        if (plain == null) { console.warn('[loadChapterMessages] decrypt 실패 — idx', r.idx); continue; }
+        out.push(JSON.parse(plain));
+      } catch (e) {
+        console.warn('[loadChapterMessages] e2ee parse 실패 — idx', r.idx, e);
+      }
+    } else if (r.content) {
+      out.push(r.content);
+    }
+  }
+  return out;
+}
+
+// 메시지 array 를 chapterId 로 batch insert. typing/error/_seed 자동 strip.
+// 반환: { ok, count } 또는 { ok:false, reason }. 호출부가 ok 면 state.chatArchive 메타에 _hasMessages:true 박음.
+async function _saveChapterMessages(chapterId, messages) {
+  if (!chapterId || !authUserId) return { ok: false, reason: 'no-id' };
+  if (!Array.isArray(messages) || messages.length === 0) return { ok: true, count: 0 };
+  const valid = messages.filter(m => m && !m.typing && !m.error && !m._seed);
+  if (valid.length === 0) return { ok: true, count: 0 };
+
+  const rows = new Array(valid.length);
+  if (_e2eeEnabled && _e2eeMasterKey) {
+    // E2EE — 각 메시지를 _serializeReplacer 로 transient 키 strip 후 stringify → 암호화 → wrap JSON 으로 박음.
+    for (let i = 0; i < valid.length; i++) {
+      const json = JSON.stringify(valid[i], _serializeReplacer);
+      const wrap = await _e2eeEncrypt(json, _e2eeMasterKey);
+      rows[i] = {
+        user_id: authUserId,
+        chapter_id: chapterId,
+        idx: i,
+        content: null,
+        encrypted_body: JSON.stringify(wrap)
+      };
+    }
+  } else {
+    // 평문 — content jsonb 에 message 객체 그대로. (jsonb 안 transient 키는 어차피 사용자 본인 데이터라 OK.)
+    for (let i = 0; i < valid.length; i++) {
+      rows[i] = {
+        user_id: authUserId,
+        chapter_id: chapterId,
+        idx: i,
+        content: valid[i],
+        encrypted_body: null
+      };
+    }
+  }
+
+  const url = `${SUPABASE_URL}/rest/v1/${_CHAT_MESSAGES_TABLE}`;
+  let resp;
+  try {
+    resp = await _fetchWithRetry5xx(url, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(rows, _serializeReplacer)
+    });
+  } catch (e) {
+    console.error('[saveChapterMessages] throw:', e);
+    return { ok: false, reason: 'throw: ' + (e && e.message || e) };
+  }
+  if (!resp.ok) {
+    const err = await resp.text().catch(() => '');
+    console.error('[saveChapterMessages] insert fail:', resp.status, err.slice(0, 200));
+    return { ok: false, reason: `${resp.status}: ${err.slice(0, 100)}` };
+  }
+  return { ok: true, count: valid.length };
+}
+
+// chapterId 의 모든 메시지 hard delete. _purgeArchive (휴지통 7일 cap 만료) cascade 시 호출.
+// 빈 chapterId 또는 미존재 chapter 도 ok (RLS 가 사용자 잘못 row 차단 — 빈 응답).
+async function _deleteChapterMessages(chapterId) {
+  if (!chapterId || !authUserId) return { ok: false, reason: 'no-id' };
+  const url = `${SUPABASE_URL}/rest/v1/${_CHAT_MESSAGES_TABLE}`
+    + `?user_id=eq.${authUserId}`
+    + `&chapter_id=eq.${encodeURIComponent(chapterId)}`;
+  let resp;
+  try {
+    resp = await _fetchWithRetry5xx(url, { method: 'DELETE', headers: authHeaders() });
+  } catch (e) {
+    console.warn('[deleteChapterMessages] throw:', e);
+    return { ok: false, reason: 'throw: ' + (e && e.message || e) };
+  }
+  if (!resp.ok) {
+    console.warn('[deleteChapterMessages]', resp.status);
+    return { ok: false, reason: `${resp.status}` };
+  }
+  return { ok: true };
+}
+
