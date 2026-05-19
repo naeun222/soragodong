@@ -128,7 +128,7 @@ async function _bookViewMore(pearlId) {
       const file = await pickPhotoFile();
       if (file) {
         showFullscreenLoader('표지 처리 중... 📸');
-        const newPhoto = await fileToResizedDataUrl(file, 1024);
+        const newPhoto = await fileToResizedDataUrl(file, 1024, 0.85);
         // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1C — _attachPearlPhoto 가 Storage 신/옛 path 자동 분기.
         await _attachPearlPhoto(pearl, newPhoto);
         hideFullscreenLoader();

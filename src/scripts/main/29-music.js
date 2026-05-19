@@ -573,8 +573,8 @@ async function addPearl() {
         const file = await pickPhotoFile();
         if (file) {
           showFullscreenLoader('사진 처리 중... 📸');
-          const resized = await fileToResizedDataUrl(file, 800);
-          const square = await makeSquareThumb(resized, 600);
+          const resized = await fileToResizedDataUrl(file, 1024, 0.85);
+          const square = await makeSquareThumb(resized, 600, 0.85);
           photo = square;
           hideFullscreenLoader();
         }
@@ -933,7 +933,7 @@ async function _pearlViewMore(id) {
     try {
       const file = await pickPhotoFile();
       if (!file) return;
-      const dataUrl = await fileToResizedDataUrl(file, 1024);
+      const dataUrl = await fileToResizedDataUrl(file, 1024, 0.85);
       if (typeof showFullscreenLoader === 'function') showFullscreenLoader('사진 업로드 중... 📸');
       await _attachPearlPhoto(pearl, dataUrl);
       if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();

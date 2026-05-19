@@ -134,7 +134,7 @@ async function saveMsgAsPearl(idx) {
     if (wantPhoto) {
       try {
         const file = await pickPhotoFile();
-        if (file) photo = await fileToResizedDataUrl(file, 1024);
+        if (file) photo = await fileToResizedDataUrl(file, 1024, 0.85);
       } catch (e) { console.warn('진주 사진:', e); }
     }
   }

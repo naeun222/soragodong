@@ -116,7 +116,7 @@ async function saveTicketPearl(opts) {
       const file = await pickPhotoFile();
       if (file) {
         showFullscreenLoader('사진 처리 중... 📸');
-        photo = await fileToResizedDataUrl(file, 1024);
+        photo = await fileToResizedDataUrl(file, 1024, 0.85);
         hideFullscreenLoader();
       }
     } catch (e) {
