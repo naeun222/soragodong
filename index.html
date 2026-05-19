@@ -9497,18 +9497,151 @@
   /* multi 모드: 사진 strip 이 한 줄 다 차지, 음악 카드는 다음 줄. */
   .checkin-mp-row.checkin-mp-multi #checkinPhotoSlot { flex: 1 1 100%; }
   .checkin-mp-row.checkin-mp-multi #checkinMusicSlot { flex: 1 1 100%; }
-  /* 일기 모달 / 타임라인 multi photo wrap (legacy single 유지 + multi grid). */
+  /* V4 (사용자 명시 2026-05-20 ultrathink): 일기 모달 / 타임라인 multi photo — 가로 스크롤 carousel + snap.
+     옛 grid 폐기 — 작은 화면에서 사진 작게 잘리고 디테일 못 봄. 한 장씩 swipe 로 큰 사진 본다. */
   .day-photo-wrap.day-photo-multi,
   .ig-photo-wrap.ig-photo-multi {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-    gap: 6px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
   }
+  .day-photo-wrap.day-photo-multi::-webkit-scrollbar,
+  .ig-photo-wrap.ig-photo-multi::-webkit-scrollbar { display: none; }
   .day-photo-wrap.day-photo-multi .day-photo,
   .ig-photo-wrap.ig-photo-multi .ig-photo {
-    width: 100%; aspect-ratio: 1;
+    flex: 0 0 100%;
+    width: 100%;
+    aspect-ratio: 1;
     object-fit: cover;
+    border-radius: 12px;
+    scroll-snap-align: center;
+  }
+  /* 일기 모달 ⋯ 더보기 버튼 — × 왼쪽. */
+  .day-modal-more {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 22px;
+    line-height: 1;
+    padding: 4px 8px;
+    margin-right: 4px;
+    cursor: pointer;
     border-radius: 8px;
+    transition: background 0.15s;
+  }
+  .day-modal-more:active { background: rgba(15,14,23,0.45); }
+  /* 일기 미디어 편집 시트 (overlay) */
+  .diary-edit-sheet-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,14,23,0.78);
+    z-index: 700;
+    display: flex; align-items: flex-end; justify-content: center;
+    padding: 0;
+    backdrop-filter: blur(8px);
+    animation: ritualFadeIn 0.2s ease;
+  }
+  .diary-edit-sheet {
+    width: 100%; max-width: 480px;
+    max-height: 88vh;
+    background: var(--surface);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    padding: 18px 18px 24px;
+    overflow-y: auto;
+    border-top: 1px solid var(--border-strong);
+  }
+  .diary-edit-sheet-title {
+    font-size: 15px; font-weight: 600; color: var(--text);
+    margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .diary-edit-sheet-close {
+    background: transparent; border: none; color: var(--text-dim);
+    font-size: 18px; cursor: pointer; padding: 4px 8px;
+  }
+  .diary-edit-section { margin-bottom: 18px; }
+  .diary-edit-section-label {
+    font-size: 11px; color: var(--accent); letter-spacing: 0.10em;
+    margin-bottom: 8px; text-transform: uppercase;
+  }
+  .diary-edit-photos-strip {
+    display: flex; gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .diary-edit-photos-strip::-webkit-scrollbar { display: none; }
+  .diary-edit-photo-tile {
+    position: relative;
+    width: 90px; height: 90px;
+    flex: 0 0 90px;
+    border-radius: 10px; overflow: hidden;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    touch-action: none;
+    transition: transform 0.12s, opacity 0.12s, border-color 0.12s;
+  }
+  .diary-edit-photo-tile img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .diary-edit-photo-tile.is-dragging { opacity: 0.55; transform: scale(0.95); }
+  .diary-edit-photo-tile.is-drop-target {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(212,167,106,0.45);
+  }
+  .diary-edit-photo-actions {
+    position: absolute; top: 4px; right: 4px;
+    display: flex; gap: 4px;
+  }
+  .diary-edit-photo-actions button {
+    width: 22px; height: 22px;
+    background: rgba(15,14,23,0.78);
+    border: 1px solid var(--border);
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .diary-edit-photo-add {
+    width: 90px; height: 90px; flex: 0 0 90px;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--text-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .diary-edit-photo-add:active { background: var(--surface); }
+  .diary-edit-music-actions {
+    display: flex; gap: 8px;
+    margin-top: 8px;
+  }
+  .diary-edit-music-actions button {
+    flex: 1;
+    padding: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .diary-edit-music-actions button:active { background: var(--surface); }
+  .diary-edit-empty {
+    font-size: 12px; color: var(--text-dim);
+    padding: 12px;
+    text-align: center;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
   }
   /* 소라 상세 모달 multi photo */
   .ci-shell-photos {
@@ -47348,6 +47481,17 @@ function openDayModal(dateStr) {
   overlay.id = 'dayModal';
   overlay.className = 'day-modal-overlay';
   overlay.onclick = (e) => { if (e.target === overlay) closeDayModal(); };
+  // V4 (사용자 명시 2026-05-20 ultrathink): 일기 사진/음악 수정 ⋯ 더보기 버튼 — × 왼쪽.
+  //   entry 가 있고 사진 / 음악 / 추가 가능 케이스 면 노출. 체크인 질문/활력/에너지/수면 은 분석 추출에 들어가서 수정 X.
+  const _hasEntryMedia = !!(entry && (
+    entry.music ||
+    entry.photo ||
+    (Array.isArray(entry.photos) && entry.photos.length > 0)
+  ));
+  const moreBtnHtml = _hasEntryMedia
+    ? `<button class="day-modal-more" onclick="openDiaryMediaEditSheet('${dateStr}')" aria-label="수정">⋯</button>`
+    : '';
+
   overlay.innerHTML = `
     <div class="day-modal" onclick="event.stopPropagation()" style="--day-mood-from:${moodPair[0]}; --day-mood-to:${moodPair[1]};">
       <div class="day-modal-header">
@@ -47355,7 +47499,10 @@ function openDayModal(dateStr) {
           <div class="day-modal-date">${escapeHtml(dateLabel)}</div>
           ${moodLabel ? `<div class="day-modal-mood">${escapeHtml(moodLabel)}</div>` : ''}
         </div>
-        <button class="day-modal-close" onclick="closeDayModal()">×</button>
+        <div style="display:flex; align-items:center;">
+          ${moreBtnHtml}
+          <button class="day-modal-close" onclick="closeDayModal()">×</button>
+        </div>
       </div>
       <div class="day-modal-tabs">
         ${counts.diary    ? `<button class="day-tab" data-tab="diary"    onclick="switchDayModalTab('diary')"><span>📔</span> 일기</button>` : ''}
@@ -47573,6 +47720,298 @@ function switchDayModalTab(tab) {
   if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
 }
 
+// V4 (사용자 명시 2026-05-20 ultrathink): 일기 미디어 (사진 + 음악) 수정 sheet.
+//   trigger: 캘린더 day modal ⋯ / 타임라인 ⋮ 메뉴.
+//   허용: 사진 교체 / 추가 / 삭제 / 순서 변경 + 음악 교체 / 삭제.
+//   금지 (분석 추출 입력이라 immutable): 체크인 질문 / 활력 / 에너지 / 수면 시간.
+//   sync: entry 변경 시 같은 날 shellCollection 의 'shell_ci_<dateStr>' 동기 (사진 여러장 = 첫 번째 만 photoThumb).
+
+const DIARY_PHOTOS_MAX = 3;
+
+function _diaryGetEntry(dateStr) {
+  return (state.entries || []).find(e => e.date === dateStr) || null;
+}
+function _diaryGetPhotos(entry) {
+  if (!entry) return [];
+  if (Array.isArray(entry.photos)) return entry.photos.slice(0, DIARY_PHOTOS_MAX);
+  if (entry.photo) return [entry.photo];
+  return [];
+}
+function _diarySetPhotos(entry, arr) {
+  if (!entry) return;
+  const clean = (arr || []).filter(Boolean).slice(0, DIARY_PHOTOS_MAX);
+  if (clean.length > 0) {
+    entry.photos = clean;
+    entry.photo = clean[0];  // legacy mirror — single-reader 호환
+  } else {
+    delete entry.photos;
+    delete entry.photo;
+  }
+}
+
+// V4 (사용자 명시 2026-05-20 ultrathink): 일기 사진/음악 변경 시 그날 소라 (shell_ci_<dateStr>) 동기.
+//   addOrUpdateCheckinShell 이 tier 재계산 + photo/music 갱신. 사진 여러장이면 photoThumb=photos[0] 만 (addOrUpdateCheckinShell 내부에서 entry.photo mirror 사용).
+function _diarySyncShell(entry) {
+  if (!entry) return;
+  if (typeof addOrUpdateCheckinShell !== 'function') return;
+  try { addOrUpdateCheckinShell(entry); } catch (e) { console.warn('[diary edit sync shell]', e); }
+}
+
+function _diaryPersistAndRerender(dateStr) {
+  const entry = _diaryGetEntry(dateStr);
+  if (!entry) return;
+  _diarySyncShell(entry);
+  if (typeof saveState === 'function') saveState();
+  // sheet 안 photos / music 영역 즉시 다시 그림.
+  _diaryRenderEditSheetBody(dateStr);
+  // 옛 day modal / 타임라인 도 갱신 (열려 있으면).
+  if (document.getElementById('dayModal') && typeof switchDayModalTab === 'function') {
+    try { switchDayModalTab(_dayModalActiveTab || 'diary'); } catch {}
+  }
+  if (typeof renderLensTimeline === 'function') { try { renderLensTimeline(); } catch {} }
+  if (typeof renderBeach === 'function') { try { renderBeach(); } catch {} }
+}
+
+async function openDiaryMediaEditSheet(dateStr) {
+  const entry = _diaryGetEntry(dateStr);
+  if (!entry) { if (typeof showToast === 'function') showToast('해당 날 일기 없음'); return; }
+  // 옛 sheet 잔존 정리
+  const existing = document.getElementById('diaryEditSheet');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'diaryEditSheet';
+  overlay.className = 'diary-edit-sheet-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  const dateLabel = new Date(dateStr + 'T12:00:00').toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
+  });
+  overlay.innerHTML = `
+    <div class="diary-edit-sheet" onclick="event.stopPropagation()">
+      <div class="diary-edit-sheet-title">
+        <span>✎ ${escapeHtml(dateLabel)} 일기 수정</span>
+        <button class="diary-edit-sheet-close" onclick="document.getElementById('diaryEditSheet')?.remove()">✕</button>
+      </div>
+      <div id="diaryEditSheetBody"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  _diaryRenderEditSheetBody(dateStr);
+}
+
+function _diaryRenderEditSheetBody(dateStr) {
+  const body = document.getElementById('diaryEditSheetBody');
+  if (!body) return;
+  const entry = _diaryGetEntry(dateStr);
+  if (!entry) return;
+  const photos = _diaryGetPhotos(entry);
+  const hasMusic = !!(entry.music && entry.music.title);
+
+  let html = '';
+  // 사진 섹션
+  html += `<div class="diary-edit-section">
+    <div class="diary-edit-section-label">📷 사진 (${photos.length}/${DIARY_PHOTOS_MAX})</div>`;
+  if (photos.length === 0) {
+    html += `<button class="diary-edit-photo-add" onclick="_diaryAddPhoto('${dateStr}')" aria-label="사진 추가">＋</button>`;
+  } else {
+    html += `<div class="diary-edit-photos-strip" id="diaryEditPhotosStrip">`;
+    photos.forEach((p, i) => {
+      html += `
+        <div class="diary-edit-photo-tile" data-diary-photo-idx="${i}" draggable="false">
+          <img src="${escapeHtml(p)}" alt="">
+          <div class="diary-edit-photo-actions">
+            <button onclick="_diaryReplacePhoto('${dateStr}', ${i})" aria-label="교체">✎</button>
+            <button onclick="_diaryDeletePhoto('${dateStr}', ${i})" aria-label="삭제">✕</button>
+          </div>
+        </div>
+      `;
+    });
+    if (photos.length < DIARY_PHOTOS_MAX) {
+      html += `<button class="diary-edit-photo-add" onclick="_diaryAddPhoto('${dateStr}')" aria-label="사진 추가">＋</button>`;
+    }
+    html += `</div>`;
+    if (photos.length >= 2) {
+      html += `<div style="font-size:10px; color:var(--text-soft); margin-top:6px;">길게 누른 후 드래그 = 순서 변경</div>`;
+    }
+  }
+  html += `</div>`;
+
+  // 음악 섹션
+  html += `<div class="diary-edit-section">
+    <div class="diary-edit-section-label">🎵 음악</div>`;
+  if (hasMusic && typeof renderMusicCardHTML === 'function') {
+    html += renderMusicCardHTML(entry.music);
+    html += `<div class="diary-edit-music-actions">
+      <button onclick="_diaryReplaceMusic('${dateStr}')">✎ 교체</button>
+      <button onclick="_diaryDeleteMusic('${dateStr}')">✕ 삭제</button>
+    </div>`;
+  } else {
+    html += `<div class="diary-edit-empty">음악 없음</div>
+      <div class="diary-edit-music-actions">
+        <button onclick="_diaryReplaceMusic('${dateStr}')">＋ 음악 추가</button>
+      </div>`;
+  }
+  html += `</div>`;
+
+  body.innerHTML = html;
+
+  // 사진 reorder drag binding (체크인과 동일 패턴).
+  const strip = document.getElementById('diaryEditPhotosStrip');
+  if (strip) _diaryBindPhotoReorder(strip, dateStr);
+}
+
+async function _diaryReplacePhoto(dateStr, idx) {
+  try {
+    if (typeof pickPhotoFile !== 'function') return;
+    const file = await pickPhotoFile();
+    if (!file) return;
+    if (typeof showFullscreenLoader === 'function') showFullscreenLoader('사진 처리 중... 📸');
+    const resized = await fileToResizedDataUrl(file, 800);
+    const square = await makeSquareThumb(resized, 600);
+    if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+    const entry = _diaryGetEntry(dateStr);
+    if (!entry) return;
+    const photos = _diaryGetPhotos(entry);
+    if (idx < 0 || idx >= photos.length) return;
+    photos[idx] = square;
+    _diarySetPhotos(entry, photos);
+    _diaryPersistAndRerender(dateStr);
+  } catch (e) {
+    if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+    console.warn('[diary replace photo]', e);
+    if (typeof showToast === 'function') showToast('사진 처리 실패');
+  }
+}
+
+function _diaryDeletePhoto(dateStr, idx) {
+  const entry = _diaryGetEntry(dateStr);
+  if (!entry) return;
+  const photos = _diaryGetPhotos(entry);
+  if (idx < 0 || idx >= photos.length) return;
+  const removed = photos[idx];
+  photos.splice(idx, 1);
+  _diarySetPhotos(entry, photos);
+  _diaryPersistAndRerender(dateStr);
+  if (typeof showUndoToast === 'function' && removed) {
+    showUndoToast('사진 삭제됨', () => {
+      const back = _diaryGetPhotos(_diaryGetEntry(dateStr));
+      back.splice(idx, 0, removed);
+      _diarySetPhotos(_diaryGetEntry(dateStr), back);
+      _diaryPersistAndRerender(dateStr);
+    });
+  }
+}
+
+async function _diaryAddPhoto(dateStr) {
+  try {
+    const entry = _diaryGetEntry(dateStr);
+    if (!entry) return;
+    const cur = _diaryGetPhotos(entry);
+    if (cur.length >= DIARY_PHOTOS_MAX) {
+      if (typeof showToast === 'function') showToast(`사진은 ${DIARY_PHOTOS_MAX}장까지`);
+      return;
+    }
+    if (typeof pickPhotoFile !== 'function') return;
+    const file = await pickPhotoFile();
+    if (!file) return;
+    if (typeof showFullscreenLoader === 'function') showFullscreenLoader('사진 처리 중... 📸');
+    const resized = await fileToResizedDataUrl(file, 800);
+    const square = await makeSquareThumb(resized, 600);
+    if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+    cur.push(square);
+    _diarySetPhotos(entry, cur);
+    _diaryPersistAndRerender(dateStr);
+  } catch (e) {
+    if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+    console.warn('[diary add photo]', e);
+    if (typeof showToast === 'function') showToast('사진 처리 실패');
+  }
+}
+
+async function _diaryReplaceMusic(dateStr) {
+  if (typeof showMusicSearchModal !== 'function') {
+    if (typeof showToast === 'function') showToast('음악 검색 사용 불가');
+    return;
+  }
+  showMusicSearchModal((track) => {
+    if (!track) return;
+    const entry = _diaryGetEntry(dateStr);
+    if (!entry) return;
+    entry.music = track;
+    _diaryPersistAndRerender(dateStr);
+  });
+}
+
+function _diaryDeleteMusic(dateStr) {
+  const entry = _diaryGetEntry(dateStr);
+  if (!entry || !entry.music) return;
+  const removed = entry.music;
+  delete entry.music;
+  _diaryPersistAndRerender(dateStr);
+  if (typeof showUndoToast === 'function') {
+    showUndoToast('음악 삭제됨', () => {
+      const e = _diaryGetEntry(dateStr);
+      if (!e) return;
+      e.music = removed;
+      _diaryPersistAndRerender(dateStr);
+    });
+  }
+}
+
+// 사진 reorder — pointer events long-press (280ms) → drag → drop swap. 체크인 사진 strip 동일 패턴.
+function _diaryBindPhotoReorder(strip, dateStr) {
+  const tiles = strip.querySelectorAll('.diary-edit-photo-tile');
+  if (tiles.length < 2) return;
+  tiles.forEach((tile) => {
+    let pressTimer = null;
+    let dragging = false;
+    let originIdx = -1;
+    let lastOverIdx = -1;
+    const onDown = (e) => {
+      if (e.target && e.target.closest('.diary-edit-photo-actions')) return;
+      originIdx = parseInt(tile.getAttribute('data-diary-photo-idx'), 10);
+      pressTimer = setTimeout(() => {
+        dragging = true;
+        tile.classList.add('is-dragging');
+        try { tile.setPointerCapture(e.pointerId); } catch {}
+      }, 280);
+    };
+    const onMove = (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const overTile = el && el.closest && el.closest('.diary-edit-photo-tile');
+      strip.querySelectorAll('.diary-edit-photo-tile.is-drop-target').forEach(t => t.classList.remove('is-drop-target'));
+      if (overTile && overTile !== tile) {
+        overTile.classList.add('is-drop-target');
+        lastOverIdx = parseInt(overTile.getAttribute('data-diary-photo-idx'), 10);
+      } else {
+        lastOverIdx = -1;
+      }
+    };
+    const onUp = (e) => {
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+      if (!dragging) return;
+      dragging = false;
+      tile.classList.remove('is-dragging');
+      strip.querySelectorAll('.diary-edit-photo-tile.is-drop-target').forEach(t => t.classList.remove('is-drop-target'));
+      try { tile.releasePointerCapture(e.pointerId); } catch {}
+      if (lastOverIdx >= 0 && lastOverIdx !== originIdx) {
+        const entry = _diaryGetEntry(dateStr);
+        if (!entry) return;
+        const arr = _diaryGetPhotos(entry);
+        const [moved] = arr.splice(originIdx, 1);
+        arr.splice(lastOverIdx, 0, moved);
+        _diarySetPhotos(entry, arr);
+        _diaryPersistAndRerender(dateStr);
+      }
+    };
+    tile.addEventListener('pointerdown', onDown);
+    tile.addEventListener('pointermove', onMove, { passive: false });
+    tile.addEventListener('pointerup', onUp);
+    tile.addEventListener('pointercancel', onUp);
+  });
+}
 function closeDayModal() {
   const el = document.getElementById('dayModal');
   if (el) el.remove();
@@ -48797,16 +49236,31 @@ function _renderTopicCardHTML(card) {
 async function showTimelineDayMenu(date) {
   const entry = (state.entries || []).find(e => e.date === date);
   const isHidden = !!(entry && entry.hidden);
+  // V4 (사용자 명시 2026-05-20 ultrathink): 사진/음악 수정 옵션 추가 — 사진 / 음악 있을 때만 노출.
+  //   체크인 질문/활력/에너지/수면 은 분석 추출 입력이라 수정 X. 사진 + 음악만 허용.
+  const _hasMedia = !!(entry && (
+    entry.music ||
+    entry.photo ||
+    (Array.isArray(entry.photos) && entry.photos.length > 0)
+  ));
+  const options = [
+    { label: '✎ 메모 추가/수정', value: 'edit' }
+  ];
+  if (_hasMedia || entry) {
+    options.push({ label: '📷 사진 / 🎵 음악 수정', value: 'editMedia' });
+  }
+  options.push({ label: isHidden ? '👁 보이기' : '🙈 숨기기', value: 'toggle' });
+  options.push({ label: '✕ 삭제', value: 'delete' });
   const action = await showOptionsModal({
     title: formatDateKorean(date),
-    options: [
-      { label: '✎ 메모 추가/수정', value: 'edit' },
-      { label: isHidden ? '👁 보이기' : '🙈 숨기기', value: 'toggle' },
-      { label: '✕ 삭제', value: 'delete' }
-    ]
+    options
   });
   if (!action) return;
   if (action === 'edit') return editTimelineEntry(date);
+  if (action === 'editMedia') {
+    if (typeof openDiaryMediaEditSheet === 'function') openDiaryMediaEditSheet(date);
+    return;
+  }
   if (action === 'toggle') return toggleHideEntry(date);
   if (action === 'delete') return deleteTimelineEntry(date);
 }

@@ -70,6 +70,17 @@ function openDayModal(dateStr) {
   overlay.id = 'dayModal';
   overlay.className = 'day-modal-overlay';
   overlay.onclick = (e) => { if (e.target === overlay) closeDayModal(); };
+  // V4 (사용자 명시 2026-05-20 ultrathink): 일기 사진/음악 수정 ⋯ 더보기 버튼 — × 왼쪽.
+  //   entry 가 있고 사진 / 음악 / 추가 가능 케이스 면 노출. 체크인 질문/활력/에너지/수면 은 분석 추출에 들어가서 수정 X.
+  const _hasEntryMedia = !!(entry && (
+    entry.music ||
+    entry.photo ||
+    (Array.isArray(entry.photos) && entry.photos.length > 0)
+  ));
+  const moreBtnHtml = _hasEntryMedia
+    ? `<button class="day-modal-more" onclick="openDiaryMediaEditSheet('${dateStr}')" aria-label="수정">⋯</button>`
+    : '';
+
   overlay.innerHTML = `
     <div class="day-modal" onclick="event.stopPropagation()" style="--day-mood-from:${moodPair[0]}; --day-mood-to:${moodPair[1]};">
       <div class="day-modal-header">
@@ -77,7 +88,10 @@ function openDayModal(dateStr) {
           <div class="day-modal-date">${escapeHtml(dateLabel)}</div>
           ${moodLabel ? `<div class="day-modal-mood">${escapeHtml(moodLabel)}</div>` : ''}
         </div>
-        <button class="day-modal-close" onclick="closeDayModal()">×</button>
+        <div style="display:flex; align-items:center;">
+          ${moreBtnHtml}
+          <button class="day-modal-close" onclick="closeDayModal()">×</button>
+        </div>
       </div>
       <div class="day-modal-tabs">
         ${counts.diary    ? `<button class="day-tab" data-tab="diary"    onclick="switchDayModalTab('diary')"><span>📔</span> 일기</button>` : ''}

@@ -180,16 +180,31 @@ function _renderTopicCardHTML(card) {
 async function showTimelineDayMenu(date) {
   const entry = (state.entries || []).find(e => e.date === date);
   const isHidden = !!(entry && entry.hidden);
+  // V4 (사용자 명시 2026-05-20 ultrathink): 사진/음악 수정 옵션 추가 — 사진 / 음악 있을 때만 노출.
+  //   체크인 질문/활력/에너지/수면 은 분석 추출 입력이라 수정 X. 사진 + 음악만 허용.
+  const _hasMedia = !!(entry && (
+    entry.music ||
+    entry.photo ||
+    (Array.isArray(entry.photos) && entry.photos.length > 0)
+  ));
+  const options = [
+    { label: '✎ 메모 추가/수정', value: 'edit' }
+  ];
+  if (_hasMedia || entry) {
+    options.push({ label: '📷 사진 / 🎵 음악 수정', value: 'editMedia' });
+  }
+  options.push({ label: isHidden ? '👁 보이기' : '🙈 숨기기', value: 'toggle' });
+  options.push({ label: '✕ 삭제', value: 'delete' });
   const action = await showOptionsModal({
     title: formatDateKorean(date),
-    options: [
-      { label: '✎ 메모 추가/수정', value: 'edit' },
-      { label: isHidden ? '👁 보이기' : '🙈 숨기기', value: 'toggle' },
-      { label: '✕ 삭제', value: 'delete' }
-    ]
+    options
   });
   if (!action) return;
   if (action === 'edit') return editTimelineEntry(date);
+  if (action === 'editMedia') {
+    if (typeof openDiaryMediaEditSheet === 'function') openDiaryMediaEditSheet(date);
+    return;
+  }
   if (action === 'toggle') return toggleHideEntry(date);
   if (action === 'delete') return deleteTimelineEntry(date);
 }

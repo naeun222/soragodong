@@ -9341,18 +9341,151 @@
   /* multi 모드: 사진 strip 이 한 줄 다 차지, 음악 카드는 다음 줄. */
   .checkin-mp-row.checkin-mp-multi #checkinPhotoSlot { flex: 1 1 100%; }
   .checkin-mp-row.checkin-mp-multi #checkinMusicSlot { flex: 1 1 100%; }
-  /* 일기 모달 / 타임라인 multi photo wrap (legacy single 유지 + multi grid). */
+  /* V4 (사용자 명시 2026-05-20 ultrathink): 일기 모달 / 타임라인 multi photo — 가로 스크롤 carousel + snap.
+     옛 grid 폐기 — 작은 화면에서 사진 작게 잘리고 디테일 못 봄. 한 장씩 swipe 로 큰 사진 본다. */
   .day-photo-wrap.day-photo-multi,
   .ig-photo-wrap.ig-photo-multi {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-    gap: 6px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
   }
+  .day-photo-wrap.day-photo-multi::-webkit-scrollbar,
+  .ig-photo-wrap.ig-photo-multi::-webkit-scrollbar { display: none; }
   .day-photo-wrap.day-photo-multi .day-photo,
   .ig-photo-wrap.ig-photo-multi .ig-photo {
-    width: 100%; aspect-ratio: 1;
+    flex: 0 0 100%;
+    width: 100%;
+    aspect-ratio: 1;
     object-fit: cover;
+    border-radius: 12px;
+    scroll-snap-align: center;
+  }
+  /* 일기 모달 ⋯ 더보기 버튼 — × 왼쪽. */
+  .day-modal-more {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 22px;
+    line-height: 1;
+    padding: 4px 8px;
+    margin-right: 4px;
+    cursor: pointer;
     border-radius: 8px;
+    transition: background 0.15s;
+  }
+  .day-modal-more:active { background: rgba(15,14,23,0.45); }
+  /* 일기 미디어 편집 시트 (overlay) */
+  .diary-edit-sheet-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,14,23,0.78);
+    z-index: 700;
+    display: flex; align-items: flex-end; justify-content: center;
+    padding: 0;
+    backdrop-filter: blur(8px);
+    animation: ritualFadeIn 0.2s ease;
+  }
+  .diary-edit-sheet {
+    width: 100%; max-width: 480px;
+    max-height: 88vh;
+    background: var(--surface);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    padding: 18px 18px 24px;
+    overflow-y: auto;
+    border-top: 1px solid var(--border-strong);
+  }
+  .diary-edit-sheet-title {
+    font-size: 15px; font-weight: 600; color: var(--text);
+    margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .diary-edit-sheet-close {
+    background: transparent; border: none; color: var(--text-dim);
+    font-size: 18px; cursor: pointer; padding: 4px 8px;
+  }
+  .diary-edit-section { margin-bottom: 18px; }
+  .diary-edit-section-label {
+    font-size: 11px; color: var(--accent); letter-spacing: 0.10em;
+    margin-bottom: 8px; text-transform: uppercase;
+  }
+  .diary-edit-photos-strip {
+    display: flex; gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .diary-edit-photos-strip::-webkit-scrollbar { display: none; }
+  .diary-edit-photo-tile {
+    position: relative;
+    width: 90px; height: 90px;
+    flex: 0 0 90px;
+    border-radius: 10px; overflow: hidden;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    touch-action: none;
+    transition: transform 0.12s, opacity 0.12s, border-color 0.12s;
+  }
+  .diary-edit-photo-tile img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .diary-edit-photo-tile.is-dragging { opacity: 0.55; transform: scale(0.95); }
+  .diary-edit-photo-tile.is-drop-target {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(212,167,106,0.45);
+  }
+  .diary-edit-photo-actions {
+    position: absolute; top: 4px; right: 4px;
+    display: flex; gap: 4px;
+  }
+  .diary-edit-photo-actions button {
+    width: 22px; height: 22px;
+    background: rgba(15,14,23,0.78);
+    border: 1px solid var(--border);
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .diary-edit-photo-add {
+    width: 90px; height: 90px; flex: 0 0 90px;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--text-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .diary-edit-photo-add:active { background: var(--surface); }
+  .diary-edit-music-actions {
+    display: flex; gap: 8px;
+    margin-top: 8px;
+  }
+  .diary-edit-music-actions button {
+    flex: 1;
+    padding: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .diary-edit-music-actions button:active { background: var(--surface); }
+  .diary-edit-empty {
+    font-size: 12px; color: var(--text-dim);
+    padding: 12px;
+    text-align: center;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
   }
   /* 소라 상세 모달 multi photo */
   .ci-shell-photos {
