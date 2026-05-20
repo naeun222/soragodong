@@ -15063,6 +15063,17 @@ function _serializeReplacer(key, value) {
   return value;
 }
 
+// V4 (사용자 명시 2026-05-20 ultrathink): cloud main row 전용 replacer.
+//   _serializeReplacer (transient strip) + _hasMessages: true 박힌 archive 의 messages 키 strip.
+//   별도 테이블 (soragodong_chat_messages) 에 이미 보관 — main row JSONB cascade 회피.
+//   localStorage 는 그대로 _serializeReplacer 사용 (in-memory cache 호환 — 다음 reload 시 hydration X 필요).
+//   this === 부모 객체 (JSON.stringify replacer 의 contract — 화살표 함수 X).
+function _cloudStateReplacer(key, value) {
+  if (_SERIALIZE_TRANSIENT_KEYS.has(key)) return undefined;
+  if (key === 'messages' && this && this._hasMessages === true) return undefined;
+  return value;
+}
+
 // 사용자 명시 2026-05-01: 100+ 사용자 대비 backup 효율 최적화 — 변경 없는 state 의 중복 backup skip.
 // hash 계산 시 자동 변하는 메타 (lastSync / _lastAutoBackupAt 등) 제외 — 실제 사용자 데이터 변경만 감지.
 const _BACKUP_HASH_EXCLUDED_KEYS = new Set([
@@ -15115,15 +15126,20 @@ async function _gzipB64Decode(b64) {
   return await new Response(stream).text();
 }
 async function _packStateForCloud(stateObj) {
-  if (typeof CompressionStream === 'undefined') return stateObj;
+  // V4 (사용자 명시 2026-05-20 ultrathink): cloud main row = _cloudStateReplacer 사용 → _hasMessages 박힌 archive 의 messages 키 strip.
+  //   gzip 미지원 / 실패 fallback 도 같은 strip 적용 — main row 가 messages 박힌 옛 동작 차단.
+  let _stripped;
+  try { _stripped = JSON.parse(JSON.stringify(stateObj, _cloudStateReplacer)); }
+  catch { _stripped = stateObj; }
+  if (typeof CompressionStream === 'undefined') return _stripped;
   try {
-    const json = JSON.stringify(stateObj, _serializeReplacer);
+    const json = JSON.stringify(_stripped, _serializeReplacer);
     const payload = await _gzipB64Encode(json);
-    if (payload.length >= json.length * 0.85) return stateObj;
+    if (payload.length >= json.length * 0.85) return _stripped;
     return { _compressed: true, _format: _COMPRESSED_FORMAT, _payload: payload };
   } catch (e) {
     console.warn('[gzip pack] 실패 — plain fallback:', e);
-    return stateObj;
+    return _stripped;
   }
 }
 async function _unpackStateFromCloud(rowData) {
@@ -20485,6 +20501,13 @@ async function loadFromCloud() {
       saveToCloudNow().catch(e => console.warn('[loadFromCloud] post-load save 실패:', e));
     }
 
+    // V4 (사용자 명시 2026-05-20 ultrathink): chat_messages 별도 테이블 hydration — _hasMessages 박힌 archive 의 messages 끌어옴.
+    //   fire-and-forget. 첫 렌더 차단 X. 끝나면 다음 cycle (toggleArchiveDay / resumeArchiveChat / 4AM batch 등) 에서 자연 반영.
+    //   E2EE 사용자 + 마스터키 미준비 시 helper 가 자동 skip — recovery 후 saveState path 가 다시 trigger.
+    if (typeof _hydrateChatArchiveOnLoad === 'function') {
+      _hydrateChatArchiveOnLoad().catch(e => console.warn('[loadFromCloud] hydrate fail:', e));
+    }
+
     setSyncStatus('online');
     return true;
   } catch (e) {
@@ -20747,6 +20770,68 @@ async function _deleteChapterMessages(chapterId) {
     return { ok: false, reason: `${resp.status}` };
   }
   return { ok: true };
+}
+
+// V4 (사용자 명시 2026-05-20 ultrathink): Step 4 — loadFromCloud 후 chat_messages 별도 테이블에서
+//   _hasMessages 박힌 archive 의 messages 를 in-memory 로 끌어옴.
+//   cloud main row 엔 messages strip 상태 (Step 4 _cloudStateReplacer) — read 경로 sync 동작 위해 hydration 필요.
+//   처리: 한 query (in.(<ids>)) chunk 로 batch fetch → group by chapter_id → 각 archive 에 채움. parallel RTT cost 최소.
+//   fire-and-forget — UI 첫 렌더 차단 X. hydration 끝나면 다음 렌더에서 자연 반영.
+async function _hydrateChatArchiveOnLoad() {
+  if (!Array.isArray(state.chatArchive) || state.chatArchive.length === 0) return;
+  if (!authUserId) return;
+  const targets = state.chatArchive.filter(a => a && a._hasMessages === true
+    && (!Array.isArray(a.messages) || a.messages.length === 0));
+  if (targets.length === 0) return;
+  // E2EE 사용자 + 마스터키 미준비 = recovery 흐름 끝나야 fetch 의미 있음. skip — 옛 archive 의 in-memory messages 는 그대로.
+  if (_e2eeEnabled && !_e2eeMasterKey) return;
+
+  const CHUNK = 50;
+  const targetIds = targets.map(a => a.id).filter(Boolean);
+  for (let i = 0; i < targetIds.length; i += CHUNK) {
+    const chunkIds = targetIds.slice(i, i + CHUNK);
+    const inFilter = chunkIds.map(id => encodeURIComponent(id)).join(',');
+    const url = `${SUPABASE_URL}/rest/v1/${_CHAT_MESSAGES_TABLE}`
+      + `?user_id=eq.${authUserId}`
+      + `&chapter_id=in.(${inFilter})`
+      + `&select=chapter_id,content,encrypted_body,idx`
+      + `&order=chapter_id.asc,idx.asc`;
+    let resp;
+    try {
+      resp = await _fetchWithTimeout(url, { headers: authHeaders() });
+    } catch (e) {
+      console.warn('[hydrate] fetch fail chunk', i, e);
+      continue;
+    }
+    if (!resp.ok) {
+      console.warn('[hydrate]', resp.status, (await resp.text().catch(() => '')).slice(0, 200));
+      continue;
+    }
+    const rows = await resp.json();
+    const grouped = new Map();
+    for (const r of rows) {
+      if (!grouped.has(r.chapter_id)) grouped.set(r.chapter_id, []);
+      grouped.get(r.chapter_id).push(r);
+    }
+    for (const [chapId, chapRows] of grouped.entries()) {
+      const msgs = [];
+      for (const r of chapRows) {
+        if (r.encrypted_body) {
+          if (!_e2eeMasterKey) continue;
+          try {
+            const wrap = JSON.parse(r.encrypted_body);
+            const plain = await _e2eeDecrypt(wrap, _e2eeMasterKey);
+            if (plain == null) continue;
+            msgs.push(JSON.parse(plain));
+          } catch (e) { console.warn('[hydrate] e2ee parse', chapId, r.idx, e); }
+        } else if (r.content) {
+          msgs.push(r.content);
+        }
+      }
+      const arch = state.chatArchive.find(a => a && a.id === chapId);
+      if (arch && msgs.length > 0) arch.messages = msgs;
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -21025,7 +21110,9 @@ async function _saveToCloudNowInner() {
       const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','activeStrategies','_shownInlineTips'];
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
-      const _sensitiveJson = JSON.stringify(sensitiveBody, _serializeReplacer);
+      // V4 (사용자 명시 2026-05-20 ultrathink): _cloudStateReplacer — _hasMessages 박힌 archive 의 messages 키 strip.
+      //   E2EE 사용자도 동일 cascade 회피 — 별도 테이블 (soragodong_chat_messages) 의 encrypted_body 로 분리 저장됨.
+      const _sensitiveJson = JSON.stringify(sensitiveBody, _cloudStateReplacer);
       // V4 fix (사용자 보고 2026-05-18) — hard cap: payload 8MB 초과 시 PATCH 자체 X.
       //   원인: 큰 chatArchive (옛 챕터 messages 통째) → JSONB UPDATE 60s+ timeout → cascade.
       //   사용자 액션 필요: 도서관에서 옛 챕터 삭제 (핀 안 박힌 거) / 큰 진주 (영상) 정리.
@@ -51159,9 +51246,19 @@ async function resumeArchiveChat(archId) {
     return;
   }
   if (!Array.isArray(archive.messages) || archive.messages.length === 0) {
-    console.warn('[resumeArchiveChat] messages empty:', { archId, messageCount: archive.messageCount, hasMessages: !!archive.messages, isArray: Array.isArray(archive.messages), len: archive.messages?.length, date: archive.date });
-    showToast('이 대화는 메시지가 비어있어 — 이어서 불가 (옛 형식 / restore 누락)');
-    return;
+    // V4 (사용자 명시 2026-05-20 ultrathink): chat_messages 별도 테이블 lazy hydrate 시도.
+    //   _hasMessages 박혔으면 chapter_id 로 fetch + cache. hydrate 실패 시 옛 빈 archive 경고 fallback.
+    if (archive._hasMessages === true && typeof _loadChapterMessages === 'function') {
+      try {
+        const _msgs = await _loadChapterMessages(archive.id || archId);
+        if (Array.isArray(_msgs) && _msgs.length > 0) archive.messages = _msgs;
+      } catch (e) { console.warn('[resumeArchiveChat] hydrate fail:', e); }
+    }
+    if (!Array.isArray(archive.messages) || archive.messages.length === 0) {
+      console.warn('[resumeArchiveChat] messages empty:', { archId, messageCount: archive.messageCount, hasMessages: !!archive.messages, isArray: Array.isArray(archive.messages), len: archive.messages?.length, date: archive.date, _hasMessages: archive._hasMessages });
+      showToast('이 대화는 메시지가 비어있어 — 이어서 불가 (옛 형식 / restore 누락)');
+      return;
+    }
   }
   const currentMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
   if (currentMsgs.length > 0) {
@@ -51207,11 +51304,23 @@ async function resumeArchiveChat(archId) {
   showToast('↩️ 대화 이어서 시작');
 }
 
-function toggleArchiveDay(date) {
+async function toggleArchiveDay(date) {
   if (_expandedArchiveDates.has(date)) {
     _expandedArchiveDates.delete(date);
-  } else {
-    _expandedArchiveDates.add(date);
+    renderChatArchiveModal();
+    return;
+  }
+  _expandedArchiveDates.add(date);
+  // V4 (사용자 명시 2026-05-20 ultrathink): expand 시 messages 없고 _hasMessages 박혔으면 lazy hydrate.
+  //   loadFromCloud 끝의 _hydrateChatArchiveOnLoad 가 보통 미리 채움 — race 케이스 (방금 진입 / 새 archive) safety net.
+  const archive = (state.chatArchive || []).find(a => (a.id || a.date) === date);
+  if (archive && archive._hasMessages === true
+      && (!Array.isArray(archive.messages) || archive.messages.length === 0)
+      && typeof _loadChapterMessages === 'function') {
+    try {
+      const _msgs = await _loadChapterMessages(archive.id || date);
+      if (Array.isArray(_msgs) && _msgs.length > 0) archive.messages = _msgs;
+    } catch (e) { console.warn('[toggleArchiveDay] hydrate fail:', e); }
   }
   renderChatArchiveModal();
 }

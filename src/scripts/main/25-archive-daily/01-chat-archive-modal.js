@@ -196,9 +196,19 @@ async function resumeArchiveChat(archId) {
     return;
   }
   if (!Array.isArray(archive.messages) || archive.messages.length === 0) {
-    console.warn('[resumeArchiveChat] messages empty:', { archId, messageCount: archive.messageCount, hasMessages: !!archive.messages, isArray: Array.isArray(archive.messages), len: archive.messages?.length, date: archive.date });
-    showToast('이 대화는 메시지가 비어있어 — 이어서 불가 (옛 형식 / restore 누락)');
-    return;
+    // V4 (사용자 명시 2026-05-20 ultrathink): chat_messages 별도 테이블 lazy hydrate 시도.
+    //   _hasMessages 박혔으면 chapter_id 로 fetch + cache. hydrate 실패 시 옛 빈 archive 경고 fallback.
+    if (archive._hasMessages === true && typeof _loadChapterMessages === 'function') {
+      try {
+        const _msgs = await _loadChapterMessages(archive.id || archId);
+        if (Array.isArray(_msgs) && _msgs.length > 0) archive.messages = _msgs;
+      } catch (e) { console.warn('[resumeArchiveChat] hydrate fail:', e); }
+    }
+    if (!Array.isArray(archive.messages) || archive.messages.length === 0) {
+      console.warn('[resumeArchiveChat] messages empty:', { archId, messageCount: archive.messageCount, hasMessages: !!archive.messages, isArray: Array.isArray(archive.messages), len: archive.messages?.length, date: archive.date, _hasMessages: archive._hasMessages });
+      showToast('이 대화는 메시지가 비어있어 — 이어서 불가 (옛 형식 / restore 누락)');
+      return;
+    }
   }
   const currentMsgs = (state.chatMessages || []).filter(m => !m.typing && !m.error);
   if (currentMsgs.length > 0) {
@@ -244,11 +254,23 @@ async function resumeArchiveChat(archId) {
   showToast('↩️ 대화 이어서 시작');
 }
 
-function toggleArchiveDay(date) {
+async function toggleArchiveDay(date) {
   if (_expandedArchiveDates.has(date)) {
     _expandedArchiveDates.delete(date);
-  } else {
-    _expandedArchiveDates.add(date);
+    renderChatArchiveModal();
+    return;
+  }
+  _expandedArchiveDates.add(date);
+  // V4 (사용자 명시 2026-05-20 ultrathink): expand 시 messages 없고 _hasMessages 박혔으면 lazy hydrate.
+  //   loadFromCloud 끝의 _hydrateChatArchiveOnLoad 가 보통 미리 채움 — race 케이스 (방금 진입 / 새 archive) safety net.
+  const archive = (state.chatArchive || []).find(a => (a.id || a.date) === date);
+  if (archive && archive._hasMessages === true
+      && (!Array.isArray(archive.messages) || archive.messages.length === 0)
+      && typeof _loadChapterMessages === 'function') {
+    try {
+      const _msgs = await _loadChapterMessages(archive.id || date);
+      if (Array.isArray(_msgs) && _msgs.length > 0) archive.messages = _msgs;
+    } catch (e) { console.warn('[toggleArchiveDay] hydrate fail:', e); }
   }
   renderChatArchiveModal();
 }

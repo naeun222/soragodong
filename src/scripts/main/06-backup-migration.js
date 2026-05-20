@@ -274,7 +274,9 @@ async function _saveToCloudNowInner() {
       const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','activeStrategies','_shownInlineTips'];
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
-      const _sensitiveJson = JSON.stringify(sensitiveBody, _serializeReplacer);
+      // V4 (사용자 명시 2026-05-20 ultrathink): _cloudStateReplacer — _hasMessages 박힌 archive 의 messages 키 strip.
+      //   E2EE 사용자도 동일 cascade 회피 — 별도 테이블 (soragodong_chat_messages) 의 encrypted_body 로 분리 저장됨.
+      const _sensitiveJson = JSON.stringify(sensitiveBody, _cloudStateReplacer);
       // V4 fix (사용자 보고 2026-05-18) — hard cap: payload 8MB 초과 시 PATCH 자체 X.
       //   원인: 큰 chatArchive (옛 챕터 messages 통째) → JSONB UPDATE 60s+ timeout → cascade.
       //   사용자 액션 필요: 도서관에서 옛 챕터 삭제 (핀 안 박힌 거) / 큰 진주 (영상) 정리.

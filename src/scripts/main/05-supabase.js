@@ -478,6 +478,13 @@ async function loadFromCloud() {
       saveToCloudNow().catch(e => console.warn('[loadFromCloud] post-load save 실패:', e));
     }
 
+    // V4 (사용자 명시 2026-05-20 ultrathink): chat_messages 별도 테이블 hydration — _hasMessages 박힌 archive 의 messages 끌어옴.
+    //   fire-and-forget. 첫 렌더 차단 X. 끝나면 다음 cycle (toggleArchiveDay / resumeArchiveChat / 4AM batch 등) 에서 자연 반영.
+    //   E2EE 사용자 + 마스터키 미준비 시 helper 가 자동 skip — recovery 후 saveState path 가 다시 trigger.
+    if (typeof _hydrateChatArchiveOnLoad === 'function') {
+      _hydrateChatArchiveOnLoad().catch(e => console.warn('[loadFromCloud] hydrate fail:', e));
+    }
+
     setSyncStatus('online');
     return true;
   } catch (e) {
@@ -740,5 +747,67 @@ async function _deleteChapterMessages(chapterId) {
     return { ok: false, reason: `${resp.status}` };
   }
   return { ok: true };
+}
+
+// V4 (사용자 명시 2026-05-20 ultrathink): Step 4 — loadFromCloud 후 chat_messages 별도 테이블에서
+//   _hasMessages 박힌 archive 의 messages 를 in-memory 로 끌어옴.
+//   cloud main row 엔 messages strip 상태 (Step 4 _cloudStateReplacer) — read 경로 sync 동작 위해 hydration 필요.
+//   처리: 한 query (in.(<ids>)) chunk 로 batch fetch → group by chapter_id → 각 archive 에 채움. parallel RTT cost 최소.
+//   fire-and-forget — UI 첫 렌더 차단 X. hydration 끝나면 다음 렌더에서 자연 반영.
+async function _hydrateChatArchiveOnLoad() {
+  if (!Array.isArray(state.chatArchive) || state.chatArchive.length === 0) return;
+  if (!authUserId) return;
+  const targets = state.chatArchive.filter(a => a && a._hasMessages === true
+    && (!Array.isArray(a.messages) || a.messages.length === 0));
+  if (targets.length === 0) return;
+  // E2EE 사용자 + 마스터키 미준비 = recovery 흐름 끝나야 fetch 의미 있음. skip — 옛 archive 의 in-memory messages 는 그대로.
+  if (_e2eeEnabled && !_e2eeMasterKey) return;
+
+  const CHUNK = 50;
+  const targetIds = targets.map(a => a.id).filter(Boolean);
+  for (let i = 0; i < targetIds.length; i += CHUNK) {
+    const chunkIds = targetIds.slice(i, i + CHUNK);
+    const inFilter = chunkIds.map(id => encodeURIComponent(id)).join(',');
+    const url = `${SUPABASE_URL}/rest/v1/${_CHAT_MESSAGES_TABLE}`
+      + `?user_id=eq.${authUserId}`
+      + `&chapter_id=in.(${inFilter})`
+      + `&select=chapter_id,content,encrypted_body,idx`
+      + `&order=chapter_id.asc,idx.asc`;
+    let resp;
+    try {
+      resp = await _fetchWithTimeout(url, { headers: authHeaders() });
+    } catch (e) {
+      console.warn('[hydrate] fetch fail chunk', i, e);
+      continue;
+    }
+    if (!resp.ok) {
+      console.warn('[hydrate]', resp.status, (await resp.text().catch(() => '')).slice(0, 200));
+      continue;
+    }
+    const rows = await resp.json();
+    const grouped = new Map();
+    for (const r of rows) {
+      if (!grouped.has(r.chapter_id)) grouped.set(r.chapter_id, []);
+      grouped.get(r.chapter_id).push(r);
+    }
+    for (const [chapId, chapRows] of grouped.entries()) {
+      const msgs = [];
+      for (const r of chapRows) {
+        if (r.encrypted_body) {
+          if (!_e2eeMasterKey) continue;
+          try {
+            const wrap = JSON.parse(r.encrypted_body);
+            const plain = await _e2eeDecrypt(wrap, _e2eeMasterKey);
+            if (plain == null) continue;
+            msgs.push(JSON.parse(plain));
+          } catch (e) { console.warn('[hydrate] e2ee parse', chapId, r.idx, e); }
+        } else if (r.content) {
+          msgs.push(r.content);
+        }
+      }
+      const arch = state.chatArchive.find(a => a && a.id === chapId);
+      if (arch && msgs.length > 0) arch.messages = msgs;
+    }
+  }
 }
 

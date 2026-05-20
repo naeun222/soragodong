@@ -536,6 +536,17 @@ function _serializeReplacer(key, value) {
   return value;
 }
 
+// V4 (사용자 명시 2026-05-20 ultrathink): cloud main row 전용 replacer.
+//   _serializeReplacer (transient strip) + _hasMessages: true 박힌 archive 의 messages 키 strip.
+//   별도 테이블 (soragodong_chat_messages) 에 이미 보관 — main row JSONB cascade 회피.
+//   localStorage 는 그대로 _serializeReplacer 사용 (in-memory cache 호환 — 다음 reload 시 hydration X 필요).
+//   this === 부모 객체 (JSON.stringify replacer 의 contract — 화살표 함수 X).
+function _cloudStateReplacer(key, value) {
+  if (_SERIALIZE_TRANSIENT_KEYS.has(key)) return undefined;
+  if (key === 'messages' && this && this._hasMessages === true) return undefined;
+  return value;
+}
+
 // 사용자 명시 2026-05-01: 100+ 사용자 대비 backup 효율 최적화 — 변경 없는 state 의 중복 backup skip.
 // hash 계산 시 자동 변하는 메타 (lastSync / _lastAutoBackupAt 등) 제외 — 실제 사용자 데이터 변경만 감지.
 const _BACKUP_HASH_EXCLUDED_KEYS = new Set([
@@ -588,15 +599,20 @@ async function _gzipB64Decode(b64) {
   return await new Response(stream).text();
 }
 async function _packStateForCloud(stateObj) {
-  if (typeof CompressionStream === 'undefined') return stateObj;
+  // V4 (사용자 명시 2026-05-20 ultrathink): cloud main row = _cloudStateReplacer 사용 → _hasMessages 박힌 archive 의 messages 키 strip.
+  //   gzip 미지원 / 실패 fallback 도 같은 strip 적용 — main row 가 messages 박힌 옛 동작 차단.
+  let _stripped;
+  try { _stripped = JSON.parse(JSON.stringify(stateObj, _cloudStateReplacer)); }
+  catch { _stripped = stateObj; }
+  if (typeof CompressionStream === 'undefined') return _stripped;
   try {
-    const json = JSON.stringify(stateObj, _serializeReplacer);
+    const json = JSON.stringify(_stripped, _serializeReplacer);
     const payload = await _gzipB64Encode(json);
-    if (payload.length >= json.length * 0.85) return stateObj;
+    if (payload.length >= json.length * 0.85) return _stripped;
     return { _compressed: true, _format: _COMPRESSED_FORMAT, _payload: payload };
   } catch (e) {
     console.warn('[gzip pack] 실패 — plain fallback:', e);
-    return stateObj;
+    return _stripped;
   }
 }
 async function _unpackStateFromCloud(rowData) {
