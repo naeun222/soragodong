@@ -573,3 +573,92 @@ function refreshHeaderDate() {
   if (dpEl && dpEl.textContent !== dateStr) dpEl.textContent = dateStr;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// V4 (사용자 명시 2026-05-20 ultrathink): Step 5 — chatArchive[].messages → chat_messages 테이블 backfill.
+// ───────────────────────────────────────────────────────────────
+// 호출: loadFromCloud 끝 fire-and-forget (한 번만 — state._chatMessagesBackfillDone 플래그).
+// 안전:
+//   1. rollback 백업 row 만들기 (me_v4_pre_chat_messages_backfill) — idempotent (이미 있으면 skip).
+//   2. 한 archive 씩 _saveChapterMessages atomic.
+//      - row 수 검증 — _saveChapterMessages 의 count 가 valid (typing/error/_seed 제외) message 수 와 일치해야 OK.
+//      - 검증 통과 시에만 arch._hasMessages = true 박음.
+//   3. in-memory messages 그대로 — read 경로 안전망. cloud main row 는 _cloudStateReplacer 가 strip.
+//   4. 한 archive 마다 saveState 호출 X — backfill 도중 N PATCH cascade 회피. 끝나면 한 번.
+// SQL 미적용 / 권한 fail 시 _saveChapterMessages 가 ok:false 반환 → _hasMessages 안 박힘 → 다음 trigger 에서 재시도.
+// ═══════════════════════════════════════════════════════════════
+async function _backfillChatMessagesToTable() {
+  if (!authUserId) return false;
+  if (state._chatMessagesBackfillDone) return true;
+  // 게스트 / E2EE recovery 대기 / testerMode = backfill X.
+  if (state && state.isGuest) return false;
+  if (typeof window !== 'undefined' && window._e2eePendingRecovery) return false;
+  if (state.preferences && state.preferences.testerMode) return false;
+  // E2EE 사용자 + 마스터키 미준비 = recovery 후 saveState path 가 다시 trigger. skip.
+  if (_e2eeEnabled && !_e2eeMasterKey) return false;
+  if (typeof _saveChapterMessages !== 'function') return false;
+
+  if (!Array.isArray(state.chatArchive) || state.chatArchive.length === 0) {
+    state._chatMessagesBackfillDone = true;
+    return true;
+  }
+  const targets = state.chatArchive.filter(a => a && !a._hasMessages
+    && Array.isArray(a.messages) && a.messages.length > 0
+    && a.id);  // id 없는 옛 archive 는 skip (chapter_id 식별 불가).
+  if (targets.length === 0) {
+    state._chatMessagesBackfillDone = true;
+    return true;
+  }
+
+  console.log(`[chat_messages backfill] start — ${targets.length} archive`);
+
+  // 안전 1: rollback 백업 row (idempotent).
+  try {
+    const { rows: existing } = await _backupRowFetch('me_v4_pre_chat_messages_backfill', 'id');
+    if (existing.length === 0) {
+      const backupPayload = {
+        _backup_meta: { type: 'pre_chat_messages_backfill_2026_05_20', createdAt: new Date().toISOString() },
+        chatArchive: JSON.parse(JSON.stringify(state.chatArchive))
+      };
+      await _backupRowUpsert('me_v4_pre_chat_messages_backfill', backupPayload, null);
+      console.log('[chat_messages backfill] rollback 백업 row 작성됨');
+    } else {
+      console.log('[chat_messages backfill] rollback 백업 이미 있음');
+    }
+  } catch (e) {
+    console.warn('[chat_messages backfill] pre-backup fail — abort (rollback 불가능 차단):', e);
+    return false;
+  }
+
+  // 안전 2: 한 archive 씩 atomic.
+  let movedCount = 0;
+  let failedCount = 0;
+  for (const arch of targets) {
+    try {
+      const validMsgs = arch.messages.filter(m => m && !m.typing && !m.error && !m._seed);
+      if (validMsgs.length === 0) {
+        // valid 0 — _hasMessages 박을 필요 X. skip.
+        continue;
+      }
+      const _r = await _saveChapterMessages(arch.id, arch.messages);
+      if (_r && _r.ok && _r.count === validMsgs.length) {
+        arch._hasMessages = true;
+        movedCount++;
+      } else {
+        console.warn('[chat_messages backfill] save mismatch:', arch.id, _r, 'expected count:', validMsgs.length);
+        failedCount++;
+      }
+    } catch (e) {
+      console.warn('[chat_messages backfill] save throw:', arch.id, e);
+      failedCount++;
+    }
+  }
+
+  console.log(`[chat_messages backfill] done — moved=${movedCount}, failed=${failedCount}, total=${targets.length}`);
+
+  if (failedCount === 0) {
+    state._chatMessagesBackfillDone = true;
+  }
+  saveState();  // 한 번 cycle — main row 가 _cloudStateReplacer 통해 strip.
+  return failedCount === 0;
+}
+

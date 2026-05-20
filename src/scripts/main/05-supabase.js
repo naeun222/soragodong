@@ -478,12 +478,16 @@ async function loadFromCloud() {
       saveToCloudNow().catch(e => console.warn('[loadFromCloud] post-load save 실패:', e));
     }
 
-    // V4 (사용자 명시 2026-05-20 ultrathink): chat_messages 별도 테이블 hydration — _hasMessages 박힌 archive 의 messages 끌어옴.
-    //   fire-and-forget. 첫 렌더 차단 X. 끝나면 다음 cycle (toggleArchiveDay / resumeArchiveChat / 4AM batch 등) 에서 자연 반영.
-    //   E2EE 사용자 + 마스터키 미준비 시 helper 가 자동 skip — recovery 후 saveState path 가 다시 trigger.
-    if (typeof _hydrateChatArchiveOnLoad === 'function') {
-      _hydrateChatArchiveOnLoad().catch(e => console.warn('[loadFromCloud] hydrate fail:', e));
-    }
+    // V4 (사용자 명시 2026-05-20 ultrathink): Step 5 backfill 먼저 → Step 4 hydrate.
+    //   backfill = 옛 archive (in-memory 에 messages 박힌) 을 별도 테이블 + _hasMessages 박음. fire-and-forget — 첫 렌더 차단 X.
+    //   끝나면 hydrate 가 _hasMessages 박힌 archive 중 messages 비어있는 거 (Step 3 새 dual-write 후 reload 한 archive) 만 fetch.
+    //   E2EE 사용자 + 마스터키 미준비 시 둘 다 helper 가 자동 skip — recovery 후 saveState path 가 다시 trigger.
+    (async () => {
+      try {
+        if (typeof _backfillChatMessagesToTable === 'function') await _backfillChatMessagesToTable();
+        if (typeof _hydrateChatArchiveOnLoad === 'function') await _hydrateChatArchiveOnLoad();
+      } catch (e) { console.warn('[loadFromCloud] chat_messages backfill/hydrate fail:', e); }
+    })();
 
     setSyncStatus('online');
     return true;
