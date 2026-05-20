@@ -1015,15 +1015,24 @@ async function testSeedV4Data() {
     });
   });
 
-  // chatArchive 3일치 (V3.13.x 7일 cap, 일부 채워두기)
+  // V4 (사용자 명시 2026-05-20 ultrathink): chatArchive 시드 — 새 schema (id + messages 박힘, _hasMessages 안 박음).
+  //   시드 = 별도 테이블 (soragodong_chat_messages) row X — testerMode wrap 안 cloud sync X. hydrate 가 [] 반환할 일 없게 _hasMessages 박지 않음.
+  //   line 1118 의 _calKeep filter 가 4/15 외엔 wipe — 의도 (캘린더 그리드 4/15 만 노출). schema 일관성만 유지.
   state.chatArchive = [];
   for (let d = 7; d >= 5; d--) {
     const ad = new Date(today.getTime() - d * 86400000);
+    const _archTs = new Date(today.getTime() - (d - 1) * 86400000);
     state.chatArchive.unshift({
+      id: 'arch_seed_d' + d + '_' + Math.random().toString(36).slice(2, 6),
       date: ad.toISOString().split('T')[0],
-      summary: `${d}일 전 — 가볍게 일상 + 한 가지 고민. 환경 도구 시도.`,
-      messageCount: 8,
-      archivedAt: new Date(today.getTime() - (d - 1) * 86400000).toISOString()
+      messageCount: 4,
+      messages: [
+        { role: 'user',      content: `${d}일 전 — 일상 + 고민 한 가지. 환경 도구 시도해봄.`, timestamp: ad.toISOString() },
+        { role: 'assistant', content: '오늘 어떤 도구 시도했어? 결과는 어땠어?', timestamp: new Date(ad.getTime() + 60000).toISOString() },
+        { role: 'user',      content: '카페 + 음악 콤보. 첫 30분 흐름 트임.', timestamp: new Date(ad.getTime() + 120000).toISOString() },
+        { role: 'assistant', content: '그 패턴 anchor 로 잡아둘 가치 있어 — 다음 막힐 때 같은 셋업 trigger 가능.', timestamp: new Date(ad.getTime() + 180000).toISOString() }
+      ],
+      generatedAt: _archTs.toISOString()
     });
   }
   // V4-fix v3 (사용자 요청): insights 시드 — AI 인과관계/패턴 발견 (다양 type/confidence/상태)
