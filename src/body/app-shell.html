@@ -63,9 +63,10 @@
         </div>
         <div id="dailyQuestionText" style="font-size:14px; line-height:1.7; color:var(--text); padding:14px; background:linear-gradient(135deg, rgba(139,126,196,0.08), rgba(201,169,110,0.05)); border:1px solid rgba(139,126,196,0.2); border-radius:14px; margin-bottom:10px; min-height:50px;"></div>
         <textarea id="checkinNote" placeholder="떠오르는 대로. 한 단어도 좋고, 한 문장도 좋아." rows="3"></textarea>
-        <div style="display:flex; gap:8px; margin-top:8px;">
+        <div id="dailyQuestionBtnRow" style="display:flex; gap:8px; margin-top:8px;">
           <button class="quick-btn" onclick="rerollDailyQuestion()" style="font-size:11px; flex: 0 0 auto; padding: 6px 12px;">↻ 다른 질문</button>
           <button class="quick-btn" onclick="dismissDailyQuestion()" style="font-size:11px; flex: 0 0 auto; padding: 6px 12px;">✕ 이 질문 그만</button>
+          <button class="quick-btn" id="checkinDiaryToggleBtn" onclick="enterCheckinDiaryMode()" style="font-size:11px; flex: 0 0 auto; padding: 6px 12px;">📔 일기로 쓰기</button>
         </div>
       </div>
 

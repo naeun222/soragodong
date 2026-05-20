@@ -64,3 +64,8 @@ capacitor.config.local.ts
 scripts/recover-emails.local.txt
 scripts/recover-*.local.txt
 scripts/recover-*.local.json
+
+# 사용자 명시 2026-05-20 — localStorage rescue / E2EE 키 dump. 절대 commit X (개인 데이터 + 암호화 키).
+soragodong-rescue*.json
+soragodong_v4_*.json
+soragodong_v4_*.txt

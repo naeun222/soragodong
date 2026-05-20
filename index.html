@@ -68,6 +68,7 @@
 <!-- 사용자 보고 2026-05-05 (perf): Google Fonts CSS 가 render-blocking 이라 첫 페인트 전에 흰→검 플래시. preload 후 swap 으로 non-blocking. -->
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet"></noscript>
+
 <style>
   :root {
     --bg: #0f0e17;
@@ -13095,6 +13096,7 @@ img.pearl-load-fail {
   .beach-shell {
     contain: layout style;
   }
+
 </style>
 </head>
 <body>
@@ -13130,9 +13132,11 @@ img.pearl-load-fail {
   </div>
 </div>
 
+
 <!-- 사용자 보고 2026-04-30 ultrathink-2: 마법고동 화면일 때만 표시되는 fixed chip -->
 <div class="magic-mode-chip" id="magicModeChip"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동</div>
 <div class="reflection-mode-chip" id="reflectionModeChip">🌊 숙고의 방</div>
+
 
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
@@ -13185,6 +13189,7 @@ img.pearl-load-fail {
 
   </div>
 </div>
+
 
 <script>
   // PWA 설치 — Android beforeinstallprompt 캡처 + 1탭 설치 / iOS manual fallback (사용자 명시 2026-04-30 ultrathink)
@@ -13267,6 +13272,7 @@ img.pearl-load-fail {
     if (/Android/i.test(ua)) defaultOs = 'android';
     setPwaTab(defaultOs);
   })();
+
 </script>
 
 <div class="app" style="display:none;">
@@ -13334,9 +13340,10 @@ img.pearl-load-fail {
         </div>
         <div id="dailyQuestionText" style="font-size:14px; line-height:1.7; color:var(--text); padding:14px; background:linear-gradient(135deg, rgba(139,126,196,0.08), rgba(201,169,110,0.05)); border:1px solid rgba(139,126,196,0.2); border-radius:14px; margin-bottom:10px; min-height:50px;"></div>
         <textarea id="checkinNote" placeholder="떠오르는 대로. 한 단어도 좋고, 한 문장도 좋아." rows="3"></textarea>
-        <div style="display:flex; gap:8px; margin-top:8px;">
+        <div id="dailyQuestionBtnRow" style="display:flex; gap:8px; margin-top:8px;">
           <button class="quick-btn" onclick="rerollDailyQuestion()" style="font-size:11px; flex: 0 0 auto; padding: 6px 12px;">↻ 다른 질문</button>
           <button class="quick-btn" onclick="dismissDailyQuestion()" style="font-size:11px; flex: 0 0 auto; padding: 6px 12px;">✕ 이 질문 그만</button>
+          <button class="quick-btn" id="checkinDiaryToggleBtn" onclick="enterCheckinDiaryMode()" style="font-size:11px; flex: 0 0 auto; padding: 6px 12px;">📔 일기로 쓰기</button>
         </div>
       </div>
 
@@ -14307,6 +14314,7 @@ img.pearl-load-fail {
   </div>
 </div>
 
+
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
   <div class="chat-plus-menu" id="chatPlusMenu" hidden>
     <button class="chat-plus-item" onclick="chatPlusAction('diary')">
@@ -14338,6 +14346,7 @@ img.pearl-load-fail {
   </div>
 </div>
 
+
 <!-- Shell collection modal -->
 <div class="modal-overlay" id="shellModal" onclick="if(event.target===this)closeModal('shellModal')">
   <div class="modal beach-screen" style="max-height:88vh; overflow-y:auto;">
@@ -14368,6 +14377,7 @@ img.pearl-load-fail {
   </div>
 </div>
 
+
 <!-- Celebration -->
 <div class="celebration" id="celebration">
   <div class="celebration-content">
@@ -14377,12 +14387,15 @@ img.pearl-load-fail {
   </div>
 </div>
 
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
 
 <!-- V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 — cold open hero overlay + 코치마크 root -->
 <!-- 동작: shouldRunStartTutorialV8 → runStartTutorialV8 가 controller. JS 가 markup 채움. -->
 <div id="v8TutorialRoot" aria-hidden="true"></div>
+
 
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -33872,7 +33885,42 @@ function recordQuestionShown(questionId) {
 function renderDailyQuestion() {
   // 사용자 요청 2026-04-30: AI 생성 분기 제거 — pool만 회전. LLM call 0, 비용 0.
   // generateAIDailyQuestion 함수는 dead code로 남김 (다른 데서 안 호출).
+  _resetCheckinDiaryMode();
   renderPoolQuestion();
+}
+
+// V4 (사용자 명시 2026-05-20 ultrathink): 체크인 답변 칸에서 일기 쓰기 모드.
+// 칩 누르면 질문 영역 통째 숨김 + textarea에 '일기: ' 자동 삽입.
+// 일방향 — 새로고침/재진입 시 자동 복귀(_resetCheckinDiaryMode 가 renderDailyQuestion 시 호출).
+let _checkinDiaryMode = false;
+
+function enterCheckinDiaryMode() {
+  _checkinDiaryMode = true;
+  const wrap = document.getElementById('dailyQuestionWrap');
+  if (wrap) {
+    const labelEl = wrap.querySelector('.input-label');
+    if (labelEl) labelEl.style.display = 'none';
+    const textEl = document.getElementById('dailyQuestionText');
+    if (textEl) textEl.style.display = 'none';
+    const btnRow = document.getElementById('dailyQuestionBtnRow');
+    if (btnRow) btnRow.style.display = 'none';
+  }
+  const ta = document.getElementById('checkinNote');
+  if (ta) {
+    if (!ta.value.startsWith('일기:')) ta.value = '일기: ';
+    ta.focus();
+    try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) {}
+  }
+}
+
+function _resetCheckinDiaryMode() {
+  _checkinDiaryMode = false;
+  const labelEl = document.querySelector('#dailyQuestionWrap .input-label');
+  if (labelEl) labelEl.style.display = '';
+  const textEl = document.getElementById('dailyQuestionText');
+  if (textEl) textEl.style.display = '';
+  const btnRow = document.getElementById('dailyQuestionBtnRow');
+  if (btnRow) btnRow.style.display = '';
 }
 
 function renderPoolQuestion() {
@@ -39374,6 +39422,51 @@ function selectQuick(btn, key, value) {
 }
 
 async function submitCheckin() {
+  // V4 (사용자 명시 2026-05-20 ultrathink): 일기 분기 — 칩 누른 일기 모드 또는 '일기:' 접두어 자동 감지.
+  // 채팅탭 '일기:' 와 동일한 데이터 모양(entry.diary + dailySource:'diary')으로 저장. vitality/mood 우회 허용.
+  const _rawNote = (document.getElementById('checkinNote')?.value || '').trim();
+  const _diaryMatch = _rawNote.match(/^일기[:：]\s*([\s\S]+)$/);
+  const _isDiaryPath = (typeof _checkinDiaryMode !== 'undefined' && _checkinDiaryMode) || !!_diaryMatch;
+  if (_isDiaryPath) {
+    const diaryContent = _diaryMatch ? _diaryMatch[1].trim() : _rawNote;
+    if (!diaryContent) {
+      if (typeof showToast === 'function') showToast('일기 내용을 입력해줘');
+      return;
+    }
+    if (typeof _detectCrisisSignal === 'function' && _detectCrisisSignal(diaryContent)) {
+      if (typeof showCrisisCarousel === 'function') showCrisisCarousel('checkin_note');
+    }
+    const todayK = todayKey();
+    let entry = (state.entries || []).find(e => e.date === todayK);
+    if (!entry) { entry = { date: todayK }; state.entries.push(entry); }
+    // append + 시각 마커 (대화탭 05-send-chat.js 와 동일 동작)
+    if (entry.diary && entry.diary.trim()) {
+      const t = new Date();
+      const hh = String(t.getHours()).padStart(2, '0');
+      const mm = String(t.getMinutes()).padStart(2, '0');
+      entry.diary += '\n\n— ' + hh + ':' + mm + ' —\n' + diaryContent;
+    } else {
+      entry.diary = diaryContent;
+    }
+    entry.dailySource = 'diary';
+    entry.timestamp = new Date().toISOString();
+    // 사용자가 일기 모드 전에 vitality/mood 골랐으면 보너스 저장 + 소라 생성
+    if (currentCheckin.vitality && currentCheckin.mood) {
+      entry.vitality = currentCheckin.vitality;
+      entry.mood = currentCheckin.mood;
+      try {
+        if (typeof addOrUpdateCheckinShell === 'function') addOrUpdateCheckinShell(entry);
+      } catch (e) { console.warn('[checkin-shell]', e); }
+    }
+    saveState();
+    if (typeof _resetCheckinDiaryMode === 'function') _resetCheckinDiaryMode();
+    currentCheckin = {};
+    _currentDailyQuestion = null;
+    if (typeof updateCheckinSub === 'function') updateCheckinSub();
+    showScreen('home');
+    if (typeof showToast === 'function') showToast('📔 일기 저장됐어');
+    return;
+  }
   // 사용자 명시 2026-05-06: vitality + mood validation (신규 작성 모드에서만)
   const _vmTodayK = todayKey();
   const _vmExisting = (state.entries || []).find(en => en.date === _vmTodayK);
@@ -66727,6 +66820,7 @@ function _dismissPwaInstallCard() {
     }
   }, 6000);
 })();
+
 </script>
 </body>
 </html>

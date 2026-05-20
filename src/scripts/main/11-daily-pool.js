@@ -231,7 +231,42 @@ function recordQuestionShown(questionId) {
 function renderDailyQuestion() {
   // 사용자 요청 2026-04-30: AI 생성 분기 제거 — pool만 회전. LLM call 0, 비용 0.
   // generateAIDailyQuestion 함수는 dead code로 남김 (다른 데서 안 호출).
+  _resetCheckinDiaryMode();
   renderPoolQuestion();
+}
+
+// V4 (사용자 명시 2026-05-20 ultrathink): 체크인 답변 칸에서 일기 쓰기 모드.
+// 칩 누르면 질문 영역 통째 숨김 + textarea에 '일기: ' 자동 삽입.
+// 일방향 — 새로고침/재진입 시 자동 복귀(_resetCheckinDiaryMode 가 renderDailyQuestion 시 호출).
+let _checkinDiaryMode = false;
+
+function enterCheckinDiaryMode() {
+  _checkinDiaryMode = true;
+  const wrap = document.getElementById('dailyQuestionWrap');
+  if (wrap) {
+    const labelEl = wrap.querySelector('.input-label');
+    if (labelEl) labelEl.style.display = 'none';
+    const textEl = document.getElementById('dailyQuestionText');
+    if (textEl) textEl.style.display = 'none';
+    const btnRow = document.getElementById('dailyQuestionBtnRow');
+    if (btnRow) btnRow.style.display = 'none';
+  }
+  const ta = document.getElementById('checkinNote');
+  if (ta) {
+    if (!ta.value.startsWith('일기:')) ta.value = '일기: ';
+    ta.focus();
+    try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) {}
+  }
+}
+
+function _resetCheckinDiaryMode() {
+  _checkinDiaryMode = false;
+  const labelEl = document.querySelector('#dailyQuestionWrap .input-label');
+  if (labelEl) labelEl.style.display = '';
+  const textEl = document.getElementById('dailyQuestionText');
+  if (textEl) textEl.style.display = '';
+  const btnRow = document.getElementById('dailyQuestionBtnRow');
+  if (btnRow) btnRow.style.display = '';
 }
 
 function renderPoolQuestion() {

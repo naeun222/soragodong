@@ -101,6 +101,51 @@ function selectQuick(btn, key, value) {
 }
 
 async function submitCheckin() {
+  // V4 (사용자 명시 2026-05-20 ultrathink): 일기 분기 — 칩 누른 일기 모드 또는 '일기:' 접두어 자동 감지.
+  // 채팅탭 '일기:' 와 동일한 데이터 모양(entry.diary + dailySource:'diary')으로 저장. vitality/mood 우회 허용.
+  const _rawNote = (document.getElementById('checkinNote')?.value || '').trim();
+  const _diaryMatch = _rawNote.match(/^일기[:：]\s*([\s\S]+)$/);
+  const _isDiaryPath = (typeof _checkinDiaryMode !== 'undefined' && _checkinDiaryMode) || !!_diaryMatch;
+  if (_isDiaryPath) {
+    const diaryContent = _diaryMatch ? _diaryMatch[1].trim() : _rawNote;
+    if (!diaryContent) {
+      if (typeof showToast === 'function') showToast('일기 내용을 입력해줘');
+      return;
+    }
+    if (typeof _detectCrisisSignal === 'function' && _detectCrisisSignal(diaryContent)) {
+      if (typeof showCrisisCarousel === 'function') showCrisisCarousel('checkin_note');
+    }
+    const todayK = todayKey();
+    let entry = (state.entries || []).find(e => e.date === todayK);
+    if (!entry) { entry = { date: todayK }; state.entries.push(entry); }
+    // append + 시각 마커 (대화탭 05-send-chat.js 와 동일 동작)
+    if (entry.diary && entry.diary.trim()) {
+      const t = new Date();
+      const hh = String(t.getHours()).padStart(2, '0');
+      const mm = String(t.getMinutes()).padStart(2, '0');
+      entry.diary += '\n\n— ' + hh + ':' + mm + ' —\n' + diaryContent;
+    } else {
+      entry.diary = diaryContent;
+    }
+    entry.dailySource = 'diary';
+    entry.timestamp = new Date().toISOString();
+    // 사용자가 일기 모드 전에 vitality/mood 골랐으면 보너스 저장 + 소라 생성
+    if (currentCheckin.vitality && currentCheckin.mood) {
+      entry.vitality = currentCheckin.vitality;
+      entry.mood = currentCheckin.mood;
+      try {
+        if (typeof addOrUpdateCheckinShell === 'function') addOrUpdateCheckinShell(entry);
+      } catch (e) { console.warn('[checkin-shell]', e); }
+    }
+    saveState();
+    if (typeof _resetCheckinDiaryMode === 'function') _resetCheckinDiaryMode();
+    currentCheckin = {};
+    _currentDailyQuestion = null;
+    if (typeof updateCheckinSub === 'function') updateCheckinSub();
+    showScreen('home');
+    if (typeof showToast === 'function') showToast('📔 일기 저장됐어');
+    return;
+  }
   // 사용자 명시 2026-05-06: vitality + mood validation (신규 작성 모드에서만)
   const _vmTodayK = todayKey();
   const _vmExisting = (state.entries || []).find(en => en.date === _vmTodayK);
