@@ -101,65 +101,34 @@ function selectQuick(btn, key, value) {
 }
 
 async function submitCheckin() {
-  // V4 (사용자 명시 2026-05-20 ultrathink): 일기 분기 — 칩 누른 일기 모드 또는 '일기:' 접두어 자동 감지.
-  // 채팅탭 '일기:' 와 동일한 데이터 모양(entry.diary + dailySource:'diary')으로 저장. vitality/mood 우회 허용.
+  // V4 fix (사용자 보고 2026-05-20 ultrathink): 일기 path 통합. 옛 코드 = 일기 분기 early return 후 sleep / note / weather / dailyQuestion answered / meals / movement / focus / social / overwhelm / music / photos / projects measurements 전부 skip → side-field 손실.
+  //   새 path = 일기 감지 후 일반 흐름 통과. 끝부분 entry processing 에서 _isDiaryPath 면 entry.diary append + dailySource. vitality/mood 우회 (validation 건너뜀), note 칸 raw 박지 X.
   const _rawNote = (document.getElementById('checkinNote')?.value || '').trim();
   const _diaryMatch = _rawNote.match(/^일기[:：]\s*([\s\S]+)$/);
   const _isDiaryPath = (typeof _checkinDiaryMode !== 'undefined' && _checkinDiaryMode) || !!_diaryMatch;
-  if (_isDiaryPath) {
-    const diaryContent = _diaryMatch ? _diaryMatch[1].trim() : _rawNote;
-    if (!diaryContent) {
-      if (typeof showToast === 'function') showToast('일기 내용을 입력해줘');
-      return;
-    }
-    if (typeof _detectCrisisSignal === 'function' && _detectCrisisSignal(diaryContent)) {
-      if (typeof showCrisisCarousel === 'function') showCrisisCarousel('checkin_note');
-    }
-    const todayK = todayKey();
-    let entry = (state.entries || []).find(e => e.date === todayK);
-    if (!entry) { entry = { date: todayK }; state.entries.push(entry); }
-    // append + 시각 마커 (대화탭 05-send-chat.js 와 동일 동작)
-    if (entry.diary && entry.diary.trim()) {
-      const t = new Date();
-      const hh = String(t.getHours()).padStart(2, '0');
-      const mm = String(t.getMinutes()).padStart(2, '0');
-      entry.diary += '\n\n— ' + hh + ':' + mm + ' —\n' + diaryContent;
-    } else {
-      entry.diary = diaryContent;
-    }
-    entry.dailySource = 'diary';
-    entry.timestamp = new Date().toISOString();
-    // 사용자가 일기 모드 전에 vitality/mood 골랐으면 보너스 저장 + 소라 생성
-    if (currentCheckin.vitality && currentCheckin.mood) {
-      entry.vitality = currentCheckin.vitality;
-      entry.mood = currentCheckin.mood;
-      try {
-        if (typeof addOrUpdateCheckinShell === 'function') addOrUpdateCheckinShell(entry);
-      } catch (e) { console.warn('[checkin-shell]', e); }
-    }
-    saveState();
-    if (typeof _resetCheckinDiaryMode === 'function') _resetCheckinDiaryMode();
-    currentCheckin = {};
-    _currentDailyQuestion = null;
-    if (typeof updateCheckinSub === 'function') updateCheckinSub();
-    showScreen('home');
-    if (typeof showToast === 'function') showToast('📔 일기 저장됐어');
+  const _diaryContent = _isDiaryPath
+    ? (_diaryMatch ? _diaryMatch[1].trim() : _rawNote.trim())
+    : '';
+  if (_isDiaryPath && !_diaryContent) {
+    if (typeof showToast === 'function') showToast('일기 내용을 입력해줘');
     return;
   }
-  // 사용자 명시 2026-05-06: vitality + mood validation (신규 작성 모드에서만)
+  // 사용자 명시 2026-05-06: vitality + mood validation (신규 작성 모드에서만). 일기 모드면 우회.
   const _vmTodayK = todayKey();
   const _vmExisting = (state.entries || []).find(en => en.date === _vmTodayK);
-  const _vmIsEdit = !!(_vmExisting && (_vmExisting.vitality || _vmExisting.mood));
-  if (!_vmIsEdit && (!currentCheckin.vitality || !currentCheckin.mood)) {
+  const _vmIsEdit = !!(_vmExisting && (_vmExisting.vitality || _vmExisting.mood || _vmExisting.diary));
+  if (!_isDiaryPath && !_vmIsEdit && (!currentCheckin.vitality || !currentCheckin.mood)) {
     if (typeof showToast === 'function') showToast('⚡ 에너지랑 💭 기분 두 개만 골라줘');
     return;
   }
   const allNighter = !!document.getElementById('allNighterToggle')?.checked;
   const sleepStart = document.getElementById('sleepStart').value;
   const sleepEnd = document.getElementById('sleepEnd').value;
-  const note = document.getElementById('checkinNote').value;
-  // 사용자 명시 2026-05-01: 위기 신호 detect — 체크인 note 검사 (자살예방법 §15-6)
-  if (note && typeof _detectCrisisSignal === 'function' && _detectCrisisSignal(note)) {
+  // 일기 모드면 note 칸 = '일기: ...' raw 라 entry.note 에 박지 X. 일반 모드면 그대로.
+  const note = _isDiaryPath ? '' : document.getElementById('checkinNote').value;
+  // 사용자 명시 2026-05-01: 위기 신호 detect — 일기 모드면 diaryContent 검사, 아니면 note (자살예방법 §15-6).
+  const _crisisText = _isDiaryPath ? _diaryContent : note;
+  if (_crisisText && typeof _detectCrisisSignal === 'function' && _detectCrisisSignal(_crisisText)) {
     if (typeof showCrisisCarousel === 'function') showCrisisCarousel('checkin_note');
   }
   const key = todayKey();
@@ -175,9 +144,22 @@ async function submitCheckin() {
     entry.sleepStart = sleepStart;
     entry.sleepEnd = sleepEnd;
   }
-  entry.vitality = currentCheckin.vitality;
-  entry.mood = currentCheckin.mood;
+  // 일기 모드 + vitality/mood 안 골랐으면 entry 기존 값 보존. 골랐으면 update.
+  if (currentCheckin.vitality) entry.vitality = currentCheckin.vitality;
+  if (currentCheckin.mood) entry.mood = currentCheckin.mood;
   entry.note = note;
+  // V4 fix (사용자 보고 2026-05-20 ultrathink): 일기 path 도 일반 흐름 통과. entry.diary append + dailySource 만 추가.
+  if (_isDiaryPath) {
+    if (entry.diary && entry.diary.trim()) {
+      const t = new Date();
+      const hh = String(t.getHours()).padStart(2, '0');
+      const mm = String(t.getMinutes()).padStart(2, '0');
+      entry.diary += '\n\n— ' + hh + ':' + mm + ' —\n' + _diaryContent;
+    } else {
+      entry.diary = _diaryContent;
+    }
+    entry.dailySource = 'diary';
+  }
   entry.modes = { ...state.modes };
   entry.cyclePhase = getCyclePhase();
   // 사용자 명시 2026-05-03 ultrathink: 날씨 자동 fetch (fire-and-forget — 체크인 흐름에 latency X).
@@ -193,18 +175,19 @@ async function submitCheckin() {
       }
     }).catch(() => {});
   }
-  // Capture today's question + answer
+  // Capture today's question + answer — 일기 모드면 _diaryContent 가 답.
+  const _answeredText = _isDiaryPath ? _diaryContent : note;
   if (_currentDailyQuestion) {
     entry.dailyQuestion = {
       id: _currentDailyQuestion.id,
       text: _currentDailyQuestion.text,
       category: _currentDailyQuestion.cat,
-      answered: !!note.trim()
+      answered: !!_answeredText.trim()
     };
     // Mark answered in history
     const todayKeyVal = todayKey();
     const histEntry = (state.questionHistory || []).find(h => h.shownDate === todayKeyVal);
-    if (histEntry) histEntry.answered = !!note.trim();
+    if (histEntry) histEntry.answered = !!_answeredText.trim();
   }
   ['meals', 'movement', 'focus', 'social', 'overwhelm'].forEach(k => {
     if (currentCheckin[k]) entry[k] = currentCheckin[k];
@@ -287,11 +270,14 @@ async function submitCheckin() {
     }
   } catch (e) { console.warn('[checkin-shell]', e); }
 
-  saveState();
+  // V4 fix (사용자 보고 2026-05-20 ultrathink): saveState(true) force — _flushLocalSave + saveToCloud 즉시 fire.
+  //   옛 saveState() = 400ms debounce + 1s cloud debounce → showScreen 직후 사용자 빠른 동작 시 race 손실.
+  saveState(true);
 
   // V3.13.x: 체크인은 순수 기록. AI 자동 응답 X. note + dailyQuestion 답변은
   // entry에 저장만 (시스템 prompt로 자연스럽게 컨텍스트). 사용자가 chat에서 능동적으로 말 걸 때
   // AI가 그 정보 참조해서 응답.
+  if (_isDiaryPath && typeof _resetCheckinDiaryMode === 'function') _resetCheckinDiaryMode();
   currentCheckin = {};
   _currentDailyQuestion = null;
   updateCheckinSub();
@@ -299,6 +285,8 @@ async function submitCheckin() {
   // V4 (사용자 명시 2026-05-18 ultrathink): 소라 emerge + tier toast (단순 토스트 대체).
   if (_checkinShellResult && typeof showCheckinShellReward === 'function') {
     showCheckinShellReward(_checkinShellResult);
+  } else if (_isDiaryPath) {
+    showToast('📔 일기 저장됐어');
   } else {
     showToast(note.trim() ? '✦ 기록됐어' : '기록 고마워 🐚');
   }

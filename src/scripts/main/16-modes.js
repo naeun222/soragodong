@@ -45,7 +45,8 @@ function prefillCheckinFromEntry() {
   }
 
   const _entryHasPhoto = !!(entry && (entry.photo || (Array.isArray(entry.photos) && entry.photos.length > 0)));
-  if (!entry || !(entry.vitality || entry.mood || entry.note || entry.sleepStart || entry.music || _entryHasPhoto)) {
+  // V4 fix (사용자 보고 2026-05-20 ultrathink): entry.diary 만 있는 날 (일기 path 단독) 도 수정 모드로 인지 — 옛 흐름은 신규 작성으로 잘못 판정.
+  if (!entry || !(entry.vitality || entry.mood || entry.note || entry.diary || entry.sleepStart || entry.music || _entryHasPhoto)) {
     // 오늘 체크인 안 함 — 새로 작성 모드
     if (submitBtn) submitBtn.textContent = '기록 완료 ✦';
     if (subtitle) subtitle.textContent = '';
@@ -85,7 +86,18 @@ function prefillCheckinFromEntry() {
   if (startEl0 && entry.sleepStart) startEl0.value = entry.sleepStart;
   if (endEl0 && entry.sleepEnd) endEl0.value = entry.sleepEnd;
   // note
-  if (noteEl0 && entry.note) noteEl0.value = entry.note;
+  // V4 fix (사용자 보고 2026-05-20 ultrathink): entry.diary 도 textarea 복원 — 일기 path 단독 entry 가 빈 textarea 로 보이던 버그.
+  //   note + diary 둘 다 있으면 note 우선 (일반 path 가 정상 흐름). diary 만 있으면 '일기: ' prefix 로 복원 + 일기 모드 진입.
+  if (noteEl0) {
+    if (entry.note) {
+      noteEl0.value = entry.note;
+    } else if (entry.diary) {
+      noteEl0.value = '일기: ' + entry.diary;
+      if (typeof enterCheckinDiaryMode === 'function') {
+        try { enterCheckinDiaryMode(); } catch (e) { console.warn('[prefill diary mode]', e); }
+      }
+    }
+  }
   // optional fields — 사용자 보고 2026-05-03: state 만 복원 + UI .selected class 누락 = 다시 진입 시 click 사라짐 버그.
   // V4 fix (사용자 보고 2026-05-04): 속성 selector 가 onclick 문자열 normalization 차이로 매칭 못 하던 케이스 (한글 / 따옴표 escape 등) — 더 안전한 onclick parse 방식으로 교체.
   const _quickBtns = document.querySelectorAll('#screen-checkin .quick-btn');

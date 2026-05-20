@@ -130,6 +130,13 @@ function cancelE2EERecovery() {
   if (!yes) return;
   const overlay = document.getElementById('e2eeRecoveryOverlay');
   if (overlay) overlay.remove();
+  // V4 (사용자 명시 2026-05-20 ultrathink): _e2eePendingRecovery clear — 누락 시 모든 saveState/saveToCloudNow 영구 차단.
+  //   사용자가 '나중에' 의도 = recovery 보류, 그러나 그 세션 입력은 그대로 보존돼야 함.
+  //   reload 시 loadFromCloud 가 다시 _e2eePendingRecovery 재set (cloud 가 여전히 encrypted 면) — 정상 흐름.
+  try { window._e2eePendingRecovery = null; } catch {}
+  if (typeof showToast === 'function') {
+    try { showToast('🔐 비밀번호 보류 — 새로고침 시 다시 시도'); } catch {}
+  }
 }
 
 // 사용자 요청 2026-04-30: 비밀번호 잊음 — 자동 백업 (평문) 에서 복원하고 새로 시작.

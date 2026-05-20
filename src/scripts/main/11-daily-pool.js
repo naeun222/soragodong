@@ -253,7 +253,9 @@ function enterCheckinDiaryMode() {
   }
   const ta = document.getElementById('checkinNote');
   if (ta) {
-    if (!ta.value.startsWith('일기:')) ta.value = '일기: ';
+    // V4 fix (사용자 보고 2026-05-20 ultrathink): 옛 코드 = ta.value 통째 '일기: ' 로 덮어쓰기 → 사용자 입력 내용 손실.
+    //   새 path = '일기:' 시작이 아니면 기존 내용 앞에 prepend (보존). 일기 모드 두 번 클릭 = 옛 startsWith 체크로 no-op.
+    if (!ta.value.startsWith('일기:')) ta.value = '일기: ' + ta.value;
     ta.focus();
     try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) {}
   }
