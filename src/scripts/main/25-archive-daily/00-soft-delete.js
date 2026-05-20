@@ -227,4 +227,9 @@ function _purgeArchive(archiveId) {
   if (Array.isArray(state.chatArchive)) {
     state.chatArchive = state.chatArchive.filter(a => !(a && (a.id === archiveId || a.date === archiveId)));
   }
+  // V4 (사용자 명시 2026-05-20 ultrathink): chat_messages 별도 테이블 cascade — chapter_id 의 row hard delete.
+  //   fire-and-forget. fail 해도 chatArchive 에서 archive 자체 사라지니 user-facing 영향 X. row leak 만 잔존.
+  if (archiveId && typeof _deleteChapterMessages === 'function') {
+    _deleteChapterMessages(archiveId).catch(e => console.warn('[_purgeArchive] chat_messages cascade fail:', e));
+  }
 }
