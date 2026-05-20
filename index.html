@@ -68,7 +68,6 @@
 <!-- 사용자 보고 2026-05-05 (perf): Google Fonts CSS 가 render-blocking 이라 첫 페인트 전에 흰→검 플래시. preload 후 swap 으로 non-blocking. -->
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet"></noscript>
-
 <style>
   :root {
     --bg: #0f0e17;
@@ -13096,7 +13095,6 @@ img.pearl-load-fail {
   .beach-shell {
     contain: layout style;
   }
-
 </style>
 </head>
 <body>
@@ -13132,11 +13130,9 @@ img.pearl-load-fail {
   </div>
 </div>
 
-
 <!-- 사용자 보고 2026-04-30 ultrathink-2: 마법고동 화면일 때만 표시되는 fixed chip -->
 <div class="magic-mode-chip" id="magicModeChip"><img src="/character/godong-wizard.svg" alt="" class="godong-icon godong-mood-wizard" decoding="async"> 마법고동</div>
 <div class="reflection-mode-chip" id="reflectionModeChip">🌊 숙고의 방</div>
-
 
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
@@ -13189,7 +13185,6 @@ img.pearl-load-fail {
 
   </div>
 </div>
-
 
 <script>
   // PWA 설치 — Android beforeinstallprompt 캡처 + 1탭 설치 / iOS manual fallback (사용자 명시 2026-04-30 ultrathink)
@@ -13272,7 +13267,6 @@ img.pearl-load-fail {
     if (/Android/i.test(ua)) defaultOs = 'android';
     setPwaTab(defaultOs);
   })();
-
 </script>
 
 <div class="app" style="display:none;">
@@ -14314,7 +14308,6 @@ img.pearl-load-fail {
   </div>
 </div>
 
-
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
   <div class="chat-plus-menu" id="chatPlusMenu" hidden>
     <button class="chat-plus-item" onclick="chatPlusAction('diary')">
@@ -14346,7 +14339,6 @@ img.pearl-load-fail {
   </div>
 </div>
 
-
 <!-- Shell collection modal -->
 <div class="modal-overlay" id="shellModal" onclick="if(event.target===this)closeModal('shellModal')">
   <div class="modal beach-screen" style="max-height:88vh; overflow-y:auto;">
@@ -14377,7 +14369,6 @@ img.pearl-load-fail {
   </div>
 </div>
 
-
 <!-- Celebration -->
 <div class="celebration" id="celebration">
   <div class="celebration-content">
@@ -14387,15 +14378,12 @@ img.pearl-load-fail {
   </div>
 </div>
 
-
 <!-- Toast -->
 <div class="toast" id="toast"></div>
-
 
 <!-- V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 — cold open hero overlay + 코치마크 root -->
 <!-- 동작: shouldRunStartTutorialV8 → runStartTutorialV8 가 controller. JS 가 markup 채움. -->
 <div id="v8TutorialRoot" aria-hidden="true"></div>
-
 
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -67059,7 +67047,6 @@ function _dismissPwaInstallCard() {
     }
   }, 6000);
 })();
-
 </script>
 </body>
 </html>
