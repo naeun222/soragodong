@@ -517,6 +517,18 @@ let currentCheckin = {};
 let syncStatus = 'offline';
 let syncTimeout = null;
 
+// V4 (사용자 명시 2026-05-20 ultrathink): 옛 로컬 데이터 cloud 덮어쓰기 가드.
+//   시나리오: 같은 사용자가 브라우저 A (옛 localStorage) 재로그인 → cloud fetch timeout/실패 →
+//     catch 분기에서 옛 localStorage 적용 → 사용자 입력 → saveToCloud 가 옛 데이터로 신선한 cloud PATCH.
+//   가드:
+//     1. _cloudLoadInProgress=true 동안 saveToCloud no-op (cloud load 끝나기 전 PATCH 차단).
+//     2. _cloudReadOnly=true 면 saveToCloud 차단 + 사용자 토스트. manualSync 가 confirm 후 강제 해제 가능.
+//     3. cloud lastSync 가 local lastSync 보다 신선하면 정상 (자연 흐름). 반대 (local 이 더 신선) = 의심 — confirm modal.
+let _cloudLoadInProgress = false;
+let _cloudReadOnly = false;
+let _cloudReadOnlyReason = '';
+let _cloudReadOnlyToastShown = false;
+
 // V4.0: localStorage 동기 저장 디바운스 (400ms). cloud는 saveToCloud 안에서 1초 디바운스.
 // force=true면 즉시 (토글/critical save). beforeunload에서도 강제 flush.
 let _localSaveTimer = null;

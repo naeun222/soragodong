@@ -4,6 +4,12 @@
 async function loadFromCloud() {
   // V4: V4 전용 row만 로드. V3 데이터(`me` row)는 영원히 안 건드림.
   console.log(`[V4] 소라고동 V4 미리보기 — auth_user_id=${authUserId}, user_id=${V4_USER_ID}`);
+  // V4 (사용자 명시 2026-05-20 ultrathink): cloud load 가드 시작.
+  //   _cloudLoadInProgress=true 동안 saveToCloud no-op — 옛 localStorage 가 신선한 cloud row 덮어쓰는 race 차단.
+  _cloudLoadInProgress = true;
+  _cloudReadOnly = false;
+  _cloudReadOnlyReason = '';
+  _cloudReadOnlyToastShown = false;
   // 사용자 명시 2026-05-05 ultrathink (Phase 1): 게스트 = cloud row X — localStorage 만 사용.
   // 같은 anonymous uid 면 localStorage state 그대로 활용. uid 다르면 wipe (security).
   if (state && state.isGuest) {
@@ -33,6 +39,7 @@ async function loadFromCloud() {
     }
     localStorage.setItem(V4_LAST_USER_KEY, authUserId);
     if (typeof setSyncStatus === 'function') setSyncStatus('idle');
+    _cloudLoadInProgress = false;  // 게스트 = cloud row X — 가드 해제.
     return;
   }
   // V3.13.x SECURITY: localStorage 사용자 변경 감지 (다른 계정 로그인 시 이전 데이터 방지)
@@ -53,11 +60,14 @@ async function loadFromCloud() {
   // 사용자 명시 2026-05-05 (perf ultrathink): cloud 응답 기다리는 동안 localStorage state 로 optimistic 화면 그리기.
   // cloud 도착 시 init() 가 자연스럽게 다시 렌더 → 덮어씀. Supabase RTT (모바일 1-2초) 동안 빈 화면 X.
   // 같은 device 재방문 시 perceived load 가장 큰 단축. E2EE 새 device 진입 시엔 localStorage 비어있어 자동 skip.
+  // V4 (사용자 명시 2026-05-20 ultrathink): _localSnapshotForDivergence 외부 scope — cloud 적용 후 lastSync divergence 감지 비교용.
+  let _localSnapshotForDivergence = null;
   if (lastUserId === authUserId) {
     try {
       const _localRaw = localStorage.getItem(V4_LOCAL_STORAGE_KEY);
       if (_localRaw) {
         const _localState = JSON.parse(_localRaw);
+        _localSnapshotForDivergence = _localState;  // cloud divergence 비교용 보존 (메모리 — cloud 적용 직후 비교).
         state = { ...DEFAULT_STATE, ..._localState };
         try {
           if (typeof applyNightMode === 'function') applyNightMode();
@@ -470,6 +480,9 @@ async function loadFromCloud() {
       } catch (e) { console.warn('[loadFromCloud] guest migrate 실패:', e); }
     }
 
+    // V4 (사용자 명시 2026-05-20 ultrathink): cloud fetch + state 적용 완료 — 가드 해제 (post-load save / backfill 가 자유롭게 cloud PATCH).
+    //   divergence 감지가 그 다음 _cloudReadOnly 재set 하기 전이라 post-load save 는 정상 동작.
+    _cloudLoadInProgress = false;
     // 사용자 보고 2026-05-05 (audit High): load 도중 누적된 변경 사항을 마지막 1회로 cloud sync. 이전엔 5곳 순차 호출 → 누적된 PATCH 가 race risk + Supabase 부하.
     // V4 fix (사용자 보고 2026-05-18 ultrathink Phase 2) — fire-and-forget. 옛 await 는 saveToCloudNow 가 supabase cascade/지연 시
     //   init() 영구 hang 위험 (PATCH timeout + retry 합 30s 가능). cleanup 의도 (시드 sweep / dedupe / V6→V7) 는
@@ -489,10 +502,41 @@ async function loadFromCloud() {
       } catch (e) { console.warn('[loadFromCloud] chat_messages backfill/hydrate fail:', e); }
     })();
 
+    // V4 (사용자 명시 2026-05-20 ultrathink): cloud 적용 후 lastSync divergence 감지.
+    //   _localSnapshotForDivergence.lastSync 가 cloud state.lastSync 보다 24h+ 신선 = 옛 브라우저 race 의심 케이스.
+    //   normal: cloud 가 더 신선 (자연). reverse: 옛 브라우저가 더 신선 (이상) = 옛 saveToCloud 실패한 잔재 또는 시간 시뮬.
+    //   confirm modal default = cloud 우선 (안전). 사용자가 명시 선택 시만 로컬 우선 (saveToCloudNow 강제 호출).
+    try {
+      const _localLs = _localSnapshotForDivergence && _localSnapshotForDivergence.lastSync;
+      const _cloudLs = state && state.lastSync;
+      if (_localLs && _cloudLs) {
+        const _localMs = new Date(_localLs).getTime();
+        const _cloudMs = new Date(_cloudLs).getTime();
+        const _diffMs = _localMs - _cloudMs;
+        // 24시간 초과 + 둘 다 유효 timestamp 일 때만 발화.
+        if (Number.isFinite(_localMs) && Number.isFinite(_cloudMs) && _diffMs > 24 * 3600000) {
+          console.warn('[loadFromCloud] divergence 감지 — local lastSync 가 cloud 보다 신선', { _localLs, _cloudLs, _diffH: (_diffMs / 3600000).toFixed(1) });
+          // 비동기 confirm — init() 흐름 차단 X. 우선 saveToCloud 임시 차단 (사용자 선택까지).
+          _cloudReadOnly = true;
+          _cloudReadOnlyReason = 'divergence';
+          setTimeout(() => { _promptCloudDivergenceConfirm(_localLs, _cloudLs, _localSnapshotForDivergence).catch(e => console.warn('[divergence prompt]', e)); }, 1500);
+        }
+      }
+    } catch (_e) { console.warn('[loadFromCloud] divergence check:', _e); }
+
     setSyncStatus('online');
     return true;
   } catch (e) {
     console.error('Cloud load error:', e);
+    // V4 (사용자 명시 2026-05-20 ultrathink): cloud load 실패 = read-only mode. 옛 localStorage 가 신선한 cloud 덮어쓰기 차단.
+    //   saveToCloud / saveToCloudNow 가 _cloudReadOnly 확인 후 no-op + 사용자 1회 토스트.
+    //   사용자가 manualSync (강제 동기화) 누르고 confirm 하면 force 해제.
+    _cloudReadOnly = true;
+    _cloudReadOnlyReason = 'load-failed';
+    _cloudLoadInProgress = false;
+    if (typeof showToast === 'function') {
+      try { showToast('⚠ 클라우드 미연결 — 변경 임시 보관, 새로고침 후 재시도'); } catch {}
+    }
     const local = localStorage.getItem(V4_LOCAL_STORAGE_KEY);
     if (local) {
       state = { ...DEFAULT_STATE, ...JSON.parse(local) };

@@ -1,3 +1,39 @@
+// V4 (사용자 명시 2026-05-20 ultrathink): cron snap row → restorable snap 변환.
+//   cron-snapshot.ts 가 row.data = { snap_at, main_updated_at, data: <main row raw> } 박음.
+//   raw = gzip wrapper 또는 _encryptedBody E2EE 또는 평문. unpack + decrypt → 평문 state-like 객체.
+//   E2EE 마스터키 미준비 시 ok:false — 사용자에게 비밀번호 복원 안내.
+async function _convertCronSnapToRestorable(cronRow) {
+  if (!cronRow || !cronRow.data) return { ok: false, reason: 'cron row 데이터 X' };
+  const rawMainData = cronRow.data.data;
+  if (!rawMainData) return { ok: false, reason: 'main row 데이터 X' };
+  let unpacked;
+  try {
+    unpacked = await _unpackStateFromCloud(rawMainData);
+  } catch (e) {
+    return { ok: false, reason: 'gzip 압축 풀기 실패: ' + (e.message || e) };
+  }
+  if (unpacked && unpacked._encryptedBody && unpacked._encryptedBody._e2ee) {
+    // E2EE 사용자 — 메인 흐름과 동일하게 마스터 키로 decrypt.
+    if (!_e2eeMasterKey) {
+      return { ok: false, reason: '비밀번호 복원 후 다시 시도 (E2EE 마스터키 미준비)' };
+    }
+    let decryptedJson;
+    try {
+      decryptedJson = await _e2eeDecrypt(unpacked._encryptedBody, _e2eeMasterKey);
+    } catch (e) {
+      return { ok: false, reason: '복호화 throw: ' + (e.message || e) };
+    }
+    if (decryptedJson === null) return { ok: false, reason: '복호화 실패 (마스터키 불일치)' };
+    let decryptedBody;
+    try { decryptedBody = JSON.parse(decryptedJson); }
+    catch (e) { return { ok: false, reason: 'decrypted JSON parse 실패: ' + (e.message || e) }; }
+    const { _encryptedBody, ...metaPart } = unpacked;
+    return { ok: true, snap: { ts: cronRow.data.snap_at, data: { ...metaPart, ...decryptedBody } } };
+  }
+  // 평문 사용자.
+  return { ok: true, snap: { ts: cronRow.data.snap_at, data: unpacked } };
+}
+
 // V4 (사용자 명시 2026-05-17 ultrathink): merge helper — snapshot 복원 시 현재 state 의 messages/media 보존.
 //   root cause: 자동백업 sanitize 가 chatArchive.messages / pearl.video|photo 통째 strip
 //     → snapshot 복원 시 메인 state 도 그 형태로 덮어쓰여 영구 손실 (cloud 메인 row 도 saveToCloudNow 로 변형).
@@ -139,30 +175,85 @@ async function restoreFromCloudBackup() {
 }
 
 // 자동 백업 목록 → modal로 보여주고 선택 복구
+// V4 (사용자 명시 2026-05-20 ultrathink): 클라이언트 weekly/update auto + 서버 cron snap (새벽 4시, 30일치) 통합 리스트.
+//   - client auto = `me_v4_auto_backup` row 안 snapshots[] (sanitized 평문 / messages-stripped).
+//   - cron snap = `cron_snap_YYYY-MM-DD` row 들 (functions/api/backup/cron-snapshot.ts). data = main row raw (E2EE blob 가능).
+//   사용자 선택 시 _kind 에 따라 복원 흐름 분기.
 async function showAutoBackupList() {
   if (!authUserId) { showToast('로그인 필요'); return; }
   showToast('🔍 자동 백업 검색 중...');
   try {
-    const { ok, rows } = await _backupRowFetch(V4_AUTO_BACKUP_USER_ID, 'data');
-    if (!ok) { showToast('백업 검색 실패'); return; }
-    if (rows.length === 0 || !rows[0].data || !Array.isArray(rows[0].data.snapshots) || rows[0].data.snapshots.length === 0) {
-      showToast('자동 백업 없음 (주 1회 + 업데이트 시 자동 생성됨)');
+    // 1. 클라이언트 auto backup (주간 + 업데이트 시 rolling 5개).
+    let clientSnaps = [];
+    try {
+      const { ok, rows } = await _backupRowFetch(V4_AUTO_BACKUP_USER_ID, 'data');
+      if (ok && rows.length > 0 && rows[0].data && Array.isArray(rows[0].data.snapshots)) {
+        clientSnaps = rows[0].data.snapshots;
+      }
+    } catch (e) { console.warn('[showAutoBackupList] client auto fetch:', e); }
+
+    // 2. 서버 cron snap (새벽 4시, user_id LIKE 'cron_snap_%', 30일 retention).
+    let cronRows = [];
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}`
+        + `&user_id=like.${encodeURIComponent('cron_snap_%')}&select=user_id,data&order=user_id.desc&limit=30`;
+      const resp = await fetch(url, { headers: authHeaders() });
+      if (resp.ok) cronRows = await resp.json();
+    } catch (e) { console.warn('[showAutoBackupList] cron snap fetch:', e); }
+
+    // 3. 통합 옵션 — ts 기준 최신 정렬.
+    const items = [];
+    clientSnaps.forEach(s => {
+      if (!s || !s.ts) return;
+      items.push({ _kind: 'client', _snap: s, ts: s.ts, reason: s.reason || '' });
+    });
+    cronRows.forEach(r => {
+      if (!r || !r.data) return;
+      // user_id = 'cron_snap_YYYY-MM-DD'. snap_at = ISO (cron fire 시각).
+      const ts = r.data.snap_at || (r.user_id.replace('cron_snap_', '') + 'T19:00:00Z');
+      items.push({ _kind: 'cron', _row: r, ts, dateKey: r.user_id.replace('cron_snap_', '') });
+    });
+    if (items.length === 0) {
+      showToast('자동 백업 없음 (새벽 4시 자동 + 주 1회 / 업데이트 시)');
       return;
     }
-    const snapshots = rows[0].data.snapshots.slice().reverse(); // 최신 먼저
-    const opts = snapshots.map((s, i) => {
-      const dt = new Date(s.ts).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-      const reasonLabel = s.reason === 'weekly' ? '🗓 주간' : s.reason.startsWith('update_') ? '🔄 업데이트 ' + s.reason.replace('update_', '') : s.reason;
-      return { label: `${dt} · ${reasonLabel}`, value: String(i) };
+    items.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+
+    const opts = items.map((it, i) => {
+      const dt = new Date(it.ts).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      let label;
+      if (it._kind === 'cron') {
+        label = `🌙 ${dt} · 새벽 4시 자동`;
+      } else {
+        const r = it.reason;
+        const reasonLabel = r === 'weekly' ? '🗓 주간' : (r && r.startsWith('update_')) ? `🔄 업데이트 ${r.replace('update_', '')}` : (r || '자동');
+        label = `${dt} · ${reasonLabel}`;
+      }
+      return { label, value: String(i) };
     });
     const choice = await showOptionsModal({
       title: '🕰 자동 백업에서 복원',
-      message: `최근 ${snapshots.length}개 중 선택. 복구하면 현재 데이터는 사라져.`,
+      message: `최근 ${items.length}개 중 선택 (새벽 4시 ${cronRows.length}개 + 앱 ${clientSnaps.length}개). 복구하면 현재 데이터는 사라져.`,
       options: opts
     });
     if (!choice) return;
     const idx = parseInt(choice, 10);
-    const snap = snapshots[idx];
+    const pick = items[idx];
+    if (!pick) { showToast('잘못된 선택'); return; }
+
+    // 4. cron snap = main row raw 블롭 → unpack + (E2EE) decrypt → state-like 객체.
+    //    client auto = 이미 평문 sanitized snap.data → 기존 흐름.
+    let snap;  // 기존 흐름의 { ts, data, _backupSchemaVersion?, chatMessages? } 형태로 통일.
+    if (pick._kind === 'cron') {
+      const _converted = await _convertCronSnapToRestorable(pick._row);
+      if (!_converted.ok) {
+        showToast('새벽 4시 백업 복원 실패: ' + _converted.reason);
+        return;
+      }
+      snap = _converted.snap;
+    } else {
+      snap = pick._snap;
+    }
     if (!snap || !snap.data) { showToast('snapshot 데이터 X'); return; }
     const yes = await showConfirmModal({
       title: '복구 확정?',
