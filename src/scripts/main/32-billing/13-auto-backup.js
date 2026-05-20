@@ -110,11 +110,16 @@ async function runAutoBackupIfNeeded() {
         return _trim;
       });
     }
+    // V4 (사용자 명시 2026-05-20 ultrathink): Step 7 — schema v5 마커.
+    //   autoBackup 은 chatMessages sub-array X (size cap — autoBackup row cascade risk).
+    //   복원 시 restore 가 chatMessages 없으면 자동 skip → 옛 _mergeArchivesPreservingMessages fallback.
+    //   별도 테이블 (soragodong_chat_messages) 이 cloud 에 영구 살아있으면 hydration 으로 자연 복원.
     snapshots.push({
       ts: new Date(now).toISOString(),
       reason,
       appVersion: typeof APP_VERSION !== 'undefined' ? APP_VERSION : '',
       _stateHash: stateHash,
+      _backupSchemaVersion: 'v5',
       data: sanitized
     });
     // rolling 5개

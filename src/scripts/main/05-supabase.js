@@ -753,6 +753,71 @@ async function _deleteChapterMessages(chapterId) {
   return { ok: true };
 }
 
+// V4 (사용자 명시 2026-05-20 ultrathink): Step 7 — manual backup 시 chat_messages 별도 테이블 통째 export.
+//   snapshot 안 `chatMessages` sub-array (chapter_id → [{idx, content/encrypted_body}]) 로 저장.
+//   복원 시 _importChatMessagesFromBackup 이 별도 테이블 재구축 → cloud 의 chat_messages row 가 hard delete 됐어도 (휴지통 7일 후) 복원 가능.
+//   autoBackup 은 호출 X — size cap (autoBackup row 4MB+ → cascade risk). manual 만 사용자 명시 의도.
+//   E2EE encrypted_body 는 already ciphertext 라 평문 노출 X — 동일 master key 의 다른 device 복원 시 자연 복호.
+async function _exportChatMessagesForBackup() {
+  if (!authUserId) return {};
+  const out = {};
+  const PAGE = 1000;
+  let offset = 0;
+  while (true) {
+    const url = `${SUPABASE_URL}/rest/v1/${_CHAT_MESSAGES_TABLE}`
+      + `?user_id=eq.${authUserId}`
+      + `&select=chapter_id,idx,content,encrypted_body`
+      + `&order=chapter_id.asc,idx.asc`
+      + `&offset=${offset}&limit=${PAGE}`;
+    let resp;
+    try { resp = await _fetchWithTimeout(url, { headers: authHeaders() }); }
+    catch (e) { console.warn('[exportChatMessages] fetch fail:', e); break; }
+    if (!resp.ok) { console.warn('[exportChatMessages]', resp.status); break; }
+    const rows = await resp.json();
+    if (!Array.isArray(rows) || rows.length === 0) break;
+    for (const r of rows) {
+      if (!out[r.chapter_id]) out[r.chapter_id] = [];
+      const entry = { idx: r.idx };
+      if (r.content) entry.content = r.content;
+      if (r.encrypted_body) entry.encrypted_body = r.encrypted_body;
+      out[r.chapter_id].push(entry);
+    }
+    if (rows.length < PAGE) break;
+    offset += PAGE;
+  }
+  return out;
+}
+
+// backup snapshot 의 chatMessages sub-array → 별도 테이블 batch insert. idempotent — 같은 (chapter_id) 옛 row DELETE 먼저.
+async function _importChatMessagesFromBackup(chatMessagesObj) {
+  if (!authUserId || !chatMessagesObj || typeof chatMessagesObj !== 'object') return { ok: true, count: 0 };
+  let totalInserted = 0;
+  let failedChapters = 0;
+  for (const [chapterId, msgs] of Object.entries(chatMessagesObj)) {
+    if (!chapterId || !Array.isArray(msgs) || msgs.length === 0) continue;
+    try { await _deleteChapterMessages(chapterId); }
+    catch (e) { console.warn('[importChatMessages] pre-delete fail', chapterId, e); }
+    const rows = msgs.map(m => ({
+      user_id: authUserId,
+      chapter_id: chapterId,
+      idx: m.idx,
+      content: m.content || null,
+      encrypted_body: m.encrypted_body || null
+    }));
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/${_CHAT_MESSAGES_TABLE}`;
+      const resp = await _fetchWithRetry5xx(url, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(rows)
+      });
+      if (resp.ok) totalInserted += rows.length;
+      else { console.warn('[importChatMessages] insert fail', chapterId, resp.status); failedChapters++; }
+    } catch (e) { console.warn('[importChatMessages] throw', chapterId, e); failedChapters++; }
+  }
+  return { ok: failedChapters === 0, count: totalInserted, failedChapters };
+}
+
 // V4 (사용자 명시 2026-05-20 ultrathink): Step 4 — loadFromCloud 후 chat_messages 별도 테이블에서
 //   _hasMessages 박힌 archive 의 messages 를 in-memory 로 끌어옴.
 //   cloud main row 엔 messages strip 상태 (Step 4 _cloudStateReplacer) — read 경로 sync 동작 위해 hydration 필요.

@@ -62,14 +62,24 @@ async function manualCloudBackup(opts) {
         }
       }
     }
-    // 새 snapshot
-    const sanitized = JSON.parse(JSON.stringify(state, _serializeReplacer));
+    // V4 (사용자 명시 2026-05-20 ultrathink): Step 7 — schema v5.
+    //   data 는 _cloudStateReplacer 사용 → _hasMessages 박힌 archive 의 messages 키 strip (chatMessages sub-array 가 처리).
+    //   chatMessages = 별도 테이블 통째 export. 복원 시 _importChatMessagesFromBackup 이 별도 테이블 재구축.
+    const sanitized = JSON.parse(JSON.stringify(state, _cloudStateReplacer));
+    let _exportedChatMessages = {};
+    try {
+      if (typeof _exportChatMessagesForBackup === 'function') {
+        _exportedChatMessages = await _exportChatMessagesForBackup();
+      }
+    } catch (e) { console.warn('[manualBackup] chat_messages export fail:', e); }
     snapshots.push({
       ts: new Date().toISOString(),
       note: (note || '').trim().slice(0, 80),
       appVersion: typeof APP_VERSION !== 'undefined' ? APP_VERSION : '',
       _stateHash: stateHash,
-      data: sanitized
+      _backupSchemaVersion: 'v5',
+      data: sanitized,
+      chatMessages: _exportedChatMessages
     });
     // rolling cap
     if (snapshots.length > MANUAL_BACKUP_KEEP_N) {

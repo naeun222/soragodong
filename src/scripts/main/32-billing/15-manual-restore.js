@@ -106,6 +106,17 @@ async function restoreFromCloudBackup() {
     state = { ...DEFAULT_STATE, ...snap.data };
     state.chatArchive = _mergeArchivesPreservingMessages(_curArchive, state.chatArchive);
     state.pearls = _mergePearlsPreservingMedia(_curPearls, state.pearls);
+    // V4 (사용자 명시 2026-05-20 ultrathink): Step 7 — schema v5 snapshot 의 chatMessages sub-array → 별도 테이블 재구축.
+    //   schema v4 (옛, chatMessages 필드 X) = 옛 path 그대로 (in-memory archive.messages 가 _mergeArchivesPreservingMessages 로 보존).
+    //   schema v5 = manualBackup 시점 chat_messages 통째 보존됨 → 휴지통 hard delete 됐어도 복원 가능.
+    let _chatMessagesImportRes = null;
+    if (snap._backupSchemaVersion === 'v5' && snap.chatMessages
+        && typeof _importChatMessagesFromBackup === 'function') {
+      try {
+        _chatMessagesImportRes = await _importChatMessagesFromBackup(snap.chatMessages);
+        console.log('[restoreFromCloudBackup] chat_messages import:', _chatMessagesImportRes);
+      } catch (e) { console.warn('[restoreFromCloudBackup] chat_messages import fail:', e); }
+    }
     // 알림 — 복원/누락 카운트.
     const _restoredMsgs = (state.chatArchive || []).filter(a => a && a._msgsRestoredFromCurrent).length;
     const _restoredMedia = (state.pearls || []).filter(p => p && p._mediaRestoredFromCurrent).length;
@@ -116,7 +127,10 @@ async function restoreFromCloudBackup() {
       console.log('[restoreFromCloudBackup] 자동 보존:', _parts.join(' / '));
     }
     await saveToCloudNow();
-    showToast(`✦ 복원됨${_restoredMsgs + _restoredMedia > 0 ? ` (현재 데이터 ${_restoredMsgs + _restoredMedia}개 자동 보존)` : ''} — 새로고침 중...`);
+    const _chatMsgsLine = _chatMessagesImportRes && _chatMessagesImportRes.count > 0
+      ? ` + 별도 테이블 ${_chatMessagesImportRes.count} 메시지 재구축`
+      : '';
+    showToast(`✦ 복원됨${_restoredMsgs + _restoredMedia > 0 ? ` (현재 데이터 ${_restoredMsgs + _restoredMedia}개 자동 보존)` : ''}${_chatMsgsLine} — 새로고침 중...`);
     setTimeout(() => location.reload(), 800);
   } catch (e) {
     console.error('restoreFromCloudBackup:', e);
@@ -165,6 +179,14 @@ async function showAutoBackupList() {
     state = { ...DEFAULT_STATE, ...snap.data };
     state.chatArchive = _mergeArchivesPreservingMessages(_curArchive, state.chatArchive);
     state.pearls = _mergePearlsPreservingMedia(_curPearls, state.pearls);
+    // V4 (사용자 명시 2026-05-20 ultrathink): Step 7 — schema v5 chatMessages sub-array → 별도 테이블 재구축 (autoBackup 엔 보통 X, manual 만 박음).
+    if (snap._backupSchemaVersion === 'v5' && snap.chatMessages
+        && typeof _importChatMessagesFromBackup === 'function') {
+      try {
+        const _imp = await _importChatMessagesFromBackup(snap.chatMessages);
+        console.log('[showAutoBackupList] chat_messages import:', _imp);
+      } catch (e) { console.warn('[showAutoBackupList] chat_messages import fail:', e); }
+    }
     // 알림 — 복원/누락 카운트.
     const _restoredMsgs = (state.chatArchive || []).filter(a => a && a._msgsRestoredFromCurrent).length;
     const _restoredMedia = (state.pearls || []).filter(p => p && p._mediaRestoredFromCurrent).length;
