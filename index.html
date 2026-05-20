@@ -14026,7 +14026,7 @@ img.pearl-load-fail {
     <div class="exec-modal-overlay" id="chatArchiveOverlay" style="display:none; z-index:600;" onclick="if(event.target===this) closeChatArchive()">
       <div class="exec-modal" style="max-height:80vh; overflow-y:auto;">
         <div class="exec-modal-title">📚 이전 대화</div>
-        <div class="exec-modal-sub">"이 대화 마무리"하면 여기로. 7일 뒤 자동 사라짐 (잠깐 보관).<br>요약 카드 탭하면 원본도 볼 수 있어.</div>
+        <div class="exec-modal-sub">"이 대화 마무리"하면 여기로. 영구 보관 (휴지통은 7일 뒤 영구 삭제).<br>요약 카드 탭하면 원본도 볼 수 있어.</div>
         <div id="chatArchiveContent"></div>
         <button class="btn-secondary" onclick="closeChatArchive()" style="margin-top:14px; width:100%;">닫기</button>
       </div>
@@ -41823,7 +41823,8 @@ function pruneOldChatArchive() {
   if (state.chatArchive.length < before || trashIdsToPurge.length > 0) saveState();
 }
 
-// 사용자 요청 2026-04-29: chatArchive 항목 핀 토글 — 영구 보관 / 7일 cap 복귀
+// V4 (사용자 명시 2026-05-20 ultrathink): Step 8 — 일반 archive 영구 보관 후 핀 = 목록 정렬용 (위로 고정).
+//   옛 의미 (영구 보관 vs 7일 cap) 폐기. 옛 pinned 데이터 그대로 보존 — UI 동작만 단순화.
 function toggleArchivePin(date) {
   if (!Array.isArray(state.chatArchive)) return;
   const item = state.chatArchive.find(a => a && a.date === date);
@@ -41832,7 +41833,7 @@ function toggleArchivePin(date) {
   saveState();
   if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
   if (typeof showToast === 'function') {
-    showToast(item.pinned ? '📌 영구 보관됨 — 7일 자동 삭제 안 돼' : '📌 핀 풀림 — 7일 cap 다시 적용');
+    showToast(item.pinned ? '📌 위로 고정됨' : '📌 핀 풀림');
   }
 }
 
@@ -51269,8 +51270,8 @@ function renderChatArchiveModal() {
       container.innerHTML = headerHtml + `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
         <div style="font-size:32px; margin-bottom:12px;">📚</div>
         아직 보관된 대화가 없어.<br>
-        7일 넘은 대화가 자동으로 여기 모일 거야.<br>
-        <span style="font-size:11px; opacity:0.8;">📌 핀 꽂으면 영구 보관됨.</span>
+        "이 대화 마무리"하면 여기로 모여. 영구 보관.<br>
+        <span style="font-size:11px; opacity:0.8;">📌 핀 = 위로 고정 (목록 정렬용).</span>
       </div>`;
     }
     return;
@@ -51298,7 +51299,7 @@ function renderChatArchiveModal() {
     //   사용자에게 "복원 가능 X" 명시하면 silent fail 회피.
     const _isEmptyMessages = isExpanded && messages.length === 0;
     const pinIcon = a.pinned ? '📌' : '📍';
-    const pinTitle = a.pinned ? '핀 풀기 (7일 cap 다시)' : '핀 꽂기 (영구 보관)';
+    const pinTitle = a.pinned ? '핀 풀기 (목록 아래로)' : '핀 꽂기 (위로 고정)';
     // 사용자 명시 2026-05-01 ultrathink: 4AM 처리 전 (pending) = 소프트 placeholder. legacy flag 도 호환.
     // 사용자 명시 2026-05-02 ultrathink: batch submit 후엔 "정리 중 ⏳" 로 변경 (오류 X 처리 중 명시).
     const isPending = !!(a._pendingExtract || a._pendingCaseAnalysis);

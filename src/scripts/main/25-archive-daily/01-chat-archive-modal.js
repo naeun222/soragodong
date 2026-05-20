@@ -66,8 +66,8 @@ function renderChatArchiveModal() {
       container.innerHTML = headerHtml + `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
         <div style="font-size:32px; margin-bottom:12px;">📚</div>
         아직 보관된 대화가 없어.<br>
-        7일 넘은 대화가 자동으로 여기 모일 거야.<br>
-        <span style="font-size:11px; opacity:0.8;">📌 핀 꽂으면 영구 보관됨.</span>
+        "이 대화 마무리"하면 여기로 모여. 영구 보관.<br>
+        <span style="font-size:11px; opacity:0.8;">📌 핀 = 위로 고정 (목록 정렬용).</span>
       </div>`;
     }
     return;
@@ -95,7 +95,7 @@ function renderChatArchiveModal() {
     //   사용자에게 "복원 가능 X" 명시하면 silent fail 회피.
     const _isEmptyMessages = isExpanded && messages.length === 0;
     const pinIcon = a.pinned ? '📌' : '📍';
-    const pinTitle = a.pinned ? '핀 풀기 (7일 cap 다시)' : '핀 꽂기 (영구 보관)';
+    const pinTitle = a.pinned ? '핀 풀기 (목록 아래로)' : '핀 꽂기 (위로 고정)';
     // 사용자 명시 2026-05-01 ultrathink: 4AM 처리 전 (pending) = 소프트 placeholder. legacy flag 도 호환.
     // 사용자 명시 2026-05-02 ultrathink: batch submit 후엔 "정리 중 ⏳" 로 변경 (오류 X 처리 중 명시).
     const isPending = !!(a._pendingExtract || a._pendingCaseAnalysis);

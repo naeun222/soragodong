@@ -51,7 +51,8 @@ function pruneOldChatArchive() {
   if (state.chatArchive.length < before || trashIdsToPurge.length > 0) saveState();
 }
 
-// 사용자 요청 2026-04-29: chatArchive 항목 핀 토글 — 영구 보관 / 7일 cap 복귀
+// V4 (사용자 명시 2026-05-20 ultrathink): Step 8 — 일반 archive 영구 보관 후 핀 = 목록 정렬용 (위로 고정).
+//   옛 의미 (영구 보관 vs 7일 cap) 폐기. 옛 pinned 데이터 그대로 보존 — UI 동작만 단순화.
 function toggleArchivePin(date) {
   if (!Array.isArray(state.chatArchive)) return;
   const item = state.chatArchive.find(a => a && a.date === date);
@@ -60,7 +61,7 @@ function toggleArchivePin(date) {
   saveState();
   if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
   if (typeof showToast === 'function') {
-    showToast(item.pinned ? '📌 영구 보관됨 — 7일 자동 삭제 안 돼' : '📌 핀 풀림 — 7일 cap 다시 적용');
+    showToast(item.pinned ? '📌 위로 고정됨' : '📌 핀 풀림');
   }
 }
 
