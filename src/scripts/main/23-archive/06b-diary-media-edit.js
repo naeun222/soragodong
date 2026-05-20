@@ -92,9 +92,16 @@ async function _diaryWritePhotoAt(entry, idx, dataUrl) {
     if (entry.photoStorageKeys.length > DIARY_PHOTOS_MAX) entry.photoStorageKeys.length = DIARY_PHOTOS_MAX;
   }
 
-  // dataURL back-compat write.
-  entry.photos[idx] = dataUrl;
-  if (idx === 0) entry.photo = dataUrl;
+  // V4 fix (사용자 보고 2026-05-20 ultrathink Phase 1E Step 7 조기): Storage 분리 성공 시 dataURL 안 박음 — localStorage 폭증 차단.
+  //   newPath !== null = Storage upload OK → entry.photos[idx] = null (slot 정렬 유지 — _diaryPhotoCount / reader 가 storageKeys 우선).
+  //   newPath === null = Storage 실패 / 가용 X → 옛 fallback (dataURL).
+  if (newPath) {
+    entry.photos[idx] = null;
+    if (idx === 0) delete entry.photo;
+  } else {
+    entry.photos[idx] = dataUrl;
+    if (idx === 0) entry.photo = dataUrl;
+  }
 
   // 옛 path orphan cleanup (path 변경 시).
   if (oldPath && oldPath !== newPath) {

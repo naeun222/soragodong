@@ -706,5 +706,19 @@ function saveState(force) {
   saveToCloud();
 }
 // 사용자 요청 2026-04-29 (perf #2): beforeunload에선 동기 flush 강제 (idle callback 큐 못 비우므로)
-window.addEventListener('beforeunload', () => _flushLocalSave({ sync: true }));
+// V4 (사용자 보고 2026-05-20 ultrathink): cloud sync best-effort fire — localStorage QuotaExceeded 시 cloud 까지 못 가면 데이터 영구 손실.
+//   _cloudReadOnly / _cloudLoadInProgress 가드 통과 + 인증된 정상 상태 면 unload 직전 fire-and-forget.
+//   browser keepalive 가 unload 후에도 inflight fetch 를 보낼 수 있음 (modern chromium/firefox). promise await X.
+window.addEventListener('beforeunload', () => {
+  _flushLocalSave({ sync: true });
+  try {
+    if (typeof saveToCloudNow === 'function' && authUserId
+        && !_cloudReadOnly && !_cloudLoadInProgress
+        && !(state && state.preferences && state.preferences.testerMode)
+        && !(state && state.isGuest)
+        && !(typeof window !== 'undefined' && window._e2eePendingRecovery)) {
+      saveToCloudNow().catch(() => {});
+    }
+  } catch {}
+});
 

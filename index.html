@@ -15234,7 +15234,21 @@ function saveState(force) {
   saveToCloud();
 }
 // 사용자 요청 2026-04-29 (perf #2): beforeunload에선 동기 flush 강제 (idle callback 큐 못 비우므로)
-window.addEventListener('beforeunload', () => _flushLocalSave({ sync: true }));
+// V4 (사용자 보고 2026-05-20 ultrathink): cloud sync best-effort fire — localStorage QuotaExceeded 시 cloud 까지 못 가면 데이터 영구 손실.
+//   _cloudReadOnly / _cloudLoadInProgress 가드 통과 + 인증된 정상 상태 면 unload 직전 fire-and-forget.
+//   browser keepalive 가 unload 후에도 inflight fetch 를 보낼 수 있음 (modern chromium/firefox). promise await X.
+window.addEventListener('beforeunload', () => {
+  _flushLocalSave({ sync: true });
+  try {
+    if (typeof saveToCloudNow === 'function' && authUserId
+        && !_cloudReadOnly && !_cloudLoadInProgress
+        && !(state && state.preferences && state.preferences.testerMode)
+        && !(state && state.isGuest)
+        && !(typeof window !== 'undefined' && window._e2eePendingRecovery)) {
+      saveToCloudNow().catch(() => {});
+    }
+  } catch {}
+});
 
 // 사용자 명시 2026-05-05 ultrathink-3: 에러 자동 개발자 보고 + 1h dedupe.
 // 호출: reportError({ signature, detail, stack, ...meta })
@@ -39698,17 +39712,29 @@ async function submitCheckin() {
     delete entry.music;
   }
   // V4 (사용자 명시 2026-05-20 ultrathink): 사진 multi 저장 — photos[] (max 3) + legacy entry.photo 미러.
+  // V4 fix (사용자 보고 2026-05-20 ultrathink Phase 1E Step 7 조기): Storage 분리된 사진은 dataURL 안 박기 — localStorage 폭증 직격 차단.
+  //   조건: _ciPhotos 모든 idx 에 currentCheckin.photoStorageKeys[idx] 가 있으면 Storage-only path (entry.photos / entry.photo wipe).
+  //   reader (06c-diary-photo-storage.js / day-modal / timeline-lens) 는 entry.photoStorageKeys 우선 hydrate. dataURL 옛 데이터는 fallback.
+  //   Storage 일부 실패 / E2EE 미설정 사용자 = 옛 fallback path (entry.photos = dataURL).
   const _ciPhotos = Array.isArray(currentCheckin.photos)
     ? currentCheckin.photos.filter(Boolean).slice(0, 3)
     : (currentCheckin.photo ? [currentCheckin.photo] : []);
   if (_ciPhotos.length > 0) {
-    entry.photos = _ciPhotos;
-    entry.photo = _ciPhotos[0];  // legacy 단일 reader 호환
-    // V4 (Phase 1E Step 4): Storage path mirror — currentCheckin.photoStorageKeys 정렬은 photos 와 동일 idx 보장.
-    if (Array.isArray(currentCheckin.photoStorageKeys) && currentCheckin.photoStorageKeys.some(Boolean)) {
-      entry.photoStorageKeys = currentCheckin.photoStorageKeys.slice(0, 3);
+    const _storageKeys = Array.isArray(currentCheckin.photoStorageKeys)
+      ? currentCheckin.photoStorageKeys.slice(0, 3)
+      : [];
+    const _allStorage = _storageKeys.length === _ciPhotos.length && _storageKeys.every(Boolean);
+    if (_allStorage) {
+      // Storage-only — localStorage 폭증 차단.
+      entry.photoStorageKeys = _storageKeys;
+      delete entry.photos;
+      delete entry.photo;
     } else {
-      delete entry.photoStorageKeys;
+      // 옛 fallback — Storage 일부 실패 or E2EE 미설정.
+      entry.photos = _ciPhotos;
+      entry.photo = _ciPhotos[0];
+      if (_storageKeys.some(Boolean)) entry.photoStorageKeys = _storageKeys;
+      else delete entry.photoStorageKeys;
     }
   } else {
     delete entry.photos;
@@ -48460,9 +48486,16 @@ async function _diaryWritePhotoAt(entry, idx, dataUrl) {
     if (entry.photoStorageKeys.length > DIARY_PHOTOS_MAX) entry.photoStorageKeys.length = DIARY_PHOTOS_MAX;
   }
 
-  // dataURL back-compat write.
-  entry.photos[idx] = dataUrl;
-  if (idx === 0) entry.photo = dataUrl;
+  // V4 fix (사용자 보고 2026-05-20 ultrathink Phase 1E Step 7 조기): Storage 분리 성공 시 dataURL 안 박음 — localStorage 폭증 차단.
+  //   newPath !== null = Storage upload OK → entry.photos[idx] = null (slot 정렬 유지 — _diaryPhotoCount / reader 가 storageKeys 우선).
+  //   newPath === null = Storage 실패 / 가용 X → 옛 fallback (dataURL).
+  if (newPath) {
+    entry.photos[idx] = null;
+    if (idx === 0) delete entry.photo;
+  } else {
+    entry.photos[idx] = dataUrl;
+    if (idx === 0) entry.photo = dataUrl;
+  }
 
   // 옛 path orphan cleanup (path 변경 시).
   if (oldPath && oldPath !== newPath) {

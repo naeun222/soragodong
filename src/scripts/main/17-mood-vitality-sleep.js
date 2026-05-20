@@ -220,17 +220,29 @@ async function submitCheckin() {
     delete entry.music;
   }
   // V4 (사용자 명시 2026-05-20 ultrathink): 사진 multi 저장 — photos[] (max 3) + legacy entry.photo 미러.
+  // V4 fix (사용자 보고 2026-05-20 ultrathink Phase 1E Step 7 조기): Storage 분리된 사진은 dataURL 안 박기 — localStorage 폭증 직격 차단.
+  //   조건: _ciPhotos 모든 idx 에 currentCheckin.photoStorageKeys[idx] 가 있으면 Storage-only path (entry.photos / entry.photo wipe).
+  //   reader (06c-diary-photo-storage.js / day-modal / timeline-lens) 는 entry.photoStorageKeys 우선 hydrate. dataURL 옛 데이터는 fallback.
+  //   Storage 일부 실패 / E2EE 미설정 사용자 = 옛 fallback path (entry.photos = dataURL).
   const _ciPhotos = Array.isArray(currentCheckin.photos)
     ? currentCheckin.photos.filter(Boolean).slice(0, 3)
     : (currentCheckin.photo ? [currentCheckin.photo] : []);
   if (_ciPhotos.length > 0) {
-    entry.photos = _ciPhotos;
-    entry.photo = _ciPhotos[0];  // legacy 단일 reader 호환
-    // V4 (Phase 1E Step 4): Storage path mirror — currentCheckin.photoStorageKeys 정렬은 photos 와 동일 idx 보장.
-    if (Array.isArray(currentCheckin.photoStorageKeys) && currentCheckin.photoStorageKeys.some(Boolean)) {
-      entry.photoStorageKeys = currentCheckin.photoStorageKeys.slice(0, 3);
+    const _storageKeys = Array.isArray(currentCheckin.photoStorageKeys)
+      ? currentCheckin.photoStorageKeys.slice(0, 3)
+      : [];
+    const _allStorage = _storageKeys.length === _ciPhotos.length && _storageKeys.every(Boolean);
+    if (_allStorage) {
+      // Storage-only — localStorage 폭증 차단.
+      entry.photoStorageKeys = _storageKeys;
+      delete entry.photos;
+      delete entry.photo;
     } else {
-      delete entry.photoStorageKeys;
+      // 옛 fallback — Storage 일부 실패 or E2EE 미설정.
+      entry.photos = _ciPhotos;
+      entry.photo = _ciPhotos[0];
+      if (_storageKeys.some(Boolean)) entry.photoStorageKeys = _storageKeys;
+      else delete entry.photoStorageKeys;
     }
   } else {
     delete entry.photos;
