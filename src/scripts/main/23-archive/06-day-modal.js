@@ -31,9 +31,23 @@ function openDayModal(dateStr) {
     return dk === dateStr;
   });
 
+  // V4 fix (사용자 보고 2026-05-20 ultrathink 2회): 옛 (entry ? 1 : 0) 복원 + 의미 있는 모든 field 검사.
+  //   직전 commit b5f8e67 의 텍스트-only 조건이 root cause — 체크인만 한 entry (vitality/mood/sleep/사진/음악) 는 day modal 자체 안 열림 ("기록 없음" toast).
+  //   일기 탭 안 mood bars / 사진 / 음악 / 모드 칩 등은 텍스트 없어도 렌더되니 modal 은 떠야 함.
+  const _diaryHasContent = !!(entry && (
+    entry.diary || entry.note ||
+    (entry.dailyQuestion && entry.dailyQuestion.answered) ||
+    entry.vitality != null || entry.mood != null ||
+    entry.sleepStart || entry.allNighter ||
+    entry.music ||
+    entry.photo ||
+    (Array.isArray(entry.photos) && entry.photos.some(Boolean)) ||
+    (Array.isArray(entry.photoStorageKeys) && entry.photoStorageKeys.some(Boolean)) ||
+    entry.meals || entry.movement || entry.focus || entry.social || entry.overwhelm ||
+    (entry.modes && Object.values(entry.modes).some(Boolean))
+  ));
   const counts = {
-    // V4 fix (사용자 보고 2026-05-20 ultrathink): entry 가 vitality/mood/sleep 등만 있고 텍스트 X 면 📔 탭 X — 빈 일기 탭 UX 혼란 제거.
-    diary: (entry && (entry.diary || entry.note || (entry.dailyQuestion && entry.dailyQuestion.answered)) ? 1 : 0),
+    diary: _diaryHasContent ? 1 : 0,
     topics: topics.length,
     archives: archives.length,
     pearls: pearls.length,
