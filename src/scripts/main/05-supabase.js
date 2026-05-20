@@ -1,6 +1,42 @@
 // ═══════════════════════════════════════════════════════════════
 // SUPABASE
 // ═══════════════════════════════════════════════════════════════
+
+// V4 (사용자 보고 2026-05-20 ultrathink): cold start race 가드 helper.
+//   cloud fetch RTT (1-2초) 동안 사용자가 submitCheckin / saveState 한 entry 가
+//   state = cloudData 교체 시 손실. 분기 직전 snapshot → 적용 후 merge.
+//   비교 rule:
+//     - cloud 에 없는 date entry = 보존 (사용자가 새로 추가).
+//     - 같은 date entry = local timestamp 가 더 신선하면 보존.
+//   chatMessages / chatArchive 등 다른 state field 도 비슷한 race 가능하나
+//   submitCheckin 흐름이 핵심 — entries 만 다룸. 다른 field 는 saveToCloud 차단 가드 (_cloudLoadInProgress) 가 처리.
+function _mergeUserDataDuringLoad(prevEntries) {
+  if (!Array.isArray(prevEntries) || prevEntries.length === 0) return;
+  if (!Array.isArray(state.entries)) state.entries = [];
+  const _cloudByDate = new Map();
+  state.entries.forEach((e, idx) => { if (e && e.date) _cloudByDate.set(e.date, { e, idx }); });
+  let _newDateCount = 0;
+  let _fresherCount = 0;
+  prevEntries.forEach(localE => {
+    if (!localE || !localE.date) return;
+    const cloud = _cloudByDate.get(localE.date);
+    if (!cloud) {
+      state.entries.push(localE);
+      _newDateCount++;
+      return;
+    }
+    const localTs = localE.timestamp ? new Date(localE.timestamp).getTime() : 0;
+    const cloudTs = cloud.e.timestamp ? new Date(cloud.e.timestamp).getTime() : 0;
+    if (Number.isFinite(localTs) && Number.isFinite(cloudTs) && localTs > cloudTs) {
+      state.entries[cloud.idx] = localE;
+      _fresherCount++;
+    }
+  });
+  if (_newDateCount > 0 || _fresherCount > 0) {
+    console.warn(`[loadFromCloud] cold start race 보존 — 새 date ${_newDateCount}개, 신선한 entry ${_fresherCount}개`);
+  }
+}
+
 async function loadFromCloud() {
   // V4: V4 전용 row만 로드. V3 데이터(`me` row)는 영원히 안 건드림.
   console.log(`[V4] 소라고동 V4 미리보기 — auth_user_id=${authUserId}, user_id=${V4_USER_ID}`);
@@ -105,6 +141,10 @@ async function loadFromCloud() {
         console.error('[loadFromCloud] 압축 cloud 데이터 복원 실패:', e);
         throw e;
       }
+      // V4 (사용자 보고 2026-05-20 ultrathink): cold start race 가드 — cloud fetch RTT (1-2초) 동안
+      //   사용자가 submitCheckin 등으로 state.entries 에 push 한 entry 가 state = cloudData 적용 시 손실.
+      //   분기 직전 snapshot → 적용 후 _mergeUserDataDuringLoad 가 timestamp / date 기준 보존.
+      const _entriesBeforeCloud = Array.isArray(state.entries) ? state.entries.slice() : [];
       // 사용자 요청 2026-04-30 (Stage 2 E2EE): _encryptedBody 있으면 마스터 키로 복호화.
       if (cloudData && cloudData._encryptedBody && cloudData._encryptedBody._e2ee) {
         // 사용자 보고 2026-04-30 데이터 손실 fix (새 device 복원): cloud에 _e2eeRecovery 있으면
@@ -142,6 +182,7 @@ async function loadFromCloud() {
               const { _encryptedBody, ...metaPart } = cloudData;
               state = { ...DEFAULT_STATE, ...metaPart, ...decryptedBody };
               _e2eeEnabled = true;
+              _mergeUserDataDuringLoad(_entriesBeforeCloud);
               console.log('✅ V4 row loaded + decrypted (E2EE)');
             } catch (e) {
               console.error('[loadFromCloud] decrypted JSON parse 실패:', e);
@@ -153,6 +194,7 @@ async function loadFromCloud() {
       } else {
         // 평문 (E2EE 미적용 사용자) — 기존 흐름
         state = { ...DEFAULT_STATE, ...cloudData };
+        _mergeUserDataDuringLoad(_entriesBeforeCloud);
         console.log('✅ V4 row loaded from cloud (평문)');
       }
     } else {

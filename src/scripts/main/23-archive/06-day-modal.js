@@ -32,7 +32,8 @@ function openDayModal(dateStr) {
   });
 
   const counts = {
-    diary: (entry ? 1 : 0),
+    // V4 fix (사용자 보고 2026-05-20 ultrathink): entry 가 vitality/mood/sleep 등만 있고 텍스트 X 면 📔 탭 X — 빈 일기 탭 UX 혼란 제거.
+    diary: (entry && (entry.diary || entry.note || (entry.dailyQuestion && entry.dailyQuestion.answered)) ? 1 : 0),
     topics: topics.length,
     archives: archives.length,
     pearls: pearls.length,

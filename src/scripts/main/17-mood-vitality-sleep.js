@@ -103,11 +103,14 @@ function selectQuick(btn, key, value) {
 async function submitCheckin() {
   // V4 fix (사용자 보고 2026-05-20 ultrathink): 일기 path 통합. 옛 코드 = 일기 분기 early return 후 sleep / note / weather / dailyQuestion answered / meals / movement / focus / social / overwhelm / music / photos / projects measurements 전부 skip → side-field 손실.
   //   새 path = 일기 감지 후 일반 흐름 통과. 끝부분 entry processing 에서 _isDiaryPath 면 entry.diary append + dailySource. vitality/mood 우회 (validation 건너뜀), note 칸 raw 박지 X.
+  // V4 fix (사용자 보고 2026-05-20 ultrathink): 명시 칩 (_checkinDiaryMode) 만 일기 path 진입.
+  //   옛: '일기:' 접두어 자동 감지 → 사용자가 의도 없이 '일기:'로 시작하는 일반 메모 적으면 entry.diary 로 잘못 분류 + entry.note 손실.
+  //   새: 칩 누른 의도만 trigger. 칩 누르면 textarea 에 '일기: ' prefix 자동 (enterCheckinDiaryMode) — submit 시 그 prefix strip.
   const _rawNote = (document.getElementById('checkinNote')?.value || '').trim();
-  const _diaryMatch = _rawNote.match(/^일기[:：]\s*([\s\S]+)$/);
-  const _isDiaryPath = (typeof _checkinDiaryMode !== 'undefined' && _checkinDiaryMode) || !!_diaryMatch;
+  const _isDiaryPath = (typeof _checkinDiaryMode !== 'undefined' && !!_checkinDiaryMode);
+  const _diaryStripMatch = _isDiaryPath ? _rawNote.match(/^일기[:：]\s*([\s\S]+)$/) : null;
   const _diaryContent = _isDiaryPath
-    ? (_diaryMatch ? _diaryMatch[1].trim() : _rawNote.trim())
+    ? (_diaryStripMatch ? _diaryStripMatch[1].trim() : _rawNote.trim())
     : '';
   if (_isDiaryPath && !_diaryContent) {
     if (typeof showToast === 'function') showToast('일기 내용을 입력해줘');
