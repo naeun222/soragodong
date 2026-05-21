@@ -343,6 +343,10 @@ async function init() {
   // V4 fix (사용자 명시 2026-05-18 ultrathink): 게스트/미구독자 only. 구독자는 maybeRunDailyChapterExtract (init 4s 후, 4AM cutoff 통과 시) 가 처리.
   //   옛: reload 마다 무조건 stuck 처리 → 구독자도 4AM 우회.
   //   새: 즉시 path 와 동일 분기 — _isTutorialEligibleUser() true 일 때만 stuck 즉시 재처리.
+  // V4 fix (사용자 보고 2026-05-22 ultrathink): 구독자도 batch race stuck signature 처리.
+  //   stuck signature: archive._pendingExtract:true + archive._batchSubmittedAt 박힘 + state.pendingBatch null.
+  //   = batch 제출됐는데 결과 적용 fail / multi-device race / timeout fallback 누락 → archive 마킹 그대로 + lastDailyChapterExtractAt stamp 박힘.
+  //   → 다음 4AM cutoff 까지 자동 trigger X. 여기서 inline 강제. msg >= 3 가드 (옛 >= 6 → 3 통일).
   setTimeout(() => {
     try {
       if (!Array.isArray(state.chatArchive) || state.chatArchive.length === 0) return;
@@ -350,9 +354,12 @@ async function init() {
       if (window._onbTutorialMode) return;
       if (state.preferences && state.preferences.testerMode) return;
       const _isFreeOrGuest = (typeof _isTutorialEligibleUser === 'function') && _isTutorialEligibleUser();
-      if (!_isFreeOrGuest) return;  // 구독자는 4AM cutoff 기반 maybeRunDailyChapterExtract 가 처리.
+      const _hasBatchStuck = state.chatArchive.some(a =>
+        a && !a._deleted && a._pendingExtract && a._batchSubmittedAt && !state.pendingBatch
+      );
+      if (!_isFreeOrGuest && !_hasBatchStuck) return;  // 구독자 = batch stuck 케이스만 통과.
       const stuckArchives = state.chatArchive.filter(a =>
-        a && !a._deleted && a._pendingExtract && Array.isArray(a.messages) && a.messages.length >= 6
+        a && !a._deleted && a._pendingExtract && Array.isArray(a.messages) && a.messages.length >= 3
       );
       if (stuckArchives.length === 0) return;
       console.log('[pending extract recovery] stuck archives:', stuckArchives.length);

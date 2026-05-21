@@ -366,6 +366,7 @@ async function _runDailyExtractInline(pending) {
       }
       _caseOk = _normalOk && _simOk;
     } catch (e) { console.warn('[inline] case fail:', e); }
+    let _topicOk = false;  // V4 fix (사용자 보고 2026-05-22 ultrathink): topic silent fail 가시화 + _pendingExtract 보존 정책 강화용.
     try {
       // 사용자 명시 2026-05-10 (batch 14): 시뮬 메시지도 topic 추출 진행 — 단 topicCard 에 source: 'simulation' 마킹.
       //   도서관 일기·대화 chip 표시 시 '시나리오' 라벨로 구분.
@@ -383,15 +384,20 @@ async function _runDailyExtractInline(pending) {
           _added.forEach(card => { if (card) card.source = 'simulation'; });
         }
       }
+      _topicOk = true;
     } catch (e) { console.warn('[inline] topic fail:', e); }
     _pushMagicReflectionArchive(batch);
     if (_before && typeof _stampSourceArchiveId === 'function') {
       _stampSourceArchiveId(_before, batch.id, batch);
     }
-    // 사용자 보고 2026-05-10 (audit batch 4): case_analysis fail 시 _pendingExtract 보존 — 다음 진입 시 재시도 가능.
-    //   옛 흐름: 무조건 delete → silent fail 후 영구 추출 안 됨 (사용자 보고 케이스 root cause).
-    if (_caseOk) {
+    // V4 fix (사용자 보고 2026-05-22 ultrathink): topic silent fail 시 _pendingExtract 보존.
+    //   옛: case OK 만 보고 _pendingExtract 풀음 → topic catch fail 시 archive 데이터 (topic/headline) 누락된 채 마킹 풀림 = stuck-but-marked.
+    //   새: case + topic 둘 다 OK 때만 _pendingExtract 풀음. case 만 OK 면 case 마커만 풀고 _pendingExtract 보존 (다음 trigger 시 topic 재시도).
+    //   사용자 보고 2026-05-10 (audit batch 4): case_analysis fail 시 _pendingExtract 보존 — 다음 진입 시 재시도. (그대로 유지)
+    if (_caseOk && _topicOk) {
       delete batch._pendingExtract;
+      delete batch._pendingCaseAnalysis;
+    } else if (_caseOk) {
       delete batch._pendingCaseAnalysis;
     }
     delete batch._batchSubmittedAt;

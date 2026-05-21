@@ -22220,6 +22220,10 @@ async function init() {
   // V4 fix (사용자 명시 2026-05-18 ultrathink): 게스트/미구독자 only. 구독자는 maybeRunDailyChapterExtract (init 4s 후, 4AM cutoff 통과 시) 가 처리.
   //   옛: reload 마다 무조건 stuck 처리 → 구독자도 4AM 우회.
   //   새: 즉시 path 와 동일 분기 — _isTutorialEligibleUser() true 일 때만 stuck 즉시 재처리.
+  // V4 fix (사용자 보고 2026-05-22 ultrathink): 구독자도 batch race stuck signature 처리.
+  //   stuck signature: archive._pendingExtract:true + archive._batchSubmittedAt 박힘 + state.pendingBatch null.
+  //   = batch 제출됐는데 결과 적용 fail / multi-device race / timeout fallback 누락 → archive 마킹 그대로 + lastDailyChapterExtractAt stamp 박힘.
+  //   → 다음 4AM cutoff 까지 자동 trigger X. 여기서 inline 강제. msg >= 3 가드 (옛 >= 6 → 3 통일).
   setTimeout(() => {
     try {
       if (!Array.isArray(state.chatArchive) || state.chatArchive.length === 0) return;
@@ -22227,9 +22231,12 @@ async function init() {
       if (window._onbTutorialMode) return;
       if (state.preferences && state.preferences.testerMode) return;
       const _isFreeOrGuest = (typeof _isTutorialEligibleUser === 'function') && _isTutorialEligibleUser();
-      if (!_isFreeOrGuest) return;  // 구독자는 4AM cutoff 기반 maybeRunDailyChapterExtract 가 처리.
+      const _hasBatchStuck = state.chatArchive.some(a =>
+        a && !a._deleted && a._pendingExtract && a._batchSubmittedAt && !state.pendingBatch
+      );
+      if (!_isFreeOrGuest && !_hasBatchStuck) return;  // 구독자 = batch stuck 케이스만 통과.
       const stuckArchives = state.chatArchive.filter(a =>
-        a && !a._deleted && a._pendingExtract && Array.isArray(a.messages) && a.messages.length >= 6
+        a && !a._deleted && a._pendingExtract && Array.isArray(a.messages) && a.messages.length >= 3
       );
       if (stuckArchives.length === 0) return;
       console.log('[pending extract recovery] stuck archives:', stuckArchives.length);
@@ -60427,6 +60434,7 @@ async function _runDailyExtractInline(pending) {
       }
       _caseOk = _normalOk && _simOk;
     } catch (e) { console.warn('[inline] case fail:', e); }
+    let _topicOk = false;  // V4 fix (사용자 보고 2026-05-22 ultrathink): topic silent fail 가시화 + _pendingExtract 보존 정책 강화용.
     try {
       // 사용자 명시 2026-05-10 (batch 14): 시뮬 메시지도 topic 추출 진행 — 단 topicCard 에 source: 'simulation' 마킹.
       //   도서관 일기·대화 chip 표시 시 '시나리오' 라벨로 구분.
@@ -60444,15 +60452,20 @@ async function _runDailyExtractInline(pending) {
           _added.forEach(card => { if (card) card.source = 'simulation'; });
         }
       }
+      _topicOk = true;
     } catch (e) { console.warn('[inline] topic fail:', e); }
     _pushMagicReflectionArchive(batch);
     if (_before && typeof _stampSourceArchiveId === 'function') {
       _stampSourceArchiveId(_before, batch.id, batch);
     }
-    // 사용자 보고 2026-05-10 (audit batch 4): case_analysis fail 시 _pendingExtract 보존 — 다음 진입 시 재시도 가능.
-    //   옛 흐름: 무조건 delete → silent fail 후 영구 추출 안 됨 (사용자 보고 케이스 root cause).
-    if (_caseOk) {
+    // V4 fix (사용자 보고 2026-05-22 ultrathink): topic silent fail 시 _pendingExtract 보존.
+    //   옛: case OK 만 보고 _pendingExtract 풀음 → topic catch fail 시 archive 데이터 (topic/headline) 누락된 채 마킹 풀림 = stuck-but-marked.
+    //   새: case + topic 둘 다 OK 때만 _pendingExtract 풀음. case 만 OK 면 case 마커만 풀고 _pendingExtract 보존 (다음 trigger 시 topic 재시도).
+    //   사용자 보고 2026-05-10 (audit batch 4): case_analysis fail 시 _pendingExtract 보존 — 다음 진입 시 재시도. (그대로 유지)
+    if (_caseOk && _topicOk) {
       delete batch._pendingExtract;
+      delete batch._pendingCaseAnalysis;
+    } else if (_caseOk) {
       delete batch._pendingCaseAnalysis;
     }
     delete batch._batchSubmittedAt;
