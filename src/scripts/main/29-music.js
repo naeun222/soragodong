@@ -905,11 +905,16 @@ async function _pearlViewMore(id) {
   opts.push({ label: '✏️ 제목 / 메모 수정', value: 'edit' });
   // V4 (사용자 명시 2026-05-17 ultrathink): 진주 edit 시 사진/영상 추가·변경·제거 옵션.
   //   음악 진주 제외 (음악은 별도 흐름). 사진/영상 mutually exclusive (한 진주에 하나만 — _heroCardHtml 분기 일관).
+  // V4 (사용자 보고 2026-05-22 ultrathink): bug fix — 옛 분기 (pearl.photo / pearl.video) 는 옛 dataURL field 만 체크.
+  //   Phase 1C 마이그 이후 옛 진주는 storageKey.photo 만 있고 photo field 삭제 → 사진 있는데 '사진 변경' 메뉴 안 보이고 '사진 추가' 만 나오는 bug.
+  //   pearlHasMedia 가 옛 dataURL / 신 storageKey 양쪽 점검 (00-pearl-media-hydrate.js).
   if (!isMusic) {
-    if (pearl.video) {
+    const hasVideo = (typeof pearlHasMedia === 'function') ? pearlHasMedia(pearl, 'video') : !!pearl.video;
+    const hasPhoto = (typeof pearlHasMedia === 'function') ? pearlHasMedia(pearl, 'photo') : !!pearl.photo;
+    if (hasVideo) {
       opts.push({ label: '🎬 영상 변경', value: 'change_video' });
       opts.push({ label: '🎬 영상 제거', value: 'remove_video' });
-    } else if (pearl.photo) {
+    } else if (hasPhoto) {
       opts.push({ label: '📷 사진 변경', value: 'change_photo' });
       opts.push({ label: '📷 사진 제거', value: 'remove_photo' });
     } else {
