@@ -68,13 +68,32 @@ function renderReviewScreen(type, reviewData, opts) {
     const summaryBlock = reviewData.summary ? `<div style="font-family:'Gowun Batang',serif; font-size:15px; color:var(--text); line-height:1.7; margin-bottom:14px; opacity:0.92;">${escapeHtml(reviewData.summary)}</div>` : '';
 
     // chart
-    const _todayChart = new Date();
-    const _cutoffChart = type === 'weekly'
-      ? new Date(_todayChart.getTime() - 7 * 86400000)
-      : new Date(_todayChart.getFullYear(), _todayChart.getMonth() - 1, 1);
-    const _cutoffEndChart = type === 'weekly'
-      ? _todayChart
-      : new Date(_todayChart.getFullYear(), _todayChart.getMonth(), 1);
+    // V4 fix (사용자 명시 2026-05-22 ultrathink): chart range 가 review.weekKey / monthKey 기반.
+    //   옛: _todayChart - 7일 rolling → review actual range 와 mismatch (사용자 인식: chart 의 X축 라벨 = "이 review 의 주" 로 인식 → 실제는 rolling).
+    //   새: review row 의 weekKey (ISO) / monthKey 에서 actual range 역계산. 한국식 일~토 (entries 수집과 일치).
+    let _cutoffChart, _cutoffEndChart;
+    if (type === 'weekly') {
+      const _r = (typeof _weeklyChartRangeFromKey === 'function' && reviewData.weekKey)
+        ? _weeklyChartRangeFromKey(reviewData.weekKey)
+        : null;
+      if (_r) { _cutoffChart = _r.start; _cutoffEndChart = _r.end; }
+      else {
+        // fallback (옛 review 의 weekKey 없는 케이스) — completedAt 기준 -7일
+        const _t = new Date(reviewData.completedAt || Date.now());
+        _cutoffChart = new Date(_t.getTime() - 7 * 86400000);
+        _cutoffEndChart = _t;
+      }
+    } else {
+      const _r = (typeof _monthlyChartRangeFromKey === 'function' && reviewData.monthKey)
+        ? _monthlyChartRangeFromKey(reviewData.monthKey)
+        : null;
+      if (_r) { _cutoffChart = _r.start; _cutoffEndChart = _r.end; }
+      else {
+        const _t = new Date(reviewData.completedAt || Date.now());
+        _cutoffChart = new Date(_t.getFullYear(), _t.getMonth() - 1, 1);
+        _cutoffEndChart = new Date(_t.getFullYear(), _t.getMonth(), 1);
+      }
+    }
     const _entriesForChart = (state.entries || []).filter(e => {
       if (!e.date) return false;
       const d = new Date(e.date + 'T12:00:00');

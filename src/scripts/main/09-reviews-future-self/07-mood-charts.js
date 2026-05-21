@@ -1,3 +1,33 @@
+// V4 (사용자 명시 2026-05-22 ultrathink): review.weekKey / monthKey → chart X축 range 역계산.
+//   weekly: ISO weekKey 의 일요일 (= 그 주의 끝) 기준 직전 7일 (한국식 일~토). entries 수집 cutoff/cutoffEnd 와 일치.
+//   monthly: monthKey 의 1일 ~ 다음 달 1일.
+function _weeklyChartRangeFromKey(weekKey) {
+  const m = (weekKey || '').match(/^(\d{4})-W(\d{2})$/);
+  if (!m) return null;
+  const year = parseInt(m[1], 10);
+  const week = parseInt(m[2], 10);
+  // ISO 4181: week 1 contains Jan 4. ISO week 시작 = 월요일.
+  const jan4 = new Date(year, 0, 4);
+  const dayOfWeek = (jan4.getDay() + 6) % 7;  // Mon=0
+  const week1Mon = new Date(jan4.getTime() - dayOfWeek * 86400000);
+  // ISO 일요일 = week start (Mon) + 6일 = 그 주의 마지막 일요일.
+  const isoSun = new Date(week1Mon.getTime() + ((week - 1) * 7 + 6) * 86400000);
+  // 한국식 일~토 (방금 끝난) = ISO 일요일 -7일 (한국식 일) ~ ISO 일요일 (exclusive — 한국식 토 + 1일).
+  const start = new Date(isoSun.getTime() - 7 * 86400000);
+  const end = new Date(isoSun.getTime());
+  return { start, end };
+}
+
+function _monthlyChartRangeFromKey(monthKey) {
+  const m = (monthKey || '').match(/^(\d{4})-(\d{2})$/);
+  if (!m) return null;
+  const year = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  const start = new Date(year, month - 1, 1);
+  const end = new Date(year, month, 1);
+  return { start, end };
+}
+
 function _renderReviewMoodChart(entries) {
   if (!Array.isArray(entries) || entries.length < 2) return '';
   // mood: 1-5 / energy: 1-5 둘 다 정규화 후 0-1 비율로 표시
