@@ -20,46 +20,26 @@ async function maybeShowE2EESetupOrRecovery() {
   // master key 있고 E2EE 활성 정상 = skip
   if (_e2eeMasterKey && _e2eeEnabled) return;
 
-  // B-1 / B-2: 평문 사용자 (cloud encryptedBody 없음) + master key 없음 → setup 강제
+  // B-1 / B-2: master key 없음. 두 분기:
+  //   - 옛 wrap localStorage 살아 있음 = 옛 사용자 (평문 복구 흐름 거친 케이스 포함) → recovery path 자동 redirect (옛 master key 살림).
+  //   - 옛 wrap 없음 = 진짜 신규 / 평문 only → setup 강제.
   if (!_e2eeMasterKey) {
-    // V4 (사용자 보고 2026-05-22 ultrathink): audit-auth 발견 — 옛 주석 "옛 비밀번호 unwrap 해도 데이터 X. 잔재 무용" 의 가정이 깨짐.
-    //   Phase 1C 마이그 이후 Storage 의 진주 미디어 (사진/영상) 가 옛 master key 로 봉인되어 살아 있음.
-    //   사용자가 데이터 wipe → 평문 복구 → 재진입 시 이 분기 진입 → 옛 wrap 자동 삭제 → 같은 비밀번호로 새 setup →
-    //     새 random master key 생성 → Storage 의 옛 미디어 영구 lock (옛 key 우주에서 사라짐).
-    //   fix: 옛 wrap 자동 archive (timestamp 박힌 별도 key) + 사용자 confirm 명시화 + cancel 시 setup 보류.
-    //   영향: 본인 한 사람뿐 아니라 모든 사용자 잠재 risk — 데이터 복구 / 백업 복원 시 동일 trigger.
-    const _oldWrapRaw = (() => { try { return localStorage.getItem('soragodong_v4_e2ee_recovery'); } catch (e) { return null; } })();
-    if (_oldWrapRaw) {
-      let _proceed = false;
-      try {
-        if (typeof showConfirmModal === 'function') {
-          _proceed = await showConfirmModal({
-            title: '⚠️ 옛 암호화 데이터 복호화 위험',
-            message: '이 기기에 이전 암호화 비밀번호 정보가 남아 있어. 새 비밀번호로 다시 만들면 옛 master key 가 폐기되어, 이전에 추가한 진주 사진 / 일기 사진 / 동영상은 영원히 복구 불가능해 (글 / 메모는 평문 복구 OK).\n\n옛 비밀번호 기억나면 백업 복원 / 다른 기기 진입으로 옛 데이터 살릴 수 있어. 모르겠으면 새로 만들기.',
-            okLabel: '새로 만들기 (옛 사진/영상 포기)',
-            cancelLabel: '취소 (옛 데이터 복구 시도)'
-          });
-        } else {
-          _proceed = true;
-        }
-      } catch (e) { _proceed = true; }
-      if (!_proceed) {
-        console.log('[E2EE setup guard] 사용자 cancel — setup 보류 (옛 데이터 복구 시도 위해 localStorage wrap 유지)');
-        return;
-      }
-      // archive 옛 wrap (timestamp 박힌 별도 key) — 미래 복구 도구가 시도 가능.
-      try {
-        const archiveKey = 'soragodong_v4_e2ee_recovery_archive_' + Date.now();
-        localStorage.setItem(archiveKey, _oldWrapRaw);
-        console.log('[E2EE setup guard] 옛 wrap archive 완료:', archiveKey);
-      } catch (e) { console.warn('[E2EE setup guard] archive fail:', e); }
+    // V4 (사용자 보고 2026-05-22 ultrathink — 진짜 fix): 옛 wrap localStorage 살아 있으면 자동 recovery path.
+    //   audit-auth 발견 — 옛 코드는 옛 wrap 무조건 삭제 후 setup 강제. 주석 "옛 비밀번호 unwrap 해도 데이터 X. 잔재 무용" 의 가정이 Phase 1C 마이그 이후 깨짐.
+    //   Storage 진주 미디어 (사진/영상) 가 옛 master key 로 봉인됨 → 새 setup 시 옛 master key 폐기 → 영구 lock.
+    //   직전 fix (commit 9523f99) 의 confirm + archive 는 안내일 뿐 — 옛 master key 못 복구. 진짜 fix = recovery path 으로 redirect 해서 옛 master key 살림.
+    //   submitE2EERecovery (line 121+) 가 multi-source unwrap (_e2eeRestoreFromPassphrase) 후 pending._encryptedBody 없으면 (= 평문 복구 케이스) state 복원 skip + master key 만 메모리 + cloud 저장 + reload. 정확히 우리가 원하는 동작.
+    //   비밀번호 잊었으면 recovery modal 안 [🔓 비밀번호 잊음] 버튼이 e2eeForgotPasswordReset path (옛 데이터 포기 의식적 선택).
+    let _hasLocalWrap = false;
+    try { _hasLocalWrap = !!localStorage.getItem('soragodong_v4_e2ee_recovery'); } catch (e) {}
+    if (_hasLocalWrap) {
+      console.log('[E2EE setup guard] 옛 wrap localStorage 발견 → recovery path 자동 redirect (setup X)');
+      // placeholder pending — maybeShowE2EERecoveryModal 의 line 76 가드 통과용. submitE2EERecovery 의 pending._encryptedBody 체크 (line 157) 는 falsy 라 state 복원 skip + master key 만 메모리.
+      window._e2eePendingRecovery = { _autoGuardPlaceholder: true };
+      return maybeShowE2EERecoveryModal();
     }
-    // 옛 wrap 정리 (이제 archive 백업 됨) + setup 강제.
+    // 옛 wrap 없음 = 진짜 신규 / 평문 only → setup 강제 (기존 동작).
     try {
-      if (localStorage.getItem('soragodong_v4_e2ee_recovery')) {
-        localStorage.removeItem('soragodong_v4_e2ee_recovery');
-        console.log('[E2EE setup guard] 옛 setup 잔재 정리 (B-2)');
-      }
       if (typeof _E2EE_LOCAL_KEY !== 'undefined' && localStorage.getItem(_E2EE_LOCAL_KEY)) {
         localStorage.removeItem(_E2EE_LOCAL_KEY);
       }
