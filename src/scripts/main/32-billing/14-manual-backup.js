@@ -36,7 +36,52 @@ async function manualCloudBackup(opts) {
   }
   showToast('☁️ 클라우드 백업 중...');
   try {
-    // 기존 snapshots 로드
+    const stateHash = _computeStateHash(state);
+    // V4 (사용자 명시 2026-05-20 ultrathink): schema v6 — _cloudStateReplacer 적용.
+    //   data 의 _hasMessages 박힌 archive 의 messages 키 strip (chatMessages sub-array 가 처리).
+    //   chatMessages = 별도 테이블 export. 복원 시 _importChatMessagesFromBackup 이 별도 테이블 재구축.
+    const sanitized = JSON.parse(JSON.stringify(state, _cloudStateReplacer));
+    let _exportedChatMessages = {};
+    try {
+      if (typeof _exportChatMessagesForBackup === 'function') {
+        _exportedChatMessages = await _exportChatMessagesForBackup();
+      }
+    } catch (e) { console.warn('[manualBackup] chat_messages export fail:', e); }
+    const newSnap = {
+      ts: new Date().toISOString(),
+      note: (note || '').trim().slice(0, 80),
+      appVersion: typeof APP_VERSION !== 'undefined' ? APP_VERSION : '',
+      _stateHash: stateHash,
+      _backupSchemaVersion: 'v6',
+      data: sanitized,
+      chatMessages: _exportedChatMessages
+    };
+
+    // V4 fix (사용자 보고 2026-05-22 ultrathink): 새 path (snapshot 별 row, 0034_backups_table) 우선 시도.
+    //   404 fallback 시 옛 path (single-row snapshots[]) — SQL 미실행 사용자 호환.
+    //   새 path = INSERT 1 row + DELETE rotation. 큰 JSONB rewrite 패턴 폐기 → statement_timeout 위험 X.
+    if (typeof _backupsTableInsert === 'function') {
+      const lastHash = (typeof _backupsTableLastHash === 'function') ? await _backupsTableLastHash('manual') : null;
+      if (lastHash && stateHash && lastHash === stateHash) {
+        showToast('✦ 변경 사항 없음 — 이미 백업됨');
+        return;
+      }
+      const ins = await _backupsTableInsert('manual', newSnap);
+      if (ins.ok) {
+        if (typeof _backupsTableRotate === 'function') {
+          try { await _backupsTableRotate('manual', MANUAL_BACKUP_KEEP_N); } catch (e) { console.warn('[manualBackup] rotate:', e); }
+        }
+        showToast('☁️ 백업됨');
+        return;
+      }
+      if (!ins.fallback) {
+        showToast('백업 실패: ' + (ins.error || 'unknown'));
+        return;
+      }
+      console.warn('[manualBackup] new path 404 — 옛 path fallback');
+    }
+
+    // 옛 path (legacy single-row snapshots[]) — SQL 미실행 호환.
     const { ok: _ok, rows } = await _backupRowFetch(V4_MANUAL_BACKUP_USER_ID, 'data,id');
     let snapshots = [];
     let existingId = null;
@@ -45,9 +90,6 @@ async function manualCloudBackup(opts) {
       existingId = rows[0].id;
     }
     // 사용자 명시 2026-05-01: 100+ 사용자 대비 효율 — 변경 없는 state 면 backup skip.
-    // 1) same-hash skip — 직전 snapshot 의 _stateHash 와 동일하면 의미 없는 backup. 옛 snapshot rotate-out 도 차단.
-    // 2) 30초 rate limit — 실수 더블 클릭 / 빠른 연타 차단.
-    const stateHash = _computeStateHash(state);
     if (snapshots.length > 0) {
       const lastSnap = snapshots[snapshots.length - 1];
       if (stateHash && lastSnap._stateHash === stateHash) {
@@ -62,26 +104,7 @@ async function manualCloudBackup(opts) {
         }
       }
     }
-    // V4 (사용자 명시 2026-05-20 ultrathink): Step 7 — schema v5.
-    //   data 는 _cloudStateReplacer 사용 → _hasMessages 박힌 archive 의 messages 키 strip (chatMessages sub-array 가 처리).
-    //   chatMessages = 별도 테이블 통째 export. 복원 시 _importChatMessagesFromBackup 이 별도 테이블 재구축.
-    const sanitized = JSON.parse(JSON.stringify(state, _cloudStateReplacer));
-    let _exportedChatMessages = {};
-    try {
-      if (typeof _exportChatMessagesForBackup === 'function') {
-        _exportedChatMessages = await _exportChatMessagesForBackup();
-      }
-    } catch (e) { console.warn('[manualBackup] chat_messages export fail:', e); }
-    snapshots.push({
-      ts: new Date().toISOString(),
-      note: (note || '').trim().slice(0, 80),
-      appVersion: typeof APP_VERSION !== 'undefined' ? APP_VERSION : '',
-      _stateHash: stateHash,
-      _backupSchemaVersion: 'v5',
-      data: sanitized,
-      chatMessages: _exportedChatMessages
-    });
-    // rolling cap
+    snapshots.push(newSnap);
     if (snapshots.length > MANUAL_BACKUP_KEEP_N) {
       snapshots = snapshots.slice(-MANUAL_BACKUP_KEEP_N);
     }
