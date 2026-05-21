@@ -20216,11 +20216,21 @@ async function loadFromCloud() {
           } catch {}
         }
         await _e2eeInitMasterKey();
+        // V4 fix (사용자 보고 2026-05-21 ultrathink): master key 없음 / decrypt 실패 / parse 실패 시도 평문 metaBody (preferences / version / lastSync / unlocked / modes / consentLog / _planOnboardingShown 등) 만 적용.
+        //   root cause: 옛 path = state = DEFAULT 만 → cloud 의 평문 metaBody 무시 → 시크릿 창 / 새 device 진입 시 _planOnboardingShown / consentLog / hookFrequency 등 모두 빈 채 → onboarding/consent 모달 부메랑.
+        //   safe: metaBody 는 이미 평문 cloud 저장 (saveToCloudNow line 330-348) — 통신/server 노출 동일. sensitive body 만 _encryptedBody 안.
+        //   saveToCloud 는 _e2eePendingRecovery 가드로 차단됨 → 부분 state 가 sensitive cloud 덮어쓸 risk X.
+        //   사용자 비밀번호 입력 → decrypt 성공 → 07-e2ee-recovery-modal.js:87-88 가 state = { ...DEFAULT, ...metaPart, ...decryptedBody } 으로 정상 복원.
+        const _metaPart = (() => {
+          if (!cloudData) return {};
+          const { _encryptedBody, ...rest } = cloudData;
+          return rest;
+        })();
         if (!_e2eeMasterKey) {
           // 마스터 키 X — 새 device 진입 또는 키 분실. password 입력 모달 표시 (별도 흐름).
           console.warn('[loadFromCloud] E2EE 활성된 cloud row인데 마스터 키 없음. password 복원 필요.');
           window._e2eePendingRecovery = cloudData;
-          state = { ...DEFAULT_STATE };
+          state = { ...DEFAULT_STATE, ..._metaPart };
           // 사용자 흐름: 진입 후 maybeShowE2EERecoveryModal 호출
         } else {
           // 사용자 보고 2026-04-30 데이터 손실 P1 fix: decrypt 실패 (잘못된 키 / cross-user) 시
@@ -20232,19 +20242,18 @@ async function loadFromCloud() {
             // 잘못된 키 제거 — 다음 진입 시 password 다시 입력
             try { localStorage.removeItem(_E2EE_LOCAL_KEY); } catch {}
             _e2eeMasterKey = null;
-            state = { ...DEFAULT_STATE };
+            state = { ...DEFAULT_STATE, ..._metaPart };
           } else {
             try {
               const decryptedBody = JSON.parse(decryptedJson);
-              const { _encryptedBody, ...metaPart } = cloudData;
-              state = { ...DEFAULT_STATE, ...metaPart, ...decryptedBody };
+              state = { ...DEFAULT_STATE, ..._metaPart, ...decryptedBody };
               _e2eeEnabled = true;
               _mergeUserDataDuringLoad(_entriesBeforeCloud);
               console.log('✅ V4 row loaded + decrypted (E2EE)');
             } catch (e) {
               console.error('[loadFromCloud] decrypted JSON parse 실패:', e);
               window._e2eePendingRecovery = cloudData;
-              state = { ...DEFAULT_STATE };
+              state = { ...DEFAULT_STATE, ..._metaPart };
             }
           }
         }
