@@ -33597,7 +33597,12 @@ function _hookActiveModesText() {
 // ─────────────────────────────────────────────────────────────────────────────
 let _hookGenerateInFlight = false;
 
+// V4 (사용자 명시 2026-05-22 ultrathink): hook generate 중단. "그만 하라고 해" — 사용자 부담 → 새 hook 생성 + push queue 등록 둘 다 disable.
+//   다시 켜려면 이 _HOOK_DISABLED 상수만 false 로. preferences.hookFrequency='off' 와 다름 — 더 강한 hard gate (force/cooldown 우회 X).
+const _HOOK_DISABLED = true;
+
 async function maybeGenerateHook(opts) {
+  if (_HOOK_DISABLED) return { skipped: 'disabled-by-user' };
   opts = opts || {};
   const force = !!opts.force;
 
@@ -33705,6 +33710,7 @@ async function maybeGenerateHook(opts) {
 
 // 수동 trigger — testerMode / 개발자 콘솔용. cooldown / cold-start gate 우회.
 async function forceGenerateHook() {
+  if (_HOOK_DISABLED) return { skipped: 'disabled-by-user' };
   return maybeGenerateHook({ force: true });
 }
 
@@ -33714,6 +33720,7 @@ async function forceGenerateHook() {
 //   같은 user_id row 가 있으면 upsert (가장 최근 hook 1개만 pending).
 // ─────────────────────────────────────────────────────────────────────────────
 async function _hookQueueForPush(entry) {
+  if (_HOOK_DISABLED) return;  // V4 (사용자 명시 2026-05-22 ultrathink): 안전망 — generate disable 중이라 도달 X 인데 옛 path 호출 대비.
   if (!entry || !entry.body) return;
   const accessToken = (typeof session !== 'undefined' && session && session.access_token) || null;
   if (!accessToken) return;
