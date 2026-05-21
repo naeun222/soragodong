@@ -36815,6 +36815,8 @@ function _canUsePearlStorage() {
 async function _attachPearlPhoto(pearl, dataUrl) {
   if (!pearl || !pearl.id) throw new Error('attachPearlPhoto: pearl 없음');
   if (typeof dataUrl !== 'string' || !dataUrl) throw new Error('attachPearlPhoto: dataURL 없음');
+  let _plainBytes = null;          // V4 (사용자 보고 2026-05-22 ultrathink): blob URL cache 즉시 갱신용 plain bytes 보존.
+  let _plainMime = 'image/jpeg';
   if (_canUsePearlStorage()) {
     const conv = _dataUrlToBytes(dataUrl);
     if (!conv) throw new Error('dataURL 파싱 실패');
@@ -36823,6 +36825,8 @@ async function _attachPearlPhoto(pearl, dataUrl) {
     pearl.storageKey.photo = result.path;
     // 옛 dataURL 필드 X (사용자 데이터 mass 회피).
     delete pearl.photo;
+    _plainBytes = conv.bytes;
+    _plainMime = conv.mime || 'image/jpeg';
   } else {
     // 옛 path fallback — testerMode / guest / master key 없음.
     pearl.photo = dataUrl;
@@ -36830,6 +36834,17 @@ async function _attachPearlPhoto(pearl, dataUrl) {
   }
   // mutually exclusive — 이전 video 정리.
   await _removePearlVideo(pearl);
+  // V4 (사용자 보고 2026-05-22 ultrathink): 옛 blob URL cache evict + 새 plain bytes 즉시 cache 박음.
+  //   bug: _attachPearlPhoto 가 storageKey.photo 갱신만 하고 _pearlMediaBlobCache 의 photo entry 그대로 남김 → 다음 hydrate 시 cache hit (line 84 in 00-pearl-media-hydrate.js) → 옛 사진 표시.
+  //   사용자 보고: '사진 변경됨' toast 떴는데 실제로 변경 안 보임. _removePearlPhoto 는 이미 _revokePearlMediaCache 호출하는데 _attachPearlPhoto 가 누락 (대칭 bug).
+  //   fix: cache evict + 새 plain bytes 로 blob URL cache 즉시 set → 다음 hydrate cache hit 으로 새 사진 표시. Supabase Storage CDN cache 의 same-path 옛 byte 우회 효과도.
+  if (typeof _revokePearlMediaCache === 'function') _revokePearlMediaCache(pearl.id, 'photo');
+  if (_plainBytes && typeof _bytesToBlobUrl === 'function' && typeof _pearlMediaBlobCache !== 'undefined' && typeof _pearlMediaCacheKey === 'function') {
+    try {
+      const newUrl = _bytesToBlobUrl(_plainBytes, _plainMime);
+      _pearlMediaBlobCache.set(_pearlMediaCacheKey(pearl.id, 'photo'), newUrl);
+    } catch (e) { console.warn('[_attachPearlPhoto] blob cache set fail:', e); }
+  }
   // V4 (사용자 명시 2026-05-22 ultrathink Phase D): eager hero thumb cache — 추가/변경 시점에 200px thumb 미리 박음.
   //   기존 lazy (hydrate 후 캐시) 의 한계 = first hero load 시 cache miss 라 hydrate 거쳐야. 신 path 진주는 Storage download + decrypt 까지 가야 표시 → 사용자 체감 "로딩 안 됨".
   //   eager 면 hero 진입 시 cache hit 즉시 표시. evict 직후 호출 (24h refresh check 우회).
@@ -36846,6 +36861,8 @@ async function _attachPearlPhoto(pearl, dataUrl) {
 async function _attachPearlVideo(pearl, videoDataUrl, thumbnailDataUrl, hasAudio, audioMeta) {
   if (!pearl || !pearl.id) throw new Error('attachPearlVideo: pearl 없음');
   if (typeof videoDataUrl !== 'string' || !videoDataUrl) throw new Error('attachPearlVideo: video dataURL 없음');
+  let _videoPlain = null, _videoMime = 'video/mp4';        // V4 (사용자 보고 2026-05-22 ultrathink): blob URL cache 즉시 갱신용.
+  let _thumbPlain = null, _thumbMime = 'image/jpeg';
   if (_canUsePearlStorage()) {
     const vconv = _dataUrlToBytes(videoDataUrl);
     if (!vconv) throw new Error('video dataURL 파싱 실패');
@@ -36853,12 +36870,16 @@ async function _attachPearlVideo(pearl, videoDataUrl, thumbnailDataUrl, hasAudio
     pearl.storageKey = pearl.storageKey || {};
     pearl.storageKey.video = vResult.path;
     delete pearl.video;
+    _videoPlain = vconv.bytes;
+    _videoMime = vconv.mime || 'video/mp4';
     if (typeof thumbnailDataUrl === 'string' && thumbnailDataUrl) {
       const tconv = _dataUrlToBytes(thumbnailDataUrl);
       if (tconv) {
         try {
           const tResult = await _uploadPearlMedia(pearl.id, 'videoThumbnail', tconv.bytes, _e2eeMasterKey);
           pearl.storageKey.videoThumbnail = tResult.path;
+          _thumbPlain = tconv.bytes;
+          _thumbMime = tconv.mime || 'image/jpeg';
         } catch (e) {
           // 썸네일 실패는 영상 자체 실패만큼 critical X — 진주는 살림. log + skip.
           console.warn('[attachPearlVideo] thumbnail upload fail:', e && e.message);
@@ -36879,6 +36900,18 @@ async function _attachPearlVideo(pearl, videoDataUrl, thumbnailDataUrl, hasAudio
   if (audioMeta) pearl.videoAudioMeta = audioMeta;
   // mutually exclusive — 이전 photo 정리.
   await _removePearlPhoto(pearl);
+  // V4 (사용자 보고 2026-05-22 ultrathink): _attachPearlPhoto 대칭 fix — 옛 blob URL cache evict + 새 plain bytes 즉시 cache 박음.
+  //   사용자 보고: '영상 변경됨' toast 떴는데 실제로 변경 안 보임. _removePearlVideo 는 이미 _revokePearlMediaCache 호출하는데 _attachPearlVideo 가 누락 (대칭 bug).
+  if (typeof _revokePearlMediaCache === 'function') {
+    _revokePearlMediaCache(pearl.id, 'video');
+    _revokePearlMediaCache(pearl.id, 'videoThumbnail');
+  }
+  if (typeof _bytesToBlobUrl === 'function' && typeof _pearlMediaBlobCache !== 'undefined' && typeof _pearlMediaCacheKey === 'function') {
+    try {
+      if (_videoPlain) _pearlMediaBlobCache.set(_pearlMediaCacheKey(pearl.id, 'video'), _bytesToBlobUrl(_videoPlain, _videoMime));
+      if (_thumbPlain) _pearlMediaBlobCache.set(_pearlMediaCacheKey(pearl.id, 'videoThumbnail'), _bytesToBlobUrl(_thumbPlain, _thumbMime));
+    } catch (e) { console.warn('[_attachPearlVideo] blob cache set fail:', e); }
+  }
   // V4 (사용자 명시 2026-05-22 ultrathink Phase D): eager hero thumb cache — videoThumbnail 도 추가 시점 캐시.
   if (typeof _revokeHeroThumbCache === 'function') _revokeHeroThumbCache(pearl.id, 'videoThumbnail');
   if (typeof thumbnailDataUrl === 'string' && thumbnailDataUrl && typeof _maybeCacheHeroThumb === 'function') {
