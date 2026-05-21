@@ -104,34 +104,83 @@ function _mergePearlsPreservingMedia(currentArr, snapArr) {
 }
 
 // 사용자 요청 2026-04-29: 수동 클라우드 복원 — 백업 목록에서 선택해서 복원
+// V4 (사용자 명시 2026-05-22 ultrathink): C step 4 — dual-read. 옛 snapshots[] + 새 soragodong_backups 테이블 합쳐서 chooser.
+//   마이그 도중 옛 백업도 보임. 선택 시 _kind 분기 (old=옛, new=새) 후 snap 객체 통일.
 async function restoreFromCloudBackup() {
   if (!authUserId) { showToast('로그인 필요'); return; }
   showToast('🔍 클라우드 백업 검색 중...');
   try {
-    const { ok, rows } = await _backupRowFetch(V4_MANUAL_BACKUP_USER_ID, 'data');
-    if (!ok) { showToast('백업 검색 실패'); return; }
-    if (rows.length === 0 || !rows[0].data || !Array.isArray(rows[0].data.snapshots) || rows[0].data.snapshots.length === 0) {
+    // 1) 옛 path — _backupRowFetch(V4_MANUAL_BACKUP_USER_ID).data.snapshots[].
+    let oldSnaps = [];
+    try {
+      const { ok, rows } = await _backupRowFetch(V4_MANUAL_BACKUP_USER_ID, 'data');
+      if (ok && rows.length > 0 && rows[0].data && Array.isArray(rows[0].data.snapshots)) {
+        oldSnaps = rows[0].data.snapshots;
+      }
+    } catch (e) { console.warn('[restoreFromCloudBackup] old path fetch:', e); }
+
+    // 2) 새 path — soragodong_backups 테이블 (meta only — 가벼움).
+    let newRows = [];
+    try {
+      if (typeof _backupsTableList === 'function') {
+        const r = await _backupsTableList('manual', MANUAL_BACKUP_KEEP_N, 'meta');
+        if (r.ok) newRows = r.rows;
+      }
+    } catch (e) { console.warn('[restoreFromCloudBackup] new path list:', e); }
+
+    // 3) 통합 — { _kind, ts, ... }.
+    const items = [];
+    oldSnaps.forEach(s => {
+      if (!s || !s.ts) return;
+      items.push({ _kind: 'old', _snap: s, ts: s.ts, note: s.note || '', truncated: !!s._truncated });
+    });
+    newRows.forEach(r => {
+      if (!r || !r.ts) return;
+      items.push({ _kind: 'new', _row: r, ts: r.ts, note: r.note || '', truncated: false });
+    });
+    if (items.length === 0) {
       showToast('클라우드 백업 없음 — "☁️ 클라우드 백업"으로 먼저 넣어둬');
       return;
     }
-    const snapshots = rows[0].data.snapshots.slice().reverse();  // 최신 먼저
+    items.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+
     // V4 fix (사용자 보고 2026-05-22 ultrathink): _truncated snapshot (옛 cleanup 으로 ts/note 만 보존, data 비움) 라벨 노출 + 복원 시 가드.
     //   root cause: row size 7MB+ → Postgres statement_timeout. 사용자 컨펌으로 옛 snapshots 의 data 비움. ts/note 만 reference.
-    const opts = snapshots.map((s, i) => {
-      const dt = new Date(s.ts).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-      const noteLabel = s.note ? ` · ${s.note}` : '';
-      const truncatedLabel = s._truncated ? ' 🗑 (정리됨)' : '';
+    const opts = items.map((it, i) => {
+      const dt = new Date(it.ts).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const noteLabel = it.note ? ` · ${it.note}` : '';
+      const truncatedLabel = it.truncated ? ' 🗑 (정리됨)' : '';
       return { label: `${dt}${noteLabel}${truncatedLabel}`, value: String(i) };
     });
     const choice = await showOptionsModal({
       title: '☁️ 클라우드 복원',
-      message: `${snapshots.length}개 백업 중 선택. 복원하면 현재 데이터는 사라져.`,
+      message: `${items.length}개 백업 중 선택. 복원하면 현재 데이터는 사라져.`,
       options: opts
     });
     if (!choice) return;
     const idx = parseInt(choice, 10);
-    const snap = snapshots[idx];
-    if (snap && snap._truncated) { showToast('🗑 이 시점 백업은 정리돼서 데이터 X — 다른 시점 골라줘'); return; }
+    const pick = items[idx];
+    if (pick && pick.truncated) { showToast('🗑 이 시점 백업은 정리돼서 데이터 X — 다른 시점 골라줘'); return; }
+    if (!pick) { showToast('백업 데이터 X'); return; }
+
+    // 4) snap 객체 통일 — _kind 별 분기.
+    let snap;
+    if (pick._kind === 'old') {
+      snap = pick._snap;
+    } else {
+      // 새 path — full row fetch.
+      const fr = await _backupsTableFetchOne(pick._row.id);
+      if (!fr.ok || !fr.row) { showToast('백업 데이터 fetch 실패'); return; }
+      snap = {
+        ts: fr.row.ts,
+        note: fr.row.note,
+        appVersion: fr.row.app_version,
+        _stateHash: fr.row.state_hash,
+        _backupSchemaVersion: fr.row.schema_version,
+        data: fr.row.data,
+        chatMessages: fr.row.chat_messages
+      };
+    }
     if (!snap || !snap.data) { showToast('백업 데이터 X'); return; }
     const yes = await showConfirmModal({
       title: '복원 확정?',
@@ -180,14 +229,16 @@ async function restoreFromCloudBackup() {
 
 // 자동 백업 목록 → modal로 보여주고 선택 복구
 // V4 (사용자 명시 2026-05-20 ultrathink): 클라이언트 weekly/update auto + 서버 cron snap (새벽 4시, 30일치) 통합 리스트.
-//   - client auto = `me_v4_auto_backup` row 안 snapshots[] (sanitized 평문 / messages-stripped).
+//   - client auto (옛 path) = `me_v4_auto_backup` row 안 snapshots[] (sanitized 평문 / messages-stripped).
+//   - new auto (새 path) = soragodong_backups 테이블 backup_type='auto' (snapshot 별 row).
 //   - cron snap = `cron_snap_YYYY-MM-DD` row 들 (functions/api/backup/cron-snapshot.ts). data = main row raw (E2EE blob 가능).
 //   사용자 선택 시 _kind 에 따라 복원 흐름 분기.
+// V4 (사용자 명시 2026-05-22 ultrathink): C step 4 — 새 path 통합 (옛 client snapshots[] 와 합쳐서 chooser).
 async function showAutoBackupList() {
   if (!authUserId) { showToast('로그인 필요'); return; }
   showToast('🔍 자동 백업 검색 중...');
   try {
-    // 1. 클라이언트 auto backup (주간 + 업데이트 시 rolling 5개).
+    // 1. 옛 path client auto backup (주간 + 업데이트 시 rolling 5개).
     let clientSnaps = [];
     try {
       const { ok, rows } = await _backupRowFetch(V4_AUTO_BACKUP_USER_ID, 'data');
@@ -196,7 +247,16 @@ async function showAutoBackupList() {
       }
     } catch (e) { console.warn('[showAutoBackupList] client auto fetch:', e); }
 
-    // 2. 서버 cron snap (새벽 4시, user_id LIKE 'cron_snap_%', 30일 retention).
+    // 2. 새 path auto (soragodong_backups, snapshot 별 row).
+    let newAutoRows = [];
+    try {
+      if (typeof _backupsTableList === 'function') {
+        const r = await _backupsTableList('auto', AUTO_BACKUP_KEEP_N, 'meta');
+        if (r.ok) newAutoRows = r.rows;
+      }
+    } catch (e) { console.warn('[showAutoBackupList] new path list:', e); }
+
+    // 3. 서버 cron snap (새벽 4시, user_id LIKE 'cron_snap_%', 30일 retention).
     let cronRows = [];
     try {
       const url = `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}`
@@ -205,11 +265,15 @@ async function showAutoBackupList() {
       if (resp.ok) cronRows = await resp.json();
     } catch (e) { console.warn('[showAutoBackupList] cron snap fetch:', e); }
 
-    // 3. 통합 옵션 — ts 기준 최신 정렬.
+    // 4. 통합 옵션 — ts 기준 최신 정렬.
     const items = [];
     clientSnaps.forEach(s => {
       if (!s || !s.ts) return;
       items.push({ _kind: 'client', _snap: s, ts: s.ts, reason: s.reason || '' });
+    });
+    newAutoRows.forEach(r => {
+      if (!r || !r.ts) return;
+      items.push({ _kind: 'newAuto', _row: r, ts: r.ts, reason: r.note || '' });
     });
     cronRows.forEach(r => {
       if (!r || !r.data) return;
@@ -237,7 +301,7 @@ async function showAutoBackupList() {
     });
     const choice = await showOptionsModal({
       title: '🕰 자동 백업에서 복원',
-      message: `최근 ${items.length}개 중 선택 (새벽 4시 ${cronRows.length}개 + 앱 ${clientSnaps.length}개). 복구하면 현재 데이터는 사라져.`,
+      message: `최근 ${items.length}개 중 선택 (새벽 4시 ${cronRows.length}개 + 앱 ${clientSnaps.length + newAutoRows.length}개). 복구하면 현재 데이터는 사라져.`,
       options: opts
     });
     if (!choice) return;
@@ -245,9 +309,11 @@ async function showAutoBackupList() {
     const pick = items[idx];
     if (!pick) { showToast('잘못된 선택'); return; }
 
-    // 4. cron snap = main row raw 블롭 → unpack + (E2EE) decrypt → state-like 객체.
-    //    client auto = 이미 평문 sanitized snap.data → 기존 흐름.
-    let snap;  // 기존 흐름의 { ts, data, _backupSchemaVersion?, chatMessages? } 형태로 통일.
+    // 5. snap 객체 통일 — _kind 별 분기.
+    //    cron = main row raw 블롭 → unpack + (E2EE) decrypt → state-like 객체.
+    //    newAuto = 새 path full row fetch → snap-like 객체.
+    //    client = 이미 평문 sanitized snap.data → 기존 흐름.
+    let snap;  // { ts, data, _backupSchemaVersion?, chatMessages? } 형태로 통일.
     if (pick._kind === 'cron') {
       const _converted = await _convertCronSnapToRestorable(pick._row);
       if (!_converted.ok) {
@@ -255,6 +321,18 @@ async function showAutoBackupList() {
         return;
       }
       snap = _converted.snap;
+    } else if (pick._kind === 'newAuto') {
+      const fr = await _backupsTableFetchOne(pick._row.id);
+      if (!fr.ok || !fr.row) { showToast('새 백업 데이터 fetch 실패'); return; }
+      snap = {
+        ts: fr.row.ts,
+        note: fr.row.note,
+        appVersion: fr.row.app_version,
+        _stateHash: fr.row.state_hash,
+        _backupSchemaVersion: fr.row.schema_version,
+        data: fr.row.data,
+        chatMessages: fr.row.chat_messages
+      };
     } else {
       snap = pick._snap;
     }
