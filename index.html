@@ -65566,10 +65566,13 @@ async function restoreFromCloudBackup() {
       return;
     }
     const snapshots = rows[0].data.snapshots.slice().reverse();  // 최신 먼저
+    // V4 fix (사용자 보고 2026-05-22 ultrathink): _truncated snapshot (옛 cleanup 으로 ts/note 만 보존, data 비움) 라벨 노출 + 복원 시 가드.
+    //   root cause: row size 7MB+ → Postgres statement_timeout. 사용자 컨펌으로 옛 snapshots 의 data 비움. ts/note 만 reference.
     const opts = snapshots.map((s, i) => {
       const dt = new Date(s.ts).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
       const noteLabel = s.note ? ` · ${s.note}` : '';
-      return { label: `${dt}${noteLabel}`, value: String(i) };
+      const truncatedLabel = s._truncated ? ' 🗑 (정리됨)' : '';
+      return { label: `${dt}${noteLabel}${truncatedLabel}`, value: String(i) };
     });
     const choice = await showOptionsModal({
       title: '☁️ 클라우드 복원',
@@ -65579,6 +65582,7 @@ async function restoreFromCloudBackup() {
     if (!choice) return;
     const idx = parseInt(choice, 10);
     const snap = snapshots[idx];
+    if (snap && snap._truncated) { showToast('🗑 이 시점 백업은 정리돼서 데이터 X — 다른 시점 골라줘'); return; }
     if (!snap || !snap.data) { showToast('백업 데이터 X'); return; }
     const yes = await showConfirmModal({
       title: '복원 확정?',
