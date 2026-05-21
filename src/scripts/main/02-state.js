@@ -296,9 +296,11 @@ const V4_USER_ID = 'me_v4';
 const V4_BACKUP_USER_ID = 'backup_v6_pre_v7';  // V3→V4 마이그레이션 1회 백업
 const V4_TESTER_BACKUP_USER_ID = 'me_v4_backup';  // testerMode ON 시점 cloud 백업 (사용자 요청 2026-04-28)
 const V4_AUTO_BACKUP_USER_ID = 'me_v4_auto_backup';  // 주 1회 + APP_VERSION 변경 시 자동 백업 (rolling 5개) (사용자 요청 2026-04-28)
-// 사용자 요청 2026-04-29: 수동 클라우드 백업 (rolling 10개) — 사용자가 명시적으로 적용하는 체크포인트
+// 사용자 요청 2026-04-29: 수동 클라우드 백업 — 사용자가 명시적으로 적용하는 체크포인트
+// V4 fix (사용자 보고 2026-05-22 ultrathink): 10 → 3. 옛 누적 row 7MB+ 시 Postgres statement_timeout (60s) 초과 fail.
+//   single row JSONB rolling 패턴이 큰 row update timeout 위험. 다음 큐 schema 마이그 (snapshot 별 row) 까지 임시.
 const V4_MANUAL_BACKUP_USER_ID = 'me_v4_manual_backup';
-const MANUAL_BACKUP_KEEP_N = 10;
+const MANUAL_BACKUP_KEEP_N = 3;
 const AUTO_BACKUP_KEEP_N = 5;
 const AUTO_BACKUP_INTERVAL_MS = 7 * 86400000;  // 7일
 const V4_LOCAL_STORAGE_KEY = 'soragodong_v4';
