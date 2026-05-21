@@ -711,7 +711,7 @@ async function addPearl() {
     }
   }
 
-  state.pearls.push({
+  const newPearl = {
     id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     content: content.trim(),
     category,
@@ -725,8 +725,15 @@ async function addPearl() {
     ...(videoAudioMeta ? { videoAudioMeta } : {}),
     createdAt: new Date().toISOString(),
     type: 'pearl'
-  });
+  };
+  state.pearls.push(newPearl);
   saveState();
+  // V4 (사용자 명시 2026-05-22 ultrathink Phase D): eager hero thumb cache — addPearl 옛 dataURL path 진주도 추가 시점 캐시.
+  //   saveMsgAsPearl 은 _attachPearlPhoto 거쳐 자동 캐시되지만 addPearl 은 옛 path (state.pearls.push 만) 라 여기서 추가 처리.
+  if (typeof _maybeCacheHeroThumb === 'function') {
+    if (photo) { try { await _maybeCacheHeroThumb(newPearl.id, 'photo', photo); } catch(_) {} }
+    if (videoThumb) { try { await _maybeCacheHeroThumb(newPearl.id, 'videoThumbnail', videoThumb); } catch(_) {} }
+  }
   renderLensPearls();
   // 사용자 명시 2026-05-09 (재정정): 진단 audio meta toast 합침 제거 — 큰 작업 (Opus / 다른 muxer) 으로 진짜 fix 예정.
   showToast('진주 추가됨 💎');

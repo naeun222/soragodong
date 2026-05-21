@@ -40,8 +40,14 @@ async function _attachPearlPhoto(pearl, dataUrl) {
   }
   // mutually exclusive — 이전 video 정리.
   await _removePearlVideo(pearl);
-  // V4 (사용자 명시 2026-05-20 ultrathink Phase C): 새 사진 박혔으니 옛 hero thumb cache evict — 다음 hydrate 시 새 사진으로 갱신.
+  // V4 (사용자 명시 2026-05-22 ultrathink Phase D): eager hero thumb cache — 추가/변경 시점에 200px thumb 미리 박음.
+  //   기존 lazy (hydrate 후 캐시) 의 한계 = first hero load 시 cache miss 라 hydrate 거쳐야. 신 path 진주는 Storage download + decrypt 까지 가야 표시 → 사용자 체감 "로딩 안 됨".
+  //   eager 면 hero 진입 시 cache hit 즉시 표시. evict 직후 호출 (24h refresh check 우회).
+  //   _maybeCacheHeroThumb 는 blob URL / dataURL 둘 다 Image.src 박힘.
   if (typeof _revokeHeroThumbCache === 'function') _revokeHeroThumbCache(pearl.id, 'photo');
+  if (typeof _maybeCacheHeroThumb === 'function') {
+    try { await _maybeCacheHeroThumb(pearl.id, 'photo', dataUrl); } catch(_) {}
+  }
 }
 
 // 진주에 video 첨부 (썸네일 + has_audio 같이).
@@ -83,8 +89,11 @@ async function _attachPearlVideo(pearl, videoDataUrl, thumbnailDataUrl, hasAudio
   if (audioMeta) pearl.videoAudioMeta = audioMeta;
   // mutually exclusive — 이전 photo 정리.
   await _removePearlPhoto(pearl);
-  // V4 (사용자 명시 2026-05-20 ultrathink Phase C): 새 videoThumbnail 박혔으니 옛 hero thumb cache evict.
+  // V4 (사용자 명시 2026-05-22 ultrathink Phase D): eager hero thumb cache — videoThumbnail 도 추가 시점 캐시.
   if (typeof _revokeHeroThumbCache === 'function') _revokeHeroThumbCache(pearl.id, 'videoThumbnail');
+  if (typeof thumbnailDataUrl === 'string' && thumbnailDataUrl && typeof _maybeCacheHeroThumb === 'function') {
+    try { await _maybeCacheHeroThumb(pearl.id, 'videoThumbnail', thumbnailDataUrl); } catch(_) {}
+  }
 }
 
 // 진주의 photo 제거 — Storage 파일 + 옛 dataURL field 둘 다.
