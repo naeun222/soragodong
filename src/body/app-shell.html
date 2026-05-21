@@ -1,12 +1,12 @@
 <div class="app" style="display:none;">
   <div class="header">
     <div style="display:flex; align-items:center; gap:8px;">
-      <!-- V4 (사용자 명시 2026-05-13 ultrathink): 메인 헤더 토글 = 대화탭 진입 시 RAG 토글 (Plus/Premium). 그 외 = godongicon brand only (no-op). -->
-      <button class="chat-mode-btn js-rag-mode-btn" onclick="onMainHeaderToggleClick()" aria-label="옛 챕터 기억" title="옛 챕터 기억 (대화탭 한정)"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
-      <!-- V4 (사용자 명시 2026-05-18 ultrathink): silent 모드 — 정상 (idle/online/syncing) 시 .silent hide. 문제 (offline/error) 시 표시. -->
-      <div class="date-pill silent" onclick="quickCheckpointFromHeader()" role="button" tabindex="0" aria-label="클라우드에 백업하기" title="클릭 — 지금 클라우드에 백업(저장)">
+      <!-- V4 (사용자 명시 2026-05-22 ultrathink): sync dot 항상 visible — godongicon 왼쪽 위치. silent 모드 제거. -->
+      <div class="date-pill" onclick="quickCheckpointFromHeader()" role="button" tabindex="0" aria-label="클라우드에 백업하기" title="클릭 — 지금 클라우드에 백업(저장)">
         <span class="sync-dot" id="syncDot"></span>
       </div>
+      <!-- V4 (사용자 명시 2026-05-13 ultrathink): 메인 헤더 토글 = 대화탭 진입 시 RAG 토글 (Plus/Premium). 그 외 = godongicon brand only (no-op). -->
+      <button class="chat-mode-btn js-rag-mode-btn" onclick="onMainHeaderToggleClick()" aria-label="옛 챕터 기억" title="옛 챕터 기억 (대화탭 한정)"><img src="/godongicon.png" alt="" class="chat-mode-img"></button>
       <!-- V4 (사용자 명시 2026-05-18 ultrathink): 헤더 우상단 설정 진입 — 항상 visible. SVG (이모지 ⚙ Twemoji 일관성 회피). -->
       <button class="header-settings-btn" onclick="showScreen('settings')" aria-label="설정" title="설정"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </div>

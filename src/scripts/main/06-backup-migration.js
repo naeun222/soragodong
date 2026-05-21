@@ -382,17 +382,23 @@ async function _saveToCloudNowInner() {
 
   // V4: V4 row만 PATCH/POST. V3 row(`me`)는 영원히 안 건드림.
   // 사용자 보고 2026-05-05: Supabase REST 5xx + network throw 1회 자동 재시도 (1.5s).
-  // 이전 = 토스트만 "자동 재시도" 라고 띄우고 실제 재시도 X (거짓 메시지) → 진짜 재시도로 회복.
-  const checkResp = await _fetchWithRetry5xx(
-    `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=id&limit=1`,
-    { headers: authHeaders() }
-  );
-  if (!checkResp.ok) { _handleCloudSyncResponse(checkResp); return; }
-  const existing = await checkResp.json();
-  if (existing.length > 0) {
+  // V4 fix (사용자 명시 2026-05-22 ultrathink): row 존재 여부 캐시 — 매 saveToCloudNow 마다 GET (select=id) 1 RTT (~400ms) 불필요.
+  //   첫 호출 = GET → row 존재 확인 + cache. 이후 = cache 통해 직접 PATCH (1 RTT 단축).
+  //   row 자동 생성 후 cache=true 박힘. row 삭제 흐름 (resetAll 등) 은 cache invalidate 필요.
+  //   PATCH 가 404 면 cache reset + POST fallback (자기 치유).
+  if (!window._v4RowExistsCache) {
+    // 첫 호출 — GET 으로 확인
+    const checkResp = await _fetchWithRetry5xx(
+      `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}&select=id&limit=1`,
+      { headers: authHeaders() }
+    );
+    if (!checkResp.ok) { _handleCloudSyncResponse(checkResp); return; }
+    const existing = await checkResp.json();
+    window._v4RowExistsCache = (existing.length > 0) ? 'exists' : 'absent';
+  }
+
+  if (window._v4RowExistsCache === 'exists') {
     const body = JSON.stringify({ data: dataPayload, updated_at: state.lastSync }, _serializeReplacer);
-    // 사용자 보고 2026-05-10 (audit batch 9): main row size 큰 경우 Postgres statement_timeout 위험 (autoBackup 과 동일 root cause).
-    //   4MB 이상 시 사용자 알림 + 자동 prune 권장. window flag 로 한 세션 1회만.
     _checkCloudRowOversize(body.length);
     const r = await _fetchWithRetry5xx(
       `${SUPABASE_URL}/rest/v1/soragodong_data?auth_user_id=eq.${authUserId}&user_id=eq.${V4_USER_ID}`,
@@ -402,6 +408,20 @@ async function _saveToCloudNowInner() {
         body
       }
     );
+    // PATCH 404 = row 실제로는 없음 → cache invalidate + POST fallback
+    if (r.status === 404 || r.status === 406) {
+      console.warn('[saveToCloudNow] PATCH 404/406 — cache invalidate + POST fallback');
+      window._v4RowExistsCache = null;
+      const postBody = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload }, _serializeReplacer);
+      const postR = await _fetchWithRetry5xx(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: postBody
+      });
+      if (postR.ok) window._v4RowExistsCache = 'exists';
+      _handleCloudSyncResponse(postR);
+      return;
+    }
     _handleCloudSyncResponse(r);
   } else {
     const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload }, _serializeReplacer);
@@ -411,6 +431,7 @@ async function _saveToCloudNowInner() {
       headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body
     });
+    if (r.ok) window._v4RowExistsCache = 'exists';
     _handleCloudSyncResponse(r);
   }
 }
@@ -557,11 +578,12 @@ async function importV3Data() {
 function saveToCloud() {
   if (!authUserId) return;
   if (syncTimeout) clearTimeout(syncTimeout);
+  // V4 fix (사용자 명시 2026-05-22 ultrathink): debounce 1000 → 500ms. 사용자 입력 후 sync 시작 빠름 (총 2.5초 → 2초).
   syncTimeout = setTimeout(async () => {
     setSyncStatus('syncing');
     try { await saveToCloudNow(); setSyncStatus('online'); }
     catch (e) { setSyncStatus('error'); }
-  }, 1000);
+  }, 500);
 }
 
 async function manualSync() {
@@ -643,12 +665,11 @@ function setSyncStatus(status) {
   syncStatus = status;
   const dot = document.getElementById('syncDot');
   if (dot) dot.className = 'sync-dot ' + status;
-  // V4 (사용자 명시 2026-05-18 ultrathink): silent 모드 — 정상 (idle/online/syncing) 시 .date-pill 숨김, 문제 (offline/error) 시 표시.
+  // V4 fix (사용자 명시 2026-05-22 ultrathink): silent 모드 제거 — sync dot 항상 visible (godongicon 왼쪽 위치).
+  //   옛 (2026-05-18) = 정상 시 hide. 사용자 인식 = "sync 진행 중 시각 신호 X" → "바로 안 됨" 인식.
+  //   새: silent class 강제 제거 (사용자가 HTML 에서 'silent' class 빼고도 옛 코드 toggle 으로 다시 추가되던 문제 차단).
   const pill = dot && dot.closest('.date-pill');
-  if (pill) {
-    const isProblem = (status === 'offline' || status === 'error');
-    pill.classList.toggle('silent', !isProblem);
-  }
+  if (pill) pill.classList.remove('silent');
   // V4 (v8 묶음 18): 동기화 빨강 (offline / error) 첫 발생 inline tip
   if ((status === 'offline' || status === 'error') && typeof _showInlineTip === 'function') {
     _showInlineTip('syncDotRed');
