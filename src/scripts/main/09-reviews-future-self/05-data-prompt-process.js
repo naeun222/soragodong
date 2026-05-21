@@ -55,23 +55,30 @@ function _collectReviewData(type) {
   const today = new Date();
   let cutoff, cutoffEnd;
   if (type === 'weekly') {
-    // 사용자 보고 2026-05-10 ultrathink: 일요일 04:00 이전 진입 시 옛 _lastWeekly4amCutoff = 지지난 일요일 4AM → data = 저번 주 (5/2 포함, 어제 5/9 제외) mismatch.
-    //   fix: cutoffEnd 직접 계산 — 일요일 = 오늘 04:00 (4AM 전후 무관) / 그 외 = 다음 일요일 04:00. 항상 "이번 주 일요일" 까지의 7일.
-    const _t = new Date(today);
-    const _dow = _t.getDay();  // 0=일, 1=월, ..., 6=토
-    let _sun4am = new Date(_t.getFullYear(), _t.getMonth(), _t.getDate(), 4, 0, 0, 0);
-    if (_dow !== 0) {
-      // 월~토 — 다음 일요일 04:00 으로
-      const _daysToSun = (7 - _dow) % 7 || 7;
-      _sun4am.setDate(_sun4am.getDate() + _daysToSun);
-    }
-    // 일요일 — _sun4am 그대로 (오늘 04:00). 04:00 이전 진입이어도 "이번 주" weekKey 유지.
-    cutoffEnd = _sun4am;
+    // V4 fix (사용자 명시 2026-05-22 ultrathink): "끝난 주의 review" 흐름 복원.
+    //   옛 (2026-05-10 fix): cutoffEnd = 다음 일요일 04:00 (미래) → 평일 (월~토) 진입 시 안 끝난 주의 부분 entries → review 부정확.
+    //   원인: batch fire trigger (`_lastWeekly4amCutoff()` = 직전 일요일 04:00) 와 entries range cutoffEnd (다음 일요일) 가 1주 mismatch.
+    //   새: cutoffEnd = 직전 일요일 04:00 (= batch fire trigger 와 일관). entries = 방금 끝난 1주 (지난 일요일 04:00 - 7일 ~ 지난 일요일 04:00).
+    //   결과: 5/22 (금) 진입 시 cutoff 5/10 - cutoffEnd 5/17 = W20 (5/11-5/17) 의 review. 5/24 (일) 04:00 통과 후 진입 시 W21 (5/18-5/24).
+    cutoffEnd = (typeof _lastWeekly4amCutoff === 'function')
+      ? _lastWeekly4amCutoff()
+      : (() => {
+          // fallback — _lastWeekly4amCutoff inline 계산
+          const _c = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 4, 0, 0, 0);
+          const _dow = _c.getDay();
+          const _daysBack = (_dow === 0) ? (_c <= today ? 0 : 7) : _dow;
+          _c.setDate(_c.getDate() - _daysBack);
+          if (_c > today) _c.setDate(_c.getDate() - 7);
+          return _c;
+        })();
     cutoff = new Date(cutoffEnd.getTime() - 7 * 86400000);
   } else {
-    // 사용자 명시 2026-05-10 (메커니즘 일관): monthly = 이번 달 (1일 ~ 다음 달 1일 04:00). 옛 = 지난 달 → 신 = 이번 달.
-    cutoff = new Date(today.getFullYear(), today.getMonth(), 1, 4, 0, 0, 0);
-    cutoffEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1, 4, 0, 0, 0);
+    // V4 fix (사용자 명시 2026-05-22 ultrathink): monthly 도 동일 패턴 — "끝난 달의 review".
+    //   옛 (2026-05-10 fix): 이번 달 (1일 ~ 다음 달 1일 04:00) — 진행 중 데이터.
+    //   원인: batch fire trigger (`_lastMonthly4amCutoff()` = 이번 달 1일 04:00) 와 entries range (이번 달 1일 ~ 다음 달 1일) 가 1달 mismatch.
+    //   새: cutoff = 지난 달 1일 04:00, cutoffEnd = 이번 달 1일 04:00. entries = 방금 끝난 달.
+    cutoff = new Date(today.getFullYear(), today.getMonth() - 1, 1, 4, 0, 0, 0);
+    cutoffEnd = new Date(today.getFullYear(), today.getMonth(), 1, 4, 0, 0, 0);
   }
   // 사용자 보고 2026-05-10 ultrathink: KST timezone shift bug fix.
   //   옛: cutoff.toISOString() = UTC 변환 → 04:00 KST = 19:00 UTC 전날 → date 1일 앞당겨짐.
