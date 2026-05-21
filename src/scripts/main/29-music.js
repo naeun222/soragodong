@@ -507,6 +507,31 @@ function _bindCheckinPhotoReorder(slot) {
   });
 }
 
+// V4 (사용자 명시 2026-05-22 ultrathink): 음악 진주 분기 — helper 추출 (filter set 케이스 + 첫 picker 케이스 양쪽 재사용).
+function _addMusicPearlBranch() {
+  showMusicSearchModal(async (track) => {
+    const note = await showInputModal({
+      title: `💎 음악 — ${track.title}`,
+      message: '메모 한 줄 (선택). 비우고 OK 가능.',
+      placeholder: '예: 그날 노을 / 그 한 마디 / 그 곡 들었던 밤',
+      okLabel: '보관'
+    });
+    if (note === null) return;
+    state.pearls.push({
+      id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      category: '음악',
+      track,
+      content: track.title,
+      note: (note || '').trim() || null,
+      createdAt: new Date().toISOString(),
+      type: 'pearl'
+    });
+    saveState();
+    renderLensPearls();
+    showToast('진주 추가됨 💎');
+  });
+}
+
 async function addPearl() {
   // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 진주 진입 → V8 진주 튜토리얼 (시뮬) fire.
   if (typeof shouldRunFirstPearlTutorial === 'function' && shouldRunFirstPearlTutorial()) {
@@ -515,32 +540,19 @@ async function addPearl() {
   }
   // V4 (사용자 명시 2026-05-20 ultrathink): 진주 하루 50장 hard cap.
   if (typeof _canAddPearlToday === 'function' && !_canAddPearlToday()) return;
-  // V4 (사용자 명시 2026-05-14 ultrathink): 카테고리 5 → 7개 (티켓/책).
-  const baseCategories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
-  const categories = baseCategories.concat(['티켓', '책']);
-  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 티켓: '🎫', 책: '📚' };
 
-  // V4 (사용자 명시 2026-05-14): 카테고리 필터된 상태에서 + 버튼 클릭 → 카테고리 모달 skip 하고 바로 그 카테고리.
-  //   '전체' (null) 일 때만 카테고리 선택 모달 노출.
+  const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 티켓: '🎫', 책: '📚' };
+  const baseCategories = state.preferences?.pearlBasketCategories || ['음악', '음식', '장소', '순간', '사람'];
+  const allCategories = baseCategories.concat(['티켓', '책']);
+
+  // V4 (사용자 명시 2026-05-14): 카테고리 chip 필터된 상태 → 해당 카테고리 prefill.
   let category = null;
-  if (typeof _pearlCatFilter !== 'undefined' && _pearlCatFilter && categories.includes(_pearlCatFilter)) {
+  if (typeof _pearlCatFilter !== 'undefined' && _pearlCatFilter && allCategories.includes(_pearlCatFilter)) {
     category = _pearlCatFilter;
-  } else {
-    const options = categories.map(c => ({
-      label: `${iconMap[c] || '💎'} ${c}`,
-      value: c
-    }));
-    const picked = await showOptionsModal({
-      title: '어떤 진주? 💎',
-      message: '',
-      options
-    });
-    if (!picked) return;
-    category = picked.trim();
   }
 
-  // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 분기 (도서관 + 버튼 진입).
-  //   sub-filter 도 누른 상태면 sub-type 도 prefill (영화 chip 활성 → 바로 영화 form).
+  // V4 (사용자 명시 2026-05-22 ultrathink): 음악/티켓/책 filter 직진 (기존 동작 보존).
+  if (category === '음악') { _addMusicPearlBranch(); return; }
   if (category === '티켓' && typeof saveTicketPearl === 'function') {
     const prefSub = (typeof _ticketSubFilter !== 'undefined' && _ticketSubFilter) ? _ticketSubFilter : null;
     await saveTicketPearl({ source: 'tab', prefillSubTypeId: prefSub });
@@ -551,30 +563,141 @@ async function addPearl() {
     return;
   }
 
-  // V3.13.x: 음악 카테고리 → iTunes 검색 모달로 곡 선택
-  if (category === '음악') {
-    showMusicSearchModal(async (track) => {
-      const note = await showInputModal({
-        title: `💎 음악 — ${track.title}`,
-        message: '메모 한 줄 (선택). 비우고 OK 가능.',
-        placeholder: '예: 그날 노을 / 그 한 마디 / 그 곡 들었던 밤',
-        okLabel: '보관'
-      });
-      if (note === null) return;
-      state.pearls.push({
-        id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        category: '음악',
-        track,
-        content: track.title,
-        note: (note || '').trim() || null,
-        createdAt: new Date().toISOString(),
-        type: 'pearl'
-      });
-      saveState();
-      renderLensPearls();
-      showToast('진주 추가됨 💎');
+  // V4 (사용자 명시 2026-05-22 ultrathink): 진주 더하기 = 사진/영상 먼저 → 카테고리 → content/note 순서.
+  //   - filter null → 첫 picker [📷 사진, 📹 동영상, 🎵 음악, 🎫 티켓, 📚 책]. 음악/티켓/책 선택 시 해당 분기.
+  //   - filter '음식'|'장소'|'순간'|'사람' → 첫 picker [📷 사진, 📹 동영상] (글만 X — 미디어 필수).
+  let mediaType = null;  // 'photo' | 'video'
+  if (category === null) {
+    const firstPick = await showOptionsModal({
+      title: '어떤 진주? 💎',
+      message: '',
+      options: [
+        { label: '📷 사진', value: 'photo' },
+        { label: '📹 동영상', value: 'video' },
+        { label: '🎵 음악', value: 'music' },
+        { label: '🎫 티켓', value: 'ticket' },
+        { label: '📚 책', value: 'book' }
+      ]
     });
-    return;
+    if (!firstPick) return;
+    if (firstPick === 'music') { _addMusicPearlBranch(); return; }
+    if (firstPick === 'ticket') {
+      if (typeof saveTicketPearl === 'function') await saveTicketPearl({ source: 'tab' });
+      return;
+    }
+    if (firstPick === 'book') {
+      if (typeof saveBookPearl === 'function') await saveBookPearl({ source: 'tab' });
+      return;
+    }
+    mediaType = firstPick;  // 'photo' | 'video'
+  } else {
+    // category 음식/장소/순간/사람 = 사진/영상 picker (글만 X — 필수)
+    const mediaPick = await showOptionsModal({
+      title: `${iconMap[category] || '💎'} ${category}`,
+      message: '사진 또는 동영상',
+      options: [
+        { label: '📷 사진', value: 'photo' },
+        { label: '📹 동영상', value: 'video' }
+      ]
+    });
+    if (!mediaPick) return;
+    mediaType = mediaPick;
+  }
+
+  // 사진/영상 file pick + process (필수, 취소 = abort)
+  let photo = null;
+  let videoData = null;
+  let videoThumb = null;
+  let videoHasAudio = null;  // 사용자 명시 2026-05-02 ultrathink: 무음 영상 시각 안내용 메타.
+  let videoAudioMeta = null;  // 사용자 보고 2026-05-09: audio chunks/codec/sr/ch — 진주 view 모달 + push toast 에 진단 표시.
+
+  if (mediaType === 'photo') {
+    try {
+      const file = await pickPhotoFile();
+      if (!file) return;  // 사용자 cancel = abort (미디어 필수)
+      showFullscreenLoader('사진 처리 중... 📸');
+      const resized = await fileToResizedDataUrl(file, 1024, 0.85);
+      const square = await makeSquareThumb(resized, 600, 0.85);
+      photo = square;
+      hideFullscreenLoader();
+    } catch (e) {
+      hideFullscreenLoader();
+      console.warn('photo failed:', e);
+      showToast('사진 처리 실패');
+      return;
+    }
+  } else if (mediaType === 'video') {
+    // V4: 동영상 옵션 (3초 / 720p / WebCodecs 압축).
+    const existingVideos = (state.pearls || []).filter(p => p.video || (p.storageKey && p.storageKey.video)).length;
+    if (existingVideos >= 10) {
+      showToast('동영상 진주는 10개까지 — 오래된 거 정리하고 다시 시도');
+      return;
+    }
+    try {
+      const file = await pickVideoFile();
+      if (!file) return;
+      if (file.size > 100_000_000) {
+        showToast(`동영상 너무 큼 (${(file.size/1e6).toFixed(0)}MB) — 100MB 이하`);
+        return;
+      }
+      showFullscreenLoader('동영상 길이 확인 중... 📹');
+      const dur = await _getVideoDuration(file);
+      hideFullscreenLoader();
+      // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): dur Infinity (live HLS / 일부 .mov) / NaN / 0 케이스 가드.
+      if (dur < 0 || !Number.isFinite(dur) || dur <= 0.05) {
+        showToast('동영상 길이 읽기 실패 — 다른 영상 시도');
+        return;
+      }
+      // 사용자 명시 2026-05-09: 3초 초과 = trim modal 띄워서 사용자가 구간 선택.
+      let trimStart = 0;
+      if (dur > 3) {
+        const range = await pickVideoTrimRange(file, 3);
+        if (!range) { showToast('자르기 취소됨'); return; }
+        trimStart = range.startTime;
+      }
+      showFullscreenLoader('동영상 압축 중... 📹');
+      try {
+        const result = await compressVideoWebCodecs(file, {
+          maxSec: 3, targetHeight: 720, bitrate: 1_500_000, fps: 30,
+          startTime: trimStart
+        });
+        const dataUrl = result.videoUrl;
+        const approxBytes = Math.round((dataUrl.length - (dataUrl.indexOf(',') + 1)) * 0.75);
+        hideFullscreenLoader();
+        if (approxBytes > 5_000_000) {
+          showToast(`압축 후도 큼 (${(approxBytes/1e6).toFixed(1)}MB) — 짧은 영상 시도`);
+          return;
+        }
+        videoData = dataUrl;
+        videoThumb = result.thumbnail;
+        videoHasAudio = !!result.hasAudio;
+        videoAudioMeta = result.audioMeta || null;
+      } catch (compressErr) {
+        hideFullscreenLoader();
+        console.error('compress error:', compressErr, compressErr && compressErr.stack);
+        const msg = (compressErr && (compressErr.message || compressErr.toString())) || '알 수 없는 오류';
+        const stack = (compressErr && compressErr.stack) ? '\n\n[stack]\n' + compressErr.stack.slice(0, 400) : '';
+        showErrorDetailModal('동영상 압축 실패', msg + stack);
+        return;
+      }
+    } catch (e) {
+      hideFullscreenLoader();
+      console.warn('video failed:', e);
+      showToast('동영상 처리 실패');
+      return;
+    }
+  }
+
+  // 카테고리 (filter 없을 때만 picker)
+  if (category === null) {
+    const photoCategories = baseCategories.filter(c => c !== '음악');
+    const pickedCat = await showOptionsModal({
+      title: '카테고리는?',
+      message: '',
+      options: photoCategories.map(c => ({ label: `${iconMap[c] || '💎'} ${c}`, value: c }))
+    });
+    if (!pickedCat) return;
+    category = pickedCat.trim();
   }
 
   // 사용자 요청 2026-04-29: 카테고리별 자연스러운 placeholder
@@ -594,122 +717,14 @@ async function addPearl() {
   });
   if (!content || !content.trim()) return;
 
-  // 사용자 요청 2026-04-29: 모든 카테고리에 작은 메모 한 줄 입력 옵션 (음악처럼)
+  // 사용자 요청 2026-04-29: 모든 카테고리에 작은 메모 한 줄 입력 옵션
   const note = await showInputModal({
     title: `💎 ${category} — ${content.trim()}`,
     message: '구체적으로 한 줄 (선택). 비우고 OK 가능.',
     placeholder: ph.memo,
-    okLabel: ['음식', '장소', '순간', '사람'].includes(category) ? '다음 →' : '보관'
+    okLabel: '보관'
   });
   if (note === null) return;
-
-  // V4-fix: 음식/장소/순간은 사진 첨부 옵션 (음악 앨범아트 풍 — 정사각 600px)
-  // V4: 동영상 옵션 추가 (3초 / 720p / WebCodecs 압축) — 썸네일 사진 패턴 동일.
-  // 사용자 명시 2026-05-09: 5초 → 3초로 단축 + 라벨 괄호 표기 제거.
-  // 사용자 명시 2026-05-22 ultrathink: 사람 카테고리도 동일 사진/영상 옵션 (음식/장소/순간 패턴 통일).
-  let photo = null;
-  let videoData = null;
-  let videoThumb = null;
-  let videoHasAudio = null;  // 사용자 명시 2026-05-02 ultrathink: 무음 영상 시각 안내용 메타.
-  let videoAudioMeta = null;  // 사용자 보고 2026-05-09: audio chunks/codec/sr/ch — 진주 view 모달 + push toast 에 진단 표시.
-  if (['음식', '장소', '순간', '사람'].includes(category)) {
-    const mediaChoice = await showOptionsModal({
-      title: '미디어 첨부 (선택)',
-      message: '사진/동영상 보탤까? 글만도 OK.',
-      options: [
-        { label: '📷 사진', value: 'photo' },
-        { label: '📹 동영상', value: 'video' },
-        { label: '글만 보관', value: 'none' }
-      ]
-    });
-    if (mediaChoice === 'photo') {
-      try {
-        const file = await pickPhotoFile();
-        if (file) {
-          showFullscreenLoader('사진 처리 중... 📸');
-          const resized = await fileToResizedDataUrl(file, 1024, 0.85);
-          const square = await makeSquareThumb(resized, 600, 0.85);
-          photo = square;
-          hideFullscreenLoader();
-        }
-      } catch (e) {
-        hideFullscreenLoader();
-        console.warn('photo failed:', e);
-        showToast('사진 처리 실패. 글만 저장.');
-      }
-    } else if (mediaChoice === 'video') {
-      const existingVideos = (state.pearls || []).filter(p => p.video).length;
-      if (existingVideos >= 10) {
-        showToast('동영상 진주는 10개까지 — 오래된 거 정리하고 다시 시도');
-      } else {
-        try {
-          const file = await pickVideoFile();
-          if (file) {
-            // 입력 가드: 100MB / 60초 이하 (압축 후 3초로 자름)
-            if (file.size > 100_000_000) {
-              showToast(`동영상 너무 큼 (${(file.size/1e6).toFixed(0)}MB) — 100MB 이하`);
-            } else {
-              showFullscreenLoader('동영상 길이 확인 중... 📹');
-              const dur = await _getVideoDuration(file);
-              hideFullscreenLoader();
-              // V4 fix v6 (사용자 보고 ultrathink 2026-05-04): dur Infinity (live HLS / 일부 .mov) / NaN / 0 케이스 가드.
-              // 그대로 dur > 3 분기 들어가면 trim modal 안에서 또 cleanup 되어 "자르기 취소됨" 잘못 안내.
-              if (dur < 0 || !Number.isFinite(dur) || dur <= 0.05) {
-                showToast('동영상 길이 읽기 실패 — 다른 영상 시도');
-              } else {
-                // 사용자 명시 2026-05-09: 3초 초과 = trim modal 띄워서 사용자가 구간 선택. 3초 이하 = modal X.
-                // 사용자 명시 2026-05-10 (재정정): trim modal 안에는 video preview / thumbnail 미리보기 X (손잡이 + 시간 라벨만).
-                let trimStart = 0;
-                if (dur > 3) {
-                  const range = await pickVideoTrimRange(file, 3);
-                  if (!range) {
-                    // 사용자 cancel
-                    showToast('자르기 취소됨');
-                    return;
-                  }
-                  trimStart = range.startTime;
-                }
-                showFullscreenLoader('동영상 압축 중... 📹');
-                try {
-                  const result = await compressVideoWebCodecs(file, {
-                    maxSec: 3, targetHeight: 720, bitrate: 1_500_000, fps: 30,
-                    startTime: trimStart
-                  });
-                  const dataUrl = result.videoUrl;
-                  const approxBytes = Math.round((dataUrl.length - (dataUrl.indexOf(',') + 1)) * 0.75);
-                  hideFullscreenLoader();
-                  if (approxBytes > 5_000_000) {
-                    showToast(`압축 후도 큼 (${(approxBytes/1e6).toFixed(1)}MB) — 짧은 영상 시도`);
-                  } else {
-                    videoData = dataUrl;
-                    videoThumb = result.thumbnail;
-                    videoHasAudio = !!result.hasAudio;
-                    videoAudioMeta = result.audioMeta || null;
-                    // 사용자 명시 2026-05-09 (재정정): 진단 modal/toast UI 제거 — Safari PWA / 데스크탑 Chrome 둘 다 무음
-                    // = mp4 자체 audio track 호환성 issue (iOS quirk 무관). 임시 진단 코드 제거 후 큰 작업 (Opus / 다른 muxer) 진행 예정.
-                    // videoAudioMeta stash 는 유지 (다음 fix 시 활용 가능).
-                  }
-                } catch (compressErr) {
-                  hideFullscreenLoader();
-                  console.error('compress error:', compressErr, compressErr && compressErr.stack);
-                  const msg = (compressErr && (compressErr.message || compressErr.toString())) || '알 수 없는 오류';
-                  const stack = (compressErr && compressErr.stack) ? '\n\n[stack]\n' + compressErr.stack.slice(0, 400) : '';
-                  showErrorDetailModal('동영상 압축 실패', msg + stack);
-                  // 사용자 보고 2026-05-09: compress fail 시 진주 push 막음 — 옛 흐름은 push 진행해서
-                  // video 필드 X 진주가 남았음 (사용자 = "저장 됐는데 안 나옴"). 명확히 abort.
-                  return;
-                }
-              }
-            }
-          }
-        } catch (e) {
-          hideFullscreenLoader();
-          console.warn('video failed:', e);
-          showToast('동영상 처리 실패. 글만 저장.');
-        }
-      }
-    }
-  }
 
   const newPearl = {
     id: 'pearl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -728,14 +743,12 @@ async function addPearl() {
   };
   state.pearls.push(newPearl);
   saveState();
-  // V4 (사용자 명시 2026-05-22 ultrathink Phase D): eager hero thumb cache — addPearl 옛 dataURL path 진주도 추가 시점 캐시.
-  //   saveMsgAsPearl 은 _attachPearlPhoto 거쳐 자동 캐시되지만 addPearl 은 옛 path (state.pearls.push 만) 라 여기서 추가 처리.
+  // V4 (사용자 명시 2026-05-22 ultrathink Phase D): eager hero thumb cache.
   if (typeof _maybeCacheHeroThumb === 'function') {
     if (photo) { try { await _maybeCacheHeroThumb(newPearl.id, 'photo', photo); } catch(_) {} }
     if (videoThumb) { try { await _maybeCacheHeroThumb(newPearl.id, 'videoThumbnail', videoThumb); } catch(_) {} }
   }
   renderLensPearls();
-  // 사용자 명시 2026-05-09 (재정정): 진단 audio meta toast 합침 제거 — 큰 작업 (Opus / 다른 muxer) 으로 진짜 fix 예정.
   showToast('진주 추가됨 💎');
 }
 
