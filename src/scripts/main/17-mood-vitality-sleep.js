@@ -152,8 +152,24 @@ async function submitCheckin() {
   if (currentCheckin.mood) entry.mood = currentCheckin.mood;
   entry.note = note;
   // V4 fix (사용자 보고 2026-05-20 ultrathink): 일기 path 도 일반 흐름 통과. entry.diary append + dailySource 만 추가.
+  // V4 fix (사용자 명시 2026-05-22 ultrathink): edit mode (_checkinDiaryEditMode) 면 entry.diary 의 가장 최근 block 만 in-place replace.
+  //   16-modes.js renderCheckinFromExisting 이 entry.diary 있을 때 latestBlock 만 textarea 에 set + flag true.
+  //   효과: 사용자가 본 그 latestBlock 의 content 만 갱신. 옛 block 들 (다른 timestamp) 그대로 보존. 새 block append X.
+  //   edit mode X (= 새 첫 일기 또는 새 추가 path) → 기존 흐름 (entry.diary 없으면 첫 block / 있으면 timestamp append).
   if (_isDiaryPath) {
-    if (entry.diary && entry.diary.trim()) {
+    const _isDiaryEdit = !!window._checkinDiaryEditMode;
+    if (_isDiaryEdit && entry.diary) {
+      const _diaryStr = entry.diary;
+      const _headerRe = /\n\n— \d{2}:\d{2} —\n/g;
+      let _lastHeaderEnd = 0;
+      let _m;
+      while ((_m = _headerRe.exec(_diaryStr))) _lastHeaderEnd = _m.index + _m[0].length;
+      if (_lastHeaderEnd > 0) {
+        entry.diary = _diaryStr.slice(0, _lastHeaderEnd) + _diaryContent;
+      } else {
+        entry.diary = _diaryContent;
+      }
+    } else if (entry.diary && entry.diary.trim()) {
       const t = new Date();
       const hh = String(t.getHours()).padStart(2, '0');
       const mm = String(t.getMinutes()).padStart(2, '0');
@@ -162,6 +178,7 @@ async function submitCheckin() {
       entry.diary = _diaryContent;
     }
     entry.dailySource = 'diary';
+    if (window._checkinDiaryEditMode) delete window._checkinDiaryEditMode;
   }
   entry.modes = { ...state.modes };
   entry.cyclePhase = getCyclePhase();
@@ -298,12 +315,13 @@ async function submitCheckin() {
   updateCheckinSub();
   showScreen('home');
   // V4 (사용자 명시 2026-05-18 ultrathink): 소라 emerge + tier toast (단순 토스트 대체).
-  if (_checkinShellResult && typeof showCheckinShellReward === 'function') {
+  // V4 fix (사용자 명시 2026-05-22 ultrathink): 첫 체크인 (isFirst) OR 티어 진화 (isUpgrade) 시에만 효과/토스트 노출.
+  //   같은 티어 + 변동 없는 수정 = 무반응 (소라 효과 X, 변경 X, 체크인 완료 토스트 X). UX 호들갑 회피.
+  //   효과 표시 시 '체크인 완료!' 토스트 같이 (소라 emerge + 명시 완료 신호).
+  const _shellShouldNotify = !!(_checkinShellResult && (_checkinShellResult.isFirst || _checkinShellResult.isUpgrade));
+  if (_shellShouldNotify && typeof showCheckinShellReward === 'function') {
     showCheckinShellReward(_checkinShellResult);
-  } else if (_isDiaryPath) {
-    showToast('📔 일기 저장됐어');
-  } else {
-    showToast(note.trim() ? '✦ 기록됐어' : '기록 고마워 🐚');
+    if (typeof showToast === 'function') showToast('체크인 완료!');
   }
   if (_autoPearlAdded) {
     setTimeout(() => showToast(`💎 자주 들은 곡이라 진주에 자동 저장 — ${_autoPearlAdded}`), 2700);

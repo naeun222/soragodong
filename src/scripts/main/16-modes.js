@@ -88,14 +88,25 @@ function prefillCheckinFromEntry() {
   // note
   // V4 fix (사용자 보고 2026-05-20 ultrathink): entry.diary 도 textarea 복원 — 일기 path 단독 entry 가 빈 textarea 로 보이던 버그.
   //   note + diary 둘 다 있으면 note 우선 (일반 path 가 정상 흐름). diary 만 있으면 '일기: ' prefix 로 복원 + 일기 모드 진입.
+  // V4 fix (사용자 명시 2026-05-22 ultrathink): entry.diary 의 가장 최근 block 만 textarea 에 set + edit mode flag.
+  //   옛: entry.diary 전체 (multi-block) 보여줘 submit 시 또 append → 중복.
+  //   새: 마지막 timestamp header 이후 부분 = latest block 만 textarea. submitCheckin 가 _checkinDiaryEditMode true 일 때 in-place replace.
+  //   block format = "block1\n\n— HH:MM —\nblock2\n\n— HH:MM —\nblock3". timestamp 없는 첫 block 만이면 entry.diary 그대로.
   if (noteEl0) {
     if (entry.note) {
       noteEl0.value = entry.note;
     } else if (entry.diary) {
-      noteEl0.value = '일기: ' + entry.diary;
+      const _diaryStr = entry.diary;
+      const _headerRe = /\n\n— \d{2}:\d{2} —\n/g;
+      let _lastHeaderEnd = 0;
+      let _m;
+      while ((_m = _headerRe.exec(_diaryStr))) _lastHeaderEnd = _m.index + _m[0].length;
+      const _latestBlock = _lastHeaderEnd > 0 ? _diaryStr.slice(_lastHeaderEnd) : _diaryStr;
+      noteEl0.value = '일기: ' + _latestBlock;
       if (typeof enterCheckinDiaryMode === 'function') {
         try { enterCheckinDiaryMode(); } catch (e) { console.warn('[prefill diary mode]', e); }
       }
+      window._checkinDiaryEditMode = true;
     }
   }
   // optional fields — 사용자 보고 2026-05-03: state 만 복원 + UI .selected class 누락 = 다시 진입 시 click 사라짐 버그.
