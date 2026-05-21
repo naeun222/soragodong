@@ -427,8 +427,11 @@ function _buildDiarySummaryPrompt(date, messages, entry) {
 
   const checkinParts = [];
   if (entry.modes) {
+    // V4 fix (사용자 보고 2026-05-21 ultrathink): raw key (period/exam/travel/sick/rest) 직렬화 시 AI 가 영어 'period' → '시험 기간' 등 hallucinate.
+    //   20-system-prompt.js:157 의 modeMap 과 동일 한국어 변환 적용. daily summary prompt 가 그 누락된 path.
+    const _modeMap = { exam: '📚 마감/시험', travel: '✈️ 여행 중', sick: '🤒 아픔', rest: '🏖 휴식', period: '🩸 월경' };
     const activeModes = Object.keys(entry.modes).filter(k => entry.modes[k]);
-    if (activeModes.length) checkinParts.push(`모드: ${activeModes.join(', ')}`);
+    if (activeModes.length) checkinParts.push(`모드: ${activeModes.map(k => _modeMap[k] || k).join(', ')}`);
   }
   if (entry.vitality != null) checkinParts.push(`활력: ${entry.vitality}/5`);
   if (entry.mood != null) checkinParts.push(`기분: ${entry.mood}/5`);
