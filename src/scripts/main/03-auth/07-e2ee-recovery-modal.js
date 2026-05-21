@@ -1,3 +1,45 @@
+// V4 (사용자 명시 2026-05-21 ultrathink): E2EE 강제 활성 가드 — 다른 사용자도 같은 케이스 자동 처리.
+//   B-1: 평문 사용자 (E2EE 한 번도 활성 안 함) → setup 모달 강제.
+//   B-2: setup 도중 fail → localStorage 잔재 정리 + setup 모달 강제.
+//   B-3/B-4: cloud _encryptedBody 박힘 + master key 없음 → recovery 모달 강제 ([나중에] 옵션 제거됨).
+//   skip: 게스트 / testerMode / onboarding tutorial / _e2eeOptedOut (테스트 계정 명시 평문).
+//   호출처: 07-init/01-init-fn.js — loadFromCloud 끝 1.5초 후.
+async function maybeShowE2EESetupOrRecovery() {
+  if (!authUserId) return;
+  if (typeof state === 'undefined' || !state) return;
+  if (state.isGuest) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (typeof window !== 'undefined' && window._onbTutorialMode) return;
+  if (state.preferences && state.preferences._e2eeOptedOut) return;  // 테스트 계정 명시 평문
+
+  // B-3 / B-4: cloud _encryptedBody 박힘 + master key 없음 → recovery 강제
+  if (window._e2eePendingRecovery) {
+    return maybeShowE2EERecoveryModal();
+  }
+
+  // master key 있고 E2EE 활성 정상 = skip
+  if (_e2eeMasterKey && _e2eeEnabled) return;
+
+  // B-1 / B-2: 평문 사용자 (cloud encryptedBody 없음) + master key 없음 → setup 강제
+  if (!_e2eeMasterKey) {
+    // B-2: localStorage 잔재 정리 (옛 setup 시도 흔적 — cloud encryptedBody 없으니 옛 비밀번호 unwrap 해도 데이터 X. 잔재 무용.)
+    try {
+      if (localStorage.getItem('soragodong_v4_e2ee_recovery')) {
+        localStorage.removeItem('soragodong_v4_e2ee_recovery');
+        console.log('[E2EE setup guard] 옛 setup 잔재 정리 (B-2)');
+      }
+      if (typeof _E2EE_LOCAL_KEY !== 'undefined' && localStorage.getItem(_E2EE_LOCAL_KEY)) {
+        localStorage.removeItem(_E2EE_LOCAL_KEY);
+      }
+    } catch {}
+    if (typeof showE2EEPasswordSetupModal === 'function') {
+      showE2EEPasswordSetupModal({ allowCancel: false, fromAutoGuard: true });
+    } else {
+      console.warn('[E2EE setup guard] showE2EEPasswordSetupModal 미로드');
+    }
+  }
+}
+
 async function maybeShowE2EERecoveryModal() {
   if (!window._e2eePendingRecovery) return;
   // 사용자 명시 2026-05-10: 테스트 계정 (preferences._e2eeOptedOut) — E2EE recovery modal 도 skip.
@@ -32,9 +74,9 @@ async function maybeShowE2EERecoveryModal() {
         <button type="button" onclick="_togglePwView('e2eePassphraseInput', this)" title="보기 / 숨기기" aria-label="비밀번호 보기 토글" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:transparent; border:none; cursor:pointer; padding:6px 8px; color:var(--text-soft); font-size:16px;">👁</button>
       </div>
       <div id="e2eeRecoveryStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px;"></div>
-      <div style="display:flex; gap:8px; margin-top:14px;">
-        <button class="btn-primary" onclick="submitE2EERecovery()" style="flex:1;">복호화하고 시작</button>
-        <button class="btn-secondary" onclick="cancelE2EERecovery()" style="flex:1;">나중에</button>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px;">
+        <button class="btn-primary" onclick="submitE2EERecovery()" style="width:100%;">복호화하고 시작</button>
+        <button class="btn-secondary" onclick="e2eeForgotPasswordReset()" style="width:100%; font-size:12px; opacity:0.85;">🔓 비밀번호 잊음 — 자동 백업에서 복원</button>
       </div>
       <div style="font-size:10.5px; color:#e8a3a3; margin-top:14px; line-height:1.6; padding:8px 10px; background:rgba(232,163,163,0.06); border-left:3px solid rgba(232,163,163,0.4); border-radius:0 6px 6px 0;">
         ⚠️ 비밀번호 분실 시 데이터 <b>영구 복구 불가</b> (회사도 X). 안전한 곳에 보관해줘.

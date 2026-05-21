@@ -279,9 +279,13 @@ async function init() {
 
   // 사용자 요청 2026-04-30 (변호사 검수): 동의는 이메일 로그인 화면에 통합 (모달 X). consentLog 적용됨.
 
-  // 사용자 요청 2026-04-30 (E2EE Stage 2): 새 device 진입 시 password 복원 모달
+  // V4 (사용자 명시 2026-05-21 ultrathink): E2EE 강제 가드 — recovery (encryptedBody 박힘) / setup (평문 사용자) 자동 분기.
+  //   B-1/B-2/B-3/B-4 모두 cover. _e2eeOptedOut (테스트 계정) 만 skip.
   setTimeout(() => {
-    if (typeof maybeShowE2EERecoveryModal === 'function') {
+    if (typeof maybeShowE2EESetupOrRecovery === 'function') {
+      maybeShowE2EESetupOrRecovery().catch(e => console.warn('e2eeSetupOrRecovery:', e));
+    } else if (typeof maybeShowE2EERecoveryModal === 'function') {
+      // fallback (옛 빌드)
       maybeShowE2EERecoveryModal().catch(e => console.warn('e2eeRecovery:', e));
     }
   }, 1500);
