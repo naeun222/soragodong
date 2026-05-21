@@ -59664,9 +59664,32 @@ async function addPearl() {
     createdAt: new Date().toISOString(),
     type: 'pearl'
   };
+  // V4 (사용자 명시 2026-05-22 ultrathink): saveMsg/Ticket/Book/Change 패턴 통일 — storage 즉시 upload.
+  //   기존 addPearl 만 옛 path (state.pearls.push 만) 라 dataURL state 박힘 → 다음 세션 _pearlMigAutoStart 가 옮김 ("옛 진주 옮기는 중" toast).
+  //   _attachPearlPhoto/Video 내부 _canUsePearlStorage false 면 옛 dataURL path 자동 fallback (testerMode/guest/key 없음).
+  //   throw 시 atomic abort (진주 자체 안 만듦, saveMsgAsPearl 패턴 동일).
+  if (photo || videoData) {
+    try {
+      if (typeof showFullscreenLoader === 'function') {
+        showFullscreenLoader(photo ? '사진 업로드 중... 📸' : '동영상 업로드 중... 📹');
+      }
+      if (photo && typeof _attachPearlPhoto === 'function') {
+        await _attachPearlPhoto(newPearl, photo);
+      }
+      if (videoData && typeof _attachPearlVideo === 'function') {
+        await _attachPearlVideo(newPearl, videoData, videoThumb, videoHasAudio, videoAudioMeta);
+      }
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+    } catch (e) {
+      if (typeof hideFullscreenLoader === 'function') hideFullscreenLoader();
+      console.warn('[addPearl] storage upload fail:', e);
+      showToast('업로드 실패 — 다시 시도해줘');
+      return;
+    }
+  }
   state.pearls.push(newPearl);
   saveState();
-  // V4 (사용자 명시 2026-05-22 ultrathink Phase D): eager hero thumb cache.
+  // V4 (사용자 명시 2026-05-22 ultrathink Phase D): eager hero thumb cache — _attachPearl* 가 이미 처리하지만 옛 path fallback 대비 idempotent 호출 유지.
   if (typeof _maybeCacheHeroThumb === 'function') {
     if (photo) { try { await _maybeCacheHeroThumb(newPearl.id, 'photo', photo); } catch(_) {} }
     if (videoThumb) { try { await _maybeCacheHeroThumb(newPearl.id, 'videoThumbnail', videoThumb); } catch(_) {} }
