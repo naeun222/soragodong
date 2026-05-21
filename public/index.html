@@ -11957,6 +11957,18 @@
   .pearl-ticket-row .ticket-card { max-width: 200px; margin: 0 auto; }
   .pearl-book-row .book-card { max-width: 140px; margin: 0 auto; }
 
+  /* V4 (사용자 명시 2026-05-22 ultrathink): timeline 사진/동영상 진주 = ticket 패턴 (grid 카드 그대로) — 꽉 차게.
+     ticket-row 와 동일 가드 (padding + max-width + center). 사진 진주 = 정사각 1/1 → 폭 220 = 220×220.
+     hydratePearlMedia 가 grid 와 timeline 같은 .tile-photo-art 선택자라 hydrate 자동 작동. */
+  .pearl-photo-row { padding: 8px; }
+  .pearl-photo-row .pinterest-tile { max-width: 220px; margin: 0 auto; }
+  .pearl-photo-row .tile-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
   /* 티켓 sub-type 관리 modal */
   .stf-chip.stf-manage { opacity: 0.7; padding: 6px 9px; }
   .stf-chip.stf-manage:hover { opacity: 1; }
@@ -58802,37 +58814,38 @@ function renderLensPearls() {
           </div>
         `;
       } else if (pearlHasMedia(p, 'video')) {
-        // V4 (사용자 명시): 동영상 진주 timeline — 썸네일만 (사진 패턴). 클릭 시 모달에서 재생.
-        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
+        // V4 (사용자 명시 2026-05-22 ultrathink): timeline 사진/동영상 진주 = ticket 패턴 (grid 카드 .pinterest-tile.tile-photo 그대로) — 꽉 차게.
+        //   옛 60px thumb + flex 메타 패턴 폐기. 클릭 시 모달에서 재생.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
-        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
-        // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
-        const thumbImg = pearlImgHtml(p, 'videoThumbnail', { cls: 'pearl-photo-thumb', alt: '' });
+        const thumbImg = pearlImgHtml(p, 'videoThumbnail', { cls: 'tile-photo-art', alt: '' });
         const visual = thumbImg
           ? thumbImg
-          : `<div class="pearl-photo-thumb video-thumb-placeholder">📹</div>`;
+          : `<div class="tile-photo-art video-thumb-placeholder">📹</div>`;
         html += `
-          <div class="pearl-card pearl-photo-card" onclick="openPearl('${p.id}')">
-            ${visual}
-            <div class="pearl-photo-meta">
-              <div class="pearl-card-content">${icon} ${escapeHtml(_vTitle)}</div>
-              ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${escapeHtml(p.note)}</div>` : ''}
+          <div class="pearl-card pearl-photo-row">
+            <div class="pinterest-tile tile-photo" onclick="openPearl('${p.id}')">
+              ${visual}
+              <div class="tile-music-meta">
+                <div class="tile-music-title">${icon} ${escapeHtml(_vTitle)}</div>
+                ${p.note ? `<div class="tile-note">${escapeHtml(p.note)}</div>` : ''}
+              </div>
             </div>
           </div>
         `;
       } else if (pearlHasMedia(p, 'photo')) {
-        // V4-fix: 사진 진주 timeline (작은 thumbnail + 메타)
-        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
+        // V4 (사용자 명시 2026-05-22 ultrathink): timeline 사진 진주 = ticket 패턴 (grid 카드 .pinterest-tile.tile-photo 그대로) — 꽉 차게.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         html += `
-          <div class="pearl-card pearl-photo-card" onclick="openPearl('${p.id}')">
-            ${pearlImgHtml(p, 'photo', { cls: 'pearl-photo-thumb', alt: '' })}
-            <div class="pearl-photo-meta">
-              <div class="pearl-card-content">${icon} ${escapeHtml(p.content || '')}</div>
-              ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${escapeHtml(p.note)}</div>` : ''}
+          <div class="pearl-card pearl-photo-row">
+            <div class="pinterest-tile tile-photo" onclick="openPearl('${p.id}')">
+              ${pearlImgHtml(p, 'photo', { cls: 'tile-photo-art', alt: p.content || '' })}
+              <div class="tile-music-meta">
+                <div class="tile-music-title">${icon} ${escapeHtml(p.content || '')}</div>
+                ${p.note ? `<div class="tile-note">${escapeHtml(p.note)}</div>` : ''}
+              </div>
             </div>
           </div>
         `;
@@ -59455,19 +59468,20 @@ async function addPearl() {
     title: `💎 ${category} — ${content.trim()}`,
     message: '구체적으로 한 줄 (선택). 비우고 OK 가능.',
     placeholder: ph.memo,
-    okLabel: ['음식', '장소', '순간'].includes(category) ? '다음 →' : '보관'
+    okLabel: ['음식', '장소', '순간', '사람'].includes(category) ? '다음 →' : '보관'
   });
   if (note === null) return;
 
   // V4-fix: 음식/장소/순간은 사진 첨부 옵션 (음악 앨범아트 풍 — 정사각 600px)
   // V4: 동영상 옵션 추가 (3초 / 720p / WebCodecs 압축) — 썸네일 사진 패턴 동일.
   // 사용자 명시 2026-05-09: 5초 → 3초로 단축 + 라벨 괄호 표기 제거.
+  // 사용자 명시 2026-05-22 ultrathink: 사람 카테고리도 동일 사진/영상 옵션 (음식/장소/순간 패턴 통일).
   let photo = null;
   let videoData = null;
   let videoThumb = null;
   let videoHasAudio = null;  // 사용자 명시 2026-05-02 ultrathink: 무음 영상 시각 안내용 메타.
   let videoAudioMeta = null;  // 사용자 보고 2026-05-09: audio chunks/codec/sr/ch — 진주 view 모달 + push toast 에 진단 표시.
-  if (['음식', '장소', '순간'].includes(category)) {
+  if (['음식', '장소', '순간', '사람'].includes(category)) {
     const mediaChoice = await showOptionsModal({
       title: '미디어 첨부 (선택)',
       message: '사진/동영상 보탤까? 글만도 OK.',

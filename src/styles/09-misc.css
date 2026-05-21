@@ -11801,6 +11801,18 @@
   .pearl-ticket-row .ticket-card { max-width: 200px; margin: 0 auto; }
   .pearl-book-row .book-card { max-width: 140px; margin: 0 auto; }
 
+  /* V4 (사용자 명시 2026-05-22 ultrathink): timeline 사진/동영상 진주 = ticket 패턴 (grid 카드 그대로) — 꽉 차게.
+     ticket-row 와 동일 가드 (padding + max-width + center). 사진 진주 = 정사각 1/1 → 폭 220 = 220×220.
+     hydratePearlMedia 가 grid 와 timeline 같은 .tile-photo-art 선택자라 hydrate 자동 작동. */
+  .pearl-photo-row { padding: 8px; }
+  .pearl-photo-row .pinterest-tile { max-width: 220px; margin: 0 auto; }
+  .pearl-photo-row .tile-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
   /* 티켓 sub-type 관리 modal */
   .stf-chip.stf-manage { opacity: 0.7; padding: 6px 9px; }
   .stf-chip.stf-manage:hover { opacity: 1; }

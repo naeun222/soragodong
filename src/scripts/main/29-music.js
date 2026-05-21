@@ -599,19 +599,20 @@ async function addPearl() {
     title: `💎 ${category} — ${content.trim()}`,
     message: '구체적으로 한 줄 (선택). 비우고 OK 가능.',
     placeholder: ph.memo,
-    okLabel: ['음식', '장소', '순간'].includes(category) ? '다음 →' : '보관'
+    okLabel: ['음식', '장소', '순간', '사람'].includes(category) ? '다음 →' : '보관'
   });
   if (note === null) return;
 
   // V4-fix: 음식/장소/순간은 사진 첨부 옵션 (음악 앨범아트 풍 — 정사각 600px)
   // V4: 동영상 옵션 추가 (3초 / 720p / WebCodecs 압축) — 썸네일 사진 패턴 동일.
   // 사용자 명시 2026-05-09: 5초 → 3초로 단축 + 라벨 괄호 표기 제거.
+  // 사용자 명시 2026-05-22 ultrathink: 사람 카테고리도 동일 사진/영상 옵션 (음식/장소/순간 패턴 통일).
   let photo = null;
   let videoData = null;
   let videoThumb = null;
   let videoHasAudio = null;  // 사용자 명시 2026-05-02 ultrathink: 무음 영상 시각 안내용 메타.
   let videoAudioMeta = null;  // 사용자 보고 2026-05-09: audio chunks/codec/sr/ch — 진주 view 모달 + push toast 에 진단 표시.
-  if (['음식', '장소', '순간'].includes(category)) {
+  if (['음식', '장소', '순간', '사람'].includes(category)) {
     const mediaChoice = await showOptionsModal({
       title: '미디어 첨부 (선택)',
       message: '사진/동영상 보탤까? 글만도 OK.',

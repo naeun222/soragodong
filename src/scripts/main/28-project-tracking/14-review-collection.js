@@ -465,37 +465,38 @@ function renderLensPearls() {
           </div>
         `;
       } else if (pearlHasMedia(p, 'video')) {
-        // V4 (사용자 명시): 동영상 진주 timeline — 썸네일만 (사진 패턴). 클릭 시 모달에서 재생.
-        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
+        // V4 (사용자 명시 2026-05-22 ultrathink): timeline 사진/동영상 진주 = ticket 패턴 (grid 카드 .pinterest-tile.tile-photo 그대로) — 꽉 차게.
+        //   옛 60px thumb + flex 메타 패턴 폐기. 클릭 시 모달에서 재생.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
-        // 사용자 명시 2026-05-04: 영상 진주 제목 = bare content (이모티콘 prefix 제거).
-        // 사용자 보고 2026-05-10: 카테고리 이모지 prefix 누락 — 사진 진주 패턴 통일.
         const _vTitle = (typeof _stripLeadingEmoji === 'function') ? _stripLeadingEmoji(p.content || '') : (p.content || '');
-        const thumbImg = pearlImgHtml(p, 'videoThumbnail', { cls: 'pearl-photo-thumb', alt: '' });
+        const thumbImg = pearlImgHtml(p, 'videoThumbnail', { cls: 'tile-photo-art', alt: '' });
         const visual = thumbImg
           ? thumbImg
-          : `<div class="pearl-photo-thumb video-thumb-placeholder">📹</div>`;
+          : `<div class="tile-photo-art video-thumb-placeholder">📹</div>`;
         html += `
-          <div class="pearl-card pearl-photo-card" onclick="openPearl('${p.id}')">
-            ${visual}
-            <div class="pearl-photo-meta">
-              <div class="pearl-card-content">${icon} ${escapeHtml(_vTitle)}</div>
-              ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${escapeHtml(p.note)}</div>` : ''}
+          <div class="pearl-card pearl-photo-row">
+            <div class="pinterest-tile tile-photo" onclick="openPearl('${p.id}')">
+              ${visual}
+              <div class="tile-music-meta">
+                <div class="tile-music-title">${icon} ${escapeHtml(_vTitle)}</div>
+                ${p.note ? `<div class="tile-note">${escapeHtml(p.note)}</div>` : ''}
+              </div>
             </div>
           </div>
         `;
       } else if (pearlHasMedia(p, 'photo')) {
-        // V4-fix: 사진 진주 timeline (작은 thumbnail + 메타)
-        // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
+        // V4 (사용자 명시 2026-05-22 ultrathink): timeline 사진 진주 = ticket 패턴 (grid 카드 .pinterest-tile.tile-photo 그대로) — 꽉 차게.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
         html += `
-          <div class="pearl-card pearl-photo-card" onclick="openPearl('${p.id}')">
-            ${pearlImgHtml(p, 'photo', { cls: 'pearl-photo-thumb', alt: '' })}
-            <div class="pearl-photo-meta">
-              <div class="pearl-card-content">${icon} ${escapeHtml(p.content || '')}</div>
-              ${p.note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${escapeHtml(p.note)}</div>` : ''}
+          <div class="pearl-card pearl-photo-row">
+            <div class="pinterest-tile tile-photo" onclick="openPearl('${p.id}')">
+              ${pearlImgHtml(p, 'photo', { cls: 'tile-photo-art', alt: p.content || '' })}
+              <div class="tile-music-meta">
+                <div class="tile-music-title">${icon} ${escapeHtml(p.content || '')}</div>
+                ${p.note ? `<div class="tile-note">${escapeHtml(p.note)}</div>` : ''}
+              </div>
             </div>
           </div>
         `;
