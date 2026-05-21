@@ -11624,23 +11624,6 @@
     height: auto;
     object-fit: contain;
   }
-  /* V4 (사용자 명시 2026-05-22 ultrathink): 일반 사진 진주 (.tile-photo) 도 자연 비율 — Pinterest masonry 스타일.
-     ticket 동일 패턴 (.tile-music-art-wrap aspect-ratio:1 강제 해제) 을 .tile-photo 전체로 확장.
-     exclude: .book-tile (책 표지는 2/3 유지) / music 진주는 .tile-music 이라 영향 X (album art 정사각) /
-              .video-thumb-placeholder (콘텐츠 없는 div) 는 정사각 유지.
-     tile-large 의 4/5 override 도 photo 한정 해제 → 사진 원본 비율 그대로 (정사각 / 세로 김 / 가로 김 자연 mix). */
-  .pinterest-tile.tile-photo:not(.book-tile) .tile-music-art-wrap {
-    aspect-ratio: auto;
-  }
-  .pinterest-tile.tile-photo:not(.book-tile) .tile-photo-art,
-  .pinterest-tile.tile-large.tile-photo:not(.book-tile) .tile-photo-art {
-    aspect-ratio: auto;
-    height: auto;
-    object-fit: contain;
-  }
-  .pinterest-tile.tile-photo:not(.book-tile) .tile-photo-art.video-thumb-placeholder {
-    aspect-ratio: 1 / 1;
-  }
   /* V4 (사용자 명시 2026-05-20 ultrathink): 티켓 grid (Pinterest masonry 만) = 사진만. subtype chip + 하단 meta (title/venue/date) hide.
      클릭 시 모달에서 모든 텍스트 표시. 타임라인 / day modal 은 텍스트 그대로 노출.
      scope: .pearls-pinterest .ticket-tile 한정. */
