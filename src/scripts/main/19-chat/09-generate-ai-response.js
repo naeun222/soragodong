@@ -306,13 +306,13 @@ async function generateAIResponse(modelOverride, opts) {
           display = display.replace(/```json[\s\S]*$/g, '');
           display = display.replace(/```[\s\S]*$/g, ''); // 미완성 fence
           display = display.replace(/\n*\{[\s\S]*$/g, (match) => {
-            if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)/.test(match)) {
+            if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)/.test(match)) {
               return '';
             }
             return match;
           });
           // V3.12.x: orphan JSON 키 (앞에 { 없이 시작) 잡기 — streaming 중 잘렸을 때
-          display = display.replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)"[\s\S]*$/g, '');
+          display = display.replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)"[\s\S]*$/g, '');
           display = display.trim();
           state.chatMessages[state.chatMessages.length - 1].content = display;
           if (_streamFirstChunk) {
@@ -358,7 +358,7 @@ async function generateAIResponse(modelOverride, opts) {
         await processAnalysis(analysisData, state.chatMessages.length - 1);
       } catch (e) { console.error('Analysis parse error:', e); }
     } else {
-      const rawJsonMatch = fullText.match(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|proposal|extracted_tasks|decision_suggested)[\s\S]*\}/);
+      const rawJsonMatch = fullText.match(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|proposal|decision_suggested)[\s\S]*\}/);
       if (rawJsonMatch) {
         try {
           analysisData = JSON.parse(rawJsonMatch[0]);
@@ -370,8 +370,8 @@ async function generateAIResponse(modelOverride, opts) {
     const finalDisplay = fullText
       .replace(/```json[\s\S]*?```/g, '')
       .replace(/```[\s\S]*$/g, '')
-      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}/g, '')
-      .replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)"[\s\S]*$/g, '')
+      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}/g, '')
+      .replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)"[\s\S]*$/g, '')
       .trim();
     state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
 

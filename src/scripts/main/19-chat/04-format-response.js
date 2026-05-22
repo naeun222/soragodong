@@ -1,6 +1,6 @@
 function formatAIResponse(text) {
   let cleaned = text.replace(/```json[\s\S]*?```/g, '').trim();
-  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
   // V4 (v8 묶음 3): [상황] 섹션 출력 시 제거 — 결과 체크 모달용 메타데이터, 화면 노출 X
   cleaned = cleaned.replace(/\[상황\][\s\S]*?(?=\n*\[내가 본 것\]|\n*\[이게 뭐냐면\]|\n*\[이럴 땐 이렇게\]|\n*\[오늘의 제안\]|$)/g, '').trim();
   let formatted = escapeHtml(cleaned);

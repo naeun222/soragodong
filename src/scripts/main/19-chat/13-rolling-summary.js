@@ -31,7 +31,7 @@ async function _maybeBuildRollingSummary(oldMessages, cacheKey) {
     const chatLog = oldMessages.map(m => {
       const role = m.role === 'user' ? '나' : '소라';
       let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
-      content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
       return `${role}: ${content}`;
     }).join('\n\n');
 

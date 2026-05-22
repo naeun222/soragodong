@@ -17,7 +17,7 @@ async function extractChapterCaseAnalysis(messages, opts) {
     const _chatLog = messages.map(m => {
       const role = m.role === 'user' ? '나' : '소라';
       let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
-      content = content.replace(/\{[\s\S]*"(?:new_traits|insight|extracted_tasks)[\s\S]*\}\s*$/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|insight)[\s\S]*\}\s*$/g, '').trim();
       return `${role}: ${content}`;
     }).join('\n\n');
     // 사용자 보고 2026-05-10 (batch 10): max_tokens 동적 — 작은 챕터 비용 ↓.

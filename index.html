@@ -32518,7 +32518,7 @@ function _buildExtractChapterPrompt(messages, isSim) {
   const chatLog = messages.map(m => {
     const role = m.role === 'user' ? '나' : '소라';
     let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
-    content = content.replace(/\{[\s\S]*"(?:new_traits|insight|extracted_tasks)[\s\S]*\}\s*$/g, '').trim();
+    content = content.replace(/\{[\s\S]*"(?:new_traits|insight)[\s\S]*\}\s*$/g, '').trim();
     return `${role}: ${content}`;
   }).join('\n\n');
 
@@ -32865,7 +32865,7 @@ async function extractChapterCaseAnalysis(messages, opts) {
     const _chatLog = messages.map(m => {
       const role = m.role === 'user' ? '나' : '소라';
       let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
-      content = content.replace(/\{[\s\S]*"(?:new_traits|insight|extracted_tasks)[\s\S]*\}\s*$/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|insight)[\s\S]*\}\s*$/g, '').trim();
       return `${role}: ${content}`;
     }).join('\n\n');
     // 사용자 보고 2026-05-10 (batch 10): max_tokens 동적 — 작은 챕터 비용 ↓.
@@ -42073,7 +42073,7 @@ function _chatEmptyDaytimeHelloHtml() {
 
 function formatAIResponse(text) {
   let cleaned = text.replace(/```json[\s\S]*?```/g, '').trim();
-  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+  cleaned = cleaned.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
   // V4 (v8 묶음 3): [상황] 섹션 출력 시 제거 — 결과 체크 모달용 메타데이터, 화면 노출 X
   cleaned = cleaned.replace(/\[상황\][\s\S]*?(?=\n*\[내가 본 것\]|\n*\[이게 뭐냐면\]|\n*\[이럴 땐 이렇게\]|\n*\[오늘의 제안\]|$)/g, '').trim();
   let formatted = escapeHtml(cleaned);
@@ -43419,13 +43419,13 @@ async function generateAIResponse(modelOverride, opts) {
           display = display.replace(/```json[\s\S]*$/g, '');
           display = display.replace(/```[\s\S]*$/g, ''); // 미완성 fence
           display = display.replace(/\n*\{[\s\S]*$/g, (match) => {
-            if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)/.test(match)) {
+            if (/"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)/.test(match)) {
               return '';
             }
             return match;
           });
           // V3.12.x: orphan JSON 키 (앞에 { 없이 시작) 잡기 — streaming 중 잘렸을 때
-          display = display.replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)"[\s\S]*$/g, '');
+          display = display.replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)"[\s\S]*$/g, '');
           display = display.trim();
           state.chatMessages[state.chatMessages.length - 1].content = display;
           if (_streamFirstChunk) {
@@ -43471,7 +43471,7 @@ async function generateAIResponse(modelOverride, opts) {
         await processAnalysis(analysisData, state.chatMessages.length - 1);
       } catch (e) { console.error('Analysis parse error:', e); }
     } else {
-      const rawJsonMatch = fullText.match(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|proposal|extracted_tasks|decision_suggested)[\s\S]*\}/);
+      const rawJsonMatch = fullText.match(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|proposal|decision_suggested)[\s\S]*\}/);
       if (rawJsonMatch) {
         try {
           analysisData = JSON.parse(rawJsonMatch[0]);
@@ -43483,8 +43483,8 @@ async function generateAIResponse(modelOverride, opts) {
     const finalDisplay = fullText
       .replace(/```json[\s\S]*?```/g, '')
       .replace(/```[\s\S]*$/g, '')
-      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}/g, '')
-      .replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)"[\s\S]*$/g, '')
+      .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}/g, '')
+      .replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)"[\s\S]*$/g, '')
       .trim();
     state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
 
@@ -43599,7 +43599,7 @@ async function processAnalysis(analysis, messageIdx) {
   const recentRetry = state._lastRetryAt && (Date.now() - state._lastRetryAt < 3 * 60 * 1000);
 
   // 사용자 요청 2026-04-30: traits/values/patterns/case_formulation_update 처리 → extractChapterCaseAnalysis (endChapter 시점).
-  // 매 메시지 추출 + isUITrigger 가드 + _prevUserIdx 부분 dead code로 제거. insight/proposal/decision_suggested/extracted_tasks 등 메시지 단위는 아래 유지.
+  // 매 메시지 추출 + isUITrigger 가드 + _prevUserIdx 부분 dead code로 제거. insight/proposal/decision_suggested 등 메시지 단위는 아래 유지.
   // === [나 탭 자동 정리] 신규 추가 후 완전 일치 strict dedupe 한 번 더 ===
   // similarText fuzzy로 못 잡힌 케이스 (다른 이름인데 description 완전 일치 등) 정리
   dedupeAllModelExactDuplicates();
@@ -43908,7 +43908,7 @@ async function _maybeBuildRollingSummary(oldMessages, cacheKey) {
     const chatLog = oldMessages.map(m => {
       const role = m.role === 'user' ? '나' : '소라';
       let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
-      content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
       return `${role}: ${content}`;
     }).join('\n\n');
 
@@ -52445,7 +52445,7 @@ function renderChatArchiveModal() {
               const cls = m.role === 'user' ? 'user' : 'assistant';
               let content = m.content || '';
               content = content.replace(/```json[\s\S]*?```/g, '').trim();
-              content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+              content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
               const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
               return `<div class="cac-msg ${cls}">
                 <div class="cac-msg-time">${time}</div>

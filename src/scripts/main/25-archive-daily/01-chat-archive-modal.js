@@ -170,7 +170,7 @@ function renderChatArchiveModal() {
               const cls = m.role === 'user' ? 'user' : 'assistant';
               let content = m.content || '';
               content = content.replace(/```json[\s\S]*?```/g, '').trim();
-              content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_tasks|extracted_schedule|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
+              content = content.replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}\s*$/g, '').trim();
               const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
               return `<div class="cac-msg ${cls}">
                 <div class="cac-msg-time">${time}</div>
