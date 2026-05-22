@@ -1068,30 +1068,52 @@
     background: var(--accent);
   }
 
-  /* V4 사용자 명시 2026-05-23 ultrathink — empty entry chip 말풍선 (사용자 reply 톤, 우측 정렬).
-     누르면 텍스트 자동 send. AI welcome bubble 바로 아래 자연 흐름. */
+  /* V4 사용자 명시 2026-05-23 ultrathink — empty entry chip = 고동이 영역 (좌측, avatar 옆 align).
+     각 모드 고유 색 + 옅은 fill + border = "tap 가능 chip" 톤 (사용자 발화 톤 X). 살짝 작음.
+     누르면 그 텍스트 자동 send → AI 첫 응답 (해당 모드 톤). */
   .ces-chips-inline {
-    display: flex; flex-direction: column; align-items: flex-end;
+    display: flex; flex-direction: column; align-items: flex-start;
     gap: 6px;
-    margin: 4px 0 14px 0;
+    margin: 4px 0 14px 44px;  /* 좌측 avatar 영역 비움 — .msg.assistant padding-left 44 와 align */
   }
   .ces-chip-bubble {
-    background: var(--accent);
-    color: var(--bg);
-    border: none;
-    border-radius: 18px;
-    border-bottom-right-radius: 4px;
-    padding: 11px 16px;
-    font-size: 15px; line-height: 1.5;
+    background: transparent;
+    border: 1px solid;
+    border-radius: 16px;
+    padding: 8px 14px;
+    font-size: 13.5px; line-height: 1.4;
     font-family: inherit;
     font-weight: 500;
     cursor: pointer;
-    max-width: 80%;
+    max-width: 88%;
     text-align: left;
-    transition: opacity 0.15s, transform 0.12s;
+    transition: background 0.15s, transform 0.12s, border-color 0.15s;
   }
-  .ces-chip-bubble:hover { opacity: 0.92; }
   .ces-chip-bubble:active { transform: scale(0.985); }
+  .ces-chip-bubble.mode-daily {
+    background: var(--mode-daily-dim);
+    border-color: var(--mode-daily);
+    color: var(--mode-daily);
+  }
+  .ces-chip-bubble.mode-daily:hover {
+    background: rgba(212,167,106,0.28);
+  }
+  .ces-chip-bubble.mode-inquiry {
+    background: var(--mode-inquiry-dim);
+    border-color: var(--mode-inquiry);
+    color: #c5b0ee;  /* 짙은 보라 dim 배경에 가독성 위해 밝은 라벤더 글자 */
+  }
+  .ces-chip-bubble.mode-inquiry:hover {
+    background: rgba(120,90,180,0.30);
+  }
+  .ces-chip-bubble.mode-vent {
+    background: var(--mode-vent-dim);
+    border-color: var(--mode-vent);
+    color: var(--mode-vent);
+  }
+  .ces-chip-bubble.mode-vent:hover {
+    background: rgba(218,165,32,0.30);
+  }
   /* welcome bubble — .msg.assistant 의 기본 layout 그대로 받음 (avatar + bubble). */
 
   /* (deprecated 2026-05-23) chat-empty-state element 폐기 — empty entry 가 chatMessages 안 통합.
