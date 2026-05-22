@@ -102,11 +102,12 @@
     /* 사용자 명시 2026-05-14: #ffd700 너무 노란색 — 차분한 antique gold 로 조정. */
     --tier-premium: #c9a449;
     --tier-premium-dim: rgba(201, 164, 73, 0.16);
-    /* V4 사용자 명시 2026-05-22 ultrathink: 대화탭 3 모드 색 — 시간대 메타포 (낮/저녁/밤). 마음 = amber (사용자 update). */
-    --mode-daily:   #d4a76a;  /* 따뜻한 베이지/황금 — 낮 */
+    /* V4 사용자 명시 2026-05-22 ultrathink: 대화탭 3 모드 색.
+       사용자 명시 2026-05-23 (재): 일상 = 베이지 → 노랑 (마음 amber 와 시각 분리). */
+    --mode-daily:   #f7d046;  /* 밝은 노랑 — 낮 */
     --mode-inquiry: #785ab4;  /* 차분한 짙은 보라 — 저녁 등불 */
     --mode-vent:    #daa520;  /* amber — 밤 따뜻한 어둠 */
-    --mode-daily-dim:   rgba(212,167,106,0.18);
+    --mode-daily-dim:   rgba(247,208,70,0.18);
     --mode-inquiry-dim: rgba(120,90,180,0.20);
     --mode-vent-dim:    rgba(218,165,32,0.20);
   }
@@ -1105,11 +1106,11 @@
   }
 
   /* 모드별 halo — null state 도 daily halo 로 통일 (default 일상고동).
-     사용자 명시 2026-05-23 (재): daily 베이지 아우라 살짝 더 강하게. */
+     사용자 명시 2026-05-23 (재): daily 색 베이지 → 노랑 (마음 amber 와 분리). */
   .chat-mode-btn.is-mode.mode-daily {
-    background: linear-gradient(135deg, rgba(212,167,106,0.24), rgba(180,140,80,0.12));
-    border-color: rgba(212,167,106,0.60);
-    box-shadow: 0 0 14px rgba(212,167,106,0.42);
+    background: linear-gradient(135deg, rgba(247,208,70,0.24), rgba(220,180,40,0.12));
+    border-color: rgba(247,208,70,0.60);
+    box-shadow: 0 0 14px rgba(247,208,70,0.42);
   }
   .chat-mode-btn.is-mode.mode-inquiry {
     background: linear-gradient(135deg, rgba(120,90,180,0.22), rgba(95,75,160,0.10));
@@ -1261,7 +1262,7 @@
     color: var(--mode-daily);
   }
   .ces-chip-bubble.mode-daily:hover {
-    background: rgba(212,167,106,0.28);
+    background: rgba(247,208,70,0.28);
   }
   .ces-chip-bubble.mode-inquiry {
     background: var(--mode-inquiry-dim);
@@ -42108,7 +42109,7 @@ function _chatEmptyAreaHtml() {
     const chipsHtml = (chatMode == null) ? `<div class="ces-chips-inline">
         <button type="button" class="ces-chip-bubble mode-daily" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
         <button type="button" class="ces-chip-bubble mode-inquiry" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어 도와줘</button>
-        <button type="button" class="ces-chip-bubble mode-vent" onclick="onChatEmptyChip('vent')">마음이 심란해...</button>
+        <button type="button" class="ces-chip-bubble mode-vent" onclick="onChatEmptyChip('vent')">마음이 심란하다</button>
       </div>` : '';
     let evening = '';
     if (_chatIsEveningMode()) {

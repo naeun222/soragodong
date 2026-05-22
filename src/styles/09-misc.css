@@ -942,11 +942,11 @@
   }
 
   /* 모드별 halo — null state 도 daily halo 로 통일 (default 일상고동).
-     사용자 명시 2026-05-23 (재): daily 베이지 아우라 살짝 더 강하게. */
+     사용자 명시 2026-05-23 (재): daily 색 베이지 → 노랑 (마음 amber 와 분리). */
   .chat-mode-btn.is-mode.mode-daily {
-    background: linear-gradient(135deg, rgba(212,167,106,0.24), rgba(180,140,80,0.12));
-    border-color: rgba(212,167,106,0.60);
-    box-shadow: 0 0 14px rgba(212,167,106,0.42);
+    background: linear-gradient(135deg, rgba(247,208,70,0.24), rgba(220,180,40,0.12));
+    border-color: rgba(247,208,70,0.60);
+    box-shadow: 0 0 14px rgba(247,208,70,0.42);
   }
   .chat-mode-btn.is-mode.mode-inquiry {
     background: linear-gradient(135deg, rgba(120,90,180,0.22), rgba(95,75,160,0.10));
@@ -1098,7 +1098,7 @@
     color: var(--mode-daily);
   }
   .ces-chip-bubble.mode-daily:hover {
-    background: rgba(212,167,106,0.28);
+    background: rgba(247,208,70,0.28);
   }
   .ces-chip-bubble.mode-inquiry {
     background: var(--mode-inquiry-dim);

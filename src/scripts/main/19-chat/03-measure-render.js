@@ -263,7 +263,7 @@ function _chatEmptyAreaHtml() {
     const chipsHtml = (chatMode == null) ? `<div class="ces-chips-inline">
         <button type="button" class="ces-chip-bubble mode-daily" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
         <button type="button" class="ces-chip-bubble mode-inquiry" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어 도와줘</button>
-        <button type="button" class="ces-chip-bubble mode-vent" onclick="onChatEmptyChip('vent')">마음이 심란해...</button>
+        <button type="button" class="ces-chip-bubble mode-vent" onclick="onChatEmptyChip('vent')">마음이 심란하다</button>
       </div>` : '';
     let evening = '';
     if (_chatIsEveningMode()) {
