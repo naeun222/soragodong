@@ -238,8 +238,12 @@ function renderChat() {
 function _chatEmptyAreaHtml() {
   try {
     if (window._onbTutorialMode) return '';
+    // V4 사용자 명시 2026-05-23 — 옛 fake AI message ("편하게 말해 보소" bubble) 폐기.
+    //   새 empty entry (screen-chat#chatEmptyState) 가 자리 대체 — 합성 캐릭터 + chip + 모드별 안내.
+    //   체크인 미완료 저녁 = 체크인 floating 카드만 (별개 system, 유지). 체크인 완료 / 낮 = 빈 return.
     const isEvening = _chatIsEveningMode();
-    return isEvening ? _chatEmptyEveningCheckinHtml() : _chatEmptyDaytimeHelloHtml();
+    if (!isEvening) return '';
+    return _chatEmptyEveningCheckinHtml();
   } catch (e) { return ''; }
 }
 
@@ -255,14 +259,8 @@ function _chatEmptyEveningCheckinHtml() {
   const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
   const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
   const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  // 체크인 완료 → 어시 버블로 어떻게 지났는지 가볍게 question (godong 자동 메시지 X — chat send 안 발사, static placeholder).
-  if (checkinDone) {
-    return `
-      <div class="msg assistant">
-        <div class="msg-bubble">편하게 말해 보소. 오늘 하루 어땠는지 궁금하오.</div>
-      </div>
-    `;
-  }
+  // V4 사용자 명시 2026-05-23 — 체크인 완료 fake AI bubble 폐기. 새 empty entry 가 자리 대체.
+  if (checkinDone) return '';
   // 미체크인 + dismiss 안 함 → floating 체크인 카드.
   if (state._chatEmptyCheckinDismissedDayK === todayKVal) return '';
   const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';

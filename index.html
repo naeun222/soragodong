@@ -42017,8 +42017,12 @@ function renderChat() {
 function _chatEmptyAreaHtml() {
   try {
     if (window._onbTutorialMode) return '';
+    // V4 사용자 명시 2026-05-23 — 옛 fake AI message ("편하게 말해 보소" bubble) 폐기.
+    //   새 empty entry (screen-chat#chatEmptyState) 가 자리 대체 — 합성 캐릭터 + chip + 모드별 안내.
+    //   체크인 미완료 저녁 = 체크인 floating 카드만 (별개 system, 유지). 체크인 완료 / 낮 = 빈 return.
     const isEvening = _chatIsEveningMode();
-    return isEvening ? _chatEmptyEveningCheckinHtml() : _chatEmptyDaytimeHelloHtml();
+    if (!isEvening) return '';
+    return _chatEmptyEveningCheckinHtml();
   } catch (e) { return ''; }
 }
 
@@ -42034,14 +42038,8 @@ function _chatEmptyEveningCheckinHtml() {
   const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
   const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
   const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  // 체크인 완료 → 어시 버블로 어떻게 지났는지 가볍게 question (godong 자동 메시지 X — chat send 안 발사, static placeholder).
-  if (checkinDone) {
-    return `
-      <div class="msg assistant">
-        <div class="msg-bubble">편하게 말해 보소. 오늘 하루 어땠는지 궁금하오.</div>
-      </div>
-    `;
-  }
+  // V4 사용자 명시 2026-05-23 — 체크인 완료 fake AI bubble 폐기. 새 empty entry 가 자리 대체.
+  if (checkinDone) return '';
   // 미체크인 + dismiss 안 함 → floating 체크인 카드.
   if (state._chatEmptyCheckinDismissedDayK === todayKVal) return '';
   const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
@@ -44502,13 +44500,14 @@ function updateChatEmptyState() {
     const mode = (state && state.chatMode) || 'daily';
     ta.placeholder = _CHAT_TA_PLACEHOLDERS[mode] || _CHAT_TA_PLACEHOLDERS.daily;
   }
-  // ─── 2. empty state element (chip + 안내) visibility + line text. chat 화면 + chatMessages 비어있을 때만. ───
+  // ─── 2. empty state element (chip + 안내) visibility + line text. chat 화면 + 진짜 메시지 없음. ───
+  // V4 사용자 명시 2026-05-23 — isEmpty 판정은 state.chatMessages.length 기준 (DOM 자식 무관).
+  //   옛 fake AI message / archive-header / 체크인 floating 카드 같은 비-메시지 element 가 들어있어도 empty entry 노출.
   const el = document.getElementById('chatEmptyState');
   if (!el) return;
   const screenChat = document.getElementById('screen-chat');
   const isChatActive = screenChat && screenChat.classList.contains('active');
-  const chatMsgs = document.getElementById('chatMessages');
-  const isEmpty = !!chatMsgs && chatMsgs.children.length === 0;
+  const isEmpty = ((typeof state !== 'undefined' && state && state.chatMessages) || []).length === 0;
   if (!isChatActive || !isEmpty) {
     el.hidden = true;
     const hint = document.getElementById('chatEmptyDiaryHint');

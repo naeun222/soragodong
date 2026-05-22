@@ -215,13 +215,14 @@ function updateChatEmptyState() {
     const mode = (state && state.chatMode) || 'daily';
     ta.placeholder = _CHAT_TA_PLACEHOLDERS[mode] || _CHAT_TA_PLACEHOLDERS.daily;
   }
-  // ─── 2. empty state element (chip + 안내) visibility + line text. chat 화면 + chatMessages 비어있을 때만. ───
+  // ─── 2. empty state element (chip + 안내) visibility + line text. chat 화면 + 진짜 메시지 없음. ───
+  // V4 사용자 명시 2026-05-23 — isEmpty 판정은 state.chatMessages.length 기준 (DOM 자식 무관).
+  //   옛 fake AI message / archive-header / 체크인 floating 카드 같은 비-메시지 element 가 들어있어도 empty entry 노출.
   const el = document.getElementById('chatEmptyState');
   if (!el) return;
   const screenChat = document.getElementById('screen-chat');
   const isChatActive = screenChat && screenChat.classList.contains('active');
-  const chatMsgs = document.getElementById('chatMessages');
-  const isEmpty = !!chatMsgs && chatMsgs.children.length === 0;
+  const isEmpty = ((typeof state !== 'undefined' && state && state.chatMessages) || []).length === 0;
   if (!isChatActive || !isEmpty) {
     el.hidden = true;
     const hint = document.getElementById('chatEmptyDiaryHint');
