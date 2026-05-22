@@ -1060,53 +1060,16 @@
     background: var(--accent);
   }
 
-  /* V4 사용자 명시 2026-05-23 ultrathink — empty entry chip = 고동이 영역 (좌측, avatar 옆 align).
-     각 모드 고유 색 + 옅은 fill + border = "tap 가능 chip" 톤 (사용자 발화 톤 X). 살짝 작음.
-     누르면 그 텍스트 자동 send → AI 첫 응답 (해당 모드 톤). */
-  .ces-chips-inline {
-    display: flex; flex-direction: column; align-items: flex-end;
-    gap: 6px;
-    margin: 4px 0 14px 0;  /* V4 사용자 명시 2026-05-23 — chip = 사용자 쪽 (우측 정렬). avatar 영역 offset 제거. */
+  /* V4 사용자 명시 2026-05-23 (재) — welcome 바로 밑 한 줄. 모드 시트 진입점 안내 (avatar tap). */
+  .ces-avatar-hint-static {
+    margin: -4px 0 10px 44px;
+    color: var(--text-soft);
+    font-size: 11.5px;
+    line-height: 1.4;
+    padding: 0 4px;
+    max-width: calc(100% - 44px);
+    opacity: 0.75;
   }
-  .ces-chip-bubble {
-    background: transparent;
-    border: 1px solid;
-    border-radius: 16px;
-    padding: 8px 14px;
-    font-size: 13.5px; line-height: 1.4;
-    font-family: inherit;
-    font-weight: 500;
-    cursor: pointer;
-    max-width: 88%;
-    text-align: left;
-    transition: background 0.15s, transform 0.12s, border-color 0.15s;
-  }
-  .ces-chip-bubble:active { transform: scale(0.985); }
-  .ces-chip-bubble.mode-daily {
-    background: var(--mode-daily-dim);
-    border-color: var(--mode-daily);
-    color: var(--mode-daily);
-  }
-  .ces-chip-bubble.mode-daily:hover {
-    background: rgba(244,183,141,0.28);
-  }
-  .ces-chip-bubble.mode-inquiry {
-    background: var(--mode-inquiry-dim);
-    border-color: var(--mode-inquiry);
-    color: #c5b0ee;  /* 짙은 보라 dim 배경에 가독성 위해 밝은 라벤더 글자 */
-  }
-  .ces-chip-bubble.mode-inquiry:hover {
-    background: rgba(120,90,180,0.30);
-  }
-  .ces-chip-bubble.mode-vent {
-    background: var(--mode-vent-dim);
-    border-color: var(--mode-vent);
-    color: var(--mode-vent);
-  }
-  .ces-chip-bubble.mode-vent:hover {
-    background: rgba(218,165,32,0.30);
-  }
-  /* welcome bubble — .msg.assistant 의 기본 layout 그대로 받음 (avatar + bubble). */
 
   /* V4 사용자 명시 2026-05-23 (재) — ⓘ 일기 안내 = static 한 줄 (daily 모드만). 토글 X. */
   .ces-diary-info-static {
@@ -1118,8 +1081,9 @@
     max-width: calc(100% - 44px);
   }
 
-  /* V4 cleanup 2026-05-23 — 옛 .chat-empty-state element + ces-lines / ces-line-* / ces-diary-info button (옛 톤) / ces-diary-hint / ces-chips / ces-chip 폐기.
-     empty entry 가 chatMessages 안 통합 (renderChat 의 _chatEmptyAreaHtml). 새 CSS = ces-chips-inline / ces-chip-bubble / ces-diary-info-static / ces-welcome 만. */
+  /* V4 cleanup 2026-05-23 (재) — chip 3개 (ces-chips-inline / ces-chip-bubble + mode-daily/inquiry/vent) 폐기. 손이 안 가서.
+     모드 선택은 헤더 + 아바타 시트로 일원화. 옛 .chat-empty-state / ces-lines / ces-line-* / ces-diary-info 버튼 / ces-diary-hint / ces-chips / ces-chip 폐기.
+     empty entry 가 chatMessages 안 통합 (renderChat 의 _chatEmptyAreaHtml). 새 CSS = ces-avatar-hint-static / ces-diary-info-static / ces-welcome 만. */
   /* V3.13.x: + 메뉴 버튼 (일기 템플릿/대화 마무리 통합) */
   .chat-plus-btn {
     width: 32px; height: 32px; border-radius: 50%;

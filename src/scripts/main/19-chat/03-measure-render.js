@@ -251,17 +251,13 @@ function _chatEmptyAreaHtml() {
     // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper 사용. sendChat 시점에 같은 텍스트가 chatMessages 에 박힘 (AI 첫 발화 인식).
     const welcomeText = (typeof _chatWelcomeText === 'function') ? _chatWelcomeText(chatMode || 'daily') : '편하게 말해 보소.';
     const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${welcomeText}</div></div>`;
-    // ⓘ 일기 안내 — daily 모드만 ('그냥 재밌게 얘기하고 싶어' 누른 후). null 상태 = 미선택, 안 노출.
+    // V4 사용자 명시 2026-05-23 — welcome 바로 밑 한 줄. 모드 시트 진입점 안내 (avatar tap).
+    const avatarHintHtml = `<div class="ces-avatar-hint-static">고동 프로필을 눌러보세요</div>`;
+    // ⓘ 일기 안내 — daily 모드만 (모드 시트에서 daily 선택 후). null 상태 = 미선택, 안 노출.
     const showDiary = (chatMode === 'daily');
     const diaryHtml = showDiary ? `<div class="ces-diary-info-static">ⓘ '일기:' 로 쓰면 원본으로 저장돼</div>` : '';
-    // chip 3 — null 만.
-    const chipsHtml = (chatMode == null) ? `<div class="ces-chips-inline">
-        <button type="button" class="ces-chip-bubble mode-daily" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
-        <button type="button" class="ces-chip-bubble mode-inquiry" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어 도와줘</button>
-        <button type="button" class="ces-chip-bubble mode-vent" onclick="onChatEmptyChip('vent')">마음이 심란하다</button>
-      </div>` : '';
-    // V4 사용자 명시 2026-05-23 — 저녁 체크인 카드 자체 폐기 (대화탭 체크인 띄우지 않음).
-    return welcomeBubble + diaryHtml + chipsHtml;
+    // V4 cleanup 2026-05-23 (재) — chip 3개 (얘기/물어/털어) 폐기. 손이 안 가서. 모드 선택은 헤더 + 아바타 시트로 일원화.
+    return welcomeBubble + avatarHintHtml + diaryHtml;
   } catch (e) { return ''; }
 }
 

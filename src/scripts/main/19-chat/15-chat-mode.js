@@ -211,13 +211,7 @@ function _chatWelcomeText(mode) {
   return _CHAT_WELCOME_TEXTS[mode] || _CHAT_WELCOME_TEXTS.daily;
 }
 
-// V4 사용자 명시 2026-05-23 ultrathink — chip 누르면 모드 선택만 (자동 send X).
-//   selectChatMode 안 chatMessages 비어있으면 renderChat → empty entry 가 새 모드별 welcome 으로 swap.
-function onChatEmptyChip(mode) {
-  if (!mode || (mode !== 'daily' && mode !== 'inquiry' && mode !== 'vent')) return;
-  selectChatMode(mode);
-}
-
+// V4 cleanup 2026-05-23 (재) — onChatEmptyChip 폐기 (chip 3개 자체 제거).
 // V4 cleanup 2026-05-23 — toggleChatEmptyDiaryInfo 폐기 (ⓘ 일기 안내 = static div 로 변경).
 
 function toggleChatModeMemory() {
