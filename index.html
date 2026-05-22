@@ -41926,7 +41926,7 @@ function _chatEmptyAreaHtml() {
     const welcomeText = (typeof _chatWelcomeText === 'function') ? _chatWelcomeText(chatMode || 'daily') : '편하게 말해 보소.';
     const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${welcomeText}</div></div>`;
     // V4 사용자 명시 2026-05-23 — welcome 바로 밑 한 줄. 모드 시트 진입점 안내 (avatar tap).
-    const avatarHintHtml = `<div class="ces-avatar-hint-static">고동 프로필을 눌러보세요</div>`;
+    const avatarHintHtml = `<div class="ces-avatar-hint-static">고동의 프로필을 눌러보세요!</div>`;
     // ⓘ 일기 안내 — daily 모드만 (모드 시트에서 daily 선택 후). null 상태 = 미선택, 안 노출.
     const showDiary = (chatMode === 'daily');
     const diaryHtml = showDiary ? `<div class="ces-diary-info-static">ⓘ '일기:' 로 쓰면 원본으로 저장돼</div>` : '';
