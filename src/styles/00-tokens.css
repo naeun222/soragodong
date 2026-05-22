@@ -33,10 +33,10 @@
     --tier-premium-dim: rgba(201, 164, 73, 0.16);
     /* V4 사용자 명시 2026-05-22 ultrathink: 대화탭 3 모드 색.
        사용자 명시 2026-05-23 (재): 일상 = 베이지 → 노랑 (마음 amber 와 시각 분리). */
-    --mode-daily:   #f7d046;  /* 밝은 노랑 — 낮 */
+    --mode-daily:   #f4b78d;  /* 살구색 — 낮 (vent amber 와 시각 분리) */
     --mode-inquiry: #785ab4;  /* 차분한 짙은 보라 — 저녁 등불 */
     --mode-vent:    #daa520;  /* amber — 밤 따뜻한 어둠 */
-    --mode-daily-dim:   rgba(247,208,70,0.18);
+    --mode-daily-dim:   rgba(244,183,141,0.18);
     --mode-inquiry-dim: rgba(120,90,180,0.20);
     --mode-vent-dim:    rgba(218,165,32,0.20);
   }

@@ -709,12 +709,17 @@
   .msg.assistant .msg-avatar {
     position: absolute;
     left: -10px; top: 0;
-    width: 36px; height: 45px;  /* 4:5 비율 — 모자 viewBox 위 25% 튀어나옴 */
+    width: 36px; height: 45px;  /* 4:5 비율 — 모자 viewBox 위 25% 튀어나옴 (모자 폐기 후에도 비율 유지) */
     overflow: visible;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.15s;
   }
+  .msg.assistant .msg-avatar:hover { transform: scale(1.06); }
+  .msg.assistant .msg-avatar:active { transform: scale(0.96); }
   .msg.assistant .msg-avatar .char-layer { position: absolute; display: block; }
-  .msg.assistant .msg-avatar .char-layer.aura { left: 0; top: 9px; width: 36px; height: 36px; z-index: 0; opacity: 0.9; }
+  /* aura = base 외측 살짝 큰 영역 — base 가장자리 너머로 글로우 spill (단 '깨달음으로' 안 가리게 작게). */
+  .msg.assistant .msg-avatar .char-layer.aura { left: -3px; top: 6px; width: 42px; height: 42px; z-index: 0; opacity: 0.85; }
   .msg.assistant .msg-avatar .char-layer.aura.aura-inquiry { filter: hue-rotate(225deg) saturate(0.85); }  /* amber → 보라 변환 */
   .msg.assistant .msg-avatar .char-layer.base { left: 0; top: 9px; width: 36px; height: 36px; z-index: 1; }
   .msg.assistant .msg-avatar .char-layer img  { width: 100%; height: 100%; display: block; }
@@ -944,9 +949,9 @@
   /* 모드별 halo — null state 도 daily halo 로 통일 (default 일상고동).
      사용자 명시 2026-05-23 (재): daily 색 베이지 → 노랑 (마음 amber 와 분리). */
   .chat-mode-btn.is-mode.mode-daily {
-    background: linear-gradient(135deg, rgba(247,208,70,0.24), rgba(220,180,40,0.12));
-    border-color: rgba(247,208,70,0.60);
-    box-shadow: 0 0 14px rgba(247,208,70,0.42);
+    background: linear-gradient(135deg, rgba(244,183,141,0.24), rgba(220,160,120,0.12));
+    border-color: rgba(244,183,141,0.60);
+    box-shadow: 0 0 14px rgba(244,183,141,0.42);
   }
   .chat-mode-btn.is-mode.mode-inquiry {
     background: linear-gradient(135deg, rgba(120,90,180,0.22), rgba(95,75,160,0.10));
@@ -1098,7 +1103,7 @@
     color: var(--mode-daily);
   }
   .ces-chip-bubble.mode-daily:hover {
-    background: rgba(247,208,70,0.28);
+    background: rgba(244,183,141,0.28);
   }
   .ces-chip-bubble.mode-inquiry {
     background: var(--mode-inquiry-dim);
@@ -1118,32 +1123,29 @@
   }
   /* welcome bubble — .msg.assistant 의 기본 layout 그대로 받음 (avatar + bubble). */
 
-  /* V4 사용자 명시 2026-05-23 ultrathink — ⓘ 일기 안내 (null/daily 모드만). */
+  /* V4 사용자 명시 2026-05-23 ultrathink — ⓘ 일기 안내 (daily 모드만). 단일 button text swap. */
   .ces-diary-info {
-    margin: -6px 0 12px 44px;
+    margin: -4px 0 12px 44px;
     background: transparent;
     border: none;
     color: var(--text-soft);
     font-size: 11.5px;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 8px;
+    padding: 5px 10px;
+    border-radius: 10px;
     transition: color 0.15s, background 0.15s;
     display: inline-block;
+    white-space: nowrap;
+    line-height: 1.4;
+    font-family: inherit;
   }
   .ces-diary-info:hover { color: var(--text); background: var(--surface2); }
-  .ces-diary-hint {
-    margin: 4px 0 12px 44px;
-    font-size: 11.5px;
-    color: var(--text-soft);
-    padding: 6px 12px;
+  .ces-diary-info.expanded {
     background: var(--surface2);
-    border-radius: 10px;
-    max-width: 80%;
-    line-height: 1.5;
-    animation: cesHintFade 180ms ease-out;
+    color: var(--text);
+    white-space: normal;  /* 펼친 hint 텍스트 = 자연 wrap */
+    max-width: calc(100% - 44px);
   }
-  .ces-diary-hint[hidden] { display: none; }
 
   /* (deprecated 2026-05-23) chat-empty-state element 폐기 — empty entry 가 chatMessages 안 통합.
      CSS 는 dead. 다음 cleanup PR 에서 제거. */

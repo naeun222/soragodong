@@ -205,11 +205,14 @@ function onChatEmptyChip(mode) {
   selectChatMode(mode);
 }
 
-// ⓘ 일기 안내 토글 — 일상/null 모드만 노출.
+// V4 사용자 명시 2026-05-23 (재) — ⓘ 일기 안내 토글 = 단일 button text swap. 한 줄 처리 (자리 부족 줄바꿈 fix).
 function toggleChatEmptyDiaryInfo() {
-  const hint = document.getElementById('chatEmptyDiaryHint');
-  if (!hint) return;
-  hint.hidden = !hint.hidden;
+  const btn = document.getElementById('chatEmptyDiaryInfo');
+  if (!btn) return;
+  const expanded = btn.classList.toggle('expanded');
+  btn.textContent = expanded
+    ? '일기: 로 쓰면 원본으로 저장돼  ×'
+    : 'ⓘ 일기 안내';
 }
 
 function toggleChatModeMemory() {

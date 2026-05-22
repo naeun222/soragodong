@@ -104,10 +104,10 @@
     --tier-premium-dim: rgba(201, 164, 73, 0.16);
     /* V4 사용자 명시 2026-05-22 ultrathink: 대화탭 3 모드 색.
        사용자 명시 2026-05-23 (재): 일상 = 베이지 → 노랑 (마음 amber 와 시각 분리). */
-    --mode-daily:   #f7d046;  /* 밝은 노랑 — 낮 */
+    --mode-daily:   #f4b78d;  /* 살구색 — 낮 (vent amber 와 시각 분리) */
     --mode-inquiry: #785ab4;  /* 차분한 짙은 보라 — 저녁 등불 */
     --mode-vent:    #daa520;  /* amber — 밤 따뜻한 어둠 */
-    --mode-daily-dim:   rgba(247,208,70,0.18);
+    --mode-daily-dim:   rgba(244,183,141,0.18);
     --mode-inquiry-dim: rgba(120,90,180,0.20);
     --mode-vent-dim:    rgba(218,165,32,0.20);
   }
@@ -873,12 +873,17 @@
   .msg.assistant .msg-avatar {
     position: absolute;
     left: -10px; top: 0;
-    width: 36px; height: 45px;  /* 4:5 비율 — 모자 viewBox 위 25% 튀어나옴 */
+    width: 36px; height: 45px;  /* 4:5 비율 — 모자 viewBox 위 25% 튀어나옴 (모자 폐기 후에도 비율 유지) */
     overflow: visible;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.15s;
   }
+  .msg.assistant .msg-avatar:hover { transform: scale(1.06); }
+  .msg.assistant .msg-avatar:active { transform: scale(0.96); }
   .msg.assistant .msg-avatar .char-layer { position: absolute; display: block; }
-  .msg.assistant .msg-avatar .char-layer.aura { left: 0; top: 9px; width: 36px; height: 36px; z-index: 0; opacity: 0.9; }
+  /* aura = base 외측 살짝 큰 영역 — base 가장자리 너머로 글로우 spill (단 '깨달음으로' 안 가리게 작게). */
+  .msg.assistant .msg-avatar .char-layer.aura { left: -3px; top: 6px; width: 42px; height: 42px; z-index: 0; opacity: 0.85; }
   .msg.assistant .msg-avatar .char-layer.aura.aura-inquiry { filter: hue-rotate(225deg) saturate(0.85); }  /* amber → 보라 변환 */
   .msg.assistant .msg-avatar .char-layer.base { left: 0; top: 9px; width: 36px; height: 36px; z-index: 1; }
   .msg.assistant .msg-avatar .char-layer img  { width: 100%; height: 100%; display: block; }
@@ -1108,9 +1113,9 @@
   /* 모드별 halo — null state 도 daily halo 로 통일 (default 일상고동).
      사용자 명시 2026-05-23 (재): daily 색 베이지 → 노랑 (마음 amber 와 분리). */
   .chat-mode-btn.is-mode.mode-daily {
-    background: linear-gradient(135deg, rgba(247,208,70,0.24), rgba(220,180,40,0.12));
-    border-color: rgba(247,208,70,0.60);
-    box-shadow: 0 0 14px rgba(247,208,70,0.42);
+    background: linear-gradient(135deg, rgba(244,183,141,0.24), rgba(220,160,120,0.12));
+    border-color: rgba(244,183,141,0.60);
+    box-shadow: 0 0 14px rgba(244,183,141,0.42);
   }
   .chat-mode-btn.is-mode.mode-inquiry {
     background: linear-gradient(135deg, rgba(120,90,180,0.22), rgba(95,75,160,0.10));
@@ -1262,7 +1267,7 @@
     color: var(--mode-daily);
   }
   .ces-chip-bubble.mode-daily:hover {
-    background: rgba(247,208,70,0.28);
+    background: rgba(244,183,141,0.28);
   }
   .ces-chip-bubble.mode-inquiry {
     background: var(--mode-inquiry-dim);
@@ -1282,32 +1287,29 @@
   }
   /* welcome bubble — .msg.assistant 의 기본 layout 그대로 받음 (avatar + bubble). */
 
-  /* V4 사용자 명시 2026-05-23 ultrathink — ⓘ 일기 안내 (null/daily 모드만). */
+  /* V4 사용자 명시 2026-05-23 ultrathink — ⓘ 일기 안내 (daily 모드만). 단일 button text swap. */
   .ces-diary-info {
-    margin: -6px 0 12px 44px;
+    margin: -4px 0 12px 44px;
     background: transparent;
     border: none;
     color: var(--text-soft);
     font-size: 11.5px;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 8px;
+    padding: 5px 10px;
+    border-radius: 10px;
     transition: color 0.15s, background 0.15s;
     display: inline-block;
+    white-space: nowrap;
+    line-height: 1.4;
+    font-family: inherit;
   }
   .ces-diary-info:hover { color: var(--text); background: var(--surface2); }
-  .ces-diary-hint {
-    margin: 4px 0 12px 44px;
-    font-size: 11.5px;
-    color: var(--text-soft);
-    padding: 6px 12px;
+  .ces-diary-info.expanded {
     background: var(--surface2);
-    border-radius: 10px;
-    max-width: 80%;
-    line-height: 1.5;
-    animation: cesHintFade 180ms ease-out;
+    color: var(--text);
+    white-space: normal;  /* 펼친 hint 텍스트 = 자연 wrap */
+    max-width: calc(100% - 44px);
   }
-  .ces-diary-hint[hidden] { display: none; }
 
   /* (deprecated 2026-05-23) chat-empty-state element 폐기 — empty entry 가 chatMessages 안 통합.
      CSS 는 dead. 다음 cleanup PR 에서 제거. */
@@ -41806,7 +41808,7 @@ function _renderChatMessageHTML(m, i) {
     // V4 사용자 명시 2026-05-23 — AI 메시지 왼쪽에 합성 캐릭터 아바타 (평온 표정 static, 모드별 모자/아우라, 안경 X).
     //   error 메시지엔 아바타 X (오류 시각을 친구 표정으로 표현 부자연).
     const avatarHtml = (m.role === 'assistant' && !m.error && typeof composedCharacterHtml === 'function')
-      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: (typeof state !== 'undefined' && state && state.chatMode) || null, useGlasses: false })}</div>`
+      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: (typeof state !== 'undefined' && state && state.chatMode) || null, useGlasses: false })}</div>`
       : '';
     return chapterDivider + `<div class="msg ${msgClass}">${avatarHtml}${bubble}${pearlSuggestChip}${proposalBtns}${decisionCard}${vaultCard}${actions}${resurfaceChip}</div>`;
 }
@@ -42090,8 +42092,9 @@ function _chatEmptyAreaHtml() {
     //   3. chip 3 (말풍선 형태, 좌측 정렬, 모드별 고유 색) — chatMode null 일 때만 노출. 누르면 selectChatMode 만 (자동 send X).
     //   4. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
     const chatMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
+    // V4 사용자 명시 2026-05-23 (재) — 아바타 click → 시트 open (= 헤더 토글과 동일 동작, 둘 다 entry).
     const avatarHtml = (typeof composedCharacterHtml === 'function')
-      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: chatMode, useGlasses: false })}</div>`
+      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false })}</div>`
       : '';
     // 모드별 2줄 안내 — null = daily 와 동일.
     const _CES_LINES = {
@@ -42101,10 +42104,9 @@ function _chatEmptyAreaHtml() {
     };
     const lines = _CES_LINES[chatMode] || _CES_LINES.daily;
     const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${lines.l1}<br>${lines.l2}</div></div>`;
-    // ⓘ 일기 안내 — null 또는 daily 만.
-    const showDiary = (chatMode == null || chatMode === 'daily');
-    const diaryHtml = showDiary ? `<button type="button" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내">ⓘ 일기 안내</button>
-        <div class="ces-diary-hint" id="chatEmptyDiaryHint" hidden>일기: 로 쓰면 원본으로 저장돼</div>` : '';
+    // ⓘ 일기 안내 — daily 모드만 ('그냥 재밌게 얘기하고 싶어' 누른 후). null 상태 = 미선택, 안 노출.
+    const showDiary = (chatMode === 'daily');
+    const diaryHtml = showDiary ? `<button type="button" id="chatEmptyDiaryInfo" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내">ⓘ 일기 안내</button>` : '';
     // chip 3 — null 만.
     const chipsHtml = (chatMode == null) ? `<div class="ces-chips-inline">
         <button type="button" class="ces-chip-bubble mode-daily" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
@@ -42981,9 +42983,9 @@ function onMainHeaderToggleClick() {
   }
   const isChat = activeScreen && (activeScreen.id === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
   if (!isChat) return;  // 다른 탭 = brand only no-op
-  // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 = 3 모드 시트 open (옛 즉시 useRag toggle 폐기).
-  //   메모리 토글은 시트 안에 통합. 모드 카드 + 메모리 토글 한 자리에서.
-  if (typeof onChatModeHeaderClick === 'function') onChatModeHeaderClick();
+  // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 = 3 모드 시트 open. 메모리 토글은 시트 안 (Plus/Premium 만).
+  //   사용자 명시 2026-05-23 (재정정): 헤더 토글 + 아바타 둘 다 같은 동작 (시트 open).
+  onChatModeHeaderClick();
 }
 
 // V4 (사용자 명시 2026-05-13): 메인 헤더 토글 visual — 화면/Plan/RAG 상태 따라 분기.
@@ -42996,8 +42998,8 @@ function updateMainHeaderBtnVisual() {
   const isChat = activeScreen && (screenId === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
   const isReflection = screenId === 'screen-reflection';
   const isMagicHelp = screenId === 'screen-magic-help';
-  // V4 사용자 명시 2026-05-23 — chat 분기의 ragEligible 가드 제거 (모든 사용자 모드 시각).
-  //   안경/메모리 시각 가드는 updateModeHeaderVisual() / openChatModeSheet() 안에서 직접 _isChatRagEligible().
+  // V4 사용자 명시 2026-05-23 ultrathink (재정정) — 헤더 토글 + 아바타 둘 다 모드 시트 entry.
+  //   메모리 toggle = 시트 안 (Plus/Premium 만, _isChatRagEligible 가드).
 
   // 숙고/마법 = per-room useOpus 조회
   let perRoomUseOpus = false;
@@ -43021,8 +43023,7 @@ function updateMainHeaderBtnVisual() {
         ? '🦉 Opus — 누르면 Sonnet'
         : '🪶 Sonnet — 누르면 Opus (Premium 전용)');
     } else if (isChat) {
-      // V4 사용자 명시 2026-05-23 — 대화탭 모든 사용자 = 3 모드 시스템 합성 캐릭터.
-      //   updateModeHeaderVisual 안에서 안경 (메모리) 가드 — Plus/Premium 만 안경 시각.
+      // V4 사용자 명시 2026-05-23 ultrathink (재정정) — 헤더 토글 + 아바타 둘 다 시트 entry. 옛 RAG 직접 toggle 폐기.
       if (typeof updateModeHeaderVisual === 'function') updateModeHeaderVisual(btn);
     } else {
       btn.classList.add('brand-only');
@@ -44524,11 +44525,14 @@ function onChatEmptyChip(mode) {
   selectChatMode(mode);
 }
 
-// ⓘ 일기 안내 토글 — 일상/null 모드만 노출.
+// V4 사용자 명시 2026-05-23 (재) — ⓘ 일기 안내 토글 = 단일 button text swap. 한 줄 처리 (자리 부족 줄바꿈 fix).
 function toggleChatEmptyDiaryInfo() {
-  const hint = document.getElementById('chatEmptyDiaryHint');
-  if (!hint) return;
-  hint.hidden = !hint.hidden;
+  const btn = document.getElementById('chatEmptyDiaryInfo');
+  if (!btn) return;
+  const expanded = btn.classList.toggle('expanded');
+  btn.textContent = expanded
+    ? '일기: 로 쓰면 원본으로 저장돼  ×'
+    : 'ⓘ 일기 안내';
 }
 
 function toggleChatModeMemory() {

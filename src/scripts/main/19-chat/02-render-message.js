@@ -140,7 +140,7 @@ function _renderChatMessageHTML(m, i) {
     // V4 사용자 명시 2026-05-23 — AI 메시지 왼쪽에 합성 캐릭터 아바타 (평온 표정 static, 모드별 모자/아우라, 안경 X).
     //   error 메시지엔 아바타 X (오류 시각을 친구 표정으로 표현 부자연).
     const avatarHtml = (m.role === 'assistant' && !m.error && typeof composedCharacterHtml === 'function')
-      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: (typeof state !== 'undefined' && state && state.chatMode) || null, useGlasses: false })}</div>`
+      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: (typeof state !== 'undefined' && state && state.chatMode) || null, useGlasses: false })}</div>`
       : '';
     return chapterDivider + `<div class="msg ${msgClass}">${avatarHtml}${bubble}${pearlSuggestChip}${proposalBtns}${decisionCard}${vaultCard}${actions}${resurfaceChip}</div>`;
 }

@@ -170,9 +170,9 @@ function onMainHeaderToggleClick() {
   }
   const isChat = activeScreen && (activeScreen.id === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
   if (!isChat) return;  // 다른 탭 = brand only no-op
-  // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 = 3 모드 시트 open (옛 즉시 useRag toggle 폐기).
-  //   메모리 토글은 시트 안에 통합. 모드 카드 + 메모리 토글 한 자리에서.
-  if (typeof onChatModeHeaderClick === 'function') onChatModeHeaderClick();
+  // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 = 3 모드 시트 open. 메모리 토글은 시트 안 (Plus/Premium 만).
+  //   사용자 명시 2026-05-23 (재정정): 헤더 토글 + 아바타 둘 다 같은 동작 (시트 open).
+  onChatModeHeaderClick();
 }
 
 // V4 (사용자 명시 2026-05-13): 메인 헤더 토글 visual — 화면/Plan/RAG 상태 따라 분기.
@@ -185,8 +185,8 @@ function updateMainHeaderBtnVisual() {
   const isChat = activeScreen && (screenId === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
   const isReflection = screenId === 'screen-reflection';
   const isMagicHelp = screenId === 'screen-magic-help';
-  // V4 사용자 명시 2026-05-23 — chat 분기의 ragEligible 가드 제거 (모든 사용자 모드 시각).
-  //   안경/메모리 시각 가드는 updateModeHeaderVisual() / openChatModeSheet() 안에서 직접 _isChatRagEligible().
+  // V4 사용자 명시 2026-05-23 ultrathink (재정정) — 헤더 토글 + 아바타 둘 다 모드 시트 entry.
+  //   메모리 toggle = 시트 안 (Plus/Premium 만, _isChatRagEligible 가드).
 
   // 숙고/마법 = per-room useOpus 조회
   let perRoomUseOpus = false;
@@ -210,8 +210,7 @@ function updateMainHeaderBtnVisual() {
         ? '🦉 Opus — 누르면 Sonnet'
         : '🪶 Sonnet — 누르면 Opus (Premium 전용)');
     } else if (isChat) {
-      // V4 사용자 명시 2026-05-23 — 대화탭 모든 사용자 = 3 모드 시스템 합성 캐릭터.
-      //   updateModeHeaderVisual 안에서 안경 (메모리) 가드 — Plus/Premium 만 안경 시각.
+      // V4 사용자 명시 2026-05-23 ultrathink (재정정) — 헤더 토글 + 아바타 둘 다 시트 entry. 옛 RAG 직접 toggle 폐기.
       if (typeof updateModeHeaderVisual === 'function') updateModeHeaderVisual(btn);
     } else {
       btn.classList.add('brand-only');

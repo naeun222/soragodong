@@ -244,8 +244,9 @@ function _chatEmptyAreaHtml() {
     //   3. chip 3 (말풍선 형태, 좌측 정렬, 모드별 고유 색) — chatMode null 일 때만 노출. 누르면 selectChatMode 만 (자동 send X).
     //   4. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
     const chatMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
+    // V4 사용자 명시 2026-05-23 (재) — 아바타 click → 시트 open (= 헤더 토글과 동일 동작, 둘 다 entry).
     const avatarHtml = (typeof composedCharacterHtml === 'function')
-      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: chatMode, useGlasses: false })}</div>`
+      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false })}</div>`
       : '';
     // 모드별 2줄 안내 — null = daily 와 동일.
     const _CES_LINES = {
@@ -255,10 +256,9 @@ function _chatEmptyAreaHtml() {
     };
     const lines = _CES_LINES[chatMode] || _CES_LINES.daily;
     const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${lines.l1}<br>${lines.l2}</div></div>`;
-    // ⓘ 일기 안내 — null 또는 daily 만.
-    const showDiary = (chatMode == null || chatMode === 'daily');
-    const diaryHtml = showDiary ? `<button type="button" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내">ⓘ 일기 안내</button>
-        <div class="ces-diary-hint" id="chatEmptyDiaryHint" hidden>일기: 로 쓰면 원본으로 저장돼</div>` : '';
+    // ⓘ 일기 안내 — daily 모드만 ('그냥 재밌게 얘기하고 싶어' 누른 후). null 상태 = 미선택, 안 노출.
+    const showDiary = (chatMode === 'daily');
+    const diaryHtml = showDiary ? `<button type="button" id="chatEmptyDiaryInfo" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내">ⓘ 일기 안내</button>` : '';
     // chip 3 — null 만.
     const chipsHtml = (chatMode == null) ? `<div class="ces-chips-inline">
         <button type="button" class="ces-chip-bubble mode-daily" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
