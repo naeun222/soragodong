@@ -166,15 +166,26 @@ function selectChatMode(mode) {
   const next = (prev === mode) ? null : mode;
   state.chatMode = next;
   try { saveState(); } catch {}
-  // 시트 카드 재렌더 + 헤더 캐릭터 morph + empty placeholder 텍스트 swap.
+  // 시트 카드 재렌더 + 헤더 캐릭터 morph + empty placeholder 텍스트 swap + 기존 메시지 아바타 morph.
   _renderChatModeSheetCards();
   if (typeof updateMainHeaderBtnVisual === 'function') updateMainHeaderBtnVisual();
   if (typeof updateChatEmptyState === 'function') updateChatEmptyState();
+  _refreshAllMsgAvatars();
   // 신규 선택 시만 토스트. deselect 는 silent (사용자가 명시 의도).
   if (next && next !== prev) {
     const card = CHAT_MODE_CARDS.find(c => c.id === next);
     if (card && typeof showToast === 'function') showToast(card.toast);
   }
+}
+
+// V4 사용자 명시 2026-05-23 — 모드 변경 시 chatMessages 안 모든 AI 메시지 아바타도 morph (renderChat 전체 X, light DOM update).
+function _refreshAllMsgAvatars() {
+  if (typeof composedCharacterHtml !== 'function') return;
+  const mode = (state && state.chatMode) || null;
+  const html = composedCharacterHtml({ mode, useGlasses: false, expression: 'serious' });
+  document.querySelectorAll('.msg.assistant .msg-avatar').forEach(av => {
+    av.innerHTML = html;
+  });
 }
 
 // ─── empty placeholder (chip + mode-aware 안내) ──────────────────

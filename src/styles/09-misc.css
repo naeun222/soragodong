@@ -703,7 +703,22 @@
   .msg.user { align-items: flex-end; }
   .msg.assistant { align-items: flex-start; }
   .msg.error { align-items: flex-start; }
-  .msg-bubble { max-width: 88%; padding: 14px 18px; border-radius: 18px; font-size: 14px; line-height: 1.75; white-space: pre-wrap; word-break: break-word; position: relative; }
+  /* V4 사용자 명시 2026-05-23 — AI 메시지 왼쪽 합성 캐릭터 아바타. padding-left 44px + .msg-avatar absolute. */
+  .msg.assistant { position: relative; padding-left: 44px; }
+  .msg.assistant .msg-avatar {
+    position: absolute;
+    left: 0; top: 0;
+    width: 36px; height: 45px;  /* 4:5 비율 — 모자 viewBox 위 25% 튀어나옴 */
+    overflow: visible;
+    pointer-events: none;
+  }
+  .msg.assistant .msg-avatar .char-layer { position: absolute; display: block; }
+  .msg.assistant .msg-avatar .char-layer.aura { inset: -4px; z-index: 0; opacity: 0.95; }
+  .msg.assistant .msg-avatar .char-layer.base { left: 0; top: 9px; width: 36px; height: 36px; z-index: 1; }
+  .msg.assistant .msg-avatar .char-layer.hat  { top: 0; left: 0; width: 36px; height: 45px; z-index: 2; }
+  .msg.assistant .msg-avatar .char-layer img  { width: 100%; height: 100%; display: block; }
+  /* V4 사용자 명시 2026-05-23 — 폰트 카톡 사이즈로 (14→15). 라인 높이 미세 조정. */
+  .msg-bubble { max-width: 88%; padding: 14px 18px; border-radius: 18px; font-size: 15px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; position: relative; }
   /* V3.13.x: 메시지 ⋮ 메뉴 버튼 */
   .msg-menu-btn {
     position: absolute; top: 4px; right: 4px;
