@@ -162,15 +162,17 @@ function selectChatMode(mode) {
   if (!mode || (mode !== 'daily' && mode !== 'inquiry' && mode !== 'vent')) return;
   if (!state) return;
   const prev = state.chatMode || null;
-  state.chatMode = mode;
+  // V4 사용자 명시 2026-05-23 — 같은 모드 재선택 = deselect (null 로 복귀, 기본 상태). 토스트 silent.
+  const next = (prev === mode) ? null : mode;
+  state.chatMode = next;
   try { saveState(); } catch {}
   // 시트 카드 재렌더 + 헤더 캐릭터 morph + empty placeholder 텍스트 swap.
   _renderChatModeSheetCards();
   if (typeof updateMainHeaderBtnVisual === 'function') updateMainHeaderBtnVisual();
   if (typeof updateChatEmptyState === 'function') updateChatEmptyState();
-  // 모드가 바뀐 경우만 토스트 (같은 모드 재선택은 silent).
-  if (prev !== mode) {
-    const card = CHAT_MODE_CARDS.find(c => c.id === mode);
+  // 신규 선택 시만 토스트. deselect 는 silent (사용자가 명시 의도).
+  if (next && next !== prev) {
+    const card = CHAT_MODE_CARDS.find(c => c.id === next);
     if (card && typeof showToast === 'function') showToast(card.toast);
   }
 }
@@ -186,23 +188,33 @@ const _CHAT_EMPTY_LINES = {
   inquiry: { l1: '편하게 말해 보소', l2: '고민이 무엇인가' },
   vent:    { l1: '편하게 말해 보소', l2: '다 괜찮다. 난 여기 있으니.' }
 };
+// V4 사용자 명시 2026-05-23 — textarea placeholder 도 모드별 swap.
+const _CHAT_TA_PLACEHOLDERS = {
+  daily:   '오늘 하루 어땠는지 궁금하오',
+  inquiry: '고민이 무엇인가',
+  vent:    '다 괜찮다. 난 여기 있으니.'
+};
 function updateChatEmptyState() {
+  // ─── 1. textarea placeholder 갱신 — chat 화면 활성/비활성 무관. 모드 바뀌면 즉시 반영. ───
+  const ta = document.getElementById('chatInput');
+  if (ta) {
+    const mode = (state && state.chatMode) || 'daily';
+    ta.placeholder = _CHAT_TA_PLACEHOLDERS[mode] || _CHAT_TA_PLACEHOLDERS.daily;
+  }
+  // ─── 2. empty state element (chip + 안내) visibility + line text. chat 화면 + chatMessages 비어있을 때만. ───
   const el = document.getElementById('chatEmptyState');
   if (!el) return;
-  // chat 화면이 활성인지.
   const screenChat = document.getElementById('screen-chat');
   const isChatActive = screenChat && screenChat.classList.contains('active');
   const chatMsgs = document.getElementById('chatMessages');
   const isEmpty = !!chatMsgs && chatMsgs.children.length === 0;
   if (!isChatActive || !isEmpty) {
     el.hidden = true;
-    // 일기 hint 자동 fold (다음 진입 시 깨끗하게).
     const hint = document.getElementById('chatEmptyDiaryHint');
     if (hint) hint.hidden = true;
     return;
   }
   el.hidden = false;
-  // 모드별 안내 텍스트.
   const mode = (state && state.chatMode) || 'daily';
   const lines = _CHAT_EMPTY_LINES[mode] || _CHAT_EMPTY_LINES.daily;
   const line1 = document.getElementById('chatEmptyLine1');
