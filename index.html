@@ -22652,11 +22652,15 @@ async function init() {
 // V4 (사용자 명시 2026-05-17 ultrathink): 모든 튜토 대상 = 게스트 OR 미구독 사용자.
 //   구독 활성 (Light/Plus/Premium) 사용자는 튜토 X — 이미 commit 된 사용자.
 //   각 튜토 shouldRunXxx 가 이 helper 호출 (게이트).
+// V4 fix (사용자 보고 2026-05-23 ultrathink) — _billingCache fetch 전 race 보호.
+//   옛: _bill null 시 _isSubscriber=false → eligible=true → premium 사용자가 init race 시점 즉시 분석 발동 (어드민 jade6679 보고).
+//   신: _bill 미완료 시 구독자 가정 (= eligible=false, deferred). 진짜 미구독자도 fetch 완료 후 다음 호출에서 자연 fallthrough.
 function _isTutorialEligibleUser() {
   if (typeof state === 'undefined' || !state) return false;
   if (state.isGuest) return true;
   const _bill = (typeof window !== 'undefined') ? window._billingCache : null;
-  const _isSubscriber = !!(_bill && _bill.subscription_plan && _bill.subscription_plan !== 'free' && _bill.subscription_active);
+  if (_bill == null) return false;  // race 보호 — fetch 전엔 구독자 가정.
+  const _isSubscriber = !!(_bill.subscription_plan && _bill.subscription_plan !== 'free' && _bill.subscription_active);
   return !_isSubscriber;
 }
 
@@ -43626,68 +43630,9 @@ async function processAnalysis(analysis, messageIdx) {
       };
     }
   }
-  // V3: Memory Vault auto-extraction → 확인 step (V3.6)
-  // 변경: 즉시 추가 X. 사용자에게 카드로 물어보고 "응" 누를 때만 저장.
-  if (analysis.extracted_tasks && Array.isArray(analysis.extracted_tasks)) {
-    const proposals = [];
-    analysis.extracted_tasks.forEach(taskText => {
-      if (!taskText || typeof taskText !== 'string') return;
-      const cleanText = taskText.trim().slice(0, 200);
-      if (!cleanText) return;
-      // 이미 vault에 있는지 (최근 20개) — fuzzy로 먼저 차단
-      const existsInVault = (state.memoryVault || []).slice(-20).find(v => 
-        v.content && similarText(v.content, cleanText)
-      );
-      if (existsInVault) return;
-      // 같은 메시지에 같은 제안 중복도 차단
-      if (proposals.some(p => exactSameText(p.content, cleanText))) return;
-      proposals.push({
-        proposalId: 'vp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        content: cleanText,
-        responded: false,
-        accepted: null
-      });
-    });
-    if (proposals.length > 0) {
-      // 메시지에 pending proposal로 저장 (renderChat에서 카드로 표시)
-      state.chatMessages[messageIdx].vaultProposals = proposals;
-    }
-  }
-  // 사용자 요청 2026-04-28: 채팅에서 일정 추출 → 자동 todaySchedule 등록
-  if (analysis.extracted_schedule && Array.isArray(analysis.extracted_schedule)) {
-    if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
-    // 사용자 명시 2026-05-06 (정정): 자정 cutoff helper.
-    const todayK = (typeof _scheduleDateKey === 'function') ? _scheduleDateKey() : todayKey();
-    const colors = ['#d4a76a','#8fc88f','#7ec8e3','#b39ddb','#ff8da1','#ffb86b','#5fcfba'];
-    let added = 0;
-    analysis.extracted_schedule.forEach((it, i) => {
-      if (!it || !it.title || !it.start || !it.end) return;
-      if (!/^\d{1,2}:\d{2}$/.test(it.start) || !/^\d{1,2}:\d{2}$/.test(it.end)) return;
-      // 같은 시간대 중복 방지
-      const dup = state.todaySchedule.some(s =>
-        s.date === todayK && s.title === String(it.title).trim().slice(0,40) && s.start === it.start
-      );
-      if (dup) return;
-      state.todaySchedule.push({
-        id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-        title: String(it.title).trim().slice(0,40),
-        start: it.start,
-        end: it.end,
-        date: todayK,
-        source: 'chat',
-        taskId: null,
-        color: colors[(state.todaySchedule.length + i) % colors.length]
-      });
-      added++;
-    });
-    if (added > 0) {
-      showToast(`📅 ${added}개 일정 추가됨`);
-      // 실행 탭 (timetable 포함) 즉시 갱신
-      if (typeof renderExecute === 'function') { try { renderExecute(); } catch {} }
-      // V4 (v8 묶음 16): 일정 자동 추가 placeholder dismiss
-      if (typeof dismissPlaceholder === 'function') dismissPlaceholder('schedule');
-    }
-  }
+  // V4 사용자 명시 2026-05-23 ultrathink — extracted_tasks (vaultProposals) + extracted_schedule (todaySchedule auto-push) 분기 폐기.
+  //   backend system-persona.ts 의 JSON schema 에서 두 키 제거 (2026-05-23) → AI 가 더 이상 출력 X.
+  //   클라이언트 stale path 도 같이 제거. memoryVault 자체는 명시 path (decision-vault / topic-actions / drag-drop) 로 유지.
   // 사용자 요청 2026-04-28: 채팅에서 진주 추가 요청 추출.
   // 사용자 보고 2026-05-11: '진주에 넣어줘' 안 했는데 자동 추가되는 버그 (시뮬 토론 중에 LLM 이 잘못 감지).
   //   → 자동 push 폐기. extracted_pearls 있으면 직전 user message 의 pearlSuggestion=true 만 마킹.

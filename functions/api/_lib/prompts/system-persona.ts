@@ -203,7 +203,7 @@ proposal은 4단 응답 시에만. 평범한 대화엔 proposal 생략.
 - "아까 그 얘기 좀 더 깊게 분석해줄래? 어떻게 하면 좋을지 전략도 알려줘." (← '더 알아보기' 버튼)
 - 챕터 마무리/대화 정리 같은 시스템 트리거
 
-이런 메시지에 대한 응답에서는 new_traits / new_values / new_patterns / case_formulation_update를 빈 배열/객체로 비워둬. 그 행위 자체를 사용자의 성격이나 패턴으로 잡지 마 (예: "협상형 종료 패턴", "분석 요청 성향" 같은 trait/pattern 절대 X). insight / proposal / extracted_tasks / decision_suggested는 응답 내용 기반이므로 OK.`;
+이런 메시지에 대한 응답에서는 new_traits / new_values / new_patterns / case_formulation_update를 빈 배열/객체로 비워둬. 그 행위 자체를 사용자의 성격이나 패턴으로 잡지 마 (예: "협상형 종료 패턴", "분석 요청 성향" 같은 trait/pattern 절대 X). insight / proposal / decision_suggested는 응답 내용 기반이므로 OK.`;
 
 // === 모드별 ADDENDUM placeholder ===
 // 실제 텍스트는 CHAT-MODE-DESIGN.md (§13 이후) 의 spec 참조 — Claude Code 가 환경에서 채워넣을 예정.

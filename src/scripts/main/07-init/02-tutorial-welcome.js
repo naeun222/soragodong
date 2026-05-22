@@ -1,11 +1,15 @@
 // V4 (사용자 명시 2026-05-17 ultrathink): 모든 튜토 대상 = 게스트 OR 미구독 사용자.
 //   구독 활성 (Light/Plus/Premium) 사용자는 튜토 X — 이미 commit 된 사용자.
 //   각 튜토 shouldRunXxx 가 이 helper 호출 (게이트).
+// V4 fix (사용자 보고 2026-05-23 ultrathink) — _billingCache fetch 전 race 보호.
+//   옛: _bill null 시 _isSubscriber=false → eligible=true → premium 사용자가 init race 시점 즉시 분석 발동 (어드민 jade6679 보고).
+//   신: _bill 미완료 시 구독자 가정 (= eligible=false, deferred). 진짜 미구독자도 fetch 완료 후 다음 호출에서 자연 fallthrough.
 function _isTutorialEligibleUser() {
   if (typeof state === 'undefined' || !state) return false;
   if (state.isGuest) return true;
   const _bill = (typeof window !== 'undefined') ? window._billingCache : null;
-  const _isSubscriber = !!(_bill && _bill.subscription_plan && _bill.subscription_plan !== 'free' && _bill.subscription_active);
+  if (_bill == null) return false;  // race 보호 — fetch 전엔 구독자 가정.
+  const _isSubscriber = !!(_bill.subscription_plan && _bill.subscription_plan !== 'free' && _bill.subscription_active);
   return !_isSubscriber;
 }
 
