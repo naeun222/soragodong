@@ -885,6 +885,7 @@
   /* aura = base 외측 살짝 큰 영역 — base 가장자리 너머로 글로우 spill (단 '깨달음으로' 안 가리게 작게). */
   .msg.assistant .msg-avatar .char-layer.aura { left: -3px; top: 6px; width: 42px; height: 42px; z-index: 0; opacity: 0.85; }
   .msg.assistant .msg-avatar .char-layer.aura.aura-inquiry { filter: hue-rotate(225deg) saturate(0.85); }  /* amber → 보라 변환 */
+  .msg.assistant .msg-avatar .char-layer.aura.aura-daily   { filter: hue-rotate(-20deg) saturate(0.70) brightness(1.05); }  /* amber → 살구 변환 */
   .msg.assistant .msg-avatar .char-layer.base { left: 0; top: 9px; width: 36px; height: 36px; z-index: 1; }
   .msg.assistant .msg-avatar .char-layer img  { width: 100%; height: 100%; display: block; }
   /* V4 사용자 명시 2026-05-23 (재) — 폰트 1px 줄임 (15→14). */
@@ -1103,6 +1104,7 @@
   }
   .chat-mode-btn.is-mode .char-layer.aura  { inset: -4px; z-index: 0; opacity: 0.95; }
   .chat-mode-btn.is-mode .char-layer.aura.aura-inquiry { filter: hue-rotate(225deg) saturate(0.85); }  /* amber → 보라 변환 */
+  .chat-mode-btn.is-mode .char-layer.aura.aura-daily   { filter: hue-rotate(-20deg) saturate(0.70) brightness(1.05); }  /* amber → 살구 변환 */
   .chat-mode-btn.is-mode .char-layer.base  { inset: 2px;  z-index: 1; width: calc(100% - 4px); height: calc(100% - 4px); }
   .chat-mode-btn.is-mode .char-layer.glasses { inset: 2px; z-index: 3; width: calc(100% - 4px); height: calc(100% - 4px); }
   .chat-mode-btn.is-mode .char-layer img,
@@ -1287,27 +1289,13 @@
   }
   /* welcome bubble — .msg.assistant 의 기본 layout 그대로 받음 (avatar + bubble). */
 
-  /* V4 사용자 명시 2026-05-23 ultrathink — ⓘ 일기 안내 (daily 모드만). 단일 button text swap. */
-  .ces-diary-info {
+  /* V4 사용자 명시 2026-05-23 (재) — ⓘ 일기 안내 = static 한 줄 (daily 모드만). 토글 X. */
+  .ces-diary-info-static {
     margin: -4px 0 12px 44px;
-    background: transparent;
-    border: none;
     color: var(--text-soft);
     font-size: 11.5px;
-    cursor: pointer;
-    padding: 5px 10px;
-    border-radius: 10px;
-    transition: color 0.15s, background 0.15s;
-    display: inline-block;
-    white-space: nowrap;
     line-height: 1.4;
-    font-family: inherit;
-  }
-  .ces-diary-info:hover { color: var(--text); background: var(--surface2); }
-  .ces-diary-info.expanded {
-    background: var(--surface2);
-    color: var(--text);
-    white-space: normal;  /* 펼친 hint 텍스트 = 자연 wrap */
+    padding: 0 4px;
     max-width: calc(100% - 44px);
   }
 
@@ -42106,7 +42094,7 @@ function _chatEmptyAreaHtml() {
     const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${lines.l1}<br>${lines.l2}</div></div>`;
     // ⓘ 일기 안내 — daily 모드만 ('그냥 재밌게 얘기하고 싶어' 누른 후). null 상태 = 미선택, 안 노출.
     const showDiary = (chatMode === 'daily');
-    const diaryHtml = showDiary ? `<button type="button" id="chatEmptyDiaryInfo" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내">ⓘ 일기 안내</button>` : '';
+    const diaryHtml = showDiary ? `<div class="ces-diary-info-static">ⓘ '일기:' 로 쓰면 원본으로 저장돼</div>` : '';
     // chip 3 — null 만.
     const chipsHtml = (chatMode == null) ? `<div class="ces-chips-inline">
         <button type="button" class="ces-chip-bubble mode-daily" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
@@ -44339,11 +44327,13 @@ function _chatModeExprPath(expression) {
 
 // 3 layer 합성 — HTML string 반환. 호출처가 element.innerHTML 또는 template literal 에 삽입.
 //   { mode: 'daily'|'inquiry'|'vent'|null, useGlasses: bool, expression: '...' }
-//   mode null/daily = 아우라 X. inquiry = 보라 아우라 (amber SVG + CSS hue-rotate). vent = amber 아우라.
-//   V4 사용자 명시 2026-05-23 (재) — 고민고동 모자 폐기, 보라 아우라로 통일.
+//   null = 아우라 X (default 일상고동 시각). daily = 살구 아우라. inquiry = 보라 아우라. vent = amber 아우라.
+//   V4 사용자 명시 2026-05-23 (재재) — daily 도 살구 아우라 추가 (amber SVG + CSS hue-rotate 살짝).
 function composedCharacterHtml({ mode, useGlasses, expression } = {}) {
-  const showAura = mode === 'vent' || mode === 'inquiry';
-  const auraVariant = mode === 'inquiry' ? ' aura-inquiry' : '';
+  const showAura = mode === 'daily' || mode === 'inquiry' || mode === 'vent';
+  const auraVariant = mode === 'inquiry' ? ' aura-inquiry'
+                    : mode === 'daily'   ? ' aura-daily'
+                    : '';
   const showGlasses = !!useGlasses;
   const exprSrc = _chatModeExprPath(expression || 'soft-smile');
   let html = '';

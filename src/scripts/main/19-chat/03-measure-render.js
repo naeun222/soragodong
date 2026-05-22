@@ -258,7 +258,7 @@ function _chatEmptyAreaHtml() {
     const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${lines.l1}<br>${lines.l2}</div></div>`;
     // ⓘ 일기 안내 — daily 모드만 ('그냥 재밌게 얘기하고 싶어' 누른 후). null 상태 = 미선택, 안 노출.
     const showDiary = (chatMode === 'daily');
-    const diaryHtml = showDiary ? `<button type="button" id="chatEmptyDiaryInfo" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내">ⓘ 일기 안내</button>` : '';
+    const diaryHtml = showDiary ? `<div class="ces-diary-info-static">ⓘ '일기:' 로 쓰면 원본으로 저장돼</div>` : '';
     // chip 3 — null 만.
     const chipsHtml = (chatMode == null) ? `<div class="ces-chips-inline">
         <button type="button" class="ces-chip-bubble mode-daily" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>

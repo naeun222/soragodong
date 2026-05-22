@@ -19,11 +19,13 @@ function _chatModeExprPath(expression) {
 
 // 3 layer 합성 — HTML string 반환. 호출처가 element.innerHTML 또는 template literal 에 삽입.
 //   { mode: 'daily'|'inquiry'|'vent'|null, useGlasses: bool, expression: '...' }
-//   mode null/daily = 아우라 X. inquiry = 보라 아우라 (amber SVG + CSS hue-rotate). vent = amber 아우라.
-//   V4 사용자 명시 2026-05-23 (재) — 고민고동 모자 폐기, 보라 아우라로 통일.
+//   null = 아우라 X (default 일상고동 시각). daily = 살구 아우라. inquiry = 보라 아우라. vent = amber 아우라.
+//   V4 사용자 명시 2026-05-23 (재재) — daily 도 살구 아우라 추가 (amber SVG + CSS hue-rotate 살짝).
 function composedCharacterHtml({ mode, useGlasses, expression } = {}) {
-  const showAura = mode === 'vent' || mode === 'inquiry';
-  const auraVariant = mode === 'inquiry' ? ' aura-inquiry' : '';
+  const showAura = mode === 'daily' || mode === 'inquiry' || mode === 'vent';
+  const auraVariant = mode === 'inquiry' ? ' aura-inquiry'
+                    : mode === 'daily'   ? ' aura-daily'
+                    : '';
   const showGlasses = !!useGlasses;
   const exprSrc = _chatModeExprPath(expression || 'soft-smile');
   let html = '';

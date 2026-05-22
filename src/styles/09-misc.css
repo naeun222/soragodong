@@ -721,6 +721,7 @@
   /* aura = base 외측 살짝 큰 영역 — base 가장자리 너머로 글로우 spill (단 '깨달음으로' 안 가리게 작게). */
   .msg.assistant .msg-avatar .char-layer.aura { left: -3px; top: 6px; width: 42px; height: 42px; z-index: 0; opacity: 0.85; }
   .msg.assistant .msg-avatar .char-layer.aura.aura-inquiry { filter: hue-rotate(225deg) saturate(0.85); }  /* amber → 보라 변환 */
+  .msg.assistant .msg-avatar .char-layer.aura.aura-daily   { filter: hue-rotate(-20deg) saturate(0.70) brightness(1.05); }  /* amber → 살구 변환 */
   .msg.assistant .msg-avatar .char-layer.base { left: 0; top: 9px; width: 36px; height: 36px; z-index: 1; }
   .msg.assistant .msg-avatar .char-layer img  { width: 100%; height: 100%; display: block; }
   /* V4 사용자 명시 2026-05-23 (재) — 폰트 1px 줄임 (15→14). */
@@ -939,6 +940,7 @@
   }
   .chat-mode-btn.is-mode .char-layer.aura  { inset: -4px; z-index: 0; opacity: 0.95; }
   .chat-mode-btn.is-mode .char-layer.aura.aura-inquiry { filter: hue-rotate(225deg) saturate(0.85); }  /* amber → 보라 변환 */
+  .chat-mode-btn.is-mode .char-layer.aura.aura-daily   { filter: hue-rotate(-20deg) saturate(0.70) brightness(1.05); }  /* amber → 살구 변환 */
   .chat-mode-btn.is-mode .char-layer.base  { inset: 2px;  z-index: 1; width: calc(100% - 4px); height: calc(100% - 4px); }
   .chat-mode-btn.is-mode .char-layer.glasses { inset: 2px; z-index: 3; width: calc(100% - 4px); height: calc(100% - 4px); }
   .chat-mode-btn.is-mode .char-layer img,
@@ -1123,27 +1125,13 @@
   }
   /* welcome bubble — .msg.assistant 의 기본 layout 그대로 받음 (avatar + bubble). */
 
-  /* V4 사용자 명시 2026-05-23 ultrathink — ⓘ 일기 안내 (daily 모드만). 단일 button text swap. */
-  .ces-diary-info {
+  /* V4 사용자 명시 2026-05-23 (재) — ⓘ 일기 안내 = static 한 줄 (daily 모드만). 토글 X. */
+  .ces-diary-info-static {
     margin: -4px 0 12px 44px;
-    background: transparent;
-    border: none;
     color: var(--text-soft);
     font-size: 11.5px;
-    cursor: pointer;
-    padding: 5px 10px;
-    border-radius: 10px;
-    transition: color 0.15s, background 0.15s;
-    display: inline-block;
-    white-space: nowrap;
     line-height: 1.4;
-    font-family: inherit;
-  }
-  .ces-diary-info:hover { color: var(--text); background: var(--surface2); }
-  .ces-diary-info.expanded {
-    background: var(--surface2);
-    color: var(--text);
-    white-space: normal;  /* 펼친 hint 텍스트 = 자연 wrap */
+    padding: 0 4px;
     max-width: calc(100% - 44px);
   }
 
