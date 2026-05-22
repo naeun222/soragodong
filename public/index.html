@@ -42084,14 +42084,9 @@ function _chatEmptyAreaHtml() {
     const avatarHtml = (typeof composedCharacterHtml === 'function')
       ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false })}</div>`
       : '';
-    // 모드별 2줄 안내 — null = daily 와 동일.
-    const _CES_LINES = {
-      daily:   { l1: '편하게 말해 보소', l2: '오늘 하루 어땠는지 궁금하오' },
-      inquiry: { l1: '편하게 말해 보소', l2: '고민이 무엇인가' },
-      vent:    { l1: '편하게 말해 보소', l2: '다 괜찮다. 난 여기 있으니.' }
-    };
-    const lines = _CES_LINES[chatMode] || _CES_LINES.daily;
-    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${lines.l1}<br>${lines.l2}</div></div>`;
+    // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper 사용. sendChat 시점에 같은 텍스트가 chatMessages 에 박힘 (AI 첫 발화 인식).
+    const welcomeText = (typeof _chatWelcomeText === 'function') ? _chatWelcomeText(chatMode || 'daily') : '편하게 말해 보소.';
+    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${welcomeText}</div></div>`;
     // ⓘ 일기 안내 — daily 모드만 ('그냥 재밌게 얘기하고 싶어' 누른 후). null 상태 = 미선택, 안 노출.
     const showDiary = (chatMode === 'daily');
     const diaryHtml = showDiary ? `<div class="ces-diary-info-static">ⓘ '일기:' 로 쓰면 원본으로 저장돼</div>` : '';
@@ -42203,9 +42198,22 @@ async function sendChat() {
   // V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty + 저녁 6시+ 체크인 카드는 사용자가 '대화 시작' 하는 순간 사라짐.
   //   첫 메시지 send 트리거 — dayK 내 영구 dismiss (새벽 4시 reset 후 내일 저녁 6시 부활).
   //   체크인 done 상태든 아니든 무관 set — done 이면 카드 자체가 안 보였으니 no-op.
+  // V4 사용자 명시 2026-05-23 ultrathink (재재) — welcome 메시지를 AI 의 *진짜 첫 발화* 로 chatMessages 에 박음.
+  //   옛 placeholder bubble = DOM only → AI 컨텍스트 X → 사용자가 첫 메시지 보내도 AI 가 *허공에 던진 첫 발화* 처리.
+  //   신: chatMessages 비어있을 때 sendChat 시점에 welcome (모드별 텍스트) push → user msg push.
+  //   AI 가 자기 첫 발화 인식 + 사용자 발화가 *답하는 형식* 으로 자연 흐름.
   if ((state.chatMessages || []).length === 0) {
     const _tk = (typeof todayKey === 'function') ? todayKey() : '';
     if (_tk) state._chatEmptyCheckinDismissedDayK = _tk;
+    // welcome 메시지 push (assistant role, _isWelcome 마커).
+    if (typeof _chatWelcomeText === 'function') {
+      state.chatMessages.push({
+        role: 'assistant',
+        content: _chatWelcomeText(state.chatMode || 'daily'),
+        timestamp: new Date().toISOString(),
+        _isWelcome: true
+      });
+    }
   }
 
   // 사용자 명시 2026-05-01: 위기 신호 detect — 자살예방법 §15-6 + 제조물책임 안전 의무.
@@ -44507,6 +44515,18 @@ function _refreshAllMsgAvatars() {
 //   별도 #chatEmptyState element / _CHAT_EMPTY_LINES / _CHAT_TA_PLACEHOLDERS 폐기.
 //   textarea placeholder = 기존 CHAT_PLACEHOLDERS pool (15-navigation.js rotateChatPlaceholder) 회전 — 모드별 swap X.
 function updateChatEmptyState() { /* deprecated 2026-05-23 — _chatEmptyAreaHtml 가 chatMessages 안 render */ }
+
+// V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper. 두 자리 사용:
+//   1) _chatEmptyAreaHtml 의 placeholder welcome bubble (DOM only, chatMessages 비어있을 때).
+//   2) sendChat 의 첫 메시지 push 직전 welcome 실제 메시지 (state.chatMessages 안 박음 — AI 가 자기 첫 발화로 인식).
+const _CHAT_WELCOME_TEXTS = {
+  daily:   '편하게 말해 보소. 오늘 하루 어땠는지 궁금하오.',
+  inquiry: '편하게 말해 보소. 고민이 무엇인가.',
+  vent:    '편하게 말해 보소. 다 괜찮다. 난 여기 있으니.'
+};
+function _chatWelcomeText(mode) {
+  return _CHAT_WELCOME_TEXTS[mode] || _CHAT_WELCOME_TEXTS.daily;
+}
 
 // V4 사용자 명시 2026-05-23 ultrathink — chip 누르면 모드 선택만 (자동 send X).
 //   selectChatMode 안 chatMessages 비어있으면 renderChat → empty entry 가 새 모드별 welcome 으로 swap.

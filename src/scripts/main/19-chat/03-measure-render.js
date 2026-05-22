@@ -248,14 +248,9 @@ function _chatEmptyAreaHtml() {
     const avatarHtml = (typeof composedCharacterHtml === 'function')
       ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false })}</div>`
       : '';
-    // 모드별 2줄 안내 — null = daily 와 동일.
-    const _CES_LINES = {
-      daily:   { l1: '편하게 말해 보소', l2: '오늘 하루 어땠는지 궁금하오' },
-      inquiry: { l1: '편하게 말해 보소', l2: '고민이 무엇인가' },
-      vent:    { l1: '편하게 말해 보소', l2: '다 괜찮다. 난 여기 있으니.' }
-    };
-    const lines = _CES_LINES[chatMode] || _CES_LINES.daily;
-    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${lines.l1}<br>${lines.l2}</div></div>`;
+    // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper 사용. sendChat 시점에 같은 텍스트가 chatMessages 에 박힘 (AI 첫 발화 인식).
+    const welcomeText = (typeof _chatWelcomeText === 'function') ? _chatWelcomeText(chatMode || 'daily') : '편하게 말해 보소.';
+    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${welcomeText}</div></div>`;
     // ⓘ 일기 안내 — daily 모드만 ('그냥 재밌게 얘기하고 싶어' 누른 후). null 상태 = 미선택, 안 노출.
     const showDiary = (chatMode === 'daily');
     const diaryHtml = showDiary ? `<div class="ces-diary-info-static">ⓘ '일기:' 로 쓰면 원본으로 저장돼</div>` : '';
