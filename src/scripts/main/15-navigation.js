@@ -12,6 +12,10 @@ function showScreen(name) {
   if (typeof updateChatEmptyState === 'function') {
     setTimeout(() => { try { updateChatEmptyState(); } catch {} }, 0);
   }
+  // V4 사용자 보고 2026-05-23 — chat 진입 시 renderChat 강제 호출. 옛 코드로 render 된 메시지를 새 코드 (avatar 포함) 로 재 render.
+  if (name === 'chat' && typeof renderChat === 'function') {
+    setTimeout(() => { try { renderChat(); } catch {} }, 0);
+  }
   // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 진입 시 sim 튜토리얼 fire.
   // _simTutorialInternalNav 플래그 = 튜토리얼 자기 자신이 호출 — 재진입 차단.
   // 사용자 명시 2026-05-06 (재정정): 마법고동 sim 튜토 폐기 — decisions 분기 제거.

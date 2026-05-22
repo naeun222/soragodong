@@ -1231,32 +1231,35 @@
     background: var(--accent);
   }
 
-  /* V4 사용자 명시 2026-05-22 ultrathink — empty placeholder (chat 메시지 비어있을 때, 입력바 위). */
+  /* V4 사용자 명시 2026-05-23 — empty entry (chat 메인 영역, chatMessages 비어있을 때).
+     입력바와 별개 자리. 화면 위쪽 여백 + 가운데 정렬 + 옛 어투 큰 2줄 + chip 3. */
   .chat-empty-state {
-    padding: 18px 18px 14px 18px;
+    padding: 64px 24px 24px 24px;
     text-align: center;
     color: var(--text-soft);
+    max-width: 420px;
+    margin: 0 auto;
   }
   .chat-empty-state[hidden] { display: none; }
   .ces-lines {
-    margin-bottom: 14px;
+    margin-bottom: 24px;
   }
   .ces-line-1 {
-    font-size: 17px; line-height: 1.45;
+    font-size: 22px; line-height: 1.45;
     color: var(--text);
     font-weight: 500;
     letter-spacing: 0.02em;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
     opacity: 0.92;
   }
   .ces-line-2-wrap {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   }
   .ces-line-2 {
-    font-size: 13px; line-height: 1.45;
+    font-size: 15px; line-height: 1.5;
     color: var(--text-dim);
     letter-spacing: 0.02em;
-    opacity: 0.85;
+    opacity: 0.88;
   }
   .ces-diary-info {
     width: 18px; height: 18px; border-radius: 50%;
@@ -13714,6 +13717,23 @@ img.pearl-load-fail {
       <div class="screen-title" style="margin-bottom: 14px;">고동이에게 <img src="/character/godong-default.svg" alt="" class="godong-icon godong-mood-default" decoding="async"></div>
       <!-- 사용자 명시 2026-05-10: 시뮬 → 대화 이어가기 시 상단 스티커. 챕터 마무리 시 사라짐. -->
       <div id="chatSimContextSticker" class="chat-sim-sticker" style="display:none;">💭 시나리오 토론 중</div>
+      <!-- V4 사용자 명시 2026-05-23 — 대화탭 empty entry: 옛 어투 2줄 안내 + chip 3 (chatMode null + textarea 비어있을 때).
+           chat-input-bar 에서 이동 (입력바 안 작은 영역 → 채팅 메인 영역 큰 자리). updateChatEmptyState() 가 display 갱신. -->
+      <div class="chat-empty-state" id="chatEmptyState" hidden>
+        <div class="ces-lines">
+          <div class="ces-line-1" id="chatEmptyLine1">편하게 말해 보소</div>
+          <div class="ces-line-2-wrap">
+            <span class="ces-line-2" id="chatEmptyLine2">오늘 하루 어땠는지 궁금하오</span>
+            <button type="button" id="chatEmptyDiaryInfo" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내" title="일기 안내" hidden>ⓘ</button>
+          </div>
+          <div class="ces-diary-hint" id="chatEmptyDiaryHint" hidden>일기: 로 시작하면 그대로 보관돼요</div>
+        </div>
+        <div class="ces-chips" id="chatEmptyChips">
+          <button type="button" class="ces-chip" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
+          <button type="button" class="ces-chip" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어</button>
+          <button type="button" class="ces-chip" onclick="onChatEmptyChip('vent')">마음이 심란해...</button>
+        </div>
+      </div>
       <div class="chat-messages" id="chatMessages"></div>
     </div>
     <!-- 사용자 요청 2026-04-29: '↓ 새 메시지' 플로팅 칩 — 위로 스크롤 후 새 메시지 도착 시 표시 -->
@@ -14562,24 +14582,6 @@ img.pearl-load-fail {
 </div>
 
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
-  <!-- V4 사용자 명시 2026-05-22 ultrathink — 대화탭 empty placeholder (chatMessages 비어있을 때, chat 화면에서만).
-       2줄 안내 (보소/하오 옛 어투) + ⓘ 일기 안내 (일상모드만) + chip 3개 (chatMode null + textarea 비어있을 때만).
-       updateChatEmptyState() 가 전체 display 갱신. -->
-  <div class="chat-empty-state" id="chatEmptyState" hidden>
-    <div class="ces-lines">
-      <div class="ces-line-1" id="chatEmptyLine1">편하게 말해 보소</div>
-      <div class="ces-line-2-wrap">
-        <span class="ces-line-2" id="chatEmptyLine2">오늘 하루 어땠는지 궁금하오</span>
-        <button type="button" id="chatEmptyDiaryInfo" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내" title="일기 안내" hidden>ⓘ</button>
-      </div>
-      <div class="ces-diary-hint" id="chatEmptyDiaryHint" hidden>일기: 로 시작하면 그대로 보관돼요</div>
-    </div>
-    <div class="ces-chips" id="chatEmptyChips">
-      <button type="button" class="ces-chip" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
-      <button type="button" class="ces-chip" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어</button>
-      <button type="button" class="ces-chip" onclick="onChatEmptyChip('vent')">마음이 심란해...</button>
-    </div>
-  </div>
   <div class="chat-plus-menu" id="chatPlusMenu" hidden>
     <button class="chat-plus-item" onclick="chatPlusAction('diary')">
       <span class="chat-plus-icon">📝</span>
@@ -39456,6 +39458,10 @@ function showScreen(name) {
   if (typeof updateChatEmptyState === 'function') {
     setTimeout(() => { try { updateChatEmptyState(); } catch {} }, 0);
   }
+  // V4 사용자 보고 2026-05-23 — chat 진입 시 renderChat 강제 호출. 옛 코드로 render 된 메시지를 새 코드 (avatar 포함) 로 재 render.
+  if (name === 'chat' && typeof renderChat === 'function') {
+    setTimeout(() => { try { renderChat(); } catch {} }, 0);
+  }
   // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 진입 시 sim 튜토리얼 fire.
   // _simTutorialInternalNav 플래그 = 튜토리얼 자기 자신이 호출 — 재진입 차단.
   // 사용자 명시 2026-05-06 (재정정): 마법고동 sim 튜토 폐기 — decisions 분기 제거.
@@ -42899,11 +42905,8 @@ function updateMainHeaderBtnVisual() {
   const isChat = activeScreen && (screenId === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
   const isReflection = screenId === 'screen-reflection';
   const isMagicHelp = screenId === 'screen-magic-help';
-  const billing = window._billingCache;
-  const plan = billing?.subscription_plan;
-  const active = !!billing?.subscription_active;
-  const ragEligible = active && (plan === 'light' || plan === 'premium');
-  // useRag / ragSeen 은 updateModeHeaderVisual() 안에서 직접 읽음 (2026-05-22 dispatch 변경 후 dead var 제거).
+  // V4 사용자 명시 2026-05-23 — chat 분기의 ragEligible 가드 제거 (모든 사용자 모드 시각).
+  //   안경/메모리 시각 가드는 updateModeHeaderVisual() / openChatModeSheet() 안에서 직접 _isChatRagEligible().
 
   // 숙고/마법 = per-room useOpus 조회
   let perRoomUseOpus = false;
@@ -42926,9 +42929,9 @@ function updateMainHeaderBtnVisual() {
       btn.setAttribute('title', perRoomUseOpus
         ? '🦉 Opus — 누르면 Sonnet'
         : '🪶 Sonnet — 누르면 Opus (Premium 전용)');
-    } else if (isChat && ragEligible) {
-      // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 = 3 모드 시스템 합성 캐릭터.
-      //   state.chatMode + state.preferences.useRag → 6 variants (3 모드 × 2 메모리).
+    } else if (isChat) {
+      // V4 사용자 명시 2026-05-23 — 대화탭 모든 사용자 = 3 모드 시스템 합성 캐릭터.
+      //   updateModeHeaderVisual 안에서 안경 (메모리) 가드 — Plus/Premium 만 안경 시각.
       if (typeof updateModeHeaderVisual === 'function') updateModeHeaderVisual(btn);
     } else {
       btn.classList.add('brand-only');
@@ -44327,7 +44330,8 @@ function composedCharacterHtml({ mode, useGlasses, expression } = {}) {
 function updateModeHeaderVisual(btn) {
   if (!btn) return;
   const mode = (state && state.chatMode) || null;   // null → default daily visual
-  const useGlasses = state?.preferences?.useRag !== false;  // default ON
+  // V4 사용자 명시 2026-05-23 — 안경 (메모리 ON) 시각은 Plus/Premium 만. 그 외 = 안경 X.
+  const useGlasses = _isChatRagEligible() && (state?.preferences?.useRag !== false);
   btn.classList.remove('rag-on', 'rag-off', 'rag-blink', 'brand-only', 'opus',
                        'mode-daily', 'mode-inquiry', 'mode-vent');
   btn.classList.add('is-mode');
@@ -44345,20 +44349,18 @@ function updateModeHeaderVisual(btn) {
   btn.setAttribute('title', `${label} ${memo} — 누르면 변경`);
 }
 
-// 헤더 클릭 dispatch — 대화탭 + Plus/Premium 자격 검사 후 시트 open.
+// 헤더 클릭 dispatch — 모든 사용자 시트 open. 모드 시스템 자체는 plan 무관 사용.
+//   메모리 토글 (옛 챕터 기억) 만 시트 안에서 Plus/Premium 가드 (사용자 명시 2026-05-23).
 function onChatModeHeaderClick() {
-  // 게스트 = 결제 유도.
-  if (typeof state !== 'undefined' && state && state.isGuest) {
-    if (typeof showGuestConversionModal === 'function') showGuestConversionModal({ reason: 'rag_toggle' });
-    return;
-  }
-  // Plan 검사 — Plus/Premium 만.
+  openChatModeSheet();
+}
+
+function _isChatRagEligible() {
+  if (!state || state.isGuest) return false;
   const billing = window._billingCache;
   const plan = billing?.subscription_plan;
   const active = !!billing?.subscription_active;
-  const ragEligible = active && (plan === 'light' || plan === 'premium');
-  if (!ragEligible) return;
-  openChatModeSheet();
+  return active && (plan === 'light' || plan === 'premium');
 }
 
 // ─── 모드 선택 시트 (popover) ─────────────────────────────────────
@@ -44373,6 +44375,8 @@ const CHAT_MODE_CARDS = [
 
 function openChatModeSheet() {
   if (document.getElementById('chatModeSheetOverlay')) return;
+  // V4 사용자 명시 2026-05-23 — 메모리 영역은 Plus/Premium 만 노출. 그 외 = 모드 카드만.
+  const showMemo = _isChatRagEligible();
   const overlay = document.createElement('div');
   overlay.id = 'chatModeSheetOverlay';
   overlay.className = 'chat-mode-sheet-overlay';
@@ -44380,6 +44384,7 @@ function openChatModeSheet() {
     <div class="chat-mode-sheet" role="dialog" aria-modal="true">
       <button class="chat-mode-sheet-close" type="button" aria-label="닫기" onclick="closeChatModeSheet()">✕</button>
       <div class="chat-mode-sheet-cards" id="chatModeSheetCards"></div>
+      ${showMemo ? `
       <div class="chat-mode-sheet-divider"></div>
       <div class="chat-mode-sheet-memo">
         <label class="chat-mode-sheet-memo-label">
@@ -44390,11 +44395,12 @@ function openChatModeSheet() {
         </label>
         <div class="chat-mode-sheet-memo-hint" id="chatModeMemoHint"></div>
       </div>
+      ` : ''}
     </div>
   `;
   document.body.appendChild(overlay);
   _renderChatModeSheetCards();
-  _renderChatModeSheetMemoState();
+  if (showMemo) _renderChatModeSheetMemoState();
   // 바깥 탭 닫기.
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closeChatModeSheet(); });
   // ESC 닫기.

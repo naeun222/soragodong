@@ -1068,32 +1068,35 @@
     background: var(--accent);
   }
 
-  /* V4 사용자 명시 2026-05-22 ultrathink — empty placeholder (chat 메시지 비어있을 때, 입력바 위). */
+  /* V4 사용자 명시 2026-05-23 — empty entry (chat 메인 영역, chatMessages 비어있을 때).
+     입력바와 별개 자리. 화면 위쪽 여백 + 가운데 정렬 + 옛 어투 큰 2줄 + chip 3. */
   .chat-empty-state {
-    padding: 18px 18px 14px 18px;
+    padding: 64px 24px 24px 24px;
     text-align: center;
     color: var(--text-soft);
+    max-width: 420px;
+    margin: 0 auto;
   }
   .chat-empty-state[hidden] { display: none; }
   .ces-lines {
-    margin-bottom: 14px;
+    margin-bottom: 24px;
   }
   .ces-line-1 {
-    font-size: 17px; line-height: 1.45;
+    font-size: 22px; line-height: 1.45;
     color: var(--text);
     font-weight: 500;
     letter-spacing: 0.02em;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
     opacity: 0.92;
   }
   .ces-line-2-wrap {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   }
   .ces-line-2 {
-    font-size: 13px; line-height: 1.45;
+    font-size: 15px; line-height: 1.5;
     color: var(--text-dim);
     letter-spacing: 0.02em;
-    opacity: 0.85;
+    opacity: 0.88;
   }
   .ces-diary-info {
     width: 18px; height: 18px; border-radius: 50%;

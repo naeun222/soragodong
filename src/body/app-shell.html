@@ -190,6 +190,23 @@
       <div class="screen-title" style="margin-bottom: 14px;">고동이에게 <img src="/character/godong-default.svg" alt="" class="godong-icon godong-mood-default" decoding="async"></div>
       <!-- 사용자 명시 2026-05-10: 시뮬 → 대화 이어가기 시 상단 스티커. 챕터 마무리 시 사라짐. -->
       <div id="chatSimContextSticker" class="chat-sim-sticker" style="display:none;">💭 시나리오 토론 중</div>
+      <!-- V4 사용자 명시 2026-05-23 — 대화탭 empty entry: 옛 어투 2줄 안내 + chip 3 (chatMode null + textarea 비어있을 때).
+           chat-input-bar 에서 이동 (입력바 안 작은 영역 → 채팅 메인 영역 큰 자리). updateChatEmptyState() 가 display 갱신. -->
+      <div class="chat-empty-state" id="chatEmptyState" hidden>
+        <div class="ces-lines">
+          <div class="ces-line-1" id="chatEmptyLine1">편하게 말해 보소</div>
+          <div class="ces-line-2-wrap">
+            <span class="ces-line-2" id="chatEmptyLine2">오늘 하루 어땠는지 궁금하오</span>
+            <button type="button" id="chatEmptyDiaryInfo" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내" title="일기 안내" hidden>ⓘ</button>
+          </div>
+          <div class="ces-diary-hint" id="chatEmptyDiaryHint" hidden>일기: 로 시작하면 그대로 보관돼요</div>
+        </div>
+        <div class="ces-chips" id="chatEmptyChips">
+          <button type="button" class="ces-chip" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
+          <button type="button" class="ces-chip" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어</button>
+          <button type="button" class="ces-chip" onclick="onChatEmptyChip('vent')">마음이 심란해...</button>
+        </div>
+      </div>
       <div class="chat-messages" id="chatMessages"></div>
     </div>
     <!-- 사용자 요청 2026-04-29: '↓ 새 메시지' 플로팅 칩 — 위로 스크롤 후 새 메시지 도착 시 표시 -->

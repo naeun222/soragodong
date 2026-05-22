@@ -43,7 +43,8 @@ function composedCharacterHtml({ mode, useGlasses, expression } = {}) {
 function updateModeHeaderVisual(btn) {
   if (!btn) return;
   const mode = (state && state.chatMode) || null;   // null → default daily visual
-  const useGlasses = state?.preferences?.useRag !== false;  // default ON
+  // V4 사용자 명시 2026-05-23 — 안경 (메모리 ON) 시각은 Plus/Premium 만. 그 외 = 안경 X.
+  const useGlasses = _isChatRagEligible() && (state?.preferences?.useRag !== false);
   btn.classList.remove('rag-on', 'rag-off', 'rag-blink', 'brand-only', 'opus',
                        'mode-daily', 'mode-inquiry', 'mode-vent');
   btn.classList.add('is-mode');
@@ -61,20 +62,18 @@ function updateModeHeaderVisual(btn) {
   btn.setAttribute('title', `${label} ${memo} — 누르면 변경`);
 }
 
-// 헤더 클릭 dispatch — 대화탭 + Plus/Premium 자격 검사 후 시트 open.
+// 헤더 클릭 dispatch — 모든 사용자 시트 open. 모드 시스템 자체는 plan 무관 사용.
+//   메모리 토글 (옛 챕터 기억) 만 시트 안에서 Plus/Premium 가드 (사용자 명시 2026-05-23).
 function onChatModeHeaderClick() {
-  // 게스트 = 결제 유도.
-  if (typeof state !== 'undefined' && state && state.isGuest) {
-    if (typeof showGuestConversionModal === 'function') showGuestConversionModal({ reason: 'rag_toggle' });
-    return;
-  }
-  // Plan 검사 — Plus/Premium 만.
+  openChatModeSheet();
+}
+
+function _isChatRagEligible() {
+  if (!state || state.isGuest) return false;
   const billing = window._billingCache;
   const plan = billing?.subscription_plan;
   const active = !!billing?.subscription_active;
-  const ragEligible = active && (plan === 'light' || plan === 'premium');
-  if (!ragEligible) return;
-  openChatModeSheet();
+  return active && (plan === 'light' || plan === 'premium');
 }
 
 // ─── 모드 선택 시트 (popover) ─────────────────────────────────────
@@ -89,6 +88,8 @@ const CHAT_MODE_CARDS = [
 
 function openChatModeSheet() {
   if (document.getElementById('chatModeSheetOverlay')) return;
+  // V4 사용자 명시 2026-05-23 — 메모리 영역은 Plus/Premium 만 노출. 그 외 = 모드 카드만.
+  const showMemo = _isChatRagEligible();
   const overlay = document.createElement('div');
   overlay.id = 'chatModeSheetOverlay';
   overlay.className = 'chat-mode-sheet-overlay';
@@ -96,6 +97,7 @@ function openChatModeSheet() {
     <div class="chat-mode-sheet" role="dialog" aria-modal="true">
       <button class="chat-mode-sheet-close" type="button" aria-label="닫기" onclick="closeChatModeSheet()">✕</button>
       <div class="chat-mode-sheet-cards" id="chatModeSheetCards"></div>
+      ${showMemo ? `
       <div class="chat-mode-sheet-divider"></div>
       <div class="chat-mode-sheet-memo">
         <label class="chat-mode-sheet-memo-label">
@@ -106,11 +108,12 @@ function openChatModeSheet() {
         </label>
         <div class="chat-mode-sheet-memo-hint" id="chatModeMemoHint"></div>
       </div>
+      ` : ''}
     </div>
   `;
   document.body.appendChild(overlay);
   _renderChatModeSheetCards();
-  _renderChatModeSheetMemoState();
+  if (showMemo) _renderChatModeSheetMemoState();
   // 바깥 탭 닫기.
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closeChatModeSheet(); });
   // ESC 닫기.

@@ -185,11 +185,8 @@ function updateMainHeaderBtnVisual() {
   const isChat = activeScreen && (screenId === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
   const isReflection = screenId === 'screen-reflection';
   const isMagicHelp = screenId === 'screen-magic-help';
-  const billing = window._billingCache;
-  const plan = billing?.subscription_plan;
-  const active = !!billing?.subscription_active;
-  const ragEligible = active && (plan === 'light' || plan === 'premium');
-  // useRag / ragSeen 은 updateModeHeaderVisual() 안에서 직접 읽음 (2026-05-22 dispatch 변경 후 dead var 제거).
+  // V4 사용자 명시 2026-05-23 — chat 분기의 ragEligible 가드 제거 (모든 사용자 모드 시각).
+  //   안경/메모리 시각 가드는 updateModeHeaderVisual() / openChatModeSheet() 안에서 직접 _isChatRagEligible().
 
   // 숙고/마법 = per-room useOpus 조회
   let perRoomUseOpus = false;
@@ -212,9 +209,9 @@ function updateMainHeaderBtnVisual() {
       btn.setAttribute('title', perRoomUseOpus
         ? '🦉 Opus — 누르면 Sonnet'
         : '🪶 Sonnet — 누르면 Opus (Premium 전용)');
-    } else if (isChat && ragEligible) {
-      // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 = 3 모드 시스템 합성 캐릭터.
-      //   state.chatMode + state.preferences.useRag → 6 variants (3 모드 × 2 메모리).
+    } else if (isChat) {
+      // V4 사용자 명시 2026-05-23 — 대화탭 모든 사용자 = 3 모드 시스템 합성 캐릭터.
+      //   updateModeHeaderVisual 안에서 안경 (메모리) 가드 — Plus/Premium 만 안경 시각.
       if (typeof updateModeHeaderVisual === 'function') updateModeHeaderVisual(btn);
     } else {
       btn.classList.add('brand-only');
