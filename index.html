@@ -16065,6 +16065,15 @@ async function maybeShowE2EESetupOrRecovery() {
   if (typeof window !== 'undefined' && window._onbTutorialMode) return;
   if (state.preferences && state.preferences._e2eeOptedOut) return;  // 테스트 계정 명시 평문
 
+  // V4 (사용자 보고 2026-05-22 ultrathink): reload 후 master key 메모리 미복원 → 옛 wrap 분기 무한 loop fix.
+  //   _e2eeInitMasterKey (localStorage _E2EE_LOCAL_KEY → 메모리 복원) 호출 site 는 코드 베이스 전체에서 단 1 곳: 05-supabase.js:161 (_encryptedBody 분기 안).
+  //   평문 복구 사용자는 loadFromCloud 의 평문 path (line 203 else) 를 타기 때문에 _e2eeInitMasterKey 호출 안 됨 → reload 후 _e2eeMasterKey null 유지.
+  //   submitE2EERecovery 의 _autoGuardPlaceholder 분기는 master key 를 localStorage 에 정상 저장하지만 (10-unified-consent-modal.js:317), 그게 메모리로 안 올라오므로 line 41+ 의 옛 wrap 분기 가 다시 placeholder pending → 모달 무한.
+  //   fix: guard 진입 시 메모리 _e2eeMasterKey null 이면 localStorage 에서 끌어올림. _e2eeInitMasterKey 는 이미 메모리 있으면 즉시 return (05-e2ee-master-flow.js:2) 이라 정상 활성 사용자엔 무영향.
+  if (!_e2eeMasterKey && typeof _e2eeInitMasterKey === 'function') {
+    try { await _e2eeInitMasterKey(); } catch (e) { console.warn('[E2EE setup guard] _e2eeInitMasterKey 예외:', e); }
+  }
+
   // B-3 / B-4: cloud _encryptedBody 박힘 + master key 없음 → recovery 강제
   if (window._e2eePendingRecovery) {
     return maybeShowE2EERecoveryModal();
