@@ -1068,8 +1068,34 @@
     background: var(--accent);
   }
 
-  /* V4 사용자 명시 2026-05-23 — empty entry (chat 메인 영역, chatMessages 비어있을 때).
-     입력바와 별개 자리. 화면 위쪽 여백 + 가운데 정렬 + 옛 어투 큰 2줄 + chip 3. */
+  /* V4 사용자 명시 2026-05-23 ultrathink — empty entry chip 말풍선 (사용자 reply 톤, 우측 정렬).
+     누르면 텍스트 자동 send. AI welcome bubble 바로 아래 자연 흐름. */
+  .ces-chips-inline {
+    display: flex; flex-direction: column; align-items: flex-end;
+    gap: 6px;
+    margin: 4px 0 14px 0;
+  }
+  .ces-chip-bubble {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 18px;
+    border-bottom-right-radius: 4px;
+    padding: 11px 16px;
+    font-size: 15px; line-height: 1.5;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    max-width: 80%;
+    text-align: left;
+    transition: opacity 0.15s, transform 0.12s;
+  }
+  .ces-chip-bubble:hover { opacity: 0.92; }
+  .ces-chip-bubble:active { transform: scale(0.985); }
+  /* welcome bubble — .msg.assistant 의 기본 layout 그대로 받음 (avatar + bubble). */
+
+  /* (deprecated 2026-05-23) chat-empty-state element 폐기 — empty entry 가 chatMessages 안 통합.
+     CSS 는 dead. 다음 cleanup PR 에서 제거. */
   .chat-empty-state {
     padding: 64px 24px 24px 24px;
     text-align: center;

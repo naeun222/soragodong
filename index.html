@@ -1231,8 +1231,34 @@
     background: var(--accent);
   }
 
-  /* V4 사용자 명시 2026-05-23 — empty entry (chat 메인 영역, chatMessages 비어있을 때).
-     입력바와 별개 자리. 화면 위쪽 여백 + 가운데 정렬 + 옛 어투 큰 2줄 + chip 3. */
+  /* V4 사용자 명시 2026-05-23 ultrathink — empty entry chip 말풍선 (사용자 reply 톤, 우측 정렬).
+     누르면 텍스트 자동 send. AI welcome bubble 바로 아래 자연 흐름. */
+  .ces-chips-inline {
+    display: flex; flex-direction: column; align-items: flex-end;
+    gap: 6px;
+    margin: 4px 0 14px 0;
+  }
+  .ces-chip-bubble {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 18px;
+    border-bottom-right-radius: 4px;
+    padding: 11px 16px;
+    font-size: 15px; line-height: 1.5;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    max-width: 80%;
+    text-align: left;
+    transition: opacity 0.15s, transform 0.12s;
+  }
+  .ces-chip-bubble:hover { opacity: 0.92; }
+  .ces-chip-bubble:active { transform: scale(0.985); }
+  /* welcome bubble — .msg.assistant 의 기본 layout 그대로 받음 (avatar + bubble). */
+
+  /* (deprecated 2026-05-23) chat-empty-state element 폐기 — empty entry 가 chatMessages 안 통합.
+     CSS 는 dead. 다음 cleanup PR 에서 제거. */
   .chat-empty-state {
     padding: 64px 24px 24px 24px;
     text-align: center;
@@ -13717,23 +13743,8 @@ img.pearl-load-fail {
       <div class="screen-title" style="margin-bottom: 14px;">고동이에게 <img src="/character/godong-default.svg" alt="" class="godong-icon godong-mood-default" decoding="async"></div>
       <!-- 사용자 명시 2026-05-10: 시뮬 → 대화 이어가기 시 상단 스티커. 챕터 마무리 시 사라짐. -->
       <div id="chatSimContextSticker" class="chat-sim-sticker" style="display:none;">💭 시나리오 토론 중</div>
-      <!-- V4 사용자 명시 2026-05-23 — 대화탭 empty entry: 옛 어투 2줄 안내 + chip 3 (chatMode null + textarea 비어있을 때).
-           chat-input-bar 에서 이동 (입력바 안 작은 영역 → 채팅 메인 영역 큰 자리). updateChatEmptyState() 가 display 갱신. -->
-      <div class="chat-empty-state" id="chatEmptyState" hidden>
-        <div class="ces-lines">
-          <div class="ces-line-1" id="chatEmptyLine1">편하게 말해 보소</div>
-          <div class="ces-line-2-wrap">
-            <span class="ces-line-2" id="chatEmptyLine2">오늘 하루 어땠는지 궁금하오</span>
-            <button type="button" id="chatEmptyDiaryInfo" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내" title="일기 안내" hidden>ⓘ</button>
-          </div>
-          <div class="ces-diary-hint" id="chatEmptyDiaryHint" hidden>일기: 로 시작하면 그대로 보관돼요</div>
-        </div>
-        <div class="ces-chips" id="chatEmptyChips">
-          <button type="button" class="ces-chip" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
-          <button type="button" class="ces-chip" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어</button>
-          <button type="button" class="ces-chip" onclick="onChatEmptyChip('vent')">마음이 심란해...</button>
-        </div>
-      </div>
+      <!-- V4 사용자 명시 2026-05-23 ultrathink — empty entry 는 _chatEmptyAreaHtml 가 chatMessages 안에 직접 render
+           (welcome bubble + chip 3 말풍선 형태). 별도 #chatEmptyState element 폐기. -->
       <div class="chat-messages" id="chatMessages"></div>
     </div>
     <!-- 사용자 요청 2026-04-29: '↓ 새 메시지' 플로팅 칩 — 위로 스크롤 후 새 메시지 도착 시 표시 -->
@@ -42021,12 +42032,25 @@ function renderChat() {
 function _chatEmptyAreaHtml() {
   try {
     if (window._onbTutorialMode) return '';
-    // V4 사용자 명시 2026-05-23 — 옛 fake AI message ("편하게 말해 보소" bubble) 폐기.
-    //   새 empty entry (screen-chat#chatEmptyState) 가 자리 대체 — 합성 캐릭터 + chip + 모드별 안내.
-    //   체크인 미완료 저녁 = 체크인 floating 카드만 (별개 system, 유지). 체크인 완료 / 낮 = 빈 return.
-    const isEvening = _chatIsEveningMode();
-    if (!isEvening) return '';
-    return _chatEmptyEveningCheckinHtml();
+    // V4 사용자 명시 2026-05-23 ultrathink — empty entry 디자인 명세:
+    //   1. AI welcome bubble — avatar (일상고동 default) + 말풍선 "편하게 말해 보소. 오늘 하루 어땠는지 궁금하오."
+    //   2. chip 3 (말풍선 형태, 사용자 reply 톤) — chatMode null 일 때만 노출. 누르면 selectChatMode + 자동 send.
+    //   3. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
+    const chatMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
+    const avatarHtml = (typeof composedCharacterHtml === 'function')
+      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: chatMode, useGlasses: false, expression: 'serious' })}</div>`
+      : '';
+    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">편하게 말해 보소. 오늘 하루 어땠는지 궁금하오.</div></div>`;
+    const chipsHtml = (chatMode == null) ? `<div class="ces-chips-inline">
+        <button type="button" class="ces-chip-bubble" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
+        <button type="button" class="ces-chip-bubble" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어 도와줘</button>
+        <button type="button" class="ces-chip-bubble" onclick="onChatEmptyChip('vent')">마음이 심란해...</button>
+      </div>` : '';
+    let evening = '';
+    if (_chatIsEveningMode()) {
+      try { evening = _chatEmptyEveningCheckinHtml(); } catch {}
+    }
+    return welcomeBubble + chipsHtml + evening;
   } catch (e) { return ''; }
 }
 
@@ -44399,11 +44423,14 @@ function selectChatMode(mode) {
   const next = (prev === mode) ? null : mode;
   state.chatMode = next;
   try { saveState(); } catch {}
-  // 시트 카드 재렌더 + 헤더 캐릭터 morph + empty placeholder 텍스트 swap + 기존 메시지 아바타 morph.
+  // 시트 카드 재렌더 + 헤더 캐릭터 morph + 기존 메시지 아바타 morph.
   _renderChatModeSheetCards();
   if (typeof updateMainHeaderBtnVisual === 'function') updateMainHeaderBtnVisual();
-  if (typeof updateChatEmptyState === 'function') updateChatEmptyState();
   _refreshAllMsgAvatars();
+  // V4 사용자 명시 2026-05-23 ultrathink — chatMessages 비어있을 때 empty entry 재 render (chip hide + welcome avatar morph).
+  if (((state && state.chatMessages) || []).length === 0 && typeof renderChat === 'function') {
+    renderChat();
+  }
   // 신규 선택 시만 토스트. deselect 는 silent (사용자가 명시 의도).
   if (next && next !== prev) {
     const card = CHAT_MODE_CARDS.find(c => c.id === next);
@@ -44421,92 +44448,32 @@ function _refreshAllMsgAvatars() {
   });
 }
 
-// ─── empty placeholder (chip + mode-aware 안내) ──────────────────
-//   호출 시점: 화면 진입 / 메시지 send / textarea input / selectChatMode / mode toggle.
-//   조건:
-//     A) chatMessages 비어있고 screen-chat 활성 → empty state 보임.
-//     B) A + chatMode === null + textarea 비어있음 → chip 보임. 한 번 chip 누르면 모드 set + chip hide.
-//     C) A + (chatMode === null || chatMode === 'daily') → ⓘ 일기 안내 아이콘 보임.
-const _CHAT_EMPTY_LINES = {
-  daily:   { l1: '편하게 말해 보소', l2: '오늘 하루 어땠는지 궁금하오' },
-  inquiry: { l1: '편하게 말해 보소', l2: '고민이 무엇인가' },
-  vent:    { l1: '편하게 말해 보소', l2: '다 괜찮다. 난 여기 있으니.' }
-};
-// V4 사용자 명시 2026-05-23 — textarea placeholder 도 모드별 swap.
-const _CHAT_TA_PLACEHOLDERS = {
-  daily:   '오늘 하루 어땠는지 궁금하오',
-  inquiry: '고민이 무엇인가',
-  vent:    '다 괜찮다. 난 여기 있으니.'
-};
-function updateChatEmptyState() {
-  // ─── 1. textarea placeholder 갱신 — chat 화면 활성/비활성 무관. 모드 바뀌면 즉시 반영. ───
+// V4 사용자 명시 2026-05-23 ultrathink — empty entry chatMessages 안 통합 (renderChat 의 _chatEmptyAreaHtml).
+//   별도 #chatEmptyState element / _CHAT_EMPTY_LINES / _CHAT_TA_PLACEHOLDERS 폐기.
+//   textarea placeholder = 기존 CHAT_PLACEHOLDERS pool (15-navigation.js rotateChatPlaceholder) 회전 — 모드별 swap X.
+function updateChatEmptyState() { /* deprecated 2026-05-23 — _chatEmptyAreaHtml 가 chatMessages 안 render */ }
+
+// chip 누르면 모드 set + 텍스트 자동 send (quick reply 패턴).
+function onChatEmptyChip(mode) {
+  if (!mode || (mode !== 'daily' && mode !== 'inquiry' && mode !== 'vent')) return;
+  // 모드 먼저 set — backend dispatch 에 적용 시 chatMode 사용.
+  selectChatMode(mode);
+  const chipTexts = {
+    daily:   '그냥 재밌게 얘기하고 싶어',
+    inquiry: '어떻게 해야할지 모르겠어 도와줘',
+    vent:    '마음이 심란해...'
+  };
+  const text = chipTexts[mode];
+  if (!text) return;
   const ta = document.getElementById('chatInput');
   if (ta) {
-    const mode = (state && state.chatMode) || 'daily';
-    ta.placeholder = _CHAT_TA_PLACEHOLDERS[mode] || _CHAT_TA_PLACEHOLDERS.daily;
+    ta.value = text;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
   }
-  // ─── 2. empty state element (chip + 안내) visibility + line text. chat 화면 + 진짜 메시지 없음. ───
-  // V4 사용자 명시 2026-05-23 — isEmpty 판정은 state.chatMessages.length 기준 (DOM 자식 무관).
-  //   옛 fake AI message / archive-header / 체크인 floating 카드 같은 비-메시지 element 가 들어있어도 empty entry 노출.
-  const el = document.getElementById('chatEmptyState');
-  if (!el) return;
-  const screenChat = document.getElementById('screen-chat');
-  const isChatActive = screenChat && screenChat.classList.contains('active');
-  const isEmpty = ((typeof state !== 'undefined' && state && state.chatMessages) || []).length === 0;
-  if (!isChatActive || !isEmpty) {
-    el.hidden = true;
-    const hint = document.getElementById('chatEmptyDiaryHint');
-    if (hint) hint.hidden = true;
-    return;
-  }
-  el.hidden = false;
-  const mode = (state && state.chatMode) || 'daily';
-  const lines = _CHAT_EMPTY_LINES[mode] || _CHAT_EMPTY_LINES.daily;
-  const line1 = document.getElementById('chatEmptyLine1');
-  const line2 = document.getElementById('chatEmptyLine2');
-  if (line1) line1.textContent = lines.l1;
-  if (line2) line2.textContent = lines.l2;
-  // ⓘ 일기 안내 — daily 또는 null (= daily 시각) 일 때만.
-  const showDiaryInfo = !state?.chatMode || state.chatMode === 'daily';
-  const info = document.getElementById('chatEmptyDiaryInfo');
-  if (info) info.hidden = !showDiaryInfo;
-  if (!showDiaryInfo) {
-    const hint = document.getElementById('chatEmptyDiaryHint');
-    if (hint) hint.hidden = true;
-  }
-  // chip — chatMode null + textarea 비어있을 때만.
-  const chips = document.getElementById('chatEmptyChips');
-  if (chips) {
-    const ta = document.getElementById('chatInput');
-    const taEmpty = !ta || !ta.value || ta.value.length === 0;
-    const showChips = !state?.chatMode && taEmpty;
-    chips.hidden = !showChips;
-  }
+  if (typeof sendChat === 'function') setTimeout(() => sendChat(), 50);
 }
 
-function onChatEmptyChip(mode) {
-  selectChatMode(mode);
-  // 시트와 다르게 empty placeholder 의 chip 누르면 텍스트 swap + chip hide (chatMode set 됐으니 자동).
-  updateChatEmptyState();
-}
-
-function toggleChatEmptyDiaryInfo() {
-  const hint = document.getElementById('chatEmptyDiaryHint');
-  if (!hint) return;
-  hint.hidden = !hint.hidden;
-}
-
-// chatMessages mutation → empty state 자동 갱신. send / receive / chapter clear 모두 cover.
-document.addEventListener('DOMContentLoaded', () => {
-  const cm = document.getElementById('chatMessages');
-  if (cm && typeof MutationObserver !== 'undefined') {
-    try {
-      new MutationObserver(() => {
-        if (typeof updateChatEmptyState === 'function') updateChatEmptyState();
-      }).observe(cm, { childList: true });
-    } catch (e) { console.warn('[chat-mode] chatMessages observer:', e); }
-  }
-});
+function toggleChatEmptyDiaryInfo() { /* deprecated 2026-05-23 — ⓘ 일기 안내 UI 폐기 */ }
 
 function toggleChatModeMemory() {
   if (!state) return;

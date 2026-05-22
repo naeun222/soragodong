@@ -238,12 +238,25 @@ function renderChat() {
 function _chatEmptyAreaHtml() {
   try {
     if (window._onbTutorialMode) return '';
-    // V4 사용자 명시 2026-05-23 — 옛 fake AI message ("편하게 말해 보소" bubble) 폐기.
-    //   새 empty entry (screen-chat#chatEmptyState) 가 자리 대체 — 합성 캐릭터 + chip + 모드별 안내.
-    //   체크인 미완료 저녁 = 체크인 floating 카드만 (별개 system, 유지). 체크인 완료 / 낮 = 빈 return.
-    const isEvening = _chatIsEveningMode();
-    if (!isEvening) return '';
-    return _chatEmptyEveningCheckinHtml();
+    // V4 사용자 명시 2026-05-23 ultrathink — empty entry 디자인 명세:
+    //   1. AI welcome bubble — avatar (일상고동 default) + 말풍선 "편하게 말해 보소. 오늘 하루 어땠는지 궁금하오."
+    //   2. chip 3 (말풍선 형태, 사용자 reply 톤) — chatMode null 일 때만 노출. 누르면 selectChatMode + 자동 send.
+    //   3. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
+    const chatMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
+    const avatarHtml = (typeof composedCharacterHtml === 'function')
+      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: chatMode, useGlasses: false, expression: 'serious' })}</div>`
+      : '';
+    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">편하게 말해 보소. 오늘 하루 어땠는지 궁금하오.</div></div>`;
+    const chipsHtml = (chatMode == null) ? `<div class="ces-chips-inline">
+        <button type="button" class="ces-chip-bubble" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
+        <button type="button" class="ces-chip-bubble" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어 도와줘</button>
+        <button type="button" class="ces-chip-bubble" onclick="onChatEmptyChip('vent')">마음이 심란해...</button>
+      </div>` : '';
+    let evening = '';
+    if (_chatIsEveningMode()) {
+      try { evening = _chatEmptyEveningCheckinHtml(); } catch {}
+    }
+    return welcomeBubble + chipsHtml + evening;
   } catch (e) { return ''; }
 }
 
