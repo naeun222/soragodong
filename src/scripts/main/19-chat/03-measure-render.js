@@ -239,14 +239,27 @@ function _chatEmptyAreaHtml() {
   try {
     if (window._onbTutorialMode) return '';
     // V4 사용자 명시 2026-05-23 ultrathink — empty entry 디자인 명세:
-    //   1. AI welcome bubble — avatar (일상고동 default) + 말풍선 "편하게 말해 보소. 오늘 하루 어땠는지 궁금하오."
-    //   2. chip 3 (말풍선 형태, 사용자 reply 톤) — chatMode null 일 때만 노출. 누르면 selectChatMode + 자동 send.
-    //   3. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
+    //   1. AI welcome bubble — avatar (모드별, default expression = soft-smile) + 말풍선 2줄 (편하게 말해 보소 / 모드별 부수).
+    //   2. ⓘ 일기 안내 — null/daily 모드만. 클릭 시 hint 펼침/접힘.
+    //   3. chip 3 (말풍선 형태, 좌측 정렬, 모드별 고유 색) — chatMode null 일 때만 노출. 누르면 selectChatMode 만 (자동 send X).
+    //   4. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
     const chatMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
     const avatarHtml = (typeof composedCharacterHtml === 'function')
-      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: chatMode, useGlasses: false, expression: 'serious' })}</div>`
+      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: chatMode, useGlasses: false })}</div>`
       : '';
-    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">편하게 말해 보소. 오늘 하루 어땠는지 궁금하오.</div></div>`;
+    // 모드별 2줄 안내 — null = daily 와 동일.
+    const _CES_LINES = {
+      daily:   { l1: '편하게 말해 보소', l2: '오늘 하루 어땠는지 궁금하오' },
+      inquiry: { l1: '편하게 말해 보소', l2: '고민이 무엇인가' },
+      vent:    { l1: '편하게 말해 보소', l2: '다 괜찮다. 난 여기 있으니.' }
+    };
+    const lines = _CES_LINES[chatMode] || _CES_LINES.daily;
+    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${lines.l1}<br>${lines.l2}</div></div>`;
+    // ⓘ 일기 안내 — null 또는 daily 만.
+    const showDiary = (chatMode == null || chatMode === 'daily');
+    const diaryHtml = showDiary ? `<button type="button" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내">ⓘ 일기 안내</button>
+        <div class="ces-diary-hint" id="chatEmptyDiaryHint" hidden>일기: 로 쓰면 원본으로 저장돼</div>` : '';
+    // chip 3 — null 만.
     const chipsHtml = (chatMode == null) ? `<div class="ces-chips-inline">
         <button type="button" class="ces-chip-bubble mode-daily" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
         <button type="button" class="ces-chip-bubble mode-inquiry" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어 도와줘</button>
@@ -256,7 +269,7 @@ function _chatEmptyAreaHtml() {
     if (_chatIsEveningMode()) {
       try { evening = _chatEmptyEveningCheckinHtml(); } catch {}
     }
-    return welcomeBubble + chipsHtml + evening;
+    return welcomeBubble + diaryHtml + chipsHtml + evening;
   } catch (e) { return ''; }
 }
 

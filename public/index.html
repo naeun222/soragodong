@@ -866,22 +866,23 @@
   .msg.user { align-items: flex-end; }
   .msg.assistant { align-items: flex-start; }
   .msg.error { align-items: flex-start; }
-  /* V4 사용자 명시 2026-05-23 — AI 메시지 왼쪽 합성 캐릭터 아바타. padding-left 44px + .msg-avatar absolute. */
+  /* V4 사용자 명시 2026-05-23 — AI 메시지 왼쪽 합성 캐릭터 아바타. padding-left 44px + .msg-avatar absolute.
+     사용자 명시 2026-05-23 (재): avatar 10px 더 왼쪽 (left:-10). aura sizing = base 영역 내 (캐릭터쪽 작게, '깨달음으로' 버튼 안 가리게). */
   .msg.assistant { position: relative; padding-left: 44px; }
   .msg.assistant .msg-avatar {
     position: absolute;
-    left: 0; top: 0;
+    left: -10px; top: 0;
     width: 36px; height: 45px;  /* 4:5 비율 — 모자 viewBox 위 25% 튀어나옴 */
     overflow: visible;
     pointer-events: none;
   }
   .msg.assistant .msg-avatar .char-layer { position: absolute; display: block; }
-  .msg.assistant .msg-avatar .char-layer.aura { inset: -4px; z-index: 0; opacity: 0.95; }
+  .msg.assistant .msg-avatar .char-layer.aura { left: 0; top: 9px; width: 36px; height: 36px; z-index: 0; opacity: 0.9; }
+  .msg.assistant .msg-avatar .char-layer.aura.aura-inquiry { filter: hue-rotate(225deg) saturate(0.85); }  /* amber → 보라 변환 */
   .msg.assistant .msg-avatar .char-layer.base { left: 0; top: 9px; width: 36px; height: 36px; z-index: 1; }
-  .msg.assistant .msg-avatar .char-layer.hat  { top: 0; left: 0; width: 36px; height: 45px; z-index: 2; }
   .msg.assistant .msg-avatar .char-layer img  { width: 100%; height: 100%; display: block; }
-  /* V4 사용자 명시 2026-05-23 — 폰트 카톡 사이즈로 (14→15). 라인 높이 미세 조정. */
-  .msg-bubble { max-width: 88%; padding: 14px 18px; border-radius: 18px; font-size: 15px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; position: relative; }
+  /* V4 사용자 명시 2026-05-23 (재) — 폰트 1px 줄임 (15→14). */
+  .msg-bubble { max-width: 88%; padding: 14px 18px; border-radius: 18px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; position: relative; }
   /* V3.13.x: 메시지 ⋮ 메뉴 버튼 */
   .msg-menu-btn {
     position: absolute; top: 4px; right: 4px;
@@ -1095,19 +1096,20 @@
     display: block;
   }
   .chat-mode-btn.is-mode .char-layer.aura  { inset: -4px; z-index: 0; opacity: 0.95; }
+  .chat-mode-btn.is-mode .char-layer.aura.aura-inquiry { filter: hue-rotate(225deg) saturate(0.85); }  /* amber → 보라 변환 */
   .chat-mode-btn.is-mode .char-layer.base  { inset: 2px;  z-index: 1; width: calc(100% - 4px); height: calc(100% - 4px); }
-  .chat-mode-btn.is-mode .char-layer.hat   { top: -8px; left: 0; width: 100%; height: 125%; z-index: 2; }
   .chat-mode-btn.is-mode .char-layer.glasses { inset: 2px; z-index: 3; width: calc(100% - 4px); height: calc(100% - 4px); }
   .chat-mode-btn.is-mode .char-layer img,
   .chat-mode-btn.is-mode > img.char-layer {
     width: 100%; height: 100%; display: block;
   }
 
-  /* 모드별 halo — null state 도 daily halo 로 통일 (default 일상고동). */
+  /* 모드별 halo — null state 도 daily halo 로 통일 (default 일상고동).
+     사용자 명시 2026-05-23 (재): daily 베이지 아우라 살짝 더 강하게. */
   .chat-mode-btn.is-mode.mode-daily {
-    background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(180,140,80,0.08));
-    border-color: rgba(212,167,106,0.42);
-    box-shadow: 0 0 10px rgba(212,167,106,0.28);
+    background: linear-gradient(135deg, rgba(212,167,106,0.24), rgba(180,140,80,0.12));
+    border-color: rgba(212,167,106,0.60);
+    box-shadow: 0 0 14px rgba(212,167,106,0.42);
   }
   .chat-mode-btn.is-mode.mode-inquiry {
     background: linear-gradient(135deg, rgba(120,90,180,0.22), rgba(95,75,160,0.10));
@@ -1278,6 +1280,33 @@
     background: rgba(218,165,32,0.30);
   }
   /* welcome bubble — .msg.assistant 의 기본 layout 그대로 받음 (avatar + bubble). */
+
+  /* V4 사용자 명시 2026-05-23 ultrathink — ⓘ 일기 안내 (null/daily 모드만). */
+  .ces-diary-info {
+    margin: -6px 0 12px 44px;
+    background: transparent;
+    border: none;
+    color: var(--text-soft);
+    font-size: 11.5px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: color 0.15s, background 0.15s;
+    display: inline-block;
+  }
+  .ces-diary-info:hover { color: var(--text); background: var(--surface2); }
+  .ces-diary-hint {
+    margin: 4px 0 12px 44px;
+    font-size: 11.5px;
+    color: var(--text-soft);
+    padding: 6px 12px;
+    background: var(--surface2);
+    border-radius: 10px;
+    max-width: 80%;
+    line-height: 1.5;
+    animation: cesHintFade 180ms ease-out;
+  }
+  .ces-diary-hint[hidden] { display: none; }
 
   /* (deprecated 2026-05-23) chat-empty-state element 폐기 — empty entry 가 chatMessages 안 통합.
      CSS 는 dead. 다음 cleanup PR 에서 제거. */
@@ -41776,7 +41805,7 @@ function _renderChatMessageHTML(m, i) {
     // V4 사용자 명시 2026-05-23 — AI 메시지 왼쪽에 합성 캐릭터 아바타 (평온 표정 static, 모드별 모자/아우라, 안경 X).
     //   error 메시지엔 아바타 X (오류 시각을 친구 표정으로 표현 부자연).
     const avatarHtml = (m.role === 'assistant' && !m.error && typeof composedCharacterHtml === 'function')
-      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: (typeof state !== 'undefined' && state && state.chatMode) || null, useGlasses: false, expression: 'serious' })}</div>`
+      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: (typeof state !== 'undefined' && state && state.chatMode) || null, useGlasses: false })}</div>`
       : '';
     return chapterDivider + `<div class="msg ${msgClass}">${avatarHtml}${bubble}${pearlSuggestChip}${proposalBtns}${decisionCard}${vaultCard}${actions}${resurfaceChip}</div>`;
 }
@@ -42055,14 +42084,27 @@ function _chatEmptyAreaHtml() {
   try {
     if (window._onbTutorialMode) return '';
     // V4 사용자 명시 2026-05-23 ultrathink — empty entry 디자인 명세:
-    //   1. AI welcome bubble — avatar (일상고동 default) + 말풍선 "편하게 말해 보소. 오늘 하루 어땠는지 궁금하오."
-    //   2. chip 3 (말풍선 형태, 사용자 reply 톤) — chatMode null 일 때만 노출. 누르면 selectChatMode + 자동 send.
-    //   3. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
+    //   1. AI welcome bubble — avatar (모드별, default expression = soft-smile) + 말풍선 2줄 (편하게 말해 보소 / 모드별 부수).
+    //   2. ⓘ 일기 안내 — null/daily 모드만. 클릭 시 hint 펼침/접힘.
+    //   3. chip 3 (말풍선 형태, 좌측 정렬, 모드별 고유 색) — chatMode null 일 때만 노출. 누르면 selectChatMode 만 (자동 send X).
+    //   4. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
     const chatMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
     const avatarHtml = (typeof composedCharacterHtml === 'function')
-      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: chatMode, useGlasses: false, expression: 'serious' })}</div>`
+      ? `<div class="msg-avatar" aria-hidden="true">${composedCharacterHtml({ mode: chatMode, useGlasses: false })}</div>`
       : '';
-    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">편하게 말해 보소. 오늘 하루 어땠는지 궁금하오.</div></div>`;
+    // 모드별 2줄 안내 — null = daily 와 동일.
+    const _CES_LINES = {
+      daily:   { l1: '편하게 말해 보소', l2: '오늘 하루 어땠는지 궁금하오' },
+      inquiry: { l1: '편하게 말해 보소', l2: '고민이 무엇인가' },
+      vent:    { l1: '편하게 말해 보소', l2: '다 괜찮다. 난 여기 있으니.' }
+    };
+    const lines = _CES_LINES[chatMode] || _CES_LINES.daily;
+    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${lines.l1}<br>${lines.l2}</div></div>`;
+    // ⓘ 일기 안내 — null 또는 daily 만.
+    const showDiary = (chatMode == null || chatMode === 'daily');
+    const diaryHtml = showDiary ? `<button type="button" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내">ⓘ 일기 안내</button>
+        <div class="ces-diary-hint" id="chatEmptyDiaryHint" hidden>일기: 로 쓰면 원본으로 저장돼</div>` : '';
+    // chip 3 — null 만.
     const chipsHtml = (chatMode == null) ? `<div class="ces-chips-inline">
         <button type="button" class="ces-chip-bubble mode-daily" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
         <button type="button" class="ces-chip-bubble mode-inquiry" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어 도와줘</button>
@@ -42072,7 +42114,7 @@ function _chatEmptyAreaHtml() {
     if (_chatIsEveningMode()) {
       try { evening = _chatEmptyEveningCheckinHtml(); } catch {}
     }
-    return welcomeBubble + chipsHtml + evening;
+    return welcomeBubble + diaryHtml + chipsHtml + evening;
   } catch (e) { return ''; }
 }
 
@@ -44287,27 +44329,26 @@ const CHAT_MODE_EXPRESSIONS = new Set([
 ]);
 
 // 표정 파일 경로 — 'serious' 만 public/character/ 에, 나머지는 public/expressions/.
+// V4 사용자 명시 2026-05-23 ultrathink — default 표정 = 'soft-smile' (옛 serious 폐기). 모드 없는 default 표정도 soft-smile.
 function _chatModeExprPath(expression) {
-  const e = CHAT_MODE_EXPRESSIONS.has(expression) ? expression : 'serious';
+  const e = CHAT_MODE_EXPRESSIONS.has(expression) ? expression : 'soft-smile';
   return e === 'serious' ? '/character/godong-serious.svg' : `/expressions/godong-${e}.svg`;
 }
 
-// 4 layer 합성 — HTML string 반환. 호출처가 element.innerHTML 또는 template literal 에 삽입.
+// 3 layer 합성 — HTML string 반환. 호출처가 element.innerHTML 또는 template literal 에 삽입.
 //   { mode: 'daily'|'inquiry'|'vent'|null, useGlasses: bool, expression: '...' }
-//   mode null 또는 'daily' = 모자 X, 아우라 X (= 일상고동 default).
+//   mode null/daily = 아우라 X. inquiry = 보라 아우라 (amber SVG + CSS hue-rotate). vent = amber 아우라.
+//   V4 사용자 명시 2026-05-23 (재) — 고민고동 모자 폐기, 보라 아우라로 통일.
 function composedCharacterHtml({ mode, useGlasses, expression } = {}) {
-  const showAura = mode === 'vent';
-  const showHat  = mode === 'inquiry';
+  const showAura = mode === 'vent' || mode === 'inquiry';
+  const auraVariant = mode === 'inquiry' ? ' aura-inquiry' : '';
   const showGlasses = !!useGlasses;
-  const exprSrc = _chatModeExprPath(expression || 'serious');
+  const exprSrc = _chatModeExprPath(expression || 'soft-smile');
   let html = '';
   if (showAura) {
-    html += `<img class="char-layer aura" src="/expressions/godong-aura-amber.svg" alt="" aria-hidden="true">`;
+    html += `<img class="char-layer aura${auraVariant}" src="/expressions/godong-aura-amber.svg" alt="" aria-hidden="true">`;
   }
   html += `<img class="char-layer base" src="${exprSrc}" alt="" aria-hidden="true">`;
-  if (showHat) {
-    html += `<img class="char-layer hat" src="/expressions/godong-wizard-hat-overlay.svg" alt="" aria-hidden="true">`;
-  }
   if (showGlasses) {
     html += `<img class="char-layer glasses" src="/expressions/godong-glasses-overlay.svg" alt="" aria-hidden="true">`;
   }
@@ -44329,7 +44370,7 @@ function updateModeHeaderVisual(btn) {
              : (mode === 'vent')    ? 'mode-vent'
              : 'mode-daily';
   btn.classList.add(halo);
-  btn.innerHTML = composedCharacterHtml({ mode, useGlasses, expression: 'serious' });
+  btn.innerHTML = composedCharacterHtml({ mode, useGlasses });  // default expression = soft-smile
   const label = (mode === 'inquiry') ? '물어보기'
               : (mode === 'vent')    ? '털어놓기'
               : '얘기하기';
@@ -44464,7 +44505,7 @@ function selectChatMode(mode) {
 function _refreshAllMsgAvatars() {
   if (typeof composedCharacterHtml !== 'function') return;
   const mode = (state && state.chatMode) || null;
-  const html = composedCharacterHtml({ mode, useGlasses: false, expression: 'serious' });
+  const html = composedCharacterHtml({ mode, useGlasses: false });  // default expression = soft-smile
   document.querySelectorAll('.msg.assistant .msg-avatar').forEach(av => {
     av.innerHTML = html;
   });
@@ -44475,27 +44516,19 @@ function _refreshAllMsgAvatars() {
 //   textarea placeholder = 기존 CHAT_PLACEHOLDERS pool (15-navigation.js rotateChatPlaceholder) 회전 — 모드별 swap X.
 function updateChatEmptyState() { /* deprecated 2026-05-23 — _chatEmptyAreaHtml 가 chatMessages 안 render */ }
 
-// chip 누르면 모드 set + 텍스트 자동 send (quick reply 패턴).
+// V4 사용자 명시 2026-05-23 ultrathink — chip 누르면 모드 선택만 (자동 send X).
+//   selectChatMode 안 chatMessages 비어있으면 renderChat → empty entry 가 새 모드별 welcome 으로 swap.
 function onChatEmptyChip(mode) {
   if (!mode || (mode !== 'daily' && mode !== 'inquiry' && mode !== 'vent')) return;
-  // 모드 먼저 set — backend dispatch 에 적용 시 chatMode 사용.
   selectChatMode(mode);
-  const chipTexts = {
-    daily:   '그냥 재밌게 얘기하고 싶어',
-    inquiry: '어떻게 해야할지 모르겠어 도와줘',
-    vent:    '마음이 심란해...'
-  };
-  const text = chipTexts[mode];
-  if (!text) return;
-  const ta = document.getElementById('chatInput');
-  if (ta) {
-    ta.value = text;
-    ta.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-  if (typeof sendChat === 'function') setTimeout(() => sendChat(), 50);
 }
 
-function toggleChatEmptyDiaryInfo() { /* deprecated 2026-05-23 — ⓘ 일기 안내 UI 폐기 */ }
+// ⓘ 일기 안내 토글 — 일상/null 모드만 노출.
+function toggleChatEmptyDiaryInfo() {
+  const hint = document.getElementById('chatEmptyDiaryHint');
+  if (!hint) return;
+  hint.hidden = !hint.hidden;
+}
 
 function toggleChatModeMemory() {
   if (!state) return;

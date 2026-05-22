@@ -11,27 +11,26 @@ const CHAT_MODE_EXPRESSIONS = new Set([
 ]);
 
 // 표정 파일 경로 — 'serious' 만 public/character/ 에, 나머지는 public/expressions/.
+// V4 사용자 명시 2026-05-23 ultrathink — default 표정 = 'soft-smile' (옛 serious 폐기). 모드 없는 default 표정도 soft-smile.
 function _chatModeExprPath(expression) {
-  const e = CHAT_MODE_EXPRESSIONS.has(expression) ? expression : 'serious';
+  const e = CHAT_MODE_EXPRESSIONS.has(expression) ? expression : 'soft-smile';
   return e === 'serious' ? '/character/godong-serious.svg' : `/expressions/godong-${e}.svg`;
 }
 
-// 4 layer 합성 — HTML string 반환. 호출처가 element.innerHTML 또는 template literal 에 삽입.
+// 3 layer 합성 — HTML string 반환. 호출처가 element.innerHTML 또는 template literal 에 삽입.
 //   { mode: 'daily'|'inquiry'|'vent'|null, useGlasses: bool, expression: '...' }
-//   mode null 또는 'daily' = 모자 X, 아우라 X (= 일상고동 default).
+//   mode null/daily = 아우라 X. inquiry = 보라 아우라 (amber SVG + CSS hue-rotate). vent = amber 아우라.
+//   V4 사용자 명시 2026-05-23 (재) — 고민고동 모자 폐기, 보라 아우라로 통일.
 function composedCharacterHtml({ mode, useGlasses, expression } = {}) {
-  const showAura = mode === 'vent';
-  const showHat  = mode === 'inquiry';
+  const showAura = mode === 'vent' || mode === 'inquiry';
+  const auraVariant = mode === 'inquiry' ? ' aura-inquiry' : '';
   const showGlasses = !!useGlasses;
-  const exprSrc = _chatModeExprPath(expression || 'serious');
+  const exprSrc = _chatModeExprPath(expression || 'soft-smile');
   let html = '';
   if (showAura) {
-    html += `<img class="char-layer aura" src="/expressions/godong-aura-amber.svg" alt="" aria-hidden="true">`;
+    html += `<img class="char-layer aura${auraVariant}" src="/expressions/godong-aura-amber.svg" alt="" aria-hidden="true">`;
   }
   html += `<img class="char-layer base" src="${exprSrc}" alt="" aria-hidden="true">`;
-  if (showHat) {
-    html += `<img class="char-layer hat" src="/expressions/godong-wizard-hat-overlay.svg" alt="" aria-hidden="true">`;
-  }
   if (showGlasses) {
     html += `<img class="char-layer glasses" src="/expressions/godong-glasses-overlay.svg" alt="" aria-hidden="true">`;
   }
@@ -53,7 +52,7 @@ function updateModeHeaderVisual(btn) {
              : (mode === 'vent')    ? 'mode-vent'
              : 'mode-daily';
   btn.classList.add(halo);
-  btn.innerHTML = composedCharacterHtml({ mode, useGlasses, expression: 'serious' });
+  btn.innerHTML = composedCharacterHtml({ mode, useGlasses });  // default expression = soft-smile
   const label = (mode === 'inquiry') ? '물어보기'
               : (mode === 'vent')    ? '털어놓기'
               : '얘기하기';
@@ -188,7 +187,7 @@ function selectChatMode(mode) {
 function _refreshAllMsgAvatars() {
   if (typeof composedCharacterHtml !== 'function') return;
   const mode = (state && state.chatMode) || null;
-  const html = composedCharacterHtml({ mode, useGlasses: false, expression: 'serious' });
+  const html = composedCharacterHtml({ mode, useGlasses: false });  // default expression = soft-smile
   document.querySelectorAll('.msg.assistant .msg-avatar').forEach(av => {
     av.innerHTML = html;
   });
@@ -199,27 +198,19 @@ function _refreshAllMsgAvatars() {
 //   textarea placeholder = 기존 CHAT_PLACEHOLDERS pool (15-navigation.js rotateChatPlaceholder) 회전 — 모드별 swap X.
 function updateChatEmptyState() { /* deprecated 2026-05-23 — _chatEmptyAreaHtml 가 chatMessages 안 render */ }
 
-// chip 누르면 모드 set + 텍스트 자동 send (quick reply 패턴).
+// V4 사용자 명시 2026-05-23 ultrathink — chip 누르면 모드 선택만 (자동 send X).
+//   selectChatMode 안 chatMessages 비어있으면 renderChat → empty entry 가 새 모드별 welcome 으로 swap.
 function onChatEmptyChip(mode) {
   if (!mode || (mode !== 'daily' && mode !== 'inquiry' && mode !== 'vent')) return;
-  // 모드 먼저 set — backend dispatch 에 적용 시 chatMode 사용.
   selectChatMode(mode);
-  const chipTexts = {
-    daily:   '그냥 재밌게 얘기하고 싶어',
-    inquiry: '어떻게 해야할지 모르겠어 도와줘',
-    vent:    '마음이 심란해...'
-  };
-  const text = chipTexts[mode];
-  if (!text) return;
-  const ta = document.getElementById('chatInput');
-  if (ta) {
-    ta.value = text;
-    ta.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-  if (typeof sendChat === 'function') setTimeout(() => sendChat(), 50);
 }
 
-function toggleChatEmptyDiaryInfo() { /* deprecated 2026-05-23 — ⓘ 일기 안내 UI 폐기 */ }
+// ⓘ 일기 안내 토글 — 일상/null 모드만 노출.
+function toggleChatEmptyDiaryInfo() {
+  const hint = document.getElementById('chatEmptyDiaryHint');
+  if (!hint) return;
+  hint.hidden = !hint.hidden;
+}
 
 function toggleChatModeMemory() {
   if (!state) return;
