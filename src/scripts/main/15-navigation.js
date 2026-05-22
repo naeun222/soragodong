@@ -8,11 +8,8 @@ function showScreen(name) {
   if (typeof updateMainHeaderBtnVisual === 'function') {
     setTimeout(() => { try { updateMainHeaderBtnVisual(); } catch {} }, 0);
   }
-  // V4 사용자 명시 2026-05-22 ultrathink — 대화 화면 진입 시 empty placeholder (chip + mode-aware 안내) 갱신.
-  if (typeof updateChatEmptyState === 'function') {
-    setTimeout(() => { try { updateChatEmptyState(); } catch {} }, 0);
-  }
   // V4 사용자 보고 2026-05-23 — chat 진입 시 renderChat 강제 호출. 옛 코드로 render 된 메시지를 새 코드 (avatar 포함) 로 재 render.
+  //   empty entry (welcome bubble + chip) 도 renderChat 안 _chatEmptyAreaHtml 가 처리 — 별도 updateChatEmptyState 호출 불필요.
   if (name === 'chat' && typeof renderChat === 'function') {
     setTimeout(() => { try { renderChat(); } catch {} }, 0);
   }

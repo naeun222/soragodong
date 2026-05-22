@@ -3,25 +3,17 @@ async function sendChat() {
   const text = input.value.trim();
   if (!text) return;
 
-  // V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty + 저녁 6시+ 체크인 카드는 사용자가 '대화 시작' 하는 순간 사라짐.
-  //   첫 메시지 send 트리거 — dayK 내 영구 dismiss (새벽 4시 reset 후 내일 저녁 6시 부활).
-  //   체크인 done 상태든 아니든 무관 set — done 이면 카드 자체가 안 보였으니 no-op.
   // V4 사용자 명시 2026-05-23 ultrathink (재재) — welcome 메시지를 AI 의 *진짜 첫 발화* 로 chatMessages 에 박음.
-  //   옛 placeholder bubble = DOM only → AI 컨텍스트 X → 사용자가 첫 메시지 보내도 AI 가 *허공에 던진 첫 발화* 처리.
-  //   신: chatMessages 비어있을 때 sendChat 시점에 welcome (모드별 텍스트) push → user msg push.
+  //   chatMessages 비어있을 때 sendChat 시점에 welcome (모드별 텍스트) push → user msg push.
   //   AI 가 자기 첫 발화 인식 + 사용자 발화가 *답하는 형식* 으로 자연 흐름.
-  if ((state.chatMessages || []).length === 0) {
-    const _tk = (typeof todayKey === 'function') ? todayKey() : '';
-    if (_tk) state._chatEmptyCheckinDismissedDayK = _tk;
-    // welcome 메시지 push (assistant role, _isWelcome 마커).
-    if (typeof _chatWelcomeText === 'function') {
-      state.chatMessages.push({
-        role: 'assistant',
-        content: _chatWelcomeText(state.chatMode || 'daily'),
-        timestamp: new Date().toISOString(),
-        _isWelcome: true
-      });
-    }
+  //   (옛 _chatEmptyCheckinDismissedDayK 자리 폐기 — 대화탭 체크인 카드 자체 폐기 후 dead.)
+  if ((state.chatMessages || []).length === 0 && typeof _chatWelcomeText === 'function') {
+    state.chatMessages.push({
+      role: 'assistant',
+      content: _chatWelcomeText(state.chatMode || 'daily'),
+      timestamp: new Date().toISOString(),
+      _isWelcome: true
+    });
   }
 
   // 사용자 명시 2026-05-01: 위기 신호 detect — 자살예방법 §15-6 + 제조물책임 안전 의무.

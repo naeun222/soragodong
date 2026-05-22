@@ -85,10 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault(); sendChat();
     }
   });
-  // V4 사용자 명시 2026-05-22 ultrathink — textarea input 시 empty placeholder chip 가시성 갱신.
-  ta.addEventListener('input', () => {
-    if (typeof updateChatEmptyState === 'function') updateChatEmptyState();
-  });
+  // V4 cleanup 2026-05-23 — updateChatEmptyState 폐기 (empty entry chatMessages 안 통합). textarea input listener 제거.
   // 사용자 요청 2026-04-29: 숙고 입력바도 메인 chat 처럼 자동 높이 (max 140px)
   const reflTa = document.getElementById('reflectionInput');
   if (reflTa) {

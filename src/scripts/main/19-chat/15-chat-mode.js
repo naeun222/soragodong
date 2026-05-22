@@ -195,10 +195,9 @@ function _refreshAllMsgAvatars() {
   });
 }
 
-// V4 사용자 명시 2026-05-23 ultrathink — empty entry chatMessages 안 통합 (renderChat 의 _chatEmptyAreaHtml).
-//   별도 #chatEmptyState element / _CHAT_EMPTY_LINES / _CHAT_TA_PLACEHOLDERS 폐기.
+// V4 cleanup 2026-05-23 — empty entry chatMessages 안 통합 (renderChat 의 _chatEmptyAreaHtml).
+//   별도 #chatEmptyState element / updateChatEmptyState 함수 / toggleChatEmptyDiaryInfo 함수 폐기.
 //   textarea placeholder = 기존 CHAT_PLACEHOLDERS pool (15-navigation.js rotateChatPlaceholder) 회전 — 모드별 swap X.
-function updateChatEmptyState() { /* deprecated 2026-05-23 — _chatEmptyAreaHtml 가 chatMessages 안 render */ }
 
 // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper. 두 자리 사용:
 //   1) _chatEmptyAreaHtml 의 placeholder welcome bubble (DOM only, chatMessages 비어있을 때).
@@ -219,15 +218,7 @@ function onChatEmptyChip(mode) {
   selectChatMode(mode);
 }
 
-// V4 사용자 명시 2026-05-23 (재) — ⓘ 일기 안내 토글 = 단일 button text swap. 한 줄 처리 (자리 부족 줄바꿈 fix).
-function toggleChatEmptyDiaryInfo() {
-  const btn = document.getElementById('chatEmptyDiaryInfo');
-  if (!btn) return;
-  const expanded = btn.classList.toggle('expanded');
-  btn.textContent = expanded
-    ? '일기: 로 쓰면 원본으로 저장돼  ×'
-    : 'ⓘ 일기 안내';
-}
+// V4 cleanup 2026-05-23 — toggleChatEmptyDiaryInfo 폐기 (ⓘ 일기 안내 = static div 로 변경).
 
 function toggleChatModeMemory() {
   if (!state) return;

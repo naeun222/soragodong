@@ -265,44 +265,6 @@ function _chatEmptyAreaHtml() {
   } catch (e) { return ''; }
 }
 
-function _chatIsEveningMode() {
-  if (window._devForceEvening) return true;
-  const h = new Date().getHours();
-  return (h >= 18 || h < 4);
-}
-
-// 저녁 체크인 floating 카드 (옛 _chatEmptyCheckinCardHtml 재명명).
-// 사용자 명시 2026-05-17 (재): 체크인 done 인 저녁 시간대엔 '편하게 말해 보소 + 오늘 하루 어땠는지 궁금하오' 어시 버블.
-function _chatEmptyEveningCheckinHtml() {
-  const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
-  const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
-  const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  // V4 사용자 명시 2026-05-23 — 체크인 완료 fake AI bubble 폐기. 새 empty entry 가 자리 대체.
-  if (checkinDone) return '';
-  // 미체크인 + dismiss 안 함 → floating 체크인 카드.
-  if (state._chatEmptyCheckinDismissedDayK === todayKVal) return '';
-  const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
-  const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '🌙', title: '오늘 하루 닫아보기', sub: '' };
-  const subHtml = copy.sub ? `<div class="cec-sub">${escapeHtml(copy.sub)}</div>` : '';
-  return `
-    <div class="chat-empty-checkin-card" onclick="enterCheckin()">
-      <div class="cec-label">${copy.icon} 체크인</div>
-      <div class="cec-title">${escapeHtml(copy.title)}</div>
-      ${subHtml}
-    </div>
-  `;
-}
-
-// 낮 어시 버블 — '안녕?' + '무슨 말 할까?' 토글 (사용자 명시 2026-05-17 ultrathink, 옛 5-06 패턴 재진입).
-function _chatEmptyDaytimeHelloHtml() {
-  const examples = (typeof EMPTY_STATE_EXAMPLES !== 'undefined' && Array.isArray(EMPTY_STATE_EXAMPLES)) ? EMPTY_STATE_EXAMPLES : [];
-  const examplesBlock = examples.length
-    ? `<button class="chat-empty-toggle" id="chatEmptyExamplesToggle" onclick="toggleChatEmptyExamples()">무슨 말 할까? ▾</button><ul class="chat-empty-list" id="chatEmptyExamplesList" style="display:none;">${examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>`
-    : '';
-  return `
-    <div class="msg assistant">
-      <div class="msg-bubble">편하게 말해 보소${examplesBlock}</div>
-    </div>
-  `;
-}
+// V4 cleanup 2026-05-23 — 옛 _chatIsEveningMode / _chatEmptyEveningCheckinHtml / _chatEmptyDaytimeHelloHtml 제거.
+//   대화탭 체크인 카드 폐기 (사용자 명시) + 옛 daytime fake AI bubble 폐기 (welcome 통합).
 

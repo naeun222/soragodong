@@ -156,8 +156,7 @@ function _firstHomeEmptySeed() {
     { role: 'assistant', content: '그게 그래도 한 호흡이 됐겠네요. 잠시라도 환기되는 게 중요하죠.',  timestamp: new Date(_now - 1.5 * 60000).toISOString() }
   ];
   state.caseFormulation = {};
-  // 체크인 dismiss / rotating card dismiss flags reset
-  state._chatEmptyCheckinDismissedDayK = null;
+  // rotating card dismiss flags reset (옛 _chatEmptyCheckinDismissedDayK = 대화탭 체크인 카드 폐기 후 dead, 제거).
   if (state.rotatingCardState) {
     state.rotatingCardState.dismissedSources = {};
     state.rotatingCardState.dismissedDayK = null;

@@ -899,31 +899,14 @@
   /* 사용자 명시 2026-04-30: Sonnet 표시 = godongicon 이미지. Opus 는 🦉 이모지 유지. */
   .chat-mode-img { width: 22px; height: 22px; object-fit: contain; display: block; pointer-events: none; }
 
-  /* V4 (사용자 명시 2026-05-13 ultrathink): RAG 토글 visual — godong-sonnet/godong-rag SVG + 3중 cue (색·형태·halo). */
-  .chat-mode-btn.rag-on {
-    background: linear-gradient(135deg, rgba(212,167,106,0.22), rgba(180,140,80,0.10));
-    border-color: rgba(212,167,106,0.55);
-    box-shadow: 0 0 14px rgba(212,167,106,0.45), inset 0 0 8px rgba(212,167,106,0.10);
-  }
-  .chat-mode-btn.rag-off { background: var(--surface2); border-color: var(--border); }
-  /* V4 (사용자 명시 2026-05-13): 대화탭 토글 svg 더 크게 꽉 채우게. png (brand-only) 는 기본 22 유지. */
-  .chat-mode-btn.rag-on .chat-mode-img,
-  .chat-mode-btn.rag-off .chat-mode-img { width: 30px; height: 30px; }
-  /* V4 (사용자 명시 2026-05-13): 대화탭 외 = brand only no-op. 클릭 자체 차단 + 시각 자연 (cursor default + opacity 자연). */
+  /* V4 cleanup 2026-05-23 — 옛 RAG 직접 toggle visual (rag-on/rag-off/rag-blink + ragBlinkPulse) 폐기.
+     헤더 = 모드 시트 entry 로 변경 (is-mode + mode-X 합성 캐릭터). 메모리 toggle = 시트 안. */
+  /* V4 (사용자 명시 2026-05-13): 대화탭 외 = brand only no-op. 클릭 자체 차단 + 시각 자연. */
   .chat-mode-btn.brand-only {
     background: transparent;
     border-color: transparent;
     pointer-events: none;
     cursor: default;
-  }
-  /* Plus 첫 진입 깜빡 halo — _ragToggleSeen 가드 falsy 시 2초 cycle pulse. 클릭 또는 모달 OK 시 해제. */
-  @keyframes ragBlinkPulse {
-    0%, 100% { box-shadow: 0 0 6px rgba(212,167,106,0.30); }
-    50%      { box-shadow: 0 0 16px rgba(212,167,106,0.85), 0 0 24px rgba(212,167,106,0.35); }
-  }
-  .chat-mode-btn.rag-blink {
-    animation: ragBlinkPulse 2.2s ease-in-out infinite;
-    border-color: rgba(212,167,106,0.45);
   }
 
   /* V4 사용자 명시 2026-05-22 ultrathink — 3 모드 시스템 합성 캐릭터.
@@ -1135,78 +1118,8 @@
     max-width: calc(100% - 44px);
   }
 
-  /* (deprecated 2026-05-23) chat-empty-state element 폐기 — empty entry 가 chatMessages 안 통합.
-     CSS 는 dead. 다음 cleanup PR 에서 제거. */
-  .chat-empty-state {
-    padding: 64px 24px 24px 24px;
-    text-align: center;
-    color: var(--text-soft);
-    max-width: 420px;
-    margin: 0 auto;
-  }
-  .chat-empty-state[hidden] { display: none; }
-  .ces-lines {
-    margin-bottom: 24px;
-  }
-  .ces-line-1 {
-    font-size: 22px; line-height: 1.45;
-    color: var(--text);
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    margin-bottom: 8px;
-    opacity: 0.92;
-  }
-  .ces-line-2-wrap {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  }
-  .ces-line-2 {
-    font-size: 15px; line-height: 1.5;
-    color: var(--text-dim);
-    letter-spacing: 0.02em;
-    opacity: 0.88;
-  }
-  .ces-diary-info {
-    width: 18px; height: 18px; border-radius: 50%;
-    background: transparent; border: 1px solid var(--border-strong);
-    color: var(--text-soft); font-size: 11px; line-height: 1;
-    cursor: pointer; padding: 0;
-    display: inline-flex; align-items: center; justify-content: center;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-  }
-  .ces-diary-info:hover { background: var(--surface2); color: var(--text); border-color: var(--border-strong); }
-  .ces-diary-info[hidden] { display: none; }
-  .ces-diary-hint {
-    margin-top: 6px;
-    font-size: 11.5px; color: var(--text-soft);
-    opacity: 0.85; line-height: 1.4;
-    animation: cesHintFade 180ms ease-out;
-  }
-  .ces-diary-hint[hidden] { display: none; }
-  @keyframes cesHintFade {
-    from { opacity: 0; transform: translateY(-2px); }
-    to   { opacity: 0.85; transform: translateY(0); }
-  }
-  .ces-chips {
-    display: flex; flex-direction: column; gap: 8px;
-    align-items: stretch;
-    max-width: 360px;
-    margin: 0 auto;
-  }
-  .ces-chips[hidden] { display: none; }
-  .ces-chip {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 9px 14px;
-    color: var(--text);
-    font-size: 13px; line-height: 1.3;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
-    text-align: center;
-  }
-  .ces-chip:hover { background: var(--surface3); border-color: var(--border-strong); }
-  .ces-chip:active { transform: scale(0.985); }
+  /* V4 cleanup 2026-05-23 — 옛 .chat-empty-state element + ces-lines / ces-line-* / ces-diary-info button (옛 톤) / ces-diary-hint / ces-chips / ces-chip 폐기.
+     empty entry 가 chatMessages 안 통합 (renderChat 의 _chatEmptyAreaHtml). 새 CSS = ces-chips-inline / ces-chip-bubble / ces-diary-info-static / ces-welcome 만. */
   /* V3.13.x: + 메뉴 버튼 (일기 템플릿/대화 마무리 통합) */
   .chat-plus-btn {
     width: 32px; height: 32px; border-radius: 50%;
@@ -12445,42 +12358,7 @@
     color: var(--accent);
   }
 
-  /* V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty 영역 체크인 floating 카드 — 저녁 6시+ 미체크인 한정. */
-  .chat-empty-checkin-card {
-    margin: 80px auto 20px;
-    max-width: 320px;
-    padding: 22px 20px;
-    background: linear-gradient(135deg, rgba(139, 126, 196, 0.10), rgba(139, 126, 196, 0.04));
-    border: 1px solid rgba(139, 126, 196, 0.25);
-    border-radius: 16px;
-    cursor: pointer;
-    text-align: center;
-    transition: transform 0.15s, background 0.15s;
-  }
-  .chat-empty-checkin-card:active {
-    transform: scale(0.985);
-    background: linear-gradient(135deg, rgba(139, 126, 196, 0.18), rgba(139, 126, 196, 0.06));
-  }
-  .chat-empty-checkin-card .cec-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: var(--accent);
-    opacity: 0.85;
-    margin-bottom: 10px;
-  }
-  .chat-empty-checkin-card .cec-title {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text);
-    line-height: 1.5;
-  }
-  .chat-empty-checkin-card .cec-sub {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-top: 8px;
-    opacity: 0.85;
-  }
+  /* V4 cleanup 2026-05-23 — 옛 .chat-empty-checkin-card / .cec-* 폐기 (대화탭 체크인 카드 자체 폐기). */
 
   /* Hook 온보딩 모달 — Section 19.1 */
   .hook-onb-overlay {

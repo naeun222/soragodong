@@ -220,56 +220,9 @@ function updateMainHeaderBtnVisual() {
   });
 }
 
-// V4 (사용자 명시 2026-05-13): Plus 첫 클릭 RAG 설명 모달.
-//   첫 클릭은 OFF 유지 — 사용자가 [켜기] 클릭 시에만 ON 전환.
-//   문구는 사용자 직접 작성 — 일단 placeholder.
-function showRagFirstClickModal() {
-  if (document.getElementById('ragFirstClickOverlay')) return;
-  const plan = window._billingCache?.subscription_plan;
-  const topN = (plan === 'premium') ? 3 : 1;
-  const overlay = document.createElement('div');
-  overlay.className = 'input-modal-overlay show';
-  overlay.id = 'ragFirstClickOverlay';
-  overlay.style.zIndex = '10005';
-  overlay.innerHTML = `
-    <div class="input-modal" style="max-width:380px; padding:24px; text-align:center;">
-      <div style="font-size:16px; font-weight:600; color:var(--text); margin-bottom:16px;">✨ 고동이 기억력이 좋아져</div>
-      <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-bottom:18px;">
-        <div style="text-align:center;">
-          <img src="/character/godong-sonnet.svg" alt="" style="width:64px; height:64px;">
-          <div style="font-size:10.5px; color:var(--text-soft); margin-top:4px;">평소</div>
-        </div>
-        <div style="color:var(--text-dim); font-size:18px;">→</div>
-        <div style="text-align:center; filter:drop-shadow(0 0 12px rgba(212,167,106,0.55));">
-          <img src="/character/godong-rag.svg" alt="" style="width:64px; height:64px;">
-          <div style="font-size:10.5px; color:var(--accent); margin-top:4px;">옛 챕터 기억 ON</div>
-        </div>
-      </div>
-      <div style="font-size:12.5px; color:var(--text-dim); line-height:1.75; margin-bottom:18px;">
-        대화를 더 자연스럽게 할 수 있고, 너를 더 깊이 이해해.<br>
-        <span style="color:var(--text-soft); font-size:11.5px;">대신 토큰이 조금 더 빨리 닳아.</span>
-      </div>
-      <button class="btn-primary" onclick="_ragFirstModalAct(true)" style="width:100%; padding:11px; margin-bottom:8px;">✨ 켜기</button>
-      <button class="btn-secondary" onclick="_ragFirstModalAct(false)" style="width:100%; padding:10px;">그대로 둘게</button>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-}
-function _ragFirstModalAct(turnOn) {
-  const ov = document.getElementById('ragFirstClickOverlay');
-  if (ov) ov.remove();
-  if (turnOn) {
-    state.preferences = state.preferences || {};
-    state.preferences.useRag = true;
-    try { saveState(); } catch {}
-    updateMainHeaderBtnVisual();
-    if (typeof showToast === 'function') showToast('✨ 옛 챕터 기억 ON — 다음 메시지부터 적용');
-    // 자동 백필 trigger
-    if (typeof _ragBackfillAll === 'function') {
-      setTimeout(() => { _ragBackfillAll().catch(e => console.warn('[rag] backfill:', e)); }, 100);
-    }
-  }
-}
+// V4 cleanup 2026-05-23 — showRagFirstClickModal / _ragFirstModalAct 폐기.
+//   옛 헤더 RAG 직접 toggle path 폐기 후 dead (헤더 = 모드 시트 entry 로 변경, 메모리 toggle 은 시트 안).
+//   카피 재활용 자리 = 32-billing/09a-plan-onboarding.js (그쪽엔 inline 으로 카피 + img 사용).
 
 // V4 (사용자 명시 2026-05-13): per-room Opus 토글 — 숙고의 방.
 //   해당 질문 (state.reflectionQuestions 의 _activeReflectionId) 의 useOpus 만 토글.

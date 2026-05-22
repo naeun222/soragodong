@@ -1063,31 +1063,14 @@
   /* 사용자 명시 2026-04-30: Sonnet 표시 = godongicon 이미지. Opus 는 🦉 이모지 유지. */
   .chat-mode-img { width: 22px; height: 22px; object-fit: contain; display: block; pointer-events: none; }
 
-  /* V4 (사용자 명시 2026-05-13 ultrathink): RAG 토글 visual — godong-sonnet/godong-rag SVG + 3중 cue (색·형태·halo). */
-  .chat-mode-btn.rag-on {
-    background: linear-gradient(135deg, rgba(212,167,106,0.22), rgba(180,140,80,0.10));
-    border-color: rgba(212,167,106,0.55);
-    box-shadow: 0 0 14px rgba(212,167,106,0.45), inset 0 0 8px rgba(212,167,106,0.10);
-  }
-  .chat-mode-btn.rag-off { background: var(--surface2); border-color: var(--border); }
-  /* V4 (사용자 명시 2026-05-13): 대화탭 토글 svg 더 크게 꽉 채우게. png (brand-only) 는 기본 22 유지. */
-  .chat-mode-btn.rag-on .chat-mode-img,
-  .chat-mode-btn.rag-off .chat-mode-img { width: 30px; height: 30px; }
-  /* V4 (사용자 명시 2026-05-13): 대화탭 외 = brand only no-op. 클릭 자체 차단 + 시각 자연 (cursor default + opacity 자연). */
+  /* V4 cleanup 2026-05-23 — 옛 RAG 직접 toggle visual (rag-on/rag-off/rag-blink + ragBlinkPulse) 폐기.
+     헤더 = 모드 시트 entry 로 변경 (is-mode + mode-X 합성 캐릭터). 메모리 toggle = 시트 안. */
+  /* V4 (사용자 명시 2026-05-13): 대화탭 외 = brand only no-op. 클릭 자체 차단 + 시각 자연. */
   .chat-mode-btn.brand-only {
     background: transparent;
     border-color: transparent;
     pointer-events: none;
     cursor: default;
-  }
-  /* Plus 첫 진입 깜빡 halo — _ragToggleSeen 가드 falsy 시 2초 cycle pulse. 클릭 또는 모달 OK 시 해제. */
-  @keyframes ragBlinkPulse {
-    0%, 100% { box-shadow: 0 0 6px rgba(212,167,106,0.30); }
-    50%      { box-shadow: 0 0 16px rgba(212,167,106,0.85), 0 0 24px rgba(212,167,106,0.35); }
-  }
-  .chat-mode-btn.rag-blink {
-    animation: ragBlinkPulse 2.2s ease-in-out infinite;
-    border-color: rgba(212,167,106,0.45);
   }
 
   /* V4 사용자 명시 2026-05-22 ultrathink — 3 모드 시스템 합성 캐릭터.
@@ -1299,78 +1282,8 @@
     max-width: calc(100% - 44px);
   }
 
-  /* (deprecated 2026-05-23) chat-empty-state element 폐기 — empty entry 가 chatMessages 안 통합.
-     CSS 는 dead. 다음 cleanup PR 에서 제거. */
-  .chat-empty-state {
-    padding: 64px 24px 24px 24px;
-    text-align: center;
-    color: var(--text-soft);
-    max-width: 420px;
-    margin: 0 auto;
-  }
-  .chat-empty-state[hidden] { display: none; }
-  .ces-lines {
-    margin-bottom: 24px;
-  }
-  .ces-line-1 {
-    font-size: 22px; line-height: 1.45;
-    color: var(--text);
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    margin-bottom: 8px;
-    opacity: 0.92;
-  }
-  .ces-line-2-wrap {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  }
-  .ces-line-2 {
-    font-size: 15px; line-height: 1.5;
-    color: var(--text-dim);
-    letter-spacing: 0.02em;
-    opacity: 0.88;
-  }
-  .ces-diary-info {
-    width: 18px; height: 18px; border-radius: 50%;
-    background: transparent; border: 1px solid var(--border-strong);
-    color: var(--text-soft); font-size: 11px; line-height: 1;
-    cursor: pointer; padding: 0;
-    display: inline-flex; align-items: center; justify-content: center;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-  }
-  .ces-diary-info:hover { background: var(--surface2); color: var(--text); border-color: var(--border-strong); }
-  .ces-diary-info[hidden] { display: none; }
-  .ces-diary-hint {
-    margin-top: 6px;
-    font-size: 11.5px; color: var(--text-soft);
-    opacity: 0.85; line-height: 1.4;
-    animation: cesHintFade 180ms ease-out;
-  }
-  .ces-diary-hint[hidden] { display: none; }
-  @keyframes cesHintFade {
-    from { opacity: 0; transform: translateY(-2px); }
-    to   { opacity: 0.85; transform: translateY(0); }
-  }
-  .ces-chips {
-    display: flex; flex-direction: column; gap: 8px;
-    align-items: stretch;
-    max-width: 360px;
-    margin: 0 auto;
-  }
-  .ces-chips[hidden] { display: none; }
-  .ces-chip {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 9px 14px;
-    color: var(--text);
-    font-size: 13px; line-height: 1.3;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
-    text-align: center;
-  }
-  .ces-chip:hover { background: var(--surface3); border-color: var(--border-strong); }
-  .ces-chip:active { transform: scale(0.985); }
+  /* V4 cleanup 2026-05-23 — 옛 .chat-empty-state element + ces-lines / ces-line-* / ces-diary-info button (옛 톤) / ces-diary-hint / ces-chips / ces-chip 폐기.
+     empty entry 가 chatMessages 안 통합 (renderChat 의 _chatEmptyAreaHtml). 새 CSS = ces-chips-inline / ces-chip-bubble / ces-diary-info-static / ces-welcome 만. */
   /* V3.13.x: + 메뉴 버튼 (일기 템플릿/대화 마무리 통합) */
   .chat-plus-btn {
     width: 32px; height: 32px; border-radius: 50%;
@@ -12609,42 +12522,7 @@
     color: var(--accent);
   }
 
-  /* V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty 영역 체크인 floating 카드 — 저녁 6시+ 미체크인 한정. */
-  .chat-empty-checkin-card {
-    margin: 80px auto 20px;
-    max-width: 320px;
-    padding: 22px 20px;
-    background: linear-gradient(135deg, rgba(139, 126, 196, 0.10), rgba(139, 126, 196, 0.04));
-    border: 1px solid rgba(139, 126, 196, 0.25);
-    border-radius: 16px;
-    cursor: pointer;
-    text-align: center;
-    transition: transform 0.15s, background 0.15s;
-  }
-  .chat-empty-checkin-card:active {
-    transform: scale(0.985);
-    background: linear-gradient(135deg, rgba(139, 126, 196, 0.18), rgba(139, 126, 196, 0.06));
-  }
-  .chat-empty-checkin-card .cec-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: var(--accent);
-    opacity: 0.85;
-    margin-bottom: 10px;
-  }
-  .chat-empty-checkin-card .cec-title {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text);
-    line-height: 1.5;
-  }
-  .chat-empty-checkin-card .cec-sub {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-top: 8px;
-    opacity: 0.85;
-  }
+  /* V4 cleanup 2026-05-23 — 옛 .chat-empty-checkin-card / .cec-* 폐기 (대화탭 체크인 카드 자체 폐기). */
 
   /* Hook 온보딩 모달 — Section 19.1 */
   .hook-onb-overlay {
@@ -26124,8 +26002,7 @@ function _firstHomeEmptySeed() {
     { role: 'assistant', content: '그게 그래도 한 호흡이 됐겠네요. 잠시라도 환기되는 게 중요하죠.',  timestamp: new Date(_now - 1.5 * 60000).toISOString() }
   ];
   state.caseFormulation = {};
-  // 체크인 dismiss / rotating card dismiss flags reset
-  state._chatEmptyCheckinDismissedDayK = null;
+  // rotating card dismiss flags reset (옛 _chatEmptyCheckinDismissedDayK = 대화탭 체크인 카드 폐기 후 dead, 제거).
   if (state.rotatingCardState) {
     state.rotatingCardState.dismissedSources = {};
     state.rotatingCardState.dismissedDayK = null;
@@ -39511,11 +39388,8 @@ function showScreen(name) {
   if (typeof updateMainHeaderBtnVisual === 'function') {
     setTimeout(() => { try { updateMainHeaderBtnVisual(); } catch {} }, 0);
   }
-  // V4 사용자 명시 2026-05-22 ultrathink — 대화 화면 진입 시 empty placeholder (chip + mode-aware 안내) 갱신.
-  if (typeof updateChatEmptyState === 'function') {
-    setTimeout(() => { try { updateChatEmptyState(); } catch {} }, 0);
-  }
   // V4 사용자 보고 2026-05-23 — chat 진입 시 renderChat 강제 호출. 옛 코드로 render 된 메시지를 새 코드 (avatar 포함) 로 재 render.
+  //   empty entry (welcome bubble + chip) 도 renderChat 안 _chatEmptyAreaHtml 가 처리 — 별도 updateChatEmptyState 호출 불필요.
   if (name === 'chat' && typeof renderChat === 'function') {
     setTimeout(() => { try { renderChat(); } catch {} }, 0);
   }
@@ -42101,46 +41975,8 @@ function _chatEmptyAreaHtml() {
   } catch (e) { return ''; }
 }
 
-function _chatIsEveningMode() {
-  if (window._devForceEvening) return true;
-  const h = new Date().getHours();
-  return (h >= 18 || h < 4);
-}
-
-// 저녁 체크인 floating 카드 (옛 _chatEmptyCheckinCardHtml 재명명).
-// 사용자 명시 2026-05-17 (재): 체크인 done 인 저녁 시간대엔 '편하게 말해 보소 + 오늘 하루 어땠는지 궁금하오' 어시 버블.
-function _chatEmptyEveningCheckinHtml() {
-  const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
-  const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
-  const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
-  // V4 사용자 명시 2026-05-23 — 체크인 완료 fake AI bubble 폐기. 새 empty entry 가 자리 대체.
-  if (checkinDone) return '';
-  // 미체크인 + dismiss 안 함 → floating 체크인 카드.
-  if (state._chatEmptyCheckinDismissedDayK === todayKVal) return '';
-  const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
-  const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '🌙', title: '오늘 하루 닫아보기', sub: '' };
-  const subHtml = copy.sub ? `<div class="cec-sub">${escapeHtml(copy.sub)}</div>` : '';
-  return `
-    <div class="chat-empty-checkin-card" onclick="enterCheckin()">
-      <div class="cec-label">${copy.icon} 체크인</div>
-      <div class="cec-title">${escapeHtml(copy.title)}</div>
-      ${subHtml}
-    </div>
-  `;
-}
-
-// 낮 어시 버블 — '안녕?' + '무슨 말 할까?' 토글 (사용자 명시 2026-05-17 ultrathink, 옛 5-06 패턴 재진입).
-function _chatEmptyDaytimeHelloHtml() {
-  const examples = (typeof EMPTY_STATE_EXAMPLES !== 'undefined' && Array.isArray(EMPTY_STATE_EXAMPLES)) ? EMPTY_STATE_EXAMPLES : [];
-  const examplesBlock = examples.length
-    ? `<button class="chat-empty-toggle" id="chatEmptyExamplesToggle" onclick="toggleChatEmptyExamples()">무슨 말 할까? ▾</button><ul class="chat-empty-list" id="chatEmptyExamplesList" style="display:none;">${examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>`
-    : '';
-  return `
-    <div class="msg assistant">
-      <div class="msg-bubble">편하게 말해 보소${examplesBlock}</div>
-    </div>
-  `;
-}
+// V4 cleanup 2026-05-23 — 옛 _chatIsEveningMode / _chatEmptyEveningCheckinHtml / _chatEmptyDaytimeHelloHtml 제거.
+//   대화탭 체크인 카드 폐기 (사용자 명시) + 옛 daytime fake AI bubble 폐기 (welcome 통합).
 
 function formatAIResponse(text) {
   let cleaned = text.replace(/```json[\s\S]*?```/g, '').trim();
@@ -42192,25 +42028,17 @@ async function sendChat() {
   const text = input.value.trim();
   if (!text) return;
 
-  // V4 (사용자 명시 2026-05-17 ultrathink): 챗 empty + 저녁 6시+ 체크인 카드는 사용자가 '대화 시작' 하는 순간 사라짐.
-  //   첫 메시지 send 트리거 — dayK 내 영구 dismiss (새벽 4시 reset 후 내일 저녁 6시 부활).
-  //   체크인 done 상태든 아니든 무관 set — done 이면 카드 자체가 안 보였으니 no-op.
   // V4 사용자 명시 2026-05-23 ultrathink (재재) — welcome 메시지를 AI 의 *진짜 첫 발화* 로 chatMessages 에 박음.
-  //   옛 placeholder bubble = DOM only → AI 컨텍스트 X → 사용자가 첫 메시지 보내도 AI 가 *허공에 던진 첫 발화* 처리.
-  //   신: chatMessages 비어있을 때 sendChat 시점에 welcome (모드별 텍스트) push → user msg push.
+  //   chatMessages 비어있을 때 sendChat 시점에 welcome (모드별 텍스트) push → user msg push.
   //   AI 가 자기 첫 발화 인식 + 사용자 발화가 *답하는 형식* 으로 자연 흐름.
-  if ((state.chatMessages || []).length === 0) {
-    const _tk = (typeof todayKey === 'function') ? todayKey() : '';
-    if (_tk) state._chatEmptyCheckinDismissedDayK = _tk;
-    // welcome 메시지 push (assistant role, _isWelcome 마커).
-    if (typeof _chatWelcomeText === 'function') {
-      state.chatMessages.push({
-        role: 'assistant',
-        content: _chatWelcomeText(state.chatMode || 'daily'),
-        timestamp: new Date().toISOString(),
-        _isWelcome: true
-      });
-    }
+  //   (옛 _chatEmptyCheckinDismissedDayK 자리 폐기 — 대화탭 체크인 카드 자체 폐기 후 dead.)
+  if ((state.chatMessages || []).length === 0 && typeof _chatWelcomeText === 'function') {
+    state.chatMessages.push({
+      role: 'assistant',
+      content: _chatWelcomeText(state.chatMode || 'daily'),
+      timestamp: new Date().toISOString(),
+      _isWelcome: true
+    });
   }
 
   // 사용자 명시 2026-05-01: 위기 신호 detect — 자살예방법 §15-6 + 제조물책임 안전 의무.
@@ -43026,56 +42854,9 @@ function updateMainHeaderBtnVisual() {
   });
 }
 
-// V4 (사용자 명시 2026-05-13): Plus 첫 클릭 RAG 설명 모달.
-//   첫 클릭은 OFF 유지 — 사용자가 [켜기] 클릭 시에만 ON 전환.
-//   문구는 사용자 직접 작성 — 일단 placeholder.
-function showRagFirstClickModal() {
-  if (document.getElementById('ragFirstClickOverlay')) return;
-  const plan = window._billingCache?.subscription_plan;
-  const topN = (plan === 'premium') ? 3 : 1;
-  const overlay = document.createElement('div');
-  overlay.className = 'input-modal-overlay show';
-  overlay.id = 'ragFirstClickOverlay';
-  overlay.style.zIndex = '10005';
-  overlay.innerHTML = `
-    <div class="input-modal" style="max-width:380px; padding:24px; text-align:center;">
-      <div style="font-size:16px; font-weight:600; color:var(--text); margin-bottom:16px;">✨ 고동이 기억력이 좋아져</div>
-      <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-bottom:18px;">
-        <div style="text-align:center;">
-          <img src="/character/godong-sonnet.svg" alt="" style="width:64px; height:64px;">
-          <div style="font-size:10.5px; color:var(--text-soft); margin-top:4px;">평소</div>
-        </div>
-        <div style="color:var(--text-dim); font-size:18px;">→</div>
-        <div style="text-align:center; filter:drop-shadow(0 0 12px rgba(212,167,106,0.55));">
-          <img src="/character/godong-rag.svg" alt="" style="width:64px; height:64px;">
-          <div style="font-size:10.5px; color:var(--accent); margin-top:4px;">옛 챕터 기억 ON</div>
-        </div>
-      </div>
-      <div style="font-size:12.5px; color:var(--text-dim); line-height:1.75; margin-bottom:18px;">
-        대화를 더 자연스럽게 할 수 있고, 너를 더 깊이 이해해.<br>
-        <span style="color:var(--text-soft); font-size:11.5px;">대신 토큰이 조금 더 빨리 닳아.</span>
-      </div>
-      <button class="btn-primary" onclick="_ragFirstModalAct(true)" style="width:100%; padding:11px; margin-bottom:8px;">✨ 켜기</button>
-      <button class="btn-secondary" onclick="_ragFirstModalAct(false)" style="width:100%; padding:10px;">그대로 둘게</button>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-}
-function _ragFirstModalAct(turnOn) {
-  const ov = document.getElementById('ragFirstClickOverlay');
-  if (ov) ov.remove();
-  if (turnOn) {
-    state.preferences = state.preferences || {};
-    state.preferences.useRag = true;
-    try { saveState(); } catch {}
-    updateMainHeaderBtnVisual();
-    if (typeof showToast === 'function') showToast('✨ 옛 챕터 기억 ON — 다음 메시지부터 적용');
-    // 자동 백필 trigger
-    if (typeof _ragBackfillAll === 'function') {
-      setTimeout(() => { _ragBackfillAll().catch(e => console.warn('[rag] backfill:', e)); }, 100);
-    }
-  }
-}
+// V4 cleanup 2026-05-23 — showRagFirstClickModal / _ragFirstModalAct 폐기.
+//   옛 헤더 RAG 직접 toggle path 폐기 후 dead (헤더 = 모드 시트 entry 로 변경, 메모리 toggle 은 시트 안).
+//   카피 재활용 자리 = 32-billing/09a-plan-onboarding.js (그쪽엔 inline 으로 카피 + img 사용).
 
 // V4 (사용자 명시 2026-05-13): per-room Opus 토글 — 숙고의 방.
 //   해당 질문 (state.reflectionQuestions 의 _activeReflectionId) 의 useOpus 만 토글.
@@ -44508,10 +44289,9 @@ function _refreshAllMsgAvatars() {
   });
 }
 
-// V4 사용자 명시 2026-05-23 ultrathink — empty entry chatMessages 안 통합 (renderChat 의 _chatEmptyAreaHtml).
-//   별도 #chatEmptyState element / _CHAT_EMPTY_LINES / _CHAT_TA_PLACEHOLDERS 폐기.
+// V4 cleanup 2026-05-23 — empty entry chatMessages 안 통합 (renderChat 의 _chatEmptyAreaHtml).
+//   별도 #chatEmptyState element / updateChatEmptyState 함수 / toggleChatEmptyDiaryInfo 함수 폐기.
 //   textarea placeholder = 기존 CHAT_PLACEHOLDERS pool (15-navigation.js rotateChatPlaceholder) 회전 — 모드별 swap X.
-function updateChatEmptyState() { /* deprecated 2026-05-23 — _chatEmptyAreaHtml 가 chatMessages 안 render */ }
 
 // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper. 두 자리 사용:
 //   1) _chatEmptyAreaHtml 의 placeholder welcome bubble (DOM only, chatMessages 비어있을 때).
@@ -44532,15 +44312,7 @@ function onChatEmptyChip(mode) {
   selectChatMode(mode);
 }
 
-// V4 사용자 명시 2026-05-23 (재) — ⓘ 일기 안내 토글 = 단일 button text swap. 한 줄 처리 (자리 부족 줄바꿈 fix).
-function toggleChatEmptyDiaryInfo() {
-  const btn = document.getElementById('chatEmptyDiaryInfo');
-  if (!btn) return;
-  const expanded = btn.classList.toggle('expanded');
-  btn.textContent = expanded
-    ? '일기: 로 쓰면 원본으로 저장돼  ×'
-    : 'ⓘ 일기 안내';
-}
+// V4 cleanup 2026-05-23 — toggleChatEmptyDiaryInfo 폐기 (ⓘ 일기 안내 = static div 로 변경).
 
 function toggleChatModeMemory() {
   if (!state) return;
@@ -67966,10 +67738,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault(); sendChat();
     }
   });
-  // V4 사용자 명시 2026-05-22 ultrathink — textarea input 시 empty placeholder chip 가시성 갱신.
-  ta.addEventListener('input', () => {
-    if (typeof updateChatEmptyState === 'function') updateChatEmptyState();
-  });
+  // V4 cleanup 2026-05-23 — updateChatEmptyState 폐기 (empty entry chatMessages 안 통합). textarea input listener 제거.
   // 사용자 요청 2026-04-29: 숙고 입력바도 메인 chat 처럼 자동 높이 (max 140px)
   const reflTa = document.getElementById('reflectionInput');
   if (reflTa) {
