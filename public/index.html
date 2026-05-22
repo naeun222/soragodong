@@ -42096,11 +42096,8 @@ function _chatEmptyAreaHtml() {
         <button type="button" class="ces-chip-bubble mode-inquiry" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어 도와줘</button>
         <button type="button" class="ces-chip-bubble mode-vent" onclick="onChatEmptyChip('vent')">마음이 심란하다</button>
       </div>` : '';
-    let evening = '';
-    if (_chatIsEveningMode()) {
-      try { evening = _chatEmptyEveningCheckinHtml(); } catch {}
-    }
-    return welcomeBubble + diaryHtml + chipsHtml + evening;
+    // V4 사용자 명시 2026-05-23 — 저녁 체크인 카드 자체 폐기 (대화탭 체크인 띄우지 않음).
+    return welcomeBubble + diaryHtml + chipsHtml;
   } catch (e) { return ''; }
 }
 
