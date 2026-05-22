@@ -439,6 +439,12 @@ const DEFAULT_STATE = {
   // 형식: [{role:'user'|'assistant', content, ts, kind?:'first'|'deepen_q'|'detailed'|'analysis'}]
   intakeWorry: [],
 
+  // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 3 모드 시스템 (CHAT-MODE-DESIGN.md).
+  //   null = 미선택 → 일상고동 default visual + backend ADDENDUM_DEFAULT (자동 감지 legacy path).
+  //   'daily' | 'inquiry' | 'vent' = 사용자 명시 선택 (empty placeholder chip 또는 헤더 시트).
+  //   fetch 직전 body._chatMode 로 주입 → backend dispatch.
+  chatMode: null,
+
   // === V7 (V4) 신규 ===
   reflectionQuestions: [],  // 사고 질문 시스템 (anchor 30): [{id, text, status, conclusion, chatMessages, ...}]
   todaySchedule: [],        // 타임테이블: [{id, title, start, end, source:'manual'|'ai'|'gcal'|'task', taskId}]

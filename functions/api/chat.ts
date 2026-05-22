@@ -407,9 +407,11 @@ async function _handleChatRequest(context: {
   //       (시뮬은 messages content '' 빈 string forward → Anthropic 400 'Sonnet HTTP 400' toast).
   //       다른 _userContentType 호출 22 곳도 silent fail (extract / mutation / decision / brain_dump 등).
   //   신: 세 모듈 호출 모두 끝난 뒤로 이동 — Anthropic forward 직전 시점에 strip.
+  // V4 사용자 명시 2026-05-22 ultrathink: _chatMode (대화탭 3 모드 dispatch) 도 같이 strip — applyPersonaToBody 가 읽은 뒤라 안전.
   delete body._promptType;
   delete body._userContentType;
   delete body._vars;
+  delete body._chatMode;
 
   // 사용자 명시 2026-05-08 ultrathink (audit FAIL #5): 자살예방법 §15-6 협력 권고 — 서버측 위기 가드.
   // 옛: 위기 키워드 감지 = 클라이언트 (13-crisis-detection.js) 만. API 직접 호출 / 클라이언트 우회 시 무방비.

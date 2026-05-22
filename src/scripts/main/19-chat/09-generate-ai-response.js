@@ -131,6 +131,9 @@ async function generateAIResponse(modelOverride, opts) {
 
     const response = await callAnthropic({
       _endpoint: _endpointName,  // 'chat_main' | 'analyze_4stage' (사용자 보고 2026-05-10 audit-backend)
+      // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 모드 → backend ADDENDUM dispatch (functions/api/_lib/prompts/system-persona.ts).
+      //   null = 사용자 미선택 → ADDENDUM_DEFAULT (자동 감지 legacy path). 'daily'|'inquiry'|'vent' = 모드별 ADDENDUM.
+      _chatMode: (typeof state !== 'undefined' && state && state.chatMode) || null,
       _useWebSearch,
       // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet (검색 시 Haiku 강제 — 위에서 결정).
       model: _modelForCall,

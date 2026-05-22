@@ -31,4 +31,11 @@
     /* 사용자 명시 2026-05-14: #ffd700 너무 노란색 — 차분한 antique gold 로 조정. */
     --tier-premium: #c9a449;
     --tier-premium-dim: rgba(201, 164, 73, 0.16);
+    /* V4 사용자 명시 2026-05-22 ultrathink: 대화탭 3 모드 색 — 시간대 메타포 (낮/저녁/밤). 마음 = amber (사용자 update). */
+    --mode-daily:   #d4a76a;  /* 따뜻한 베이지/황금 — 낮 */
+    --mode-inquiry: #785ab4;  /* 차분한 짙은 보라 — 저녁 등불 */
+    --mode-vent:    #daa520;  /* amber — 밤 따뜻한 어둠 */
+    --mode-daily-dim:   rgba(212,167,106,0.18);
+    --mode-inquiry-dim: rgba(120,90,180,0.20);
+    --mode-vent-dim:    rgba(218,165,32,0.20);
   }

@@ -170,35 +170,9 @@ function onMainHeaderToggleClick() {
   }
   const isChat = activeScreen && (activeScreen.id === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
   if (!isChat) return;  // 다른 탭 = brand only no-op
-  // Plan 검사 — Plus/Premium 만 가능.
-  const billing = window._billingCache;
-  const plan = billing?.subscription_plan;
-  const active = !!billing?.subscription_active;
-  const ragEligible = active && (plan === 'light' || plan === 'premium');  // 'light' key = Plus
-  if (!ragEligible) return;  // Light/미구독/Premium 외 = brand only no-op
-  state.preferences = state.preferences || {};
-  // V4 (사용자 명시 2026-05-18): default ON — 옛 "켜기 권유" 모달 skip. _ragToggleSeen 마킹만 + toggle 진행.
-  //   옛 사용자 (_ragToggleSeen undefined) 도 마이그 한 번. 모달 없이 바로 toggle.
-  if (!state.preferences._ragToggleSeen) {
-    state.preferences._ragToggleSeen = true;
-    // 깜빡 halo 종료
-    document.querySelectorAll('.js-rag-mode-btn').forEach(btn => btn.classList.remove('rag-blink'));
-  }
-  // 두 번째 클릭부터 toggle.
-  // V4 (사용자 명시 2026-05-18): default ON — undefined / true 둘 다 currently-on 으로 간주. 첫 클릭 OFF, 그 다음 ON.
-  const currentlyOn = state.preferences.useRag !== false;
-  state.preferences.useRag = !currentlyOn;
-  try { saveState(); } catch {}
-  updateMainHeaderBtnVisual();
-  if (typeof showToast === 'function') {
-    showToast(state.preferences.useRag
-      ? '✨ 옛 챕터 기억 ON — 다음 메시지부터 적용'
-      : '🪶 옛 챕터 기억 OFF');
-  }
-  // V4: RAG 처음 ON 시 옛 archive 자동 백필.
-  if (state.preferences.useRag && typeof _ragBackfillAll === 'function') {
-    setTimeout(() => { _ragBackfillAll().catch(e => console.warn('[rag] backfill:', e)); }, 100);
-  }
+  // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 = 3 모드 시트 open (옛 즉시 useRag toggle 폐기).
+  //   메모리 토글은 시트 안에 통합. 모드 카드 + 메모리 토글 한 자리에서.
+  if (typeof onChatModeHeaderClick === 'function') onChatModeHeaderClick();
 }
 
 // V4 (사용자 명시 2026-05-13): 메인 헤더 토글 visual — 화면/Plan/RAG 상태 따라 분기.
@@ -215,9 +189,7 @@ function updateMainHeaderBtnVisual() {
   const plan = billing?.subscription_plan;
   const active = !!billing?.subscription_active;
   const ragEligible = active && (plan === 'light' || plan === 'premium');
-  // V4 (사용자 명시 2026-05-18): default ON — undefined / true 둘 다 ON visual.
-  const useRag = state?.preferences?.useRag !== false;
-  const ragSeen = !!(state?.preferences?._ragToggleSeen);
+  // useRag / ragSeen 은 updateModeHeaderVisual() 안에서 직접 읽음 (2026-05-22 dispatch 변경 후 dead var 제거).
 
   // 숙고/마법 = per-room useOpus 조회
   let perRoomUseOpus = false;
@@ -230,7 +202,8 @@ function updateMainHeaderBtnVisual() {
   }
 
   document.querySelectorAll('.js-rag-mode-btn').forEach(btn => {
-    btn.classList.remove('rag-on', 'rag-off', 'rag-blink', 'brand-only', 'opus');
+    btn.classList.remove('rag-on', 'rag-off', 'rag-blink', 'brand-only', 'opus',
+                         'is-mode', 'mode-daily', 'mode-inquiry', 'mode-vent');
     if (isReflection || isMagicHelp) {
       // 숙고의 방 / 마법고동 = 🪶 Sonnet / 🦉 Opus 토글.
       btn.classList.toggle('opus', perRoomUseOpus);
@@ -240,17 +213,9 @@ function updateMainHeaderBtnVisual() {
         ? '🦉 Opus — 누르면 Sonnet'
         : '🪶 Sonnet — 누르면 Opus (Premium 전용)');
     } else if (isChat && ragEligible) {
-      if (useRag) {
-        btn.classList.add('rag-on');
-        btn.innerHTML = '<img src="/character/godong-rag.svg" alt="" class="chat-mode-img">';
-        btn.setAttribute('title', '✨ 옛 챕터 기억 ON — 누르면 OFF');
-      } else {
-        btn.classList.add('rag-off');
-        btn.innerHTML = '<img src="/character/godong-sonnet.svg" alt="" class="chat-mode-img">';
-        btn.setAttribute('title', '🪶 옛 챕터 기억 OFF — 누르면 ON');
-        // 깜빡 halo: ragSeen X + 사용자 처음 진입 시
-        if (!ragSeen) btn.classList.add('rag-blink');
-      }
+      // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 = 3 모드 시스템 합성 캐릭터.
+      //   state.chatMode + state.preferences.useRag → 6 variants (3 모드 × 2 메모리).
+      if (typeof updateModeHeaderVisual === 'function') updateModeHeaderVisual(btn);
     } else {
       btn.classList.add('brand-only');
       btn.innerHTML = '<img src="/godongicon.png" alt="" class="chat-mode-img">';

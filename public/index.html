@@ -102,6 +102,13 @@
     /* 사용자 명시 2026-05-14: #ffd700 너무 노란색 — 차분한 antique gold 로 조정. */
     --tier-premium: #c9a449;
     --tier-premium-dim: rgba(201, 164, 73, 0.16);
+    /* V4 사용자 명시 2026-05-22 ultrathink: 대화탭 3 모드 색 — 시간대 메타포 (낮/저녁/밤). 마음 = amber (사용자 update). */
+    --mode-daily:   #d4a76a;  /* 따뜻한 베이지/황금 — 낮 */
+    --mode-inquiry: #785ab4;  /* 차분한 짙은 보라 — 저녁 등불 */
+    --mode-vent:    #daa520;  /* amber — 밤 따뜻한 어둠 */
+    --mode-daily-dim:   rgba(212,167,106,0.18);
+    --mode-inquiry-dim: rgba(120,90,180,0.20);
+    --mode-vent-dim:    rgba(218,165,32,0.20);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   /* 사용자 보고 2026-05-05: <html> 에 bg-color 없으면 첫 페인트 직전 흰색 디폴트 잠깐 보여서 번쩍 → 다크 톤 매치 (#0f0e17 = --bg) */
@@ -1059,6 +1066,225 @@
     animation: ragBlinkPulse 2.2s ease-in-out infinite;
     border-color: rgba(212,167,106,0.45);
   }
+
+  /* V4 사용자 명시 2026-05-22 ultrathink — 3 모드 시스템 합성 캐릭터.
+     amber 아우라 (back) → 표정 base → 모자 (top, viewBox 위 25% 튀어나옴) → 안경 (top, 메모리 ON).
+     .is-mode = 대화탭 헤더 (32x32). 큰 메시지 아바타용은 별도 .mode-avatar (필요 시). */
+  .chat-mode-btn.is-mode {
+    overflow: visible;
+    position: relative;
+  }
+  .chat-mode-btn.is-mode .char-layer {
+    position: absolute;
+    pointer-events: none;
+    display: block;
+  }
+  .chat-mode-btn.is-mode .char-layer.aura  { inset: -4px; z-index: 0; opacity: 0.95; }
+  .chat-mode-btn.is-mode .char-layer.base  { inset: 2px;  z-index: 1; width: calc(100% - 4px); height: calc(100% - 4px); }
+  .chat-mode-btn.is-mode .char-layer.hat   { top: -8px; left: 0; width: 100%; height: 125%; z-index: 2; }
+  .chat-mode-btn.is-mode .char-layer.glasses { inset: 2px; z-index: 3; width: calc(100% - 4px); height: calc(100% - 4px); }
+  .chat-mode-btn.is-mode .char-layer img,
+  .chat-mode-btn.is-mode > img.char-layer {
+    width: 100%; height: 100%; display: block;
+  }
+
+  /* 모드별 halo — null state 도 daily halo 로 통일 (default 일상고동). */
+  .chat-mode-btn.is-mode.mode-daily {
+    background: linear-gradient(135deg, rgba(212,167,106,0.18), rgba(180,140,80,0.08));
+    border-color: rgba(212,167,106,0.42);
+    box-shadow: 0 0 10px rgba(212,167,106,0.28);
+  }
+  .chat-mode-btn.is-mode.mode-inquiry {
+    background: linear-gradient(135deg, rgba(120,90,180,0.22), rgba(95,75,160,0.10));
+    border-color: rgba(160,130,210,0.48);
+    box-shadow: 0 0 12px rgba(140,100,200,0.32);
+  }
+  .chat-mode-btn.is-mode.mode-vent {
+    background: linear-gradient(135deg, rgba(40,55,90,0.30), rgba(30,40,70,0.18));
+    border-color: rgba(218,165,32,0.48);
+    box-shadow: 0 0 14px rgba(218,165,32,0.32);
+  }
+
+  /* V4 사용자 명시 2026-05-22 ultrathink — 대화탭 모드 선택 시트 (헤더 캐릭터 popover). */
+  .chat-mode-sheet-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0);
+    z-index: 10050;
+    display: flex; align-items: flex-start; justify-content: flex-end;
+    padding: 56px 12px 0 12px;
+    opacity: 0;
+    transition: opacity 200ms ease-out, background 200ms ease-out;
+    pointer-events: none;
+  }
+  .chat-mode-sheet-overlay.open {
+    opacity: 1;
+    background: rgba(0,0,0,0.10);
+    pointer-events: auto;
+  }
+  .chat-mode-sheet {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04);
+    padding: 38px 16px 16px 16px;
+    width: 300px; max-width: calc(100vw - 24px);
+    transform-origin: top right;
+    transform: scale(0.85) translateY(-8px);
+    opacity: 0;
+    transition: transform 200ms ease-out, opacity 200ms ease-out;
+    position: relative;
+  }
+  .chat-mode-sheet-overlay.open .chat-mode-sheet {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  .chat-mode-sheet-close {
+    position: absolute; top: 10px; right: 10px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: transparent; border: none;
+    color: var(--text-dim); font-size: 14px; line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s;
+  }
+  .chat-mode-sheet-close:hover { background: var(--surface2); color: var(--text); }
+  .chat-mode-sheet-cards { display: flex; flex-direction: column; gap: 10px; }
+  .chat-mode-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left-width: 4px;
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-size: 13.5px; line-height: 1.4;
+    text-align: left;
+    cursor: pointer;
+    transition: background 180ms ease, color 180ms ease, border-color 180ms ease, transform 120ms ease;
+    font-family: inherit;
+  }
+  .chat-mode-card:active { transform: scale(0.985); }
+  .chat-mode-card.mode-daily   { border-left-color: var(--mode-daily); color: var(--mode-daily); }
+  .chat-mode-card.mode-inquiry { border-left-color: var(--mode-inquiry); color: #b8a4e0; }
+  .chat-mode-card.mode-vent    { border-left-color: var(--mode-vent); color: var(--mode-vent); }
+  .chat-mode-card.selected.mode-daily {
+    background: var(--mode-daily); border-color: var(--mode-daily); color: #2a1f10;
+  }
+  .chat-mode-card.selected.mode-inquiry {
+    background: var(--mode-inquiry); border-color: var(--mode-inquiry); color: #fff;
+  }
+  .chat-mode-card.selected.mode-vent {
+    background: var(--mode-vent); border-color: var(--mode-vent); color: #2a1f0a;
+  }
+  .chat-mode-sheet-divider {
+    height: 1px; background: var(--border-strong);
+    margin: 14px 4px 12px 4px;
+  }
+  .chat-mode-sheet-memo {
+    padding: 2px 4px 4px 4px;
+  }
+  .chat-mode-sheet-memo-label {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+  }
+  .chat-mode-sheet-memo-text {
+    font-size: 13px; color: var(--text); font-weight: 500;
+  }
+  .chat-mode-sheet-memo-hint {
+    font-size: 11.5px; color: var(--text-dim);
+    line-height: 1.4;
+  }
+  .chat-mode-memo-toggle {
+    width: 36px; height: 20px; border-radius: 999px;
+    background: var(--surface3); border: 1px solid var(--border-strong);
+    position: relative; cursor: pointer; padding: 0;
+    transition: background 180ms ease, border-color 180ms ease;
+    flex-shrink: 0;
+  }
+  .chat-mode-memo-toggle .chat-mode-memo-thumb {
+    position: absolute; top: 1px; left: 1px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--text-dim);
+    transition: transform 180ms ease, background 180ms ease;
+  }
+  .chat-mode-memo-toggle.on {
+    background: var(--accent-dim);
+    border-color: rgba(201,169,110,0.45);
+  }
+  .chat-mode-memo-toggle.on .chat-mode-memo-thumb {
+    transform: translateX(16px);
+    background: var(--accent);
+  }
+
+  /* V4 사용자 명시 2026-05-22 ultrathink — empty placeholder (chat 메시지 비어있을 때, 입력바 위). */
+  .chat-empty-state {
+    padding: 18px 18px 14px 18px;
+    text-align: center;
+    color: var(--text-soft);
+  }
+  .chat-empty-state[hidden] { display: none; }
+  .ces-lines {
+    margin-bottom: 14px;
+  }
+  .ces-line-1 {
+    font-size: 17px; line-height: 1.45;
+    color: var(--text);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+    opacity: 0.92;
+  }
+  .ces-line-2-wrap {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .ces-line-2 {
+    font-size: 13px; line-height: 1.45;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+    opacity: 0.85;
+  }
+  .ces-diary-info {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: transparent; border: 1px solid var(--border-strong);
+    color: var(--text-soft); font-size: 11px; line-height: 1;
+    cursor: pointer; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .ces-diary-info:hover { background: var(--surface2); color: var(--text); border-color: var(--border-strong); }
+  .ces-diary-info[hidden] { display: none; }
+  .ces-diary-hint {
+    margin-top: 6px;
+    font-size: 11.5px; color: var(--text-soft);
+    opacity: 0.85; line-height: 1.4;
+    animation: cesHintFade 180ms ease-out;
+  }
+  .ces-diary-hint[hidden] { display: none; }
+  @keyframes cesHintFade {
+    from { opacity: 0; transform: translateY(-2px); }
+    to   { opacity: 0.85; transform: translateY(0); }
+  }
+  .ces-chips {
+    display: flex; flex-direction: column; gap: 8px;
+    align-items: stretch;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+  .ces-chips[hidden] { display: none; }
+  .ces-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 9px 14px;
+    color: var(--text);
+    font-size: 13px; line-height: 1.3;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
+    text-align: center;
+  }
+  .ces-chip:hover { background: var(--surface3); border-color: var(--border-strong); }
+  .ces-chip:active { transform: scale(0.985); }
   /* V3.13.x: + 메뉴 버튼 (일기 템플릿/대화 마무리 통합) */
   .chat-plus-btn {
     width: 32px; height: 32px; border-radius: 50%;
@@ -14321,6 +14547,24 @@ img.pearl-load-fail {
 </div>
 
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
+  <!-- V4 사용자 명시 2026-05-22 ultrathink — 대화탭 empty placeholder (chatMessages 비어있을 때, chat 화면에서만).
+       2줄 안내 (보소/하오 옛 어투) + ⓘ 일기 안내 (일상모드만) + chip 3개 (chatMode null + textarea 비어있을 때만).
+       updateChatEmptyState() 가 전체 display 갱신. -->
+  <div class="chat-empty-state" id="chatEmptyState" hidden>
+    <div class="ces-lines">
+      <div class="ces-line-1" id="chatEmptyLine1">편하게 말해 보소</div>
+      <div class="ces-line-2-wrap">
+        <span class="ces-line-2" id="chatEmptyLine2">오늘 하루 어땠는지 궁금하오</span>
+        <button type="button" id="chatEmptyDiaryInfo" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내" title="일기 안내" hidden>ⓘ</button>
+      </div>
+      <div class="ces-diary-hint" id="chatEmptyDiaryHint" hidden>일기: 로 시작하면 그대로 보관돼요</div>
+    </div>
+    <div class="ces-chips" id="chatEmptyChips">
+      <button type="button" class="ces-chip" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
+      <button type="button" class="ces-chip" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어</button>
+      <button type="button" class="ces-chip" onclick="onChatEmptyChip('vent')">마음이 심란해...</button>
+    </div>
+  </div>
   <div class="chat-plus-menu" id="chatPlusMenu" hidden>
     <button class="chat-plus-item" onclick="chatPlusAction('diary')">
       <span class="chat-plus-icon">📝</span>
@@ -14978,6 +15222,12 @@ const DEFAULT_STATE = {
   // 별도 array — chatMessages 와 격리 (회의 결정 B). traits/values/patterns 자동 합류 input.
   // 형식: [{role:'user'|'assistant', content, ts, kind?:'first'|'deepen_q'|'detailed'|'analysis'}]
   intakeWorry: [],
+
+  // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 3 모드 시스템 (CHAT-MODE-DESIGN.md).
+  //   null = 미선택 → 일상고동 default visual + backend ADDENDUM_DEFAULT (자동 감지 legacy path).
+  //   'daily' | 'inquiry' | 'vent' = 사용자 명시 선택 (empty placeholder chip 또는 헤더 시트).
+  //   fetch 직전 body._chatMode 로 주입 → backend dispatch.
+  chatMode: null,
 
   // === V7 (V4) 신규 ===
   reflectionQuestions: [],  // 사고 질문 시스템 (anchor 30): [{id, text, status, conclusion, chatMessages, ...}]
@@ -39187,6 +39437,10 @@ function showScreen(name) {
   if (typeof updateMainHeaderBtnVisual === 'function') {
     setTimeout(() => { try { updateMainHeaderBtnVisual(); } catch {} }, 0);
   }
+  // V4 사용자 명시 2026-05-22 ultrathink — 대화 화면 진입 시 empty placeholder (chip + mode-aware 안내) 갱신.
+  if (typeof updateChatEmptyState === 'function') {
+    setTimeout(() => { try { updateChatEmptyState(); } catch {} }, 0);
+  }
   // V4 (사용자 명시 2026-05-06 ultrathink — 추가): 첫 진입 시 sim 튜토리얼 fire.
   // _simTutorialInternalNav 플래그 = 튜토리얼 자기 자신이 호출 — 재진입 차단.
   // 사용자 명시 2026-05-06 (재정정): 마법고동 sim 튜토 폐기 — decisions 분기 제거.
@@ -42610,35 +42864,9 @@ function onMainHeaderToggleClick() {
   }
   const isChat = activeScreen && (activeScreen.id === 'screen-chat' || activeScreen.classList.contains('screen-chat'));
   if (!isChat) return;  // 다른 탭 = brand only no-op
-  // Plan 검사 — Plus/Premium 만 가능.
-  const billing = window._billingCache;
-  const plan = billing?.subscription_plan;
-  const active = !!billing?.subscription_active;
-  const ragEligible = active && (plan === 'light' || plan === 'premium');  // 'light' key = Plus
-  if (!ragEligible) return;  // Light/미구독/Premium 외 = brand only no-op
-  state.preferences = state.preferences || {};
-  // V4 (사용자 명시 2026-05-18): default ON — 옛 "켜기 권유" 모달 skip. _ragToggleSeen 마킹만 + toggle 진행.
-  //   옛 사용자 (_ragToggleSeen undefined) 도 마이그 한 번. 모달 없이 바로 toggle.
-  if (!state.preferences._ragToggleSeen) {
-    state.preferences._ragToggleSeen = true;
-    // 깜빡 halo 종료
-    document.querySelectorAll('.js-rag-mode-btn').forEach(btn => btn.classList.remove('rag-blink'));
-  }
-  // 두 번째 클릭부터 toggle.
-  // V4 (사용자 명시 2026-05-18): default ON — undefined / true 둘 다 currently-on 으로 간주. 첫 클릭 OFF, 그 다음 ON.
-  const currentlyOn = state.preferences.useRag !== false;
-  state.preferences.useRag = !currentlyOn;
-  try { saveState(); } catch {}
-  updateMainHeaderBtnVisual();
-  if (typeof showToast === 'function') {
-    showToast(state.preferences.useRag
-      ? '✨ 옛 챕터 기억 ON — 다음 메시지부터 적용'
-      : '🪶 옛 챕터 기억 OFF');
-  }
-  // V4: RAG 처음 ON 시 옛 archive 자동 백필.
-  if (state.preferences.useRag && typeof _ragBackfillAll === 'function') {
-    setTimeout(() => { _ragBackfillAll().catch(e => console.warn('[rag] backfill:', e)); }, 100);
-  }
+  // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 = 3 모드 시트 open (옛 즉시 useRag toggle 폐기).
+  //   메모리 토글은 시트 안에 통합. 모드 카드 + 메모리 토글 한 자리에서.
+  if (typeof onChatModeHeaderClick === 'function') onChatModeHeaderClick();
 }
 
 // V4 (사용자 명시 2026-05-13): 메인 헤더 토글 visual — 화면/Plan/RAG 상태 따라 분기.
@@ -42655,9 +42883,7 @@ function updateMainHeaderBtnVisual() {
   const plan = billing?.subscription_plan;
   const active = !!billing?.subscription_active;
   const ragEligible = active && (plan === 'light' || plan === 'premium');
-  // V4 (사용자 명시 2026-05-18): default ON — undefined / true 둘 다 ON visual.
-  const useRag = state?.preferences?.useRag !== false;
-  const ragSeen = !!(state?.preferences?._ragToggleSeen);
+  // useRag / ragSeen 은 updateModeHeaderVisual() 안에서 직접 읽음 (2026-05-22 dispatch 변경 후 dead var 제거).
 
   // 숙고/마법 = per-room useOpus 조회
   let perRoomUseOpus = false;
@@ -42670,7 +42896,8 @@ function updateMainHeaderBtnVisual() {
   }
 
   document.querySelectorAll('.js-rag-mode-btn').forEach(btn => {
-    btn.classList.remove('rag-on', 'rag-off', 'rag-blink', 'brand-only', 'opus');
+    btn.classList.remove('rag-on', 'rag-off', 'rag-blink', 'brand-only', 'opus',
+                         'is-mode', 'mode-daily', 'mode-inquiry', 'mode-vent');
     if (isReflection || isMagicHelp) {
       // 숙고의 방 / 마법고동 = 🪶 Sonnet / 🦉 Opus 토글.
       btn.classList.toggle('opus', perRoomUseOpus);
@@ -42680,17 +42907,9 @@ function updateMainHeaderBtnVisual() {
         ? '🦉 Opus — 누르면 Sonnet'
         : '🪶 Sonnet — 누르면 Opus (Premium 전용)');
     } else if (isChat && ragEligible) {
-      if (useRag) {
-        btn.classList.add('rag-on');
-        btn.innerHTML = '<img src="/character/godong-rag.svg" alt="" class="chat-mode-img">';
-        btn.setAttribute('title', '✨ 옛 챕터 기억 ON — 누르면 OFF');
-      } else {
-        btn.classList.add('rag-off');
-        btn.innerHTML = '<img src="/character/godong-sonnet.svg" alt="" class="chat-mode-img">';
-        btn.setAttribute('title', '🪶 옛 챕터 기억 OFF — 누르면 ON');
-        // 깜빡 halo: ragSeen X + 사용자 처음 진입 시
-        if (!ragSeen) btn.classList.add('rag-blink');
-      }
+      // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 = 3 모드 시스템 합성 캐릭터.
+      //   state.chatMode + state.preferences.useRag → 6 variants (3 모드 × 2 메모리).
+      if (typeof updateModeHeaderVisual === 'function') updateModeHeaderVisual(btn);
     } else {
       btn.classList.add('brand-only');
       btn.innerHTML = '<img src="/godongicon.png" alt="" class="chat-mode-img">';
@@ -43000,6 +43219,9 @@ async function generateAIResponse(modelOverride, opts) {
 
     const response = await callAnthropic({
       _endpoint: _endpointName,  // 'chat_main' | 'analyze_4stage' (사용자 보고 2026-05-10 audit-backend)
+      // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 모드 → backend ADDENDUM dispatch (functions/api/_lib/prompts/system-persona.ts).
+      //   null = 사용자 미선택 → ADDENDUM_DEFAULT (자동 감지 legacy path). 'daily'|'inquiry'|'vent' = 모드별 ADDENDUM.
+      _chatMode: (typeof state !== 'undefined' && state && state.chatMode) || null,
       _useWebSearch,
       // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet (검색 시 Haiku 강제 — 위에서 결정).
       model: _modelForCall,
@@ -44040,6 +44262,278 @@ async function _ragAutoBackfillOnLoad() {
 window.addEventListener('load', () => {
   setTimeout(() => _ragAutoBackfillOnLoad(), 7000);
 });
+// V4 사용자 명시 2026-05-22 ultrathink — 대화탭 3 모드 시스템 (CHAT-MODE-DESIGN.md).
+//   모드: 'daily' (일상고동) / 'inquiry' (고민고동, 마법사 모자) / 'vent' (마음고동, amber 아우라).
+//   메모리: state.preferences.useRag (기존). ON 시 안경 overlay.
+//   합성: amber 아우라(back) → 표정 base → 모자(top) → 안경(top). 모자만 viewBox 위로 25% 튀어나옴 (4:5 비율).
+//   null state = default 일상고동 visual (모자 X, 아우라 X). 사용자가 chip 또는 시트로 명시 선택해야 모드 set.
+
+// 12 표정 ID 풀 — system prompt expression 필드와 1:1 매칭. 풀에 없는 ID 는 serious fallback.
+const CHAT_MODE_EXPRESSIONS = new Set([
+  'serious', 'soft-smile', 'bright-smile', 'laugh', 'surprised',
+  'curious', 'thinking', 'tilt', 'empathic', 'warm', 'nod', 'focused'
+]);
+
+// 표정 파일 경로 — 'serious' 만 public/character/ 에, 나머지는 public/expressions/.
+function _chatModeExprPath(expression) {
+  const e = CHAT_MODE_EXPRESSIONS.has(expression) ? expression : 'serious';
+  return e === 'serious' ? '/character/godong-serious.svg' : `/expressions/godong-${e}.svg`;
+}
+
+// 4 layer 합성 — HTML string 반환. 호출처가 element.innerHTML 또는 template literal 에 삽입.
+//   { mode: 'daily'|'inquiry'|'vent'|null, useGlasses: bool, expression: '...' }
+//   mode null 또는 'daily' = 모자 X, 아우라 X (= 일상고동 default).
+function composedCharacterHtml({ mode, useGlasses, expression } = {}) {
+  const showAura = mode === 'vent';
+  const showHat  = mode === 'inquiry';
+  const showGlasses = !!useGlasses;
+  const exprSrc = _chatModeExprPath(expression || 'serious');
+  let html = '';
+  if (showAura) {
+    html += `<img class="char-layer aura" src="/expressions/godong-aura-amber.svg" alt="" aria-hidden="true">`;
+  }
+  html += `<img class="char-layer base" src="${exprSrc}" alt="" aria-hidden="true">`;
+  if (showHat) {
+    html += `<img class="char-layer hat" src="/expressions/godong-wizard-hat-overlay.svg" alt="" aria-hidden="true">`;
+  }
+  if (showGlasses) {
+    html += `<img class="char-layer glasses" src="/expressions/godong-glasses-overlay.svg" alt="" aria-hidden="true">`;
+  }
+  return html;
+}
+
+// 헤더 캐릭터 visual — 대화탭일 때만 사용. updateMainHeaderBtnVisual 의 대화탭 분기에서 호출.
+//   state.chatMode + state.preferences.useRag → 6 variants (3 모드 × 2 메모리). 평온 표정 only.
+function updateModeHeaderVisual(btn) {
+  if (!btn) return;
+  const mode = (state && state.chatMode) || null;   // null → default daily visual
+  const useGlasses = state?.preferences?.useRag !== false;  // default ON
+  btn.classList.remove('rag-on', 'rag-off', 'rag-blink', 'brand-only', 'opus',
+                       'mode-daily', 'mode-inquiry', 'mode-vent');
+  btn.classList.add('is-mode');
+  // halo 색 — null 도 daily 색으로 통일 (default 일상고동).
+  const halo = (mode === 'inquiry') ? 'mode-inquiry'
+             : (mode === 'vent')    ? 'mode-vent'
+             : 'mode-daily';
+  btn.classList.add(halo);
+  btn.innerHTML = composedCharacterHtml({ mode, useGlasses, expression: 'serious' });
+  const label = (mode === 'inquiry') ? '물어보기'
+              : (mode === 'vent')    ? '털어놓기'
+              : '얘기하기';
+  const memo  = useGlasses ? '· 기억 ON' : '· 기억 OFF';
+  btn.setAttribute('aria-label', `대화 모드 ${label} ${memo}`);
+  btn.setAttribute('title', `${label} ${memo} — 누르면 변경`);
+}
+
+// 헤더 클릭 dispatch — 대화탭 + Plus/Premium 자격 검사 후 시트 open.
+function onChatModeHeaderClick() {
+  // 게스트 = 결제 유도.
+  if (typeof state !== 'undefined' && state && state.isGuest) {
+    if (typeof showGuestConversionModal === 'function') showGuestConversionModal({ reason: 'rag_toggle' });
+    return;
+  }
+  // Plan 검사 — Plus/Premium 만.
+  const billing = window._billingCache;
+  const plan = billing?.subscription_plan;
+  const active = !!billing?.subscription_active;
+  const ragEligible = active && (plan === 'light' || plan === 'premium');
+  if (!ragEligible) return;
+  openChatModeSheet();
+}
+
+// ─── 모드 선택 시트 (popover) ─────────────────────────────────────
+//   §4 — 세로 카드 스택 (3 모드) + 메모리 토글. transform-origin = 헤더 캐릭터.
+//   클릭: 즉시 모드 set + 헤더 morph + 토스트 short label. 시트 안 닫힘.
+//   닫기: ✕ / 바깥 탭 / ESC.
+const CHAT_MODE_CARDS = [
+  { id: 'daily',   label: '오늘 하루 어땠는지 얘기하기',           toast: '얘기하기' },
+  { id: 'inquiry', label: '어떻게 해야할지 모르겠을 때 물어보기', toast: '물어보기' },
+  { id: 'vent',    label: '마음이 심란할 때 털어놓기',             toast: '털어놓기' }
+];
+
+function openChatModeSheet() {
+  if (document.getElementById('chatModeSheetOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'chatModeSheetOverlay';
+  overlay.className = 'chat-mode-sheet-overlay';
+  overlay.innerHTML = `
+    <div class="chat-mode-sheet" role="dialog" aria-modal="true">
+      <button class="chat-mode-sheet-close" type="button" aria-label="닫기" onclick="closeChatModeSheet()">✕</button>
+      <div class="chat-mode-sheet-cards" id="chatModeSheetCards"></div>
+      <div class="chat-mode-sheet-divider"></div>
+      <div class="chat-mode-sheet-memo">
+        <label class="chat-mode-sheet-memo-label">
+          <span class="chat-mode-sheet-memo-text">옛 챕터 기억</span>
+          <button type="button" id="chatModeMemoToggle" class="chat-mode-memo-toggle" role="switch" aria-checked="false" onclick="toggleChatModeMemory()">
+            <span class="chat-mode-memo-thumb"></span>
+          </button>
+        </label>
+        <div class="chat-mode-sheet-memo-hint" id="chatModeMemoHint"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  _renderChatModeSheetCards();
+  _renderChatModeSheetMemoState();
+  // 바깥 탭 닫기.
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeChatModeSheet(); });
+  // ESC 닫기.
+  const escHandler = (e) => { if (e.key === 'Escape') { closeChatModeSheet(); document.removeEventListener('keydown', escHandler); } };
+  document.addEventListener('keydown', escHandler);
+  overlay._escHandler = escHandler;
+  // 진입 트랜지션 — next frame 에 .open 클래스.
+  requestAnimationFrame(() => overlay.classList.add('open'));
+}
+
+function closeChatModeSheet() {
+  const overlay = document.getElementById('chatModeSheetOverlay');
+  if (!overlay) return;
+  if (overlay._escHandler) {
+    try { document.removeEventListener('keydown', overlay._escHandler); } catch {}
+  }
+  overlay.classList.remove('open');
+  // 트랜지션 끝나면 제거. CSS 200ms 와 일치.
+  setTimeout(() => { overlay.remove(); }, 220);
+}
+
+function _renderChatModeSheetCards() {
+  const wrap = document.getElementById('chatModeSheetCards');
+  if (!wrap) return;
+  const current = (state && state.chatMode) || null;
+  wrap.innerHTML = CHAT_MODE_CARDS.map(card => {
+    const selected = (card.id === current);
+    return `<button type="button"
+        class="chat-mode-card ${selected ? 'selected' : ''} mode-${card.id}"
+        data-mode="${card.id}"
+        aria-pressed="${selected ? 'true' : 'false'}"
+        onclick="selectChatMode('${card.id}')">
+      ${card.label}
+    </button>`;
+  }).join('');
+}
+
+function _renderChatModeSheetMemoState() {
+  const btn = document.getElementById('chatModeMemoToggle');
+  const hint = document.getElementById('chatModeMemoHint');
+  if (!btn || !hint) return;
+  const on = state?.preferences?.useRag !== false;
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-checked', on ? 'true' : 'false');
+  hint.textContent = on ? '안경 쓴 고동이가 너를 기억해' : '이번 대화만 기억해';
+}
+
+function selectChatMode(mode) {
+  if (!mode || (mode !== 'daily' && mode !== 'inquiry' && mode !== 'vent')) return;
+  if (!state) return;
+  const prev = state.chatMode || null;
+  state.chatMode = mode;
+  try { saveState(); } catch {}
+  // 시트 카드 재렌더 + 헤더 캐릭터 morph + empty placeholder 텍스트 swap.
+  _renderChatModeSheetCards();
+  if (typeof updateMainHeaderBtnVisual === 'function') updateMainHeaderBtnVisual();
+  if (typeof updateChatEmptyState === 'function') updateChatEmptyState();
+  // 모드가 바뀐 경우만 토스트 (같은 모드 재선택은 silent).
+  if (prev !== mode) {
+    const card = CHAT_MODE_CARDS.find(c => c.id === mode);
+    if (card && typeof showToast === 'function') showToast(card.toast);
+  }
+}
+
+// ─── empty placeholder (chip + mode-aware 안내) ──────────────────
+//   호출 시점: 화면 진입 / 메시지 send / textarea input / selectChatMode / mode toggle.
+//   조건:
+//     A) chatMessages 비어있고 screen-chat 활성 → empty state 보임.
+//     B) A + chatMode === null + textarea 비어있음 → chip 보임. 한 번 chip 누르면 모드 set + chip hide.
+//     C) A + (chatMode === null || chatMode === 'daily') → ⓘ 일기 안내 아이콘 보임.
+const _CHAT_EMPTY_LINES = {
+  daily:   { l1: '편하게 말해 보소', l2: '오늘 하루 어땠는지 궁금하오' },
+  inquiry: { l1: '편하게 말해 보소', l2: '고민이 무엇인가' },
+  vent:    { l1: '편하게 말해 보소', l2: '다 괜찮다. 난 여기 있으니.' }
+};
+function updateChatEmptyState() {
+  const el = document.getElementById('chatEmptyState');
+  if (!el) return;
+  // chat 화면이 활성인지.
+  const screenChat = document.getElementById('screen-chat');
+  const isChatActive = screenChat && screenChat.classList.contains('active');
+  const chatMsgs = document.getElementById('chatMessages');
+  const isEmpty = !!chatMsgs && chatMsgs.children.length === 0;
+  if (!isChatActive || !isEmpty) {
+    el.hidden = true;
+    // 일기 hint 자동 fold (다음 진입 시 깨끗하게).
+    const hint = document.getElementById('chatEmptyDiaryHint');
+    if (hint) hint.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  // 모드별 안내 텍스트.
+  const mode = (state && state.chatMode) || 'daily';
+  const lines = _CHAT_EMPTY_LINES[mode] || _CHAT_EMPTY_LINES.daily;
+  const line1 = document.getElementById('chatEmptyLine1');
+  const line2 = document.getElementById('chatEmptyLine2');
+  if (line1) line1.textContent = lines.l1;
+  if (line2) line2.textContent = lines.l2;
+  // ⓘ 일기 안내 — daily 또는 null (= daily 시각) 일 때만.
+  const showDiaryInfo = !state?.chatMode || state.chatMode === 'daily';
+  const info = document.getElementById('chatEmptyDiaryInfo');
+  if (info) info.hidden = !showDiaryInfo;
+  if (!showDiaryInfo) {
+    const hint = document.getElementById('chatEmptyDiaryHint');
+    if (hint) hint.hidden = true;
+  }
+  // chip — chatMode null + textarea 비어있을 때만.
+  const chips = document.getElementById('chatEmptyChips');
+  if (chips) {
+    const ta = document.getElementById('chatInput');
+    const taEmpty = !ta || !ta.value || ta.value.length === 0;
+    const showChips = !state?.chatMode && taEmpty;
+    chips.hidden = !showChips;
+  }
+}
+
+function onChatEmptyChip(mode) {
+  selectChatMode(mode);
+  // 시트와 다르게 empty placeholder 의 chip 누르면 텍스트 swap + chip hide (chatMode set 됐으니 자동).
+  updateChatEmptyState();
+}
+
+function toggleChatEmptyDiaryInfo() {
+  const hint = document.getElementById('chatEmptyDiaryHint');
+  if (!hint) return;
+  hint.hidden = !hint.hidden;
+}
+
+// chatMessages mutation → empty state 자동 갱신. send / receive / chapter clear 모두 cover.
+document.addEventListener('DOMContentLoaded', () => {
+  const cm = document.getElementById('chatMessages');
+  if (cm && typeof MutationObserver !== 'undefined') {
+    try {
+      new MutationObserver(() => {
+        if (typeof updateChatEmptyState === 'function') updateChatEmptyState();
+      }).observe(cm, { childList: true });
+    } catch (e) { console.warn('[chat-mode] chatMessages observer:', e); }
+  }
+});
+
+function toggleChatModeMemory() {
+  if (!state) return;
+  state.preferences = state.preferences || {};
+  const currentlyOn = state.preferences.useRag !== false;
+  state.preferences.useRag = !currentlyOn;
+  state.preferences._ragToggleSeen = true;
+  try { saveState(); } catch {}
+  _renderChatModeSheetMemoState();
+  if (typeof updateMainHeaderBtnVisual === 'function') updateMainHeaderBtnVisual();
+  if (typeof showToast === 'function') {
+    showToast(state.preferences.useRag
+      ? '✨ 옛 챕터 기억 ON — 다음 메시지부터 적용'
+      : '🪶 옛 챕터 기억 OFF');
+  }
+  // RAG 처음 ON 시 옛 archive 자동 백필 — 옛 onMainHeaderToggleClick 동작 유지.
+  if (state.preferences.useRag && typeof _ragBackfillAll === 'function') {
+    setTimeout(() => { _ragBackfillAll().catch(e => console.warn('[rag] backfill:', e)); }, 100);
+  }
+}
 // ═══════════════════════════════════════════════════════════════
 // SYSTEM PROMPT
 // ═══════════════════════════════════════════════════════════════
@@ -67444,6 +67938,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter' && !e.shiftKey && !isMobile()) {
       e.preventDefault(); sendChat();
     }
+  });
+  // V4 사용자 명시 2026-05-22 ultrathink — textarea input 시 empty placeholder chip 가시성 갱신.
+  ta.addEventListener('input', () => {
+    if (typeof updateChatEmptyState === 'function') updateChatEmptyState();
   });
   // 사용자 요청 2026-04-29: 숙고 입력바도 메인 chat 처럼 자동 높이 (max 140px)
   const reflTa = document.getElementById('reflectionInput');

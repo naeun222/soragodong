@@ -1,4 +1,22 @@
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
+  <!-- V4 사용자 명시 2026-05-22 ultrathink — 대화탭 empty placeholder (chatMessages 비어있을 때, chat 화면에서만).
+       2줄 안내 (보소/하오 옛 어투) + ⓘ 일기 안내 (일상모드만) + chip 3개 (chatMode null + textarea 비어있을 때만).
+       updateChatEmptyState() 가 전체 display 갱신. -->
+  <div class="chat-empty-state" id="chatEmptyState" hidden>
+    <div class="ces-lines">
+      <div class="ces-line-1" id="chatEmptyLine1">편하게 말해 보소</div>
+      <div class="ces-line-2-wrap">
+        <span class="ces-line-2" id="chatEmptyLine2">오늘 하루 어땠는지 궁금하오</span>
+        <button type="button" id="chatEmptyDiaryInfo" class="ces-diary-info" onclick="toggleChatEmptyDiaryInfo()" aria-label="일기 안내" title="일기 안내" hidden>ⓘ</button>
+      </div>
+      <div class="ces-diary-hint" id="chatEmptyDiaryHint" hidden>일기: 로 시작하면 그대로 보관돼요</div>
+    </div>
+    <div class="ces-chips" id="chatEmptyChips">
+      <button type="button" class="ces-chip" onclick="onChatEmptyChip('daily')">그냥 재밌게 얘기하고 싶어</button>
+      <button type="button" class="ces-chip" onclick="onChatEmptyChip('inquiry')">어떻게 해야할지 모르겠어</button>
+      <button type="button" class="ces-chip" onclick="onChatEmptyChip('vent')">마음이 심란해...</button>
+    </div>
+  </div>
   <div class="chat-plus-menu" id="chatPlusMenu" hidden>
     <button class="chat-plus-item" onclick="chatPlusAction('diary')">
       <span class="chat-plus-icon">📝</span>
