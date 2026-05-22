@@ -872,7 +872,7 @@
   .msg.assistant { position: relative; padding-left: 44px; }
   .msg.assistant .msg-avatar {
     position: absolute;
-    left: -10px; top: 0;
+    left: -10px; top: -8px;  /* V4 사용자 명시 2026-05-23 — 아바타를 말풍선 위쪽으로 올림 (top:0 → -8) */
     width: 36px; height: 45px;  /* 4:5 비율 — 모자 viewBox 위 25% 튀어나옴 (모자 폐기 후에도 비율 유지) */
     overflow: visible;
     pointer-events: auto;
@@ -903,7 +903,7 @@
   .msg-menu-btn:hover, .msg-menu-btn:active { opacity: 1; background: rgba(255,255,255,0.08); }
   .msg.user .msg-menu-btn { color: var(--bg); opacity: 0.55; }
   .msg.user .msg-bubble { background: var(--accent); color: var(--bg); border-bottom-right-radius: 4px; font-weight: 500; }
-  .msg.assistant .msg-bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
+  .msg.assistant .msg-bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-top-left-radius: 4px; margin-left: -10px; }  /* V4 사용자 명시 2026-05-23 — 뾰족한 모서리 좌하 → 좌상 (아바타 쪽). 말풍선 10px 더 왼쪽. */
   .msg.error .msg-bubble { background: rgba(224,108,117,0.1); border: 1px solid rgba(224,108,117,0.3); color: var(--text); border-bottom-left-radius: 4px; }
   .msg.assistant .msg-bubble .stage-label {
     display: block;
@@ -1228,9 +1228,9 @@
      각 모드 고유 색 + 옅은 fill + border = "tap 가능 chip" 톤 (사용자 발화 톤 X). 살짝 작음.
      누르면 그 텍스트 자동 send → AI 첫 응답 (해당 모드 톤). */
   .ces-chips-inline {
-    display: flex; flex-direction: column; align-items: flex-start;
+    display: flex; flex-direction: column; align-items: flex-end;
     gap: 6px;
-    margin: 4px 0 14px 44px;  /* 좌측 avatar 영역 비움 — .msg.assistant padding-left 44 와 align */
+    margin: 4px 0 14px 0;  /* V4 사용자 명시 2026-05-23 — chip = 사용자 쪽 (우측 정렬). avatar 영역 offset 제거. */
   }
   .ces-chip-bubble {
     background: transparent;
