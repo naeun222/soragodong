@@ -252,10 +252,22 @@ function buildSystemPromptParts() {
   //   query (사용자 마지막 message) 와 의미적으로 가까운 옛 챕터 N개 (Plus=1 / Premium=3) 를 MMR retrieve → perCall 영역에 inject.
   //   매번 다른 챕터 → 피드백 루프 risk ↓ (옛 정책 보호).
   //   useRag OFF / Light / 게스트 = retrieve X, inject X (자연 noop).
+  //
+  // V4 (사용자 명시 2026-05-23 ultrathink): 직전 챕터 자동 inject (B안) 추가.
+  //   anaphoric query ("끝났어", "그거") 의 referent 보장. RAG retrieve 와 무관, 항상 직전 1개.
+  //   B 먼저 호출 → archive id 받음 → RAG 쪽에서 dedup (같은 archive 두 번 inject 방지).
+  let recentArchiveId = null;
+  if (typeof _recentChapterInject === 'function') {
+    try { recentArchiveId = _recentChapterInject(perCall); }
+    catch (e) { console.warn('[recentChapter] inject fail:', e?.message || e); }
+  }
   if (window._ragLastRetrieved && Array.isArray(window._ragLastRetrieved) && window._ragLastRetrieved.length > 0
       && typeof _ragFormatInject === 'function') {
     try {
-      const ragText = _ragFormatInject(window._ragLastRetrieved);
+      const filtered = recentArchiveId
+        ? window._ragLastRetrieved.filter(r => r.archiveId !== recentArchiveId)
+        : window._ragLastRetrieved;
+      const ragText = _ragFormatInject(filtered);
       if (ragText && ragText.length > 0) perCall.push(ragText);
     } catch (e) { console.warn('[rag] inject fail:', e?.message || e); }
   }
