@@ -216,24 +216,8 @@ async function _ragRetrieveTopN(queryText, topN) {
   }));
 }
 
-// V4 (사용자 명시 2026-05-23 ultrathink): topic 의 chapterStartedAt/EndedAt 으로 archive.messages 슬라이스.
-//   _ragFormatInject 가 topic 시간대의 raw user 메시지 inject — Haiku 압축 summary 대신 사용자 본인 어휘.
-function _ragSliceTopicMessages(archive, topic) {
-  if (!archive?.messages || !topic?.chapterStartedAt) return [];
-  const start = new Date(topic.chapterStartedAt).getTime();
-  const end = topic.chapterEndedAt ? new Date(topic.chapterEndedAt).getTime() : Infinity;
-  if (!isFinite(start)) return [];
-  return archive.messages.filter(m => {
-    if (!m || !m.timestamp || m.isSimulationContext) return false;
-    const t = new Date(m.timestamp).getTime();
-    return t >= start && t <= end;
-  });
-}
-
 // V4: system prompt 에 inject 할 텍스트 — top-N archive 의 요약.
-//   V4 (사용자 명시 2026-05-23 ultrathink): topic 별 raw 슬라이스로 변경.
-//     이유: anaphoric query ("끝났어", "그거") 케이스에서 LLM-compressed 300자 summary 보다
-//     사용자 본인 raw 메시지가 referent 잡기 좋음. score 는 archive 임베딩 유지 (비대칭 OK).
+//   각 archive 의 *topicCards (있으면)* 또는 *messages 핵심 발췌*.
 //   매 메시지 마다 다름 = prompt cache invalidate (의도된 동작).
 function _ragFormatInject(retrieved) {
   if (!Array.isArray(retrieved) || retrieved.length === 0) return '';
@@ -241,32 +225,19 @@ function _ragFormatInject(retrieved) {
     const a = r.archiveItem;
     if (!a) return '';
     const dateLabel = a.date || (a.generatedAt ? a.generatedAt.slice(0, 10) : '');
-    // topicCards 우선 — title + 그 시간대의 raw user 메시지 2개.
+    // topicCards 우선 (이미 압축된 요약).
     const topics = (state.topicCards || []).filter(c =>
       c && !c._deleted && c.sourceArchiveId === a.id && c.category !== 'strategy'
     );
     let summary = '';
     if (topics.length > 0) {
-      summary = topics.slice(0, 3).map(t => {
-        const sliced = _ragSliceTopicMessages(a, t);
-        const userMsgs = sliced
-          .filter(m => m.role === 'user' && !m._starter)
-          .slice(0, 2)
-          .map(m => (m.content || '').replace(/```json[\s\S]*?```/g, '').trim().slice(0, 150))
-          .filter(Boolean);
-        const title = (t.title || '').trim();
-        if (userMsgs.length > 0) {
-          return `  · ${title}\n${userMsgs.map(u => `      "${u}"`).join('\n')}`;
-        }
-        // 슬라이스 결과 user 메시지 0개 — title + summary 1줄 fallback.
-        return `  · ${title}${t.summary ? ': ' + t.summary.slice(0, 200) : ''}`;
-      }).join('\n');
+      summary = topics.slice(0, 3).map(t => `  · ${t.title || ''}${t.summary ? ': ' + t.summary : ''}`).join('\n');
     } else {
-      // topicCards 없으면 messages 첫 2개 user 메시지로 핵심 추정. 100→150 자.
+      // topicCards 없으면 messages 첫 2개 user 메시지로 핵심 추정.
       const userMsgs = (a.messages || [])
         .filter(m => m && m.role === 'user' && !m.isSimulationContext && !m._starter)
         .slice(0, 2)
-        .map(m => (m.content || '').replace(/```json[\s\S]*?```/g, '').trim().slice(0, 150))
+        .map(m => (m.content || '').slice(0, 100))
         .filter(Boolean);
       summary = userMsgs.length > 0 ? userMsgs.map(u => `  · "${u}"`).join('\n') : '  · (요약 없음)';
     }
