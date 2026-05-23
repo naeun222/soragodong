@@ -152,18 +152,32 @@ function _ragCosine(a, b) {
   return denom > 0 ? dot / denom : 0;
 }
 
+// V4 (사용자 명시 2026-05-24 ultrathink): recency 가중치 — exponential half-life 60일.
+//   같은 cosine 이면 최근 archive 선호. 옛 archive 완전 사장 X (자기관찰 PWA 특성상
+//   몇 달 단위로 반복되는 패턴 retrieval 가치 ↑ → decay 약하게).
+//   - 1주 전: 0.92 / 1달: 0.71 / 2달: 0.50 / 6달: 0.16
+//   - generatedAt / date 둘 다 없으면 0.7 (중간).
+function _ragRecencyWeight(archive) {
+  const ts = archive?.generatedAt || archive?.date;
+  if (!ts) return 0.7;
+  const ageDays = (Date.now() - new Date(ts).getTime()) / 86400000;
+  if (!isFinite(ageDays) || ageDays < 0) return 1.0;
+  return Math.pow(0.5, ageDays / 60);
+}
+
 // V4: MMR retrieve — 관련성 + 다양성 균형. λ=0.5 균형.
 //   1) query 와 가장 관련 높은 1개 선택.
 //   2) 다음은 (query 관련성) - λ × max(이미 선택된 항목과의 유사도) 가 가장 높은 1개.
 //   3) topN 도달까지 반복.
+//   V4 (사용자 명시 2026-05-24 ultrathink): qSim 에 recency weight 곱 — 같은 관련성이면 최근 우선.
 function _ragMMR(candidates, queryEmbedding, topN, lambda) {
   if (!Array.isArray(candidates) || candidates.length === 0) return [];
   if (topN <= 0) return [];
   lambda = (typeof lambda === 'number') ? lambda : _RAG_MMR_LAMBDA;
-  // Pre-compute query similarity
+  // Pre-compute query similarity (× recency weight)
   const scored = candidates.map(c => ({
     item: c,
-    qSim: _ragCosine(queryEmbedding, c.embedding)
+    qSim: _ragCosine(queryEmbedding, c.embedding) * _ragRecencyWeight(c.archiveItem)
   }));
   const selected = [];
   const remaining = scored.slice();
