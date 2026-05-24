@@ -47,10 +47,11 @@
       if (window._onbTutorialMode) { console.log('[bg-fetch] onb tutorial — skip'); return; }
       if (state.preferences && state.preferences.testerMode) { console.log('[bg-fetch] testerMode — skip'); return; }
       if (typeof _canAI === 'function' && !_canAI()) { console.log('[bg-fetch] _canAI false — skip'); return; }
-      // 4) maybeRunDailyChapterExtract — 내부 batch API + 4단 분석.
-      if (typeof maybeRunDailyChapterExtract === 'function') {
-        await maybeRunDailyChapterExtract();
-        console.log('[bg-fetch] dailyChapterExtract 완료');
+      // 4) maybeRunChapterCleanup — step A 분리 + step B cleanup batch + step C review chain.
+      //    옛 maybeRunDailyChapterExtract 은 alias 로 유지 (호환). 새 함수 사용.
+      if (typeof maybeRunChapterCleanup === 'function') {
+        await maybeRunChapterCleanup();
+        console.log('[bg-fetch] chapterCleanup 완료');
       }
     } catch (e) {
       console.warn('[bg-fetch] task error:', e);

@@ -322,11 +322,11 @@ async function init() {
     setTimeout(() => { _resumePendingIntake().catch(e => console.warn('intake resume:', e)); }, 4800);
   }
 
-  // 사용자 명시 2026-05-01: 리뷰 자동 생성 trigger 제거 (weekly/monthly/quarterly/yearly).
-  // 사용자가 홈/리뷰모음의 review-card 를 직접 click 해야 generateReview 호출.
-  // dailyChapterExtract 만 보존 (4단 분석 자동 추출 — 리뷰 X).
-  if (typeof maybeRunDailyChapterExtract === 'function') {
-    setTimeout(() => { maybeRunDailyChapterExtract().catch(e => console.warn('dailyChapterExtract:', e)); }, 4000);
+  // V4 (사용자 명시 2026-05-25 ultrathink): 신규 maybeRunChapterCleanup (재설계 main entry).
+  //   step A 챕터 분리 + step B cleanup batch + step C review chain trigger.
+  //   옛 maybeRunDailyChapterExtract 는 alias 로 호환 유지 (step 5 에서 제거 예정).
+  if (typeof maybeRunChapterCleanup === 'function') {
+    setTimeout(() => { maybeRunChapterCleanup().catch(e => console.warn('chapterCleanup:', e)); }, 4000);
   }
   // 사용자 보고 2026-05-12 ultrathink: init 시 _billingCache 자동 populating.
   //   옛: refreshBillingStatus 가 settings 화면 진입 시만 호출 → settings 안 들른 사용자 (예: 새 계정 + 결제 직후 chat 로 진입) 의 _billingCache 영원히 비어있음.

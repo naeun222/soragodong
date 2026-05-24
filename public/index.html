@@ -22389,11 +22389,11 @@ async function init() {
     setTimeout(() => { _resumePendingIntake().catch(e => console.warn('intake resume:', e)); }, 4800);
   }
 
-  // 사용자 명시 2026-05-01: 리뷰 자동 생성 trigger 제거 (weekly/monthly/quarterly/yearly).
-  // 사용자가 홈/리뷰모음의 review-card 를 직접 click 해야 generateReview 호출.
-  // dailyChapterExtract 만 보존 (4단 분석 자동 추출 — 리뷰 X).
-  if (typeof maybeRunDailyChapterExtract === 'function') {
-    setTimeout(() => { maybeRunDailyChapterExtract().catch(e => console.warn('dailyChapterExtract:', e)); }, 4000);
+  // V4 (사용자 명시 2026-05-25 ultrathink): 신규 maybeRunChapterCleanup (재설계 main entry).
+  //   step A 챕터 분리 + step B cleanup batch + step C review chain trigger.
+  //   옛 maybeRunDailyChapterExtract 는 alias 로 호환 유지 (step 5 에서 제거 예정).
+  if (typeof maybeRunChapterCleanup === 'function') {
+    setTimeout(() => { maybeRunChapterCleanup().catch(e => console.warn('chapterCleanup:', e)); }, 4000);
   }
   // 사용자 보고 2026-05-12 ultrathink: init 시 _billingCache 자동 populating.
   //   옛: refreshBillingStatus 가 settings 화면 진입 시만 호출 → settings 안 들른 사용자 (예: 새 계정 + 결제 직후 chat 로 진입) 의 _billingCache 영원히 비어있음.
@@ -62217,99 +62217,128 @@ async function _timeoutReviewChainBatch() {
   }
 }
 
-// V4 사용자 명시 2026-05-01 ultrathink: 사용자 활동 시 (load / sendChat) trigger.
-// 사용자 명시 2026-05-02 ultrathink: 4AM extract → Batch API 50% 할인.
-// 1. pending batch 결과 먼저 처리 (batch_id 있으면 fetch). 12h 지났으면 timeout fallback.
-// 2. 잠든 상태 (5h+ 갭) + 4AM cutoff → archive 이송 + batch submit.
-async function maybeRunDailyChapterExtract() {
+// V4 (사용자 명시 2026-05-25 ultrathink): 재설계 main entry — maybeRunChapterCleanup.
+//   step A: 챕터 분리 trigger
+//     (i)  ✓ 버튼 — endChapter()/_archiveCurrentChapter manual=true 별도 path (여기 X)
+//     (ii) lastMsg + 5h < now — 5h 갭, cutoff 와 별개 (사용자 spec 6)
+//     (iii) 4AM cutoff 통과 + lastMsg < (cutoff - 5분)
+//   step B: cleanup batch — 어제 batch 큐 처리 (_pendingCleanup 마커, daily cooldown)
+//     · case (Opus) + topic (Haiku) + diary 같은 batch_id
+//     · 결과 도착 시 archive._cleanedAt stamp + maybeTriggerReviewChain chain
+//   step C: review chain — 매 진입 시도 (cleanup 없을 때도 backlog cover)
+//     · weekly + monthly + quarterly + annual 자격 체크 (entries >= 임계값, key not in)
+//     · 모든 missing 한 batch_id (weekly 있으면 insight 통합)
+//   legacy: 옛 state.pendingBatch 잔재 = single-shot _resumePendingBatch 후 새 schema 만.
+async function maybeRunChapterCleanup() {
   if (!authUserId || window._onbTutorialMode) return;
   if (state.preferences && state.preferences.testerMode) return;
-  if (!_canAI()) return;
 
-  // 1. pending batch 결과 먼저 처리 (잠든 상태 가드 위에 둠 — 사용자 활동 시 즉시 결과 가져옴)
-  if (state.pendingBatch && state.pendingBatch.batch_id) {
-    await _resumePendingBatch();
+  const isGuest = !_canAI();  // 게스트 = step A 분리만 (step B+C X)
+
+  // ─── legacy pendingBatch (옛 schema) 잔재 처리 — single-shot ─────────
+  if (!isGuest && state.pendingBatch && state.pendingBatch.batch_id) {
+    try { await _resumePendingBatch(); } catch (e) { console.warn('[legacy resume]', e); }
     if (state.pendingBatch && state.pendingBatch.batch_id) {
-      // 아직 결과 미완 — 12h 지났으면 timeout fallback
       const submittedMs = state.pendingBatch.submitted_at || 0;
       if (Date.now() - submittedMs > 12 * 3600 * 1000) {
-        await _timeoutPendingBatch();
+        try { await _timeoutPendingBatch(); } catch {}
       } else {
-        // 사용자 명시 2026-05-08 ultrathink (재): polling 가속 — 5분/15분/30분 retry.
-        //   Anthropic Batch API typical latency = 5분~1시간. 2/4/6분 polling 은 너무 짧음 (대부분 fail).
-        //   5/15/30분 = 평균 도착 시점 cover. 30분 후 미도착 = 사용자 다음 진입 시 처리.
-        //   한 batch_id 당 1번만 schedule (window flag 가드). _resumePendingBatch 가 모든 type
-        //   (chapter case+topic, weekly/monthly/quarterly/annual review, diary) 통합 처리.
         const _bid = state.pendingBatch.batch_id;
         if (window._pendingBatchPollingFor !== _bid) {
           window._pendingBatchPollingFor = _bid;
-          [300000, 900000, 1800000].forEach(ms => {  // 5min / 15min / 30min
+          [300000, 900000, 1800000].forEach(ms => {
             setTimeout(() => {
               if (state.pendingBatch && state.pendingBatch.batch_id === _bid) {
-                _resumePendingBatch().catch(e => console.warn('[batch polling retry]', e));
+                _resumePendingBatch().catch(e => console.warn('[legacy polling]', e));
               }
             }, ms);
           });
         }
       }
-      // batch 처리 중이면 새 batch 안 넣음 (중복 방지)
-      return;
+      return;  // legacy 진행 중이면 새 schema 시도 X
     }
   }
 
-  // 2. 4AM cutoff schedule check
-  if (!_shouldRunSchedule(state.lastDailyChapterExtractAt, _lastDaily4amCutoff())) return;
+  // ─── 새 cleanup batch 결과 fetch ─────────────────────────
+  if (!isGuest && state.pendingChapterCleanupBatch && state.pendingChapterCleanupBatch.batch_id) {
+    try { await _resumeChapterCleanupBatch(); } catch (e) { console.warn('[cleanup resume]', e); }
+    if (state.pendingChapterCleanupBatch && state.pendingChapterCleanupBatch.batch_id) {
+      const _bid = state.pendingChapterCleanupBatch.batch_id;
+      if (window._pendingCleanupBatchPollingFor !== _bid) {
+        window._pendingCleanupBatchPollingFor = _bid;
+        [300000, 900000, 1800000].forEach(ms => {  // 5min / 15min / 30min
+          setTimeout(() => {
+            if (state.pendingChapterCleanupBatch && state.pendingChapterCleanupBatch.batch_id === _bid) {
+              _resumeChapterCleanupBatch().catch(e => console.warn('[cleanup polling]', e));
+            }
+          }, ms);
+        });
+      }
+      return;  // cleanup 진행 중이면 새 cleanup batch 제출 X (중복 방지)
+    }
+  }
 
-  // V4 (사용자 명시 2026-05-08): 4AM cutoff 자동 추출 폐기 — 사용자가 ✓ 깨달음 버튼 누른 것만 추출.
-  // mutation chat 활성 상태로 잠들었으면 단순 close (skipSave=true). archive 추가 X.
+  // ─── 새 review chain batch 결과 fetch ──────────────────
+  if (!isGuest && state.pendingReviewBatch && state.pendingReviewBatch.batch_id) {
+    try { await _resumeReviewChainBatch(); } catch (e) { console.warn('[review resume]', e); }
+    if (state.pendingReviewBatch && state.pendingReviewBatch.batch_id) {
+      const _bid = state.pendingReviewBatch.batch_id;
+      if (window._pendingReviewBatchPollingFor !== _bid) {
+        window._pendingReviewBatchPollingFor = _bid;
+        [300000, 900000, 1800000].forEach(ms => {
+          setTimeout(() => {
+            if (state.pendingReviewBatch && state.pendingReviewBatch.batch_id === _bid) {
+              _resumeReviewChainBatch().catch(e => console.warn('[review polling]', e));
+            }
+          }, ms);
+        });
+      }
+    }
+  }
+
+  // ─── step A: 챕터 분리 ───────────────────────────────────
+  // mutation chat close (잠든 상태로 활성이면 단순 close)
   if (typeof _mutationChatState !== 'undefined' && _mutationChatState
       && typeof closeMutationChat === 'function') {
     try { closeMutationChat(true); } catch {}
   }
 
-  // 4AM 시점 mood 패턴 위기 detect (자살예방법 §15-6)
+  // crisis pattern detect (자살예방법 §15-6)
   if (typeof _checkCrisisPattern === 'function' && _checkCrisisPattern()) {
     if (typeof showCrisisCarousel === 'function') {
       setTimeout(() => showCrisisCarousel('mood_pattern'), 1500);
     }
   }
 
-  // 3. 잠든 상태 가드 — step 4 (chatMessages → archive 이송) 만 막는 의도.
-  //   V4 (사용자 명시 2026-05-20 ultrathink): 4AM cutoff 단순 룰 — last msg < (직전 4AM cutoff - 5분) 이면 archive.
-  //   옛 (_isDifferentDay && _gap >= 5h) 룰 폐기. 새 룰은 자정~새벽 단발 chat 도 매일 batch 에 묶이게.
-  //   mid-session 보호: last msg 가 cutoff 직전 5분 또는 cutoff 이후 = defer (다음 4AM batch).
-  //   archive date = first msg dayK (4AM 기준) — _archiveCurrentChapter 가 이미 그렇게 처리.
-  //   사용자 보고 2026-05-12 ultrathink (보존): 가드 4 는 step 4 의 if 조건만 막음. step 5/6 (이미 archive 된 pending 의 batch submit) 은 항상 실행.
+  // 챕터 분리 자격 — trigger (ii) 5h 갭 또는 (iii) 4AM cutoff + lastMsg<cutoff-5분
   const lastMsg = (state.chatMessages && state.chatMessages.length > 0)
     ? state.chatMessages[state.chatMessages.length - 1] : null;
   const _lastMs = (lastMsg && lastMsg.timestamp) ? new Date(lastMsg.timestamp).getTime() : null;
   let _shouldArchive = false;
   if (_lastMs != null) {
     const _cutoffMs = _lastDaily4amCutoff().getTime();
-    _shouldArchive = _lastMs < (_cutoffMs - 5 * 60 * 1000);
+    const _5hAgoMs = Date.now() - 5 * 3600 * 1000;
+    // (ii) 5h 갭 — cutoff 와 별개, 언제든 trigger (사용자 spec 6)
+    if (_lastMs < _5hAgoMs) _shouldArchive = true;
+    // (iii) 4AM cutoff 통과 + lastMsg < cutoff-5분
+    else if (_lastMs < (_cutoffMs - 5 * 60 * 1000)) _shouldArchive = true;
   }
 
-  // 4. chatMessages 의 현재 챕터도 archive 이송 — cutoff 통과 시.
   if (_shouldArchive
       && state.chatMessages && state.chatMessages.length >= 3
       && typeof _archiveCurrentChapter === 'function') {
     _archiveCurrentChapter({ manual: false });
   }
 
-  // 5-pre. msgs < 3 archive 의 stuck 마커 cleanup — 사용자 보고 2026-05-12 ultrathink.
-  //   batch path filter (아래 line) + _submitDailyExtractBatch / _runDailyExtractInline 모두 `messages.length >= 3` 필수.
-  //   _archiveCurrentChapter 의 minLen=3 가드로 정상 path 엔 안 들어가지만 마이그레이션 / 옛 코드 / race 잔재 케이스 = 영원히 stuck → "🌙 4시 자동 정리 예정" 무한 노출.
-  //   처리할 방법이 없는 archive 의 _pending* 마커만 정리. archive 자체 (history) 는 보존 — 사용자가 도서관에서 직접 삭제 가능.
-  // V4 fix (사용자 보고 2026-05-17 ultrathink): 가드 확장 — messages 필드 자체 없거나 array 아닌 케이스도 cover.
-  //   옛 root cause: Array.isArray(a.messages) && a.messages.length < 3 = messages 필드 없는 archive (옛 2026-05-10 이전 형식) 는 SKIP → 영원히 stuck.
-  //   확장: messages 없거나 array 아니거나 <3 → 다 cleanup.
+  // msg<3 stuck marker sweep (옛 + 새 마커 모두 cover)
   let _sweptDeadMarker = false;
   (state.chatArchive || []).forEach(a => {
     if (!a || a._deleted) return;
-    if (a._pendingExtract || a._pendingCaseAnalysis) {
+    if (a._pendingCleanup || a._pendingExtract || a._pendingCaseAnalysis) {
       const _msgs = a.messages;
       const _invalid = !Array.isArray(_msgs) || _msgs.length < 3;
       if (_invalid) {
+        delete a._pendingCleanup;
         delete a._pendingExtract;
         delete a._pendingCaseAnalysis;
         delete a._batchSubmittedAt;
@@ -62322,25 +62351,31 @@ async function maybeRunDailyChapterExtract() {
     if (typeof renderChatArchiveModal === 'function') { try { renderChatArchiveModal(); } catch {} }
   }
 
-  // 5. pending archive 모음
-  const pending = (state.chatArchive || []).filter(a =>
-    a && !a._deleted && (a._pendingExtract || a._pendingCaseAnalysis) && Array.isArray(a.messages) && a.messages.length >= 3
-  );
+  // ─── step B: cleanup batch (어제 큐 처리, daily cooldown) ────────────
+  if (!isGuest && _shouldRunSchedule(state.lastChapterCleanupAt, _lastDaily4amCutoff())) {
+    const unprocessed = (state.chatArchive || []).filter(a =>
+      a && !a._deleted && a._pendingCleanup
+      && !a.isSimulation  // K: 시뮬 챕터 처리 X
+      && Array.isArray(a.messages) && a.messages.length >= 3
+      && (!a._batchSubmittedAt || (Date.now() - a._batchSubmittedAt) > 12 * 3600 * 1000)
+    );
+    // unprocessed=[] 도 submit 함수가 lastChapterCleanupAt stamp 처리 (early return)
+    await submitChapterCleanupBatch(unprocessed);
+  }
 
-  // 6. batch submit (50% 할인)
-  // V4 fix (사용자 보고 2026-05-24 ultrathink): pending=0 도 review/diary batch trigger.
-  //   옛: pending=0 → early return → _submitDailyExtractBatch 호출 X → _buildReviewBatchRequests 도달 X
-  //       → 일주일 챕터 다 추출 완료된 사용자 = 일요일 4AM 통과해도 weekly review 영구 누락.
-  //   증상 예: lastWeeklyReviewBatchAt=undefined + pending=0 + _shouldRunSchedule=true 인데 trigger X.
-  //   새: pending=0 도 _submitDailyExtractBatch 호출. 내부에서 chapter inline/topic forEach 가 빈 배열에 자연 skip.
-  //       review/diary build 는 정상 → 자격 있으면 submit. 없으면 line 641-645 의 requests=0 fallback 에서 stamp+return.
-  await _submitDailyExtractBatch(pending);
-
-  // 7. 자동 인사이트 발견 (사용자 명시 2026-05-16 ultrathink) — 7일 cooldown + entries>=7 가드 내부.
-  if (typeof maybeRunDailyInsightDiscover === 'function') {
-    try { await maybeRunDailyInsightDiscover(); } catch (e) { console.warn('[auto-insight]', e); }
+  // ─── step C: review chain trigger ────────────────────────
+  // cleanup batch 진행 중이면 _resumeChapterCleanupBatch 끝에서 chain 호출.
+  // cleanup batch 없거나 끝났으면 직접 시도 (옛 cycle backlog cover).
+  if (!isGuest && !state.pendingChapterCleanupBatch?.batch_id) {
+    if (typeof maybeTriggerReviewChain === 'function') {
+      try { await maybeTriggerReviewChain(); } catch (e) { console.warn('[reviewChain entry]', e); }
+    }
   }
 }
+
+// V4 (사용자 명시 2026-05-25 ultrathink): 옛 함수명 alias — 옛 호출처 호환 (07-init / 35-bg-fetch).
+//   step 4 의 호출처 rename 함께 진행. 다음 step (5) 에서 옛 함수 (_submitDailyExtractBatch 등) 폐기.
+const maybeRunDailyChapterExtract = maybeRunChapterCleanup;
 
 // 사용자 명시 2026-05-10: 주간 리뷰만 새로 받는 명령어 — _diagnoseExtract 의 weekly 부분만 추출.
 //   console: `_forceWeeklyReview()` → 이번 주 weekKey 기준 새 review 생성 (이미 있으면 toast 알림 + skip).
@@ -68850,10 +68885,11 @@ function _dismissPwaInstallCard() {
       if (window._onbTutorialMode) { console.log('[bg-fetch] onb tutorial — skip'); return; }
       if (state.preferences && state.preferences.testerMode) { console.log('[bg-fetch] testerMode — skip'); return; }
       if (typeof _canAI === 'function' && !_canAI()) { console.log('[bg-fetch] _canAI false — skip'); return; }
-      // 4) maybeRunDailyChapterExtract — 내부 batch API + 4단 분석.
-      if (typeof maybeRunDailyChapterExtract === 'function') {
-        await maybeRunDailyChapterExtract();
-        console.log('[bg-fetch] dailyChapterExtract 완료');
+      // 4) maybeRunChapterCleanup — step A 분리 + step B cleanup batch + step C review chain.
+      //    옛 maybeRunDailyChapterExtract 은 alias 로 유지 (호환). 새 함수 사용.
+      if (typeof maybeRunChapterCleanup === 'function') {
+        await maybeRunChapterCleanup();
+        console.log('[bg-fetch] chapterCleanup 완료');
       }
     } catch (e) {
       console.warn('[bg-fetch] task error:', e);
