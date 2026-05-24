@@ -43994,7 +43994,11 @@ function _ragFormatInject(retrieved) {
     );
     let summary = '';
     if (topics.length > 0) {
-      summary = topics.slice(0, 3).map(t => `  · ${t.title || ''}${t.summary ? ': ' + t.summary : ''}`).join('\n');
+      // V4 (사용자 명시 2026-05-25 ultrathink, 2 번째 묶음): summary cap 200자 — 옛 코드 cap X → prompt 비대 + 토큰 낭비.
+      summary = topics.slice(0, 3).map(t => {
+        const sum = (t.summary || '').slice(0, 200);
+        return `  · ${t.title || ''}${sum ? ': ' + sum : ''}`;
+      }).join('\n');
     } else {
       // topicCards 없으면 messages 첫 2개 user 메시지로 핵심 추정.
       const userMsgs = (a.messages || [])
@@ -44011,7 +44015,8 @@ function _ragFormatInject(retrieved) {
     '',
     '[관련 옛 챕터 (지금 대화와 의미적으로 가까운)]',
     sections.join('\n'),
-    '  · 자연스럽게 참조 가능. 단 "옛 ~일에 이런 얘기 했었지" 식 직접 인용보단 *연결되는 자기관찰 흐름* 으로.',
+    // V4 (사용자 명시 2026-05-25 ultrathink, 2 번째 묶음): 직접 인용 unconditional OK — 옛 "anaphor / 명시 recall 시" conditional 폐기.
+    '  · 자연스럽게 참조 가능. *직접 인용 OK* — 구체 토픽·세부사항 그대로 호출해도 됨 (사용자 명시 2026-05-25).',
     ''
   ].join('\n');
 }
