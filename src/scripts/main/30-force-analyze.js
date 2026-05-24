@@ -2027,61 +2027,8 @@ window._diagnoseExtract = async function() {
 
 // ═══════════════════════════════════════════════════════════════
 // V4 (사용자 명시 2026-05-06): 미구독/게스트 = 3턴마다 자동 모델 갱신.
-// V4 (사용자 명시 2026-05-08 ultrathink — 재): forceAnalyze (전체 데이터) → extractChapterCaseAnalysis (chatMessages 만, Opus 4.7) 으로 변경.
-//   게스트 entries 거의 0 이라 forceAnalyze 의 entries/archive 분석 의미 X. chatMessages 분석이 합리.
-//   모델은 Opus — 게스트/미구독자에게 가장 풍부한 분석 제공 (옛 forceAnalyze 도 Opus 였음).
-// trigger: generateAIResponse 끝 hook.
-// 가드:
-//   - 미구독 (게스트 or 인증 X subscription_active) 만
-//   - testerMode X (saveState noop 라 마킹 X / 개발자 본인 = 노이즈)
-//   - chatMessages user role count 가 정확히 3 / 6 / 9 ... (3 배수)
-//   - cooldown 60초 (race + 같은 turn 내 중복 fire 차단)
-// 효과: 미구독 사용자가 데이터 쌓일 때마다 점진적으로 나 탭 (modelTraits/Values/Patterns) 갱신.
-// ═══════════════════════════════════════════════════════════════
-async function _maybeAutoForceAnalyzeFreeTier() {
-  if (typeof state === 'undefined' || !state) return;
-  if (state.preferences && state.preferences.testerMode) return;
-  // 사용자 보고 2026-05-11: admin 계정도 매 3턴 자동 갱신 firing → 시뮬 중 방해. admin = 자동 X.
-  if (typeof _isAdmin === 'function' && _isAdmin()) return;
-  // 구독 detect — window._billingCache 가 source of truth (refreshBillingStatus 가 채움).
-  const billing = window._billingCache;
-  const isPaid = !!(billing && billing.subscription_active && billing.subscription_plan
-    && ['light', 'premium', 'early_light', 'early_lifetime'].includes(billing.subscription_plan));
-  if (isPaid) return;  // 유료 구독자 = 다른 흐름 (사용자 직접 클릭) — 자동 X
-  // user role 메시지 count — 사용자 보고 2026-05-11: 시뮬 컨텍스트 메시지 제외 (시뮬 토론 중 자동 분석 firing 회피).
-  const userMsgCount = (state.chatMessages || []).filter(m =>
-    m && m.role === 'user' && !m.error && !m.typing && !m.isSimulationContext
-  ).length;
-  if (userMsgCount === 0 || userMsgCount % 3 !== 0) return;
-  // cooldown — 같은 3턴 안에서 multi-fire 차단 + race 안전
-  state.preferences = state.preferences || {};
-  const lastAt = state.preferences._autoForceAnalyzeLastAt;
-  if (lastAt) {
-    try {
-      const last = new Date(lastAt).getTime();
-      if (Date.now() - last < 60000) return;
-    } catch {}
-  }
-  state.preferences._autoForceAnalyzeLastAt = new Date().toISOString();
-  try { saveState(); } catch {}
-  // 사용자 명시 2026-05-08 ultrathink: extractChapterCaseAnalysis 호출. 옛 forceAnalyze 폐기.
-  // 사용자 보고 2026-05-10 (audit-billing 노랑): 게스트 3턴마다 Opus 4.7 자동 호출 → 게스트 cap $0.30 빠른 소진.
-  //   fix: 게스트 + 미구독자 = Sonnet (default). Premium 만 Opus. Opus 비용 = Sonnet 의 ~5배.
-  if (typeof extractChapterCaseAnalysis === 'function') {
-    try {
-      const _msgs = (state.chatMessages || []).slice();
-      const _bill = window._billingCache;
-      const _isPremium = !!(_bill && _bill.subscription_plan === 'premium' && _bill.subscription_active);
-      const _useOpus = _isPremium;
-      await extractChapterCaseAnalysis(_msgs, { model: _useOpus ? 'claude-opus-4-7' : 'claude-sonnet-4-6' });
-      // 사용자 명시 2026-05-15 ultrathink: 게스트 첫 자동 추출 직후 '나' 탭 가입 유도 배너 트리거 — 18-model-rendering.js 의 _renderGuestNudgeBanner 가 이 플래그 감시. 2026-05-08 통합(13e267f) 시 같이 사라졌던 회귀 복원. 첫 1회만 (가드 + dismiss 후 영구).
-      if (state.isGuest && !state._guestAutoExtracted) {
-        state._guestAutoExtracted = true;
-        try { saveState(); } catch {}
-        // V4 fix (사용자 보고 2026-05-17): 게스트 첫 추출 후 '나 탭 정리' 토스트 제거.
-        //   사용자 보고 — 3턴 만에 토스트 뜨는데 나 탭 실제 갱신 안 돼 misleading. flag + renderModel 만 유지 (nudge banner trigger 보존).
-        if (typeof renderModel === 'function') renderModel();
-      }
-    } catch (e) { console.warn('[auto chapter case]', e); }
-  }
-}
+// V4 (사용자 명시 2026-05-25 ultrathink): _maybeAutoForceAnalyzeFreeTier 폐기.
+//   옛: 미구독/게스트 매 3턴 inline case_analysis (Sonnet) — 잦은 model 변경 + 비용.
+//   새 spec 2: "사용자가 대화탭에서 대화 했을 때, 3턴마다. 아무 일도 일어나지 않음."
+//   모든 사용자 동일 path: 챕터 마무리 → _pendingCleanup → cleanup batch (Opus, 4AM cutoff 통과 시).
+//   함수 + 호출처 (19-chat/09-generate-ai-response.js:407-410) 제거.

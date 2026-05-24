@@ -86,7 +86,9 @@ function _archiveCurrentChapter(opts) {
     messages: validMsgs.slice(),
     generatedAt: new Date().toISOString(),
     endedManually: !!opts.manual,
-    _pendingExtract: true,
+    // V4 (사용자 명시 2026-05-25 ultrathink): _pendingExtract → _pendingCleanup (재설계 통합 마커).
+    //   cleanup batch (case+topic+diary) 가 처리 후 _cleanedAt stamp. 옛 마커 호환은 init 시 migration shim 이 처리.
+    _pendingCleanup: true,
     ...(_hasSimMsg ? { hasSimulationMessages: true } : {}),
     ...(_allSimMsgs ? { isSimulation: true } : {})  // legacy 호환 — pure 시뮬 챕터만
   };
@@ -137,67 +139,14 @@ function _archiveCurrentChapter(opts) {
     setTimeout(() => { _ragEmbedArchive(archiveItem).catch(e => console.warn('[rag] embed archive fail:', e)); }, 0);
   }
 
-  // 신규유저 빠른 추출 — 첫 3 챕터만 즉시 API 호출 (case + topic 둘 다)
+  // V4 (사용자 명시 2026-05-25 ultrathink): 신규유저 즉시 case_analysis 분기 폐기.
+  //   옛: 게스트/미구독자 매 챕터 마무리마다 즉시 inline (Sonnet) → 새 spec 폐기.
+  //   새: 모든 사용자 동일 path — 챕터 마무리 → _pendingCleanup 마커 → 4AM cutoff 통과 후 cleanup batch (Opus).
+  //   첫 case formulation 노출까지 최대 24시간 + polling. 사용자 spec 8 (OK 수용).
+  //   chapterCompletedCount 만 유지 (다른 흐름 의존).
   if (typeof state.chapterCompletedCount !== 'number') state.chapterCompletedCount = 0;
   state.chapterCompletedCount += 1;
   saveState();
-
-  // V4 fix (사용자 명시 2026-05-18 ultrathink): chapterCompletedCount <= 3 → _isTutorialEligibleUser() 로 변경.
-  //   옛: 신규유저 첫 3챕터만 즉시. 그 후 4AM batch deferred.
-  //   새: 게스트 OR 미구독자 = 매 챕터 마무리마다 즉시 (사용성 우선). 구독자 = 4AM batch deferred (비용 절감 / 자연 누적).
-  //   `_isTutorialEligibleUser` (02-tutorial-welcome.js:4) = 게스트 또는 미구독 helper.
-  const _isFreeOrGuest = (typeof _isTutorialEligibleUser === 'function') && _isTutorialEligibleUser();
-  if (_isFreeOrGuest && typeof _canAI === 'function' && _canAI()
-      && !window._onbTutorialMode
-      && !(state.preferences && state.preferences.testerMode)
-      && archiveItem.messages.length >= 6) {
-    // V4 (사용자 명시 2026-05-14 ultrathink): 옛 2026-05-06 정책 (비프리미엄 + 자동 분리 챕터 topic skip) 폐기.
-    //   비프리미엄도 자동 분리 (5h+ gap) 챕터 topic 을 도서관에 정리. plan / manual 무관.
-    //   비용 차이 (Haiku 추출 ~$0.0001/챕터) 흡수 — 사용자 가치 (도서관 자연 누적) 우선.
-    setTimeout(async () => {
-      try {
-        // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
-        // sourceArchiveId 박음 (cascade soft delete 추적용).
-        const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
-        // 사용자 명시 2026-05-08 ultrathink: _extractFromIndex 적용 — 옛 부분 input 제외.
-        const _extractMsgs = _chapterExtractMessages(archiveItem);
-        // 사용자 명시 2026-05-11 ultrathink: 메시지 단위 분리 — 옛 path 는 isSimulation 미전달이라 시뮬 메시지가 cf 5차원 침투 (신규유저 첫 3챕터 즉시 path). _runDailyExtractInline / _submitDailyExtractBatch 와 동일.
-        const _normalMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
-        const _simMsgs = _extractMsgs.filter(m => m && m.isSimulationContext);
-        if (typeof extractChapterCaseAnalysis === 'function') {
-          if (_normalMsgs.length >= 3) {
-            try { await extractChapterCaseAnalysis(_normalMsgs); }
-            catch (e) { console.warn('[new-user extract] case fail:', e); }
-          }
-          if (_simMsgs.length >= 3) {
-            try { await extractChapterCaseAnalysis(_simMsgs, { isSimulation: true }); }
-            catch (e) { console.warn('[new-user extract] case sim fail:', e); }
-          }
-        }
-        if (typeof extractPreviousChapterTopics === 'function') {
-          if (_normalMsgs.length >= 3) {
-            try { await extractPreviousChapterTopics(_normalMsgs); }
-            catch (e) { console.warn('[new-user extract] topic fail:', e); }
-          }
-          if (_simMsgs.length >= 3) {
-            const _beforeSim = (state.topicCards || []).length;
-            try {
-              await extractPreviousChapterTopics(_simMsgs);
-              const _added = (state.topicCards || []).slice(_beforeSim);
-              _added.forEach(card => { if (card) card.source = 'simulation'; });
-            } catch (e) { console.warn('[new-user extract] topic sim fail:', e); }
-          }
-        }
-        if (_before && typeof _stampSourceArchiveId === 'function') {
-          _stampSourceArchiveId(_before, archiveItem.id, archiveItem);
-        }
-        delete archiveItem._pendingExtract;
-        delete archiveItem._pendingCaseAnalysis;  // legacy 호환
-        saveState();
-        if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
-      } catch (e) { console.warn('[new-user extract] guard:', e); }
-    }, 1500);
-  }
   return archiveItem;
 }
 

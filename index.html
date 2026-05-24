@@ -42376,7 +42376,9 @@ function _archiveCurrentChapter(opts) {
     messages: validMsgs.slice(),
     generatedAt: new Date().toISOString(),
     endedManually: !!opts.manual,
-    _pendingExtract: true,
+    // V4 (사용자 명시 2026-05-25 ultrathink): _pendingExtract → _pendingCleanup (재설계 통합 마커).
+    //   cleanup batch (case+topic+diary) 가 처리 후 _cleanedAt stamp. 옛 마커 호환은 init 시 migration shim 이 처리.
+    _pendingCleanup: true,
     ...(_hasSimMsg ? { hasSimulationMessages: true } : {}),
     ...(_allSimMsgs ? { isSimulation: true } : {})  // legacy 호환 — pure 시뮬 챕터만
   };
@@ -42427,67 +42429,14 @@ function _archiveCurrentChapter(opts) {
     setTimeout(() => { _ragEmbedArchive(archiveItem).catch(e => console.warn('[rag] embed archive fail:', e)); }, 0);
   }
 
-  // 신규유저 빠른 추출 — 첫 3 챕터만 즉시 API 호출 (case + topic 둘 다)
+  // V4 (사용자 명시 2026-05-25 ultrathink): 신규유저 즉시 case_analysis 분기 폐기.
+  //   옛: 게스트/미구독자 매 챕터 마무리마다 즉시 inline (Sonnet) → 새 spec 폐기.
+  //   새: 모든 사용자 동일 path — 챕터 마무리 → _pendingCleanup 마커 → 4AM cutoff 통과 후 cleanup batch (Opus).
+  //   첫 case formulation 노출까지 최대 24시간 + polling. 사용자 spec 8 (OK 수용).
+  //   chapterCompletedCount 만 유지 (다른 흐름 의존).
   if (typeof state.chapterCompletedCount !== 'number') state.chapterCompletedCount = 0;
   state.chapterCompletedCount += 1;
   saveState();
-
-  // V4 fix (사용자 명시 2026-05-18 ultrathink): chapterCompletedCount <= 3 → _isTutorialEligibleUser() 로 변경.
-  //   옛: 신규유저 첫 3챕터만 즉시. 그 후 4AM batch deferred.
-  //   새: 게스트 OR 미구독자 = 매 챕터 마무리마다 즉시 (사용성 우선). 구독자 = 4AM batch deferred (비용 절감 / 자연 누적).
-  //   `_isTutorialEligibleUser` (02-tutorial-welcome.js:4) = 게스트 또는 미구독 helper.
-  const _isFreeOrGuest = (typeof _isTutorialEligibleUser === 'function') && _isTutorialEligibleUser();
-  if (_isFreeOrGuest && typeof _canAI === 'function' && _canAI()
-      && !window._onbTutorialMode
-      && !(state.preferences && state.preferences.testerMode)
-      && archiveItem.messages.length >= 6) {
-    // V4 (사용자 명시 2026-05-14 ultrathink): 옛 2026-05-06 정책 (비프리미엄 + 자동 분리 챕터 topic skip) 폐기.
-    //   비프리미엄도 자동 분리 (5h+ gap) 챕터 topic 을 도서관에 정리. plan / manual 무관.
-    //   비용 차이 (Haiku 추출 ~$0.0001/챕터) 흡수 — 사용자 가치 (도서관 자연 누적) 우선.
-    setTimeout(async () => {
-      try {
-        // V4 사용자 명시 2026-05-04: 추출 직전/직후 snapshot diff → 새 derived 항목에
-        // sourceArchiveId 박음 (cascade soft delete 추적용).
-        const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
-        // 사용자 명시 2026-05-08 ultrathink: _extractFromIndex 적용 — 옛 부분 input 제외.
-        const _extractMsgs = _chapterExtractMessages(archiveItem);
-        // 사용자 명시 2026-05-11 ultrathink: 메시지 단위 분리 — 옛 path 는 isSimulation 미전달이라 시뮬 메시지가 cf 5차원 침투 (신규유저 첫 3챕터 즉시 path). _runDailyExtractInline / _submitDailyExtractBatch 와 동일.
-        const _normalMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
-        const _simMsgs = _extractMsgs.filter(m => m && m.isSimulationContext);
-        if (typeof extractChapterCaseAnalysis === 'function') {
-          if (_normalMsgs.length >= 3) {
-            try { await extractChapterCaseAnalysis(_normalMsgs); }
-            catch (e) { console.warn('[new-user extract] case fail:', e); }
-          }
-          if (_simMsgs.length >= 3) {
-            try { await extractChapterCaseAnalysis(_simMsgs, { isSimulation: true }); }
-            catch (e) { console.warn('[new-user extract] case sim fail:', e); }
-          }
-        }
-        if (typeof extractPreviousChapterTopics === 'function') {
-          if (_normalMsgs.length >= 3) {
-            try { await extractPreviousChapterTopics(_normalMsgs); }
-            catch (e) { console.warn('[new-user extract] topic fail:', e); }
-          }
-          if (_simMsgs.length >= 3) {
-            const _beforeSim = (state.topicCards || []).length;
-            try {
-              await extractPreviousChapterTopics(_simMsgs);
-              const _added = (state.topicCards || []).slice(_beforeSim);
-              _added.forEach(card => { if (card) card.source = 'simulation'; });
-            } catch (e) { console.warn('[new-user extract] topic sim fail:', e); }
-          }
-        }
-        if (_before && typeof _stampSourceArchiveId === 'function') {
-          _stampSourceArchiveId(_before, archiveItem.id, archiveItem);
-        }
-        delete archiveItem._pendingExtract;
-        delete archiveItem._pendingCaseAnalysis;  // legacy 호환
-        saveState();
-        if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
-      } catch (e) { console.warn('[new-user extract] guard:', e); }
-    }, 1500);
-  }
   return archiveItem;
 }
 
@@ -43364,10 +43313,9 @@ async function generateAIResponse(modelOverride, opts) {
     renderChat();
     renderModelPreview();
 
-    // 사용자 명시 2026-05-06: 미구독/게스트 = 3턴마다 자동 모델 갱신 (forceAnalyze auto). 게스트와 똑같이.
-    if (typeof _maybeAutoForceAnalyzeFreeTier === 'function') {
-      _maybeAutoForceAnalyzeFreeTier().catch(e => console.warn('[auto force]', e));
-    }
+    // V4 (사용자 명시 2026-05-25 ultrathink): 미구독/게스트 3턴 자동 분석 폐기 (사용자 spec 2).
+    //   옛: _maybeAutoForceAnalyzeFreeTier 가 매 3턴 inline case_analysis 호출 → 비용 폭증, 잦은 model 변경.
+    //   새: 모든 사용자 동일 path — 챕터 마무리 → _pendingCleanup → cleanup batch (Opus, 4AM 통과 시).
 
     // V4 (사용자 명시 2026-05-14 ultrathink): 전략 resurface — 사용자 메시지 ↔ 전략 problemContext 매칭 → chip surface.
     //   Deeper(4단) 응답엔 skip (hook 안 가드). useRag OFF / Light 도 keyword 매칭은 동작.
@@ -62496,64 +62444,11 @@ window._diagnoseExtract = async function() {
 
 // ═══════════════════════════════════════════════════════════════
 // V4 (사용자 명시 2026-05-06): 미구독/게스트 = 3턴마다 자동 모델 갱신.
-// V4 (사용자 명시 2026-05-08 ultrathink — 재): forceAnalyze (전체 데이터) → extractChapterCaseAnalysis (chatMessages 만, Opus 4.7) 으로 변경.
-//   게스트 entries 거의 0 이라 forceAnalyze 의 entries/archive 분석 의미 X. chatMessages 분석이 합리.
-//   모델은 Opus — 게스트/미구독자에게 가장 풍부한 분석 제공 (옛 forceAnalyze 도 Opus 였음).
-// trigger: generateAIResponse 끝 hook.
-// 가드:
-//   - 미구독 (게스트 or 인증 X subscription_active) 만
-//   - testerMode X (saveState noop 라 마킹 X / 개발자 본인 = 노이즈)
-//   - chatMessages user role count 가 정확히 3 / 6 / 9 ... (3 배수)
-//   - cooldown 60초 (race + 같은 turn 내 중복 fire 차단)
-// 효과: 미구독 사용자가 데이터 쌓일 때마다 점진적으로 나 탭 (modelTraits/Values/Patterns) 갱신.
-// ═══════════════════════════════════════════════════════════════
-async function _maybeAutoForceAnalyzeFreeTier() {
-  if (typeof state === 'undefined' || !state) return;
-  if (state.preferences && state.preferences.testerMode) return;
-  // 사용자 보고 2026-05-11: admin 계정도 매 3턴 자동 갱신 firing → 시뮬 중 방해. admin = 자동 X.
-  if (typeof _isAdmin === 'function' && _isAdmin()) return;
-  // 구독 detect — window._billingCache 가 source of truth (refreshBillingStatus 가 채움).
-  const billing = window._billingCache;
-  const isPaid = !!(billing && billing.subscription_active && billing.subscription_plan
-    && ['light', 'premium', 'early_light', 'early_lifetime'].includes(billing.subscription_plan));
-  if (isPaid) return;  // 유료 구독자 = 다른 흐름 (사용자 직접 클릭) — 자동 X
-  // user role 메시지 count — 사용자 보고 2026-05-11: 시뮬 컨텍스트 메시지 제외 (시뮬 토론 중 자동 분석 firing 회피).
-  const userMsgCount = (state.chatMessages || []).filter(m =>
-    m && m.role === 'user' && !m.error && !m.typing && !m.isSimulationContext
-  ).length;
-  if (userMsgCount === 0 || userMsgCount % 3 !== 0) return;
-  // cooldown — 같은 3턴 안에서 multi-fire 차단 + race 안전
-  state.preferences = state.preferences || {};
-  const lastAt = state.preferences._autoForceAnalyzeLastAt;
-  if (lastAt) {
-    try {
-      const last = new Date(lastAt).getTime();
-      if (Date.now() - last < 60000) return;
-    } catch {}
-  }
-  state.preferences._autoForceAnalyzeLastAt = new Date().toISOString();
-  try { saveState(); } catch {}
-  // 사용자 명시 2026-05-08 ultrathink: extractChapterCaseAnalysis 호출. 옛 forceAnalyze 폐기.
-  // 사용자 보고 2026-05-10 (audit-billing 노랑): 게스트 3턴마다 Opus 4.7 자동 호출 → 게스트 cap $0.30 빠른 소진.
-  //   fix: 게스트 + 미구독자 = Sonnet (default). Premium 만 Opus. Opus 비용 = Sonnet 의 ~5배.
-  if (typeof extractChapterCaseAnalysis === 'function') {
-    try {
-      const _msgs = (state.chatMessages || []).slice();
-      const _bill = window._billingCache;
-      const _isPremium = !!(_bill && _bill.subscription_plan === 'premium' && _bill.subscription_active);
-      const _useOpus = _isPremium;
-      await extractChapterCaseAnalysis(_msgs, { model: _useOpus ? 'claude-opus-4-7' : 'claude-sonnet-4-6' });
-      // 사용자 명시 2026-05-15 ultrathink: 게스트 첫 자동 추출 직후 '나' 탭 가입 유도 배너 트리거 — 18-model-rendering.js 의 _renderGuestNudgeBanner 가 이 플래그 감시. 2026-05-08 통합(13e267f) 시 같이 사라졌던 회귀 복원. 첫 1회만 (가드 + dismiss 후 영구).
-      if (state.isGuest && !state._guestAutoExtracted) {
-        state._guestAutoExtracted = true;
-        try { saveState(); } catch {}
-        // V4 fix (사용자 보고 2026-05-17): 게스트 첫 추출 후 '나 탭 정리' 토스트 제거.
-        //   사용자 보고 — 3턴 만에 토스트 뜨는데 나 탭 실제 갱신 안 돼 misleading. flag + renderModel 만 유지 (nudge banner trigger 보존).
-        if (typeof renderModel === 'function') renderModel();
-      }
-    } catch (e) { console.warn('[auto chapter case]', e); }
-  }
-}
+// V4 (사용자 명시 2026-05-25 ultrathink): _maybeAutoForceAnalyzeFreeTier 폐기.
+//   옛: 미구독/게스트 매 3턴 inline case_analysis (Sonnet) — 잦은 model 변경 + 비용.
+//   새 spec 2: "사용자가 대화탭에서 대화 했을 때, 3턴마다. 아무 일도 일어나지 않음."
+//   모든 사용자 동일 path: 챕터 마무리 → _pendingCleanup → cleanup batch (Opus, 4AM cutoff 통과 시).
+//   함수 + 호출처 (19-chat/09-generate-ai-response.js:407-410) 제거.
 // ═══════════════════════════════════════════════════════════════
 // SETTINGS
 // ═══════════════════════════════════════════════════════════════

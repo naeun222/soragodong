@@ -404,10 +404,9 @@ async function generateAIResponse(modelOverride, opts) {
     renderChat();
     renderModelPreview();
 
-    // 사용자 명시 2026-05-06: 미구독/게스트 = 3턴마다 자동 모델 갱신 (forceAnalyze auto). 게스트와 똑같이.
-    if (typeof _maybeAutoForceAnalyzeFreeTier === 'function') {
-      _maybeAutoForceAnalyzeFreeTier().catch(e => console.warn('[auto force]', e));
-    }
+    // V4 (사용자 명시 2026-05-25 ultrathink): 미구독/게스트 3턴 자동 분석 폐기 (사용자 spec 2).
+    //   옛: _maybeAutoForceAnalyzeFreeTier 가 매 3턴 inline case_analysis 호출 → 비용 폭증, 잦은 model 변경.
+    //   새: 모든 사용자 동일 path — 챕터 마무리 → _pendingCleanup → cleanup batch (Opus, 4AM 통과 시).
 
     // V4 (사용자 명시 2026-05-14 ultrathink): 전략 resurface — 사용자 메시지 ↔ 전략 problemContext 매칭 → chip surface.
     //   Deeper(4단) 응답엔 skip (hook 안 가드). useRag OFF / Light 도 keyword 매칭은 동작.
