@@ -18,8 +18,14 @@ async function generateAIResponse(modelOverride, opts) {
   window._ragLastRetrieved = null;
   if (!_isDeeperAnalysis && typeof _ragIsEnabled === 'function' && _ragIsEnabled()) {
     try {
-      const lastUserMsg = [...state.chatMessages].reverse().find(m => m && m.role === 'user' && !m.error && !m.typing);
-      const queryText = lastUserMsg?.content || '';
+      // V4 (사용자 명시 2026-05-25 ultrathink, 2 번째 묶음): query 확장 — last user msg 한 줄만 쓰면 anaphor ("기억해봐") 일 때 의미 매칭 실패.
+      //   직전 3개 user msg concat → semantic content 살아남음. 토큰 ↑ 미미 (~50), recall ↑ 큼.
+      const recentUserMsgs = state.chatMessages
+        .filter(m => m && m.role === 'user' && !m.error && !m.typing)
+        .slice(-3)
+        .map(m => (m.content || '').slice(0, 300))
+        .filter(Boolean);
+      const queryText = recentUserMsgs.join(' / ');
       if (queryText && typeof _ragRetrieveTopN === 'function') {
         window._ragLastRetrieved = await _ragRetrieveTopN(queryText);
       }
