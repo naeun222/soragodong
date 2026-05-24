@@ -1132,6 +1132,288 @@ async function _timeoutPendingBatch() {
   if (typeof renderModelPreview === 'function') { try { renderModelPreview(); } catch {} }
 }
 
+// V4 (사용자 명시 2026-05-25 ultrathink): 신규 chapter cleanup batch — 옛 _submitDailyExtractBatch + _resumePendingBatch 의 chapter+topic+diary 부분만 분리.
+//   review batch 는 별 path (review chain, step 3 신규). step 4 swap 까지 호출 X — 정의만.
+//   case_analysis = Opus 4-7 (옛 Sonnet inline 폐기), topic = Haiku 4-5, diary = 옛 builder 재사용.
+//   chain: cleanup 결과 도착 시 → archive._cleanedAt stamp → maybeTriggerReviewChain (step 3) 호출.
+//   부분 성공 처리 (η): case + topic 둘 다 OK 일 때만 _cleanedAt + _pendingCleanup delete. 한쪽만 OK 면 _pendingCleanup 보존 → 다음 trigger 재시도.
+
+async function submitChapterCleanupBatch(unprocessed) {
+  unprocessed = Array.isArray(unprocessed) ? unprocessed : [];
+  const requests = [];
+
+  // case_analysis (Opus 4-7) per archive
+  for (const batch of unprocessed) {
+    if (!batch || !batch.id) continue;
+    const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : batch.messages;
+    if (!Array.isArray(_msgs) || _msgs.length < 3) continue;
+    const _normalMsgs = _msgs.filter(m => !m || !m.isSimulationContext);
+    if (_normalMsgs.length < 3) continue;
+    const _chatLog = _normalMsgs.map(m => {
+      const role = m.role === 'user' ? '나' : '소라';
+      let content = (m.content || '').replace(/```json[\s\S]*?```/g, '').trim();
+      content = content.replace(/\{[\s\S]*"(?:new_traits|insight)[\s\S]*\}\s*$/g, '').trim();
+      return `${role}: ${content}`;
+    }).join('\n\n');
+    const _maxTok = _normalMsgs.length >= 60 ? 4000 : (_normalMsgs.length >= 20 ? 2500 : 1500);
+    requests.push({
+      custom_id: `case_${batch.id}`,
+      params: {
+        model: 'claude-opus-4-7',
+        max_tokens: _maxTok,
+        messages: [{ role: 'user', content: '' }],
+        _endpoint: 'extract_chapter',
+        _userContentType: 'chapter_topics',
+        _vars: { chatLog: _chatLog.slice(0, 8000), isSim: false }
+      }
+    });
+  }
+
+  // topic_extract (Haiku 4-5) per archive
+  for (const batch of unprocessed) {
+    if (!batch || !batch.id) continue;
+    const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : batch.messages;
+    if (!Array.isArray(_msgs) || _msgs.length < 3) continue;
+    if (typeof _buildExtractTopicPrompt !== 'function') continue;
+    requests.push({
+      custom_id: `topic_${batch.id}`,
+      params: {
+        model: 'claude-haiku-4-5',
+        max_tokens: 600,
+        messages: [{ role: 'user', content: '' }],
+        _endpoint: 'extract_topic',
+        _userContentType: 'chapter_chat',
+        _vars: _buildExtractTopicPrompt(_msgs)
+      }
+    });
+  }
+
+  // diary auto summary (지난 7일 missing) — 옛 builder 재사용
+  const diaryBatch = (typeof _buildDiaryBatchRequests === 'function') ? _buildDiaryBatchRequests() : { requests: [], pendingDates: [] };
+  requests.push(...diaryBatch.requests);
+
+  if (requests.length === 0) {
+    state.lastChapterCleanupAt = new Date().toISOString();
+    saveState();
+    return;
+  }
+
+  console.log(`[cleanup batch] ${unprocessed.length} 챕터 + ${diaryBatch.pendingDates.length} 일기 → ${requests.length} requests submit`);
+
+  try {
+    const resp = await _authedFetch('/api/chat-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action: 'submit', requests })
+    });
+    if (!resp.ok) throw new Error('batch submit failed: ' + resp.status);
+    const data = await resp.json();
+    if (!data.id) throw new Error('batch_id 없음');
+
+    state.pendingChapterCleanupBatch = {
+      batch_id: data.id,
+      submitted_at: Date.now(),
+      archive_ids: unprocessed.map(p => p.id),
+      diary_pending_dates: diaryBatch.pendingDates
+    };
+    unprocessed.forEach(b => { b._batchSubmittedAt = Date.now(); });
+    state.lastChapterCleanupAt = new Date().toISOString();
+    saveState();
+    console.log(`[cleanup batch] submitted: ${data.id}`);
+    if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
+  } catch (e) {
+    console.warn('[cleanup batch] submit fail — fallback 일반 API:', e);
+    if (diaryBatch && Array.isArray(diaryBatch.pendingDates)) {
+      diaryBatch.pendingDates.forEach(dk => {
+        const ent = (state.entries || []).find(en => en.date === dk);
+        if (ent) delete ent._pendingDiarySummary;
+      });
+    }
+    if (typeof _runDailyExtractInline === 'function') {
+      await _runDailyExtractInline(unprocessed);
+    }
+  }
+}
+
+async function _resumeChapterCleanupBatch() {
+  const pb = state.pendingChapterCleanupBatch;
+  if (!pb || !pb.batch_id) return;
+
+  try {
+    // status check
+    const statusResp = await _authedFetch('/api/chat-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action: 'status', batch_id: pb.batch_id })
+    });
+    if (!statusResp.ok) {
+      state.pendingChapterCleanupBatch.statusFailCount = (state.pendingChapterCleanupBatch.statusFailCount || 0) + 1;
+      if (state.pendingChapterCleanupBatch.statusFailCount >= 3) {
+        await _timeoutChapterCleanupBatch();
+        return;
+      }
+      saveState();
+      return;
+    }
+    const status = await statusResp.json();
+    if (state.pendingChapterCleanupBatch.statusFailCount) delete state.pendingChapterCleanupBatch.statusFailCount;
+    if (status.processing_status !== 'ended') {
+      const submittedMs = state.pendingChapterCleanupBatch.submitted_at || 0;
+      if (submittedMs > 0 && Date.now() - submittedMs > 12 * 3600 * 1000) {
+        await _timeoutChapterCleanupBatch();
+      }
+      return;
+    }
+
+    // ended — results fetch
+    const resultsResp = await _authedFetch('/api/chat-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action: 'results', batch_id: pb.batch_id })
+    });
+    if (!resultsResp.ok) {
+      state.pendingChapterCleanupBatch.resultsFailCount = (state.pendingChapterCleanupBatch.resultsFailCount || 0) + 1;
+      if (state.pendingChapterCleanupBatch.resultsFailCount >= 3) {
+        await _timeoutChapterCleanupBatch();
+        return;
+      }
+      saveState();
+      return;
+    }
+    const data = await resultsResp.json();
+    if (!data.ok || !Array.isArray(data.results)) {
+      state.pendingChapterCleanupBatch.dataInvalidCount = (state.pendingChapterCleanupBatch.dataInvalidCount || 0) + 1;
+      if (state.pendingChapterCleanupBatch.dataInvalidCount >= 3) {
+        await _timeoutChapterCleanupBatch();
+        return;
+      }
+      saveState();
+      return;
+    }
+
+    // 결과 처리 (custom_id 별)
+    for (const r of data.results) {
+      if (r?.result?.type !== 'succeeded') {
+        console.warn(`[cleanup resume] ${r.custom_id} = ${r.result?.type}`);
+        continue;
+      }
+      const text = r.result.message?.content?.[0]?.text || '';
+      const cid = r.custom_id || '';
+
+      if (cid.startsWith('case_')) {
+        const archiveId = cid.slice('case_'.length);
+        const arch = (state.chatArchive || []).find(a => a && a.id === archiveId);
+        if (!arch || arch._deleted) continue;
+        const _bef = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
+        try {
+          const jm = text.match(/\{[\s\S]*\}/);
+          if (jm) {
+            const analysis = JSON.parse(jm[0]);
+            if (typeof _processExtractChapterAnalysis === 'function') {
+              _processExtractChapterAnalysis(analysis);
+            }
+            arch._caseAnalysisDone = true;
+          }
+        } catch (e) { console.warn('[cleanup resume] case JSON', archiveId, e); }
+        if (_bef && typeof _stampSourceArchiveId === 'function') {
+          _stampSourceArchiveId(_bef, arch.id, arch);
+        }
+      } else if (cid.startsWith('topic_')) {
+        const archiveId = cid.slice('topic_'.length);
+        const arch = (state.chatArchive || []).find(a => a && a.id === archiveId);
+        if (!arch || arch._deleted) continue;
+        const _bef = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
+        try {
+          let cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+          const jm = cleaned.match(/\{[\s\S]*\}/);
+          if (jm) {
+            const parsed = JSON.parse(jm[0]);
+            if (typeof _processExtractTopicData === 'function') {
+              _processExtractTopicData(parsed, arch.messages);
+            }
+            arch._topicExtractDone = true;
+          }
+        } catch (e) { console.warn('[cleanup resume] topic JSON', archiveId, e); }
+        if (_bef && typeof _stampSourceArchiveId === 'function') {
+          _stampSourceArchiveId(_bef, arch.id, arch);
+        }
+      } else if (cid.startsWith('diary_')) {
+        try {
+          const dateKey = cid.slice('diary_'.length);
+          const summary = (typeof _processDiarySummaryResult === 'function') ? _processDiarySummaryResult(text) : null;
+          const entry = (state.entries || []).find(e => e.date === dateKey);
+          if (entry && summary) {
+            entry.aiSummary = summary;
+            entry.dailySource = 'auto';
+            delete entry._pendingDiarySummary;
+          } else if (entry) {
+            delete entry._pendingDiarySummary;
+          }
+        } catch (e) { console.warn('[cleanup resume] diary', cid, e); }
+      }
+    }
+
+    // archive cleanup 마킹 — case + topic 둘 다 OK 일 때만 _cleanedAt 박고 마커 정리.
+    // 부분 성공 (한쪽 fail) 시 _pendingCleanup 보존 → 다음 trigger 시 재시도.
+    (pb.archive_ids || []).forEach(aid => {
+      const arch = (state.chatArchive || []).find(a => a && a.id === aid);
+      if (!arch) return;
+      // magic/reflection archive push (옛 패턴 유지 — J 답: 마법/숙고 review content 포함)
+      const _bef = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
+      if (typeof _pushMagicReflectionArchive === 'function') {
+        _pushMagicReflectionArchive(arch);
+      }
+      if (_bef && typeof _stampSourceArchiveId === 'function') {
+        _stampSourceArchiveId(_bef, arch.id, arch);
+      }
+      if (arch._caseAnalysisDone && arch._topicExtractDone) {
+        arch._cleanedAt = new Date().toISOString();
+        delete arch._pendingCleanup;
+        delete arch._batchSubmittedAt;
+        // 옛 마커도 정리 (옛 코드 호환)
+        delete arch._pendingExtract;
+        delete arch._pendingCaseAnalysis;
+      }
+      delete arch._caseAnalysisDone;
+      delete arch._topicExtractDone;
+    });
+
+    state.pendingChapterCleanupBatch = null;
+    saveState();
+
+    if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
+    if (typeof renderArchive === 'function') renderArchive();
+    if (typeof renderModel === 'function') renderModel();
+    if (typeof renderModelPreview === 'function') renderModelPreview();
+    if (typeof renderYesterdayCard === 'function') renderYesterdayCard();
+
+    // Chain: review chain trigger (step 3 에서 정의 — typeof 가드)
+    if (typeof maybeTriggerReviewChain === 'function') {
+      try { await maybeTriggerReviewChain(); } catch (e) { console.warn('[reviewChain trigger]', e); }
+    }
+  } catch (e) {
+    console.warn('[cleanup resume] throw:', e);
+  }
+}
+
+async function _timeoutChapterCleanupBatch() {
+  const pb = state.pendingChapterCleanupBatch;
+  if (!pb) return;
+  console.warn('[cleanup batch] 12h timeout 또는 status/results fail 3회 — inline fallback');
+  const archives = (state.chatArchive || []).filter(a => a && (pb.archive_ids || []).includes(a.id));
+  if (Array.isArray(pb.diary_pending_dates)) {
+    pb.diary_pending_dates.forEach(dk => {
+      const ent = (state.entries || []).find(en => en.date === dk);
+      if (ent) delete ent._pendingDiarySummary;
+    });
+  }
+  state.pendingChapterCleanupBatch = null;
+  saveState();
+  if (archives.length > 0 && typeof _runDailyExtractInline === 'function') {
+    await _runDailyExtractInline(archives);
+  }
+}
+
 // V4 사용자 명시 2026-05-01 ultrathink: 사용자 활동 시 (load / sendChat) trigger.
 // 사용자 명시 2026-05-02 ultrathink: 4AM extract → Batch API 50% 할인.
 // 1. pending batch 결과 먼저 처리 (batch_id 있으면 fetch). 12h 지났으면 timeout fallback.
