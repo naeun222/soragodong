@@ -433,8 +433,12 @@ async function init() {
   // Restore active ritual bar if user was in middle of one
   restoreActiveRitualOnLoad();
 
-  // V4 (사용자 명시 2026-05-25 ultrathink): 옛 inline diary 자동 요약 (init 7초 trigger) 폐기.
-  // batch path (maybeRunChapterCleanup → _buildDiaryBatchRequests) 단독 처리. 4AM cutoff 통과 시 cleanup batch 안 묶어 발사.
+  // V3.13.x: 일기 자동 요약 (어제부터 거꾸로 보강 안 된 첫 날 1개)
+  // V4 (사용자 명시 2026-05-25 ultrathink): batch path (chat-batch.ts raw passthrough → case_/topic_/diary/insight 모두 errored) broken 으로 inline 재복원.
+  //   production diary 자동 요약 책임 path. chat-batch.ts 에 backend 합성 path 추가 fix 후 inline 재폐기 예정.
+  setTimeout(() => {
+    runDiaryAutoSummaryIfNeeded().catch(e => console.warn('diary auto summary error:', e));
+  }, 7000);
 
   // V3.13.x: 테스터 모드 켜져 있으면 배지 표시
   if (state.preferences && state.preferences.testerMode) {
