@@ -403,7 +403,7 @@ function buildReflectionSystem(vars: any): string {
 // _promptType (우선) 또는 _endpoint 매칭. cache_control 있는 경우 1h cache 그대로 보존 (자체 system 도 가치 — 매 호출 동일).
 // 매칭 시 client body.system 무시하고 server-side override.
 // 매칭 안 되면 null 반환 — 호출자가 client system 그대로 사용.
-export function getEndpointSystem(body: any): { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }[] | null {
+export function getEndpointSystem(body: any): { type: 'text'; text: string; cache_control?: { type: 'ephemeral'; ttl?: '5m' | '1h' } }[] | null {
   const _pt = body?._promptType;
 
   // _promptType 우선 매칭 (intake / analyze_4stage 동일 endpoint 분기).
@@ -415,7 +415,7 @@ export function getEndpointSystem(body: any): { type: 'text'; text: string; cach
   }
   if (_pt === 'strategy_builder') {
     // strategy_builder: 정적 + cache_control (1h TTL). 23-archive/13.
-    return [{ type: 'text', text: STRATEGY_BUILDER_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    return [{ type: 'text', text: STRATEGY_BUILDER_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
   }
 
   // _endpoint 매칭 (단일 promptType 만 가진 endpoint).
@@ -423,61 +423,61 @@ export function getEndpointSystem(body: any): { type: 'text'; text: string; cach
     return [{ type: 'text', text: FIRST_TOUCH_SYSTEM }];
   }
   if (body?._endpoint === 'magic_help') {
-    return [{ type: 'text', text: buildMagicHelpSystem(body._vars), cache_control: { type: 'ephemeral' } }];
+    return [{ type: 'text', text: buildMagicHelpSystem(body._vars), cache_control: { type: 'ephemeral', ttl: '1h' } }];
   }
   if (body?._endpoint === 'reflection' && body?._vars?.questionText) {
     // reflection: questionText 변수 있으면 server template, 없으면 fallback (아래 분기).
-    return [{ type: 'text', text: buildReflectionSystem(body._vars), cache_control: { type: 'ephemeral' } }];
+    return [{ type: 'text', text: buildReflectionSystem(body._vars), cache_control: { type: 'ephemeral', ttl: '1h' } }];
   }
   // 사용자 보고 2026-05-12 ultrathink: reflection fallback — _vars.questionText 없을 때도 generic system + cache.
   if (body?._endpoint === 'reflection') {
-    return [{ type: 'text', text: REFLECTION_FALLBACK_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    return [{ type: 'text', text: REFLECTION_FALLBACK_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
   }
 
   // 사용자 명시 2026-05-11 ultrathink: review_annual / review_quarterly JSON schema backend 이전.
   // 클라가 보낸 system 무시 — server-side 정적 schema (cache_control ephemeral) 강제.
   // volatile (사용자 데이터) 는 messages user content 로 그대로 forward.
   if (body?._endpoint === 'review_annual') {
-    return [{ type: 'text', text: REVIEW_ANNUAL_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    return [{ type: 'text', text: REVIEW_ANNUAL_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
   }
   if (body?._endpoint === 'review_quarterly') {
-    return [{ type: 'text', text: REVIEW_QUARTERLY_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    return [{ type: 'text', text: REVIEW_QUARTERLY_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
   }
 
   // 사용자 보고 2026-05-12 ultrathink: 누락 endpoint server-side system + cache_control 추가 (cache_read=0 → non-zero).
   //   각 분기는 (_endpoint, _userContentType) 매칭. user-content-templates 의 build* 가 user content 의 동적 변수만 합성.
   if (body?._endpoint === 'analyze_4stage' && body?._userContentType === 'force_analyze') {
-    return [{ type: 'text', text: ANALYZE_4STAGE_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    return [{ type: 'text', text: ANALYZE_4STAGE_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
   }
   if (body?._endpoint === 'extract_chapter') {
     if (body?._userContentType === 'chapter_insight') {
-      return [{ type: 'text', text: CHAPTER_INSIGHT_SYSTEM, cache_control: { type: 'ephemeral' } }];
+      return [{ type: 'text', text: CHAPTER_INSIGHT_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
     }
     if (body?._userContentType === 'chapter_topics') {
       // chapter_topics + isSim=true → 보수적 시뮬 분석 (cf 5차원 X). isSim 미명시 또는 false → 풀 chapter 분석.
       if (body?._vars?.isSim) {
-        return [{ type: 'text', text: CHAPTER_SIM_EXTRACT_SYSTEM, cache_control: { type: 'ephemeral' } }];
+        return [{ type: 'text', text: CHAPTER_SIM_EXTRACT_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
       }
-      return [{ type: 'text', text: CHAPTER_TOPICS_SYSTEM, cache_control: { type: 'ephemeral' } }];
+      return [{ type: 'text', text: CHAPTER_TOPICS_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
     }
     if (body?._userContentType === 'sim_extract') {
-      return [{ type: 'text', text: CHAPTER_SIM_EXTRACT_SYSTEM, cache_control: { type: 'ephemeral' } }];
+      return [{ type: 'text', text: CHAPTER_SIM_EXTRACT_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
     }
   }
   if (body?._endpoint === 'extract_topic') {
     if (body?._userContentType === 'chapter_chat') {
-      return [{ type: 'text', text: TOPIC_CHAPTER_CHAT_SYSTEM, cache_control: { type: 'ephemeral' } }];
+      return [{ type: 'text', text: TOPIC_CHAPTER_CHAT_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
     }
     if (body?._userContentType === 'temp_chat') {
-      return [{ type: 'text', text: TOPIC_TEMP_CHAT_SYSTEM, cache_control: { type: 'ephemeral' } }];
+      return [{ type: 'text', text: TOPIC_TEMP_CHAT_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
     }
   }
   if (body?._endpoint === 'daily_summary') {
-    return [{ type: 'text', text: DAILY_SUMMARY_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    return [{ type: 'text', text: DAILY_SUMMARY_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
   }
   // 사용자 명시 2026-05-16 ultrathink: 자동 인사이트 발견 endpoint.
   if (body?._endpoint === 'discover_insights') {
-    return [{ type: 'text', text: DISCOVER_INSIGHTS_SYSTEM, cache_control: { type: 'ephemeral' } }];
+    return [{ type: 'text', text: DISCOVER_INSIGHTS_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
   }
   // mutation (4 sub-type) — user data 비중 큼. system 단위로 분리해도 cache 효과 미미. 일단 skip.
 

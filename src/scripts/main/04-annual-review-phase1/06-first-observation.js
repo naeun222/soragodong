@@ -220,10 +220,10 @@ async function _intakeAnalyze(intakeWorry) {
     const promptParts = buildSystemPromptParts();
     systemBlocks = [];
     if (promptParts.stable && promptParts.stable.length > 0) {
-      systemBlocks.push({ type: 'text', text: promptParts.stable, cache_control: { type: 'ephemeral' } });
+      systemBlocks.push({ type: 'text', text: promptParts.stable, cache_control: { type: 'ephemeral', ttl: '1h' } });
     }
     if (promptParts.sessionStable && promptParts.sessionStable.length > 0) {
-      systemBlocks.push({ type: 'text', text: promptParts.sessionStable, cache_control: { type: 'ephemeral' } });
+      systemBlocks.push({ type: 'text', text: promptParts.sessionStable, cache_control: { type: 'ephemeral', ttl: '1h' } });
     }
     if (promptParts.perCall && promptParts.perCall.length > 0) {
       systemBlocks.push({ type: 'text', text: promptParts.perCall });
@@ -247,7 +247,7 @@ async function _intakeAnalyze(intakeWorry) {
     const _last = messages[_cacheIdx];
     messages[_cacheIdx] = {
       role: _last.role,
-      content: [{ type: 'text', text: _last.content, cache_control: { type: 'ephemeral' } }]
+      content: [{ type: 'text', text: _last.content, cache_control: { type: 'ephemeral', ttl: '1h' } }]
     };
   }
 

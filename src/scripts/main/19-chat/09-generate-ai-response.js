@@ -71,14 +71,14 @@ async function generateAIResponse(modelOverride, opts) {
         type: 'text',
         text: promptParts.stable,
         // 사용자 요청 2026-04-29 비용절감: 1h cache TTL — ADHD burst+break 패턴, 5분 default 만료 회피 → 헤비 사용자 ~10% 절감.
-        cache_control: { type: 'ephemeral' }
+        cache_control: { type: 'ephemeral', ttl: '1h' }
       });
     }
     if (promptParts.sessionStable && promptParts.sessionStable.length > 0) {
       systemBlocks.push({
         type: 'text',
         text: promptParts.sessionStable,
-        cache_control: { type: 'ephemeral' }
+        cache_control: { type: 'ephemeral', ttl: '1h' }
       });
     }
     if (promptParts.perCall && promptParts.perCall.length > 0) {
@@ -126,7 +126,7 @@ async function generateAIResponse(modelOverride, opts) {
       const _last = messages[_cacheIdx];
       messages[_cacheIdx] = {
         role: _last.role,
-        content: [{ type: 'text', text: _last.content, cache_control: { type: 'ephemeral' } }]
+        content: [{ type: 'text', text: _last.content, cache_control: { type: 'ephemeral', ttl: '1h' } }]
       };
     }
 

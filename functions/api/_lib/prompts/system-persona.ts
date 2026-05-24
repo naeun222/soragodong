@@ -420,26 +420,26 @@ export function applyPersonaToBody(body: any): void {
       body.system[0] = {
         ..._first,
         text: persona + '\n' + (_first.text || ''),
-        cache_control: _first.cache_control || { type: 'ephemeral' }
+        cache_control: _first.cache_control || { type: 'ephemeral', ttl: '1h' }
       };
     } else {
       body.system.unshift({
         type: 'text',
         text: persona,
-        cache_control: { type: 'ephemeral' }
+        cache_control: { type: 'ephemeral', ttl: '1h' }
       });
     }
   } else if (typeof body.system === 'string' && body.system.length > 0) {
     body.system = [{
       type: 'text',
       text: persona + '\n' + body.system,
-      cache_control: { type: 'ephemeral' }
+      cache_control: { type: 'ephemeral', ttl: '1h' }
     }];
   } else {
     body.system = [{
       type: 'text',
       text: persona,
-      cache_control: { type: 'ephemeral' }
+      cache_control: { type: 'ephemeral', ttl: '1h' }
     }];
   }
 }

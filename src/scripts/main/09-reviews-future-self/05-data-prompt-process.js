@@ -393,7 +393,7 @@ ${data.trackingFacts.map(f => {
 위 데이터로 [출력 JSON] 스키마에 맞춰 JSON 객체 하나만 반환.`;
 
   return {
-    system: [{ type: 'text', text: stable, cache_control: { type: 'ephemeral' } }],
+    system: [{ type: 'text', text: stable, cache_control: { type: 'ephemeral', ttl: '1h' } }],
     model: 'claude-sonnet-4-6',
     max_tokens: 4000,
     userMessage: volatile,
