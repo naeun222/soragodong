@@ -91,6 +91,8 @@ export async function onRequestPost(context: {
       delete p._userContentType;
       delete p._vars;
       delete p._chatMode;
+      // V4 (사용자 명시 2026-05-25 ultrathink): Anthropic batch API 가 unknown field strict reject — chat API 는 lenient 이라 chat.ts 는 _endpoint 박힌 채 forward OK 였지만, batch params 는 `_endpoint: Extra inputs are not permitted` 400 받음. batch path 에선 _endpoint 도 strip.
+      delete p._endpoint;
     }
     const upstream = await fetch(`${ANTHROPIC_BASE}/messages/batches`, {
       method: 'POST',
