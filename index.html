@@ -27869,10 +27869,16 @@ function _verifySingleQuote(quote, sources) {
   return filtered.length > 0 ? quote : '';
 }
 
-function _collectReviewData(type) {
+// V4 (사용자 명시 2026-05-25 ultrathink): cutoff/cutoffEnd 옵션 추가 (backlog 케이스에서 옛 cycle range 명시 가능).
+//   기존 호출처 (옵션 X) = 옛 동작 그대로 (today 기준 자동 계산). review chain batch path 만 명시.
+function _collectReviewData(type, opts) {
+  opts = opts || {};
   const today = new Date();
   let cutoff, cutoffEnd;
-  if (type === 'weekly') {
+  if (opts.cutoff && opts.cutoffEnd) {
+    cutoff = opts.cutoff instanceof Date ? opts.cutoff : new Date(opts.cutoff);
+    cutoffEnd = opts.cutoffEnd instanceof Date ? opts.cutoffEnd : new Date(opts.cutoffEnd);
+  } else if (type === 'weekly') {
     // V4 fix (사용자 명시 2026-05-22 ultrathink): "끝난 주의 review" 흐름 복원.
     //   옛 (2026-05-10 fix): cutoffEnd = 다음 일요일 04:00 (미래) → 평일 (월~토) 진입 시 안 끝난 주의 부분 entries → review 부정확.
     //   원인: batch fire trigger (`_lastWeekly4amCutoff()` = 직전 일요일 04:00) 와 entries range cutoffEnd (다음 일요일) 가 1주 mismatch.
@@ -61874,6 +61880,340 @@ async function _timeoutChapterCleanupBatch() {
   saveState();
   if (archives.length > 0 && typeof _runDailyExtractInline === 'function') {
     await _runDailyExtractInline(archives);
+  }
+}
+
+// V4 (사용자 명시 2026-05-25 ultrathink): 신규 review chain batch — 옛 _buildReviewBatchRequests + _resumePendingBatch 의 review 부분 분리.
+//   weekly + insight 같은 batch_id (사용자 11 답). monthly/quarterly/annual 는 review request 만 (insight X).
+//   자격: _collectMissingReviews — key not in state[cycle+'Reviews'] + entries >= 임계값.
+//   chain: cleanup batch 결과 도착 시 _resumeChapterCleanupBatch 끝에서 호출 + step 4 의 maybeRunChapterCleanup 끝에서도 호출 (cleanup 없을 때도 trigger).
+//   step 4 swap 까지 호출 X — 정의만.
+
+async function maybeTriggerReviewChain() {
+  if (state.pendingReviewBatch?.batch_id) return;  // 진행 중
+  if (!_canAI()) return;  // 게스트 제외
+  if (window._onbTutorialMode) return;
+  if (state.preferences?.testerMode) return;
+  if (typeof _collectMissingReviews !== 'function') return;
+
+  const missing = _collectMissingReviews(new Date());
+  if (missing.length === 0) return;
+
+  console.log(`[review chain] missing: ${missing.map(m => m.cycle + '_' + m.key + '(entries=' + m.entriesCount + ')').join(', ')}`);
+  await submitReviewChainBatch(missing);
+}
+
+async function submitReviewChainBatch(missingReviews) {
+  if (!Array.isArray(missingReviews) || missingReviews.length === 0) return;
+  const requests = [];
+
+  for (const m of missingReviews) {
+    let spec = null;
+    try {
+      if (m.cycle === 'weekly' || m.cycle === 'monthly') {
+        const data = (typeof _collectReviewData === 'function')
+          ? _collectReviewData(m.cycle, { cutoff: m.cutoff, cutoffEnd: m.cutoffEnd })
+          : null;
+        if (data && typeof _buildReviewPrompt === 'function') {
+          spec = _buildReviewPrompt(m.cycle, data);
+        }
+      } else if (m.cycle === 'quarterly') {
+        const stats = (typeof getQuarterlyStats === 'function' && getQuarterlyStats(m.key)) || {};
+        if (typeof _collectQuarterlyData === 'function' && typeof _buildQuarterlyReviewPrompt === 'function') {
+          const data = _collectQuarterlyData(m.key, stats);
+          spec = _buildQuarterlyReviewPrompt(m.key, stats, data);
+        }
+      } else if (m.cycle === 'annual') {
+        if (typeof _collectAnnualData === 'function' && typeof _buildAnnualReviewPrompt === 'function') {
+          const data = _collectAnnualData(m.key);
+          spec = _buildAnnualReviewPrompt(m.key, data);
+        }
+      }
+    } catch (e) { console.warn('[review chain] spec build fail:', m.cycle, m.key, e); }
+    if (!spec) continue;
+    requests.push({
+      custom_id: `review_${m.cycle}_${m.key}`,
+      params: {
+        model: spec.model,
+        max_tokens: spec.max_tokens,
+        system: spec.system,
+        messages: [{ role: 'user', content: spec.userMessage }]
+      }
+    });
+  }
+
+  // weekly 있으면 insight 같은 batch_id 통합 (사용자 11 답)
+  const hasWeekly = missingReviews.some(m => m.cycle === 'weekly');
+  if (hasWeekly && typeof _buildInsightDiscoverContext === 'function') {
+    try {
+      const ctx = _buildInsightDiscoverContext();
+      if (ctx) {
+        requests.push({
+          custom_id: `insight_weekly_${Date.now()}`,
+          params: {
+            model: 'claude-sonnet-4-6',
+            max_tokens: 800,
+            messages: [{ role: 'user', content: '' }],
+            _endpoint: 'discover_insights',
+            _userContentType: 'discover_insights',
+            _vars: { dataJson: ctx.dataJson, existingInsights: ctx.existingInsights }
+          }
+        });
+      }
+    } catch (e) { console.warn('[review chain] insight ctx fail:', e); }
+  }
+
+  if (requests.length === 0) return;
+
+  try {
+    const resp = await _authedFetch('/api/chat-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action: 'submit', requests })
+    });
+    if (!resp.ok) throw new Error('review chain batch submit failed: ' + resp.status);
+    const data = await resp.json();
+    if (!data.id) throw new Error('batch_id 없음');
+
+    state.pendingReviewBatch = {
+      batch_id: data.id,
+      submitted_at: Date.now(),
+      review_keys: missingReviews.map(m => ({ cycle: m.cycle, key: m.key })),
+      has_insight: hasWeekly
+    };
+    saveState();
+    console.log(`[review chain batch] submitted: ${data.id} — ${missingReviews.length} reviews + ${hasWeekly ? 1 : 0} insight`);
+    if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
+  } catch (e) {
+    console.warn('[review chain batch] submit fail:', e);
+  }
+}
+
+async function _resumeReviewChainBatch() {
+  const pb = state.pendingReviewBatch;
+  if (!pb || !pb.batch_id) return;
+
+  try {
+    const statusResp = await _authedFetch('/api/chat-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action: 'status', batch_id: pb.batch_id })
+    });
+    if (!statusResp.ok) {
+      state.pendingReviewBatch.statusFailCount = (state.pendingReviewBatch.statusFailCount || 0) + 1;
+      if (state.pendingReviewBatch.statusFailCount >= 3) {
+        await _timeoutReviewChainBatch();
+        return;
+      }
+      saveState();
+      return;
+    }
+    const status = await statusResp.json();
+    if (state.pendingReviewBatch.statusFailCount) delete state.pendingReviewBatch.statusFailCount;
+    if (status.processing_status !== 'ended') {
+      const submittedMs = state.pendingReviewBatch.submitted_at || 0;
+      if (submittedMs > 0 && Date.now() - submittedMs > 12 * 3600 * 1000) {
+        await _timeoutReviewChainBatch();
+      }
+      return;
+    }
+
+    const resultsResp = await _authedFetch('/api/chat-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action: 'results', batch_id: pb.batch_id })
+    });
+    if (!resultsResp.ok) {
+      state.pendingReviewBatch.resultsFailCount = (state.pendingReviewBatch.resultsFailCount || 0) + 1;
+      if (state.pendingReviewBatch.resultsFailCount >= 3) {
+        await _timeoutReviewChainBatch();
+        return;
+      }
+      saveState();
+      return;
+    }
+    const data = await resultsResp.json();
+    if (!data.ok || !Array.isArray(data.results)) {
+      state.pendingReviewBatch.dataInvalidCount = (state.pendingReviewBatch.dataInvalidCount || 0) + 1;
+      if (state.pendingReviewBatch.dataInvalidCount >= 3) {
+        await _timeoutReviewChainBatch();
+        return;
+      }
+      saveState();
+      return;
+    }
+
+    for (const r of data.results) {
+      if (r?.result?.type !== 'succeeded') {
+        console.warn(`[review chain resume] ${r.custom_id} = ${r.result?.type}`);
+        continue;
+      }
+      const text = r.result.message?.content?.[0]?.text || '';
+      const cid = r.custom_id || '';
+
+      if (cid.startsWith('review_')) {
+        const rest = cid.slice('review_'.length);
+        const firstUnder = rest.indexOf('_');
+        if (firstUnder < 0) continue;
+        const cycle = rest.slice(0, firstUnder);
+        const key = rest.slice(firstUnder + 1);
+        try {
+          if (cycle === 'weekly' || cycle === 'monthly') {
+            const json = (typeof _processReviewResult === 'function') ? _processReviewResult(text) : null;
+            if (json && Array.isArray(json.quotes) && typeof _filterValidQuotes === 'function' && typeof _collectReviewData === 'function') {
+              try {
+                const _data = _collectReviewData(cycle);
+                json.quotes = _filterValidQuotes(json.quotes, _collectQuoteSources(_data));
+              } catch {}
+            }
+            if (json) {
+              const _common = {
+                id: (cycle === 'weekly' ? 'wr_' : 'mr_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                type: cycle,
+                completedAt: new Date().toISOString(),
+                auto: true
+              };
+              const review = cycle === 'weekly' ? {
+                ..._common,
+                one_word_weekly: json.one_word_weekly,
+                momentum_line: json.momentum_line,
+                scenes: json.scenes,
+                flow: json.flow,
+                cycles: json.cycles,
+                soft_notice: json.soft_notice,
+                seeds: json.seeds,
+              } : {
+                ..._common,
+                ...json
+              };
+              if (cycle === 'weekly') review.weekKey = key;
+              else review.monthKey = key;
+              const arrKey = cycle === 'weekly' ? 'weeklyReviews' : 'monthlyReviews';
+              state[arrKey] = state[arrKey] || [];
+              const exists = state[arrKey].find(v => (cycle === 'weekly' ? v.weekKey : v.monthKey) === key);
+              if (!exists) state[arrKey].unshift(review);
+            }
+          } else if (cycle === 'quarterly') {
+            const json = (typeof _processQuarterlyReviewResult === 'function') ? _processQuarterlyReviewResult(text) : null;
+            if (json && typeof _filterValidQuotes === 'function' && typeof _collectQuarterlyData === 'function') {
+              try {
+                const _stats = (typeof getQuarterlyStats === 'function' && getQuarterlyStats(key)) || {};
+                const _data = _collectQuarterlyData(key, _stats);
+                const _sources = _collectQuoteSources(_data);
+                if (Array.isArray(json.quotes)) json.quotes = _filterValidQuotes(json.quotes, _sources);
+                if (json.transformation && typeof json.transformation === 'object') {
+                  json.transformation.start_quote = _verifySingleQuote(json.transformation.start_quote, _sources);
+                  json.transformation.end_quote = _verifySingleQuote(json.transformation.end_quote, _sources);
+                }
+              } catch {}
+            }
+            if (json) {
+              const stats = (typeof getQuarterlyStats === 'function' && getQuarterlyStats(key)) || {};
+              const review = {
+                id: 'qr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                quarterKey: key,
+                completedAt: new Date().toISOString(),
+                stats,
+                summary: json.summary || '',
+                sections: Array.isArray(json.sections) ? json.sections : [],
+                one_word: json.one_word,
+                pattern: json.pattern,
+                turning_point: json.turning_point,
+                transformation: json.transformation,
+                continuity: json.continuity,
+                quotes: json.quotes,
+                experiment: json.experiment,
+                seeds: json.seeds,
+                seed_callbacks: json.seed_callbacks,
+                auto: true
+              };
+              state.quarterlyReviews = state.quarterlyReviews || [];
+              const exists = state.quarterlyReviews.find(v => v.quarterKey === key);
+              if (!exists) state.quarterlyReviews.push(review);
+            }
+          } else if (cycle === 'annual') {
+            const narrative = (typeof _robustJsonExtract === 'function') ? _robustJsonExtract(text) : null;
+            if (narrative) {
+              const year = parseInt(key, 10);
+              const existsAnnual = (state.annualReviews || []).find(r => r.year === year);
+              if (!existsAnnual && typeof _processAnnualReviewResult === 'function' && typeof _collectAnnualData === 'function') {
+                const dataAnnual = _collectAnnualData(year);
+                const annualReview = _processAnnualReviewResult(narrative, year, dataAnnual, false);
+                if (annualReview) annualReview.auto = true;
+              }
+            }
+          }
+        } catch (e) { console.warn('[review chain resume] cycle fail:', cid, e); }
+      } else if (cid.startsWith('insight_')) {
+        try {
+          let jsonStr = text;
+          const fenceM = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+          if (fenceM) jsonStr = fenceM[1];
+          const jm = jsonStr.match(/\{[\s\S]*\}/);
+          if (!jm) continue;
+          const parsed = JSON.parse(jm[0]);
+          const discovered = Array.isArray(parsed && parsed.discovered) ? parsed.discovered : [];
+          const existingContents = (state.insights || []).filter(i => i && !i.dismissed).map(i => (i.content || '').toLowerCase());
+          const nowIso = new Date().toISOString();
+          discovered.forEach(d => {
+            if (!d || typeof d !== 'object') return;
+            const type = (d.type === 'causal' || d.type === 'pattern') ? d.type : null;
+            if (!type) return;
+            const content = (d.content || '').trim();
+            const evidence = (d.evidence || '').trim();
+            const conf = typeof d.confidence === 'number' ? d.confidence : 0;
+            if (!content || content.length < 8) return;
+            if (conf < 0.55) return;
+            if (typeof _dedupInsight === 'function' && _dedupInsight(content, existingContents)) return;
+            state.insights = state.insights || [];
+            state.insights.push({
+              id: 'ins_auto_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+              type,
+              content: content.slice(0, 80),
+              evidence: evidence.slice(0, 120),
+              supportingEntryIds: [],
+              confidence: Math.min(0.95, Math.max(0.55, conf)),
+              discoveredAt: nowIso,
+              dismissed: false,
+              user_verified: false,
+              source: 'auto'
+            });
+            existingContents.push(content.toLowerCase());
+          });
+          if (!state.preferences) state.preferences = {};
+          state.preferences._lastInsightDiscoverAt = nowIso;
+        } catch (e) { console.warn('[review chain resume] insight fail:', cid, e); }
+      }
+    }
+
+    state.pendingReviewBatch = null;
+    saveState();
+
+    if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
+    if (typeof renderArchive === 'function') renderArchive();
+    if (typeof renderLensInsights === 'function') renderLensInsights();
+    if (typeof renderModel === 'function') renderModel();
+  } catch (e) {
+    console.warn('[review chain resume] throw:', e);
+  }
+}
+
+async function _timeoutReviewChainBatch() {
+  const pb = state.pendingReviewBatch;
+  if (!pb) return;
+  console.warn('[review chain batch] 12h timeout 또는 fail 3회 — inline fallback');
+  const reviewTypes = [];
+  const reviewKeys = {};
+  (pb.review_keys || []).forEach(rk => {
+    if (rk.cycle === 'weekly' || rk.cycle === 'monthly' || rk.cycle === 'quarterly' || rk.cycle === 'annual') {
+      reviewTypes.push(rk.cycle);
+      reviewKeys[rk.cycle] = rk.key;
+    }
+  });
+  state.pendingReviewBatch = null;
+  saveState();
+  if (reviewTypes.length > 0 && typeof _runReviewExtractInline === 'function') {
+    await _runReviewExtractInline(reviewTypes, reviewKeys);
   }
 }
 

@@ -51,10 +51,16 @@ function _verifySingleQuote(quote, sources) {
   return filtered.length > 0 ? quote : '';
 }
 
-function _collectReviewData(type) {
+// V4 (사용자 명시 2026-05-25 ultrathink): cutoff/cutoffEnd 옵션 추가 (backlog 케이스에서 옛 cycle range 명시 가능).
+//   기존 호출처 (옵션 X) = 옛 동작 그대로 (today 기준 자동 계산). review chain batch path 만 명시.
+function _collectReviewData(type, opts) {
+  opts = opts || {};
   const today = new Date();
   let cutoff, cutoffEnd;
-  if (type === 'weekly') {
+  if (opts.cutoff && opts.cutoffEnd) {
+    cutoff = opts.cutoff instanceof Date ? opts.cutoff : new Date(opts.cutoff);
+    cutoffEnd = opts.cutoffEnd instanceof Date ? opts.cutoffEnd : new Date(opts.cutoffEnd);
+  } else if (type === 'weekly') {
     // V4 fix (사용자 명시 2026-05-22 ultrathink): "끝난 주의 review" 흐름 복원.
     //   옛 (2026-05-10 fix): cutoffEnd = 다음 일요일 04:00 (미래) → 평일 (월~토) 진입 시 안 끝난 주의 부분 entries → review 부정확.
     //   원인: batch fire trigger (`_lastWeekly4amCutoff()` = 직전 일요일 04:00) 와 entries range cutoffEnd (다음 일요일) 가 1주 mismatch.
