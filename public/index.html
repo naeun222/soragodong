@@ -27365,68 +27365,24 @@ function _dismissReview(type, key) {
   if (typeof saveState === 'function') saveState();
 }
 
+// V4 (사용자 명시 2026-05-25 ultrathink): UI 노출 = fresh batch review 만.
+//   옛 일요일 fallback path (사용자 직접 generateReview 호출 후 노출) 폐기.
+//   새 spec: review 는 무조건 batch path (auto=true) 만 — review chain batch 가 자격 충족 시 생성.
+//   inline path (auto=false) 도 사용 X — _force* 명령어는 batch path 호출로 변경 또는 폐기.
 function isWeeklyReviewAvailable() {
-  // batch 자동 생성 + 미시청 = 항상 노출 (요일 무관)
-  const fresh = _hasFreshBatchReview('weeklyReviews');
-  if (fresh) return true;
-  // 옛 흐름: 일요일 + 이번주 안 한 경우 (사용자 직접 생성 가능 시점)
-  const today = _cutoffAdjustedNow();
-  if (today.getDay() !== 0) return false;
-  const currentWeekKey = getCurrentWeekKey();
-  if (_reviewDismissed('weekly', currentWeekKey)) return false;
-  return !(state.weeklyReviews || []).some(r => r.weekKey === currentWeekKey);
+  return !!_hasFreshBatchReview('weeklyReviews');
 }
 
 function isMonthlyReviewAvailable() {
-  const fresh = _hasFreshBatchReview('monthlyReviews');
-  if (fresh) return true;
-  // 옛 흐름: 일요일 + 첫 7일 + 지난달 데이터 있으면
-  const today = _cutoffAdjustedNow();
-  if (today.getDay() !== 0) return false;
-  const dayOfMonth = today.getDate();
-  if (dayOfMonth > 7) return false;
-  const prevMonthKey = getMonthKey(new Date(today.getFullYear(), today.getMonth() - 1, 15));
-  if (_reviewDismissed('monthly', prevMonthKey)) return false;
-  const hasPrevMonth = (state.monthlyReviews || []).some(r => r.monthKey === prevMonthKey);
-  if (hasPrevMonth) return false;
-  const hasPrevMonthData = state.entries.some(e => e.date.startsWith(prevMonthKey));
-  return hasPrevMonthData;
+  return !!_hasFreshBatchReview('monthlyReviews');
 }
 
-// 사용자 명시 2026-05-01 ultrathink: 분기 리뷰 카드 가드 (4AM cutoff).
 function isQuarterlyReviewAvailable() {
-  const fresh = _hasFreshBatchReview('quarterlyReviews');
-  if (fresh) return true;
-  const today = _cutoffAdjustedNow();
-  if (today.getDay() !== 0) return false;
-  if (today.getDate() > 7) return false;
-  if (today.getMonth() % 3 !== 0) return false;
-  const prevQDate = new Date(today.getFullYear(), today.getMonth() - 1, 15);
-  const prevQuarterKey = (typeof getQuarterKey === 'function') ? getQuarterKey(prevQDate) : null;
-  if (!prevQuarterKey) return false;
-  if (_reviewDismissed('quarterly', prevQuarterKey)) return false;
-  const exists = (state.quarterlyReviews || []).some(r => r.quarterKey === prevQuarterKey);
-  if (exists) return false;
-  const range = (typeof getQuarterRange === 'function') ? getQuarterRange(prevQuarterKey) : null;
-  if (!range) return false;
-  const startISO = range.start.toISOString().split('T')[0];
-  const endISO = range.end.toISOString().split('T')[0];
-  return state.entries.some(e => e.date >= startISO && e.date <= endISO);
+  return !!_hasFreshBatchReview('quarterlyReviews');
 }
 
-// 사용자 명시 2026-05-01 ultrathink: 연간 리뷰 카드 가드 (4AM cutoff).
 function isAnnualReviewAvailable() {
-  const fresh = _hasFreshBatchReview('annualReviews');
-  if (fresh) return true;
-  const today = _cutoffAdjustedNow();
-  if (today.getDay() !== 0) return false;
-  if (today.getMonth() !== 0) return false;
-  if (today.getDate() > 7) return false;
-  const prevYear = today.getFullYear() - 1;
-  if (_reviewDismissed('annual', prevYear)) return false;
-  const exists = (state.annualReviews || []).some(r => r.year === prevYear);
-  if (exists) return false;
-  return (state.entries || []).some(e => e.date && e.date.startsWith(String(prevYear)));
+  return !!_hasFreshBatchReview('annualReviews');
 }
 
 // 사용자 명시 2026-05-09 ultrathink: 리뷰 카드 description hook — generic 워딩 X / specific stat preview ○.
@@ -32774,9 +32730,10 @@ async function extractChapterCaseAnalysis(messages, opts) {
     if (state.preferences && state.preferences.testerMode) return false;
     if (!Array.isArray(messages) || messages.length < 3) return false;
 
-    // 사용자 명시 2026-05-08 ultrathink: opts.model 파라미터 — 미구독자/게스트 매 3턴 자동 호출 시 Opus 4.7 지정.
-    //   default = Sonnet 4-6 (기존 동작). 명시 시 다른 모델 가능.
-    const _model = (opts && opts.model) || 'claude-sonnet-4-6';
+    // V4 (사용자 명시 2026-05-25 ultrathink): default model Sonnet 4-6 → Opus 4-7.
+    //   모든 사용자 (게스트 제외, intake/cleanup batch 둘 다) Opus.
+    //   batch path (submitChapterCleanupBatch) 도 명시적으로 Opus 박음 — 이 default 와 일관.
+    const _model = (opts && opts.model) || 'claude-opus-4-7';
     const _isSim = !!opts.isSimulation;
     // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildChapterTopics 가 합성. 클라는 chatLog 만 _vars 로.
     const _chatLog = messages.map(m => {
