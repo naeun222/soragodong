@@ -518,6 +518,85 @@ function _buildReviewBatchRequests() {
   return { requests, reviewKeys, pendingTypes };
 }
 
+// V4 (사용자 명시 2026-05-25 ultrathink): review trigger 재설계 — missing review list 자격 체크 helper.
+//   옛 _buildReviewBatchRequests 의 cooldown stamp 정책 폐기. 새 자격:
+//     1) cutoff 통과 (cutoffEnd <= now)
+//     2) key not in state[cycle+'Reviews']
+//     3) range entries >= 임계값 (weekly=3, monthly=7, quarterly=20, annual=90)
+//   backlog 자연 cover — entries 자격 자체가 가드 (사용자 안 들어와도 무한 backlog X).
+//   range 기준: archive.date / entries.date 둘 다 dayK (4AM 기준). cutoffEnd 의 _toLocalDateISO 와 비교.
+function _collectMissingReviews(now) {
+  now = now || new Date();
+  const missing = [];
+  const _toISO = (d) => {
+    if (!d) return '';
+    const dd = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dd.getTime())) return '';
+    const y = dd.getFullYear();
+    const m = String(dd.getMonth() + 1).padStart(2, '0');
+    const day = String(dd.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const _entriesInRange = (startISO, endISO) =>
+    (state.entries || []).filter(e => e && e.date && e.date >= startISO && e.date < endISO);
+
+  // weekly: cutoffEnd = 직전 일요일 04:00, cutoff = cutoffEnd - 7일.
+  const wEnd = _lastWeekly4amCutoff();
+  if (wEnd <= now) {
+    const wStart = new Date(wEnd.getTime() - 7 * 86400000);
+    const weekKey = (typeof getWeekKey === 'function') ? getWeekKey(wEnd) : null;
+    if (weekKey) {
+      const exists = (state.weeklyReviews || []).some(r => r && r.weekKey === weekKey);
+      if (!exists) {
+        const ents = _entriesInRange(_toISO(wStart), _toISO(wEnd));
+        if (ents.length >= 3) missing.push({ cycle: 'weekly', key: weekKey, cutoff: wStart, cutoffEnd: wEnd, entriesCount: ents.length });
+      }
+    }
+  }
+
+  // monthly: cutoffEnd = 이번 달 1일 04:00, cutoff = 지난 달 1일 04:00.
+  const mEnd = _lastMonthly4amCutoff();
+  if (mEnd <= now) {
+    const mStart = new Date(mEnd.getFullYear(), mEnd.getMonth() - 1, 1, 4, 0, 0, 0);
+    const monthKey = (typeof getMonthKey === 'function') ? getMonthKey(mStart) : null;
+    if (monthKey) {
+      const exists = (state.monthlyReviews || []).some(r => r && r.monthKey === monthKey);
+      if (!exists) {
+        const ents = _entriesInRange(_toISO(mStart), _toISO(mEnd));
+        if (ents.length >= 7) missing.push({ cycle: 'monthly', key: monthKey, cutoff: mStart, cutoffEnd: mEnd, entriesCount: ents.length });
+      }
+    }
+  }
+
+  // quarterly: cutoffEnd = 이번 분기 첫 달 1일 04:00, cutoff = 지난 분기 첫 달.
+  const qEnd = _lastQuarterly4amCutoff();
+  if (qEnd <= now) {
+    const qStart = new Date(qEnd.getFullYear(), qEnd.getMonth() - 3, 1, 4, 0, 0, 0);
+    const quarterKey = (typeof getQuarterKey === 'function') ? getQuarterKey(qStart) : null;
+    if (quarterKey) {
+      const exists = (state.quarterlyReviews || []).some(r => r && r.quarterKey === quarterKey);
+      if (!exists) {
+        const ents = _entriesInRange(_toISO(qStart), _toISO(qEnd));
+        if (ents.length >= 20) missing.push({ cycle: 'quarterly', key: quarterKey, cutoff: qStart, cutoffEnd: qEnd, entriesCount: ents.length });
+      }
+    }
+  }
+
+  // annual: cutoffEnd = 올해 1/1 04:00, cutoff = 작년 1/1 04:00.
+  const aEnd = _lastAnnual4amCutoff();
+  if (aEnd <= now) {
+    const aStart = new Date(aEnd.getFullYear() - 1, 0, 1, 4, 0, 0, 0);
+    const prevYear = aStart.getFullYear();
+    const exists = (state.annualReviews || []).some(r => r && r.year === prevYear);
+    if (!exists) {
+      const ents = _entriesInRange(_toISO(aStart), _toISO(aEnd));
+      if (ents.length >= 90) missing.push({ cycle: 'annual', key: prevYear, cutoff: aStart, cutoffEnd: aEnd, entriesCount: ents.length });
+    }
+  }
+
+  return missing;
+}
+
 // 사용자 명시 2026-05-02 ultrathink (A 옵션): diary auto summary batch — 어제부터 7일 거슬러 missing entry 의 request 추가.
 // inline path (runDiaryAutoSummaryIfNeeded) 와 동일 가드: entry 있고 + diary X + aiSummary X + chatMessages 2+ OR 체크인 정보 있음.
 // _pendingDiarySummary 마커 적용해 batch 처리 중 inline race 차단.

@@ -240,6 +240,23 @@ async function loadFromCloud() {
     if (!state.insights) state.insights = [];
     if (!state.pearls) state.pearls = [];
     if (!state.topicCards) state.topicCards = [];  // V3.8: 챕터 토픽 카드
+    // V4 (사용자 명시 2026-05-25 ultrathink): review trigger 재설계 migration.
+    //   옛 archive._pendingExtract / _pendingCaseAnalysis (두 개) → 새 archive._pendingCleanup (통합).
+    //   옛 state.lastDailyChapterExtractAt → 새 state.lastChapterCleanupAt (rename).
+    //   1회 idempotent — state._reviewRedesignMigrated 마커.
+    //   옛 field 는 보존 (옛 코드 path 호환), 새 코드는 _pendingCleanup / lastChapterCleanupAt 만 봄.
+    if (!state._reviewRedesignMigrated) {
+      (state.chatArchive || []).forEach(a => {
+        if (!a) return;
+        if (a._pendingExtract || a._pendingCaseAnalysis) {
+          a._pendingCleanup = true;
+        }
+      });
+      if (state.lastDailyChapterExtractAt && !state.lastChapterCleanupAt) {
+        state.lastChapterCleanupAt = state.lastDailyChapterExtractAt;
+      }
+      state._reviewRedesignMigrated = true;
+    }
     // V3.9: tasks + memoryVault에 priority 필드 부여
     (state.tasks || []).forEach((t, idx) => {
       if (typeof t.priority !== 'number') t.priority = idx;
