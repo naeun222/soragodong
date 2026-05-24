@@ -139,6 +139,45 @@ function _archiveCurrentChapter(opts) {
     setTimeout(() => { _ragEmbedArchive(archiveItem).catch(e => console.warn('[rag] embed archive fail:', e)); }, 0);
   }
 
+  // V4 (사용자 명시 2026-05-25 ultrathink, 2 번째 묶음): topicCards 만 즉시 추출 부활.
+  //   Step 5a (commit 6d26cff) 가 폐기한 것 = case_analysis (Opus, 비싼 분석) — 폐기 유지.
+  //   topicCards (Haiku, ~$0.0001/챕터) 는 RAG inject 의 핵심 정보원 → 즉시 추출 필요.
+  //   4AM batch 만 의존 시 직전 챕터 (몇 분~몇 시간 전) 의 topicCards 가 비어서 RAG fallback (첫 2 user msg)
+  //   = "와 나 이제 끝났어" 같은 cryptic 짧은 msg 만 inject → AI "기억 못 함".
+  //   가드: _canAI / 튜토리얼 / 테스터 / msg >= 6. 시뮬 메시지 격리 (메시지 단위) 유지.
+  if (typeof _canAI === 'function' && _canAI()
+      && !window._onbTutorialMode
+      && !(state.preferences && state.preferences.testerMode)
+      && archiveItem.messages.length >= 6) {
+    setTimeout(async () => {
+      try {
+        const _before = (typeof _captureDerivedSnapshot === 'function') ? _captureDerivedSnapshot() : null;
+        const _extractMsgs = _chapterExtractMessages(archiveItem);
+        const _normalMsgs = _extractMsgs.filter(m => !m || !m.isSimulationContext);
+        const _simMsgs = _extractMsgs.filter(m => m && m.isSimulationContext);
+        if (typeof extractPreviousChapterTopics === 'function') {
+          if (_normalMsgs.length >= 3) {
+            try { await extractPreviousChapterTopics(_normalMsgs); }
+            catch (e) { console.warn('[immediate-topic] normal fail:', e); }
+          }
+          if (_simMsgs.length >= 3) {
+            const _beforeSim = (state.topicCards || []).length;
+            try {
+              await extractPreviousChapterTopics(_simMsgs);
+              const _added = (state.topicCards || []).slice(_beforeSim);
+              _added.forEach(card => { if (card) card.source = 'simulation'; });
+            } catch (e) { console.warn('[immediate-topic] sim fail:', e); }
+          }
+        }
+        if (_before && typeof _stampSourceArchiveId === 'function') {
+          _stampSourceArchiveId(_before, archiveItem.id, archiveItem);
+        }
+        saveState();
+        if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
+      } catch (e) { console.warn('[immediate-topic] guard:', e); }
+    }, 1500);
+  }
+
   // V4 (사용자 명시 2026-05-25 ultrathink): 신규유저 즉시 case_analysis 분기 폐기.
   //   옛: 게스트/미구독자 매 챕터 마무리마다 즉시 inline (Sonnet) → 새 spec 폐기.
   //   새: 모든 사용자 동일 path — 챕터 마무리 → _pendingCleanup 마커 → 4AM cutoff 통과 후 cleanup batch (Opus).
