@@ -413,110 +413,17 @@ async function _runDailyExtractInline(pending) {
   if (typeof renderModelPreview === 'function') { try { renderModelPreview(); } catch {} }
 }
 
-// 사용자 명시 2026-05-02 ultrathink: 리뷰 batch request 빌더 — schedule 체크 후 weekly/monthly/quarterly/annual 추가.
-// state.lastXxxReviewBatchAt + _shouldRunSchedule + _lastXxx4amCutoff 으로 1회 만 submit.
-// 각 review type 별 _collectXxxData + _buildXxxReviewPrompt → null 이면 (데이터 부족) skip.
-//
-// 사용자 명시 2026-05-02 ultrathink: 리뷰 batch 활성 (50% 비용 절감 우선).
-// 매력도 약점 (ritual sense / "처리 중 ⏳" 토스트) 받아들임 — chapter batch 동일 패턴 (사용자 활동 시 trigger).
-// E (사용자 활동 시 trigger) 한계 인지 + C (server cron) E2EE 충돌로 폐기 + D (네이티브) Phase 3 인계.
+// V4 (사용자 명시 2026-05-25 ultrathink): 옛 FEATURE_BATCH_REVIEWS 폐기.
+//   review batch 가 chapter pending batch 와 분리됨 — 별 path (submitReviewChainBatch + maybeTriggerReviewChain).
+//   _buildReviewBatchRequests 함수 자체 폐기 (옛 호출처 _submitDailyExtractBatch 도 같이 폐기).
+//   FEATURE_BATCH_DIARY 만 유지 (diary auto summary 가 새 cleanup batch 안 통합).
 const FEATURE_BATCH_REVIEWS = true;
 // 사용자 명시 2026-05-02 ultrathink (A 옵션): diary auto summary 를 batch 로 통합. 4AM cutoff 도달 후 사용자 진입 시 batch submit.
 // chapter / topic / review / diary 모두 같은 batch_id. 결과 도착 후 entry.aiSummary 적용됨 + 어제 카드 자동 노출.
 const FEATURE_BATCH_DIARY = true;
 
-function _buildReviewBatchRequests() {
-  if (!FEATURE_BATCH_REVIEWS) return { requests: [], reviewKeys: {}, pendingTypes: [] };
-  const requests = [];
-  const reviewKeys = {};  // review type → key (weekly: weekKey, monthly: monthKey, ...)
-  const pendingTypes = [];
-
-  // weekly — 월요일 4AM cutoff
-  if (_shouldRunSchedule(state.lastWeeklyReviewBatchAt, _lastWeekly4amCutoff())) {
-    const data = _collectReviewData('weekly');
-    const spec = _buildReviewPrompt('weekly', data);
-    if (spec) {
-      // 사용자 보고 2026-05-10: weekKey = cutoffEnd 기준 (사용자 인식 "이번 주" 일요일 = W19, 옛 cutoff 시작 기준 W18 mismatch fix).
-      const weekKey = getWeekKey(data.cutoffEnd || data.cutoff);
-      reviewKeys.weekly = weekKey;
-      requests.push({
-        custom_id: `review_weekly_${weekKey}`,
-        params: {
-          model: spec.model,
-          max_tokens: spec.max_tokens,
-          system: spec.system,
-          messages: [{ role: 'user', content: spec.userMessage }]
-        }
-      });
-      pendingTypes.push('weekly');
-    }
-  }
-  // monthly — 매월 1일 4AM cutoff
-  if (_shouldRunSchedule(state.lastMonthlyReviewBatchAt, _lastMonthly4amCutoff())) {
-    const data = _collectReviewData('monthly');
-    const spec = _buildReviewPrompt('monthly', data);
-    if (spec) {
-      const monthKey = getMonthKey(data.cutoff);
-      reviewKeys.monthly = monthKey;
-      requests.push({
-        custom_id: `review_monthly_${monthKey}`,
-        params: {
-          model: spec.model,
-          max_tokens: spec.max_tokens,
-          system: spec.system,
-          messages: [{ role: 'user', content: spec.userMessage }]
-        }
-      });
-      pendingTypes.push('monthly');
-    }
-  }
-  // quarterly — 분기 첫 달 1일 4AM cutoff
-  if (_shouldRunSchedule(state.lastQuarterlyReviewBatchAt, _lastQuarterly4amCutoff())) {
-    // ERROR #12 fix: prevQ 명시 계산.
-    const now = new Date();
-    const Q = Math.floor(now.getMonth() / 3) + 1;
-    const prevQuarterKey = Q === 1 ? `${now.getFullYear() - 1}-Q4` : `${now.getFullYear()}-Q${Q - 1}`;
-    const stats = (typeof getQuarterlyStats === 'function' && getQuarterlyStats(prevQuarterKey)) || null;
-    if (stats) {
-      const data = _collectQuarterlyData(prevQuarterKey, stats);
-      const spec = _buildQuarterlyReviewPrompt(prevQuarterKey, stats, data);
-      if (spec) {
-        reviewKeys.quarterly = prevQuarterKey;
-        requests.push({
-          custom_id: `review_quarterly_${prevQuarterKey}`,
-          params: {
-            model: spec.model,
-            max_tokens: spec.max_tokens,
-            system: spec.system,
-            messages: [{ role: 'user', content: spec.userMessage }]
-          }
-        });
-        pendingTypes.push('quarterly');
-      }
-    }
-  }
-  // annual — 1월 1일 4AM cutoff
-  if (_shouldRunSchedule(state.lastAnnualReviewBatchAt, _lastAnnual4amCutoff())) {
-    const prevYear = new Date().getFullYear() - 1;
-    const data = _collectAnnualData(prevYear);
-    const spec = _buildAnnualReviewPrompt(prevYear, data);
-    if (spec) {
-      reviewKeys.annual = prevYear;
-      requests.push({
-        custom_id: `review_annual_${prevYear}`,
-        params: {
-          model: spec.model,
-          max_tokens: spec.max_tokens,
-          system: spec.system,
-          messages: [{ role: 'user', content: spec.userMessage }]
-        }
-      });
-      pendingTypes.push('annual');
-    }
-  }
-
-  return { requests, reviewKeys, pendingTypes };
-}
+// V4 (사용자 명시 2026-05-25 ultrathink): _buildReviewBatchRequests 폐기 (위 코멘트 참조).
+//   대체: maybeTriggerReviewChain + submitReviewChainBatch (cooldown 폐기, key not in 자격).
 
 // V4 (사용자 명시 2026-05-25 ultrathink): review trigger 재설계 — missing review list 자격 체크 helper.
 //   옛 _buildReviewBatchRequests 의 cooldown stamp 정책 폐기. 새 자격:
@@ -663,126 +570,10 @@ function _buildDiaryBatchRequests() {
   return { requests, pendingDates };
 }
 
-// Batch submit — pending archive 들 → multi-request batch 으로 제출.
-// 사용자 명시 2026-05-02 ultrathink: chapter + topic + review (4 type) 같은 batch 안 통합 — batch_id 한 개.
-// 사용자 명시 2026-05-08 ultrathink: chapter case_analysis = inline 즉시 (UX — 나 탭 dot 1-2분 안에).
-//   topic / review / diary 는 batch 유지 (50% 할인 + polling 가속 5/15/30분).
-//   추가 비용 ~$0.05~0.1/주/사용자. 자연 종료 챕터만 영향 (사용자 ✓ 챕터는 이미 inline 처리됨).
-async function _submitDailyExtractBatch(pending) {
-  // 사용자 명시 2026-05-08 ultrathink: 이어서한 archive 의 _extractFromIndex 적용 — 옛 부분 input 제외.
-  // chapter case_analysis 만 inline fire-and-forget — 사용자 wait X.
-  // 사용자 보고 2026-05-10 (audit): 옛 `>= 6` 가드 = 짧은 챕터 (3-5 메시지) case_analysis 완전 skip → 나 탭 갱신 누락.
-  //   topic 추출은 `>= 3` 인데 case_analysis 만 `>= 6` 이라 mismatch. pending 필터 (`>= 3`) 와 동일하게.
-  pending
-    .filter(b => {
-      if (!b || !b.messages) return false;
-      const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(b) : b.messages;
-      return _msgs.length >= 3;
-    })
-    .forEach(b => {
-      const _msgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(b) : b.messages;
-      // 사용자 명시 2026-05-11 ultrathink: 메시지 단위 분리 — 옛 path 는 isSimulation 미전달이라 시뮬 메시지가 cf 5차원 침투. _runDailyExtractInline (line 384-394) 모범 패턴 동일.
-      const _normalMsgs = _msgs.filter(m => !m || !m.isSimulationContext);
-      const _simMsgs = _msgs.filter(m => m && m.isSimulationContext);
-      const _normalP = _normalMsgs.length >= 3 ? extractChapterCaseAnalysis(_normalMsgs) : Promise.resolve();
-      const _simP = _simMsgs.length >= 3 ? extractChapterCaseAnalysis(_simMsgs, { isSimulation: true }) : Promise.resolve();
-      Promise.all([_normalP, _simP])
-        .then(() => {
-          delete b._pendingCaseAnalysis;
-          try { saveState(); } catch {}
-        })
-        .catch(e => console.warn('[chapter case inline]', b.id, e));
-    });
-
-  const requests = [];
-  for (const batch of pending) {
-    // case_analysis = inline 분리 (위). topic 만 batch.
-    const _topicMsgs = (typeof _chapterExtractMessages === 'function') ? _chapterExtractMessages(batch) : batch.messages;
-    if (_topicMsgs.length < 3) continue;
-    requests.push({
-      custom_id: `topic_${batch.id}`,
-      params: {
-        model: 'claude-haiku-4-5',
-        max_tokens: 600,
-        messages: [{ role: 'user', content: _buildExtractTopicPrompt(_topicMsgs) }]
-      }
-    });
-  }
-
-  // 사용자 명시 2026-05-02 ultrathink: review batch 통합 추가.
-  const reviewBatch = _buildReviewBatchRequests();
-  requests.push(...reviewBatch.requests);
-
-  // 사용자 명시 2026-05-02 ultrathink (A 옵션): diary auto summary batch 통합.
-  const diaryBatch = _buildDiaryBatchRequests();
-  requests.push(...diaryBatch.requests);
-
-  if (requests.length === 0) {
-    state.lastDailyChapterExtractAt = new Date().toISOString();
-    saveState();
-    return;
-  }
-
-  console.log(`[daily extract] ${pending.length} 챕터 (case inline) + ${reviewBatch.pendingTypes.length} 리뷰 + ${diaryBatch.pendingDates.length} 일기 → ${requests.length} batch requests submit`);
-
-  try {
-    const resp = await _authedFetch('/api/chat-batch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
-      body: JSON.stringify({ action: 'submit', requests })
-    });
-    if (!resp.ok) throw new Error('batch submit failed: ' + resp.status);
-    const data = await resp.json();
-    if (!data.id) throw new Error('batch_id 없음');
-
-    state.pendingBatch = {
-      batch_id: data.id,
-      submitted_at: Date.now(),
-      archive_ids: pending.map(p => p.id),
-      review_pending: reviewBatch.pendingTypes,         // ['weekly', 'monthly', ...] race 차단용
-      review_keys: reviewBatch.reviewKeys,               // { weekly: weekKey, monthly: monthKey, ... }
-      diary_pending_dates: diaryBatch.pendingDates       // ['2026-05-01', ...] inline race 차단용
-    };
-    pending.forEach(b => { b._batchSubmittedAt = Date.now(); });
-    state.lastDailyChapterExtractAt = new Date().toISOString();
-    // 사용자 보고 2026-05-08 ultrathink: schedule cooldown stamp = 다음 cycle 시작 - 1ms.
-    //   옛: stamp = now → 사용자가 cycle 가로질러 (예: 1주+ 갭 후 일요일 진입 → 월요일 진입) 시 두 번 trigger.
-    //   fix: 현재 cycle 끝 시점 stamp → 같은 cycle 안 재 trigger 차단 + 다음 cycle 시작 시 정상 trigger.
-    if (reviewBatch.pendingTypes.includes('weekly')) {
-      const _nextWeek = new Date(_lastWeekly4amCutoff().getTime() + 7 * 86400000 - 1);
-      state.lastWeeklyReviewBatchAt = _nextWeek.toISOString();
-    }
-    if (reviewBatch.pendingTypes.includes('monthly')) {
-      const _curMon = _lastMonthly4amCutoff();
-      const _nextMon = new Date(_curMon.getFullYear(), _curMon.getMonth() + 1, 1, 4, 0, 0, -1);
-      state.lastMonthlyReviewBatchAt = _nextMon.toISOString();
-    }
-    if (reviewBatch.pendingTypes.includes('quarterly')) {
-      const _curQ = _lastQuarterly4amCutoff();
-      const _nextQ = new Date(_curQ.getFullYear(), _curQ.getMonth() + 3, 1, 4, 0, 0, -1);
-      state.lastQuarterlyReviewBatchAt = _nextQ.toISOString();
-    }
-    if (reviewBatch.pendingTypes.includes('annual')) {
-      const _curA = _lastAnnual4amCutoff();
-      const _nextA = new Date(_curA.getFullYear() + 1, 0, 1, 4, 0, 0, -1);
-      state.lastAnnualReviewBatchAt = _nextA.toISOString();
-    }
-    saveState();
-    console.log(`[daily extract] batch submitted: ${data.id} — review_pending: ${reviewBatch.pendingTypes.join(',') || '(none)'}`);
-    if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
-    if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
-  } catch (e) {
-    console.warn('[daily extract] batch submit fail — fallback 일반 API:', e);
-    // 사용자 명시 2026-05-02 ultrathink: diary _pendingDiarySummary 마커 cleanup — inline path 가 다시 처리할 수 있게.
-    if (diaryBatch && Array.isArray(diaryBatch.pendingDates)) {
-      diaryBatch.pendingDates.forEach(dk => {
-        const ent = (state.entries || []).find(en => en.date === dk);
-        if (ent) delete ent._pendingDiarySummary;
-      });
-    }
-    await _runDailyExtractInline(pending);
-  }
-}
+// V4 (사용자 명시 2026-05-25 ultrathink): _submitDailyExtractBatch 폐기.
+//   옛: chapter case (inline Sonnet) + topic (batch Haiku) + review (batch) + diary (batch) 한 batch_id 통합 — review trigger 가 chapter pending 의 부수 효과 = hidden coupling.
+//   새 spec: chapter cleanup (case Opus + topic + diary) + review chain (review + insight) 별 batch_id.
+//   대체 함수: submitChapterCleanupBatch + submitReviewChainBatch.
 
 // pending batch 결과 fetch + 처리. 사용자 활동 시점 (앱 진입 / 다음 4AM) 호출.
 async function _resumePendingBatch() {
