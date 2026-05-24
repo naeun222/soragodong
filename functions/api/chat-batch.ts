@@ -8,6 +8,13 @@
 import { verifyAuth, unauthorized, jsonResponse, type Env } from './_lib/auth';
 import { recordUsage, calculateCost } from './_lib/usage';
 import { checkBudget, deductCost } from './_lib/billing';
+// V4 (사용자 명시 2026-05-25 ultrathink): batch 에도 chat.ts 와 동일한 backend 합성 시퀀스 적용.
+//   옛: raw passthrough → _endpoint/_userContentType/_vars 가 Anthropic 으로 그대로 forward 돼 무시 → system X + content="" → errored.
+//   진단 증거: pendingReviewBatch 안 insight_weekly result.type='errored' / chatArchive 5개 _pendingCleanup stuck.
+//   신: chat.ts 의 applyEndpointSystem + applyUserContentTemplate + (필요 시) applyPersonaToBody 패턴 그대로.
+import { applyEndpointSystem, shouldSkipPersona } from './_lib/prompts/endpoint-systems';
+import { applyUserContentTemplate } from './_lib/prompts/user-content-templates';
+import { applyPersonaToBody } from './_lib/prompts/system-persona';
 
 // V4 (사용자 보고 2026-05-11 ultrathink): Cloudflare AI Gateway native passthrough — HKG colo region block 우회.
 const ANTHROPIC_BASE = 'https://gateway.ai.cloudflare.com/v1/53e0f1f9111983b0d7a4275cf94b6dc0/soragodong-anthropic/anthropic/v1';
@@ -60,6 +67,30 @@ export async function onRequestPost(context: {
     if (requests.length > 100) {
       // 클라이언트 자체 cap (Anthropic 한계 100k 단 비용 보호)
       return jsonResponse({ error: 'requests 100 초과 — 분할 필요' }, 400);
+    }
+    // V4 (사용자 명시 2026-05-25 ultrathink): each request 를 chat.ts 와 동일하게 변환.
+    //   applyEndpointSystem → body.system 강제 override (_endpoint / _promptType 매칭).
+    //   applyUserContentTemplate → 마지막 user message content 강제 합성 (_userContentType / _endpoint+_vars 매칭).
+    //   shouldSkipPersona 미해당 시 applyPersonaToBody → SYSTEM_PERSONA prepend.
+    //   strip hint fields (_promptType / _userContentType / _vars / _chatMode) — Anthropic forward X.
+    //   _endpoint 는 chat.ts 와 동일하게 보존 (Anthropic 가 unknown field 무시).
+    //   review_<cycle>_<key> 처럼 system + userMessage 가 이미 직접 박힌 path 도 _endpoint 매칭 시 stable system override — 의도된 경로 (review-systems.ts).
+    for (const req of requests) {
+      const p = req && req.params;
+      if (!p || typeof p !== 'object') continue;
+      try {
+        applyEndpointSystem(p);
+        applyUserContentTemplate(p);
+        if (!shouldSkipPersona(p)) {
+          applyPersonaToBody(p);
+        }
+      } catch (e) {
+        console.warn('[chat-batch] synthesis fail for', req.custom_id, e);
+      }
+      delete p._promptType;
+      delete p._userContentType;
+      delete p._vars;
+      delete p._chatMode;
     }
     const upstream = await fetch(`${ANTHROPIC_BASE}/messages/batches`, {
       method: 'POST',
