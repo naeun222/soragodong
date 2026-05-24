@@ -16,6 +16,19 @@ async function generateAIResponse(modelOverride, opts) {
   // V4 (사용자 명시 2026-05-13 ultrathink): RAG retrieve — Plus/Premium + useRag ON 일 때만. 4단 분석 (analyze_4stage) 은 skip.
   //   buildSystemPromptParts 가 perCall 영역에 _ragLastRetrieved 인용 → inject.
   window._ragLastRetrieved = null;
+  // V4 (사용자 명시 2026-05-25 ultrathink, 2 번째 묶음): _billingCache race 보호 — max 1.5초 polling.
+  //   재현 evidence: 앱 진입 직후 빠르게 chat 보내면 _billingCache 아직 안 떠서
+  //   _ragIsEnabled() false → RAG silent skip → window._ragLastRetrieved = null.
+  //   한 박자 기다리면 정상. polling 100ms × 15 = 1.5초 max.
+  if (!_isDeeperAnalysis) {
+    for (let i = 0; i < 15; i++) {
+      if (window._billingCache) break;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    if (!window._billingCache && session?.access_token) {
+      console.warn('[rag] _billingCache not ready after 1.5s — skipping retrieve');
+    }
+  }
   if (!_isDeeperAnalysis && typeof _ragIsEnabled === 'function' && _ragIsEnabled()) {
     try {
       // V4 (사용자 명시 2026-05-25 ultrathink, 2 번째 묶음): query 확장 — last user msg 한 줄만 쓰면 anaphor ("기억해봐") 일 때 의미 매칭 실패.
