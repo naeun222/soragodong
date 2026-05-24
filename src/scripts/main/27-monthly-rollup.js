@@ -318,108 +318,13 @@ async function generateQuarterlyReview(quarterKey, stats) {
 // 사용자 명시 2026-05-01 ultrathink: 옛 자동 review trigger 함수 3종 (runQuarterly/Monthly/AnnualAutoReviewIfNeeded) 완전 제거.
 // 리뷰 카드 click 으로만 생성 (openReview / openQuarterlyReviewCard / openAnnualReviewCard).
 
-// V3.13.x: 일기 자동 요약 — entry 있는데 diary/aiSummary 둘 다 없는 날 보강 (어제부터 7일 거슬러, 1회 1일치)
-// 사용자 명시 2026-05-02 ultrathink (A 옵션): batch 활성 + 처리 중 시 skip — batch에서 처리.
-async function runDiaryAutoSummaryIfNeeded() {
-  if (!_canAI()) return;
-  // batch 처리 중 = 같은 batch 안 diary request 가 처리 중. inline race 차단.
-  if (typeof FEATURE_BATCH_DIARY !== 'undefined' && FEATURE_BATCH_DIARY
-      && state.pendingBatch && state.pendingBatch.batch_id) {
-    return;
-  }
+// V4 (사용자 명시 2026-05-25 ultrathink): 옛 inline diary 자동 요약 폐기.
+//   path: runDiaryAutoSummaryIfNeeded (init 7초 trigger) + summarizeDayForEntry 가 batch path 와 race.
+//   재설계: cleanup batch (_buildDiaryBatchRequests, 30-force-analyze.js) 단독. 4AM cutoff 통과 시 chapter+topic+diary 한 batch_id.
+//   조건 단순: !entry.diary && entry → 생성. aiSummary idempotent natural. _aiSummaryFailed 만 영구 sentinel 유지.
+//   race marker (_pendingDiarySummary) / inline retry guard (_aiSummaryAttempts / _aiSummaryLastAttemptAt) 도 함께 제거 — batch lastChapterCleanupAt stamp 가 24h cooldown 자연 역할.
 
-  // V3.13.x: 04:00 cutoff 기준 어제부터 거꾸로
-  // 사용자 보고 2026-05-17 ultrathink: 옛 path = `new Date()` + setDate(-i) = calendar 기준이라 새벽 4시 전 (calendar 어제 == 오늘 per cutoff) today entry 가 prematurely summarize.
-  //   fix: 앵커 = todayKey() (cutoff-aware), setDate(-i) on 그 앵커의 noon. i=1 ↔ "어제 per cutoff" invariant.
-  //   추가 방어: dateKey === todayKey() 가드 (이중 안전망).
-  const _todayDk = (typeof todayKey === 'function') ? todayKey() : null;
-  for (let i = 1; i <= 7; i++) {
-    let dateKey;
-    if (_todayDk) {
-      const _anchor = new Date(_todayDk + 'T12:00:00');
-      _anchor.setDate(_anchor.getDate() - i);
-      const _y = _anchor.getFullYear();
-      const _m = String(_anchor.getMonth() + 1).padStart(2, '0');
-      const _d = String(_anchor.getDate()).padStart(2, '0');
-      dateKey = `${_y}-${_m}-${_d}`;
-    } else {
-      // todayKey 부재 fallback — calendar 기준 (옛 path 유지)
-      const noon = new Date();
-      noon.setHours(12, 0, 0, 0);
-      noon.setDate(noon.getDate() - i);
-      dateKey = getDayKey(noon);
-    }
-    if (_todayDk && dateKey === _todayDk) continue;  // 오늘 entry 절대 처리 X
-
-    const entry = (state.entries || []).find(e => e.date === dateKey);
-    if (!entry) continue;
-    if (entry.diary) continue;
-    if (entry.aiSummary) continue;
-    if (entry._pendingDiarySummary) continue;  // batch 가 처리 중 — race 차단
-    // V4 (사용자 명시 2026-05-16 cowork): persistent retry guard.
-    //   원인: _pendingDiarySummary 는 in-memory transient — reload 마다 reset (joh752307 5번 fire root cause).
-    //   fix: saveState 통해 cloud sync 되는 _aiSummaryAttempts / _aiSummaryLastAttemptAt / _aiSummaryFailed 로 idempotent guard.
-    if (entry._aiSummaryFailed) continue;  // 영구 실패 (empty response sentinel) — 다시 시도 X
-    if (entry._aiSummaryLastAttemptAt) {
-      const _hoursSince = (Date.now() - new Date(entry._aiSummaryLastAttemptAt).getTime()) / 3600000;
-      if (_hoursSince < 24) continue;  // 24h cooldown
-    }
-    if ((entry._aiSummaryAttempts || 0) >= 3) continue;  // 3회 cap
-    // 사용자 보고 2026-05-04 (B16): testerMode 아닐 때 시드 entry 제외 — '엄마 김치찌개' 등 더미 데이터 요약 노출 차단.
-    const _isTesterDS = !!(state.preferences && state.preferences.testerMode);
-    if (!_isTesterDS && entry._seed) continue;
-
-    let messages = (state.chatMessages || []).filter(m =>
-      m.timestamp && getDayKey(m.timestamp) === dateKey && !m.typing && !m.error
-      && (_isTesterDS || !m._seed)
-    );
-    if (messages.length < 2) {
-      const archived = (state.chatArchive || []).find(a => a.date === dateKey && !a._deleted && (_isTesterDS || !a._seed));
-      if (archived && Array.isArray(archived.messages)) {
-        messages = archived.messages.filter(m => _isTesterDS || !m._seed);
-      }
-    }
-
-    const hasContext = messages.length >= 2 || entry.vitality != null || entry.mood != null || (entry.note && entry.note.trim());
-    if (!hasContext) continue;
-
-    // V4 (사용자 명시 2026-05-16 cowork): 호출 직전 attempt 마킹 — saveState → cloud sync → 재진입 시 보존.
-    //   실패 / network glitch / catch 시에도 마킹이 살아남아 다음 진입의 cooldown / cap 가드 trigger.
-    entry._aiSummaryLastAttemptAt = new Date().toISOString();
-    entry._aiSummaryAttempts = (entry._aiSummaryAttempts || 0) + 1;
-    saveState();
-
-    try {
-      const result = await summarizeDayForEntry(dateKey, messages, entry);
-      // V4 (사용자 명시 2026-05-16 cowork): empty response sentinel — backend chat.ts 가 _emptyResponse 박은 케이스.
-      //   영구 skip 마킹 (다음 진입 시 무한 재시도 차단). 사용자 비용 X (backend 가 chargeUsage skip).
-      if (result && typeof result === 'object' && result.__empty) {
-        entry._aiSummaryFailed = true;
-        entry._aiSummaryFailReason = result.reason || 'empty_response';
-        saveState();
-        console.warn(`[diary auto summary] empty response — 영구 skip ${dateKey}`);
-        return;
-      }
-      if (result && typeof result === 'string' && result.length > 0) {
-        entry.aiSummary = result;
-        entry.dailySource = 'auto';
-        // 성공 — guard markers 정리 (다음 entry 처리 / 재호출 시 깨끗)
-        delete entry._aiSummaryAttempts;
-        delete entry._aiSummaryLastAttemptAt;
-        delete entry._aiSummaryFailed;
-        delete entry._aiSummaryFailReason;
-        saveState();
-        console.log(`✦ 자동 요약 ${dateKey} 생성됨`);
-      }
-    } catch (e) {
-      console.warn('diary auto summary failed for', dateKey, e);
-    }
-    return;  // 한 번에 1일치만 (cost + rate)
-  }
-}
-
-// 사용자 명시 2026-05-02 ultrathink: diary auto summary batch path 재사용 위해 prompt builder 분리.
-// inline path (runDiaryAutoSummaryIfNeeded) 와 batch path (_buildReviewBatchRequests 의 diary request) 둘 다 동일 builder 사용.
+// diary summary prompt builder — _buildDiaryBatchRequests 가 호출 (cleanup batch 안 diary request).
 function _buildDiarySummaryPrompt(date, messages, entry) {
   const dateLabel = new Date(date).toLocaleDateString('ko-KR', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
@@ -459,25 +364,5 @@ function _buildDiarySummaryPrompt(date, messages, entry) {
 // diary summary 결과 처리 — 단순 text trim.
 function _processDiarySummaryResult(text) {
   return (text || '').trim();
-}
-
-async function summarizeDayForEntry(date, messages, entry) {
-  const promptSpec = _buildDiarySummaryPrompt(date, messages, entry);
-  const resp = await callAnthropic({
-    _endpoint: promptSpec._endpoint,
-    _vars: promptSpec._vars,
-    model: promptSpec.model,
-    max_tokens: promptSpec.max_tokens,
-    messages: [{ role: 'user', content: '' }]
-  });
-  if (!resp.ok) throw new Error('API ' + resp.status);
-  const data = await resp.json();
-  // V4 (사용자 명시 2026-05-16 cowork): backend empty response sentinel 인식.
-  //   chat.ts 가 200 + content[0].text="" 시 _emptyResponse:true flag 박음 (chargeUsage skip 됨).
-  //   sentinel object 반환 → runDiaryAutoSummaryIfNeeded 가 entry._aiSummaryFailed 영구 마킹.
-  if (data && data._emptyResponse) {
-    return { __empty: true, reason: data._emptyReason || 'empty' };
-  }
-  return _processDiarySummaryResult(data && data.content && data.content[0] && data.content[0].text);
 }
 

@@ -413,14 +413,10 @@ async function _runDailyExtractInline(pending) {
   if (typeof renderModelPreview === 'function') { try { renderModelPreview(); } catch {} }
 }
 
-// V4 (사용자 명시 2026-05-25 ultrathink): 옛 FEATURE_BATCH_REVIEWS 폐기.
+// V4 (사용자 명시 2026-05-25 ultrathink): 옛 FEATURE_BATCH_REVIEWS / FEATURE_BATCH_DIARY 폐기.
 //   review batch 가 chapter pending batch 와 분리됨 — 별 path (submitReviewChainBatch + maybeTriggerReviewChain).
-//   _buildReviewBatchRequests 함수 자체 폐기 (옛 호출처 _submitDailyExtractBatch 도 같이 폐기).
-//   FEATURE_BATCH_DIARY 만 유지 (diary auto summary 가 새 cleanup batch 안 통합).
+//   diary 는 cleanup batch 단독 — inline path (runDiaryAutoSummaryIfNeeded) 폐기로 race 없음. flag 무의미.
 const FEATURE_BATCH_REVIEWS = true;
-// 사용자 명시 2026-05-02 ultrathink (A 옵션): diary auto summary 를 batch 로 통합. 4AM cutoff 도달 후 사용자 진입 시 batch submit.
-// chapter / topic / review / diary 모두 같은 batch_id. 결과 도착 후 entry.aiSummary 적용됨 + 어제 카드 자동 노출.
-const FEATURE_BATCH_DIARY = true;
 
 // V4 (사용자 명시 2026-05-25 ultrathink): _buildReviewBatchRequests 폐기 (위 코멘트 참조).
 //   대체: maybeTriggerReviewChain + submitReviewChainBatch (cooldown 폐기, key not in 자격).
@@ -504,17 +500,16 @@ function _collectMissingReviews(now) {
   return missing;
 }
 
-// 사용자 명시 2026-05-02 ultrathink (A 옵션): diary auto summary batch — 어제부터 7일 거슬러 missing entry 의 request 추가.
-// inline path (runDiaryAutoSummaryIfNeeded) 와 동일 가드: entry 있고 + diary X + aiSummary X + chatMessages 2+ OR 체크인 정보 있음.
-// _pendingDiarySummary 마커 적용해 batch 처리 중 inline race 차단.
+// V4 (사용자 명시 2026-05-25 ultrathink): diary auto summary batch — 어제부터 7일 거슬러 missing entry 의 request 추가.
+//   조건 단순화: !entry.diary (사용자 직접 일기 X) + !entry.aiSummary (idempotent) + !entry._aiSummaryFailed (empty response sentinel) + !entry._seed (testerMode 분기) + dateKey ≠ todayKey (cutoff-aware, 2026-05-17 fix).
+//   옛 hasContext 가드 / _pendingDiarySummary 마커 / inline retry guard (_aiSummaryAttempts, _aiSummaryLastAttemptAt) 폐기 — batch lastChapterCleanupAt stamp 가 24h cooldown 자연 역할.
 function _buildDiaryBatchRequests() {
-  if (!FEATURE_BATCH_DIARY) return { requests: [], pendingDates: [] };
   const requests = [];
   const pendingDates = [];
 
-  // 사용자 보고 2026-05-17 ultrathink: inline path 와 동일 bug — calendar 기준 시작점이라 새벽 4시 전 today entry 가 batch 에 끼어듦.
-  //   fix: 앵커 = todayKey() (cutoff-aware), setDate(-i) on 그 앵커의 noon. dateKey === todayKey() 가드 추가.
+  // 사용자 보고 2026-05-17 ultrathink: 앵커 = todayKey() (cutoff-aware), setDate(-i) on 그 앵커의 noon. dateKey === todayKey() 가드 추가.
   const _todayDk = (typeof todayKey === 'function') ? todayKey() : null;
+  const _isTesterBD = !!(state.preferences && state.preferences.testerMode);
   for (let i = 1; i <= 7; i++) {
     let dateKey;
     if (_todayDk) {
@@ -534,12 +529,10 @@ function _buildDiaryBatchRequests() {
 
     const entry = (state.entries || []).find(e => e.date === dateKey);
     if (!entry) continue;
-    if (entry.diary) continue;
-    if (entry.aiSummary) continue;
-    if (entry._pendingDiarySummary) continue;  // 이미 batch 가 처리 중
-    // 사용자 보고 2026-05-04 (B16): testerMode 아닐 때 시드 entry 제외 — '엄마 김치찌개' 등 더미 데이터 batch 요약 노출 차단.
-    const _isTesterBD = !!(state.preferences && state.preferences.testerMode);
-    if (!_isTesterBD && entry._seed) continue;
+    if (entry.diary) continue;             // 사용자 직접 일기 — 우선
+    if (entry.aiSummary) continue;         // 이미 aiSummary 있음 (idempotent)
+    if (entry._aiSummaryFailed) continue;  // backend _emptyResponse sentinel — 영구 skip
+    if (!_isTesterBD && entry._seed) continue;  // B16 시드 entry 제외
 
     let messages = (state.chatMessages || []).filter(m =>
       m.timestamp && (typeof getDayKey === 'function' ? getDayKey(m.timestamp) : '') === dateKey && !m.typing && !m.error
@@ -551,19 +544,20 @@ function _buildDiaryBatchRequests() {
         messages = archived.messages.filter(m => _isTesterBD || !m._seed);
       }
     }
-    const hasContext = messages.length >= 2 || entry.vitality != null || entry.mood != null || (entry.note && entry.note.trim());
-    if (!hasContext) continue;
 
     const spec = _buildDiarySummaryPrompt(dateKey, messages, entry);
+    // V4 (사용자 명시 2026-05-25 ultrathink): case_/topic_ batch 와 동일 구조 — _endpoint/_vars 박음.
+    //   현재 chat-batch.ts 는 raw passthrough 라 backend 합성 X (별 fix 사항 — 단 일관 구조 유지).
     requests.push({
       custom_id: `diary_${dateKey}`,
       params: {
         model: spec.model,
         max_tokens: spec.max_tokens,
-        messages: [{ role: 'user', content: spec.userMessage }]
+        messages: [{ role: 'user', content: '' }],
+        _endpoint: spec._endpoint,
+        _vars: spec._vars
       }
     });
-    entry._pendingDiarySummary = true;
     pendingDates.push(dateKey);
   }
 
@@ -755,18 +749,20 @@ async function _resumePendingBatch() {
         } catch (e) { console.warn('[batch review] fail:', customId, e); }
         continue;
       }
-      // 사용자 명시 2026-05-02 ultrathink (A 옵션): diary auto summary 분기.
+      // V4 (사용자 명시 2026-05-25 ultrathink): legacy schema diary 분기 — 빈 응답 시 _aiSummaryFailed 영구 마킹.
       if (customId.startsWith('diary_')) {
         try {
           const dateKey = customId.slice('diary_'.length);
           const summary = _processDiarySummaryResult(text);
           const entry = (state.entries || []).find(e => e.date === dateKey);
-          if (entry && summary) {
-            entry.aiSummary = summary;
-            entry.dailySource = 'auto';
-            delete entry._pendingDiarySummary;
-          } else if (entry) {
-            delete entry._pendingDiarySummary;  // 결과 빈 시도 마커 cleanup
+          if (entry) {
+            if (summary && summary.length > 0) {
+              entry.aiSummary = summary;
+              entry.dailySource = 'auto';
+            } else {
+              entry._aiSummaryFailed = true;
+              entry._aiSummaryFailReason = 'empty_batch_response';
+            }
           }
         } catch (e) { console.warn('[batch diary] fail:', customId, e); }
         continue;
@@ -904,15 +900,8 @@ async function _timeoutPendingBatch() {
   if (reviewTypes.length > 0) {
     await _runReviewExtractInline(reviewTypes, reviewKeys);
   }
-  // diary 의 _pendingDiarySummary 마커 cleanup — inline path (runDiaryAutoSummaryIfNeeded) 가 다시 처리 가능하게.
-  if (diaryDates.length > 0) {
-    diaryDates.forEach(dk => {
-      const ent = (state.entries || []).find(en => en.date === dk);
-      if (ent) delete ent._pendingDiarySummary;
-    });
-    saveState();
-    // 다음 사용자 진입 시 (init 7초 후) runDiaryAutoSummaryIfNeeded 가 자동 처리.
-  }
+  // V4 (사용자 명시 2026-05-25 ultrathink): inline diary path 폐기 → _pendingDiarySummary 마커 자체 X.
+  //   timeout 시 diary 는 다음 cleanup batch (4AM cutoff) 까지 자연 대기.
   if (targets.length === 0 && reviewTypes.length === 0 && diaryDates.length === 0) {
     saveState();
   }
@@ -1014,12 +1003,7 @@ async function submitChapterCleanupBatch(unprocessed) {
     if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
   } catch (e) {
     console.warn('[cleanup batch] submit fail — fallback 일반 API:', e);
-    if (diaryBatch && Array.isArray(diaryBatch.pendingDates)) {
-      diaryBatch.pendingDates.forEach(dk => {
-        const ent = (state.entries || []).find(en => en.date === dk);
-        if (ent) delete ent._pendingDiarySummary;
-      });
-    }
+    // V4 (사용자 명시 2026-05-25 ultrathink): _pendingDiarySummary 마커 자체 X — diary 는 다음 4AM cutoff 까지 자연 대기.
     if (typeof _runDailyExtractInline === 'function') {
       await _runDailyExtractInline(unprocessed);
     }
@@ -1131,14 +1115,20 @@ async function _resumeChapterCleanupBatch() {
       } else if (cid.startsWith('diary_')) {
         try {
           const dateKey = cid.slice('diary_'.length);
-          const summary = (typeof _processDiarySummaryResult === 'function') ? _processDiarySummaryResult(text) : null;
+          const summary = (typeof _processDiarySummaryResult === 'function') ? _processDiarySummaryResult(text) : '';
           const entry = (state.entries || []).find(e => e.date === dateKey);
-          if (entry && summary) {
-            entry.aiSummary = summary;
-            entry.dailySource = 'auto';
-            delete entry._pendingDiarySummary;
-          } else if (entry) {
-            delete entry._pendingDiarySummary;
+          // V4 (사용자 명시 2026-05-25 ultrathink): empty response sentinel — backend chat.ts 의 _emptyResponse path 와 동등.
+          //   batch path 는 chat.ts 사이클을 안 거치므로 빈 text 자체를 sentinel 로 사용 (Anthropic 가 정상 응답 비울 일 없음).
+          //   _aiSummaryFailed 영구 마킹 → 다음 batch 진입 시 _buildDiaryBatchRequests 가 자동 skip.
+          if (entry) {
+            if (summary && summary.length > 0) {
+              entry.aiSummary = summary;
+              entry.dailySource = 'auto';
+            } else {
+              entry._aiSummaryFailed = true;
+              entry._aiSummaryFailReason = 'empty_batch_response';
+              console.warn(`[cleanup resume] diary empty — 영구 skip ${dateKey}`);
+            }
           }
         } catch (e) { console.warn('[cleanup resume] diary', cid, e); }
       }
@@ -1192,12 +1182,7 @@ async function _timeoutChapterCleanupBatch() {
   if (!pb) return;
   console.warn('[cleanup batch] 12h timeout 또는 status/results fail 3회 — inline fallback');
   const archives = (state.chatArchive || []).filter(a => a && (pb.archive_ids || []).includes(a.id));
-  if (Array.isArray(pb.diary_pending_dates)) {
-    pb.diary_pending_dates.forEach(dk => {
-      const ent = (state.entries || []).find(en => en.date === dk);
-      if (ent) delete ent._pendingDiarySummary;
-    });
-  }
+  // V4 (사용자 명시 2026-05-25 ultrathink): _pendingDiarySummary 마커 자체 X — diary 는 다음 cleanup batch (24h 후) 자연 picks up.
   state.pendingChapterCleanupBatch = null;
   saveState();
   if (archives.length > 0 && typeof _runDailyExtractInline === 'function') {

@@ -257,6 +257,18 @@ async function loadFromCloud() {
       }
       state._reviewRedesignMigrated = true;
     }
+    // V4 (사용자 명시 2026-05-25 ultrathink): inline diary path 폐기 — entries 에 박힌 dead marker 정리.
+    //   _pendingDiarySummary (race marker), _aiSummaryAttempts / _aiSummaryLastAttemptAt (inline retry guard) 제거.
+    //   _aiSummaryFailed / _aiSummaryFailReason 는 영구 sentinel — 보존.
+    if (!state._inlineDiarySunsetMigrated) {
+      (state.entries || []).forEach(e => {
+        if (!e) return;
+        delete e._pendingDiarySummary;
+        delete e._aiSummaryAttempts;
+        delete e._aiSummaryLastAttemptAt;
+      });
+      state._inlineDiarySunsetMigrated = true;
+    }
     // V3.9: tasks + memoryVault에 priority 필드 부여
     (state.tasks || []).forEach((t, idx) => {
       if (typeof t.priority !== 'number') t.priority = idx;
