@@ -1162,13 +1162,14 @@ async function maybeRunDailyChapterExtract() {
   const pending = (state.chatArchive || []).filter(a =>
     a && !a._deleted && (a._pendingExtract || a._pendingCaseAnalysis) && Array.isArray(a.messages) && a.messages.length >= 3
   );
-  if (pending.length === 0) {
-    state.lastDailyChapterExtractAt = new Date().toISOString();
-    saveState();
-    return;
-  }
 
   // 6. batch submit (50% 할인)
+  // V4 fix (사용자 보고 2026-05-24 ultrathink): pending=0 도 review/diary batch trigger.
+  //   옛: pending=0 → early return → _submitDailyExtractBatch 호출 X → _buildReviewBatchRequests 도달 X
+  //       → 일주일 챕터 다 추출 완료된 사용자 = 일요일 4AM 통과해도 weekly review 영구 누락.
+  //   증상 예: lastWeeklyReviewBatchAt=undefined + pending=0 + _shouldRunSchedule=true 인데 trigger X.
+  //   새: pending=0 도 _submitDailyExtractBatch 호출. 내부에서 chapter inline/topic forEach 가 빈 배열에 자연 skip.
+  //       review/diary build 는 정상 → 자격 있으면 submit. 없으면 line 641-645 의 requests=0 fallback 에서 stamp+return.
   await _submitDailyExtractBatch(pending);
 
   // 7. 자동 인사이트 발견 (사용자 명시 2026-05-16 ultrathink) — 7일 cooldown + entries>=7 가드 내부.
