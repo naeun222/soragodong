@@ -14,7 +14,9 @@
 # Play Console 정책:
 #   - 자동화 가능하지만 첫 업로드는 수동 (Play Console 의 manual review).
 #   - 이미 versionCode 5 manual 업로드 완료 → 자동화는 100+ 부터 시작 (충돌 X).
-#   - track: internal = Internal Testing (회사 내부 테스터만). production 으로 바꾸려면 검수 통과 사용자 그룹 검증 후.
+#   - track: alpha = Closed Testing - Alpha 트랙 (5/18 수동 업로드한 Alpha 그룹 177명 — 사용자 본인 포함).
+#     V4 fix (사용자 명시 2026-05-25 ultrathink): 옛 `internal` 로 5/18~5/25 cron 빌드 누적되어 Alpha 사용자 (= 본인) 가 1주일 동안
+#     자동 빌드 못 받음. 5/18 수동 업로드 (NPE bug 포함) 에 stuck → 100% crash. alpha 트랙으로 단일화 — Internal tester 그룹 비어있어 폐기.
 #
 # Trigger:
 #   - cron `0 18 */2 * *` = 2일마다 UTC 18시 = Korea 03시 (다음날 새벽)
@@ -93,7 +95,9 @@ jobs:
           packageName: com.soragodong.app
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           # V4 fix (사용자 보고 2026-05-18) — 옛 `track` deprecated 경고. `tracks` (복수) 로 migrate.
-          tracks: internal
+          # V4 fix (사용자 명시 2026-05-25 ultrathink) — internal → alpha. Alpha 트랙 사용자 (= 5/18 수동 업로드 그룹) 에게
+          # 자동 빌드 도달 부활. 옛 internal 트랙은 tester 0명이라 폐기.
+          tracks: alpha
           status: completed
           whatsNewDirectory: .github/whatsnew
 
