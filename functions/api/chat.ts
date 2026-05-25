@@ -500,10 +500,43 @@ async function _handleChatRequest(context: {
     if (!upstream.body) {
       return jsonResponse({ error: 'upstream body 없음' }, 502);
     }
+    // V4 (사용자 보고 2026-05-25 ultrathink): upstream 응답 Content-Type 검사 — Anthropic / Cloudflare AI Gateway 가
+    //   200 + non-SSE (text/html / application/json error 등) 응답 시 frontend SSE parser 가 silent skip → 빈 메시지.
+    //   non-stream path 의 line 590 empty guard 와 대등하게 stream path 에도 가드 추가.
+    //   text/event-stream 이 아니면 raw 받아 JSON 500 으로 변환 → frontend catch 분기 → 사용자 안내.
+    const _upstreamCT = (upstream.headers.get('content-type') || '').toLowerCase();
+    if (!_upstreamCT.includes('event-stream')) {
+      const _raw = await upstream.text().catch(() => '');
+      console.error(`[chat.ts] stream upstream non-SSE Content-Type=${_upstreamCT} status=${upstream.status}:`, _raw.slice(0, 500));
+      // JSON 이면 그대로, HTML 이면 <title> 추출, 그 외엔 raw 일부.
+      let _detail = '';
+      const _trimmed = _raw.trimStart();
+      if (_trimmed.startsWith('<!DOCTYPE') || _trimmed.startsWith('<html')) {
+        const _titleMatch = _raw.match(/<title>([^<]+)<\/title>/i);
+        _detail = _titleMatch ? _titleMatch[1].trim().slice(0, 200) : 'upstream HTML';
+      } else if (_trimmed.startsWith('{')) {
+        try {
+          const _j = JSON.parse(_raw);
+          _detail = _j?.error?.message || _j?.error || JSON.stringify(_j).slice(0, 200);
+        } catch { _detail = _raw.slice(0, 200); }
+      } else {
+        _detail = _raw.slice(0, 200) || `Content-Type=${_upstreamCT}`;
+      }
+      return jsonResponse({
+        error: 'upstream non-SSE 응답: ' + _detail,
+        code: 'UPSTREAM_NON_SSE',
+        upstream_content_type: _upstreamCT,
+        upstream_status: upstream.status
+      }, 502);
+    }
 
     const reader = upstream.body.getReader();
     const decoder = new TextDecoder();
     let usageData: any = null;
+    // V4 (사용자 보고 2026-05-25 ultrathink): 빈 stream 감지 — 0 chunk / 0 content_block_delta 시 frontend 에 sentinel SSE event 보내
+    //   frontend `_processSSELine` 의 error type 분기로 잡힘 → throw → catch 분기 → 사용자 안내. chargeUsage skip.
+    let _streamChunkCount = 0;
+    let _streamDeltaCount = 0;
 
     // 사용자 보고 2026-04-30 ultrathink: SSE 파서 buffer 잔여 처리 누락 → 마지막 message_delta (최종 output_tokens cumulative) 가 chunk 경계에 걸려 영원히 파싱 X 였음.
     // → output_tokens 가 message_start 초기값 (1) 으로 기록됐을 가능성. 사용량 표시 안 잡히던 root cause 후보.
@@ -517,6 +550,10 @@ async function _handleChatRequest(context: {
         if (evt.type === 'message_start' && evt.message?.usage) {
           usageData = { ...(usageData || {}), ...evt.message.usage };
         }
+        // V4 (사용자 보고 2026-05-25 ultrathink): content_block_delta 카운트 — 빈 stream 감지용.
+        if (evt.type === 'content_block_delta' && evt.delta?.text) {
+          _streamDeltaCount++;
+        }
       } catch {}
     };
 
@@ -527,6 +564,7 @@ async function _handleChatRequest(context: {
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
+            _streamChunkCount++;
             const chunk = decoder.decode(value, { stream: true });
             buffer += chunk;
             const lines = buffer.split('\n');
@@ -540,13 +578,28 @@ async function _handleChatRequest(context: {
           if (buffer) {
             for (const line of buffer.split('\n')) _parseSseLine(line);
           }
+          // V4 (사용자 보고 2026-05-25 ultrathink): 빈 stream 감지 — chunk 0 또는 content_block_delta 0 시 frontend 에 명시 error event 보냄.
+          //   frontend `_processSSELine` 의 evt.type === 'error' 분기 (09-generate-ai-response.js line 317) 가 잡아 throw → catch → 사용자 안내.
+          //   non-stream path (line 590) empty guard 와 대등 효과.
+          if (_streamChunkCount === 0 || _streamDeltaCount === 0) {
+            console.warn('[chat.ts] empty stream — chunks=' + _streamChunkCount + ' deltas=' + _streamDeltaCount, { endpoint, model: body.model });
+            const _emptyEvt = `event: error\ndata: ${JSON.stringify({
+              type: 'error',
+              error: {
+                type: 'empty_response',
+                message: 'Anthropic 가 빈 응답 — 다시 보내기 (chargeUsage skip)'
+              }
+            })}\n\n`;
+            try { controller.enqueue(new TextEncoder().encode(_emptyEvt)); } catch {}
+          }
           controller.close();
         } catch (e) {
           controller.error(e);
         } finally {
           // 사용자 명시 2026-05-01 (agent audit): output_tokens=1 (message_start 초기값만 받고 message_delta 누락) 케이스 차감 skip.
+          // V4 (사용자 보고 2026-05-25 ultrathink): 빈 stream (delta 0) 시 chargeUsage skip — 사용자 무료 처리.
           const _outputTokens = usageData?.output_tokens || 0;
-          if (usageData && _outputTokens > 1) {
+          if (usageData && _outputTokens > 1 && _streamDeltaCount > 0) {
             // 사용자 명시 2026-05-02 ultrathink: chargeUsage 헬퍼 — welcome bonus 우선 소진 + overflow USD 차감.
             // 사용자 보고 2026-05-05 (audit Critical): finally 안 await chargeUsage → stream close 후 워커 lifetime 보장 X → drop risk.
             // fix = waitUntil 로 명시 위임 + 즉시 finally 종료 (stream 깔끔하게 close).

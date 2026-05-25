@@ -5,7 +5,25 @@ import { verifyAuth, unauthorized, jsonResponse, type Env } from './_lib/auth';
 import { getMonthlyUsage } from './_lib/usage';
 import { getUserBilling, ensureBillingRow, promoteGuestToEarlyLight } from './_lib/billing';
 
+// V4 (사용자 보고 2026-05-25 ultrathink): outer try/catch wrap — chat.ts onRequestPost 패턴 (line 211) 적용.
+//   옛: uncaught throw 시 Cloudflare Pages Functions 가 자체 5xx HTML 페이지 응답 → frontend 'Unexpected token <'.
+//   신: throw 잡아 JSON 500 + detail 반환 → frontend `_doRefreshBillingStatus` 가 'API 500 — ...' 형태로 표시.
+//   원래 verifyAuth 의 `throw new Error('SUPABASE env 누락')` 만 uncaught throw 후보였는데, 모르는 throw path 도 같이 cover.
 export async function onRequestGet(context: { request: Request; env: Env }): Promise<Response> {
+  try {
+    return await _handleUsageRequest(context);
+  } catch (e: any) {
+    const _msg = e?.message || String(e);
+    const _stack = e?.stack ? String(e.stack).slice(0, 800) : '';
+    console.error('[usage.ts] uncaught throw:', _stack || _msg);
+    return jsonResponse({
+      error: '백엔드 throw: ' + _msg,
+      stack: _stack || undefined
+    }, 500);
+  }
+}
+
+async function _handleUsageRequest(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
   const user = await verifyAuth(request, env);
   if (!user) return unauthorized();
