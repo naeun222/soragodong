@@ -169,7 +169,9 @@ function selectChatMode(mode) {
   // V4 사용자 명시 2026-05-23 — 같은 모드 재선택 = deselect (null 로 복귀, 기본 상태). 토스트 silent.
   const next = (prev === mode) ? null : mode;
   state.chatMode = next;
-  try { saveState(); } catch {}
+  // V4 fix (사용자 보고 2026-05-25 ultrathink) — force=true: 강제 새로고침 시 mode 풀림 방지.
+  //   debounce (local 400ms idle / cloud 1s) 안에 reload 떨어지면 미저장 → null 복귀. force 면 즉시 동기 flush + cloud PATCH 발사.
+  try { saveState(true); } catch {}
   // 시트 카드 재렌더 + 헤더 캐릭터 morph + 기존 메시지 아바타 morph.
   _renderChatModeSheetCards();
   if (typeof updateMainHeaderBtnVisual === 'function') updateMainHeaderBtnVisual();

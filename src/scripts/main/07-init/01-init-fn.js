@@ -177,6 +177,20 @@ async function init() {
   try { performance.mark('cloudEnd'); } catch (e) {}
   window._initialDataLoading = false;
 
+  // V4 fix (사용자 보고 2026-05-25 ultrathink) — chatMode local-wins-after-cloud.
+  //   root cause: loadFromCloud (05-supabase.js:206) 의 state = { ...DEFAULT_STATE, ...cloudData } 가 cloud stale 시 localStorage 의 신선한 chatMode 를 null 로 덮어씀.
+  //   강제 새로고침 = cloud PATCH 가 in-flight abort 또는 debounce 안 → cloud 가 옛 chatMode 인 채. local 은 saveState(true) 로 동기 flush 됐어도 cloud merge 가 trash.
+  //   fix: cloud merge 후 localStorage 의 chatMode 만 다시 박음. 다음 saveToCloud 가 cloud 도 catch-up. chatMode 는 UI selection 이라 local-wins 자연스러움.
+  try {
+    const _localRaw = localStorage.getItem(V4_LOCAL_STORAGE_KEY);
+    if (_localRaw) {
+      const _parsed = JSON.parse(_localRaw);
+      if (_parsed && _parsed.chatMode !== undefined) {
+        state.chatMode = _parsed.chatMode;
+      }
+    }
+  } catch (e) { console.warn('[init chatMode local reapply]', e); }
+
   // V4 fix (사용자 명시 2026-05-18 ultrathink): stored session 흐름 userName 매핑.
   //   카카오 OAuth deeplink (14-capacitor-oauth-deeplink.js) 직후엔 token 받자마자 매핑하지만 reload 후 stored session path 진입자엔 fire 안 함.
   //   cloud 의 userName 이 ''(공란) 이라 cloud merge 직후 보완 시도 — _hookOnbShouldShow 가 호명 fallback 만 쓰지 않게.
