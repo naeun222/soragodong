@@ -14268,6 +14268,25 @@ img.pearl-load-fail {
         </div>
       </details>
 
+      <!-- 🔠 폰트 크기 — V4 사용자 요청 2026-05-25 -->
+      <!-- state.preferences.fontScale (0.9/1.0/1.15/1.3) → applyFontScale 이 body zoom 으로 비례 확대. -->
+      <details class="settings-collapse">
+        <summary>🔠 글자 크기</summary>
+        <div class="settings-collapse-body">
+          <div class="settings-hint" style="margin-bottom:10px;">
+            화면 전체 글자·여백을 비례해서 확대해.<br>
+            <span style="color:var(--text-soft);">눈에 잘 들어오는 크기로.</span>
+          </div>
+          <div class="settings-btn-row" id="fontScaleRow" style="margin-bottom:6px;">
+            <button class="btn-secondary" data-scale="0.9" onclick="setFontScale(0.9)">작게</button>
+            <button class="btn-secondary" data-scale="1" onclick="setFontScale(1.0)">보통</button>
+            <button class="btn-secondary" data-scale="1.15" onclick="setFontScale(1.15)">크게</button>
+            <button class="btn-secondary" data-scale="1.3" onclick="setFontScale(1.3)">더 크게</button>
+          </div>
+          <div class="settings-hint" id="fontScaleHint" style="margin-bottom:6px;"></div>
+        </div>
+      </details>
+
       <!-- 🔔 알림 설정 — V4 사용자 명시 2026-05-18 ultrathink -->
       <!-- hookFrequency / hookNotificationTime 사용자 변경 + 권한 상태 + ensurePushSubscription 재등록 버튼. -->
       <details class="settings-collapse">
@@ -15094,6 +15113,8 @@ const DEFAULT_STATE = {
   // 6. 커스텀 설정
   preferences: {
     nightModeManual: null,  // null = auto, 'on' | 'off' = manual override
+    // V4 (사용자 요청 2026-05-25): 폰트 크기 (가독성). 0.9=작게 / 1.0=보통 / 1.15=크게 / 1.3=더 크게. applyFontScale 가 body zoom 으로 적용.
+    fontScale: 1.0,
     hookFrequency: 'daily',       // 'daily'|'every-other-day'|'thrice-week'|'off'
     hookNotificationTime: 21,     // 시 (0-23), default 21시
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
@@ -20359,6 +20380,7 @@ async function loadFromCloud() {
           state = { ...DEFAULT_STATE, ..._localState, isGuest: true };  // isGuest 강제 유지
           try {
             if (typeof applyNightMode === 'function') applyNightMode();
+            if (typeof applyFontScale === 'function') applyFontScale();
             if (typeof renderModes === 'function') renderModes();
             if (typeof renderTodayMission === 'function') renderTodayMission();
             if (typeof renderShellBar === 'function') renderShellBar();
@@ -22485,6 +22507,8 @@ async function init() {
   }, 5000);
 
   applyNightMode();
+  // V4 (사용자 요청 2026-05-25): 폰트 크기 prefs (body zoom) 적용. nightMode 와 같이 첫 페인트 직후 1회.
+  if (typeof applyFontScale === 'function') applyFontScale();
   renderModes();
   if (typeof renderYesterdayCard === 'function') renderYesterdayCard();
   renderTodayMission();
@@ -43182,6 +43206,23 @@ async function generateAIResponse(modelOverride, opts) {
       throw new Error('API ' + response.status + detail);
     }
 
+    // V4 (사용자 보고 2026-05-25 ultrathink): response.ok 인데 SSE/JSON 아닌 HTML 응답 ('<!DOCTYPE ...' Cloudflare 5xx / Workers script 응답 안 함 / SW 캐시 잔재 등)
+    //   → 옛 path: SSE parser 가 line.startsWith('data: ') 안 매치라 silent skip → fullText='' → '빈 메시지' 만 표시 (catch 안 탐).
+    //   → fix: Content-Type 사전 검사. HTML 이면 raw <title> 추출해 명확 에러로 throw → catch 분기 → 다시 보내기 버튼 노출.
+    const _chatCT = (response.headers.get('content-type') || '').toLowerCase();
+    if (_chatCT && !_chatCT.includes('event-stream') && !_chatCT.includes('json') && !_chatCT.includes('text/plain')) {
+      let _raw = '';
+      try { _raw = await response.text(); } catch {}
+      const _trimmed = _raw.trimStart();
+      let _detail = '';
+      if (_trimmed.startsWith('<!DOCTYPE') || _trimmed.startsWith('<html')) {
+        const _titleMatch = _raw.match(/<title>([^<]+)<\/title>/i);
+        _detail = _titleMatch ? ' — Cloudflare: ' + _titleMatch[1].trim().slice(0, 120) : ' — (backend HTML 응답)';
+      } else {
+        _detail = ' — 응답 형식 오류 (' + (_chatCT || 'unknown') + ')';
+      }
+      throw new Error('API ' + response.status + _detail);
+    }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let fullText = '';
@@ -43284,6 +43325,12 @@ async function generateAIResponse(modelOverride, opts) {
       flushStreamUpdate();
     }
 
+    // V4 (사용자 보고 2026-05-25 ultrathink): stream 끝났는데 fullText 비어있으면 (backend 가 SSE 시작은 했지만 content_block_delta 없이 [DONE] / 빈 stream 보냄)
+    //   → 옛 path: 빈 assistant bubble 남고 사용자는 '대답 안 함' 으로 인식.
+    //   → fix: 명확한 에러로 throw → catch 분기 → '다시 보내기' 안내.
+    if (!fullText || !fullText.trim()) {
+      throw new Error('빈 응답 — 모델이 텍스트를 보내지 않았어');
+    }
     // Extract analysis JSON
     const jsonMatch = fullText.match(/```json\s*([\s\S]*?)\s*```/);
     let analysisData = null;
@@ -43308,7 +43355,18 @@ async function generateAIResponse(modelOverride, opts) {
       .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}/g, '')
       .replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)"[\s\S]*$/g, '')
       .trim();
-    state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
+    // V4 (사용자 보고 2026-05-25 ultrathink): finalDisplay 가 empty (모델이 JSON block 만 응답 / strip 후 텍스트 0) 면
+    //   analysisData 가 있으면 분석은 처리됐으니 짧은 ack 메시지로 fallback.
+    //   둘 다 없으면 빈 응답 → catch 진입 위해 throw.
+    if (!finalDisplay) {
+      if (analysisData) {
+        state.chatMessages[state.chatMessages.length - 1].content = '🐚 (분석만 정리해뒀어. 더 얘기하고 싶으면 이어줘.)';
+      } else {
+        throw new Error('빈 응답 — 텍스트가 비어있어');
+      }
+    } else {
+      state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
+    }
 
     // V3.13.x: 4단 응답 ([오늘의 제안] 또는 다른 4단 라벨 포함) 판정
     // askDeeper로 트리거됐든, 사용자 직접 '어떡하지' 등 도움 요청 → 자동 4단이든 다 해당
@@ -62244,6 +62302,70 @@ function loadSettings() {
   if (typeof renderBusinessInfo === 'function') renderBusinessInfo();
   // V4 (사용자 명시 2026-05-18 ultrathink): 알림 설정 UI sync — 권한 상태 + 빈도/시각 chip 활성 표시.
   if (typeof refreshNotificationSettings === 'function') refreshNotificationSettings();
+  // V4 (사용자 요청 2026-05-25): 폰트 크기 chip 활성 표시.
+  if (typeof refreshFontScaleSettings === 'function') refreshFontScaleSettings();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🔠 폰트 크기 — V4 사용자 요청 2026-05-25
+// state.preferences.fontScale (0.9 / 1.0 / 1.15 / 1.3) → body zoom 으로 전체 UI 비례 확대.
+// applyFontScale 은 init + nav 진입 + 변경 시 호출. 모달도 body 자식이라 함께 scale.
+// ═══════════════════════════════════════════════════════════════
+
+const FONT_SCALE_PRESETS = [
+  { value: 0.9,  label: '작게' },
+  { value: 1.0,  label: '보통' },
+  { value: 1.15, label: '크게' },
+  { value: 1.3,  label: '더 크게' }
+];
+
+function _getFontScale() {
+  const v = state?.preferences?.fontScale;
+  return (typeof v === 'number' && v >= 0.7 && v <= 1.6) ? v : 1.0;
+}
+
+function applyFontScale() {
+  try {
+    const scale = _getFontScale();
+    // 사용자 요청 2026-05-25: body zoom — 폰트 + padding + 아이콘 비례 확대. 1.0 이면 zoom 속성 자체 제거 (호환).
+    if (scale === 1.0) {
+      document.body.style.zoom = '';
+    } else {
+      document.body.style.zoom = String(scale);
+    }
+  } catch (e) {
+    console.warn('[applyFontScale]', e);
+  }
+}
+
+function refreshFontScaleSettings() {
+  const row = document.getElementById('fontScaleRow');
+  if (!row) return;
+  const current = _getFontScale();
+  row.querySelectorAll('.btn-secondary').forEach(b => {
+    const v = parseFloat(b.getAttribute('data-scale'));
+    if (!isNaN(v) && Math.abs(v - current) < 0.001) b.classList.add('is-active');
+    else b.classList.remove('is-active');
+  });
+  const hint = document.getElementById('fontScaleHint');
+  if (hint) {
+    const preset = FONT_SCALE_PRESETS.find(p => Math.abs(p.value - current) < 0.001);
+    hint.textContent = preset ? `현재: ${preset.label}` : `현재: ${Math.round(current * 100)}%`;
+  }
+}
+
+function setFontScale(scale) {
+  if (typeof scale !== 'number' || scale < 0.7 || scale > 1.6) return;
+  if (!state) return;
+  state.preferences = state.preferences || {};
+  state.preferences.fontScale = scale;
+  try { saveState(); } catch {}
+  applyFontScale();
+  refreshFontScaleSettings();
+  if (typeof showToast === 'function') {
+    const preset = FONT_SCALE_PRESETS.find(p => Math.abs(p.value - scale) < 0.001);
+    showToast('🔠 글자 크기: ' + (preset ? preset.label : Math.round(scale * 100) + '%'));
+  }
 }
 
 function renderBusinessInfo() {
@@ -62381,7 +62503,37 @@ async function _doRefreshBillingStatus(manual) {
       if (refreshed) resp = await _doFetch();
     }
     if (!resp.ok) {
-      if (status) status.textContent = `사용량 조회 실패 (${resp.status})`;
+      // V4 (사용자 보고 2026-05-25 ultrathink): 미구독자 path 에서 backend 가 HTML (Cloudflare 5xx 자체 페이지) 응답하는 케이스 — status 와 title 같이 노출.
+      let _diag = '';
+      try {
+        const _raw = await resp.text();
+        const _trimmed = _raw.trimStart();
+        if (_trimmed.startsWith('<!DOCTYPE') || _trimmed.startsWith('<html')) {
+          const _titleMatch = _raw.match(/<title>([^<]+)<\/title>/i);
+          if (_titleMatch) _diag = ' — ' + _titleMatch[1].trim().slice(0, 80);
+          else _diag = ' — backend HTML 응답';
+        } else if (_raw) {
+          try {
+            const _j = JSON.parse(_raw);
+            if (_j && _j.error) _diag = ' — ' + String(_j.error).slice(0, 120);
+          } catch { _diag = ' — ' + _raw.slice(0, 120); }
+        }
+      } catch {}
+      if (status) status.textContent = `사용량 조회 실패 (${resp.status})${_diag}`;
+      return;
+    }
+    // V4 (사용자 보고 2026-05-25 ultrathink): resp.ok 인데 Content-Type 이 JSON 아니면 (Cloudflare cache / SW 잔재 / Workers script 응답 안 함 시 HTML 가능) safe parse — 옛 코드: 'Unexpected token <' raw 노출.
+    const _usageCT = (resp.headers.get('content-type') || '').toLowerCase();
+    if (!_usageCT.includes('json')) {
+      let _diag = '';
+      try {
+        const _raw = await resp.text();
+        const _titleMatch = _raw.match(/<title>([^<]+)<\/title>/i);
+        if (_titleMatch) _diag = ' — ' + _titleMatch[1].trim().slice(0, 80);
+        else _diag = ' — 응답 형식 오류 (' + (_usageCT || 'unknown') + ')';
+        console.error('[refreshBillingStatus] non-JSON 200 응답:', _usageCT, _raw.slice(0, 500));
+      } catch {}
+      if (status) status.textContent = `사용량 조회 실패${_diag}`;
       return;
     }
     const data = await resp.json();

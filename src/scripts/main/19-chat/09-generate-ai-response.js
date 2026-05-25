@@ -266,6 +266,23 @@ async function generateAIResponse(modelOverride, opts) {
       throw new Error('API ' + response.status + detail);
     }
 
+    // V4 (사용자 보고 2026-05-25 ultrathink): response.ok 인데 SSE/JSON 아닌 HTML 응답 ('<!DOCTYPE ...' Cloudflare 5xx / Workers script 응답 안 함 / SW 캐시 잔재 등)
+    //   → 옛 path: SSE parser 가 line.startsWith('data: ') 안 매치라 silent skip → fullText='' → '빈 메시지' 만 표시 (catch 안 탐).
+    //   → fix: Content-Type 사전 검사. HTML 이면 raw <title> 추출해 명확 에러로 throw → catch 분기 → 다시 보내기 버튼 노출.
+    const _chatCT = (response.headers.get('content-type') || '').toLowerCase();
+    if (_chatCT && !_chatCT.includes('event-stream') && !_chatCT.includes('json') && !_chatCT.includes('text/plain')) {
+      let _raw = '';
+      try { _raw = await response.text(); } catch {}
+      const _trimmed = _raw.trimStart();
+      let _detail = '';
+      if (_trimmed.startsWith('<!DOCTYPE') || _trimmed.startsWith('<html')) {
+        const _titleMatch = _raw.match(/<title>([^<]+)<\/title>/i);
+        _detail = _titleMatch ? ' — Cloudflare: ' + _titleMatch[1].trim().slice(0, 120) : ' — (backend HTML 응답)';
+      } else {
+        _detail = ' — 응답 형식 오류 (' + (_chatCT || 'unknown') + ')';
+      }
+      throw new Error('API ' + response.status + _detail);
+    }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let fullText = '';
@@ -368,6 +385,12 @@ async function generateAIResponse(modelOverride, opts) {
       flushStreamUpdate();
     }
 
+    // V4 (사용자 보고 2026-05-25 ultrathink): stream 끝났는데 fullText 비어있으면 (backend 가 SSE 시작은 했지만 content_block_delta 없이 [DONE] / 빈 stream 보냄)
+    //   → 옛 path: 빈 assistant bubble 남고 사용자는 '대답 안 함' 으로 인식.
+    //   → fix: 명확한 에러로 throw → catch 분기 → '다시 보내기' 안내.
+    if (!fullText || !fullText.trim()) {
+      throw new Error('빈 응답 — 모델이 텍스트를 보내지 않았어');
+    }
     // Extract analysis JSON
     const jsonMatch = fullText.match(/```json\s*([\s\S]*?)\s*```/);
     let analysisData = null;
@@ -392,7 +415,18 @@ async function generateAIResponse(modelOverride, opts) {
       .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}/g, '')
       .replace(/[\s,]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)"[\s\S]*$/g, '')
       .trim();
-    state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
+    // V4 (사용자 보고 2026-05-25 ultrathink): finalDisplay 가 empty (모델이 JSON block 만 응답 / strip 후 텍스트 0) 면
+    //   analysisData 가 있으면 분석은 처리됐으니 짧은 ack 메시지로 fallback.
+    //   둘 다 없으면 빈 응답 → catch 진입 위해 throw.
+    if (!finalDisplay) {
+      if (analysisData) {
+        state.chatMessages[state.chatMessages.length - 1].content = '🐚 (분석만 정리해뒀어. 더 얘기하고 싶으면 이어줘.)';
+      } else {
+        throw new Error('빈 응답 — 텍스트가 비어있어');
+      }
+    } else {
+      state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
+    }
 
     // V3.13.x: 4단 응답 ([오늘의 제안] 또는 다른 4단 라벨 포함) 판정
     // askDeeper로 트리거됐든, 사용자 직접 '어떡하지' 등 도움 요청 → 자동 4단이든 다 해당

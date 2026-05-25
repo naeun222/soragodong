@@ -406,6 +406,8 @@ async function init() {
   }, 5000);
 
   applyNightMode();
+  // V4 (사용자 요청 2026-05-25): 폰트 크기 prefs (body zoom) 적용. nightMode 와 같이 첫 페인트 직후 1회.
+  if (typeof applyFontScale === 'function') applyFontScale();
   renderModes();
   if (typeof renderYesterdayCard === 'function') renderYesterdayCard();
   renderTodayMission();

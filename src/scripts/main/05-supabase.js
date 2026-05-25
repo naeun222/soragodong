@@ -63,6 +63,7 @@ async function loadFromCloud() {
           state = { ...DEFAULT_STATE, ..._localState, isGuest: true };  // isGuest 강제 유지
           try {
             if (typeof applyNightMode === 'function') applyNightMode();
+            if (typeof applyFontScale === 'function') applyFontScale();
             if (typeof renderModes === 'function') renderModes();
             if (typeof renderTodayMission === 'function') renderTodayMission();
             if (typeof renderShellBar === 'function') renderShellBar();

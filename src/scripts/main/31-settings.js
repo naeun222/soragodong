@@ -30,6 +30,70 @@ function loadSettings() {
   if (typeof renderBusinessInfo === 'function') renderBusinessInfo();
   // V4 (사용자 명시 2026-05-18 ultrathink): 알림 설정 UI sync — 권한 상태 + 빈도/시각 chip 활성 표시.
   if (typeof refreshNotificationSettings === 'function') refreshNotificationSettings();
+  // V4 (사용자 요청 2026-05-25): 폰트 크기 chip 활성 표시.
+  if (typeof refreshFontScaleSettings === 'function') refreshFontScaleSettings();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🔠 폰트 크기 — V4 사용자 요청 2026-05-25
+// state.preferences.fontScale (0.9 / 1.0 / 1.15 / 1.3) → body zoom 으로 전체 UI 비례 확대.
+// applyFontScale 은 init + nav 진입 + 변경 시 호출. 모달도 body 자식이라 함께 scale.
+// ═══════════════════════════════════════════════════════════════
+
+const FONT_SCALE_PRESETS = [
+  { value: 0.9,  label: '작게' },
+  { value: 1.0,  label: '보통' },
+  { value: 1.15, label: '크게' },
+  { value: 1.3,  label: '더 크게' }
+];
+
+function _getFontScale() {
+  const v = state?.preferences?.fontScale;
+  return (typeof v === 'number' && v >= 0.7 && v <= 1.6) ? v : 1.0;
+}
+
+function applyFontScale() {
+  try {
+    const scale = _getFontScale();
+    // 사용자 요청 2026-05-25: body zoom — 폰트 + padding + 아이콘 비례 확대. 1.0 이면 zoom 속성 자체 제거 (호환).
+    if (scale === 1.0) {
+      document.body.style.zoom = '';
+    } else {
+      document.body.style.zoom = String(scale);
+    }
+  } catch (e) {
+    console.warn('[applyFontScale]', e);
+  }
+}
+
+function refreshFontScaleSettings() {
+  const row = document.getElementById('fontScaleRow');
+  if (!row) return;
+  const current = _getFontScale();
+  row.querySelectorAll('.btn-secondary').forEach(b => {
+    const v = parseFloat(b.getAttribute('data-scale'));
+    if (!isNaN(v) && Math.abs(v - current) < 0.001) b.classList.add('is-active');
+    else b.classList.remove('is-active');
+  });
+  const hint = document.getElementById('fontScaleHint');
+  if (hint) {
+    const preset = FONT_SCALE_PRESETS.find(p => Math.abs(p.value - current) < 0.001);
+    hint.textContent = preset ? `현재: ${preset.label}` : `현재: ${Math.round(current * 100)}%`;
+  }
+}
+
+function setFontScale(scale) {
+  if (typeof scale !== 'number' || scale < 0.7 || scale > 1.6) return;
+  if (!state) return;
+  state.preferences = state.preferences || {};
+  state.preferences.fontScale = scale;
+  try { saveState(); } catch {}
+  applyFontScale();
+  refreshFontScaleSettings();
+  if (typeof showToast === 'function') {
+    const preset = FONT_SCALE_PRESETS.find(p => Math.abs(p.value - scale) < 0.001);
+    showToast('🔠 글자 크기: ' + (preset ? preset.label : Math.round(scale * 100) + '%'));
+  }
 }
 
 function renderBusinessInfo() {
@@ -167,7 +231,37 @@ async function _doRefreshBillingStatus(manual) {
       if (refreshed) resp = await _doFetch();
     }
     if (!resp.ok) {
-      if (status) status.textContent = `사용량 조회 실패 (${resp.status})`;
+      // V4 (사용자 보고 2026-05-25 ultrathink): 미구독자 path 에서 backend 가 HTML (Cloudflare 5xx 자체 페이지) 응답하는 케이스 — status 와 title 같이 노출.
+      let _diag = '';
+      try {
+        const _raw = await resp.text();
+        const _trimmed = _raw.trimStart();
+        if (_trimmed.startsWith('<!DOCTYPE') || _trimmed.startsWith('<html')) {
+          const _titleMatch = _raw.match(/<title>([^<]+)<\/title>/i);
+          if (_titleMatch) _diag = ' — ' + _titleMatch[1].trim().slice(0, 80);
+          else _diag = ' — backend HTML 응답';
+        } else if (_raw) {
+          try {
+            const _j = JSON.parse(_raw);
+            if (_j && _j.error) _diag = ' — ' + String(_j.error).slice(0, 120);
+          } catch { _diag = ' — ' + _raw.slice(0, 120); }
+        }
+      } catch {}
+      if (status) status.textContent = `사용량 조회 실패 (${resp.status})${_diag}`;
+      return;
+    }
+    // V4 (사용자 보고 2026-05-25 ultrathink): resp.ok 인데 Content-Type 이 JSON 아니면 (Cloudflare cache / SW 잔재 / Workers script 응답 안 함 시 HTML 가능) safe parse — 옛 코드: 'Unexpected token <' raw 노출.
+    const _usageCT = (resp.headers.get('content-type') || '').toLowerCase();
+    if (!_usageCT.includes('json')) {
+      let _diag = '';
+      try {
+        const _raw = await resp.text();
+        const _titleMatch = _raw.match(/<title>([^<]+)<\/title>/i);
+        if (_titleMatch) _diag = ' — ' + _titleMatch[1].trim().slice(0, 80);
+        else _diag = ' — 응답 형식 오류 (' + (_usageCT || 'unknown') + ')';
+        console.error('[refreshBillingStatus] non-JSON 200 응답:', _usageCT, _raw.slice(0, 500));
+      } catch {}
+      if (status) status.textContent = `사용량 조회 실패${_diag}`;
       return;
     }
     const data = await resp.json();

@@ -398,6 +398,8 @@ const DEFAULT_STATE = {
   // 6. 커스텀 설정
   preferences: {
     nightModeManual: null,  // null = auto, 'on' | 'off' = manual override
+    // V4 (사용자 요청 2026-05-25): 폰트 크기 (가독성). 0.9=작게 / 1.0=보통 / 1.15=크게 / 1.3=더 크게. applyFontScale 가 body zoom 으로 적용.
+    fontScale: 1.0,
     hookFrequency: 'daily',       // 'daily'|'every-other-day'|'thrice-week'|'off'
     hookNotificationTime: 21,     // 시 (0-23), default 21시
     pearlBasketCategories: ['음악', '음식', '장소', '순간', '사람'],
