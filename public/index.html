@@ -60658,6 +60658,41 @@ function _lastAnnual4amCutoff() {
   return cutoff;
 }
 
+// V4 (사용자 명시 2026-05-25 ultrathink): backlog cutoff helpers.
+//   _lastXxx4amCutoff 직전 1개만 반환. backlog 자격 체크 위해 weeksAgo/monthsAgo offset 받는 variant.
+//   _collectMissingReviews 에서 weekly 4주 / monthly 3개월 / quarterly 4분기 / annual 2년 backlog cover 용.
+function _weeklyCutoffAt(weeksAgo) {
+  const c = _lastWeekly4amCutoff();
+  c.setDate(c.getDate() - 7 * (weeksAgo || 0));
+  return c;
+}
+function _monthlyCutoffAt(monthsAgo) {
+  const c = _lastMonthly4amCutoff();
+  c.setMonth(c.getMonth() - (monthsAgo || 0));
+  return c;
+}
+function _quarterlyCutoffAt(quartersAgo) {
+  const c = _lastQuarterly4amCutoff();
+  c.setMonth(c.getMonth() - 3 * (quartersAgo || 0));
+  return c;
+}
+function _annualCutoffAt(yearsAgo) {
+  const c = _lastAnnual4amCutoff();
+  c.setFullYear(c.getFullYear() - (yearsAgo || 0));
+  return c;
+}
+
+// V4 (사용자 명시 2026-05-25 ultrathink): review 빈 응답 sentinel.
+//   diary 의 entry._aiSummaryFailed 와 동일 정책 — backend 가 succeeded 줬는데 parse fail / 빈 JSON 인 경우만 영구 skip.
+//   transient fail (network / errored) 는 박지 X — 다음 진입에 자동 retry.
+//   cap 50 개 — 오래된 거 drop (FIFO).
+function _markReviewFailedKey(cycle, key) {
+  const arrKey = cycle + 'ReviewsFailedKeys';
+  state[arrKey] = state[arrKey] || [];
+  if (!state[arrKey].includes(key)) state[arrKey].push(key);
+  if (state[arrKey].length > 50) state[arrKey] = state[arrKey].slice(-50);
+}
+
 function _shouldRunSchedule(lastAt, cutoff) {
   if (!lastAt) return true;
   return new Date(lastAt) < cutoff;
@@ -60784,8 +60819,11 @@ const FEATURE_BATCH_REVIEWS = true;
 //   옛 _buildReviewBatchRequests 의 cooldown stamp 정책 폐기. 새 자격:
 //     1) cutoff 통과 (cutoffEnd <= now)
 //     2) key not in state[cycle+'Reviews']
-//     3) range entries >= 임계값 (weekly=3, monthly=7, quarterly=20, annual=90)
-//   backlog 자연 cover — entries 자격 자체가 가드 (사용자 안 들어와도 무한 backlog X).
+//     3) key not in state[cycle+'ReviewsFailedKeys'] (빈 응답 sentinel)
+//     4) range entries >= 임계값 (weekly=3, monthly=7, quarterly=20, annual=90)
+//   backlog 범위 (diary 의 7일 cover 와 대칭): weekly 4주 / monthly 3개월 / quarterly 4분기 / annual 2년.
+//     이전 spec 은 직전 1주기만 — backend stuck / 일시적 fail 시 backlog 영영 누락 (W18, W20 사례).
+//     entries 임계값 가드가 자연 cap 역할 — 데이터 진짜 있던 주만 검출.
 //   range 기준: archive.date / entries.date 둘 다 dayK (4AM 기준). cutoffEnd 의 _toLocalDateISO 와 비교.
 function _collectMissingReviews(now) {
   now = now || new Date();
@@ -60802,58 +60840,55 @@ function _collectMissingReviews(now) {
   const _entriesInRange = (startISO, endISO) =>
     (state.entries || []).filter(e => e && e.date && e.date >= startISO && e.date < endISO);
 
-  // weekly: cutoffEnd = 직전 일요일 04:00, cutoff = cutoffEnd - 7일.
-  const wEnd = _lastWeekly4amCutoff();
-  if (wEnd <= now) {
+  // weekly: 직전 4주 backlog
+  for (let weeksAgo = 0; weeksAgo < 4; weeksAgo++) {
+    const wEnd = _weeklyCutoffAt(weeksAgo);
+    if (!wEnd || wEnd > now) continue;
     const wStart = new Date(wEnd.getTime() - 7 * 86400000);
     const weekKey = (typeof getWeekKey === 'function') ? getWeekKey(wEnd) : null;
-    if (weekKey) {
-      const exists = (state.weeklyReviews || []).some(r => r && r.weekKey === weekKey);
-      if (!exists) {
-        const ents = _entriesInRange(_toISO(wStart), _toISO(wEnd));
-        if (ents.length >= 3) missing.push({ cycle: 'weekly', key: weekKey, cutoff: wStart, cutoffEnd: wEnd, entriesCount: ents.length });
-      }
-    }
+    if (!weekKey) continue;
+    if ((state.weeklyReviews || []).some(r => r && r.weekKey === weekKey)) continue;
+    if ((state.weeklyReviewsFailedKeys || []).includes(weekKey)) continue;
+    const ents = _entriesInRange(_toISO(wStart), _toISO(wEnd));
+    if (ents.length >= 3) missing.push({ cycle: 'weekly', key: weekKey, cutoff: wStart, cutoffEnd: wEnd, entriesCount: ents.length });
   }
 
-  // monthly: cutoffEnd = 이번 달 1일 04:00, cutoff = 지난 달 1일 04:00.
-  const mEnd = _lastMonthly4amCutoff();
-  if (mEnd <= now) {
+  // monthly: 직전 3개월 backlog
+  for (let monthsAgo = 0; monthsAgo < 3; monthsAgo++) {
+    const mEnd = _monthlyCutoffAt(monthsAgo);
+    if (!mEnd || mEnd > now) continue;
     const mStart = new Date(mEnd.getFullYear(), mEnd.getMonth() - 1, 1, 4, 0, 0, 0);
     const monthKey = (typeof getMonthKey === 'function') ? getMonthKey(mStart) : null;
-    if (monthKey) {
-      const exists = (state.monthlyReviews || []).some(r => r && r.monthKey === monthKey);
-      if (!exists) {
-        const ents = _entriesInRange(_toISO(mStart), _toISO(mEnd));
-        if (ents.length >= 7) missing.push({ cycle: 'monthly', key: monthKey, cutoff: mStart, cutoffEnd: mEnd, entriesCount: ents.length });
-      }
-    }
+    if (!monthKey) continue;
+    if ((state.monthlyReviews || []).some(r => r && r.monthKey === monthKey)) continue;
+    if ((state.monthlyReviewsFailedKeys || []).includes(monthKey)) continue;
+    const ents = _entriesInRange(_toISO(mStart), _toISO(mEnd));
+    if (ents.length >= 7) missing.push({ cycle: 'monthly', key: monthKey, cutoff: mStart, cutoffEnd: mEnd, entriesCount: ents.length });
   }
 
-  // quarterly: cutoffEnd = 이번 분기 첫 달 1일 04:00, cutoff = 지난 분기 첫 달.
-  const qEnd = _lastQuarterly4amCutoff();
-  if (qEnd <= now) {
+  // quarterly: 직전 4분기 backlog
+  for (let quartersAgo = 0; quartersAgo < 4; quartersAgo++) {
+    const qEnd = _quarterlyCutoffAt(quartersAgo);
+    if (!qEnd || qEnd > now) continue;
     const qStart = new Date(qEnd.getFullYear(), qEnd.getMonth() - 3, 1, 4, 0, 0, 0);
     const quarterKey = (typeof getQuarterKey === 'function') ? getQuarterKey(qStart) : null;
-    if (quarterKey) {
-      const exists = (state.quarterlyReviews || []).some(r => r && r.quarterKey === quarterKey);
-      if (!exists) {
-        const ents = _entriesInRange(_toISO(qStart), _toISO(qEnd));
-        if (ents.length >= 20) missing.push({ cycle: 'quarterly', key: quarterKey, cutoff: qStart, cutoffEnd: qEnd, entriesCount: ents.length });
-      }
-    }
+    if (!quarterKey) continue;
+    if ((state.quarterlyReviews || []).some(r => r && r.quarterKey === quarterKey)) continue;
+    if ((state.quarterlyReviewsFailedKeys || []).includes(quarterKey)) continue;
+    const ents = _entriesInRange(_toISO(qStart), _toISO(qEnd));
+    if (ents.length >= 20) missing.push({ cycle: 'quarterly', key: quarterKey, cutoff: qStart, cutoffEnd: qEnd, entriesCount: ents.length });
   }
 
-  // annual: cutoffEnd = 올해 1/1 04:00, cutoff = 작년 1/1 04:00.
-  const aEnd = _lastAnnual4amCutoff();
-  if (aEnd <= now) {
+  // annual: 직전 2년 backlog
+  for (let yearsAgo = 0; yearsAgo < 2; yearsAgo++) {
+    const aEnd = _annualCutoffAt(yearsAgo);
+    if (!aEnd || aEnd > now) continue;
     const aStart = new Date(aEnd.getFullYear() - 1, 0, 1, 4, 0, 0, 0);
     const prevYear = aStart.getFullYear();
-    const exists = (state.annualReviews || []).some(r => r && r.year === prevYear);
-    if (!exists) {
-      const ents = _entriesInRange(_toISO(aStart), _toISO(aEnd));
-      if (ents.length >= 90) missing.push({ cycle: 'annual', key: prevYear, cutoff: aStart, cutoffEnd: aEnd, entriesCount: ents.length });
-    }
+    if ((state.annualReviews || []).some(r => r && r.year === prevYear)) continue;
+    if ((state.annualReviewsFailedKeys || []).includes(prevYear)) continue;
+    const ents = _entriesInRange(_toISO(aStart), _toISO(aEnd));
+    if (ents.length >= 90) missing.push({ cycle: 'annual', key: prevYear, cutoff: aStart, cutoffEnd: aEnd, entriesCount: ents.length });
   }
 
   return missing;
@@ -61758,6 +61793,10 @@ async function _resumeReviewChainBatch() {
               state[arrKey] = state[arrKey] || [];
               const exists = state[arrKey].find(v => (cycle === 'weekly' ? v.weekKey : v.monthKey) === key);
               if (!exists) state[arrKey].unshift(review);
+            } else {
+              // 빈 응답 sentinel — backend succeeded 줬는데 parse fail / 빈 JSON. 다음 진입에 자동 retry skip.
+              _markReviewFailedKey(cycle, key);
+              console.warn('[review chain resume] empty/parse-fail — sentinel 박음:', cid);
             }
           } else if (cycle === 'quarterly') {
             const json = (typeof _processQuarterlyReviewResult === 'function') ? _processQuarterlyReviewResult(text) : null;
@@ -61796,6 +61835,9 @@ async function _resumeReviewChainBatch() {
               state.quarterlyReviews = state.quarterlyReviews || [];
               const exists = state.quarterlyReviews.find(v => v.quarterKey === key);
               if (!exists) state.quarterlyReviews.push(review);
+            } else {
+              _markReviewFailedKey(cycle, key);
+              console.warn('[review chain resume] empty/parse-fail — sentinel 박음:', cid);
             }
           } else if (cycle === 'annual') {
             const narrative = (typeof _robustJsonExtract === 'function') ? _robustJsonExtract(text) : null;
@@ -61807,6 +61849,9 @@ async function _resumeReviewChainBatch() {
                 const annualReview = _processAnnualReviewResult(narrative, year, dataAnnual, false);
                 if (annualReview) annualReview.auto = true;
               }
+            } else {
+              _markReviewFailedKey(cycle, key);
+              console.warn('[review chain resume] empty/parse-fail — sentinel 박음:', cid);
             }
           }
         } catch (e) { console.warn('[review chain resume] cycle fail:', cid, e); }
