@@ -993,6 +993,11 @@
   }
   .chat-mode-sheet-close:hover { background: var(--surface2); color: var(--text); }
   .chat-mode-sheet-cards { display: flex; flex-direction: column; gap: 10px; }
+  /* V4 사용자 요청 2026-05-25 ultrathink — 챗 탭 배경 모드별 tint. null = 미선택, 색 X. */
+  #screen-chat { transition: background-color 250ms ease; }
+  #screen-chat.chat-bg-daily   { background-color: var(--mode-daily-dim); }
+  #screen-chat.chat-bg-inquiry { background-color: var(--mode-inquiry-dim); }
+  #screen-chat.chat-bg-vent    { background-color: var(--mode-vent-dim); }
   .chat-mode-card {
     background: var(--surface2);
     border: 1px solid var(--border);

@@ -190,6 +190,8 @@ async function init() {
       }
     }
   } catch (e) { console.warn('[init chatMode local reapply]', e); }
+  // V4 사용자 요청 2026-05-25 ultrathink — 챗 탭 배경 모드 tint 초기 적용 (reload 후 복원된 chatMode 색 반영).
+  try { if (typeof _applyChatModeBg === 'function') _applyChatModeBg(); } catch {}
 
   // V4 fix (사용자 명시 2026-05-18 ultrathink): stored session 흐름 userName 매핑.
   //   카카오 OAuth deeplink (14-capacitor-oauth-deeplink.js) 직후엔 token 받자마자 매핑하지만 reload 후 stored session path 진입자엔 fire 안 함.

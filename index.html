@@ -1157,6 +1157,11 @@
   }
   .chat-mode-sheet-close:hover { background: var(--surface2); color: var(--text); }
   .chat-mode-sheet-cards { display: flex; flex-direction: column; gap: 10px; }
+  /* V4 사용자 요청 2026-05-25 ultrathink — 챗 탭 배경 모드별 tint. null = 미선택, 색 X. */
+  #screen-chat { transition: background-color 250ms ease; }
+  #screen-chat.chat-bg-daily   { background-color: var(--mode-daily-dim); }
+  #screen-chat.chat-bg-inquiry { background-color: var(--mode-inquiry-dim); }
+  #screen-chat.chat-bg-vent    { background-color: var(--mode-vent-dim); }
   .chat-mode-card {
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -22291,6 +22296,8 @@ async function init() {
       }
     }
   } catch (e) { console.warn('[init chatMode local reapply]', e); }
+  // V4 사용자 요청 2026-05-25 ultrathink — 챗 탭 배경 모드 tint 초기 적용 (reload 후 복원된 chatMode 색 반영).
+  try { if (typeof _applyChatModeBg === 'function') _applyChatModeBg(); } catch {}
 
   // V4 fix (사용자 명시 2026-05-18 ultrathink): stored session 흐름 userName 매핑.
   //   카카오 OAuth deeplink (14-capacitor-oauth-deeplink.js) 직후엔 token 받자마자 매핑하지만 reload 후 stored session path 진입자엔 fire 안 함.
@@ -44231,6 +44238,16 @@ function _formatTimeDelta(iso) {
   if (days < 7) return days + '일 전 끝남';
   return Math.floor(days / 7) + '주 전 끝남';
 }
+// V4 사용자 요청 2026-05-25 ultrathink — 챗 탭 배경 모드별 tint helper. #screen-chat 만 적용 (다른 탭 영향 X).
+//   null = 색 없음 (default 다크). state.chatMode set/morph/reload 시 자동 호출.
+function _applyChatModeBg() {
+  const el = document.getElementById('screen-chat');
+  if (!el) return;
+  const mode = (state && state.chatMode) || null;
+  el.classList.remove('chat-bg-daily', 'chat-bg-inquiry', 'chat-bg-vent');
+  if (mode) el.classList.add(`chat-bg-${mode}`);
+}
+
 // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 3 모드 시스템 (CHAT-MODE-DESIGN.md).
 //   모드: 'daily' (일상고동) / 'inquiry' (고민고동, 마법사 모자) / 'vent' (마음고동, amber 아우라).
 //   메모리: state.preferences.useRag (기존). ON 시 안경 overlay.
@@ -44405,10 +44422,11 @@ function selectChatMode(mode) {
   // V4 fix (사용자 보고 2026-05-25 ultrathink) — force=true: 강제 새로고침 시 mode 풀림 방지.
   //   debounce (local 400ms idle / cloud 1s) 안에 reload 떨어지면 미저장 → null 복귀. force 면 즉시 동기 flush + cloud PATCH 발사.
   try { saveState(true); } catch {}
-  // 시트 카드 재렌더 + 헤더 캐릭터 morph + 기존 메시지 아바타 morph.
+  // 시트 카드 재렌더 + 헤더 캐릭터 morph + 기존 메시지 아바타 morph + 챗 화면 배경 tint.
   _renderChatModeSheetCards();
   if (typeof updateMainHeaderBtnVisual === 'function') updateMainHeaderBtnVisual();
   _refreshAllMsgAvatars();
+  _applyChatModeBg();
   // V4 사용자 명시 2026-05-23 ultrathink — chatMessages 비어있을 때 empty entry 재 render (chip hide + welcome avatar morph).
   if (((state && state.chatMessages) || []).length === 0 && typeof renderChat === 'function') {
     renderChat();
