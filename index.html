@@ -68505,6 +68505,13 @@ function _dismissPwaInstallCard() {
 //      Android: JobScheduler default (forceAlarmManager=false 면 SCHEDULE_EXACT_ALARM permission 불필요). 분 단위 drift 허용 — KPI = 사용자 자는 동안 fire.
 //      iOS: scheduleTask 가 충전 중 + OS 패턴 만족 시 fire. 보장 X — default task 가 fallback.
 //   가드: pending cleanup 있고 + 4AM cutoff 통과 + onb tutorial X + testerMode X + _canAI() → maybeRunChapterCleanup fire.
+//
+// V4 fix (사용자 보고 2026-05-25 ultrathink): Play Console 비정상 종료 100% — BackgroundFetchPlugin.buildConfig NPE.
+//   root cause: ES module 금지 (인라인 onclick 526개) 라 plugin 의 JS wrapper (`import { BackgroundFetch } from ...`) 못 씀.
+//     → window.Capacitor.Plugins.BackgroundFetch (= native proxy 그 자체) 를 직접 호출.
+//     → JS wrapper 가 하던 `NativeModule.configure({ options: config })` 의 `{ options: ... }` 래핑 누락.
+//     → native 의 `call.getObject("options")` → null → buildConfig 의 `options.has(...)` NPE → process crash.
+//   fix: JS wrapper 가 한 일을 수동 재현 — `{ options: ... }` 래핑 + addListener('fetch') 로 콜백 (인자로는 무시됨).
 
 (function _initBgFetch() {
   if (typeof window === 'undefined' || !window.Capacitor) return;
@@ -68513,6 +68520,7 @@ function _dismissPwaInstallCard() {
   if (_platform !== 'android' && _platform !== 'ios') return;
 
   // plugin lazy reference — npx cap sync android 후 자동 register (Capacitor 7+ 표준).
+  // 주의: 이건 native proxy (NativeModule). JS wrapper class 가 아님 — 호출 시 wrapping 직접.
   const BgFetch = window.Capacitor.Plugins && window.Capacitor.Plugins.BackgroundFetch;
   if (!BgFetch || typeof BgFetch.configure !== 'function') {
     console.warn('[bg-fetch] @transistorsoft/capacitor-background-fetch plugin 미설치 또는 register 실패');
@@ -68532,16 +68540,19 @@ function _dismissPwaInstallCard() {
   };
 
   // daily 4AM custom task 재등록 — one-shot 끝 callback 안 자기 자신 재호출 (drift 자동 보정).
+  // native proxy 직호출이므로 { options: { ... } } 으로 wrap — buildConfig 가 call.getObject("options") 로 꺼냄.
   const _scheduleNext4AM = async () => {
     try {
       const _delayMs = _msUntilNext4AMLocal();
       await BgFetch.scheduleTask({
-        taskId: DAILY_4AM_TASK_ID,
-        delay: _delayMs,
-        periodic: false,
-        stopOnTerminate: false,
-        startOnBoot: true,
-        requiredNetworkType: (BgFetch.NETWORK_TYPE_ANY != null) ? BgFetch.NETWORK_TYPE_ANY : 1,
+        options: {
+          taskId: DAILY_4AM_TASK_ID,
+          delay: _delayMs,
+          periodic: false,
+          stopOnTerminate: false,
+          startOnBoot: true,
+          requiredNetworkType: 1,  // NETWORK_TYPE_ANY = 1 (JS wrapper const, native proxy 에는 없음).
+        },
       });
       console.log('[bg-fetch] daily 4AM 다음 fire — delay:', Math.round(_delayMs / 60_000), 'min');
     } catch (e) {
@@ -68605,17 +68616,25 @@ function _dismissPwaInstallCard() {
   };
 
   // configure 비동기. init 6초 후 — 다른 init 흐름 끝난 후 register.
+  // native proxy 직호출이므로 { options: { ... } } wrap + 콜백은 addListener('fetch', ...) 로 등록 (인자 자리는 무시됨).
+  // native 의 onFetch/onTimeout 가 listener event `{ taskId, timeout }` 으로 통지 — timeout flag 로 분기.
   setTimeout(async () => {
     try {
-      await BgFetch.configure(
-        {
+      await BgFetch.addListener('fetch', (event) => {
+        const _tid = event && event.taskId;
+        if (event && event.timeout) {
+          _timeoutTask(_tid);
+        } else {
+          _runTask(_tid);
+        }
+      });
+      await BgFetch.configure({
+        options: {
           minimumFetchInterval: 15,  // default task: 15분 간격 (OS 가 조절)
           stopOnTerminate: false,    // 앱 종료 후도 동작 (Android)
           startOnBoot: true,         // 부팅 후 자동 시작 (Android)
         },
-        _runTask,
-        _timeoutTask
-      );
+      });
       console.log('[bg-fetch] configured (15min default + daily 4AM)');
     } catch (e) {
       console.warn('[bg-fetch] configure fail:', e);
