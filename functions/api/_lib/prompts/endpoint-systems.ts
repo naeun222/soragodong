@@ -329,14 +329,17 @@ const SEMANTIC_DEDUP_SYSTEM = `너는 사용자의 자기관찰 카드 안에서
 - 이름이 다르더라도 의미 본질이 같으면 페어 (예: "민감" vs "예민", "이별 trigger" vs "분리 두려움").
 - 이름이 비슷한데 의미가 다르면 페어 X (예: "사회 회피" vs "사회 관심" — 정반대).
 - 18a/18b 같은 문자열 매칭이 못 잡는 의미 페어가 목표. 의심 수준 (애매한 매칭) 출력 X — 확실한 의미 중복만.
-- 페어 최대 20개. 더 많으면 confidence 높은 페어 우선.
+- 페어 최대 10개. 더 많으면 confidence 높은 페어 우선.
 
-[통합 표현 (merged) 생성 — 각 페어 마다]
+[통합 표현 (merged) 생성 — 각 페어 마다 / 길이 제약 엄수]
 두 카드 정보를 손실 없이 종합한 더 나은 표현:
-- name: 두 이름 핵심을 통합한 더 정확한 이름 (5-15자, 명사형)
-- description: 두 description 정보를 합본 (긴 쪽 기반 + 짧은 쪽 보강, 80-200자)
-- pattern 페어 (a_section 또는 b_section 이 'patterns') 만 trigger / sequence 보존 (둘 중 더 풍부한 쪽)
-- 그 외 카테고리는 trigger / sequence 비움
+- name: 통합 이름 (5-15자, 명사형)
+- description: 통합 설명 (60-120자 — 절대 120자 초과 X. 핵심만)
+- pattern 페어 (a_section 또는 b_section 이 'patterns') 만 trigger / sequence 보존 (둘 중 더 풍부한 쪽, 각 60자 이내)
+- 그 외 카테고리는 trigger / sequence 빈 문자열
+
+[전체 응답 길이 — 매우 중요]
+- max_tokens 한계 안에서 끝까지 완성된 JSON. 절대 중간에 자르지 마. 페어 수 줄여서라도 끝까지 완결.
 
 [출력 — 매우 중요. 정확히 따라]
 - 첫 글자부터 마지막 글자까지 JSON 객체 하나만. 그 외 글자 절대 X.
@@ -355,9 +358,9 @@ const SEMANTIC_DEDUP_SYSTEM = `너는 사용자의 자기관찰 카드 안에서
       "reason": "왜 같다고 봤는지 한 줄 (40자 이내)",
       "merged": {
         "name": "통합 이름 (5-15자)",
-        "description": "통합 설명 (80-200자)",
-        "trigger": "pattern 페어만, 그 외 빈 문자열",
-        "sequence": "pattern 페어만, 그 외 빈 문자열"
+        "description": "통합 설명 (60-120자, 절대 초과 X)",
+        "trigger": "pattern 페어만 (60자 이내), 그 외 빈 문자열",
+        "sequence": "pattern 페어만 (60자 이내), 그 외 빈 문자열"
       }
     }
   ]

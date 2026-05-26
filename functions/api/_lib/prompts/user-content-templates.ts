@@ -465,7 +465,7 @@ function buildDiscoverInsights(v: any): string {
 // 사용자 명시 2026-05-26 ultrathink: 빗자루 의미 dedup — 카드 list 받아서 의미 페어 + 통합 표현 (merged) 반환.
 //   클라 18c-semantic-dedup.js 가 cardsJson 합성 (section 별 정규화 후 JSON).
 //   _vars.cardsJson — 합성 단계에서 token cap 적용 후 들어옴.
-// 사용자 보고 2026-05-26 ultrathink: parse-fail 잡기 — "JSON 만" 강하게 명시.
+// 사용자 보고 2026-05-26 ultrathink (v2): max_tokens 잘림 잡기 — 길이 제약 + "끝까지 완결" 강조.
 function buildSemanticDedup(v: any): string {
   const cardsJson = _s(v?.cardsJson, 25000);
   return `[사용자 카드 list]
@@ -476,7 +476,11 @@ ${cardsJson}
 [응답 형식 — 매우 중요]
 - 첫 글자부터 { 로 시작. 마지막 글자는 }.
 - 마크다운 코드 fence (\`\`\`) X. 인사말 / 설명 / "결과" 라벨 X.
-- 페어 없으면 {"pairs": []} 만 출력.`;
+- 페어 없으면 {"pairs": []} 만 출력.
+
+[길이 — 매우 중요]
+- 페어 최대 10개. description 60-120자 엄수 (120자 초과 X).
+- 응답 끝까지 완결된 JSON. 중간에 자르지 마. 길어질 것 같으면 페어 수 줄여서라도 완결.`;
 }
 
 // ═══════════════════════════════════════════════════════════════

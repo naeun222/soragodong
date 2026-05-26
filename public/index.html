@@ -42269,7 +42269,38 @@ function _collectCardsForSemanticDedup() {
 // 응답 파싱 — JSON only. markdown fence inside 추출 우선 → fallback indexOf/lastIndexOf.
 //   사용자 보고 2026-05-26 ultrathink: AI 가 fence 앞에 설명 + ```json + JSON + ``` 형식으로 응답 시 옛 ^``` regex 가 fence 못 잡고 fail.
 //   fix: fence pair 안쪽 추출 우선 (시작 위치 무관). fence 없으면 indexOf 폴백. parse fail 시 raw text 첫 300 char console.warn 으로 진단.
+// 사용자 보고 2026-05-26 ultrathink (v2): max_tokens 도달로 mid-string 잘림. _tryRepairTruncatedDedupJson 으로 완성된 페어만 회수.
 // ─────────────────────────────────────────────────────────────────────────
+function _tryRepairTruncatedDedupJson(body) {
+  // 잘린 JSON 에서 완성된 페어 object 만 살림.
+  //   {"pairs":[{...},{...},{partial... → {"pairs":[{...},{...}]}
+  //   brace depth 추적 (string escape 포함). depth 0 도달 위치 (페어 object 끝) 기록.
+  if (!body || typeof body !== 'string') return null;
+  const arrStart = body.indexOf('[', body.indexOf('"pairs"'));
+  if (arrStart < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  let lastCompletePos = -1;
+  for (let i = arrStart + 1; i < body.length; i++) {
+    const c = body[i];
+    if (escape) { escape = false; continue; }
+    if (c === '\\') { escape = true; continue; }
+    if (c === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (c === '{') depth++;
+    else if (c === '}') {
+      depth--;
+      if (depth === 0) lastCompletePos = i;
+    }
+  }
+  if (lastCompletePos < 0) {
+    // 완성된 페어 0개 → 빈 array 로 fallback (parse-fail 보다 비어있음 OK).
+    return '{"pairs":[]}';
+  }
+  return body.slice(0, lastCompletePos + 1) + ']}';
+}
+
 function _parseSemanticDedupResponse(text) {
   if (!text || typeof text !== 'string') return null;
   const s = text.trim();
@@ -42287,11 +42318,11 @@ function _parseSemanticDedupResponse(text) {
   if (!body) {
     const i = s.indexOf('{');
     const j = s.lastIndexOf('}');
-    if (i < 0 || j <= i) {
-      console.warn('[semantic_dedup] raw response — no { or } found:', s.slice(0, 300));
+    if (i < 0) {
+      console.warn('[semantic_dedup] raw response — no { found:', s.slice(0, 300));
       return null;
     }
-    body = s.slice(i, j + 1);
+    body = j > i ? s.slice(i, j + 1) : s.slice(i);  // 잘림 케이스 — j <= i 면 끝까지.
   }
   try {
     const parsed = JSON.parse(body);
@@ -42301,7 +42332,21 @@ function _parseSemanticDedupResponse(text) {
     }
     return parsed;
   } catch (e) {
-    console.warn('[semantic_dedup] JSON parse fail:', e && e.message, '\nraw:', s.slice(0, 300), '\nbody attempt:', body.slice(0, 300));
+    // 잘림 추정 — repair 시도.
+    console.warn('[semantic_dedup] JSON parse fail (truncation 추정 — repair 시도):', e && e.message);
+    const repaired = _tryRepairTruncatedDedupJson(body);
+    if (repaired) {
+      try {
+        const parsed = JSON.parse(repaired);
+        if (parsed && Array.isArray(parsed.pairs)) {
+          console.warn('[semantic_dedup] repair OK — 완성 페어', parsed.pairs.length, '개 회수');
+          return parsed;
+        }
+      } catch (e2) {
+        console.warn('[semantic_dedup] repair 도 fail:', e2 && e2.message);
+      }
+    }
+    console.warn('[semantic_dedup] raw (300):', s.slice(0, 300), '\nbody (300):', body.slice(0, 300));
     return null;
   }
 }
@@ -42336,8 +42381,8 @@ function _validateSemanticDedupPairs(rawPairs) {
       }
     });
   }
-  // cap 20 — 백엔드 prompt 도 명시하지만 client 도 가드.
-  return valid.slice(0, 20);
+  // cap 10 — 백엔드 prompt 도 명시하지만 client 도 가드 (사용자 보고 2026-05-26 ultrathink v2: max_tokens 잘림 잡기 위해 cap 20→10).
+  return valid.slice(0, 10);
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -42366,8 +42411,9 @@ async function runSemanticDedup(opts) {
       _userContentType: 'semantic_dedup',
       _vars: { cardsJson: json },
       model: 'claude-opus-4-7',
-      // 사용자 보고 2026-05-26 ultrathink: 3000 → 4000 (truncate 가드 — 페어 20 + merged description 200자 다 받으면 ~6K char 보통, buffer ↑).
-      max_tokens: 4000,
+      // 사용자 보고 2026-05-26 ultrathink (v2): 4000 → 8000. 직전 v1 fix 도 4000 한계 도달 → mid-string 잘림.
+      //   페어 10 × (a/b name/section + reason 40자 + merged{name 15자 + description 120자 + trigger/sequence 60자 각}) ≈ ~5K char 안전 + 2K buffer.
+      max_tokens: 8000,
       messages: [{ role: 'user', content: '' }]
     });
     if (!response || !response.ok) {
@@ -42384,6 +42430,10 @@ async function runSemanticDedup(opts) {
           text += block.text;
         }
       }
+    }
+    // 사용자 보고 2026-05-26 ultrathink (v2): stop_reason 감지 — 'max_tokens' 면 잘림 확정. 진단 log.
+    if (data && data.stop_reason === 'max_tokens') {
+      console.warn('[semantic_dedup] stop_reason=max_tokens — response 잘림. text len:', text.length, '/ max_tokens:', 8000);
     }
     const parsed = _parseSemanticDedupResponse(text);
     if (!parsed) {
@@ -68770,7 +68820,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.241-semantic-parse-fix';
+const APP_VERSION = 'v4.0.242-semantic-truncation-fix';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
