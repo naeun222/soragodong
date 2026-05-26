@@ -29,8 +29,10 @@ export const PERSONA_SKIP_PROMPT_TYPES = new Set([
 
 // 사용자 명시 2026-05-11 ultrathink: force_analyze 는 자체 "너는 임상심리학자로서..." 톤 — SYSTEM_PERSONA "친구 카톡" 톤과 충돌.
 // 별도 스킵 list — _userContentType 매칭 시 persona prepend skip.
+// 사용자 명시 2026-05-26 ultrathink: semantic_dedup 도 분석 톤 — persona prepend X.
 export const PERSONA_SKIP_USER_CONTENT_TYPES = new Set([
-  'force_analyze'
+  'force_analyze',
+  'semantic_dedup'
 ]);
 
 export function shouldSkipPersona(body: any): boolean {
@@ -308,6 +310,55 @@ const REFLECTION_FALLBACK_SYSTEM = `한 질문에 대한 깊은 숙고를 함께
 [네 일]
 사용자가 새로 적은 한 줄을 받고, 그 각도로 한 발짝 더 들어가는 질문 1-2개 또는 짧은 관찰 한 줄.`;
 
+// 사용자 명시 2026-05-26 ultrathink: 빗자루 의미 dedup endpoint — 18a/18b 가 못 잡는 의미 페어 찾기.
+//   클라 18c-semantic-dedup.js 가 trigger (사용자 수동 24h cooldown + 일요일 자동). 출력 = 페어 list + 통합 표현 (merged).
+//   사용자가 빗자루 모달에서 페어 + merged 결과 보고 [이 결과로 합치기] 컨펌. 자동 합치기 X.
+const SEMANTIC_DEDUP_SYSTEM = `너는 사용자의 자기관찰 카드 안에서 의미상 같은 카드 페어를 찾아 통합 표현을 만든다.
+
+[입력]
+- cards: section 별 카드 list. 각 카드 = { section, name, description, trigger?, sequence?, confidence?, evidence_count?, user_verified? }
+- sections: traits / patterns / values / strengths / mechanisms / problems
+
+[찾을 페어 유형]
+1. 같은 section 안 의미 중복 (예: traits 안에 "사회적 호감 감지 민감성" + "대인 호감 레이더").
+2. cross-section 클러스터:
+   - 핵심 작동 패턴 클러스터: traits ↔ patterns. 안정 성향이면 trait, 행동 시퀀스면 pattern. 의미 같으면 페어.
+   - 자기조절 도구 클러스터: strengths ↔ mechanisms. 의미 같으면 페어.
+
+[원칙 — 매우 중요]
+- 이름이 다르더라도 의미 본질이 같으면 페어 (예: "민감" vs "예민", "이별 trigger" vs "분리 두려움").
+- 이름이 비슷한데 의미가 다르면 페어 X (예: "사회 회피" vs "사회 관심" — 정반대).
+- 18a/18b 같은 문자열 매칭이 못 잡는 의미 페어가 목표. 의심 수준 (애매한 매칭) 출력 X — 확실한 의미 중복만.
+- 페어 최대 20개. 더 많으면 confidence 높은 페어 우선.
+
+[통합 표현 (merged) 생성 — 각 페어 마다]
+두 카드 정보를 손실 없이 종합한 더 나은 표현:
+- name: 두 이름 핵심을 통합한 더 정확한 이름 (5-15자, 명사형)
+- description: 두 description 정보를 합본 (긴 쪽 기반 + 짧은 쪽 보강, 80-200자)
+- pattern 페어 (a_section 또는 b_section 이 'patterns') 만 trigger / sequence 보존 (둘 중 더 풍부한 쪽)
+- 그 외 카테고리는 trigger / sequence 비움
+
+[출력 — JSON만, 마크다운 X]
+{
+  "pairs": [
+    {
+      "a_name": "원본 a 카드 name 정확히 (변형 X)",
+      "a_section": "traits|patterns|values|strengths|mechanisms|problems",
+      "b_name": "원본 b 카드 name 정확히 (변형 X)",
+      "b_section": "...",
+      "reason": "왜 같다고 봤는지 한 줄 (40자 이내)",
+      "merged": {
+        "name": "통합 이름 (5-15자)",
+        "description": "통합 설명 (80-200자)",
+        "trigger": "pattern 페어만, 그 외 빈 문자열",
+        "sequence": "pattern 페어만, 그 외 빈 문자열"
+      }
+    }
+  ]
+}
+
+페어 없으면 "pairs": []. JSON 만 출력.`;
+
 // mutation (4 sub-type) — user data 비중 큼. system 단위로 분리해도 cache 효과 미미하다고 판단해서 system 상수 추가 안 함.
 
 const INTAKE_REPLY_SYSTEM = '소라고동 톤 — 따뜻하고 짧게. 1-2 문장만 출력. 따옴표·markdown X.';
@@ -504,6 +555,10 @@ export function getEndpointSystem(body: any): { type: 'text'; text: string; cach
   // 사용자 명시 2026-05-16 ultrathink: 자동 인사이트 발견 endpoint.
   if (body?._endpoint === 'discover_insights') {
     return [{ type: 'text', text: DISCOVER_INSIGHTS_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
+  }
+  // 사용자 명시 2026-05-26 ultrathink: 빗자루 의미 dedup endpoint — 18a/18b 가 못 잡는 의미 페어 + 통합 표현 (merged).
+  if (body?._endpoint === 'semantic_dedup') {
+    return [{ type: 'text', text: SEMANTIC_DEDUP_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
   }
   // mutation (4 sub-type) — user data 비중 큼. system 단위로 분리해도 cache 효과 미미. 일단 skip.
 

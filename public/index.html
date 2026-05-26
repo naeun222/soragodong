@@ -41434,30 +41434,7 @@ let _modelDedupState = null;
 
 function openModelDedupModal() {
   if (document.getElementById('modelDedupOverlay')) return;
-  // 사용자 명시 2026-05-26 ultrathink: 18a (Levenshtein name, 14 카테고리) + 18b (Jaccard description, traits/values/patterns) 둘 다 후보 추출 후 merge.
-  //   같은 (a, b) 페어가 양쪽에서 잡히면 max similarity 채택 — 사용자한테 한 번만 보여줌. _renderModelDedupStep / _modelDedupMerge 는 18b 후보의 category (traits/values/patterns) 도 일반 path 로 처리.
-  const lev = _collectModelDedupCandidates();
-  const jac = (typeof _collectContentDedupCandidates === 'function')
-    ? _collectContentDedupCandidates()
-    : [];
-  const _samePair = (x, y) => (x.a === y.a && x.b === y.b) || (x.a === y.b && x.b === y.a);
-  const all = [];
-  for (const c of lev) all.push(c);
-  for (const c of jac) {
-    const dup = all.find(m => _samePair(m, c));
-    if (dup) {
-      if (c.similarity > dup.similarity) dup.similarity = c.similarity;
-    } else {
-      all.push(c);
-    }
-  }
-  all.sort((a, b) => b.similarity - a.similarity);
-  _modelDedupState = {
-    candidates: all,
-    idx: 0,
-    merged: 0,
-    skipped: 0,
-  };
+  _rebuildModelDedupCandidates({ resetIdx: true });
   const overlay = document.createElement('div');
   overlay.id = 'modelDedupOverlay';
   overlay.className = 'input-modal-overlay show';
@@ -41467,10 +41444,99 @@ function openModelDedupModal() {
   _renderModelDedupStep();
 }
 
+// 사용자 명시 2026-05-26 ultrathink: 18a (Levenshtein name) + 18b (Jaccard description) + 18c (AI 의미 페어) 합집합.
+//   같은 (a, b) 페어가 여러 path 에서 잡히면 semantic (AI merged 가치 ↑) 보존 + similarity max.
+//   semantic_dedup 호출 후에도 재호출 — 새 candidates 재구성.
+function _rebuildModelDedupCandidates(opts) {
+  const _samePair = (x, y) => (x.a === y.a && x.b === y.b) || (x.a === y.b && x.b === y.a);
+  const lev = _collectModelDedupCandidates();
+  const jac = (typeof _collectContentDedupCandidates === 'function') ? _collectContentDedupCandidates() : [];
+  const sem = (typeof _collectSemanticDedupCandidates === 'function') ? _collectSemanticDedupCandidates() : [];
+  const all = [];
+  // semantic 우선 push — 같은 페어 발견 시 merged / reason 보존.
+  for (const c of sem) all.push(c);
+  for (const c of lev) {
+    const dup = all.find(m => _samePair(m, c));
+    if (dup) {
+      if (c.similarity > dup.similarity) dup.similarity = c.similarity;
+    } else {
+      all.push(c);
+    }
+  }
+  for (const c of jac) {
+    const dup = all.find(m => _samePair(m, c));
+    if (dup) {
+      if (c.similarity > dup.similarity) dup.similarity = c.similarity;
+    } else {
+      all.push(c);
+    }
+  }
+  all.sort((a, b) => b.similarity - a.similarity);
+  if (!_modelDedupState || (opts && opts.resetIdx)) {
+    _modelDedupState = { candidates: all, idx: 0, merged: 0, skipped: 0 };
+  } else {
+    _modelDedupState.candidates = all;
+  }
+}
+
 function closeModelDedupModal() {
   const ov = document.getElementById('modelDedupOverlay');
   if (ov) ov.remove();
   _modelDedupState = null;
+}
+
+// V4 feat (사용자 명시 2026-05-26 ultrathink): "🔮 더 깊이 찾기" 버튼 HTML — cooldown 표시.
+//   AI semantic_dedup 호출 → 의미 페어 추출 후 candidates 재구성. 18c-semantic-dedup.js 의 isSemanticDedupOnCooldown / semanticDedupCooldownRemainingMs 사용.
+function _semanticDedupButtonHtml() {
+  if (typeof runSemanticDedup !== 'function') return '';
+  const onCd = (typeof isSemanticDedupOnCooldown === 'function') && isSemanticDedupOnCooldown(false);
+  if (onCd) {
+    const remainMs = semanticDedupCooldownRemainingMs(false);
+    const remainH = Math.ceil(remainMs / (60 * 60 * 1000));
+    return `<button class="btn-secondary" disabled style="width:100%; margin-bottom:10px; font-size:11px; opacity:0.5;">🔮 AI 가 더 깊이 찾기 (${remainH}시간 후 가능)</button>`;
+  }
+  return `<button class="btn-secondary" onclick="_runSemanticDedupFromModal()" style="width:100%; margin-bottom:10px; font-size:11.5px;">🔮 AI 가 더 깊이 찾기 (의미 페어 + 통합 표현)</button>`;
+}
+
+async function _runSemanticDedupFromModal() {
+  const modal = document.getElementById('modelDedupModal');
+  if (!modal) return;
+  const _prevHtml = modal.innerHTML;
+  modal.innerHTML = `
+    <div style="text-align:center; padding:30px 10px;">
+      <div style="font-size:32px; margin-bottom:14px;">🔮</div>
+      <div style="font-size:13px; color:var(--text); margin-bottom:6px;">AI 가 카드들 의미 비교 중...</div>
+      <div style="font-size:11px; color:var(--text-soft);">5~10초 정도. 잠깐만.</div>
+    </div>
+  `;
+  try {
+    const result = await runSemanticDedup({ auto: false });
+    if (!result || !result.ok) {
+      const _reason = result && result.reason;
+      let msg = 'AI 호출 실패.';
+      if (_reason === 'cooldown') msg = '하루 한 번만 가능. 내일 다시.';
+      else if (_reason === 'no-ai') msg = 'AI 호출 불가 (로그인 필요).';
+      else if (_reason === 'no-cards' || _reason === 'too-few-cards') msg = '카드 더 쌓이면 다시.';
+      else if (_reason === 'parse-fail') msg = 'AI 응답 파싱 실패. 다시.';
+      else if (_reason === 'http-fail') msg = `서버 에러 (${result.status || '?'}). 다시.`;
+      modal.innerHTML = `
+        <div style="text-align:center; padding:20px 10px;">
+          <div style="font-size:13px; color:var(--text); margin-bottom:16px;">${msg}</div>
+          <button class="btn-primary" onclick="_renderModelDedupStep()" style="width:100%;">돌아가기</button>
+        </div>
+      `;
+      return;
+    }
+    _rebuildModelDedupCandidates({ resetIdx: true });
+    _renderModelDedupStep();
+    if (typeof showToast === 'function') {
+      const n = (result.pairs || []).length;
+      showToast(n ? `🔮 AI 가 의미 페어 ${n}개 찾음` : '🔮 AI 가 찾은 의미 페어 X');
+    }
+  } catch (e) {
+    console.warn('[semantic_dedup modal]', e);
+    modal.innerHTML = _prevHtml;
+  }
 }
 
 function _renderModelDedupStep() {
@@ -41484,7 +41550,8 @@ function _renderModelDedupStep() {
     modal.innerHTML = `
       <div style="text-align:center; padding:20px 10px;">
         <div style="font-size:32px; margin-bottom:12px;">✨</div>
-        <div style="font-size:14px; color:var(--text); margin-bottom:20px;">정리할 중복 후보 X.</div>
+        <div style="font-size:14px; color:var(--text); margin-bottom:16px;">정리할 중복 후보 X.</div>
+        ${_semanticDedupButtonHtml()}
         <button class="btn-primary" onclick="closeModelDedupModal()" style="width:100%;">닫기</button>
       </div>
     `;
@@ -41495,7 +41562,8 @@ function _renderModelDedupStep() {
       <div style="text-align:center; padding:20px 10px;">
         <div style="font-size:32px; margin-bottom:12px;">🧹</div>
         <div style="font-size:14px; color:var(--text); margin-bottom:8px;">정리 끝.</div>
-        <div style="font-size:11.5px; color:var(--text-soft); margin-bottom:20px; line-height:1.8;">합친 거 ${merged}개 · 놔둔 거 ${skipped}개</div>
+        <div style="font-size:11.5px; color:var(--text-soft); margin-bottom:16px; line-height:1.8;">합친 거 ${merged}개 · 놔둔 거 ${skipped}개</div>
+        ${_semanticDedupButtonHtml()}
         <button class="btn-primary" onclick="closeModelDedupModal()" style="width:100%;">닫기</button>
       </div>
     `;
@@ -41563,15 +41631,34 @@ function _renderModelDedupStep() {
     const src = item.extractedFrom === 'simulation' ? '<span style="font-size:10px; color:var(--accent);">💭 시뮬</span>' : '';
     return `<div style="display:flex; gap:8px; margin-top:4px; flex-wrap:wrap;">${verified}${conf ? ' · ' + conf : ''}${evi ? ' · ' + evi : ''}${src ? ' · ' + src : ''}</div>`;
   };
-  const _mergeHint = category.startsWith('deep_')
-    ? '합치면: 더 자세한 쪽 남김.'
-    : '합치면: 컨펌 ✓ 우선 / evidence 합산 / confidence 큰 쪽 / 시뮬 출처 → 일반 출처 우선.';
+  // V4 feat (사용자 명시 2026-05-26 ultrathink): semantic 후보 (AI 의미 페어) 면 merged 통합 표현 미리보기 카드 추가.
+  //   사용자가 "합친 결과" 직접 보고 [이 결과로 합치기] / [놔두기] 결정.
+  const _isSemantic = cur.source === 'semantic' && cur.merged && cur.merged.name;
+  const _semanticBadge = _isSemantic
+    ? '<div style="font-size:10.5px; color:var(--accent); margin-bottom:6px;">🔮 AI 가 의미로 찾음</div>'
+    : '';
+  const _mergedCardHtml = _isSemantic ? `
+      <div style="text-align:center; font-size:10.5px; color:var(--text-soft); margin-top:4px;">↓ AI 가 합친다면</div>
+      <div style="padding:10px 12px; background:rgba(126,200,227,0.06); border:1px solid rgba(126,200,227,0.25); border-radius:8px; margin-top:4px;">
+        <div style="font-size:10px; color:var(--accent); margin-bottom:4px;">✨ 통합 표현</div>
+        <div style="font-size:13px; color:var(--text); font-weight:500;">${escapeHtml(cur.merged.name)}</div>
+        ${cur.merged.description ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px; line-height:1.6;">${escapeHtml(String(cur.merged.description).slice(0, 240))}</div>` : ''}
+        ${cur.merged.trigger ? `<div style="font-size:10.5px; color:var(--text-soft); margin-top:4px;">트리거: ${escapeHtml(String(cur.merged.trigger).slice(0, 120))}</div>` : ''}
+        ${cur.merged.sequence ? `<div style="font-size:10.5px; color:var(--text-soft); margin-top:2px;">흐름: ${escapeHtml(String(cur.merged.sequence).slice(0, 120))}</div>` : ''}
+        ${cur.reason ? `<div style="font-size:10px; color:var(--text-soft); margin-top:6px; font-style:italic;">왜? ${escapeHtml(String(cur.reason).slice(0, 120))}</div>` : ''}
+      </div>
+    ` : '';
+  const _mergeBtnLabel = _isSemantic ? '이 결과로 합치기 ✦' : '합치기 ✦';
+  const _mergeHint = _isSemantic
+    ? '합치면 위 ✨ 통합 표현으로 갱신. 메타 (컨펌 / 근거) 는 두 카드 합산.'
+    : (category.startsWith('deep_') ? '합치면: 더 자세한 쪽 남김.' : '합치면: 컨펌 ✓ 우선 / evidence 합산 / confidence 큰 쪽 / 시뮬 출처 → 일반 출처 우선.');
 
   modal.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
       <div style="font-size:11px; color:var(--text-soft);">${idx + 1} / ${candidates.length} · ${_categoryLabel}</div>
       <div style="font-size:10px; color:var(--text-dim);">유사도 ${(similarity * 100).toFixed(0)}%</div>
     </div>
+    ${_semanticBadge}
     <div style="font-size:14px; font-weight:600; color:var(--text); margin-bottom:14px;">이 둘 합칠까?</div>
     <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
       <div style="padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px;">
@@ -41585,14 +41672,16 @@ function _renderModelDedupStep() {
         ${bDesc ? `<div style="font-size:11px; color:var(--text-dim); margin-top:4px; line-height:1.6;">${escapeHtml(bDesc.slice(0, 200))}</div>` : ''}
         ${_metaBadge(b)}
       </div>
+      ${_mergedCardHtml}
     </div>
     <div style="font-size:10.5px; color:var(--text-soft); margin-bottom:14px; padding:8px 10px; background:rgba(126,200,227,0.04); border-left:2px solid rgba(126,200,227,0.3); border-radius:0 6px 6px 0; line-height:1.7;">
       ${_mergeHint}
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn-secondary" onclick="_modelDedupSkip()" style="flex:1;">놔두기</button>
-      <button class="btn-primary" onclick="_modelDedupMerge()" style="flex:1;">합치기 ✦</button>
+      <button class="btn-primary" onclick="_modelDedupMerge()" style="flex:1;">${_mergeBtnLabel}</button>
     </div>
+    ${idx === 0 ? _semanticDedupButtonHtml() : ''}
     <button class="btn-secondary" onclick="closeModelDedupModal()" style="width:100%; margin-top:8px; font-size:11px; opacity:0.7;">중단</button>
   `;
 }
@@ -41609,6 +41698,22 @@ function _modelDedupMerge() {
   const cur = _modelDedupState.candidates[_modelDedupState.idx];
   if (!cur) return;
   const { category, a, b } = cur;
+
+  // V4 feat (사용자 명시 2026-05-26 ultrathink): semantic 후보 (AI merged) — AI 가 만든 통합 표현으로 keep 카드 갱신.
+  //   같은 section 페어 = a 우선 (verified 면 verified 쪽). cross-cluster = trait > pattern / strengths > mechanisms.
+  //   AI 가 만든 merged.name / description / trigger / sequence 로 갱신. 메타 (evidence/confidence/verified/extractedFrom) 는 두 카드 결합.
+  if (cur.source === 'semantic' && cur.merged && cur.merged.name) {
+    _modelDedupMergeSemantic(cur);
+    _modelDedupState.merged++;
+    _modelDedupState.idx++;
+    while (_modelDedupState.idx < _modelDedupState.candidates.length) {
+      const next = _modelDedupState.candidates[_modelDedupState.idx];
+      if (next && next.a !== b && next.b !== b && next.a !== a && next.b !== a) break;
+      _modelDedupState.idx++;
+    }
+    _renderModelDedupStep();
+    return;
+  }
 
   // 사용자 명시 2026-05-16 ultrathink: 더 깊은 나 dedup — string array (coreBeliefs/identityKeywords) + 객체 array (turningPoints/relationships) 별도 처리.
   const deepArrGetter = {
@@ -41810,6 +41915,68 @@ function _modelDedupMerge() {
   }
   _renderModelDedupStep();
 }
+
+// V4 feat (사용자 명시 2026-05-26 ultrathink): AI semantic 후보 합치기 — 18c-semantic-dedup.js 의 _semanticDedupSectionArray / _normalizeNameForMatching 사용.
+//   keep / drop 결정 (same-section 은 verified > a / cross-cluster 는 trait/strengths 우선) → keep 카드 AI merged 표현 + 두 카드 메타 합산.
+function _modelDedupMergeSemantic(cur) {
+  const { a, b, merged, category } = cur;
+  const aSection = cur.a_section;
+  const bSection = cur.b_section;
+
+  let keepCard, dropCard, keepSection, dropSection;
+  if (category === 'cluster_operating') {
+    // traits ↔ patterns — trait 쪽 keep (안정 성향이 행동 시퀀스보다 상위).
+    if (aSection === 'traits') { keepCard = a; dropCard = b; keepSection = 'traits'; dropSection = 'patterns'; }
+    else { keepCard = b; dropCard = a; keepSection = 'traits'; dropSection = 'patterns'; }
+  } else if (category === 'cluster_self_regulation') {
+    // strengths ↔ mechanisms — strengths 쪽 keep ("강점 = 작동하는 도구").
+    if (aSection === 'strengths') { keepCard = a; dropCard = b; keepSection = 'strengths'; dropSection = 'mechanisms'; }
+    else { keepCard = b; dropCard = a; keepSection = 'strengths'; dropSection = 'mechanisms'; }
+  } else {
+    // same section — verified 우선, 둘 다 verified 면 a.
+    const aVer = (typeof a === 'object' && a !== null && a.user_verified === true);
+    const bVer = (typeof b === 'object' && b !== null && b.user_verified === true);
+    if (bVer && !aVer) { keepCard = b; dropCard = a; }
+    else { keepCard = a; dropCard = b; }
+    keepSection = dropSection = aSection;
+  }
+
+  const keepArr = (typeof _semanticDedupSectionArray === 'function') ? _semanticDedupSectionArray(keepSection) : null;
+  const dropArr = (typeof _semanticDedupSectionArray === 'function') ? _semanticDedupSectionArray(dropSection) : null;
+  if (!Array.isArray(keepArr) || !Array.isArray(dropArr)) return;
+
+  const keepIdx = keepArr.indexOf(keepCard);
+  const dropIdx = dropArr.indexOf(dropCard);
+  if (keepIdx < 0 || dropIdx < 0) return;
+
+  // string item (cf 카테고리 string array) 도 안전 처리 — 객체 변환 후 갱신.
+  const _toObj = (x) => (typeof x === 'string') ? { text: x } : Object.assign({}, x);
+  const keepObj = _toObj(keepCard);
+  const dropObj = _toObj(dropCard);
+
+  keepObj.evidence_count = (keepObj.evidence_count || 1) + (dropObj.evidence_count || 1);
+  keepObj.confidence = Math.max(keepObj.confidence || 0, dropObj.confidence || 0);
+  if (dropObj.user_verified === true) keepObj.user_verified = true;
+  if (dropObj.extractedFrom === 'chapter') keepObj.extractedFrom = 'chapter';
+
+  // AI 통합 표현 적용. cf section (strengths/mechanisms/problems) 은 text 필드, 그 외는 name.
+  const nameField = (keepSection === 'strengths' || keepSection === 'mechanisms' || keepSection === 'problems') ? 'text' : 'name';
+  keepObj[nameField] = merged.name;
+  if (merged.description) keepObj.description = merged.description;
+  // pattern 관련 페어 만 trigger / sequence 보존.
+  if (keepSection === 'patterns' || dropSection === 'patterns') {
+    if (merged.trigger) keepObj.trigger = merged.trigger;
+    if (merged.sequence) keepObj.sequence = merged.sequence;
+  }
+  keepObj.merged_at = new Date().toISOString();
+  keepObj.merged_from_ai = true;
+  if (category === 'cluster_operating') keepObj.merged_from_cluster = 'operating';
+  else if (category === 'cluster_self_regulation') keepObj.merged_from_cluster = 'self_regulation';
+
+  keepArr[keepIdx] = keepObj;
+  dropArr.splice(dropIdx, 1);
+  if (typeof saveState === 'function') saveState();
+}
 // 사용자 명시 2026-05-26 ultrathink: 일회성 내용 기반 dedup 후보 추출. description Jaccard 로
 //   18a (Levenshtein, name only) 가 못 잡는 의미 중복 잡음.
 //   "사회적 호감 감지 민감성" + "대인 호감 레이더" — name 만 보면 다르지만 description 거의 같은 단어 → Jaccard 0.3+ 매칭.
@@ -41911,6 +42078,333 @@ function _collectContentDedupCandidates() {
     }
   }
   return candidates;
+}
+// 사용자 명시 2026-05-26 ultrathink: 빗자루 의미 dedup (A1 사용자 수동 + A2 일요일 자동).
+//   18a (Levenshtein name) / 18b (Jaccard description) 가 못 잡는 의미 페어를 AI 가 추출 + 통합 표현 (merged) 생성.
+//   사용자 페어 컨펌 path 유지 — AI 는 후보만 추천, 합치기는 빗자루 모달에서 사용자 결정 ([이 결과로 합치기] / [놔두기]).
+//   cooldown: 사용자 수동 24h / 자동 7d. testerMode 우회 (시드 데이터 dedup 테스트).
+//   비용 가드: 카드 list token cap + 페어 max 20 (백엔드 prompt 강제).
+
+const SEMANTIC_DEDUP_COOLDOWN_MANUAL_MS = 24 * 60 * 60 * 1000;
+const SEMANTIC_DEDUP_COOLDOWN_AUTO_MS = 7 * 24 * 60 * 60 * 1000;
+const SEMANTIC_DEDUP_CARDS_JSON_MAX = 22000;  // chars. 백엔드 cap 25000 보다 buffer.
+
+// ─────────────────────────────────────────────────────────────────────────
+// cooldown 체크 (auto / manual 별)
+// ─────────────────────────────────────────────────────────────────────────
+function _isSemanticDedupTester() {
+  return !!(state && state.preferences && state.preferences.testerMode);
+}
+
+function _semanticDedupCooldownMs(auto) {
+  return auto ? SEMANTIC_DEDUP_COOLDOWN_AUTO_MS : SEMANTIC_DEDUP_COOLDOWN_MANUAL_MS;
+}
+
+function _semanticDedupLastAtMs(auto) {
+  const key = auto ? '_lastSemanticDedupAutoAt' : '_lastSemanticDedupManualAt';
+  const iso = state && state[key];
+  if (!iso) return 0;
+  const ms = new Date(iso).getTime();
+  return isFinite(ms) ? ms : 0;
+}
+
+function isSemanticDedupOnCooldown(auto) {
+  if (_isSemanticDedupTester()) return false;
+  const last = _semanticDedupLastAtMs(!!auto);
+  if (!last) return false;
+  return (Date.now() - last) < _semanticDedupCooldownMs(!!auto);
+}
+
+function semanticDedupCooldownRemainingMs(auto) {
+  if (_isSemanticDedupTester()) return 0;
+  const last = _semanticDedupLastAtMs(!!auto);
+  if (!last) return 0;
+  const remain = _semanticDedupCooldownMs(!!auto) - (Date.now() - last);
+  return remain > 0 ? remain : 0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// name 정규화 (lowercase + 공백 제거) — AI 응답 name 매칭 가드
+// ─────────────────────────────────────────────────────────────────────────
+function _normalizeNameForMatching(name) {
+  if (name == null) return '';
+  return String(name).toLowerCase().replace(/\s+/g, '').trim();
+}
+
+// section 별 카드 array 반환 (live 참조). semantic_dedup 합치기 시점 lookup 용.
+function _semanticDedupSectionArray(section) {
+  if (!state) return null;
+  if (section === 'traits') return state.traits;
+  if (section === 'patterns') return state.patterns;
+  if (section === 'values') return state.values;
+  if (section === 'strengths') return state.caseFormulation && state.caseFormulation.strengths;
+  if (section === 'mechanisms') return state.caseFormulation && state.caseFormulation.mechanisms;
+  if (section === 'problems') return state.caseFormulation && state.caseFormulation.problems;
+  return null;
+}
+
+// section + name (정규화) 로 live 카드 찾기. cf string array 도 지원.
+function _semanticDedupFindCard(section, name) {
+  const arr = _semanticDedupSectionArray(section);
+  if (!Array.isArray(arr)) return null;
+  const norm = _normalizeNameForMatching(name);
+  if (!norm) return null;
+  for (const item of arr) {
+    if (item == null) continue;
+    if (typeof item === 'string') {
+      if (_normalizeNameForMatching(item) === norm) return item;
+    } else {
+      if (item._deleted) continue;
+      const itemName = item.name || item.text;
+      if (_normalizeNameForMatching(itemName) === norm) return item;
+    }
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 카드 list 수집 — section 별 정규화. token cap 안에서 confidence DESC 우선 자름.
+// ─────────────────────────────────────────────────────────────────────────
+function _collectCardsForSemanticDedup() {
+  const out = [];
+  const _pushCard = (section, name, extras) => {
+    if (!name) return;
+    const card = Object.assign({ section, name }, extras || {});
+    Object.keys(card).forEach(k => {
+      if (card[k] === '' || card[k] == null) delete card[k];
+    });
+    out.push(card);
+  };
+
+  const _objSorted = (arr) => {
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter(x => x && !x._deleted)
+      .slice()
+      .sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+  };
+
+  for (const t of _objSorted(state && state.traits)) {
+    _pushCard('traits', t.name, {
+      description: t.description,
+      confidence: t.confidence,
+      evidence_count: t.evidence_count,
+      user_verified: t.user_verified
+    });
+  }
+  for (const p of _objSorted(state && state.patterns)) {
+    _pushCard('patterns', p.name, {
+      description: p.description,
+      trigger: p.trigger,
+      sequence: p.sequence,
+      confidence: p.confidence,
+      evidence_count: p.evidence_count,
+      user_verified: p.user_verified
+    });
+  }
+  for (const v of _objSorted(state && state.values)) {
+    _pushCard('values', v.name, {
+      description: v.description,
+      confidence: v.confidence,
+      evidence_count: v.evidence_count,
+      user_verified: v.user_verified
+    });
+  }
+
+  // case formulation 5 dim — strengths / mechanisms / problems 만 (goals / growth 는 dedup 대상 X).
+  const cf = state && state.caseFormulation;
+  if (cf) {
+    const _cfNorm = (arr, section) => {
+      if (!Array.isArray(arr)) return;
+      for (const item of arr) {
+        if (item == null) continue;
+        if (typeof item === 'string') {
+          _pushCard(section, item, {});
+        } else {
+          if (item._deleted) continue;
+          _pushCard(section, item.text || item.name, {
+            confidence: item.confidence,
+            evidence_count: item.evidence_count,
+            user_verified: item.user_verified
+          });
+        }
+      }
+    };
+    _cfNorm(cf.strengths, 'strengths');
+    _cfNorm(cf.mechanisms, 'mechanisms');
+    _cfNorm(cf.problems, 'problems');
+  }
+
+  // token cap — 너무 길면 약한 신호 (confidence 낮음) drop. 이미 confidence DESC 정렬됨.
+  let json = JSON.stringify(out);
+  if (json.length <= SEMANTIC_DEDUP_CARDS_JSON_MAX) return { cards: out, json };
+  while (out.length > 20 && json.length > SEMANTIC_DEDUP_CARDS_JSON_MAX) {
+    out.pop();
+    json = JSON.stringify(out);
+  }
+  return { cards: out, json };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 응답 파싱 — JSON only (markdown fence / 잡음 가드)
+// ─────────────────────────────────────────────────────────────────────────
+function _parseSemanticDedupResponse(text) {
+  if (!text || typeof text !== 'string') return null;
+  let s = text.trim();
+  // markdown fence 제거
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+  // 첫 { 부터 마지막 } 까지 추출
+  const i = s.indexOf('{');
+  const j = s.lastIndexOf('}');
+  if (i < 0 || j <= i) return null;
+  const body = s.slice(i, j + 1);
+  try {
+    const parsed = JSON.parse(body);
+    if (!parsed || !Array.isArray(parsed.pairs)) return null;
+    return parsed;
+  } catch (e) {
+    console.warn('[semantic_dedup] JSON parse fail', e);
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 페어 검증 — AI hallucination 가드. live 카드 매칭 fail 페어 drop.
+// ─────────────────────────────────────────────────────────────────────────
+function _validateSemanticDedupPairs(rawPairs) {
+  if (!Array.isArray(rawPairs)) return [];
+  const valid = [];
+  for (const p of rawPairs) {
+    if (!p || typeof p !== 'object') continue;
+    const aCard = _semanticDedupFindCard(p.a_section, p.a_name);
+    const bCard = _semanticDedupFindCard(p.b_section, p.b_name);
+    if (!aCard || !bCard) {
+      console.warn('[semantic_dedup] live 카드 매칭 fail — skip:', p.a_name, '|', p.b_name);
+      continue;
+    }
+    if (aCard === bCard) continue;  // 같은 카드 페어 skip
+    const merged = (p.merged && typeof p.merged === 'object') ? p.merged : {};
+    valid.push({
+      a_name: String(p.a_name || ''),
+      a_section: String(p.a_section || ''),
+      b_name: String(p.b_name || ''),
+      b_section: String(p.b_section || ''),
+      reason: String(p.reason || '').slice(0, 200),
+      merged: {
+        name: String(merged.name || '').slice(0, 80),
+        description: String(merged.description || '').slice(0, 600),
+        trigger: String(merged.trigger || '').slice(0, 200),
+        sequence: String(merged.sequence || '').slice(0, 200)
+      }
+    });
+  }
+  // cap 20 — 백엔드 prompt 도 명시하지만 client 도 가드.
+  return valid.slice(0, 20);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 메인 호출 — opts = { auto: bool }. true = 일요일 자동 (7d cooldown), false = 사용자 수동 (24h cooldown).
+// ─────────────────────────────────────────────────────────────────────────
+async function runSemanticDedup(opts) {
+  const auto = !!(opts && opts.auto);
+  if (typeof _canAI === 'function' && !_canAI()) {
+    return { ok: false, reason: 'no-ai' };
+  }
+  if (isSemanticDedupOnCooldown(auto)) {
+    return { ok: false, reason: 'cooldown', remainingMs: semanticDedupCooldownRemainingMs(auto) };
+  }
+  const { cards, json } = _collectCardsForSemanticDedup();
+  if (!cards.length) {
+    return { ok: false, reason: 'no-cards' };
+  }
+  // 카드 < 4 면 의미 페어 가능성 낮음 — 호출 skip.
+  if (cards.length < 4) {
+    return { ok: false, reason: 'too-few-cards', cardCount: cards.length };
+  }
+
+  try {
+    const response = await callAnthropic({
+      _endpoint: 'semantic_dedup',
+      _userContentType: 'semantic_dedup',
+      _vars: { cardsJson: json },
+      model: 'claude-opus-4-7',
+      max_tokens: 3000,
+      messages: [{ role: 'user', content: '' }]
+    });
+    if (!response || !response.ok) {
+      const txt = response ? await response.text().catch(() => '') : '';
+      console.warn('[semantic_dedup] HTTP fail', response && response.status, txt.slice(0, 300));
+      return { ok: false, reason: 'http-fail', status: response && response.status };
+    }
+    const data = await response.json();
+    const text = (data && data.content && data.content[0] && data.content[0].text) || '';
+    const parsed = _parseSemanticDedupResponse(text);
+    if (!parsed) {
+      return { ok: false, reason: 'parse-fail' };
+    }
+    const pairs = _validateSemanticDedupPairs(parsed.pairs);
+    const nowIso = new Date().toISOString();
+    state.aiSuggestedDedupPairs = {
+      at: nowIso,
+      source: auto ? 'auto' : 'manual',
+      pairs
+    };
+    if (auto) {
+      state._lastSemanticDedupAutoAt = nowIso;
+    } else {
+      state._lastSemanticDedupManualAt = nowIso;
+    }
+    if (typeof saveState === 'function') saveState();
+    return { ok: true, pairs, cardCount: cards.length, source: auto ? 'auto' : 'manual' };
+  } catch (e) {
+    console.warn('[semantic_dedup] throw', e);
+    return { ok: false, reason: 'throw', error: e && e.message };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 빗자루 모달 통합용 — 현재 저장된 AI 페어 list (live 카드 객체 참조 변환).
+// 18a / 18b candidates 와 같은 schema 로 변환: { category, a, b, similarity, source: 'semantic', merged }
+// ─────────────────────────────────────────────────────────────────────────
+function _collectSemanticDedupCandidates() {
+  const stored = state && state.aiSuggestedDedupPairs;
+  if (!stored || !Array.isArray(stored.pairs)) return [];
+  const out = [];
+  for (const p of stored.pairs) {
+    const aCard = _semanticDedupFindCard(p.a_section, p.a_name);
+    const bCard = _semanticDedupFindCard(p.b_section, p.b_name);
+    if (!aCard || !bCard) continue;
+    if (aCard === bCard) continue;
+    // category 결정 — 같은 section 이면 그 이름, cross 이면 cluster 명.
+    let category;
+    if (p.a_section === p.b_section) {
+      if (p.a_section === 'traits' || p.a_section === 'values' || p.a_section === 'patterns') {
+        category = p.a_section;
+      } else {
+        category = 'cf_' + p.a_section;
+      }
+    } else {
+      // cross — operating (traits ↔ patterns) / self_regulation (strengths ↔ mechanisms)
+      const sa = p.a_section, sb = p.b_section;
+      const op = (sa === 'traits' && sb === 'patterns') || (sa === 'patterns' && sb === 'traits');
+      const sr = (sa === 'strengths' && sb === 'mechanisms') || (sa === 'mechanisms' && sb === 'strengths');
+      if (op) category = 'cluster_operating';
+      else if (sr) category = 'cluster_self_regulation';
+      else category = sa + '_x_' + sb;  // edge case — 다른 cross
+    }
+    out.push({
+      category,
+      a: aCard,
+      b: bCard,
+      similarity: 0.9,  // AI 후보 — high similarity 로 정렬 우선.
+      source: 'semantic',
+      merged: p.merged,
+      reason: p.reason,
+      a_section: p.a_section,
+      b_section: p.b_section
+    });
+  }
+  return out;
 }
 // ═══════════════════════════════════════════════════════════════
 // CHAT
@@ -61328,6 +61822,19 @@ async function forceAnalyze(opts) {
     } catch (e) { console.warn('[dedup nudge]', e); }
     setSyncStatus('online');
     showToast(isAuto ? '🔍 일주일 모델 분석 자동 완료 ✦' : '분석 완료 ✦');
+    // V4 feat (사용자 명시 2026-05-26 ultrathink): 일요일 자동 forceAnalyze 끝나면 빗자루 의미 dedup 도 자동 호출.
+    //   별도 7일 cooldown — forceAnalyze 가 매주 자동이라 자연 cadence. 결과는 다음 빗자루 모달 열 때 자동 노출.
+    //   manual 호출은 빗자루 모달 "🔮 더 깊이 찾기" 버튼 (24h cooldown).
+    if (isAuto && typeof runSemanticDedup === 'function') {
+      try {
+        const _sd = await runSemanticDedup({ auto: true });
+        if (_sd && _sd.ok) {
+          console.log('[semantic_dedup auto]', (_sd.pairs || []).length, '페어 발견');
+        } else if (_sd) {
+          console.log('[semantic_dedup auto] skip:', _sd.reason);
+        }
+      } catch (e) { console.warn('[semantic_dedup auto]', e); }
+    }
   } catch (err) {
     console.error(err);
     if (!isAuto) alert('분석 실패: ' + err.message);
@@ -68090,7 +68597,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.238-cluster-ui';
+const APP_VERSION = 'v4.0.239-semantic-dedup';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

@@ -313,6 +313,19 @@ async function forceAnalyze(opts) {
     } catch (e) { console.warn('[dedup nudge]', e); }
     setSyncStatus('online');
     showToast(isAuto ? '🔍 일주일 모델 분석 자동 완료 ✦' : '분석 완료 ✦');
+    // V4 feat (사용자 명시 2026-05-26 ultrathink): 일요일 자동 forceAnalyze 끝나면 빗자루 의미 dedup 도 자동 호출.
+    //   별도 7일 cooldown — forceAnalyze 가 매주 자동이라 자연 cadence. 결과는 다음 빗자루 모달 열 때 자동 노출.
+    //   manual 호출은 빗자루 모달 "🔮 더 깊이 찾기" 버튼 (24h cooldown).
+    if (isAuto && typeof runSemanticDedup === 'function') {
+      try {
+        const _sd = await runSemanticDedup({ auto: true });
+        if (_sd && _sd.ok) {
+          console.log('[semantic_dedup auto]', (_sd.pairs || []).length, '페어 발견');
+        } else if (_sd) {
+          console.log('[semantic_dedup auto] skip:', _sd.reason);
+        }
+      } catch (e) { console.warn('[semantic_dedup auto]', e); }
+    }
   } catch (err) {
     console.error(err);
     if (!isAuto) alert('분석 실패: ' + err.message);
