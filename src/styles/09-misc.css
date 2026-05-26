@@ -8921,53 +8921,55 @@
     background: linear-gradient(135deg, rgba(212,167,106,0.22), rgba(139,126,196,0.14));
     color: var(--accent2);
   }
-  /* 필터 ON 시 day cell 배경 = 정사각 이미지. day 숫자는 위에 떠야 하니 contrast 강화. */
-  .cal-day-bg-img {
+  /* V4 (사용자 보고 2026-05-27 ultrathink — 재): 캘린더 필터 layer stack.
+     priority chain (photo > ticket > book) 이 코드 if-else 가 아닌 CSS z-index 로 표현됨.
+     img layer 가 hydrate 실패 시 visibility:hidden → 아래 layer (다른 필터 자산 / mood 색) 가 자연 노출.
+     티켓·책에 photo 없을 시 emoji fallback layer 도 같은 z 에 위치. */
+  .cal-day-bg-layer {
     position: absolute;
     inset: 0;
+    border-radius: 8px;
+    pointer-events: none;
+  }
+  .cal-day-bg-img.cal-day-bg-layer {
     width: 100%; height: 100%;
     object-fit: cover;
-    border-radius: 8px;
-    z-index: 0;
     display: block;
   }
-  .cal-day.has-bg-img .cal-day-num {
-    position: relative; z-index: 2;
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.65), 0 0 4px rgba(0,0,0,0.35);
-    font-weight: 600;
+  .cal-day-bg-emoji.cal-day-bg-layer {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; line-height: 1;
+    background: linear-gradient(135deg, rgba(212,167,106,0.30), rgba(139,126,196,0.18));
   }
-  .cal-day.has-bg-img .cal-chapter-dot {
-    z-index: 2;
-    background: #fff;
-    box-shadow: 0 0 3px rgba(0,0,0,0.6);
-  }
-  .cal-day.has-bg-img .day-cell-mini-row { display: none; }
-  .cal-day.has-bg-img.today {
-    border-color: #fff;
-    box-shadow: 0 0 0 1px var(--accent2);
-  }
-  /* hydrate pending — mood 색이 비치도록 placeholder bg 없음 (사용자 보고 2026-05-27 ultrathink). */
+  .cal-day-bg-photo  { z-index: 3; }
+  .cal-day-bg-ticket { z-index: 2; }
+  .cal-day-bg-book   { z-index: 1; }
   .cal-day-bg-img.diary-load-fail,
   .cal-day-bg-img.pearl-load-fail {
     visibility: hidden;
   }
-  /* 사용자 보고 2026-05-27 ultrathink: stale storageKey 로 hydrate 실패한 셀 = mood 색 fallback 보여줘야 함.
-     cell bg 는 항상 mood 색이고, img 가 visibility:hidden 되면 mood 가 비침. day-num 도 white → 기본 텍스트로 되돌림. */
-  .cal-day.has-bg-img:has(.cal-day-bg-img.diary-load-fail) .cal-day-num,
-  .cal-day.has-bg-img:has(.cal-day-bg-img.pearl-load-fail) .cal-day-num {
-    color: var(--text);
-    text-shadow: none;
-    font-weight: 400;
+  /* visible layer (= fail 아닌 layer) 가 하나라도 있을 때만 day-num / chapter-dot 흰색 + 코너로.
+     모든 layer 가 fail / layer 자체 없음 → 자동으로 mood 색 + 기본 텍스트 (별도 rule 불필요). */
+  .cal-day:has(.cal-day-bg-layer:not(.diary-load-fail):not(.pearl-load-fail)) .cal-day-num {
+    position: absolute;
+    top: 3px; left: 5px;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.70), 0 0 4px rgba(0,0,0,0.40);
+    font-weight: 600;
+    font-size: 10px;
+    z-index: 4;
   }
-  .cal-day.has-bg-img:has(.cal-day-bg-img.diary-load-fail) .cal-chapter-dot,
-  .cal-day.has-bg-img:has(.cal-day-bg-img.pearl-load-fail) .cal-chapter-dot {
-    background: var(--accent2);
-    box-shadow: none;
+  .cal-day:has(.cal-day-bg-layer:not(.diary-load-fail):not(.pearl-load-fail)) .cal-chapter-dot {
+    background: #fff;
+    box-shadow: 0 0 3px rgba(0,0,0,0.6);
+    z-index: 4;
   }
-  .cal-day.has-bg-img:has(.cal-day-bg-img.diary-load-fail) .day-cell-mini-row,
-  .cal-day.has-bg-img:has(.cal-day-bg-img.pearl-load-fail) .day-cell-mini-row {
-    display: flex;
+  .cal-day:has(.cal-day-bg-layer:not(.diary-load-fail):not(.pearl-load-fail)) .day-cell-mini-row {
+    display: none;
+  }
+  .cal-day.today:has(.cal-day-bg-layer:not(.diary-load-fail):not(.pearl-load-fail)) {
+    border-color: #fff;
+    box-shadow: 0 0 0 1px var(--accent2);
   }
   /* V4-1s: 점프 시 ig-card 깜빡임 */
   .ig-card-flash {

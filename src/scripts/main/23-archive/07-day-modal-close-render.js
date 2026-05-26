@@ -132,29 +132,45 @@ function renderLensCalendarGrid() {
     const isFuture = dateKey > todayKey();
     const empty = !entry && !hasChapter && dayTickets.length === 0 && dayBooks.length === 0;
 
-    // V4 (사용자 명시 2026-05-27 ultrathink): 필터 priority — photo > ticket > book.
-    //   필터 ON + 자산 있음 = 그 자산 정사각 bg. 아니면 무드 색 fallback.
-    let bgImageHtml = '';
+    // V4 (사용자 명시 2026-05-27 ultrathink — 재): 필터 layer stack — photo z=3, ticket z=2, book z=1.
+    //   각 필터 ON + 자산 있음 → 그 layer 셀에 push. img hydrate 실패 시 visibility:hidden 으로
+    //   자연스럽게 아래 layer (다른 필터 자산 / mood 색) 가 비침. 단일 bgImageHtml 보다 stale storageKey
+    //   에 강하고, 티켓·책은 photo 없을 때 sub-type emoji fallback layer 로 시각 신호 유지.
+    //   priority chain 이 코드 if-else 가 아닌 CSS z-index 로 표현됨.
+    const bgLayers = [];
     if (calFilters.photo && entry && typeof diaryEntryHasPhoto === 'function' && diaryEntryHasPhoto(entry, 0)) {
-      bgImageHtml = (typeof diaryImgHtml === 'function')
-        ? diaryImgHtml(entry, 0, { cls: 'cal-day-bg-img', alt: '' })
+      const h = (typeof diaryImgHtml === 'function')
+        ? diaryImgHtml(entry, 0, { cls: 'cal-day-bg-layer cal-day-bg-img cal-day-bg-photo', alt: '' })
         : '';
+      if (h) bgLayers.push(h);
     }
-    if (!bgImageHtml && calFilters.ticket && dayTickets.length > 0 && typeof pearlImgHtml === 'function') {
-      const tp = dayTickets.find(p => typeof pearlHasMedia === 'function' && pearlHasMedia(p, 'photo'));
-      if (tp) bgImageHtml = pearlImgHtml(tp, 'photo', { cls: 'cal-day-bg-img', alt: '' });
+    if (calFilters.ticket && dayTickets.length > 0) {
+      const tp = (typeof pearlHasMedia === 'function') ? dayTickets.find(p => pearlHasMedia(p, 'photo')) : null;
+      if (tp && typeof pearlImgHtml === 'function') {
+        const h = pearlImgHtml(tp, 'photo', { cls: 'cal-day-bg-layer cal-day-bg-img cal-day-bg-ticket', alt: '' });
+        if (h) bgLayers.push(h);
+      } else {
+        // photo 없는 티켓 → sub-type emoji fallback (첫 티켓 기준).
+        const first = dayTickets[0];
+        const sub = (typeof _findTicketSubType === 'function') ? _findTicketSubType(first.subType) : null;
+        const emoji = sub?.emoji || '🎫';
+        bgLayers.push(`<span class="cal-day-bg-layer cal-day-bg-emoji cal-day-bg-ticket" aria-hidden="true">${emoji}</span>`);
+      }
     }
-    if (!bgImageHtml && calFilters.book && dayBooks.length > 0 && typeof pearlImgHtml === 'function') {
-      const bp = dayBooks.find(p => typeof pearlHasMedia === 'function' && pearlHasMedia(p, 'photo'));
-      if (bp) bgImageHtml = pearlImgHtml(bp, 'photo', { cls: 'cal-day-bg-img', alt: '' });
+    if (calFilters.book && dayBooks.length > 0) {
+      const bp = (typeof pearlHasMedia === 'function') ? dayBooks.find(p => pearlHasMedia(p, 'photo')) : null;
+      if (bp && typeof pearlImgHtml === 'function') {
+        const h = pearlImgHtml(bp, 'photo', { cls: 'cal-day-bg-layer cal-day-bg-img cal-day-bg-book', alt: '' });
+        if (h) bgLayers.push(h);
+      } else {
+        // photo 없는 책 → 📚 emoji fallback.
+        bgLayers.push(`<span class="cal-day-bg-layer cal-day-bg-emoji cal-day-bg-book" aria-hidden="true">📚</span>`);
+      }
     }
-    const hasBgImg = !!bgImageHtml;
-    // 사용자 보고 2026-05-27 ultrathink: stale storageKey → hydrate 실패 시 mood 색이 비치도록
-    // cell bg 는 항상 mood 색 유지. 성공한 사진은 위에 absolute img 가 덮어버려서 mood 색 안 보임.
+    // cell bg 는 항상 mood 색 (모든 layer fail/없음 시 mood fallback).
     const bg = mood ? (moodColor[mood] || 'transparent') : 'transparent';
 
-    // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 mini dot — 첫 1개씩 + 누적 +N.
-    //   bg image 깔린 경우 mini dot 충돌 → hide (cal-day.has-bg-img 클래스가 CSS 로 처리).
+    // 티켓 / 책 mini dot — 필터 layer 가 셀을 채우면 CSS :has() 로 자동 hide.
     let miniIcons = '';
     if (dayTickets.length > 0) {
       const first = dayTickets[0];
@@ -175,12 +191,12 @@ function renderLensCalendarGrid() {
     const miniWrap = miniIcons ? `<span class="day-cell-mini-row">${miniIcons}</span>` : '';
 
     html += `
-      <div class="cal-day${isToday ? ' today' : ''}${empty ? ' empty' : ''}${isFuture ? ' future' : ''}${hasBgImg ? ' has-bg-img' : ''}"
+      <div class="cal-day${isToday ? ' today' : ''}${empty ? ' empty' : ''}${isFuture ? ' future' : ''}"
            data-date="${dateKey}"
            style="background:${bg};"
            onclick="${isFuture ? '' : `jumpToTimelineDate('${dateKey}')`}"
            title="${dateKey}${mood ? ` · 기분 ${mood}/5` : ''}">
-        ${bgImageHtml}
+        ${bgLayers.join('')}
         <span class="cal-day-num">${d}</span>
         ${hasChapter ? `<span class="cal-chapter-dot"></span>` : ''}
         ${miniWrap}
