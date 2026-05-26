@@ -17316,16 +17316,23 @@ function _mergeGuestSnapshotIntoExisting(guest) {
   state.values = _mergeModelArr(state.values, guest.values);
   state.patterns = _mergeModelArr(state.patterns, guest.patterns);
 
-  // 5. caseFormulation — string array mergeStrings (similarText dedupe)
+  // 5. caseFormulation — string + 객체 mixed mergeStrings (similarText dedupe)
+  // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — 객체 항목 drop 차단 (게스트 전환 데이터 손실 fix).
+  //   직전 commit a2bc5d8 에서 cf 5차원이 { text, confidence, evidence_count, user_verified, created_at } 객체 형태로 통일됨.
+  //   옛 typeof === 'string' 가드는 객체 항목을 통째로 drop → 게스트 → 정규 회원 전환 시 모든 객체 형태 cf 항목 소실.
+  //   호환 OR 조건: string + 객체 양쪽 처리. 원본 형태 유지 (객체면 객체, string 이면 string).
   if (guest.caseFormulation) {
     if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
     const cf = state.caseFormulation;
     const gcf = guest.caseFormulation;
+    const _itemText = (it) => typeof it === 'string' ? it : (it && (it.text || it.name)) || '';
     const _mergeStrArr = (a, b) => {
       const out = Array.isArray(a) ? a.slice() : [];
       (Array.isArray(b) ? b : []).forEach(item => {
-        if (!item || typeof item !== 'string') return;
-        if (typeof similarText !== 'function' || !out.some(e => similarText(e, item))) out.push(item);
+        if (!item) return;
+        const text = _itemText(item);
+        if (!text || !text.trim()) return;
+        if (typeof similarText !== 'function' || !out.some(e => similarText(_itemText(e), text))) out.push(item);
       });
       return out;
     };
@@ -44805,13 +44812,20 @@ function dedupeExactArray(arr, fields) {
   return out;
 }
 
-// case_formulation의 problems/mechanisms/strengths는 단순 문자열 배열
+// case_formulation의 problems/mechanisms/strengths/goals/growth — string + 객체 mixed array
+// 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — 객체 처리 추가.
+//   직전 commit a2bc5d8 에서 cf 5차원이 { text, confidence, evidence_count, user_verified, created_at } 객체 형태로 통일됨.
+//   옛 dedupe 는 exactSameText(객체, 객체) 매칭 fail (toLowerCase trim 가드만 있음).
+//   text 추출 + dedup. 원본 형태 유지 (객체면 객체, string 이면 string).
 function dedupeStringArray(arr) {
   if (!Array.isArray(arr)) return arr;
   const out = [];
+  const _itemText = (it) => typeof it === 'string' ? it : (it && (it.text || it.name)) || '';
   arr.forEach(s => {
     if (!s) return;
-    if (!out.some(existing => exactSameText(existing, s))) out.push(s);
+    const text = _itemText(s);
+    if (!text || !text.trim()) return;
+    if (!out.some(existing => exactSameText(_itemText(existing), text))) out.push(s);
   });
   return out;
 }
@@ -44830,10 +44844,16 @@ function dedupeAllModelExactDuplicates() {
     const bP = (cf.problems || []).length;
     const bM = (cf.mechanisms || []).length;
     const bS = (cf.strengths || []).length;
+    // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — goals/growth 누락 fix.
+    const bG = (cf.goals || []).length;
+    const bGr = (cf.growth || []).length;
     cf.problems = dedupeStringArray(cf.problems || []);
     cf.mechanisms = dedupeStringArray(cf.mechanisms || []);
     cf.strengths = dedupeStringArray(cf.strengths || []);
-    if (bP !== cf.problems.length || bM !== cf.mechanisms.length || bS !== cf.strengths.length) changed = true;
+    cf.goals = dedupeStringArray(cf.goals || []);
+    cf.growth = dedupeStringArray(cf.growth || []);
+    if (bP !== cf.problems.length || bM !== cf.mechanisms.length || bS !== cf.strengths.length
+        || bG !== cf.goals.length || bGr !== cf.growth.length) changed = true;
   }
   if (beforeT !== state.traits.length || beforeV !== state.values.length || beforeP !== state.patterns.length) changed = true;
   if (changed) {
@@ -53135,7 +53155,18 @@ function renderExecute() {}
 // - 객체형 derived: 추출 직후 sourceArchiveId 직접 박음 (cascade = filter id)
 // - 텍스트형 derived (cf.* / udp.identityKeywords): archive 에 _derivedRefs 메타
 //   (cascade 시 splice).
+//
+// 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — text 기반 매칭 (옛 reference 매칭 폐기).
+//   직전 commit a2bc5d8 에서 cf 5차원이 객체 형태로 통일됨. arr.indexOf(text) / arr.includes(text) 처럼
+//   reference / primitive 비교는 객체 array 에서 fail → soft-delete cascade refs 정합성 위험.
+//   _cfUnwrap helper (30-force-analyze.js:385 동일 패턴) 로 text 추출 후 similarText 매칭.
 // ═══════════════════════════════════════════════════════════════
+
+// 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — text 추출 helper.
+//   string + 객체 mixed 호환 (객체면 .text || .name).
+function _cfUnwrap(e) {
+  return typeof e === 'string' ? e : (e && (e.text || e.name)) || '';
+}
 
 // 추출 직전 snapshot — id set + 텍스트 array.
 function _captureDerivedSnapshot() {
@@ -53190,7 +53221,16 @@ function _stampSourceArchiveId(before, archiveId, archiveItem) {
   if (!archiveItem) return;
   if (!archiveItem._derivedRefs) archiveItem._derivedRefs = {};
   const refs = archiveItem._derivedRefs;
-  const newOnly = (after, beforeArr) => after.filter(x => !beforeArr.includes(x));
+  // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — text 기반 newOnly (옛 reference 매칭 폐기).
+  //   객체끼리는 reference 비교 fail → 이전엔 string 만 잡혔지만 객체 전환 후 모든 신규 항목이 "ref 없음" 으로 잡혀 ref 폭증 / refs 가 객체 그대로 저장됨 (다음 splice 시 indexOf fail).
+  //   text 추출 후 set 비교. fresh 도 객체 그대로 (원본 형태 유지) push — refs 도 객체 array 가 됨 (removeFromArr/pushIfMissing 도 text 매칭이라 OK).
+  const newOnly = (after, beforeArr) => {
+    const beforeTexts = new Set((Array.isArray(beforeArr) ? beforeArr : []).map(_cfUnwrap).filter(t => t && t.trim()));
+    return (Array.isArray(after) ? after : []).filter(x => {
+      const t = _cfUnwrap(x);
+      return t && t.trim() && !beforeTexts.has(t);
+    });
+  };
   const cf = state.caseFormulation || {};
   const pushRefs = (key, after, beforeArr) => {
     const fresh = newOnly(Array.isArray(after) ? after : [], beforeArr);
@@ -53250,11 +53290,18 @@ function _softDeleteArchiveCascade(archiveId) {
   // 단, restore 할 수 있게 archive._derivedRefsBackup 으로 보존.
   if (arch._derivedRefs) {
     const cf = state.caseFormulation || (state.caseFormulation = { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} });
+    // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — text 기반 매칭 (옛 indexOf 매칭 폐기).
+    //   객체 array 에서 arr.indexOf(객체) 는 ref 동일성 요구 → 다른 ref 객체끼리 fail. text 추출 후 findIndex.
     const removeFromArr = (arr, items) => {
       if (!Array.isArray(arr) || !Array.isArray(items)) return 0;
       let removed = 0;
       items.forEach(t => {
-        const idx = arr.indexOf(t);
+        const tText = _cfUnwrap(t);
+        if (!tText || !tText.trim()) return;
+        const idx = arr.findIndex(x => {
+          const xText = _cfUnwrap(x);
+          return xText && xText.trim() && (typeof similarText === 'function' ? similarText(xText, tText) : xText === tText);
+        });
         if (idx >= 0) { arr.splice(idx, 1); removed += 1; }
       });
       return removed;
@@ -53314,9 +53361,20 @@ function _restoreArchiveCascade(archiveId) {
   // 텍스트 ref — 다시 push (중복 체크)
   if (arch._derivedRefs) {
     const cf = state.caseFormulation || (state.caseFormulation = { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} });
+    // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — text 기반 매칭 (옛 includes 매칭 폐기).
+    //   객체 array 에서 arr.includes(객체) 는 ref 동일성 요구 → 다른 ref 객체끼리 fail.
+    //   복원 시 backup ref (객체) 를 cf 배열에 다시 push, text 기준 dedupe.
     const pushIfMissing = (arr, items) => {
       if (!Array.isArray(arr) || !Array.isArray(items)) return;
-      items.forEach(t => { if (!arr.includes(t)) arr.push(t); });
+      items.forEach(t => {
+        const tText = _cfUnwrap(t);
+        if (!tText || !tText.trim()) return;
+        const hit = arr.some(x => {
+          const xText = _cfUnwrap(x);
+          return xText && xText.trim() && (typeof similarText === 'function' ? similarText(xText, tText) : xText === tText);
+        });
+        if (!hit) arr.push(t);
+      });
     };
     const r = arch._derivedRefs;
     pushIfMissing(cf.problems, r.cfProblems);
@@ -56787,11 +56845,19 @@ function getQuarterlyStats(quarterKey) {
   }).filter(Boolean);
 
   // 8 차원 — 분기 시점에 추가된 problems / strengths 수
+  // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — count 정확화 (옛 string 만 count 폐기).
+  //   직전 commit a2bc5d8 에서 cf 5차원이 객체 형태로 통일됨. 옛 `typeof p === 'string'` 가드는 객체 항목 0 처리 → 통계 과소.
+  //   truthy + text 추출로 변경 — string + 객체 mixed 양쪽 count.
   const cf = state.caseFormulation || {};
-  const problemsAdded = (cf.problems || []).filter(p => typeof p === 'string').length;  // V3은 string
-  const strengthsAdded = (cf.strengths || []).filter(s => typeof s === 'string').length;
+  const _hasText = (p) => {
+    if (!p) return false;
+    const text = typeof p === 'string' ? p : (p && (p.text || p.name)) || '';
+    return !!text && text.trim().length > 0;
+  };
+  const problemsAdded = (cf.problems || []).filter(_hasText).length;
+  const strengthsAdded = (cf.strengths || []).filter(_hasText).length;
   // growth 차원
-  const growthCount = (cf.growth || []).length;
+  const growthCount = (cf.growth || []).filter(_hasText).length;
 
   // entries 수 (체크인 일수)
   const checkins = (state.entries || []).filter(e => {
@@ -68811,7 +68877,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.245-cf-object-shape';
+const APP_VERSION = 'v4.0.246-cf-consumer-fix';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

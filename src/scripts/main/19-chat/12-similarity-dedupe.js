@@ -46,13 +46,20 @@ function dedupeExactArray(arr, fields) {
   return out;
 }
 
-// case_formulation의 problems/mechanisms/strengths는 단순 문자열 배열
+// case_formulation의 problems/mechanisms/strengths/goals/growth — string + 객체 mixed array
+// 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — 객체 처리 추가.
+//   직전 commit a2bc5d8 에서 cf 5차원이 { text, confidence, evidence_count, user_verified, created_at } 객체 형태로 통일됨.
+//   옛 dedupe 는 exactSameText(객체, 객체) 매칭 fail (toLowerCase trim 가드만 있음).
+//   text 추출 + dedup. 원본 형태 유지 (객체면 객체, string 이면 string).
 function dedupeStringArray(arr) {
   if (!Array.isArray(arr)) return arr;
   const out = [];
+  const _itemText = (it) => typeof it === 'string' ? it : (it && (it.text || it.name)) || '';
   arr.forEach(s => {
     if (!s) return;
-    if (!out.some(existing => exactSameText(existing, s))) out.push(s);
+    const text = _itemText(s);
+    if (!text || !text.trim()) return;
+    if (!out.some(existing => exactSameText(_itemText(existing), text))) out.push(s);
   });
   return out;
 }
@@ -71,10 +78,16 @@ function dedupeAllModelExactDuplicates() {
     const bP = (cf.problems || []).length;
     const bM = (cf.mechanisms || []).length;
     const bS = (cf.strengths || []).length;
+    // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — goals/growth 누락 fix.
+    const bG = (cf.goals || []).length;
+    const bGr = (cf.growth || []).length;
     cf.problems = dedupeStringArray(cf.problems || []);
     cf.mechanisms = dedupeStringArray(cf.mechanisms || []);
     cf.strengths = dedupeStringArray(cf.strengths || []);
-    if (bP !== cf.problems.length || bM !== cf.mechanisms.length || bS !== cf.strengths.length) changed = true;
+    cf.goals = dedupeStringArray(cf.goals || []);
+    cf.growth = dedupeStringArray(cf.growth || []);
+    if (bP !== cf.problems.length || bM !== cf.mechanisms.length || bS !== cf.strengths.length
+        || bG !== cf.goals.length || bGr !== cf.growth.length) changed = true;
   }
   if (beforeT !== state.traits.length || beforeV !== state.values.length || beforeP !== state.patterns.length) changed = true;
   if (changed) {

@@ -309,16 +309,23 @@ function _mergeGuestSnapshotIntoExisting(guest) {
   state.values = _mergeModelArr(state.values, guest.values);
   state.patterns = _mergeModelArr(state.patterns, guest.patterns);
 
-  // 5. caseFormulation — string array mergeStrings (similarText dedupe)
+  // 5. caseFormulation — string + 객체 mixed mergeStrings (similarText dedupe)
+  // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — 객체 항목 drop 차단 (게스트 전환 데이터 손실 fix).
+  //   직전 commit a2bc5d8 에서 cf 5차원이 { text, confidence, evidence_count, user_verified, created_at } 객체 형태로 통일됨.
+  //   옛 typeof === 'string' 가드는 객체 항목을 통째로 drop → 게스트 → 정규 회원 전환 시 모든 객체 형태 cf 항목 소실.
+  //   호환 OR 조건: string + 객체 양쪽 처리. 원본 형태 유지 (객체면 객체, string 이면 string).
   if (guest.caseFormulation) {
     if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
     const cf = state.caseFormulation;
     const gcf = guest.caseFormulation;
+    const _itemText = (it) => typeof it === 'string' ? it : (it && (it.text || it.name)) || '';
     const _mergeStrArr = (a, b) => {
       const out = Array.isArray(a) ? a.slice() : [];
       (Array.isArray(b) ? b : []).forEach(item => {
-        if (!item || typeof item !== 'string') return;
-        if (typeof similarText !== 'function' || !out.some(e => similarText(e, item))) out.push(item);
+        if (!item) return;
+        const text = _itemText(item);
+        if (!text || !text.trim()) return;
+        if (typeof similarText !== 'function' || !out.some(e => similarText(_itemText(e), text))) out.push(item);
       });
       return out;
     };

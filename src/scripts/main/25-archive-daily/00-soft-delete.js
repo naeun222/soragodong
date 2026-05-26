@@ -10,7 +10,18 @@
 // - 객체형 derived: 추출 직후 sourceArchiveId 직접 박음 (cascade = filter id)
 // - 텍스트형 derived (cf.* / udp.identityKeywords): archive 에 _derivedRefs 메타
 //   (cascade 시 splice).
+//
+// 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — text 기반 매칭 (옛 reference 매칭 폐기).
+//   직전 commit a2bc5d8 에서 cf 5차원이 객체 형태로 통일됨. arr.indexOf(text) / arr.includes(text) 처럼
+//   reference / primitive 비교는 객체 array 에서 fail → soft-delete cascade refs 정합성 위험.
+//   _cfUnwrap helper (30-force-analyze.js:385 동일 패턴) 로 text 추출 후 similarText 매칭.
 // ═══════════════════════════════════════════════════════════════
+
+// 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — text 추출 helper.
+//   string + 객체 mixed 호환 (객체면 .text || .name).
+function _cfUnwrap(e) {
+  return typeof e === 'string' ? e : (e && (e.text || e.name)) || '';
+}
 
 // 추출 직전 snapshot — id set + 텍스트 array.
 function _captureDerivedSnapshot() {
@@ -65,7 +76,16 @@ function _stampSourceArchiveId(before, archiveId, archiveItem) {
   if (!archiveItem) return;
   if (!archiveItem._derivedRefs) archiveItem._derivedRefs = {};
   const refs = archiveItem._derivedRefs;
-  const newOnly = (after, beforeArr) => after.filter(x => !beforeArr.includes(x));
+  // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — text 기반 newOnly (옛 reference 매칭 폐기).
+  //   객체끼리는 reference 비교 fail → 이전엔 string 만 잡혔지만 객체 전환 후 모든 신규 항목이 "ref 없음" 으로 잡혀 ref 폭증 / refs 가 객체 그대로 저장됨 (다음 splice 시 indexOf fail).
+  //   text 추출 후 set 비교. fresh 도 객체 그대로 (원본 형태 유지) push — refs 도 객체 array 가 됨 (removeFromArr/pushIfMissing 도 text 매칭이라 OK).
+  const newOnly = (after, beforeArr) => {
+    const beforeTexts = new Set((Array.isArray(beforeArr) ? beforeArr : []).map(_cfUnwrap).filter(t => t && t.trim()));
+    return (Array.isArray(after) ? after : []).filter(x => {
+      const t = _cfUnwrap(x);
+      return t && t.trim() && !beforeTexts.has(t);
+    });
+  };
   const cf = state.caseFormulation || {};
   const pushRefs = (key, after, beforeArr) => {
     const fresh = newOnly(Array.isArray(after) ? after : [], beforeArr);
@@ -125,11 +145,18 @@ function _softDeleteArchiveCascade(archiveId) {
   // 단, restore 할 수 있게 archive._derivedRefsBackup 으로 보존.
   if (arch._derivedRefs) {
     const cf = state.caseFormulation || (state.caseFormulation = { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} });
+    // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — text 기반 매칭 (옛 indexOf 매칭 폐기).
+    //   객체 array 에서 arr.indexOf(객체) 는 ref 동일성 요구 → 다른 ref 객체끼리 fail. text 추출 후 findIndex.
     const removeFromArr = (arr, items) => {
       if (!Array.isArray(arr) || !Array.isArray(items)) return 0;
       let removed = 0;
       items.forEach(t => {
-        const idx = arr.indexOf(t);
+        const tText = _cfUnwrap(t);
+        if (!tText || !tText.trim()) return;
+        const idx = arr.findIndex(x => {
+          const xText = _cfUnwrap(x);
+          return xText && xText.trim() && (typeof similarText === 'function' ? similarText(xText, tText) : xText === tText);
+        });
         if (idx >= 0) { arr.splice(idx, 1); removed += 1; }
       });
       return removed;
@@ -189,9 +216,20 @@ function _restoreArchiveCascade(archiveId) {
   // 텍스트 ref — 다시 push (중복 체크)
   if (arch._derivedRefs) {
     const cf = state.caseFormulation || (state.caseFormulation = { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} });
+    // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — text 기반 매칭 (옛 includes 매칭 폐기).
+    //   객체 array 에서 arr.includes(객체) 는 ref 동일성 요구 → 다른 ref 객체끼리 fail.
+    //   복원 시 backup ref (객체) 를 cf 배열에 다시 push, text 기준 dedupe.
     const pushIfMissing = (arr, items) => {
       if (!Array.isArray(arr) || !Array.isArray(items)) return;
-      items.forEach(t => { if (!arr.includes(t)) arr.push(t); });
+      items.forEach(t => {
+        const tText = _cfUnwrap(t);
+        if (!tText || !tText.trim()) return;
+        const hit = arr.some(x => {
+          const xText = _cfUnwrap(x);
+          return xText && xText.trim() && (typeof similarText === 'function' ? similarText(xText, tText) : xText === tText);
+        });
+        if (!hit) arr.push(t);
+      });
     };
     const r = arch._derivedRefs;
     pushIfMissing(cf.problems, r.cfProblems);

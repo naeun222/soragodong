@@ -100,11 +100,19 @@ function getQuarterlyStats(quarterKey) {
   }).filter(Boolean);
 
   // 8 차원 — 분기 시점에 추가된 problems / strengths 수
+  // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 후속 — count 정확화 (옛 string 만 count 폐기).
+  //   직전 commit a2bc5d8 에서 cf 5차원이 객체 형태로 통일됨. 옛 `typeof p === 'string'` 가드는 객체 항목 0 처리 → 통계 과소.
+  //   truthy + text 추출로 변경 — string + 객체 mixed 양쪽 count.
   const cf = state.caseFormulation || {};
-  const problemsAdded = (cf.problems || []).filter(p => typeof p === 'string').length;  // V3은 string
-  const strengthsAdded = (cf.strengths || []).filter(s => typeof s === 'string').length;
+  const _hasText = (p) => {
+    if (!p) return false;
+    const text = typeof p === 'string' ? p : (p && (p.text || p.name)) || '';
+    return !!text && text.trim().length > 0;
+  };
+  const problemsAdded = (cf.problems || []).filter(_hasText).length;
+  const strengthsAdded = (cf.strengths || []).filter(_hasText).length;
   // growth 차원
-  const growthCount = (cf.growth || []).length;
+  const growthCount = (cf.growth || []).filter(_hasText).length;
 
   // entries 수 (체크인 일수)
   const checkins = (state.entries || []).filter(e => {
