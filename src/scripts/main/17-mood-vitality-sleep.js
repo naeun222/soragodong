@@ -341,6 +341,67 @@ async function submitCheckin() {
   } catch (e) { console.warn('[pwa post-checkin]', e); }
 }
 
+// 사용자 명시 2026-05-27 ultrathink: 홈 인라인 sleep widget — 4-18시 동안 큰 체크인 카드 자리에 노출.
+//   onchange 즉시 자동 저장 (제출 버튼 X). vitality/mood 는 안 건드림 → entry 는 여전히 미완료.
+//   "오늘 체크인" mini-link 누르면 큰 체크인 화면 진입 + sleep 값 prefill.
+function onHomeSleepTimeChange() {
+  _updateHomeSleepDuration();
+  const sEl = document.getElementById('homeSleepStart');
+  const eEl = document.getElementById('homeSleepEnd');
+  if (!sEl || !eEl) return;
+  const sVal = sEl.value;
+  const eVal = eEl.value;
+  // 둘 다 있을 때만 저장 — 사용자가 하나만 set 한 중간 상태에선 보류.
+  if (!sVal || !eVal) return;
+  _saveSleepInline({ allNighter: false, sleepStart: sVal, sleepEnd: eVal });
+}
+
+function onHomeSleepAllNighterChange(checked) {
+  // UI 인라인 swap
+  const pair = document.getElementById('homeSleepTimePair');
+  const msg = document.getElementById('homeSleepAllNighterMsg');
+  const dur = document.getElementById('homeSleepDuration');
+  if (pair) pair.style.display = checked ? 'none' : '';
+  if (msg) msg.style.display = checked ? '' : 'none';
+  if (dur) dur.textContent = '';
+  _saveSleepInline({ allNighter: !!checked });
+}
+
+function _saveSleepInline(opts) {
+  try {
+    const key = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+    state.entries = state.entries || [];
+    let entry = state.entries.find(e => e.date === key);
+    if (!entry) { entry = { date: key }; state.entries.push(entry); }
+    if (opts.allNighter) {
+      entry.allNighter = true;
+      entry.sleepStart = '';
+      entry.sleepEnd = '';
+    } else {
+      entry.allNighter = false;
+      entry.sleepStart = opts.sleepStart || '';
+      entry.sleepEnd = opts.sleepEnd || '';
+    }
+    entry.timestamp = new Date().toISOString();
+    if (typeof saveState === 'function') saveState();
+  } catch (e) { console.warn('[saveSleepInline]', e); }
+}
+
+function _updateHomeSleepDuration() {
+  const sEl = document.getElementById('homeSleepStart');
+  const eEl = document.getElementById('homeSleepEnd');
+  const dEl = document.getElementById('homeSleepDuration');
+  if (!sEl || !eEl || !dEl) return;
+  if (!sEl.value || !eEl.value) { dEl.textContent = ''; return; }
+  const [sh, sm] = sEl.value.split(':').map(Number);
+  const [eh, em] = eEl.value.split(':').map(Number);
+  let minutes = (eh * 60 + em) - (sh * 60 + sm);
+  if (minutes < 0) minutes += 24 * 60;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  dEl.textContent = `약 ${hours}시간 ${mins}분`;
+}
+
 function buildCheckinSummary(entry) {
   const parts = [];
   if (entry.sleepStart && entry.sleepEnd) parts.push(`수면 ${entry.sleepStart}~${entry.sleepEnd}`);

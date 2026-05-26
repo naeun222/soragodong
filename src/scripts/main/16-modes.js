@@ -45,8 +45,12 @@ function prefillCheckinFromEntry() {
   }
 
   const _entryHasPhoto = !!(entry && (entry.photo || (Array.isArray(entry.photos) && entry.photos.length > 0)));
-  // V4 fix (사용자 보고 2026-05-20 ultrathink): entry.diary 만 있는 날 (일기 path 단독) 도 수정 모드로 인지 — 옛 흐름은 신규 작성으로 잘못 판정.
-  if (!entry || !(entry.vitality || entry.mood || entry.note || entry.diary || entry.sleepStart || entry.music || _entryHasPhoto)) {
+  // V4 fix (사용자 명시 2026-05-27 ultrathink): vitality && mood = 체크인 entry 필수 요소. 둘 다 있어야 '수정 모드'.
+  //   sleep/note/diary/music/photo 만 있는 entry (4-18시 인라인 sleep widget 단독 저장 등) = 미완료 → 새 작성 모드.
+  //   side-field 는 _hasAnySideField 일 때 prefill 만 해주고 submit 버튼은 '기록 완료'.
+  const _hasAnySideField = !!(entry && (entry.note || entry.diary || entry.sleepStart || entry.allNighter || entry.music || _entryHasPhoto));
+  const _isFullEntry = !!(entry && entry.vitality && entry.mood);
+  if (!entry || (!_isFullEntry && !_hasAnySideField)) {
     // 오늘 체크인 안 함 — 새로 작성 모드
     if (submitBtn) submitBtn.textContent = '기록 완료 ✦';
     if (subtitle) subtitle.textContent = '';
@@ -60,8 +64,9 @@ function prefillCheckinFromEntry() {
     if (typeof _updateCheckinSubmitState === 'function') _updateCheckinSubmitState();
     return;
   }
-  // 오늘 entry 있음 — 수정 모드
-  if (submitBtn) submitBtn.textContent = '수정 완료 ✦';
+  // 오늘 entry 있음 — vitality+mood 둘 다 있으면 '수정 완료', 아니면 (side-field 만) '기록 완료'.
+  // 사용자 명시 2026-05-27 ultrathink: vitality/mood 필수. side-field (sleep / note 등) 만 있는 entry = 미완료.
+  if (submitBtn) submitBtn.textContent = _isFullEntry ? '수정 완료 ✦' : '기록 완료 ✦';
   // V4 fix (사용자 명시 2026-05-18) — subtitle 문구 삭제. 옛: '오늘 이미 기록한 거. 바꿀 거 있으면 고쳐.'
   if (subtitle) subtitle.textContent = '';
 

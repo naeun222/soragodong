@@ -12600,6 +12600,64 @@
     color: var(--accent);
   }
 
+  /* 사용자 명시 2026-05-27 ultrathink: 홈 인라인 sleep widget — 4-18시 동안 큰 체크인 카드 자리.
+     library-hero 와 같은 사이즈로 통일 (priority slot 안 다른 카드와 visual consistency). */
+  .home-sleep-widget {
+    margin: 8px 0 14px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(126,200,200,0.10), rgba(139,126,196,0.08));
+    border: 1px solid rgba(126,200,200,0.30);
+    border-radius: 16px;
+  }
+  .rc-body-tap .home-sleep-widget { margin: 0; width: 100%; }
+  /* sleep widget = 인라인 (탭 진입 X) → wrapper cursor default 강제. */
+  .rc-body-tap:has(.home-sleep-widget) { cursor: default; }
+  .home-sleep-widget-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .home-sleep-widget-title {
+    font-size: 13px; font-weight: 600; color: var(--text);
+    letter-spacing: 0.02em;
+  }
+  .home-sleep-allnighter-toggle {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text-dim);
+    cursor: pointer; user-select: none;
+    padding: 4px 8px; border-radius: 8px;
+    background: var(--surface);
+  }
+  .home-sleep-allnighter-toggle input { margin: 0; cursor: pointer; }
+  .home-sleep-time-pair {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .home-sleep-input {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .home-sleep-label {
+    font-size: 11px; color: var(--text-dim); letter-spacing: 0.02em;
+  }
+  .home-sleep-input input[type="time"] {
+    width: 100%; padding: 8px 10px;
+    font-size: 14px; color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
+  .home-sleep-allnighter-msg {
+    font-size: 13px; color: var(--accent2);
+    padding: 12px; text-align: center;
+    background: rgba(126,200,200,0.08);
+    border: 1px dashed rgba(126,200,200,0.3);
+    border-radius: 10px;
+  }
+  .home-sleep-duration {
+    font-size: 11px; color: var(--text-dim);
+    margin-top: 6px; text-align: right;
+    min-height: 14px;
+  }
+
   /* V4 cleanup 2026-05-23 — 옛 .chat-empty-checkin-card / .cec-* 폐기 (대화탭 체크인 카드 자체 폐기). */
 
   /* Hook 온보딩 모달 — Section 19.1 */
@@ -30563,8 +30621,10 @@ function renderRotatingCard() {
     const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
 
     // 체크인 완료 여부 — 우선순위에서 제외 + 작은 링크 done 상태로.
+    // 사용자 명시 2026-05-27 ultrathink: vitality && mood 필수. 둘 다 있어야 체크인 entry '완료'.
+    //   sleep/note 만 있는 entry = 미완료 → 큰 카드 / sleep widget 으로 surface.
     const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
-    const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
+    const checkinDone = !!(todayEntry && todayEntry.vitality && todayEntry.mood);
 
     // 각 source 빌더 — 가용성 만 체크. tap 만으로는 dismiss X (peek 후 미완 = 다시 surface).
     // V4 (사용자 명시 2026-05-20 ultrathink): tap dismiss path 폐기. 각 source 의 *완료 / 만료* 조건만 책임.
@@ -30584,6 +30644,16 @@ function renderRotatingCard() {
     };
     const buildCheckin = () => {
       if (checkinDone) return null;  // 완료 → priority 에서 제외 (자동 dismiss)
+      // 사용자 명시 2026-05-27 ultrathink: 4-18시 = 인라인 sleep widget (탭 진입 X, 자동 저장).
+      //   18시-4시 = 원래 큰 체크인 카드 (탭하면 체크인 화면).
+      //   _rcIsEveningMode() = h>=18 || h<4 = evening. !evening = 4-18시 daytime.
+      if (!_rcIsEveningMode()) {
+        return {
+          id: 'sleep_widget_' + todayKVal, sourceType: 'sleep_widget',
+          bodyHtml: _rcBuildSleepWidgetBodyHtml(todayEntry),
+          // onTapClick X — 카드 전체 tap 핸들러 emit 안 함 (자식 input 만 동작).
+        };
+      }
       return {
         id: 'checkin_' + todayKVal, sourceType: 'checkin',
         bodyHtml: _rcBuildCheckinBodyHtml(),
@@ -30641,14 +30711,14 @@ function renderRotatingCard() {
     }
 
     // 카드 + 작은 체크인 링크.
-    // V4 fix (사용자 명시 2026-05-18 ultrathink): mini-link 는 완료 시에만 노출.
-    //   checkin 카드가 priority slot 에 있을 때 skip (중복 회피) — 단 미완료 mini-link 도 폐기되어 결과적으로 done 만.
-    // V4 fix (사용자 명시 2026-05-18 ultrathink 재): mini-link 위치 분리 — 회전카드 container 에서 빼고
-    //   별도 #checkinDoneMiniLinkSlot (인사 영역 오른쪽) 에 inject.
+    // V4 fix (사용자 명시 2026-05-27 ultrathink): mini-link 노출 정책 단순화.
+    //   - 큰 체크인 카드 (sourceType='checkin') 가 priority slot 에 = 중복 회피 → 숨김.
+    //   - 그 외 (sleep_widget / hook / review / oneul / 카드 X) = 항상 노출.
+    //   텍스트도 '✓ 오늘 체크인' → '오늘 체크인' (4-18시 미완료 케이스 / 18+ 완료 케이스 둘 다 같은 텍스트 = 위치 일관성).
     const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
     const miniLink = (picked && picked.sourceType === 'checkin')
-      ? ''  // checkin 카드가 priority slot 에 = 중복 회피
-      : _rcCheckinMiniLink(checkinDone);  // 완료 시에만 ✓ 링크 노출
+      ? ''  // 큰 체크인 카드 = 중복 회피
+      : _rcCheckinMiniLink();
 
     // mini-link slot 별도 inject (인사 영역 오른쪽).
     const miniSlot = document.getElementById('checkinDoneMiniLinkSlot');
@@ -30677,15 +30747,13 @@ function _rcOnSourceTap(sourceId) {
   } catch (e) { console.warn('[rcOnSourceTap]', e); }
 }
 
-// 작은 체크인 링크 — 완료 시에만 노출.
-// V4 fix (사용자 명시 2026-05-18 ultrathink): isDone=false 분기 폐기 — 미완료 mini-link X.
-//   미완료는 priority slot 의 큰 체크인 카드로만 표시. 완료 시 (큰 카드 X) 작은 ✓ 링크만 노출.
-// V4 fix (사용자 명시 2026-05-18 ultrathink 재): 문구 축소 '✓ 오늘 체크인 — 보기 / 수정' → '✓ 오늘 체크인'.
-//   위치도 회전카드 밑 → 인사 영역 오른쪽 (#checkinDoneMiniLinkSlot) 으로 이동.
-function _rcCheckinMiniLink(isDone) {
+// 작은 체크인 링크 — 인사 영역 오른쪽 mini-link slot.
+// V4 fix (사용자 명시 2026-05-27 ultrathink): 노출 조건 확대 — 큰 체크인 카드 (sourceType='checkin') 가
+//   priority slot 차지할 때만 숨기고 그 외는 항상 노출. 4-18시 sleep widget 옆에도, 18+ vitality/mood 있는 케이스에도.
+//   텍스트도 '오늘 체크인' (✓ 제거) — 미완료/완료 모두 같은 문구 (위치 일관성).
+function _rcCheckinMiniLink() {
   if (window._onbTutorialMode) return '';
-  if (!isDone) return '';
-  return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인</div>`;
+  return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">오늘 체크인</div>`;
 }
 
 // Hook source bodyHtml — 친구 톤 질문 + hint.
@@ -30706,6 +30774,48 @@ function _rcBuildHookBodyHtml(hook) {
         </div>
       </div>
       <div class="hero-meta">탭해서 답해줘</div>
+    </div>
+  `;
+}
+
+// 사용자 명시 2026-05-27 ultrathink: 4-18시 인라인 sleep widget — 그 자리에서 어젯밤 수면만 자동 저장.
+//   vitality/mood 없으므로 entry 는 미완료 (사용자가 "오늘 체크인" footer 누르면 큰 체크인 화면).
+//   prefill: entry.sleepStart/End/allNighter 있으면 채움. onchange 자동 저장 (onHomeSleepTimeChange / onHomeSleepAllNighterChange).
+function _rcBuildSleepWidgetBodyHtml(entry) {
+  const sStart = (entry && entry.sleepStart) || '';
+  const sEnd = (entry && entry.sleepEnd) || '';
+  const isAllNighter = !!(entry && entry.allNighter);
+  let durLabel = '';
+  if (!isAllNighter && sStart && sEnd) {
+    const [sh, sm] = sStart.split(':').map(Number);
+    const [eh, em] = sEnd.split(':').map(Number);
+    let minutes = (eh * 60 + em) - (sh * 60 + sm);
+    if (minutes < 0) minutes += 24 * 60;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    durLabel = `약 ${hours}시간 ${mins}분`;
+  }
+  return `
+    <div class="home-sleep-widget">
+      <div class="home-sleep-widget-header">
+        <div class="home-sleep-widget-title">😴 어젯밤 수면</div>
+        <label class="home-sleep-allnighter-toggle">
+          <input type="checkbox" id="homeSleepAllNighter" ${isAllNighter ? 'checked' : ''} onchange="onHomeSleepAllNighterChange(this.checked)">
+          🌙 밤샘
+        </label>
+      </div>
+      <div class="home-sleep-time-pair" id="homeSleepTimePair" style="${isAllNighter ? 'display:none' : ''}">
+        <div class="home-sleep-input">
+          <div class="home-sleep-label">잠든 시각</div>
+          <input type="time" id="homeSleepStart" value="${sStart}" onchange="onHomeSleepTimeChange()">
+        </div>
+        <div class="home-sleep-input">
+          <div class="home-sleep-label">일어난 시각</div>
+          <input type="time" id="homeSleepEnd" value="${sEnd}" onchange="onHomeSleepTimeChange()">
+        </div>
+      </div>
+      <div class="home-sleep-allnighter-msg" id="homeSleepAllNighterMsg" style="${isAllNighter ? '' : 'display:none'}">🌙 밤샘으로 기록 — 수면 시간 X</div>
+      <div class="home-sleep-duration" id="homeSleepDuration">${durLabel}</div>
     </div>
   `;
 }
@@ -40086,8 +40196,12 @@ function prefillCheckinFromEntry() {
   }
 
   const _entryHasPhoto = !!(entry && (entry.photo || (Array.isArray(entry.photos) && entry.photos.length > 0)));
-  // V4 fix (사용자 보고 2026-05-20 ultrathink): entry.diary 만 있는 날 (일기 path 단독) 도 수정 모드로 인지 — 옛 흐름은 신규 작성으로 잘못 판정.
-  if (!entry || !(entry.vitality || entry.mood || entry.note || entry.diary || entry.sleepStart || entry.music || _entryHasPhoto)) {
+  // V4 fix (사용자 명시 2026-05-27 ultrathink): vitality && mood = 체크인 entry 필수 요소. 둘 다 있어야 '수정 모드'.
+  //   sleep/note/diary/music/photo 만 있는 entry (4-18시 인라인 sleep widget 단독 저장 등) = 미완료 → 새 작성 모드.
+  //   side-field 는 _hasAnySideField 일 때 prefill 만 해주고 submit 버튼은 '기록 완료'.
+  const _hasAnySideField = !!(entry && (entry.note || entry.diary || entry.sleepStart || entry.allNighter || entry.music || _entryHasPhoto));
+  const _isFullEntry = !!(entry && entry.vitality && entry.mood);
+  if (!entry || (!_isFullEntry && !_hasAnySideField)) {
     // 오늘 체크인 안 함 — 새로 작성 모드
     if (submitBtn) submitBtn.textContent = '기록 완료 ✦';
     if (subtitle) subtitle.textContent = '';
@@ -40101,8 +40215,9 @@ function prefillCheckinFromEntry() {
     if (typeof _updateCheckinSubmitState === 'function') _updateCheckinSubmitState();
     return;
   }
-  // 오늘 entry 있음 — 수정 모드
-  if (submitBtn) submitBtn.textContent = '수정 완료 ✦';
+  // 오늘 entry 있음 — vitality+mood 둘 다 있으면 '수정 완료', 아니면 (side-field 만) '기록 완료'.
+  // 사용자 명시 2026-05-27 ultrathink: vitality/mood 필수. side-field (sleep / note 등) 만 있는 entry = 미완료.
+  if (submitBtn) submitBtn.textContent = _isFullEntry ? '수정 완료 ✦' : '기록 완료 ✦';
   // V4 fix (사용자 명시 2026-05-18) — subtitle 문구 삭제. 옛: '오늘 이미 기록한 거. 바꿀 거 있으면 고쳐.'
   if (subtitle) subtitle.textContent = '';
 
@@ -40697,6 +40812,67 @@ async function submitCheckin() {
       setTimeout(() => renderPwaInstallInlineCard({ target: 'home' }), 3000);
     }
   } catch (e) { console.warn('[pwa post-checkin]', e); }
+}
+
+// 사용자 명시 2026-05-27 ultrathink: 홈 인라인 sleep widget — 4-18시 동안 큰 체크인 카드 자리에 노출.
+//   onchange 즉시 자동 저장 (제출 버튼 X). vitality/mood 는 안 건드림 → entry 는 여전히 미완료.
+//   "오늘 체크인" mini-link 누르면 큰 체크인 화면 진입 + sleep 값 prefill.
+function onHomeSleepTimeChange() {
+  _updateHomeSleepDuration();
+  const sEl = document.getElementById('homeSleepStart');
+  const eEl = document.getElementById('homeSleepEnd');
+  if (!sEl || !eEl) return;
+  const sVal = sEl.value;
+  const eVal = eEl.value;
+  // 둘 다 있을 때만 저장 — 사용자가 하나만 set 한 중간 상태에선 보류.
+  if (!sVal || !eVal) return;
+  _saveSleepInline({ allNighter: false, sleepStart: sVal, sleepEnd: eVal });
+}
+
+function onHomeSleepAllNighterChange(checked) {
+  // UI 인라인 swap
+  const pair = document.getElementById('homeSleepTimePair');
+  const msg = document.getElementById('homeSleepAllNighterMsg');
+  const dur = document.getElementById('homeSleepDuration');
+  if (pair) pair.style.display = checked ? 'none' : '';
+  if (msg) msg.style.display = checked ? '' : 'none';
+  if (dur) dur.textContent = '';
+  _saveSleepInline({ allNighter: !!checked });
+}
+
+function _saveSleepInline(opts) {
+  try {
+    const key = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
+    state.entries = state.entries || [];
+    let entry = state.entries.find(e => e.date === key);
+    if (!entry) { entry = { date: key }; state.entries.push(entry); }
+    if (opts.allNighter) {
+      entry.allNighter = true;
+      entry.sleepStart = '';
+      entry.sleepEnd = '';
+    } else {
+      entry.allNighter = false;
+      entry.sleepStart = opts.sleepStart || '';
+      entry.sleepEnd = opts.sleepEnd || '';
+    }
+    entry.timestamp = new Date().toISOString();
+    if (typeof saveState === 'function') saveState();
+  } catch (e) { console.warn('[saveSleepInline]', e); }
+}
+
+function _updateHomeSleepDuration() {
+  const sEl = document.getElementById('homeSleepStart');
+  const eEl = document.getElementById('homeSleepEnd');
+  const dEl = document.getElementById('homeSleepDuration');
+  if (!sEl || !eEl || !dEl) return;
+  if (!sEl.value || !eEl.value) { dEl.textContent = ''; return; }
+  const [sh, sm] = sEl.value.split(':').map(Number);
+  const [eh, em] = eEl.value.split(':').map(Number);
+  let minutes = (eh * 60 + em) - (sh * 60 + sm);
+  if (minutes < 0) minutes += 24 * 60;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  dEl.textContent = `약 ${hours}시간 ${mins}분`;
 }
 
 function buildCheckinSummary(entry) {
@@ -69881,7 +70057,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.265-execute-chip-reorder';
+const APP_VERSION = 'v4.0.266-home-sleep-widget';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

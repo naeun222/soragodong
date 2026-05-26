@@ -12439,6 +12439,64 @@
     color: var(--accent);
   }
 
+  /* 사용자 명시 2026-05-27 ultrathink: 홈 인라인 sleep widget — 4-18시 동안 큰 체크인 카드 자리.
+     library-hero 와 같은 사이즈로 통일 (priority slot 안 다른 카드와 visual consistency). */
+  .home-sleep-widget {
+    margin: 8px 0 14px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(126,200,200,0.10), rgba(139,126,196,0.08));
+    border: 1px solid rgba(126,200,200,0.30);
+    border-radius: 16px;
+  }
+  .rc-body-tap .home-sleep-widget { margin: 0; width: 100%; }
+  /* sleep widget = 인라인 (탭 진입 X) → wrapper cursor default 강제. */
+  .rc-body-tap:has(.home-sleep-widget) { cursor: default; }
+  .home-sleep-widget-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .home-sleep-widget-title {
+    font-size: 13px; font-weight: 600; color: var(--text);
+    letter-spacing: 0.02em;
+  }
+  .home-sleep-allnighter-toggle {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text-dim);
+    cursor: pointer; user-select: none;
+    padding: 4px 8px; border-radius: 8px;
+    background: var(--surface);
+  }
+  .home-sleep-allnighter-toggle input { margin: 0; cursor: pointer; }
+  .home-sleep-time-pair {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .home-sleep-input {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .home-sleep-label {
+    font-size: 11px; color: var(--text-dim); letter-spacing: 0.02em;
+  }
+  .home-sleep-input input[type="time"] {
+    width: 100%; padding: 8px 10px;
+    font-size: 14px; color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
+  .home-sleep-allnighter-msg {
+    font-size: 13px; color: var(--accent2);
+    padding: 12px; text-align: center;
+    background: rgba(126,200,200,0.08);
+    border: 1px dashed rgba(126,200,200,0.3);
+    border-radius: 10px;
+  }
+  .home-sleep-duration {
+    font-size: 11px; color: var(--text-dim);
+    margin-top: 6px; text-align: right;
+    min-height: 14px;
+  }
+
   /* V4 cleanup 2026-05-23 — 옛 .chat-empty-checkin-card / .cec-* 폐기 (대화탭 체크인 카드 자체 폐기). */
 
   /* Hook 온보딩 모달 — Section 19.1 */

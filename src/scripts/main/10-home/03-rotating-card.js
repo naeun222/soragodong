@@ -501,8 +501,10 @@ function renderRotatingCard() {
     const todayKVal = (typeof todayKey === 'function') ? todayKey() : '';
 
     // 체크인 완료 여부 — 우선순위에서 제외 + 작은 링크 done 상태로.
+    // 사용자 명시 2026-05-27 ultrathink: vitality && mood 필수. 둘 다 있어야 체크인 entry '완료'.
+    //   sleep/note 만 있는 entry = 미완료 → 큰 카드 / sleep widget 으로 surface.
     const todayEntry = (state.entries || []).find(e => e.date === todayKVal);
-    const checkinDone = !!(todayEntry && (todayEntry.vitality || todayEntry.note));
+    const checkinDone = !!(todayEntry && todayEntry.vitality && todayEntry.mood);
 
     // 각 source 빌더 — 가용성 만 체크. tap 만으로는 dismiss X (peek 후 미완 = 다시 surface).
     // V4 (사용자 명시 2026-05-20 ultrathink): tap dismiss path 폐기. 각 source 의 *완료 / 만료* 조건만 책임.
@@ -522,6 +524,16 @@ function renderRotatingCard() {
     };
     const buildCheckin = () => {
       if (checkinDone) return null;  // 완료 → priority 에서 제외 (자동 dismiss)
+      // 사용자 명시 2026-05-27 ultrathink: 4-18시 = 인라인 sleep widget (탭 진입 X, 자동 저장).
+      //   18시-4시 = 원래 큰 체크인 카드 (탭하면 체크인 화면).
+      //   _rcIsEveningMode() = h>=18 || h<4 = evening. !evening = 4-18시 daytime.
+      if (!_rcIsEveningMode()) {
+        return {
+          id: 'sleep_widget_' + todayKVal, sourceType: 'sleep_widget',
+          bodyHtml: _rcBuildSleepWidgetBodyHtml(todayEntry),
+          // onTapClick X — 카드 전체 tap 핸들러 emit 안 함 (자식 input 만 동작).
+        };
+      }
       return {
         id: 'checkin_' + todayKVal, sourceType: 'checkin',
         bodyHtml: _rcBuildCheckinBodyHtml(),
@@ -579,14 +591,14 @@ function renderRotatingCard() {
     }
 
     // 카드 + 작은 체크인 링크.
-    // V4 fix (사용자 명시 2026-05-18 ultrathink): mini-link 는 완료 시에만 노출.
-    //   checkin 카드가 priority slot 에 있을 때 skip (중복 회피) — 단 미완료 mini-link 도 폐기되어 결과적으로 done 만.
-    // V4 fix (사용자 명시 2026-05-18 ultrathink 재): mini-link 위치 분리 — 회전카드 container 에서 빼고
-    //   별도 #checkinDoneMiniLinkSlot (인사 영역 오른쪽) 에 inject.
+    // V4 fix (사용자 명시 2026-05-27 ultrathink): mini-link 노출 정책 단순화.
+    //   - 큰 체크인 카드 (sourceType='checkin') 가 priority slot 에 = 중복 회피 → 숨김.
+    //   - 그 외 (sleep_widget / hook / review / oneul / 카드 X) = 항상 노출.
+    //   텍스트도 '✓ 오늘 체크인' → '오늘 체크인' (4-18시 미완료 케이스 / 18+ 완료 케이스 둘 다 같은 텍스트 = 위치 일관성).
     const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
     const miniLink = (picked && picked.sourceType === 'checkin')
-      ? ''  // checkin 카드가 priority slot 에 = 중복 회피
-      : _rcCheckinMiniLink(checkinDone);  // 완료 시에만 ✓ 링크 노출
+      ? ''  // 큰 체크인 카드 = 중복 회피
+      : _rcCheckinMiniLink();
 
     // mini-link slot 별도 inject (인사 영역 오른쪽).
     const miniSlot = document.getElementById('checkinDoneMiniLinkSlot');
@@ -615,15 +627,13 @@ function _rcOnSourceTap(sourceId) {
   } catch (e) { console.warn('[rcOnSourceTap]', e); }
 }
 
-// 작은 체크인 링크 — 완료 시에만 노출.
-// V4 fix (사용자 명시 2026-05-18 ultrathink): isDone=false 분기 폐기 — 미완료 mini-link X.
-//   미완료는 priority slot 의 큰 체크인 카드로만 표시. 완료 시 (큰 카드 X) 작은 ✓ 링크만 노출.
-// V4 fix (사용자 명시 2026-05-18 ultrathink 재): 문구 축소 '✓ 오늘 체크인 — 보기 / 수정' → '✓ 오늘 체크인'.
-//   위치도 회전카드 밑 → 인사 영역 오른쪽 (#checkinDoneMiniLinkSlot) 으로 이동.
-function _rcCheckinMiniLink(isDone) {
+// 작은 체크인 링크 — 인사 영역 오른쪽 mini-link slot.
+// V4 fix (사용자 명시 2026-05-27 ultrathink): 노출 조건 확대 — 큰 체크인 카드 (sourceType='checkin') 가
+//   priority slot 차지할 때만 숨기고 그 외는 항상 노출. 4-18시 sleep widget 옆에도, 18+ vitality/mood 있는 케이스에도.
+//   텍스트도 '오늘 체크인' (✓ 제거) — 미완료/완료 모두 같은 문구 (위치 일관성).
+function _rcCheckinMiniLink() {
   if (window._onbTutorialMode) return '';
-  if (!isDone) return '';
-  return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인</div>`;
+  return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">오늘 체크인</div>`;
 }
 
 // Hook source bodyHtml — 친구 톤 질문 + hint.
@@ -644,6 +654,48 @@ function _rcBuildHookBodyHtml(hook) {
         </div>
       </div>
       <div class="hero-meta">탭해서 답해줘</div>
+    </div>
+  `;
+}
+
+// 사용자 명시 2026-05-27 ultrathink: 4-18시 인라인 sleep widget — 그 자리에서 어젯밤 수면만 자동 저장.
+//   vitality/mood 없으므로 entry 는 미완료 (사용자가 "오늘 체크인" footer 누르면 큰 체크인 화면).
+//   prefill: entry.sleepStart/End/allNighter 있으면 채움. onchange 자동 저장 (onHomeSleepTimeChange / onHomeSleepAllNighterChange).
+function _rcBuildSleepWidgetBodyHtml(entry) {
+  const sStart = (entry && entry.sleepStart) || '';
+  const sEnd = (entry && entry.sleepEnd) || '';
+  const isAllNighter = !!(entry && entry.allNighter);
+  let durLabel = '';
+  if (!isAllNighter && sStart && sEnd) {
+    const [sh, sm] = sStart.split(':').map(Number);
+    const [eh, em] = sEnd.split(':').map(Number);
+    let minutes = (eh * 60 + em) - (sh * 60 + sm);
+    if (minutes < 0) minutes += 24 * 60;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    durLabel = `약 ${hours}시간 ${mins}분`;
+  }
+  return `
+    <div class="home-sleep-widget">
+      <div class="home-sleep-widget-header">
+        <div class="home-sleep-widget-title">😴 어젯밤 수면</div>
+        <label class="home-sleep-allnighter-toggle">
+          <input type="checkbox" id="homeSleepAllNighter" ${isAllNighter ? 'checked' : ''} onchange="onHomeSleepAllNighterChange(this.checked)">
+          🌙 밤샘
+        </label>
+      </div>
+      <div class="home-sleep-time-pair" id="homeSleepTimePair" style="${isAllNighter ? 'display:none' : ''}">
+        <div class="home-sleep-input">
+          <div class="home-sleep-label">잠든 시각</div>
+          <input type="time" id="homeSleepStart" value="${sStart}" onchange="onHomeSleepTimeChange()">
+        </div>
+        <div class="home-sleep-input">
+          <div class="home-sleep-label">일어난 시각</div>
+          <input type="time" id="homeSleepEnd" value="${sEnd}" onchange="onHomeSleepTimeChange()">
+        </div>
+      </div>
+      <div class="home-sleep-allnighter-msg" id="homeSleepAllNighterMsg" style="${isAllNighter ? '' : 'display:none'}">🌙 밤샘으로 기록 — 수면 시간 X</div>
+      <div class="home-sleep-duration" id="homeSleepDuration">${durLabel}</div>
     </div>
   `;
 }
