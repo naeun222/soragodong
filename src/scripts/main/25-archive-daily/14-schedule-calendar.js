@@ -1,8 +1,11 @@
 // V4 (사용자 재정정 2026-05-27 ultrathink — 캘린더 일정/할 일 2단계 재정정):
-// 일정 lens (도서관 📅 일정 chip) 의 grid 뷰 캘린더.
+// 일정 lens (도서관 🗓️ 일정 chip) 의 grid 뷰 캘린더.
 // 사용자 재정정 2026-05-27 ultrathink (시각 조정): 구글 캘린더 월간 뷰 스타일 — 셀 세로 + 일정 title 인라인.
-// 사용자 명시 2026-05-27 ultrathink (UI 통일): 외곽 + 헤더 = 일기·대화 캘린더와 같은 .cal-grid-wrap / .cal-nav / .cal-nav-btn / .cal-month-label / .cal-weekdays 클래스.
-// 사용자 명시 2026-05-27 ultrathink (격자 + sync): 셀 사이 1px gap + grid background=var(--border) 로 격자 라인. 빈 셀로 마지막 주 채움. todaySchedule (오늘) 도 캘린더 오늘 셀에 합치기 (timeline ↔ 캘린더 sync).
+// 사용자 명시 2026-05-27 ultrathink (UI 통일): 외곽 + 헤더 = 일기·대화 캘린더와 같은 .cal-* 클래스.
+// 사용자 명시 2026-05-27 ultrathink (격자 + sync): 셀 사이 1px gap + grid background=var(--border) 격자 라인. todaySchedule (오늘) 도 캘린더 오늘 셀에 합치기.
+// 사용자 명시 2026-05-27 ultrathink (풀스크린 + 이전/다음 달):
+//   - 6주 (42 셀) 강제. grid-template-rows: repeat(6, 1fr) + height vh-based — 캘린더 영역 화면 가득.
+//   - 이전 달 마지막 며칠 + 다음 달 첫 며칠 셀 표시. 숫자 색만 var(--text-soft) 흐리게 (구글 캘린더 패턴). 일정/task 도 표시.
 // timeline 뷰는 기존 renderExecute() — 별도.
 
 let _schedCalCursorYM = null;  // 'YYYY-MM' (사용자 로컬 시간대)
@@ -10,7 +13,6 @@ let _schedCalCursorYM = null;  // 'YYYY-MM' (사용자 로컬 시간대)
 const _SCHED_CAL_SCHEDULE_COLOR = '#7eb8ff';
 const _SCHED_CAL_TASK_COLOR     = '#fbbf24';
 const _SCHED_CAL_MAX_ITEMS      = 3;
-const _SCHED_CAL_CELL_HEIGHT    = 88;  // px — 셀 min-height (구글 캘린더 비율)
 
 function _schedCalEnsureCursor() {
   if (!_schedCalCursorYM) {
@@ -28,7 +30,7 @@ function _schedCalMonthShift(delta) {
   if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
 }
 
-// 정렬 키 — schedule 의 startAt (ISO) 또는 todaySchedule 의 _legacyStart (HH:MM). 종일은 맨 위.
+// 정렬 키 — schedule.startAt (ISO) / todaySchedule.start (HH:MM) / isAllDay (맨 위).
 function _schedSortKey(s) {
   if (s._legacyStart) return s._legacyStart;
   if (s.isAllDay) return '00:00';
@@ -36,6 +38,11 @@ function _schedSortKey(s) {
     return _isoToScheduleTimeKey(s.startAt) || '99:99';
   }
   return '99:99';
+}
+
+// dateKey 'YYYY-MM-DD' helper
+function _schedYMD(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function renderScheduleCalendarGrid() {
@@ -48,37 +55,62 @@ function renderScheduleCalendarGrid() {
   const monthLabel = target.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
   const lastDay = new Date(year, month, 0).getDate();
   const firstWeekday = target.getDay();
-  const monthKey = `${year}-${String(month).padStart(2, '0')}`;
 
-  const _today = new Date();
-  const todayK = `${_today.getFullYear()}-${String(_today.getMonth() + 1).padStart(2, '0')}-${String(_today.getDate()).padStart(2, '0')}`;
+  // 6주 (42 셀) 강제 — 이전 달 마지막 며칠 + 이번 달 + 다음 달 첫 며칠.
+  const TOTAL_CELLS = 42;
+  const prevMonthLastDay = new Date(year, month - 1, 0).getDate();
+  const trailingCells = TOTAL_CELLS - firstWeekday - lastDay;
 
-  // schedules — 해당 월에 시작하는 entry.
+  // visible 셀 목록 (display 순서) + visibleDateKeys (schedules/tasks 매핑 용)
+  const visibleDateKeys = new Set();
+  const visibleCells = [];
+
+  for (let i = 0; i < firstWeekday; i++) {
+    const day = prevMonthLastDay - firstWeekday + 1 + i;
+    const dt = new Date(year, month - 2, day);  // month-2 = 이전 달 (0-index)
+    const dk = _schedYMD(dt);
+    visibleCells.push({ day, dateKey: dk, isOtherMonth: true });
+    visibleDateKeys.add(dk);
+  }
+  for (let day = 1; day <= lastDay; day++) {
+    const dk = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    visibleCells.push({ day, dateKey: dk, isOtherMonth: false });
+    visibleDateKeys.add(dk);
+  }
+  for (let i = 1; i <= trailingCells; i++) {
+    const dt = new Date(year, month, i);  // month (0-index = 다음 달)
+    const dk = _schedYMD(dt);
+    visibleCells.push({ day: i, dateKey: dk, isOtherMonth: true });
+    visibleDateKeys.add(dk);
+  }
+
+  // schedules — visible 범위 안 entry
   const schedulesByDate = {};
   for (const s of (state.schedules || [])) {
     const dk = (typeof _isoToScheduleDayKey === 'function') ? _isoToScheduleDayKey(s.startAt) : null;
-    if (!dk || !dk.startsWith(monthKey)) continue;
+    if (!dk || !visibleDateKeys.has(dk)) continue;
     if (!schedulesByDate[dk]) schedulesByDate[dk] = [];
     schedulesByDate[dk].push(s);
   }
 
-  // tasks — dueDate 매칭 (미완료 만).
+  // tasks — dueDate 매칭 (미완료 만)
   const tasksByDate = {};
   for (const t of (state.tasks || [])) {
-    if (!t.dueDate || !t.dueDate.startsWith(monthKey)) continue;
+    if (!t.dueDate || !visibleDateKeys.has(t.dueDate)) continue;
     if (t.status === 'done') continue;
     if (!tasksByDate[t.dueDate]) tasksByDate[t.dueDate] = [];
     tasksByDate[t.dueDate].push(t);
   }
 
-  // 사용자 명시 2026-05-27 ultrathink (timeline ↔ 캘린더 sync): state.todaySchedule 의 오늘 entry 도 캘린더 오늘 셀에 합치기.
-  //   ICS import / task 시간 적용 / manual 추가 모두 todaySchedule 에 들어감 → 캘린더에 안 보이면 두 view 불일치.
-  //   scheduleId 있으면 schedules 에서 derive 된 entry — skip (중복). taskId 있으면 task 로 분류 + dedupe.
-  if (todayK.startsWith(monthKey)) {
+  const _today = new Date();
+  const todayK = _schedYMD(_today);
+
+  // todaySchedule 의 오늘 entry 도 캘린더 오늘 셀에 합치기 (timeline ↔ 캘린더 sync).
+  if (visibleDateKeys.has(todayK)) {
     for (const it of (state.todaySchedule || [])) {
       const dateK = it.date || todayK;
       if (dateK !== todayK) continue;
-      if (it.scheduleId) continue;  // schedules 에서 derive — 중복
+      if (it.scheduleId) continue;  // schedules derive — 중복
 
       if (it.source === 'task' || it.taskId) {
         const taskEntity = (state.tasks || []).find(t => t.id === it.taskId);
@@ -115,7 +147,7 @@ function renderScheduleCalendarGrid() {
     tasksByDate[dk].sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
   }
 
-  // 외곽 + 헤더 + 요일 = 일기·대화 캘린더와 같은 클래스.
+  // 외곽 + 헤더 + 요일
   let html = `
     <div class="cal-grid-wrap">
       <div class="cal-nav">
@@ -126,18 +158,11 @@ function renderScheduleCalendarGrid() {
       <div class="cal-weekdays">
         <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
       </div>
-      <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+      <div style="display:grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, minmax(96px, 1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden; height: calc(100vh - 220px); min-height: 580px;">
   `;
 
-  const emptyCellStyle = `min-height:${_SCHED_CAL_CELL_HEIGHT}px; background:var(--surface); opacity:0.45;`;
-
-  // 빈 셀 (전월 잔여) — 격자 자연스럽게 채우기 위해 surface bg + 약한 opacity.
-  for (let i = 0; i < firstWeekday; i++) {
-    html += `<div style="${emptyCellStyle}"></div>`;
-  }
-
-  for (let day = 1; day <= lastDay; day++) {
-    const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  for (const cell of visibleCells) {
+    const { day, dateKey, isOtherMonth } = cell;
     const isToday = dateKey === todayK;
     const ds = schedulesByDate[dateKey] || [];
     const dt = tasksByDate[dateKey] || [];
@@ -157,26 +182,27 @@ function renderScheduleCalendarGrid() {
     const display = allItems.slice(0, _SCHED_CAL_MAX_ITEMS);
     const remaining = allItems.length - display.length;
 
-    const dayLabelHtml = isToday
-      ? `<span style="font-size:11px; font-weight:600; color:#fff; background:var(--accent2); padding:2px 6px; border-radius:10px; line-height:1.2;">${day}</span>`
-      : `<span style="font-size:11px; font-weight:400; color:var(--text); padding:2px 4px; line-height:1.2;">${day}</span>`;
+    // 날짜 라벨 — 오늘 = 둥근 강조 박스. 다른 달 = 숫자 색 흐리게 (구글 캘린더 패턴).
+    let dayLabelHtml;
+    if (isToday) {
+      dayLabelHtml = `<span style="font-size:11px; font-weight:600; color:#fff; background:var(--accent2); padding:2px 6px; border-radius:10px; line-height:1.2;">${day}</span>`;
+    } else if (isOtherMonth) {
+      dayLabelHtml = `<span style="font-size:11px; font-weight:400; color:var(--text-soft); opacity:0.55; padding:2px 4px; line-height:1.2;">${day}</span>`;
+    } else {
+      dayLabelHtml = `<span style="font-size:11px; font-weight:400; color:var(--text); padding:2px 4px; line-height:1.2;">${day}</span>`;
+    }
+
+    const itemDim = isOtherMonth ? ' opacity:0.6;' : '';
 
     html += `
-      <div onclick="_schedCalDayClick('${dateKey}')" style="min-height:${_SCHED_CAL_CELL_HEIGHT}px; background:var(--surface); padding:4px 4px 5px; cursor:pointer; display:flex; flex-direction:column; gap:2px; box-sizing:border-box; overflow:hidden;">
+      <div onclick="_schedCalDayClick('${dateKey}')" style="background:var(--surface); padding:4px 4px 5px; cursor:pointer; display:flex; flex-direction:column; gap:2px; box-sizing:border-box; overflow:hidden;">
         <div style="display:flex; justify-content:flex-end;">${dayLabelHtml}</div>
         ${display.map(it => `
-          <div style="font-size:10px; padding:1px 5px; background:${it.color}1f; border-left:2px solid ${it.color}; color:var(--text); border-radius:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.35;" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
+          <div style="font-size:10px; padding:1px 5px; background:${it.color}1f; border-left:2px solid ${it.color}; color:var(--text); border-radius:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.35;${itemDim}" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
         `).join('')}
-        ${remaining > 0 ? `<div style="font-size:9px; color:var(--text-soft); padding:1px 5px; line-height:1.2;">+${remaining}</div>` : ''}
+        ${remaining > 0 ? `<div style="font-size:9px; color:var(--text-soft); padding:1px 5px; line-height:1.2;${itemDim}">+${remaining}</div>` : ''}
       </div>
     `;
-  }
-
-  // 마지막 주 잔여 (다음 달 빈 셀) — 격자 채우기.
-  const totalCells = firstWeekday + lastDay;
-  const trailing = (7 - (totalCells % 7)) % 7;
-  for (let i = 0; i < trailing; i++) {
-    html += `<div style="${emptyCellStyle}"></div>`;
   }
 
   html += `
