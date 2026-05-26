@@ -229,11 +229,16 @@ async function forceAnalyze(opts) {
       const cf = state.caseFormulation;
       cf.version = (cf.version || 0) + 1;
       cf.lastUpdated = new Date().toISOString();
+      // V4 fix (사용자 보고 2026-05-26 ultrathink): existing 에 시드/V3 형태 object ({text, confidence, ...}) 잔존 가능 → unwrap 후 비교.
+      //   원인: 26-test-tools/02-seed-v4-data.js:853 의 testerMode seed 가 cf.problems/mechanisms/strengths 를 object array 로 push.
+      //   force-analyze 의 incoming 은 string 가정 → 기존 object e 와 새 string item 비교 시 similarText 가드 trip → warn 폭주.
+      //   render (cfBullet) / system-prompt (_cfTrunc) 는 이미 unwrap 지원하므로 여기만 맞추면 hybrid 안전.
+      const _cfUnwrap = (e) => (typeof e === 'string') ? e : (e && (e.text || e.name)) || '';
       const mergeStrings = (existing, incoming) => {
         const out = [...(existing || [])];
         (incoming || []).forEach(item => {
           if (!item || typeof item !== 'string') return;
-          if (!out.some(e => similarText(e, item))) out.push(item);
+          if (!out.some(e => similarText(_cfUnwrap(e), item))) out.push(item);
         });
         return out;
       };
