@@ -358,12 +358,23 @@ const DEFAULT_STATE = {
 
   // === V6 NEW ===
   // 1. 실행 탭 (Execution)
-  tasks: [],              // [{id, title, status, priority, energy, due, source, createdAt, completedAt, weight, project_id?}]
+  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 1단계): task 에 dueDate / dueTime / notifyMinutesBefore 추가.
+  //   기존 date (오늘 분류), scheduledStart/End (오늘 timetable) 와 의미 분리:
+  //     - date='YYYY-MM-DD'         : '오늘 할 일' 분류 기준 (isToday=true 일 때 = 오늘 날짜)
+  //     - scheduledStart/End='HH:MM': 오늘 timetable 시간 (todaySchedule 이중 기록)
+  //     - dueDate='YYYY-MM-DD'      : 미래 마감일 (캘린더 일정 뷰 표시 대상)
+  //     - dueTime='HH:MM' | null    : 마감 시각. null = 종일 (시간 무시)
+  //     - notifyMinutesBefore: number | null : 알림 시각. null = 알림 없음. default 15.
+  tasks: [],              // [{id, title, status, priority, energy, source, createdAt, completedAt, weight, project_id?, isToday?, date?, scheduledStart?, scheduledEnd?, dueDate?, dueTime?, notifyMinutesBefore?, ...}]
   projects: [],           // [{id, name, deadline?, status, createdAt}]
   areas: [],              // [{id, name, createdAt}] — 다이어트, 운동, 연구, 관계
   memoryVault: [],        // [{id, content, source: 'chat'|'manual', extractedAt, processed}]
   dayPlan: [],            // [{date, blocks: { morning: [], afternoon1: [], afternoon2: [], evening: [], night: [] }}]
   starts: [],             // [{id, taskId, location, woop, startedAt, returnedAt, outcome}]
+  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 1단계): 캘린더 일정 store.
+  //   todaySchedule (오늘 시간표) 와 별개. 모든 날짜 + isAllDay 지원. todaySchedule 은 derive view 로 유지 (backward compat).
+  //   필드: id, title, description?, startAt(ISO8601 local), endAt(ISO8601), isAllDay(bool), notifyMinutesBefore?(default 15), createdAt(ISO), updatedAt(ISO)
+  schedules: [],          // [{id, title, description?, startAt, endAt, isAllDay, notifyMinutesBefore?, createdAt, updatedAt}]
   
   // 2. 아카이브 V6 (3 Lens)
   insights: [],           // [{id, type:'pattern'|'causal', content, supportingEntryIds, confidence, discoveredAt, dismissed}]
