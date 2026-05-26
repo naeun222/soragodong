@@ -104,6 +104,10 @@ async function sendChat() {
       entry.diary = diaryContent;
     }
     entry.dailySource = 'diary';
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — diary marker race): 채팅 일기 path 도 batch sentinel strip.
+    //   17-mood-vitality-sleep.js 체크인 path 와 동일 정책 — diary 손수 작성 = batch aiSummary 재공급 권리 회복.
+    delete entry._aiSummaryFailed;
+    delete entry._aiSummaryFailReason;
     isDiary = true;
     // V4 (v8 묶음 16): 일기 첫 사용 placeholder dismiss
     if (typeof dismissPlaceholder === 'function') dismissPlaceholder('diary');

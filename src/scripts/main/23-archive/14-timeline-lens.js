@@ -278,6 +278,9 @@ async function editTimelineEntry(date) {
   if (updated === null) return;
   if (updated.trim() === '') {
     delete entry.userEdit;
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — sentinel 좀비 청소): userEdit 지울 때 editedAt 도 동시 strip.
+    //   안 지우면 userEdit 없는데 editedAt 만 박혀 좀비 sentinel — 후속 코드가 editedAt 보고 잘못 판단할 위험.
+    delete entry.editedAt;
   } else {
     entry.userEdit = updated.trim();
     entry.editedAt = new Date().toISOString();

@@ -40311,6 +40311,11 @@ async function submitCheckin() {
       entry.diary = _diaryContent;
     }
     entry.dailySource = 'diary';
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — diary marker race): 사용자가 직접 diary 작성 → batch sentinel strip.
+    //   옛 entry 에 _aiSummaryFailed 박혀있으면 _buildDiaryBatchRequests 가 영구 skip → 새 diary 가 들어와도 aiSummary 재공급 권리 X.
+    //   diary 손수 작성 = 권리 회복 신호.
+    delete entry._aiSummaryFailed;
+    delete entry._aiSummaryFailReason;
     if (window._checkinDiaryEditMode) delete window._checkinDiaryEditMode;
   }
   entry.modes = { ...state.modes };
@@ -43307,6 +43312,10 @@ async function sendChat() {
       entry.diary = diaryContent;
     }
     entry.dailySource = 'diary';
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — diary marker race): 채팅 일기 path 도 batch sentinel strip.
+    //   17-mood-vitality-sleep.js 체크인 path 와 동일 정책 — diary 손수 작성 = batch aiSummary 재공급 권리 회복.
+    delete entry._aiSummaryFailed;
+    delete entry._aiSummaryFailReason;
     isDiary = true;
     // V4 (v8 묶음 16): 일기 첫 사용 placeholder dismiss
     if (typeof dismissPlaceholder === 'function') dismissPlaceholder('diary');
@@ -52623,6 +52632,9 @@ async function editTimelineEntry(date) {
   if (updated === null) return;
   if (updated.trim() === '') {
     delete entry.userEdit;
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — sentinel 좀비 청소): userEdit 지울 때 editedAt 도 동시 strip.
+    //   안 지우면 userEdit 없는데 editedAt 만 박혀 좀비 sentinel — 후속 코드가 editedAt 보고 잘못 판단할 위험.
+    delete entry.editedAt;
   } else {
     entry.userEdit = updated.trim();
     entry.editedAt = new Date().toISOString();
@@ -62850,6 +62862,12 @@ async function _resumePendingBatch() {
           const summary = _processDiarySummaryResult(text);
           const entry = (state.entries || []).find(e => e.date === dateKey);
           if (entry) {
+            // V4 fix (사용자 명시 2026-05-26 ultrathink — diary marker race): batch in flight 동안 사용자가 직접 diary 작성한 경우 덮어쓰기 X.
+            //   _buildDiaryBatchRequests 가 빌드 시점엔 diary 비어 있어 batch 에 포함됐다가, batch 결과 도착 전 사용자가 손수 diary 작성 → 사용자 손수 작성 우선.
+            if (entry.diary) {
+              console.log('[batch diary] user wrote diary while batch in flight — skip aiSummary', dateKey);
+              continue;
+            }
             if (summary && summary.length > 0) {
               entry.aiSummary = summary;
               entry.dailySource = 'auto';
@@ -63231,7 +63249,10 @@ async function _resumeChapterCleanupBatch() {
           //   batch path 는 chat.ts 사이클을 안 거치므로 빈 text 자체를 sentinel 로 사용 (Anthropic 가 정상 응답 비울 일 없음).
           //   _aiSummaryFailed 영구 마킹 → 다음 batch 진입 시 _buildDiaryBatchRequests 가 자동 skip.
           if (entry) {
-            if (summary && summary.length > 0) {
+            // V4 fix (사용자 명시 2026-05-26 ultrathink — diary marker race): batch in flight 동안 사용자가 직접 diary 작성한 경우 덮어쓰기 X.
+            if (entry.diary) {
+              console.log('[cleanup resume] user wrote diary while batch in flight — skip aiSummary', dateKey);
+            } else if (summary && summary.length > 0) {
               entry.aiSummary = summary;
               entry.dailySource = 'auto';
             } else {
@@ -69043,7 +69064,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.251-zombie-marker-hygiene';
+const APP_VERSION = 'v4.0.252-diary-marker-race-fix';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
@@ -70518,8 +70539,12 @@ function _dismissPwaInstallCard() {
         ? state.chatArchive.filter(a => a && !a._deleted && (a._pendingCleanup || a._pendingExtract) && Array.isArray(a.messages) && a.messages.length >= 3)
         : [];
       // diary backfill 도 가능한지 체크 — 어제부터 7일 missing entries (aiSummary X) 가 있으면 발사.
+      // V4 fix (사용자 명시 2026-05-26 ultrathink — bg-fetch 불필요 wake 제거): 오늘 entry 제외.
+      //   _buildDiaryBatchRequests 가 dateKey ≠ todayKey cutoff 가드 (30-force-analyze.js:788) — 오늘 entry 는 batch 에 포함 안 됨.
+      //   여기서 오늘 entry 까지 trigger 로 카운트하면 _pending 0 인데도 bg-fetch wake → maybeRunChapterCleanup() 가 결국 아무것도 안 함.
+      const _todayDk = (typeof todayKey === 'function') ? todayKey() : '';
       const _hasMissingDiary = Array.isArray(state.entries) && state.entries.some(e =>
-        e && !e.diary && !e.aiSummary && !e._aiSummaryFailed && e.date
+        e && !e.diary && !e.aiSummary && !e._aiSummaryFailed && e.date && e.date < _todayDk
       );
       if (_pending.length === 0 && !_hasMissingDiary) {
         console.log('[bg-fetch] no pending cleanup + no missing diary — skip');

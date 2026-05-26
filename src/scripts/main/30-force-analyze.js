@@ -1056,6 +1056,12 @@ async function _resumePendingBatch() {
           const summary = _processDiarySummaryResult(text);
           const entry = (state.entries || []).find(e => e.date === dateKey);
           if (entry) {
+            // V4 fix (사용자 명시 2026-05-26 ultrathink — diary marker race): batch in flight 동안 사용자가 직접 diary 작성한 경우 덮어쓰기 X.
+            //   _buildDiaryBatchRequests 가 빌드 시점엔 diary 비어 있어 batch 에 포함됐다가, batch 결과 도착 전 사용자가 손수 diary 작성 → 사용자 손수 작성 우선.
+            if (entry.diary) {
+              console.log('[batch diary] user wrote diary while batch in flight — skip aiSummary', dateKey);
+              continue;
+            }
             if (summary && summary.length > 0) {
               entry.aiSummary = summary;
               entry.dailySource = 'auto';
@@ -1437,7 +1443,10 @@ async function _resumeChapterCleanupBatch() {
           //   batch path 는 chat.ts 사이클을 안 거치므로 빈 text 자체를 sentinel 로 사용 (Anthropic 가 정상 응답 비울 일 없음).
           //   _aiSummaryFailed 영구 마킹 → 다음 batch 진입 시 _buildDiaryBatchRequests 가 자동 skip.
           if (entry) {
-            if (summary && summary.length > 0) {
+            // V4 fix (사용자 명시 2026-05-26 ultrathink — diary marker race): batch in flight 동안 사용자가 직접 diary 작성한 경우 덮어쓰기 X.
+            if (entry.diary) {
+              console.log('[cleanup resume] user wrote diary while batch in flight — skip aiSummary', dateKey);
+            } else if (summary && summary.length > 0) {
               entry.aiSummary = summary;
               entry.dailySource = 'auto';
             } else {

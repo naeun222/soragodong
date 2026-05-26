@@ -73,8 +73,12 @@
         ? state.chatArchive.filter(a => a && !a._deleted && (a._pendingCleanup || a._pendingExtract) && Array.isArray(a.messages) && a.messages.length >= 3)
         : [];
       // diary backfill 도 가능한지 체크 — 어제부터 7일 missing entries (aiSummary X) 가 있으면 발사.
+      // V4 fix (사용자 명시 2026-05-26 ultrathink — bg-fetch 불필요 wake 제거): 오늘 entry 제외.
+      //   _buildDiaryBatchRequests 가 dateKey ≠ todayKey cutoff 가드 (30-force-analyze.js:788) — 오늘 entry 는 batch 에 포함 안 됨.
+      //   여기서 오늘 entry 까지 trigger 로 카운트하면 _pending 0 인데도 bg-fetch wake → maybeRunChapterCleanup() 가 결국 아무것도 안 함.
+      const _todayDk = (typeof todayKey === 'function') ? todayKey() : '';
       const _hasMissingDiary = Array.isArray(state.entries) && state.entries.some(e =>
-        e && !e.diary && !e.aiSummary && !e._aiSummaryFailed && e.date
+        e && !e.diary && !e.aiSummary && !e._aiSummaryFailed && e.date && e.date < _todayDk
       );
       if (_pending.length === 0 && !_hasMissingDiary) {
         console.log('[bg-fetch] no pending cleanup + no missing diary — skip');

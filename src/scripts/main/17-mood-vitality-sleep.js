@@ -178,6 +178,11 @@ async function submitCheckin() {
       entry.diary = _diaryContent;
     }
     entry.dailySource = 'diary';
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — diary marker race): 사용자가 직접 diary 작성 → batch sentinel strip.
+    //   옛 entry 에 _aiSummaryFailed 박혀있으면 _buildDiaryBatchRequests 가 영구 skip → 새 diary 가 들어와도 aiSummary 재공급 권리 X.
+    //   diary 손수 작성 = 권리 회복 신호.
+    delete entry._aiSummaryFailed;
+    delete entry._aiSummaryFailReason;
     if (window._checkinDiaryEditMode) delete window._checkinDiaryEditMode;
   }
   entry.modes = { ...state.modes };
