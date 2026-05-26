@@ -1,4 +1,13 @@
 function similarText(a, b) {
+  // V4 fix (사용자 보고 2026-05-26 ultrathink): 비-string 가드 — LLM 응답이 object/array 등 비-string 으로 와도 throw 방지.
+  //   원인: traits/values/patterns forEach 의 similarText(e.name, t.name) 에서 t.name 이 비-string 일 때
+  //   s.toLowerCase() 호출 → TypeError → forceAnalyze 무한 반복 (lastForceAnalyzeAt 저장 못 함, 매 init 헛 콜 $0.007).
+  //   defensive skip + warn 으로 다음 진단 기회 확보.
+  if (typeof a !== 'string' || typeof b !== 'string') {
+    if (a != null && a !== '' && typeof a !== 'string') console.warn('[similarText] non-string a:', typeof a, a);
+    if (b != null && b !== '' && typeof b !== 'string') console.warn('[similarText] non-string b:', typeof b, b);
+    return false;
+  }
   if (!a || !b) return false;
   const n = s => s.toLowerCase().replace(/\s+/g, '');
   return n(a) === n(b) || n(a).includes(n(b)) || n(b).includes(n(a));

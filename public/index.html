@@ -43981,6 +43981,15 @@ async function askDeeper(messageIdx) {
 }
 
 function similarText(a, b) {
+  // V4 fix (사용자 보고 2026-05-26 ultrathink): 비-string 가드 — LLM 응답이 object/array 등 비-string 으로 와도 throw 방지.
+  //   원인: traits/values/patterns forEach 의 similarText(e.name, t.name) 에서 t.name 이 비-string 일 때
+  //   s.toLowerCase() 호출 → TypeError → forceAnalyze 무한 반복 (lastForceAnalyzeAt 저장 못 함, 매 init 헛 콜 $0.007).
+  //   defensive skip + warn 으로 다음 진단 기회 확보.
+  if (typeof a !== 'string' || typeof b !== 'string') {
+    if (a != null && a !== '' && typeof a !== 'string') console.warn('[similarText] non-string a:', typeof a, a);
+    if (b != null && b !== '' && typeof b !== 'string') console.warn('[similarText] non-string b:', typeof b, b);
+    return false;
+  }
   if (!a || !b) return false;
   const n = s => s.toLowerCase().replace(/\s+/g, '');
   return n(a) === n(b) || n(a).includes(n(b)) || n(b).includes(n(a));
@@ -52420,6 +52429,14 @@ function _softDeleteArchiveCascade(archiveId) {
   const _now = new Date().toISOString();
   arch._deleted = true;
   arch._deletedAt = _now;
+  // V4 fix (사용자 보고 2026-05-26 ultrathink): cleanup 마커 동시 strip — 좀비 archive 방지.
+  //   원인: 마커 잔존하면 30-force-analyze.js 의 cleanup batch filter (a => !a._deleted && a._pendingCleanup) 가 영구 거부 →
+  //   매일 새벽 unprocessed=[] → submitChapterCleanupBatch([]) → requests.length===0 early return → lastChapterCleanupAt 만 stamp →
+  //   사용자 모델 (trait/value/pattern) 분석 한 달 freeze.
+  delete arch._pendingCleanup;
+  delete arch._pendingExtract;
+  delete arch._pendingCaseAnalysis;
+  delete arch._batchSubmittedAt;
 
   const counts = { traits: 0, values: 0, patterns: 0, archive: 0, pearls: 0, insights: 0, topicCards: 0, udpTurningPoints: 0, udpRelationships: 0 };
   const cascadeArr = (arr, key) => {
@@ -62593,10 +62610,23 @@ async function maybeRunChapterCleanup() {
     _archiveCurrentChapter({ manual: false });
   }
 
-  // msg<3 stuck marker sweep (옛 + 새 마커 모두 cover)
+  // msg<3 stuck marker sweep (옛 + 새 마커 모두 cover) + 좀비 (_deleted + 마커 잔존) retro 청소
   let _sweptDeadMarker = false;
   (state.chatArchive || []).forEach(a => {
-    if (!a || a._deleted) return;
+    if (!a) return;
+    // V4 fix (사용자 보고 2026-05-26 ultrathink): 좀비 archive retro 청소 — _deleted 인데 cleanup 마커 잔존.
+    //   원인: 삭제 path (_softDeleteArchiveCascade) 가 _pendingCleanup 등 마커 strip 안 함 → filter 영구 거부 → cleanup batch 매일 no-op.
+    //   여기서 retro 청소 + 00-soft-delete.js 에서 삭제 path 자체 fix.
+    if (a._deleted) {
+      if (a._pendingCleanup || a._pendingExtract || a._pendingCaseAnalysis || a._batchSubmittedAt) {
+        delete a._pendingCleanup;
+        delete a._pendingExtract;
+        delete a._pendingCaseAnalysis;
+        delete a._batchSubmittedAt;
+        _sweptDeadMarker = true;
+      }
+      return;
+    }
     if (a._pendingCleanup || a._pendingExtract || a._pendingCaseAnalysis) {
       const _msgs = a.messages;
       const _invalid = !Array.isArray(_msgs) || _msgs.length < 3;
@@ -67808,7 +67838,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.234-chat-welcome-soft-smile';
+const APP_VERSION = 'v4.0.235-archive-zombie-fix';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

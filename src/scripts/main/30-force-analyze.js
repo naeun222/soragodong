@@ -1822,10 +1822,23 @@ async function maybeRunChapterCleanup() {
     _archiveCurrentChapter({ manual: false });
   }
 
-  // msg<3 stuck marker sweep (옛 + 새 마커 모두 cover)
+  // msg<3 stuck marker sweep (옛 + 새 마커 모두 cover) + 좀비 (_deleted + 마커 잔존) retro 청소
   let _sweptDeadMarker = false;
   (state.chatArchive || []).forEach(a => {
-    if (!a || a._deleted) return;
+    if (!a) return;
+    // V4 fix (사용자 보고 2026-05-26 ultrathink): 좀비 archive retro 청소 — _deleted 인데 cleanup 마커 잔존.
+    //   원인: 삭제 path (_softDeleteArchiveCascade) 가 _pendingCleanup 등 마커 strip 안 함 → filter 영구 거부 → cleanup batch 매일 no-op.
+    //   여기서 retro 청소 + 00-soft-delete.js 에서 삭제 path 자체 fix.
+    if (a._deleted) {
+      if (a._pendingCleanup || a._pendingExtract || a._pendingCaseAnalysis || a._batchSubmittedAt) {
+        delete a._pendingCleanup;
+        delete a._pendingExtract;
+        delete a._pendingCaseAnalysis;
+        delete a._batchSubmittedAt;
+        _sweptDeadMarker = true;
+      }
+      return;
+    }
     if (a._pendingCleanup || a._pendingExtract || a._pendingCaseAnalysis) {
       const _msgs = a.messages;
       const _invalid = !Array.isArray(_msgs) || _msgs.length < 3;

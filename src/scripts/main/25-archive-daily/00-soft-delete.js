@@ -89,6 +89,14 @@ function _softDeleteArchiveCascade(archiveId) {
   const _now = new Date().toISOString();
   arch._deleted = true;
   arch._deletedAt = _now;
+  // V4 fix (사용자 보고 2026-05-26 ultrathink): cleanup 마커 동시 strip — 좀비 archive 방지.
+  //   원인: 마커 잔존하면 30-force-analyze.js 의 cleanup batch filter (a => !a._deleted && a._pendingCleanup) 가 영구 거부 →
+  //   매일 새벽 unprocessed=[] → submitChapterCleanupBatch([]) → requests.length===0 early return → lastChapterCleanupAt 만 stamp →
+  //   사용자 모델 (trait/value/pattern) 분석 한 달 freeze.
+  delete arch._pendingCleanup;
+  delete arch._pendingExtract;
+  delete arch._pendingCaseAnalysis;
+  delete arch._batchSubmittedAt;
 
   const counts = { traits: 0, values: 0, patterns: 0, archive: 0, pearls: 0, insights: 0, topicCards: 0, udpTurningPoints: 0, udpRelationships: 0 };
   const cascadeArr = (arr, key) => {
