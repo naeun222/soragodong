@@ -6098,7 +6098,12 @@
     padding: 24px 22px 32px;
     transform: translateY(20px);
     transition: transform 0.22s ease;
+    /* V4 fix (사용자 보고 2026-05-26 ultrathink): 백업 list 많을 때 modal 이 viewport 위로 자라서 잘림. options-list 안 scroll 처리. */
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
   }
+  .input-modal-title, .input-modal-msg, .input-modal-actions { flex-shrink: 0; }
   .input-modal-overlay.show .input-modal { transform: translateY(0); }
 
   /* 사용자 명시 2026-05-10: 시나리오 토론 스티커 — 시뮬 → 대화 이어가기 시 chat 화면 상단. 챕터 마무리 시 사라짐. */
@@ -6560,6 +6565,10 @@
   .options-list {
     display: flex; flex-direction: column; gap: 8px;
     margin-bottom: 16px;
+    /* V4 fix (사용자 보고 2026-05-26 ultrathink): 백업 list 등 항목 많으면 scroll. */
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
   }
   .options-btn {
     background: var(--surface2);
@@ -68994,7 +69003,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.247-dedup-merge-fail-guard';
+const APP_VERSION = 'v4.0.248-backup-list-scroll';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
