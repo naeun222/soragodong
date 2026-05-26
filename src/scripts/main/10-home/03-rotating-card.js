@@ -679,7 +679,7 @@ function _rcBuildSleepWidgetBodyHtml(entry) {
     durLabel = `약 ${hours}시간 ${mins}분`;
   }
   return `
-    <div class="home-sleep-widget">
+    <div class="home-sleep-widget has-attention-pulse">
       <div class="home-sleep-widget-header">
         <div class="home-sleep-widget-title">😴 어젯밤 수면</div>
         <label class="home-sleep-allnighter-toggle">
@@ -709,7 +709,7 @@ function _rcBuildSleepWidgetBodyHtml(entry) {
 function _rcBuildCheckinBodyHtml() {
   if (window._onbTutorialMode) {
     return `
-      <div class="library-hero">
+      <div class="library-hero has-attention-pulse">
         <div class="hero-label">✓ 체크인</div>
         <div class="hero-text">
           <div class="hero-text-col">
@@ -723,7 +723,7 @@ function _rcBuildCheckinBodyHtml() {
   const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
   const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '✓', title: '체크인', sub: '' };
   return `
-    <div class="library-hero">
+    <div class="library-hero has-attention-pulse">
       <div class="hero-label">${copy.icon} 체크인</div>
       <div class="hero-text">
         <div class="hero-text-col">

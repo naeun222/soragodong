@@ -1,1 +1,1 @@
-v4.0.272-checkin-mini-always-show
+v4.0.273-card-attention-pulse

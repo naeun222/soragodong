@@ -12597,6 +12597,23 @@
     color: var(--accent);
   }
 
+  /* 사용자 명시 2026-05-27 ultrathink — 수면 widget + 체크인 카드 공용 'needs attention' 펄싱 점.
+     기록 완료 시 카드 자체가 사라지므로 항상 표시. ::before 으로 DOM 추가 없이 marker class 만으로 동작.
+     position: 카드 우상단 안쪽 (8/8) — sleep widget 의 밤샘 토글 (header 안 right) 과 vertical range 안 겹침. */
+  .has-attention-pulse { position: relative; }
+  .has-attention-pulse::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+
   /* 사용자 명시 2026-05-27 ultrathink: 홈 인라인 sleep widget — 4-18시 동안 큰 체크인 카드 자리.
      library-hero 와 같은 사이즈로 통일 (priority slot 안 다른 카드와 visual consistency).
      사용자 명시 2026-05-27 ultrathink #2 — 시간 input 카드 밖 overflow fix + library-hero default 높이 맞춤.
@@ -30818,7 +30835,7 @@ function _rcBuildSleepWidgetBodyHtml(entry) {
     durLabel = `약 ${hours}시간 ${mins}분`;
   }
   return `
-    <div class="home-sleep-widget">
+    <div class="home-sleep-widget has-attention-pulse">
       <div class="home-sleep-widget-header">
         <div class="home-sleep-widget-title">😴 어젯밤 수면</div>
         <label class="home-sleep-allnighter-toggle">
@@ -30848,7 +30865,7 @@ function _rcBuildSleepWidgetBodyHtml(entry) {
 function _rcBuildCheckinBodyHtml() {
   if (window._onbTutorialMode) {
     return `
-      <div class="library-hero">
+      <div class="library-hero has-attention-pulse">
         <div class="hero-label">✓ 체크인</div>
         <div class="hero-text">
           <div class="hero-text-col">
@@ -30862,7 +30879,7 @@ function _rcBuildCheckinBodyHtml() {
   const slot = (typeof getCheckinTimeSlot === 'function') ? getCheckinTimeSlot() : 'night';
   const copy = (typeof _checkinCardCopy === 'function') ? _checkinCardCopy(slot, false) : { icon: '✓', title: '체크인', sub: '' };
   return `
-    <div class="library-hero">
+    <div class="library-hero has-attention-pulse">
       <div class="hero-label">${copy.icon} 체크인</div>
       <div class="hero-text">
         <div class="hero-text-col">
@@ -70081,7 +70098,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.272-checkin-mini-always-show';
+const APP_VERSION = 'v4.0.273-card-attention-pulse';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
