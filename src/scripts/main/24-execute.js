@@ -26,7 +26,10 @@ function _scheduleDateKey() {
 }
 
 function _renderTimetableStripHTML() {
-  const items = (state.todaySchedule || []).slice().sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+  // 사용자 명시 2026-05-27 ultrathink (timeline ↔ 캘린더 sync): getTodaySchedulesDerivedView 사용 — state.schedules 오늘 + state.todaySchedule 합쳐서 양쪽 view 같은 데이터.
+  const items = (typeof getTodaySchedulesDerivedView === 'function')
+    ? getTodaySchedulesDerivedView()
+    : (state.todaySchedule || []).slice().sort((a, b) => (a.start || '').localeCompare(b.start || ''));
   const todayK = _scheduleDateKey();
   const todayItems = items.filter(it => !it.date || it.date === todayK);
   const now = new Date();

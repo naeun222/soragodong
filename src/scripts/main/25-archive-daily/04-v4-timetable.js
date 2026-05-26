@@ -1,5 +1,8 @@
 function renderV4TimetableHTML() {
-  const items = (state.todaySchedule || []).slice().sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+  // 사용자 명시 2026-05-27 ultrathink (timeline ↔ 캘린더 sync): getTodaySchedulesDerivedView 사용 — state.schedules 오늘 + state.todaySchedule 합쳐서 양쪽 view 같은 데이터.
+  const items = (typeof getTodaySchedulesDerivedView === 'function')
+    ? getTodaySchedulesDerivedView()
+    : (state.todaySchedule || []).slice().sort((a, b) => (a.start || '').localeCompare(b.start || ''));
   // 사용자 명시 2026-05-06 (정정): 자정 (00:00) cutoff. _scheduleDateKey 가 helper.
   const todayK = (typeof _scheduleDateKey === 'function') ? _scheduleDateKey() : todayKey();
   const todayItems = items.filter(it => !it.date || it.date === todayK);

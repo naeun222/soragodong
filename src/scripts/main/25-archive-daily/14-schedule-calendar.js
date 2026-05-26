@@ -1,7 +1,8 @@
 // V4 (사용자 재정정 2026-05-27 ultrathink — 캘린더 일정/할 일 2단계 재정정):
-// 일정 lens (도서관 🚀 일정 chip) 의 grid 뷰 캘린더.
-// 사용자 재정정 2026-05-27 ultrathink (시각 조정): 구글 캘린더 월간 뷰 스타일 — 셀 세로 길게 + 일정 title 인라인.
-// 사용자 명시 2026-05-27 ultrathink (UI 통일): 외곽 + 헤더 = 일기·대화 캘린더와 같은 .cal-grid-wrap / .cal-nav / .cal-nav-btn / .cal-month-label / .cal-weekdays 클래스. 화살표 ← →. 월 라벨 toLocaleDateString.
+// 일정 lens (도서관 📅 일정 chip) 의 grid 뷰 캘린더.
+// 사용자 재정정 2026-05-27 ultrathink (시각 조정): 구글 캘린더 월간 뷰 스타일 — 셀 세로 + 일정 title 인라인.
+// 사용자 명시 2026-05-27 ultrathink (UI 통일): 외곽 + 헤더 = 일기·대화 캘린더와 같은 .cal-grid-wrap / .cal-nav / .cal-nav-btn / .cal-month-label / .cal-weekdays 클래스.
+// 사용자 명시 2026-05-27 ultrathink (격자 + sync): 셀 사이 1px gap + grid background=var(--border) 로 격자 라인. 빈 셀로 마지막 주 채움. todaySchedule (오늘) 도 캘린더 오늘 셀에 합치기 (timeline ↔ 캘린더 sync).
 // timeline 뷰는 기존 renderExecute() — 별도.
 
 let _schedCalCursorYM = null;  // 'YYYY-MM' (사용자 로컬 시간대)
@@ -9,6 +10,7 @@ let _schedCalCursorYM = null;  // 'YYYY-MM' (사용자 로컬 시간대)
 const _SCHED_CAL_SCHEDULE_COLOR = '#7eb8ff';
 const _SCHED_CAL_TASK_COLOR     = '#fbbf24';
 const _SCHED_CAL_MAX_ITEMS      = 3;
+const _SCHED_CAL_CELL_HEIGHT    = 88;  // px — 셀 min-height (구글 캘린더 비율)
 
 function _schedCalEnsureCursor() {
   if (!_schedCalCursorYM) {
@@ -26,6 +28,16 @@ function _schedCalMonthShift(delta) {
   if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
 }
 
+// 정렬 키 — schedule 의 startAt (ISO) 또는 todaySchedule 의 _legacyStart (HH:MM). 종일은 맨 위.
+function _schedSortKey(s) {
+  if (s._legacyStart) return s._legacyStart;
+  if (s.isAllDay) return '00:00';
+  if (s.startAt && typeof _isoToScheduleTimeKey === 'function') {
+    return _isoToScheduleTimeKey(s.startAt) || '99:99';
+  }
+  return '99:99';
+}
+
 function renderScheduleCalendarGrid() {
   const container = document.getElementById('libExecuteGrid');
   if (!container) return;
@@ -38,7 +50,10 @@ function renderScheduleCalendarGrid() {
   const firstWeekday = target.getDay();
   const monthKey = `${year}-${String(month).padStart(2, '0')}`;
 
-  // schedules — 해당 월에 시작하는 entry. 시간순 정렬.
+  const _today = new Date();
+  const todayK = `${_today.getFullYear()}-${String(_today.getMonth() + 1).padStart(2, '0')}-${String(_today.getDate()).padStart(2, '0')}`;
+
+  // schedules — 해당 월에 시작하는 entry.
   const schedulesByDate = {};
   for (const s of (state.schedules || [])) {
     const dk = (typeof _isoToScheduleDayKey === 'function') ? _isoToScheduleDayKey(s.startAt) : null;
@@ -46,11 +61,8 @@ function renderScheduleCalendarGrid() {
     if (!schedulesByDate[dk]) schedulesByDate[dk] = [];
     schedulesByDate[dk].push(s);
   }
-  for (const dk of Object.keys(schedulesByDate)) {
-    schedulesByDate[dk].sort((a, b) => (a.startAt || '').localeCompare(b.startAt || ''));
-  }
 
-  // tasks — dueDate 매칭 (미완료 만). dueTime 시간순.
+  // tasks — dueDate 매칭 (미완료 만).
   const tasksByDate = {};
   for (const t of (state.tasks || [])) {
     if (!t.dueDate || !t.dueDate.startsWith(monthKey)) continue;
@@ -58,14 +70,52 @@ function renderScheduleCalendarGrid() {
     if (!tasksByDate[t.dueDate]) tasksByDate[t.dueDate] = [];
     tasksByDate[t.dueDate].push(t);
   }
+
+  // 사용자 명시 2026-05-27 ultrathink (timeline ↔ 캘린더 sync): state.todaySchedule 의 오늘 entry 도 캘린더 오늘 셀에 합치기.
+  //   ICS import / task 시간 적용 / manual 추가 모두 todaySchedule 에 들어감 → 캘린더에 안 보이면 두 view 불일치.
+  //   scheduleId 있으면 schedules 에서 derive 된 entry — skip (중복). taskId 있으면 task 로 분류 + dedupe.
+  if (todayK.startsWith(monthKey)) {
+    for (const it of (state.todaySchedule || [])) {
+      const dateK = it.date || todayK;
+      if (dateK !== todayK) continue;
+      if (it.scheduleId) continue;  // schedules 에서 derive — 중복
+
+      if (it.source === 'task' || it.taskId) {
+        const taskEntity = (state.tasks || []).find(t => t.id === it.taskId);
+        if (taskEntity && taskEntity.status === 'done') continue;
+        const existing = tasksByDate[dateK] || [];
+        const dup = existing.find(t => t.id === it.taskId);
+        if (dup) continue;
+        if (!tasksByDate[dateK]) tasksByDate[dateK] = [];
+        tasksByDate[dateK].push({
+          id: it.taskId,
+          title: it.title || (taskEntity ? taskEntity.title : ''),
+          dueTime: it.start || null,
+          _fromTodaySchedule: true
+        });
+      } else {
+        if (!schedulesByDate[dateK]) schedulesByDate[dateK] = [];
+        schedulesByDate[dateK].push({
+          id: it.id,
+          title: it.title || '',
+          isAllDay: false,
+          startAt: null,
+          _legacyStart: it.start || null,
+          _fromTodaySchedule: true
+        });
+      }
+    }
+  }
+
+  // 시간순 정렬
+  for (const dk of Object.keys(schedulesByDate)) {
+    schedulesByDate[dk].sort((a, b) => _schedSortKey(a).localeCompare(_schedSortKey(b)));
+  }
   for (const dk of Object.keys(tasksByDate)) {
     tasksByDate[dk].sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
   }
 
-  const _today = new Date();
-  const todayK = `${_today.getFullYear()}-${String(_today.getMonth() + 1).padStart(2, '0')}-${String(_today.getDate()).padStart(2, '0')}`;
-
-  // 외곽 + 헤더 + 요일 = 일기·대화 캘린더와 같은 클래스 (visual 통일).
+  // 외곽 + 헤더 + 요일 = 일기·대화 캘린더와 같은 클래스.
   let html = `
     <div class="cal-grid-wrap">
       <div class="cal-nav">
@@ -76,12 +126,14 @@ function renderScheduleCalendarGrid() {
       <div class="cal-weekdays">
         <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
       </div>
-      <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:3px; padding:0 2px;">
+      <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
   `;
 
-  // 빈 셀 (전월 잔여)
+  const emptyCellStyle = `min-height:${_SCHED_CAL_CELL_HEIGHT}px; background:var(--surface); opacity:0.45;`;
+
+  // 빈 셀 (전월 잔여) — 격자 자연스럽게 채우기 위해 surface bg + 약한 opacity.
   for (let i = 0; i < firstWeekday; i++) {
-    html += '<div style="min-height:80px; background:transparent;"></div>';
+    html += `<div style="${emptyCellStyle}"></div>`;
   }
 
   for (let day = 1; day <= lastDay; day++) {
@@ -90,7 +142,6 @@ function renderScheduleCalendarGrid() {
     const ds = schedulesByDate[dateKey] || [];
     const dt = tasksByDate[dateKey] || [];
 
-    // schedule 먼저 (시간순), task 그 다음. 종일 일정은 · prefix.
     const allItems = [
       ...ds.map(s => ({
         kind: 'schedule',
@@ -111,14 +162,21 @@ function renderScheduleCalendarGrid() {
       : `<span style="font-size:11px; font-weight:400; color:var(--text); padding:2px 4px; line-height:1.2;">${day}</span>`;
 
     html += `
-      <div onclick="_schedCalDayClick('${dateKey}')" style="min-height:80px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:4px 3px 5px; cursor:pointer; display:flex; flex-direction:column; gap:2px; box-sizing:border-box; overflow:hidden;">
+      <div onclick="_schedCalDayClick('${dateKey}')" style="min-height:${_SCHED_CAL_CELL_HEIGHT}px; background:var(--surface); padding:4px 4px 5px; cursor:pointer; display:flex; flex-direction:column; gap:2px; box-sizing:border-box; overflow:hidden;">
         <div style="display:flex; justify-content:flex-end;">${dayLabelHtml}</div>
         ${display.map(it => `
-          <div style="font-size:9.5px; padding:1px 4px; background:${it.color}1f; border-left:2px solid ${it.color}; color:var(--text); border-radius:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.35;" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
+          <div style="font-size:10px; padding:1px 5px; background:${it.color}1f; border-left:2px solid ${it.color}; color:var(--text); border-radius:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.35;" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
         `).join('')}
-        ${remaining > 0 ? `<div style="font-size:9px; color:var(--text-soft); padding:1px 4px; line-height:1.2;">+${remaining}</div>` : ''}
+        ${remaining > 0 ? `<div style="font-size:9px; color:var(--text-soft); padding:1px 5px; line-height:1.2;">+${remaining}</div>` : ''}
       </div>
     `;
+  }
+
+  // 마지막 주 잔여 (다음 달 빈 셀) — 격자 채우기.
+  const totalCells = firstWeekday + lastDay;
+  const trailing = (7 - (totalCells % 7)) % 7;
+  for (let i = 0; i < trailing; i++) {
+    html += `<div style="${emptyCellStyle}"></div>`;
   }
 
   html += `
@@ -126,7 +184,7 @@ function renderScheduleCalendarGrid() {
     </div>
   `;
 
-  // 범례 (안내 문구 제거 — 2-3 ship 후)
+  // 범례
   html += `
     <div style="margin:18px 4px 0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; font-size:12px; color:var(--text-soft); line-height:1.6;">
       <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
