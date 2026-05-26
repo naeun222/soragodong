@@ -80,7 +80,8 @@ function updateModeHeaderVisual(btn) {
              : (mode === 'vent')    ? 'mode-vent'
              : 'mode-daily';
   btn.classList.add(halo);
-  btn.innerHTML = composedCharacterHtml({ mode, useGlasses });  // default expression = soft-smile
+  // V4 fix (사용자 보고 2026-05-26 ultrathink) — 헤더 토글은 항상 soft-smile (모드 default warm/curious/empathic 무관).
+  btn.innerHTML = composedCharacterHtml({ mode, useGlasses, expression: 'soft-smile' });
   const label = (mode === 'inquiry') ? '물어보기'
               : (mode === 'vent')    ? '털어놓기'
               : '얘기하기';
@@ -226,10 +227,10 @@ function _refreshAllMsgAvatars() {
     const expression = (m && m.expression) || _chatModeDefaultExpr(mode);
     av.innerHTML = composedCharacterHtml({ mode, useGlasses: false, expression });
   });
-  // empty entry welcome bubble (chatMessages 비었을 때만 존재) — 모드 default 표정으로 갱신.
+  // V4 fix (사용자 보고 2026-05-26 ultrathink) — empty entry welcome bubble avatar = 항상 soft-smile (모드 default 무관).
   const welcomeAv = document.querySelector('.msg.assistant.ces-welcome .msg-avatar');
   if (welcomeAv) {
-    welcomeAv.innerHTML = composedCharacterHtml({ mode, useGlasses: false, expression: _chatModeDefaultExpr(mode) });
+    welcomeAv.innerHTML = composedCharacterHtml({ mode, useGlasses: false, expression: 'soft-smile' });
   }
 }
 

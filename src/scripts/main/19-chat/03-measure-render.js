@@ -244,8 +244,8 @@ function _chatEmptyAreaHtml() {
     //   3. chip 3 (말풍선 형태, 좌측 정렬, 모드별 고유 색) — chatMode null 일 때만 노출. 누르면 selectChatMode 만 (자동 send X).
     //   4. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
     const chatMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
-    // V4 사용자 명시 2026-05-26 ultrathink — welcome 표정 = 모드별 default (daily=warm/inquiry=curious/vent=empathic/null=soft-smile).
-    const _welcomeExpr = (typeof _chatModeDefaultExpr === 'function') ? _chatModeDefaultExpr(chatMode) : 'soft-smile';
+    // V4 fix (사용자 보고 2026-05-26 ultrathink) — 처음 프로필 default 표정 = 항상 soft-smile (모드 default warm/curious/empathic 무관).
+    const _welcomeExpr = 'soft-smile';
     // V4 사용자 명시 2026-05-23 (재) — 아바타 click → 시트 open (= 헤더 토글과 동일 동작, 둘 다 entry).
     const avatarHtml = (typeof composedCharacterHtml === 'function')
       ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false, expression: _welcomeExpr })}</div>`

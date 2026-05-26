@@ -42202,8 +42202,8 @@ function _chatEmptyAreaHtml() {
     //   3. chip 3 (말풍선 형태, 좌측 정렬, 모드별 고유 색) — chatMode null 일 때만 노출. 누르면 selectChatMode 만 (자동 send X).
     //   4. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
     const chatMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
-    // V4 사용자 명시 2026-05-26 ultrathink — welcome 표정 = 모드별 default (daily=warm/inquiry=curious/vent=empathic/null=soft-smile).
-    const _welcomeExpr = (typeof _chatModeDefaultExpr === 'function') ? _chatModeDefaultExpr(chatMode) : 'soft-smile';
+    // V4 fix (사용자 보고 2026-05-26 ultrathink) — 처음 프로필 default 표정 = 항상 soft-smile (모드 default warm/curious/empathic 무관).
+    const _welcomeExpr = 'soft-smile';
     // V4 사용자 명시 2026-05-23 (재) — 아바타 click → 시트 open (= 헤더 토글과 동일 동작, 둘 다 entry).
     const avatarHtml = (typeof composedCharacterHtml === 'function')
       ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false, expression: _welcomeExpr })}</div>`
@@ -44600,7 +44600,8 @@ function updateModeHeaderVisual(btn) {
              : (mode === 'vent')    ? 'mode-vent'
              : 'mode-daily';
   btn.classList.add(halo);
-  btn.innerHTML = composedCharacterHtml({ mode, useGlasses });  // default expression = soft-smile
+  // V4 fix (사용자 보고 2026-05-26 ultrathink) — 헤더 토글은 항상 soft-smile (모드 default warm/curious/empathic 무관).
+  btn.innerHTML = composedCharacterHtml({ mode, useGlasses, expression: 'soft-smile' });
   const label = (mode === 'inquiry') ? '물어보기'
               : (mode === 'vent')    ? '털어놓기'
               : '얘기하기';
@@ -44746,10 +44747,10 @@ function _refreshAllMsgAvatars() {
     const expression = (m && m.expression) || _chatModeDefaultExpr(mode);
     av.innerHTML = composedCharacterHtml({ mode, useGlasses: false, expression });
   });
-  // empty entry welcome bubble (chatMessages 비었을 때만 존재) — 모드 default 표정으로 갱신.
+  // V4 fix (사용자 보고 2026-05-26 ultrathink) — empty entry welcome bubble avatar = 항상 soft-smile (모드 default 무관).
   const welcomeAv = document.querySelector('.msg.assistant.ces-welcome .msg-avatar');
   if (welcomeAv) {
-    welcomeAv.innerHTML = composedCharacterHtml({ mode, useGlasses: false, expression: _chatModeDefaultExpr(mode) });
+    welcomeAv.innerHTML = composedCharacterHtml({ mode, useGlasses: false, expression: 'soft-smile' });
   }
 }
 
