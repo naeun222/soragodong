@@ -595,24 +595,23 @@ function renderRotatingCard() {
     }
 
     // 카드 + 작은 체크인 링크.
-    // 사용자 명시 2026-05-27 (revert) — '오늘 체크인' footer 위치/문구/크기 옛 (pre-5/18) 상태 복구.
-    //   회전카드 container 안 cardHtml + miniLink 인라인 렌더 (= 회전카드 밑 footer).
-    //   완료 시에만 노출 (isDone). 큰 체크인 카드 priority slot 차지 시 숨김 (중복 회피).
-    //   #checkinDoneMiniLinkSlot 은 빈 상태로 비워 둠 (:empty 으로 자동 숨김).
+    // 사용자 명시 2026-05-27 (재정정): footer = 인사 영역 right slot + 작은 사이즈 (5/18-5/26 상태) 유지가 정답.
+    //   ✓ 만 부활 + 완료 시에만 노출 (= 5/18 e15825b 상태). 5/27 ff1773f 변경 (✓ 제거 + 항상 노출) 만 되돌림.
+    //   큰 체크인 카드 priority slot 차지 시 숨김 (중복 회피).
     const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
     const miniLink = (picked && picked.sourceType === 'checkin')
       ? ''  // 큰 체크인 카드 = 중복 회피
       : _rcCheckinMiniLink(checkinDone);
 
-    // 옛 5/18 slot 비워 두기 (mini-link 는 회전카드 footer 로 복원).
+    // mini-link slot 별도 inject (인사 영역 오른쪽).
     const miniSlot = document.getElementById('checkinDoneMiniLinkSlot');
-    if (miniSlot) miniSlot.innerHTML = '';
+    if (miniSlot) miniSlot.innerHTML = miniLink;
 
-    if (!cardHtml && !miniLink) {
+    if (!cardHtml) {
       container.innerHTML = '';
       return;
     }
-    container.innerHTML = cardHtml + miniLink;
+    container.innerHTML = cardHtml;
     // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — 신 path 진주 미디어 (storageKey) 가 카드에 있으면 hydrate. hydratePearlVideos 도 같이 (옛 path 영상 진주 호환).
     if (typeof hydratePearlVideos === 'function') hydratePearlVideos();
     else if (typeof hydratePearlMedia === 'function') hydratePearlMedia(container);
@@ -631,13 +630,13 @@ function _rcOnSourceTap(sourceId) {
   } catch (e) { console.warn('[rcOnSourceTap]', e); }
 }
 
-// 작은 체크인 링크 — 회전카드 밑 footer (pre-5/18 인라인 디자인 복원).
-// 사용자 명시 2026-05-27 (revert): 위치/문구/크기 옛 footer 로 복원.
-//   완료 시에만 노출 (미완료는 priority slot 의 큰 체크인 카드 / sleep widget 로 surface).
+// 작은 체크인 링크 — 인사 영역 오른쪽 mini-link slot.
+// 사용자 명시 2026-05-27 (재정정): 5/18-5/26 상태 = right slot + 작은 사이즈 + '✓ 오늘 체크인' + 완료 시에만.
+//   미완료는 priority slot 의 큰 체크인 카드 / sleep widget 로 surface.
 function _rcCheckinMiniLink(isDone) {
   if (window._onbTutorialMode) return '';
   if (!isDone) return '';
-  return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인 — 보기 / 수정</div>`;
+  return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인</div>`;
 }
 
 // Hook source bodyHtml — 친구 톤 질문 + hint.

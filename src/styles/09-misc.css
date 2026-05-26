@@ -12420,16 +12420,15 @@
   }
   .simple-tuto-btn.ghost:active { background: var(--surface2, rgba(255,255,255,0.04)); }
 
-  /* 사용자 명시 2026-05-27 (revert) — '오늘 체크인' footer 위치/문구/크기 pre-5/18 인라인 footer 로 복구.
-     회전카드 밑 가운데 정렬 13px / padding 8/14 / radius 10 — 인사 영역 right slot 으로 옮긴 5/18 변형 무효화. */
+  /* 사용자 명시 2026-05-27 (재정정) — 5/18-5/26 인사 영역 right slot 작은 사이즈 복원 (pre-5/18 footer 로 잘못 복원했던 것 취소). */
   .rc-checkin-mini-link {
-    margin-top: 8px;
-    padding: 8px 14px;
-    font-size: 13px;
+    padding: 4px 8px;
+    font-size: 12px;
     color: var(--text-dim);
-    text-align: center;
+    text-align: right;
     cursor: pointer;
-    border-radius: 10px;
+    border-radius: 8px;
+    white-space: nowrap;
     transition: background 0.15s, color 0.15s;
   }
   .rc-checkin-mini-link:active {
