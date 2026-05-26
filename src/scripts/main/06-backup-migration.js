@@ -294,7 +294,8 @@ async function _saveToCloudNowInner() {
       // 회전 카드 spec final 추가 (2026-05-09): 미니 리뷰 결과 + 회전 카드 sessionState (진주 4시간 / unseenInsights / quizProgress 등) 모두 sensitiveBody 에 포함.
       // 사용자 보고 2026-05-12 ultrathink (root cause 동일 패턴): tutorialShown / tutorialVersion / _core2NotUnlocked / userName / activeStrategies 누락 → 신규 가입자 sim 튜토리얼 (도서관 / 진주 / 깨달음 / 마법 / 리뷰 / 숙고) 마커 reload 마다 손실 → 같은 튜토리얼 반복 fire. 같이 추가.
       // 사용자 보고 2026-05-18 ultrathink (root cause 동일 패턴 재발): _shownInlineTips 누락 → E2EE 사용자의 firstHomeTutorial 마커 ('firstHomeIntro') / inline tip 8개 / simple-tuto modal key 모두 reload 마다 wipe → 홈 진입 시마다 firstHomeTutorial 무한 fire. 같이 추가.
-      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','activeStrategies','_shownInlineTips'];
+      // 사용자 보고 2026-05-27 ultrathink (root cause 동일 패턴 재재발): aiSuggestedDedupPairs 누락 → 빗자루 'AI 가 더 깊이 찾기' 결과 pair 가 cloud reload 마다 wipe → 모달 빈 결과. sensitiveBody (카드 이름/이유 = 사용자 분석 데이터).
+      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','activeStrategies','_shownInlineTips','aiSuggestedDedupPairs'];
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
       // V4 (사용자 명시 2026-05-20 ultrathink): _cloudStateReplacer — _hasMessages 박힌 archive 의 messages 키 strip.
@@ -350,6 +351,9 @@ async function _saveToCloudNowInner() {
         }
       }
       // 평문 메타 (consent / billing / version / preferences 일부)
+      // 사용자 보고 2026-05-27 ultrathink (root cause 동일 패턴 재재발):
+      //   _lastSemanticDedupManualAt / _lastSemanticDedupAutoAt 누락 → 빗자루 'AI 가 더 깊이 찾기' 24h/7d 쿨다운 cloud reload 마다 wipe → 가드 풀려 재호출 가능 (사용자 AI 비용 발생).
+      //   lastChapterCleanupAt 도 같은 패턴 (recent 추가 + 누락) → 매일 cleanup 쿨다운 wipe. 같이 보강.
       const metaBody = {
         version: state.version,
         lastSync: state.lastSync,
@@ -361,10 +365,13 @@ async function _saveToCloudNowInner() {
         dailyChatCount: state.dailyChatCount,
         lastForceAnalyzeAt: state.lastForceAnalyzeAt,
         lastDailyChapterExtractAt: state.lastDailyChapterExtractAt,
+        lastChapterCleanupAt: state.lastChapterCleanupAt,
         lastWeeklyAnalyzeAt: state.lastWeeklyAnalyzeAt,
         lastMonthlyAnalyzeAt: state.lastMonthlyAnalyzeAt,
         lastQuarterlyAnalyzeAt: state.lastQuarterlyAnalyzeAt,
         lastYearlyAnalyzeAt: state.lastYearlyAnalyzeAt,
+        _lastSemanticDedupManualAt: state._lastSemanticDedupManualAt,
+        _lastSemanticDedupAutoAt: state._lastSemanticDedupAutoAt,
         _e2eeEnabled: true,
         _e2eeVersion: _E2EE_VERSION,
         _e2eeRecovery: recoveryInfo  // password로 암호화된 master key + salt
