@@ -99,9 +99,7 @@ function renderExecute() {
   const todayTasks = (state.tasks || []).filter(t => t.date === todayKeyVal);
   const completed = todayTasks.filter(t => t.status === 'done' && !t.isToday);
 
-  let html = `
-    <div class="screen-title">일정 🚀</div>
-  `;
+  let html = '';
 
   html += _renderTimetableStripHTML();
   if (_timetableExpanded && typeof renderV4TimetableHTML === 'function') {
