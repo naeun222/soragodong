@@ -104,7 +104,7 @@ function renderExecute() {
   const completed = todayTasks.filter(t => t.status === 'done' && !t.isToday);
 
   let html = `
-    <div class="screen-title">실행 🚀</div>
+    <div class="screen-title">일정 🚀</div>
     <div class="screen-sub">머릿속 짐 → 오늘의 카드 → 차근히.</div>
   `;
 
@@ -315,10 +315,8 @@ function renderExecute() {
     </div>
   `;
 
-  // 추적 항목 (체중/수면/운동 그래프) — 옛 실행 탭에 살았으니 chip 안에도 유지.
-  html += `<div id="projectsSection"></div>`;
+  // 사용자 명시 2026-05-27 ultrathink: 일정 lens 에서 트래커 (projectsSection / renderProjects) 제외.
   container.innerHTML = html;
-  if (typeof renderProjects === 'function') renderProjects();
 }
 
 // === BRAIN DUMP ===
