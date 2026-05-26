@@ -662,6 +662,16 @@ async function _resumePendingBatch() {
   const pb = state.pendingBatch;
   if (!pb || !pb.batch_id) return;
 
+  // V4 (사용자 명시 2026-05-26 ultrathink): 24h hard cap — status fetch 시도 전.
+  //   Anthropic batch retention 끝나 status 가 404 영영 fail 시 statusFailCount 가 페이지 진입 단위 1씩만 누적 → 3회 도달 X → 영구 stuck.
+  //   진단: 옛 batch msgbatch_01DvpXgPgdGWt71CteG2v6tQ 가 5/24 04:00 W21 cutoff 직후 (backend chat-batch.ts fix 직전) 제출되어 errored + retention 후 stuck.
+  //   fix: submitted_at 24h+ 면 status 무관 즉시 timeout fallback.
+  if (pb.submitted_at && Date.now() - pb.submitted_at > 24 * 3600 * 1000) {
+    console.warn('[batch] 24h hard cap — submitted_at:', new Date(pb.submitted_at).toISOString(), '→ timeout');
+    await _timeoutPendingBatch();
+    return;
+  }
+
   try {
     // status check
     const statusResp = await _authedFetch('/api/chat-batch', {
@@ -671,6 +681,12 @@ async function _resumePendingBatch() {
     });
     if (!statusResp.ok) {
       console.warn('[batch status] fail:', statusResp.status);
+      // V4 (사용자 명시 2026-05-26 ultrathink): 4xx 즉시 escape — 404/410 = retention 끝 (영구 fail). 5xx 만 fail count 누적.
+      if (statusResp.status === 404 || statusResp.status === 410) {
+        console.warn('[batch] status', statusResp.status, '— retention 끝, 즉시 timeout fallback');
+        await _timeoutPendingBatch();
+        return;
+      }
       // 사용자 보고 2026-05-10 (audit batch 3): fail count 누적 → 3회 이상 시 timeout fallback (영구 stuck 회피).
       state.pendingBatch.statusFailCount = (state.pendingBatch.statusFailCount || 0) + 1;
       if (state.pendingBatch.statusFailCount >= 3) {
@@ -1102,6 +1118,13 @@ async function _resumeChapterCleanupBatch() {
   const pb = state.pendingChapterCleanupBatch;
   if (!pb || !pb.batch_id) return;
 
+  // V4 (사용자 명시 2026-05-26 ultrathink): 24h hard cap — _resumePendingBatch 와 동일 패턴.
+  if (pb.submitted_at && Date.now() - pb.submitted_at > 24 * 3600 * 1000) {
+    console.warn('[cleanup batch] 24h hard cap — submitted_at:', new Date(pb.submitted_at).toISOString(), '→ timeout');
+    await _timeoutChapterCleanupBatch();
+    return;
+  }
+
   try {
     // status check
     const statusResp = await _authedFetch('/api/chat-batch', {
@@ -1110,6 +1133,12 @@ async function _resumeChapterCleanupBatch() {
       body: JSON.stringify({ action: 'status', batch_id: pb.batch_id })
     });
     if (!statusResp.ok) {
+      // V4 (사용자 명시 2026-05-26 ultrathink): 4xx 즉시 escape.
+      if (statusResp.status === 404 || statusResp.status === 410) {
+        console.warn('[cleanup batch] status', statusResp.status, '— retention 끝, 즉시 timeout');
+        await _timeoutChapterCleanupBatch();
+        return;
+      }
       state.pendingChapterCleanupBatch.statusFailCount = (state.pendingChapterCleanupBatch.statusFailCount || 0) + 1;
       if (state.pendingChapterCleanupBatch.statusFailCount >= 3) {
         await _timeoutChapterCleanupBatch();
@@ -1285,6 +1314,16 @@ async function _timeoutChapterCleanupBatch() {
 //   step 4 swap 까지 호출 X — 정의만.
 
 async function maybeTriggerReviewChain() {
+  // V4 (사용자 명시 2026-05-26 ultrathink): 24h+ stuck escape — _resumeReviewChainBatch 가 setTimeout polling 으로만 fire (페이지 닫히면 잃음) 인 corner case 대비.
+  //   진단: 옛 batch msgbatch_01DvpXgPgdGWt71CteG2v6tQ 가 retention 끝 후에도 maybeTriggerReviewChain 가드에 걸려 신규 batch 영영 차단됨.
+  //   resume path 의 24h hard cap 와 별개 — trigger 진입 자체에서도 stale batch_id 자동 해제.
+  if (state.pendingReviewBatch?.batch_id
+      && state.pendingReviewBatch.submitted_at
+      && Date.now() - state.pendingReviewBatch.submitted_at > 24 * 3600 * 1000) {
+    console.warn('[review chain] 24h+ stuck escape — clear stale batch_id');
+    state.pendingReviewBatch = null;
+    saveState();
+  }
   if (state.pendingReviewBatch?.batch_id) return;  // 진행 중
   if (!_canAI()) return;  // 게스트 제외
   if (window._onbTutorialMode) return;
@@ -1388,6 +1427,13 @@ async function _resumeReviewChainBatch() {
   const pb = state.pendingReviewBatch;
   if (!pb || !pb.batch_id) return;
 
+  // V4 (사용자 명시 2026-05-26 ultrathink): 24h hard cap — _resumePendingBatch 와 동일 패턴.
+  if (pb.submitted_at && Date.now() - pb.submitted_at > 24 * 3600 * 1000) {
+    console.warn('[review chain] 24h hard cap — submitted_at:', new Date(pb.submitted_at).toISOString(), '→ timeout');
+    await _timeoutReviewChainBatch();
+    return;
+  }
+
   try {
     const statusResp = await _authedFetch('/api/chat-batch', {
       method: 'POST',
@@ -1395,6 +1441,12 @@ async function _resumeReviewChainBatch() {
       body: JSON.stringify({ action: 'status', batch_id: pb.batch_id })
     });
     if (!statusResp.ok) {
+      // V4 (사용자 명시 2026-05-26 ultrathink): 4xx 즉시 escape.
+      if (statusResp.status === 404 || statusResp.status === 410) {
+        console.warn('[review chain] status', statusResp.status, '— retention 끝, 즉시 timeout');
+        await _timeoutReviewChainBatch();
+        return;
+      }
       state.pendingReviewBatch.statusFailCount = (state.pendingReviewBatch.statusFailCount || 0) + 1;
       if (state.pendingReviewBatch.statusFailCount >= 3) {
         await _timeoutReviewChainBatch();
