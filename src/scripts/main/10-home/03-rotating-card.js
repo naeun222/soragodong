@@ -528,6 +528,10 @@ function renderRotatingCard() {
       //   18시-4시 = 원래 큰 체크인 카드 (탭하면 체크인 화면).
       //   _rcIsEveningMode() = h>=18 || h<4 = evening. !evening = 4-18시 daytime.
       if (!_rcIsEveningMode()) {
+        // 사용자 명시 2026-05-27 — 수면 기록 끝나면 카드 사라짐 (체크인 카드가 checkinDone 시 빠지는 것과 동일).
+        //   완료 조건: 밤샘 || (잠든 시각 && 일어난 시각). priority 슬롯은 다음 source (hook/oneul/review) 로 넘어감.
+        const sleepDone = !!(todayEntry && (todayEntry.allNighter || (todayEntry.sleepStart && todayEntry.sleepEnd)));
+        if (sleepDone) return null;
         return {
           id: 'sleep_widget_' + todayKVal, sourceType: 'sleep_widget',
           bodyHtml: _rcBuildSleepWidgetBodyHtml(todayEntry),

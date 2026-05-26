@@ -384,6 +384,8 @@ function _saveSleepInline(opts) {
     }
     entry.timestamp = new Date().toISOString();
     if (typeof saveState === 'function') saveState();
+    // 사용자 명시 2026-05-27 — 수면 기록되면 sleep widget 카드 자동 사라짐 (rerender → buildCheckin 의 sleepDone 체크가 다음 source 로 swap).
+    if (typeof renderRotatingCard === 'function') renderRotatingCard();
   } catch (e) { console.warn('[saveSleepInline]', e); }
 }
 
