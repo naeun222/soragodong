@@ -9,7 +9,9 @@ const _LIB_CAT_TO_VIEW = {
   diary:     'libDiary',
   yangsaeng: 'libYangsaeng',
   insights:  'libInsights',
-  galpi:     'libGalpi'
+  galpi:     'libGalpi',
+  // 사용자 명시 2026-05-27 ultrathink: 실행 chip — 5번째 library 카테고리.
+  execute:   'libExecute'
 };
 
 let _currentLens = 'diary';
@@ -39,6 +41,8 @@ function renderArchive() {
   renderLensStrategies();
   renderLensPearls();
   if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
+  // 사용자 명시 2026-05-27 ultrathink: 실행 chip view 도 같이 pre-render (다른 lens 와 동일 패턴).
+  if (typeof renderExecute === 'function') { try { renderExecute(); } catch (e) { console.warn('[renderExecute]', e); } }
   // V4 fix (사용자 보고 2026-05-17 ultrathink): renderLibraryHero 자동 호출 제거 — '오늘의 너' 큐레이션이 회전카드 oneul source + libraryHero 두 곳에 중복 노출되던 버그 fix.
   //   회전카드 (renderRotatingCard) 의 oneul source 가 '오늘의 너' 책임. libraryHero 는 진주 튜토 전용 (13-first-pearl-tutorial.js 가 명시 호출).
   if (typeof updateLibraryCatNewDots === 'function') updateLibraryCatNewDots();

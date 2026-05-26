@@ -177,8 +177,9 @@ function switchLibraryCat(cat) {
   // V4: 카테고리 전환 후 잠금 시각 갱신 (마법고동 등)
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 30);
   // 검색바는 모든 카테고리에서 노출 (사용자 보고 2026-04-29: 'block' 으로 덮으면 flex 깨져 토글이 검색창 밑으로 wrap — 'flex' 유지)
+  //   사용자 명시 2026-05-27 ultrathink: 실행 chip 은 검색 / 그리드·타임라인 토글 적용 X → 둘 다 hide.
   const searchBar = document.getElementById('archiveSearchBar');
-  if (searchBar) searchBar.style.display = 'flex';
+  if (searchBar) searchBar.style.display = (cat === 'execute') ? 'none' : 'flex';
   // V4-fix #5: 클릭한 카테고리는 본 것 → ● 점 사라짐
   if (typeof _markLibCatSeen === 'function') {
     _markLibCatSeen(cat);
@@ -190,7 +191,8 @@ function switchLibraryCat(cat) {
   if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
   if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
   // 사용자 요청 2026-04-29: 토글 5 카테고리 모두 통일 (SVG 아이콘 — 라벨 동적 X)
+  // 사용자 명시 2026-05-27 ultrathink: 실행 chip 은 그리드·타임라인 토글 적용 X → hide.
   const toggleEl = document.querySelector('.library-view-toggle');
-  if (toggleEl) toggleEl.style.display = '';
+  if (toggleEl) toggleEl.style.display = (cat === 'execute') ? 'none' : '';
 }
 

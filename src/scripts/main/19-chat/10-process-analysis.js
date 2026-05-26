@@ -85,7 +85,6 @@ async function processAnalysis(analysis, messageIdx) {
     if (added > 0) {
       showToast(`📋 할 일 ${added}개 서랍장에 추가됨`);
       if (typeof renderExecute === 'function') { try { renderExecute(); } catch {} }
-      if (typeof updateExecuteChipMeta === 'function') { try { updateExecuteChipMeta(); } catch {} }
     }
   }
   if (_hasExplicitTaskScheduleTrigger && analysis.extracted_schedule && Array.isArray(analysis.extracted_schedule) && analysis.extracted_schedule.length > 0) {

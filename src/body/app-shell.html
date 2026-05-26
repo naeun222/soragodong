@@ -260,19 +260,6 @@
       <!-- 활성 미션 (소라의 부름) -->
       <div id="missionContainer"></div>
 
-      <!-- 사용자 명시 2026-05-27 ultrathink: 실행 chip (옛 실행 탭 → 홈 collapsible chip 으로 복원). -->
-      <div id="executeChipWrap" class="execute-chip-wrap">
-        <button id="executeChipBtn" class="execute-chip-btn" type="button" onclick="toggleExecuteChip()" aria-expanded="false" aria-controls="executeChipExpanded">
-          <span class="execute-chip-icon">🚀</span>
-          <span class="execute-chip-label">실행</span>
-          <span class="execute-chip-meta" id="executeChipMeta">비어있어</span>
-          <span class="execute-chip-arrow" id="executeChipArrow">▸</span>
-        </button>
-        <div id="executeChipExpanded" class="execute-chip-expanded" hidden>
-          <div id="executeContent"></div>
-        </div>
-      </div>
-
       <!-- 활성 숙고 (homeSmallCards / 리뷰 preview / change hint 카드 다 폐기 — 회전카드로 흡수). -->
       <div id="reflectionContainer"></div>
 
@@ -291,6 +278,8 @@
           <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')"><span class="cat-icon">🌱</span><span class="cat-label">양생방</span></button>
           <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')"><span class="cat-icon">✨</span><span class="cat-label">깨달음</span></button>
           <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')"><span class="cat-icon">🌀</span><span class="cat-label">마법·리뷰</span></button>
+          <!-- 사용자 명시 2026-05-27 ultrathink: 실행 chip — 마법·리뷰 오른쪽. 옛 실행 탭 (f632dd4 2026-05-16 폐기) → library-cats 5번째 chip 으로 부활. -->
+          <button class="lib-cat-chip"        data-cat="execute"   onclick="switchLibraryCat('execute')"><span class="cat-icon">🚀</span><span class="cat-label">실행</span></button>
         </div>
       </div>
 
@@ -335,6 +324,10 @@
       <!-- 🌀 마법·리뷰 -->
       <div id="libGalpi" class="library-cat-view" style="display:none;">
         <!-- 사용자 요청 2026-04-29: 피드/목록 토글 통일 — JS에서 동적 렌더 -->
+      </div>
+      <!-- 🚀 실행 (사용자 명시 2026-05-27 ultrathink — library-cats 5번째 chip) -->
+      <div id="libExecute" class="library-cat-view" style="display:none;">
+        <div id="executeContent"></div>
       </div>
     </div>
 

@@ -1,13 +1,10 @@
 // ═══════════════════════════════════════════════════════════════
-// V4 (사용자 명시 2026-05-27 ultrathink): 실행 탭 UI 부분 복원 — 홈 (도서관) 안 collapsible chip 으로.
+// V4 (사용자 명시 2026-05-27 ultrathink): 실행 탭 UI 복원 — 홈 (도서관) library-cats 5번째 chip 으로.
 //   2026-05-16 (f632dd4) 폐기한 renderExecute / brain dump / Now 3 / 서랍장 / 타임테이블 / immerse UI 복원.
-//   bottom-nav '실행' 탭은 복원 X — 홈 chip 진입만. showScreen('execute') 분기도 부활 X.
+//   bottom-nav '실행' 탭 복원 X — 도서관 chip (data-cat="execute") 만. showScreen('execute') 분기도 부활 X.
 //   튜토리얼 11 step (go_execute ~ exec_immerse_done) 도 복원 X (onboarding 가벼움 우선).
 //   shell helper (SHELL_POOLS / pickShellForTask / completeQuest 등) 의 V4 개선 (dedup + anti-recency + typeof guard) 유지.
-//
-// chip UX:
-//   · #executeChipBtn 탭 → #executeChipExpanded 펼침/접힘. 컨테이너 ID #executeContent 옛 그대로.
-//   · meta = 오늘 카드 / 오늘 할 일 / 서랍장 카운트 sum. 0 이면 "비어있어".
+//   chip 진입: switchLibraryCat('execute') → #libExecute 노출 → #executeContent 안 renderExecute 결과.
 // ═══════════════════════════════════════════════════════════════
 
 let _execMode = 'balance';
@@ -23,34 +20,6 @@ function _scheduleDateKey() {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
-}
-
-// === EXECUTE CHIP (홈 안 collapsible 진입) ===
-// 사용자 명시 2026-05-27 ultrathink: bottom-nav 진입 폐기 → 홈 chip 으로 복원.
-function toggleExecuteChip() {
-  const wrap = document.getElementById('executeChipExpanded');
-  const arrow = document.getElementById('executeChipArrow');
-  const btn = document.getElementById('executeChipBtn');
-  if (!wrap) return;
-  const opening = !!wrap.hidden;
-  wrap.hidden = !opening;
-  if (arrow) arrow.textContent = opening ? '▾' : '▸';
-  if (btn) btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
-  if (opening) {
-    try { renderExecute(); } catch (e) { console.warn('[executeChip] render:', e); }
-  }
-}
-
-function updateExecuteChipMeta() {
-  const el = document.getElementById('executeChipMeta');
-  if (!el) return;
-  const todayKeyVal = todayKey();
-  const tasks = state.tasks || [];
-  const now3 = tasks.filter(t => t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done').length;
-  const todayList = tasks.filter(t => t.slot === 'drawer' && t.isToday && t.date === todayKeyVal && t.status !== 'done').length;
-  const drawer = tasks.filter(t => t.slot === 'drawer' && !t.isToday && t.status !== 'done' && (t.title || '').trim()).length;
-  const total = now3 + todayList + drawer;
-  el.textContent = total > 0 ? `${total}개` : '비어있어';
 }
 
 function _renderTimetableStripHTML() {
@@ -112,12 +81,6 @@ function toggleDrawerSection() {
 function renderExecute() {
   const container = document.getElementById('executeContent');
   if (!container) return;
-  // chip 접힘 상태면 heavy render skip — meta 만 갱신 (#executeChipExpanded hidden 이면 사용자 안 봄).
-  const expandedWrap = document.getElementById('executeChipExpanded');
-  if (expandedWrap && expandedWrap.hidden) {
-    updateExecuteChipMeta();
-    return;
-  }
 
   // Liquid flow check first — auto-cascade incomplete blocks
   if (typeof liquidFlow === 'function') liquidFlow();
@@ -356,7 +319,6 @@ function renderExecute() {
   html += `<div id="projectsSection"></div>`;
   container.innerHTML = html;
   if (typeof renderProjects === 'function') renderProjects();
-  updateExecuteChipMeta();
 }
 
 // === BRAIN DUMP ===

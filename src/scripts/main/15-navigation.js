@@ -97,8 +97,6 @@ function showScreen(name) {
       try { runDiagnosesIfNeeded(); } catch (e) { console.warn('runDiagnoses:', e); }
     }
     if (typeof renderUpdateNotice === 'function') renderUpdateNotice();
-    // V4 (사용자 명시 2026-05-27 ultrathink): 실행 chip meta 갱신 — 홈 진입마다 카운트 새로.
-    if (typeof updateExecuteChipMeta === 'function') updateExecuteChipMeta();
 
     // V4-fix #5: 도서관 처음 진입 시 모든 카테고리 lastSeen 초기화 (점 폭발 방지)
     if (state.preferences && !state.preferences._libCatLastSeenInit) {
