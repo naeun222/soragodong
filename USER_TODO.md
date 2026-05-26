@@ -30,7 +30,7 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 | `PORTONE_API_KEY` | (포트원 가입 후) | PG 결정 후 |
 | `PORTONE_API_SECRET` | (포트원 가입 후) | 동일 |
 | `PORTONE_CHANNEL_KEY` | (포트원 가입 후) | 동일 |
-| 🟡 `BILLING_RECURRING_ENABLED` | `false` (또는 삭제) | 정기결제 5 endpoint 가드. **2026-05-13 (재정정): 일반결제 (KG이니시스 일회성) 복귀** — Cloudflare env 에서 `false` 로 변경 또는 항목 삭제. backend 자동 가계약 모드 동작. frontend `01-config.js:BILLING_RECURRING_ENABLED = false` 도 같이 적용됨. 정기 PG 빌링 채널 실 발급 후 재 `true`. |
+| 🔴 `BILLING_RECURRING_ENABLED` | `true` | 정기결제 5 endpoint 가드. **2026-05-26 (토스페이 PG 심사 회신 대응 — 재재정정): 정기결제 모드 복귀** — Cloudflare env 에서 `true` 로 변경 필수. backend cron-charge-recurring / portone-register-recurring / cron-renewal-notice 가 활성화됨. frontend `01-config.js:BILLING_RECURRING_ENABLED = true` 동기 적용 완료. **이 env 안 바꾸면 frontend 는 정기결제 표기/UI 보여주는데 백엔드는 RECURRING_DISABLED 403 반환 → 결제 직접 실패**. 적용 후 retry deployment 필수. |
 
 적용한 후 → **Deployments → Retry deployment** (재배포 후 적용).
 

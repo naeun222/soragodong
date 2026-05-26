@@ -23,7 +23,10 @@ window._VAPID_PUBLIC_KEY = 'BFOY9MMRWPhPQBfm1GTj-pWCo8VIaulXPIVrqiufvZDdIv2T0K1g
 //   false: subscribe modal 의 모든 tier (Light/Plus/Premium) 가 *일회성 1개월* 결제 (자동 갱신 X, 만료 7일 전 알림 후 재구매).
 //          빌링키 등록 / cron 자동 결제 / Plus 첫 달 무료 trial 흐름 전부 우회. backend cron 도 가드.
 //   true:  옛 정기결제 흐름 (requestIssueBillingKey + portone-register-recurring + cron 매월 갱신) 으로 복귀. 계약 승인 후 변경.
-const BILLING_RECURRING_ENABLED = false;
+// V4 (사용자 명시 2026-05-26 ultrathink) — 토스페이 PG 심사 회신 대응. 정기결제 모드로 복귀.
+//   토스페이팀이 "자동갱신 X 표기 vs 다음 자동 결제 매월 가입일 기준 안내" 혼재를 지적 → 일관된 정기결제 표기로 통일.
+//   카드 등록/삭제 UI 도 동시에 노출 (BILLING_RECURRING_ENABLED=true 시 _renderCancelRenewalBox 자동 활성화).
+const BILLING_RECURRING_ENABLED = true;
 
 // V4 (사용자 명시 2026-05-13): Google Play TWA 환경 감지 + 결제 진입점 가드 (하이브리드 옵션 C).
 //   document.referrer 가 `android-app://<package>` 로 시작 = TWA 가 launch 한 신호 (Chrome Custom Tabs / TWA spec).

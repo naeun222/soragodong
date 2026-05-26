@@ -511,14 +511,17 @@ function _renderCancelRenewalBox(billing) {
   // 등록된 PG — frontend state 에서 (backend 컬럼 미추가). 없으면 일반 라벨.
   const pgKey = state?.preferences?.lastRegisteredPG;
   const pgLabelStr = (typeof _pgLabel === 'function' && pgKey) ? _pgLabel(pgKey) : '카드 / 간편결제';
+  // V4 (사용자 명시 2026-05-26 ultrathink) — 토스페이 PG 심사 회신 대응. 카드 등록/삭제 라벨 명확화.
+  //   "구독 해지" 만으로는 PG 심사관 시점에서 "카드 정보 삭제" 가 명시되지 않음 → "🗑 카드 등록 정보 삭제" 라벨 + 부연.
+  //   백엔드 cancel-renewal 이 PortOne 빌링키 즉시 삭제 + DB clear 하므로 사실상 "카드 삭제 + 구독 해지" 일체.
   const cancelBtnHtml = cancelled
-    ? `<div style="padding:9px 11px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.10); border-radius:8px; font-size:12px; color:var(--text-soft); line-height:1.6;">✓ 다음 갱신 해지됨 — <b style="color:var(--text);">${nextStr}</b> 까지 사용 가능.</div>`
-    : `<button class="btn-secondary" onclick="cancelNextRenewal()" style="width:100%; padding:10px; font-size:12.5px; color:var(--text); opacity:0.85;">⏸ 구독 해지 (다음 갱신부터)</button>
-       <div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">현 결제 만료일 (${nextStr}) 까지 그대로 사용. 환불 X.</div>`;
+    ? `<div style="padding:9px 11px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.10); border-radius:8px; font-size:12px; color:var(--text-soft); line-height:1.6;">✓ 카드 등록 정보 삭제됨 — <b style="color:var(--text);">${nextStr}</b> 까지 사용 가능 (다음 자동 결제 차단).</div>`
+    : `<button class="btn-secondary" onclick="cancelNextRenewal()" style="width:100%; padding:10px; font-size:12.5px; color:var(--text); opacity:0.85;">🗑 카드 등록 정보 삭제 (구독 해지)</button>
+       <div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">등록된 카드 정보가 PG (포트원) 에서 즉시 삭제되고 다음 자동 결제가 멈춰. 현 결제 만료일 (${nextStr}) 까지는 그대로 사용. 환불 X.</div>`;
   const changeBtnHtml = cancelled
     ? ''
-    : `<button class="btn-secondary" onclick="changeRegisteredCard()" style="width:100%; padding:10px; font-size:12.5px; margin-top:8px;">💳 결제수단 (카드) 변경</button>
-       <div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">새 카드 등록 = 기존 카드 자동 대체.</div>`;
+    : `<button class="btn-secondary" onclick="changeRegisteredCard()" style="width:100%; padding:10px; font-size:12.5px; margin-top:8px;">💳 카드 변경 (새 카드 재등록)</button>
+       <div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">새 카드 등록 시 기존 카드 정보는 PG 에서 자동 해제 + 새 카드로 다음 결제 진행.</div>`;
   // V4 (사용자 명시 2026-05-13 ultrathink): 예약된 plan 변경 표시 + 취소 버튼.
   const schedPlan = billing.scheduled_plan_change || null;
   const schedAtStr = billing.scheduled_plan_change_at ? new Date(billing.scheduled_plan_change_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : null;
@@ -536,7 +539,7 @@ function _renderCancelRenewalBox(billing) {
     : '';
   box.innerHTML = `
     <div style="padding:10px 0;">
-      <div style="font-size:12.5px; color:var(--text); font-weight:600; margin-bottom:8px;">📇 등록된 결제수단</div>
+      <div style="font-size:12.5px; color:var(--text); font-weight:600; margin-bottom:8px;">📇 등록된 카드 정보</div>
       <div style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:9px; padding:11px 13px; margin-bottom:10px; line-height:1.7;">
         <div style="font-size:12px; color:var(--text);">${escapeHtml(pgLabelStr)}</div>
         <div style="font-size:11.5px; color:var(--text-soft); margin-top:4px;">다음 결제예정일: <b style="color:var(--text);">${nextStr}</b>${krw ? ` · <b style="color:var(--text);">${krw}원</b>` : ''}</div>
@@ -579,7 +582,8 @@ function changeRegisteredCard() {
 // 백엔드: /api/billing/cancel-renewal (POST, Bearer auth) — billing.cancel_at_period_end=true set.
 async function cancelNextRenewal() {
   if (!session?.access_token) { alert('로그인 필요'); return; }
-  if (!confirm('다음 갱신을 해지할까?\n\n현 결제 기간 (만료일까지) 은 그대로 사용하고, 다음 자동 결제만 멈춰. 환불 아니야.\n\n다시 갱신하고 싶으면 [구독 시작 / 변경] 으로 재구독.')) return;
+  // V4 (사용자 명시 2026-05-26 ultrathink) — 토스페이 PG 심사 회신 대응. confirm 다이얼로그에 "카드 정보 삭제" 명시.
+  if (!confirm('🗑 카드 등록 정보 삭제 (구독 해지)\n\n• PG (포트원) 에 등록된 카드 정보가 즉시 삭제돼.\n• 다음 자동 결제가 멈춰.\n• 현 결제 기간 (만료일까지) 은 그대로 사용 가능 — 환불 아니야.\n• 다시 사용하고 싶으면 [구독 시작 / 변경] 에서 카드 재등록.\n\n계속할까?')) return;
   try {
     const _origFetch = window._anthropicOrigFetch || window.fetch;
     const resp = await _origFetch('/api/billing/cancel-renewal', {
@@ -592,7 +596,7 @@ async function cancelNextRenewal() {
     });
     const data = await resp.json().catch(() => ({}));
     if (resp.ok && data.ok) {
-      showToast('✓ 다음 갱신 해지됨 — 만료일까지 사용 가능');
+      showToast('✓ 카드 등록 정보 삭제됨 — 만료일까지 사용 가능');
       if (typeof refreshBillingStatus === 'function') refreshBillingStatus(true);
     } else {
       alert('해지 실패: ' + (data.error || resp.status));
