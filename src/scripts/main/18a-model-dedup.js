@@ -105,9 +105,26 @@ let _modelDedupState = null;
 
 function openModelDedupModal() {
   if (document.getElementById('modelDedupOverlay')) return;
-  const candidates = _collectModelDedupCandidates();
+  // 사용자 명시 2026-05-26 ultrathink: 18a (Levenshtein name, 14 카테고리) + 18b (Jaccard description, traits/values/patterns) 둘 다 후보 추출 후 merge.
+  //   같은 (a, b) 페어가 양쪽에서 잡히면 max similarity 채택 — 사용자한테 한 번만 보여줌. _renderModelDedupStep / _modelDedupMerge 는 18b 후보의 category (traits/values/patterns) 도 일반 path 로 처리.
+  const lev = _collectModelDedupCandidates();
+  const jac = (typeof _collectContentDedupCandidates === 'function')
+    ? _collectContentDedupCandidates()
+    : [];
+  const _samePair = (x, y) => (x.a === y.a && x.b === y.b) || (x.a === y.b && x.b === y.a);
+  const all = [];
+  for (const c of lev) all.push(c);
+  for (const c of jac) {
+    const dup = all.find(m => _samePair(m, c));
+    if (dup) {
+      if (c.similarity > dup.similarity) dup.similarity = c.similarity;
+    } else {
+      all.push(c);
+    }
+  }
+  all.sort((a, b) => b.similarity - a.similarity);
   _modelDedupState = {
-    candidates,
+    candidates: all,
     idx: 0,
     merged: 0,
     skipped: 0,
